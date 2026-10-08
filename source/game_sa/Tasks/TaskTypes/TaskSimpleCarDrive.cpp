@@ -1,4 +1,6 @@
 #include "StdInc.h"
+
+#include <numbers>
 #include "TaskSimpleCarDrive.h"
 #include "TaskUtilityLineUpPedWithCar.h"
 #include "Ragdoll/IKChainManager.h"
@@ -227,9 +229,9 @@ void CTaskSimpleCarDrive::ProcessHeadBopping(CPed* ped, bool a3, float a4) {
         const float angle = m_fRandomHeadBoppingMultiplier * m_fHeadBoppingOrientation;
         const auto  quat  = &ped->m_apBones[PED_NODE_HEAD]->KeyFrame->q;
         if (m_nHeadBoppingDirection >= 1) {
-            RtQuatRotate(quat, &CPedIK::XaxisIK, m_nBoppingCompletedTimes ? -angle : angle, rwCOMBINEPOSTCONCAT);
+            RtQuatRotate(quat, &CPedIK::XaxisIK, m_nBoppingCompletedTimes ? -angle : angle, rwCOMBINEPRECONCAT);
         }
-        RtQuatRotate(quat, &CPedIK::ZaxisIK, m_nHeadBoppingDirection == 2 ? angle : -angle, rwCOMBINEPOSTCONCAT);
+        RtQuatRotate(quat, &CPedIK::ZaxisIK, m_nHeadBoppingDirection == 2 ? angle : -angle, rwCOMBINEPRECONCAT);
         ped->bUpdateMatricesRequired = true;
     }
 }
@@ -343,7 +345,7 @@ void CTaskSimpleCarDrive::ProcessArmBopping(CPed* ped, bool a3, float a4) {
         const auto hand = animId == ANIM_ID_TAP_HAND
             ? PED_NODE_LEFT_HAND
             : PED_NODE_RIGHT_HAND;
-        RtQuatRotate(&ped->m_apBones[hand]->KeyFrame->q, &CPedIK::ZaxisIK, -angle, rwCOMBINEPOSTCONCAT);
+        RtQuatRotate(&ped->m_apBones[hand]->KeyFrame->q, &CPedIK::ZaxisIK, -angle, rwCOMBINEPRECONCAT);
         ped->bUpdateMatricesRequired = true;
     }
 
@@ -599,7 +601,7 @@ bool CTaskSimpleCarDrive::ProcessPed(CPed* ped) {
 
     // Passenger speech
     if (((uint32)ped->m_nRandomSeed + CTimer::GetFrameCounter()) % 16384u == 0) {
-        if (const auto driver = m_pVehicle->m_pDriver; driver && driver != ped && ped->IsPlayer()) {
+        if (const auto driver = m_pVehicle->m_pDriver; driver && driver != ped && driver->IsPlayer()) { // NOTE: The original checks if the *driver* is the player
             if (m_pVehicle->m_vecMoveSpeed.Magnitude2D() > 0.7f) {
                 ped->Say(CTX_GLOBAL_CAR_FAST, 0, 1.f);
             }

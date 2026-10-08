@@ -59,32 +59,24 @@ CTaskGangHassleVehicle::~CTaskGangHassleVehicle() {
 
 // 0x65FDD0
 float CTaskGangHassleVehicle::GetTargetHeading(CPed* ped) {
-    const auto& bb = CModelInfo::GetModelInfo(m_Vehicle->m_nModelIndex)->GetColModel()->GetBoundingBox();
-
-    float x = bb.m_vecMin.x;
-    float y = bb.m_vecMin.y;
+    // The original reads the vehicle's matrix (right / forward vectors), it doesn't use the model's bounding box
+    CVector dir;
     switch (m_nHasslePosId) {
-    case 0:
-    case 2:
-        break;
     case 1:
     case 3:
-        x = -x;
-        y = -y;
+        dir = -m_Vehicle->GetRight();
         break;
     case 4:
-        // NOTSA: The original reads a `CVector` at `CColModel + 0x10` here (that's `{ bb.max.y, bb.max.z, boundSphere.center.x }`)
-        x = bb.m_vecMax.y;
-        y = bb.m_vecMax.z;
+        dir = m_Vehicle->GetForward();
         break;
     case 5:
-        x = -bb.m_vecMax.y;
-        y = -bb.m_vecMax.z;
+        dir = -m_Vehicle->GetForward();
         break;
-    default:
+    default: // 0, 2 and anything else
+        dir = m_Vehicle->GetRight();
         break;
     }
-    return CGeneral::LimitRadianAngle(CGeneral::GetRadianAngleBetweenPoints(x, y, 0.f, 0.f));
+    return CGeneral::LimitRadianAngle(CGeneral::GetRadianAngleBetweenPoints(dir.x, dir.y, 0.f, 0.f));
 }
 
 // 0x6641A0
@@ -390,14 +382,16 @@ CTask* CTaskGangHassleVehicle::ControlSubTask(CPed* ped) {
     const auto savedHealth = m_Vehicle->m_fHealth;
 
     CTaskSimpleFight fight{m_Vehicle, 11, 20'000};
-    fight.m_nComboSet     = 4;
-    fight.m_nCurrentMove  = FIGHT_ATTACK_HIT_2;
-    fight.m_nLastCommand  = 11;
 
     CMatrix hitMat{ped->GetMatrix()};
     hitMat.GetPosition() += ped->GetForward();
 
     plugin::CallMethod<0x61D5F0, CTaskSimpleFight*, float>(&fight, 0.5f); // `CTaskSimpleFight::FightSetUpCol`
+
+    // NOTE: These are set after `FightSetUpCol` (like the original does)
+    fight.m_nComboSet     = 4;
+    fight.m_nCurrentMove  = FIGHT_ATTACK_HIT_2;
+    fight.m_nLastCommand  = 11;
 
     const auto numColPts = CCollision::ProcessColModels(
         hitMat,

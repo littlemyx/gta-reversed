@@ -1752,6 +1752,7 @@ void CCamera::Process() {
         ProcessShake((float)((timeNow - m_fStartShakeTime) / ((double)m_fEndShakeTime - m_fStartShakeTime)));
     }
 
+    // NOTSA: Zero-initialised, the original leaves them uninitialised if the transition progress is NaN or > 1
     CVector source{}, target{}, front{}, up{};
 
     if (!m_bTransitionState || bFollowingVehicle) {
@@ -2069,7 +2070,8 @@ void CCamera::Process() {
             && activeCam.m_nMode != MODE_TOP_DOWN_PED
             && otherCam.m_nDirectionWasLooking != LOOKING_DIRECTION_FORWARD
         ) {
-            // BUG: Reads from the `m_nActiveCam % 2`-th camera, which is not the active one if it's the debug cam
+            // BUG: Copies the `m_nActiveCam % 2`-th camera's (= the active one's, or the 1st if it's the debug cam) value into the *other* camera,
+            //      most likely `otherCam.m_vecSourceBeforeLookBehind` was intended
             otherCam.m_vecSource = m_aCams[m_nActiveCam % 2].m_vecSourceBeforeLookBehind;
             m_fOrientation       = newOrientation;
         }
@@ -2105,7 +2107,7 @@ void CCamera::Process() {
 
     float waterLevel;
     if (!CWaterLevel::GetWaterLevel(samplePos.x, samplePos.y, samplePos.z, waterLevel, true, nullptr)
-        || samplePos.z - 0.6f > waterLevel // 0x858CC8
+        || (double)samplePos.z - 0.6f > waterLevel // 0x858CC8 - NOTE: compared in x87 extended precision
     ) {
         CWeather::UnderWaterness = 0.f;
         return;
@@ -2114,7 +2116,7 @@ void CCamera::Process() {
     const float depth = waterLevel - samplePos.z;
     CWeather::WaterDepth = depth < 0.f ? 0.f : depth;
 
-    if (samplePos.z + 0.6f < waterLevel) {
+    if ((double)samplePos.z + 0.6f < waterLevel) {
         CWeather::UnderWaterness = 1.f;
     } else {
         CWeather::UnderWaterness = (float)(1.0 - ((double)samplePos.z - ((double)waterLevel - 0.6f)) * (double)0.8333333f); // 0x863278
@@ -2286,8 +2288,16 @@ void CCamera::CalculateDerivedValues(bool bForMirror, bool bOriented) {
 void CCamera::ImproveNearClip(CVehicle* vehicle, CPed* ped, CVector* source, CVector* targPosn) {
     const auto& cam = GetActiveCam();
 
+    // NOTE: The original keeps the differences in x87 extended precision (no rounding to float), the sum is accumulated in `z, y, x` order
+    const auto DistToTarget = [&] {
+        const double dx = (double)source->x - targPosn->x;
+        const double dy = (double)source->y - targPosn->y;
+        const double dz = (double)source->z - targPosn->z;
+        return std::sqrt(dz * dz + dy * dy + dx * dx);
+    };
+
     // Far away from the target => push the near clip out (scaled by the current collision distance)
-    if ((*source - *targPosn).Magnitude() > 10.f) {
+    if (DistToTarget() > 10.0) {
         const float nearClip = 1.f * gCurDistForCam;
         if (Scene.m_pRwCamera->nearPlane < nearClip) {
             RwCameraSetNearClipPlane(Scene.m_pRwCamera, nearClip);
@@ -2303,7 +2313,7 @@ void CCamera::ImproveNearClip(CVehicle* vehicle, CPed* ped, CVector* source, CVe
 
                     float waterLevel = 0.f;
                     const bool bHasWater = CWaterLevel::GetWaterLevel(source->x, source->y, source->z, waterLevel, false, nullptr);
-                    if (bHasWater && std::abs(waterLevel - source->z) < 0.3f) { // On the water surface
+                    if (bHasWater && std::abs((double)waterLevel - source->z) < (double)0.3f) { // On the water surface
                         RwCameraSetNearClipPlane(Scene.m_pRwCamera, 0.1f);
                     } else if (bUnderwaterSprinting && m_nPedZoom == 1) {
                         RwCameraSetNearClipPlane(Scene.m_pRwCamera, 0.1f);
@@ -2365,8 +2375,7 @@ void CCamera::ImproveNearClip(CVehicle* vehicle, CPed* ped, CVector* source, CVe
                 if (cam.m_vecSource.z - CalculateGroundHeight(eGroundHeightType::ENTITY_BB_BOTTOM) > 10.f) {
                     float nearClip = 5.f * gCurDistForCam;
 
-                    const auto diff = *source - *targPosn;
-                    const double distScaled = std::sqrt((double)diff.z * diff.z + (double)diff.y * diff.y + (double)diff.x * diff.x) * (double)0.1f;
+                    const double distScaled = DistToTarget() * (double)0.1f;
                     if (distScaled < nearClip) {
                         nearClip = (float)distScaled;
                     }

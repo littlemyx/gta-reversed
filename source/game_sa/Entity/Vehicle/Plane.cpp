@@ -230,8 +230,10 @@ void CPlane::BlowUpCar(CEntity* damager, bool bHideExplosion) {
         SetDoorDamage(DOOR_RIGHT_REAR, false);
         SpawnFlyingComponent(CAR_WHEEL_LF, 1);
 
-        if (const auto atomic = GetCurrentAtomicObject(m_aCarNodes[CAR_WHEEL_LF])) {
-            RpAtomicSetFlags(atomic, 0);
+        if (m_aCarNodes[CAR_WHEEL_LF]) {
+            if (const auto atomic = GetCurrentAtomicObject(m_aCarNodes[CAR_WHEEL_LF])) {
+                RpAtomicSetFlags(atomic, 0);
+            }
         }
     }
 
@@ -564,7 +566,7 @@ void CPlane::FindPlaneCreationCoors(CVector* outCoors, CVector* outTargetCoors, 
 
         CWorld::AdvanceCurrentScanCode();
 
-        // NOTE: `box` is passed uninitialized by the original code
+        // NOTSA: `box` is passed uninitialized by the original code (default-constructed here)
         CColBox      box{};
         CColSphere   sphere;
         sphere.Set(15.0f, *outCoors, SURFACE_DEFAULT, 0, tColLighting{0xFF});
@@ -599,11 +601,9 @@ void CPlane::DoPlaneGenerationAndRemoval() {
         mat.GetUp()      = CVector{ 0.0f, 0.0f, 1.0f };
     };
 
-    // Inlined `CVehicle::SetEngineOn` (0x41BDD0)
+    // Inlined `CVehicle::SetEngineOn(true)` (0x41BDD0): the engine is forced off if it is broken
     const auto TurnEngineOn = [](CVehicle* veh) {
-        if (!veh->vehicleFlags.bEngineBroken) {
-            veh->vehicleFlags.bEngineOn = true;
-        }
+        veh->vehicleFlags.bEngineOn = !veh->vehicleFlags.bEngineBroken;
     };
 
     const auto FinishGeneration = [] {
@@ -658,6 +658,7 @@ void CPlane::DoPlaneGenerationAndRemoval() {
                 const auto& heliPos = heli->GetPosition();
                 if (auto* const target = CWorld::FindUnsuspectingTargetPed(heliPos, FindPlayerCoors())) {
                     heli->m_autoPilot.m_nCarMission  = MISSION_HELI_FOLLOW_ENTITY;
+                    // NOTSA: The field is declared as `CVehicle*`, but the heli can follow peds too (original code does the same)
                     heli->m_autoPilot.m_TargetEntity = reinterpret_cast<CVehicle*>(target);
                     target->RegisterReference(reinterpret_cast<CEntity**>(&heli->m_autoPilot.m_TargetEntity));
                     heli->m_nHeliFlags |= 2;
@@ -669,9 +670,13 @@ void CPlane::DoPlaneGenerationAndRemoval() {
                             FinishGeneration();
                             return;
                         }
-                        target->GetEventGroup().Add(CEventDanger{ heli, 200.0f }, false);
+                        CEventDanger event{ heli, 200.0f };
+                        event.m_TaskId = TASK_COMPLEX_SMART_FLEE_ENTITY; // 0x38F
+                        target->GetEventGroup().Add(&event, false);
                     } else {
-                        group->m_groupIntelligence.AddEvent(CEventDanger{ heli, 200.0f });
+                        CEventDanger event{ heli, 200.0f };
+                        event.m_TaskId = TASK_GROUP_FLEE_THREAT; // 0x5E1
+                        group->m_groupIntelligence.AddEvent(&event);
                     }
                 }
             }

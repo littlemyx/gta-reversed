@@ -151,6 +151,8 @@ void CCarCtrl::InjectHooks()
     RH_ScopedInstall(UpdateCarCount, 0x424000);
     RH_ScopedInstall(PossiblyRemoveVehicle, 0x424F80);
     RH_ScopedInstall(SlowCarDownForPedsSectorList, 0x425440);
+    RH_ScopedInstall(WeaveForObject, 0x426BC0);
+    RH_ScopedInstall(WeaveForOtherCar, 0x426350);
 }
 
 // 0x4212E0
@@ -2061,14 +2063,300 @@ void CCarCtrl::UpdateCarOnRails(CVehicle* vehicle) {
     plugin::Call<0x436540, CVehicle*>(vehicle);
 }
 
+namespace {
+// These replicate the operation order of the original (`CMatrix::Multiply3x3` and `CMatrix::MultiplyMatrixWithVector`), as the ones in `CMatrix` do the additions
+// in a different order. (x87: the sum is kept in extended precision and rounded to float only once)
+
+// 0x59C790
+CVector TransformVectorOriginal(const CMatrix& m, const CVector& v) {
+    const auto &r = m.GetRight(), &f = m.GetForward(), &u = m.GetUp();
+    return CVector{
+        (float)(((double)u.x * v.z + (double)f.x * v.y) + (double)r.x * v.x),
+        (float)(((double)u.y * v.z + (double)r.y * v.x) + (double)f.y * v.y),
+        (float)(((double)u.z * v.z + (double)r.z * v.x) + (double)f.z * v.y)
+    };
+}
+
+// 0x59C890
+CVector TransformPointOriginal(const CMatrix& m, const CVector& v) {
+    const auto &r = m.GetRight(), &f = m.GetForward(), &u = m.GetUp(), &p = m.GetPosition();
+    return CVector{
+        (float)((((double)u.x * v.z + (double)f.x * v.y) + (double)r.x * v.x) + p.x),
+        (float)((((double)u.y * v.z + (double)r.y * v.x) + (double)f.y * v.y) + p.y),
+        (float)((((double)u.z * v.z + (double)r.z * v.x) + (double)f.z * v.y) + p.z)
+    };
+}
+
+constexpr auto WEAVE_ANGLE_STEP = std::bit_cast<float>(0x3DD67750u); // 0x858FAC - 6 degrees (in radians)
+} // namespace
+
+//! 0x421A50 (unnamed in the original) - Used by `WeaveForOtherCar`
+//! Tests whether the 2 edges (`a0`/`a1` and `a2`/`a3` are start + direction pairs) of the box A would hit the 2 edges of box B, when A drives in `heading`'s direction at `aSpeed`,
+//! and B moves with the speed of (`bSpeedX`, `bSpeedY`). The edges of the box that moves (relative to the other one) are swept along that relative motion.
+//! If `aIsSmaller` is set the roles of the boxes are swapped, so A is the one moving (in the opposite direction).
+static bool WouldBoxesCollide(
+    float heading,
+    const CVector& a0, const CVector& a1, const CVector& a2, const CVector& a3,
+    const CVector& b0, const CVector& b1, const CVector& b2, const CVector& b3,
+    float bSpeedX, float bSpeedY,
+    float aSpeed,
+    bool aIsSmaller
+) {
+    // x87: cos/sin and the differences are kept in extended precision
+    const auto relSpeedX = (float)(((double)bSpeedX - std::cos((double)heading) * aSpeed) * 100.0f);
+    const auto relSpeedY = (float)(((double)bSpeedY - std::sin((double)heading) * aSpeed) * 100.0f);
+
+    // The relative motion applied to the moving box (swapped if the roles are)
+    const auto relX = aIsSmaller ? -relSpeedX : relSpeedX;
+    const auto relY = aIsSmaller ? -relSpeedY : relSpeedY;
+
+    // The box that moves, and the one that stands still (relative to the moving one)
+    const CVector &m0 = aIsSmaller ? a0 : b0, &m1 = aIsSmaller ? a1 : b1, &m2 = aIsSmaller ? a2 : b2, &m3 = aIsSmaller ? a3 : b3;
+    const CVector &s0 = aIsSmaller ? b0 : a0, &s1 = aIsSmaller ? b1 : a1, &s2 = aIsSmaller ? b2 : a2, &s3 = aIsSmaller ? b3 : a3;
+
+    // Tests if the (moving) edge (start `p`, direction `d`) or any of the other 3 sides of the quad it sweeps hits the static edge (`ss`, `sd`)
+    const auto TestSweptEdge = [&](const CVector& p, const CVector& d) {
+        // All of these are rounded to float, as they're stored in the original
+        const auto qX  = (float)((double)p.x + d.x),          qY  = (float)((double)p.y + d.y);    // End of the edge
+        const auto pmX = (float)((double)relX + p.x),         pmY = (float)((double)relY + p.y);   // Start of the moved edge
+        const auto qmX = (float)((double)qX + relX),          qmY = (float)((double)qY + relY);    // End of the moved edge
+
+        const auto Test = [&](const CVector& ss, const CVector& sd, float startX, float startY, float dirX, float dirY) {
+            return CCollision::Test2DLineAgainst2DLine(ss.x, ss.y, sd.x, sd.y, startX, startY, dirX, dirY); // 0x4138D0
+        };
+        const auto TestAgainst = [&](const CVector& ss, const CVector& sd) {
+            return Test(ss, sd, p.x, p.y, (float)((double)qX - p.x), (float)((double)qY - p.y))                    // The edge
+                || Test(ss, sd, qX, qY, (float)((double)pmX - qX), (float)((double)pmY - qY))                      // From the end to the start of the moved edge
+                || Test(ss, sd, pmX, pmY, (float)((double)qmX - pmX), (float)((double)qmY - pmY))                  // The moved edge
+                || Test(ss, sd, qmX, qmY, (float)((double)p.x - qmX), (float)((double)p.y - qmY));                 // From the end of the moved edge to the start of the edge
+        };
+        return TestAgainst(s0, s1) || TestAgainst(s2, s3);
+    };
+
+    return TestSweptEdge(m0, m1) || TestSweptEdge(m2, m3);
+}
+
 // 0x426BC0
-void CCarCtrl::WeaveForObject(CEntity* entity, CVehicle* vehicle, float* arg3, float* arg4) {
-    plugin::Call<0x426BC0, CEntity*, CVehicle*, float*, float*>(entity, vehicle, arg3, arg4);
+void CCarCtrl::WeaveForObject(CEntity* entity, CVehicle* vehicle, float* pLowerAngle, float* pUpperAngle) {
+    // Offset of the "pole" of the object (in its local space) that the vehicle should avoid
+    float offX, offY;
+    const auto modelId = entity->m_nModelIndex;
+    if (modelId == ModelIndices::MI_TRAFFICLIGHTS) {
+        offX = 2.957f;
+        offY = 0.147f;
+    } else if (modelId == ModelIndices::MI_SINGLESTREETLIGHTS1) {
+        offX = 0.744f;
+        offY = 0.0f;
+    } else if (modelId == ModelIndices::MI_SINGLESTREETLIGHTS2) {
+        offX = 0.043f;
+        offY = 0.0f;
+    } else if (modelId == ModelIndices::MI_SINGLESTREETLIGHTS3) {
+        offX = 1.143f;
+        offY = 0.145f;
+    } else if (modelId == ModelIndices::MI_DOUBLESTREETLIGHTS) {
+        offX = 0.0f;
+        offY = -0.048f;
+    } else {
+        if (!CModelInfo::GetModelInfo(modelId)->SwaysInWind()) {
+            return;
+        }
+        offX = 0.0f;
+        offY = 0.0f;
+    }
+
+    const CVector entityPos = entity->GetPosition(); // Has to be before the matrix is (possibly) allocated
+    const auto&   entityMat = entity->GetMatrix();
+    const auto&   vehPos    = vehicle->GetPosition();
+
+    // x87: the position is kept in extended precision (only X is rounded to float, Y isn't)
+    const auto poleX = (float)(((double)offY * entityMat.GetForward().x + (double)offX * entityMat.GetRight().x) + entityPos.x);
+    const auto poleY = ((double)offX * entityMat.GetRight().y + (double)offY * entityMat.GetForward().y) + entityPos.y;
+
+    const auto toPoleX = (float)((double)poleX - vehPos.x);
+    const auto toPoleY = (float)(poleY - vehPos.y);
+
+    // x87: The result of this is kept in extended precision (the function leaves it in ST0)
+    const double heading = CGeneral::GetATanOfXY(toPoleX, toPoleY); // 0x53CC70
+
+    // Half of the angle (as seen from the vehicle) the pole (and the car) takes up
+    const auto poleAngleWidth = (float)(((double)CModelInfo::GetModelInfo(vehicle->m_nModelIndex)->GetColModel()->m_boundBox.m_vecMax.x * 2.4f + 0.3f) / std::sqrt((double)toPoleY * toPoleY + (double)toPoleX * toPoleX));
+    const auto halfWidth      = poleAngleWidth * 0.5f;
+
+    const auto pi = std::numbers::pi_v<float>;
+
+    // Makes the angle (in extended precision) to be in -PI to PI
+    const auto Wrap = [&](double angle) {
+        while (angle < -pi) {
+            angle += 2.0f * pi;
+        }
+        while (pi < angle) {
+            angle -= 2.0f * pi;
+        }
+        return angle;
+    };
+
+    // Lower end
+    {
+        const auto diff = Wrap(heading - *pLowerAngle);
+        if ((diff < 0.0 ? -diff : diff) < halfWidth) {
+            const double lower = heading - halfWidth;
+            *pLowerAngle = (float)lower;
+            if (lower < -pi) {
+                double angle = *pLowerAngle;
+                do {
+                    angle += 2.0f * pi;
+                } while (angle < -pi);
+                *pLowerAngle = (float)angle;
+            }
+        }
+    }
+
+    // Upper end
+    {
+        const auto diff = Wrap(heading - *pUpperAngle);
+        if ((diff < 0.0 ? -diff : diff) < halfWidth) {
+            const double upper = heading + halfWidth;
+            *pUpperAngle = (float)upper;
+            if (upper > pi) {
+                double angle = *pUpperAngle;
+                do {
+                    angle -= 2.0f * pi;
+                } while (angle > pi);
+                *pUpperAngle = (float)angle;
+            }
+        }
+    }
 }
 
 // 0x426350
-void CCarCtrl::WeaveForOtherCar(CEntity* entity, CVehicle* vehicle, float* arg3, float* arg4) {
-    plugin::Call<0x426350, CEntity*, CVehicle*, float*, float*>(entity, vehicle, arg3, arg4);
+void CCarCtrl::WeaveForOtherCar(CEntity* entity, CVehicle* vehicle, float* pLowerAngle, float* pUpperAngle) {
+    // Cars that are supposed to be rammed/followed/escorted by `vehicle` (or the other way around) don't need to be avoided
+    const auto  mission = vehicle->m_autoPilot.m_nCarMission;
+    const auto* target  = vehicle->m_autoPilot.m_TargetEntity;
+    if (mission == MISSION_RAMPLAYER_CLOSE && entity == FindPlayerVehicle()) {
+        return;
+    }
+    if (mission == MISSION_RAMCAR_CLOSE && entity == target) {
+        return;
+    }
+    if (mission == MISSION_FOLLOWCAR_CLOSE) {
+        if (entity == target) {
+            return;
+        }
+        if (entity->GetIsTypeVehicle() && entity->AsVehicle()->vehicleFlags.bPartOfConvoy) {
+            return;
+        }
+    }
+    if (mission == MISSION_KILLPED_CLOSE) {
+        if (entity->GetIsTypePed() && entity->AsPed()->bInVehicle && entity->AsPed()->m_pVehicle == target) {
+            return;
+        }
+    }
+    // Note: `entity` is assumed to be a vehicle from here on
+    const auto otherMission = entity->AsVehicle()->m_autoPilot.m_nCarMission;
+    if (otherMission == MISSION_PROTECTION_REAR || otherMission == MISSION_PROTECTION_FRONT
+        || otherMission == MISSION_ESCORT_LEFT || otherMission == MISSION_ESCORT_RIGHT || otherMission == MISSION_ESCORT_REAR || otherMission == MISSION_ESCORT_FRONT
+    ) {
+        if (entity->AsVehicle()->m_autoPilot.m_TargetEntity == vehicle) {
+            return;
+        }
+    }
+
+    // Note: Both of the matrices are used directly (not null checked)
+    const auto& vehMat = *vehicle->m_matrix;
+    const auto& entMat = *entity->m_matrix;
+
+    const auto& entPos = entity->GetPosition();
+    const auto& vehPos = vehicle->GetPosition();
+
+    // Vector from this vehicle to the other. x87: `toEntYExt` is kept in extended precision for the first use
+    const auto toEntX    = (float)((double)entPos.x - vehPos.x);
+    const auto toEntYExt = (double)entPos.y - vehPos.y;
+    const auto toEntY    = (float)toEntYExt;
+
+    // Is the other car in front of this one?
+    const auto fwdDot = toEntYExt * vehMat.GetForward().y + (double)toEntX * vehMat.GetForward().x;
+    if (fwdDot < 0.0) {
+        return;
+    }
+    const auto rightDot = (float)((double)toEntY * vehMat.GetRight().y + (double)toEntX * vehMat.GetRight().x);
+
+    // Edges of this vehicle's box (a bit bigger than the actual bounding box) that are on the side of the other car (start + direction of each)
+    const auto& vehBB = CModelInfo::GetModelInfo(vehicle->m_nModelIndex)->GetColModel()->m_boundBox;
+    const CVector vehEdge1Start = TransformPointOriginal(vehMat, {
+        (float)((double)vehBB.m_vecMin.x - 0.2f),
+        fwdDot > 0.0 ? (float)((double)vehBB.m_vecMax.y + 0.2f) : (float)((double)vehBB.m_vecMin.y - 0.2f),
+        0.0f
+    });
+    const CVector vehEdge1Dir = TransformVectorOriginal(vehMat, { (float)((((double)vehBB.m_vecMax.x + 0.2f) - vehBB.m_vecMin.x) - 0.2f), 0.0f, 0.0f });
+    const CVector vehEdge2Start = TransformPointOriginal(vehMat, {
+        rightDot > 0.0f ? (float)((double)vehBB.m_vecMax.x + 0.2f) : (float)((double)vehBB.m_vecMin.x - 0.2f),
+        (float)((double)vehBB.m_vecMin.y - 0.2f),
+        0.0f
+    });
+    const CVector vehEdge2Dir = TransformVectorOriginal(vehMat, { 0.0f, (float)((((double)vehBB.m_vecMax.y + 0.2f) - vehBB.m_vecMin.y) - 0.2f), 0.0f });
+
+    // Same for the other car
+    const auto entFwdDot   = (double)toEntY * entMat.GetForward().y + (double)toEntX * entMat.GetForward().x;
+    const auto entRightDot = (float)((double)toEntY * entMat.GetRight().y + (double)toEntX * entMat.GetRight().x);
+
+    const auto& entBB = CModelInfo::GetModelInfo(entity->m_nModelIndex)->GetColModel()->m_boundBox;
+    const CVector entEdge1Start = TransformPointOriginal(entMat, {
+        (float)((double)entBB.m_vecMin.x - 0.2f),
+        entFwdDot < 0.0 ? (float)((double)entBB.m_vecMax.y + 0.2f) : (float)((double)entBB.m_vecMin.y - 0.2f),
+        0.0f
+    });
+    const CVector entEdge1Dir = TransformVectorOriginal(entMat, { (float)((((double)entBB.m_vecMax.x + 0.2f) - entBB.m_vecMin.x) - 0.2f), 0.0f, 0.0f });
+    const CVector entEdge2Start = TransformPointOriginal(entMat, {
+        entRightDot < 0.0f ? (float)((double)entBB.m_vecMax.x + 0.2f) : (float)((double)entBB.m_vecMin.x - 0.2f),
+        (float)((double)entBB.m_vecMin.y - 0.2f),
+        0.0f
+    });
+    const CVector entEdge2Dir = TransformVectorOriginal(entMat, { 0.0f, (float)((((double)entBB.m_vecMax.y + 0.2f) - entBB.m_vecMin.y) - 0.2f), 0.0f });
+
+    // If this vehicle is smaller it's the one that "moves" (in the test)
+    const bool vehIsSmaller = vehBB.m_vecMax.x < entBB.m_vecMax.x;
+
+    // x87: kept in extended precision until it's rounded to float
+    const auto vehSpeed2D = (float)std::sqrt((double)vehicle->m_vecMoveSpeed.x * vehicle->m_vecMoveSpeed.x + (double)vehicle->m_vecMoveSpeed.y * vehicle->m_vecMoveSpeed.y);
+    const auto& entSpeed  = entity->AsVehicle()->m_vecMoveSpeed;
+
+    const auto WouldCollide = [&](float heading) {
+        return WouldBoxesCollide(
+            heading,
+            vehEdge1Start, vehEdge1Dir, vehEdge2Start, vehEdge2Dir,
+            entEdge1Start, entEdge1Dir, entEdge2Start, entEdge2Dir,
+            entSpeed.x, entSpeed.y,
+            vehSpeed2D,
+            vehIsSmaller
+        );
+    };
+
+    const auto pi = std::numbers::pi_v<float>;
+
+    // Move the lower angle down (until no collision, or at most 8 times)
+    for (auto i = 0; i < 8; i++) {
+        if (!WouldCollide(*pLowerAngle)) {
+            break;
+        }
+        const double angle = (double)*pLowerAngle - WEAVE_ANGLE_STEP; // x87: not rounded for the comparison
+        *pLowerAngle = (float)angle;
+        if (angle < 0.0) {
+            *pLowerAngle = (float)(angle + 2.0f * pi);
+        }
+    }
+
+    // Move the upper angle up
+    for (auto i = 0; i < 8; i++) {
+        if (!WouldCollide(*pUpperAngle)) {
+            break;
+        }
+        const double angle = (double)*pUpperAngle + WEAVE_ANGLE_STEP;
+        *pUpperAngle = (float)angle;
+        if (angle > 2.0f * pi) {
+            *pUpperAngle = (float)(angle - 2.0f * pi);
+        }
+    }
 }
 
 // 0x42D680

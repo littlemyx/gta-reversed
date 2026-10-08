@@ -74,9 +74,6 @@ auto& s_DJBanterSpecial2 = StaticRef<int32[12][22]>(0x8CB280);
 //! Play time that was set in the previous call to `CAERadioTrackManager::Service`
 auto& s_PrevServicePlayTime = StaticRef<int32>(0x8CBA68);
 
-//! Camera's float at 0xB6F14C (offset 0x124 from `TheCamera`, probably `m_fCameraAverageSpeed`), affects how fast the radio is retuned.
-auto& s_CameraRetuneFactor = StaticRef<float>(0xB6F14C);
-
 //! Checks if `value` is one of the first `count` elements of `history`
 template<typename T, size_t N, typename V>
 bool IsInHistory(const std::array<T, N>& history, int32 count, V value) {
@@ -601,7 +598,7 @@ void CAERadioTrackManager::CheckForStationRetune() {
         }
         AudioEngine.ReportFrontendAudioEvent(AE_FRONTEND_RADIO_RETUNE_START);
 
-        const uint32 retuneDelay = s_CameraRetuneFactor > 0.9f ? 4000u : 2000u;
+        const uint32 retuneDelay = TheCamera.m_fCameraAverageSpeed > 0.9f ? 4000u : 2000u;
         if (CTimer::GetTimeInMS() <= m_nTimeRadioStationRetuned + 1500u) {
             return;
         }
@@ -1093,7 +1090,8 @@ void CAERadioTrackManager::StopRadio(tVehicleAudioSettings* settings, bool durin
 
         // Save the state of the station, so that it can be resumed later
         // BUG: `as.StationID` might be `RADIO_INVALID`, in which case memory before `m_aRadioState` is overwritten
-        auto& state = m_aRadioState[as.StationID];
+        // NOTE: Indexing through `data()` on purpose, so that the (original) out-of-bounds access isn't caught by the STL's checks
+        auto& state = m_aRadioState.data()[as.StationID];
         rng::fill(state.m_aElapsed, 0);
         state.m_iTrackPlayTime = -1;
         rng::fill(state.m_aTrackQueue, -1);
@@ -1477,100 +1475,101 @@ void CAERadioTrackManager::ChooseTracksForStation(eRadioID id) {
 
 // 0x4E8E40
 int8 CAERadioTrackManager::ChooseTalkRadioShow() {
-    // NOTE: The stat IDs are raw, because the names in `eStats` at these indices are unreliable.
-    const auto IsStatZero    = [](int32 stat) { return CStats::GetStatValue(static_cast<eStats>(stat)) == 0.0f; };
-    const auto IsStatNonZero = [&](int32 stat) { return !IsStatZero(stat); };
+    // NOTE: These are mission-completion flags (stats 302..326). The names of the stats from `STAT_PLAYING_TIME` (320)
+    //       onwards in `eStats` don't match what they are used for (see also `CheckForMissionStatsChanges`).
+    const auto IsStatZero    = [](eStats stat) { return CStats::GetStatValue(stat) == 0.0f; };
+    const auto IsStatNonZero = [&](eStats stat) { return !IsStatZero(stat); };
 
     // Find all shows that are available (depends on the progress in the game)
     std::array<int8, 31> shows;
     rng::fill(shows, -1);
     int8 numShows = 0;
 
-    if (IsStatNonZero(0x136) && IsStatZero(0x137)) {
+    if (IsStatNonZero(STAT_RYDERS_MISSION_ROBBING_UNCLE_SAM_ACCOMPLISHED) && IsStatZero(STAT_MIKE_TORENO_MISSION_ACCOMPLISHED)) {
         shows[numShows++] = 14;
-    } else if (IsStatNonZero(0x138)) {
+    } else if (IsStatNonZero(STAT_ARCHITECTURAL_ESPIONAGE_MISSION_ACCOMPLISHED)) {
         shows[numShows++] = 15;
     }
 
-    if (IsStatZero(0x139)) {
+    if (IsStatZero(STAT_JIZZY_MISSION_ACCOMPLISHED)) {
         shows[numShows++] = 12;
-    } else if (IsStatZero(0x138)) {
+    } else if (IsStatZero(STAT_ARCHITECTURAL_ESPIONAGE_MISSION_ACCOMPLISHED)) {
         shows[numShows++] = 13;
     }
 
-    if (IsStatNonZero(0x13B) && IsStatZero(0x13C)) {
+    if (IsStatNonZero(STAT_SMALL_TOWN_BANK_MISSION_ACCOMPLISHED) && IsStatZero(STAT_PHOTO_OPPORTUNITY_MISSION_ACCOMPLISHED)) {
         shows[numShows++] = 6;
     }
 
-    if (IsStatNonZero(0x12E) && IsStatZero(0x13A)) {
+    if (IsStatNonZero(STAT_DRIVE_THRU_MISSION_ACCOMPLISHED) && IsStatZero(STAT_REUNITING_THE_FAMILIES_MISSION_ACCOMPLISHED)) {
         shows[numShows++] = 3;
-    } else if (IsStatNonZero(0x13C) && IsStatZero(0x13D)) {
+    } else if (IsStatNonZero(STAT_PHOTO_OPPORTUNITY_MISSION_ACCOMPLISHED) && IsStatZero(STAT_DON_PEYOTE_MISSION_ACCOMPLISHED)) {
         shows[numShows++] = 4;
-    } else if (IsStatNonZero(0x13D)) {
+    } else if (IsStatNonZero(STAT_DON_PEYOTE_MISSION_ACCOMPLISHED)) {
         shows[numShows++] = 5;
     }
 
-    if (IsStatZero(0x13E)) {
+    if (IsStatZero(STAT_LOCAL_LIQUOR_STORE_MISSION_ACCOMPLISHED)) {
         shows[numShows++] = 7;
     } else {
         shows[numShows++] = 8;
     }
 
-    if (IsStatZero(0x13F)) {
+    if (IsStatZero(STAT_BADLANDS_MISSION_ACCOMPLISHED)) {
         shows[numShows++] = 9;
-    } else if (IsStatZero(0x130) && IsStatZero(0x140)) {
+    } else if (IsStatZero(STAT_555_WE_TIP_MISSION_ACCOMPLISHED) && IsStatZero(STAT_PLAYING_TIME)) {
         shows[numShows++] = 10;
-    } else if (IsStatNonZero(0x140)) {
+    } else if (IsStatNonZero(STAT_PLAYING_TIME)) {
         shows[numShows++] = 11;
     }
 
-    if (IsStatZero(0x141)) {
+    if (IsStatZero(STAT_HIDDEN_PACKAGES_FOUND)) {
         shows[numShows++] = 27;
     } else {
         shows[numShows++] = 28;
     }
 
-    if (IsStatZero(0x142)) {
+    if (IsStatZero(STAT_TAGS_SPRAYED)) {
         shows[numShows++] = 29;
     } else {
         shows[numShows++] = 30;
     }
 
-    if (IsStatZero(0x143)) {
+    if (IsStatZero(STAT_LEAST_FAVORITE_GANG)) {
         shows[numShows++] = 0;
-    } else if (IsStatNonZero(0x144) && IsStatZero(0x145)) {
+    } else if (IsStatNonZero(STAT_GANG_MEMBERS_WASTED) && IsStatZero(STAT_CRIMINALS_WASTED)) {
         shows[numShows++] = 1;
-    } else if (IsStatNonZero(0x146)) {
+    } else if (IsStatNonZero(STAT_MOST_FAVORITE_RADIO_STATION)) {
         shows[numShows++] = 2;
     }
 
-    if (IsStatZero(0x12E)) {
+    if (IsStatZero(STAT_DRIVE_THRU_MISSION_ACCOMPLISHED)) {
         shows[numShows++] = 16;
-    } else if (IsStatNonZero(0x12E) && IsStatZero(0x12F)) {
+    } else if (IsStatNonZero(STAT_DRIVE_THRU_MISSION_ACCOMPLISHED) && IsStatZero(STAT_MANAGEMENT_ISSUES_MISSION_ACCOMPLISHED)) {
         shows[numShows++] = 17;
-    } else if (IsStatNonZero(0x12F) && IsStatZero(0x143)) {
+    } else if (IsStatNonZero(STAT_MANAGEMENT_ISSUES_MISSION_ACCOMPLISHED) && IsStatZero(STAT_LEAST_FAVORITE_GANG)) {
         shows[numShows++] = 18;
-    } else if (IsStatNonZero(0x143) && IsStatZero(0x130)) {
+    } else if (IsStatNonZero(STAT_LEAST_FAVORITE_GANG) && IsStatZero(STAT_555_WE_TIP_MISSION_ACCOMPLISHED)) {
         shows[numShows++] = 19;
-    } else if (IsStatNonZero(0x130) && IsStatZero(0x131)) {
+    } else if (IsStatNonZero(STAT_555_WE_TIP_MISSION_ACCOMPLISHED) && IsStatZero(STAT_YAY_KA_BOOM_BOOM_MISSION_ACCOMPLISHED)) {
         shows[numShows++] = 20;
-    } else if (IsStatNonZero(0x131) && IsStatZero(0x132)) {
+    } else if (IsStatNonZero(STAT_YAY_KA_BOOM_BOOM_MISSION_ACCOMPLISHED) && IsStatZero(STAT_FISH_IN_A_BARREL_MISSION_ACCOMPLISHED)) {
         shows[numShows++] = 21;
-    } else if (IsStatNonZero(0x132) && IsStatZero(0x133)) {
+    } else if (IsStatNonZero(STAT_FISH_IN_A_BARREL_MISSION_ACCOMPLISHED) && IsStatZero(STAT_BREAKING_THE_BANK_AT_CALIGULAS_MISSION_ACCOMPLISHED)) {
         shows[numShows++] = 22;
-    } else if (IsStatNonZero(0x133) && IsStatZero(0x134)) {
+    } else if (IsStatNonZero(STAT_BREAKING_THE_BANK_AT_CALIGULAS_MISSION_ACCOMPLISHED) && IsStatZero(STAT_A_HOME_IN_THE_HILLS_MISSION_ACCOMPLISHED)) {
         shows[numShows++] = 23;
-    } else if (IsStatNonZero(0x134) && IsStatZero(0x135)) {
+    } else if (IsStatNonZero(STAT_A_HOME_IN_THE_HILLS_MISSION_ACCOMPLISHED) && IsStatZero(STAT_MAYBE_SET_RIOT_MODE)) {
         shows[numShows++] = 24;
-    } else if (IsStatNonZero(0x135) && CStats::GetStatValue(STAT_CITY_UNLOCKED) != 4.0f) {
+    } else if (IsStatNonZero(STAT_MAYBE_SET_RIOT_MODE) && CStats::GetStatValue(STAT_CITY_UNLOCKED) != 4.0f) {
         shows[numShows++] = 25;
     } else if (CStats::GetStatValue(STAT_CITY_UNLOCKED) == 4.0f) {
         shows[numShows++] = 26;
     }
 
     // Pick a random one that wasn't played recently
-    // NOTE: The history of shows is the music track history of the talk radio. It only has 20 entries,
-    //       but up to 29 are checked, which reads out of bounds (into the history of the next station).
+    // BUG: The history of shows is the music track history of the talk radio. It only has 20 entries,
+    //      but up to 29 are checked, which reads out of bounds (into the history of the next station).
     const int32 numToCheck = numShows - 1;
     const int8* const history = m_nMusicTrackIndexHistory[RADIO_TALK].indices.data();
     while (true) {

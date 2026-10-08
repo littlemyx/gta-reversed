@@ -52,7 +52,7 @@ CVector TransformPointOriginal(const CMatrix& m, const CVector& v) {
 }
 } // namespace
 
-// 0xC1C81C - Divisor of the forward speed when deciding whether to emit exhaust particles in `PreRender` (named by hand, never written to by the game code)
+// 0xC1C81C - Divisor of the forward speed when deciding whether to emit exhaust particles in `PreRender` (named by hand, initialised by the CRT static initializer at 0x853620 to `(1 / 3.6) / 50`, never written to afterwards)
 static auto& s_BikeExhaustSpeedDivisor = StaticRef<float>(0xC1C81C);
 
 // 0xC1C804 - Squared (sign preserved) steering input, written by `ProcessControlInputs` (named by hand, no known readers)
@@ -568,7 +568,7 @@ bool CBike::ProcessAI(uint32& extraHandlingFlags) {
         m_RideAnimData.AnimLeanFwd  = 0.0f;
         return true;
     }
-    case STATUS_REMOTE_CONTROLLED: {
+    case STATUS_FORCED_STOP: { // Jump table index 9 (0x6BCEBC); `STATUS_REMOTE_CONTROLLED` (8) goes to the default case
         if (m_vecMoveSpeed.SquaredMagnitude() < 0.01f) {
             vehicleFlags.bIsHandbrakeOn = true;
             m_BrakePedal                = 1.0f;

@@ -3,16 +3,27 @@
 #include "PedGroup.h"
 #include <TaskSimpleCarSetPedOut.h>
 #include <TaskComplexFollowLeaderInFormation.h>
+#include "Formation.h"
+#include "PedList.h"
+#include "TaskSimpleGoToPoint.h"
 
 //! @addr 0x5FB010
 //! @returns Distance of the furthers member from the leader
 float CPedGroup::FindDistanceToFurthestMember() {
-    return plugin::CallMethodAndReturn<float, 0x5FB010, CPedGroup*>(this);
-    /*
+    float furthest = 0.f;
     const auto leader = GetMembership().GetLeader();
-    for (const auto& mem : GetMembership().GetMembers(true)) {
-
-    }*/
+    if (!leader) {
+        return furthest;
+    }
+    const auto& leaderPos = leader->GetPosition();
+    for (const auto mem : GetMembership().GetFollowers()) {
+        const auto d = mem->GetPosition() - leaderPos;
+        const auto dist = std::sqrt(d.z * d.z + d.x * d.x + d.y * d.y); // Order of operations as in the original
+        if (furthest <= dist) {
+            furthest = dist;
+        }
+    }
+    return furthest;
 }
 
 // 0x5FB0A0
@@ -76,7 +87,26 @@ void CPedGroup::PlayerGaveCommand_Attack(CPed* playerPed, CPed* target) {
 
 // 0x5FAB60
 void CPedGroup::PlayerGaveCommand_Gather(CPed* ped) {
-    plugin::CallMethod<0x5FAB60, CPedGroup*, CPed*>(this, ped);
+    CPedList pedList;
+    pedList.Empty();
+    pedList.BuildListFromGroup_NotInCar_NoLeader(&GetMembership());
+
+    if (ped->GetIntelligence()->IsInACarOrEnteringOne() && ped->m_pVehicle) {
+        CFormation::GenerateGatherDestinations_AroundCar(pedList, ped->m_pVehicle);
+    } else {
+        CFormation::GenerateGatherDestinations(pedList, ped);
+    }
+    CFormation::DistributeDestinations(pedList);
+
+    for (int32 i = 0; i < (int32)pedList.m_count; i++) {
+        const auto groupPed = pedList.m_peds[i];
+        CVector    dest;
+        if (CFormation::ReturnDestinationForPed(groupPed, &dest)) {
+            const CTaskSimpleGoToPoint task{ PEDMOVE_SPRINT, dest, 2.f, true, false };
+            auto& intel = GetIntelligence();
+            intel.SetTask(groupPed, task, intel.GetPedTaskPairs(), TASK_SECONDARY_INVALID, false);
+        }
+    }
 }
 
 // 0x5FC7E0
@@ -144,11 +174,11 @@ void CPedGroup::InjectHooks() {
     RH_ScopedInstall(Destructor, 0x5FC190);
 
     RH_ScopedInstall(Teleport, 0x5F7AD0);
-    RH_ScopedInstall(PlayerGaveCommand_Gather, 0x5FAB60, {.Reversed = false});
+    RH_ScopedInstall(PlayerGaveCommand_Gather, 0x5FAB60);
     RH_ScopedInstall(PlayerGaveCommand_Attack, 0x5F7CC0);
     RH_ScopedInstall(IsAnyoneUsingCar, 0x5F7DB0);
     RH_ScopedInstall(GetClosestGroupPed, 0x5FACD0);
-    RH_ScopedInstall(FindDistanceToFurthestMember, 0x5FB010, {.Reversed = false});
+    RH_ScopedInstall(FindDistanceToFurthestMember, 0x5FB010);
     RH_ScopedInstall(FindDistanceToNearestMember, 0x5FB0A0);
     RH_ScopedInstall(Flush, 0x5FB790);
     RH_ScopedInstall(Process, 0x5FC7E0);

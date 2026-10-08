@@ -5,6 +5,7 @@
 #include "InteriorManager_c.h"
 #include "FurnitureManager_c.h"
 #include "Furniture_c.h"
+#include "ModelIndices.h"
 
 void Interior_c::InjectHooks() {
     RH_ScopedClass(Interior_c);
@@ -811,8 +812,8 @@ void Interior_c::CalcMatrix(const CVector* translation) {
 
     // Make it relative to the entity the interior belongs to
     auto* const entity = m_pGroup->GetEntity();
-    if (entity->m_pRwObject) {
-        RwMatrixMultiply(&m_matrix, &m_matrix, RwFrameGetMatrix(RwFrameGetParent(entity->m_pRwObject)));
+    if (entity->GetRwObject()) {
+        RwMatrixMultiply(&m_matrix, &m_matrix, RwFrameGetMatrix(RwFrameGetParent(entity->GetRwObject())));
     } else {
         // BUG: The original code passes a null matrix here (which would crash)
         RwMatrixMultiply(&m_matrix, &m_matrix, nullptr);
@@ -1113,7 +1114,7 @@ void Interior_c::AddPickups() {
         GetTileCentre(static_cast<float>(tileX), static_cast<float>(tileY), &pos);
 
         if (RandBelow(100) < 75) {
-            CPickups::GenerateNewOne(pos, MI_MONEY, PICKUP_MONEY, 10 + RandBelow(40));
+            CPickups::GenerateNewOne(pos, ModelIndices::MI_MONEY, PICKUP_MONEY, 10 + RandBelow(40));
         } else {
             pos.z += 0.5f;
 

@@ -6037,7 +6037,7 @@ void CCam::Process_M16_1stPerson(const CVector& target, float orientation, float
             m_fFOV        = (float)((double)m_fFOV / (((double)CTimer::GetTimeStep() * 255.0f + 10000.0f) * 0.0001f));
             gM16TargetFov = m_fFOV;
             m_fFOVSpeed   = 0.0f;
-        } else if (std::abs(gM16TargetFov - m_fFOV) <= 0.5f) {
+        } else if (!(std::abs(gM16TargetFov - m_fFOV) > 0.5f)) { // NOTE: written this way so a NaN takes this branch like in the original
             m_fFOVSpeed = 0.0f;
         } else {
             WellBufferMe(gM16TargetFov, m_fFOV, m_fFOVSpeed, 0.5f, 0.25f, false);
@@ -6080,7 +6080,7 @@ void CCam::Process_M16_1stPerson(const CVector& target, float orientation, float
         if (d < step || e < step) {
             m_fHorizontalAngle = CTheScripts::fCameraHeadingWhenPlayerIsAttached;
             step               = 0.0f;
-        } else if (d <= (double)e) {
+        } else if (!(d > (double)e)) {
             m_fHorizontalAngle = m_fHorizontalAngle - step;
         } else {
             m_fHorizontalAngle = step + m_fHorizontalAngle;
@@ -6358,7 +6358,7 @@ void CCam::Process_M16_1stPerson(const CVector& target, float orientation, float
     }
 
     if (!skipNearClip && m_nMode == MODE_CAMERA) {
-        const float fov = std::min(15.0f, m_fFOV);
+        const float fov = (15.0f < m_fFOV) ? 15.0f : m_fFOV; // Not `std::min` - differs for NaN
         RwCameraSetNearClipPlane(Scene.m_pRwCamera, (float)((((double)15.0f - fov) * 0.15f + 1.0) * 0.3f));
     }
 

@@ -17,6 +17,7 @@ void CAEAudioHardware::InjectHooks() {
     RH_ScopedInstall(Constructor, 0x4D83E0);
     RH_ScopedInstall(Destructor, 0x4D83A0);
 
+    RH_ScopedInstall(PlaySound, 0x4D86B0);
     RH_ScopedInstall(AllocateChannels, 0x5B9340);
     RH_ScopedInstall(RequestVirtualChannelSoundInfo, 0x4D8E60);
     RH_ScopedInstall(Query3DSoundEffects, 0x4D8490);
@@ -240,8 +241,51 @@ void CAEAudioHardware::Terminate() {
     SAFE_RELEASE(m_pDSDevice);
 }
 
+// 0x4D86B0
 void CAEAudioHardware::PlaySound(int16 channel, uint16 channelSlot, uint16 soundIdInSlot, uint16 bankSlot, int16 playPosition, int16 flags, float speed) {
-    plugin::CallMethod<0x4D86B0, CAEAudioHardware*, int16, uint16, uint16, uint16, int16, int16, float>(this, channel, channelSlot, soundIdInSlot, bankSlot, playPosition, flags, speed);
+    if (channel < 0 || channelSlot >= m_anNumChannelsInSlot[channel]) {
+        return;
+    }
+
+    uint32 bufferSize{};
+    uint16 sampleRate{};
+    const auto buffer = m_pMP3BankLoader->GetSoundBuffer((eSoundID)soundIdInSlot, (eSoundBankSlot)bankSlot, bufferSize, sampleRate);
+    if (!buffer) {
+        return;
+    }
+
+    const auto loopOffset = m_pMP3BankLoader->GetLoopOffset((eSoundID)soundIdInSlot, (eSoundBankSlot)bankSlot);
+
+    // BUG: Off by one, `m_aChannels` has `MAX_NUM_AUDIO_CHANNELS` entries, but index == MAX_NUM_AUDIO_CHANNELS passes this check
+    const auto chIdx = (uint16)(channelSlot + channel);
+    if (notsa::IsFixBugs() ? chIdx >= MAX_NUM_AUDIO_CHANNELS : chIdx > MAX_NUM_AUDIO_CHANNELS) {
+        return;
+    }
+
+    auto* const ch = static_cast<CAEStaticChannel*>(m_aChannels[chIdx]);
+    if (!ch->SetAudioBuffer(buffer, (uint16)bufferSize, (int16)soundIdInSlot, (int16)bankSlot, (int16)loopOffset, sampleRate)) {
+        return;
+    }
+
+    int32 startPos = playPosition < 0 ? 0 : playPosition;
+
+    const int32 length = ch->GetLength();
+    if ((flags & 0x8) && (int16)startPos > 0) { // Play position is a percentage
+        const auto  scaled = (float)((double)(int16)startPos * (double)0.01f * (double)length);
+        startPos = (int32)std::floor((double)scaled); // 0x406CE0 = `floor`, then `_ftol`
+    }
+    if ((int16)startPos > length) {
+        startPos = length;
+    }
+
+    if (m_n3dEffectsQueryResult) {
+        ch->SetNotInRoom((flags & 0x200) == 0);
+    }
+
+    ch->Play((int16)startPos, (int8)flags, speed);
+
+    m_awChannelFlags[(int32)channelSlot + channel] = flags;
+    ch->m_nFlags = (int32)flags; // +0x28
 }
 
 // 0x5B9340

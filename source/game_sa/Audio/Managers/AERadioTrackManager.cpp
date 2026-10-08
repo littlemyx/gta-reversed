@@ -746,17 +746,19 @@ void CAERadioTrackManager::StartRadio(const tVehicleAudioSettings& settings) {
        if (CTimer::GetTimeInMS() > m_nSavedTimeMs + 60'000)
            return false;
 
-       const auto savedHours = m_nSavedGameClockHours;
-       auto savedDays = m_nSavedGameClockDays;
+       // The saved clock values are signed bytes in the original (0xFF = unset)
+       const auto savedHours = (int8)m_nSavedGameClockHours;
+       const auto savedDays  = (int8)m_nSavedGameClockDays;
        if (savedHours < 0 || savedDays < 0)
            return false;
 
-       if (savedDays > CClock::GetGameClockDays()) {
-           const auto month = CClock::GetGameClockMonth();
-           savedDays += CClock::daysInMonth[month == 0 ? 11 : month - 1]; // prev month
+       int32 daysPassed = (int32)CClock::GetGameClockDays() - savedDays;
+       if (daysPassed < 0) {
+           const auto month = (int8)(CClock::GetGameClockMonth() - 1);
+           daysPassed += CClock::daysInMonth[month < 0 ? month + 12 : month]; // prev month
        }
 
-       if (CClock::GetGameClockHours() + 24 * savedDays - savedHours > 5)
+       if (daysPassed * 24 - savedHours + (int32)CClock::GetGameClockHours() > 5)
            return false;
 
        return true;

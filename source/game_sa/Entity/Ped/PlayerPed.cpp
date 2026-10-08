@@ -13,6 +13,14 @@
 #include "TaskSimpleUseGun.h"
 #include "EntryExitManager.h"
 #include "MBlur.h"
+#include "Clothes.h"
+#include "AnimManager.h"
+#include "WeaponInfo.h"
+#include "TaskSimpleFight.h"
+#include "WeaponModelInfo.h"
+#include "PedModelInfo.h"
+#include "VisibilityPlugins.h"
+#include "Streaming.h"
 
 bool CPlayerPed::bDebugPlayerInvincible;
 bool CPlayerPed::bDebugTargeting;
@@ -41,6 +49,7 @@ void CPlayerPed::InjectHooks() {
     RH_ScopedInstall(ReApplyMoveAnims, 0x609650);
     RH_ScopedInstall(DoesPlayerWantNewWeapon, 0x609710);
     RH_ScopedInstall(ProcessPlayerWeapon, 0x6097F0);
+    RH_ScopedInstall(ProcessAnimGroups, 0x6098F0);
     RH_ScopedInstall(PickWeaponAllowedFor2Player, 0x609800);
     RH_ScopedInstall(UpdateCameraWeaponModes, 0x609830);
     RH_ScopedInstall(ClearWeaponTarget, 0x609c80);
@@ -344,7 +353,150 @@ void CPlayerPed::UpdateCameraWeaponModes(CPad* pad) {
 
 // 0x6098F0
 void CPlayerPed::ProcessAnimGroups() {
-    plugin::CallMethod<0x6098F0, CPlayerPed *>(this);
+    // 0x609A3B: Default motion group + the offset of `group` relative to ANIM_GROUP_PLAYER
+    const auto DefaultMotionGroup = [](int32 group) -> int32 {
+        return group + CClothes::GetDefaultPlayerMotionGroup() - ANIM_GROUP_PLAYER;
+    };
+    // 0x609A1F: Player peds use their model's anim group (if it isn't the default player one)
+    const auto PlayerModelGroupOrDefault = [&](int32 group) -> int32 {
+        if (m_nPedType == PED_TYPE_PLAYER1) {
+            const auto modelGroup = CModelInfo::GetModelInfo(m_nModelIndex)->AsPedModelInfoPtr()->m_nAnimType;
+            if (modelGroup != ANIM_GROUP_PLAYER) {
+                return modelGroup;
+            }
+        }
+        return DefaultMotionGroup(group);
+    };
+
+    int32 newGroup;
+    int32 group = m_nAnimGroup;
+
+    // NOTE: -50deg < heading < 50deg, NaN falls through to the camera checks
+    const auto heading = m_pPlayerData->m_fFPSMoveHeading;
+    if (   !(-0.87266463f < heading && heading < 0.87266463f)
+        && TheCamera.GetActiveCam().Using3rdPersonMouseCam()
+        && CanStrafeOrMouseControl()
+    ) {
+        newGroup = group == ANIM_GROUP_PLAYER
+            ? PlayerModelGroupOrDefault(group)
+            : DefaultMotionGroup(group);
+    } else {
+        group = 0;
+
+        bool hasRocketLauncher = false;
+        if (m_pWeaponObject) {
+            if (auto* const mi = CVisibilityPlugins::GetClumpModelInfo(m_pWeaponObject)) {
+                if (mi->GetModelType() == MODEL_INFO_WEAPON) {
+                    group = (int32)static_cast<CWeaponModelInfo*>(mi)->GetWeaponInfo();
+                    hasRocketLauncher = group == WEAPON_RLAUNCHER || group == WEAPON_RLAUNCHER_HS;
+                }
+            }
+        }
+
+        if (hasRocketLauncher) {
+            newGroup = DefaultMotionGroup(ANIM_GROUP_PLAYERROCKET);
+        } else if (GetIntelligence()->GetTaskJetPack()) {
+            newGroup = ANIM_GROUP_PLAYERJETPACK;
+        } else switch (group) {
+        case WEAPON_BASEBALLBAT:
+        case WEAPON_SHOVEL:
+        case WEAPON_POOL_CUE:
+            newGroup = DefaultMotionGroup(ANIM_GROUP_PLAYERBBBAT);
+            break;
+        case WEAPON_CHAINSAW:
+        case WEAPON_FLAMETHROWER:
+        case WEAPON_MINIGUN:
+            newGroup = DefaultMotionGroup(ANIM_GROUP_PLAYERCSAW);
+            break;
+        case WEAPON_M4:
+        case WEAPON_AK47:
+        case WEAPON_SPAS12_SHOTGUN:
+        case WEAPON_SHOTGUN:
+        case WEAPON_SNIPERRIFLE:
+        case WEAPON_COUNTRYRIFLE:
+            newGroup = DefaultMotionGroup(ANIM_GROUP_PLAYER2ARMED);
+            break;
+        default:
+            if (m_pPlayerData->m_pPedClothesDesc->GetIsWearingBalaclava()) {
+                newGroup = ANIM_GROUP_PLAYERSNEAK;
+            } else {
+                newGroup = PlayerModelGroupOrDefault(ANIM_GROUP_PLAYER);
+            }
+            break;
+        }
+    }
+
+    if (m_nAnimGroup != newGroup) {
+        m_nAnimGroup = (AssocGroupId)newGroup;
+        ReApplyMoveAnims();
+    }
+
+    // Anim blocks of the melee weapon / fighting style
+    const auto* const wi = CWeaponInfo::GetWeaponInfo(GetActiveWeapon().m_Type, GetWeaponSkill());
+    bool releaseWeaponAnims = false, releaseStyleAnims = false;
+
+    // 0x609AA8 etc: Reference the anim block of `animGroup`, store it into `ref`
+    const auto ReferenceAnimBlock = [](uint32& ref, AssocGroupId animGroup) {
+        auto* block = CAnimManager::GetAnimationBlock(animGroup);
+        if (!block) {
+            block = CAnimManager::GetAnimationBlock(CAnimManager::GetAnimBlockName(animGroup));
+        }
+        const auto blockIdx = CAnimManager::GetAnimationBlockIndex(block);
+        if (block->IsLoaded) {
+            if (ref == 0) {
+                CAnimManager::AddAnimBlockRef(blockIdx);
+                ref = animGroup;
+            }
+        } else {
+            CStreaming::RequestModel(IFPToModelId(blockIdx), STREAMING_KEEP_IN_MEMORY);
+        }
+    };
+
+    if (wi->m_nWeaponFire == WEAPON_FIRE_MELEE && !bInVehicle) {
+        const auto weaponStyle = (int8)wi->m_nBaseCombo;
+        if (weaponStyle == STYLE_STANDARD) {
+            if (m_pPlayerData->m_nMeleeWeaponAnimReferenced) {
+                releaseWeaponAnims = true;
+            }
+        } else {
+            const auto grp = CTaskSimpleFight::m_aComboData[weaponStyle - STYLE_STANDARD].m_nAnimGroup;
+            if (grp != m_pPlayerData->m_nMeleeWeaponAnimReferenced) {
+                releaseWeaponAnims = m_pPlayerData->m_nMeleeWeaponAnimReferenced != 0;
+                ReferenceAnimBlock(m_pPlayerData->m_nMeleeWeaponAnimReferenced, grp);
+            }
+        }
+
+        if (m_nFightingStyle == STYLE_STANDARD) {
+            if (m_pPlayerData->m_nMeleeWeaponAnimReferencedExtra) {
+                releaseStyleAnims = true;
+            }
+        } else {
+            const auto grp = CTaskSimpleFight::m_aComboData[(uint8)m_nFightingStyle - STYLE_STANDARD].m_nAnimGroup;
+            if (grp != m_pPlayerData->m_nMeleeWeaponAnimReferencedExtra) {
+                releaseStyleAnims = m_pPlayerData->m_nMeleeWeaponAnimReferencedExtra != 0;
+                ReferenceAnimBlock(m_pPlayerData->m_nMeleeWeaponAnimReferencedExtra, grp);
+            }
+        }
+
+    } else {
+        // Not holding a melee weapon (or in a vehicle): release both
+        releaseWeaponAnims = true;
+        releaseStyleAnims  = true;
+    }
+
+    if (releaseWeaponAnims) {
+        if (const auto ref = m_pPlayerData->m_nMeleeWeaponAnimReferenced) {
+            CAnimManager::RemoveAnimBlockRef(CAnimManager::GetAnimationBlockIndex((AssocGroupId)ref));
+            m_pPlayerData->m_nMeleeWeaponAnimReferenced = 0;
+        }
+    }
+
+    if (releaseStyleAnims) {
+        if (const auto ref = m_pPlayerData->m_nMeleeWeaponAnimReferencedExtra) {
+            CAnimManager::RemoveAnimBlockRef(CAnimManager::GetAnimationBlockIndex((AssocGroupId)ref));
+            m_pPlayerData->m_nMeleeWeaponAnimReferencedExtra = 0;
+        }
+    }
 }
 
 // 0x609C80

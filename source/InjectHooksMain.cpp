@@ -722,6 +722,7 @@ void InjectHooksMain() {
     CWeapon::InjectHooks();
     cTransmission::InjectHooks();
     CPlayerPed::InjectHooks();
+    CPedSaveStructure::InjectHooks();
     CStats::InjectHooks();
     CCarCtrl::InjectHooks();
     CTheZones::InjectHooks();

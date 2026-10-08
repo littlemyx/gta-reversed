@@ -3453,10 +3453,25 @@ void CVehicle::ProcessBikeWheel(CVector& wheelFwd, CVector& wheelRight, CVector&
         (float)(right * wheelRight.z + fz) // z product stays unrounded in the original
     };
     const CVector forceBeforeNorm = force;
-    force.Normalise(); // 0x59C910
+    { // 0x59C910 - the sum of squares and the reciprocal stay in the FPU registers (extended precision); the shared `CVector::Normalise` rounds them to float
+        const double sumSq = (double)force.x * force.x + (double)force.y * force.y + (double)force.z * force.z;
+        if (sumSq <= 0.0) {
+            force.x = 1.f;
+        } else {
+            const double recip = 1.0 / std::sqrt(sumSq);
+            force.x = (float)(force.x * recip);
+            force.y = (float)(force.y * recip);
+            force.z = (float)(force.z * recip);
+        }
+    }
 
     const float mag = (float)std::sqrt((double)forceBeforeNorm.z * forceBeforeNorm.z + (double)forceBeforeNorm.y * forceBeforeNorm.y + (double)forceBeforeNorm.x * forceBeforeNorm.x);
-    const CVector cp = CrossProduct(wheelContactPoint, force); // 0x59C730
+    // 0x59C730 - the products stay in the FPU registers (extended precision); the shared `CrossProduct` rounds them to float
+    const CVector cp{
+        (float)((double)wheelContactPoint.y * force.z - (double)wheelContactPoint.z * force.y),
+        (float)((double)wheelContactPoint.z * force.x - (double)wheelContactPoint.x * force.z),
+        (float)((double)wheelContactPoint.x * force.y - (double)wheelContactPoint.y * force.x)
+    };
     const double cpSq = ((double)cp.x * cp.x + (double)cp.y * cp.y) + (double)cp.z * cp.z;
     const double moveScale = (double)m_fMass * mag;
     const double turnScale = (1.0 / (cpSq / m_fTurnMass + 1.0 / m_fMass)) * mag;
@@ -4172,11 +4187,22 @@ void CVehicle::ProcessBoatControl(tBoatHandlingData* boatHandling, float* fLastW
     }
 }
 
+// 0x59C890 - the original evaluation order; the sum stays in the FPU registers (extended precision)
+static CVector TransformPointExt(const CMatrix& m, const CVector& v) {
+    const auto &r = m.GetRight(), &f = m.GetForward(), &u = m.GetUp(), &p = m.GetPosition();
+    return CVector{
+        (float)((((double)u.x * v.z + (double)f.x * v.y) + (double)r.x * v.x) + p.x),
+        (float)((((double)u.y * v.z + (double)r.y * v.x) + (double)f.y * v.y) + p.y),
+        (float)((((double)u.z * v.z + (double)r.z * v.x) + (double)f.z * v.y) + p.z)
+    };
+}
+
 // 0x6DD130
 void CVehicle::DoBoatSplashes(float fWaterDamping) {
     // NOTE: The original keeps intermediates on the x87 stack (53-bit precision), hence the `double`s below.
-    const float speedSq = (float)((double)m_vecMoveSpeed.x * m_vecMoveSpeed.x + (double)m_vecMoveSpeed.y * m_vecMoveSpeed.y + (double)m_vecMoveSpeed.z * m_vecMoveSpeed.z);
-    if (!(speedSq > 0.0025f) || !(GetUp().z > 0.0f) || TheCamera.GetLookingForwardFirstPerson() || !IsVisible()) {
+    const double speedSqExt = (double)m_vecMoveSpeed.x * m_vecMoveSpeed.x + (double)m_vecMoveSpeed.y * m_vecMoveSpeed.y + (double)m_vecMoveSpeed.z * m_vecMoveSpeed.z;
+    const float  speedSq    = (float)speedSqExt; // The original stores it as a float, but compares the unrounded value
+    if (!(speedSqExt > 0.0025f) || !(GetUp().z > 0.0f) || TheCamera.GetLookingForwardFirstPerson() || !IsVisible()) {
         return;
     }
 
@@ -4255,14 +4281,7 @@ void CVehicle::DoBoatSplashes(float fWaterDamping) {
     const float posZ = zMult * colMin.z;
 
     // 0x59C890 - the original evaluation order
-    const auto TransformPointOriginal = [&](const CVector& v) {
-        const auto &r = m_matrix->GetRight(), &f = m_matrix->GetForward(), &u = m_matrix->GetUp(), &p = m_matrix->GetPosition();
-        return CVector{
-            ((u.x * v.z + f.x * v.y) + r.x * v.x) + p.x,
-            ((u.y * v.z + r.y * v.x) + f.y * v.y) + p.y,
-            ((u.z * v.z + r.z * v.x) + f.z * v.y) + p.z
-        };
-    };
+    const auto TransformPointOriginal = [&](const CVector& v) { return TransformPointExt(*m_matrix, v); };
 
     const CVector backward{ -m_matrix->GetForward().x, -m_matrix->GetForward().y, -m_matrix->GetForward().z };
 
@@ -5068,9 +5087,10 @@ void CVehicle::FireFixedMachineGuns() {
     const float offY = (float)(invLen * fwd.y);
 
     // Fires from one gun at `localPos`
-    const auto FireFromGun = [&](CVector localPos, float scaledOffX, float scaledOffY) {
-        CVector start = m_matrix->TransformPoint(localPos); // 0x59C890
-        CVector       end{ scaledOffX + start.x, scaledOffY + start.y, start.z };
+    // NOTE: The offsets are `double`s because the first gun uses the unrounded products (in the FPU registers) while the second one uses their float copies
+    const auto FireFromGun = [&](CVector localPos, double scaledOffX, double scaledOffY) {
+        CVector start = TransformPointExt(*m_matrix, localPos); // 0x59C890
+        CVector end{ (float)(scaledOffX + start.x), (float)(start.y + scaledOffY), start.z };
 
         const auto r1 = rand();
         const auto r2 = rand();
@@ -5089,7 +5109,7 @@ void CVehicle::FireFixedMachineGuns() {
 
     const float scaledOffX = (float)(offX * 60.f);
     const float scaledOffY = (float)(offY * 60.f);
-    FireFromGun({  2.f, 2.5f, 1.f }, scaledOffX, scaledOffY);
+    FireFromGun({  2.f, 2.5f, 1.f }, (double)offX * 60.f, (double)offY * 60.f);
     FireFromGun({ -2.f, 2.5f, 1.f }, scaledOffX, scaledOffY);
 
     AudioEngine.ReportWeaponEvent(AE_WEAPON_FIRE_PLANE, WEAPON_M4, this); // 0x506F40
@@ -5215,7 +5235,7 @@ void CVehicle::DoDriveByShootings() {
             if ((assoc->m_Flags & 1) != 0) {
                 return;
             }
-            if (assoc->m_BlendAmount <= 0.99f) {
+            if (!(assoc->m_BlendAmount > 0.99f)) { // (not `<=`: NaN returns as well)
                 return;
             }
         }

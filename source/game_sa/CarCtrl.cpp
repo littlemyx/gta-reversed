@@ -37,7 +37,7 @@ void CCarCtrl::InjectHooks()
     RH_ScopedInstall(CreateCarForScript, 0x431F80);
     RH_ScopedInstall(ChooseBoatModel, 0x421970);
     RH_ScopedInstall(ChooseCarModelToLoad, 0x421900);
-    RH_ScopedInstall(GetNewVehicleDependingOnCarModel, 0x421440, { .Reversed = false });
+    RH_ScopedInstall(GetNewVehicleDependingOnCarModel, 0x421440);
     RH_ScopedInstall(IsAnyoneParking, 0x42C250);
     RH_ScopedInstall(IsThisVehicleInteresting, 0x423EA0);
     RH_ScopedInstall(JoinCarWithRoadAccordingToMission, 0x432CB0);
@@ -420,34 +420,46 @@ void CCarCtrl::GetAIPlaneToDoDogFightAgainstPlayer(CAutomobile* automobile) {
     plugin::Call<0x42F370, CAutomobile*>(automobile);
 }
 
+// Allocates from the vehicle pool, and only calls the constructor if that succeeded (as the original code does)
+template<typename T, typename... Args>
+static T* CreateVehicle(int32 modelId, uint8 createdBy, Args... args) {
+    void* mem = CVehicle::operator new(sizeof(T));
+    if (!mem) {
+        return nullptr;
+    }
+    return new (mem) T(modelId, static_cast<eVehicleCreatedBy>(createdBy), args...);
+}
+
 // 0x421440
 CVehicle* CCarCtrl::GetNewVehicleDependingOnCarModel(int32 modelId, uint8 createdBy) {
-    return plugin::CallAndReturn<CVehicle*, 0x421440, int32, uint8>(modelId, createdBy);
-    /*
     switch (CModelInfo::GetModelInfo(modelId)->AsVehicleModelInfoPtr()->m_nVehicleType) {
-    case VEHICLE_TYPE_MTRUCK:
-        return new CMonsterTruck(modelId, createdBy);
-    case VEHICLE_TYPE_QUAD:
-        return new CQuadBike(modelId, createdBy);
-    case VEHICLE_TYPE_HELI:
-        return new CHeli(modelId, createdBy);
-    case VEHICLE_TYPE_PLANE:
-        return new CPlane(modelId, createdBy);
-    case VEHICLE_TYPE_BOAT:
-        return new CBoat(modelId, createdBy);
-    case VEHICLE_TYPE_TRAIN:
-        return new CTrain(modelId, createdBy);
-    case VEHICLE_TYPE_BIKE:
-        return new CBike(modelId, createdBy);
-    case VEHICLE_TYPE_BMX:
-        return new CBmx(modelId, createdBy);
-    case VEHICLE_TYPE_TRAILER:
-        return new CTrailer(modelId, createdBy);
-    case VEHICLE_TYPE_AUTOMOBILE:
-        return new CAutomobile(modelId, createdBy, 1);
+    case VEHICLE_TYPE_MTRUCK:  return CreateVehicle<CMonsterTruck>(modelId, createdBy);
+    case VEHICLE_TYPE_QUAD:    return CreateVehicle<CQuadBike>(modelId, createdBy);
+    case VEHICLE_TYPE_HELI:    return CreateVehicle<CHeli>(modelId, createdBy);
+    case VEHICLE_TYPE_PLANE:   return CreateVehicle<CPlane>(modelId, createdBy);
+    case VEHICLE_TYPE_BOAT:    return CreateVehicle<CBoat>(modelId, createdBy);
+    case VEHICLE_TYPE_TRAIN:   return CreateVehicle<CTrain>(modelId, createdBy);
+    case VEHICLE_TYPE_BIKE: {
+        auto* const bike = CreateVehicle<CBike>(modelId, createdBy);
+        if (!bike) {
+            // BUG: Original code writes the bike flags through a null pointer here (crash). We just return null.
+            return nullptr;
+        }
+        bike->bikeFlags.bOnSideStand = true;
+        return bike;
     }
-    return nullptr;
-    */
+    case VEHICLE_TYPE_BMX: {
+        auto* const bmx = CreateVehicle<CBmx>(modelId, createdBy);
+        if (!bmx) {
+            // BUG: Same as above
+            return nullptr;
+        }
+        bmx->bikeFlags.bOnSideStand = true;
+        return bmx;
+    }
+    case VEHICLE_TYPE_TRAILER: return CreateVehicle<CTrailer>(modelId, createdBy);
+    default:                   return CreateVehicle<CAutomobile>(modelId, createdBy, true);
+    }
 }
 
 // 0x42C250

@@ -7,6 +7,7 @@
 // NOTE: The original returns a pointer to the element (not a copy)
 CVector& CPedShelterAttractor::GetDisplacement(int32 pedId) {
     if (ms_displacements.empty()) {
+        ms_displacements.reserve(5); // NOTE: `SArray::emplace_back` can't grow an array which has no storage yet
         // Generate 5 random displacements (inside a circle with radius 2), each at least 1 unit away from all others
         for (int32 n = 0; n < 5;) {
             const float angle  = (float)((double)CGeneral::GetRandomNumber() * (double)RAND_MAX_FLOAT_RECIPROCAL * (double)TWO_PI);

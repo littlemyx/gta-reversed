@@ -24,14 +24,10 @@ namespace {
 // Constants from the original exe
 constexpr float kInv255      = 1.0f / 255.0f;   // 0x859A3C
 constexpr float kInv128      = 1.0f / 128.0f;   // 0x858B88
-constexpr float kInvRandMax  = 1.0f / 32767.0f; // 0x858C7C
-constexpr float kDegToRad    = 0.0174532793f;   // 0x85A7BC (not exactly PI/180)
+constexpr float kDegToRad    = 0.0174532793f;   // 0x85A7BC (not exactly PI/180, so `DegreesToRadians` can't be used)
 
-// 0x8A6230 - RwBlendFunction table (1..11)
-auto& s_BlendFunctions = StaticRef<std::array<int32, 11>>(0x8A6230);
-
-// 0xB6FA14 - A vector in `TheCamera` (TheCamera+0x9EC), used by the "trail on screen" particles
-auto& s_TrailCamVec = StaticRef<CVector>(0xB6FA14);
+// 0x8A6230 - Blend function table: { rwBLENDZERO .. rwBLENDSRCALPHASAT } (values 1..11)
+auto& s_BlendFunctions = StaticRef<std::array<RwBlendFunction, 11>>(0x8A6230);
 
 //! Set up the temporary (identity) basis matrix the way the original does it
 void SetupIdentityBasis(RwMatrix& mat) {
@@ -487,7 +483,7 @@ void FxEmitterBP_c::Render(RwCamera* camera, uint32 txdHashKey, float brightness
         if (info.m_SmokeType > -1) {
             const float smokeBrightness    = info.m_SmokeBrightness;
             const float negSmokeBrightness = -smokeBrightness;
-            const float randOffset = ((smokeBrightness - negSmokeBrightness) * ((float)CGeneral::GetRandomNumber() * kInvRandMax) + negSmokeBrightness) * kInv255;
+            const float randOffset = ((smokeBrightness - negSmokeBrightness) * ((float)CGeneral::GetRandomNumber() * RAND_MAX_FLOAT_RECIPROCAL) + negSmokeBrightness) * kInv255;
 
             FxPrtMult_c mult{};
             const auto ProcessColor = [&](float color) {
@@ -533,10 +529,11 @@ void FxEmitterBP_c::Render(RwCamera* camera, uint32 txdHashKey, float brightness
                     prt->m_Velocity.y * k,
                     prt->m_Velocity.z * k,
                 };
+                const auto& prevCamPos = TheCamera.m_mCameraMatrixOld.GetPosition(); // Original: global at 0xB6FA14 (TheCamera + 0x9EC)
                 const CVector prevPos{
-                    (pp.x - vk.x) - s_TrailCamVec.x,
-                    (pp.y - vk.y) - s_TrailCamVec.y,
-                    (pp.z - vk.z) - s_TrailCamVec.z,
+                    (pp.x - vk.x) - prevCamPos.x,
+                    (pp.y - vk.y) - prevCamPos.y,
+                    (pp.z - vk.z) - prevCamPos.z,
                 };
                 trailVec = CVector{
                     (toParticle.x - prevPos.x) * info.m_fTrailTime,
@@ -556,11 +553,9 @@ void FxEmitterBP_c::Render(RwCamera* camera, uint32 txdHashKey, float brightness
                 };
             }
 
-            CVector dir = trailVec;
+            CVector dir = trailVec; // Normalized in `BuildDirectedBasis`
             if (dir.x == 0.0f && dir.y == 0.0f && dir.z == 0.0f) {
                 dir.z = 1.0f;
-            } else {
-                RwV3dNormalize(&dir, &dir);
             }
 
             const CVector toCam{

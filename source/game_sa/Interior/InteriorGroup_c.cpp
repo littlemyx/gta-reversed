@@ -48,8 +48,8 @@ namespace {
 auto& s_ArePedsEnabled        = StaticRef<bool>(0xBB3DC2);                    // InteriorManager_c::m_ArePedsEnabled
 auto& s_InteriorPedsAliveState = StaticRef<std::array<bool, 16>>(0xBB3D9C);   // InteriorManager_c::m_InteriorPedsAliveState
 
-// `(int)(rand() * (1 / 32768.f) * n)` - See `RandBelow` in `Interior_c.cpp`
-int32 RandBelow(int32 n) {
+// `(int)(rand() * (1 / 32768.f) * n)` - Same as `RandBelow` in `Interior_c.cpp` (named differently so unity builds don't break)
+int32 GroupRandBelow(int32 n) {
     return static_cast<int32>(static_cast<float>(CGeneral::GetRandomNumber()) * (1.f / 32768.f) * static_cast<float>(n));
 }
 
@@ -153,7 +153,7 @@ void InteriorGroup_c::SetupHousePeds() {
 
     const auto pos = GetEntityOrigin(m_pEntity);
 
-    int32 numPeds = (RandBelow(100) <= 50) + 1;
+    int32 numPeds = (GroupRandBelow(100) <= 50) + 1;
 
     // Chance to create gang members instead
     bool        isGang  = false;
@@ -162,7 +162,7 @@ void InteriorGroup_c::SetupHousePeds() {
         gangType = CPopCycle::PickGangToCreateMembersOf();
         if (gangType != static_cast<ePedType>(0) && CPopulation::ChooseGangOccupation(static_cast<eGangID>(gangType - PED_TYPE_GANG1)) >= 0) {
             isGang = true;
-            if (RandBelow(100) <= 15) {
+            if (GroupRandBelow(100) <= 15) {
                 numPeds = 3 + (CGeneral::GetRandomNumber() >= 0x3FFF);
             } else {
                 isGang = false;
@@ -291,8 +291,9 @@ void InteriorGroup_c::SetupPaths() {
                     const auto dx = nodePos.x - exitPt.PosOutside.x;
                     const auto dy = nodePos.y - exitPt.PosOutside.y;
                     const auto dz = nodePos.z - exitPt.PosOutside.z;
-                    const auto distSq = e == 0 ? dx * dx + dy * dy + dz * dz : dy * dy + dz * dz + dx * dx;
-                    if (distSq < 9.f) {
+                    // NOTE: The order of the additions is the same as in the original (it differs for the 1st exit)
+                    const auto distSq = e == 0 ? dy * dy + dz * dz + dx * dx : dx * dx + dz * dz + dy * dy;
+                    if (distSq <= 9.f) { // NOTE: `<=`, not `<`
                         paths.AddInteriorLinkToExternalNode(outsideNode, ext);
                     }
                 }
@@ -328,7 +329,7 @@ void InteriorGroup_c::SetupPaths() {
             const auto dx   = unlinkedPos[i].x - unlinkedPos[j].x;
             const auto dy   = unlinkedPos[i].y - unlinkedPos[j].y;
             const auto dz   = unlinkedPos[i].z - unlinkedPos[j].z;
-            const auto dist = dx * dx + dy * dy + dz * dz;
+            const auto dist = dy * dy + dz * dz + dx * dx; // NOTE: Same order of additions as in the original
             if (dist < bestDist) {
                 best     = j;
                 bestDist = dist;
@@ -344,7 +345,8 @@ void InteriorGroup_c::SetupPaths() {
         }
     }
 
-    paths.CompleteNewInterior(nullptr);
+    // 0x452270 - `CPathFind::CompleteNewInterior` is declared, but not defined (yet)
+    plugin::CallMethod<0x452270, CPathFind*, CNodeAddress*>(&paths, nullptr);
     m_pathSetupComplete = true;
 }
 
@@ -448,7 +450,7 @@ void InteriorGroup_c::DereferenceAnims() {
     if (!m_animBlockReferenced) {
         return;
     }
-    CAnimManager::AddAnimBlockRef(CAnimManager::GetAnimationBlockIndex(GetAnimBlockName()));
+    CAnimManager::RemoveAnimBlockRef(CAnimManager::GetAnimationBlockIndex(GetAnimBlockName())); // 0x4D3FD0 (was `AddAnimBlockRef`)
     m_animBlockReferenced = false;
 }
 
@@ -490,7 +492,7 @@ void InteriorGroup_c::UpdateOfficePeds() {
         }
 
         for (int32 i = 0; i < numPeds; i++) {
-            const auto modelId = static_cast<eModelID>(CStreaming::FindMIPedSlotForInterior(RandBelow(8)));
+            const auto modelId = static_cast<eModelID>(CStreaming::FindMIPedSlotForInterior(GroupRandBelow(8)));
             const auto pedIdx  = m_numPeds;
             auto* const ped    = CPopulation::AddPed(CModelInfo::GetPedModelInfo(modelId)->m_nPedType, modelId, pos, false);
             m_peds[pedIdx]     = ped;
@@ -533,10 +535,10 @@ void InteriorGroup_c::SetupShopPeds() {
     m_numPeds = 0;
 
     // NOTE: `RandBelow(-3)` is in [-2, 0]
-    const int32 numPeds = (2 - RandBelow(-3)) * m_numInteriors + 1;
+    const int32 numPeds = (2 - GroupRandBelow(-3)) * m_numInteriors + 1;
     for (int32 i = 0; i < numPeds; i++) {
         // The first ped is the shopkeeper
-        const auto modelId = static_cast<eModelID>(CStreaming::FindMIPedSlotForInterior(i == 0 ? 0 : 1 - RandBelow(-7)));
+        const auto modelId = static_cast<eModelID>(CStreaming::FindMIPedSlotForInterior(i == 0 ? 0 : 1 - GroupRandBelow(-7)));
         const auto pedType = CModelInfo::GetPedModelInfo(modelId)->m_nPedType;
 
         auto* const interior = GetRandomInterior();
@@ -632,7 +634,7 @@ bool InteriorGroup_c::FindInteriorInfo(eInteriorInfoType infoType, InteriorInfo_
     }
 
     if (numCandidates > 0) {
-        const auto idx = RandBelow(numCandidates);
+        const auto idx = GroupRandBelow(numCandidates);
         *outInfo     = infos[idx];
         *outInterior = interiors[idx];
         return true;
@@ -660,7 +662,7 @@ int32 InteriorGroup_c::GetNumInteriorInfos(int32 type) {
 
 // 0x5948C0
 Interior_c* InteriorGroup_c::GetRandomInterior() {
-    const auto idx = RandBelow(m_numInteriors);
+    const auto idx = GroupRandBelow(m_numInteriors);
     int32      n   = 0;
     for (auto* const interior : m_interiors) {
         if (interior) {

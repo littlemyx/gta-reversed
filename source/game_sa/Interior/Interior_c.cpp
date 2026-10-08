@@ -1147,7 +1147,7 @@ void Interior_c::Shop_FurnishEdges() {
     // Shelf infos (and walkable tiles) along the walls
     const int32 lastX = width - 2;
     for (int32 x = 1; lastX >= 1 && x <= lastX; x++) {
-        if (IsOutside(x, box.m_tWindowStart, box.m_tWindowEnd)) {
+        if (IsOutside(x, box.m_tDoorStart, box.m_tDoorEnd)) {
             TryAddShelfInfo(static_cast<float>(x), static_cast<float>(maxY), 2);
         }
         if (GetTileStatus(x, 1) == 0) {
@@ -2003,7 +2003,7 @@ CEntity* Interior_c::PlaceFurniture(Furniture_c* furniture, int32 tileX, int32 t
 
     auto* const building = new CBuilding();
     item->m_entity = building;
-    building->SetModelIndex(furniture->m_nModelId);
+    building->SetModelIndexNoCreate(furniture->m_nModelId); // vtable slot 6 (0x18)
     building->SetMatrix(worldMat);
     building->SetAreaCode(static_cast<eAreaCodes>(m_areaCode));
     building->m_bDontCastShadowsOn = true; // 0x10000

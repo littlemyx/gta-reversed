@@ -26,6 +26,8 @@ auto& gPlayerPedVisible = StaticRef<bool>(0x8CC380); // true
 auto& gCurCamColVars = StaticRef<uint8>(0x8CCB80);
 auto& gCurDistForCam = StaticRef<float>(0x8CCB84);
 auto& gpCamColVars = StaticRef<float*>(0xB6FE88);
+// 0x509AE0 - defined (and hooked) in Cam.cpp
+void WellBufferMe(float target, float& valueToChange, float& speedSoFar, float topSpeed, float speedStep, bool isAnAngle);
 static auto& gCamColLastRadius = StaticRef<float>(0xB6EC6C);
 auto& gCamColVars = StaticRef<float[28][6]>(0x8CC8E0);
 // Set if the cam mode was changed by the player (read at the end of CamControl, set by the cinematic cams (`ProcessObbeCinemaCamera*`) and someone else)
@@ -3369,39 +3371,6 @@ bool CycleCameraModeUpJustDown(const CPad& pad) {
     case 1: return pad.IsDPadUpPressed();
     default: return false;
     }
-}
-
-// 0x509AE0 - `WellBufferMe` is private to Cam.cpp
-void WellBufferMe(float target, float& valueToChange, float& speedSoFar, float topSpeed, float speedStep, bool isAnAngle) {
-    // NOTE: the hook of this function lives in Cam.cpp (`WellBufferMe` there is a copy of this one, installed on the same address)
-    constexpr double PI     = (double)std::numbers::pi_v<float>;     // 0x858CB8
-    constexpr double TWO_PI = (double)(2.f * std::numbers::pi_v<float>); // 0x858CBC
-
-    // x87 extended precision is kept by the original, except for the (angle) difference which is spilled to a float
-    double diff = (double)target - valueToChange;
-    if (isAnAngle) {
-        diff = (double)(float)diff;
-        for (; diff >= PI; diff -= TWO_PI) {
-            ;
-        }
-        for (; diff < -PI; diff += TWO_PI) {
-            ;
-        }
-    }
-
-    const double fullSpeed = diff * topSpeed;
-    const double speedDiff = fullSpeed - speedSoFar;
-    const double change    = std::abs(speedDiff) * CTimer::GetTimeStep() * speedStep;
-    speedSoFar = (float)(speedDiff <= 0.0 || std::isnan(speedDiff) ? speedSoFar - change : change + speedSoFar);
-
-    if (fullSpeed < 0.0 && fullSpeed > speedSoFar) {
-        speedSoFar = (float)fullSpeed;
-    } else if (fullSpeed > 0.0 && fullSpeed < speedSoFar) {
-        speedSoFar = (float)fullSpeed;
-    }
-
-    const float timeStep = CTimer::GetTimeStep();
-    valueToChange = (float)((10.0f < timeStep ? 10.0f : timeStep) * (double)speedSoFar + valueToChange);
 }
 
 // Moves `value` towards `target` by (at most) `step`

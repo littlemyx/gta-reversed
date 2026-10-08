@@ -278,33 +278,37 @@ static void AvoidTheGeometry(const CVector& src, const CVector& dst, CVector& ou
     plugin::CallMethod<0x514030, CCamera*, const CVector*, const CVector*, CVector*, float>(&TheCamera, &src, &dst, &out, fov);
 }
 
-// 0x509AE0
-static void WellBufferMe(float target, float& valueToChange, float& speedSoFar, float topSpeed, float speedStep, bool isAnAngle) {
-    const auto valueToTargetDiff = [&] {
-        auto d = target - valueToChange;
-        if (isAnAngle) {
-            for (; d >= DegreesToRadians(180.0f); d -= DegreesToRadians(360.0f)) {
-                ;
-            }
-            for (; d < DegreesToRadians(-180.0f); d += DegreesToRadians(360.0f)) {
-                ;
-            }
-        }
-        return d;
-    }();
+// 0x509AE0 - the single implementation, shared with Camera.cpp (declared there)
+void WellBufferMe(float target, float& valueToChange, float& speedSoFar, float topSpeed, float speedStep, bool isAnAngle) {
+    constexpr double PI     = (double)std::numbers::pi_v<float>;         // 0x858CB8
+    constexpr double TWO_PI = (double)(2.f * std::numbers::pi_v<float>); // 0x858CBC
 
-    const auto fullSpeedStep = valueToTargetDiff * topSpeed;
-    speedSoFar += std::abs(std::abs(fullSpeedStep - speedSoFar) * CTimer::GetTimeStep() * speedStep);
-
-    if (fullSpeedStep >= 0.0f || fullSpeedStep <= speedSoFar) {
-        if (fullSpeedStep > 0.0f && fullSpeedStep < speedSoFar) {
-            speedSoFar = fullSpeedStep;
+    // x87 extended precision is kept by the original, except for the (angle) difference which is spilled to a float
+    double diff = (double)target - valueToChange;
+    if (isAnAngle) {
+        diff = (double)(float)diff;
+        for (; diff >= PI; diff -= TWO_PI) {
+            ;
         }
-    } else {
-        speedSoFar = fullSpeedStep;
+        for (; diff < -PI; diff += TWO_PI) {
+            ;
+        }
     }
 
-    valueToChange += std::min(CTimer::GetTimeStep(), 10.0f) * speedSoFar;
+    const double fullSpeed = diff * topSpeed;
+    const double speedDiff = fullSpeed - speedSoFar;
+    const double change    = std::abs(speedDiff) * CTimer::GetTimeStep() * speedStep;
+    // (FCOM + TEST 0x41): subtracts if `speedDiff <= 0` or unordered
+    speedSoFar = (float)(speedDiff <= 0.0 || std::isnan(speedDiff) ? speedSoFar - change : change + speedSoFar);
+
+    if (fullSpeed < 0.0 && fullSpeed > speedSoFar) {
+        speedSoFar = (float)fullSpeed;
+    } else if (fullSpeed > 0.0 && fullSpeed < speedSoFar) {
+        speedSoFar = (float)fullSpeed;
+    }
+
+    const float timeStep = CTimer::GetTimeStep();
+    valueToChange = (float)((10.0f < timeStep ? 10.0f : timeStep) * (double)speedSoFar + valueToChange);
 }
 
 namespace {

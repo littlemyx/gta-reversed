@@ -21,6 +21,8 @@ public:
     bool      MakeAbortable(CPed* ped, eAbortPriority priority = ABORT_PRIORITY_URGENT, CEvent const* event = nullptr) override { return false; }
     bool      ProcessPed(CPed* ped) override;
 
+    bool WillKillPed() const { return m_bWillKillPed; } // NOTSA
+
 private: // Wrappers for hooks
     // 0x653EA0
     CTaskSimpleHurtPedWithCar* Constructor(CVehicle* a, float b) {

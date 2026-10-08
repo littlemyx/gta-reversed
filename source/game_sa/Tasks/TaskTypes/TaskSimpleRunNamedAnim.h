@@ -16,10 +16,10 @@ public:
     char                 m_animName[24];
     char                 m_animGroupName[16];
     float                m_fBlendDelta;
-    CAnimBlendHierarchy* m_pAnimHierarchy;
+    CAnimBlendHierarchy* m_pAnimHierarchy{};
     uint32               m_Time;
     CTaskTimer           m_Timer;
-    CVector              m_vecOffsetAtEnd;
+    CVector              m_vecOffsetAtEnd{};
     uint32               m_animFlags;
     int16                m_nAnimId;
 

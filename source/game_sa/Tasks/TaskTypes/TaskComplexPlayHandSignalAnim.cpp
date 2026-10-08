@@ -32,39 +32,29 @@ CTaskComplexPlayHandSignalAnim::CTaskComplexPlayHandSignalAnim(AnimationId anima
 
 // 0x61BDF0
 CTaskComplexPlayHandSignalAnim::~CTaskComplexPlayHandSignalAnim() {
-    enum {
-        RIGHT,
-        LEFT,
-    };
-    enum {
-        NONFAT,
-        FAT
-    };
-    const eModelID handModels[2][2]{
-        // nonfat           fat
-        { MODEL_SHANDL, MODEL_FHANDL }, // left
-        { MODEL_SHANDR, MODEL_FHANDR }  // right
-    };
+    const auto leftModel  = CModelInfo::GetModelInfo(m_DoUseFatHands ? MODEL_FHANDL : MODEL_SHANDL);
+    const auto rightModel = CModelInfo::GetModelInfo(m_DoUseFatHands ? MODEL_FHANDR : MODEL_SHANDR);
 
-    // Remove hand model refs
-    for (const auto i : { LEFT, RIGHT }) {
-        CModelInfo::GetModelInfo(handModels[i][m_DoUseFatHands ? FAT : NONFAT])->RemoveRef();
+    // Remove hand model refs (only those we've added)
+    if (m_bLeftHandLoaded) {
+        leftModel->RemoveRef();
+    }
+    if (m_bRightHandLoaded) {
+        rightModel->RemoveRef();
     }
 
     // Deal with anim
     if (m_bAnimationLoaded) { // Remove anim ref
         CAnimManager::RemoveAnimBlockRef(ms_animBlock);
-    } else if (ms_animBlock != -1 && !CAnimManager::GetAnimBlocks()[ms_animBlock].RefCnt) { 
-        if (!rng::all_of(std::array{ LEFT, RIGHT }, [&, this](auto i) { // Unload anim block if not all of the models has refs
-            return CModelInfo::GetModelInfo(handModels[i][m_DoUseFatHands ? FAT : NONFAT])->m_nRefCount != 0;
-        })) {
-            CStreaming::RemoveModel(IFPToModelId(ms_animBlock));        
+    } else if (leftModel->m_nRefCount == 0 || rightModel->m_nRefCount == 0) { // Unload anim block if not all of the models have refs
+        if (ms_animBlock != (uint32)-1 && !CAnimManager::GetAnimBlocks()[ms_animBlock].RefCnt) {
+            CStreaming::RemoveModel(IFPToModelId(ms_animBlock));
         }
     }
 }
 
-// 0x61B460
-AnimationId CTaskComplexPlayHandSignalAnim::GetAnimIdForPed(CPed* ped) {
+// 0x61B460 (NOTSA: `this` (ecx) is passed by the original callers but never read, hence `__stdcall` to match the callee-cleanup `ret 4`)
+AnimationId __stdcall CTaskComplexPlayHandSignalAnim::GetAnimIdForPed(CPed* ped) {
     switch (ped->m_nPedType) {
     case PED_TYPE_GANG1:  return (AnimationId)0x140;
     case PED_TYPE_GANG2:  return (AnimationId)0x141;
@@ -146,7 +136,7 @@ CTask* CTaskComplexPlayHandSignalAnim::ControlSubTask(CPed* ped) {
         if (ms_animBlock == (uint32)-1) {
             ms_animBlock = CAnimManager::GetAnimationBlockIndex("ghands");
         }
-        if (CAnimManager::GetAnimBlocks()[ms_animBlock].IsLoaded) {
+        if (CStreaming::IsModelLoaded(IFPToModelId(ms_animBlock))) { // NOTE: Checks the streaming state, not `CAnimBlock::IsLoaded`
             if (!m_bAnimationLoaded) {
                 CAnimManager::AddAnimBlockRef(ms_animBlock);
                 m_bAnimationLoaded = true;

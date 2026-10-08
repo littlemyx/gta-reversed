@@ -15,12 +15,15 @@ void CTaskGoToVehicleAndLean::InjectHooks() {
 
     RH_ScopedInstall(Constructor, 0x660E60);
     RH_ScopedInstall(Destructor, 0x660EE0);
-    RH_ScopedInstall(Clone, 0x6621B0);
-    RH_ScopedInstall(MakeAbortable, 0x664500);
-    RH_ScopedInstall(CreateNextSubTask, 0x664590);
-    RH_ScopedInstall(CreateFirstSubTask, 0x664D40);
-    RH_ScopedInstall(ControlSubTask, 0x664E60);
     RH_ScopedInstall(CalcTargetPos, 0x664770);
+    RH_ScopedInstall(DoTidyUp, 0x660F60);
+
+    RH_ScopedVMTInstall(Clone, 0x6621B0);
+    RH_ScopedVMTInstall(GetTaskType, 0x660ED0);
+    RH_ScopedVMTInstall(MakeAbortable, 0x664500);
+    RH_ScopedVMTInstall(CreateNextSubTask, 0x664590);
+    RH_ScopedVMTInstall(CreateFirstSubTask, 0x664D40);
+    RH_ScopedVMTInstall(ControlSubTask, 0x664E60);
 }
 
 // 0x660E60
@@ -88,10 +91,7 @@ CTask* CTaskGoToVehicleAndLean::CreateFirstSubTask(CPed* ped) {
 
             m_TargetPos = CalcTargetPos(ped);
 
-            const auto& pedPos = ped->GetPosition();
-            const auto  dz     = m_TargetPos.z - pedPos.z;
-            const auto  dy     = m_TargetPos.y - pedPos.y;
-            if (dz * dz + dy * dy + (m_TargetPos.x - pedPos.x) * (m_TargetPos.x - pedPos.x) < 1.f) { // Already there
+            if ((m_TargetPos - ped->GetPosition()).SquaredMagnitude() < 1.f) { // Already there
                 return nullptr;
             }
             return new CTaskComplexGoToPointAndStandStill{ PEDMOVE_WALK, m_TargetPos, 0.05f, 2.f, false, true };
@@ -132,7 +132,7 @@ CTask* CTaskGoToVehicleAndLean::ControlSubTask(CPed* ped) {
 
     // Abort if the spot we want to lean on has moved
     const auto newPos = CalcTargetPos(ped);
-    if ((newPos - m_TargetPos).SquaredMagnitude() > 0.01f) {
+    if ((newPos - m_TargetPos).SquaredMagnitude() > 0.010000001f) { // NOTE: 0x3C23D70B, not `0.01f` (0x3C23D70A)
         if (m_pSubTask->MakeAbortable(ped, ABORT_PRIORITY_URGENT, nullptr)) {
             DoTidyUp(ped);
             return nullptr;
@@ -175,7 +175,7 @@ CVector CTaskGoToVehicleAndLean::CalcTargetPos(CPed* ped) {
         m_bPedOnRightSide = false;
         localX            = bb.m_vecMin.x - 0.5f;
     }
-    return m_Vehicle->GetMatrix() * CVector{ localX, 0.f, 0.f };
+    return m_Vehicle->GetMatrix().TransformPoint(CVector{ localX, 0.f, 0.f });
 }
 
 // 0x660F60

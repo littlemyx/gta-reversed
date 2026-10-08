@@ -53,6 +53,8 @@ CTaskSimpleRunNamedAnim::CTaskSimpleRunNamedAnim(
     strcpy_s(m_animGroupName, animGroupName);
     if (const auto block = CAnimManager::GetAnimationBlock(m_animGroupName)) {
         m_pAnimHierarchy = CAnimManager::GetAnimation(m_animName, block);
+    } else {
+        m_pAnimHierarchy = nullptr;
     }
 }
 
@@ -66,7 +68,7 @@ bool CTaskSimpleRunNamedAnim::ProcessPed(CPed* ped) {
         if (!m_bOffsetAtEnd) {
             auto* const assoc = RpAnimBlendClumpGetAssociation(ped->GetRpClump(), true, m_pAnimHierarchy);
             CVector bonePos{};
-            ped->GetBonePosition(&bonePos, (eBoneTag)3, false);
+            ped->GetBonePosition(&bonePos, BONE_SPINE1, false);
             if (m_fBlendDelta > 100.f && assoc) {
                 if ((ped->GetPosition() - bonePos).Magnitude() > 1.f) {
                     assoc->m_Flags |= ANIMATION_IS_BLEND_AUTO_REMOVE;
@@ -151,6 +153,7 @@ void CTaskSimpleRunNamedAnim::FinishRunAnimMovePedCB(CAnimBlendAssociation* asso
 
     if ((assoc->m_Flags & ANIMATION_IS_FINISH_AUTO_REMOVE) || assoc->m_nCallbackType == ANIM_BLEND_CALLBACK_DELETE) {
         task->m_bIsFinished = true;
+        task->m_pAnim       = nullptr;
     } else {
         assoc->SetDeleteCallback(CTaskSimpleAnim::FinishRunAnimCB, task);
     }

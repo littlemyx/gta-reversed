@@ -5,7 +5,6 @@
 #include "TaskComplexEvasiveStep.h"
 #include "TaskComplexFallAndGetUp.h"
 #include "TaskSimpleLeaveGroup.h"
-#include "TaskSimpleHitFromBehind.h"
 #include "TaskSimpleKillPedWithCar.h"
 #include "TaskSimpleHurtPedWithCar.h"
 #include "PedGeometryAnalyser.h"
@@ -80,8 +79,6 @@ CTask* CTaskComplexHitPedWithCar::CreateSubTask(eTaskType tt) {
         }
         return new CTaskComplexFallAndGetUp{ animId, ANIM_GROUP_DEFAULT, m_DownTime };
     }
-    case TASK_SIMPLE_HIT_BEHIND:
-        return new CTaskSimpleHitFromBehind{};
     case TASK_SIMPLE_KILL_PED_WITH_CAR:
         return new CTaskSimpleKillPedWithCar{ m_Veh, m_ImpulseMag };
     case TASK_SIMPLE_HURT_PED_WITH_CAR:
@@ -97,12 +94,10 @@ CTask* CTaskComplexHitPedWithCar::CreateNextSubTask(CPed* ped) {
     case TASK_COMPLEX_EVASIVE_STEP:
     case TASK_NONE:
     case TASK_COMPLEX_FALL_AND_GET_UP:
-    case TASK_SIMPLE_HIT_BEHIND:
     case TASK_SIMPLE_KILL_PED_WITH_CAR:
         return CreateSubTask(TASK_FINISHED);
     case TASK_SIMPLE_HURT_PED_WITH_CAR: {
-        // NOTSA: `CTaskSimpleHurtPedWithCar::m_bWillKillPed` is private, so read it by offset (0x10)
-        if (*(const bool*)((const uint8*)m_pSubTask + 0x10)) {
+        if (static_cast<CTaskSimpleHurtPedWithCar*>(m_pSubTask)->WillKillPed()) {
             return nullptr;
         }
         return CreateSubTask(TASK_COMPLEX_FALL_AND_GET_UP);

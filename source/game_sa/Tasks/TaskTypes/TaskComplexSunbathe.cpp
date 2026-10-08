@@ -10,24 +10,7 @@
 #include "Clock.h"
 #include "Streaming.h"
 
-void CTaskComplexSunbathe::InjectHooks() {
-    RH_ScopedVirtualClass(CTaskComplexSunbathe, 0x86e0ac, 11);
-    RH_ScopedCategory("Tasks/TaskTypes");
-
-    RH_ScopedInstall(Constructor, 0x631F80);
-    RH_ScopedInstall(Destructor, 0x632050);
-
-    RH_ScopedInstall(CreateSubTask, 0x638290);
-
-    RH_ScopedVMTInstall(Clone, 0x6366A0);
-    RH_ScopedVMTInstall(GetTaskType, 0x632040);
-    RH_ScopedVMTInstall(MakeAbortable, 0x6320F0);
-    RH_ScopedVMTInstall(CreateNextSubTask, 0x6399F0);
-    RH_ScopedVMTInstall(CreateFirstSubTask, 0x639CB0);
-    RH_ScopedVMTInstall(ControlSubTask, 0x6381A0);
-}
-
-// 0x632140 (NOTSA: not a member in the original, called with a dummy `this` / usercall-like)
+// 0x632140 (NOTSA: not a member in the original, plain cdecl without arguments)
 static bool CanSunbathe() {
     if (CClock::GetGameClockHours() < 10 || CClock::GetGameClockHours() >= 18) {
         return false;
@@ -53,13 +36,33 @@ static bool CanSunbathe() {
     }
 }
 
-// 0x632190 (NOTSA: not a member in the original, `this` is unused)
+// 0x632190 (NOTSA: not a member in the original, plain cdecl; callers pass a stray `this` in ecx which is never read)
 static bool ShouldLoadSunbatheAnims() {
     const auto* const plyr = CWorld::Players[CWorld::PlayerInFocus].m_pPed;
     if (const auto* const veh = plyr->GetVehicleIfInOne()) {
         return veh->m_vecMoveSpeed.SquaredMagnitude() <= 0.04f;
     }
     return true;
+}
+
+void CTaskComplexSunbathe::InjectHooks() {
+    RH_ScopedVirtualClass(CTaskComplexSunbathe, 0x86e0ac, 11);
+    RH_ScopedCategory("Tasks/TaskTypes");
+
+    RH_ScopedGlobalInstall(CanSunbathe, 0x632140);
+    RH_ScopedGlobalInstall(ShouldLoadSunbatheAnims, 0x632190);
+
+    RH_ScopedInstall(Constructor, 0x631F80);
+    RH_ScopedInstall(Destructor, 0x632050);
+
+    RH_ScopedInstall(CreateSubTask, 0x638290);
+
+    RH_ScopedVMTInstall(Clone, 0x6366A0);
+    RH_ScopedVMTInstall(GetTaskType, 0x632040);
+    RH_ScopedVMTInstall(MakeAbortable, 0x6320F0);
+    RH_ScopedVMTInstall(CreateNextSubTask, 0x6399F0);
+    RH_ScopedVMTInstall(CreateFirstSubTask, 0x639CB0);
+    RH_ScopedVMTInstall(ControlSubTask, 0x6381A0);
 }
 
 // 0x631f80
@@ -177,6 +180,7 @@ CTask* CTaskComplexSunbathe::CreateFirstSubTask(CPed* ped) {
     (void)CGeneral::GetRandomNumber(); // NOTSA: result unused, but advances the RNG
 
     if (ped->m_nPedType == PED_TYPE_CIVFEMALE) {
+        // BUG: yields 2..7 (rand & 0xFFFF is in [0, 65535], not 15 bits), i.e. can go past SUNBATHER_FEMALE_3
         m_SunbatherType = (eSunbatherType)(2 - (int32)((float)(CGeneral::GetRandomNumber() & 0xFFFF) * RAND_RECIPROCAL_2POW15 * -3.f));
     } else if (CPopulation::IsSunbather(ped)) {
         m_SunbatherType = (eSunbatherType)(CGeneral::GetRandomNumber() < 0x3FFF);
@@ -248,7 +252,7 @@ CTask* CTaskComplexSunbathe::ControlSubTask(CPed* ped) {
     if (!CanSunbathe()) {
         m_BathingTimer.Pause();
         if (m_pSubTask->GetTaskType() == TASK_SIMPLE_SUNBATHE) {
-            m_pSubTask->MakeAbortable(ped);
+            m_pSubTask->MakeAbortable(ped, ABORT_PRIORITY_LEISURE, nullptr); // original passes priority 0 (not the default URGENT)
         }
     }
 

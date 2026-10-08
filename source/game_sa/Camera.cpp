@@ -7,7 +7,10 @@
 #include "TaskSimpleDuck.h"
 #include "Hud.h"
 #include "FileLoader.h"
+#include "MBlur.h"
 #include "TaskSimpleSwim.h"
+
+#include <numbers>
 
 auto& TheCamera = StaticRef<CCamera>(0xB6F028);
 auto& gbModelViewer = StaticRef<bool>(0xBA6728);
@@ -24,6 +27,11 @@ static auto& gCamColLastRadius = StaticRef<float>(0xB6EC6C);
 auto& gCamColVars = StaticRef<float[28][6]>(0x8CC8E0);
 static auto& gNearClipPedDistDivisor = StaticRef<float>(0xB6EC68); // NOTSA name: unidentified global
 static auto& gNearClipPedScale = StaticRef<float>(0x8CCC84);       // NOTSA name: unidentified global, 0.25
+
+// Process: NOTSA names, unidentified globals
+static auto& gDrunkCamAngle              = StaticRef<float>(0xB6EC30); // Drunk camera wobble phase in degrees (+5 each frame while drunk)
+static auto& gbFirstPersonUpsideDownBlur = StaticRef<bool>(0xB70142);  // Set while the blur for the 1st person cam in an (almost) upside down vehicle is active
+static auto& gbCamUnkB70143              = StaticRef<bool>(0xB70143);  // Only ever cleared (in `Process`)
 
 // CopyCameraMatrixToRWCam: previous RW frame vectors (+ MSVC static-init guard bits at 0xB6FFC0)
 static auto& gPrevRwCamRight    = StaticRef<CVector>(0xB6FF90);
@@ -146,7 +154,7 @@ void CCamera::InjectHooks() {
     RH_ScopedInstall(TryToStartNewCamMode, 0x51E560, { .Reversed = false });
     RH_ScopedInstall(CameraColDetAndReact, 0x520190);
     RH_ScopedInstall(CamControl, 0x527FA0, { .Reversed = false });
-    RH_ScopedInstall(Process, 0x52B730, { .Reversed = false });
+    RH_ScopedInstall(Process, 0x52B730);
     RH_ScopedInstall(DeleteCutSceneCamDataMemory, 0x5B24A0);
     RH_ScopedInstall(LoadPathSplines, 0x5B24D0);
     RH_ScopedInstall(Init, 0x5BC520);
@@ -1642,7 +1650,475 @@ void CCamera::ProcessScriptedCommands() {
 void CCamera::Process() {
     ZoneScoped;
 
-    plugin::CallMethod<0x52B730, CCamera*>(this);
+    constexpr float PI     = std::numbers::pi_v<float>; // 0x858CB8
+    constexpr float TWO_PI = 2.f * PI;                  // 0x858CBC
+
+    // 0.5 - cos(x * pi) * 0.5 - NOTE: x87 extended precision is kept by the original, so callers decide when to round to float
+    const auto EaseInOut = [](double x) { return 0.5 - std::cos(x * (double)PI) * 0.5; };
+
+    // Keeps the camera at least 1.3 units (2D) away from the target (pushes it out along the same direction)
+    const auto KeepAwayFromTarget = [](CVector& pos, const CVector& target) {
+        constexpr float MIN_DIST = 1.3f; // 0x8CCF20
+        const float dx = pos.x - target.x;
+        const float dy = pos.y - target.y;
+        if (std::sqrt((double)dy * dy + (double)dx * dx) < MIN_DIST) {
+            const float angle = CGeneral::GetATanOfXY(dx, dy);
+            pos.x = (float)(std::cos((double)angle) * MIN_DIST + target.x);
+            pos.y = (float)(std::sin((double)angle) * MIN_DIST + target.y);
+        }
+    };
+
+    // Camera's heading, 0 if looking straight up/down
+    const auto GetFrontHeading = [this]() -> float {
+        const auto& front = GetActiveCam().m_vecFront;
+        if (front.x == 0.f && front.y == 0.f) {
+            return 0.f;
+        }
+        return CGeneral::GetATanOfXY(front.x, front.y);
+    };
+
+    ResetMadeInvisibleObjects();
+
+    bool  bFollowingVehicle = false; // (Not looking forward, and the target is a vehicle)
+    float fov               = 0.f;
+    m_bJust_Switched        = false;
+
+    m_vecRealPreviousCameraPosition = GetPosition();
+
+    if (m_bLookingAtPlayer || m_bTargetJustBeenOnTrain || m_nWhoIsInControlOfTheCamera == 2) {
+        UpdateTargetEntity();
+    }
+
+    if (!m_pTargetEntity) {
+        m_pTargetEntity = FindPlayerPed(-1);
+        m_pTargetEntity->RegisterReference(&m_pTargetEntity);
+    }
+    for (const auto camIdx : { (int32)m_nActiveCam, (m_nActiveCam + 1) % 2 }) {
+        auto& camTarget = m_aCams[camIdx].m_pCamTargetEntity;
+        if (!camTarget) {
+            camTarget = m_pTargetEntity;
+            camTarget->RegisterReference(&camTarget);
+        }
+    }
+
+    CamControl();
+    ProcessScriptedCommands(); // 0x52B845 - inlined
+
+    if (m_bFading) {
+        ProcessFade();
+    }
+    if (m_bMusicFading) {
+        ProcessMusicFade();
+    }
+    if (m_bWideScreenOn) {
+        ProcessWideScreenOn();
+    }
+
+    RwCameraSetNearClipPlane(Scene.m_pRwCamera, 0.3f);
+
+    const float headingBefore = GetFrontHeading();
+    GetActiveCam().Process();
+    const float headingAfter = GetFrontHeading();
+
+    if (m_bTransitionState && CTimer::GetTimeInMS() > m_nTimeTransitionStart + m_nTransitionDuration) {
+        m_bTransitionState         = false;
+        m_bDoingSpecialInterp      = false;
+        m_bWaitForInterpolToFinish = false;
+    }
+
+    if (m_bUseNearClipScript) {
+        RwCameraSetNearClipPlane(Scene.m_pRwCamera, m_fNearClipScript);
+    }
+
+    { // Did the camera heading change by a lot?
+        double headingDiff = (double)headingAfter - (double)headingBefore;
+        while (headingDiff >= PI) {
+            headingDiff -= TWO_PI;
+        }
+        while (headingDiff < -PI) {
+            headingDiff += TWO_PI;
+        }
+        if (std::abs(headingDiff) > 0.3f) {
+            m_bJust_Switched = true;
+        }
+    }
+
+    if (GetActiveCam().m_nDirectionWasLooking != LOOKING_DIRECTION_FORWARD && m_pTargetEntity->GetIsTypeVehicle()) {
+        bFollowingVehicle = true;
+    }
+
+    const double timeNow = (double)CTimer::GetTimeInMS();
+    if (timeNow <= m_fEndShakeTime) {
+        ProcessShake((float)((timeNow - m_fStartShakeTime) / ((double)m_fEndShakeTime - m_fStartShakeTime)));
+    }
+
+    CVector source{}, target{}, front{}, up{};
+
+    if (!m_bTransitionState || bFollowingVehicle) {
+        auto& cam = GetActiveCam();
+
+        source = cam.m_vecSource;
+        up     = cam.m_vecUp;
+        if (m_bMoveCamToAvoidGeom) {
+            source += m_vecClearGeometryVec;
+
+            front = cam.m_vecTargetCoorsForFudgeInter - source;
+            front.Normalise();
+
+            CVector right = CrossProduct(front, up);
+            right.Normalise();
+
+            up = CrossProduct(right, front);
+            up.Normalise();
+        } else {
+            front = cam.m_vecFront;
+        }
+
+        gbCamUnkB70143 = false;
+        fov            = cam.m_fFOV;
+    } else {
+        // Interpolating between the previous and the current camera
+        uint32 elapsed = CTimer::GetTimeInMS() - m_nTimeTransitionStart;
+        if (!(elapsed < m_nTransitionDuration)) {
+            elapsed = m_nTransitionDuration;
+        }
+
+        float t = (float)((double)elapsed / (double)m_nTransitionDuration); // Progress of the source/up/fov interpolation
+
+        // Progress of the target interpolation
+        double targetT = (double)elapsed / (double)m_nTransitionDurationTargetCoors;
+        if (targetT < 0.0) {
+            targetT = 0.0;
+        } else if (targetT > 1.0) {
+            targetT = 1.0;
+        }
+
+        // Target
+        if (targetT <= m_fFractionInterToStopMovingTarget) { // Moving with the starting speed
+            const double x = m_fFractionInterToStopMovingTarget != 0.f
+                ? ((double)m_fFractionInterToStopMovingTarget - targetT) / m_fFractionInterToStopMovingTarget
+                : 0.0;
+            const double f = EaseInOut(x);
+
+            const float y = (float)(f * m_vecTargetSpeedAtStartInter.y);
+            const float z = (float)(f * m_vecTargetSpeedAtStartInter.z);
+            m_vecTargetWhenInterPol.x = (float)(f * m_vecTargetSpeedAtStartInter.x + m_vecStartingTargetForInterPol.x);
+            m_vecTargetWhenInterPol.y = (float)((double)y + m_vecStartingTargetForInterPol.y);
+            m_vecTargetWhenInterPol.z = (float)((double)z + m_vecStartingTargetForInterPol.z);
+            target = m_vecTargetWhenInterPol;
+        } else if (targetT > m_fFractionInterToStopMovingTarget) { // Catching up with the actual target
+            const double x = m_fFractionInterToStopCatchUpTarget != 0.f
+                ? (targetT - m_fFractionInterToStopMovingTarget) / m_fFractionInterToStopCatchUpTarget
+                : 1.0;
+            const float f = (float)EaseInOut(x);
+
+            if (m_fFractionInterToStopMovingTarget == 0.f) {
+                m_vecTargetWhenInterPol = m_vecStartingTargetForInterPol;
+            }
+
+            const auto& camTarget = GetActiveCam().m_vecTargetCoorsForFudgeInter;
+            const double dx = (double)camTarget.x - m_vecTargetWhenInterPol.x;
+            const double dy = (double)camTarget.y - m_vecTargetWhenInterPol.y;
+            const float  dz = camTarget.z - m_vecTargetWhenInterPol.z;
+
+            const float tx = (float)(dx * f);
+            target.x = (float)((double)tx + m_vecTargetWhenInterPol.x);
+            target.y = (float)(dy * f + m_vecTargetWhenInterPol.y);
+            target.z = (float)((double)dz * f + m_vecTargetWhenInterPol.z);
+        }
+
+        // Source, up, fov
+        const auto SetupFrontAndUp = [&](bool bNormaliseUp) {
+            if (bNormaliseUp) {
+                up.Normalise();
+            }
+            const auto mode = GetActiveCam().m_nMode;
+            if (mode == MODE_TOPDOWN || mode == MODE_TOP_DOWN_PED) {
+                front.Normalise();
+                up = CrossProduct(front, CVector{ -1.f, 0.f, 0.f });
+            } else {
+                front.Normalise();
+                up.Normalise();
+                CVector right = CrossProduct(front, up);
+                right.Normalise();
+                up = CrossProduct(right, front);
+            }
+            up.Normalise();
+        };
+
+        if (t <= m_fFractionInterToStopMoving) { // Moving with the starting speed
+            const double x = m_fFractionInterToStopMoving != 0.f
+                ? ((double)m_fFractionInterToStopMoving - t) / m_fFractionInterToStopMoving
+                : 0.0;
+            const double f = EaseInOut(x);
+            t = (float)f;
+
+            // Source
+            {
+                const float z = (float)((double)t * m_vecSourceSpeedAtStartInter.z);
+                m_vecSourceWhenInterPol.x = (float)(f * m_vecSourceSpeedAtStartInter.x + m_vecStartingSourceForInterPol.x);
+                m_vecSourceWhenInterPol.y = (float)((double)t * m_vecSourceSpeedAtStartInter.y + m_vecStartingSourceForInterPol.y);
+                m_vecSourceWhenInterPol.z = (float)((double)z + m_vecStartingSourceForInterPol.z);
+            }
+            if (m_bLookingAtPlayer) {
+                KeepAwayFromTarget(m_vecSourceWhenInterPol, target);
+            }
+
+            // Up
+            {
+                const float z = (float)((double)t * m_vecUpSpeedAtStartInter.z);
+                m_vecUpWhenInterPol.x = (float)((double)t * m_vecUpSpeedAtStartInter.x + m_vecStartingUpForInterPol.x);
+                m_vecUpWhenInterPol.y = (float)((double)t * m_vecUpSpeedAtStartInter.y + m_vecStartingUpForInterPol.y);
+                m_vecUpWhenInterPol.z = (float)((double)z + m_vecStartingUpForInterPol.z);
+            }
+
+            // FOV
+            m_fFOVWhenInterPol = (float)((double)t * m_fFOVSpeedAtStartInter + m_fStartingFOVForInterPol);
+
+            source = m_vecSourceWhenInterPol;
+            front  = target - source;
+            StoreValuesDuringInterPol(&source, &m_vecTargetWhenInterPol, &m_vecUpWhenInterPol, &m_fFOVWhenInterPol);
+            front.Normalise();
+
+            up = m_bLookingAtPlayer ? CVector{ 0.f, 0.f, 1.f } : m_vecUpWhenInterPol;
+
+            SetupFrontAndUp(true);
+
+            fov = m_fFOVWhenInterPol;
+        } else if (t <= 1.f) { // Catching up with the actual camera
+            const double x = m_fFractionInterToStopCatchUp != 0.f
+                ? ((double)t - m_fFractionInterToStopMoving) / m_fFractionInterToStopCatchUp
+                : 1.0;
+            const float f = (float)EaseInOut(x);
+
+            const auto& cam = GetActiveCam();
+
+            source = m_vecSourceWhenInterPol + (cam.m_vecSource - m_vecSourceWhenInterPol) * f;
+            if (m_bLookingAtPlayer) {
+                KeepAwayFromTarget(source, target);
+            }
+
+            fov = (float)(((double)cam.m_fFOV - m_fFOVWhenInterPol) * f + m_fFOVWhenInterPol);
+
+            up    = m_vecUpWhenInterPol + (cam.m_vecUp - m_vecUpWhenInterPol) * f;
+            front = target - source;
+            StoreValuesDuringInterPol(&source, &target, &up, &fov);
+            front.Normalise();
+
+            if (m_bLookingAtPlayer) {
+                up = CVector{ 0.f, 0.f, 1.f };
+            }
+
+            SetupFrontAndUp(false);
+
+            fov = m_fFOVWhenInterPol;
+        }
+
+        // Keep track of the speed
+        const CVector diff  = source - target;
+        const float   alpha = CGeneral::GetATanOfXY((float)std::sqrt((double)diff.y * diff.y + (double)diff.x * diff.x), diff.z);
+        const float   beta  = CGeneral::GetATanOfXY(diff.x, diff.y);
+        GetActiveCam().KeepTrackOfTheSpeed(source, target, up, alpha, beta, fov);
+    }
+
+    // Don't let the camera go through the walls when transitioning
+    if (m_bTransitionState && !m_bLookingAtVector && m_bLookingAtPlayer && !CCullZones::CamStairsForPlayer() && !m_bPlayerIsInGarage) {
+        CColPoint colPoint;
+        CEntity*  hitEntity = nullptr;
+        if (CWorld::ProcessLineOfSight(m_pTargetEntity->GetPosition(), source, colPoint, hitEntity, true, false, false, true, false, true, true, false)) {
+            source = colPoint.m_vecPoint;
+            RwCameraSetNearClipPlane(Scene.m_pRwCamera, 0.05f);
+        }
+    }
+
+    // Drunk camera
+    if (CMBlur::Drunkness > 0.f) {
+        const double angle = (double)gDrunkCamAngle * (double)0.017453292f; // 0x8595EC
+        const double cosA  = std::cos(angle);
+        const double sinA  = std::sin(angle);
+        const float  cosF  = (float)cosA;
+        const float  sinF  = (float)sinA;
+
+        const double sourceMult = (double)CMBlur::Drunkness * (double)-0.02f; // 0x85904C
+        source.x = (float)(cosA * sourceMult + source.x);
+        source.z = (float)(sinA * sourceMult + source.z);
+
+        up.Normalise();
+        const double upMult = (double)CMBlur::Drunkness * (double)0.05f; // 0x858C28
+        up.x = (float)((double)cosF * upMult + up.x);
+        up.y = (float)((double)sinF * upMult + up.y);
+        up.Normalise();
+
+        front.Normalise();
+        const double frontMult = (double)CMBlur::Drunkness * (double)-0.1f; // 0x858EF4
+        front.x = (float)((double)cosF * frontMult + front.x);
+        front.y = (float)((double)sinF * frontMult + front.y);
+        front.Normalise();
+
+        CVector right = CrossProduct(front, up);
+        right.Normalise();
+        up = CrossProduct(right, front);
+        up.Normalise();
+
+        gDrunkCamAngle += 5.f; // 0x858C80
+    }
+
+    // Update the camera matrix
+    m_mCameraMatrix.GetRight()    = CrossProduct(up, front);
+    m_mCameraMatrix.GetForward()  = front;
+    m_mCameraMatrix.GetUp()       = up;
+    m_mCameraMatrix.GetPosition() = source;
+
+    // Camera shake
+    {
+        const uint32 sinceShakeStart = CTimer::GetTimeInMS() - m_nCamShakeStart;
+        float shake = (float)((double)m_fCamShakeForce - (double)sinceShakeStart * (double)0.00028f); // 0x863280
+        if (shake < 2.f) {
+            if (!(shake > 0.f)) {
+                shake = 0.f;
+            }
+        } else {
+            shake = 2.f;
+        }
+
+        const uint32 rnd = CGeneral::GetRandomNumber() & 0xFFFF;
+        const double mult = (double)shake * (double)0.1f; // 0x858B1C
+        auto& camPos = m_mCameraMatrix.GetPosition();
+        camPos.x = (float)((double)(int32)((rnd & 0xF) - 7) * mult + camPos.x);
+        camPos.y = (float)((double)(int32)(((rnd >> 4) & 0xF) - 7) * mult + camPos.y);
+        camPos.z = (float)((double)(int32)(((rnd >> 8) & 0xF) - 7) * mult + camPos.z);
+
+        if (mult > 0.0 && m_nBlurType != eMotionBlurType::SNIPER) {
+            const int32 alpha = 25 - (int32)((double)shake * -255.0); // 0x86327C
+            m_nMotionBlurAddAlpha = static_cast<uint32>(std::min(alpha, 150));
+        }
+    }
+
+    // Blur when looking from the first person while the player's vehicle is (close to) upside down
+    if (GetActiveCam().m_nMode == MODE_1STPERSON
+        && FindPlayerVehicle(-1, false)
+        && FindPlayerVehicle(-1, false)->GetUp().z < 0.2f // 0x858CC4
+    ) {
+        m_nBlurRed   = 255;
+        m_nBlurGreen = 255;
+        m_nBlurBlue  = 255;
+        m_nBlurType  = eMotionBlurType::SNIPER;
+        m_nMotionBlur = 240;
+        gbFirstPersonUpsideDownBlur = true;
+    } else if (gbFirstPersonUpsideDownBlur) {
+        gbFirstPersonUpsideDownBlur = false;
+    }
+
+    CDraw::SetFOV(fov);
+    CalculateDerivedValues(false, true);
+    CopyCameraMatrixToRWCam(false);
+    m_vecGameCamPos = m_mCameraMatrix.GetPosition();
+    UpdateSoundDistances();
+
+    if (CCutsceneMgr::ms_running && !CCutsceneMgr::ms_useLodMultiplier) {
+        m_fLODDistMultiplier = 1.f;
+    } else {
+        m_fLODDistMultiplier = 70.f / CDraw::ms_fFOV; // 0x858CE0
+    }
+    m_fGenerationDistMultiplier = m_fLODDistMultiplier;
+    m_fLODDistMultiplier        = CRenderer::ms_lodDistScale * m_fLODDistMultiplier;
+
+    RwCameraSetFarClipPlane(Scene.m_pRwCamera, (float)((double)(int32)((double)Scene.m_pRwCamera->farPlane * 100.0) * (double)0.01f));
+    CDraw::ms_fNearClipZ = m_pRwCamera->nearPlane;
+    CDraw::ms_fFarClipZ  = m_pRwCamera->farPlane;
+
+    // Camera's average speed
+    if (m_bJustInitialized || m_bJust_Switched) {
+        m_vecPreviousCameraPosition = m_mCameraMatrix.GetPosition();
+        m_bJustInitialized          = false;
+    }
+    {
+        const auto& camPos = m_mCameraMatrix.GetPosition();
+        const double dx    = (double)camPos.x - m_vecPreviousCameraPosition.x;
+        const double dy    = (double)camPos.y - m_vecPreviousCameraPosition.y;
+        const double dz    = (double)camPos.z - m_vecPreviousCameraPosition.z;
+
+        m_nNumFramesSoFar++;
+        const double speedSoFar = std::sqrt(dz * dz + dy * dy + dx * dx) + m_fCameraSpeedSoFar;
+        m_fCameraSpeedSoFar     = (float)speedSoFar;
+        if (m_nNumFramesSoFar == m_nWorkOutSpeedThisNumFrames) {
+            m_fCameraSpeedSoFar  = 0.f;
+            m_nNumFramesSoFar    = 0;
+            m_fCameraAverageSpeed = (float)(speedSoFar / (double)(int32)m_nWorkOutSpeedThisNumFrames);
+        }
+    }
+
+    const float newOrientation = m_fOrientation + PI;
+    m_vecPreviousCameraPosition = m_mCameraMatrix.GetPosition();
+
+    {
+        auto& cam = GetActiveCam();
+        if (cam.m_nDirectionWasLooking != LOOKING_DIRECTION_FORWARD && cam.m_nMode != MODE_TOP_DOWN_PED) {
+            cam.m_vecSource = cam.m_vecSourceBeforeLookBehind;
+            m_fOrientation  = newOrientation;
+        }
+    }
+
+    if (m_bTransitionState) {
+        auto& activeCam = GetActiveCam();
+        auto& otherCam  = m_aCams[(m_nActiveCam + 1) % 2];
+        if (otherCam.m_pCamTargetEntity
+            && m_pTargetEntity
+            && m_pTargetEntity->GetIsTypePed()
+            && !otherCam.m_pCamTargetEntity->GetIsTypeVehicle()
+            && activeCam.m_nMode != MODE_TOP_DOWN_PED
+            && otherCam.m_nDirectionWasLooking != LOOKING_DIRECTION_FORWARD
+        ) {
+            // BUG: Reads from the `m_nActiveCam % 2`-th camera, which is not the active one if it's the debug cam
+            otherCam.m_vecSource = m_aCams[m_nActiveCam % 2].m_vecSourceBeforeLookBehind;
+            m_fOrientation       = newOrientation;
+        }
+    }
+
+    m_bCameraJustRestored = false;
+    m_bMoveCamToAvoidGeom = false;
+
+    // Underwater-ness: sample the water level slightly in front of the camera
+    CVector samplePos;
+    {
+        // Direction the camera is facing (2D)
+        double dirX;
+        float  dirY, dirZ;
+        if (m_matrix) {
+            const auto& fwd = m_matrix->GetForward();
+            dirX = fwd.x;
+            dirY = fwd.y;
+            dirZ = fwd.z;
+        } else {
+            dirX = -std::sin((double)m_placement.m_fHeading);
+            dirY = (float)std::cos((double)m_placement.m_fHeading);
+            dirZ = 0.f;
+        }
+
+        constexpr float SAMPLE_DIST = 0.4f; // 0x858EE8
+        const auto&     pos         = GetPosition();
+        const float     zMult       = (float)((double)dirZ * SAMPLE_DIST);
+        samplePos.x = (float)(dirX * SAMPLE_DIST + pos.x);
+        samplePos.y = (float)((double)dirY * SAMPLE_DIST + pos.y);
+        samplePos.z = (float)((double)zMult + pos.z);
+    }
+
+    float waterLevel;
+    if (!CWaterLevel::GetWaterLevel(samplePos.x, samplePos.y, samplePos.z, waterLevel, true, nullptr)
+        || samplePos.z - 0.6f > waterLevel // 0x858CC8
+    ) {
+        CWeather::UnderWaterness = 0.f;
+        return;
+    }
+
+    const float depth = waterLevel - samplePos.z;
+    CWeather::WaterDepth = depth < 0.f ? 0.f : depth;
+
+    if (samplePos.z + 0.6f < waterLevel) {
+        CWeather::UnderWaterness = 1.f;
+    } else {
+        CWeather::UnderWaterness = (float)(1.0 - ((double)samplePos.z - ((double)waterLevel - 0.6f)) * (double)0.8333333f); // 0x863278
+    }
 }
 
 // 0x514860

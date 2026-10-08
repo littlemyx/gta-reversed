@@ -22,8 +22,8 @@ void FxSystem_c::InjectHooks() {
     RH_ScopedInstall(PlayAndKill, 0x4AA3D0);
     RH_ScopedInstall(Kill, 0x4AA3F0);
     RH_ScopedInstall(AttachToBone, 0x4AA400);
-    RH_ScopedOverloadedInstall(AddParticle, "v3d", 0x4AA440, void(FxSystem_c::*)(const CVector&,const CVector&,float,const FxPrtMult_c&,float,float,float,bool), {.Reversed = false});
-    RH_ScopedOverloadedInstall(AddParticle, "mat", 0x4AA540, void(FxSystem_c::*)(const RwMatrix&,const CVector&,float,const FxPrtMult_c&,float,float,float,bool), {.Reversed = false});
+    RH_ScopedOverloadedInstall(AddParticle, "v3d", 0x4AA440, void(FxSystem_c::*)(const CVector&,const CVector&,float,const FxPrtMult_c&,float,float,float,bool));
+    RH_ScopedOverloadedInstall(AddParticle, "mat", 0x4AA540, void(FxSystem_c::*)(const RwMatrix&,const CVector&,float,const FxPrtMult_c&,float,float,float,bool));
     RH_ScopedInstall(EnablePrim, 0x4AA610);
     RH_ScopedInstall(SetMatrix, 0x4AA630);
     RH_ScopedInstall(SetOffsetPos, 0x4AA660);
@@ -32,7 +32,7 @@ void FxSystem_c::InjectHooks() {
     RH_ScopedInstall(GetCompositeMatrix, 0x4AA8C0);
     RH_ScopedInstall(GetPlayStatus, 0x4AA900);
     RH_ScopedInstall(ForAllParticles, 0x4AA930);
-    RH_ScopedInstall(UpdateBoundingBoxCB, 0x4AA9A0, {.Reversed = false});
+    RH_ScopedInstall(UpdateBoundingBoxCB, 0x4AA9A0);
     RH_ScopedInstall(GetBoundingSphereWld, 0x4AAAD0);
     RH_ScopedInstall(GetBoundingSphereLcl, 0x4AAB50);
     RH_ScopedInstall(SetBoundingSphere, 0x4AAB80);
@@ -46,7 +46,7 @@ void FxSystem_c::InjectHooks() {
     RH_ScopedInstall(SetMustCreatePrts, 0x4AAC70);
     RH_ScopedInstall(DoFxAudio, 0x4AAC90);
     RH_ScopedInstall(IsVisible, 0x4AAF30);
-    RH_ScopedInstall(Update, 0x4AAF70, {.Reversed = false});
+    RH_ScopedInstall(Update, 0x4AAF70);
 }
 FxSystem_c* FxSystem_c::Constructor() { this->FxSystem_c::FxSystem_c(); return this; }
 FxSystem_c* FxSystem_c::Destructor() { this->FxSystem_c::~FxSystem_c(); return this; }
@@ -170,14 +170,15 @@ void FxSystem_c::AttachToBone(CEntity* entity, eBoneTag boneId) {
 }
 
 auto CanAddParticle() {
-    switch (g_fx.GetFxQuality()) {
-    case FX_QUALITY_LOW:
-        return CGeneral::RandomBool(50.0f);
-    case FX_QUALITY_MEDIUM:
-        return CGeneral::RandomBool(75.0f);
-    default:
-        return true;
+    // NOTSA: original rolled `(int32)(rand * 100)` and compared with 50 / 25 (`< 50` => skip), inlined in both AddParticle overloads
+    const auto roll = (int32)((float)(CGeneral::GetRandomNumber() & 0xFFFF) * (1.0f / 32768.0f) * 100.0f);
+    if (g_fx.GetFxQuality() == FX_QUALITY_LOW && roll < 50) {
+        return false;
     }
+    if (g_fx.GetFxQuality() == FX_QUALITY_MEDIUM && roll < 25) {
+        return false;
+    }
+    return true;
 }
 
 // 0x4AA440
@@ -304,7 +305,29 @@ uint32 FxSystem_c::ForAllParticles(void(*callback)(Particle_c*, int32, FxBox_c**
 
 // 0x4AA9A0
 void FxSystem_c::UpdateBoundingBoxCB(Particle_c* particle, int32 a2, FxBox_c** data) {
-    ((void(__cdecl *)(Particle_c*, int32, FxBox_c**))0x4AA9A0)(particle, a2, data);
+    if (a2 != 0) {
+        return;
+    }
+    FxBox_c& box = **data;
+    const CVector& pos = particle->m_Pos;
+    if (pos.x < box.minX) {
+        box.minX = pos.x;
+    }
+    if (box.maxX < pos.x) {
+        box.maxX = pos.x;
+    }
+    if (pos.y < box.minY) {
+        box.minY = pos.y;
+    }
+    if (box.maxY < pos.y) {
+        box.maxY = pos.y;
+    }
+    if (pos.z < box.minZ) {
+        box.minZ = pos.z;
+    }
+    if (box.maxZ < pos.z) {
+        box.maxZ = pos.z;
+    }
 }
 
 // 0x4AAA40
@@ -415,7 +438,109 @@ bool FxSystem_c::IsVisible() const {
 
 // 0x4AAF70
 bool FxSystem_c::Update(RwCamera* camera, float timeDelta) {
-    return ((bool(__thiscall *)(FxSystem_c*, RwCamera*, float))0x4AAF70)(this, camera, timeDelta);
+    if (m_nKillStatus == FX_3) {
+        return true;
+    }
+    if (m_nKillStatus == FX_KILLED) {
+        m_nKillStatus = FX_3;
+        return false;
+    }
+
+    RwMatrix* mat = g_fxMan.FxRwMatrixCreate();
+    if (m_ParentMatrix) {
+        RwMatrixMultiply(mat, &m_LocalMatrix, m_ParentMatrix);
+    } else {
+        *mat = m_LocalMatrix;
+    }
+
+    const float prevCamDist = m_fCameraDistance;
+    const RwV3d& camPos     = RwFrameGetMatrix(RwCameraGetFrame(camera))->pos;
+    g_fxMan.FxRwMatrixDestroy(mat); // NOTE: `mat` is still read below (as in the original)
+
+    const RwV3d delta = {
+        camPos.x - mat->pos.x,
+        camPos.y - mat->pos.y,
+        camPos.z - mat->pos.z,
+    };
+    m_fCameraDistance = RwV3dLength(&delta);
+
+    const float cullDist = (float)m_SystemBP->m_nCullDist * (1.0f / 256.0f);
+    bool        culled   = false;
+
+    const auto Process = [&]() -> bool { // Returns true if particle prims have been updated
+        if (m_nPlayStatus != eFxSystemPlayStatus::FX_PLAYING) {
+            return false;
+        }
+
+        float dt = (float)m_nTimeMult * 0.001f * timeDelta;
+        m_fCurrentTime = m_UseConstTime
+            ? (float)m_nConstTime * (1.0f / 256.0f)
+            : dt + m_fCurrentTime;
+
+        const auto playMode = m_SystemBP->m_nPlayMode;
+        if (playMode == 2 && m_SystemBP->m_fLoopIntervalMin > 0.0f) {
+            if (m_fCurrentTime > m_SystemBP->m_fLength) {
+                m_stopParticleCreation = true;
+            }
+            const float limit = m_SystemBP->m_fLength + m_LoopInterval;
+            if (limit < m_fCurrentTime) {
+                m_fCurrentTime -= limit;
+                const auto rnd = CGeneral::GetRandomNumber() % 10'000;
+                m_stopParticleCreation = false;
+                m_LoopInterval = (float)rnd * 0.0001f * (m_SystemBP->m_fLoopLength - m_SystemBP->m_fLoopIntervalMin) + m_SystemBP->m_fLoopIntervalMin;
+            }
+        } else if (m_fCurrentTime > m_SystemBP->m_fLength) {
+            switch (playMode) {
+            case 0:
+                Stop();
+                if (m_nKillStatus == FX_PLAY_AND_KILL) {
+                    m_nKillStatus = FX_KILLED;
+                }
+                break;
+            case 1:
+                m_fCurrentTime = m_SystemBP->m_fLength;
+                break;
+            case 2:
+                m_fCurrentTime -= m_SystemBP->m_fLength;
+                break;
+            case 3:
+                Stop();
+                break;
+            }
+        }
+
+        if (m_prevCulled) {
+            dt += 0.25f;
+        }
+
+        for (auto i = 0; i < (int8)m_SystemBP->m_nNumPrims; i++) {
+            m_Prims[i]->Update(m_fCurrentTime, dt);
+        }
+        return true;
+    };
+
+    if (m_SystemBP->m_nPlayMode != 0 && !(m_fCameraDistance < cullDist && IsVisible())) {
+        culled = true;
+    } else if (Process()) {
+        m_prevCulled = false;
+        if (m_nPlayStatus == eFxSystemPlayStatus::FX_PLAYING) {
+            DoFxAudio(CVector{mat->pos});
+        }
+        return false;
+    }
+
+    if (m_nPlayStatus == eFxSystemPlayStatus::FX_STOPPED
+        && m_fCameraDistance < cullDist
+        && cullDist <= prevCamDist
+        && m_SystemBP->m_nPlayMode == 3
+    ) {
+        Play();
+    }
+    m_prevCulled = culled;
+    if (m_nPlayStatus == eFxSystemPlayStatus::FX_PLAYING) {
+        DoFxAudio(CVector{mat->pos});
+    }
+    return false;
 }
 
 // NOTSA

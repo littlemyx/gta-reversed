@@ -220,7 +220,7 @@ bool CTaskSimpleFightingControl::ProcessPed(CPed* ped) {
     }
 
     const auto fightTask = static_cast<CTaskSimpleFight*>(taskMgr.GetTaskSecondary(TASK_SECONDARY_ATTACK));
-    m_maxAttackRange = CTaskSimpleFight::m_aComboData[std::max<int32>((int32)fightTask->m_nCurrentMove - 4, 0)].m_fRanges;
+    m_maxAttackRange = CTaskSimpleFight::m_aComboData[std::max<int32>((int32)fightTask->m_nComboSet - 4, 0)].m_fRanges;
 
     if (m_nextAttackTime == 0) {
         // x87: the whole chain is kept in extended precision until the final truncation
@@ -231,7 +231,7 @@ bool CTaskSimpleFightingControl::ProcessPed(CPed* ped) {
     }
 
     int32 cmd = moveCmd;
-    if ((int32)fightTask->m_nCurrentMove <= 1) {
+    if ((int32)fightTask->m_nComboSet <= 1) {
         const auto calcCmd = CalcMoveCommand(ped);
         if (calcCmd > -1) {
             cmd = calcCmd;

@@ -12,6 +12,8 @@
 #include "TaskSimpleHoldEntity.h"
 #include "TaskSimpleFight.h"
 #include "TaskSimpleDuck.h"
+#include "WeaponInfo.h"
+#include "GameLogic.h"
 
 auto& gLastRandomNumberForIdleAnimationID = StaticRef<int32>(0x8D2FEC);
 auto& gLastTouchTimeDelta = StaticRef<uint32>(0xC19664);
@@ -30,7 +32,7 @@ void CTaskSimplePlayerOnFoot::InjectHooks() {
 
     RH_ScopedInstall(ProcessPlayerWeapon, 0x6859A0);
     RH_ScopedInstall(PlayIdleAnimations, 0x6872C0);
-    RH_ScopedInstall(PlayerControlFighter, 0x687530, {.Reversed = false});
+    RH_ScopedInstall(PlayerControlFighter, 0x687530);
     RH_ScopedInstall(PlayerControlZelda, 0x6883D0);
 
     RH_ScopedVMTInstall(Clone, 0x68AFF0);
@@ -760,7 +762,164 @@ void CTaskSimplePlayerOnFoot::PlayIdleAnimations(CPlayerPed* player) {
 
 // 0x687530
 void CTaskSimplePlayerOnFoot::PlayerControlFighter(CPlayerPed* player) {
-    plugin::CallMethod<0x687530, CTaskSimplePlayerOnFoot*, CPlayerPed*>(this, player);
+    const auto fight = player->GetIntelligence()->GetTaskFighting();
+    if (!fight) {
+        return;
+    }
+
+    const bool isArmed = CWeaponInfo::GetWeaponInfo(player->GetActiveWeapon().m_Type, eWeaponSkill::STD)->m_nWeaponFire != WEAPON_FIRE_MELEE;
+
+    CPad* const pad = player->GetPadFromPlayer();
+    const float walkLeftRight = (float)pad->GetPedWalkLeftRight();
+    const float walkUpDown    = (float)pad->GetPedWalkUpDown();
+    float       x             = walkLeftRight * 0.0078125f; // 1/128
+    float       y             = walkUpDown * 0.0078125f;
+    const float step          = CTimer::GetTimeStep() * 0.07f;
+
+    const auto IsTargeting = [&] {
+        return player->m_pTargetedObject || (CCamera::m_bUseMouse3rdPerson && pad->GetTarget());
+    };
+
+    float len{}; // Magnitude of the input (as float)
+
+    if (CGameLogic::IsPlayerUse2PlayerControls(player)) {
+        len = std::sqrt(x * x + y * y);
+        if (len > 0.f) {
+            const auto angle = CGeneral::LimitRadianAngle(CGeneral::GetRadianAngleBetweenPoints(0.f, 0.f, -x, y) - TheCamera.m_fOrientation);
+            const float negSin = (float)-std::sin((double)angle); // Stored as float in the original
+            const float cos    = (float)std::cos((double)angle);
+            if (CGameLogic::IsPlayerAllowedToGoInThisDirection(player, CVector{ negSin, cos, 0.f }, 0.f)) {
+                const auto& mat = player->GetMatrix();
+                const auto& r   = mat.GetRight();
+                const auto& f   = mat.GetForward();
+                // x87: Products and sums stay in extended precision until the final store
+                x = (float)(((double)cos * r.y + (double)negSin * r.x + (double)r.z * 0.0) * (double)len);
+                y = (float)(-(((double)cos * f.y + (double)negSin * f.x + (double)f.z * 0.0) * (double)len));
+            } else {
+                x = 0.f;
+                y = 0.f;
+            }
+        }
+    } else if (IsTargeting()) {
+        len = std::sqrt(x * x + y * y);
+        if (len > 0.f) {
+            if (len > 1.f) {
+                len = 1.f;
+            }
+            const auto angle  = CGeneral::LimitRadianAngle(CGeneral::GetRadianAngleBetweenPoints(0.f, 0.f, -x, y) - TheCamera.m_fOrientation);
+            const double negSin = -std::sin((double)angle);
+            const double cos    = std::cos((double)angle);
+            const auto& mat = player->GetMatrix();
+            const auto& r   = mat.GetRight();
+            const auto& f   = mat.GetForward();
+            x = (float)((cos * r.y + negSin * r.x + (double)r.z * 0.0) * (double)len);
+            y = (float)(-((cos * f.y + negSin * f.x + (double)f.z * 0.0) * (double)len));
+        }
+    }
+
+    // Moves `current` towards `target` by at most `step`
+    const auto MoveTowards = [step](float& current, float target) {
+        const float diff = target - current;
+        if (std::abs(diff) <= step) {
+            current = target;
+        } else if (diff <= 0.f) {
+            current = current - step;
+        } else {
+            current = step + current;
+        }
+    };
+
+    const auto playerData = player->GetPlayerData();
+    const auto lastCmd    = fight->m_nLastCommand;
+
+    if (IsTargeting()) {
+        MoveTowards(playerData->m_vecFightMovement.y, y);
+        MoveTowards(playerData->m_vecFightMovement.x, x);
+
+        bool doSprintCmds;
+        if (player->m_pTargetedObject) {
+            const auto& pedPos    = player->GetPosition();
+            const auto& targetPos = player->m_pTargetedObject->GetPosition();
+            // x87: extended precision
+            const double dx = (double)targetPos.x - (double)pedPos.x;
+            const double dy = (double)targetPos.y - (double)pedPos.y;
+            const double dz = (double)targetPos.z - (double)pedPos.z;
+            if (dz * dz + dy * dy + dx * dx > 16.0 && lastCmd < 11) {
+                doSprintCmds = true;
+            } else {
+                doSprintCmds = pad->GetSprint() || isArmed;
+            }
+        } else {
+            doSprintCmds = pad->GetSprint() || isArmed;
+        }
+
+        if (doSprintCmds) {
+            if (pad->GetSprint()) {
+                fight->ControlFight(nullptr, 0x11);
+            } else if (y >= -0.5f) {
+                fight->ControlFight(nullptr, 0xF);
+            } else {
+                fight->ControlFight(nullptr, 0x10);
+            }
+            return;
+        }
+        // Fall through to the movement commands below
+    } else {
+        // 0x687821
+        const float angle = CGeneral::GetRadianAngleBetweenPoints(0.f, 0.f, -walkLeftRight, walkUpDown);
+        len               = std::sqrt(x * x + y * y);
+
+        bool doMove = true;
+        if (len > 1.f) {
+            len = 1.f;
+        } else if (len == 0.f) {
+            playerData->m_vecFightMovement.x = 0.f;
+            playerData->m_vecFightMovement.y = 0.f;
+            doMove = false;
+        }
+        if (doMove && y <= 0.f) {
+            const float diff   = -len - playerData->m_vecFightMovement.y;
+            float       newVal = -len;
+            if (std::abs(diff) > step) {
+                newVal = diff <= 0.f ? playerData->m_vecFightMovement.y - step : step + playerData->m_vecFightMovement.y;
+            }
+            playerData->m_vecFightMovement.y = newVal;
+            playerData->m_vecFightMovement.x = 0.f;
+            player->m_fAimingRotation        = CGeneral::LimitRadianAngle(angle - TheCamera.m_fOrientation);
+        }
+
+        if (!player->m_pTargetedObject && y <= 0.f && lastCmd < 11) {
+            m_nTimer += (int32)((double)CTimer::GetTimeStep() * (double)0.02f * 1000.0);
+        } else {
+            m_nTimer = 0;
+        }
+
+        if (!pad->GetSprint() && !pad->GetDuck() && !isArmed && y <= 0.f) {
+            if ((float)(uint32)m_nTimer < 2000.f) {
+                goto MovementCommands;
+            }
+        }
+
+        pad->GetSprint(); // Result unused in the original
+        const int32 cmd = len > 0.5f ? 0x10 : 0xF;
+        if (pad->DuckJustDown() && CTaskSimpleDuck::CanPedDuck(player)) {
+            player->GetIntelligence()->SetTaskDuckSecondary(0);
+            fight->ControlFight(nullptr, 0x12);
+            return;
+        }
+        fight->ControlFight(nullptr, (uint8)cmd);
+        return;
+    }
+
+MovementCommands:
+    const auto fm = playerData->m_vecFightMovement;
+    if (std::abs(fm.y) > 0.f && std::abs(fm.x) < std::abs(fm.y)) {
+        fight->ControlFight(nullptr, fm.y >= 0.f ? 5 : 3);
+        return;
+    }
+    if (std::abs(fm.x) > 0.f) {
+        fight->ControlFight(nullptr, fm.x > 0.f ? 6 : 4);
+    }
 }
 
 // 0x687C20

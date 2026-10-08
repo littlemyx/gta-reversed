@@ -94,7 +94,7 @@ public:
     static inline auto& TimerMainCounterHideState = StaticRef<int16>(0xBAA388);
     static inline auto& TimerMainCounterWasDisplayed = StaticRef<bool>(0xBAA38A);
     static inline auto& TimerCounterHideState = StaticRef<std::array<int16, 4>>(0xBAA38C);
-    static inline auto& TimerCounterWasDisplayed = StaticRef<std::array<int16, 4>>(0xBAA394);
+    static inline auto& TimerCounterWasDisplayed = StaticRef<std::array<bool, 4>>(0xBAA394);
 
     static inline auto& OddJob2OffTimer = StaticRef<float>(0xBAA398);
     static inline auto& OddJob2XOffset = StaticRef<float>(0xBAA39C);
@@ -144,7 +144,7 @@ public:
     static void DrawPlayerInfo();
     static inline void DrawClock();
     static inline void DrawMoney(const CPlayerInfo& playerInfo, uint8 alpha);
-    static inline void DrawWeapon(CPlayerPed* ped0, CPlayerPed* ped1);
+    static inline void DrawWeapon(CPlayerPed* ped0, CPlayerPed* ped1, float alpha);
 
     static void DrawTripSkip();
     static void DrawWanted();

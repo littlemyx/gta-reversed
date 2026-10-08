@@ -20,6 +20,8 @@
 #include "PedIntelligence.h"
 #include "Ragdoll/IKChainManager.h"
 #include "GameLogic.h"
+#include "ControllerConfigManager.h"
+#include "TheScripts.h"
 #include "Collision/Collision.h"
 #include "Entity/Vehicle/Automobile.h"
 #include "Entity/Vehicle/Bike.h"
@@ -347,7 +349,7 @@ void CCam::InjectHooks() {
     RH_ScopedInstall(Process_FollowCar_SA, 0x5245B0);
     RH_ScopedInstall(Process_FollowPedWithMouse, 0x50F970);
     RH_ScopedInstall(Process_FollowPed_SA, 0x522D40);
-    RH_ScopedInstall(Process_M16_1stPerson, 0x5105C0, { .Reversed = false });
+    RH_ScopedInstall(Process_M16_1stPerson, 0x5105C0);
     RH_ScopedInstall(Process_Rocket, 0x511B50);
     RH_ScopedInstall(Process_SpecialFixedForSyphon, 0x517500);
     RH_ScopedInstall(Process_WheelCam, 0x512110);
@@ -5240,10 +5242,460 @@ void CCam::Process_FollowPed_SA(const CVector& target, float orientation, float 
     m_bResetStatics     = false;
 }
 
+namespace {
+// Camera bump tuning (names made up), see `DoCamBump`
+auto& gM16CamBumpPeriod   = StaticRef<int32>(0x8CC474); // 800
+auto& gM16CamBumpDuration = StaticRef<int32>(0x8CC478); // 600
+auto& gM16CamBumpDecay    = StaticRef<float>(0x8CC47C); // 0.95
+auto& gM16CamBumpScale    = StaticRef<float>(0x8CC480); // 0.1
+
+// Used by `Process_M16_1stPerson` when the ped is crouching (names made up)
+auto& gM16CrouchBackOffset = StaticRef<float>(0x8CC7BC); // 0.5
+auto& gM16CrouchSideOffset = StaticRef<float>(0x8CC7B8); // 0.18
+
+// Pitch limit of `Process_M16_1stPerson` and the stick damping factors (names made up)
+auto& gM16MaxPitch        = StaticRef<float>(0x8CCC90); // 1.2
+auto& gM16StickDampSlow   = StaticRef<float>(0x8CCC94); // 0.5 (both sticks almost centered)
+auto& gM16StickDampNormal = StaticRef<float>(0x8CCC98); // 0.8
+
+auto& gM16TargetFov           = StaticRef<float>(0xB6FFE8);  // The FOV the zoom is blended towards (names made up)
+auto& gM16Unused_B6FFEC       = StaticRef<uint32>(0xB6FFEC); // Only ever reset by `Process_M16_1stPerson`
+auto& gM16Unused_B6FFF0       = StaticRef<uint32>(0xB6FFF0); // ^
+auto& gbM16CamObstructed      = StaticRef<bool>(0xB6FFF4);   // Set when the (collision checked) camera is too close to the geometry, in that case the near clip isn't touched
+
+// Heading of the entity the way `CPlaceable::GetHeading` (0x441DB0) leaves it in the FPU (extended precision)
+double M16HeadingExt(const CPlaceable& placeable) {
+    if (const auto* const mat = placeable.m_matrix) {
+        const auto& fwd = mat->GetForward();
+        return std::atan2((double)-fwd.x, (double)fwd.y);
+    }
+    return (double)placeable.m_placement.m_fHeading;
+}
+
+// dst += dir * c - the x/y sums stay in the FPU registers, the z product is rounded to a float first
+void M16AddScaled(CVector& dst, float c, const CVector& dir) {
+    dst.x = (float)((double)c * dir.x + dst.x);
+    dst.y = (float)((double)c * dir.y + dst.y);
+    dst.z = (float)((double)c * dir.z) + dst.z;
+}
+
+// dst -= dir * c - ^
+void M16SubScaled(CVector& dst, float c, const CVector& dir) {
+    dst.x = (float)(dst.x - (double)c * dir.x);
+    dst.y = (float)(dst.y - (double)c * dir.y);
+    dst.z = dst.z - (float)((double)c * dir.z);
+}
+
+// asin of a value clamped to [-1, 1] (stored as a float)
+float M16ClampedAsin(float v) {
+    return (float)std::asin((double)std::clamp(v, -1.0f, 1.0f));
+}
+}
+
 // 0x5105C0
 void CCam::Process_M16_1stPerson(const CVector& target, float orientation, float speedVar, float speedVarWanted) {
-    // NOTSA: Not reversed yet, forwards to the original code (the hook is disabled, see `InjectHooks`)
-    plugin::CallMethod<0x5105C0, CCam*, const CVector*, float, float, float>(this, &target, orientation, speedVar, speedVarWanted);
+    // NOTE: `target`, `orientation`, `speedVar` and `speedVarWanted` aren't used by the original (it copies `target` to a local, but only overwrites it)
+    constexpr float kPi     = std::numbers::pi_v<float>;
+    constexpr float kHalfPi = kPi / 2.0f;
+    constexpr float kTwoPi  = 2.0f * kPi;
+
+    if (!m_pCamTargetEntity->GetIsTypePed()) {
+        return;
+    }
+    auto* const targetPed = m_pCamTargetEntity->AsPed();
+
+    float maxPitch = 1.04719758f;  // local_38
+    float minPitch = 1.49225652f;  // local_34 (as a magnitude)
+    float upOfs    = 0.1f;         // local_48 - offset of the camera along the up vector of the ped
+    float backOfs  = 0.3f;         // local_44 - offset of the camera backwards (along the forward vector of the ped)
+
+    // Player that is attached to something (turret, vehicle mounted gun, ...)
+    const bool isPlayerAttached = targetPed->IsPlayer() && targetPed->m_pAttachedTo;
+
+    if (m_bResetStatics) {
+        if (CCamera::m_bUseMouse3rdPerson && !targetPed->m_pTargetedObject) {
+            if (isPlayerAttached) {
+                m_fHorizontalAngle = CTheScripts::fCameraHeadingWhenPlayerIsAttached;
+                m_fVerticalAngle   = 0.0f;
+            }
+        } else {
+            if (isPlayerAttached) {
+                m_fHorizontalAngle = CTheScripts::fCameraHeadingWhenPlayerIsAttached;
+            } else {
+                m_fHorizontalAngle = targetPed->m_fCurrentRotation - kHalfPi;
+            }
+            m_fVerticalAngle = 0.0f;
+        }
+
+        m_bResetStatics             = false;
+        gbM16CamObstructed          = false;
+        gM16Unused_B6FFF0           = 0;
+        m_fInitialPlayerOrientation = targetPed->m_fCurrentRotation - kHalfPi;
+        gM16Unused_B6FFEC           = 0;
+        m_bCollisionChecksOn        = true;
+        m_fFOVSpeed                 = 0.0f;
+        gM16TargetFov               = m_fFOV;
+        m_fAlphaSpeed               = 0.0f;
+        m_fBetaSpeed                = 0.0f;
+    }
+
+    if (m_nMode == MODE_SNIPER || m_nMode == MODE_CAMERA) {
+        // Zooming
+        bool wheelZoomed = false;
+
+        const auto zoomInBtn  = ControlsManager.GetMouseButtonAssociatedWithAction(eControllerAction::PED_SNIPER_ZOOM_IN);
+        const auto zoomOutBtn = ControlsManager.GetMouseButtonAssociatedWithAction(eControllerAction::PED_SNIPER_ZOOM_OUT);
+        const float wheel     = CPad::NewMouseControllerState.m_fWheelMoved;
+
+        if ((wheel > 0.0f && zoomOutBtn == 4) || (wheel < 0.0f && zoomOutBtn == 5)) {
+            gM16TargetFov = (float)((((double)std::abs(wheel) * 7.0f + 10000.0f) * gM16TargetFov) * 0.0001f);
+            wheelZoomed   = true;
+        } else if ((wheel > 0.0f && zoomInBtn == 4) || (wheel < 0.0f && zoomInBtn == 5)) {
+            gM16TargetFov = (float)((double)gM16TargetFov / (((double)std::abs(wheel) * 7.0f + 10000.0f) * 0.0001f));
+            wheelZoomed   = true;
+        }
+
+        auto* const pad = CPad::GetPad(0);
+        if (pad->SniperZoomOut() && !wheelZoomed) {
+            m_fFOV        = (float)((((double)CTimer::GetTimeStep() * 255.0f + 10000.0f) * m_fFOV) * 0.0001f);
+            gM16TargetFov = m_fFOV;
+            m_fFOVSpeed   = 0.0f;
+        } else if (pad->SniperZoomIn() && !wheelZoomed) {
+            m_fFOV        = (float)((double)m_fFOV / (((double)CTimer::GetTimeStep() * 255.0f + 10000.0f) * 0.0001f));
+            gM16TargetFov = m_fFOV;
+            m_fFOVSpeed   = 0.0f;
+        } else if (std::abs(gM16TargetFov - m_fFOV) <= 0.5f) {
+            m_fFOVSpeed = 0.0f;
+        } else {
+            WellBufferMe(gM16TargetFov, m_fFOV, m_fFOVSpeed, 0.5f, 0.25f, false);
+        }
+
+        if (m_fFOV > 70.0f) {
+            m_fFOV = 70.0f;
+        }
+        if (gM16TargetFov > 70.0f) {
+            gM16TargetFov = 70.0f;
+        } else if (m_nMode == MODE_CAMERA) {
+            if (m_fFOV < 3.0f) {
+                m_fFOV = 3.0f;
+            }
+            if (gM16TargetFov < 3.0f) {
+                gM16TargetFov = 3.0f;
+            }
+        } else {
+            if (m_fFOV < 15.0f) {
+                m_fFOV = 15.0f;
+            }
+            if (gM16TargetFov < 15.0f) {
+                gM16TargetFov = 15.0f;
+            }
+        }
+
+        TheCamera.SetMotionBlur(180, 255, 180, 120, eMotionBlurType::SNIPER);
+    } else {
+        m_fFOV = 70.0f;
+    }
+
+    // Attached player: the camera is steered towards the wanted heading
+    if (isPlayerAttached && 0.0f < CTheScripts::fCameraHeadingStepWhenPlayerIsAttached) {
+        auto&        step = CTheScripts::fCameraHeadingStepWhenPlayerIsAttached;
+        double       d    = (double)m_fHorizontalAngle - CTheScripts::fCameraHeadingWhenPlayerIsAttached;
+        if (d < 0.0) {
+            d += kTwoPi;
+        }
+        const float e = (float)((double)kTwoPi - d);
+        if (d < step || e < step) {
+            m_fHorizontalAngle = CTheScripts::fCameraHeadingWhenPlayerIsAttached;
+            step               = 0.0f;
+        } else if (d <= (double)e) {
+            m_fHorizontalAngle = m_fHorizontalAngle - step;
+        } else {
+            m_fHorizontalAngle = step + m_fHorizontalAngle;
+        }
+    }
+
+    // Look around (mouse / sticks)
+    {
+        const auto  mouse = CPad::NewMouseControllerState.GetAmountMouseMoved();
+        const float ts    = CTimer::GetTimeStep();
+        double      deltaH, deltaV; // NOTE: x87 extended precision in the original
+        if (mouse.x == 0.0f && mouse.y == 0.0f) {
+            auto* const pad    = CPad::GetPad(0);
+            const float stickH = (float)-(int32)pad->LookAroundLeftRight(targetPed);
+            const float stickV = (float)(int32)pad->LookAroundUpDown(targetPed);
+
+            float locH, locV;
+            if (isPlayerAttached) {
+                const double h = (double)stickH * 0.0078125f;
+                const double v = (double)stickV * 0.0078125f;
+                const double f = (double)m_fFOV * 0.0125f;
+                locH           = (float)(std::abs(h) * (f * 0.04f) * ts * h);
+                locV           = (float)(std::abs(v) * (f * 0.034285713f) * ts * v);
+            } else {
+                const float signH = stickH < 0.0f ? -1.0f : 1.0f;
+                const float signV = stickV < 0.0f ? -1.0f : 1.0f;
+                const double f    = (double)m_fFOV * 0.0125f;
+                locH              = (float)((((double)stickH * stickH * 0.0001f) * (f * 0.0571428575f)) * ts * signH);
+                locV              = (float)((((double)stickV * stickV * 4.44444449e-05f) * (f * 0.0714285746f)) * ts * signV);
+            }
+
+            float damp = gM16StickDampNormal;
+            if (std::abs(stickH) < 2.0f && std::abs(stickV) < 2.0f) {
+                damp = gM16StickDampSlow;
+            }
+            damp = (float)std::pow((double)damp, (double)ts);
+
+            const float oneMinusDamp = (float)(1.0 - (double)damp);
+            const double betaSpeed   = (1.0 - (double)damp) * locH + (double)damp * m_fBetaSpeed;
+            m_fBetaSpeed             = (float)betaSpeed;
+            const float alphaSpeed   = (float)((double)damp * m_fAlphaSpeed + (double)oneMinusDamp * locV);
+            m_fAlphaSpeed            = alphaSpeed;
+
+            deltaH = betaSpeed;
+            deltaV = alphaSpeed;
+        } else {
+            const float mouseX = mouse.x * -3.0f;
+            float       mouseY = mouse.y * 3.0f;
+            float       hSrc   = mouseX;
+            auto* const pad    = CPad::GetPad(0);
+            if (pad->DisablePlayerControls != 0 || pad->JustOutOfFrontEnd != 0 || ts <= 0.0f) {
+                mouseY = 0.0f;
+                hSrc   = 0.0f;
+            }
+            const double f  = (double)m_fFOV * 0.0125f;
+            const float  fF = (float)f;
+            deltaH          = (double)hSrc * (f * CCamera::m_fMouseAccelHorzntl);
+            deltaV          = ((double)fF * CCamera::m_fMouseAccelVertical) * mouseY;
+            m_fBetaSpeed    = 0.0f;
+            m_fAlphaSpeed   = 0.0f;
+        }
+        m_fHorizontalAngle = (float)(deltaH + m_fHorizontalAngle);
+        m_fVerticalAngle   = (float)(deltaV + m_fVerticalAngle);
+    }
+    ClipBeta();
+
+    // Camera bump
+    if ((int32)m_nCamBumpedTime > 0) {
+        const uint32 bumpTime = m_nCamBumpedTime;
+        const double c        = std::cos((double)(uint32)(CTimer::GetTimeInMS() - bumpTime) / (double)gM16CamBumpPeriod * (double)kTwoPi);
+        m_fHorizontalAngle    = (float)((double)gM16CamBumpScale * c * m_fCamBumpedHorz + m_fHorizontalAngle);
+        m_fVerticalAngle      = (float)(c * m_fCamBumpedVert * (double)gM16CamBumpScale + m_fVerticalAngle);
+        m_fCamBumpedHorz      = (float)(std::pow((double)gM16CamBumpDecay, (double)CTimer::GetTimeStep()) * m_fCamBumpedHorz);
+        m_fCamBumpedVert      = (float)(std::pow((double)gM16CamBumpDecay, (double)CTimer::GetTimeStep()) * m_fCamBumpedVert);
+        if (CTimer::GetTimeInMS() > bumpTime + (uint32)gM16CamBumpDuration) {
+            m_nCamBumpedTime = 0;
+        }
+    }
+
+    if (targetPed->bIsDucking) {
+        backOfs = 0.8f;
+    }
+
+    CVector bonePos{};
+    if (isPlayerAttached) {
+        auto* const attached = targetPed->m_pAttachedTo;
+
+        // Pitch and heading of the entity the ped is attached to, as seen from the ped's `m_fTurretAngleA` position (0 = default)
+        float pitchTarget;   // local_40
+        float headingTarget; // local_20
+        switch (targetPed->m_fTurretAngleA) {
+        case 1:
+            pitchTarget   = M16ClampedAsin(-attached->GetMatrix().GetRight().z);
+            headingTarget = (float)M16HeadingExt(*attached);
+            break;
+        case 2:
+            pitchTarget   = M16ClampedAsin(-attached->GetMatrix().GetForward().z);
+            headingTarget = (float)(M16HeadingExt(*attached) + (double)kHalfPi);
+            break;
+        case 3:
+            pitchTarget   = M16ClampedAsin(attached->GetMatrix().GetRight().z);
+            headingTarget = (float)(M16HeadingExt(*attached) - (double)kPi);
+            break;
+        default:
+            pitchTarget   = M16ClampedAsin(attached->GetMatrix().GetForward().z);
+            headingTarget = (float)(M16HeadingExt(*attached) - (double)kHalfPi);
+            break;
+        }
+
+        targetPed->PositionAttachedPed();
+        targetPed->UpdateRwMatrix();
+        targetPed->UpdateRwFrame();
+        targetPed->UpdateRpHAnim();
+
+        if (attached->GetIsTypeVehicle() && attached->AsVehicle()->m_nVehicleType == VEHICLE_TYPE_BIKE) {
+            upOfs   = 0.0f;
+            backOfs = 0.0f;
+            targetPed->GetBonePosition(&bonePos, BONE_HEAD, true);
+            maxPitch = targetPed->m_nTurretPosnMode;
+            minPitch = maxPitch;
+        } else {
+            targetPed->GetBonePosition(&bonePos, BONE_HEAD, true);
+        }
+        m_vecSource = bonePos;
+
+        M16AddScaled(m_vecSource, upOfs, targetPed->GetMatrix().GetUp());
+        M16SubScaled(m_vecSource, backOfs, targetPed->GetMatrix().GetForward());
+
+        // Limit how far the camera heading is allowed to go from the heading of the attached entity
+        const float  timeFactor = CTimer::GetTimeStep() * 0.05f;
+        const double headMargin = 0.75f * (double)targetPed->m_fTurretAngleB;
+        const float  headInner  = (float)((1.0f - 0.75f) * (double)targetPed->m_fTurretAngleB);
+
+        double headTarget = headingTarget;
+        if (headTarget - m_fHorizontalAngle > (double)kPi) {
+            headTarget -= (double)kTwoPi;
+        } else if (headTarget - m_fHorizontalAngle < (double)-kPi) {
+            headTarget += (double)kTwoPi;
+        }
+
+        CAutomobile* heli = nullptr;
+        if (attached->GetIsTypeVehicle() && attached->AsVehicle()->m_nVehicleSubType == VEHICLE_TYPE_HELI) {
+            heli = attached->AsAutomobile();
+        }
+
+        const double headDiff = headTarget - m_fHorizontalAngle;
+        double       headOver = 0.0;
+        bool         headOut  = true;
+        if (headDiff > headMargin) {
+            headOver = headDiff - headMargin;
+        } else if (headDiff < -headMargin) {
+            headOver = headDiff + headMargin;
+        } else {
+            headOut = false;
+        }
+        if (headOut) {
+            const float over  = (float)headOver;
+            float       delta = (float)(timeFactor * std::abs(over));
+            if (std::abs(over) > (double)headInner + delta) {
+                delta = (float)(std::abs(over) - headInner);
+            }
+            if (heli && heli->m_fForcedOrientation > 0.0f) {
+                heli->SetHeliOrientation((float)((double)heli->m_fForcedOrientation - (double)CTimer::GetTimeStep() * over * 0.1f));
+            }
+            if (over != 0.0f) {
+                if (over < 0.0f) {
+                    m_fHorizontalAngle = m_fHorizontalAngle - delta;
+                } else {
+                    m_fHorizontalAngle = delta + m_fHorizontalAngle;
+                }
+            }
+        }
+
+        // Same for the pitch
+        {
+            const float m1     = (float)(0.75f * (double)maxPitch);
+            const float inner2 = (float)((1.0f - 0.75f) * (double)maxPitch);
+            if ((double)m1 + pitchTarget < m_fVerticalAngle) {
+                const double q = (double)pitchTarget - m_fVerticalAngle;
+                if (q < -(double)m1) {
+                    const float t = (float)std::abs(q + m1);
+                    double      e = (double)CTimer::GetTimeStep() * 0.05f * t;
+                    if ((double)inner2 + e < t) {
+                        e = (double)t - inner2;
+                    }
+                    m_fVerticalAngle = (float)(m_fVerticalAngle - e);
+                }
+            }
+        }
+        {
+            const float m2     = (float)(0.75f * (double)minPitch);
+            const float inner3 = (float)((1.0f - 0.75f) * (double)minPitch);
+            if ((double)pitchTarget - m2 > m_fVerticalAngle) {
+                const double q = (double)pitchTarget - m_fVerticalAngle;
+                if (q > m2) {
+                    const float t = (float)std::abs(q - m2);
+                    double      e = (double)CTimer::GetTimeStep() * 0.05f * t;
+                    if ((double)inner3 + e < t) {
+                        e = (double)t - inner3;
+                    }
+                    m_fVerticalAngle = (float)(e + m_fVerticalAngle);
+                }
+            }
+        }
+    } else {
+        if (m_fVerticalAngle > 1.04719758f) {
+            m_fVerticalAngle = 1.04719758f;
+        } else if (m_fVerticalAngle < -1.49225652f) {
+            m_fVerticalAngle = -1.49225652f;
+        }
+
+        targetPed->UpdateRwMatrix();
+        targetPed->UpdateRwFrame();
+        targetPed->UpdateRpHAnim();
+
+        targetPed->GetBonePosition(&bonePos, BONE_HEAD, true);
+        m_vecSource = bonePos;
+        m_vecSource.z = m_vecSource.z + 0.1f;
+
+        if (!targetPed->bIsDucking) {
+            m_vecSource.x = (float)(m_vecSource.x - (double)backOfs * targetPed->GetMatrix().GetForward().x);
+            m_vecSource.y = (float)(m_vecSource.y - (double)backOfs * targetPed->GetMatrix().GetForward().y);
+        } else {
+            m_vecSource.x = (float)(m_vecSource.x - (double)gM16CrouchBackOffset * targetPed->GetMatrix().GetForward().x);
+            m_vecSource.y = (float)(m_vecSource.y - (double)gM16CrouchBackOffset * targetPed->GetMatrix().GetForward().y);
+            m_vecSource.x = (float)(m_vecSource.x - (double)gM16CrouchSideOffset * targetPed->GetMatrix().GetRight().x);
+            m_vecSource.y = (float)(m_vecSource.y - (double)gM16CrouchSideOffset * targetPed->GetMatrix().GetRight().y);
+        }
+    }
+
+    // Limit the pitch
+    if (m_fVerticalAngle < -gM16MaxPitch) {
+        m_fVerticalAngle = -gM16MaxPitch;
+    } else if (m_fVerticalAngle > gM16MaxPitch) {
+        m_fVerticalAngle = gM16MaxPitch;
+    }
+
+    {
+        const double cosV = std::cos((double)m_fVerticalAngle);
+        m_vecFront.x      = (float)-(std::cos((double)m_fHorizontalAngle) * cosV);
+        m_vecFront.y      = (float)-(std::sin((double)m_fHorizontalAngle) * cosV);
+        m_vecFront.z      = (float)std::sin((double)m_fVerticalAngle);
+    }
+
+    CVector lookPos = m_vecSource; // local_24
+    M16AddScaled(lookPos, 3.0f, m_vecFront);
+    M16AddScaled(m_vecSource, 0.4f, m_vecFront);
+
+    // Make sure the camera isn't inside / too close to the geometry
+    // NOTE: The angles stay in the FPU registers (extended precision) in the original
+    const auto IsProbeObstructed = [&](double h, double v) {
+        const double cv = std::cos(v);
+        const float  x  = (float)(std::cos(h) * cv);
+        const float  y  = (float)(std::sin(h) * cv);
+        const float  z3 = (float)(std::sin(v) * 3.0f);
+        const CVector probe{ (float)((double)x * 3.0f + m_vecSource.x), (float)((double)y * 3.0f) + m_vecSource.y, z3 + m_vecSource.z };
+        return !CWorld::GetIsLineOfSightClear(probe, m_vecSource, true, true, false, true, false, true, true);
+    };
+
+    bool skipNearClip = false;
+    if (m_bCollisionChecksOn) {
+        const double v = (double)m_fVerticalAngle - 0.34906587f;
+        if (!CWorld::GetIsLineOfSightClear(lookPos, m_vecSource, true, true, false, true, false, true, true)
+            || IsProbeObstructed((double)m_fHorizontalAngle + 0.610865235f, v)
+            || IsProbeObstructed((double)m_fHorizontalAngle - 0.610865235f, v)
+        ) {
+            RwCameraSetNearClipPlane(Scene.m_pRwCamera, 0.3f);
+            gbM16CamObstructed = true;
+            skipNearClip       = true;
+        } else {
+            gbM16CamObstructed = false;
+        }
+    } else if (gbM16CamObstructed) {
+        skipNearClip = true;
+    }
+
+    if (!skipNearClip && m_nMode == MODE_CAMERA) {
+        const float fov = std::min(15.0f, m_fFOV);
+        RwCameraSetNearClipPlane(Scene.m_pRwCamera, (float)((((double)15.0f - fov) * 0.15f + 1.0) * 0.3f));
+    }
+
+    M16SubScaled(m_vecSource, 0.4f, m_vecFront);
+    GetVectorsReadyForRW();
+
+    const float heading = (float)std::atan2((double)-m_vecFront.x, (double)m_vecFront.y);
+    auto* const camPed  = TheCamera.m_pTargetEntity->AsPed();
+    camPed->m_fCurrentRotation = heading;
+    camPed->m_fAimingRotation  = heading;
 }
 
 // 0x511B50

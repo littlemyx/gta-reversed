@@ -1,5 +1,7 @@
 #include "StdInc.h"
 
+#include <numbers>
+
 #include "Cam.h"
 #include "TimeCycle.h"
 #include "Camera.h"

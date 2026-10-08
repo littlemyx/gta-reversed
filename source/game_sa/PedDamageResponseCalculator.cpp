@@ -3,6 +3,7 @@
 #include <reversiblebugfixes/Bugs.hpp>
 #include "PedDamageResponseCalculator.h"
 
+#include "PedStats.h"
 #include "PedGroups.h"
 #include "PedIntelligence.h"
 #include "Localisation.h"

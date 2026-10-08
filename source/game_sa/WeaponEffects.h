@@ -9,6 +9,8 @@
 #include "Vector.h"
 #include "RGBA.h"
 
+class CEntity;
+
 typedef int32 CrossHairId;
 
 enum eWeaponEffectsLockTexture {
@@ -23,8 +25,8 @@ public:
     CVector m_vecPosn;
     CRGBA   m_color;
     float   m_fSize;
-    int32   field_1C;
-    int32   field_20;
+    float   m_fRingAngle;     // 0x1C: angle (radians) of the rotating lock-on triangles
+    float   m_fLockOnFade;    // 0x20: fade value of the flight lock-on sprite (see Render)
     float   m_fRotation;
     bool    m_bClearImmediately;
 
@@ -51,3 +53,11 @@ constexpr auto MAX_NUM_WEAPON_CROSSHAIRS{ 2u };
 static inline auto& gCrossHair = StaticRef<std::array<CWeaponEffects, MAX_NUM_WEAPON_CROSSHAIRS>>(0xC8A838);
 static inline auto& gpCrossHairTex = StaticRef<RwTexture*>(0xC8A818);
 static inline auto& gpCrossHairTexFlight = StaticRef<RwTexture*[2]>(0xC8A810);
+
+// NOTSA names for the globals used by `CWeaponEffects::Render`
+static inline auto& gLastCrossHairTargetTime   = StaticRef<uint32>(0xC8A890);      // Time when `gpLastCrossHairTarget` has changed
+static inline auto& gpLastCrossHairTarget      = StaticRef<CEntity*>(0xC8A894);    // Last target found by the 2nd player's lock-on
+static inline auto& gCrossHairLockOffsetCos    = StaticRef<float>(0xC8A898);       // cos(angle) * m_fLockOnFade, used as Y offset
+static inline auto& gCrossHairLockOffsetSin    = StaticRef<float>(0xC8A89C);       // sin(angle) * m_fLockOnFade, used as X offset
+static inline auto& gCrossHairRingOffset       = StaticRef<std::array<float, MAX_NUM_WEAPON_CROSSHAIRS>>(0xC8A8A0); // Radius offset of the pulsing ring
+static inline auto& gCrossHairRingGrowing      = StaticRef<std::array<bool, MAX_NUM_WEAPON_CROSSHAIRS>>(0x8D6144);  // Is the pulsing ring currently growing

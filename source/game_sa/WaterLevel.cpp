@@ -1,5 +1,6 @@
 #include "StdInc.h"
 #include "WaterLevel.h"
+#include "PostEffects.h"
 #include <sstream>
 
 #define TRIANGLE_ARGS_OUT X1, Y1, P1, X2, Y2, P2, X3, Y3, P3

@@ -28,6 +28,87 @@ static inline auto& DWCineyCamLastFwd = StaticRef<CVector>(0xB6FEB0);
 static inline auto& DWCineyCamLastNearClip = StaticRef<float>(0xB6EC08);
 static inline auto& DWCineyCamLastFov = StaticRef<float>(0xB6EC0C);
 
+//! Settings of the DW (David Wood) heli chase cinematic camera, a global at 0xB6FEC0 (names made up)
+struct DWHeliChaseCamSettings {
+    CVector endPos;                // 0x00
+    CVector startPos;              // 0x0C
+    float   endDistAhead;          // 0x18
+    float   startDistBehind;       // 0x1C
+    float   zOffset;               // 0x20
+    float   sideOffset;            // 0x24
+    float   fovBlendInFraction;    // 0x28
+    float   fovStart;              // 0x2C
+    float   fovEnd;                // 0x30
+    float   targetVelFactor;       // 0x34
+    float   rollRate;              // 0x38
+    float   nearClip;              // 0x3C
+    bool    bPosLocked;            // 0x40
+    int32   lockedCounter;         // 0x44
+    int32   lockedCounterInit;     // 0x48
+    CVector lockedPos;             // 0x4C
+    int32   numTries;              // 0x58
+    bool    bCollided;             // 0x5C
+    int32   clearCounterMax;       // 0x60
+    int32   clearCounter;          // 0x64
+    float   fovZoomDistMin;        // 0x68
+    float   fovZoomDistMax;        // 0x6C
+    float   fovZoomAmount;         // 0x70
+    float   minDist2D;             // 0x74
+    float   sphereRadius;          // 0x78
+    float   fovRange;              // 0x7C
+    bool    bBlocked;              // 0x80
+    bool    bFlag81;               // 0x81
+    float   savedFov;              // 0x84
+    bool    bFovLerping;           // 0x88
+    int32   fovLerpStartTime;      // 0x8C
+    int32   fovLerpEndTime;        // 0x90
+    float   fovLerpStartFraction;  // 0x94
+    int32   fovLerpDuration;       // 0x98
+
+    // 0x50E180
+    void SetDefaults() {
+        endDistAhead         = 50.0f;
+        sideOffset           = 50.0f;
+        startDistBehind      = 30.0f;
+        zOffset              = 55.0f;
+        fovBlendInFraction   = 0.05f;
+        fovStart             = 70.0f;
+        fovEnd               = 22.0f;
+        targetVelFactor      = 1.0f;
+        rollRate             = 0.0f;
+        nearClip             = 10.0f;
+        lockedCounter        = 30;
+        numTries             = 8;
+        clearCounterMax      = 60;
+        clearCounter         = 60;
+        fovZoomDistMin       = 100.0f;
+        fovZoomDistMax       = 110.0f;
+        fovZoomAmount        = 10.0f;
+        minDist2D            = 5.0f;
+        sphereRadius         = 12.0f;
+        fovLerpStartFraction = 0.75f;
+        fovLerpDuration      = 4000;
+        bPosLocked           = false;
+        bCollided            = false;
+        bBlocked             = false;
+        bFlag81              = false;
+        fovRange             = 50.0f;
+        lockedCounterInit    = 30;
+        bFovLerping          = false;
+    }
+
+    // 0x50E090
+    void Randomize() {
+        endDistAhead       = ((float)CGeneral::GetRandomNumber() * 3.05185094e-05f * 1.4f + 0.1f) * endDistAhead;
+        startDistBehind    = ((float)CGeneral::GetRandomNumber() * 3.05185094e-05f * 0.5f + 0.5f) * startDistBehind;
+        zOffset            = ((float)CGeneral::GetRandomNumber() * 3.05185094e-05f * 0.5f + 0.5f) * zOffset;
+        sideOffset         = ((float)CGeneral::GetRandomNumber() * 3.05185094e-05f * 0.5f + 0.5f) * sideOffset;
+        fovBlendInFraction = ((float)CGeneral::GetRandomNumber() * 3.05185094e-05f * 1.5f + 0.5f) * fovBlendInFraction;
+    }
+};
+VALIDATE_SIZE(DWHeliChaseCamSettings, 0x9C);
+static inline auto& gDWHeliChaseCamSettings = StaticRef<DWHeliChaseCamSettings>(0xB6FEC0);
+
 // 0x509BE0 - wraps the angle into [-PI, PI)
 static float WrapAngleToPi(float a) {
     for (; a >= PI; a -= (2.0f * PI)) {
@@ -104,9 +185,9 @@ void CCam::InjectHooks() {
     RH_ScopedInstall(Process_Cam_TwoPlayer_InCarAndShooting, 0x519810, { .Reversed = false });
     RH_ScopedInstall(Process_Cam_TwoPlayer_Separate_Cars, 0x513510, { .Reversed = false });
     RH_ScopedInstall(Process_Cam_TwoPlayer_Separate_Cars_TopDown, 0x513BE0);
-    RH_ScopedInstall(Process_DW_BirdyCam, 0x51B850, { .Reversed = false });
-    RH_ScopedInstall(Process_DW_CamManCam, 0x51B120, { .Reversed = false });
-    RH_ScopedInstall(Process_DW_HeliChaseCam, 0x51A740, { .Reversed = false });
+    RH_ScopedInstall(Process_DW_BirdyCam, 0x51B850);
+    RH_ScopedInstall(Process_DW_CamManCam, 0x51B120);
+    RH_ScopedInstall(Process_DW_HeliChaseCam, 0x51A740);
     RH_ScopedInstall(Process_DW_PlaneCam1, 0x51C760);
     RH_ScopedInstall(Process_DW_PlaneCam2, 0x51CC30);
     RH_ScopedInstall(Process_DW_PlaneCam3, 0x51D100);
@@ -831,17 +912,502 @@ void CCam::Process_Cam_TwoPlayer_Separate_Cars_TopDown() {
 
 // 0x51B850
 void CCam::Process_DW_BirdyCam(bool) {
-    NOTSA_UNREACHABLE();
+    constexpr int32 CAM_ID = 22;
+
+    TheCamera.m_bUseNearClipScript = false;
+    if (!m_pCamTargetEntity || !m_pCamTargetEntity->GetIsTypeVehicle()) {
+        TheCamera.m_bUseNearClipScript = false;
+        return;
+    }
+
+    CEntity*   entity{};
+    CVehicle*  vehicle{};
+    CVector    dest{}, src{}, up{}, right{}, fwd{}, vel{}, angVel{};
+    float      speed{}, angSpeed{};
+    CColSphere colSphere{};
+    GetCoreDataForDWCineyCamMode(entity, vehicle, dest, src, up, right, fwd, vel, speed, angVel, angSpeed, colSphere);
+
+    const auto now = CTimer::GetTimeInMS();
+
+    static CVector s_points[2]{};       // 0xB70080
+    static int32   s_clearCounter = 30; // 0xB7007C
+
+    if (gLastDWCineyCamMode != 0x3A || gLastFrameProcessedDWCineyCam < CTimer::GetFrameCounter() - 1u) {
+        gLastDWCineyCamMode  = 0x3A;
+        gDWCineyCamEndTime   = 5000u + now; // 0x8CCBB0
+        gbExitCam[CAM_ID]    = false;
+        gDWCineyCamStartTime = now;
+        s_clearCounter       = 30;
+        gHandShaker[0].Reset();
+
+        const auto centerAhead = CVector{
+            fwd.x * 50.0f * 2.0f + dest.x,
+            dest.y + fwd.y * 50.0f * 2.0f,
+            dest.z + fwd.z * 50.0f * 2.0f,
+        };
+        CEntity* entitiesAhead[128]{};
+        int16    numAhead{};
+        CWorld::FindObjectsInRange(centerAhead, 50.0f, true, &numAhead, 127, entitiesAhead, false, false, false, true, true);
+
+        fwd.z *= 50.0f;
+        const auto centerBehind = CVector{
+            dest.x - fwd.x * 50.0f * 1.0f,
+            dest.y - fwd.y * 50.0f * 1.0f,
+            dest.z - fwd.z * 1.0f,
+        };
+        CEntity* entitiesBehind[128]{};
+        int16    numBehind{};
+        CWorld::FindObjectsInRange(centerBehind, 50.0f, true, &numBehind, 127, entitiesBehind, false, false, false, true, true);
+
+        const auto IsSuitableLampPost = [](CEntity* e) {
+            return e->GetIsStatic() && e->GetMatrix().GetUp().z > 0.9f && IsLampPost(e->GetModelId());
+        };
+
+        CEntity* lampsAhead[128]{};
+        int16    numLampsAhead{};
+        for (int32 i = 0; i < numAhead; i++) {
+            if (IsSuitableLampPost(entitiesAhead[i])) {
+                lampsAhead[numLampsAhead++] = entitiesAhead[i];
+            }
+        }
+        CEntity* lampsBehind[128]{};
+        int16    numLampsBehind{};
+        for (int32 i = 0; i < numBehind; i++) {
+            if (IsSuitableLampPost(entitiesBehind[i])) {
+                lampsBehind[numLampsBehind++] = entitiesBehind[i];
+            }
+        }
+
+        const auto GetRandomPointOnLamp = [](CEntity* lamp) {
+            auto* const colModel = lamp->GetColModel();
+            auto        pt       = lamp->GetMatrix().TransformPoint(colModel->m_boundBox.m_vecMax);
+            const float h        = colModel->m_boundBox.m_vecMax.z - colModel->m_boundBox.m_vecMin.z * 0.5f;
+            const float r        = (float)CGeneral::GetRandomNumber();
+            pt.z                 = pt.z - ((h - 1.0f) * r * 3.05185094e-05f + 1.0f);
+            return pt;
+        };
+
+        bool found = false;
+        if (numLampsAhead < 1) {
+            gbExitCam[CAM_ID] = true;
+            return;
+        }
+        for (int32 i = 0; i < numLampsAhead && !found; i++) {
+            auto* const lampA = lampsAhead[i];
+            if (!IsSuitableLampPost(lampA)) {
+                continue;
+            }
+            const auto ptA   = GetRandomPointOnLamp(lampA);
+            const auto probe = (ptA - dest).Normalized() + dest;
+            // NOTSA: original compares `fabs(0.0) < 6.0` here, which is always true
+            for (int32 j = i; j < numLampsBehind && !found; j++) {
+                auto* const lampB = lampsBehind[j];
+                if (!IsSuitableLampPost(lampB)) {
+                    continue;
+                }
+                const auto ptB = GetRandomPointOnLamp(lampB);
+                if (CWorld::GetIsLineOfSightClear(ptA, ptB, true, false, false, false, false, true, true) &&
+                    CWorld::GetIsLineOfSightClear(ptB, probe, true, false, false, false, false, true, true)) {
+                    src          = ptA;
+                    s_points[0]  = ptA;
+                    s_points[1]  = ptB;
+                    found        = true;
+                }
+            }
+        }
+        if (!found) {
+            gbExitCam[CAM_ID] = true;
+            return;
+        }
+    }
+
+    const int32 duration = (int32)(gDWCineyCamEndTime - gDWCineyCamStartTime);
+    const float t        = (float)(int32)(now - gDWCineyCamStartTime) / (float)duration;
+
+    const auto p0   = s_points[0];
+    const auto p1   = s_points[1];
+    const auto n    = (p1 - p0).Normalized() * 1.0f;
+    const auto from = p1 - n;
+    const auto to   = CVector{ n.x + n.x + p0.x, n.y + n.y + p0.y, n.z + n.z + p0.z };
+
+    if (!gbExitCam[CAM_ID]) {
+        const double s = std::sin((270.0 - (double)t * 180.0) * 0.0174532924);
+        const double k = (1.0 + s) * 0.5;
+        src.x = (float)(((double)to.x - from.x) * k + from.x);
+        src.y = (float)(((double)to.y - from.y) * k + from.y);
+        src.z = (float)(((double)to.z - from.z) * (s + 1.0) * 0.5 + from.z);
+    }
+
+    if (IsTimeToExitThisDWCineyCamMode(CAM_ID, src, dest, t, false)) {
+        gbExitCam[CAM_ID] = true;
+        return;
+    }
+
+    CWorld::pIgnoreEntity = entity;
+    CColPoint colPoint;
+    CEntity*  hitEntity{};
+    const bool clear      = !CWorld::ProcessLineOfSight(dest, src, colPoint, hitEntity, true, true, false, false, false, false, false, false);
+    CWorld::pIgnoreEntity = nullptr;
+    if (!clear) {
+        const bool wasZero = s_clearCounter == 0;
+        s_clearCounter--;
+        if (wasZero) {
+            gbExitCam[CAM_ID]     = true;
+            CWorld::pIgnoreEntity = nullptr;
+            return;
+        }
+    } else {
+        const bool wasAbove = 30 < s_clearCounter;
+        s_clearCounter++;
+        if (wasAbove) {
+            s_clearCounter = 30;
+        }
+    }
+
+    Finalise_DW_CineyCams(src, dest, 0.0f, 70.0f, 0.3f, 0.0f);
 }
 
 // 0x51B120
 void CCam::Process_DW_CamManCam(bool) {
-    NOTSA_UNREACHABLE();
+    constexpr int32 CAM_ID = 21;
+
+    TheCamera.m_bUseNearClipScript = false;
+    if (!m_pCamTargetEntity || !m_pCamTargetEntity->GetIsTypeVehicle()) {
+        TheCamera.m_bUseNearClipScript = false;
+        return;
+    }
+
+    CEntity*   entity{};
+    CVehicle*  vehicle{};
+    CVector    dest{}, src{}, up{}, right{}, fwd{}, vel{}, angVel{};
+    float      speed{}, angSpeed{};
+    CColSphere colSphere{};
+    GetCoreDataForDWCineyCamMode(entity, vehicle, dest, src, up, right, fwd, vel, speed, angVel, angSpeed, colSphere);
+
+    const auto now = CTimer::GetTimeInMS();
+
+    static int32   s_clearCounter = 100; // 0xB70074
+    static CVector s_lampPos{};          // 0xB70068
+
+    if (gLastDWCineyCamMode != 0x39 || gLastFrameProcessedDWCineyCam < CTimer::GetFrameCounter() - 1u) {
+        gLastDWCineyCamMode  = 0x39;
+        gDWCineyCamEndTime   = 10000u + now; // 0x8CCBAC
+        s_clearCounter       = 100;
+        gbExitCam[CAM_ID]    = false;
+        gDWCineyCamStartTime = now;
+        gHandShaker[0].Reset();
+
+        const auto center = dest + fwd * 50.0f;
+        CEntity*   entities[16]{};
+        int16      numEntities{};
+        CWorld::FindObjectsInRange(center, 50.0f, true, &numEntities, 15, entities, false, false, false, true, true);
+
+        float    bestDist = 10000.0f;
+        CEntity* found{};
+        if (numEntities < 1) {
+            gbExitCam[CAM_ID] = true;
+            return;
+        }
+        for (int16 i = 0; i < numEntities; i++) {
+            auto* const e = entities[i];
+            if (!e->GetIsStatic() || !(e->GetMatrix().GetUp().z > 0.9f) || !IsLampPost(e->GetModelId())) {
+                continue;
+            }
+            const auto  ePos   = e->GetPosition();
+            const float dist2D = (CVector2D{ ePos } - CVector2D{ dest }).Magnitude();
+            if (!(dist2D < bestDist && 5.0f < dist2D)) {
+                continue;
+            }
+            auto* const colModel = e->GetColModel();
+            auto        pt       = e->GetMatrix().TransformPoint(colModel->m_boundBox.m_vecMax);
+            pt.z                 = pt.z - colModel->m_boundBox.m_vecMax.z;
+            pt.z                 = colModel->m_boundBox.m_vecMin.z * 0.5f + pt.z;
+
+            const auto probe = (pt - dest).Normalized() + dest;
+            // NOTSA: original compares `fabs(0.0) < 6.0` here, which is always true
+            if (CWorld::GetIsLineOfSightClear(pt, probe, true, false, false, false, false, true, true)) {
+                found     = e;
+                bestDist  = dist2D;
+                src       = pt;
+                s_lampPos = pt;
+            }
+        }
+        if (!found) {
+            gbExitCam[CAM_ID] = true;
+            return;
+        }
+    }
+
+    const int32 duration = (int32)(gDWCineyCamEndTime - gDWCineyCamStartTime);
+    float       t        = (float)(int32)(now - gDWCineyCamStartTime) / (float)duration;
+
+    if (!gbExitCam[CAM_ID]) {
+        auto dir = dest - s_lampPos;
+        src      = s_lampPos;
+        dir.Normalise();
+        src.x = dir.x * 1.0f + src.x;
+        src.y = dir.y * 1.0f + src.y;
+        src.z = dir.z * 1.0f + src.z;
+    }
+
+    auto k = (float)(std::sqrt((double)sq(dest.y - src.y) + (double)sq(dest.z - src.z) + (double)sq(dest.x - src.x)) / 30.0);
+    k      = std::clamp(k, 0.0f, 1.0f);
+    float fov = (float)((15.0 - 70.0) * (std::sin((270.0 - (double)k * 180.0) * 0.0174532924) + 1.0) * 0.5 + 70.0);
+    if (t < 0.1f) {
+        auto k2 = std::clamp(t / 0.1f, 0.0f, 1.0f);
+        fov     = (float)(((double)fov - 70.0) * (std::sin((270.0 - (double)k2 * 180.0) * 0.0174532924) + 1.0) * 0.5 + 70.0);
+    }
+
+    if (IsTimeToExitThisDWCineyCamMode(CAM_ID, src, dest, t, false)) {
+        gbExitCam[CAM_ID] = true;
+        return;
+    }
+
+    CWorld::pIgnoreEntity = entity;
+    CColPoint colPoint;
+    CEntity*  hitEntity{};
+    const bool hit        = CWorld::ProcessLineOfSight(dest, src, colPoint, hitEntity, true, true, false, false, false, false, false, false);
+    CWorld::pIgnoreEntity = nullptr;
+    if (!hit) {
+        const bool wasAbove = 100 < s_clearCounter;
+        s_clearCounter++;
+        if (wasAbove) {
+            s_clearCounter = 100;
+        }
+    } else {
+        const bool wasZero = s_clearCounter == 0;
+        s_clearCounter--;
+        if (wasZero) {
+            gbExitCam[CAM_ID]     = true;
+            CWorld::pIgnoreEntity = nullptr;
+            return;
+        }
+    }
+
+    // `FUN_00420800` is `max(a, b)`; the result is always >= 0.2 so the `< 0` branch of the original is dead
+    const float shake = std::min(std::max(vel.Magnitude() * 8.0f, 0.2f), 1.0f);
+    Finalise_DW_CineyCams(src, dest, 0.0f, fov, 10.0f - fov * 0.0142857144f * 9.69999981f, shake);
 }
 
 // 0x51A740
 void CCam::Process_DW_HeliChaseCam(bool) {
-    NOTSA_UNREACHABLE();
+    constexpr int32 CAM_ID = 20;
+
+    TheCamera.m_bUseNearClipScript = false;
+
+    // The original picks one of several settings structs using `rand * 0.0` (always the first one), but still consumes a random number
+    (void)CGeneral::GetRandomNumber();
+    auto& S = gDWHeliChaseCamSettings;
+
+    if (!m_pCamTargetEntity || !m_pCamTargetEntity->GetIsTypeVehicle()) {
+        return;
+    }
+
+    CEntity*   entity{};
+    CVehicle*  vehicle{};
+    CVector    dest{}, src{}, up{}, right{}, fwd{}, vel{}, angVel{};
+    float      speed{}, angSpeed{};
+    CColSphere colSphere{};
+    GetCoreDataForDWCineyCamMode(entity, vehicle, dest, src, up, right, fwd, vel, speed, angVel, angSpeed, colSphere);
+
+    const auto now = CTimer::GetTimeInMS();
+
+    if (gLastDWCineyCamMode != 0x38 || gLastFrameProcessedDWCineyCam < CTimer::GetFrameCounter() - 1u) {
+        gDWCineyCamEndTime = 20000u + now; // 0x8CCBA8
+        gbExitCam[CAM_ID]  = false;
+        gLastDWCineyCamMode = 0x38;
+        gDWCineyCamStartTime = now;
+
+        S.SetDefaults();
+        S.lockedCounter = S.lockedCounterInit;
+        S.fovRange      = S.fovStart - S.fovEnd;
+        S.bPosLocked    = false;
+        S.bCollided     = false;
+        S.bBlocked      = false;
+        S.bFlag81       = false;
+        S.clearCounter  = S.clearCounterMax;
+        S.bFovLerping   = false;
+        S.Randomize();
+        gHandShaker[0].Reset();
+
+        bool found = false;
+        for (int32 i = 0; i < S.numTries; i++) {
+            S.startPos.x = dest.x - fwd.x * S.startDistBehind;
+            S.startPos.y = dest.y - fwd.y * S.startDistBehind;
+            S.startPos.z = dest.z - fwd.z * S.startDistBehind;
+            S.endPos.x   = fwd.x * S.endDistAhead + dest.x;
+            S.endPos.y   = fwd.y * S.endDistAhead + dest.y;
+            S.endPos.z   = fwd.z * S.endDistAhead + dest.z;
+            S.startPos.z = S.startPos.z + S.zOffset;
+            S.endPos.z   = S.zOffset + S.endPos.z;
+
+            const int32 r1    = CGeneral::GetRandomNumber();
+            const int32 r2    = CGeneral::GetRandomNumber();
+            const float sign1 = r1 < 0x3FFF ? -1.0f : 1.0f;
+            const float sign2 = r2 < 0x3FFF ? -1.0f : 1.0f;
+
+            S.startPos.x = right.x * S.sideOffset * sign1 + S.startPos.x;
+            S.startPos.y = right.y * S.sideOffset * sign1 + S.startPos.y;
+            S.startPos.z = (S.sideOffset * 0.0f * sign1) + S.startPos.z;
+
+            S.endPos.x = right.x * S.sideOffset * sign2 + S.endPos.x;
+            S.endPos.y = right.y * S.sideOffset * sign2 + S.endPos.y;
+            S.endPos.z = S.sideOffset * 0.0f * sign2 + S.endPos.z;
+
+            if (!CWorld::TestSphereAgainstWorld(S.startPos, S.sphereRadius, nullptr, true, true, false, false, false, false)) {
+                CWorld::pIgnoreEntity = entity;
+                CColPoint colPoint;
+                CEntity*  hitEntity{};
+                const bool clear      = !CWorld::ProcessLineOfSight(dest, S.startPos, colPoint, hitEntity, true, true, false, false, false, false, false, false);
+                CWorld::pIgnoreEntity = nullptr;
+                if (clear) {
+                    S.bFlag81     = CGeneral::GetRandomNumber() < 0x3FFF;
+                    S.bFovLerping = CGeneral::GetRandomNumber() < 0x3FFF;
+                    found         = true;
+                    break;
+                }
+            }
+        }
+        if (!found) {
+            S.bPosLocked   = false;
+            S.bCollided    = false;
+            S.fovRange     = S.fovStart - S.fovEnd;
+            S.bBlocked     = false;
+            S.bFlag81      = false;
+            S.clearCounter = S.clearCounterMax;
+            S.lockedCounter = S.lockedCounterInit;
+            S.bFovLerping  = false;
+            gbExitCam[CAM_ID] = true;
+            return;
+        }
+    }
+
+    if (gbExitCam[CAM_ID]) {
+        return;
+    }
+
+    const int32 duration = (int32)(gDWCineyCamEndTime - gDWCineyCamStartTime);
+    const float t        = (float)(int32)(now - gDWCineyCamStartTime) / (float)duration;
+
+    CVector cur;
+    cur.x = (S.endPos.x - S.startPos.x) * t + S.startPos.x;
+    cur.y = (S.endPos.y - S.startPos.y) * t + S.startPos.y;
+    cur.z = (S.endPos.z - S.startPos.z) * t + S.startPos.z;
+
+    // Move the look-at point ahead of the vehicle
+    dest.x = fwd.x * speed * S.targetVelFactor + fwd.x + dest.x;
+    dest.y = fwd.y * speed * S.targetVelFactor + fwd.y + dest.y;
+    dest.z = fwd.z * speed * S.targetVelFactor + fwd.z + dest.z;
+
+    CVector2D dir{ dest.x - cur.x, dest.y - cur.y };
+    const float dist2D = std::sqrt(dir.x * dir.x + dir.y * dir.y);
+    {
+        const float inv = 1.0f / dist2D;
+        dir.x           = dir.x * inv;
+        dir.y           = inv * dir.y;
+    }
+
+    src.x = cur.x;
+    src.y = cur.y;
+    src.z = cur.z;
+    if (dist2D < S.minDist2D) {
+        src.x = dest.x - dir.x * S.minDist2D;
+        src.y = dest.y - dir.y * S.minDist2D;
+    }
+
+    double fovBase = S.fovEnd;
+    if (t < S.fovBlendInFraction && !S.bFlag81) {
+        const double s = std::sin((270.0 - (double)(1.0f / S.fovBlendInFraction) * (double)t * 180.0) * 0.0174532924);
+        fovBase        = ((double)S.fovEnd - (double)S.fovStart) * (s + 1.0) * 0.5 + (double)S.fovStart;
+    }
+    double fovZoom = 0.0;
+    const float dist3D = std::sqrt(sq(src.x - dest.x) + sq(src.y - dest.y) + sq(cur.z - dest.z));
+    if (S.fovZoomDistMin < dist3D) {
+        double k = ((double)dist3D - S.fovZoomDistMin) / ((double)S.fovZoomDistMax - S.fovZoomDistMin);
+        k        = std::clamp(k, 0.0, 1.0);
+        const double s = std::sin((270.0 - k * 180.0) * 0.0174532924);
+        fovZoom        = (s + 1.0) * 0.5 * S.fovZoomAmount;
+    }
+    float fov        = (float)(fovBase - fovZoom);
+    const float roll = t * S.rollRate;
+
+    static CVector s_savedPos{};        // 0xB70058
+    static int32   s_blendCounter = 100; // 0x8CCD24
+    if (S.bCollided || CWorld::TestSphereAgainstWorld(src, 15.0f, nullptr, true, true, false, false, false, false)) {
+        if (!S.bCollided) {
+            s_savedPos     = src;
+            S.bCollided    = true;
+            s_blendCounter = 100;
+        }
+        if (s_blendCounter < 0) {
+            s_blendCounter--;
+            gbExitCam[CAM_ID] = true;
+            return;
+        }
+        src.x = (src.x - s_savedPos.x) * 0.5f + s_savedPos.x;
+        src.y = (src.y - s_savedPos.y) * 0.5f + s_savedPos.y;
+        src.z = (src.z - s_savedPos.z) * 0.5f + s_savedPos.z;
+        s_blendCounter--;
+    }
+
+    if (!S.bPosLocked) {
+        CWorld::pIgnoreEntity = entity;
+        CColPoint colPoint;
+        CEntity*  hitEntity{};
+        const bool clear      = !CWorld::ProcessLineOfSight(dest, src, colPoint, hitEntity, true, true, false, false, false, false, false, false);
+        CWorld::pIgnoreEntity = nullptr;
+        if (!clear) {
+            S.bBlocked = true;
+            if (!S.bFovLerping && S.clearCounter < (S.clearCounterMax + ((S.clearCounterMax >> 31) & 3)) >> 2) {
+                S.savedFov         = fov;
+                S.bFovLerping      = true;
+                S.fovLerpStartTime = (int32)now;
+                S.fovLerpEndTime   = S.fovLerpDuration + (int32)now;
+            }
+            const auto prev = S.clearCounter;
+            S.clearCounter  = prev - 1;
+            if (prev == 0) {
+                S.lockedPos  = dest;
+                S.bPosLocked = true;
+            }
+        } else {
+            S.clearCounter++;
+            if (S.clearCounterMax < S.clearCounter) {
+                S.clearCounter = S.clearCounterMax;
+            }
+        }
+    } else {
+        dest             = S.lockedPos;
+        const auto prev  = S.lockedCounter;
+        S.lockedCounter  = prev - 1;
+        if (prev == 0) {
+            gbExitCam[CAM_ID] = true;
+            return;
+        }
+    }
+
+    bool doFovLerp = S.bFovLerping;
+    if (!doFovLerp) {
+        if (S.fovLerpStartFraction <= t) {
+            S.savedFov         = fov;
+            S.bFovLerping      = true;
+            S.fovLerpStartTime = (int32)now;
+            S.fovLerpEndTime   = S.fovLerpDuration + (int32)now;
+        }
+        doFovLerp = S.bFovLerping;
+    }
+    if (doFovLerp) {
+        double f = ((double)(int32)now - (double)S.fovLerpStartTime) / ((double)S.fovLerpEndTime - (double)S.fovLerpStartTime);
+        f        = std::clamp(f, 0.0, 1.0);
+        const double s = std::sin((270.0 - f * 180.0) * 0.0174532924);
+        fov            = (float)(((double)S.fovStart - (double)S.savedFov) * (s + 1.0) * 0.5 + (double)S.savedFov);
+    }
+
+    if (IsTimeToExitThisDWCineyCamMode(CAM_ID, src, dest, t, false)) {
+        gbExitCam[CAM_ID] = true;
+        return;
+    }
+    Finalise_DW_CineyCams(src, dest, roll, fov, S.nearClip, 1.0f);
 }
 
 // 0x51C760

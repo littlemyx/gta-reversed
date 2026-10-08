@@ -5,10 +5,10 @@
 class CEntity;
 
 enum class eIdleCamZoomState {
-    UNK_0 = 0, // Zooming in (towards `m_ZoomNearest`)
-    UNK_1 = 1, // Zooming out (towards `m_ZoomFarthest`)
-    UNK_2 = 2, // Zoomed in
-    UNK_3 = 3, // Zoomed out (idle)
+    ZOOMING_IN = 0, // Zooming in (towards `m_ZoomNearest`)
+    ZOOMING_OUT = 1, // Zooming out (towards `m_ZoomFarthest`)
+    ZOOMED_IN = 2, // Zoomed in
+    ZOOMED_OUT = 3, // Zoomed out (idle)
 };
 
 class CIdleCam {

@@ -67,7 +67,7 @@ void CIdleCam::Reset(bool resetControls) {
     m_TimeTargetEntityWasLastVisible = -1.0f;
     m_TimeLastZoomIn                 = -1.0f;
     m_Target                         = 0;
-    m_ZoomState                      = eIdleCamZoomState::UNK_3;
+    m_ZoomState                      = eIdleCamZoomState::ZOOMED_OUT;
     m_nForceAZoomOut                 = 0;
     m_CurFOV                         = 70.0f;
     m_TargetLOSCounter               = 0;
@@ -173,20 +173,20 @@ void CIdleCam::ProcessFOVZoom(float time) {
                     CWorld::pIgnoreEntity = oldIgnore;
                 }
 
-                if (m_TargetLOSCounter > 10 && m_ZoomState == eIdleCamZoomState::UNK_2) {
-                    m_ZoomState = eIdleCamZoomState::UNK_1;
+                if (m_TargetLOSCounter > 10 && m_ZoomState == eIdleCamZoomState::ZOOMED_IN) {
+                    m_ZoomState = eIdleCamZoomState::ZOOMING_OUT;
                 }
 
-                if (m_ZoomState == eIdleCamZoomState::UNK_3 && !m_bHasZoomedIn && isLOSClear) {
-                    m_ZoomState = eIdleCamZoomState::UNK_0;
+                if (m_ZoomState == eIdleCamZoomState::ZOOMED_OUT && !m_bHasZoomedIn && isLOSClear) {
+                    m_ZoomState = eIdleCamZoomState::ZOOMING_IN;
                     newZoomTo   = zoomNearest;
                     applyZoomTo = true;
-                    keepStart   = prevState == eIdleCamZoomState::UNK_0;
+                    keepStart   = prevState == eIdleCamZoomState::ZOOMING_IN;
                 }
             }
-        } else if (prevState == eIdleCamZoomState::UNK_2) {
+        } else if (prevState == eIdleCamZoomState::ZOOMED_IN) {
             newZoomTo   = m_ZoomFarthest;
-            m_ZoomState = eIdleCamZoomState::UNK_1;
+            m_ZoomState = eIdleCamZoomState::ZOOMING_OUT;
             applyZoomTo = true;
         }
 
@@ -199,14 +199,14 @@ void CIdleCam::ProcessFOVZoom(float time) {
         }
     }
 
-    if (m_ZoomState == eIdleCamZoomState::UNK_2) {
+    if (m_ZoomState == eIdleCamZoomState::ZOOMED_IN) {
         m_TimeLastZoomIn = curTimeMs;
     }
 
-    if (m_nForceAZoomOut && m_ZoomState == eIdleCamZoomState::UNK_2) {
+    if (m_nForceAZoomOut && m_ZoomState == eIdleCamZoomState::ZOOMED_IN) {
         m_ZoomFrom        = m_CurFOV;
         m_TimeZoomStarted = curTimeMs;
-        m_ZoomState       = eIdleCamZoomState::UNK_1;
+        m_ZoomState       = eIdleCamZoomState::ZOOMING_OUT;
         m_ZoomTo          = m_ZoomFarthest;
     }
     m_nForceAZoomOut = false;
@@ -218,27 +218,27 @@ void CIdleCam::ProcessFOVZoom(float time) {
     };
 
     switch (m_ZoomState) {
-    case eIdleCamZoomState::UNK_0:
+    case eIdleCamZoomState::ZOOMING_IN:
         if (std::fabs(m_CurFOV - zoomNearest) >= 1.0f) {
             InterpolateFOV();
         } else {
-            m_ZoomState      = eIdleCamZoomState::UNK_2;
+            m_ZoomState      = eIdleCamZoomState::ZOOMED_IN;
             m_bHasZoomedIn   = true;
             m_CurFOV         = zoomNearest;
         }
         break;
-    case eIdleCamZoomState::UNK_1:
+    case eIdleCamZoomState::ZOOMING_OUT:
         if (std::fabs(m_CurFOV - m_ZoomFarthest) >= 1.0f) {
             InterpolateFOV();
         } else {
-            m_ZoomState = eIdleCamZoomState::UNK_3;
+            m_ZoomState = eIdleCamZoomState::ZOOMED_OUT;
             m_CurFOV    = m_ZoomFarthest;
         }
         break;
-    case eIdleCamZoomState::UNK_2:
+    case eIdleCamZoomState::ZOOMED_IN:
         m_CurFOV = zoomNearest;
         break;
-    case eIdleCamZoomState::UNK_3:
+    case eIdleCamZoomState::ZOOMED_OUT:
         m_CurFOV = m_ZoomFarthest;
         break;
     default:
@@ -316,7 +316,7 @@ void CIdleCam::SetTargetPlayer() {
 // 0x517870
 void CIdleCam::ProcessTargetSelection() {
     auto timeDelta = static_cast<float>(CTimer::GetTimeInMS()) - m_TimeLastTargetSelected;
-    if (m_ZoomState != eIdleCamZoomState::UNK_3 && m_TargetLOSCounter <= 0) {
+    if (m_ZoomState != eIdleCamZoomState::ZOOMED_OUT && m_TargetLOSCounter <= 0) {
         timeDelta /= m_IncreaseMinimumTimeFactorForZoomedIn;
     }
 
@@ -328,7 +328,7 @@ void CIdleCam::ProcessTargetSelection() {
             auto* eventEntity = event->entity;
             if (m_Target != eventEntity) {
                 if (IsTargetValid(eventEntity)) {
-                    if (m_ZoomState == eIdleCamZoomState::UNK_3) {
+                    if (m_ZoomState == eIdleCamZoomState::ZOOMED_OUT) {
                         SetTarget(eventEntity);
                     } else {
                         m_nForceAZoomOut = true;
@@ -338,7 +338,7 @@ void CIdleCam::ProcessTargetSelection() {
                 g_InterestingEvents.InvalidateEvent(event);
             }
         } else if (!m_Target || !IsTargetValid(m_Target) && m_Target != FindPlayerPed()) {
-            if (m_ZoomState == eIdleCamZoomState::UNK_3) {
+            if (m_ZoomState == eIdleCamZoomState::ZOOMED_OUT) {
                 SetTargetPlayer();
             } else {
                 m_nForceAZoomOut = true;
@@ -352,7 +352,7 @@ void CIdleCam::ProcessTargetSelection() {
 
     if (!IsTargetValid(m_Target) && timeDelta > m_TimeMinimumToLookAtSomething) {
         m_nForceAZoomOut = true;
-        if (m_ZoomState == eIdleCamZoomState::UNK_3 || m_TargetLOSCounter > 0) {
+        if (m_ZoomState == eIdleCamZoomState::ZOOMED_OUT || m_TargetLOSCounter > 0) {
             SetTargetPlayer();
         }
     }

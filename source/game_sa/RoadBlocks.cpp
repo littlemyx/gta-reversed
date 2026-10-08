@@ -340,8 +340,7 @@ void CRoadBlocks::CreateRoadBlockBetween2Points(CVector a, CVector b, bool isGan
                     if (isBurning) {
                         gFireManager.StartFire(veh, nullptr, 2.8f, true, 60000, 2);
                         if (veh->m_pFire) {
-                            // CFire::m_RemovalDist (private, and has no setter)
-                            reinterpret_cast<uint8*>(veh->m_pFire)[0x21] = 92;
+                            veh->m_pFire->SetRemovalDist(92);
                         }
                     }
                 }
@@ -360,7 +359,7 @@ void CRoadBlocks::CreateRoadBlockBetween2Points(CVector a, CVector b, bool isGan
                 CWorld::Add(obj);
                 gFireManager.StartFire(obj, nullptr, 2.8f, true, 60000, 2);
                 if (obj->m_pFire) {
-                    reinterpret_cast<uint8*>(obj->m_pFire)[0x21] = 92; // CFire::m_RemovalDist (private, and has no setter)
+                    obj->m_pFire->SetRemovalDist(92);
                 }
             }
         }

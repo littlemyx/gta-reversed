@@ -881,6 +881,10 @@ void CShadows::CastShadowEntityXY(CEntity* entity, float conrerAX, float cornerA
             };
         };
 
+        if (numIn <= 0) { // NOTSA: The original reads stale buffer data here, but never emits anything in this case
+            return 0;
+        }
+
         int32 numOut = 0;
         int16 state  = 0; // 0 = Nothing processed yet, 1 = previous was in, 2 = previous was out
         for (int32 i = 0; i < numIn; i++) {

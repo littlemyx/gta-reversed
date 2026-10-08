@@ -1756,11 +1756,11 @@ void RpAnimBlendNodeUpdateKeyFrames(AnimBlendUpdateData* c, AnimBlendFrameData* 
 void RpAnimBlendClumpUpdateAnimations(RpClump* clump, float timeStep, bool isOnScreen) {
     const auto bd = RpAnimBlendClumpGetData(clump);
 
+    gpAnimBlendClump = bd; // NOTE: Set even if the clump has no animations (as the original code does)
+
     if (bd->m_AnimList.IsEmpty()) {
         return;
     }
-
-    gpAnimBlendClump = bd;
 
     AnimBlendUpdateData ctx{};
     size_t             nodesCnt{};

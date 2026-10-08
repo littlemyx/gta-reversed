@@ -444,7 +444,7 @@ bool CEntryExit::TransitionFinished(CPed* ped) {
     CTimer::Suspend();
 
     if (CGame::currArea == AREA_CODE_NORMAL_WORLD) {
-        RwCameraSetFarClipPlane(Scene.m_pRwCamera, CTimeCycle::FindFarClipForCoors(spawnPos));
+        RwCameraSetFarClipPlane(TheCamera.m_pRwCamera, CTimeCycle::FindFarClipForCoors(spawnPos)); // 0xB6F97C
     }
 
     ms_spawnPoint->RequestObjectsInFrustum();
@@ -513,8 +513,7 @@ bool CEntryExit::TransitionFinished(CPed* ped) {
 
     ms_spawnPoint->bEnteredWithoutExit = false;
     if (ms_spawnPoint->bDeleteEnex) {
-        static auto& mp_poolEntryExits = StaticRef<CEntryExitsPool*>(0x96A7D8); // Private to EntryExitManager.cpp
-        CEntryExitManager::DeleteOne(mp_poolEntryExits->GetIndex(ms_spawnPoint));
+        CEntryExitManager::DeleteOne(CEntryExitManager::GetPool()->GetIndex(ms_spawnPoint));
     }
 
     ped->GetTaskManager().GetTaskSecondaryFacial()->StopAll();

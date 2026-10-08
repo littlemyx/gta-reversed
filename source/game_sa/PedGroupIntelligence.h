@@ -101,6 +101,9 @@ public:
 
     auto&& GetPedGroup(this auto&& self) { return *self.m_pPedGroup; }
 
+    //! The index of the task sequence (see `CTaskSequences`) used by the group, or `-1` if none
+    auto GetTaskSeqId() const { return m_TaskSeqId; }
+
 private:
     bool ShouldSetHighestPriorityEventAsCurrent();
 

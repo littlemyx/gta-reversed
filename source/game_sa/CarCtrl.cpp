@@ -441,18 +441,20 @@ CVehicle* CCarCtrl::GetNewVehicleDependingOnCarModel(int32 modelId, uint8 create
     case VEHICLE_TYPE_TRAIN:   return CreateVehicle<CTrain>(modelId, createdBy);
     case VEHICLE_TYPE_BIKE: {
         auto* const bike = CreateVehicle<CBike>(modelId, createdBy);
-        if (!bike) {
-            // BUG: Original code writes the bike flags through a null pointer here (crash). We just return null.
-            return nullptr;
+        if constexpr (notsa::IsFixBugs()) {
+            if (!bike) { // BUG: Original code writes the bike flags through a null pointer if the pool is full (crash)
+                return nullptr;
+            }
         }
         bike->bikeFlags.bOnSideStand = true;
         return bike;
     }
     case VEHICLE_TYPE_BMX: {
         auto* const bmx = CreateVehicle<CBmx>(modelId, createdBy);
-        if (!bmx) {
-            // BUG: Same as above
-            return nullptr;
+        if constexpr (notsa::IsFixBugs()) {
+            if (!bmx) { // BUG: Same as above
+                return nullptr;
+            }
         }
         bmx->bikeFlags.bOnSideStand = true;
         return bmx;

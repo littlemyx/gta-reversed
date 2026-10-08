@@ -70,7 +70,7 @@ void CGroupEventHandler::InjectHooks() {
     RH_ScopedInstall(ComputeResponsePedFriend, 0x5FB2D0);
     RH_ScopedInstall(ComputeResponseNewGangMember, 0x5F9840);
     RH_ScopedInstall(ComputeResponseLeaderExitedCar, 0x5F90A0);
-    RH_ScopedInstall(ComputeResponsLeaderQuitEnteringCar, 0x5F9530, { .Reversed = false });
+    RH_ScopedInstall(ComputeResponsLeaderQuitEnteringCar, 0x5F9530);
     RH_ScopedInstall(ComputeResponseLeaderEnteredCar, 0x5F8900);
     RH_ScopedInstall(ComputeResponseLeaderEnterExit, 0x5F9710);
     RH_ScopedInstall(ComputeResponseGunAimedAt, 0x5FBD10);
@@ -364,8 +364,7 @@ CTaskAllocator* CGroupEventHandler::ComputeResponseLeaderExitedCar(const CEventE
 CTaskAllocator* CGroupEventHandler::ComputeResponseLeaderEnteredCar(const CEvent& e, CPedGroup* pg, CPed* originator) {
     const auto& event  = static_cast<const CEventLeaderEnteredCarAsDriver&>(e);
     const auto  taskId = event.m_TaskId;
-    // `CPedGroupIntelligence::m_TaskSeqId` (the last member of the class) is private and there's no accessor for it
-    const auto  seqId  = *reinterpret_cast<const int32*>(reinterpret_cast<const uint8*>(&pg->GetIntelligence()) + sizeof(CPedGroupIntelligence) - sizeof(int32));
+    const auto  seqId  = pg->GetIntelligence().GetTaskSeqId();
     const auto  leader = pg->GetMembership().GetLeader();
     const auto  veh    = event.m_vehicle;
     if (!leader || !veh) {

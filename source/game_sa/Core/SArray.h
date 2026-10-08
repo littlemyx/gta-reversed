@@ -98,7 +98,7 @@ public:
         assert(first >= _First && first < _Last);
         assert(last >= first && last <= _Last);
         rng::destroy(first, last);
-        rng::move_backward(last, _Last, first); // Move the rest of the elements
+        rng::move(last, _Last, first); // Move the rest of the elements down (move_backward would take `first` as the END of the destination)
         _Last -= (last - first);
     }
     void erase(T* iter) {

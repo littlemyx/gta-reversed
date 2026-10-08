@@ -3530,7 +3530,7 @@ auto& gFlyByRollSegmentIdx = StaticRef<int32>(0xBC4088); // Current position in 
 void FlyBySplineVec3(CVector* out, float* data, float time, int32* idx) {
     const auto count = static_cast<int32>(data[0]);
 
-    // NOTE: The duration is NOT recalculated after `idx` is changed below, so it is the one of the old segment (original bug)
+    // BUG: The duration is NOT recalculated after `idx` is changed below, so it is the one of the old segment (the original does the same)
     const double duration = (static_cast<double>(data[*idx]) - data[*idx - 10]) * 1000.0;
     const float  lastTime = data[count * 10 - 9] * 1000.0f;
 

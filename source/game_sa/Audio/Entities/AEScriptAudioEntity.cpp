@@ -53,7 +53,7 @@ void CAEScriptAudioEntity::ClearMissionAudio(uint8 sampleId) {
     if (sampleId >= MISSION_AUDIO_COUNT) {
         return;
     }
-    AESoundManager.CancelSoundsInBankSlot(SND_BANK_SLOT_MISSION1 + sampleId, true);
+    AESoundManager.CancelSoundsInBankSlot((int16)(SND_BANK_SLOT_MISSION1 + sampleId), true);
 
     auto& link = wavLinks[sampleId];
     link.m_pEntity   = nullptr;
@@ -67,7 +67,7 @@ bool CAEScriptAudioEntity::IsMissionAudioSampleFinished(uint8 sampleId) {
         return true;
     }
     if (sampleId >= 2) {
-        return AESoundManager.AreSoundsPlayingInBankSlot(SND_BANK_SLOT_MISSION1 + sampleId) == 0;
+        return AESoundManager.AreSoundsPlayingInBankSlot((int16)(SND_BANK_SLOT_MISSION1 + sampleId)) == 0;
     }
     return wavLinks[sampleId].m_Sound == nullptr;
 }

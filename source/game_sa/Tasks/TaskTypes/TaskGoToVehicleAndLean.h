@@ -8,8 +8,9 @@ public:
     CVehicle* m_Vehicle;
     int32     m_LeanAnimDurationInMs;
     bool      m_LeanOnVehicle;
-    bool      field_15; // CalcTargetPos
+    bool      m_bPedOnRightSide; // Set by `CalcTargetPos`: whether the ped is on the right side of the vehicle
     uint8     field_16[2];
+    CVector   m_TargetPos;
 
 public:
     static constexpr auto Type = TASK_COMPLEX_GOTO_VEHICLE_AND_LEAN;
@@ -25,7 +26,7 @@ public:
     CTask* ControlSubTask(CPed* ped) override;
 
     void DoTidyUp(CPed* ped);
-    // CalcTargetPos(CPed* ped) 0x664770
+    CVector CalcTargetPos(CPed* ped);
 
 private:
     friend void InjectHooksMain();
@@ -33,4 +34,4 @@ private:
     CTaskGoToVehicleAndLean* Constructor(CVehicle* vehicle, int32 leanAnimDurationInMs) { this->CTaskGoToVehicleAndLean::CTaskGoToVehicleAndLean(vehicle, leanAnimDurationInMs); return this; }
     CTaskGoToVehicleAndLean* Destructor() { this->CTaskGoToVehicleAndLean::~CTaskGoToVehicleAndLean(); return this; }
 };
-VALIDATE_SIZE(CTaskGoToVehicleAndLean, 0x18);
+VALIDATE_SIZE(CTaskGoToVehicleAndLean, 0x24);

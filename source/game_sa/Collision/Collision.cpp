@@ -1878,7 +1878,9 @@ void CCollision::ClosestPointOnPoly(CColTriangle* arg0, CVector* arg1, CVector* 
 void CCollision::CalculateTrianglePlanes(CColModel* colModel) {
     ZoneScoped;
 
-    plugin::Call<0x418580, CColModel*>(colModel);
+    if (colModel->m_pColData) {
+        CalculateTrianglePlanes(colModel->m_pColData);
+    }
     if (colModel->m_pColData && colModel->m_pColData->m_pTriangles) {
         assert(colModel->m_pColData->m_pTrianglePlanes); // If model has triangles it should also have triPls by now (otherwise random crashes will occour)
     }
@@ -1886,7 +1888,9 @@ void CCollision::CalculateTrianglePlanes(CColModel* colModel) {
 
 // 0x4185A0
 void CCollision::RemoveTrianglePlanes(CColModel* colModel) {
-    plugin::Call<0x4185A0, CColModel*>(colModel);
+    if (colModel->m_pColData) {
+        RemoveTrianglePlanes(colModel->m_pColData);
+    }
 }
 
 // TODO: This function could be refactored to use ranges instead of these ugly static variables :D
@@ -3460,6 +3464,8 @@ void CCollision::InjectHooks() {
 
     RH_ScopedOverloadedInstall(CalculateTrianglePlanes, "colData", 0x416330, void (*)(CCollisionData*), { .State = state, .Locked = locked });
     RH_ScopedOverloadedInstall(RemoveTrianglePlanes, "colData", 0x416400, void (*)(CCollisionData*), { .State = state, .Locked = locked });
+    RH_ScopedOverloadedInstall(CalculateTrianglePlanes, "colModel", 0x418580, void (*)(CColModel*), { .State = state, .Locked = locked });
+    RH_ScopedOverloadedInstall(RemoveTrianglePlanes, "colModel", 0x4185A0, void (*)(CColModel*), { .State = state, .Locked = locked });
 }
 
 void CCollision::Tests(int32 i) {

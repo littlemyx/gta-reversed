@@ -72,7 +72,7 @@ static auto& s_BikeWheelStates = StaticRef<std::array<tWheelState, 2>>(0xC1C26C)
 // 0xC1C27C - Thrust passed to `ProcessBikeWheel` (named by hand, a global in the original)
 static auto& s_BikeWheelThrust = StaticRef<float>(0xC1C27C);
 
-// 0xC1C818 - Traction scale used by `ProcessControl`, initialised by the CRT static initializer at 0x853600 to `(1 / 50^2) * 10` = 0.004 (named by hand)
+// 0xC1C818 - Traction scale used by `ProcessControl`, initialised by the CRT static initializer at 0x853600 to `(1 / 50^2) * 10` ~= 0.004 (0x3B83126E) (named by hand)
 static auto& s_BikeTractionScale = StaticRef<float>(0xC1C818);
 
 // 0x96914C - Handling cheat type passed to `CalculateDriveAcceleration` by `ProcessControl` (named by hand, never written => always `CHEAT_HANDLING_NONE`)
@@ -1736,7 +1736,7 @@ void CBike::ProcessControl() {
         } else if (std::fabs(m_vecMoveSpeed.x) < 0.01f && std::fabs(m_vecMoveSpeed.y) < 0.01f && m_fSteerAngle == 0.0f) {
             m_RideAnimData.BarSteerAngle = static_cast<float>(std::pow(static_cast<double>(0.96f), static_cast<double>(CTimer::GetTimeStep())) * m_RideAnimData.BarSteerAngle); // 0x86F0E0 (double)
         } else {
-            float steerFactor = 1.0f;
+            double steerFactor = 1.0; // NOTE: x87 keeps the whole `steerFactor` chain in extended precision
             if (forwardSpeed > 0.01f && (m_WheelCounts[0] > 0.0f || m_WheelCounts[1] > 0.0f) && GetStatus() == STATUS_PLAYER) {
                 CColPoint tarmacColPoint{};
                 tarmacColPoint.m_nSurfaceTypeA = SURFACE_WHEELBASE;
@@ -1753,18 +1753,18 @@ void CBike::ProcessControl() {
                     gripRatio = 1.0f;
                 }
 
-                steerFactor = std::asin(gripRatio) / (m_pHandlingData->m_fSteeringLock * 0.017453292f);
+                steerFactor = std::asin(static_cast<double>(gripRatio)) / (static_cast<double>(m_pHandlingData->m_fSteeringLock) * static_cast<double>(0.017453292f));
                 if ((m_fSteerAngle < 0.0f && m_RideAnimData.LeanAngle < 0.0f) || (m_fSteerAngle > 0.0f && m_RideAnimData.LeanAngle > 0.0f)) {
                     steerFactor += steerFactor;
                 }
-                if (steerFactor > 1.0f) {
-                    steerFactor = 1.0f;
+                if (steerFactor > 1.0) {
+                    steerFactor = 1.0;
                 }
             }
             if (GetStatus() != STATUS_PLAYER) {
-                steerFactor = 1.0f;
+                steerFactor = 1.0;
             }
-            m_RideAnimData.BarSteerAngle = steerFactor * m_fSteerAngle;
+            m_RideAnimData.BarSteerAngle = static_cast<float>(steerFactor * static_cast<double>(m_fSteerAngle));
         }
 
         const CVector moveSpeedBeforeWheels = m_vecMoveSpeed;
@@ -1829,8 +1829,8 @@ void CBike::ProcessControl() {
                 contactSpeed -= m_aGroundPhysicalPtrs[frontWheel]->GetSpeed(m_aGroundOffsets[frontWheel]);
             }
 
-            // NOTE: The stub of `CVehicle::ProcessBikeWheel` passes `destabTraction` as the 3rd, and `adhesion` as the 4th float to the original function,
-            //       so the values are passed in the order [adhesion, destabTraction] = [4th float, 3rd float] of the original call
+            // NOTE: The original takes (adhesion, destabTraction) as its 3rd/4th floats = (adhesion * traction bias, grip modifier), but the stub in `Vehicle.cpp`
+            //       forwards its `destabTraction` as the 3rd and its `adhesion` as the 4th one, so the values have to be passed in the stub's order [grip modifier, adhesion * traction bias]
             ProcessBikeWheel(
                 wheelFwd,
                 wheelRight,
@@ -1839,8 +1839,8 @@ void CBike::ProcessControl() {
                 2,
                 s_BikeWheelThrust,
                 frontBrakeBias * frontBrakeForce,
-                gripMod,                      // The 4th float of the original call
-                adhesion * frontTractionBias, // The 3rd float of the original call
+                gripMod,                      // Stub's `adhesion` => 4th float of the original call
+                adhesion * frontTractionBias, // Stub's `destabTraction` => 3rd float of the original call
                 0,
                 &m_aWheelAngularVelocity[0],
                 &wheelStates[0],
@@ -1959,8 +1959,8 @@ void CBike::ProcessControl() {
                 contactSpeed -= m_aGroundPhysicalPtrs[rearWheel]->GetSpeed(m_aGroundOffsets[rearWheel]);
             }
 
-            // NOTE: The stub of `CVehicle::ProcessBikeWheel` passes `destabTraction` as the 3rd, and `adhesion` as the 4th float to the original function,
-            //       so the values are passed in the order [adhesion, destabTraction] = [4th float, 3rd float] of the original call
+            // NOTE: The original takes (adhesion, destabTraction) as its 3rd/4th floats = (adhesion * traction bias, grip modifier), but the stub in `Vehicle.cpp`
+            //       forwards its `destabTraction` as the 3rd and its `adhesion` as the 4th one, so the values have to be passed in the stub's order [grip modifier, adhesion * traction bias]
             ProcessBikeWheel(
                 wheelFwd,
                 wheelRight,
@@ -1969,8 +1969,8 @@ void CBike::ProcessControl() {
                 2,
                 s_BikeWheelThrust,
                 rearBrakeForce * rearBrakeBias,
-                rearGripMod,                     // The 4th float of the original call
-                rearAdhesion * rearTractionBias, // The 3rd float of the original call
+                rearGripMod,                     // Stub's `adhesion` => 4th float of the original call
+                rearAdhesion * rearTractionBias, // Stub's `destabTraction` => 3rd float of the original call
                 1,
                 &m_aWheelAngularVelocity[1],
                 &wheelStates[1],
@@ -2026,26 +2026,32 @@ void CBike::ProcessControl() {
             m_vecGroundRight = CrossProduct(GetForward(), m_vecAveGroundNormal);
             m_vecGroundRight.Normalise();
 
-            float lateralAccel;
+            // NOTE: x87 keeps everything until the single store of `lateral` in extended precision
+            double lateralAccel;
             if (m_pAttachedTo) {
-                lateralAccel = 0.0f;
+                lateralAccel = 0.0;
             } else if (m_nNoOfContactWheels == 0) {
-                lateralAccel = ((m_fSteerAngle / (m_pHandlingData->m_fSteeringLock * 0.017453292f)) * CTimer::GetTimeStep()) * -0.004f;
+                lateralAccel = ((static_cast<double>(m_fSteerAngle) / (static_cast<double>(m_pHandlingData->m_fSteeringLock) * static_cast<double>(0.017453292f))) * static_cast<double>(CTimer::GetTimeStep())) * static_cast<double>(-0.004f);
             } else {
-                CVector speedChange;
+                CVector minuend, subtrahend;
                 if (physicalFlags.bDisableCollisionForce) {
-                    speedChange              = moveSpeedBeforeWheels - m_vecOldSpeedForPlayback;
+                    minuend                  = moveSpeedBeforeWheels;
+                    subtrahend               = m_vecOldSpeedForPlayback;
                     m_vecOldSpeedForPlayback = moveSpeedBeforeWheels;
                 } else {
-                    speedChange = m_vecMoveSpeed - moveSpeedBeforeWheels;
+                    minuend    = m_vecMoveSpeed;
+                    subtrahend = moveSpeedBeforeWheels;
                 }
-                lateralAccel = (speedChange.y * m_vecGroundRight.y + speedChange.z * m_vecGroundRight.z) + speedChange.x * m_vecGroundRight.x;
+                const double dx = static_cast<double>(minuend.x) - static_cast<double>(subtrahend.x);
+                const double dy = static_cast<double>(minuend.y) - static_cast<double>(subtrahend.y);
+                const double dz = static_cast<double>(minuend.z) - static_cast<double>(subtrahend.z);
+                lateralAccel = (dy * static_cast<double>(m_vecGroundRight.y) + dz * static_cast<double>(m_vecGroundRight.z)) + dx * static_cast<double>(m_vecGroundRight.x);
             }
 
             const auto timeStepForLean = CTimer::GetTimeStep() >= 0.01f ? CTimer::GetTimeStep() : 0.01f;
-            float      lateral         = lateralAccel / (timeStepForLean * 0.008f);
+            double     lateral         = lateralAccel / (static_cast<double>(timeStepForLean) * static_cast<double>(0.008f));
 
-            const auto maxLean = m_nWheelStatus[0] == 1 ? 0.4f * m_BikeHandling->m_fMaxLean : m_BikeHandling->m_fMaxLean;
+            const double maxLean = m_nWheelStatus[0] == 1 ? static_cast<double>(0.4f) * static_cast<double>(m_BikeHandling->m_fMaxLean) : static_cast<double>(m_BikeHandling->m_fMaxLean);
             if (lateral > maxLean) {
                 lateral = maxLean;
             } else if (lateral < -maxLean) {
@@ -2053,7 +2059,7 @@ void CBike::ProcessControl() {
             }
 
             const auto desLeanPow = std::pow(m_BikeHandling->m_fDesLean, CTimer::GetTimeStep());
-            lean = (std::asin(lateral) - stillAnimLean) * (1.0f - desLeanPow) + desLeanPow * m_RideAnimData.DesiredLeanAngle;
+            lean = (std::asin(static_cast<float>(lateral)) - stillAnimLean) * (1.0f - desLeanPow) + desLeanPow * m_RideAnimData.DesiredLeanAngle;
         }
         m_RideAnimData.DesiredLeanAngle = lean;
         m_RideAnimData.LeanAngle        = lean;
@@ -2083,7 +2089,8 @@ void CBike::ProcessControl() {
             }
         }
 
-        const auto timeStepInMS = static_cast<int32>(CTimer::GetTimeStep() * 0.02f * 1000.0f);
+        // NOTE: x87 keeps the product in extended precision before truncating it
+        const auto timeStepInMS = static_cast<int32>(static_cast<double>(CTimer::GetTimeStep()) * static_cast<double>(0.02f) * static_cast<double>(1000.0f));
         auto       timeStepF    = static_cast<float>(timeStepInMS);
         if (timeStepInMS < 0) {
             timeStepF += 4294967296.0f;
@@ -2136,16 +2143,19 @@ void CBike::ProcessControl() {
     }
 
     if ((suspensionShake > 0.0f || roughnessShake > 0.0f) && GetStatus() == STATUS_PLAYER) {
-        const auto speedSq = m_vecMoveSpeed.SquaredMagnitude();
-        if (speedSq > BIKE_SHAKE_MIN_SPEED_SQ) {
-            const auto speedPerMass = std::sqrt(speedSq) / m_fMass;
+        // NOTE: x87 keeps all of this in extended precision (until the values are truncated to integers)
+        const double speedSq = static_cast<double>(m_vecMoveSpeed.x) * static_cast<double>(m_vecMoveSpeed.x)
+                             + static_cast<double>(m_vecMoveSpeed.y) * static_cast<double>(m_vecMoveSpeed.y)
+                             + static_cast<double>(m_vecMoveSpeed.z) * static_cast<double>(m_vecMoveSpeed.z);
+        if (speedSq > static_cast<double>(BIKE_SHAKE_MIN_SPEED_SQ)) {
+            const double speedPerMass = std::sqrt(speedSq) / static_cast<double>(m_fMass);
             if (suspensionShake > 0.0f) {
-                const auto frequency = static_cast<uint8>(static_cast<int32>(std::min((speedPerMass * suspensionShake) * 400000.0f + 100.0f, 250.0f)));
-                const auto time      = static_cast<int32>((CTimer::GetTimeStep() * 20000.0f) / static_cast<float>(frequency));
+                const auto frequency = static_cast<uint8>(static_cast<int32>(std::min((speedPerMass * static_cast<double>(suspensionShake)) * 400000.0 + 100.0, 250.0)));
+                const auto time      = static_cast<int32>((static_cast<double>(CTimer::GetTimeStep()) * 20000.0) / static_cast<double>(frequency));
                 CPad::GetPad(0)->StartShake(static_cast<int16>(time), frequency, 0);
             } else {
-                const auto frequency = static_cast<uint8>(static_cast<int32>(std::min((speedPerMass * roughnessShake) * 400000.0f + 40.0f, 150.0f)));
-                const auto time      = static_cast<int32>((CTimer::GetTimeStep() * 5000.0f) / static_cast<float>(frequency));
+                const auto frequency = static_cast<uint8>(static_cast<int32>(std::min((speedPerMass * static_cast<double>(roughnessShake)) * 400000.0 + 40.0, 150.0)));
+                const auto time      = static_cast<int32>((static_cast<double>(CTimer::GetTimeStep()) * 5000.0) / static_cast<double>(frequency));
                 CPad::GetPad(0)->StartShake(static_cast<int16>(time), frequency, 0);
             }
         }

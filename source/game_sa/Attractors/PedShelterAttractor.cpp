@@ -1,7 +1,19 @@
 #include "StdInc.h"
 
+#include <numbers>
+
 #include "PedShelterAttractor.h"
 #include "Tasks/TaskTypes/TaskComplexGoToAttractor.h"
+
+// The one in `common.h` is rounded to 5 decimals, the original uses the exact float (0x858CBC)
+static constexpr float EXACT_TWO_PI = std::numbers::pi_v<float> * 2.f;
+
+// NOTE: `SArray::erase` is wrong (it passes the *begin* of the destination to `rng::move_backward`, which expects its *end*), so shift the tail down manually (as the original does)
+template<typename T>
+static void EraseFromSArray(SArray<T>& arr, T* pos) {
+    rng::move(pos + 1, arr._Last, pos);
+    std::destroy_at(--arr._Last);
+}
 
 // 0x5EF420
 // NOTE: The original returns a pointer to the element (not a copy)
@@ -10,7 +22,7 @@ CVector& CPedShelterAttractor::GetDisplacement(int32 pedId) {
         ms_displacements.reserve(5); // NOTE: `SArray::emplace_back` can't grow an array which has no storage yet
         // Generate 5 random displacements (inside a circle with radius 2), each at least 1 unit away from all others
         for (int32 n = 0; n < 5;) {
-            const float angle  = (float)((double)CGeneral::GetRandomNumber() * (double)RAND_MAX_FLOAT_RECIPROCAL * (double)TWO_PI);
+            const float angle  = (float)((double)CGeneral::GetRandomNumber() * (double)RAND_MAX_FLOAT_RECIPROCAL * (double)EXACT_TWO_PI);
             const double radius = ((double)CGeneral::GetRandomNumber() * (double)RAND_MAX_FLOAT_RECIPROCAL) * 2.0;
             const CVector disp{
                 (float)(std::cos((double)angle) * radius),
@@ -60,9 +72,9 @@ bool CPedShelterAttractor::BroadcastDeparture(CPed* ped) {
     }
 
     if (const auto pair = rng::find(m_PedTaskPairs, ped, &CPedTaskPair::Ped); pair != m_PedTaskPairs.end()) {
-        m_PedTaskPairs.erase(pair);
+        EraseFromSArray(m_PedTaskPairs, &*pair);
     }
-    m_ArrivedPeds.erase(it);
+    EraseFromSArray(m_ArrivedPeds, &*it);
 
     for (auto* const attractedPed : m_AttractPeds) {
         const auto n = (int32)(m_ArrivedPeds.size());

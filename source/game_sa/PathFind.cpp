@@ -312,6 +312,7 @@ void CPathFind::DoPathSearch(
 ) {
     // Moved this up here, as it's set in every return path
     outNodesCount = 0;
+    m_totalNumNodesInPathFindHashTable = 0u; // Original resets this at the very start (not just before the search)
 
     const auto ResolveNode = [&, this](CVector nodePosn, CNodeAddress* addr) {
         if (addr && addr->IsValid()) {
@@ -365,7 +366,6 @@ void CPathFind::DoPathSearch(
     }
 
     rng::fill(m_pathFindHashTable, nullptr);
-    m_totalNumNodesInPathFindHashTable = 0u;
 
     AddNodeToList(target, 0);
 

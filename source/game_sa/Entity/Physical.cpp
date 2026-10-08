@@ -13,9 +13,14 @@
 #include "RealTimeShadowManager.h"
 
 namespace {
-// Sector index calculation as done by `Add`/`RemoveAndAdd` (x87: `floor(v * 0.02 + 60)`)
+// Sector index calculation as done by `Add`/`RemoveAndAdd` (`floor(v * 0.02f + 60.0f)`, constants at 0x858B38 and 0x858B34)
 int32 PhysicalGetSectorIdx(float v) {
-    return static_cast<int32>(std::floor(static_cast<double>(v) * static_cast<double>(0.02f) + 60.0));
+    return static_cast<int32>(std::floor(v * 0.02f + 60.0f));
+}
+
+// Original (0x4072A0) uses `& 0xF` (also for negative coordinates), while `CWorld::GetRepeatSector` uses `abs(c) % 16`, which differs for negative values
+CRepeatSector& PhysicalGetRepeatSector(int32 x, int32 y) {
+    return CWorld::ms_aRepeatSectors[y & 0xF][x & 0xF];
 }
 
 // Get the list of the repeat sector in which a physical of the given type is stored
@@ -170,7 +175,7 @@ void CPhysical::Add()
     const auto maxSectorY = PhysicalGetSectorIdx(rect.top);
     for (int32 sectorY = minSectorY; sectorY <= maxSectorY; ++sectorY) {
         for (int32 sectorX = minSectorX; sectorX <= maxSectorX; ++sectorX) {
-            auto& rs   = CWorld::GetRepeatSector(sectorX, sectorY);
+            auto& rs   = PhysicalGetRepeatSector(sectorX, sectorY);
             auto* list = PhysicalGetRepeatSectorList(rs, GetType());
 
             const auto entryInfoNode = new CEntryInfoNode();
@@ -616,7 +621,7 @@ void CPhysical::RemoveAndAdd() {
     const auto maxSectorY = PhysicalGetSectorIdx(rect.top);
     for (int32 sectorY = minSectorY; sectorY <= maxSectorY; ++sectorY) {
         for (int32 sectorX = minSectorX; sectorX <= maxSectorX; ++sectorX) {
-            auto& rs   = CWorld::GetRepeatSector(sectorX, sectorY);
+            auto& rs   = PhysicalGetRepeatSector(sectorX, sectorY);
             auto* list = PhysicalGetRepeatSectorList(rs, GetType());
 
             if (entryInfoNode) {

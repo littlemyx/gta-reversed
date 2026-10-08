@@ -3,11 +3,23 @@
 #include <bit>
 #include <numbers>
 
+#include "Shadows.h"
+
 namespace {
 // The original game uses the exact (float rounded) values, but the ones in `common.h` are rounded to 5 decimals
 constexpr float BMX_PI      = std::numbers::pi_v<float>;       // 0x871504
 constexpr float BMX_HALF_PI = std::numbers::pi_v<float> / 2.f; // 0x87150C
 constexpr float BMX_TWO_PI  = std::numbers::pi_v<float> * 2.f; // 0x858CBC
+
+// 0x59C790 - Same add order as in `CBike`'s file-local helper (`CMatrix::TransformVector` adds in a different order)
+CVector TransformVectorOriginal(const CMatrix& m, const CVector& v) {
+    const auto &r = m.GetRight(), &f = m.GetForward(), &u = m.GetUp();
+    return CVector{
+        (u.x * v.z + f.x * v.y) + r.x * v.x,
+        (u.y * v.z + r.y * v.x) + f.y * v.y,
+        (u.z * v.z + r.z * v.x) + f.z * v.y
+    };
+}
 }
 
 void CBmx::InjectHooks() {
@@ -214,7 +226,7 @@ void CBmx::ProcessDrivingAnims(CPed* driver, bool blend) {
         } else if (fwdAnim && fwdAnim->m_BlendAmount > 0.1f) {
             newCrankAngle = BlendCrankTowards(fwdAnim, BMX_HALF_PI);
         } else {
-            newCrankAngle = (float)std::pow((double)0.97f, (double)CTimer::GetTimeStep()) * m_fCrankAngle;
+            newCrankAngle = (float)(std::pow((double)0.97f, (double)CTimer::GetTimeStep()) * (double)m_fCrankAngle); // NOTE: x87 keeps the `pow` result in extended precision
         }
         m_fCrankAngle = newCrankAngle;
 
@@ -281,7 +293,7 @@ void CBmx::ProcessDrivingAnims(CPed* driver, bool blend) {
         }
 
         if (!mainAnim) {
-            m_fCrankAngle = (float)std::pow((double)0.97f, (double)CTimer::GetTimeStep()) * m_fCrankAngle;
+            m_fCrankAngle = (float)(std::pow((double)0.97f, (double)CTimer::GetTimeStep()) * (double)m_fCrankAngle); // NOTE: x87 keeps the `pow` result in extended precision
         } else {
             bool synced = false;
             if (isNewAnim) {
@@ -442,7 +454,7 @@ void CBmx::ProcessBunnyHop() {
 
 // 0x6C0810
 void CBmx::PreRender() {
-    // 0xC1C83C - Unknown flag (it's in BSS, never written to by anything reversed so far - so it's always false)
+    // 0xC1C83C - Unknown flag (it's in BSS, read only by this function [0x6C1060, 0x6C113D, 0x6C11DB] and there's no writer in the whole `.text` - so it's always false)
     static auto& s_UnkFlag = StaticRef<bool>(0xC1C83C);
 
     CVehicle::PreRender();
@@ -556,7 +568,7 @@ void CBmx::PreRender() {
     if (m_WheelCounts[2] > 0.0f || m_WheelCounts[3] > 0.0f) {
         const auto y        = (cd->m_pLines[3].m_vecStart.y + cd->m_pLines[2].m_vecStart.y) * 0.5f;
         const auto minRatio = m_aRatioHistory[2] < m_aRatioHistory[3] ? m_aRatioHistory[2] : m_aRatioHistory[3];
-        const auto z        = (cd->m_pLines[2].m_vecStart.z - minRatio * m_fSuspensionLength[2]) - mi->m_fWheelSizeRear * 0.5f;
+        const auto z        = (cd->m_pLines[2].m_vecStart.z - minRatio * m_fSuspensionLength[2]) - mi->m_fWheelSizeFront * 0.5f; // BUG: Original uses the front wheel size here (but the rear one for the radius below)
         const auto wheelVel = GetSpeed(CVector{ 0.0f, y, z });
 
         const auto rotation        = ProcessWheelRotation(m_WheelStates[1], fwd, wheelVel, mi->m_fWheelSizeRear * 0.5f);

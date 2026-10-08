@@ -33,13 +33,13 @@ public:
     uintptr    m_nId;
     float      m_fGroundZ;
     float      m_fMass;
-    float      m_fTotalLength;
+    float      m_fTotalLength; // NOTE: Actually the length of a single segment (0x30C), see `CRopes::RegisterRope`/`CRope::UpdateWeightInRope`
     CEntity*   m_pRopeHolder;
     CEntity*   m_pAttachedEntity;
     CEntity*   m_pRopeAttachObject;
     float      m_fSegmentLength;
     uint32     m_nTime;
-    uint8      m_nSegments;
+    uint8      m_nSegments;    // NOTE: Actually the index of the last fixed segment (the rope hangs from it), see `CRope::UpdateWeightInRope`
     eRopeType  m_nType;
     uint8      m_nFlags1; // *
     uint8      m_nFlags2; // ** leftover?

@@ -28,6 +28,17 @@
 #include "TaskComplexSmartFleeEntity.h"
 #include "EventScriptCommand.h"
 #include "CarCtrl.h"
+#include "TaskComplexBeInGroup.h"
+#include "TaskSimplePlayerOnFoot.h"
+#include "TaskComplexFacial.h"
+#include "EventDontJoinPlayerGroup.h"
+#include "EventNewGangMember.h"
+#include "EventPlayerCommandToGroupAttack.h"
+#include "EventPlayerCommandToGroupGather.h"
+#include "Cheat.h"
+#include "Radar.h"
+#include "Stats.h"
+#include <numbers>
 
 bool CPlayerPed::bDebugPlayerInvincible;
 bool CPlayerPed::bDebugTargeting;
@@ -87,8 +98,11 @@ void CPlayerPed::InjectHooks() {
     RH_ScopedInstall(FindPedToAttack, 0x60C5F0);
     RH_ScopedInstall(ForceGroupToAlwaysFollow, 0x60C7C0);
     RH_ScopedInstall(ForceGroupToNeverFollow, 0x60C800);
+    RH_ScopedInstall(MakeThisPedJoinOurGroup, 0x60C840);
+    RH_ScopedInstall(SetInitialState, 0x60CD20);
     RH_ScopedOverloadedInstall(MakeChangesForNewWeapon, "BySlot", 0x60D000, void(CPlayerPed::*)(uint32));
     RH_ScopedInstall(EvaluateTarget, 0x60D020);
+    RH_ScopedInstall(EvaluateNeighbouringTarget, 0x60D1C0);
     RH_ScopedInstall(PlayerHasJustAttackedSomeone, 0x60D5A0);
     RH_ScopedInstall(SetupPlayerPed, 0x60D790);
 
@@ -1649,9 +1663,99 @@ void CPlayerPed::ForceGroupToNeverFollow(bool enable) {
         TellGroupToStartFollowingPlayer(false, false, true);
 }
 
+// NOTSA: `CPedGroupMembership::m_separationRange` is private and has no accessor (and that header is out of this file's scope),
+// so it's accessed by the explicit instantiation exemption from access checking.
+// TODO: Replace with a proper accessor once `CPedGroupMembership` has one.
+namespace {
+template<typename Tag, typename Tag::type MemberPtr>
+struct PrivateMemberRobber {
+    friend typename Tag::type GetMemberPtr(Tag) { return MemberPtr; }
+};
+struct SeparationRangeTag {
+    using type = float CPedGroupMembership::*;
+    friend type GetMemberPtr(SeparationRangeTag);
+};
+template struct PrivateMemberRobber<SeparationRangeTag, &CPedGroupMembership::m_separationRange>;
+}
+
 // 0x60C840
 void CPlayerPed::MakeThisPedJoinOurGroup(CPed* ped) {
-    plugin::CallMethod<0x60C840, CPlayerPed *, CPed*>(this, ped);
+    if (ped->bDruggedUp) {
+        Say(CTX_GLOBAL_DRUGGED_IGNORE);
+        return;
+    }
+
+    if (ped->GetTaskManager().FindActiveTaskByType(TASK_COMPLEX_KILL_PED_ON_FOOT)) {
+        return;
+    }
+
+    // 0x609380 (inlined here)
+    static_assert(CHEAT_WANNA_BE_IN_MY_GANG == 0x4C && CHEAT_NO_ONE_CAN_STOP_US == 0x4D && CHEAT_ROCKET_MAYHEM == 0x4E); // 0x96917C, 0x96917D, 0x96917E
+    const auto IsRecruitCheatActive = [] {
+        return CCheat::IsAnyActive({ CHEAT_WANNA_BE_IN_MY_GANG, CHEAT_NO_ONE_CAN_STOP_US, CHEAT_ROCKET_MAYHEM });
+    };
+    if (ped->m_nPedType != PED_TYPE_GANG2 && !IsRecruitCheatActive()) {
+        return;
+    }
+
+    auto& group      = GetPlayerGroup();
+    auto& membership = group.GetMembership();
+    if (membership.IsMember(ped)) {
+        return;
+    }
+
+    CAEPedSpeechAudioEntity::SetCJMood(MOOD_UNK, 10'000, 1, -1, -1);
+    Say(CTX_GLOBAL_JOIN_ME_ASK, 0, 1.f, true);
+
+    // Max. number of group members
+    int32 maxMembers = std::min<int32>(CStats::FindMaxNumberOfGroupMembers(), GetPlayerData()->m_nScriptLimitToGangSize);
+    if (CStats::GetStatValue(STAT_CITY_UNLOCKED) == 1.f || CStats::GetStatValue(STAT_CITY_UNLOCKED) == 2.f) { // 0x858624, 0x858CA0
+        maxMembers = 0;
+    }
+
+    // Can the ped be recruited?
+    const auto numFollowers = membership.CountMembersExcludingLeader();
+    if ((IsRecruitCheatActive() && numFollowers < 7) || numFollowers < maxMembers) {
+        if (auto* const pedGroup = CPedGroups::GetPedsGroup(ped)) { // Remove from its current group
+            pedGroup->GetMembership().RemoveMember(ped);
+        }
+
+        // Tell the ped to be in our group
+        auto* const task = new CTaskComplexBeInGroup{ (int32)FindPlayerPed(-1)->GetPlayerData()->m_nPlayerGroup, false };
+        CEventScriptCommand scriptCmdEvent{ 3, task, false };
+        ped->GetEventGroup().Add(&scriptCmdEvent, false);
+
+        membership.AddFollower(ped);
+        group.Process();
+        ped->GiveWeaponWhenJoiningGang();
+
+        CEventGroupEvent groupEvent{ this, new CEventNewGangMember{ ped } };
+        group.GetIntelligence().AddEvent(&groupEvent);
+
+        ped->bDrownsInWater = false;
+
+        CStats::IncrementStat(STAT_GANG_MEMBERS_RECRUITED, 1.f);
+        CStats::DisplayScriptStatUpdateMessage(STAT_UPDATE_INCREASE, STAT_GANG_STRENGTH, 1.f);
+
+        // NOTE: Original passes "CODEPLR" (0x86D1E0) as the 5th argument, which our `SetEntityBlip` doesn't have
+        // RGBA read from the gang color tables (0x8D1344, 0x8D1350, 0x8D135C) for gang 1 (Grove) - same as `CGangWars::GetGangColor(GANG_GROVE)` (which is private)
+        const auto blipColor = (eBlipColour)0x46C800FF; // (70, 200, 0, 255)
+        const auto blip      = CRadar::SetEntityBlip(BLIP_CHAR, GetPedPool()->GetRef(ped), (uint32)blipColor, BLIP_DISPLAY_BLIPONLY);
+        CRadar::ChangeBlipScale(blip, 2);
+        CRadar::ChangeBlipColour(blip, blipColor);
+        CRadar::SetBlipFriendly(blip, true);
+
+        ped->bClearRadarBlipOnDeath = true;
+
+        membership.*GetMemberPtr(SeparationRangeTag{}) = 120.f; // 0x86C6C0 (`ms_fPlayerGroupMaxSeparation`)
+
+        ped->Say(CTX_GLOBAL_JOIN_GANG_YES, 2500, 1.f, true);
+    } else {
+        ped->Say(CTX_GLOBAL_JOIN_GANG_NO, 2500, 1.f, true);
+
+        CEventDontJoinPlayerGroup event{ this };
+        ped->GetEventGroup().Add(&event, false);
+    }
 }
 
 // 0x60CC50
@@ -1661,7 +1765,75 @@ bool CPlayerPed::PlayerWantsToAttack() {
 
 // 0x60CD20
 void CPlayerPed::SetInitialState(bool bGroupCreated) {
-    plugin::CallMethod<0x60CD20, CPlayerPed *, bool>(this, bGroupCreated);
+    CMBlur::ClearDrunkBlur();
+    CTimer::ms_fTimeScale = 1.f;
+
+    m_bUsesCollision = true;
+    physicalFlags.bApplyGravity = true;
+
+    ClearAimFlag();
+    ClearLookFlag();
+
+    bRenderPedInCar = true;
+
+    if (m_pFire) {
+        m_pFire->Extinguish();
+    }
+
+    SetPedState(PEDSTATE_IDLE);
+    SetMoveState(PEDMOVE_STILL);
+
+    bIsDucking     = false;
+    bDontRender    = false;
+    bIsBeingArrested = false;
+    bCanExitCar    = true;
+
+    GetIntelligence()->FlushIntelligence();
+    RpAnimBlendClumpRemoveAllAssociations(GetRpClump());
+
+    GetTaskManager().SetTask(new CTaskSimplePlayerOnFoot{}, TASK_PRIMARY_DEFAULT, false);
+
+    m_nAnimGroup         = ANIM_GROUP_PLAYER;
+    bIsPedDieAnimPlaying = false;
+
+    if (GetPlayerData()) {
+        GetPlayerData()->m_bAdrenaline = false;
+    }
+
+    SetRealMoveAnim();
+
+    m_pStats->m_nTemper = 50;
+
+    if (m_pAttachedTo && !m_bUsesCollision) {
+        m_bUsesCollision = true;
+    }
+    m_pAttachedTo = nullptr;
+
+    m_nTurretAmmo = 0;
+
+    GetTaskManager().SetTaskSecondary(new CTaskComplexFacial{}, TASK_SECONDARY_FACIAL_COMPLEX);
+
+    if (!bGroupCreated && !GetPlayerData()->m_bGroupNeverFollow) {
+        // NOTE: At this point (when called from the constructor) the player's group isn't created yet, so this uses
+        //       whatever is in `m_nPlayerGroup` - that's why `GetPlayerGroup()` (which asserts the group is active) isn't used.
+        auto& group = CPedGroups::ms_groups[GetPlayerData()->m_nPlayerGroup];
+        group.m_bMembersEnterLeadersVehicle = true;
+        group.GetIntelligence().SetDefaultTaskAllocatorType(ePedGroupDefaultTaskAllocatorType::RANDOM);
+
+        CEventPlayerCommandToGroupAttack attackEvent{ nullptr }; // The original constructs a `CEventPlayerCommandToGroup(0, 0)` and swaps the vtable
+        attackEvent.ComputeResponseTaskType(&group);
+        if (attackEvent.WillRespond()) {
+            auto* const gatherEvent = new CEventPlayerCommandToGroupGather{ nullptr };
+            gatherEvent->m_TaskId = attackEvent.m_TaskId;
+
+            CEventGroupEvent groupEvent{ this, gatherEvent };
+            group.GetIntelligence().AddEvent(&groupEvent);
+        }
+    }
+
+    if (GetPlayerData()) {
+        GetPlayerData()->SetInitialState();
+    }
 }
 
 // 0x60D000
@@ -1698,7 +1870,52 @@ void CPlayerPed::EvaluateTarget(CEntity* target, CEntity *& outTarget, float & o
 
 // 0x60D1C0
 void CPlayerPed::EvaluateNeighbouringTarget(CEntity* target, CEntity** outTarget, float* outTargetPriority, float maxDistance, float arg4, bool arg5) {
-    plugin::CallMethod<0x60D1C0, CPlayerPed *, CEntity*, CEntity**, float*, float, float, bool>(this, target, outTarget, outTargetPriority, maxDistance, arg4, arg5);
+    // The original keeps the intermediate results in extended precision, hence `double`
+    const auto& selfPos   = GetPosition();
+    const auto& targetPos = target->GetPosition();
+    const double dx = (double)targetPos.x - (double)selfPos.x;
+    const double dy = (double)targetPos.y - (double)selfPos.y;
+    const double dz = (double)targetPos.z - (double)selfPos.z;
+    if (!(std::sqrt(dz * dz + dy * dy + dx * dx) <= (double)maxDistance)) { // NOTE: NaN returns too
+        return;
+    }
+
+    if (DoesTargetHaveToBeBroken(target, &GetActiveWeapon())) {
+        return;
+    }
+
+    // Angle between the camera and the target, relative to `arg4`, normalized to [-pi, pi]
+    const auto& camPos = TheCamera.GetPosition();
+    const float diffY = targetPos.y - camPos.y;
+    const float diffX = targetPos.x - camPos.x;
+    double angle = (double)CGeneral::GetATanOfXY(diffX, diffY) - (double)arg4;
+    constexpr auto PI = std::numbers::pi_v<float>; // 0x858CB8
+    while (angle > (double)PI) {
+        angle -= (double)(2.f * PI); // 0x858CBC
+    }
+    while (angle < (double)-PI) { // 0x858CC0
+        angle += (double)(2.f * PI);
+    }
+
+    constexpr auto MAX_ANGLE = 0.8726646304130554f; // 0x86D1D0 (50 deg)
+    if (!(std::abs(angle) < (double)MAX_ANGLE)) {
+        return;
+    }
+
+    // `arg5` selects which side of the camera's view direction the target has to be on
+    // Priority is the (negated) angle distance, or a big negative number if the target is on the wrong side.
+    constexpr auto WRONG_SIDE_PRIORITY = -100000.f; // 0x86D1E8
+    double priority;
+    if (!arg5) {
+        priority = !(angle >= 0.0) ? angle : (double)WRONG_SIDE_PRIORITY;
+    } else {
+        priority = !(angle <= 0.0) ? -angle : (double)WRONG_SIDE_PRIORITY;
+    }
+
+    if (priority > (double)*outTargetPriority) {
+        *outTarget         = target;
+        *outTargetPriority = (float)priority;
+    }
 }
 
 // 0x60D350

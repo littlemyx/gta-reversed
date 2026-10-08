@@ -15,6 +15,11 @@
 #include "InterestingEvents.h"
 #include "Shadows.h"
 #include "Birds.h"
+#include "Automobile.h"
+#include "DamageManager.h"
+#include "SurfaceInfos_c.h"
+#include "VehicleModelInfo.h"
+#include "RwHelper.h"
 
 //float& PELLET_COL_SCALE_RATIO_MULT = *(float*)0x8D6128; // 1.3
 
@@ -47,7 +52,7 @@ void CWeapon::InjectHooks() {
     RH_ScopedInstall(Update, 0x73DB40);
     RH_ScopedInstall(SetUpPelletCol, 0x73C710);
     RH_ScopedInstall(FireAreaEffect, 0x73E800);
-    RH_ScopedInstall(FireInstantHitFromCar, 0x73EC40, { .Reversed = false });
+    RH_ScopedInstall(FireInstantHitFromCar, 0x73EC40);
     RH_ScopedInstall(FireFromCar, 0x73FA20);
     RH_ScopedInstall(FireInstantHit, 0x73FB10, { .Reversed = false });
     RH_ScopedInstall(FireProjectile, 0x741360);
@@ -55,11 +60,11 @@ void CWeapon::InjectHooks() {
     RH_ScopedInstall(LaserScopeDot, 0x73A8D0);
     RH_ScopedInstall(FireM16_1stPerson, 0x741C00);
     RH_ScopedInstall(Fire, 0x742300);
-    RH_ScopedGlobalInstall(DoTankDoomAiming, 0x73D1E0, { .Reversed = false });
-    RH_ScopedGlobalInstall(DoDriveByAutoAiming, 0x73D720, { .Reversed = false });
-    RH_ScopedGlobalInstall(FindNearestTargetEntityWithScreenCoors, 0x73E240, { .Reversed = false });
+    RH_ScopedGlobalInstall(DoTankDoomAiming, 0x73D1E0);
+    RH_ScopedGlobalInstall(DoDriveByAutoAiming, 0x73D720);
+    RH_ScopedGlobalInstall(FindNearestTargetEntityWithScreenCoors, 0x73E240);
     RH_ScopedGlobalInstall(EvaluateTargetForHeatSeekingMissile, 0x73E560);
-    RH_ScopedGlobalInstall(CheckForShootingVehicleOccupant, 0x73F480, { .Reversed = false });
+    RH_ScopedGlobalInstall(CheckForShootingVehicleOccupant, 0x73F480);
     RH_ScopedGlobalInstall(PickTargetForHeatSeekingMissile, 0x73F910);
     RH_ScopedOverloadedInstall(CanBeUsedFor2Player, "Static", 0x73B240, bool(*)(eWeaponType));
     RH_ScopedOverloadedInstall(CanBeUsedFor2Player, "Method", 0x73DEF0, bool(CWeapon::*)());
@@ -1012,12 +1017,116 @@ void CWeapon::DoDoomAiming(CEntity* owner, CVector* start, CVector* end) {
 
 // 0x73D1E0
 void CWeapon::DoTankDoomAiming(CEntity* vehicle, CEntity* owner, CVector* startPoint, CVector* endPoint) {
-    plugin::Call<0x73D1E0, CEntity*, CEntity*, CVector*, CVector*>(vehicle, owner, startPoint, endPoint);
+    const CVector dir  = *endPoint - *startPoint;
+    const CVector start2D{ startPoint->x, startPoint->y, 0.f };
+    const CVector end2D{ endPoint->x, endPoint->y, 0.f };
+
+    int16                    numInRange{};
+    std::array<CEntity*, 16> inRange{};
+    CWorld::FindObjectsInRange(*startPoint, dir.Magnitude(), true, &numInRange, 15, inRange.data(), false, true, false, false, false);
+
+    float       closestDist = 10'000.f;
+    int16       closestIdx{};
+    const float slope = (endPoint->z - startPoint->z) / dir.Magnitude();
+    for (int16 i = 0; i < numInRange; i++) {
+        const auto entity = inRange[i];
+        if (vehicle == entity || owner == entity) {
+            continue;
+        }
+        if (entity->GetStatus() == STATUS_TRAIN_MOVING || entity->GetStatus() == STATUS_TRAIN_NOT_MOVING) {
+            continue;
+        }
+        // NOTSA: Original checks bit 29 of `CPhysical::m_nPhysicalFlags` (`bRenderScorched`)
+        if (entity->GetIsTypeVehicle() && entity->AsPhysical()->physicalFlags.bRenderScorched) {
+            continue;
+        }
+
+        const auto vehPos    = vehicle->GetPosition();
+        const auto entPos    = entity->GetPosition();
+        const auto dist2D    = std::sqrt((vehPos.x - entPos.x) * (vehPos.x - entPos.x) + (vehPos.y - entPos.y) * (vehPos.y - entPos.y));
+        const auto heightEst = dist2D * slope;
+        const auto zDiff     = vehPos.z - (heightEst + entPos.z);
+        const auto absZDiff  = zDiff >= 0.f ? zDiff : -zDiff;
+        if (!(absZDiff * 3.f < dist2D)) {
+            continue;
+        }
+
+        const CVector entPos2D{ entPos.x, entPos.y, 0.f };
+        const auto    boundRadius = CModelInfo::GetModelInfo(entity->m_nModelIndex)->GetColModel()->GetBoundRadius();
+        if (CCollision::DistToLine(start2D, end2D, entPos2D) < boundRadius * 3.f) {
+            const auto dist3D = std::sqrt(dist2D * dist2D + absZDiff * absZDiff);
+            if (dist3D < closestDist) {
+                closestIdx  = i;
+                closestDist = dist3D;
+            }
+        }
+    }
+
+    if (numInRange > 0 && closestDist < 9000.f) {
+        const auto target = inRange[closestIdx]->GetPosition();
+        const auto dirLen2D = std::sqrt((endPoint->y - startPoint->y) * (endPoint->y - startPoint->y) + (endPoint->x - startPoint->x) * (endPoint->x - startPoint->x));
+        const auto tgtLen2D = std::sqrt((target.x - startPoint->x) * (target.x - startPoint->x) + (target.y - startPoint->y) * (target.y - startPoint->y));
+        endPoint->z = (dirLen2D / tgtLen2D) * ((target.z + 0.3f) - startPoint->z) + startPoint->z;
+    }
 }
 
 // 0x73D720
 void CWeapon::DoDriveByAutoAiming(CEntity* owner, CVehicle* vehicle, CVector* startPoint, CVector* endPoint, bool canAimVehicles) {
-    plugin::Call<0x73D720, CEntity*, CVehicle*, CVector*, CVector*, bool>(owner, vehicle, startPoint, endPoint, canAimVehicles);
+    if (!owner) {
+        return;
+    }
+
+    const auto radius = (*endPoint - *startPoint).Magnitude();
+
+    int16                    numPeds{}, numVehicles{};
+    std::array<CEntity*, 32> inRange{};
+    CWorld::FindObjectsInRange(*startPoint, radius, true, &numPeds, 16, inRange.data(), false, false, true, false, false);
+    if (canAimVehicles) {
+        CWorld::FindObjectsInRange(*startPoint, radius, true, &numVehicles, 16, inRange.data() + numPeds, false, true, false, false, false);
+    }
+    const auto numInRange = (int16)(numPeds + numVehicles);
+
+    float closestScore = 10'000.f;
+    int16 closestIdx{};
+    for (int16 i = 0; i < numInRange; i++) {
+        const auto entity = inRange[i];
+        if (entity == owner) {
+            continue;
+        }
+        if (entity->GetIsTypePed()) {
+            const auto ped = entity->AsPed();
+            if (ped->m_nPedState == PEDSTATE_DIE || ped->m_nPedState == PEDSTATE_DEAD || ped->m_pAttachedTo == vehicle) {
+                continue;
+            }
+        }
+
+        const auto entPos = entity->GetPosition();
+        float      score  = CCollision::DistToLine(*startPoint, *endPoint, entPos);
+        if (vehicle->m_nVehicleSubType == VEHICLE_TYPE_PLANE || vehicle->m_nVehicleSubType == VEHICLE_TYPE_HELI) {
+            const auto distToVeh = (entPos - vehicle->GetPosition()).Magnitude();
+            score /= (distToVeh >= 5.f ? distToVeh : 5.f);
+        } else {
+            score += (entPos - owner->GetPosition()).Magnitude() * 0.15f;
+        }
+
+        const auto dir = *endPoint - *startPoint;
+        if (dir.x * (entPos.x - startPoint->x) + dir.y * (entPos.y - startPoint->y) + dir.z * (entPos.z - startPoint->z) > 0.f) {
+            if (score < closestScore) {
+                closestScore = score;
+                closestIdx   = i;
+            }
+        }
+    }
+
+    const auto autoAimAngle = vehicle->GetPlaneGunsAutoAimAngle();
+    const auto maxScore     = autoAimAngle > 0.5f
+        ? std::tan(autoAimAngle * 0.017453292f)
+        : 2.5f;
+    if (closestScore < maxScore) {
+        const auto target = inRange[closestIdx]->GetPosition();
+        const auto scale  = (*startPoint - *endPoint).Magnitude() / (*startPoint - target).Magnitude();
+        *endPoint = (target - *startPoint) * scale + *startPoint;
+    }
 }
 
 // 0x73DB40
@@ -1130,10 +1239,10 @@ bool CWeapon::CanBeUsedFor2Player() {
 
 // 0x73E240
 CEntity* CWeapon::FindNearestTargetEntityWithScreenCoors(float screenX, float screenY, float range, CVector point, float* outScrX, float* outScrY) {
-    screenX = (screenX + 1.f) * SCREEN_WIDTH / 2.f;
-    screenY = (screenY + 1.f) * SCREEN_HEIGHT / 2.f;
+    float closestScrDist = SCREEN_WIDTH * (1.f / 15.f); // 0x863E0C
+    screenX              = (screenX + 1.f) * SCREEN_WIDTH * 0.5f;
+    screenY              = (screenY + 1.f) * SCREEN_HEIGHT * 0.5f;
 
-    float    closestScrDistSq = sq(SCREEN_WIDTH / 15.f);
     CEntity* closest{};
     const auto ProcessEntity = [&](CEntity* e) {
         const auto epos = e->GetPosition();
@@ -1143,40 +1252,54 @@ CEntity* CWeapon::FindNearestTargetEntityWithScreenCoors(float screenX, float sc
         if (!CSprite::CalcScreenCoors(epos, &scrPos, &scrSz.x, &scrSz.y, true, true)) {
             return;
         }
-        const auto scrDistSq = (CVector2D{ scrPos } - CVector2D{screenX, screenY}).SquaredMagnitude();
-        if (scrDistSq >= closestScrDistSq) {
+        const auto dx = scrPos.x - screenX;
+        const auto dy = scrPos.y - screenY;
+        const auto scrDist = std::sqrt(dx * dx + dy * dy);
+        if (!(scrDist < closestScrDist)) {
             return;
         }
-        if (sq(range) <= (point - epos).SquaredMagnitude()) {
+        if (!((epos.x - point.x) * (epos.x - point.x) + (epos.y - point.y) * (epos.y - point.y) + (epos.z - point.z) * (epos.z - point.z) < range * range)) {
             return;
         }
-        closestScrDistSq = scrDistSq;
-        closest          = e;
+        closestScrDist = scrDist;
+        closest        = e;
 
+        // BUG: Original only checks `outScrX` for null, but writes both
         if (outScrX && outScrY) {
-            *outScrX = scrPos.x / (SCREEN_WIDTH / 2.f) - 1.f;
-            *outScrY = scrPos.y / (SCREEN_HEIGHT / 2.f) - 1.f;
+            *outScrX = scrPos.x / (SCREEN_WIDTH * 0.5f) - 1.f;
+            *outScrY = scrPos.y / (SCREEN_HEIGHT * 0.5f) - 1.f;
         }
     };
 
-    for (auto& ped : GetPedPool()->GetAllValid()) {
-        if (ped.IsStateDead() || ped.bInVehicle) {
+    // NOTSA: Original iterates the pools from the last slot to the first (matters on ties)
+    const auto pedPool = GetPedPool();
+    for (auto i = (int32)pedPool->GetSize(); i-- > 0;) {
+        const auto ped = pedPool->GetAt(i);
+        if (!ped) {
             continue;
         }
-        if (!CDarkel::ThisPedShouldBeKilledForFrenzy(ped)) {
+        if (ped->IsStateDead() || ped->bInVehicle) {
             continue;
         }
-        ProcessEntity(&ped);
+        if (!CDarkel::ThisPedShouldBeKilledForFrenzy(*ped)) {
+            continue;
+        }
+        ProcessEntity(ped);
     }
 
-    for (auto& veh : GetVehiclePool()->GetAllValid()) {
-        if (&veh == FindPlayerVehicle()) {
+    const auto vehPool = GetVehiclePool();
+    for (auto i = (int32)vehPool->GetSize(); i-- > 0;) {
+        const auto veh = vehPool->GetAt(i);
+        if (!veh) {
             continue;
         }
-        if (!CDarkel::ThisVehicleShouldBeKilledForFrenzy(veh)) {
+        if (veh == FindPlayerVehicle()) {
             continue;
         }
-        ProcessEntity(&veh);
+        if (!CDarkel::ThisVehicleShouldBeKilledForFrenzy(*veh)) {
+            continue;
+        }
+        ProcessEntity(veh);
     }
 
     return closest;
@@ -1320,12 +1443,175 @@ bool CWeapon::FireAreaEffect(CEntity* firingEntity, const CVector& origin, CEnti
 
 // 0x73EC40
 bool CWeapon::FireInstantHitFromCar(CVehicle* vehicle, bool leftSide, bool rightSide) {
-    return plugin::CallMethodAndReturn<bool, 0x73EC40, CWeapon*, CVehicle*, bool, bool>(this, vehicle, leftSide, rightSide);
+    const auto wi = CWeaponInfo::GetWeaponInfo(m_Type, eWeaponSkill::STD);
+    const auto mi = CModelInfo::GetModelInfo(vehicle->m_nModelIndex)->AsVehicleModelInfoPtr();
+    const auto driver = vehicle->m_pDriver;
+
+    // BUG: Original doesn't check if there's a driver (except for bikes)
+    const auto TransformByDriverHand = [&](CVector& pos) {
+        const auto hier = GetAnimHierarchyFromSkinClump(driver->GetRpClump());
+        const auto idx  = RpHAnimIDGetIndex(hier, driver->m_apBones[PED_NODE_RIGHT_HAND]->BoneTag);
+        RwV3dTransformPoints(&pos, &pos, 1, &RpHAnimHierarchyGetMatrixArray(hier)[idx]);
+    };
+    const auto ComputeEndFromStart = [&](const CVector& start) -> CVector {
+        const auto  range = wi->m_fWeaponRange;
+        const auto& mat   = vehicle->GetMatrix();
+        if (leftSide) {
+            const auto& right = mat.GetRight();
+            return { start.x - range * right.x, start.y - range * right.y, start.z - range * right.z };
+        }
+        const auto& dir = rightSide ? mat.GetRight() : mat.GetForward();
+        return { range * dir.x + start.x, range * dir.y + start.y, range * dir.z + start.z };
+    };
+
+    CVector start{}, end{};
+    if (vehicle->m_nVehicleType != VEHICLE_TYPE_BIKE) {
+        if (rightSide) {
+            start.x = wi->m_vecFireOffset.x * 1.8f;
+            start.y = wi->m_vecFireOffset.y * 1.8f;
+            start.z = wi->m_vecFireOffset.z * 1.8f - 0.1f;
+        } else {
+            start = wi->m_vecFireOffset;
+        }
+        TransformByDriverHand(start);
+        start += CTimer::ms_fTimeStep * vehicle->m_vecMoveSpeed;
+        end = ComputeEndFromStart(start);
+    } else if (driver) {
+        start = wi->m_vecFireOffset;
+        TransformByDriverHand(start);
+        start += CTimer::ms_fTimeStep * vehicle->m_vecMoveSpeed;
+        end = ComputeEndFromStart(start);
+    } else {
+        // Driver-less bike
+        const auto& mat  = vehicle->GetMatrix();
+        const auto& seat = mi->GetFrontSeatPosn();
+        CVector     localStart{}, localEnd{};
+        if (leftSide) {
+            const auto r  = rand();
+            const auto cm = vehicle->GetColModel();
+            localStart = {
+                -cm->GetBoundingBox().m_vecMax.x - 0.25f,
+                (seat.y - 0.05f) + (float)(r & 0xFF) * 0.001f,
+                seat.z + 0.63f
+            };
+            localEnd = { -wi->m_fWeaponRange, seat.y, seat.z + 0.6f };
+        } else if (rightSide) {
+            const auto r  = rand();
+            const auto cm = vehicle->GetColModel();
+            localStart = {
+                cm->GetBoundingBox().m_vecMax.x + 0.25f,
+                (seat.y - 0.18f) + (float)(r & 0xFF) * 0.001f,
+                seat.z + 0.52f
+            };
+            localEnd = { wi->m_fWeaponRange, seat.y, seat.z + 0.5f };
+        } else {
+            const auto cm = vehicle->GetColModel();
+            const auto r  = rand();
+            localStart = {
+                (float)(r & 0xFF) * 0.001f - 0.4f,
+                (cm->GetBoundingBox().m_vecMax.y + seat.y) + 0.2f,
+                seat.z + 0.55f
+            };
+            localEnd = { 0.f, wi->m_fWeaponRange, seat.z + 0.5f };
+        }
+        start = mat.TransformPoint(localStart);
+        start += CTimer::ms_fTimeStep * vehicle->m_vecMoveSpeed;
+        end   = mat.TransformPoint(localEnd);
+    }
+
+    // Add some inaccuracy
+    const auto r1 = rand();
+    const auto r2 = rand();
+    const auto noiseX = (float)(r2 & 0xFF) * 0.01f - 1.28f;
+    const auto noiseY = (float)(r1 & 0xFF) * 0.01f - 1.28f;
+    const auto r3 = rand();
+    end.x += noiseX;
+    end.y += noiseY;
+    end.z += (float)(r3 & 0xFF) * 0.01f - 1.28f;
+
+    DoDriveByAutoAiming(FindPlayerPed(), vehicle, &start, &end, false);
+    FireInstantHitFromCar2(start, end, vehicle, vehicle->m_pDriver);
+    return true;
 }
 
 // 0x73F480
 bool CWeapon::CheckForShootingVehicleOccupant(CEntity** pCarEntity, CColPoint* colPoint, eWeaponType weaponType, const CVector& origin, const CVector& target) {
-    return plugin::CallAndReturn<bool, 0x73F480, CEntity**, CColPoint*, eWeaponType, const CVector&, const CVector&>(pCarEntity, colPoint, weaponType, origin, target);
+    const auto veh = (*pCarEntity)->AsVehicle();
+    if (!veh->GetIsTypeVehicle()) {
+        return false; // NOTSA: Original returns garbage here
+    }
+
+    const CColPoint savedColPoint = *colPoint;
+    float           depth         = 1.f;
+    bool            hitOccupant   = false;
+    CColLine        line{ origin, target };
+
+    // Test if line goes through the occupants' heads
+    const auto CheckOccupant = [&](CPed* ped) {
+        if (!ped || !ped->bCanBeShotInVehicle) {
+            return;
+        }
+        CVector headPos{};
+        const auto hier = GetAnimHierarchyFromSkinClump(ped->GetRpClump());
+        const auto idx  = RpHAnimIDGetIndex(hier, ped->m_apBones[PED_NODE_HEAD]->BoneTag);
+        RwV3dTransformPoints(&headPos, &headPos, 1, &RpHAnimHierarchyGetMatrixArray(hier)[idx]);
+        headPos.z += 0.1f;
+
+        CColSphere sphere{};
+        sphere.Set(0.2f, headPos, SURFACE_DEFAULT, 9, tColLighting{ 0xFF });
+        if (CCollision::ProcessLineSphere(line, sphere, *colPoint, depth)) {
+            *pCarEntity = ped;
+            hitOccupant = true;
+        }
+    };
+    CheckOccupant(veh->m_pDriver);
+    for (const auto passenger : veh->m_apPassengers) {
+        CheckOccupant(passenger);
+    }
+
+    // Test if the shot went through the windscreen (shot from the front, of an automobile)
+    if (veh->m_nVehicleType == VEHICLE_TYPE_AUTOMOBILE) {
+        const auto& mat = veh->GetMatrix();
+        const auto  dir = target - origin;
+        const auto& fwd = mat.GetForward();
+        if (dir.x * fwd.x + dir.y * fwd.y + dir.z * fwd.z < 0.f) {
+            const auto& up = mat.GetUp();
+            if (dir.x * up.x + dir.y * up.y + dir.z * up.z <= 0.f || veh->vehicleFlags.bIsBig) {
+                const auto cm = veh->GetColModel();
+                const auto cd = cm->m_pColData;
+                if (cd->m_nNumTriangles > 0) { // NOTSA: Original doesn't check `cd` for null
+                    const CMatrix invMat = Invert(mat);
+                    line.m_vecStart = invMat.TransformPoint(line.m_vecStart);
+                    line.m_vecEnd   = invMat.TransformPoint(line.m_vecEnd);
+                    CCollision::CalculateTrianglePlanes(cm);
+                    for (int16 i = 0; i < (int16)cd->m_nNumTriangles; i++) {
+                        const auto& tri = cd->m_pTriangles[i];
+                        if (!g_surfaceInfos.IsGlass(tri.GetSurfaceType())) {
+                            continue;
+                        }
+                        if (!CCollision::TestLineTriangle(line, cd->m_pVertices, tri, cd->m_pTrianglePlanes[i])) {
+                            continue;
+                        }
+                        const auto automobile = veh->AsAutomobile();
+                        auto&      dmgMgr     = automobile->m_damageManager;
+                        if (dmgMgr.ProgressPanelDamage(WINDSCREEN_PANEL)) {
+                            if (dmgMgr.GetPanelStatus(WINDSCREEN_PANEL) == DAMSTATE_DAMAGED) {
+                                dmgMgr.ProgressPanelDamage(WINDSCREEN_PANEL);
+                            }
+                            automobile->SetPanelDamage(WINDSCREEN_PANEL, true);
+                        }
+                        break;
+                    }
+                }
+            }
+        }
+    }
+
+    if (!hitOccupant) {
+        *pCarEntity = veh;
+        *colPoint   = savedColPoint;
+    }
+    return hitOccupant; // NOTSA: Original returns garbage
 }
 
 // 0x73F910

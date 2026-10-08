@@ -151,7 +151,7 @@ void CCamera::InjectHooks() {
     RH_ScopedInstall(SetCameraUpForMirror, 0x51A560);
     RH_ScopedInstall(RestoreCameraAfterMirror, 0x51A5A0);
     RH_ScopedInstall(ConeCastCollisionResolve, 0x51A5D0);
-    RH_ScopedInstall(TryToStartNewCamMode, 0x51E560, { .Reversed = false });
+    RH_ScopedInstall(TryToStartNewCamMode, 0x51E560);
     RH_ScopedInstall(CameraColDetAndReact, 0x520190);
     RH_ScopedInstall(CamControl, 0x527FA0, { .Reversed = false });
     RH_ScopedInstall(Process, 0x52B730);
@@ -2418,9 +2418,521 @@ bool CCamera::ConeCastCollisionResolve(const CVector& pos, const CVector& lookAt
     }
 }
 
+// Minimum height above the water level for the fixed cameras of `TryToStartNewCamMode`
+static auto& gFixedCamMinHeightAboveWater     = StaticRef<float>(0x8CC8C0); // NOTSA name: 1.0
+static auto& gFixedCamMinHeightAboveWaterBoat = StaticRef<float>(0x8CC8C4); // NOTSA name: -2.0
+
+namespace {
+// 0x50B830 (unnamed in the original) - Is the active cam's source at or below the water level?
+bool IsActiveCamUnderWater() {
+    const CVector& src = TheCamera.m_aCams[TheCamera.m_nActiveCam].m_vecSource;
+    float level;
+    return CWaterLevel::GetWaterLevel(src.x, src.y, src.z, level, true, nullptr) && level >= src.z;
+}
+
+// 0x59C790 - `CMatrix::TransformVector`, but with the add order of the original
+CVector TransformVectorOriginal(const CMatrix& m, const CVector& v) {
+    const auto &r = m.GetRight(), &f = m.GetForward(), &u = m.GetUp();
+    return CVector{
+        (u.x * v.z + f.x * v.y) + r.x * v.x,
+        (u.y * v.z + r.y * v.x) + f.y * v.y,
+        (u.z * v.z + r.z * v.x) + f.z * v.y
+    };
+}
+
+// The player's coords moved along (normalised) `dir` by `fwd` and sideways by `sideX`/`sideY` (the fixed cam candidates of `TryToStartNewCamMode`)
+CVector OffsetFromPlayer(const CVector& pos, const CVector& dir, float fwd, float sideX, float sideY) {
+    return CVector{
+        (pos.x + dir.x * fwd) + dir.y * sideX,
+        (dir.y * fwd + pos.y) + dir.x * sideY,
+        pos.z + dir.z * fwd
+    };
+}
+
+// Move the position onto the ground below it (or onto the roof above it)
+void SnapToGroundOrRoof(CVector& pos, float heightOffset) {
+    bool       found    = false;
+    const auto groundZ  = CWorld::FindGroundZFor3DCoord(CVector{ pos.x, pos.y, pos.z + 5.f }, &found);
+    if (found) {
+        pos.z = groundZ + heightOffset;
+    } else {
+        const auto roofZ = CWorld::FindRoofZFor3DCoord(pos.x, pos.y, pos.z - 5.f, &found);
+        if (found) {
+            pos.z = roofZ + heightOffset;
+        }
+    }
+}
+
+// Rotate (the XY of) the velocity by `angleOffset` around the heading (the original keeps `cos` in extended precision)
+void RotateHeading(CVector& vel, float angleOffset) {
+    const double angle = static_cast<double>(CGeneral::GetATanOfXY(vel.x, vel.y)) + static_cast<double>(angleOffset);
+    const double cosA  = std::cos(angle);
+    const float  sinA  = static_cast<float>(std::sin(angle));
+    vel.x = static_cast<float>(cosA + static_cast<double>(vel.x));
+    vel.y = sinA + vel.y;
+}
+
+// Don't let the position go below the water surface (if there is any)
+void ClampAboveWater(CVector& pos) {
+    float level;
+    if (!CWaterLevel::GetWaterLevelNoWaves(pos, &level)) {
+        return;
+    }
+
+    float margin = gFixedCamMinHeightAboveWater;
+    if (const auto* const veh = FindPlayerVehicle(); veh && veh->m_nVehicleType == VEHICLE_TYPE_BOAT) {
+        margin = gFixedCamMinHeightAboveWaterBoat;
+    }
+    if (pos.z < margin + level) {
+        pos.z = margin + level;
+    }
+}
+
+// Is the player's vehicle a boat that is not (target-wise) the Skimmer?
+bool IsPlayerBoatWithoutSkimmerTarget(const CCamera& cam) {
+    const auto* const veh = FindPlayerVehicle();
+    return veh && veh->m_nVehicleType == VEHICLE_TYPE_BOAT && cam.m_pTargetEntity->m_nModelIndex != MODEL_SKIMMER;
+}
+
+bool IsLineOfSightClearFromPlayer(const CVector& target) {
+    return CWorld::GetIsLineOfSightClear(FindPlayerCoors(), target, true, false, false, false, false, false, false);
+}
+}
+
 // 0x51E560
 bool CCamera::TryToStartNewCamMode(int32 camSequence) {
-    return plugin::CallMethodAndReturn<bool, 0x51E560, CCamera*, int32>(this, camSequence);
+    // Common finish of the fixed cam cases: the cam is made fixed at `pos`, true if the cam is not under water afterwards
+    const auto StartFixedCam = [this](const CVector& pos) {
+        SetCamPositionForFixedMode(pos, CVector{ 0.f, 0.f, 0.f });
+        TakeControl(FindPlayerEntity(), MODE_FIXED, eSwitchType::JUMPCUT, 2);
+        return !IsActiveCamUnderWater();
+    };
+
+    switch (camSequence) {
+    case 0: {
+        auto* const veh = FindPlayerVehicle();
+        if (!veh) {
+            return false;
+        }
+        if (veh->m_nVehicleType == VEHICLE_TYPE_BOAT && m_pTargetEntity->m_nModelIndex != MODEL_SKIMMER) {
+            return false;
+        }
+        if (veh->m_nModelIndex == MODEL_RHINO) {
+            return false;
+        }
+
+        CVector target = TransformVectorOriginal(veh->GetMatrix(), CVector{ -1.4f, -2.3f, 0.3f });
+        target += veh->GetPosition();
+        if (!CWorld::GetIsLineOfSightClear(veh->GetPosition(), target, true, false, false, false, false, false, false)) {
+            return false;
+        }
+
+        TakeControl(veh, MODE_WHEELCAM, eSwitchType::JUMPCUT, 2);
+        return true;
+    }
+    case 1: {
+        CVector pos = FindPlayerCoors();
+        CVector vel = FindPlayerSpeed();
+        vel.z       = 0.f;
+        vel.Normalise();
+        pos = OffsetFromPlayer(pos, vel, 20.f, 3.f, -3.f);
+
+        if (IsPlayerBoatWithoutSkimmerTarget(*this)) {
+            return false;
+        }
+
+        SnapToGroundOrRoof(pos, 1.5f);
+
+        if (!IsLineOfSightClearFromPlayer(pos)) {
+            return false;
+        }
+
+        const CVector toPlayer = FindPlayerCoors() - pos;
+        const CVector toPlayer2D{ toPlayer.x, toPlayer.y, 0.f };
+        if (toPlayer2D.Magnitude() > 40.f) {
+            const CVector& speed = FindPlayerSpeed();
+            if (((toPlayer2D.y * speed.y) + (toPlayer2D.x * speed.x)) + (speed.z * 0.f) > 0.f) {
+                return false;
+            }
+        }
+        if (toPlayer2D.Magnitude() < 4.5f) {
+            return false;
+        }
+
+        return StartFixedCam(pos);
+    }
+    case 2: {
+        if (IsPlayerBoatWithoutSkimmerTarget(*this)) {
+            return false;
+        }
+
+        CVector pos = FindPlayerCoors();
+        CVector vel = FindPlayerSpeed();
+        vel.z       = 0.f;
+        vel.Normalise();
+        pos = OffsetFromPlayer(pos, vel, 16.f, 2.5f, -2.5f);
+
+        SnapToGroundOrRoof(pos, 0.5f);
+
+        if (!IsLineOfSightClearFromPlayer(pos)) {
+            return false;
+        }
+
+        const CVector toPlayer = FindPlayerCoors() - pos;
+        const CVector toPlayer2D{ toPlayer.x, toPlayer.y, 0.f };
+        if (toPlayer2D.Magnitude() > 29.f) {
+            const CVector& speed = FindPlayerSpeed();
+            if (((toPlayer2D.y * speed.y) + (speed.z * 0.f)) + (toPlayer2D.x * speed.x) > 0.f) {
+                return false;
+            }
+        }
+        if (toPlayer2D.Magnitude() < 2.f) {
+            return false;
+        }
+
+        SetCamPositionForFixedMode(pos, CVector{ 0.f, 0.f, 0.f });
+        TakeControl(FindPlayerEntity(), MODE_FIXED, eSwitchType::JUMPCUT, 2);
+        RwCameraSetNearClipPlane(Scene.m_pRwCamera, 0.15f);
+        return !IsActiveCamUnderWater();
+    }
+    case 3: {
+        CVector pos = FindPlayerCoors();
+        CVector vel = FindPlayerSpeed();
+        vel.z       = 0.f;
+        vel.Normalise();
+        pos   = OffsetFromPlayer(pos, vel, 30.f, 8.f, -8.f);
+        pos.z = pos.z + 16.f;
+
+        if (!IsLineOfSightClearFromPlayer(pos)) {
+            return false;
+        }
+
+        SetCamPositionForFixedMode(pos, CVector{ 0.f, 0.f, 0.f });
+        TakeControl(FindPlayerEntity(), MODE_FIXED, eSwitchType::JUMPCUT, 2);
+        if (IsActiveCamUnderWater()) {
+            return false;
+        }
+        RwCameraSetNearClipPlane(Scene.m_pRwCamera, 0.15f);
+        return true;
+    }
+    case 5: {
+        CVector pos = FindPlayerCoors();
+        CVector vel = FindPlayerSpeed();
+        vel.z       = 0.f;
+        vel.Normalise();
+        pos = OffsetFromPlayer(pos, vel, 30.f, -6.f, 6.f);
+
+        SnapToGroundOrRoof(pos, 3.5f);
+
+        if (!IsLineOfSightClearFromPlayer(pos)) {
+            return false;
+        }
+
+        return StartFixedCam(pos);
+    }
+    case 6:
+        TakeControl(FindPlayerEntity(), MODE_1STPERSON, eSwitchType::JUMPCUT, 2);
+        return true;
+    case 7: {
+        if (FindPlayerPed()->GetWantedLevel() <= eWantedLevel::WANTED_CLEAN || !FindPlayerVehicle()) {
+            return false;
+        }
+        if (IsPlayerBoatWithoutSkimmerTarget(*this)) {
+            return false;
+        }
+
+        auto* const pool = GetVehiclePool();
+        for (auto i = pool->GetSize(); i > 0;) {
+            i--;
+
+            auto* const veh = pool->GetAt(i);
+            if (!veh || veh->m_nVehicleType != VEHICLE_TYPE_AUTOMOBILE || veh == FindPlayerVehicle()) {
+                continue;
+            }
+            if (!veh->vehicleFlags.bIsLawEnforcer || veh->GetStatus() != STATUS_PHYSICS) {
+                continue;
+            }
+
+            const float dx = veh->GetPosition().x - FindPlayerCoors().x;
+            const float dy = veh->GetPosition().y - FindPlayerCoors().y;
+            if (!((FindPlayerCoors() - veh->GetPosition()).Magnitude() < 30.f)) {
+                continue;
+            }
+
+            const auto& playerFwd = FindPlayerVehicle()->GetForward();
+            if (!((dy * playerFwd.y + dx * playerFwd.x) < 0.f)) {
+                continue;
+            }
+
+            const auto& vehFwd = veh->GetForward();
+            if (!((playerFwd.y * vehFwd.y + playerFwd.x * vehFwd.x) > 0.8f)) {
+                continue;
+            }
+
+            TakeControl(veh, MODE_CAM_ON_A_STRING, eSwitchType::JUMPCUT, 2);
+            if (!IsActiveCamUnderWater()) {
+                return true;
+            }
+        }
+        return false;
+    }
+    case 8: {
+        if (FindPlayerPed()->GetWantedLevel() <= eWantedLevel::WANTED_CLEAN || !FindPlayerVehicle()) {
+            return false;
+        }
+        if (IsPlayerBoatWithoutSkimmerTarget(*this)) {
+            return false;
+        }
+
+        auto* const pool = GetVehiclePool();
+        for (auto i = pool->GetSize(); i > 0;) {
+            i--;
+
+            auto* const veh = pool->GetAt(i);
+            if (!veh || veh->m_nVehicleType != VEHICLE_TYPE_AUTOMOBILE || veh == FindPlayerVehicle()) {
+                continue;
+            }
+            if (!veh->vehicleFlags.bIsLawEnforcer) {
+                continue;
+            }
+
+            const float dx = veh->GetPosition().x - FindPlayerCoors().x;
+            const float dy = veh->GetPosition().y - FindPlayerCoors().y;
+            if (!((FindPlayerCoors() - veh->GetPosition()).Magnitude() < 30.f)) {
+                continue;
+            }
+
+            const auto& playerFwd = FindPlayerVehicle()->GetForward();
+            if (!((dy * playerFwd.y + dx * playerFwd.x) < 0.f)) {
+                continue;
+            }
+
+            const auto& vehFwd = veh->GetForward();
+            if (!((playerFwd.y * vehFwd.y + playerFwd.x * vehFwd.x) > 0.8f)) {
+                continue;
+            }
+
+            CVector target = TransformVectorOriginal(veh->GetMatrix(), CVector{ -1.4f, -2.3f, 0.3f });
+            target += veh->GetPosition();
+            if (!CWorld::GetIsLineOfSightClear(veh->GetPosition(), target, true, false, false, false, false, false, false)) {
+                return false;
+            }
+
+            TakeControl(veh, MODE_WHEELCAM, eSwitchType::JUMPCUT, 2);
+            if (!IsActiveCamUnderWater()) {
+                return true;
+            }
+        }
+        return false;
+    }
+    case 15: {
+        if (!FindPlayerVehicle()) {
+            return false;
+        }
+
+        CVector pos = FindPlayerCoors();
+        CVector vel = FindPlayerSpeed();
+        vel.z       = 0.f;
+        vel.Normalise();
+        pos.x = vel.x * 34.f + pos.x;
+        pos.y = pos.y + vel.y * 34.f;
+        pos.z = FindPlayerCoors().z + 0.5f; // NOTE: The original first adds `vel.z * 34.f`, but then overwrites it
+        if (FindPlayerVehicle()->m_nVehicleType == VEHICLE_TYPE_BOAT) {
+            pos.z += 1.f;
+        }
+
+        if (!IsLineOfSightClearFromPlayer(pos)) {
+            return false;
+        }
+
+        const CVector toPlayer = FindPlayerCoors() - pos;
+        if (toPlayer.Magnitude() > 44.f) {
+            const CVector& speed = FindPlayerSpeed();
+            if (((toPlayer.y * speed.y) + (speed.z * 0.f)) + (toPlayer.x * speed.x) > 0.f) {
+                return false;
+            }
+        }
+        if (toPlayer.Magnitude() < 3.f) {
+            return false;
+        }
+
+        return StartFixedCam(pos);
+    }
+    case 16: {
+        if (!FindPlayerVehicle()) {
+            return false;
+        }
+
+        CVector pos = FindPlayerCoors();
+        CVector vel = FindPlayerSpeed();
+        vel.z       = 0.f;
+        vel.Normalise();
+        RotateHeading(vel, 1.04719758f); // PI / 3
+        vel.Normalise();
+        pos.x = vel.x * 30.f + pos.x;
+        pos.y = pos.y + vel.y * 30.f;
+        pos.z = FindPlayerCoors().z - 5.5f; // NOTE: The original first adds `vel.z * 30.f`, but then overwrites it
+
+        bool       found = false;
+        const auto roofZ = CWorld::FindRoofZFor3DCoord(pos.x, pos.y, pos.z, &found);
+        if (found) {
+            pos.z = roofZ + 0.5f;
+        } else {
+            ClampAboveWater(pos);
+        }
+
+        if (!IsLineOfSightClearFromPlayer(pos)) {
+            return false;
+        }
+
+        const CVector toPlayer = FindPlayerCoors() - pos;
+        if (toPlayer.Magnitude() > 50.f) {
+            return false;
+        }
+        if (toPlayer.Magnitude() < 3.f) {
+            return false;
+        }
+
+        return StartFixedCam(pos);
+    }
+    case 17: {
+        if (!FindPlayerVehicle()) {
+            return false;
+        }
+
+        CVector pos = FindPlayerCoors();
+        CVector vel = FindPlayerSpeed();
+        vel.z       = 0.f;
+        vel.Normalise();
+        RotateHeading(vel, 3.31612563f); // 190 degrees
+        vel.Normalise();
+        pos.x = vel.x * 25.f + pos.x;
+        pos.y = pos.y + vel.y * 25.f;
+        pos.z = FindPlayerCoors().z - 1.f; // NOTE: The original first adds `vel.z * 25.f`, but then overwrites it
+
+        bool       found = false;
+        const auto roofZ = CWorld::FindRoofZFor3DCoord(pos.x, pos.y, pos.z, &found);
+        if (found) {
+            pos.z = roofZ + 0.5f;
+        } else {
+            ClampAboveWater(pos);
+        }
+
+        if (!IsLineOfSightClearFromPlayer(pos)) {
+            return false;
+        }
+
+        const CVector toPlayer = FindPlayerCoors() - pos;
+        if (toPlayer.Magnitude() > 50.f) {
+            const CVector& speed = FindPlayerSpeed();
+            if (((toPlayer.y * speed.y) + (speed.z * 0.f)) + (toPlayer.x * speed.x) > 0.f) {
+                return false;
+            }
+        }
+        if (toPlayer.Magnitude() < 2.f) {
+            return false;
+        }
+
+        return StartFixedCam(pos);
+    }
+    case 18:
+    case 19: {
+        const bool bIs18 = camSequence == 18;
+
+        CVector pos = FindPlayerCoors();
+        if (const auto* const veh = FindPlayerVehicle(); veh && veh->m_nVehicleType == VEHICLE_TYPE_BOAT) {
+            pos.z += bIs18 ? 23.f : 4.f;
+        } else {
+            pos.z -= bIs18 ? 23.f : 1.f;
+        }
+
+        CVector vel = FindPlayerSpeed();
+        RotateHeading(vel, bIs18 ? 2.53072739f /* 145 degrees */ : 0.488692194f /* 28 degrees */);
+        vel.z = 0.f;
+        vel.Normalise();
+
+        const float dist = bIs18 ? 15.f : 12.5f;
+        pos.x = pos.x + vel.x * dist;
+        pos.y = pos.y + vel.y * dist;
+        pos.z = vel.z * dist + pos.z;
+
+        // BUG: Compares the ground Z to 1.0 and only then moves the camera to the ground. The `found` result is ignored
+        bool       found   = false;
+        const auto groundZ = CWorld::FindGroundZFor3DCoord(pos, &found);
+        if (groundZ == 1.f) {
+            if (pos.z < groundZ) {
+                pos.z = groundZ + 0.5f;
+            }
+        } else {
+            ClampAboveWater(pos);
+        }
+
+        if (!IsLineOfSightClearFromPlayer(pos)) {
+            return false;
+        }
+
+        const CVector toPlayer = FindPlayerCoors() - pos;
+        if (toPlayer.Magnitude() > (bIs18 ? 57.f : 36.f)) {
+            return false;
+        }
+        if (toPlayer.Magnitude() < (bIs18 ? 1.f : 2.f)) {
+            return false;
+        }
+
+        return StartFixedCam(pos);
+    }
+    case 20:
+        if (!m_aCams[m_nActiveCam].Process_DW_HeliChaseCam(true)) {
+            return false;
+        }
+        TakeControl(FindPlayerEntity(), MODE_DW_HELI_CHASE, eSwitchType::JUMPCUT, 2);
+        return !IsActiveCamUnderWater();
+    case 21:
+        if (!m_aCams[m_nActiveCam].Process_DW_CamManCam(true)) {
+            return false;
+        }
+        TakeControl(FindPlayerEntity(), MODE_DW_CAM_MAN, eSwitchType::JUMPCUT, 2);
+        return !IsActiveCamUnderWater();
+    case 22:
+        if (!m_aCams[m_nActiveCam].Process_DW_BirdyCam(true)) {
+            return false;
+        }
+        TakeControl(FindPlayerEntity(), MODE_DW_BIRDY, eSwitchType::JUMPCUT, 2);
+        return !IsActiveCamUnderWater();
+    case 23:
+        if (!m_aCams[m_nActiveCam].Process_DW_PlaneSpotterCam(true)) {
+            return false;
+        }
+        TakeControl(FindPlayerEntity(), MODE_DW_PLANE_SPOTTER, eSwitchType::JUMPCUT, 2);
+        return !IsActiveCamUnderWater();
+    case 24:
+    case 25:
+        TheCamera.m_bUseNearClipScript = false;
+        return false;
+    case 26:
+        if (!m_aCams[m_nActiveCam].Process_DW_PlaneCam1(true)) {
+            return false;
+        }
+        TakeControl(FindPlayerEntity(), MODE_DW_PLANECAM1, eSwitchType::JUMPCUT, 2);
+        return !IsActiveCamUnderWater();
+    case 27:
+        if (!m_aCams[m_nActiveCam].Process_DW_PlaneCam2(true)) {
+            return false;
+        }
+        TakeControl(FindPlayerEntity(), MODE_DW_PLANECAM2, eSwitchType::JUMPCUT, 2);
+        return !IsActiveCamUnderWater();
+    case 28:
+        if (!m_aCams[m_nActiveCam].Process_DW_PlaneCam3(true)) {
+            return false;
+        }
+        TakeControl(FindPlayerEntity(), MODE_DW_PLANECAM3, eSwitchType::JUMPCUT, 2);
+        return !IsActiveCamUnderWater();
+    case 29:
+        TakeControl(FindPlayerEntity(), MODE_CAM_ON_A_STRING, eSwitchType::JUMPCUT, 2);
+        return true;
+    default: // 4, 9..14, out of range
+        return false;
+    }
 }
 
 // 0x520190

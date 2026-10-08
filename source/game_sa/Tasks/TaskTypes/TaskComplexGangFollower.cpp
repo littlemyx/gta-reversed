@@ -27,11 +27,11 @@ void CTaskComplexGangFollower::InjectHooks() {
     RH_ScopedInstall(Constructor, 0x65EAA0);
     RH_ScopedInstall(Destructor, 0x65EBB0);
     //RH_ScopedInstall(CalculateOffsetPosition, 0x65ED40, { .Reversed = false }); // not hooked because i want to keep CVector return, but original function took a CVector&
-    RH_ScopedInstall(Clone, 0x65ECB0);
-    RH_ScopedInstall(MakeAbortable, 0x65EC30);
-    RH_ScopedInstall(CreateNextSubTask, 0x665E00);
-    RH_ScopedInstall(CreateFirstSubTask, 0x666160);
-    RH_ScopedInstall(ControlSubTask, 0x662A10);
+    RH_ScopedVMTInstall(Clone, 0x65ECB0);
+    RH_ScopedVMTInstall(MakeAbortable, 0x65EC30);
+    RH_ScopedVMTInstall(CreateNextSubTask, 0x665E00);
+    RH_ScopedVMTInstall(CreateFirstSubTask, 0x666160);
+    RH_ScopedVMTInstall(ControlSubTask, 0x662A10);
 }
 
 // 0x65EAA0

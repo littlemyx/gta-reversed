@@ -2,6 +2,11 @@
 
 #include "TaskComplexGoToAttractor.h"
 #include "PedAtmAttractor.h"
+#include "PedPlacement.h"
+#include "TaskComplexSequence.h"
+#include "TaskComplexGoToPointAndStandStill.h"
+#include "TaskSimpleSlideToCoord.h"
+#include "TaskSimpleStandStill.h"
 
 void CTaskComplexGoToAttractor::InjectHooks() {
     RH_ScopedVirtualClass(CTaskComplexGoToAttractor, 0x86FF3C, 11);
@@ -10,9 +15,9 @@ void CTaskComplexGoToAttractor::InjectHooks() {
     RH_ScopedInstall(Constructor, 0x66B640);
     RH_ScopedInstall(Destructor, 0x66B6A0);
 
-    RH_ScopedVMTInstall(Clone, 0x66D130, { .Reversed = false });
-    RH_ScopedVMTInstall(CreateNextSubTask, 0x66B6C0, { .Reversed = false });
-    RH_ScopedVMTInstall(CreateFirstSubTask, 0x670420, { .Reversed = false });
+    RH_ScopedVMTInstall(Clone, 0x66D130);
+    RH_ScopedVMTInstall(CreateNextSubTask, 0x66B6C0);
+    RH_ScopedVMTInstall(CreateFirstSubTask, 0x670420);
 }
 
 // 0x66B640
@@ -41,7 +46,23 @@ CTask* CTaskComplexGoToAttractor::CreateNextSubTask(CPed* ped) {
 
 // 0x670420
 CTask* CTaskComplexGoToAttractor::CreateFirstSubTask(CPed* ped) {
-    return plugin::CallMethodAndReturn<CTask*, 0x670420, CTaskComplexGoToAttractor*, CPed*>(this, ped);
+    auto moveState = m_MoveState;
+    if (m_Attractor->GetType() == PED_ATTRACTOR_SHELTER) { // Get out of the rain quickly
+        moveState = PEDMOVE_RUN;
+    }
+
+    if (!ped->bUseAttractorInstantly) {
+        const auto seq = new CTaskComplexSequence{};
+        seq->AddTask(new CTaskComplexGoToPointAndStandStill{moveState, m_vecAttrPosn, 0.5f, 2.f, false, false});
+        seq->AddTask(new CTaskSimpleSlideToCoord{m_vecAttrPosn, m_fAttrHeading, 0.5f});
+        return seq;
+    }
+
+    // Teleport the ped to the attractor
+    m_vecAttrPosn = CPedPlacement::FindZCoorForPed(m_vecAttrPosn).first;
+    ped->GetPosition() = m_vecAttrPosn;
+    ped->m_fCurrentRotation = ped->m_fAimingRotation = m_fAttrHeading;
+    return new CTaskSimpleStandStill{0, false, false, 8.f};
 }
 
 // 0x66B710

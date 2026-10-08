@@ -1110,7 +1110,7 @@ void CWeapon::DoDriveByAutoAiming(CEntity* owner, CVehicle* vehicle, CVector* st
         }
 
         const auto dir = *endPoint - *startPoint;
-        if (dir.x * (entPos.x - startPoint->x) + dir.y * (entPos.y - startPoint->y) + dir.z * (entPos.z - startPoint->z) > 0.f) {
+        if ((dir.z * (entPos.z - startPoint->z) + dir.y * (entPos.y - startPoint->y)) + dir.x * (entPos.x - startPoint->x) > 0.f) { // NOTE: Sum order as in the original
             if (score < closestScore) {
                 closestScore = score;
                 closestIdx   = i;
@@ -1265,7 +1265,7 @@ CEntity* CWeapon::FindNearestTargetEntityWithScreenCoors(float screenX, float sc
         closest        = e;
 
         // BUG: Original only checks `outScrX` for null, but writes both
-        if (outScrX && outScrY) {
+        if (outScrX && (outScrY || !notsa::IsFixBugs())) {
             *outScrX = scrPos.x / (SCREEN_WIDTH * 0.5f) - 1.f;
             *outScrY = scrPos.y / (SCREEN_HEIGHT * 0.5f) - 1.f;
         }
@@ -1489,30 +1489,30 @@ bool CWeapon::FireInstantHitFromCar(CVehicle* vehicle, bool leftSide, bool right
         if (leftSide) {
             const auto r  = rand();
             const auto cm = vehicle->GetColModel();
-            localStart = {
+            localStart = CVector{
                 -cm->GetBoundingBox().m_vecMax.x - 0.25f,
                 (seat.y - 0.05f) + (float)(r & 0xFF) * 0.001f,
                 seat.z + 0.63f
             };
-            localEnd = { -wi->m_fWeaponRange, seat.y, seat.z + 0.6f };
+            localEnd = CVector{ -wi->m_fWeaponRange, seat.y, seat.z + 0.6f };
         } else if (rightSide) {
             const auto r  = rand();
             const auto cm = vehicle->GetColModel();
-            localStart = {
+            localStart = CVector{
                 cm->GetBoundingBox().m_vecMax.x + 0.25f,
                 (seat.y - 0.18f) + (float)(r & 0xFF) * 0.001f,
                 seat.z + 0.52f
             };
-            localEnd = { wi->m_fWeaponRange, seat.y, seat.z + 0.5f };
+            localEnd = CVector{ wi->m_fWeaponRange, seat.y, seat.z + 0.5f };
         } else {
             const auto cm = vehicle->GetColModel();
             const auto r  = rand();
-            localStart = {
+            localStart = CVector{
                 (float)(r & 0xFF) * 0.001f - 0.4f,
                 (cm->GetBoundingBox().m_vecMax.y + seat.y) + 0.2f,
                 seat.z + 0.55f
             };
-            localEnd = { 0.f, wi->m_fWeaponRange, seat.z + 0.5f };
+            localEnd = CVector{ 0.f, wi->m_fWeaponRange, seat.z + 0.5f };
         }
         start = mat.TransformPoint(localStart);
         start += CTimer::ms_fTimeStep * vehicle->m_vecMoveSpeed;
@@ -1574,12 +1574,12 @@ bool CWeapon::CheckForShootingVehicleOccupant(CEntity** pCarEntity, CColPoint* c
         const auto& mat = veh->GetMatrix();
         const auto  dir = target - origin;
         const auto& fwd = mat.GetForward();
-        if (dir.x * fwd.x + dir.y * fwd.y + dir.z * fwd.z < 0.f) {
+        if (dir.x * fwd.x + (dir.y * fwd.y + dir.z * fwd.z) < 0.f) { // NOTE: Sum order as in the original
             const auto& up = mat.GetUp();
-            if (dir.x * up.x + dir.y * up.y + dir.z * up.z <= 0.f || veh->vehicleFlags.bIsBig) {
+            if (dir.x * up.x + (dir.y * up.y + dir.z * up.z) <= 0.f || veh->vehicleFlags.bIsBig) {
                 const auto cm = veh->GetColModel();
                 const auto cd = cm->m_pColData;
-                if (cd->m_nNumTriangles > 0) { // NOTSA: Original doesn't check `cd` for null
+                if (cd && cd->m_nNumTriangles > 0) { // NOTSA: Original doesn't check `cd` for null
                     const CMatrix invMat = Invert(mat);
                     line.m_vecStart = invMat.TransformPoint(line.m_vecStart);
                     line.m_vecEnd   = invMat.TransformPoint(line.m_vecEnd);

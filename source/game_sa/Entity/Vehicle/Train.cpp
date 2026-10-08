@@ -111,8 +111,9 @@ CTrain::CTrain(int32 modelIndex, eVehicleCreatedBy createdBy) : CVehicle(created
         m_aDoors[DOOR_LEFT_FRONT].Init(1.25f, 0.25f, DOOR_AXIS_NEG_Y, DOOR_AXIS_Z, DOOR_EXTRA_BASED);
         m_aDoors[DOOR_RIGHT_FRONT].Init(1.25f, 0.25f, DOOR_AXIS_NEG_Y, DOOR_AXIS_Z, DOOR_EXTRA_BASED);
     } else {
-        m_aDoors[DOOR_LEFT_FRONT].Init(TWO_PI / -5.0f, 0.0f, DOOR_AXIS_NEG_Y, DOOR_AXIS_Z, DOOR_EXTRA_BASED);
-        m_aDoors[DOOR_RIGHT_FRONT].Init(TWO_PI / +5.0f, 0.0f, DOOR_AXIS_NEG_Y, DOOR_AXIS_Z, DOOR_EXTRA_BASED);
+        // NOTE: `TWO_PI / 5.0f` isn't used, because the project's `TWO_PI` is less precise than the original's constant (0x3FA0D97C)
+        m_aDoors[DOOR_LEFT_FRONT].Init(-1.2566371f, 0.0f, DOOR_AXIS_NEG_Y, DOOR_AXIS_Z, DOOR_EXTRA_BASED);
+        m_aDoors[DOOR_RIGHT_FRONT].Init(+1.2566371f, 0.0f, DOOR_AXIS_NEG_Y, DOOR_AXIS_Z, DOOR_EXTRA_BASED);
     }
 
     // NOTSA: The original code only touches some of the flags here, the rest (`bIsFrontCarriage`, `bIsLastCarriage` and `bClockwiseDirection`) are left as they are
@@ -594,7 +595,7 @@ void CTrain::RemoveRandomPassenger() {
         return;
     }
 
-    ped->bTestForShotInVehicle = true; // NOTSA: bit 0x40000 in the ped flags, marks the ped as a temporary train passenger
+    ped->bJustGotOffTrain = true; // Ped flag dword at +0x478, mask 0x40000: marks the ped as a temporary train passenger
     m_nNumPassengersToLeave = m_nNumPassengersToLeave - 1;
     m_pTemporaryPassenger = ped;
     CEntity::RegisterReference(m_pTemporaryPassenger);
@@ -1141,7 +1142,7 @@ void CTrain::AddNearbyPedAsRandomPassenger() {
 
     if (m_pTemporaryPassenger) {
         auto* const tmpPed = m_pTemporaryPassenger;
-        const bool isTmpPassenger = tmpPed->bTestForShotInVehicle; // NOTSA: bit 0x40000 in the ped flags
+        const bool isTmpPassenger = tmpPed->bJustGotOffTrain; // Ped flag dword at +0x478, mask 0x40000
         if (!isTmpPassenger && !tmpPed->bInVehicle) {
             return;
         }
@@ -1180,7 +1181,7 @@ void CTrain::AddNearbyPedAsRandomPassenger() {
             || ped->GetPlayerData()
             || ped->m_nPedType == PED_TYPE_COP
             || ped->bInVehicle
-            || ped->bTestForShotInVehicle // NOTSA: bit 0x40000 in the ped flags
+            || ped->bJustGotOffTrain // Ped flag dword at +0x478, mask 0x40000
             || ped->m_nPedState == PEDSTATE_DIE
             || ped->m_nPedState == PEDSTATE_DEAD
             || ped->m_nPedState == PEDSTATE_DIE_BY_STEALTH

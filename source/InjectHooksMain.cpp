@@ -986,7 +986,7 @@ void InjectHooksMain() {
         CTaskComplexDrivePointRoute::InjectHooks();
         CTaskComplexEnterCarAsDriverTimed::InjectHooks();
         CTaskComplexEnterCarAsPassengerTimed::InjectHooks();
-        // CTaskComplexEnterCarAsPassengerWait::InjectHooks();
+        CTaskComplexEnterCarAsPassengerWait::InjectHooks();
         // CTaskComplexEvasiveCower::InjectHooks();
         // CTaskComplexEvasiveDiveAndGetUp::InjectHooks();
         // CTaskComplexEvasiveStep::InjectHooks();

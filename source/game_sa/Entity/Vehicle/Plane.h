@@ -45,7 +45,7 @@ public:
     float        m_fAccelerationBreakStatus;
     float        m_fAccelerationBreakStatusPrev;
     float        m_fSteeringFactor;
-    float        field_9A0;
+    uint32       field_9A0; // Number of stalls to count (passed to `m_vehicleAudio.m_DoCountStalls`)
     float        m_planeCreationHeading; // The heading when plane is created or placed on road properly
     float        m_maxAltitude;
     float        m_altitude;
@@ -65,7 +65,7 @@ public:
     int32        field_9E4;
     std::array<FxSystem_c*, 4> m_apJettrusParticles;
     FxSystem_c*  m_pSmokeParticle;
-    uint32       m_nSmokeTimer;
+    int32        m_nSmokeTimer;
     bool         m_bSmokeEjectorEnabled;
 
     static constexpr auto Type = VEHICLE_TYPE_PLANE;

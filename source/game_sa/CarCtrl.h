@@ -74,7 +74,7 @@ public:
     static float FindGhostRoadHeight(CVehicle* vehicle);
     static void FireHeliRocketsAtTarget(CAutomobile* entityLauncher, CEntity* entity);
     static void FlyAIHeliInCertainDirection(CHeli* heli, float arg2, float arg3, bool arg4);
-    static void FlyAIHeliToTarget_FixedOrientation(CHeli* heli, float fOrientation, CVector posn);
+    static void FlyAIHeliToTarget_FixedOrientation(CHeli* heli, float orientation, CVector posn);
     static void FlyAIPlaneInCertainDirection(CPlane* plane);
     static bool GenerateCarCreationCoors2(CVector posn, float radius, float arg3, float arg4, bool arg5, float arg6, float arg7, CVector* origin, CNodeAddress* nodeAddress1, CNodeAddress* nodeAddress2, float* arg11, bool arg12, bool arg13);
     static void GenerateEmergencyServicesCar();

@@ -142,6 +142,11 @@ void CCarCtrl::InjectHooks()
     RH_ScopedInstall(SteerAIPlaneToFollowEntity, 0x4237F0);
     RH_ScopedInstall(SteerAIPlaneToCrashAndBurn, 0x423880);
     RH_ScopedInstall(SteerAIHeliToCrashAndBurn, 0x4238E0);
+    RH_ScopedInstall(FlyAIHeliToTarget_FixedOrientation, 0x423940);
+    RH_ScopedInstall(RegisterVehicleOfInterest, 0x423DE0);
+    RH_ScopedInstall(ClearInterestingVehicleList, 0x423F00);
+    RH_ScopedInstall(SwitchVehicleToRealPhysics, 0x423FC0);
+    RH_ScopedInstall(UpdateCarCount, 0x424000);
 }
 
 // 0x4212E0
@@ -254,7 +259,7 @@ int32 CCarCtrl::ChoosePoliceCarModel(uint32 ignoreLvpd1Model) {
 
 // 0x423F00
 void CCarCtrl::ClearInterestingVehicleList() {
-    plugin::Call<0x423F00>();
+    std::ranges::fill(apCarsToKeep, nullptr);
 }
 
 // 0x422760
@@ -524,8 +529,122 @@ void CCarCtrl::FlyAIHeliInCertainDirection(CHeli* heli, float arg2, float arg3, 
 }
 
 // 0x423940
-void CCarCtrl::FlyAIHeliToTarget_FixedOrientation(CHeli* heli, float Orientation, CVector posn) {
-    plugin::Call<0x423940, CHeli*, float, CVector>(heli, Orientation, posn);
+void CCarCtrl::FlyAIHeliToTarget_FixedOrientation(CHeli* heli, float orientation, CVector posn) {
+    constexpr auto PI = std::numbers::pi_v<float>;
+
+    const auto& moveSpeed = heli->m_vecMoveSpeed;
+    const auto& mat       = *heli->m_matrix; // Not null checked in the original
+
+    // Twice a second (at a different time for each heli) check for obstacles below the heli
+    const uint32 seed = heli->m_nRandomSeed;
+    if ((seed + CTimer::m_snTimeInMilliseconds) % 500 < (CTimer::m_snPreviousTimeInMilliseconds + seed) % 500) {
+        heli->field_9AC = heli->m_fMaxAltitude;
+
+        const auto& pos = heli->GetPosition();
+        const auto stepX = (float)((double)moveSpeed.x * 50.0f);
+        const auto stepY = (float)((double)moveSpeed.y * 50.0f);
+        const auto stepZ = (double)moveSpeed.z * 50.0f; // x87: kept in extended precision
+        const CVector origin{
+            (float)((double)stepX + pos.x),
+            (float)((double)stepY + pos.y),
+            (float)(stepZ + pos.z)
+        };
+
+        CVector dir{ (float)std::cos((double)orientation), (float)std::sin((double)orientation), -1.0f };
+        dir.Normalise();
+
+        const auto offsetZ = (float)((double)dir.z * 60.0f);
+        const CVector target{
+            (float)((double)dir.x * 60.0f + origin.x),
+            (float)((double)dir.y * 60.0f + origin.y),
+            (float)((double)offsetZ + origin.z)
+        };
+
+        CColPoint colPoint;
+        CEntity*  hitEntity{};
+        if (CWorld::ProcessLineOfSight(origin, target, colPoint, hitEntity, true, false, false, false, false, false, false, true)) {
+            auto altitude = (double)colPoint.m_vecPoint.z + heli->m_fMinAltitude;
+            if (altitude < heli->field_9AC) {
+                altitude = heli->field_9AC;
+            }
+            heli->field_9AC = (float)altitude;
+        }
+    }
+
+    const auto heading = CGeneral::GetATanOfXY(mat.GetForward().x, mat.GetForward().y);
+
+    // Throttle: Try to get to the wanted altitude
+    {
+        heli->m_fAccelerationBreakStatus = 0.0f;
+        const auto altDiff = (double)heli->field_9AC - ((double)moveSpeed.z * 100.0f + heli->GetPosition().z);
+        heli->m_fAccelerationBreakStatus = (float)(altDiff * (altDiff > 0.0 ? 0.1f : 0.2f));
+
+        // Add some noise
+        auto throttle = ((double)(rand() & 0xF) - 7.0f) * 0.00200000009f + heli->m_fAccelerationBreakStatus;
+        heli->m_fAccelerationBreakStatus = (float)throttle;
+        if (throttle < 1.0f) {
+            if (-0.3f > throttle) {
+                throttle = -0.3f;
+            }
+        } else {
+            throttle = 1.0f;
+        }
+        heli->m_fAccelerationBreakStatus = (float)throttle;
+    }
+
+    // Steer: Rotate towards the wanted orientation
+    {
+        auto headingDiff = (double)orientation - heading;
+        if (headingDiff > PI) {
+            do { headingDiff -= 2.0f * PI; } while (headingDiff > PI);
+        }
+        if (headingDiff < -PI) {
+            do { headingDiff += 2.0f * PI; } while (headingDiff < -PI);
+        }
+        auto steer = headingDiff * -0.5f;
+        heli->m_fLeftRightSkid = (float)steer;
+        if (steer < 1.0f) {
+            if (-1.0f > steer) {
+                steer = -1.0f;
+            }
+        } else {
+            steer = 1.0f;
+        }
+        heli->m_fLeftRightSkid = (float)steer;
+    }
+
+    // Move towards the target position
+    const auto& pos = heli->GetPosition();
+    const auto dx = (double)posn.x - pos.x;
+    const auto dy = (double)posn.y - pos.y;
+
+    const auto speedRight = (float)(((double)moveSpeed.z * mat.GetRight().z + (double)moveSpeed.y * mat.GetRight().y) + (double)mat.GetRight().x * moveSpeed.x);
+    const auto speedFwd   = (float)(((double)moveSpeed.z * mat.GetForward().z + (double)moveSpeed.y * mat.GetForward().y) + (double)moveSpeed.x * mat.GetForward().x);
+
+    const auto rightErr = (float)((((double)dy * mat.GetRight().y + (double)dx * mat.GetRight().x) + (double)mat.GetRight().z * 0.0f) + (double)speedRight * 80.0f);
+    const auto fwdErr   = (((double)dy * mat.GetForward().y + (double)dx * mat.GetForward().x) + (double)mat.GetForward().z * 0.0f) + (double)speedFwd * 80.0f; // not rounded (x87)
+
+    // Left/right
+    heli->m_fSteeringLeftRight = (std::abs(rightErr) < 5.0f)
+        ? speedRight
+        : (float)((double)rightErr * -0.02);
+    if (heli->m_fSteeringLeftRight < 0.75f) {
+        if (-0.75f > heli->m_fSteeringLeftRight) {
+            heli->m_fSteeringLeftRight = -0.75f;
+        }
+    } else {
+        heli->m_fSteeringLeftRight = 0.75f;
+    }
+
+    // Forward/backward
+    heli->m_fSteeringUpDown = ((fwdErr < 0.0 ? -fwdErr : fwdErr) < 5.0f)
+        ? speedFwd
+        : (float)(fwdErr * -0.015);
+    if (heli->m_fSteeringUpDown < 0.5f && -0.5f > heli->m_fSteeringUpDown) {
+        heli->m_fSteeringUpDown = -0.5f;
+    } else if (!(heli->m_fSteeringUpDown < 0.5f)) {
+        heli->m_fSteeringUpDown = 0.5f;
+    }
 }
 
 // 0x423000
@@ -1064,7 +1183,34 @@ void CCarCtrl::ReconsiderRoute(CVehicle* vehicle) {
 
 // 0x423DE0
 void CCarCtrl::RegisterVehicleOfInterest(CVehicle* vehicle) {
-    plugin::Call<0x423DE0, CVehicle*>(vehicle);
+    // Already registered => just refresh the time
+    for (auto i = 0; i < (int32)std::size(apCarsToKeep); i++) {
+        if (apCarsToKeep[i] == vehicle) {
+            aCarsToKeepTime[i] = CTimer::GetTimeInMS();
+            return;
+        }
+    }
+
+    // Use a free slot
+    for (auto i = 0; i < (int32)std::size(apCarsToKeep); i++) {
+        if (!apCarsToKeep[i]) {
+            apCarsToKeep[i]    = vehicle;
+            aCarsToKeepTime[i] = CTimer::GetTimeInMS();
+            return;
+        }
+    }
+
+    // Replace the oldest one
+    auto oldestTime = UINT32_MAX;
+    auto oldestIdx  = 0;
+    for (auto i = 0; i < (int32)std::size(apCarsToKeep); i++) {
+        if (apCarsToKeep[i] && aCarsToKeepTime[i] < oldestTime) {
+            oldestTime = aCarsToKeepTime[i];
+            oldestIdx  = i;
+        }
+    }
+    apCarsToKeep[oldestIdx]    = vehicle;
+    aCarsToKeepTime[oldestIdx] = CTimer::GetTimeInMS();
 }
 
 // 0x4322B0
@@ -1542,7 +1688,11 @@ void CCarCtrl::SwitchBetweenPhysicsAndGhost(CVehicle* vehicle) {
 
 // 0x423FC0
 void CCarCtrl::SwitchVehicleToRealPhysics(CVehicle* vehicle) {
-    plugin::Call<0x423FC0, CVehicle*>(vehicle);
+    vehicle->SetStatus(STATUS_PHYSICS);
+    vehicle->m_autoPilot.m_nTempAction                 = TEMPACT_NONE;
+    vehicle->m_autoPilot.m_nTimeToStartMission         = CTimer::GetTimeInMS() + 2000;
+    vehicle->m_autoPilot.m_nTimeSwitchedToRealPhysics  = CTimer::GetTimeInMS();
+    vehicle->m_nFakePhysics                            = 0;
 }
 
 // 0x425B30
@@ -1572,7 +1722,55 @@ void CCarCtrl::TriggerDogFightMoves(CVehicle* vehicle1, CVehicle* vehicle2) {
 
 // 0x424000
 void CCarCtrl::UpdateCarCount(CVehicle* vehicle, uint8 bDecrease) {
-    plugin::Call<0x424000, CVehicle*, uint8>(vehicle, bDecrease);
+    // The counters are compared as signed integers, even the ones declared as unsigned
+    const auto Decrement = [](auto& counter) {
+        counter--;
+        if ((int32)counter < 0) {
+            counter = 0;
+        }
+    };
+
+    if (!bDecrease) {
+        switch (vehicle->m_nCreatedBy) {
+        case RANDOM_VEHICLE:
+            if (vehicle->vehicleFlags.bIsLawEnforcer) {
+                NumLawEnforcerCars++;
+            }
+            NumRandomCars++;
+            break;
+        case MISSION_VEHICLE:
+            if (vehicle->vehicleFlags.bIsLawEnforcer) {
+                vehicle->vehicleFlags.bIsLawEnforcer = false;
+                NumLawEnforcerCars--;
+            }
+            NumMissionCars++;
+            break;
+        case PARKED_VEHICLE:
+            NumParkedCars++;
+            break;
+        case PERMANENT_VEHICLE:
+            NumPermanentVehicles++;
+            break;
+        }
+    } else {
+        switch (vehicle->m_nCreatedBy) {
+        case RANDOM_VEHICLE:
+            if (vehicle->vehicleFlags.bIsLawEnforcer) {
+                Decrement(NumLawEnforcerCars);
+            }
+            Decrement(NumRandomCars);
+            break;
+        case MISSION_VEHICLE:
+            Decrement(NumMissionCars);
+            break;
+        case PARKED_VEHICLE:
+            Decrement(NumParkedCars);
+            break;
+        case PERMANENT_VEHICLE:
+            Decrement(NumPermanentVehicles);
+            break;
+        }
+    }
 }
 
 // 0x436540

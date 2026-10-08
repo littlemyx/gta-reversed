@@ -6,26 +6,43 @@ void CScripted2dEffects::InjectHooks() {
     RH_ScopedClass(CScripted2dEffects);
     RH_ScopedCategory("Scripts");
 
-    RH_ScopedInstall(Init, 0x6FA6F0, { .Reversed = false });
+    RH_ScopedInstall(Init, 0x6FA6F0);
     RH_ScopedInstall(GetEffectPairs, 0x6FA840);
     RH_ScopedInstall(GetIndex, 0x6F9F60);
     RH_ScopedInstall(AddScripted2DEffect, 0x6FA7C0);
     RH_ScopedInstall(ReturnScripted2DEffect, 0x6F9E80);
 }
 
+// 0x6F9EB0 - Resets the effect pairs (`CScriptedEffectPairs::Clear`)
+static void ClearEffectPairs(CScriptedEffectPairs& pairs) {
+    for (auto& pair : pairs.Pairs) {
+        for (auto& effect : pair.Effects) {
+            effect.Effect         = -1;
+            effect.WaitingTask    = -1;
+            effect.PartnerTask    = -1;
+            effect.PartnerUseMode = CScriptedEffectPair::eMode::NONE;
+        }
+        // BUG: The original forgets to reset `PartnerTask` of the second effect
+        if (!notsa::IsFixBugs()) {
+            // Leave as is
+        }
+        pair.UsePartnerImmediately = false;
+    }
+    pairs.NumPairs = 0;
+}
+
 // 0x6FA6F0
-// FIXME: Makes game crash for some reason
 void CScripted2dEffects::Init() {
     for (auto i = 0u; i < NUM_SCRIPTED_2D_EFFECTS; i++) {
         ms_activated[i]             = false;
         ScriptReferenceIndex[i]     = 1;
         ms_effectSequenceTaskIDs[i] = -1;
-        ms_userLists[i].m_bUseList  = false;
-        ms_useAgainFlags[i]         = false;
-        ms_radii[i]                 = -1.0f;
         rng::fill(ms_userLists[i].m_UserTypes, -1);
         rng::fill(ms_userLists[i].m_UserTypesByPedType, -1);
-        ms_effectPairs[i] = CScriptedEffectPairs{};
+        ms_userLists[i].m_bUseList  = false;
+        ClearEffectPairs(ms_effectPairs[i]);
+        ms_useAgainFlags[i]         = false;
+        ms_radii[i]                 = -1.0f;
     }
 }
 

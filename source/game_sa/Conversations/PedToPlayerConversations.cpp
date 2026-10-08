@@ -1,4 +1,5 @@
 #include "PedToPlayerConversations.h"
+#include "Conversations.h"
 
 #include "Ragdoll/IKChainManager.h"
 
@@ -113,7 +114,7 @@ void CPedToPlayerConversations::Update() {
             m_Topic = (ped->m_nPedType == PED_TYPE_GANG1 || (ped->m_nPedType >= PED_TYPE_GANG3 && ped->m_nPedType <= PED_TYPE_GANG10)) // All gang peds, except Grove Street Families
                 ? CGeneral::GetRandomNumberInRange(8, 10)
                 : CGeneral::GetRandomNumberInRange(0, 7);
-            if (!ped->m_pedSpeech.WillPedChatAboutTopic((int16)m_Topic)) {
+            if (!ped->GetSpeechAE().WillPedChatAboutTopic((int16)m_Topic)) {
                 continue;
             }
 
@@ -139,8 +140,8 @@ void CPedToPlayerConversations::Update() {
                 m_TimeOfLastPlayerConversation = CTimer::GetTimeInMS();
                 m_StartTime                    = CTimer::GetTimeInMS();
                 ped->DisablePedSpeech(false);
-                g_ikChainMan.LookAt("Ped2Pl_Conversation", ped, player, 100'000, (eBoneTag32)5, nullptr, false, 0.25f, 500, 8, false);
-                g_ikChainMan.LookAt("Ped2Pl_ConversationP", player, ped, 100'000, (eBoneTag32)5, nullptr, false, 0.25f, 500, 8, false);
+                g_ikChainMan.LookAt("Ped2Pl_Conversation", ped, player, 100'000, BONE_HEAD, nullptr, false, 0.25f, 500, 8, false);
+                g_ikChainMan.LookAt("Ped2Pl_ConversationP", player, ped, 100'000, BONE_HEAD, nullptr, false, 0.25f, 500, 8, false);
             };
 
             switch (m_Topic) {

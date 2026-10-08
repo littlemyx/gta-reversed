@@ -1,10 +1,17 @@
 #include "StdInc.h"
 
+#include <numbers>
 #include "PedStats.h"
 #include "CarEnterExit.h"
 #include "TaskSimpleCarSetPedInAsDriver.h"
 #include "TaskComplexDriveWander.h"
 #include "TaskSimpleCarSetPedInAsPassenger.h"
+#include "EventPedEnteredMyVehicle.h"
+#include "PlayerPed.h"
+#include "Bike.h"
+#include "Automobile.h"
+#include "VehicleAnimGroupData.h"
+#include "Models/VehicleModelInfo.h"
 
 void CCarEnterExit::InjectHooks() {
     RH_ScopedClass(CCarEnterExit);
@@ -22,8 +29,8 @@ void CCarEnterExit::InjectHooks() {
     RH_ScopedInstall(ComputeTargetDoorToEnterAsPassenger, 0x64F190);
     RH_ScopedInstall(ComputeTargetDoorToExit, 0x64F110);
     RH_ScopedInstall(GetNearestCarDoor, 0x6528F0);
-    RH_ScopedInstall(GetNearestCarPassengerDoor, 0x650BB0, { .Reversed = false });
-    RH_ScopedInstall(GetPositionToOpenCarDoor, 0x64E740, { .Reversed = false });
+    RH_ScopedInstall(GetNearestCarPassengerDoor, 0x650BB0);
+    RH_ScopedInstall(GetPositionToOpenCarDoor, 0x64E740);
     RH_ScopedInstall(IsCarDoorInUse, 0x64EC90);
     RH_ScopedInstall(IsCarDoorReady, 0x64ED90);
     RH_ScopedInstall(IsCarQuickJackPossible, 0x64EF00);
@@ -31,12 +38,12 @@ void CCarEnterExit::InjectHooks() {
     RH_ScopedInstall(IsClearToDriveAway, 0x6509B0);
     RH_ScopedInstall(IsPathToDoorBlockedByVehicleCollisionModel, 0x651210);
     RH_ScopedInstall(IsPedHealthy, 0x64EEE0);
-    RH_ScopedInstall(IsPlayerToQuitCarEnter, 0x64F240, { .Reversed = false });
-    RH_ScopedInstall(IsRoomForPedToLeaveCar, 0x6504C0, { .Reversed = false });
+    RH_ScopedInstall(IsPlayerToQuitCarEnter, 0x64F240);
+    RH_ScopedInstall(IsRoomForPedToLeaveCar, 0x6504C0);
     RH_ScopedInstall(IsVehicleHealthy, 0x64EEC0);
     RH_ScopedInstall(IsVehicleStealable, 0x6510D0);
     RH_ScopedInstall(MakeUndraggedDriverPedLeaveCar, 0x64F600);
-    RH_ScopedInstall(MakeUndraggedPassengerPedsLeaveCar, 0x64F540, { .Reversed = false });
+    RH_ScopedInstall(MakeUndraggedPassengerPedsLeaveCar, 0x64F540);
     RH_ScopedInstall(QuitEnteringCar, 0x650130);
     RH_ScopedInstall(RemoveCarSitAnim, 0x64F680);
     RH_ScopedInstall(RemoveGetInAnims, 0x64F6E0);
@@ -379,15 +386,204 @@ bool CCarEnterExit::GetNearestCarDoor(const CPed* ped, const CVehicle* vehicle, 
 
 // 0x650BB0
 bool CCarEnterExit::GetNearestCarPassengerDoor(const CPed* ped, const CVehicle* vehicle, CVector* outVec, int32* doorId, bool CheckIfOccupiedTandemSeat, bool CheckIfDoorIsEnterable, bool CheckIfRoomToGetIn) {
-    return plugin::CallAndReturn<bool, 0x650BB0, const CPed*, const CVehicle*, CVector*, int32*, bool, bool, bool>(ped, vehicle, outVec, doorId, CheckIfOccupiedTandemSeat, CheckIfDoorIsEnterable, CheckIfRoomToGetIn);
+    // NOTSA: Original code left these uninitialized if not set (only matters if the function returns false)
+    CVector posDoorRF{}, posDoorLR{}, posDoorRR{};
+    float   dxRF = 999.f, dyRF = 999.f; // Door 8  (CAR_DOOR_RF) - delta to ped
+    float   dxLR = 999.f, dyLR = 999.f; // Door 11 (CAR_DOOR_LR)
+    float   dxRR = 999.f, dyRR = 999.f; // Door 9  (CAR_DOOR_RR)
+    bool    found = false;
+
+    const auto  animGroup = vehicle->m_pHandlingData->m_nAnimGroup;
+    const CVector pedPos  = ped->GetPosition();
+
+    // Busses (anim groups 15, 16) => Only the front door
+    if (animGroup == 15 || animGroup == 16) {
+        if (CheckIfDoorIsEnterable && (vehicle->m_nGettingInFlags & 4)) {
+            return false;
+        }
+        if (CheckIfRoomToGetIn && !IsRoomForPedToLeaveCar(vehicle, 8, nullptr)) {
+            return false;
+        }
+        *outVec = GetPositionToOpenCarDoor(vehicle, 8);
+        *doorId = 8;
+        return true;
+    }
+
+    if (vehicle->IsBike() || vehicle->m_pHandlingData->m_bTandemSeats) {
+        if (!CheckIfOccupiedTandemSeat || !vehicle->m_apPassengers[0]) {
+            if ((!CheckIfDoorIsEnterable || !(vehicle->m_nGettingInFlags & 2))
+                && (!CheckIfRoomToGetIn || IsRoomForPedToLeaveCar(vehicle, 11, nullptr))
+            ) {
+                posDoorLR = GetPositionToOpenCarDoor(vehicle, 11);
+                dxLR      = posDoorLR.x - pedPos.x;
+                dyLR      = posDoorLR.y - pedPos.y;
+                found     = true;
+            }
+
+            if (!((CheckIfDoorIsEnterable && (vehicle->m_nGettingInFlags & 8))
+                || (CheckIfRoomToGetIn && !IsRoomForPedToLeaveCar(vehicle, 9, nullptr)))
+            ) {
+                posDoorRR = GetPositionToOpenCarDoor(vehicle, 9);
+                dxRR      = posDoorRR.x - pedPos.x;
+                dyRR      = posDoorRR.y - pedPos.y;
+                found     = true;
+            }
+        }
+    } else {
+        if (!((CheckIfOccupiedTandemSeat && vehicle->m_apPassengers[0])
+            || (CheckIfDoorIsEnterable && (vehicle->m_nGettingInFlags & 4))
+            || (CheckIfRoomToGetIn && !IsRoomForPedToLeaveCar(vehicle, 8, nullptr)))
+        ) {
+            posDoorRF = GetPositionToOpenCarDoor(vehicle, 8);
+            dxRF      = posDoorRF.x - pedPos.x;
+            dyRF      = posDoorRF.y - pedPos.y;
+            found     = true;
+        }
+    }
+
+    // Rear doors of 4 door vehicles
+    if ((int8)vehicle->GetVehicleModelInfo()->m_nNumDoors > 2) {
+        const auto IsRearDoorUsable = [&](int32 node) { // Original code checked for the nodes' presence directly (if the handling says so)
+            return !vehicle->m_pHandlingData->m_bForceDoorCheck
+                || (vehicle->IsAutomobile() && static_cast<const CAutomobile*>(vehicle)->m_aCarNodes[node]);
+        };
+
+        if (IsRearDoorUsable(CAR_DOOR_LR)
+            && (!CheckIfOccupiedTandemSeat || !vehicle->m_apPassengers[1])
+            && (!CheckIfDoorIsEnterable || !(vehicle->m_nGettingInFlags & 2))
+            && (!CheckIfRoomToGetIn || IsRoomForPedToLeaveCar(vehicle, 11, nullptr))
+        ) {
+            posDoorLR = GetPositionToOpenCarDoor(vehicle, 11);
+            dxLR      = posDoorLR.x - pedPos.x;
+            dyLR      = posDoorLR.y - pedPos.y;
+            found     = true;
+        }
+
+        if (IsRearDoorUsable(CAR_DOOR_RR)
+            && (!CheckIfOccupiedTandemSeat || !vehicle->m_apPassengers[2])
+            && (!CheckIfDoorIsEnterable || !(vehicle->m_nGettingInFlags & 8))
+            && (!CheckIfRoomToGetIn || IsRoomForPedToLeaveCar(vehicle, 9, nullptr))
+        ) {
+            posDoorRR = GetPositionToOpenCarDoor(vehicle, 9);
+            dxRR      = posDoorRR.x - pedPos.x;
+            dyRR      = posDoorRR.y - pedPos.y;
+            found     = true;
+        }
+    }
+
+    // Pick the closest
+    *outVec = posDoorRF;
+    *doorId = 8;
+    if (dxLR * dxLR + dyLR * dyLR < dxRF * dxRF + dyRF * dyRF) {
+        *doorId = 11;
+        *outVec = posDoorLR;
+        dxRF    = dxLR;
+        dyRF    = dyLR;
+    }
+    if (dxRR * dxRR + dyRR * dyRR < dyRF * dyRF + dxRF * dxRF) {
+        *doorId = 9;
+        *outVec = posDoorRR;
+    }
+    return found;
 }
 
 // 0x64E740
 // Originally RVO'd
 CVector CCarEnterExit::GetPositionToOpenCarDoor(const CVehicle* vehicle, int32 doorId) {
-    CVector out;
-    plugin::CallAndReturn<CVector*, 0x64E740, CVector*, const CVehicle*, int32>(&out, vehicle, doorId);
-    return out;
+    auto* const mi  = vehicle->GetVehicleModelInfo();
+    auto* const hnd = vehicle->m_pHandlingData;
+    auto&       veh = const_cast<CVehicle&>(*vehicle); // TODO: Fix constness
+    const auto& mat = veh.GetMatrix();
+
+    const auto GetSeatPos = [&](bool back) -> CVector {
+        return back ? mi->GetBackSeatPosn() : mi->GetFrontSeatPosn();
+    };
+
+    // Bikes / tandem seat vehicles
+    if (vehicle->IsBike() || hnd->m_bTandemSeats) {
+        if (doorId == 18) {
+            const auto doorOffset = vehicle->GetAnimGroup().ComputeAnimDoorOffsets(ENTER_BIKE_FRONT);
+            const auto seat       = mi->GetFrontSeatPosn();
+            return mat.TransformPoint({
+                seat.x - doorOffset.x,
+                seat.y + doorOffset.y,
+                seat.z - doorOffset.z
+            });
+        }
+
+        auto doorOffset = vehicle->GetAnimGroup().ComputeAnimDoorOffsets(ENTER_FRONT);
+        auto seat       = GetSeatPos(doorId == 11 || doorId == 9);
+
+        if (vehicle->IsBike()) {
+            if (doorId == 9 || doorId == 8) {
+                doorOffset.x = doorOffset.x * -1.f;
+            }
+            CVector out;
+            static_cast<CBike&>(veh).GetCorrectedWorldDoorPosition(out, doorOffset, seat);
+            return out;
+        }
+
+        // Tandem seats, but not a bike
+        if (doorId == 9 || doorId == 8) {
+            doorOffset.x = doorOffset.x * -1.f;
+            seat.x       = seat.x + hnd->m_fSeatOffsetDistance;
+        } else {
+            seat.x       = seat.x - hnd->m_fSeatOffsetDistance;
+        }
+        return mat.TransformPoint(seat - doorOffset);
+    }
+
+    // NOTE: Original code did pass the seat offset as an anim door offset index for the "default" case, but then ignored the result (and it might have read out of bounds)
+    float seatOffset = (hnd->m_nAnimGroup == 0x65 && (doorId == 11 || doorId == 9))
+        ? 0.f
+        : hnd->m_fSeatOffsetDistance;
+
+    CVector doorOffset{};
+    switch (doorId) {
+    case 10:
+    case 8:  doorOffset = vehicle->GetAnimGroup().ComputeAnimDoorOffsets(ENTER_FRONT); break;
+    case 11:
+    case 9:  doorOffset = vehicle->GetAnimGroup().ComputeAnimDoorOffsets(ENTER_REAR); break;
+    case 18: vehicle->GetAnimGroup().ComputeAnimDoorOffsets(ENTER_BIKE_FRONT); break; // Result isn't used
+    default: break;
+    }
+
+    CVector local{};
+    switch (doorId) {
+    case 8: { // RF
+        const auto seat = mi->GetFrontSeatPosn();
+        local = { (seat.x + seatOffset) - (-doorOffset.x), seat.y - doorOffset.y, seat.z - doorOffset.z };
+        break;
+    }
+    case 9: { // RR
+        const auto seat = mi->GetBackSeatPosn();
+        local = { (seat.x + seatOffset) - (-doorOffset.x), seat.y - doorOffset.y, seat.z - doorOffset.z };
+        break;
+    }
+    case 10: { // LF
+        const auto seat = mi->GetFrontSeatPosn();
+        local = { -(seat.x + seatOffset) - doorOffset.x, seat.y - doorOffset.y, seat.z - doorOffset.z };
+        break;
+    }
+    case 11: { // LR
+        const auto seat = mi->GetBackSeatPosn();
+        local = { -(seat.x + seatOffset) - doorOffset.x, seat.y - doorOffset.y, seat.z - doorOffset.z };
+        break;
+    }
+    default: {
+        const auto seat = mi->GetFrontSeatPosn();
+        local = seat; // doorOffset is zero here
+        break;
+    }
+    }
+
+    if (vehicle->m_nVehicleSubType == VEHICLE_TYPE_MTRUCK
+        || (hnd->m_bIsBig && vehicle->m_nVehicleSubType != VEHICLE_TYPE_PLANE)
+    ) {
+        local.z = 0.95f - veh.GetHeightAboveRoad();
+    }
+
+    return vehicle->GetPosition() + mat.TransformVector(local);
 }
 
 // 0x64EC90
@@ -506,12 +702,194 @@ bool CCarEnterExit::IsPedHealthy(CPed* ped) {
 
 // 0x64F240
 bool CCarEnterExit::IsPlayerToQuitCarEnter(const CPed* ped, const CVehicle* vehicle, int32 startTime, CTask* task) {
-    return plugin::CallAndReturn<bool, 0x64F240, const CPed*, const CVehicle*, int32, CTask*>(ped, vehicle, startTime, task);
+    constexpr float kPi = std::numbers::pi_v<float>, kTwoPi = 2.f * std::numbers::pi_v<float>, kHalfPi = std::numbers::pi_v<float> / 2.f;
+
+    const auto* const pad = static_cast<const CPlayerPed*>(ped)->GetPadFromPlayer();
+
+    float doorAngle      = ped->m_fCurrentRotation;
+    bool  checkMeleeKey = false;
+
+    if (task) {
+        bool computeAngle = false;
+        switch (task->GetTaskType()) {
+        case TASK_SIMPLE_CAR_ALIGN:
+        case TASK_SIMPLE_STAND_STILL:
+        case TASK_COMPLEX_FALL_AND_GET_UP:
+        case TASK_SIMPLE_CAR_CLOSE_DOOR_FROM_INSIDE:
+        case TASK_SIMPLE_CAR_GET_IN:
+        case TASK_SIMPLE_CAR_SHUFFLE:
+        case TASK_SIMPLE_CAR_SET_PED_IN_AS_DRIVER:
+        case TASK_SIMPLE_CAR_SET_PED_OUT:
+        case TASK_SIMPLE_WAIT_UNTIL_PED_OUT_CAR:
+            computeAngle = true;
+            break;
+        case TASK_COMPLEX_LEAVE_CAR:
+        case TASK_SIMPLE_CAR_OPEN_DOOR_FROM_OUTSIDE:
+        case TASK_SIMPLE_CAR_OPEN_LOCKED_DOOR_FROM_OUTSIDE:
+        case TASK_SIMPLE_BIKE_PICK_UP:
+        case TASK_SIMPLE_CAR_QUICK_DRAG_PED_OUT:
+        case TASK_SIMPLE_CAR_SLOW_DRAG_PED_OUT:
+            computeAngle  = true;
+            checkMeleeKey = true;
+            break;
+        default:
+            break;
+        }
+
+        if (computeAngle) {
+            const auto& mat      = const_cast<CVehicle*>(vehicle)->GetMatrix();
+            const auto  toPed    = ped->GetPosition() - vehicle->GetPosition();
+            const auto  heading  = vehicle->GetHeading();
+            const float sideDot  = (toPed.z * mat.GetRight().z + toPed.y * mat.GetRight().y) + toPed.x * mat.GetRight().x;
+
+            doorAngle = sideDot > 0.f
+                ? heading + kHalfPi
+                : heading - kHalfPi;
+
+            if (mat.GetUp().z < 0.f) { // Upside down
+                doorAngle += kPi;
+                if (doorAngle > kPi) {
+                    doorAngle -= kTwoPi;
+                }
+            }
+            if (doorAngle > kPi) {
+                doorAngle -= kTwoPi;
+            } else if (doorAngle < -kPi) {
+                doorAngle += kTwoPi;
+            }
+        }
+    }
+
+    if (vehicle->m_pFire) {
+        return true;
+    }
+
+    if (pad->DisablePlayerControls) {
+        return false;
+    }
+
+    if (checkMeleeKey) {
+        if (pad->MeleeAttackJustDown(false)) {
+            return true;
+        }
+    } else {
+        const auto timeDiff = CTimer::GetTimeInMS() - (uint32)startTime;
+        float      timeDiffF = (float)(int32)timeDiff;
+        if ((int32)timeDiff < 0) {
+            timeDiffF += 4294967296.f;
+        }
+        if (timeDiffF <= 500.f) {
+            return false;
+        }
+    }
+
+    const float walkUpDown    = (float)pad->GetPedWalkUpDown();
+    const float walkLeftRight = (float)pad->GetPedWalkLeftRight();
+
+    float stickAngle = CGeneral::GetRadianAngleBetweenPoints(0.f, 0.f, -walkLeftRight, walkUpDown) - TheCamera.m_fOrientation;
+    const float stickMag = std::sqrt(walkUpDown * walkUpDown + walkLeftRight * walkLeftRight) * 0.0078125f;
+
+    // Make sure the angle is in the range of [doorAngle - kPi, doorAngle + kPi]
+    if (stickAngle > doorAngle + kPi) {
+        stickAngle -= kTwoPi;
+    } else if (stickAngle < doorAngle - kPi) {
+        stickAngle += kTwoPi;
+    }
+
+    return stickMag > 0.75f && std::abs(stickAngle - doorAngle) > kPi / 4.f;
 }
 
 // 0x6504C0
 bool CCarEnterExit::IsRoomForPedToLeaveCar(const CVehicle* vehicle, int32 doorId, const CVector* pos) {
-    return plugin::CallAndReturn<bool, 0x6504C0>(vehicle, doorId, pos);
+    auto* const mi  = vehicle->GetVehicleModelInfo();
+    auto&       veh = const_cast<CVehicle&>(*vehicle); // TODO: Fix constness
+    const auto& mat = veh.GetMatrix();
+
+    // Position of the seat (in the vehicle's space)
+    CVector seat;
+    if (vehicle->IsBike() || vehicle->m_pHandlingData->m_bTandemSeats) {
+        seat = (doorId == 11 || doorId == 9) ? mi->GetBackSeatPosn() : mi->GetFrontSeatPosn();
+        if (doorId == 10 || doorId == 11) {
+            seat.x = -seat.x;
+        }
+    } else {
+        switch (doorId) {
+        case 8:  seat = mi->GetFrontSeatPosn(); break;
+        case 9:  seat = mi->GetBackSeatPosn(); break;
+        case 10: seat = mi->GetFrontSeatPosn(); seat.x = -seat.x; break;
+        case 11: seat = mi->GetBackSeatPosn();  seat.x = -seat.x; break;
+        default: return false;
+        }
+    }
+
+    const auto start = mat.TransformPoint(seat); // Start of the line (world space)
+    auto       door  = GetPositionToOpenCarDoor(vehicle, doorId);
+
+    if (pos) {
+        auto offset = *pos;
+        if (doorId == 8 || doorId == 9) {
+            offset.x = -offset.x;
+        }
+        door += mat.TransformVector(offset);
+    }
+
+    CVector startAdj = start;
+    if (mat.GetUp().z < 0.f) { // Upside down
+        startAdj.z += 0.5f;
+        door.z     += 0.5f;
+    }
+
+    const float dx = door.x - startAdj.x;
+    const float dy = door.y - startAdj.y;
+
+    CVector end;
+    if (vehicle->IsBike()) {
+        end.x  = door.x;
+        end.y  = door.y;
+        end.z  = door.z + 0.2f;
+        door.z = end.z + 0.35f;
+    } else {
+        const float len = std::sqrt(dx * dx + dy * dy);
+        const float k   = (0.35f + len) / len;
+        end.x = dx * k + startAdj.x;
+        end.y = dy * k + startAdj.y;
+        end.z = door.z;
+    }
+
+    if (!CWorld::GetIsLineOfSightClear(startAdj, end, true, false, false, true, false, false, false)) {
+        return false;
+    }
+
+    const bool testBuildings = vehicle->m_nVehicleType != VEHICLE_TYPE_TRAIN;
+    const auto* const hitEntity = CWorld::TestSphereAgainstWorld(door, 0.35f, &veh, testBuildings, true, false, true, false, false);
+    if (hitEntity
+        && !(hitEntity->GetModelIndex() == 0x260 && vehicle->GetModelIndex() == 0x241)
+        && hitEntity != vehicle->m_pAttachedTo
+    ) {
+        return false;
+    }
+
+    CColPoint  colPoint{};
+    CEntity*   outEntity{};
+    const bool hitGround = CWorld::ProcessVerticalLine(door, 1000.f, colPoint, outEntity, true, false, false, true, false, false, nullptr);
+    const float groundZ  = colPoint.m_vecPoint.z;
+    if (hitGround && door.z < groundZ && door.z + 0.6f > groundZ) {
+        return false;
+    }
+
+    float groundZBelow;
+    if (vehicle->IsBoat()
+        || notsa::contains({ 0x1CC, 0x21B, 0x1BF, 0x1A1 }, (int32)vehicle->GetModelIndex())
+    ) {
+        groundZBelow = groundZ - 1.f;
+    } else {
+        if (!CWorld::ProcessVerticalLine(door, -1000.f, colPoint, outEntity, true, false, false, true, false, false, nullptr)) {
+            return false;
+        }
+        groundZBelow = colPoint.m_vecPoint.z;
+    }
+
+    return groundZ == 0.f || !(groundZ < groundZBelow);
 }
 
 // 0x64EEC0
@@ -601,7 +979,19 @@ void CCarEnterExit::MakeUndraggedDriverPedLeaveCar(const CVehicle* vehicle, cons
 
 // 0x64F540
 void CCarEnterExit::MakeUndraggedPassengerPedsLeaveCar(const CVehicle* targetVehicle, const CPed* draggedPed, const CPed* ped) {
-    plugin::Call<0x64F540, const CVehicle*, const CPed*, const CPed*>(targetVehicle, draggedPed, ped);
+    for (uint8 i = 0; i < targetVehicle->m_nMaxPassengers; i++) {
+        CPed* const passenger = targetVehicle->m_apPassengers[i];
+        if (!passenger || passenger == draggedPed || passenger->bStayInCarOnJack) {
+            continue;
+        }
+
+        CEventPedEnteredMyVehicle event{
+            const_cast<CPed*>(ped),
+            const_cast<CVehicle*>(targetVehicle),
+            (eTargetDoor)ComputeTargetDoorToExit(targetVehicle, passenger)
+        };
+        passenger->GetEventGroup().Add(&event, false);
+    }
 }
 
 // unused

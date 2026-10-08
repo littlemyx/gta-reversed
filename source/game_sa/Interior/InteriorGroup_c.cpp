@@ -185,7 +185,7 @@ void InteriorGroup_c::SetupHousePeds() {
         m_peds[pedIdx]    = ped;
         if (ped) {
             m_numPeds++;
-            plugin::CallMethod<0x46CED0, CScriptsForBrains*, const char*, CEntity*, int8>(&CTheScripts::ScriptsForBrains, "house", ped, 3); // StartOrRequestNewStreamedScriptBrainWithThisName (declared but not yet reversed)
+            CTheScripts::ScriptsForBrains.StartOrRequestNewStreamedScriptBrainWithThisName("house", ped, 3);
             SetupInteriorPed(ped, new CTaskInteriorBeInHouse(this));
         }
         if (!s_InteriorPedsAliveState[i]) {

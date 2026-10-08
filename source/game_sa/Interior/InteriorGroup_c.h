@@ -45,30 +45,30 @@ public:
 
     void Init(CEntity* entity, int32 id);
     void Update();
-    int32 AddInterior(Interior_c* interior);
+    void AddInterior(Interior_c* interior);
     void SetupPeds();
     void UpdatePeds();
-    int32 SetupHousePeds();
-    int8 SetupPaths();
-    int8 ArePathsLoaded();
+    void SetupHousePeds();
+    void SetupPaths();
+    bool ArePathsLoaded();
     void Setup();
-    int8 Exit();
-    int8 ContainsInteriorType(int32 a2);
-    int8 CalcIsVisible();
+    void Exit();
+    bool ContainsInteriorType(int32 type);
+    void CalcIsVisible();
 
     void DereferenceAnims();
     void ReferenceAnims();
 
     void UpdateOfficePeds();
-    int8 RemovePed(CPed* a2);
-    int32 SetupShopPeds();
+    void RemovePed(CPed* ped);
+    void SetupShopPeds();
     void SetupOfficePeds();
     CEntity* GetEntity();
     CPed* GetPed(int32);
-    bool FindClosestInteriorInfo(int32 a, CVector point, float b, InteriorInfo_t** interiorInfo, Interior_c** interior, float* pSome);
-    bool FindInteriorInfo(eInteriorInfoType infoType, InteriorInfo_t** a3, Interior_c** a4);
-    int32 GetNumInteriorInfos(int32 a2);
-    int32 GetRandomInterior();
+    bool FindClosestInteriorInfo(int32 type, CVector point, float radius, InteriorInfo_t** outInfo, Interior_c** outInterior, float* outDistSq);
+    bool FindInteriorInfo(eInteriorInfoType infoType, InteriorInfo_t** outInfo, Interior_c** outInterior);
+    int32 GetNumInteriorInfos(int32 type);
+    Interior_c* GetRandomInterior();
     auto GetId() const { return m_id; }
 
     auto GetInteriors() const { return m_interiors | std::views::take(m_numInteriors); }

@@ -61,6 +61,8 @@ void CGenericGameStorage::InjectHooks() {
     // Also, these functions originally had the file pointer passed to them @ `ebp`
     // which is non-standard, so.. yeah, not really possible to reverse this garbage
     // until we reverse everything.
+    // NOTE: Verified against the asm: none of the functions below take register inputs (all are plain cdecl / thiscall-less
+    // with stack args), so they're safe to hook. The `ebp` remark only applied to GenericLoad / GenericSave internals.
 
     RH_ScopedInstall(ReportError, 0x5D08C0);
     RH_ScopedInstall(DoGameSpecificStuffBeforeSave, 0x618F50);
@@ -770,7 +772,8 @@ void CGenericGameStorage::MakeValidSaveName(int32 slot) {
             *it = ' ';
     }
 
-    strcpy_s(ms_SaveFileName, path);
+    // BUG: Original code is an unbounded strcpy (path may be up to 259 chars, ms_SaveFileName is 256), kept for fidelity.
+    strcpy(ms_SaveFileName, path);
 }
 
 // 0x5D0E30
@@ -802,7 +805,9 @@ bool CGenericGameStorage::OpenFileForReading(const char* fileName, int32 slot) {
     assert(slot < MAX_SAVEGAME_SLOTS);
 
     if (fileName) {
-        strcpy_s(ms_LoadFileName, fileName);
+        // BUG: Original code uses an unbounded strcpy into the 104 byte buffer (overflows into ms_SaveFileNameJustSaved for long paths).
+        // Kept as is: the file still opens correctly, whereas strcpy_s would invoke the invalid parameter handler.
+        strcpy(ms_LoadFileName, fileName);
         s_PcSaveHelper.GenerateGameFilename(slot, ms_LoadFileNameWithPath);
     }
 

@@ -52,7 +52,7 @@ public:
     void* GetSequenceBlock() const;
     void CompressKeyframes() const;
 
-    void MoveMemory();
+    bool MoveMemory();
     void Print();
 
     auto GetSequences() const { return std::span{ m_pSequences, (size_t)m_nSeqCount }; }

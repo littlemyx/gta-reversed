@@ -169,8 +169,34 @@ void CAnimBlendHierarchy::RemoveUncompressedData() {
 }
 
 // 0x4CF800
-void CAnimBlendHierarchy::MoveMemory() {
-    NOTSA_UNREACHABLE("Unused Function"); //plugin::CallMethod<0x4CF800, CAnimBlendHierarchy*>(this);
+bool CAnimBlendHierarchy::MoveMemory() {
+    if (!m_pSequences) {
+        return false;
+    }
+
+    if (!m_pSequences[0].m_bUsingExternalMemory) {
+        bool moved = false;
+        for (auto& seq : GetSequences()) {
+            if (seq.MoveMemory()) {
+                moved = true;
+            }
+        }
+        return moved;
+    }
+
+    // All sequences share one memory block (their frames point into it)
+    const auto oldBlock = (uint8*)m_pSequences[0].m_Frames;
+    if (!oldBlock) {
+        return false;
+    }
+    const auto newBlock = (uint8*)CMemoryMgr::MoveMemory(oldBlock); // 0x72F500
+    if (newBlock == oldBlock) {
+        return false;
+    }
+    for (auto& seq : GetSequences()) {
+        seq.m_Frames = (uint8*)seq.m_Frames + (newBlock - oldBlock);
+    }
+    return true;
 }
 
 // 0x4CF8A0

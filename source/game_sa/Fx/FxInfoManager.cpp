@@ -21,6 +21,9 @@
 #include "FxInfoFriction.h"
 #include "FxInfoAttractPt.h"
 #include "FxInfoAttractLine.h"
+#include "FxInterpInfoFloat.h"
+#include "FxInterpInfo255.h"
+#include "FxInterpInfoU255.h"
 #include "FxInfoGroundCollide.h"
 #include "FxInfoWind.h"
 #include "FxInfoJitter.h"
@@ -49,10 +52,17 @@ void FxInfoManager_c::InjectHooks() {
     RH_ScopedCategory("Fx");
 
     RH_ScopedInstall(AddFxInfo, 0x4A7B00);
-    // RH_ScopedInstall(Load, 0x5C0B70);
+    RH_ScopedInstall(Load, 0x5C0B70);
     RH_ScopedInstall(ProcessEmissionInfo, 0x4A4960);
     RH_ScopedInstall(ProcessMovementInfo, 0x4A4A10);
     RH_ScopedInstall(ProcessRenderInfo, 0x4A4A80);
+
+    // NOTSA: hooks of the Fx blueprint classes that have no registration in InjectHooksMain.cpp
+    FxInfoAttractLine_c::InjectHooks();
+    FxInterpInfoFloat_c::InjectHooks();
+    FxInterpInfo32_c::InjectHooks();
+    FxInterpInfo255_c::InjectHooks();
+    FxInterpInfoU255_c::InjectHooks();
 }
 
 // 0x4A7B00
@@ -137,10 +147,7 @@ constexpr struct { int32 type; const char* name; } FXINFOMANAGER_C_LOAD_MAPPING[
 
 // 0x5C0B70
 void FxInfoManager_c::Load(FILESTREAM file, int32 version) {
-    plugin::CallMethod<0x5C0B70, FxInfoManager_c*, FILESTREAM, int32>(this, file, version);
-    return;
-
-    ReadField<void>(file);
+    ReadField<void>(file); // 1st line is skipped
     m_nNumInfos = ReadField<int32>(file, "NUM_INFOS:");
     m_MovementOffset = -1;
     m_RenderOffset = -1;
@@ -149,7 +156,9 @@ void FxInfoManager_c::Load(FILESTREAM file, int32 version) {
     assert(m_pInfos);
 
     char line[256], field[128];
-    for (auto& info : GetInfos()) {
+    for (int32 i = 0; i < m_nNumInfos; i++) {
+        int32 timeModePrt = 1;
+
         ReadLine(file, line, sizeof(line));
         VERIFY(sscanf(line, "%s", field) == 1);
 
@@ -161,26 +170,40 @@ void FxInfoManager_c::Load(FILESTREAM file, int32 version) {
             }
             NOTSA_UNREACHABLE("Unknown FX Info: %s", field); // NOTSA
         };
-        auto infoType = GetType();
+        const auto infoType = GetType();
 
-        bool bTimeModePrt = true;
-        if ((infoType & 0xF000) > 0x1000 && version >= 0.7f) {
-            bTimeModePrt = ReadField<bool>(file, "TIMEMODEPRT:");
+        // Only the emission infos (0x1xxx) don't have the TIMEMODEPRT line
+        if ((infoType & 0xF000) > 0x1000 && (double)version >= 0.7) { // 0x86B1D0 (double 0.7)
+            timeModePrt = ReadField<int32>(file, "TIMEMODEPRT:");
         }
 
-        info = AddFxInfo(infoType);
+        auto* const info = AddFxInfo(infoType);
         assert(info); // printf("Failed to load info: %s\n", field)
+        m_pInfos[i] = info;
         info->Load(file, version);
         ReadField<void>(file);
 
-        info->m_bTimeModeParticle = bTimeModePrt;
+        info->m_bTimeModeParticle = (uint8)timeModePrt != 0; // The original stores the low byte of the value
+
+        const auto type = (uint16)info->m_nType;
+        if (!(type & 0x1000)) {
+            if (!(type & 0x2000)) {
+                if ((type & 0xC000) && m_RenderOffset == -1) {
+                    m_RenderOffset = (int8)i;
+                }
+            } else if (m_MovementOffset == -1) {
+                m_MovementOffset = (int8)i;
+            }
+        }
     }
 
-    if (m_RenderOffset == -1)
-        m_RenderOffset = m_nNumInfos;
+    if (m_RenderOffset == -1) {
+        m_RenderOffset = (int8)m_nNumInfos;
+    }
 
-    if (m_MovementOffset == -1)
+    if (m_MovementOffset == -1) {
         m_MovementOffset = m_RenderOffset;
+    }
 }
 
 /* todo:

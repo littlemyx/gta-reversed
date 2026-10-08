@@ -391,6 +391,9 @@ void CAEPoliceScannerAudioEntity::AddAudioEvent(eAudioEvents event, eCrimeType c
 
 // 0x4E6BC0
 void CAEPoliceScannerAudioEntity::PrepSlots() {
+    if (!s_pCurrentSlots) {
+        return;
+    }
     for (auto i = 0; i < NUM_POLICE_SCANNER_SLOTS; i++) {
         s_SlotState[i] = s_pCurrentSlots[i].IsActive();
     }
@@ -468,11 +471,10 @@ void CAEPoliceScannerAudioEntity::FinishedPlayingScannerDialogue() {
     s_pPSControlling             = nullptr;
     s_pCurrentSlots              = nullptr;
     s_bStoppingScanner           = false;
-    s_NextNewScannerDialogueTime = s_NextNewScannerDialogueTime + CTimer::GetTimeInMS();
+    s_NextNewScannerDialogueTime = CTimer::GetTimeInMS() + 10000; // 0x8C8140
     s_fVolumeOffset              = 0.0f;
 
-    std::ranges::fill(s_SlotState, -1);
-    s_SlotState[4] = 1;
+    std::ranges::fill(s_SlotState, 1);
 
     rng::fill(s_ScannerSlotFirst, tScannerSlot{});
     rng::fill(s_ScannerSlotSecond, tScannerSlot{});
@@ -559,7 +561,7 @@ void CAEPoliceScannerAudioEntity::PopulateScannerDialogueLists(const tScannerSlo
 // inlined
 // 0x4E6C00
 bool CAEPoliceScannerAudioEntity::CanWePlayNewScannerDialogue() {
-    if (s_nScannerPlaybackState == STATE_INITIAL)
+    if (s_nScannerPlaybackState != STATE_INITIAL)
         return false;
 
     if (CTimer::GetTimeInMS() < s_NextNewScannerDialogueTime)

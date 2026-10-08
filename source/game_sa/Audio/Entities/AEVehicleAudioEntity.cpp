@@ -3860,7 +3860,7 @@ void CAEVehicleAudioEntity::ProcessDummyHovercraft(tVehicleParams& params) {
     constexpr float VOL_MIN = -12.f, VOL_MAX = -6.f;   // 0x8CBFAC, 0x8CBFB0
     constexpr float FRQ_MIN = 0.8f, FRQ_MAX = 1.15f;   // 0x8CBFB4, 0x8CBFB8
     constexpr float FRQ_STEER_FACTOR = 0.15f;          // 0x8CBFBC
-    constexpr float ROTOR_FREQ_STEP  = 1.f / 187.5f;   // 0x862D04
+    constexpr float ROTOR_FREQ_STEP  = 0.00533333234f; // 0x862D04 (0x3BAEC33C, not exactly `1.f / 187.5f`)
 
     const auto pad = CPad::GetPad(0);
 

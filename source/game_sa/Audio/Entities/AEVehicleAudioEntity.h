@@ -369,7 +369,7 @@ protected: // Config:
                 { MODEL_ANDROM, { 8.f,  8.f,  0.f, -12.f  } }, // 0x8CBEA8, 0x8CBEAC, 0xB6B9FC, 0x8CBEB8
             };
             float ThrustVolFadeStep{1.f};                                         // 0x85A310 (double)
-            float RotorFreqStepUp{1.f / 187.5f}, RotorFreqStepDown{1.f / 187.5f}; // 0x862D04
+            float RotorFreqStepUp{0.00533333234f}, RotorFreqStepDown{0.00533333234f}; // 0x862D04 (0x3BAEC33C, not exactly `1.f / 187.5f`)
         } Jet{};
 
         struct {

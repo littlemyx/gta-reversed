@@ -16,13 +16,14 @@
 #include "TaskComplexWanderMedic.h"
 #include "TaskComplexWanderCop.h"
 #include "TaskComplexLeaveCar.h"
+#include "TaskComplexSequence.h"
 
 void CTaskComplexWander::InjectHooks() {
     RH_ScopedVirtualClass(CTaskComplexWander, 0x86FE84, 15);
     RH_ScopedCategory("Tasks/TaskTypes");
 
     RH_ScopedInstall(Constructor, 0x66F450);
-    RH_ScopedVMTInstall(CreateNextSubTask, 0x674140, { .Reversed = false });
+    RH_ScopedVMTInstall(CreateNextSubTask, 0x674140);
     RH_ScopedVMTInstall(CreateFirstSubTask, 0x6740E0);
     RH_ScopedVMTInstall(ControlSubTask, 0x674C30);
     RH_ScopedVMTInstall(UpdateDir, 0x669DA0);
@@ -49,52 +50,38 @@ CTaskComplexWander::CTaskComplexWander(eMoveState moveState, uint8 dir, bool bWa
 
 // 0x674140
 CTask* CTaskComplexWander::CreateNextSubTask(CPed* ped) {
-    return plugin::CallMethodAndReturn<CTask*, 0x674140, CTaskComplexWander*, CPed*>(this, ped); // untested
-
     switch (m_pSubTask->GetTaskType()) {
     case TASK_SIMPLE_SCRATCH_HEAD: {
         m_nDir++;
         UpdatePathNodes(ped, m_nDir, m_LastNode, m_NextNode, m_nDir);
-
         if (ValidNodes()) {
             return CreateSubTask(ped, TASK_SIMPLE_GO_TO_POINT);
         }
-
         return new CTaskSimpleScratchHead();
     }
-    case TASK_COMPLEX_CROSS_ROAD_LOOK_AND_ACHIEVE_HEADING:
     case TASK_COMPLEX_OBSERVE_TRAFFIC_LIGHTS_AND_ACHIEVE_HEADING:
-    case TASK_COMPLEX_SIT_DOWN_THEN_IDLE_THEN_STAND_UP:
+    case TASK_COMPLEX_CROSS_ROAD_LOOK_AND_ACHIEVE_HEADING:
         return CreateSubTask(ped, TASK_SIMPLE_GO_TO_POINT);
-
-    case TASK_SIMPLE_CAR_DRIVE_TIMED:
-        return CreateFirstSubTask(ped);
-
-    case TASK_COMPLEX_LEAVE_CAR:
-        if (ped->bInVehicle) {
-            return CreateSubTask(ped, TASK_SIMPLE_CAR_DRIVE_TIMED);
-        }
-        return CreateFirstSubTask(ped);
-
     case TASK_COMPLEX_SEQUENCE:
-    case TASK_SIMPLE_GO_TO_POINT:
+    case TASK_SIMPLE_GO_TO_POINT: {
         if (m_bAllNodesBlocked) {
             m_bAllNodesBlocked = false;
             return new CTaskSimpleScratchHead();
         }
 
         UpdateDir(ped);
+        const auto prevLastNode = m_LastNode;
         UpdatePathNodes(ped, m_nDir, m_LastNode, m_NextNode, m_nDir);
 
-        if (m_NextNode == m_LastNode) { // Inverted
-            CVector outTargetPos;
-            ComputeTargetPos(ped, outTargetPos, m_NextNode); // 0x6743C8 (this is here out-of-order, but I guess it doesn't matter)
-            return new CTaskComplexSequence{ // 0x6742DA
-                new CTaskSimpleStandStill(500, false, false, 8.0f),
-                new CTaskSimpleRunAnim(ped->m_nAnimGroup, ANIM_ID_ROADCROSS, 4.0F, false),
-                new CTaskSimpleScratchHead(),
-                new CTaskSimpleGoToPoint(m_nMoveState, outTargetPos, m_fTargetRadius, false, false),
-            };
+        if (m_NextNode == prevLastNode) { // Turning back => stand, look around, and go to the node
+            const auto seq = new CTaskComplexSequence{};
+            seq->AddTask(new CTaskSimpleStandStill{ 500, false, false, 8.f });
+            seq->AddTask(new CTaskSimpleRunAnim{ ped->m_nAnimGroup, ANIM_ID_ROADCROSS, 4.f, false });
+            seq->AddTask(new CTaskSimpleScratchHead{});
+            CVector targetPos;
+            ComputeTargetPos(ped, targetPos, m_NextNode);
+            seq->AddTask(new CTaskSimpleGoToPoint{ m_nMoveState, targetPos, m_fTargetRadius, false, false });
+            return seq;
         }
 
         if (!ValidNodes()) {
@@ -109,10 +96,15 @@ CTask* CTaskComplexWander::CreateNextSubTask(CPed* ped) {
                 return CreateSubTask(ped, TASK_COMPLEX_CROSS_ROAD_LOOK_AND_ACHIEVE_HEADING);
             }
         }
-
         return CreateSubTask(ped, TASK_SIMPLE_GO_TO_POINT);
-
-    case TASK_COMPLEX_IN_AIR_AND_LAND:
+    }
+    case TASK_COMPLEX_LEAVE_CAR:
+        if (ped->bInVehicle) {
+            return CreateSubTask(ped, TASK_SIMPLE_CAR_DRIVE_TIMED);
+        }
+        return CreateFirstSubTask(ped);
+    case TASK_SIMPLE_CAR_DRIVE_TIMED:
+        return CreateFirstSubTask(ped);
     default:
         return nullptr;
     }

@@ -226,6 +226,7 @@
 #include "TaskSimpleAbseil.h"
 #include "TaskComplexWanderCop.h"
 #include "TaskComplexEnterCarAsPassengerTimed.h"
+#include "TaskComplexEnterCarAsPassengerWait.h"
 #include "TaskSimpleWaitUntilPedIsInCar.h"
 #include "TaskComplexUseMobilePhone.h"
 #include "TaskSimpleStandStill.h"

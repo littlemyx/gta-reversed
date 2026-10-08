@@ -1277,7 +1277,8 @@ void CCam::Process() {
 
 // 0x518500
 void CCam::ProcessArrestCamOne() {
-    NOTSA_UNREACHABLE();
+    // NOTSA: Not reversed yet, forwards to the original code (the hook is disabled, see `InjectHooks`)
+    plugin::CallMethod<0x518500, CCam*>(this);
 }
 
 // 0x519250
@@ -1699,8 +1700,9 @@ void CCam::Process_1stPerson(const CVector& target, float orientation, float spe
 }
 
 // 0x521500
-void CCam::Process_AimWeapon(const CVector&, float, float, float) {
-    NOTSA_UNREACHABLE();
+void CCam::Process_AimWeapon(const CVector& target, float orientation, float speedVar, float speedVarWanted) {
+    // NOTSA: Not reversed yet, forwards to the original code (the hook is disabled, see `InjectHooks`)
+    plugin::CallMethod<0x521500, CCam*, const CVector*, float, float, float>(this, &target, orientation, speedVar, speedVarWanted);
 }
 
 // 0x512B10
@@ -3375,13 +3377,15 @@ void CCam::Process_Fixed(const CVector& target, float orientation, float speedVa
 }
 
 // 0x5B25F0
-void CCam::Process_FlyBy(const CVector&, float, float, float) {
-    NOTSA_UNREACHABLE();
+void CCam::Process_FlyBy(const CVector& target, float orientation, float speedVar, float speedVarWanted) {
+    // NOTSA: Not reversed yet, forwards to the original code (the hook is disabled, see `InjectHooks`)
+    plugin::CallMethod<0x5B25F0, CCam*, const CVector*, float, float, float>(this, &target, orientation, speedVar, speedVarWanted);
 }
 
 // 0x5245B0
-void CCam::Process_FollowCar_SA(const CVector&, float, float, float, bool) {
-    NOTSA_UNREACHABLE();
+void CCam::Process_FollowCar_SA(const CVector& target, float orientation, float speedVar, float speedVarWanted, bool bFlag) {
+    // NOTSA: Not reversed yet, forwards to the original code (the hook is disabled, see `InjectHooks`)
+    plugin::CallMethod<0x5245B0, CCam*, const CVector*, float, float, float, bool>(this, &target, orientation, speedVar, speedVarWanted, bFlag);
 }
 
 // 0x50F970
@@ -3631,13 +3635,15 @@ void CCam::Process_FollowPedWithMouse(const CVector& target, float orientation, 
 }
 
 // 0x522D40
-void CCam::Process_FollowPed_SA(const CVector&, float, float, float, bool) {
-    NOTSA_UNREACHABLE();
+void CCam::Process_FollowPed_SA(const CVector& target, float orientation, float speedVar, float speedVarWanted, bool bFlag) {
+    // NOTSA: Not reversed yet, forwards to the original code (the hook is disabled, see `InjectHooks`)
+    plugin::CallMethod<0x522D40, CCam*, const CVector*, float, float, float, bool>(this, &target, orientation, speedVar, speedVarWanted, bFlag);
 }
 
 // 0x5105C0
-void CCam::Process_M16_1stPerson(const CVector&, float, float, float) {
-    NOTSA_UNREACHABLE();
+void CCam::Process_M16_1stPerson(const CVector& target, float orientation, float speedVar, float speedVarWanted) {
+    // NOTSA: Not reversed yet, forwards to the original code (the hook is disabled, see `InjectHooks`)
+    plugin::CallMethod<0x5105C0, CCam*, const CVector*, float, float, float>(this, &target, orientation, speedVar, speedVarWanted);
 }
 
 // 0x511B50

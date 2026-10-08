@@ -14,7 +14,7 @@ public:
 public:
     static constexpr auto Type = TASK_COMPLEX_CAR_SLOW_BE_DRAGGED_OUT_AND_STAND_UP;
 
-    CTaskComplexCarSlowBeDraggedOutAndStandUp(CVehicle* vehicle, eTargetDoor door);
+    CTaskComplexCarSlowBeDraggedOutAndStandUp(CVehicle* vehicle, int32 door);
     ~CTaskComplexCarSlowBeDraggedOutAndStandUp() override;
 
     eTaskType GetTaskType() const override { return Type; }
@@ -29,6 +29,6 @@ public:
 private:
     friend void InjectHooksMain();
     static void InjectHooks();
-    CTaskComplexCarSlowBeDraggedOutAndStandUp* Constructor(CVehicle* veh, eTargetDoor door) { this->CTaskComplexCarSlowBeDraggedOutAndStandUp::CTaskComplexCarSlowBeDraggedOutAndStandUp(veh, door); return this; }
+    CTaskComplexCarSlowBeDraggedOutAndStandUp* Constructor(CVehicle* veh, int32 door) { this->CTaskComplexCarSlowBeDraggedOutAndStandUp::CTaskComplexCarSlowBeDraggedOutAndStandUp(veh, door); return this; }
     CTaskComplexCarSlowBeDraggedOutAndStandUp* Destructor() { this->CTaskComplexCarSlowBeDraggedOutAndStandUp::~CTaskComplexCarSlowBeDraggedOutAndStandUp(); return this; }
 };

@@ -24,9 +24,9 @@ void CTaskComplexCarSlowBeDraggedOutAndStandUp::InjectHooks() {
 }
 
 // 0x648620
-CTaskComplexCarSlowBeDraggedOutAndStandUp::CTaskComplexCarSlowBeDraggedOutAndStandUp(CVehicle* vehicle, eTargetDoor door) : CTaskComplex() {
+CTaskComplexCarSlowBeDraggedOutAndStandUp::CTaskComplexCarSlowBeDraggedOutAndStandUp(CVehicle* vehicle, int32 door) : CTaskComplex() {
     m_Vehicle = vehicle;
-    m_Door = door;
+    m_Door = (eTargetDoor)door;
     CEntity::SafeRegisterRef(m_Vehicle);
 }
 

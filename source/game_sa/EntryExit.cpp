@@ -10,6 +10,9 @@
 #include "PlayerPed.h"
 #include "Object.h"
 #include "Interior/InteriorManager_c.h"
+#include "Events/EventLeaderEntryExit.h"
+#include "Hud.h"
+#include "Rubbish.h"
 
 void CEntryExit::InjectHooks() {
     RH_ScopedClass(CEntryExit);
@@ -21,7 +24,7 @@ void CEntryExit::InjectHooks() {
     RH_ScopedInstall(IsInArea, 0x43E460);
     RH_ScopedInstall(GetPositionRelativeToOutsideWorld, 0x43EA00, {.Locked = true});
     RH_ScopedInstall(TransitionStarted, 0x43FFD0);
-    RH_ScopedInstall(TransitionFinished, 0x4404A0, { .Reversed = false });
+    RH_ScopedInstall(TransitionFinished, 0x4404A0);
     RH_ScopedInstall(RequestObjectsInFrustum, 0x43E690);
     RH_ScopedInstall(RequestAmbientPeds, 0x43E6D0);
     RH_ScopedInstall(WarpGangWithPlayer, 0x43F1F0);
@@ -318,51 +321,35 @@ bool CEntryExit::TransitionStarted(CPed* ped) {
 
 // 0x4404A0
 bool CEntryExit::TransitionFinished(CPed* ped) {
-    return plugin::CallMethodAndReturn<bool, 0x4404A0, CEntryExit*, CPed*>(this, ped);
-    /*
-    const auto spawnPos = ms_spawnPoint->m_vecExitPos;
+    const CVector spawnPos = ms_spawnPoint->m_vecExitPos;
 
     if (const auto entity = ped->GetEntityThatThisPedIsHolding()) {
-        entity->m_AreaCode = (eAreaCodes)ms_spawnPoint->m_nArea;
+        entity->SetAreaCode(ms_spawnPoint->m_nArea);
     }
 
-    const auto DisplayEnExName = [this]{
+    // Sends `CEventLeaderEntryExit` to the group of the ped (if it has one)
+    const auto SendLeaderEntryExitEventToGroup = [ped]() -> bool {
+        const auto group = CPedGroups::GetPedsGroup(ped);
+        if (!group) {
+            return false;
+        }
+        CEventGroupEvent groupEvent{ ped, new CEventLeaderEntryExit(ped) };
+        group->GetIntelligence().AddEvent(&groupEvent);
+        return true;
+    };
+
+    // Displays the name of the interior (if it has one)
+    const auto DisplayEnExName = [this] {
         if (const auto enex = GetEntryExitToDisplayNameOf()) {
             CHud::SetZoneName(TheText.Get(enex->m_szName), true);
         }
     };
 
-    if ((bFoodDateFlag || bUnknownPairing) || ped->bInVehicle) {
-        switch (CEntryExitManager::ms_exitEnterState) {
-        case EXIT_ENTER_STATE_0: { // 0x440ABE
-            TheCamera.SetFadeColour(0, 0, 0);
-            TheCamera.Fade(0.5f, eFadeFlag::FADE_IN);
-            CEntryExitManager::ms_exitEnterState = EXIT_ENTER_STATE_2;
-
-            if (const auto pedsGroup = CPedGroups::GetPedsGroup(ped)) {
-                CEventGroupEvent groupEvent{ ped, new CEventLeaderEntryExit(ped) };
-                pedsGroup->GetIntelligence().AddEvent(&groupEvent);
-            }
-            DisplayEnExName();
-            return false;
-        }
-        case EXIT_ENTER_STATE_3: { // 0x440689
-            CGame::currArea = CEntryExit::ms_spawnPoint->m_nArea;
-            CEntryExitManager::ms_numVisibleEntities = 0;
-            break;
-        }
-        case EXIT_ENTER_STATE_2: { // 0x440A92
-            if (!TheCamera.GetFading()) {
-                CEntryExitManager::ms_exitEnterState = EXIT_ENTER_STATE_3;
-            }
-            return false;
-        }
-        }
-    } else { // 0x44051B
+    if (!bUnknownPairing && !bFoodDateFlag && !ped->bInVehicle) { // 0x440503
         CColStore::AddCollisionNeededAtPosn(spawnPos);
         CIplStore::AddIplsNeededAtPosn(spawnPos);
 
-        if (ms_bWarping) { // 0x440534
+        if (ms_bWarping) {
             CRenderer::m_loadingPriority = false;
             CStreaming::AddModelsToRequestList(spawnPos, STREAMING_LOADING_SCENE);
             ms_spawnPoint->RequestObjectsInFrustum();
@@ -370,56 +357,75 @@ bool CEntryExit::TransitionFinished(CPed* ped) {
         }
 
         switch (CEntryExitManager::ms_exitEnterState) {
-        case 0: { // 0x4405E8
+        case EXIT_ENTER_STATE_0: { // 0x4405E8
             CEntryExitManager::SetAreaCodeForVisibleObjects();
             CEntryExitManager::ms_exitEnterState = EXIT_ENTER_STATE_1;
-            CGame::currArea = ms_spawnPoint->m_nArea;
+            CGame::currArea                      = ms_spawnPoint->m_nArea;
 
-            if (const auto pedsGroup = CPedGroups::GetPedsGroup(ped)) {
-                CEventGroupEvent groupEvent{ ped, new CEventLeaderEntryExit(ped) };
-                pedsGroup->GetIntelligence().AddEvent(&groupEvent);
-            }
-
+            SendLeaderEntryExitEventToGroup();
             return false;
         }
-        case 1: { // 0x4405A1
-            if (const auto primaryTask = ped->GetTaskManager().GetTaskPrimary(ePrimaryTasks::TASK_PRIMARY_PRIMARY)) {
-                if (primaryTask->GetTaskType() == eTaskType::TASK_COMPLEX_GOTO_DOOR_AND_OPEN) {
-                    TheCamera.SetFadeColour(0, 0, 0);
-                    TheCamera.Fade(1.f, eFadeFlag::FADE_IN);
-                    CEntryExitManager::ms_exitEnterState = EXIT_ENTER_STATE_2;
-                }
+        case EXIT_ENTER_STATE_1: { // 0x44059B
+            const auto primaryTask = ped->GetTaskManager().GetTaskPrimary(TASK_PRIMARY_PRIMARY);
+            if (!primaryTask || primaryTask->GetTaskType() != TASK_COMPLEX_GOTO_DOOR_AND_OPEN) {
+                TheCamera.SetFadeColour(0, 0, 0);
+                TheCamera.Fade(1.f, eFadeFlag::FADE_IN);
+                CEntryExitManager::ms_exitEnterState = EXIT_ENTER_STATE_2;
             }
             DisplayEnExName();
             return false;
         }
-        case 2: { // 0x44057F
+        case EXIT_ENTER_STATE_2: { // 0x44057A
+            if (TheCamera.GetFading()) {
+                return false;
+            }
+            CEntryExitManager::ms_exitEnterState = EXIT_ENTER_STATE_3;
+            break;
+        }
+        default:
+            break;
+        }
+    } else { // 0x440678
+        switch (CEntryExitManager::ms_exitEnterState) {
+        case EXIT_ENTER_STATE_0: { // 0x440AB3
+            TheCamera.SetFadeColour(0, 0, 0);
+            TheCamera.Fade(0.5f, eFadeFlag::FADE_IN);
+            CEntryExitManager::ms_exitEnterState = EXIT_ENTER_STATE_2;
+
+            SendLeaderEntryExitEventToGroup();
+            DisplayEnExName();
+            return false;
+        }
+        case EXIT_ENTER_STATE_2: { // 0x440A92
             if (!TheCamera.GetFading()) {
                 CEntryExitManager::ms_exitEnterState = EXIT_ENTER_STATE_3;
-                break;
             }
             return false;
+        }
+        default: { // 0x44068F
+            CGame::currArea                         = ms_spawnPoint->m_nArea;
+            CEntryExitManager::ms_numVisibleEntities = 0;
             break;
         }
         }
     }
 
-    // ms_exitEnterState == 3
-    ped->m_AreaCode = (eAreaCodes)CGame::currArea;
+    // 0x4406AD - Here the state is 3 (or something unknown)
+    ped->SetAreaCode((eAreaCodes)CGame::currArea);
     if (ped->m_pVehicle && ped->bInVehicle) {
-        ped->m_pVehicle->m_AreaCode = (eAreaCodes)CGame::currArea;
+        ped->m_pVehicle->SetAreaCode((eAreaCodes)CGame::currArea);
     }
-    ped->m_pEnex = CGame::CanSeeOutSideFromCurrArea() ? nullptr : this; // Inverted
+    ped->m_pEnex = CGame::currArea != AREA_CODE_NORMAL_WORLD ? this : nullptr;
 
     CEntryExitManager::AddEntryExitToStack(this);
 
-    ped->bCanExitCar = true;
-    CPad::GetPad()->bDisablePlayerEnterCar = false;
+    ped->bCanExitCar                                 = true;
+    CPad::GetPad(0)->bPlayerOnInteriorTransition = false;
 
     CClothes::RebuildPlayerIfNeeded(ped->AsPlayer());
 
     if (bFoodDateFlag) {
-        bEnteredWithoutExit = false;
+        ms_spawnPoint->bEnteredWithoutExit = false;
         return true;
     }
 
@@ -431,92 +437,91 @@ bool CEntryExit::TransitionFinished(CPed* ped) {
     CWaterLevel::FindNearestWaterAndItsFlow();
     CGarages::CloseHideOutGaragesBeforeSave();
     CEntryExitManager::ResetAreaCodeForVisibleObjects();
-    //g_interiorMan.SetEntryExitPtr(this); // TODO
+    g_interiorMan.SetEntryExitPtr(this);
     CPopulation::RemoveAllRandomPeds();
     RequestAmbientPeds();
-    CStreaming::LoadAllRequestedModels(0);
+    CStreaming::LoadAllRequestedModels(false);
     CTimer::Suspend();
 
-    if (!CGame::CanSeeOutSideFromCurrArea()) {
-        RwCameraSetFarClipPlane(TheCamera.m_pRwCamera, CTimeCycle::FindFarClipForCoors(spawnPos));
+    if (CGame::currArea == AREA_CODE_NORMAL_WORLD) {
+        RwCameraSetFarClipPlane(Scene.m_pRwCamera, CTimeCycle::FindFarClipForCoors(spawnPos));
     }
 
     ms_spawnPoint->RequestObjectsInFrustum();
     CStreaming::LoadScene(spawnPos);
-    CStreaming::LoadAllRequestedModels(0);
+    CStreaming::LoadAllRequestedModels(false);
     GenerateAmbientPeds(spawnPos);
 
-    // TODO
-    // if (g_interiorMan.Update())
-    // {
-    //     CStreaming::SetLoadVehiclesInLoadScene(false);
-    //     CStreaming::LoadScene(spawnPoint);
-    //     CStreaming::SetLoadVehiclesInLoadScene(true);
-    // }
+    if (g_interiorMan.Update()) {
+        CStreaming::SetLoadVehiclesInLoadScene(false);
+        CStreaming::LoadScene(spawnPos);
+        CStreaming::SetLoadVehiclesInLoadScene(true);
+    }
 
     CTimer::Resume();
 
     CStreaming::ClearFlagForAll(STREAMING_LOADING_SCENE);
 
     if (ms_spawnPoint->m_nSkyColor) {
-        CTimeCycle::StartExtraColour(ms_spawnPoint->m_nSkyColor - 1, 0);
+        CTimeCycle::StartExtraColour(ms_spawnPoint->m_nSkyColor - 1, false);
     } else {
-        CTimeCycle::StopExtraColour(0);
+        CTimeCycle::StopExtraColour(false);
     }
 
-    // TODO
-    //CRubbish::SetVisibility((CRubbish*)(ms_spawnPoint->flags & 1));
+    CRubbish::SetVisibility(ms_spawnPoint->bUnknownInterior);
 
+    const auto exitAngleRad = DegreesToRadians(ms_spawnPoint->m_fExitAngle);
     if (ped->bInVehicle) {
-        CVector teleportPos = spawnPos;
-        teleportPos.z -= 1.f;
-        ped->m_pVehicle->Teleport(teleportPos, false);
-        ped->m_pVehicle->SetHeading(DegreesToRadians(m_fExitAngle));
+        auto* const veh = ped->m_pVehicle;
+
+        // Move the vehicle to the spawn point
+        const auto heightAboveRoad = veh->GetHeightAboveRoad();
+        veh->Teleport(CVector{ spawnPos.x, spawnPos.y, (spawnPos.z - 1.f) + heightAboveRoad }, false);
+        veh->SetHeading(exitAngleRad);
     } else {
-        CVector teleportPos;
-        FindValidTeleportPoint(&teleportPos);
+        // Move the ped to a valid position near the spawn point
+        CVector teleportPos = spawnPos;
+        ms_spawnPoint->FindValidTeleportPoint(teleportPos);
         ped->Teleport(teleportPos, false);
 
-        ped->m_fCurrentRotation = DegreesToRadians(m_fExitAngle);
-        ped->m_fAimingRotation = ped->m_fCurrentRotation;
-        ped->SetHeading(ped->m_fCurrentRotation);
-
-        TheCamera.Fade(1.f, eFadeFlag::FADE_OUT);
-
-        CTheScripts::ClearSpaceForMissionEntity(ped->GetPosition(), ped);
-
-        if (bRewardInterior) {
-            CShopping::RemoveLoadedShop();
-        } else {
-            CShopping::LoadShop(m_szName);
-            if (m_pLink) {
-                m_pLink->bRewardInterior = true;
-            }
-        }
-
-        CPopulation::ManageAllPopulation();
-        CTheScripts::Process();
-
-        if (ms_spawnPoint->bAcceptNpcGroup) {
-            WarpGangWithPlayer(ped);
-        }
-
-        ProcessStealableObjects(ped);
-
-        ms_spawnPoint->bEnteredWithoutExit = false;
-        if (ms_spawnPoint->bDeleteEnex) {
-            CEntryExitManager::DeleteOne(CEntryExitManager::mp_poolEntryExits->GetIndex(ms_spawnPoint));
-        }
-
-        // TODO
-        auto task = static_cast<CTaskComplexFacial*>(ped->GetTaskManager().GetTaskSecondary(TASK_SECONDARY_FACIAL_COMPLEX));
-        task->StopAll();
-
-        CGame::TidyUpMemory(true, true);
+        ped->m_fCurrentRotation = exitAngleRad;
+        ped->m_fAimingRotation  = exitAngleRad;
+        ped->SetHeading(exitAngleRad);
     }
 
-    return 0; // TODO
-    */
+    TheCamera.Fade(1.f, eFadeFlag::FADE_OUT);
+
+    CTheScripts::ClearSpaceForMissionEntity(ped->GetPosition(), ped);
+
+    if (ms_spawnPoint->bUsedRewardEntrance) {
+        CShopping::RemoveLoadedShop();
+    } else if (ms_spawnPoint->bRewardInterior) {
+        CShopping::LoadShop(m_szName);
+        if (m_pLink) {
+            bUsedRewardEntrance = true;
+        }
+    }
+
+    CPopulation::ManageAllPopulation();
+    CTheScripts::Process();
+
+    if (ms_spawnPoint->bAcceptNpcGroup) {
+        WarpGangWithPlayer(ped->AsPlayer());
+    }
+
+    ProcessStealableObjects(ped);
+
+    ms_spawnPoint->bEnteredWithoutExit = false;
+    if (ms_spawnPoint->bDeleteEnex) {
+        static auto& mp_poolEntryExits = StaticRef<CEntryExitsPool*>(0x96A7D8); // Private to EntryExitManager.cpp
+        CEntryExitManager::DeleteOne(mp_poolEntryExits->GetIndex(ms_spawnPoint));
+    }
+
+    ped->GetTaskManager().GetTaskSecondaryFacial()->StopAll();
+
+    CGame::TidyUpMemory(true, true);
+
+    return true;
 }
 
 // 0x43E6D0

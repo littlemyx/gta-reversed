@@ -24,6 +24,19 @@ auto& gCamColVars = StaticRef<float[28][6]>(0x8CC8E0);
 static auto& gNearClipPedDistDivisor = StaticRef<float>(0xB6EC68); // NOTSA name: unidentified global
 static auto& gNearClipPedScale = StaticRef<float>(0x8CCC84);       // NOTSA name: unidentified global, 0.25
 
+// CopyCameraMatrixToRWCam: previous RW frame vectors (+ MSVC static-init guard bits at 0xB6FFC0)
+static auto& gPrevRwCamRight    = StaticRef<CVector>(0xB6FF90);
+static auto& gPrevRwCamUp       = StaticRef<CVector>(0xB6FF9C);
+static auto& gPrevRwCamAt       = StaticRef<CVector>(0xB6FFA8);
+static auto& gPrevRwCamPos      = StaticRef<CVector>(0xB6FFB4);
+static auto& gPrevRwCamInitMask = StaticRef<uint32>(0xB6FFC0);
+
+// CameraColDetAndReact: NOTSA names
+static auto& gCamColLowestSphereZ  = StaticRef<float>(0xB700EC);
+static auto& gCamColLastModelIdx   = StaticRef<int32>(0xB700F0);
+static auto& gCamColLastSource     = StaticRef<CVector>(0xB700DC);
+static auto& gCamColLastSourceInit = StaticRef<uint32>(0xB700E8); // MSVC static-init guard of `gCamColLastSource`
+
 CCam& CCamera::GetActiveCamera() {
     return TheCamera.m_aCams[TheCamera.m_nActiveCam];
 }
@@ -525,29 +538,36 @@ void CCamera::CopyCameraMatrixToRWCam(bool bUpdateMatrix) {
     rwMat->right = m_mCameraMatrix.GetRight();
 
     // Jitter suppression: if the new vector is almost the same as the previous one - keep the previous one
-    constexpr float EPS = 0.00001f;
-    static CVector prevPos{ -99999.f, -99999.f, -99999.f };
-    static CVector prevAt{ -99999.f, -99999.f, -99999.f };
-    static CVector prevUp{ -99999.f, -99999.f, -99999.f };
-    static CVector prevRight{ -99999.f, -99999.f, -99999.f };
+    // MSVC static-init guards of the 4 `prev` vectors
+    const auto InitPrev = [](uint32 bit, CVector& prev) {
+        if (!(gPrevRwCamInitMask & bit)) {
+            gPrevRwCamInitMask |= bit;
+            prev = CVector{ -99999.f, -99999.f, -99999.f };
+        }
+    };
+    InitPrev(1, gPrevRwCamPos);
+    InitPrev(2, gPrevRwCamAt);
+    InitPrev(4, gPrevRwCamUp);
+    InitPrev(8, gPrevRwCamRight);
 
+    constexpr float EPS = 0.00001f;
     const auto Snap = [](RwV3d& cur, const CVector& prev) {
         const float dx = prev.x - cur.x;
         const float dy = prev.y - cur.y;
         const float dz = prev.z - cur.z;
-        if (dx * dx + dy * dy + dz * dz < EPS * EPS) {
+        if ((dz * dz + dy * dy) + dx * dx < EPS * EPS) { // NOTE: addition order as in the original
             cur = prev;
         }
     };
-    Snap(rwMat->pos, prevPos);
-    Snap(rwMat->at, prevAt);
-    Snap(rwMat->up, prevUp);
-    Snap(rwMat->right, prevRight);
+    Snap(rwMat->pos, gPrevRwCamPos);
+    Snap(rwMat->at, gPrevRwCamAt);
+    Snap(rwMat->up, gPrevRwCamUp);
+    Snap(rwMat->right, gPrevRwCamRight);
 
-    prevPos   = rwMat->pos;
-    prevAt    = rwMat->at;
-    prevUp    = rwMat->up;
-    prevRight = rwMat->right;
+    gPrevRwCamPos   = rwMat->pos;
+    gPrevRwCamAt    = rwMat->at;
+    gPrevRwCamUp    = rwMat->up;
+    gPrevRwCamRight = rwMat->right;
 
     RwMatrixUpdate(rwMat);
     RwFrameUpdateObjects(frame);
@@ -1172,7 +1192,7 @@ void CCamera::UpdateSoundDistances() {
 // 0x50CB90
 void CCamera::SetNearClipBasedOnPedCollision(float arg2) {
     const float v0 = gpCamColVars[4];
-    float nearClip = (0.3f - v0) * (std::sqrt(arg2) / gNearClipPedDistDivisor) * gNearClipPedScale + v0;
+    float nearClip = (0.3f - v0) * ((std::sqrt(arg2) / gNearClipPedDistDivisor) * gNearClipPedScale) + v0; // NOTE: operation order as in the original
     if (nearClip < v0) {
         nearClip = v0;
     }
@@ -1370,8 +1390,8 @@ void CCamera::VectorTrackLinear(CVector* to, CVector* from, float duration, bool
     const float now = static_cast<float>(CTimer::GetTimeInMS());
     m_fTrackLinearStartTime = now;
     m_fTrackLinearEndTime   = now + duration;
-    m_vecTrackLinearEndPoint   = *from; // NOTE: member names are swapped: this one is the start point (+0xC64)
-    m_vecTrackLinearStartPoint = *to;   // and this one is the end point (+0xC70)
+    m_vecTrackLinearStartPoint = *from;
+    m_vecTrackLinearEndPoint   = *to;
     m_bTrackLinearWithEase  = bEase;
 }
 
@@ -1530,8 +1550,8 @@ void CCamera::ProcessVectorTrackLinear() {
 // 0x50D350
 void CCamera::ProcessVectorTrackLinear(float ratio) {
     m_bVecTrackLinearProcessed = true;
-    const CVector& a = m_vecTrackLinearEndPoint;   // +0xC64, actually the start point
-    const CVector& b = m_vecTrackLinearStartPoint; // +0xC70, actually the end point
+    const CVector& a = m_vecTrackLinearStartPoint;
+    const CVector& b = m_vecTrackLinearEndPoint;
     const float t = m_bTrackLinearWithEase
         ? (std::sin((270.0f - ratio * 180.0f) * 0.017453292f) + 1.0f) * 0.5f
         : ratio;
@@ -1581,7 +1601,7 @@ void CCamera::ProcessFOVLerp() {
 void CCamera::ProcessFOVLerp(float ratio) {
     m_bFOVLerpProcessed = true;
     if (m_nZoomMode) {
-        m_fFOVNew = (m_fZoomOutFactor - m_fZoomInFactor) * ((std::sin((270.0f - ratio * 180.0f) * 0.017453292f) + 1.0f) * 0.5f) + m_fZoomInFactor;
+        m_fFOVNew = (m_fZoomOutFactor - m_fZoomInFactor) * (std::sin((270.0f - ratio * 180.0f) * 0.017453292f) + 1.0f) * 0.5f + m_fZoomInFactor;
     } else {
         m_fFOVNew = (m_fZoomOutFactor - m_fZoomInFactor) * ratio + m_fZoomInFactor;
     }
@@ -1745,7 +1765,7 @@ void CCamera::CalculateFrustumPlanes(bool bForMirror) {
     m_avecFrustumNormals[3] = CVector{ 0.f, -as, ac };
 
     const auto Dot = [](const CVector& n, const CVector& p) { // NOTE: order of additions matters for float results
-        return n.x * p.x + n.z * p.z + n.y * p.y;
+        return (n.y * p.y + n.z * p.z) + n.x * p.x;
     };
 
     if (!bForMirror) {
@@ -1837,20 +1857,18 @@ bool CCamera::CameraColDetAndReact(CVector* source, CVector* target) {
 
     if (gCurCamColVars > 9 && ignored) {
         float limit;
-        if (ignored->IsVehicle() && ignored->AsVehicle()->m_nVehicleSubType == VEHICLE_TYPE_AUTOMOBILE) {
-            static float lowestSphereZ; // 0xB700EC
-            static int32 lastModelIdx; // 0xB700F0
-            if (ignored->m_nModelIndex != lastModelIdx) {
-                lowestSphereZ = 100.f;
+        if (ignored->GetIsTypeVehicle() && ignored->AsVehicle()->m_nVehicleSubType == VEHICLE_TYPE_AUTOMOBILE) {
+            if (ignored->m_nModelIndex != gCamColLastModelIdx) {
+                gCamColLowestSphereZ = 100.f;
                 if (const auto* const cd = ignored->GetColModel()->m_pColData) {
-                    for (auto i = 0; i < cd->m_nNumSpheres; i++) {
+                    for (auto i = 0u; i < cd->m_nNumSpheres; i++) {
                         const auto& sp = cd->m_pSpheres[i];
-                        if (sp.m_vecCenter.z - sp.m_fRadius < lowestSphereZ) {
-                            lowestSphereZ = sp.m_vecCenter.z - sp.m_fRadius;
+                        if (sp.m_vecCenter.z - sp.m_fRadius < gCamColLowestSphereZ) {
+                            gCamColLowestSphereZ = sp.m_vecCenter.z - sp.m_fRadius;
                         }
                     }
                 }
-                lastModelIdx = ignored->m_nModelIndex;
+                gCamColLastModelIdx = ignored->m_nModelIndex;
             }
 
             if (!ignored->m_matrix) {
@@ -1859,9 +1877,9 @@ bool CCamera::CameraColDetAndReact(CVector* source, CVector* target) {
             }
             const CMatrix& mat = *ignored->m_matrix;
             const CVector& pos = ignored->GetPosition();
-            limit = ((target->x - pos.x) * mat.GetUp().x
-                   + (target->y - pos.y) * mat.GetUp().y
-                   + (target->z - pos.z) * mat.GetUp().z) - lowestSphereZ;
+            limit = (((target->z - pos.z) * mat.GetUp().z
+                    + (target->y - pos.y) * mat.GetUp().y)
+                    + (target->x - pos.x) * mat.GetUp().x) - gCamColLowestSphereZ; // NOTE: addition order as in the original
             if (limit < 0.2f) {
                 limit = 0.2f;
             }
@@ -1902,7 +1920,7 @@ bool CCamera::CameraColDetAndReact(CVector* source, CVector* target) {
     }
 
     bool bIsBike = false;
-    if (gCurCamColVars > 9 && ignored && ignored->IsVehicle() && ignored->AsVehicle()->m_nVehicleType == VEHICLE_TYPE_BIKE) {
+    if (gCurCamColVars > 9 && ignored && ignored->GetIsTypeVehicle() && ignored->AsVehicle()->m_nVehicleType == VEHICLE_TYPE_BIKE) {
         bIsBike = true;
         minDist = 0.05f;
     }
@@ -1917,15 +1935,18 @@ bool CCamera::CameraColDetAndReact(CVector* source, CVector* target) {
     }
 
     if (gCurDistForCam <= dist) {
-        static CVector lastSource{ 0.f, 0.f, 0.f }; // 0xB700DC
-        if (0.01f * 0.01f < (*source - lastSource).SquaredMagnitude()) {
-            float step = (dist - gCurDistForCam) * CTimer::GetTimeStep() * gpCamColVars[5];
+        if (!(gCamColLastSourceInit & 1)) { // MSVC static-init guard
+            gCamColLastSourceInit |= 1;
+            gCamColLastSource = CVector{ 0.f, 0.f, 0.f };
+        }
+        if (0.01f * 0.01f < (*source - gCamColLastSource).SquaredMagnitude()) {
+            float step = (dist - gCurDistForCam) * (CTimer::GetTimeStep() * gpCamColVars[5]);
             if (step > 0.05f) {
                 step = 0.05f;
             }
             gCurDistForCam += step;
         }
-        lastSource = *source;
+        gCamColLastSource = *source;
     } else {
         gCurDistForCam = dist;
     }

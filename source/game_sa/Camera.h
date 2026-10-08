@@ -287,8 +287,8 @@ public:
     float           m_fDuckAimCamMotionFactor{};
     float           m_fTrackLinearStartTime{};
     float           m_fTrackLinearEndTime{};
-    CVector         m_vecTrackLinearEndPoint{};
     CVector         m_vecTrackLinearStartPoint{};
+    CVector         m_vecTrackLinearEndPoint{};
     bool            m_bTrackLinearWithEase{};
     CVector         m_vecTrackLinear{};
     bool            m_bVecTrackLinearProcessed{};

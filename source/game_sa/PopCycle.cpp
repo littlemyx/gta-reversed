@@ -16,7 +16,7 @@ void CPopCycle::InjectHooks() {
     RH_ScopedGlobalInstall(Initialise, 0x5BC090);
     RH_ScopedGlobalInstall(PickGangToCreateMembersOf, 0x60F8D0);
     RH_ScopedGlobalInstall(FindNewPedType, 0x60FBD0);
-    RH_ScopedGlobalInstall(PickPedMIToStreamInForCurrentZone, 0x60FFD0, { .Reversed = false });
+    RH_ScopedGlobalInstall(PickPedMIToStreamInForCurrentZone, 0x60FFD0);
     RH_ScopedGlobalInstall(IsPedAppropriateForCurrentZone, 0x610150);
     RH_ScopedGlobalInstall(IsPedInGroup, 0x610210);
     RH_ScopedGlobalInstall(PickARandomGroupOfOtherPeds, 0x610420);
@@ -297,7 +297,21 @@ ePopcycleGroup CPopCycle::PickARandomGroupOfOtherPeds() {
 // 0x60FFD0
 eModelID CPopCycle::PickPedMIToStreamInForCurrentZone() {
     for (auto tr = 0; tr < 10; tr++) { // 10 tries
-        const auto grpId        = PickARandomGroupOfOtherPeds();
+        // NOTE: This is `PickARandomGroupOfOtherPeds` inlined in the original code, but it differs from the
+        // non-inlined version (random number distribution and `<` instead of `<=` when picking the group)
+        const auto grpId = [] {
+            const auto& percs = m_nPercTypeGroup[m_nCurrentTimeIndex][m_nCurrentTimeOfWeek][m_pCurrZoneInfo->PopType];
+            auto        rnd   = (int32)((float)(CGeneral::GetRandomNumber() & 0xFFFF) * (1.f / 32768.f) * 100.f);
+            size_t      grp   = 0;
+            while (rnd >= (int32)percs[grp]) {
+                rnd -= (int32)percs[grp];
+                if (++grp >= std::size(percs)) { // BUG: Original code reads out of bounds here
+                    grp = std::size(percs) - 1;
+                    break;
+                }
+            }
+            return (ePopcycleGroup)grp;
+        }();
         const auto pedGrpId     = CPopulation::GetPedGroupId(grpId, CPopulation::CurrentWorldZone);
         const auto npeds        = CPopulation::GetNumPedsInGroup(pedGrpId);
         auto& nextPedToLoadSlot = CStreaming::ms_NextPedToLoadFromGroup[grpId];

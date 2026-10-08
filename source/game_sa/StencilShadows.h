@@ -19,7 +19,7 @@ public:
     static bool GraphicsHighQuality();
 
     static void UpdateHierarchy(CStencilShadowObject*& firstAvailable, CStencilShadowObject*& firstActive, CStencilShadowObject* newOne);
-    static void RegisterStencilShadows(CVector& cameraPos, bool doNotCreateNew);
+    static bool RegisterStencilShadows(CVector& cameraPos, bool doNotCreateNew);
 
     static void RenderStencilShadows();
     static void RenderForVehicle(CStencilShadowObject*);

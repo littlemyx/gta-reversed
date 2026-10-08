@@ -11,6 +11,7 @@
 #include "TrafficLights.h"
 #include "TheScripts.h"
 #include "GangWars.h"
+#include "Garages.h"
 #include "Game.h"
 #include "General.h"
 #include "GameLogic.h"
@@ -147,6 +148,7 @@ void CCarCtrl::InjectHooks()
     RH_ScopedInstall(ClearInterestingVehicleList, 0x423F00);
     RH_ScopedInstall(SwitchVehicleToRealPhysics, 0x423FC0);
     RH_ScopedInstall(UpdateCarCount, 0x424000);
+    RH_ScopedInstall(PossiblyRemoveVehicle, 0x424F80);
 }
 
 // 0x4212E0
@@ -1158,7 +1160,143 @@ void CCarCtrl::PossiblyFireHSMissile(CVehicle* entityLauncher, CEntity* targetEn
 
 // 0x424F80
 void CCarCtrl::PossiblyRemoveVehicle(CVehicle* vehicle) {
-    plugin::Call<0x424F80, CVehicle*>(vehicle);
+    const auto Remove = [&] { // 0x4251E5 / 0x425220 / 0x42541D
+        CWorld::Remove(vehicle);
+        delete vehicle;
+    };
+
+    if (vehicle->m_nNumGettingIn) {
+        return;
+    }
+    if (vehicle->vehicleFlags.bPartOfConvoy && vehicle->m_autoPilot.m_TargetEntity) {
+        return;
+    }
+
+    // BUG: The original only initializes this in the first block below, but reads it in the later ones too
+    CVector playerCentre;
+    if (notsa::IsFixBugs()) {
+        playerCentre = FindPlayerCentreOfWorld(CWorld::PlayerInFocus);
+    }
+
+    if (!vehicle->vehicleFlags.bIsLocked && vehicle->CanBeDeleted() && !CCranes::IsThisCarBeingTargettedByAnyCrane(vehicle)) {
+        if (vehicle->vehicleFlags.bFadeOut && CVisibilityPlugins::GetClumpAlpha(vehicle->GetRpClump()) == 0) {
+            Remove();
+            return;
+        }
+
+        if (!notsa::IsFixBugs()) {
+            playerCentre = FindPlayerCentreOfWorld(CWorld::PlayerInFocus);
+        }
+
+        // x87: the difference is kept in extended precision
+        const auto dx = (double)vehicle->GetPosition().x - playerCentre.x;
+        const auto dy = (double)vehicle->GetPosition().y - playerCentre.y;
+        const auto distToPlayer2D = (float)std::sqrt(dx * dx + dy * dy);
+
+        const auto& activeCam = TheCamera.m_aCams[TheCamera.m_nActiveCam];
+        float removalRange;
+        if (!vehicle->GetIsOnScreen()
+            && !activeCam.m_bLookingLeft
+            && !activeCam.m_bLookingRight
+            && !activeCam.m_bLookingBehind
+            && TheCamera.GetLookDirection()
+            && vehicle->m_nCreatedBy != PARKED_VEHICLE
+            && vehicle->m_nModelIndex != MODEL_AMBULAN
+            && vehicle->m_nModelIndex != MODEL_FIRETRUK
+            && !vehicle->vehicleFlags.bIsLawEnforcer
+            && !vehicle->vehicleFlags.bIsCarParkVehicle
+            && vehicle->m_nTimeTillWeNeedThisCar <= CTimer::GetTimeInMS()
+            && !vehicle->vehicleFlags.bNeverUseSmallerRemovalRange
+        ) {
+            removalRange = 45.0f;
+        } else {
+            removalRange = TheCamera.m_fGenerationDistMultiplier * 170.0f;
+        }
+        if (TheCamera.m_mCameraMatrix.GetForward().z < -0.9f) { // Looking (almost) straight down
+            removalRange = 75.0f;
+        }
+
+        // 0x420800 - `a > b ? a : b`
+        const auto extRange = (float)vehicle->m_nExtendedRemovalRange;
+        const auto maxRange = extRange > 170.0f ? extRange : 170.0f;
+
+        // x87: kept in extended precision until the comparison
+        if ((double)maxRange * removalRange * (double)(1.0f / 170.0f) < (double)distToPlayer2D && vehicle->m_autoPilot.m_nCarMission != MISSION_PLANE_ATTACK_PLAYER_POLICE) {
+            if (!CGarages::IsPointWithinHideOutGarage(vehicle->GetPosition())) {
+                if (IsThisVehicleInteresting(vehicle)) {
+                    vehicle->m_nFakePhysics = 10;
+                    return;
+                }
+                if (vehicle->GetIsOnScreen()) {
+                    vehicle->vehicleFlags.bFadeOut = true;
+                    return;
+                }
+                Remove();
+                return;
+            }
+        }
+
+        if (vehicle->GetStatus() == STATUS_SIMPLE) {
+            // Note: Uses the matrix directly (not null checked)
+            const auto upZ = vehicle->m_matrix->GetUp().z;
+            if ((upZ < 0.0f ? -upZ : upZ) < 0.74f) { // Vehicle is on its side (or upside down)
+                Remove();
+                return;
+            }
+        }
+
+        if (   (vehicle->GetStatus() == STATUS_PHYSICS || vehicle->GetStatus() == STATUS_WRECKED)
+            && (vehicle->m_nVehicleSubType == VEHICLE_TYPE_PLANE || vehicle->m_nVehicleSubType == VEHICLE_TYPE_HELI)
+            && vehicle->m_bIsStuck
+        ) {
+            Remove();
+            return;
+        }
+    }
+
+    if (   vehicle->m_nVehicleSubType != VEHICLE_TYPE_HELI
+        && vehicle->m_nVehicleSubType != VEHICLE_TYPE_PLANE
+        && vehicle->m_autoPilot.m_nTempAction != TEMPACT_STUCKINTRAFFIC
+        && (   vehicle->GetStatus() == STATUS_SIMPLE
+            || (vehicle->GetStatus() == STATUS_PHYSICS && (vehicle->m_autoPilot.m_nCarDrivingStyle == DRIVING_STYLE_STOP_FOR_CARS || vehicle->m_autoPilot.m_nCarDrivingStyle == DRIVING_STYLE_STOP_FOR_CARS_IGNORE_LIGHTS))
+        )
+        && CTimer::GetTimeInMS() - vehicle->m_autoPilot.m_nTimeSwitchedToRealPhysics > 5000
+        && vehicle->m_nTimeTillWeNeedThisCar == 0
+        && CTimer::GetTimeInMS() != 0
+        && !vehicle->GetIsOnScreen()
+    ) {
+        const CVector offset = vehicle->GetPosition() - playerCentre; // BUG: `playerCentre` is uninitialized if the first block wasn't entered (locked/can't be deleted/targeted by a crane), see above
+        // x87: kept in extended precision
+        if (std::sqrt((double)offset.y * offset.y + (double)offset.x * offset.x) > 22.0f
+            && !IsThisVehicleInteresting(vehicle)
+            && !vehicle->vehicleFlags.bIsLocked
+            && vehicle->CanBeDeleted()
+            && !CTrafficLights::ShouldCarStopForLight(vehicle, true)
+            && !CTrafficLights::ShouldCarStopForBridge(vehicle)
+            && !CGarages::IsPointWithinHideOutGarage(vehicle->GetPosition())
+        ) {
+            Remove();
+            return;
+        }
+    }
+
+    // Wrecks
+    if (vehicle->GetStatus() != STATUS_WRECKED
+        || !vehicle->m_nTimeWhenBlowedUp
+        || !(CTimer::GetTimeInMS() > vehicle->m_nTimeWhenBlowedUp + 60'000)
+        || !(CTimer::GetTimeInMS() > vehicle->m_nTimeTillWeNeedThisCar)
+        || vehicle->GetIsOnScreen()
+    ) {
+        return;
+    }
+    const CVector offset = vehicle->GetPosition() - playerCentre; // BUG: Same as above
+    if (!((double)offset.x * offset.x + (double)offset.y * offset.y + (double)offset.z * offset.z > 42.25f)) { // x87: kept in extended precision
+        return;
+    }
+    if (CGarages::IsPointWithinHideOutGarage(vehicle->GetPosition())) {
+        return;
+    }
+    Remove();
 }
 
 // 0x423F10

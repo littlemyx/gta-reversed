@@ -844,7 +844,7 @@ void CPlayerInfo::Process(uint32 playerIndex) {
     if ((CTimer::m_FrameCounter & 0xF) == 0) {
         const CEntity* const posEntity = m_pPed->bInVehicle ? static_cast<CEntity*>(m_pPed->m_pVehicle) : static_cast<CEntity*>(m_pPed);
         const auto&          pos       = posEntity->GetPosition();
-        m_fRoadDensityAroundPlayer     = ThePaths.CalcRoadDensity(pos.x, pos.y);
+        m_fRoadDensityAroundPlayer     = plugin::CallMethodAndReturn<float, 0x44EFC0, CPathFind*, float, float>(&ThePaths, pos.x, pos.y); // CPathFind::CalcRoadDensity (declared but not yet reversed)
     }
     m_fRoadDensityAroundPlayer = static_cast<float>((static_cast<double>(m_fRoadDensityAroundPlayer) - static_cast<double>(1.0f)) * static_cast<double>(0.6f) + static_cast<double>(1.0f));
     if (m_fRoadDensityAroundPlayer < 0.5f) {

@@ -81,6 +81,11 @@ class CWaterLevel {
     static inline auto& m_bWaterFog = StaticRef<bool>(0x8D37D4);
     static inline auto& m_bWaterFogScript = StaticRef<bool>(0x8D37D5);
     static inline auto& m_WaterFogDensity = StaticRef<int32>(0x8D37E0);
+    static inline auto& m_WaterFogCol = StaticRef<CRGBA>(0x8D37E8);                 // Color of the fog layers (outside of it)
+    static inline auto& m_WaterFogInsideCol = StaticRef<CRGBA>(0x8D37EC);           // Color of the full-screen quad when inside the fog
+    static inline auto& m_fWaterFogInsideFadeSpeed = StaticRef<float>(0x8D37F0);    // Default: 0.04
+    static inline auto& m_fWaterFogInsideFade = StaticRef<float>(0xC228EC);         // [0, 1] How much the inside-fog quad is faded in
+    static inline auto& m_fWaterFogInsideTimer = StaticRef<float>(0xC228F0);        // Time (in game ticks) left until the inside fade starts fading out
 
     static inline auto& faWaveMultipliersX = StaticRef<std::array<float, 8>>(0x8D38C8);
     static inline auto& faWaveMultipliersY = StaticRef<std::array<float, 8>>(0x8D38E8);

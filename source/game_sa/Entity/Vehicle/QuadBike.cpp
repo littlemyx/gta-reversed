@@ -8,6 +8,36 @@ auto& bDoQuadDamping = StaticRef<bool>(0x8D3450); // true
 auto& QUAD_HBSTEER_ANIM_MULT = StaticRef<float>(0x8D3454); // -0.4f
 auto& vecQuadResistance = StaticRef<CVector>(0x8D3458); // { 0.995f, 0.995f, 1.0f }
 
+namespace {
+// Same as in `Bike.cpp` - replicates the operation order of the original (inlined `CMatrix::Multiply3x3`)
+
+// 0x59C790
+CVector TransformVectorOriginal(const CMatrix& m, const CVector& v) {
+    const auto &r = m.GetRight(), &f = m.GetForward(), &u = m.GetUp();
+    return CVector{
+        (u.x * v.z + f.x * v.y) + r.x * v.x,
+        (u.y * v.z + r.y * v.x) + f.y * v.y,
+        (u.z * v.z + r.z * v.x) + f.z * v.y
+    };
+}
+
+// 0x59C810
+CVector InverseTransformVectorOriginal(const CMatrix& m, const CVector& v) {
+    const auto &r = m.GetRight(), &f = m.GetForward(), &u = m.GetUp();
+    return CVector{
+        (r.y * v.y + r.z * v.z) + v.x * r.x,
+        (f.y * v.y + f.x * v.x) + f.z * v.z,
+        (u.y * v.y + u.x * v.x) + u.z * v.z
+    };
+}
+
+// Constants used by `ProcessControl`
+constexpr float QUAD_PITCH_DAMP_COEF      = 0.995f; // 0x871ABC - Also used as the pitch damping when the front wheels are in the air
+constexpr float QUAD_PITCH_DAMP_COEF_AIR  = 0.5f;   // 0x871AC0 - Used if neither wheelie, nor stoppie
+constexpr float QUAD_ROLL_DAMP_COEF       = 1.0f;   // 0x871AC4
+constexpr float QUAD_ROLL_DAMP_COEF_AIR   = 1.0f;   // 0x871AC8
+}
+
 void CQuadBike::InjectHooks() {
     RH_ScopedVirtualClass(CQuadBike, 0x871ae8, 71);
     RH_ScopedCategory("Vehicle");
@@ -17,7 +47,7 @@ void CQuadBike::InjectHooks() {
     RH_ScopedVMTInstall(GetRideAnimData, 0x6CDC90);
     RH_ScopedVMTInstall(PreRender, 0x6CEAD0);
     RH_ScopedVMTInstall(ProcessAI, 0x6CE460);
-    RH_ScopedVMTInstall(ProcessControl, 0x6CDCC0, { .Reversed = false });
+    RH_ScopedVMTInstall(ProcessControl, 0x6CDCC0);
     RH_ScopedVMTInstall(ProcessControlInputs, 0x6CE020);
     RH_ScopedVMTInstall(ProcessDrivingAnims, 0x6CE280);
     RH_ScopedVMTInstall(ProcessSuspension, 0x6CE270);
@@ -108,6 +138,78 @@ void CQuadBike::PreRender() {
         mat.SetRotateZOnly(QUAD_HBSTEER_ANIM_MULT * m_sRideAnimData.AnimLeanLeft);
         mat.UpdateRW();
     }
+}
+
+// 0x6CDCC0
+void CQuadBike::ProcessControl() {
+    if (GetStatus() == STATUS_PLAYER && bDoQuadDamping) {
+        // Damp the angular velocity of the quad (and keep it from tipping over)
+        const auto& mat = GetMatrix();
+
+        const auto turnLocal = InverseTransformVectorOriginal(mat, m_vecTurnSpeed);
+
+        float pitchCoef = QUAD_PITCH_DAMP_COEF;
+        float rollCoef  = QUAD_ROLL_DAMP_COEF;
+
+        double pitchDamp = vecQuadResistance.x; // Note: the original keeps this in the FPU (extended precision)
+        float  rollDamp  = vecQuadResistance.y;
+
+        const auto wheelRatios = m_fWheelsSuspensionCompression;
+        if (wheelRatios[0] == 1.0f && wheelRatios[2] == 1.0f) { // Front wheels in the air => wheelie
+            if ((wheelRatios[1] < 1.0f || wheelRatios[3] < 1.0f) && GetForward().z > 0.0f) {
+                const auto error = std::fabs(m_pHandling->m_fWheelieAng - GetForward().z) * 0.25f;
+                pitchDamp = (double)vecQuadResistance.x - (double)std::min(error, 0.07f);
+            } else {
+                pitchDamp = QUAD_PITCH_DAMP_COEF;
+                rollCoef  = QUAD_ROLL_DAMP_COEF_AIR;
+            }
+        } else if (m_WheelCounts[1] == 1.0f && m_WheelCounts[3] == 1.0f) { // Front wheels on the ground, rear ones in the air => stoppie
+            if (GetForward().z < 0.0f) {
+                const auto error = std::fabs(m_pHandling->m_fStoppieAng - GetForward().z) * 0.3f;
+                pitchDamp = ((double)std::min(error, 0.1f) + (double)0.9f) * (double)vecQuadResistance.x;
+            }
+        } else {
+            pitchCoef = QUAD_PITCH_DAMP_COEF_AIR;
+        }
+
+        const auto pitchDampF = (float)(pitchDamp / ((double)turnLocal.x * (double)turnLocal.x * (double)pitchCoef + 1.0));
+        const auto rollDampF  = (float)((double)rollDamp / ((double)turnLocal.y * (double)turnLocal.y * (double)rollCoef + 1.0));
+
+        const auto pitchFactor = (float)std::pow((double)pitchDampF, (double)CTimer::GetTimeStep());
+        const auto rollFactor  = std::pow((double)rollDampF, (double)CTimer::GetTimeStep());
+
+        const auto pitchDelta = (float)((double)turnLocal.x * (double)pitchFactor - (double)turnLocal.x);
+        const auto rollDelta  = (double)turnLocal.y * rollFactor - (double)turnLocal.y; // Stays in the FPU
+
+        const auto turnMass = m_fTurnMass;
+        const auto up       = GetUp();
+
+        {
+            const auto fx = (float)((double)up.x * -1.0 * rollDelta);
+            const auto fz = (float)((double)(float)((double)up.z * -1.0) * rollDelta);
+            ApplyTurnForce(
+                CVector{
+                    (float)((double)fx * (double)turnMass),
+                    (float)((double)up.y * -1.0 * rollDelta * (double)turnMass),
+                    (float)((double)fz * (double)turnMass)
+                },
+                TransformVectorOriginal(mat, m_vecCentreOfMass) + GetRight()
+            );
+        }
+        {
+            const auto fz = (float)((double)pitchDelta * (double)up.z);
+            ApplyTurnForce(
+                CVector{
+                    (float)((double)pitchDelta * (double)up.x * (double)turnMass),
+                    (float)((double)pitchDelta * (double)up.y * (double)turnMass),
+                    (float)((double)fz * (double)turnMass)
+                },
+                TransformVectorOriginal(mat, m_vecCentreOfMass) + GetForward()
+            );
+        }
+    }
+
+    CAutomobile::ProcessControl(); // 0x6B1880
 }
 
 // 0x6CE460
@@ -204,48 +306,6 @@ bool CQuadBike::ProcessAI(uint32& extraHandlingFlags) {
 
     }
     return false;
-}
-
-// 0x6CDCC0
-void CQuadBike::ProcessControl() {
-    return plugin::CallMethod<0x6CDCC0, CQuadBike*>(this);
-
-    if (GetStatus() != STATUS_PLAYER || !bDoQuadDamping) {
-        CAutomobile::ProcessControl();
-        return;
-    }
-
-    const auto turnSpeed_Mult_Matrix = m_matrix->InverseTransformVector(m_vecTurnSpeed);
-    float v2 = vecQuadResistance.y, v5 = vecQuadResistance.x;
-    if (AreFrontWheelsNotTouchingGround()) {
-        if (!AreRearWheelsNotTouchingGround() && m_matrix->GetForward().z > 0.0f) {
-            v5 = vecQuadResistance.x - std::min(0.07f, fabs(m_pHandling->m_fWheelieAng - m_matrix->GetForward().z) * 0.25f);
-        }
-    } else {
-        if (m_WheelCounts[CAR_WHEEL_REAR_LEFT] == 1.0f && m_WheelCounts[CAR_WHEEL_REAR_RIGHT] == 1.0f) {
-            if (m_matrix->GetForward().z < 0.0f) {
-                v5 = vecQuadResistance.x * (0.9f + std::min(0.1f, fabs(m_pHandling->m_fStoppieAng - m_matrix->GetForward().z) * 0.3f));
-            }
-        } else {
-            v2 = 0.5f;
-        }
-    }
-
-    const CVector velocityOS = m_matrix->InverseTransformVector(m_vecTurnSpeed);
-    CVector unk{ // In the original code `x` is calculated once then immediately overwritten by the below line
-        std::pow(vecQuadResistance.x, CTimer::GetTimeStep()),
-        vecQuadResistance.y / (velocityOS.y * velocityOS.y + 1.0f),
-        1.0f
-    };
-    const auto centreOfMassOS = m_matrix->InverseTransformVector(m_vecCentreOfMass);
-
-    const float v9 = std::pow(unk.y, CTimer::GetTimeStep()) * velocityOS.y - velocityOS.y;
-    ApplyTurnForce(m_matrix->GetUp() * -1.0f * v9 * m_fTurnMass, m_matrix->GetRight() + centreOfMassOS);
-
-    const float v19 = velocityOS.x * unk.x - velocityOS.x;
-    ApplyTurnForce(m_matrix->GetUp() * v19 * m_fTurnMass, m_matrix->GetForward() + centreOfMassOS);
-
-    CAutomobile::ProcessControl();
 }
 
 // 0x6CE020

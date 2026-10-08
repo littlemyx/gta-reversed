@@ -157,9 +157,11 @@ static inline auto& gFollowPedLastZoomDist        = StaticRef<float>(0xB6EC50); 
 static inline auto& gbFollowPedCamBehindPlayer    = StaticRef<bool>(0xB6EC54);  // Set while the "camera behind player" button is held (until the ped moves)
 static inline auto& gFollowPedLastAlpha           = StaticRef<float>(0x8CCE74);
 static inline auto& gFollowPedLastBeta            = StaticRef<float>(0x8CCE6C);
-static inline auto& gFollowPedLastPlayerPos       = StaticRef<CVector>(0x8CCC3C);
-static inline auto& gFollowPedPlayerPosVel        = StaticRef<CVector>(0xB6EC7C);
-static inline auto& gFollowPedUnkB6FE34           = StaticRef<int32>(0xB6FE34);
+
+// Shared by `Process` and `Process_FollowPed_SA` (names made up)
+static inline auto& gCamPlayerLastPos             = StaticRef<CVector>(0x8CCC3C); // Position of the followed player of the last frame (`Process_FollowPed_SA` resets it)
+static inline auto& gCamPlayerPosVel              = StaticRef<CVector>(0xB6EC7C); // Smoothed velocity of the above (`Process_FollowPed_SA` resets it)
+static inline auto& gCamUnkB6FE34                 = StaticRef<int32>(0xB6FE34);   // Compared with 0xB6FDC8 in `Process`, zeroed by `Process_FollowPed_SA` and `CIdleCam::IdleCamGeneralProcess`
 
 // 0x4082C0 (and 0x406DA0 for the squared one) - Kept in the FPU registers in the original (extended precision)
 static double SqMagExt(const CVector& v) {
@@ -1021,21 +1023,18 @@ void CCam::ClipBeta() {
 // 0x526FC0
 void CCam::Process() {
     // Globals whose purpose is unknown (names made up)
-    static auto& s_unk_B6FE34       = StaticRef<int32>(0xB6FE34);
     static auto& s_unk_B6FDC8       = StaticRef<float>(0xB6FDC8);
     static auto& s_unk_C0B184       = StaticRef<uint8>(0xC0B184);
     static auto& s_unk_C8A860       = StaticRef<uint8>(0xC8A860);
     static auto& s_unk_8CCF00       = StaticRef<bool>(0x8CCF00);
-    static auto& s_lastPlayerPos    = StaticRef<CVector>(0x8CCC3C);
-    static auto& s_playerPosVel     = StaticRef<CVector>(0xB6EC7C);
     static auto& s_firstPersonFlag  = StaticRef<bool>(0xB6EC20);
 
-    if ((float)s_unk_B6FE34 <= s_unk_B6FDC8) {
+    if ((float)gCamUnkB6FE34 <= s_unk_B6FDC8) {
         s_unk_C0B184 &= 0xFE;
     }
     if (TheCamera.m_aCams[TheCamera.m_nActiveCam].m_nMode != MODE_FOLLOWPED) {
         s_unk_C0B184 &= 0xFE;
-        s_unk_B6FE34 = 0;
+        gCamUnkB6FE34 = 0;
     }
 
     float   orientation = 0.0f; // local_78
@@ -1115,7 +1114,7 @@ void CCam::Process() {
                 target = playerPos;
 
                 bool bReset =
-                    9.0f < sq(s_lastPlayerPos.z - playerPos.z) + sq(s_lastPlayerPos.y - playerPos.y) + sq(s_lastPlayerPos.x - playerPos.x) // NOTE: summation order as in the original
+                    9.0f < sq(gCamPlayerLastPos.z - playerPos.z) + sq(gCamPlayerLastPos.y - playerPos.y) + sq(gCamPlayerLastPos.x - playerPos.x) // NOTE: summation order as in the original
                     || CTimer::GetTimeStep() < 0.2f
                     || Using3rdPersonMouseCam()
                     || TheCamera.m_bCamDirectlyBehind
@@ -1123,31 +1122,31 @@ void CCam::Process() {
                 if (!bReset) {
                     if (FindPlayerPed()->GetIntelligence()->GetTaskFighting() && m_nMode == MODE_AIMWEAPON) {
                         const float f = (float)std::pow(0.899999976, (double)CTimer::GetTimeStep());
-                        target        = playerPos * (1.0f - f) + s_lastPlayerPos * f;
+                        target        = playerPos * (1.0f - f) + gCamPlayerLastPos * f;
                         bReset        = true;
                     } else {
                         // NOTE: The original computes `1 - pow(..)` first (rounded to float) and derives the other weight from it
                         const float inv1 = (float)(1.0 - std::pow(0.600000024, (double)CTimer::GetTimeStep()));
                         const float inv2 = (float)(1.0 - std::pow(0.800000012, (double)CTimer::GetTimeStep()));
-                        const CVector predicted = s_lastPlayerPos + s_playerPosVel * CTimer::GetTimeStep();
+                        const CVector predicted = gCamPlayerLastPos + gCamPlayerPosVel * CTimer::GetTimeStep();
                         const CVector blended   = predicted * (1.0f - inv1) + playerPos * inv1;
                         target.x                = blended.x;
                         target.y                = blended.y;
                         target.z                = playerPos.z;
 
-                        const CVector delta{ target.x - s_lastPlayerPos.x, target.y - s_lastPlayerPos.y, playerPos.z - s_lastPlayerPos.z };
+                        const CVector delta{ target.x - gCamPlayerLastPos.x, target.y - gCamPlayerLastPos.y, playerPos.z - gCamPlayerLastPos.z };
                         const float   divisor = std::max(1.0f, CTimer::GetTimeStep());
-                        const CVector newVel  = s_playerPosVel * (1.0f - inv2) + (delta * inv2) / divisor;
-                        s_playerPosVel.x      = newVel.x;
-                        s_playerPosVel.y      = newVel.y;
+                        const CVector newVel  = gCamPlayerPosVel * (1.0f - inv2) + (delta * inv2) / divisor;
+                        gCamPlayerPosVel.x    = newVel.x;
+                        gCamPlayerPosVel.y    = newVel.y;
                     }
                 }
                 if (bReset) {
-                    s_playerPosVel.x = 0.0f;
-                    s_playerPosVel.y = 0.0f;
+                    gCamPlayerPosVel.x = 0.0f;
+                    gCamPlayerPosVel.y = 0.0f;
                 }
-                s_playerPosVel.z = 0.0f;
-                s_lastPlayerPos  = target;
+                gCamPlayerPosVel.z = 0.0f;
+                gCamPlayerLastPos  = target;
             } else {
                 target = ent->GetPosition();
             }
@@ -4436,6 +4435,11 @@ void CCam::Process_FollowPedWithMouse(const CVector& target, float orientation, 
 void CCam::Process_FollowPed_SA(const CVector& target, float orientation, float speedVar, float speedVarWanted, bool bFlag) {
     // NOTE: x87 extended precision is emulated with `double` in the expressions that stay in the FPU registers in the original
 
+    // NOTE: The values the original uses (0x858CB8, 0x858CBC, 0x858FE4), the ones from `common.h` are slightly different
+    constexpr float PI      = std::numbers::pi_v<float>;
+    constexpr float TWO_PI  = 2.f * PI;
+    constexpr float HALF_PI = PI / 2.f;
+
     if (!m_pCamTargetEntity->GetIsTypePed()) {
         return;
     }
@@ -4524,8 +4528,8 @@ void CCam::Process_FollowPed_SA(const CVector& target, float orientation, float 
     const bool bResetting = m_bResetStatics || TheCamera.m_bCamDirectlyBehind || TheCamera.m_bCamDirectlyInFront;
     if (bFlag || bResetting) {
         if (bFlag) {
-            gFollowPedLastPlayerPos = ped->GetPosition();
-            gFollowPedPlayerPosVel  = CVector{ 0.0f, 0.0f, 0.0f };
+            gCamPlayerLastPos = ped->GetPosition();
+            gCamPlayerPosVel  = CVector{ 0.0f, 0.0f, 0.0f };
             tgt                     = ped->GetPosition();
             tgt.z += tuning.targetZOffset;
         }
@@ -4598,6 +4602,7 @@ void CCam::Process_FollowPed_SA(const CVector& target, float orientation, float 
         CPad::ClearMouseHistory();
     } else if (auto* const standingOn = ped->m_standingOnEntity) {
         // Moves the previous camera positions along with the train the ped is standing on
+        // NOTE: The velocity is the one of the entity the ped is standing on, even if the train is the one it's attached to
         const auto IsTrain = [](const CEntity* e) { return e->GetIsTypeVehicle() && e->AsVehicle()->m_nVehicleType == VEHICLE_TYPE_TRAIN; };
         if (IsTrain(standingOn) || (standingOn->AsPhysical()->m_pAttachedTo && IsTrain(standingOn->AsPhysical()->m_pAttachedTo))) {
             const auto&  vel = standingOn->AsPhysical()->m_vecMoveSpeed;
@@ -4825,8 +4830,10 @@ void CCam::Process_FollowPed_SA(const CVector& target, float orientation, float 
 
     if (auto* const climb = ped->GetIntelligence()->GetTaskClimb()) {
         climb->GetCameraStickModifier(ped, m_fVerticalAngle, m_fHorizontalAngle, stickUD, stickLR);
-    } else if (auto* const activeTask = ped->GetIntelligence()->GetTaskManager().GetActiveTask(); activeTask && activeTask->GetTaskType() == TASK_COMPLEX_ENTER_CAR_AS_DRIVER) {
-        // 0x63A380 - Adjusts the camera sticks while the ped is entering a car (as the driver)
+    } else if (auto* const activeTask = ped->GetIntelligence()->GetTaskManager().GetActiveTask();
+        (activeTask || !notsa::IsFixBugs()) /* BUG: The original doesn't check `activeTask` for null */ && activeTask->GetTaskType() == TASK_COMPLEX_ENTER_CAR_AS_DRIVER
+    ) {
+        // 0x63A380 - Unreversed `CTaskComplexEnterCar` method (`this + 0xC` is the vehicle), adjusts the camera sticks while the ped is entering a car (as the driver)
         plugin::CallMethod<0x63A380, CTask*, CPed*, float, float*, float*, float*, float*>(activeTask, ped, zoomDist, &m_fVerticalAngle, &m_fHorizontalAngle, &stickUD, &stickLR);
     }
 
@@ -4885,7 +4892,8 @@ void CCam::Process_FollowPed_SA(const CVector& target, float orientation, float 
     float vertDelta;
     if (bMouseCam) {
         // BUG: Uses the horizontal mouse acceleration for the vertical movement as well
-        stickUD = (float)((((double)CPad::NewMouseControllerState.m_AmountMoved.y * (double)2.5f) * ((double)m_fFOV * (double)0.0125f)) * (double)CCamera::m_fMouseAccelHorzntl);
+        const float mouseAccelY = notsa::IsFixBugs() ? CCamera::m_fMouseAccelVertical : CCamera::m_fMouseAccelHorzntl;
+        stickUD = (float)((((double)CPad::NewMouseControllerState.m_AmountMoved.y * (double)2.5f) * ((double)m_fFOV * (double)0.0125f)) * (double)mouseAccelY);
 
         const uint8 fade = CDraw::FadeValue;
         if ((TheCamera.m_bFading && TheCamera.GetFadingDirection() == 1 && fade > 0x2D) || fade > 200) {
@@ -5018,7 +5026,7 @@ void CCam::Process_FollowPed_SA(const CVector& target, float orientation, float 
         return;
     }
 
-    gFollowPedUnkB6FE34 = 0;
+    gCamUnkB6FE34 = 0;
     m_bResetStatics     = false;
 }
 

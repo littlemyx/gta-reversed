@@ -9,7 +9,7 @@ void CRope::InjectHooks() {
 
     RH_ScopedInstall(ReleasePickedUpObject, 0x556030);
     RH_ScopedInstall(CreateHookObjectForRope, 0x556070);
-    RH_ScopedInstall(UpdateWeightInRope, 0x5561B0, { .Reversed = false });
+    RH_ScopedInstall(UpdateWeightInRope, 0x5561B0);
     RH_ScopedInstall(Remove, 0x556780);
     RH_ScopedInstall(Render, 0x556800);
     RH_ScopedInstall(PickUpObject, 0x5569C0);
@@ -86,8 +86,111 @@ void CRope::CreateHookObjectForRope() {
 }
 
 // 0x5561B0
-int8 CRope::UpdateWeightInRope(float a2, float a3, float a4, int32 a5, float* a6) {
-    return plugin::CallMethodAndReturn<int8, 0x5561B0, CRope*, float, float, float, int32, float*>(this, a2, a3, a4, a5, a6);
+// NOTE: `m_fTotalLength` is actually the length of a single segment, and `m_nSegments` is the index of the last "fixed" segment (the one the rest of the rope hangs from)
+bool CRope::UpdateWeightInRope(float x, float y, float z, int32 a5, float* outPos) {
+    const auto anchorIdx = (size_t)m_nSegments;
+    const auto anchor    = m_aSegments[anchorIdx];
+    const auto segLen    = m_fTotalLength; // 0x30C
+    constexpr auto LAST  = NUM_ROPE_SEGMENTS - 1; // 31
+
+    m_aSegments[LAST] = CVector{ x, y, z };
+
+    const float maxReach = (float)(LAST - anchorIdx) * segLen;
+    const CVector delta  = CVector{ x, y, z } - anchor;
+    const float dist     = std::sqrt(delta.x * delta.x + delta.z * delta.z + delta.y * delta.y);
+
+    // Length of the vector from `b` to `a`
+    const auto DistOf = [](const CVector& a, const CVector& b) {
+        const float dx = a.x - b.x, dy = a.y - b.y, dz = a.z - b.z;
+        return std::sqrt(dx * dx + dz * dz + dy * dy);
+    };
+
+    if (!(dist < maxReach)) { // Target is out of reach => stretch the rope straight towards it
+        const float scale = maxReach / dist;
+        outPos[0] = delta.x * scale + anchor.x;
+        outPos[1] = delta.y * scale + anchor.y;
+        outPos[2] = delta.z * scale + anchor.z;
+
+        CVector dir = delta;
+        for (size_t i = anchorIdx + 1; i < NUM_ROPE_SEGMENTS; i++) {
+            dir.Normalise();
+            dir.x *= segLen;
+            dir.y *= segLen;
+            dir.z *= segLen;
+            const float k = (float)(int32)(i - anchorIdx);
+            m_aSegments[i] = CVector{
+                dir.x * k + anchor.x,
+                dir.y * k + anchor.y,
+                dir.z * k + anchor.z
+            };
+        }
+        return true;
+    }
+
+    // Rope has slack => relax the segment lengths a few times
+    for (int32 iter = 0; iter < 6; iter++) {
+        // Backwards: Pull previous segments towards the current one
+        if (anchorIdx + 1 < LAST) {
+            for (auto i = LAST; i > anchorIdx + 1; i--) {
+                auto&       prev = m_aSegments[i - 1];
+                const auto& cur  = m_aSegments[i];
+                if (DistOf(cur, prev) <= segLen) {
+                    break;
+                }
+                const CVector oldPrev = prev;
+                const float   scale   = segLen / DistOf(cur, prev);
+                prev = CVector{
+                    (prev.x - cur.x) * scale + cur.x,
+                    (prev.y - cur.y) * scale + cur.y,
+                    (prev.z - cur.z) * scale + cur.z
+                };
+                const float invTimeStep = 1.f / CTimer::GetTimeStep();
+                m_aSpeed[i - 1] = CVector{
+                    (prev.x - oldPrev.x) * invTimeStep,
+                    (prev.y - oldPrev.y) * invTimeStep,
+                    (prev.z - oldPrev.z) * invTimeStep
+                };
+            }
+        }
+
+        // Forwards: Pull next segments towards the previous one
+        if (anchorIdx + 1 < LAST) {
+            for (auto i = anchorIdx + 1; i < LAST; i++) {
+                const auto& prev = m_aSegments[i - 1];
+                auto&       cur  = m_aSegments[i];
+                const auto  d    = cur - prev;
+                const float len  = std::sqrt(d.x * d.x + d.z * d.z + d.y * d.y);
+                if (len > segLen) {
+                    const float scale = segLen / len;
+                    cur = CVector{
+                        d.x * scale + prev.x,
+                        d.y * scale + prev.y,
+                        d.z * scale + prev.z
+                    };
+                }
+            }
+        }
+    }
+
+    // Final pass: Pull previous segments towards the current one, starting from the end
+    if (anchorIdx + 1 < LAST) {
+        for (auto i = LAST; i > anchorIdx + 1; i--) {
+            auto&       prev = m_aSegments[i - 1];
+            const auto& cur  = m_aSegments[i];
+            const float len  = DistOf(cur, prev);
+            if (len <= segLen) {
+                break;
+            }
+            const float scale = segLen / len;
+            prev = CVector{
+                (prev.x - cur.x) * scale + cur.x,
+                (prev.y - cur.y) * scale + cur.y,
+                (prev.z - cur.z) * scale + cur.z
+            };
+        }
+    }
+
+    return false;
 }
 
 // 0x556780

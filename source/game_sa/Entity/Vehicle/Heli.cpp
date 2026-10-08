@@ -5,6 +5,7 @@
     Do not delete this comment block. Respect others' work!
 */
 #include "StdInc.h"
+#include "WindModifiers.h"
 
 void CHeli::InjectHooks() {
     RH_ScopedVirtualClass(CHeli, 0x871680, 71);
@@ -21,6 +22,8 @@ void CHeli::InjectHooks() {
     RH_ScopedVMTInstall(Fix, 0x6C4530);
     RH_ScopedVMTInstall(BurstTyre, 0x6C4330);
     RH_ScopedVMTInstall(SetUpWheelColModel, 0x6C4320);
+    RH_ScopedVMTInstall(ProcessControlInputs, 0x6C4830);
+    RH_ScopedVMTInstall(ProcessFlyingCarStuff, 0x6C4E60);
 }
 
 // 0x6C4190
@@ -284,7 +287,97 @@ bool CHeli::SetUpWheelColModel(CColModel* wheelCol) {
 
 // 0x6C4830
 void CHeli::ProcessControlInputs(uint8 playerNum) {
-    plugin::CallMethod<0x6C4830, CHeli*, uint8>(this, playerNum);
+    const auto pad = CPad::GetPad(playerNum);
+
+    m_fAccelerationBreakStatus = (float)((int32)pad->GetAccelerate() - (int32)pad->GetBrake()) * (1.0f / 255.0f); // 0x859A3C
+
+    // 0x6C4A4E / 0x6C4952
+    const auto SteerWithPad = [&] {
+        m_nLastControlInput  = eControllerType::KEYBOARD;
+        m_fSteeringUpDown    = (float)(int32)pad->GetSteeringUpDown() * (1.0f / 128.0f);
+        m_fSteeringLeftRight = (float)(-(int32)pad->GetSteeringLeftRight()) * (1.0f / 128.0f);
+    };
+
+    if (!CCamera::m_bUseMouse3rdPerson || !m_bEnableMouseFlying) {
+        SteerWithPad();
+    } else {
+        const auto& mouseMoved = CPad::NewMouseControllerState.m_AmountMoved;
+
+        bool useMouse = false; // 0x6C4993
+        if (mouseMoved.x != 0.0f || mouseMoved.y != 0.0f) {
+            useMouse = true;
+        } else if (   (std::abs(m_fSteeringLeftRight) > 0.0f || std::abs(m_fSteeringUpDown) > 0.0f)
+                   && m_nLastControlInput == eControllerType::MOUSE
+                   && pad->GetSteeringLeftRight() == 0
+                   && pad->GetSteeringUpDown() == 0
+        ) {
+            useMouse = true;
+        }
+
+        if (useMouse) {
+            m_nLastControlInput = eControllerType::MOUSE;
+            if (pad->NewState.m_bVehicleMouseLook == 0) {
+                m_fSteeringLeftRight = (float)((double)m_fSteeringLeftRight - (double)mouseMoved.x * (double)0.0025f); // 0x871674
+                m_fSteeringUpDown    = (float)((double)mouseMoved.y * (double)0.0025f + (double)m_fSteeringUpDown);
+            }
+            if (std::abs(m_fSteeringLeftRight) < 0.5f) {
+                m_fSteeringLeftRight = (float)(std::pow(0.98, (double)CTimer::GetTimeStep()) * (double)m_fSteeringLeftRight); // 0x87167C
+            }
+            if (std::abs(m_fSteeringUpDown) < 0.5f) {
+                m_fSteeringUpDown = (float)(std::pow(0.98, (double)CTimer::GetTimeStep()) * (double)m_fSteeringUpDown);
+            }
+        } else if (pad->GetSteeringLeftRight() != 0 || pad->GetSteeringUpDown() != 0 || m_nLastControlInput != eControllerType::MOUSE) { // 0x6C492E
+            SteerWithPad();
+        } // else: keep the mouse values as they are
+    }
+
+    m_fSteeringUpDown    = std::clamp(m_fSteeringUpDown, -1.0f, 1.0f); // 0x6C4A96
+    m_fSteeringLeftRight = std::clamp(m_fSteeringLeftRight, -1.0f, 1.0f);
+
+    m_fLeftRightSkid = (float)pad->GetLookRight();
+    if (pad->GetLookLeft()) {
+        m_fLeftRightSkid = -1.0f;
+    }
+
+    // 0x6C4B4F - Horn: levels the helicopter out
+    if (pad->GetHorn() && GetUp().z > 0.0f) {
+        m_fLeftRightSkid = 0.0f;
+
+        const auto flying = m_pFlyingHandlingData;
+        const auto& speed = m_vecMoveSpeed;
+
+        auto pitchDir = CrossProduct(CVector{ 0.0f, 0.0f, 1.0f }, GetRight());
+        pitchDir.Normalise();
+        const double pitch = ((double)pitchDir.y * speed.y + (double)pitchDir.z * speed.z + (double)pitchDir.x * speed.x) * (double)flying->m_fPitchStab;
+        m_fSteeringUpDown = (float)std::clamp(pitch, -2.0, 2.0);
+
+        auto rollDir = CrossProduct(GetForward(), CVector{ 0.0f, 0.0f, 1.0f });
+        rollDir.Normalise();
+        const double roll = ((double)rollDir.y * speed.y + (double)rollDir.z * speed.z + (double)rollDir.x * speed.x) * (double)flying->m_fRollStab;
+        m_fSteeringLeftRight = (float)std::clamp(roll, -2.0, 2.0);
+    }
+
+    m_fSteerAngle = 0.0f; // 0x6C4D75
+    m_BrakePedal  = 1.0f;
+    m_GasPedal    = 0.0f;
+    vehicleFlags.bIsHandbrakeOn = false;
+
+    if (pad->DisablePlayerControls) {
+        FindPlayerPed()->KeepAreaAroundPlayerClear();
+
+        const double mag = std::sqrt((double)m_vecMoveSpeed.x * m_vecMoveSpeed.x + (double)m_vecMoveSpeed.y * m_vecMoveSpeed.y + (double)m_vecMoveSpeed.z * m_vecMoveSpeed.z);
+        if (mag > (double)0.28f) { // 0x871254
+            const double scale = (double)0.28f / mag;
+            m_vecMoveSpeed.x = (float)(scale * m_vecMoveSpeed.x);
+            m_vecMoveSpeed.y = (float)(scale * m_vecMoveSpeed.y);
+            m_vecMoveSpeed.z = (float)(scale * m_vecMoveSpeed.z);
+        }
+    }
+
+    if (m_fHealth < 250.0f) { // 0x6C4E1A
+        m_fAccelerationBreakStatus = -0.1f;
+        m_fLeftRightSkid = (float)((double)m_fLeftRightSkid + 0.5);
+    }
 }
 
 // 0x6C4400
@@ -335,7 +428,116 @@ void CHeli::SetupDamageAfterLoad() {
 
 // 0x6C4E60
 void CHeli::ProcessFlyingCarStuff() {
-    plugin::CallMethod<0x6C4E60, CHeli*>(this);
+    const auto isRCHeli = [this] { return m_nModelIndex == MODEL_RCRAIDER || m_nModelIndex == MODEL_RCGOBLIN; };
+
+    const auto status = GetStatus();
+    if (status != STATUS_PLAYER && status != STATUS_REMOTE_CONTROLLED && status != STATUS_PHYSICS) {
+        if (!m_pHandlingData->m_bIsHeli) { // 0x6C4E93
+            return;
+        }
+
+        vehicleFlags.bEngineOn = false;
+
+        // Rotor spins down
+        const double decay = (double)CTimer::GetTimeStep() * (double)0.00055f; // 0x8717B0
+        if (decay < m_fHeliRotorSpeed) {
+            m_nFakePhysics = 0;
+            m_fHeliRotorSpeed = (float)((double)m_fHeliRotorSpeed - decay);
+        } else {
+            m_fHeliRotorSpeed = 0.0f;
+        }
+    } else {
+        // 0x6C4EF8 - Rotor spins up
+        if (m_fHeliRotorSpeed < 0.22f && !physicalFlags.bSubmergedInWater) { // 0x8717AC
+            m_fHeliRotorSpeed += isRCHeli() ? 0.003f : 0.001f; // 0x859CD8, 0x858CDC
+        }
+
+        if (m_fHeliRotorSpeed > 0.15f) { // 0x858FCC
+            const auto isFloatingOnWater = physicalFlags.bTouchingWater && (m_nModelIndex == MODEL_SEASPAR || m_nModelIndex == MODEL_LEVIATHN);
+            if (vehicleFlags.bIsRCVehicle) {
+                FlyingControl(FLIGHT_MODEL_RC, m_fLeftRightSkid, m_fSteeringUpDown, m_fSteeringLeftRight, m_fAccelerationBreakStatus);
+            } else if (   !(m_nNumContactWheels >= 4 || isFloatingOnWater)
+                       || m_fAccelerationBreakStatus > 0.0 // 0x859EF8 (double 0.0)
+                       || std::abs(m_vecMoveSpeed.x) > 0.02f // 0x858B38
+                       || std::abs(m_vecMoveSpeed.y) > 0.02f
+                       || std::abs(m_vecMoveSpeed.z) > 0.02f
+            ) {
+                FlyingControl(FLIGHT_MODEL_HELI, m_fLeftRightSkid, m_fSteeringUpDown, m_fSteeringLeftRight, m_fAccelerationBreakStatus);
+            }
+        }
+
+        // 0x6C501D - Rotor blades
+        if (m_fHeliRotorSpeed > 0.015f && m_aCarNodes[HELI_STATIC_ROTOR]) { // 0x8717A8
+            auto* const rotorFrame = m_aCarNodes[HELI_STATIC_ROTOR];
+            CMatrix rotorMat{ &rotorFrame->modelling, false };
+            // NOTSA: The original also constructs a second, never used, local CMatrix here
+
+            RpAtomic* atomic = nullptr;
+            RwFrameForAllObjects(rotorFrame, GetCurrentAtomicObjectCB, &atomic);
+            if (atomic) {
+                const float radius = RpAtomicGetBoundingSphere(atomic)->radius;
+                if (radius > 0.1f) { // 0x858B1C
+                    float damageMult = 1.0f;
+                    if (isRCHeli()) {
+                        damageMult = 0.9f;
+                    } else if (m_nModelIndex == MODEL_SPARROW || m_nModelIndex == MODEL_SEASPAR) {
+                        damageMult = 0.8f;
+                    } else if (m_nModelIndex == MODEL_HUNTER) {
+                        damageMult = 0.5f;
+                    }
+                    if (GetStatus() == STATUS_PLAYER || GetStatus() == STATUS_REMOTE_CONTROLLED) {
+                        DoBladeCollision(rotorMat.GetPosition(), GetMatrix(), -3, radius, damageMult); // 0x6C5135
+                    }
+                }
+            }
+
+            // 0x6C513A - Wind
+            const auto statusNow = GetStatus();
+            if ((statusNow == STATUS_PLAYER || statusNow == STATUS_PHYSICS) && m_fHeliRotorSpeed > 0.0075f) { // 0x8717A4
+                const double power = (double)m_fHeliRotorSpeed * (double)6.666667f; // 0x866FBC
+                CWindModifiers::RegisterOne(GetPosition(), 1, 1.0 < power ? 1.0f : (float)power);
+            } else if (statusNow == STATUS_SIMPLE) {
+                CWindModifiers::RegisterOne(GetPosition(), 1, 1.0f);
+            }
+        }
+    }
+
+    // 0x6C5200 - Blade sound
+    if (   !isRCHeli()
+        && m_fHeliRotorSpeed < 0.154f // 0x8717A0
+        && m_fHeliRotorSpeed > 0.0044f // 0x87179C
+        && m_aCarNodes[HELI_STATIC_ROTOR]
+    ) {
+        const auto& pos    = GetPosition();
+        const auto& camPos = TheCamera.GetPosition();
+
+        const float  dz  = camPos.z - pos.z;
+        const float  dy  = camPos.y - pos.y;
+        const double dxe = (double)camPos.x - (double)pos.x; // Not rounded to float on the x87 stack
+        const float  dx  = (float)dxe;
+
+        const double distSq = dxe * dx + (double)dy * dy + (double)dz * dz;
+        if (distSq < 400.0 && std::abs((double)m_fPropRotate - (double)m_wheelRotation[1]) > (double)0.5235988f) { // 0x85A700, 0x858F20
+            CMatrix rotorMat{ &m_aCarNodes[HELI_STATIC_ROTOR]->modelling, false };
+            // NOTSA: The original also constructs a second, never used, local CMatrix here
+
+            const auto& right = rotorMat.GetRight();
+            const auto& mat   = GetMatrix();
+            const CVector bladeDir{
+                (float)((double)mat.GetUp().x * right.z + (double)mat.GetForward().x * right.y + (double)mat.GetRight().x * right.x),
+                (float)((double)mat.GetUp().y * right.z + (double)mat.GetRight().y * right.x + (double)mat.GetForward().y * right.y),
+                (float)((double)mat.GetUp().z * right.z + (double)mat.GetRight().z * right.x + (double)mat.GetForward().z * right.y),
+            };
+
+            const double dist    = std::sqrt((double)(float)distSq);
+            const double invDist = 1.0 / (dist < (double)0.01f ? (double)0.01f : dist); // 0x858C58 (clamp: min 0.01)
+            const double dot     = (double)bladeDir.z * (invDist * dz) + (double)bladeDir.y * (invDist * dy) + (double)bladeDir.x * (dx * invDist);
+            if (std::abs(dot) > (double)0.95f) { // 0x858EF0
+                m_vehicleAudio.AddAudioEvent(AE_HELI_BLADE, 0.0f); // 0x6C53CB
+                m_fPropRotate = m_wheelRotation[1];
+            }
+        }
+    }
 }
 
 // 0x6C5420

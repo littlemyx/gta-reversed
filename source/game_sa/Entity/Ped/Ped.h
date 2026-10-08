@@ -332,7 +332,7 @@ public:
     uint32              m_nUnconsciousTimer;
     uint32              m_nLookTime;
     uint32              m_nAttackTimer;
-    int32               m_nDeathTimeMS; //< Death time in MS (CTimer::GetTimeMS())
+    int32               m_nDeathTimeMS; //< Death time in MS (CTimer::GetTimeMS()) - NOTE: Also reused as the counter of the remaining bloody footprints (see `DoFootLanded`)
     char                m_nBodypartToRemove;
     char                field_755;
     int16               m_nMoneyCount; // Used for money pickup when ped is killed

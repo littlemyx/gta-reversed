@@ -32,6 +32,15 @@
 #include "RealTimeShadowManager.h"
 #include "WindModifiers.h"
 #include "Automobile.h"
+#include "Bike.h"
+#include "Object.h"
+#include "Crime.h"
+#include "EventDamage.h"
+#include "PedDamageResponseCalculator.h"
+#include "TaskComplexDestroyCarMelee.h"
+#include "AnimManager.h"
+#include "ModelInfo.h"
+#include "Pad.h"
 #include "CarEnterExit.h"
 #include "PedPlacement.h"
 #include "Pathfind.h"
@@ -88,7 +97,7 @@ void CPed::InjectHooks() {
     RH_ScopedInstall(ClearLookFlag, 0x5E1950);
     RH_ScopedInstall(WorkOutHeadingForMovingFirstPerson, 0x5E1A00);
     RH_ScopedInstall(UpdatePosition, 0x5E1B10);
-    RH_ScopedInstall(MakeTyresMuddySectorList<CPtrListSingleLink<CPhysical*>>, 0x6AE0D0, { .Reversed = false });
+    RH_ScopedInstall(MakeTyresMuddySectorList<CPtrListSingleLink<CPhysical*>>, 0x6AE0D0);
     RH_ScopedInstall(IsPedInControl, 0x5E3960);
     RH_ScopedInstall(RemoveWeaponModel, 0x5E3990);
     RH_ScopedInstall(RemoveWeaponWhenEnteringVehicle, 0x5E6370);
@@ -100,7 +109,7 @@ void CPed::InjectHooks() {
     RH_ScopedOverloadedInstall(GetBonePosition, "Original", 0x5E4280, void(CPed::*)(CVector*, eBoneTag, bool));
     RH_ScopedInstall(PutOnGoggles, 0x5E3AE0);
     RH_ScopedInstall(ReplaceWeaponWhenExitingVehicle, 0x5E6490);
-    RH_ScopedInstall(KillPedWithCar, 0x5F0360, { .Reversed = false });
+    RH_ScopedInstall(KillPedWithCar, 0x5F0360);
     RH_ScopedInstall(IsPedHeadAbovePos, 0x5F02C0);
     RH_ScopedInstall(RemoveWeaponAnims, 0x5F0250);
     RH_ScopedInstall(DoesLOSBulletHitPed, 0x5F01A0);
@@ -4228,7 +4237,341 @@ bool CPed::IsPedHeadAbovePos(float zPos) {
 */
 void CPed::KillPedWithCar(CVehicle* car, float fDamageIntensity, bool bPlayDeadAnimation)
 {
-    ((void(__thiscall *)(CPed*, CVehicle*, float, bool))0x5F0360)(this, car, fDamageIntensity, bPlayDeadAnimation);
+    if (const auto task = GetTaskManager().GetSimplestActiveTask()) {
+        switch (task->GetTaskType()) {
+        case TASK_SIMPLE_FALL:
+        case TASK_SIMPLE_DIE:
+            // Just remember the car (Unless we already have one, that's not a player's car)
+            if (!m_pEntityIgnoredCollision || car->GetStatus() == STATUS_PLAYER) {
+                m_pEntityIgnoredCollision = car;
+            }
+            return;
+        case TASK_SIMPLE_DEAD:
+            return;
+        default:
+            break;
+        }
+    }
+
+    if (m_pContactEntity && m_pContactEntity->GetIsTypeVehicle()) {
+        if (m_pContactEntity->AsVehicle()->m_nVehicleType == VEHICLE_TYPE_BOAT) {
+            return;
+        }
+        if (IsPlayer()) {
+            return;
+        }
+    } else if (m_pVehicle && m_pVehicle == car) {
+        if (car->m_nVehicleType == VEHICLE_TYPE_BOAT) {
+            return;
+        }
+        if (car->m_nVehicleSubType == VEHICLE_TYPE_PLANE) {
+            return;
+        }
+    }
+
+    // Ignore slow cars if we're attacking them
+    if (const auto task = GetTaskManager().Find<CTaskComplexDestroyCarMelee>(); task && task->m_VehToDestroy == car) {
+        if (car->m_vecMoveSpeed.SquaredMagnitude() < 0.0225f) {
+            return;
+        }
+    }
+
+    // Vector from the car to us
+    CVector diff = GetPosition() - car->GetPosition();
+
+    AnimationId animId    = ANIM_ID_NO_ANIMATION_SET;
+    float       animSpeed = 1.0f;
+
+    if (fDamageIntensity <= 12.0f || IsPlayer()) {
+        // Light hit - Knock the ped over
+        if (m_vecLastCollisionImpactVelocity.z >= -0.8f || fDamageIntensity <= 3.0f) {
+            if (fDamageIntensity <= 6.0f) {
+                return;
+            }
+            if (IsPlayer() && fDamageIntensity <= 10.0f) {
+                return;
+            }
+        }
+
+        bIsStanding = false;
+
+        const int32 dir = GetLocalDirection(CVector2D{ -car->m_vecMoveSpeed.x, -car->m_vecMoveSpeed.y });
+
+        float damage = 30.0f;
+        if (IsPlayer() && car->m_nVehicleSubType == VEHICLE_TYPE_TRAIN) {
+            damage = 150.0f;
+        }
+
+        CPedDamageResponseCalculator calculator{ car, damage, WEAPON_RAMMEDBYCAR, PED_PIECE_TORSO, false };
+        CEventDamage                 event{ car, CTimer::GetTimeInMS(), WEAPON_RAMMEDBYCAR, PED_PIECE_TORSO, (uint8)dir, false, bInVehicle };
+
+        animId = (AnimationId)(dir + ANIM_ID_KO_SKID_FRONT); // ANIM_ID_KO_SKID_FRONT, ANIM_ID_KD_LEFT.. etc (Based on the direction)
+
+        if (event.AffectsPed(this)) {
+            calculator.ComputeDamageResponse(this, event.m_damageResponse, true);
+
+            event.m_nAnimGroup = ANIM_GROUP_DEFAULT;
+            event.m_nAnimID    = animId;
+            event.m_fAnimBlend = 8.0f;
+            event.m_fAnimSpeed = 1.0f;
+            if (bPlayDeadAnimation) {
+                CAnimManager::BlendAnimation(GetRpClump(), ANIM_GROUP_DEFAULT, animId, 8.0f)->m_Speed = 1.0f;
+                event.m_bAnimAdded = true;
+            }
+
+            GetEventGroup().Add(&event, false);
+
+            if (!IsPlayer() || m_bHasHitWall || car->m_nVehicleSubType == VEHICLE_TYPE_TRAIN || m_vecLastCollisionImpactVelocity.z < -0.8f) {
+                m_pEntityIgnoredCollision = car;
+            }
+            GetIntelligence()->m_collisionScanner.m_bAlreadyHitByCar = true;
+        }
+        bKnockedUpIntoAir = false;
+
+        if (car->m_nVehicleSubType == VEHICLE_TYPE_TRAIN) {
+            if (m_bHasHitWall) {
+                m_vecMoveSpeed = CVector{};
+            } else {
+                // Remove the part of our speed that is in the direction of the train, and use some of the train's speed
+                CVector dirOfTrain = car->m_vecMoveSpeed;
+                dirOfTrain.Normalise();
+                const float speedInDir = dirOfTrain.y * m_vecMoveSpeed.y + dirOfTrain.z * m_vecMoveSpeed.z + dirOfTrain.x * m_vecMoveSpeed.x;
+                m_vecMoveSpeed -= dirOfTrain * speedInDir;
+                m_vecMoveSpeed += car->m_vecMoveSpeed * 0.3f;
+            }
+        } else if (!m_bHasHitWall) {
+            m_vecMoveSpeed = car->m_vecMoveSpeed * 0.75f;
+        }
+        m_vecMoveSpeed.z = 0.0f;
+
+        if (CLocalisation::KnockDownPeds()) {
+            car->m_vehicleAudio.AddAudioEvent(AE_PED_KNOCK_DOWN, 0.0f);
+        }
+        Say(CTX_GLOBAL_PAIN_LOW, 0, 1.0f, false, false, false);
+    } else {
+        // Heavy hit
+        enum eHitType : uint8 {
+            HIT_NONE = 0,
+            HIT_HOOD = 1,
+            HIT_PUSHED_AWAY = 2,
+            HIT_SIDE_LEFT = 3,
+            HIT_SIDE_RIGHT = 4,
+        };
+
+        const uint8 rnd = CGeneral::GetRandomNumber() & 3;
+        auto        hitType = HIT_NONE;
+        auto        weapon  = WEAPON_RAMMEDBYCAR;
+
+        if (car == FindPlayerVehicle()) {
+            // Rumble the pad
+            const float invMass = 1.0f / car->m_fMass;
+            const float shake   = std::min(car->m_vecMoveSpeed.Magnitude() * invMass * 200000.0f + 80.0f, 250.0f);
+            const uint8 freq    = (uint8)(int32)shake;
+            CPad::GetPad(0)->StartShake((int16)(40000 / freq), freq, 0);
+        }
+
+        bIsStanding = false;
+
+        int32 dir = GetLocalDirection(CVector2D{ -car->m_vecMoveSpeed.x, -car->m_vecMoveSpeed.y });
+
+        const auto* const carMat = &car->GetMatrix();
+        const float sideDot = diff.z * carMat->GetRight().z + diff.y * carMat->GetRight().y + diff.x * carMat->GetRight().x;
+        const float upDot   = diff.z * carMat->GetUp().z    + diff.y * carMat->GetUp().y    + diff.x * carMat->GetUp().x;
+
+        bool isOverTheHood = false;
+        bool pushAway      = false;
+
+        if (car->m_nVehicleSubType == VEHICLE_TYPE_TRAIN) {
+            hitType  = HIT_PUSHED_AWAY;
+            pushAway = true;
+        } else if (DotProduct(car->m_vecMoveSpeed, carMat->GetForward()) >= 0.0f) {
+            if (car->GetColModel()->m_boundBox.m_vecMax.x * 0.99f < std::abs(sideDot)) {
+                // Hit by the side of the car
+                hitType = sideDot > 0.0f ? HIT_SIDE_RIGHT : HIT_SIDE_LEFT;
+
+                const float fwdDot = diff.z * carMat->GetForward().z + diff.y * carMat->GetForward().y + diff.x * carMat->GetForward().x;
+                if (std::abs(fwdDot) < car->GetColModel()->m_boundBox.m_vecMax.y * 0.85f) {
+                    pushAway = true;
+                }
+            } else if ((rnd != 0 && (upDot <= 0.1f || rnd < 2)) || car->m_pHandlingData->m_bIsBig) {
+                hitType  = HIT_PUSHED_AWAY;
+                pushAway = true;
+            } else {
+                hitType       = HIT_HOOD;
+                isOverTheHood = true;
+            }
+        }
+
+        if (pushAway) {
+            weapon         = WEAPON_RUNOVERBYCAR;
+            m_vecMoveSpeed = car->m_vecMoveSpeed * 0.9f;
+            m_vecMoveSpeed.z = 0.0f;
+            if (dir == 1 || dir == 3) {
+                dir = 2;
+            }
+        }
+
+        if (isOverTheHood) {
+            // Get thrown over the hood
+            const auto& box  = car->GetColModel()->m_boundBox;
+            const float maxY = box.m_vecMax.y;
+            const float minY = box.m_vecMin.y;
+            const float maxZ = box.m_vecMax.z;
+
+            float length;  // [fStack_cc] "Length" of the car part we're going over
+            float targetZ; // [fStack_b8]
+            if (carMat->GetForward().z < -0.2f) { // Car is looking down
+                const CVector top = car->GetPosition() + carMat->GetUp() * maxZ + carMat->GetForward() * minY;
+                targetZ = top.z;
+                length  = maxY - minY;
+            } else if (carMat->GetForward().z <= 0.1f) { // Car is level
+                const CVector top = car->GetPosition() + carMat->GetUp() * maxZ;
+                targetZ = top.z;
+                length  = car->GetColModel()->m_boundBox.m_vecMax.y;
+            } else { // Car is looking up
+                const CVector top = car->GetPosition() + carMat->GetUp() * maxZ + carMat->GetForward() * maxY;
+                targetZ = top.z;
+                length  = maxY;
+                if (targetZ - GetPosition().z > 0.0f) {
+                    // Lift ourselves up a bit
+                    GetMatrix().GetPosition().z += (targetZ - GetPosition().z) * 0.5f;
+                    targetZ = (targetZ - GetPosition().z) * 0.25f + targetZ;
+                }
+            }
+
+            const float carSpeed = car->m_vecMoveSpeed.Magnitude();
+            const float time     = length / carSpeed; // Time it takes the car to go over
+            const float zSpeed   = (targetZ - GetPosition().z) / time;
+            const float randMult = (float)(((double)(CGeneral::GetRandomNumber() & 0xFF) * 0.002 + 1.5) * (double)zSpeed);
+
+            CVector newVel = car->m_vecMoveSpeed;
+            newVel.Normalise();
+            newVel *= randMult * 0.2f;
+            newVel.z += randMult;
+            m_vecMoveSpeed = newVel;
+
+            // Turn the direction around (We're being thrown)
+            dir += 2;
+            if (dir > 3) {
+                dir -= 4;
+            }
+
+            // Knock the bonnet off
+            if (car->m_nVehicleType == VEHICLE_TYPE_AUTOMOBILE) {
+                if (const auto bonnet = car->AsAutomobile()->RemoveBonnetInPedCollision()) {
+                    const auto& m = car->GetMatrix();
+                    if (CGeneral::GetRandomNumber() & 1) {
+                        bonnet->m_vecMoveSpeed = (m_vecMoveSpeed + m.GetRight() * 0.1f) + m.GetUp() * 0.5f;
+                    } else {
+                        bonnet->m_vecMoveSpeed = (m_vecMoveSpeed - m.GetRight() * 0.1f) + m.GetUp() * 0.5f;
+                    }
+                    bonnet->ApplyTurnForce(m.GetUp() * 10.0f, m.GetForward());
+                }
+            }
+
+            diff = GetPosition() - car->GetPosition();
+
+            if (CLocalisation::KnockDownPeds()) {
+                car->m_vehicleAudio.AddAudioEvent(AE_PED_BOUNCE, 0.0f);
+            }
+        } else {
+            if (CLocalisation::KnockDownPeds()) {
+                car->m_vehicleAudio.AddAudioEvent(AE_PED_CRUNCH, 0.0f);
+            }
+        }
+
+        if (car->m_pDriver) {
+            CCrime::ReportCrime(m_nPedType == PED_TYPE_COP ? CRIME_KILL_COP_PED_WITH_CAR : CRIME_KILL_PED_WITH_CAR, this, car->m_pDriver);
+        }
+
+        CPedDamageResponseCalculator calculator{ car, 1000.0f, weapon, PED_PIECE_TORSO, false };
+        CEventDamage                 event{ car, CTimer::GetTimeInMS(), weapon, PED_PIECE_TORSO, (uint8)dir, false, bInVehicle };
+
+        const uint8 rnd2 = CGeneral::GetRandomNumber() & 3;
+        switch (dir) {
+        case 0:
+            if (hitType == HIT_SIDE_LEFT) {
+                animId = rnd2 < 2 ? ANIM_ID_KO_SKID_FRONT : ANIM_ID_KO_SPIN_R;
+            } else if (hitType == HIT_SIDE_RIGHT && rnd2 >= 2) {
+                animId = ANIM_ID_KO_SPIN_L;
+            } else {
+                animId = ANIM_ID_KO_SKID_FRONT;
+            }
+            break;
+        case 1:
+            animId = ANIM_ID_KD_LEFT;
+            break;
+        case 2:
+            if (hitType == HIT_SIDE_LEFT && rnd2 >= 2) {
+                animId = ANIM_ID_KD_LEFT;
+            } else if (hitType == HIT_SIDE_RIGHT && rnd2 >= 2) {
+                animId = ANIM_ID_KD_RIGHT;
+            } else {
+                animId = ANIM_ID_KO_SKID_BACK;
+            }
+            break;
+        case 3:
+            animId = ANIM_ID_KD_RIGHT;
+            break;
+        }
+
+        if (!event.AffectsPed(this)) {
+            bKnockedUpIntoAir = false;
+        } else {
+            float animBlend;
+            if (weapon == WEAPON_RAMMEDBYCAR) {
+                animBlend = car->m_vecMoveSpeed.Magnitude() * 8.0f + 4.0f;
+            } else {
+                animBlend = car->m_vecMoveSpeed.Magnitude() * 12.0f + 4.0f;
+                animSpeed = (float)((double)car->m_vecMoveSpeed.Magnitude() * 16.0 + 1.0);
+            }
+
+            calculator.ComputeDamageResponse(this, event.m_damageResponse, true);
+
+            event.m_nAnimGroup = ANIM_GROUP_DEFAULT;
+            event.m_nAnimID    = animId;
+            event.m_fAnimBlend = animBlend;
+            event.m_fAnimSpeed = animSpeed;
+            if (bPlayDeadAnimation) {
+                CAnimManager::BlendAnimation(GetRpClump(), ANIM_GROUP_DEFAULT, animId, animBlend)->m_Speed = animSpeed;
+                event.m_bAnimAdded = true;
+            }
+
+            GetEventGroup().Add(&event, false);
+
+            if (!m_pEntityIgnoredCollision) {
+                m_pEntityIgnoredCollision = car;
+            }
+            bKnockedUpIntoAir = hitType == HIT_HOOD;
+            GetIntelligence()->m_collisionScanner.m_bAlreadyHitByCar = true;
+        }
+
+        Say(CTX_GLOBAL_PAIN_DEATH_HIGH, 0, 1.0f, false, false, false);
+    }
+
+    // Apply a force to the car (We're hitting it)
+    const auto& carUp = car->GetMatrix().GetUp();
+    const float upComp = diff.y * carUp.y + diff.z * carUp.z + diff.x * carUp.x;
+    diff -= carUp * upComp;
+
+    CVector dirToPed = diff;
+    dirToPed.Normalise();
+
+    const float speedInDir = dirToPed.y * car->m_vecMoveSpeed.y + dirToPed.z * car->m_vecMoveSpeed.z + dirToPed.x * car->m_vecMoveSpeed.x;
+    if (!bKnockedUpIntoAir) {
+        dirToPed.z -= 0.2f;
+    }
+
+    const float mult = car->m_nVehicleType == VEHICLE_TYPE_BIKE ? -0.75f : -0.5f;
+    const CVector point = diff * 0.25f;
+
+    const float massMult = std::min(1.0f, car->m_fMass / 1600.0f);
+    const float totalForce = std::min(car->m_fMass, 1600.0f) * massMult * (speedInDir * mult);
+    car->ApplyForce(
+        CVector{ dirToPed.x * totalForce, dirToPed.y * totalForce, dirToPed.z * totalForce },
+        point,
+        true
+    );
 }
 
 /*!
@@ -4237,7 +4580,114 @@ void CPed::KillPedWithCar(CVehicle* car, float fDamageIntensity, bool bPlayDeadA
 template<typename PtrListType>
 void CPed::MakeTyresMuddySectorList(PtrListType& ptrList)
 {
-    ((void(__thiscall *)(CPed*, PtrListType&))0x6AE0D0)(this, ptrList);
+    // NOTE: The original code doesn't reset these between iterations (they are only updated for cars and bikes),
+    // meaning that a vehicle of another type (heli, boat, etc) will re-process the last car/bike.
+    CAutomobile* car{};
+    CBike*       bike{};
+
+    for (auto* const entity : ptrList) {
+        auto* const veh = entity->AsVehicle();
+        if (veh->IsScanCodeCurrent()) {
+            continue;
+        }
+        veh->SetCurrentScanCode();
+
+        // Only process vehicles close enough to us
+        const auto& pedPos = GetPosition();
+        const auto& vehPos = veh->GetPosition();
+        if (!(std::abs(pedPos.x - vehPos.x) < 10.0f)) {
+            continue;
+        }
+        if (!(std::abs(pedPos.y - vehPos.y) < 10.0f)) {
+            continue;
+        }
+
+        if (veh->m_nVehicleType == VEHICLE_TYPE_AUTOMOBILE) {
+            car  = veh->AsAutomobile();
+            bike = nullptr;
+        } else if (veh->m_nVehicleType == VEHICLE_TYPE_BIKE) {
+            car  = nullptr;
+            bike = veh->AsBike();
+        }
+
+        // Skip slow vehicles
+        if (veh->m_vecMoveSpeed.x * veh->m_vecMoveSpeed.x + veh->m_vecMoveSpeed.y * veh->m_vecMoveSpeed.y <= 0.05f) {
+            continue;
+        }
+
+        if (car) {
+            const auto& box = CModelInfo::GetModelInfo(car->m_nModelIndex)->GetColModel()->m_boundBox;
+            for (size_t i = 0; i < 4; i++) {
+                if (car->m_wheelSkidmarkBloodState[i] || !(car->m_fWheelsSuspensionCompression[i] < 1.0f)) {
+                    continue;
+                }
+
+                // Offset of the wheel (in the car's space)
+                CVector wheelOffset{};
+                switch (i) {
+                case 0: wheelOffset = CVector{ -box.m_vecMax.x, box.m_vecMax.y, 0.0f }; break;
+                case 1: wheelOffset = CVector{ -box.m_vecMax.x, box.m_vecMin.y, 0.0f }; break;
+                case 2: wheelOffset = CVector{  box.m_vecMax.x, box.m_vecMax.y, 0.0f }; break;
+                case 3: wheelOffset = CVector{  box.m_vecMax.x, box.m_vecMin.y, 0.0f }; break;
+                }
+                const auto wheelPos = car->GetMatrix().TransformPoint(wheelOffset);
+
+                if (!(std::abs(wheelPos.z - pedPos.z) < 2.0f)) {
+                    continue;
+                }
+                if (!((wheelPos.y - pedPos.y) * (wheelPos.y - pedPos.y) + (wheelPos.x - pedPos.x) * (wheelPos.x - pedPos.x) < 1.0f)) {
+                    continue;
+                }
+
+                if (CLocalisation::Blood()) {
+                    car->m_wheelSkidmarkBloodState[i] = true;
+                    car->m_vehicleAudio.AddAudioEvent(AE_PED_DRIVE_OVER, 0.0f);
+                }
+
+                if (car->m_fMass > 500.0f) {
+                    car->ApplyMoveForce(0.0f, 0.0f, std::min(m_fMass * 0.001f, 1.0f) * 50.0f);
+                    car->ApplyTurnForce(
+                        CVector{ 0.0f, 0.0f, std::min(m_fTurnMass * 0.0005f, 1.0f) * 50.0f },
+                        wheelPos - car->GetPosition()
+                    );
+                    if (car == FindPlayerVehicle()) {
+                        CPad::GetPad(0)->StartShake(300, 70, 0);
+                    }
+                }
+            }
+        } else if (bike) {
+            const auto& box = CModelInfo::GetModelInfo(bike->m_nModelIndex)->GetColModel()->m_boundBox;
+            for (size_t i = 0; i < 2; i++) {
+                // NOTE: Each wheel has 2 suspension lines
+                if (bike->m_bWheelBloody[i] || !(bike->m_aWheelRatios[i * 2] < 1.0f)) {
+                    continue;
+                }
+
+                const auto wheelOffset = CVector{ 0.0f, (i == 0 ? box.m_vecMax.y : box.m_vecMin.y) * 0.8f, 0.0f };
+                const auto wheelPos    = bike->GetMatrix().TransformPoint(wheelOffset);
+
+                if (!(std::abs(wheelPos.z - pedPos.z) < 2.0f)) {
+                    continue;
+                }
+                if (!((wheelPos.y - pedPos.y) * (wheelPos.y - pedPos.y) + (wheelPos.x - pedPos.x) * (wheelPos.x - pedPos.x) < 1.0f)) {
+                    continue;
+                }
+
+                if (CLocalisation::Blood()) {
+                    bike->m_bWheelBloody[i] = true;
+                    bike->m_vehicleAudio.AddAudioEvent(AE_PED_DRIVE_OVER, 0.0f);
+                }
+
+                if (bike->m_fMass > 10.0f) {
+                    bike->ApplyMoveForce(0.0f, 0.0f, 10.0f);
+                    bike->ApplyTurnForce(CVector{ 0.0f, 0.0f, 10.0f }, wheelPos - bike->GetPosition());
+                    if (bike == FindPlayerVehicle()) {
+                        CPad::GetPad(0)->StartShake(300, 70, 0);
+                    }
+                }
+            }
+        }
+    }
 }
 
 /*!

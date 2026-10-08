@@ -31,12 +31,14 @@
 #include "Entity/Ped/CopPed.h"
 #include "PlayerPedData.h"
 #include "Messages.h"
+#include "Hud.h"
 #include "Text/Text.h"
 
 auto& gbFirstPersonRunThisFrame = StaticRef<bool>(0xB6EC20);
 auto& gLastFrameProcessedDWCineyCam = StaticRef<uint32>(0x8CCB9C);
 
 // Indexed by the DW cinematic cam id (20..28), see `IsTimeToExitThisDWCineyCamMode`
+// NOTE: Only the indices 20..28 are used (= 0xB6EC70..0xB6EC78), the first 20 bytes overlap other (unrelated) variables, eg. `gArrestCamOneCop` (0xB6EC5C)
 static inline auto& gbExitCam = StaticRef<std::array<bool, 29>>(0xB6EC5C);
 static inline auto& gDWCineyCamMinDist = StaticRef<std::array<float, 9>>(0x8CCBCC);
 static inline auto& gDWCineyCamMaxDist = StaticRef<std::array<float, 9>>(0x8CCBF0);
@@ -338,6 +340,7 @@ void CCam::InjectHooks() {
     RH_ScopedInstall(Using3rdPersonMouseCam, 0x50A850);
     RH_ScopedInstall(Process, 0x526FC0);
     RH_ScopedInstall(ProcessArrestCamOne, 0x518500);
+    RH_ScopedInstall(ArrestCamLookAtCopHead, 0x512EF0);
     RH_ScopedInstall(ProcessPedsDeadBaby, 0x519250);
     RH_ScopedInstall(Process_1rstPersonPedOnPC, 0x50EB70);
     RH_ScopedInstall(Process_1stPerson, 0x517EA0);
@@ -1415,7 +1418,6 @@ namespace {
 auto& gArrestCamOneMode      = StaticRef<int32>(0xB6EC58);    // 0 = none yet, 1 = from the cop's head, 2 = beside the cop, 3..7 = free cams (see `ProcessArrestCamOne`), 8 = from a lamp post
 auto& gArrestCamOneCop       = StaticRef<CEntity*>(0xB6EC5C); // The cop the cam is set up at (registered reference)
 auto& gArrestCamOneStartTime = StaticRef<float>(0xB6EC60);    // `CTimer::m_snTimeInMilliseconds` when the "from the cop's head" mode was started
-auto& gbBustedMessageDisabled = StaticRef<bool>(0xBAADC0);    // NOTE: name made up (probably a wrong guess), the "BUSTED" message is only shown if it's not set
 
 // Function local statics (with their init flags) of 0x512EF0 (names made up)
 auto& gArrestCamHeadOffset    = StaticRef<CVector>(0xB70004); // Offset applied to the camera's position, (0, 0, -0.5)
@@ -1426,10 +1428,12 @@ auto& gArrestCamHeadTimeShift = StaticRef<float>(0xB70024);   // Subtracted from
 
 constexpr float RAND_RECIPROCAL = 3.05185094e-05f; // 0x858C7C, ~ 1/RAND_MAX
 
-// 0x512EF0 - A `CCam` method in the original (`thiscall`, `this` in ECX, `ret 8`), so it can't be hooked (register argument).
+} // namespace
+
+// 0x512EF0
 // Puts the camera at the arrested player and makes it look at the head of the arresting cop (`cop`).
 // If `checkLineOfSight` is set it also might randomly fail, and fails if the cop's head isn't visible.
-bool ArrestCamLookAtCopHead(CCam& cam, CPed* cop, bool checkLineOfSight) {
+bool CCam::ArrestCamLookAtCopHead(CPed* cop, bool checkLineOfSight) {
     if (checkLineOfSight) {
         const double rnd = (double)CGeneral::GetRandomNumber() * (double)RAND_RECIPROCAL;
         if (rnd > (double)0.65f) {
@@ -1471,9 +1475,9 @@ bool ArrestCamLookAtCopHead(CCam& cam, CPed* cop, bool checkLineOfSight) {
         gArrestCamHeadOffset = CVector{ 0.0f, 0.0f, -0.5f };
     }
 
-    const CVector oldSource = cam.m_vecSource;
-    cam.m_vecSource         = target->GetPosition();
-    cam.m_fFOV              = 100.0f;
+    const CVector oldSource = m_vecSource;
+    m_vecSource             = target->GetPosition();
+    m_fFOV                  = 100.0f;
 
     // Position of the head bone (Not using `CPed::GetBonePosition` as that one doesn't read the matrix directly)
     auto* const    hierarchy = GetAnimHierarchyFromSkinClump(cop->GetRpClump());
@@ -1486,34 +1490,36 @@ bool ArrestCamLookAtCopHead(CCam& cam, CPed* cop, bool checkLineOfSight) {
         (float)(((double)headPos.z + (double)-0.06f) - 0.5 * (double)t)
     };
 
-    cam.m_vecSource.x += gArrestCamHeadOffset.x;
-    cam.m_vecSource.y += gArrestCamHeadOffset.y;
-    cam.m_vecSource.z += gArrestCamHeadOffset.z;
+    m_vecSource.x += gArrestCamHeadOffset.x;
+    m_vecSource.y += gArrestCamHeadOffset.y;
+    m_vecSource.z += gArrestCamHeadOffset.z;
 
-    cam.m_vecFront = CVector{
-        lookAt.x - cam.m_vecSource.x,
-        lookAt.y - cam.m_vecSource.y,
-        lookAt.z - cam.m_vecSource.z
+    m_vecFront = CVector{
+        lookAt.x - m_vecSource.x,
+        lookAt.y - m_vecSource.y,
+        lookAt.z - m_vecSource.z
     };
-    cam.m_vecFront.Normalise();
+    m_vecFront.Normalise();
 
-    cam.m_vecUp = CVector{ 0.0f, 0.0f, 1.0f };
-    auto right  = CrossProduct(cam.m_vecFront, cam.m_vecUp);
+    m_vecUp    = CVector{ 0.0f, 0.0f, 1.0f };
+    auto right = CrossProduct(m_vecFront, m_vecUp);
     right.Normalise();
-    cam.m_vecUp = CrossProduct(right, cam.m_vecFront);
+    m_vecUp = CrossProduct(right, m_vecFront);
 
     if (checkLineOfSight) {
-        if (!CWorld::GetIsLineOfSightClear(cam.m_vecSource, lookAt, true, true, false, true, false, false, true)) {
+        if (!CWorld::GetIsLineOfSightClear(m_vecSource, lookAt, true, true, false, true, false, false, true)) {
             return false;
         }
-        if (!CWorld::GetIsLineOfSightClear(cam.m_vecSource, lookAt, true, false, false, true, false, false, false)) {
-            cam.m_vecSource = oldSource;
+        if (!CWorld::GetIsLineOfSightClear(m_vecSource, lookAt, true, false, false, true, false, false, false)) {
+            m_vecSource = oldSource;
         }
     }
 
     target->SetIsVisible(false);
     return true;
 }
+
+namespace {
 
 // 0x515D80 - A `CCam` method in the original (`thiscall`, `ret 10h`), but it never uses `this`, so it's the same as a `stdcall`.
 // Finds a position for the camera beside the cop (`cop`), looking at `targetPos` (at least 8 units away from it).
@@ -1656,7 +1662,7 @@ bool CCam::ProcessArrestCamOne() {
     };
     const auto FindArrestingCop = [] {
         auto* const player = FindPlayerPed();
-        return player && player->m_pPlayerData->m_pArrestingCop ? player->m_pPlayerData->m_pArrestingCop : nullptr;
+        return player && player->GetPlayerData()->m_pArrestingCop ? player->GetPlayerData()->m_pArrestingCop : nullptr;
     };
     // Finishes the camera: sets the front and up vectors, looking from the source to the target
     const auto SetupVectors = [&] {
@@ -1702,7 +1708,7 @@ bool CCam::ProcessArrestCamOne() {
             modes = isLucky ? std::array<int32, 6>{ 2, 8, 3, 2, -1, -1 } : std::array<int32, 6>{ 8, 3, 2, -1, -1, -1 };
         }
 
-        if (!gbBustedMessageDisabled) {
+        if (!CHud::m_BigMessage[STYLE_WHITE_MIDDLE][0]) { // 0xBAADC0, the "BUSTED" message is only added if there's no big message of this style yet
             CMessages::AddBigMessage(TheText.Get("BUSTED"), 5000, STYLE_WHITE_MIDDLE);
         }
 
@@ -1712,7 +1718,7 @@ bool CCam::ProcessArrestCamOne() {
             switch (modes[i]) {
             case 1: { // Looking from the cop's head
                 gArrestCamOneStartTime = (float)(double)CTimer::GetTimeInMS();
-                if (ArrestCamLookAtCopHead(*this, cop, true)) {
+                if (ArrestCamLookAtCopHead(cop, true)) {
                     TheCamera.m_pTargetEntity->SetIsVisible(false);
                     gArrestCamOneMode = 1;
                     m_bResetStatics   = false;
@@ -1787,7 +1793,7 @@ bool CCam::ProcessArrestCamOne() {
 
     if (gArrestCamOneMode == 1) {
         TheCamera.m_pTargetEntity->SetIsVisible(false);
-        return ArrestCamLookAtCopHead(*this, FindArrestingCop(), false);
+        return ArrestCamLookAtCopHead(FindArrestingCop(), false);
     }
 
     {

@@ -160,6 +160,7 @@ public:
 
     void Process();
     bool ProcessArrestCamOne();
+    bool ArrestCamLookAtCopHead(CPed* cop, bool checkLineOfSight);
     void ProcessPedsDeadBaby();
     void Process_1rstPersonPedOnPC(const CVector&, float, float, float);
     void Process_1stPerson(const CVector&, float, float, float);

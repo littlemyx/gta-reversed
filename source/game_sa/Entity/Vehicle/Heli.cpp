@@ -424,10 +424,10 @@ void CHeli::ProcessControlInputs(uint8 playerNum) {
                 m_fSteeringUpDown    = (float)((double)mouseMoved.y * (double)0.0025f + (double)m_fSteeringUpDown);
             }
             if (std::abs(m_fSteeringLeftRight) < 0.5f) {
-                m_fSteeringLeftRight = (float)(std::pow(0.98, (double)CTimer::GetTimeStep()) * (double)m_fSteeringLeftRight); // 0x87167C
+                m_fSteeringLeftRight = (float)(std::pow((double)0.98f, (double)CTimer::GetTimeStep()) * (double)m_fSteeringLeftRight); // 0x87167C
             }
             if (std::abs(m_fSteeringUpDown) < 0.5f) {
-                m_fSteeringUpDown = (float)(std::pow(0.98, (double)CTimer::GetTimeStep()) * (double)m_fSteeringUpDown);
+                m_fSteeringUpDown = (float)(std::pow((double)0.98f, (double)CTimer::GetTimeStep()) * (double)m_fSteeringUpDown);
             }
         } else if (pad->GetSteeringLeftRight() != 0 || pad->GetSteeringUpDown() != 0 || m_nLastControlInput != eControllerType::MOUSE) { // 0x6C492E
             SteerWithPad();
@@ -573,7 +573,6 @@ void CHeli::ProcessFlyingCarStuff() {
         if (m_fHeliRotorSpeed > 0.015f && m_aCarNodes[HELI_STATIC_ROTOR]) { // 0x8717A8
             auto* const rotorFrame = m_aCarNodes[HELI_STATIC_ROTOR];
             CMatrix rotorMat{ &rotorFrame->modelling, false };
-            // NOTSA: The original also constructs a second, never used, local CMatrix here
 
             RpAtomic* atomic = nullptr;
             RwFrameForAllObjects(rotorFrame, GetCurrentAtomicObjectCB, &atomic);
@@ -684,7 +683,7 @@ void CHeli::PreRender() {
 
             const double curZ = m_wheelPosition[i];
             if (!(wheelZ > curZ)) {
-                if (!physicalFlags.bAddMovingCollisionSpeed || !handlingFlags.bLowRider) {
+                if (!physicalFlags.bAddMovingCollisionSpeed || !handlingFlags.bHydraulicInst) {
                     wheelZ = (wheelZ - curZ) * (double)0.75f + curZ; // 0x858F34
                 }
             }
@@ -888,7 +887,7 @@ void CHeli::ProcessControl() {
 
             // 0x6C74B7 - Police heli shooting at the target
             if (shootAtTarget) {
-                int32 interval;
+                int32 interval = 0;
                 switch ((uint32)FindPlayerPed()->GetPlayerWanted()->m_WantedLevel) { // 0x6C74E5
                 case 0:
                 case 1:
@@ -897,7 +896,7 @@ void CHeli::ProcessControl() {
                 case 4: interval = 5000; break;
                 case 5: interval = 3500; break;
                 case 6: interval = 2000; break;
-                default: interval = std::bit_cast<int32>(dxToTarget); break; // NOTSA: The original uses a leftover stack value here (can't happen, max wanted level is 6)
+                default: NOTSA_UNREACHABLE("Invalid wanted level"); // The original reads a leftover stack value here (can't happen, max wanted level is 6)
                 }
 
                 if (FindPlayerPed()->GetPlayerWanted()->m_WantedLevel != eWantedLevel::WANTED_CLEAN) {

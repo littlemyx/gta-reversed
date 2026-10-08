@@ -74,13 +74,7 @@ public:
     char         field_9B8;
     int8         m_nNumSwatOccupants;
     std::array<uint8, 4> m_aSwatState;
-    union {
-        std::array<float, 6> m_aSearchLightHistoryX; // 0x9C0 - Predicted search light target positions (one per second, newest first)
-        struct {
-            float        _padHistoryX[5];
-            FxSystem_c** m_pParticlesList; // NOTSA: Bogus - this overlaps `m_aSearchLightHistoryX[5]`, only kept because Vehicle.cpp uses it (should probably be `m_ppGunflashFx`)
-        };
-    };
+    std::array<float, 6> m_aSearchLightHistoryX; // 0x9C0 - Predicted search light target positions (one per second, newest first)
     std::array<float, 6> m_aSearchLightHistoryY; // 0x9D8
     uint32       m_nSearchLightTimer;
     CVector      m_vecSearchLightTarget;

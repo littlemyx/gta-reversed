@@ -273,9 +273,159 @@ static float WrapAngleToPi(float a) {
 }
 static void LimitAngleToPi(float& a) { a = WrapAngleToPi(a); }
 
-// 0x514030 - `CCamera::AvoidTheGeometry` (declared in Camera.h, but not defined there at the time of writing)
-static void AvoidTheGeometry(const CVector& src, const CVector& dst, CVector& out, float fov) {
-    plugin::CallMethod<0x514030, CCamera*, const CVector*, const CVector*, CVector*, float>(&TheCamera, &src, &dst, &out, fov);
+void WellBufferMe(float target, float& valueToChange, float& speedSoFar, float topSpeed, float speedStep, bool isAnAngle); // Defined below
+
+//! Names made up: `AvoidTheGeometry` smooths the strength of the push-away vector with these (see `WellBufferMe`)
+static inline auto& gAvoidGeometryStrength      = StaticRef<float>(0xB6EC38);
+static inline auto& gAvoidGeometrySpeed         = StaticRef<float>(0xB6EC3C);
+static inline auto& gbAvoidGeometryDoSecondLOS  = StaticRef<bool>(0xB6EC65); // NOTSA name
+
+// 0x514030 - Defined here (and not in Camera.cpp), as it's only used by the cams
+void CCamera::AvoidTheGeometry(const CVector* src, const CVector* dst, CVector* out, float FOV) {
+    // Camera -> target. NOTE: x87 extended precision is kept by the original for `dx` (only its stored copy is rounded)
+    const double dx   = (double)dst->x - (double)src->x;
+    const float  dxf  = (float)dx;
+    const float  dy   = dst->y - src->y;
+    const float  dz   = dst->z - src->z;
+    CVector      dir{};
+    m_vecClearGeometryVec = CVector{};
+    const float len3D = (float)std::sqrt(((double)dz * dz + dx * dx) + (double)dy * dy);
+    const float len2D = (float)std::sqrt(dx * dx + (double)dy * dy);
+
+    // Direction (heading, pitch) of the camera
+    const float heading = (dx == 0.0 && dy == 0.f)
+        ? CGeneral::GetATanOfXY(m_mCameraMatrix.GetForward().x, m_mCameraMatrix.GetForward().y)
+        : CGeneral::GetATanOfXY(dxf, dy);
+    const float pitch = (len2D == 0.f && dz == 0.f)
+        ? 0.f
+        : CGeneral::GetATanOfXY(len2D, dz);
+    dir.x = (float)(std::cos((double)heading) * std::cos((double)pitch));
+    dir.y = (float)(std::sin((double)heading) * std::cos((double)pitch));
+    dir.z = (float)std::sin((double)pitch);
+
+    // Move the camera `len3D` away from the target, along `dir`
+    {
+        const double ex  = (double)dir.x * len3D;
+        const double ey  = (double)dir.y * len3D;
+        const float  ez  = (float)((double)dir.z * len3D);
+        out->x = (float)((double)dst->x - ex);
+        out->y = (float)((double)dst->y - ey);
+        out->z = (float)((double)dst->z - (double)ez);
+    }
+    dir.Normalise();
+
+    const auto GetNearClip = [] { return RwCameraGetNearClipPlane(Scene.m_pRwCamera); };
+    const auto Dist = [](const CVector& a, const CVector& b) { // (x^2 + z^2) + y^2
+        const double x = (double)a.x - b.x, y = (double)a.y - b.y, z = (double)a.z - b.z;
+        return std::sqrt((x * x + z * z) + y * y);
+    };
+
+    // Line of sight from the target to the camera
+    CColPoint colPoint;
+    CEntity*  hitEntity{};
+    CWorld::pIgnoreEntity = m_pTargetEntity;
+    if (CWorld::ProcessLineOfSight(*dst, *out, colPoint, hitEntity, true, false, false, true, false, false, true, false)) {
+        const CVector hit1 = colPoint.m_vecPoint;
+        *out               = hit1;
+        if (gbAvoidGeometryDoSecondLOS) {
+            if (CWorld::ProcessLineOfSight(*out, *dst, colPoint, hitEntity, false, true, true, true, false, false, true, false)) {
+                if (Dist(*out, colPoint.m_vecPoint) < (double)GetNearClip()) {
+                    *out = colPoint.m_vecPoint;
+                } else if (Dist(*out, hit1) < (double)GetNearClip()) {
+                    *out = hit1;
+                }
+            }
+        }
+    }
+    CWorld::pIgnoreEntity = nullptr;
+
+    // Don't let the near clip plane cut the player
+    if (FindPlayerPed(-1)) {
+        const CVector toTarget = *dst - *out;
+        const double  d        = Dist(toTarget, CVector{}) - (double)0.5f; // 0x8CC38C
+        if (d < (double)GetNearClip()) {
+            constexpr float MIN_NEAR_CLIP = 0.15f; // 0x8CC390
+            RwCameraSetNearClipPlane(Scene.m_pRwCamera, d <= (double)MIN_NEAR_CLIP ? MIN_NEAR_CLIP : (float)d);
+        }
+    }
+
+    // Check if anything is in the way of the near clip plane's "box", and push the camera away from it
+    float strengthTarget = 0.f;
+    {
+        const double halfTan = std::tan((double)FOV * (double)0.017453292f * (double)0.5f); // 0x8595EC, 0x858B8C
+        const double widthK  = halfTan * (double)CDraw::ms_fAspectRatio * (double)1.15f;    // 0x8CC820
+        const float  nearClip = GetNearClip();
+        const float  radius   = (float)((double)nearClip * widthK);
+        const float  offX     = (float)((double)dir.x * nearClip);
+        const float  offY     = (float)((double)dir.y * nearClip);
+        const CVector center{
+            (float)((double)offX + out->x),
+            (float)((double)offY + out->y),
+            (float)((double)dir.z * nearClip + out->z)
+        };
+
+        if (CWorld::TestSphereAgainstWorld(center, radius, nullptr, true, false, false, true, false, true)) {
+            const auto& hit = gaTempSphereColPoints[0];
+            CVector     toHit{ hit.m_vecPoint.x - center.x, hit.m_vecPoint.y - center.y, hit.m_vecPoint.z - center.z };
+
+            // How far in front of the camera is the hit
+            const double depth = ((((double)hit.m_vecPoint.x - out->x) * dir.x + ((double)hit.m_vecPoint.z - out->z) * dir.z)) + ((double)hit.m_vecPoint.y - out->y) * dir.y;
+            constexpr float MIN_NEAR = 0.15f; // 0x8CC390
+            constexpr float MAX_NEAR = 0.9f;  // 0x858C20
+            if (depth > (double)MIN_NEAR) {
+                if (depth < (double)MAX_NEAR && depth < (double)GetNearClip()) {
+                    RwCameraSetNearClipPlane(Scene.m_pRwCamera, (float)depth);
+                }
+            } else if (depth < (double)MIN_NEAR) {
+                RwCameraSetNearClipPlane(Scene.m_pRwCamera, MIN_NEAR);
+            }
+
+            const float penetration = (float)((double)radius - Dist(toHit, CVector{}));
+            toHit.Normalise();
+            CVector normal = hit.m_vecNormal;
+            normal.Normalise();
+
+            const double xr = (double)toHit.x * penetration; // NOTE: kept in extended precision by the original
+            const float  yr = toHit.y * penetration;
+            const float  zr = toHit.z * penetration;
+            if (((-(double)toHit.x * normal.x + -(double)toHit.z * normal.z) + -(double)toHit.y * normal.y) < 0.0) {
+                normal = -normal;
+            }
+            strengthTarget = 1.f;
+            const double push = ((-xr * normal.x + -(double)zr * normal.z) + -(double)yr * normal.y);
+            m_vecClearGeometryVec.x = (float)(normal.x * push);
+            m_vecClearGeometryVec.y = (float)(normal.y * push);
+            m_vecClearGeometryVec.z = (float)(normal.z * push);
+
+            // Remember on which side of the ped the camera was pushed to (used by `Process`?)
+            if (m_pTargetEntity && m_pTargetEntity->GetIsTypePed() && 2.f * MIN_NEAR /* 0x8CC390 */ > GetNearClip()) {
+                const auto& top = m_pTargetEntity->GetMatrix().GetForward();
+                const auto NdotTop = [&] { return ((double)normal.z * top.z + (double)normal.y * top.y) + (double)normal.x * top.x; };
+                if (NdotTop() < 0.0) {
+                    if (m_fAvoidTheGeometryProbsTimer < 0.f) {
+                        m_fAvoidTheGeometryProbsTimer = 0.f;
+                    }
+                    m_fAvoidTheGeometryProbsTimer = (float)((double)CTimer::ms_fTimeStep + m_fAvoidTheGeometryProbsTimer);
+                } else if (NdotTop() > 0.5) { // 0x858B8C
+                    if (m_fAvoidTheGeometryProbsTimer > 0.f) {
+                        m_fAvoidTheGeometryProbsTimer = 0.f;
+                    }
+                    m_fAvoidTheGeometryProbsTimer = (float)((double)m_fAvoidTheGeometryProbsTimer - CTimer::ms_fTimeStep);
+                }
+                if (m_nAvoidTheGeometryProbsDirn == 0) {
+                    const auto cross = CrossProduct(m_pTargetEntity->GetPosition() - *out, normal);
+                    m_nAvoidTheGeometryProbsDirn = cross.z > 0.f ? (uint16)0xFFFF : (uint16)1;
+                }
+            }
+        }
+    }
+
+    m_fAvoidTheGeometryProbsTimer = (float)(std::pow((double)0.9f, (double)CTimer::ms_fTimeStep) * m_fAvoidTheGeometryProbsTimer); // 0x8CC81C
+    WellBufferMe(strengthTarget, gAvoidGeometryStrength, gAvoidGeometrySpeed, 0.2f, 0.05f, false);
+    m_vecClearGeometryVec.x = gAvoidGeometryStrength * m_vecClearGeometryVec.x;
+    m_vecClearGeometryVec.y = gAvoidGeometryStrength * m_vecClearGeometryVec.y;
+    m_vecClearGeometryVec.z = gAvoidGeometryStrength * m_vecClearGeometryVec.z;
+    m_bMoveCamToAvoidGeom   = true;
 }
 
 // 0x509AE0 - the single implementation, shared with Camera.cpp (declared there)
@@ -377,6 +527,13 @@ void CCam::InjectHooks() {
     RH_ScopedGlobalInstall(FlyBySplineFloat, 0x5B2330);
     RH_ScopedGlobalInstall(GetArrestCamPosBesideCop, 0x515D80);
     RH_ScopedGlobalInstall(GetArrestCamPosBehindTarget, 0x516010);
+
+    // `CCamera::AvoidTheGeometry` is defined in this file (see above)
+    {
+        RH_ScopedClass(CCamera);
+        RH_ScopedCategory("Camera");
+        RH_ScopedInstall(AvoidTheGeometry, 0x514030);
+    }
 }
 
 // 0x517730
@@ -1686,7 +1843,7 @@ bool CCam::ProcessArrestCamOne() {
     const auto ApplyCamPos = [&] {
         m_vecSource            = camPos;
         const CVector srcCopy = camPos;
-        AvoidTheGeometry(srcCopy, targetPos, m_vecSource, m_fFOV);
+        TheCamera.AvoidTheGeometry(&srcCopy, &targetPos, &m_vecSource, m_fFOV);
     };
 
     if (m_bResetStatics) {
@@ -1912,7 +2069,7 @@ bool CCam::ProcessArrestCamOne() {
         SetupVectors();
     } else {
         const CVector srcCopy = m_vecSource;
-        AvoidTheGeometry(srcCopy, targetPos, m_vecSource, m_fFOV);
+        TheCamera.AvoidTheGeometry(&srcCopy, &targetPos, &m_vecSource, m_fFOV);
     }
     return true;
 }
@@ -2007,7 +2164,8 @@ void CCam::ProcessPedsDeadBaby() {
     }
 
     m_vecSource = CVector{ srcX, srcY, srcZ };
-    AvoidTheGeometry(CVector{ srcX, srcY, srcZ }, targetPos, m_vecSource, m_fFOV);
+    const CVector srcCopy{ srcX, srcY, srcZ };
+    TheCamera.AvoidTheGeometry(&srcCopy, &targetPos, &m_vecSource, m_fFOV);
     TheCamera.m_bMoveCamToAvoidGeom = false;
 }
 
@@ -3491,7 +3649,8 @@ void CCam::Process_Cam_TwoPlayer_InCarAndShooting() {
     RotCamIfInFrontCar(vehPos, baseAngle);
 
     m_vecTargetCoorsForFudgeInter = vehPos;
-    AvoidTheGeometry(CVector{ m_vecSource }, m_vecTargetCoorsForFudgeInter, m_vecSource, m_fFOV);
+    const CVector srcCopy{ m_vecSource };
+    TheCamera.AvoidTheGeometry(&srcCopy, &m_vecTargetCoorsForFudgeInter, &m_vecSource, m_fFOV);
 
     {
         const double sinb = std::sin((double)rotExcess);
@@ -7024,7 +7183,7 @@ void CCam::Process_SpecialFixedForSyphon(const CVector& target, float orientatio
     m_vecFront = target - m_vecSource;
 
     const CVector fixedSource = m_vecCamFixedModeSource;
-    AvoidTheGeometry(fixedSource, m_vecTargetCoorsForFudgeInter, m_vecSource, m_fFOV);
+    TheCamera.AvoidTheGeometry(&fixedSource, &m_vecTargetCoorsForFudgeInter, &m_vecSource, m_fFOV);
     m_vecFront.z += m_fSyphonModeTargetZOffSet;
     GetVectorsReadyForRW();
 

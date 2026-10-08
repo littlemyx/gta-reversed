@@ -318,6 +318,9 @@ void CRope::Update() {
     // It's used for: the old position of a segment, the output of `UpdateWeightInRope`, the (adjusted) speed of the hanging
     // entity, and the candidate position when looking for something to pick up.
     // BUG: In the original it is not initialized, and when picking up a ped it's read as if it were holding the candidate's position (see below).
+    //      The last writers before that are (in order): the old position of the last simulated segment (only if any were simulated),
+    //      the output of `UpdateWeightInRope` (only when it returns true) and the adjusted speed of the hanging entity (same condition).
+    //      Nothing in the ped search touches it, so here it holds exactly the same value (zero if none of the above ran, garbage in the original).
     CVector scratch{};
 
     // Fraction of the speed that is kept each frame
@@ -325,10 +328,11 @@ void CRope::Update() {
 
     // Everything below is done only for ropes near the camera (NOTE: `m_nFlags2` isn't cleared if we bail out here)
     {
-        const auto& camPos = TheCamera.GetPosition();
-        const float dy     = camPos.y - m_aSegments[0].y;
-        const float dx     = camPos.x - m_aSegments[0].x;
-        if (!(std::sqrt(dx * dx + dy * dy) < 200.f)) {
+        // NOTE: x87 keeps the differences, their squares and the root in extended precision
+        const auto&  camPos = TheCamera.GetPosition();
+        const double dy     = (double)camPos.y - (double)m_aSegments[0].y;
+        const double dx     = (double)camPos.x - (double)m_aSegments[0].x;
+        if (!(std::sqrt(dx * dx + dy * dy) < 200.0)) {
             return;
         }
     }
@@ -343,11 +347,12 @@ void CRope::Update() {
 
     // Expired rope: let the top segment fall
     if (!(m_nFlags2 & 1) && m_nTime < CTimer::GetTimeInMS()) {
-        const float ts = CTimer::GetTimeStep();
-        m_aSpeed[0].z = m_aSpeed[0].z - ts * 0.0015f;
-        m_aSegments[0].x = ts * m_aSpeed[0].x + m_aSegments[0].x;
-        m_aSegments[0].y = ts * m_aSpeed[0].y + m_aSegments[0].y;
-        m_aSegments[0].z = ts * m_aSpeed[0].z + m_aSegments[0].z;
+        // NOTE: The products stay in extended precision until the single float store
+        const double ts = CTimer::GetTimeStep();
+        m_aSpeed[0].z    = (float)((double)m_aSpeed[0].z - ts * 0.0015f);
+        m_aSegments[0].x = (float)(ts * m_aSpeed[0].x + m_aSegments[0].x);
+        m_aSegments[0].y = (float)(ts * m_aSpeed[0].y + m_aSegments[0].y);
+        m_aSegments[0].z = (float)(ts * m_aSpeed[0].z + m_aSegments[0].z);
     }
 
     // Find the ground below the rope (not every frame)
@@ -380,45 +385,53 @@ void CRope::Update() {
             scratch = pos; // Old position
 
             // Wind (NOTE: Not applied to Z)
-            speed.x = (float)((rand() & 0xF) - 8) * 0.001f + speed.x;
-            speed.y = (float)((rand() & 0xF) - 8) * 0.001f + speed.y;
+            // NOTE: x87 keeps the product in extended precision before it's added and stored
+            speed.x = (float)((double)((rand() & 0xF) - 8) * 0.001f + speed.x);
+            speed.y = (float)((double)((rand() & 0xF) - 8) * 0.001f + speed.y);
 
             // Speed is a blend of the previous segment's one and own
+            // NOTE: Only for Z the products aren't stored (rounded) before they are added
             speed = CVector{
                 oneMinusDamping * prevSpeed.x + damping * speed.x,
                 oneMinusDamping * prevSpeed.y + damping * speed.y,
-                oneMinusDamping * prevSpeed.z + damping * speed.z
+                (float)((double)damping * speed.z + (double)oneMinusDamping * prevSpeed.z)
             };
 
             // Gravity
-            pos.z = pos.z - CTimer::GetTimeStep() * 0.15f;
+            pos.z = (float)((double)pos.z - (double)CTimer::GetTimeStep() * 0.15f);
 
             // Don't go below the ground
             if (m_nFlags2 & 4) {
-                const float minZ = m_fGroundZ + 0.3f;
-                if (!(pos.z > minZ)) {
-                    pos.z = minZ;
+                const double minZ = (double)m_fGroundZ + 0.3f; // NOTE: Not rounded to float for the comparison
+                if (!((double)pos.z > minZ)) {
+                    pos.z = (float)minZ;
                 }
             }
 
             // Constrain the distance to the previous segment
-            const float dz  = pos.z - prevPos.z;
-            const float dy  = pos.y - prevPos.y;
-            const float dx  = pos.x - prevPos.x;
-            const float len = std::sqrt(dx * dx + dy * dy + dz * dz);
-            const float k   = m_fTotalLength / len; // NOTE: `m_fTotalLength` is really the length of a single segment
+            // NOTE: A mix of what's stored as a float (`dz`, `dx` for the multiplication, the squared length) and what isn't (`dy`, the others)
+            const double dxE    = (double)pos.x - prevPos.x;
+            const double dyE    = (double)pos.y - prevPos.y;
+            const float  dz     = pos.z - prevPos.z;
+            const float  dx     = (float)dxE;
+            const float  lenSq  = (float)(dxE * dxE + dyE * dyE + (double)dz * dz);
+            const double k      = (double)m_fTotalLength / std::sqrt((double)lenSq); // NOTE: `m_fTotalLength` is really the length of a single segment
+            const float  newDx  = (float)((double)dx * k);
+            const float  newDy  = (float)(dyE * k);
+            const float  newDz  = (float)((double)dz * k);
             pos = CVector{
-                dx * k + prevPos.x,
-                dy * k + prevPos.y,
-                dz * k + prevPos.z
+                newDx + prevPos.x,
+                newDy + prevPos.y,
+                newDz + prevPos.z
             };
 
             // New speed from the position change
+            // NOTE: Only for Z the difference and the inverse (of the time step) aren't rounded
             const float invTimeStep = 1.f / CTimer::GetTimeStep();
             speed = CVector{
                 (pos.x - scratch.x) * invTimeStep,
                 (pos.y - scratch.y) * invTimeStep,
-                (pos.z - scratch.z) * invTimeStep
+                (float)(((double)pos.z - scratch.z) * (1.0 / (double)CTimer::GetTimeStep()))
             };
         }
     }
@@ -445,22 +458,24 @@ void CRope::Update() {
         if (IsAnalogControlled) {
             const int16 stick = CPad::GetPad(0)->GetCarGunUpDown();
             if ((stick < 0 && CTheScripts::bEnableCraneRaise) || (stick > 0 && CTheScripts::bEnableCraneLower)) {
-                m_fSegmentLength = m_fSegmentLength - (float)stick * CTimer::GetTimeStep() * 0.00001f;
+                // NOTE: The whole expression is evaluated in extended precision before the store
+                m_fSegmentLength = (float)((double)m_fSegmentLength - (double)stick * CTimer::GetTimeStep() * 0.00001f);
             }
             if (0.84f < m_fSegmentLength) {
                 m_fSegmentLength = 0.84f;
             }
         } else { // Digital (the other types are always one of CRANE_MAGNO, WRECKING_BALL, QUARRY_CRANE_ARM and CRANE_TROLLEY here)
             if (CTheScripts::bEnableCraneRaise) {
-                const float delta = (float)CPad::GetPad(0)->NewState.ButtonSquare * CTimer::GetTimeStep() * 0.00001f;
-                if (delta > 0.f && delta + m_fSegmentLength < 0.9f) {
+                // NOTE: Evaluated in extended precision, rounded to float only when stored. Same for the sums below
+                const float delta = (float)((double)CPad::GetPad(0)->NewState.ButtonSquare * CTimer::GetTimeStep() * 0.00001f);
+                if (delta > 0.f && (double)delta + m_fSegmentLength < 0.9f) {
                     AudioEngine.ReportMissionAudioEvent(0x68, m_pRopeHolder->AsPhysical(), 0.f, 1.f);
                 }
                 m_fSegmentLength = delta + m_fSegmentLength;
             }
             if (CTheScripts::bEnableCraneLower) {
-                const float delta = (float)CPad::GetPad(0)->NewState.ButtonCross * CTimer::GetTimeStep() * 0.00001f;
-                if (delta > 0.f && m_fSegmentLength - delta > 0.01f) {
+                const float delta = (float)((double)CPad::GetPad(0)->NewState.ButtonCross * CTimer::GetTimeStep() * 0.00001f);
+                if (delta > 0.f && (double)m_fSegmentLength - delta > 0.01f) {
                     AudioEngine.ReportMissionAudioEvent(0x68, m_pRopeHolder->AsPhysical(), 0.f, 1.f);
                 }
                 m_fSegmentLength = m_fSegmentLength - delta;
@@ -484,16 +499,20 @@ void CRope::Update() {
         if (hanging->m_nModelIndex == MODEL_SECURICA) {
             mass = 750.f;
         }
-        hangingBlend = kMassBlendFactor * std::bit_cast<float>(0x3a5a740eu) * mass + kBaseBlend;
-        if (hangingBlend > 0.5f) {
-            hangingBlend = 0.5f;
+        // NOTE: x87 keeps the whole expression and the comparison in extended precision
+        double blend = (double)kMassBlendFactor * std::bit_cast<float>(0x3a5a740eu) * mass + kBaseBlend; // 0x863E30: 1/1200
+        if (0.5 < blend) {
+            blend = 0.5;
         }
+        hangingBlend = (float)blend;
         hanging->AsPhysical()->m_nFakePhysics = 0;
     } else {
-        // NOTE: Not null-checked in the original
         hanging      = m_pAttachedEntity;
         hangingBlend = kBaseBlend;
-        hanging->SetUsesCollision(true);
+        // BUG: Not null-checked in the original (the check below makes it clear it's expected to be possible)
+        if (hanging || !notsa::IsFixBugs()) {
+            hanging->SetUsesCollision(true);
+        }
     }
 
     if (hanging) {
@@ -503,7 +522,8 @@ void CRope::Update() {
             hanging->SetPosn(scratch);
 
             auto* const hangingPhy = hanging->AsPhysical();
-            auto* const holder     = m_pRopeHolder->AsPhysical(); // NOTE: Not null-checked in the original
+            // BUG: Not null-checked in the original
+            auto* const holder     = m_pRopeHolder->AsPhysical();
 
             scratch = hangingPhy->m_vecMoveSpeed;
 
@@ -521,32 +541,39 @@ void CRope::Update() {
             dir.Normalise();
 
             // Remove the speed component that's along the rope (away from the start)
-            const float dot = dir.z * scratch.z + dir.x * scratch.x + dir.y * scratch.y;
-            float       newSpeedX = scratch.x;
-            if (dot > 0.f) {
-                newSpeedX = scratch.x - dir.x * dot;
-                scratch.y = scratch.y - dot * dir.y;
-                scratch.z = scratch.z - dot * dir.z;
+            // NOTE: x87 keeps `dot` (the comparison), the X component and the sums below in extended precision.
+            //       Only `dot` (for the products), `scratch.y`, `scratch.z` and the differences of Y and Z are stored as floats.
+            const double dotE = (double)dir.z * scratch.z + (double)dir.x * scratch.x + (double)dir.y * scratch.y;
+            const float  dot  = (float)dotE;
+            double       speedX = scratch.x;
+            if (dotE > 0.0) {
+                speedX    = (double)scratch.x - (double)dir.x * dot;
+                scratch.y = (float)((double)scratch.y - (double)dot * dir.y);
+                scratch.z = (float)((double)scratch.z - (double)dot * dir.z);
             }
-            const CVector newSpeed{
-                newSpeedX + holderSpeed.x,
-                holderSpeed.y + scratch.y,
-                holderSpeed.z + scratch.z
-            };
+            const double newSpeedX = speedX + holderSpeed.x;
+            const double newSpeedY = (double)holderSpeed.y + scratch.y;
+            const double newSpeedZ = (double)holderSpeed.z + scratch.z;
 
             // The speed change is shared between the hanging entity and the holder
-            const float dvz = newSpeed.z - hangingPhy->m_vecMoveSpeed.z;
-            const float dvy = newSpeed.y - hangingPhy->m_vecMoveSpeed.y;
-            const float dvx = newSpeed.x - hangingPhy->m_vecMoveSpeed.x;
+            const float  dvz = (float)(newSpeedZ - hangingPhy->m_vecMoveSpeed.z);
+            const float  dvy = (float)(newSpeedY - hangingPhy->m_vecMoveSpeed.y);
+            const double dvx = newSpeedX - hangingPhy->m_vecMoveSpeed.x;
 
-            const float hangingShare = 1.f - hangingBlend;
-            hangingPhy->m_vecMoveSpeed.x = dvx * hangingShare + hangingPhy->m_vecMoveSpeed.x;
-            hangingPhy->m_vecMoveSpeed.y = dvy * hangingShare + hangingPhy->m_vecMoveSpeed.y;
-            hangingPhy->m_vecMoveSpeed.z = dvz * hangingShare + hangingPhy->m_vecMoveSpeed.z;
+            const double hangingShare = 1.0 - hangingBlend;
+            const float  hangingDvz   = (float)(dvz * hangingShare);
+            const float  hangingDvy   = (float)(dvy * hangingShare);
+            const float  hangingDvx   = (float)(dvx * hangingShare);
+            hangingPhy->m_vecMoveSpeed.z = hangingDvz + hangingPhy->m_vecMoveSpeed.z;
+            hangingPhy->m_vecMoveSpeed.y = hangingDvy + hangingPhy->m_vecMoveSpeed.y;
+            hangingPhy->m_vecMoveSpeed.x = hangingDvx + hangingPhy->m_vecMoveSpeed.x;
 
-            holder->m_vecMoveSpeed.x = holder->m_vecMoveSpeed.x - dvx * hangingBlend;
-            holder->m_vecMoveSpeed.y = holder->m_vecMoveSpeed.y - dvy * hangingBlend;
-            holder->m_vecMoveSpeed.z = holder->m_vecMoveSpeed.z - dvz * hangingBlend;
+            const float holderDvz = (float)(dvz * (double)hangingBlend);
+            const float holderDvy = (float)(dvy * (double)hangingBlend);
+            const float holderDvx = (float)(dvx * (double)hangingBlend);
+            holder->m_vecMoveSpeed.z = holder->m_vecMoveSpeed.z - holderDvz;
+            holder->m_vecMoveSpeed.y = holder->m_vecMoveSpeed.y - holderDvy;
+            holder->m_vecMoveSpeed.x = holder->m_vecMoveSpeed.x - holderDvx;
 
             // Orientation: the entity hangs from the rope
             if (!m_pRopeAttachObject) {
@@ -557,15 +584,19 @@ void CRope::Update() {
                 const CMatrix prev{ mat };
                 mat.ForceUpVector(-dir);
                 const CMatrix forced{ mat };
-                mat.GetRight().x   = prev.GetRight().x   * 0.9f + forced.GetRight().x   * 0.1f;
-                mat.GetRight().y   = prev.GetRight().y   * 0.9f + forced.GetRight().y   * 0.1f;
-                mat.GetRight().z   = prev.GetRight().z   * 0.9f + forced.GetRight().z   * 0.1f;
-                mat.GetForward().x = prev.GetForward().x * 0.9f + forced.GetForward().x * 0.1f;
-                mat.GetForward().y = prev.GetForward().y * 0.9f + forced.GetForward().y * 0.1f;
-                mat.GetForward().z = prev.GetForward().z * 0.9f + forced.GetForward().z * 0.1f;
-                mat.GetUp().x      = prev.GetUp().x      * 0.9f + forced.GetUp().x      * 0.1f;
-                mat.GetUp().y      = prev.GetUp().y      * 0.9f + forced.GetUp().y      * 0.1f;
-                mat.GetUp().z      = prev.GetUp().z      * 0.9f + forced.GetUp().z      * 0.1f;
+                // NOTE: The products aren't rounded before they are added
+                const auto Blend = [](float prevVal, float forcedVal) {
+                    return (float)((double)prevVal * 0.9f + (double)forcedVal * 0.1f);
+                };
+                mat.GetRight().x   = Blend(prev.GetRight().x,   forced.GetRight().x);
+                mat.GetRight().y   = Blend(prev.GetRight().y,   forced.GetRight().y);
+                mat.GetRight().z   = Blend(prev.GetRight().z,   forced.GetRight().z);
+                mat.GetForward().x = Blend(prev.GetForward().x, forced.GetForward().x);
+                mat.GetForward().y = Blend(prev.GetForward().y, forced.GetForward().y);
+                mat.GetForward().z = Blend(prev.GetForward().z, forced.GetForward().z);
+                mat.GetUp().x      = Blend(prev.GetUp().x,      forced.GetUp().x);
+                mat.GetUp().y      = Blend(prev.GetUp().y,      forced.GetUp().y);
+                mat.GetUp().z      = Blend(prev.GetUp().z,      forced.GetUp().z);
             }
         }
 
@@ -616,10 +647,13 @@ void CRope::Update() {
     }
 
     // Reduce the length of the rope depending on how much the picked up thing pulls it down
-    const auto OnPickedUp = [&](float dzRope) {
-        if (dzRope > 0.f) {
-            const float invMass = 1.f / m_fMass;
-            m_fSegmentLength    = RopeMax((m_fSegmentLength - dzRope * invMass) - invMass * m_fTotalLength, 0.01f);
+    // NOTE: The whole expression is evaluated in extended precision (including `1 / mass`).
+    //       The original calls `RopeMax` only for peds, for the rest it's inlined and compares the unrounded value,
+    //       but the result is the same (the value is rounded to float on the way out in both cases).
+    const auto OnPickedUp = [&](double dzRope) {
+        if (dzRope > 0.0) {
+            const double invMass = 1.0 / (double)m_fMass;
+            m_fSegmentLength     = RopeMax((float)((m_fSegmentLength - dzRope * invMass) - invMass * m_fTotalLength), 0.01f);
         }
     };
 
@@ -645,10 +679,11 @@ void CRope::Update() {
                 continue;
             }
             const auto& pedPos = ped->GetPosition();
-            const float dx     = pedPos.x - lastPos.x;
-            const float dy     = pedPos.y - lastPos.y;
-            const float dz     = pedPos.z - lastPos.z;
-            if (!(std::sqrt(dx * dx + dy * dy + dz * dz) < 2.5f)) {
+            // NOTE: x87 keeps the differences, the squares and the root in extended precision (same everywhere below)
+            const double dx    = (double)pedPos.x - lastPos.x;
+            const double dy    = (double)pedPos.y - lastPos.y;
+            const double dz    = (double)pedPos.z - lastPos.z;
+            if (!(std::sqrt(dz * dz + dy * dy + dx * dx) < 2.5)) {
                 continue;
             }
 
@@ -658,8 +693,9 @@ void CRope::Update() {
             m_pAttachedEntity->SetPosn(ped->GetMatrix().TransformPoint(CVector{ 0.f, 0.f, CRopes::FindPickupHeight(ped) }));
             m_pAttachedEntity->SetUsesCollision(false);
 
-            // BUG: `scratch.z` (a stale value) is used instead of the position of what's being picked up (copy-paste from the other cases)
-            OnPickedUp(lastPos.z - scratch.z);
+            // BUG: `scratch.z` (a stale value: the last thing written to that stack slot before, see its declaration) is used
+            //      instead of the position of what's being picked up (copy-paste from the other cases)
+            OnPickedUp((double)lastPos.z - scratch.z);
             break;
         }
         return Finish();
@@ -715,10 +751,10 @@ void CRope::Update() {
             const float height = CRopes::FindPickupHeight(veh);
             scratch            = veh->GetMatrix().TransformPoint(CVector{ 0.f, 0.f, height });
 
-            const float dx = scratch.x - lastPos.x;
-            const float dy = scratch.y - lastPos.y;
-            const float dz = scratch.z - lastPos.z;
-            if (!(std::sqrt(dx * dx + dy * dy + dz * dz) < 2.5f)) {
+            const double dx = (double)scratch.x - lastPos.x;
+            const double dy = (double)scratch.y - lastPos.y;
+            const double dz = (double)scratch.z - lastPos.z;
+            if (!(std::sqrt(dx * dx + dz * dz + dy * dy) < 2.5)) {
                 continue;
             }
 
@@ -732,7 +768,7 @@ void CRope::Update() {
             m_pAttachedEntity->SetPosn(veh->GetMatrix().TransformPoint(CVector{ 0.f, 0.f, height }));
             m_pAttachedEntity->SetUsesCollision(false);
 
-            OnPickedUp(lastPos.z - scratch.z);
+            OnPickedUp((double)lastPos.z - scratch.z);
             break;
         }
 
@@ -765,7 +801,7 @@ void CRope::Update() {
             || (lookForQuarryRocks && (   modelIdx == MI_QUARY_ROCK1
                                        || modelIdx == MI_QUARY_ROCK2
                                        || modelIdx == MI_QUARY_ROCK3
-                                       || modelIdx == MI_DEAD_TIED_COP) // The address (0x8CD714) is right, the name is probably not (a 4th rock?)
+                                       || modelIdx == MI_DEAD_TIED_COP) // 0x8CD714, `dead_tied_cop` in the model names table
                                    && !obj->m_pAttachedTo)
             || (lookForWongDish && modelIdx == MI_WONG_DISH)
             || (lookForKmbRock  && modelIdx == MI_KMB_ROCK)
@@ -806,10 +842,10 @@ void CRope::Update() {
             }
         }
 
-        const float dx = scratch.x - lastPos.x;
-        const float dy = scratch.y - lastPos.y;
-        const float dz = scratch.z - lastPos.z;
-        if (!(std::sqrt(dx * dx + dy * dy + dz * dz) < 2.5f)) {
+        const double dx = (double)scratch.x - lastPos.x;
+        const double dy = (double)scratch.y - lastPos.y;
+        const double dz = (double)scratch.z - lastPos.z;
+        if (!(std::sqrt(dz * dz + dy * dy + dx * dx) < 2.5)) {
             continue;
         }
 
@@ -826,7 +862,7 @@ void CRope::Update() {
         }
         obj->physicalFlags.bAttachedToEntity = true;
 
-        OnPickedUp(lastPos.z - scratch.z);
+        OnPickedUp((double)lastPos.z - scratch.z);
 
         // Rotate around the forward axis (right => up => left => down)
         for (; rotations != 0; rotations--) {

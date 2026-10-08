@@ -1,5 +1,9 @@
 #include "StdInc.h"
 #include "TaskInteriorSitAtDesk.h"
+#include "Interior/InteriorManager_c.h"
+#include "Interior/InteriorInfo_t.h"
+#include "CarEnterExit.h"
+#include <numbers>
 
 void CTaskInteriorSitAtDesk::InjectHooks() {
     RH_ScopedVirtualClass(CTaskInteriorSitAtDesk, 0x87035c, 9);
@@ -14,7 +18,7 @@ void CTaskInteriorSitAtDesk::InjectHooks() {
     RH_ScopedVMTInstall(Clone, 0x6760E0);
     RH_ScopedVMTInstall(GetTaskType, 0x676070);
     RH_ScopedVMTInstall(MakeAbortable, 0x676150);
-    RH_ScopedVMTInstall(ProcessPed, 0x677920, { .Reversed = false });
+    RH_ScopedVMTInstall(ProcessPed, 0x677920);
 }
 
 // 0x676010
@@ -102,7 +106,126 @@ bool CTaskInteriorSitAtDesk::MakeAbortable(CPed* ped, eAbortPriority priority, C
 
 // 0x677920
 bool CTaskInteriorSitAtDesk::ProcessPed(CPed* ped) {
-    return plugin::CallMethodAndReturn<bool, 0x677920, CTaskInteriorSitAtDesk*, CPed*>(this, ped);
+    const int32 curAnimId = m_Anim ? (int32)m_Anim->m_AnimId : -1;
+
+    ped->SetMoveState(PEDMOVE_STILL);
+
+    // Finished => turn the ped around (as the ped stood up facing the other way)
+    if (m_bTaskFinished && !RpAnimBlendClumpGetAssociation(ped->GetRpClump(), ANIM_ID_OFF_SIT_2IDLE_180)) {
+        const auto heading = CGeneral::LimitRadianAngle(ped->m_fCurrentRotation + std::numbers::pi_v<float>);
+        ped->m_fAimingRotation  = heading;
+        ped->m_fCurrentRotation = heading;
+        if (ped->m_matrix) {
+            ped->m_matrix->SetRotateZOnly(heading);
+        } else {
+            ped->m_placement.m_fHeading = heading;
+        }
+        return true;
+    }
+
+    if (m_bTaskAborting) {
+        if (!InteriorManager_c::AreAnimsLoaded(2)) {
+            return true;
+        }
+        if (curAnimId == ANIM_ID_OFF_SIT_IN) {
+            m_Anim->m_BlendDelta = -8.f;
+        } else if (curAnimId >= ANIM_ID_OFF_SIT_IDLE_LOOP && curAnimId <= ANIM_ID_OFF_SIT_WATCH) {
+            if (!m_bUpdatePedPos) {
+                m_Anim->SetDeleteCallback(CDefaultAnimCallback::DefaultAnimCB, nullptr);
+                m_Anim = CAnimManager::BlendAnimation(ped->GetRpClump(), ANIM_GROUP_INT_OFFICE, ANIM_ID_OFF_SIT_2IDLE_180, 1000.f);
+                m_Anim->SetFinishCallback(FinishAnimCB, this);
+                m_bUpdatePedPos = true;
+                return false;
+            }
+        } else if (curAnimId == ANIM_ID_OFF_SIT_2IDLE_180) {
+            m_Anim->m_Speed = 2.f;
+        }
+    }
+
+    if (!m_Anim) {
+        if (!InteriorManager_c::AreAnimsLoaded(2)) {
+            return false;
+        }
+        if (m_PrevAnimId == ANIM_ID_UNDEFINED) {
+            if (!m_bDoInstantly) {
+                m_Anim = CAnimManager::BlendAnimation(ped->GetRpClump(), ANIM_GROUP_INT_OFFICE, ANIM_ID_OFF_SIT_IN, 4.f);
+                m_Anim->SetFinishCallback(FinishAnimCB, this);
+                return false;
+            }
+        } else if (m_PrevAnimId != ANIM_ID_OFF_SIT_IN) {
+            if (m_PrevAnimId >= ANIM_ID_OFF_SIT_CRASH && m_PrevAnimId <= ANIM_ID_OFF_SIT_WATCH) {
+                StartRandomLoopAnim(ped, 4.f);
+            }
+            return false;
+        }
+        m_TaskTimer.Start(m_Duration);
+        StartRandomLoopAnim(ped, 1000.f);
+        m_bUpdatePedPos = true;
+        return false;
+    }
+
+    if (m_bUpdatePedPos) {
+        CVector pos = ped->GetPosition();
+        const auto z = pos.z;
+        if (curAnimId >= ANIM_ID_OFF_SIT_IDLE_LOOP && curAnimId <= ANIM_ID_OFF_SIT_BORED_LOOP) {
+            pos = ped->m_matrix->TransformPoint(CCarEnterExit::ms_vecPedDeskAnimOffset);
+        } else if (curAnimId == ANIM_ID_OFF_SIT_2IDLE_180) {
+            pos = ped->m_matrix->TransformPoint(-CCarEnterExit::ms_vecPedDeskAnimOffset);
+        }
+        pos.z = z;
+        ped->SetPosn(pos);
+        m_bUpdatePedPos = false;
+    }
+
+    if (m_TaskTimer.m_bStarted && m_TaskTimer.IsOutOfTime()) {
+        if (m_Anim->m_AnimId != ANIM_ID_OFF_SIT_2IDLE_180) {
+            m_Anim->SetDeleteCallback(CDefaultAnimCallback::DefaultAnimCB, nullptr);
+            m_Anim = CAnimManager::BlendAnimation(ped->GetRpClump(), ANIM_GROUP_INT_OFFICE, ANIM_ID_OFF_SIT_2IDLE_180, 1000.f);
+            m_Anim->SetFinishCallback(FinishAnimCB, this);
+            m_bUpdatePedPos = true;
+        }
+    } else if (m_AnimTimer.m_bStarted && m_AnimTimer.IsOutOfTime()) {
+        m_AnimTimer.Stop();
+        if (rand() < 0x3FFF) {
+            StartRandomOneOffAnim(ped);
+        } else {
+            StartRandomLoopAnim(ped, 4.f);
+        }
+    }
+
+    // Keep the ped moving towards (and facing) the chair while sitting down
+    if (m_Anim->m_AnimId == ANIM_ID_OFF_SIT_IN) {
+        const auto& pedPos = ped->GetPosition();
+        const auto& mat    = *ped->m_matrix; // BUG: Original code doesn't check for the matrix here, so neither do we
+
+        // x87: Each of these is stored as a float
+        const float dx = m_InteriorInfo->Pos.x - pedPos.x;
+        const float dy = m_InteriorInfo->Pos.y - pedPos.y;
+        const float dz = m_InteriorInfo->Pos.z - pedPos.z;
+
+        // x87: The sum of squares + sqrt is kept in extended precision until the comparison
+        const double lenD = std::sqrt((double)dz * (double)dz + (double)dy * (double)dy + (double)dx * (double)dx);
+        const float  len  = (float)lenD;
+        const float  clamped = lenD < (double)0.02f ? len : 0.02f;
+
+        const double inv = 1.0 / (double)len;
+        const double vx  = ((double)dx * inv) * (double)clamped;
+        const double vy  = (double)(float)((double)dy * inv) * (double)clamped;
+        const double vz  = (double)(float)((double)dz * inv) * (double)clamped;
+
+        const auto& right = mat.GetRight();
+        const auto& up    = mat.GetForward(); // Matrix' second vector (offset 0x10)
+        ped->m_vecAnimMovingShiftLocal.x = (float)(((double)right.z * vz + (double)right.y * vy) + (double)right.x * vx);
+        ped->m_vecAnimMovingShiftLocal.y = (float)(((double)up.y * vy + (double)up.z * vz) + (double)up.x * vx);
+
+        ped->m_fAimingRotation = CGeneral::LimitRadianAngle(CGeneral::GetRadianAngleBetweenPoints(
+            m_InteriorInfo->Dir.x,
+            m_InteriorInfo->Dir.y,
+            0.f,
+            0.f
+        ));
+    }
+    return false;
 }
 
 void CTaskInteriorSitAtDesk::StartAnim(CPed* ped, AnimationId animId, float blendDelta) {

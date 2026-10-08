@@ -11,7 +11,7 @@ public:
     CTaskComplexUseClosestFreeScriptedAttractorSprint();
     ~CTaskComplexUseClosestFreeScriptedAttractorSprint() override = default;
 
-    CTask*    Clone()       const override { return new CTaskComplexUseClosestFreeScriptedAttractorSprint{ *this }; }
+    CTask*    Clone()       const override { return new CTaskComplexUseClosestFreeScriptedAttractorSprint{}; } // 0x4B8870 (NOTSA: the base copy ctor would reset the move state)
     eTaskType GetTaskType() const override { return Type; }
 
 private: // Wrappers for hooks

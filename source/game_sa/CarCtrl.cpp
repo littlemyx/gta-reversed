@@ -12,6 +12,7 @@
 #include "TheScripts.h"
 #include "GangWars.h"
 #include "Garages.h"
+#include "CarAI.h"
 #include "Events/EventPotentialGetRunOver.h"
 #include "Game.h"
 #include "General.h"
@@ -151,6 +152,10 @@ void CCarCtrl::InjectHooks()
     RH_ScopedInstall(UpdateCarCount, 0x424000);
     RH_ScopedInstall(PossiblyRemoveVehicle, 0x424F80);
     RH_ScopedInstall(SlowCarDownForPedsSectorList, 0x425440);
+    RH_ScopedInstall(SteerAICarWithPhysicsTryingToBlockTarget_Stop, 0x428990);
+    RH_ScopedInstall(SteerAIBoatWithPhysicsHeadingForTarget, 0x428BE0);
+    RH_ScopedInstall(SteerAIBoatWithPhysicsAttackingPlayer, 0x428DE0);
+    RH_ScopedInstall(SteerAIBoatWithPhysicsCirclingPlayer, 0x429090);
     RH_ScopedInstall(WeaveForObject, 0x426BC0);
     RH_ScopedInstall(WeaveForOtherCar, 0x426350);
 }
@@ -1711,19 +1716,134 @@ void CCarCtrl::SlowCarOnRailsDownForTrafficAndLights(CVehicle* vehicle) {
     }
 }
 
+//! Normalized 2D (X, Y) forward vector of the vehicle (the one used by the AI boat code)
+//! x87: The length is kept in extended precision. Note: Uses the matrix directly (not null checked)
+static CVector2D GetNormalizedForward2D(CVehicle* vehicle) {
+    const auto& fwd = vehicle->m_matrix->GetForward();
+    const auto  len = std::sqrt((double)fwd.y * fwd.y + (double)fwd.x * fwd.x);
+    if (len == 0.0) {
+        return { 1.0f, fwd.y };
+    }
+    const auto invLen = 1.0 / len;
+    return { (float)(invLen * fwd.x), (float)(invLen * fwd.y) };
+}
+
+//! Wraps the angle (extended precision) into [-PI, PI]
+static double WrapAngleToPi(double angle) {
+    constexpr auto pi = std::numbers::pi_v<float>;
+    while (angle < -pi) {
+        angle += 2.0f * pi;
+    }
+    while (pi < angle) {
+        angle -= 2.0f * pi;
+    }
+    return angle;
+}
+
+//! Calculates the gas of the AI controlled boats (same code in `SteerAIBoatWithPhysicsHeadingForTarget`, `...AttackingPlayer` and `...CirclingPlayer`)
+//! @returns If the boat is going too fast (so it has to slow down)
+static bool CalcBoatAIGas(CVehicle* vehicle, float* pGas) {
+    // x87: kept in extended precision
+    const auto cruiseSpeed = (float)vehicle->m_autoPilot.m_nCruiseSpeed;
+    const auto speedDiff   = (double)cruiseSpeed - std::sqrt((double)vehicle->m_vecMoveSpeed.x * vehicle->m_vecMoveSpeed.x + (double)vehicle->m_vecMoveSpeed.y * vehicle->m_vecMoveSpeed.y) * 60.0f;
+    if (!(speedDiff <= 0.0)) { // (Also true for NaN)
+        const auto ratio = speedDiff / cruiseSpeed;
+        *pGas = ratio > 0.25f
+            ? 1.0f
+            : (float)(1.0 - (0.25f - ratio) * 4.0f);
+        return false;
+    }
+    *pGas = speedDiff < -5.0f ? -0.2f : -0.1f;
+    return true;
+}
+
 // 0x428DE0
-void CCarCtrl::SteerAIBoatWithPhysicsAttackingPlayer(CVehicle* vehicle, float* arg2, float* arg3, float* arg4, bool* arg5) {
-    plugin::Call<0x428DE0, CVehicle*, float*, float*, float*, bool*>(vehicle, arg2, arg3, arg4, arg5);
+void CCarCtrl::SteerAIBoatWithPhysicsAttackingPlayer(CVehicle* vehicle, float* pSteer, float* pGas, float* pBrake, bool* pHandbrake) {
+    const auto& vehPos = vehicle->GetPosition();
+
+    // Distance to the player. x87: kept in extended precision
+    const auto playerPos = FindPlayerCoors();
+    const auto dx        = (double)playerPos.x - vehPos.x;
+    const auto dy        = (double)playerPos.y - vehPos.y;
+    const auto dz        = (double)playerPos.z - vehPos.z;
+    const auto distToPlayerExt = std::sqrt((dz * dz + dy * dy) + dx * dx);
+    const auto distToPlayer    = (float)distToPlayerExt;
+
+    // How far ahead (in time) the player's position is predicted
+    const auto  predictionTimeExt = distToPlayerExt * 0.05f;
+    const float predictionTime    = predictionTimeExt < 2.0 ? (float)predictionTimeExt : 2.0f;
+
+    const auto fwd = GetNormalizedForward2D(vehicle);
+
+    // Where the player will be. x87: X is rounded to float, Y isn't
+    const auto& playerSpeed  = FindPlayerSpeed();
+    const auto  targetX      = (float)(((double)predictionTime * playerSpeed.x) * 60.0f + FindPlayerCoors().x);
+    const auto  targetYDelta = (float)(((double)predictionTime * playerSpeed.y) * 60.0f);
+    const auto  targetY      = (double)targetYDelta + FindPlayerCoors().y;
+
+    const float targetHeading = CGeneral::GetATanOfXY((float)((double)targetX - vehPos.x), (float)(targetY - vehPos.y));
+    const auto  steer         = WrapAngleToPi((double)targetHeading - CGeneral::GetATanOfXY(fwd.x, fwd.y));
+
+    CalcBoatAIGas(vehicle, pGas);
+    *pBrake     = 0.0f;
+    *pSteer     = (float)steer;
+    *pHandbrake = false;
+
+    if (vehicle->m_nModelIndex == MODEL_PREDATOR && distToPlayer < 40.0f && steer < 0.15f) { // BUG: `steer` is signed, so this fires if the target is anywhere to the left too
+        vehicle->FireFixedMachineGuns();
+    }
 }
 
 // 0x429090
-void CCarCtrl::SteerAIBoatWithPhysicsCirclingPlayer(CVehicle* vehicle, float* arg2, float* arg3, float* arg4, bool* arg5) {
-    plugin::Call<0x429090, CVehicle*, float*, float*, float*, bool*>(vehicle, arg2, arg3, arg4, arg5);
+void CCarCtrl::SteerAIBoatWithPhysicsCirclingPlayer(CVehicle* vehicle, float* pSteer, float* pGas, float* pBrake, bool* pHandbrake) {
+    const auto& vehPos = vehicle->GetPosition();
+
+    // Direction from the vehicle to the player (2D)
+    const auto playerPos = FindPlayerCoors();
+    CVector toPlayer{ (float)((double)playerPos.x - vehPos.x), (float)((double)playerPos.y - vehPos.y), 0.0f };
+    toPlayer.Normalise();
+
+    // Offset (perpendicular to the direction) to the point to circle around - the direction of circling depends on the random seed
+    const auto radius = (vehicle->m_nRandomSeed & 1) ? -12.0f : 26.0f;
+    const auto offX   = (float)((double)toPlayer.y * radius);
+    const auto offY   = (float)((double)-toPlayer.x * radius);
+
+    // x87: Not rounded to float
+    const auto targetX = (double)offX + FindPlayerCoors().x;
+    const auto targetY = (double)offY + FindPlayerCoors().y;
+
+    const auto fwd = GetNormalizedForward2D(vehicle);
+
+    const float targetHeading = CGeneral::GetATanOfXY((float)(targetX - vehPos.x), (float)(targetY - vehPos.y));
+    const auto  steer         = WrapAngleToPi((double)targetHeading - CGeneral::GetATanOfXY(fwd.x, fwd.y));
+
+    CalcBoatAIGas(vehicle, pGas);
+    *pBrake     = 0.0f;
+    *pSteer     = (float)steer;
+    *pHandbrake = false;
 }
 
 // 0x428BE0
-void CCarCtrl::SteerAIBoatWithPhysicsHeadingForTarget(CVehicle* vehicle, float arg2, float arg3, float* arg4, float* arg5, float* arg6) {
-    plugin::Call<0x428BE0, CVehicle*, float, float, float*, float*, float*>(vehicle, arg2, arg3, arg4, arg5, arg6);
+void CCarCtrl::SteerAIBoatWithPhysicsHeadingForTarget(CVehicle* vehicle, float x, float y, float* pSteer, float* pGas, float* pBrake) {
+    const auto fwd = GetNormalizedForward2D(vehicle);
+    const auto& pos = vehicle->GetPosition();
+
+    // Angle needed to turn to face the target (in [-PI, PI])
+    const float targetHeading = CGeneral::GetATanOfXY(x - pos.x, y - pos.y);
+    auto        steer         = WrapAngleToPi((double)targetHeading - CGeneral::GetATanOfXY(fwd.x, fwd.y));
+
+    // Clamp to [-0.5, 0.5]
+    if (steer < -0.5f) {
+        steer = -0.5f;
+    } else if (steer > 0.5f) {
+        steer = 0.5f;
+    }
+
+    const auto goingTooFast = CalcBoatAIGas(vehicle, pGas);
+    *pBrake = 0.0f;
+    *pSteer = goingTooFast
+        ? (float)(steer * -1.0f) // Reverse the steering when slowing down
+        : (float)steer;
 }
 
 // 0x422B20
@@ -1840,8 +1960,84 @@ void CCarCtrl::SteerAICarWithPhysicsTryingToBlockTarget(CVehicle* vehicle, CEnti
 }
 
 // 0x428990
-void CCarCtrl::SteerAICarWithPhysicsTryingToBlockTarget_Stop(CVehicle* vehicle, float x, float y, float arg4, float arg5, float* arg6, float* arg7, float* arg8, bool* arg9) {
-    plugin::Call<0x428990, CVehicle*, float, float, float, float, float*, float*, float*, bool*>(vehicle, x, y, arg4, arg5, arg6, arg7, arg8, arg9);
+void CCarCtrl::SteerAICarWithPhysicsTryingToBlockTarget_Stop(CVehicle* vehicle, float x, float y, float arg4, float arg5, float* pSteer, float* pGas, float* pBrake, bool* pHandbrake) {
+    *pSteer     = 0.0f;
+    *pGas       = 0.0f;
+    *pBrake     = 1.0f;
+    *pHandbrake = true;
+
+    // Squared distance to the target. x87: kept in extended precision for the first comparison
+    const auto& pos       = vehicle->GetPosition();
+    const auto  distSqExt = ((double)pos.y - y) * ((double)pos.y - y) + ((double)pos.x - x) * ((double)pos.x - x);
+    const auto  distSq    = (float)distSqExt;
+
+    auto& autoPilot = vehicle->m_autoPilot;
+
+    // Not there yet
+    if (distSqExt > 100.0f) {
+        autoPilot.m_nCarMission = autoPilot.m_nCarMission != MISSION_BLOCKCAR_HANDBRAKESTOP
+            ? MISSION_BLOCKPLAYER_CLOSE
+            : MISSION_BLOCKCAR_CLOSE;
+        return;
+    }
+
+    const auto LeaveCar = [&] {
+        CCarAI::TellOccupantsToLeaveCar(vehicle);
+        autoPilot.m_nCruiseSpeed = 0;
+        autoPilot.m_nCarMission  = MISSION_NONE;
+    };
+
+    // x87: Kept in extended precision
+    const auto GetPlayerVehicleSpeed = [] {
+        const auto& speed = FindPlayerVehicle()->m_vecMoveSpeed;
+        return std::sqrt(((double)speed.x * speed.x + (double)speed.y * speed.y) + (double)speed.z * speed.z);
+    };
+
+    if (autoPilot.m_nCarMission == MISSION_BLOCKCAR_HANDBRAKESTOP) {
+        if (vehicle->m_pDriver) {
+            if (const auto task = vehicle->m_pDriver->GetTaskManager().GetActiveTask()) {
+                if (task->GetTaskType() == TASK_COMPLEX_KILL_CRIMINAL) {
+                    return;
+                }
+            }
+        }
+        if (!((double)vehicle->m_vecMoveSpeed.x * vehicle->m_vecMoveSpeed.x + (double)vehicle->m_vecMoveSpeed.y * vehicle->m_vecMoveSpeed.y < 0.0001f)) {
+            return;
+        }
+        if (!((double)arg4 * arg4 + (double)arg5 * arg5 < 0.0004f)) {
+            return;
+        }
+        if (!vehicle->vehicleFlags.bIsLawEnforcer) {
+            return;
+        }
+        LeaveCar();
+        return;
+    }
+
+    // The timer counts the time the player is not moving
+    if (FindPlayerVehicle() && GetPlayerVehicleSpeed() < 0.05f) {
+        vehicle->m_nCopsInCarTimer = (int16)(int64)((double)CTimer::GetTimeStep() * 16.666666f + (double)(uint16)vehicle->m_nCopsInCarTimer); // 0x821B40 (ftol)
+    } else {
+        vehicle->m_nCopsInCarTimer = 0;
+    }
+
+    if (FindPlayerVehicle()) {
+        if (!FindPlayerVehicle()->IsUpsideDown()) {
+            if (!(GetPlayerVehicleSpeed() < 0.05f)) {
+                return;
+            }
+            if ((uint16)vehicle->m_nCopsInCarTimer <= 2500u) {
+                return;
+            }
+        }
+    }
+    if (!vehicle->vehicleFlags.bIsLawEnforcer) {
+        return;
+    }
+    if (!(distSq < 100.0f)) {
+        return;
+    }
+    LeaveCar();
 }
 
 // 0x436A90

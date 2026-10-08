@@ -89,6 +89,13 @@ struct tRadioState {
 };
 VALIDATE_SIZE(tRadioState, 0x2C);
 
+//! Inclusive range of sound IDs. `Start == 0x782` is used for "there are none".
+struct tRadioSoundRange {
+    int32 Start;
+    int32 End;
+};
+VALIDATE_SIZE(tRadioSoundRange, 0x8);
+
 //typedef int8 RadioStationId; => eRadioID
 
 // NOTSA
@@ -139,7 +146,7 @@ public:
     uint32          m_nTimeToDisplayRadioName{0};
     uint32          m_nSavedTimeMs{0};
     uint32          m_nRetuneStartedTime;
-    uint32          field_60{0};
+    uint32          field_60{0}; //!< Time (in ms) when the current radio started playing
     int32           m_HwClientHandle;
     eRadioTrackMode m_nMode{eRadioTrackMode::RADIO_STOPPED};
     int32           m_nStationsListed{0};
@@ -249,7 +256,7 @@ protected:
     int32 ChooseIdentIndex(eRadioID id);
     int32 ChooseAdvertIndex(eRadioID id);
     int32 ChooseDJBanterIndex(eRadioID id);
-    int32 ChooseDJBanterIndexFromList(eRadioID id, int32** list);
+    int32 ChooseDJBanterIndexFromList(eRadioID id, const tRadioSoundRange* list);
     int8  ChooseMusicTrackIndex(eRadioID id);
     static int8  ChooseTalkRadioShow();
 

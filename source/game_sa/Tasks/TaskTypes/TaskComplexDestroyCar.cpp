@@ -19,7 +19,7 @@ void CTaskComplexDestroyCar::InjectHooks() {
     RH_ScopedVMTInstall(MakeAbortable, 0x621C80);
     RH_ScopedVMTInstall(CreateNextSubTask, 0x62D9E0);
     RH_ScopedVMTInstall(CreateFirstSubTask, 0x62DA90);
-    RH_ScopedVMTInstall(ControlSubTask, 0x6288C0, { .Reversed = false });
+    RH_ScopedVMTInstall(ControlSubTask, 0x6288C0);
 }
 
 // 0x621C00
@@ -94,5 +94,51 @@ CTask* CTaskComplexDestroyCar::CreateSubTask(eTaskType taskType, CPed* ped) {
 
 // 0x6288C0
 CTask* CTaskComplexDestroyCar::ControlSubTask(CPed* ped) {
-    return plugin::CallMethodAndReturn<CTask*, 0x6288C0, CTaskComplexDestroyCar*, CPed*>(this, ped);
+    if (!m_VehicleToDestroy || !(m_VehicleToDestroy->m_fHealth > 0.f)) { // Written like this to handle NaN the same way as the original
+        return nullptr;
+    }
+
+    if (m_arg0) {
+        return CreateFirstSubTask(ped);
+    }
+
+    eTaskType newTaskType;
+    switch (m_pSubTask->GetTaskType()) {
+    case TASK_COMPLEX_DESTROY_CAR_MELEE: {
+        if (ped->GetActiveWeapon().IsTypeMelee()) {
+            return m_pSubTask;
+        }
+        newTaskType = TASK_COMPLEX_DESTROY_CAR_ARMED;
+        break;
+    }
+    case TASK_COMPLEX_DESTROY_CAR_ARMED: {
+        if (ped->GetActiveWeapon().GetTotalAmmo() != 0 || ped->IsPlayer()) {
+            return m_pSubTask;
+        }
+
+        // Out of ammo => try to find another weapon with ammo
+        int32 slot = 0;
+        for (; slot < (int32)NUM_WEAPON_SLOTS; slot++) {
+            if ((int32)ped->GetWeaponInSlot((size_t)slot).GetTotalAmmo() > 0) {
+                ped->SetCurrentWeapon(slot);
+                break;
+            }
+        }
+        if (slot != (int32)NUM_WEAPON_SLOTS) {
+            return m_pSubTask;
+        }
+
+        // Nothing left => go unarmed
+        ped->SetCurrentWeapon(0);
+        newTaskType = TASK_COMPLEX_DESTROY_CAR_MELEE;
+        break;
+    }
+    default:
+        return m_pSubTask;
+    }
+
+    if (m_pSubTask->MakeAbortable(ped, ABORT_PRIORITY_URGENT, nullptr)) {
+        return CreateSubTask(newTaskType, ped);
+    }
+    return m_pSubTask;
 }

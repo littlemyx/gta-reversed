@@ -914,7 +914,7 @@ void CTaskComplexEnterCar::GetCameraStickModifier(CPed* ped, float zoomDist, flo
     }
     stickLR = (float)(delta * s_Factors[m_CamMovementChoice] + stickLR);
 
-    if (vertAngle > -0.17453294f) { // 0x8D2ECC
+    if (vertAngle > StaticRef<float>(0x8D2ECC)) { // .data global in the original (-10 degrees, ~-0.17453294)
         stickUD = (float)((double)stickUD - (double)s_Factors[m_CamMovementChoice] * s_Limits[m_CamMovementChoice]);
     }
 }

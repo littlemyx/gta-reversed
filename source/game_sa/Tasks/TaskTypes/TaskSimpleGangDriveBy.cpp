@@ -188,5 +188,5 @@ void CTaskSimpleGangDriveBy::FireGun(CPed* ped) {
         }
         weapon.Fire(ped, &muzzle, &muzzle, m_pTargetEntity, &targetPos, &aim);
     }
-    ped->DoGunFlash(250, false); // 0x8D2E90
+    ped->DoGunFlash(StaticRef<uint16>(0x8D2E90), false); // Flash lifetime (a .data global in the original, initialised to 250)
 }

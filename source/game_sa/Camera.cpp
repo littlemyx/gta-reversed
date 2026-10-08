@@ -28,6 +28,8 @@ auto& gCurDistForCam = StaticRef<float>(0x8CCB84);
 auto& gpCamColVars = StaticRef<float*>(0xB6FE88);
 static auto& gCamColLastRadius = StaticRef<float>(0xB6EC6C);
 auto& gCamColVars = StaticRef<float[28][6]>(0x8CC8E0);
+// Set if the cam mode was changed by the player (read at the end of CamControl, set by the cinematic cams (`ProcessObbeCinemaCamera*`) and someone else)
+static auto& gCamModeChangedByPlayer = StaticRef<bool>(0xB6EC34); // NOTSA name
 static auto& gNearClipPedDistDivisor = StaticRef<float>(0xB6EC68); // NOTSA name: unidentified global
 static auto& gNearClipPedScale = StaticRef<float>(0x8CCC84);       // NOTSA name: unidentified global, 0.25
 
@@ -132,6 +134,13 @@ void CCamera::InjectHooks() {
     RH_ScopedInstall(SetColVarsVehicle, 0x50CCA0);
     RH_ScopedInstall(StartTransitionWhenNotFinishedInter, 0x515BC0);
     RH_ScopedInstall(StartTransition, 0x515200);
+    RH_ScopedInstall(UpdateSoundDistances, 0x515BD0);
+    RH_ScopedOverloadedInstall(ProcessShake, "0", 0x51A6F0, void(CCamera::*)());
+    RH_ScopedInstall(ProcessObbeCinemaCameraCar, 0x5267C0);
+    RH_ScopedInstall(ProcessObbeCinemaCameraTrain, 0x526950);
+    RH_ScopedInstall(ProcessObbeCinemaCameraHeli, 0x526AE0);
+    RH_ScopedInstall(ProcessObbeCinemaCameraPlane, 0x526C80);
+    RH_ScopedInstall(ProcessObbeCinemaCameraBoat, 0x526E20);
     RH_ScopedInstall(CameraGenericModeSpecialCases, 0x50CD30);
     RH_ScopedInstall(CameraPedModeSpecialCases, 0x50CD80);
     RH_ScopedInstall(CameraPedAimModeSpecialCases, 0x50CDA0);
@@ -1177,7 +1186,44 @@ void CCamera::TakeControlNoEntity(const CVector& fixedModeVector, eSwitchType sw
 
 // 0x50C910
 void CCamera::TakeControlAttachToEntity(CEntity* target, CEntity* attached, CVector* attachedCamOffset, CVector* attachedCamLookAt, float tilt, eSwitchType switchType, int32 whoIsInControlOfTheCamera) {
-    plugin::CallMethod<0x50C910, CCamera*, CEntity*, CEntity*, CVector*, CVector*, float, eSwitchType, int32>(this, target, attached, attachedCamOffset, attachedCamLookAt, tilt, switchType, whoIsInControlOfTheCamera);
+    if (whoIsInControlOfTheCamera == 2 && m_nWhoIsInControlOfTheCamera == 1) {
+        return;
+    }
+    m_nWhoIsInControlOfTheCamera = whoIsInControlOfTheCamera;
+
+    if (!attached) {
+        if (FindPlayerVehicle(-1, false)) {
+            attached = FindPlayerVehicle(-1, false);
+        } else {
+            attached = CWorld::Players[CWorld::PlayerInFocus].m_pPed; // NOTE: not `FindPlayerPed`
+        }
+    }
+
+    if (target) {
+        CEntity::ChangeEntityReference(m_pTargetEntity, target);
+        m_bLookingAtVector = false;
+    } else {
+        m_bLookingAtVector = true;
+        // 0x509760 - "are the vectors different" (unordered counts as different)
+        const bool differ = attachedCamLookAt->x != attachedCamOffset->x
+                         || attachedCamLookAt->y != attachedCamOffset->y
+                         || attachedCamLookAt->z != attachedCamOffset->z;
+        m_vecAttachedCamLookAt = differ ? *attachedCamLookAt : CVector{ 0.f, 0.f, 0.f };
+    }
+
+    if (attachedCamOffset->x == 0.f && attachedCamOffset->y == 0.f && attachedCamOffset->z == 0.f) {
+        m_vecAttachedCamOffset = CVector{ 0.f, 0.f, 2.f };
+    } else {
+        m_vecAttachedCamOffset = *attachedCamOffset;
+    }
+
+    m_fAttachedCamAngle = tilt;
+    CEntity::ChangeEntityReference(m_pAttachedEntity, attached); // NOTE: the original crashes if `attached` is null here
+    m_nModeToGoTo       = MODE_ATTACHCAM;
+    m_nTypeOfSwitch     = switchType;
+    m_bLookingAtPlayer  = false;
+    m_bStartInterScript = true;
+    // NOTSA: the original calls `FindPlayerPed(-1)` here and discards the result
 }
 
 // 0x50CAE0
@@ -1197,7 +1243,53 @@ void CCamera::UpdateAimingCoors(const CVector& aimingTargetCoors) {
 
 // 0x515BD0
 void CCamera::UpdateSoundDistances() {
-    plugin::CallMethod<0x515BD0, CCamera*>(this);
+    const auto mode = GetActiveCam().m_nMode;
+    bool isFirstPersonLikeMode = false;
+    switch (mode) {
+    case MODE_1STPERSON:
+    case MODE_SNIPER:
+    case MODE_SNIPER_RUNABOUT:
+    case MODE_ROCKETLAUNCHER_RUNABOUT:
+    case MODE_ROCKETLAUNCHER_RUNABOUT_HS:
+    case MODE_M16_1STPERSON_RUNABOUT:
+    case MODE_FIGHT_CAM_RUNABOUT:
+    case MODE_1STPERSON_RUNABOUT:
+    case MODE_HELICANNON_1STPERSON:
+    case MODE_CAMERA:
+    case MODE_M16_1STPERSON:
+    case MODE_ROCKETLAUNCHER:
+    case MODE_ROCKETLAUNCHER_HS:
+        isFirstPersonLikeMode = true;
+    }
+
+    // The point is `scale` times the camera's forward vector away from the camera (sic)
+    const float scale = isFirstPersonLikeMode && m_pTargetEntity->GetIsTypePed()
+        ? 0.5f  // 0x858B8C
+        : 5.0f; // 0x858C80
+    const auto& fwd = m_mCameraMatrix.GetForward();
+    const auto  pos = GetPosition();
+    const float fz  = (float)((double)fwd.z * scale);
+    const CVector point{
+        (float)((double)fwd.x * scale + pos.x),
+        (float)((double)fwd.y * scale + pos.y),
+        (float)((double)fz + pos.z)
+    };
+
+    const auto idx = (uint16)(CTimer::m_FrameCounter % 12);
+    if (idx == 0) {
+        m_fSoundDistUpAsReadOld = m_fSoundDistUpAsRead;
+
+        CColPoint colPoint;
+        CEntity*  hitEntity;
+        if (CWorld::ProcessVerticalLine(point, (float)((double)point.z + 20.0), colPoint, hitEntity, true, false, false, false, true, false, nullptr)) {
+            m_fSoundDistUpAsRead = colPoint.m_vecPoint.z - point.z;
+        } else {
+            m_fSoundDistUpAsRead = 20.f; // 0x858BA4
+        }
+    }
+
+    const double f = (double)(int16)(idx + 1) * (double)0.16666667f; // 0x85F0A0 (1/6)
+    m_fSoundDistUp = (float)((1.0 - f) * m_fSoundDistUpAsReadOld + f * m_fSoundDistUpAsRead);
 }
 
 // unused
@@ -1524,14 +1616,128 @@ void CCamera::ProcessObbeCinemaCameraPed() {
     // NOP
 }
 
+namespace {
+bool IsActiveCamUnderWater(); // defined further down (0x50B830)
+
+// Cinematic cam sequences (`ProcessObbeCinemaCamera*`): NOTSA names, unidentified globals
+// The direction in which the sequences are stepped (1 or -1)
+auto& gCineyCamDirection = StaticRef<int8>(0x8CC471);
+// Car
+auto& gCineyCamCarIdx    = StaticRef<int32>(0x8CCEEC);
+auto& gCineyCamCarTable  = StaticRef<int32[12]>(0x8CC828); // last one is the fallback
+auto& gCineyCamCarTime   = StaticRef<uint32>(0xB70120);
+// Train
+auto& gCineyCamTrainIdx   = StaticRef<int32>(0x8CCEF0);
+auto& gCineyCamTrainTable = StaticRef<int32[7]>(0x8CC858);
+auto& gCineyCamTrainTime  = StaticRef<uint32>(0xB70124);
+// Heli
+auto& gCineyCamHeliIdx   = StaticRef<int32>(0x8CCEF4);
+auto& gCineyCamHeliTable = StaticRef<int32[8]>(0x8CC874);
+auto& gCineyCamHeliTime  = StaticRef<uint32>(0xB70128);
+// Plane
+auto& gCineyCamPlaneIdx   = StaticRef<int32>(0x8CCEF8);
+auto& gCineyCamPlaneTable = StaticRef<int32[7]>(0x8CC894);
+auto& gCineyCamPlaneTime  = StaticRef<uint32>(0xB7012C);
+// Boat
+auto& gCineyCamBoatIdx   = StaticRef<int32>(0x8CCEFC);
+auto& gCineyCamBoatTable = StaticRef<int32[4]>(0x8CC8B0);
+auto& gCineyCamBoatTime  = StaticRef<uint32>(0xB70130);
+
+// Shown the first time a cinematic cam is started
+void ShowCineyCamHelpMessage(const CCamera& cam) {
+    if (gbCineyCamMessageDisplayed > 0 && !cam.m_bCinemaCamera) {
+        gbCineyCamMessageDisplayed--;
+        CHud::SetHelpMessage(TheText.Get("CINCAM"), true, false, false);
+    }
+}
+
+// Steps `seqIdx` (wrapping around at `count`) and tries to start the cam from the table at that index
+bool StepCineyCamSeq(CCamera& cam, int32& seqIdx, const int32* table, int32 count) {
+    seqIdx = (gCineyCamDirection + seqIdx) % count;
+    if (seqIdx < 0) {
+        seqIdx = count - 1;
+    } else if (seqIdx > count - 1) {
+        seqIdx = 0;
+    }
+    return cam.TryToStartNewCamMode(table[seqIdx]);
+}
+
+// Looks for a cam of the sequence that can be started (at most `count` + 1 tries).
+// Returns false if there's none (or only the one after `count` tries, which the original treats the same way)
+bool StartNextCineyCam(CCamera& cam, int32& seqIdx, const int32* table, int32 count) {
+    int32 numTries = 0;
+    if (StepCineyCamSeq(cam, seqIdx, table, count)) {
+        return true;
+    }
+    for (;;) {
+        if (numTries > count) {
+            return false;
+        }
+        numTries++;
+        if (StepCineyCamSeq(cam, seqIdx, table, count)) {
+            return numTries < count;
+        }
+    }
+}
+}
+
+// 0x51D770
+bool CCamera::IsItTimeForNewCamera(int32 camSequence, int32 startTime) {
+    return plugin::CallMethodAndReturn<bool, 0x51D770, CCamera*, int32, int32>(this, camSequence, startTime); // Not reversed yet
+}
+
 // 0x526C80
 void CCamera::ProcessObbeCinemaCameraPlane() {
-    plugin::CallMethod<0x526C80, CCamera*>(this); // Not reversed yet
+    if (!bDidWeProcessAnyCinemaCam) {
+        gCineyCamPlaneIdx       = -1;
+        gCamModeChangedByPlayer = true;
+        ShowCineyCamHelpMessage(*this);
+    }
+
+    if (bDidWeProcessAnyCinemaCam
+        && !IsActiveCamUnderWater()
+        && !IsItTimeForNewCamera(gCineyCamPlaneTable[gCineyCamPlaneIdx], (int32)gCineyCamPlaneTime)
+    ) {
+        m_nModeObbeCamIsInForCar  = gCineyCamPlaneIdx;
+        bDidWeProcessAnyCinemaCam = true;
+        return;
+    }
+
+    if (StartNextCineyCam(*this, gCineyCamPlaneIdx, gCineyCamPlaneTable, 6)) {
+        gCineyCamPlaneTime = CTimer::GetTimeInMS();
+    } else {
+        gCineyCamPlaneIdx = 6;
+        if (GetActiveCam().m_nMode != MODE_CAM_ON_A_STRING) {
+            TryToStartNewCamMode(MODE_PED_DEAD_BABY);
+            gCineyCamPlaneTime = CTimer::GetTimeInMS();
+        }
+    }
+    m_nModeObbeCamIsInForCar  = gCineyCamPlaneIdx;
+    bDidWeProcessAnyCinemaCam = true;
 }
 
 // 0x526950
 void CCamera::ProcessObbeCinemaCameraTrain() {
-    plugin::CallMethod<0x526950, CCamera*>(this); // Not reversed yet
+    if (!bDidWeProcessAnyCinemaCam) {
+        gCineyCamTrainIdx = -1;
+        ShowCineyCamHelpMessage(*this);
+        gCamModeChangedByPlayer = true;
+    }
+
+    if (bDidWeProcessAnyCinemaCam && !IsItTimeForNewCamera(gCineyCamTrainTable[gCineyCamTrainIdx], (int32)gCineyCamTrainTime)) {
+        m_nModeObbeCamIsInForCar  = gCineyCamTrainIdx;
+        bDidWeProcessAnyCinemaCam = true;
+        return;
+    }
+
+    const bool found = StartNextCineyCam(*this, gCineyCamTrainIdx, gCineyCamTrainTable, 6);
+    gCineyCamTrainTime = CTimer::GetTimeInMS();
+    if (!found) {
+        gCineyCamTrainIdx = 6;
+        TryToStartNewCamMode(gCineyCamTrainTable[6]);
+    }
+    m_nModeObbeCamIsInForCar  = gCineyCamTrainIdx;
+    bDidWeProcessAnyCinemaCam = true;
 }
 
 // 0x50B890
@@ -1574,17 +1780,83 @@ void CCamera::ProcessVectorTrackLinear(float ratio) {
 
 // 0x526E20
 void CCamera::ProcessObbeCinemaCameraBoat() {
-    plugin::CallMethod<0x526E20, CCamera*>(this); // Not reversed yet
+    if (!bDidWeProcessAnyCinemaCam) {
+        gCineyCamBoatIdx = -1;
+        ShowCineyCamHelpMessage(*this);
+        gCamModeChangedByPlayer = true;
+    }
+
+    if (bDidWeProcessAnyCinemaCam && !IsItTimeForNewCamera(gCineyCamBoatTable[gCineyCamBoatIdx], (int32)gCineyCamBoatTime)) {
+        m_nModeObbeCamIsInForCar  = gCineyCamBoatIdx;
+        bDidWeProcessAnyCinemaCam = true;
+        return;
+    }
+
+    if (StartNextCineyCam(*this, gCineyCamBoatIdx, gCineyCamBoatTable, 3)) {
+        gCineyCamBoatTime = CTimer::GetTimeInMS();
+    } else {
+        gCineyCamBoatIdx = 3;
+        if (GetActiveCam().m_nMode != MODE_CAM_ON_A_STRING) {
+            TryToStartNewCamMode(MODE_PED_DEAD_BABY);
+            gCineyCamBoatTime = CTimer::GetTimeInMS();
+        }
+    }
+    m_nModeObbeCamIsInForCar  = gCineyCamBoatIdx;
+    bDidWeProcessAnyCinemaCam = true;
 }
 
 // 0x5267C0
 void CCamera::ProcessObbeCinemaCameraCar() {
-    plugin::CallMethod<0x5267C0, CCamera*>(this); // Not reversed yet
+    if (!bDidWeProcessAnyCinemaCam) {
+        gCineyCamCarIdx = -1;
+        ShowCineyCamHelpMessage(*this);
+        gCamModeChangedByPlayer = true;
+    }
+
+    if (bDidWeProcessAnyCinemaCam && !IsItTimeForNewCamera(gCineyCamCarTable[gCineyCamCarIdx], (int32)gCineyCamCarTime)) {
+        m_nModeObbeCamIsInForCar  = gCineyCamCarIdx;
+        bDidWeProcessAnyCinemaCam = true;
+        return;
+    }
+
+    const bool found = StartNextCineyCam(*this, gCineyCamCarIdx, gCineyCamCarTable, 11);
+    gCineyCamCarTime = CTimer::GetTimeInMS();
+    if (!found) {
+        gCineyCamCarIdx = 11;
+        TryToStartNewCamMode(gCineyCamCarTable[11]);
+    }
+    m_nModeObbeCamIsInForCar  = gCineyCamCarIdx;
+    bDidWeProcessAnyCinemaCam = true;
 }
 
 // 0x526AE0
 void CCamera::ProcessObbeCinemaCameraHeli() {
-    plugin::CallMethod<0x526AE0, CCamera*>(this); // Not reversed yet
+    if (!bDidWeProcessAnyCinemaCam) {
+        gCineyCamHeliIdx = -1;
+        ShowCineyCamHelpMessage(*this);
+        gCamModeChangedByPlayer = true;
+    }
+
+    if (bDidWeProcessAnyCinemaCam
+        && !IsActiveCamUnderWater()
+        && !IsItTimeForNewCamera(gCineyCamHeliTable[gCineyCamHeliIdx], (int32)gCineyCamHeliTime)
+    ) {
+        m_nModeObbeCamIsInForCar  = gCineyCamHeliIdx;
+        bDidWeProcessAnyCinemaCam = true;
+        return;
+    }
+
+    if (StartNextCineyCam(*this, gCineyCamHeliIdx, gCineyCamHeliTable, 7)) {
+        gCineyCamHeliTime = CTimer::GetTimeInMS();
+    } else {
+        gCineyCamHeliIdx = 7;
+        if (GetActiveCam().m_nMode != MODE_CAM_ON_A_STRING) {
+            TryToStartNewCamMode(MODE_PED_DEAD_BABY);
+            gCineyCamHeliTime = CTimer::GetTimeInMS();
+        }
+    }
+    m_nModeObbeCamIsInForCar  = gCineyCamHeliIdx;
+    bDidWeProcessAnyCinemaCam = true;
 }
 
 // 0x50D430
@@ -1632,7 +1904,10 @@ void CCamera::ProcessVectorMoveLinear() {
 // unused
 // 0x51A6F0
 void CCamera::ProcessShake() {
-    plugin::CallMethod<0x51A6F0, CCamera*>(this);
+    const double timeNow = (double)CTimer::GetTimeInMS();
+    if (timeNow <= m_fEndShakeTime) {
+        ProcessShake((float)((timeNow - m_fStartShakeTime) / ((double)m_fEndShakeTime - m_fStartShakeTime)));
+    }
 }
 
 // shakeIntensity not used
@@ -3065,8 +3340,6 @@ bool CCamera::CameraColDetAndReact(CVector* source, CVector* target) {
 static auto& gNewCamMode = StaticRef<eCamMode>(0xB70140); // NOTSA name
 // CamControl: > 0 if a mode was requested (used if the target is a vehicle, then reset to -1)
 static auto& gRequestedCamMode = StaticRef<int32>(0x8CC824); // NOTSA name
-// CamControl: set if the cam mode was changed by the player (read at the end of CamControl, set by someone else)
-static auto& gCamModeChangedByPlayer = StaticRef<bool>(0xB6EC34); // NOTSA name
 // CamControl: special aim cam (`MODE_SPECIAL_FIXED_FOR_SYPHON`): set if the fixed cam position was already set up
 static auto& gSpecialAimCamPosSet = StaticRef<bool>(0xB7013D); // NOTSA name
 // CamControl: arrest cam
@@ -3100,7 +3373,35 @@ bool CycleCameraModeUpJustDown(const CPad& pad) {
 
 // 0x509AE0 - `WellBufferMe` is private to Cam.cpp
 void WellBufferMe(float target, float& valueToChange, float& speedSoFar, float topSpeed, float speedStep, bool isAnAngle) {
-    plugin::Call<0x509AE0, float, float*, float*, float, float, bool>(target, &valueToChange, &speedSoFar, topSpeed, speedStep, isAnAngle);
+    // NOTE: the hook of this function lives in Cam.cpp (`WellBufferMe` there is a copy of this one, installed on the same address)
+    constexpr double PI     = (double)std::numbers::pi_v<float>;     // 0x858CB8
+    constexpr double TWO_PI = (double)(2.f * std::numbers::pi_v<float>); // 0x858CBC
+
+    // x87 extended precision is kept by the original, except for the (angle) difference which is spilled to a float
+    double diff = (double)target - valueToChange;
+    if (isAnAngle) {
+        diff = (double)(float)diff;
+        for (; diff >= PI; diff -= TWO_PI) {
+            ;
+        }
+        for (; diff < -PI; diff += TWO_PI) {
+            ;
+        }
+    }
+
+    const double fullSpeed = diff * topSpeed;
+    const double speedDiff = fullSpeed - speedSoFar;
+    const double change    = std::abs(speedDiff) * CTimer::GetTimeStep() * speedStep;
+    speedSoFar = (float)(speedDiff <= 0.0 || std::isnan(speedDiff) ? speedSoFar - change : change + speedSoFar);
+
+    if (fullSpeed < 0.0 && fullSpeed > speedSoFar) {
+        speedSoFar = (float)fullSpeed;
+    } else if (fullSpeed > 0.0 && fullSpeed < speedSoFar) {
+        speedSoFar = (float)fullSpeed;
+    }
+
+    const float timeStep = CTimer::GetTimeStep();
+    valueToChange = (float)((10.0f < timeStep ? 10.0f : timeStep) * (double)speedSoFar + valueToChange);
 }
 
 // Moves `value` towards `target` by (at most) `step`
@@ -3132,7 +3433,7 @@ int32 GetStairsZoneExtent(const CZoneDef& zone) {
 
 // CGarage::FindDoorsWithGarage (0x449FF0)
 void FindGarageDoors(CGarage* garage, CObject*& door1, CObject*& door2) {
-    plugin::CallMethod<0x449FF0, CGarage*, CObject**, CObject**>(garage, &door1, &door2);
+    garage->FindDoorsWithGarage(&door1, &door2);
 }
 
 CVector GetCenterOfGarage(const CGarage& garage) {

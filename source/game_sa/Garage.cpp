@@ -1,6 +1,7 @@
 #include "StdInc.h"
 
 #include "Garage.h"
+#include "Garages.h"
 
 void CGarage::InjectHooks() {
     RH_ScopedClass(CGarage);
@@ -23,6 +24,7 @@ void CGarage::InjectHooks() {
     // RH_ScopedInstall(InitDoorsAtStart, 0x447600);
     // RH_ScopedInstall(IsPointInsideGarage, 0x4487D0);
     // RH_ScopedInstall(Update, 0x44AA50);
+    RH_ScopedInstall(FindDoorsWithGarage, 0x449FF0);
 }
 
 // 0x4479F0
@@ -279,4 +281,56 @@ void CStoredCar::StoreCar(CVehicle* vehicle) {
 // 0x447E40
 CVehicle* CStoredCar::RestoreCar() {
     return plugin::CallMethodAndReturn<CVehicle*, 0x447E40, CStoredCar*>(this);
+}
+
+// 0x449FF0
+void CGarage::FindDoorsWithGarage(CObject** ppFirstDoor, CObject** ppSecondDoor) {
+    *ppSecondDoor = nullptr;
+    *ppFirstDoor  = nullptr;
+
+    // Center of the garage's door area (intermediates are rounded to float where the original spills them)
+    const auto garageIdx = static_cast<int8>(this - CGarages::aGarages);
+    const float halfW    = m_fWidth * 0.5f;
+    const float t1       = (float)((double)m_vDirectionA.x * halfW);
+    const float x1       = t1 + m_vPosn.x;
+    const double y1      = (double)m_vDirectionA.y * halfW + m_vPosn.y;
+    const float halfH    = m_fHeight * 0.5f;
+    const float t3       = (float)((double)m_vDirectionB.x * halfH);
+    const float cx       = t3 + x1;
+    const float cy       = (float)((double)m_vDirectionB.y * halfH + y1);
+
+    float dist1  = 99999.9f; // 0x85999C
+    float dist2  = 99999.9f;
+    auto& pool   = *GetObjectPool();
+    for (auto i = pool.GetSize(); i-- > 0;) {
+        if (pool.IsFreeSlotAtIndex(i)) {
+            continue;
+        }
+        auto* const obj = pool.GetAt(i);
+        if (!obj || obj->m_nGarageDoorGarageIndex != garageIdx) {
+            continue;
+        }
+
+        const auto& pos = obj->GetPosition();
+        const double dx = (double)cx - pos.x;
+        const double dy = (double)cy - pos.y;
+        const float dist = (float)std::sqrt(dx * dx + dy * dy);
+
+        if (!*ppFirstDoor) {
+            *ppFirstDoor = obj;
+            dist1        = dist;
+            continue;
+        }
+        if (!(dist < dist1)) { // (FCOM + JP): >= or unordered
+            if (!*ppSecondDoor || dist < dist2) {
+                *ppSecondDoor = obj;
+                dist2         = dist;
+            }
+        } else {
+            *ppSecondDoor = *ppFirstDoor;
+            dist2         = dist1;
+            *ppFirstDoor  = obj;
+            dist1         = dist;
+        }
+    }
 }

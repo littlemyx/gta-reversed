@@ -1351,7 +1351,7 @@ void CWaterLevel::RenderWater() {
         const auto v2 = quad.GetVertex(2);
         const auto v3 = quad.GetVertex(3);
         RenderWaterRectangle(
-            v0.x, v1.x, v0.y, v3.y,
+            v0.x, v1.x, v0.y, v2.y, // NOTE: Y2 comes from the 3rd vertex (not the 4th), see 0x6EFE26
             v0.rp, v1.rp, v2.rp, v3.rp
         );
         quad.bToBeRendered = false;

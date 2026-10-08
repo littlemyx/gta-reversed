@@ -758,7 +758,7 @@ void CGenericGameStorage::MakeValidSaveName(int32 slot) {
     char path[MAX_PATH]{};
     sprintf_s(path, "%s%i", C_PcSave::DefaultPCSaveFileName, slot + 1);
 
-    // NOTSA: original code (0x5D0EC9) truncates the path to 256 chars so that the extension fits
+    // Original code (0x5D0ECB) truncates the path to 256 chars so that the extension fits
     if (strlen(path) >= 0x101u) {
         path[257] = 0;
     }

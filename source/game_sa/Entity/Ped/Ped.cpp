@@ -196,7 +196,7 @@ void CPed::InjectHooks() {
 
     RH_ScopedVMTInstall(SetModelIndex, 0x5E4880);
     RH_ScopedVMTInstall(DeleteRwObject, 0x5DEBF0);
-    //RH_ScopedVirtualInstall(ProcessControl, 0x5E8CD0, { .Reversed = false });
+    RH_ScopedVMTInstall(ProcessControl, 0x5E8CD0);
     RH_ScopedVMTInstall(Teleport, 0x5E4110);
     RH_ScopedVMTInstall(SpecialEntityPreCollisionStuff, 0x5E3C30);
     //RH_ScopedVirtualInstall(SpecialEntityCalcCollisionSteps, 0x5E3E90, { .Reversed = false });
@@ -4811,7 +4811,249 @@ void CPed::DeleteRwObject()
 */
 void CPed::ProcessControl()
 {
-    plugin::CallMethod<0x5E8CD0, CPed*>(this);
+    // x87 keeps the (x*x + y*y) + z*z sum in extended precision (0x406DA0 returns it in ST0 without a sqrt)
+    const auto SquaredMagnitudeExt = [](const CVector& v) -> double {
+        return ((double)v.x * (double)v.x + (double)v.y * (double)v.y) + (double)v.z * (double)v.z;
+    };
+
+    m_pedAudio.Service(); // 0x4E2EE0
+
+    // Molotov fire effect in hand
+    if (m_nPedType == PED_TYPE_PLAYER1 || m_nPedType == PED_TYPE_PLAYER_NETWORK) {
+        if (auto& wep = GetActiveWeapon(); wep.m_Type == WEAPON_MOLOTOV) {
+            if (!bDontRender
+                && m_bIsVisible
+                && (!physicalFlags.bSubmergedInWater || !GetIntelligence()->GetTaskSwim())
+                && m_pWeaponObject
+            ) {
+                if (!wep.m_FxSystem) {
+                    wep.m_FxSystem = g_fxMan.CreateFxSystem("molotov_flame", CVector{ 0.f, 0.f, 0.f }, GetBoneMatrix(eBoneTag::BONE_R_HAND), false);
+                    if (const auto fx = wep.m_FxSystem) {
+                        fx->SetLocalParticles(true);
+                        fx->CopyParentMatrix();
+                        fx->Play();
+                    }
+                }
+            } else if (wep.m_FxSystem) {
+                g_fxMan.DestroyFxSystem(wep.m_FxSystem);
+                wep.m_FxSystem = nullptr;
+            }
+        }
+    }
+
+    if (bUsedForReplay) {
+        return;
+    }
+
+    if (bPartOfAttackWave) {
+        if (CGame::currArea != AREA_CODE_NORMAL_WORLD) {
+            return;
+        }
+        if (FindPlayerCoors().z > 950.f) { // 0x858F4C
+            return;
+        }
+    }
+
+    if (((uint8)m_nRandomSeed + CTimer::m_FrameCounter & 0x1F) == 0) {
+        PruneReferences();
+    }
+
+    {
+        auto alpha = CVisibilityPlugins::GetClumpAlpha(GetRpClump());
+        if (bFadeOut) {
+            alpha = std::max(alpha - 8, 0);
+        } else if (alpha < 255) {
+            alpha = std::min(alpha + 16, 255);
+        }
+        CVisibilityPlugins::SetClumpAlpha(GetRpClump(), alpha);
+    }
+
+    // The value of the `field_588` that means "no ground Z" (99999.99f)
+    constexpr auto NO_GROUND_Z = std::bit_cast<float>(0x47C34FFFu);
+
+    if (bKnockedOffBike
+        && (bIsStanding || bIsDrowning)
+        && !m_standingOnEntity
+        && !bHeadStuckInCollision
+        && std::bit_cast<uint32>(field_588) == std::bit_cast<uint32>(NO_GROUND_Z)
+        && SquaredMagnitudeExt(m_vecMoveSpeed) < (double)0.01f // 0x858C58
+    ) {
+        if (m_pVehicle) {
+            static auto& colPoints = StaticRef<std::array<CColPoint, 32>>(0xC092A8);
+            if (!CCollision::ProcessColModels(
+                GetMatrix(), *GetModelInfo()->GetColModel(),
+                m_pVehicle->GetMatrix(), *m_pVehicle->GetModelInfo()->GetColModel(),
+                colPoints, nullptr, nullptr, false
+            )) {
+                bKnockedOffBike = false;
+                m_pEntityIgnoredCollision = nullptr;
+            }
+        } else {
+            bKnockedOffBike = false;
+        }
+    }
+
+    if (bHeadStuckInCollision && bCheckColAboveHead) {
+        if ((double)GetPosition().z + (double)1.5f < (double)field_588) { // 0x858CE8
+            bHeadStuckInCollision = false;
+        }
+    }
+
+    bWasStanding = false;
+    bFiringWeapon = false;
+    bIsDrowning = false;
+    physicalFlags.bSubmergedInWater = false;
+    bDonePositionOutOfCollision = false;
+    bPushOtherPeds = false;
+    bCheckColAboveHead = false;
+    bPedHitWallLastFrame = false;
+    bTestForShotInVehicle = false;
+    field_588 = NO_GROUND_Z;
+
+    // Decay of the gunflash alphas
+    const auto DecayGunflashAlpha = [](int16& alpha, int16 prog) {
+        if (alpha <= 0) {
+            return;
+        }
+        const double x = (double)CTimer::ms_fTimeStep * (double)0.02f * (double)1000.f; // 0x858B38, 0x858C4C
+        const auto   d = (int32)x; // _ftol
+        const auto   decrement = (uint32)(int32)prog * (uint32)d;
+        if ((uint32)(int32)alpha <= decrement) {
+            alpha = 0;
+        } else {
+            alpha = (int16)((uint32)(int32)alpha - decrement);
+        }
+    };
+    DecayGunflashAlpha(m_nWeaponGunflashAlphaMP1, m_nWeaponGunFlashAlphaProgMP1);
+    DecayGunflashAlpha(m_nWeaponGunflashAlphaMP2, m_nWeaponGunFlashAlphaProgMP2);
+
+    if (!bIsStanding) {
+        bHeadStuckInCollision = false;
+    }
+
+    if (m_nCreatedBy == PED_MISSION && FindPlayerPed() != this) {
+        if (FindPlayerPed()->GetPlayerGroup().m_groupMembership.IsMember(this)) { // 0x5F6A10
+            bCheckColAboveHead = false;
+        }
+    }
+
+    ProcessBuoyancy(); // 0x5E1FA0
+
+    if (const auto pd = m_pPlayerData) {
+        if (physicalFlags.bSubmergedInWater && pd->m_nWaterCoverPerc > 50) {
+            if ((int8)pd->m_nWetness < 100) {
+                pd->m_nWetness++;
+            }
+        } else {
+            if ((int8)pd->m_nWetness > 0) {
+                pd->m_nWetness--;
+            }
+        }
+    }
+
+    if (bIsStanding && !CWorld::bForceProcessControl && m_standingOnEntity) {
+        if (m_standingOnEntity->m_bIsInSafePosition
+            || (m_standingOnEntity->GetIsTypeVehicle() && m_standingOnEntity->AsVehicle()->m_nVehicleSubType == VEHICLE_TYPE_TRAIN)
+        ) {
+            m_bWasPostponed = true;
+            return;
+        }
+    }
+
+    GetIntelligence()->ProcessFirst(); // 0x6073A0
+
+    const bool bWasStandingAtStart = bIsStanding;
+    if (!bWasStandingAtStart && m_vecMoveSpeed.z > 0.25) { // 0x862E38 (double)
+        if (m_pPlayerData) {
+            m_vecMoveSpeed.z = 0.25f;
+        } else {
+            const auto scale = (float)std::pow(0.949999988079071, (double)CTimer::ms_fTimeStep); // 0x86C3C8 (double), _CIpow
+            m_vecMoveSpeed = m_vecMoveSpeed * scale;
+        }
+    }
+
+    if (   m_nPedType == PED_TYPE_PLAYER1
+        || m_nPedType == PED_TYPE_PLAYER_NETWORK
+        || !bWasStandingAtStart
+        || m_vecMoveSpeed.x != 0.f
+        || m_vecMoveSpeed.y != 0.f
+        || m_vecMoveSpeed.z != 0.f
+        || (m_nMoveState != PEDMOVE_STILL && m_nMoveState != PEDMOVE_NONE)
+        || m_vecAnimMovingShiftLocal.x != 0.f
+        || m_vecAnimMovingShiftLocal.y != 0.f
+        || m_nPedState == PEDSTATE_JUMP
+        || bIsInTheAir
+        || m_standingOnEntity
+    ) {
+        CPhysical::ProcessControl(); // 0x5485E0
+    } else {
+        CPhysical::SkipPhysics(); // 0x5433B0
+    }
+
+    RequestDelayedWeapon(); // 0x5E8910
+    PlayFootSteps();        // 0x5E57F0
+    bTestForBlockedPositions = false;
+    bFallenDown = false;
+    GetIntelligence()->Process(); // 0x608260
+    if (m_nPedState != PEDSTATE_DEAD) {
+        CalculateNewVelocity(); // 0x5E4C50
+    }
+    UpdatePosition(); // 0x5E1B10
+    SetMoveAnim();    // vtable +0x5C
+    bRightArmBlocked = false;
+    bLeftArmBlocked = false;
+    bDuckRightArmBlocked = false;
+    bMidriffBlockedForJump = false;
+
+    // Bleeding: leave blood puddles
+    if ((bPedIsBleeding || field_72F) && CLocalisation::Blood() && !bInVehicle) {
+        if (field_72F) {
+            field_72F--;
+        }
+        if ((CTimer::m_FrameCounter & 3) == 0) {
+            const auto& camPos = TheCamera.GetPosition();
+            const auto  diff   = GetPosition() - camPos;
+            if (SquaredMagnitudeExt(diff) < (double)2500.f) { // 0x8598B0
+                const auto size = (float)((double)(rand() & 0x7F) * (double)0.0015f + (double)0.15f); // 0x863E38, 0x858FCC
+
+                CVector pos;
+                pos.x = (float)((double)((rand() & 0x7F) - 0x40) * (double)0.007f + (double)GetPosition().x); // 0x86C3C0
+                pos.y = (float)((double)((rand() & 0x7F) - 0x40) * (double)0.007f + (double)GetPosition().y);
+                pos.z = (float)((double)GetPosition().z + (double)1.f); // 0x858624
+
+                CShadows::AddPermanentShadow(
+                    SHADOW_DEFAULT, // 1
+                    gpBloodPoolTex,
+                    &pos,
+                    size, 0.f,
+                    0.f, -size,
+                    255, 200, 0, 0,
+                    4.f,
+                    (rand() & 0xFFF) + 2000,
+                    1.f
+                );
+            }
+        }
+    }
+
+    if (bInVehicle) {
+        if (m_pVehicle) {
+            CPopulation::UpdatePedCount(this, true);
+        } else {
+            bInVehicle = false;
+        }
+    } else {
+        CPopulation::UpdatePedCount(this, false);
+    }
+
+    if (((uint16)m_nRandomSeed + CTimer::m_FrameCounter & 0x3FFF) == 0 && bDruggedUp) {
+        Say(CTX_GLOBAL_DRUGGED_CHAT, 0, 1.f, false, false, false); // 0x51
+    }
+
+    if (GetActiveWeapon().m_Type == WEAPON_CHAINSAW && m_nPedState != PEDSTATE_ATTACK && !bInVehicle && !GetIntelligence()->GetTaskSwim()) {
+        m_weaponAudio.AddAudioEvent(AE_WEAPON_CHAINSAW_IDLE); // 0x4E69F0
+    }
+    m_weaponAudio.Service(); // 0x4E6AE0
 }
 
 /*!

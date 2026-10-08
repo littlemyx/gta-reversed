@@ -55,14 +55,14 @@ public:
     static int32 ChoosePoliceCarModel(uint32 arg0);
     static eModelID ChooseGangCarModel(eGangID loadedCarGroupId);
     static void ClearInterestingVehicleList();
-    static void ClitargetOrientationToLink(CVehicle* vehicle, CCarPathLinkAddress arg2, int8 arg3, float* arg4, float arg5, float arg6);
+    static void ClitargetOrientationToLink(CVehicle* vehicle, CCarPathLinkAddress linkAddr, int8 dirSign, float* pOrientation, float targetX, float targetY);
     static CVehicle* CreateCarForScript(int32 modelId, CVector posn, bool doMissionCleanup);
     static bool CreateConvoy(CVehicle* vehicle, int32 arg2);
     static bool CreatePoliceChase(CVehicle* vehicle, int32 arg2, CNodeAddress NodeAddress);
     static bool DealWithBend_Racing(CVehicle* vehicle, CCarPathLinkAddress LinkAddress1, CCarPathLinkAddress LinkAddress2, CCarPathLinkAddress LinkAddress3, CCarPathLinkAddress LinkAddress4, char arg6, char arg7, char arg8, char arg9, float arg10, float* arg11, float* arg12, float* arg13, float* arg14, CVector* pos);
     static void DragCarToPoint(CVehicle* vehicle, CVector* pos);
     static float FindAngleToWeaveThroughTraffic(CVehicle* vehicle, CPhysical* physical, float arg3, float arg4, float arg5);
-    static void FindIntersection2Lines(float arg1, float arg2, float arg3, float arg4, float arg5, float arg6, float arg7, float arg8, float* arg9, float* arg10);
+    static void FindIntersection2Lines(float x1, float y1, float dx1, float dy1, float x2, float y2, float dx2, float dy2, float* outX, float* outY);
     static void FindLinksToGoWithTheseNodes(CVehicle* vehicle);
     static float FindMaximumSpeedForThisCarInTraffic(CVehicle* vehicle);
     static void FindNodesThisCarIsNearestTo(CVehicle* vehicle, CNodeAddress& nodeAddress1, CNodeAddress& nodeAddress2);
@@ -108,7 +108,7 @@ public:
     static void ScanForPedDanger(CVehicle* vehicle);
     static bool ScriptGenerateOneEmergencyServicesCar(uint32 modelId, CVector posn);
     static void SetCoordsOfScriptCar(CVehicle* vehicle, float x, float y, float z, uint8 arg5, uint8 arg6);
-    static void SetUpDriverAndPassengersForVehicle(CVehicle* vehicle, int32 arg2, int32 arg3, bool arg4, bool arg5, int32 passengersNum);
+    static void SetUpDriverAndPassengersForVehicle(CVehicle* vehicle, int32 pedType, int32 minPassengers, bool arg4, bool arg5, int32 maxPassengers);
     template<typename PtrListType>
     static void SlowCarDownForCarsSectorList(PtrListType& ptrList, CVehicle* vehicle, float arg3, float arg4, float arg5, float arg6, float* arg7, float arg8);
     static void SlowCarDownForObject(CEntity* entity, CVehicle* vehicle, float* arg3, float arg4);
@@ -121,7 +121,7 @@ public:
     static void SteerAIBoatWithPhysicsAttackingPlayer(CVehicle* vehicle, float* arg2, float* arg3, float* arg4, bool* arg5);
     static void SteerAIBoatWithPhysicsCirclingPlayer(CVehicle* vehicle, float* arg2, float* arg3, float* arg4, bool* arg5);
     static void SteerAIBoatWithPhysicsHeadingForTarget(CVehicle* vehicle, float arg2, float arg3, float* arg4, float* arg5, float* arg6);
-    static void SteerAICarBlockingPlayerForwardAndBack(CVehicle* vehicle, float* arg2, float* arg3, float* arg4, bool* arg5);
+    static void SteerAICarBlockingPlayerForwardAndBack(CVehicle* vehicle, float* pSteer, float* pGas, float* pBrake, bool* pHandbrake);
     static void SteerAICarParkParallel(CVehicle* vehicle, float* arg2, float* arg3, float* arg4, bool* arg5);
     static void SteerAICarParkPerpendicular(CVehicle* vehicle, float* arg2, float* arg3, float* arg4, bool* arg5);
     static void SteerAICarTowardsPointInEscort(CVehicle* vehicle1, CVehicle* vehicle2, float arg3, float arg4, float* arg5, float* arg6, float* arg7, bool* arg8);

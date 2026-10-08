@@ -19,6 +19,8 @@
 #include "eAreaCodes.h"
 
 #include <reversiblebugfixes/Bugs.hpp>
+#include <numbers>
+#include <bit>
 
 auto& apCarsToKeep = StaticRef<CVehicle*[2]>(0x969084);
 auto& aCarsToKeepTime = StaticRef<std::array<uint32, 2>>(0x96907C);
@@ -51,6 +53,11 @@ void CCarCtrl::InjectHooks()
     RH_ScopedInstall(SlowCarOnRailsDownForTrafficAndLights, 0x434790);
     RH_ScopedInstall(FindMaxSteerAngle, 0x427FE0);
     RH_ScopedInstall(GenerateRandomCars, 0x4341C0);
+    RH_ScopedInstall(SetUpDriverAndPassengersForVehicle, 0x4217C0);
+    RH_ScopedInstall(SwitchBetweenPhysicsAndGhost, 0x4222A0);
+    RH_ScopedInstall(FindIntersection2Lines, 0x4226F0);
+    RH_ScopedInstall(ClitargetOrientationToLink, 0x422760);
+    RH_ScopedInstall(SteerAICarBlockingPlayerForwardAndBack, 0x422B20);
 }
 
 // 0x4212E0
@@ -167,8 +174,99 @@ void CCarCtrl::ClearInterestingVehicleList() {
 }
 
 // 0x422760
-void CCarCtrl::ClitargetOrientationToLink(CVehicle* vehicle, CCarPathLinkAddress arg2, int8 arg3, float* arg4, float arg5, float arg6) {
-    plugin::Call<0x422760, CVehicle*, CCarPathLinkAddress, int8, float*, float, float>(vehicle, arg2, arg3, arg4, arg5, arg6);
+void CCarCtrl::ClitargetOrientationToLink(CVehicle* vehicle, CCarPathLinkAddress linkAddr, int8 dirSign, float* pOrientation, float targetX, float targetY) {
+    if (!ThePaths.m_pPathNodes[linkAddr.m_wAreaId]) {
+        return;
+    }
+    const auto& link = ThePaths.GetCarPathLink(linkAddr);
+
+    // `CCarPathLink::m_dir`/`m_nPathNodeWidth` hide their raw values, but the original works on them
+    const auto raw = std::bit_cast<std::array<uint8, sizeof(CCarPathLink)>>(link);
+    const auto dirX = (int32)(int8)raw[8], dirY = (int32)(int8)raw[9];
+    const auto width = (uint32)raw[10];
+
+    // Direction vector scaled by `dirSign` (the intermediates are kept in extended precision)
+    const auto dirXScaled = (float)((double)dirX * 0.01f * (double)dirSign);
+    const auto dirYScaled = (float)((double)dirY * 0.01f * (double)dirSign);
+
+    // 0x422760 - result is unused:
+    // CGeneral::GetATanOfXY(targetX - vehicle->GetPosition().x, targetY - vehicle->GetPosition().y);
+
+    const auto numOppositeLanes = (uint32)link.m_numOppositeDirLanes;
+    const auto numSameLanes     = (uint32)link.m_numSameDirLanes;
+
+    float  laneA; // stored as float
+    double laneB; // kept on the x87 stack
+    if (numOppositeLanes == 0) {
+        laneA = (float)((double)numSameLanes * 0.5f);
+        laneB = laneA;
+    } else if (numSameLanes == 0) {
+        laneA = (float)((double)numOppositeLanes * 0.5f);
+        laneB = laneA;
+    } else {
+        const auto [a, b] = dirSign == 0
+            ? std::pair{ numOppositeLanes, numSameLanes }
+            : std::pair{ numSameLanes, numOppositeLanes };
+        laneA = (float)((double)width * 0.011574074f + (double)a);
+        laneB = (double)b;
+    }
+
+    const auto laneAOffset = (double)laneA - 0.3f;
+    const auto laneBOffset = (float)(laneB - 0.3f);
+
+    // Points to the left/right of the target
+    const auto x1 = (float)((double)dirYScaled * laneAOffset * 5.4f + targetX);
+    const auto y1 = (double)targetY - (double)dirXScaled * laneAOffset * 5.4f; // not rounded to float
+    const auto x2 = (float)((double)targetX - (double)laneBOffset * dirYScaled * 5.4f);
+    const auto y2 = (float)((double)targetY + (double)laneBOffset * dirXScaled * 5.4f);
+
+    const auto& vehPos = vehicle->GetPosition();
+    const auto angle1 = CGeneral::GetATanOfXY(x1 - vehPos.x, (float)(y1 - vehPos.y));
+    const auto angle2 = CGeneral::GetATanOfXY(x2 - vehPos.x, y2 - vehPos.y);
+
+    constexpr auto PI = std::numbers::pi_v<float>;
+
+    const auto origOrientation = *pOrientation;
+    auto  diff1  = (double)(float)(angle1 - origOrientation);
+    auto  diff1f = (float)diff1; // stored copy (only updated if wrapped)
+    auto  diff2  = (double)angle2 - origOrientation;
+
+    if (diff1 > PI) {
+        do { diff1 -= 2.0f * PI; } while (diff1 > PI);
+        diff1f = (float)diff1;
+    }
+    if (diff1 < -PI) {
+        do { diff1 += 2.0f * PI; } while (diff1 < -PI);
+        diff1f = (float)diff1;
+    }
+    while (diff2 > PI) {
+        diff2 -= 2.0f * PI;
+    }
+    while (diff2 < -PI) {
+        diff2 += 2.0f * PI;
+    }
+
+    if (diff1 < 0.0 && diff2 < 0.0) {
+        *pOrientation = diff1 > diff2
+            ? (float)((double)diff1f + origOrientation)
+            : (float)(diff2 + origOrientation);
+    } else if (diff1 > 0.0 && diff2 > 0.0) {
+        *pOrientation = diff1 < diff2
+            ? (float)((double)diff1f + origOrientation)
+            : (float)(diff2 + origOrientation);
+    }
+
+    // Wrap into [0, 2PI]
+    if (*pOrientation < 0.0f) {
+        double v = *pOrientation;
+        do { v += 2.0f * PI; } while (v < 0.0);
+        *pOrientation = (float)v;
+    }
+    if (*pOrientation > 2.0f * PI) {
+        double v = *pOrientation;
+        do { v -= 2.0f * PI; } while (v > 2.0f * PI);
+        *pOrientation = (float)v;
+    }
 }
 
 // 0x431F80
@@ -277,8 +375,14 @@ float CCarCtrl::FindAngleToWeaveThroughTraffic(CVehicle* vehicle, CPhysical* phy
 }
 
 // 0x4226F0
-void CCarCtrl::FindIntersection2Lines(float arg1, float arg2, float arg3, float arg4, float arg5, float arg6, float arg7, float arg8, float* arg9, float* arg10) {
-    plugin::Call<0x4226F0, float, float, float, float, float, float, float, float, float*, float*>(arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, arg10);
+void CCarCtrl::FindIntersection2Lines(float x1, float y1, float dx1, float dy1, float x2, float y2, float dx2, float dy2, float* outX, float* outY) {
+    // x87: everything is kept in extended precision until the final stores
+    const auto denom = (double)dx1 * dy2 - (double)dy1 * dx2;
+    const auto t = denom != 0.0
+        ? (((double)x2 - x1) * dy2 - ((double)y2 - y1) * dx2) / denom
+        : 0.0;
+    *outX = (float)(dx1 * t + x1);
+    *outY = (float)(t * dy1 + y1);
 }
 
 // 0x42B470
@@ -760,8 +864,51 @@ void CCarCtrl::SetCoordsOfScriptCar(CVehicle* vehicle, float x, float y, float z
 }
 
 // 0x4217C0
-void CCarCtrl::SetUpDriverAndPassengersForVehicle(CVehicle* vehicle, int32 arg2, int32 arg3, bool arg4, bool arg5, int32 passengersNum) {
-    plugin::Call<0x4217C0, CVehicle*, int32, int32, bool, bool, int32>(vehicle, arg2, arg3, arg4, arg5, passengersNum);
+void CCarCtrl::SetUpDriverAndPassengersForVehicle(CVehicle* vehicle, int32 pedType, int32 minPassengers, bool arg4, bool arg5, int32 maxPassengers) {
+    const auto IsGangLikePedType = [&] { // 14..23
+        return pedType >= (int32)PED_TYPE_GANG8 && pedType <= (int32)PED_TYPE_SPECIAL;
+    };
+
+    vehicle->SetUpDriver(pedType, arg4, arg5);
+    if (IsGangLikePedType()) {
+        if (rand() < 0x3FFF) {
+            vehicle->m_pDriver->GiveObjectToPedToHold(ModelIndices::MI_GANG_SMOKE, 1); // BUG: m_pDriver isn't checked for null (SetUpDriver can fail)
+        }
+    }
+
+    maxPassengers = std::min<int32>(maxPassengers, vehicle->m_nMaxPassengers);
+
+    auto numPassengers = minPassengers;
+    if (numPassengers < maxPassengers) {
+        for (auto i = maxPassengers - minPassengers; i > 0; i--) {
+            // x87: the product is kept in extended precision (doubles are exact here)
+            if ((double)rand() * (double)RAND_MAX_FLOAT_RECIPROCAL < 0.125) {
+                numPassengers++;
+            }
+        }
+    }
+    if (numPassengers >= maxPassengers) {
+        numPassengers = maxPassengers;
+    }
+
+    if (CModelInfo::IsCarModel(vehicle->m_nModelIndex)) {
+        // Vans can only have a single passenger
+        const auto vanAnimBlock = CAnimManager::GetAnimationBlockIndex("van");
+        if (CModelInfo::GetModelInfo(vehicle->m_nModelIndex)->GetAnimFileIndex() == vanAnimBlock && numPassengers > 0) {
+            numPassengers = 1;
+        }
+    }
+
+    for (auto seat = 0; seat < numPassengers; seat++) {
+        if (const auto passenger = vehicle->SetupPassenger(seat, pedType, arg4, arg5)) {
+            passenger->UpdateStatEnteringVehicle();
+            if (IsGangLikePedType()) {
+                if (rand() < 0x3FFF) {
+                    passenger->GiveObjectToPedToHold(ModelIndices::MI_GANG_SMOKE, 1);
+                }
+            }
+        }
+    }
 }
 
 // 0x432420
@@ -840,8 +987,71 @@ void CCarCtrl::SteerAIBoatWithPhysicsHeadingForTarget(CVehicle* vehicle, float a
 }
 
 // 0x422B20
-void CCarCtrl::SteerAICarBlockingPlayerForwardAndBack(CVehicle* vehicle, float* arg2, float* arg3, float* arg4, bool* arg5) {
-    plugin::Call<0x422B20, CVehicle*, float*, float*, float*, bool*>(vehicle, arg2, arg3, arg4, arg5);
+void CCarCtrl::SteerAICarBlockingPlayerForwardAndBack(CVehicle* vehicle, float* pSteer, float* pGas, float* pBrake, bool* pHandbrake) {
+    *pSteer     = 0.0f;
+    *pHandbrake = false;
+
+    // Where the player will be in a moment (position delta = speed + 0.1 * forward)
+    const auto plSpeed = FindPlayerSpeed();
+    const auto player  = FindPlayerEntity();
+    const auto& plFwd  = player->GetMatrix().GetForward();
+
+    const auto speedX = (float)((double)plFwd.x * 0.1f + plSpeed.x);
+    const auto speedY = (float)((double)plSpeed.y + (double)plFwd.y * 0.1f);
+
+    // Note: Uses the matrix directly (not null checked)
+    auto& vehMat = *vehicle->m_matrix;
+
+    CVector right{ vehMat.GetRight().x, vehMat.GetRight().y, 0.0f };
+    right.Normalise();
+
+    CVector fwd{ vehMat.GetForward().x, vehMat.GetForward().y, 0.0f };
+    fwd.Normalise();
+
+    // Offset from this vehicle to the player
+    const auto GetOffsetToPlayer = [&] {
+        const auto plPos  = FindPlayerCoors();
+        const auto vehPos = vehicle->GetPosition();
+        return std::array<double, 3>{ (double)plPos.x - vehPos.x, (double)plPos.y - vehPos.y, (double)plPos.z - vehPos.z };
+    };
+
+    // x87: all intermediates are kept in extended precision
+    const auto [dx, dy, dz] = GetOffsetToPlayer();
+    const auto rightDotOffset = ((double)right.y * dy + dx * right.x) + dz * right.z;
+    auto       rightDotSpeed  = ((double)right.y * speedY + (double)right.x * speedX) + (double)right.z * 0.0f;
+    if (rightDotSpeed == 0.0) {
+        rightDotSpeed = 0.01f;
+    }
+    const auto t  = -(rightDotOffset / rightDotSpeed); // Time until the player is level with the vehicle
+    const auto tf = (float)t;
+    if (t < 0.0) {
+        *pGas   = 0.0f;
+        *pBrake = 0.0f;
+        return;
+    }
+
+    const auto [dx2, dy2, dz2] = GetOffsetToPlayer();
+    const auto& moveSpeed = vehicle->m_vecMoveSpeed;
+    const auto  vehSpeedAlongFwd = (float)(((double)fwd.y * moveSpeed.y + (double)fwd.z * moveSpeed.z) + (double)fwd.x * moveSpeed.x);
+
+    const auto fwdDotSpeed  = ((double)fwd.y * speedY + (double)fwd.x * speedX) + (double)fwd.z * 0.0f;
+    const auto fwdDotOffset = ((double)fwd.y * dy2 + dx2 * fwd.x) + dz2 * fwd.z;
+    const auto dist         = (fwdDotSpeed * tf + fwdDotOffset) - (double)vehSpeedAlongFwd * tf; // Distance to the player (along forward) when he's level with the vehicle
+
+    if (dist > 0.0) {
+        *pGas   = (float)std::min<double>(dist * 0.1f, 1.0f);
+        *pBrake = 0.0f;
+    } else if (vehSpeedAlongFwd > 0.0f) {
+        *pGas = 0.0f;
+        const auto brake = std::min<double>(dist * -0.1f, 1.0f);
+        *pBrake = (float)brake;
+        if (brake > 0.95f) {
+            *pHandbrake = true;
+        }
+    } else {
+        *pGas   = (float)std::max<double>(dist * 0.1f, -1.0f);
+        *pBrake = 0.0f;
+    }
 }
 
 // 0x433BA0
@@ -956,7 +1166,48 @@ bool CCarCtrl::StopCarIfNodesAreInvalid(CVehicle* vehicle) {
 
 // 0x4222A0
 void CCarCtrl::SwitchBetweenPhysicsAndGhost(CVehicle* vehicle) {
-    plugin::Call<0x4222A0, CVehicle*>(vehicle);
+    if (!vehicle->physicalFlags.bDontLoadCollision) {
+        return;
+    }
+    if (!vehicle->IsMissionVehicle()) {
+        return;
+    }
+    switch (vehicle->m_nVehicleSubType) {
+    case VEHICLE_TYPE_BOAT:
+    case VEHICLE_TYPE_PLANE:
+    case VEHICLE_TYPE_HELI:
+        return;
+    }
+
+    switch (vehicle->GetStatus()) {
+    case STATUS_PHYSICS: {
+        if (CColStore::HasCollisionLoaded(vehicle->GetPosition(), AREA_CODE_NORMAL_WORLD)) {
+            return;
+        }
+        vehicle->SetStatus(STATUS_GHOST);
+        if (vehicle->m_nVehicleSubType == VEHICLE_TYPE_AUTOMOBILE) {
+            for (auto wheel = 0; wheel < 4; wheel++) {
+                vehicle->AsAutomobile()->m_damageManager.SetWheelStatus((eCarWheel)wheel, WHEEL_STATUS_OK);
+            }
+        }
+        break;
+    }
+    case STATUS_GHOST: {
+        if (!CColStore::HasCollisionLoaded(vehicle->GetPosition(), AREA_CODE_NORMAL_WORLD)) {
+            return;
+        }
+        vehicle->SetStatus(STATUS_PHYSICS);
+        switch (vehicle->m_nVehicleType) {
+        case VEHICLE_TYPE_AUTOMOBILE:
+            vehicle->AsAutomobile()->PlaceOnRoadProperly();
+            break;
+        case VEHICLE_TYPE_BIKE:
+            vehicle->AsBike()->PlaceOnRoadProperly();
+            break;
+        }
+        break;
+    }
+    }
 }
 
 // 0x423FC0

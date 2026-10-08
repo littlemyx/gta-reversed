@@ -70,6 +70,12 @@ public:
     static inline auto& m_LastWeaponTypeFired = StaticRef<uint32>(0xB79514);
     static inline auto& bShowUpdateStats = StaticRef<bool>(0x8CDE56);
 
+    // NOTSA names (originals unknown)
+    static inline auto& m_FatMuscleMessageState = StaticRef<uint8>(0xB79534);   // 1/2/3: which fat/muscle update message was shown last
+    static inline auto& m_pSexAppealVehicle     = StaticRef<CVehicle*>(0xB79530); // last vehicle used for sex appeal
+    static inline auto& m_RespectThreshold      = StaticRef<float>(0x8CDEC4);   // -99.0f if not initialised
+    static inline auto& m_RespectLastValue      = StaticRef<float>(0x8CDEC8);   // -99.0f if not initialised
+
     static void InjectHooks();
 
     static char* GetStatID(eStats stat);

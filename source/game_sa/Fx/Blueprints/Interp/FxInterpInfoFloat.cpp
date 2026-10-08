@@ -2,6 +2,14 @@
 
 #include "FxInterpInfoFloat.h"
 #include "FxManager.h"
+#include "FxInterpInfoGetVal.h"
+
+void FxInterpInfoFloat_c::InjectHooks() {
+    RH_ScopedClass(FxInterpInfoFloat_c);
+    RH_ScopedCategory("Fx");
+
+    RH_ScopedOverloadedInstall(GetVal, "", 0x4A8470, void(FxInterpInfoFloat_c::*)(float*, float));
+}
 
 // 0x4A8440
 FxInterpInfoFloat_c::FxInterpInfoFloat_c() : FxInterpInfo_c() {
@@ -43,49 +51,5 @@ float FxInterpInfoFloat_c::GetVal(int32 attrib, float time, float deltaTime) {
 
 // 0x4A8470
 void FxInterpInfoFloat_c::GetVal(float* outValues, float delta) {
-    return plugin::CallMethod<0x4A8470, FxInterpInfoFloat_c*, float*, float>(this, outValues, delta);
-
-    if (m_nNumKeys == 1) {
-        for (auto i = 0; i < m_nCount; i++) {
-            outValues[i] = *m_Keys[i];
-        }
-        return;
-    }
-
-    if (m_bLooped) {
-        auto totalTime = (float)m_pTimes[m_nNumKeys - 1] / 256.0f;
-        delta = delta - (delta / totalTime) * totalTime;
-    }
-
-    if (m_nNumKeys <= 1) {
-        for (auto j = 0; j < m_nCount; j++) {
-            outValues[j] = m_Keys[j][m_nNumKeys - 1];
-        }
-        return;
-    }
-
-    int v8 = 1;
-    float v11;
-    uint16* v10 = m_pTimes + 1;
-    while (true) {
-        v11 = (float)*v10 / 256.0f;
-        if (delta < v11)
-            break;
-        ++v8;
-        ++v10;
-        if (v8 >= m_nNumKeys) {
-            for (auto j = 0; j < m_nCount; j++) {
-                outValues[j] = m_Keys[j][m_nNumKeys - 1];
-            }
-            return;
-        }
-    }
-
-    int v13 = 0;
-    float v14 = (float)m_pTimes[v8 - 1] / 256.0f;
-    float a3a;
-    float* v15;
-    for (a3a = (delta - v14) / (v11 - v14); v13 < m_nCount; outValues[v13 - 1] = (v15[v8] - v15[v8 - 1]) * a3a + v15[v8 - 1]) {
-        v15 = m_Keys[v13++];
-    }
+    notsa::detail::FxInterpInfoGetVal(*this, m_Keys, 1.0, outValues, delta);
 }

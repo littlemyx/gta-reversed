@@ -2,6 +2,14 @@
 
 #include "FxInterpInfoU255.h"
 #include "FxManager.h"
+#include "FxInterpInfoGetVal.h"
+
+void FxInterpInfoU255_c::InjectHooks() {
+    RH_ScopedClass(FxInterpInfoU255_c);
+    RH_ScopedCategory("Fx");
+
+    RH_ScopedInstall(GetVal, 0x4A8800);
+}
 
 // 0x4A87D0
 FxInterpInfoU255_c::FxInterpInfoU255_c() : FxInterpInfo_c() {
@@ -38,5 +46,5 @@ void FxInterpInfoU255_c::Allocate(int32 count) {
 
 // 0x4A8800
 void FxInterpInfoU255_c::GetVal(float* outValues, float delta) {
-    plugin::CallMethod<0x4A8800, FxInterpInfoU255_c*, float*, float>(this, outValues, delta);
+    notsa::detail::FxInterpInfoGetVal(*this, m_Keys, 0.00390625, outValues, delta);
 }

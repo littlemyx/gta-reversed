@@ -2,6 +2,14 @@
 
 #include "FxInterpInfo32.h"
 #include "FxManager.h"
+#include "FxInterpInfoGetVal.h"
+
+void FxInterpInfo32_c::InjectHooks() {
+    RH_ScopedClass(FxInterpInfo32_c);
+    RH_ScopedCategory("Fx");
+
+    RH_ScopedInstall(GetVal, 0x4A89C0);
+}
 
 // 0x4A8990
 FxInterpInfo32_c::FxInterpInfo32_c() : FxInterpInfo_c() {
@@ -38,5 +46,5 @@ void FxInterpInfo32_c::Allocate(int32 count) {
 
 // 0x4A89C0
 void FxInterpInfo32_c::GetVal(float* outValues, float delta) {
-    plugin::CallMethod<0x4A89C0, FxInterpInfo32_c*, float*, float>(this, outValues, delta);
+    notsa::detail::FxInterpInfoGetVal(*this, m_Keys, 0.0010000000474974513, outValues, delta);
 }

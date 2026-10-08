@@ -13,6 +13,8 @@ namespace {
 // Used by heat seeking missiles (WEAPON_ROCKET_HS) that are homing in on a plane (by the player)
 inline auto& HOMING_PLANE_DAMPING = StaticRef<float>(0x8D6104); // 0.95 - velocity multiplier (per time step, exponent)
 inline auto& HOMING_PLANE_ACCEL   = StaticRef<float>(0x8D6108); // 0.15 - acceleration towards the target
+// Not exactly `0.0117f` (it's 1 ULP lower), so read it from the exe
+inline auto& HOMING_PLAYER_ACCEL  = StaticRef<float>(0x872BFC); // Acceleration towards the target of the missiles fired by the player
 }
 
 void CProjectileInfo::InjectHooks() {
@@ -120,7 +122,7 @@ bool CProjectileInfo::AddProjectile(CEntity* creator, eWeaponType projectileType
         velocity.x = std::sin(angle) * speed * -1.0f;
         velocity.y = std::cos(angle) * speed;
         velocity.z = (force + 1.0f) * 0.4f * speed;
-        if (creator->m_nModelIndex == MODEL_SENTINEL) { // NOTSA: Weird, original code checks for this model specifically
+        if (creator->m_nModelIndex == MODEL_SENTINEL) { // Weird, but the original code checks for this model specifically
             velocity += creator->AsPhysical()->m_vecMoveSpeed;
         }
 
@@ -429,6 +431,7 @@ void CProjectileInfo::Update() {
 
         if (type == WEAPON_ROCKET || type == WEAPON_ROCKET_HS) {
             // Smoke trail
+            const auto Rand01 = [] { return static_cast<float>(CGeneral::GetRandomNumber()) * RAND_MAX_FLOAT_RECIPROCAL; }; // Same as `rand() / 32767.f`
             FxPrtMult_c prtMult{ 0.3f, 0.3f, 0.3f, 0.3f, 0.5f, 1.0f, 0.08f };
 
             const CVector moved{
@@ -438,11 +441,11 @@ void CProjectileInfo::Update() {
             };
             const auto numParticles = std::max(1, static_cast<int32>(std::sqrt((moved.x * moved.x + moved.z * moved.z) + moved.y * moved.y)));
             for (int32 p = 0; p < numParticles; p++) {
-                const auto shade = static_cast<float>(rand()) * (1.0f / 32767.0f) * 0.25f + 0.25f;
+                const auto shade = Rand01() * 0.25f + 0.25f;
                 prtMult.m_Color.red   = shade;
                 prtMult.m_Color.green = shade;
                 prtMult.m_Color.blue  = shade;
-                prtMult.m_fLife       = static_cast<float>(rand()) * (1.0f / 32767.0f) * 0.04f + 0.08f;
+                prtMult.m_fLife       = Rand01() * 0.04f + 0.08f;
 
                 const float t = 1.0f - static_cast<float>(p) / static_cast<float>(numParticles);
                 const auto& projPos = proj->GetPosition();
@@ -453,9 +456,9 @@ void CProjectileInfo::Update() {
                 };
 
                 CVector randomDir{
-                    static_cast<float>(rand()) * (1.0f / 32767.0f) * 2.0f - 1.0f,
-                    static_cast<float>(rand()) * (1.0f / 32767.0f) * 2.0f - 1.0f,
-                    static_cast<float>(rand()) * (1.0f / 32767.0f) * 2.0f - 1.0f,
+                    Rand01() * 2.0f - 1.0f,
+                    Rand01() * 2.0f - 1.0f,
+                    Rand01() * 2.0f - 1.0f,
                 };
                 randomDir.Normalise();
 
@@ -490,10 +493,10 @@ void CProjectileInfo::Update() {
             }
         };
 
-        if (info.m_nDestroyTime < CTimer::GetTimeInMS() && info.m_nDestroyTime != 0) { // Note: the time is unsigned
+        if (static_cast<uint32>(info.m_nDestroyTime) < CTimer::GetTimeInMS() && info.m_nDestroyTime != 0) { // Note: the time is unsigned
             if (type == WEAPON_REMOTE_SATCHEL_CHARGE) {
                 // BUG: `m_pCreator` isn't null-checked
-                if (info.m_pCreator->GetIsTypePed() && info.m_pCreator->AsPed()->IsPlayer()) {
+                if ((info.m_pCreator || !notsa::IsFixBugs()) && info.m_pCreator->GetIsTypePed() && info.m_pCreator->AsPed()->IsPlayer()) {
                     auto* const ped = info.m_pCreator->AsPed();
                     // Player has no more detonator (or ammo for it) => detonate
                     if (ped->GetWeapon(WEAPON_DETONATOR).m_Type != WEAPON_DETONATOR || ped->GetWeapon(WEAPON_DETONATOR).m_TotalAmmo == 0) {
@@ -653,7 +656,7 @@ void CProjectileInfo::Update() {
                 toTarget.Normalise();
 
                 float turnAccel = (info.m_pCreator == FindPlayerPed(-1) || info.m_pCreator == FindPlayerVehicle(-1, false))
-                    ? 0.0117f /* 0x872BFC */
+                    ? HOMING_PLAYER_ACCEL
                     : 0.009f;
                 if (tgt->AsPhysical()->m_vecMoveSpeed.Magnitude() > 0.8f) {
                     turnAccel *= 1.2f;
@@ -698,6 +701,10 @@ void CProjectileInfo::Update() {
             default:
                 break;
             }
+        }
+
+        if (notsa::IsFixBugs() && !info.m_bActive) { // The projectile was removed above
+            continue;
         }
 
         info.m_vecLastPosn = proj->GetPosition(); // BUG: `proj` might have been deleted above (but the pool still contains the memory)

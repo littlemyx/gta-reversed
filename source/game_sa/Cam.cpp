@@ -27,6 +27,11 @@
 #include "Entity/Vehicle/Bike.h"
 #include "Entity/Vehicle/Plane.h"
 #include "Tasks/TaskTypes/TaskComplexProstituteSolicit.h"
+#include "Tasks/TaskTypes/TaskSimpleArrestPed.h"
+#include "Entity/Ped/CopPed.h"
+#include "PlayerPedData.h"
+#include "Messages.h"
+#include "Text/Text.h"
 
 auto& gbFirstPersonRunThisFrame = StaticRef<bool>(0xB6EC20);
 auto& gLastFrameProcessedDWCineyCam = StaticRef<uint32>(0x8CCB9C);
@@ -306,6 +311,12 @@ void FlyBySplineVec3(CVector* out, float* data, float time, int32* idx);
 void FlyBySplineFloat(float* out, float* data, float time, int32* idx);
 } // namespace
 
+namespace {
+// Defined above `CCam::ProcessArrestCamOne`, declared here so they can be hooked
+bool __stdcall GetArrestCamPosBesideCop(CEntity* target, CPed* cop, const CVector* targetPos, CVector* outPos);
+bool __stdcall GetArrestCamPosBehindTarget(CEntity* target, CPed* cop, const CVector* targetPos, CVector* outPos);
+} // namespace
+
 void CCam::InjectHooks() {
     RH_ScopedClass(CCam);
     RH_ScopedCategory("Camera");
@@ -326,7 +337,7 @@ void CCam::InjectHooks() {
     RH_ScopedInstall(RotCamIfInFrontCar, 0x50A4F0);
     RH_ScopedInstall(Using3rdPersonMouseCam, 0x50A850);
     RH_ScopedInstall(Process, 0x526FC0);
-    RH_ScopedInstall(ProcessArrestCamOne, 0x518500, { .Reversed = false });
+    RH_ScopedInstall(ProcessArrestCamOne, 0x518500);
     RH_ScopedInstall(ProcessPedsDeadBaby, 0x519250);
     RH_ScopedInstall(Process_1rstPersonPedOnPC, 0x50EB70);
     RH_ScopedInstall(Process_1stPerson, 0x517EA0);
@@ -357,6 +368,8 @@ void CCam::InjectHooks() {
     RH_ScopedGlobalInstall(WellBufferMe, 0x509AE0);
     RH_ScopedGlobalInstall(FlyBySplineVec3, 0x5B2090);
     RH_ScopedGlobalInstall(FlyBySplineFloat, 0x5B2330);
+    RH_ScopedGlobalInstall(GetArrestCamPosBesideCop, 0x515D80);
+    RH_ScopedGlobalInstall(GetArrestCamPosBehindTarget, 0x516010);
 }
 
 // 0x517730
@@ -1397,10 +1410,501 @@ void CCam::Process() {
     }
 }
 
+namespace {
+// The state of the "arrest cam one" (names made up)
+auto& gArrestCamOneMode      = StaticRef<int32>(0xB6EC58);    // 0 = none yet, 1 = from the cop's head, 2 = beside the cop, 3..7 = free cams (see `ProcessArrestCamOne`), 8 = from a lamp post
+auto& gArrestCamOneCop       = StaticRef<CEntity*>(0xB6EC5C); // The cop the cam is set up at (registered reference)
+auto& gArrestCamOneStartTime = StaticRef<float>(0xB6EC60);    // `CTimer::m_snTimeInMilliseconds` when the "from the cop's head" mode was started
+auto& gbBustedMessageDisabled = StaticRef<bool>(0xBAADC0);    // NOTE: name made up (probably a wrong guess), the "BUSTED" message is only shown if it's not set
+
+// Function local statics (with their init flags) of 0x512EF0 (names made up)
+auto& gArrestCamHeadOffset    = StaticRef<CVector>(0xB70004); // Offset applied to the camera's position, (0, 0, -0.5)
+auto& gArrestCamUnusedVec     = StaticRef<CVector>(0xB70010); // Only initialised to (0, 0, 0), never read by the original code
+auto& gArrestCamStaticsInit   = StaticRef<uint32>(0xB7001C);  // Bit 0: `gArrestCamUnusedVec` is initialised, bit 1: `gArrestCamHeadOffset` is initialised
+auto& gbArrestCamHeadPhase    = StaticRef<bool>(0xB70020);    // Flips every call once the time passed
+auto& gArrestCamHeadTimeShift = StaticRef<float>(0xB70024);   // Subtracted from the elapsed time (never written to by the code seen)
+
+constexpr float RAND_RECIPROCAL = 3.05185094e-05f; // 0x858C7C, ~ 1/RAND_MAX
+
+// 0x512EF0 - A `CCam` method in the original (`thiscall`, `this` in ECX, `ret 8`), so it can't be hooked (register argument).
+// Puts the camera at the arrested player and makes it look at the head of the arresting cop (`cop`).
+// If `checkLineOfSight` is set it also might randomly fail, and fails if the cop's head isn't visible.
+bool ArrestCamLookAtCopHead(CCam& cam, CPed* cop, bool checkLineOfSight) {
+    if (checkLineOfSight) {
+        const double rnd = (double)CGeneral::GetRandomNumber() * (double)RAND_RECIPROCAL;
+        if (rnd > (double)0.65f) {
+            return false;
+        }
+    }
+
+    auto* const target = TheCamera.m_pTargetEntity;
+    if (target->GetType() != ENTITY_TYPE_PED || !cop) {
+        return false;
+    }
+
+    // `t` is the time since the start of the mode, in seconds (clamped to [0, 1])
+    // NOTE: The whole expression is calculated in extended precision, then rounded to float
+    const double tExt = (((double)CTimer::GetTimeInMS() - (double)gArrestCamOneStartTime) - (double)gArrestCamHeadTimeShift) / 1000.0;
+    float        t    = (float)tExt;
+    bool         flipPhase;
+    if (tExt > 1.0) {
+        t         = 1.0f;
+        flipPhase = true;
+    } else if (t < 0.0f) {
+        t         = 0.0f;
+        flipPhase = false;
+    } else {
+        flipPhase = !(t < 1.0f);
+    }
+    if (flipPhase) {
+        gbArrestCamHeadPhase = !gbArrestCamHeadPhase;
+    } else {
+        gbArrestCamHeadPhase = true;
+    }
+
+    if (!(gArrestCamStaticsInit & 1)) {
+        gArrestCamStaticsInit |= 1;
+        gArrestCamUnusedVec = CVector{ 0.0f, 0.0f, 0.0f };
+    }
+    if (!(gArrestCamStaticsInit & 2)) {
+        gArrestCamStaticsInit |= 2;
+        gArrestCamHeadOffset = CVector{ 0.0f, 0.0f, -0.5f };
+    }
+
+    const CVector oldSource = cam.m_vecSource;
+    cam.m_vecSource         = target->GetPosition();
+    cam.m_fFOV              = 100.0f;
+
+    // Position of the head bone (Not using `CPed::GetBonePosition` as that one doesn't read the matrix directly)
+    auto* const    hierarchy = GetAnimHierarchyFromSkinClump(cop->GetRpClump());
+    const RwInt32  headIdx   = RpHAnimIDGetIndex(hierarchy, BONE_HEAD);
+    const RwV3d&   headPos   = *RwMatrixGetPos(&RpHAnimHierarchyGetMatrixArray(hierarchy)[headIdx]);
+
+    const CVector lookAt{
+        headPos.x,
+        headPos.y,
+        (float)(((double)headPos.z + (double)-0.06f) - 0.5 * (double)t)
+    };
+
+    cam.m_vecSource.x += gArrestCamHeadOffset.x;
+    cam.m_vecSource.y += gArrestCamHeadOffset.y;
+    cam.m_vecSource.z += gArrestCamHeadOffset.z;
+
+    cam.m_vecFront = CVector{
+        lookAt.x - cam.m_vecSource.x,
+        lookAt.y - cam.m_vecSource.y,
+        lookAt.z - cam.m_vecSource.z
+    };
+    cam.m_vecFront.Normalise();
+
+    cam.m_vecUp = CVector{ 0.0f, 0.0f, 1.0f };
+    auto right  = CrossProduct(cam.m_vecFront, cam.m_vecUp);
+    right.Normalise();
+    cam.m_vecUp = CrossProduct(right, cam.m_vecFront);
+
+    if (checkLineOfSight) {
+        if (!CWorld::GetIsLineOfSightClear(cam.m_vecSource, lookAt, true, true, false, true, false, false, true)) {
+            return false;
+        }
+        if (!CWorld::GetIsLineOfSightClear(cam.m_vecSource, lookAt, true, false, false, true, false, false, false)) {
+            cam.m_vecSource = oldSource;
+        }
+    }
+
+    target->SetIsVisible(false);
+    return true;
+}
+
+// 0x515D80 - A `CCam` method in the original (`thiscall`, `ret 10h`), but it never uses `this`, so it's the same as a `stdcall`.
+// Finds a position for the camera beside the cop (`cop`), looking at `targetPos` (at least 8 units away from it).
+bool __stdcall GetArrestCamPosBesideCop(CEntity* target, CPed* cop, const CVector* targetPos, CVector* outPos) {
+    if (!target || !cop) {
+        return false;
+    }
+
+    const CVector  copPos = cop->GetPosition();
+    const CVector& tgt    = *targetPos;
+
+    // Direction from the cop to the target
+    CVector dir{ tgt.x - copPos.x, tgt.y - copPos.y, tgt.z - copPos.z };
+
+    // The point 3 units to the side of the cop
+    auto right = CrossProduct(dir, CVector{ 0.0f, 0.0f, 1.0f });
+    right.Normalise();
+    const CVector sidePos{
+        (float)(3.0 * (double)right.x + (double)copPos.x),
+        (float)(3.0 * (double)right.y + (double)copPos.y),
+        (float)((double)(float)(3.0 * (double)right.z) + (double)copPos.z)
+    };
+
+    dir.Normalise();
+    if (dir.z < -0.7071f) {
+        dir.z = -0.7071f;
+        const double xyLen = std::sqrt((double)dir.y * (double)dir.y + (double)dir.x * (double)dir.x) * (double)1.4142271f;
+        if (xyLen > 0.0) {
+            const double invLen = 1.0 / xyLen;
+            dir.x = (float)((double)dir.x * invLen);
+            dir.y = (float)((double)dir.y * invLen);
+        }
+        dir.Normalise();
+    } else if (dir.z > 0.0f) {
+        dir.z = 0.0f;
+        dir.Normalise();
+    }
+
+    // The point 5 units behind the side point (towards the cop)
+    // NOTE: `y` and `z` of the point are not rounded to a float in the original code
+    const double fromSideX = 5.0 * (double)dir.x;
+    const double fromSideY = 5.0 * (double)dir.y;
+    const float  fromSideZ = (float)(5.0 * (double)dir.z);
+    const float  pointX    = (float)((double)sidePos.x - fromSideX);
+    const double pointY    = (double)sidePos.y - fromSideY;
+    const double pointZ    = (double)sidePos.z - (double)fromSideZ;
+
+    // Vector from that point to the target
+    CVector toTarget{
+        tgt.x - pointX,
+        (float)((double)tgt.y - pointY),
+        (float)((double)tgt.z - pointZ)
+    };
+
+    const double len  = std::sqrt(((double)toTarget.z * (double)toTarget.z + (double)toTarget.y * (double)toTarget.y) + (double)toTarget.x * (double)toTarget.x);
+    const float  lenF = (float)len;
+    double       zDiff = toTarget.z;
+    if (len < 8.0 && lenF > 0.0f) { // Make it at least 8 units away
+        const double scale = 8.0 / (double)lenF;
+        toTarget.x         = (float)((double)toTarget.x * scale);
+        toTarget.y         = (float)((double)toTarget.y * scale);
+        zDiff              = scale * (double)toTarget.z;
+    }
+
+    outPos->x = tgt.x - toTarget.x;
+    outPos->y = tgt.y - toTarget.y;
+    outPos->z = (float)((double)tgt.z - zDiff);
+    return true;
+}
+
+// 0x516010 - A `CCam` method in the original (`thiscall`, `ret 10h`), but it never uses `this`, so it's the same as a `stdcall`.
+// Finds a position for the camera behind (relative to the cop `cop`) and to the side of the target, looking at `targetPos`.
+bool __stdcall GetArrestCamPosBehindTarget(CEntity* target, CPed* cop, const CVector* targetPos, CVector* outPos) {
+    if (!target || !cop) {
+        return false;
+    }
+
+    const CVector  copPos = cop->GetPosition();
+    const CVector& tgt    = *targetPos;
+
+    CVector dir{ tgt.x - copPos.x, tgt.y - copPos.y, 0.0f };
+    dir.Normalise();
+
+    // 5 units further from the cop than the target
+    // NOTE: The original also calculates `z` here, but overwrites it later
+    outPos->x = (float)(5.0 * (double)dir.x + (double)tgt.x);
+    outPos->y = (float)(5.0 * (double)dir.y + (double)tgt.y);
+
+    // 10 units to the side (NOTE: Not normalised, but `dir.z` is 0 and `dir` is normalised, so it is unit length anyway)
+    const auto side = CrossProduct(dir, CVector{ 0.0f, 0.0f, 1.0f });
+    outPos->x       = (float)(10.0 * (double)side.x + (double)outPos->x);
+    outPos->y       = (float)(10.0 * (double)side.y + (double)outPos->y);
+
+    outPos->z = tgt.z + 5.0f;
+
+    bool       groundFound{};
+    const auto groundZ = CWorld::FindGroundZFor3DCoord(*outPos, &groundFound);
+    if (groundFound) {
+        outPos->z = (float)((double)0.7f + (double)groundZ);
+    }
+    return true;
+}
+} // namespace
+
 // 0x518500
-void CCam::ProcessArrestCamOne() {
-    // NOTSA: Not reversed yet, forwards to the original code (the hook is disabled, see `InjectHooks`)
-    plugin::CallMethod<0x518500, CCam*>(this);
+bool CCam::ProcessArrestCamOne() {
+    std::array<int32, 6> modes;
+    modes.fill(-1);
+
+    bool    found = false;
+    CPed*   cop   = nullptr; // The cop arresting the player
+    CVector targetPos{};     // The position of the arrested player
+    CVector camPos = m_vecSource; // NOTSA: This is not initialised in the original, and might be used by it if no cam mode could be found
+
+    m_fFOV = 45.0f;
+
+    // Position of the arrested player (a bone of him/her if possible), returns the player ped (if any), `false` if the target is not a ped/vehicle
+    const auto GetArrestedPos = [&](CPed*& outPed) {
+        auto* const target = TheCamera.m_pTargetEntity;
+        outPed             = nullptr;
+        switch (target->GetType()) {
+        case ENTITY_TYPE_PED: {
+            outPed = target->AsPed();
+            outPed->GetBonePosition(&targetPos, BONE_SPINE1, true);
+            return true;
+        }
+        case ENTITY_TYPE_VEHICLE: {
+            auto* const driver = target->AsVehicle()->m_pDriver;
+            if (driver && driver->IsPlayer()) {
+                outPed = driver;
+                driver->GetBonePosition(&targetPos, BONE_SPINE1, true);
+            } else {
+                targetPos = target->GetPosition();
+            }
+            return true;
+        }
+        default:
+            return false;
+        }
+    };
+    const auto FindArrestingCop = [] {
+        auto* const player = FindPlayerPed();
+        return player && player->m_pPlayerData->m_pArrestingCop ? player->m_pPlayerData->m_pArrestingCop : nullptr;
+    };
+    // Finishes the camera: sets the front and up vectors, looking from the source to the target
+    const auto SetupVectors = [&] {
+        m_vecFront = CVector{
+            targetPos.x - m_vecSource.x,
+            targetPos.y - m_vecSource.y,
+            targetPos.z - m_vecSource.z
+        };
+        m_vecFront.Normalise();
+
+        m_vecUp    = CVector{ 0.0f, 0.0f, 1.0f };
+        auto right = CrossProduct(m_vecFront, m_vecUp);
+        right.Normalise();
+        m_vecUp = CrossProduct(right, m_vecFront);
+    };
+    // Moves the camera source to `camPos`, and the source to a position where the geometry doesn't obstruct the view
+    const auto ApplyCamPos = [&] {
+        m_vecSource            = camPos;
+        const CVector srcCopy = camPos;
+        AvoidTheGeometry(srcCopy, targetPos, m_vecSource, m_fFOV);
+    };
+
+    if (m_bResetStatics) {
+        gArrestCamOneMode = 0;
+
+        CPed* arrestedPlayerPed;
+        if (!GetArrestedPos(arrestedPlayerPed)) {
+            return false;
+        }
+
+        cop = FindArrestingCop();
+
+        // Prefer the cam modes with the cop if there's a cop, and (randomly) the dice says so
+        const bool isPed  = TheCamera.m_pTargetEntity->GetType() == ENTITY_TYPE_PED;
+        bool       isLucky = false;
+        if (cop) {
+            const double rnd = (double)CGeneral::GetRandomNumber() * (double)RAND_RECIPROCAL;
+            isLucky          = rnd > (isPed ? 0.5 : (double)0.65f);
+        }
+        if (isPed) {
+            modes = isLucky ? std::array<int32, 6>{ 1, 2, 3, 2, 8, -1 } : std::array<int32, 6>{ 1, 3, 2, 8, -1, -1 };
+        } else {
+            modes = isLucky ? std::array<int32, 6>{ 2, 8, 3, 2, -1, -1 } : std::array<int32, 6>{ 8, 3, 2, -1, -1, -1 };
+        }
+
+        if (!gbBustedMessageDisabled) {
+            CMessages::AddBigMessage(TheText.Get("BUSTED"), 5000, STYLE_WHITE_MIDDLE);
+        }
+
+        for (size_t i = 0; gArrestCamOneMode == 0 && i < modes.size() && modes[i] > 0; i++) {
+            gArrestCamOneCop = nullptr;
+
+            switch (modes[i]) {
+            case 1: { // Looking from the cop's head
+                gArrestCamOneStartTime = (float)(double)CTimer::GetTimeInMS();
+                if (ArrestCamLookAtCopHead(*this, cop, true)) {
+                    TheCamera.m_pTargetEntity->SetIsVisible(false);
+                    gArrestCamOneMode = 1;
+                    m_bResetStatics   = false;
+                    return true;
+                }
+                break;
+            }
+            case 2:   // Beside the cop
+            case 3: { // Behind the player (and later randomly one of the free cams 3..7)
+                if (cop) {
+                    found = modes[i] == 2
+                        ? GetArrestCamPosBesideCop(TheCamera.m_pTargetEntity, cop, &targetPos, &camPos)
+                        : GetArrestCamPosBehindTarget(TheCamera.m_pTargetEntity, cop, &targetPos, &camPos);
+                    gArrestCamOneCop = cop;
+                    cop              = nullptr;
+                } else if (arrestedPlayerPed) {
+                    // Look for a cop that is arresting the player
+                    for (auto* const entity : std::span{ arrestedPlayerPed->GetIntelligence()->GetPedEntities(), 16 }) {
+                        if (!entity) {
+                            continue;
+                        }
+                        auto* const nearbyPed = entity->AsPed();
+                        const auto  task      = nearbyPed->GetTaskManager().FindActiveTaskByType(TASK_SIMPLE_ARREST_PED);
+                        if (!task || FindPlayerPed() != static_cast<CTaskSimpleArrestPed*>(task)->m_Ped) {
+                            continue;
+                        }
+                        found = GetArrestCamPosBesideCop(TheCamera.m_pTargetEntity, nearbyPed, &targetPos, &camPos);
+                        if (found) {
+                            gArrestCamOneCop = nearbyPed;
+                            break;
+                        }
+                    }
+                }
+                break;
+            }
+            case 8: { // Looking from a lamp post
+                found = GetLookFromLampPostPos(TheCamera.m_pTargetEntity, cop, targetPos, camPos);
+                break;
+            }
+            }
+
+            if (found) {
+                if (gArrestCamOneCop) {
+                    gArrestCamOneCop->RegisterReference(&gArrestCamOneCop);
+                }
+                gArrestCamOneMode = modes[i];
+                if (gArrestCamOneMode == 3) { // Pick a random free cam
+                    const double rnd  = (double)CGeneral::GetRandomNumber() * (double)RAND_RECIPROCAL * 5.0;
+                    const float  rndF = (float)rnd;
+                    if (rnd < 1.0) {
+                        gArrestCamOneMode = 3;
+                    } else if (rndF < 2.0f) {
+                        gArrestCamOneMode = 4;
+                    } else if (rndF < 3.0f) {
+                        gArrestCamOneMode = 5;
+                    } else if (rndF < 4.0f) {
+                        gArrestCamOneMode = 6;
+                    } else {
+                        gArrestCamOneMode = 7;
+                    }
+                }
+            }
+        }
+
+        ApplyCamPos();
+        SetupVectors();
+        if (gArrestCamOneMode != 0) {
+            m_bResetStatics = false;
+        }
+        return true;
+    }
+
+    if (gArrestCamOneMode == 1) {
+        TheCamera.m_pTargetEntity->SetIsVisible(false);
+        return ArrestCamLookAtCopHead(*this, FindArrestingCop(), false);
+    }
+
+    {
+        CPed* unused;
+        if (!GetArrestedPos(unused)) {
+            return false;
+        }
+    }
+
+    // `true` => the camera position (`camPos`) is updated and applied, `false` => only the current source is corrected (0x5190D9)
+    bool apply = false;
+
+    const auto mode = (int32)gArrestCamOneMode;
+    // Moves `camPos` by `dir * 0.1 * timeStep` (NOTE: Parts of this are calculated in extended precision in the original)
+    const auto MoveCamPos = [&](const CVector& dir) {
+        const float  timeStep = CTimer::GetTimeStep();
+        const double moveX    = (double)dir.x * (double)0.1f;
+        const double moveY    = (double)dir.y * (double)0.1f;
+        const float  moveZ    = (float)((double)dir.z * (double)0.1f);
+        camPos.x              = (float)((double)(float)(moveX * (double)timeStep) + (double)camPos.x);
+        camPos.y              = (float)(moveY * (double)timeStep + (double)camPos.y);
+        camPos.z              = (float)((double)moveZ * (double)timeStep + (double)camPos.z);
+    };
+
+    if (mode == 2) { // Beside the cop
+        if (gArrestCamOneCop) {
+            const bool result = GetArrestCamPosBesideCop(TheCamera.m_pTargetEntity, gArrestCamOneCop->AsPed(), &targetPos, &camPos);
+
+            // Don't let the camera go up too fast
+            const double maxZ = (double)CTimer::GetTimeStep() * (double)0.1f + (double)m_vecSource.z;
+            if (maxZ < (double)camPos.z) {
+                camPos.z = (float)maxZ;
+            }
+            apply = result;
+        }
+    } else if (mode > 3 && mode <= 7) { // Free cam, to the left (4, 5) or right (6, 7)
+        auto dir = CVector{
+            targetPos.x - m_vecSource.x,
+            targetPos.y - m_vecSource.y,
+            targetPos.z - m_vecSource.z
+        };
+        camPos     = m_vecSource;
+        m_vecFront = dir;
+        m_vecFront.Normalise();
+        m_vecUp = CVector{ 0.0f, 0.0f, 1.0f };
+        dir     = CrossProduct(m_vecFront, m_vecUp);
+        dir.Normalise();
+        if (mode == 6 || mode == 7) {
+            dir.x *= -1.0f;
+            dir.y *= -1.0f;
+            dir.z *= -1.0f;
+        }
+
+        const CVector testPos{
+            (float)((double)dir.x * 0.5 + (double)m_vecSource.x),
+            (float)((double)dir.y * 0.5 + (double)m_vecSource.y),
+            (float)((double)dir.z * 0.5 + (double)m_vecSource.z)
+        };
+        if (!CWorld::TestSphereAgainstWorld(testPos, 0.4f, TheCamera.m_pTargetEntity, true, true, false, true, false, true)) {
+            MoveCamPos(dir);
+            if (mode == 5 || mode == 7) { // Move up
+                camPos.z = (float)((double)CTimer::GetTimeStep() * (double)0.05f + (double)camPos.z);
+            } else { // Stick to the ground
+                found              = false;
+                const auto groundZ = CWorld::FindGroundZFor3DCoord(camPos, &found);
+                if (found) {
+                    camPos.z = (float)((double)0.7f + (double)groundZ);
+                }
+            }
+            apply = true;
+        }
+    } else if (mode == 8) { // From a lamp post
+        camPos     = m_vecSource;
+        m_vecFront = CVector{
+            targetPos.x - camPos.x,
+            targetPos.y - camPos.y,
+            targetPos.z - camPos.z
+        };
+        m_vecFront.z = 0.0f;
+        m_vecFront.Normalise();
+        m_vecUp    = CVector{ 0.0f, 0.0f, 1.0f };
+        auto right = CrossProduct(m_vecFront, m_vecUp);
+        right.Normalise();
+
+        const double sideX = 10.0 * (double)right.x;
+        const double sideY = 10.0 * (double)right.y;
+        const float  sideZ = (float)(10.0 * (double)right.z);
+        const double diffX = (double)targetPos.x - (double)camPos.x;
+        const float  diffY = targetPos.y - camPos.y;
+        const float  diffZ = targetPos.z - camPos.z;
+        m_vecFront         = CVector{
+            (float)(diffX + sideX),
+            (float)((double)diffY + sideY),
+            (float)((double)diffZ + (double)sideZ)
+        };
+        m_vecFront.z = 0.0f;
+        m_vecFront.Normalise();
+
+        const CVector testPos{
+            (float)((double)m_vecFront.x * 0.5 + (double)camPos.x),
+            (float)((double)m_vecFront.y * 0.5 + (double)camPos.y),
+            (float)((double)m_vecFront.z * 0.5 + (double)camPos.z)
+        };
+        if (!CWorld::TestSphereAgainstWorld(testPos, 0.4f, TheCamera.m_pTargetEntity, true, true, false, true, false, true)) {
+            MoveCamPos(m_vecFront);
+            apply = true;
+        }
+    }
+
+    if (apply) {
+        ApplyCamPos();
+        SetupVectors();
+    } else {
+        const CVector srcCopy = m_vecSource;
+        AvoidTheGeometry(srcCopy, targetPos, m_vecSource, m_fFOV);
+    }
+    return true;
 }
 
 // 0x519250

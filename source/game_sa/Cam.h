@@ -159,7 +159,7 @@ public:
     void ClipBeta();
 
     void Process();
-    void ProcessArrestCamOne();
+    bool ProcessArrestCamOne();
     void ProcessPedsDeadBaby();
     void Process_1rstPersonPedOnPC(const CVector&, float, float, float);
     void Process_1stPerson(const CVector&, float, float, float);

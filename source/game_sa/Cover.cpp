@@ -273,7 +273,30 @@ bool CCover::DoesCoverPointStillProvideCover(CCoverPoint* cpt, CVector pos) {
 
 // 0x6988E0
 void CCover::Find2HighestPoints(CColTriangle* triangle, CVector* vertPositions, int32& outPoint1, int32& outPoint2) {
-    NOTSA_UNREACHABLE("Unused"); // plugin::Call<0x6988E0, CColTriangle*, CVector*, int32&, int32&>(triangle, vertPositions, outPoint1, outPoint2);
+    const auto a = triangle->m_vertIndices[0], b = triangle->m_vertIndices[1], c = triangle->m_vertIndices[2];
+    const float za = vertPositions[a].z, zb = vertPositions[b].z, zc = vertPositions[c].z;
+    if (za < zb && za < zc) { // A is lowest => B, C highest
+        outPoint1 = b;
+        outPoint2 = c;
+        return;
+    }
+    if (zb < za && zb < zc) { // B is lowest => A, C highest
+        outPoint1 = a;
+        // BUG: the original writes the second index into outPoint1 again, so outPoint2 is left untouched
+        if (notsa::IsFixBugs()) {
+            outPoint2 = c;
+        } else {
+            outPoint1 = c;
+        }
+        return;
+    }
+    outPoint1 = a; // C lowest (or ties) => A, B highest
+    // BUG: same as above
+    if (notsa::IsFixBugs()) {
+        outPoint2 = b;
+    } else {
+        outPoint1 = b;
+    }
 }
 
 // 0x6992B0

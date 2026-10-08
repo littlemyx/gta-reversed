@@ -19,7 +19,10 @@ public:
     int32      field_14;
     int32      field_18[10];
     int32      field_40[10];
-    int32      field_68[10];
+    float      field_68[10];
+
+public:
+    static void InjectHooks();
 
     void Clear();
 };

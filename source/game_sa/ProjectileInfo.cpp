@@ -115,9 +115,9 @@ bool CProjectileInfo::AddProjectile(CEntity* creator, eWeaponType projectileType
 
         matrix.SetTranslate(CVector{ 0.0f, 0.0f, 0.0f });
         matrix.RotateZ(angle);
-        matrix.m_pos.x += origin.x;
-        matrix.m_pos.y += origin.y;
-        matrix.m_pos.z += origin.z;
+        matrix.GetPosition().x += origin.x;
+        matrix.GetPosition().y += origin.y;
+        matrix.GetPosition().z += origin.z;
 
         velocity.x = std::sin(angle) * speed * -1.0f;
         velocity.y = std::cos(angle) * speed;
@@ -138,9 +138,9 @@ bool CProjectileInfo::AddProjectile(CEntity* creator, eWeaponType projectileType
 
         matrix.SetTranslate(CVector{ 0.0f, 0.0f, 0.0f });
         matrix.RotateZ(angle);
-        matrix.m_pos.x += origin.x;
-        matrix.m_pos.y += origin.y;
-        matrix.m_pos.z += origin.z;
+        matrix.GetPosition().x += origin.x;
+        matrix.GetPosition().y += origin.y;
+        matrix.GetPosition().z += origin.z;
 
         objInfoFlag = 5;
         elasticity  = 0.5f;
@@ -161,9 +161,9 @@ bool CProjectileInfo::AddProjectile(CEntity* creator, eWeaponType projectileType
 
         matrix.SetTranslate(CVector{ 0.0f, 0.0f, 0.0f });
         matrix.RotateZ(angle);
-        matrix.m_pos.x += origin.x;
-        matrix.m_pos.y += origin.y;
-        matrix.m_pos.z += origin.z;
+        matrix.GetPosition().x += origin.x;
+        matrix.GetPosition().y += origin.y;
+        matrix.GetPosition().z += origin.z;
 
         velocity.x = std::sin(angle) * speed * -1.0f;
         velocity.y = std::cos(angle) * speed;
@@ -183,19 +183,19 @@ bool CProjectileInfo::AddProjectile(CEntity* creator, eWeaponType projectileType
 
         if (creator->GetIsTypeVehicle()) {
             matrix       = creator->GetMatrix();
-            matrix.m_pos = origin;
+            matrix.GetPosition() = origin;
             speed        = creator->AsPhysical()->m_vecMoveSpeed.Magnitude() + speed;
         } else if (creator->GetIsTypePed() && creator->AsPed()->IsPlayer()) {
             const auto& cam = TheCamera.GetActiveCam();
-            matrix.m_forward = cam.m_vecFront;
-            matrix.m_up      = cam.m_vecUp;
-            matrix.m_right   = CrossProduct(cam.m_vecUp, cam.m_vecFront);
-            matrix.m_pos     = origin;
+            matrix.GetForward() = cam.m_vecFront;
+            matrix.GetUp()      = cam.m_vecUp;
+            matrix.GetRight()   = CrossProduct(cam.m_vecUp, cam.m_vecFront);
+            matrix.GetPosition()     = origin;
         } else if (dir) {
-            matrix.m_forward = *dir;
-            matrix.m_right   = creator->GetMatrix().m_right;
-            matrix.m_up      = CrossProduct(matrix.m_right, matrix.m_forward);
-            matrix.m_pos     = origin;
+            matrix.GetForward() = *dir;
+            matrix.GetRight()   = creator->GetMatrix().GetRight();
+            matrix.GetUp()      = CrossProduct(matrix.GetRight(), matrix.GetForward());
+            matrix.GetPosition()     = origin;
         } else {
             matrix = creator->GetMatrix(); // BUG: `origin` isn't used in this case, the creator's position is
         }
@@ -219,7 +219,7 @@ bool CProjectileInfo::AddProjectile(CEntity* creator, eWeaponType projectileType
             velocity = CVector{ 0.0f, 0.0f, 0.0f };
         }
         matrix       = creator->GetMatrix();
-        matrix.m_pos = origin;
+        matrix.GetPosition() = origin;
         break;
     }
     default:

@@ -190,12 +190,8 @@ void CFont::PrintChar(float x, float y, char character) {
 
     if (PS2Symbol) {
         // Extra symbol to be drawn (e.g. PS2 buttons)
-        // NOTE: The CRect field order here is memory-order of the original struct
-        CRect rect;
-        rect.left   = x;
-        rect.bottom = (h + h) + y;
-        rect.right  = h * 17.0f + x;
-        rect.top    = h * 19.0f + y;
+        // CRect ctor is (left, bottom, right, top)
+        const CRect rect{ x, (h + h) + y, h * 17.0f + x, h * 19.0f + y };
         ButtonSprite[PS2Symbol].Draw(rect, CRGBA{ 255, 255, 255, RenderState.m_color.a });
         return;
     }
@@ -578,8 +574,10 @@ void CFont::RenderFontBuffer() {
 
     // The buffer is a sequence of [CFontChar][NUL terminated string][padding to 4 bytes]
     // The first CFontChar is at `FontRenderStateBuf[0]`, its string follows right after it.
-    auto*       cur = reinterpret_cast<char*>(&FontRenderStateBuf[0]) + sizeof(CFontChar);
-    const auto* end = reinterpret_cast<const char*>(pEmptyChar);
+    // NOTE: The real buffer (0xC716B0, 0x200 bytes) is larger than `std::array<CFontChar, 9>` (0x1B0 bytes),
+    //       so go through an integer to make the walk past the end of that array object explicit.
+    auto*       cur = reinterpret_cast<char*>(reinterpret_cast<uintptr_t>(&FontRenderStateBuf[0])) + sizeof(CFontChar);
+    const auto* end = reinterpret_cast<const char*>(reinterpret_cast<uintptr_t>(pEmptyChar));
 
     if (cur < end) {
         do {
@@ -787,11 +785,19 @@ int16 CFont::ProcessCurrentString(bool print, float x, float y, const GxtChar* t
             if (tag) {
                 // Re-insert the colour tag at the beginning of the rest of the text
                 sprintf_s(gString, "~%c~", tag);
-                strcpy_s(buf, gString);
+                // BUG: The original copies without any bounds checking (`buf` is 256 bytes)
+                const auto bufSize = notsa::IsFixBugs() ? sizeof(buf) : (size_t)-1;
+                size_t     len     = 0;
+                for (const char* src = gString; *src && len + 1 < bufSize; src++) {
+                    buf[len++] = *src;
+                }
                 if (m_bNewLine) {
                     lineEnd += 3;
                 }
-                strcat_s(buf, lineEnd);
+                for (const char* src = lineEnd; *src && len + 1 < bufSize; src++) {
+                    buf[len++] = *src;
+                }
+                buf[len] = '\0';
                 cur = buf;
                 tag = '\0';
             }

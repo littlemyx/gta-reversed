@@ -3533,34 +3533,20 @@ VALIDATE_SIZE(FollowCarCamSettings, 0x3C);
 auto& gFollowCarCamSettings = StaticRef<std::array<FollowCarCamSettings, 7>>(0x8CC600);
 auto& gFollowCarZoomAngle   = StaticRef<std::array<std::array<float, 5>, 3>>(0x8CC41C); // [zoom][arrPos], see `CCamera::GetArrPosForVehicleType`
 
-// NOTE: These two are the car zoom (the 1..3 "view distance" setting) and the smoothed car zoom of `TheCamera`.
-//       The names of `CCamera::m_nCarZoom` and co. don't seem to line up with these addresses, so the originals are used directly.
-auto& gCarZoom         = StaticRef<int32>(0xB6F0DC);
-auto& gCarZoomSmoothed = StaticRef<float>(0xB6F0E8);
-
 auto& gFollowCarTrailerBlend = StaticRef<float>(0xB7011C); // [0, 1]: Blend factor between the vehicle (alone) and the vehicle + trailer/passenger (names made up)
 auto& gFollowCarMouseTimer   = StaticRef<float>(0xB70118); // Set to 50 when the mouse is moved, counts down while it's idle
 auto& gbFollowCarAlphaReset  = StaticRef<bool>(0xB70114);  // Set once the vertical angle has been reset for a (special) vehicle
-auto& gFollowCarPrevAlpha    = StaticRef<float>(0x8CCEB0);
-auto& gFollowCarPrevBeta     = StaticRef<float>(0x8CCEA8);
-auto& gbCamUnk_B6F999        = StaticRef<bool>(0xB6F999);  // Set to true when the camera is reset, purpose unknown
-auto& gbCamUnk_9655E5        = StaticRef<bool>(0x9655E5);  // Set to true when the followed vehicle is "big" (read by the camera collision code?), purpose unknown
+auto& gFollowCarPrevAlpha    = StaticRef<float>(0x8CCEB0); // Initially -9999
+auto& gFollowCarPrevBeta     = StaticRef<float>(0x8CCEA8); // Initially -9999
+auto& gbCamUnk_9655E5        = StaticRef<bool>(0x9655E5);  // Set to true when the followed vehicle is "big". Never read anywhere in the exe, purpose unknown
 
 // 0x420800 (see `RopeMax` in Rope.cpp)
 float FollowCarMax(float a, float b) {
     return a > b ? a : b; // NOTE: NaN => `b`
 }
 
-// 0x50A0A0 - Rounds `value` to `decimals` decimal places (half away from zero)
-float RoundToDecimals(float value, int32 decimals) {
-    double t = std::pow(10.0, (double)(decimals + 1)) * (double)value;
-    t += value < 0.0f ? -5.0 : 5.0;
-    double integral;
-    std::modf(t * (double)0.1f, &integral);
-    return (float)(integral / std::pow(10.0, (double)decimals));
-}
-
-// Index into `gFollowCarCamSettings` (the "camera vehicle type") of the vehicle
+// Index into `gFollowCarCamSettings` (the "camera vehicle type") of the vehicle: 0 = car (also the Vortex), 1 = bike/quad, 2 = heli (also the Hydra with the nozzles down),
+// 3 = plane, 4 = boat, 5 = RC Bandit/Baron/Tiger/Cam, 6 = RC Raider/Goblin
 uint32 GetFollowCarCamType(const CVehicle* veh) {
     switch (veh->m_nModelIndex) {
     case MODEL_RCBANDIT:
@@ -3610,7 +3596,7 @@ void CCam::Process_FollowCar_SA(const CVector& target, float orientation, float 
     const uint32 camType = GetFollowCarCamType(veh);
     const auto&  cfg     = gFollowCarCamSettings[camType];
 
-    float dist = gCarZoomSmoothed + cfg.minDistOffset; // The distance the camera wants to keep from the vehicle
+    float dist = TheCamera.m_fCarZoomSmoothed + cfg.minDistOffset; // The distance the camera wants to keep from the vehicle
 
     int32 arrPos = 0;
     TheCamera.GetArrPosForVehicleType(static_cast<eVehicleType>(veh->GetVehicleAppearance()), arrPos);
@@ -3619,11 +3605,11 @@ void CCam::Process_FollowCar_SA(const CVector& target, float orientation, float 
     float elevAngle = 0.0f;
     if (veh->GetStatus() == STATUS_REMOTE_CONTROLLED) {
         elevAngle = gFollowCarZoomAngle[1][arrPos];
-    } else if (gCarZoom == 1) {
+    } else if (TheCamera.m_nCarZoom == 1) {
         elevAngle = gFollowCarZoomAngle[0][arrPos];
-    } else if (gCarZoom == 2) {
+    } else if (TheCamera.m_nCarZoom == 2) {
         elevAngle = gFollowCarZoomAngle[1][arrPos];
-    } else if (gCarZoom == 3) {
+    } else if (TheCamera.m_nCarZoom == 3) {
         elevAngle = gFollowCarZoomAngle[2][arrPos];
     }
 
@@ -3637,17 +3623,17 @@ void CCam::Process_FollowCar_SA(const CVector& target, float orientation, float 
             blend          = 1.0f < v ? 1.0f : (float)v;
         }
 
-        const auto& vehBB     = veh->GetColModel()->GetBoundingBox();
-        const auto& trailerBB = trailer->GetColModel()->GetBoundingBox();
-        const double dx       = (double)trailerBB.m_vecMax.x - (double)vehBB.m_vecMin.x;
-        const double dy       = (double)trailerBB.m_vecMax.y - (double)vehBB.m_vecMin.y;
-        const double dz       = (double)trailerBB.m_vecMax.z - (double)vehBB.m_vecMin.z;
-        const double len      = std::sqrt(dz * dz + dy * dy + dx * dx);
-        colSize               = (float)(len * 0.5 * (double)blend + (double)colSize);
+        // NOTE: Everything here uses the *trailer's* collision model (the original never touches the vehicle's again)
+        const auto&  trailerBB = trailer->GetColModel()->GetBoundingBox();
+        const double dx        = (double)trailerBB.m_vecMax.x - (double)trailerBB.m_vecMin.x;
+        const double dy        = (double)trailerBB.m_vecMax.y - (double)trailerBB.m_vecMin.y;
+        const double dz        = (double)trailerBB.m_vecMax.z - (double)trailerBB.m_vecMin.z;
+        const double len       = std::sqrt(dz * dz + dy * dy + dx * dx);
+        colSize                = (float)(len * 0.5 * (double)blend + (double)colSize);
 
-        const float vehMaxZ = veh->GetColModel()->GetBoundingBox().m_vecMax.z;
-        const float maxZ    = heightZ > vehMaxZ ? heightZ : vehMaxZ;
-        heightZ             = (float)(((double)maxZ - (double)heightZ) * (double)blend + (double)heightZ);
+        const float trailerMaxZ = trailerBB.m_vecMax.z;
+        const float maxZ        = heightZ > trailerMaxZ ? heightZ : trailerMaxZ;
+        heightZ                 = (float)(((double)maxZ - (double)heightZ) * (double)blend + (double)heightZ);
 
         // Move the target towards the trailer
         const auto&  trailerPos = trailer->GetPosition();
@@ -3706,7 +3692,7 @@ void CCam::Process_FollowCar_SA(const CVector& target, float orientation, float 
     float minDist;
     {
         double limit = cfg.minDistLimit;
-        if (gCarZoom == 1 && (camType == 0 || camType == 1)) {
+        if (TheCamera.m_nCarZoom == 1 && (camType == 0 || camType == 1)) {
             limit *= 0.65f;
         }
         minDist = (double)dist > limit ? dist : (float)limit;
@@ -3739,10 +3725,10 @@ void CCam::Process_FollowCar_SA(const CVector& target, float orientation, float 
     }
 
     if (bReset || TheCamera.m_bCamDirectlyBehind || TheCamera.m_bCamDirectlyInFront) {
-        m_bResetStatics      = false;
-        m_bRotating          = false;
-        m_bCollisionChecksOn = true;
-        gbCamUnk_B6F999      = true;
+        m_bResetStatics             = false;
+        m_bRotating                 = false;
+        m_bCollisionChecksOn        = true;
+        TheCamera.m_bResetOldMatrix = true; // 0xB6F999
 
         if (!TheCamera.m_bJustCameOutOfGarage && !bFlag) {
             m_fVerticalAngle = 0.0f;
@@ -4120,9 +4106,7 @@ void CCam::Process_FollowCar_SA(const CVector& target, float orientation, float 
     }
 
     // NOTE: This rounds the *previous* source, it's overwritten below
-    m_vecSource.x = RoundToDecimals(m_vecSource.x, 4);
-    m_vecSource.y = RoundToDecimals(m_vecSource.y, 4);
-    m_vecSource.z = RoundToDecimals(m_vecSource.z, 4);
+    LimitPrecision(m_vecSource);
     GetVectorsReadyForRW();
     TheCamera.m_bCamDirectlyBehind  = false;
     TheCamera.m_bCamDirectlyInFront = false;
@@ -4160,7 +4144,7 @@ void CCam::Process_FollowCar_SA(const CVector& target, float orientation, float 
         m_avecTargetHistoryPos[1].z = (float)((double)tgt.z - (double)sinAf * (double)dist);
     }
 
-    CCamera::SetColVarsVehicle(static_cast<eVehicleType>(camType), gCarZoom);
+    CCamera::SetColVarsVehicle(static_cast<eVehicleType>(camType), static_cast<int32>(TheCamera.m_nCarZoom));
 
     if (gCameraDirection == 3) {
         CWorld::pIgnoreEntity           = veh;
@@ -4172,16 +4156,12 @@ void CCam::Process_FollowCar_SA(const CVector& target, float orientation, float 
         TheCamera.CameraColDetAndReact(&m_vecSource, &tgt);
         TheCamera.ImproveNearClip(veh, nullptr, &m_vecSource, &tgt);
         CWorld::pIgnoreEntity = nullptr;
-        m_vecSource.x         = RoundToDecimals(m_vecSource.x, 4);
-        m_vecSource.y         = RoundToDecimals(m_vecSource.y, 4);
-        m_vecSource.z         = RoundToDecimals(m_vecSource.z, 4);
+        LimitPrecision(m_vecSource);
     }
 
     TheCamera.m_bCamDirectlyBehind  = false;
     TheCamera.m_bCamDirectlyInFront = false;
-    m_vecSource.x                   = RoundToDecimals(m_vecSource.x, 4);
-    m_vecSource.y                   = RoundToDecimals(m_vecSource.y, 4);
-    m_vecSource.z                   = RoundToDecimals(m_vecSource.z, 4);
+    LimitPrecision(m_vecSource);
     GetVectorsReadyForRW();
 
     gCamFollowCarLookAt = tgt;

@@ -20,7 +20,7 @@ void CClouds::InjectHooks() {
     RH_ScopedInstall(SetUpOneSkyPoly, 0x713060);
     RH_ScopedInstall(Render, 0x713950);
     RH_ScopedInstall(RenderSkyPolys, 0x714650);
-    RH_ScopedInstall(RenderBottomFromHeight, 0x7154B0, { .Reversed = false });
+    RH_ScopedInstall(RenderBottomFromHeight, 0x7154B0);
 
     // Moving fog
     RH_ScopedInstall(MovingFogInit, 0x713660);
@@ -859,41 +859,221 @@ void CClouds::RenderSkyPolys() {
 
 // 0x7154B0
 void CClouds::RenderBottomFromHeight() {
-    /****
-    * Code below should be good
-    * but it isn't complete...
-    *****\
-   
-    const auto camPos = TheCamera.GetPosition();
-    if (camPos.z < -90.f) { // 0x71557D [Moved up here]
+    ZoneScoped;
+
+    // NOTSA names for the tables used by this function
+    auto& randTable  = StaticRef<std::array<float, 80>>(0x8D5658); // Pseudo random numbers in [0, 1]
+    auto& offsetYTbl = StaticRef<std::array<float, 30>>(0x8D57A0);
+    auto& offsetXTbl = StaticRef<std::array<float, 30>>(0x8D5818);
+
+    const auto& cc = CTimeCycle::m_CurrentColours;
+
+    const int32 red   = cc.m_nFluffyCloudsBottomRed;
+    const int32 green = cc.m_nFluffyCloudsBottomGreen;
+    const int32 blue  = cc.m_nFluffyCloudsBottomBlue;
+
+    // Brightened color, used by the first vertex of every cloud quad
+    const int32 brightRed   = (int32)std::min(255.0f, (float)red * 2.0f + 20.0f);
+    const int32 brightGreen = (int32)std::min(255.0f, (float)green * 1.5f);
+    const int32 brightBlue  = (int32)std::min(255.0f, (float)blue * 1.5f);
+
+    const auto& camPos = TheCamera.GetPosition();
+    if (camPos.z < -90.0f) {
         return;
     }
 
-    const auto& cc = CTimeCycle::m_CurrentColours; // cc = color component
-    const auto ClampClr = [](float clr) {
-        return std::min(clr, 255.f);
-    };
-    const auto fcClr = CRGBA{ // fc = fluffy clouds
-        (uint8)ClampClr(cc.m_nFluffyCloudsBottomRed * 2.f + 20.f),
-        (uint8)ClampClr(cc.m_nFluffyCloudsBottomGreen * 1.5f),
-        (uint8)ClampClr(cc.m_nFluffyCloudsBottomBlue * 1.5f),
-        (uint8)255
-    };
-
-    auto lowZ = 160.f, highZ = 190.f;
+    float lowZ  = 160.0f;
+    float highZ = 190.0f;
+    {
+        const float f = ((camPos.z - 190.0f) - 10.0f) * 0.3f;
+        if (f > 0.0f) {
+            lowZ  = 160.0f + f;
+            highZ = f + 190.0f;
+        }
+    }
 
     auto& windShift = StaticRef<float>(0xC6E954);
+    windShift = CTimer::ms_fTimeStep * CWeather::Wind * 0.25f + windShift;
 
-    RwRenderStateSet(rwRENDERSTATEZWRITEENABLE,      RWRSTATE(TRUE));
+    RwRenderStateSet(rwRENDERSTATEZWRITEENABLE,      RWRSTATE(FALSE));
     RwRenderStateSet(rwRENDERSTATEZTESTENABLE,       RWRSTATE(TRUE));
     RwRenderStateSet(rwRENDERSTATEVERTEXALPHAENABLE, RWRSTATE(TRUE));
-    RwRenderStateSet(rwRENDERSTATEFOGENABLE,         RWRSTATE(TRUE));
+    RwRenderStateSet(rwRENDERSTATEFOGENABLE,         RWRSTATE(FALSE));
     RwRenderStateSet(rwRENDERSTATESRCBLEND,          RWRSTATE(rwBLENDSRCALPHA));
     RwRenderStateSet(rwRENDERSTATEDESTBLEND,         RWRSTATE(rwBLENDINVSRCALPHA));
     RwRenderStateSet(rwRENDERSTATETEXTURERASTER,     RWRSTATE(RwTextureGetRaster(gpCloudMaskTex)));
 
-    // TODO....
-    */
+    const int32 cloudAlpha = (int32)cc.m_fCloudAlpha;
+
+    // Pass 1: Bottoms of the fluffy clouds (colored quads)
+    if (cloudAlpha != 0) {
+        uiTempBufferVerticesStored = 0;
+        uiTempBufferIndicesStored  = 0;
+
+        uint32 numVerts = 0;
+        uint32 numIdx   = 0;
+
+        const float zRange = highZ - lowZ;
+
+        for (int32 i = 1; i <= 28; i++) {
+            const float t  = (randTable[(i + 5) % 80] * 0.5f + 1.0f) * windShift;
+            const float x1 = (randTable[(i - 1) % 80] * 512.0f + t) - camPos.x;
+            const float y1 = (randTable[i % 80] * 512.0f + t) - camPos.y;
+
+            // Wrap the position around the camera (grid of 512 units)
+            const float dx = x1 - (float)(((int32)x1 & ~0x1FF) + 0x100);
+            const float dy = y1 - (float)(((int32)y1 & ~0x1FF) + 0x100);
+
+            const float vx = dx + camPos.x;
+            const float vy = dy + camPos.y;
+            const float vz = zRange * randTable[(i + 1) % 80] + lowZ;
+
+            int32 alpha = cloudAlpha;
+            if (vz - camPos.z > 0.0f) { // Fade out the clouds that are above the camera
+                alpha = (int32)((1.0f - (vz - camPos.z) * 0.004f) * (float)cloudAlpha);
+            }
+            if (alpha <= 0) {
+                continue;
+            }
+
+            // Fade out with the horizontal distance
+            const float adx  = std::abs(camPos.x - vx);
+            const float ady  = std::abs(camPos.y - vy);
+            const float dist = (adx <= ady ? ady : adx) * 0.00390625f;
+            if (dist > 0.75f) {
+                alpha = (int32)((1.0f - (dist - 0.75f) * 4.0f) * (float)alpha);
+            }
+            if (alpha <= 0) {
+                continue;
+            }
+
+            const float sizeX = randTable[(i + 2) % 80] * 100.0f + 60.0f;
+            const float sizeY = randTable[(i + 3) % 80] * 100.0f + 60.0f;
+
+            aTempBufferIndices[numIdx + 0] = (RxVertexIndex)(numVerts + 2);
+            aTempBufferIndices[numIdx + 1] = (RxVertexIndex)(numVerts + 1);
+            aTempBufferIndices[numIdx + 2] = (RxVertexIndex)(numVerts + 0);
+            aTempBufferIndices[numIdx + 3] = (RxVertexIndex)(numVerts + 2);
+            aTempBufferIndices[numIdx + 4] = (RxVertexIndex)(numVerts + 3);
+            aTempBufferIndices[numIdx + 5] = (RxVertexIndex)(numVerts + 1);
+
+            const uint32 colBright = ((((((uint32)alpha << 8) | (uint32)brightRed) << 8) | (uint32)brightGreen) << 8) | (uint32)brightBlue;
+            const uint32 colBase   = ((((((uint32)alpha << 8) | (uint32)red) << 8) | (uint32)green) << 8) | (uint32)blue;
+
+            auto* const verts = &TempBufferVertices.m_3d[numVerts];
+
+            verts[0].objVertex.x = vx - sizeX;
+            verts[0].objVertex.y = sizeY + vy;
+            verts[0].objVertex.z = vz;
+            verts[0].color       = colBright;
+            verts[0].u           = 0.0f;
+            verts[0].v           = 0.0f;
+
+            verts[1].objVertex.x = sizeX + vx;
+            verts[1].objVertex.y = sizeY + vy;
+            verts[1].objVertex.z = vz;
+            verts[1].color       = colBase;
+            verts[1].u           = 0.0f;
+            verts[1].v           = 1.0f;
+
+            verts[2].objVertex.x = vx - sizeX;
+            verts[2].objVertex.y = vy - sizeY;
+            verts[2].objVertex.z = vz;
+            verts[2].color       = colBase;
+            verts[2].u           = 1.0f;
+            verts[2].v           = 0.0f;
+
+            verts[3].objVertex.x = sizeX + vx;
+            verts[3].objVertex.y = vy - sizeY;
+            verts[3].objVertex.z = vz;
+            verts[3].color       = colBase;
+            verts[3].u           = 1.0f;
+            verts[3].v           = 1.0f;
+
+            numIdx   += 6;
+            numVerts += 4;
+            uiTempBufferIndicesStored  = (uint16)numIdx;
+            uiTempBufferVerticesStored = (uint16)numVerts;
+        }
+
+        if (numIdx != 0) {
+            if (RwIm3DTransform(TempBufferVertices.m_3d, numVerts, nullptr, rwIM3D_VERTEXUV | rwIM3D_VERTEXXYZ | rwIM3D_VERTEXRGBA)) {
+                RwIm3DRenderIndexedPrimitive(rwPRIMTYPETRILIST, aTempBufferIndices, uiTempBufferIndicesStored);
+                RwIm3DEnd();
+            }
+        }
+
+        uiTempBufferIndicesStored  = 0;
+        uiTempBufferVerticesStored = 0;
+    }
+
+    CSprite::InitSpriteBuffer();
+
+    // Pass 2: Cloud sprites
+    if (cloudAlpha > 0) {
+        const float zRange = highZ - lowZ;
+
+        for (int32 j = 0; j < 30; j++) {
+            const float w  = windShift * 0.5f;
+            const float ex = (w + offsetXTbl[j]) - camPos.x;
+            const float ey = (w + offsetYTbl[j]) - camPos.y;
+
+            const float dx = ex - (float)(((int32)ex & ~0xFF) + 0x80);
+            const float dy = ey - (float)(((int32)ey & ~0xFF) + 0x80);
+
+            const CVector pos{
+                dx + camPos.x,
+                dy + camPos.y,
+                zRange * randTable[j % 80] + lowZ
+            };
+
+            const float dz = std::abs(camPos.z - pos.z);
+            int32 alpha = (int32)((1.0f - dz * 0.004f) * (float)cloudAlpha);
+            if (alpha <= 0) {
+                continue;
+            }
+
+            const float size = (randTable[(j + 1) % 80] + 1.0f) * 12.0f;
+
+            const float adx  = std::abs(camPos.x - pos.x);
+            const float ady  = std::abs(camPos.y - pos.y);
+            float       dist = (adx <= ady ? ady : adx) * 0.0078125f;
+
+            if (dist > 0.75f) {
+                if (dist >= 1.0f) {
+                    dist = 1.0f;
+                }
+                alpha = (int32)((1.0f - (dist - 0.75f) * 4.0f) * (float)alpha);
+            }
+
+            if (dist <= 0.05f) {
+                continue;
+            }
+            if (dist < 0.1f) { // Fade out when close to the camera
+                alpha = (int32)(((dist - 0.05f) * (float)alpha) * 20.0f);
+            }
+
+            CVector   screenPos;
+            CVector2D screenSize;
+            if (CSprite::CalcScreenCoors(pos, &screenPos, &screenSize.x, &screenSize.y, false, true)) {
+                CSprite::RenderBufferedOneXLUSprite(
+                    screenPos,
+                    CVector2D{ screenSize.x * size, screenSize.y * size },
+                    (uint8)red, (uint8)green, (uint8)blue,
+                    256,
+                    1.0f / screenPos.z,
+                    (uint8)alpha
+                );
+            }
+        }
+    }
+
+    CSprite::FlushSpriteBuffer();
+
+    RwRenderStateSet(rwRENDERSTATETEXTURERASTER,     RWRSTATE(NULL));
+    RwRenderStateSet(rwRENDERSTATEVERTEXALPHAENABLE, RWRSTATE(FALSE));
+    RwRenderStateSet(rwRENDERSTATEZWRITEENABLE,      RWRSTATE(TRUE));
+    RwRenderStateSet(rwRENDERSTATEZTESTENABLE,       RWRSTATE(TRUE));
 }
 
 //

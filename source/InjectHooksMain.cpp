@@ -2,6 +2,8 @@
 
 #include <extensions/CommandLine.h>
 
+#include "PedSaveStructure.h"
+
 // Audio
 // -- General
 #include "AEAudioEnvironment.h"

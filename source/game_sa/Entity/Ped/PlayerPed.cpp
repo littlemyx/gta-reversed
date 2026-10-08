@@ -365,7 +365,8 @@ void CPlayerPed::ProcessAnimGroups() {
     };
     // 0x609A1F: Player peds use their model's anim group (if it isn't the default player one)
     const auto PlayerModelGroupOrDefault = [&](int32 group) -> int32 {
-        if (m_nPedType == PED_TYPE_PLAYER1) {
+        // NOTE: The original compares with 1 (= PED_TYPE_PLAYER2), not with PED_TYPE_PLAYER1 (0x609A1F)
+        if (m_nPedType == PED_TYPE_PLAYER2) {
             const auto modelGroup = CModelInfo::GetModelInfo(m_nModelIndex)->AsPedModelInfoPtr()->m_nAnimType;
             if (modelGroup != ANIM_GROUP_PLAYER) {
                 return modelGroup;
@@ -839,8 +840,8 @@ float CPlayerPed::ControlButtonSprint(eSprintType sprintType) {
 // 0x60A820
 float CPlayerPed::GetButtonSprintResults(eSprintType sprintType) {
     const auto moveSpeed = GetPlayerData()->m_fMoveSpeed;
-    if (moveSpeed <= PLAYER_SPRINT_THRESHOLD) {
-        return moveSpeed <= 0.0f ? 0.0f : 1.0f;
+    if (!(moveSpeed > PLAYER_SPRINT_THRESHOLD)) { // NOTE: NaN takes this branch (FCOMP + JNZ on C0|C3)
+        return moveSpeed > 0.0f ? 1.0f : 0.0f;
     }
     // The original keeps the intermediate results in extended precision, hence `double`
     const auto progress = std::max(0.0, (double)moveSpeed / (double)PLAYER_SPRINT_THRESHOLD - 1.0);

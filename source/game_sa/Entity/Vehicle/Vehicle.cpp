@@ -216,7 +216,7 @@ void CVehicle::InjectHooks() {
     // RH_ScopedInstall(ProcessWeapons, 0x6E3950);
     RH_ScopedInstall(DoFixedMachineGuns, 0x73F400);
     RH_ScopedInstall(FireFixedMachineGuns, 0x73DF00);
-    // RH_ScopedInstall(DoDriveByShootings, 0x741FD0);
+    RH_ScopedInstall(DoDriveByShootings, 0x741FD0);
     RH_ScopedInstall(ReleasePickedUpEntityWithWinch, 0x6D3CB0);
     RH_ScopedInstall(PickUpEntityWithWinch, 0x6D3CD0);
     RH_ScopedInstall(QueryPickedUpEntityWithWinch, 0x6D3CF0);
@@ -5102,7 +5102,130 @@ void CVehicle::FireFixedMachineGuns() {
 
 // 0x741FD0
 void CVehicle::DoDriveByShootings() {
-    plugin::CallMethod<0x741FD0, CVehicle*>(this);
+    CPed* const driver = m_pDriver;
+    if (!driver) {
+        return;
+    }
+
+    // NOTE: The original calls the CPlayerPed methods without checking that the driver is actually a player ped
+    const auto playerInfo = driver->AsPlayer()->GetPlayerInfoForThisPlayerPed(); // 0x609FF0
+    if (!playerInfo || !playerInfo->m_bCanDoDriveBy) {
+        return;
+    }
+
+    const auto pad = driver->AsPlayer()->GetPadFromPlayer(); // 0x609560
+    if (!pad) {
+        return;
+    }
+
+    CWeapon& weapon = driver->GetActiveWeapon();
+    if (CWeaponInfo::GetWeaponInfo(weapon.m_Type, eWeaponSkill::STD)->m_nSlot != +eWeaponSlot::SMG) {
+        return;
+    }
+
+    bool isBike    = false;
+    bool gunFired  = false;
+    bool lookLeft  = false;
+    bool lookRight = false;
+
+    if (m_nVehicleSubType == VEHICLE_TYPE_BMX) {
+        if (pad->GetCarGunFired() == 1) {
+            gunFired = true;
+        }
+    } else if (pad->GetCarGunFired() != 0) {
+        gunFired = true;
+    }
+
+    AssocGroupId animGroup{};
+    int32        animLeft, animRight, animFront;
+    if (GetRideAnimData()) {
+        isBike    = true;
+        animGroup = GetRideAnimData()->AnimGroup;
+        animLeft  = ANIM_ID_BIKE_DRIVEBYLHS;
+        animRight = ANIM_ID_BIKE_DRIVEBYRHS;
+        animFront = ANIM_ID_BIKE_DRIVEBYFT;
+    } else {
+        animFront = ANIM_ID_NO_ANIMATION_SET;
+        if (vehicleFlags.bLowVehicle) {
+            animLeft  = ANIM_ID_DRIVEBYL_L;
+            animRight = ANIM_ID_DRIVEBYL_R;
+        } else {
+            animLeft  = ANIM_ID_DRIVEBY_L;
+            animRight = ANIM_ID_DRIVEBY_R;
+        }
+    }
+
+    weapon.Update(nullptr); // 0x73DB40
+
+    {
+        auto& cam = TheCamera.m_aCams[TheCamera.m_nActiveCam];
+        if (cam.m_nMode == MODE_TOPDOWN || TheCamera.m_bObbeCinematicCarCamOn || cam.m_nMode == MODE_TWOPLAYER_IN_CAR_AND_SHOOTING) {
+            lookLeft  = pad->GetLookLeft();
+            lookRight = pad->GetLookRight();
+        } else {
+            lookLeft  = cam.m_bLookingLeft;
+            lookRight = cam.m_bLookingRight;
+        }
+    }
+
+    const auto SetAnimFadeOut = [](CAnimBlendAssociation* assoc) {
+        if (assoc) {
+            assoc->m_BlendDelta = -8.f;
+        }
+    };
+
+    if (!(isBike ? gunFired : (lookLeft || lookRight)) || (int32)weapon.m_TotalAmmo <= 0) {
+        if (weapon.m_TotalAmmo != 0) {
+            const auto clipSize = (int32)CWeaponInfo::GetWeaponInfo(weapon.m_Type, eWeaponSkill::STD)->m_nAmmoClip;
+            if (weapon.m_TotalAmmo < (uint32)clipSize) { // NOTE: the original sign-extends the 16-bit clip size (movsx)
+                weapon.m_AmmoInClip = weapon.m_TotalAmmo;
+            } else {
+                weapon.m_AmmoInClip = clipSize;
+            }
+        }
+        SetAnimFadeOut(RpAnimBlendClumpGetAssociation(driver->GetRpClump(), animLeft));
+        auto* const assocRight = RpAnimBlendClumpGetAssociation(driver->GetRpClump(), animRight);
+        SetAnimFadeOut(assocRight);
+        // In the original `assoc` is left as the right-side association for non-bikes
+        SetAnimFadeOut(isBike ? RpAnimBlendClumpGetAssociation(driver->GetRpClump(), animFront) : assocRight);
+        return;
+    }
+
+    CAnimBlendAssociation* assoc;
+    int32                  animToUse;
+    const auto             BlendIn = [&] {
+        assoc = CAnimManager::BlendAnimation(driver->GetRpClump(), animGroup, (AnimationId)animToUse, 16.f);
+    };
+    bool doAnim = true;
+    if (lookLeft) {
+        animToUse = animLeft;
+    } else if (lookRight) {
+        animToUse = animRight;
+    } else if (isBike) {
+        animToUse = animFront;
+    } else {
+        doAnim = false;
+    }
+    if (doAnim) {
+        assoc = RpAnimBlendClumpGetAssociation(driver->GetRpClump(), animToUse);
+        if (!assoc || assoc->m_BlendDelta < 0.f) {
+            BlendIn();
+        }
+        if (assoc) {
+            if ((assoc->m_Flags & 1) != 0) {
+                return;
+            }
+            if (assoc->m_BlendAmount <= 0.99f) {
+                return;
+            }
+        }
+    }
+
+    if (gunFired && CTimer::GetTimeInMS() > weapon.m_TimeForNextShotMs) {
+        weapon.FireFromCar(this, lookLeft, lookRight);
+        weapon.m_TimeForNextShotMs = CTimer::GetTimeInMS() + 70;
+        driver->DoGunFlash(250, false);
+    }
 }
 
 // NOTSA

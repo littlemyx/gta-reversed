@@ -5,7 +5,11 @@
     Do not delete this comment block. Respect others' work!
 */
 #include "StdInc.h"
+#include <numbers>
 #include "WindModifiers.h"
+#include "Shadows.h"
+#include "CarCtrl.h"
+#include "FireManager.h"
 
 void CHeli::InjectHooks() {
     RH_ScopedVirtualClass(CHeli, 0x871680, 71);
@@ -24,6 +28,8 @@ void CHeli::InjectHooks() {
     RH_ScopedVMTInstall(SetUpWheelColModel, 0x6C4320);
     RH_ScopedVMTInstall(ProcessControlInputs, 0x6C4830);
     RH_ScopedVMTInstall(ProcessFlyingCarStuff, 0x6C4E60);
+    RH_ScopedVMTInstall(PreRender, 0x6C5420);
+    RH_ScopedVMTInstall(BlowUpCar, 0x6C6D30);
 }
 
 // 0x6C4190
@@ -266,7 +272,100 @@ void CHeli::RenderAllHeliSearchLights() {
 
 // 0x6C6D30
 void CHeli::BlowUpCar(CEntity* damager, bool bHideExplosion) {
-    plugin::CallMethod<0x6C6D30, CHeli*, CEntity*, uint8>(this, damager, bHideExplosion);
+    if (!vehicleFlags.bCanBeDamaged) {
+        return;
+    }
+
+    const auto isRCHeli = m_nModelIndex == MODEL_RCRAIDER || m_nModelIndex == MODEL_RCGOBLIN;
+
+    // 0x6C6D42 - Non-player helis crash and burn first
+    if (GetStatus() != STATUS_PLAYER && m_autoPilot.m_nCarMission != MISSION_HELI_CRASH_AND_BURN && !isRCHeli) {
+        m_autoPilot.m_nCarMission = MISSION_HELI_CRASH_AND_BURN; // Not `SetCarMission`, but the same thing
+        m_fHealth = 0.0f;
+        return;
+    }
+
+    if (damager == FindPlayerPed() || damager == FindPlayerVehicle()) { // 0x6C6D7A
+        auto& playerInfo = FindPlayerInfo();
+        playerInfo.m_nHavocCaused += 20;
+        playerInfo.m_fCurrentChaseValue += 10.0f; // 0x85862C
+        CStats::IncrementStat(STAT_COST_OF_PROPERTY_DAMAGED, (float)(rand() % 6000 + 4000));
+    }
+
+    if (m_nModelIndex == MODEL_VCNMAV) {
+        CWanted::UseNewsHeliInAdditionToPolice = false;
+    }
+
+    if (GetStatus() == STATUS_PLAYER) { // 0x6C6DFA
+        m_bUsesCollision = false; // `m_nFlags &= 0xFFFFFF7E` (bits 0 and 7)
+        m_bIsVisible     = false;
+        ResetMoveSpeed();
+        ResetTurnSpeed();
+    }
+
+    SetStatus(STATUS_WRECKED);
+    physicalFlags.bRenderScorched = true;
+    m_nTimeWhenBlowedUp = CTimer::GetTimeInMS();
+    CVisibilityPlugins::SetClumpForAllAtomicsFlag(GetRpClump(), eAtomicComponentFlag::ATOMIC_PIPE_NO_EXTRA_PASSES); // 0x6C6E3D
+    m_damageManager.FuckCarCompletely(false);
+
+    if (!isRCHeli) { // 0x6C6E51
+        SetBumperDamage(FRONT_BUMPER, false);
+        SetBumperDamage(REAR_BUMPER, false);
+        SetDoorDamage(DOOR_BONNET, false);
+        SetDoorDamage(DOOR_BOOT, false);
+        SetDoorDamage(DOOR_LEFT_FRONT, false);
+        SetDoorDamage(DOOR_RIGHT_FRONT, false);
+        SetDoorDamage(DOOR_LEFT_REAR, false);
+        SetDoorDamage(DOOR_RIGHT_REAR, false);
+        SpawnFlyingComponent(CAR_WHEEL_LF, 1);
+
+        // BUG: The original doesn't check if the node exists
+        if (notsa::IsFixBugs() ? m_aCarNodes[HELI_WHEEL_LF] != nullptr : true) {
+            RpAtomic* atomic = nullptr;
+            RwFrameForAllObjects(m_aCarNodes[HELI_WHEEL_LF], GetCurrentAtomicObjectCB, &atomic);
+            if (atomic) {
+                RpAtomicSetFlags(atomic, 0);
+            }
+        }
+    }
+
+    m_nBombOnBoard = 0; // 0x6C6EEB
+    m_fHealth      = 0.0f;
+    m_wBombTimer   = 0;
+
+    TheCamera.CamShake(0.4f, GetPosition());
+    KillPedsInVehicle();
+
+    m_nOverrideLights          = NO_CAR_LIGHT_OVERRIDE; // 0x6C6F49
+    vehicleFlags.bEngineOn     = false;
+    vehicleFlags.bLightsOn     = false;
+    vehicleFlags.bSirenOrAlarm = false;
+    autoFlags.bTaxiLight       = false;
+
+    if (vehicleFlags.bIsAmbulanceOnDuty) {
+        vehicleFlags.bIsAmbulanceOnDuty = false;
+        CCarCtrl::NumAmbulancesOnDuty--;
+    }
+
+    if (vehicleFlags.bIsFireTruckOnDuty) {
+        vehicleFlags.bIsFireTruckOnDuty = false;
+        CCarCtrl::NumFireTrucksOnDuty--;
+    }
+
+    ChangeLawEnforcerState(false);
+    gFireManager.StartFire(this, damager, 0.8f, 1, 7000, 0);
+    CDarkel::RegisterCarBlownUpByPlayer(*this, 0);
+    CExplosion::AddExplosion(
+        this,
+        damager,
+        isRCHeli ? EXPLOSION_RC_VEHICLE : EXPLOSION_AIRCRAFT,
+        GetPosition(),
+        0,
+        1,
+        -1.0f,
+        0
+    );
 }
 
 // 0x6C4530
@@ -542,7 +641,125 @@ void CHeli::ProcessFlyingCarStuff() {
 
 // 0x6C5420
 void CHeli::PreRender() {
-    plugin::CallMethod<0x6C5420, CHeli*>(this);
+    CVehicle::PreRender(); // 0x6D6480
+
+    const auto mi = GetVehicleModelInfo();
+    CMatrix    rotorMat{}; // Re-attached to each of the rotor frames below
+
+    // 0x6C545D - Search light
+    if (m_bSearchLightEnabled && m_fSearchLightIntensity > 0.0f && CClock::GetIsTimeInRange(19, 6)) {
+        const auto origin = GetMatrix().TransformPoint({ 0.0f, 3.5f, -0.3f }); // 0x59C890
+        AddHeliSearchLight(
+            origin,
+            m_vecSearchLightTarget,
+            20.0f,
+            m_fSearchLightIntensity,
+            reinterpret_cast<uint32>(this) + 11, // Corona index
+            1,
+            1
+        );
+    }
+
+    // NOTSA: `GetColModel()` (0x535300) was called here, the result is unused
+
+    // 0x6C5506 - Wheel positions
+    if (vehicleFlags.bVehicleColProcessed) {
+        DoBurstAndSoftGroundRatios();
+
+        for (auto i = 0; i < 4; i++) {
+            const double t = 1.0 - (double)m_aSuspensionSpringLength[i] / (double)m_aSuspensionLineLength[i];
+            const float  v = (float)(((double)m_fWheelsSuspensionCompression[i] - t) / (1.0 - t));
+
+            CVector wheelPos;
+            mi->GetWheelPosn(i, wheelPos, true);
+
+            double wheelZ = (double)wheelPos.z + (double)m_pHandlingData->m_fSuspensionUpperLimit;
+            if (v > 0.0f) {
+                wheelZ -= (double)v * (double)m_aSuspensionSpringLength[i];
+            }
+
+            const double curZ = m_wheelPosition[i];
+            if (!(wheelZ > curZ)) {
+                if (!physicalFlags.bAddMovingCollisionSpeed || !handlingFlags.bLowRider) {
+                    wheelZ = (wheelZ - curZ) * (double)0.75f + curZ; // 0x858F34
+                }
+            }
+            m_wheelPosition[i] = (float)wheelZ;
+        }
+    }
+
+    UpdateWheelMatrix(4, 1);
+    UpdateWheelMatrix(7, 1);
+    UpdateWheelMatrix(2, 1);
+    UpdateWheelMatrix(5, 1);
+
+    if (!(m_nModelIndex == MODEL_RCRAIDER || m_nModelIndex == MODEL_RCGOBLIN)) {
+        DoHeliDustEffect(1.0f, 1.0f);
+    }
+
+    // 0x6C55E4 - Main rotor angle
+    constexpr float TWO_PI_F = 2.0f * std::numbers::pi_v<float>; // 0x858CBC
+    {
+        const auto isBigRotor = m_nModelIndex == MODEL_SPARROW
+                             || m_nModelIndex == MODEL_SEASPAR
+                             || m_nModelIndex == MODEL_MAVERICK
+                             || m_nModelIndex == MODEL_VCNMAV
+                             || m_nModelIndex == MODEL_POLMAV;
+        const double step = isBigRotor
+            ? (double)CTimer::GetTimeStep() * (double)m_fHeliRotorSpeed * (double)1.66f // 0x8D33A0
+            : (double)CTimer::GetTimeStep() * (double)m_fHeliRotorSpeed;
+        m_fRotorZ = (float)((double)m_fRotorZ - step);
+        if (m_fRotorZ < -TWO_PI_F) { // 0x863234
+            double angle = (double)m_fRotorZ + (double)TWO_PI_F;
+            while (angle < -(double)TWO_PI_F) {
+                angle += (double)TWO_PI_F;
+            }
+            m_fRotorZ = (float)angle;
+        }
+    }
+
+    // 0x6C568A - Second rotor angle
+    {
+        double step = (double)CTimer::GetTimeStep() * (double)m_fHeliRotorSpeed;
+        if (m_nModelIndex == MODEL_LEVIATHN) {
+            step = step + step;
+        } else {
+            step = step * (double)2.3f; // 0x858F54
+        }
+        m_fSecondRotorZ = (float)((double)m_fSecondRotorZ - step);
+        if (m_fSecondRotorZ > TWO_PI_F) {
+            double angle = m_fSecondRotorZ;
+            do {
+                angle -= (double)TWO_PI_F;
+            } while (angle > (double)TWO_PI_F);
+            m_fSecondRotorZ = (float)angle;
+        }
+    }
+
+    // 0x6C56E9 - Apply the rotation to the rotor frames (keeping their position)
+    const auto RotateRotor = [&](eHeliNodes node, float angle, bool aroundZ) {
+        const auto frame = m_aCarNodes[node];
+        if (!frame) {
+            return;
+        }
+        rotorMat.Attach(&frame->modelling, false);
+        const auto pos = rotorMat.GetPosition();
+        if (aroundZ) {
+            rotorMat.SetRotateZ(angle);
+        } else {
+            rotorMat.SetRotateX(angle);
+        }
+        rotorMat.GetPosition().x += pos.x;
+        rotorMat.GetPosition().y += pos.y;
+        rotorMat.GetPosition().z += pos.z;
+        rotorMat.UpdateRW();
+    };
+    RotateRotor(HELI_STATIC_ROTOR,  m_fRotorZ,       true);
+    RotateRotor(HELI_MOVING_ROTOR,  m_fRotorZ,       true);
+    RotateRotor(HELI_STATIC_ROTOR2, m_fSecondRotorZ, false);
+    RotateRotor(HELI_MOVING_ROTOR2, m_fSecondRotorZ, false);
+
+    CShadows::StoreShadowForVehicle(this, VEH_SHD_HELI); // 0x6C589D
 }
 
 // 0x6C7050

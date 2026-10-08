@@ -77,6 +77,7 @@
 #include "Tasks/TaskTypes/TaskSimpleGangDriveBy.h"
 #include "Tasks/TaskTypes/TaskComplexDriveWander.h"
 #include "Tasks/TaskTypes/TaskComplexFollowLeaderInFormation.h"
+#include "Tasks/TaskTypes/TaskComplexBeInGroup.h"
 #include "Tasks/TaskTypes/TaskSimpleSay.h"
 #include "Tasks/TaskTypes/TaskComplexHitResponse.h"
 #include "Tasks/TaskTypes/TaskComplexAvoidOtherPedWhileWandering.h"
@@ -1910,25 +1911,14 @@ void CEventHandler::ComputePedCollisionWithPedResponse(CEvent* e, CTask* tactive
                 const float dist = diff.Magnitude();
 
                 if (tAvoid) {
-                    // `CTaskComplexAvoidOtherPedWhileWandering::m_WantsToQuit = true` (Private)
-                    *(reinterpret_cast<uint8*>(tAvoid) + 0x5C) |= 2;
+                    static_cast<CTaskComplexAvoidOtherPedWhileWandering*>(tAvoid)->SetWantsToQuit();
                 }
                 if (tGoToPoint) {
                     tGoToPoint->SetTargetPtRadius(dist + 0.1f);
                 }
 
-                // 0x4BC470 - `CTaskComplexSeekEntity::SetMaxEntityDist2D` (Template, with private members)
-                {
-                    const float newDist = dist + 0.1f;
-                    auto* const t       = reinterpret_cast<uint8*>(tSeek);
-                    auto&       curDist = *reinterpret_cast<float*>(t + 0x18);
-                    if (curDist != newDist) {
-                        curDist                                  = newDist;
-                        *reinterpret_cast<uint32*>(t + 0x28) = CTimer::m_snTimeInMilliseconds;
-                        *reinterpret_cast<uint32*>(t + 0x2C) = 0;
-                        *(t + 0x30)                              = 1;
-                    }
-                }
+                // 0x4BC470 (Hackery, because we don't know what `T_PosCalc` actually is, but the used members are located before it)
+                static_cast<CTaskComplexSeekEntity<>*>(tSeek)->SetMaxEntityDist2D(dist + 0.1f);
 
                 if (dist < 8.f) {
                     tGangFollower->m_Offset = diff;
@@ -2043,8 +2033,8 @@ void CEventHandler::ComputePedCollisionWithPlayerResponse(CEvent* e, CTask* tact
     const auto   tGoToPoint    = (CTaskSimpleGoToPoint*)ped->GetIntelligence()->FindTaskByType(TASK_SIMPLE_GO_TO_POINT);
     CTask* const tSeek         = ped->GetIntelligence()->FindTaskByType(TASK_COMPLEX_SEEK_ENTITY);
 
-    if (const auto tBeInGroup = ped->GetIntelligence()->FindTaskByType(TASK_COMPLEX_BE_IN_GROUP);
-        tBeInGroup && *reinterpret_cast<int32*>(reinterpret_cast<uint8*>(tBeInGroup) + 0xC) == 0 // `m_nGroupId`
+    if (const auto tBeInGroup = static_cast<CTaskComplexBeInGroup*>(ped->GetIntelligence()->FindTaskByType(TASK_COMPLEX_BE_IN_GROUP));
+        tBeInGroup && tBeInGroup->GetGroupID() == 0
     ) {
         isBeInGroup = true;
         if (CPedGroups::ms_groups[0].GetMembership().CountMembers() < 3) {
@@ -2080,24 +2070,13 @@ void CEventHandler::ComputePedCollisionWithPlayerResponse(CEvent* e, CTask* tact
         const float dist = diff.Magnitude();
 
         if (tAvoid) {
-            // `CTaskComplexAvoidOtherPedWhileWandering::m_WantsToQuit = true` (Private)
-            *(reinterpret_cast<uint8*>(tAvoid) + 0x5C) |= 2;
+            static_cast<CTaskComplexAvoidOtherPedWhileWandering*>(tAvoid)->SetWantsToQuit();
         } else if (tGoToPoint) {
             tGoToPoint->SetTargetPtRadius(dist + 0.1f);
         }
 
-        // 0x4BC470 - `CTaskComplexSeekEntity::SetMaxEntityDist2D` (Template, with private members)
-        {
-            const float newDist = dist + 0.1f;
-            auto* const t       = reinterpret_cast<uint8*>(tSeek);
-            auto&       curDist = *reinterpret_cast<float*>(t + 0x18);
-            if (curDist != newDist) {
-                curDist                              = newDist;
-                *reinterpret_cast<uint32*>(t + 0x28) = CTimer::m_snTimeInMilliseconds;
-                *reinterpret_cast<uint32*>(t + 0x2C) = 0;
-                *(t + 0x30)                          = 1;
-            }
-        }
+        // 0x4BC470 (Hackery, because we don't know what `T_PosCalc` actually is, but the used members are located before it)
+        static_cast<CTaskComplexSeekEntity<>*>(tSeek)->SetMaxEntityDist2D(dist + 0.1f);
 
         if (dist < 8.f) {
             static_cast<CTaskComplexGangFollower*>(tGangFollower)->m_Offset = diff;
@@ -2120,8 +2099,7 @@ void CEventHandler::ComputePedCollisionWithPlayerResponse(CEvent* e, CTask* tact
             }
         }
 
-        // `m_Leader` of `CTaskComplexFollowLeaderInFormation` (Private)
-        if (pedIsInFrontOfVic && victim == *reinterpret_cast<CPed**>(reinterpret_cast<uint8*>(tactive) + 0x10)) {
+        if (pedIsInFrontOfVic && victim == static_cast<CTaskComplexFollowLeaderInFormation*>(tactive)->GetLeader()) {
             goto L_4BF12E;
         }
         goto L_4BF122;

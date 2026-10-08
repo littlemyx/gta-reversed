@@ -43,17 +43,16 @@ void CScriptsForBrains::SwitchAllObjectBrainsWithThisID(int8 ID, bool bStatus) {
 }
 
 // 0x46A930
-// NOTE: The parameter names are misleading: `attachType` is stored as the type of the brain, `Type` as the object grouping ID
-void CScriptsForBrains::AddNewScriptBrain(int16 ImgIndex, int16 Model, uint16 priority, int8 attachType, int8 Type, float Radius) {
+void CScriptsForBrains::AddNewScriptBrain(int16 ImgIndex, int16 Model, uint16 priority, int8 typeOfBrain, int8 objectGroupingId, float Radius) {
     for (auto& script : m_aScriptForBrains) {
         if (script.m_StreamedScriptIndex != -1) {
             continue;
         }
         script.m_StreamedScriptIndex        = ImgIndex;
         script.m_PercentageChance           = priority;
-        script.m_ObjectGroupingId           = Type;
+        script.m_ObjectGroupingId           = objectGroupingId;
         script.m_PedModelOrPedGeneratorIndex = Model;
-        script.m_TypeOfBrain                = attachType;
+        script.m_TypeOfBrain                = typeOfBrain;
         script.m_bBrainActive               = true;
         script.m_ObjectBrainActivationRadius = Radius > 0.f ? Radius : 5.f;
         return;

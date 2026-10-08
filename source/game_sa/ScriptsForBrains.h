@@ -36,7 +36,7 @@ public:
 
     void Init();
 
-    void AddNewScriptBrain(int16 ImgIndex, int16 Model, uint16 priority, int8 attachType, int8 Type, float Radius);
+    void AddNewScriptBrain(int16 ImgIndex, int16 Model, uint16 priority, int8 typeOfBrain, int8 objectGroupingId, float Radius);
     void AddNewStreamedScriptBrainForCodeUse(int16 a2, char* a3, int8 attachtype);
 
     void CheckIfNewEntityNeedsScript(CEntity* entity, int8 attachType, void* unused);

@@ -262,12 +262,12 @@ void CMonsterTruck::SetupSuspensionLines() {
     if (!cd->m_pDisks) {
         cd->bUsesDisks  = true;
         cd->m_nNumLines = 4;
-        cd->m_pDisks    = static_cast<CColDisk*>(CMemoryMgr::Malloc(sizeof(CColDisk) * 4));
+        cd->m_pDisks    = static_cast<CColDisk*>(CMemoryMgr::Malloc(sizeof(CColDisk) * 4, 0));
     } else if (!cd->bUsesDisks) {
         CMemoryMgr::Free(cd->m_pDisks);
         cd->bUsesDisks  = true;
         cd->m_nNumLines = 4;
-        cd->m_pDisks    = static_cast<CColDisk*>(CMemoryMgr::Malloc(sizeof(CColDisk) * 4));
+        cd->m_pDisks    = static_cast<CColDisk*>(CMemoryMgr::Malloc(sizeof(CColDisk) * 4, 0));
     }
 
     CVector direction{ 0.f, 0.f, 0.f };
@@ -277,7 +277,7 @@ void CMonsterTruck::SetupSuspensionLines() {
 
         direction.x = i < 2 ? -1.0f : 1.0f;
 
-        // CColDisk::Set @ 0x40FD50 (Inlined)
+        // CColDisk::Set @ 0x40FD50 (Inlined): Set(radius, center, thicknessDir, thickness, material, piece, lighting)
         auto& disk         = cd->m_pDisks[i];
         disk.m_fRadius     = m_fSuspensionRadius;
         disk.m_vecCenter   = wheelPos;

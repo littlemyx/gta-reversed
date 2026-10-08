@@ -46,6 +46,9 @@ public:
 
     auto GetPedToAvoid() const { return m_PedToAvoid; }
 
+    // NOTSA: Used by `CEventHandler::ComputePedCollisionWith{Ped,Player}Response` (originally written as `|= 2` to the byte at +0x5C)
+    void SetWantsToQuit(bool wantsToQuit = true) { m_WantsToQuit = wantsToQuit; }
+
 private:
     friend void InjectHooksMain();
     static void InjectHooks();

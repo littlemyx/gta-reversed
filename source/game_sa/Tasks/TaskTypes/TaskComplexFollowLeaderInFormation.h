@@ -34,6 +34,9 @@ public:
     CTask*    CreateFirstSubTask(CPed* ped) override;
     CTask*    ControlSubTask(CPed* ped) override;
 
+    // NOTSA: Used by `CEventHandler::ComputePedCollisionWithPlayerResponse` (originally read at +0x10)
+    CPed* GetLeader() const { return m_Leader; }
+
 private:
     friend void InjectHooksMain();
     static void InjectHooks();

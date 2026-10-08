@@ -18,6 +18,14 @@
 #include "UserDisplay.h"
 #include "AudioEngine.h"
 
+namespace {
+// NOTSA: `CTimer::GetTimeStepInMS()` divides by 50 which is NOT bit-identical to the original `ts * 0.02f * 1000.0f` (differs in the last bit for ~27% of inputs)
+// This is used by the functions that were reversed from the original code
+float OGTimeStepInMS() {
+    return CTimer::GetTimeStep() * 0.02f * 1000.0f;
+}
+}
+
 void CHud::InjectHooks() {
     RH_ScopedClass(CHud);
     RH_ScopedCategoryGlobal();
@@ -689,7 +697,7 @@ void CHud::DrawCrossHairs() {
         const float radius  = player->GetWeaponRadiusOnScreen();
 
         if (radius == 0.2f) {
-            CSprite2d::DrawRect(CRect{ centerX - 1.0f, centerY - 1.0f, centerX + 1.0f, centerY + 1.0f }, white);
+            CSprite2d::DrawRect(CRect{ centerX - 1.0f, centerY + 1.0f, centerX + 1.0f, centerY - 1.0f }, white);
         }
 
         const float w = SCREEN_WIDTH * (1.0f / 640.0f) * 64.0f * radius;
@@ -930,7 +938,7 @@ void CHud::DrawHelpText() {
         break;
     case 2:
         if (!TheCamera.m_bWideScreenOn) {
-            m_nHelpMessageFadeTimer += (int32)CTimer::GetTimeStepInMS() * 2;
+            m_nHelpMessageFadeTimer += (int32)OGTimeStepInMS() * 2;
             if (0.0f < (float)(int32)m_nHelpMessageFadeTimer) {
                 m_nHelpMessageFadeTimer = 0;
                 m_nHelpMessageState     = 1;
@@ -939,7 +947,7 @@ void CHud::DrawHelpText() {
         }
         break;
     case 3:
-        m_nHelpMessageFadeTimer -= (int32)CTimer::GetTimeStepInMS() * 2;
+        m_nHelpMessageFadeTimer -= (int32)OGTimeStepInMS() * 2;
         if ((float)(int32)m_nHelpMessageFadeTimer < 0.0f || TheCamera.m_bWideScreenOn) {
             m_nHelpMessageFadeTimer = 0;
             m_nHelpMessageState     = 0;
@@ -947,7 +955,7 @@ void CHud::DrawHelpText() {
         alphaFade = GetFadeAlpha();
         break;
     case 4:
-        m_nHelpMessageFadeTimer -= (int32)CTimer::GetTimeStepInMS() * 2;
+        m_nHelpMessageFadeTimer -= (int32)OGTimeStepInMS() * 2;
         if ((float)(int32)m_nHelpMessageFadeTimer < 0.0f) {
             m_nHelpMessageFadeTimer = 0;
             m_nHelpMessageState     = 2;
@@ -963,7 +971,7 @@ void CHud::DrawHelpText() {
         return;
     }
 
-    m_nHelpMessageTimer += (int32)CTimer::GetTimeStepInMS();
+    m_nHelpMessageTimer += (int32)OGTimeStepInMS();
     CFont::SetAlphaFade(alphaFade);
     CFont::SetProportional(true);
     CFont::SetScaleForCurrentLanguage(SCREEN_STRETCH_X(0.52f), SCREEN_STRETCH_Y(1.1f));
@@ -1495,7 +1503,7 @@ void CHud::DrawScriptText(bool isBeforeFade) {
 
 // 0x58C250
 void CHud::DrawSubtitles() {
-    auto& bWasWidescreen = StaticRef<bool>(0xBAB214); // OG: function local static
+    static auto& bWasWidescreen = StaticRef<bool>(0xBAB214); // OG: function local static
 
     if (!m_Message[0]) {
         return;
@@ -1571,8 +1579,8 @@ void CHud::DrawSubtitles() {
 // 0x58C6A0
 void CHud::DrawSuccessFailedMessage() {
     // OG: function local static `posY`, together with its init-guard flag (bit 0)
-    auto& posY      = StaticRef<float>(0xBAB218);
-    auto& posYGuard = StaticRef<uint32>(0xBAB21C);
+    static auto& posY      = StaticRef<float>(0xBAB218);
+    static auto& posYGuard = StaticRef<uint32>(0xBAB21C);
     if (!(posYGuard & 1)) {
         posYGuard |= 1;
         posY = (float)(RsGlobal.maximumHeight / 2) - SCREEN_STRETCH_Y(10.0f);
@@ -1626,7 +1634,7 @@ void CHud::DrawSuccessFailedMessage() {
     CFont::SetColor(HudColour.GetRGBA(HUD_COLOUR_GOLD, (uint8)(int32)messageAlpha));
 
     if ((float)(RsGlobal.maximumWidth - 20) > messageInUse) {
-        const float delta = (float)(uint32)(int32)CTimer::GetTimeStepInMS() * 0.3f;
+        const float delta = (float)(uint32)(int32)OGTimeStepInMS() * 0.3f;
         messageInUse += delta;
         messageAlpha = delta + messageAlpha;
         if (messageAlpha > 255.0f) {
@@ -1636,7 +1644,7 @@ void CHud::DrawSuccessFailedMessage() {
         messageX = CTimer::GetTimeStep() + messageX;
         if (!(messageX < 120.0f)) {
             messageX = 120.0f;
-            messageAlpha = messageAlpha - (float)(uint32)(int32)CTimer::GetTimeStepInMS() * 0.3f;
+            messageAlpha = messageAlpha - (float)(uint32)(int32)OGTimeStepInMS() * 0.3f;
         }
         if (messageAlpha <= 0.0f) {
             messageAlpha = 0.0f;
@@ -2233,7 +2241,7 @@ void CHud::DrawTripSkip() {
 // 0x58D9A0
 void CHud::DrawWanted() {
     // OG: function local static, set when the wanted level didn't change since the last frame
-    auto& bWantedLevelUnchanged = StaticRef<bool>(0xBAB228);
+    static auto& bWantedLevelUnchanged = StaticRef<bool>(0xBAB228);
 
     const auto* const wanted         = FindPlayerWanted();
     const auto        wantedLevel    = (int32)wanted->m_WantedLevel;

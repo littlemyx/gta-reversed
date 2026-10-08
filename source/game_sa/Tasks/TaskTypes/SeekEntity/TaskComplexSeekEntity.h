@@ -167,6 +167,15 @@ public:
         }
     }
 
+    // NOTSA: Used by `CEventHandler::ComputePedCollisionWith{Ped,Player}Response` (0x4BC470)
+    // Only touches members located before `m_entitySeekPosCalculator`, so it is safe to call with any `T_PosCalc`
+    void SetMaxEntityDist2D(float dist) {
+        if (m_maxEntityDist2D != dist) {
+            m_maxEntityDist2D = dist;
+            m_scanTimer.Start(0);
+        }
+    }
+
     CTask* Clone() const override {
         return new CTaskComplexSeekEntity{ *this };
     }

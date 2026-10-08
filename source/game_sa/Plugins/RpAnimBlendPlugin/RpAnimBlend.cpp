@@ -1790,12 +1790,26 @@ void RpAnimBlendClumpUpdateAnimations(RpClump* clump, float timeStep, bool isOnS
     ctx.BlendNodeArrays[nodesCnt] = nullptr; // Null terminator
 
     // 0x4D35A2 - Update animation's timesteps
+    // NOTE: This is `CAnimBlendAssociation::UpdateTimeStep` inlined (with a slightly different order of float operations)
+    RpAnimBlendClumpForEachAssociation(clump, [&](CAnimBlendAssociation* a) {
+        if (!a->IsPlaying()) {
+            return;
+        }
+        float step;
+        if (!a->IsSyncronised()) {
+            step = a->GetSpeed();
+        } else if (totalTime == 0.f) {
+            step = a->GetHier()->GetTotalTime();
+        } else {
+            step = (a->GetHier()->GetTotalTime() / totalTime) * totalBlendAmnt;
+        }
+        a->m_TimeStep = step * timeStep;
+    });
+
+    // Multiplier for `UpdateTime` below (Unused in the function, but kept for reference)
     const auto animTimeMult = totalTime == 0.f
         ? 1.f
-        : 1.f / totalTime * totalBlendAmnt;
-    RpAnimBlendClumpForEachAssociation(clump, [&](CAnimBlendAssociation* a) {
-        a->UpdateTimeStep(timeStep, animTimeMult);
-    });
+        : totalBlendAmnt / totalTime;
 
     // 0x4D360E - Update all animations's frames
     const auto rootFD = &bd->GetRootFrameData();
@@ -1927,7 +1941,7 @@ void RpAnimBlendPlugin::InjectHooks() {
     RH_ScopedGlobalOverloadedInstall(RpAnimBlendGetNextAssociation, "Any", 0x4D6AB0, CAnimBlendAssociation * (*)(CAnimBlendAssociation * association));
     RH_ScopedGlobalOverloadedInstall(RpAnimBlendGetNextAssociation, "Flags", 0x4D6AD0, CAnimBlendAssociation * (*)(CAnimBlendAssociation * association, uint32 flags));
 
-    RH_ScopedGlobalInstall(RpAnimBlendClumpUpdateAnimations, 0x4D34F0, {.Reversed = false}); // TODO: Hook this again... Unhooked for testing.
+    RH_ScopedGlobalInstall(RpAnimBlendClumpUpdateAnimations, 0x4D34F0);
 #ifdef USE_COPY_PASTE_FRAME_UPDATE
     const auto state = (DISABLE_CUSTOM_FRAME_UPDATE_FUNCTIONS) ? HS::RedirectToGTA : HS::RedirectToOurs;
     // Most of these functions aren't hookable (without effort) they take args in <eax> and whatnot, they aren't regular `__cdecl` calls

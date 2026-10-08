@@ -191,7 +191,7 @@ public:
     static eModelID PickRiotRoadBlockCar();
     static void  ConvertToRealObject(CDummyObject* dummyObject);
     static void  ConvertToDummyObject(CObject* object);
-    static bool  AddToPopulation(float arg0, float arg1, float arg2, float arg3);
+    static bool  AddToPopulation(float minRadius, float maxRadius, float minRadiusClose, float maxRadiusClose);
     // returns number of generated peds?
     static int32 GeneratePedsAtAttractors(
         CVector pos,

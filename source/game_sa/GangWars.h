@@ -90,7 +90,7 @@ public:
 
     static void AddKillToProvocation(ePedType pedType);
     static bool AttackWaveOvercome();
-    static float CalculateTimeTillNextAttack();
+    static uint32 CalculateTimeTillNextAttack(); // NOTE: Original returns an integer in EAX (via `_ftol`), callers convert it to float
     static bool CanPlayerStartAGangWarHere(CZoneInfo* zoneInfo);
     static void CheerVictory();
     static void ClearSpecificZonesToTriggerGangWar();

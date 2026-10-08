@@ -137,8 +137,8 @@ bool CGangWars::AttackWaveOvercome() {
 }
 
 // 0x443DB0
-float CGangWars::CalculateTimeTillNextAttack() {
-    return CGeneral::GetRandomNumberInRange(648'000.0f, 1'620'000.0f); // todo: convert to human readable time HH::MM::SS
+uint32 CGangWars::CalculateTimeTillNextAttack() {
+    return (uint32)CGeneral::GetRandomNumberInRange(648'000.0f, 1'620'000.0f); // todo: convert to human readable time HH::MM::SS
 }
 
 // 0x443F80
@@ -223,8 +223,8 @@ bool CGangWars::CreateAttackWave(int32 warFerocity, int32 waveID) {
     }
 
     // The 2 weapons (and their models) used by this wave
-    eWeaponType weaponA, weaponB;
-    int32       modelA, modelB;
+    eWeaponType weaponA = WEAPON_UNARMED, weaponB = WEAPON_UNARMED;
+    int32       modelA = 0, modelB = 0;
     switch (warFerocity) {
     case 0: weaponA = WEAPON_BASEBALLBAT;  weaponB = WEAPON_PISTOL;     modelA = 0x150; modelB = 0x15A; break;
     case 1: weaponA = WEAPON_PISTOL;       weaponB = WEAPON_MICRO_UZI;  modelA = 0x15A; modelB = 0x160; break;
@@ -234,7 +234,11 @@ bool CGangWars::CreateAttackWave(int32 warFerocity, int32 waveID) {
     case 5: weaponA = WEAPON_DESERT_EAGLE; weaponB = WEAPON_AK47;       modelA = 0x15C; modelB = 0x163; break;
     default:
         // BUG: the original used uninitialized values here (and indexed the streaming info array with a pointer)
-        return false;
+        // NOTSA: ... except during the training mission, where the switch below fully overwrites them (so the original works there)
+        if (!bTrainingMission) {
+            return false;
+        }
+        break;
     }
     if (bTrainingMission) {
         switch (warFerocity) {
@@ -579,7 +583,7 @@ void CGangWars::EndGangWar(bool end) {
 
     if (State2 == WAR_NOTIFIED) {
         State2 = NO_ATTACK;
-        TimeTillNextAttack = CalculateTimeTillNextAttack();
+        TimeTillNextAttack = (float)CalculateTimeTillNextAttack();
 
         auto releasedPeds = ReleasePedsInAttackWave(true, false);
         MakeEnemyGainInfluenceInZone(Gang1, 3 * releasedPeds);
@@ -778,7 +782,7 @@ uint32 CGangWars::ReleasePedsInAttackWave(bool isEndOfWar, bool restoreGangPedsA
 void CGangWars::SetGangWarsActive(bool active) {
     if (active != bGangWarsActive) {
         CTheZones::FillZonesWithGangColours(!active);
-        TimeTillNextAttack = CalculateTimeTillNextAttack();
+        TimeTillNextAttack = (float)CalculateTimeTillNextAttack();
 
         if (!active)
             EndGangWar(false);
@@ -820,7 +824,7 @@ void CGangWars::StartDefensiveGangWar() {
         pZoneInfoToFightOver->RadarMode = 2;
         pZoneInfoToFightOver->ZoneColor = CRGBA{ 255, 0, 0, 160 };
     } else {
-        TimeTillNextAttack = CalculateTimeTillNextAttack();
+        TimeTillNextAttack = (float)CalculateTimeTillNextAttack();
     }
 }
 
@@ -960,7 +964,7 @@ void CGangWars::Update() {
         return;
     }
 
-    if (CTimer::m_FrameCounter == 56u) {
+    if ((CTimer::m_FrameCounter & 0xFF) == 56u) { // NOTE: the original compares only the low byte
         UpdateTerritoryUnderControlPercentage();
     }
 
@@ -1108,7 +1112,7 @@ void CGangWars::Update() {
             State2 = NO_ATTACK;
             MakeEnemyGainInfluenceInZone(Gang1, 30);
             CTheZones::FillZonesWithGangColours(false);
-            TimeTillNextAttack = CalculateTimeTillNextAttack();
+            TimeTillNextAttack = (float)CalculateTimeTillNextAttack();
             CStats::DecrementStat(STAT_RESPECT, 30.0f);
         }
         break;
@@ -1116,7 +1120,7 @@ void CGangWars::Update() {
     case PLAYER_CAME_TO_WAR: {
         if (AttackWaveOvercome()) {
             State2             = NO_ATTACK;
-            TimeTillNextAttack = CalculateTimeTillNextAttack();
+            TimeTillNextAttack = (float)CalculateTimeTillNextAttack();
             ShowMessage("GW_WON", "GW_WON");
             StrengthenPlayerInfluenceInZone(10);
             CTheZones::FillZonesWithGangColours(false);
@@ -1127,7 +1131,7 @@ void CGangWars::Update() {
         fightTimer += (int32)(CTimer::GetTimeStep() * 0.02f * -1000.0f);
         if (fightTimer < 0) {
             State2             = NO_ATTACK;
-            TimeTillNextAttack = CalculateTimeTillNextAttack();
+            TimeTillNextAttack = (float)CalculateTimeTillNextAttack();
             ShowMessage("GW_SLOW", "GW_SLOW");
             const auto released = ReleasePedsInAttackWave(true, false);
             MakeEnemyGainInfluenceInZone(Gang1, (int32)released * 3);

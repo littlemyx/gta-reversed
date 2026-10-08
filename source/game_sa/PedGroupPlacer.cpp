@@ -8,7 +8,7 @@
 #include "TaskComplexBeInGroup.h"
 #include "TaskComplexWanderGang.h"
 #include "TaskComplexFollowLeaderInFormation.h"
-#include "PedGroupDefaultTaskAllocators.h"
+#include "Tasks/Allocators/PedGroup/PedGroupDefaultTaskAllocators.h"
 
 void CPedGroupPlacer::InjectHooks() {
     RH_ScopedClass(CPedGroupPlacer);
@@ -62,7 +62,7 @@ int32 PlacePedsInCircle(ePedType type, uint32 numOfPeds, const CVector& origin, 
 
         const auto model = CPopulation::ChooseGangOccupation((eGangID)((int32)type - 7));
         auto* const mi   = CModelInfo::GetModelInfo(model);
-        if (!mi->m_pRwObject) {
+        if (!mi->GetRwObject()) {
             continue;
         }
 
@@ -91,7 +91,10 @@ int32 PlacePedsInCircle(ePedType type, uint32 numOfPeds, const CVector& origin, 
 
         auto* const ped = CPopulation::AddPed(type, model, pos, false);
         if (!ped) {
-            // NOTSA: The original code calls `RemovePed(nullptr)` here (which would crash)
+            // BUG: The original calls `RemovePed(nullptr)` here, which crashes
+            if (!notsa::IsFixBugs()) {
+                CPopulation::RemovePed(ped);
+            }
             continue;
         }
         outPeds[numPlaced++] = ped;
@@ -128,7 +131,7 @@ bool CPedGroupPlacer::PlaceFormationGroup(ePedType type, uint32 numOfPeds, const
     const auto z = groundZ >= origin.z ? groundZ : origin.z;
 
     const auto model = CPopulation::ChooseGangOccupation((eGangID)((int32)type - 7));
-    if (!CModelInfo::GetModelInfo(model)->m_pRwObject) {
+    if (!CModelInfo::GetModelInfo(model)->GetRwObject()) {
         return false;
     }
 
@@ -141,7 +144,7 @@ bool CPedGroupPlacer::PlaceFormationGroup(ePedType type, uint32 numOfPeds, const
     int32 numPlaced = 1;
     for (int32 i = 1; i < (int32)numOfPeds; i++) {
         const auto followerModel = CPopulation::ChooseGangOccupation((eGangID)((int32)type - 7));
-        if (!CModelInfo::GetModelInfo(followerModel)->m_pRwObject) {
+        if (!CModelInfo::GetModelInfo(followerModel)->GetRwObject()) {
             continue;
         }
 

@@ -8,6 +8,11 @@
 
 #include "BaseModelInfo.h"
 
+// 0x4212C0 - Hook for `CBaseModelInfo::SwaysInWind` (see `InjectHooks`)
+static uint32 __fastcall SwaysInWind_Hook(const CBaseModelInfo* mi) {
+    return mi->SwaysInWind() ? 1u : 0u;
+}
+
 void CBaseModelInfo::InjectHooks() {
     RH_ScopedVirtualClass(CBaseModelInfo, 0x85BB9C, 15);
     RH_ScopedCategory("Models");
@@ -45,8 +50,9 @@ void CBaseModelInfo::InjectHooks() {
 
     RH_ScopedInstall(IsBreakableStatuePart, 0x59F090);
     RH_ScopedInstall(IsTagModel, 0x49CC20);
-    // Hooking SwaysInWind function causes side effects
-    RH_ScopedInstall(SwaysInWind, 0x4212C0, { .Reversed = false });
+    // NOTSA: `CBaseModelInfo::SwaysInWind` is inlined in the header, and returns `bool`, so only `al` would be set when called from the
+    // original code, but the callers (0x426C57, 0x5699A2, 0x59FA61) test the whole `eax` => Hook a function that returns the full `eax` instead.
+    RH_ScopedGlobalInstall(SwaysInWind_Hook, 0x4212C0);
 
     RH_ScopedInstall(SetBaseModelInfoFlags, 0x5B3AD0);
 }

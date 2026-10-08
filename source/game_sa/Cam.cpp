@@ -330,7 +330,7 @@ void CCam::InjectHooks() {
     RH_ScopedInstall(ProcessPedsDeadBaby, 0x519250);
     RH_ScopedInstall(Process_1rstPersonPedOnPC, 0x50EB70);
     RH_ScopedInstall(Process_1stPerson, 0x517EA0);
-    RH_ScopedInstall(Process_AimWeapon, 0x521500, { .Reversed = false });
+    RH_ScopedInstall(Process_AimWeapon, 0x521500);
     RH_ScopedInstall(Process_AttachedCam, 0x512B10);
     RH_ScopedInstall(Process_Cam_TwoPlayer, 0x525E50);
     RH_ScopedInstall(Process_Cam_TwoPlayer_InCarAndShooting, 0x519810);
@@ -1823,10 +1823,683 @@ void CCam::Process_1stPerson(const CVector& target, float orientation, float spe
     m_bResetStatics = false;
 }
 
+namespace {
+//! Settings of the aiming camera, indexed by the "aiming situation": 0 = on foot, 1 = jetpack / on a bike or quad, 2 = in any other vehicle, 3 = melee weapon
+struct AimWeaponCamSettings {
+    float baseDist;     //< Distance of the camera from the target
+    float distScale;    //< Added to the above, scaled by the cosine of the vertical angle
+    float angleScale;   //< Scales the vertical angle for the cosine above
+    float initialAlpha; //< Vertical angle the camera starts at
+    float zOffset;      //< Added to the height of the target
+    float alphaMax;     //< Maximum vertical angle
+    float alphaMin;     //< Minimum vertical angle (negated)
+};
+static_assert(sizeof(AimWeaponCamSettings) == 0x1C);
+
+auto& gAimWeaponCamSettings = StaticRef<std::array<AimWeaponCamSettings, 4>>(0x8CC4C0);
+
+// Tuning values of the aiming camera (names made up)
+auto& gAimStickScale           = StaticRef<float>(0x8CC4A0); // Scale of the stick input
+auto& gAimLockOnTurnRate       = StaticRef<float>(0x8CC4A4); // Maximum angle change per time step when locked on to a target
+auto& gAimFreeTurnRate         = StaticRef<float>(0x8CC4A8); // Maximum angle change per time step when the camera follows the player's heading
+auto& gAimDriverTurnRateScale  = StaticRef<float>(0x8CC4AC); // ^ for drivers
+auto& gAimDriverDeadzone       = StaticRef<float>(0x8CC4B0); // Angle difference (for drivers) the camera doesn't follow
+auto& gAimFovRifle             = StaticRef<float>(0x8CC4B4); // FOV when aiming with an AK-47 / M4
+auto& gAimFovSniper            = StaticRef<float>(0x8CC4B8); // FOV when aiming with a country rifle
+auto& gAimHeading              = StaticRef<float>(0x8CC530); // Heading the player is turned to when the camera isn't moved for a while (-1001 = not set)
+auto& gAimIdleTimeMax          = StaticRef<int32>(0x8CC534); // Above this the camera follows `gAimHeading`
+auto& gAimIdleTimeMin          = StaticRef<int32>(0x8CC538);
+auto& gAimLockOnBlend          = StaticRef<float>(0x8CC39C); // Base of the `pow` used to smooth the lock on position
+auto& gAimEnterTargetingDelay  = StaticRef<float>(0x8CCE54); // Time (ms) after which the camera is turned around again when "enter targeting" is pressed as a passenger
+auto& gAimStickRateCentered    = StaticRef<float>(0x8CCE58); // Base of the `pow` used to smooth the stick input (sticks centered)
+auto& gAimStickRate            = StaticRef<float>(0x8CCE5C); // ^ otherwise
+auto& gAimMeleeLockZScale      = StaticRef<float>(0x8CCE60); // Scale of the height difference added to the lock on position when using melee weapons
+auto& gbAimLookAtUsesCrossProd = StaticRef<bool>(0x8CCE64);  // Initially true
+auto& gAimExtinguisherAlpha    = StaticRef<float>(0x8D610C); // Vertical angle added when aiming with the fire extinguisher
+auto& gbAimFreeRotation        = StaticRef<bool>(0xB6EC44);  // Whether the camera rotates freely (otherwise it's moved towards `gAimHeading`)
+auto& gAimIdleTime             = StaticRef<int32>(0xB6EC48); // Time (ms) the driver hasn't moved the camera
+auto& gAimLastEnterTargeting   = StaticRef<uint32>(0xB6EC4C);
+
+//! `CrossProduct` (0x59C730) - the products stay in the FPU registers (extended precision)
+CVector AimWeaponCrossExt(const CVector& a, const CVector& b) {
+    return {
+        (float)((double)a.y * (double)b.z - (double)a.z * (double)b.y),
+        (float)((double)a.z * (double)b.x - (double)a.x * (double)b.z),
+        (float)((double)a.x * (double)b.y - (double)a.y * (double)b.x),
+    };
+}
+
+//! The original limits values to [-1, 1] before calling `asin`/`acos` (NaN is passed through)
+float AimWeaponClampUnit(double v) {
+    return v < -1.0 ? -1.0f : (1.0 < v ? 1.0f : (float)v);
+}
+} // namespace
+
 // 0x521500
 void CCam::Process_AimWeapon(const CVector& target, float orientation, float speedVar, float speedVarWanted) {
-    // NOTSA: Not reversed yet, forwards to the original code (the hook is disabled, see `InjectHooks`)
-    plugin::CallMethod<0x521500, CCam*, const CVector*, float, float, float>(this, &target, orientation, speedVar, speedVarWanted);
+    // NOTE: The parameters other than `target` are unused
+    // NOTE: x87 extended precision is emulated with `double` in the expressions that stay in the FPU registers in the original
+    // NOTE: The values the original uses (0x858CB8, 0x858CBC, 0x858FE4), the ones from `common.h` are slightly different
+    constexpr float PI       = std::numbers::pi_v<float>;
+    constexpr float TWO_PI   = 2.0f * PI;
+    constexpr float HALF_PI  = PI / 2.0f;
+    constexpr float DEG2RAD  = 0.0174532924f; // 0x8595EC
+
+    // Statics of the function (the original keeps them at these addresses)
+    static auto& s_InitGuard      = StaticRef<uint32>(0xB70110); // MSVC static init guard
+    static auto& s_LockOnPos      = StaticRef<CVector>(0xB70104); // Smoothed position of the locked on target
+    static auto& s_MeleeAimAlpha  = StaticRef<float>(0xB70100);   // Smoothed vertical crosshair angle (in degrees) when using melee weapons (initially 3)
+    static auto& s_MeleeAimBeta   = StaticRef<float>(0xB700FC);   // Smoothed horizontal crosshair angle (in degrees) when using melee weapons (initially 20)
+    static auto& s_LockOnLosTimer = StaticRef<float>(0xB700F8);   // Time until the line of sight to the melee target has to be checked again (+/-100 = clear / blocked)
+    static auto& s_LockOnBlend    = StaticRef<float>(0xB700F4);   // [0, 1], how much the camera is looking at the (melee) target instead of the player
+
+    if (!(s_InitGuard & 1u)) {
+        s_InitGuard |= 1u;
+        s_LockOnPos = CVector{ 0.0f, 0.0f, 0.0f };
+    }
+
+    if (!m_pCamTargetEntity->GetIsTypePed()) {
+        return;
+    }
+    auto* const ped = m_pCamTargetEntity->AsPed();
+    if (!ped->IsPlayer()) {
+        return;
+    }
+
+    auto* const intel = ped->GetIntelligence();
+    auto* const wi    = intel->GetTaskUseGun()
+        ? intel->GetTaskUseGun()->m_WeaponInfo
+        : CWeaponInfo::GetWeaponInfo(ped->GetActiveWeapon().m_Type, eWeaponSkill::STD);
+    const bool bMelee = wi->m_nWeaponFire == eWeaponFire::WEAPON_FIRE_MELEE;
+
+    auto* const veh       = ped->m_pVehicle;
+    const bool  bIsDriver = ped->bInVehicle && veh && veh->m_pDriver == ped;
+    const bool  bIsPassenger = ped->bInVehicle && veh && veh->m_pDriver != ped;
+
+    int32 settingsIdx = 0;
+    if (ped->bInVehicle) {
+        settingsIdx = (veh && (veh->m_nVehicleType == VEHICLE_TYPE_BIKE || veh->m_nVehicleSubType == VEHICLE_TYPE_QUAD)) ? 1 : 2;
+    } else if (intel->GetTaskJetPack()) {
+        settingsIdx = 1;
+    } else if (ped->GetActiveWeapon().IsTypeMelee()) {
+        settingsIdx = 3;
+    }
+    const auto& settings = gAimWeaponCamSettings[settingsIdx];
+
+    const eWeaponType weaponType = ped->GetActiveWeapon().m_Type;
+    const float       ts         = CTimer::GetTimeStep();
+
+    // FOV
+    float fovTarget = 70.0f;
+    if (weaponType == WEAPON_AK47 || weaponType == WEAPON_M4) {
+        fovTarget = gAimFovRifle;
+    } else if (weaponType == WEAPON_COUNTRYRIFLE) {
+        fovTarget = gAimFovSniper;
+    }
+    if (!TheCamera.m_bTransitionState) {
+        if (!m_bResetStatics || weaponType == WEAPON_COUNTRYRIFLE) {
+            const double step  = (double)ts * 1.0;
+            const float  stepF = (float)step;
+            const double up    = step + (double)m_fFOV;
+            if ((double)fovTarget > up) {
+                m_fFOV = (float)up;
+            } else {
+                const double down = (double)m_fFOV - (double)stepF;
+                m_fFOV            = ((double)fovTarget < down) ? (float)down : fovTarget;
+            }
+        } else {
+            m_fFOV = fovTarget;
+        }
+    }
+
+    // Angles (in radians) the crosshair is away from the center of the screen
+    float offsetH; // Horizontal
+    float offsetV; // Vertical
+    if (bMelee) {
+        if (!(s_InitGuard & 2u)) {
+            s_InitGuard |= 2u;
+            s_MeleeAimAlpha = 3.0f;
+        }
+        if (!(s_InitGuard & 4u)) {
+            s_InitGuard |= 4u;
+            s_MeleeAimBeta = 20.0f;
+        }
+
+        float wantAlpha = 3.0f;
+        float wantBeta  = 20.0f;
+        float wantBlend = 0.0f;
+        if (intel->GetTaskFighting() && ped->m_nMoveState < PEDMOVE_WALK && ped->m_pTargetedObject) {
+            bool bLookAtTarget = false;
+            bool bCheckLos     = false;
+            if (s_LockOnLosTimer > ts) {
+                s_LockOnLosTimer -= ts;
+                bLookAtTarget = !(s_LockOnLosTimer < 0.0f);
+            } else if (-ts > s_LockOnLosTimer) {
+                s_LockOnLosTimer += ts;
+                bLookAtTarget = !(s_LockOnLosTimer < 0.0f);
+            } else {
+                bCheckLos = true;
+            }
+
+            if (bCheckLos) {
+                // Is there a clear line of sight to the target?
+                const CVector pedPos   = ped->GetPosition();
+                const CVector tgtPos   = ped->m_pTargetedObject->GetPosition();
+                const CVector probeSrc = pedPos + CVector{ 0.0f, 0.0f, 0.75f };
+
+                CVector side      = AimWeaponCrossExt(tgtPos - pedPos, CVector{ 0.0f, 0.0f, 1.0f });
+                const float mag   = (float)std::sqrt(SqMagExt(side));
+                const float limit = (0.7f > mag) ? 0.7f : mag;
+                side *= (float)(2.0 / (double)limit);
+
+                const CVector probeDst = side + probeSrc;
+                if (CWorld::GetIsLineOfSightClear(probeSrc, probeDst, true, true, false, true, false, true, true)) {
+                    s_LockOnLosTimer = 100.0f;
+                    bLookAtTarget    = true;
+                } else {
+                    s_LockOnLosTimer = -100.0f;
+                }
+            }
+
+            if (bLookAtTarget) {
+                wantAlpha = 0.0f;
+                wantBeta  = 70.0f;
+                wantBlend = 1.0f;
+            }
+        }
+
+        if (m_bResetStatics) {
+            s_MeleeAimAlpha = wantAlpha;
+            s_MeleeAimBeta  = wantBeta;
+            s_LockOnBlend   = 0.0f;
+        } else if (!TheCamera.m_bTransitionState) {
+            const double p = std::pow((double)0.96f, (double)ts);
+            const double q = 1.0 - p;
+            s_MeleeAimAlpha = (float)((double)wantAlpha * q + (double)s_MeleeAimAlpha * p);
+            s_MeleeAimBeta  = (float)((double)wantBeta * q + (double)s_MeleeAimBeta * p);
+            s_LockOnBlend   = (float)(q * (double)wantBlend + (double)s_LockOnBlend * p);
+        }
+        offsetH = s_MeleeAimBeta * DEG2RAD;
+        offsetV = s_MeleeAimAlpha * DEG2RAD;
+    } else {
+        s_LockOnBlend = 0.0f;
+        const double tanHalfFov = std::tan(((double)m_fFOV * (double)0.5f) * (double)DEG2RAD);
+        offsetH = (float)std::atan2((((double)CCamera::m_f3rdPersonCHairMultX - (double)0.5f) * 2.0) * tanHalfFov, 1.0);
+        offsetV = (float)std::atan2(tanHalfFov * (((double)0.5f - (double)CCamera::m_f3rdPersonCHairMultY) * 2.0 * (1.0 / (double)CDraw::ms_fAspectRatio)), 1.0);
+    }
+
+    if (m_bResetStatics) {
+        TheCamera.ResetDuckingSystem(ped);
+        m_bRotating          = false;
+        m_bCollisionChecksOn = true;
+        m_fAlphaSpeed        = 0.0f;
+        m_fBetaSpeed         = 0.0f;
+        gbAimFreeRotation    = true;
+        gAimIdleTime         = 60000;
+        gAimHeading          = -1001.0f;
+        gAimLastEnterTargeting = 0;
+
+        if (!CCamera::m_bUseMouse3rdPerson || ped->m_pTargetedObject) {
+            m_fVerticalAngle = settings.initialAlpha;
+            if (ped->bInVehicle && veh) {
+                m_fHorizontalAngle = (float)(((double)ped->m_fCurrentRotation - (double)HALF_PI) - (double)offsetH);
+                const float fz     = AimWeaponClampUnit(veh->GetMatrix().GetForward().z);
+                m_fVerticalAngle   = (float)(std::asin((double)fz) + (double)m_fVerticalAngle);
+            } else if (!ped->m_pTargetedObject) {
+                m_fHorizontalAngle = (float)(((double)ped->m_fCurrentRotation - (double)HALF_PI) + (double)offsetH);
+                if (ped->bIsStanding) {
+                    const float  c = AimWeaponClampUnit(DotExt(ped->field_578, ped->GetMatrix().GetForward()));
+                    const double a = (double)m_fVerticalAngle - std::asin((double)c);
+                    m_fVerticalAngle = (float)a;
+                    if (weaponType == WEAPON_EXTINGUISHER) {
+                        m_fVerticalAngle = (float)(a + (double)gAimExtinguisherAlpha);
+                    }
+                }
+            }
+        }
+    }
+
+    // Move the heading towards the one set by the scripts
+    if (CTheScripts::fCameraHeadingStepWhenPlayerIsAttached > 0.0f) {
+        const float step   = CTheScripts::fCameraHeadingStepWhenPlayerIsAttached;
+        const float wanted = CTheScripts::fCameraHeadingWhenPlayerIsAttached;
+        double      d      = (double)m_fHorizontalAngle - (double)wanted;
+        if (d < 0.0) {
+            d += (double)TWO_PI;
+        }
+        const float e = (float)((double)TWO_PI - d);
+        if (d < (double)step || e < step) {
+            m_fHorizontalAngle                                  = wanted;
+            CTheScripts::fCameraHeadingStepWhenPlayerIsAttached = 0.0f;
+        } else if (d <= (double)e) {
+            m_fHorizontalAngle = (float)((double)m_fHorizontalAngle - (double)step);
+        } else {
+            m_fHorizontalAngle = (float)((double)step + (double)m_fHorizontalAngle);
+        }
+    }
+
+    CVector     tgt   = target;
+    const float tgtZ0 = target.z;
+    ped->UpdateRpHAnim();
+
+    double tgtZExt = ((double)ped->GetPosition().z + (double)0.5f) + (double)settings.zOffset;
+    if (m_fFOV < 70.0f) {
+        double r = (70.0 - (double)m_fFOV) / (70.0 - (double)gAimFovRifle);
+        if (1.0 < r) {
+            r = 1.0;
+        }
+        tgtZExt = tgtZExt + r * (double)0.1f;
+    }
+    tgt.z = (float)tgtZExt;
+    const float zDelta = (float)(tgtZExt - (double)tgtZ0);
+
+    // How far the target is moved to the right
+    float lookAtScale = 0.2f;
+    if (!wi->flags.bAimWithArm && ped->GetPlayerData()->m_pPedClothesDesc->HasVisibleNewHairCut(1)) {
+        lookAtScale = 0.3f;
+    } else if (m_fFOV < 70.0f) {
+        double r = (70.0 - (double)m_fFOV) / (70.0 - (double)gAimFovSniper);
+        if (1.0 < r) {
+            r = 1.0;
+        }
+        lookAtScale = (float)(r * (double)0.1f + (double)0.2f);
+    }
+
+    if (gbAimLookAtUsesCrossProd) {
+        const CVector cross = AimWeaponCrossExt(m_vecFront, m_vecUp);
+        const auto&   right = ped->GetMatrix().GetRight();
+        const float   d     = (float)(((double)cross.y * (double)right.y + (double)cross.z * (double)right.z) + (double)cross.x * (double)right.x);
+        const float   c     = (1.0f < d) ? 1.0f : ((d < 0.0f) ? 0.0f : d);
+        const double  f     = (1.0 - std::acos((double)c) * (double)0.63661975f) * (double)lookAtScale;
+        const double  cx    = (double)cross.x * f;
+        const float   cy    = (float)((double)cross.y * f);
+        const float   cz    = (float)((double)cross.z * f);
+        tgt.x               = (float)(cx + (double)tgt.x);
+        tgt.y               = (float)((double)tgt.y + (double)cy);
+        tgt.z               = (float)((double)cz + (double)tgt.z);
+    } else {
+        const auto&  right = ped->GetMatrix().GetRight();
+        const double sx    = (double)lookAtScale * (double)right.x;
+        const double sy    = (double)lookAtScale * (double)right.y;
+        const float  sz    = (float)((double)lookAtScale * (double)right.z);
+        tgt.x              = (float)(sx + (double)tgt.x);
+        tgt.y              = (float)(sy + (double)tgt.y);
+        tgt.z              = (float)((double)sz + (double)tgt.z);
+    }
+
+    // Position of the locked on target
+    if (auto* const locked = ped->m_pTargetedObject) {
+        CVector lockPos{ 0.0f, 0.0f, 0.0f };
+        if (locked->GetIsTypePed() && !bMelee) {
+            locked->AsPed()->GetBonePosition(&lockPos, BONE_SPINE1, true);
+        } else {
+            lockPos = locked->GetPosition();
+        }
+        if (bMelee) {
+            lockPos.z = (float)((double)zDelta * (double)gAimMeleeLockZScale + (double)lockPos.z);
+        }
+        if (!m_bResetStatics && intel->GetTaskFighting()) {
+            const float p = (float)std::pow((double)gAimLockOnBlend, (double)ts);
+            const float q = (float)(1.0 - (double)p);
+            s_LockOnPos   = p * s_LockOnPos + q * lockPos;
+        } else {
+            s_LockOnPos = lockPos;
+        }
+    }
+
+    if (ped->m_pTargetedObject) {
+        // Locked on to a target
+        const double dx = (double)s_LockOnPos.x - (double)tgt.x;
+        const double dy = (double)s_LockOnPos.y - (double)tgt.y;
+        const float  dz = (float)((double)s_LockOnPos.z - (double)tgt.z);
+
+        const float yawToTarget = (float)(std::atan2(-dx, dy) - (double)HALF_PI);
+        const float hSq         = (float)(dx * dx + dy * dy);
+        float       pitchToTarget = (float)std::atan2((double)dz, std::sqrt((double)hSq));
+
+        if (bMelee) {
+            pitchToTarget = (float)(std::cos((double)offsetH) * (double)pitchToTarget);
+        } else {
+            // Move the target so the crosshair ends up on it
+            const double ex  = (double)tgt.x - (double)m_vecSource.x;
+            const double ey  = (double)tgt.y - (double)m_vecSource.y;
+            const double ez  = (double)tgt.z - (double)m_vecSource.z;
+            const double len = std::sqrt((ez * ez + ey * ey) + ex * ex);
+
+            double dist;
+            if (len < (double)settings.baseDist) {
+                dist = std::sqrt(SqMagExt(tgt - m_vecSource));
+            } else {
+                dist = (double)settings.baseDist;
+            }
+            const double R     = std::sqrt((double)dz * (double)dz + (double)hSq);
+            const double ratio = (dist + R) / R;
+            offsetV            = (float)((double)offsetV * ratio);
+            offsetH            = (float)(ratio * (double)offsetH);
+        }
+
+        double yaw   = (double)yawToTarget + (double)offsetH;
+        double pitch = (double)pitchToTarget - (double)offsetV;
+        if (pitch < -(double)PI) {
+            pitch += (double)TWO_PI;
+        } else if (pitch > (double)PI) {
+            pitch -= (double)TWO_PI;
+        }
+
+        float maxStep = ts * gAimLockOnTurnRate;
+        if (m_bResetStatics) {
+            maxStep = 1000.0f;
+        }
+
+        // Vertical
+        {
+            const double delta  = pitch - (double)m_fVerticalAngle;
+            const float  deltaF = (float)delta;
+            if (std::abs(delta) < (double)maxStep) {
+                m_fVerticalAngle = (float)pitch;
+            } else if (!(deltaF < 0.0f)) {
+                m_fVerticalAngle = (float)((double)maxStep + (double)m_fVerticalAngle);
+            } else {
+                m_fVerticalAngle = (float)((double)m_fVerticalAngle - (double)maxStep);
+            }
+        }
+
+        // Horizontal
+        {
+            const double yd = yaw - (double)m_fHorizontalAngle;
+            if (yd > (double)PI) {
+                yaw -= (double)TWO_PI;
+            } else if (yd < -(double)PI) {
+                yaw += (double)TWO_PI;
+            }
+            const double delta  = yaw - (double)m_fHorizontalAngle;
+            const float  deltaF = (float)delta;
+            if (std::abs(delta) < (double)maxStep) {
+                m_fHorizontalAngle = (float)yaw;
+            } else if (!(deltaF < 0.0f)) {
+                m_fHorizontalAngle = (float)((double)maxStep + (double)m_fHorizontalAngle);
+            } else {
+                m_fHorizontalAngle = (float)((double)m_fHorizontalAngle - (double)maxStep);
+            }
+        }
+        m_fAlphaSpeed = 0.0f;
+        m_fBetaSpeed  = 0.0f;
+    } else {
+        auto* const  pad    = CPad::GetPad(0);
+        const float  mouseX = CPad::NewMouseControllerState.m_AmountMoved.x;
+        const float  mouseY = CPad::NewMouseControllerState.m_AmountMoved.y;
+        if (CCamera::m_bUseMouse3rdPerson && pad->DisablePlayerControls == 0 && (mouseX != 0.0f || mouseY != 0.0f)) {
+            // Mouse
+            const double f      = (double)m_fFOV * (double)0.0125f;
+            const double yChain = (((double)mouseY * (double)4.0f) * f) * (double)CCamera::m_fMouseAccelVertical;
+            const double xChain = (((double)mouseX * (double)-2.5f) * f) * (double)CCamera::m_fMouseAccelHorzntl;
+            m_fBetaSpeed        = 0.0f;
+            m_fAlphaSpeed       = 0.0f;
+            m_fHorizontalAngle  = (float)(xChain + (double)m_fHorizontalAngle);
+            m_fVerticalAngle    = (float)(yChain + (double)m_fVerticalAngle);
+        } else {
+            // Pad
+            const float  lr = (float)(-(int32)pad->AimWeaponLeftRight(ped));
+            const float  ud = (float)(int32)pad->AimWeaponUpDown(ped);
+            const double f  = (double)m_fFOV * (double)0.0125f;
+
+            const double sc = (double)gAimStickScale;
+            const float  stickH = (float)(((((((double)0.0714285746f * f) * (double)std::abs(lr)) * (double)lr) * (double)ts) * sc) * sc);
+            const float  stickV = (float)((((((f * (double)0.042857144f) * (double)std::abs(ud)) * (double)ud) * (double)ts) * sc) * sc);
+
+            float stickRate = gAimStickRate;
+            if (std::abs(lr) < 2.0f && std::abs(ud) < 2.0f) {
+                stickRate = gAimStickRateCentered;
+            }
+            const float pf = (float)std::pow((double)stickRate, (double)ts);
+            const float qf = (float)(1.0 - (double)pf);
+            m_fBetaSpeed   = (float)((double)pf * (double)m_fBetaSpeed + (double)qf * (double)stickH);
+            m_fAlphaSpeed  = (float)((double)qf * (double)stickV + (double)pf * (double)m_fAlphaSpeed);
+
+            float dBeta  = m_fBetaSpeed;
+            float dAlpha = m_fAlphaSpeed;
+
+            // Whether the camera is moved towards `gAimHeading` (otherwise it rotates freely)
+            bool bFollowHeading;
+            if (bIsPassenger) {
+                if (pad->GetEnterTargeting()) {
+                    const uint32 now = CTimer::GetTimeInMS();
+                    if ((double)(now - gAimLastEnterTargeting) < (double)gAimEnterTargetingDelay) {
+                        dBeta  = PI;
+                        dAlpha = 0.0f;
+                    } else {
+                        gAimLastEnterTargeting = now;
+                    }
+                }
+                bFollowHeading = !gbAimFreeRotation;
+            } else if (bIsDriver) {
+                if (lr == 0.0f && ud == 0.0f) {
+                    if (!pad->GetWeapon(ped)) {
+                        gAimIdleTime += (int32)(((double)ts * (double)0.02f) * (double)1000.0f);
+                    }
+                } else {
+                    gAimIdleTime = 0;
+                }
+
+                if (gAimIdleTime > gAimIdleTimeMax) {
+                    gbAimFreeRotation = false;
+                    gAimHeading       = (float)(((double)ped->m_fCurrentRotation - (double)HALF_PI) + (double)offsetH);
+                    bFollowHeading    = true;
+                } else if (gAimIdleTime > gAimIdleTimeMin) {
+                    const double base = (double)ped->m_fCurrentRotation - (double)HALF_PI;
+                    double       diff = (base - (double)offsetH) - (double)m_fHorizontalAngle;
+                    if (diff > (double)TWO_PI) {
+                        diff -= (double)TWO_PI;
+                    } else if (diff < -(double)TWO_PI) {
+                        diff += (double)TWO_PI;
+                    }
+                    if (diff < (double)0.5235988f) {
+                        gAimHeading       = (float)(base + (double)offsetH);
+                        gAimIdleTime      = gAimIdleTimeMax + 1;
+                        gbAimFreeRotation = false;
+                        bFollowHeading    = true;
+                    } else {
+                        gbAimFreeRotation = true;
+                        bFollowHeading    = false;
+                    }
+                } else {
+                    gbAimFreeRotation = true;
+                    if (pad->GetWeapon(ped)) {
+                        gAimIdleTime = 0;
+                    }
+                    bFollowHeading = false;
+                }
+            } else {
+                bFollowHeading = !gbAimFreeRotation;
+            }
+
+            if (!bFollowHeading) {
+                gAimHeading        = -1001.0f;
+                m_fHorizontalAngle = (float)((double)dBeta + (double)m_fHorizontalAngle);
+                m_fVerticalAngle   = (float)((double)dAlpha + (double)m_fVerticalAngle);
+            } else {
+                float heading = (float)((double)ped->m_fCurrentRotation - (double)HALF_PI);
+                if (gAimHeading < -1000.0f) {
+                    gAimHeading = heading;
+                } else {
+                    heading = gAimHeading;
+                }
+
+                if (!wi->flags.bAimWithArm && !bMelee) {
+                    const float rot         = (float)((double)gAimHeading + (double)HALF_PI);
+                    ped->m_fAimingRotation  = rot;
+                    ped->m_fCurrentRotation = rot;
+                    ped->SetHeading(rot);
+                    ped->UpdateRwMatrix();
+                }
+
+                double beta     = (double)heading - (double)offsetH;
+                float  rate     = ts * gAimFreeTurnRate;
+                float  deadzone = 0.0f;
+                if (bIsDriver) {
+                    rate     = (float)((double)rate * (double)gAimDriverTurnRateScale);
+                    deadzone = gAimDriverDeadzone;
+                }
+
+                {
+                    const double u = beta - (double)m_fHorizontalAngle;
+                    if (u > (double)PI) {
+                        beta -= (double)TWO_PI;
+                    } else if (u < -(double)PI) {
+                        beta += (double)TWO_PI;
+                    }
+                }
+                double diff = beta - (double)m_fHorizontalAngle;
+                if (deadzone > 0.0f) {
+                    if (diff > (double)deadzone) {
+                        diff -= (double)deadzone;
+                    } else if (diff < -(double)deadzone) {
+                        diff += (double)deadzone;
+                    } else {
+                        diff = 0.0;
+                    }
+                }
+                if (std::abs(diff) < (double)rate) {
+                    gbAimFreeRotation  = true;
+                    m_fHorizontalAngle = (float)(diff + (double)m_fHorizontalAngle);
+                } else if (!(diff < 0.0)) {
+                    m_fHorizontalAngle = (float)((double)rate + (double)m_fHorizontalAngle);
+                } else {
+                    m_fHorizontalAngle = (float)((double)m_fHorizontalAngle - (double)rate);
+                }
+
+                if (!bIsDriver) {
+                    m_fVerticalAngle = (float)((double)dAlpha + (double)m_fVerticalAngle);
+                } else {
+                    const float fz = AimWeaponClampUnit(veh->GetMatrix().GetForward().z);
+                    double      alpha = std::asin((double)fz) + (double)settings.initialAlpha;
+                    {
+                        const double u = alpha - (double)m_fVerticalAngle;
+                        if (u > (double)PI) {
+                            alpha -= (double)TWO_PI;
+                        } else if (u < -(double)PI) {
+                            alpha += (double)TWO_PI;
+                        }
+                    }
+                    double diffA = alpha - (double)m_fVerticalAngle;
+                    if (diffA > (double)deadzone) {
+                        diffA -= (double)deadzone;
+                    } else if (diffA < -(double)deadzone) {
+                        diffA += (double)deadzone;
+                    } else {
+                        diffA = 0.0;
+                    }
+                    if (std::abs(diffA) < (double)rate) {
+                        m_fVerticalAngle = (float)(diffA + (double)m_fVerticalAngle);
+                    } else if (!(diffA < 0.0)) {
+                        m_fVerticalAngle = (float)((double)rate + (double)m_fVerticalAngle);
+                    } else {
+                        m_fVerticalAngle = (float)((double)m_fVerticalAngle - (double)rate);
+                    }
+                }
+            }
+        }
+    }
+
+    ClipBeta();
+    if (m_fVerticalAngle > settings.alphaMax) {
+        m_fVerticalAngle = settings.alphaMax;
+    } else if (m_fVerticalAngle < -settings.alphaMin) {
+        m_fVerticalAngle = -settings.alphaMin;
+    }
+
+    // Camera position
+    double cosTerm;
+    if (m_fVerticalAngle <= 0.0f) {
+        cosTerm = std::cos((double)m_fVerticalAngle);
+    } else {
+        double w = (double)settings.angleScale * (double)m_fVerticalAngle;
+        if ((double)HALF_PI < w) {
+            w = (double)HALF_PI;
+        }
+        cosTerm = std::cos(w);
+    }
+    const double dist = (double)settings.baseDist + cosTerm * (double)settings.distScale;
+
+    {
+        const double cosV = std::cos((double)m_fVerticalAngle);
+        m_vecFront.x      = (float)-(std::cos((double)m_fHorizontalAngle) * cosV);
+        m_vecFront.y      = (float)-(std::sin((double)m_fHorizontalAngle) * cosV);
+        m_vecFront.z      = (float)std::sin((double)m_fVerticalAngle);
+    }
+    {
+        const double dfx = dist * (double)m_vecFront.x;
+        const float  dfy = (float)(dist * (double)m_vecFront.y);
+        const float  dfz = (float)(dist * (double)m_vecFront.z);
+        m_vecSource.x    = (float)((double)tgt.x - dfx);
+        m_vecSource.y    = (float)((double)tgt.y - (double)dfy);
+        m_vecSource.z    = (float)((double)tgt.z - (double)dfz);
+    }
+
+    TheCamera.HandleCameraMotionForDuckingDuringAim(ped, &m_vecSource, &tgt, false);
+    m_vecTargetCoorsForFudgeInter = tgt;
+    CCamera::SetColVarsAimWeapon(settingsIdx);
+    if (gCameraDirection == 3) {
+        TheCamera.CameraGenericModeSpecialCases(ped);
+        TheCamera.CameraPedAimModeSpecialCases(ped);
+        TheCamera.CameraColDetAndReact(&m_vecSource, &tgt);
+        TheCamera.ImproveNearClip(nullptr, ped, &m_vecSource, &tgt);
+    }
+    TheCamera.m_bCamDirectlyBehind  = false;
+    TheCamera.m_bCamDirectlyInFront = false;
+
+    // Look at the (melee) target a bit
+    if (s_LockOnBlend > 0.0f && ped->m_pTargetedObject) {
+        const double w   = (double)s_LockOnBlend * (double)0.5f;
+        const float  ax  = (float)((double)s_LockOnPos.x * w);
+        const float  ay  = (float)((double)s_LockOnPos.y * w);
+        const double wz  = w * (double)s_LockOnPos.z;
+        const double q   = 1.0 - w;
+        const double tqx = (double)tgt.x * q;
+        const float  by  = (float)((double)tgt.y * q);
+        const float  cz  = (float)(q * (double)tgt.z);
+        const float  ex  = (float)(tqx + (double)ax);
+        const float  ey  = (float)((double)by + (double)ay);
+        const double ez  = (double)cz + wz;
+        m_vecFront.x     = (float)((double)ex - (double)m_vecSource.x);
+        m_vecFront.y     = (float)((double)ey - (double)m_vecSource.y);
+        m_vecFront.z     = (float)(ez - (double)m_vecSource.z);
+        m_vecFront.Normalise();
+    }
+
+    GetVectorsReadyForRW();
+
+    // Turn the player towards where the camera is looking at
+    if ((!wi->flags.bAimWithArm || ped->bIsDucking) && !bMelee && !ped->bInVehicle) {
+        const auto FrontHeading = [&] {
+            return (float)(std::atan2(-(double)m_vecFront.x, (double)m_vecFront.y) - (double)offsetH);
+        };
+
+        bool  bHasHeading = true;
+        float heading{};
+        if (weaponType == WEAPON_SPRAYCAN) {
+            heading = FrontHeading();
+        } else if (auto* const locked = ped->m_pTargetedObject) {
+            const CVector diff = locked->GetPosition() - ped->GetPosition();
+            heading            = (float)std::atan2(-(double)diff.x, (double)diff.y);
+        } else if (gbAimFreeRotation) {
+            heading = FrontHeading();
+        } else {
+            bHasHeading = false;
+        }
+
+        if (bHasHeading && heading > -100.0f) {
+            const float rot         = (float)((double)heading + (double)-0.05f);
+            ped->m_fCurrentRotation = rot;
+            ped->m_fAimingRotation  = rot;
+            ped->SetHeading(heading);
+            ped->UpdateRwMatrix();
+        }
+
+        TheCamera.m_pTargetEntity->AsPed()->GetPlayerData()->m_fLookPitch = TheCamera.Find3rdPersonQuickAimPitch();
+    }
+
+    m_bResetStatics = false;
 }
 
 // 0x512B10

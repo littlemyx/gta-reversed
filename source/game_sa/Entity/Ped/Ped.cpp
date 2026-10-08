@@ -198,7 +198,7 @@ void CPed::InjectHooks() {
     RH_ScopedVMTInstall(DeleteRwObject, 0x5DEBF0);
     //RH_ScopedVirtualInstall(ProcessControl, 0x5E8CD0, { .Reversed = false });
     RH_ScopedVMTInstall(Teleport, 0x5E4110);
-    //RH_ScopedVirtualInstall(SpecialEntityPreCollisionStuff, 0x5E3C30, { .Reversed = false });
+    RH_ScopedVMTInstall(SpecialEntityPreCollisionStuff, 0x5E3C30);
     //RH_ScopedVirtualInstall(SpecialEntityCalcCollisionSteps, 0x5E3E90, { .Reversed = false });
     RH_ScopedVMTInstall(PreRender, 0x5E8A20);
     RH_ScopedVMTInstall(Render, 0x5E7680);
@@ -4846,7 +4846,94 @@ void CPed::SpecialEntityPreCollisionStuff(CPhysical* colPhysical,
                                           bool& bCollidedEntityUnableToMove,
                                           bool& bThisOrCollidedEntityStuck)
 {
-    plugin::CallMethod<0x5E3C30, CPed*, CPhysical*, bool, bool&, bool&, bool&, bool&>(this, colPhysical, bIgnoreStuckCheck, bCollisionDisabled, bCollidedEntityCollisionIgnored, bCollidedEntityUnableToMove, bThisOrCollidedEntityStuck);
+    // Returns whether to set `bSkipLineCol` (0x1000 in physical flags) afterwards
+    const auto Process = [&]() -> bool {
+        // Ped (knocked off bike) vs. the vehicle it was knocked off
+        if (colPhysical->GetIsTypeVehicle() && bKnockedOffBike && m_pVehicle == colPhysical) {
+            bCollisionDisabled = true;
+            return false;
+        }
+
+        if (m_pEntityIgnoredCollision == colPhysical || colPhysical->m_pEntityIgnoredCollision == this) {
+            bCollidedEntityCollisionIgnored = true;
+            return !(bKnockedUpIntoAir && !bKnockedOffBike);
+        }
+
+        if (m_pAttachedTo == colPhysical || colPhysical->m_pAttachedTo == this) {
+            bCollisionDisabled = true;
+            return false;
+        }
+        if (m_pAttachedTo && colPhysical->m_pAttachedTo) {
+            bCollisionDisabled = true;
+            return false;
+        }
+
+        if (colPhysical->physicalFlags.bDisableMoveForce) {
+            if (!colPhysical->physicalFlags.bDisableCollisionForce && !colPhysical->physicalFlags.bDoorHitEndStop) {
+                if (bIgnoreStuckCheck) {
+                    bCollisionDisabled = true;
+                } else if (GetIsStuck() || colPhysical->GetIsStuck()) {
+                    bThisOrCollidedEntityStuck = true;
+                }
+            } else {
+                bCollidedEntityUnableToMove = true;
+            }
+            return true;
+        }
+
+        if (colPhysical->physicalFlags.bInfiniteMass || colPhysical->physicalFlags.bDisableZ) {
+            if (bIgnoreStuckCheck) {
+                bCollidedEntityCollisionIgnored = true;
+            } else if (GetIsStuck() || colPhysical->GetIsStuck()) {
+                bThisOrCollidedEntityStuck = true;
+            }
+            return true;
+        }
+
+        if (colPhysical->GetIsTypeObject()) {
+            const auto obj = colPhysical->AsObject();
+            if (obj->objectFlags.bIsLampPost && obj->GetUp().z < 0.66f) {
+                bCollidedEntityCollisionIgnored = true;
+                return true;
+            }
+            if (obj->m_nModelIndex == MODEL_GRENADE && obj->GetPosition().z < GetPosition().z) {
+                bCollidedEntityCollisionIgnored = true;
+                return true;
+            }
+            if (obj->m_pObjectInfo->m_fUprootLimit > 0.0f || obj->physicalFlags.bDisableCollisionForce) {
+                if (std::abs(obj->m_vecMoveSpeed.x) < 0.001f
+                    && std::abs(obj->m_vecMoveSpeed.y) < 0.001f
+                    && std::abs(obj->m_vecMoveSpeed.z) < 0.001f
+                ) {
+                    bCollidedEntityUnableToMove = true;
+                    return false;
+                }
+            }
+            if (obj->GetIsStuck()) {
+                bCollidedEntityUnableToMove = true;
+            }
+            return false;
+        }
+
+        const auto mi = colPhysical->m_nModelIndex;
+        if (mi == MODEL_RCBANDIT || mi == MODEL_RCTIGER || mi == MODEL_RCCAM) {
+            bCollidedEntityCollisionIgnored = true;
+            return true;
+        }
+        if (colPhysical->GetIsStuck()) {
+            bCollidedEntityUnableToMove = true;
+        }
+        return false;
+    };
+    if (Process()) {
+        physicalFlags.bSkipLineCol = true; // 0x1000
+    }
+
+    if (m_nPedType == PED_TYPE_PLAYER1 || m_nPedType == PED_TYPE_PLAYER_NETWORK) {
+        if (GetIntelligence()->GetTaskClimb()) {
+            physicalFlags.bSkipLineCol = true;
+        }
+    }
 }
 
 /*!

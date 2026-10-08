@@ -13,6 +13,9 @@
 #include "Shadows.h"
 #include "Coronas.h"
 #include "TaskSimpleJetPack.h"
+#include "Clock.h"
+#include "Sprite.h"
+#include "PostEffects.h"
 
 using namespace ModelIndices;
 void CPickups::InjectHooks() {
@@ -22,13 +25,13 @@ void CPickups::InjectHooks() {
     RH_ScopedInstall(Init, 0x454A70);
     RH_ScopedInstall(ReInit, 0x456E60);
     RH_ScopedInstall(AddToCollectedPickupsArray, 0x455240);
-    RH_ScopedOverloadedInstall(CreatePickupCoorsCloseToCoors, "", 0x458A80, void(*)(float, float, float, float&, float&, float&), {.Reversed = false});
+    RH_ScopedOverloadedInstall(CreatePickupCoorsCloseToCoors, "", 0x458A80, void(*)(float, float, float, float&, float&, float&));
     RH_ScopedInstall(CreateSomeMoney, 0x458970);
     RH_ScopedInstall(DetonateMinesHitByGunShot, 0x4590C0);
     RH_ScopedInstall(DoCollectableEffects, 0x455E20);
     RH_ScopedInstall(DoMineEffects, 0x4560E0);
     RH_ScopedInstall(DoMoneyEffects, 0x454E80);
-    RH_ScopedInstall(DoPickUpEffects, 0x455720, { .Reversed = false });
+    RH_ScopedInstall(DoPickUpEffects, 0x455720);
     RH_ScopedInstall(FindPickUpForThisObject, 0x4551C0);
 
     // Cannot be hooked at all for now due to ABI fuckery, the return value is 32 bit, but causes the function to assume the calling convention of of T* Function(T*, ...)
@@ -97,7 +100,53 @@ void CPickups::AddToCollectedPickupsArray(int32 pickupIndex) {
  * @param [out] outX, outY, outZ Created pickup's position
  */
 void CPickups::CreatePickupCoorsCloseToCoors(float inX, float inY, float inZ, float& outX, float& outY, float& outZ) {
-    plugin::Call<0x458A80, float, float, float, float&, float&, float&>(inX, inY, inZ, outX, outY, outZ);
+    for (int32 i = 0; i < 32; i++) {
+        const auto angle = (float)(CGeneral::GetRandomNumber() & 0xFF) * (TWO_PI / 256.0f); // 0x859BBC
+        CVector    cand{
+            std::sinf(angle) * 1.5f + inX,
+            std::cosf(angle) * 1.5f + inY,
+            0.0f
+        };
+
+        bool foundGround{};
+        cand.z = CWorld::FindGroundZFor3DCoord(CVector{ cand.x, cand.y, inZ }, &foundGround, nullptr) + 0.5f;
+        if (!foundGround) {
+            continue;
+        }
+
+        const CVector start{ inX, inY, inZ + 0.3f };
+        const CVector delta = cand - start;
+        const auto    len   = delta.Magnitude();
+        const auto    scale = (len + 0.4f) / len;
+        const CVector end   = start + delta * scale;
+
+        const auto playerPos = FindPlayerCoors(-1);
+        if (std::sqrt((cand.x - playerPos.x) * (cand.x - playerPos.x) + (cand.y - playerPos.y) * (cand.y - playerPos.y)) > 2.0f) {
+            if (i <= 16 && TestForPickupsInBubble(cand, 1.3f)) {
+                continue;
+            }
+        } else if (i <= 16) {
+            continue;
+        }
+
+        if (!CWorld::GetIsLineOfSightClear(end, start, true, i < 16, false, i < 16, false, false, false)) {
+            continue;
+        }
+
+        if (i <= 16 && CWorld::TestSphereAgainstWorld(cand, 1.2f, nullptr, false, true, false, false, false, false)) {
+            continue;
+        }
+
+        outX = cand.x;
+        outY = cand.y;
+        // BUG: the original writes the candidate's Y coordinate into outZ
+        outZ = notsa::IsFixBugs() ? cand.z : cand.y;
+        return;
+    }
+
+    outX = inX;
+    outY = inY;
+    outZ = inZ + 0.4f;
 }
 
 /*!
@@ -246,7 +295,153 @@ void CPickups::DoMoneyEffects(CEntity* entity) {
 
 // 0x455720
 void CPickups::DoPickUpEffects(CEntity* entity) {
-    plugin::Call<0x455720, CEntity*>(entity);
+    auto* const obj    = entity->AsObject();
+    auto* const pickup = FindPickUpForThisObject(obj);
+
+    if (obj->m_nModelIndex == MI_PICKUP_CAMERA) {
+        if (TheCamera.GetActiveCam().m_nMode == MODE_CAMERA) {
+            obj->objectFlags.bDoNotRender = false;
+        } else {
+            obj->objectFlags.bDoNotRender = true;
+            if (CClock::GetGameClockHours() < 5 || CPostEffects::IsVisionFXActive()) {
+                // 0x859B60 = -50.0f
+                const auto alphaRoll = 100 - (int32)((float)(CGeneral::GetRandomNumber() & 0xFFFF) * (1.0f / 32768.0f) * -50.0f);
+                const auto size      = (std::sinf((float)(CTimer::GetTimeInMS() & 0x1FFF) * 0.00076660159f) + 1.7f) * 3.7f;
+                CCoronas::RegisterCorona(
+                    (uint32)(uintptr_t)obj + 1, // NOTSA: original passed the address of a stack slot of this function here
+                    nullptr,
+                    (uint8)alphaRoll,
+                    (uint8)(int32)((float)alphaRoll * 0.7f),
+                    (uint8)(int32)((float)alphaRoll * 0.7f),
+                    255,
+                    obj->GetPosition(),
+                    size,
+                    100.0f,
+                    CORONATYPE_HEADLIGHT,
+                    FLARETYPE_NONE,
+                    eCoronaReflType::CORREFL_NONE,
+                    eCoronaLOSCheck::LOSCHECK_OFF,
+                    eCoronaTrail::TRAIL_OFF,
+                    0.0f,
+                    false,
+                    1.5f,
+                    0,
+                    15.0f,
+                    false,
+                    false
+                );
+            }
+        }
+    } else {
+        obj->objectFlags.bDoNotRender = pickup->PickUpShouldBeInvisible();
+    }
+
+    if (obj->objectFlags.bDoNotRender) {
+        return;
+    }
+
+    // BUG: for some models (bribe, info, killfrenzy, property, savegame) the original never assigned `weaponType`,
+    // so the stack slot of the function's argument (= the object pointer) was used as an index below
+    int32 weaponType = notsa::IsFixBugs() ? 0 : (int32)(int16)(uintptr_t)obj;
+    {
+        const auto model = obj->m_nModelIndex;
+        if (model == MI_PICKUP_ADRENALINE) {
+            weaponType = 0x2F;
+        } else if (model == MI_PICKUP_BODYARMOUR) {
+            weaponType = 0x30;
+        } else if (model == MI_PICKUP_BRIBE || model == MI_PICKUP_INFO || model == MI_PICKUP_KILLFRENZY) {
+            // keeps `weaponType`
+        } else if (model == MI_PICKUP_HEALTH || model == MI_PICKUP_BONUS) {
+            weaponType = 0x2F;
+        } else if (model == MI_PICKUP_PROPERTY) {
+            // keeps `weaponType`
+        } else if (model == MI_PICKUP_PROPERTY_FORSALE) {
+            weaponType = 0x2F;
+        } else if (model == MI_PICKUP_REVENUE) {
+            weaponType = 0x35;
+        } else if (model == MI_PICKUP_SAVEGAME) {
+            // keeps `weaponType`
+        } else if (model == MI_PICKUP_CLOTHES) {
+            weaponType = 0x2F;
+        } else {
+            weaponType = WeaponForModel(model);
+        }
+    }
+
+    if (obj->objectFlags.bPickupPropertyForSale || obj->objectFlags.bPickupInShopOutOfStock || obj->m_nBonusValue != 0 || obj->m_wCostValue != 0) {
+        const auto& camPos = TheCamera.GetPosition();
+        const auto& objPos = obj->GetPosition();
+        const auto  dist   = std::sqrt((camPos.y - objPos.y) * (camPos.y - objPos.y) + (camPos.x - objPos.x) * (camPos.x - objPos.x));
+
+        if (dist < 14.0f && NumMessages < MAX_PICKUP_MESSAGES) {
+            const CVector worldPos{ objPos.x, objPos.y, objPos.z + 0.7f };
+            CVector       screenPos;
+            float         w, h;
+            if (CSprite::CalcScreenCoors(worldPos, &screenPos, &w, &h, true, true)) {
+                auto& msg = aMessages[NumMessages];
+
+                msg.pos.x  = screenPos.x;
+                msg.pos.y  = screenPos.y;
+                msg.width  = w;
+                msg.height = h;
+                msg.pos.z  = std::bit_cast<float>((int32)WeaponForModel(obj->m_nModelIndex)); // NOTE: yes, the original stores it in `pos.z`
+
+                // 0x8A5FB0: 8-byte entries { uint8 r, g, b, pad; float 1.0f }, indexed by weapon type
+                struct tColorEntry { uint8 r, g, b, pad; float unused; };
+                const auto& color = reinterpret_cast<const tColorEntry*>(0x8A5FB0)[weaponType];
+                msg.color.r = color.r;
+                msg.color.g = color.g;
+                msg.color.b = color.b;
+                msg.color.a = (uint8)(int32)((1.0f - dist * (1.0f / 14.0f)) * 255.0f);
+
+                if (obj->objectFlags.bPickupInShopOutOfStock) {
+                    msg.flags |= 1;
+                } else {
+                    msg.flags &= ~1;
+                }
+                msg.field_19 = obj->m_nBonusValue;
+                msg.price    = obj->m_wCostValue * 5u;
+
+                if (obj->m_nModelIndex == MI_PICKUP_PROPERTY) {
+                    msg.text = const_cast<GxtChar*>(TheText.Get(CPickup::FindStringForTextIndex((ePickupPropertyText)FindPickUpForThisObject(obj)->m_nFlags.nPropertyTextIndex)));
+                    msg.flags &= ~2;
+                } else if (obj->m_nModelIndex == MI_PICKUP_PROPERTY_FORSALE) {
+                    msg.text = const_cast<GxtChar*>(TheText.Get(CPickup::FindStringForTextIndex((ePickupPropertyText)FindPickUpForThisObject(obj)->m_nFlags.nPropertyTextIndex)));
+                    msg.flags |= 2;
+                } else {
+                    msg.text = nullptr;
+                    msg.flags &= ~2;
+                }
+                NumMessages++;
+            }
+        }
+    }
+
+    // Scale the model so that it fits into ~1.2 units
+    const auto& bb   = CModelInfo::GetModelInfo(obj->m_nModelIndex)->GetColModel()->GetBoundingBox();
+    const auto  dimX = bb.m_vecMax.x - bb.m_vecMin.x;
+    const auto  dimY = bb.m_vecMax.y - bb.m_vecMin.y;
+    const auto  dimZ = bb.m_vecMax.z - bb.m_vecMin.z;
+    const auto  maxYZ = dimY > dimZ ? dimY : dimZ;
+    const auto  maxDim = dimX > maxYZ ? dimX : maxYZ;
+
+    auto invScale = 1.2f / maxDim;
+    if (invScale < 1.0f) {
+        invScale = 1.0f;
+    }
+    auto scale = (invScale - 1.0f) * 0.6f + 1.0f;
+    if (obj->m_nModelIndex == 0x16A) {
+        scale = 1.2f;
+    }
+
+    const auto angle = (float)(CTimer::GetTimeInMS() & 0x7FF) * 0.0030566407f;
+    const auto cs    = std::cosf(angle) * scale;
+    const auto sn    = std::sinf(angle) * scale;
+
+    auto& mat = obj->GetMatrix();
+    mat.GetRight() = CVector{ cs, sn, 0.0f };
+    mat.GetUp()    = CVector{ -sn, cs, 0.0f };
+    mat.GetForward() = CVector{ 0.0f, 0.0f, scale };
 }
 
 // 0x4551C0

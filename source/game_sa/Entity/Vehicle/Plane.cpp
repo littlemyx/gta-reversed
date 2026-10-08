@@ -1,5 +1,8 @@
 #include "StdInc.h"
 
+#include <cmath>
+#include <numbers>
+
 #include "Plane.h"
 #include "CarCtrl.h"
 #include "FireManager.h"
@@ -17,6 +20,14 @@
 #include "Explosion.h"
 #include "TheScripts.h"
 #include "Fx.h"
+#include "FxManager.h"
+#include "FxPrtMult.h"
+#include "Shadows.h"
+#include "MotionBlurStreaks.h"
+#include "BouncingPanel.h"
+#include "VehicleModelInfo.h"
+#include "Matrix.h"
+#include "Quaternion.h"
 
 auto& HARRIER_NOZZLE_ROTATERATE = StaticRef<float>(0x8D33DC);       // 25.0f
 auto& PLANE_DAMAGE_WAVE_COUNTER_VAR = StaticRef<float>(0x8D33E0);   // 0.75f
@@ -38,6 +49,54 @@ auto& PLANE_PROP_DAMAGE_MULT = StaticRef<float>(0x8D3444);          // 0.2f
 auto& PLANE_PROP_DAMAGE_WAVE_PERIOD = StaticRef<int32>(0x8D3448);   // 2500
 auto& PLANE_PROP_DAMAGE_BASE = StaticRef<float>(0x8D344C);          // 0.8f
 
+// NOTSA: Unnamed globals used by `PreRender`, named by hand
+auto& PLANE_PANEL_RETURN_MULT = StaticRef<float>(0x8D33FC);         // 0.03f - `CBouncingPanel::ProcessPanel` return multiplier
+auto& PLANE_PANEL_DAMP_MULT = StaticRef<float>(0x8D3400);           // 0.98f - `CBouncingPanel::ProcessPanel` damp multiplier
+auto& VORTEX_HOVER_MAX_COMPRESSION = StaticRef<float>(0x8D3404);    // 1.3f
+auto& VORTEX_HOVER_ROLL_LIMIT = StaticRef<float>(0x8D3408);         // 0.1f
+auto& VORTEX_HOVER_PITCH_LIMIT = StaticRef<float>(0x8D340C);        // 0.1f
+auto& VORTEX_HOVER_BLEND_BASE = StaticRef<float>(0x8D3410);         // 0.9f - blend = pow(this, timestep)
+auto& VORTEX_HOVER_SPEED_LIMIT = StaticRef<float>(0x8D3414);        // 0.3f
+auto& VORTEX_HOVER_SPEED_MULT = StaticRef<float>(0x8D3418);         // 2.0f
+
+namespace {
+// Read-only data (.rdata), so no need to reference those by their addresses
+constexpr float DEG_TO_RAD                = 0.017453292f;                       // 0x8595EC
+constexpr float TWO_PI_EXACT              = std::numbers::pi_v<float> * 2.f;    // 0x858CBC
+constexpr float HALF_PI_EXACT             = 1.5707964f;                         // 0x858FE4
+constexpr float PLANE_RUDDER_MAX_DEG      = 40.0f;                              // 0x871914
+constexpr float PLANE_ELEVATOR_MAX_DEG    = 25.0f;                              // 0x871918
+constexpr float PLANE_AILERON_MAX_DEG     = -30.0f;                             // 0x87191C
+constexpr float PLANE_GEAR_SCALE_MULT     = 0.5f;                               // 0x871920
+constexpr float PLANE_GEAR_SHIFT_MULT     = 0.3f;                               // 0x871924
+constexpr float PLANE_GEAR_POS_MULT       = 0.03f;                              // 0x871928
+constexpr float PLANE_GEAR_ANGLE_DEFAULT  = 1.4835299f;                         // 0x87192C
+constexpr float PLANE_GEAR_ANGLE_HYDRA    = -1.5707964f;                        // 0x871930
+constexpr float PLANE_MISC_ANGLE_HYDRA    = -1.3962635f;                        // 0x871934
+constexpr float PLANE_MISC_ANGLE_SHAMAL   = 2.268928f;                          // 0x871938 (Also used by Hydra's `MISC_B`)
+constexpr float PLANE_GEAR_ANGLE_ANDROM   = 2.268928f;                          // 0x87193C
+constexpr float PLANE_GEAR_ANGLE_NEVADA   = 1.3089969f;                         // 0x871940
+
+//! Axis a control surface is hinged on: the direction from the surface's pivot (position of `mat`) to the model dummy marking the hinge.
+//! If the dummy isn't set (all zero) `defaultAxis` is used.
+CVector GetControlSurfaceAxis(CVector dummy, const CMatrix& mat, CVector defaultAxis) {
+    if (dummy.x == 0.0f && dummy.y == 0.0f && dummy.z == 0.0f) {
+        return defaultAxis;
+    }
+    dummy.x = dummy.x - mat.GetPosition().x;
+    dummy.y = dummy.y - mat.GetPosition().y;
+    dummy.z = dummy.z - mat.GetPosition().z;
+    dummy.Normalise();
+    return dummy;
+}
+
+//! Clamp used by Vortex' hover tilt (`x87` keeps `v` in extended precision, it's rounded to float only at the end)
+float ClampVortexTilt(double v, float limit) {
+    const double clamped = v > (double)limit ? (double)limit : v;
+    return -limit > clamped ? -limit : (float)clamped;
+}
+}
+
 void CPlane::InjectHooks() {
     RH_ScopedVirtualClass(CPlane, 0x871948, 71);
     RH_ScopedCategory("Vehicle");
@@ -46,7 +105,7 @@ void CPlane::InjectHooks() {
     RH_ScopedInstall(InitPlaneGenerationAndRemoval, 0x6CAD90);
     RH_ScopedVMTInstall(SetUpWheelColModel, 0x6C9140);
     RH_ScopedVMTInstall(BurstTyre, 0x6C9150);
-    RH_ScopedVMTInstall(PreRender, 0x6C94A0, { .Reversed = false });
+    RH_ScopedVMTInstall(PreRender, 0x6C94A0);
     RH_ScopedVMTInstall(Render, 0x6CAB70);
     RH_ScopedInstall(IsAlreadyFlying, 0x6CAB90);
     RH_ScopedVMTInstall(Fix, 0x6CABB0);
@@ -844,7 +903,481 @@ bool CPlane::BurstTyre(uint8 tyreComponentId, bool bPhysicalEffect) {
 
 // 0x6C94A0
 void CPlane::PreRender() {
-    plugin::CallMethod<0x6C94A0, CPlane*>(this);
+    const auto mi       = GetVehicleModelInfo();
+    const auto colModel = GetColModel();
+
+    CVehicle::PreRender(); // Skips `CAutomobile::PreRender`
+
+    if (m_nModelIndex == MODEL_VORTEX) {
+        DoHoverSuspensionRatios();
+    }
+
+    //> 0x6C950D - Wheels
+    if (vehicleFlags.bVehicleColProcessed) {
+        DoBurstAndSoftGroundRatios();
+
+        for (int32 i = 0; i < 4; i++) {
+            // How much the suspension is compressed [0: not compressed, 1: fully]
+            const double relaxedRatio = 1.0 - (double)m_aSuspensionSpringLength[i] / (double)m_aSuspensionLineLength[i];
+            const float  ratio        = (float)(((double)m_fWheelsSuspensionCompression[i] - relaxedRatio) / (1.0 - relaxedRatio));
+
+            CVector wheelPos;
+            mi->GetWheelPosn(i, wheelPos, true);
+
+            double newWheelZ = (double)wheelPos.z + (double)m_pHandlingData->m_fSuspensionUpperLimit;
+            if (ratio > 0.0f) {
+                newWheelZ -= (double)ratio * (double)m_aSuspensionSpringLength[i];
+            }
+            if (newWheelZ <= (double)m_wheelPosition[i] && (!physicalFlags.bAddMovingCollisionSpeed || !handlingFlags.bHydraulicInst)) {
+                newWheelZ = (newWheelZ - (double)m_wheelPosition[i]) * (double)0.75f + (double)m_wheelPosition[i]; // 0x858F34
+            }
+            m_wheelPosition[i] = (float)newWheelZ;
+
+            if (m_nModelIndex == MODEL_ANDROM) {
+                if (m_fWheelsSuspensionCompression[i] >= 1.0f) {
+                    m_wheelRotation[i] = m_wheelRotation[i] * 0.95f; // 0x858EF0
+                } else {
+                    const auto& fwd    = m_matrix->GetForward();
+                    const auto& normal = m_wheelColPoint[i].m_vecNormal;
+                    const double dot   = ((double)fwd.z * (double)normal.z + (double)normal.x * (double)fwd.x) + (double)fwd.y * (double)normal.y;
+
+                    // Clamped to [-1; 1] (the value is only rounded to float when it's within range)
+                    float arg;
+                    if (dot < -1.0) {
+                        arg = -1.0f;
+                    } else if (dot > 1.0) {
+                        arg = 1.0f;
+                    } else {
+                        arg = (float)dot;
+                    }
+                    m_wheelRotation[i] = (float)-std::asin((double)arg);
+                }
+            }
+        }
+    }
+
+    //> 0x6C966B - Wheel matrices
+    UpdateWheelMatrix(PLANE_WHEEL_RB, 1);
+    UpdateWheelMatrix(PLANE_WHEEL_LB, 1);
+    UpdateWheelMatrix(PLANE_WHEEL_RF, 1);
+    UpdateWheelMatrix(PLANE_WHEEL_LF, m_nModelIndex == MODEL_HYDRA ? 3 : 1);
+
+    //> 0x6C96A5 - Propeller angle
+    {
+        // NOTE: x87 keeps the sum in extended precision, only the comparison uses that value
+        const double newAngle = (double)CTimer::GetTimeStep() * (double)m_fPropSpeed + (double)field_9C8;
+        field_9C8 = (float)newAngle;
+        if (newAngle > (double)TWO_PI_EXACT) {
+            double angle = field_9C8;
+            do {
+                angle -= (double)TWO_PI_EXACT;
+            } while (angle > (double)TWO_PI_EXACT);
+            field_9C8 = (float)angle;
+        }
+    }
+
+    //> 0x6C96E9 - Control surfaces (rudder, ailerons, elevators)
+    if (GetStatus() <= STATUS_PHYSICS) {
+        CMatrix     mat;  // Attached to the frame matrix of the surface being rotated
+        CQuaternion quat;
+        CVector     axis;
+
+        // Rudder (+ Vortex' second rudder)
+        if (const auto rudder = m_aCarNodes[PLANE_RUDDER]) {
+            mat.Attach(RwFrameGetMatrix(rudder), false);
+            mat.UpdateRW();
+
+            axis = GetControlSurfaceAxis(mi->GetModelDummyPosition(DUMMY_EXHAUST_SECONDARY), mat, CVector{ 0.0f, 0.0f, 1.0f });
+            quat.Set(&axis, (float)((double)PLANE_RUDDER_MAX_DEG * (double)DEG_TO_RAD * (double)m_fLeftRightSkid));
+            quat.Get(mat.m_pAttachMatrix);
+
+            if (m_nModelIndex == MODEL_VORTEX && m_aCarNodes[PLANE_MISC_B]) {
+                mat.Attach(RwFrameGetMatrix(m_aCarNodes[PLANE_MISC_B]), false);
+                mat.UpdateRW();
+                quat.Get(mat.m_pAttachMatrix);
+            }
+        }
+
+        // Ailerons
+        if (const auto aileronR = m_aCarNodes[PLANE_AILERON_R]) {
+            // While the landing gear is moving, the ailerons are scaled/shifted
+            float gearScale = 1.0f;
+            float gearShift = 0.0f;
+            if (m_pFlyingHandlingData->m_fGearDownL > 1.0f
+                && std::abs(m_fLandingGearStatus) < 1.0f
+                && (m_aCarNodes[PLANE_GEAR_L] || m_aCarNodes[PLANE_GEAR_R])
+            ) {
+                const double k = 1.0 - (double)std::abs(m_fLandingGearStatus);
+                gearScale = (float)(k * (double)PLANE_GEAR_SCALE_MULT + 1.0);
+                gearShift = (float)(k * (double)PLANE_GEAR_SHIFT_MULT);
+            }
+
+            // Moves the aileron back to its original position (shifted along Y by the scaling) - used when the hinge isn't along X
+            const auto ShiftAileron = [&](int32 node) {
+                CVector pos;
+                if (mi->GetOriginalCompPosition(pos, node)) {
+                    pos.y = (float)((1.0 - (double)gearScale) * (double)colModel->GetBoundingBox().m_vecMax.y * (double)PLANE_GEAR_POS_MULT + (double)pos.y);
+                    mat.SetTranslateOnly(pos);
+                }
+            };
+
+            mat.Attach(RwFrameGetMatrix(aileronR), false);
+            mat.UpdateRW();
+
+            axis = GetControlSurfaceAxis(mi->GetModelDummyPosition(DUMMY_TRAILER_ATTACH), mat, CVector{ 1.0f, 0.0f, 0.0f });
+            quat.Set(&axis, (float)(((double)PLANE_AILERON_MAX_DEG * (double)DEG_TO_RAD) * (double)m_fSteeringLeftRight + (double)gearShift));
+            quat.Get(mat.m_pAttachMatrix);
+
+            if (gearScale > 1.0f) {
+                mat.Update();
+                if (axis.x == 1.0f) {
+                    mat.GetForward().y *= gearScale;
+                } else {
+                    ShiftAileron(PLANE_AILERON_R);
+                }
+                mat.UpdateRW();
+            }
+
+            if (const auto aileronL = m_aCarNodes[PLANE_AILERON_L]) {
+                mat.Attach(RwFrameGetMatrix(aileronL), false);
+                mat.UpdateRW();
+
+                axis.x = axis.x * -1.0f;
+                quat.Set(&axis, (float)(((double)PLANE_AILERON_MAX_DEG * (double)DEG_TO_RAD) * (double)m_fSteeringLeftRight - (double)gearShift));
+                quat.Get(mat.m_pAttachMatrix);
+
+                if (gearScale > 1.0f) {
+                    mat.Update();
+                    if (axis.x == -1.0f) {
+                        mat.GetForward().y *= gearScale;
+                    } else {
+                        ShiftAileron(PLANE_AILERON_L);
+                    }
+                    mat.UpdateRW();
+                }
+            }
+        }
+
+        // Elevators
+        if (const auto elevatorR = m_aCarNodes[PLANE_ELEVATOR_R]) {
+            mat.Attach(RwFrameGetMatrix(elevatorR), false);
+            mat.UpdateRW();
+
+            axis = GetControlSurfaceAxis(mi->GetModelDummyPosition(DUMMY_HAND_REST), mat, CVector{ 1.0f, 0.0f, 0.0f });
+            quat.Set(&axis, (float)-((double)PLANE_ELEVATOR_MAX_DEG * (double)DEG_TO_RAD * (double)m_fSteeringUpDown));
+            quat.Get(mat.m_pAttachMatrix);
+
+            if (const auto elevatorL = m_aCarNodes[PLANE_ELEVATOR_L]) {
+                mat.Attach(RwFrameGetMatrix(elevatorL), false);
+                mat.UpdateRW();
+
+                const float angle = (float)((double)PLANE_ELEVATOR_MAX_DEG * (double)DEG_TO_RAD * (double)m_fSteeringUpDown);
+                axis.x = axis.x * -1.0f;
+                quat.Set(&axis, angle);
+                quat.Get(mat.m_pAttachMatrix);
+            }
+        }
+    }
+
+    //> 0x6C9C94 - Propellers (static one is only visible when slow, the moving one when fast)
+    for (int32 pass = 0; pass < 2; pass++) {
+        const auto  staticProp = pass == 0 ? PLANE_STATIC_PROP : PLANE_STATIC_PROP2;
+        const auto  movingProp = pass == 0 ? PLANE_MOVING_PROP : PLANE_MOVING_PROP2;
+        const float dir        = pass == 0 ? 1.0f : -1.0f;
+
+        if (m_aCarNodes[staticProp]) {
+            const float angle = dir * field_9C8;
+            SetComponentRotation(m_aCarNodes[staticProp], AXIS_Y, angle + angle, true);
+            if (const auto atomic = GetCurrentAtomicObject(m_aCarNodes[staticProp])) {
+                SetComponentAtomicAlpha(reinterpret_cast<RpAtomic*>(atomic), 255);
+            }
+        }
+        if (m_aCarNodes[movingProp]) {
+            SetComponentRotation(m_aCarNodes[movingProp], AXIS_Y, -(dir * field_9C8), true);
+            if (const auto atomic = GetCurrentAtomicObject(m_aCarNodes[movingProp])) {
+                SetComponentAtomicAlpha(reinterpret_cast<RpAtomic*>(atomic), 0);
+            }
+        }
+    }
+
+    //> 0x6C9D7E - Landing gear and the other model specific moving parts
+    {
+        eRotationAxis gearAxis    = AXIS_Y;
+        int32         miscAxis    = -1; // -1: none
+        float         gearLScale  = 0.0f;
+        float         gearRScale  = 0.0f;
+        float         miscAScale  = 0.0f;
+        float         miscBScale  = 0.0f;
+        bool          hasGearMove = true;
+
+        switch (m_nModelIndex) {
+        case MODEL_RUSTLER:
+            gearAxis   = AXIS_Y;
+            gearLScale = -PLANE_GEAR_ANGLE_DEFAULT;
+            gearRScale = PLANE_GEAR_ANGLE_DEFAULT;
+            break;
+        case MODEL_SHAMAL:
+        case MODEL_AT400:
+            gearAxis   = AXIS_Y;
+            gearLScale = -PLANE_GEAR_ANGLE_DEFAULT;
+            gearRScale = PLANE_GEAR_ANGLE_DEFAULT;
+            miscAxis   = AXIS_X;
+            miscAScale = PLANE_MISC_ANGLE_SHAMAL;
+            break;
+        case MODEL_HYDRA:
+            gearAxis   = AXIS_X;
+            gearLScale = PLANE_GEAR_ANGLE_HYDRA;
+            gearRScale = PLANE_GEAR_ANGLE_HYDRA;
+            miscAxis   = AXIS_X;
+            miscAScale = PLANE_MISC_ANGLE_HYDRA;
+            miscBScale = PLANE_MISC_ANGLE_SHAMAL;
+            break;
+        case MODEL_NEVADA:
+            gearAxis   = AXIS_X;
+            gearLScale = PLANE_GEAR_ANGLE_NEVADA;
+            gearRScale = PLANE_GEAR_ANGLE_NEVADA;
+            break;
+        case MODEL_ANDROM:
+            gearAxis   = AXIS_X;
+            gearLScale = PLANE_GEAR_ANGLE_ANDROM;
+            gearRScale = PLANE_GEAR_ANGLE_ANDROM;
+            miscAxis   = AXIS_X;
+            miscAScale = -PLANE_GEAR_ANGLE_ANDROM;
+            break;
+        default:
+            hasGearMove = false;
+            break;
+        }
+
+        if (hasGearMove) {
+            SetComponentRotation(m_aCarNodes[PLANE_GEAR_L], gearAxis, std::abs(m_fLandingGearStatus) * gearLScale, true);
+            SetComponentRotation(m_aCarNodes[PLANE_GEAR_R], gearAxis, std::abs(m_fLandingGearStatus) * gearRScale, true);
+            if (miscAxis > -1) {
+                SetComponentRotation(m_aCarNodes[PLANE_MISC_A], (eRotationAxis)miscAxis, std::abs(m_fLandingGearStatus) * miscAScale, true);
+                if ((double)miscBScale > 0.0) {
+                    SetComponentRotation(m_aCarNodes[PLANE_MISC_B], (eRotationAxis)miscAxis, std::abs(m_fLandingGearStatus) * miscBScale, true);
+                }
+            }
+        }
+    }
+
+    //> 0x6C9EE3 - Andromada's / Hydra's / Vortex' special parts
+    if (m_nModelIndex == MODEL_ANDROM) {
+        SetComponentRotation(m_aCarNodes[PLANE_MISC_B], AXIS_X, (float)((double)m_wMiscComponentAngle * (double)ANDROM_COL_ANGLE_MULT), true);
+    } else if (m_nModelIndex == MODEL_HYDRA) {
+        // Nozzles
+        const float nozzleAngle = (float)(((double)m_wMiscComponentAngle * (double)HALF_PI_EXACT) / (double)(int32)(int16)HARRIER_NOZZLE_ROTATE_LIMIT);
+        SetComponentRotation(m_aCarNodes[PLANE_WHEEL_LM], AXIS_X, nozzleAngle, true);
+        SetComponentRotation(m_aCarNodes[PLANE_WHEEL_RM], AXIS_X, nozzleAngle, true);
+
+        if (vehicleFlags.bEngineOn) {
+            const float thrust = (float)(((double)m_fAccelerationBreakStatus + 1.0) * (double)0.5f);
+
+            if ((int32)m_wMiscComponentAngle < (int32)(int16)HARRIER_NOZZLE_SWITCH_LIMIT) {
+                if (m_pDustParticle) {
+                    m_pDustParticle->Kill();
+                    m_pDustParticle        = nullptr;
+                    m_heliDustFxTimeConst = 0.0f;
+                }
+            } else {
+                DoHeliDustEffect(thrust, 2.0f);
+            }
+
+            RwMatrix* const nozzleL = RwFrameGetMatrix(m_aCarNodes[PLANE_WHEEL_LM]);
+            RwMatrix* const nozzleR = RwFrameGetMatrix(m_aCarNodes[PLANE_WHEEL_RM]);
+
+            // Jet thrust particles: 2 on each nozzle
+            const struct {
+                CVector    offset;
+                RwMatrix*  nozzle;
+            } jets[4] = {
+                { CVector{  0.7f,  -0.45f, 0.05f }, nozzleL },
+                { CVector{ -0.82f, -0.45f, 0.05f }, nozzleL },
+                { CVector{  0.63f, -0.45f, 0.07f }, nozzleR },
+                { CVector{ -0.75f, -0.45f, 0.07f }, nozzleR },
+            };
+
+            for (auto& fx : m_apJettrusParticles) {
+                const auto parentMat = GetModellingMatrix();
+                if (parentMat && !fx) {
+                    fx = g_fxMan.CreateFxSystem("jetthrust", CVector{ 0.0f, 0.0f, 0.0f }, parentMat, false);
+                    if (fx) {
+                        fx->Play();
+                        fx->SetLocalParticles(true);
+                        fx->CopyParentMatrix();
+                    }
+                }
+            }
+
+            for (size_t i = 0; i < m_apJettrusParticles.size(); i++) {
+                if (const auto fx = m_apJettrusParticles[i]) {
+                    CMatrix jetMat = *m_matrix * CMatrix{ jets[i].nozzle };
+                    // NOTSA: The original passes the `CMatrix` directly (layout compatible with `RwMatrix`)
+                    fx->SetMatrix(reinterpret_cast<RwMatrix*>(&jetMat));
+                    fx->SetOffsetPos(jets[i].offset);
+                    fx->SetConstTime(true, thrust);
+                }
+            }
+        } else {
+            for (auto& fx : m_apJettrusParticles) {
+                if (fx) {
+                    fx->Kill();
+                    fx = nullptr;
+                }
+            }
+            if (m_pDustParticle) {
+                m_pDustParticle->Kill();
+                m_pDustParticle        = nullptr;
+                m_heliDustFxTimeConst = 0.0f;
+            }
+        }
+    } else if (m_nModelIndex == MODEL_VORTEX && m_aCarNodes[PLANE_MISC_A]) {
+        // Hovercraft skirt: tilts according to the speed and the suspension compression
+        const auto* const lines = colModel->GetData()->m_pLines;
+
+        CVector wheelPos;
+        mi->GetWheelPosn(0, wheelPos, false);
+
+        CMatrix mat{ RwFrameGetMatrix(m_aCarNodes[PLANE_MISC_A]) };
+
+        const auto& myMat = *m_matrix;
+        const auto& speed = m_vecMoveSpeed;
+
+        const auto SpeedAlong = [&](const CVector& dir) {
+            return (((double)speed.z * (double)dir.z + (double)speed.y * (double)dir.y) + (double)dir.x * (double)speed.x) * (double)VORTEX_HOVER_SPEED_MULT;
+        };
+        mat.GetUp().y = ClampVortexTilt(SpeedAlong(myMat.GetForward()), VORTEX_HOVER_SPEED_LIMIT);
+        mat.GetUp().x = ClampVortexTilt(SpeedAlong(myMat.GetRight()), VORTEX_HOVER_SPEED_LIMIT);
+
+        const double blend = std::pow((double)VORTEX_HOVER_BLEND_BASE, (double)CTimer::GetTimeStep());
+        const float  inv   = (float)(1.0 - blend);
+
+        const auto ClampRatio = [](double v, float limit) {
+            if (v > (double)limit) {
+                return (double)limit;
+            }
+            if (v < (double)-limit) {
+                return (double)-limit;
+            }
+            return v;
+        };
+
+        // Pitch
+        {
+            const double r = ClampRatio(
+                ((((double)m_wheelPosition[2] - (double)m_wheelPosition[3]) + ((double)m_wheelPosition[0] - (double)m_wheelPosition[1])) * 0.5)
+                    / ((double)lines[0].m_vecStart.y - (double)lines[1].m_vecStart.y),
+                VORTEX_HOVER_PITCH_LIMIT
+            );
+            mat.GetForward().z = (float)((double)mat.GetForward().z * blend + (double)inv * r);
+        }
+
+        // Roll
+        {
+            const double r = ClampRatio(
+                ((((double)m_wheelPosition[3] - (double)m_wheelPosition[1]) + ((double)m_wheelPosition[2] - (double)m_wheelPosition[0])) * 0.5)
+                    / ((double)lines[3].m_vecStart.x - (double)lines[1].m_vecStart.x),
+                VORTEX_HOVER_ROLL_LIMIT
+            );
+            mat.GetRight().z = (float)((double)mat.GetRight().z * blend + (double)inv * r);
+        }
+
+        // Height
+        {
+            double r = 1.0 - (((((double)m_wheelPosition[3] + (double)m_wheelPosition[1]) + (double)m_wheelPosition[2]) + (double)m_wheelPosition[0]) * 0.25 - (double)wheelPos.z)
+                                 / ((double)mi->m_fWheelSizeFront * 0.5);
+            if (r > (double)VORTEX_HOVER_MAX_COMPRESSION) {
+                r = (double)VORTEX_HOVER_MAX_COMPRESSION;
+            }
+            mat.GetUp().z = (float)((double)mat.GetUp().z * blend + (double)inv * r);
+        }
+
+        mat.UpdateRW();
+    }
+
+    //> 0x6CA638 - Bouncing panels
+    for (auto& panel : m_panels) {
+        if ((int16)panel.m_nFrameId > -1) {
+            panel.ProcessPanel(this, m_aCarNodes[(int16)panel.m_nFrameId], m_moveForce, m_turnForce, PLANE_PANEL_RETURN_MULT, PLANE_PANEL_DAMP_MULT);
+        }
+    }
+
+    m_moveForce = CVector{
+        m_vecMoveSpeed.x + m_vecFrictionMoveSpeed.x,
+        m_vecMoveSpeed.y + m_vecFrictionMoveSpeed.y,
+        m_vecMoveSpeed.z + m_vecFrictionMoveSpeed.z,
+    };
+    m_turnForce = CVector{
+        m_vecTurnSpeed.x + m_vecFrictionTurnSpeed.x,
+        m_vecTurnSpeed.y + m_vecFrictionTurnSpeed.y,
+        m_vecTurnSpeed.z + m_vecFrictionTurnSpeed.z,
+    };
+
+    //> 0x6CA70E - Shadow
+    CShadows::StoreShadowForVehicle(
+        this,
+        m_nModelIndex == MODEL_VORTEX ? VEH_SHD_CAR
+        : m_nModelIndex == MODEL_AT400 || m_nModelIndex == MODEL_ANDROM ? VEH_SHD_BIG_PLANE
+        : VEH_SHD_PLANE
+    );
+
+    //> 0x6CA73F - Wing tip streaks
+    if (!vehicleFlags.bIsDrowning && m_nModelIndex != MODEL_VORTEX && m_nModelIndex != MODEL_RCBARON) {
+        const auto& up = m_matrix->GetUp();
+
+        // NOTE: x87 keeps the whole expression in extended precision
+        double alpha = std::abs(((((double)m_vecMoveSpeed.z * (double)up.z + (double)m_vecMoveSpeed.y * (double)up.y) + (double)up.x * (double)m_vecMoveSpeed.x)
+                                    * (double)m_pFlyingHandlingData->m_fAttackLift) * 6400.0) // 0x859AEC
+                       - 32.0; // 0x85950C
+        if (alpha < 0.0) {
+            alpha = 0.0;
+        }
+        const auto streakAlpha = (uint8)(int32)alpha;
+
+        // Right wing
+        const CVector& dummy = mi->GetModelDummyPosition(DUMMY_WING_AIR_TRAIL);
+        CVector        a{ dummy.x, dummy.y, dummy.z };
+        CVector        b{ dummy.x - 0.1f, dummy.y, dummy.z }; // 0x858B1C
+        const auto     rightA = m_matrix->TransformPoint(a);
+        const auto     rightB = m_matrix->TransformPoint(b);
+        CMotionBlurStreaks::RegisterStreak(reinterpret_cast<uint32>(this), 255, 255, 255, streakAlpha, rightA, rightB);
+
+        // Left wing (mirrored)
+        a.x = -a.x;
+        b.x = -b.x;
+        const auto leftA = m_matrix->TransformPoint(a);
+        const auto leftB = m_matrix->TransformPoint(b);
+        CMotionBlurStreaks::RegisterStreak(reinterpret_cast<uint32>(this) + 1, 255, 255, 255, streakAlpha, leftA, leftB);
+    }
+
+    //> 0x6CA937 - Smoke ejector
+    if (m_bSmokeEjectorEnabled) {
+        if (m_nModelIndex == MODEL_CROPDUST) {
+            const FxPrtMult_c prtMult{ 1.0f, 1.0f, 1.0f, 0.4f, 1.0f, 1.0f, 0.2f };
+            const auto        pos = m_matrix->TransformPoint(CVector{ 0.0f, -0.5f, -0.5f });
+            const CVector     vel{
+                m_vecMoveSpeed.x * 10.0f,
+                m_vecMoveSpeed.y * 10.0f,
+                (float)((double)m_vecMoveSpeed.z * 10.0 - 3.0), // 0x85862C, 0x858B3C
+            };
+            g_fx.m_SmokeHuge->AddParticle(pos, vel, 0.0f, prtMult, -1.0f, 1.2f, 0.6f, false);
+        } else if (m_nModelIndex == MODEL_STUNT) {
+            const FxPrtMult_c prtMult{ 1.0f, 0.0f, 0.0f, 0.4f, 1.0f, 1.0f, 0.3f };
+            const auto        pos = m_matrix->TransformPoint(CVector{ 0.0f, -5.0f, 0.0f });
+            const CVector     vel{
+                m_vecMoveSpeed.x * 10.0f,
+                m_vecMoveSpeed.y * 10.0f,
+                m_vecMoveSpeed.z * 10.0f,
+            };
+            g_fx.m_SmokeHuge->AddParticle(pos, vel, 0.0f, prtMult, -1.0f, 1.2f, 0.6f, false);
+        }
+    }
+
+    //> 0x6CAA93 - Skimmer's splashes
+    if (m_nModelIndex == MODEL_SKIMMER && physicalFlags.bSubmergedInWater) {
+        // NOTSA: The original passes the float at 0x950 (`m_fDoomHorizontalRotation` of `CAutomobile`) as the water damping
+        DoBoatSplashes(m_fDoomHorizontalRotation);
+    }
 }
 
 // 0x6CAB70

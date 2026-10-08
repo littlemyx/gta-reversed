@@ -55,7 +55,7 @@ public:
     float        m_forwardZ;
     uint32       m_nStartedFlyingTime;
     float        m_fPropSpeed;
-    float        field_9C8;
+    float        field_9C8; // Propeller rotation angle, wrapped to [0; 2pi]
     float        m_fLandingGearStatus;
     int32        m_planeDamageWave;
     FxSystem_c** m_pGunParticles;

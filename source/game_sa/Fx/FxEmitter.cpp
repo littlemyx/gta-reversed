@@ -6,6 +6,7 @@
 #include "FxPrimBP.h"
 #include "FxEmitterBP.h"
 #include "FxEmitterPrt.h"
+#include "FxFtol.h"
 
 void FxEmitter_c::InjectHooks() {
     RH_ScopedVirtualClass(FxEmitter_c, 0x85A7A4, 6);
@@ -14,9 +15,9 @@ void FxEmitter_c::InjectHooks() {
     // RH_ScopedInstall(Init_Reversed, 0x4A2550);
     // RH_ScopedInstall(Update_Reversed, 0x4A4460); // bad
     // RH_ScopedInstall(Reset_Reversed, 0x4A2570);
-    // RH_ScopedOverloadedInstall(AddParticle_Reversed, "matrix", 0x4A3EA0, void(FxEmitter_c::*)(RwMatrix*, CVector*, float, FxPrtMult_c*, float, float, bool));
-    // RH_ScopedOverloadedInstall(AddParticle_Reversed, "", 0x4A4050, void(FxEmitter_c::*)(CVector*, CVector*, float, FxPrtMult_c*, float, float, bool));
-    // RH_ScopedInstall(CreateParticles, 0x4A41E0);
+    RH_ScopedVMTOverloadedInstall(AddParticle, "Vec", 0x4A3EA0, void(FxEmitter_c::*)(const CVector&, const CVector&, float, const FxPrtMult_c&, float, float, bool));
+    RH_ScopedVMTOverloadedInstall(AddParticle, "Mat", 0x4A4050, void(FxEmitter_c::*)(const RwMatrix&, const CVector&, float, const FxPrtMult_c&, float, float, bool));
+    RH_ScopedInstall(CreateParticles, 0x4A41E0);
     // RH_ScopedInstall(CreateParticle, 0x4A2580);
 }
 
@@ -43,133 +44,134 @@ void FxEmitter_c::Reset() {
 
 // 0x4A3EA0
 void FxEmitter_c::AddParticle(const CVector& pos, const CVector& vel, float timeSince, const FxPrtMult_c& fxMults, float rotZ, float brightness, bool createLocal) {
-    return plugin::CallMethod<0x4A3EA0, FxEmitter_c*, const CVector*, const CVector*, float, const FxPrtMult_c*, float, float, bool>(this, &pos, &vel, timeSince, &fxMults, rotZ, brightness,
-                                                                                                                   createLocal);
-
-    // todo:
     EmissionInfo_t emission;
     m_PrimBP->m_FxInfoManager.ProcessEmissionInfo(0.0f, 0.0f, m_System->m_SystemBP->m_fLength, m_System->m_UseConstTime, &emission);
 
-    auto mat1 = g_fxMan.FxRwMatrixCreate();
-    auto mat0 = g_fxMan.FxRwMatrixCreate();
-    auto mat  = g_fxMan.FxRwMatrixCreate();
+    auto* const finalMat  = g_fxMan.FxRwMatrixCreate();
+    auto* const worldMat  = g_fxMan.FxRwMatrixCreate();
+    auto* const posMat    = g_fxMan.FxRwMatrixCreate();
 
-    RwMatrixSetIdentity(mat);
-    RwV3dAssign(RwMatrixGetPos(mat), &pos);
+    // Identity + position (done by hand in the original, the flags are OR'd in)
+    posMat->right = {1.0f, 0.0f, 0.0f};
+    posMat->up    = {0.0f, 1.0f, 0.0f};
+    posMat->at    = {0.0f, 0.0f, 1.0f};
+    posMat->pos   = {0.0f, 0.0f, 0.0f};
+    posMat->flags |= 0x20003;
+    posMat->pos   = {pos.x, pos.y, pos.z};
+    RwMatrixUpdate(posMat);
 
-    RwMatrixUpdate(mat);
     if (m_System->m_ParentMatrix) {
-        RwMatrixMultiply(mat0, mat, m_System->m_ParentMatrix);
-    }
-    else {
-        mat0 = mat;
+        RwMatrixMultiply(worldMat, posMat, m_System->m_ParentMatrix);
+    } else {
+        *worldMat = *posMat;
     }
 
-    auto mat2 = g_fxMan.FxRwMatrixCreate();
-    m_PrimBP->GetRWMatrix(*mat2);
-    RwMatrixMultiply(mat1, mat2, mat0);
-    g_fxMan.FxRwMatrixDestroy(mat2);
+    auto* const primMat = g_fxMan.FxRwMatrixCreate();
+    m_PrimBP->GetRWMatrix(*primMat);
+    RwMatrixMultiply(finalMat, primMat, worldMat);
+    g_fxMan.FxRwMatrixDestroy(primMat);
 
-    if (auto* particle = CreateParticle(emission, *mat1, &vel, timeSince, fxMults, brightness, createLocal)) {
+    if (auto* const particle = CreateParticle(emission, *finalMat, &vel, timeSince, fxMults, brightness, createLocal)) {
         if (rotZ >= 0.0f) {
-            particle->m_RotZ = (uint8)(rotZ / 2.0f); // todo: int8/uint8 conversion
+            particle->m_RotZ = (uint8)notsa::detail::Ftol((double)rotZ * 0.5); // 0x858B8C
         }
     }
 
-    g_fxMan.FxRwMatrixDestroy(mat);
-    g_fxMan.FxRwMatrixDestroy(mat0);
-    g_fxMan.FxRwMatrixDestroy(mat1);
+    g_fxMan.FxRwMatrixDestroy(posMat);
+    g_fxMan.FxRwMatrixDestroy(worldMat);
+    g_fxMan.FxRwMatrixDestroy(finalMat);
 }
 
 // 0x4A4050
 void FxEmitter_c::AddParticle(const RwMatrix& mat, const CVector& vel, float timeSince, const FxPrtMult_c& fxMults, float rotZ, float brightness, bool createLocal) {
-    return plugin::CallMethod<0x4A4050, FxEmitter_c*, const RwMatrix*, const CVector*, float, const FxPrtMult_c*, float, float, bool>(this, &mat, &vel, timeSince, &fxMults, rotZ, brightness,
-                                                                                                                    createLocal);
-
-    // todo:
     EmissionInfo_t emission;
     m_PrimBP->m_FxInfoManager.ProcessEmissionInfo(0.0f, 0.0f, m_System->m_SystemBP->m_fLength, m_System->m_UseConstTime, &emission);
-    auto mat2 = g_fxMan.FxRwMatrixCreate();
-    auto mat1 = g_fxMan.FxRwMatrixCreate();
-    auto mat0 = g_fxMan.FxRwMatrixCreate();
-    RwMatrixSetIdentity(mat0);
-    *mat0 = mat;
 
-    RwMatrixUpdate(mat0);
+    auto* const finalMat = g_fxMan.FxRwMatrixCreate();
+    auto* const worldMat = g_fxMan.FxRwMatrixCreate();
+    auto* const inMat    = g_fxMan.FxRwMatrixCreate();
+
+    // The original first sets this matrix to identity, but then overwrites all 16 dwords with `mat`
+    *inMat = mat;
+    RwMatrixUpdate(inMat);
+
     if (m_System->m_ParentMatrix) {
-        RwMatrixMultiply(mat1, mat0, m_System->m_ParentMatrix);
+        RwMatrixMultiply(worldMat, inMat, m_System->m_ParentMatrix);
     } else {
-        mat1 = mat0;
+        *worldMat = *inMat;
     }
 
-    auto mat3 = g_fxMan.FxRwMatrixCreate();
-    m_PrimBP->GetRWMatrix(*mat3);
-    RwMatrixMultiply(mat2, mat3, mat1);
-    g_fxMan.FxRwMatrixDestroy(mat3);
+    auto* const primMat = g_fxMan.FxRwMatrixCreate();
+    m_PrimBP->GetRWMatrix(*primMat);
+    RwMatrixMultiply(finalMat, primMat, worldMat);
+    g_fxMan.FxRwMatrixDestroy(primMat);
 
-    if (auto* particle = CreateParticle(emission, *mat2, &vel, timeSince, fxMults, brightness, createLocal)) {
-        if (rotZ >= 0.0f)
-            particle->m_RotZ = (uint8)(rotZ * 2.0f); // todo:: see above
+    if (auto* const particle = CreateParticle(emission, *finalMat, &vel, timeSince, fxMults, brightness, createLocal)) {
+        if (rotZ >= 0.0f) {
+            particle->m_RotZ = (uint8)notsa::detail::Ftol((double)rotZ * 0.5); // 0x858B8C
+        }
     }
 
-    g_fxMan.FxRwMatrixDestroy(mat0);
-    g_fxMan.FxRwMatrixDestroy(mat1);
-    g_fxMan.FxRwMatrixDestroy(mat2);
+    g_fxMan.FxRwMatrixDestroy(inMat);
+    g_fxMan.FxRwMatrixDestroy(worldMat);
+    g_fxMan.FxRwMatrixDestroy(finalMat);
 }
 
 // 0x4A41E0
 void FxEmitter_c::CreateParticles(float currentTime, float deltaTime) {
-    return plugin::CallMethod<0x4A41E0, FxEmitter_c*, float, float>(this, currentTime, deltaTime);
-
     EmissionInfo_t emission;
     m_PrimBP->m_FxInfoManager.ProcessEmissionInfo(currentTime, deltaTime, m_System->m_SystemBP->m_fLength, m_System->m_UseConstTime, &emission);
 
-    auto lodStart = (float)m_PrimBP->m_FxInfoManager.m_nLodStart / 64.0f;
-    auto lodEnd   = (float)m_PrimBP->m_FxInfoManager.m_nLodEnd   / 64.0f;
+    const double rateMult = (double)m_System->m_nRateMult * 0.001f;                    // 0x858CDC
+    const float  lodStart = (float)((double)m_PrimBP->m_FxInfoManager.m_nLodStart * 0.015625f); // 0x85A7D4 (1/64)
+    const float  lodEnd   = (float)((double)m_PrimBP->m_FxInfoManager.m_nLodEnd * 0.015625f);
 
-    float visibility;
-    if (m_System->m_fCameraDistance >= lodStart) {
-        if (m_System->m_fCameraDistance <= lodEnd) {
-            visibility = 1.0f - (m_System->m_fCameraDistance - lodStart) / (lodEnd - lodStart);
+    const float camDist = m_System->m_fCameraDistance;
+    double      visibility;
+    if (!(camDist < lodStart)) {
+        if (!(camDist > lodEnd)) {
+            visibility = 1.0 - ((double)camDist - lodStart) / ((double)lodEnd - lodStart);
         } else {
-            visibility = 0.0f;
+            visibility = 0.0;
         }
     } else {
-        visibility = 1.0f;
+        visibility = 1.0;
     }
 
-    m_fEmissionIntensity += emission.m_fCount * visibility * ((float)m_System->m_nRateMult * 1000.0f);
-    if (   CWeather::Wind >= emission.m_fMinWind
-        && CWeather::Wind <= emission.m_fMaxWind
-        && CWeather::Rain >= emission.m_fMinRain
-        && CWeather::Rain <= emission.m_fMaxRain
-        && m_fEmissionIntensity >= 1.0f
+    m_fEmissionIntensity = (float)((double)emission.m_fCount * visibility * rateMult + m_fEmissionIntensity);
+
+    // NaN semantics: the original only bails out on an ordered "less than" / "greater than"
+    if (   !(CWeather::Wind < emission.m_fMinWind)
+        && !(CWeather::Wind > emission.m_fMaxWind)
+        && !(CWeather::Rain < emission.m_fMinRain)
+        && !(CWeather::Rain > emission.m_fMaxRain)
+        && !(m_fEmissionIntensity < 1.0f)
     ) {
-        auto mat = g_fxMan.FxRwMatrixCreate();
-        auto mat1 = g_fxMan.FxRwMatrixCreate();
+        auto* const finalMat = g_fxMan.FxRwMatrixCreate();
+        auto* const worldMat = g_fxMan.FxRwMatrixCreate();
+
         RwMatrixUpdate(&m_System->m_LocalMatrix);
         if (m_System->m_ParentMatrix) {
-            RwMatrixMultiply(mat1, &m_System->m_LocalMatrix, m_System->m_ParentMatrix);
+            RwMatrixMultiply(worldMat, &m_System->m_LocalMatrix, m_System->m_ParentMatrix);
         } else {
-            *mat1 = m_System->m_LocalMatrix;
+            *worldMat = m_System->m_LocalMatrix;
         }
 
-        auto mat2 = g_fxMan.FxRwMatrixCreate();
-        m_PrimBP->GetRWMatrix(*mat2);
-        RwMatrixMultiply(mat, mat2, mat1);
-        g_fxMan.FxRwMatrixDestroy(mat2);
+        auto* const primMat = g_fxMan.FxRwMatrixCreate();
+        m_PrimBP->GetRWMatrix(*primMat);
+        RwMatrixMultiply(finalMat, primMat, worldMat);
+        g_fxMan.FxRwMatrixDestroy(primMat);
 
-        auto counter = 0u;
-        for (auto step = 0u; counter < (uint32)m_fEmissionIntensity; step = counter) {
+        // The intensity is re-read (and re-truncated) on every iteration, but it doesn't change in the loop
+        for (int32 i = 0; i < notsa::detail::Ftol(m_fEmissionIntensity); i++) {
             FxPrtMult_c prtMult;
-            auto timeSince = (float)step / m_fEmissionIntensity * deltaTime;
-            CreateParticle(emission, *mat, nullptr, timeSince, prtMult, 1.2f, m_System->m_createLocal);
-            counter++;
+            const float timeSince = (float)((double)i / m_fEmissionIntensity * deltaTime);
+            CreateParticle(emission, *finalMat, nullptr, timeSince, prtMult, 1.2f, m_System->m_createLocal);
         }
-        m_fEmissionIntensity -= m_fEmissionIntensity; // OG shit
+        m_fEmissionIntensity = (float)((double)m_fEmissionIntensity - (double)notsa::detail::Ftol(m_fEmissionIntensity));
 
-        g_fxMan.FxRwMatrixDestroy(mat1);
-        g_fxMan.FxRwMatrixDestroy(mat);
+        g_fxMan.FxRwMatrixDestroy(worldMat);
+        g_fxMan.FxRwMatrixDestroy(finalMat);
     }
 }
 

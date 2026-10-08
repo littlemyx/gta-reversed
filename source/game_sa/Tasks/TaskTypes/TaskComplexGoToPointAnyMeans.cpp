@@ -16,9 +16,9 @@ void CTaskComplexGoToPointAnyMeans::InjectHooks() {
     RH_ScopedOverloadedInstall(Constructor, "2", 0x66B790, CTaskComplexGoToPointAnyMeans*(CTaskComplexGoToPointAnyMeans::*)(int32, CVector const&, CVehicle*, float, int32));
     RH_ScopedInstall(Destructor, 0x66B830);
     RH_ScopedInstall(CreateSubTask, 0x6705D0);
-    RH_ScopedInstall(CreateNextSubTask, 0x6728A0);
-    RH_ScopedInstall(CreateFirstSubTask, 0x6729C0);
-    RH_ScopedInstall(ControlSubTask, 0x672A50);
+    RH_ScopedVMTInstall(CreateNextSubTask, 0x6728A0);
+    RH_ScopedVMTInstall(CreateFirstSubTask, 0x6729C0);
+    RH_ScopedVMTInstall(ControlSubTask, 0x672A50);
 }
 
 // 0x66B720

@@ -215,7 +215,7 @@ void CVehicle::InjectHooks() {
     // RH_ScopedInstall(GetPlaneWeaponFiringStatus, 0x6E3440);
     // RH_ScopedInstall(ProcessWeapons, 0x6E3950);
     RH_ScopedInstall(DoFixedMachineGuns, 0x73F400);
-    // RH_ScopedInstall(FireFixedMachineGuns, 0x73DF00);
+    RH_ScopedInstall(FireFixedMachineGuns, 0x73DF00);
     // RH_ScopedInstall(DoDriveByShootings, 0x741FD0);
     RH_ScopedInstall(ReleasePickedUpEntityWithWinch, 0x6D3CB0);
     RH_ScopedInstall(PickUpEntityWithWinch, 0x6D3CD0);
@@ -4174,86 +4174,117 @@ void CVehicle::ProcessBoatControl(tBoatHandlingData* boatHandling, float* fLastW
 
 // 0x6DD130
 void CVehicle::DoBoatSplashes(float fWaterDamping) {
-    //return plugin::CallMethod<0x6DD130, CVehicle*, float>(this, fWaterDamping);
-
-    const auto speedDist = m_vecMoveSpeed.SquaredMagnitude();
-    if (speedDist <= 0.0025f || GetUp().z <= 0.0f || TheCamera.GetLookingForwardFirstPerson() || !IsVisible()) {
+    // NOTE: The original keeps intermediates on the x87 stack (53-bit precision), hence the `double`s below.
+    const float speedSq = (float)((double)m_vecMoveSpeed.x * m_vecMoveSpeed.x + (double)m_vecMoveSpeed.y * m_vecMoveSpeed.y + (double)m_vecMoveSpeed.z * m_vecMoveSpeed.z);
+    if (!(speedSq > 0.0025f) || !(GetUp().z > 0.0f) || TheCamera.GetLookingForwardFirstPerson() || !IsVisible()) {
         return;
     }
 
-    if (m_autoPilot.m_nCarMission == MISSION_CRUISE && (CTimer::m_FrameCounter & 2) != 0) {
+    const bool isCruising = m_autoPilot.m_nCarMission == MISSION_CRUISE;
+    if (isCruising && (CTimer::m_FrameCounter & 2) != 0) {
         return;
     }
 
-    auto vec = GetPosition() - TheCamera.GetPosition(); // -> DistanceBetweenPoints2D()
-    vec.z = 0.0f;
-    auto dist = vec.Magnitude();
-    if (dist >= 80.0f)
-        return;
-
-    auto v9 = std::sqrt(speedDist) * 0.075f * fWaterDamping;
-    if (m_nModelIndex == MODEL_SKIMMER) {
-        v9 = std::min(v9 * 3.0f, 0.5f);
-    } else if (v9 > 1.0f) {
-        v9 = 1.0f;
-    }
-
-    if (v9 <= 0.15f) {
+    auto camToVeh = GetPosition() - TheCamera.GetPosition(); // 0x40FE60
+    camToVeh.z = 0.0f;
+    const float dist = camToVeh.Magnitude();
+    if (!(dist < 80.0f)) {
         return;
     }
 
-    auto v48 = v9 * 0.75f;
-    if (m_autoPilot.m_nCarMission == MISSION_CRUISE) {
-        auto v10 = v48 + v48;
-        if (v10 >= 1.0f)
-            v48 = 1.0f;
-        else
-            v48 = v10;
+    const bool isSkimmer = m_nModelIndex == MODEL_SKIMMER;
+
+    double intensity = std::sqrt((double)speedSq) * 0.075f * fWaterDamping;
+    if (isSkimmer) {
+        intensity *= 3.0f;
+        if (!(intensity <= 0.5f)) {
+            intensity = 0.5f;
+        }
+    } else if (!(intensity <= 1.0f)) {
+        intensity = 1.0f;
+    }
+    if (!(intensity > 0.15f)) {
+        return;
     }
 
-    auto alpha0 = std::min(v48 * 128.0f, 64.0f);
+    float scaled = (float)(intensity * 0.75f);
+    if (isCruising) {
+        const double doubled = (double)scaled + scaled;
+        scaled = doubled >= 1.0 ? 1.0f : (float)doubled;
+    }
+
+    uint8 alphaByte = (uint8)(int32)(scaled * 128.0f);
+    if (alphaByte >= 0x40) {
+        alphaByte = 0x40;
+    }
+
+    const double velScaleD = (double)scaled * 10.0f;
+    const float  velScale  = (float)velScaleD;
+    const float  sizeBase  = (float)(velScaleD + 0.75f);
+    const float  lifeRand  = CGeneral::GetRandomNumberInRange(0.8f, 1.2f);
+    const float  lifeBase  = (float)((((double)scaled + scaled) + 0.3f) * lifeRand);
+
     if (dist > 50.0f) {
-        alpha0 *= (80.0f - dist) * 0.033f;
+        alphaByte = (uint8)(int32)(((80.0 - dist) * 0.033333335f) * alphaByte); // 0x858F10
     }
 
     FxPrtMult_c particleData(1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 0.0f, 1.0f);
+    {
+        const float alpha = (float)((double)alphaByte * 0.003921569f); // 1 / 255
+        particleData.m_Color.alpha = alpha >= 1.0f ? 1.0f : alpha;
 
-    auto alpha = alpha0 / 255.0f;
-    particleData.m_Color.alpha = alpha >= 1.0f ? 1.0f : alpha;
+        const float size = (float)((double)sizeBase * 0.1f);
+        particleData.m_fSize = size >= 1.0f ? 1.0f : size;
 
-    auto v12 = v48 * 10.0f;
-    auto size = v12 + 0.75f * 0.1f;
-    particleData.m_fSize = size >= 1.0f ? 1.0f : size;
-
-    auto life = CGeneral::GetRandomNumberInRange(0.8f, 1.2f) * (v48 + v48 + 0.3f) * 0.2f;
-    particleData.m_fLife = life >= 1.0f ? 1.0f : life;
-
-    const CVector& colMin = GetColModel()->GetBoundingBox().m_vecMin;
-    const CVector& colMax = GetColModel()->GetBoundingBox().m_vecMax;
-
-    auto X_MULT = 0.7f;
-    auto Z_MULT = 0.0f;
-    if (m_nModelIndex == MODEL_SKIMMER) {
-        X_MULT = 0.25f; // 0x8D3678
-        Z_MULT = 0.85f; // 0x8D3674
+        const float life = (float)((double)lifeBase * 0.2f);
+        particleData.m_fLife = life >= 1.0f ? 1.0f : life;
     }
 
-    auto baseVel = CVector{ -GetForward().x, -GetRight().y, -GetRight().z };
+    const CBoundingBox& bb = GetColModel()->GetBoundingBox();
+    const CVector colMin = bb.m_vecMin;
+    const CVector colMax = bb.m_vecMax;
 
-    CVector p0 = m_matrix->TransformPoint({ colMin.x * X_MULT, colMax.y / 2.0f, colMin.z * Z_MULT });
-    auto vel0 = baseVel * CGeneral::GetRandomNumberInRange(0.8f, 1.2f);
-    vel0 -= GetRight() * CGeneral::GetRandomNumberInRange(0.3f, 0.7f); // minus
-    vel0 += GetUp() * CGeneral::GetRandomNumberInRange(0.8f, 1.2f);
-    vel0 *= v12;
-    g_fx.m_BoatSplash->AddParticle(p0, vel0, 0.0f, particleData);
+    float xMult = 0.7f;
+    float zMult = 0.0f;
+    if (isSkimmer) {
+        xMult = StaticRef<float>(0x8D3678); // 0.25f
+        zMult = StaticRef<float>(0x8D3674); // 0.85f
+    }
 
-    CVector p1 = { colMax.x * X_MULT, colMax.y / 2.0f, colMin.z * Z_MULT };
-    p1 = m_matrix->TransformPoint(p1);
-    auto vel1 = baseVel * CGeneral::GetRandomNumberInRange(0.8f, 1.2f);
-    vel1 += GetRight() * CGeneral::GetRandomNumberInRange(0.3f, 0.7f);  // plus
-    vel1 += GetUp() * CGeneral::GetRandomNumberInRange(0.8f, 1.2f);
-    vel1 *= v12;
-    g_fx.m_BoatSplash->AddParticle(p1, vel1, 0.0f, particleData);
+    const float posY = colMax.y * 0.5f;
+    const float posZ = zMult * colMin.z;
+
+    // 0x59C890 - the original evaluation order
+    const auto TransformPointOriginal = [&](const CVector& v) {
+        const auto &r = m_matrix->GetRight(), &f = m_matrix->GetForward(), &u = m_matrix->GetUp(), &p = m_matrix->GetPosition();
+        return CVector{
+            ((u.x * v.z + f.x * v.y) + r.x * v.x) + p.x,
+            ((u.y * v.z + r.y * v.x) + f.y * v.y) + p.y,
+            ((u.z * v.z + r.z * v.x) + f.z * v.y) + p.z
+        };
+    };
+
+    const CVector backward{ -m_matrix->GetForward().x, -m_matrix->GetForward().y, -m_matrix->GetForward().z };
+
+    // Left splash
+    {
+        const CVector pos = TransformPointOriginal({ colMin.x * xMult, posY, posZ });
+        CVector       vel = backward * CGeneral::GetRandomNumberInRange(0.8f, 1.2f);
+        vel -= m_matrix->GetRight() * CGeneral::GetRandomNumberInRange(0.3f, 0.7f);
+        vel += m_matrix->GetUp() * CGeneral::GetRandomNumberInRange(0.8f, 1.2f);
+        vel *= velScale;
+        g_fx.m_BoatSplash->AddParticle(pos, vel, 0.0f, particleData);
+    }
+
+    // Right splash
+    {
+        const CVector pos = TransformPointOriginal({ colMax.x * xMult, posY, posZ });
+        CVector       vel = backward * CGeneral::GetRandomNumberInRange(0.8f, 1.2f);
+        vel += m_matrix->GetRight() * CGeneral::GetRandomNumberInRange(0.3f, 0.7f);
+        vel += m_matrix->GetUp() * CGeneral::GetRandomNumberInRange(0.8f, 1.2f);
+        vel *= velScale;
+        g_fx.m_BoatSplash->AddParticle(pos, vel, 0.0f, particleData);
+    }
 }
 
 // 0x6DD6F0
@@ -5018,7 +5049,55 @@ void CVehicle::DoFixedMachineGuns() {
 
 // 0x73DF00
 void CVehicle::FireFixedMachineGuns() {
-    plugin::CallMethod<0x73DF00, CVehicle*>(this);
+    const auto now = CTimer::GetTimeInMS();
+    if (now <= m_nGunFiringTime + 150u) {
+        return;
+    }
+
+    const auto& fwd = m_matrix->GetForward();
+    double len = std::sqrt((double)fwd.y * fwd.y + (double)fwd.x * fwd.x);
+    if (0.1f > len) {
+        len = 0.1f;
+    }
+    const double invLen = 1.0 / len;
+
+    m_nGunFiringTime = now;
+
+    // Offset of the end point along the (2D-normalised) forward direction
+    const float offX = (float)(invLen * fwd.x);
+    const float offY = (float)(invLen * fwd.y);
+
+    // Fires from one gun at `localPos`
+    const auto FireFromGun = [&](CVector localPos, float scaledOffX, float scaledOffY) {
+        CVector start = m_matrix->TransformPoint(localPos); // 0x59C890
+        CVector       end{ scaledOffX + start.x, scaledOffY + start.y, start.z };
+
+        const auto r1 = rand();
+        const auto r2 = rand();
+        const float jitterX = (float)(int32)((r2 & 0xFF) - 0x80) * 0.015f;
+        const float jitterY = (float)(int32)((r1 & 0xFF) - 0x80) * 0.015f;
+        const auto  r3 = rand();
+        const double jitterZ = (double)(int32)((r3 & 0xFF) - 0x80) * 0.02f;
+
+        end.x = jitterX + end.x;
+        end.y = end.y + jitterY;
+        end.z = (float)(end.z + jitterZ);
+
+        CWeapon::DoTankDoomAiming(this, m_pDriver, &start, &end); // 0x73D1E0
+        FireOneInstantHitRound(start, end, 15); // 0x73AF00
+    };
+
+    const float scaledOffX = (float)(offX * 60.f);
+    const float scaledOffY = (float)(offY * 60.f);
+    FireFromGun({  2.f, 2.5f, 1.f }, scaledOffX, scaledOffY);
+    FireFromGun({ -2.f, 2.5f, 1.f }, scaledOffX, scaledOffY);
+
+    AudioEngine.ReportWeaponEvent(AE_WEAPON_FIRE_PLANE, WEAPON_M4, this); // 0x506F40
+
+    if (--m_nAmmoInClip == 0) {
+        m_nAmmoInClip    = 20;
+        m_nGunFiringTime = CTimer::GetTimeInMS() + 1400;
+    }
 }
 
 // 0x741FD0

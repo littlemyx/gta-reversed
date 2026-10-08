@@ -19,6 +19,10 @@
 #include "Ragdoll/IKChainManager.h"
 #include "GameLogic.h"
 #include "Collision/Collision.h"
+#include "Entity/Vehicle/Automobile.h"
+#include "Entity/Vehicle/Bike.h"
+#include "Entity/Vehicle/Plane.h"
+#include "Tasks/TaskTypes/TaskComplexProstituteSolicit.h"
 
 auto& gbFirstPersonRunThisFrame = StaticRef<bool>(0xB6EC20);
 auto& gLastFrameProcessedDWCineyCam = StaticRef<uint32>(0x8CCB9C);
@@ -330,7 +334,7 @@ void CCam::InjectHooks() {
     RH_ScopedInstall(Process_Editor, 0x50F3F0);
     RH_ScopedInstall(Process_Fixed, 0x51D470);
     RH_ScopedInstall(Process_FlyBy, 0x5B25F0, { .Reversed = false });
-    RH_ScopedInstall(Process_FollowCar_SA, 0x5245B0, { .Reversed = false });
+    RH_ScopedInstall(Process_FollowCar_SA, 0x5245B0);
     RH_ScopedInstall(Process_FollowPedWithMouse, 0x50F970);
     RH_ScopedInstall(Process_FollowPed_SA, 0x522D40);
     RH_ScopedInstall(Process_M16_1stPerson, 0x5105C0, { .Reversed = false });
@@ -3504,10 +3508,682 @@ void CCam::Process_FlyBy(const CVector& target, float orientation, float speedVa
     plugin::CallMethod<0x5B25F0, CCam*, const CVector*, float, float, float>(this, &target, orientation, speedVar, speedVarWanted);
 }
 
+namespace {
+//! Tuning of `CCam::Process_FollowCar_SA` for one "camera vehicle type" (see `GetFollowCarCamType`), 7 of them at 0x8CC600 (names made up)
+struct FollowCarCamSettings {
+    float heightMul;         // 0x00: Multiplier of the vehicle's height
+    float minDistOffset;     // 0x04: Added to the zoom
+    float heightSub;         // 0x08: Subtracted from the scaled height
+    float maxDistMul;        // 0x0C: Multiplier of the (tweaked) vehicle size to get the max distance
+    float minDistLimit;      // 0x10: Lower limit of the distance the camera starts at after a reset
+    float alphaSmoothBase;   // 0x14: Base of the `pow(base, timestep)` that smooths the vertical angle
+    float alphaStepLimitMul; // 0x18: Timestep multiplier => max vertical angle step
+    float field_1C;          // 0x1C: Unused
+    float betaSmoothBase;    // 0x20: Base of the `pow(base, timestep)` that smooths the horizontal angle (and both speeds)
+    float betaSpeedLimit;    // 0x24: Max speed of the horizontal (and, with a bit of fantasy, the vertical) angle
+    float betaCatchUpMul;    // 0x28: Timestep multiplier => how fast the horizontal angle follows the vehicle's direction
+    float betaStepLimitMul;  // 0x2C: Timestep multiplier => max horizontal angle step
+    float inputMul;          // 0x30: Multiplier of the (stick/mouse) input
+    float maxAlpha;          // 0x34: Max vertical angle
+    float minAlpha;          // 0x38: Min vertical angle (negated)
+};
+VALIDATE_SIZE(FollowCarCamSettings, 0x3C);
+
+auto& gFollowCarCamSettings = StaticRef<std::array<FollowCarCamSettings, 7>>(0x8CC600);
+auto& gFollowCarZoomAngle   = StaticRef<std::array<std::array<float, 5>, 3>>(0x8CC41C); // [zoom][arrPos], see `CCamera::GetArrPosForVehicleType`
+
+// NOTE: These two are the car zoom (the 1..3 "view distance" setting) and the smoothed car zoom of `TheCamera`.
+//       The names of `CCamera::m_nCarZoom` and co. don't seem to line up with these addresses, so the originals are used directly.
+auto& gCarZoom         = StaticRef<int32>(0xB6F0DC);
+auto& gCarZoomSmoothed = StaticRef<float>(0xB6F0E8);
+
+auto& gFollowCarTrailerBlend = StaticRef<float>(0xB7011C); // [0, 1]: Blend factor between the vehicle (alone) and the vehicle + trailer/passenger (names made up)
+auto& gFollowCarMouseTimer   = StaticRef<float>(0xB70118); // Set to 50 when the mouse is moved, counts down while it's idle
+auto& gbFollowCarAlphaReset  = StaticRef<bool>(0xB70114);  // Set once the vertical angle has been reset for a (special) vehicle
+auto& gFollowCarPrevAlpha    = StaticRef<float>(0x8CCEB0);
+auto& gFollowCarPrevBeta     = StaticRef<float>(0x8CCEA8);
+auto& gbCamUnk_B6F999        = StaticRef<bool>(0xB6F999);  // Set to true when the camera is reset, purpose unknown
+auto& gbCamUnk_9655E5        = StaticRef<bool>(0x9655E5);  // Set to true when the followed vehicle is "big" (read by the camera collision code?), purpose unknown
+
+// 0x420800 (see `RopeMax` in Rope.cpp)
+float FollowCarMax(float a, float b) {
+    return a > b ? a : b; // NOTE: NaN => `b`
+}
+
+// 0x50A0A0 - Rounds `value` to `decimals` decimal places (half away from zero)
+float RoundToDecimals(float value, int32 decimals) {
+    double t = std::pow(10.0, (double)(decimals + 1)) * (double)value;
+    t += value < 0.0f ? -5.0 : 5.0;
+    double integral;
+    std::modf(t * (double)0.1f, &integral);
+    return (float)(integral / std::pow(10.0, (double)decimals));
+}
+
+// Index into `gFollowCarCamSettings` (the "camera vehicle type") of the vehicle
+uint32 GetFollowCarCamType(const CVehicle* veh) {
+    switch (veh->m_nModelIndex) {
+    case MODEL_RCBANDIT:
+    case MODEL_RCBARON:
+    case MODEL_RCTIGER:
+    case MODEL_RCCAM:
+        return 5;
+    case MODEL_RCRAIDER:
+    case MODEL_RCGOBLIN:
+        return 6;
+    }
+    if (veh->m_nVehicleType == VEHICLE_TYPE_BIKE || veh->m_nVehicleSubType == VEHICLE_TYPE_QUAD) {
+        return 1;
+    }
+    switch (veh->m_nVehicleSubType) {
+    case VEHICLE_TYPE_HELI:
+        return 2;
+    case VEHICLE_TYPE_PLANE:
+        if (veh->m_nModelIndex == MODEL_HYDRA && (int32)veh->AsAutomobile()->m_wMiscComponentAngle >= (int32)(int16)CPlane::HARRIER_NOZZLE_SWITCH_LIMIT) {
+            return 2;
+        }
+        return veh->m_nModelIndex == MODEL_VORTEX ? 0 : 3;
+    case VEHICLE_TYPE_BOAT:
+        return 4;
+    }
+    return 0;
+}
+} // namespace
+
 // 0x5245B0
 void CCam::Process_FollowCar_SA(const CVector& target, float orientation, float speedVar, float speedVarWanted, bool bFlag) {
-    // NOTSA: Not reversed yet, forwards to the original code (the hook is disabled, see `InjectHooks`)
-    plugin::CallMethod<0x5245B0, CCam*, const CVector*, float, float, float, bool>(this, &target, orientation, speedVar, speedVarWanted, bFlag);
+    if (!m_pCamTargetEntity->GetIsTypeVehicle()) {
+        return;
+    }
+    auto* const veh = m_pCamTargetEntity->AsVehicle();
+    const float ts  = CTimer::GetTimeStep();
+
+    CVector tgt = target; // The point the camera looks at (modified below)
+
+    auto* pad = CPad::GetPad(0);
+    if (veh->m_pDriver && veh->m_pDriver->m_nPedType == PED_TYPE_PLAYER2) {
+        pad = CPad::GetPad(1);
+    }
+
+    TheCamera.ApplyVehicleCameraTweaks(veh);
+
+    const uint32 camType = GetFollowCarCamType(veh);
+    const auto&  cfg     = gFollowCarCamSettings[camType];
+
+    float dist = gCarZoomSmoothed + cfg.minDistOffset; // The distance the camera wants to keep from the vehicle
+
+    int32 arrPos = 0;
+    TheCamera.GetArrPosForVehicleType(static_cast<eVehicleType>(veh->GetVehicleAppearance()), arrPos);
+
+    // Angle the camera is looking down by
+    float elevAngle = 0.0f;
+    if (veh->GetStatus() == STATUS_REMOTE_CONTROLLED) {
+        elevAngle = gFollowCarZoomAngle[1][arrPos];
+    } else if (gCarZoom == 1) {
+        elevAngle = gFollowCarZoomAngle[0][arrPos];
+    } else if (gCarZoom == 2) {
+        elevAngle = gFollowCarZoomAngle[1][arrPos];
+    } else if (gCarZoom == 3) {
+        elevAngle = gFollowCarZoomAngle[2][arrPos];
+    }
+
+    float heightZ  = veh->GetColModel()->GetBoundingBox().m_vecMax.z;
+    float colSize  = std::abs(veh->GetColModel()->GetBoundingBox().m_vecMin.y) * 2.0f;
+    auto& blend    = gFollowCarTrailerBlend;
+
+    if (auto* const trailer = veh->m_pVehicleBeingTowed) {
+        if (blend < 1.0f) {
+            const double v = (double)ts * 0.02f + (double)blend;
+            blend          = 1.0f < v ? 1.0f : (float)v;
+        }
+
+        const auto& vehBB     = veh->GetColModel()->GetBoundingBox();
+        const auto& trailerBB = trailer->GetColModel()->GetBoundingBox();
+        const double dx       = (double)trailerBB.m_vecMax.x - (double)vehBB.m_vecMin.x;
+        const double dy       = (double)trailerBB.m_vecMax.y - (double)vehBB.m_vecMin.y;
+        const double dz       = (double)trailerBB.m_vecMax.z - (double)vehBB.m_vecMin.z;
+        const double len      = std::sqrt(dz * dz + dy * dy + dx * dx);
+        colSize               = (float)(len * 0.5 * (double)blend + (double)colSize);
+
+        const float vehMaxZ = veh->GetColModel()->GetBoundingBox().m_vecMax.z;
+        const float maxZ    = heightZ > vehMaxZ ? heightZ : vehMaxZ;
+        heightZ             = (float)(((double)maxZ - (double)heightZ) * (double)blend + (double)heightZ);
+
+        // Move the target towards the trailer
+        const auto&  trailerPos = trailer->GetPosition();
+        const double f          = (double)blend * 0.5f;
+        const float  gx         = (float)(f * trailerPos.x);
+        const float  gy         = (float)(f * trailerPos.y);
+        const double gz         = f * trailerPos.z;
+        const double w          = 1.0 - f;
+        const float  ty         = (float)(w * tgt.y);
+        const float  tz         = (float)(w * tgt.z);
+        tgt.x                   = (float)((double)tgt.x * w + (double)gx);
+        tgt.y                   = (float)((double)ty + (double)gy);
+        tgt.z                   = (float)((double)tz + gz);
+    } else if (veh->m_nVehicleSubType == VEHICLE_TYPE_BIKE || veh->m_nVehicleSubType == VEHICLE_TYPE_QUAD) {
+        if (veh->m_apPassengers[0]) {
+            if (blend < 1.0f) {
+                const double v = (double)ts * 0.02f + (double)blend;
+                blend          = 1.0f < v ? 1.0f : (float)v;
+            }
+        } else if (blend > 0.0f) {
+            const double v = (double)blend - (double)ts * 0.02f;
+            blend          = 0.0f <= v ? (float)v : 0.0f;
+        }
+        heightZ = (float)(0.4f * (double)blend + (double)heightZ);
+    } else {
+        blend = 0.0f;
+    }
+
+    const double tweakSize = (double)TheCamera.m_fCurrentTweakDistance * (double)colSize;
+    dist                   = (float)((double)dist + tweakSize);
+    float maxDist          = (float)(tweakSize * cfg.maxDistMul);
+
+    if (veh->GetVehicleAppearance() == VEHICLE_APPEARANCE_HELI && veh->GetStatus() != STATUS_REMOTE_CONTROLLED) {
+        const auto&  up = veh->GetMatrix().GetUp();
+        const double k  = 0.6f;
+        const float  ax = (float)(k * (double)up.x * (double)heightZ);
+        const double ay = k * (double)up.y * (double)heightZ;
+        const float  az = (float)((double)(float)(k * (double)up.z) * (double)heightZ);
+        tgt.x           = (float)((double)ax + (double)tgt.x);
+        tgt.y           = (float)(ay + (double)tgt.y);
+        tgt.z           = (float)((double)TheCamera.m_fCurrentTweakAltitude * ((double)az + (double)tgt.z));
+    } else {
+        const float hAdj = (float)((double)heightZ * cfg.heightMul - cfg.heightSub);
+        double      z    = tgt.z;
+        if (hAdj > 0.0f) {
+            z += hAdj;
+            dist      = hAdj + dist;
+            elevAngle = (float)(0.3f / (double)dist * (double)hAdj + (double)elevAngle);
+        }
+        tgt.z = (float)((double)TheCamera.m_fCurrentTweakAltitude * z);
+    }
+
+    elevAngle = TheCamera.m_fCurrentTweakAngle + elevAngle;
+
+    // The closest the camera is allowed to be after a reset
+    float minDist;
+    {
+        double limit = cfg.minDistLimit;
+        if (gCarZoom == 1 && (camType == 0 || camType == 1)) {
+            limit *= 0.65f;
+        }
+        minDist = (double)dist > limit ? dist : (float)limit;
+    }
+
+    const bool bReset = m_bResetStatics;
+    m_fCaMaxDistance  = dist;
+    m_fCaMinDistance  = 3.5f;
+
+    if (!bReset) {
+        if (veh->m_nVehicleSubType == VEHICLE_TYPE_AUTOMOBILE || veh->m_nVehicleSubType == VEHICLE_TYPE_BIKE) {
+            const auto&  fwd   = veh->GetMatrix().GetForward();
+            const auto&  speed = veh->m_vecMoveSpeed;
+            const double dot   = (double)fwd.z * (double)speed.z + (double)fwd.y * (double)speed.y + (double)speed.x * (double)fwd.x;
+            if (dot > 0.4f) {
+                m_fFOV = (float)((dot - 0.4f) * (double)ts + (double)m_fFOV);
+            }
+        }
+        if (m_fFOV > 70.0f) {
+            const double p = std::pow((double)0.98f, (double)ts);
+            m_fFOV         = (float)(((double)m_fFOV - 70.0) * p + 70.0);
+        }
+        if (m_fFOV > 100.0f) {
+            m_fFOV = 100.0f;
+        } else if (m_fFOV < 70.0f) {
+            m_fFOV = 70.0f;
+        }
+    } else {
+        m_fFOV = 70.0f;
+    }
+
+    if (bReset || TheCamera.m_bCamDirectlyBehind || TheCamera.m_bCamDirectlyInFront) {
+        m_bResetStatics      = false;
+        m_bRotating          = false;
+        m_bCollisionChecksOn = true;
+        gbCamUnk_B6F999      = true;
+
+        if (!TheCamera.m_bJustCameOutOfGarage && !bFlag) {
+            m_fVerticalAngle = 0.0f;
+            const double heading = veh->m_matrix
+                ? std::atan2(-(double)veh->m_matrix->GetForward().x, (double)veh->m_matrix->GetForward().y)
+                : (double)veh->m_placement.m_fHeading;
+            m_fHorizontalAngle = (float)(heading - (double)HALF_PI);
+            if (TheCamera.m_bCamDirectlyInFront) {
+                m_fHorizontalAngle = (float)((heading - (double)HALF_PI) + (double)PI);
+            }
+        }
+
+        const double cosA = std::cos((double)m_fVerticalAngle);
+        m_fBetaSpeed      = 0.0f;
+        m_fAlphaSpeed     = 0.0f;
+        m_fDistance       = 1000.0f;
+        m_vecFront.x      = (float)-(std::cos((double)m_fHorizontalAngle) * cosA);
+        m_vecFront.y      = (float)-(std::sin((double)m_fHorizontalAngle) * cosA);
+        m_vecFront.z      = (float)std::sin((double)m_fVerticalAngle);
+
+        // `out = tgt - len * front`
+        const auto PlaceHistory = [&](CVector& out, float len) {
+            const double px = (double)len * (double)m_vecFront.x;
+            const double py = (double)len * (double)m_vecFront.y;
+            const float  pz = (float)((double)len * (double)m_vecFront.z);
+            out.x           = (float)((double)tgt.x - px);
+            out.y           = (float)((double)tgt.y - py);
+            out.z           = (float)((double)tgt.z - (double)pz);
+        };
+        PlaceHistory(m_avecTargetHistoryPos[0], minDist);
+        m_anTargetHistoryTime[0] = CTimer::m_snTimeInMilliseconds;
+        PlaceHistory(m_avecTargetHistoryPos[1], dist);
+        m_nCurrentHistoryPoints = 0;
+
+        if (!TheCamera.m_bJustCameOutOfGarage && !bFlag) {
+            m_fVerticalAngle = -elevAngle;
+        }
+    }
+
+    m_vecFront = tgt - m_avecTargetHistoryPos[0];
+    m_vecFront.Normalise();
+
+    float currDist; // Distance between the target and where the camera is (supposed to be)
+    {
+        const double dx = (double)tgt.x - (double)m_avecTargetHistoryPos[1].x;
+        const double dy = (double)tgt.y - (double)m_avecTargetHistoryPos[1].y;
+        const double dz = (double)tgt.z - (double)m_avecTargetHistoryPos[1].z;
+        currDist        = (float)std::sqrt(dx * dx + dz * dz + dy * dy);
+    }
+
+    // Horizontal angle behind the vehicle
+    double behindBeta = std::atan2(-(double)m_vecFront.x, (double)m_vecFront.y) - (double)HALF_PI;
+    if (behindBeta < (double)-PI) {
+        behindBeta += (double)(2.0f * PI);
+    }
+
+    const auto& moveSpeed = veh->m_vecMoveSpeed;
+
+    // Horizontal angle of the vehicle's movement
+    double moveBeta = behindBeta;
+    if (std::sqrt((double)moveSpeed.x * (double)moveSpeed.x + (double)moveSpeed.y * (double)moveSpeed.y) > 0.02f) {
+        moveBeta = std::atan2(-(double)moveSpeed.x, (double)moveSpeed.y) - (double)HALF_PI;
+    }
+    if (moveBeta <= behindBeta + (double)PI) {
+        if (moveBeta < behindBeta - (double)PI) {
+            moveBeta += (double)(2.0f * PI);
+        }
+    } else {
+        moveBeta -= (double)(2.0f * PI);
+    }
+
+    const double betaCatchUp    = (double)ts * cfg.betaCatchUpMul;
+    const float  betaStepLimit  = ts * cfg.betaStepLimitMul;
+    float        betaVel; // How fast the horizontal angle has to change to be at the wanted one
+    {
+        const double d = ((double)moveSpeed.z * (double)m_vecFront.z + (double)moveSpeed.y * (double)m_vecFront.y) + (double)moveSpeed.x * (double)m_vecFront.x;
+        const double rx = (double)moveSpeed.x - d * (double)m_vecFront.x;
+        const double ry = (double)moveSpeed.y - (double)(float)(d * (double)m_vecFront.y);
+        const double rz = (double)moveSpeed.z - (double)(float)(d * (double)m_vecFront.z);
+        const float  lateralSpeed = (float)std::sqrt(rz * rz + rx * rx + ry * ry);
+
+        double catchUp = betaCatchUp * (double)lateralSpeed;
+        if (1.0 < catchUp) {
+            catchUp = 1.0;
+        }
+        double step = (moveBeta - behindBeta) * catchUp;
+        if (step > (double)betaStepLimit) {
+            step = betaStepLimit;
+        } else if (step < (double)-betaStepLimit) {
+            step = -betaStepLimit;
+        }
+
+        double wantedBeta = behindBeta + step;
+        if (wantedBeta <= (double)m_fHorizontalAngle + (double)PI) {
+            if (wantedBeta < (double)m_fHorizontalAngle - (double)PI) {
+                wantedBeta += (double)(2.0f * PI);
+            }
+        } else {
+            wantedBeta -= (double)(2.0f * PI);
+        }
+        betaVel = (float)((wantedBeta - (double)m_fHorizontalAngle) / (double)(1.0f <= ts ? ts : 1.0f));
+    }
+
+    // Vertical angle at which the camera looks at the vehicle (at the moment)
+    float alphaTarget = (float)std::asin((double)std::clamp(m_vecFront.z, -1.0f, 1.0f));
+
+    if (currDist < dist && dist > maxDist) {
+        dist = maxDist <= currDist ? currDist : maxDist;
+    }
+
+    float maxAlpha = cfg.maxAlpha;
+    if ((double)moveSpeed.x * moveSpeed.x + (double)moveSpeed.y * moveSpeed.y + (double)moveSpeed.z * moveSpeed.z < 0.04f
+        && (veh->m_nVehicleType != VEHICLE_TYPE_BIKE || veh->AsBike()->m_nNoOfContactWheels >= 4)
+        && veh->m_nVehicleSubType != VEHICLE_TYPE_HELI
+        && (veh->m_nVehicleSubType != VEHICLE_TYPE_PLANE || veh->AsAutomobile()->m_nNumContactWheels != 0)) {
+        const auto& mat = veh->GetMatrix();
+        const auto  right = CrossProduct(mat.GetForward(), CVector{ 0.0f, 0.0f, 1.0f }).Normalized();
+        const auto  up    = CrossProduct(right, mat.GetForward()).Normalized();
+        if ((double)up.y * (double)m_vecFront.y + (double)up.z * (double)m_vecFront.z + (double)up.x * (double)m_vecFront.x > 0.0) {
+            const auto&  bb          = veh->GetColModel()->GetBoundingBox();
+            const double heightAbove = veh->GetHeightAboveRoad();
+            const auto&  pos         = veh->GetPosition();
+            const float  zRel        = (float)(((double)tgt.z - (double)pos.z) + heightAbove);
+
+            const double relBeta1 = (double)m_fHorizontalAngle - ((double)veh->GetHeading() - (double)HALF_PI);
+            const double phi      = std::asin(std::fabs(std::sin(relBeta1)));
+            const double thr      = std::atan2((double)bb.m_vecMax.x, -(double)bb.m_vecMin.y);
+            double       d1;
+            if (phi <= thr) {
+                d1 = (1.5f - (double)bb.m_vecMin.y) / std::cos(phi);
+            } else {
+                const float v   = (float)(1.2f + (double)bb.m_vecMax.x);
+                const float arg = (float)((double)HALF_PI - phi);
+                d1              = (double)v / std::cos((double)FollowCarMax(0.0f, arg));
+            }
+            const float d1f = (float)d1;
+
+            const double relBeta2 = (double)m_fHorizontalAngle - ((double)veh->GetHeading() - (double)HALF_PI);
+            const double pitch    = std::atan2((double)mat.GetForward().z, std::sqrt((double)mat.GetForward().x * (double)mat.GetForward().x + (double)mat.GetForward().y * (double)mat.GetForward().y));
+            const double p1       = pitch * std::cos(relBeta2);
+            maxAlpha              = (float)(std::atan2((double)zRel, (double)d1f * 1.2f) + p1);
+
+            if (veh->m_nVehicleType == VEHICLE_TYPE_AUTOMOBILE
+                && veh->AsAutomobile()->m_nNumContactWheels > 1
+                && std::fabs(DotProduct(veh->m_vecTurnSpeed, mat.GetForward())) < 0.05f) {
+                const double relBeta3 = ((double)m_fHorizontalAngle - ((double)veh->GetHeading() - (double)HALF_PI)) + (double)HALF_PI;
+                const double pitchR   = std::atan2((double)mat.GetRight().z, std::sqrt((double)mat.GetRight().y * (double)mat.GetRight().y + (double)mat.GetRight().x * (double)mat.GetRight().x));
+                maxAlpha              = (float)(pitchR * std::cos(relBeta3) + (double)maxAlpha);
+            }
+        }
+    }
+
+    alphaTarget = alphaTarget - elevAngle;
+    if (alphaTarget > maxAlpha) {
+        alphaTarget = maxAlpha;
+    } else if (alphaTarget < -cfg.minAlpha) {
+        alphaTarget = -cfg.minAlpha;
+    }
+
+    float alphaStepLimit = ts * cfg.alphaStepLimitMul;
+    float alphaStep; // How much the vertical angle will change
+    {
+        const double pw   = std::pow((double)cfg.alphaSmoothBase, (double)ts);
+        const double step = ((double)alphaTarget - (double)m_fVerticalAngle) * (1.0 - pw);
+        alphaStep         = (float)step;
+        if (step > (double)alphaStepLimit) {
+            alphaStep = alphaStepLimit;
+        } else if (alphaStep < -alphaStepLimit) {
+            alphaStep = -alphaStepLimit;
+        }
+    }
+
+    // Input
+    float inX = (float)(-(int32)pad->AimWeaponLeftRight(nullptr)); // Horizontal
+    float inY = CCamera::m_bUseMouse3rdPerson ? 0.0f : (float)(int32)pad->AimWeaponUpDown(nullptr); // Vertical
+    float yawIn, pitchIn;
+    {
+        const double fovScale = (double)m_fFOV * 0.0125000002f;
+        yawIn   = (float)(((std::fabs((double)inX) * (fovScale * 0.0714285746f)) * (double)inX) * 0.00700000022f * 0.00700000022f);
+        pitchIn = (float)(((std::fabs((double)inY) * (fovScale * 0.0428571440f)) * (double)inY) * 0.00700000022f * 0.00700000022f);
+    }
+
+    bool bSpecialModel = true;
+    switch (veh->m_nModelIndex) {
+    case MODEL_PACKER:
+    case MODEL_DOZER:
+    case MODEL_DUMPER:
+    case MODEL_CEMENT:
+    case MODEL_ANDROM:
+    case MODEL_HYDRA:
+    case MODEL_TOWTRUCK:
+    case MODEL_FORKLIFT:
+    case MODEL_TRACTOR:
+        pitchIn = 0.0f;
+        break;
+    default:
+        if (veh->m_nModelIndex == MODEL_RCTIGER || (veh->m_nVehicleType == VEHICLE_TYPE_AUTOMOBILE && veh->handlingFlags.bHydraulicInst)) {
+            yawIn   = 0.0f;
+            pitchIn = 0.0f;
+        } else {
+            bSpecialModel = false;
+        }
+        break;
+    }
+
+    if (gCameraDirection != 3) {
+        yawIn   = 0.0f;
+        pitchIn = 0.0f;
+    }
+
+    if (camType == 0) {
+        const int16 steeringUD = pad->GetSteeringUpDown();
+        if (std::fabs((double)steeringUD) > 120.0f && veh->m_pDriver) {
+            if (const auto* const task = veh->m_pDriver->GetIntelligence()->GetTaskManager().GetActiveTask(); task && task->GetTaskType() != TASK_COMPLEX_LEAVE_CAR) {
+                const double s = (double)steeringUD;
+                pitchIn        = (float)(((((std::fabs(s) * (((double)m_fFOV * 0.0125000002f) * 0.0428571440f)) * s) * 0.00700000022f) * 0.00700000022f) * 0.5 + (double)pitchIn);
+            }
+        }
+    }
+    if (pitchIn > 0.0f) {
+        pitchIn = pitchIn * 0.5f;
+    }
+
+    bool bMouse = false; // The mouse is used to control the camera
+    if (CCamera::m_bUseMouse3rdPerson && pad->DisablePlayerControls == 0) {
+        const float mouseY = CPad::NewMouseControllerState.m_AmountMoved.y + CPad::NewMouseControllerState.m_AmountMoved.y;
+        const float mouseX = CPad::NewMouseControllerState.m_AmountMoved.x * -2.0f;
+        const bool  bMouseControlsVehicle = (veh->m_nVehicleSubType == VEHICLE_TYPE_PLANE || veh->m_nVehicleSubType == VEHICLE_TYPE_HELI)
+            ? CVehicle::m_bEnableMouseFlying
+            : CVehicle::m_bEnableMouseSteering;
+
+        if ((mouseX == 0.0f && mouseY == 0.0f) || (pad->NewState.m_bVehicleMouseLook == 0 && bMouseControlsVehicle)) {
+            if (gFollowCarMouseTimer > 0.0f) {
+                m_fBetaSpeed          = 0.0f;
+                m_fAlphaSpeed         = 0.0f;
+                pitchIn               = 0.0f;
+                yawIn                 = 0.0f;
+                alphaTarget           = m_fVerticalAngle;
+                gFollowCarMouseTimer  = FollowCarMax(0.0f, gFollowCarMouseTimer - ts);
+                bMouse                = true;
+            }
+        } else {
+            const double fovScale = (double)m_fFOV * 0.0125000002f;
+            pitchIn               = (float)(((double)mouseY * fovScale) * (double)CCamera::m_fMouseAccelHorzntl);
+            yawIn                 = (float)(((double)mouseX * fovScale) * (double)CCamera::m_fMouseAccelHorzntl);
+            m_fBetaSpeed          = 0.0f;
+            m_fAlphaSpeed         = 0.0f;
+            alphaTarget           = m_fVerticalAngle;
+            gFollowCarMouseTimer  = 1.0f * 50.0f;
+            bMouse                = true;
+        }
+    }
+
+    // Look down when the passenger is a prostitute that is about to do her job
+    if (const auto* const passenger = veh->m_apPassengers[0]) {
+        if (const auto* const task = passenger->GetIntelligence()->GetTaskManager().GetActiveTask(); task && task->GetTaskType() == TASK_COMPLEX_PROSTITUTE_SOLICIT) {
+            if (static_cast<const CTaskComplexProstituteSolicit*>(task)->bMoveCameraDown) {
+                if ((double)maxAlpha - 0.1f <= (double)m_fVerticalAngle) {
+                    pitchIn = 0.0f;
+                } else {
+                    pitchIn = ts * 0.0035f;
+                }
+            }
+        }
+    }
+
+    if (bSpecialModel) {
+        bool bSetResetFlag = false;
+        if (gCameraMode == MODE_CAM_ON_A_STRING) {
+            bSetResetFlag = gbFollowCarAlphaReset;
+        } else {
+            gbFollowCarAlphaReset = false;
+        }
+        if (!bSetResetFlag) {
+            if (std::fabs((double)elevAngle + (double)m_fVerticalAngle) > 0.05f) {
+                pitchIn = (float)((-(double)elevAngle - (double)m_fVerticalAngle) * 0.05f);
+            } else {
+                bSetResetFlag = true;
+            }
+        }
+        if (bSetResetFlag) {
+            gbFollowCarAlphaReset = true;
+        }
+    }
+
+    pitchIn *= cfg.inputMul;
+    yawIn   *= cfg.inputMul;
+
+    const float pwBeta = (float)std::pow((double)cfg.betaSmoothBase, (double)ts);
+    const float speedLimit = cfg.betaSpeedLimit;
+    {
+        double v = (double)yawIn + (double)betaVel;
+        if (v > (double)speedLimit) {
+            v = speedLimit;
+        } else if (v < (double)-speedLimit) {
+            v = -speedLimit;
+        }
+        const double oneMinusPw = 1.0 - (double)pwBeta;
+        const double betaSpeed  = v * oneMinusPw + (double)pwBeta * (double)m_fBetaSpeed;
+        m_fBetaSpeed            = (float)betaSpeed;
+        if (std::fabs(betaSpeed) < 0.0001f) {
+            m_fBetaSpeed = 0.0f;
+        }
+    }
+    const float oneMinusPwBeta = (float)(1.0 - (double)pwBeta);
+
+    m_fHorizontalAngle = (float)((bMouse ? (double)yawIn : (double)ts * (double)m_fBetaSpeed) + (double)m_fHorizontalAngle);
+
+    if (TheCamera.m_bJustCameOutOfGarage) {
+        m_fHorizontalAngle = (float)((double)CGeneral::GetATanOfXY(m_vecFront.x, m_vecFront.y) + (double)PI);
+    }
+    ClipBeta();
+
+    if (camType <= 1 && alphaTarget < m_fVerticalAngle && !(currDist < dist)) {
+        int32 numContactWheels;
+        if (veh->m_nVehicleType == VEHICLE_TYPE_AUTOMOBILE) {
+            numContactWheels = veh->AsAutomobile()->m_nNumContactWheels;
+        } else if (veh->m_nVehicleType == VEHICLE_TYPE_BIKE) {
+            numContactWheels = veh->AsBike()->m_nNoOfContactWheels;
+        } else {
+            numContactWheels = 0;
+        }
+        if (numContactWheels > 1) {
+            pitchIn = (float)(((double)alphaTarget - (double)m_fVerticalAngle) * 0.075f + (double)pitchIn);
+        }
+    }
+
+    {
+        const double limit = pitchIn > 0.0f ? (double)speedLimit * 0.5 : (double)speedLimit;
+        const float  t     = (float)((double)oneMinusPwBeta * (double)pitchIn + (double)pwBeta * (double)m_fAlphaSpeed);
+        m_fAlphaSpeed      = t;
+        if ((double)t > limit) {
+            m_fAlphaSpeed = (float)limit;
+        } else if ((double)t < -limit) {
+            m_fAlphaSpeed = (float)-limit;
+        }
+    }
+    if (std::fabs(m_fAlphaSpeed) < 0.0001f) {
+        m_fAlphaSpeed = 0.0f;
+    }
+
+    float alphaDelta;
+    if (bMouse) {
+        alphaTarget = pitchIn + alphaTarget;
+        alphaDelta  = pitchIn;
+    } else {
+        alphaTarget = (float)((double)ts * (double)m_fAlphaSpeed + (double)alphaTarget);
+        alphaDelta  = alphaStep;
+    }
+    m_fVerticalAngle = alphaDelta + m_fVerticalAngle;
+
+    if (m_fVerticalAngle > maxAlpha) {
+        m_fVerticalAngle = maxAlpha;
+        m_fAlphaSpeed    = 0.0f;
+    } else if (m_fVerticalAngle < -cfg.minAlpha) {
+        m_fVerticalAngle = -cfg.minAlpha;
+        m_fAlphaSpeed    = 0.0f;
+    }
+
+    // Get rid of tiny changes
+    if (std::fabs((double)gFollowCarPrevAlpha - (double)m_fVerticalAngle) < 0.0001f) {
+        m_fVerticalAngle = gFollowCarPrevAlpha;
+    }
+    gFollowCarPrevAlpha = m_fVerticalAngle;
+    if (std::fabs((double)gFollowCarPrevBeta - (double)m_fHorizontalAngle) < 0.0001f) {
+        m_fHorizontalAngle = gFollowCarPrevBeta;
+    }
+    gFollowCarPrevBeta = m_fHorizontalAngle;
+
+    {
+        const double cosA = std::cos((double)m_fVerticalAngle);
+        m_vecFront.x      = (float)-(std::cos((double)m_fHorizontalAngle) * cosA);
+        m_vecFront.y      = (float)-(std::sin((double)m_fHorizontalAngle) * cosA);
+        m_vecFront.z      = (float)std::sin((double)m_fVerticalAngle);
+    }
+
+    // NOTE: This rounds the *previous* source, it's overwritten below
+    m_vecSource.x = RoundToDecimals(m_vecSource.x, 4);
+    m_vecSource.y = RoundToDecimals(m_vecSource.y, 4);
+    m_vecSource.z = RoundToDecimals(m_vecSource.z, 4);
+    GetVectorsReadyForRW();
+    TheCamera.m_bCamDirectlyBehind  = false;
+    TheCamera.m_bCamDirectlyInFront = false;
+
+    {
+        const double px = (double)dist * (double)m_vecFront.x;
+        const double py = (double)dist * (double)m_vecFront.y;
+        const float  pz = (float)((double)dist * (double)m_vecFront.z);
+        m_vecSource.x   = (float)((double)tgt.x - px);
+        m_vecSource.y   = (float)((double)tgt.y - py);
+        m_vecSource.z   = (float)((double)tgt.z - (double)pz);
+    }
+
+    alphaTarget = alphaTarget + elevAngle;
+
+    m_vecTargetCoorsForFudgeInter = tgt;
+    m_avecTargetHistoryPos[2]     = m_avecTargetHistoryPos[0];
+
+    {
+        const float  cosA = (float)std::cos((double)alphaTarget);
+        const double ux   = -(std::cos((double)m_fHorizontalAngle) * (double)cosA);
+        const double uy   = -(std::sin((double)m_fHorizontalAngle) * (double)cosA);
+        const double sinA = std::sin((double)alphaTarget);
+        const float  uxf  = (float)ux;
+        const float  sinAf = (float)sinA;
+
+        // Where the camera is at its closest
+        m_avecTargetHistoryPos[0].x = (float)((double)tgt.x - (double)(float)((double)uxf * (double)minDist));
+        m_avecTargetHistoryPos[0].y = (float)((double)tgt.y - (double)(float)(uy * (double)minDist));
+        m_avecTargetHistoryPos[0].z = (float)((double)tgt.z - sinA * (double)minDist);
+
+        // Where the camera is supposed to be
+        m_avecTargetHistoryPos[1].x = (float)((double)tgt.x - (double)(float)((double)uxf * (double)dist));
+        m_avecTargetHistoryPos[1].y = (float)((double)tgt.y - (double)(float)(uy * (double)dist));
+        m_avecTargetHistoryPos[1].z = (float)((double)tgt.z - (double)sinAf * (double)dist);
+    }
+
+    CCamera::SetColVarsVehicle(static_cast<eVehicleType>(camType), gCarZoom);
+
+    if (gCameraDirection == 3) {
+        CWorld::pIgnoreEntity           = veh;
+        TheCamera.m_nExtraEntitiesCount = 0;
+        TheCamera.CameraVehicleModeSpecialCases(veh);
+        if (veh->vehicleFlags.bIsBig) {
+            gbCamUnk_9655E5 = true;
+        }
+        TheCamera.CameraColDetAndReact(&m_vecSource, &tgt);
+        TheCamera.ImproveNearClip(veh, nullptr, &m_vecSource, &tgt);
+        CWorld::pIgnoreEntity = nullptr;
+        m_vecSource.x         = RoundToDecimals(m_vecSource.x, 4);
+        m_vecSource.y         = RoundToDecimals(m_vecSource.y, 4);
+        m_vecSource.z         = RoundToDecimals(m_vecSource.z, 4);
+    }
+
+    TheCamera.m_bCamDirectlyBehind  = false;
+    TheCamera.m_bCamDirectlyInFront = false;
+    m_vecSource.x                   = RoundToDecimals(m_vecSource.x, 4);
+    m_vecSource.y                   = RoundToDecimals(m_vecSource.y, 4);
+    m_vecSource.z                   = RoundToDecimals(m_vecSource.z, 4);
+    GetVectorsReadyForRW();
+
+    gCamFollowCarLookAt = tgt;
 }
 
 // 0x50F970

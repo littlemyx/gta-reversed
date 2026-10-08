@@ -21,6 +21,10 @@
 #include "PedModelInfo.h"
 #include "VisibilityPlugins.h"
 #include "Streaming.h"
+#include "EventGunAimedAt.h"
+#include "EventGroupEvent.h"
+#include "PedGroups.h"
+#include "TaskManager.h"
 
 bool CPlayerPed::bDebugPlayerInvincible;
 bool CPlayerPed::bDebugTargeting;
@@ -72,6 +76,7 @@ void CPlayerPed::InjectHooks() {
     RH_ScopedInstall(HandlePlayerBreath, 0x60A8D0);
     RH_ScopedOverloadedInstall(MakeChangesForNewWeapon, "", 0x60B460, void(CPlayerPed::*)(eWeaponType));
     RH_ScopedGlobalInstall(LOSBlockedBetweenPeds, 0x60B550);
+    RH_ScopedInstall(Compute3rdPersonMouseTarget, 0x60B650);
     RH_ScopedInstall(DoesTargetHaveToBeBroken, 0x60C0C0);
     RH_ScopedInstall(SetPlayerMoveBlendRatio, 0x60C520);
     RH_ScopedInstall(FindPedToAttack, 0x60C5F0);
@@ -1234,7 +1239,106 @@ bool LOSBlockedBetweenPeds(CEntity* entity1, CEntity* entity2) {
 
 // 0x60B650
 void CPlayerPed::Compute3rdPersonMouseTarget(bool meleeWeapon) {
-    plugin::CallMethod<0x60B650, CPlayerPed *, bool>(this, meleeWeapon);
+    CPed* target = nullptr;
+
+    if (CCamera::m_bUseMouse3rdPerson) {
+        const auto* const wi = CWeaponInfo::GetWeaponInfo(GetActiveWeapon().m_Type, GetWeaponSkill());
+        const float       range = wi->m_fTargetRange;
+        const CVector     pos = GetPosition();
+
+        CVector source; // Start of the line
+        CVector dest;   // End of the line
+        if (meleeWeapon) {
+            TheCamera.Find3rdPersonCamTargetVector(range, pos, source, dest);
+        } else {
+            const auto& cam = TheCamera.GetActiveCam();
+            source = cam.m_vecSource;
+            dest   = cam.m_vecFront;
+
+            // NOTE: The original keeps all of the intermediate values in x87 registers (extended precision)
+            const double dx = (double)source.x - (double)pos.x;
+            const double dy = (double)source.y - (double)pos.y;
+            const double dz = (double)source.z - (double)pos.z;
+
+            // Distance of the camera in front of the ped (along the camera's direction)
+            const double d = ((double)dest.y * dy + (double)dest.z * dz) + dx * (double)dest.x;
+            if (d < 0.0) {
+                // Move the source to the plane of the ped
+                const double ax = d * (double)dest.x;
+                const double ay = (double)dest.y * d;
+                const double az = (double)dest.z * d;
+                source.x = (float)((double)source.x - ax);
+                source.y = (float)((double)source.y - ay);
+                source.z = (float)((double)source.z - az);
+            }
+
+            const double fx = (double)dest.x * (double)range;
+            const double fy = (double)dest.y * (double)range;
+            const float  fz = (float)((double)dest.z * (double)range); // This one is stored to memory before use
+            dest.x = (float)((double)source.x + fx);
+            dest.y = (float)(fy + (double)source.y);
+            dest.z = (float)((double)fz + (double)source.z);
+        }
+
+        CColPoint colPoint;
+        CEntity*  hitEntity = nullptr;
+        CWorld::pIgnoreEntity  = this;
+        CWorld::bIncludeBikers = true;
+        if (CWorld::ProcessLineOfSight(source, dest, colPoint, hitEntity, false, false, true, false, false, false, false, false)) {
+            if (hitEntity != this && hitEntity->AsPed()->IsAlive()) {
+                target = hitEntity->AsPed();
+            }
+        }
+        CWorld::ResetLineTestOptions();
+
+        if (target) {
+            if (target != m_p3rdPersonMouseTarget) {
+                CEntity::ChangeEntityReference(m_p3rdPersonMouseTarget, target);
+            }
+            field_7A0 = CTimer::GetTimeInMS() + 1000;
+
+            if (CWeaponInfo::GetWeaponInfo(GetActiveWeapon().m_Type, eWeaponSkill::STD)->m_nWeaponFire == WEAPON_FIRE_MELEE) {
+                return;
+            }
+            if (!(CWeaponInfo::GetWeaponInfo(GetActiveWeapon().m_Type, GetWeaponSkill())->m_nFlags & 1)) { // bCanAim
+                return;
+            }
+            if (!target->GetIntelligence()->IsInSeeingRange(GetPosition())) {
+                return;
+            }
+
+            // Don't annoy peds that are already reacting to someone aiming at them
+            {
+                auto& tasks = target->GetIntelligence()->GetTaskManager().m_aPrimaryTasks;
+                CTask* const task = tasks[0] ? tasks[0] : (tasks[1] ? tasks[1] : tasks[2]);
+                if (task && task->GetTaskType() == TASK_COMPLEX_REACT_TO_GUN_AIMED_AT) {
+                    return;
+                }
+            }
+
+            if (GetActiveWeapon().m_Type != WEAPON_PISTOL_SILENCED) {
+                static_assert(CTX_GLOBAL_PULL_GUN == 0xB0);
+                Say(CTX_GLOBAL_PULL_GUN, 0, 1.f, false, false, false);
+            }
+
+            if (auto* const group = CPedGroups::GetPedsGroup(target)) { // 0x60B97D
+                if (CPedGroups::AreInSameGroup(target, this)) {
+                    return;
+                }
+                CEventGroupEvent groupEvent{ target, new CEventGunAimedAt(this) };
+                group->GetIntelligence().AddEvent(&groupEvent);
+            } else {
+                CEventGunAimedAt event{ this };
+                target->GetIntelligence()->GetEventGroup().Add(&event, false);
+            }
+            return;
+        }
+    }
+
+    // BUG?: Clears the pointer without unregistering the reference
+    if (m_p3rdPersonMouseTarget && (uint32)field_7A0 < CTimer::GetTimeInMS()) {
+        m_p3rdPersonMouseTarget = nullptr;
+    }
 }
 
 // 0x60BA80

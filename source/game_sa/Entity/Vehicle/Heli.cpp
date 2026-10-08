@@ -9,6 +9,9 @@
 #include "WindModifiers.h"
 #include "Shadows.h"
 #include "CarCtrl.h"
+#include "CullZones.h"
+#include "InterestingEvents.h"
+#include "Ropes.h"
 #include "FireManager.h"
 
 void CHeli::InjectHooks() {
@@ -30,6 +33,7 @@ void CHeli::InjectHooks() {
     RH_ScopedVMTInstall(ProcessFlyingCarStuff, 0x6C4E60);
     RH_ScopedVMTInstall(PreRender, 0x6C5420);
     RH_ScopedVMTInstall(BlowUpCar, 0x6C6D30);
+    RH_ScopedVMTInstall(ProcessControl, 0x6C7050);
 }
 
 // 0x6C4190
@@ -764,5 +768,243 @@ void CHeli::PreRender() {
 
 // 0x6C7050
 void CHeli::ProcessControl() {
-    plugin::CallMethod<0x6C7050, CHeli*>(this);
+    CAutomobile::ProcessControl(); // 0x6B1880
+
+    if (!vehicleFlags.bEngineOn && m_pDustParticle) {
+        m_pDustParticle->Kill();
+        m_pDustParticle       = nullptr;
+        m_heliDustFxTimeConst = 0.0f;
+    }
+
+    // 0x6C7085 - Toggle the search light
+    if (CPad::GetPad(m_pDriver && m_pDriver->m_nPedType == PED_TYPE_PLAYER2 ? 1 : 0)->HornJustDown()) {
+        m_bSearchLightEnabled = !m_bSearchLightEnabled;
+    }
+
+    bool     searchLightOn = false; // 0x6C70C7
+    bool     shootAtTarget = false;
+    CEntity* target        = nullptr;
+
+    if (physicalFlags.bRenderScorched || CCullZones::PlayerNoRain()) {
+        m_fSearchLightIntensity = 0.0f; // 0x6C77E6
+    } else {
+        if (   m_autoPilot.m_nCarMission == MISSION_HELI_POLICE_BEHAVIOUR
+            && (   !FindPlayerVehicle()
+                || (FindPlayerVehicle()->m_nVehicleSubType != VEHICLE_TYPE_HELI && FindPlayerVehicle()->m_nVehicleSubType != VEHICLE_TYPE_PLANE)
+            )
+        ) {
+            searchLightOn = true;
+            shootAtTarget = true;
+            target        = FindPlayerEntity();
+        } else if (m_autoPilot.m_nCarMission == MISSION_HELI_FOLLOW_ENTITY && m_autoPilot.m_TargetEntity && (m_nHeliFlags & 2)) {
+            searchLightOn = true;
+            target        = m_autoPilot.m_TargetEntity;
+        } else if (GetStatus() == STATUS_PLAYER && m_nModelIndex == MODEL_POLMAV && m_bSearchLightEnabled) {
+            searchLightOn = true;
+        }
+
+        if (physicalFlags.bSubmergedInWater) { // 0x6C7195
+            searchLightOn = false;
+            shootAtTarget = false;
+        }
+
+        m_bSearchLightEnabled = searchLightOn;
+
+        if (searchLightOn) { // 0x6C71AB
+            // Position and speed of whatever the light is following
+            CVector targetPos;
+            CVector targetVel;
+            if (target) {
+                targetPos = target->GetPosition();
+                targetVel = static_cast<CPhysical*>(target)->m_vecMoveSpeed;
+            } else {
+                // Look at the ground in front of the heli
+                const auto up = GetUpVector(); // 0x50E420
+                const CVector offset{ up.x * -30.0f, up.y * -30.0f, up.z * -30.0f }; // 0x859CE4
+
+                const auto  fwd = GetForwardVector(); // 0x41CCB0
+                const auto& pos = GetPosition();
+                targetPos.x = (float)((double)fwd.x * 10.0 + (double)pos.x + (double)offset.x); // 0x85862C
+                targetPos.y = (float)((double)(float)(fwd.y * 10.0f) + (double)pos.y + (double)offset.y);
+                targetPos.z = (float)((double)(float)((float)(fwd.z * 10.0f) + pos.z) + (double)offset.z);
+                targetVel   = m_vecMoveSpeed;
+            }
+
+            // 0x6C72AE - Record the (predicted) target position once per second
+            const uint32 now = CTimer::GetTimeInMS();
+            int32        timeSinceLastRecord = (int32)(now - m_nSearchLightTimer);
+            if (timeSinceLastRecord > 1000) {
+                const double fx = (double)targetVel.x * 100.0; // 0x858628
+                const double fy = (double)targetVel.y * 100.0;
+
+                int32 numRecords = (int32)((uint32)(timeSinceLastRecord - 1001) / 1000u) + 1;
+                timeSinceLastRecord -= numRecords * 1000;
+                do {
+                    for (auto i = (int32)m_aSearchLightHistoryX.size() - 1; i > 0; i--) {
+                        m_aSearchLightHistoryX[i] = m_aSearchLightHistoryX[i - 1];
+                        m_aSearchLightHistoryY[i] = m_aSearchLightHistoryY[i - 1];
+                    }
+                    m_nSearchLightTimer += 1000;
+                    m_aSearchLightHistoryX[0] = (float)(fx + (double)targetPos.x);
+                    m_aSearchLightHistoryY[0] = (float)((double)targetPos.y + fy);
+                } while (--numRecords != 0);
+            }
+
+            // 0x6C7352 - Interpolate between the recorded positions
+            const double blend    = (double)timeSinceLastRecord * (double)0.001f; // 0x858CDC
+            const double blendInv = 1.0 - blend;
+            m_vecSearchLightTarget.z = targetPos.z;
+            const float  curX = (float)(blend * m_aSearchLightHistoryX[1] + blendInv * m_aSearchLightHistoryX[2]);
+            m_vecSearchLightTarget.x = curX;
+            const double curY = blend * m_aSearchLightHistoryY[1] + blendInv * m_aSearchLightHistoryY[2];
+            m_vecSearchLightTarget.y = (float)curY;
+
+            // 0x6C73A8 - Light intensity falls off with the distance
+            {
+                const auto& pos = GetPosition();
+                const double dy   = curY - (double)pos.y;
+                const double dx   = (double)curX - (double)pos.x; // Not rounded to float on the x87 stack
+                const double dist = std::sqrt(dy * dy + dx * dx);
+                if (dist > (double)60.0f) { // 0x858B34
+                    m_fSearchLightIntensity = 0.0f;
+                } else {
+                    const float distF = (float)dist;
+                    if (distF < 40.0f) { // 0x858A10
+                        m_fSearchLightIntensity = 1.0f;
+                    } else {
+                        m_fSearchLightIntensity = (float)(1.0 - ((double)distF - (double)40.0f) * (double)0.05f); // 0x858C28
+                    }
+                }
+            }
+
+            const float  dxToTarget = (float)((double)targetPos.x - (double)curX);
+            const double dyToTarget = (double)targetPos.y - curY;
+            if (m_fSearchLightIntensity < 0.9f || dyToTarget * dyToTarget + (double)dxToTarget * dxToTarget > 49.0) { // 0x858C20, 0x8717C4
+                m_nShootTimer             = now;
+                m_nTimeForMinigunFiring   = now;
+            } else if (now > m_nPoliceShoutTimer) {
+                m_nPoliceShoutTimer = (uint32)(rand() & 0xFFF) + 4500 + now;
+            }
+
+            // 0x6C74B7 - Police heli shooting at the target
+            if (shootAtTarget) {
+                int32 interval;
+                switch ((uint32)FindPlayerPed()->GetPlayerWanted()->m_WantedLevel) { // 0x6C74E5
+                case 0:
+                case 1:
+                case 2: interval = 999999; break;
+                case 3: interval = 10000; break;
+                case 4: interval = 5000; break;
+                case 5: interval = 3500; break;
+                case 6: interval = 2000; break;
+                default: interval = std::bit_cast<int32>(dxToTarget); break; // NOTSA: The original uses a leftover stack value here (can't happen, max wanted level is 6)
+                }
+
+                if (FindPlayerPed()->GetPlayerWanted()->m_WantedLevel != eWantedLevel::WANTED_CLEAN) {
+                    AudioEngine.SayPedless(AE_SPEECH_PED, CTX_GLOBAL_POLICE_HELICOPTER, this, 0, 1.0f, false, false, false); // 0x6C7547
+                }
+
+                if (CCullZones::NoPolice()) {
+                    interval /= 2;
+                }
+
+                if (target != FindPlayerPed()) {
+                    interval = 5000;
+                }
+
+                if (FindPlayerWanted()->PoliceBackOff()) { // 0x6C7585
+                    m_nShootTimer           = CTimer::GetTimeInMS();
+                    m_nTimeForMinigunFiring = CTimer::GetTimeInMS();
+                } else {
+                    const auto origin = GetMatrix().TransformPoint({ 0.0f, 3.5f, -1.0f }); // 0x59C890
+
+                    const uint32 shootTime = m_nShootTimer + (uint32)interval;
+                    if (CTimer::GetTimeInMS() > shootTime && CTimer::GetPreviousTimeInMS() <= shootTime) {
+                        if (!CWorld::GetIsLineOfSightClear(origin, targetPos, true, false, false, false, false, false, false)) {
+                            m_nShootTimer           = CTimer::GetTimeInMS();
+                            m_nTimeForMinigunFiring = CTimer::GetTimeInMS();
+                        }
+                    }
+
+                    if (CTimer::GetTimeInMS() > m_nShootTimer + (uint32)interval && CTimer::GetTimeInMS() > m_nTimeForMinigunFiring) { // 0x6C760F
+                        CVector shotTarget = targetPos;
+                        shotTarget.x = (float)((double)((rand() & 0xFF) - 0x80) * (double)0.02f + (double)shotTarget.x); // 0x858B38
+                        shotTarget.y = (float)((double)((rand() & 0xFF) - 0x80) * (double)0.02f + (double)shotTarget.y);
+
+                        CVector dir{
+                            targetPos.x - origin.x,
+                            targetPos.y - origin.y,
+                            targetPos.z - origin.z,
+                        };
+                        dir.Normalise();
+
+                        // 3.0f = 0x858B3C
+                        const float  dx3f   = (float)((double)dir.x * 3.0);
+                        const double dy3    = (double)dir.y * 3.0;
+                        const double dz3    = (double)dir.z * 3.0;
+                        const float  dz3f   = (float)dz3;
+                        shotTarget.x = (float)((double)dx3f + (double)shotTarget.x);
+                        shotTarget.y = (float)(dy3 + (double)shotTarget.y);
+                        shotTarget.z = (float)((double)shotTarget.z + dz3);
+
+                        const CVector start{
+                            (float)((double)dx3f + (double)origin.x),
+                            (float)((double)origin.y + dy3),
+                            (float)((double)origin.z + (double)dz3f),
+                        };
+
+                        FireOneInstantHitRound(start, shotTarget, 20); // 0x6C7773
+                        AudioEngine.ReportWeaponEvent(AE_WEAPON_FIRE, WEAPON_M4, this); // 0x6C7788
+
+                        m_nTimeForMinigunFiring = CTimer::GetTimeInMS() + (CGeneral::GetRandomNumberInRange(0.0f, 1.0f) >= 0.15f ? 150u : 400u); // 0x8D33A4
+                    }
+                }
+            }
+        }
+    }
+
+    // 0x6C77EC - Dropping the SWAT team
+    if (m_autoPilot.m_nCarMission == MISSION_HELI_POLICE_BEHAVIOUR && m_nNumSwatOccupants != 0) {
+        SendDownSwat();
+        g_InterestingEvents.Add(CInterestingEvents::ZELDICK_OCCUPATION, this);
+    }
+
+    for (auto i = 0; i < (int32)m_aSwatState.size(); i++) { // 0x6C7824
+        auto& state = m_aSwatState[i];
+        if (state == 0) {
+            continue;
+        }
+
+        state--;
+
+        const auto ropeId = reinterpret_cast<uint32>(this) + i; // The rope is identified by `this + i`
+        const auto swatOffset = FindSwatPositionRelativeToHeli(i);
+        CRopes::RegisterRope(ropeId, 8, GetMatrix().TransformPoint(swatOffset), false, 0, 0, nullptr, 20000);
+
+        if (state == 0) {
+            const auto swatOffset2 = FindSwatPositionRelativeToHeli(i);
+            const CVector v{ swatOffset2.x * 0.05f, swatOffset2.y * 0.05f, swatOffset2.z * 0.05f }; // 0x858C28
+            const auto& mat = GetMatrix();
+            // 0x59C790 (Multiply3x3)
+            const auto rotated = CVector{
+                (float)((double)mat.GetUp().x * v.z + (double)mat.GetForward().x * v.y + (double)mat.GetRight().x * v.x),
+                (float)((double)mat.GetUp().y * v.z + (double)mat.GetRight().y * v.x + (double)mat.GetForward().y * v.y),
+                0.0f, // z isn't used
+            };
+            CRopes::SetSpeedOfTopNode(ropeId, rotated);
+        }
+    }
+
+    UpdateWinch();
+    ProcessWeapons();
+
+    if (g_InterestingEvents.m_b1) { // 0xC0B184
+        float chance = (float)((double)CTimer::GetTimeStep() * (double)0.02f * (double)0.1f); // 0x858B38, 0x858B1C
+        if (shootAtTarget) {
+            chance += chance;
+        }
+        if ((double)rand() * (double)RAND_MAX_FLOAT_RECIPROCAL < (double)chance) { // 0x858C7C
+            g_InterestingEvents.Add(CInterestingEvents::INTERESTING_EVENT_21, this);
+        }
+    }
 }

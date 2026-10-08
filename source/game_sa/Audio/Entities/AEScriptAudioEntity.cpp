@@ -313,10 +313,10 @@ void CAEScriptAudioEntity::ProcessMissionAudioEvent(eAudioEvents eventId, CVecto
             m_nLastTimeHornPlayed = CTimer::GetTimeInMS();
             break;
         case AE_SCRIPT_DISABLE_HELI_AUDIO: // 0x3E8
-            CAEVehicleAudioEntity::s_HelicoptorsDisabled = true; // 0x4F4EE0 (NOTSA: set directly, the bodies of Enable/DisableHelicoptors are swapped in CAEVehicleAudioEntity.cpp)
+            CAEVehicleAudioEntity::DisableHelicoptors(); // 0x4F4EE0
             break;
         case AE_SCRIPT_ENABLE_HELI_AUDIO: // 0x3E9
-            CAEVehicleAudioEntity::s_HelicoptorsDisabled = false; // 0x4F4EF0 (see above)
+            CAEVehicleAudioEntity::EnableHelicoptors(); // 0x4F4EF0
             break;
         case AE_SCRIPT_CEILING_VENT_LAND: // 0x3EA
             PlayResident(SND_BANK_SLOT_COLLISIONS, SND_BANK_GENRL_COLLISIONS, 0x40, 0.0f, 0.79f, 0x23, 1.0f);

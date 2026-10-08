@@ -115,8 +115,7 @@ public:
     template<typename PtrListType>
     static void SlowCarDownForObjectsSectorList(PtrListType& PtrList, CVehicle* vehicle, float arg3, float arg4, float arg5, float arg6, float* arg7, float arg8);
     static void SlowCarDownForOtherCar(CEntity* car1, CVehicle* car2, float* arg3, float arg4);
-    template<typename PtrListType>
-    static void SlowCarDownForPedsSectorList(PtrListType& PtrList, CVehicle* vehicle, float arg3, float arg4, float arg5, float arg6, float* arg7, float arg8);
+    static void SlowCarDownForPedsSectorList(CPtrListDoubleLink<CPed*>& pedList, CVehicle* vehicle, float minX, float minY, float maxX, float maxY, float* speedFactor, float speedMult);
     static void SlowCarOnRailsDownForTrafficAndLights(CVehicle* vehicle);
     static void SteerAIBoatWithPhysicsAttackingPlayer(CVehicle* vehicle, float* arg2, float* arg3, float* arg4, bool* arg5);
     static void SteerAIBoatWithPhysicsCirclingPlayer(CVehicle* vehicle, float* arg2, float* arg3, float* arg4, bool* arg5);

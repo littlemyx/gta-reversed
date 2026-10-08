@@ -12,6 +12,7 @@
 #include "TheScripts.h"
 #include "GangWars.h"
 #include "Garages.h"
+#include "Events/EventPotentialGetRunOver.h"
 #include "Game.h"
 #include "General.h"
 #include "GameLogic.h"
@@ -149,6 +150,7 @@ void CCarCtrl::InjectHooks()
     RH_ScopedInstall(SwitchVehicleToRealPhysics, 0x423FC0);
     RH_ScopedInstall(UpdateCarCount, 0x424000);
     RH_ScopedInstall(PossiblyRemoveVehicle, 0x424F80);
+    RH_ScopedInstall(SlowCarDownForPedsSectorList, 0x425440);
 }
 
 // 0x4212E0
@@ -1537,9 +1539,152 @@ void CCarCtrl::SlowCarDownForOtherCar(CEntity* car1, CVehicle* car2, float* arg3
 }
 
 // 0x425440
-template<typename PtrListType>
-void CCarCtrl::SlowCarDownForPedsSectorList(PtrListType& PtrList, CVehicle* vehicle, float arg3, float arg4, float arg5, float arg6, float* arg7, float arg8) {
-    plugin::Call<0x425440, PtrListType&, CVehicle*, float, float, float, float, float*, float>(PtrList, vehicle, arg3, arg4, arg5, arg6, arg7, arg8);
+void CCarCtrl::SlowCarDownForPedsSectorList(CPtrListDoubleLink<CPed*>& pedList, CVehicle* vehicle, float minX, float minY, float maxX, float maxY, float* speedFactor, float speedMult) {
+    // Note: The matrix is used directly (not null checked) throughout
+    const auto& vehMat = *vehicle->m_matrix;
+    const auto& fwd    = vehMat.GetForward();
+    const auto& right  = vehMat.GetRight();
+
+    auto halfWidth = CModelInfo::GetModelInfo(vehicle->m_nModelIndex)->GetColModel()->m_boundBox.m_vecMax.x;
+
+    // x87: kept in extended precision (only `fwdSpeed` is rounded to float)
+    const auto fwdSpeedExt = ((double)fwd.z * vehicle->m_vecMoveSpeed.z + (double)fwd.y * vehicle->m_vecMoveSpeed.y) + (double)fwd.x * vehicle->m_vecMoveSpeed.x;
+    const auto fwdSpeed    = (float)fwdSpeedExt;
+    const auto slowDownDist = (float)(fwdSpeedExt * 200.0f); // How far ahead peds are considered
+    const auto closeDist    = (float)((double)std::abs(fwdSpeed) * 50.0f);
+
+    const auto isVehicleOfConcern = [&] { // `bVar15` in the decomp - Peds in front of such vehicles are in danger
+        if (vehicle == FindPlayerVehicle()) {
+            return true;
+        }
+        switch (vehicle->m_nVehicleType) {
+        case VEHICLE_TYPE_TRAIN:
+        case VEHICLE_TYPE_PLANE:
+        case VEHICLE_TYPE_HELI:
+            return true;
+        }
+        const auto style = vehicle->m_autoPilot.m_nCarDrivingStyle;
+        if (style != DRIVING_STYLE_STOP_FOR_CARS && style != DRIVING_STYLE_DRIVINGMODE_AVOIDCARS_STOPFORPEDS_OBEYLIGHTS) {
+            return true;
+        }
+        return vehicle->GetStatus() == STATUS_PHYSICS;
+    }();
+
+    const auto halfLength = CModelInfo::GetModelInfo(vehicle->m_nModelIndex)->GetColModel()->m_boundBox.m_vecMax.y;
+
+    // The original stores the next node before processing the current one
+    for (auto it = pedList.begin(); it != pedList.end();) {
+        CPed* const ped = *it;
+        ++it;
+
+        if (ped->IsScanCodeCurrent() || !ped->m_bUsesCollision) {
+            continue;
+        }
+        ped->SetCurrentScanCode();
+
+        const CVector pedPos = ped->GetPosition();
+        if (!(pedPos.x > minX) || !(pedPos.x < maxX) || !(pedPos.y > minY) || !(pedPos.y < maxY)) {
+            continue;
+        }
+
+        {
+            const auto zDiff = (double)pedPos.z - vehicle->GetPosition().z;
+            if (!((zDiff < 0.0 ? -zDiff : zDiff) < 6.0f)) {
+                continue;
+            }
+        }
+
+        // How far along the vehicle's forward vector (in 2D) is the ped, and how far is he from that line (in Z)
+        const auto distAlongLine = CCollision::DistAlongLine2D(
+            vehicle->GetPosition().x, vehicle->GetPosition().y,
+            fwd.x, fwd.y,
+            pedPos.x, pedPos.y
+        ); // 0x412A80
+        {
+            const auto zErr = (double)pedPos.z - ((double)distAlongLine * vehicle->GetForwardVector().z + vehicle->GetPosition().z);
+            if (!((zErr < 0.0 ? -zErr : zErr) < 3.0f)) {
+                continue;
+            }
+        }
+
+        // Ped's position relative to the vehicle (each component is rounded to float)
+        const auto dz = (float)((double)pedPos.z - vehicle->GetPosition().z);
+        const auto dy = (float)((double)pedPos.y - vehicle->GetPosition().y);
+        const auto dx = (float)((double)pedPos.x - vehicle->GetPosition().x);
+
+        // Distance of the ped along the vehicle's forward vector (x87: sum is kept in extended precision, rounded to float when stored)
+        auto pedFwdDist = (float)(((double)dy * fwd.y + (double)dz * fwd.z) + (double)dx * fwd.x);
+
+        const auto style = vehicle->m_autoPilot.m_nCarDrivingStyle;
+        if (   (style == DRIVING_STYLE_STOP_FOR_CARS || style == DRIVING_STYLE_STOP_FOR_CARS_IGNORE_LIGHTS || style == DRIVING_STYLE_SLOW_DOWN_FOR_CARS || style == DRIVING_STYLE_DRIVINGMODE_AVOIDCARS_STOPFORPEDS_OBEYLIGHTS)
+            && (ped != FindPlayerPed() || CWorld::Players[CWorld::PlayerInFocus].m_pLastTargetVehicle != vehicle)
+            && halfLength < pedFwdDist
+        ) {
+            const auto distToFront = (double)pedFwdDist - halfLength; // x87: not rounded when compared
+            if (distToFront < slowDownDist) {
+                const auto distToFrontF = (float)distToFront;
+
+                // x87: kept in extended precision
+                const auto pedRightDist = std::abs(((double)dy * right.y + (double)dz * right.z) + (double)dx * right.x);
+                if (vehicle->m_nVehicleType == VEHICLE_TYPE_BIKE) {
+                    halfWidth = halfWidth * 1.6f; // BUG: This is persistent for the rest of the loop, so it's applied for every ped, not just once
+                }
+                if (pedRightDist <= (double)halfWidth + 0.5f && distToFrontF < 13.0f) {
+                    const auto gap = distToFrontF - 1.0f;
+                    const double clampedGap = 0.0f > gap ? 0.0f : gap;
+                    const auto   scaledGap  = ((double)(1.0f / 13.0f) * clampedGap) * speedMult;
+                    const auto   newFactor  = 1.0f > scaledGap ? 1.0 : scaledGap;
+                    *speedFactor = newFactor > *speedFactor ? *speedFactor : (float)newFactor;
+
+                    vehicle->m_autoPilot.carCtrlFlags.bHonkAtPed = true;
+                    if (distToFrontF < 4.0f) {
+                        vehicle->m_autoPilot.m_nTempAction     = TEMPACT_WAIT;
+                        vehicle->m_autoPilot.m_nTempActionTime = CTimer::GetTimeInMS() + 4000;
+                    }
+                    if (distToFrontF < 2.5f) {
+                        vehicle->m_autoPilot.m_nTempAction     = TEMPACT_BRAKE;
+                        vehicle->m_autoPilot.m_nTempActionTime = CTimer::GetTimeInMS() + 4000;
+                    }
+                }
+            }
+        }
+
+        if (ped->GetType() != ENTITY_TYPE_PED) {
+            continue;
+        }
+
+        // The player is honking at the ped
+        if (vehicle == FindPlayerVehicle() && vehicle->m_HornCounter) {
+            const CVector offset = ped->GetPosition() - vehicle->GetPosition(); // 0x40FE60
+            // x87: kept in extended precision
+            if ((((double)offset.x * offset.x + (double)offset.y * offset.y) + (double)offset.z * offset.z) < 49.0f) {
+                CEventPotentialGetRunOver event{ vehicle };
+                ped->GetIntelligence()->GetEventGroup().Add(&event, false);
+            }
+        }
+
+        // Ped is in the way of a fast moving vehicle
+        if (isVehicleOfConcern && fwdSpeed != 0.0f) {
+            const auto fwdSign   = pedFwdDist < 0.0f ? -1 : 1;
+            const auto speedSign = fwdSpeed < 0.0f ? -1 : 1;
+            if (fwdSign != speedSign) {
+                continue;
+            }
+            pedFwdDist = std::abs(pedFwdDist);
+            if (!(pedFwdDist > halfLength) || !(std::abs(fwdSpeed) > 0.05f) || !((double)pedFwdDist - halfLength < closeDist)) {
+                continue;
+            }
+            const auto pedRightDist = std::abs(((double)dy * right.y + (double)dz * right.z) + (double)dx * right.x);
+            if (!(pedRightDist <= (double)halfWidth + 0.35f)) {
+                continue;
+            }
+            CEventPotentialGetRunOver event{ vehicle };
+            ped->GetIntelligence()->GetEventGroup().Add(&event, false);
+            if (vehicle->m_pDriver && vehicle->m_pDriver->IsPlayer()) {
+                ped->GetIntelligence()->IncrementAngerAtPlayer(2);
+            }
+        }
+    }
 }
 
 // 0x434790

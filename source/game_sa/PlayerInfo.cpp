@@ -7,6 +7,20 @@
 #include "CarEnterExit.h"
 #include "PedGeometryAnalyser.h"
 #include "Cranes.h"
+#include "Automobile.h"
+#include "Bike.h"
+#include "TheScripts.h"
+#include "Events/EventScriptCommand.h"
+#include "TaskComplexLeaveCar.h"
+#include "TaskComplexEnterCar.h"
+#include "TaskComplexEnterCarAsDriver.h"
+#include "TaskComplexEnterCarAsPassenger.h"
+#include "TaskComplexEnterBoatAsDriver.h"
+#include "TaskComplexStealCar.h"
+#include "TaskComplexGoPickUpEntity.h"
+#include "TaskSimpleJetPack.h"
+#include "TaskSimpleSwim.h"
+#include "TaskSimpleHoldEntity.h"
 
 void CPlayerInfo::InjectHooks() {
     RH_ScopedClass(CPlayerInfo);
@@ -16,7 +30,7 @@ void CPlayerInfo::InjectHooks() {
     RH_ScopedInstall(CancelPlayerEnteringCars, 0x56E860);
     RH_ScopedInstall(FindObjectToSteal, 0x56DBD0);
     RH_ScopedInstall(EvaluateCarPosition, 0x56DAD0);
-    RH_ScopedInstall(Process, 0x56F8D0, { .Reversed = false });
+    RH_ScopedInstall(Process, 0x56F8D0);
     RH_ScopedInstall(FindClosestCarSectorList, 0x56F4E0);
     RH_ScopedInstall(Clear, 0x56F330);
     RH_ScopedInstall(StreamParachuteWeapon, 0x56EB30);
@@ -186,9 +200,690 @@ void CPlayerInfo::SetLastTargetVehicle(CVehicle* vehicle) {
     CEntity::SafeRegisterRef(m_pLastTargetVehicle);
 }
 
+namespace {
+// Original: `CTimer::ms_fTimeStep * 0.02f * mult` kept in extended precision until `_ftol` (0x821B40).
+// `mult` is either 1000.0f, or -1000.0f (0x859948).
+int32 TimeStepToMS(float mult = 1000.0f) {
+    return static_cast<int32>(static_cast<double>(CTimer::GetTimeStep()) * static_cast<double>(0.02f) * static_cast<double>(mult));
+}
+
+// Taxi fare: Score +1 for every second the player drives a taxi with a passenger
+void ProcessTaxiFare(CPlayerInfo& info) {
+    const auto* const ped = info.m_pPed;
+    if (info.m_bTaxiTimerScore && ped->bInVehicle) {
+        const auto* const veh = ped->m_pVehicle;
+        if ((veh->m_nModelIndex == MODEL_TAXI || veh->m_nModelIndex == MODEL_CABBIE) && veh->m_pDriver == ped && veh->m_nNumPassengers > 0u) {
+            const auto elapsed = CTimer::GetTimeInMS() - info.m_nTaxiTimer;
+            if (elapsed >= 1000u) {
+                const auto seconds = elapsed / 1000u;
+                info.m_nMoney += static_cast<int32>(seconds);
+                info.m_nTaxiTimer += seconds * 1000u;
+            }
+            return;
+        }
+    }
+    info.m_nTaxiTimer = CTimer::GetTimeInMS();
+}
+
+// `m_nTempBufferCounter - factor * timestep(ms)`, clamped to 0 (so wheels can leave the ground for a few frames)
+uint32 DecayedTempBufferCounter(const CPlayerInfo& info, float factor) {
+    const auto ms = static_cast<uint32>(TimeStepToMS()); // The original adds 2^32 if it's negative, so treats it as unsigned
+    auto       v  = static_cast<double>(info.m_nTempBufferCounter) - static_cast<double>(ms) * static_cast<double>(factor);
+    if (v < 0.0) {
+        v = 0.0;
+    }
+    return static_cast<uint32>(static_cast<int64>(v));
+}
+
+// Tracks two wheels / wheelie / stoppie stunts (+ records them in the stats)
+void ProcessStunts(CPlayerInfo& s) {
+    // The original jumps into the middle of this sequence from many places, so these are the "entry points"
+    const auto ResetCarLessThan3Wheels = [&] { s.m_nCarLess3WheelCounter = 0; };                                  // 0x5700D0
+    const auto ResetCarTwoWheels       = [&] { s.m_nTempBufferCounter = 0; s.m_nCarTwoWheelCounter = 0; };        // 0x5700D6
+    const auto ResetBikeCounters       = [&] { s.m_nBikeRearWheelCounter = 0; s.m_nBikeFrontWheelCounter = 0; };  // 0x5700E2
+    const auto ResetBikeEnd            = [&] { ResetCarTwoWheels(); ResetCarLessThan3Wheels(); };                 // 0x5700BC
+    const auto ResetAll                = [&] { ResetCarLessThan3Wheels(); ResetCarTwoWheels(); ResetBikeCounters(); };
+
+    auto* const ped = s.m_pPed;
+    auto* const veh = ped->bInVehicle ? ped->m_pVehicle : nullptr;
+    if (!veh) {
+        ResetAll();
+        return;
+    }
+
+    if (veh->m_nVehicleType == VEHICLE_TYPE_AUTOMOBILE) {
+        auto* const car = veh->AsAutomobile();
+
+        if (car->m_nNumContactWheels < 3u) {
+            s.m_nCarLess3WheelCounter += static_cast<uint32>(TimeStepToMS());
+        } else {
+            s.m_nCarLess3WheelCounter = 0;
+        }
+
+        // Wheels 0 and 1 are the left ones, 2 and 3 are the right ones
+        const auto& comp = car->m_fWheelsSuspensionCompressionPrev;
+        enum class State { ON_TWO_WHEELS, GRACE_PERIOD, NOT_ON_TWO_WHEELS } state;
+        if (comp[2] == 1.0f && comp[3] == 1.0f) { // Right wheels in the air
+            state = (comp[0] < 1.0f && comp[1] < 1.0f && car->m_fDamageIntensity == 0.0f) ? State::ON_TWO_WHEELS : State::GRACE_PERIOD;
+        } else if (comp[0] == 1.0f && comp[1] == 1.0f) { // Left wheels in the air
+            state = (comp[2] < 1.0f && comp[3] < 1.0f && car->m_fDamageIntensity == 0.0f) ? State::ON_TWO_WHEELS : State::GRACE_PERIOD;
+        } else {
+            state = State::NOT_ON_TWO_WHEELS;
+        }
+
+        if (state == State::ON_TWO_WHEELS) {
+            s.m_nCarTwoWheelCounter += static_cast<uint32>(TimeStepToMS());
+            s.m_fCarTwoWheelDist = car->m_fMovingSpeed + s.m_fCarTwoWheelDist;
+            s.m_nTempBufferCounter = DecayedTempBufferCounter(s, 0.5f);
+            ResetBikeCounters();
+            return;
+        }
+
+        const auto counter = s.m_nCarTwoWheelCounter;
+        if (state == State::GRACE_PERIOD) {
+            if (counter != 0u && s.m_nTempBufferCounter < 500u) {
+                s.m_nTempBufferCounter -= static_cast<uint32>(TimeStepToMS(-1000.0f));
+                ResetBikeCounters();
+                return;
+            }
+        } else if (counter == 0u) {
+            ResetBikeCounters();
+            return;
+        }
+        if (counter >= 2000u) {
+            s.m_fBestCarTwoWheelsDistM  = s.m_fCarTwoWheelDist;
+            s.m_nBestCarTwoWheelsTimeMs = counter;
+            CStats::SetNewRecordStat(STAT_LONGEST_2_WHEELS_TIME, static_cast<float>(counter / 1000u));
+            CStats::SetNewRecordStat(STAT_LONGEST_2_WHEELS_DISTANCE, s.m_fCarTwoWheelDist);
+        }
+        s.m_fCarTwoWheelDist = 0.0f;
+        ResetCarTwoWheels();
+        ResetBikeCounters();
+        return;
+    }
+
+    if (veh->m_nVehicleType == VEHICLE_TYPE_BIKE) {
+        auto* const bike   = veh->AsBike();
+        const auto& ratios = bike->m_aRatioHistory; // [0], [1] - front wheel, [2], [3] - rear wheel (1.0 = in the air)
+
+        const auto RecordWheelie = [&](uint32 counter) {
+            s.m_fBestBikeWheelieDistM  = s.m_fBikeRearWheelDist;
+            s.m_nBestBikeWheelieTimeMs = counter;
+            CStats::SetNewRecordStat(STAT_LONGEST_WHEELIE_TIME, static_cast<float>(counter / 1000u));
+            CStats::SetNewRecordStat(STAT_LONGEST_WHEELIE_DISTANCE, s.m_fBikeRearWheelDist);
+        };
+        const auto RecordStoppie = [&](uint32 counter) {
+            s.m_fBestBikeStoppieDistM  = s.m_fBikeFrontWheelDist;
+            s.m_nBestBikeStoppieTimeMs = counter;
+            CStats::SetNewRecordStat(STAT_LONGEST_STOPPIE_TIME, static_cast<float>(counter / 1000u));
+            CStats::SetNewRecordStat(STAT_LONGEST_STOPPIE_DISTANCE, s.m_fBikeFrontWheelDist);
+        };
+        // Wheelie/stoppie is still going, or in the grace period (0x56FF92)
+        const auto ExtendGracePeriod = [&] {
+            s.m_nTempBufferCounter -= static_cast<uint32>(TimeStepToMS(-1000.0f));
+            s.m_nCarTwoWheelCounter  = 0;
+            s.m_nCarLess3WheelCounter = 0;
+        };
+        // 0x56FE67
+        const auto DecayTempBufferAndEnd = [&] {
+            s.m_nTempBufferCounter    = DecayedTempBufferCounter(s, 0.2f);
+            s.m_nCarTwoWheelCounter   = 0;
+            s.m_nCarLess3WheelCounter = 0;
+        };
+
+        // Wheelie: front wheel is in the air
+        if (ratios[0] == 1.0f && ratios[1] == 1.0f && s.m_nBikeFrontWheelCounter == 0u) {
+            if (ratios[2] < 1.0f || (ratios[3] < 1.0f && bike->m_fDamageIntensity == 0.0f)) {
+                s.m_nBikeRearWheelCounter += static_cast<uint32>(TimeStepToMS());
+                s.m_fBikeRearWheelDist = bike->m_fMovingSpeed + s.m_fBikeRearWheelDist;
+                DecayTempBufferAndEnd();
+                return;
+            }
+
+            const auto counter = s.m_nBikeRearWheelCounter;
+            if (counter != 0u && s.m_nTempBufferCounter < 500u) {
+                ExtendGracePeriod();
+                return;
+            }
+            if (counter >= 5000u) {
+                RecordWheelie(counter);
+            }
+            s.m_nBikeRearWheelCounter = 0;
+            s.m_fBikeRearWheelDist    = 0.0f;
+            ResetBikeEnd();
+            return;
+        }
+
+        const auto rearCounter = s.m_nBikeRearWheelCounter;
+        if (rearCounter != 0u) {
+            if (rearCounter >= 5000u) {
+                RecordWheelie(rearCounter);
+            }
+            s.m_nBikeRearWheelCounter = 0;
+            s.m_fBikeRearWheelDist    = 0.0f;
+            ResetBikeEnd();
+            return;
+        }
+
+        // Stoppie: rear wheel is in the air
+        const auto frontCounter = s.m_nBikeFrontWheelCounter;
+        if (ratios[2] == 1.0f && ratios[3] == 1.0f) {
+            if (ratios[0] < 1.0f || (ratios[1] < 1.0f && bike->m_fDamageIntensity == 0.0f)) {
+                s.m_nBikeFrontWheelCounter += static_cast<uint32>(TimeStepToMS());
+                s.m_fBikeFrontWheelDist = bike->m_fMovingSpeed + s.m_fBikeFrontWheelDist;
+                DecayTempBufferAndEnd();
+                return;
+            }
+            if (frontCounter != 0u && s.m_nTempBufferCounter < 500u) {
+                ExtendGracePeriod();
+                return;
+            }
+        }
+        if (frontCounter >= 2000u) {
+            RecordStoppie(frontCounter);
+        }
+        s.m_nBikeFrontWheelCounter = 0;
+        s.m_fBikeFrontWheelDist    = 0.0f;
+        ResetBikeEnd();
+        return;
+    }
+
+    ResetAll();
+}
+
+// Money shown on the HUD slowly catches up with the real amount
+void ProcessDisplayMoney(CPlayerInfo& s) {
+    if (s.m_nDisplayMoney == s.m_nMoney) {
+        return;
+    }
+    const auto diff    = s.m_nMoney - s.m_nDisplayMoney;
+    const auto absDiff = std::abs(diff);
+    int32      step;
+    if (absDiff > 100'000) {
+        step = 12345;
+    } else if (absDiff > 10'000) {
+        step = 1234;
+    } else if (absDiff > 1'000) {
+        step = 123;
+    } else {
+        step = absDiff <= 50 ? 1 : 42;
+    }
+    if (diff < 0) {
+        s.m_nDisplayMoney -= step;
+    } else {
+        s.m_nDisplayMoney += step;
+    }
+}
+
+// The player pressed the enter/exit vehicle button while in a vehicle
+void ProcessExitVehicle(CPlayerInfo& s) {
+    auto* const ped = s.m_pPed;
+    auto* const veh = ped->m_pVehicle;
+
+    if (s.m_pRemoteVehicle) {
+        return;
+    }
+    if (const auto* const entityUnder = veh->m_pEntityWeAreOn) {
+        if (CBridge::ThisIsABridgeObjectMovingUp(entityUnder->m_nModelIndex)) {
+            return;
+        }
+    }
+    if (veh->GetStatus() == STATUS_WRECKED || veh->GetStatus() == STATUS_TRAIN_MOVING || veh->m_nDoorLock == CARLOCK_LOCKED_PLAYER_INSIDE) {
+        return;
+    }
+
+    auto& taskMgr = ped->GetIntelligence()->GetTaskManager();
+    if (auto* const active = taskMgr.GetActiveTask()) {
+        if (!active->MakeAbortable(ped, ABORT_PRIORITY_URGENT, nullptr)) {
+            s.m_bTryingToExitCar = true;
+            return;
+        }
+    }
+
+    if (veh->m_nVehicleType == VEHICLE_TYPE_BOAT) {
+        taskMgr.SetTask(new CTaskComplexLeaveCar{ veh, 0, 0, true, false }, TASK_PRIMARY_PRIMARY);
+        ped->bTryingToReachDryLand = true;
+        return;
+    }
+
+    if (!veh->CanPedStepOutCar(false) && !veh->CanPedJumpOutCar(ped)) {
+        if (veh->GetStatus() == STATUS_PLAYER) {
+            s.m_bTryingToExitCar = true;
+        }
+    } else {
+        taskMgr.SetTask(new CTaskComplexLeaveCar{ veh, 0, 0, true, false }, TASK_PRIMARY_PRIMARY);
+        s.m_bTryingToExitCar = true;
+        s.GivePlayerParachute();
+    }
+}
+
+// The player pressed the enter/exit vehicle button while on foot
+void ProcessEnterVehicle(CPlayerInfo& s, uint32 playerIndex) {
+    auto* const ped = s.m_pPed;
+    if (ped->m_pAttachedTo) {
+        return;
+    }
+
+    auto* const intel         = ped->GetIntelligence();
+    auto&       taskMgr       = intel->GetTaskManager();
+    auto* const objectToSteal = CPlayerInfo::FindObjectToSteal(ped);
+    auto* const simplestTask  = taskMgr.GetSimplestActiveTask();
+    auto* const holdTask      = intel->GetTaskHold(false);
+    if (simplestTask->GetTaskType() == TASK_SIMPLE_CLIMB || intel->GetTaskFighting() || (holdTask && holdTask->m_pEntityToHold)) {
+        return;
+    }
+
+    // Pick up the object
+    if (objectToSteal) {
+        if (auto* const active = taskMgr.GetActiveTask()) {
+            if (!active->MakeAbortable(ped, ABORT_PRIORITY_URGENT, nullptr)) {
+                return;
+            }
+        }
+
+        // NOTSA: `CTaskComplexGoPickUpEntity` has no constructor in our codebase yet
+        auto* const task = static_cast<CTaskComplexGoPickUpEntity*>(CTask::operator new(sizeof(CTaskComplexGoPickUpEntity)));
+        if (task) {
+            plugin::CallMethod<0x6919C0, CTaskComplexGoPickUpEntity*, CEntity*, int32>(task, objectToSteal, 0x51);
+        }
+
+        CEventScriptCommand event{ TASK_PRIMARY_PRIMARY, task, false };
+        CWorld::Players[CWorld::PlayerInFocus].m_pPed->GetIntelligence()->GetEventGroup().Add(&event, false);
+        return;
+    }
+
+    // Find the closest vehicle
+    CVehicle* targetVeh{};
+    float     targetVehDist{};
+
+    const auto& pedPos = ped->GetPosition();
+    const float minX   = pedPos.x - 10.0f;
+    const float maxX   = pedPos.x + 10.0f;
+    const float minY   = pedPos.y - 10.0f;
+    const float maxY   = pedPos.y + 10.0f;
+
+    const auto SectorOf = [](float v) { return static_cast<int32>(std::floor(static_cast<float>(static_cast<double>(v) * 0.02f + 60.0f))); };
+    const auto xMin     = SectorOf(minX);
+    const auto yMin     = SectorOf(minY);
+    const auto xMax     = SectorOf(maxX);
+    const auto yMax     = SectorOf(maxY);
+
+    CWorld::AdvanceCurrentScanCode();
+    for (auto y = yMin; y <= yMax; y++) {
+        for (auto x = xMin; x <= xMax; x++) {
+            s.FindClosestCarSectorList(CWorld::GetRepeatSector(x, y).Vehicles, ped, minX, minY, maxX, maxY, &targetVehDist, &targetVeh);
+        }
+    }
+    if (!targetVeh) {
+        return;
+    }
+
+    // If it's a trailer then get in the thing towing it
+    if (targetVeh->m_nVehicleSubType == VEHICLE_TYPE_TRAILER && targetVeh->m_pTowingVehicle) {
+        targetVeh = targetVeh->m_pTowingVehicle;
+    }
+    if (!targetVeh->CanBeDriven()) {
+        return;
+    }
+
+    if (auto* const jetPack = intel->GetTaskJetPack()) {
+        jetPack->DropJetPack(ped);
+    }
+
+    // Boats
+    if (targetVeh->m_nVehicleType == VEHICLE_TYPE_BOAT) {
+        if (!targetVeh->m_pDriver) {
+            if (auto* const active = taskMgr.GetActiveTask()) {
+                if (!active->MakeAbortable(ped, ABORT_PRIORITY_URGENT, nullptr)) {
+                    return;
+                }
+            }
+            taskMgr.SetTask(new CTaskComplexEnterCarAsDriver{ targetVeh }, TASK_PRIMARY_PRIMARY);
+        }
+        return;
+    }
+
+    if (auto* const active = taskMgr.GetActiveTask()) {
+        bool bGetOutOfWaterToDoor{};
+        if (active->GetTaskType() == TASK_COMPLEX_IN_WATER && intel->GetTaskSwim()) {
+            switch (targetVeh->m_nModelIndex) { // Aircraft that can land on water
+            case MODEL_SKIMMER:
+            case MODEL_VORTEX:
+            case MODEL_SEASPAR:
+            case MODEL_LEVIATHN: {
+                CVector doorPos{};
+                int32   doorId{};
+                if (CCarEnterExit::GetNearestCarDoor(ped, targetVeh, doorPos, doorId)) {
+                    auto* const swimTask = intel->GetTaskSwim();
+                    swimTask->m_vecPos    = doorPos;
+                    swimTask->m_nTimeStep = 5000;
+                    bGetOutOfWaterToDoor  = true;
+                }
+                break;
+            }
+            }
+        }
+        if (!bGetOutOfWaterToDoor && !active->MakeAbortable(ped, ABORT_PRIORITY_URGENT, nullptr)) {
+            return;
+        }
+    }
+
+    // Single player (or both players are allowed to be in separate cars)
+    if (!CWorld::Players[1].m_pPed || CGameLogic::bPlayersCanBeInSeparateCars) {
+        taskMgr.SetTask(new CTaskComplexEnterCarAsDriver{ targetVeh }, TASK_PRIMARY_PRIMARY);
+        return;
+    }
+
+    // Co-op: Take into consideration what the other player is doing
+    const auto  otherPlayerIdx = static_cast<int32>(playerIndex + 1) % 2;
+    auto* const otherPed       = CWorld::Players[otherPlayerIdx].m_pPed;
+    auto&       otherTaskMgr   = otherPed->GetIntelligence()->GetTaskManager();
+    auto* const otherDefault   = otherTaskMgr.m_aPrimaryTasks[TASK_PRIMARY_DEFAULT];
+    auto* const otherPrimary   = otherTaskMgr.m_aPrimaryTasks[TASK_PRIMARY_PRIMARY];
+
+    int32 otherDefaultType{}, otherPrimaryType{};
+    CVehicle* driverOf{};    // Vehicle the other player is driving (or entering as the driver)
+    CVehicle* passengerOf{}; // Vehicle the other player is a passenger in (or entering as one)
+    if (otherDefault) {
+        otherDefaultType = otherDefault->GetTaskType();
+    }
+    if (otherPrimary) {
+        otherPrimaryType = otherPrimary->GetTaskType();
+        switch (otherPrimaryType) {
+        case TASK_COMPLEX_ENTER_CAR_AS_DRIVER:
+        case TASK_COMPLEX_DRAG_PED_FROM_CAR:
+            driverOf = static_cast<CTaskComplexEnterCar*>(otherPrimary)->GetTargetCar();
+            break;
+        case TASK_COMPLEX_STEAL_CAR:
+            driverOf = static_cast<CTaskComplexStealCar*>(otherPrimary)->m_veh;
+            break;
+        case TASK_COMPLEX_ENTER_BOAT_AS_DRIVER:
+            driverOf = static_cast<CTaskComplexEnterBoatAsDriver*>(otherPrimary)->GetTargetVehicle();
+            break;
+        }
+    }
+    if (otherDefaultType == TASK_SIMPLE_PLAYER_IN_CAR || otherPrimaryType == TASK_SIMPLE_PLAYER_IN_CAR || otherDefaultType == TASK_SIMPLE_CAR_DRIVE || otherPrimaryType == TASK_SIMPLE_CAR_DRIVE) {
+        auto* const otherVeh = otherPed->m_pVehicle;
+        if (otherVeh->m_pDriver == otherPed) {
+            driverOf = otherVeh;
+        } else {
+            passengerOf = otherVeh; // NOTE: Yes, that's what the original does
+        }
+    }
+    if (otherPrimaryType == TASK_COMPLEX_ENTER_CAR_AS_PASSENGER) {
+        passengerOf = static_cast<CTaskComplexEnterCar*>(otherPrimary)->GetTargetCar();
+    }
+
+    if (driverOf == targetVeh) { // The other player is driving it, so go in as a passenger
+        taskMgr.SetTask(new CTaskComplexEnterCarAsPassenger{ targetVeh, 0, false }, TASK_PRIMARY_PRIMARY);
+    } else if (passengerOf == targetVeh || (!driverOf && !passengerOf)) {
+        taskMgr.SetTask(new CTaskComplexEnterCarAsDriver{ targetVeh }, TASK_PRIMARY_PRIMARY);
+    }
+}
+
+// Handles the fade-out/in and cleanup after the remote controlled vehicle exploded
+void ProcessRemoteVehicleExplosion(CPlayerInfo& s) {
+    if (!s.m_bAfterRemoteVehicleExplosion) {
+        return;
+    }
+
+    const auto prevElapsed = CTimer::GetPreviousTimeInMS() - s.m_nTimeOfRemoteVehicleExplosion;
+    const auto elapsed     = CTimer::GetTimeInMS() - s.m_nTimeOfRemoteVehicleExplosion;
+
+    if (prevElapsed < 1000u && elapsed >= 1000u && s.m_nPlayerState == PLAYERSTATE_PLAYING && s.m_bFadeAfterRemoteVehicleExplosion) {
+        TheCamera.SetFadeColour(0, 0, 0);
+        TheCamera.Fade(1.0f, eFadeFlag::FADE_IN);
+    }
+
+    if (elapsed > 2000u) {
+        if (s.m_nPlayerState == PLAYERSTATE_PLAYING && s.m_bFadeAfterRemoteVehicleExplosion) {
+            TheCamera.RestoreWithJumpCut();
+            TheCamera.SetFadeColour(0, 0, 0);
+            TheCamera.Fade(1.0f, eFadeFlag::FADE_OUT);
+            TheCamera.Process();
+            CTimer::Stop();
+            CRenderer::RequestObjectsInFrustum(nullptr, 0);
+            CStreaming::LoadAllRequestedModels(false);
+            CTimer::Update();
+        }
+        s.m_bAfterRemoteVehicleExplosion = false;
+
+        auto& focusedInfo = CWorld::Players[CWorld::PlayerInFocus];
+        if (focusedInfo.m_pRemoteVehicle) {
+            focusedInfo.m_pRemoteVehicle->m_bRemoveFromWorld = true;
+        }
+        focusedInfo.m_pRemoteVehicle = nullptr;
+
+        if (const auto* const focusedPed = focusedInfo.m_pPed; focusedPed && focusedPed->bInVehicle && focusedPed->m_pVehicle) {
+            focusedPed->m_pVehicle->SetStatus(STATUS_PLAYER);
+        }
+    }
+}
+
+// Blows up the car of the player if it's stuck upside down for too long
+void ProcessUpsideDownVehicle(CPlayerInfo& s) {
+    const auto IsUpsideDown = [&] {
+        const auto* const veh = FindPlayerVehicle();
+        return veh
+            && s.m_pPed->bInVehicle
+            && veh->GetMatrix().GetUp().z < 0.0f
+            && veh->m_vecMoveSpeed.Magnitude() < 0.05f
+            && (veh->m_nVehicleType == VEHICLE_TYPE_AUTOMOBILE || veh->m_nVehicleType == VEHICLE_TYPE_BOAT)
+            && !veh->physicalFlags.bSubmergedInWater;
+    };
+
+    if (IsUpsideDown()) {
+        s.m_nTimesUpsideDownInARow += FindPlayerVehicle()->GetMatrix().GetUp().z < -0.5f ? 2u : 1u;
+    } else {
+        s.m_nTimesUpsideDownInARow = 0;
+    }
+
+    if (s.m_nTimesUpsideDownInARow > 6u) {
+        auto* const veh = FindPlayerVehicle();
+        if (veh->vehicleFlags.bCanBeDamaged) {
+            if (veh->m_fHealth > 249.0f) {
+                veh->m_fHealth = 249.0f;
+            }
+            if (veh->m_nVehicleType == VEHICLE_TYPE_AUTOMOBILE) {
+                auto* const car = veh->AsAutomobile();
+                car->m_damageManager.SetEngineStatus(225);
+                car->m_pExplosionVictim = nullptr;
+            }
+        }
+    }
+}
+
+// Distance travelled stats (on foot/in a vehicle)
+void ProcessDistanceStats(CPlayerInfo& s) {
+    const auto* const focusedPed = CWorld::Players[CWorld::PlayerInFocus].m_pPed;
+    if (focusedPed && focusedPed->bInVehicle && focusedPed->m_pVehicle) {
+        auto* const veh   = focusedPed->m_pVehicle;
+        const auto  speed = veh->m_fMovingSpeed;
+        if (veh->m_nModelIndex == MODEL_CADDY) {
+            CStats::IncrementStat(STAT_DISTANCE_TRAVELLED_BY_GOLF_CART, speed);
+        } else if (veh->m_nVehicleSubType == VEHICLE_TYPE_BMX) {
+            CStats::IncrementStat(STAT_DISTANCE_TRAVELLED_BY_BICYCLE, speed);
+        } else {
+            const auto appearance = veh->GetVehicleAppearance();
+            if (appearance == VEHICLE_APPEARANCE_HELI) {
+                CStats::IncrementStat(STAT_DISTANCE_TRAVELLED_BY_HELICOPTER, speed);
+            }
+            if (appearance == VEHICLE_APPEARANCE_PLANE) {
+                CStats::IncrementStat(STAT_DISTANCE_TRAVELLED_BY_PLANE, speed);
+            }
+            if (appearance == VEHICLE_APPEARANCE_AUTOMOBILE) {
+                CStats::IncrementStat(STAT_DISTANCE_TRAVELLED_BY_CAR, speed);
+            }
+            if (appearance == VEHICLE_APPEARANCE_BIKE) {
+                CStats::IncrementStat(STAT_DISTANCE_TRAVELLED_BY_MOTORBIKE, speed);
+            }
+            if (appearance == VEHICLE_APPEARANCE_BOAT) {
+                CStats::IncrementStat(STAT_DISTANCE_TRAVELLED_BY_BOAT, speed);
+            }
+            if ((appearance == VEHICLE_APPEARANCE_PLANE || appearance == VEHICLE_APPEARANCE_HELI) && veh->m_vecMoveSpeed.Magnitude() > 0.2f) {
+                CStats::IncrementStat(STAT_FLIGHT_TIME, CTimer::GetTimeStep() * 16.0f);
+            }
+        }
+
+        if (!FindPlayerTrain()) {
+            auto* const playerVeh = FindPlayerVehicle();
+            if (playerVeh->m_vecMoveSpeed.SquaredMagnitude() > 0.0f) {
+                switch (playerVeh->GetVehicleAppearance()) {
+                case VEHICLE_APPEARANCE_BIKE:
+                    if (playerVeh->m_nVehicleSubType != VEHICLE_TYPE_BMX) {
+                        CStats::UpdateStatsWhenOnMotorBike(playerVeh->AsBike());
+                    }
+                    break;
+                case VEHICLE_APPEARANCE_HELI:
+                case VEHICLE_APPEARANCE_PLANE:
+                    CStats::UpdateStatsWhenFlying(playerVeh);
+                    break;
+                case VEHICLE_APPEARANCE_BOAT:
+                    break;
+                default:
+                    CStats::UpdateStatsWhenDriving(playerVeh);
+                    break;
+                }
+            }
+        }
+    } else if (focusedPed->m_fMovingSpeed > 0.0f) {
+        auto* const intel = s.m_pPed->GetIntelligence();
+        if (intel->GetTaskSwim()) {
+            if (CPad::GetPad(0)->GetPedWalkLeftRight() != 0 || CPad::GetPad(0)->GetAccelerate() != 0) {
+                CStats::IncrementStat(STAT_DISTANCE_TRAVELLED_BY_SWIMMING, focusedPed->m_fMovingSpeed);
+            }
+        } else if (intel->GetTaskJetPack()) {
+            CStats::IncrementStat(STAT_TIME_ON_JETPACK, CTimer::GetTimeStep() * 16.0f);
+        } else {
+            CStats::IncrementStat(STAT_DISTANCE_TRAVELLED_ON_FOOT, focusedPed->m_fMovingSpeed);
+        }
+    }
+}
+
+// Updates `m_fCurrentChaseValue`: how "ill" the chase is, based on the wanted level
+void ProcessChaseValue(CPlayerInfo& s) {
+    // Original static locals: A `static CVector` + its init guard
+    static auto& s_LastPlayerPosGuard  = StaticRef<uint32>(0xB9B9A0);
+    static auto& s_LastPlayerPos       = StaticRef<CVector>(0xB9B994);
+    static auto& s_bMovedFarFromLast   = StaticRef<bool>(0x8CDF21); // Player moved at least 10 units since the last check
+    static auto& s_bIsNearVehicleNode  = StaticRef<bool>(0x8CDF20); // There's a vehicle path node within 60 units of the player
+
+    const auto* const wanted = s.m_pPed->GetWanted();
+    if (wanted->m_WantedLevel == eWantedLevel::WANTED_CLEAN || CTheScripts::IsPlayerOnAMission()) {
+        s.m_fCurrentChaseValue = 0.0f;
+        return;
+    }
+
+    if ((s_LastPlayerPosGuard & 1u) == 0u) {
+        s_LastPlayerPosGuard |= 1u;
+    }
+
+    // Every 20 seconds
+    if (CTimer::GetTimeInMS() / 20'000u != CTimer::GetPreviousTimeInMS() / 20'000u) {
+        const auto pos = FindPlayerCoors();
+        s_bMovedFarFromLast = false;
+        const auto dx   = static_cast<double>(s_LastPlayerPos.x) - static_cast<double>(pos.x);
+        const auto dy   = static_cast<double>(s_LastPlayerPos.y) - static_cast<double>(pos.y);
+        const auto dz   = static_cast<double>(s_LastPlayerPos.z) - static_cast<double>(pos.z);
+        if (10.0 <= std::sqrt(dz * dz + dy * dy + dx * dx)) {
+            s_bMovedFarFromLast = true;
+        }
+
+        s_LastPlayerPos = FindPlayerCoors();
+        s_bIsNearVehicleNode = ThePaths.FindNodeClosestToCoors(FindPlayerCoors(), PATH_TYPE_VEH, 60.0f, 1, 0, 0, 0, 0).IsAreaValid();
+    }
+
+    float targetChase = 0.0f;
+    switch (wanted->m_WantedLevel) {
+    case eWantedLevel::WANTED_LEVEL_1: targetChase = 31.0f;   break;
+    case eWantedLevel::WANTED_LEVEL_2: targetChase = 62.0f;   break;
+    case eWantedLevel::WANTED_LEVEL_3: targetChase = 125.0f;  break;
+    case eWantedLevel::WANTED_LEVEL_4: targetChase = 250.0f;  break;
+    case eWantedLevel::WANTED_LEVEL_5: targetChase = 500.0f;  break;
+    case eWantedLevel::WANTED_LEVEL_6: targetChase = 1000.0f; break;
+    default:                                                  break;
+    }
+
+    const auto delta = static_cast<float>((static_cast<double>(targetChase) - static_cast<double>(s.m_fCurrentChaseValue)) * static_cast<double>(CTimer::GetTimeStep()) * static_cast<double>(0.0001f));
+    if (delta < 0.0f
+        || (s_bMovedFarFromLast && s_bIsNearVehicleNode && !CCullZones::NoPolice() && !CCullZones::PoliceAbandonCars() && CGame::currArea == AREA_CODE_NORMAL_WORLD)
+    ) {
+        s.m_fCurrentChaseValue = delta + s.m_fCurrentChaseValue;
+    }
+}
+} // namespace
+
 // 0x56F8D0
 void CPlayerInfo::Process(uint32 playerIndex) {
-    plugin::CallMethod<0x56F8D0, CPlayerInfo*, uint32>(this, playerIndex);
+    if (CReplay::Mode == MODE_PLAYBACK) {
+        return;
+    }
+
+    CPad* const pad = CPad::GetPad(playerIndex);
+
+    ProcessTaxiFare(*this);
+    ProcessStunts(*this);
+    WorkOutEnergyFromHunger();
+    ProcessDisplayMoney(*this);
+
+    m_pPed->m_fMaxHealth = CStats::GetFatAndMuscleModifier(STAT_MOD_MAX_HEALTH);
+    m_nMaxHealth         = static_cast<uint8>(static_cast<int32>(m_pPed->m_fMaxHealth));
+
+    if (m_pPed->bInVehicle && CStats::GetStatValue(STAT_FLYING_SKILL) >= 400.0f) {
+        StreamParachuteWeapon(true);
+    } else if (m_bParachuteReferenced) {
+        CGameLogic::IsCoopGameGoingOn(); // NOTE: Result is unused
+        if (m_bParachuteReferenced) {
+            CStreaming::SetModelIsDeletable(MODEL_GUN_PARA);
+            m_bParachuteReferenced   = false;
+            m_nRequireParachuteTimer = 0;
+        }
+    }
+
+    // Road density around the player (updated every 16 frames, and smoothed every frame)
+    if ((CTimer::m_FrameCounter & 0xF) == 0) {
+        const CEntity* const posEntity = m_pPed->bInVehicle ? static_cast<CEntity*>(m_pPed->m_pVehicle) : static_cast<CEntity*>(m_pPed);
+        const auto&          pos       = posEntity->GetPosition();
+        m_fRoadDensityAroundPlayer     = ThePaths.CalcRoadDensity(pos.x, pos.y);
+    }
+    m_fRoadDensityAroundPlayer = static_cast<float>((static_cast<double>(m_fRoadDensityAroundPlayer) - static_cast<double>(1.0f)) * static_cast<double>(0.6f) + static_cast<double>(1.0f));
+    if (m_fRoadDensityAroundPlayer < 0.5f) {
+        m_fRoadDensityAroundPlayer = 0.5f;
+    }
+    if (1.45f < m_fRoadDensityAroundPlayer) {
+        m_fRoadDensityAroundPlayer = 1.45f;
+    }
+
+    // Enter/exit vehicle
+    if (!pad->GetTarget()
+        && m_pPed->bCanExitCar
+        && !m_pPed->bUsingMobilePhone
+        && (pad->ExitVehicleJustDown() || (m_bTryingToExitCar && pad->GetExitVehicle() && m_pPed->bInVehicle))
+    ) {
+        m_bTryingToExitCar = false;
+        if (m_pPed->bInVehicle) {
+            ProcessExitVehicle(*this);
+        } else {
+            ProcessEnterVehicle(*this, playerIndex);
+        }
+    } else {
+        m_bTryingToExitCar = false;
+    }
+
+    ProcessRemoteVehicleExplosion(*this);
+
+    if ((CTimer::m_FrameCounter & 0x1F) == 0) {
+        ProcessUpsideDownVehicle(*this);
+    }
+
+    ProcessDistanceStats(*this);
+    ProcessChaseValue(*this);
+
+    // NOTSA: `this` isn't really a CPlayerInfo, it's the address of the `m_nCrosshairActivated` member (see `CWeaponEffects::Render`)
+    plugin::CallMethod<0x56EC80, CPlayerInfo*, uint32, CPad*>(reinterpret_cast<CPlayerInfo*>(&m_nCrosshairActivated), playerIndex, pad);
+
+    m_nMoney        = std::min(m_nMoney, 999'999'999);
+    m_nDisplayMoney = std::min(m_nDisplayMoney, 999'999'999);
 }
 
 // 0x56F4E0

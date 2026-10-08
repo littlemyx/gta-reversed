@@ -22,6 +22,7 @@ public:
     CTask*    ControlSubTask(CPed* ped) override { return m_pSubTask; }
 
     CTask* CreateSubTask(eTaskType tt);
+    [[nodiscard]] CVehicle* GetTargetVehicle() const { return m_EnterInto; } // NOTSA
 
 protected:
     CVehicle* m_EnterInto = {};

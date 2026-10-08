@@ -9,6 +9,7 @@
 #include "TaskSimpleWaitUntilPedIsInCar.h"
 #include "PedGeometryAnalyser.h"
 #include "PedGroups.h"
+#include "PedGroup.h"
 #include "CarEnterExit.h"
 #include <optional>
 

@@ -123,6 +123,24 @@ class CWaterLevel {
     static inline auto& TextureShiftSecondV = StaticRef<float>(0xC21180);
     static inline auto& TextureShiftSecondU = StaticRef<float>(0xC21184);
 
+    // Third layer, applied with random jitter every frame by `RenderWater`. Not used by any reversed code (yet) => names are a guess (by analogy with the above)
+    static inline auto& TextureShiftThirdV = StaticRef<float>(0xC21170);
+    static inline auto& TextureShiftThirdU = StaticRef<float>(0xC21174);
+
+    // Scrolling accumulators (flow-driven), updated by `RenderWater`. Initial value: 0.5
+    static inline auto& TextureScrollSecondU = StaticRef<float>(0x8D3824);
+    static inline auto& TextureScrollSecondV = StaticRef<float>(0x8D3828);
+    static inline auto& TextureScrollFirstU = StaticRef<float>(0x8D382C);
+    static inline auto& TextureScrollFirstV = StaticRef<float>(0x8D3830);
+
+    static inline auto& TextureJitterMult = StaticRef<float>(0x8D3834);           // Default: 0.1
+    static inline auto& TextureRandomShiftMult = StaticRef<float>(0x8D3928);      // Default: 0.01
+    static inline auto& TextureFlowScrollMult = StaticRef<float>(0x8D392C);       // Default: 0.04
+    static inline auto& WaterTextureAddressing = StaticRef<uint32>(0x8D3930);     // Default: 1 (rwTEXTUREADDRESSWRAP)
+    static inline auto& DETAILEDSEABEDDIST = StaticRef<float>(0x8D3934);          // Default: 600. Sea bed blocks closer than this are drawn using `RenderDetailedSeaBedSegment`
+
+    static inline auto& bRainbowQuads = StaticRef<bool>(0xC228DC);                // Debug leftover? If set each water quad is colored based on it's index
+
     struct WaterFog {
         std::array<int16, 70> minX;
         std::array<int16, 70> minY;
@@ -297,6 +315,12 @@ public:
     static void SplitWaterTriangleAlongYLine(int32 a0, int32 a1, int32 a2, CRenPar a3, int32 a4, int32 a5, CRenPar a6, int32 a7, int32 a8, CRenPar a9);
     static void RenderHighDetailWaterTriangle(int32 X1, int32 Y1, CRenPar P1, int32 X2, int32 Y2, CRenPar P2, int32 X3, int32 Y3, CRenPar P3);
     static void RenderWater();
+
+    //! Render a (part of a) block of the sea bed as a single quad
+    static void RenderSeaBedSegment(int32 blockX, int32 blockY, float minX, float maxX, float minY, float maxY);
+
+    //! Same as above, but the quad is subdivided into cells (4 per block)
+    static void RenderDetailedSeaBedSegment(int32 blockX, int32 blockY, float minX, float maxX, float minY, float maxY);
     static void SyncWater();
 
     static bool IsPointUnderwaterNoWaves(const CVector& point);
@@ -331,7 +355,6 @@ public:
     IsLocationOutOfWorldBounds_WS(const CVector&, int32)
     MarkQuadsAndPolysToBeRendered(int32, int32, bool)
     RenderBoatWakes()
-    RenderDetailedSeaBedSegment(int32, int32, float, float, float, float)
 
     RenderFlatWaterTriangle(int32, int32, CRenPar, int32, int32, CRenPar, int32, int32, CRenPar)
 
@@ -343,7 +366,6 @@ public:
     RenderHighDetailWaterTriangle(int32, int32, CRenPar, int32, int32, CRenPar, int32, int32, CRenPar)
     RenderHighDetailWaterTriangle_OneLayer(int32, int32, CRenPar, int32, int32, CRenPar, int32, int32, CRenPar, int32, int32, int32, int32)
 
-    RenderSeaBedSegment(int32, int32, float, float, float, float)
     RenderShipsOnHorizon()
     RenderTransparentWater()
     RenderWakeSegment(CVector2D&, CVector2D&, CVector2D&, CVector2D&, float&, float&, float&, float&, float&)

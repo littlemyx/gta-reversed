@@ -2,6 +2,7 @@
 #include "WaterLevel.h"
 #include "PostEffects.h"
 #include <sstream>
+#include <numbers>
 
 #define TRIANGLE_ARGS_OUT X1, Y1, P1, X2, Y2, P2, X3, Y3, P3
 
@@ -47,7 +48,9 @@ void CWaterLevel::InjectHooks() {
     RH_ScopedGlobalInstall(GetWaterLevelNoWaves, 0x6E8580);
     RH_ScopedGlobalInstall(RenderWaterFog, 0x6E7760);
     RH_ScopedGlobalInstall(CalculateWavesOnlyForCoordinate, 0x6E6EF0);
-    RH_ScopedGlobalInstall(RenderWater, 0x6EF650, { .Reversed = false });
+    RH_ScopedGlobalInstall(RenderWater, 0x6EF650);
+    RH_ScopedGlobalInstall(RenderSeaBedSegment, 0x6E6870);
+    RH_ScopedGlobalInstall(RenderDetailedSeaBedSegment, 0x6E6A10);
     RH_ScopedGlobalInstall(AddWaveToResult, 0x6E81E0);
     RH_ScopedGlobalInstall(SetCameraRange, 0x6E9C80);
 }
@@ -1079,9 +1082,302 @@ void CWaterLevel::RenderHighDetailWaterTriangle(int32 X1, int32 Y1, CRenPar P1, 
     plugin::CallAndReturn<void, 0x6EDDC0, int32, int32, CRenPar, int32, int32, CRenPar, int32, int32, CRenPar>(X1, Y1, P1, X2, Y2, P2, X3, Y3, P3);
 }
 
+// 0x6E6870 - cdecl
+void CWaterLevel::RenderSeaBedSegment(int32 blockX, int32 blockY, float minX, float maxX, float minY, float maxY) {
+    constexpr auto SEABED_Z     = -70.f;
+    const auto SEABED_COLOR = CRGBA{ 0x50, 0x50, 0x50, 0xFF }; // 0xFF505050
+    constexpr auto UV_SCALE     = 8.f;
+
+    // NOTE: No `RenderIfDoesntFit` here, the original doesn't check for overflow either
+    RenderBuffer::PushIndices({ 0, 1, 2, 3, 1, 2 }, true);
+
+    // The block coordinates are converted to float first, and the sums are done in extended precision
+    const auto CalcPos = [](int32 block, float frac) {
+        return (float)(((double)(float)block + (double)frac) * 500.0 - 3000.0);
+    };
+
+    const auto x0 = CalcPos(blockX, minX), x1 = CalcPos(blockX, maxX);
+    const auto y0 = CalcPos(blockY, minY), y1 = CalcPos(blockY, maxY);
+
+    RenderBuffer::PushVertex({ x0, y0, SEABED_Z }, { minX * UV_SCALE, minY * UV_SCALE }, SEABED_COLOR);
+    RenderBuffer::PushVertex({ x0, y1, SEABED_Z }, { minX * UV_SCALE, maxY * UV_SCALE }, SEABED_COLOR);
+    RenderBuffer::PushVertex({ x1, y0, SEABED_Z }, { maxX * UV_SCALE, minY * UV_SCALE }, SEABED_COLOR);
+    RenderBuffer::PushVertex({ x1, y1, SEABED_Z }, { maxX * UV_SCALE, maxY * UV_SCALE }, SEABED_COLOR);
+}
+
+// 0x6E6A10 - cdecl
+void CWaterLevel::RenderDetailedSeaBedSegment(int32 blockX, int32 blockY, float minX, float maxX, float minY, float maxY) {
+    constexpr auto SEABED_Z         = -70.f;
+    const auto SEABED_COLOR       = CRGBA{ 0x50, 0x50, 0x50, 0xFF }; // 0xFF505050
+    constexpr auto UV_SCALE         = 8.f;
+    constexpr auto CELLS_PER_BLOCK  = 4.f; // 0x858B90
+
+    // Number of cells to split the segment into (At least 1 on each axis)
+    const auto spanX = (double)maxX - (double)minX;
+    const auto spanY = (double)maxY - (double)minY;
+    const auto numX  = std::max(1, (int32)(spanX * CELLS_PER_BLOCK));
+    const auto numY  = std::max(1, (int32)(spanY * CELLS_PER_BLOCK));
+    const auto widthX  = (float)spanX;
+    const auto heightY = (float)spanY;
+
+    for (int32 ix = 0; ix < numX; ix++) {
+        // The start is kept in extended precision, the end is rounded to float (as the original does)
+        const auto fx0 = (double)ix * widthX / (double)numX + (double)minX;
+        const auto fx1 = (float)((double)(ix + 1) * widthX / (double)numX + (double)minX);
+
+        const auto u0 = (float)(UV_SCALE * fx0);
+        const auto u1 = fx1 * UV_SCALE;
+
+        const auto x0 = (float)(((double)(float)blockX + fx0) * 500.0 - 3000.0);
+        const auto x1 = (float)(((double)(float)blockX + (double)fx1) * 500.0 - 3000.0);
+
+        for (int32 iy = 0; iy < numY; iy++) {
+            const auto fy0 = (float)((double)iy * heightY / (double)numY + (double)minY);
+            const auto fy1 = (float)((double)(iy + 1) * heightY / (double)numY + (double)minY);
+
+            const auto y0 = (float)(((double)(float)blockY + (double)fy0) * 500.0 - 3000.0);
+            const auto y1 = (float)(((double)(float)blockY + (double)fy1) * 500.0 - 3000.0);
+
+            RenderBuffer::PushIndices({ 0, 1, 2, 3, 1, 2 }, true);
+
+            RenderBuffer::PushVertex({ x0, y0, SEABED_Z }, { u0, fy0 * UV_SCALE }, SEABED_COLOR);
+            RenderBuffer::PushVertex({ x0, y1, SEABED_Z }, { u0, fy1 * UV_SCALE }, SEABED_COLOR);
+            RenderBuffer::PushVertex({ x1, y0, SEABED_Z }, { u1, fy0 * UV_SCALE }, SEABED_COLOR);
+            RenderBuffer::PushVertex({ x1, y1, SEABED_Z }, { u1, fy1 * UV_SCALE }, SEABED_COLOR);
+        }
+    }
+}
+
 // 0x6EF650
 void CWaterLevel::RenderWater() {
-    plugin::Call<0x6EF650>();
+    ZoneScoped;
+
+    if (!CGame::CanSeeWaterFromCurrArea()) {
+        return;
+    }
+
+    SetCameraRange();
+    DefinedState();
+
+    // Renders out and clears the (immediate mode) buffers
+    const auto FlushRenderBuffer = [] {
+        if (uiTempBufferVerticesStored) {
+            LittleTest();
+            if (RwIm3DTransform(TempBufferVertices.m_3d, uiTempBufferVerticesStored, nullptr, rwIM3D_VERTEXUV)) {
+                RwIm3DRenderIndexedPrimitive(rwPRIMTYPETRILIST, aTempBufferIndices, uiTempBufferIndicesStored);
+                RwIm3DEnd();
+            }
+        }
+        RenderBuffer::ClearRenderBuffer();
+    };
+
+    //
+    // Sea bed (Outside of the world only)
+    //
+    RenderBuffer::ClearRenderBuffer();
+
+    RwRenderStateSet(rwRENDERSTATETEXTURERASTER,       RWRSTATE(seabd32Raster));
+    RwRenderStateSet(rwRENDERSTATEFOGENABLE,           RWRSTATE(TRUE));
+    RwRenderStateSet(rwRENDERSTATESRCBLEND,            RWRSTATE(rwBLENDSRCALPHA));
+    RwRenderStateSet(rwRENDERSTATEDESTBLEND,           RWRSTATE(rwBLENDINVSRCALPHA));
+    RwRenderStateSet(rwRENDERSTATEALPHATESTFUNCTIONREF, RWRSTATE(0));
+    RwRenderStateSet(rwRENDERSTATEVERTEXALPHAENABLE,   RWRSTATE(TRUE));
+
+    for (int32 i = 0; i < (int32)m_NumBlocksOutsideWorldToBeRendered; i++) {
+        const int32 blockX = m_BlocksToBeRenderedOutsideWorldX[i];
+        const int32 blockY = m_BlocksToBeRenderedOutsideWorldY[i];
+
+        // Is the block close enough to the camera to use the detailed version?
+        const auto& camPos = TheCamera.GetPosition();
+        const auto  blockCenterX = ((double)blockX + 0.5) * (double)WATER_BLOCK_SIZE - 3000.0;
+        const auto  blockCenterY = (float)(((double)blockY + 0.5) * (double)WATER_BLOCK_SIZE - 3000.0); // Rounded to float, but X isn't!
+        const auto  distX = (double)camPos.x - blockCenterX;
+        const auto  distY = (double)camPos.y - (double)blockCenterY;
+        const bool  isNear = std::sqrt(distX * distX + distY * distY) < (double)DETAILEDSEABEDDIST;
+
+        const auto RenderSegment = [&](float minX, float maxX, float minY, float maxY) {
+            if (isNear) {
+                RenderDetailedSeaBedSegment(blockX, blockY, minX, maxX, minY, maxY);
+            } else {
+                RenderSeaBedSegment(blockX, blockY, minX, maxX, minY, maxY);
+            }
+        };
+
+        // Edge blocks of the world only have a thin strip rendered here (rest is rendered by the water polys)
+        float minX = 0.f, maxX = 1.f;
+        float minY = 0.f, maxY = 1.f;
+        bool  renderStripX = true; // Out of the world: the whole block is rendered with this call
+        bool  renderStripY = false;
+
+        if (blockX >= 0 && blockY >= 0 && blockX < NUM_WATER_BLOCKS_ROWCOL && blockY < NUM_WATER_BLOCKS_ROWCOL) { // In the world
+            renderStripX = false;
+            if (blockX == 0) {
+                maxX         = 0.04f;
+                renderStripX = true;
+            } else if (blockX == 11) {
+                minX         = 0.96f;
+                maxX         = 1.f;
+                renderStripX = true;
+            }
+            if (blockY == 0) {
+                maxY         = 0.04f;
+                renderStripY = true;
+            } else if (blockY == 11) {
+                minY         = 0.96f;
+                maxY         = 1.f;
+                renderStripY = true;
+            }
+        }
+
+        if (renderStripX) {
+            RenderSegment(minX, maxX, 0.f, 1.f);
+        }
+        if (renderStripY) {
+            RenderSegment(0.f, 1.f, minY, maxY);
+        }
+    }
+
+    FlushRenderBuffer();
+
+    //
+    // Update texture shifts, and water colors
+    //
+    RwRenderStateSet(rwRENDERSTATEZWRITEENABLE,   RWRSTATE(FALSE));
+    RwRenderStateSet(rwRENDERSTATETEXTUREADDRESS, RWRSTATE(WaterTextureAddressing));
+
+    // The intermediate results are kept in extended precision by the original
+    const double flowScrollX = (double)CTimer::GetTimeStep() * (double)m_CurrentFlow.x * (double)TextureFlowScrollMult;
+    TextureScrollSecondU = (float)(0.08f * flowScrollX + (double)TextureScrollSecondU);
+
+    const double flowScrollY = (double)CTimer::GetTimeStep() * (double)m_CurrentFlow.y * (double)TextureFlowScrollMult;
+    TextureScrollSecondV = (float)(0.08f * flowScrollY + (double)TextureScrollSecondV);
+
+    if (TextureScrollSecondU > 1.f) {
+        TextureScrollSecondU -= 1.f;
+    }
+    if (TextureScrollSecondV > 1.f) {
+        TextureScrollSecondV -= 1.f;
+    }
+
+    TextureScrollFirstU = (float)(flowScrollX * 0.04f + (double)TextureScrollFirstU);
+    TextureScrollFirstV = (float)(flowScrollY * 0.04f + (double)TextureScrollFirstV);
+
+    if (TextureScrollFirstU > 1.f) {
+        TextureScrollFirstU -= 1.f;
+    }
+    if (TextureScrollFirstV > 1.f) {
+        TextureScrollFirstV -= 1.f;
+    }
+
+    constexpr auto PI_F = std::numbers::pi_v<float>;
+
+    const double angle1 = (double)(float)(CTimer::GetTimeInMS() & 0xFFF) * (2.f * PI_F / 4096.f);
+    TextureShiftSecondU = (float)(std::sin(angle1) * (double)CWeather::Wavyness * 0.08f + (double)TextureScrollSecondU);
+    TextureShiftSecondV = (float)(std::cos(angle1) * (double)CWeather::Wavyness * 0.08f + (double)TextureScrollSecondV);
+
+    const float angle2 = (float)(CTimer::GetTimeInMS() & 0x1FFF) * (PI_F / 4096.f);
+    TextureShiftFirstU = TextureScrollFirstU;
+    const double cosAngle2d = std::cos((double)angle2);
+    const float  cosAngle2  = (float)cosAngle2d; // Original stores it as float too
+    TextureShiftFirstV = (float)(cosAngle2d * 0.024f + (double)TextureScrollFirstV);
+
+    constexpr auto RAND_NORM = 1.f / 32767.f; // 0x858C7C (Not 1 / RAND_MAX, but that is the original value)
+
+    const int32 rand1 = rand();
+    TextureShiftThirdU = (float)((double)(float)rand1 * RAND_NORM * (double)TextureRandomShiftMult);
+    const int32 rand2 = rand();
+    TextureShiftThirdU = (float)(std::sin((double)angle2) * (double)TextureJitterMult + (double)TextureShiftThirdU);
+    TextureShiftThirdV = (float)((double)(float)rand2 * RAND_NORM * (double)TextureRandomShiftMult + (double)cosAngle2 * (double)TextureJitterMult);
+
+    // Water colors
+    WaterColor.r = (uint8)(int32)CTimeCycle::m_CurrentColours.m_fWaterRed;
+    WaterColor.g = (uint8)(int32)CTimeCycle::m_CurrentColours.m_fWaterGreen;
+    WaterColor.b = (uint8)(int32)CTimeCycle::m_CurrentColours.m_fWaterBlue;
+    // NOTSA: `WaterColor.a` isn't touched here (And not used, see `WaterLayerAlpha`)
+    WaterColorTriangle = WaterColor;
+
+    const auto secondLayerAlpha = (int32)(CTimeCycle::m_CurrentColours.m_fWaterAlpha * 0.5f);
+    WaterLayerAlpha[1] = secondLayerAlpha;
+
+    // BUG: Division by zero if `secondLayerAlpha == 256`
+    const auto firstLayerAlpha = (secondLayerAlpha << 8) / (0x100 - secondLayerAlpha);
+    WaterLayerAlpha[0] = firstLayerAlpha <= 0xFF ? (uint32)firstLayerAlpha : 0xFFu;
+
+    //
+    // Water polys
+    //
+    RenderBuffer::ClearRenderBuffer();
+
+    RwRenderStateSet(rwRENDERSTATETEXTURERASTER, RWRSTATE(waterclear256Raster));
+    RwRenderStateSet(rwRENDERSTATEFOGENABLE,     RWRSTATE(TRUE));
+    RwRenderStateSet(rwRENDERSTATESRCBLEND,      RWRSTATE(rwBLENDSRCALPHA));
+    RwRenderStateSet(rwRENDERSTATEDESTBLEND,     RWRSTATE(rwBLENDINVSRCALPHA));
+
+    for (int32 i = 0; i < (int32)NumWaterTriangles; i++) {
+        auto& tri = WaterTriangles[i];
+        if (!tri.bToBeRendered) {
+            continue;
+        }
+        const auto v0 = tri.GetVertex(0);
+        const auto v1 = tri.GetVertex(1);
+        const auto v2 = tri.GetVertex(2);
+        RenderWaterTriangle(
+            v0.x, v0.y, v0.rp,
+            v1.x, v1.y, v1.rp,
+            v2.x, v2.y, v2.rp
+        );
+        tri.bToBeRendered = false;
+    }
+
+    for (int32 i = 0; i < (int32)NumWaterQuads; i++) {
+        auto& quad = WaterQuads[i];
+        if (!quad.bToBeRendered) {
+            continue;
+        }
+
+        if (bRainbowQuads) {
+            const auto CalcChannel = [](int32 n) {
+                return (uint8)(int32)((float)n * 0.0625f * 255.f);
+            };
+            WaterColor.r = CalcChannel(i & 0xF);
+            WaterColor.g = CalcChannel((i / 16) & 0xF);
+            WaterColor.b = CalcChannel((i / 256) & 0xF);
+            WaterColor.a = (uint8)(int32)CTimeCycle::m_CurrentColours.m_fWaterAlpha;
+            WaterColorTriangle = WaterColor;
+        }
+
+        const auto v0 = quad.GetVertex(0);
+        const auto v1 = quad.GetVertex(1);
+        const auto v2 = quad.GetVertex(2);
+        const auto v3 = quad.GetVertex(3);
+        RenderWaterRectangle(
+            v0.x, v1.x, v0.y, v3.y,
+            v0.rp, v1.rp, v2.rp, v3.rp
+        );
+        quad.bToBeRendered = false;
+    }
+
+    // Blocks outside of the world: flat, "empty" water (Same params for each vertex)
+    for (int32 i = 0; i < (int32)m_NumBlocksOutsideWorldToBeRendered; i++) {
+        const int16 blockX = m_BlocksToBeRenderedOutsideWorldX[i];
+        const int16 blockY = m_BlocksToBeRenderedOutsideWorldY[i];
+        if (blockX >= 0 && blockX < NUM_WATER_BLOCKS_ROWCOL && blockY >= 0 && blockY < NUM_WATER_BLOCKS_ROWCOL) { // In the world => already rendered above
+            continue;
+        }
+
+        const CRenPar par{ 0.f, 1.f, 0.f, 0, 0 };
+        const auto CalcPos = [](int32 block) { return (int32)((float)block - 3000.f); };
+        RenderWaterRectangle(
+            CalcPos(blockX * WATER_BLOCK_SIZE), CalcPos(blockX * WATER_BLOCK_SIZE + WATER_BLOCK_SIZE),
+            CalcPos(blockY * WATER_BLOCK_SIZE), CalcPos(blockY * WATER_BLOCK_SIZE + WATER_BLOCK_SIZE),
+            par, par, par, par
+        );
+    }
+
+    FlushRenderBuffer();
+
+    RenderBoatWakes();
+    DefinedState();
 }
 
 void CWaterLevel::SyncWater() {

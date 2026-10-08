@@ -84,6 +84,8 @@ public:
     static inline auto& GenTrain_GenerationNode = StaticRef<uint32>(0xC38008);
     static inline auto& GenTrain_Status = StaticRef<uint32>(0xC3800C);
     static inline auto& bDisableRandomTrains = StaticRef<bool>(0xC38010);
+    static inline auto& GenTrain_LastConfig = StaticRef<int32>(0xC38064);   // Config of the previously generated train (cycles through 0..7)
+    static inline auto& GenTrain_IsNearStation = StaticRef<bool>(0xC38068); // Is the player close to any station
     static CVector aStationCoors[6];
 
     static constexpr auto Type = VEHICLE_TYPE_TRAIN;

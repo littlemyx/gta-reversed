@@ -4,6 +4,9 @@
 #include "FireManager.h"
 #include "MenuSystem.h"
 #include "Hud.h"
+#include "CarEnterExit.h"
+#include "PedGeometryAnalyser.h"
+#include "Cranes.h"
 
 void CPlayerInfo::InjectHooks() {
     RH_ScopedClass(CPlayerInfo);
@@ -11,10 +14,10 @@ void CPlayerInfo::InjectHooks() {
 
     RH_ScopedInstall(Constructor, 0x571920, { .State = HS::RedirectToGTA, .Locked = true }); // hooking ctor will produce bugs with weapons, you will never give weapon through cheat or something
     RH_ScopedInstall(CancelPlayerEnteringCars, 0x56E860);
-    RH_ScopedInstall(FindObjectToSteal, 0x56DBD0, { .Reversed = false });
+    RH_ScopedInstall(FindObjectToSteal, 0x56DBD0);
     RH_ScopedInstall(EvaluateCarPosition, 0x56DAD0);
     RH_ScopedInstall(Process, 0x56F8D0, { .Reversed = false });
-    RH_ScopedInstall(FindClosestCarSectorList, 0x56F4E0, { .Reversed = false });
+    RH_ScopedInstall(FindClosestCarSectorList, 0x56F4E0);
     RH_ScopedInstall(Clear, 0x56F330);
     RH_ScopedInstall(StreamParachuteWeapon, 0x56EB30);
     RH_ScopedInstall(AddHealth, 0x56EAB0);
@@ -74,7 +77,62 @@ void CPlayerInfo::CancelPlayerEnteringCars(CVehicle* vehicle) {
 
 // 0x56DBD0
 CEntity* CPlayerInfo::FindObjectToSteal(CPed* ped) {
-    return plugin::CallAndReturn<CEntity*, 0x56DBD0, CPed*>(ped);
+    auto&       pedMat = ped->GetMatrix();
+    const auto& pedFwd = pedMat.GetForward();
+    const auto& pedRgt = pedMat.GetRight();
+    const auto& pedPos = ped->GetPosition();
+
+    // Point 1.5 units in front of the ped
+    const auto offX = pedFwd.x * 0.5f * 3.0f;
+    const auto offY = pedFwd.y * 0.5f * 3.0f;
+    const auto offZ = pedFwd.z * 0.5f * 3.0f;
+    const CVector center{ offX + pedPos.x, offY + pedPos.y, offZ + pedPos.z };
+
+    // Sector range (the original did the clamping in a rather strange way, but the result is the same)
+    const auto SectorOf = [](float v) { return (int32)std::floor(v * 0.02f + 60.0f); };
+    const auto xMinSector = SectorOf(center.x - 3.0f);
+    const auto yMinSector = SectorOf(center.y - 3.0f);
+    const auto xMaxSector = SectorOf(center.x + 3.0f);
+    const auto yMaxSector = SectorOf(center.y + 3.0f);
+    const auto xMin = xMinSector > 0 ? xMinSector : 0;
+    const auto yMin = yMinSector > 0 ? yMinSector : 0;
+    const auto xMax = xMaxSector < 119 ? xMaxSector : 119;
+    const auto yMax = yMaxSector < 119 ? yMaxSector : 119;
+
+    CWorld::AdvanceCurrentScanCode();
+    const auto scanCode = CWorld::GetCurrentScanCode();
+
+    CEntity* found{};
+    for (auto y = yMin; y <= yMax; y++) {
+        for (auto x = xMin; x <= xMax; x++) {
+            for (auto* node = CWorld::GetRepeatSector(x, y).Objects.GetNode(); node;) {
+                auto* const obj = node->Item;
+                node            = node->Next;
+
+                const auto& objPos = obj->GetPosition();
+                const auto  dx     = objPos.x - center.x;
+                const auto  dy     = objPos.y - center.y;
+                const auto  dz     = objPos.z - center.z;
+                // NOTE: The original doesn't set the object's scan code
+                if (!obj->objectFlags.bIsLiftable || obj->GetScanCode() == scanCode) {
+                    continue;
+                }
+                if (!(dz * dz + dy * dy + dx * dx < 4.5f)) {
+                    continue;
+                }
+
+                auto fwdDot = dz * pedFwd.z + dy * pedFwd.y + dx * pedFwd.x;
+                if (fwdDot < 0.0f) {
+                    fwdDot = 10.0f - fwdDot;
+                }
+                const auto rgtDot = std::abs(dz * pedRgt.z + dy * pedRgt.y + dx * pedRgt.x);
+                if (rgtDot * 3.0f + fwdDot < 1000.0f) {
+                    found = obj;
+                }
+            }
+        }
+    }
+    return found;
 }
 
 // 0x56DAD0
@@ -135,7 +193,81 @@ void CPlayerInfo::Process(uint32 playerIndex) {
 
 // 0x56F4E0
 void CPlayerInfo::FindClosestCarSectorList(CPtrListDoubleLink<CVehicle*>& ptrList, CPed* ped, float minX, float minY, float maxX, float maxY, float* outVehDist, CVehicle** outVehicle) {
-    plugin::CallMethod<0x56F4E0, CPlayerInfo*, CPtrListDoubleLink<CVehicle*>&, CPed*, float, float, float, float, float*, CVehicle**>(this, ptrList, ped, minX, minY, maxX, maxY, outVehDist, outVehicle);
+    for (auto* node = ptrList.GetNode(); node;) {
+        auto* const veh = node->Item;
+        node            = node->Next;
+
+        if (veh->IsScanCodeCurrent() || !veh->GetUsesCollision() || veh->GetType() != ENTITY_TYPE_VEHICLE) {
+            continue;
+        }
+        veh->SetCurrentScanCode();
+        if (veh->GetStatus() == STATUS_WRECKED || veh->GetStatus() == STATUS_TRAIN_MOVING) {
+            continue;
+        }
+
+        // Skip vehicles that are not upright (but let bikes through)
+        if (veh->GetMatrix().GetUp().z <= 0.3f && veh->m_nVehicleSubType != VEHICLE_TYPE_BIKE) {
+            continue;
+        }
+
+        const auto& vehPos     = veh->GetPosition();
+        const auto  vehBaseZ   = vehPos.z - veh->GetDistanceFromCentreOfMassToBaseOfModel() + 1.0f;
+        const auto& pedPos     = ped->GetPosition();
+        auto        pedToVehDist = ((pedPos.x - vehPos.x) + (pedPos.y - vehPos.y)) * 0.0f + (pedPos.z - vehBaseZ); // NOTE: Yes, that's how it was
+        // ^ NOTE: Yes, `(dx + dy) * 0.0f` is in the original as well. Result is basically the Z distance.
+
+        const auto IsAcceptableDistance = [&]() -> bool {
+            if (veh->m_nModelIndex == MODEL_AT400) {
+                CVector doorPos;
+                int32   doorId{};
+                if (CCarEnterExit::GetNearestCarDoor(ped, veh, doorPos, doorId)) {
+                    pedToVehDist = std::abs(ped->GetPosition().z - doorPos.z);
+                    if (pedToVehDist < 1.0f) {
+                        return true;
+                    }
+                }
+            }
+            if (std::abs(pedToVehDist) < 2.0f) {
+                return true;
+            }
+            if (veh->m_nVehicleSubType != VEHICLE_TYPE_BOAT) {
+                return false;
+            }
+            const auto pedZ = ped->GetPosition().z;
+            if (vehBaseZ < pedZ && vehBaseZ > pedZ - 4.0f) {
+                return true;
+            }
+            return ped->m_pContactEntity == veh;
+        };
+        if (!IsAcceptableDistance()) {
+            continue;
+        }
+
+        if (!veh->vehicleFlags.bConsideredByPlayer) {
+            continue;
+        }
+
+        CVector doorPos;
+        int32   doorId{};
+        if (!CCarEnterExit::GetNearestCarDoor(ped, veh, doorPos, doorId)) {
+            continue;
+        }
+
+        const CVector2D pedToVeh{ ped->GetPosition().x - veh->GetPosition().x, ped->GetPosition().y - veh->GetPosition().y };
+        const auto      dist2D = CVector{ pedToVeh.x, pedToVeh.y, 0.0f }.Magnitude();
+        pedToVehDist           = dist2D;
+        if (dist2D > 10.0f) {
+            if (CPedGeometryAnalyser::LiesInsideBoundingBox(*ped, ped->GetPosition(), *veh)) {
+                pedToVehDist = 10.0f;
+            } else {
+                continue;
+            }
+        }
+
+        if (!CCranes::IsThisCarBeingCarriedByAnyCrane(veh)) {
+            EvaluateCarPosition(veh, ped, pedToVehDist, outVehDist, outVehicle);
+        }
+    }
 }
 
 // 0x56F330

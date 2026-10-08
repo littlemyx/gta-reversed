@@ -863,7 +863,7 @@ bool CCarEnterExit::IsRoomForPedToLeaveCar(const CVehicle* vehicle, int32 doorId
     const bool testBuildings = vehicle->m_nVehicleType != VEHICLE_TYPE_TRAIN;
     const auto* const hitEntity = CWorld::TestSphereAgainstWorld(door, 0.35f, &veh, testBuildings, true, false, true, false, false);
     if (hitEntity
-        && !(hitEntity->GetModelIndex() == 0x260 && vehicle->GetModelIndex() == 0x241)
+        && !(hitEntity->GetModelIndex() == MODEL_TUGSTAIR && vehicle->GetModelIndex() == MODEL_AT400)
         && hitEntity != vehicle->m_pAttachedTo
     ) {
         return false;
@@ -879,7 +879,7 @@ bool CCarEnterExit::IsRoomForPedToLeaveCar(const CVehicle* vehicle, int32 doorId
 
     float groundZBelow;
     if (vehicle->IsBoat()
-        || notsa::contains({ 0x1CC, 0x21B, 0x1BF, 0x1A1 }, (int32)vehicle->GetModelIndex())
+        || notsa::contains({ (int32)MODEL_SKIMMER, (int32)MODEL_VORTEX, (int32)MODEL_SEASPAR, (int32)MODEL_LEVIATHN }, (int32)vehicle->GetModelIndex())
     ) {
         groundZBelow = groundZ - 1.f;
     } else {

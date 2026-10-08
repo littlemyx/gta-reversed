@@ -63,24 +63,24 @@ void CGenericGameStorage::InjectHooks() {
     // until we reverse everything.
 
     RH_ScopedInstall(ReportError, 0x5D08C0);
-    RH_ScopedInstall(DoGameSpecificStuffBeforeSave, 0x618F50, { .Reversed = false });
-    RH_ScopedInstall(DoGameSpecificStuffAfterSucessLoad, 0x618E90, { .Reversed = false });
-    RH_ScopedInstall(InitRadioStationPositionList, 0x618E70, { .Reversed = false });
-    RH_ScopedGlobalInstall(GetSavedGameDateAndTime, 0x618D00, { .Reversed = false });
+    RH_ScopedInstall(DoGameSpecificStuffBeforeSave, 0x618F50);
+    RH_ScopedInstall(DoGameSpecificStuffAfterSucessLoad, 0x618E90);
+    RH_ScopedInstall(InitRadioStationPositionList, 0x618E70);
+    RH_ScopedGlobalInstall(GetSavedGameDateAndTime, 0x618D00);
     RH_ScopedInstall(GenericLoad, 0x5D17B0);
     RH_ScopedInstall(GenericSave, 0x5D13E0);
-    RH_ScopedInstall(CheckSlotDataValid, 0x5D1380, { .Reversed = false });
+    RH_ScopedInstall(CheckSlotDataValid, 0x5D1380);
     RH_ScopedOverloadedInstall(LoadDataFromWorkBuffer, "org", 0x5D1300, bool(*)(void*, int32));
     RH_ScopedOverloadedInstall(SaveDataToWorkBuffer, "org", 0x5D1270, bool(*)(void*, int32));
-    RH_ScopedInstall(LoadWorkBuffer, 0x5D10B0, { .Reversed = false });
-    RH_ScopedInstall(SaveWorkBuffer, 0x5D0F80, { .Reversed = false });
-    RH_ScopedInstall(GetCurrentVersionNumber, 0x5D0F50, { .Reversed = false });
-    RH_ScopedInstall(MakeValidSaveName, 0x5D0E90, { .Reversed = false });
-    RH_ScopedInstall(CloseFile, 0x5D0E30, { .Reversed = false });
-    RH_ScopedInstall(OpenFileForWriting, 0x5D0DD0, { .Reversed = false });
-    RH_ScopedInstall(OpenFileForReading, 0x5D0D20, { .Reversed = false });
-    RH_ScopedInstall(CheckDataNotCorrupt, 0x5D1170, { .Reversed = false });
-    RH_ScopedInstall(RestoreForStartLoad, 0x619000, { .Reversed = false });
+    RH_ScopedInstall(LoadWorkBuffer, 0x5D10B0);
+    RH_ScopedInstall(SaveWorkBuffer, 0x5D0F80);
+    RH_ScopedInstall(GetCurrentVersionNumber, 0x5D0F50);
+    RH_ScopedInstall(MakeValidSaveName, 0x5D0E90);
+    RH_ScopedInstall(CloseFile, 0x5D0E30);
+    RH_ScopedInstall(OpenFileForWriting, 0x5D0DD0);
+    RH_ScopedInstall(OpenFileForReading, 0x5D0D20);
+    RH_ScopedInstall(CheckDataNotCorrupt, 0x5D1170);
+    RH_ScopedInstall(RestoreForStartLoad, 0x619000);
 }
 
 // 0x5D08C0
@@ -756,9 +756,12 @@ void CGenericGameStorage::MakeValidSaveName(int32 slot) {
     assert(slot < MAX_SAVEGAME_SLOTS);
 
     char path[MAX_PATH]{};
-    s_PcSaveHelper.GenerateGameFilename(slot, path);
+    sprintf_s(path, "%s%i", C_PcSave::DefaultPCSaveFileName, slot + 1);
 
-    path[257] = 0; // Make sure there's space for the file extension
+    // NOTSA: original code (0x5D0EC9) truncates the path to 256 chars so that the extension fits
+    if (strlen(path) >= 0x101u) {
+        path[257] = 0;
+    }
 
     strcat_s(path, ".b");
 

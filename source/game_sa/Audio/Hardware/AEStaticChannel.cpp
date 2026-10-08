@@ -185,20 +185,16 @@ bool CAEStaticChannel::SetAudioBuffer(void* buffer, uint16 size, int16 f88, int1
         field_68               = size;
     }
 
-    // NOTSA: The original stores the size of the DirectSound buffer (DSBUFFERDESC::dwBufferBytes) at this+0x24,
-    // which is part of CAEAudioChannel::_pad10 (so no named member for it).
-    auto& dsBufferBytes = *reinterpret_cast<uint32*>(reinterpret_cast<uint8*>(this) + 0x24);
-
     uint32 bufferBytes;
     if (m_bLooped && m_nCurrentBufferOffset != 0) {
         const uint32 tailBytes = field_68 - m_nCurrentBufferOffset;
         m_nNumLockBytes        = tailBytes;
         field_6C               = std::max<uint32>(field_68, 24000u) / tailBytes + 1;
         bufferBytes            = field_6C * tailBytes;
-        dsBufferBytes          = bufferBytes;
+        m_nBufferBytes         = bufferBytes;
     } else {
-        bufferBytes   = size;
-        dsBufferBytes = size;
+        bufferBytes    = size;
+        m_nBufferBytes = size;
     }
 
     DSBUFFERDESC bufferDesc{};
@@ -242,12 +238,12 @@ bool CAEStaticChannel::SetAudioBuffer(void* buffer, uint16 size, int16 f88, int1
         }
         m_bNeedData = false;
     } else {
-        setCurrentPos = dsBufferBytes - m_nCurrentBufferOffset;
+        setCurrentPos = m_nBufferBytes - m_nCurrentBufferOffset;
         memcpy((uint8*)audioPtr1 + setCurrentPos, m_pBuffer, m_nCurrentBufferOffset);
 
         const uint32 tailBytes = m_nNumLockBytes;
         m_nNumLoops            = m_nCurrentBufferOffset / tailBytes + 1;
-        m_dwLockOffset         = dsBufferBytes - uint32(m_nNumLoops) * tailBytes;
+        m_dwLockOffset         = m_nBufferBytes - uint32(m_nNumLoops) * tailBytes;
 
         if (const uint32 numCopies = uint32(field_6C) - m_nNumLoops) {
             uint16 i = 0;

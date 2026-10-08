@@ -17,7 +17,8 @@ public:
     IDirectSound3DBuffer* m_pDirectSound3DBuffer;
 #endif
 
-    char                  _pad10[24];
+    char                  _pad10[20];
+    uint32                m_nBufferBytes; // Size of the DirectSound buffer (DSBUFFERDESC::dwBufferBytes); only written by CAEStaticChannel::SetAudioBuffer
     uint32                m_nFlags;
     uint32                m_nLengthInBytes;
     uint32                m_dwStopTime; // unused

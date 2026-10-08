@@ -19,12 +19,12 @@ static void ClearEffectPairs(CScriptedEffectPairs& pairs) {
         for (auto& effect : pair.Effects) {
             effect.Effect         = -1;
             effect.WaitingTask    = -1;
-            effect.PartnerTask    = -1;
             effect.PartnerUseMode = CScriptedEffectPair::eMode::NONE;
         }
+        pair.Effects[0].PartnerTask = -1;
         // BUG: The original forgets to reset `PartnerTask` of the second effect
-        if (!notsa::IsFixBugs()) {
-            // Leave as is
+        if (notsa::IsFixBugs()) {
+            pair.Effects[1].PartnerTask = -1;
         }
         pair.UsePartnerImmediately = false;
     }

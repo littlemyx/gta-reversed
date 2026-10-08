@@ -1806,7 +1806,7 @@ bool CWeapon::FireInstantHit(CEntity* firingEntity, CVector* origin, CVector* mu
                     veh,
                     &start,
                     &endPt,
-                    notsa::contains({ VEHICLE_TYPE_PLANE, VEHICLE_TYPE_HELI }, veh->m_nVehicleType)
+                    notsa::contains({ VEHICLE_TYPE_PLANE, VEHICLE_TYPE_HELI }, veh->m_nVehicleSubType) // Offset 0x594, not 0x590
                 );
 
                 endPt = CVector{

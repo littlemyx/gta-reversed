@@ -321,8 +321,7 @@ void CPedGeometryAnalyser::ComputeEntityBoundingBoxCorners(float zPos, CEntity& 
 void CPedGeometryAnalyser::ComputeEntityBoundingBoxCornersUncached(float zPos, CEntity& entity, CVector* corners) {
     // Interior furniture
     if (entity.GetIsTypeBuilding() && entity.m_bIsTempBuilding) {
-        // BUG: The original passes the entity as is, but `GetBoundingBox` expects a `FurnitureEntity_c` (reads the tile coords from +0xC/+0xE)
-        if (g_interiorMan.GetBoundingBox(reinterpret_cast<FurnitureEntity_c*>(&entity), corners)) {
+        if (g_interiorMan.GetBoundingBox(&entity, corners)) {
             for (auto i = 0u; i < 4; i++) {
                 corners[i].z = zPos;
             }

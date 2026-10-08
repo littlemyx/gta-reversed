@@ -247,7 +247,7 @@ bool CPedGeometryAnalyser::ComputeClosestSurfacePoint(const CVector& posn, const
 
         const float dirZ = edgeZ * inv;
         const float t    = (posn.x - a.x) * edgeX * inv + (posn.y - a.y) * edgeY * inv + (posn.z - a.z) * dirZ; // Distance along the edge
-        if (t >= 0.f && t < len) {
+        if (t >= 0.f && t <= len) {
             const CVector p = {
                 edgeX * inv * t + a.x,
                 edgeY * inv * t + a.y,

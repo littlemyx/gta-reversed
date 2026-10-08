@@ -6,7 +6,6 @@
 #include "Scripted2dEffects.h"
 #include "PedAttractorManager.h"
 #include "InterestingEvents.h"
-#include "2dEffect.h"
 
 void CTaskComplexUseClosestFreeScriptedAttractor::InjectHooks() {
     RH_ScopedVirtualClass(CTaskComplexUseClosestFreeScriptedAttractor, 0x86e428, 11);

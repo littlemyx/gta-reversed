@@ -103,6 +103,7 @@ void CAutomobile::InjectHooks()
     RH_ScopedInstall(TowTruckControl, 0x6A40F0);
     RH_ScopedInstall(ProcessCarOnFireAndExplode, 0x6A7090);
 
+    RH_ScopedVMTInstall(Render, 0x6A2B10);
     RH_ScopedVMTInstall(Fix, 0x6A3440);
     RH_ScopedVMTInstall(DoBurstAndSoftGroundRatios, 0x6A47F0);
     RH_ScopedVMTInstall(PlayCarHorn, 0x6A3770);
@@ -6420,7 +6421,108 @@ void CAutomobile::PreRender() {
 
 // 0x6A2B10
 void CAutomobile::Render() {
-    plugin::CallMethod<0x6A2B10, CAutomobile*>(this);
+    m_nTimeTillWeNeedThisCar = CTimer::GetTimeInMS() + 3000;
+
+    int32 savedAlphaTestRef = 1; // The original pre-initializes the out value
+    RwRenderStateGet(rwRENDERSTATEALPHATESTFUNCTIONREF, &savedAlphaTestRef);
+    RwRenderStateSet(rwRENDERSTATEALPHATESTFUNCTIONREF, RWRSTATE(1));
+
+    const auto RenderNodeAtomic = [](RwFrame* frame) {
+        // The original calls `GetFirstObject` twice (once for the callee, once for the argument)
+        auto* const callee = (RpAtomic*)GetFirstObject(frame);
+        callee->renderCallBack((RpAtomic*)GetFirstObject(frame));
+    };
+
+    if (!CCheat::IsActive(CHEAT_INVISIBLE_CAR)) { // 0x96914B
+        CVehicle::Render();
+    } else {
+        // Only render wheels
+        RenderNodeAtomic(m_aCarNodes[CAR_WHEEL_RB]);
+        RenderNodeAtomic(m_aCarNodes[CAR_WHEEL_LB]);
+        RenderNodeAtomic(m_aCarNodes[CAR_WHEEL_RF]);
+        RenderNodeAtomic(m_aCarNodes[CAR_WHEEL_LF]);
+        if (m_aCarNodes[CAR_WHEEL_RM]) {
+            RenderNodeAtomic(m_aCarNodes[CAR_WHEEL_RM]);
+        }
+        if (m_aCarNodes[CAR_WHEEL_LM]) {
+            RenderNodeAtomic(m_aCarNodes[CAR_WHEEL_LM]);
+        }
+    }
+
+    // Rhino: render the extra (middle) wheels at the suspension line positions
+    if (m_nModelIndex == MODEL_RHINO) {
+        const auto* const lines = GetColModel()->m_pColData->m_pLines;
+
+        // Values stored inside doors (see `CAutomobile::ProcessEntityCollision`)
+        const float extraWheels[8]{
+            m_doors[DOOR_LEFT_REAR].m_openAngle,
+            m_doors[DOOR_LEFT_REAR].m_closedAngle,
+            m_doors[DOOR_LEFT_REAR].m_angle,
+            m_doors[DOOR_LEFT_REAR].m_prevAngle,
+            m_doors[DOOR_RIGHT_REAR].m_openAngle,
+            m_doors[DOOR_RIGHT_REAR].m_closedAngle,
+            m_doors[DOOR_RIGHT_REAR].m_angle,
+            m_doors[DOOR_RIGHT_REAR].m_prevAngle,
+        };
+
+        for (auto i = 0u; i < 8; i++) {
+            // BUG: Always uses the length of the 1st wheel's suspension
+            double t = (double)extraWheels[i] - (((double)m_aSuspensionLineLength[0] - (double)m_aSuspensionSpringLength[0]) / (double)m_aSuspensionLineLength[0]);
+            if (t < 0.0) {
+                t = 0.0;
+            }
+            const double u = (double)1.f - t; // 0x858624
+
+            const auto& line = lines[4 + i];
+
+            const float A = (float)(u * (double)line.m_vecStart.x);
+            const float B = (float)(u * (double)line.m_vecStart.y);
+            const double uz = u * (double)line.m_vecStart.z;
+            const float C = (float)(t * (double)line.m_vecEnd.z);
+
+            CVector offset{
+                (float)(t * (double)line.m_vecEnd.x + (double)A),
+                (float)(t * (double)line.m_vecEnd.y + (double)B),
+                (float)((double)C + uz),
+            };
+
+            RwFrame* const node = i < 4
+                ? m_aCarNodes[CAR_WHEEL_LB]
+                : m_aCarNodes[CAR_WHEEL_RB];
+            RwMatrix* const nodeMat = RwFrameGetMatrix(node);
+
+            RwV3d translation{
+                (float)((double)offset.x - (double)nodeMat->pos.x),
+                (float)((double)offset.y - (double)nodeMat->pos.y),
+                (float)((double)offset.z - (double)nodeMat->pos.z),
+            };
+            RwMatrixTranslate(nodeMat, &translation, rwCOMBINEPOSTCONCAT);
+            RwFrameUpdateObjects(node);
+            RenderNodeAtomic(node);
+
+            // Undo the translation
+            translation.x *= -1.f; // 0x858C1C
+            translation.y *= -1.f;
+            translation.z *= -1.f;
+            RwMatrixTranslate(nodeMat, &translation, rwCOMBINEPOSTCONCAT);
+        }
+    }
+
+    RwRenderStateSet(rwRENDERSTATEALPHATESTFUNCTIONREF, RWRSTATE(savedAlphaTestRef));
+
+    if (   m_nModelIndex != MODEL_RCBANDIT
+        && (int16)m_nModelIndex != -2
+        && m_nModelIndex != MODEL_RHINO
+        && !vehicleFlags.bIsRCVehicle
+        && GetVehicleAppearance() != VEHICLE_APPEARANCE_HELI
+    ) {
+        if (m_renderLights.m_bRightFront) {
+            DoHeadLightBeam(eVehicleLightId::MAIN, *m_matrix, true);
+        }
+        if (m_renderLights.m_bLeftFront) {
+            DoHeadLightBeam(eVehicleLightId::MAIN, *m_matrix, false);
+        }
+    }
 }
 
 // 0x6A9CA0

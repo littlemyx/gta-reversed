@@ -47,6 +47,12 @@
 #include "Events/EventNewGangMember.h"
 #include "Events/EventLeaderEntryExit.h"
 #include "Events/EventLeaderExitedCarAsDriver.h"
+#include "Events/EventLeaderEnteredCarAsDriver.h"
+#include "Tasks/TaskSequences.h"
+#include "Tasks/TaskComplexUseSequence.h"
+#include "Tasks/TaskComplexSequence.h"
+#include "Tasks/TaskTypes/TaskSimpleCarDrive.h"
+#include "Tasks/TaskTypes/TaskComplexLeaveAnyCar.h"
 
 void CGroupEventHandler::InjectHooks() {
     RH_ScopedClass(CGroupEventHandler);
@@ -65,7 +71,7 @@ void CGroupEventHandler::InjectHooks() {
     RH_ScopedInstall(ComputeResponseNewGangMember, 0x5F9840);
     RH_ScopedInstall(ComputeResponseLeaderExitedCar, 0x5F90A0);
     RH_ScopedInstall(ComputeResponsLeaderQuitEnteringCar, 0x5F9530, { .Reversed = false });
-    RH_ScopedInstall(ComputeResponseLeaderEnteredCar, 0x5F8900, { .Reversed = false });
+    RH_ScopedInstall(ComputeResponseLeaderEnteredCar, 0x5F8900);
     RH_ScopedInstall(ComputeResponseLeaderEnterExit, 0x5F9710);
     RH_ScopedInstall(ComputeResponseGunAimedAt, 0x5FBD10);
     RH_ScopedInstall(ComputeResponseGather, 0x5F99F0);
@@ -356,7 +362,118 @@ CTaskAllocator* CGroupEventHandler::ComputeResponseLeaderExitedCar(const CEventE
 
 // 0x5F8900
 CTaskAllocator* CGroupEventHandler::ComputeResponseLeaderEnteredCar(const CEvent& e, CPedGroup* pg, CPed* originator) {
-    return plugin::CallAndReturn<CTaskAllocator*, 0x5F8900, const CEvent&, CPedGroup*, CPed*>(e, pg, originator);
+    const auto& event  = static_cast<const CEventLeaderEnteredCarAsDriver&>(e);
+    const auto  taskId = event.m_TaskId;
+    // `CPedGroupIntelligence::m_TaskSeqId` (the last member of the class) is private and there's no accessor for it
+    const auto  seqId  = *reinterpret_cast<const int32*>(reinterpret_cast<const uint8*>(&pg->GetIntelligence()) + sizeof(CPedGroupIntelligence) - sizeof(int32));
+    const auto  leader = pg->GetMembership().GetLeader();
+    const auto  veh    = event.m_vehicle;
+    if (!leader || !veh) {
+        return nullptr;
+    }
+
+    auto& intel = pg->GetIntelligence();
+
+    // Followers sorted so that mission peds come first
+    std::array<CPed*, TOTAL_PED_GROUP_FOLLOWERS> sortedFollowers{};
+    {
+        size_t n = 0;
+        for (auto i = 0; i < TOTAL_PED_GROUP_FOLLOWERS; i++) {
+            if (const auto m = pg->GetMembership().GetMember(i); m && m->IsCreatedBy(PED_MISSION)) {
+                sortedFollowers[n++] = m;
+            }
+        }
+        for (auto i = 0; i < TOTAL_PED_GROUP_FOLLOWERS; i++) {
+            if (const auto m = pg->GetMembership().GetMember(i); m && !m->IsCreatedBy(PED_MISSION)) {
+                sortedFollowers[n++] = m;
+            }
+        }
+    }
+
+    const auto GetNumFollowers = [&] {
+        auto n = 0;
+        for (auto i = 0; i < TOTAL_PED_GROUP_FOLLOWERS; i++) {
+            if (pg->GetMembership().GetMember(i)) {
+                n++;
+            }
+        }
+        return n;
+    };
+
+    // Inlined: Whenever the ped should be forced to sit in the front seat
+    const auto ShouldForceFrontSeat = [&](CPed* ped) {
+        if (GetNumFollowers() != 1 || veh->m_nVehicleType == VEHICLE_TYPE_BIKE || veh->m_nVehicleSubType == VEHICLE_TYPE_QUAD) {
+            return false;
+        }
+        const auto front = veh->m_apPassengers[0];
+        if (!front || front == ped) {
+            return true;
+        }
+        for (auto i = 0; i < TOTAL_PED_GROUP_FOLLOWERS; i++) { // Already a follower?
+            if (pg->GetMembership().GetMember(i) == front) {
+                return false;
+            }
+        }
+        if (pg->GetMembership().GetLeader() == front) {
+            return false;
+        }
+        return !front->bDontDragMeOutCar;
+    };
+
+    CPed* prevPed      = leader;
+    int32 numAssigned  = 0;
+    for (CPed* const ped : sortedFollowers) {
+        if (!ped) {
+            continue;
+        }
+
+        if (numAssigned >= (int32)veh->m_nMaxPassengers) { // Vehicle full => Make them leave any vehicle they're in
+            intel.SetTask(ped, CTaskComplexLeaveAnyCar{ 0, true, false }, intel.GetPedTaskPairs());
+            continue;
+        }
+
+        if (taskId == TASK_GROUP_ENTER_CAR_AND_PERFORM_SEQUENCE && seqId >= 0 && seqId < CTaskSequences::NUM_SEQUENCES && CTaskSequences::ms_taskSequence[seqId].IsActive()) {
+            // Enter the car, and then perform the sequence
+            const auto forceFrontSeat = ShouldForceFrontSeat(ped);
+            CTaskComplexSequence seq{};
+            seq.AddTask(new CTaskComplexEnterCarAsPassengerWait{ veh, prevPed, forceFrontSeat, PEDMOVE_RUN });
+            seq.AddTask(new CTaskComplexUseSequence{ seqId });
+            intel.SetTask(ped, seq, intel.GetPedTaskPairs());
+        } else {
+            // Just enter the car
+            const auto forceFrontSeat = ShouldForceFrontSeat(ped);
+            intel.SetTask(ped, CTaskComplexEnterCarAsPassengerWait{ veh, prevPed, forceFrontSeat, PEDMOVE_RUN }, intel.GetPedTaskPairs());
+
+            // Make the ped drive (Once they're in the car)
+            if (!ped->bHasGroupDriveTask) {
+                ped->bHasGroupDriveTask = true;
+
+                CTaskComplexSequence seq{};
+                seq.AddTask(new CTaskSimpleCarDrive{ veh, nullptr, true });
+                if (const auto defTask = intel.GetTaskDefault(ped)) {
+                    seq.AddTask(defTask->Clone());
+                }
+                intel.SetDefaultTask(ped, seq);
+            }
+        }
+
+        numAssigned++;
+        prevPed = ped;
+    }
+
+    // Make the leader drive (If they're not a player)
+    if (!leader->IsPlayer() && !leader->bHasGroupDriveTask) {
+        leader->bHasGroupDriveTask = true;
+
+        CTaskComplexSequence seq{};
+        seq.AddTask(new CTaskSimpleCarDrive{ veh, nullptr, true });
+        if (const auto defTask = intel.GetTaskDefault(leader)) {
+            seq.AddTask(defTask->Clone());
+        }
+        intel.SetDefaultTask(leader, seq);
+    }
+
+    return nullptr;
 }
 
 // 0x5F9710
@@ -466,7 +583,44 @@ CTaskAllocator* CGroupEventHandler::ComputeResponseDamage(const CEventDamage& e,
 
 // 0x5F9530
 CTaskAllocator* CGroupEventHandler::ComputeResponsLeaderQuitEnteringCar(const CEvent& e, CPedGroup* pg, CPed* originator) {
-    return plugin::CallAndReturn<CTaskAllocator*, 0x5F9530, const CEvent&, CPedGroup*, CPed*>(e, pg, originator);
+    // NOTE: The original code iterates over the raw member slots (some of which might be null),
+    // and the delay is calculated using the slot index, so we have to do the same.
+    for (int32 i = 0; i < TOTAL_PED_GROUP_FOLLOWERS; i++) {
+        CPed* const m = pg->GetMembership().GetMember(i);
+        if (!m) {
+            continue;
+        }
+
+        if (m->bInVehicle && m->m_pVehicle) { // Member is in a vehicle => Make them leave it
+            pg->GetIntelligence().SetEventResponseTask(m, CTaskComplexLeaveCar{
+                m->m_pVehicle,
+                TARGET_DOOR_FRONT_LEFT,
+                i * 500,
+                true,
+                false
+            });
+            continue;
+        }
+
+        // Otherwise check if they're trying to enter a vehicle => Make them leave it
+        CVehicle* veh{};
+        if (const auto t = m->GetTaskManager().Find<CTaskComplexEnterCarAsPassengerWait>(false); !t || !(veh = t->GetCar())) {
+            if (const auto t = m->GetTaskManager().Find<CTaskComplexEnterCarAsPassenger>(false); !t || !(veh = t->GetTargetCar())) {
+                continue;
+            }
+        }
+
+        // This is an inlined `rand() * -500.f` => The result is a number in range [0, 499]
+        const auto rnd = -(int32)((float)(CGeneral::GetRandomNumber() & 0xFFFF) * (1.f / 32768.f) * 500.f);
+        pg->GetIntelligence().SetEventResponseTask(m, CTaskComplexLeaveCar{
+            veh,
+            TARGET_DOOR_FRONT_LEFT,
+            (i * 500 - rnd) + 250,
+            false,
+            false
+        });
+    }
+    return nullptr;
 }
 
 // 0x5FAA50

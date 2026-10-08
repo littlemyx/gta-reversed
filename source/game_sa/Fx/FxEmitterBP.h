@@ -6,9 +6,9 @@ class FxEmitterPrt_c;
 
 class NOTSA_EXPORT_VTABLE FxEmitterBP_c : public FxPrimBP_c {
 public:
-    uint16 m_nLodStart;
-    uint16 m_nLodEnd;
-
+    // NOTSA: The original has no members of its own, the lod values and the "has flat / heat haze" flags
+    // are stored in `m_FxInfoManager` (+0x38 .. +0x3D). The two flags below are written by `FxSystemBP_c::Load`
+    // (they should be `m_FxInfoManager.m_bHas{Flat,HeatHaze}ParticleEmitter` instead).
     bool   m_bHasInfoFlatData;
     bool   m_bHasInfoHeatHazeData;
 
@@ -33,4 +33,4 @@ private:
 
 
 };
-VALIDATE_SIZE(FxEmitterBP_c, 0x48);
+VALIDATE_SIZE(FxEmitterBP_c, 0x44); // NOTSA: original is 0x40

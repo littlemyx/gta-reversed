@@ -461,9 +461,10 @@ void CClothesBuilder::ConstructGeometryArray(RpGeometry** out, uint32* modelName
 // inlined, see 0x5A6CE1
 // 0x5A56C0
 void CClothesBuilder::DestroySkinArrays(RwMatrixWeights* weights, RwUInt32* bones) {
-    // TODO: Should this be `delete[]` or `delete`?
-    delete weights;
-    delete bones;
+    // NOTE: OG used the plain CRT `free`-like operator delete [0x8214BD] for both (they're allocated by `operator new` [0x82119A] in `ConstructGeometryAndSkinArrays`).
+    // They're allocated using `new[]` in our code, so they must be freed using `delete[]`.
+    delete[] weights;
+    delete[] bones;
 }
 
 // 0x5A56E0

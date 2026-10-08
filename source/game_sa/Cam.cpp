@@ -2343,7 +2343,7 @@ static_assert(sizeof(AimWeaponCamSettings) == 0x1C);
 auto& gAimWeaponCamSettings = StaticRef<std::array<AimWeaponCamSettings, 4>>(0x8CC4C0);
 
 // Tuning values of the aiming camera (names made up)
-auto& gAimStickScale           = StaticRef<float>(0x8CC4A0); // Scale of the stick input
+auto& gAimStickScale           = StaticRef<float>(0x8CC4A0); // Scale of the stick input (shared with other cameras)
 auto& gAimLockOnTurnRate       = StaticRef<float>(0x8CC4A4); // Maximum angle change per time step when locked on to a target
 auto& gAimFreeTurnRate         = StaticRef<float>(0x8CC4A8); // Maximum angle change per time step when the camera follows the player's heading
 auto& gAimDriverTurnRateScale  = StaticRef<float>(0x8CC4AC); // ^ for drivers
@@ -2353,13 +2353,12 @@ auto& gAimFovSniper            = StaticRef<float>(0x8CC4B8); // FOV when aiming 
 auto& gAimHeading              = StaticRef<float>(0x8CC530); // Heading the player is turned to when the camera isn't moved for a while (-1001 = not set)
 auto& gAimIdleTimeMax          = StaticRef<int32>(0x8CC534); // Above this the camera follows `gAimHeading`
 auto& gAimIdleTimeMin          = StaticRef<int32>(0x8CC538);
-auto& gAimLockOnBlend          = StaticRef<float>(0x8CC39C); // Base of the `pow` used to smooth the lock on position
+auto& gAimLockOnBlend          = StaticRef<float>(0x8CC39C); // Base of the `pow` used to smooth the lock on position (also read by `Process`)
 auto& gAimEnterTargetingDelay  = StaticRef<float>(0x8CCE54); // Time (ms) after which the camera is turned around again when "enter targeting" is pressed as a passenger
 auto& gAimStickRateCentered    = StaticRef<float>(0x8CCE58); // Base of the `pow` used to smooth the stick input (sticks centered)
 auto& gAimStickRate            = StaticRef<float>(0x8CCE5C); // ^ otherwise
 auto& gAimMeleeLockZScale      = StaticRef<float>(0x8CCE60); // Scale of the height difference added to the lock on position when using melee weapons
 auto& gbAimLookAtUsesCrossProd = StaticRef<bool>(0x8CCE64);  // Initially true
-auto& gAimExtinguisherAlpha    = StaticRef<float>(0x8D610C); // Vertical angle added when aiming with the fire extinguisher
 auto& gbAimFreeRotation        = StaticRef<bool>(0xB6EC44);  // Whether the camera rotates freely (otherwise it's moved towards `gAimHeading`)
 auto& gAimIdleTime             = StaticRef<int32>(0xB6EC48); // Time (ms) the driver hasn't moved the camera
 auto& gAimLastEnterTargeting   = StaticRef<uint32>(0xB6EC4C);
@@ -2556,7 +2555,7 @@ void CCam::Process_AimWeapon(const CVector& target, float orientation, float spe
                     const double a = (double)m_fVerticalAngle - std::asin((double)c);
                     m_fVerticalAngle = (float)a;
                     if (weaponType == WEAPON_EXTINGUISHER) {
-                        m_fVerticalAngle = (float)(a + (double)gAimExtinguisherAlpha);
+                        m_fVerticalAngle = (float)(a + (double)CWeapon::ms_fExtinguisherAimAngle);
                     }
                 }
             }

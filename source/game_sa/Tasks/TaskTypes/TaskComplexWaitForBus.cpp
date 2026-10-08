@@ -11,11 +11,11 @@ void CTaskComplexWaitForBus::InjectHooks() {
 
     RH_ScopedInstall(Destructor, 0x632930);
 
-    RH_ScopedVMTInstall(Clone, 0x636A60, {.Reversed = false});
-    RH_ScopedVMTInstall(GetTaskType, 0x632920, {.Reversed = false});
-    RH_ScopedVMTInstall(CreateNextSubTask, 0x632940, {.Reversed = false});
-    RH_ScopedVMTInstall(CreateFirstSubTask, 0x638940, {.Reversed = false});
-    RH_ScopedVMTInstall(ControlSubTask, 0x632A40, {.Reversed = false});
+    RH_ScopedVMTInstall(Clone, 0x636A60);
+    RH_ScopedVMTInstall(GetTaskType, 0x632920);
+    RH_ScopedVMTInstall(CreateNextSubTask, 0x632940);
+    RH_ScopedVMTInstall(CreateFirstSubTask, 0x638940);
+    RH_ScopedVMTInstall(ControlSubTask, 0x632A40);
 }
 
 CTaskComplexWaitForBus::CTaskComplexWaitForBus(const CTaskComplexWaitForBus& o) :
@@ -45,7 +45,7 @@ CTask* CTaskComplexWaitForBus::CreateNextSubTask(CPed* ped) {
         return nullptr; // Got on the bus, so task is finito
     }
     default:
-        NOTSA_UNREACHABLE();
+        return nullptr; // NOTSA: Original silently returned null here (and so do we, instead of hitting UB)
     }
 }
 

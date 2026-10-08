@@ -60,9 +60,9 @@ void CPools::InjectHooks() {
     RH_ScopedInstall(LoadVehiclePool, 0x5D2A20);
     RH_ScopedInstall(MakeSureSlotInObjectPoolIsEmpty, 0x550080);
     RH_ScopedInstall(Save, 0x5D0880);
-    RH_ScopedInstall(SaveObjectPool, 0x5D4940, { .Reversed = false });
-    RH_ScopedInstall(SavePedPool, 0x5D4B40, { .Reversed = false });
-    RH_ScopedInstall(SaveVehiclePool, 0x5D4800, { .Reversed = false });
+    RH_ScopedInstall(SaveObjectPool, 0x5D4940);
+    RH_ScopedInstall(SavePedPool, 0x5D4B40);
+    RH_ScopedInstall(SaveVehiclePool, 0x5D4800);
 }
 
 // 0x550F10
@@ -305,18 +305,79 @@ bool CPools::Save() {
 
 // 0x5D4940
 bool CPools::SaveObjectPool() {
-    return plugin::CallAndReturn<bool, 0x5D4940>();
+    const auto IsSavable = [](CObject& obj) { return obj.m_nObjectType == OBJECT_MISSION; };
+
+    int32 count = 0;
+    for (auto& obj : GetObjectPool()->GetAllValid()) {
+        if (IsSavable(obj)) {
+            count++;
+        }
+    }
+    CGenericGameStorage::SaveDataToWorkBuffer(count);
+
+    for (auto& obj : GetObjectPool()->GetAllValid()) {
+        if (!IsSavable(obj)) {
+            continue;
+        }
+        CGenericGameStorage::SaveDataToWorkBuffer(GetObjectRef(&obj));
+        CGenericGameStorage::SaveDataToWorkBuffer((int32)obj.m_nModelIndex);
+        obj.Save(); // Saves the size (0x30) and the `CObjectSaveStructure`
+    }
+    return true;
 }
 
 // 0x5D4B40
 bool CPools::SavePedPool() {
-    return plugin::CallAndReturn<bool, 0x5D4B40>();
+    // Only the player ped (not in a vehicle) is saved
+    const auto IsSavable = [](CPed& ped) { return !ped.bInVehicle && ped.m_nPedType == PED_TYPE_PLAYER1; };
+
+    int32 count = 0;
+    for (auto& ped : GetPedPool()->GetAllValid()) {
+        if (IsSavable(ped)) {
+            count++;
+        }
+    }
+    CGenericGameStorage::SaveDataToWorkBuffer(count);
+
+    for (auto& ped : GetPedPool()->GetAllValid()) {
+        if (!IsSavable(ped)) {
+            continue;
+        }
+        CGenericGameStorage::SaveDataToWorkBuffer(GetPedRef(&ped));
+        CGenericGameStorage::SaveDataToWorkBuffer((int32)ped.m_nModelIndex);
+        CGenericGameStorage::SaveDataToWorkBuffer((int32)ped.m_nPedType);
+        ped.Save();
+    }
+    return true;
 }
 
 // 0x5D4800
 // Used in CPools::Save (Android 1.0)
 bool CPools::SaveVehiclePool() {
-    return plugin::CallAndReturn<bool, 0x5D4800>();
+    // Only empty (no driver, no passengers) mission vehicles are saved
+    const auto IsSavable = [](CVehicle& veh) {
+        return veh.m_nCreatedBy == MISSION_VEHICLE
+            && !veh.m_pDriver
+            && rng::none_of(veh.m_apPassengers, [](CPed* p) { return p != nullptr; });
+    };
+
+    int32 count = 0;
+    for (auto& veh : GetVehiclePool()->GetAllValid()) {
+        if (IsSavable(veh)) {
+            count++;
+        }
+    }
+    CGenericGameStorage::SaveDataToWorkBuffer(count);
+
+    for (auto& veh : GetVehiclePool()->GetAllValid()) {
+        if (!IsSavable(veh)) {
+            continue;
+        }
+        CGenericGameStorage::SaveDataToWorkBuffer(GetVehicleRef(&veh));
+        CGenericGameStorage::SaveDataToWorkBuffer((int32)veh.m_nModelIndex);
+        veh.Save();
+    }
+    return true;
 }
 
 // 0x404550

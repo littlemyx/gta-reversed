@@ -399,7 +399,7 @@ bool CGangWars::CreateAttackWave(int32 warFerocity, int32 waveID) {
                 car->m_autoPilot.m_nCruiseSpeed = 10;
                 car->m_autoPilot.m_TargetEntity = reinterpret_cast<CVehicle*>(FindPlayerPed(-1)); // NOTE: it's a ped...
                 car->m_autoPilot.m_nCarDrivingStyle = DRIVING_STYLE_AVOID_CARS;
-                car->m_nStatus = STATUS_PHYSICS;
+                car->SetStatus(STATUS_PHYSICS);
                 car->vehicleFlags.bNeverUseSmallerRemovalRange = true;
                 car->m_autoPilot.m_nStraightLineDistance = 30;
                 CCarCtrl::SetUpDriverAndPassengersForVehicle(car, Gang1 + 14, 1, false, false, 1);

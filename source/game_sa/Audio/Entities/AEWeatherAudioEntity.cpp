@@ -77,164 +77,234 @@ void CAEWeatherAudioEntity::AddAudioEvent(eAudioEvents event) {
     PlayThunderSound(SND_GENRL_EXPLOSIONS_DISTANT_L, 0.906f, std::min(volume, 0.f), freq * 0.4f, SOUND_FRONT_END | SOUND_IS_CANCELLABLE | SOUND_REQUEST_UPDATES | SOUND_ROLLED_OFF, eWeatherEvent::THUNDER_DIRECT);
 }
 
+namespace {
+//! 0x59C910 - `CVector::Normalise`, the squared length is accumulated at extended precision, in this exact term order
+void NormaliseX87(CVector& v) {
+    const double len2 = ((double)v.x * (double)v.x + (double)v.y * (double)v.y) + (double)v.z * (double)v.z;
+    if (len2 <= 0.0) { // `!(len2 > 0)` but without NaN
+        v.x = 1.0f; // NOTE: Only X is set by the original
+        return;
+    }
+    const double inv = 1.0 / std::sqrt(len2);
+    v.x = (float)(inv * (double)v.x);
+    v.y = (float)(inv * (double)v.y);
+    v.z = (float)(inv * (double)v.z);
+}
+
+//! 0x4082C0 - `CVector::Magnitude`, the result is returned at extended precision (never rounded to float)
+double MagnitudeX87(const CVector& v) {
+    return std::sqrt(((double)v.x * (double)v.x + (double)v.y * (double)v.y) + (double)v.z * (double)v.z);
+}
+}
+
 // 0x505A00
 void CAEWeatherAudioEntity::UpdateParameters(CAESound* sound, int16 curPlayPos) {
-    //plugin::CallMethod<0x505A00, CAEWeatherAudioEntity*, CAESound*, int16>(this, sound, curPlayPos);
-
     if (curPlayPos <= 0) {
         return;
     }
 
+    // Shared by the "outside" check failing in `CITY_NOISE` and `UNK_4/5` (0x5067B0)
     const auto FadeSoundOut = [sound] {
-        if (sound->GetVolume() <= -50.f) {
+        const float vol = sound->GetVolume();
+        if (!(vol > -50.f)) {
             sound->StopSoundAndForget();
-        } else {
-            sound->SetVolume(std::max(-50.f, sound->GetVolume() - 0.6f));
+            return;
         }
+        const double v = (double)vol - (double)0.6f;
+        sound->SetVolume(v > -50.0 ? (float)v : -50.f);
     };
 
-    switch ((eWeatherEvent)(sound->m_Event)) {
-    case eWeatherEvent::THUNDER: { // 0x505A7F
-        const auto reqVolume  = CAEAudioUtility::AudioLog10(CWeather::LightningDuration * 0.0375f + 0.25f) * 20.f + GetDefaultVolume(AE_THUNDER);
-        const auto reqPlayPos = 600 - 500 * (CWeather::LightningDuration / 20);
-        if ((uint32)(curPlayPos) > reqPlayPos) { // 0x505AD9
-            if ((uint32)(curPlayPos) > reqPlayPos + 200 || reqVolume <= 0.f) { // 0x505ACD
-                sound->SetVolume(std::min(0.f, reqVolume));
-            } else { // 0x505B4F
-                const auto vol = std::pow(10.f, reqVolume / 20.f);
-                sound->SetVolume(CAEAudioUtility::AudioLog10((float)(curPlayPos - reqPlayPos) * (1.f - vol) / 200.f + vol) * 20.f);
-            }
-        } else { // 0x505AF3
-            sound->SetVolume(CAEAudioUtility::AudioLog10((float)(curPlayPos) / (float)(reqPlayPos)) * 20.f + reqVolume);
+    switch (sound->m_Event) {
+    case +eWeatherEvent::THUNDER: { // 0x505A85
+        const uint32 duration = CWeather::LightningDuration;
+        const float  reqVolume = (float)(std::log10((double)duration * (double)0.0375f + 0.25) * 20.0 + (double)GetDefaultVolume(AE_THUNDER));
+
+        const uint32 pos       = (uint32)(int32)curPlayPos; // Sign extended
+        const uint32 reqPlayPos = 600u - 500u * (duration / 20u);
+        if (pos <= reqPlayPos) { // 0x505AED
+            sound->SetVolume((float)(std::log10((double)(int32)pos / (double)reqPlayPos) * 20.0 + (double)reqVolume));
+        } else if (pos <= reqPlayPos + 200u && reqVolume > 0.f) { // 0x505B2E
+            const double vol = std::pow(10.0, (double)reqVolume * (double)0.05f);
+            const double t   = (double)(pos - reqPlayPos);
+            sound->SetVolume((float)(std::log10((t * (1.0 - vol)) * (double)0.005f + vol) * 20.0));
+        } else { // 0x505B97
+            sound->SetVolume(reqVolume < 0.f ? reqVolume : 0.f);
         }
         break;
     }
-    case eWeatherEvent::CITY_NOISE: { // 0x505BE5 - Bro my head hurts what is this shit
-        if (!CGame::CanSeeOutSideFromCurrArea()) {
+    case +eWeatherEvent::CITY_NOISE: { // 0x505BE5
+        if (CGame::currArea != AREA_CODE_NORMAL_WORLD) { // NOTE: Inlined `CGame::CanSeeOutSideFromCurrArea`
             FadeSoundOut();
             return;
         }
 
+        const float baseVol = GetDefaultVolume(AE_CITY_NOISE);
+
         const CVector camPos = TheCamera.GetPosition();
-        const CVector camRight = TheCamera.GetRightVector().Normalized();
-        auto* const player = FindPlayerPed();
+        auto* const   player = FindPlayerPed();
 
         CVector pov = camPos;
         if (player) {
             pov.z = player->GetPosition().z;
         }
 
-        const auto Process = [&](CVector origin, CVector target, float& cityNoiseVolumeBoostResidue, CEntity*& lastEntity) {
-            CEntity* hitEntity{};
-            CColPoint hitCP{};
-            CWorld::ProcessLineOfSight(
-                origin,
-                target,
-                hitCP,
-                hitEntity,
-                true,
-                true,
-                false,
-                true,
-                true,
-                false,
-                false,
-                false
-            );
-            const auto UpdateSound = [&](float speed, float volume) { // 0x505F56
-                if (sound->GetVolume() < volume + GetDefaultVolume(AE_CITY_NOISE)) {
-                    sound->SetVolume(std::min(volume + sound->GetVolume() + 0.3f, GetDefaultVolume(AE_CITY_NOISE) + volume));
-                } else if (sound->GetVolume() > volume + GetDefaultVolume(AE_CITY_NOISE)) {
-                    if (cityNoiseVolumeBoostResidue <= 0.f) {
-                       sound->SetVolume(std::max(volume + sound->GetVolume() - 0.3f, GetDefaultVolume(AE_CITY_NOISE) + volume));
-                    } else {
-                        cityNoiseVolumeBoostResidue = std::min(1.3f, cityNoiseVolumeBoostResidue);
-                        sound->SetVolume(std::max(sound->GetVolume() - 0.3f, GetDefaultVolume(AE_CITY_NOISE)) - cityNoiseVolumeBoostResidue);
-                        //if (sound->GetVolume() - 0.3f - residue <= GetDefaultVolume(AE_CITY_NOISE) - residue) {
-                        //} else {
-                        //}
-                    }
+        CVector right = TheCamera.GetRightVector();
+        NormaliseX87(right);
+        const CVector right4{ right.x * 4.f, right.y * 4.f, right.z * 4.f };
+
+        // The only difference between the sides is the direction, the static state and the line's end points
+        const auto Process = [&](const CVector& origin, const CVector& lineEnd, float& residue, CEntity*& lastEntity) {
+            CEntity*  hitEntity{};
+            CColPoint hitCP;
+            CWorld::ProcessLineOfSight(origin, lineEnd, hitCP, hitEntity, true, true, false, true, true, false, false, false);
+
+            float  dopplerVol = 0.f;
+            float  speed      = 1.f;
+            double outSpeed   = 1.0; // Kept at extended precision until it's stored in the sound
+
+            if (hitEntity && hitEntity != lastEntity && std::abs((double)TheCamera.GetPosition().z - (double)pov.z) < 6.0) { // 0x505D4A
+                CVector playerVel{};
+                if (player && player->bInVehicle && player->m_pVehicle) {
+                    playerVel = player->m_pVehicle->GetMoveSpeed();
                 }
-                sound->SetSpeed(speed);
-            };
-            if (hitEntity && hitEntity != lastEntity && std::abs(camPos.z - pov.z) < 6.f) { // 0x505D50
-                const CVector velocity = player && player->IsInVehicle()
-                    ? player->m_pVehicle->GetMoveSpeed()
-                    : CVector{};
-                const CVector hitPhysicalPos = hitEntity->GetIsTypePhysical()
-                    ? hitEntity->GetPosition()
-                    : CVector{};
-                const auto fwd = TheCamera.GetForwardVector().Normalized();
-                const auto force = (velocity.ProjectOnToNormal(fwd) - hitPhysicalPos.ProjectOnToNormal(fwd)).Magnitude();
-                if (force > 0.35f) { // 0x505E8D
-                    const auto speed = (force - 0.35f) / 0.95f;
-                    UpdateSound(speed * 1.75f + 1.75f, CAEAudioUtility::AudioLog10((1.f - (pov + camRight - hitCP.m_vecPoint).Magnitude() / 0.6f) * speed) * 20.f + 30.f);
+                CVector hitVel{};
+                if (hitEntity->GetIsTypePhysical()) {
+                    hitVel = hitEntity->AsPhysical()->GetMoveSpeed();
                 }
-                lastEntity = hitEntity;
-            } else {
-                UpdateSound(1.f, 0.f);
+
+                CVector fwd = TheCamera.GetForwardVector();
+                NormaliseX87(fwd);
+
+                const auto dotPlayer = (float)(((double)fwd.z * (double)playerVel.z + (double)fwd.y * (double)playerVel.y) + (double)fwd.x * (double)playerVel.x);
+                const auto dotHit    = (float)(((double)fwd.z * (double)hitVel.z    + (double)fwd.y * (double)hitVel.y)    + (double)fwd.x * (double)hitVel.x);
+
+                // 0x40FE90: `scalar * vec`, 0x40FE60: `a - b`
+                const CVector hitProj{ dotHit * fwd.x, dotHit * fwd.y, dotHit * fwd.z };
+                const CVector playerProj{ dotPlayer * fwd.x, dotPlayer * fwd.y, dotPlayer * fwd.z };
+                const CVector relVel{ playerProj.x - hitProj.x, playerProj.y - hitProj.y, playerProj.z - hitProj.z };
+
+                const double relSpeed = MagnitudeX87(relVel);
+                if (relSpeed > (double)0.35f) { // 0x505E82
+                    speed = (float)((relSpeed - (double)0.35f) * (double)1.0526316f);
+
+                    const CVector toHit{
+                        (float)(((double)right.x + (double)pov.x) - (double)hitCP.m_vecPoint.x),
+                        (float)(((double)pov.y + (double)right.y) - (double)hitCP.m_vecPoint.y),
+                        (float)((double)(float)((double)right.z + (double)pov.z) - (double)hitCP.m_vecPoint.z) // The Z sum is rounded to float first
+                    };
+                    const double dist = MagnitudeX87(toHit);
+                    dopplerVol = (float)(std::log10((1.0 - dist * (double)(1.f / 6.f)) * (double)speed) * 20.0 + 30.0);
+                    outSpeed   = (double)speed * (double)1.75f + (double)1.75f;
+                }
             }
+
+            // 0x505F2C
+            const float vol    = sound->GetVolume();
+            const float target = (float)((double)baseVol + (double)dopplerVol);
+            if (vol < target) {
+                const double v = ((double)vol + (double)dopplerVol) + (double)0.3f;
+                sound->SetVolume(v < (double)target ? (float)v : target);
+                sound->SetSpeed((float)outSpeed);
+                lastEntity = hitEntity;
+                residue    = dopplerVol;
+                return;
+            }
+            if (vol > target) { // 0x505F8F
+                if (!(residue > 0.f)) { // 0x5060A5
+                    const double v = (double)vol - (double)0.3f;
+                    sound->SetVolume(v > (double)baseVol ? (float)v : baseVol);
+                } else { // 0x505FB5
+                    const float  limit = 1.3f < residue ? 1.3f : residue;
+                    const double vmExt = (double)vol - (double)0.3f;
+                    const float  vm    = (float)vmExt;
+                    if ((double)baseVol - (double)limit < vmExt - (double)limit) {
+                        sound->SetVolume((float)((double)vm - (double)limit));
+                    } else {
+                        sound->SetVolume((float)((double)baseVol - (double)limit));
+                    }
+                    residue = (float)((double)residue - (double)limit);
+                }
+            }
+            sound->SetSpeed((float)outSpeed);
+            lastEntity = hitEntity;
         };
 
-
+        // NOTE: The original has 2 copies of this code (right: 0x505CC1, left: 0x5060D8)
         if (sound->m_CurrPos == DEFAULT_POS) {
-            static auto& fCityNoiseVolumeBoostResidueRight = StaticRef<float>(0xB6BC70);
-            static auto& pLastEntityRight = StaticRef<CEntity*>(0xB6BC74);
-            Process(pov + camRight * 4.f, pov + camRight, fCityNoiseVolumeBoostResidueRight, pLastEntityRight);
+            static auto& s_ResidueRight   = StaticRef<float>(0xB6BC70);
+            static auto& s_LastEntityRight = StaticRef<CEntity*>(0xB6BC74);
+            Process(
+                CVector{ right.x + pov.x, pov.y + right.y, right.z + pov.z },
+                CVector{ right4.x + pov.x, pov.y + right4.y, right4.z + pov.z },
+                s_ResidueRight,
+                s_LastEntityRight
+            );
         } else {
-            static auto& fCityNoiseVolumeBoostResidueLeft = StaticRef<float>(0xB6BC68);
-            static auto& pLastEntityLeft = StaticRef<CEntity*>(0xB6BC6C);
-            Process(pov - camRight * 4.f, pov - camRight, fCityNoiseVolumeBoostResidueLeft, pLastEntityLeft);
+            static auto& s_ResidueLeft    = StaticRef<float>(0xB6BC68);
+            static auto& s_LastEntityLeft = StaticRef<CEntity*>(0xB6BC6C);
+            Process(
+                CVector{ -right.x + pov.x, pov.y + -right.y, -right.z + pov.z },
+                CVector{ -right4.x + pov.x, pov.y + -right4.y, -right4.z + pov.z },
+                s_ResidueLeft,
+                s_LastEntityLeft
+            );
         }
-
         break;
     }
-    case eWeatherEvent::UNK_4:
-    case eWeatherEvent::UNK_5: { // 0x50652F
-        static auto& sbWindOffset = StaticRef<bool>(0x8CC2C0);
-        static auto& sfWindOffset = StaticRef<float>(0xB6BAFC);
-        static auto& sfWindFreq = StaticRef<float>(0xB6BAF8);
+    case +eWeatherEvent::UNK_4:
+    case +eWeatherEvent::UNK_5: { // 0x506527
+        static auto& sbWindOffset  = StaticRef<bool>(0x8CC2C0);
+        static auto& sfWindOffset  = StaticRef<float>(0xB6BAFC);
+        static auto& sfWindFreq    = StaticRef<float>(0xB6BAF8);
         static auto& sfOldFreqLeft = StaticRef<float>(0x8CC2C4);
-        
-        const auto zPosFactor = std::clamp(TheCamera.GetPosition().z / 500.f, 0.f, 1.f);
-        const auto windRatio = lerp(
-            CGeneral::GetPiecewiseLinear({
-                { 0.0f, 0.0f },
-                { 0.3f, 0.4f },
-                { 1.0f, 0.5f }
-            }, zPosFactor),
-            CGeneral::GetPiecewiseLinear({
-                { 0.0f, 0.5f },
-                { 0.3f, 1.0f },
-                { 1.0f, 1.0f }
-            }, zPosFactor),
-            std::clamp(CWeather::WindClipped, 0.f, 1.f)
-        );
+        static auto& sWindTableA   = StaticRef<float[3][2]>(0x8CC2D0);
+        static auto& sWindTableB   = StaticRef<float[3][2]>(0x8CC2E8);
+
+        const double zFactor = (double)TheCamera.GetPosition().z * (double)0.002f;
+        const float  t       = zFactor > 1.0 ? 1.f : (zFactor < 0.0 ? 0.f : (float)zFactor);
+
+        const float a = CAEAudioUtility::GetPiecewiseLinear(t, 3, sWindTableA);
+        const float b = CAEAudioUtility::GetPiecewiseLinear(t, 3, sWindTableB);
+
+        const float wind = CWeather::WindClipped > 1.f ? 1.f : (CWeather::WindClipped < 0.f ? 0.f : CWeather::WindClipped);
+        const auto ratio = (float)(((double)b - (double)a) * (double)wind + (double)a);
+
         if (CAEAudioUtility::ResolveProbability(0.07f)) { // 0x506642
             sbWindOffset = !sbWindOffset;
         }
-        sfWindOffset = sbWindOffset // 0x50667E
-            ? 21.f * windRatio
-            : 0.f;
-        sfWindFreq = sbWindOffset // 0x50668E
-            ? 1.2f * windRatio
-            : 0.f;
-        if (!CGame::CanSeeOutSideFromCurrArea()) { // 0x506694
-            FadeSoundOut();
-        } else { // 0x5066A6
-            sound->SetVolume(notsa::step_to(sound->GetVolume(), sfWindOffset - 33.f, 0.6f));
+        sfWindOffset = (float)((21.0 * (double)sbWindOffset) * (double)ratio);          // 0x506678
+        sfWindFreq   = (float)(((double)sbWindOffset * (double)1.2f) * (double)ratio); // 0x506684
 
-            sfOldFreqLeft = sfOldFreqLeft > sfWindFreq
-                ? notsa::step_up_to(sfOldFreqLeft, sfWindFreq, 0.1f)                   // 0x506716
-                : std::max(1.f, notsa::step_down_to(sfOldFreqLeft, sfWindFreq, 0.1f)); // 0x50677C
-            sound->SetSpeed(sfOldFreqLeft);
+        if (CGame::currArea != AREA_CODE_NORMAL_WORLD) { // 0x506694
+            FadeSoundOut();
+            return;
         }
+
+        // 0x50669A - Volume
+        const float target = (float)(-33.0 + (double)sfWindOffset);
+        const float vol    = sound->GetVolume();
+        if (vol < target) {
+            const double v = (double)vol + (double)0.6f;
+            sound->SetVolume(v < (double)target ? (float)v : target);
+        } else if (vol > target) {
+            const double v = (double)vol - (double)0.6f;
+            sound->SetVolume(v > (double)target ? (float)v : target);
+        }
+
+        // 0x5066FD - Frequency
+        const float freq = sfWindFreq;
+        if (sfOldFreqLeft < freq) {
+            const double v = (double)sfOldFreqLeft + (double)0.1f;
+            sfOldFreqLeft  = v < (double)freq ? (float)v : freq;
+        } else if (sfOldFreqLeft > freq) {
+            const double v = (double)sfOldFreqLeft - (double)0.1f;
+            sfOldFreqLeft  = v > 1.0 ? (float)v : 1.f;
+        }
+        sound->SetSpeed(sfOldFreqLeft);
         break;
     }
-    case eWeatherEvent::THUNDER_DIRECT:
+    default: // `THUNDER_DIRECT` and anything else is ignored
         break;
-    default:
-        NOTSA_UNREACHABLE();
     }
 }
 

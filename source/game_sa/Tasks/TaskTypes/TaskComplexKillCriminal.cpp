@@ -348,7 +348,7 @@ CTask* CTaskComplexKillCriminal::CreateFirstSubTask(CPed* ped) {
     if (FindPlayerWanted(-1)->GetWantedLevel() != eWantedLevel::WANTED_CLEAN) {
         return nullptr;
     }
-    if (!g_LoadMonitor.m_bEnableAmbientCrime) {
+    if (!g_LoadMonitor.IsAmbientCrimeEnabled()) {
         return nullptr;
     }
     if (ped->m_nPedType != PED_TYPE_COP) {
@@ -536,7 +536,7 @@ CTask* CTaskComplexKillCriminal::ControlSubTask(CPed* ped) {
         }
     }
 
-    if (!g_LoadMonitor.m_bEnableAmbientCrime) {
+    if (!g_LoadMonitor.IsAmbientCrimeEnabled()) {
         return nullptr;
     }
 

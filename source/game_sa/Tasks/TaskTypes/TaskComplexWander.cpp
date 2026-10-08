@@ -267,7 +267,7 @@ void CTaskComplexWander::ComputeTargetPos(const CPed* ped, CVector& outTargetPos
 
 // 0x669F30
 bool CTaskComplexWander::ValidNodes() const {
-    return m_NextNode.IsValid() && m_LastNode.IsValid() && m_NextNode != m_LastNode;
+    return m_NextNode.IsAreaValid() && m_LastNode.IsAreaValid() && m_NextNode != m_LastNode; // NOTSA: original only checks the area ids against -1
 }
 
 // 0x674560

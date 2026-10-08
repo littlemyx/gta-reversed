@@ -575,7 +575,7 @@ bool CTaskSimpleUseGun::ProcessPed(CPed* ped) {
 
                 const auto& pistolWhipHitTimes = StaticRef<std::array<float, 2>>(0xC17738);
                 const auto& pistolWhipHitIdx   = StaticRef<std::array<uint8, 2>>(0xC17780);
-                const auto  pistolWhipHitOffs  = &StaticRef<CVector>(0xC177D0); // Array
+                const auto& pistolWhipHitOffs  = StaticRef<std::array<CVector, 7>>(0xC177D0); // Shared hit offsets table (7 entries, 0xC177D0..0xC17824), also used by the fight code
 
                 if (anim->m_BlendAmount > 0.9f
                     && anim->m_BlendDelta >= 0.f

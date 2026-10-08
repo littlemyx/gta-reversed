@@ -94,7 +94,7 @@ CTask* CTaskComplexDestroyCar::CreateSubTask(eTaskType taskType, CPed* ped) {
 
 // 0x6288C0
 CTask* CTaskComplexDestroyCar::ControlSubTask(CPed* ped) {
-    if (!m_VehicleToDestroy || !(m_VehicleToDestroy->m_fHealth > 0.f)) { // Written like this to handle NaN the same way as the original
+    if (!m_VehicleToDestroy || m_VehicleToDestroy->m_fHealth <= 0.f) { // Written like this to handle NaN the same way as the original (NaN => keeps going)
         return nullptr;
     }
 

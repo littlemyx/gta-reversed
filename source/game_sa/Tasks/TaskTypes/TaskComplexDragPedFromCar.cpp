@@ -52,9 +52,9 @@ CTask* CTaskComplexDragPedFromCar::CreateFirstSubTask(CPed* ped) {
                     && m_Ped->m_pVehicle->m_nVehicleType != VEHICLE_TYPE_BIKE
                     && m_Ped->m_pVehicle->m_nVehicleSubType != VEHICLE_TYPE_QUAD
                 ) {
-                    m_TargetDoor = CCarEnterExit::ComputeTargetDoorToExit(m_Car, m_Ped);
+                    m_TargetSeat = CCarEnterExit::ComputeTargetDoorToExit(m_Car, m_Ped); // The original stores it at +0x1C (m_TargetSeat; seats are door-coded)
                 } else {
-                    m_TargetDoor = 0;
+                    m_TargetSeat = 0;
                 }
             }
             return CTaskComplexEnterCar::CreateFirstSubTask(ped);

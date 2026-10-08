@@ -115,7 +115,7 @@ bool CTaskSimpleDead::ProcessPed(CPed* ped) {
         const auto ClampAcos = [](float v) {
             if (-1.f > v) {
                 v = -1.f;
-            } else if (!(1.f > v)) { // NOTE: NaN is passed through the 1.0 check the same way as the original
+            } else if (v > 1.f) { // NOTE: NaN is passed through both checks unchanged, same as the original
                 v = 1.f;
             }
             return (float)std::acos((double)v);

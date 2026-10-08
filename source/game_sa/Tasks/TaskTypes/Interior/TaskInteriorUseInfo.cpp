@@ -46,7 +46,9 @@ CTaskInteriorUseInfo::CTaskInteriorUseInfo(const CTaskInteriorUseInfo& o) :
 
 // 0x675A90
 CTaskInteriorUseInfo::~CTaskInteriorUseInfo() {
-    m_IntInfo->IsInUse = false;
+    if (m_IntInfo) {
+        m_IntInfo->IsInUse = false;
+    }
 }
 
 // 0x675B30

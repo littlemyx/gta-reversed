@@ -1460,7 +1460,19 @@ void CPlayerPed::DrawTriangleForMouseRecruitPed() {
     const CVector camPos = TheCamera.GetPosition();
     for (auto& vert : verts) {
         CVector toCam = camPos - vert;
-        toCam.Normalise();
+
+        // NOTE: Inlined 0x59C910 (`CVector::Normalise`): The sum of squares, `1 / sqrt` and the multiplication are all done
+        //       in extended precision (`double` here) and only the results are rounded to float. The shared `CVector::Normalise` is float-only.
+        const double sumSq = ((double)toCam.x * toCam.x + (double)toCam.y * toCam.y) + (double)toCam.z * toCam.z;
+        if (sumSq > 0.0) { // NOTE: NaN takes the other branch
+            const double recip = 1.0 / std::sqrt(sumSq);
+            toCam.x = (float)(toCam.x * recip);
+            toCam.y = (float)(toCam.y * recip);
+            toCam.z = (float)(toCam.z * recip);
+        } else {
+            toCam.x = 1.f; // Only `x` is touched, as in the original
+        }
+
         vert += toCam;
     }
 
@@ -1668,21 +1680,6 @@ void CPlayerPed::ForceGroupToNeverFollow(bool enable) {
         TellGroupToStartFollowingPlayer(false, false, true);
 }
 
-// NOTSA: `CPedGroupMembership::m_separationRange` is private and has no accessor (and that header is out of this file's scope),
-// so it's accessed by the explicit instantiation exemption from access checking.
-// TODO: Replace with a proper accessor once `CPedGroupMembership` has one.
-namespace {
-template<typename Tag, typename Tag::type MemberPtr>
-struct PrivateMemberRobber {
-    friend typename Tag::type GetMemberPtr(Tag) { return MemberPtr; }
-};
-struct SeparationRangeTag {
-    using type = float CPedGroupMembership::*;
-    friend type GetMemberPtr(SeparationRangeTag);
-};
-template struct PrivateMemberRobber<SeparationRangeTag, &CPedGroupMembership::m_separationRange>;
-}
-
 // 0x60C840
 void CPlayerPed::MakeThisPedJoinOurGroup(CPed* ped) {
     if (ped->bDruggedUp) {
@@ -1742,7 +1739,7 @@ void CPlayerPed::MakeThisPedJoinOurGroup(CPed* ped) {
         CStats::IncrementStat(STAT_GANG_MEMBERS_RECRUITED, 1.f);
         CStats::DisplayScriptStatUpdateMessage(STAT_UPDATE_INCREASE, STAT_GANG_STRENGTH, 1.f);
 
-        // NOTE: Original passes "CODEPLR" (0x86D1E0) as the 5th argument, which our `SetEntityBlip` doesn't have
+        // NOTE: Original passes the name "CODEPLR" (0x86D1E0) as the 5th argument, but `SetEntityBlip` (cdecl, 4 args) never uses it
         // RGBA read from the gang color tables (0x8D1344, 0x8D1350, 0x8D135C) for gang 1 (Grove) - same as `CGangWars::GetGangColor(GANG_GROVE)` (which is private)
         const auto blipColor = (eBlipColour)0x46C800FF; // (70, 200, 0, 255)
         const auto blip      = CRadar::SetEntityBlip(BLIP_CHAR, GetPedPool()->GetRef(ped), (uint32)blipColor, BLIP_DISPLAY_BLIPONLY);
@@ -1752,7 +1749,7 @@ void CPlayerPed::MakeThisPedJoinOurGroup(CPed* ped) {
 
         ped->bClearRadarBlipOnDeath = true;
 
-        membership.*GetMemberPtr(SeparationRangeTag{}) = 120.f; // 0x86C6C0 (`ms_fPlayerGroupMaxSeparation`)
+        membership.SetSeparationRange(120.f); // 0x86C6C0 (`ms_fPlayerGroupMaxSeparation`)
 
         ped->Say(CTX_GLOBAL_JOIN_GANG_YES, 2500, 1.f, true);
     } else {

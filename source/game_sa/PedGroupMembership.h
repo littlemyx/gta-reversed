@@ -147,6 +147,9 @@ public:
     //! @notsa
     CPed* GetFirstAvailableMember();
 
+    //! @notsa Set the max. distance between the leader and a follower (before they're considered separated)
+    void SetSeparationRange(float range) { m_separationRange = range; }
+
     static eModelID GetObjectForPedToHold();
 private:
     //! NOTSA

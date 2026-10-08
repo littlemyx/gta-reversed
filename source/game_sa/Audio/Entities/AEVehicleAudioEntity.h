@@ -354,6 +354,24 @@ protected: // Config:
             float RotorVolBase{0.f}; // 0xB6BA04
         } DummyRCPlane{};
 
+        //! Jets (Shamal, Hydra, AT-400, Andromada), see `ProcessGenericJet`
+        struct {
+            struct Props {
+                float FrontVolBase;   //!< Base volume of the front sound
+                float RearVolBase;    //!< Base volume of the rear sound
+                float ThrustVolBase;  //!< Base volume of the thrust sound (When accelerating)
+                float DistantVolBase; //!< Volume of the distant sound
+            };
+            std::unordered_map<eModelID, Props> PropsByModel{
+                { MODEL_SHAMAL, { 8.f,  8.f,  0.f, -100.f } }, // 0x8CBE68, 0x8CBE6C, 0xB6B9F4, 0x8CBE78
+                { MODEL_HYDRA,  { 8.f,  8.f,  0.f, -100.f } }, // 0x8CBE7C, 0x8CBE80, 0xB6B9F8, 0x8CBE8C
+                { MODEL_AT400,  { 20.f, 20.f, 6.f, -8.f   } }, // 0x8CBE90, 0x8CBE94, 0x8CBE98, 0x8CBEA4
+                { MODEL_ANDROM, { 8.f,  8.f,  0.f, -12.f  } }, // 0x8CBEA8, 0x8CBEAC, 0xB6B9FC, 0x8CBEB8
+            };
+            float ThrustVolFadeStep{1.f};                                         // 0x85A310 (double)
+            float RotorFreqStepUp{1.f / 187.5f}, RotorFreqStepDown{1.f / 187.5f}; // 0x862D04
+        } Jet{};
+
         struct {
             float RotorFreqStepUp{1.f / 187.5f}, RotorFreqStepDown{1.f / 187.5f}; // 0xNONE
             float TiltDownStep{ 0.07f };     // 0x8CBF6C

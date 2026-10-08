@@ -74,7 +74,7 @@ public:
 
     CObject* Bedroom_AddTableItem(int32 groupId, int32 subGroupId, int32 rotation, int32 tileX, int32 tileY, int32 rotationIdx);
     void FurnishBedroom();
-    CObject* Kitchen_FurnishEdges();
+    void Kitchen_FurnishEdges();
     void FurnishKitchen();
     CObject* Lounge_AddTV(int32 rotation, int32 unused1, int32 unused2, int32 unused3);
     CObject* Lounge_AddHifi(int32 rotation, int32 tileX, int32 tileY, int32 unused);

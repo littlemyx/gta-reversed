@@ -16,13 +16,13 @@ void Interior_c::InjectHooks() {
 
     RH_ScopedInstall(Bedroom_AddTableItem, 0x593F10);
     RH_ScopedInstall(FurnishBedroom, 0x593FC0);
-    RH_ScopedInstall(Kitchen_FurnishEdges, 0x596930, { .Reversed = false });
+    RH_ScopedInstall(Kitchen_FurnishEdges, 0x596930);
     RH_ScopedInstall(FurnishKitchen, 0x5970B0);
     RH_ScopedInstall(Lounge_AddTV, 0x597240);
     RH_ScopedInstall(Lounge_AddHifi, 0x597430);
     RH_ScopedInstall(Lounge_AddChairInfo, 0x5974E0);
     RH_ScopedInstall(Lounge_AddSofaInfo, 0x5975C0);
-    RH_ScopedInstall(FurnishLounge, 0x597740, { .Reversed = false });
+    RH_ScopedInstall(FurnishLounge, 0x597740);
     RH_ScopedInstall(Office_PlaceEdgeFillers, 0x599210);
     RH_ScopedInstall(Office_PlaceDesk, 0x5993E0);
     RH_ScopedInstall(Office_PlaceEdgeDesks, 0x5995B0);
@@ -36,7 +36,7 @@ void Interior_c::InjectHooks() {
     RH_ScopedInstall(Shop_PlaceFixedUnits, 0x59A030);
     RH_ScopedInstall(Shop_FurnishCeiling, 0x59A130);
     RH_ScopedInstall(Shop_AddShelfInfo, 0x59A140);
-    RH_ScopedInstall(Shop_FurnishEdges, 0x59A1B0, { .Reversed = false });
+    RH_ScopedInstall(Shop_FurnishEdges, 0x59A1B0);
     RH_ScopedInstall(GetBoundingBox, 0x593DB0);
     RH_ScopedInstall(Init, 0x593BF0);
     RH_ScopedInstall(ResetTiles, 0x593910);
@@ -274,8 +274,145 @@ void Interior_c::FurnishBedroom() {
 }
 
 // 0x596930
-CObject* Interior_c::Kitchen_FurnishEdges() {
-    return plugin::CallMethodAndReturn<CObject*, 0x596930, Interior_c*>(this);
+void Interior_c::Kitchen_FurnishEdges() {
+    const auto wealth = m_box->m_status;
+    const int32 maxX = m_box->m_width - 1;
+    const int32 maxY = m_box->m_depth - 1;
+    int32 outW, outD; // Unused
+
+    // Corner units (top left, top right)
+    auto* const cornerUnit = g_furnitureMan.GetFurniture(4, 7, m_furnitureId, wealth);
+    const bool  hasTopLeft  = PlaceFurniture(cornerUnit, 0, maxY, 0.f, 1, 1, &outW, &outD, 0) != nullptr;
+    const bool  hasTopRight = PlaceFurniture(cornerUnit, maxX, maxY, 0.f, 1, 0, &outW, &outD, 0) != nullptr;
+
+    // Length of the left and right side's "doors"
+    const auto leftRunEnd  = std::max<int32>(m_box->m_lDoorEnd, m_box->m_lWindowEnd);
+    const auto rightRunEnd = std::max<int32>(m_box->m_rDoorEnd, m_box->m_rWindowEnd);
+    int32 leftRun  = std::max(leftRunEnd, 0);
+    int32 rightRun = std::max(rightRunEnd, 0);
+    if (rightRun <= 0) {
+        if (leftRun <= 0) {
+            leftRun  = CGeneral::GetRandomNumberInRange(0, maxY);
+            rightRun = CGeneral::GetRandomNumberInRange(0, maxY);
+        } else {
+            rightRun = 0;
+        }
+    } else if (leftRun <= 0) {
+        leftRun = 0;
+    }
+    if (leftRun > 0) {
+        SetTilesStatus(0, 0, 1, leftRun, 2, 0);
+    }
+    if (rightRun > 0) {
+        SetTilesStatus(maxX, 0, 1, rightRun, 2, 0);
+    }
+
+    // Units at the end of the left and right wall
+    PlaceFurniture(g_furnitureMan.GetFurniture(4, 0, m_furnitureId, wealth), 0, leftRun, 0.f, 1, 1, &outW, &outD, 0);
+    PlaceFurniture(g_furnitureMan.GetFurniture(4, 2, m_furnitureId, wealth), maxX, rightRun, 0.f, 1, 3, &outW, &outD, 0);
+
+    // Fridge? (on the top wall)
+    int32 along = 0;
+    if (PlaceFurnitureOnWall(4, 3, m_furnitureId, 0.f, 1, 0, m_box->m_tWindowStart == -1 ? -1 : m_box->m_tWindowStart, 0, nullptr, &along, nullptr, nullptr, nullptr, nullptr)) {
+        along++;
+        AddInteriorInfo(5, static_cast<float>(along), static_cast<float>(m_box->m_depth) - 1.5f, 2, nullptr);
+    }
+    PlaceFurnitureOnWall(4, 5, m_furnitureId, 0.f, 1, -1, -1, 0, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr);
+    PlaceFurnitureOnWall(4, 4, m_furnitureId, 0.f, 1, -1, -1, 0, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr);
+    PlaceFurnitureOnWall(4, 6, m_furnitureId, 0.f, 1, -1, -1, 0, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr);
+
+    // Counters along the walls. For each one, remember where items could be placed on top of it
+    constexpr size_t MAX_SPOTS = 32;
+    float            spotX[MAX_SPOTS]{}, spotY[MAX_SPOTS]{}, spotRot[MAX_SPOTS]{}, spotTaken[MAX_SPOTS]{};
+    int32            numSpots = 0;
+    const auto       AddSpot  = [&](float x, float y, float rot) {
+        // NOTSA: The original overflows the arrays here
+        if (numSpots < static_cast<int32>(MAX_SPOTS)) {
+            spotX[numSpots]   = x;
+            spotY[numSpots]   = y;
+            spotRot[numSpots] = rot;
+            numSpots++;
+        }
+    };
+
+    auto* const counter = g_furnitureMan.GetFurniture(4, 1, m_furnitureId, wealth);
+    for (int32 y = leftRun + 1; y < maxY; y++) {
+        if (PlaceFurniture(counter, 0, y, 0.f, 1, 1, &outW, &outD, 0)) {
+            AddSpot(0.5f, static_cast<float>(y) + 0.5f, 90.f);
+        }
+    }
+    for (int32 x = 1; x < maxX; x++) {
+        if (PlaceFurniture(counter, x, maxY, 0.f, 1, 0, &outW, &outD, 0)) {
+            AddSpot(static_cast<float>(x) + 0.5f, static_cast<float>(maxY) + 0.5f, 0.f);
+        }
+    }
+    for (int32 y = rightRun + 1; y <= maxY - 1; y++) {
+        if (PlaceFurniture(counter, maxX, y, 0.f, 1, 3, &outW, &outD, 0)) {
+            AddSpot(static_cast<float>(maxX) + 0.5f, static_cast<float>(y) + 0.5f, 270.f);
+        }
+    }
+
+    // Something in one of the top corners
+    auto* const cornerItem = g_furnitureMan.GetFurniture(4, 10, -1, wealth);
+    if (CGeneral::GetRandomNumber() < 0x3FFF && hasTopLeft) {
+        PlaceObject(true, cornerItem, 0.5f, static_cast<float>(m_box->m_depth) - 0.5f, 1.05f, 45.f);
+    } else if (hasTopRight) {
+        PlaceObject(true, cornerItem, static_cast<float>(m_box->m_width) - 0.5f, static_cast<float>(m_box->m_depth) - 0.5f, 1.05f, 315.f);
+    }
+
+    if (numSpots <= 0) {
+        return;
+    }
+
+    // Pick 2 (different) spots for stealable items
+    const auto RollSpot = [&] { return RandBelow(numSpots); };
+    const int32 spotA = RollSpot();
+    spotTaken[spotA] = 1.f;
+    int32 spotB = RollSpot();
+    if (spotTaken[spotB] == 1.f) {
+        int32 tries = 0;
+        do {
+            if (tries > 29) {
+                break;
+            }
+            spotB = RollSpot();
+            tries++;
+        } while (spotTaken[spotB] == 1.f);
+        // BUG: Even if a free spot was found at the very last try, it's thrown away
+        if (tries == 30) {
+            spotB = -1;
+        }
+    }
+
+    // Chance of placing an item on the remaining spots
+    int32 chance;
+    if (wealth >= 75) {
+        chance = RandBelow(20);
+    } else if (wealth >= 50) {
+        chance = 20 - RandBelow(-30);
+    } else {
+        chance = 50 - RandBelow(-50);
+    }
+
+    for (int32 i = 0; i < numSpots; i++) {
+        if (spotTaken[i] != 0.f) {
+            continue;
+        }
+        if (RandBelow(100) >= chance) {
+            continue;
+        }
+        const auto subGroupId = CGeneral::GetRandomNumber() < 0x3FFF ? 3 : 4;
+        if (auto* const furniture = g_furnitureMan.GetFurniture(8, subGroupId, -1, wealth)) {
+            PlaceObject(false, furniture, spotX[i], spotY[i], 1.05f, spotRot[i]);
+        }
+    }
+
+    if (spotA != -1) {
+        PlaceObject(true, g_furnitureMan.GetFurniture(4, 8, -1, wealth), spotX[spotA], spotY[spotA], 1.05f, spotRot[spotA]);
+    }
+    if (spotB != -1) {
+        PlaceObject(true, g_furnitureMan.GetFurniture(4, 9, -1, wealth), spotX[spotB], spotY[spotB], 1.05f, spotRot[spotB]);
+    }
 }
 
 // 0x5970B0
@@ -424,7 +561,139 @@ void Interior_c::Lounge_AddSofaInfo(int32 rotation, int32 offset, CEntity* entit
 
 // 0x597740
 void Interior_c::FurnishLounge() {
-    plugin::CallMethod<0x597740, Interior_c*>(this);
+    const auto wealth = m_box->m_status;
+    const auto width  = static_cast<int32>(m_box->m_width);
+    const auto depth  = static_cast<int32>(m_box->m_depth);
+    const auto perimeter = (depth + width) * 2;
+
+    // Door
+    SetTilesStatus(m_box->m_door - 1, 0, 2, 1, 7, 0);
+    SetTilesStatus(m_box->m_door - 2, 0, 1, 1, 2, 0);
+    SetTilesStatus(m_box->m_door + 1, 0, 1, 1, 2, 0);
+
+    // TV in a corner
+    // NOTSA: `cornerRot` is uninitialized in the original if the TV couldn't be placed
+    int32 cornerRot = -1, cornerX = 0, cornerY = 0, tmpW, tmpD;
+    int32 usedCorner = -1;
+    if (PlaceFurnitureInCorner(2, 2, -1, 0.f, 1, -1, 0, &cornerRot, &cornerX, &cornerY, &tmpW, &tmpD)) {
+        Lounge_AddTV(cornerRot, cornerX, cornerY, 0);
+        usedCorner = cornerRot;
+    }
+    SetCornerTiles(cornerRot, 2, 2, 1);
+
+    // Mark the tiles along the walls (and add goto points to the corners)
+    const int32 maxX = width - 2;
+    const int32 maxY = depth - 2;
+    for (int32 x = 1; x <= maxX; x++) {
+        SetTilesStatus(x, maxY, 1, 1, 3, 0);
+        SetTilesStatus(x, 1, 1, 1, 3, 0);
+    }
+    for (int32 y = 1; y <= maxY; y++) {
+        SetTilesStatus(1, y, 1, 1, 3, 0);
+        SetTilesStatus(maxX, y, 1, 1, 3, 0);
+    }
+    AddGotoPt(1, 1, 0.f, 0.f);
+    AddGotoPt(1, maxY, 0.f, 0.f);
+    AddGotoPt(maxX, 1, 0.f, 0.f);
+    AddGotoPt(maxX, maxY, 0.f, 0.f);
+
+    SetCornerTiles(0, 2, 2, 0);
+    SetCornerTiles(2, 2, 2, 0);
+    SetCornerTiles(1, 2, 2, 0);
+    SetCornerTiles(3, 2, 2, 0);
+
+    m_furnitureId = static_cast<int8>(g_furnitureMan.GetRandomId(2, 0, wealth));
+
+    // Sofa (and a table in front of it)
+    int32 rot = 0, pos = 0; // NOTSA: Uninitialized in the original if nothing was placed
+    if (auto* const sofa = PlaceFurnitureOnWall(2, 0, m_furnitureId, 0.f, 1, -1, -1, 0, &rot, &pos, nullptr, nullptr, nullptr, nullptr)) {
+        Lounge_AddSofaInfo(rot, pos, sofa);
+        if (!PlaceFurnitureOnWall(2, 4, -1, 0.f, 1, rot, pos, 2, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr)) {
+            PlaceFurnitureOnWall(2, 4, -1, 0.f, 1, rot, pos, 3, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr);
+        }
+    }
+
+    // Chairs
+    const auto AddChair = [&] {
+        if (auto* const chair = PlaceFurnitureOnWall(2, 1, m_furnitureId, 0.f, 1, -1, -1, 0, &rot, &pos, nullptr, nullptr, nullptr, nullptr)) {
+            Lounge_AddChairInfo(rot, pos, chair);
+        }
+    };
+    AddChair();
+    AddChair();
+    if (perimeter > 28) {
+        AddChair();
+    }
+
+    // Free the corner tiles (except for the one with the TV)
+    if (usedCorner != 0) { SetCornerTiles(0, 2, 0, 0); }
+    if (usedCorner != 2) { SetCornerTiles(2, 2, 0, 0); }
+    if (usedCorner != 1) { SetCornerTiles(1, 2, 0, 0); }
+    if (usedCorner != 3) { SetCornerTiles(3, 2, 0, 0); }
+
+    // Hifi
+    {
+        int32 hifiRot = 0, hifiX = 0, hifiY = 0;
+        if (PlaceFurnitureOnWall(2, 6, -1, 0.f, 1, -1, -1, 0, &hifiRot, nullptr, &hifiX, &hifiY, nullptr, nullptr)) {
+            Lounge_AddHifi(hifiRot, hifiX, hifiY, 0);
+        }
+    }
+    PlaceFurnitureOnWall(2, 5, -1, 0.f, 1, -1, -1, 0, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr);
+    PlaceFurnitureOnWall(8, 0, -1, 0.f, 1, -1, -1, 0, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr);
+    PlaceFurnitureOnWall(8, 0, -1, 0.f, 1, -1, -1, 0, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr);
+
+    // Small items - How many to place depends on the wealth
+    int32 chance;
+    if (wealth >= 75) {
+        chance = RandBelow(20);
+    } else if (wealth >= 50) {
+        chance = 20 - RandBelow(-30);
+    } else {
+        chance = 50 - RandBelow(-50);
+    }
+
+    const auto PlaceItem = [&](int32 roll, int32 w, int32 d, int32 subGroupId, int32 usedW, int32 usedD) {
+        int32 x, y;
+        if (roll < chance && FindEmptyTiles(w, d, &x, &y)) {
+            auto* const furniture = g_furnitureMan.GetFurniture(8, subGroupId, -1, wealth);
+            PlaceObject(false, furniture, static_cast<float>(x) + 0.5f, static_cast<float>(y) + 0.5f, 0.05f, 0.f);
+            SetTilesStatus(x, y, usedW, usedD, 2, 0);
+        }
+    };
+    PlaceItem(RandBelow(60),  2, 2, 2, 2, 2);
+    PlaceItem(RandBelow(100), 1, 1, 5, 1, 1);
+    PlaceItem(RandBelow(100), 1, 1, 4, 1, 1);
+
+    // Rug in the middle
+    {
+        auto* const rug   = g_furnitureMan.GetFurniture(8, 1, -1, wealth);
+        const auto  tileY = static_cast<int32>(static_cast<float>(depth) * 0.5f - static_cast<float>(rug->m_nWidthY) * 0.5f);
+        const auto  tileX = static_cast<int32>(static_cast<float>(width) * 0.5f - static_cast<float>(rug->m_nWidthX) * 0.5f);
+        int32 outW, outD;
+        PlaceFurniture(rug, tileX, tileY, 0.f, 0, 0, &outW, &outD, 0);
+    }
+
+    // Interior infos for the free tiles along the walls
+    for (int32 x = 0; width - 1 > 0 && x < width - 1; x++) {
+        const auto bottom = GetTileStatus(x, 0);
+        const auto top    = GetTileStatus(x, depth - 1);
+        if (bottom == 0 || bottom == 2) {
+            AddInteriorInfo(2, static_cast<float>(x), 0.f, 2, nullptr);
+        }
+        if (top == 0 || top == 2) {
+            AddInteriorInfo(2, static_cast<float>(x), static_cast<float>(depth - 1), 0, nullptr);
+        }
+    }
+    for (int32 y = 1; y < depth - 2; y++) {
+        const auto left  = GetTileStatus(0, y);
+        const auto right = GetTileStatus(width - 1, y);
+        if (left == 0 || left == 2) {
+            AddInteriorInfo(2, 0.f, static_cast<float>(y), 1, nullptr);
+        }
+        if (right == 0 || right == 2) {
+            AddInteriorInfo(2, static_cast<float>(width - 1), static_cast<float>(y), 3, nullptr);
+        }
+    }
 }
 
 // 0x599210
@@ -821,7 +1090,95 @@ void Interior_c::Shop_AddShelfInfo(int32 tileX, int32 tileY, int32 direction) {
 
 // 0x59A1B0
 void Interior_c::Shop_FurnishEdges() {
-    plugin::CallMethod<0x59A1B0, Interior_c*>(this);
+    const auto& box   = *m_box;
+    const int32 width = box.m_width;
+    const int32 depth = box.m_depth;
+
+    // Chooses the type of unit for a whole wall
+    const auto RollSubGroupId = [] {
+        const auto roll = RandBelow(100);
+        if (roll > 50) {
+            return 0;
+        }
+        if (roll > 25) {
+            return 3;
+        }
+        return roll > 10 ? 6 : 9;
+    };
+
+    // Units along the walls
+    const int32 maxX = width - 1;
+    const int32 maxY = depth - 2;
+    {
+        const auto subGroupId = RollSubGroupId();
+        for (int32 x = 1; maxX > 1 && x < maxX;) {
+            x += Shop_PlaceEdgeUnits(subGroupId, x, depth - 1, 0);
+        }
+    }
+    {
+        const auto subGroupId = RollSubGroupId();
+        for (int32 y = 1; maxY >= 1 && y <= maxY;) {
+            y += Shop_PlaceEdgeUnits(subGroupId, 0, y, 1);
+        }
+    }
+    {
+        const auto subGroupId = RollSubGroupId();
+        for (int32 y = 1; maxY >= 1 && y <= maxY;) {
+            y += Shop_PlaceEdgeUnits(subGroupId, maxX, y, 3);
+        }
+    }
+
+    // Is `v` outside of the [start, end] range (-1 as start means the range doesn't exist)
+    const auto IsOutside = [](int32 v, int8 start, int8 end) {
+        return start == -1 || v < start || v > end;
+    };
+
+    // Adds a shelf info with some probability (same as in `Shop_AddShelfInfo`, but with a different position)
+    const auto TryAddShelfInfo = [&](float x, float y, int32 direction) {
+        if (s_ShelfInfoCounter > 1) {
+            if (RandBelow(100) > 60) {
+                AddInteriorInfo(8, x, y, direction, nullptr);
+                s_ShelfInfoCounter = 0;
+            }
+        }
+        s_ShelfInfoCounter++;
+    };
+
+    // Shelf infos (and walkable tiles) along the walls
+    const int32 lastX = width - 2;
+    for (int32 x = 1; lastX >= 1 && x <= lastX; x++) {
+        if (IsOutside(x, box.m_tWindowStart, box.m_tWindowEnd)) {
+            TryAddShelfInfo(static_cast<float>(x), static_cast<float>(maxY), 2);
+        }
+        if (GetTileStatus(x, 1) == 0) {
+            SetTilesStatus(x, 1, 1, 1, 2, 0);
+        }
+    }
+
+    const int32 lastY = depth - 3;
+    for (int32 y = 2; lastY >= 2 && y <= lastY; y++) {
+        if (IsOutside(y, box.m_lDoorStart, box.m_lDoorEnd)) {
+            TryAddShelfInfo(1.f, static_cast<float>(y), 3);
+        }
+        if (IsOutside(y, box.m_rDoorStart, box.m_rDoorEnd)) {
+            TryAddShelfInfo(static_cast<float>(lastX), static_cast<float>(y), 1);
+        }
+    }
+
+    // Mark the aisle tiles
+    const int32 innerX = width - 3;
+    for (int32 x = 2; innerX >= 2 && x <= innerX; x++) {
+        if (GetTileStatus(x, 2) == 0) {
+            SetTilesStatus(x, 2, 1, 1, 2, 0);
+        }
+        SetTilesStatus(x, lastY, 1, 1, 3, 0);
+    }
+    const int32 innerY = depth - 4;
+    for (int32 y = 3; innerY >= 3 && y <= innerY; y++) {
+        SetTilesStatus(2, y, 1, 1, 3, 0);
+        SetTilesStatus(innerX, y, 1, 1, 3, 0);
+    }
+    SetTilesStatus(3, 3, width - 6, 1, 3, 0);
 }
 
 // 0x593DB0

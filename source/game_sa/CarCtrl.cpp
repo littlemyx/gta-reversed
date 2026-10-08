@@ -25,6 +25,85 @@
 auto& apCarsToKeep = StaticRef<CVehicle*[2]>(0x969084);
 auto& aCarsToKeepTime = StaticRef<std::array<uint32, 2>>(0x96907C);
 
+// Tunables of the AI plane flight code (all in .data, names are NOTSA)
+//! 0x8A5B2C - Pitch angles tested (from `FindPlaneObstacleAltitude`) when looking for obstacles ahead of an AI plane
+auto& s_PlaneAIObstacleProbePitches = StaticRef<std::array<float, 6>>(0x8A5B2C);
+//! 0x8A5B44 - Factor of the plane's roll that is added to the elevator
+auto& s_PlaneAIRollToElevatorFactor = StaticRef<float>(0x8A5B44);
+//! 0x8A5B48 - Factor applied to the roll-rate corrected aileron (rudder) input
+auto& s_PlaneAIAileronFactor = StaticRef<float>(0x8A5B48);
+//! 0x8A5B4C - Numerator of the roll-rate prediction (30 / timestep)
+auto& s_PlaneAIRollRatePredictionFactor = StaticRef<float>(0x8A5B4C);
+//! 0x8A5B50 - Elevator gain
+auto& s_PlaneAIElevatorGain = StaticRef<float>(0x8A5B50);
+//! 0x8A5B54 - Cruise speed of remote controlled planes
+auto& s_PlaneAIRCCruiseSpeed = StaticRef<float>(0x8A5B54);
+
+//! 0x422E10 - Casts a ray ahead of the plane in the given direction (pitch/heading), returns true (and the z of the hit point) if something was hit
+static bool ProbePlaneObstacle(CPlane* plane, float pitch, float heading, float* outHitZ) {
+    const auto& moveSpeed = plane->m_vecMoveSpeed;
+    const auto  stepX = (float)((double)moveSpeed.x * 50.0f);
+    const auto  stepY = (float)((double)moveSpeed.y * 50.0f);
+    const auto  stepZ = (double)moveSpeed.z * 50.0f; // x87: kept in extended precision
+    const auto& pos   = plane->GetPosition();
+
+    const CVector origin{
+        (float)((double)stepX + pos.x),
+        (float)((double)stepY + pos.y),
+        (float)(stepZ + pos.z)
+    };
+
+    CVector dir{ (float)std::cos((double)heading), (float)std::sin((double)heading), 0.0f };
+    dir.Normalise();
+
+    // x87: some of the intermediate values are rounded to float, others aren't
+    const auto sinPitch  = std::sin((double)pitch);
+    const auto zero      = (float)(0.0f * sinPitch);
+    const auto sinPitchF = (float)sinPitch;
+    const auto cosPitch  = std::cos((double)pitch);
+    const auto xc        = (double)dir.x * cosPitch;
+    const auto yc        = (float)((double)dir.y * cosPitch);
+    const auto zc        = (float)(cosPitch * dir.z);
+    const auto ux        = (float)(xc + zero);
+    const auto uy        = (double)yc + zero;
+    const auto uz        = (double)zc + sinPitchF;
+    const auto tx        = (float)(ux * 200.0f);
+    const auto ty        = (float)(uy * 200.0f);
+    const auto tz        = uz * 200.0f;
+
+    const CVector target{
+        (float)((double)tx + origin.x),
+        (float)((double)ty + origin.y),
+        (float)(tz + origin.z)
+    };
+
+    CColPoint colPoint;
+    CEntity*  hitEntity{};
+    if (!CWorld::ProcessLineOfSight(origin, target, colPoint, hitEntity, true, false, false, false, false, false, false, true)) {
+        return false;
+    }
+    *outHitZ = colPoint.m_vecPoint.z;
+    return true;
+}
+
+//! 0x422F80 - Finds the altitude of the highest obstacle ahead of the plane (when heading in `heading`)
+static float FindPlaneObstacleAltitude(CPlane* plane, float heading) {
+    float highest = 0.0f;
+    for (auto i = 0u; i < s_PlaneAIObstacleProbePitches.size(); i++) {
+        float hitZ;
+        if (!ProbePlaneObstacle(plane, s_PlaneAIObstacleProbePitches[i], heading, &hitZ)) {
+            continue;
+        }
+        if (i == 0) {
+            return 100000.0f; // Something is right in front of the plane
+        }
+        if (!(highest > hitZ)) {
+            highest = hitZ;
+        }
+    }
+    return highest;
+}
+
 void CCarCtrl::InjectHooks()
 {
     RH_ScopedClass(CCarCtrl);
@@ -58,6 +137,11 @@ void CCarCtrl::InjectHooks()
     RH_ScopedInstall(FindIntersection2Lines, 0x4226F0);
     RH_ScopedInstall(ClitargetOrientationToLink, 0x422760);
     RH_ScopedInstall(SteerAICarBlockingPlayerForwardAndBack, 0x422B20);
+    RH_ScopedInstall(FlyAIPlaneInCertainDirection, 0x423000);
+    RH_ScopedInstall(SteerAIPlaneTowardsTargetCoors, 0x423790);
+    RH_ScopedInstall(SteerAIPlaneToFollowEntity, 0x4237F0);
+    RH_ScopedInstall(SteerAIPlaneToCrashAndBurn, 0x423880);
+    RH_ScopedInstall(SteerAIHeliToCrashAndBurn, 0x4238E0);
 }
 
 // 0x4212E0
@@ -445,8 +529,233 @@ void CCarCtrl::FlyAIHeliToTarget_FixedOrientation(CHeli* heli, float Orientation
 }
 
 // 0x423000
-void CCarCtrl::FlyAIPlaneInCertainDirection(CPlane* pPlane) {
-    plugin::Call<0x423000, CPlane*>(pPlane);
+void CCarCtrl::FlyAIPlaneInCertainDirection(CPlane* plane) {
+    constexpr auto PI = std::numbers::pi_v<float>;
+
+    const auto& moveSpeed = plane->m_vecMoveSpeed;
+    const auto& mat       = *plane->m_matrix; // Not null checked in the original
+    const auto& fwd       = mat.GetForward();
+
+    // Once a second (at a different time for each plane) pick a new altitude/heading to avoid obstacles
+    const uint32 seed = plane->m_nRandomSeed;
+    if ((seed + CTimer::m_snTimeInMilliseconds) % 1000 < (CTimer::m_snPreviousTimeInMilliseconds + seed) % 1000) {
+        const auto curHeading = CGeneral::GetATanOfXY(fwd.x, fwd.y);
+
+        auto targetHeading = plane->m_planeHeading;
+        switch (plane->m_autoPilot.m_nTempAction) {
+        case TEMPACT_PLANE_FLY_STRAIGHT:
+            targetHeading = curHeading;
+            break;
+        case TEMPACT_PLANE_SHARP_LEFT:
+            targetHeading = (float)((double)curHeading - 2.0f);
+            break;
+        case TEMPACT_PLANE_SHARP_RIGHT:
+            targetHeading = (float)(2.0f + (double)curHeading);
+            break;
+        }
+
+        plane->m_altitude         = 500.0f;
+        plane->m_planeHeadingPrev = plane->m_planeHeading + PI;
+
+        // x87: the heading difference is kept in extended precision
+        auto headingDiff = (double)curHeading - targetHeading;
+        if (headingDiff > PI) {
+            do { headingDiff -= 2.0f * PI; } while (headingDiff > PI);
+        }
+        if (headingDiff < -PI) {
+            do { headingDiff += 2.0f * PI; } while (headingDiff < -PI);
+        }
+
+        const auto absHeadingDiff = headingDiff < 0.0 ? -headingDiff : headingDiff;
+        const auto turnAngle      = absHeadingDiff < 0.52359879f // 30 deg
+            ? 0.0f
+            : (float)(headingDiff * 1.5f);
+
+        for (auto pass = 0; pass < 2; pass++) {
+            for (auto i = 1; i < 20; i++) {
+                const auto angle = (float)((double)(i / 2) * ((i & 1) ? 0.261799395f : -0.261799395f)); // 15 deg steps, alternating sides
+                const auto probeHeading = (float)((double)angle + targetHeading);
+
+                // Is this angle between the straight ahead and the turn angle?
+                const auto isInTurnDirection = (angle < 0.0f && angle > turnAngle) || (angle > 0.0f && angle < turnAngle);
+                if (pass == 0 ? !isInTurnDirection : isInTurnDirection) {
+                    continue;
+                }
+
+                const auto obstacleAlt = FindPlaneObstacleAltitude(plane, probeHeading);
+                if (!(obstacleAlt < 150.0f)) {
+                    continue;
+                }
+
+                plane->m_planeHeadingPrev = (float)((double)angle * 1.10000002f + plane->m_planeHeading);
+
+                auto altitude = (double)obstacleAlt + plane->m_minAltitude;
+                if (!(altitude > plane->m_maxAltitude)) {
+                    altitude = plane->m_maxAltitude;
+                }
+                plane->m_altitude = (float)altitude;
+                break;
+            }
+        }
+    }
+
+    const float desiredSpeed = plane->vehicleFlags.bIsRCVehicle
+        ? s_PlaneAIRCCruiseSpeed
+        : 32.0f;
+
+    const float heading  = CGeneral::GetATanOfXY(fwd.x, fwd.y);
+    const auto  curSpeed = (float)(((double)fwd.y * moveSpeed.y + (double)fwd.x * moveSpeed.x) * 60.0f);
+
+    if (std::ranges::any_of(plane->m_fWheelsSuspensionCompression, [](float v) { return v < 1.0f; })) {
+        plane->m_nStartedFlyingTime = CTimer::m_snTimeInMilliseconds;
+    }
+
+    bool isTakingOff;
+    if (CTimer::m_snTimeInMilliseconds - plane->m_nStartedFlyingTime <= 4000) {
+        isTakingOff = true;
+        plane->m_fSteeringUpDown = curSpeed < desiredSpeed ? 0.0f : 0.4f;
+    } else {
+        isTakingOff = false;
+
+        if (plane->m_fLandingGearStatus != 1.0f) {
+            plane->SetGearUp();
+        }
+
+        const auto predictedZ = (float)((double)moveSpeed.z * 100.0f + plane->GetPosition().z);
+
+        // 0x821E70 is the CRT's asin
+        const auto pitch     = std::asin((double)fwd.z);
+        const auto prevPitch = plane->m_forwardZ;
+        const auto timeStep  = (double)CTimer::ms_fTimeStep;
+        plane->m_forwardZ    = (float)pitch;
+        const auto predictedPitch = (float)((100.0f / timeStep) * (pitch - prevPitch) + pitch);
+
+        auto climb = ((double)plane->m_altitude - predictedZ) * 0.0333333351f;
+        if (!(climb < 0.4f)) {
+            climb = 0.4f;
+        } else if (!(climb > -0.4f)) {
+            climb = -0.4f;
+        }
+        if (curSpeed < desiredSpeed && !(climb < 0.25f)) {
+            climb = 0.25f;
+        }
+        plane->m_fSteeringUpDown = (float)((climb - predictedPitch) * s_PlaneAIElevatorGain);
+    }
+
+    auto headingError = (double)plane->m_planeHeadingPrev - heading;
+    if (headingError < -PI) {
+        do { headingError += 2.0f * PI; } while (headingError < -PI);
+    }
+    if (headingError > PI) {
+        do { headingError -= 2.0f * PI; } while (headingError > PI);
+    }
+
+    if (isTakingOff) {
+        auto steer = -((double)plane->m_planeCreationHeading - heading) * 10.0f;
+        if (1.0f < steer) {
+            steer = 1.0f;
+        } else if (-1.0f > steer) {
+            steer = -1.0f;
+        }
+        plane->m_fLeftRightSkid     = (float)steer;
+        plane->m_fSteeringLeftRight = 0.0f;
+    } else {
+        auto turn = -headingError * 1.5f;
+        if (0.9f < turn) {
+            turn = 0.9f;
+        } else if (-0.9f > turn) {
+            turn = -0.9f;
+        }
+
+        double bank, absBank;
+        const auto SetBankFromTurn = [&] {
+            bank    = turn;
+            absBank = turn < 0.0 ? -turn : turn;
+        };
+        if (plane->vehicleFlags.bIsRCVehicle) {
+            if (0.7f < turn) {
+                bank = absBank = 0.7f;
+            } else if (-0.7f > turn) {
+                bank    = -0.7f;
+                absBank = 0.7f;
+            } else {
+                SetBankFromTurn();
+            }
+        } else {
+            SetBankFromTurn();
+        }
+
+        double yaw;
+        if (!(absBank < 0.1f)) {
+            plane->m_fLeftRightSkid = (float)bank;
+            yaw = -bank;
+        } else {
+            plane->m_fLeftRightSkid = (float)(bank * 4.0f);
+            yaw = 0.0;
+        }
+
+        const auto slowSpeedLimit = (double)desiredSpeed * 1.20000005f;
+        if (curSpeed < slowSpeedLimit) {
+            auto factor = 1.0f - (slowSpeedLimit - curSpeed) / ((double)desiredSpeed * 0.5f);
+            if (0.0 > factor) {
+                factor = 0.0;
+            }
+            yaw *= factor;
+        }
+
+        // NOTE: The original checks if the matrix is null here, but it's dereferenced above already
+        auto len = std::sqrt((double)mat.GetRight().x * mat.GetRight().x + (double)mat.GetRight().y * mat.GetRight().y);
+        if (mat.GetUp().z < 0.0f) {
+            len *= -1.0f;
+        }
+        const auto roll = (float)std::atan2((double)mat.GetRight().z, len);
+
+        const auto timeStep = CTimer::ms_fTimeStep < 1.0f ? 1.0 : (double)CTimer::ms_fTimeStep;
+        auto rollError = yaw - (((double)roll - plane->m_fSteeringFactor) * (s_PlaneAIRollRatePredictionFactor / timeStep) + roll);
+        if (rollError > PI) {
+            do { rollError -= 2.0f * PI; } while (rollError > PI);
+        }
+        if (rollError < -PI) {
+            do { rollError += 2.0f * PI; } while (rollError < -PI);
+        }
+        rollError *= s_PlaneAIAileronFactor;
+
+        plane->m_fSteeringFactor = roll;
+        if (!(rollError < 1.0f)) {
+            rollError = 1.0f;
+        }
+        if (!(rollError > -1.0f)) {
+            rollError = -1.0f;
+        }
+        plane->m_fSteeringLeftRight = (float)rollError;
+
+        const double elevator = plane->m_fSteeringUpDown;
+        auto rollCompensation = s_PlaneAIRollToElevatorFactor * (double)roll;
+        if (rollCompensation < 0.0) {
+            rollCompensation = -rollCompensation;
+        }
+        const auto newElevator = (float)(rollCompensation + elevator);
+        plane->m_fSteeringUpDown = newElevator;
+        if (elevator < 0.0) {
+            const auto halved = elevator * 0.5f;
+            plane->m_fSteeringUpDown = halved > newElevator ? newElevator : (float)halved;
+        }
+    }
+
+    auto elevator = plane->m_fSteeringUpDown < 1.0f ? (double)plane->m_fSteeringUpDown : 1.0;
+    if (!(elevator > -1.0f)) {
+        elevator = -1.0f;
+    }
+    plane->m_fSteeringUpDown = (float)elevator;
+
+    plane->m_fAccelerationBreakStatus = plane->m_fAccelerationBreakStatusPrev;
+
+    if (plane->m_autoPilot.m_nTempAction == TEMPACT_PLANE_FLY_UP) {
+        plane->m_fSteeringUpDown = 1.0f;
+        if (curSpeed < 20.0) {
+            plane->m_autoPilot.m_nTempAction = TEMPACT_NONE;
+        }
+    }
 }
 
 // 0x424210
@@ -1121,7 +1430,12 @@ void CCarCtrl::SteerAIHeliFlyingAwayFromPlayer(CAutomobile* automobile) {
 
 // 0x4238E0
 void CCarCtrl::SteerAIHeliToCrashAndBurn(CAutomobile* automobile) {
-    plugin::Call<0x4238E0, CAutomobile*>(automobile);
+    const auto heli = static_cast<CHeli*>(automobile);
+    const auto left = (heli->m_nRandomSeed & 1) != 0;
+    heli->m_fSteeringUpDown = -0.3f;
+    heli->m_fLeftRightSkid  = left ? heli->field_A14 : -heli->field_A14;
+    heli->m_fAccelerationBreakStatus = -0.5f;
+    heli->m_fSteeringLeftRight       = left ? 1.0f : -1.0f;
 }
 
 // 0x42A750
@@ -1146,17 +1460,33 @@ void CCarCtrl::SteerAIHeliTowardsTargetCoors(CAutomobile* automobile) {
 
 // 0x423880
 void CCarCtrl::SteerAIPlaneToCrashAndBurn(CAutomobile* automobile) {
-    plugin::Call<0x423880, CAutomobile*>(automobile);
+    const auto plane = static_cast<CPlane*>(automobile);
+    const auto dir   = (plane->m_nRandomSeed & 1) ? 1.0f : -1.0f;
+    plane->m_fSteeringUpDown            = -0.3f;
+    plane->m_fLeftRightSkid             = dir;
+    plane->m_fAccelerationBreakStatus   = 0.0f;
+    plane->m_fSteeringLeftRight         = dir;
 }
 
 // 0x4237F0
 void CCarCtrl::SteerAIPlaneToFollowEntity(CAutomobile* automobile) {
-    plugin::Call<0x4237F0, CAutomobile*>(automobile);
+    const auto plane  = static_cast<CPlane*>(automobile);
+    const auto target = plane->m_autoPilot.m_TargetEntity;
+    plane->m_planeHeading = CGeneral::GetATanOfXY(
+        target->GetPosition().x - plane->GetPosition().x,
+        target->GetPosition().y - plane->GetPosition().y
+    );
+    plane->m_maxAltitude = plane->m_autoPilot.m_TargetEntity->GetPosition().z;
+    FlyAIPlaneInCertainDirection(plane);
 }
 
 // 0x423790
 void CCarCtrl::SteerAIPlaneTowardsTargetCoors(CAutomobile* automobile) {
-    plugin::Call<0x423790, CAutomobile*>(automobile);
+    const auto plane = static_cast<CPlane*>(automobile);
+    const auto& dest = plane->m_autoPilot.m_vecDestinationCoors;
+    const auto& pos  = plane->GetPosition();
+    plane->m_planeHeading = CGeneral::GetATanOfXY(dest.x - pos.x, dest.y - pos.y);
+    FlyAIPlaneInCertainDirection(plane);
 }
 
 // 0x422590

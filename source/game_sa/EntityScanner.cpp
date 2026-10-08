@@ -47,7 +47,7 @@ void CEntityScanner::ScanForEntitiesInRange(const eRepeatSectorList sectorList, 
 
     const bool isPlayerPed = FindPlayerPed(-1) == &ped;
 
-    const auto* const intel = ped.m_pIntelligence;
+    const auto* const intel = ped.GetIntelligence();
     const float       range = intel->m_fHearingRange > intel->m_fSeeingRange // max(hearing range, seeing range)
         ? intel->m_fHearingRange
         : intel->m_fSeeingRange;

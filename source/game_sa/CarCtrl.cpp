@@ -427,7 +427,7 @@ static T* CreateVehicle(int32 modelId, uint8 createdBy, Args... args) {
     if (!mem) {
         return nullptr;
     }
-    return new (mem) T(modelId, static_cast<eVehicleCreatedBy>(createdBy), args...);
+    return ::new (mem) T(modelId, static_cast<eVehicleCreatedBy>(createdBy), args...);
 }
 
 // 0x421440

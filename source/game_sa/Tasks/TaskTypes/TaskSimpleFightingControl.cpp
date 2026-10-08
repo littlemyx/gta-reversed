@@ -22,7 +22,7 @@ void CTaskSimpleFightingControl::InjectHooks() {
     RH_ScopedVMTInstall(Clone, 0x622EB0);
     RH_ScopedVMTInstall(GetTaskType, 0x61DC90);
     RH_ScopedVMTInstall(MakeAbortable, 0x61DD00);
-    RH_ScopedVMTInstall(ProcessPed, 0x62A0A0, { .Reversed = false });
+    RH_ScopedVMTInstall(ProcessPed, 0x62A0A0);
 }
 
 // 0x61DC10
@@ -174,42 +174,69 @@ bool CTaskSimpleFightingControl::MakeAbortable(CPed* ped, eAbortPriority priorit
 
 // 0x62A0A0
 bool CTaskSimpleFightingControl::ProcessPed(CPed* ped) {
-    return plugin::CallMethodAndReturn<bool, 0x62A0A0, CTaskSimpleFightingControl*, CPed*>(this, ped);
-
-    /*
-    * Code below should be good so far, I'm lazy to finish it
-    if (!m_target) {
-        return false;
-    }
-
-    if (m_bool) {
+    if (!m_target || m_bool) {
         return true;
     }
 
-    const auto pedShootingRange = [ped] {
-        const auto range = (int16)ped->m_nWeaponShootingRate;
-        if (!ped->IsCreatedByMission() && ped->m_nPedType != PED_TYPE_COP && range == 40) {
-            return ped->m_pStats->m_wShootingRate;
-        }
-        return range;
-    }();
+    // The ped's "shooting rate" (the original misuses the stats' flags field if the ped's rate is the default 40)
+    float shootingRate = (float)ped->m_nWeaponShootingRate;
+    if (!ped->IsCreatedByMission() && ped->m_nPedType != PED_TYPE_COP && ped->m_nWeaponShootingRate == 40) {
+        shootingRate = (float)ped->m_pStats->m_flags;
+    }
 
     ped->GiveWeaponAtStartOfFight();
 
-    // Create fight task for ped if not already
-    if (!ped->GetTaskManager().GetTaskSecondary(TASK_SECONDARY_ATTACK)) {
-        ped->GetTaskManager().SetTaskSecondary(new CTaskSimpleFight{ m_target, false, (uint32)FIGHT_CTRL_FIGHT_IDLE_TIME }, TASK_SECONDARY_ATTACK);
+    int32 moveCmd = 0;
+    auto& taskMgr = ped->GetTaskManager();
+    if (!taskMgr.GetTaskSecondary(TASK_SECONDARY_ATTACK)) {
+        // 0x8D2E50 = 60000.f (Idle period)
+        taskMgr.SetTaskSecondary(new CTaskSimpleFight{ m_target, 0, (uint32)FIGHT_CTRL_FIGHT_IDLE_TIME }, TASK_SECONDARY_ATTACK);
         m_nextAttackTime = 0;
+    } else {
+        if (taskMgr.GetTaskSecondary(TASK_SECONDARY_ATTACK)->GetTaskType() != TASK_SIMPLE_FIGHT) {
+            taskMgr.GetTaskSecondary(TASK_SECONDARY_ATTACK)->MakeAbortable(ped, ABORT_PRIORITY_URGENT, nullptr);
+            return false;
+        }
+        if (m_nextAttackTime <= CTimer::GetTimeInMS()) {
+            m_nextAttackTime = 0;
+            moveCmd          = 0xB;
+            if (ped->m_nAllowedAttackMoves != 4 && ped->GetActiveWeapon().m_Type == WEAPON_UNARMED) {
+                moveCmd = 0xC;
+            }
+        } else {
+            // x87: `2.0 * rate * 0.025` is kept in extended precision for the comparison
+            if (   m_target->GetType() == ENTITY_TYPE_PED
+                && m_someTime == 0
+                && (double)CGeneral::GetRandomNumberInRange(0.f, 100.f) < 2.0 * (double)shootingRate * (double)0.025f
+            ) {
+                m_someTime = (uint32)CGeneral::GetRandomNumberInRange(500, 2000); // 0x8D2E58, 0x8D2E5C
+                moveCmd    = 2;
+            } else if (m_someTime != 0) {
+                const auto decr = (uint32)((double)CTimer::GetTimeStep() * (double)0.02f * 1000.0);
+                m_someTime      = m_someTime > decr ? m_someTime - decr : 0;
+                moveCmd         = 2;
+            }
+        }
     }
 
-    const auto pedFightTask = ped->GetTaskManager().GetTaskSecondary(TASK_SECONDARY_ATTACK);
-    if (pedFightTask->GetTaskType() != TASK_SIMPLE_FIGHT) {
-        pedFightTask->MakeAbortable(ped);
-        return false;
+    const auto fightTask = static_cast<CTaskSimpleFight*>(taskMgr.GetTaskSecondary(TASK_SECONDARY_ATTACK));
+    m_maxAttackRange = CTaskSimpleFight::m_aComboData[std::max<int32>((int32)fightTask->m_nCurrentMove - 4, 0)].m_fRanges;
+
+    if (m_nextAttackTime == 0) {
+        // x87: the whole chain is kept in extended precision until the final truncation
+        const double r    = (double)rand() * (double)RAND_MAX_FLOAT_RECIPROCAL + (double)0.25f;
+        const double div  = (double)shootingRate * (double)m_unk3 * (double)0.025f * (double)0.7f + (double)0.3f;
+        const auto   wait = (int32)(r / div * 2000.0); // 0x8D2E4C = 2000
+        m_nextAttackTime = (uint32)wait + CTimer::GetTimeInMS();
     }
 
-    if (m_nextAttackTime <= CTimer::GetTimeInMS()) {
-        m_nextAttackTime = 0;
+    int32 cmd = moveCmd;
+    if ((int32)fightTask->m_nCurrentMove <= 1) {
+        const auto calcCmd = CalcMoveCommand(ped);
+        if (calcCmd > -1) {
+            cmd = calcCmd;
+        }
     }
-    */
+    fightTask->ControlFight(m_target, (uint8)cmd);
+    return false;
 }

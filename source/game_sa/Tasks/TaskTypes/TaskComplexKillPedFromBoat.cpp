@@ -1,17 +1,21 @@
 #include "StdInc.h"
 #include "TaskComplexKillPedFromBoat.h"
 
+#include "TaskSimpleStandStill.h"
+#include "TaskComplexKillPedOnFoot.h"
+#include "Audio/Enums/PedSpeechContexts.h"
+
 void CTaskComplexKillPedFromBoat::InjectHooks() {
     RH_ScopedVirtualClass(CTaskComplexKillPedFromBoat, 0x86da98, 11);
     RH_ScopedCategory("Tasks/TaskTypes");
     RH_ScopedInstall(Constructor, 0x6227C0);
     RH_ScopedInstall(Destructor, 0x622830);
 
-    RH_ScopedVMTInstall(Clone, 0x6238A0, { .Reversed = false });
-    RH_ScopedVMTInstall(GetTaskType, 0x622820, { .Reversed = false });
-    RH_ScopedVMTInstall(CreateNextSubTask, 0x622890, { .Reversed = false });
-    RH_ScopedVMTInstall(CreateFirstSubTask, 0x622900, { .Reversed = false });
-    RH_ScopedVMTInstall(ControlSubTask, 0x622980, { .Reversed = false });
+    RH_ScopedVMTInstall(Clone, 0x6238A0);
+    RH_ScopedVMTInstall(GetTaskType, 0x622820);
+    RH_ScopedVMTInstall(CreateNextSubTask, 0x622890);
+    RH_ScopedVMTInstall(CreateFirstSubTask, 0x622900);
+    RH_ScopedVMTInstall(ControlSubTask, 0x622980);
 
 }
 
@@ -28,20 +32,58 @@ CTaskComplexKillPedFromBoat::~CTaskComplexKillPedFromBoat() {
 
 // 0x6238A0
 CTask* CTaskComplexKillPedFromBoat::Clone() const {
-    return plugin::CallMethodAndReturn<CTask*, 0x6238A0, const CTaskComplexKillPedFromBoat*>(this);
+    return new CTaskComplexKillPedFromBoat{ m_Ped };
 }
 
 // 0x622890
 CTask* CTaskComplexKillPedFromBoat::CreateNextSubTask(CPed* ped) {
-    return plugin::CallMethodAndReturn<CTask*, 0x622890, CTaskComplexKillPedFromBoat*, CPed*>(this, ped);
+    return new CTaskSimpleStandStill{ 0, true, false, 8.f };
 }
 
 // 0x622900
 CTask* CTaskComplexKillPedFromBoat::CreateFirstSubTask(CPed* ped) {
-    return plugin::CallMethodAndReturn<CTask*, 0x622900, CTaskComplexKillPedFromBoat*, CPed*>(this, ped);
+    ped->bStayInSamePlace = true;
+    return new CTaskSimpleStandStill{ 0, true, false, 8.f };
 }
 
 // 0x622980
 CTask* CTaskComplexKillPedFromBoat::ControlSubTask(CPed* ped) {
-    return plugin::CallMethodAndReturn<CTask*, 0x622980, CTaskComplexKillPedFromBoat*, CPed*>(this, ped);
+    const auto sub = m_pSubTask;
+
+    // Is `ped` a cop that cares about the (player) target of this task? (Conditions are the same for all uses below)
+    const auto IsCopAfterPlayer = [&] {
+        return ped->m_nPedType == PED_TYPE_COP && m_Ped && m_Ped->IsPlayer();
+    };
+
+    switch (sub->GetTaskType()) {
+    case TASK_SIMPLE_STAND_STILL: { // 0xCB
+        // Wanted level is up => go kill the target
+        if (IsCopAfterPlayer() && FindPlayerWanted()->m_WantedLevel != eWantedLevel::WANTED_CLEAN) {
+            if (sub->MakeAbortable(ped, ABORT_PRIORITY_URGENT, nullptr)) {
+                return new CTaskComplexKillPedOnFoot{ m_Ped, -1, 0, 0, 0, 1 };
+            }
+        }
+        return sub;
+    }
+    case TASK_COMPLEX_KILL_PED_ON_FOOT: { // 0x3E8
+        if (IsCopAfterPlayer()) { // Taunt the player
+            if (m_Ped->bInVehicle && m_Ped->m_pVehicle) {
+                if (m_Ped->m_pVehicle->m_vehicleAudio.m_AuSettings.VehicleAudioType == AE_BOAT) {
+                    AudioEngine.SayPedless(AE_SPEECH_PED, CTX_GLOBAL_POLICE_BOAT, ped, 0, 1.f, false, false, false);
+                }
+            } else if (m_Ped->physicalFlags.bSubmergedInWater) {
+                AudioEngine.SayPedless(AE_SPEECH_PED, CTX_GLOBAL_POLICE_OVERBOARD, ped, 0, 1.f, false, false, false);
+            }
+        }
+        // Wanted level is gone => go back to standing still
+        if (IsCopAfterPlayer() && FindPlayerWanted()->m_WantedLevel == eWantedLevel::WANTED_CLEAN) {
+            if (sub->MakeAbortable(ped, ABORT_PRIORITY_URGENT, nullptr)) {
+                return new CTaskSimpleStandStill{ 0, true, false, 8.f };
+            }
+        }
+        return sub;
+    }
+    default:
+        return sub;
+    }
 }

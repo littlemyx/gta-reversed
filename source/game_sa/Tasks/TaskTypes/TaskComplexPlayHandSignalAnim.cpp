@@ -114,7 +114,7 @@ CTask* CTaskComplexPlayHandSignalAnim::CreateFirstSubTask(CPed* ped) {
         }
     }
 
-    const auto modelId = ped->GetModelID();
+    const auto modelId = ped->GetModelId();
     m_DoUseFatHands = modelId == MODEL_BALLAS2 || modelId == MODEL_FAM1 || modelId == MODEL_FAM3;
     return CreateSubTask(TASK_SIMPLE_STAND_STILL);
 }

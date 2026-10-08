@@ -60,5 +60,5 @@ CTask* CTaskComplexDragPedFromCar::CreateFirstSubTask(CPed* ped) {
             return CTaskComplexEnterCar::CreateFirstSubTask(ped);
         }
     }
-    return CreateSubTask(TASK_FINISHED, ped);
+    return CreateSubTask(TASK_NONE, ped);
 }

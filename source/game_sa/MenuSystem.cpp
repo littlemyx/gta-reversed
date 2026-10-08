@@ -1,6 +1,7 @@
 #include "StdInc.h"
 
 #include "MenuSystem.h"
+#include "VehicleModelInfo.h"
 
 auto& MenuNumber = StaticRef<std::array<CMenuSystem::Menu*, 2>>(0xBA82D8);
 
@@ -26,7 +27,7 @@ void CMenuSystem::InjectHooks() {
     RH_ScopedInstall(CreateNewMenu, 0x582300);
     RH_ScopedInstall(ActivateItems, 0x581990);
     RH_ScopedInstall(ActivateOneItem, 0x581B30);
-    RH_ScopedInstall(FillGridWithCarColours, 0x5820E0, { .Reversed = false });
+    RH_ScopedInstall(FillGridWithCarColours, 0x5820E0);
     RH_ScopedInstall(InsertMenu, 0x581E00);
     RH_ScopedInstall(SwitchOffMenu, 0x580750);
 }
@@ -603,7 +604,44 @@ void CMenuSystem::ActivateOneItem(MenuId id, uint8 row, bool enable) {
 
 // 0x5820E0
 void CMenuSystem::FillGridWithCarColours(MenuId id) {
-    plugin::Call<0x5820E0, MenuId>(id);
+    // Colours picked so far (the not yet picked ones stay black, and take part in the comparison below too)
+    std::array<CRGBA, MENU_CAR_COLOR_COUNT> pickedColours;
+    pickedColours.fill(CRGBA{ 0, 0, 0, 255 });
+
+    uint8 colourIdx   = 0;
+    uint8 pickedCount = 0;
+    uint8 loopCount   = 1;
+    do {
+        const auto& tableColour = CVehicleModelInfo::ms_vehicleColourTable[colourIdx];
+        const CRGBA colour{ tableColour.r, tableColour.g, tableColour.b, 255 };
+
+        // Is this colour too similar to any of the already picked ones?
+        bool isSimilar = false;
+        for (auto i = 0u; i < loopCount; i++) {
+            const auto& picked = pickedColours[i];
+            if (loopCount > 1
+                && colour.r > picked.r - 15
+                && colour.g > picked.g - 15
+                && colour.b > picked.b - 15
+                && colour.r < picked.r + 15
+                && colour.g < picked.g + 15
+                && colour.b < picked.b + 15
+            ) {
+                isSimilar = true;
+            }
+        }
+
+        const auto nextColourIdx = static_cast<uint8>(colourIdx + 1);
+        if (!isSimilar || nextColourIdx >= 0x80) {
+            pickedColours[pickedCount]               = colour;
+            MenuNumber[id]->m_anUsedCarColors[pickedCount] = colourIdx;
+            pickedCount++;
+            loopCount++;
+            colourIdx = 0;
+        } else {
+            colourIdx = nextColourIdx;
+        }
+    } while (loopCount < MENU_CAR_COLOR_COUNT + 1);
 }
 
 // Insert menu column

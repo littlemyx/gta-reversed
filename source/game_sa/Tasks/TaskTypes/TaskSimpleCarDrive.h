@@ -1,6 +1,7 @@
 #pragma once
 
 #include "TaskSimple.h"
+#include "TaskTimer.h"
 
 class CVehicle;
 class CTaskUtilityLineUpPedWithCar;
@@ -10,10 +11,7 @@ public:
     CVehicle*                     m_pVehicle;
     CAnimBlendAssociation*        m_pAnimCloseDoorRolling;
     CTaskUtilityLineUpPedWithCar* m_pTaskUtilityLineUpPedWithCar;
-    CTaskTimer*                   m_TaskTimer;
-    int32                         field_18;
-    char                          field_1C;
-    char                          field_1D;
+    CTaskTimer                    m_NoDriverTimer; // Started when the ped is a (front) passenger in a driverless car, once it's out of time the ped leaves the car and wanders around
     int32                         m_nBoppingStartTime;
     int32                         field_24;
     int32                         m_nBoppingEndTime;  // Seemingly not a tick count, but rather the bopping interval
@@ -29,12 +27,12 @@ public:
     CTaskTimer                    m_copCarStolenTimer;
 
     // Inited according to: 0x63C3AE
-    uint8 m_b01 : 1;
-    uint8 m_b02 : 1;
-    uint8 m_bUpdateCurrentVehicle : 1; // m_bUpdateCurrentVehicle : 1; // updates m_pVehicle pointer to the current occupied vehicle by ped
-    uint8 m_b08 : 1;
-    uint8 m_b10 : 1;
-    uint8 m_b20 : 1;
+    uint8 m_bHeadBopping : 1;          // Is the head bopping
+    uint8 m_bArmBopping : 1;           // Is the arm bopping
+    uint8 m_bUpdateCurrentVehicle : 1; // updates m_pVehicle pointer to the current occupied vehicle by ped
+    uint8 m_b08 : 1;                   // Set on construction, and when `MakeAbortable` is called (non-immediately). Reset by `SetPedPosition`.
+    uint8 m_bPassengerAnimBlended : 1; // Passenger's "bike passenger" anim has been blended in already
+    uint8 m_bClosingDoor : 1;          // Ped is closing the door (rolling it shut), can't be aborted
 
 public:
     static constexpr auto Type = TASK_SIMPLE_CAR_DRIVE;

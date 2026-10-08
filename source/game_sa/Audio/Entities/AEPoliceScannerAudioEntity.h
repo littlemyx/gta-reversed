@@ -16,7 +16,7 @@ struct tScannerSlot {
 
 class NOTSA_EXPORT_VTABLE CAEPoliceScannerAudioEntity : public CAEAudioEntity {
 public:
-    enum State : int32 {
+    enum State : int16 { // NOTE: Is a 16 bit value (the byte after it - `s_bScannerDisabled` - is a separate variable)
         STATE_INITIAL = 0,
         ONE           = 1,
         TWO           = 2,

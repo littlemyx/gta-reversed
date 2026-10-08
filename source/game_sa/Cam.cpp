@@ -10,6 +10,8 @@
 #include "HandShaker.h"
 #include "Tasks/TaskTypes/TaskSimpleHoldEntity.h"
 #include "Tasks/TaskTypes/TaskSimpleGangDriveBy.h"
+#include "Tasks/TaskTypes/TaskSimpleClimb.h"
+#include "PostEffects.h"
 
 auto& gbFirstPersonRunThisFrame = StaticRef<bool>(0xB6EC20);
 auto& gLastFrameProcessedDWCineyCam = StaticRef<uint32>(0x8CCB9C);
@@ -538,12 +540,39 @@ bool CCam::IsTimeToExitThisDWCineyCamMode(int32 camId, const CVector& src, const
 
 // 0x509DF0
 void CCam::KeepTrackOfTheSpeed(const CVector& source, const CVector& target, const CVector& up, const float& alpha, const float& beta, const float& fov) {
-    static CVector prevSource = source;
-    static CVector prevTarget = target;
-    static CVector prevUp     = up;
-    static float   prevBeta   = beta;
-    static float   prevAlpha  = alpha;
-    static float   prevFov    = fov;
+    // The original uses function-local statics (+ their MSVC init guard bits at 0xB6FF8C), names made up
+    static auto& prevFov       = StaticRef<float>(0xB6FF5C);
+    static auto& prevAlpha     = StaticRef<float>(0xB6FF60);
+    static auto& prevBeta      = StaticRef<float>(0xB6FF64);
+    static auto& prevUp        = StaticRef<CVector>(0xB6FF68);
+    static auto& prevTarget    = StaticRef<CVector>(0xB6FF74);
+    static auto& prevSource    = StaticRef<CVector>(0xB6FF80);
+    static auto& initGuardMask = StaticRef<uint32>(0xB6FF8C);
+
+    if (!(initGuardMask & 0x1)) {
+        prevSource = source;
+        initGuardMask |= 0x1;
+    }
+    if (!(initGuardMask & 0x2)) {
+        prevTarget = target;
+        initGuardMask |= 0x2;
+    }
+    if (!(initGuardMask & 0x4)) {
+        prevUp = up;
+        initGuardMask |= 0x4;
+    }
+    if (!(initGuardMask & 0x8)) {
+        prevBeta = beta;
+        initGuardMask |= 0x8;
+    }
+    if (!(initGuardMask & 0x10)) {
+        prevAlpha = alpha;
+        initGuardMask |= 0x10;
+    }
+    if (!(initGuardMask & 0x20)) {
+        prevFov = fov;
+        initGuardMask |= 0x20;
+    }
 
     if (TheCamera.m_bJust_Switched) {
         prevSource = source;

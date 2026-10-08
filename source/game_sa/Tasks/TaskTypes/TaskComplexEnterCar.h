@@ -29,6 +29,9 @@ public:
     CVector        GetTargetPos() const;
     CVehicle*      GetCameraAvoidVehicle();
 
+    // Called by the follow ped camera while the player is entering a car (as the driver): pushes the camera sticks to look at the car
+    void GetCameraStickModifier(CPed* ped, float zoomDist, float& vertAngle, float& horzAngle, float& stickUD, float& stickLR);
+
     auto GetTargetCar() const { return m_Car; }
     void SetMoveState(eMoveState ms) { m_MoveState = ms; }
     auto GetEnterCarStartTime() const { return m_EnterCarStartTime; } // NOTSA

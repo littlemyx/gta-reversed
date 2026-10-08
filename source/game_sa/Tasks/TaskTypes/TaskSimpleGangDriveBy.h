@@ -57,6 +57,8 @@ public:
 public:
     static constexpr auto Type = TASK_SIMPLE_GANG_DRIVEBY;
 
+    static void InjectHooks();
+
     CTaskSimpleGangDriveBy(CEntity *target, const CVector *targetPos, float abortRange, int8 frequencyPercentage, eDrivebyStyle drivebyStyle, bool seatRHS);
     ~CTaskSimpleGangDriveBy() override;
 
@@ -64,6 +66,8 @@ public:
     CTask* Clone() const override;
     bool MakeAbortable(CPed* ped, eAbortPriority priority = ABORT_PRIORITY_URGENT, const CEvent* event = nullptr) override;
     bool ProcessPed(CPed* ped) override;
+
+    void FireGun(CPed* ped);
 };
 VALIDATE_SIZE(CTaskSimpleGangDriveBy, 0x44);
 

@@ -1,5 +1,7 @@
 #include "StdInc.h"
 
+#include <numbers>
+
 #include "Ragdoll/IKChainManager.h"
 
 #include "TaskSimpleBikeJacked.h"
@@ -47,6 +49,7 @@ void CTaskComplexEnterCar::InjectHooks() {
     RH_ScopedInstall(CreateTaskUtilityLineUpPedWithCar, 0x63ACC0);
     RH_ScopedInstall(GetTargetPos, 0x63A300);
     RH_ScopedInstall(GetCameraAvoidVehicle, 0x63A690);
+    RH_ScopedInstall(GetCameraStickModifier, 0x63A380);
     RH_ScopedInstall(SetVehicleFlags, 0x63AB90);
     RH_ScopedInstall(CreateSubTask, 0x63E040);
 
@@ -820,6 +823,100 @@ CVector CTaskComplexEnterCar::GetTargetPos() const {
         return tGoTo->GetTargetPt();
     }
     return {};
+}
+
+// 0x63A380
+void CTaskComplexEnterCar::GetCameraStickModifier(CPed* ped, float zoomDist, float& vertAngle, float& horzAngle, float& stickUD, float& stickLR) {
+    if (!m_Car || m_Car->m_nVehicleSubType == VEHICLE_TYPE_HELI) {
+        return;
+    }
+
+    const auto* pad = CPad::GetPad(0);
+    if (ped->m_nPedType == PED_TYPE_PLAYER2) {
+        pad = CPad::GetPad(1);
+    }
+
+    // NOTE: The original checks for `TASK_SIMPLE_CAR_OPEN_DOOR_FROM_OUTSIDE` twice
+    if (!GetSubTask()) {
+        return;
+    }
+    switch (GetSubTask()->GetTaskType()) {
+    case TASK_SIMPLE_CAR_OPEN_DOOR_FROM_OUTSIDE:
+    case TASK_SIMPLE_BIKE_PICK_UP:
+    case TASK_SIMPLE_CAR_SLOW_DRAG_PED_OUT:
+    case TASK_SIMPLE_CAR_GET_IN:
+    case TASK_SIMPLE_CAR_SHUFFLE:
+        break;
+    default:
+        return;
+    }
+
+    // Where does the player push the right stick/accelerates/brakes
+    constexpr float STICK_THRESHOLD = 20.f; // 0x858BA4
+    if (std::abs((float)pad->AimWeaponLeftRight(ped)) > STICK_THRESHOLD || std::abs((float)pad->AimWeaponUpDown(ped)) > STICK_THRESHOLD) {
+        m_CamMovementChoice = 3;
+    } else if (pad->GetAccelerate()) {
+        m_CamMovementChoice = 2;
+    } else if (pad->GetBrake()) {
+        m_CamMovementChoice = 1;
+    }
+    if (m_CamMovementChoice == 3) {
+        return;
+    }
+
+    // NOTE: x87 extended precision is kept by the original, unless specified otherwise
+    constexpr double PI      = (double)std::numbers::pi_v<float>;     // 0x858CB8
+    constexpr double TWO_PI  = (double)(2.f * std::numbers::pi_v<float>); // 0x858CBC
+    constexpr double HALF_PI = (double)(std::numbers::pi_v<float> / 2.f); // 0x858FE4
+
+    const auto& carMat = *m_Car->m_matrix; // BUG: Used w/o checking for null (below it is checked, though)
+    const auto  carHeading = m_Car->m_matrix
+        ? std::atan2((double)-carMat.GetForward().x, (double)carMat.GetForward().y)
+        : (double)m_Car->m_placement.m_fHeading;
+    const float heading = (float)(carHeading - HALF_PI); // Rounded to float
+
+    const auto& carPos = m_Car->GetPosition();
+    const auto& pedPos = ped->GetPosition();
+    const auto& right  = carMat.GetRight();
+    const double sideDist = (((double)pedPos.z - carPos.z) * right.z + ((double)pedPos.y - carPos.y) * right.y) + ((double)pedPos.x - carPos.x) * right.x;
+    const float  sideDistF = (float)sideDist;
+
+    float angle = (float)(std::atan2(sideDist, (double)zoomDist) * (double)0.7f); // 0x86E690 - Rounded to float
+    if (-m_Car->GetColModel()->m_boundBox.m_vecMin.y > zoomDist) {
+        angle = angle > 0.f ? -0.13962634f : 0.13962634f; // 0x86E694
+    }
+
+    double target = m_CamMovementChoice == 1
+        ? (double)angle + ((double)heading + PI)
+        : (double)heading - angle;
+    if (target > (double)horzAngle + PI) {
+        target -= TWO_PI;
+    } else if (target < (double)horzAngle - PI) {
+        target += TWO_PI;
+    }
+    double delta = target - horzAngle;
+
+    // Choose in which direction to go
+    const bool flip = (sideDistF > 0.f) == (m_CamMovementChoice == 1)
+        ? delta <= -HALF_PI /* 0x859998 */
+        : delta >= HALF_PI;
+    if (flip) {
+        delta *= -1.0; // 0x858C1C
+    }
+
+    const auto& s_Limits  = StaticRef<std::array<float, 3>>(0x86E684);
+    const auto& s_Factors = StaticRef<std::array<float, 3>>(0x86E678);
+    const float limit     = s_Limits[m_CamMovementChoice];
+    if (delta > limit) {
+        delta = limit;
+    } else if (delta < -limit) {
+        delta = -limit;
+    }
+    stickLR = (float)(delta * s_Factors[m_CamMovementChoice] + stickLR);
+
+    if (vertAngle > -0.17453294f) { // 0x8D2ECC
+        stickUD = (float)((double)stickUD - (double)s_Factors[m_CamMovementChoice] * s_Limits[m_CamMovementChoice]);
+    }
 }
 
 // 0x63A690

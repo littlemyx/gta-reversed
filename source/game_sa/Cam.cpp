@@ -13,6 +13,7 @@
 #include "Tasks/TaskTypes/TaskSimpleHoldEntity.h"
 #include "Tasks/TaskTypes/TaskSimpleGangDriveBy.h"
 #include "Tasks/TaskTypes/TaskSimpleClimb.h"
+#include "Tasks/TaskTypes/TaskComplexEnterCar.h"
 #include "PostEffects.h"
 #include "Tasks/TaskTypes/TaskSimpleSwim.h"
 #include "Tasks/TaskTypes/TaskSimpleUseGun.h"
@@ -3710,7 +3711,7 @@ void CCam::Process_Cam_TwoPlayer_InCarAndShooting() {
         CTaskSimpleGangDriveBy task{ nullptr, nullptr, 100.0f, 100, (eDrivebyStyle)8, seatRHS };
         task.m_pWeaponInfo = CWeaponInfo::GetWeaponInfo(shooter->GetActiveWeapon().m_Type, shooter->GetWeaponSkill());
         task.m_nFakeShootDirn = (char)fakeShootDirn;
-        plugin::CallMethod<0x627CC0, CTaskSimpleGangDriveBy*, CPed*>(&task, shooter); // FireGun-like
+        task.FireGun(shooter); // 0x627CC0
         CamShakeNoPos(&TheCamera, 0.03f);
     }
 }
@@ -6390,8 +6391,7 @@ void CCam::Process_FollowPed_SA(const CVector& target, float orientation, float 
     } else if (auto* const activeTask = ped->GetIntelligence()->GetTaskManager().GetActiveTask();
         (activeTask || !notsa::IsFixBugs()) /* BUG: The original doesn't check `activeTask` for null */ && activeTask->GetTaskType() == TASK_COMPLEX_ENTER_CAR_AS_DRIVER
     ) {
-        // 0x63A380 - Unreversed `CTaskComplexEnterCar` method (`this + 0xC` is the vehicle), adjusts the camera sticks while the ped is entering a car (as the driver)
-        plugin::CallMethod<0x63A380, CTask*, CPed*, float, float*, float*, float*, float*>(activeTask, ped, zoomDist, &m_fVerticalAngle, &m_fHorizontalAngle, &stickUD, &stickLR);
+        static_cast<CTaskComplexEnterCar*>(activeTask)->GetCameraStickModifier(ped, zoomDist, m_fVerticalAngle, m_fHorizontalAngle, stickUD, stickLR); // 0x63A380
     }
 
     // Beta

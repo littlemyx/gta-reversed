@@ -15,7 +15,7 @@ void C_PcSave::InjectHooks() {
 
     // See note in CGenericGameStorage::InjectHooks as to why GenerateGameFilename is unhooked by default
     RH_ScopedInstall(SetSaveDirectory, 0x619040);
-    RH_ScopedInstall(GenerateGameFilename, 0x6190A0, { .Reversed = false }); // bad
+    RH_ScopedInstall(GenerateGameFilename, 0x6190A0);
     RH_ScopedInstall(PopulateSlotInfo, 0x619140);
     RH_ScopedInstall(SaveSlot, 0x619060);
     RH_ScopedInstall(DeleteSlot, 0x6190D0);
@@ -30,8 +30,10 @@ void C_PcSave::SetSaveDirectory(const char* path) {
 void C_PcSave::GenerateGameFilename(int32 slot, char* out) {
     assert(slot < MAX_SAVEGAME_SLOTS);
 
-    const auto maxSize = std::size(DefaultPCSaveFileName) + std::size(std::to_string(MAX_SAVEGAME_SLOTS)) + std::size(".b") - 2u;
-    sprintf_s(out, maxSize, "%s%i%s", DefaultPCSaveFileName, slot + 1, ".b");
+    // BUG: The original code uses an unbounded sprintf. Callers pass buffers of different sizes (e.g. the 104 byte
+    // `ms_LoadFileNameWithPath`), so `sprintf_s` with a fixed size would (in debug CRT) fill memory past the
+    // actual buffer with 0xFE. Kept unbounded to match the original behaviour.
+    sprintf(out, "%s%i%s", DefaultPCSaveFileName, slot + 1, ".b");
 }
 
 // 0x619140

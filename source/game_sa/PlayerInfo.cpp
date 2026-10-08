@@ -663,7 +663,7 @@ void ProcessRemoteVehicleExplosion(CPlayerInfo& s) {
 // Blows up the car of the player if it's stuck upside down for too long
 void ProcessUpsideDownVehicle(CPlayerInfo& s) {
     const auto IsUpsideDown = [&] {
-        const auto* const veh = FindPlayerVehicle();
+        auto* const veh = FindPlayerVehicle();
         return veh
             && s.m_pPed->bInVehicle
             && veh->GetMatrix().GetUp().z < 0.0f

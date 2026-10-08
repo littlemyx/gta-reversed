@@ -27,6 +27,16 @@ public:
     };
     VALIDATE_SIZE(GotoPt_t, 0x10);
 
+    //! A point peds can use to leave the interior (see `CalcExitPts`)
+    struct ExitPt_t {
+        int8    field_0[2];
+        int8    GotoPtIdx[2]; //!< Indices of the `m_gotoPts` to go through (-1 = none)
+        CVector PosInside;
+        float   field_14;
+        CVector PosOutside;
+    };
+    VALIDATE_SIZE(ExitPt_t, 0x20);
+
     int32             m_interiorId;         // 0x8
     InteriorGroup_c*  m_pGroup;             // 0xC
     int32             m_areaCode;           // 0x10
@@ -46,7 +56,7 @@ public:
     int8              m_gotoPtsCount;       // 0x40C
     int8              m_interiorInfosCount; // 0x40D
     GotoPt_t          m_gotoPts[16];        // 0x410
-    char              gap510[0x80];         // 0x510
+    ExitPt_t          m_exitPts[4];         // 0x510 - Bottom, left, top, right (see `CalcExitPts`)
     InteriorInfo_t    m_interiorInfos[16];  // 0x590
     int8              m_furnitureGroupId;   // 0x790
     int8              m_furnitureId;        // 0x791
@@ -107,10 +117,10 @@ public:
     void FindBoundingBox(int32 tileX, int32 tileY, int32* minX, int32* maxX, int32* minY, int32* maxY, int32* visited);
     void CalcExitPts();
     bool IsVisible();
-    CObject* PlaceFurniture(Furniture_c* furniture, int32 tileX, int32 tileY, float offsetZ, int32 checkTiles, int32 rotation, int32* outWidth, int32* outDepth, uint8 a9);
-    CObject* PlaceFurnitureOnWall(int32 furnitureGroupId, int32 furnitureSubgroupId, int32 furnitureId, float offsetZ, int32 checkTiles, int32 rotation, int32 posAlongWall,
+    CEntity* PlaceFurniture(Furniture_c* furniture, int32 tileX, int32 tileY, float offsetZ, int32 checkTiles, int32 rotation, int32* outWidth, int32* outDepth, uint8 a9);
+    CEntity* PlaceFurnitureOnWall(int32 furnitureGroupId, int32 furnitureSubgroupId, int32 furnitureId, float offsetZ, int32 checkTiles, int32 rotation, int32 posAlongWall,
                                   int32 distFromWall, int32* outRotation, int32* outPosAlongWall, int32* outTileX, int32* outTileY, int32* outWidth, int32* outDepth);
-    CObject* PlaceFurnitureInCorner(int32 furnitureGroupId, int32 furnitureSubgroupId, int32 id, float offsetZ, int32 checkTiles, int32 rotation, int32 distFromWall,
+    CEntity* PlaceFurnitureInCorner(int32 furnitureGroupId, int32 furnitureSubgroupId, int32 id, float offsetZ, int32 checkTiles, int32 rotation, int32 distFromWall,
                                     int32* outRotation, int32* outTileX, int32* outTileY, int32* outWidth, int32* outDepth);
     bool FindEmptyTiles(int32 width, int32 depth, int32* outTileX, int32* outTileY);
     void FurnishShop(int32 furnitureGroupId);

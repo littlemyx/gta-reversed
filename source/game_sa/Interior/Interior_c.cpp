@@ -15,7 +15,7 @@ void Interior_c::InjectHooks() {
     //RH_ScopedInstall(Destructor, 0x591360, { .Reversed = false });
 
     RH_ScopedInstall(Bedroom_AddTableItem, 0x593F10);
-    RH_ScopedInstall(FurnishBedroom, 0x593FC0, { .Reversed = false });
+    RH_ScopedInstall(FurnishBedroom, 0x593FC0);
     RH_ScopedInstall(Kitchen_FurnishEdges, 0x596930, { .Reversed = false });
     RH_ScopedInstall(FurnishKitchen, 0x5970B0);
     RH_ScopedInstall(Lounge_AddTV, 0x597240);
@@ -39,12 +39,12 @@ void Interior_c::InjectHooks() {
     RH_ScopedInstall(Shop_FurnishEdges, 0x59A1B0, { .Reversed = false });
     RH_ScopedInstall(GetBoundingBox, 0x593DB0);
     RH_ScopedInstall(Init, 0x593BF0);
-    RH_ScopedInstall(ResetTiles, 0x593910, { .Reversed = false });
-    RH_ScopedInstall(PlaceObject, 0x5934E0, { .Reversed = false });
+    RH_ScopedInstall(ResetTiles, 0x593910);
+    RH_ScopedInstall(PlaceObject, 0x5934E0);
     RH_ScopedInstall(GetFurnitureEntity, 0x5913B0);
     RH_ScopedInstall(IsPtInside, 0x5913E0);
     RH_ScopedInstall(CalcMatrix, 0x5914D0);
-    RH_ScopedInstall(Furnish, 0x591590, { .Reversed = false });
+    RH_ScopedInstall(Furnish, 0x591590);
     RH_ScopedInstall(Unfurnish, 0x5915D0);
     RH_ScopedInstall(CheckTilesEmpty, 0x591680);
     RH_ScopedInstall(SetTilesStatus, 0x591700);
@@ -59,9 +59,9 @@ void Interior_c::InjectHooks() {
     RH_ScopedInstall(AddPickups, 0x591F90);
     RH_ScopedInstall(Exit, 0x592230);
     RH_ScopedInstall(FindBoundingBox, 0x5922C0);
-    RH_ScopedInstall(CalcExitPts, 0x5924A0, { .Reversed = false });
+    RH_ScopedInstall(CalcExitPts, 0x5924A0);
     RH_ScopedInstall(IsVisible, 0x5929F0);
-    RH_ScopedInstall(PlaceFurniture, 0x592AA0, { .Reversed = false });
+    RH_ScopedInstall(PlaceFurniture, 0x592AA0);
     RH_ScopedInstall(PlaceFurnitureOnWall, 0x593120);
     RH_ScopedInstall(PlaceFurnitureInCorner, 0x593340);
     RH_ScopedInstall(FindEmptyTiles, 0x591C50);
@@ -80,6 +80,10 @@ auto& s_ShopUnitChance = StaticRef<int32>(0xBB3DE4);
 
 // Set once the office had its (single) special `InteriorInfo` (type 7) placed (see `Office_PlaceEdgeFillers`)
 auto& s_OfficeSpecialInfoPlaced = StaticRef<bool>(0xBB3DC8);
+
+// Members of `g_interiorMan` (private) - Objects that can be stolen (see `PlaceObject`)
+auto& s_StealableObjectCount = StaticRef<int32>(0xBB3A18);                         // InteriorManager_c::m_ObjectCount
+auto& s_StealableObjects     = StaticRef<std::array<InteriorObject, 32>>(0xBB3A1C); // InteriorManager_c::m_Objects
 
 // The following 4 are members of `g_interiorMan`, but they are private, so we can't access them
 auto& s_TimeLastPickupsGenerated = StaticRef<uint32>(0xBB3DC4);     // InteriorManager_c::m_TimeLastPickupsGenerated
@@ -173,7 +177,100 @@ CObject* Interior_c::Bedroom_AddTableItem(int32 groupId, int32 subGroupId, int32
 
 // 0x593FC0
 void Interior_c::FurnishBedroom() {
-    plugin::CallMethod<0x593FC0, Interior_c*>(this);
+    const auto wealth = m_box->m_status;
+    const auto width  = static_cast<int32>(m_box->m_width);
+    const auto depth  = static_cast<int32>(m_box->m_depth);
+
+    m_furnitureId = static_cast<int8>(g_furnitureMan.GetRandomId(3, 1, wealth));
+    SetTilesStatus(m_box->m_door - 1, 0, 2, 2, 7, 0);
+
+    // NOTSA: In the original these are uninitialized if the bed couldn't be placed
+    int32 bedRot = 0, bedPos = 0;
+    auto* const bed = PlaceFurnitureOnWall(3, 0, -1, 0.f, 1, -1, -1, 0, &bedRot, &bedPos, nullptr, nullptr, nullptr, nullptr);
+
+    // Bedside tables - One before the bed...
+    if (bedPos > 0 && PlaceFurnitureOnWall(3, 1, m_furnitureId, 0.f, 1, bedRot, bedPos - 1, 0, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr)) {
+        int32 action, dir, tx, ty, usedX, usedY;
+        switch (bedRot) {
+        case 1: action = 3; dir = 2; tx = 1;         ty = bedPos - 1; usedX = 2;         usedY = bedPos - 1; break;
+        case 3: action = 4; dir = 2; tx = width - 2; ty = bedPos - 1; usedX = width - 3; usedY = bedPos - 1; break;
+        case 0: action = 3; dir = 1; tx = bedPos - 1; ty = depth - 2; usedX = bedPos - 1; usedY = depth - 3; break;
+        case 2: action = 4; dir = 1; tx = bedPos - 1; ty = 1;         usedX = bedPos - 1; usedY = 2;         break;
+        default: action = dir = tx = ty = usedX = usedY = 0; break; // Can't happen
+        }
+        AddInteriorInfo(action, static_cast<float>(tx), static_cast<float>(ty), dir, bed);
+        SetTilesStatus(usedX, usedY, 1, 1, 2, 0);
+    }
+
+    // ...and one after
+    if (PlaceFurnitureOnWall(3, 1, m_furnitureId, 0.f, 1, bedRot, bedPos + 2, 0, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr)) {
+        int32 action, dir, tx, ty, usedX, usedY;
+        switch (bedRot) {
+        case 1: action = 4; dir = 0; tx = 1;         ty = bedPos + 2; usedX = 2;         usedY = bedPos + 2; break;
+        case 3: action = 3; dir = 0; tx = width - 2; ty = bedPos + 2; usedX = width - 3; usedY = bedPos + 2; break;
+        case 0: action = 4; dir = 3; tx = bedPos + 2; ty = depth - 2; usedX = bedPos + 2; usedY = depth - 3; break;
+        case 2: action = 3; dir = 3; tx = bedPos + 2; ty = 1;         usedX = bedPos + 2; usedY = 2;         break;
+        default: action = dir = tx = ty = usedX = usedY = 0; break; // Can't happen
+        }
+        AddInteriorInfo(action, static_cast<float>(tx), static_cast<float>(ty), dir, bed);
+        SetTilesStatus(usedX, usedY, 1, 1, 2, 0);
+    }
+
+    PlaceFurnitureOnWall(3, 3, m_furnitureId, 0.f, 1, -1, -1, 0, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr);
+    PlaceFurnitureOnWall(3, 2, m_furnitureId, 0.f, 1, -1, -1, 0, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr);
+
+    // Table with an item on it
+    {
+        const auto AddTable = [&](int32 subGroupId) {
+            int32 rot = 0, tileX = 0, tileY = 0;
+            if (PlaceFurnitureOnWall(2, 6, -1, 0.f, 1, -1, -1, 0, &rot, nullptr, &tileX, &tileY, nullptr, nullptr)) {
+                Bedroom_AddTableItem(2, subGroupId, rot, tileX, tileY, rot);
+            }
+        };
+
+        const auto roll = RandBelow(100);
+        if (roll < 25) {
+            AddTable(8);
+        } else if (roll >= 50) {
+            if (roll < 75) {
+                AddTable(8);
+                AddTable(3);
+            }
+        } else {
+            AddTable(3);
+        }
+    }
+
+    // Small items - How many to place depends on the wealth
+    int32 chance;
+    if (wealth >= 75) {
+        chance = RandBelow(20);
+    } else if (wealth >= 50) {
+        chance = 20 - RandBelow(-30);
+    } else {
+        chance = CGeneral::GetRandomNumberInRange(50, 100);
+    }
+
+    const auto PlaceItem = [&](int32 roll, int32 w, int32 d, int32 subGroupId, int32 usedW, int32 usedD) {
+        int32 x, y;
+        if (roll < chance && FindEmptyTiles(w, d, &x, &y)) {
+            auto* const furniture = g_furnitureMan.GetFurniture(8, subGroupId, -1, wealth);
+            PlaceObject(false, furniture, static_cast<float>(x) + 0.5f, static_cast<float>(y) + 0.5f, 0.05f, 0.f);
+            SetTilesStatus(x, y, usedW, usedD, 2, 0);
+        }
+    };
+    PlaceItem(RandBelow(60),  2, 2, 2, 2, 2);
+    PlaceItem(RandBelow(100), 1, 1, 5, 1, 1);
+    PlaceItem(RandBelow(100), 1, 1, 4, 1, 1);
+    PlaceItem(RandBelow(100), 1, 1, 3, 1, 1);
+    PlaceItem(RandBelow(100), 2, 2, 6, 1, 1); // NOTE: Only marks 1x1 tiles as used
+
+    // Rug in the middle
+    auto* const rug   = g_furnitureMan.GetFurniture(8, 1, -1, wealth);
+    const auto  tileY = static_cast<int32>(static_cast<float>(depth) * 0.5f - static_cast<float>(rug->m_nWidthY) * 0.5f);
+    const auto  tileX = static_cast<int32>(static_cast<float>(width) * 0.5f - static_cast<float>(rug->m_nWidthX) * 0.5f);
+    int32 outW, outD;
+    PlaceFurniture(rug, tileX, tileY, 0.f, 0, 0, &outW, &outD, 0);
 }
 
 // 0x596930
@@ -758,13 +855,145 @@ bool Interior_c::GetBoundingBox(FurnitureEntity_c* entity, CVector* outPoints) {
 
 // 0x593910
 void Interior_c::ResetTiles() {
-    plugin::CallMethod<0x593910, Interior_c*>(this);
+    std::memset(m_tiles, 0, sizeof(m_tiles));
+
+    const auto& box = *m_box;
+
+    // Marks all empty (status 0) tiles in the rectangle as `status`
+    const auto MarkEmpty = [&](int32 x, int32 y, int32 w, int32 d, uint8 status) {
+        for (int32 ix = 0; ix < w; ix++) {
+            for (int32 iy = 0; iy < d; iy++) {
+                auto& tile = m_tiles[x + ix][y + iy];
+                if (tile == 0) {
+                    tile = status;
+                }
+            }
+        }
+    };
+
+    // Doors (status 8)
+    if (box.m_lDoorStart != -1) {
+        const int32 start = box.m_lDoorStart, len = box.m_lDoorEnd - start;
+        if (len > 0 && start >= 0 && box.m_width != 0 && start + len <= box.m_depth) {
+            MarkEmpty(0, start, 1, len, 8);
+        }
+    }
+    if (box.m_rDoorStart != -1) {
+        const int32 start = box.m_rDoorStart, len = box.m_rDoorEnd - start;
+        const int32 x = box.m_width - 1;
+        if (len > 0 && x >= 0 && start >= 0 && start + len <= box.m_depth) {
+            MarkEmpty(x, start, 1, len, 8);
+        }
+    }
+    if (box.m_tDoorStart != -1) {
+        const int32 start = box.m_tDoorStart, len = box.m_tDoorEnd - start;
+        const int32 y = box.m_depth - 1;
+        if (len > 0 && y >= 0 && start >= 0 && start + len <= box.m_width) {
+            MarkEmpty(start, y, len, 1, 8);
+        }
+    }
+
+    // Windows (status 9)
+    if (box.m_lWindowStart != -1) {
+        const int32 start = box.m_lWindowStart, len = box.m_lWindowEnd - start;
+        if (len > 0 && start >= 0 && box.m_width != 0 && start + len <= box.m_depth) {
+            MarkEmpty(0, start, 1, len, 9);
+        }
+    }
+    if (box.m_rWindowStart != -1) {
+        const int32 start = box.m_rWindowStart, len = box.m_rWindowEnd - start;
+        const int32 x = box.m_width - 1;
+        if (len > 0 && x >= 0 && start >= 0 && start + len <= box.m_depth) {
+            MarkEmpty(x, start, 1, len, 9);
+        }
+    }
+    if (box.m_tWindowStart != -1) {
+        const int32 start = box.m_tWindowStart, len = box.m_tWindowEnd - start;
+        const int32 y = box.m_depth - 1;
+        if (len > 0 && y >= 0 && start >= 0 && start + len <= box.m_width) {
+            MarkEmpty(start, y, len, 1, 9);
+        }
+    }
+
+    // No-go areas (status 11)
+    for (int32 i = 0; i < 3; i++) {
+        const int32 x = box.m_noGoLeft[i];
+        const int32 y = box.m_noGoBottom[i];
+        if (x == -1 || y == -1) {
+            continue;
+        }
+        const int32 w = box.m_noGoWidth[i];
+        const int32 d = box.m_noGoDepth[i];
+        if (x >= 0 && y >= 0 && x + w <= box.m_width && y + d <= box.m_depth && w > 0) {
+            MarkEmpty(x, y, w, d, 11);
+        }
+    }
 }
 
 // 0x5934E0
 CObject* Interior_c::PlaceObject(uint8 isStealable, Furniture_c* furniture, float offsetX, float offsetY, float offsetZ, float rotationZ) {
-    return plugin::CallMethodAndReturn<CObject*, 0x5934E0, Interior_c*, uint8, Furniture_c*, float, float, float, float>(this, isStealable, furniture, offsetX, offsetY, offsetZ,
-                                                                                                                         rotationZ);
+    const float x = static_cast<float>(-static_cast<int32>(m_box->m_width)) * 0.5f + offsetX;
+    const float y = static_cast<float>(-static_cast<int32>(m_box->m_depth)) * 0.5f + offsetY;
+    const float z = static_cast<float>(-static_cast<int32>(m_box->m_height)) * 0.5f + offsetZ
+                  - CModelInfo::GetModelInfo(furniture->m_nModelId)->GetColModel()->GetBoundingBox().m_vecMin.z;
+
+    if (s_FurnitureEntityPool.GetNumItems() <= 0) {
+        return nullptr;
+    }
+
+    CMatrix interiorMat{ &m_matrix, false };
+    auto    localMat = CMatrix::Unity();
+    localMat.RotateZ(rotationZ * 0.017453292f);
+    localMat.GetPosition() += CVector{ x, y, z };
+    CMatrix worldMat = interiorMat * localMat;
+
+    auto* const item = s_FurnitureEntityPool.RemoveHead();
+    if (!item) {
+        return nullptr;
+    }
+
+    auto* const obj = new CObject(furniture->m_nModelId, false);
+    item->m_entity = obj;
+    obj->SetMatrix(worldMat);
+    obj->SetAreaCode(static_cast<eAreaCodes>(m_areaCode));
+    obj->m_bDontCastShadowsOn = true; // 0x10000
+    obj->m_nObjectType = OBJECT_TYPE_DECORATION;
+    obj->SetIsStatic(true);
+    CWorld::Add(obj);
+    item->m_tileX = static_cast<uint16>(static_cast<int32>(offsetX));
+    item->m_tileY = static_cast<uint16>(static_cast<int32>(offsetY));
+    m_furnitureList.AddItem(item);
+
+    if (isStealable) {
+        obj->objectFlags.bIsLiftable = true; // 0x2000
+
+        if (!g_interiorMan.HasInteriorHadStealDataSetup(this)) {
+            // First time this interior is set up, remember the object so it can be stolen
+            auto& rec     = s_StealableObjects[s_StealableObjectCount];
+            rec.entity     = obj;
+            rec.modelId    = furniture->m_nModelId;
+            rec.interiorId = m_interiorId;
+            rec.pos        = CVector{ x, y, z };
+            rec.wasStolen  = false;
+            s_StealableObjectCount++;
+        } else {
+            const auto idx = g_interiorMan.FindStealableObjectId(m_interiorId, furniture->m_nModelId, CVector{ x, y, z });
+            if (idx >= 0 && s_StealableObjects[idx].wasStolen) {
+                // Object was stolen previously, so don't recreate it
+                CWorld::Remove(obj);
+                delete obj;
+                item->m_entity = nullptr;
+                m_furnitureList.RemoveItem(item);
+                s_FurnitureEntityPool.AddItem(item);
+                return nullptr;
+            }
+            const auto idx2 = g_interiorMan.FindStealableObjectId(m_interiorId, furniture->m_nModelId, CVector{ x, y, z });
+            if (idx2 >= 0) {
+                s_StealableObjects[idx2].entity = obj;
+            }
+        }
+    }
+    return obj;
 }
 
 // 0x5913B0
@@ -822,7 +1051,13 @@ void Interior_c::CalcMatrix(const CVector* translation) {
 
 // 0x591590
 void Interior_c::Furnish() {
-    plugin::CallMethod<0x591590, Interior_c*>(this);
+    switch (m_box->m_type) {
+    case 0: FurnishShop(0);   break;
+    case 1: FurnishOffice();  break;
+    case 2: FurnishLounge();  break;
+    case 3: FurnishBedroom(); break;
+    case 4: FurnishKitchen(); break;
+    }
 }
 
 // 0x5915D0
@@ -1204,7 +1439,120 @@ void Interior_c::FindBoundingBox(int32 tileX, int32 tileY, int32* minX, int32* m
 
 // 0x5924A0
 void Interior_c::CalcExitPts() {
-    plugin::CallMethod<0x5924A0, Interior_c*>(this);
+    const auto& box   = *m_box;
+    const int32 count = m_gotoPtsCount;
+
+    // Bottom (door side)
+    if (box.m_door >= 0) {
+        auto&       exitPt = m_exitPts[0];
+        const float x      = static_cast<float>(box.m_door) - 0.5f;
+        float       y;
+        if (count <= 2) {
+            exitPt.GotoPtIdx[0] = exitPt.GotoPtIdx[1] = -1;
+            y = 0.f;
+        } else {
+            int32 i = 0;
+            do {
+                if (static_cast<float>(static_cast<int8>(m_gotoPts[i].TileX)) > x) {
+                    break;
+                }
+                i += 2;
+            } while (i < count);
+            if (i == 0) {
+                exitPt.GotoPtIdx[0] = 0;
+                exitPt.GotoPtIdx[1] = -1;
+            } else if (i == count) {
+                exitPt.GotoPtIdx[0] = static_cast<int8>(count - 2);
+                exitPt.GotoPtIdx[1] = -1;
+            } else {
+                exitPt.GotoPtIdx[0] = static_cast<int8>(i);
+                exitPt.GotoPtIdx[1] = static_cast<int8>(i - 2);
+            }
+            y = static_cast<float>(static_cast<int8>(m_gotoPts[0].TileY)) - 0.25f;
+        }
+        GetTileCentre(x, y, &exitPt.PosInside);
+        GetTileCentre(x, -0.25f, &exitPt.PosOutside);
+    }
+
+    // Left
+    if (box.m_lDoorStart >= 0) {
+        auto&       exitPt = m_exitPts[1];
+        const float y      = static_cast<float>(box.m_lDoorEnd - box.m_lDoorStart) * 0.5f + static_cast<float>(box.m_lDoorStart) - 0.5f;
+        float       x;
+        if (count <= 2) {
+            exitPt.GotoPtIdx[0] = exitPt.GotoPtIdx[1] = -1;
+            x = 0.f;
+        } else {
+            if (static_cast<float>(static_cast<int8>(m_gotoPts[0].TileY)) > y) {
+                exitPt.GotoPtIdx[0] = 0;
+                exitPt.GotoPtIdx[1] = -1;
+            } else if (!(static_cast<float>(static_cast<int8>(m_gotoPts[1].TileY)) < y)) {
+                exitPt.GotoPtIdx[0] = 0;
+                exitPt.GotoPtIdx[1] = 1;
+            } else {
+                exitPt.GotoPtIdx[0] = 1;
+                exitPt.GotoPtIdx[1] = -1;
+            }
+            x = static_cast<float>(static_cast<int8>(m_gotoPts[0].TileX)) - 0.25f;
+        }
+        GetTileCentre(x, y, &exitPt.PosInside);
+        GetTileCentre(-0.25f, y, &exitPt.PosOutside);
+    }
+
+    // Top
+    if (box.m_tDoorStart >= 0) {
+        auto&       exitPt = m_exitPts[2];
+        const float x      = static_cast<float>(box.m_tDoorEnd - box.m_tDoorStart) * 0.5f + static_cast<float>(box.m_tDoorStart) - 0.5f;
+        float       y;
+        if (count <= 2) {
+            exitPt.GotoPtIdx[0] = exitPt.GotoPtIdx[1] = -1;
+            y = static_cast<float>(box.m_depth - 1);
+        } else {
+            int32 i = 1;
+            do {
+                if (static_cast<float>(static_cast<int8>(m_gotoPts[i].TileX)) > x) {
+                    break;
+                }
+                i += 2;
+            } while (i < count);
+            if (i == count) {
+                exitPt.GotoPtIdx[0] = static_cast<int8>(count - 1);
+                exitPt.GotoPtIdx[1] = -1;
+            } else {
+                exitPt.GotoPtIdx[0] = static_cast<int8>(i);
+                exitPt.GotoPtIdx[1] = static_cast<int8>(i - 2);
+            }
+            y = static_cast<float>(static_cast<int8>(m_gotoPts[1].TileY)) + 0.25f;
+        }
+        GetTileCentre(x, y, &exitPt.PosInside);
+        GetTileCentre(x, static_cast<float>(box.m_depth - 1) + 0.25f, &exitPt.PosOutside);
+    }
+
+    // Right
+    if (box.m_rDoorStart >= 0) {
+        auto&       exitPt = m_exitPts[3];
+        const float y      = static_cast<float>(box.m_rDoorEnd - box.m_rDoorStart) * 0.5f + static_cast<float>(box.m_rDoorStart) - 0.5f;
+        float       x;
+        if (count <= 2) {
+            exitPt.GotoPtIdx[0] = exitPt.GotoPtIdx[1] = -1;
+            x = static_cast<float>(box.m_width - 1);
+        } else {
+            if (static_cast<float>(static_cast<int8>(m_gotoPts[count - 2].TileY)) > y) {
+                exitPt.GotoPtIdx[0] = static_cast<int8>(count - 2);
+                exitPt.GotoPtIdx[1] = -1;
+            } else if (!(static_cast<float>(static_cast<int8>(m_gotoPts[count - 1].TileY)) < y)) {
+                exitPt.GotoPtIdx[0] = static_cast<int8>(count - 1);
+                exitPt.GotoPtIdx[1] = static_cast<int8>(count - 2);
+            } else {
+                exitPt.GotoPtIdx[0] = static_cast<int8>(count - 1);
+                exitPt.GotoPtIdx[1] = -1;
+            }
+            // NOTE: Uses the TileX of the 2nd last point (the original does that too)
+            x = static_cast<float>(static_cast<int8>(m_gotoPts[count - 2].TileX)) + 0.25f;
+        }
+        GetTileCentre(x, y, &exitPt.PosInside);
+        GetTileCentre(static_cast<float>(box.m_width - 1) + 0.25f, y, &exitPt.PosOutside);
+    }
 }
 
 // 0x5929F0
@@ -1224,13 +1572,101 @@ bool Interior_c::IsVisible() {
 }
 
 // 0x592AA0
-CObject* Interior_c::PlaceFurniture(Furniture_c* furniture, int32 tileX, int32 tileY, float offsetZ, int32 checkTiles, int32 rotation, int32* outWidth, int32* outDepth, uint8 a9) {
-    return plugin::CallMethodAndReturn<CObject*, 0x592AA0, Interior_c*, Furniture_c*, int32, int32, float, int32, int32, int32*, int32*, uint8>(
-        this, furniture, tileX, tileY, offsetZ, checkTiles, rotation, outWidth, outDepth, a9);
+CEntity* Interior_c::PlaceFurniture(Furniture_c* furniture, int32 tileX, int32 tileY, float offsetZ, int32 checkTiles, int32 rotation, int32* outWidth, int32* outDepth, uint8 a9) {
+    const auto Fail = [&]() -> CEntity* {
+        *outWidth = 0;
+        *outDepth = 0;
+        return nullptr;
+    };
+
+    if (s_FurnitureEntityPool.GetNumItems() <= 0) {
+        return Fail();
+    }
+
+    // Size of the furniture after rotation
+    const bool  isSideways = rotation == 1 || rotation == 3;
+    const int32 width      = isSideways ? furniture->m_nWidthY : furniture->m_nWidthX;
+    const int32 depth      = isSideways ? furniture->m_nWidthX : furniture->m_nWidthY;
+    const int32 baseWidthX = furniture->m_nWidthX;
+    const int32 baseWidthY = furniture->m_nWidthY;
+
+    if (checkTiles == 1 && !a9 && !CheckTilesEmpty(tileX, tileY, width, depth, furniture->m_bCanPlaceInFrontOfWindow)) {
+        return Fail();
+    }
+
+    // Random rotation around the center of the furniture
+    CMatrix jitterMat;
+    if (furniture->m_nMaxAng) {
+        const float cy = 0.5f - static_cast<float>(baseWidthY) * 0.5f;
+        const float cx = 0.5f - static_cast<float>(baseWidthX) * 0.5f;
+
+        auto toOrigin = CMatrix::Unity();
+        toOrigin.SetTranslate({ cx, cy, 0.f });
+
+        auto rot = CMatrix::Unity();
+        rot.RotateZ(static_cast<float>(CGeneral::GetRandomNumberInRange(-static_cast<int32>(furniture->m_nMaxAng), static_cast<int32>(furniture->m_nMaxAng))) * 0.017453292f);
+
+        auto fromOrigin = CMatrix::Unity();
+        fromOrigin.SetTranslate({ -cx, -cy, 0.f });
+
+        jitterMat = (fromOrigin * rot) * toOrigin;
+    } else {
+        jitterMat.SetUnity();
+    }
+
+    CMatrix interiorMat{ &m_matrix, false };
+    auto    placeMat = CMatrix::Unity();
+    placeMat.RotateZ(static_cast<float>(rotation) * 1.5707964f);
+
+    int32 xOff = 0, yOff = 0;
+    switch (rotation) {
+    case 1: xOff = width - 1; break;
+    case 2: xOff = width - 1; yOff = depth - 1; break;
+    case 3: yOff = depth - 1; break;
+    }
+
+    if (checkTiles == 1 || checkTiles == 2) {
+        const float z = static_cast<float>(-static_cast<int32>(m_box->m_height)) * 0.5f + offsetZ;
+        const float y = static_cast<float>(-static_cast<int32>(m_box->m_depth)) * 0.5f + static_cast<float>(yOff) + static_cast<float>(tileY) + 0.5f;
+        const float x = static_cast<float>(-static_cast<int32>(m_box->m_width)) * 0.5f + static_cast<float>(xOff) + static_cast<float>(tileX) + 0.5f;
+        placeMat.GetPosition() += CVector{ x, y, z };
+    } else if (checkTiles == 0) {
+        const float z = static_cast<float>(m_box->m_height) * 0.5f - offsetZ;
+        const float y = static_cast<float>(-static_cast<int32>(m_box->m_depth)) * 0.5f + static_cast<float>(yOff) + static_cast<float>(tileY) + 0.5f;
+        const float x = static_cast<float>(-static_cast<int32>(m_box->m_width)) * 0.5f + static_cast<float>(xOff) + static_cast<float>(tileX) + 0.5f;
+        placeMat.GetPosition() += CVector{ x, y, z };
+    }
+
+    CMatrix worldMat = (interiorMat * placeMat) * jitterMat;
+
+    auto* const item = s_FurnitureEntityPool.RemoveHead();
+    if (!item) {
+        return Fail();
+    }
+
+    auto* const building = new CBuilding();
+    item->m_entity = building;
+    building->SetModelIndex(furniture->m_nModelId);
+    building->SetMatrix(worldMat);
+    building->SetAreaCode(static_cast<eAreaCodes>(m_areaCode));
+    building->m_bDontCastShadowsOn = true; // 0x10000
+    building->m_bIsTempBuilding    = true; // 0x400000
+    CWorld::Add(building);
+    item->m_tileX = static_cast<uint16>(tileX);
+    item->m_tileY = static_cast<uint16>(tileY);
+    m_furnitureList.AddItem(item);
+
+    if (checkTiles == 1) {
+        SetTilesStatus(tileX, tileY, width, depth, furniture->m_bIsTall ? 6 : 5, 1);
+    }
+
+    *outWidth = width;
+    *outDepth = depth;
+    return item->m_entity;
 }
 
 // 0x593120
-CObject* Interior_c::PlaceFurnitureOnWall(int32 furnitureGroupId, int32 furnitureSubgroupId, int32 furnitureId, float offsetZ, int32 checkTiles, int32 rotation, int32 posAlongWall,
+CEntity* Interior_c::PlaceFurnitureOnWall(int32 furnitureGroupId, int32 furnitureSubgroupId, int32 furnitureId, float offsetZ, int32 checkTiles, int32 rotation, int32 posAlongWall,
                                           int32 distFromWall, int32* outRotation, int32* outPosAlongWall, int32* outTileX, int32* outTileY, int32* outWidth, int32* outDepth) {
     auto* const furniture = g_furnitureMan.GetFurniture(furnitureGroupId, furnitureSubgroupId, static_cast<int16>(furnitureId), m_box->m_status);
     if (!furniture) {
@@ -1277,7 +1713,7 @@ CObject* Interior_c::PlaceFurnitureOnWall(int32 furnitureGroupId, int32 furnitur
 }
 
 // 0x593340
-CObject* Interior_c::PlaceFurnitureInCorner(int32 furnitureGroupId, int32 furnitureSubgroupId, int32 id, float offsetZ, int32 checkTiles, int32 rotation, int32 distFromWall,
+CEntity* Interior_c::PlaceFurnitureInCorner(int32 furnitureGroupId, int32 furnitureSubgroupId, int32 id, float offsetZ, int32 checkTiles, int32 rotation, int32 distFromWall,
                                             int32* outRotation, int32* outTileX, int32* outTileY, int32* outWidth, int32* outDepth) {
     auto* const furniture = g_furnitureMan.GetFurniture(furnitureGroupId, furnitureSubgroupId, static_cast<int16>(id), m_box->m_status);
     if (!furniture) {

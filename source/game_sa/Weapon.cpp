@@ -20,6 +20,7 @@
 #include "SurfaceInfos_c.h"
 #include "VehicleModelInfo.h"
 #include "RwHelper.h"
+#include "TaskSimpleUseGun.h"
 
 //float& PELLET_COL_SCALE_RATIO_MULT = *(float*)0x8D6128; // 1.3
 
@@ -54,7 +55,7 @@ void CWeapon::InjectHooks() {
     RH_ScopedInstall(FireAreaEffect, 0x73E800);
     RH_ScopedInstall(FireInstantHitFromCar, 0x73EC40);
     RH_ScopedInstall(FireFromCar, 0x73FA20);
-    RH_ScopedInstall(FireInstantHit, 0x73FB10, { .Reversed = false });
+    RH_ScopedInstall(FireInstantHit, 0x73FB10);
     RH_ScopedInstall(FireProjectile, 0x741360);
     RH_ScopedInstall(DoBulletImpact, 0x73B550);
     RH_ScopedInstall(LaserScopeDot, 0x73A8D0);
@@ -1669,16 +1670,574 @@ bool CWeapon::FireFromCar(CVehicle* vehicle, bool leftSide, bool rightSide) {
     return true;
 }
 
+//! NOTSA: Original used the CRT `rand()` scaled by `1 / 32767` (0x858C7C), the intermediate results stay in an x87 register
+static double FireInstantHit_Rand01() {
+    return (double)rand() * (double)RAND_MAX_FLOAT_RECIPROCAL;
+}
+
+//! NOTSA: `CGeneral::GetRandomNumberInRange<float>` (0x41BD90), but without the assertion
+static float FireInstantHit_RandomInRange(float lo, float hi) {
+    return (float)((double)lo + ((double)hi - (double)lo) * FireInstantHit_Rand01());
+}
+
+/*!
+* @brief Randomly offsets the point of impact (Used for non-player shooters, and for vehicles)
+* @note The order of the `rand()` calls is: Z, Y, X
+*/
+static void FireInstantHit_ApplyRandomSpread(CVector& pt, float spread) {
+    const auto rz = (float)FireInstantHit_Rand01();
+    const auto ry = (float)FireInstantHit_Rand01();
+    const auto rx = FireInstantHit_Rand01();
+
+    const auto offsX = (rx * 0.4f - 0.2f) * spread;
+    const auto offsY = ((double)ry * 0.4f - 0.2f) * spread;
+    const auto offsZ = (float)(((double)rz * 0.2f - 0.1f) * spread);
+
+    pt.x = (float)(offsX + pt.x);
+    pt.y = (float)(pt.y + offsY);
+    pt.z = offsZ + pt.z;
+}
+
+/*!
+* @brief Makes the point of impact wobble in a circle (that is on the plane of `sinDir` and `cosDir`) depending on the time (Used for players)
+*/
+static void FireInstantHit_ApplyAimSway(CVector& pt, const CVector& sinDir, const CVector& cosDir, float spread) {
+    constexpr auto SWAY_ROT_RATE = 0.0062831854f; // 0x8D6118 (2 * PI / 1000)
+
+    const auto angle = (double)CTimer::GetTimeInMS() * (double)SWAY_ROT_RATE;
+
+    // Part 1
+    const auto sinZ = (double)sinDir.z * spread; // Not rounded to float
+    const auto sinY = (float)((double)sinDir.y * spread);
+    const auto sinX = (float)((double)sinDir.x * spread);
+    const auto s    = (float)std::sin(angle);
+    pt.x = (float)((double)sinX * s + pt.x);
+    pt.y = (float)(pt.y + (double)sinY * s);
+    const auto z = sinZ * s + pt.z; // Not rounded to float
+
+    // Part 2
+    const auto cosZ = (double)cosDir.z * spread; // Not rounded to float
+    const auto cosY = (float)((double)cosDir.y * spread);
+    const auto cosX = (float)((double)cosDir.x * spread);
+    const auto c    = (float)std::cos(angle);
+    pt.x = (float)((double)cosX * c + pt.x);
+    pt.y = (float)(pt.y + (double)cosY * c);
+    pt.z = (float)(cosZ * c + z);
+}
+
+//! @brief `start + dir * range`, with the same rounding as the original
+static CVector FireInstantHit_PointAlongDir(const CVector& start, const CVector& dir, double range) {
+    const auto offsY = (float)((double)dir.y * range);
+    const auto offsZ = (float)((double)dir.z * range);
+    return {
+        (float)(start.x + (double)dir.x * range),
+        offsY + start.y,
+        start.z + offsZ
+    };
+}
+
 // 0x73FB10
 bool CWeapon::FireInstantHit(CEntity* firingEntity, CVector* origin, CVector* muzzlePosn, CEntity* targetEntity, CVector* target, CVector* originForDriveBy, bool arg6, bool muzzle) {
-    constexpr auto PLAYER_AIM_SCALE      = 0.75f;
-    constexpr auto PLAYER_AIM_SCALE_DIST = 5.00f;
-    constexpr auto PLAYER_ANIM_ROT_RATE  = 0.0062832f;
-    constexpr auto SHOTGUN_SPREAD_RATE   = 0.05f;
-    constexpr auto SHOTGUN_NUM_PELLETS   = 15u;
-    constexpr auto SPAS_NUM_PELLETS      = 4u;
+    constexpr auto PLAYER_AIM_SCALE      = 0.75f;           // 0x8D6110
+    constexpr auto PLAYER_AIM_SCALE_DIST = 5.00f;           // 0x8D6114
+    constexpr auto SHOTGUN_SPREAD_RATE   = 0.05f;           // 0x8D611C
+    constexpr auto SHOTGUN_NUM_PELLETS   = 15;              // 0x8D6120
+    constexpr auto SPAS_NUM_PELLETS      = 8;               // 0x8D6124 (NOTE: The value in the exe is 8, not 4)
+    constexpr auto MIN_AIM_DIR_MAG       = 0.01f;           // 0x858C58
 
-    return plugin::CallMethodAndReturn<bool, 0x73FB10, CWeapon*, CEntity*, CVector*, CVector*, CEntity*, CVector*, CVector*, bool, bool>(this, firingEntity, origin, muzzlePosn, targetEntity, target, originForDriveBy, arg6, muzzle);
+    assert(firingEntity);
+
+    const auto ped = firingEntity->GetIsTypePed()
+        ? firingEntity->AsPed()
+        : nullptr;
+    const auto wi = CWeaponInfo::GetWeaponInfo(m_Type, ped ? ped->GetWeaponSkill(m_Type) : eWeaponSkill::STD);
+
+    CVector   muzzlePos = *muzzlePosn;
+    CVector   start     = *origin;
+    CVector   endPt{};                       // Where the shot ends (In some cases this is a direction for a while)
+    CVector   dir{};                         // Direction of the shot - BUG: Left uninitialized in the original, but used by the muzzle flash code (if `muzzle` is set)
+    CVector   camSource{};                   // Start of the line of sight test when the player is aiming
+    CEntity*  hitEntity = nullptr;
+    CColPoint colPoint{};
+    float     spread    = 0.f;               // Accuracy modifier
+
+    if (originForDriveBy) {
+        start = *originForDriveBy;
+    }
+
+    CTaskSimpleUseGun* taskUseGun{};
+    if (ped) {
+        spread = (float)((100.0 - (double)ped->m_nWeaponAccuracy) / (double)wi->m_fAccuracy);
+        if (ped->GetPlayerData() && ped->bIsDucking) {
+            spread *= 0.5f;
+        }
+        taskUseGun = ped->GetIntelligence()->GetTaskUseGun();
+    }
+
+    if (notsa::contains({ WEAPON_SHOTGUN, WEAPON_SAWNOFF_SHOTGUN, WEAPON_SPAS12_SHOTGUN }, m_Type)) {
+        spread = 0.f;
+        CWorld::fWeaponSpreadRate = SHOTGUN_SPREAD_RATE / wi->m_fAccuracy;
+    }
+
+    // Does the hit test (used by every case below)
+    const auto DoLineOfSight = [&](const CVector& from) {
+        CBirds::HandleGunShot(&from, &endPt);
+        CShadows::GunShotSetsOilOnFire(from, endPt);
+        CWorld::ProcessLineOfSight(from, endPt, colPoint, hitEntity, true, true, true, true, true, false, false, true);
+    };
+
+    // 0x7407C1 - Default aiming (Direction of the shooter, with some inaccuracy)
+    const auto DoDefaultAiming = [&] {
+        if (firingEntity->GetIsTypeVehicle()) {
+            const auto veh = firingEntity->AsVehicle();
+
+            spread = 0.6f;
+            endPt  = firingEntity->GetMatrix().GetForward();
+            dir    = endPt;
+
+            const auto status = veh->GetStatus();
+            if (status == STATUS_PLAYER || status == STATUS_REMOTE_CONTROLLED) {
+                endPt = FireInstantHit_PointAlongDir(start, endPt, wi->m_fWeaponRange);
+
+                DoDriveByAutoAiming(
+                    status == STATUS_REMOTE_CONTROLLED
+                        ? FindPlayerPed(-1)
+                        : veh->m_pDriver,
+                    veh,
+                    &start,
+                    &endPt,
+                    notsa::contains({ VEHICLE_TYPE_PLANE, VEHICLE_TYPE_HELI }, veh->m_nVehicleType)
+                );
+
+                endPt = CVector{
+                    endPt.x - start.x,
+                    endPt.y - start.y,
+                    endPt.z - start.z
+                };
+                endPt.Normalise();
+
+                spread = notsa::contains({ MODEL_SEASPAR, MODEL_SPARROW, MODEL_RCTIGER }, (eModelID)veh->m_nModelIndex)
+                    ? 0.1f
+                    : 0.3f;
+            }
+
+            FireInstantHit_ApplyRandomSpread(endPt, spread);
+            endPt.Normalise();
+            CWorld::pIgnoreEntity = firingEntity;
+            endPt = FireInstantHit_PointAlongDir(start, endPt, wi->m_fWeaponRange);
+
+            // NOTE: `CWorld::bIncludeBikers` isn't set here
+        } else {
+            const auto  range = wi->m_fWeaponRange;
+            const auto& fwd   = firingEntity->GetMatrix().GetForward();
+
+            const auto offsX = range * fwd.x;
+            const auto offsY = range * fwd.y;
+            endPt.x = offsX + muzzlePos.x;
+            endPt.y = muzzlePos.y + offsY;
+            endPt.z = (float)((double)range * fwd.z + muzzlePos.z);
+            dir     = firingEntity->GetMatrix().GetForward();
+
+            if (ped) {
+                if (ped->bDoomAim && (!ped->IsPlayer() || !wi->flags.bCanAim)) {
+                    DoDoomAiming(firingEntity, &start, &endPt);
+                }
+            }
+
+            if (ped && ped->bInVehicle && ped->m_pVehicle) {
+                CWorld::pIgnoreEntity = ped->m_pVehicle;
+            } else if (ped && ped->m_pAttachedTo && ped->m_pAttachedTo->GetIsTypeVehicle()) {
+                CWorld::pIgnoreEntity = ped->m_pAttachedTo;
+            } else {
+                CWorld::pIgnoreEntity = firingEntity;
+            }
+            CWorld::bIncludeBikers = true;
+        }
+        DoLineOfSight(start);
+    };
+
+    if (taskUseGun && taskUseGun->m_SkipAim) { // 0x73FC94 (NOTE: Offset 0xE of the task)
+        // Shoot straight ahead from the hand of the ped
+        endPt = CVector{ wi->m_fWeaponRange, 0.f, 0.f };
+
+        const auto hier = GetAnimHierarchyFromSkinClump(ped->GetRpClump());
+        const auto idx  = RpHAnimIDGetIndex(hier, ped->m_apBones[PED_NODE_RIGHT_HAND]->BoneTag);
+        RwV3dTransformPoints(&endPt, &endPt, 1, &RpHAnimHierarchyGetMatrixArray(hier)[idx]);
+
+        dir = CVector{
+            endPt.x - start.x,
+            endPt.y - start.y,
+            endPt.z - start.z
+        };
+        dir.Normalise();
+
+        if (ped->bInVehicle && ped->m_pVehicle) {
+            CWorld::pIgnoreEntity = ped->m_pVehicle;
+        } else if (ped->m_pAttachedTo && ped->m_pAttachedTo->GetIsTypeVehicle()) {
+            CWorld::pIgnoreEntity = ped->m_pAttachedTo;
+        }
+        CWorld::bIncludeBikers = true;
+
+        DoLineOfSight(start);
+    } else if (!ped) {
+        DoDefaultAiming();
+    } else if (!targetEntity && !target) { // 0x74034A - Player shooting (without a target)
+        const auto camMode = TheCamera.GetActiveCam().m_nMode;
+        if (!ped->IsPlayer() || !notsa::contains({ MODE_AIMWEAPON, MODE_AIMWEAPON_FROMCAR, MODE_AIMWEAPON_ATTACHED, MODE_TWOPLAYER_IN_CAR_AND_SHOOTING }, camMode)) {
+            DoDefaultAiming();
+        } else { // 0x740389
+            TheCamera.Find3rdPersonCamTargetVector(wi->m_fWeaponRange * 3.0f, start, camSource, endPt);
+
+            dir = CVector{
+                endPt.x - start.x,
+                endPt.y - start.y,
+                endPt.z - start.z
+            };
+            dir.Normalise();
+
+            const auto playerData = ped->GetPlayerData();
+            if (spread != 0.f) {
+                const auto ratio = ((double)PLAYER_AIM_SCALE_DIST / wi->m_fWeaponRange) * 3.0;
+                const auto scale = 1.0 < ratio
+                    ? 1.0
+                    : ratio;
+                spread = (float)(scale * spread * playerData->m_fAttackButtonCounter * PLAYER_AIM_SCALE);
+
+                const auto& cam = TheCamera.m_aCams[0]; // NOTE: Not the active cam
+                CVector     sinDir, cosDir;
+                if (notsa::contains({ MODE_AIMWEAPON, MODE_AIMWEAPON_FROMCAR, MODE_TWOPLAYER_IN_CAR_AND_SHOOTING }, cam.m_nMode)) {
+                    if (cam.m_nMode == MODE_TWOPLAYER_IN_CAR_AND_SHOOTING) {
+                        CVector unused{};
+                        TheCamera.m_aCams[0].Get_TwoPlayer_AimVector(unused); // Result is unused
+                    }
+                    cosDir = cam.m_vecUp;
+                    sinDir = CrossProduct(cam.m_vecFront, cosDir);
+                    sinDir.Normalise();
+                } else {
+                    // BUG: Original uses the point where the camera is looking at, not a direction (relative to the shooter)
+                    sinDir = CrossProduct(endPt, CVector{ 0.f, 0.f, 1.f });
+                    sinDir.Normalise();
+                    cosDir = CrossProduct(sinDir, endPt);
+                    cosDir.Normalise();
+                }
+                FireInstantHit_ApplyAimSway(endPt, sinDir, cosDir, spread);
+
+                playerData->m_fAttackButtonCounter = (float)((double)(int16)wi->m_nDamage * 0.04f + playerData->m_fAttackButtonCounter);
+            }
+
+            if (ped->bInVehicle && ped->m_pVehicle && !ped->m_pVehicle->vehicleFlags.bVehicleCanBeTargetted) {
+                CWorld::pIgnoreEntity = ped->m_pVehicle;
+            } else if (ped->m_pAttachedTo && ped->m_pAttachedTo->GetIsTypeVehicle() && !ped->m_pAttachedTo->AsVehicle()->vehicleFlags.bVehicleCanBeTargetted) {
+                CWorld::pIgnoreEntity = ped->m_pAttachedTo;
+            } else {
+                CWorld::pIgnoreEntity = firingEntity;
+            }
+            CWorld::bIncludeDeadPeds = true;
+            CWorld::bIncludeCarTyres = true;
+            CWorld::bIncludeBikers   = true;
+
+            DoLineOfSight(camSource);
+
+            if (hitEntity) {
+                // Check if the hit entity is in range of the weapon
+                const auto dx = (double)colPoint.m_vecPoint.x - camSource.x;
+                const auto dy = (double)colPoint.m_vecPoint.y - camSource.y;
+                const auto dist2D = (float)std::sqrt(dx * dx + dy * dy);
+                if ((double)TargetWeaponRangeMultiplier(hitEntity, ped) * wi->m_fWeaponRange < dist2D) {
+                    hitEntity = nullptr;
+                } else {
+                    CheckForShootingVehicleOccupant(&hitEntity, &colPoint, m_Type, camSource, endPt);
+                }
+            }
+        }
+    } else { // 0x73FDF2 - AI shooting at a target
+        if (ped->m_pedIK.bGunReachedTarget || arg6) { // Otherwise there's no line of sight test, and `hitEntity` stays null
+            //> 0x73FE0A - Find the point to shoot at
+            if (!target) {
+                if (targetEntity->GetIsTypePed()) {
+                    if (const auto playerData = ped->GetPlayerData()) {
+                        endPt = playerData->m_vecTargetBoneOffset;
+                        targetEntity->AsPed()->GetTransformedBonePosition(endPt, (eBoneTag)playerData->m_nTargetBone, false);
+                    } else {
+                        targetEntity->AsPed()->GetBonePosition(&endPt, BONE_SPINE1, false);
+                    }
+                } else {
+                    endPt = targetEntity->GetPosition();
+                }
+            } else {
+                endPt = *target;
+            }
+
+            //> 0x73FE81 - Direction to the point (Note: The X and Z components are not rounded to float before being used)
+            {
+                const auto dx = (double)endPt.x - start.x;
+                const auto dy = endPt.y - start.y;
+                const auto dz = (double)endPt.z - start.z;
+                auto       mag = std::sqrt(dx * dx + (double)dy * dy + dz * dz);
+                if (mag < MIN_AIM_DIR_MAG) {
+                    mag = MIN_AIM_DIR_MAG;
+                }
+                const auto invMag = 1.0 / mag;
+                endPt.x = (float)(invMag * dx);
+                endPt.y = (float)(invMag * dy);
+                endPt.z = (float)(invMag * dz);
+                dir     = endPt;
+            }
+
+            // 0x73FF11 - Shoot as far as the weapon can
+            endPt = FireInstantHit_PointAlongDir(
+                start,
+                endPt,
+                (double)TargetWeaponRangeMultiplier(targetEntity, ped) * wi->m_fWeaponRange
+            );
+
+            const auto playerData = ped->GetPlayerData();
+            if (!playerData || spread == 0.f) { // 0x7401DA
+                if (spread > 0.f) {
+                    if (targetEntity && targetEntity->GetIsTypePed() && targetEntity->AsPed()->IsPlayer()) {
+                        // Be less accurate if the target is moving
+                        const auto speed = targetEntity->AsPhysical()->m_vecMoveSpeed.Magnitude();
+                        const auto m     = speed > 0.33f
+                            ? 0.33f
+                            : speed;
+                        spread = (float)(((double)m * 0.90909094f + 0.8f) * spread); // 0x872C70, 0x858C98
+                    }
+                    FireInstantHit_ApplyRandomSpread(endPt, spread);
+                }
+            } else { // 0x73FF6B
+                const auto ratio = (double)PLAYER_AIM_SCALE_DIST / wi->m_fWeaponRange;
+                const auto scale = 1.0 < ratio
+                    ? 1.0
+                    : ratio;
+                const auto scaledSpread = scale * spread * playerData->m_fAttackButtonCounter * PLAYER_AIM_SCALE;
+                spread = (float)scaledSpread;
+
+                const auto halfSpread = scaledSpread * 0.5;
+                const auto minSpread  = 0.2f < halfSpread  // 0x858CC4
+                    ? 0.2f
+                    : (float)halfSpread;
+                spread = FireInstantHit_RandomInRange(minSpread, spread);
+
+                const auto& cam = TheCamera.m_aCams[0]; // NOTE: Not the active cam
+                CVector     sinDir, cosDir;
+                if (notsa::contains({ MODE_AIMWEAPON, MODE_AIMWEAPON_FROMCAR }, cam.m_nMode)) {
+                    cosDir = cam.m_vecUp;
+                    sinDir = CrossProduct(cam.m_vecFront, cosDir);
+                    sinDir.Normalise();
+                } else {
+                    // BUG: Original uses the point we're shooting at, not a direction (relative to the shooter)
+                    sinDir = CrossProduct(endPt, CVector{ 0.f, 0.f, 1.f });
+                    sinDir.Normalise();
+                    cosDir = CrossProduct(sinDir, endPt);
+                    cosDir.Normalise();
+                }
+                FireInstantHit_ApplyAimSway(endPt, sinDir, cosDir, spread);
+
+                playerData->m_fAttackButtonCounter = (float)((double)(int16)wi->m_nDamage * 0.04f + playerData->m_fAttackButtonCounter);
+            }
+
+            //> 0x7402EE
+            if (ped->bInVehicle && ped->m_pVehicle && !ped->m_pVehicle->vehicleFlags.bVehicleCanBeTargetted) {
+                CWorld::pIgnoreEntity = ped->m_pVehicle;
+            } else if (ped->m_pAttachedTo && ped->m_pAttachedTo->GetIsTypeVehicle() && !ped->m_pAttachedTo->AsVehicle()->vehicleFlags.bVehicleCanBeTargetted) {
+                CWorld::pIgnoreEntity = ped->m_pAttachedTo;
+            }
+            if (ped->IsPlayer()) {
+                CWorld::bIncludeDeadPeds = true;
+            }
+            CWorld::bIncludeBikers = true;
+
+            DoLineOfSight(start);
+        }
+    }
+
+    //> 0x740B71 - Notify everyone about the shot
+    CEventGunShot gunShotEvent{
+        firingEntity,
+        start,
+        endPt,
+        notsa::contains({ WEAPON_PISTOL_SILENCED, WEAPON_TEARGAS }, m_Type)
+    };
+    GetEventGlobalGroup()->Add(static_cast<CEvent*>(&gunShotEvent), false);
+
+    CEventGunShotWhizzedBy gunShotWhizzedByEvent{
+        firingEntity,
+        start,
+        endPt,
+        m_Type == WEAPON_PISTOL_SILENCED
+    };
+    GetEventGlobalGroup()->Add(static_cast<CEvent*>(&gunShotWhizzedByEvent), false);
+
+    g_InterestingEvents.Add(CInterestingEvents::EType::INTERESTING_EVENT_22, firingEntity);
+
+    // NOTE: Original calls `ped->IsPlayer()` here and discards the result
+    start = *origin;
+
+    //> 0x740C66 - Muzzle flash
+    if (muzzle) {
+        float lightOffset{}, shellSize{};
+        bool  doEffects = true;
+        switch (m_Type) {
+        case WEAPON_PISTOL:
+        case WEAPON_PISTOL_SILENCED:
+        case WEAPON_DESERT_EAGLE:
+        case WEAPON_SNIPERRIFLE:
+            lightOffset = 0.2f;
+            shellSize   = 0.25f;
+            break;
+        case WEAPON_SHOTGUN:
+        case WEAPON_SAWNOFF_SHOTGUN:
+        case WEAPON_SPAS12_SHOTGUN:
+            lightOffset = 0.3f;
+            shellSize   = 0.45f;
+            break;
+        case WEAPON_MICRO_UZI:
+        case WEAPON_MP5:
+        case WEAPON_TEC9:
+            lightOffset = 0.2f;
+            shellSize   = 0.3f;
+            break;
+        case WEAPON_AK47:
+        case WEAPON_M4:
+        case WEAPON_MINIGUN: { // 0x740C8C
+            // Weapons that fire too fast only get the effects every second shot
+            static auto& s_RapidFireCounter = StaticRef<uint8>(0xC8A80C);
+            const auto   animLoopLen        = (int32)(((double)wi->m_fAnimLoopEnd - wi->m_fAnimLoopStart) * 900.0);
+            if (animLoopLen < 50) {
+                s_RapidFireCounter++;
+                if (s_RapidFireCounter & 1) {
+                    doEffects = false;
+                    break;
+                }
+            }
+            lightOffset = 0.65f;
+            shellSize   = 0.25f;
+            break;
+        }
+        default:
+            doEffects = false;
+            break;
+        }
+
+        if (doEffects) { // 0x740CFC
+            CPointLights::AddLight(PLTYPE_POINTLIGHT, muzzlePos, {}, 3.0f, 0.25f, 0.22f, 0.0f, 0, false, nullptr);
+
+            g_fx.TriggerGunshot(
+                firingEntity,
+                muzzlePos,
+                dir,
+                !(ped && ped->m_pGunflashObject)
+            );
+
+            CVector shellPos{
+                (float)((double)muzzlePos.x - (double)dir.x * lightOffset),
+                (float)((double)muzzlePos.y - (double)dir.y * lightOffset),
+                (float)((double)muzzlePos.z - (double)dir.z * lightOffset)
+            };
+            const auto& right = firingEntity->GetMatrix().GetRight();
+            AddGunshell(firingEntity, shellPos, CVector2D{ right.x, right.y }, shellSize);
+        }
+    }
+
+    //> 0x740E3A - Water splash
+    {
+        bool testWater = false;
+        if (targetEntity) {
+            testWater = notsa::contains({ ENTITY_TYPE_VEHICLE, ENTITY_TYPE_PED, ENTITY_TYPE_OBJECT }, targetEntity->GetType())
+                && targetEntity->AsPhysical()->physicalFlags.bSubmergedInWater;
+        } else if (endPt.z < start.z) {
+            testWater = (ped && ped->IsPlayer())
+                || notsa::contains({ STATUS_PLAYER, STATUS_REMOTE_CONTROLLED }, firingEntity->GetStatus());
+        }
+        if (testWater) { // 0x740EA3
+            CVector waterHitPos{};
+            const auto TestWater = [&](CVector to) { // 0x6E61B0 - Not reversed yet
+                return plugin::CallAndReturn<bool, 0x6E61B0, CVector, CVector, CVector*>(start, to, &waterHitPos);
+            };
+            if (TestWater(hitEntity ? colPoint.m_vecPoint : endPt)) { // 0x740F42
+                g_fx.TriggerBulletSplash(waterHitPos);
+                AudioEngine.ReportBulletHit(nullptr, SURFACE_WATER_SHALLOW, waterHitPos, 0.f);
+            }
+        }
+    }
+
+    //> 0x740F6A - Do the actual bullet impact(s)
+    int32 numIterations = 0;
+    if (CWorld::fWeaponSpreadRate <= 0.f
+        || !hitEntity
+        || (hitEntity->GetIsTypeVehicle() && colPoint.m_nPieceTypeB > 12 && colPoint.m_nPieceTypeB < 17) // Wheels
+    ) {
+        DoBulletImpact(firingEntity, hitEntity, muzzlePos, endPt, colPoint, 0);
+    } else { // Shotgun-like weapon
+        do {
+            numIterations++;
+
+            const auto numPellets = m_Type == WEAPON_SPAS12_SHOTGUN
+                ? SPAS_NUM_PELLETS
+                : SHOTGUN_NUM_PELLETS;
+
+            CMatrix pelletMat{};
+            SetUpPelletCol(numPellets, firingEntity, hitEntity, start, colPoint, pelletMat);
+
+            std::array<float, SHOTGUN_NUM_PELLETS> pelletTouchDist; // 1.0 = No hit
+            pelletTouchDist.fill(1.f);
+
+            const auto cm = hitEntity->GetIsTypePed()
+                ? CModelInfo::GetModelInfo(hitEntity->m_nModelIndex)->AsPedModelInfoPtr()->AnimatePedColModelSkinned(hitEntity->GetRpClump())
+                : hitEntity->GetColModel();
+            CCollision::ProcessColModels(
+                pelletMat,
+                ms_PelletTestCol,
+                hitEntity->GetMatrix(),
+                *cm,
+                CWorld::m_aTempColPts,
+                CWorld::m_aTempColPts.data(),
+                pelletTouchDist.data(),
+                false
+            );
+
+            int32 numHits = 0, lastHit = 0;
+            for (int32 i = 0; i < numPellets; i++) {
+                if (pelletTouchDist[i] < 1.f) {
+                    numHits++;
+                    lastHit = i;
+                }
+            }
+
+            for (int32 i = 0; i < numPellets; i++) {
+                if (pelletTouchDist[i] < 1.f) {
+                    // NOTE: The 2nd point passed in the original is actually the colpoint itself (its first member is the position)
+                    DoBulletImpact(
+                        firingEntity,
+                        hitEntity,
+                        muzzlePos,
+                        CWorld::m_aTempColPts[i].m_vecPoint,
+                        CWorld::m_aTempColPts[i],
+                        i == lastHit ? -numHits : 1
+                    );
+                }
+            }
+
+            if (hitEntity->GetIsTypePed() || hitEntity->GetIsTypeVehicle()) {
+                if ((pelletTouchDist[0] != 1.f && (double)numHits / numPellets >= 0.5) || numIterations >= 2) {
+                    hitEntity = nullptr;
+                } else {
+                    // The pellets that missed may continue through the entity
+                    CWorld::pIgnoreEntity = hitEntity;
+                    start                 = colPoint.m_vecPoint;
+                    hitEntity             = nullptr;
+                    DoLineOfSight(start);
+                }
+            } else {
+                DoBulletImpact(firingEntity, hitEntity, muzzlePos, endPt, colPoint, 0);
+                hitEntity = nullptr;
+            }
+        } while (hitEntity);
+    }
+
+    CWorld::ResetLineTestOptions();
+
+    return true;
 }
 
 // 0x741360

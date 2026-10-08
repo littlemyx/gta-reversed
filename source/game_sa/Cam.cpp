@@ -298,6 +298,12 @@ static void WellBufferMe(float target, float& valueToChange, float& speedSoFar, 
     valueToChange += std::min(CTimer::GetTimeStep(), 10.0f) * speedSoFar;
 }
 
+namespace {
+// Defined above `CCam::Process_FlyBy`, declared here so they can be hooked
+void FlyBySplineVec3(CVector* out, float* data, float time, int32* idx);
+void FlyBySplineFloat(float* out, float* data, float time, int32* idx);
+} // namespace
+
 void CCam::InjectHooks() {
     RH_ScopedClass(CCam);
     RH_ScopedCategory("Camera");
@@ -337,7 +343,7 @@ void CCam::InjectHooks() {
     RH_ScopedInstall(Process_DW_PlaneSpotterCam, 0x51C250);
     RH_ScopedInstall(Process_Editor, 0x50F3F0);
     RH_ScopedInstall(Process_Fixed, 0x51D470);
-    RH_ScopedInstall(Process_FlyBy, 0x5B25F0, { .Reversed = false });
+    RH_ScopedInstall(Process_FlyBy, 0x5B25F0);
     RH_ScopedInstall(Process_FollowCar_SA, 0x5245B0);
     RH_ScopedInstall(Process_FollowPedWithMouse, 0x50F970);
     RH_ScopedInstall(Process_FollowPed_SA, 0x522D40);
@@ -347,6 +353,8 @@ void CCam::InjectHooks() {
     RH_ScopedInstall(Process_WheelCam, 0x512110);
 
     RH_ScopedGlobalInstall(WellBufferMe, 0x509AE0);
+    RH_ScopedGlobalInstall(FlyBySplineVec3, 0x5B2090);
+    RH_ScopedGlobalInstall(FlyBySplineFloat, 0x5B2330);
 }
 
 // 0x517730
@@ -3503,10 +3511,230 @@ void CCam::Process_Fixed(const CVector& target, float orientation, float speedVa
     }
 }
 
+namespace {
+//! Minimal duration (ms) of a fly-by spline segment: shorter ones are skipped while searching the segment (a global at 0x8D0F80, name made up)
+auto& gFlyByMinSegmentTimeMs = StaticRef<float>(0x8D0F80);
+
+// Fly-by state (names made up)
+auto& gFlyByFov            = StaticRef<float>(0xBC4074); // Result of the FOV spline
+auto& gFlyByFovCopy        = StaticRef<float>(0xBC4078); // NOTE: Only written (together with `gFlyByFov`) when the fly-by starts, never read
+auto& gFlyByLookSegmentIdx = StaticRef<int32>(0xBC407C); // Current position in the spline `CCamera::m_aPathArray[3]` (where the camera looks at)
+auto& gFlyBySrcSegmentIdx  = StaticRef<int32>(0xBC4080); // Current position in the spline `CCamera::m_aPathArray[2]` (camera position)
+auto& gFlyByFovSegmentIdx  = StaticRef<int32>(0xBC4084); // Current position in the spline `CCamera::m_aPathArray[0]` (FOV)
+auto& gFlyByRollSegmentIdx = StaticRef<int32>(0xBC4088); // Current position in the spline `CCamera::m_aPathArray[1]` (roll)
+
+//! Evaluates a Bezier spline of 3D points at the time `time` (ms), 0x5B2090 (cdecl)
+//! @param out  Result (the cutscene offset is added to it)
+//! @param data `[0]` = number of entries, then (starting at `[1]`) 10 floats per entry: time (s), point (3), incoming control point (3), outgoing control point (3)
+//! @param idx  In/out: index (into `data`) of the entry that ends the current segment
+void FlyBySplineVec3(CVector* out, float* data, float time, int32* idx) {
+    const auto count = static_cast<int32>(data[0]);
+
+    // NOTE: The duration is NOT recalculated after `idx` is changed below, so it is the one of the old segment (original bug)
+    const double duration = (static_cast<double>(data[*idx]) - data[*idx - 10]) * 1000.0;
+    const float  lastTime = data[count * 10 - 9] * 1000.0f;
+
+    if (time < lastTime) {
+        bool canAdvance = true;
+        if (static_cast<uint32>(*idx - 1) / 10u > static_cast<uint32>(count)) {
+            *idx       = count * 10 - 9;
+            canAdvance = false;
+        }
+        if (duration <= gFlyByMinSegmentTimeMs && canAdvance) { // Skip the (too) short segment
+            *idx += 10;
+            if (static_cast<uint32>(*idx - 1) / 10u > static_cast<uint32>(count)) {
+                *idx = count * 10 - 9;
+            }
+        }
+    }
+
+    const int32 i = *idx;
+
+    double t = (static_cast<double>(time) - static_cast<double>(data[i - 10]) * 1000.0) / duration;
+    if (t > 1.0) {
+        t = 1.0;
+    } else if (t < 0.0) {
+        t = 0.0;
+    }
+    if (time > lastTime) {
+        t = 1.0;
+    }
+
+    const CVector p0{ data[i - 9], data[i - 8], data[i - 7] }; // Point of the previous entry
+    const CVector c0{ data[i - 3], data[i - 2], data[i - 1] }; // Outgoing control point of the previous entry
+    const CVector p1{ data[i + 1], data[i + 2], data[i + 3] }; // Point of this entry
+    const CVector c1{ data[i + 4], data[i + 5], data[i + 6] }; // Incoming control point of this entry
+
+    if (c0.x != p0.x || c0.y != p0.y || c0.z != p0.z) {
+        // Cubic Bezier: the intermediate results are stored as floats where the original does so
+        const double u   = 1.0 - t;
+        const double t2  = t * t;
+        const double u2  = u * u;
+        const float  t3f = static_cast<float>(t2 * t);
+        const float  u2f = static_cast<float>(u2);
+        const float  u3f = static_cast<float>(u2 * u);
+        const float  utf = static_cast<float>(u * t2);
+        const double tu2 = t * u2f;
+
+        out->x = static_cast<float>(((utf * static_cast<double>(c1.x) + tu2 * c0.x) * 3.0 + t3f * static_cast<double>(p1.x)) + u3f * static_cast<double>(p0.x));
+        out->y = static_cast<float>(((utf * static_cast<double>(c1.y) + tu2 * c0.y) * 3.0 + t3f * static_cast<double>(p1.y)) + u3f * static_cast<double>(p0.y));
+        out->z = static_cast<float>(((utf * static_cast<double>(c1.z) + tu2 * c0.z) * 3.0 + t3f * static_cast<double>(p1.z)) + u3f * static_cast<double>(p0.z));
+    } else {
+        // Straight line
+        out->x = static_cast<float>((static_cast<double>(p1.x) - p0.x) * t + p0.x);
+        out->y = static_cast<float>((static_cast<double>(p1.y) - p0.y) * t + p0.y);
+        out->z = static_cast<float>((static_cast<double>(p1.z) - p0.z) * t + p0.z);
+    }
+
+    *out += TheCamera.m_vecCutSceneOffset;
+}
+
+//! Same as `FlyBySplineVec3`, but for a spline of floats (4 floats per entry: time (s), value, incoming control value, outgoing control value), 0x5B2330 (cdecl)
+//! The cutscene offset is not added.
+void FlyBySplineFloat(float* out, float* data, float time, int32* idx) {
+    const auto count = static_cast<int32>(data[0]);
+
+    const double duration = (static_cast<double>(data[*idx]) - data[*idx - 4]) * 1000.0;
+    const float  lastTime = data[count * 4 - 3] * 1000.0f;
+
+    if (time < lastTime) {
+        bool canAdvance = true;
+        if (static_cast<uint32>(*idx - 1) / 4u > static_cast<uint32>(count)) {
+            *idx       = count * 4 - 3;
+            canAdvance = false;
+        }
+        if (duration <= gFlyByMinSegmentTimeMs && canAdvance) { // Skip the (too) short segment
+            *idx += 4;
+            if (static_cast<uint32>(*idx - 1) / 4u > static_cast<uint32>(count)) {
+                *idx = count * 4 - 3;
+            }
+        }
+    }
+
+    const int32 i = *idx;
+
+    // NOTE: Unlike `FlyBySplineVec3`, the duration is recalculated for the (possibly changed) `idx`
+    double t = (static_cast<double>(time) - static_cast<double>(data[i - 4]) * 1000.0)
+             / ((static_cast<double>(data[i]) - data[i - 4]) * 1000.0);
+    if (t > 1.0) {
+        t = 1.0;
+    } else if (t < 0.0) {
+        t = 0.0;
+    }
+    if (time > lastTime) {
+        t = 1.0;
+    }
+
+    const float p0 = data[i - 3]; // Value of the previous entry
+    const float c0 = data[i - 1]; // Outgoing control value of the previous entry
+    const float p1 = data[i + 1]; // Value of this entry
+    const float c1 = data[i + 2]; // Incoming control value of this entry
+
+    if (c0 != p0) {
+        // Cubic Bezier (everything is kept in extended precision in the original)
+        const double u   = 1.0 - t;
+        const double u2  = u * u;
+        const double u3  = u2 * u;
+        const double acc = (p1 * t + (c1 * u) * 3.0) * t;
+        *out = static_cast<float>((acc + (c0 * u2) * 3.0) * t + u3 * p0);
+    } else {
+        // Straight line
+        *out = static_cast<float>((static_cast<double>(p1) - p0) * t + p0);
+    }
+}
+} // namespace
+
 // 0x5B25F0
 void CCam::Process_FlyBy(const CVector& target, float orientation, float speedVar, float speedVarWanted) {
-    // NOTSA: Not reversed yet, forwards to the original code (the hook is disabled, see `InjectHooks`)
-    plugin::CallMethod<0x5B25F0, CCam*, const CVector*, float, float, float>(this, &target, orientation, speedVar, speedVarWanted);
+    if (TheCamera.m_bCutsceneFinished) {
+        return;
+    }
+
+    float roll = 0.0f;
+
+    m_vecUp = CVector{ 0.0f, 0.0f, 1.0f };
+
+    auto* const fovPath  = TheCamera.m_aPathArray[0].m_pArrPathData;
+    auto* const rollPath = TheCamera.m_aPathArray[1].m_pArrPathData;
+    auto* const srcPath  = TheCamera.m_aPathArray[2].m_pArrPathData;
+    auto* const lookPath = TheCamera.m_aPathArray[3].m_pArrPathData;
+
+    if (!TheCamera.m_bStartingSpline) {
+        m_fTimeElapsedFloat = 0.0f;
+        m_nFinishTime       = static_cast<uint32>(static_cast<int32>(static_cast<double>(srcPath[static_cast<int32>(srcPath[0]) * 10 - 9]) * 1000.0));
+
+        gFlyByRollSegmentIdx = 5;
+        gFlyByFovSegmentIdx  = 5;
+        TheCamera.m_bStartingSpline = true;
+        gFlyBySrcSegmentIdx  = 11;
+        gFlyByLookSegmentIdx = 11;
+        gFlyByFov = gFlyByFovCopy = fovPath[2];
+    } else {
+        m_fTimeElapsedFloat = static_cast<float>(static_cast<double>(CTimer::GetTimeStepNonClipped()) * 0.02f * 1000.0f + m_fTimeElapsedFloat);
+    }
+
+    const float time = static_cast<float>(static_cast<uint32>(static_cast<int32>(m_fTimeElapsedFloat)));
+
+    // The up vector is rotated around the front vector by the roll (in degrees)
+    const auto ApplyRoll = [&] {
+        constexpr float DEG_TO_RAD = static_cast<float>(std::numbers::pi / 180.0);
+        constexpr float HALF_PI    = std::numbers::pi_v<float> / 2.0f;
+        const double angle = static_cast<double>(roll) * DEG_TO_RAD + HALF_PI;
+        m_vecUp.x = static_cast<float>(std::cos(angle));
+        m_vecUp.z = static_cast<float>(std::sin(angle));
+    };
+
+    // Moves `idx` to the segment that contains `time` (the segments of the spline with `stride` floats per entry)
+    const auto FindSegment = [&](const float* data, int32& idx, int32 stride) {
+        while ((static_cast<double>(data[idx]) - data[1]) * 1000.0 <= time) {
+            idx += stride;
+        }
+    };
+
+    if (static_cast<double>(m_nFinishTime) <= time) { // Finished => stay at the end of the splines
+        gFlyBySrcSegmentIdx  = (static_cast<int32>(srcPath[0]) - 1) * 10 + 1;
+        gFlyByLookSegmentIdx = (static_cast<int32>(lookPath[0]) - 1) * 10 + 1;
+        gFlyByRollSegmentIdx = static_cast<int32>(rollPath[0]) * 4 - 3;
+        gFlyByFovSegmentIdx  = static_cast<int32>(fovPath[0]) * 4 - 3;
+
+        FlyBySplineVec3(&m_vecSource, srcPath, time, &gFlyBySrcSegmentIdx);
+        FlyBySplineVec3(&m_vecFront, lookPath, time, &gFlyByLookSegmentIdx);
+        FlyBySplineFloat(&roll, rollPath, time, &gFlyByRollSegmentIdx);
+        ApplyRoll();
+        FlyBySplineFloat(&gFlyByFov, fovPath, time, &gFlyByFovSegmentIdx);
+
+        TheCamera.m_fPositionAlongSpline = 1.0f;
+        gFlyBySrcSegmentIdx  = 0;
+        gFlyByLookSegmentIdx = 0;
+        gFlyByRollSegmentIdx = 0;
+        gFlyByFovSegmentIdx  = 0;
+    } else {
+        TheCamera.m_fPositionAlongSpline = static_cast<float>(time / static_cast<double>(m_nFinishTime));
+
+        FindSegment(srcPath, gFlyBySrcSegmentIdx, 10);
+        FlyBySplineVec3(&m_vecSource, srcPath, time, &gFlyBySrcSegmentIdx);
+
+        FindSegment(lookPath, gFlyByLookSegmentIdx, 10);
+        FlyBySplineVec3(&m_vecFront, lookPath, time, &gFlyByLookSegmentIdx);
+
+        FindSegment(rollPath, gFlyByRollSegmentIdx, 4);
+        FlyBySplineFloat(&roll, rollPath, time, &gFlyByRollSegmentIdx);
+        ApplyRoll();
+
+        FindSegment(fovPath, gFlyByFovSegmentIdx, 4);
+        FlyBySplineFloat(&gFlyByFov, fovPath, time, &gFlyByFovSegmentIdx);
+    }
+
+    // `m_vecFront` holds the look-at point until here
+    m_vecTargetCoorsForFudgeInter = m_vecFront;
+    m_vecFront                    = m_vecFront - m_vecSource;
+    m_vecFront.Normalise();
+
+    const CVector right = CrossProduct(m_vecUp, m_vecFront);
+    m_vecUp             = CrossProduct(m_vecFront, right);
+    m_vecUp.Normalise();
+
+    m_fFOV = gFlyByFov;
 }
 
 namespace {

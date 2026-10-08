@@ -907,7 +907,13 @@ void CGangWars::SwitchGangWarsActive() {
 void CGangWars::TellGangMembersTo(bool isGangWarEnding) {
     // return plugin::Call<0x444530, bool>(isGangWarEnding);
 
-    for (auto& ped : GetPedPool()->GetAllValid()) {
+    auto* const pool = GetPedPool();
+    for (int32 i = pool->GetSize(); i-- > 0;) { // The original walks the pool backwards (matters for the order of the random numbers consumed below)
+        auto* const pedPtr = pool->GetAt(i);
+        if (!pedPtr)
+            continue;
+        auto& ped = *pedPtr;
+
         if (ped.IsPlayer())
             continue;
 

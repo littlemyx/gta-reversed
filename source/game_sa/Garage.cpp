@@ -46,6 +46,16 @@ void CGarage::BuildRotatedDoorMatrix(CEntity* entity, float fDoorPosition) {
     matrix.GetRight() = CrossProduct(vecForward, matrix.GetUp());
 }
 
+// 0x59C890 - the original evaluation order; the sum stays in the FPU registers (extended precision), stored as float
+static CVector TransformPointExt(const CMatrix& m, const CVector& v) {
+    const auto &r = m.GetRight(), &f = m.GetForward(), &u = m.GetUp(), &p = m.GetPosition();
+    return CVector{
+        (float)((((double)u.x * v.z + (double)f.x * v.y) + (double)r.x * v.x) + p.x),
+        (float)((((double)u.y * v.z + (double)r.y * v.x) + (double)f.y * v.y) + p.y),
+        (float)((((double)u.z * v.z + (double)r.z * v.x) + (double)f.z * v.y) + p.z)
+    };
+}
+
 // 0x449D10
 void CGarage::TidyUpGarageClose() {
     auto* const pool = GetVehiclePool();
@@ -69,7 +79,7 @@ void CGarage::TidyUpGarageClose() {
             const auto* const colData = veh->GetColModel()->m_pColData;
             for (int32 s = 0; s < colData->m_nNumSpheres; s++) {
                 const auto& sphere = colData->m_pSpheres[s];
-                if (!IsPointInsideGarage(veh->m_matrix->TransformPoint(sphere.m_vecCenter), sphere.m_fRadius)) { // 0x449DFC
+                if (!IsPointInsideGarage(TransformPointExt(*veh->m_matrix, sphere.m_vecCenter), sphere.m_fRadius)) { // 0x449DFC
                     bRemove = true;
                 }
             }

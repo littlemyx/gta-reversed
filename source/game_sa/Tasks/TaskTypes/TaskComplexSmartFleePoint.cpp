@@ -38,7 +38,8 @@ CTaskComplexSmartFleePoint::CTaskComplexSmartFleePoint(CVector const& fleePos, b
     m_fleeTimeMs{fleeTimeMs}
 {
     if (m_fleeTimeMs != -1) {
-        m_timer.Start(m_fleeTimeMs);
+        // Not using `Start` as it rejects negative intervals (the original only checks for `-1`)
+        m_timer = CTaskTimer{CTimer::GetTimeInMS(), (uint32)m_fleeTimeMs};
     }
 }
 
@@ -111,11 +112,9 @@ void CTaskComplexSmartFleePoint::SetFleePosition(CVector const& pos, float safeD
 // 0x65BDC0
 bool CTaskComplexSmartFleePoint::MakeAbortable(CPed* ped, eAbortPriority priority, CEvent const* event) {
     if (priority == ABORT_PRIORITY_LEISURE) {
-        // Make the timer run out right away (not using `Start` as it rejects negative intervals)
+        // Make the timer run out right away
         m_fleeTimeMs = -1;
-        m_timer.m_nStartTime = CTimer::GetTimeInMS();
-        m_timer.m_nInterval  = -1;
-        m_timer.m_bStarted   = true;
+        m_timer.SetOutOfTime();
     }
     return m_pSubTask->MakeAbortable(ped, priority, event);
 }
@@ -164,7 +163,7 @@ CTask* CTaskComplexSmartFleePoint::ControlSubTask(CPed* ped) {
     const auto wander = static_cast<CTaskComplexWander*>(m_pSubTask);
     wander->m_nMoveState = m_moveState;
 
-    CTask* newSubTask = nullptr; // nullptr => keep the current one
+    CTask* ret = m_pSubTask; // Note: replaced by the result of `CreateSubTask` below (even if it's null)
     if (m_hasFleePointChanged) {
         m_hasFleePointChanged = false;
         if (m_timer.m_bStarted) { // Restart the timer
@@ -182,19 +181,17 @@ CTask* CTaskComplexSmartFleePoint::ControlSubTask(CPed* ped) {
         }
     } else {
         if (m_timer.m_bStarted && m_timer.IsOutOfTime()) {
-            newSubTask = CreateSubTask(TASK_SIMPLE_STAND_STILL, ped);
+            ret = CreateSubTask(TASK_SIMPLE_STAND_STILL, ped);
         } else {
             const auto& pedPos = ped->GetPosition();
             const auto  safeDistSq = m_safeDist * m_safeDist;
             if ((m_fleePoint - pedPos).SquaredMagnitude() > safeDistSq) {
                 if ((m_initalPos - pedPos).SquaredMagnitude() > safeDistSq) {
-                    newSubTask = CreateSubTask(TASK_SIMPLE_STAND_STILL, ped);
+                    ret = CreateSubTask(TASK_SIMPLE_STAND_STILL, ped);
                 }
             }
         }
     }
-    const auto ret = newSubTask ? newSubTask : m_pSubTask;
-
     if (m_moveState == PEDMOVE_RUN && !g_ikChainMan.IsLooking(ped)) {
         if (CGeneral::GetRandomNumberInRange(0, 100) <= 5) {
             g_ikChainMan.LookAt(

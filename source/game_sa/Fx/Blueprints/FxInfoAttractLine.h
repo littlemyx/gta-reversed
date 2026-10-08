@@ -8,6 +8,8 @@ protected:
     FxInterpInfo32_c m_InterpInfo;
 
 public:
+    static void InjectHooks();
+
     FxInfoAttractLine_c();
     ~FxInfoAttractLine_c() override = default; // 0x4A7040
 

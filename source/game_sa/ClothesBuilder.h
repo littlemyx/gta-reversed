@@ -51,7 +51,12 @@ public:
     */
     static RpGeometry* BlendGeometry(RpClump* clump, const char* frameName0, const char* frameName1, float r0, float r1);
 
-    static RpGeometry* CopyGeometry(RpClump* clump, const char* a2, const char* a3);
+    /*!
+    * Copy the geometry of `srcFrameName` into the geometry of `dstFrameName`
+    *
+    * @addr 0x5A5340
+    */
+    static RpGeometry* CopyGeometry(RpClump* clump, const char* dstFrameName, const char* srcFrameName);
     static void ConstructGeometryArray(RpGeometry** ppGeometry, uint32* pModelKeys, float normal, float fatness, float strength);
     static void DestroySkinArrays(RwMatrixWeights* weights, RwUInt32* bones);
     static void BuildBoneIndexConversionTable(uint8* a1, RpHAnimHierarchy* a2, int32 a3);

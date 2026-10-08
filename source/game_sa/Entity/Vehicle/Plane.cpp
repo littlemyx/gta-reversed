@@ -61,7 +61,7 @@ auto& VORTEX_HOVER_SPEED_MULT = StaticRef<float>(0x8D3418);         // 2.0f
 
 namespace {
 // Read-only data (.rdata), so no need to reference those by their addresses
-constexpr float DEG_TO_RAD                = 0.017453292f;                       // 0x8595EC
+// NOTE: `DEG_TO_RAD` (0x8595EC) is the project-wide one (common.h), it rounds to the very same float
 constexpr float TWO_PI_EXACT              = std::numbers::pi_v<float> * 2.f;    // 0x858CBC
 constexpr float HALF_PI_EXACT             = 1.5707964f;                         // 0x858FE4
 constexpr float PLANE_RUDDER_MAX_DEG      = 40.0f;                              // 0x871914
@@ -928,13 +928,13 @@ void CPlane::PreRender() {
             if (ratio > 0.0f) {
                 newWheelZ -= (double)ratio * (double)m_aSuspensionSpringLength[i];
             }
-            if (newWheelZ <= (double)m_wheelPosition[i] && (!physicalFlags.bAddMovingCollisionSpeed || !handlingFlags.bHydraulicInst)) {
+            if (!(newWheelZ > (double)m_wheelPosition[i]) && (!physicalFlags.bAddMovingCollisionSpeed || !handlingFlags.bHydraulicInst)) {
                 newWheelZ = (newWheelZ - (double)m_wheelPosition[i]) * (double)0.75f + (double)m_wheelPosition[i]; // 0x858F34
             }
             m_wheelPosition[i] = (float)newWheelZ;
 
             if (m_nModelIndex == MODEL_ANDROM) {
-                if (m_fWheelsSuspensionCompression[i] >= 1.0f) {
+                if (!(m_fWheelsSuspensionCompression[i] < 1.0f)) { // x87: also taken for NaN
                     m_wheelRotation[i] = m_wheelRotation[i] * 0.95f; // 0x858EF0
                 } else {
                     const auto& fwd    = m_matrix->GetForward();

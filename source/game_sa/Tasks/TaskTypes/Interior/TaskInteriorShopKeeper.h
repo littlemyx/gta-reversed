@@ -23,6 +23,9 @@ public:
     CTask*    CreateFirstSubTask(CPed* ped) override;
     CTask*    ControlSubTask(CPed* ped) override;
 
+    //! NOTSA: Accessor for `CTaskInteriorUseInfo::CreateNextSubTask` (which sets the flag from outside)
+    void SetStartServeAnim(bool b) { m_bStartServeAnim = b; }
+
 
 private: // Wrappers for hooks
     // 0x675660

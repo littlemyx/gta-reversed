@@ -2,6 +2,8 @@
 
 #include "CarFXRenderer.h"
 #include "CustomCarEnvMapPipeline.h"
+#include "ClothesBuilder.h"
+#include "TxdStore.h"
 
 void CCarFXRenderer::InjectHooks() {
     RH_ScopedClass(CCarFXRenderer);
@@ -9,7 +11,7 @@ void CCarFXRenderer::InjectHooks() {
 
     RH_ScopedInstall(RegisterPlugins, 0x5D5B00);
     RH_ScopedInstall(Initialise, 0x5D5AC0);
-    RH_ScopedInstall(InitialiseDirtTexture, 0x5D5BC0, { .Reversed = false });
+    RH_ScopedInstall(InitialiseDirtTexture, 0x5D5BC0);
     RH_ScopedInstall(Shutdown, 0x5D5AD0);
     RH_ScopedInstall(PreRenderUpdate, 0x5D5B10);
     RH_ScopedInstall(IsCCPCPipelineAttached, 0x5D5B80);
@@ -31,7 +33,39 @@ bool CCarFXRenderer::Initialise() {
 
 // 0x5D5BC0
 void CCarFXRenderer::InitialiseDirtTexture() {
-    plugin::Call<0x5D5BC0>();
+    const auto vehicleTxd = CTxdStore::FindTxdSlot("vehicle");
+    CTxdStore::PushCurrentTxd();
+    CTxdStore::SetCurrentTxd(vehicleTxd);
+
+    auto* const grunge = RwTextureRead("vehiclegrunge256", nullptr);
+    RwTextureSetFilterMode(grunge, rwFILTERLINEAR);
+
+    const auto width  = grunge->raster->width;
+    const auto height = grunge->raster->height;
+
+    // Create `NUM_DIRT_TEXTURES` variations of the grunge texture, from white (clean), to the grunge texture itself (dirty)
+    for (auto i = 0; i < NUM_DIRT_TEXTURES; i++) {
+        auto* const dirtTex = CClothesBuilder::CopyTexture(grunge);
+        ms_aDirtTextures[i] = dirtTex;
+        RwTextureSetName(dirtTex, "vehiclegrunge256");
+
+        auto* const raster = dirtTex->raster;
+        auto* const pixels = RwRasterLock(raster, 0, rwRASTERLOCKWRITE | rwRASTERLOCKREAD);
+
+        const auto bias = (4080 - 255 * i) / 16; // Original: iterates over `i` by decreasing 0xFF from 0xFF0, and divides by 16
+        for (auto y = 0; y < height; y++) {
+            for (auto x = 0; x < width; x++) {
+                auto* const px = &pixels[(y * width + x) * 4];
+                for (auto c = 0; c < 3; c++) { // Note: Alpha is untouched
+                    px[c] = (uint8)(((px[c] * i) >> 4) + bias);
+                }
+            }
+        }
+
+        RwRasterUnlock(raster);
+    }
+
+    CTxdStore::PopCurrentTxd();
 }
 
 // 0x5D5AD0

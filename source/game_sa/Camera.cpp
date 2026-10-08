@@ -8,6 +8,8 @@
 #include "Hud.h"
 #include "FileLoader.h"
 #include "MBlur.h"
+#include "Garages.h"
+#include "PostEffects.h"
 #include "TaskSimpleSwim.h"
 #include "TaskSimpleArrestPed.h"
 
@@ -1522,14 +1524,14 @@ void CCamera::ProcessObbeCinemaCameraPed() {
     // NOP
 }
 
-//
+// 0x526C80
 void CCamera::ProcessObbeCinemaCameraPlane() {
-    assert(0);
+    plugin::CallMethod<0x526C80, CCamera*>(this); // Not reversed yet
 }
 
-//
+// 0x526950
 void CCamera::ProcessObbeCinemaCameraTrain() {
-    assert(0);
+    plugin::CallMethod<0x526950, CCamera*>(this); // Not reversed yet
 }
 
 // 0x50B890
@@ -1570,19 +1572,19 @@ void CCamera::ProcessVectorTrackLinear(float ratio) {
     m_vecTrackLinear.z = (b.z - a.z) * t + a.z;
 }
 
-//
+// 0x526E20
 void CCamera::ProcessObbeCinemaCameraBoat() {
-    assert(0);
+    plugin::CallMethod<0x526E20, CCamera*>(this); // Not reversed yet
 }
 
-//
+// 0x5267C0
 void CCamera::ProcessObbeCinemaCameraCar() {
-    assert(0);
+    plugin::CallMethod<0x5267C0, CCamera*>(this); // Not reversed yet
 }
 
-//
+// 0x526AE0
 void CCamera::ProcessObbeCinemaCameraHeli() {
-    assert(0);
+    plugin::CallMethod<0x526AE0, CCamera*>(this); // Not reversed yet
 }
 
 // 0x50D430
@@ -3178,17 +3180,33 @@ void PlaceFixedCamNearGarageDoors(CCamera& cam, const CVector& refPos, CObject* 
 }
 
 // The part of `CamControl` (0x528351..0x528A64) that places the fixed camera for when the player is in a vehicle that is in a garage's camera zone
-void PlaceFixedCamForVehicleInGarage(CCamera& cam) {
+void PlaceFixedCamForVehicleInGarage(CCamera& cam, CAttributeZone* stairsZone) {
     CObject *door1{}, *door2{};
     CVector refPos;
+    const CVector targetPos = cam.m_pTargetEntity->GetPosition();
     if (cam.m_pToGarageWeAreIn) {
         FindGarageDoors(cam.m_pToGarageWeAreIn, door1, door2);
         refPos = GetCenterOfGarage(*cam.m_pToGarageWeAreIn);
     } else {
         // BUG: The original doesn't set the door pointers in this case (so it reads uninitialized stack memory)
-        // NOTSA: The original also computed (and tested the line of sight of) some points here, but never used the result
-        refPos = cam.m_pTargetEntity->GetPosition();
+        refPos = targetPos;
+
+        // NOTSA: The original looks for a point on either side of the target that is visible from it, but the result is never used
+        // (it's only compared with the camera position which is then overwritten). The tests are kept for their side effects (scan code)
+        const CVector& camSrc = cam.GetActiveCam().m_vecSource;
+        if (stairsZone && std::sqrt((targetPos.x - camSrc.x) * (targetPos.x - camSrc.x) + (targetPos.y - camSrc.y) * (targetPos.y - camSrc.y)) > 15.f) {
+            const CVector dir{ 1.f, 0.f, 0.f }; // The original normalises a zero vector (which results in this)
+            const float   scale = static_cast<float>(GetStairsZoneExtent(stairsZone->zoneDef)) * 2.f;
+            if (!IsLineOfSightClearForGarageCam(targetPos, targetPos + scale * dir)) {
+                (void)IsLineOfSightClearForGarageCam(targetPos, targetPos - scale * dir);
+            }
+        }
     }
+
+    // NOTSA: The result is unused in the original, kept for the side effects (scan code)
+    bool found{};
+    (void)CWorld::FindGroundZFor3DCoord(targetPos, &found);
+
     PlaceFixedCamNearGarageDoors(cam, refPos, door1, door2, gGarageCamDistVeh, gGarageCamHeightVeh);
     cam.m_bGarageFixedCamPositionSet = true;
 }
@@ -3412,7 +3430,7 @@ void CCamera::CamControl() {
                         if (((!m_bGarageFixedCamPositionSet && m_bLookingAtPlayer == true) || m_nWhoIsInControlOfTheCamera == 2)
                             && (m_pToGarageWeAreIn || stairsZone)
                         ) {
-                            PlaceFixedCamForVehicleInGarage(*this);
+                            PlaceFixedCamForVehicleInGarage(*this, stairsZone);
                         }
 
                         if ((CGarages::CameraShouldBeOutside() || bInStairsZone)
@@ -3879,18 +3897,17 @@ void CCamera::CamControl() {
         if (m_bObbeCinematicCarCamOn && bCinematicCamAllowed) {
             CPostEffects::m_bSpeedFXUserFlagCurrentFrame = false;
             if (m_pTargetEntity->GetIsTypeVehicle()) {
-                // NOTE: These functions (ProcessObbeCinemaCamera*) are stubs in this class, so call the originals
                 const auto vehSubType = m_pTargetEntity->AsVehicle()->m_nVehicleSubType;
                 if (vehSubType == VEHICLE_TYPE_PLANE) {
-                    plugin::CallMethod<0x526C80, CCamera*>(this); // ProcessObbeCinemaCameraPlane
+                    ProcessObbeCinemaCameraPlane();
                 } else if (m_pTargetEntity->AsVehicle()->GetVehicleAppearance() == VEHICLE_APPEARANCE_HELI) {
-                    plugin::CallMethod<0x526AE0, CCamera*>(this); // ProcessObbeCinemaCameraHeli
+                    ProcessObbeCinemaCameraHeli();
                 } else if (vehSubType == VEHICLE_TYPE_BOAT) {
-                    plugin::CallMethod<0x526E20, CCamera*>(this); // ProcessObbeCinemaCameraBoat
+                    ProcessObbeCinemaCameraBoat();
                 } else if (vehSubType == VEHICLE_TYPE_TRAIN) {
-                    plugin::CallMethod<0x526950, CCamera*>(this); // ProcessObbeCinemaCameraTrain
+                    ProcessObbeCinemaCameraTrain();
                 } else {
-                    plugin::CallMethod<0x5267C0, CCamera*>(this); // ProcessObbeCinemaCameraCar
+                    ProcessObbeCinemaCameraCar();
                 }
             }
         } else {

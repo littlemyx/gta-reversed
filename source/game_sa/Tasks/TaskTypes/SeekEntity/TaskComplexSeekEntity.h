@@ -53,6 +53,9 @@ public:
     */
     static constexpr auto Type = eTaskType::TASK_COMPLEX_SEEK_ENTITY;
 
+    //! NOTSA: Only valid if the task really is a `CTaskComplexSeekEntity<T_PosCalc>` of this exact instantiation (see the note above)
+    bool HasAchievedSeekEntity() const { return m_bAchievedSeekEntity; }
+
     static void InjectHooks() {
         RH_ScopedCategory("Tasks/TaskTypes/SeekEntity");
         if constexpr (std::is_same_v<T_PosCalc, CEntitySeekPosCalculatorXYOffset>) {

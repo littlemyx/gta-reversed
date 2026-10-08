@@ -58,6 +58,6 @@ public:
     CVector      m_VehPos{};
     CVector      m_VehMatFwd{};
     CVector      m_VehMatRight{};
-    int32        m_EnterCarStartTime{};
+    int32        m_EnterCarStartTime{-1}; // 0x6541B0 initialises it to -1
 };
 VALIDATE_SIZE(CTaskComplexWalkRoundCar, 0x58);

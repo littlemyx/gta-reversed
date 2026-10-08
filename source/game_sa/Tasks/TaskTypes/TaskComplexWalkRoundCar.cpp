@@ -4,6 +4,7 @@
 #include "TaskComplexWalkRoundCar.h"
 #include "TaskSimpleStandStill.h"
 #include "TaskSimpleAchieveHeading.h"
+#include "TaskComplexEnterCar.h"
 #include "TaskComplexEnterCarAsDriver.h"
 #include "PedGeometryAnalyser.h"
 #include "CarEnterExit.h"
@@ -246,8 +247,7 @@ CTask* CTaskComplexWalkRoundCar::CreateFirstSubTask(CPed* ped) {
 
     if (ped->IsPlayer()) {
         if (const auto task = ped->GetTaskManager().FindTaskByType(TASK_PRIMARY_PRIMARY, TASK_COMPLEX_ENTER_CAR_AS_DRIVER)) {
-            // NOTSA: `CTaskComplexEnterCar::m_EnterCarStartTime` (+0x4C) is protected
-            m_EnterCarStartTime = *reinterpret_cast<int32*>(reinterpret_cast<uint8*>(task) + 0x4C);
+            m_EnterCarStartTime = static_cast<CTaskComplexEnterCar*>(task)->GetEnterCarStartTime();
         }
     }
 

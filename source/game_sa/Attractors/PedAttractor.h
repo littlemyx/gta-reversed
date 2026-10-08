@@ -32,11 +32,11 @@ public:
         float                  deltaHeading
     );
 
+    // NOTE: vtable order matters - in the original vtable (0x86C538) GetType is slot 0 (pure virtual there), the destructor is slot 1
+    virtual ePedAttractorType GetType() const { return PED_ATTRACTOR_UNDEFINED; }
     virtual ~CPedAttractor() {}
 
     static void Shutdown();
-
-    virtual ePedAttractorType GetType() const { return PED_ATTRACTOR_UNDEFINED; }
 
     void SetTaskForPed(CPed* ped, CTask* task);
     bool RegisterPed(CPed* ped);

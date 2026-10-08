@@ -72,9 +72,7 @@ CTask* CTaskComplexEnterCarAsPassengerWait::CreateSubTask(int32 taskType, CPed* 
             ? (uint32)CCarEnterExit::ComputeTargetDoorToEnterAsPassenger(m_Car, 0)
             : 0u;
         const auto task = new CTaskComplexEnterCarAsPassengerTimed{m_Car, targetSeat, (uint32)-1, true};
-        // NOTSA: `CTaskComplexEnterCarAsPassengerTimed::m_MoveState` (+0x1C) is private
-        static_assert(sizeof(eMoveState) == 4);
-        *reinterpret_cast<eMoveState*>(reinterpret_cast<uint8*>(task) + 0x1C) = m_MoveState;
+        task->SetMoveState(m_MoveState);
         return task;
     }
     case TASK_SIMPLE_WAIT_UNTIL_PED_IN_CAR:

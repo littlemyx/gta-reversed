@@ -4,6 +4,7 @@
 
 #include "TaskComplexArrestPed.h"
 #include "TaskComplexFallAndGetUp.h"
+#include "TaskComplexEnterCar.h"
 #include "TaskSimpleWaitUntilPedIsOutCar.h"
 #include "TaskSimpleArrestPed.h"
 #include "TaskComplexKillPedOnFoot.h"
@@ -49,17 +50,17 @@ bool CTaskComplexArrestPed::MakeAbortable(CPed* ped, eAbortPriority priority, co
 }
 
 namespace {
-// NOTSA: `CTaskComplexEnterCar`'s flags (+0x10) are protected, `CTaskComplexSeekEntity`'s (+0x48) private
-constexpr uint8 ENTER_CAR_FLAG_QUIT_AFTER_OPENING_DOOR       = 2; // `m_bQuitAfterOpeningDoor`
-constexpr uint8 ENTER_CAR_FLAG_QUIT_AFTER_DRAGGING_PED_OUT   = 4; // `m_bQuitAfterDraggingPedOut`
-constexpr uint8 SEEK_ENTITY_FLAG_ACHIEVED_SEEK_ENTITY        = 4; // `m_bAchievedSeekEntity`
-
-bool IsEnterCarFlagSet(const CTask* task, uint8 flag) {
-    return (*(reinterpret_cast<const uint8*>(task) + 0x10) & flag) != 0;
+bool IsEnterCarQuitAfterOpeningDoor(const CTask* task) {
+    return static_cast<const CTaskComplexEnterCar*>(task)->IsQuitAfterOpeningDoor();
 }
 
+bool IsEnterCarQuitAfterDraggingPedOut(const CTask* task) {
+    return static_cast<const CTaskComplexEnterCar*>(task)->IsQuitAfterDraggingPedOut();
+}
+
+// NOTSA: Only `CTaskComplexSeekEntity<CEntitySeekPosCalculatorStandard>` is created by this task
 bool HasSeekEntityAchievedEntity(const CTask* task) {
-    return (*(reinterpret_cast<const uint8*>(task) + 0x48) & SEEK_ENTITY_FLAG_ACHIEVED_SEEK_ENTITY) != 0;
+    return static_cast<const CTaskComplexSeekEntity<CEntitySeekPosCalculatorStandard>*>(task)->HasAchievedSeekEntity();
 }
 
 // Is `target` close enough (on the XY plane, and the Z axis) to `ped`, to be arrested
@@ -100,7 +101,7 @@ CTask* CTaskComplexArrestPed::CreateNextSubTask(CPed* ped) {
     }
     case TASK_COMPLEX_DRAG_PED_FROM_CAR: {
         if (const auto task = static_cast<CTaskComplexFallAndGetUp*>(m_PedToArrest->GetTaskManager().FindActiveTaskByType(TASK_COMPLEX_FALL_AND_GET_UP))) {
-            if (task->IsFalling() && !IsEnterCarFlagSet(m_pSubTask, ENTER_CAR_FLAG_QUIT_AFTER_DRAGGING_PED_OUT)) {
+            if (task->IsFalling() && !IsEnterCarQuitAfterDraggingPedOut(m_pSubTask)) {
                 if (IsPedCloseEnoughToArrest(m_PedToArrest, ped)) {
                     task->SetDownTime(100'000);
                     return CreateSubTask(TASK_SIMPLE_ARREST_PED, ped);
@@ -111,13 +112,13 @@ CTask* CTaskComplexArrestPed::CreateNextSubTask(CPed* ped) {
     }
     case TASK_COMPLEX_CAR_OPEN_DRIVER_DOOR:
     case TASK_COMPLEX_CAR_OPEN_PASSENGER_DOOR: { // Both are identical
-        if (IsEnterCarFlagSet(m_pSubTask, ENTER_CAR_FLAG_QUIT_AFTER_OPENING_DOOR) && m_PedToArrest->m_pVehicle && !m_PedToArrest->m_pVehicle->CanPedOpenLocks(ped)) {
+        if (IsEnterCarQuitAfterOpeningDoor(m_pSubTask) && m_PedToArrest->m_pVehicle && !m_PedToArrest->m_pVehicle->CanPedOpenLocks(ped)) {
             m_Vehicle = m_PedToArrest->m_pVehicle;
         }
         if (!m_PedToArrest->IsAlive()) {
             return CreateSubTask(TASK_SIMPLE_ARREST_PED, ped);
         }
-        if (m_PedToArrest->bInVehicle && !IsEnterCarFlagSet(m_pSubTask, ENTER_CAR_FLAG_QUIT_AFTER_OPENING_DOOR)) {
+        if (m_PedToArrest->bInVehicle && !IsEnterCarQuitAfterOpeningDoor(m_pSubTask)) {
             if (m_PedToArrest->GetTaskManager().FindActiveTaskByType(TASK_COMPLEX_LEAVE_CAR)) {
                 return CreateSubTask(TASK_COMPLEX_KILL_PED_ON_FOOT, ped);
             }
@@ -137,8 +138,8 @@ CTask* CTaskComplexArrestPed::CreateNextSubTask(CPed* ped) {
             return CreateSubTask(TASK_SIMPLE_ARREST_PED, ped);
         }
         if (ped->m_nPedType != PED_TYPE_COP && m_PedToArrest->IsPlayer()) {
-            // BUG: Original doesn't check if the player data/wanted is valid
-            if (const auto wanted = m_PedToArrest->GetPlayerWanted(); wanted->m_NumCopsInPursuit > 0) {
+            // BUG: `GetPlayerWanted()` is null if the player data is missing, the original dereferences it anyway
+            if (const auto wanted = m_PedToArrest->GetPlayerWanted(); (!notsa::IsFixBugs() || wanted) && wanted->m_NumCopsInPursuit > 0) {
                 return CreateSubTask(TASK_FINISHED, ped);
             }
         }

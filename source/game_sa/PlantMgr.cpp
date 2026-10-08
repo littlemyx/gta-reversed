@@ -9,8 +9,51 @@
 #include "ProcObjectMan.h"
 
 // 0x5DD100 (todo: move)
-static void AtomicCreatePrelitIfNeeded(RpAtomic* atomic) {
-    plugin::Call<0x5DD100, RpAtomic*>(atomic);
+// Replaces the atomic's geometry with a pre-lit copy of it (if it's not already pre-lit)
+static RpAtomic* AtomicCreatePrelitIfNeeded(RpAtomic* atomic) {
+    RpGeometry* const geometry = RpAtomicGetGeometry(atomic);
+    if (RpGeometryGetFlags(geometry) & rpGEOMETRYPRELIT) {
+        return atomic;
+    }
+
+    const auto numTris  = RpGeometryGetNumTriangles(geometry);
+    const auto numVerts = RpGeometryGetNumVertices(geometry);
+
+    RpGeometry* const newGeometry = RpGeometryCreate(numVerts, numTris, rpGEOMETRYTRISTRIP | rpGEOMETRYTEXTURED | rpGEOMETRYPRELIT);
+
+    // Copy over vertices, UVs, and triangles
+    std::memcpy(
+        RpMorphTargetGetVertices(RpGeometryGetMorphTarget(newGeometry, 0)),
+        RpMorphTargetGetVertices(RpGeometryGetMorphTarget(geometry, 0)),
+        numVerts * sizeof(RwV3d)
+    );
+    std::memcpy(
+        RpGeometryGetVertexTexCoords(newGeometry, rwTEXTURECOORDINATEINDEX0),
+        RpGeometryGetVertexTexCoords(geometry, rwTEXTURECOORDINATEINDEX0),
+        numVerts * sizeof(RwTexCoords)
+    );
+    std::memcpy(
+        RpGeometryGetTriangles(newGeometry),
+        RpGeometryGetTriangles(geometry),
+        numTris * sizeof(RpTriangle)
+    );
+
+    // Copy over the materials
+    for (auto i = 0; i < numTris; i++) {
+        RpGeometryTriangleSetMaterial(
+            newGeometry,
+            &RpGeometryGetTriangles(newGeometry)[i],
+            RpGeometryTriangleGetMaterial(geometry, &RpGeometryGetTriangles(geometry)[i])
+        );
+    }
+
+    RpGeometryUnlock(newGeometry);
+    RpGeometryGetFlags(newGeometry) |= rpGEOMETRYPOSITIONS;
+
+    // NOTE: The reference created by `RpGeometryCreate` is never released (leaks a ref, as in the OG code)
+    RpAtomicSetGeometry(atomic, newGeometry, rpATOMICSAMEBOUNDINGSPHERE);
+
+    return atomic;
 }
 
 // 0x5DD1E0 (do not hook! it has retarded calling conv)

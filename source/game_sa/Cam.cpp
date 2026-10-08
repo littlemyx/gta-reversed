@@ -114,6 +114,8 @@ static inline auto& gDWHeliChaseCamSettings = StaticRef<DWHeliChaseCamSettings>(
 //! First hit point of `CWorld::TestSphereAgainstWorld` (`gaTempSphereColPoints[0].m_vecPoint` in World.cpp)
 static inline auto& gTempSphereHitPoint0 = StaticRef<CVector>(0xB9B250);
 
+static inline auto& s_curDistForCam = StaticRef<float>(0x8CCB84); // `gCurDistForCam` in Camera.cpp
+
 //! Written by `Process_FollowCar_SA`, read by `LookBehind` (name made up)
 static inline auto& gCamFollowCarLookAt = StaticRef<CVector>(0xB6F018);
 
@@ -241,7 +243,7 @@ void CCam::InjectHooks() {
     RH_ScopedInstall(LookRight, 0x520E40);
     RH_ScopedInstall(RotCamIfInFrontCar, 0x50A4F0);
     RH_ScopedInstall(Using3rdPersonMouseCam, 0x50A850);
-    RH_ScopedInstall(Process, 0x526FC0, { .Reversed = false });
+    RH_ScopedInstall(Process, 0x526FC0);
     RH_ScopedInstall(ProcessArrestCamOne, 0x518500, { .Reversed = false });
     RH_ScopedInstall(ProcessPedsDeadBaby, 0x519250);
     RH_ScopedInstall(Process_1rstPersonPedOnPC, 0x50EB70);
@@ -908,7 +910,369 @@ void CCam::ClipBeta() {
 
 // 0x526FC0
 void CCam::Process() {
-    NOTSA_UNREACHABLE();
+    // Globals whose purpose is unknown (names made up)
+    static auto& s_unk_B6FE34       = StaticRef<uint32>(0xB6FE34);
+    static auto& s_unk_B6FDC8       = StaticRef<float>(0xB6FDC8);
+    static auto& s_unk_C0B184       = StaticRef<uint8>(0xC0B184);
+    static auto& s_unk_C8A860       = StaticRef<uint8>(0xC8A860);
+    static auto& s_unk_8CCF00       = StaticRef<bool>(0x8CCF00);
+    static auto& s_lastPlayerPos    = StaticRef<CVector>(0x8CCC3C);
+    static auto& s_playerPosVel     = StaticRef<CVector>(0xB6EC7C);
+    static auto& s_firstPersonFlag  = StaticRef<bool>(0xB6EC20);
+
+    if ((float)s_unk_B6FE34 <= s_unk_B6FDC8) {
+        s_unk_C0B184 &= 0xFE;
+    }
+    if (TheCamera.m_aCams[TheCamera.m_nActiveCam].m_nMode != MODE_FOLLOWPED) {
+        s_unk_C0B184 &= 0xFE;
+        s_unk_B6FE34 = 0;
+    }
+
+    float   orientation = 0.0f; // local_78
+    float   speedVar    = 0.0f; // local_7c
+    CVector target{};           // local_6c
+
+    if (!m_pCamTargetEntity) {
+        m_pCamTargetEntity = TheCamera.m_pTargetEntity;
+        m_pCamTargetEntity->RegisterReference(&m_pCamTargetEntity);
+    }
+
+    if (s_unk_C8A860 == 1) {
+        auto* const player = FindPlayerPed();
+        if (!player || !player->m_pVehicle || player->m_pVehicle->m_nModelIndex != 0x208) {
+            CWeaponEffects::ClearCrossHairImmediately(CrossHairId(0));
+        }
+    }
+
+    m_nFrameNumWereAt++;
+    if (m_nDoCollisionCheckEveryNumOfFrames < m_nFrameNumWereAt) {
+        m_nFrameNumWereAt = 1;
+    }
+    m_bCollisionChecksOn = m_nFrameNumWereAt == m_nDoCollisionChecksOnFrameNum;
+
+    const auto GetAngleOfEntityForward = [](CEntity* e) {
+        auto& fwd = e->GetMatrix().GetForward();
+        if (fwd.x == 0.0f && fwd.y == 0.0f) {
+            return 0.0f;
+        }
+        return CGeneral::GetATanOfXY(e->GetMatrix().GetForward().x, e->GetMatrix().GetForward().y);
+    };
+
+    if (!m_bCamLookingAtVector) {
+        auto* const ent = m_pCamTargetEntity;
+        if (ent->GetIsTypeVehicle()) {
+            target      = ent->GetPosition();
+            orientation = GetAngleOfEntityForward(ent);
+
+            CVector fwd2D{ ent->GetMatrix().GetForward().x, ent->GetMatrix().GetForward().y, 0.0f };
+            fwd2D.Normalise();
+            float len = std::sqrt(fwd2D.x * fwd2D.x + fwd2D.y * fwd2D.y);
+            if (len != 0.0f) {
+                len = 1.0f / len;
+                fwd2D.x = fwd2D.x * len;
+                fwd2D.y = len * fwd2D.y;
+            }
+            const float vx = fwd2D.x * ent->AsPhysical()->m_vecMoveSpeed.x;
+            const float vy = fwd2D.y * ent->AsPhysical()->m_vecMoveSpeed.y;
+            speedVar       = std::sqrt(vx * vx + vy * vy);
+            if (vy + vx <= 0.0f) {
+                speedVar = speedVar * 0.555555582f;
+                if (0.5f < speedVar) {
+                    speedVar = 0.5f;
+                }
+                speedVar = -speedVar;
+            } else {
+                speedVar = speedVar * 1.11111116f;
+                if (1.0f < speedVar) {
+                    speedVar = 1.0f;
+                }
+            }
+            m_fSpeedVar = m_fSpeedVar * 0.894999981f + speedVar * 0.105000019f;
+
+            if (m_nDirectionWasLooking != 3) {
+                auto* const pad = CPad::GetPad(0);
+                if (pad->GetLookBehindForCar() && (pad->GetLookLeft() || pad->GetLookRight())) {
+                    TheCamera.m_bCamDirectlyBehind = true;
+                }
+            }
+        } else {
+            auto* const player = FindPlayerPed();
+            if (ent == player) {
+                CVector playerPos = FindPlayerPed()->GetPosition();
+                if (FindPlayerPed()->GetIntelligence()->GetTaskClimb()) {
+                    FindPlayerPed()->GetIntelligence()->GetTaskClimb()->GetCameraTargetPos(FindPlayerPed(), playerPos);
+                }
+                target = playerPos;
+
+                bool bReset =
+                    9.0f < sq(s_lastPlayerPos.x - playerPos.x) + sq(s_lastPlayerPos.y - playerPos.y) + sq(s_lastPlayerPos.z - playerPos.z)
+                    || CTimer::GetTimeStep() < 0.2f
+                    || Using3rdPersonMouseCam()
+                    || TheCamera.m_bCamDirectlyBehind
+                    || TheCamera.m_bCamDirectlyInFront;
+                if (!bReset) {
+                    if (FindPlayerPed()->GetIntelligence()->GetTaskFighting() && m_nMode == MODE_AIMWEAPON) {
+                        const float f = std::pow(0.899999976f, CTimer::GetTimeStep());
+                        target        = playerPos * (1.0f - f) + s_lastPlayerPos * f;
+                        bReset        = true;
+                    } else {
+                        const float pow1 = std::pow(0.600000024f, CTimer::GetTimeStep());
+                        const float pow2 = std::pow(0.800000012f, CTimer::GetTimeStep());
+                        const CVector predicted = s_lastPlayerPos + s_playerPosVel * CTimer::GetTimeStep();
+                        const CVector blended   = predicted * pow1 + playerPos * (1.0f - pow1);
+                        target.x                = blended.x;
+                        target.y                = blended.y;
+                        target.z                = playerPos.z;
+
+                        const CVector delta{ target.x - s_lastPlayerPos.x, target.y - s_lastPlayerPos.y, playerPos.z - s_lastPlayerPos.z };
+                        const float   divisor = std::max(1.0f, CTimer::GetTimeStep());
+                        const CVector newVel  = s_playerPosVel * pow2 + (delta * (1.0f - pow2)) / divisor;
+                        s_playerPosVel.x      = newVel.x;
+                        s_playerPosVel.y      = newVel.y;
+                    }
+                }
+                if (bReset) {
+                    s_playerPosVel.x = 0.0f;
+                    s_playerPosVel.y = 0.0f;
+                }
+                s_playerPosVel.z = 0.0f;
+                s_lastPlayerPos  = target;
+            } else {
+                target = ent->GetPosition();
+            }
+            orientation = GetAngleOfEntityForward(m_pCamTargetEntity);
+            speedVar    = 0.0f;
+            m_fSpeedVar = 0.0f;
+        }
+    } else {
+        target = m_vecCamFixedModeVector;
+    }
+
+    // Look behind / left / right handling
+    m_nDirectionWasLooking = gCameraDirection;
+    gCameraDirection       = 3;
+    if (&TheCamera.m_aCams[TheCamera.m_nActiveCam] == this) {
+        auto* const ent = m_pCamTargetEntity;
+        bool        bTransitionState = TheCamera.m_bTransitionState;
+        auto* const pad              = CPad::GetPad(0);
+        bool        skipRest         = false;
+
+        if ((m_nMode == MODE_CAM_ON_A_STRING || m_nMode == MODE_1STPERSON || m_nMode == MODE_BEHINDBOAT || m_nMode == MODE_BEHINDCAR) && ent->GetIsTypeVehicle()) {
+            const bool bHeliOrPlane = ent->AsVehicle()->GetVehicleAppearance() == VEHICLE_APPEARANCE_HELI || ent->AsVehicle()->GetVehicleAppearance() == VEHICLE_APPEARANCE_PLANE;
+            if (!pad->GetLookBehindForCar()) {
+                const auto ClearTransition = [&] {
+                    TheCamera.m_bWaitForInterpolToFinish = bHeliOrPlane;
+                    TheCamera.m_bDoingSpecialInterp      = bHeliOrPlane;
+                    TheCamera.m_bTransitionState         = bHeliOrPlane;
+                };
+                if (!pad->GetLookLeft() || bHeliOrPlane) {
+                    if (!pad->GetLookRight() || bHeliOrPlane) {
+                        gCameraDirection = 3;
+                    } else {
+                        gCameraDirection = 2;
+                        ClearTransition();
+                    }
+                } else {
+                    gCameraDirection = 1;
+                    ClearTransition();
+                }
+                if (m_nDirectionWasLooking != (uint32)gCameraDirection) {
+                    TheCamera.m_bJust_Switched = true;
+                }
+            } else {
+                TheCamera.m_bTransitionState         = false;
+                TheCamera.m_bDoingSpecialInterp      = false;
+                TheCamera.m_bWaitForInterpolToFinish = false;
+                bTransitionState                     = m_nDirectionWasLooking == 0;
+                if (!bTransitionState) {
+                    TheCamera.m_bJust_Switched = true;
+                }
+                gCameraDirection = 0;
+            }
+            skipRest = true;
+        } else if (m_nMode == MODE_FOLLOWPED && ent->GetIsTypePed()) {
+            if (pad->GetLookBehindForPed()) {
+                if (m_nDirectionWasLooking != 0 && !bTransitionState) {
+                    TheCamera.m_bJust_Switched = true;
+                }
+                gCameraDirection = 0;
+                skipRest         = true;
+            }
+        } else if (m_nMode != MODE_AIMWEAPON) {
+            skipRest = true;
+        }
+        if (!skipRest) {
+            gCameraDirection = 3;
+            if (m_nDirectionWasLooking != 3) {
+                s_curDistForCam = 1.0f;
+            }
+        }
+    }
+
+    if (TheCamera.m_bJust_Switched) {
+        s_curDistForCam                = 1.0f;
+        TheCamera.m_bResetOldMatrix   = true;
+    }
+
+    if (m_nMode != MODE_BEHINDCAR && m_nMode != MODE_CAM_ON_A_STRING && m_nMode != MODE_BEHINDBOAT && m_nMode != MODE_1STPERSON && m_nMode != MODE_TWOPLAYER_IN_CAR_AND_SHOOTING) {
+        CPostEffects::m_bSpeedFXUserFlagCurrentFrame = false;
+    }
+    s_firstPersonFlag = false;
+
+    switch (m_nMode) {
+    case MODE_BEHINDCAR:
+    case MODE_CAM_ON_A_STRING:
+    case MODE_BEHINDBOAT:
+        Process_FollowCar_SA(target, orientation, m_fSpeedVar, speedVar, false);
+        break;
+    case MODE_FOLLOWPED:
+        if (!CCamera::m_bUseMouse3rdPerson || s_unk_8CCF00) {
+            Process_FollowPed_SA(target, orientation, m_fSpeedVar, speedVar, false);
+        } else {
+            Process_FollowPedWithMouse(target, orientation, m_fSpeedVar, speedVar);
+        }
+        break;
+    default:
+        m_vecSource = CVector{ 0.0f, 0.0f, 0.0f };
+        m_vecFront  = CVector{ 0.0f, 1.0f, 0.0f };
+        m_vecUp     = CVector{ 0.0f, 0.0f, 1.0f };
+        break;
+    case MODE_SNIPER:
+    case MODE_M16_1STPERSON:
+    case MODE_HELICANNON_1STPERSON:
+    case MODE_CAMERA:
+        Process_M16_1stPerson(target, orientation, m_fSpeedVar, speedVar);
+        break;
+    case MODE_ROCKETLAUNCHER:
+        Process_Rocket(target, orientation, m_fSpeedVar, speedVar, false);
+        break;
+    case MODE_WHEELCAM:
+        Process_WheelCam(target, orientation, m_fSpeedVar, speedVar);
+        break;
+    case MODE_FIXED:
+        Process_Fixed(target, orientation, m_fSpeedVar, speedVar);
+        break;
+    case MODE_1STPERSON:
+        Process_1stPerson(target, orientation, m_fSpeedVar, speedVar);
+        break;
+    case MODE_FLYBY:
+        Process_FlyBy(target, orientation, m_fSpeedVar, speedVar);
+        break;
+    case MODE_PED_DEAD_BABY:
+        ProcessPedsDeadBaby();
+        TheCamera.m_bPlayerIsInGarage    = false;
+        TheCamera.m_bJustCameOutOfGarage = false;
+        break;
+    case MODE_ARRESTCAM_ONE:
+        ProcessArrestCamOne();
+        break;
+    case MODE_ARRESTCAM_TWO:
+        break;
+    case MODE_SPECIAL_FIXED_FOR_SYPHON:
+        Process_SpecialFixedForSyphon(target, orientation, m_fSpeedVar, speedVar);
+        break;
+    case MODE_SNIPER_RUNABOUT:
+    case MODE_ROCKETLAUNCHER_RUNABOUT:
+    case MODE_1STPERSON_RUNABOUT:
+    case MODE_M16_1STPERSON_RUNABOUT:
+    case MODE_FIGHT_CAM_RUNABOUT:
+    case MODE_ROCKETLAUNCHER_RUNABOUT_HS:
+        Process_1rstPersonPedOnPC(target, orientation, m_fSpeedVar, speedVar);
+        break;
+    case MODE_EDITOR:
+        Process_Editor(target, orientation, m_fSpeedVar, speedVar);
+        break;
+    case MODE_ATTACHCAM:
+        Process_AttachedCam();
+        break;
+    case MODE_TWOPLAYER:
+        Process_Cam_TwoPlayer();
+        break;
+    case MODE_TWOPLAYER_IN_CAR_AND_SHOOTING:
+        Process_Cam_TwoPlayer_InCarAndShooting();
+        break;
+    case MODE_TWOPLAYER_SEPARATE_CARS:
+        Process_Cam_TwoPlayer_Separate_Cars();
+        break;
+    case MODE_ROCKETLAUNCHER_HS:
+        Process_Rocket(target, orientation, m_fSpeedVar, speedVar, true);
+        break;
+    case MODE_AIMWEAPON:
+    case MODE_AIMWEAPON_FROMCAR:
+    case MODE_AIMWEAPON_ATTACHED:
+        Process_AimWeapon(target, orientation, m_fSpeedVar, speedVar);
+        break;
+    case MODE_TWOPLAYER_SEPARATE_CARS_TOPDOWN:
+        Process_Cam_TwoPlayer_Separate_Cars_TopDown();
+        break;
+    case MODE_DW_HELI_CHASE:
+        Process_DW_HeliChaseCam(false);
+        break;
+    case MODE_DW_CAM_MAN:
+        Process_DW_CamManCam(false);
+        break;
+    case MODE_DW_BIRDY:
+        Process_DW_BirdyCam(false);
+        break;
+    case MODE_DW_PLANE_SPOTTER:
+        Process_DW_PlaneSpotterCam(false);
+        break;
+    case MODE_DW_DOG_FIGHT:
+    case MODE_DW_FISH:
+        TheCamera.m_bUseNearClipScript = false;
+        break;
+    case MODE_DW_PLANECAM1:
+        Process_DW_PlaneCam1(false);
+        break;
+    case MODE_DW_PLANECAM2:
+        Process_DW_PlaneCam2(false);
+        break;
+    case MODE_DW_PLANECAM3:
+        Process_DW_PlaneCam3(false);
+        break;
+    }
+
+    if (m_nMode < MODE_DW_HELI_CHASE || m_nMode > MODE_DW_PLANECAM3) {
+        gLastDWCineyCamMode = -1;
+    }
+    gCameraMode = m_nMode;
+
+    CVector diff = m_vecSource - m_vecTargetCoorsForFudgeInter;
+    m_fTrueBeta  = CGeneral::GetATanOfXY(diff.x, diff.y);
+    m_fTrueAlpha = CGeneral::GetATanOfXY(std::sqrt(diff.x * diff.x + diff.y * diff.y), diff.z);
+
+    if (!TheCamera.m_bTransitionState) {
+        KeepTrackOfTheSpeed(m_vecSource, m_vecTargetCoorsForFudgeInter, m_vecUp, m_fTrueAlpha, m_fTrueBeta, m_fFOV);
+    }
+
+    m_vecSourceBeforeLookBehind = m_vecSource;
+    m_bLookingRight  = false;
+    m_bLookingLeft   = false;
+    m_bLookingBehind = false;
+
+    if (&TheCamera.m_aCams[TheCamera.m_nActiveCam] == this) {
+        switch (gCameraDirection) {
+        case 0: LookBehind(); break;
+        case 1: LookRight(false); break;
+        case 2: LookRight(true); break;
+        }
+        m_nDirectionWasLooking = gCameraDirection;
+    }
+
+    if (TheCamera.m_bFOVLerpProcessed) {
+        m_fFOV                         = TheCamera.m_fFOVNew;
+        TheCamera.m_bFOVLerpProcessed = false;
+    }
+    if (TheCamera.m_bVecMoveLinearProcessed) {
+        m_vecSource                           = TheCamera.m_vecMoveLinear;
+        TheCamera.m_bVecMoveLinearProcessed = false;
+    }
+    if (TheCamera.m_bVecTrackLinearProcessed) {
+        m_vecFront = TheCamera.m_vecTrackLinear - m_vecSource;
+        m_vecFront.Normalise();
+        GetVectorsReadyForRW();
+        TheCamera.m_bVecTrackLinearProcessed = false;
+    }
 }
 
 // 0x518500

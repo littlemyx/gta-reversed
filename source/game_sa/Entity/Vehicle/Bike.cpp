@@ -1829,8 +1829,6 @@ void CBike::ProcessControl() {
                 contactSpeed -= m_aGroundPhysicalPtrs[frontWheel]->GetSpeed(m_aGroundOffsets[frontWheel]);
             }
 
-            // NOTE: The original takes (adhesion, destabTraction) as its 3rd/4th floats = (adhesion * traction bias, grip modifier), but the stub in `Vehicle.cpp`
-            //       forwards its `destabTraction` as the 3rd and its `adhesion` as the 4th one, so the values have to be passed in the stub's order [grip modifier, adhesion * traction bias]
             ProcessBikeWheel(
                 wheelFwd,
                 wheelRight,
@@ -1839,8 +1837,8 @@ void CBike::ProcessControl() {
                 2,
                 s_BikeWheelThrust,
                 frontBrakeBias * frontBrakeForce,
-                gripMod,                      // Stub's `adhesion` => 4th float of the original call
-                adhesion * frontTractionBias, // Stub's `destabTraction` => 3rd float of the original call
+                adhesion * frontTractionBias, // adhesion
+                gripMod,                      // destabTraction (grip modifier)
                 0,
                 &m_aWheelAngularVelocity[0],
                 &wheelStates[0],
@@ -1959,8 +1957,6 @@ void CBike::ProcessControl() {
                 contactSpeed -= m_aGroundPhysicalPtrs[rearWheel]->GetSpeed(m_aGroundOffsets[rearWheel]);
             }
 
-            // NOTE: The original takes (adhesion, destabTraction) as its 3rd/4th floats = (adhesion * traction bias, grip modifier), but the stub in `Vehicle.cpp`
-            //       forwards its `destabTraction` as the 3rd and its `adhesion` as the 4th one, so the values have to be passed in the stub's order [grip modifier, adhesion * traction bias]
             ProcessBikeWheel(
                 wheelFwd,
                 wheelRight,
@@ -1969,8 +1965,8 @@ void CBike::ProcessControl() {
                 2,
                 s_BikeWheelThrust,
                 rearBrakeForce * rearBrakeBias,
-                rearGripMod,                     // Stub's `adhesion` => 4th float of the original call
-                rearAdhesion * rearTractionBias, // Stub's `destabTraction` => 3rd float of the original call
+                rearAdhesion * rearTractionBias, // adhesion
+                rearGripMod,                     // destabTraction (grip modifier)
                 1,
                 &m_aWheelAngularVelocity[1],
                 &wheelStates[1],

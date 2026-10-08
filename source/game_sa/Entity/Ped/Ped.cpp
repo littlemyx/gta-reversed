@@ -3068,7 +3068,7 @@ void CPed::PlayFootSteps() {
             if (m_pedAudio.m_bCanAddEvent) {
                 m_pedAudio.AddAudioEvent(AE_PED_SKATE_LEFT, std::log10(adhesion) * 20.0f, skateSpeed);
             }
-        } else if (adhesion > 0.2f && curTime > threshold && curTime - timeStep <= threshold) {
+        } else if (adhesion > 0.2f && curTime > threshold && curTime - timeStep < threshold) {
             if (m_pedAudio.m_bCanAddEvent) {
                 m_pedAudio.AddAudioEvent(AE_PED_SKATE_RIGHT, std::log10(adhesion) * 20.0f, skateSpeed);
             }
@@ -4678,7 +4678,7 @@ void CPed::MakeTyresMuddySectorList(PtrListType& ptrList)
                     bike->m_vehicleAudio.AddAudioEvent(AE_PED_DRIVE_OVER, 0.0f);
                 }
 
-                if (bike->m_fMass > 10.0f) {
+                if (bike->m_fMass > 100.0f) {
                     bike->ApplyMoveForce(0.0f, 0.0f, 10.0f);
                     bike->ApplyTurnForce(CVector{ 0.0f, 0.0f, 10.0f }, wheelPos - bike->GetPosition());
                     if (bike == FindPlayerVehicle()) {

@@ -932,6 +932,7 @@ void CGangWars::TellGangMembersTo(bool isGangWarEnding) {
             }
             CEventScriptCommand event(TASK_PRIMARY_PRIMARY, task, false);
             ped.GetEventGroup().Add(&event);
+            continue; // 0x4447E5: peds in vehicles get only the car task, the wander task is for peds on foot
         }
 
         auto task = new CTaskComplexWanderGang(PEDMOVE_WALK, CGeneral::GetRandomNumberInRange(0, 8), 5000, true, 0.5f);

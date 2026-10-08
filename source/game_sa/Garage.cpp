@@ -8,11 +8,11 @@ void CGarage::InjectHooks() {
     RH_ScopedCategoryGlobal();
 
     RH_ScopedInstall(BuildRotatedDoorMatrix, 0x4479F0);
-    // RH_ScopedInstall(TidyUpGarageClose, 0x449D10);
-    // RH_ScopedInstall(TidyUpGarage, 0x449C50);
+    RH_ScopedInstall(TidyUpGarageClose, 0x449D10);
+    RH_ScopedInstall(TidyUpGarage, 0x449C50);
     RH_ScopedInstall(StoreAndRemoveCarsForThisHideOut, 0x449900);
     // RH_ScopedInstall(EntityHasASphereWayOutsideGarage, 0x449050);
-    // RH_ScopedInstall(RemoveCarsBlockingDoorNotInside, 0x449690);
+    RH_ScopedInstall(RemoveCarsBlockingDoorNotInside, 0x449690);
     // RH_ScopedInstall(IsEntityTouching3D, 0x448EE0);
     // RH_ScopedInstall(IsEntityEntirelyOutside, 0x448D30);
     // RH_ScopedInstall(IsStaticPlayerCarEntirelyInside, 0x44A830);
@@ -21,10 +21,17 @@ void CGarage::InjectHooks() {
     // RH_ScopedInstall(PlayerArrestedOrDied, 0x4486C0);
     RH_ScopedInstall(OpenThisGarage, 0x447D50);
     RH_ScopedInstall(CloseThisGarage, 0x447D70);
-    // RH_ScopedInstall(InitDoorsAtStart, 0x447600);
+    RH_ScopedInstall(InitDoorsAtStart, 0x447600);
     // RH_ScopedInstall(IsPointInsideGarage, 0x4487D0);
     // RH_ScopedInstall(Update, 0x44AA50);
     RH_ScopedInstall(FindDoorsWithGarage, 0x449FF0);
+
+    {
+        RH_ScopedClass(CStoredCar);
+        RH_ScopedCategoryGlobal();
+
+        RH_ScopedInstall(StoreCar, 0x449760);
+    }
 }
 
 // 0x4479F0
@@ -41,12 +48,59 @@ void CGarage::BuildRotatedDoorMatrix(CEntity* entity, float fDoorPosition) {
 
 // 0x449D10
 void CGarage::TidyUpGarageClose() {
-    plugin::CallMethod<0x449D10, CGarage*>(this);
+    auto* const pool = GetVehiclePool();
+    for (int32 i = pool->GetSize() - 1; i != 0; i--) { // NOTE: slot 0 is never visited (original loop ends at 0 exclusive)
+        auto* const veh = pool->GetAt(i);
+        if (!veh) {
+            continue;
+        }
+        if (veh->m_nVehicleType != VEHICLE_TYPE_AUTOMOBILE && veh->m_nVehicleType != VEHICLE_TYPE_BIKE) {
+            continue;
+        }
+        if (veh->GetStatus() != STATUS_WRECKED || !IsEntityTouching3D(veh)) {
+            continue;
+        }
+
+        bool bRemove{};
+        if (m_nDoorState == GARAGE_DOOR_CLOSED) {
+            bRemove = true;
+        } else {
+            // Remove if any of the col spheres is (partly) outside of the garage
+            const auto* const colData = veh->GetColModel()->m_pColData;
+            for (int32 s = 0; s < colData->m_nNumSpheres; s++) {
+                const auto& sphere = colData->m_pSpheres[s];
+                if (!IsPointInsideGarage(veh->m_matrix->TransformPoint(sphere.m_vecCenter), sphere.m_fRadius)) { // 0x449DFC
+                    bRemove = true;
+                }
+            }
+        }
+        if (bRemove) {
+            CWorld::Remove(veh);
+            delete veh;
+        }
+    }
 }
 
 // 0x449C50
 void CGarage::TidyUpGarage() {
-    plugin::CallMethod<0x449C50, CGarage*>(this);
+    auto* const pool = GetVehiclePool();
+    for (int32 i = pool->GetSize() - 1; i != 0; i--) { // NOTE: slot 0 is never visited (original loop ends at 0 exclusive)
+        auto* const veh = pool->GetAt(i);
+        if (!veh) {
+            continue;
+        }
+        if (veh->m_nVehicleType != VEHICLE_TYPE_AUTOMOBILE && veh->m_nVehicleType != VEHICLE_TYPE_BIKE) {
+            continue;
+        }
+        if (!IsPointInsideGarage(veh->GetPosition())) {
+            continue;
+        }
+        // 0.5f @ 0x858B8C; note: matrix is dereferenced unchecked in the original too
+        if (veh->GetStatus() == STATUS_WRECKED || veh->GetUp().z < 0.5f) {
+            CWorld::Remove(veh);
+            delete veh;
+        }
+    }
 }
 
 // 0x449900
@@ -84,7 +138,22 @@ bool CGarage::EntityHasASphereWayOutsideGarage(CEntity* entity, float fRadius) {
 
 // 0x449690
 void CGarage::RemoveCarsBlockingDoorNotInside() {
-    plugin::CallMethod<0x449690, CGarage*>(this);
+    auto* const pool = GetVehiclePool();
+    for (int32 i = pool->GetSize(); i-- > 0;) {
+        auto* const veh = pool->GetAt(i);
+        if (!veh) {
+            continue;
+        }
+        if (!IsEntityTouching3D(veh)) {
+            continue;
+        }
+        if (IsPointInsideGarage(veh->GetPosition()) || veh->vehicleFlags.bIsLocked || !veh->CanBeDeleted()) {
+            continue;
+        }
+        CWorld::Remove(veh);
+        delete veh;
+        return; // Only one car is removed per call
+    }
 }
 
 // 0x448EE0
@@ -135,7 +204,29 @@ void CGarage::CloseThisGarage() {
 
 // 0x447600
 void CGarage::InitDoorsAtStart() {
-    plugin::CallMethod<0x447600, CGarage*>(this);
+    m_nFlags      = (m_nFlags & 0x39) | 0x40; // keep bits 0,3,4,5; clear bits 1,2,7; set `m_bDoorClosed`
+    m_nDoorState  = GARAGE_DOOR_CLOSED;
+    m_nTimeToOpen = 0;
+
+    switch (m_nType) {
+    case 1:
+    case 6: case 7: case 8: case 9: case 10: case 11: case 12:
+    case 14: case 15: case 16: case 17: case 18: case 19: case 20: case 21: case 22: case 23: case 24: case 25:
+    case 26: case 27: case 28: case 29: case 30: case 31: case 32: case 33: case 34: case 35: case 36: case 37:
+    case 38: case 39: case 40: case 41: case 42: case 43: case 44: case 45:
+        m_nDoorState    = GARAGE_DOOR_CLOSED;
+        m_fDoorPosition = 0.0f;
+        break;
+    case BOMBSHOP_TIMED:
+    case BOMBSHOP_ENGINE:
+    case BOMBSHOP_REMOTE:
+    case PAYNSPRAY: // 2..5
+        m_nDoorState    = GARAGE_DOOR_OPEN;
+        m_fDoorPosition = 1.0f;
+        break;
+    default:
+        break;
+    }
 }
 
 // 0x4487D0
@@ -275,7 +366,59 @@ void CSaveGarage::CopyGarageOutOfSaveGarage(CGarage& g) const {
 // todo move
 // 0x449760
 void CStoredCar::StoreCar(CVehicle* vehicle) {
-    plugin::CallMethod<0x449760, CStoredCar*, CVehicle*>(this, vehicle);
+    m_wModelIndex = vehicle->m_nModelIndex;
+    m_vPosn       = vehicle->GetPosition();
+
+    // Forward vector packed as signed bytes (x100); `_ftol` truncates, the product is kept at extended precision
+    const auto& fwd  = vehicle->m_matrix->GetForward();
+    m_nPackedForwardX = static_cast<uint8>(static_cast<int32>(double(fwd.x) * 100.0));
+    m_nPackedForwardY = static_cast<uint8>(static_cast<int32>(double(fwd.y) * 100.0));
+    m_nPackedForwardZ = static_cast<uint8>(static_cast<int32>(double(fwd.z) * 100.0));
+
+    m_nPrimaryColor    = vehicle->m_nPrimaryColor;
+    m_nSecondaryColor  = vehicle->m_nSecondaryColor;
+    m_nTertiaryColor   = vehicle->m_nTertiaryColor;
+    m_nQuaternaryColor = vehicle->m_nQuaternaryColor;
+    m_nRadioStation    = static_cast<uint8>(vehicle->m_vehicleAudio.m_AuSettings.RadioStation);
+    m_nHandlingFlags   = static_cast<uint32>(vehicle->m_nHandlingFlagsIntValue);
+    m_anCompsToUse[0]  = vehicle->m_anExtras[0];
+    m_anCompsToUse[1]  = vehicle->m_anExtras[1];
+
+    m_nStoredCarFlags = 0;
+    _pad0             = 0; // The original clears a 16 bit word here
+    if (vehicle->physicalFlags.bBulletProof) {
+        m_nStoredCarFlags |= 0x01;
+    }
+    if (vehicle->physicalFlags.bFireProof) {
+        m_nStoredCarFlags |= 0x02;
+    }
+    if (vehicle->physicalFlags.bExplosionProof) {
+        m_nStoredCarFlags |= 0x04;
+    }
+    if (vehicle->physicalFlags.bCollisionProof) {
+        m_nStoredCarFlags |= 0x08;
+    }
+    if (vehicle->physicalFlags.bMeleeProof) {
+        m_nStoredCarFlags |= 0x10;
+    }
+    if (vehicle->vehicleFlags.bUpgradedStereo) {
+        m_nStoredCarFlags |= 0x20;
+    }
+    if (vehicle->handlingFlags.bHydraulicInst) {
+        m_nStoredCarFlags |= 0x40;
+    }
+    if (vehicle->handlingFlags.bNosInst) {
+        m_nStoredCarFlags |= 0x80;
+    }
+
+    // NOTE: not reset for other vehicle types (stale value stays)
+    if (vehicle->m_nVehicleType == VEHICLE_TYPE_AUTOMOBILE || vehicle->m_nVehicleType == VEHICLE_TYPE_BIKE) {
+        m_nBombType = vehicle->m_nBombOnBoard;
+    }
+
+    std::ranges::copy(vehicle->m_anUpgrades, m_awCarMods);
+    m_nPaintJob     = static_cast<uint8>(vehicle->GetRemapIndex());
+    m_nNitroBoosts  = vehicle->m_nNitroBoosts;
 }
 
 // 0x447E40

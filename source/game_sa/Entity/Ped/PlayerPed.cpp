@@ -38,6 +38,9 @@
 #include "Cheat.h"
 #include "Radar.h"
 #include "Stats.h"
+#include "Darkel.h"
+#include "GameLogic.h"
+#include "PedType.h"
 #include <numbers>
 
 bool CPlayerPed::bDebugPlayerInvincible;
@@ -103,8 +106,10 @@ void CPlayerPed::InjectHooks() {
     RH_ScopedOverloadedInstall(MakeChangesForNewWeapon, "BySlot", 0x60D000, void(CPlayerPed::*)(uint32));
     RH_ScopedInstall(EvaluateTarget, 0x60D020);
     RH_ScopedInstall(EvaluateNeighbouringTarget, 0x60D1C0);
+    RH_ScopedInstall(ProcessGroupBehaviour, 0x60D350);
     RH_ScopedInstall(PlayerHasJustAttackedSomeone, 0x60D5A0);
     RH_ScopedInstall(SetupPlayerPed, 0x60D790);
+    RH_ScopedInstall(ProcessWeaponSwitch, 0x60D850);
 
     RH_ScopedVMTInstall(ProcessControl, 0x60EA90);
     RH_ScopedVMTInstall(SetMoveAnim, 0x609490);
@@ -1920,7 +1925,89 @@ void CPlayerPed::EvaluateNeighbouringTarget(CEntity* target, CEntity** outTarget
 
 // 0x60D350
 void CPlayerPed::ProcessGroupBehaviour(CPad* pad) {
-    plugin::CallMethod<0x60D350, CPlayerPed *, CPad*>(this, pad);
+    // The ped the player is looking at (or the one the mouse is pointing at)
+    CEntity* target = m_pTargetedObject;
+    if (CCamera::m_bUseMouse3rdPerson && !target) {
+        target = m_p3rdPersonMouseTarget;
+    }
+
+    // `CTimer::ms_fTimeStepNonClipped * 0.02f * 1000.0f` kept in extended precision, then truncated by _ftol (0x821B40)
+    const auto TimeStepInMS = [] {
+        return (uint16)(int32)((double)CTimer::GetTimeStepNonClipped() * (double)0.02f * 1000.0);
+    };
+
+    // 0x609380 (inlined here)
+    const auto IsRecruitCheatActive = [] {
+        return CCheat::IsAnyActive({ CHEAT_WANNA_BE_IN_MY_GANG, CHEAT_NO_ONE_CAN_STOP_US, CHEAT_ROCKET_MAYHEM });
+    };
+
+    constexpr uint16 HOLD_TIME_MS = 1200; // 0x4B0
+
+    // Up: Tell the group to follow the player/recruit a ped (on a short press), disband the group (on a long press)
+    if (!FindPlayerVehicle(-1, false)) {
+        auto* const pd = GetPlayerData();
+        if (pad->GetGroupControlForward()) {
+            pd->m_nPadUpPressedInMilliseconds += TimeStepInMS();
+            if (GetPlayerData()->m_nPadUpPressedInMilliseconds == HOLD_TIME_MS && !GetPlayerData()->m_bGroupStuffDisabled) {
+                DisbandPlayerGroup();
+            }
+        } else {
+            if (pd->m_nPadUpPressedInMilliseconds != 0 && pd->m_nPadUpPressedInMilliseconds < HOLD_TIME_MS) {
+                if (   !target
+                    || !target->GetIsTypePed()
+                    || (target->AsPed()->m_nPedType != PED_TYPE_GANG2 && !IsRecruitCheatActive())
+                ) {
+                    TellGroupToStartFollowingPlayer(true, true, false);
+                } else if (!pd->m_bGroupStuffDisabled) {
+                    MakeThisPedJoinOurGroup(target->AsPed());
+                }
+            }
+            GetPlayerData()->m_nPadUpPressedInMilliseconds = 0;
+        }
+    }
+
+    if (GetPlayerData()->m_bGroupStuffDisabled) {
+        return;
+    }
+
+    // Down: Tell the group to stop following the player/recruit a ped (on a short press), disband the group (on a long press)
+    if (!FindPlayerVehicle(-1, false)) {
+        auto* const pd = GetPlayerData();
+        if (pad->GetGroupControlBack()) {
+            pd->m_nPadDownPressedInMilliseconds += TimeStepInMS();
+            if (GetPlayerData()->m_nPadDownPressedInMilliseconds >= HOLD_TIME_MS) {
+                DisbandPlayerGroup();
+            }
+        } else {
+            if (pd->m_nPadDownPressedInMilliseconds != 0 && pd->m_nPadDownPressedInMilliseconds < HOLD_TIME_MS) {
+                if (   target
+                    && target->GetIsTypePed()
+                    && target->AsPed()->m_nPedType == PED_TYPE_GANG2
+                ) {
+                    MakeThisPedJoinOurGroup(target->AsPed());
+                } else {
+                    TellGroupToStartFollowingPlayer(false, true, false);
+                }
+            }
+            GetPlayerData()->m_nPadDownPressedInMilliseconds = 0;
+        }
+    }
+
+    // Every 32 frames: Grove Street peds hate cops if the player is wanted (and don't otherwise)
+    if ((CTimer::GetFrameCounter() & 0x1F) == 6) {
+        auto* const pool = GetPedPool();
+        for (auto i = pool->GetSize(); i-- > 0;) {
+            auto* const ped = pool->GetAt(i);
+            if (!ped || ped->m_nPedType != PED_TYPE_GANG2) {
+                continue;
+            }
+            if ((int32)FindPlayerPed(-1)->GetPlayerData()->m_pWanted->m_WantedLevel > 0) {
+                ped->m_acquaintance.SetAsAcquaintance(ACQUAINTANCE_HATE, CPedType::GetPedFlag(PED_TYPE_COP));
+            } else {
+                ped->m_acquaintance.ClearAsAcquaintance(ACQUAINTANCE_HATE, CPedType::GetPedFlag(PED_TYPE_COP));
+            }
+        }
+    }
 }
 
 // 0x60D5A0
@@ -1945,7 +2032,127 @@ void CPlayerPed::SetupPlayerPed(int32 playerId) {
 
 // 0x60D850
 void CPlayerPed::ProcessWeaponSwitch(CPad* pad) {
-    plugin::CallMethod<0x60D850, CPlayerPed *, CPad*>(this, pad);
+    // NOTE: The slot indices are signed bytes in the original (`m_nChosenWeapon` is -1 when nothing's chosen)
+    const auto GetChosenSlot = [this] { return (int8)GetPlayerData()->m_nChosenWeapon; };
+    const auto SetChosenSlot = [this](int32 slot) { GetPlayerData()->m_nChosenWeapon = (uint8)(int8)slot; };
+    const auto GetActiveSlot = [this] { return (int8)m_nActiveWeaponSlot; };
+
+    const auto IsCamMode = [](std::initializer_list<eCamMode> modes) {
+        return rng::contains(modes, (eCamMode)TheCamera.GetActiveCam().m_nMode);
+    };
+
+    // Can the weapon in the slot be switched to?
+    const auto CanSwitchToSlot = [this](int32 slot) {
+        auto& weapon = m_aWeapons[slot];
+        return weapon.m_Type != WEAPON_UNARMED
+            && weapon.HasWeaponAmmoToBeUsed()
+            && (!CGameLogic::IsCoopGameGoingOn() || weapon.CanBeUsedFor2Player());
+    };
+
+    // Returns whether the second part (applying the chosen weapon) should be executed
+    const auto ChooseWeapon = [&]() -> bool {
+        if (CDarkel::FrenzyOnGoing() || m_pAttachedTo || GetIntelligence()->GetTaskJetPack()) {
+            return true;
+        }
+
+        // Cycle through the weapons using the pad
+        if (!m_pTargetedObject
+            && !GetPlayerData()->m_bFreeAiming
+            && !GetPlayerData()->m_bDontAllowWeaponChange
+            && !GetPlayerData()->m_bInVehicleDontAllowWeaponChange
+        ) {
+            if (pad->CycleWeaponRightJustDown()) {
+                if (!IsCamMode({ MODE_M16_1STPERSON, MODE_M16_1STPERSON_RUNABOUT, MODE_SNIPER, MODE_SNIPER_RUNABOUT, MODE_ROCKETLAUNCHER, MODE_ROCKETLAUNCHER_RUNABOUT, MODE_ROCKETLAUNCHER_HS, MODE_ROCKETLAUNCHER_RUNABOUT_HS, MODE_CAMERA })) {
+                    SetChosenSlot(GetActiveSlot() + 1);
+                    for (; GetChosenSlot() < 13; SetChosenSlot(GetChosenSlot() + 1)) {
+                        if (CanSwitchToSlot(GetChosenSlot())) {
+                            goto chosen;
+                        }
+                    }
+                    SetChosenSlot(0);
+                }
+            } else if (pad->CycleWeaponLeftJustDown()) {
+                if (!IsCamMode({ MODE_M16_1STPERSON, MODE_SNIPER, MODE_ROCKETLAUNCHER, MODE_ROCKETLAUNCHER_HS, MODE_CAMERA })) {
+                    SetChosenSlot(GetActiveSlot() - 1);
+                    if (GetChosenSlot() < 0) {
+                        SetChosenSlot(12);
+                    }
+                    while (GetChosenSlot() != 0) {
+                        if (CanSwitchToSlot(GetChosenSlot())) {
+                            goto chosen;
+                        }
+                        SetChosenSlot(GetChosenSlot() - 1);
+                        if (GetChosenSlot() < 0) {
+                            SetChosenSlot(12);
+                        }
+                    }
+                }
+            }
+        }
+    chosen:
+
+        // Out of ammo => switch to the next best weapon
+        auto& activeWeapon = m_aWeapons[GetActiveSlot()];
+        if (CWeaponInfo::GetWeaponInfo(activeWeapon.m_Type, eWeaponSkill::STD)->GetFireType() == WEAPON_FIRE_MELEE) {
+            return true;
+        }
+        if (pad->GetWeapon(this) && activeWeapon.m_Type == WEAPON_MINIGUN) {
+            return true;
+        }
+        if ((int32)activeWeapon.m_TotalAmmo > 0) {
+            return true;
+        }
+        if (IsCamMode({ MODE_M16_1STPERSON, MODE_SNIPER, MODE_ROCKETLAUNCHER, MODE_ROCKETLAUNCHER_HS })) {
+            return false;
+        }
+
+        if (activeWeapon.m_Type == WEAPON_DETONATOR && m_aWeapons[8].m_Type == WEAPON_REMOTE_SATCHEL_CHARGE) {
+            SetChosenSlot(8);
+        } else {
+            SetChosenSlot(GetActiveSlot() - 1);
+        }
+        for (; GetChosenSlot() >= 0; SetChosenSlot(GetChosenSlot() - 1)) {
+            const auto slot = GetChosenSlot();
+            if (slot == 5 && m_aWeapons[5].m_Type == WEAPON_BASEBALLBAT) {
+                return true;
+            }
+            // NOTE: The slots 16..18 don't exist
+            if ((int32)m_aWeapons[slot].m_TotalAmmo > 0 && slot != 0x12 && slot != 0x11 && slot != 0x10) {
+                return true;
+            }
+        }
+        SetChosenSlot(0);
+        return true;
+    };
+
+    if (!ChooseWeapon()) {
+        return;
+    }
+
+    // Apply the chosen weapon
+    if (GetChosenSlot() == GetActiveSlot()) {
+        return;
+    }
+
+    if (const auto* const gun = GetIntelligence()->GetTaskUseGun()) { // Original calls `GetTaskUseGun` for every check
+        switch (gun->GetLastGunCommand()) {
+        case eGunCommand::FIRE:
+        case eGunCommand::FIREBURST:
+            return;
+        case eGunCommand::RELOAD:
+            if (gun->m_Anim) {
+                return;
+            }
+            break;
+        default:
+            break;
+        }
+    }
+
+    RemoveWeaponAnims(GetActiveSlot(), -1000.f);
+    if (GetChosenSlot() != -1) {
+        MakeChangesForNewWeapon(m_aWeapons[GetChosenSlot()].m_Type);
+    }
 }
 
 // 0x60DC50

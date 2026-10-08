@@ -25,6 +25,9 @@
 #include "EventGroupEvent.h"
 #include "PedGroups.h"
 #include "TaskManager.h"
+#include "TaskComplexSmartFleeEntity.h"
+#include "EventScriptCommand.h"
+#include "CarCtrl.h"
 
 bool CPlayerPed::bDebugPlayerInvincible;
 bool CPlayerPed::bDebugTargeting;
@@ -77,7 +80,9 @@ void CPlayerPed::InjectHooks() {
     RH_ScopedOverloadedInstall(MakeChangesForNewWeapon, "", 0x60B460, void(CPlayerPed::*)(eWeaponType));
     RH_ScopedGlobalInstall(LOSBlockedBetweenPeds, 0x60B550);
     RH_ScopedInstall(Compute3rdPersonMouseTarget, 0x60B650);
+    RH_ScopedInstall(DrawTriangleForMouseRecruitPed, 0x60BA80);
     RH_ScopedInstall(DoesTargetHaveToBeBroken, 0x60C0C0);
+    RH_ScopedInstall(KeepAreaAroundPlayerClear, 0x60C1E0);
     RH_ScopedInstall(SetPlayerMoveBlendRatio, 0x60C520);
     RH_ScopedInstall(FindPedToAttack, 0x60C5F0);
     RH_ScopedInstall(ForceGroupToAlwaysFollow, 0x60C7C0);
@@ -1344,7 +1349,123 @@ void CPlayerPed::Compute3rdPersonMouseTarget(bool meleeWeapon) {
 
 // 0x60BA80
 void CPlayerPed::DrawTriangleForMouseRecruitPed() {
-    plugin::CallMethod<0x60BA80, CPlayerPed *>(this);
+    CPed* const target = m_p3rdPersonMouseTarget;
+    if (!target) {
+        return;
+    }
+
+    RwRenderStateSet(rwRENDERSTATEZWRITEENABLE,      RWRSTATE(FALSE));
+    RwRenderStateSet(rwRENDERSTATEZTESTENABLE,       RWRSTATE(TRUE));
+    RwRenderStateSet(rwRENDERSTATESRCBLEND,          RWRSTATE(rwBLENDSRCALPHA));
+    RwRenderStateSet(rwRENDERSTATEDESTBLEND,         RWRSTATE(rwBLENDINVSRCALPHA));
+    RwRenderStateSet(rwRENDERSTATEVERTEXALPHAENABLE, RWRSTATE(TRUE));
+    RwRenderStateSet(rwRENDERSTATETEXTURERASTER,     RWRSTATE(FALSE));
+    RwRenderStateSet(rwRENDERSTATEALPHATESTFUNCTION, RWRSTATE(rwALPHATESTFUNCTIONALWAYS));
+
+    // The x87 code keeps all of the following intermediates in extended precision, hence `double`
+
+    // Health bar color: red (low health) => green (full health)
+    double healthRatio = (double)target->m_fHealth / (double)target->m_fMaxHealth;
+    if (healthRatio > 1.0) { // NOTE: NaN doesn't take this branch
+        healthRatio = 1.0;
+    }
+    uint8 colR{}, colG{}, colB{};
+    if (healthRatio > 0.0) { // NOTE: NaN takes the "all zero" branch
+        const double inv = 1.0 - healthRatio;
+        colR = (uint8)(int32)(inv * 255.0 + healthRatio * 0.0);
+        colG = (uint8)(int32)(healthRatio * 255.0 + inv * 0.0);
+        colB = (uint8)(int32)(healthRatio * 0.0 + inv * 0.0);
+    }
+
+    // Size of the triangle depends on the distance to the ped
+    const auto& selfPos   = GetPosition();
+    const auto& targetPos = target->GetPosition();
+    const double dx = (double)targetPos.x - (double)selfPos.x;
+    const double dy = (double)targetPos.y - (double)selfPos.y;
+    const double dz = (double)targetPos.z - (double)selfPos.z;
+    double scale = std::sqrt(dz * dz + dy * dy + dx * dx) - 10.0; // 0x85862C
+    if (!(scale > 0.0)) {
+        scale = 0.0;
+    }
+    scale *= (double)0.02f; // 0x858B38
+    if (1.0 < scale) {
+        scale = 1.0;
+    }
+    scale = scale * (double)0.825f + (double)0.175f; // 0x86D1DC, 0x85A5C8
+
+    // Camera's right vector (as there might be no matrix, it's computed from the heading then)
+    double right_x, right_y;
+    float  right_z;
+    if (TheCamera.m_matrix) {
+        const auto& right = TheCamera.m_matrix->GetRight();
+        right_x = right.x;
+        right_y = right.y;
+        right_z = right.z;
+    } else {
+        const auto heading = TheCamera.m_placement.m_fHeading;
+        right_x = std::cos((double)heading);
+        right_y = std::sin((double)heading);
+        right_z = 0.f;
+    }
+    const float rx = (float)(right_x * scale);
+    const float ry = (float)(right_y * scale);
+    const float rz = (float)((double)right_z * scale);
+    const float k  = (float)(0.0 * scale); // Always 0
+
+    const float posZ = (float)((double)targetPos.z + 1.0);
+
+    CVector verts[3];
+    if (target->m_nPedType == PED_TYPE_GANG1) { // Triangle pointing downwards
+        verts[0] = CVector{ targetPos.x, targetPos.y, posZ };
+        verts[1] = CVector{
+            (targetPos.x - rx) + k,
+            k + (targetPos.y - ry),
+            (float)((double)(posZ - rz) + scale)
+        };
+        verts[2] = CVector{
+            (targetPos.x + rx) + k,
+            k + (targetPos.y + ry),
+            (float)(scale + (double)(posZ + rz))
+        };
+    } else { // Triangle pointing upwards
+        verts[0] = CVector{
+            targetPos.x + k,
+            k + targetPos.y,
+            (float)((double)posZ + scale)
+        };
+        verts[1] = CVector{ targetPos.x + rx, ry + targetPos.y, posZ + rz };
+        verts[2] = CVector{ targetPos.x - rx, targetPos.y - ry, posZ - rz };
+    }
+
+    // Move all of the vertices 1 unit towards the camera
+    const CVector camPos = TheCamera.GetPosition();
+    for (auto& vert : verts) {
+        CVector toCam = camPos - vert;
+        toCam.Normalise();
+        vert += toCam;
+    }
+
+    // Opaque in the tip, fully transparent at the base
+    const uint32 colRGB = ((uint32)colR << 16) | ((uint32)colG << 8) | (uint32)colB;
+    for (auto i = 0u; i < std::size(verts); i++) {
+        auto& vtx = TempBufferVertices.m_3d[i];
+        vtx.objVertex = { verts[i].x, verts[i].y, verts[i].z };
+        vtx.color     = (i == 0) ? (0xFF000000 | colRGB) : colRGB;
+        aTempBufferIndices[i] = (RxVertexIndex)i;
+    }
+
+    if (RwIm3DTransform(TempBufferVertices.m_3d, std::size(verts), nullptr, rwIM3D_VERTEXXYZ | rwIM3D_VERTEXRGBA)) {
+        RwIm3DRenderIndexedPrimitive(rwPRIMTYPETRILIST, aTempBufferIndices, std::size(verts));
+        RwIm3DEnd();
+    }
+
+    RwRenderStateSet(rwRENDERSTATETEXTURERASTER,     RWRSTATE(FALSE));
+    RwRenderStateSet(rwRENDERSTATEZWRITEENABLE,      RWRSTATE(TRUE));
+    RwRenderStateSet(rwRENDERSTATEZTESTENABLE,       RWRSTATE(TRUE));
+    RwRenderStateSet(rwRENDERSTATESRCBLEND,          RWRSTATE(rwBLENDSRCALPHA));
+    RwRenderStateSet(rwRENDERSTATEDESTBLEND,         RWRSTATE(rwBLENDINVSRCALPHA));
+    RwRenderStateSet(rwRENDERSTATEVERTEXALPHAENABLE, RWRSTATE(FALSE));
+    RwRenderStateSet(rwRENDERSTATEALPHATESTFUNCTION, RWRSTATE(rwALPHATESTFUNCTIONGREATER));
 }
 
 // 0x60C0C0
@@ -1372,7 +1493,74 @@ bool CPlayerPed::DoesTargetHaveToBeBroken(CEntity* target, CWeapon* weapon) {
 
 // 0x60C1E0
 void CPlayerPed::KeepAreaAroundPlayerClear() {
-    plugin::CallMethod<0x60C1E0, CPlayerPed *>(this);
+    // Get rid of the (game created) peds nearby
+    for (CEntity* const entity : GetIntelligence()->GetPedScanner().m_apEntities) {
+        auto* const ped = static_cast<CPed*>(entity);
+        if (!ped || !ped->IsCreatedBy(PED_GAME) || ped->bInVehicle || !ped->IsAlive()) {
+            continue;
+        }
+        if (CPedGroups::ms_groups[0].GetMembership().IsMember(ped)) { // NOTE: Not `GetPlayerGroup()`, the original hardcodes the group 0 (0xC09928)
+            continue;
+        }
+        if (!ped->GetIsOnScreen() || ped->bKeepTasksAfterCleanUp) {
+            ped->FlagToDestroyWhenNextProcessed();
+            continue;
+        }
+
+        // Already fleeing from us?
+        if (const auto* const task = ped->GetIntelligence()->FindTaskByType(TASK_COMPLEX_SMART_FLEE_ENTITY)) {
+            if (static_cast<const CTaskComplexSmartFleeEntity*>(task)->m_fleeFrom == this) {
+                continue;
+            }
+        }
+        // Is about to flee from something (Only the first script command event is checked)
+        if (const auto* const event = ped->GetEventGroup().GetEventOfType(EVENT_SCRIPT_COMMAND)) {
+            if (const auto* const task = static_cast<const CEventScriptCommand*>(event)->m_task) {
+                if (task->GetTaskType() == TASK_COMPLEX_SMART_FLEE_ENTITY) {
+                    continue;
+                }
+            }
+        }
+
+        auto* const task = new CTaskComplexSmartFleeEntity{ this, false, 1000.f, 100'000, 1'000, 1.f }; // 0x86F678, 0xC18CF0
+        task->m_moveState = PEDMOVE_WALK;
+        CEventScriptCommand event{ 3, task, false };
+        ped->GetEventGroup().Add(&event, false);
+    }
+
+    // Get rid of the vehicles nearby
+    const auto& selfPos = GetPosition();
+    const CVector center = (bInVehicle && m_pVehicle) // `selfPos` is used for the search (below) in any case
+        ? m_pVehicle->GetPosition()
+        : selfPos;
+
+    CEntity* nearby[6];
+    int16    numNearby;
+    CWorld::FindObjectsInRange(selfPos, 15.f, true, &numNearby, (int16)std::size(nearby), nearby, false, true, false, false, false);
+    for (int16 i = 0; i < numNearby; i++) {
+        auto* const veh = nearby[i]->AsVehicle();
+        if (veh->IsMissionVehicle()) {
+            continue;
+        }
+        if (veh->GetStatus() == STATUS_PLAYER || veh->GetStatus() == STATUS_FORCED_STOP) {
+            continue;
+        }
+
+        const auto& vehPos = veh->GetPosition();
+        const double dx = (double)vehPos.x - (double)center.x;
+        const double dy = (double)vehPos.y - (double)center.y;
+        const double dz = (double)vehPos.z - (double)center.z;
+        if (dz * dz + dy * dy + dx * dx > (double)25.f) { // 0x858FE8 - NOTE: NaN takes the other branch
+            veh->m_autoPilot.SetTempAction(TEMPACT_WAIT, 5000);
+        } else {
+            // BUG: Dereferences the matrix without checking if there's one
+            const auto& fwd = veh->m_matrix->GetForward();
+            const double dot = ((double)center.y - (double)vehPos.y) * (double)fwd.y
+                             + ((double)center.x - (double)vehPos.x) * (double)fwd.x;
+            veh->m_autoPilot.SetTempAction(dot > 0.0 ? TEMPACT_REVERSE : TEMPACT_GOFORWARD, 2000);
+        }
+        CCarCtrl::PossiblyRemoveVehicle(veh);
+    }
 }
 
 // 0x60C520

@@ -552,22 +552,22 @@ CVector CCarEnterExit::GetPositionToOpenCarDoor(const CVehicle* vehicle, int32 d
     switch (doorId) {
     case 8: { // RF
         const auto seat = mi->GetFrontSeatPosn();
-        local = { (seat.x + seatOffset) - (-doorOffset.x), seat.y - doorOffset.y, seat.z - doorOffset.z };
+        local = CVector{ (seat.x + seatOffset) - (-doorOffset.x), seat.y - doorOffset.y, seat.z - doorOffset.z };
         break;
     }
     case 9: { // RR
         const auto seat = mi->GetBackSeatPosn();
-        local = { (seat.x + seatOffset) - (-doorOffset.x), seat.y - doorOffset.y, seat.z - doorOffset.z };
+        local = CVector{ (seat.x + seatOffset) - (-doorOffset.x), seat.y - doorOffset.y, seat.z - doorOffset.z };
         break;
     }
     case 10: { // LF
         const auto seat = mi->GetFrontSeatPosn();
-        local = { -(seat.x + seatOffset) - doorOffset.x, seat.y - doorOffset.y, seat.z - doorOffset.z };
+        local = CVector{ -(seat.x + seatOffset) - doorOffset.x, seat.y - doorOffset.y, seat.z - doorOffset.z };
         break;
     }
     case 11: { // LR
         const auto seat = mi->GetBackSeatPosn();
-        local = { -(seat.x + seatOffset) - doorOffset.x, seat.y - doorOffset.y, seat.z - doorOffset.z };
+        local = CVector{ -(seat.x + seatOffset) - doorOffset.x, seat.y - doorOffset.y, seat.z - doorOffset.z };
         break;
     }
     default: {

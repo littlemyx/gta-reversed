@@ -31,6 +31,20 @@
 #include "TaskComplexEnterCarAsDriver.h"
 #include "RealTimeShadowManager.h"
 #include "WindModifiers.h"
+#include "Automobile.h"
+#include "CarEnterExit.h"
+#include "PedPlacement.h"
+#include "Pathfind.h"
+#include "World.h"
+#include "Fx.h"
+#include "FxSystem.h"
+#include "FxPrtMult.h"
+#include "EventSoundQuiet.h"
+#include "Weather.h"
+#include "CullZones.h"
+#include "Localisation.h"
+#include "General.h"
+#include "WaterLevel.h"
 
 void CPed::InjectHooks() {
     RH_ScopedVirtualClass(CPed, 0x86C358, 26);
@@ -63,17 +77,17 @@ void CPed::InjectHooks() {
     RH_ScopedOverloadedInstall(GiveWeapon, "", 0x5E6080, eWeaponSlot(CPed::*)(eWeaponType, uint32, bool));
     RH_ScopedInstall(TakeOffGoggles, 0x5E6010);
     RH_ScopedInstall(AddWeaponModel, 0x5E5ED0);
-    RH_ScopedInstall(PlayFootSteps, 0x5E57F0, { .Reversed = false });
-    RH_ScopedInstall(DoFootLanded, 0x5E5380, { .Reversed = false });
+    RH_ScopedInstall(PlayFootSteps, 0x5E57F0);
+    RH_ScopedInstall(DoFootLanded, 0x5E5380);
     RH_ScopedInstall(ClearAll, 0x5E5320);
     RH_ScopedInstall(CalculateNewOrientation, 0x5E52E0);
-    RH_ScopedInstall(CalculateNewVelocity, 0x5E4C50, { .Reversed = false });
+    RH_ScopedInstall(CalculateNewVelocity, 0x5E4C50);
     RH_ScopedInstall(SetCharCreatedBy, 0x5E47E0);
     RH_ScopedInstall(SetPedState, 0x5E4500);
     RH_ScopedInstall(GiveObjectToPedToHold, 0x5E4390);
     RH_ScopedInstall(ClearLookFlag, 0x5E1950);
     RH_ScopedInstall(WorkOutHeadingForMovingFirstPerson, 0x5E1A00);
-    RH_ScopedInstall(UpdatePosition, 0x5E1B10, { .Reversed = false });
+    RH_ScopedInstall(UpdatePosition, 0x5E1B10);
     RH_ScopedInstall(MakeTyresMuddySectorList<CPtrListSingleLink<CPhysical*>>, 0x6AE0D0, { .Reversed = false });
     RH_ScopedInstall(IsPedInControl, 0x5E3960);
     RH_ScopedInstall(RemoveWeaponModel, 0x5E3990);
@@ -112,7 +126,7 @@ void CPed::InjectHooks() {
     RH_ScopedInstall(RemoveWeaponForScriptedCutscene, 0x5E6550);
     RH_ScopedInstall(GiveWeaponAtStartOfFight, 0x5E8AB0);
     RH_ScopedInstall(ProcessBuoyancy, 0x5E1FA0);
-    RH_ScopedInstall(PositionPedOutOfCollision, 0x5E0820, { .Reversed = false });
+    RH_ScopedInstall(PositionPedOutOfCollision, 0x5E0820);
     RH_ScopedInstall(GrantAmmo, 0x5DF220);
     RH_ScopedInstall(GetWeaponSlot, 0x5DF200);
     RH_ScopedInstall(PositionAnyPedOutOfCollision, 0x5E13C0);
@@ -168,7 +182,7 @@ void CPed::InjectHooks() {
     RH_ScopedInstall(GetBikeRidingSkill, 0x5DF510);
     RH_ScopedInstall(SetPedPositionInCar, 0x5DF910);
     RH_ScopedInstall(SetRadioStation, 0x5DFD90);
-    RH_ScopedInstall(PositionAttachedPed, 0x5DFDF0, { .Reversed = false });
+    RH_ScopedInstall(PositionAttachedPed, 0x5DFDF0);
     RH_ScopedInstall(ResetGunFlashAlpha, 0x5DF4E0);
 
     RH_ScopedVMTInstall(SetModelIndex, 0x5E4880);
@@ -1360,7 +1374,69 @@ void CPed::SetRadioStation()
 */
 void CPed::PositionAttachedPed()
 {
-    ((void(__thiscall *)(CPed*))0x5DFDF0)(this);
+    if (!m_pAttachedTo) {
+        return;
+    }
+
+    CMatrix attachedMat{};
+    CVector offset;
+    if (m_pAttachedTo->GetModelIndex() == MODEL_FIRELA
+        && m_pAttachedTo->AsAutomobile()->m_aCarNodes[CAR_MISC_B]
+        && m_vecTurretOffset.z < -900.0f
+    ) {
+        // Attached to the fire truck ladder
+        attachedMat.Attach(RwFrameGetLTM(m_pAttachedTo->AsAutomobile()->m_aCarNodes[CAR_MISC_B]), false);
+        attachedMat.Detach();
+        offset = m_vecTurretOffset;
+        offset.z += 1000.0f;
+    } else {
+        attachedMat = m_pAttachedTo->GetMatrix(); // Allocates the matrix if needed
+        offset      = m_vecTurretOffset;
+    }
+
+    attachedMat.GetPosition() += attachedMat.TransformVector(offset);
+
+    const float heading = std::atan2(-attachedMat.GetForward().x, attachedMat.GetForward().y);
+
+    if (!IsPlayer()) {
+        float desiredHeading = heading;
+        switch (m_fTurretAngleA) {
+        case 1: desiredHeading = heading + HALF_PI; break;
+        case 2: desiredHeading = heading + PI;      break;
+        case 3: desiredHeading = heading - HALF_PI; break;
+        }
+        desiredHeading = CGeneral::LimitRadianAngle(desiredHeading);
+
+        m_fCurrentRotation = CGeneral::LimitRadianAngle(m_fCurrentRotation);
+
+        float diff = m_fCurrentRotation - desiredHeading;
+        if (diff > PI) {
+            diff -= TWO_PI;
+        } else if (diff < -PI) {
+            diff += TWO_PI;
+        }
+
+        if (diff > m_fTurretAngleB) {
+            m_fCurrentRotation = desiredHeading + m_fTurretAngleB;
+        } else if (diff < -m_fTurretAngleB) {
+            m_fCurrentRotation = desiredHeading - m_fTurretAngleB;
+        }
+
+        m_fCurrentRotation = CGeneral::LimitRadianAngle(m_fCurrentRotation);
+    }
+
+    CMatrix rotMat{};
+    rotMat.SetRotateZ(m_fCurrentRotation - heading);
+    attachedMat *= rotMat;
+    SetMatrix(attachedMat);
+
+    if (m_pAttachedTo->GetIsTypeVehicle() || m_pAttachedTo->GetIsTypeObject()) {
+        m_vecMoveSpeed = m_pAttachedTo->m_vecMoveSpeed;
+        m_vecTurnSpeed = m_pAttachedTo->m_vecTurnSpeed;
+    }
+
+    m_standingOnEntity = nullptr;
+    bIsStanding        = true;
 }
 
 /*!
@@ -1571,7 +1647,206 @@ bool CPed::CanSeeEntity(CEntity* entity, float limitAngle) {
 */
 bool CPed::PositionPedOutOfCollision(int32 exitDoor, CVehicle* vehicle, bool findClosestNode)
 {
-    return ((bool(__thiscall *)(CPed*, int32, CVehicle*, bool))0x5E0820)(this, exitDoor, vehicle, findClosestNode);
+    if (!vehicle) {
+        vehicle = m_pVehicle;
+        if (!vehicle) {
+            return false;
+        }
+    }
+
+    if (bDonePositionOutOfCollision) {
+        return true;
+    }
+
+    const auto& box = vehicle->GetColModel()->m_boundBox;
+    // Using the same indices as the original (`float*` into the bounding box)
+    const float boxMinX = box.m_vecMin.x, boxMinY = box.m_vecMin.y, boxMinZ = box.m_vecMin.z;
+    const float boxMaxX = box.m_vecMax.x, boxMaxY = box.m_vecMax.y, boxMaxZ = box.m_vecMax.z;
+
+    const CVector vehPos         = vehicle->GetPosition(); // Copy
+    const CVector origPedPos     = GetPosition();          // Copy
+    CVector       tempPos        = origPedPos;             // Last position that was tried (NOTE: Used even if it hasn't been set by us!)
+    const bool    usedCollision  = m_bUsesCollision;
+    bool          foundPos       = false;
+
+    CWorld::pIgnoreEntity = vehicle;
+    m_vecMoveSpeed        = CVector{};
+    physicalFlags.bForceHitReturnFalse = true;
+    m_bUsesCollision      = false;
+
+    const auto& vehMat = vehicle->GetMatrix();
+
+    // Is the current position (`tempPos`) valid?
+    const auto IsTempPosClear = [&] {
+        return !CheckCollision()
+            && CWorld::GetIsLineOfSightClear(vehPos, tempPos, true, false, false, true, false, false, false);
+    };
+
+    // Sets the position (the vehicle's matrix is not touched)
+    const auto TryPos = [&](const CVector& pos) {
+        tempPos = pos;
+        SetPosn(tempPos);
+        return IsTempPosClear();
+    };
+
+    if (vehicle->IsOnItsSide() && vehicle->m_nVehicleType != VEHICLE_TYPE_BIKE) {
+        // Try standing on top of the vehicle
+        if (TryPos(CVector{ vehPos.x, vehPos.y, (vehPos.z + boxMaxX) + 1.0f })) { // BUG: Uses `boxMaxX` as the height
+            foundPos = true;
+        }
+    } else if (exitDoor) {
+        // Try the position next to the door
+        if (TryPos(CCarEnterExit::GetPositionToOpenCarDoor(vehicle, exitDoor))) {
+            foundPos = true;
+        } else if (vehicle->m_nVehicleType == VEHICLE_TYPE_BIKE && (exitDoor == 10 || exitDoor == 11)) {
+            // Try the other side
+            if (TryPos(CCarEnterExit::GetPositionToOpenCarDoor(vehicle, exitDoor == 11 ? 9 : 8))) {
+                foundPos = true;
+            }
+        }
+    }
+
+    const float maxZ     = -boxMinZ < boxMaxZ ? boxMaxZ : -boxMinZ;
+    float       sideDist = std::abs(vehMat.GetRight().z) * maxZ + (boxMinX - 0.355f);
+    if (exitDoor == 8 || exitDoor == 9) {
+        sideDist = boxMaxX + 0.355f;
+    }
+
+    if (!foundPos) {
+        // Try moving the ped to the side of the vehicle (Perpendicular to its right vector)
+        const float dot  = (origPedPos.z - vehPos.z) * vehMat.GetRight().z
+                         + (origPedPos.y - vehPos.y) * vehMat.GetRight().y
+                         + (origPedPos.x - vehPos.x) * vehMat.GetRight().x;
+        const float dist = sideDist - dot;
+        foundPos = TryPos(CVector{
+            dist * vehMat.GetRight().x + origPedPos.x,
+            dist * vehMat.GetRight().y + origPedPos.y,
+            dist * vehMat.GetRight().z + origPedPos.z
+        });
+    }
+
+    if (!foundPos) {
+        // Search along the side of the vehicle
+        const float minY = boxMinY;
+        const float step = (boxMaxY - minY) * 0.33333334f; // 0x859040
+        for (int32 i = 0; i < 4 && !foundPos; i++) {
+            const float y = (float)i * step + minY;
+            const CVector pos{
+                (sideDist * vehMat.GetRight().x + vehPos.x) + y * vehMat.GetForward().x,
+                (sideDist * vehMat.GetRight().y + vehPos.y) + y * vehMat.GetForward().y,
+                (sideDist * vehMat.GetRight().z + vehPos.z) + y * vehMat.GetForward().z
+            };
+            foundPos = TryPos(pos);
+        }
+
+        if (!foundPos) { // In front of the vehicle
+            const float d = boxMinY - 0.355f;
+            foundPos = TryPos(CVector{
+                d * vehMat.GetForward().x + vehPos.x,
+                d * vehMat.GetForward().y + vehPos.y,
+                d * vehMat.GetForward().z + vehPos.z
+            });
+        }
+
+        if (!foundPos) { // Behind the vehicle
+            const float d = boxMaxY + 0.355f;
+            foundPos = TryPos(CVector{
+                d * vehMat.GetForward().x + vehPos.x,
+                d * vehMat.GetForward().y + vehPos.y,
+                d * vehMat.GetForward().z + vehPos.z
+            });
+        }
+
+        if (!foundPos) { // The other side of the vehicle (front)
+            const float d = boxMinY;
+            foundPos = TryPos(CVector{
+                (vehPos.x - sideDist * vehMat.GetRight().x) + d * vehMat.GetForward().x,
+                (vehPos.y - sideDist * vehMat.GetRight().y) + d * vehMat.GetForward().y,
+                (vehPos.z - sideDist * vehMat.GetRight().z) + d * vehMat.GetForward().z
+            });
+        }
+
+        if (!foundPos) { // The other side of the vehicle (back)
+            const float d = boxMaxY;
+            foundPos = TryPos(CVector{
+                (vehPos.x - sideDist * vehMat.GetRight().x) + d * vehMat.GetForward().x,
+                (vehPos.y - sideDist * vehMat.GetRight().y) + d * vehMat.GetForward().y,
+                (vehPos.z - sideDist * vehMat.GetRight().z) + d * vehMat.GetForward().z
+            });
+        }
+
+        if (!foundPos && vehicle->m_nVehicleType == VEHICLE_TYPE_AUTOMOBILE) { // On top of the vehicle
+            foundPos = TryPos(CVector{
+                boxMaxZ * vehMat.GetUp().x + vehPos.x,
+                boxMaxZ * vehMat.GetUp().y + vehPos.y,
+                (boxMaxZ * vehMat.GetUp().z + vehPos.z) + 1.0f
+            });
+        }
+    }
+
+    CWorld::pIgnoreEntity              = nullptr;
+    physicalFlags.bForceHitReturnFalse = false;
+    m_bUsesCollision                   = usedCollision;
+
+    if (foundPos) {
+        m_vecMoveSpeed = CVector{};
+        bDonePositionOutOfCollision = true;
+        m_vecTurnSpeed = CVector{};
+        if (vehicle->m_nVehicleType != VEHICLE_TYPE_BIKE || findClosestNode) {
+            vehicle->m_vecMoveSpeed = CVector{};
+            vehicle->m_vecMoveSpeed.z -= 0.05f;
+            vehicle->m_vecTurnSpeed = CVector{};
+        }
+        return true;
+    }
+
+    if (!findClosestNode) {
+        return false;
+    }
+
+    // Couldn't find a position around the vehicle, use the closest path node instead
+    const auto pedNode = ThePaths.FindNodeClosestToCoors(vehPos, PATH_TYPE_PED, 999999.88f, 0, 0, 0, 0, 0);
+    const auto vehNode = ThePaths.FindNodeClosestToCoors(vehPos, PATH_TYPE_VEH, 999999.88f, 0, 0, 0, 0, 0);
+
+    const bool hasPedNode = pedNode.IsAreaValid();
+    if (hasPedNode) {
+        tempPos = ThePaths.GetPathNode(pedNode)->GetPosition();
+    }
+
+    if (!vehNode.IsAreaValid()) {
+        if (!hasPedNode) {
+            return false;
+        }
+    } else {
+        const CVector vehNodePos = ThePaths.GetPathNode(vehNode)->GetPosition();
+        const CVector diff       = vehNodePos - vehPos;
+        const float   nodeDist   = std::sqrt(diff.y * diff.y + diff.x * diff.x);
+        const float   tempDist   = std::sqrt((tempPos.x - vehPos.x) * (tempPos.x - vehPos.x) + (tempPos.y - vehPos.y) * (tempPos.y - vehPos.y));
+        if (nodeDist < tempDist) {
+            tempPos = vehNodePos;
+        }
+    }
+
+    tempPos = CPedPlacement::FindZCoorForPed(tempPos).first;
+    SetPosn(tempPos);
+
+    // Face the same direction as the vehicle
+    const float heading = vehicle->m_matrix
+        ? std::atan2(-vehicle->m_matrix->GetForward().x, vehicle->m_matrix->GetForward().y)
+        : vehicle->m_placement.m_fHeading;
+    if (m_matrix) {
+        m_matrix->SetRotateZOnly(heading);
+    } else {
+        m_placement.m_fHeading = heading;
+    }
+
+    bDonePositionOutOfCollision = true;
+    m_vecMoveSpeed              = CVector{};
+    m_vecTurnSpeed              = CVector{};
+    vehicle->m_vecTurnSpeed     = CVector{};
+    vehicle->m_vecMoveSpeed     = CVector{};
+    vehicle->m_vecMoveSpeed.z  += 0.02f;
+    return true;
 }
 
 /*!
@@ -1690,7 +1965,135 @@ float CPed::WorkOutHeadingForMovingFirstPerson(float heading) {
 */
 void CPed::UpdatePosition()
 {
-    ((void(__thiscall *)(CPed*))0x5E1B10)(this);
+    if (CReplay::Mode == MODE_PLAYBACK) {
+        return;
+    }
+
+    const auto ApplyRotation = [this] {
+        if (m_matrix) {
+            m_matrix->SetRotateZOnly(m_fCurrentRotation);
+        } else {
+            m_placement.m_fHeading = m_fCurrentRotation;
+        }
+    };
+
+    if (!bIsStanding) {
+        if (!GetIntelligence()->GetTaskSwim() && !GetIntelligence()->GetTaskJetPack()) {
+            const auto task = GetTaskManager().GetTaskPrimary(TASK_PRIMARY_PRIMARY);
+            if (!task || task->GetTaskType() != TASK_COMPLEX_USE_SWAT_ROPE) {
+                return;
+            }
+        }
+        ApplyRotation();
+        return;
+    }
+
+    if (m_pAttachedTo) {
+        return;
+    }
+
+    ApplyRotation();
+
+    const auto standingOn = m_standingOnEntity;
+
+    float dx, dy; // Wanted change in velocity
+    if (!standingOn) {
+        if (g_surfaceInfos.IsSteepSlope(m_nContactSurface) && (field_578.x != 0.0f || field_578.y != 0.0f)) {
+            CVector2D slopeDir{ field_578.x, field_578.y };
+            slopeDir.Normalise();
+
+            dx = slopeDir.x * 0.02f;
+            m_vecMoveSpeed = CVector{ 0.0f, 0.0f, -0.001f };
+            dx += m_vecAnimMovingShift.x;
+            dy = slopeDir.y * 0.02f + m_vecAnimMovingShift.y;
+
+            const auto dot = slopeDir.y * dy + slopeDir.x * dx;
+            if (dot < 0.0f) {
+                dx -= slopeDir.x * dot;
+                dy -= dot * slopeDir.y;
+            }
+        } else {
+            dx = m_vecAnimMovingShift.x - m_vecMoveSpeed.x;
+            dy = m_vecAnimMovingShift.y - m_vecMoveSpeed.y;
+        }
+    } else {
+        float speedX, speedY;
+        if (!IsPlayer()
+            && standingOn->GetIsTypeVehicle()
+            && standingOn->AsVehicle()->m_nVehicleType == VEHICLE_TYPE_BOAT
+        ) {
+            // Calculate the speed at our position on the boat, plus a centripetal term
+            CVector relPos = GetPosition();
+            relPos.z -= 1.0f;
+            relPos -= standingOn->GetPosition();
+
+            const auto* const phys = standingOn->AsPhysical();
+            CVector speed = phys->m_vecMoveSpeed + CrossProduct(phys->m_vecTurnSpeed, relPos);
+            speed += (relPos * (phys->m_vecTurnSpeed.SquaredMagnitude() * -1.0f)) * CTimer::GetTimeStep();
+
+            speedX = speed.x;
+            speedY = speed.y;
+            m_vecMoveSpeed.z = speed.z;
+        } else {
+            const auto speed = standingOn->AsPhysical()->GetSpeed(field_56C);
+            speedX = speed.x;
+            speedY = speed.y;
+        }
+
+        dx = (speedX + m_vecAnimMovingShift.x) - m_vecMoveSpeed.x;
+        dy = (speedY + m_vecAnimMovingShift.y) - m_vecMoveSpeed.y;
+
+        m_fCurrentRotation += CTimer::GetTimeStep() * standingOn->AsPhysical()->m_vecTurnSpeed.z;
+        m_fAimingRotation  += CTimer::GetTimeStep() * standingOn->AsPhysical()->m_vecTurnSpeed.z;
+    }
+
+    // Limit the change in velocity
+    const auto standingOn2 = m_standingOnEntity;
+    if (!standingOn2
+        || standingOn2->AsPhysical()->m_pAttachedTo
+        || (standingOn2->AsPhysical()->physicalFlags.bDisableCollisionForce && !standingOn2->AsPhysical()->physicalFlags.bCollidable)
+    ) {
+        if (bFallenDown && !standingOn2) {
+            const auto mag = std::sqrt(dy * dy + dx * dx);
+            const auto maxMag = CTimer::GetTimeStep() * 0.01f;
+            if (mag > maxMag) {
+                const auto scale = maxMag / mag;
+                dx *= scale;
+                dy *= scale;
+            }
+        }
+    } else {
+        const auto mag = std::sqrt(dy * dy + dx * dx);
+
+        float maxMag;
+        bool  useMaxMag = true;
+        if (standingOn2->GetIsTypeVehicle()) {
+            if (m_nPedState == PEDSTATE_DIE) {
+                maxMag = CTimer::GetTimeStep() * 0.002f;
+            } else {
+                const auto vehType = standingOn2->AsVehicle()->m_nVehicleType;
+                if (vehType == VEHICLE_TYPE_BIKE && standingOn2->AsPhysical()->m_vecMoveSpeed.SquaredMagnitude() > 0.04f) {
+                    maxMag = CTimer::GetTimeStep() * 0.0002f;
+                } else {
+                    maxMag = mag;
+                    if (vehType == VEHICLE_TYPE_AUTOMOBILE) {
+                        maxMag = CTimer::GetTimeStep() * 0.01f;
+                    }
+                }
+            }
+        } else {
+            maxMag = CTimer::GetTimeStep() * 0.01f;
+        }
+
+        if (mag > maxMag) {
+            const auto scale = maxMag / mag;
+            dx *= scale;
+            dy *= scale;
+        }
+    }
+
+    m_vecMoveSpeed.x += dx;
+    m_vecMoveSpeed.y += dy;
 }
 
 /*!
@@ -2179,7 +2582,154 @@ void CPed::SetCharCreatedBy(ePedCreatedBy createdBy) {
  * @addr 0x5E4C50
  */
 void CPed::CalculateNewVelocity() {
-    ((void(__thiscall*)(CPed*))0x5E4C50)(this);
+    const auto timeStep = CTimer::GetTimeStep();
+
+    // Turn towards the aiming rotation
+    float diff{};
+    if (!bIsInTheAir && !bIsLanding
+        && m_nPedState != PEDSTATE_DIE && m_nPedState != PEDSTATE_DEAD && m_nPedState != PEDSTATE_ARRESTED
+    ) {
+        const float turnRate = m_fHeadingChangeRate * 0.017453292f /* 0x8595EC */ * timeStep;
+
+        m_fCurrentRotation = CGeneral::LimitRadianAngle(m_fCurrentRotation);
+
+        float targetRot = CGeneral::LimitRadianAngle(m_fAimingRotation);
+        if (targetRot > m_fCurrentRotation + PI) {
+            targetRot -= TWO_PI;
+        } else if (targetRot < m_fCurrentRotation - PI) {
+            targetRot += TWO_PI;
+        }
+        diff = targetRot - m_fCurrentRotation;
+
+        const auto isPlayer = IsPlayer();
+        if (isPlayer) {
+            m_fMoveAnim = 1.0f;
+        } else if (diff >= 0.0f && m_fMoveAnim < 0.0f) {
+            m_fMoveAnim = 0.1f;
+        } else if (diff < 0.0f && m_fMoveAnim > 0.0f) {
+            m_fMoveAnim = -0.1f;
+        }
+
+        bool turned{};
+        const float maxTurn = std::abs(m_fMoveAnim) * turnRate;
+        if (diff > maxTurn) {
+            m_fCurrentRotation += maxTurn;
+            m_fMoveAnim        += timeStep * 0.1f;
+            if (m_fMoveAnim > 1.0f) {
+                m_fMoveAnim = 1.0f;
+            }
+            turned = true;
+        } else if (-1.0f * maxTurn > diff) {
+            m_fCurrentRotation -= maxTurn;
+            m_fMoveAnim        -= timeStep * 0.1f;
+            if (m_fMoveAnim < -1.0f) {
+                m_fMoveAnim = -1.0f;
+            }
+            turned = true;
+        } else {
+            if (isPlayer || std::abs(diff) <= 0.1f * turnRate) {
+                m_fCurrentRotation += diff;
+                float anim = std::abs(diff) / turnRate;
+                if (anim < 0.1f) {
+                    anim = 0.1f;
+                }
+                m_fMoveAnim = anim;
+            } else {
+                m_fCurrentRotation += diff * 0.5f;
+                m_fMoveAnim        *= 0.5f;
+            }
+        }
+
+        if (isPlayer
+            || (m_nMoveState != PEDMOVE_STILL && m_nMoveState != PEDMOVE_NONE)
+            || !turned
+            || GetIntelligence()->GetTaskUseGun()
+            || GetIntelligence()->GetTaskFighting()
+        ) {
+            if (m_nMoveState == PEDMOVE_TURN_L || m_nMoveState == PEDMOVE_TURN_R) {
+                m_nMoveState = PEDMOVE_STILL;
+            }
+        } else {
+            m_nMoveState = diff <= 0.0f ? PEDMOVE_TURN_R : PEDMOVE_TURN_L;
+        }
+
+        m_pedIK.m_fBodyRoll = 0.0f;
+    }
+
+    // Slope handling
+    const auto& mat = GetMatrix();
+    const float fwdDot   = field_578.z * mat.GetForward().z + field_578.y * mat.GetForward().y + field_578.x * mat.GetForward().x;
+    const float rightDot = field_578.z * mat.GetRight().z   + field_578.y * mat.GetRight().y   + field_578.x * mat.GetRight().x;
+
+    const auto AsinClamped = [](float v) {
+        return std::asin(std::clamp(v, -1.0f, 1.0f));
+    };
+
+    const auto UpdateSlopeRollFromRight = [&] { m_pedIK.m_fSlopeRoll = AsinClamped(rightDot); };
+    const auto UpdateSlopePitchFromFwd  = [&] { m_pedIK.m_fSlopePitch = 0.75f * m_pedIK.m_fSlopePitch + (1.0f - 0.75f) * AsinClamped(fwdDot); };
+
+    if (!m_pedIK.bSlopePitch) {
+        if (m_nMoveState >= PEDMOVE_WALK && !IsPlayer()) {
+            if (std::abs(m_pedIK.m_fSlopeRoll) > 0.02f) {
+                m_pedIK.m_fSlopeRoll = std::pow(0.9f, timeStep) * m_pedIK.m_fSlopeRoll;
+            }
+            // BUG: The roll is zeroed regardless of the above
+            m_pedIK.m_fSlopeRoll = 0.0f;
+        }
+    } else {
+        float decay = 0.0f;
+        if (m_nPedState == PEDSTATE_DIE) {
+            UpdateSlopeRollFromRight();
+            UpdateSlopePitchFromFwd();
+        } else if (!bFallenDown
+            && (m_nMoveState < PEDMOVE_WALK || g_surfaceInfos.IsStairs(m_nContactSurface) || bPedHitWallLastFrame)
+        ) {
+            if (m_pedIK.m_fSlopePitch != 0.0f || m_pedIK.m_fSlopeRoll != 0.0f) {
+                decay = std::pow(0.9f, timeStep);
+            }
+
+            if (std::abs(m_pedIK.m_fSlopePitch) <= 0.01f) {
+                m_pedIK.m_fSlopePitch = 0.0f;
+            } else {
+                m_pedIK.m_fSlopePitch = decay * m_pedIK.m_fSlopePitch;
+            }
+
+            if (std::abs(m_pedIK.m_fSlopeRoll) > 0.02f) {
+                m_pedIK.m_fSlopeRoll = decay * m_pedIK.m_fSlopeRoll;
+            } else {
+                m_pedIK.m_fSlopeRoll = 0.0f;
+            }
+        } else if (m_nPedState == PEDSTATE_DIE || bFallenDown) {
+            UpdateSlopeRollFromRight();
+            UpdateSlopePitchFromFwd();
+        } else {
+            m_pedIK.m_fSlopeRoll = 0.0f;
+            UpdateSlopePitchFromFwd();
+        }
+    }
+
+    // Anim moving shift
+    const float fwdScale   = std::sqrt(std::max(0.0f, 1.0f - fwdDot * fwdDot));
+    const float rightScale = std::sqrt(std::max(0.0f, 1.0f - rightDot * rightDot));
+
+    m_vecAnimMovingShift = CVector2D{};
+
+    const float fwdShift = fwdScale * m_vecAnimMovingShiftLocal.y;
+    m_vecAnimMovingShift.x += fwdShift * mat.GetForward().x;
+    m_vecAnimMovingShift.y += fwdShift * mat.GetForward().y;
+
+    const float rightShift = rightScale * m_vecAnimMovingShiftLocal.x;
+    m_vecAnimMovingShift.x += rightShift * mat.GetRight().x;
+    m_vecAnimMovingShift.y += rightShift * mat.GetRight().y;
+
+    if (timeStep < 0.01f && !CTimer::bSlowMotionActive) {
+        m_vecAnimMovingShift.x *= 0.01f;
+        m_vecAnimMovingShift.y *= 0.01f;
+    } else {
+        const float invTimeStep = 1.0f / timeStep;
+        m_vecAnimMovingShift.x *= invTimeStep;
+        m_vecAnimMovingShift.y *= invTimeStep;
+    }
 }
 
 /*!
@@ -2205,36 +2755,197 @@ void CPed::ClearAll() {
     }
 }
 
+namespace {
+// NOTSA: Name by hand, original name unknown.
+// Byte at 0xB72C70: Read only by `SpawnFootDust` (0x5E37C0), never written by any code. If set, no dust particles are created.
+auto& s_bSuppressFootDust = StaticRef<bool>(0xB72C70);
+
+// Returns a random number in [0, 1]
+float GetRandomUnitFloat() {
+    return (float)CGeneral::GetRandomNumber() * RAND_MAX_FLOAT_RECIPROCAL;
+}
+
+// 0x5E3630 - Original is a custom calling convention (count: eax, pos: edi, ped: ebx)
+// Spawns small splash particles around `pos` (used while it's raining)
+void SpawnFootRainSplash(int32 count, const CVector& pos, CPed* ped) {
+    if (!ped->GetIsOnScreen()) {
+        return;
+    }
+
+    const auto& camPos = TheCamera.GetPosition();
+    const float dx     = pos.x - camPos.x;
+    const float dy     = pos.y - camPos.y;
+    if (dy * dy + dx * dx > 100.0f) {
+        return;
+    }
+
+    const FxPrtMult_c prt{ 1.0f, 1.0f, 1.0f, 0.1f, 0.15f, 0.0f, 0.15f };
+    for (int32 i = 0; i < count; i++) {
+        CVector particlePos = pos;
+        particlePos.x = (GetRandomUnitFloat() * 0.2f + particlePos.x) - 0.1f;
+        particlePos.y = (GetRandomUnitFloat() * 0.2f + particlePos.y) - 0.1f;
+
+        g_fx.m_Splash->AddParticle(particlePos, CVector{}, 0.0f, prt);
+        g_fx.m_Splash->AddParticle(particlePos, ped->GetMatrix().GetForward() * 1.5f, 0.0f, prt);
+    }
+}
+
+// 0x5E37C0 - Original is a custom calling convention (count: eax, pos: ebx, ped: esi)
+// Spawns dust particles around `pos` (if the surface the ped is standing on produces them)
+void SpawnFootDust(int32 count, const CVector& pos, CPed* ped) {
+    if (!ped->GetIsOnScreen()) {
+        return;
+    }
+
+    const auto& camPos = TheCamera.GetPosition();
+    const float dx     = pos.x - camPos.x;
+    const float dy     = pos.y - camPos.y;
+    if (dy * dy + dx * dx > 100.0f) {
+        return;
+    }
+
+    const FxPrtMult_c prt{ 1.0f, 1.0f, 1.0f, 0.1f, 0.15f, 0.0f, 0.15f };
+    if (!g_surfaceInfos.ProducesFootDust(ped->m_nContactSurface)) {
+        return;
+    }
+
+    for (int32 i = 0; i < count; i++) {
+        CVector particlePos = pos;
+        particlePos.x = (GetRandomUnitFloat() * 0.2f + particlePos.x) - 0.1f;
+        particlePos.y = (GetRandomUnitFloat() * 0.2f + particlePos.y) - 0.1f;
+
+        CVector vel;
+        vel.x = GetRandomUnitFloat() * 0.3f - 0.15f;
+        vel.y = GetRandomUnitFloat() * 0.3f - 0.15f;
+        vel.z = 0.0f;
+
+        if (!s_bSuppressFootDust) {
+            g_fx.m_SmokeII3expand->AddParticle(particlePos, vel, 0.0f, prt);
+        }
+    }
+}
+} // namespace
+
 /*!
  * @addr 0x5E5380
  */
 void CPed::DoFootLanded(bool leftFoot, uint8 arg1) {
-    ((void(__thiscall*)(CPed*, bool, uint8))0x5E5380)(this, leftFoot, arg1);
+    if (!bCalledPreRender || m_bDontUpdateHierarchy) {
+        return;
+    }
+
+    CVector footPos;
+    GetBonePosition(&footPos, leftFoot ? BONE_L_FOOT : BONE_R_FOOT, false);
+
+    const auto& mat   = GetMatrix();
+    const auto  fwd   = mat.GetForward(); // Copies
+    const auto  right = mat.GetRight();
+
+    // Move the position a bit forward, and down
+    footPos.z -= 0.1f;
+    footPos.x = fwd.x * 0.2f + footPos.x;
+    footPos.y = footPos.y + fwd.y * 0.2f;
+    footPos.z = fwd.z * 0.2f + footPos.z;
+
+    if (bDoBloodyFootprints && CLocalisation::Blood()) {
+        CShadows::AddPermanentShadow(
+            SHADOW_DEFAULT,
+            gpBloodPoolTex,
+            &footPos,
+            fwd.x * 0.26f, fwd.y * 0.26f,
+            right.x * 0.14f, right.y * 0.14f,
+            255, 200, 0, 0,
+            4.0f,
+            3000,
+            1.0f
+        );
+
+        // NOTE: `m_nDeathTimeMS` is reused as the footprint counter
+        if ((uint32)m_nDeathTimeMS > 20u) {
+            m_nDeathTimeMS -= 20;
+        } else {
+            m_nDeathTimeMS = 0;
+            bDoBloodyFootprints = false;
+        }
+    }
+
+    if (g_surfaceInfos.LeavesFootsteps(m_nContactSurface)) {
+        const auto& pedPos = GetPosition();
+        const auto& camPos = TheCamera.GetPosition();
+        if (std::sqrt((camPos.x - pedPos.x) * (camPos.x - pedPos.x) + (camPos.y - pedPos.y) * (camPos.y - pedPos.y)) < 10.0f) {
+            CShadows::AddPermanentShadow(
+                SHADOW_DEFAULT,
+                gpShadowPedTex,
+                &footPos,
+                fwd.x * -0.26f, fwd.y * -0.26f,
+                right.x * -0.1f, right.y * -0.1f,
+                120, 250, 250, 50,
+                4.0f,
+                2000u + (IsPlayer() ? 3000u : 0u),
+                1.0f
+            );
+        }
+    }
+
+    // Rain splashes and dust
+    if (CWeather::Rain > 0.1f && !CCullZones::CamNoRain() && !CCullZones::PlayerNoRain() && CGame::currArea == AREA_CODE_NORMAL_WORLD) {
+        SpawnFootRainSplash(4, footPos, this);
+    }
+    SpawnFootDust(4, footPos, this);
+
+    if (arg1) {
+        m_Wobble      = TWO_PI;
+        m_WobbleSpeed = (m_vecAnimMovingShift.y * m_vecAnimMovingShift.y + m_vecAnimMovingShift.x * m_vecAnimMovingShift.x) * 20.0f + 0.4f;
+    }
+
+    CVector splashPos;
+    if (physicalFlags.bSubmergedInWater) {
+        const auto pos = GetPosition(); // Copy
+        float waterZ{};
+        CWaterLevel::GetWaterLevel(pos.x, pos.y, pos.z + 1.5f, waterZ, true, nullptr);
+
+        const auto dx = CTimer::GetTimeStep() * m_vecMoveSpeed.x;
+        const auto dy = CTimer::GetTimeStep() * m_vecMoveSpeed.y;
+        splashPos.x = (dx + dx) + pos.x;
+        splashPos.y = (dy + dy) + pos.y;
+        splashPos.z = waterZ;
+
+        if (pos.z - 0.4f <= waterZ) {
+            return;
+        }
+    } else {
+        if (!g_surfaceInfos.IsShallowWater(m_nContactSurface)) {
+            return;
+        }
+
+        splashPos = CVector{ footPos.x, footPos.y, 0.3f + footPos.z };
+        splashPos += GetForwardVector() * -0.2f;
+    }
+
+    g_fx.TriggerFootSplash(splashPos);
+    m_pedAudio.AddAudioEvent(AE_PED_FOOTSTEP_LEFT, 0.0f, 1.0f, nullptr, SURFACE_WATER_SHALLOW, 0, 0);
 }
 
 /*!
 * @addr 0x5E57F0
 */
 void CPed::PlayFootSteps() {
-    return plugin::CallMethod<0x5E57F0>(this);
-    // Below code is kinda working.. kinda. I'm too lazy to fix it, good luck future me!
-    /* auto& anim = *RpAnimBlendClumpGetFirstAssociation(GetRpClump());
+    auto* const firstAssoc = RpAnimBlendClumpGetFirstAssociation(GetRpClump());
 
-    const auto IsWalkRunSprintAnim = [&] {
-        switch (anim.m_nAnimId) {
-        case ANIM_ID_WALK:
-        case ANIM_ID_RUN:
-        case ANIM_ID_SPRINT: {
-            return true;
-        }
-        }
-        return false;
-    };
+    float                  idleBlendTotal{}; // Blend of all non-walk animations
+    float                  walkBlendTotal{}; // Blend of all walk animations
+    CAnimBlendAssociation* walkAssoc{};
+    const uint8            isWalkRunSprintAnim = firstAssoc->m_AnimId == ANIM_ID_WALK
+                                              || firstAssoc->m_AnimId == ANIM_ID_RUN
+                                              || firstAssoc->m_AnimId == ANIM_ID_SPRINT;
+
+    const bool isSkater = m_pStats == &CPedStats::ms_apPedStats[(size_t)ePedStats::SKATER];
 
     if (bDoBloodyFootprints) {
-        if (m_nDeathTimeMS && m_nDeathTimeMS < 300) {
-            m_nDeathTimeMS -= 1;
-            if (!m_nDeathTimeMS) {
+        // NOTE: `m_nDeathTimeMS` is reused as the footprint counter
+        if (m_nDeathTimeMS != 0 && (uint32)m_nDeathTimeMS < 300u) {
+            m_nDeathTimeMS--;
+            if (m_nDeathTimeMS == 0) {
                 bDoBloodyFootprints = false;
             }
         }
@@ -2244,210 +2955,169 @@ void CPed::PlayFootSteps() {
         return;
     }
 
-    // 0x5E58FB, 0x5E5A0B, 0x5E5AB9, 0x5E5E64, 0x5E5D87
-    const auto DoProcessLanding = [this] {
-        if (bIsLanding) { // Redundant check.. probably inlined function?
-            if (const auto task = GetTaskManager().GetSimplestActiveTask(); task->GetTaskType() == TASK_SIMPLE_LAND) {
-                auto landedTask = task->As<CTaskSimpleLand>();
-                if (landedTask->RightFootLanded()) {
-                    DoFootLanded(false, true);
-                } else if (landedTask->RightFootLanded()) {
-                    DoFootLanded(true, true);
-                }
-            }
+    // 0x5E5E69
+    const auto ProcessLanding = [this]() {
+        if (!bIsLanding) {
+            return;
+        }
+        const auto task = GetTaskManager().GetSimplestActiveTask();
+        if (task->GetTaskType() != TASK_SIMPLE_LAND) {
+            return;
+        }
+        const auto landTask = static_cast<CTaskSimpleLand*>(task);
+        if (landTask->RightFootLanded()) {
+            DoFootLanded(false, true);
+        } else if (landTask->LeftFootLanded()) {
+            DoFootLanded(true, true);
         }
     };
 
-    // TODO: Is this inlined? What is this doing exactly? (Anim stuff)
-    float walkBlendTotal{}, idleBlendTotal{};
-    CAnimBlendAssociation* walkAssoc{};
-    auto* lastAssoc = &anim;
-    do { // 0x5E58A1
-        if (lastAssoc->m_nFlags & ANIMATION_WALK) {
-            walkBlendTotal += lastAssoc->m_fBlendAmount;
-            walkAssoc = lastAssoc;
-        } else {
-            if ((lastAssoc->m_nFlags & ANIMATION_ADD_TO_BLEND) == 0) {
-                if (lastAssoc->m_nAnimId != ANIM_ID_FIGHT_IDLE) {
-                    if (lastAssoc->m_nFlags & ANIMATION_IS_PARTIAL || bIsDucking) {
-                        idleBlendTotal += lastAssoc->m_fBlendAmount;
-                    }
-                }
-            }
+    for (auto* a = firstAssoc; a; a = RpAnimBlendGetNextAssociation(a)) {
+        if (a->m_Flags & ANIMATION_WALK) {
+            walkBlendTotal += a->m_BlendAmount;
+            walkAssoc       = a;
+        } else if (!(a->m_Flags & ANIMATION_DONT_ADD_TO_PARTIAL_BLEND)
+            && a->m_AnimId != ANIM_ID_FIGHT_IDLE
+            && ((a->m_Flags & ANIMATION_IS_PARTIAL) || !bIsDucking)
+        ) {
+            idleBlendTotal += a->m_BlendAmount;
         }
+    }
 
-        lastAssoc = RpAnimBlendGetNextAssociation(lastAssoc);
-    } while (lastAssoc);
-
-
-    if (!walkAssoc || walkBlendTotal <= 0.5f || idleBlendTotal >= 1.f) { // 0x5E58FB
-        DoProcessLanding();
+    if (!walkAssoc || walkBlendTotal <= 0.5f || idleBlendTotal >= 1.0f) {
+        ProcessLanding();
         return;
     }
 
-    auto* walkAssocHier = walkAssoc->m_pHierarchy;
+    const float curTime  = walkAssoc->m_CurrentTime;
+    const float timeStep = walkAssoc->m_TimeStep;
 
-    float minAnimTime = walkAssocHier->m_fTotalTime / 15.f;
-    float maxAnimTime = walkAssocHier->m_fTotalTime / 2.f + minAnimTime; // Weird.. Why adding `minAnimTime` to it?
-
+    const float totalTime = walkAssoc->m_BlendHier->m_fTotalTime;
+    float       minAnimTime = totalTime * (1.0f / 15.0f); // 0x863E0C
+    float       maxAnimTime = totalTime * 0.5f + minAnimTime;
     if (bIsDucking) {
         minAnimTime += 0.2f;
         maxAnimTime += 0.2f;
     }
 
-    if (m_pStats == &CPedStats::ms_apPedStats[STAT_BURGULAR_STATUS]) { // 0X5E5968
+    // Plays the footstep audio event + (ducking/sneaking adjusted)
+    const auto DoFootStepAE = [&](eAudioEvents event) {
+        float volume{}, speed{};
+        if (!bIsDucking) {
+            if (m_nMoveState == PEDMOVE_RUN) {
+                volume = -6.0f;
+                speed  = 1.1f;
+            } else if (m_nMoveState == PEDMOVE_SPRINT) {
+                speed = 1.2f;
+            } else {
+                volume = -12.0f;
+                speed  = 0.9f;
+            }
+            if (m_nAnimGroup == ANIM_GROUP_PLAYERSNEAK) {
+                volume -= 6.0f;
+                speed  -= 0.1f;
+            }
+        } else {
+            volume = -18.0f;
+            speed  = 0.8f;
+        }
+        if (m_pedAudio.m_bCanAddEvent) {
+            m_pedAudio.AddAudioEvent(event, volume, speed);
+        }
+    };
 
-        // NOTE: The number `15` seems to be reoccurring, it's used above as well.
-        const float animTimeMult = walkAssoc->m_nAnimId != AnimationId::ANIM_ID_WALK ? 8.f / 15.f : 5.f / 15.f;
+    if (isSkater) {
+        const float threshold = walkAssoc->m_AnimId == ANIM_ID_WALK ? 0.53333336f : 0.33333334f;
+        float adhesion  = 1.0f;
 
-        float adhesionMult{ 1.f };
         switch (g_surfaceInfos.GetAdhesionGroup(m_nContactSurface)) {
-        case eAdhesionGroup::ADHESION_GROUP_SAND: { // 0X5E599F
-            if (CGeneral::GetRandomNumber() % 64) {
-                m_vecAnimMovingShiftLocal *= 0.2f;
+        case ADHESION_GROUP_LOOSE:
+            if (CGeneral::GetRandomNumber() & 0x7F) {
+                m_vecAnimMovingShiftLocal.x *= 0.5f;
+                m_vecAnimMovingShiftLocal.y *= 0.5f;
             }
-
-            DoProcessLanding();
-            return;
-        }
-        case eAdhesionGroup::ADHESION_GROUP_WET: { // 0X5E59B1
-            m_vecAnimMovingShiftLocal *= 0.3f;
-            DoProcessLanding();
-            return;
-        }
-        case eAdhesionGroup::ADHESION_GROUP_LOOSE: { // 0x5E5A25
-            if (CGeneral::GetRandomNumber() % 128) {
-                m_vecAnimMovingShiftLocal *= 0.5f;
+            adhesion = 0.5f;
+            break;
+        case ADHESION_GROUP_SAND:
+            if (CGeneral::GetRandomNumber() & 0x3F) {
+                m_vecAnimMovingShiftLocal.x *= 0.2f;
+                m_vecAnimMovingShiftLocal.y *= 0.2f;
             }
-            adhesionMult = 0.5f;
+            ProcessLanding();
+            return;
+        case ADHESION_GROUP_WET:
+            m_vecAnimMovingShiftLocal.x *= 0.3f;
+            m_vecAnimMovingShiftLocal.y *= 0.3f;
+            ProcessLanding();
+            return;
+        default:
             break;
         }
-        }
 
-        if (m_pedAudio.m_iRadioStationScriptRequest) { // Move condition out here, but originally it was at 0x5E5AFA and 0x5E5A68
-            const auto DoAddSkateAE = [&, this](eAudioEvents audio) {
-                // 0x5E5AB4
-                m_pedAudio.AddAudioEvent(audio,
-                    CAEAudioUtility::AudioLog10(adhesionMult) * 20.f,
-                    walkAssoc->m_nAnimId == AnimationId::ANIM_ID_WALK ? 1.f : 0.75f
-                );
-            };
-
-            if (   walkAssoc->m_fCurrentTime <= 0.f
-                || walkAssoc->m_fCurrentTime - walkAssoc->m_fTimeStep > 0.f
-            ) {
-                if (adhesionMult > 0.2f
-                    && walkAssoc->m_fCurrentTime > animTimeMult
-                    && walkAssoc->m_fCurrentTime - walkAssoc->m_fTimeStep <= animTimeMult
-                ) {
-                    // 0x5E5B46
-                    DoAddSkateAE(eAudioEvents::AE_PED_SKATE_RIGHT);
-                }
-            } else {
-                // 0x5E5AB4
-                DoAddSkateAE(eAudioEvents::AE_PED_SKATE_LEFT);
+        const float skateSpeed = walkAssoc->m_AnimId == ANIM_ID_WALK ? 0.75f : 1.0f;
+        if (curTime > 0.0f && curTime - timeStep <= 0.0f) {
+            if (m_pedAudio.m_bCanAddEvent) {
+                m_pedAudio.AddAudioEvent(AE_PED_SKATE_LEFT, std::log10(adhesion) * 20.0f, skateSpeed);
+            }
+        } else if (adhesion > 0.2f && curTime > threshold && curTime - timeStep <= threshold) {
+            if (m_pedAudio.m_bCanAddEvent) {
+                m_pedAudio.AddAudioEvent(AE_PED_SKATE_RIGHT, std::log10(adhesion) * 20.0f, skateSpeed);
             }
         }
 
-        DoProcessLanding();
+        ProcessLanding();
         return;
     }
 
-    // 0x5E5E56 and 0x5E5D57.. Seems like inlined?
-    const auto DoFootStepAE = [&, this](bool isLeftFoot) {
-        if (m_pedAudio.m_iRadioStationScriptRequest) {
-            const auto DoAddFootStepAE = [&, this](float volume, float speed) {
-                m_pedAudio.AddAudioEvent(isLeftFoot ? eAudioEvents::AE_PED_FOOTSTEP_RIGHT : eAudioEvents::AE_PED_FOOTSTEP_LEFT, volume, speed);
-            };
-
-            if (bIsDucking) {
-                DoAddFootStepAE(-18.f, 0.8f);
-            } else {
-                const auto DoAddMovingFootStepAE = [&, this](float volume, float speed) {
-                    if (m_nAnimGroup == ANIM_GROUP_PLAYERSNEAK) {
-                        DoAddFootStepAE(volume - 6.f, speed - 0.1f);
-                    } else {
-                        DoAddFootStepAE(volume, speed);
-                    }
-                };
-
-                switch (m_nMoveState) {
-                case PEDMOVE_RUN:
-                    DoAddMovingFootStepAE(-6.f, 1.1f);
-                    break;
-                case PEDMOVE_SPRINT:
-                    DoAddMovingFootStepAE(0.f, 1.2f);
-                    break;
-                default:
-                    DoAddMovingFootStepAE(-12.f, 0.9f);
-                    break;
-                }
-            }
+    if (minAnimTime > curTime || curTime - timeStep >= minAnimTime) {
+        // Right foot
+        if (curTime >= maxAnimTime && curTime - timeStep < maxAnimTime) {
+            DoFootStepAE(AE_PED_FOOTSTEP_RIGHT);
+            DoFootLanded(false, isWalkRunSprintAnim);
         }
-        DoFootLanded(isLeftFoot, IsWalkRunSprintAnim());
-    };
+    } else {
+        // Left foot
+        if (IsPlayer() && m_pPlayerData) {
+            const bool wearingBalaclava = m_pPlayerData->m_pPedClothesDesc->GetIsWearingBalaclava();
+            const float ratio           = m_pPlayerData->m_fMoveBlendRatio;
 
-    // 0x5E5B50
-    if (   minAnimTime > walkAssoc->m_fCurrentTime
-        || walkAssoc->m_fCurrentTime - walkAssoc->m_fTimeStep >= minAnimTime
-    ) {
-        // 0x5E5D8E
-        if (walkAssoc->m_fCurrentTime >= (double)maxAnimTime
-            && walkAssoc->m_fCurrentTime - walkAssoc->m_fTimeStep < maxAnimTime)
-        {
-            // 0x5E592B - 0x5E5E56
-            DoFootStepAE(false); // Do right footstep AE
-            DoProcessLanding();
-            return;
-        }
-    }
-
-    if (IsPlayer()) { // 0x5E5B79
-        if (const auto pd = GetPlayerData()) {
-            const auto DoEventSoundQuiet = [this](float volume) {
-                // 0x5E5BCB
-                CEventSoundQuiet event{ this, volume, (uint32)-1, {0.f, 0.f, 0.f}};
-                GetEventGlobalGroup()->Add(&event);
-            };
-
-            const auto isWearingBalaclava = pd->m_pPedClothesDesc->GetIsWearingBalaclava();
-            switch (m_nMoveState) {
-            case PEDMOVE_JOG:   // 0x5E5BAD -- hehehe, 0x 5E5 - BAD
-            case PEDMOVE_RUN: { // 0x5E5BB6
-                // 0x5E5BDD
-                if (pd->m_fMoveBlendRatio >= 2.f) {
-                    DoEventSoundQuiet(isWearingBalaclava ? 55.f : 45.f);
+            float volume{};
+            bool  makeSound{};
+            if (m_nMoveState == PEDMOVE_JOG || m_nMoveState == PEDMOVE_RUN) {
+                if (ratio >= 2.0f) {
+                    volume    = wearingBalaclava ? 55.0f : 45.0f;
+                    makeSound = true;
                 } else {
-                    const auto DoEventSoundQuiet_MoveBlendFactor = [&](float moveBlendFactor) {
-                        // 0x5E5C31
-                        if (const auto volume = (pd->m_fMoveBlendRatio - 1.f) * moveBlendFactor + 30.f; volume > 0.f) {
-                            DoEventSoundQuiet(volume);
+                    bool calcVolume{};
+                    float factor{};
+                    if (wearingBalaclava && ratio > 1.1f) {
+                        calcVolume = true;
+                        factor     = 20.0f;
+                    } else if (ratio > 1.5f) {
+                        calcVolume = true;
+                        factor     = 15.0f;
+                    }
+                    if (calcVolume) {
+                        volume = (ratio - 1.0f) * factor + 30.0f;
+                        if (volume > 0.0f) {
+                            makeSound = true;
                         }
-                    };
-
-                    // 0x05E5BF3
-                    if (isWearingBalaclava && pd->m_fMoveBlendRatio > 1.1f) {
-                        DoEventSoundQuiet_MoveBlendFactor(20.f);
-                    } else if (pd->m_fMoveBlendRatio > 1.5f) {
-                        DoEventSoundQuiet_MoveBlendFactor(15.f);
                     }
                 }
-                break;
+            } else if (m_nMoveState == PEDMOVE_SPRINT) {
+                volume    = wearingBalaclava ? 65.0f : 55.0f;
+                makeSound = true;
             }
-            case PEDMOVE_SPRINT: { // 0x5E5BBB
-                DoEventSoundQuiet(isWearingBalaclava ? 65.f : 55.f);
-                break;
-            }
-            }
-            if (pd->m_pPedClothesDesc->GetIsWearingBalaclava()) {
+            if (makeSound) {
+                GetEventGlobalGroup()->Add(CEventSoundQuiet{ this, volume, (uint32)(-1), CVector{} });
             }
         }
+
+        DoFootStepAE(AE_PED_FOOTSTEP_LEFT);
+        DoFootLanded(true, isWalkRunSprintAnim);
     }
 
-    // 0x5E5C8D
-    DoFootStepAE(true); // Do left foot step AE
-    DoFootLanded(true, IsWalkRunSprintAnim());
-    DoProcessLanding(); */
+    ProcessLanding();
 }
 
 /*!

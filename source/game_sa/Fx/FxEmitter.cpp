@@ -196,17 +196,18 @@ FxEmitterPrt_c* FxEmitter_c::CreateParticle(const EmissionInfo_t& emissionInfo, 
 
     particle->m_MultColor = CRGBA{fxMults.m_Color};
 
-    particle->m_MultSize = fxMults.m_fSize;
-    particle->m_MultRot = fxMults.m_Rot;
+    // NOTSA: Fields are raw bytes (the original stores `(uint8)(value * 255)` / `(uint8)(brightness * 100)`)
+    particle->m_MultSize = (uint8)(int32)(fxMults.m_fSize * 255.0f);
+    particle->m_MultRot  = (uint8)(int32)(fxMults.m_Rot * 255.0f);
 
     particle->m_bLocalToSystem = createLocal;
 
     particle->m_RandR = CGeneral::GetRandomNumberInRange(0, 256);
     particle->m_RandG = CGeneral::GetRandomNumberInRange(0, 256);
     particle->m_RandB = CGeneral::GetRandomNumberInRange(0, 256);
-    particle->m_Brightness = brightness;
+    particle->m_Brightness = (uint8)(int32)(brightness * 100.0f);
 
-    particle->m_RotZ = -1;
+    particle->m_RotZ = 0xFF;
     particle->m_CurrentRotation = CGeneral::GetRandomNumberInRange(0.0f, 1.0f) * (emissionInfo.m_fRotationMaxAngle - emissionInfo.m_fRotationMinAngle) + emissionInfo.m_fRotationMinAngle;
 
     if (createLocal) {

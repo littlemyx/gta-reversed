@@ -21,23 +21,6 @@
 #include "General.h"
 
 namespace {
-//! NOTSA: Real layout of `FxEmitterPrt_c` (see 0x4A2580, 0x4A21D0, 0x4A2C40).
-//! `FxEmitterPrt_c` in FxEmitterPrt.h has a bogus second `ListItem_c` base that shifts every field after `Particle_c`,
-//! so it can't be used here.
-struct FxEmitterPrtRaw : Particle_c {
-    uint8 m_Color[4]; // R, G, B, A multipliers
-    uint8 m_MultSize;
-    uint8 m_MultRot;
-    uint8 m_RandR;
-    uint8 m_RandG;
-    uint8 m_RandB;
-    uint8 m_Brightness; // 0..100
-    uint8 m_RotZ;       // 255 = not set
-    bool  m_bLocalToSystem;
-    float m_CurrentRotation;
-};
-static_assert(sizeof(FxEmitterPrtRaw) == 0x3C);
-
 // Constants from the original exe
 constexpr float kInv255      = 1.0f / 255.0f;   // 0x859A3C
 constexpr float kInv128      = 1.0f / 128.0f;   // 0x858B88
@@ -93,7 +76,7 @@ void BuildDirectedBasis(RwMatrix& mat, CVector dir, CVector toCam, CVector& axis
 }
 
 //! Update particle's rotation, and calculate the (rotated) `right` and `up` vectors
-void ProcessParticleRotation(FxEmitterPrtRaw& prt, const RwMatrix& mat, const CVector& axis, CVector& outRight, CVector& outUp) {
+void ProcessParticleRotation(FxEmitterPrt_c& prt, const RwMatrix& mat, const CVector& axis, CVector& outRight, CVector& outUp) {
     if (prt.m_RotZ != 0xFF) {
         prt.m_CurrentRotation = (float)prt.m_RotZ + (float)prt.m_RotZ;
     }
@@ -121,7 +104,7 @@ void ProcessParticleRotation(FxEmitterPrtRaw& prt, const RwMatrix& mat, const CV
 }
 
 //! Apply per-particle random size variation + size multiplier
-void ProcessParticleSize(const FxEmitterPrtRaw& prt, RenderInfo_t& info) {
+void ProcessParticleSize(const FxEmitterPrt_c& prt, RenderInfo_t& info) {
     info.m_fSizeX = ((float)prt.m_RandR * kInv255 - 0.5f) * info.m_fSizeXBias + info.m_fSizeX;
     info.m_fSizeY = ((float)prt.m_RandG * kInv255 - 0.5f) * info.m_fSizeYBias + info.m_fSizeY;
     if (prt.m_MultSize < 0xFF) {
@@ -172,7 +155,7 @@ void RenderParticleQuad(const CVector& pos, const CVector& right, const CVector&
 }
 
 //! Calculate world position of the particle
-CVector GetParticleWorldPos(const FxEmitterPrtRaw& prt) {
+CVector GetParticleWorldPos(const FxEmitterPrt_c& prt) {
     if (!prt.m_bLocalToSystem) {
         return prt.m_Pos;
     }
@@ -242,7 +225,7 @@ void FxEmitterBP_c::RenderHeatHaze(RwCamera* camera, uint32 txdHashKey, float br
     const auto& camMat = *RwFrameGetMatrix(RwCameraGetFrame(camera));
 
     for (auto* it = m_Particles.GetHead(); it; it = m_Particles.GetNext(it)) {
-        auto* const prt = static_cast<FxEmitterPrtRaw*>(it);
+        auto* const prt = static_cast<FxEmitterPrt_c*>(it);
 
         const auto pos = GetParticleWorldPos(*prt);
 
@@ -298,7 +281,7 @@ void FxEmitterBP_c::RenderHeatHaze(RwCamera* camera, uint32 txdHashKey, float br
 
 // 0x4A21D0
 bool FxEmitterBP_c::UpdateParticle(float deltaTime, FxEmitterPrt_c* emitter) {
-    auto* const prt = reinterpret_cast<FxEmitterPrtRaw*>(emitter);
+    auto* const prt = emitter;
     auto* const sys = prt->m_System;
 
     const auto dt = (float)sys->m_nTimeMult * 0.001f * deltaTime;
@@ -445,8 +428,7 @@ void FxEmitterBP_c::Render(RwCamera* camera, uint32 txdHashKey, float brightness
     const auto hasHeatHazeInfo = IsFxInfoPresent(FX_INFO_HEATHAZE_DATA);
 
     if (doHeatHaze) {
-        // NOTSA: `m_bHasInfoHeatHazeData` is what `FxSystemBP_c::Load` sets, the original flag lives in the info manager
-        if (m_FxInfoManager.m_bHasHeatHazeParticleEmitter || m_bHasInfoHeatHazeData) {
+        if (m_FxInfoManager.m_bHasHeatHazeParticleEmitter) {
             RenderHeatHaze(camera, txdHashKey, brightness);
         }
         return;
@@ -487,7 +469,7 @@ void FxEmitterBP_c::Render(RwCamera* camera, uint32 txdHashKey, float brightness
     const auto& camMat = *RwFrameGetMatrix(RwCameraGetFrame(camera));
 
     for (auto* it = m_Particles.GetHead(); it; it = m_Particles.GetNext(it)) {
-        auto* const prt = static_cast<FxEmitterPrtRaw*>(it);
+        auto* const prt = static_cast<FxEmitterPrt_c*>(it);
 
         const auto pos = GetParticleWorldPos(*prt);
 
@@ -634,10 +616,10 @@ void FxEmitterBP_c::Render(RwCamera* camera, uint32 txdHashKey, float brightness
             if (255.0f < g) { g = 255.0f; }
             if (255.0f < b) { b = 255.0f; }
         }
-        if (prt->m_Color[0] < 0xFF) { r = (float)prt->m_Color[0] * kInv255 * r; }
-        if (prt->m_Color[1] < 0xFF) { g = (float)prt->m_Color[1] * kInv255 * g; }
-        if (prt->m_Color[2] < 0xFF) { b = (float)prt->m_Color[2] * kInv255 * b; }
-        if (prt->m_Color[3] < 0xFF) { a = (float)prt->m_Color[3] * kInv255 * a; }
+        if (prt->m_MultColor.r < 0xFF) { r = (float)prt->m_MultColor.r * kInv255 * r; }
+        if (prt->m_MultColor.g < 0xFF) { g = (float)prt->m_MultColor.g * kInv255 * g; }
+        if (prt->m_MultColor.b < 0xFF) { b = (float)prt->m_MultColor.b * kInv255 * b; }
+        if (prt->m_MultColor.a < 0xFF) { a = (float)prt->m_MultColor.a * kInv255 * a; }
 
         uint8 cr, cg, cb;
         if (info.m_bSelfLit) {

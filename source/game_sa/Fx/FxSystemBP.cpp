@@ -102,14 +102,14 @@ void FxSystemBP_c::Load(Const char* filename, FILESTREAM file, int32 version) {
         auto* emitter = new FxEmitterBP_c();
         assert(emitter);
 
-        emitter->m_bHasInfoFlatData = false;
-        emitter->m_bHasInfoHeatHazeData = false;
+        emitter->m_FxInfoManager.m_bHasFlatParticleEmitter = false;
+        emitter->m_FxInfoManager.m_bHasHeatHazeParticleEmitter = false;
 
         ReadField<void>(file);
 
         emitter->Load(file, version, aTextureNames[i]);
-        emitter->m_bHasInfoFlatData = emitter->IsFxInfoPresent(FX_INFO_FLAT_DATA);
-        emitter->m_bHasInfoHeatHazeData = emitter->IsFxInfoPresent(FX_INFO_HEATHAZE_DATA);
+        emitter->m_FxInfoManager.m_bHasFlatParticleEmitter = emitter->IsFxInfoPresent(FX_INFO_FLAT_DATA);
+        emitter->m_FxInfoManager.m_bHasHeatHazeParticleEmitter = emitter->IsFxInfoPresent(FX_INFO_HEATHAZE_DATA);
         m_Prims[i] = emitter;
     }
 

@@ -11,7 +11,7 @@ void CGarages::InjectHooks() {
     RH_ScopedInstall(Init, 0x447120);
     RH_ScopedInstall(Init_AfterRestart, 0x448B60);
     RH_ScopedInstall(Shutdown, 0x4471B0);
-    // RH_ScopedInstall(AddOne, 0x4471E0);
+    RH_ScopedInstall(AddOne, 0x4471E0);
     RH_ScopedInstall(CloseHideOutGaragesBeforeSave, 0x44A170);
     RH_ScopedInstall(PlayerArrestedOrDied, 0x449E60);
     RH_ScopedInstall(AllRespraysCloseOrOpen, 0x448B30);
@@ -26,7 +26,8 @@ void CGarages::InjectHooks() {
     RH_ScopedInstall(ActivateGarage, 0x447CD0);
     RH_ScopedInstall(DeActivateGarage, 0x447CB0);
     RH_ScopedInstall(SetTargetCarForMissionGarage, 0x447C40);
-    // RH_ScopedInstall(StoreCarInNearestImpoundingGarage, 0x44A3C0);
+    RH_ScopedInstall(StoreCarInNearestImpoundingGarage, 0x44A3C0);
+    RH_ScopedInstall(StopCarFromBlowingUp, 0x448890);
     RH_ScopedInstall(TriggerMessage, 0x447B80);
     RH_ScopedInstall(PrintMessages, 0x447790);
     RH_ScopedInstall(ChangeGarageType, 0x4476D0);
@@ -142,8 +143,61 @@ void CGarages::GivePlayerDetonator() {
 // 0x2	door goes in
 // 0x4	camera follow players
 // TODO...
-void CGarages::AddOne(float x1, float y1, float z1, float frontX, float frontY, float x2, float y2, float z2, uint8 type, uint32 a10, char* name, uint32 argFlags) {
-    return plugin::Call<0x4471E0, float, float, float, float, float, float, float, float, uint8, uint32, char*, uint32>(x1, y1, z1, frontX, frontY, x2, y2, z2, type, a10, name, argFlags);
+// NOTE: the original returns the index of the added garage in EAX (declared `void` in plugin-sdk); `a10` is unused
+int32 CGarages::AddOne(float x1, float y1, float z1, float frontX, float frontY, float x2, float y2, float z2, uint8 type, uint32 a10, char* name, uint32 argFlags) {
+    auto& garage = aGarages[NumGarages];
+
+    // Selects as `(a < b) ? a : b` / `(a > b) ? a : b` (FCOMP + JP / JNZ patterns, includes the NaN handling)
+    const auto Min = [](float a, float b) { return a < b ? a : b; };
+    const auto Max = [](float a, float b) { return a > b ? a : b; };
+
+    // The 4th corner is calculated at extended precision, stored as float
+    const float cornerX = (float)((double)frontX + x2 - x1);
+    const float minX    = Min(Min(x1, frontX), x2);
+    garage.m_fLeftCoord = minX < cornerX ? minX : cornerX;
+    const float maxX    = Max(Max(x1, frontX), x2);
+    garage.m_fRightCoord = maxX > cornerX ? maxX : cornerX;
+
+    const float cornerY  = (float)((double)frontY + y2 - y1);
+    const float minY     = Min(Min(y1, frontY), y2);
+    garage.m_fFrontCoord = minY < cornerY ? minY : cornerY;
+    const float maxY     = Max(Max(y1, frontY), y2);
+    garage.m_fBackCoord  = maxY > cornerY ? maxY : cornerY;
+
+    garage.m_vPosn.x = x1;
+    garage.m_vPosn.y = y1;
+    garage.m_vPosn.z = z1;
+    garage.m_vDirectionA.x = (float)((double)frontX - x1);
+    garage.m_vDirectionA.y = (float)((double)frontY - y1);
+    garage.m_vDirectionB.x = (float)((double)x2 - x1);
+    garage.m_vDirectionB.y = (float)((double)y2 - y1);
+    garage.m_fTopZ = z2;
+
+    // Normalize both directions. The X component is divided by the unrounded (extended precision) length,
+    // the Y component by the length rounded to float (as stored in the garage).
+    {
+        const double dx = garage.m_vDirectionA.x, dy = garage.m_vDirectionA.y;
+        const double lenExt = std::sqrt(dx * dx + dy * dy);
+        garage.m_fWidth = (float)lenExt;
+        garage.m_vDirectionA.x = (float)(dx / lenExt);
+        garage.m_vDirectionA.y = garage.m_vDirectionA.y / garage.m_fWidth;
+    }
+    {
+        const double dx = garage.m_vDirectionB.x, dy = garage.m_vDirectionB.y;
+        const double lenExt = std::sqrt(dx * dx + dy * dy);
+        garage.m_fHeight = (float)lenExt;
+        garage.m_vDirectionB.x = (float)(dx / lenExt);
+        garage.m_vDirectionB.y = garage.m_vDirectionB.y / garage.m_fHeight;
+    }
+
+    garage.m_nType         = (eGarageType)type;
+    garage.m_nOriginalType = (eGarageType)type;
+    strncpy(garage.m_anName, name, 7); // NOTE: doesn't null terminate on its own (as in the original)
+    garage.m_bDoorOpensUp          = (argFlags & 1) != 0;
+    garage.m_bDoorGoesIn           = (argFlags & 2) != 0;
+    garage.m_bCameraFollowsPlayer  = (argFlags & 4) != 0;
+
+    return NumGarages++;
 }
 
 // 0x44A170
@@ -513,17 +567,48 @@ bool CGarages::Save() {
 
 // 0x44A3C0
 void CGarages::StoreCarInNearestImpoundingGarage(CVehicle* vehicle) {
-    plugin::Call<0x44A3C0, CVehicle*>(vehicle);
+    int32 nearest{-1};
+    float nearestDist{99999.9f}; // 0x47C34FF3
+    for (uint32 i = 0; i < (uint32)NumGarages; i++) {
+        const auto& garage = aGarages[i];
+        if (garage.m_nType < IMPOUND_LS || garage.m_nType > IMPOUND_LV) {
+            continue;
+        }
+        const double dx   = (double)vehicle->GetPosition().x - garage.m_vPosn.x;
+        const double dy   = (double)vehicle->GetPosition().y - garage.m_vPosn.y;
+        const double dist = std::sqrt(dx * dx + dy * dy); // kept at extended precision for the comparison
+        if (dist < nearestDist) {
+            nearestDist = (float)dist;
+            nearest     = (int32)i;
+        }
+    }
+    if (nearest < 0) {
+        return;
+    }
+
+    auto* const cars = GetStoredCarsInSafehouse(FindSafeHouseIndexForGarageType(aGarages[nearest].m_nType));
+
+    // Number of occupied slots (of the first 3); if full, shift the cars down to free the last one
+    int32 slot = cars[0].HasCar() ? 1 : 0;
+    if (cars[1].HasCar()) {
+        slot++;
+    }
+    if (cars[2].HasCar()) {
+        slot++;
+    }
+    if (slot == 3) {
+        cars[0] = cars[1];
+        cars[1] = cars[2];
+        slot    = 2;
+    }
+    cars[slot].StoreCar(vehicle);
 }
 
 // unused
 // 0x448890
 void CGarages::StopCarFromBlowingUp(CAutomobile* vehicle) {
-    return plugin::Call<0x448890, CVehicle*>(vehicle);
-
-    // untested
     vehicle->m_fBurnTimer = 0.0f;
-    vehicle->m_fHealth = vehicle->m_fHealth <= 300.0f ? 300.0f : vehicle->m_fHealth;
+    vehicle->m_fHealth = vehicle->m_fHealth > 300.0f ? vehicle->m_fHealth : 300.0f; // 0x858FD8
 
     auto& manager = vehicle->m_damageManager;
     if (manager.GetEngineStatus() >= 275) {

@@ -48,7 +48,7 @@ public:
     static void Shutdown();
     static void Update();
 
-    static void AddOne(float x1, float y1, float z1, float frontX, float frontY, float x2, float y2, float z2, uint8 type, uint32 a10, char* name, uint32 argFlags);
+    static int32 AddOne(float x1, float y1, float z1, float frontX, float frontY, float x2, float y2, float z2, uint8 type, uint32 a10, char* name, uint32 argFlags);
     static void CloseHideOutGaragesBeforeSave();
     static void PlayerArrestedOrDied();
     static void AllRespraysCloseOrOpen(bool state);

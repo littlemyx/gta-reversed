@@ -11,11 +11,11 @@ void CInterestingEvents::InjectHooks() {
     RH_ScopedClass(CInterestingEvents);
     RH_ScopedCategoryGlobal();
 
-    RH_ScopedInstall(Constructor, 0x6023A0, { .Reversed = false });
-    RH_ScopedInstall(Destructor, 0x856880, { .Reversed = false });
-    RH_ScopedInstall(Add, 0x602590, { .Reversed = false });
-    RH_ScopedInstall(ScanForNearbyEntities, 0x605A30, { .Reversed = false });
-    RH_ScopedInstall(GetInterestingEvent, 0x6028A0, { .Reversed = false });
+    RH_ScopedInstall(Constructor, 0x6023A0);
+    // RH_ScopedInstall(Destructor, 0x856880, { .Reversed = false }); <-- original is an atexit-style cleanup of the global (takes no `this`), can't be hooked as a member
+    RH_ScopedInstall(Add, 0x602590);
+    RH_ScopedInstall(ScanForNearbyEntities, 0x605A30);
+    RH_ScopedInstall(GetInterestingEvent, 0x6028A0);
     RH_ScopedInstall(InvalidateEvent, 0x602960);
     RH_ScopedInstall(InvalidateNonVisibleEvents, 0x6029C0);
 }
@@ -84,63 +84,84 @@ CInterestingEvents* CInterestingEvents::Destructor() {
     return this;
 }
 
+// Common part of `Add` and `ScanForNearbyEntities`: Updates the (per-frame cached) scan area center
+static void UpdateScanCenter(CInterestingEvents& ie, const CVector& camPos) {
+    CPlayerPed* const player = FindPlayerPed();
+    const CVector     playerPos = player->GetPosition();
+
+    ie.vec148   = playerPos - camPos;
+    ie.vec148.z = 0.f;
+    if (ie.vec148.NormaliseAndMag() == 0.f) {
+        ie.vec148 = player->GetMatrix().GetForward();
+    }
+    ie.m_vecCenter = ie.vec148 * ie.m_fRadius + playerPos;
+}
+
 // 0x602590
 void CInterestingEvents::Add(CInterestingEvents::EType type, CEntity* entity) {
-    return plugin::CallMethod<0x602590, CInterestingEvents*, CInterestingEvents::EType, CEntity*>(this, type, entity);
-
-    if (!m_b1 || !entity)
+    if (!m_b1 || !entity) {
         return;
-
-    NOTSA_LOG_DEBUG("type={}, model={}", (int32)(type), entity->m_nModelIndex);
-
-    const auto& camPos = CCamera::GetActiveCamera().m_vecSource;
-    if (m_CurrentFrameCounter != CTimer::GetFrameCounter()) {
-        m_CurrentFrameCounter = CTimer::GetFrameCounter();
-
-        CPlayerPed* player = FindPlayerPed();
-        const auto& playerPos = player->GetPosition();
-        vec148 = playerPos - camPos;
-        vec148.z = 0.f;
-        if (vec148.NormaliseAndMag() == 0.f) {
-            vec148 = player->GetMatrix().GetForward();
-        }
-        m_vecCenter = (vec148 * m_fRadius) + playerPos;
     }
 
-    CVector2D distance = m_vecCenter - entity->GetPosition();
-    if (distance.SquaredMagnitude() > m_fRadius * m_fRadius)
-        return;
+    // NOTE: Original code made a copy of the camera position
+    const CVector camPos = CCamera::GetActiveCamera().m_vecSource;
 
-    CVector vec0 = vec148 * entity->GetPosition();
-    CVector vec1 = vec148 * camPos;
-    if (!m_b2 && vec0.ComponentwiseSum() - vec1.ComponentwiseSum() < 0.f)
-        return;
+    if (m_CurrentFrameCounter != CTimer::GetFrameCounter()) {
+        m_CurrentFrameCounter = CTimer::GetFrameCounter();
+        UpdateScanCenter(*this, camPos);
+    }
 
-    if (!CWorld::GetIsLineOfSightClear(camPos, entity->GetPosition(), true, false, false, false, false, true, false))
-        return;
+    // Is the entity inside of the scan area? (2D)
+    const CVector entityPos = entity->GetPosition();
+    {
+        const float dx = m_vecCenter.x - entityPos.x;
+        const float dy = m_vecCenter.y - entityPos.y;
+        if (dy * dy + dx * dx > m_fRadius * m_fRadius) {
+            return;
+        }
+    }
 
-    uint32 time = CTimer::GetTimeInMS();
-    for (auto index = 0; index < MAX_INTERESTING_EVENTS; index++) {
-        TInterestingEvent& event = g_InterestingEvents.m_Events[index];
-        if (event.entity) {
-            if (m_nPriorities[type] < m_nPriorities[event.type] && CTimer::GetTimeInMS() <= event.time + static_cast<uint32>(m_nDelays[event.type]))
-                continue;
-            if (CTimer::GetTimeInMS() <= m_nEndsOfTime[type] || m_nInterestingEvent == index)
-                continue;
-        } else {
+    // Is the entity in front of the camera?
+    if (m_b2) {
+        const float entityDot = (vec148.z * entityPos.z + vec148.y * entityPos.y) + vec148.x * entityPos.x;
+        const float camDot    = (camPos.y * vec148.y + camPos.z * vec148.z) + camPos.x * vec148.x;
+        if (entityDot + -camDot < 0.f) {
+            return;
+        }
+    }
+
+    if (!CWorld::GetIsLineOfSightClear(camPos, entityPos, true, false, false, false, false, true, false)) {
+        return;
+    }
+
+    const auto now          = CTimer::GetTimeInMS();
+    const auto newPriority  = m_nPriorities[type];
+    const bool endTimeOver  = now > m_nEndsOfTime[type];
+    for (int32 i = 0; i < MAX_INTERESTING_EVENTS; i++) {
+        auto& event = m_Events[i];
+
+        if (!event.entity) {
             event.type = 0;
+        } else if (event.type != 0) { // NOTE: Events of type 0 can always be replaced
+            const bool isExpired = now > (uint32)m_nDelays[event.type] + event.time;
+            if (newPriority < m_nPriorities[event.type] && !isExpired) {
+                continue;
+            }
+            if (!endTimeOver || m_nInterestingEvent == i) {
+                continue;
+            }
         }
 
         CEntity::SafeCleanUpRef(event.entity);
-        event.type = type;
+        event.type   = type;
         event.entity = entity;
-        event.time = time;
+        event.time   = now;
         entity->RegisterReference(&event.entity);
-        if (m_b8)
-            m_nEndsOfTime[type] = time;
-        else
-            m_nEndsOfTime[type] = time + (m_nDelays[type] >> 1);
-        break;
+
+        m_nEndsOfTime[type] = m_b8
+            ? now + (m_nDelays[type] >> 1)
+            : now;
+        return;
     }
 }
 
@@ -148,42 +169,29 @@ void CInterestingEvents::Add(CInterestingEvents::EType type, CEntity* entity) {
 void CInterestingEvents::ScanForNearbyEntities() {
     ZoneScoped;
 
-    return plugin::CallMethod<0x605A30, CInterestingEvents*>(this);
-
-    if (!m_b1)
+    if (!m_b1) {
         return;
+    }
 
-    const auto UPDATE_INTERVAL = 500;
-    if (CTimer::GetTimeInMS() - m_nLastScanTimeUpdate < UPDATE_INTERVAL) {
+    if (CTimer::GetTimeInMS() - m_nLastScanTimeUpdate < 500u) {
         return;
     }
     m_nLastScanTimeUpdate = CTimer::GetTimeInMS();
 
-    CPlayerPed* player = FindPlayerPed();
+    CPlayerPed* const player = FindPlayerPed();
     if (m_CurrentFrameCounter != CTimer::GetFrameCounter()) {
         m_CurrentFrameCounter = CTimer::GetFrameCounter();
-        const auto& camPos = CCamera::GetActiveCamera().m_vecSource, playerPos = player->GetPosition();
-        vec148 = playerPos - camPos;
-        vec148.z = 0.f;
-        if (vec148.NormaliseAndMag() == 0.f)
-            vec148 = player->GetMatrix().GetForward();
-        m_vecCenter = (vec148 * m_fRadius) + playerPos;
+        UpdateScanCenter(*this, CCamera::GetActiveCamera().m_vecSource);
     }
 
-    auto v0 = std::max(static_cast<int>(std::floor((m_vecCenter.x - m_fRadius) * 50.0f + 60.0f)), 0);
-    auto v1 = std::max(static_cast<int>(std::floor((m_vecCenter.y - m_fRadius) * 50.0f + 60.0f)), 0);
-    auto v2 = std::min(static_cast<int>(std::floor((m_vecCenter.x + m_fRadius) * 50.0f + 60.0f)), 119);
-    auto v3 = std::min(static_cast<int>(std::floor((m_vecCenter.y + m_fRadius) * 50.0f + 60.0f)), 119);
-
-    int32 startSectorX = CWorld::GetSectorX(m_vecCenter.x - m_fRadius);
-    int32 startSectorY = CWorld::GetSectorY(m_vecCenter.y - m_fRadius);
-    int32 endSectorX   = CWorld::GetSectorX(m_vecCenter.x + m_fRadius);
-    int32 endSectorY   = CWorld::GetSectorY(m_vecCenter.y + m_fRadius);
-
-    assert(v0 == startSectorX);
-    assert(v1 == startSectorY);
-    assert(v2 == endSectorX);
-    assert(v3 == endSectorY);
+    // NOTE: Not using `CWorld::GetSectorX/Y` here, as the original code clamps the values to the area
+    const auto GetSector = [](float coord) {
+        return (int32)std::floor(coord * 0.02f + 60.0f);
+    };
+    const int32 startSectorX = std::max(GetSector(m_vecCenter.x - m_fRadius), 0);
+    const int32 startSectorY = std::max(GetSector(m_vecCenter.y - m_fRadius), 0);
+    const int32 endSectorX   = std::min(GetSector(m_fRadius + m_vecCenter.x), 119);
+    const int32 endSectorY   = std::min(GetSector(m_fRadius + m_vecCenter.y), 119);
 
     CWorld::AdvanceCurrentScanCode();
     player->SetCurrentScanCode();
@@ -192,32 +200,24 @@ void CInterestingEvents::ScanForNearbyEntities() {
         for (int32 sectorX = startSectorX; sectorX <= endSectorX; ++sectorX) {
             auto& rs = CWorld::GetRepeatSector(sectorX, sectorY);
 
-            for (auto* const ped : rs.Peds) {
-                if (ped->IsScanCodeCurrent())
+            for (CPed* const ped : rs.Peds) {
+                if (ped->IsScanCodeCurrent()) {
                     continue;
-
+                }
                 ped->SetCurrentScanCode();
 
-                if (ped->m_nPedState == PEDSTATE_DEAD)
+                if (ped->m_nPedState == PEDSTATE_DEAD) {
                     continue;
-
-                CEntity* entity;
-                if (ped->bInVehicle) {
-                    entity = ped->m_pVehicle;
-                } else {
-                    entity = ped;
                 }
 
+                CEntity* const entity = ped->bInVehicle && ped->m_pVehicle
+                    ? (CEntity*)ped->m_pVehicle
+                    : ped;
+
                 switch (ped->m_nPedType) {
-                case PED_TYPE_COP:
-                    Add(INTERESTING_EVENT_5, entity);
-                    break;
-                case PED_TYPE_CRIMINAL:
-                    Add(INTERESTING_EVENT_6, entity);
-                    break;
-                case PED_TYPE_PROSTITUTE:
-                    Add(INTERESTING_EVENT_4, entity);
-                    break;
+                case PED_TYPE_COP:       Add(INTERESTING_EVENT_5, entity); break;
+                case PED_TYPE_CRIMINAL:  Add(INTERESTING_EVENT_6, entity); break;
+                case PED_TYPE_PROSTITUTE:Add(INTERESTING_EVENT_4, entity); break;
                 default:
                     if (IsPedTypeGang(ped->m_nPedType)) {
                         Add(INTERESTING_EVENT_7, entity);
@@ -226,23 +226,23 @@ void CInterestingEvents::ScanForNearbyEntities() {
                 }
             }
 
-            for (auto* const vehicle : rs.Vehicles) {
-                if (vehicle->IsScanCodeCurrent())
+            for (CVehicle* const vehicle : rs.Vehicles) {
+                if (vehicle->IsScanCodeCurrent()) {
                     continue;
-
+                }
                 vehicle->SetCurrentScanCode();
-                if (vehicle->physicalFlags.bRenderScorched != 0)
-                    continue;
 
-                if (!vehicle->m_pDriver)
+                if (vehicle->physicalFlags.bRenderScorched) {
                     continue;
+                }
+                if (!vehicle->m_pDriver) {
+                    continue;
+                }
 
-                auto style = vehicle->m_autoPilot.m_nCarDrivingStyle;
-                if (!style)
+                const auto style = vehicle->m_autoPilot.m_nCarDrivingStyle;
+                if (style == DRIVING_STYLE_STOP_FOR_CARS || style == DRIVING_STYLE_DRIVINGMODE_AVOIDCARS_STOPFORPEDS_OBEYLIGHTS) {
                     continue;
-
-                if (style == DRIVING_STYLE_DRIVINGMODE_AVOIDCARS_STOPFORPEDS_OBEYLIGHTS)
-                    continue;
+                }
 
                 Add(INTERESTING_EVENT_14, vehicle);
             }
@@ -252,39 +252,35 @@ void CInterestingEvents::ScanForNearbyEntities() {
 
 // 0x6028A0
 TInterestingEvent* CInterestingEvents::GetInterestingEvent() {
-    return plugin::CallMethodAndReturn<TInterestingEvent*, 0x6028A0, CInterestingEvents*>(this);
+    const auto now = CTimer::GetTimeInMS();
 
-    uint32 start = CTimer::GetTimeInMS(), end = CTimer::GetTimeInMS();
-    if (!m_b4 && m_nInterestingEvent != -1)
-        return nullptr;
-
-    TInterestingEvent* result = &m_Events[m_nInterestingEvent];
-    if (result->entity && CTimer::GetTimeInMS() < result->time + static_cast<uint32>(m_nDelays[result->type])) {
-        return result;
-    }
-
-    // update
-    uint8 prevPriority = 0;
-    int8 interesting = -1;
-    for (auto i = 0; i < MAX_INTERESTING_EVENTS; i++, start = end) {
-        TInterestingEvent& event = m_Events[i];
-        if (!event.entity)
-            continue;
-
-        if (static_cast<uint16>(CGeneral::GetRandomNumber()) >= 128) {
-            if (m_nPriorities[event.type] <= prevPriority)
-                continue;
-
-            if (start >= event.time + static_cast<uint32>(m_nDelays[result->type]))
-                continue;
+    // Is the current event still valid?
+    if (m_b4 && m_nInterestingEvent != -1) {
+        auto* const cur = &m_Events[m_nInterestingEvent];
+        if (cur->entity && now < (uint32)m_nDelays[cur->type] + cur->time) {
+            return cur;
         }
-
-        prevPriority = m_nPriorities[event.type];
-        interesting = i;
     }
-    m_nInterestingEvent = interesting;
 
-    return interesting == -1 ? nullptr : &m_Events[m_nInterestingEvent];
+    // Find a new one
+    int32 bestPriority = 0;
+    int32 best         = -1;
+    for (int32 i = 0; i < MAX_INTERESTING_EVENTS; i++) {
+        const auto& event = m_Events[i];
+        if (!event.entity) {
+            continue;
+        }
+        if (now >= (uint32)m_nDelays[event.type] + event.time) { // Expired
+            continue;
+        }
+        if ((int32)m_nPriorities[event.type] > bestPriority || (rand() & 0xFFFF) < 0x80) {
+            bestPriority = m_nPriorities[event.type];
+            best         = i;
+        }
+    }
+    m_nInterestingEvent = (int8)best;
+
+    return best == -1 ? nullptr : &m_Events[best];
 }
 
 // 0x602960

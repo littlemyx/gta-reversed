@@ -843,11 +843,12 @@ void CShadows::CastShadowEntityXYZ(CEntity* entity, CVector* posn, float frontX,
     entity->GetMatrix().CopyToRwMatrix(&param.entityMatrix);
     RwMatrixInvert(&param.invMatrix, &camMat);
 
-    const auto viewWindowY = shdwCam->m_pRwCamera->viewWindow.y;
+    // NOTE: Original reads the `x` component (offset 0x68), it's the same as `y` for shadow cameras though
+    const auto viewWindowX = shdwCam->m_pRwCamera->viewWindow.x;
     const RwV3d invScale{
-        -0.5f / (0.9f * viewWindowY),
-        -0.5f / (0.9f * viewWindowY),
-        1.0f / (viewWindowY * 0.8f)
+        -0.5f / (0.9f * viewWindowX),
+        -0.5f / (0.9f * viewWindowX),
+        1.0f / (viewWindowX * 0.8f)
     };
     RwMatrixScale(&param.invMatrix, &invScale, rwCOMBINEPOSTCONCAT);
     const RwV3d invTranslate{ 0.5f, 0.f, 0.f };
@@ -863,10 +864,12 @@ void CShadows::CastShadowEntityXYZ(CEntity* entity, CVector* posn, float frontX,
     RwMatrixInvert(&entityMatInv, &entityMat);
 
     // The shadow's sphere in the entity's space
+    // NOTE: Original ignores `posn` and uses the center of the real time shadow's base sphere instead
+    const auto& baseCenter = realTimeShadow->m_baseSphere.m_vecCenter;
     const RwV3d sphereCenterWorld{
-        frontX * -1.1f + posn->x,
-        posn->y + frontY * -1.1f,
-        posn->z - 0.5f
+        frontX * -1.1f + baseCenter.x,
+        baseCenter.y + frontY * -1.1f,
+        baseCenter.z - 0.5f
     };
     RwV3d sphereCenter;
     RwV3dTransformPoints(&sphereCenter, &sphereCenterWorld, 1, &entityMatInv);

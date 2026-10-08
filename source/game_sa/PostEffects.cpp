@@ -39,7 +39,7 @@ void CPostEffects::InjectHooks() {
     RH_ScopedInstall(ScriptResetForEffects, 0x7010F0);
     RH_ScopedInstall(UnderWaterRipple, 0x7039C0);
     RH_ScopedInstall(HeatHazeFXInit, 0x701450);
-    RH_ScopedInstall(HeatHazeFX, 0x701780, { .Reversed = false });
+    RH_ScopedInstall(HeatHazeFX, 0x701780);
     RH_ScopedInstall(IsVisionFXActive, 0x7034F0);
     RH_ScopedInstall(NightVision, 0x7011C0);
     RH_ScopedInstall(NightVisionSetLights, 0x7012E0);
@@ -51,10 +51,10 @@ void CPostEffects::InjectHooks() {
     RH_ScopedInstall(Fog, 0x704150);
     RH_ScopedInstall(CCTV, 0x702F40);
     RH_ScopedInstall(Grain, 0x7037C0);
-    RH_ScopedInstall(SpeedFX, 0x7030A0, { .Reversed = false });
+    RH_ScopedInstall(SpeedFX, 0x7030A0);
     RH_ScopedInstall(DarknessFilter, 0x702F00);
     RH_ScopedInstall(ColourFilter, 0x703650);
-    RH_ScopedInstall(Radiosity, 0x702080, { .Reversed = false });
+    RH_ScopedInstall(Radiosity, 0x702080);
     RH_ScopedInstall(SetSpeedFXManualSpeedCurrentFrame, 0x700BE0);
     RH_ScopedInstall(Render, 0x7046E0);
 }
@@ -540,7 +540,218 @@ void CPostEffects::HeatHazeFXInit() {
 
 // 0x701780
 void CPostEffects::HeatHazeFX(float fIntensity, bool bAlphaMaskMode) {
-    plugin::Call<0x701780, float, bool>(fIntensity, bAlphaMaskMode);
+    // Debug flag: if set, a single full screen quad (with only the red channel) is drawn instead of the haze quads
+    static auto& s_DebugDrawMask = StaticRef<bool>(0xC402BB);
+
+    auto* const camera = Scene.m_pRwCamera;
+    auto* const camRaster = RwCameraGetRaster(camera);
+    const bool  useStencil = RwRasterGetDepth(camRaster) != 16;
+
+    const auto SetStencilState = [&](RwRenderState state, int32 value) {
+        RwRenderStateSet(state, RWRSTATE(value));
+    };
+
+    if (bAlphaMaskMode) {
+        RwRGBA black{ 0, 0, 0, 0 };
+        RwCameraClear(camera, &black, rwCAMERACLEARZ);
+
+        ImmediateModeRenderStatesStore();
+        ImmediateModeRenderStatesSet();
+
+        RwRenderStateSet(rwRENDERSTATESRCBLEND,  RWRSTATE(rwBLENDSRCALPHA));
+        RwRenderStateSet(rwRENDERSTATEDESTBLEND, RWRSTATE(rwBLENDONE));
+        if (useStencil) {
+            SetStencilState(rwRENDERSTATESTENCILENABLE,      TRUE);
+            SetStencilState(rwRENDERSTATESTENCILFAIL,        rwSTENCILOPERATIONKEEP);
+            SetStencilState(rwRENDERSTATESTENCILZFAIL,       rwSTENCILOPERATIONKEEP);
+            SetStencilState(rwRENDERSTATESTENCILPASS,        rwSTENCILOPERATIONREPLACE);
+            SetStencilState(rwRENDERSTATESTENCILFUNCTIONREF, 0);
+            SetStencilState(rwRENDERSTATESTENCILFUNCTION,    rwSTENCILFUNCTIONALWAYS);
+        }
+        DrawQuad(0.0f, 0.0f, (float)RsGlobal.maximumWidth, (float)RsGlobal.maximumHeight, 0, 0, 0, 255, nullptr);
+        if (useStencil) {
+            SetStencilState(rwRENDERSTATESTENCILFUNCTIONREF, 1);
+        }
+        g_fx.Render(TheCamera.m_pRwCamera, true);
+        ImmediateModeRenderStatesReStore();
+    } else {
+        s_DebugDrawMask = false;
+    }
+
+    fIntensity = std::clamp(fIntensity, 0.0f, 1.0f);
+
+    HeatHazeFXInit();
+
+    RwRenderStateSet(rwRENDERSTATETEXTUREADDRESS, RWRSTATE(rwTEXTUREADDRESSCLAMP));
+    RwCameraEndUpdate(camera);
+    RwRasterPushContext(pRasterFrontBuffer);
+    RwRasterRenderFast(RwCameraGetRaster(camera), 0, 0);
+    RwRasterPopContext();
+    RsCameraBeginUpdate(camera);
+
+    uiTempBufferVerticesStored = 0;
+    uiTempBufferIndicesStored  = 0;
+    RwRenderStateSet(rwRENDERSTATEFOGENABLE,         RWRSTATE(FALSE));
+    RwRenderStateSet(rwRENDERSTATEVERTEXALPHAENABLE, RWRSTATE(TRUE));
+
+    const auto alpha = (int32)((float)m_HeatHazeFXIntensity * fIntensity);
+    uiTempBufferVerticesStored = 0;
+
+    if (useStencil) {
+        SetStencilState(rwRENDERSTATESTENCILPASS,        rwSTENCILOPERATIONKEEP);
+        SetStencilState(rwRENDERSTATESTENCILFUNCTIONREF, 1);
+        SetStencilState(rwRENDERSTATESTENCILFUNCTION,    rwSTENCILFUNCTIONEQUAL);
+    }
+    RwRenderStateSet(rwRENDERSTATEZTESTENABLE,  RWRSTATE(FALSE));
+    RwRenderStateSet(rwRENDERSTATEZWRITEENABLE, RWRSTATE(FALSE));
+    RwRenderStateSet(rwRENDERSTATETEXTURERASTER, RWRSTATE(pRasterFrontBuffer));
+    RwRenderStateSet(rwRENDERSTATETEXTUREFILTER, RWRSTATE(rwFILTERLINEAR));
+    RwRenderStateSet(rwRENDERSTATESRCBLEND,  RWRSTATE(rwBLENDSRCALPHA));
+    RwRenderStateSet(rwRENDERSTATEDESTBLEND, RWRSTATE(rwBLENDINVSRCALPHA));
+
+    const auto  frontRaster = pRasterFrontBuffer;
+    const auto  screenZ     = RwIm2DGetNearScreenZ();
+    const auto  recipNear   = 1.0f / RwCameraGetNearClipPlane(camera);
+
+    if (!s_DebugDrawMask) {
+        const auto scanX   = m_HeatHazeFXScanSizeX;
+        const auto scanY   = m_HeatHazeFXScanSizeY;
+        const auto renderX = m_HeatHazeFXRenderSizeX;
+        const auto renderY = m_HeatHazeFXRenderSizeY;
+        const auto halfDX  = (renderX - scanX) / 2;
+        const auto halfDY  = (renderY - scanY) / 2;
+        const uint32 color = ((uint32)alpha << 24) | 0xFFFFFF;
+
+        for (auto i = 0; i < (int32)hpX.size(); i++) {
+            auto sx = hpX[i];
+            auto sy = hpY[i];
+            auto px = sx - halfDX;
+            auto py = sy - halfDY;
+
+            if (const auto shift = m_HeatHazeFXRandomShift; shift > 0) {
+                px += (int32)((float)(CGeneral::GetRandomNumber() & 0xFFFF) * (1.0f / 32768.0f) * (float)(shift - -shift)) + -shift;
+                py += (int32)((float)(CGeneral::GetRandomNumber() & 0xFFFF) * (1.0f / 32768.0f) * (float)(m_HeatHazeFXRandomShift - -m_HeatHazeFXRandomShift)) + -m_HeatHazeFXRandomShift;
+            }
+
+            const auto rasterW = RwRasterGetWidth(frontRaster);
+            const auto rasterH = RwRasterGetHeight(frontRaster);
+            if (px < 0) {
+                sx += halfDX;
+                px = 0;
+            }
+            if (px > rasterW - renderX) {
+                sx -= halfDX;
+                px = rasterW - renderX;
+            }
+            if (py < 0) {
+                sy += halfDY;
+                py = 0;
+            }
+            if (py > rasterH - renderY) {
+                sy -= halfDY;
+                py = rasterH - renderY;
+            }
+
+            const auto v  = (int32)uiTempBufferVerticesStored;
+            auto*      vb = &aRadiosityVertexBuffer[v];
+
+            vb[0].x = (float)px;
+            vb[0].y = (float)py;
+            vb[0].u = (float)sx / (float)rasterW;
+            vb[0].v = (float)sy / (float)rasterH;
+
+            vb[1].x = (float)(px + renderX);
+            vb[1].y = (float)py;
+            vb[1].u = (float)(sx + scanX) / (float)rasterW;
+            vb[1].v = (float)sy / (float)rasterH;
+
+            vb[2].x = (float)px;
+            vb[2].y = (float)(py + renderY);
+            vb[2].u = (float)sx / (float)rasterW;
+            vb[2].v = (float)(sy + scanY) / (float)rasterH;
+
+            vb[3].x = (float)(px + renderX);
+            vb[3].y = (float)(py + renderY);
+            vb[3].u = (float)(sx + scanX) / (float)rasterW;
+            vb[3].v = (float)(sy + scanY) / (float)rasterH;
+
+            for (auto j = 0; j < 4; j++) {
+                vb[j].z             = screenZ;
+                vb[j].rhw           = recipNear;
+                vb[j].emissiveColor = color;
+            }
+
+            const auto idx = (int32)uiTempBufferIndicesStored;
+            aTempBufferIndices[idx + 0] = (RxVertexIndex)(v + 0);
+            aTempBufferIndices[idx + 1] = (RxVertexIndex)(v + 2);
+            aTempBufferIndices[idx + 2] = (RxVertexIndex)(v + 1);
+            aTempBufferIndices[idx + 3] = (RxVertexIndex)(v + 1);
+            aTempBufferIndices[idx + 4] = (RxVertexIndex)(v + 2);
+            aTempBufferIndices[idx + 5] = (RxVertexIndex)(v + 3);
+            uiTempBufferIndicesStored += 6;
+            uiTempBufferVerticesStored += 4;
+
+            // Move this haze quad
+            hpY[i] -= (int32)(CTimer::GetTimeStep() * 0.5f * (float)hpS[i]);
+            if (hpY[i] < 0) {
+                hpX[i] = (int32)((float)(CGeneral::GetRandomNumber() & 0xFFFF) * (1.0f / 32768.0f) * (float)(RwRasterGetWidth(pRasterFrontBuffer) - scanX));
+                hpY[i] = RwRasterGetHeight(pRasterFrontBuffer) - scanY;
+                hpS[i] = (int32)((float)(CGeneral::GetRandomNumber() & 0xFFFF) * (1.0f / 32768.0f) * (float)(m_HeatHazeFXSpeedMax - m_HeatHazeFXSpeedMin)) + m_HeatHazeFXSpeedMin;
+            }
+        }
+    } else {
+        // Debug: Draw the whole screen with only the red channel (the alpha mask)
+        const auto v  = (int32)uiTempBufferVerticesStored;
+        auto*      vb = &aRadiosityVertexBuffer[v];
+        const uint32 color = ((uint32)alpha << 24) | 0xFF0000;
+
+        vb[0].x = 0.0f;
+        vb[0].y = 0.0f;
+        vb[1].x = (float)RwRasterGetWidth(frontRaster);
+        vb[1].y = 0.0f;
+        vb[2].x = 0.0f;
+        vb[2].y = (float)RwRasterGetHeight(frontRaster);
+        vb[3].x = (float)RwRasterGetWidth(frontRaster);
+        vb[3].y = (float)RwRasterGetHeight(frontRaster);
+        for (auto j = 0; j < 4; j++) {
+            vb[j].z             = screenZ;
+            vb[j].rhw           = recipNear;
+            vb[j].emissiveColor = color;
+        }
+
+        const auto idx = (int32)uiTempBufferIndicesStored;
+        aTempBufferIndices[idx + 0] = (RxVertexIndex)(v + 0);
+        aTempBufferIndices[idx + 1] = (RxVertexIndex)(v + 2);
+        aTempBufferIndices[idx + 2] = (RxVertexIndex)(v + 1);
+        aTempBufferIndices[idx + 3] = (RxVertexIndex)(v + 1);
+        aTempBufferIndices[idx + 4] = (RxVertexIndex)(v + 2);
+        aTempBufferIndices[idx + 5] = (RxVertexIndex)(v + 3);
+        uiTempBufferVerticesStored += 4;
+        uiTempBufferIndicesStored += 6;
+    }
+
+    RwRenderStateSet(rwRENDERSTATETEXTURERASTER, RWRSTATE(pRasterFrontBuffer));
+    if (uiTempBufferVerticesStored != 0) {
+        RwIm2DRenderIndexedPrimitive(
+            rwPRIMTYPETRILIST,
+            reinterpret_cast<RwIm2DVertex*>(aRadiosityVertexBuffer),
+            uiTempBufferVerticesStored,
+            aTempBufferIndices,
+            uiTempBufferIndicesStored
+        );
+    }
+    uiTempBufferVerticesStored = 0;
+
+    RwRenderStateSet(rwRENDERSTATEFOGENABLE,         RWRSTATE(FALSE));
+    RwRenderStateSet(rwRENDERSTATEZTESTENABLE,       RWRSTATE(TRUE));
+    RwRenderStateSet(rwRENDERSTATEZWRITEENABLE,      RWRSTATE(TRUE));
+    RwRenderStateSet(rwRENDERSTATETEXTURERASTER,     RWRSTATE(NULL));
+    RwRenderStateSet(rwRENDERSTATEVERTEXALPHAENABLE, RWRSTATE(FALSE));
+    RwRenderStateSet(rwRENDERSTATESRCBLEND,          RWRSTATE(rwBLENDSRCALPHA));
+    RwRenderStateSet(rwRENDERSTATEDESTBLEND,         RWRSTATE(rwBLENDINVSRCALPHA));
+    if (useStencil) {
+        SetStencilState(rwRENDERSTATESTENCILENABLE, FALSE);
+    }
 }
 
 // 0x7034F0
@@ -841,7 +1052,104 @@ void CPostEffects::Grain(int32 strengthMask, bool update) {
 
 // 0x7030A0
 void CPostEffects::SpeedFX(float speed) {
-    plugin::Call<0x7030A0, float>(speed);
+    // 0x8D5190: { threshold, count, size, jitter }[7]
+    struct tSpeedFXLevel {
+        float threshold;
+        int32 count;
+        int32 size;
+        int32 jitter;
+    };
+    static auto& s_Levels = StaticRef<std::array<tSpeedFXLevel, 7>>(0x8D5190);
+
+    const auto lookDir       = TheCamera.GetActiveCam().m_nDirectionWasLooking;
+    const bool isLookingLeft = lookDir == 1;
+    const bool isLookingRight = lookDir == 2;
+
+    int32 count{}, size{}, jitter{};
+    for (auto i = (int32)s_Levels.size() - 1; i >= 0; i--) {
+        if (speed >= s_Levels[i].threshold) {
+            count  = s_Levels[i].count;
+            size   = s_Levels[i].size;
+            jitter = s_Levels[i].jitter;
+            break;
+        }
+    }
+    if (isLookingLeft || isLookingRight) {
+        size   = size / 2;
+        jitter = 0;
+    }
+    if (count <= 0) {
+        return;
+    }
+
+    ImmediateModeRenderStatesStore();
+    ImmediateModeRenderStatesSet();
+
+    const float fU1 = ms_imf.fFrontBufferU1;
+    const float fV1 = ms_imf.fFrontBufferV1;
+    const float fU2 = ms_imf.fFrontBufferU2;
+    const float fV2 = ms_imf.fFrontBufferV2;
+
+    float uJit1{}, uJit2{}, vJit1{}, vJit2{};
+    if (jitter > 0) {
+        const auto jitterMult = (float)jitter * 0.004f; // 0x859CE0
+        const auto uRange     = fU2 * jitterMult;
+        const auto vRange     = fV2 * jitterMult;
+        uJit1 = uJit2 = (float)rand() * RAND_MAX_FLOAT_RECIPROCAL * uRange;
+        vJit1 = vJit2 = (float)rand() * RAND_MAX_FLOAT_RECIPROCAL * vRange;
+    }
+
+    const float su = fU2 * (float)size * 0.0025f; // 0x86C340
+    const float sv = (float)size * fV2 * 0.0025f;
+
+    // Per-vertex offsets (named after the quad vertex + component they're used for)
+    float u0Off = su, u2Off = su;    // added to vertices 0 and 2's U
+    float u1Off = -su, u3Off = -su;  // added to vertices 1 and 3's U
+    float v0Off = sv, v1Off = sv;    // added to vertices 0 and 1's V
+    float v2Off = -sv, v3Off = -sv;  // added to vertices 2 and 3's V
+
+    for (auto n = count; n != 0; n--) {
+        if (isLookingLeft) {
+            uJit1 = uJit2 = vJit1 = vJit2 = 0.0f;
+            v0Off = u1Off = v1Off = u3Off = v3Off = v2Off = 0.0f;
+        }
+        if (isLookingRight) {
+            uJit1 = uJit2 = vJit1 = vJit2 = 0.0f;
+            u0Off = v0Off = v1Off = v3Off = u2Off = v2Off = 0.0f;
+        }
+
+        ms_imf.quad[0].u = fU1 + u0Off + uJit1;
+        ms_imf.quad[0].v = fV1 + v0Off + vJit1;
+        ms_imf.quad[1].u = (fU2 + u1Off) - uJit2;
+        ms_imf.quad[1].v = fV1 + v1Off + vJit2;
+        ms_imf.quad[2].u = fU1 + u2Off + uJit1;
+        ms_imf.quad[2].v = (fV2 + v2Off) - uJit2; // NOTE: Uses the U jitter (original code does this too)
+        ms_imf.quad[3].u = (fU2 + u3Off) - uJit2;
+        ms_imf.quad[3].v = (fV2 + v3Off) - vJit2;
+
+        DrawQuad(0.0f, 0.0f, (float)RsGlobal.maximumWidth, (float)RsGlobal.maximumHeight, 255, 255, 255, (uint8)m_SpeedFXAlpha, pRasterFrontBuffer);
+
+        u0Off += su;
+        v0Off += sv;
+        u1Off -= su;
+        v1Off += sv;
+        u2Off += su;
+        u3Off -= su;
+        v2Off -= sv;
+        v3Off -= sv;
+    }
+
+    // Reset UVs
+    ms_imf.quad[0].u = 0.0f;
+    ms_imf.quad[0].v = 0.0f;
+    ms_imf.quad[1].u = 1.0f;
+    ms_imf.quad[1].v = 0.0f;
+    ms_imf.quad[2].u = 0.0f;
+    ms_imf.quad[2].v = 1.0f;
+    ms_imf.quad[3].u = 1.0f;
+    ms_imf.quad[3].v = 1.0f;
+
+    ImmediateModeRenderStatesReStore();
 }
 
 // 0x702F00
@@ -885,7 +1193,152 @@ void CPostEffects::ColourFilter(RwRGBA pass1, RwRGBA pass2) {
 
 // 0x702080
 void CPostEffects::Radiosity(int32 intensityLimit, int32 filterPasses, int32 renderPasses, int32 intensity) {
-    plugin::Call<0x702080>();
+    auto curW = m_RadiosityPixelsX;
+    auto curH = m_RadiosityPixelsY;
+
+    const auto RecipNearClip = [] { return 1.0f / RwCameraGetNearClipPlane(Scene.m_pRwCamera); };
+    auto&      vb            = aRadiosityVertexBuffer;
+
+    RwRenderStateSet(rwRENDERSTATETEXTUREFILTER,     RWRSTATE(rwFILTERNEAREST));
+    RwRenderStateSet(rwRENDERSTATEFOGENABLE,         RWRSTATE(FALSE));
+    RwRenderStateSet(rwRENDERSTATEZTESTENABLE,       RWRSTATE(TRUE));
+    RwRenderStateSet(rwRENDERSTATEZWRITEENABLE,      RWRSTATE(FALSE));
+    RwRenderStateSet(rwRENDERSTATETEXTURERASTER,     RWRSTATE(pRasterFrontBuffer));
+    RwRenderStateSet(rwRENDERSTATEVERTEXALPHAENABLE, RWRSTATE(FALSE));
+    RwRenderStateSet(rwRENDERSTATESRCBLEND,          RWRSTATE(rwBLENDSRCALPHA));
+    RwRenderStateSet(rwRENDERSTATEDESTBLEND,         RWRSTATE(rwBLENDINVSRCALPHA));
+
+    // Initial 2 vertices
+    vb[0].z = vb[0].y = vb[0].x = 0.0f;
+    vb[0].v = vb[0].u = 0.0f;
+    vb[0].rhw = RecipNearClip();
+    vb[1].z = 0.0f;
+    vb[1].v = vb[1].u = 1.0f;
+    if (m_bRadiosityStripCopyMode) {
+        vb[1].x = (float)RsGlobal.maximumWidth;
+        vb[1].y = (float)RsGlobal.maximumHeight;
+    } else {
+        vb[1].x = (float)curW;
+        vb[1].y = (float)curH;
+    }
+    vb[1].rhw = RecipNearClip();
+    uiTempBufferVerticesStored = 0;
+
+    RwRenderStateSet(rwRENDERSTATEZTESTENABLE, RWRSTATE(TRUE));
+
+    // Filter passes: Downscale the image by 2 each pass
+    if (filterPasses > 0) {
+        RwRenderStateSet(rwRENDERSTATETEXTUREFILTER, RWRSTATE(rwFILTERLINEAR));
+
+        auto idx = (int32)uiTempBufferVerticesStored;
+        for (auto n = 0; n < filterPasses; n++) {
+            const auto halfW   = curW / 2;
+            const auto halfH   = curH / 2;
+            const auto rasterW = (float)RwRasterGetWidth(pRasterFrontBuffer);
+            const auto rasterH = (float)RwRasterGetHeight(pRasterFrontBuffer);
+
+            auto& a = vb[idx + 0];
+            a.u     = (float)m_RadiosityFilterUCorrection / rasterW;
+            a.v     = (float)m_RadiosityFilterVCorrection / rasterH;
+            a.x = a.y = a.z = 0.0f;
+            a.rhw           = RecipNearClip();
+
+            auto& b = vb[idx + 1];
+            b.u     = (float)curW / rasterW;
+            b.v     = (float)curH / rasterH;
+            b.x     = (float)(halfW + 1);
+            b.y     = (float)(halfH + 1);
+            b.z     = 0.0f;
+            b.rhw   = RecipNearClip();
+
+            a.emissiveColor = b.emissiveColor = 0xFFFFFFFF;
+
+            idx += 2;
+            uiTempBufferVerticesStored = (uint16)idx;
+            curW                       = halfW;
+            curH                       = halfH;
+        }
+    }
+
+    RwRenderStateSet(rwRENDERSTATESRCBLEND,  RWRSTATE(rwBLENDSRCALPHA));
+    RwRenderStateSet(rwRENDERSTATEDESTBLEND, RWRSTATE(rwBLENDINVSRCALPHA));
+
+    // Intensity limit quad
+    {
+        const auto idx = (int32)uiTempBufferVerticesStored;
+        const uint32 limit = (uint32)intensityLimit;
+        const auto color = ((((limit | 0xFFFF8000u) << 8) | limit) << 8) | limit;
+
+        auto& a = vb[idx + 0];
+        a.x = a.y = a.z = 0.0f;
+        a.rhw           = RecipNearClip();
+
+        auto& b = vb[idx + 1];
+        b.x     = (float)(curW + 1);
+        b.y     = (float)(curH + 1);
+        b.z     = 0.0f;
+        b.rhw   = RecipNearClip();
+
+        a.emissiveColor = b.emissiveColor = color;
+        uiTempBufferVerticesStored = (uint16)(idx + 2);
+    }
+
+    const auto Flush = [&] {
+        if (uiTempBufferVerticesStored > 2) {
+            RwIm2DRenderPrimitive(rwPRIMTYPETRISTRIP, reinterpret_cast<RwIm2DVertex*>(aRadiosityVertexBuffer), uiTempBufferVerticesStored);
+        }
+    };
+
+    if (renderPasses > 0) {
+        Flush();
+        uiTempBufferVerticesStored = 0;
+
+        RwRenderStateSet(rwRENDERSTATETEXTUREFILTER, RWRSTATE(m_bRadiosityLinearFilter ? rwFILTERLINEAR : rwFILTERMIPNEAREST));
+
+        const auto screenW = (float)RsGlobal.maximumWidth;
+        const auto screenH = (float)RsGlobal.maximumHeight;
+        const auto rasterW = (float)RwRasterGetWidth(pRasterFrontBuffer);
+        const auto rasterH = (float)RwRasterGetHeight(pRasterFrontBuffer);
+
+        auto idx = (int32)uiTempBufferVerticesStored;
+        for (auto n = 0; n < renderPasses; n++) {
+            uint32 color;
+            if (m_bRadiosityStripCopyMode) {
+                color = (uint32)intensity << 24;
+            } else {
+                color = m_bRadiosityDebug ? 0xFFFFFFFFu : ((uint32)intensity << 24);
+            }
+
+            auto& a = vb[idx + 0];
+            a.u = a.v = 0.0f;
+            a.x = a.y = a.z = 0.0f;
+            a.rhw           = RecipNearClip();
+
+            auto& b = vb[idx + 1];
+            b.u     = (float)curW / rasterW;
+            b.v     = (float)curH / rasterH;
+            b.x     = screenW;
+            b.y     = screenH;
+            b.z     = 0.0f;
+            b.rhw   = RecipNearClip();
+
+            a.emissiveColor = b.emissiveColor = color;
+
+            idx += 2;
+            uiTempBufferVerticesStored = (uint16)idx;
+        }
+    }
+
+    Flush();
+    uiTempBufferVerticesStored = 0;
+
+    RwRenderStateSet(rwRENDERSTATEFOGENABLE,         RWRSTATE(FALSE));
+    RwRenderStateSet(rwRENDERSTATEZTESTENABLE,       RWRSTATE(TRUE));
+    RwRenderStateSet(rwRENDERSTATEZWRITEENABLE,      RWRSTATE(TRUE));
+    RwRenderStateSet(rwRENDERSTATETEXTURERASTER,     RWRSTATE(NULL));
+    RwRenderStateSet(rwRENDERSTATEVERTEXALPHAENABLE, RWRSTATE(FALSE));
+    RwRenderStateSet(rwRENDERSTATESRCBLEND,          RWRSTATE(rwBLENDSRCALPHA));
+    RwRenderStateSet(rwRENDERSTATEDESTBLEND,         RWRSTATE(rwBLENDINVSRCALPHA));
 }
 
 // 0x700BE0

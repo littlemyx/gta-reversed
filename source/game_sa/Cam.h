@@ -98,8 +98,14 @@ public:
     float     m_fBeta_Targeting;
     float     m_fX_Targetting;
     float     m_fY_Targetting;
-    CVehicle* m_pCarWeAreFocussingOn;
-    CVehicle* m_pCarWeAreFocussingOnI;
+    union {
+        CVehicle* m_pCarWeAreFocussingOn;
+        int32     m_nTwoPlayerFocusedPlayer; ///< NOTSA: Index of the player whose car is focussed by the two player separate cars camera
+    };
+    union {
+        CVehicle* m_pCarWeAreFocussingOnI;
+        float     m_fTwoPlayerFocusBlend; ///< NOTSA: Blend factor [0, 1] of the two player separate cars camera
+    };
     float     m_fCamBumpedHorz;
     float     m_fCamBumpedVert;
     uint32    m_nCamBumpedTime; // TODO: Probably float

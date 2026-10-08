@@ -125,6 +125,52 @@ static bool GetBoatLookLRBehindCamHeight(CEntity* target, float& outHeight) {
     return false;
 }
 
+//! Seems to be some "line of sight mode" byte consulted by `CWorld::ProcessLineOfSight`, name unknown
+static inline auto& gUnkLOSModeByte_8CCB80 = StaticRef<uint8>(0x8CCB80);
+
+// 0x5132D0 - Computes the camera position/front for the two player camera (`cam` is the `this` of the original)
+static void ComputeTwoPlayerCamPos(CCam& cam, float angle, CVector& outSource, CVector& outFront, CVector& outTarget) {
+    const double pitch = cam.m_fVerticalAngle;
+    outFront.x         = (float)-(std::cos((double)angle) * std::cos(pitch));
+    outFront.y         = (float)-(std::sin((double)angle) * std::cos(pitch));
+    outFront.z         = (float)std::sin(pitch);
+
+    CVector flatDir{ outFront.x, outFront.y, 0.0f };
+    flatDir.Normalise();
+
+    const auto& pos0 = CWorld::Players[0].m_pPed->GetPosition();
+    const auto& pos1 = CWorld::Players[1].m_pPed->GetPosition();
+
+    const float dist = (pos0 - pos1).Magnitude() * 0.67f + 7.0f;
+
+    CVector diff2D{ pos0.x - pos1.x, pos0.y - pos1.y, 0.0f };
+    diff2D.Normalise();
+
+    const float dot = diff2D.y * flatDir.y + diff2D.x * flatDir.x + 0.0f * 0.0f;
+    const float t   = 0.5f - dot * 0.25f;
+
+    const float w1 = 1.0f - t;
+    outTarget.x    = t * pos0.x + w1 * pos1.x;
+    outTarget.y    = t * pos0.y + w1 * pos1.y;
+    outTarget.z    = t * pos0.z + w1 * pos1.z;
+
+    outSource.x = outTarget.x - outFront.x * dist;
+    outSource.y = outTarget.y - outFront.y * dist;
+    outSource.z = outTarget.z - outFront.z * dist;
+    outSource.z = dist * 0.1f + outSource.z;
+}
+
+// 0x513220 - Whether there are no buildings between `pos` and both players
+static bool IsTwoPlayerCamPosClear(const CVector& pos) {
+    CColPoint colPoint;
+    CEntity*  hitEntity{};
+    gUnkLOSModeByte_8CCB80 = 5;
+    if (CWorld::ProcessLineOfSight(pos, CWorld::Players[0].m_pPed->GetPosition(), colPoint, hitEntity, true, false, false, false, false, true, true, false)) {
+        return false;
+    }
+    return !CWorld::ProcessLineOfSight(pos, CWorld::Players[1].m_pPed->GetPosition(), colPoint, hitEntity, true, false, false, false, false, true, true, false);
+}
+
 // 0x509BE0 - wraps the angle into [-PI, PI)
 static float WrapAngleToPi(float a) {
     for (; a >= PI; a -= (2.0f * PI)) {
@@ -192,14 +238,14 @@ void CCam::InjectHooks() {
     RH_ScopedInstall(Using3rdPersonMouseCam, 0x50A850);
     RH_ScopedInstall(Process, 0x526FC0, { .Reversed = false });
     RH_ScopedInstall(ProcessArrestCamOne, 0x518500, { .Reversed = false });
-    RH_ScopedInstall(ProcessPedsDeadBaby, 0x519250, { .Reversed = false });
+    RH_ScopedInstall(ProcessPedsDeadBaby, 0x519250);
     RH_ScopedInstall(Process_1rstPersonPedOnPC, 0x50EB70, { .Reversed = false });
     RH_ScopedInstall(Process_1stPerson, 0x517EA0);
     RH_ScopedInstall(Process_AimWeapon, 0x521500, { .Reversed = false });
     RH_ScopedInstall(Process_AttachedCam, 0x512B10);
-    RH_ScopedInstall(Process_Cam_TwoPlayer, 0x525E50, { .Reversed = false });
-    RH_ScopedInstall(Process_Cam_TwoPlayer_InCarAndShooting, 0x519810, { .Reversed = false });
-    RH_ScopedInstall(Process_Cam_TwoPlayer_Separate_Cars, 0x513510, { .Reversed = false });
+    RH_ScopedInstall(Process_Cam_TwoPlayer, 0x525E50);
+    RH_ScopedInstall(Process_Cam_TwoPlayer_InCarAndShooting, 0x519810);
+    RH_ScopedInstall(Process_Cam_TwoPlayer_Separate_Cars, 0x513510);
     RH_ScopedInstall(Process_Cam_TwoPlayer_Separate_Cars_TopDown, 0x513BE0);
     RH_ScopedInstall(Process_DW_BirdyCam, 0x51B850);
     RH_ScopedInstall(Process_DW_CamManCam, 0x51B120);
@@ -867,7 +913,96 @@ void CCam::ProcessArrestCamOne() {
 
 // 0x519250
 void CCam::ProcessPedsDeadBaby() {
-    NOTSA_UNREACHABLE();
+    static auto& s_startTime = StaticRef<float>(0xB70054); // NOTE: write-only as far as this function is concerned
+    static auto& s_unused    = StaticRef<float>(0xB70050); // ^
+
+    auto* const target = TheCamera.m_pTargetEntity;
+
+    CVector targetPos;
+    if (target->GetIsTypePed()) {
+        target->AsPed()->GetBonePosition(&targetPos, BONE_SPINE1, true);
+    } else if (target->GetIsTypeVehicle()) {
+        targetPos = target->GetPosition();
+        targetPos.z += target->GetColModel()->m_boundBox.m_vecMax.z;
+    } else {
+        return;
+    }
+
+    float srcX = targetPos.x;
+    float srcY = targetPos.y;
+    float srcZ{};
+
+    if (!m_bResetStatics) {
+        srcX = m_vecSource.x;
+        srcY = m_vecSource.y;
+        srcZ = m_vecSource.z;
+        const float prevX = srcX;
+        const float prevY = srcY;
+
+        if (!CWorld::TestSphereAgainstWorld({ srcX, srcY, srcZ + 0.2f }, 0.3f, TheCamera.m_pTargetEntity, true, true, false, true, false, true)) {
+            srcZ = CTimer::GetTimeStep() * 0.04f + srcZ;
+        }
+
+        const auto fwd = target->GetMatrix().GetForward();
+        auto       right = CrossProduct(fwd, CVector{ 0.0f, 0.0f, 1.0f });
+        right.z          = 0.0f;
+        right.Normalise();
+
+        const float elapsedTime = (float)(CTimer::GetTimeInMS() - TheCamera.m_nTimeLastChange);
+        const float clamped     = std::min(elapsedTime, 1000.0f);
+        const float savedZ      = srcZ;
+        const double orbit      = (double)clamped * 0.001f * std::sin((double)elapsedTime / 600.0);
+
+        const float candX = (float)((double)right.x * 2.0 * orbit + targetPos.x);
+        const float candY = (float)((double)(right.y * 2.0f) * orbit) + targetPos.y;
+
+        CVector dir{ candX - prevX, candY - prevY, 0.0f };
+        dir.Normalise();
+        const CVector probe{ dir.x * 0.2f + prevX, dir.y * 0.2f + prevY, (0.0f * 0.2f) + srcZ };
+        if (!CWorld::TestSphereAgainstWorld(probe, 0.3f, TheCamera.m_pTargetEntity, true, true, false, true, false, true)) {
+            srcZ = savedZ;
+            srcY = candY;
+            srcX = candX;
+        }
+
+        m_vecFront = CVector{ 0.0f, 0.0f, -1.0f };
+        float fVar4 = std::min(elapsedTime, 2000.0f);
+        fVar4       = fVar4 * 0.0005f;
+        const float cosv = (float)std::cos((double)elapsedTime / 600.0);
+        m_vecFront.x = right.x * -0.35f * fVar4 * cosv + m_vecFront.x;
+        m_vecFront.y = (right.y * -0.35f) * fVar4 * cosv + m_vecFront.y;
+        m_vecFront.z = (-0.35f * right.z * fVar4) * cosv + m_vecFront.z;
+        m_vecFront.Normalise();
+        m_vecUp = CrossProduct(right, m_vecFront);
+        m_vecUp.Normalise();
+    } else {
+        s_startTime = (float)CTimer::GetTimeInMS();
+        srcZ        = 2.0f + targetPos.z;
+        TheCamera.m_nTimeLastChange = CTimer::GetTimeInMS(); // NOTE: 0xB6F094
+        s_unused = 0.0f;
+        const float prevX = targetPos.x;
+        const float prevY = targetPos.y;
+
+        float waterLevel = 0.0f;
+        if (CWaterLevel::GetWaterLevelNoWaves({ targetPos.x, targetPos.y, srcZ }, &waterLevel) && srcZ < waterLevel + 1.5f) {
+            srcZ = waterLevel + 1.5f;
+        }
+
+        const auto fwd   = target->GetMatrix().GetForward();
+        auto       right = CrossProduct(fwd, CVector{ 0.0f, 0.0f, 1.0f });
+        right.z          = 0.0f;
+        right.Normalise();
+
+        m_vecFront = CVector{ targetPos.x - prevX, targetPos.y - prevY, targetPos.z - srcZ };
+        m_vecFront.Normalise();
+        m_vecUp = CrossProduct(right, m_vecFront);
+        m_vecUp.Normalise();
+        m_bResetStatics = false;
+    }
+
+    m_vecSource = CVector{ srcX, srcY, srcZ };
+    AvoidTheGeometry(CVector{ srcX, srcY, srcZ }, targetPos, m_vecSource, m_fFOV);
+    TheCamera.m_bMoveCamToAvoidGeom = false;
 }
 
 // 0x50EB70
@@ -1157,17 +1292,590 @@ void CCam::Process_AttachedCam() {
 
 // 0x525E50
 void CCam::Process_Cam_TwoPlayer() {
-    NOTSA_UNREACHABLE();
+    static auto& s_mode                 = StaticRef<int32>(0x8A5E50);   // 0 = follow player 1, 1 = follow player 2, 2 = both
+    static auto& s_lastClearTime        = StaticRef<uint32>(0xB6EC24);
+    static auto& s_lastBlockedTime      = StaticRef<uint32>(0xB6EC28);
+    static auto& s_helpMessageTime      = StaticRef<uint32>(0x96A8B4);
+    static auto& s_helpMessageCount     = StaticRef<int32>(0x96A8B8);
+
+    const auto IsSwitchPressed = [](const CPad* pad) { // 0x5404A0
+        switch (pad->Mode) {
+        case 0:
+        case 2:
+        case 3:  return pad->IsSelectPressed();
+        case 1:  return pad->IsDPadUpPressed();
+        default: return false;
+        }
+    };
+
+    auto* const ped0 = CWorld::Players[0].m_pPed;
+    auto* const ped1 = CWorld::Players[1].m_pPed;
+
+    if (!IsSwitchPressed(CPad::GetPad(0))) {
+        if (IsSwitchPressed(CPad::GetPad(1))) {
+            s_mode = (s_mode == 1) + 1;
+        }
+    } else {
+        s_mode = ((s_mode != 0) - 1) & 2;
+    }
+
+    if (s_mode == 0) {
+        if (ped0->bInVehicle && ped0->m_pVehicle) {
+            m_pCamTargetEntity = ped0->m_pVehicle;
+            Process_FollowCar_SA(ped0->m_pVehicle->GetPosition(), 0.0f, 0.0f, 0.0f, false);
+            m_pCamTargetEntity = ped0;
+            m_bResetStatics    = false;
+            return;
+        }
+        Process_FollowPed_SA(ped0->GetPosition(), 0.0f, 0.0f, 0.0f, false);
+        m_bResetStatics = false;
+        return;
+    }
+    if (s_mode == 1) {
+        if (ped1->bInVehicle && ped1->m_pVehicle) {
+            m_pCamTargetEntity = ped1->m_pVehicle;
+            Process_FollowCar_SA(ped1->m_pVehicle->GetPosition(), 0.0f, 0.0f, 0.0f, false);
+            m_pCamTargetEntity = ped0;
+            m_bResetStatics    = false;
+            return;
+        }
+        m_pCamTargetEntity = ped1;
+        Process_FollowPed_SA(ped1->GetPosition(), 0.0f, 0.0f, 0.0f, false);
+        m_pCamTargetEntity = ped0;
+        m_bResetStatics    = false;
+        return;
+    }
+
+    m_fVerticalAngle = -0.523598790f; // 0xBF060A92
+    m_fAlphaSpeed    = 0.0f;
+
+    CVector src{}, front{};
+    float   angle{};
+    uint32  foundIdx = 0;
+    {
+        uint32 i = 0;
+        uint32 next;
+        do {
+            next = i + 1;
+            if ((i & 1) == 0) {
+                angle = m_fHorizontalAngle - (float)((int32)next / 2) * 0.15f;
+            } else {
+                angle = (float)((int32)next / 2) * 0.15f + m_fHorizontalAngle;
+            }
+            ComputeTwoPlayerCamPos(*this, angle, src, front, m_vecTargetCoorsForFudgeInter);
+            if (IsTwoPlayerCamPosClear(src)) {
+                s_lastClearTime = CTimer::GetTimeInMS();
+                next            = i;
+                break;
+            }
+            i = next;
+        } while ((int32)next < 21);
+        foundIdx = next;
+    }
+
+    if (foundIdx == 21) {
+        angle           = m_fHorizontalAngle;
+        s_lastBlockedTime = CTimer::GetTimeInMS();
+    } else if ((int32)foundIdx > 0) {
+        s_lastBlockedTime = CTimer::GetTimeInMS();
+    }
+
+    if (m_bResetStatics) {
+        m_fHorizontalAngle = angle;
+    }
+
+    const auto WrapNear = [this](float a) {
+        if (a <= m_fHorizontalAngle + PI) {
+            if (a < m_fHorizontalAngle - PI) {
+                return a + 2.0f * PI;
+            }
+            return a;
+        }
+        return a - 2.0f * PI;
+    };
+
+    float fVar2 = (WrapNear(angle) - m_fHorizontalAngle) * 0.2f;
+    float fVar4 = 0.1f;
+    if (fVar2 <= 0.1f) {
+        fVar4 = fVar2;
+        if (fVar2 < -0.1f) {
+            fVar4 = -0.1f;
+        }
+    }
+    fVar4 += m_fHorizontalAngle;
+
+    float local70 = 0.0f;
+    const auto TryStep = [&]() { // the repeated "check the new position" block
+        ComputeTwoPlayerCamPos(*this, angle, src, front, m_vecTargetCoorsForFudgeInter);
+        if (!IsTwoPlayerCamPosClear(src)) {
+            if ((local70 > 0.0f && m_fBetaSpeed > 0.0f) || (local70 < 0.0f && m_fBetaSpeed < 0.0f)) {
+                m_fBetaSpeed = 0.0f;
+            }
+            s_lastBlockedTime = CTimer::GetTimeInMS();
+            local70           = 0.0f;
+        }
+    };
+
+    if (foundIdx == 0 && CTimer::GetTimeInMS() >= s_lastBlockedTime + 1000) {
+        const CVector vel = ped0->m_vecMoveSpeed + ped1->m_vecMoveSpeed;
+        const float   mag2 = vel.y * vel.y + vel.x * vel.x + vel.z * vel.z;
+        bool          stepBack = false;
+        if (mag2 <= 0.01f) {
+            stepBack = true;
+        } else {
+            const float f3 = 0.1f * CTimer::GetTimeStep();
+            const float f5 = 0.02f * CTimer::GetTimeStep();
+            local70        = (float)(std::atan2((double)-vel.x, (double)vel.y) - (double)(PI / 2.0f));
+            const double d = (double)local70 - (double)fVar4;
+            if (d <= (double)PI) {
+                if (d < (double)-PI) {
+                    local70 += 2.0f * PI;
+                }
+            } else {
+                local70 -= 2.0f * PI;
+            }
+            double f14;
+            if (std::sqrt(mag2) * f3 <= 1.0f) {
+                f14 = vel.Magnitude() * f3;
+            } else {
+                f14 = 1.0;
+            }
+            const float f2 = (float)(((double)local70 - (double)fVar4) * f14);
+            local70        = f5;
+            if (f2 <= f5) {
+                local70 = f2;
+                if (f2 < -f5) {
+                    local70 = -f5;
+                }
+            }
+            if (0.01f < local70) {
+                angle += 0.15f;
+            } else if (local70 < 0.01f) {
+                stepBack = true;
+            }
+        }
+        if (stepBack) {
+            angle -= 0.15f;
+        }
+        if (0.01f < std::abs(local70)) {
+            TryStep();
+        }
+    }
+
+    local70 = local70 + fVar4;
+    local70 = WrapNear(local70);
+
+    float step = std::max(CTimer::GetTimeStep(), 1.0f);
+    fVar2      = (local70 - m_fHorizontalAngle) / step;
+
+    const float powFactor = std::pow(0.8f, CTimer::GetTimeStep());
+    fVar4                 = 0.1f;
+
+    if (foundIdx == 0 && s_lastBlockedTime + 1000 <= CTimer::GetTimeInMS()) {
+        const auto aim0 = CPad::GetPad(0)->AimWeaponLeftRight(ped0);
+        const auto aim1 = CPad::GetPad(1)->AimWeaponLeftRight(ped1);
+        float      f3   = -(float)aim0 - (float)aim1;
+        local70         = 128.0f;
+        if (f3 <= 128.0f) {
+            local70 = f3;
+            if (f3 < -128.0f) {
+                local70 = -128.0f;
+            }
+        }
+        local70 = m_fFOV * 0.0125f * 0.0714285746f * std::abs(local70) * 0.007f * 0.007f * local70;
+        if (local70 > 0.01f) {
+            angle += 0.15f;
+        } else if (local70 < 0.01f) {
+            angle -= 0.15f;
+        }
+        if (0.01f < std::abs(local70)) {
+            TryStep();
+        }
+        fVar2 = local70 + fVar2;
+    }
+
+    if (fVar2 <= fVar4) {
+        const float lo = -fVar4;
+        fVar4          = fVar2;
+        if (fVar2 < lo) {
+            fVar4 = lo;
+        }
+    }
+
+    m_fBetaSpeed       = powFactor * m_fBetaSpeed + (1.0f - powFactor) * fVar4;
+    m_fHorizontalAngle = m_fBetaSpeed * CTimer::GetTimeStep() + m_fHorizontalAngle;
+
+    ComputeTwoPlayerCamPos(*this, m_fHorizontalAngle, m_vecSource, m_vecFront, m_vecTargetCoorsForFudgeInter);
+
+    if (foundIdx == 21 && CTimer::GetTimeInMS() - s_lastClearTime > 500) {
+        CColPoint colPoint;
+        CEntity*  hitEntity{};
+        gUnkLOSModeByte_8CCB80 = 5;
+        if (CWorld::ProcessLineOfSight(m_vecTargetCoorsForFudgeInter, m_vecSource, colPoint, hitEntity, true, false, false, false, false, true, true, false)) {
+            m_vecSource = colPoint.m_vecPoint;
+        }
+        if (s_helpMessageTime < CTimer::GetTimeInMS() && s_helpMessageCount < 6) {
+            CHud::SetHelpMessage(TheText.Get("WRN2_2P"), false, false, false);
+            s_helpMessageTime = CTimer::GetTimeInMS() + 60000;
+            s_helpMessageCount++;
+        }
+    }
+
+    m_vecUp = CVector{ 0.0f, 0.0f, 1.0f };
+    m_vecUp.Normalise();
+    const auto right = CrossProduct(m_vecUp, m_vecFront).Normalized();
+    m_vecUp          = CrossProduct(m_vecFront, right);
+    m_vecUp.Normalise();
+
+    m_fFOV          = 70.0f;
+    m_bResetStatics = false;
 }
 
 // 0x519810
 void CCam::Process_Cam_TwoPlayer_InCarAndShooting() {
-    NOTSA_UNREACHABLE();
+    if (!m_pCamTargetEntity->GetIsTypeVehicle()) {
+        return;
+    }
+
+    auto* const player0Ped = CWorld::Players[0].m_pPed;
+    auto* const player1Ped = CWorld::Players[1].m_pPed;
+    auto* const veh        = player0Ped->m_pVehicle;
+
+    CVector vehPos = veh->GetPosition(); // local_c4
+    float   baseAngle = veh->GetHeading() - PI / 2.0f; // local_b0
+
+    CPed* shooter;
+    CPad* pad;
+    if (veh->m_pDriver == player0Ped) {
+        pad     = CPad::GetPad(1);
+        shooter = player1Ped;
+    } else {
+        pad     = CPad::GetPad(0);
+        shooter = player0Ped;
+    }
+
+    // Field of view
+    const auto vehSubType = veh->m_nVehicleSubType;
+    if (vehSubType == VEHICLE_TYPE_AUTOMOBILE || vehSubType == VEHICLE_TYPE_BIKE) {
+        const auto& fwd = veh->GetMatrix().GetForward();
+        const float spd = veh->m_vecMoveSpeed.x * fwd.x + veh->m_vecMoveSpeed.y * fwd.y + veh->m_vecMoveSpeed.z * fwd.z;
+        if (0.4f < spd) {
+            m_fFOV = (spd - 0.4f) * CTimer::GetTimeStep() + m_fFOV;
+        }
+    }
+    if (70.0f < m_fFOV) {
+        const float f = std::pow(0.98f, CTimer::GetTimeStep());
+        m_fFOV        = (m_fFOV - 70.0f) * f + 70.0f;
+    }
+    if (m_fFOV <= 100.0f) {
+        if (m_fFOV < 70.0f) {
+            m_fFOV = 70.0f;
+        }
+    } else {
+        m_fFOV = 100.0f;
+    }
+
+    // Aiming
+    const float aimLR = (float)pad->AimWeaponLeftRight(shooter);
+    const float aimUD = (float)pad->AimWeaponUpDown(shooter);
+    const float absLR = std::abs(aimLR);
+    float       fovScale = m_fFOV * 0.0125f;
+    m_fX_Targetting = fovScale * 0.0714285746f * absLR * CTimer::GetTimeStep() * 0.004f * 0.004f * aimLR + m_fX_Targetting;
+    const float absUD = std::abs(-aimUD);
+    m_fY_Targetting = fovScale * 0.042857144f * absUD * CTimer::GetTimeStep() * 0.004f * 0.004f * -aimUD + m_fY_Targetting;
+
+    auto* const weaponInfo = CWeaponInfo::GetWeaponInfo(shooter->GetActiveWeapon().m_Type, shooter->GetWeaponSkill());
+    float       targetScreenX{}, targetScreenY{};
+    CEntity* const aimTarget = CWeapon::FindNearestTargetEntityWithScreenCoors(
+        m_fX_Targetting,
+        m_fY_Targetting,
+        weaponInfo->m_fWeaponRange + weaponInfo->m_fWeaponRange,
+        shooter->GetPosition(),
+        &targetScreenX,
+        &targetScreenY
+    );
+
+    if (aimTarget && absLR < 120.0f && absUD < 120.0f) {
+        const double f = std::pow(0.85f, CTimer::GetTimeStep());
+        double       dx = ((double)targetScreenX - m_fX_Targetting) * (1.0 - f);
+        float        lim = CTimer::GetTimeStep() * 0.01f;
+        if (dx <= lim) {
+            if (dx < -lim) {
+                dx = -lim;
+            }
+        } else {
+            dx = lim;
+        }
+        m_fX_Targetting = (float)(dx + m_fX_Targetting);
+
+        const double f2 = std::pow(0.85f, CTimer::GetTimeStep());
+        double       dy = ((double)targetScreenY - m_fY_Targetting) * (1.0 - f2);
+        lim = CTimer::GetTimeStep() * 0.01f;
+        if (dy <= lim) {
+            if (dy < -lim) {
+                dy = -lim;
+            }
+        } else {
+            dy = lim;
+        }
+        m_fY_Targetting = (float)(dy + m_fY_Targetting);
+    }
+
+    float rotExcess = 0.0f; // local_b8
+    if (0.9f < m_fX_Targetting) {
+        rotExcess       = m_fX_Targetting;
+        m_fX_Targetting = 0.9f;
+        rotExcess       = rotExcess - 0.9f;
+    }
+    if (m_fX_Targetting < -0.9f) {
+        rotExcess       = m_fX_Targetting;
+        m_fX_Targetting = -0.9f;
+        rotExcess       = rotExcess + 0.9f;
+    }
+    if (0.9f < m_fY_Targetting) {
+        const float d   = (m_fY_Targetting - 0.9f) * CTimer::GetTimeStep();
+        m_fY_Targetting = 0.9f;
+        m_fVerticalAngle = m_fVerticalAngle - d * 0.5f;
+    }
+    if (m_fY_Targetting < -0.9f) {
+        const float d   = (m_fY_Targetting + 0.9f) * CTimer::GetTimeStep();
+        m_fY_Targetting = -0.9f;
+        m_fVerticalAngle = m_fVerticalAngle - d * 0.5f;
+    }
+    if (absLR < 1.0f && absUD < 1.0f && !aimTarget) {
+        const float x   = m_fX_Targetting;
+        const float y   = m_fY_Targetting - -0.4f;
+        const float len = std::sqrt(x * x + y * y);
+        const float step = CTimer::GetTimeStep() * 0.002f;
+        if (step <= len) {
+            const float inv = 1.0f / len;
+            m_fX_Targetting = m_fX_Targetting - step * inv * x;
+            m_fY_Targetting = m_fY_Targetting - inv * step * y;
+        } else {
+            m_fX_Targetting = 0.0f;
+            m_fY_Targetting = -0.4f;
+        }
+    }
+
+    // Distance / height
+    const auto* const colModel = veh->GetColModel();
+    float vehMaxZ = colModel->m_boundBox.m_vecMax.z;
+    float alphaTarget = -0.34906587f; // local_ac
+    float camDist     = 0.5f + std::abs(colModel->m_boundBox.m_vecMin.y) + std::abs(colModel->m_boundBox.m_vecMin.y); // local_cc
+
+    if (veh->GetVehicleAppearance() == VEHICLE_APPEARANCE_HELI && veh->GetStatus() != STATUS_REMOTE_CONTROLLED) {
+        const auto& up = veh->GetMatrix().GetUp();
+        vehPos.x       = 0.6f * up.x * vehMaxZ + vehPos.x;
+        vehPos.y       = 0.6f * up.y * vehMaxZ + vehPos.y;
+        vehPos.z       = 0.6f * up.z * vehMaxZ + vehPos.z;
+    } else {
+        const float h = 1.3f * vehMaxZ - 0.4f;
+        if (0.0f < h) {
+            vehPos.z    = vehPos.z + h;
+            camDist     = camDist + h;
+            alphaTarget = (0.3f / camDist) * h + alphaTarget;
+        }
+    }
+
+    const float minDist = camDist * 0.9f;
+    camDist             = 2.0f + camDist;
+    m_fCaMinDistance    = minDist;
+    m_fCaMaxDistance    = camDist;
+
+    const float dy = m_vecSource.y - vehPos.y;
+    const float dx = m_vecSource.x - vehPos.x;
+    float       dist2D = std::sqrt(dy * dy + dx * dx);
+    m_fDistanceBeforeChanges = dist2D;
+    if (dist2D < (float)0.002) {
+        dist2D = 0.002f;
+    }
+    m_fHorizontalAngle = (float)(std::atan2((double)-(vehPos.x - m_vecSource.x), (double)(vehPos.y - m_vecSource.y)) - (double)(PI / 2.0f));
+
+    float clampedDist = camDist;
+    if (camDist < dist2D || (clampedDist = minDist, dist2D < minDist)) {
+        m_vecSource.x = dx * (clampedDist / dist2D) + vehPos.x;
+        m_vecSource.y = (clampedDist / dist2D) * dy + vehPos.y;
+    }
+
+    const auto& vel = veh->m_vecMoveSpeed;
+    if (0.0001f < vel.z * vel.z + vel.y * vel.y + vel.x * vel.x) {
+        const double velPitch = std::atan2((double)vel.z, std::sqrt((double)vel.y * vel.y + (double)vel.x * vel.x));
+        float        factor   = veh->m_nVehicleSubType == VEHICLE_TYPE_HELI ? 3.0f : 5.0f;
+        double       k        = (std::sqrt((double)vel.z * vel.z + (double)vel.y * vel.y + (double)vel.x * vel.x) - 0.01f) * factor;
+        if (1.0 < k) {
+            k = 1.0;
+        }
+        alphaTarget  = (float)(k * velPitch + alphaTarget);
+        const double f = std::pow(0.96f, CTimer::GetTimeStep());
+        m_fVerticalAngle = (float)(f * m_fVerticalAngle + (1.0 - f) * alphaTarget);
+    }
+
+    float maxAlpha = 0.52359879f;
+    float minAlpha = -1.04719758f;
+    if (veh->m_nVehicleSubType == VEHICLE_TYPE_HELI) {
+        maxAlpha = 0.174532935f;
+        minAlpha = -1.04719758f;
+    }
+    if (minAlpha <= m_fVerticalAngle) {
+        if (maxAlpha < m_fVerticalAngle) {
+            m_fVerticalAngle = maxAlpha;
+        }
+    } else {
+        m_fVerticalAngle = minAlpha;
+    }
+    m_vecSource.z = (float)((double)vehPos.z - std::sin((double)m_fVerticalAngle) * camDist);
+
+    RotCamIfInFrontCar(vehPos, baseAngle);
+
+    m_vecTargetCoorsForFudgeInter = vehPos;
+    AvoidTheGeometry(CVector{ m_vecSource }, m_vecTargetCoorsForFudgeInter, m_vecSource, m_fFOV);
+
+    {
+        const double sinb = std::sin((double)rotExcess);
+        const double cosb = std::cos((double)rotExcess);
+        const float  px   = m_vecSource.x;
+        const double dyv  = (double)m_vecSource.y - (double)vehPos.y;
+        const float  nx   = (float)(cosb * ((double)px - (double)vehPos.x) + sinb * dyv);
+        m_vecSource.x     = nx + vehPos.x;
+        m_vecSource.y     = (float)((cosb * dyv - sinb * ((double)px - (double)vehPos.x)) + (double)vehPos.y);
+    }
+
+    m_bResetStatics = false;
+    m_vecFront.x    = vehPos.x - m_vecSource.x;
+    m_vecFront.y    = vehPos.y - m_vecSource.y;
+    m_vecFront.z    = vehPos.z - m_vecSource.z;
+    GetVectorsReadyForRW();
+
+    // Shooting
+    if (!veh->CanPedLeanOut(shooter)) {
+        shooter->GetActiveWeapon().Update(shooter);
+    }
+    auto& shooterWeapon = shooter->GetActiveWeapon();
+    if (pad->GetCarGunFired() != 0 && !veh->CanPedLeanOut(shooter) && !shooterWeapon.IsTypeMelee() && shooterWeapon.m_State == eWeaponState::WEAPONSTATE_READY) {
+        CVector aimPos;
+        if (!aimTarget) {
+            const auto  right  = CrossProduct(m_vecFront, m_vecUp);
+            const float t      = m_fFOV * 0.00872664619f;
+            const float tanT   = std::tan(t);
+            const auto  upTerm = m_vecUp * (std::tan(t) / CDraw::ms_fAspectRatio * m_fY_Targetting);
+            const auto  rightTerm = (right * m_fX_Targetting) * tanT;
+            auto        dir    = (m_vecFront + rightTerm) - upTerm;
+            dir *= weaponInfo->m_fWeaponRange * 3.0f;
+            dir += m_vecSource;
+            aimPos = dir;
+        } else {
+            aimPos = aimTarget->GetPosition();
+        }
+
+        const bool seatRHS = shooter != veh->m_apPassengers[1];
+
+        const auto toAim = aimPos - m_vecSource;
+        float      ang   = std::atan2(-toAim.x, toAim.y);
+        float      diff  = ang - veh->GetHeading();
+        if (diff > PI) {
+            diff -= 2.0f * PI;
+        } else if (diff < -PI) {
+            diff += 2.0f * PI;
+        }
+        diff += 0.7853981852531433f;
+        if (diff < 0.0f) {
+            diff += 2.0f * PI;
+        }
+        const auto fakeShootDirn = (int32)(diff * 0.6366197466850281f);
+
+        CTaskSimpleGangDriveBy task{ nullptr, nullptr, 100.0f, 100, (eDrivebyStyle)8, seatRHS };
+        task.m_pWeaponInfo = CWeaponInfo::GetWeaponInfo(shooter->GetActiveWeapon().m_Type, shooter->GetWeaponSkill());
+        task.m_nFakeShootDirn = (char)fakeShootDirn;
+        plugin::CallMethod<0x627CC0, CTaskSimpleGangDriveBy*, CPed*>(&task, shooter); // FireGun-like
+        CamShakeNoPos(&TheCamera, 0.03f);
+    }
 }
 
 // 0x513510
 void CCam::Process_Cam_TwoPlayer_Separate_Cars() {
-    NOTSA_UNREACHABLE();
+    m_fFOV = 80.0f;
+
+    auto* const veh2 = CWorld::Players[1].m_pPed->m_pVehicle;
+    auto* const veh1 = CWorld::Players[0].m_pPed->m_pVehicle;
+
+    const CVector pos1 = veh1->GetPosition();
+    const CVector pos2 = veh2->GetPosition();
+
+    const auto d = (pos2 - pos1).Normalized();
+
+    const CVector pA{
+        pos1.x - d.x * 6.0f,
+        pos1.y - d.y * 6.0f,
+        (pos1.z + veh1->GetColModel()->m_boundBox.m_vecMax.z + 1.0f) - d.z * 6.0f,
+    };
+    const CVector pB{
+        d.x * 6.0f + pos2.x,
+        d.y * 6.0f + pos2.y,
+        d.z * 6.0f + pos2.z + veh2->GetColModel()->m_boundBox.m_vecMax.z + 1.0f,
+    };
+
+    const auto dirA = (veh2->GetPosition() - pA).Normalized();
+    const auto dirB = (veh1->GetPosition() - pB).Normalized();
+
+    CVector perp{ pA.y - pB.y, pB.x - pA.x, 0.0f };
+    perp.Normalise();
+    perp.z = -0.1f;
+    perp.Normalise();
+
+    const float angle = m_fTwoPlayerFocusBlend * PI;
+    const float s     = (float)std::sin((double)angle);
+    const float c     = (float)((std::cos((double)angle) + 1.0) * 0.5);
+
+    const float dist = (veh1->GetPosition() - veh2->GetPosition()).Magnitude();
+
+    const float perpZ = s * perp.z;
+    const float oneMinusC = 1.0f - c;
+    m_vecSource.x = (c * pA.x + pB.x * oneMinusC) - s * perp.x * dist * 0.75f;
+    m_vecSource.y = (c * pA.y + oneMinusC * pB.y) - s * perp.y * dist * 0.75f;
+    m_vecSource.z = (c * pA.z + oneMinusC * pB.z) - perpZ * dist * 0.75f;
+
+    const float oneMinusS = 1.0f - s;
+    const float blendX    = (dirA.x * c + dirB.x * oneMinusC) * oneMinusS;
+    const float blendY    = (dirA.y * c + dirB.y * oneMinusC) * oneMinusS;
+    const float blendZ    = (dirA.z * c + dirB.z * oneMinusC) * oneMinusS;
+    m_vecFront.x          = blendX + s * perp.x;
+    m_vecFront.y          = blendY + s * perp.y;
+    m_vecFront.z          = blendZ + perpZ;
+    m_vecFront.Normalise();
+
+    m_vecTargetCoorsForFudgeInter = m_nTwoPlayerFocusedPlayer == 0 ? veh2->GetPosition() : veh1->GetPosition();
+
+    m_vecUp = CVector{ 0.0f, 0.0f, 1.0f };
+    m_vecUp.Normalise();
+    const auto right = CrossProduct(m_vecUp, m_vecFront).Normalized();
+    m_vecUp          = CrossProduct(m_vecFront, right);
+    m_vecUp.Normalise();
+
+    auto* const focusedVeh = CWorld::Players[m_nTwoPlayerFocusedPlayer].m_pPed->m_pVehicle;
+    auto* const otherVeh   = CWorld::Players[(m_nTwoPlayerFocusedPlayer - 1u) & 1].m_pPed->m_pVehicle;
+    const auto  focusedVel = focusedVeh->m_vecMoveSpeed;
+    CVector     front2D{ m_vecFront.x, m_vecFront.y, 0.0f };
+    front2D.Normalise();
+    const float focusedDot = focusedVel.y * front2D.y + focusedVel.z * front2D.z + focusedVel.x * front2D.x;
+    if (focusedDot < -0.13f &&
+        focusedDot < -front2D.x * otherVeh->m_vecMoveSpeed.x + otherVeh->m_vecMoveSpeed.y * -front2D.y + otherVeh->m_vecMoveSpeed.z * -front2D.z) {
+        m_nTwoPlayerFocusedPlayer = (m_nTwoPlayerFocusedPlayer - 1u) & 1;
+    }
+
+    float blend;
+    if (m_nTwoPlayerFocusedPlayer == 0) {
+        blend = m_fTwoPlayerFocusBlend - CTimer::GetTimeStep() * 0.04f;
+        if (blend <= 0.0f) {
+            blend = 0.0f;
+        }
+    } else {
+        blend = CTimer::GetTimeStep() * 0.04f + m_fTwoPlayerFocusBlend;
+        if (1.0f <= blend) {
+            m_fTwoPlayerFocusBlend = 1.0f;
+            return;
+        }
+    }
+    m_fTwoPlayerFocusBlend = blend;
 }
 
 // 0x513BE0

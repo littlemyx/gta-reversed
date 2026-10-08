@@ -229,7 +229,7 @@ void CVehicle::InjectHooks() {
     RH_ScopedGlobalInstall(IsVehiclePointerValid, 0x6E38F0);
     // RH_ScopedGlobalInstall(RemoveUpgradeCB, 0x6D3300);
     // RH_ScopedGlobalInstall(FindUpgradeCB, 0x6D3370);
-    RH_ScopedGlobalOverloadedInstall(RemoveObjectsCB, "Object", 0x6D33B0, RwObject*(*)(RwObject*, void*), { .Reversed = false });
+    RH_ScopedGlobalOverloadedInstall(RemoveObjectsCB, "Object", 0x6D33B0, RwObject*(*)(RwObject*, void*));
     RH_ScopedGlobalOverloadedInstall(RemoveObjectsCB, "Frame", 0x6D3420, RwFrame*(*)(RwFrame*, void*));
     RH_ScopedGlobalInstall(CopyObjectsCB, 0x6D3450);
     // RH_ScopedGlobalInstall(FindReplacementUpgradeCB, 0x6D3490);
@@ -2284,7 +2284,33 @@ RpAtomic* FindUpgradeCB(RpAtomic* atomic, void* data) {
 
 // 0x6D33B0
 RwObject* RemoveObjectsCB(RwObject* object, void* data) {
-    return ((RwObject * (__cdecl*)(RwObject*, void*))0x6D33B0)(object, data);
+    if (RwObjectGetType(object) != rpATOMIC) {
+        return object;
+    }
+
+    const auto atomic = reinterpret_cast<RpAtomic*>(object);
+
+    // NOTSA: The original overwrites (4 bytes of) whatever `data` points to with the atomic's flags
+    // (The only caller passes a pointer to a `RwFrame*` => It's overwritten)
+    const auto flags = CVisibilityPlugins::GetAtomicId(atomic);
+    *static_cast<int32*>(data) = flags;
+
+    if (flags & ATOMIC_UPGRADE) {
+        return object;
+    }
+
+    const auto mi    = CVisibilityPlugins::GetModelInfo(atomic);
+    const auto frame = RpAtomicGetFrame(atomic);
+    RpClumpRemoveAtomic(RpAtomicGetClump(atomic), atomic);
+    RpAtomicDestroy(atomic);
+    if (!CVisibilityPlugins::GetFrameHierarchyId(frame)) {
+        RwFrameDestroy(frame);
+    }
+    if (mi) {
+        mi->RemoveRef();
+    }
+
+    return object;
 }
 
 // 0x6D3420

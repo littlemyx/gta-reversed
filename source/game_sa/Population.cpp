@@ -66,7 +66,7 @@ void CPopulation::InjectHooks() {
     RH_ScopedGlobalInstall(AddToPopulation, 0x614720, { .Reversed = false });
     RH_ScopedGlobalInstall(GeneratePedsAtAttractors, 0x615970);
     RH_ScopedGlobalInstall(GeneratePedsAtStartOfGame, 0x615C90);
-    RH_ScopedGlobalInstall(ManageObject, 0x615DC0, { .Reversed = false });
+    RH_ScopedGlobalInstall(ManageObject, 0x615DC0);
     RH_ScopedGlobalInstall(ManageDummy, 0x616000);
     RH_ScopedGlobalInstall(ManageAllPopulation, 0x6160A0);
     RH_ScopedGlobalInstall(ManagePopulation, 0x616190);
@@ -1711,7 +1711,87 @@ void CPopulation::GeneratePedsAtStartOfGame() {
 
 // 0x615DC0
 void CPopulation::ManageObject(CObject* object, const CVector& posn) {
-    ((void(__cdecl*)(CObject*, const CVector&))0x615DC0)(object, posn);
+    if (!object->CanBeDeleted()) {
+        return;
+    }
+
+    // Distance (summation order as in the original)
+    const auto DistTo = [&](const CVector& from) {
+        const auto d = from - posn;
+        return std::sqrt(d.z * d.z + d.y * d.y + d.x * d.x);
+    };
+
+    const auto RemoveObject = [&] {
+        CWorld::Remove(object);
+        delete object;
+    };
+
+    const float dist = DistTo(object->GetPosition());
+
+    // Non-temporary objects: Convert to dummy objects if they're far enough
+    if (object->m_nObjectType != OBJECT_TEMPORARY) {
+        const float distToDummy = object->m_pDummyObject
+            ? DistTo(object->m_pDummyObject->GetPosition())
+            : 100000.f;
+
+        const float maxDist = (object->m_nModelIndex == ModelIndices::MI_SAMSITE || object->m_nModelIndex == ModelIndices::MI_SAMSITE2)
+            ? 750.f
+            : 80.f;
+        if (dist <= maxDist) {
+            return;
+        }
+        if (FindDummyDistForModel((eModelID)object->m_nModelIndex) >= distToDummy) {
+            return;
+        }
+        ConvertToDummyObject(object);
+        return;
+    }
+
+    // Temporary objects (e.g. debris)
+    const auto Mi = [](ModelIndex mi) { return (uint16)(eModelID)mi; };
+    const uint16 modelId = object->m_nModelIndex;
+    if (   modelId == Mi(ModelIndices::MI_ROADWORKBARRIER1)
+        || modelId == Mi(ModelIndices::MI_ROADBLOCKFUCKEDCAR1)
+        || modelId == Mi(ModelIndices::MI_ROADBLOCKFUCKEDCAR2)
+        || modelId == Mi(ModelIndices::MI_BEACHBALL)
+    ) {
+        if (dist > 120.f) {
+            RemoveObject();
+        }
+        return;
+    }
+
+    if (modelId >= Mi(ModelIndices::MI_BEACHTOWEL01) && modelId <= Mi(ModelIndices::MI_BEACHTOWEL04)) {
+        if (dist <= 64.5f) {
+            if (dist <= 35.f) {
+                return;
+            }
+            if (object->GetIsOnScreen()) {
+                return;
+            }
+        }
+        RemoveObject();
+        return;
+    }
+
+    if (   dist > 54.5f
+        || (dist > 25.f && !object->GetIsOnScreen())
+        || CTimer::GetTimeInMS() > object->m_nRemovalTime
+    ) {
+        RemoveObject();
+        return;
+    }
+
+    const auto rwObject = object->GetRwObject();
+    if (!rwObject || rwObject->type != rpCLUMP) {
+        return;
+    }
+    if (!object->objectFlags.bFadingIn) { // 0x400000
+        return;
+    }
+    if (CVisibilityPlugins::GetClumpAlpha(reinterpret_cast<RpClump*>(rwObject)) == 0 || !object->IsVisible()) {
+        RemoveObject();
+    }
 }
 
 // 0x616000

@@ -8,6 +8,8 @@
 #include <imgui.h>
 #include "Shadows.h"
 #include "FireManager.h"
+#include "Collision/ColHelpers.h"
+#include "RenderBuffer.hpp"
 #include <CustomBuildingDNPipeline.h>
 
 void CShadows::InjectHooks() {
@@ -32,7 +34,7 @@ void CShadows::InjectHooks() {
     RH_ScopedInstall(UpdateStaticShadows, 0x707F40);
     RH_ScopedInstall(RenderExtraPlayerShadows, 0x707FA0);
     RH_ScopedInstall(RenderStaticShadows, 0x708300);
-    RH_ScopedInstall(CastShadowEntityXY, 0x7086B0, { .Reversed = false });
+    RH_ScopedInstall(CastShadowEntityXY, 0x7086B0);
     RH_ScopedInstall(CastShadowEntityXYZ, 0x70A040);
     RH_ScopedInstall(CastPlayerShadowSectorList<CPtrListSingleLink<CPhysical*>>, 0x70A470);
     RH_ScopedInstall(CastShadowSectorList<CPtrListSingleLink<CPhysical*>>, 0x70A630);
@@ -813,7 +815,217 @@ void CShadows::RenderStaticShadows() {
 
 // 0x7086B0
 void CShadows::CastShadowEntityXY(CEntity* entity, float conrerAX, float cornerAY, float cornerBX, float cornerBY, CVector* posn, float frontX, float frontY, float sideX, float sideY, int16 intensity, uint8 red, uint8 green, uint8 blue, float zDistance, float scale, CPolyBunch** ppPolyBunch, uint8* pDayNightIntensity, int32 shadowType) {
-    ((void(__cdecl*)(CEntity*, float, float, float, float, CVector*, float, float, float, float, int16, uint8, uint8, uint8, float, float, CPolyBunch**, uint8*, int32))0x7086B0)(entity, conrerAX, cornerAY, cornerBX, cornerBY, posn, frontX, frontY, sideX, sideY, intensity, red, green, blue, zDistance, scale, ppPolyBunch, pDayNightIntensity, shadowType);
+    // NOTE: `conrerAX`, `cornerAY`, `cornerBX` and `cornerBY` aren't used by the original code
+
+    // A vertex of the polygon that is being clipped
+    struct ClipVert {
+        CVector2D uv;
+        CVector   pos; // `z` is calculated after clipping
+    };
+    constexpr size_t MAX_CLIP_VERTS = 10; // Original buffers have room for 10 vertices
+
+    auto* const colModel = entity->GetModelInfo()->GetColModel();
+    auto* const colData  = colModel->m_pColData;
+    if (!colData || colData->m_nNumTriangles == 0) {
+        return;
+    }
+    CCollision::CalculateTrianglePlanes(colModel);
+
+    const CMatrix& entityMat = entity->GetMatrix();
+    const CVector& mRight    = entityMat.GetRight();
+    const CVector& mFwd      = entityMat.GetForward();
+    const CVector  entityPos = entity->GetPosition();
+
+    // Transform the shadow's `front` and `side` into the entity's space
+    const float frontLocalX = frontX * mRight.x + frontY * mRight.y;
+    const float frontLocalY = frontY * mFwd.y + frontX * mFwd.x;
+    const float sideLocalX  = sideX * mRight.x + sideY * mRight.y;
+    const float sideLocalY  = sideY * mFwd.y + sideX * mFwd.x;
+
+    // Transform the shadow's center into the entity's space
+    const float relX = posn->x - entityPos.x;
+    const float relY = posn->y - entityPos.y;
+    const float cX   = relX * mRight.x + relY * mRight.y;
+    const float cY   = relX * mFwd.x + relY * mFwd.y;
+
+    // The shadow's 4 corners in the entity's space
+    const std::array<CVector2D, 4> corners{{
+        { (cX + frontLocalX) - sideLocalX,  (frontLocalY + cY) - sideLocalY  },
+        { (cX + sideLocalX) + frontLocalX,  (sideLocalY + cY) + frontLocalY  },
+        { sideLocalX + (cX - frontLocalX),  (cY - frontLocalY) + sideLocalY  },
+        { (cX - frontLocalX) - sideLocalX,  (cY - frontLocalY) - sideLocalY  },
+    }};
+
+    const float zLocal = posn->z - entityPos.z;
+
+    // Bounding rect of the corners
+    const float minX = std::min({ corners[0].x, corners[1].x, corners[2].x, corners[3].x });
+    const float maxX = std::max({ corners[0].x, corners[1].x, corners[2].x, corners[3].x });
+    const float minY = std::min({ corners[0].y, corners[1].y, corners[2].y, corners[3].y });
+    const float maxY = std::max({ corners[0].y, corners[1].y, corners[2].y, corners[3].y });
+
+    // Clips the polygon `in` against the half plane defined by point `a` and the direction `d`,
+    // and keeps the part where the cross product is `> 0`. Returns the number of vertices written to `out`.
+    const auto ClipAgainstEdge = [](const ClipVert* in, int32 numIn, ClipVert* out, const CVector& a, float dx, float dy) {
+        const auto Side = [&](const ClipVert& v) {
+            return (v.pos.x - a.x) * dy - (v.pos.y - a.y) * dx;
+        };
+        // Intersection of the edge `prev -> cur`
+        const auto Intersect = [&](const ClipVert& prev, const ClipVert& cur, float curSide) {
+            float t = std::abs(Side(prev));
+            t       = t / (std::abs(curSide) + t);
+            const float s = 1.f - t;
+            return ClipVert{
+                .uv  = { s * prev.uv.x + t * cur.uv.x, s * prev.uv.y + t * cur.uv.y },
+                .pos = { s * prev.pos.x + t * cur.pos.x, s * prev.pos.y + t * cur.pos.y, 0.f }
+            };
+        };
+
+        int32 numOut = 0;
+        int16 state  = 0; // 0 = Nothing processed yet, 1 = previous was in, 2 = previous was out
+        for (int32 i = 0; i < numIn; i++) {
+            const float side = Side(in[i]);
+            if (side <= 0.f) {
+                if (state == 1) {
+                    out[numOut++] = Intersect(in[i - 1], in[i], side);
+                }
+                state = 2;
+            } else {
+                if (state == 2) {
+                    out[numOut++] = Intersect(in[i - 1], in[i], side);
+                }
+                out[numOut++] = in[i];
+                state         = 1;
+            }
+        }
+
+        // Close the polygon
+        const float firstSide = Side(in[0]);
+        if ((firstSide > 0.f && state == 2) || (firstSide <= 0.f && state == 1)) {
+            out[numOut++] = Intersect(in[numIn - 1], in[0], firstSide);
+        }
+        return numOut;
+    };
+
+    // Casts the shadow onto the triangle with the given index
+    const auto ProcessTriangle = [&](int32 triIdx) {
+        const auto& plane = colData->m_pTrianglePlanes[triIdx];
+        const CVector normal = plane.GetNormal();
+        if (!(std::abs(normal.z) > 0.1f)) { // Ignore (almost) vertical triangles
+            return;
+        }
+
+        const auto& tri = colData->m_pTriangles[triIdx];
+        CVector p0, p1, p2;
+        colData->GetTrianglePoint(p0, tri.vA);
+        colData->GetTrianglePoint(p1, tri.vB);
+        colData->GetTrianglePoint(p2, tri.vC);
+
+        // Rough overlap test
+        if (!(   (minX < p0.x || minX < p1.x || minX < p2.x)
+              && (p0.x < maxX || p1.x < maxX || p2.x < maxX)
+              && (minY < p0.y || minY < p1.y || minY < p2.y)
+              && (p0.y < maxY || p1.y < maxY || p2.y < maxY)
+              && (p0.z < zLocal || p1.z < zLocal || p2.z < zLocal)
+        )) {
+            return;
+        }
+        const float zLowest = zLocal - zDistance;
+        if (!(zLowest < p0.z || zLowest < p1.z || zLowest < p2.z)) {
+            return;
+        }
+
+        // Clip the shadow's quad by the triangle's edges
+        std::array<ClipVert, MAX_CLIP_VERTS> bufA, bufB;
+        bufA[0] = { { 0.f, 0.f }, { corners[0].x, corners[0].y, 0.f } };
+        bufA[1] = { { 1.f, 0.f }, { corners[1].x, corners[1].y, 0.f } };
+        bufA[2] = { { 1.f, 1.f }, { corners[2].x, corners[2].y, 0.f } };
+        bufA[3] = { { 0.f, 1.f }, { corners[3].x, corners[3].y, 0.f } };
+
+        int32 n = ClipAgainstEdge(bufA.data(), 4, bufB.data(), p0, p1.x - p0.x, p1.y - p0.y);
+        n       = ClipAgainstEdge(bufB.data(), n, bufA.data(), p1, p2.x - p1.x, p2.y - p1.y);
+        n       = ClipAgainstEdge(bufA.data(), n, bufB.data(), p2, p0.x - p2.x, p0.y - p2.y);
+        if (n <= 2) {
+            return;
+        }
+        auto& poly = bufB; // The clipped polygon
+
+        // Calculate the Z coordinates by projecting the polygon onto the triangle's plane
+        const float planeD = normal.x * p0.x + normal.y * p0.y + p0.z * normal.z;
+        const float invNz  = -1.f / normal.z;
+        for (int32 i = 0; i < n; i++) {
+            poly[i].pos.z = ((normal.x * poly[i].pos.x + normal.y * poly[i].pos.y) - planeD) * invNz;
+        }
+
+        // Transform into world space
+        for (int32 i = 0; i < n; i++) {
+            const float x = poly[i].pos.x;
+            const float y = poly[i].pos.y;
+            poly[i].pos.x = mRight.x * x + mFwd.x * y + entityPos.x;
+            poly[i].pos.y = x * mRight.y + mFwd.y * y + entityPos.y;
+            poly[i].pos.z = entityPos.z + poly[i].pos.z;
+        }
+
+        *pDayNightIntensity = tri.m_nLight.value;
+
+        if (!ppPolyBunch) {
+            // Render directly
+            const int32 numIdx = n * 3 - 6;
+
+            RwImVertexIndex* idxIt{};
+            RwIm3DVertex*    vtxIt{};
+            RenderBuffer::StartStoring(numIdx, n, idxIt, vtxIt);
+
+            uint8 r, g, b;
+            AffectColourWithLighting((eShadowType)shadowType, *pDayNightIntensity, red, green, blue, r, g, b);
+
+            for (int32 i = 0; i < n; i++, vtxIt++) {
+                RwIm3DVertexSetPos(vtxIt, poly[i].pos.x, poly[i].pos.y, poly[i].pos.z + 0.06f);
+                RwIm3DVertexSetRGBA(vtxIt, r, g, b, (uint8)intensity);
+                RwIm3DVertexSetU(vtxIt, scale * poly[i].uv.x);
+                RwIm3DVertexSetV(vtxIt, scale * poly[i].uv.y);
+            }
+            for (int32 i = 0; i < numIdx; i++) {
+                *idxIt++ = g_ShadowVertices[i];
+            }
+
+            RenderBuffer::StopStoring();
+        } else if (pEmptyBunchList) {
+            // Store in a poly bunch
+            auto* const bunch = pEmptyBunchList;
+            pEmptyBunchList   = bunch->m_pNext;
+            bunch->m_pNext    = *ppPolyBunch;
+            *ppPolyBunch      = bunch;
+            bunch->m_wNumVerts = (int16)n;
+            for (int32 i = 0; i < n; i++) {
+                bunch->m_avecPosn[i] = poly[i].pos;
+                bunch->m_aU[i]       = (uint8)(poly[i].uv.x * 200.f);
+                bunch->m_aV[i]       = (uint8)(poly[i].uv.y * 200.f);
+            }
+        }
+    };
+
+    // Casts the shadow onto the triangles [first, last] (inclusive)
+    const auto ProcessTriangles = [&](int32 first, int32 last) {
+        for (int32 i = first; i <= last; i++) {
+            ProcessTriangle(i);
+        }
+    };
+
+    if (!colData->bHasFaceGroups) {
+        ProcessTriangles(0, (int32)colData->m_nNumTriangles - 1);
+    } else {
+        // NOTE: The original code iterates the face groups from the last to the first
+        for (const auto& fg : colData->GetFaceGroups() | rng::views::reverse) {
+            if (   fg.bb.m_vecMin.x < maxX
+                && minX < fg.bb.m_vecMax.x
+                && fg.bb.m_vecMin.y < maxY
+                && minY < fg.bb.m_vecMax.y
+            ) {
+                ProcessTriangles(fg.first, fg.last);
+            }
+        }
+    }
 }
 
 // 0x70A040

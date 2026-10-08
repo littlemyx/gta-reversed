@@ -43,22 +43,33 @@ void CDecision::Set(
     notsa::mdarray<int32, MAX_NUM_CHOICES, 2>& bools,
     notsa::mdarray<float, MAX_NUM_CHOICES, 6>& facialProbs
 ) {
-    plugin::CallMethod<0x600570>(this, &tasks, &probs, &bools, &facialProbs);
-}
+    // NOTE: `facialProbs` is unused by the original
 
-/*
-// 0x6040D0
-void CDecision::MakeDecision(int32, bool, int32, int32, int32, int32, int16&, int16&) {
+    // _ftol (0x821B40) truncates to int64 (0x8000000000000000 on overflow/NaN); only the low byte is stored
+    const auto FtolToByte = [](float f) -> uint8 {
+        const double v = f;
+        if (!(v > -9223372036854775808.0 && v < 9223372036854775808.0)) {
+            return 0;
+        }
+        return (uint8)(int64)v;
+    };
 
-}
-
-// 0x600710
-bool CDecision::HasResponse() {
-
+    for (auto i = 0; i < MAX_NUM_CHOICES; i++) {
+        m_Tasks[i] = (eTaskType)tasks[i];
+        for (auto j = 0; j < 4; j++) {
+            m_Probs[i][j] = FtolToByte(probs[i][j]);
+        }
+        m_Bools[i][0] = bools[i][0] != 0;
+        m_Bools[i][1] = bools[i][1] != 0;
+    }
 }
 
 // 0x600600
-void CDecision::Add(int32, float*, int32*) {
-
+void CDecision::Add(eTaskType taskId, float* responseChances, int32* flags) {
+    plugin::CallMethod<0x600600, CDecision*, eTaskType, float*, int32*>(this, taskId, responseChances, flags);
 }
-*/
+
+// 0x6040D0
+void CDecision::MakeDecision(int32 eventSourceType, bool bIsPedInVehicle, eTaskType taskTypeToAvoid1, eTaskType taskTypeToAvoid2, eTaskType taskTypeToAvoid3, eTaskType taskTypeToSeek, int16& taskType, int16& facialTaskType) {
+    plugin::CallMethod<0x6040D0, CDecision*, int32, bool, eTaskType, eTaskType, eTaskType, eTaskType, int16*, int16*>(this, eventSourceType, bIsPedInVehicle, taskTypeToAvoid1, taskTypeToAvoid2, taskTypeToAvoid3, taskTypeToSeek, &taskType, &facialTaskType);
+}

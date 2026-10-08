@@ -1,6 +1,7 @@
 #pragma once
 
 class CPed;
+class CVehicle;
 
 class CPedToPlayerConversations {
 public:
@@ -18,6 +19,8 @@ public:
     static inline auto& m_StartTime                    = StaticRef<uint32>(0x9691B8);
     static inline auto& m_bPositiveReply               = StaticRef<bool>(0x9691B0); // unused
     static inline auto& m_bPositiveOpening             = StaticRef<bool>(0x9691B1);
+    static inline auto& m_NextPedIndexToCheck          = StaticRef<int32>(0x969A3C);     // NOTSA name: index into the ped pool of the ped that is checked next for starting a conversation
+    static inline auto& m_pPlayerVehicle               = StaticRef<CVehicle*>(0x969A40); // NOTSA name: last known vehicle of the player (referenced)
 
     static void InjectHooks();
     static void Clear();

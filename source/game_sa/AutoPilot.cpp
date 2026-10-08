@@ -1,6 +1,7 @@
 #include "StdInc.h"
 
 #include "AutoPilot.h"
+#include "Curves.h"
 
 // 0x6D5E20
 CAutoPilot::CAutoPilot() : m_aPathFindNodesInfo() {
@@ -43,13 +44,97 @@ CAutoPilot::CAutoPilot() : m_aPathFindNodesInfo() {
     m_fMaxTrafficSpeed = 0.0F;
 }
 
+void CAutoPilot::InjectHooks() {
+    RH_ScopedClass(CAutoPilot);
+    RH_ScopedCategory("Vehicle");
+
+    RH_ScopedInstall(ModifySpeed, 0x41B980);
+    RH_ScopedInstall(RemoveOnePathNode, 0x41B950);
+}
+
+namespace {
+//! 0x44DB00 - the original's lane offset of a car path link, returned at extended precision (x87 `st0`).
+//! NOTE: `CCarPathLink::OneWayLaneOffset` does NOT match this function's asm, so it isn't used here.
+double LaneOffsetOfLink(const CCarPathLink& link) {
+    const auto raw   = reinterpret_cast<const uint8*>(&link);
+    const auto flags = raw[0xB];
+    const auto opp   = flags & 7;        // bits 0..2
+    const auto same  = (flags >> 3) & 7; // bits 3..5
+    if (opp == 0) {
+        return 0.5 - (double)same * 0.5;
+    }
+    if (same == 0) {
+        return 0.5 - (double)opp * 0.5;
+    }
+    return (double)raw[0xA] * (double)0.011574074f + 0.5; // 0x858EEC = 1/86.4
+}
+}
+
+// 0x41B980
 void CAutoPilot::ModifySpeed(float target) {
-    plugin::CallMethod<0x41B980, CAutoPilot*, float>(this, target);
+    constexpr float c01   = 0.01f;  // 0x858C58
+    constexpr float c0125 = 0.125f; // 0x858C48
+    constexpr float c54   = 5.4f;   // 0x858C50
+
+    if (!(target > c01)) {
+        target = c01;
+    }
+
+    // `(now - field_C)` is treated as unsigned (the original adds 2^32 if negative), divided as a signed int
+    const auto progress = (float)((double)(uint32)(CTimer::GetTimeInMS() - (uint32)field_C) / (double)(int32)m_nSpeedScaleFactor);
+    m_speed = target;
+
+    if (!ThePaths.IsAreaLoaded(m_nCurrentPathNodeInfo.m_wAreaId) || !ThePaths.IsAreaLoaded(m_nNextPathNodeInfo.m_wAreaId)) {
+        return;
+    }
+
+    // Both links are looked up through `m_pNaviNodes`
+    const auto& linkA = ThePaths.GetCarPathLink(m_nCurrentPathNodeInfo);
+    const auto& linkB = ThePaths.GetCarPathLink(m_nNextPathNodeInfo);
+
+    // Raw compressed values (posn: int16 * 1/8, dir: int8 * 0.01)
+    const auto rawA16 = reinterpret_cast<const int16*>(&linkA);
+    const auto rawB16 = reinterpret_cast<const int16*>(&linkB);
+    const auto rawA8  = reinterpret_cast<const int8*>(&linkA);
+    const auto rawB8  = reinterpret_cast<const int8*>(&linkB);
+
+    const double curr = _smthCurr;
+    const double next = _smthNext;
+
+    const auto Dir = [](int8 d, double s) { return (float)((double)d * (double)c01 * s); };
+    const float adx = Dir(rawA8[8], curr);
+    const float ady = Dir(rawA8[9], curr);
+    const float bdx = Dir(rawB8[8], next);
+    const float bdy = Dir(rawB8[9], next);
+
+    const auto k1 = (float)((LaneOffsetOfLink(linkA) + (double)m_nCurrentLane) * (double)c54);
+    const auto k2 = (LaneOffsetOfLink(linkB) + (double)m_nNextLane) * (double)c54; // not rounded to float
+
+    const CVector end{
+        (float)((double)rawB16[0] * (double)c0125 + k2 * (double)bdy),
+        (float)((double)rawB16[1] * (double)c0125 - k2 * (double)bdx),
+        0.0f
+    };
+    const CVector start{
+        (float)((double)rawA16[0] * (double)c0125 + (double)k1 * (double)ady),
+        (float)((double)rawA16[1] * (double)c0125 - (double)k1 * (double)adx),
+        0.0f
+    };
+
+    const auto scale = CCurves::CalcSpeedScaleFactor(start, end, adx, ady, bdx, bdy);
+
+    // `_ftol` truncates, the products are kept at extended precision
+    const auto newScale = (int32)((double)scale * (1000.0 / (double)m_speed));
+    m_nSpeedScaleFactor = (uint32)newScale;
+    field_C             = (int32)((double)CTimer::GetTimeInMS() - (double)newScale * (double)progress);
 }
 
 // 0x41B950
 void CAutoPilot::RemoveOnePathNode() {
-    plugin::CallMethod<0x41B950, CAutoPilot*>(this);
+    m_nPathFindNodesCount--;
+    for (int16 i = 0; i < (int16)m_nPathFindNodesCount; i++) {
+        m_aPathFindNodesInfo[i] = m_aPathFindNodesInfo[i + 1];
+    }
 }
 
 void CAutoPilot::SetCarMission(eCarMission carMission, uint32 timeOffsetMs) {

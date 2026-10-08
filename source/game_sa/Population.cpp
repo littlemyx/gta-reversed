@@ -1352,8 +1352,15 @@ void CPopulation::PlaceCouple(ePedType husbandPedType, eModelID husbandModelId, 
         return;
     }
 
-    if (CanCameraSeeAPedHere(placeAt)) {
-        return;
+    // NOTE: Not `CanCameraSeeAPedHere`, as the original uses a different radius (1.5), `>` instead of `>=` and a `sqrt`-ed distance
+    if (TheCamera.IsSphereVisible(placeAt, 1.5f)) {
+        const auto playerPos = FindPlayerPed(-1)->GetPosition();
+        const double dx = static_cast<double>(placeAt.x) - static_cast<double>(playerPos.x);
+        const double dy = static_cast<double>(placeAt.y) - static_cast<double>(playerPos.y);
+        const auto   dist = static_cast<float>(std::sqrt(dx * dx + dy * dy));
+        if (static_cast<double>(PedCreationDistMultiplier()) * 42.5 > static_cast<double>(dist)) {
+            return;
+        }
     }
 
     if (!CPedPlacement::IsPositionClearForPed(placeAt, CModelInfo::GetPedModelInfo(husbandModelId)->GetColModel()->GetBoundRadius())) {
@@ -1362,7 +1369,7 @@ void CPopulation::PlaceCouple(ePedType husbandPedType, eModelID husbandModelId, 
 
     const auto GetSetGroundZ = [](CVector& posn) {
         bool bGroundHit{};
-        posn.z = std::max(CWorld::FindGroundZFor3DCoord(posn, &bGroundHit, nullptr) + 1.f, posn.z);
+        posn.z = std::max(CWorld::FindGroundZFor3DCoord({ posn.x, posn.y, posn.z + 1.f }, &bGroundHit, nullptr) + 1.f, posn.z);
         return bGroundHit;
     };
 
@@ -1395,26 +1402,32 @@ void CPopulation::PlaceCouple(ePedType husbandPedType, eModelID husbandModelId, 
     }
 
     // 0x614028
-    const auto wifeyIsLeader = wifeyWalkSpeed >= husbWalkSpeed; // Whoever is faster is the leader
+    const auto wifeyIsLeader = wifeyWalkSpeed > husbWalkSpeed; // Whoever is faster is the leader (if equal => the husband)
     wifey->GetTaskManager().SetTask(new CTaskComplexBeInCouple{ husb, wifeyIsLeader }, TASK_PRIMARY_PRIMARY);
     husb->GetTaskManager().SetTask(new CTaskComplexBeInCouple{ wifey, !wifeyIsLeader }, TASK_PRIMARY_PRIMARY);
 
-    // Update husband position
-    auto husbNewPos = husb->GetPosition() + CVector{ CTaskComplexFollowLeaderInFormation::ms_offsets.Offsets[4] };
-    if (GetSetGroundZ(husbNewPos)) {
-        husb->SetPosn(husbNewPos);
-    }
-
-    if (CPedPlacement::IsPositionClearForPed(
-        husbNewPos,
-        wifey->GetColModel()->GetBoundRadius(),
-        { husb, wifey }
-    )) {
-        CVisibilityPlugins::SetClumpAlpha(wifey->GetRpClump(), 0); // All good
-    }  else { // Blocked by something
-        RemovePed(wifey);
+    // Move the WIFE next to the husband
+    bool bGroundHit{};
+    const auto wifeyNewPos = husb->GetPosition() + CVector{ CTaskComplexFollowLeaderInFormation::ms_offsets.Offsets[4] };
+    const auto wifeyNewZ = std::max(CWorld::FindGroundZFor3DCoord({ wifeyNewPos.x, wifeyNewPos.y, wifeyNewPos.z + 1.f }, &bGroundHit, nullptr) + 1.f, wifeyNewPos.z);
+    if (!bGroundHit) {
         RemovePed(husb);
+        RemovePed(wifey);
+        return;
     }
+    wifey->SetPosn(wifeyNewPos.x, wifeyNewPos.y, wifeyNewZ);
+
+    // NOTSA: The original doesn't use the return value, but checks the entities it has found; `wifeyNewPos.z` is NOT the adjusted one
+    CEntity* hitEntities[3]{};
+    CPedPlacement::IsPositionClearForPed(wifeyNewPos, CModelInfo::GetPedModelInfo(wifeyModelId)->GetColModel()->GetBoundRadius(), 3, hitEntities, true, true, true);
+    for (const auto* const hit : hitEntities) {
+        if (hit && hit != husb && hit != wifey) { // Blocked by something
+            RemovePed(husb);
+            RemovePed(wifey);
+            return;
+        }
+    }
+    CVisibilityPlugins::SetClumpAlpha(wifey->GetRpClump(), 0); // All good
 }
 
 // 0x614210
@@ -1711,7 +1724,6 @@ void AddCoupleToPopulation(eModelID husbandModel, eModelID wifeModel, const CVec
     }
 
     // Move the wife next to the husband
-    // NOTE: `CPopulation::PlaceCouple` moves the husband here instead (the original code is the same, but in there it was ECX=EDI too, so one of them is wrong)
     const auto wifeNewPos = husband->GetPosition() + CVector{ CTaskComplexFollowLeaderInFormation::ms_offsets.Offsets[4] };
     groundFound = false;
     const auto wifeGroundZ = CWorld::FindGroundZFor3DCoord(CVector{ wifeNewPos.x, wifeNewPos.y, wifeNewPos.z + 1.f }, &groundFound, nullptr);

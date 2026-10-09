@@ -82,6 +82,8 @@
 #include "Radar.h"
 #include "WaterCannons.h"
 #include "Lines.h"
+#include "MentalHealth.h"
+#include "PlayerRelationshipRecorder.h"
 #include "Escalators.h"
 #include "MovingThings.h"
 #include "PlaneTrail.h"
@@ -786,6 +788,9 @@ void InjectHooksMain() {
     CInformGroupEventQueue::InjectHooks();
     CGangs::InjectHooks();
     CPlayerInfo::InjectHooks();
+    CLines::InjectHooks();
+    CMentalState::InjectHooks();
+    CPlayerRelationshipRecorder::InjectHooks();
     CReplay::InjectHooks();
     CDarkel::InjectHooks();
     CGeneral::InjectHooks();

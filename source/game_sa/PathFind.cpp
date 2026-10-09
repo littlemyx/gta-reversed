@@ -1094,11 +1094,16 @@ void AddNewInteriorNodeLink(int32 areaA, int32 nodeA, int32 areaB, int32 nodeB, 
         return std::sqrt(dz * dz + dy * dy + dx * dx);
     };
 
-    // The original computes the distance up to 3 times (inlined `min(dist, 255)` + `max(1, ...)` idioms); the observable result is:
-    // `255` if the distance (using the compressed positions) is > 255, otherwise the truncated distance. The `max(1, ...)` branch is dead code.
+    // The original evaluates the distance several times (inlined `min(dist, 255)` / `max(1, ...)` idioms):
+    // 1. `d` = distance using the compressed positions; if `d > 255` -> 255
+    // 2. otherwise if `(uint8)ftol(d) < 1` (d < 1) -> 1
+    // 3. otherwise the truncated distance using the uncompressed positions (0x420A10)
+    const auto d = Dist3D(*src, *tgt);
     uint8 length;
-    if (Dist3D(*src, *tgt) > 255.0) {
+    if (d > 255.0) {
         length = 255;
+    } else if ((uint8)notsa::detail::Ftol(d) < 1) {
+        length = 1;
     } else {
         const CVector srcPos = src->GetPosition(), tgtPos = tgt->GetPosition(); // 0x420A10
         const double  dx = (double)srcPos.x - (double)tgtPos.x;
@@ -1362,7 +1367,13 @@ CVector CPathFind::FindParkingNodeInArea(float minX, float maxX, float minY, flo
     if (!haveFirst) {
         return CVector{ 0.f, 0.f, 0.f };
     }
-    return haveSelected ? selected : first;
+    if (haveSelected) {
+        return selected;
+    }
+    // BUG: When the round-robin index didn't match any node, the original returns `first.y` as the `z` (reads the wrong stack slot at 0x4515BD)
+    return notsa::IsFixBugs()
+        ? first
+        : CVector{ first.x, first.y, first.y };
 }
 
 // 0x450F30

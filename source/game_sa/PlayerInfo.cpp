@@ -956,7 +956,7 @@ void CPlayerInfo::ProcessCarGunCrosshair(uint32 playerIndex, CPad* pad) {
     const bool  oldDoomAim = ped->bDoomAim;
     ped->bDoomAim          = false;
     weapon.FireInstantHit(ped, &source, &source, nullptr, &target, nullptr, true, true);
-    ped->bDoomAim = oldDoomAim;
+    CWorld::Players[playerIndex].m_pPed->bDoomAim = oldDoomAim; // The original re-reads the player's ped here (0x56EF5F)
 }
 
 // 0x56EC80 - Hook wrapper: `this` is the address of `m_nCrosshairActivated`

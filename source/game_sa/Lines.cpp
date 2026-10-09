@@ -31,7 +31,7 @@ void CLines::RenderLineWithClipping(float startX, float startY, float startZ, fl
     const double dy   = (double)startY - (double)endY;
     const double dz   = (double)startZ - (double)endZ;
     double       iters = std::sqrt(dz * dz + dy * dy + dx * dx) * (double)0.4f + 1.0;
-    if (7.0 < iters || std::isnan(iters)) { // `FCOMP` + `TEST AH, 5` + `JP`
+    if (7.0 < iters) { // `FCOMP` + `TEST AH, 5` + `JP`: unordered (NaN) leaves `iters` as is (-> `_ftol` of NaN = 0 vertices)
         iters = 7.0;
     }
     const auto numVerts = (int16)notsa::detail::Ftol(iters); // _ftol

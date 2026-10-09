@@ -1,6 +1,13 @@
 #pragma once
 #pragma message("Compiling precompiled header.\n")
 
+#ifdef NOTSA_STANDALONE_RUN
+// The original exe has no assert()s: the run build must not abort on conditions the original silently tolerates (e.g. flipped rects from DoFade without FIX_BUGS)
+#ifndef NDEBUG
+#define NDEBUG
+#endif
+#endif
+
 #include <cstdio>
 #include <cmath>
 #include <cinttypes>

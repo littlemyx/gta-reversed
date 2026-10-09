@@ -184,7 +184,7 @@ static void ShimDumpBackBuffer() {
         const char* e = std::getenv("NOTSA_STANDALONE_SCREENSHOT");
         s_Every = e ? (std::atoi(e) > 0 ? std::atoi(e) : 1) : -1;
     }
-    if (s_Every < 0 || s_Written >= 30 || (s_Frame++ % s_Every) != 0) {
+    if (s_Every < 0 || s_Written >= (std::getenv("NOTSA_STANDALONE_SCREENSHOT_MAX") ? std::atoi(std::getenv("NOTSA_STANDALONE_SCREENSHOT_MAX")) : 30) || (s_Frame++ % s_Every) != 0) {
         return;
     }
     IDirect3DDevice9* dev = rw::d3d::d3ddevice;

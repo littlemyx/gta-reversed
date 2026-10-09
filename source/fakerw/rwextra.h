@@ -125,6 +125,14 @@ void RwD3D9DrawIndexedPrimitive(RwUInt32 primitiveType, RwInt32 baseVertexIndex,
 void RwD3D9DrawPrimitive(RwUInt32 primitiveType, RwUInt32 startVertex, RwUInt32 primitiveCount);
 inline IDirect3DDevice9* GetD3D9Device() { return rw::d3d::d3ddevice; }
 
+// 02c: the rest of the RwD3D9 fixed-function/device state API (source/standalone/rw/rwd3d_ff.cpp). The game only needs the functions above plus
+// the ones declared in rwapi.h; these are the matching Get* / helper entry points (same names and argument order as the original RW 3.6 D3D9 API).
+void   RwD3D9GetTextureStageState(RwUInt32 stage, RwUInt32 type, void* value);   // *(RwUInt32*)value = state
+void   RwD3D9GetTransform(RwUInt32 state, void* matrix);                          // D3DMATRIX*
+void   RwD3D9GetLight(RwInt32 index, void* light);                                // D3DLIGHT9*
+void   RwD3D9SetStreamSource(RwUInt32 streamNumber, void* streamData, RwUInt32 offset, RwUInt32 stride);
+void   RwD3D9SetFVF(RwUInt32 fvf);
+
 // Ambient light colour clamped to [0,1] (RW kept it in a global that RpWorldAddLight/RpLightSetColor refresh; read by the car pipeline)
 extern RwRGBAReal AmbientSaturated;
 

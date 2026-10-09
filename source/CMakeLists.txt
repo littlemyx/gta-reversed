@@ -249,6 +249,21 @@ if (${RE_PROJECT}_RW_LIBRW)
     target_include_directories(rw_engine_test BEFORE PRIVATE fakerw)
     target_link_libraries(rw_engine_test PRIVATE librw d3d9 user32)
     set_target_properties(rw_engine_test PROPERTIES COMPILE_WARNING_AS_ERROR OFF)
+
+    # P2B-02c unit test of the render-state mapper + RwD3D9 fixed-function API (not part of `all`): ninja rw_renderstate_test. No PCH; uses a hidden window and
+    # librw's D3D9 device when one can be created (Wine/wined3d is fine), otherwise only the device-less checks run.
+    if (EXISTS "${PROJECT_SOURCE_DIR}/tests/standalone/rw_renderstate_test.cpp")
+        add_executable(rw_renderstate_test EXCLUDE_FROM_ALL
+            "${PROJECT_SOURCE_DIR}/tests/standalone/rw_renderstate_test.cpp"
+            "${CMAKE_CURRENT_SOURCE_DIR}/standalone/rw/renderstate.cpp"
+            "${CMAKE_CURRENT_SOURCE_DIR}/standalone/rw/rwd3d_ff.cpp"
+        )
+        target_compile_features(rw_renderstate_test PRIVATE cxx_std_23)
+        target_compile_definitions(rw_renderstate_test PRIVATE NOTSA_RW_LIBRW NOTSA_RW_UNIT_TEST RW_D3D9)
+        target_include_directories(rw_renderstate_test BEFORE PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/fakerw")
+        target_link_libraries(rw_renderstate_test PRIVATE librw d3d9 user32)
+        set_target_properties(rw_renderstate_test PROPERTIES COMPILE_WARNING_AS_ERROR OFF)
+    endif()
 endif()
 
 #--------------------------------------------------------------------
@@ -295,6 +310,8 @@ if (${RE_PROJECT}_RW_LIBRW)
     target_include_directories(${RE_PROJECT_LIB_NAME} BEFORE PRIVATE fakerw)
     # P2B-02a: engine.cpp is the shim's RwEngine*/RwD3D9 device layer and includes librw's private d3d9 header (rwd3dimpl.h)
     set_source_files_properties(standalone/rw/engine.cpp PROPERTIES SKIP_UNITY_BUILD_INCLUSION ON)
+    # P2B-02c: standalone shim TUs that include fakerw.h directly (no PCH dependency, their own static helpers)
+    set_source_files_properties(standalone/rw/renderstate.cpp standalone/rw/rwd3d_ff.cpp PROPERTIES SKIP_UNITY_BUILD_INCLUSION ON)
 endif()
 
 target_link_libraries(${RE_PROJECT_LIB_NAME} PRIVATE

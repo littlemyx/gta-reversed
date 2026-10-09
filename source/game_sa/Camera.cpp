@@ -6,6 +6,7 @@
 #include "TaskSimpleHoldEntity.h"
 #include "TaskSimpleDuck.h"
 #include "Hud.h"
+#include "HandShaker.h"
 #include "FileLoader.h"
 #include "MBlur.h"
 #include "Garages.h"
@@ -179,7 +180,9 @@ void CCamera::InjectHooks() {
     RH_ScopedOverloadedInstall(ProcessVectorMoveLinear, "1", 0x5164A0, void(CCamera::*)());
     RH_ScopedOverloadedInstall(ProcessFOVLerp, "0", 0x50D510, void(CCamera::*)(float));
     RH_ScopedOverloadedInstall(ProcessFOVLerp, "1", 0x516500, void(CCamera::*)());
-    //RH_ScopedOverloadedInstall(ProcessJiggle, "0", 0x516560, { .Reversed = false });
+    RH_ScopedInstall(ProcessJiggle, 0x516560);
+    RH_ScopedInstall(IsItTimeForNewCamera, 0x51D770);
+    RH_ScopedOverloadedInstall(IsSphereVisible, "3", 0x420C40, bool(CCamera::*)(const CVector&, float, RwMatrix*));
 
     RH_ScopedGlobalInstall(CamShakeNoPos, 0x50A970);
 }
@@ -1403,7 +1406,32 @@ bool CCamera::IsExtraEntityToIgnore(CEntity* entity) {
 
 // 0x420C40
 bool CCamera::IsSphereVisible(const CVector& origin, float radius, RwMatrix* transformMatrix) {
-    return plugin::CallMethodAndReturn<bool, 0x420C40, CCamera*, const CVector&, float, RwMatrix*>(this, origin, radius, transformMatrix);
+    // NOTE: x87 extended precision in the original, intermediates are `double` here. All the early-outs
+    //       are written so that NaN doesn't reject (`!(a > b)` in the original's FCOMP + test flags terms)
+    CVector pos = origin;
+    RwV3dTransformPoints(&pos, &pos, 1, transformMatrix);
+
+    const double r = radius;
+    if ((double)pos.y + r < (double)CDraw::ms_fNearClipZ) {
+        return false;
+    }
+    if ((double)pos.y - r > (double)CDraw::ms_fFarClipZ) {
+        return false;
+    }
+    const auto& n = m_avecFrustumNormals;
+    if ((double)pos.x * n[0].x + (double)pos.y * n[0].y > r) {
+        return false;
+    }
+    if ((double)pos.x * n[1].x + (double)pos.y * n[1].y > r) {
+        return false;
+    }
+    if ((double)pos.z * n[2].z + (double)pos.y * n[2].y > r) {
+        return false;
+    }
+    if ((double)pos.z * n[3].z + (double)pos.y * n[3].y > r) {
+        return false;
+    }
+    return true;
 }
 
 // 0x420D40 - NOTE: Function has no hook
@@ -1685,7 +1713,298 @@ bool StartNextCineyCam(CCamera& cam, int32& seqIdx, const int32* table, int32 co
 
 // 0x51D770
 bool CCamera::IsItTimeForNewCamera(int32 camSequence, int32 startTime) {
-    return plugin::CallMethodAndReturn<bool, 0x51D770, CCamera*, int32, int32>(this, camSequence, startTime); // Not reversed yet
+    // NOTSA names, unidentified globals
+    static auto& s_MaxTimeSinceStartAbs  = StaticRef<float>(0x8CCDF8); // 20000.0 - Above this (ms) the cam is always changed
+    static auto& s_MaxTimeSinceStart     = StaticRef<float>(0x8CCDF0); // 15000.0 - Above this (ms) most of the cams are changed
+    static auto& s_bStickWasCentered     = StaticRef<bool>(0x8CCDF4);  // Initially true, the right stick has to be centered to change the cam by it again
+
+    // NOTE: x87 extended precision in the original: the intermediates are `double`, the vectors are floats
+    const auto MagExt = [](const CVector& v) { // 0x4082C0 - `CVector::Magnitude`
+        return std::sqrt(((double)v.x * v.x + (double)v.y * v.y) + (double)v.z * v.z);
+    };
+
+    if (camSequence < 0) {
+        return true;
+    }
+
+    // Time since the start of the cam. NOTE: `FILD` is signed, thus the correction (2^32 from 0x858C54) for times above 2^31
+    const uint32 now = CTimer::GetTimeInMS();
+    double       sinceStartExt = (double)(int32)now;
+    if ((int32)now < 0) {
+        sinceStartExt += 4294967296.0f;
+    }
+    sinceStartExt -= (double)startTime;
+    if (sinceStartExt > (double)s_MaxTimeSinceStartAbs) { // the compare is done before the value is rounded to float
+        return true;
+    }
+    const float sinceStart = (float)sinceStartExt;
+
+    // Right stick -> change the cam
+    const float stickX = (float)CPad::GetPad(0)->NewState.RightStickX; // 0x53FB70
+    if (std::fabs(stickX) <= 32.0f) { // 0x85950C
+        s_bStickWasCentered = true;
+    } else if (std::fabs(stickX) > 96.0f && s_bStickWasCentered) { // 0x863218
+        gCineyCamDirection = 1;
+        if (stickX <= 0.0f) {
+            gCineyCamDirection = -1;
+        }
+        s_bStickWasCentered = false;
+        return true;
+    }
+
+    if (camSequence > 29) {
+        return false;
+    }
+
+    // Is the player in a boat (and the cam's target isn't a Skimmer)?
+    const auto IsPlayerInBoatNotSkimmer = [&] { // NOTE: `FindPlayerVehicle` is called twice in the original (no side effects)
+        const auto* const veh = FindPlayerVehicle(-1, false);
+        return veh && veh->m_nVehicleType == VEHICLE_TYPE_BOAT && m_pTargetEntity->m_nModelIndex != MODEL_SKIMMER;
+    };
+    // Is there a clear line from the player to the camera? (Buildings only)
+    const auto IsPlayerVisibleFromCam = [&] {
+        return CWorld::GetIsLineOfSightClear(FindPlayerCoors(-1), m_vecFixedModeSource, true, false, false, false, false, false, false);
+    };
+    // Is there a clear line from the cam's target to the active cam's position? (Buildings only)
+    const auto IsTargetVisibleFromActiveCam = [&] {
+        return CWorld::GetIsLineOfSightClear(m_pTargetEntity->GetPosition(), GetActiveCam().m_vecSource, true, false, false, false, false, false, false);
+    };
+    // Player's position relative to the cam (as the original does it, the vector's `z` is zeroed for the 2D checks)
+    const auto PlayerOffsetFromCam = [&](bool zeroZ) {
+        CVector offset = FindPlayerCoors(-1) - m_vecFixedModeSource;
+        if (zeroZ) {
+            offset.z = 0.0f;
+        }
+        return offset;
+    };
+    // Dot product with the player's speed, the term order of the original (the `z` is multiplied by 0.0 and its order varies)
+    const auto SpeedDotZFirst = [](const CVector& offset) { // (y * sy + sz * 0) + x * sx
+        const auto& speed = FindPlayerSpeed(-1);
+        return ((double)offset.y * speed.y + (double)speed.z * 0.0f) + (double)offset.x * speed.x;
+    };
+    const auto SpeedDotZLast = [](const CVector& offset) { // (y * sy + x * sx) + sz * 0
+        const auto& speed = FindPlayerSpeed(-1);
+        return ((double)offset.y * speed.y + (double)offset.x * speed.x) + (double)speed.z * 0.0f;
+    };
+    const auto SetNearClipAndReturnFalse = [] { // 0x7EE1D0 - `RwCameraSetNearClipPlane`
+        RwCameraSetNearClipPlane(Scene.m_pRwCamera, 0.15f);
+        return false;
+    };
+    auto& activeCam = GetActiveCam();
+
+    switch (camSequence) {
+    case 0: {
+        if (const auto* const veh = FindPlayerVehicle(-1, false)) {
+            if (IsPlayerInBoatNotSkimmer()) {
+                return true;
+            }
+            if (veh->m_nModelIndex == MODEL_RHINO) {
+                return true;
+            }
+            if (!IsTargetVisibleFromActiveCam()) {
+                return true;
+            }
+        }
+        if (now > (uint32)startTime + 5000u) {
+            return true;
+        }
+        return SetNearClipAndReturnFalse();
+    }
+    case 1: {
+        if (sinceStart > s_MaxTimeSinceStart) {
+            return true;
+        }
+        if (IsPlayerInBoatNotSkimmer()) {
+            return true;
+        }
+        if (!IsPlayerVisibleFromCam()) {
+            return true;
+        }
+        const auto offset = PlayerOffsetFromCam(true);
+        if (MagExt(offset) > 40.0f && SpeedDotZFirst(offset) > 0.0) { // 0x858A10
+            return true;
+        }
+        return MagExt(offset) < 4.5f; // 0x863214
+    }
+    case 2: {
+        if (sinceStart > s_MaxTimeSinceStart) {
+            return true;
+        }
+        if (IsPlayerInBoatNotSkimmer()) {
+            return true;
+        }
+        if (!IsPlayerVisibleFromCam()) {
+            return true;
+        }
+        const auto offset = PlayerOffsetFromCam(true);
+        if (MagExt(offset) < 2.0f) { // 0x858CA0
+            double nearClip = MagExt(offset) * 0.5f;
+            if (nearClip < (double)0.05f) { // 0x858C28
+                nearClip = 0.05f;
+            }
+            m_fNearClipScript     = (float)nearClip;
+            m_bUseNearClipScript = true;
+        }
+        if (MagExt(offset) > 29.0f && SpeedDotZFirst(offset) > 0.0) { // 0x863210
+            return true;
+        }
+        if (MagExt(offset) < 2.0f) {
+            return true;
+        }
+        return SetNearClipAndReturnFalse();
+    }
+    case 3: {
+        if (sinceStart > s_MaxTimeSinceStart) {
+            return true;
+        }
+        if (!IsPlayerVisibleFromCam()) {
+            return true;
+        }
+        const auto offset = PlayerOffsetFromCam(true);
+        if (MagExt(offset) > 48.0f && SpeedDotZLast(offset) > 0.0) { // 0x862D38
+            return true;
+        }
+        return SetNearClipAndReturnFalse();
+    }
+    case 4:
+    case 6:
+        return now > (uint32)startTime + 3000u;
+    case 5: {
+        if (sinceStart > s_MaxTimeSinceStart) {
+            return true;
+        }
+        if (IsPlayerInBoatNotSkimmer()) {
+            return true;
+        }
+        if (!IsPlayerVisibleFromCam()) {
+            return true;
+        }
+        const auto offset = PlayerOffsetFromCam(true);
+        if (!(MagExt(offset) > 38.0f)) { // 0x86320C
+            return false;
+        }
+        return SpeedDotZFirst(offset) > 0.0;
+    }
+    case 7: {
+        if (now > (uint32)startTime + 2000u) {
+            auto* const veh = FindPlayerVehicle(-1, false);
+            // BUG: The original doesn't check for the player not being in a vehicle (calls `GetIsOnScreen` on null)
+            if (notsa::IsFixBugs() && !veh) {
+                return true;
+            }
+            if (!veh->GetIsOnScreen()) { // 0x534540
+                return true;
+            }
+        }
+        return false;
+    }
+    case 8: {
+        if (sinceStart > s_MaxTimeSinceStart) {
+            return true;
+        }
+        if (IsPlayerInBoatNotSkimmer()) {
+            return true;
+        }
+        if (!IsTargetVisibleFromActiveCam()) {
+            return true;
+        }
+        if (now > (uint32)startTime + 1000u) {
+            return true;
+        }
+        m_fNearClipScript     = 0.6f; // 0x3F19999A
+        m_bUseNearClipScript = true;
+        return false;
+    }
+    case 15: {
+        if (sinceStart > s_MaxTimeSinceStart) {
+            return true;
+        }
+        if (!FindPlayerVehicle(-1, false)) {
+            return false;
+        }
+        if (!IsPlayerVisibleFromCam()) {
+            return true;
+        }
+        const auto offset = PlayerOffsetFromCam(true);
+        if (MagExt(offset) > 44.0f && SpeedDotZLast(offset) > 0.0) { // 0x858FF8
+            return true;
+        }
+        return MagExt(offset) < 3.0f; // 0x858B3C
+    }
+    case 16: {
+        if (sinceStart > s_MaxTimeSinceStart) {
+            return true;
+        }
+        if (!FindPlayerVehicle(-1, false)) {
+            return false;
+        }
+        if (!IsPlayerVisibleFromCam()) {
+            return true;
+        }
+        const auto offset = PlayerOffsetFromCam(true);
+        if (MagExt(offset) > 50.0f) { // 0x858B40
+            return true;
+        }
+        return MagExt(offset) < 3.0f;
+    }
+    case 17: {
+        if (sinceStart > s_MaxTimeSinceStart) {
+            return true;
+        }
+        if (!FindPlayerVehicle(-1, false)) {
+            return false;
+        }
+        if (!IsPlayerVisibleFromCam()) {
+            return true;
+        }
+        const auto offset = PlayerOffsetFromCam(true);
+        if (MagExt(offset) > 50.0f && SpeedDotZLast(offset) > 0.0) {
+            return true;
+        }
+        return MagExt(offset) < 2.0f;
+    }
+    case 18: {
+        if (sinceStart > s_MaxTimeSinceStart) {
+            return true;
+        }
+        if (!IsPlayerVisibleFromCam()) {
+            return true;
+        }
+        const auto offset = PlayerOffsetFromCam(false); // NOTE: `z` is kept
+        if (MagExt(offset) > 57.0f) { // 0x863208
+            return true;
+        }
+        return MagExt(offset) < 1.0f; // 0x858624
+    }
+    case 19: {
+        if (sinceStart > s_MaxTimeSinceStart) {
+            return true;
+        }
+        if (!IsPlayerVisibleFromCam()) {
+            return true;
+        }
+        const auto offset = PlayerOffsetFromCam(true);
+        if (MagExt(offset) > 36.0f) { // 0x863204
+            return true;
+        }
+        return MagExt(offset) < 2.0f;
+    }
+    case 20: return !activeCam.Process_DW_HeliChaseCam(true);    // 0x51A740
+    case 21: return !activeCam.Process_DW_CamManCam(true);       // 0x51B120
+    case 22: return !activeCam.Process_DW_BirdyCam(true);        // 0x51B850
+    case 23: return !activeCam.Process_DW_PlaneSpotterCam(true); // 0x51C250
+    case 24:
+    case 25:
+        TheCamera.m_bUseNearClipScript = false; // 0xB6F059
+        return true;
+    case 26: return !activeCam.Process_DW_PlaneCam1(true);       // 0x51C760
+    case 27: return !activeCam.Process_DW_PlaneCam2(true);       // 0x51CC30
+    case 28: return !activeCam.Process_DW_PlaneCam3(true);       // 0x51D100
+    case 29:
+        return now > (uint32)startTime + 5000u;
+    default: // 9 - 14
+        return false;
+    }
 }
 
 // 0x526C80
@@ -1908,14 +2227,96 @@ void CCamera::ProcessVectorMoveLinear() {
 void CCamera::ProcessShake() {
     const double timeNow = (double)CTimer::GetTimeInMS();
     if (timeNow <= m_fEndShakeTime) {
-        ProcessShake((float)((timeNow - m_fStartShakeTime) / ((double)m_fEndShakeTime - m_fStartShakeTime)));
+        ProcessJiggle((float)((timeNow - m_fStartShakeTime) / ((double)m_fEndShakeTime - m_fStartShakeTime)));
     }
 }
 
-// shakeIntensity not used
+namespace {
+// The helpers below are what the original's `CVector` / `CMatrix` functions do (extended precision with a fixed term order;
+// the shared ones round to float / add in another order).
+
+// 0x59C910 - `CVector::Normalise`. A length of 0 (or less) only writes `x = 1` (NaN takes the sqrt path)
+void NormaliseExt(CVector& v) {
+    const double sumSq = ((double)v.x * v.x + (double)v.y * v.y) + (double)v.z * v.z;
+    if (sumSq <= 0.0) {
+        v.x = 1.0f;
+    } else {
+        const double recip = 1.0 / std::sqrt(sumSq);
+        v.x = (float)(v.x * recip);
+        v.y = (float)(v.y * recip);
+        v.z = (float)(v.z * recip);
+    }
+}
+
+// 0x59C730 - `CrossProduct`
+CVector CrossProductExt(const CVector& a, const CVector& b) {
+    return CVector{
+        (float)((double)b.z * a.y - (double)a.z * b.y),
+        (float)((double)b.x * a.z - (double)a.x * b.z),
+        (float)((double)b.y * a.x - (double)a.y * b.x)
+    };
+}
+
+// 0x59C810 - `Multiply3x3(out, v, m)`: `v` transformed by the transposed rotation of `m`
+CVector Multiply3x3VMExt(const CVector& v, const CMatrix& m) {
+    const auto &r = m.GetRight(), &f = m.GetForward(), &u = m.GetUp();
+    return CVector{
+        (float)(((double)r.y * v.y + (double)r.z * v.z) + (double)v.x * r.x),
+        (float)(((double)f.y * v.y + (double)f.x * v.x) + (double)f.z * v.z),
+        (float)(((double)u.y * v.y + (double)u.x * v.x) + (double)u.z * v.z)
+    };
+}
+} // namespace
+
+// The first param (shake intensity) is not used, the original reads `m_fShakeIntensity`
 // 0x516560
-CVector* CCamera::ProcessShake(float intensity) {
-    return plugin::CallMethodAndReturn<CVector*, 0x516560, CCamera*, float>(this, intensity);
+void CCamera::ProcessJiggle(float) {
+    auto& cam = GetActiveCam();
+
+    // 0x516586 - Sets up the hand shakers (1 - 5) the first time it's called. NOTE: The original is not using `CHandShaker::SetDefaults` for this
+    static auto& s_HandShakersInitialised = StaticRef<bool>(0xB70048);
+    if (!s_HandShakersInitialised) {
+        const auto Init = [](size_t idx, CVector lim, CVector motion, CVector slow, int32 twitchFreq, float twitchVel) {
+            auto& hs = gHandShaker[idx];
+            hs.m_lim              = lim;
+            hs.m_motion           = motion;
+            hs.m_slow             = slow;
+            hs.m_scaleReactionMin = 0.3f;
+            hs.m_scaleReactionMax = 1.0f;
+            hs.m_twitchFreq       = twitchFreq;
+            hs.m_twitchVel        = twitchVel;
+        };
+        const CVector motion{ 0.0002f, 0.0002f, 0.0001f };
+        const CVector slow{ 1.3f, 1.3f, 1.4f };
+        Init(1, { 0.02f, 0.02f, 0.01f }, motion, slow, 15, 0.001f);
+        Init(2, { 0.02f, 0.02f, 0.04f }, motion, slow, 20, 0.001f);
+        Init(3, { 0.02f, 0.02f, 0.01f }, motion, slow, 10, 0.0005f);
+        Init(4, { 0.02f, 0.02f, 0.01f }, motion, slow, 20, 0.002f);
+        Init(5, { 0.02f, 0.02f, 0.01f }, motion, slow, 2, 0.003f);
+        s_HandShakersInitialised = true;
+    }
+
+    auto& hs = gHandShaker[m_nShakeType];
+    hs.Process(m_fShakeIntensity);
+    const float angle = hs.m_ang.z * m_fShakeIntensity;
+
+    cam.m_vecFront = Multiply3x3VMExt(cam.m_vecFront, hs.m_resultMat); // 0x59C810
+    NormaliseExt(cam.m_vecFront);
+
+    cam.m_vecUp = CVector{ (float)std::sin((double)angle), 0.0f, (float)std::cos((double)angle) };
+
+    auto side = CrossProductExt(cam.m_vecFront, cam.m_vecUp);
+    NormaliseExt(side);
+    cam.m_vecUp = CrossProductExt(side, cam.m_vecFront);
+
+    if (cam.m_vecFront.x == 0.0f && cam.m_vecFront.y == 0.0f) {
+        cam.m_vecFront.x = 0.0001f; // 0x38D1B717
+        cam.m_vecFront.y = 0.0001f;
+    }
+
+    side = CrossProductExt(cam.m_vecFront, cam.m_vecUp);
+    NormaliseExt(side);
+    cam.m_vecUp = CrossProductExt(side, cam.m_vecFront);
 }
 
 // inlined - 0x52B845
@@ -2029,7 +2430,7 @@ void CCamera::Process() {
 
     const double timeNow = (double)CTimer::GetTimeInMS();
     if (timeNow <= m_fEndShakeTime) {
-        ProcessShake((float)((timeNow - m_fStartShakeTime) / ((double)m_fEndShakeTime - m_fStartShakeTime)));
+        ProcessJiggle((float)((timeNow - m_fStartShakeTime) / ((double)m_fEndShakeTime - m_fStartShakeTime)));
     }
 
     // NOTSA: Zero-initialised, the original leaves them uninitialised if the transition progress is NaN or > 1
@@ -3799,8 +4200,8 @@ void CCamera::CamControl() {
                 ) {
                     if (!FindPlayerPed()->GetIntelligence()->GetTaskManager().GetTaskSecondary(TASK_SECONDARY_ATTACK)) {
                         // NOTSA: The result of these 2 is discarded (they only read the mouse input)
-                        if (plugin::CallMethodAndReturn<int16, 0x540E80, CPad*>(pad) == 0) { // LookAroundLeftRight
-                            plugin::CallMethodAndReturn<int16, 0x540F80, CPad*>(pad);          // LookAroundUpDown
+                        if (pad->LookAroundLeftRight() == 0) { // LookAroundLeftRight
+                            pad->LookAroundUpDown();          // LookAroundUpDown
                         }
                     }
 

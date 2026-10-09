@@ -369,7 +369,7 @@ public:
     void ProcessMusicFade();
     void ProcessScriptedCommands();
     void ProcessShake();
-    CVector* ProcessShake(float intensity);
+    void ProcessJiggle(float intensity); // 0x516560 (`intensity` is not used)
     void ProcessVectorMoveLinear();
     void ProcessVectorMoveLinear(float ratio);
     void ProcessVectorTrackLinear();

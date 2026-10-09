@@ -449,6 +449,32 @@ if (${RE_PROJECT}_RW_LIBRW)
         target_link_libraries(rw_im2d_im3d_test PRIVATE librw d3d9 user32)
         set_target_properties(rw_im2d_im3d_test PROPERTIES COMPILE_WARNING_AS_ERROR OFF)
     endif()
+
+    # P2B-05b unit test of the matfx / uvanim layer (Wine-runnable; optional SA DFF paths on the command line)
+    add_executable(rw_matfx_uvanim_test EXCLUDE_FROM_ALL
+        "${PROJECT_SOURCE_DIR}/tests/standalone/rw_matfx_uvanim_test.cpp"
+        standalone/rw/matfx.cpp
+        standalone/rw/uvanim.cpp
+        standalone/rw/rwglobals.cpp
+        standalone/rw/atomic.cpp
+        standalone/rw/clump.cpp
+        standalone/rw/plugins.cpp
+        standalone/rw/frame.cpp
+        standalone/rw/light.cpp
+        standalone/rw/world.cpp
+        standalone/rw/material.cpp
+        standalone/rw/geometry.cpp
+        standalone/rw/texture.cpp
+        standalone/rw/texdict.cpp
+        standalone/rw/raster.cpp
+        standalone/rw/image.cpp
+        standalone/rw/camera.cpp
+    )
+    target_compile_features(rw_matfx_uvanim_test PRIVATE cxx_std_23)
+    target_compile_definitions(rw_matfx_uvanim_test PRIVATE NOTSA_RW_LIBRW NOTSA_RW_UNIT_TEST RW_D3D9)
+    target_include_directories(rw_matfx_uvanim_test BEFORE PRIVATE fakerw)
+    target_link_libraries(rw_matfx_uvanim_test PRIVATE librw d3d9 user32)
+    set_target_properties(rw_matfx_uvanim_test PROPERTIES COMPILE_WARNING_AS_ERROR OFF)
 endif()
 
 #--------------------------------------------------------------------
@@ -510,6 +536,8 @@ if (${RE_PROJECT}_RW_LIBRW)
     set_source_files_properties(standalone/rw/im2d_im3d.cpp PROPERTIES SKIP_UNITY_BUILD_INCLUSION ON)
     # P2B-07: pipeline.cpp includes the private d3d9 header and has anonymous-namespace helpers
     set_source_files_properties(standalone/rw/pipeline.cpp PROPERTIES SKIP_UNITY_BUILD_INCLUSION ON)
+    # P2B-05b: anonymous-namespace helpers in matfx.cpp / uvanim.cpp
+    set_source_files_properties(standalone/rw/matfx.cpp standalone/rw/uvanim.cpp PROPERTIES SKIP_UNITY_BUILD_INCLUSION ON)
 endif()
 
 target_link_libraries(${RE_PROJECT_LIB_NAME} PRIVATE

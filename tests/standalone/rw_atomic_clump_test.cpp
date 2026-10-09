@@ -440,6 +440,103 @@ static void StreamTests(const char* path) {
           cEnv.ctor - e0.ctor == cEnv.dtor - e0.dtor && cCol.ctor - c0.ctor == cCol.dtor - c0.dtor);
 }
 
+
+// P2B-04d: RpClumpGtaStreamRead1/2/CancelStream. Read1 on a stream that only holds the first part of the file (what the streaming thread has
+// when a big model is split), Read2 on a fresh stream over the whole file (CStreaming::FinishLoadingLargeFile).
+static void GtaSplitTests(const char* path) {
+    Section((std::string("gta split read: ") + path).c_str());
+    auto bytes = ReadFile(path);
+    if (bytes.empty()) { CHECK(false); return; }
+    const Alloc base = Snap();
+    uint32_t len = 0, ver = 0;
+
+    // reference: the normal reader (atomic order, geometry data, node names)
+    rw::StreamMemory ref;
+    ref.open(bytes.data(), (uint32_t)bytes.size());
+    CHECK(rw::findChunk(&ref, rw::ID_CLUMP, &len, &ver));
+    RpClump* full = RpClumpStreamRead(&ref);
+    CHECK(full != nullptr);
+    if (!full) return;
+    std::vector<RpAtomic*> fa;
+    RpClumpForAllAtomics(full, CollectCB, &fa);
+    const int frames = RwFrameCount(RpClumpGetFrame(full));
+
+    // Read1 over the whole file just to learn where the first half ends (the stream position the exe remembers)
+    rw::StreamMemory probe;
+    probe.open(bytes.data(), (uint32_t)bytes.size());
+    CHECK(rw::findChunk(&probe, rw::ID_CLUMP, &len, &ver));
+    CHECK(RpClumpGtaStreamRead1(&probe));
+    const uint32_t cut = probe.tell();
+    CHECK(cut > 0 && cut < bytes.size());
+    const Alloc parked = Snap();
+    CHECK(parked.f == base.f + frames + frames && parked.g >= base.g + (int)fa.size() / 2);   // `full` + the parked frames; geometries of the first half
+    RpClumpGtaCancelStream();
+    CHECK(Snap().f == base.f + frames && Snap().g == base.g + (Snap().g - base.g) && Snap().a == base.a + (int)fa.size());
+    const int geosOfFull = Snap().g - base.g;
+
+    // the real flow: Start on a truncated buffer (first part only), Finish on a fresh stream over the whole buffer
+    const Counters n0 = cName, p0 = cPipe, d0 = c2dfx, c0 = cCol;
+    rw::StreamMemory part;
+    part.open(bytes.data(), cut);
+    CHECK(rw::findChunk(&part, rw::ID_CLUMP, &len, &ver));
+    CHECK(RpClumpGtaStreamRead1(&part) == true);
+    CHECK(part.tell() == cut);
+    rw::StreamMemory whole;
+    whole.open(bytes.data(), (uint32_t)bytes.size());
+    CHECK(rw::findChunk(&whole, rw::ID_CLUMP, &len, &ver));          // FinishLoadClumpFile's stream is positioned like a fresh Read1 stream
+    RpClump* split = RpClumpGtaStreamRead2(&whole);
+    CHECK(split != nullptr);
+    if (split) {
+        std::vector<RpAtomic*> sa;
+        RpClumpForAllAtomics(split, CollectCB, &sa);
+        CHECK(sa.size() == fa.size() && RwFrameCount(RpClumpGetFrame(split)) == frames);
+        bool same = sa.size() == fa.size();
+        int framesNamed = 0, pipeSeen = 0;
+        for (size_t i = 0; same && i < sa.size(); i++) {
+            same = sa[i]->geometry->numVertices == fa[i]->geometry->numVertices && sa[i]->geometry->numTriangles == fa[i]->geometry->numTriangles &&
+                   RpGeometryGetNumMaterials(sa[i]->geometry) == RpGeometryGetNumMaterials(fa[i]->geometry) && RpAtomicGetFlags(sa[i]) == RpAtomicGetFlags(fa[i]) &&
+                   std::strcmp(NameOf(RpAtomicGetFrame(sa[i])), NameOf(RpAtomicGetFrame(fa[i]))) == 0 && sa[i]->clump == split &&
+                   RawAt(sa[i]->geometry, off2dfx)->len == RawAt(fa[i]->geometry, off2dfx)->len;
+            pipeSeen += *(int32_t*)((uint8_t*)sa[i] + offPipe) != 0;
+        }
+        CHECK(same);
+        CHECK(pipeSeen == 0);                                         // atomic extensions are not read on this path (exe 0x72E270)
+        framesNamed = cName.read - n0.read;
+        CHECK(framesNamed > 0);
+        CHECK(cCol.ctor - c0.ctor == 1);                              // exactly one clump created
+        std::printf("  split read: %zu atomics, %d frames (names read: %d), atomic-extension reads: %d, 2dfx reads: %d (cut at %u of %zu bytes)\n", sa.size(), frames,
+                    framesNamed, cPipe.read - p0.read, c2dfx.read - d0.read, cut, bytes.size());
+        CHECK(RpClumpDestroy(split) == TRUE);
+    }
+    CHECK(Snap().f == base.f + frames && Snap().a == base.a + (int)fa.size() && Snap().g - base.g == geosOfFull);   // nothing parked any more
+    CHECK(RpClumpGtaStreamRead2(&whole) == nullptr);                  // nothing parked
+
+    // cancel after Read1 releases the parked geometries / frames
+    rw::StreamMemory again;
+    again.open(bytes.data(), cut);
+    rw::findChunk(&again, rw::ID_CLUMP, &len, &ver);
+    CHECK(RpClumpGtaStreamRead1(&again));
+    RpClumpGtaCancelStream();
+    RpClumpGtaCancelStream();                                         // idempotent
+    CHECK(Snap().f == base.f + frames && Snap().g - base.g == geosOfFull);
+    // a truncated first part fails and leaves nothing behind
+    rw::StreamMemory cutShort;
+    cutShort.open(bytes.data(), cut > 200 ? 200 : cut / 2);
+    rw::findChunk(&cutShort, rw::ID_CLUMP, &len, &ver);
+    CHECK(RpClumpGtaStreamRead1(&cutShort) == false);
+    CHECK(Snap().f == base.f + frames && Snap().g - base.g == geosOfFull);
+    // a second Read1 drops the previously parked clump
+    rw::StreamMemory a1, a2;
+    a1.open(bytes.data(), cut); a2.open(bytes.data(), cut);
+    rw::findChunk(&a1, rw::ID_CLUMP, &len, &ver); rw::findChunk(&a2, rw::ID_CLUMP, &len, &ver);
+    CHECK(RpClumpGtaStreamRead1(&a1) && RpClumpGtaStreamRead1(&a2));
+    RpClumpGtaCancelStream();
+    CHECK(Snap().f == base.f + frames && Snap().g - base.g == geosOfFull);
+
+    CHECK(RpClumpDestroy(full) == TRUE);
+    CHECK(Same(base, Snap()));
+}
+
 int main(int argc, char** argv) {
     std::setvbuf(stdout, nullptr, _IONBF, 0);
     _set_error_mode(_OUT_TO_STDERR);
@@ -477,6 +574,7 @@ int main(int argc, char** argv) {
     ClumpTests();
     LightCameraTests();
     for (int i = 1; i < argc; i++) StreamTests(argv[i]);
+    for (int i = 1; i < argc; i++) GtaSplitTests(argv[i]);
 
     rw::Engine::s_plglist.destruct(rw::engine);
     DestroyWindow(wnd);

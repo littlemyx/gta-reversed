@@ -1,9 +1,10 @@
 // P2B-04c: RpClump* on top of librw (rw::Clump).
 //   RpClump{Create,Destroy,Clone,AddAtomic,RemoveAtomic,ForAllAtomics,GetNumAtomics,Render,StreamRead,StreamWrite,StreamGetSize} and the light /
-//   camera members (Add/Remove/ForAll/GetNum). RpClumpGetFrame / RpClumpSetFrame are macros in fakerw. RpClumpGtaStreamRead1/2/CancelStream: 04d.
+//   camera members (Add/Remove/ForAll/GetNum). RpClumpGetFrame / RpClumpSetFrame are macros in fakerw.
+//   P2B-04d (end of file): RpClumpGtaStreamRead1 / RpClumpGtaStreamRead2 / RpClumpGtaCancelStream, the SA-specific split clump reader.
 //   Not here (nothing in the game calls them outside the stock RW headers): RpClumpSet/GetCallBack (librw's clump has no render callback
 //   field), RpClumpCreateSpace, RpClumpValidatePlugins, RpClumpSetStreamAlwaysCallBack.
-// Verified against the exe: RpClumpCreate 0x74A290, RpClumpDestroy 0x74A310, RpClumpClone 0x749F70, RpClumpAddAtomic 0x74A490,
+// Verified against the exe: RpClumpGtaStreamRead1 0x72E570, Read2 0x72E620, CancelStream 0x72E700, RpClumpCreate 0x74A290, RpClumpDestroy 0x74A310, RpClumpClone 0x749F70, RpClumpAddAtomic 0x74A490,
 // RpClumpRemoveAtomic 0x74A4C0, RpClumpForAllAtomics 0x749B70, RpClumpRender 0x749B20, RpClumpStreamRead 0x74B420.
 // ORDER (matters for every ForAllAtomics consumer): the exe links atomics / lights at the HEAD of the clump's list (AddAtomic, and the same
 // inline insertion in RpClumpStreamRead) and iterates head -> tail, i.e. the list is in REVERSE insertion order: a streamed clump lists its
@@ -310,5 +311,177 @@ RpClump* RpClumpForAllCameras(RpClump* clump, RwCameraCallBack callback, void* d
 
 RwInt32 RpClumpGetNumCameras(RpClump* clump) {
     return clump ? clump->countCameras() : 0;
+}
+// ================================================================================================================================
+// P2B-04d: SA's split clump reader (used for the "big model" streaming path: CFileLoader::StartLoadClumpFile / FinishLoadClumpFile and
+// CStreaming::RemoveModel -> RpClumpGtaCancelStream). The exe reads the front of a DFF while only the first half of the file is in memory
+// and finishes the clump later from a FRESH stream over the whole file:
+//   Read1 (0x72E570, the stream is already inside the Clump chunk): STRUCT (12 bytes: numAtomics / numLights / numCameras), FRAMELIST (frames
+//     built, parked), GEOMETRYLIST: STRUCT (numGeometries), then ONLY THE FIRST numGeometries/2 geometries (RpGeometryStreamRead, with the
+//     geometry plugins: 2dfx / breakable / extra colours / materials' env+spec). The stream position after them is remembered. True on success.
+//   Read2 (0x72E620): a new clump, the stream (position 0 of the fresh stream) is advanced to the remembered position, the remaining geometries
+//     [numGeometries/2, numGeometries) are read, the clump takes frames[0] as its frame, then numAtomics ATOMIC chunks are read with 0x72E270
+//     and added at the head. 0x72E270 reads only the 16-byte atomic STRUCT (frame index, geometry index, flags) and sets frame + geometry --
+//     the atomic's EXTENSION (pipeline id, rights) is NOT read, and neither are lights, cameras or the clump's own extension (whose plugin
+//     chunks are therefore left to the file's skipped bytes). Parked geometry references / frame array are released.
+//   Cancel (0x72E700): releases whatever Read1 parked (geometry references; the exe leaks the parked frames, here they are destroyed).
+// One clump can be parked at a time (static state in the exe too); a second Read1 drops the previous one (the exe leaks it). Read2 without a
+// Read1 returns NULL (undefined in the exe). Indices in the atomic struct are range-checked here.
+namespace {
+struct ParkedClump {
+    bool                      active = false;
+    int32_t                   numAtomics = 0, numGeometries = 0, half = 0;
+    uint32_t                  position = 0; // stream position after the first half
+    rw::FrameList_            frames{0, nullptr};
+    std::vector<rw::Geometry*> geometries;
+
+    void ReleaseGeometries() {
+        for (rw::Geometry* g : geometries) {
+            if (g) {
+                RpGeometryDestroy(g);
+            }
+        }
+        geometries.clear();
+    }
+    void ReleaseFrameArray() {
+        if (frames.frames) {
+            rwFree(frames.frames);
+        }
+        frames = {0, nullptr};
+    }
+    void DestroyFrames() { // frames nobody adopted
+        if (frames.frames && frames.numFrames > 0 && frames.frames[0]) {
+            DestroyFrameHierarchy(frames.frames[0]);
+        }
+        ReleaseFrameArray();
+    }
+    void Reset() {
+        ReleaseGeometries();
+        ReleaseFrameArray();
+        active = false;
+    }
+};
+ParkedClump g_parked;
+
+bool ReadGeometries(rw::Stream* stream, int32_t from, int32_t to) {
+    for (int32_t i = from; i < to; i++) {
+        if (!rw::findChunk(stream, rw::ID_GEOMETRY, nullptr, nullptr)) {
+            return false;
+        }
+        rw::Geometry* const g = rw::Geometry::streamRead(stream);
+        if (!g) {
+            return false;
+        }
+        g_parked.geometries[i] = g;
+    }
+    return true;
+}
+
+// 0x72E270 (see above). Index fields are bounds-checked.
+RpAtomic* ReadAtomicStruct(rw::Stream* stream) {
+    uint32_t len = 0, ver = 0;
+    if (!rw::findChunk(stream, rw::ID_STRUCT, &len, &ver) || len < 16) {
+        return nullptr;
+    }
+    int32_t buf[4] = {};
+    if (stream->read8(buf, 16) != 16) {
+        return nullptr;
+    }
+    if (len > 16) {
+        stream->seek(static_cast<int32_t>(len - 16));
+    }
+    const bool ok = buf[0] >= 0 && buf[0] < g_parked.frames.numFrames && buf[1] >= 0 && buf[1] < g_parked.numGeometries && g_parked.geometries[buf[1]];
+    if (!ok) {
+        return nullptr;
+    }
+    RpAtomic* const atomic = RpAtomicCreate();
+    if (!atomic) {
+        return nullptr;
+    }
+    atomic->object.object.flags = static_cast<uint8_t>(buf[2]);
+    RpAtomicSetFrame(atomic, g_parked.frames.frames[buf[0]]);
+    RpAtomicSetGeometry(atomic, g_parked.geometries[buf[1]], 0);
+    return atomic;
+}
+} // namespace
+
+bool RpClumpGtaStreamRead1(RwStream* stream) {
+    g_parked.DestroyFrames();
+    g_parked.Reset();
+    if (!stream) {
+        return false;
+    }
+    uint32_t len = 0, ver = 0;
+    int32_t  counts[3] = {};
+    if (!rw::findChunk(stream, rw::ID_STRUCT, &len, &ver) || len < 12 || stream->read8(counts, 12) != 12) {
+        return false;
+    }
+    if (len > 12) {
+        stream->seek(static_cast<int32_t>(len - 12));
+    }
+    if (!rw::findChunk(stream, rw::ID_FRAMELIST, nullptr, nullptr) || !g_parked.frames.streamRead(stream)) {
+        g_parked.DestroyFrames();
+        return false;
+    }
+    if (!rw::findChunk(stream, rw::ID_GEOMETRYLIST, nullptr, nullptr) || !rw::findChunk(stream, rw::ID_STRUCT, nullptr, nullptr)) {
+        g_parked.DestroyFrames();
+        return false;
+    }
+    g_parked.numAtomics    = counts[0];
+    g_parked.numGeometries = stream->readI32();
+    if (g_parked.numGeometries < 0 || g_parked.numGeometries > 0x10000) {
+        g_parked.DestroyFrames();
+        return false;
+    }
+    g_parked.half = g_parked.numGeometries / 2;
+    g_parked.geometries.assign(g_parked.numGeometries, nullptr);
+    if (!ReadGeometries(stream, 0, g_parked.half)) {
+        g_parked.ReleaseGeometries();
+        g_parked.DestroyFrames();
+        return false;
+    }
+    g_parked.position = stream->tell();
+    g_parked.active   = true;
+    return true;
+}
+
+RpClump* RpClumpGtaStreamRead2(RwStream* stream) {
+    if (!stream || !g_parked.active) {
+        return nullptr;
+    }
+    RpClump* const clump = RpClumpCreate();
+    if (!clump) {
+        g_parked.DestroyFrames();
+        g_parked.Reset();
+        return nullptr;
+    }
+    RwShimEnsureAtomicRenderSlot();
+    stream->seek(static_cast<int32_t>(g_parked.position) - static_cast<int32_t>(stream->tell()));
+    if (!ReadGeometries(stream, g_parked.half, g_parked.numGeometries)) {
+        g_parked.ReleaseGeometries();
+        g_parked.DestroyFrames();
+        g_parked.active = false;
+        RpClumpDestroy(clump);
+        return nullptr;
+    }
+    if (g_parked.frames.numFrames > 0) {
+        clump->setFrame(g_parked.frames.frames[0]); // from here on the clump owns the frames
+    }
+    for (int32_t i = 0; i < g_parked.numAtomics; i++) {
+        RpAtomic* atomic = nullptr;
+        if (!rw::findChunk(stream, rw::ID_ATOMIC, nullptr, nullptr) || !(atomic = ReadAtomicStruct(stream))) {
+            g_parked.Reset();
+            RpClumpDestroy(clump);
+            return nullptr;
+        }
+        RpClumpAddAtomic(clump, atomic);
+    }
+    g_parked.Reset(); // geometry references: the atomics hold their own
+    return clump;
+}
+
+void RpClumpGtaCancelStream() {
+    g_parked.DestroyFrames();
+    g_parked.Reset();
 }
 #endif

@@ -10,6 +10,8 @@
 
 class NOTSA_EXPORT_VTABLE CProjectile : public CObject {
 public:
+    static void InjectHooks();
+
     CProjectile(int32 modelId);
 };
 

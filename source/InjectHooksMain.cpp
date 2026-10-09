@@ -628,6 +628,9 @@
 #include "PedScriptedAttractor.h"
 #include "PedParkAttractor.h"
 #include "PedStepAttractor.h"
+#include "OctTree.h"
+#include "OctTreeBase.h"
+#include "Projectile.h"
 #endif
 
 void InjectHooksMain() {
@@ -796,6 +799,7 @@ void InjectHooksMain() {
     CObjectSaveStructure::InjectHooks();
     CCutsceneObject::InjectHooks();
     CHandObject::InjectHooks();
+    CProjectile::InjectHooks();
     CBuilding::InjectHooks();
     CAnimatedBuilding::InjectHooks();
     CCompressedMatrixNotAligned::InjectHooks();
@@ -924,6 +928,8 @@ void InjectHooksMain() {
     CCullZones::InjectHooks();
     CSpecialPlateHandler::InjectHooks();
     CKeyGen::InjectHooks();
+    COctTree::InjectHooks();
+    COctTreeBase::InjectHooks();
     CAccidentManager::InjectHooks();
     CStuntJumpManager::InjectHooks();
     CLocalisation::InjectHooks();

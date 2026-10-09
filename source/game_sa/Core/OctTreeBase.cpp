@@ -2,6 +2,14 @@
 
 #include "OctTreeBase.h"
 
+void COctTreeBase::InjectHooks() {
+    RH_ScopedVirtualClass(COctTreeBase, 0x867178, 2);
+    RH_ScopedCategory("Core");
+
+    RH_ScopedVMTInstall(InsertTree, 0x5A7710);
+    RH_ScopedVMTInstall(FillPalette, 0x5A7280);
+}
+
 auto& gOctTreeBase = StaticRef<COctTreeBase>(0xBC1290);
 
 // 0x5A7710

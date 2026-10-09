@@ -12,6 +12,7 @@ typedef CPool<class COctTree> COctTreePool;
 
 class NOTSA_EXPORT_VTABLE COctTree {
 public:
+    static void InjectHooks();
     uint32 m_nLevel;
     bool   m_bLastStep;       // no children
     int16  m_aChildrens[8];   // pool slot IDs,  -1 - empty

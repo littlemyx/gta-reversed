@@ -2,6 +2,13 @@
 
 #include "Projectile.h"
 
+void CProjectile::InjectHooks() {
+    RH_ScopedVirtualClass(CProjectile, 0x867030, 23);
+    RH_ScopedCategory("Entity/Object");
+
+    RH_ScopedVMTDestructorInstall(0x5A40F0);
+}
+
 CProjectile::CProjectile(int32 modelId) : CObject() {
     m_bTunnelTransition = true;
     m_fMass = 1.0F;

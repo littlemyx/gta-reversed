@@ -3,8 +3,10 @@
 #include "AnimBlendAssociation.h"
 
 void CAnimBlendAssociation::InjectHooks() {
-    RH_ScopedClass(CAnimBlendAssociation);
+    RH_ScopedVirtualClass(CAnimBlendAssociation, 0x85C6D0, 1);
     RH_ScopedCategory("Animation");
+
+    RH_ScopedVMTDestructorInstall(0x4CEFA0);
 
     RH_ScopedOverloadedInstall(Constructor0, "", 0x4CE9B0, CAnimBlendAssociation*(CAnimBlendAssociation::*)());
     RH_ScopedOverloadedInstall(Constructor1, "clump_hier", 0x4CEFC0, CAnimBlendAssociation*(CAnimBlendAssociation::*)(RpClump*, CAnimBlendHierarchy*));

@@ -1,6 +1,14 @@
 #include "StdInc.h"
 
 #include "OctTree.h"
+
+void COctTree::InjectHooks() {
+    RH_ScopedVirtualClass(COctTree, 0x867170, 2);
+    RH_ScopedCategory("Core");
+
+    RH_ScopedVMTInstall(InsertTree, 0x5A75B0);
+    RH_ScopedVMTInstall(FillPalette, 0x5A70F0);
+}
 auto& gpTmpOctTree = StaticRef<COctTree*>(0xBC12D8);
 
 // 0x5A6DB0

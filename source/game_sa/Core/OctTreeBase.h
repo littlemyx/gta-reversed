@@ -10,6 +10,7 @@
 
 class NOTSA_EXPORT_VTABLE COctTreeBase : public COctTree {
 public:
+    static void InjectHooks();
     uint32 m_nNumBranches;
     bool32 m_bHasTransparentPixels;
 

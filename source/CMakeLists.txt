@@ -33,6 +33,15 @@ if (${RE_PROJECT}_STANDALONE AND NOT ${RE_PROJECT}_STANDALONE_DUMP_HOOKS_ONLY)
     endif()
 endif()
 
+# RenderWare backend. OFF: the game's own RW headers/wrappers (they forward to the original exe's RW by address).
+# ON: the RW C API is provided by source/fakerw over vendor/librw (git submodule, pinned). Implied ON by the runnable standalone build
+# (STANDALONE=ON, not DUMP_HOOKS_ONLY); the hook-dump build and the ASI build keep the real RW headers. See .notes/P2B_SHIM_PLAN.md.
+option(${RE_PROJECT}_RW_LIBRW "Use librw (source/fakerw) instead of the original RenderWare" OFF)
+option(${RE_PROJECT}_RW_LIBRW_OPT_OUT "Do not imply RW_LIBRW from a runnable STANDALONE build" OFF)
+if (${RE_PROJECT}_STANDALONE AND NOT ${RE_PROJECT}_STANDALONE_DUMP_HOOKS_ONLY AND NOT ${RE_PROJECT}_RW_LIBRW_OPT_OUT)
+    set(${RE_PROJECT}_RW_LIBRW ON CACHE BOOL "Use librw (source/fakerw) instead of the original RenderWare" FORCE)
+endif()
+
 #--------------------------------------------------------------------
 # Build options
 #--------------------------------------------------------------------
@@ -78,6 +87,17 @@ else()
         "${CMAKE_CURRENT_SOURCE_DIR}/game_sa/Audio/OpenAL/*.h*"
     )
     list(REMOVE_ITEM SOURCE_FILES_WITHOUT_MODULES_LIST ${OPENAL_FILES})
+endif()
+
+if (${RE_PROJECT}_RW_LIBRW)
+    # The wrappers in game_sa/RenderWare/rw/*.cpp forward to the exe's RenderWare by address; with librw the API comes from source/fakerw
+    file(
+        GLOB_RECURSE RW_WRAPPER_FILES
+        LIST_DIRECTORIES false
+        RELATIVE "${CMAKE_CURRENT_SOURCE_DIR}"
+        "${CMAKE_CURRENT_SOURCE_DIR}/game_sa/RenderWare/rw/*.c*"
+    )
+    list(REMOVE_ITEM SOURCE_FILES_WITHOUT_MODULES_LIST ${RW_WRAPPER_FILES})
 endif()
 
 #
@@ -189,6 +209,21 @@ if (${RE_PROJECT}_STANDALONE AND NOT ${RE_PROJECT}_STANDALONE_DUMP_HOOKS_ONLY)
     endif()
 endif()
 
+if (${RE_PROJECT}_RW_LIBRW)
+    # librw as a static library built with the same (static) CRT. Options are forced before add_subdirectory (cache vars of the subproject).
+    # NOTE: must come BEFORE the add_dependency() calls below: that macro leaks junk tokens into the directory-wide compile options.
+    set(LIBRW_PLATFORM D3D9 CACHE STRING "" FORCE)
+    set(LIBRW_TOOLS OFF CACHE BOOL "" FORCE)
+    set(LIBRW_INSTALL OFF CACHE BOOL "" FORCE)
+    set(LIBRW_EXAMPLES OFF CACHE BOOL "" FORCE)
+    if (NOT EXISTS "${PROJECT_SOURCE_DIR}/vendor/librw/CMakeLists.txt")
+        message(FATAL_ERROR "${RE_PROJECT}_RW_LIBRW needs the librw submodule: git submodule update --init vendor/librw")
+    endif()
+    add_subdirectory("${PROJECT_SOURCE_DIR}/vendor/librw" "${CMAKE_BINARY_DIR}/vendor/librw")
+    # librw is third-party code: never -Werror (COMPILE_WARNING_AS_ERROR is set per target on ${RE_PROJECT_LIB_NAME} only)
+    set_target_properties(librw PROPERTIES COMPILE_WARNING_AS_ERROR OFF)
+endif()
+
 #--------------------------------------------------------------------
 # Add dependencies
 #--------------------------------------------------------------------
@@ -224,6 +259,13 @@ add_dependency(
 )
 if (${RE_PROJECT}_USE_SDL3)
     add_dependency(SDL3)
+endif()
+
+if (${RE_PROJECT}_RW_LIBRW)
+    target_link_libraries(${RE_PROJECT_LIB_NAME} PRIVATE librw)
+    target_compile_definitions(${RE_PROJECT_LIB_NAME} PRIVATE NOTSA_RW_LIBRW RW_D3D9)
+    # fakerw headers (same file names as the RenderWare headers) take precedence over game_sa/RenderWare/rw/
+    target_include_directories(${RE_PROJECT_LIB_NAME} BEFORE PRIVATE fakerw)
 endif()
 
 target_link_libraries(${RE_PROJECT_LIB_NAME} PRIVATE

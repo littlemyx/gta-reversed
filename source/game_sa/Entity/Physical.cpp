@@ -972,9 +972,9 @@ void CPhysical::AddCollisionRecord(CEntity* collidedEntity)
         if (collidedEntity->GetIsTypeVehicle())
         {
             auto* collidedVehicle = collidedEntity->AsVehicle();
-            if (vehicle->m_nAlarmState == -1)
+            if (vehicle->m_nAlarmState == 0xFFFF)
                 vehicle->m_nAlarmState = 15000;
-            if (collidedVehicle->m_nAlarmState == -1)
+            if (collidedVehicle->m_nAlarmState == 0xFFFF)
                 collidedVehicle->m_nAlarmState = 15000;
         }
     }

@@ -2775,7 +2775,7 @@ void CAutomobile::DoBurstAndSoftGroundRatios()
 // 0x6A3770
 void CAutomobile::PlayCarHorn()
 {
-    if (m_nAlarmState && m_nAlarmState != -1 && GetStatus() != STATUS_WRECKED || m_HornCounter) {
+    if (m_nAlarmState && m_nAlarmState != 0xFFFF && GetStatus() != STATUS_WRECKED || m_HornCounter) {
         return;
     }
 
@@ -5830,7 +5830,7 @@ void CAutomobile::ScanForCrimes() {
         && plyrveh->IsAutomobile()
         && plyrveh->GetStatus() != STATUS_WRECKED
         && plyrveh->m_nAlarmState
-        && plyrveh->m_nAlarmState != -1
+        && plyrveh->m_nAlarmState != 0xFFFF
         && DistanceBetweenPointsSquared(GetPosition(), plyrveh->GetPosition()) < sq(20.f)
     ) {
         FindPlayerPed()->SetWantedLevelNoDrop(eWantedLevel::WANTED_LEVEL_1);

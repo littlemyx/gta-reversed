@@ -23,7 +23,7 @@
  * All Rights Reserved.
  *
  */
-#include "rwcore.h"
+#include <rwcore.h>
 #include <Windows.h>
 
 /* Default arena size depending on platform. */

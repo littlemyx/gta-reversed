@@ -43,6 +43,11 @@
 #include "RenderWare/D3DIndexDataBuffer.h"
 #include "RenderWare/D3DResourceSystem.h"
 #include "RenderWare/D3DTextureBuffer.h"
+#ifdef NOTSA_RW_LIBRW
+// The RW C API on top of librw: source/fakerw (put BEFORE game_sa/RenderWare/rw in the include path, see source/CMakeLists.txt)
+#include <rwcore.h>
+#include <skeleton.h>
+#else
 #include "RenderWare/rw/rpanisot.h"
 #include "RenderWare/rw/rpcriter.h"
 #include "RenderWare/rw/rperror.h"
@@ -60,6 +65,7 @@
 #include "RenderWare/rw/rwplcore.h"
 #include "RenderWare/rw/rwtexdict.h"
 #include "RenderWare/rw/skeleton.h"
+#endif
 #include "RenderWare/RenderWare.h"
 #include <PluginBase.h>
 

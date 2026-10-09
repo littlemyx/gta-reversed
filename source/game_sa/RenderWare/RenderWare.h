@@ -6,6 +6,10 @@
 */
 #pragma once
 
+#ifdef NOTSA_RW_LIBRW
+#include <rwcore.h> // fakerw (librw), see source/fakerw/fakerw.h
+#include <skeleton.h>
+#else
 #include "rw/rwcore.h"
 #include "rw/rphanim.h"
 #include "rw/rpuvanim.h"
@@ -13,15 +17,20 @@
 #include "rw/rpmatfx.h"
 #include "rw/skeleton.h"
 #include "rw/rwplcore.h"
+#endif
 #include <type_traits>
 
 #ifdef _DX9_SDK_INSTALLED
 #include "d3d9.h"
 #endif
 
+static inline auto& RsGlobal =  StaticRef<RsGlobalType>(0xC17040);
+
+#ifdef NOTSA_RW_LIBRW
+// RenderWare internals live in librw (source/fakerw): their exe-address statics/helpers are replaced by shim members (P2B-00c ...)
+#else
 static inline auto& RwInitialized = StaticRef<bool>(0xC920E8);
 static inline auto& RwEngineInstance =  StaticRef<RwGlobals*>(0xC97B24);
-static inline auto& RsGlobal =  StaticRef<RsGlobalType>(0xC17040);
 static inline auto& geometryTKList =  StaticRef<RwPluginRegistry>(0x8D628C);
 static inline auto& RpUVAnimDictSchema =  StaticRef<RtDictSchema>(0x8DED50);
 static inline auto& AmbientSaturated = StaticRef<RwRGBAReal>(0x8E2418);
@@ -44,6 +53,7 @@ inline _D3DMATRIX *GetD3DProjTransform() {
 inline void _rpMaterialSetDefaultSurfaceProperties(RwSurfaceProperties *surfProps) {
     ((void(__cdecl *)(RwSurfaceProperties*))0x74D870)(surfProps);
 }
+#endif
 
 #define RWRSTATE(a) (reinterpret_cast<void *>(a))
 #define PSGLOBAL(var) (((psGlobalType *)(RsGlobal.ps))->var)
@@ -53,10 +63,12 @@ inline void _rpMaterialSetDefaultSurfaceProperties(RwSurfaceProperties *surfProp
 */
 #define rpPDS_MAKEPIPEID(vendorID, pipeID) ((((vendorID) & 0xFFFF) << 16) | ((pipeID) & 0xFFFF))
 
+#ifndef NOTSA_RW_LIBRW
 struct RwResEntrySA : RwResEntry {
     RxD3D9ResEntryHeader header;
     RxD3D9InstanceData meshData;
 };
+#endif
 
 
 void RwCoreInjectHooks();

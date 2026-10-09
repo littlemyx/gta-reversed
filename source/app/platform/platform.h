@@ -37,6 +37,8 @@ void RsTerminate();
 bool RsInitialize();
 bool RsRwInitialize(void* param);
 
+RwMemoryFunctions* psGetMemoryFunctions();
+
 bool RsSetPresetView(RwCamera* camera, int32 viewNum);
 void RsSetNextPresetView(RwCamera* camera);
 void RsSetPreviousPresetView(RwCamera* camera);

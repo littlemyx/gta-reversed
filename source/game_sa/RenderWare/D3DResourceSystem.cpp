@@ -52,12 +52,25 @@ void D3DResourceSystem::CancelBuffering() {
 
 // 0x7307F0
 uint32 D3DResourceSystem::GetTotalIndexDataSize() {
-    return plugin::CallAndReturn<uint32, 0x7307F0>();
+    // NOTE: `D3DIndexDataBuffer::GetTotalDataSize` (0x7303B0) is not reversed yet
+    const auto GetBufferSize = [](D3DIndexDataBuffer& buf) {
+        return plugin::CallMethodAndReturn<uint32, 0x7303B0, D3DIndexDataBuffer*>(&buf);
+    };
+    uint32 total = 0;
+    for (int32 i = NUM_INDEX_DATA_BUFFERS - 1; i >= 0; i--) { // Original goes backwards
+        total += GetBufferSize(IndexDataBuffers[i]);
+    }
+    return GetBufferSize(LargeIndexDataBuffer) + total;
 }
 
 // 0x730660
 uint32 D3DResourceSystem::GetTotalPixelsSize() {
-    return plugin::CallAndReturn<uint32, 0x730660>();
+    // NOTE: `D3DTextureBuffer::GetTotalDataSize` (0x7300A0) is not reversed yet
+    uint32 total = 0;
+    for (int32 i = NumTextureBuffers; i != 0; i--) { // Original goes backwards
+        total += plugin::CallMethodAndReturn<uint32, 0x7300A0, D3DTextureBuffer*>(&TextureBuffers[i - 1]);
+    }
+    return total;
 }
 
 // 0x730830
@@ -205,13 +218,77 @@ void D3DResourceSystem::TidyUpD3DTextures(uint32 count) {
 }
 
 // 0x7306A0
+// NOTE: `format` (2nd arg) is unused by the original, the format is always `D3DFMT_INDEX16`
 int32 D3DResourceSystem::CreateIndexBuffer(uint32 numIndices, uint32 format, void** ppIndexBuffer) {
-    return plugin::CallAndReturn<int32, 0x7306A0, uint32, uint32, void**>(numIndices, format, ppIndexBuffer);
+    // Buffers are bucketed by their size (in indices, 100 per bucket)
+    const int32 bucket   = ((int32)numIndices - 1) / 100;
+    const int32 capacity = (bucket + 1) * 100;
+
+    IDirect3DIndexBuffer9* ib;
+    if (bucket < NUM_INDEX_DATA_BUFFERS) {
+        auto& buf = IndexDataBuffers[bucket];
+        if (buf.m_nSize == 0) {
+            ib = nullptr;
+        } else {
+            buf.m_nNumDatasInBuffer--;
+            buf.m_nSize--;
+            ib = buf.m_apIndexData[buf.m_nSize];
+        }
+        *ppIndexBuffer = ib;
+        if (ib) {
+            D3DINDEXBUFFER_DESC desc;
+            ib->GetDesc(&desc); // Result unused by the original
+            return 0;
+        }
+    } else {
+        // NOTE: `D3DIndexDataBuffer::Pop(uint32)` (0x730270) is not reversed yet
+        ib = (IDirect3DIndexBuffer9*)plugin::CallMethodAndReturn<void*, 0x730270, D3DIndexDataBuffer*, uint32>(&LargeIndexDataBuffer, (uint32)capacity);
+        *ppIndexBuffer = ib;
+        if (ib) {
+            return 0;
+        }
+    }
+
+    // Nothing to reuse => create a new one
+    return GetD3D9Device()->CreateIndexBuffer(capacity * 2, D3DUSAGE_WRITEONLY, D3DFMT_INDEX16, D3DPOOL_MANAGED, (IDirect3DIndexBuffer9**)ppIndexBuffer, nullptr);
 }
 
 // 0x730510
-int32 D3DResourceSystem::CreateTexture(int32 width, int32 height, uint32 format, void** ppTexture) {
-    return plugin::CallAndReturn<int32, 0x730510, int32, int32, uint32, void**>(width, height, format, ppTexture);
+// NOTE: The signature in the original has the `levels` argument (the repo's earlier declaration was missing it), see `D3DTextureBuffer::m_nLevels`
+int32 D3DResourceSystem::CreateTexture(int32 width, int32 height, int32 levels, uint32 format, void** ppTexture) {
+    if (levels > 1) {
+        levels = 0;
+    }
+
+    void* tex = nullptr;
+    bool  popped = false;
+    if (width == height) {
+        // NOTE: `FILD` of the buffer's width (extended precision) compared to the float
+        const float widthF = (float)width;
+        for (int32 i = 1; i < NumTextureBuffers; i++) {
+            auto& buf = TextureBuffers[i];
+            if ((double)(int32)buf.m_nWidth == (double)widthF && levels == buf.m_nLevels && format == buf.m_nFormat) {
+                // Found a buffer for this kind of texture. If it's empty a new texture is created (the small texture buffer isn't tried)
+                if (buf.m_nSize != 0) {
+                    buf.m_nNumTexturesInBuffer--;
+                    buf.m_nSize--;
+                    tex = buf.m_apTextures[buf.m_nSize];
+                }
+                popped = true;
+                break;
+            }
+        }
+    }
+    if (!popped) {
+        // NOTE: `D3DTextureBuffer::Pop(format, width, height, bOneLevel)` (0x72FF60) is not reversed yet
+        tex = plugin::CallMethodAndReturn<void*, 0x72FF60, D3DTextureBuffer*, uint32, int32, int32, int32>(&TextureBuffers[0], format, width, height, levels);
+    }
+
+    *ppTexture = tex;
+    if (tex) {
+        return 0;
+    }
+    return GetD3D9Device()->CreateTexture(width, height, levels, 0, (D3DFORMAT)format, D3DPOOL_MANAGED, (IDirect3DTexture9**)ppTexture, nullptr);
 }
 
 // 0x730D30
@@ -323,6 +400,10 @@ void D3DResourceSystem::InjectHooks() {
     RH_ScopedInstall(TidyUpD3DTextures, 0x7305E0);
     RH_ScopedInstall(DestroyIndexBuffer, 0x730D30);
     RH_ScopedInstall(DestroyTexture, 0x730B70);
+    RH_ScopedInstall(GetTotalIndexDataSize, 0x7307F0);
+    RH_ScopedInstall(GetTotalPixelsSize, 0x730660);
+    RH_ScopedInstall(CreateIndexBuffer, 0x7306A0);
+    RH_ScopedInstall(CreateTexture, 0x730510);
 
     {
         RH_ScopedClass(D3DTextureBuffer);

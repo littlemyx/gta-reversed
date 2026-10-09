@@ -37,6 +37,7 @@ void RsInjectHooks() {
     RH_ScopedGlobalInstall(RsRwInitialize, 0x619C90);
     RH_ScopedGlobalInstall(RsLoadPresetViews, 0x619D60);
     RH_ScopedGlobalInstall(RsSavePresetView, 0x619FA0);
+    RH_ScopedGlobalInstall(psGetMemoryFunctions, 0x745510);
 }
 
 static auto& KeysShifted = StaticRef<std::array<uint8, 256>>(0x8D2D00);
@@ -233,19 +234,9 @@ void RsWarningMessage(const RwChar* msg) {
     psWarningMessage(msg);
 }
 
-/*
-static RwMemoryFunctions g_objMemFunctions = { // 0x8D6228
-    CMemoryMgr::Malloc,
-    CMemoryMgr::Free,
-    CMemoryMgr::Realloc,
-    CMemoryMgr::Calloc
-};
-*/
-
 // 0x745510
 RwMemoryFunctions* psGetMemoryFunctions() {
-    return plugin::CallAndReturn<RwMemoryFunctions*, 0x745510>();
-    // return &g_objMemFunctions;
+    return &StaticRef<RwMemoryFunctions>(0x8D6228); // The original table lives in the exe's .data (malloc/free/realloc/calloc)
 }
 
 // 0x619C90

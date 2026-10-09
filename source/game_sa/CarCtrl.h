@@ -107,7 +107,7 @@ public:
     static void RemoveFromInterestingVehicleList(CVehicle* vehicle);
     static void ScanForPedDanger(CVehicle* vehicle);
     static bool ScriptGenerateOneEmergencyServicesCar(uint32 modelId, CVector posn);
-    static void SetCoordsOfScriptCar(CVehicle* vehicle, float x, float y, float z, uint8 arg5, uint8 arg6);
+    static void SetCoordsOfScriptCar(CVehicle* vehicle, float x, float y, float z, uint8 resetRotation, uint8 placeOnGround);
     static void SetUpDriverAndPassengersForVehicle(CVehicle* vehicle, int32 pedType, int32 minPassengers, bool arg4, bool arg5, int32 maxPassengers);
     static void SlowCarDownForCarsSectorList(CPtrListDoubleLink<CVehicle*>& carList, CVehicle* vehicle, float minX, float minY, float maxX, float maxY, float* speedFactor, float speedMult);
     static void SlowCarDownForObject(CEntity* entity, CVehicle* vehicle, float* arg3, float arg4);

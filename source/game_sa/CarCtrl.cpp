@@ -258,6 +258,7 @@ void CCarCtrl::InjectHooks()
     RH_ScopedInstall(SteerAICarTowardsPointInEscort, 0x4336D0);
     RH_ScopedInstall(SteerAICarParkParallel, 0x433BA0);
     RH_ScopedInstall(SteerAICarParkPerpendicular, 0x433EA0);
+    RH_ScopedInstall(SetCoordsOfScriptCar, 0x4342A0);
 }
 
 // 0x4212E0
@@ -2771,8 +2772,40 @@ bool CCarCtrl::ScriptGenerateOneEmergencyServicesCar(uint32 modelId, CVector pos
 }
 
 // 0x4342A0
-void CCarCtrl::SetCoordsOfScriptCar(CVehicle* vehicle, float x, float y, float z, uint8 arg5, uint8 arg6) {
-    plugin::Call<0x4342A0, CVehicle*, float, float, float, uint8, uint8>(vehicle, x, y, z, arg5, arg6);
+void CCarCtrl::SetCoordsOfScriptCar(CVehicle* vehicle, float x, float y, float z, uint8 resetRotation, uint8 placeOnGround) {
+    const auto vehicleRef = CPools::GetVehicleRef(vehicle);
+
+    if (z <= -100.0f) { // 0x859014
+        z = CWorld::FindGroundZForCoord(x, y); // 0x569660
+    }
+    if (placeOnGround) {
+        z = (float)(vehicle->GetDistanceFromCentreOfMassToBaseOfModel() + (double)z); // x87: the sum is rounded only once
+    }
+
+    vehicle->SetIsStatic(false);
+    CTheScripts::StuckCars.ClearStuckFlagForCar(vehicleRef); // 0x463C40
+
+    const CVector pos{ x, y, z };
+    vehicle->Teleport(pos, resetRotation != 0);
+
+    if (vehicle->m_nVehicleType != VEHICLE_TYPE_BOAT) {
+        switch (vehicle->m_nVehicleType) {
+        case VEHICLE_TYPE_AUTOMOBILE:
+        case VEHICLE_TYPE_TRAILER:
+            vehicle->AsAutomobile()->PlaceOnRoadProperly(); // 0x6AF420
+            break;
+        case VEHICLE_TYPE_BIKE:
+            vehicle->AsBike()->PlaceOnRoadProperly(); // 0x6BEEB0
+            break;
+        default:
+            break;
+        }
+        CTheScripts::ClearSpaceForMissionEntity(pos, vehicle); // 0x486B00
+        JoinCarWithRoadAccordingToMission(vehicle); // 0x432CB0
+    } else {
+        CTheScripts::ClearSpaceForMissionEntity(pos, vehicle); // 0x486B00
+    }
+    vehicle->m_autoPilot.m_nTempAction = TEMPACT_NONE;
 }
 
 // 0x4217C0

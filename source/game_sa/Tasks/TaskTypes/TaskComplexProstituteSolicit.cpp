@@ -20,6 +20,7 @@ void CTaskComplexProstituteSolicit::InjectHooks() {
     RH_ScopedInstall(CreateSubTask, 0x666360);
     RH_ScopedVMTInstall(CreateFirstSubTask, 0x6666A0);
     RH_ScopedVMTInstall(CreateNextSubTask, 0x666780);
+    RH_ScopedVMTInstall(ControlSubTask, 0x6669D0);
 }
 
 // 0x59C890 - the original evaluation order; the sum stays in the FPU registers (extended precision), stored as float
@@ -269,5 +270,252 @@ CTask* CTaskComplexProstituteSolicit::CreateNextSubTask(CPed* ped) {
 
 // 0x6669D0
 CTask* CTaskComplexProstituteSolicit::ControlSubTask(CPed* ped) {
-    return plugin::CallMethodAndReturn<CTask*, 0x6669D0, CTaskComplexProstituteSolicit*, CPed*>(this, ped);
+    // 0x406DA0 - squared magnitude, summed in extended precision in this order
+    const auto SquaredMagnitude = [](const CVector& v) {
+        return ((double)v.x * (double)v.x + (double)v.y * (double)v.y) + (double)v.z * (double)v.z;
+    };
+
+    bMoveCameraDown = bSexProcessStarted;
+
+    if (!IsTaskValid(ped, m_pClient)) {
+        bMoveCameraDown    = false;
+        bTaskCanBeFinished = true;
+    }
+
+    // x87: `timeStep * 0.02f * 1000.0f` stays in extended precision until `_ftol`
+    const auto dt = (int32)(int64)((double)CTimer::GetTimeStep() * (double)0.02f * (double)1000.0f);
+
+    if (bTaskCanBeFinished) {
+        if (m_nCurrentTimer == 0) {
+            if (m_pSubTask->GetTaskType() != TASK_COMPLEX_LEAVE_CAR && m_pSubTask->MakeAbortable(ped, ABORT_PRIORITY_URGENT, nullptr)) {
+                return CreateSubTask(TASK_COMPLEX_LEAVE_CAR, ped);
+            }
+        } else {
+            m_nCurrentTimer = (int16)(m_nCurrentTimer - dt);
+            if (m_nCurrentTimer <= 0) {
+                CAEPedSpeechAudioEntity::SetCJMood(MOOD_WR, 120'000, -1, -1, -1);
+                m_pClient->Say(CTX_GLOBAL_AFTER_SEX);
+                m_nCurrentTimer = 0;
+            }
+        }
+        return m_pSubTask;
+    }
+
+    const auto subTaskType = m_pSubTask->GetTaskType();
+
+    if (subTaskType == TASK_SIMPLE_STAND_STILL) {
+        auto* const pad = CPad::GetPad(0);
+        if (pad->ConversationYesJustDown()) {
+            bPlayerHasAcceptedSexProposition = true;
+            if (m_pClient) {
+                m_pClient->Say(CTX_GLOBAL_SOLICIT_PRO_YES);
+            }
+            return CreateNextSubTask(ped);
+        }
+        if (pad->ConversationNoJustDown()) {
+            if (m_pClient) {
+                m_pClient->Say(CTX_GLOBAL_SOLICIT_PRO_NO);
+            }
+            bTaskCanBeFinished = true;
+        }
+        return m_pSubTask;
+    }
+
+    if (subTaskType == TASK_COMPLEX_SEEK_ENTITY || subTaskType == TASK_COMPLEX_ENTER_CAR_AS_PASSENGER) {
+        const auto  vehPos = m_pClient->m_pVehicle->GetPosition();
+        const double dx = (double)vehPos.x - (double)m_vecVehiclePosn.x;
+        const double dy = (double)vehPos.y - (double)m_vecVehiclePosn.y;
+        const double dz = (double)vehPos.z - (double)m_vecVehiclePosn.z;
+        if ((dx * dx + dz * dz) + dy * dy > 16.0f) { // the asm sums x, z, y
+            bTaskCanBeFinished = true;
+        }
+        return m_pSubTask;
+    }
+
+    if (subTaskType != TASK_COMPLEX_CAR_DRIVE) {
+        return m_pSubTask;
+    }
+
+    const auto now = CTimer::GetTimeInMS();
+    if (TheCamera.m_nWhoIsInControlOfTheCamera == 1) {
+        m_nLastSavedTime = now;
+        m_nCurrentTimer  = 8000;
+        bMoveCameraDown  = false;
+        b08              = true;
+        bVehicleShifted  = true;
+        return m_pSubTask;
+    }
+
+    // Is the vehicle (nearly) standing still?
+    const auto vehicleSpeed = m_pClient->m_pVehicle->m_vecMoveSpeed * 50.0f;
+    const bool isVehicleStill = SquaredMagnitude(vehicleSpeed) < 0.5625f;
+    if (!isVehicleStill || b08) {
+        b08              = false;
+        m_nLastSavedTime = now;
+    }
+
+    auto* const wanted = FindPlayerWanted(-1);
+
+    if (now > (uint32)m_nNextTimeToCheckForSecludedPlace) {
+        bPedsCanPotentiallySeeThis = false;
+        bPedsCanSeeThis            = false;
+        bCopsCanSeeThis            = false;
+        m_nNextTimeToCheckForSecludedPlace = now + 1000;
+
+        const auto nearbyPeds = ped->GetIntelligence()->GetPedEntities();
+        for (auto i = 0; i < 16; i++) {
+            auto* const other = static_cast<CPed*>(nearbyPeds[i]);
+            if (!other || other == m_pClient || other->m_nPedType == PED_TYPE_PROSTITUTE) {
+                continue;
+            }
+
+            const auto sqDist = SquaredMagnitude(other->GetPosition() - ped->GetPosition());
+            if (sqDist < 56.25f) {
+                bPedsCanSeeThis = true;
+            }
+            if (sqDist < 400.0f) {
+                bPedsCanPotentiallySeeThis = true;
+            }
+
+            if (other->m_nPedType == PED_TYPE_COP && bSexProcessStarted && wanted && (int32)wanted->m_WantedLevel < 1) {
+                auto* const veh = m_pClient->m_pVehicle;
+                const bool  usedCollision = veh->m_bUsesCollision;
+                veh->m_bUsesCollision = false;
+                const bool isClear = CWorld::GetIsLineOfSightClear(other->GetPosition(), m_pClient->GetPosition(), true, true, false, true, false, true, false);
+                veh->m_bUsesCollision = usedCollision;
+                if (isClear) {
+                    bCopsCanSeeThis = true;
+                }
+            }
+        }
+    }
+
+    if (bSearchingForSecludedPlace) {
+        if (isVehicleStill && now - m_nLastSavedTime > 4000u) {
+            if (bPedsCanPotentiallySeeThis) {
+                if (!bSecludedPlaceMessageShown) {
+                    CMessages::AddMessageQ(TheText.Get("PROS_01"), 3000, 1, true);
+                    bSecludedPlaceMessageShown = true;
+                }
+            } else {
+                bSearchingForSecludedPlace = false;
+                bSexProcessStarted         = true;
+                m_nLastPaymentTime         = now;
+                CMessages::AddMessageQ(TheText.Get("PROS_02"), 2000, 1, true);
+            }
+        }
+        return m_pSubTask;
+    }
+
+    if (!bSexProcessStarted) {
+        return m_pSubTask;
+    }
+
+    if (b07) {
+        b07 = false;
+        m_nCurrentTimer = 15'000;
+        CStats::IncrementStat(STAT_NUMBER_OF_PROSTITUTES_VISITED, 1.0f);
+    }
+
+    auto* const pad = CPad::GetPad(0);
+    const bool  isPlayerDriving = pad->GetAccelerate() || pad->GetBrake();
+    const auto  randVal = rand(); // 0x821B1E
+
+    bool copsCanSee = false;
+    if (bCopsCanSeeThis && wanted && (int32)wanted->m_WantedLevel < 1) {
+        FindPlayerWanted(-1)->SetWantedLevel(eWantedLevel::WANTED_LEVEL_1);
+        copsCanSee = true;
+    }
+
+    if (isPlayerDriving || bPedsCanSeeThis || copsCanSee) {
+        // Interrupt the sex
+        m_nLastSavedTime           = now;
+        bSexProcessStarted         = false;
+        bSearchingForSecludedPlace = true;
+        bVehicleShifted            = true;
+        if (isPlayerDriving) {
+            if ((uint32)randVal >= 0x1FFFFFFFu && m_nCurrentTimer >= 3000) {
+                m_nCurrentTimer = 8000;
+                return m_pSubTask;
+            }
+            bTaskCanBeFinished = true;
+            m_nCurrentTimer    = 0;
+            CMessages::AddMessageQ(TheText.Get("PROS_09"), 3000, 1, true);
+            return m_pSubTask;
+        }
+        if (m_nCurrentTimer < 3000) {
+            bTaskCanBeFinished = true;
+            m_nCurrentTimer    = 0;
+            return m_pSubTask;
+        }
+        CMessages::AddMessageQ(TheText.Get("PROS_01"), 3000, 1, true);
+        m_nCurrentTimer = 8000;
+        return m_pSubTask;
+    }
+
+    // Shake the vehicle
+    m_nVehicleMovementTimer = (int16)(m_nVehicleMovementTimer - dt);
+    if (m_nVehicleMovementTimer <= 0) {
+        float shakeScale = CGeneral::GetRandomNumberInRange(-0.5f, -0.9f);
+        if (m_nCurrentTimer > 10'000) {
+            m_nVehicleMovementTimer = 850;
+        } else if (m_nCurrentTimer > 5000) {
+            m_nVehicleMovementTimer = 450;
+        } else if (m_nCurrentTimer > 1000) {
+            m_nVehicleMovementTimer = 120;
+        } else {
+            shakeScale = (float)((double)shakeScale * (double)0.5f);
+            m_nVehicleMovementTimer = 850;
+            CPad::GetPad(0)->StartShake(1000, 120, 0);
+        }
+
+        auto* const veh       = m_pClient->m_pVehicle;
+        const auto  vehPos    = veh->GetPosition();
+        const auto  clientPos = m_pClient->GetPosition();
+        // 0x404330 Min(150, vehMass / 15), 0x420800 Max(that, clientMass); both pick the 2nd operand on NaN
+        const float scaledMass = veh->m_fMass * 0.06666667f; // 0x863E0C
+        const float minMass    = 150.0f < scaledMass ? 150.0f : scaledMass;
+        const float mass    = minMass > m_pClient->m_fMass ? minMass : m_pClient->m_fMass;
+
+        const auto& pointSrc = (randVal & 1) ? clientPos : ped->GetPosition();
+        const float pointY   = (float)((double)pointSrc.y - (double)vehPos.y);
+        const float pointX   = (float)((double)pointSrc.x - (double)vehPos.x);
+        veh->ApplyTurnForce(CVector{ 0.0f, 0.0f, (float)((double)mass * (double)shakeScale) }, CVector{ pointX, pointY, 0.0f });
+        veh->m_vehicleAudio.AddAudioEvent(AE_SUSPENSION_BOUNCE, 0.0f);
+
+        if (b10 && (uint32)randVal > 0xFFFFFFFu) { // NOTE: never true, `rand()` is at most 0x7FFF
+            ped->Say((randVal & 0xFFFF) < 0xFF ? CTX_GLOBAL_GIVING_HEAD : CTX_GLOBAL_HAVING_SEX, 0, 0.5f);
+        }
+    }
+
+    m_nCurrentTimer = (int16)(m_nCurrentTimer - dt);
+    if (m_nCurrentTimer <= 0) {
+        m_nCurrentTimer    = 3000;
+        bSexProcessStarted = false;
+        bTaskCanBeFinished = true;
+    }
+
+    if (now - m_nLastPaymentTime > 1000u) {
+        m_nLastPaymentTime = now;
+        auto* const playerInfo = static_cast<CPlayerPed*>(m_pClient)->GetPlayerInfoForThisPlayerPed();
+        if (CCheat::IsActive(CHEAT_PROSTITUTES_PAY_YOU)) {
+            playerInfo->m_nMoney += 2;
+        } else if (playerInfo->m_nMoney >= 2) {
+            playerInfo->m_nMoney -= 2;
+            CStats::IncrementStat(STAT_PROSTITUTE_BUDGET, 2.0f);
+            ped->m_nMoneyCount++;
+        } else {
+            playerInfo->m_nMoney = 0;
+            m_nCurrentTimer      = 0;
+            bSexProcessStarted   = false;
+            bTaskCanBeFinished   = true;
+            CMessages::ClearMessages(false);
+            CMessages::AddMessageQ(TheText.Get("PROS_06"), 2000, 1, true); // You've got money right?
+            CMessages::AddMessageQ(TheText.Get("PROS_09"), 3000, 1, true); // Stop wasting my time!
+        }
+        if (!bVehicleShifted) {
+            playerInfo->AddHealth(2);
+        }
+    }
+    return m_pSubTask;
 }

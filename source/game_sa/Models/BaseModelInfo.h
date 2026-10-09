@@ -76,7 +76,9 @@ class CPedModelInfo;
 class CTimeModelInfo;
 class CVehicleModelInfo;
 class CWeaponModelInfo;
+#ifndef NOTSA_RW_LIBRW // fakerw: the RW names are aliases of rw::* types, they cannot be forward-declared as structs
 struct RwObject;
+#endif
 
 // originally an abstract class
 class NOTSA_EXPORT_VTABLE CBaseModelInfo {

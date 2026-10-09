@@ -9,7 +9,9 @@
 #include "TaskSimple.h"
 #include "Vector.h"
 
+#ifndef NOTSA_RW_LIBRW // fakerw: the RW names are aliases of rw::* types, they cannot be forward-declared as structs
 struct RpClump;
+#endif
 class  FxSystem_c;
 class  CAnimBlendAssociation;
 class  CEntity;

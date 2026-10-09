@@ -9,7 +9,9 @@
 #include "Entity.h"
 #include "Rect.h"
 
+#ifndef NOTSA_RW_LIBRW // fakerw: the RW names are aliases of rw::* types, they cannot be forward-declared as structs
 struct RpAtomic;
+#endif
 
 struct tTagDesc {
     CEntity* Entity; //!< The physical tag entity (Pretty much just a model with a single atomic and material)

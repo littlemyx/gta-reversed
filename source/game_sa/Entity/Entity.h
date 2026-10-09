@@ -38,7 +38,9 @@ class CDummy;
 class CPhysical;
 class CBaseModelInfo;
 
+#ifndef NOTSA_RW_LIBRW // fakerw: the RW names are aliases of rw::* types, they cannot be forward-declared as structs
 struct RwObject;
+#endif
 
 class NOTSA_EXPORT_VTABLE CEntity : public CPlaceable {
 public:

@@ -53,7 +53,9 @@ public:
 };
 VALIDATE_SIZE(CPath, 0x10);
 
+#ifndef NOTSA_RW_LIBRW // fakerw: the RW names are aliases of rw::* types, they cannot be forward-declared as structs
 struct RwStream;
+#endif
 
 class CVehicleRecording {
 public:

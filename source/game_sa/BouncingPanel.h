@@ -3,7 +3,9 @@
 #include "Vector.h"
 
 class CVehicle;
+#ifndef NOTSA_RW_LIBRW // fakerw: the RW names are aliases of rw::* types, they cannot be forward-declared as structs
 struct RwFrame;
+#endif
 
 class  CBouncingPanel {
     static inline auto& BOUNCE_SPRING_DAMP_MULT = StaticRef<float>(0x8D3954); // 0.95

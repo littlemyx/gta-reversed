@@ -11,8 +11,10 @@
 #include "RGBA.h"
 #include "Vector.h"
 
+#ifndef NOTSA_RW_LIBRW // fakerw: the RW names are aliases of rw::* types, they cannot be forward-declared as structs
 struct RpClump;
 struct RpAtomic;
+#endif
 
 struct tUser3dMarker {
     bool    m_bIsUsed;

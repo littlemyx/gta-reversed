@@ -6,7 +6,9 @@
 #include "RGBA.h"
 #include "extensions/FixedFloat.hpp"
 
+#ifndef NOTSA_RW_LIBRW // fakerw: the RW names are aliases of rw::* types, they cannot be forward-declared as structs
 struct RwRGBA;
+#endif
 class FxSystem_c;
 
 //! A particle created by `FxEmitterBP_c` / `FxEmitter_c`

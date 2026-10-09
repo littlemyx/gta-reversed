@@ -2,7 +2,9 @@
 
 class CVector;
 class CRGBA;
+#ifndef NOTSA_RW_LIBRW // fakerw: the RW names are aliases of rw::* types, they cannot be forward-declared as structs
 struct RwTexture;
+#endif
 
 class PPTriPlant {
 public:

@@ -12,8 +12,10 @@
 #include "Vector.h"
 #include "Matrix.h"
 
+#ifndef NOTSA_RW_LIBRW // fakerw: the RW names are aliases of rw::* types, they cannot be forward-declared as structs
 struct RpAtomic;
 struct RpMaterial;
+#endif
 
 enum e3dMarkerType : uint16 {
     MARKER3D_ARROW = 0,

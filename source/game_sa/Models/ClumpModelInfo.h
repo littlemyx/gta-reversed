@@ -9,9 +9,11 @@
 #include "BaseModelInfo.h"
 #include "RwObjectNameIdAssocation.h"
 
+#ifndef NOTSA_RW_LIBRW // fakerw: the RW names are aliases of rw::* types, they cannot be forward-declared as structs
 struct RwFrame;
 struct RpAtomic;
 struct RpClump;
+#endif
 
 struct tCompSearchStructByName {
     const char* m_pName;

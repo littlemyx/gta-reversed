@@ -38,7 +38,9 @@ class CEmergencyPed;
 class CCoverPoint;
 class CEntryExit;
 class CAnimBlendClumpData;
+#ifndef NOTSA_RW_LIBRW // fakerw: the RW names are aliases of rw::* types, they cannot be forward-declared as structs
 struct RpHAnimHierarchy;
+#endif
 
 enum ePedNode : int32 {
     PED_NODE_NULL            = 0,

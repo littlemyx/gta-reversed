@@ -16,6 +16,25 @@
 double FindGhostRoadHeightOriginal(CVehicle* vehicle);
 
 namespace {
+// Replicates the operation order of `CMatrix::Multiply3x3` (0x59C790), the sum is kept in extended precision and rounded to float only once
+CVector PhysicalTransformVectorOriginal(const CMatrix& m, const CVector& v) {
+    const auto &r = m.GetRight(), &f = m.GetForward(), &u = m.GetUp();
+    return CVector{
+        (float)(((double)u.x * v.z + (double)f.x * v.y) + (double)r.x * v.x),
+        (float)(((double)u.y * v.z + (double)r.y * v.x) + (double)f.y * v.y),
+        (float)(((double)u.z * v.z + (double)r.z * v.x) + (double)f.z * v.y)
+    };
+}
+
+// Replicates `CrossProduct` (0x59C730): the products are not rounded to float before the subtraction
+CVector PhysicalCrossProductOriginal(const CVector& a, const CVector& b) {
+    return CVector{
+        (float)((double)b.z * a.y - (double)a.z * b.y),
+        (float)((double)a.z * b.x - (double)b.z * a.x),
+        (float)((double)a.x * b.y - (double)b.x * a.y)
+    };
+}
+
 // Sector index calculation as done by `Add`/`RemoveAndAdd` (`floor(v * 0.02f + 60.0f)`, constants at 0x858B38 and 0x858B34)
 int32 PhysicalGetSectorIdx(float v) {
     return static_cast<int32>(std::floor(v * 0.02f + 60.0f));
@@ -65,6 +84,7 @@ void CPhysical::InjectHooks()
     RH_ScopedVMTInstall(ProcessEntityCollision, 0x546D00);
     RH_ScopedInstall(ApplyGravity, 0x542FE0);
     RH_ScopedInstall(ApplyFrictionMoveForce, 0x5430A0);
+    RH_ScopedInstall(ApplyFrictionTurnForce, 0x543100);
     RH_ScopedInstall(ApplyFrictionForce, 0x543220);
     RH_ScopedInstall(SkipPhysics, 0x5433B0);
     RH_ScopedInstall(AddCollisionRecord, 0x543490);
@@ -75,6 +95,7 @@ void CPhysical::InjectHooks()
     RH_ScopedInstall(ApplySpringCollision, 0x543C90);
     RH_ScopedInstall(ApplySpringCollisionAlt, 0x543D60);
     RH_ScopedInstall(ApplySpringDampening, 0x543E90);
+    RH_ScopedInstall(ApplySpringDampeningOld, 0x544100);
     RH_ScopedInstall(RemoveRefsToEntity, 0x544280);
     RH_ScopedInstall(DettachEntityFromEntity, 0x5442F0);
     RH_ScopedInstall(DettachAutoAttachedEntity, 0x5446A0);
@@ -86,6 +107,7 @@ void CPhysical::InjectHooks()
     RH_ScopedOverloadedInstall(ApplyFriction, "self", 0x5454C0, bool(CPhysical::*)(float, CColPoint&));
     RH_ScopedOverloadedInstall(ApplyFriction, "other", 0x545980, bool(CPhysical::*)(CPhysical*, float, CColPoint&));
     RH_ScopedInstall(ProcessShiftSectorList, 0x546670);
+    RH_ScopedInstall(ApplyScriptCollision, 0x546ED0);
     RH_ScopedInstall(ApplySpeed, 0x547B80);
     RH_ScopedInstall(UnsetIsInSafePosition, 0x548320);
     RH_ScopedOverloadedInstall(ApplyFriction, "void", 0x5483D0, void(CPhysical::*)());
@@ -846,9 +868,37 @@ void CPhysical::ApplyFrictionMoveForce(CVector moveForce)
 
 // Unused
 // 0x543100
-void CPhysical::ApplyFrictionTurnForce(CVector posn, CVector velocity)
-{
-    ((void(__thiscall*)(CPhysical*, CVector, CVector))0x543100)(this, posn, velocity);
+void CPhysical::ApplyFrictionTurnForce(CVector force, CVector point) { // NOTE: The header names these `posn, velocity`, but the original uses them as (force, point), see `ApplyFrictionForce`
+    if (physicalFlags.bDisableTurnForce) {
+        return;
+    }
+
+    float   turnMass = m_fTurnMass;
+    CVector comTransformed{};
+    if (physicalFlags.bInfiniteMass) {
+        turnMass = (float)((((double)m_vecCentreOfMass.z * m_fMass) * m_vecCentreOfMass.z) * 0.5f + turnMass);
+    } else {
+        comTransformed = PhysicalTransformVectorOriginal(GetMatrix(), m_vecCentreOfMass); // 0x59C790
+    }
+
+    if (physicalFlags.bDisableMoveForce) {
+        point.z = 0.0f; // NOTE: Original only zeroes the value on the x87 stack, the argument itself isn't modified
+        force.z = 0.0f;
+    }
+
+    const CVector diff{
+        point.x - comTransformed.x,
+        point.y - comTransformed.y,
+        point.z - comTransformed.z
+    };
+    const auto cross = PhysicalCrossProductOriginal(diff, force); // 0x59C730
+
+    const double invTurnMass = 1.0 / (double)turnMass; // kept in extended precision for the x component
+    m_vecFrictionTurnSpeed.x = (float)(invTurnMass * cross.x + m_vecFrictionTurnSpeed.x);
+    const float ty           = (float)(invTurnMass * cross.y);
+    const float tz           = (float)(invTurnMass * cross.z);
+    m_vecFrictionTurnSpeed.y = ty + m_vecFrictionTurnSpeed.y;
+    m_vecFrictionTurnSpeed.z = tz + m_vecFrictionTurnSpeed.z;
 }
 
 // 0x543220
@@ -1188,9 +1238,46 @@ bool CPhysical::ApplySpringDampening(float fDampingForce, float fSpringForceDamp
 }
 
 // Unused
-bool CPhysical::ApplySpringDampeningOld(float arg0, float arg1, CVector& arg2, CVector& arg3, CVector& arg4)
-{
-    return ((bool(__thiscall*)(CPhysical*, float, float, CVector&, CVector&, CVector&))0x544100)(this, arg0, arg1, arg2, arg3, arg4);
+bool CPhysical::ApplySpringDampeningOld(float dampingForce, float arg1 /*unused*/, CVector& direction, CVector& collisionPoint, CVector& collisionPos) {
+    // Spilled to a float in the original
+    const float collisionPosDotDir = (float)(((double)collisionPos.y * direction.y + (double)collisionPos.z * direction.z) + (double)direction.x * collisionPos.x);
+
+    const auto speed = GetSpeed(collisionPoint); // 0x542CE0
+    const double speedDotDir = ((double)speed.y * direction.y + (double)speed.z * direction.z) + (double)speed.x * direction.x;
+    const float  speedDotDirF = (float)speedDotDir; // Spilled to a float, but the unrounded value is used right below
+    const double avgDot = (speedDotDir + collisionPosDotDir) * 0.5f;
+
+    const float timeStep = CTimer::ms_fTimeStep < 3.0f ? CTimer::ms_fTimeStep : 3.0f;
+
+    double force = avgDot * ((double)timeStep * m_fMass) * dampingForce * -0.53f; // -0.53f: 0x863C04
+    if (physicalFlags.bMakeMassTwiceAsBig) {
+        force += force;
+    }
+
+    // Limit
+    double limit = (double)m_fTurnMass / ((((collisionPoint.x * (double)collisionPoint.x + (double)collisionPoint.y * collisionPoint.y) + (double)collisionPoint.z * collisionPoint.z) + 1.0f) * m_fMass * 2.0);
+    if (limit > 1.0) {
+        limit = 1.0;
+    }
+
+    double ratio = force / ((double)speedDotDirF * m_fMass);
+    if (ratio < 0.0) {
+        ratio = -ratio;
+    }
+    if (ratio > limit) { // Skipped on NaN (FCOM + `test ah, 0x41; jnz`)
+        force = force * (limit / ratio);
+    }
+
+    ApplyForce(
+        CVector{
+            (float)(force * direction.x),
+            (float)(force * direction.y),
+            (float)(force * direction.z)
+        },
+        collisionPoint,
+        true
+    );
+    return true;
 }
 
 // 0x544280
@@ -2149,9 +2236,32 @@ void CPhysical::PlacePhysicalRelativeToOtherPhysical(CPhysical* relativeToPhysic
 
 // Unused
 // 0x546ED0
-float CPhysical::ApplyScriptCollision(CVector arg0, float arg1, float arg2, CVector* arg3)
-{
-    return ((float(__thiscall*)(CPhysical*, CVector, float, float, CVector*))0x546ED0)(this, arg0, arg1, arg2, arg3);
+float CPhysical::ApplyScriptCollision(CVector dir, float elasticity, float friction, CVector* point) {
+    const auto savedElasticity = m_fElasticity;
+    float      damage          = 0.0f;
+
+    CColPoint colPoint;
+    // NOTSA: The original only initialises `m_vecPoint` and `m_vecNormal` (the rest is stack garbage), we zero-init everything else
+    std::memset(&colPoint, 0, sizeof(colPoint));
+    colPoint.m_vecNormal = dir;
+
+    if (point) {
+        colPoint.m_vecPoint = *point;
+    } else {
+        const auto  pos    = GetPosition();
+        const float radius = GetColModel()->GetBoundRadius(); // 0x535300
+        colPoint.m_vecPoint.x = (float)((double)pos.x - (double)dir.x * radius); // The product isn't rounded to float (x87 stack)...
+        colPoint.m_vecPoint.y = pos.y - (float)((double)dir.y * radius);         // ...but the other two are spilled to float
+        colPoint.m_vecPoint.z = pos.z - (float)((double)dir.z * radius);
+    }
+
+    m_fElasticity = elasticity;
+    if (ApplyCollision(this, colPoint, damage) && friction > 0.0f) { // 0x5435C0
+        ApplyFriction(friction, colPoint); // 0x5454C0
+    }
+    m_fElasticity = savedElasticity;
+
+    return damage;
 }
 
 // 0x546FF0

@@ -107,6 +107,7 @@ void CAutomobile::InjectHooks()
     RH_ScopedInstall(SetDoorDamage, 0x6B1600);
     RH_ScopedInstall(TowTruckControl, 0x6A40F0);
     RH_ScopedInstall(ProcessCarOnFireAndExplode, 0x6A7090);
+    RH_ScopedInstall(HasCarStoppedBecauseOfLight, 0x44D520);
 
     RH_ScopedVMTInstall(PreRender, 0x6AAB50);
     RH_ScopedVMTInstall(Render, 0x6A2B10);
@@ -6638,7 +6639,49 @@ void CAutomobile::FireTruckControl(CFire* fire) {
 
 // 0x44D520
 bool CAutomobile::HasCarStoppedBecauseOfLight() {
-    return ((bool(__thiscall*)(CAutomobile*))0x44D520)(this); // TODO: Reverse
+    if (GetStatus() != STATUS_SIMPLE && GetStatus() != STATUS_PHYSICS) {
+        return false;
+    }
+
+    // Is there a link `from` => `to` whose navi link is in a traffic light state != 0?
+    const auto IsLinkRedLit = [](CNodeAddress from, CNodeAddress to) {
+        const auto& fromNode = ThePaths.m_pPathNodes[from.m_wAreaId][from.m_wNodeId];
+        for (int32 i = 0; i < (int32)fromNode.m_nNumLinks; i++) {
+            const auto linkIdx = fromNode.m_wBaseLinkId + i;
+            const auto linked  = ThePaths.m_pNodeLinks[from.m_wAreaId][linkIdx];
+            if (linked.m_wAreaId != to.m_wAreaId || linked.m_wNodeId != to.m_wNodeId) {
+                continue;
+            }
+            const auto navi = ThePaths.m_pNaviLinks[from.m_wAreaId][linkIdx];
+            if (!ThePaths.m_pPathNodes[navi.m_wAreaId]) {
+                continue;
+            }
+            if (ThePaths.GetCarPathLink(navi).m_nTrafficLightState != 0) {
+                return true;
+            }
+        }
+        return false;
+    };
+
+    // 0x44D53D
+    const auto cur = m_autoPilot.m_currentAddress;
+    if (!ThePaths.m_pPathNodes[cur.m_wAreaId]) {
+        return false;
+    }
+    const auto next = m_autoPilot.m_startingRouteNode;
+    if (!ThePaths.m_pPathNodes[next.m_wAreaId]) {
+        return false;
+    }
+    if (IsLinkRedLit(cur, next)) {
+        return true;
+    }
+
+    // 0x44D657
+    const auto prev = m_autoPilot.m_endingRouteNode;
+    if (prev.m_wAreaId == (uint16)-1 || !ThePaths.m_pPathNodes[prev.m_wAreaId]) {
+        return false;
+    }
+    return IsLinkRedLit(prev, cur);
 }
 
 /*!

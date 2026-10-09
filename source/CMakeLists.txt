@@ -358,6 +358,29 @@ if (${RE_PROJECT}_RW_LIBRW)
     target_include_directories(rw_platform_test BEFORE PRIVATE fakerw)
     target_link_libraries(rw_platform_test PRIVATE librw d3d9 user32)
     set_target_properties(rw_platform_test PROPERTIES COMPILE_WARNING_AS_ERROR OFF)
+
+
+    # P2B-05a unit test of the skin / hanim layer (Wine-runnable; optional SA DFF paths on the command line)
+    add_executable(rw_skin_hanim_test EXCLUDE_FROM_ALL
+        "${PROJECT_SOURCE_DIR}/tests/standalone/rw_skin_hanim_test.cpp"
+        standalone/rw/skin.cpp
+        standalone/rw/hanim.cpp
+        standalone/rw/atomic.cpp
+        standalone/rw/clump.cpp
+        standalone/rw/plugins.cpp
+        standalone/rw/frame.cpp
+        standalone/rw/math.cpp
+        standalone/rw/stream.cpp
+        standalone/rw/light.cpp
+        standalone/rw/world.cpp
+        standalone/rw/material.cpp
+        standalone/rw/geometry.cpp
+    )
+    target_compile_features(rw_skin_hanim_test PRIVATE cxx_std_23)
+    target_compile_definitions(rw_skin_hanim_test PRIVATE NOTSA_RW_LIBRW NOTSA_RW_UNIT_TEST RW_D3D9)
+    target_include_directories(rw_skin_hanim_test BEFORE PRIVATE fakerw)
+    target_link_libraries(rw_skin_hanim_test PRIVATE librw d3d9 user32)
+    set_target_properties(rw_skin_hanim_test PROPERTIES COMPILE_WARNING_AS_ERROR OFF)
 endif()
 
 #--------------------------------------------------------------------
@@ -413,6 +436,8 @@ if (${RE_PROJECT}_RW_LIBRW)
     set_source_files_properties(standalone/rw/geometry.cpp standalone/rw/light.cpp standalone/rw/world.cpp standalone/rw/material.cpp PROPERTIES SKIP_UNITY_BUILD_INCLUSION ON)
     # P2B-03b: texture.cpp includes the private d3d9 header; texdict.cpp pairs with it
     set_source_files_properties(standalone/rw/texture.cpp standalone/rw/texdict.cpp standalone/rw/rwtexdict.cpp PROPERTIES SKIP_UNITY_BUILD_INCLUSION ON)
+    # P2B-05a: anonymous-namespace helpers in skin.cpp / hanim.cpp
+    set_source_files_properties(standalone/rw/skin.cpp standalone/rw/hanim.cpp PROPERTIES SKIP_UNITY_BUILD_INCLUSION ON)
 endif()
 
 target_link_libraries(${RE_PROJECT_LIB_NAME} PRIVATE

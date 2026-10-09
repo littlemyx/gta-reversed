@@ -324,3 +324,19 @@ RwInt32 RpMaterialSetStreamRightsCallBack(RwUInt32 pluginID, RwPluginDataChunkRi
 void     NotsaRwPlatform_OnEngineStarted();
 void     NotsaRwPlatform_OnEngineStopping();
 unsigned NotsaRwPlatform_DeviceResetCount();
+
+
+
+//--------------------------------------------------------------------------------------------------
+// 05a (standalone/rw/{skin,hanim}.cpp): skin / hanim API beyond rwapi.h. The game only calls what rwapi.h declares; these are the rest of the
+// stock RW API the shim implements anyway (used by the unit test).
+//--------------------------------------------------------------------------------------------------
+RpHAnimHierarchy* RpHAnimHierarchyCreate(RwInt32 numNodes, RwUInt32* nodeFlags, RwInt32* nodeIDs, RpHAnimHierarchyFlag flags, RwInt32 maxInterpKeyFrameSize);
+RpHAnimHierarchy* RpHAnimHierarchyDestroy(RpHAnimHierarchy* hierarchy);   // returns NULL like the exe
+RpHAnimHierarchy* RpHAnimHierarchyAttach(RpHAnimHierarchy* hierarchy);
+RpHAnimHierarchy* RpHAnimHierarchyDetach(RpHAnimHierarchy* hierarchy);
+RpHAnimHierarchy* RpHAnimHierarchyAttachFrameIndex(RpHAnimHierarchy* hierarchy, RwInt32 nodeIndex);
+RpHAnimHierarchy* RpHAnimHierarchyDetachFrameIndex(RpHAnimHierarchy* hierarchy, RwInt32 nodeIndex);
+RwBool            RpHAnimFrameSetID(RwFrame* frame, RwInt32 id);
+RwInt32           RpHAnimFrameGetID(RwFrame* frame);
+RpSkinType        RpSkinAtomicGetType(RpAtomic* atomic);

@@ -58,26 +58,57 @@ void CTaskInteriorSitAtDesk::FinishAnimCB(CAnimBlendAssociation* anim, void* dat
     self->m_Anim = nullptr;
 }
 
+namespace {
+// x87-accurate version of `0x59C890` (MultiplyMatrixWithVector): each component is accumulated in extended
+// precision in the order of the original and rounded to float once at the end.
+CVector TransformPointX87(const CMatrix& m, const CVector& v) {
+    return {
+        (float)((((double)m.GetUp().x * v.z + (double)m.GetForward().x * v.y) + (double)m.GetRight().x * v.x) + m.GetPosition().x),
+        (float)((((double)m.GetUp().y * v.z + (double)m.GetRight().y * v.x) + (double)m.GetForward().y * v.y) + m.GetPosition().y),
+        (float)((((double)m.GetUp().z * v.z + (double)m.GetRight().z * v.x) + (double)m.GetForward().z * v.y) + m.GetPosition().z)
+    };
+}
+
+// The exe's idiom: `(int)((rand() & 0xFFFF) * (1 / 32768.f) * range)` (0x858B14), evaluated exactly (x87).
+// NOT the same as `CGeneral::GetRandomNumberInRange` (that one divides by RAND_MAX, and is exclusive of `max`)
+int32 RandomScaled(int32 range) {
+    return (int32)(((uint32)CGeneral::GetRandomNumber() & 0xFFFF) * (uint32)range) >> 15;
+}
+}
+
 // 0x677780
 void CTaskInteriorSitAtDesk::StartRandomLoopAnim(CPed* ped, float blendDelta) {
-    using CGeneral::GetRandomNumberInRange;
+    if (m_Anim) {
+        m_Anim->SetDefaultDeleteCallback(); // 0x4CEBC0
+    }
 
-    const auto chance = GetRandomNumberInRange(100u);
-    StartAnim(
-        ped,
-        chance > 40
-            ? ANIM_ID_OFF_SIT_TYPE_LOOP
-            : chance > 10
-                ? ANIM_ID_OFF_SIT_BORED_LOOP
-                : ANIM_ID_OFF_SIT_IDLE_LOOP,
-        blendDelta
-    );
-    m_AnimTimer.Start(chance > 40 ? GetRandomNumberInRange(2000, 5000) : GetRandomNumberInRange(7000, 12000));
+    // Original draws the chance, then the duration, and only then blends the animation
+    const auto chance = RandomScaled(100);
+    AnimationId animId;
+    int32       duration;
+    if (chance > 40) {
+        animId   = ANIM_ID_OFF_SIT_TYPE_LOOP;
+        duration = 7000 + RandomScaled(5000);
+    } else if (chance > 10) {
+        animId   = ANIM_ID_OFF_SIT_BORED_LOOP;
+        duration = 2000 + RandomScaled(3000);
+    } else {
+        animId   = ANIM_ID_OFF_SIT_IDLE_LOOP;
+        duration = 2000 + RandomScaled(3000);
+    }
+
+    m_Anim = CAnimManager::BlendAnimation(ped->GetRpClump(), ANIM_GROUP_INT_OFFICE, animId, blendDelta);
+    m_Anim->SetFinishCallback(FinishAnimCB, this);
+
+    // Unconditional (no `>= 0` check), but duration is always positive
+    m_AnimTimer.m_nInterval  = duration;
+    m_AnimTimer.m_nStartTime = CTimer::GetTimeInMS();
+    m_AnimTimer.m_bStarted   = true;
 }
 
 // 0x677880
 void CTaskInteriorSitAtDesk::StartRandomOneOffAnim(CPed* ped) {
-    const auto chance = CGeneral::GetRandomNumberInRange(100u);
+    const auto chance = RandomScaled(100);
     StartAnim(
         ped,
         chance > 60
@@ -169,9 +200,9 @@ bool CTaskInteriorSitAtDesk::ProcessPed(CPed* ped) {
         CVector pos = ped->GetPosition();
         const auto z = pos.z;
         if (curAnimId >= ANIM_ID_OFF_SIT_IDLE_LOOP && curAnimId <= ANIM_ID_OFF_SIT_BORED_LOOP) {
-            pos = ped->m_matrix->TransformPoint(CCarEnterExit::ms_vecPedDeskAnimOffset);
+            pos = TransformPointX87(*ped->m_matrix, CCarEnterExit::ms_vecPedDeskAnimOffset); // 0x59C890
         } else if (curAnimId == ANIM_ID_OFF_SIT_2IDLE_180) {
-            pos = ped->m_matrix->TransformPoint(-CCarEnterExit::ms_vecPedDeskAnimOffset);
+            pos = TransformPointX87(*ped->m_matrix, -CCarEnterExit::ms_vecPedDeskAnimOffset); // 0x59C890
         }
         pos.z = z;
         ped->SetPosn(pos);

@@ -4,6 +4,8 @@
 #include "Interior/InteriorInfo_t.h"
 #include "Interior/Interior_c.h"
 #include "Interior/InteriorManager_c.h"
+#include "CarEnterExit.h"
+#include <numbers>
 
 void CTaskInteriorLieInBed::InjectHooks() {
     RH_ScopedVirtualClass(CTaskInteriorLieInBed, 0x870338, 9);
@@ -41,10 +43,10 @@ CTaskInteriorLieInBed::CTaskInteriorLieInBed(
 // For `0x675EF0`
 CTaskInteriorLieInBed::CTaskInteriorLieInBed(const CTaskInteriorLieInBed& o) :
     CTaskInteriorLieInBed{
-        m_GetOutAfterInterval,
-        m_IntInfo,
-        m_bRghtHandSide,
-        m_bDoInstantly
+        o.m_GetOutAfterInterval,
+        o.m_IntInfo,
+        o.m_bRghtHandSide,
+        o.m_bDoInstantly
     }
 {
 }
@@ -52,7 +54,7 @@ CTaskInteriorLieInBed::CTaskInteriorLieInBed(const CTaskInteriorLieInBed& o) :
 // 0x675E90
 CTaskInteriorLieInBed::~CTaskInteriorLieInBed() {
     if (m_Anim) {
-        m_Anim->SetDefaultFinishCallback();
+        m_Anim->SetDefaultDeleteCallback(); // 0x4CEBC0
     }
 }
 
@@ -77,7 +79,7 @@ bool CTaskInteriorLieInBed::MakeAbortable(CPed* ped, eAbortPriority priority, CE
     if (priority == ABORT_PRIORITY_IMMEDIATE) {
         if (m_Anim) {
             m_Anim->SetBlendDelta(-1000.f);
-            m_Anim->SetDefaultFinishCallback();
+            m_Anim->SetDefaultDeleteCallback(); // 0x4CEBC0
             m_Anim = nullptr;
         }
         ped->GetIntelligence()->GetEventScanner().GetAcquaintanceScanner().SetOnlyScriptPedAllowed();
@@ -86,6 +88,18 @@ bool CTaskInteriorLieInBed::MakeAbortable(CPed* ped, eAbortPriority priority, CE
         m_TaskAborting = true;
         return false;
     }
+}
+
+namespace {
+// x87-accurate version of `0x59C890` (MultiplyMatrixWithVector): each component is accumulated in extended
+// precision in the order (at * z + [right|forward] * ...) and rounded to float once at the end.
+CVector TransformPointX87(const CMatrix& m, const CVector& v) {
+    return {
+        (float)((((double)m.GetUp().x * v.z + (double)m.GetForward().x * v.y) + (double)m.GetRight().x * v.x) + m.GetPosition().x),
+        (float)((((double)m.GetUp().y * v.z + (double)m.GetRight().y * v.x) + (double)m.GetForward().y * v.y) + m.GetPosition().y),
+        (float)((((double)m.GetUp().z * v.z + (double)m.GetRight().z * v.x) + (double)m.GetForward().z * v.y) + m.GetPosition().z)
+    };
+}
 }
 
 // 0x6772E0
@@ -103,13 +117,21 @@ bool CTaskInteriorLieInBed::ProcessPed(CPed* ped) {
         }
     }
 
-    const auto CreateNextAnim = [&, this](AnimSeqIdx seqIdx, float blendDelta = 1000.f) {
-        m_Anim->SetDefaultFinishCallback();
-        
+    // Blends in the given animation and hooks up the finish callback
+    const auto StartAnim = [&, this](AnimSeqIdx seqIdx, float blendDelta) {
         m_Anim = CAnimManager::BlendAnimation(ped->GetRpClump(), ANIM_GROUP_INT_HOUSE, GetAnimIdInSeq(seqIdx), blendDelta);
-        m_Anim->SetFinishCallback(FinishAnimCB, this);
+        m_Anim->SetFinishCallback(FinishAnimCB, this); // 0x4CEBE0
+    };
 
-        m_UpdatePedPos = true;
+    // Same as above, but first detaches the callback from the animation that's currently playing
+    const auto SwitchToAnim = [&, this](AnimSeqIdx seqIdx, float blendDelta) {
+        m_Anim->SetDefaultDeleteCallback(); // 0x4CEBC0
+        StartAnim(seqIdx, blendDelta);
+    };
+
+    // Starts the get-out timer (inlined `CTaskTimer::Start`)
+    const auto StartTimer = [this] {
+        m_GetOutTimer.Start(m_GetOutAfterInterval);
     };
 
     if (m_TaskAborting) {
@@ -118,81 +140,99 @@ bool CTaskInteriorLieInBed::ProcessPed(CPed* ped) {
             return true;
         }
 
-        assert(m_Anim);
-
         if (currAnimId == GetAnimIdInSeq(AnimSeqIdx::GET_IN)) {
             m_Anim->SetBlendDelta(-8.f);
         } else if (currAnimId == GetAnimIdInSeq(AnimSeqIdx::LOOP)) {
             if (!m_UpdatePedPos) {
-                CreateNextAnim(AnimSeqIdx::GET_OUT);
+                SwitchToAnim(AnimSeqIdx::GET_OUT, 1000.f);
+                m_UpdatePedPos = true;
                 return false;
             }
         } else if (currAnimId == GetAnimIdInSeq(AnimSeqIdx::GET_OUT)) {
-            m_Anim->SetBlendDelta(3.f);
+            m_Anim->SetSpeed(3.f); // Speed (+0x24), NOT the blend delta
         }
     }
 
     if (m_Anim) {
         if (m_UpdatePedPos) {
-            const auto animOffsetOS = [&, this] {
+            const auto animOffsetWS = [&, this]() -> CVector {
                 switch (currAnimId) {
                 case ANIM_ID_BED_LOOP_L:
                 case ANIM_ID_BED_OUT_L:
-                    return CCarEnterExit::ms_vecPedBedLAnimOffset;
+                    return TransformPointX87(*ped->m_matrix, CCarEnterExit::ms_vecPedBedLAnimOffset);
                 case ANIM_ID_BED_LOOP_R:
                 case ANIM_ID_BED_OUT_R:
-                    return CCarEnterExit::ms_vecPedBedRAnimOffset;
+                    return TransformPointX87(*ped->m_matrix, CCarEnterExit::ms_vecPedBedRAnimOffset);
                 default:
-                    NOTSA_UNREACHABLE();
+                    return ped->GetPosition(); // Original doesn't transform anything here
                 }
             }();
-            const auto animOffsetWS = ped->m_matrix->TransformPoint(animOffsetOS); // Transform to world space
-            ped->SetPosn({ animOffsetWS.x, animOffsetWS.y, ped->GetPosition().z });
+            ped->SetPosn({ animOffsetWS.x, animOffsetWS.y, ped->GetPosition().z }); // 0x4241C0
+            m_UpdatePedPos = false;
             if (currAnimId == GetAnimIdInSeq(AnimSeqIdx::LOOP)) {
-                ped->m_fAimingRotation = ped->m_fCurrentRotation = CGeneral::LimitRadianAngle(ped->m_fCurrentRotation + PI);
-                ped->SetHeading(ped->m_fCurrentRotation);
+                // x87: sum is rounded to float when passed to `LimitRadianAngle`
+                const auto heading = CGeneral::LimitRadianAngle((float)((double)ped->m_fCurrentRotation + (double)std::numbers::pi_v<float>));
+                ped->m_fCurrentRotation = heading;
+                ped->m_fAimingRotation  = heading;
+                ped->SetHeading(heading); // 0x59B020 / m_placement.m_fHeading
             }
         }
 
         if (m_GetOutTimer.IsOutOfTime()) {
-            if (currAnimId != GetAnimIdInSeq(AnimSeqIdx::GET_OUT)) {
-                CreateNextAnim(AnimSeqIdx::GET_OUT);
+            if (m_Anim->GetAnimId() != GetAnimIdInSeq(AnimSeqIdx::GET_OUT)) {
+                SwitchToAnim(AnimSeqIdx::GET_OUT, 1000.f);
+                m_UpdatePedPos = true;
             }
         }
 
-        // Update ped's anim shift and rotation
-        if (currAnimId != GetAnimIdInSeq(AnimSeqIdx::GET_OUT)) {
-            auto pedToIntDir           = m_IntInfo->Pos - ped->GetPosition();
-            const auto pedToIntMag     = pedToIntDir.NormaliseAndMag();
-            const auto pedToIntShiftWS = pedToIntDir * std::min(pedToIntMag, 0.2f);
+        // Update ped's anim shift and rotation (only while getting into the bed, and
+        // checking the animation that's playing *now*, as it might have just been switched)
+        if (m_Anim->GetAnimId() == GetAnimIdInSeq(AnimSeqIdx::GET_IN)) {
+            const auto& pedPos = ped->GetPosition();
+            const auto& mat    = *ped->m_matrix; // Original doesn't check for the matrix here either
 
-            // Now transform the point into ped's object space from world space
-            // in quite a convoluted way.
-            ped->m_vecAnimMovingShiftLocal = {
-                pedToIntShiftWS.Dot(ped->GetRight()),
-                pedToIntShiftWS.Dot(ped->GetForward()),
-            };
+            // x87: Each of these is stored as a float
+            const float dx = m_IntInfo->Pos.x - pedPos.x;
+            const float dy = m_IntInfo->Pos.y - pedPos.y;
+            const float dz = m_IntInfo->Pos.z - pedPos.z;
 
-            ped->m_fAimingRotation = m_IntInfo->Dir.Heading();
+            // x87: The sum of squares + sqrt is kept in extended precision until the comparison
+            const double lenD    = std::sqrt((double)dz * (double)dz + (double)dy * (double)dy + (double)dx * (double)dx);
+            const float  len     = (float)lenD;
+            const float  clamped = lenD < (double)0.02f ? len : 0.02f; // 0x858B38 is 0.02f
+
+            const double inv = 1.0 / (double)len;
+            const double vx  = ((double)dx * inv) * (double)clamped;
+            const double vy  = (double)(float)((double)dy * inv) * (double)clamped;
+            const double vz  = (double)(float)((double)dz * inv) * (double)clamped;
+
+            const auto& right = mat.GetRight();
+            const auto& fwd   = mat.GetForward(); // Matrix' second vector (offset 0x10)
+            ped->m_vecAnimMovingShiftLocal.x = (float)(((double)right.z * vz + (double)right.y * vy) + (double)right.x * vx);
+            ped->m_vecAnimMovingShiftLocal.y = (float)(((double)fwd.z * vz + (double)fwd.y * vy) + (double)fwd.x * vx);
+
+            ped->m_fAimingRotation = CGeneral::LimitRadianAngle(CGeneral::GetRadianAngleBetweenPoints(
+                m_IntInfo->Dir.x,
+                m_IntInfo->Dir.y,
+                0.f,
+                0.f
+            ));
         }
     } else if (InteriorManager_c::AreAnimsLoaded(ANIM_GROUP_DEFAULT)) { // Create animation
-        const auto CreateNextAnimAndStartTimer = [&, this](AnimSeqIdx offset, float blendDelta = 1000.f) {
-            m_GetOutTimer.Start(m_GetOutAfterInterval);
-            CreateNextAnim(offset, blendDelta);
-        };
-
-        if (m_PrevAnimId != ANIM_ID_UNDEFINED) {
-            if (m_PrevAnimId == GetAnimIdInSeq(AnimSeqIdx::GET_IN)) {
-                CreateNextAnimAndStartTimer(AnimSeqIdx::LOOP);
-            }
-        } else {
+        if (m_PrevAnimId == ANIM_ID_UNDEFINED) {
             ped->GetIntelligence()->GetEventScanner().GetAcquaintanceScanner().TurnOffAllScanners();
-            CreateNextAnimAndStartTimer(
-                m_bDoInstantly
-                    ? AnimSeqIdx::LOOP
-                    : AnimSeqIdx::GET_IN,
-                4.f
-            );
+            if (m_bDoInstantly) {
+                StartTimer();
+                StartAnim(AnimSeqIdx::LOOP, 1000.f);
+                m_UpdatePedPos = true;
+            } else {
+                // Note: No timer, no `m_UpdatePedPos`
+                StartAnim(AnimSeqIdx::GET_IN, 4.f);
+            }
+        } else if (m_PrevAnimId == GetAnimIdInSeq(AnimSeqIdx::GET_IN)) {
+            StartTimer();
+            StartAnim(AnimSeqIdx::LOOP, 1000.f);
+            m_UpdatePedPos = true;
         }
     }
 

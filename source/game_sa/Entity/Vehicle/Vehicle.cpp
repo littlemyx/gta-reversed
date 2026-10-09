@@ -190,7 +190,7 @@ void CVehicle::InjectHooks() {
     RH_ScopedInstall(SetComponentRotation, 0x6DBA30);
     RH_ScopedInstall(SetTransmissionRotation, 0x6DBBB0);
     RH_ScopedInstall(DoBoatSplashes, 0x6DD130);
-    // RH_ScopedInstall(DoSunGlare, 0x6DD6F0);
+    RH_ScopedInstall(DoSunGlare, 0x6DD6F0);
     RH_ScopedInstall(AddWaterSplashParticles, 0x6DDF60);
     RH_ScopedInstall(AddExhaustParticles, 0x6DE240);
     // RH_ScopedInstall(AddSingleWheelParticles, 0x6DE880);
@@ -4540,16 +4540,180 @@ void CVehicle::DoBoatSplashes(float fWaterDamping) {
     }
 }
 
-// 0x6DD6F0
-void CVehicle::DoSunGlare() {
-    return ((void(__thiscall*)(CVehicle*))0x6DD6F0)(this);
-
-    /*
-    * Below code should be good so far, I'm lazy to finish it, srry.
-    if (physicalFlags.bDestroyed || GetUp().z < 0.f || GetVehicleAppearance() != eVehicleAppearance::VEHICLE_APPEARANCE_AUTOMOBILE || CWeather::SunGlare <= 0.f) {
+// 0x59C910 - `CVector::Normalise` as the original evaluates it: the sum of squares and the reciprocal root stay in the FPU registers
+// (extended precision), every component is stored as float. A length of 0 (or less) only writes `x = 1`; NaN takes the sqrt path.
+static void NormaliseExt(CVector& v) {
+    const double sq = ((double)v.x * v.x + (double)v.y * v.y) + (double)v.z * v.z;
+    if (sq <= 0.0) {
+        v.x = 1.0f;
         return;
     }
-    */
+    const double inv = 1.0 / std::sqrt(sq);
+    v.x = (float)(v.x * inv);
+    v.y = (float)(v.y * inv);
+    v.z = (float)(v.z * inv);
+}
+
+// 0x44E480 - `CVector2D::Normalise` as the original evaluates it (see `NormaliseExt`)
+static void Normalise2DExt(CVector2D& v) {
+    const double sq = (double)v.x * v.x + (double)v.y * v.y;
+    if (sq <= 0.0) {
+        v.x = 1.0f;
+        return;
+    }
+    const double inv = 1.0 / std::sqrt(sq);
+    v.x = (float)(v.x * inv);
+    v.y = (float)(v.y * inv);
+}
+
+// 0x6DD6F0
+void CVehicle::DoSunGlare() {
+    // NOTE: The original keeps most intermediates on the x87 stack (extended precision), hence the `double`s below.
+    if (physicalFlags.bRenderScorched || m_matrix->GetUp().z < 0.0f || GetVehicleAppearance() != VEHICLE_APPEARANCE_AUTOMOBILE || !(CWeather::SunGlare > 0.0f)) {
+        return;
+    }
+
+    // Vehicle -> camera, scaled to a length of 2 (`vToCam`)
+    const CVector toCam = TheCamera.GetPosition() - GetPosition();
+    const float   dist  = (float)std::sqrt(((double)toCam.x * toCam.x + (double)toCam.z * toCam.z) + (double)toCam.y * toCam.y);
+    const double  scale = 2.0f / (double)dist;
+    const CVector vToCam{ (float)(toCam.x * scale), (float)(toCam.y * scale), (float)(toCam.z * scale) };
+
+    // Sun direction (+ vToCam) in the vehicle's (right, forward) basis
+    const auto&  vecToSun = CTimeCycle::m_VectorToSun[CTimeCycle::m_CurrentStoredValue];
+    const double sx = (double)vToCam.x + vecToSun.x, sy = (double)vToCam.y + vecToSun.y, sz = (double)vToCam.z + vecToSun.z;
+    const auto&  right = m_matrix->GetRight();
+    const auto&  fwd   = m_matrix->GetForward();
+    CVector glareDir{
+        (float)((sz * right.z + sy * right.y) + sx * right.x),
+        (float)((sz * fwd.z + sy * fwd.y) + sx * fwd.x),
+        0.0f
+    };
+    NormaliseExt(glareDir);
+
+    CVector2D fwd2D{ m_matrix->GetForward().x, m_matrix->GetForward().y };
+    CVector2D toCam2D{ vToCam.x, vToCam.y };
+    Normalise2DExt(fwd2D);
+    Normalise2DExt(toCam2D);
+
+    double facing = (double)toCam2D.y * fwd2D.y + (double)toCam2D.x * fwd2D.x;
+    if (facing < 0.0) {
+        facing = -facing;
+    }
+
+    double intensity;
+    if (facing > 0.995f) {
+        intensity = 1.0f;
+    } else if (facing > 0.99f) {
+        intensity = (facing - 0.99f) * 200.0f;
+    } else {
+        return;
+    }
+
+    if (!(dist > 30.0f)) {
+        if (!(dist > 13.0f)) {
+            return;
+        }
+        intensity = (intensity * ((double)dist - 13.0f)) * 0.05882353f; // 0x871FC0
+    }
+
+    const double colorScale = intensity * 0.8f;
+    const auto   ToColor    = [&](uint16 core) { // 0x821B40 (_ftol) truncates
+        return (uint8)(int32)((((double)(core + 0x1FE) * colorScale) * CWeather::SunGlare) * 0.33333334f);
+    };
+    const auto& colours = CTimeCycle::m_CurrentColours;
+    const uint8 red     = ToColor(colours.m_nSunCoreRed);
+    const uint8 green   = ToColor(colours.m_nSunCoreGreen);
+    const uint8 blue    = ToColor(colours.m_nSunCoreBlue);
+
+    const auto colData = GetColModel()->m_pColData;
+    CCollision::CalculateTrianglePlanes(colData);
+
+    const auto GetVertex = [&](uint16 idx) { return CVector{ colData->m_pVertices[idx] }; };
+
+    // Walks over pairs of triangles that form a quad (they share an edge, so 1 of the second triangle's vertices is new)
+    for (int32 i = 0; i <= (int32)(int16)colData->m_nNumTriangles - 2; i += 2) {
+        const auto& tri0 = colData->m_pTriangles[i];
+        const auto& tri1 = colData->m_pTriangles[i + 1];
+
+        const uint16  a = tri0.vA, b = tri0.vB, c = tri0.vC;
+        const CVector v0 = GetVertex(a);
+        if (!(v0.z > 0.0f)) {
+            continue;
+        }
+        const CVector v1 = GetVertex(b);
+        const CVector v2 = GetVertex(c);
+
+        int32   numNew = 0;
+        CVector v3{};
+        for (const auto idx : { tri1.vA, tri1.vB, tri1.vC }) {
+            if (idx != a && idx != b && idx != c) {
+                v3 = GetVertex(idx);
+                numNew++;
+            }
+        }
+        if (numNew != 1) {
+            continue;
+        }
+
+        // Quad center
+        const double sumX01 = (double)v1.x + v0.x;
+        const double sumY01 = (double)v1.y + v0.y;
+        const float  sumZ01 = (float)((double)v1.z + v0.z);
+        const float  sumX   = (float)(sumX01 + v2.x);
+        const double sumY   = sumY01 + v2.y;
+        const double sumZ   = (double)sumZ01 + v2.z;
+        const float  centerX = (float)((double)(float)((double)v3.x + sumX) * 0.25f);
+        const float  centerY = (float)((double)(float)((double)v3.y + sumY) * 0.25f);
+        const double centerZ = ((double)v3.z + sumZ) * 0.25f;
+
+        // Smaller of the |center - v0| deltas
+        const double dx    = (double)centerX - v0.x;
+        const double dy    = (double)centerY - v0.y;
+        const float  dyF   = (float)dy; // stored to a float temporary in the original
+        const double adx   = dx < 0.0 ? -dx : dx;
+        const double ady   = dy < 0.0 ? -dy : dy;
+        double       delta = adx < ady ? dx : (double)dyF;
+        if (delta < 0.0) {
+            delta = -delta;
+        }
+        const double glare = delta * 1.4f;
+        if (!(glare > 0.6f)) {
+            continue;
+        }
+
+        const double offX = (double)glareDir.x * glare;
+        const double offY = glare * glareDir.y;
+        const float  offZ = (float)(glare * glareDir.z);
+        const CVector localPos{ (float)(offX + centerX), (float)(offY + centerY), (float)((double)offZ + centerZ) };
+        const CVector worldPos = TransformPointExt(*m_matrix, localPos); // 0x59C890
+        const CVector coronaPos{
+            (float)((double)worldPos.x + vToCam.x),
+            (float)((double)worldPos.y + vToCam.y),
+            (float)((double)worldPos.z + vToCam.z)
+        };
+
+        CCoronas::RegisterCorona( // 0x6FC580
+            (uint32)(uintptr_t)this + 0x1B + i, // (sic) the id is derived from the vehicle's address
+            nullptr,
+            red, green, blue, 255,
+            coronaPos,
+            CWeather::SunGlare * 0.9f,
+            90.0f,
+            CORONATYPE_SHINYSTAR,
+            FLARETYPE_NONE,
+            CORREFL_NONE,
+            LOSCHECK_OFF,
+            TRAIL_OFF,
+            0.0f,
+            false,
+            1.5f,
+            false,
+            15.0f,
+            false,
+            false
+        );
+    }
 }
 
 // 0x6DDF60

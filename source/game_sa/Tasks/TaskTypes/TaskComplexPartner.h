@@ -47,6 +47,8 @@ public:
     virtual CTaskComplexSequence* GetPartnerSequence() = 0; // vtable slot 13 is `_purecall` in the exe
 
 protected:
+    void CalculateMeetingPoints(CPed* ped, CVector* point, CVector* targetPoint); // 0x681FE0
+
     // NOTSA: the base class code uses a 16-bit counter at +0x70, which is `field_70` of the derived classes (the base is 0x70 bytes)
     int16& GetGoToPointFrameCounter() { return *reinterpret_cast<int16*>(reinterpret_cast<uint8*>(this) + 0x70); }
 

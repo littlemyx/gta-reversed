@@ -21,10 +21,25 @@ static void NormaliseOriginal(CVector2D& v) {
     }
 }
 
+// 0x59C910 - `CVector::Normalise` as the exe has it: the sum of squares and the reciprocal root stay in extended precision,
+// a non-positive length (NaN takes the sqrt path) only writes `x = 1`
+static void NormaliseOriginal(CVector& v) {
+    const double sq = ((double)v.x * v.x + (double)v.y * v.y) + (double)v.z * v.z;
+    if (!(sq <= 0.0)) {
+        const double recip = 1.0 / std::sqrt(sq);
+        v.x = (float)(v.x * recip);
+        v.y = (float)(v.y * recip);
+        v.z = (float)(v.z * recip);
+    } else {
+        v.x = 1.0f;
+    }
+}
+
 void CTaskComplexPartner::InjectHooks() {
     RH_ScopedVirtualClass(CTaskComplexPartner, 0x870664, 14);
     RH_ScopedCategory("Tasks/TaskTypes");
     RH_ScopedInstall(Constructor, 0x681E70);
+    RH_ScopedInstall(CalculateMeetingPoints, 0x681FE0);
     RH_ScopedVMTInstall(CreateNextSubTask, 0x683AD0);
     RH_ScopedVMTInstall(CreateFirstSubTask, 0x681F20);
     RH_ScopedVMTInstall(ControlSubTask, 0x6840D0);
@@ -190,8 +205,7 @@ CTask* CTaskComplexPartner::CreateNextSubTask(CPed* ped) {
             return nullptr;
         }
         if (m_leadSpeaker) {
-            // 0x681FE0 (unnamed, not part of this batch): computes `m_targetPoint` from `m_point`
-            plugin::CallMethod<0x681FE0, CTaskComplexPartner*, CPed*, CVector*, CVector*>(this, ped, &m_point, &m_targetPoint);
+            CalculateMeetingPoints(ped, &m_point, &m_targetPoint);
             partnerTask->m_point = m_targetPoint;
         }
         m_partnerState = PARTNER_STATE_UNK_2;
@@ -200,6 +214,74 @@ CTask* CTaskComplexPartner::CreateNextSubTask(CPed* ped) {
     default:
         return nullptr;
     }
+}
+
+// 0x681FE0
+// Takes the point `m_distanceMultiplier` of the way from the ped to the partner, pushes it away from both until it is at least 0.7 from each
+// (at most 11 rounds, otherwise the task is marked completed and nothing is written), then writes the two spots half a (unit) step to either
+// side of it: `point` = the one nearer the ped, `targetPoint` = the one nearer the partner. x87: the candidate stays in extended precision.
+void CTaskComplexPartner::CalculateMeetingPoints(CPed* ped, CVector* point, CVector* targetPoint) {
+    const CVector pedPos     = ped->GetPosition();
+    const CVector partnerPos = m_partner->GetPosition();
+
+    CVector dir{
+        (float)((double)partnerPos.x - pedPos.x),
+        (float)((double)partnerPos.y - pedPos.y),
+        (float)((double)partnerPos.z - pedPos.z)
+    };
+
+    double cx = (float)((double)dir.x * m_distanceMultiplier + pedPos.x);
+    double cy = (float)((double)(float)((double)dir.y * m_distanceMultiplier) + pedPos.y);
+    double cz = (float)((double)(float)((double)dir.z * m_distanceMultiplier) + pedPos.z);
+
+    NormaliseOriginal(dir);
+
+    if (GetTaskType() != TASK_COMPLEX_PARTNER_CHAT) {
+        for (int32 iter = 0;; iter++) {
+            if (iter > 10) {
+                m_taskCompleted = true;
+                return;
+            }
+
+            bool pushed = false;
+            if (const auto dist = std::sqrt((cx - pedPos.x) * (cx - pedPos.x) + (cy - pedPos.y) * (cy - pedPos.y)); dist < 0.7f) { // NaN: not pushed
+                const auto diff = 0.75f - dist;
+                const auto px   = (float)(dir.x * diff);
+                const auto py   = (float)(dir.y * diff);
+                const auto pz   = diff * dir.z;
+                cx += px;
+                cy += py;
+                cz += pz;
+                pushed = true;
+            }
+            if (const auto dist = std::sqrt((cx - partnerPos.x) * (cx - partnerPos.x) + (cy - partnerPos.y) * (cy - partnerPos.y)); dist < 0.7f) {
+                const auto diff = 0.75f - dist;
+                const auto px   = (float)(dir.x * diff);
+                const auto py   = (float)(dir.y * diff);
+                const auto pz   = diff * dir.z;
+                cx -= px;
+                cy -= py;
+                cz -= pz;
+            } else if (!pushed) {
+                break;
+            }
+        }
+    }
+
+    // `cx`/`cy` are used from the FPU stack (not rounded) for `point`; `cy`/`cz` are used from their float spill slots for `targetPoint`
+    const auto czF = (float)cz;
+    const auto cyF = (float)cy;
+    const auto hx  = dir.x * 0.5f;
+    const auto hy  = dir.y * 0.5f;
+    const auto hz  = dir.z * 0.5f;
+
+    point->x = (float)(cx - hx);
+    point->y = (float)(cy - hy);
+    point->z = (float)((double)czF - hz);
+
+    targetPoint->x = (float)(cx + hx);
+    targetPoint->y = (float)((double)hy + cyF);
+    targetPoint->z = (float)((double)hz + czF);
 }
 
 // 0x681F20 (also the target of the 5-byte thunk 0x6823B0 used by `CTaskComplexPartnerDeal`)

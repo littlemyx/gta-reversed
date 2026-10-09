@@ -9,6 +9,7 @@ void FxInterpInfoFloat_c::InjectHooks() {
     RH_ScopedCategory("Fx");
 
     RH_ScopedOverloadedInstall(GetVal, "", 0x4A8470, void(FxInterpInfoFloat_c::*)(float*, float));
+    RH_ScopedOverloadedInstall(GetVal, "integral", 0x4A85C0, float(FxInterpInfoFloat_c::*)(int32, float, float));
 }
 
 // 0x4A8440
@@ -46,7 +47,74 @@ void FxInterpInfoFloat_c::Allocate(int32 count) {
 
 // 0x4A85C0
 float FxInterpInfoFloat_c::GetVal(int32 attrib, float time, float deltaTime) {
-    return plugin::CallMethodAndReturn<float, 0x4A85C0, FxInterpInfoFloat_c*, int32, float, float>(this, attrib, time, deltaTime);
+    // Integrates the piecewise linear key curve of `attrib` over [time - deltaTime, time] (trapezoid rule per segment).
+    // Everything is kept on the x87 stack in the original => `double` here.
+    constexpr double TIME_SCALE = 0.00390625; // 0x859AA0 (1/256)
+    constexpr double HALF       = 0.5;        // 0x858B8C
+
+    const float* const keys = m_Keys[attrib];
+    if (m_nNumKeys == 1) {
+        return (float)((double)deltaTime * (double)keys[0]);
+    }
+
+    const int32 n = m_nNumKeys;
+    double      t = (double)time - (double)deltaTime;
+    double      acc = 0.0; // 0x858B50
+
+    // Find the first key with `t < keyTime`
+    int32 j = 0;
+    for (; j < n; j++) {
+        if (t < (double)m_pTimes[j] * TIME_SCALE) {
+            break;
+        }
+    }
+
+    if (j == n) { // `t` is past the last key
+        return (float)((double)deltaTime * (double)keys[n - 1]);
+    }
+    if (j > n) { // n < 0
+        return 0.0f;
+    }
+
+    // Value at `t`
+    double S;
+    if (j > 0) {
+        const double T0 = (double)m_pTimes[j - 1] * TIME_SCALE;
+        const double T1 = (double)m_pTimes[j] * TIME_SCALE;
+        const double r  = (t - T0) / (T1 - T0);
+        S               = r * ((double)keys[j] - (double)keys[j - 1]) + (double)keys[j - 1];
+    } else {
+        S = (double)keys[0];
+    }
+
+    for (; j < n; j++) {
+        const auto Tj = (float)((double)m_pTimes[j] * TIME_SCALE);
+        // BUG: For j == 0 this reads `m_pTimes[-1]` and `keys[-1]` (out of bounds), but only if `time` is before the first key
+        const auto Tp = (float)((double)m_pTimes[j - 1] * TIME_SCALE);
+        if (Tj == time) { // 0x4A8732
+            const double w = ((double)keys[j] - S) * HALF + S;
+            acc += w * ((double)Tj - t);
+            return (float)acc;
+        }
+        if (Tj < time) { // 0x4A86E9
+            const double w = ((double)keys[j] - S) * HALF + S;
+            acc += w * ((double)Tj - t);
+            S = (double)keys[j];
+            t = (double)Tj;
+        } else if (Tj > time) { // 0x4A874B
+            const double r  = ((double)time - (double)Tp) / ((double)Tj - (double)Tp);
+            const double v  = r * ((double)keys[j] - (double)keys[j - 1]) + (double)keys[j - 1];
+            const double w  = (v - S) * HALF + S;
+            acc += w * ((double)time - t);
+            return (float)acc;
+        }
+        // (unordered => just go to the next key)
+    }
+
+    // `time` is past the last key
+    const double w = ((double)keys[n - 1] - S) * HALF + S;
+    acc += w * ((double)m_pTimes[n - 1] * TIME_SCALE - t);
+    return (float)acc;
 }
 
 // 0x4A8470

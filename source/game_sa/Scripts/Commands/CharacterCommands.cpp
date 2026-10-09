@@ -3285,7 +3285,7 @@ bool IsCharUsingMapAttractor(CPed& ped) {
 
 // todo: move that to somewhere else
 eTargetDoor ComputeTargetDoorToExit(const CVehicle& vehicle, const CPed& ped) {
-    return plugin::CallAndReturn<eTargetDoor, 0x64F110, const CVehicle&, const CPed&>(vehicle, ped);
+    return static_cast<eTargetDoor>(CCarEnterExit::ComputeTargetDoorToExit(&vehicle, &ped)); // 0x64F110
 }
 
 /*

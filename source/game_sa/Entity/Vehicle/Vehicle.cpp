@@ -226,6 +226,7 @@ void CVehicle::InjectHooks() {
     RH_ScopedGlobalOverloadedInstall(SetVehicleAtomicVisibilityCB, "Frame", 0x6D26D0, RwFrame*(*)(RwFrame*, void*));
     // RH_ScopedGlobalInstall(SetCompAlphaCB, 0x6D2950);
     RH_ScopedGlobalInstall(IsVehiclePointerValid, 0x6E38F0);
+    RH_ScopedGlobalInstall(IsValidModForVehicle, 0x49B010);
     // RH_ScopedGlobalInstall(RemoveUpgradeCB, 0x6D3300);
     // RH_ScopedGlobalInstall(FindUpgradeCB, 0x6D3370);
     RH_ScopedGlobalOverloadedInstall(RemoveObjectsCB, "Object", 0x6D33B0, RwObject*(*)(RwObject*, void*));
@@ -5042,8 +5043,34 @@ void CVehicle::GetPlaneWeaponFiringStatus(bool& status, eOrdnanceType& ordnanceT
     ((void(__thiscall*)(CVehicle*, bool&, eOrdnanceType&))0x6E3440)(this, status, ordnanceType);
 }
 
+// 0x49B010 - Checks if the upgrade model `modelId` can be installed on `vehicle`
 bool IsValidModForVehicle(uint32 modelId, CVehicle* vehicle) {
-    return plugin::CallAndReturn<bool, 0x49B010, uint32, CVehicle*>(modelId, vehicle);
+    const auto* const vmi   = CModelInfo::GetVehicleModelInfo(vehicle->m_nModelIndex);
+    const auto        flags = CModelInfo::GetModelInfo(modelId)->m_nFlags; // Upgrade model flags: 0x100 = "has vehicle dummy", 0x7C00 = mod kind
+
+    if (flags & 0x100) {
+        if ((flags & 0x7C00) == 0x800) { // Wheels
+            const auto wheelSet = (int32)(int8)vmi->m_nWheelUpgradeClass;
+            for (int32 i = 0; i < CVehicleModelInfo::GetNumWheelUpgrades(wheelSet); i++) {
+                if ((uint32)CVehicleModelInfo::GetWheelUpgrade(wheelSet, i) == modelId) {
+                    return true;
+                }
+            }
+            return false;
+        }
+    } else if ((flags & 0x7C00) == 0x4400) { // Stereo
+        const auto& audio = vehicle->m_vehicleAudio.m_AuSettings;
+        if ((uint8)audio.RadioType != 0) { // Not a civilian radio (+0x1D3)
+            return false;
+        }
+        if ((uint8)audio.BassSetting == 1) { // +0x1BE
+            return vehicle->vehicleFlags.bUpgradedStereo; // +0x42E & 0x10
+        }
+        return true;
+    }
+
+    // Is it in the list of upgrades of this model?
+    return rng::any_of(vmi->m_anUpgrades, [&](int16 upgrade) { return (uint32)(int32)upgrade == modelId; });
 }
 
 // 0x6E38F0

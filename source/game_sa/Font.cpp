@@ -7,6 +7,7 @@
 #include "StdInc.h"
 
 #include "Font.h"
+#include "TheScripts.h"
 
 #include "eLanguage.h"
 
@@ -58,7 +59,7 @@ void CFont::InjectHooks() {
     RH_ScopedInstall(PrintStringFromBottom, 0x71A820);
     RH_ScopedInstall(GetCharacterSize, 0x719750);
     RH_ScopedInstall(LoadFontValues, 0x7187C0);
-    // Install("", "GetScriptLetterSize", 0x719670, &GetScriptLetterSize);
+    RH_ScopedGlobalInstall(GetScriptLetterSize, 0x719670);
     RH_ScopedInstall(FindSubFontCharacter, 0x7192C0);
     RH_ScopedGlobalInstall(GetLetterIdPropValue, 0x718770);
 }
@@ -1109,7 +1110,40 @@ float CFont::GetHeight(bool a1) {
 
 // 0x719670, original name unknown
 float GetScriptLetterSize(uint8 letterId) {
-    return plugin::CallAndReturn<float, 0x719670, uint8>(letterId);
+    // Width of a letter for the script text line that's currently being set up (`CTheScripts::IntroTextLines[NumberOfIntroTextLinesThisFrame]`)
+    if (letterId == '?') {
+        letterId = 0;
+    }
+
+    const auto& text = CTheScripts::IntroTextLines[CTheScripts::NumberOfIntroTextLinesThisFrame];
+    const auto  fontStyle = (int32)text.FontStyle;
+
+    uint8 fontTexture; // `CL` in the original
+    uint8 charIdx;     // `AL` in the original
+    if (fontStyle == 2) {
+        fontTexture = 0;
+        charIdx     = CFont::FindSubFontCharacter(letterId, 2);
+    } else if (fontStyle == 3) {
+        fontTexture = 1;
+        charIdx     = CFont::FindSubFontCharacter(letterId, 1);
+    } else {
+        // BUG: `fontTexture` isn't clamped (`gFontData` only has 2 elements) - the original reads out of bounds for styles > 1
+        fontTexture = (uint8)fontStyle;
+        if (letterId == 0x91) {
+            charIdx = '@';
+        } else if (letterId > 0x9B) {
+            charIdx = 0;
+        } else {
+            charIdx = letterId;
+        }
+    }
+
+    // The original calculates in extended precision
+    const auto* const fontData = gFontData.data() + fontTexture;
+    const int32 width = text.IsProportional
+        ? fontData->m_propValues.data()[charIdx]
+        : fontData->m_unpropValue;
+    return (float)((double)text.Scale.x * (double)(width + (int32)text.TextEdge));
 }
 
 // 0x7192C0

@@ -30,7 +30,7 @@ public:
     bool IsScanAllowed(CPed& ped);                                                  // 0x603A30
     static bool WantsToRiotAgainst(CPed* ped, CPed* other);                         // 0x603AF0
     int32 ScanCandidateForAcquaintance(CPed& ped, int32 acquaintanceId, int32 curIdx, CPed* candidate, CPed*& outPed, int32& outIdx); // 0x607560
-    bool CreateAcquaintanceEvent(CPed& ped, int32 acquaintanceType, CPed* other);   // 0x606BA0 (unreversed, ~0x2B0 bytes, a switch creating the CEventAcquaintance* events)
+    bool CreateAcquaintanceEvent(CPed& ped, int32 acquaintanceType, CPed* other);   // 0x606BA0
 
     void ScanForPedAcquaintances(CPed& ped, int32 acquaintanceId, CEntity** entities, int32 count, CPed*& outPed, int32& outIdx); // 0x607A90 - `acquaintanceId` is -1 for "any"
 

@@ -28,6 +28,15 @@
 #include "DecisionMakers/DecisionMakerTypes.h"
 #include "PedType.h"
 #include "GameLogic.h"
+#include "Cheat.h"
+#include "PedGroups.h"
+#include "PedGroup.h"
+#include "EventAcquaintancePedRespect.h"
+#include "EventAcquaintancePedLike.h"
+#include "EventAcquaintancePedDislike.h"
+#include "EventAcquaintancePedHate.h"
+#include "EventAcquaintancePedHateBadlyLit.h"
+#include "EventSeenCop.h"
 #include "PedGroups.h"
 #include "Acquaintance.h"
 
@@ -85,6 +94,7 @@ void CPedAcquaintanceScanner::InjectHooks() {
     RH_ScopedInstall(ScanForPedAcquaintances, 0x607A90);
     RH_ScopedInstall(WantsToRiotAgainst, 0x603AF0);
     RH_ScopedInstall(ScanCandidateForAcquaintance, 0x607560);
+    RH_ScopedInstall(CreateAcquaintanceEvent, 0x606BA0);
 }
 
 void CSexyPedScanner::InjectHooks() {
@@ -801,8 +811,54 @@ int32 CPedAcquaintanceScanner::ScanCandidateForAcquaintance(CPed& ped, int32 acq
     return -1;
 }
 
-// 0x606BA0 (unreversed)
+// 0x606BA0
 // asm: thiscall (the caller loads ECX = this, RET 0xC) but the body never reads ECX, so `this` is unused; args (ped, acquaintanceType, other).
 bool CPedAcquaintanceScanner::CreateAcquaintanceEvent(CPed& ped, int32 acquaintanceType, CPed* other) {
-    return plugin::CallMethodAndReturn<bool, 0x606BA0, CPedAcquaintanceScanner*, CPed*, int32, CPed*>(this, &ped, acquaintanceType, other);
+    switch (acquaintanceType) {
+    case 0: { // Respect
+        CEventAcquaintancePedRespect event{ other }; // 0x4AF820
+        return ped.GetIntelligence()->m_eventGroup.Add(&event, false) != nullptr; // 0x4AB420
+    }
+    case 1: { // Like
+        CEventAcquaintancePedLike event{ other }; // 0x4AF820
+        return ped.GetIntelligence()->m_eventGroup.Add(&event, false) != nullptr; // 0x4AB420
+    }
+    case 2: { // Seen cop
+        if (other->m_nPedType != PED_TYPE_COP) {
+            return false;
+        }
+        CEventSeenCop event{ other }; // 0x4AF820
+        return ped.GetIntelligence()->m_eventGroup.Add(&event, false) != nullptr; // 0x4AB420
+    }
+    case 3: { // Dislike
+        CEventAcquaintancePedDislike event{ other }; // 0x4AF820
+        return ped.GetIntelligence()->m_eventGroup.Add(&event, false) != nullptr; // 0x4AB420
+    }
+    case 4: { // Hate
+        const float lightLevel = ped.GetIntelligence()->CanSeeEntityWithLights(other, 0); // 0x605550
+        if (lightLevel > 0.0f) {
+            // 0x96913F = CHEAT_HAVE_ABOUNTY_ON_YOUR_HEAD
+            if (!CCheat::IsActive(CHEAT_HAVE_ABOUNTY_ON_YOUR_HEAD)
+                && (!CGameLogic::LaRiotsActiveHere() /* 0x441C10 */ || !WantsToRiotAgainst(&ped, other) /* 0x603AF0 */)
+            ) {
+                CEventAcquaintancePedHate event{ other }; // 0x420E70
+                return ped.GetIntelligence()->m_eventGroup.Add(&event, false) != nullptr; // 0x4AB420
+            }
+            CEventAcquaintancePedHate event{ other }; // 0x420E70
+            if (auto* const group = CPedGroups::GetPedsGroup(&ped)) { // 0x5F7E80
+                event.m_TaskId = TASK_GROUP_KILL_THREATS_BASIC; // 1502
+                return group->GetIntelligence().AddEvent(&event); // 0x5F7470
+            }
+            event.m_TaskId = TASK_COMPLEX_KILL_PED_ON_FOOT; // 1000
+            return ped.GetIntelligence()->m_eventGroup.Add(&event, false) != nullptr; // 0x4AB420
+        }
+        if (lightLevel < 0.0f) { // NaN and 0 fall through to `false`
+            CEventAcquaintancePedHateBadlyLit event{ other, (int32)CTimer::GetTimeInMS(), other->GetPosition() }; // 0x4AF820 + fields filled inline
+            return ped.GetIntelligence()->m_eventGroup.Add(&event, false) != nullptr; // 0x4AB420
+        }
+        return false;
+    }
+    default:
+        return false;
+    }
 }

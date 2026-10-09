@@ -479,11 +479,7 @@ void ProcessEnterVehicle(CPlayerInfo& s, uint32 playerIndex) {
             }
         }
 
-        // NOTSA: `CTaskComplexGoPickUpEntity` has no constructor in our codebase yet
-        auto* const task = static_cast<CTaskComplexGoPickUpEntity*>(CTask::operator new(sizeof(CTaskComplexGoPickUpEntity)));
-        if (task) {
-            plugin::CallMethod<0x6919C0, CTaskComplexGoPickUpEntity*, CEntity*, int32>(task, objectToSteal, 0x51);
-        }
+        auto* const task = new CTaskComplexGoPickUpEntity{ objectToSteal, ANIM_GROUP_CARRY }; // 0x51
 
         CEventScriptCommand event{ TASK_PRIMARY_PRIMARY, task, false };
         CWorld::Players[CWorld::PlayerInFocus].m_pPed->GetIntelligence()->GetEventGroup().Add(&event, false);

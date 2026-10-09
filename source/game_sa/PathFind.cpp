@@ -93,7 +93,9 @@ void CPathFind::InjectHooks() {
     RH_ScopedInstall(CompleteNewInterior, 0x452270);
     RH_ScopedInstall(RemoveLinksToNewInteriorNode, 0x44DF60);
     RH_ScopedInstall(SwitchOffNodeAndNeighbours, 0x452160);
-    //RH_ScopedInstall(Find2NodesForCarCreation, 0x452090);
+    RH_ScopedInstall(Find2NodesForCarCreation, 0x452090);
+    RH_ScopedInstall(RemoveBadStartNode, 0x44E4F0);
+    RH_ScopedInstall(RecordNodesClosestToCoors, 0x44FA30);
     //RH_ScopedInstall(TestCoorsCloseness, 0x452000);
     RH_ScopedInstall(FindNextNodeWandering, 0x451B70);
     RH_ScopedInstall(DoPathSearch, 0x4515D0);
@@ -1792,6 +1794,92 @@ bool CPathFind::These2NodesAreAdjacent(CNodeAddress nodeAddress1, CNodeAddress n
         }
     }
     return false;
+}
+
+// 0x44E4F0
+// Removes the first node of the route if the position is already past it (that is, between the first 2 nodes)
+void CPathFind::RemoveBadStartNode(CVector pos, CNodeAddress* address, int16* numPathFindNodes) {
+    if (*numPathFindNodes < 2) {
+        return;
+    }
+    if (!m_pPathNodes[address[0].m_wAreaId] || !m_pPathNodes[address[1].m_wAreaId]) {
+        return;
+    }
+    const auto posA = m_pPathNodes[address[0].m_wAreaId][address[0].m_wNodeId].GetPosition();
+    const auto posB = m_pPathNodes[address[1].m_wAreaId][address[1].m_wNodeId].GetPosition();
+
+    // x87: The 1st factor is rounded to float, the rest is kept in extended precision
+    const auto   tB  = (float)((double)posB.y - pos.y);
+    const double dot = ((double)posA.y - pos.y) * tB + ((double)posB.x - pos.x) * ((double)posA.x - pos.x);
+    if (dot < 0.0) { // (x87: NaN doesn't remove the node)
+        (*numPathFindNodes)--;
+        for (int16 i = 0; i < *numPathFindNodes; i++) {
+            address[i] = address[i + 1];
+        }
+    }
+}
+
+// 0x44FA30
+// Finds (up to) `count` nodes closest to `pos` (the closest first), they are marked while searching so that every node is only found once.
+// `outAddresses` is left untouched from the first node that isn't found. The 4 bools are passed to `FindNodeClosestToCoors` (as `unk2`, `unk3`, `bBoatsOnly` and `unk6`)
+void CPathFind::RecordNodesClosestToCoors(CVector pos, uint8 nodeType, int count, CNodeAddress* outAddresses, float maxDist, bool unk2, bool unk3, bool bBoatsOnly, bool unk6) {
+    // Clear the marker of all nodes of the type. (The marker is `unk1`, bit 1 of the 2nd flags byte, it is not used by the path data files)
+    for (auto area = 0u; area < NUM_TOTAL_PATH_NODE_AREAS; area++) {
+        CPathNode* const nodes = m_pPathNodes[area];
+        if (!nodes) {
+            continue;
+        }
+        int32 first, last;
+        switch (nodeType) {
+        case PATH_TYPE_VEH:
+            first = 0;
+            last  = (int32)m_anNumVehicleNodes[area];
+            break;
+        case PATH_TYPE_PED:
+            first = (int32)m_anNumVehicleNodes[area];
+            last  = (int32)m_anNumNodes[area];
+            break;
+        default: // The original ends up with an empty range
+            continue;
+        }
+        for (auto i = first; i < last; i++) {
+            nodes[i].unk1 = false;
+        }
+    }
+
+    for (; count > 0; count--) {
+        const auto closest = FindNodeClosestToCoors(pos, (ePathType)nodeType, maxDist, unk2, unk3, 1, bBoatsOnly, unk6); // 0x44F460
+        if (closest.m_wAreaId == 0xFFFF) {
+            break;
+        }
+        m_pPathNodes[closest.m_wAreaId][closest.m_wNodeId].unk1 = true;
+        *outAddresses++ = closest;
+    }
+}
+
+// 0x452090
+// Finds 2 nodes near `pos` that are not adjacent to each other (`outAddress2` is left untouched if there's no such node)
+void CPathFind::Find2NodesForCarCreation(CVector pos, CNodeAddress* outAddress1, CNodeAddress* outAddress2, bool bLowTraffic) {
+    constexpr auto MAX_DIST = std::bit_cast<float>(0x497423FEu); // ~999999.9
+
+    CNodeAddress nodes[4]; // (the original only sets the area of these)
+    RecordNodesClosestToCoors(pos, PATH_TYPE_VEH, 4, nodes, MAX_DIST, bLowTraffic, false, false, true); // 0x44FA30
+
+    if (nodes[0].m_wAreaId == 0xFFFF) {
+        outAddress1->m_wAreaId = 0xFFFF; // (the node isn't touched)
+        outAddress2->m_wAreaId = 0xFFFF;
+        return;
+    }
+    *outAddress1 = nodes[0];
+    for (auto i = 1; i < 4; i++) {
+        if (nodes[i].m_wAreaId == 0xFFFF) {
+            continue;
+        }
+        if (!These2NodesAreAdjacent(nodes[0], nodes[i])) { // 0x44D230
+            *outAddress2 = nodes[i];
+            return;
+        }
+    }
 }
 
 // 0x44FCE0

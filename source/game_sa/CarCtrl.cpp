@@ -924,7 +924,7 @@ bool CCarCtrl::CreatePoliceChase(CVehicle* vehicle, int32 carType, CNodeAddress 
     } else {
         vehicle->m_pDriver->bWantedByPolice = true;
     }
-    for (auto i = 0; i < vehicle->m_nNumPassengers; i++) {
+    for (auto i = 0; i < vehicle->m_nMaxPassengers; i++) { // (`m_nMaxPassengers` @ 0x488, not `m_nNumPassengers`: all the seats are checked)
         if (auto* const passenger = vehicle->m_apPassengers[i]) {
             passenger->bWantedByPolice = true;
         }
@@ -2398,36 +2398,10 @@ void CCarCtrl::FlyAIPlaneInCertainDirection(CPlane* plane) {
     }
 }
 
-//! 0x452090 - `CPathFind::Find2NodesForCarCreation` (declared in `PathFind.h`, but not implemented there yet)
-//! Finds 2 nodes near `pos` that are not adjacent to each other (`out2` is left untouched if there's no such node)
-static void Find2NodesForCarCreationOriginal(CPathFind& paths, CVector pos, CNodeAddress* out1, CNodeAddress* out2, bool lowTraffic) {
-    constexpr auto MAX_DIST = std::bit_cast<float>(0x497423FEu); // ~999999.9
-
-    CNodeAddress nodes[4]; // (the original only sets the area of these)
-    // 0x44FA30 - `CPathFind::RecordNodesClosestToCoors` (not reversed yet)
-    plugin::CallMethod<0x44FA30, CPathFind*, CVector, uint8, int32, CNodeAddress*, float, bool, bool, bool, bool>(&paths, pos, 0, 4, nodes, MAX_DIST, lowTraffic, false, false, true);
-
-    if (nodes[0].m_wAreaId == 0xFFFF) {
-        out1->m_wAreaId = 0xFFFF; // (the node isn't touched)
-        out2->m_wAreaId = 0xFFFF;
-        return;
-    }
-    *out1 = nodes[0];
-    for (auto i = 1; i < 4; i++) {
-        if (nodes[i].m_wAreaId == 0xFFFF) {
-            continue;
-        }
-        if (!paths.These2NodesAreAdjacent(nodes[0], nodes[i])) { // 0x44D230
-            *out2 = nodes[i];
-            return;
-        }
-    }
-}
-
 // 0x424210
 // `radius` and `arg3` are the (X, Y) direction the created car has to be (not) in, relative to `posn`: `arg4` is the threshold of the dot product with it
 // (the cars are created if the dot product is above it if `arg5`, below or equal to it otherwise). `arg6` and `arg7` are the distances from `posn`
-// where the car is created (`arg6`: where it has to be visible, `arg7`: where it must not be). `arg12`: use the low traffic nodes. `arg13`: be strict about the nodes.
+// where the car is created (`arg6`: where it has to be visible, `arg7`: where it must not be). `arg12`: use the low traffic nodes (and don't use switched off nodes/dead ends). `arg13`: don't pick the closest node to `posn` from time to time.
 // Returns the position (`pOrigin`), the 2 nodes it's between (`pNodeAddress1`, `pNodeAddress12`) and where (`arg11`: fraction) between them.
 bool CCarCtrl::GenerateCarCreationCoors2(CVector posn, float radius, float arg3, float arg4, bool arg5, float arg6, float arg7, CVector* pOrigin, CNodeAddress* pNodeAddress1, CNodeAddress* pNodeAddress12, float* arg11, bool arg12, bool arg13) {
     // Function-local statics of the original (the flags @ 0x969108 are the "initialized" flags of them)
@@ -2469,8 +2443,8 @@ bool CCarCtrl::GenerateCarCreationCoors2(CVector posn, float radius, float arg3,
         const double dy   = (double)posn.y - lastUpdatePos.y;
         const double dist = std::sqrt(dy * dy + dx * dx);
         if (dist > 10.0f || CTimer::GetTimeInMS() > nextUpdateTime) { // 0x85862C
-            Find2NodesForCarCreationOriginal(ThePaths, posn, &nodeLow1, &nodeLow2, true);       // 0x452090
-            Find2NodesForCarCreationOriginal(ThePaths, posn, &nodeNormal1, &nodeNormal2, false); // 0x452090
+            ThePaths.Find2NodesForCarCreation(posn, &nodeLow1, &nodeLow2, true);       // 0x452090
+            ThePaths.Find2NodesForCarCreation(posn, &nodeNormal1, &nodeNormal2, false); // 0x452090
             nextUpdateTime = CTimer::GetTimeInMS() + 5000;
             lastUpdatePos  = posn;
 
@@ -2569,7 +2543,7 @@ bool CCarCtrl::GenerateCarCreationCoors2(CVector posn, float radius, float arg3,
 
             // Is this place OK?
             bool foundPlace = false;
-            if (!((nextNode.m_isSwitchedOff || curNode.m_isSwitchedOff) && arg13)) {
+            if (!((nextNode.m_isSwitchedOff || curNode.m_isSwitchedOff) && arg12)) {
                 const auto AbsNaN = [](double v) { return v < 0.0 ? -v : v; }; // (NaN stays NaN)
 
                 // The place where the line between the nodes crosses the circle of the radius `arg6` (it has to be visible)
@@ -2651,7 +2625,7 @@ bool CCarCtrl::GenerateCarCreationCoors2(CVector posn, float radius, float arg3,
                     // Dead ends
                     auto& nodeA = ThePaths.m_pPathNodes[pNodeAddress1->m_wAreaId][pNodeAddress1->m_wNodeId];
                     auto& nodeB = ThePaths.m_pPathNodes[pNodeAddress12->m_wAreaId][pNodeAddress12->m_wNodeId];
-                    if (nodeB.m_onDeadEnd && ThePaths.ThisNodeWillLeadIntoADeadEnd(&nodeB, &nodeA) && arg13) { // 0x44D310
+                    if (nodeB.m_onDeadEnd && ThePaths.ThisNodeWillLeadIntoADeadEnd(&nodeB, &nodeA) && arg12) { // 0x44D310
                         return false;
                     }
 
@@ -3369,28 +3343,6 @@ void CCarCtrl::JoinCarWithRoadSystem(CVehicle* vehicle) {
     ap.m_nNextLane    = 0;
 }
 
-//! 0x44E4F0 - `CPathFind::RemoveBadStartNode` (declared in `PathFind.h`, but not implemented there yet). Removes the first node of the route if the vehicle is already past it
-//! x87: The 1st factor is rounded to float, the rest is kept in extended precision
-static void RemoveBadStartNodeOriginal(CPathFind& paths, CVector pos, CNodeAddress* nodes, int16* numNodes) {
-    if (*numNodes < 2) {
-        return;
-    }
-    if (!paths.m_pPathNodes[nodes[0].m_wAreaId] || !paths.m_pPathNodes[nodes[1].m_wAreaId]) {
-        return;
-    }
-    const auto posA = paths.m_pPathNodes[nodes[0].m_wAreaId][nodes[0].m_wNodeId].GetPosition();
-    const auto posB = paths.m_pPathNodes[nodes[1].m_wAreaId][nodes[1].m_wNodeId].GetPosition();
-
-    const auto   tB  = (float)((double)posB.y - pos.y);
-    const double dot = ((double)posA.y - pos.y) * tB + ((double)posB.x - pos.x) * ((double)posA.x - pos.x);
-    if (!(dot >= 0.0)) { // The vehicle is between the 2 nodes (or past the 1st one): Remove the 1st node
-        (*numNodes)--;
-        for (int16 i = 0; i < *numNodes; i++) {
-            nodes[i] = nodes[i + 1];
-        }
-    }
-}
-
 // 0x42F870
 bool CCarCtrl::JoinCarWithRoadSystemGotoCoors(CVehicle* vehicle, const CVector& posn, bool unused, bool bIsBoat) {
     auto& ap = vehicle->m_autoPilot;
@@ -3416,7 +3368,7 @@ bool CCarCtrl::JoinCarWithRoadSystemGotoCoors(CVehicle* vehicle, const CVector& 
         vehicle->m_nModelIndex == MODEL_VORTEX,
         bIsBoat
     ); // 0x4515D0
-    RemoveBadStartNodeOriginal(ThePaths, vehicle->GetPosition(), ap.m_aPathFindNodesInfo.data(), &numPathNodes); // 0x44E4F0
+    ThePaths.RemoveBadStartNode(vehicle->GetPosition(), ap.m_aPathFindNodesInfo.data(), &numPathNodes); // 0x44E4F0
 
     if (numPathNodes >= 2) {
         ap.m_currentAddress           = ap.m_aPathFindNodesInfo[0];

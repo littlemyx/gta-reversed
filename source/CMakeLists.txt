@@ -512,6 +512,30 @@ if (${RE_PROJECT}_RW_LIBRW)
     set_property(TARGET rw_custom_pipelines_test PROPERTY SOURCES "${STANDALONE_PAD_OBJ}" ${_rcp_sources})
     target_link_options(rw_custom_pipelines_test PRIVATE "$<$<CXX_COMPILER_ID:MSVC>:/BASE:0x400000;/DYNAMICBASE:NO;/FIXED;/MERGE:_TEXT=.text;/INCREMENTAL:NO;/SUBSYSTEM:CONSOLE;/FORCE:UNRESOLVED>") # the PCH object drags in vtables of game classes whose methods are not linked here
     set_target_properties(rw_custom_pipelines_test PROPERTIES COMPILE_WARNING_AS_ERROR OFF CXX_SCAN_FOR_MODULES OFF)
+    # P2E game-function differential test (exe-oracle): the REAL game TUs of the numerically sensitive ports (CCollision / CGeneral / CVector / CMatrix / CQuaternion /
+    # CAnimBlendNode) are compiled into the test with the game's flags (x87 /arch:IA32) and PCH; the test maps gta_sa_compact.exe (env RW_EXE_ORACLE) at its original
+    # addresses inside the 9 MB placeholder image and calls the exe's own machine code next to the C++ port with random inputs (bit-exact compare, PC=24 and PC=53).
+    add_executable(game_oracle_test EXCLUDE_FROM_ALL
+        "${PROJECT_SOURCE_DIR}/tests/standalone/game_oracle_test.cpp"
+        game_sa/Collision/Collision.cpp
+        game_sa/General.cpp
+        game_sa/Core/Vector.cpp
+        game_sa/Core/Matrix.cpp
+        game_sa/Core/Quaternion.cpp
+        game_sa/Animation/AnimBlendNode.cpp
+    )
+    target_compile_features(game_oracle_test PRIVATE cxx_std_23)
+    target_compile_definitions(game_oracle_test PRIVATE NOTSA_RW_LIBRW RW_D3D9)
+    target_include_directories(game_oracle_test PRIVATE $<TARGET_PROPERTY:${RE_PROJECT_LIB_NAME},INCLUDE_DIRECTORIES>)
+    target_compile_options(game_oracle_test PRIVATE $<TARGET_PROPERTY:${RE_PROJECT_LIB_NAME},COMPILE_OPTIONS>)
+    target_precompile_headers(game_oracle_test PRIVATE StdInc.cpp)
+    target_link_libraries(game_oracle_test PRIVATE librw spdlog::spdlog Tracy::TracyClient user32)
+    target_sources(game_oracle_test PRIVATE "${STANDALONE_PAD_OBJ}")
+    get_target_property(_go_sources game_oracle_test SOURCES)
+    list(REMOVE_ITEM _go_sources "${STANDALONE_PAD_OBJ}")
+    set_property(TARGET game_oracle_test PROPERTY SOURCES "${STANDALONE_PAD_OBJ}" ${_go_sources})
+    target_link_options(game_oracle_test PRIVATE "$<$<CXX_COMPILER_ID:MSVC>:/BASE:0x400000;/DYNAMICBASE:NO;/FIXED;/MERGE:_TEXT=.text;/INCREMENTAL:NO;/SUBSYSTEM:CONSOLE;/FORCE:UNRESOLVED>")
+    set_target_properties(game_oracle_test PROPERTIES COMPILE_WARNING_AS_ERROR OFF CXX_SCAN_FOR_MODULES OFF)
     # P2B-06 unit test of Im2D / Im3D (not part of `all`): ninja rw_im2d_im3d_test. Hidden window + librw's D3D9 device (Wine/wined3d is fine); pixels are read back
     if (EXISTS "${PROJECT_SOURCE_DIR}/tests/standalone/rw_im2d_im3d_test.cpp")
         add_executable(rw_im2d_im3d_test EXCLUDE_FROM_ALL

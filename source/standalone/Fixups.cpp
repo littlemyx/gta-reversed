@@ -4,6 +4,9 @@
 #include <unordered_map>
 #include <mutex>
 #include <atomic>
+#include <crtdbg.h>
+#include <csignal>
+#include <cstdlib>
 #include <unordered_set>
 #include <vector>
 #include "Fixups.h"
@@ -51,6 +54,37 @@ std::unordered_set<uint32_t>& NoCopySlots() { // exe vtable slots of unverified 
     return s;
 }
 FixupStats g_Stats{};
+char       g_LastHook[160]; // last hook name handed to us: a CRT assertion during hook installation (e.g. duplicate item in a category) names it
+
+void NoteHook(uint32_t exeAddr, const char* name) {
+    wsprintfA(g_LastHook, "0x%08X %.100s", exeAddr, name ? name : "?");
+}
+
+void __cdecl AbortHandler(int) {
+    Fixups::Fatal("abort() called (failed assert()/terminate). Last hook registered: %s", g_LastHook);
+}
+
+#ifdef _DEBUG
+// The debug CRT's assert() would open a modal message box (invisible/hanging under Wine, and in a headless run): log it and terminate instead
+int __cdecl CrtReportHook(int type, char* message, int* returnValue) {
+    if (type == _CRT_ASSERT || type == _CRT_ERROR) {
+        Fixups::Fatal("CRT assertion/error: %.700s (last hook registered: %s)", message ? message : "?", g_LastHook);
+    }
+    if (returnValue) {
+        *returnValue = 0;
+    }
+    return FALSE; // other report types: default handling
+}
+int __cdecl CrtReportHookW(int type, wchar_t* message, int* returnValue) {
+    char narrow[800];
+    narrow[0] = 0;
+    if (message) {
+        WideCharToMultiByte(CP_ACP, 0, message, -1, narrow, sizeof(narrow) - 1, nullptr, nullptr);
+        narrow[sizeof(narrow) - 1] = 0;
+    }
+    return CrtReportHook(type, narrow, returnValue);
+}
+#endif
 
 // ---------------------------------------------------------------- trap stubs
 // stub:  68 <exeAddr>        push exeAddr
@@ -191,6 +225,7 @@ void RegisterFunction(uint32_t exeAddr, void* ours, const char* name) {
     if (!ours || !exeAddr) {
         return; // `0x0` placeholders / hooks without a body
     }
+    NoteHook(exeAddr, name);
     auto [it, inserted] = FnMap().try_emplace(exeAddr, FnEntry{ ours, name });
     if (inserted) {
         g_Stats.RegisteredFunctions++;
@@ -205,6 +240,7 @@ void RegisterVMTSlot(uint32_t vtblAddr, size_t slot, uint32_t exeFn, void* ours,
         return;
     }
     const auto slotAddr = vtblAddr + (uint32_t)(slot * sizeof(uint32_t));
+    NoteHook(exeFn, name);
     if (SlotMap().try_emplace(slotAddr, FnEntry{ ours, name }).second) {
         g_Stats.RegisteredVMTSlots++;
     } else if (SlotMap()[slotAddr].Ours != ours) {
@@ -222,6 +258,7 @@ void RegisterUnverified(uint32_t exeAddr, const char* name, int state, bool reve
     if (!exeAddr) {
         return;
     }
+    NoteHook(exeAddr, name);
     Unverified().push_back({ exeAddr, vtblSlot, state, reversed, name });
     if (vtblSlot) {
         NoCopySlots().insert(vtblSlot);
@@ -398,6 +435,14 @@ FixupStats ApplyToDataImage() {
 }
 
 void InstallRedirectHandler() {
+    // assert()/abort() must not open a modal message box (it hangs a headless/Wine run forever): print to stderr and end in AbortHandler -> log + exit
+    _set_error_mode(_OUT_TO_STDERR);
+    _set_abort_behavior(0, _WRITE_ABORT_MSG | _CALL_REPORTFAULT);
+    signal(SIGABRT, AbortHandler);
+#ifdef _DEBUG
+    _CrtSetReportHook(CrtReportHook);
+    _CrtSetReportHookW2(_CRT_RPTHOOK_INSTALL, CrtReportHookW);
+#endif
     AddVectoredExceptionHandler(1, RedirectVEH);
 }
 } // namespace Fixups

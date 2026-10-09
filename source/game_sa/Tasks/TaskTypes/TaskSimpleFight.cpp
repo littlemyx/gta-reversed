@@ -35,6 +35,19 @@ static void NormaliseExt(CVector& v) {
     v.z = (float)(v.z * inv);
 }
 
+// Max volume of the melee hit sounds (indexed with `m_nCurrentMove`)
+static inline auto& s_HitSoundMaxVolume = StaticRef<std::array<uint32, 3>>(0x8D2E3C);
+
+// 0x59C890 - the original evaluation order; the sum stays in the FPU registers (extended precision), stored as float
+static CVector TransformPointExt(const CMatrix& m, const CVector& v) {
+    const auto &r = m.GetRight(), &f = m.GetForward(), &u = m.GetUp(), &p = m.GetPosition();
+    return CVector{
+        (float)((((double)u.x * v.z + (double)f.x * v.y) + (double)r.x * v.x) + p.x),
+        (float)((((double)u.y * v.z + (double)r.y * v.x) + (double)f.y * v.y) + p.y),
+        (float)((((double)u.z * v.z + (double)r.z * v.x) + (double)f.z * v.y) + p.z)
+    };
+}
+
 void CTaskSimpleFight::InjectHooks() {
     RH_ScopedVirtualClass(CTaskSimpleFight, 0x86D684, 9);
     RH_ScopedCategory("Tasks/TaskTypes");
@@ -53,6 +66,14 @@ void CTaskSimpleFight::InjectHooks() {
     RH_ScopedInstall(FightHitCar, 0x61D0B0);
     RH_ScopedInstall(FightHitObj, 0x61D400);
     RH_ScopedInstall(FightStrike, 0x6240B0);
+
+    RH_ScopedInstall(GetComboAnimGroupID, 0x4ABDA0);
+    RH_ScopedInstall(IsComboSet, 0x4ABDC0);
+    RH_ScopedInstall(IsHitComboSet, 0x4ABDF0);
+    RH_ScopedInstall(ControlFight, 0x61C5E0);
+    RH_ScopedInstall(FinishMeleeAnimCB, 0x61DAE0);
+    RH_ScopedVMTInstall(MakeAbortable, 0x6239F0);
+    RH_ScopedVMTInstall(ProcessPed, 0x629920);
 }
 
 // 0x61C470
@@ -96,22 +117,38 @@ CTaskSimpleFight::~CTaskSimpleFight() {
 
 // 0x61C5E0
 bool CTaskSimpleFight::ControlFight(CEntity* entity, uint8 command) {
-    return plugin::CallMethodAndReturn<bool, 0x61C5E0, CTaskSimpleFight*, CEntity*, uint8>(this, entity, command);
+    m_bIsInControl = true;
+    if (entity != m_pTargetEntity) {
+        CEntity::SafeCleanUpRef(m_pTargetEntity);
+        m_pTargetEntity = entity;
+        CEntity::SafeRegisterRef(m_pTargetEntity);
+    }
+    // NOTE: The original compares as signed chars
+    if ((int8)m_nNextCommand < (int8)command) {
+        m_nNextCommand = command;
+    }
+    return true;
 }
 
 // 0x4ABDC0
 bool CTaskSimpleFight::IsComboSet() {
-    return plugin::CallMethodAndReturn<bool, 0x4ABDC0, CTaskSimpleFight*>(this);
+    const auto idx = std::max<int32>(m_nComboSet - 4, 0); // (Original: branchless clamp)
+    return (m_aComboData[idx].m_wFlags & (0x10u << (m_nCurrentMove & 0x1F))) != 0;
 }
 
 // 0x4ABDF0
 bool CTaskSimpleFight::IsHitComboSet() {
-    return plugin::CallMethodAndReturn<bool, 0x4ABDF0, CTaskSimpleFight*>(this);
+    if (m_nCurrentMove > 2) { // signed compare
+        return false;
+    }
+    const auto idx = std::max<int32>(m_nComboSet - 4, 0);
+    return (m_aComboData[idx].m_wFlags & (0x1000u << (m_nCurrentMove & 0x1F))) != 0;
 }
 
 // 0x4ABDA0
 AssocGroupId CTaskSimpleFight::GetComboAnimGroupID() {
-    return plugin::CallMethodAndReturn<AssocGroupId, 0x4ABDA0, CTaskSimpleFight*>(this);
+    const auto idx = std::max<int32>(m_nComboSet - 4, 0);
+    return m_aComboData[idx].m_nAnimGroup;
 }
 
 // 0x5BD360
@@ -279,14 +316,339 @@ void CTaskSimpleFight::LoadMeleeData() {
     CFileMgr::CloseFile(f);
 }
 
+// 0x61DAE0 - Finish/delete callback of `m_pAnim` and `m_pIdleAnim` (`data` is the task)
+void CTaskSimpleFight::FinishMeleeAnimCB(CAnimBlendAssociation* anim, void* data) {
+    auto* const task = static_cast<CTaskSimpleFight*>(data);
+
+    if (task->m_pAnim == anim) {
+        task->m_pAnim = nullptr;
+    } else if (task->m_pIdleAnim == anim) {
+        task->m_pIdleAnim = nullptr;
+    }
+
+    if (anim->m_AnimId == ANIM_ID_FIGHT2IDLE) {
+        task->m_bIsFinished = true;
+    }
+
+    if (!task->m_pIdleAnim) {
+        switch (task->m_nLastCommand) {
+        case 1:
+        case 0xF:
+        case 0x10:
+        case 0x11:
+            task->m_bIsFinished = true;
+            break;
+        }
+    }
+}
+
+// Not reversed yet (called by `ProcessPed`)
+int8 CTaskSimpleFight::GetAvailableComboSet(CPed* ped, int8 command) { // 0x61C7F0
+    return plugin::CallMethodAndReturn<int8, 0x61C7F0, CTaskSimpleFight*, CPed*, int8>(this, ped, command);
+}
+
+int16 CTaskSimpleFight::ChooseAttackPlayer(CPed* ped) { // 0x624710
+    return plugin::CallMethodAndReturn<int16, 0x624710, CTaskSimpleFight*, CPed*>(this, ped);
+}
+
+int16 CTaskSimpleFight::ChooseAttackAI(CPed* ped) { // 0x624A40
+    return plugin::CallMethodAndReturn<int16, 0x624A40, CTaskSimpleFight*, CPed*>(this, ped);
+}
+
+void CTaskSimpleFight::StartAnim(CPed* ped, int32 move) { // 0x623B10
+    plugin::CallMethod<0x623B10, CTaskSimpleFight*, CPed*, int32>(this, ped, move);
+}
+
+void CTaskSimpleFight::SetPlayerMoveAnim(CPlayerPed* player) { // 0x61C9B0
+    plugin::CallMethod<0x61C9B0, CTaskSimpleFight*, CPlayerPed*>(this, player);
+}
+
 // 0x6239F0
 bool CTaskSimpleFight::MakeAbortable(CPed* ped, eAbortPriority priority, const CEvent* event) {
-    return plugin::CallMethodAndReturn<bool, 0x6239F0, CTaskSimpleFight*, CPed*, eAbortPriority, const CEvent*>(this, ped, priority, event);
+    if (priority != ABORT_PRIORITY_URGENT && priority != ABORT_PRIORITY_IMMEDIATE) {
+        m_nNextCommand = 1;
+        return false;
+    }
+
+    if (event) {
+        // NOTE: It's `GetEventPriority` (vtable +8), not `GetEventType`
+        const auto evPriority = event->GetEventPriority();
+        if (evPriority <= 31 || evPriority == 60) {
+            return false;
+        }
+    }
+
+    if (m_pAnim) {
+        if (priority == ABORT_PRIORITY_IMMEDIATE) {
+            m_pAnim->m_BlendDelta = -1000.f; // 0xC47A0000
+        }
+        m_pAnim->SetDefaultDeleteCallback();
+        m_pAnim = nullptr;
+    }
+
+    if (m_pIdleAnim) {
+        m_pIdleAnim->SetDefaultDeleteCallback();
+        if (m_pIdleAnim->m_BlendAmount > 0.f && m_pIdleAnim->m_BlendDelta >= 0.f) { // 0x858B50 = 0.0f; `>` / `>=` (JNZ 0x41 / JNZ 0x1)
+            CAnimManager::BlendAnimation(
+                ped->GetRpClump(),
+                ped->m_nAnimGroup,
+                ANIM_ID_IDLE,
+                priority == ABORT_PRIORITY_IMMEDIATE ? 1000.f : 16.f // 0x447A0000 / 0x41800000
+            );
+        }
+        m_pIdleAnim = nullptr;
+    }
+
+    if (ped && ped->IsPlayer()) {
+        ped->GetPlayerData()->m_vecFightMovement = CVector2D{ 0.f, 0.f };
+        SetPlayerMoveAnim(static_cast<CPlayerPed*>(ped));
+    }
+
+    m_bIsFinished = true;
+    return true;
 }
 
 // 0x629920
 bool CTaskSimpleFight::ProcessPed(CPed* ped) {
-    return plugin::CallMethodAndReturn<bool, 0x629920, CTaskSimpleFight*, CPed*>(this, ped);
+    if (m_bIsFinished) {
+        if (m_pIdleAnim) {
+            m_pIdleAnim->SetDefaultDeleteCallback();
+            if (m_pIdleAnim->m_BlendAmount > 0.f && m_pIdleAnim->m_BlendDelta >= 0.f) {
+                CAnimManager::BlendAnimation(ped->GetRpClump(), ped->m_nAnimGroup, ANIM_ID_IDLE, 8.f); // 0x41000000
+            }
+            m_pIdleAnim = nullptr;
+        }
+        return true;
+    }
+
+    if (m_nComboSet == 0 || !m_bIsInControl) {
+        // x87: 0.02 (0x858B38) and 1000.0 (0x858C4C) are applied in extended precision, then truncated (0x821B40)
+        m_nIdleCounter += (int16)(int32)((double)CTimer::GetTimeStep() * (double)0.02f * (double)1000.0f);
+    } else {
+        m_nIdleCounter = 0;
+    }
+
+    if (!m_bIsInControl) {
+        if ((int8)m_nNextCommand < 1) {
+            return false;
+        }
+        if (m_pAnim && m_pAnim->m_AnimId == ANIM_ID_FIGHT2IDLE) {
+            return false;
+        }
+    }
+
+    if (!m_pIdleAnim) {
+        switch (m_nLastCommand) {
+        case 1:
+        case 0xF:
+        case 0x10:
+        case 0x11:
+            m_bIsFinished = true;
+            break;
+        default:
+            if (!m_pAnim && ((int32)ped->m_nMoveState <= PEDMOVE_WALK || !ped->IsPlayer())) {
+                const auto* const wi = CWeaponInfo::GetWeaponInfo(ped->GetActiveWeapon().m_Type, (eWeaponSkill)1);
+                int8 comboSet = (int8)wi->m_nBaseCombo;
+                if (comboSet == 4) {
+                    comboSet = (int8)ped->m_nFightingStyle;
+                }
+                const auto& combo = m_aComboData[comboSet - 4];
+
+                bool bUseSet = true; // false => fall back to the standard set
+                if (!(combo.m_wFlags & 0x400)) { // (+0x85 & 4)
+                    bUseSet = false;
+                } else if (combo.m_nAnimGroup != 0x21) {
+                    bool bGotAnims = true;
+                    if (combo.m_nAnimGroup == m_nRequiredAnimGroup) {
+                        bGotAnims = m_bAnimsReferenced;
+                    } else {
+                        if (m_bAnimsReferenced) {
+                            CAnimManager::RemoveAnimBlockRef(CAnimManager::GetAnimationBlockIndex(m_nRequiredAnimGroup)); // 0x4D3FD0
+                            m_bAnimsReferenced = false;
+                        }
+                        m_nRequiredAnimGroup = combo.m_nAnimGroup;
+                        bGotAnims = false;
+                    }
+                    if (!bGotAnims) {
+                        auto* blk = CAnimManager::GetAnimationBlock(m_nRequiredAnimGroup);
+                        if (!blk) {
+                            blk = CAnimManager::GetAnimationBlock(CAnimManager::GetAnimBlockName(m_nRequiredAnimGroup));
+                        }
+                        const auto blkIdx = CAnimManager::GetAnimationBlockIndex(blk);
+                        if (blk->IsLoaded) {
+                            CAnimManager::AddAnimBlockRef(blkIdx);
+                            m_bAnimsReferenced = true;
+                        } else {
+                            CStreaming::RequestModel(IFPToModelId(blkIdx), STREAMING_KEEP_IN_MEMORY); // 8
+                            if ((int8)m_nNextCommand >= 11 && (int8)m_nNextCommand <= 14) {
+                                m_nNextCommand = 11;
+                            }
+                            bUseSet = false;
+                        }
+                    }
+                }
+                if (!bUseSet) {
+                    comboSet = 4;
+                }
+
+                m_nComboSet = comboSet;
+                m_pIdleAnim = CAnimManager::BlendAnimation(
+                    ped->GetRpClump(),
+                    m_aComboData[comboSet - 4].m_nAnimGroup,
+                    ANIM_ID_FIGHT_IDLE, // 0xDF
+                    4.f // 0x40800000
+                );
+                m_pIdleAnim->SetDeleteCallback(FinishMeleeAnimCB, this);
+                ped->SetMoveState(PEDMOVE_STILL);
+                ped->m_nSwimmingMoveState = PEDMOVE_STILL; // (+0x538)
+                m_nComboSet   = 0;
+                m_nLastCommand = 0;
+            }
+            break;
+        }
+    }
+
+    if (m_nRequiredAnimGroup != 0x21 && !m_bAnimsReferenced) {
+        GetAvailableComboSet(ped, -1); // 0x61C7F0 (result unused)
+    }
+
+    if (!m_pAnim) {
+        if (ped->IsPlayer() && m_nIdlePeriod < m_nIdleCounter && m_nNextCommand == 0 && m_nComboSet == 0) {
+            m_nNextCommand = 1;
+        }
+        if ((m_nNextCommand != 0 || m_nComboSet != 0) && m_nLastCommand != 0x10) {
+            m_nComboSet = GetAvailableComboSet(ped, (int8)m_nNextCommand); // 0x61C7F0
+            if (ped->IsPlayer()) {
+                if ((int8)m_nNextCommand >= 3 && (int8)m_nNextCommand <= 6) {
+                    SetPlayerMoveAnim(static_cast<CPlayerPed*>(ped)); // 0x61C9B0 (Skips `StartAnim`)
+                } else {
+                    StartAnim(ped, ChooseAttackPlayer(ped)); // 0x624710, 0x623B10
+                }
+            } else {
+                StartAnim(ped, ChooseAttackAI(ped)); // 0x624A40, 0x623B10
+            }
+        }
+    } else {
+        if (ped->GetActiveWeapon().m_Type == WEAPON_CHAINSAW) {
+            ped->GetWeaponAE().AddAudioEvent(AE_WEAPON_CHAINSAW_ACTIVE); // 0x4E69F0
+        }
+
+        if (m_nComboSet < 4) {
+            auto* const anim = m_pAnim;
+            if (m_nLastCommand == 8 || m_nLastCommand == 10) {
+                // x87: Division is done in extended precision
+                if ((double)anim->m_CurrentTime / (double)anim->m_BlendHier->m_fTotalTime > (double)StaticRef<float>(0x8D2E94) // 0.4f
+                 && anim->m_BlendDelta > -4.f // 0x859C3C
+                ) {
+                    anim->m_BlendDelta = -4.f; // 0xC0800000
+                    goto tail;
+                }
+            }
+            if (m_nLastCommand == 3) {
+                if (m_nNextCommand == 3) {
+                    m_nNextCommand = 0;
+                } else if (anim->m_BlendDelta > -4.f) {
+                    anim->m_BlendDelta = -4.f;
+                }
+            }
+        } else {
+            const auto& combo = m_aComboData[m_nComboSet - 4];
+            if (m_nLastCommand == 2) {
+                if (m_nNextCommand == 2) {
+                    auto* const anim = m_pAnim;
+                    if (anim->m_Flags & ANIMATION_IS_PLAYING) {
+                        const double cur  = anim->m_CurrentTime;
+                        const double next = (double)anim->m_TimeStep + cur;
+                        if ((cur < combo.ABlockHit && combo.ABlockHit <= next)
+                         || (cur < combo.ABlockChain && combo.ABlockChain <= next)
+                        ) {
+                            anim->m_Flags &= ~ANIMATION_IS_PLAYING;
+                            m_pAnim->SetCurrentTime(combo.ABlockHit);
+                        }
+                    }
+                } else {
+                    auto* const anim = m_pAnim;
+                    if (!(anim->m_Flags & ANIMATION_IS_PLAYING) && anim->m_BlendAmount > 0.f && anim->m_BlendDelta >= 0.f) {
+                        anim->m_BlendDelta = -4.f;
+                    }
+                    if ((int8)m_nNextCommand >= 11) {
+                        m_pAnim->SetDefaultDeleteCallback();
+                        m_pAnim = nullptr;
+                    }
+                }
+                if (m_nNextCommand == 2) {
+                    m_nNextCommand = 0;
+                }
+            } else {
+                auto* const anim = m_pAnim;
+                if (anim->m_BlendAmount > 0.9f && anim->m_BlendDelta >= 0.f) { // 0x858C20
+                    const int32  move = m_nCurrentMove;
+                    const double cur  = anim->m_CurrentTime;
+                    const double hit  = combo.m_fHit[move];
+                    if (cur > hit && cur - (double)anim->m_TimeStep < hit) {
+                        // The strike frame
+                        ped->GetAE().AddAudioEvent(AE_PED_SWING, 0.f, 1.f, nullptr, (eSurfaceType)0, combo.m_Hit[move], 0); // 0x4E2BB0
+                        if (m_nComboSet == 5 && m_nCurrentMove >= 0 && m_nCurrentMove <= 2) {
+                            ped->GetAE().AddAudioEvent(AE_PED_SWING, 0.f, 1.f, nullptr, (eSurfaceType)0, combo.m_Hit[m_nCurrentMove], s_HitSoundMaxVolume[m_nCurrentMove]);
+                        }
+                        if ((int8)m_nNextCommand >= 11 && (int8)m_nNextCommand <= 14) {
+                            m_nNextCommand = 0;
+                        }
+                        const auto hitLevel = combo.m_nHitLevel[m_nCurrentMove];
+                        if (hitLevel != 7) {
+                            CVector strikePos = TransformPointExt(*ped->m_matrix, m_aHitOffsets[hitLevel]); // 0x59C890
+                            if (m_nCurrentMove == 4) {
+                                strikePos += ped->m_vecMoveSpeed * CTimer::GetTimeStep(); // 0x40FEC0, 0x411A00
+                            }
+                            FightStrike(ped, strikePos);
+                        }
+                    } else if (anim->m_CurrentTime >= combo.m_fChain[move]
+                        && (int8)m_nNextCommand >= 11 && (int8)m_nNextCommand <= 14
+                    ) {
+                        switch (m_nCurrentMove) {
+                        case 0:
+                        case 1: {
+                            m_nComboSet = GetAvailableComboSet(ped, (int8)m_nNextCommand);
+                            StartAnim(ped, ped->IsPlayer() ? ChooseAttackPlayer(ped) : m_nCurrentMove + 1);
+                            break;
+                        }
+                        case 3: {
+                            if (ped->IsPlayer() && ChooseAttackPlayer(ped) == 3) {
+                                StartAnim(ped, 3);
+                            }
+                            break;
+                        }
+                        case 4: {
+                            if (m_nComboSet == 12 && ped->IsPlayer()) {
+                                m_pAnim->SetCurrentTime((float)((double)combo.m_fHit[m_nCurrentMove] - (double)0.01f)); // 0x858C58
+                            } else {
+                                m_nComboSet = GetAvailableComboSet(ped, (int8)m_nNextCommand);
+                                StartAnim(ped, ped->IsPlayer() ? ChooseAttackPlayer(ped) : m_nCurrentMove + 1);
+                            }
+                            break;
+                        }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+tail:
+    if (m_pTargetEntity) {
+        // x87: The differences aren't rounded to float
+        const auto& pedPos = ped->GetPosition();
+        const auto& tgtPos = m_pTargetEntity->GetPosition();
+        const double dx = (double)tgtPos.x - (double)pedPos.x;
+        const double dy = (double)tgtPos.y - (double)pedPos.y;
+        ped->m_fAimingRotation = (float)std::atan2(-dx, dy); // +0x55C
+    } else if (ped->IsPlayer() && CCamera::m_bUseMouse3rdPerson && static_cast<CPlayerPed*>(ped)->GetPadFromPlayer()->GetTarget()) {
+        const auto& v = StaticRef<CVector>(0xB6F32C);
+        ped->m_fAimingRotation = (float)std::atan2(-(double)v.x, (double)v.y);
+    }
+
+    m_bIsInControl = false;
+    return false;
 }
 
 // 0x61C650
@@ -344,9 +706,6 @@ bool CTaskSimpleFight::BeHitWhileBlocking(CPed* victim, CPed* creator, int8 comb
     anim->m_Flags |= ANIMATION_IS_PLAYING;
     return true;
 }
-
-// Max volume of the melee hit sounds (indexed with `m_nCurrentMove`)
-static inline auto& s_HitSoundMaxVolume = StaticRef<std::array<uint32, 3>>(0x8D2E3C);
 
 // Strike damage the way the original leaves it in st0 (the products are not rounded to float, and `FightHitPed` truncates them)
 static double GetStrikeDamageExt(const CTaskSimpleFight& task, CPed* ped) {

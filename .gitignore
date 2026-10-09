@@ -69,3 +69,10 @@ compile_commands.json
 
 ## TODO: These files can be put into a better place?
 /source/libs/imgui/*
+# Standalone build: data extracted from the user's own original exe (never commit)
+original_data.bin
+original_data.json
+data_pointers.txt
+standalone_data/
+standalone.log
+standalone_unknown_pointers.txt

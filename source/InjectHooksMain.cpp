@@ -230,6 +230,7 @@
 #include "TaskComplexDestroyCarArmed.h"
 #include "TaskSimpleAbseil.h"
 #include "TaskSimpleOnEscalator.h"
+#include "TaskSimpleBeHitWhileMoving.h"
 #include "TaskSimpleBeKickedOnGround.h"
 #include "TaskSimpleWaitForPizza.h"
 #include "TaskComplexWanderCop.h"
@@ -1226,7 +1227,7 @@ void InjectHooksMain() {
         CTaskSimpleAffectSecondaryBehaviour::InjectHooks();
         CTaskSimpleArrestPed__InjectHooks();
         CTaskSimpleBeHit::InjectHooks();
-        // CTaskSimpleBeHitWhileMoving::InjectHooks();
+        CTaskSimpleBeHitWhileMoving::InjectHooks();
         CTaskSimpleBeKickedOnGround::InjectHooks();
         CTaskSimpleBikeJacked::InjectHooks();
         CTaskSimpleCarAlign::InjectHooks();

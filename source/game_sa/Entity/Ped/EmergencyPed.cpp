@@ -2,6 +2,14 @@
 
 #include "EmergencyPed.h"
 
+void CEmergencyPed::InjectHooks() {
+    RH_ScopedVirtualClass(CEmergencyPed, 0x86C200, 26);
+    RH_ScopedCategory("Entity/Ped");
+
+    RH_ScopedVMTDestructorInstall(0x5DE3E0);
+    RH_ScopedVMTInstall(ProcessControl, 0x5DE400);
+}
+
 // 0x5DE340
 CEmergencyPed::CEmergencyPed(ePedType pedType, uint32 modelIndex) : CPed(pedType) {
     SetModelIndex(modelIndex); // V1053 Calling the 'SetModelIndex' virtual function in the constructor may lead to unexpected result at runtime

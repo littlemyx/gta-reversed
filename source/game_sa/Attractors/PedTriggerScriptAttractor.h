@@ -4,6 +4,7 @@
 
 class NOTSA_EXPORT_VTABLE CPedTriggerScriptAttractor final : public CPedAttractor {
 public:
+    static void InjectHooks();
     static constexpr auto Type = PED_ATTRACTOR_TRIGGER_SCRIPT;
 
     // 0x5EE890

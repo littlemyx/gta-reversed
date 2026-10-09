@@ -4,6 +4,7 @@
 
 class NOTSA_EXPORT_VTABLE CPedPizzaAttractor final : public CPedAttractor {
 public:
+    static void InjectHooks();
     static constexpr auto Type = PED_ATTRACTOR_PIZZA;
 
     // 0x5EE6E0
@@ -28,5 +29,5 @@ public:
     ePedAttractorType GetType() const override { return Type; }
 
     // 0x5EE750
-    float GetHeadOfQueueWaitTime() const { return 2000.0f; }
+    virtual float GetHeadOfQueueWaitTime() const { return 2000.0f; } // new virtual in the exe vtable (slot 6)
 };

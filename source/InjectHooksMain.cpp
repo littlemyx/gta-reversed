@@ -617,6 +617,17 @@
 #include "FxInterpInfoU255.h"
 #include "FxInterpInfo32.h"
 #include "FxInterpInfo255.h"
+#include "DummyPed.h"
+#include "EmergencyPed.h"
+#include "PedAtmAttractor.h"
+#include "PedSeatAttractor.h"
+#include "PedStopAttractor.h"
+#include "PedPizzaAttractor.h"
+#include "PedTriggerScriptAttractor.h"
+#include "PedLookAtAttractor.h"
+#include "PedScriptedAttractor.h"
+#include "PedParkAttractor.h"
+#include "PedStepAttractor.h"
 #endif
 
 void InjectHooksMain() {
@@ -668,6 +679,15 @@ void InjectHooksMain() {
     CCarFXRenderer::InjectHooks();
     CPedAttractorManager::InjectHooks();
     CPedAttractorPedPlacer::InjectHooks();
+    CPedATMAttractor::InjectHooks();
+    CPedSeatAttractor::InjectHooks();
+    CPedStopAttractor::InjectHooks();
+    CPedPizzaAttractor::InjectHooks();
+    CPedTriggerScriptAttractor::InjectHooks();
+    CPedLookAtAttractor::InjectHooks();
+    CPedScriptedAttractor::InjectHooks();
+    CPedParkAttractor::InjectHooks();
+    CPedStepAttractor::InjectHooks();
     CAttractorScanner::InjectHooks();
     CAutoPilot::InjectHooks();
     BoneNode_c::InjectHooks();
@@ -708,6 +728,7 @@ void InjectHooksMain() {
     CSetPieces::InjectHooks();
     CCopPed::InjectHooks();
     CCivilianPed::InjectHooks();
+    CEmergencyPed::InjectHooks();
     CDamageManager::InjectHooks();
     CCreepingFire::InjectHooks();
     BreakManager_c::InjectHooks();
@@ -769,6 +790,7 @@ void InjectHooksMain() {
     CRenderer::InjectHooks();
     CDummy::InjectHooks();
     CDummyObject::InjectHooks();
+    CDummyPed::InjectHooks();
     CObject::InjectHooks();
     CObjectData::InjectHooks();
     CObjectSaveStructure::InjectHooks();

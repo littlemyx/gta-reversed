@@ -10,6 +10,8 @@
 
 class NOTSA_EXPORT_VTABLE CEmergencyPed : public CPed {
 public:
+    static void InjectHooks();
+
     CEmergencyPed(ePedType pedType, uint32 modelIndex);
     ~CEmergencyPed() override = default;
 

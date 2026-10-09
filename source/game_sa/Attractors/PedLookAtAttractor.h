@@ -4,6 +4,7 @@
 
 class NOTSA_EXPORT_VTABLE CPedLookAtAttractor final : public CPedAttractor {
 public:
+    static void InjectHooks();
     static constexpr auto Type = PED_ATTRACTOR_LOOK_AT;
 
     // 0x5EE960

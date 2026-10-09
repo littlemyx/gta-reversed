@@ -88,7 +88,7 @@ public:
     static void GetAIPlaneToDoDogFightAgainstPlayer(CAutomobile* automobile);
     static CVehicle* GetNewVehicleDependingOnCarModel(int32 modelID, uint8 createdBy);
     static bool IsAnyoneParking();
-    static bool IsThisAnAppropriateNode(CVehicle* vehicle, CNodeAddress nodeAddress1, CNodeAddress nodeAddress2, CNodeAddress nodeAddress3, bool arg5);
+    static bool IsThisAnAppropriateNode(CVehicle* vehicle, CNodeAddress nodeAddress1, CNodeAddress nodeAddress2, CNodeAddress nodeAddress3, bool arg5, bool arg6);
     static bool IsThisVehicleInteresting(CVehicle* vehicle);
     static void JoinCarWithRoadAccordingToMission(CVehicle* vehicle);
     static void JoinCarWithRoadSystem(CVehicle* vehicle);

@@ -9,6 +9,9 @@
 #include "TaskComplex.h"
 #include "TaskTimer.h"
 
+//! 0x632140 - Not a member in the original
+bool CanSunbathe();
+
 class CAnimBlock;
 class CObject;
 

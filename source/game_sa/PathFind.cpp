@@ -78,6 +78,7 @@ void CPathFind::InjectHooks() {
     RH_ScopedInstall(CountNeighboursToBeSwitchedOff, 0x4504F0);
     RH_ScopedInstall(FindNodeOrientationForCarPlacement, 0x450320);
     RH_ScopedInstall(GeneratePedCreationCoors_Interior, 0x44ECA0);
+    RH_ScopedInstall(GeneratePedCreationCoors, 0x44E790);
     //RH_ScopedInstall(FindNodePairClosestToCoors, 0x44FEE0);
     RH_ScopedInstall(FindNodeClosestToCoorsFavourDirection, 0x44FCE0);
     RH_ScopedInstall(FindNodeClosestToCoors, 0x44F460);
@@ -271,6 +272,120 @@ auto CPathFind::FindIntersection(const CNodeAddress& startNodeAddress, const CNo
 bool CPathFind::TestCrossesRoad(CNodeAddress startNodeAddress, CNodeAddress targetNodeAddress) {
     const auto intersect = FindIntersection(startNodeAddress, targetNodeAddress);
     return intersect && intersect->m_bRoadCross;
+}
+
+// 0x44E790
+bool CPathFind::GeneratePedCreationCoors(
+    float x, float y,
+    float minDist1, float maxDist1,
+    float minDist2, float maxDist2,
+    CVector* outCoords,
+    CNodeAddress* outAddress1, CNodeAddress* outAddress2,
+    float* outOrientation,
+    bool bLowTraffic,
+    CMatrix* transformMatrix
+) {
+    const auto minSpawnProb = (int32)((double)(rand() & 0xFFFF) * 0x1p-15 * (double)15.0f); // 0x858B14, 0x858B48
+    const float maxRangeSq  = (float)(((double)maxDist1 + (double)30.0f) * ((double)maxDist1 + (double)30.0f)); // 0x858CA4
+
+    const auto areaId = FindRegionForCoors({ x, y }); // 0x44D830
+
+    for (auto attempt = 0; attempt < 300; attempt++) {
+        auto* const nodes = m_pPathNodes[areaId];
+        if (!nodes || !m_anNumPedNodes[areaId]) {
+            continue;
+        }
+        const auto& node = nodes[(rand() >> 6) % (int32)m_anNumPedNodes[areaId] + (int32)m_anNumVehicleNodes[areaId]];
+
+        const double nodeX = (double)static_cast<float>(node.m_vPos.x);
+        const double nodeY = (double)static_cast<float>(node.m_vPos.y);
+        const double distSqExt = (nodeY - (double)y) * (nodeY - (double)y) + (nodeX - (double)x) * (nodeX - (double)x);
+        const float  distSq    = (float)distSqExt;
+        if (!(distSqExt < (double)maxRangeSq)) {
+            continue;
+        }
+        if ((int32)node.m_nSpawnProbability <= minSpawnProb) {
+            continue;
+        }
+
+        for (auto linkIdx = 0u; linkIdx < node.m_nNumLinks; linkIdx++) {
+            if (m_pPathIntersections[areaId][node.m_wBaseLinkId + (int32)linkIdx].m_bRoadCross) {
+                continue;
+            }
+            const auto linkedAddr = m_pNodeLinks[areaId][node.m_wBaseLinkId + (int32)linkIdx];
+            if (linkedAddr.m_wAreaId >= 0x40 || !m_pPathNodes[linkedAddr.m_wAreaId]) {
+                continue;
+            }
+            const auto& linked = m_pPathNodes[linkedAddr.m_wAreaId][linkedAddr.m_wNodeId];
+
+            if ((node.m_isSwitchedOff || linked.m_isSwitchedOff) && !bLowTraffic) {
+                continue;
+            }
+            if ((int32)linked.m_nSpawnProbability <= minSpawnProb) {
+                continue;
+            }
+
+            const float dist = (float)std::sqrt((double)distSq);
+
+            // x87: `(ly - y)` is kept in extended precision for one factor and rounded to float for the other
+            const double lx = (double)static_cast<float>(linked.m_vPos.x);
+            const double ly = (double)static_cast<float>(linked.m_vPos.y);
+            const float  lyDiffF = (float)(ly - (double)y);
+            const double sum     = (ly - (double)y) * (double)lyDiffF + (lx - (double)x) * (lx - (double)x);
+            if (!(dist < maxDist1) && !(std::sqrt(sum) < (double)maxDist1)) {
+                continue;
+            }
+
+            for (auto tries = 0; tries < 5; tries++) {
+                const float t = (float)((double)(rand() & 0xFF) * (double)0.00390625f); // 0x859AA0
+                *outOrientation = t;
+
+                const CVector linkedPos = linked.GetPosition();
+                const float   tx = (float)((double)t * linkedPos.x);
+                const float   ty = (float)((double)t * linkedPos.y);
+                const float   tz = (float)((double)t * linkedPos.z);
+                const float   oneMinusT = 1.0f - t;
+
+                const CVector nodePos = node.GetPosition();
+                const double  nyExt = (double)oneMinusT * nodePos.y;
+                const float   nzF   = (float)((double)oneMinusT * nodePos.z);
+
+                const CVector pos{
+                    (float)((double)oneMinusT * nodePos.x + (double)tx),
+                    (float)(nyExt + (double)ty),
+                    nzF + tz
+                };
+
+                const double dx = (double)pos.x - (double)x;
+                const double dy = (double)pos.y - (double)y;
+                const float  posDist = (float)std::sqrt(dy * dy + dx * dx);
+
+                const bool visible = transformMatrix
+                    ? TheCamera.IsSphereVisible(pos, 2.0f, reinterpret_cast<RwMatrix*>(transformMatrix)) // 0x420C40
+                    : TheCamera.IsSphereVisible(pos, 2.0f); // 0x420D40
+
+                if (visible
+                    ? (posDist > minDist1 && posDist < maxDist1)
+                    : (posDist > minDist2 && posDist < maxDist2 && (rand() & 1))
+                ) {
+                    *outAddress1 = node.GetAddress();
+                    *outAddress2 = linked.GetAddress();
+                    *outCoords   = pos;
+
+                    bool foundGround{};
+                    const auto groundZ = CWorld::FindGroundZFor3DCoord({ pos.x, pos.y, pos.z + 2.0f }, &foundGround, nullptr); // 0x5696C0
+                    if (foundGround) {
+                        if (std::abs((double)groundZ - (double)pos.z) > 3.0) { // NOTE: Gives up completely (it doesn't try again)
+                            return false;
+                        }
+                        outCoords->z = groundZ;
+                        return true;
+                    }
+                }
+            }
+        }
+    }
+    return false;
 }
 
 // 0x44ECA0

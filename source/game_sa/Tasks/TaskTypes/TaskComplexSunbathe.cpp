@@ -11,7 +11,7 @@
 #include "Streaming.h"
 
 // 0x632140 (NOTSA: not a member in the original, plain cdecl without arguments)
-static bool CanSunbathe() {
+bool CanSunbathe() {
     if (CClock::GetGameClockHours() < 10 || CClock::GetGameClockHours() >= 18) {
         return false;
     }

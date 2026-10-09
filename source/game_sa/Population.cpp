@@ -38,11 +38,16 @@
 #define POP_LOG_DEBUG(...)
 #endif
 
+namespace AddToPopulationDetail {
+CObject* CreateBeachToy(const CVector& pos, int32 toyType);
+}
+
 void CPopulation::InjectHooks() {
     RH_ScopedClass(CPopulation);
     RH_ScopedCategoryGlobal();
 
     RH_ScopedGlobalInstall(FindPedRaceFromName, 0x5B6D40);
+    RH_ScopedGlobalInstall(AddToPopulationDetail::CreateBeachToy, 0x6EABA0);
 
     RH_ScopedGlobalInstall(LoadPedGroups, 0x5BCFE0);
     RH_ScopedGlobalInstall(LoadCarGroups, 0x5BD1A0);
@@ -1608,37 +1613,64 @@ int32 GetNumGangMembersToPlace() {
     return MIN + static_cast<int32>(static_cast<double>(rand() & 0xFFFF) * 0x1p-15 * (MAX - MIN));
 }
 
-//! 0x44E790 - `CPathFind::GeneratePedCreationCoors` (declared as `void` in `PathFind.h`, but it actually returns a bool)
-bool GeneratePedCreationCoors(
-    float x, float y,
-    float minDist1, float maxDist1,
-    float minDist2, float maxDist2,
-    CVector* outCoords,
-    CNodeAddress* outAddress1, CNodeAddress* outAddress2,
-    float* outOrientation,
-    bool lowTraffic
-) {
-    return plugin::CallMethodAndReturn<bool, 0x44E790, CPathFind*, float, float, float, float, float, float, CVector*, CNodeAddress*, CNodeAddress*, float*, bool, CMatrix*>(
-        &ThePaths,
-        x, y,
-        minDist1, maxDist1,
-        minDist2, maxDist2,
-        outCoords,
-        outAddress1, outAddress2,
-        outOrientation,
-        lowTraffic,
-        nullptr
-    );
-}
-
-//! 0x6EABA0 - `CWaterLevel::CreateBeachToy` (not reversed yet, and not declared in `WaterLevel.h`)
+//! 0x6EABA0 - `CWaterLevel::CreateBeachToy` (not declared in `WaterLevel.h`). `toyType`: 1 = ball, 2-4 = loungers, 5 = random lounger, 6 = lotion, 7-10 = towels, 11 = random towel
 CObject* CreateBeachToy(const CVector& pos, int32 toyType) {
-    return plugin::CallAndReturn<CObject*, 0x6EABA0, const CVector*, int32>(&pos, toyType);
-}
+    using namespace ModelIndices;
+    static_assert(offsetof(CObject, m_nObjectType) == 0x13C && offsetof(CObject, m_nRemovalTime) == 0x150);
 
-//! 0x632140 - `CanSunbathe` (it's `static` in `TaskComplexSunbathe.cpp`)
-bool CanSunbathe() {
-    return plugin::CallAndReturn<bool, 0x632140>();
+    if (CObject::nNoTempObjects >= 0x96) {
+        return nullptr;
+    }
+
+    if (toyType == 5) {
+        switch (rand() & 7) {
+        case 1: case 7: toyType = 2; break;
+        case 3: case 5: toyType = 4; break;
+        default:        toyType = 3; break;
+        }
+    } else if (toyType == 11) {
+        switch (rand() & 7) {
+        case 1: case 7: toyType = 8;  break;
+        case 2: case 6: toyType = 9;  break;
+        case 3: case 5: toyType = 10; break;
+        default:        toyType = 7;  break;
+        }
+        if (CObject::nNoTempObjects >= 0x91) {
+            return nullptr;
+        }
+    }
+
+    ModelIndex model    = MI_BEACHBALL;
+    bool       isStatic = false;
+    switch (toyType) {
+    case 1:  model = MI_BEACHBALL;       break;
+    case 2:  model = MI_LOUNGE_WOOD_UP;  break;
+    case 3:  model = MI_LOUNGE_TOWEL_UP; break;
+    case 4:  model = MI_LOUNGE_WOOD_DN;  break;
+    case 6:  model = MI_LOTION;          isStatic = true; break;
+    case 7:  model = MI_BEACHTOWEL01;    isStatic = true; break;
+    case 8:  model = MI_BEACHTOWEL02;    isStatic = true; break;
+    case 9:  model = MI_BEACHTOWEL03;    isStatic = true; break;
+    case 10: model = MI_BEACHTOWEL04;    isStatic = true; break;
+    default: break; // The ball is used for unknown types
+    }
+
+    auto* const obj = new CObject((uint16)model, true); // 0x5A1EE0, 0x5A1D70
+    if (!obj) {
+        return nullptr;
+    }
+    obj->SetPosn(pos);
+    if (obj->GetRwObject()) {
+        obj->UpdateRwMatrix();
+    }
+    obj->m_vecMoveSpeed  = CVector{};
+    obj->m_vecTurnSpeed  = CVector{};
+    obj->m_nObjectType   = OBJECT_TEMPORARY;
+    obj->SetIsStatic(isStatic);
+    CObject::nNoTempObjects++;
+    obj->m_nRemovalTime = CTimer::m_snTimeInMilliseconds + 43'200'000;
+    CWorld::Add(obj);
+    return obj;
 }
 
 //! Distance (as a float, like the original stored it) between `a` and `b` in 2D (calculated using extended precision)
@@ -2094,14 +2126,15 @@ bool CPopulation::AddToPopulation(float minRadius, float maxRadius, float minRad
     CVector      pos{};
     CNodeAddress addr1{}, addr2{};
     float        orientation{};
-    if (!GeneratePedCreationCoors(
+    if (!ThePaths.GeneratePedCreationCoors(
         playerCentre.x, playerCentre.y,
         minDist1, maxDist1,
         minRadiusClose, maxRadiusClose,
         &pos,
         &addr1, &addr2,
         &orientation,
-        pedType == PED_TYPE_COP && FindPlayerWanted(-1)->m_WantedLevel > eWantedLevel::WANTED_CLEAN
+        pedType == PED_TYPE_COP && FindPlayerWanted(-1)->m_WantedLevel > eWantedLevel::WANTED_CLEAN,
+        nullptr
     )) {
         return result;
     }

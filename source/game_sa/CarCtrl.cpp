@@ -134,6 +134,15 @@ static CVector2D GetNormalizedForward2D(CVehicle* vehicle) {
     return { (float)(invLen * fwd.x), (float)(invLen * fwd.y) };
 }
 
+//! `CrossProduct` (0x59C730) - the products stay in the FPU registers (extended precision), the shared `CrossProduct` rounds them to float
+static CVector CrossProductOriginal(const CVector& a, const CVector& b) {
+    return {
+        (float)((double)b.z * a.y - (double)a.z * b.y),
+        (float)((double)a.z * b.x - (double)b.z * a.x),
+        (float)((double)a.x * b.y - (double)b.x * a.y),
+    };
+}
+
 void CCarCtrl::InjectHooks()
 {
     RH_ScopedClass(CCarCtrl);
@@ -207,6 +216,9 @@ void CCarCtrl::InjectHooks()
     RH_ScopedInstall(WeaveThroughPedsSectorList, 0x42D7E0);
     RH_ScopedInstall(WeaveThroughObjectsSectorList, 0x42D950);
     RH_ScopedInstall(PickNextNodeRandomly, 0x42DE80);
+    RH_ScopedInstall(DragCarToPoint, 0x42EC90);
+    RH_ScopedInstall(GetAIPlaneToDoDogFightAgainstPlayer, 0x42F370);
+    RH_ScopedInstall(GetAIHeliToAttackPlayer, 0x42F3C0);
 }
 
 // 0x4212E0
@@ -515,7 +527,131 @@ bool CCarCtrl::DealWithBend_Racing(CVehicle* vehicle, CCarPathLinkAddress LinkAd
 
 // 0x42EC90
 void CCarCtrl::DragCarToPoint(CVehicle* vehicle, CVector* pos) {
-    plugin::Call<0x42EC90, CVehicle*, CVector*>(vehicle, pos);
+    // Note: The vehicle's matrix is used directly (not null checked) until the position is set at the end
+    float rangeAbove = 3.0f; // How far above/below the wheels' position the ground is looked for
+    float rangeBelow = 3.0f;
+
+    // Length of the vehicle (wheelbase). x87: kept in extended precision for the first uses
+    const auto& bb   = CModelInfo::GetModelInfo(vehicle->m_nModelIndex)->GetColModel()->m_boundBox;
+    const auto  lenExt = ((double)bb.m_vecMax.y - bb.m_vecMin.y) * 0.95f; // 0x858EF0
+    const auto  len    = (float)lenExt;
+    if (vehicle->m_autoPilot.field_51 > 0x10) {
+        rangeAbove = rangeBelow = 100.0f;
+    }
+
+    const CVector oldFwd = vehicle->m_matrix->GetForward();
+    const auto&   fwd    = oldFwd;
+
+    const float targetX = pos->x;
+    const float targetY = pos->y;
+
+    // Where the front wheels are (the wheelbase's half in front of the vehicle's position)
+    const auto frontX = (float)((double)vehicle->GetPosition().x - ((double)fwd.x * lenExt) * 0.5f);
+    const auto frontY = (float)((double)vehicle->GetPosition().y - ((double)fwd.y * lenExt) * 0.5f);
+
+    // The point (on the line from the front wheels, to the target) where the rear wheels have to be
+    float rearX, rearY;
+    {
+        const auto fwdX15 = (double)fwd.x * 1.5f;
+        const auto fwdY15 = (float)((double)fwd.y * 1.5f);
+        const CColLine   line{
+            CVector{ frontX, frontY, 0.0f },
+            CVector{ (float)(fwdX15 + frontX), (float)((double)fwdY15 + frontY), 0.0f }
+        };
+        const CColSphere sphere{ CSphere{ len, CVector{ targetX, targetY, 0.0f } } };
+        CColPoint colPoint;
+        float     depth = 1.0f;
+        if (CCollision::ProcessLineSphere(line, sphere, colPoint, depth)) { // 0x412AA0
+            rearX = colPoint.m_vecPoint.x;
+            rearY = colPoint.m_vecPoint.y;
+        } else {
+            // x87: kept in extended precision
+            const auto dy    = (double)targetY - frontY;
+            const auto dx    = (double)targetX - frontX;
+            const auto ratio = (double)len / std::sqrt(dx * dx + dy * dy);
+            rearX = (float)(((double)frontX - targetX) * ratio + targetX);
+            rearY = (float)(((double)frontY - targetY) * ratio + targetY);
+        }
+    }
+
+    // Height of the wheels over the ground (the Z of the front is the base of the rear's as well)
+    const auto halfLenZExt = ((double)fwd.z * len) * 0.5f;
+    const auto halfLenZ    = (float)halfLenZExt;
+
+    // Finds the Z of the ground at the given position. `centerZExt` is the Z the search is based on (kept in extended precision as in the original)
+    const auto FindGroundZ = [&](float x, float y, double centerZExt, CStoredCollPoly* poly, float oldGroundZ) -> float {
+        const auto centerZ = (float)centerZExt;
+        const auto lower   = (float)(centerZExt - rangeBelow);
+        const auto upper   = (float)((double)centerZ + rangeAbove);
+
+        CVector    origin{ x, y, upper };
+        CColPoint  colPoint;
+        CEntity*   entity{};
+        if (CCollision::IsStoredPolyStillValidVerticalLine(origin, lower, colPoint, poly)) { // 0x414D70
+            return colPoint.m_vecPoint.z;
+        }
+
+        origin.z = (float)((double)centerZ + 1.5f);
+        if (!CWorld::ProcessVerticalLine(origin, (float)((double)centerZ - 2.0f), colPoint, entity, true, false, false, false, false, false, poly)) { // 0x5674E0
+            origin.z = upper;
+            if (!CWorld::ProcessVerticalLine(origin, lower, colPoint, entity, true, false, false, false, false, false, poly)) {
+                return oldGroundZ;
+            }
+        }
+
+        vehicle->m_pEntityWeAreOn = entity;
+        vehicle->m_bTunnel           = entity->m_bTunnel;
+        vehicle->m_bTunnelTransition = entity->m_bTunnelTransition;
+        vehicle->m_autoPilot.field_51 = 0;
+        return colPoint.m_vecPoint.z;
+    };
+
+    // Front
+    vehicle->m_autoPilot.field_51++;
+    const auto frontGroundZ = FindGroundZ(targetX, targetY, halfLenZExt + vehicle->GetPosition().z, &vehicle->m_FrontCollPoly, vehicle->m_fVehicleFrontGroundZ);
+    vehicle->m_fVehicleFrontGroundZ = frontGroundZ;
+
+    // Rear
+    const auto rearGroundZ = FindGroundZ(rearX, rearY, (double)vehicle->GetPosition().z - halfLenZ, &vehicle->m_RearCollPoly, vehicle->m_fVehicleRearGroundZ);
+    vehicle->m_fVehicleRearGroundZ = rearGroundZ;
+
+    // Orientation. x87: kept in extended precision
+    const auto invLen   = 1.0f / (double)len;
+    const auto pitch    = std::atan2(((double)frontGroundZ - rearGroundZ) * invLen, 1.0);
+    const auto cosPitch = std::cos(pitch);
+    auto&      mat      = *vehicle->m_matrix;
+
+    mat.GetRight().x = (float)(((double)targetY - rearY) * invLen);
+    mat.GetRight().y = (float)(((double)targetX - rearX) * ((double)-1.0f / len));
+    mat.GetRight().z = 0.0f;
+
+    mat.GetForward().x = (float)-(cosPitch * mat.GetRight().y);
+    mat.GetForward().y = (float)(cosPitch * mat.GetRight().x);
+    mat.GetForward().z = (float)std::sin(pitch);
+
+    mat.GetUp() = CrossProductOriginal(mat.GetRight(), mat.GetForward()); // 0x59C730
+
+    // New position: the middle of the 2 wheels pairs, a bit above the ground
+    const auto groundZSum = (float)((double)rearGroundZ + frontGroundZ);
+    const auto centerX    = (float)(((double)targetX + rearX) * 0.5f);
+    const auto centerY    = (float)(((double)targetY + rearY) * 0.5f);
+    const auto centerZ    = (float)((double)groundZSum * 0.5f);
+
+    const auto posZ = (float)((double)vehicle->GetHeightAboveRoad() + centerZ);
+    vehicle->UpdateLightingFromStoredPolys(); // 0x6D0CC0
+
+    vehicle->GetPosition() = CVector{ centerX, centerY, posZ };
+
+    // Steer into the direction we turned to
+    const auto steerCross = CrossProductOriginal(mat.GetForward(), oldFwd); // 0x59C730
+    const auto steer      = (double)steerCross.z * -10.0f; // 0x859004
+    if (!(steer < 0.5f)) {
+        vehicle->m_fSteerAngle = 0.5f;
+    } else if (steer > -0.5f) {
+        vehicle->m_fSteerAngle = (float)steer;
+    } else {
+        vehicle->m_fSteerAngle = -0.5f;
+    }
 }
 
 // 0x4325C0
@@ -1429,7 +1565,40 @@ void CCarCtrl::GenerateRandomCars() {
 
 // 0x42F3C0
 void CCarCtrl::GetAIHeliToAttackPlayer(CAutomobile* automobile) {
-    plugin::Call<0x42F3C0, CAutomobile*>(automobile);
+    const auto heli = static_cast<CHeli*>(automobile);
+
+    // Note: The original gets the player's coords over and over
+    const auto  playerPos = FindPlayerCoors(-1);
+    const auto& heliPos   = heli->GetPosition();
+
+    auto heading = CGeneral::GetATanOfXY( // 0x53CC70
+        (float)((double)playerPos.x - heliPos.x),
+        (float)((double)playerPos.y - heliPos.y)
+    );
+
+    // Distance to the player. x87: The differences are kept in extended precision (only the Y is rounded to float at first)
+    const auto dyExt = (double)playerPos.y - heliPos.y;
+    const auto dxExt = (double)playerPos.x - heliPos.x;
+    auto       dist  = (float)std::sqrt(dyExt * (float)dyExt + dxExt * dxExt);
+
+    heli->m_fMaxAltitude = playerPos.z;
+    heli->m_autoPilot.m_vecDestinationCoors = playerPos;
+
+    if (heli->m_autoPilot.m_nCarMission == MISSION_HELI_ATTACK_PLAYER) {
+        if (!(dist >= 15.0f)) { // 0x858B48
+            heli->m_autoPilot.m_nCarMission = MISSION_HELI_ATTACK_PLAYER_FLY_AWAY;
+        }
+        dist += 50.0f; // 0x858B40
+    } else if (heli->m_autoPilot.m_nCarMission == MISSION_HELI_ATTACK_PLAYER_FLY_AWAY) {
+        if (!(dist <= 18.0f)) { // 0x859008
+            heli->m_autoPilot.m_nCarMission = MISSION_HELI_ATTACK_PLAYER;
+        }
+        heading += std::numbers::pi_v<float>;
+    }
+
+    FlyAIHeliInCertainDirection(heli, heading, dist, false); // 0x429A70
+    TestWhetherToFirePlaneGuns(automobile, FindPlayerEntity(-1)); // 0x429520
+    FireHeliRocketsAtTarget(automobile, FindPlayerEntity(-1)); // 0x42B270
 }
 
 // 0x42A730
@@ -1523,7 +1692,13 @@ void CCarCtrl::GetAIPlaneToDoDogFight(CAutomobile* automobile) {
 
 // 0x42F370
 void CCarCtrl::GetAIPlaneToDoDogFightAgainstPlayer(CAutomobile* automobile) {
-    plugin::Call<0x42F370, CAutomobile*>(automobile);
+    // Note: The target is stored without registering a reference
+    if (FindPlayerVehicle(-1, false)) {
+        automobile->m_autoPilot.m_TargetEntity = FindPlayerVehicle(-1, false);
+    } else {
+        automobile->m_autoPilot.m_TargetEntity = reinterpret_cast<CVehicle*>(FindPlayerPed(-1)); // Not a vehicle, but the original does the same
+    }
+    GetAIPlaneToDoDogFight(automobile);
 }
 
 // Allocates from the vehicle pool, and only calls the constructor if that succeeded (as the original code does)

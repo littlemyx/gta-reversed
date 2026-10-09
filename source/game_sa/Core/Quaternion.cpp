@@ -199,7 +199,7 @@ void CQuaternion::Set(RwV3d* axis, float angle) { // 0x59C600
 // Spherical linear interpolation
 void CQuaternion::Slerp(const CQuaternion& from, const CQuaternion& to, float t) { // 0x59C630
     // Inlined 0x4D00E0 (cdecl: from, to, float* theta, float* sinThetaInv)
-    // NOTE: Not hooked as 0x4D00E0 - CAnimBlendNode::CalcTheta is (wrongly?) hooked at that address, see report.
+    // NOTE: 0x4D00E0 is a cdecl helper (a, b, float* theta, float* invSinTheta); it is hooked as `CalcThetaFromQuats` in AnimBlendNode.cpp (CAnimBlendNode::CalcTheta is a NOTSA wrapper around it), not here.
     float dot = (float)(((double)from.w * to.w + (double)from.z * to.z + (double)from.y * to.y) + (double)from.x * to.x);
     if (dot > 1.0f) { // Original: FCOMP + `test ah, 0x41; jne` => clamp only if dot > 1 (NaN is not clamped)
         dot = 1.0f;

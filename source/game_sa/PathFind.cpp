@@ -101,7 +101,7 @@ void CPathFind::InjectHooks() {
     RH_ScopedInstall(FindLinkBetweenNodes, 0x451350);
     RH_ScopedInstall(ReturnInteriorNodeIndex, 0x451300);
     RH_ScopedInstall(FindNthNodeClosestToCoors, 0x44F8C0);
-    //RH_ScopedInstall(FindNodeClosestInRegion, 0x44F2C0);
+    RH_ScopedInstall(FindNodeClosestInRegion, 0x44F2C0);
     //RH_ScopedInstall(CalcDistToAnyConnectingLinks, 0x44F190);
     RH_ScopedInstall(CalcRoadDensity, 0x44EFC0);
     RH_ScopedInstall(FindPedCreationPosBetweenNodes, 0x44DA30);
@@ -1124,6 +1124,63 @@ bool CPathFind::IsWaterNodeNearby(CVector position, float radius) {
     return false;
 }
 
+// 0x44F2C0
+void CPathFind::FindNodeClosestInRegion(CNodeAddress* outAddress, uint16 areaId, CVector pos, uint8 nodeType, float* outDist, bool bLowTraffic, bool bUnkn, bool bBoats, bool bUnused) {
+    if (!m_pPathNodes[areaId]) {
+        return;
+    }
+
+    uint32 first, last;
+    switch (nodeType) {
+    case PATH_TYPE_VEH: // Vehicle nodes are at the start of the array
+        first = 0;
+        last  = m_anNumVehicleNodes[areaId];
+        break;
+    case PATH_TYPE_PED:     // Ped nodes follow the vehicle nodes
+        first = m_anNumVehicleNodes[areaId];
+        last  = m_anNumNodes[areaId];
+        break;
+    default:                // Nothing is searched (the original leaves `first == last == nodeType`)
+        return;
+    }
+
+    for (uint32 i = first; (int32)i < (int32)last; i++) { // The original compares the indices as signed
+        CPathNode* const node = &m_pPathNodes[areaId][i];
+
+        if (bLowTraffic && node->m_isSwitchedOff) { // [node + 0x18] & 0x20
+            continue;
+        }
+        if (bUnkn && node->unk1) { // [node + 0x19] & 2
+            continue;
+        }
+        if ((bool)node->m_bWaterNode != bBoats) { // [node + 0x18] >> 7
+            continue;
+        }
+
+        // x87: the X is stored as float, Y and Z are kept in extended precision (all are exactly representable in double)
+        const float  nodeX = (float)node->m_vPos.x;
+        const double nodeY = (double)(float)node->m_vPos.y;
+        const double nodeZ = (double)(float)node->m_vPos.z;
+
+        const double dz  = std::abs(nodeZ - (double)pos.z) * (double)3.f; // 0x858B3C
+        const double dy  = std::abs(nodeY - (double)pos.y);
+        const double dx  = std::abs((double)nodeX - (double)pos.x);
+        const double d   = ((dy + dz) + dx) * (double)0.3f; // 0x858C24
+        if (!(d < (double)*outDist)) { // NaN => skip
+            continue;
+        }
+        const float dF = (float)d;
+
+        // 0x44F190 (returns in st0)
+        const double total = (double)plugin::CallMethodAndReturn<float, 0x44F190, CPathFind*, CPathNode*, CVector>(this, node, pos) * (double)0.2f + (double)dF; // 0x858CC4
+        if (total < (double)*outDist) {
+            *outDist = (float)total;
+            outAddress->m_wAreaId = areaId;
+            outAddress->m_wNodeId = (uint16)i;
+        }
+    }
+}
+
 // 0x44F460
 CNodeAddress CPathFind::FindNodeClosestToCoors(
     CVector pos,
@@ -1138,11 +1195,9 @@ CNodeAddress CPathFind::FindNodeClosestToCoors(
     float        dist = maxDistance; // Also used as the "best distance so far" by `FindNodeClosestInRegion`
     CNodeAddress closest{};          // NOTE: Only the area ID is initialized in the original (the node ID is garbage)
 
-    // 0x44F2C0 - Not reversed yet. NOTE: `unk3` is never passed on.
+    // NOTE: `unk3` is never passed on.
     const auto SearchRegion = [&](size_t areaId, int32 lastArg) {
-        plugin::CallMethod<0x44F2C0, CPathFind*, CNodeAddress*, uint16, CVector, int32, float*, uint16, uint16, uint16, int32>(
-            this, &closest, (uint16)areaId, pos, (int32)nodeType, &dist, unk2, unk4, bBoatsOnly, lastArg
-        );
+        FindNodeClosestInRegion(&closest, (uint16)areaId, pos, (uint8)nodeType, &dist, unk2, unk4, bBoatsOnly, lastArg);
     };
 
     // _ftol(), then clamped to [0, 7]

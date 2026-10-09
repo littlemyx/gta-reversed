@@ -307,6 +307,21 @@ if (${RE_PROJECT}_RW_LIBRW)
     target_include_directories(rw_world_geometry_test BEFORE PRIVATE fakerw)
     target_link_libraries(rw_world_geometry_test PRIVATE librw d3d9 user32)
     set_target_properties(rw_world_geometry_test PROPERTIES COMPILE_WARNING_AS_ERROR OFF)
+    # P2B-03b unit test of texture.cpp + texdict.cpp (Wine-runnable; optional argv[1] = SA `models` directory for the real TXD checks)
+    add_executable(rw_texture_test EXCLUDE_FROM_ALL
+        "${PROJECT_SOURCE_DIR}/tests/standalone/rw_texture_test.cpp"
+        standalone/rw/texture.cpp
+        standalone/rw/texdict.cpp
+        standalone/rw/raster.cpp
+        standalone/rw/image.cpp
+        standalone/rw/frame.cpp
+        standalone/rw/camera.cpp
+    )
+    target_compile_features(rw_texture_test PRIVATE cxx_std_23)
+    target_compile_definitions(rw_texture_test PRIVATE NOTSA_RW_LIBRW RW_D3D9)
+    target_include_directories(rw_texture_test BEFORE PRIVATE fakerw)
+    target_link_libraries(rw_texture_test PRIVATE librw d3d9 user32)
+    set_target_properties(rw_texture_test PROPERTIES COMPILE_WARNING_AS_ERROR OFF)
 endif()
 
 #--------------------------------------------------------------------
@@ -360,6 +375,8 @@ if (${RE_PROJECT}_RW_LIBRW)
 
     # P2B-04ab: anonymous-namespace helpers (geometry.cpp mesh builder)
     set_source_files_properties(standalone/rw/geometry.cpp standalone/rw/light.cpp standalone/rw/world.cpp standalone/rw/material.cpp PROPERTIES SKIP_UNITY_BUILD_INCLUSION ON)
+    # P2B-03b: texture.cpp includes the private d3d9 header; texdict.cpp pairs with it
+    set_source_files_properties(standalone/rw/texture.cpp standalone/rw/texdict.cpp PROPERTIES SKIP_UNITY_BUILD_INCLUSION ON)
 endif()
 
 target_link_libraries(${RE_PROJECT_LIB_NAME} PRIVATE

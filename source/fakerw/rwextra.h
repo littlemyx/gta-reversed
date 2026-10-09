@@ -265,3 +265,26 @@ RwUInt32 RpGeometryStreamGetSize(const RpGeometry* geometry);
 inline RpGeometry* RpGeometryAddRef(RpGeometry* geometry) { geometry->refCount++; return geometry; }
 // the value last passed to RpD3D9GeometrySetUsageFlags (0 = never set); read by the custom pipelines' instance callbacks
 RwUInt32 RpD3D9GeometryGetUsageFlags(const RpGeometry* geometry);
+// 03b --------------------------------------------------------------------------------------------------------------------------------
+// P2B-03b (texture + texdict, standalone/rw/{texture,texdict}.cpp): RW functions that are not in rwapi.h (the game reaches them only through the
+// stock RW headers or not at all). Same signatures as RW 3.6.
+//--------------------------------------------------------------------------------------------------
+RwBool                  RwTextureGetMipmapping(void);
+RwBool                  RwTextureGetAutoMipmapping(void);
+RwTextureCallBackRead   RwTextureGetReadCallBack(void);
+RwTexture*              RwTextureSetMaskName(RwTexture* texture, const RwChar* maskName);
+RwTexture*              RwTextureStreamRead(RwStream* stream);
+const RwTexture*        RwTextureStreamWrite(const RwTexture* texture, RwStream* stream);
+RwUInt32                RwTextureStreamGetSize(const RwTexture* texture);
+RwInt32                 RwTexDictionaryRegisterPluginStream(RwUInt32 pluginID, RwPluginDataChunkReadCallBack readCB, RwPluginDataChunkWriteCallBack writeCB, RwPluginDataChunkGetSizeCallBack getSizeCB);
+RwTexDictionary*        RwTexDictionaryStreamRead(RwStream* stream);
+RwUInt32                RwTexDictionaryStreamGetSize(const RwTexDictionary* texDict);
+
+// RW's filterAddressing masks (rwcore.h / rwtexture): used by the RwTextureGet{FilterMode,AddressingU,AddressingV} accessor macros in rwaccessors.h, which
+// were never given the constants. Layout: bits 0-7 filter, 8-11 U, 12-15 V (librw's Texture::getFilter / getAddressU / getAddressV).
+#ifndef rwTEXTUREFILTERMODEMASK
+#define rwTEXTUREFILTERMODEMASK     0x000000FF
+#define rwTEXTUREADDRESSINGUMASK    0x00000F00
+#define rwTEXTUREADDRESSINGVMASK    0x0000F000
+#define rwTEXTUREADDRESSINGMASK     (rwTEXTUREADDRESSINGUMASK | rwTEXTUREADDRESSINGVMASK)
+#endif

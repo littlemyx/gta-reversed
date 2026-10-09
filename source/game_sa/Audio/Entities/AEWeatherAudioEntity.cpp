@@ -15,7 +15,7 @@ enum class eWeatherEvent {
 };
 
 
-// NOTE: (x, y, z) = (-0.906, 0.423, 0), as built on the stack at 0x505A00 (compared against `sound->m_CurrPos`) and by `Service` (0x5052F0)
+// NOTE: (x, y, z) = (-0.906, 0.423, 0), as built on the stack at 0x505A00 (compared against `sound->m_CurrPos`); `Service` (0x5052F0) builds its own 4 variants
 constexpr CVector DEFAULT_POS = { -0.906f, 0.423f, 0.f };
 
 auto& m_snLastRainDropSoundID = StaticRef<int32>(0x8CC310); // TODO: Use `eSoundID`
@@ -311,92 +311,141 @@ void CAEWeatherAudioEntity::UpdateParameters(CAESound* sound, int16 curPlayPos) 
 
 // 0x5052F0
 void CAEWeatherAudioEntity::Service() {
+    // The 4 positions the original builds on its stack: (+-0.906, +-0.423, 0)
+    static_assert(std::bit_cast<uint32>(0.906f) == 0x3F67EF9E && std::bit_cast<uint32>(0.423f) == 0x3ED89375);
+    constexpr CVector POS_L_FRONT{ -0.906f,  0.423f, 0.f }; // [esp+0x20]
+    constexpr CVector POS_R_FRONT{  0.906f,  0.423f, 0.f }; // [esp+0x14]
+    constexpr CVector POS_L_BACK { -0.906f, -0.423f, 0.f }; // [esp+0x38]
+    constexpr CVector POS_R_BACK {  0.906f, -0.423f, 0.f }; // [esp+0x2C]
+
     if (CGame::CanSeeOutSideFromCurrArea()) { // 0x50538C
-        const auto EnsureSoundForEventIsPlaying = [this](eSoundID sfx, eWeatherEvent event, int16 startPlayPercentage) {
-            if (!AEAudioHardware.EnsureSoundBankIsLoaded(SND_BANK_GENRL_FRONTEND_GAME, SND_BANK_SLOT_FRONTEND_GAME)) {
-                return;
-            }
-            if (AESoundManager.AreSoundsOfThisEventPlayingForThisEntity(+event, this)) {
-                return;
-            }
+        // Each block: [gate on event] -> [bank loaded ? play sound(s) : request bank load]
+        const auto PlayEventSound = [this](eSoundID sfx, const CVector& pos, uint16 flags, int16 playTime, eWeatherEvent event) {
             AESoundManager.PlaySound({
                 .BankSlotID  = SND_BANK_SLOT_FRONTEND_GAME,
                 .SoundID     = sfx,
                 .AudioEntity = this,
-                .Pos         = DEFAULT_POS,
+                .Pos         = pos,
                 .Volume      = -50.f,
-                .Flags       = SOUND_FORCED_FRONT | SOUND_START_PERCENTAGE | SOUND_REQUEST_UPDATES | SOUND_FRONT_END,
-                .PlayTime    = startPlayPercentage,
+                .Flags       = flags,
+                .PlayTime    = playTime,
                 .EventID     = +event,
             });
         };
 
-        // 0x50539E
-        EnsureSoundForEventIsPlaying(0, eWeatherEvent::CITY_NOISE, 0); 
-        EnsureSoundForEventIsPlaying(0, eWeatherEvent::CITY_NOISE, 50);
+        // 0x50539E: City noise - a pair of sounds under a single gate
+        if (!AESoundManager.AreSoundsOfThisEventPlayingForThisEntity(+eWeatherEvent::CITY_NOISE, this)) {
+            if (AEAudioHardware.IsSoundBankLoaded(SND_BANK_GENRL_FRONTEND_GAME, SND_BANK_SLOT_FRONTEND_GAME)) {
+                PlayEventSound(0, POS_L_FRONT, SOUND_FORCED_FRONT | SOUND_REQUEST_UPDATES | SOUND_FRONT_END, 0, eWeatherEvent::CITY_NOISE);
+                PlayEventSound(0, POS_R_FRONT, SOUND_FORCED_FRONT | SOUND_START_PERCENTAGE | SOUND_REQUEST_UPDATES | SOUND_FRONT_END, 50, eWeatherEvent::CITY_NOISE);
+            } else {
+                AEAudioHardware.LoadSoundBank(SND_BANK_GENRL_FRONTEND_GAME, SND_BANK_SLOT_FRONTEND_GAME);
+            }
+        }
 
-        // 0x505482
-        EnsureSoundForEventIsPlaying(29, eWeatherEvent::UNK_4, 0);
+        // 0x505482: Wind (left)
+        if (!AESoundManager.AreSoundsOfThisEventPlayingForThisEntity(+eWeatherEvent::UNK_4, this)) {
+            if (AEAudioHardware.IsSoundBankLoaded(SND_BANK_GENRL_FRONTEND_GAME, SND_BANK_SLOT_FRONTEND_GAME)) {
+                PlayEventSound(29, POS_L_FRONT, SOUND_FORCED_FRONT | SOUND_REQUEST_UPDATES | SOUND_FRONT_END, 0, eWeatherEvent::UNK_4);
+            } else {
+                AEAudioHardware.LoadSoundBank(SND_BANK_GENRL_FRONTEND_GAME, SND_BANK_SLOT_FRONTEND_GAME);
+            }
+        }
 
-        // 0x505509
-        EnsureSoundForEventIsPlaying(30, eWeatherEvent::UNK_5, 50);
+        // 0x505509: Wind (right)
+        if (!AESoundManager.AreSoundsOfThisEventPlayingForThisEntity(+eWeatherEvent::UNK_5, this)) {
+            if (AEAudioHardware.IsSoundBankLoaded(SND_BANK_GENRL_FRONTEND_GAME, SND_BANK_SLOT_FRONTEND_GAME)) {
+                PlayEventSound(30, POS_R_FRONT, SOUND_FORCED_FRONT | SOUND_START_PERCENTAGE | SOUND_REQUEST_UPDATES | SOUND_FRONT_END, 50, eWeatherEvent::UNK_5);
+            } else {
+                AEAudioHardware.LoadSoundBank(SND_BANK_GENRL_FRONTEND_GAME, SND_BANK_SLOT_FRONTEND_GAME);
+            }
+        }
     }
 
-    const auto UpdateRainSounds = [this](float targetVolume) {
-        m_sfRainVolume = notsa::step_to(m_sfRainVolume, targetVolume, 0.5f);
-
-        if (targetVolume == -100.f && m_sfRainVolume <= -50.f) { // 0x50566D
-            m_sfRainVolume = -100.f;
-            if (m_sRainSoundL.IsActive()) {
-                m_sRainSoundL.StopSoundAndForget();
+    // 0x505592: Rain
+    // Returns false if the rest of the function must be skipped (original jumps to the epilogue)
+    const auto UpdateRainTwinLoopSound = [&](CAETwinLoopSoundEntity& sound, bool isLeft) -> bool {
+        const auto& posFront = isLeft ? POS_L_FRONT : POS_R_FRONT;
+        const auto& posBack  = isLeft ? POS_L_BACK  : POS_R_BACK;
+        if (sound.IsActive()) {
+            sound.UpdateTwinLoopSound(posFront, m_sfRainVolume, 1.f);
+            if (sound.DoSoundsSwitchThisFrame()) {
+                m_snLastRainDropSoundID = m_snLastRainDropSoundID + 1 <= 11
+                    ? m_snLastRainDropSoundID + 1
+                    : 2;
+                // NOTE: The original calls the random number generator BEFORE `ResolveProbability`
+                // and computes `(vol - 15) + rand` with `vol - 15` in extended precision.
+                const auto rnd = CAEAudioUtility::GetRandomNumberInRange(-6.f, 6.f);
+                const auto vol = (float)(((double)m_sfRainVolume - 15.0) + (double)rnd);
+                AESoundManager.PlaySound({
+                    .BankSlotID = SND_BANK_SLOT_WEATHER,
+                    .SoundID    = (eSoundID)(m_snLastRainDropSoundID),
+                    .Pos        = CAEAudioUtility::ResolveProbability(0.5f) ? posFront : posBack,
+                    .Volume     = vol,
+                    .Flags      = SOUND_IS_CANCELLABLE | SOUND_FRONT_END, // Original: init with 0, then `m_Flags = 3`
+                });
             }
-            if (m_sRainSoundR.IsActive()) {
-                m_sRainSoundR.StopSoundAndForget();
-            }
-        } else {
-            const auto UpdateRainTwinLoopSound = [this](CAETwinLoopSoundEntity& sound, float posX) {
-                if (sound.IsActive()) {
-                    sound.UpdateTwinLoopSound({posX, 0.f, 0.423f}, m_sfRainVolume, 1.f);
-                    if (sound.DoSoundsSwitchThisFrame()) {
-                        m_snLastRainDropSoundID = m_snLastRainDropSoundID + 1 <= 11
-                            ? m_snLastRainDropSoundID + 1
-                            : 2;
-                        AESoundManager.PlaySound({
-                            .BankSlotID = SND_BANK_SLOT_WEATHER,
-                            .SoundID    = (eSoundID)(m_snLastRainDropSoundID),
-                            .Pos        = CVector{ posX, CAEAudioUtility::ResolveProbability(0.5f) ? 0.423f : -0.423f, 0.f },
-                            .Volume     = CAEAudioUtility::GetRandomNumberInRange(-6.f, 6.f) + m_sfRainVolume - 15.f,
-                            .Flags      = SOUND_IS_CANCELLABLE | SOUND_FRONT_END
-                        });
-                    }
-                } else if (AEAudioHardware.EnsureSoundBankIsLoaded(SND_BANK_GENRL_RAIN, SND_BANK_SLOT_WEATHER)) {
-                    sound.Initialise(
-                        SND_BANK_SLOT_WEATHER,
-                        1,
-                        0,
-                        this,
-                        65u,
-                        350u
-                    );
-                    sound.PlayTwinLoopSound(
-                        { posX, 0.423f, 0.f },
-                        m_sfRainVolume,
-                        1.f,
-                        1.f,
-                        1.f,
-                        (eSoundEnvironment)(SOUND_START_PERCENTAGE | SOUND_IS_CANCELLABLE | SOUND_FRONT_END)
-                    );
-                }
-            };
-            UpdateRainTwinLoopSound(m_sRainSoundL, -0.906f);
-            UpdateRainTwinLoopSound(m_sRainSoundR, 0.906f);
+            return true;
         }
+        if (!AEAudioHardware.IsSoundBankLoaded(SND_BANK_GENRL_RAIN, SND_BANK_SLOT_WEATHER)) { // 0x505701 / 0x505862
+            AEAudioHardware.LoadSoundBank(SND_BANK_GENRL_RAIN, SND_BANK_SLOT_WEATHER);
+            return false; // Jumps to the function end (the right sound isn't handled this frame if the left one fails)
+        }
+        if (isLeft) { // 0x50571E
+            sound.Initialise(SND_BANK_SLOT_WEATHER, 1, 0, this, 65u, 350u, 0, 0);
+        } else { // 0x50588E
+            sound.Initialise(SND_BANK_SLOT_WEATHER, 0, 1, this, 65u, 350u, 50, 50);
+        }
+        sound.PlayTwinLoopSound(
+            posFront,
+            m_sfRainVolume,
+            1.f,
+            1.f,
+            1.f,
+            (eSoundEnvironment)(SOUND_START_PERCENTAGE | SOUND_IS_CANCELLABLE | SOUND_FRONT_END)
+        );
+        return true;
     };
+
+    // The target volume is kept in extended precision by the original until it's compared / stored, so use doubles
+    double targetVolume;
     if (CWeather::Rain <= 0.f || CCullZones::PlayerNoRain() || CCullZones::CamNoRain() || !CGame::CanSeeOutSideFromCurrArea()) { // 0x5055A3
-        UpdateRainSounds(-100.0f);
+        targetVolume = -100.0;
     } else { // 0x5055D5
-        m_sfRainVolume = std::max(m_sfRainVolume, -50.f);
-        UpdateRainSounds(GetDefaultVolume(AE_RAIN) + CAEAudioUtility::AudioLog10(std::max(CWeather::Rain - 0.2f, 0.f) / 0.8f) * 20.f);
+        if (!(m_sfRainVolume > -50.f)) {
+            m_sfRainVolume = -50.f;
+        }
+        double x = (double)CWeather::Rain - (double)0.2f;
+        if (!(x > 0.0)) {
+            x = 0.0;
+        }
+        x *= 1.25; // 0x8595F0 (NOT a division by 0.8)
+        // NOTE: Raw `fyl2x`, NOT `AudioLog10` (no clamp, log10(0) = -inf)
+        targetVolume = std::log10(x) * 20.0 + (double)GetDefaultVolume(AE_RAIN); // 0x505608
+    }
+
+    // 0x505634: step `m_sfRainVolume` towards the target by 0.5
+    const double cur = m_sfRainVolume;
+    if (targetVolume < cur) {
+        const double dec = cur - 0.5;
+        m_sfRainVolume = dec > targetVolume ? (float)dec : (float)targetVolume;
+    } else if (targetVolume > cur) {
+        const double inc = cur + 0.5;
+        m_sfRainVolume = inc < targetVolume ? (float)inc : (float)targetVolume;
+    } // else: equal or unordered => unchanged
+
+    if (targetVolume == -100.0 && m_sfRainVolume <= -50.f) { // 0x50566D
+        m_sfRainVolume = -100.f;
+        if (m_sRainSoundL.IsActive()) {
+            m_sRainSoundL.StopSoundAndForget();
+        }
+        if (m_sRainSoundR.IsActive()) {
+            m_sRainSoundR.StopSoundAndForget();
+        }
+        return;
+    }
+    if (UpdateRainTwinLoopSound(m_sRainSoundL, true)) {
+        UpdateRainTwinLoopSound(m_sRainSoundR, false);
     }
 }
 

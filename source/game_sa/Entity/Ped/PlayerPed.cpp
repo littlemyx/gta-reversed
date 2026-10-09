@@ -102,6 +102,7 @@ void CPlayerPed::InjectHooks() {
     RH_ScopedInstall(FindPedToAttack, 0x60C5F0);
     RH_ScopedInstall(PlayerWantsToAttack, 0x60CC50);
     RH_ScopedInstall(FindWeaponLockOnTarget, 0x60DC50);
+    RH_ScopedInstall(FindNextWeaponLockOnTarget, 0x60E530);
     RH_ScopedInstall(ForceGroupToAlwaysFollow, 0x60C7C0);
     RH_ScopedInstall(ForceGroupToNeverFollow, 0x60C800);
     RH_ScopedInstall(MakeThisPedJoinOurGroup, 0x60C840);
@@ -2440,8 +2441,118 @@ bool CPlayerPed::FindWeaponLockOnTarget() {
 }
 
 // 0x60E530
-bool CPlayerPed::FindNextWeaponLockOnTarget(CEntity* arg0, bool arg1) {
-    return plugin::CallMethodAndReturn<bool, 0x60E530, CPlayerPed *, CEntity*, bool>(this, arg0, arg1);
+bool CPlayerPed::FindNextWeaponLockOnTarget(CEntity* currentTarget, bool arg1) {
+    const auto  wepType  = GetActiveWeapon().m_Type;
+    const auto* wepInfo  = CWeaponInfo::GetWeaponInfo(wepType, GetWeaponSkill()); // 0x743C60
+    const float wepRange = wepInfo->m_fTargetRange;
+
+    CEntity* bestTarget   = nullptr;
+    float    bestPriority = -10000.0f; // 0xC61C4000
+
+    // NOTE: The original calls `GetATanOfXY(GetForward())` here and discards the result
+
+    // Angle from the camera to the current target, or the camera's forward direction if there is none
+    float refX, refY;
+    if (currentTarget) {
+        const auto& targetPos = currentTarget->GetPosition();
+        const auto& camPos    = TheCamera.GetPosition();
+        refY = targetPos.y - camPos.y;
+        refX = targetPos.x - camPos.x;
+    } else {
+        refX = TheCamera.m_mCameraMatrix.GetForward().x; // 0xB6F9AC
+        refY = TheCamera.m_mCameraMatrix.GetForward().y; // 0xB6F9B0
+    }
+    const float angle = CGeneral::GetATanOfXY(refX, refY); // 0x53CC70
+
+    // BUG: In the original the range multiplier of the object and vehicle loops below is evaluated for
+    // whatever the register held after the ped loop (the ped in slot 0 or null; `currentTarget` if the
+    // ped pool has no slots) instead of the object / vehicle being evaluated.
+    CEntity* rangeTarget = currentTarget;
+
+    // Peds
+    for (auto i = GetPedPool()->GetSize(); i-- > 0;) {
+        CPed* const ped = GetPedPool()->GetAt(i);
+        rangeTarget = ped;
+        if (!ped || ped == this || ped == currentTarget) {
+            continue;
+        }
+        if (ped->m_nPedState == PEDSTATE_DIE || ped->m_nPedState == PEDSTATE_DEAD) { // 0x36, 0x37
+            continue;
+        }
+        if (ped->bInVehicle) {
+            const auto* const veh = ped->m_pVehicle;
+            if (!veh || (veh->m_nVehicleType != VEHICLE_TYPE_BIKE && !veh->vehicleFlags.bVehicleCanBeTargetted)) {
+                continue;
+            }
+        }
+        if (ped->bNeverEverTargetThisPed) { // 0x470, 0x10000000
+            continue;
+        }
+        if (CPedGroups::AreInSameGroup(ped, this)) { // 0x5F7F40
+            continue;
+        }
+        if ((ped->m_nPedType == PED_TYPE_PLAYER1 || ped->m_nPedType == PED_TYPE_PLAYER2) && CGameLogic::bPlayersCannotTargetEachOther) {
+            continue;
+        }
+        if (LOSBlockedBetweenPeds(this, ped)) { // 0x60B550
+            continue;
+        }
+        if (!CanIKReachThisTarget(ped->GetPosition(), &GetActiveWeapon(), true)) { // 0x609F80
+            continue;
+        }
+        const float mult = CWeapon::TargetWeaponRangeMultiplier(ped, this); // 0x73B380
+        EvaluateNeighbouringTarget(ped, &bestTarget, &bestPriority, (float)((double)mult * (double)wepRange), angle, arg1); // 0x60D1C0
+    }
+
+    // Objects
+    for (auto i = GetObjectPool()->GetSize(); i-- > 0;) {
+        CObject* const obj = GetObjectPool()->GetAt(i);
+        if (!obj || !obj->CanBeTargetted() || obj->objectFlags.bIsExploded /* 0x140, 0x40 */ || !obj->GetRwObject()) {
+            continue;
+        }
+        if (!CanIKReachThisTarget(obj->GetPosition(), &GetActiveWeapon(), true)) {
+            continue;
+        }
+        const float mult = CWeapon::TargetWeaponRangeMultiplier(notsa::IsFixBugs() ? (CEntity*)obj : rangeTarget, this);
+        EvaluateNeighbouringTarget(obj, &bestTarget, &bestPriority, (float)((double)mult * (double)wepRange), angle, arg1);
+    }
+
+    // Vehicles (co-op only)
+    if (CGameLogic::IsCoopGameGoingOn()) { // 0x441390
+        for (auto i = GetVehiclePool()->GetSize(); i-- > 0;) {
+            CVehicle* const veh = GetVehiclePool()->GetAt(i);
+            if (!veh || veh->physicalFlags.bRenderScorched /* 0x40, 0x20000000 */ || veh->m_nVehicleSubType == VEHICLE_TYPE_BMX) {
+                continue;
+            }
+            if (!CanIKReachThisTarget(veh->GetPosition(), &GetActiveWeapon(), true)) {
+                continue;
+            }
+            const float mult = CWeapon::TargetWeaponRangeMultiplier(notsa::IsFixBugs() ? (CEntity*)veh : rangeTarget, this);
+            EvaluateNeighbouringTarget(veh, &bestTarget, &bestPriority, (float)((double)mult * (double)wepRange), angle, arg1);
+        }
+    }
+
+    if (!bestTarget) {
+        return false;
+    }
+
+    // Tell the new target (or its group) that a gun is aimed at it
+    if (bestTarget->GetIsTypePed() && CWeaponInfo::GetWeaponInfo(GetActiveWeapon().m_Type, eWeaponSkill::STD)->m_nWeaponFire != WEAPON_FIRE_MELEE) {
+        CPed* const targetPed = bestTarget->AsPed();
+        if (auto* const group = CPedGroups::GetPedsGroup(targetPed)) { // 0x5F7E80
+            if (!CPedGroups::AreInSameGroup(targetPed, this)) {
+                CEventGroupEvent event{ targetPed, new CEventGunAimedAt{ this } }; // 0x4B0700, 0x4ADFD0
+                group->GetIntelligence().AddEvent(&event); // 0x5F7470
+            }
+        } else {
+            CEventGunAimedAt event{ this }; // 0x4B0700
+            targetPed->GetIntelligence()->m_eventGroup.Add(&event, false); // 0x4AB420
+        }
+    }
+
+    CEntity::ChangeEntityReference(m_pTargetedObject, bestTarget);
+    GetPlayerData()->m_bDontAllowWeaponChange = true; // 0x85
+    return true;
 }
 
 // 0x60EA90

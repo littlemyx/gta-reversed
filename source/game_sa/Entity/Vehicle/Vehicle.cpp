@@ -1877,7 +1877,8 @@ bool CVehicle::CarHasRoof() {
 // 0x6D2600
 float CVehicle::HeightAboveCeiling(float height, eFlightModel flightModel) {
     switch (flightModel) {
-    case eFlightModel::FLIGHT_MODEL_BARON: {
+    case eFlightModel::FLIGHT_MODEL_BARON:
+    case eFlightModel::FLIGHT_MODEL_RC: { // 0x6D2604 & 0x6D2609: models 1 AND 2 take this path
         if (height >= 500.f) {
             if (height < 950.f) {
                 return height - 500.f;
@@ -1890,10 +1891,6 @@ float CVehicle::HeightAboveCeiling(float height, eFlightModel flightModel) {
         return -1.f;
     }
     default: {
-        // Originally this was the condition used, but it's ugly
-        // Leaving here to make sure it all works as expectd
-        assert(!((uint32)((int)flightModel - 1) <= 1u)); // (unsigned compare: the original treats model 2 like 1)
-
         if (height < 800.f)
             return -1.f;
         return height - 800.f;
@@ -2397,12 +2394,15 @@ RpAtomic* RemoveAllUpgradesCB(RpAtomic* atomic, void* data) {
 }
 
 // From [0x6D35BC - 0x6D3611]
-static void SetupUpgradeAtomicRendering(RpAtomic* atomic, bool isDamaged) {
+// NOTE: Only `CreateUpgradeAtomic` (0x6D35EA) sets `ATOMIC_ALPHA`; `CreateReplacementAtomic` (0x6D37F6) and `AddReplacementUpgrade` (0x6D38F3) do not.
+static void SetupUpgradeAtomicRendering(RpAtomic* atomic, bool isDamaged, bool setAlphaFlag) {
     RpMaterial* hasAlphaMaterial = nullptr;
     RpGeometryForAllMaterials(RpAtomicGetGeometry(atomic), CVehicleModelInfo::HasAlphaMaterialCB, &hasAlphaMaterial);
     if (hasAlphaMaterial) {
         CVisibilityPlugins::SetAtomicRenderCallback(atomic, CVisibilityPlugins::RenderVehicleHiDetailAlphaCB);
-        CVisibilityPlugins::SetAtomicFlag(atomic, ATOMIC_ALPHA);
+        if (setAlphaFlag) {
+            CVisibilityPlugins::SetAtomicFlag(atomic, ATOMIC_ALPHA);
+        }
     } else {
         CVisibilityPlugins::SetAtomicRenderCallback(atomic, CVisibilityPlugins::RenderVehicleHiDetailCB);
     }
@@ -2435,7 +2435,7 @@ RpAtomic* CVehicle::CreateUpgradeAtomic(CBaseModelInfo* mi, const UpgradePosnDes
     CVisibilityPlugins::SetAtomicFlag(atomic, eAtomicComponentFlag::ATOMIC_UPGRADE);
     CVisibilityPlugins::SetAtomicFlag(atomic, eAtomicComponentFlag::ATOMIC_DONT_CULL);
 
-    SetupUpgradeAtomicRendering(atomic, isDamaged);
+    SetupUpgradeAtomicRendering(atomic, isDamaged, true);
 
     CDamageAtomicModelInfo::ms_bCreateDamagedVersion = false;
     return atomic;
@@ -2504,7 +2504,7 @@ RpAtomic* CVehicle::CreateReplacementAtomic(CBaseModelInfo* mi, RwFrame* parentF
     CVisibilityPlugins::SetAtomicId(atomic, flags & ~eAtomicComponentFlag::ATOMIC_MASK);
     CVisibilityPlugins::SetAtomicFlag(atomic, isDamaged ? eAtomicComponentFlag::ATOMIC_DAMAGED : eAtomicComponentFlag::ATOMIC_OK);
 
-    SetupUpgradeAtomicRendering(atomic, isDamaged);
+    SetupUpgradeAtomicRendering(atomic, isDamaged, false);
 
     CDamageAtomicModelInfo::ms_bCreateDamagedVersion = false;
 
@@ -2532,7 +2532,7 @@ void CVehicle::AddReplacementUpgrade(int32 modelIndex, int32 nodeId) {
     CVisibilityPlugins::SetAtomicId(atomic, oldAtomicFlags & ~ATOMIC_MASK);
     CVisibilityPlugins::SetAtomicFlag(atomic, ATOMIC_OK);
 
-    SetupUpgradeAtomicRendering(atomic, false); // NOTE: 0x6D38D5 - 0x6D390B
+    SetupUpgradeAtomicRendering(atomic, false, false); // NOTE: 0x6D38D5 - 0x6D390B
 
     CDamageAtomicModelInfo::ms_bCreateDamagedVersion = false;
 
@@ -3690,7 +3690,7 @@ void CVehicle::InflictDamage(CEntity* damager, eWeaponType weapon, float intensi
         if (gasCapPos != CVector{}) { // 0x509760 is `operator!=`
             const auto worldPos = TransformPointExt(*m_matrix, gasCapPos);
             coords = CVector{ coords.x - worldPos.x, coords.y - worldPos.y, coords.z - worldPos.z };
-            if (coords.Magnitude() < 0.25f) {
+            if (MagnitudeExt(coords) < 0.25f) { // 0x4082C0: the result stays in the FPU (not rounded to float)
                 intensity = m_fHealth < 1100.0f ? m_fHealth : 1100.0f; // 0x404330 (min, with the original's NaN behaviour)
             }
         }
@@ -5648,7 +5648,7 @@ bool CVehicle::AddSingleWheelParticles(tWheelState wheelState, uint32 arg1, floa
         }
     }
 
-    if (!(arg2 < 1.0f)) {
+    if (arg2 >= 1.0f) { // (FCOMP + `TEST AH, 1` + JZ: NaN does NOT return)
         return false;
     }
 

@@ -68,6 +68,7 @@ void CStats::InjectHooks() {
     RH_ScopedInstall(FindMostFavoriteRadioStation, 0x558FA0);
     RH_ScopedInstall(FindLeastFavoriteRadioStation, 0x559010);
     RH_ScopedInstall(GetFatAndMuscleModifier, 0x559AF0);
+    RH_ScopedInstall(FindCriminalRatingString, 0x55A210);
     RH_ScopedOverloadedInstall(GetStatValue, "-OG", 0x558E40, float(*)(eStats));
     RH_ScopedInstall(SetStatValue, 0x55A070);
     RH_ScopedInstall(IsStatFloat, 0x558E30);
@@ -697,8 +698,107 @@ void CStats::RegisterBestPosition(eStats stat, int32 position) {
 }
 
 // 0x55A210
-GxtChar* CStats::FindCriminalRatingString() {
-    return plugin::CallAndReturn<GxtChar*, 0x55A210>();
+const GxtChar* CStats::FindCriminalRatingString() {
+    struct Tier { int32 below; const char* key; };
+    const auto Find = [](int32 rating, std::initializer_list<Tier> tiers) -> const char* {
+        for (const auto& t : tiers) {
+            if (rating < t.below) {
+                return t.key;
+            }
+        }
+        return nullptr;
+    };
+
+    const int32 rating = FindCriminalRatingNumber(); // 0x559080
+
+    if (rating < 0) {
+        if (rating > -500) {
+            return TheText.Get("RATNG53");
+        }
+        if (rating > -2000) {
+            return TheText.Get("RATNG54");
+        }
+        if (rating > -4000) {
+            return TheText.Get("RATNG55");
+        }
+        if (rating > -6000) {
+            return TheText.Get("RATNG56");
+        }
+        return TheText.Get("RATNG57");
+    }
+
+    if (const auto* key = Find(rating, {
+        {20, "RATNG1"},
+        {50, "RATNG2"},
+        {75, "RATNG3"},
+        {100, "RATNG4"},
+        {120, "RATNG5"},
+        {150, "RATNG6"},
+        {200, "RATNG7"},
+        {240, "RATNG8"},
+        {270, "RATNG9"},
+        {300, "RATNG10"},
+        {335, "RATNG11"},
+        {370, "RATNG12"},
+        {400, "RATNG13"},
+        {450, "RATNG14"},
+        {500, "RATNG15"},
+        {550, "RATNG16"},
+        {600, "RATNG17"},
+        {610, "RATNG18"},
+        {650, "RATNG19"},
+        {700, "RATNG20"},
+        {850, "RATNG21"},
+        {1000, "RATNG22"},
+        {1005, "RATNG23"},
+        {1150, "RATNG24"}
+    })) {
+        return TheText.Get(key);
+    }
+
+    if (rating < 1300) { // Special case, TIMES_BUSTED
+        return TheText.Get((float)StatTypesInt[STAT_TIMES_BUSTED - FIRST_INT_STAT] > 0.0f ? "RATNG25" : "RATNG24");
+    }
+
+    if (const auto* key = Find(rating, {
+        {1500, "RATNG26"},
+        {1700, "RATNG27"},
+        {2000, "RATNG28"},
+        {2100, "RATNG29"},
+        {2300, "RATNG30"},
+        {2500, "RATNG31"},
+        {2750, "RATNG32"},
+        {3000, "RATNG33"},
+        {3500, "RATNG34"},
+        {4000, "RATNG35"},
+        {5000, "RATNG36"},
+        {7500, "RATNG37"},
+        {10000, "RATNG38"},
+        {20000, "RATNG39"},
+        {30000, "RATNG40"},
+        {40000, "RATNG41"},
+        {50000, "RATNG42"},
+        {65000, "RATNG43"},
+        {80000, "RATNG44"},
+        {100000, "RATNG45"},
+        {150000, "RATNG46"},
+        {200000, "RATNG47"},
+        {300000, "RATNG48"},
+        {375000, "RATNG49"}
+    })) {
+        return TheText.Get(key);
+    }
+
+    if (rating < 500000) { // Special case, FLIGHT_TIME; x87: kept in extended precision, then truncated by _ftol
+        const auto flightTime = (int32)((double)StatTypesInt[STAT_FLIGHT_TIME - FIRST_INT_STAT] * (double)(1.6666667e-05f) * (double)0.016666668f);
+        return TheText.Get(flightTime > 10 ? "RATNG50" : "RATNG49");
+    }
+
+    static_assert(offsetof(CPlayerInfo, m_nDisplayMoney) == 0xBC);
+    if (rating >= 1000000 && CWorld::Players[CWorld::PlayerInFocus].m_nDisplayMoney > 10000000 /* NOTE: not m_nMoney */) {
+        return TheText.Get("RATNG52");
+    }
+    return TheText.Get("RATNG51");
 }
 
 // 0x55A780

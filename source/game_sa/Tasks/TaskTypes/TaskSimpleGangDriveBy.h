@@ -69,11 +69,14 @@ public:
 
     void FireGun(CPed* ped);
 
-    // Not reversed yet (names guessed)
+    // Names guessed
     bool StartDriveByAnim(CPed* ped); // 0x627B20
     void ProcessPlayerPed(CPed* ped); // 0x621960
     void ProcessAIPed(CPed* ped);     // 0x627600
     void ProcessAimIK(CPed* ped);     // 0x628350
+
+    bool CheckLineOfSight(CPed* ped, const CVector& targetPos); // 0x621B10
+    static void FinishDriveByAnimCB(CAnimBlendAssociation* anim, void* data); // 0x621BE0
 };
 VALIDATE_SIZE(CTaskSimpleGangDriveBy, 0x44);
 

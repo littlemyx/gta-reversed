@@ -382,6 +382,30 @@ if (${RE_PROJECT}_RW_LIBRW)
     target_link_libraries(rw_skin_hanim_test PRIVATE librw d3d9 user32)
     set_target_properties(rw_skin_hanim_test PROPERTIES COMPILE_WARNING_AS_ERROR OFF)
 
+    # P2B-05c unit test of the RtAnim / RtQuat layer (Wine-runnable; optional SA DFF paths on the command line)
+    add_executable(rw_rtanim_rtquat_test EXCLUDE_FROM_ALL
+        "${PROJECT_SOURCE_DIR}/tests/standalone/rw_rtanim_rtquat_test.cpp"
+        standalone/rw/rtanim.cpp
+        standalone/rw/rtquat.cpp
+        standalone/rw/skin.cpp
+        standalone/rw/hanim.cpp
+        standalone/rw/atomic.cpp
+        standalone/rw/clump.cpp
+        standalone/rw/plugins.cpp
+        standalone/rw/frame.cpp
+        standalone/rw/math.cpp
+        standalone/rw/stream.cpp
+        standalone/rw/light.cpp
+        standalone/rw/world.cpp
+        standalone/rw/material.cpp
+        standalone/rw/geometry.cpp
+    )
+    target_compile_features(rw_rtanim_rtquat_test PRIVATE cxx_std_23)
+    target_compile_definitions(rw_rtanim_rtquat_test PRIVATE NOTSA_RW_LIBRW NOTSA_RW_UNIT_TEST RW_D3D9)
+    target_include_directories(rw_rtanim_rtquat_test BEFORE PRIVATE fakerw)
+    target_link_libraries(rw_rtanim_rtquat_test PRIVATE librw d3d9 user32)
+    set_target_properties(rw_rtanim_rtquat_test PROPERTIES COMPILE_WARNING_AS_ERROR OFF)
+
     # P2B-07 unit test of the RxPipeline façade + stock AllInOne callbacks (needs a D3D9 HAL device: Wine/wined3d is fine; optional SA DFF/TXD paths on the command line)
     add_executable(rw_pipeline_test EXCLUDE_FROM_ALL
         "${PROJECT_SOURCE_DIR}/tests/standalone/rw_pipeline_test.cpp"

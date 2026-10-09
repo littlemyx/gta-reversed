@@ -224,6 +224,19 @@ if (${RE_PROJECT}_RW_LIBRW)
         target_include_directories(rw_math_stream_test BEFORE PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/fakerw")
         target_link_libraries(rw_math_stream_test PRIVATE librw)
     endif()
+
+    # (defined here, BEFORE add_dependency() below: that macro calls add_compile_options(<pkg> PRIVATE ...) at directory scope, which every later target inherits as bogus sources)
+    # P2B-02b unit test of the frame / camera layer (Wine-runnable, no game data): frame.cpp + camera.cpp + librw (defines RwEngineInstance itself), a hidden window, no PCH
+    add_executable(rw_frame_camera_test EXCLUDE_FROM_ALL
+        "${PROJECT_SOURCE_DIR}/tests/standalone/rw_frame_camera_test.cpp"
+        standalone/rw/frame.cpp
+        standalone/rw/camera.cpp
+    )
+    target_compile_features(rw_frame_camera_test PRIVATE cxx_std_23)
+    target_compile_definitions(rw_frame_camera_test PRIVATE NOTSA_RW_LIBRW RW_D3D9)
+    target_include_directories(rw_frame_camera_test BEFORE PRIVATE fakerw)
+    target_link_libraries(rw_frame_camera_test PRIVATE librw d3d9 user32)
+    set_target_properties(rw_frame_camera_test PROPERTIES COMPILE_WARNING_AS_ERROR OFF)
 endif()
 
 #--------------------------------------------------------------------

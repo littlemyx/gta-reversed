@@ -175,3 +175,15 @@ struct RwFileFunctions {
 };
 static_assert(sizeof(RwFileFunctions) == 0x2C);
 RwFileFunctions* RwOsGetFileInterface();
+
+//--------------------------------------------------------------------------------------------------
+// 02b (standalone/rw/camera.cpp)
+//--------------------------------------------------------------------------------------------------
+// RwCamera::recipViewWindow (1 / viewWindow, kept in sync by RwCameraSetViewWindow in RW): not a librw field, derived on demand.
+// Its only reader was WindowedMode.cpp (projection matrix of _rwD3D9CameraBeginUpdate), which the librw build does not compile.
+inline RwV2d RwCameraGetRecipViewWindow(const RwCamera* camera) {
+    RwV2d recip;
+    recip.x = 1.0f / camera->viewWindow.x;
+    recip.y = 1.0f / camera->viewWindow.y;
+    return recip;
+}

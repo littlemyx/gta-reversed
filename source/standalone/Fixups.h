@@ -21,6 +21,10 @@ struct FixupStats {
     size_t TextLikeIgnored{};     // code-range dwords the extractor rejected as text (not rewritten)
     size_t UnalignedIgnored{};    // ... as unaligned / u16 pairs (not rewritten)
     size_t ChangedDwords{};       // dwords of the image that differ from the loaded original after ApplyToDataImage (self-check: == fixed + trapped)
+    size_t VtableClasses{};       // classes whose whole vtable was copied
+    size_t VtableClassesNoExport{}; // RH_ScopedVirtualClass users without an exported vtable (nothing copied; MUST be 0)
+    size_t FixedByVtableCopy{};   // slots written by the whole-vtable copy (also those that were not in the pointer list)
+    size_t VtableCopyOverlap{};   // ... of which were also listed as code pointers (the rest were unaligned/unlisted dwords)
     size_t FixedBySlot{};
     size_t FixedByFunction{};
     size_t TrappedV{};            // unknown + replaced by a trap stub
@@ -34,6 +38,10 @@ void RegisterFunction(uint32_t exeAddr, void* ours, const char* name);
 //! Register a replacement for one vtable slot of the original exe: vtable at `vtblAddr`, slot index `slot`
 //! (`exeFn` is the exe function that slot originally holds: it is also used as a fallback for inherited slots in other vtables)
 void RegisterVMTSlot(uint32_t vtblAddr, size_t slot, uint32_t exeFn, void* ours, const char* name);
+
+//! A class with `RH_ScopedVirtualClass(cls, exeVtbl, n)`: `ourVtbl` (null if the class does not export its vtable) has the same slot layout as the
+//! exe vtable at `exeVtbl`, so `ApplyToDataImage` copies all `n` slots over it.
+void RegisterVMTClass(uint32_t exeVtbl, size_t n, void* const* ourVtbl, const char* cls);
 
 //! Replacement for `exeAddr` or nullptr
 void* FindKnown(uint32_t exeAddr);

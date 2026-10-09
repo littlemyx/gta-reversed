@@ -4,6 +4,8 @@
 #include <unordered_map>
 #include <mutex>
 #include <atomic>
+#include <unordered_set>
+#include <vector>
 #include "Fixups.h"
 #include "DataImage.h"
 
@@ -22,6 +24,16 @@ std::unordered_map<uint32_t, FnEntry>& FnMap() {
 std::unordered_map<uint32_t, FnEntry>& SlotMap() { // key = address of the vtable slot in the data image
     static std::unordered_map<uint32_t, FnEntry> m = [] { decltype(m) r; r.reserve(8192); return r; }();
     return m;
+}
+struct VtableClass {
+    uint32_t           ExeVtbl;
+    size_t             N;
+    void* const*       Ours;
+    std::string        Name;
+};
+std::vector<VtableClass>& VtableClasses() {
+    static std::vector<VtableClass> v;
+    return v;
 }
 FixupStats g_Stats{};
 
@@ -168,6 +180,15 @@ void RegisterVMTSlot(uint32_t vtblAddr, size_t slot, uint32_t exeFn, void* ours,
     }
 }
 
+void RegisterVMTClass(uint32_t exeVtbl, size_t n, void* const* ourVtbl, const char* cls) {
+    if (!ourVtbl) {
+        g_Stats.VtableClassesNoExport++;
+        Log("vtable copy: class %s has no exported vtable (add NOTSA_EXPORT_VTABLE), its virtuals stay trapped", cls);
+        return;
+    }
+    VtableClasses().push_back({ exeVtbl, n, ourVtbl, cls });
+}
+
 void* FindKnown(uint32_t exeAddr) {
     const auto it = FnMap().find(exeAddr);
     return it != FnMap().end() ? it->second.Ours : nullptr;
@@ -215,6 +236,34 @@ FixupStats ApplyToDataImage() {
     g_Stats.TextLikeIgnored = info.SkippedTextLike;
     g_Stats.UnalignedIgnored = info.SkippedUnaligned;
     const std::vector<uint32_t> original(words, words + n); // for the self-check
+
+    // Whole-vtable copy: for every class with an exported vtable all N slots of OUR vtable replace the exe vtable (our slot layout mirrors the exe's)
+    std::vector<bool> covered(n, false);
+    {
+        std::unordered_set<uint32_t> listed;
+        for (const auto& [a, k] : ptrs) {
+            listed.insert(a);
+        }
+        for (const auto& c : VtableClasses()) {
+            if (c.ExeVtbl < info.DataBase || c.ExeVtbl + c.N * 4 > info.DataBase + info.InitializedSize) {
+                Log("vtable copy: %s vtable 0x%08X+%u slots outside the data image, skipped", c.Name.c_str(), c.ExeVtbl, (unsigned)c.N);
+                continue;
+            }
+            g_Stats.VtableClasses++;
+            for (size_t k = 0; k < c.N; k++) {
+                const uint32_t slotAddr = c.ExeVtbl + (uint32_t)(k * 4);
+                void* const ours = c.Ours[k];
+                const size_t i = (slotAddr - info.DataBase) / 4;
+                if (!ours || covered[i]) {
+                    continue;
+                }
+                words[i] = (uint32_t)ours;
+                covered[i] = true;
+                g_Stats.FixedByVtableCopy++;
+                g_Stats.VtableCopyOverlap += listed.contains(slotAddr);
+            }
+        }
+    }
     // Pass 2 replace
     char dir[MAX_PATH];
     GetModuleFileNameA(nullptr, dir, MAX_PATH);
@@ -225,6 +274,9 @@ FixupStats ApplyToDataImage() {
     fopen_s(&unk, dir, "w");
     for (const auto& [slotAddr, klass] : ptrs) {
         const size_t i = (slotAddr - info.DataBase) / 4;
+        if (covered[i]) {
+            continue; // already written by the whole-vtable copy
+        }
         const uint32_t orig = words[i];
         (klass == 1 ? g_Stats.CodePointersV : g_Stats.CodePointersC)++;
         if (const auto it = SlotMap().find(slotAddr); it != SlotMap().end()) {
@@ -249,14 +301,16 @@ FixupStats ApplyToDataImage() {
     }
     const auto& s = g_Stats;
     Log("fixups: registered %u functions + %u vtable slots (%u conflicts). Data image code pointers: V=%u C=%u (skipped, NOT rewritten: text-like %u, unaligned/u16-pair %u). "
-        "Fixed: by slot %u, by function %u; trapped (unknown): V=%u C=%u",
+        "Fixed: by slot %u, by function %u; trapped (unknown): V=%u C=%u (V/C exclude the %u listed slots covered by the vtable copy)",
         (unsigned)s.RegisteredFunctions, (unsigned)s.RegisteredVMTSlots, (unsigned)s.Conflicts, (unsigned)s.CodePointersV, (unsigned)s.CodePointersC,
-        (unsigned)s.TextLikeIgnored, (unsigned)s.UnalignedIgnored, (unsigned)s.FixedBySlot, (unsigned)s.FixedByFunction, (unsigned)s.TrappedV, (unsigned)s.TrappedC);
+        (unsigned)s.TextLikeIgnored, (unsigned)s.UnalignedIgnored, (unsigned)s.FixedBySlot, (unsigned)s.FixedByFunction, (unsigned)s.TrappedV, (unsigned)s.TrappedC, (unsigned)s.VtableCopyOverlap);
+    Log("fixups vtable copy: %u classes copied whole (%u slots written, %u of them listed pointers), %u classes without exported vtable",
+        (unsigned)s.VtableClasses, (unsigned)s.FixedByVtableCopy, (unsigned)s.VtableCopyOverlap, (unsigned)s.VtableClassesNoExport);
     if (info.DataBase <= 0x860E2C && info.DataBase + info.InitializedSize > 0x8A2A18) { // regression probes of the S1 classifier (1.0 US compact)
         Log("fixups probes: 0x860E2C=0x%08X (data, must stay 0x004F0000) 0x8A2A18=0x%08X (data, must stay 0x004D0000) 0x85DA64=0x%08X (pointer to 0x425F70, must be rewritten)",
             *(uint32_t*)0x860E2C, *(uint32_t*)0x8A2A18, *(uint32_t*)0x85DA64);
     }
-    const size_t expectedChanged = s.FixedBySlot + s.FixedByFunction + s.TrappedV + s.TrappedC;
+    const size_t expectedChanged = s.FixedBySlot + s.FixedByFunction + s.FixedByVtableCopy + s.TrappedV + s.TrappedC;
     Log("fixups self-check: changed dwords %u, fixed+trapped %u: %s", (unsigned)s.ChangedDwords, (unsigned)expectedChanged, s.ChangedDwords == expectedChanged ? "OK" : "MISMATCH");
     if (s.ChangedDwords != expectedChanged) {
         Fatal("ApplyToDataImage self-check failed: %u dwords changed but %u were fixed/trapped (something else wrote into the image)", (unsigned)s.ChangedDwords, (unsigned)expectedChanged);

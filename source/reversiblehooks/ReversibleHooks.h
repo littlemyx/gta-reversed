@@ -39,6 +39,15 @@
     const  ReversibleHooks::Utility::VMTInfo pGTAVTbl{}; \
     const  ReversibleHooks::Utility::VMTInfo pOurVTbl{}; \
     using RHCurrentNS = cls;
+#elif defined(NOTSA_STANDALONE_RUN)
+// Standalone run: our vtable mirrors the exe's slot layout, so the fixup pass copies ALL `nVirtFns_` slots of it over the exe vtable
+// in the data image (not just the hooked ones). Needs `NOTSA_EXPORT_VTABLE` on the class (otherwise `pOurVTbl` is empty and nothing is copied).
+#define RH_ScopedVirtualClass(cls, addrGTAVtbl, nVirtFns_) \
+    RH_InstallProlouge(#cls) \
+    const auto pGTAVTbl = ReversibleHooks::Utility::VMTInfo{ (void**)addrGTAVtbl, nVirtFns_ }; \
+    const auto pOurVTbl = ReversibleHooks::Utility::VMTInfo::FindByClassName(#cls, nVirtFns_); \
+    [[maybe_unused]] const int rhVtblCopyRegistered_ = (notsa::standalone::Fixups::RegisterVMTClass((uint32_t)addrGTAVtbl, nVirtFns_, pOurVTbl.GetAddress(), #cls), 0); \
+    using RHCurrentNS = cls;
 #else
 #define RH_ScopedVirtualClass(cls, addrGTAVtbl, nVirtFns_) \
     RH_InstallProlouge(#cls) \

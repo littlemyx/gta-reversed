@@ -49,15 +49,17 @@ CVector CVector::Random(float min, float max) {
     return { Get(), Get(), Get() };
 }
 
-// Returns length of vector
+// 0x4082C0 - Returns length of vector
+// The original squares, adds and takes the root in extended precision (x87, term order ((x*x + y*y) + z*z)) and only the caller rounds to float
 float CVector::Magnitude() const
 {
-    return sqrt(x * x + y * y + z * z);
+    return (float)std::sqrt(((double)x * x + (double)y * y) + (double)z * z);
 }
 
+// 0x406D50 (see Magnitude for the evaluation)
 float CVector::Magnitude2D() const
 {
-    return sqrt(x * x + y * y);
+    return (float)std::sqrt((double)x * x + (double)y * y);
 }
 
 // 0x59C910

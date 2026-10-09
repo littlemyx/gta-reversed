@@ -4,6 +4,13 @@
 #include "TaskSimpleEvasiveStep.h"
 #include "TaskSimpleAchieveHeading.h"
 
+void CTaskComplexEvasiveStep::InjectHooks() {
+    RH_ScopedVirtualClass(CTaskComplexEvasiveStep, 0x86F218, 11);
+    RH_ScopedCategory("Tasks/TaskTypes");
+
+    RH_ScopedInstall(CreateSubTask, 0x6533E0);
+}
+
 // 0x6532D0
 CTaskComplexEvasiveStep::CTaskComplexEvasiveStep(CEntity* entity, const CVector& pos) : CTaskComplex() {
     m_Pos = pos;
@@ -18,8 +25,6 @@ CTaskComplexEvasiveStep::~CTaskComplexEvasiveStep() {
 
 // 0x6533E0
 CTask* CTaskComplexEvasiveStep::CreateSubTask(eTaskType taskType) {
-    return plugin::CallMethodAndReturn<CTask*, 0x6533E0, CTaskComplexEvasiveStep*, eTaskType>(this, taskType);
-
     switch (taskType) {
     case TASK_SIMPLE_EVASIVE_STEP:
         return new CTaskSimpleEvasiveStep(m_Entity);
@@ -28,7 +33,6 @@ CTask* CTaskComplexEvasiveStep::CreateSubTask(eTaskType taskType) {
         return new CTaskSimpleAchieveHeading(angle, 2.0f, 0.2f);
     }
     case TASK_FINISHED:
-        return nullptr;
     default:
         return nullptr;
     }

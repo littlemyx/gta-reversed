@@ -11,6 +11,8 @@ public:
 public:
     static constexpr auto Type = TASK_COMPLEX_EVASIVE_STEP;
 
+    static void InjectHooks();
+
     CTaskComplexEvasiveStep(CEntity* entity, const CVector& pos);
     ~CTaskComplexEvasiveStep() override;
 

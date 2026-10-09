@@ -2058,8 +2058,9 @@ void CPathFind::FindNodePairClosestToCoors(CVector pos, uint8 nodeType, CNodeAdd
         return;
     }
 
-    // BUG: with maxDist > 10000 the exe goes on with an unset pair (reads node 0xFFFF's area)
-    if (notsa::IsFixBugs() && (bestFirst.m_wAreaId == 0xFFFF || bestSecond.m_wAreaId == 0xFFFF)) {
+    // BUG: with maxDist > 10000 the exe goes on with an unset pair and reads `m_pPathNodes[0xFFFF]` (out of bounds => memory unsafe,
+    // so this guard is NOT gated by FIX_BUGS: the exe's result there is garbage / a crash)
+    if (bestFirst.m_wAreaId == 0xFFFF || bestSecond.m_wAreaId == 0xFFFF) {
         outFirst->m_wAreaId  = 0xFFFF;
         outSecond->m_wAreaId = 0xFFFF;
         *outDist             = 0.0f;
@@ -2073,7 +2074,21 @@ void CPathFind::FindNodePairClosestToCoors(CVector pos, uint8 nodeType, CNodeAdd
     const CVector p2 = m_pPathNodes[bestSecond.m_wAreaId][bestSecond.m_wNodeId].GetPosition();
     CVector dir{ p1.x - p2.x, p1.y - p2.y, 0.0f };
     dir.Normalise(); // 0x59C910
-    *outDist = (float)(std::atan2(-(double)dir.x, (double)dir.y) * (double)57.2957763671875f); // 0x859878
+    // exe: `fld x; fchs; fld y; fpatan; fmul 57.29578f (0x859878); fstp [outDist]` (the atan2 result stays unrounded on the x87 stack)
+    {
+        const float xv = dir.x, yv = dir.y;
+        static const float radToDeg = 57.2957763671875f;
+        float res;
+        __asm {
+            fld  xv
+            fchs
+            fld  yv
+            fpatan
+            fmul radToDeg
+            fstp res
+        }
+        *outDist = res;
+    }
 }
 
 // 0x450320

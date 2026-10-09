@@ -571,6 +571,25 @@ if (${RE_PROJECT}_RW_LIBRW)
     set_property(TARGET game_oracle_test PROPERTY SOURCES "${STANDALONE_PAD_OBJ}" ${_go_sources})
     target_link_options(game_oracle_test PRIVATE "$<$<CXX_COMPILER_ID:MSVC>:/BASE:0x400000;/DYNAMICBASE:NO;/FIXED;/MERGE:_TEXT=.text;/INCREMENTAL:NO;/SUBSYSTEM:CONSOLE;/FORCE:UNRESOLVED>")
     set_target_properties(game_oracle_test PROPERTIES COMPILE_WARNING_AS_ERROR OFF CXX_SCAN_FOR_MODULES OFF)
+    # S6-B differential test of script command handlers (g9..g12) against the exe's group processors (same exe-oracle machinery as game_oracle_test; the handler TUs are #included by the test)
+    add_executable(script_oracle_test EXCLUDE_FROM_ALL
+        "${PROJECT_SOURCE_DIR}/tests/standalone/script_oracle_test.cpp"
+        game_sa/General.cpp
+        game_sa/Core/Vector.cpp
+        game_sa/Core/Matrix.cpp
+    )
+    target_compile_features(script_oracle_test PRIVATE cxx_std_23)
+    target_compile_definitions(script_oracle_test PRIVATE NOTSA_RW_LIBRW RW_D3D9)
+    target_include_directories(script_oracle_test PRIVATE $<TARGET_PROPERTY:${RE_PROJECT_LIB_NAME},INCLUDE_DIRECTORIES>)
+    target_compile_options(script_oracle_test PRIVATE $<TARGET_PROPERTY:${RE_PROJECT_LIB_NAME},COMPILE_OPTIONS>)
+    target_precompile_headers(script_oracle_test PRIVATE StdInc.cpp)
+    target_link_libraries(script_oracle_test PRIVATE librw spdlog::spdlog Tracy::TracyClient user32)
+    target_sources(script_oracle_test PRIVATE "${STANDALONE_PAD_OBJ}")
+    get_target_property(_so_sources script_oracle_test SOURCES)
+    list(REMOVE_ITEM _so_sources "${STANDALONE_PAD_OBJ}")
+    set_property(TARGET script_oracle_test PROPERTY SOURCES "${STANDALONE_PAD_OBJ}" ${_so_sources})
+    target_link_options(script_oracle_test PRIVATE "$<$<CXX_COMPILER_ID:MSVC>:/BASE:0x400000;/DYNAMICBASE:NO;/FIXED;/MERGE:_TEXT=.text;/INCREMENTAL:NO;/SUBSYSTEM:CONSOLE;/FORCE:UNRESOLVED>")
+    set_target_properties(script_oracle_test PROPERTIES COMPILE_WARNING_AS_ERROR OFF CXX_SCAN_FOR_MODULES OFF)
     # P2B-06 unit test of Im2D / Im3D (not part of `all`): ninja rw_im2d_im3d_test. Hidden window + librw's D3D9 device (Wine/wined3d is fine); pixels are read back
     if (EXISTS "${PROJECT_SOURCE_DIR}/tests/standalone/rw_im2d_im3d_test.cpp")
         add_executable(rw_im2d_im3d_test EXCLUDE_FROM_ALL

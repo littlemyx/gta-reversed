@@ -50,8 +50,8 @@ public:
         notsa::mdarray<int32, MAX_NUM_CHOICES, 2>& bools,
         notsa::mdarray<float, MAX_NUM_CHOICES, 6>& facialProbs
     );
-    void Add(eTaskType taskId, float* responseChances, int32* flags); // 0x600600 (not reversed yet)
-    void MakeDecision(int32 eventSourceType, bool bIsPedInVehicle, eTaskType taskTypeToAvoid1, eTaskType taskTypeToAvoid2, eTaskType taskTypeToAvoid3, eTaskType taskTypeToSeek, int16& taskType, int16& facialTaskType); // 0x6040D0 (not reversed yet)
+    void Add(eTaskType taskId, float* responseChances, int32* flags); // 0x600600
+    void MakeDecision(int32 eventSourceType, bool bIsPedInVehicle, eTaskType taskTypeToAvoid1, eTaskType taskTypeToAvoid2, eTaskType taskTypeToAvoid3, eTaskType taskTypeToSeek, int16& taskType, int16& facialTaskType); // 0x6040D0
 };
 
 VALIDATE_SIZE(CDecision, 0x3C);

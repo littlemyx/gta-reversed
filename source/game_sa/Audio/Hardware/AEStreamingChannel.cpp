@@ -592,7 +592,7 @@ void CAEStreamingChannel::InjectHooks() {
     RH_ScopedVirtualClass(CAEStreamingChannel, 0x85F3F0, 9);
     RH_ScopedCategory("Audio/Hardware");
 
-    RH_ScopedInstall(Constructor, 0x4F1800, { .Reversed = false }); // makes game not load radio
+    RH_ScopedInstall(Constructor, 0x4F1800);
     RH_ScopedInstall(Destructor, 0x4F2200);
     RH_ScopedInstall(SynchPlayback, 0x4F1870);
     RH_ScopedInstall(PrepareStream, 0x4F23D0);

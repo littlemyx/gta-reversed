@@ -157,7 +157,12 @@ public:
      * @param pt The position (point) to transform
     */
     CVector TransformPoint(CVector pt) const {
-        return TransformVector(pt) + m_pos;
+        // 0x59C890: the 3 products and both adds stay in extended precision (x87, order (up*z + fwd*y) + right*x for x; (up*z + right*x) + fwd*y for y/z), then + pos; one float rounding
+        return {
+            (float)((((double)m_up.x * pt.z + (double)m_forward.x * pt.y) + (double)m_right.x * pt.x) + m_pos.x),
+            (float)((((double)m_up.y * pt.z + (double)m_right.y * pt.x) + (double)m_forward.y * pt.y) + m_pos.y),
+            (float)((((double)m_up.z * pt.z + (double)m_right.z * pt.x) + (double)m_forward.z * pt.y) + m_pos.z)
+        };
     }
 
     /*!
@@ -167,11 +172,15 @@ public:
      * @param pt The vector (direction) to transform
      */
     CVector TransformVector(CVector v) const {
-        // Inlined:
-        // > m_right.x * v.x + m_forward.x * v.y + m_up.x * v.z,
-        // > m_right.y * v.x + m_forward.y * v.y + m_up.y * v.z,
-        // > m_right.z * v.x + m_forward.z * v.y + m_up.z * v.z,
-        return v.x * m_right + v.y * m_forward + v.z * m_up;
+        // 0x59C790 (`Multiply3x3(out, m, v)`): extended precision (x87), the add order of the exe, a single float rounding per component:
+        // > x = (up.x*v.z + fwd.x*v.y) + right.x*v.x
+        // > y = (up.y*v.z + right.y*v.x) + fwd.y*v.y
+        // > z = (up.z*v.z + right.z*v.x) + fwd.z*v.y
+        return {
+            (float)(((double)m_up.x * v.z + (double)m_forward.x * v.y) + (double)m_right.x * v.x),
+            (float)(((double)m_up.y * v.z + (double)m_right.y * v.x) + (double)m_forward.y * v.y),
+            (float)(((double)m_up.z * v.z + (double)m_right.z * v.x) + (double)m_forward.z * v.y)
+        };
     }
 
     /*!
@@ -195,7 +204,12 @@ public:
         // So I ended up with dot products (which make sense if you think about it)
         // `Inverted().TransformPoint(v)`
 
-        return { m_right.Dot(v), m_forward.Dot(v), m_up.Dot(v) }; 
+        // 0x59C810 (`Multiply3x3(out, v, m)`): extended precision (x87), the add order of the exe
+        return {
+            (float)(((double)m_right.y * v.y + (double)m_right.z * v.z) + (double)v.x * m_right.x),
+            (float)(((double)m_forward.y * v.y + (double)m_forward.x * v.x) + (double)m_forward.z * v.z),
+            (float)(((double)m_up.y * v.y + (double)m_up.x * v.x) + (double)m_up.z * v.z)
+        };
     }
 
     void operator=(const CMatrix& right);

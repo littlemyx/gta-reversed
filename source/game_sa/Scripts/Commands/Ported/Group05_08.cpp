@@ -57,7 +57,7 @@ using namespace notsa::script;
 *  - `fcom/fcomp x; fnstsw; test ah, N; jp/jnp/jne` => see the comments, the NaN behaviour is kept (an unordered compare
 *    sets C0|C2|C3, so `test ah, 0x41` / `test ah, 5` / `test ah, 0x44` treat it differently from a plain C++ compare)
 *  - `fcom -100.0f ... FindGroundZForCoord` (0x859014): the Z is looked up only if `z <= -100.0f` (ordered)
-*  - `_ftol` (0x821B40) = truncation, out of range / NaN => 0x80000000
+*  - `_ftol2` (0x821B40) = truncation to int64, only the low dword is used (NaN / out of range => 0, NOT 0x80000000)
 */
 
 namespace {
@@ -83,12 +83,13 @@ static_assert(offsetof(CPlayerInfo, m_nMaxArmour) == 0x150);
 static_assert(offsetof(CRunningScript, m_IP) == 0x14);
 static_assert(BLIP_COORD == 4 && BLIP_CONTACT_POINT == 5);
 
-//! `_ftol` (0x821B40)
+//! `_ftol2` (0x821B40): truncates to a 64 bit integer (`fistp qword` + truncation fix-up; NaN / out of range => the "integer
+//! indefinite" 0x8000000000000000) and the callers only use the LOW dword (EAX). NOT the saturating 0x80000000 of a 32 bit conversion.
 int32 Ftol(double v) {
-    if (!(v > -2147483649.0 && v < 2147483648.0)) { // out of range or NaN => "integer indefinite"
-        return (int32)0x80000000;
+    if (!(v > -9223372036854775808.0 && v < 9223372036854775808.0)) { // also catches NaN
+        return 0;
     }
-    return (int32)v;
+    return (int32)(int64)v;
 }
 
 //! x87-compare idiom `fcom -100.0f; test ah, 0x41; jp skip`: the ground Z is looked up only when `z <= -100.0f` (ordered).
@@ -559,9 +560,12 @@ void StartCutscene() {
     CCutsceneMgr::StartCutscene();
 }
 
-//! 744 GET_CUTSCENE_TIME (case @0x48073F): no params => 1 value (eax of GetCutsceneTimeInMilleseconds)
+//! 744 GET_CUTSCENE_TIME (case @0x48073F): no params => 1 value. The case stores EAX of CCutsceneMgr::GetCutsceneTimeInMilleseconds
+//! (0x5B0550 = `fld [ms_cutsceneTimerS]; fmul 1000.0f (0x858C4C); jmp _ftol2`), i.e. the low dword of `trunc(timer * 1000.0f)`.
+//! NOTE: computed here and not through CCutsceneMgr::GetCutsceneTimeInMilleseconds - that function does `(uint64)timerS * 1000`
+//! (truncates the seconds BEFORE scaling) and is wrong against the exe.
 int32 GetCutsceneTime() {
-    return (int32)CCutsceneMgr::GetCutsceneTimeInMilleseconds();
+    return Ftol((double)CCutsceneMgr::ms_cutsceneTimerS * (double)1000.0f);
 }
 
 //! 745 HAS_CUTSCENE_FINISHED (case @0x480761): no params => compare flag
@@ -836,22 +840,26 @@ bool SlideObject(CObject& obj, float tx, float ty, float tz, float sx, float sy,
     }
 
     //! One axis: d = c - t; d >= 0: `d > s ? c - s : t`; d < 0 or NaN: `-d > s ? s + c : t`
-    const auto Step = [](float c, float t, float s) -> float {
-        const float d = (float)((double)c - (double)t); // stored to memory
-        if (!(d < 0.0f) && !std::isnan(d)) {            // `fcom 0; test ah, 1; jne neg`: C0 (less) is also set for NaN
-            if ((double)d > (double)s) {
+    //! X: `d` stays on the FPU stack (extended precision, NOT rounded to float); Y and Z: `d` is spilled to a float temp first.
+    const auto Step = [](float c, float t, float s, bool spill) -> float {
+        double d = (double)c - (double)t;
+        if (spill) {
+            d = (double)(float)d;
+        }
+        if (!(d < 0.0) && !std::isnan(d)) { // `fcom 0; test ah, 1; jne neg`: C0 (less) is also set for NaN
+            if (d > (double)s) {
                 return (float)((double)c - (double)s);
             }
             return t;
         }
-        if (-(double)d > (double)s) {
+        if (-d > (double)s) {
             return (float)((double)s + (double)c);
         }
         return t;
     };
-    cx = Step(cx, tx, sx);
-    cy = Step(cy, ty, sy);
-    cz = Step(cz, tz, sz);
+    cx = Step(cx, tx, sx, false);
+    cy = Step(cy, ty, sy, true);
+    cz = Step(cz, tz, sz, true);
 
     const CVector newPos{ cx, cy, cz };
     if (collisionCheck != 0) {

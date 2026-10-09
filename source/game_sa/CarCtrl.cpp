@@ -255,6 +255,7 @@ void CCarCtrl::InjectHooks()
     RH_ScopedInstall(SteerAICarWithPhysicsFollowPreRecordedPath, 0x432DD0);
     RH_ScopedInstall(SteerAICarWithPhysicsHeadingForTarget, 0x433280);
     RH_ScopedInstall(UpdateCarOnRails, 0x436540);
+    RH_ScopedInstall(SteerAICarWithPhysicsFollowPath, 0x434900);
     RH_ScopedInstall(SteerAICarWithPhysicsTryingToBlockTarget, 0x4335E0);
     RH_ScopedInstall(SteerAICarTowardsPointInEscort, 0x4336D0);
     RH_ScopedInstall(SteerAICarParkParallel, 0x433BA0);
@@ -3670,8 +3671,281 @@ void CCarCtrl::SteerAICarWithPhysics(CVehicle* vehicle) {
 }
 
 // 0x434900
-void CCarCtrl::SteerAICarWithPhysicsFollowPath(CVehicle* vehicle, float* arg2, float* arg3, float* arg4, bool* arg5) {
-    plugin::Call<0x434900, CVehicle*, float*, float*, float*, bool*>(vehicle, arg2, arg3, arg4, arg5);
+void CCarCtrl::SteerAICarWithPhysicsFollowPath(CVehicle* vehicle, float* pSteer, float* pGas, float* pBrake, bool* pHandbrake) {
+    if (StopCarIfNodesAreInvalid(vehicle)) { // 0x422590
+        return;
+    }
+    auto& ap = vehicle->m_autoPilot;
+
+    const auto NoInput = [&] {
+        *pBrake     = 1.0f;
+        *pGas       = 0.0f;
+        *pSteer     = 0.0f;
+        *pHandbrake = false;
+    };
+
+    const auto fwd2D = GetNormalizedForward2D(vehicle); // Note: Not null checked
+
+    if (!ThePaths.IsAreaLoaded(ap.m_nCurrentPathNodeInfo.m_wAreaId) || !ThePaths.IsAreaLoaded(ap.m_nNextPathNodeInfo.m_wAreaId)) {
+        NoInput();
+        return;
+    }
+
+    const auto LinkOf = [](const CCarPathLinkAddress& addr) -> const CCarPathLink& {
+        return ThePaths.m_pNaviNodes[addr.m_wAreaId][addr.m_wCarPathLinkId];
+    };
+    // `CCarPathLink::m_dir`/`m_posn` hide their raw values, but the original works on them
+    const auto Raw8  = [](const CCarPathLink& l) { return reinterpret_cast<const int8*>(&l); };
+    const auto Raw16 = [](const CCarPathLink& l) { return reinterpret_cast<const int16*>(&l); };
+
+    // Directions of the current and the next link. x87: (dir * 0.01f) * sign, rounded to float (0x858C58)
+    float curDirX, curDirY, nextDirX, nextDirY;
+    const auto LoadDirs = [&] {
+        const auto Dir = [](int8 d, int8 sign) { return (float)((double)d * (double)0.01f * (double)sign); };
+        const auto& cur  = LinkOf(ap.m_nCurrentPathNodeInfo);
+        const auto& next = LinkOf(ap.m_nNextPathNodeInfo);
+        curDirX  = Dir(Raw8(cur)[8], ap._smthCurr);
+        curDirY  = Dir(Raw8(cur)[9], ap._smthCurr);
+        nextDirX = Dir(Raw8(next)[8], ap._smthNext);
+        nextDirY = Dir(Raw8(next)[9], ap._smthNext);
+    };
+    LoadDirs();
+
+    const auto& pos = vehicle->GetPosition();
+
+    // Lane offset of the current link. x87: rounded to float
+    float curK = (float)((LinkOf(ap.m_nCurrentPathNodeInfo).OneWayLaneOffsetExtended() + (double)ap.m_nCurrentLane) * (double)5.4f); // 0x44DB00, 0x858C50
+    float distToStart;
+    {
+        // Lane offset of the next link. x87: NOT rounded to float
+        double nextK = (LinkOf(ap.m_nNextPathNodeInfo).OneWayLaneOffsetExtended() + (double)ap.m_nNextLane) * (double)5.4f;
+        if (vehicle->m_nVehicleSubType == VEHICLE_TYPE_BMX) {
+            constexpr auto BMX_LANE_OFFSET = std::bit_cast<float>(0x3FBA9FBFu); // 0x859010
+            curK  = (float)((double)curK + (double)BMX_LANE_OFFSET);
+            nextK = nextK + (double)BMX_LANE_OFFSET;
+        }
+
+        const auto& cur  = LinkOf(ap.m_nCurrentPathNodeInfo);
+        const auto& next = LinkOf(ap.m_nNextPathNodeInfo);
+        const float startX = (float)((double)Raw16(cur)[0] * (double)0.125f + (double)curK * curDirY); // 0x858C48
+        const float startY = (float)((double)Raw16(cur)[1] * (double)0.125f - (double)curK * curDirX);
+        const float endX   = (float)((double)Raw16(next)[0] * (double)0.125f + nextK * nextDirY);
+        const float endY   = (float)((double)Raw16(next)[1] * (double)0.125f - nextK * nextDirX);
+
+        // x87: the intermediate values are kept in extended precision
+        const double dx = (double)pos.x - startX, dy = (double)pos.y - startY;
+        distToStart     = (float)std::sqrt(dy * dy + dx * dx);
+        const double ex = (double)endX - startX, ey = (double)endY - startY;
+        const float  segLen = (float)std::sqrt(ey * ey + ex * ex);
+        const float  dot    = (float)(ey * dy + ex * dx);
+
+        bool needNextNode;
+        if (distToStart < 5.0f) { // 0x858C80
+            needNextNode = true;
+        } else if (dot > 0.0f && distToStart < 8.0f) { // 0x859000
+            needNextNode = true;
+        } else {
+            const auto cosAngle = (double)dot / ((double)segLen * distToStart);
+            needNextNode = cosAngle > 0.7f || std::bit_cast<uint16>(ap.m_nNextPathNodeInfo) == std::bit_cast<uint16>(ap.m_nCurrentPathNodeInfo); // 0x858CB0
+        }
+
+        if (needNextNode) {
+            if (PickNextNodeAccordingStrategy(vehicle)) { // 0x432B10
+                // The car got a new node. Some missions switch to "close" variants and use a different steering function
+                const auto HeadForTarget = [&](const CVector& target) {
+                    SteerAICarWithPhysicsHeadingForTarget(vehicle, nullptr, target.x, target.y, pSteer, pGas, pBrake, pHandbrake); // 0x433280
+                };
+                switch (ap.m_nCarMission) {
+                case MISSION_RAMPLAYER_FARAWAY:
+                    ap.m_nCarMission = MISSION_RAMPLAYER_CLOSE;
+                    HeadForTarget(FindPlayerCoors()); // 0x56E010
+                    return;
+                case MISSION_BLOCKPLAYER_FARAWAY:
+                    ap.m_nCarMission = MISSION_BLOCKPLAYER_CLOSE;
+                    HeadForTarget(FindPlayerCoors()); // 0x56E010
+                    return;
+                case MISSION_GOTOCOORDINATES:
+                    ap.m_nCarMission = MISSION_GOTOCOORDINATES_STRAIGHTLINE;
+                    HeadForTarget(ap.m_vecDestinationCoors);
+                    return;
+                case MISSION_GOTOCOORDINATES_ACCURATE:
+                    ap.m_nCarMission = MISSION_GOTOCOORDINATES_STRAIGHTLINE_ACCURATE;
+                    HeadForTarget(ap.m_vecDestinationCoors);
+                    return;
+                case MISSION_RAMCAR_FARAWAY:
+                    ap.m_nCarMission = MISSION_RAMCAR_CLOSE;
+                    HeadForTarget(ap.m_TargetEntity->GetPosition()); // Note: Not null checked
+                    return;
+                case MISSION_BLOCKCAR_FARAWAY:
+                    ap.m_nCarMission = MISSION_BLOCKCAR_CLOSE;
+                    HeadForTarget(ap.m_TargetEntity->GetPosition()); // Note: Not null checked
+                    return;
+                case MISSION_APPROACHPLAYER_FARAWAY:
+                    ap.m_nCarMission = MISSION_APPROACHPLAYER_CLOSE;
+                    HeadForTarget(FindPlayerCoors()); // 0x56E010
+                    return;
+                case MISSION_ESCORT_LEFT_FARAWAY:
+                case MISSION_ESCORT_RIGHT_FARAWAY:
+                case MISSION_ESCORT_REAR_FARAWAY:
+                case MISSION_ESCORT_FRONT_FARAWAY:
+                    ap.m_nCarMission = (eCarMission)(ap.m_nCarMission - 0x24); // MISSION_ESCORT_LEFT.. MISSION_ESCORT_FRONT
+                    HeadForTarget(ap.m_TargetEntity->GetPosition()); // Note: Not null checked
+                    return;
+                default:
+                    break;
+                }
+            }
+
+            // Either there's no new node, or it wasn't handled above => recalculate the stuff for the (maybe new) link
+            if (!ThePaths.IsAreaLoaded(ap.m_nCurrentPathNodeInfo.m_wAreaId) || !ThePaths.IsAreaLoaded(ap.m_nNextPathNodeInfo.m_wAreaId)) {
+                NoInput();
+                return;
+            }
+
+            // Note: The BMX offset isn't applied here, and the (old) directions are used for the distance
+            const auto& newCur = LinkOf(ap.m_nCurrentPathNodeInfo);
+            curK = (float)((newCur.OneWayLaneOffsetExtended() + (double)ap.m_nCurrentLane) * (double)5.4f); // 0x44DB00, 0x858C50
+            const double dx2 = ((double)Raw16(newCur)[0] * (double)0.125f + (double)curK * curDirY) - pos.x;
+            const double dy2 = ((double)Raw16(newCur)[1] * (double)0.125f - (double)curK * curDirX) - pos.y;
+            distToStart = (float)std::sqrt(dy2 * dy2 + dx2 * dx2);
+            LoadDirs();
+        }
+    }
+
+    // The point we steer to
+    const auto& curLink = LinkOf(ap.m_nCurrentPathNodeInfo);
+    const auto  curRaw16 = Raw16(curLink);
+
+    const double kDirY = (double)curK * curDirY;
+    const float  startX = (float)((double)curRaw16[0] * (double)0.125f + kDirY);
+    const float  kDirXf = (float)((double)curK * curDirX); // x87: rounded to float here
+    const float  startY = (float)((double)curRaw16[1] * (double)0.125f - kDirXf);
+
+    float targetX = (float)((double)startX - ((double)distToStart * curDirX) * (double)0.35f); // 0x858F9C
+    float targetY = (float)((double)startY - ((double)distToStart * curDirY) * (double)0.35f);
+    if (distToStart > 40.0f) { // 0x858A10
+        targetX = startX;
+        targetY = startY;
+    }
+
+    const auto targetAngle = CGeneral::GetATanOfXY((float)((double)targetX - pos.x), (float)((double)targetY - pos.y)); // 0x53CC70
+    const auto heading     = CGeneral::GetATanOfXY(fwd2D.x, fwd2D.y); // 0x53CC70
+
+    float angle;
+    switch (ap.m_nCarDrivingStyle) {
+    case DRIVING_STYLE_AVOID_CARS:
+    case DRIVING_STYLE_DRIVINGMODE_AVOIDCARS_OBEYLIGHTS:
+    case DRIVING_STYLE_DRIVINGMODE_AVOIDCARS_STOPFORPEDS_OBEYLIGHTS:
+        angle = FindAngleToWeaveThroughTraffic(vehicle, nullptr, targetAngle, heading, 1.0f); // 0x4325C0
+        break;
+    default:
+        angle = targetAngle;
+        break;
+    }
+    float steer = (float)WrapAngleToPi((double)angle - heading);
+    steer = ClampSteerToMax(vehicle, steer); // 0x427FE0
+
+    // The speed along the forward direction. x87: kept in extended precision until stored
+    const auto& vehFwd  = vehicle->m_matrix->GetForward();
+    const auto& moveSpd = vehicle->m_vecMoveSpeed;
+    const auto  curSpeed = (float)((((double)moveSpd.z * vehFwd.z + (double)moveSpd.y * vehFwd.y) + (double)moveSpd.x * vehFwd.x) * (double)60.0f); // 0x858B34
+
+    // The speed (factor of the cruise speed) allowed by the traffic
+    float speedFactor;
+    switch (ap.m_nCarDrivingStyle) {
+    case DRIVING_STYLE_STOP_FOR_CARS:
+    case DRIVING_STYLE_SLOW_DOWN_FOR_CARS:
+    case DRIVING_STYLE_STOP_FOR_CARS_IGNORE_LIGHTS:
+    case DRIVING_STYLE_DRIVINGMODE_AVOIDCARS_STOPFORPEDS_OBEYLIGHTS:
+        speedFactor = (float)((double)FindMaximumSpeedForThisCarInTraffic(vehicle) / (int32)ap.m_nCruiseSpeed); // 0x434400
+        break;
+    default:
+        speedFactor = 1.0f;
+        break;
+    }
+    switch (ap.m_nCarDrivingStyle) {
+    case DRIVING_STYLE_STOP_FOR_CARS:
+    case DRIVING_STYLE_SLOW_DOWN_FOR_CARS:
+    case DRIVING_STYLE_DRIVINGMODE_AVOIDCARS_OBEYLIGHTS:
+    case DRIVING_STYLE_DRIVINGMODE_AVOIDCARS_STOPFORPEDS_OBEYLIGHTS:
+        if (CTrafficLights::ShouldCarStopForLight(vehicle, false)) { // 0x49D610
+            CCarAI::CarHasReasonToStop(vehicle); // 0x41C050
+            speedFactor = 0.0f;
+        }
+        break;
+    default:
+        break;
+    }
+    if (CTrafficLights::ShouldCarStopForBridge(vehicle)) { // 0x49D420
+        CCarAI::CarHasReasonToStop(vehicle); // 0x41C050
+        speedFactor = 0.0f;
+    }
+
+    // Slow down for bends. x87: `curK2` is not rounded to float
+    const auto curK2 = (curLink.OneWayLaneOffsetExtended() + (double)ap.m_nCurrentLane) * (double)5.4f; // 0x44DB00, 0x858C50
+    const auto bendStartX = (float)(((double)curRaw16[0] * (double)0.125f + curK2 * curDirY) - pos.x);
+    const auto bendStartY = (float)(((double)curRaw16[1] * (double)0.125f - curK2 * curDirX) - pos.y);
+    const auto angleToBend = CGeneral::GetATanOfXY(bendStartX, bendStartY); // 0x53CC70
+    const float turnFactor1 = FindSpeedMultiplier((float)((double)angleToBend - heading), 0.4f, 1.2f, 0.4f); // 0x4224E0
+    const auto curDirAngle  = CGeneral::GetATanOfXY(curDirX, curDirY); // 0x53CC70
+    const auto nextDirAngle = CGeneral::GetATanOfXY(nextDirX, nextDirY); // 0x53CC70
+    const float turnFactor2 = FindSpeedMultiplier((float)((double)curDirAngle - nextDirAngle), 0.1f, 1.2f, 0.4f); // 0x4224E0
+
+    double limit = 1.0;
+    if (!(distToStart > 40.0f) && ap.m_nCruiseSpeed >= 12) { // 0x858A10
+        limit = 1.0 - (1.0 - turnFactor2) * (1.0 - (double)distToStart * 0.025f); // 0x859038
+    }
+
+    float factor;
+    const double lower = turnFactor1 < limit ? (double)turnFactor1 : limit;
+    if (!(lower < speedFactor)) {
+        factor = speedFactor;
+    } else {
+        factor = turnFactor1 < limit ? turnFactor1 : (float)limit;
+    }
+
+    *pBrake = 0.0f;
+    const double targetSpeed = (double)ap.m_nCruiseSpeed * factor;
+    const float  speedDiff   = (float)(targetSpeed - curSpeed);
+    if (targetSpeed < 0.05f && speedDiff < 0.03f) { // 0x858C28, 0x858B10
+        *pBrake = 1.0f;
+        *pGas   = 0.0f;
+    } else if (!(speedDiff > 0.0f)) {
+        const double brake = (double)speedDiff * -(1.0f / 12.0f); // 0x859034
+        *pGas   = 0.0f;
+        *pBrake = 0.5f < brake ? 0.5f : (float)brake; // 0x858B8C
+    } else {
+        const double gas = (double)speedDiff * (!(curSpeed < 2.0f) ? 0.125f : 0.25f); // 0x858CA0, 0x858C48, 0x858C84
+        *pGas = 1.0f < gas ? 1.0f : (float)gas;
+
+        if (vehicle->m_nVehicleSubType == VEHICLE_TYPE_BMX && speedDiff > 3.0f) { // 0x858B3C
+            auto* const bmx = static_cast<CBmx*>(vehicle);
+            if (bmx->m_fControlPedaling <= 0.0f) { // Note: "always 0.0f" according to the header
+                bmx->m_fControlPedaling = 10.0f;
+            }
+        }
+    }
+    *pSteer     = steer;
+    *pHandbrake = false;
+
+    // Go-to-coordinates missions: if we're (almost) there and the destination is behind us => reverse
+    if ((ap.m_nCarMission == MISSION_GOTOCOORDINATES || ap.m_nCarMission == MISSION_GOTOCOORDINATES_ACCURATE) && ap.m_nTempAction == TEMPACT_NONE) {
+        const CVector toDest = pos - ap.m_vecDestinationCoors; // 0x40FE60
+        // x87: kept in extended precision (0x4082C0)
+        const double distToDest = std::sqrt(((double)toDest.x * toDest.x + (double)toDest.y * toDest.y) + (double)toDest.z * toDest.z);
+        if (distToDest < 8.0f) { // 0x859000
+            // BUG: This uses the position of the vehicle, not the vector to the destination
+            const auto& fwd3D = vehicle->m_matrix->GetForward();
+            double dot = ((double)pos.z * fwd3D.z + (double)pos.y * fwd3D.y) + (double)pos.x * fwd3D.x; // 0x40FDB0
+            if (dot < 0.0) {
+                dot = -dot;
+            }
+            if (dot / (float)distToDest < 0.2f) { // 0x858CC4
+                ap.m_nTempAction     = TEMPACT_REVERSE;
+                ap.m_nTempActionTime = CTimer::GetTimeInMS() + 2000;
+            }
+        }
+    }
 }
 
 // 0x435830

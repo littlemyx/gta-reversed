@@ -3,6 +3,10 @@
 #include "TaskComplexDestroyCarArmed.h"
 #include "TaskSimplePause.h"
 #include <TaskComplexGoToPointAndStandStill.h>
+#include "TaskSimpleGunControl.h"
+#include "TaskSimpleThrowControl.h"
+#include "SeekEntity/TaskComplexSeekEntity.h"
+#include "SeekEntity/PosCalculators/EntitySeekPosCalculatorStandard.h"
 
 void CTaskComplexDestroyCarArmed::InjectHooks() {
     RH_ScopedVirtualClass(CTaskComplexDestroyCarArmed, 0x86d9c4, 11);
@@ -11,8 +15,8 @@ void CTaskComplexDestroyCarArmed::InjectHooks() {
     RH_ScopedInstall(Constructor, 0x621F50);
     RH_ScopedInstall(Destructor, 0x622010);
 
-    RH_ScopedInstall(CalculateSearchPositionAndRanges, 0x628C80, { .State = HS::RedirectToGTA, .Locked = true });
-    RH_ScopedInstall(CreateSubTask, 0x628DA0, { .State = HS::RedirectToGTA, .Locked = true });
+    RH_ScopedInstall(CalculateSearchPositionAndRanges, 0x628C80);
+    RH_ScopedInstall(CreateSubTask, 0x628DA0);
 
     RH_ScopedVMTInstall(Clone, 0x623600);
     RH_ScopedVMTInstall(GetTaskType, 0x622000);
@@ -48,59 +52,60 @@ void CTaskComplexDestroyCarArmed::CalculateSearchPositionAndRanges(CPed* ped) {
     m_PedPos = ped->GetPosition();
     m_VehiclePos = m_VehToDestroy->GetPosition();
     m_PedToVehDirUnnorm = m_VehiclePos - m_PedPos;
-    m_PedVehDist = m_PedToVehDirUnnorm.Magnitude();
+    // The original sums the squares and takes the root on the x87 stack (extended precision), then stores a float
+    m_PedVehDist = (float)std::sqrt(
+        (double)m_PedToVehDirUnnorm.x * m_PedToVehDirUnnorm.x
+      + (double)m_PedToVehDirUnnorm.y * m_PedToVehDirUnnorm.y
+      + (double)m_PedToVehDirUnnorm.z * m_PedToVehDirUnnorm.z
+    );
 
     const auto& weapon = ped->GetActiveWeapon();
     const auto& winfo  = weapon.GetWeaponInfo(ped);
-    m_fWeaponRange = winfo.m_fWeaponRange / 2.f;
-    m_fWeaponRangeClamped = std::max(0.8f, m_fWeaponRange * 0.9f);
-    m_fWeaponRange *= 1.1f; // = winfo.m_fWeaponRange * 0.55f
+    m_fWeaponRange = winfo.m_fWeaponRange * 0.5f; // 0x858B8C (exact)
+    // The 0.9 product stays in extended precision until it is compared to / stored as float
+    const auto clamped = (double)m_fWeaponRange * (double)0.9f; // 0x858C20
+    m_fWeaponRangeClamped = (0.8f > clamped) ? 0.8f : (float)clamped; // 0x858C98 (FCOMP + JNE)
+    m_fWeaponRange *= 1.1f; // 0x858F14
 }
 
 // 0x628DA0
 CTask* CTaskComplexDestroyCarArmed::CreateSubTask(eTaskType taskType, CPed* ped) {
-    NOTSA_UNREACHABLE("Redirected code can't be reached");
-    return nullptr;
-    /* Redirected */
-
-    /*
-    * Missing stubs for the 3 of tasks below
-    * Other than that, it should be correct
     switch (taskType) {
-    case TASK_SIMPLE_GUN_CTRL: {
+    case TASK_SIMPLE_GUN_CTRL: { // 0x628ED4
         const auto& winfo = ped->GetActiveWeapon().GetWeaponInfo(ped);
         if (winfo.flags.bThrow) {
-            return new CTaskSimpleThrowControl{ m_VehToDestroy, false };
+            return new CTaskSimpleThrowControl{ m_VehToDestroy, nullptr };
         }
-        return new CTaskSimpleGunControl{ m_VehToDestroy, 0, 0, 3, 5, 5000 };
+        return new CTaskSimpleGunControl{ m_VehToDestroy, CVector{}, CVector{}, eGunCommand::FIREBURST, 5, 5000 };
     }
-    case TASK_COMPLEX_SEEK_ENTITY: {
+    case TASK_COMPLEX_SEEK_ENTITY: { // 0x628E6A
         return new CTaskComplexSeekEntity<CEntitySeekPosCalculatorStandard>{
             m_VehToDestroy,
-            50000,
-            1000,
-            1.0,
-            2.0,
-            2.0,
-            1,
-            1
+            50'000,
+            1'000,
+            1.f,  // 0x85BACC
+            2.f,  // 0x859E30
+            2.f,  // 0x859E34
+            true,
+            true
         };
     }
-    case TASK_SIMPLE_PAUSE: {
+    case TASK_SIMPLE_PAUSE: { // 0x628E30
         return new CTaskSimplePause{ 100 };
     }
-    case TASK_COMPLEX_GO_TO_POINT_AND_STAND_STILL: {
+    case TASK_COMPLEX_GO_TO_POINT_AND_STAND_STILL: { // 0x628DE0
         return new CTaskComplexGoToPointAndStandStill{
             PEDMOVE_RUN,
             m_VehiclePos,
-            0.5f,
-            2.0f,
+            0.5f, // 0x86FC84
+            2.0f, // 0x86FC88
             false,
             false
         };
     }
+    default:
+        return nullptr;
     }
-    */
 }
 
 // 0x622070

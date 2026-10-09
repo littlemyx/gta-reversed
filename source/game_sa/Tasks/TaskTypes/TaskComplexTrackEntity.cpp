@@ -11,7 +11,7 @@ void CTaskComplexTrackEntity::InjectHooks() {
     RH_ScopedInstall(Constructor, 0x65F3B0);
     RH_ScopedInstall(Destructor, 0x65F460);
 
-    RH_ScopedInstall(SetOffsetPos, 0x65F760, {.State = HS::RedirectToGTA, .Locked = true});
+    RH_ScopedInstall(SetOffsetPos, 0x65F760);
     RH_ScopedInstall(CalcTargetPos, 0x65F780);
     RH_ScopedInstall(CalcMoveRatio, 0x65F930);
 

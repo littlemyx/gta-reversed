@@ -62,7 +62,7 @@ public:
             RH_ScopedVirtualClass(CTaskComplexSeekEntity<CEntitySeekPosCalculatorXYOffset>, 0x86FBB4, 11);
 
             RH_ScopedInstall(Constructor, 0x661DC0);
-            RH_ScopedInstall(Destructor, 0x661F30);
+            RH_ScopedNamedInstall(Destructor, "Destructor-NonVirtual", 0x661F30); // not "Destructor": RH_ScopedVMTDestructorInstall below registers that name (duplicate-name assert in HookCategory)
             RH_ScopedVMTDestructorInstall(0x661F10);
 
             RH_ScopedInstall(CreateSubTask, 0x496DC0);

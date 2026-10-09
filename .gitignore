@@ -76,3 +76,6 @@ data_pointers.txt
 standalone_data/
 standalone.log
 standalone_unknown_pointers.txt
+__pycache__/
+data_pointers.bin
+standalone_unverified_hooks.txt

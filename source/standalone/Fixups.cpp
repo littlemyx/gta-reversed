@@ -96,6 +96,16 @@ void* MakeStub(uint32_t exeAddr) {
 }
 
 // ---------------------------------------------------------------- redirect handler
+// SEH-guarded read: a trap taken on a stack overflow path must not double fault silently
+bool SafeReadU32(uint32_t addr, uint32_t& out) {
+    __try {
+        out = *(volatile uint32_t*)addr;
+        return true;
+    } __except (EXCEPTION_EXECUTE_HANDLER) {
+        return false;
+    }
+}
+
 LONG CALLBACK RedirectVEH(EXCEPTION_POINTERS* ep) {
     const auto* r = ep->ExceptionRecord;
     if (r->ExceptionCode != EXCEPTION_ACCESS_VIOLATION || !DataImage::IsLoaded()) {
@@ -103,10 +113,23 @@ LONG CALLBACK RedirectVEH(EXCEPTION_POINTERS* ep) {
     }
     const auto  pc = (uint32_t)ep->ContextRecord->Eip;
     const auto& info = DataImage::GetInfo();
-    if (pc < info.CodeLo || pc >= info.CodeHi || r->ExceptionInformation[1] != pc) { // not an instruction fetch from the original code range
+    const auto  kind = (uint32_t)r->ExceptionInformation[0]; // 0 read, 1 write, 8 execute (DEP)
+    const auto  addr = (uint32_t)r->ExceptionInformation[1];
+    if (pc < info.CodeLo || pc >= info.CodeHi || addr != pc) { // not an instruction fetch from the original code range
+        if (kind != 8 && addr >= info.CodeLo && addr < info.DataBase) {
+            Fixups::Fatal("TRAP: data %s access to the original code range at 0x%08X from 0x%08X (exe +0x%X). The original code bytes are not part of the standalone image.",
+                kind ? "write" : "read", addr, pc, pc - (uint32_t)GetModuleHandleA(nullptr));
+        }
+        if (kind == 1 && info.RdataLo && addr >= info.RdataLo && addr < info.RdataHi) {
+            Fixups::Fatal("TRAP: write into the read-only original .rdata at 0x%08X from 0x%08X (exe +0x%X): a vtable/constant/string table is being modified.",
+                addr, pc, pc - (uint32_t)GetModuleHandleA(nullptr));
+        }
         return EXCEPTION_CONTINUE_SEARCH;
     }
-    const uint32_t retAddr = *(uint32_t*)ep->ContextRecord->Esp;
+    uint32_t retAddr = 0;
+    if (!SafeReadU32(ep->ContextRecord->Esp, retAddr)) {
+        retAddr = 0xDEADDEAD; // unreadable stack
+    }
     if (void* ours = Fixups::FindKnown(pc)) {
         static std::atomic<uint32_t> s_logged{};
         if (s_logged++ < 64) {
@@ -360,6 +383,16 @@ FixupStats ApplyToDataImage() {
     Log("fixups self-check: changed dwords %u, fixed+trapped %u: %s", (unsigned)s.ChangedDwords, (unsigned)expectedChanged, s.ChangedDwords == expectedChanged ? "OK" : "MISMATCH");
     if (s.ChangedDwords != expectedChanged) {
         Fatal("ApplyToDataImage self-check failed: %u dwords changed but %u were fixed/trapped (something else wrote into the image)", (unsigned)s.ChangedDwords, (unsigned)expectedChanged);
+    }
+    // .rdata (vtables, constants, string tables) is read-only in the original exe: everything above was the last legitimate write.
+    // A write from a port now raises an AV that RedirectVEH reports with the address (see "write into the read-only original .rdata").
+    if (info.RdataLo && info.RdataHi > info.RdataLo) {
+        DWORD old;
+        if (VirtualProtect((void*)info.RdataLo, info.RdataHi - info.RdataLo, PAGE_READONLY, &old)) {
+            Log("fixups: .rdata 0x%08X..0x%08X is now PAGE_READONLY", info.RdataLo, info.RdataHi);
+        } else {
+            Log("fixups: WARNING VirtualProtect(READONLY) on .rdata failed (error %u)", GetLastError());
+        }
     }
     return s;
 }

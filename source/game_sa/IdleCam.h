@@ -36,7 +36,7 @@ public:
     // Inlined: ProcessSlerp, return type is NOTSA
     auto VectorToAnglesRotXRotZ(const CVector& pos) {
         return std::make_pair(
-            CGeneral::GetATanOfXY(pos.x, pos.y) + DegreesToRadians(180.0f),
+            CGeneral::GetATanOfXY(pos.x, pos.y) + 3.1415927f, // 0x858CB8 (exact float pi)
             CGeneral::GetATanOfXY(pos.Magnitude2D(), pos.z)
         );
     }

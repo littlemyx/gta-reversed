@@ -35,14 +35,25 @@ bool CCoverPoint::CanAccommodateAnotherPed() const noexcept {
 
 // 0x698EF0
 void CCoverPoint::ReleaseCoverPointForPed(CPed* ped) {
-    rng::fill(m_CoveredPeds, nullptr);
+    // Only the slots that hold `ped` are cleared (the exe compares each slot with the argument)
+    for (auto& covered : m_CoveredPeds) {
+        if (covered.Get() == ped) {
+            covered = (CPed*)nullptr; // CleanUpOldReference (0x571A00) if it was set
+        }
+    }
 }
 
 // 0x698EB0
 void CCoverPoint::ReserveCoverPointForPed(CPed* ped) {
-    const auto it = rng::find(m_CoveredPeds, nullptr);
-    if (it != m_CoveredPeds.end()) {
-        *it = ped;
+    // The exe walks the slots in order: stops if one already holds `ped`, else takes the first free one
+    for (auto& covered : m_CoveredPeds) {
+        if (covered.Get() == ped) {
+            return;
+        }
+        if (!covered.Get()) {
+            covered = ped; // RegisterReference (0x571B70)
+            return;
+        }
     }
 }
 

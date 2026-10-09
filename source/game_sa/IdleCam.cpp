@@ -3,6 +3,7 @@
 #include "IdleCam.h"
 #include "InterestingEvents.h"
 #include "HandShaker.h"
+#include "Fx/FxFtol.h"
 
 auto& gIdleCam = StaticRef<CIdleCam>(0xB6FDA0);
 auto& gbCineyCamProcessedOnFrame = StaticRef<uint32>(0xB6EC40);
@@ -82,7 +83,7 @@ void CIdleCam::Reset(bool resetControls) {
 // 0x50A200
 void CIdleCam::ProcessIdleCamTicker() {
     if (m_LastTimePadTouched == CPad::GetPad(0)->LastTimeTouched) {
-        m_IdleTickerFrames += static_cast<uint32>(CTimer::ms_fTimeStep * 20.0f);
+        m_IdleTickerFrames += notsa::detail::Ftol(CTimer::ms_fTimeStep * 0.02f * 1000.0f); // 0x858B38, 0x858C4C (NOT `ts * 20`)
     } else {
         m_LastTimePadTouched = CPad::GetPad(0)->LastTimeTouched;
         m_IdleTickerFrames   = 0;
@@ -134,20 +135,23 @@ void CIdleCam::ProcessFOVZoom(float time) {
         CVector lookAtPos;
         GetLookAtPositionOnTarget(m_Target, lookAtPos);
 
-        const CVector delta = m_Cam->m_vecSource - lookAtPos;
-        const float   dist  = std::sqrt(delta.z * delta.z + delta.y * delta.y + delta.x * delta.x);
+        // exe: x87, term order z, y, x
+        const double dx   = (double)m_Cam->m_vecSource.x - (double)lookAtPos.x;
+        const double dy   = (double)m_Cam->m_vecSource.y - (double)lookAtPos.y;
+        const double dz   = (double)m_Cam->m_vecSource.z - (double)lookAtPos.z;
+        const double dist = std::sqrt(dz * dz + dy * dy + dx * dx);
 
         if (m_Target->GetType() == ENTITY_TYPE_PED) {
             const auto pedType = m_Target->AsPed()->m_nPedType;
             if (pedType == PED_TYPE_PROSTITUTE || pedType == PED_TYPE_CIVFEMALE) {
                 shouldZoomIn = true;
                 zoomNearest *= 0.5f;
-                if (dist < 8.0f) {
+                if (dist < 8.0) {
                     m_nForceAZoomOut = true;
                 }
             }
         }
-        if (dist > m_DistStartFOVZoom) {
+        if (dist > (double)m_DistStartFOVZoom) {
             shouldZoomIn = true;
         }
     }
@@ -214,7 +218,7 @@ void CIdleCam::ProcessFOVZoom(float time) {
     // Interpolates the FOV between `m_ZoomFrom` and `m_ZoomTo`
     const auto InterpolateFOV = [&] {
         const float t = (270.0f - ((curTimeMs - m_TimeZoomStarted) / m_DurationFOVZoom) * 180.0f) * 0.017453292f;
-        m_CurFOV = (m_ZoomTo - m_ZoomFrom) * ((std::sin(t) + 1.0f) * 0.5f) + m_ZoomFrom;
+        m_CurFOV = (float)((double)(m_ZoomTo - m_ZoomFrom) * ((std::sin((double)t) + 1.0) * 0.5) + (double)m_ZoomFrom); // fsin result stays unrounded on the x87 stack
     };
 
     switch (m_ZoomState) {
@@ -260,8 +264,12 @@ bool CIdleCam::IsTargetValid(CEntity* target) {
     CVector lookAtPos{};
     GetLookAtPositionOnTarget(target, lookAtPos);
 
-    const auto dist = DistanceBetweenPoints(m_Cam->m_vecSource, lookAtPos);
-    if (dist < m_DistTooClose || dist > m_DistTooFar) {
+    // exe: x87, term order z, y, x
+    const double dx   = (double)m_Cam->m_vecSource.x - (double)lookAtPos.x;
+    const double dy   = (double)m_Cam->m_vecSource.y - (double)lookAtPos.y;
+    const double dz   = (double)m_Cam->m_vecSource.z - (double)lookAtPos.z;
+    const double dist = std::sqrt(dz * dz + dy * dy + dx * dx);
+    if (dist < (double)m_DistTooClose || dist > (double)m_DistTooFar) {
         return false;
     }
 
@@ -287,7 +295,7 @@ bool CIdleCam::IsTargetValid(CEntity* target) {
         return true;
     }
 
-    return m_TargetLOSCounter++ < m_TargetLOSFramestoReject;
+    return m_TargetLOSCounter++ <= m_TargetLOSFramestoReject; // exe: `jg` => false only if the old counter was > frames
 }
 
 // 0x50A280
@@ -347,7 +355,12 @@ void CIdleCam::ProcessTargetSelection() {
     }
 
     if (!m_Target) {
-        SetTargetPlayer();
+        // The exe stores the player into `m_Target` directly (no reference registration) BEFORE calling `SetTarget`,
+        // so `SetTarget` takes its "has a target" branch (slerps from `m_LastIdlePos`) and cleans up a reference that was never registered.
+        m_Target         = FindPlayerPed();
+        m_nForceAZoomOut = true;
+        SetTarget(FindPlayerPed());
+        m_nForceAZoomOut = true;
     }
 
     if (!IsTargetValid(m_Target) && timeDelta > m_TimeMinimumToLookAtSomething) {
@@ -376,53 +389,75 @@ float CIdleCam::ProcessSlerp(float& outX, float& outZ) {
     auto [slerpAtan, slerpDistAtan]   = VectorToAnglesRotXRotZ(m_PositionToSlerpFrom - m_Cam->m_vecSource);
     auto [lookAtAtan, lookAtDistAtan] = VectorToAnglesRotXRotZ(lookAtPos - m_Cam->m_vecSource);
 
-    const auto ClampAngle = [](float& angle, float compare) {
-        // TODO: simplify
-        if (compare <= DegreesToRadians(180.0f)) {
-            if (compare < -DegreesToRadians(180.0f)) {
-                angle += DegreesToRadians(360.0f);
-            }
-        } else {
-            angle -= DegreesToRadians(360.0f);
+    constexpr float PI_F     = 3.1415927f; // 0x858CB8
+    constexpr float TWO_PI_F = 6.2831855f; // 0x858CBC
+    const auto ClampAngle = [&](float& angle, float diff) {
+        if (diff > PI_F) {
+            angle -= TWO_PI_F;
+        } else if (diff < -PI_F) { // 0x858CC0
+            angle += TWO_PI_F;
         }
     };
 
     ClampAngle(lookAtDistAtan, lookAtDistAtan - slerpDistAtan);
     ClampAngle(lookAtAtan, lookAtAtan - slerpAtan);
 
-    const auto slerpT = std::min((beginTime - m_TimeLastTargetSelected) / m_SlerpDuration, 1.0f);
-    const auto lerpT  = (std::sin(DegreesToRadians(270.0f - 180.0f * slerpT)) + 1.0f) / 2.0f;
+    float slerpT = ((float)beginTime - m_TimeLastTargetSelected) / m_SlerpDuration;
+    if (slerpT > 1.0f) { // `fcomp 1.0; jne` => NaN stays NaN
+        slerpT = 1.0f;
+    }
+    // exe: (sin((270 - slerpT * 180) * 0.017453292) + 1) * 0.5  (0x859070, 0x85A994, 0x8595EC)
+    const float lerpT = (float)((std::sin((double)((270.0f - slerpT * 180.0f) * 0.017453292f)) + 1.0) * 0.5);
 
-    outX = lerp(slerpDistAtan, lookAtDistAtan - slerpDistAtan, lerpT);
-    outZ = lerp(slerpAtan, lookAtAtan - slerpAtan, lerpT);
+    // NOTE: NOT the common.h `lerp` (that one is `to * t + from * (1 - t)`); the exe computes `(to - from) * t + from`
+    outX = (lookAtDistAtan - slerpDistAtan) * lerpT + slerpDistAtan;
+    outZ = (lookAtAtan - slerpAtan) * lerpT + slerpAtan;
     return slerpT;
 }
 
 // 0x50E760
 void CIdleCam::FinaliseIdleCamera(float curAngleX, float curAngleY, float shakeDegree) {
-    auto &vecFwd = m_Cam->m_vecFront, vecUp = m_Cam->m_vecUp;
+    // NOTE: the original declaration here was `auto &vecFwd = ..., vecUp = ...;` => `vecUp` was a COPY
+    auto& vecFwd = m_Cam->m_vecFront;
+    auto& vecUp  = m_Cam->m_vecUp;
 
+    // x87: the products stay unrounded until the float store
     vecFwd = CVector{
-        -(std::cos(curAngleY) * std::cos(curAngleX)),
-        -(std::sin(curAngleY) * std::cos(curAngleX)),
-        std::sin(curAngleX)
-    }.Normalized();
+        (float)-(std::cos((double)curAngleY) * std::cos((double)curAngleX)),
+        (float)-(std::sin((double)curAngleY) * std::cos((double)curAngleX)),
+        (float)std::sin((double)curAngleX)
+    };
+    vecFwd.Normalise();
     m_LastIdlePos = vecFwd + m_Cam->m_vecSource;
 
     auto& hs = gHandShaker[0];
-    hs.Process(shakeDegree);
-    const auto angle = hs.m_ang.z * m_DegreeShakeIdleCam * shakeDegree;
-    vecFwd = hs.m_resultMat.TransformPoint(vecFwd);
+    hs.Process(shakeDegree * m_DegreeShakeIdleCam); // exe: `shake * m_DegreeShakeIdleCam`
+    const float angle = (hs.m_ang.z * m_DegreeShakeIdleCam) * shakeDegree;
+    vecFwd = hs.m_resultMat.InverseTransformVector(vecFwd); // 0x59C810 `Multiply3x3(out, v, m)` (NOT TransformPoint)
 
-    vecUp.Set(std::sin(angle), 0.0f, std::cos(angle));
-    auto rightDir = CrossProduct(vecFwd, vecUp).Normalized();
-    vecUp         = CrossProduct(rightDir, vecFwd);
-    if (vecFwd.x == 0 && vecFwd.y == 0.0f) {
-        vecFwd.x = vecFwd.y = 0.0001f;
-    }
-    rightDir = CrossProduct(vecFwd, vecUp).Normalized();
-    vecUp    = CrossProduct(rightDir, vecFwd);
-    m_Cam->GetVectorsReadyForRW();
+    vecUp.Set((float)std::sin((double)angle), 0.0f, (float)std::cos((double)angle));
+
+    // The exe orthonormalises the 3 times: (a) with the shaken up vector, (b) after resetting `up` to (0, 0, 1)
+    const auto Orthonormalise = [&] {
+        auto rightDir = CrossProduct(vecFwd, vecUp);
+        rightDir.Normalise();
+        vecUp = CrossProduct(rightDir, vecFwd);
+    };
+    const auto FixDegenerateFront = [&] {
+        if (vecFwd.x == 0.0f && vecFwd.y == 0.0f) {
+            vecFwd.x = vecFwd.y = 0.0001f; // 0x38D1B717
+        }
+    };
+
+    Orthonormalise();
+    FixDegenerateFront();
+    Orthonormalise();
+
+    vecUp.Set(0.0f, 0.0f, 1.0f);
+    vecFwd.Normalise();
+    FixDegenerateFront();
+    Orthonormalise();
+    // (no `GetVectorsReadyForRW` here: the exe doesn't call it)
 }
 
 // 0x51D3E0

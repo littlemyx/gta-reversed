@@ -83,7 +83,9 @@ void CConversations::SetUpConversationNode(
 
     if (answerYesKey) {
         strncpy(node.m_NameNodeYes, answerYesKey, 6u);
-        MakeUpperCase(node.m_NameNodeYes);
+        if (notsa::IsFixBugs()) { // BUG: The exe upper-cases only the question and the "no" key, the "yes" key is used as given (and compared case-sensitively in `DoneSettingUpConversation`)
+            MakeUpperCase(node.m_NameNodeYes);
+        }
     } else {
         node.m_NameNodeYes[0] = '\0';
     }
@@ -180,8 +182,15 @@ void CConversations::DoneSettingUpConversation(bool bSuppressSubtitles) {
             break;
         }
     }
-    // BUG: The original doesn't check if there's a free slot at all (it would write to a null pointer below)
-    assert(conversation);
+    if (!conversation) {
+        // BUG: The original doesn't check if there's a free slot at all: it uses the memory right after the array (`m_aTempNodes`, 0x969360) as the conversation
+        if (notsa::IsFixBugs()) {
+            m_SettingUpConversationNumNodes = 0;
+            m_SettingUpConversation         = false;
+            return;
+        }
+        conversation = reinterpret_cast<CConversationForPed*>(m_Conversations.data() + m_Conversations.size());
+    }
 
     // Reserve a slot in `m_Nodes` for each of the temp nodes
     for (auto i = 0; i < m_SettingUpConversationNumNodes; i++) {

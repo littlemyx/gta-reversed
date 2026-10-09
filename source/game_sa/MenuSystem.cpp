@@ -568,10 +568,8 @@ void CMenuSystem::ActivateItems(MenuId id, bool b0, bool b1, bool b2, bool b3, b
     }
 }
 
-// 0x581B30, untested
+// 0x581B30
 void CMenuSystem::ActivateOneItem(MenuId id, uint8 row, bool enable) {
-    // plugin::Call<0x581B30, MenuId, uint8, uint8>(id, row, enable);
-
     auto* menu = MenuNumber[id];
 
     menu->m_abRowSelectable[row] = enable;

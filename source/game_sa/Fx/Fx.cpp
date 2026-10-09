@@ -242,10 +242,10 @@ void Fx_c::InjectHooks() {
     RH_ScopedInstall(AddWheelGrass, 0x49FF20);
     RH_ScopedInstall(AddWheelGravel, 0x4A0170);
     RH_ScopedInstall(AddWheelMud, 0x4A03C0);
-    // RH_ScopedInstall(AddWheelSand, 0x4A0610);
-    // RH_ScopedInstall(AddWheelDust, 0x4A09C0);
-    // RH_ScopedInstall(TriggerWaterHydrant, 0x4A0D70);
-    // RH_ScopedInstall(TriggerGunshot, 0x4A0DE0);
+    RH_ScopedInstall(AddWheelSand, 0x4A0610);
+    RH_ScopedInstall(AddWheelDust, 0x4A09C0);
+    RH_ScopedInstall(TriggerWaterHydrant, 0x4A0D70);
+    RH_ScopedInstall(TriggerGunshot, 0x4A0DE0);
     // RH_ScopedInstall(TriggerTankFire, 0x4A0FA0);
     RH_ScopedInstall(TriggerWaterSplash, 0x4A1070);
     RH_ScopedInstall(TriggerBulletSplash, 0x4A10E0);
@@ -788,22 +788,75 @@ void Fx_c::AddWheelMud(CVehicle* vehicle, CVector pos, bool bWheelsSpinning, flo
 
 // 0x4A0610
 void Fx_c::AddWheelSand(CVehicle* vehicle, CVector pos, bool bWheelsSpinning, float lightMult) {
-    ((void(__thiscall*)(Fx_c*, CVehicle*, CVector, uint8, float))0x4A0610)(this, vehicle, pos, bWheelsSpinning, lightMult);
+    AddWheelSandOrDust(*this, vehicle, pos, bWheelsSpinning, lightMult, { 0.81f, 0.67f, 0.57f }, false);
 }
 
 // 0x4A09C0
 void Fx_c::AddWheelDust(CVehicle* vehicle, CVector pos, bool bWheelsSpinning, float lightMult) {
-    ((void(__thiscall*)(Fx_c*, CVehicle*, CVector, uint8, float))0x4A09C0)(this, vehicle, pos, bWheelsSpinning, lightMult);
+    AddWheelSandOrDust(*this, vehicle, pos, bWheelsSpinning, lightMult, { 0.51f, 0.44f, 0.31f }, true);
 }
 
 // 0x4A0D70
 void Fx_c::TriggerWaterHydrant(const CVector& pos) {
-    ((void(__thiscall*)(Fx_c*, const CVector&))0x4A0D70)(this, pos);
+    if (CamDistSq_XZY(pos) > 625.0) { // 0x85A6E8 (FCOMP + JZ: NaN passes)
+        return;
+    }
+    if (auto* const fxSystem = g_fxMan.CreateFxSystem("water_hydrant", pos, nullptr, false)) { // 0x4A9BE0
+        fxSystem->PlayAndKill(); // 0x4AA3D0
+    }
 }
 
 // 0x4A0DE0
 void Fx_c::TriggerGunshot(CEntity* entity, const CVector& origin, const CVector& target, bool doGunflash) {
-    ((void(__thiscall*)(Fx_c*, CEntity*, const CVector&, const CVector&, bool))0x4A0DE0)(this, entity, origin, target, doGunflash);
+    if (CamDistSq_ZXY(origin) > 625.0) { // 0x85A6E8 (FCOMP + JZ: NaN passes)
+        return;
+    }
+
+    RwMatrix* tempMat{}; // Only created when there's no entity
+    RwMatrix* mat;
+    CVector   localPos;
+    if (entity) {
+        const auto& entityPos = entity->GetPosition();
+        localPos = CVector{ origin.x - entityPos.x, origin.y - entityPos.y, origin.z - entityPos.z };
+
+        // Make sure the entity has a matrix (0x54F560, 0x54F1B0)
+        if (!entity->m_matrix) {
+            entity->AllocateMatrix();
+            entity->m_placement.UpdateMatrix(entity->m_matrix);
+        }
+        localPos = InverseTransformVectorOriginal(*entity->m_matrix, localPos); // 0x59C810
+
+        if (!entity->GetRwObject()) {
+            return;
+        }
+        mat = RwFrameGetMatrix(static_cast<RwFrame*>(rwObjectGetParent(entity->GetRwObject())));
+    } else {
+        tempMat = g_fxMan.FxRwMatrixCreate(); // 0x4A9440
+        CreateMatFromVec(tempMat, &origin, &target); // 0x49E950
+        localPos = CVector{ 0.0f, 0.0f, 0.0f };
+        mat = tempMat;
+    }
+
+    if (mat) {
+        if (doGunflash) {
+            if (auto* const fxSystem = g_fxMan.CreateFxSystem("gunflash", localPos, mat, false)) { // 0x4A9BE0
+                if (!entity) {
+                    fxSystem->CopyParentMatrix(); // 0x4AA890
+                }
+                fxSystem->PlayAndKill(); // 0x4AA3D0
+            }
+        }
+        if (auto* const fxSystem = g_fxMan.CreateFxSystem("gunsmoke", localPos, mat, false)) { // 0x4A9BE0
+            if (!entity) {
+                fxSystem->CopyParentMatrix(); // 0x4AA890
+            }
+            fxSystem->PlayAndKill(); // 0x4AA3D0
+        }
+    }
+
+    if (tempMat) {
+        g_fxMan.FxRwMatrixDestroy(tempMat); // 0x4A9460
+    }
 }
 
 // 0x4A0FA0

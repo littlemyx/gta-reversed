@@ -123,7 +123,7 @@ void CWorldScan::ScanWorld(CVector2D* points, int32 pointsCount, tScanFunction s
             if (i == cur) {
                 continue;
             }
-            double angle = (double)CGeneral::GetATanOfXY(points[i].x - points[cur].x, points[i].y - points[cur].y) - (double)hullAngle;
+            double angle = CGeneral::GetATanOfXYExt(points[i].x - points[cur].x, points[i].y - points[cur].y) - (double)hullAngle; // 0x53CC70 (unrounded ST0)
             if (angle < 0.0) { // 0x858B50 = 0.0f
                 do {
                     angle += (double)(2.f * std::numbers::pi_v<float>); // 0x858CBC
@@ -1064,7 +1064,7 @@ void CRenderer::ScanSectorList(int32 sectorX, int32 sectorY) {
     float fDistanceY = CWorld::GetSectorPosY(sectorY) - ms_vecCameraPosition.y;
     float fAngleInRadians = std::atan2(-fDistanceX, fDistanceY) - ms_fCameraHeading;
     if (CVector2D(fDistanceX, fDistanceY).SquaredMagnitude() < MAX_STREAMING_RADIUS_SQUARED ||
-        std::fabs(CGeneral::LimitRadianAngle(fAngleInRadians)) < STREAMING_ANGLE_THRESHOLD_RAD
+        std::fabs(CGeneral::LimitRadianAngleExt(fAngleInRadians)) < (double)STREAMING_ANGLE_THRESHOLD_RAD // x87: 0x53CB50 leaves the result unrounded in ST0
     ) {
         bRequestModel = true;
     }
@@ -1156,7 +1156,7 @@ void CRenderer::ScanBigBuildingList(int32 sectorX, int32 sectorY) {
     float fDistanceY = CWorld::GetLodSectorPosY(sectorY) - ms_vecCameraPosition.y;
     float fAngleInRadians = std::atan2(-fDistanceX, fDistanceY) - ms_fCameraHeading;
     if (CVector2D(fDistanceX, fDistanceY).SquaredMagnitude() < MAX_BIGBUILDING_STREAMING_RADIUS_SQUARED ||
-        std::fabs(CGeneral::LimitRadianAngle(fAngleInRadians)) <= BIGBUILDING_STREAMING_ANGLE_THRESHOLD_RAD
+        std::fabs(CGeneral::LimitRadianAngleExt(fAngleInRadians)) <= (double)BIGBUILDING_STREAMING_ANGLE_THRESHOLD_RAD // x87: 0x53CB50 leaves the result unrounded in ST0
     ) {
         bRequestModel = true;
     }

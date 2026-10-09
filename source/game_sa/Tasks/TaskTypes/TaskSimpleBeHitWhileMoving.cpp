@@ -123,6 +123,9 @@ void CTaskSimpleBeHitWhileMoving::StartAnim(CPed* ped) {
                     assoc->m_Flags |= ANIMATION_IS_PLAYING;
                     assoc->m_BlendAmount = 0.f;
                     assoc->m_BlendDelta  = 8.f;
+                    if (notsa::IsFixBugs()) { // BUG: The original leaves `m_pAnim` null here and then registers the finish callback on it => crash. Track the reused anim instead.
+                        m_pAnim = assoc;
+                    }
                 } else {
                     m_pAnim = CAnimManager::BlendAnimation(clump, ANIM_GROUP_DEFAULT, animId, 8.f);
                 }
@@ -172,7 +175,7 @@ void CTaskSimpleBeHitWhileMoving::StartAnim(CPed* ped) {
         }
     }
 
-    if (!m_pAnim && notsa::IsFixBugs()) { // BUG: See above (also reachable via the "ped is attached" path)
+    if (!m_pAnim && notsa::IsFixBugs()) { // BUG: See above (the original crashes on a null `m_pAnim` in the "ped is attached" and the random 1000-3000 paths)
         return;
     }
     m_pAnim->SetFinishCallback(FinishAnimCB, this); // 0x4CEBE0

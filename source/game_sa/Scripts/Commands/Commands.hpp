@@ -40,6 +40,7 @@ namespace g17c { void RegisterHandlers(); }; // S6-D part 2 (2/2)
 namespace g18 { void RegisterHandlers(); }; // S6-E part 1: ids 1800..1899
 namespace g19 { void RegisterHandlers(); }; // S6-E part 2: ids 1900..1999
 namespace g22 { void RegisterHandlers(); }; // S6-G: ids 2200..2299
+namespace g23 { void RegisterHandlers(); }; // S6-H: ids 2300..2399
 }; // namespace ported
 }; // namespace commands
 }; // namespace notsa

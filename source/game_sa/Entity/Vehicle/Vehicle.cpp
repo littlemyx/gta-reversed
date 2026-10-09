@@ -28,6 +28,8 @@
 #include "Shadows.h"
 #include "PedClothesDesc.h"
 
+static CVector TransformPointExt(const CMatrix& m, const CVector& v); // defined below
+
 auto& planeRotorDmgTimeMS = StaticRef<uint32>(0xC1CC1C);
 
 auto& fBurstTyreMod = StaticRef<float>(0x8D34B4);                // 0.13f
@@ -149,7 +151,7 @@ void CVehicle::InjectHooks() {
     RH_ScopedInstall(RemoveUpgrade, 0x6D3630);
     RH_ScopedInstall(GetUpgrade, 0x6D3650);
     RH_ScopedInstall(CreateReplacementAtomic, 0x6D3700);
-    // RH_ScopedInstall(AddReplacementUpgrade, 0x6D3830);
+    RH_ScopedInstall(AddReplacementUpgrade, 0x6D3830);
     RH_ScopedInstall(RemoveReplacementUpgrade, 0x6D39E0);
     RH_ScopedInstall(GetReplacementUpgrade, 0x6D3A50);
     RH_ScopedInstall(RemoveAllUpgrades, 0x6D3AB0);
@@ -179,7 +181,7 @@ void CVehicle::InjectHooks() {
     RH_ScopedInstall(SetupRender, 0x6D64F0);
     RH_ScopedInstall(ProcessBikeWheel, 0x6D73B0);
     RH_ScopedInstall(FindTyreNearestPoint, 0x6D7BC0);
-    // RH_ScopedInstall(InflictDamage, 0x6D7C90);
+    RH_ScopedInstall(InflictDamage, 0x6D7C90);
     RH_ScopedInstall(KillPedsGettingInVehicle, 0x6D82F0);
     RH_ScopedInstall(UsesSiren, 0x6D8470);
     RH_ScopedInstall(IsSphereTouchingVehicle, 0x6D84D0);
@@ -224,15 +226,15 @@ void CVehicle::InjectHooks() {
 
     RH_ScopedGlobalOverloadedInstall(SetVehicleAtomicVisibilityCB, "Object", 0x6D2690, RwObject*(*)(RwObject*, void*));
     RH_ScopedGlobalOverloadedInstall(SetVehicleAtomicVisibilityCB, "Frame", 0x6D26D0, RwFrame*(*)(RwFrame*, void*));
-    // RH_ScopedGlobalInstall(SetCompAlphaCB, 0x6D2950);
+    RH_ScopedGlobalInstall(SetCompAlphaCB, 0x6D2950);
     RH_ScopedGlobalInstall(IsVehiclePointerValid, 0x6E38F0);
     RH_ScopedGlobalInstall(IsValidModForVehicle, 0x49B010);
-    // RH_ScopedGlobalInstall(RemoveUpgradeCB, 0x6D3300);
-    // RH_ScopedGlobalInstall(FindUpgradeCB, 0x6D3370);
+    RH_ScopedGlobalInstall(RemoveUpgradeCB, 0x6D3300);
+    RH_ScopedGlobalInstall(FindUpgradeCB, 0x6D3370);
     RH_ScopedGlobalOverloadedInstall(RemoveObjectsCB, "Object", 0x6D33B0, RwObject*(*)(RwObject*, void*));
     RH_ScopedGlobalOverloadedInstall(RemoveObjectsCB, "Frame", 0x6D3420, RwFrame*(*)(RwFrame*, void*));
     RH_ScopedGlobalInstall(CopyObjectsCB, 0x6D3450);
-    // RH_ScopedGlobalInstall(FindReplacementUpgradeCB, 0x6D3490);
+    RH_ScopedGlobalInstall(FindReplacementUpgradeCB, 0x6D3490);
     RH_ScopedGlobalInstall(RemoveAllUpgradesCB, 0x6D34D0);
     RH_ScopedNamedGlobalInstall(::DestroyVehicleAndDriverAndPassengers, "DestroyVehicleAndDriverAndPassengers", 0x6D2250); // `::` because the CVehicle member of the same name would win; cdecl (vehicle on the stack), NOT a thiscall member
 }
@@ -1959,7 +1961,8 @@ void CVehicle::ApplyBoatWaterResistance(tBoatHandlingData* boatHandling, float f
 
 // 0x6D2950
 RpMaterial* SetCompAlphaCB(RpMaterial* material, void* data) {
-    return ((RpMaterial * (__cdecl*)(RpMaterial*, void*))0x6D2950)(material, data);
+    material->color.alpha = static_cast<uint8>(reinterpret_cast<uintptr_t>(data)); // 0x6D2950: byte store at +7 (RwRGBA::alpha)
+    return material;
 }
 
 // 0x6D2960
@@ -2280,12 +2283,34 @@ bool CVehicle::ClearVehicleUpgradeFlags(int32 arg0, int32 modId) {
 
 // 0x6D3300
 RpAtomic* RemoveUpgradeCB(RpAtomic* atomic, void* data) {
-    return ((RpAtomic * (__cdecl*)(RpAtomic*, void*))0x6D3300)(atomic, data);
+    // NOTE: `data` is the upgrade id passed BY VALUE (not a pointer) - see `CVehicle::RemoveUpgrade`
+    if (CVisibilityPlugins::GetAtomicId(atomic) & ATOMIC_UPGRADE) {
+        const auto mi = CVisibilityPlugins::GetModelInfo(atomic);
+        if (static_cast<int32>(reinterpret_cast<intptr_t>(data)) == mi->CarMod && !mi->bUsesVehDummy) {
+            const auto frame = RpAtomicGetFrame(atomic);
+            RpClumpRemoveAtomic(RpAtomicGetClump(atomic), atomic);
+            RpAtomicDestroy(atomic);
+            RwFrameDestroy(frame);
+            if (mi) {
+                mi->RemoveRef();
+            }
+        }
+    }
+    return atomic;
 }
 
 // 0x6D3370
 RpAtomic* FindUpgradeCB(RpAtomic* atomic, void* data) {
-    return ((RpAtomic * (__cdecl*)(RpAtomic*, void*))0x6D3370)(atomic, data);
+    struct tFindUpgradeData { int32 upgradeId; RpAtomic* atomic; };
+    const auto d = static_cast<tFindUpgradeData*>(data);
+    if (CVisibilityPlugins::GetAtomicId(atomic) & ATOMIC_UPGRADE) {
+        const auto mi = CVisibilityPlugins::GetModelInfo(atomic);
+        if (d->upgradeId == mi->CarMod) {
+            d->atomic = atomic;
+            return nullptr; // stop iteration
+        }
+    }
+    return atomic;
 }
 
 // 0x6D33B0
@@ -2343,7 +2368,16 @@ RwObject* CopyObjectsCB(RwObject* object, void* data) {
 
 // 0x6D3490
 RwObject* FindReplacementUpgradeCB(RwObject* object, void* data) {
-    return ((RwObject * (__cdecl*)(RwObject*, void*))0x6D3490)(object, data);
+    if (RwObjectGetType(object) == rpATOMIC) {
+        const auto atomic = reinterpret_cast<RpAtomic*>(object);
+        if (!(CVisibilityPlugins::GetAtomicId(atomic) & ATOMIC_UPGRADE)) {
+            if (CVisibilityPlugins::GetModelInfoIndex(atomic) != -1) {
+                static_cast<tCompSearchStructById*>(data)->m_pFrame = reinterpret_cast<RwFrame*>(object); // (sic) the original stores the atomic here
+                return nullptr; // stop iteration
+            }
+        }
+    }
+    return object;
 }
 
 // 0x6D34D0
@@ -2404,7 +2438,8 @@ RpAtomic* CVehicle::CreateUpgradeAtomic(CBaseModelInfo* mi, const UpgradePosnDes
 
 // 0x6D3630
 void CVehicle::RemoveUpgrade(int32 upgradeId) {
-    RpClumpForAllAtomics(GetRpClump(), RemoveUpgradeCB, &upgradeId);
+    // NOTE: the id is passed BY VALUE (RemoveUpgradeCB compares `data` itself), NOT as `&upgradeId`
+    RpClumpForAllAtomics(GetRpClump(), RemoveUpgradeCB, reinterpret_cast<void*>(static_cast<intptr_t>(upgradeId)));
 }
 
 // 0x6D3650
@@ -2473,9 +2508,48 @@ RpAtomic* CVehicle::CreateReplacementAtomic(CBaseModelInfo* mi, RwFrame* parentF
 
 // 0x6D3830
 void CVehicle::AddReplacementUpgrade(int32 modelIndex, int32 nodeId) {
-    // NOTE: 0x6D38D5 - 0x6D390B => `SetupUpgradeAtomicRendering`
+    const auto frame = CClumpModelInfo::GetFrameFromId(GetRpClump(), nodeId);
 
-    ((void(__thiscall*)(CVehicle*, int32, int32))0x6D3830)(this, modelIndex, nodeId);
+    // Remove everything that's currently attached to the frame, remember the (last) atomic's flags
+    int32 oldAtomicFlags = 0;
+    RwFrameForAllObjects(frame, RemoveObjectsCB, &oldAtomicFlags);
+    RwFrameForAllChildren(frame, RemoveObjectsCB, &oldAtomicFlags);
+
+    const auto mi = CModelInfo::GetModelInfo(modelIndex);
+    const auto atomic = reinterpret_cast<RpAtomic*>(mi->CreateInstance());
+    mi->AddRef();
+
+    const auto atomicFrame = RpAtomicGetFrame(atomic);
+    RpClumpAddAtomic(GetRpClump(), atomic);
+    RpAtomicSetFrame(atomic, frame);
+    RwFrameDestroy(atomicFrame);
+
+    CVisibilityPlugins::SetAtomicId(atomic, oldAtomicFlags & ~ATOMIC_MASK);
+    CVisibilityPlugins::SetAtomicFlag(atomic, ATOMIC_OK);
+
+    SetupUpgradeAtomicRendering(atomic, false); // NOTE: 0x6D38D5 - 0x6D390B
+
+    CDamageAtomicModelInfo::ms_bCreateDamagedVersion = false;
+
+    if (nodeId == CAR_EXHAUST) {
+        if (m_pHandlingData->m_bDoubleExhaust) {
+            const auto second = CreateReplacementAtomic(mi, frame, (eAtomicComponentFlag)oldAtomicFlags, false, true);
+            const auto mat = RwFrameGetMatrix(RpAtomicGetFrame(second));
+            mat->pos.x = (float)((double)RwFrameGetMatrix(frame)->pos.x * -2.0f); // 0x858B18 = -2.0f
+            RwMatrixUpdate(mat);
+        }
+    } else if (nodeId == CAR_BUMP_FRONT || nodeId == CAR_BUMP_REAR) {
+        const auto vmi = CModelInfo::GetModelInfo(m_nModelIndex)->AsVehicleModelInfoPtr();
+        CCustomCarPlateMgr::SetupClumpAfterVehicleUpgrade(GetRpClump(), vmi->m_pPlateMaterial, vmi->m_nPlateType);
+    }
+
+    if (mi->AsDamageAtomicModelInfoPtr()) {
+        CreateReplacementAtomic(mi, frame, (eAtomicComponentFlag)oldAtomicFlags, true, false);
+        if (frame) {
+            RwFrameForAllObjects(frame, SetVehicleAtomicVisibilityCB, (void*)ATOMIC_OK);
+            RwFrameForAllChildren(frame, SetVehicleAtomicVisibilityCB, (void*)ATOMIC_OK);
+        }
+    }
 }
 
 // 0x6D39E0
@@ -3533,7 +3607,161 @@ auto CVehicle::FindTyreNearestPoint(CVector2D point) -> eNearestCarWheel {
 
 // 0x6D7C90
 void CVehicle::InflictDamage(CEntity* damager, eWeaponType weapon, float intensity, CVector coords) {
-    ((void(__thiscall*)(CVehicle*, CEntity*, eWeaponType, float, CVector))0x6D7C90)(this, damager, weapon, intensity, coords);
+    bool dueToFireExplosionOrBullet = false;
+    if (!CanVehicleBeDamaged(damager, weapon, dueToFireExplosionOrBullet)) {
+        return;
+    }
+
+    if (GetStatus() == STATUS_PLAYER && CStats::GetPercentageProgress() >= 100.0f) {
+        intensity *= 0.5f;
+    }
+
+    // Player caused property damage
+    if (intensity > 10.0f
+        && (damager == FindPlayerPed(-1) || damager == FindPlayerVehicle(-1, false))
+        && GetStatus() != STATUS_WRECKED
+    ) {
+        auto& playerInfo = CWorld::Players[CWorld::PlayerInFocus];
+        playerInfo.m_nHavocCaused += 2;
+        playerInfo.m_fCurrentChaseValue += 1.0f;
+        CStats::IncrementStat(STAT_COST_OF_PROPERTY_DAMAGED, (float)(rand() % 20 + 5));
+    }
+
+    // Ped shot at the tyres (automobiles / bikes only)
+    if (damager && damager->GetType() == ENTITY_TYPE_PED && (m_nVehicleType == VEHICLE_TYPE_AUTOMOBILE || m_nVehicleType == VEHICLE_TYPE_BIKE)) {
+        const auto damagerPed = damager->AsPed();
+
+        int32 chance = 0;
+        switch (weapon) { // 0x6D82C0 (jump table, indexed through the byte table at 0x6D82D0)
+        case WEAPON_PISTOL:
+        case WEAPON_PISTOL_SILENCED:
+        case WEAPON_SHOTGUN:
+        case WEAPON_MICRO_UZI:
+        case WEAPON_MP5:
+        case WEAPON_TEC9:
+        case WEAPON_UZI_DRIVEBY:
+            chance = 5;
+            break;
+        case WEAPON_DESERT_EAGLE:
+            chance = 0x40;
+            break;
+        case WEAPON_AK47:
+        case WEAPON_M4:
+            chance = 10;
+            break;
+        default:
+            break;
+        }
+
+        if (damagerPed->IsPlayer()) {
+            chance = 0;
+        }
+
+        bool mayBurst = true;
+        if (damagerPed->m_pVehicle && damagerPed->m_pVehicle->m_nVehicleSubType == VEHICLE_TYPE_BIKE) {
+            if (chance > 1) {
+                chance = 1;
+            }
+        } else if (m_nModelIndex == MODEL_COPBIKE && m_pDriver && m_pDriver->IsCop()) {
+            mayBurst = false;
+        }
+
+        if (mayBurst && chance != 0 && !vehicleFlags.bTyresDontBurst && (rand() & 0x7F) < chance) {
+            std::optional<bool> physicalEffect;
+            if (m_nVehicleType == VEHICLE_TYPE_BIKE) {
+                physicalEffect = false;
+            } else if (GetVehicleAppearance() == VEHICLE_APPEARANCE_AUTOMOBILE) {
+                physicalEffect = true;
+            }
+            if (physicalEffect) {
+                BurstTyre((uint8)((uint8)FindTyreNearestPoint(CVector2D{coords.x, coords.y}) + 13), *physicalEffect);
+            }
+        }
+    }
+
+    // Shot the petrol tank (gas cap) of a vehicle => kill it
+    if (vehicleFlags.bPetrolTankIsWeakPoint && dueToFireExplosionOrBullet && damager && damager->GetType() == ENTITY_TYPE_PED && damager->AsPed()->IsPlayer()) {
+        const CVector gasCapPos = GetVehicleModelInfo()->m_pVehicleStruct->m_avDummyPos[DUMMY_GAS_CAP];
+        if (gasCapPos != CVector{}) { // 0x509760 is `operator!=`
+            const auto worldPos = TransformPointExt(*m_matrix, gasCapPos);
+            coords = CVector{ coords.x - worldPos.x, coords.y - worldPos.y, coords.z - worldPos.z };
+            if (coords.Magnitude() < 0.25f) {
+                intensity = m_fHealth < 1100.0f ? m_fHealth : 1100.0f; // 0x404330 (min, with the original's NaN behaviour)
+            }
+        }
+    }
+
+    // Helis / planes take less damage from anything but explosions / rockets
+    if ((m_nVehicleSubType == VEHICLE_TYPE_HELI || m_nVehicleSubType == VEHICLE_TYPE_PLANE)
+        && !vehicleFlags.bIsRCVehicle
+        && weapon != WEAPON_EXPLOSION && weapon != WEAPON_GRENADE && weapon != WEAPON_ROCKET && weapon != WEAPON_ROCKET_HS
+    ) {
+        intensity *= 0.4f;
+    }
+
+    if (m_fHealth > 0.0f) {
+        m_nLastWeaponDamageType = (uint8)weapon;
+        if (damager) {
+            m_pLastDamageEntity = damager;
+            damager->RegisterReference(&m_pLastDamageEntity);
+        }
+
+        if (m_fHealth > intensity) {
+            const float prevHealth = m_fHealth;
+            m_fHealth = m_fHealth - intensity;
+
+            if ((GetStatus() == STATUS_PLAYER || GetStatus() == STATUS_SIMPLE || GetStatus() == STATUS_PHYSICS)
+                && damager && damager->GetType() == ENTITY_TYPE_PED
+            ) {
+                if (m_pDriver) {
+                    m_pDriver->GetEventGroup().Add(CEventVehicleDamageWeapon{ this, damager, weapon }, false);
+                }
+                for (auto i = 0; i < (int32)m_nMaxPassengers; i++) { // NOTE: the original iterates up to `m_nMaxPassengers` (+0x488), not `m_nNumPassengers` (+0x484)
+                    if (const auto passenger = m_apPassengers[i]) {
+                        passenger->GetEventGroup().Add(CEventVehicleDamageWeapon{ this, damager, weapon }, false);
+                    }
+                }
+            }
+
+            if (prevHealth >= 250.0f && m_fHealth < 250.0f && m_nVehicleType == VEHICLE_TYPE_AUTOMOBILE) {
+                AsAutomobile()->m_damageManager.SetEngineStatus(225);
+                // NOTE: the original stores `damager` (any `CEntity*`) into CAutomobile +0x928, which is `m_pExplosionVictim` (a `CPed*`)
+                const auto engineBreaker = reinterpret_cast<CEntity**>(&AsAutomobile()->m_pExplosionVictim);
+                *engineBreaker = damager;
+                if (damager) {
+                    damager->RegisterReference(engineBreaker);
+                }
+            }
+        } else {
+            m_fHealth = 0.0f;
+
+            if (damager == FindPlayerPed(-1)) {
+                eCrimeType crime;
+                if (m_nVehicleSubType == VEHICLE_TYPE_HELI && !vehicleFlags.bIsRCVehicle) {
+                    crime = CRIME_DESTROY_HELI;
+                } else if (m_nVehicleSubType == VEHICLE_TYPE_PLANE && !vehicleFlags.bIsRCVehicle) {
+                    crime = CRIME_DESTROY_PLANE;
+                } else {
+                    crime = CRIME_DESTROY_VEHICLE;
+                }
+                CCrime::ReportCrime(crime, this, damager->AsPed());
+            }
+
+            if (weapon == WEAPON_EXPLOSION) {
+                m_wBombTimer = (int16)((rand() & 0x7FF) + 1000);
+                m_pWhoDetonatedMe = damager ? damager->AsPed() : nullptr;
+                if (damager) {
+                    damager->RegisterReference(reinterpret_cast<CEntity**>(&m_pWhoDetonatedMe));
+                }
+            } else {
+                BlowUpCar(damager, false);
+            }
+        }
+    }
+
+    if (vehicleFlags.bIsLawEnforcer && damager == FindPlayerPed(-1)) {
+        FindPlayerPed(-1)->SetWantedLevelNoDrop(eWantedLevel::WANTED_LEVEL_1);
+    }
 }
 
 // 0x6D82F0

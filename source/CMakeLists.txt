@@ -237,6 +237,18 @@ if (${RE_PROJECT}_RW_LIBRW)
     target_include_directories(rw_frame_camera_test BEFORE PRIVATE fakerw)
     target_link_libraries(rw_frame_camera_test PRIVATE librw d3d9 user32)
     set_target_properties(rw_frame_camera_test PROPERTIES COMPILE_WARNING_AS_ERROR OFF)
+
+    # Unit test of the engine layer (Wine-runnable, no game data): engine.cpp + rwglobals.cpp + librw, a hidden window, no PCH
+    add_executable(rw_engine_test EXCLUDE_FROM_ALL
+        "${PROJECT_SOURCE_DIR}/tests/standalone/rw_engine_test.cpp"
+        standalone/rw/engine.cpp
+        standalone/rw/rwglobals.cpp
+    )
+    target_compile_features(rw_engine_test PRIVATE cxx_std_23)
+    target_compile_definitions(rw_engine_test PRIVATE NOTSA_RW_LIBRW RW_D3D9)
+    target_include_directories(rw_engine_test BEFORE PRIVATE fakerw)
+    target_link_libraries(rw_engine_test PRIVATE librw d3d9 user32)
+    set_target_properties(rw_engine_test PROPERTIES COMPILE_WARNING_AS_ERROR OFF)
 endif()
 
 #--------------------------------------------------------------------
@@ -281,6 +293,8 @@ if (${RE_PROJECT}_RW_LIBRW)
     target_compile_definitions(${RE_PROJECT_LIB_NAME} PRIVATE NOTSA_RW_LIBRW RW_D3D9)
     # fakerw headers (same file names as the RenderWare headers) take precedence over game_sa/RenderWare/rw/
     target_include_directories(${RE_PROJECT_LIB_NAME} BEFORE PRIVATE fakerw)
+    # P2B-02a: engine.cpp is the shim's RwEngine*/RwD3D9 device layer and includes librw's private d3d9 header (rwd3dimpl.h)
+    set_source_files_properties(standalone/rw/engine.cpp PROPERTIES SKIP_UNITY_BUILD_INCLUSION ON)
 endif()
 
 target_link_libraries(${RE_PROJECT_LIB_NAME} PRIVATE

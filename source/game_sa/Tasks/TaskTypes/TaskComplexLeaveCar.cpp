@@ -7,6 +7,7 @@
 #include "Events/Event.h"
 #include "TaskSimpleCarCloseDoorFromOutside.h"
 #include "TaskSimpleCarSetPedOut.h"
+#include "TaskSimpleCarForcePedOut.h"
 #include "TaskSimpleCarWaitForDoorNotToBeInUse.h"
 #include "TaskSimpleCarWaitToSlowDown.h"
 #include "TaskSimpleCarDriveTimed.h"
@@ -526,14 +527,8 @@ CTask* CTaskComplexLeaveCar::CreateSubTask(eTaskType taskType, CPed* ped) {
         return new CTaskSimpleCarGetOut{ m_pTargetVehicle, (uint32)m_nTargetDoor, m_pTaskUtilityLineUpPedWithCar };
     case TASK_SIMPLE_CAR_JUMP_OUT:
         return new CTaskSimpleCarJumpOut{ m_pTargetVehicle, (uint32)m_nTargetDoor, m_pTaskUtilityLineUpPedWithCar };
-    case TASK_SIMPLE_CAR_FORCE_PED_OUT: {
-        // TODO: `CTaskSimpleCarForcePedOut` isn't reversed yet, so allocate it manually (size 0x10) and call its constructor
-        const auto mem = static_cast<CTask*>(CTask::operator new(0x10));
-        if (!mem) {
-            return nullptr;
-        }
-        return plugin::CallMethodAndReturn<CTask*, 0x647710, CTask*, CVehicle*, int32>(mem, m_pTargetVehicle, m_nTargetDoor);
-    }
+    case TASK_SIMPLE_CAR_FORCE_PED_OUT:
+        return new CTaskSimpleCarForcePedOut{ m_pTargetVehicle, (eTargetDoor)m_nTargetDoor }; // 0x647710
     case TASK_COMPLEX_CAR_SLOW_BE_DRAGGED_OUT:
         return new CTaskComplexCarSlowBeDraggedOut{ m_pTargetVehicle, (eTargetDoor)m_nTargetDoor, true };
     default:

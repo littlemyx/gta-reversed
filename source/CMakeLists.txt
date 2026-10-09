@@ -539,6 +539,7 @@ if (${RE_PROJECT}_RW_LIBRW)
         standalone/rw/world.cpp
         standalone/rw/material.cpp
         standalone/rw/geometry.cpp
+        standalone/rw/geometry_strip.cpp
         standalone/rw/raster.cpp
         standalone/rw/image.cpp
         standalone/rw/texture.cpp
@@ -810,7 +811,7 @@ if (${RE_PROJECT}_RW_LIBRW)
     target_link_libraries(rw_matfx_uvanim_test PRIVATE librw d3d9 user32)
     set_target_properties(rw_matfx_uvanim_test PROPERTIES COMPILE_WARNING_AS_ERROR OFF)
     # engine.cpp / camera.cpp log through standalone/Fixups.h: give the shim unit tests the include path (AFTER, so it cannot shadow fakerw) and a Log() stub
-    foreach (_t rw_engine_test rw_frame_camera_test rw_raster_image_test rw_texture_test rw_platform_test rw_pipeline_test rw_matfx_pipeline_test rw_matfx_uvanim_test rw_im2d_im3d_test)
+    foreach (_t rw_custom_pipelines_test rw_engine_test rw_frame_camera_test rw_raster_image_test rw_texture_test rw_platform_test rw_pipeline_test rw_matfx_pipeline_test rw_matfx_uvanim_test rw_im2d_im3d_test)
         if (TARGET ${_t})
             target_include_directories(${_t} AFTER PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}")
             target_sources(${_t} PRIVATE "${PROJECT_SOURCE_DIR}/tests/standalone/fixups_log_stub.cpp")

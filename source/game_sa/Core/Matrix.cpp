@@ -240,51 +240,447 @@ void CMatrix::SetRotate(float x, float y, float z)
     m_pos.Set(0.0F, 0.0F, 0.0F);
 }
 
+// 0x59B1E0: the exe's x87 code verbatim (the sin is spilled to a float, the cos stays unrounded on the FPU stack, every row is mixed with the
+// extended-precision products in the exe's term order and spilled to float temporaries). The exe takes only the angle and ALWAYS rotates m_pos too;
+// NOTSA: bKeepPos restores the position afterwards.
 void CMatrix::RotateX(float angle, bool bKeepPos)
 {
-    auto rotMat = CMatrix();
-    rotMat.SetRotateX(angle);
-    m_right =   rotMat.TransformVector(m_right);
-    m_forward = rotMat.TransformVector(m_forward);
-    m_up =      rotMat.TransformVector(m_up);
-    if (!bKeepPos) {
-        m_pos = rotMat.TransformVector(m_pos);
+    const CVector savedPos = m_pos;
+    float         A[1] = { angle };
+    float         L[8];
+    CMatrix*      self = this;
+    __asm {
+        mov ecx, self
+        fld dword ptr [A + 0]
+        fcos
+        fld dword ptr [A + 0]
+        fsin
+        fstp dword ptr [A + 0]
+        fld st(0)
+        fmul dword ptr [ecx + 4]
+        fld dword ptr [A + 0]
+        fmul dword ptr [ecx + 8]
+        fsubp st(1), st(0)
+        fld dword ptr [A + 0]
+        fmul dword ptr [ecx + 4]
+        fld st(2)
+        fmul dword ptr [ecx + 8]
+        faddp st(1), st(0)
+        fld st(2)
+        fmul dword ptr [ecx + 0x14]
+        fld dword ptr [A + 0]
+        fmul dword ptr [ecx + 0x18]
+        fsubp st(1), st(0)
+        fstp dword ptr [L + 8]
+        fld dword ptr [A + 0]
+        mov eax, dword ptr [L + 8]
+        fmul dword ptr [ecx + 0x14]
+        mov dword ptr [ecx + 0x14], eax
+        fld st(3)
+        fmul dword ptr [ecx + 0x18]
+        faddp st(1), st(0)
+        fstp dword ptr [L + 12]
+        fld st(2)
+        mov edx, dword ptr [L + 12]
+        fmul dword ptr [ecx + 0x24]
+        mov dword ptr [ecx + 0x18], edx
+        fld dword ptr [A + 0]
+        fmul dword ptr [ecx + 0x28]
+        fsubp st(1), st(0)
+        fstp dword ptr [L + 16]
+        fld dword ptr [A + 0]
+        mov eax, dword ptr [L + 16]
+        fmul dword ptr [ecx + 0x24]
+        mov dword ptr [ecx + 0x24], eax
+        fld st(3)
+        fmul dword ptr [ecx + 0x28]
+        faddp st(1), st(0)
+        fstp dword ptr [L + 20]
+        mov edx, dword ptr [L + 20]
+        fld st(2)
+        fmul dword ptr [ecx + 0x34]
+        mov dword ptr [ecx + 0x28], edx
+        fld dword ptr [A + 0]
+        fmul dword ptr [ecx + 0x38]
+        fsubp st(1), st(0)
+        fstp dword ptr [L + 24]
+        fld dword ptr [A + 0]
+        mov eax, dword ptr [L + 24]
+        fmul dword ptr [ecx + 0x34]
+        mov dword ptr [ecx + 0x34], eax
+        fxch st(3)
+        fmul dword ptr [ecx + 0x38]
+        faddp st(3), st(0)
+        fxch st(2)
+        fstp dword ptr [L + 28]
+        mov edx, dword ptr [L + 28]
+        fstp dword ptr [ecx + 4]
+        mov dword ptr [ecx + 0x38], edx
+        fstp dword ptr [ecx + 8]
+    }
+    if (bKeepPos) {
+        m_pos = savedPos;
     }
 }
 
+// 0x59B2C0: the exe's x87 code verbatim (the sin is spilled to a float, the cos stays unrounded on the FPU stack, every row is mixed with the
+// extended-precision products in the exe's term order and spilled to float temporaries). The exe takes only the angle and ALWAYS rotates m_pos too;
+// NOTSA: bKeepPos restores the position afterwards.
 void CMatrix::RotateY(float angle, bool bKeepPos)
 {
-    auto rotMat = CMatrix();
-    rotMat.SetRotateY(angle);
-    m_right =   rotMat.TransformVector(m_right);
-    m_forward = rotMat.TransformVector(m_forward);
-    m_up =      rotMat.TransformVector(m_up);
-    if (!bKeepPos) {
-        m_pos = rotMat.TransformVector(m_pos);
+    const CVector savedPos = m_pos;
+    float         A[1] = { angle };
+    float         L[8];
+    CMatrix*      self = this;
+    __asm {
+        mov ecx, self
+        fld dword ptr [A + 0]
+        fcos
+        fld dword ptr [A + 0]
+        fsin
+        fst dword ptr [A + 0]
+        fmul dword ptr [ecx + 8]
+        fld st(1)
+        fmul dword ptr [ecx]
+        faddp st(1), st(0)
+        fld st(1)
+        fmul dword ptr [ecx + 8]
+        fld dword ptr [A + 0]
+        fmul dword ptr [ecx]
+        fsubp st(1), st(0)
+        fld dword ptr [A + 0]
+        fmul dword ptr [ecx + 0x18]
+        fld st(3)
+        fmul dword ptr [ecx + 0x10]
+        faddp st(1), st(0)
+        fstp dword ptr [L + 8]
+        fld st(2)
+        mov eax, dword ptr [L + 8]
+        fmul dword ptr [ecx + 0x18]
+        fld dword ptr [A + 0]
+        fmul dword ptr [ecx + 0x10]
+        mov dword ptr [ecx + 0x10], eax
+        fsubp st(1), st(0)
+        fstp dword ptr [L + 12]
+        fld dword ptr [A + 0]
+        mov edx, dword ptr [L + 12]
+        fmul dword ptr [ecx + 0x28]
+        mov dword ptr [ecx + 0x18], edx
+        fld st(3)
+        fmul dword ptr [ecx + 0x20]
+        faddp st(1), st(0)
+        fstp dword ptr [L + 16]
+        fld st(2)
+        mov eax, dword ptr [L + 16]
+        fmul dword ptr [ecx + 0x28]
+        fld dword ptr [A + 0]
+        fmul dword ptr [ecx + 0x20]
+        mov dword ptr [ecx + 0x20], eax
+        fsubp st(1), st(0)
+        fstp dword ptr [L + 20]
+        fld dword ptr [A + 0]
+        mov edx, dword ptr [L + 20]
+        fmul dword ptr [ecx + 0x38]
+        mov dword ptr [ecx + 0x28], edx
+        fld st(3)
+        fmul dword ptr [ecx + 0x30]
+        faddp st(1), st(0)
+        fstp dword ptr [L + 24]
+        mov eax, dword ptr [L + 24]
+        fxch st(2)
+        fmul dword ptr [ecx + 0x38]
+        fld dword ptr [A + 0]
+        fmul dword ptr [ecx + 0x30]
+        mov dword ptr [ecx + 0x30], eax
+        fsubp st(1), st(0)
+        fstp dword ptr [L + 28]
+        mov edx, dword ptr [L + 28]
+        fstp dword ptr [ecx]
+        mov dword ptr [ecx + 0x38], edx
+        fstp dword ptr [ecx + 8]
+    }
+    if (bKeepPos) {
+        m_pos = savedPos;
     }
 }
 
+// 0x59B390: the exe's x87 code verbatim (the sin is spilled to a float, the cos stays unrounded on the FPU stack, every row is mixed with the
+// extended-precision products in the exe's term order and spilled to float temporaries). The exe takes only the angle and ALWAYS rotates m_pos too;
+// NOTSA: bKeepPos restores the position afterwards.
 void CMatrix::RotateZ(float angle, bool bKeepPos)
 {
-    auto rotMat = CMatrix();
-    rotMat.SetRotateZ(angle);
-    m_right =   rotMat.TransformVector(m_right);
-    m_forward = rotMat.TransformVector(m_forward);
-    m_up =      rotMat.TransformVector(m_up);
-    if (!bKeepPos) {
-        m_pos = rotMat.TransformVector(m_pos);
+    const CVector savedPos = m_pos;
+    float         A[1] = { angle };
+    float         L[8];
+    CMatrix*      self = this;
+    __asm {
+        mov ecx, self
+        fld dword ptr [A + 0]
+        fcos
+        fld dword ptr [A + 0]
+        fsin
+        fstp dword ptr [A + 0]
+        fld st(0)
+        fmul dword ptr [ecx]
+        fld dword ptr [A + 0]
+        fmul dword ptr [ecx + 4]
+        fsubp st(1), st(0)
+        fld st(1)
+        fmul dword ptr [ecx + 4]
+        fld dword ptr [A + 0]
+        fmul dword ptr [ecx]
+        faddp st(1), st(0)
+        fld st(2)
+        fmul dword ptr [ecx + 0x10]
+        fld dword ptr [A + 0]
+        fmul dword ptr [ecx + 0x14]
+        fsubp st(1), st(0)
+        fstp dword ptr [L + 8]
+        fld dword ptr [A + 0]
+        mov eax, dword ptr [L + 8]
+        fmul dword ptr [ecx + 0x10]
+        mov dword ptr [ecx + 0x10], eax
+        fld st(3)
+        fmul dword ptr [ecx + 0x14]
+        faddp st(1), st(0)
+        fstp dword ptr [L + 12]
+        fld st(2)
+        mov edx, dword ptr [L + 12]
+        fmul dword ptr [ecx + 0x20]
+        mov dword ptr [ecx + 0x14], edx
+        fld dword ptr [A + 0]
+        fmul dword ptr [ecx + 0x24]
+        fsubp st(1), st(0)
+        fstp dword ptr [L + 16]
+        fld dword ptr [A + 0]
+        mov eax, dword ptr [L + 16]
+        fmul dword ptr [ecx + 0x20]
+        mov dword ptr [ecx + 0x20], eax
+        fld st(3)
+        fmul dword ptr [ecx + 0x24]
+        faddp st(1), st(0)
+        fstp dword ptr [L + 20]
+        mov edx, dword ptr [L + 20]
+        fld st(2)
+        fmul dword ptr [ecx + 0x30]
+        mov dword ptr [ecx + 0x24], edx
+        fld dword ptr [A + 0]
+        fmul dword ptr [ecx + 0x34]
+        fsubp st(1), st(0)
+        fstp dword ptr [L + 24]
+        fld dword ptr [A + 0]
+        mov eax, dword ptr [L + 24]
+        fmul dword ptr [ecx + 0x30]
+        mov dword ptr [ecx + 0x30], eax
+        fxch st(3)
+        fmul dword ptr [ecx + 0x34]
+        faddp st(3), st(0)
+        fxch st(2)
+        fstp dword ptr [L + 28]
+        mov edx, dword ptr [L + 28]
+        fstp dword ptr [ecx]
+        mov dword ptr [ecx + 0x34], edx
+        fstp dword ptr [ecx + 4]
+    }
+    if (bKeepPos) {
+        m_pos = savedPos;
     }
 }
 
-// rotate on 3 axes
+// 0x59B460 (RET 0xC: 3 float args). The exe's x87 code verbatim: sin/cos of x, y, z (fsin/fcos), the 3x3 product built from float spills, then
+// every row of this matrix (including the position) is transformed with the extended-precision accumulations of the exe.
 void CMatrix::Rotate(CVector rotation)
 {
-    auto rotMat = CMatrix();
-    rotMat.SetRotate(rotation.x, rotation.y, rotation.z);
-    m_right =   rotMat.TransformVector(m_right);
-    m_forward = rotMat.TransformVector(m_forward);
-    m_up =      rotMat.TransformVector(m_up);
-    m_pos =     rotMat.TransformVector(m_pos);
+    float    A[3] = { rotation.x, rotation.y, rotation.z };
+    float    L[21];
+    CMatrix* self = this;
+    __asm {
+        mov ecx, self
+        fld dword ptr [A + 0]
+        fcos
+        fld dword ptr [A + 0]
+        fsin
+        fstp dword ptr [A + 0]
+        fld dword ptr [A + 4]
+        fcos
+        fld dword ptr [A + 4]
+        fsin
+        fld dword ptr [A + 8]
+        fcos
+        fld dword ptr [A + 8]
+        fsin
+        fst dword ptr [A + 4]
+        fmul dword ptr [A + 0]
+        fld st(1)
+        fmul dword ptr [A + 0]
+        fstp dword ptr [A + 8]
+        fld st(1)
+        fmul st(0), st(4)
+        fld st(1)
+        fmul st(0), st(4)
+        fsubp st(1), st(0)
+        fstp dword ptr [L + 0]
+        fld dword ptr [A + 8]
+        fmul st(0), st(3)
+        fld dword ptr [A + 4]
+        fmul st(0), st(5)
+        faddp st(1), st(0)
+        fstp dword ptr [L + 4]
+        fld st(2)
+        fmul st(0), st(5)
+        fchs
+        fstp dword ptr [L + 8]
+        fld dword ptr [A + 4]
+        fmul st(0), st(5)
+        fchs
+        fstp dword ptr [L + 12]
+        fld st(1)
+        fmul st(0), st(5)
+        fstp dword ptr [L + 16]
+        fxch st(1)
+        fmul st(0), st(2)
+        fxch st(1)
+        fmul st(0), st(3)
+        faddp st(1), st(0)
+        fstp dword ptr [L + 24]
+        fld dword ptr [A + 4]
+        fmul st(0), st(1)
+        fld dword ptr [A + 8]
+        fmul st(0), st(3)
+        fsubp st(1), st(0)
+        fstp dword ptr [L + 28]
+        fstp st(0)
+        fmulp st(1), st(0)
+        fld dword ptr [L + 24]
+        fmul dword ptr [ecx + 8]
+        fld dword ptr [L + 12]
+        fmul dword ptr [ecx + 4]
+        faddp st(1), st(0)
+        fld dword ptr [L + 0]
+        fmul dword ptr [ecx]
+        faddp st(1), st(0)
+        fld dword ptr [L + 28]
+        fmul dword ptr [ecx + 8]
+        fld dword ptr [L + 16]
+        fmul dword ptr [ecx + 4]
+        faddp st(1), st(0)
+        fld dword ptr [L + 4]
+        fmul dword ptr [ecx]
+        faddp st(1), st(0)
+        fld st(2)
+        fmul dword ptr [ecx + 8]
+        fld dword ptr [A + 0]
+        fmul dword ptr [ecx + 4]
+        faddp st(1), st(0)
+        fld dword ptr [L + 8]
+        fmul dword ptr [ecx]
+        faddp st(1), st(0)
+        fstp dword ptr [L + 44]
+        fld dword ptr [L + 0]
+        fmul dword ptr [ecx + 0x10]
+        fld dword ptr [L + 24]
+        fmul dword ptr [ecx + 0x18]
+        faddp st(1), st(0)
+        fld dword ptr [L + 12]
+        fmul dword ptr [ecx + 0x14]
+        faddp st(1), st(0)
+        fstp dword ptr [L + 48]
+        fld dword ptr [L + 4]
+        fmul dword ptr [ecx + 0x10]
+        fld dword ptr [L + 28]
+        fmul dword ptr [ecx + 0x18]
+        faddp st(1), st(0)
+        fld dword ptr [L + 16]
+        fmul dword ptr [ecx + 0x14]
+        faddp st(1), st(0)
+        fstp dword ptr [L + 52]
+        fld dword ptr [L + 8]
+        fmul dword ptr [ecx + 0x10]
+        fld st(3)
+        fmul dword ptr [ecx + 0x18]
+        faddp st(1), st(0)
+        fld dword ptr [A + 0]
+        fmul dword ptr [ecx + 0x14]
+        faddp st(1), st(0)
+        fstp dword ptr [L + 56]
+        fld dword ptr [L + 0]
+        fmul dword ptr [ecx + 0x20]
+        fld dword ptr [L + 24]
+        fmul dword ptr [ecx + 0x28]
+        faddp st(1), st(0)
+        fld dword ptr [L + 12]
+        fmul dword ptr [ecx + 0x24]
+        faddp st(1), st(0)
+        fstp dword ptr [L + 60]
+        fld dword ptr [L + 4]
+        fmul dword ptr [ecx + 0x20]
+        fld dword ptr [L + 28]
+        fmul dword ptr [ecx + 0x28]
+        faddp st(1), st(0)
+        fld dword ptr [L + 16]
+        fmul dword ptr [ecx + 0x24]
+        faddp st(1), st(0)
+        fstp dword ptr [L + 64]
+        fld dword ptr [L + 8]
+        fmul dword ptr [ecx + 0x20]
+        fld st(3)
+        fmul dword ptr [ecx + 0x28]
+        faddp st(1), st(0)
+        fld dword ptr [A + 0]
+        fmul dword ptr [ecx + 0x24]
+        faddp st(1), st(0)
+        fstp dword ptr [L + 68]
+        fld dword ptr [L + 0]
+        fmul dword ptr [ecx + 0x30]
+        fld dword ptr [L + 24]
+        fmul dword ptr [ecx + 0x38]
+        faddp st(1), st(0)
+        fld dword ptr [L + 12]
+        fmul dword ptr [ecx + 0x34]
+        faddp st(1), st(0)
+        fstp dword ptr [L + 72]
+        fld dword ptr [L + 4]
+        fmul dword ptr [ecx + 0x30]
+        fld dword ptr [L + 28]
+        fmul dword ptr [ecx + 0x38]
+        faddp st(1), st(0)
+        fld dword ptr [L + 16]
+        fmul dword ptr [ecx + 0x34]
+        faddp st(1), st(0)
+        fstp dword ptr [L + 76]
+        fld dword ptr [L + 8]
+        fmul dword ptr [ecx + 0x30]
+        fxch st(3)
+        fmul dword ptr [ecx + 0x38]
+        mov eax, dword ptr [L + 44]
+        faddp st(3), st(0)
+        fld dword ptr [A + 0]
+        mov edx, dword ptr [L + 48]
+        fmul dword ptr [ecx + 0x34]
+        mov dword ptr [ecx + 8], eax
+        mov eax, dword ptr [L + 52]
+        mov dword ptr [ecx + 0x10], edx
+        mov edx, dword ptr [L + 56]
+        faddp st(3), st(0)
+        mov dword ptr [ecx + 0x14], eax
+        fxch st(2)
+        mov eax, dword ptr [L + 60]
+        mov dword ptr [ecx + 0x18], edx
+        fstp dword ptr [L + 80]
+        mov edx, dword ptr [L + 64]
+        mov dword ptr [ecx + 0x20], eax
+        fstp dword ptr [ecx]
+        mov eax, dword ptr [L + 68]
+        mov dword ptr [ecx + 0x24], edx
+        fstp dword ptr [ecx + 4]
+        mov edx, dword ptr [L + 72]
+        mov dword ptr [ecx + 0x28], eax
+        mov eax, dword ptr [L + 76]
+        mov dword ptr [ecx + 0x30], edx
+        mov edx, dword ptr [L + 80]
+        mov dword ptr [ecx + 0x34], eax
+        mov dword ptr [ecx + 0x38], edx
+    }
 }
 
 void CMatrix::Reorthogonalise()

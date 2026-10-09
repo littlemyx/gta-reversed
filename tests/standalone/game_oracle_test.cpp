@@ -323,6 +323,36 @@ static void TestMatrixQuat() {
         return false;
     });
 
+    // CMatrix::RotateX/Y/Z (thiscall, RET 4) and Rotate(x,y,z) (RET 0xC) rotate all four rows (the exe has no bKeepPos). x87 fsin/fcos, spills, extended accumulations.
+    auto cmpMat = [](const CMatrix& a, const RawMat& b, std::string& d, const RawMat& in, const std::string& args) {
+        const bool ok = SameV(a.GetRight(), b.right) & SameV(a.GetForward(), b.fwd) & SameV(a.GetUp(), b.up) & SameV(a.GetPosition(), b.pos);
+        if (ok) return true;
+        d = args + " rows " + V(in.right) + V(in.fwd) + V(in.up) + V(in.pos) + " got " + V(a.GetRight()) + V(a.GetForward()) + V(a.GetUp()) + V(a.GetPosition()) + " exe " + V(b.right) + V(b.fwd) + V(b.up) + V(b.pos);
+        return false;
+    };
+    static const struct { const char* n; uint32 va; void (CMatrix::*fn)(float, bool); } axes[] = {
+        { "RotateX 0x59B1E0", 0x59B1E0, &CMatrix::RotateX }, { "RotateY 0x59B2C0", 0x59B2C0, &CMatrix::RotateY }, { "RotateZ 0x59B390", 0x59B390, &CMatrix::RotateZ } };
+    for (const auto& ax : axes) {
+        Run(std::string("CMatrix::") + ax.n, [&, cmpMat](Rng& r, std::string& d) {
+            const float s = PickScale(r); const RawMat m = GenMat(r, s);
+            const float angle = r.below(2) ? GenF(r, 7.f) : GenF(r, PickScale(r));
+            CMatrix cm = ToCMatrix(m);
+            (cm.*ax.fn)(angle, false);
+            RawMat e = m;
+            oracle::Fn<void __fastcall(void*, void*, float)>(ax.va)(&e, nullptr, angle);
+            return cmpMat(cm, e, d, m, "angle " + F(angle));
+        });
+    }
+    Run("CMatrix::Rotate(x,y,z) 0x59B460", [&, cmpMat](Rng& r, std::string& d) {
+        const float s = PickScale(r); const RawMat m = GenMat(r, s);
+        const CVector ang = r.below(2) ? GenV(r, 7.f) : GenV(r, PickScale(r));
+        CMatrix cm = ToCMatrix(m);
+        cm.Rotate(ang);
+        RawMat e = m;
+        oracle::Fn<void __fastcall(void*, void*, float, float, float)>(0x59B460)(&e, nullptr, ang.x, ang.y, ang.z);
+        return cmpMat(cm, e, d, m, "angles " + V(ang));
+    });
+
     auto genQuat = [](Rng& r) {
         CQuaternion q;
         const float s = r.below(4) ? 1.f : PickScale(r);

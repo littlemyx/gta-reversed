@@ -16,6 +16,7 @@
 // Interpolate / ToMatrix (the game registers its own, RtAnimBlendKeyFrameApply / RpAnimBlendKeyFrameInterpolate), RpHAnimAnimation*.
 #ifdef NOTSA_RW_LIBRW
 #include "fakerw.h"
+#include "rwtrig.h"
 
 #include <algorithm>
 #include <cassert>
@@ -252,7 +253,7 @@ RwBool RpHAnimHierarchyUpdateMatrices(RpHAnimHierarchy* hierarchy) {
         frame->object.privateFlags = (frame->object.privateFlags & ~rw::Frame::SUBTREESYNCLTM) | rw::Frame::SUBTREESYNCOBJ;
     };
 
-    constexpr int kMaxDepth = 64;
+    constexpr int kMaxDepth = 256;   // the exe's pointer stack (matrix path) holds ~600 entries before it hits the return address; real rigs nest < 20
     if (!noMat) {
         RwMatrix* stack[kMaxDepth];
         int sp = 0;
@@ -298,7 +299,10 @@ RwBool RpHAnimHierarchyUpdateMatrices(RpHAnimHierarchy* hierarchy) {
 //--------------------------------------------------------------------------------------------------
 
 // W: exe 0x7C60C0. out.t = lerp(in1.t, in2.t, alpha); out.q = slerp(in1.q, in2.q, alpha) with the sign of in2.q flipped to the shorter arc (IN PLACE, as the
-// exe does) and a linear mix when the quaternions are closer than 0.999.
+// exe does; a NaN dot product does not flip: fcom + test ah,5 + jp) and a linear mix when the quaternions are closer than 0.999 (a NaN dot takes the slerp
+// path: C0 is also set for unordered). The slerp uses the exe's inlined RwACos (FreeBSD e_acosf polynomials) and RwSinMinusPiToPi minimax polynomial, not
+// libm: omega = acos(cosom), invSin = 1 / sin(omega), scale0 = sin(omega (1 - alpha)) invSin, scale1 = sin(omega alpha) invSin (rwtrig.h; the exe's RwSqrt
+// inside the acos is table based, the shim uses the exact square root).
 void RpHAnimKeyFrameBlend(void* voidOut, void* voidIn1, void* voidIn2, RwReal alpha) {
     StdFrame* out = static_cast<StdFrame*>(voidOut);
     StdFrame* in1 = static_cast<StdFrame*>(voidIn1);
@@ -307,7 +311,7 @@ void RpHAnimKeyFrameBlend(void* voidOut, void* voidIn1, void* voidIn2, RwReal al
     out->t.x = (in2->t.x - in1->t.x) * alpha + in1->t.x;
     out->t.y = (in2->t.y - in1->t.y) * alpha + in1->t.y;
     out->t.z = (in2->t.z - in1->t.z) * alpha + in1->t.z;
-    if (cosom < 0.0f || std::isnan(cosom)) {
+    if (cosom < 0.0f) {
         cosom = -cosom;
         in2->q.x = -in2->q.x;
         in2->q.y = -in2->q.y;
@@ -316,11 +320,11 @@ void RpHAnimKeyFrameBlend(void* voidOut, void* voidIn1, void* voidIn2, RwReal al
     }
     float scale0 = 1.0f - alpha;
     float scale1 = alpha;
-    if (cosom < 0.999f) {
-        const float omega = std::acos(cosom);
-        const float invSin = 1.0f / std::sin(omega);
-        scale0 = std::sin(scale0 * omega) * invSin;
-        scale1 = std::sin(alpha * omega) * invSin;
+    if (!(cosom >= 0.999f)) {
+        const double omega  = rwtrig::ACos(cosom);
+        const double invSin = 1.0 / rwtrig::SinMinusPiToPi(omega);
+        scale0 = (float)(rwtrig::SinMinusPiToPi(omega * scale0) * invSin);
+        scale1 = (float)(rwtrig::SinMinusPiToPi(omega * alpha) * invSin);
     }
     out->q.x = scale1 * in2->q.x + scale0 * in1->q.x;
     out->q.y = scale1 * in2->q.y + scale0 * in1->q.y;

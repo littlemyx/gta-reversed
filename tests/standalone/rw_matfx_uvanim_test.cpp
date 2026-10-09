@@ -169,7 +169,8 @@ static void UVAnimSynthetic() {
     dict->add(anim);                                                                        // the dictionary takes the creation reference
     rw::Animation* other = MakeAnim("other", 0x1C0, 2, uvs, times, 1.0f);
     dict->add(other);
-    CHECK(dict->count() == 2 && dict->find("LIN") == anim && dict->find("other") == other && dict->find("nope") == nullptr);
+    CHECK(dict->count() == 2 && dict->find("lin") == anim && dict->find("other") == other && dict->find("nope") == nullptr);
+    CHECK(dict->find("LIN") == nullptr);                                                    // exe: case-sensitive strcmp (0x8263C0 via RtDictFindNamedEntry 0x7CEFE0)
     // stream the dictionary out and back in through the shim entry points
     uint32_t sz = dict->streamGetSize();
     std::vector<uint8_t> buf(sz + 64);
@@ -237,6 +238,140 @@ static void UVAnimParam() {
     CHECK(Near(b->pos.x, (float)ttx, 2e-3f) && Near(b->pos.y, (float)tty, 2e-3f));
     RpMaterialDestroy(m);
     rw::UVAnimCustomData::get(anim)->destroy(anim);
+}
+
+
+// ---------------------------------------------------------------------------------------------------------------------------------
+// Review fixes (exe addresses in the comments)
+static std::vector<uint8_t> WriteMaterial(RpMaterial* m) {
+    std::vector<uint8_t> buf(4096);
+    rw::StreamMemory ws; ws.open(buf.data(), 0, (uint32_t)buf.size());
+    CHECK(m->streamWrite(&ws));
+    buf.resize(ws.length);
+    return buf;
+}
+static RpMaterial* ReadMaterial(std::vector<uint8_t>& buf) {
+    rw::StreamMemory rs; rs.open(buf.data(), (uint32_t)buf.size());
+    uint32_t len = 0, ver = 0;
+    if (!rw::findChunk(&rs, rw::ID_MATERIAL, &len, &ver)) return nullptr;
+    return rw::Material::streamRead(&rs);
+}
+
+static void ReviewFixTests() {
+    Section("review: RpMatFXMaterialSetEffects DUAL defaults / texture setters reference the new texture first");
+    {
+        RpMaterial* m = RpMaterialCreate();
+        RpMatFXMaterialSetEffects(m, rpMATFXEFFECTDUAL);                                    // 0x811D31: src SRCALPHA (5), dst INVSRCALPHA (6)
+        CHECK(rw::MatFX::get(m)->getDualSrcBlend() == rw::BLENDSRCALPHA && rw::MatFX::get(m)->getDualDestBlend() == rw::BLENDINVSRCALPHA);
+        rw::MatFX::get(m)->setDualSrcBlend(rw::BLENDONE);
+        RpMatFXMaterialSetEffects(m, rpMATFXEFFECTDUAL);                                    // set again: the defaults are re-applied (unconditional in the exe)
+        CHECK(rw::MatFX::get(m)->getDualSrcBlend() == rw::BLENDSRCALPHA);
+        RpMatFXMaterialSetEffects(m, rpMATFXEFFECTDUALUVTRANSFORM);                         // 0x811D81
+        CHECK(rw::MatFX::get(m)->getDualSrcBlend() == rw::BLENDSRCALPHA && rw::MatFX::get(m)->getDualDestBlend() == rw::BLENDINVSRCALPHA);
+        RpMatFXMaterialSetEffects(m, rpMATFXEFFECTENVMAP);                                  // other effects: untouched pass data (zero)
+        CHECK(rw::MatFX::get(m)->fx[0].env.coefficient == 0.0f && rw::MatFX::get(m)->fx[0].env.tex == nullptr);
+        RwTexture* tex = RwTextureCreate(nullptr);
+        std::strcpy(tex->name, "t1");
+        rw::MatFX::get(m)->setEnvTexture(tex);
+        RwTextureDestroy(tex);                                                              // only the material owns it now
+        CHECK(tex->refCount == 1);
+        rw::MatFX::get(m)->setEnvTexture(tex);                                              // 0x811ED0: addRef first, then release the old one: still alive
+        CHECK(tex->refCount == 1 && RpMatFXMaterialGetEnvMapTexture(m) == tex);
+        RpMaterialDestroy(m);
+    }
+
+    Section("review: UV animation stream read (0x7CBC20): found / missing / case / matrices only for used channels");
+    {
+        const float uvs[2][6] = { {1, 0, 0, 1, 0, 0}, {1, 0, 0, 1, 4, 0} };
+        const float times[2] = { 0, 1 };
+        rw::Animation* a0 = MakeAnim("lin", 0x1C0, 2, uvs, times, 1.0f, 0);
+        rw::Animation* a1 = MakeAnim("c1", 0x1C0, 2, uvs, times, 1.0f, 1);
+        rw::Animation* miss = MakeAnim("zzz", 0x1C0, 2, uvs, times, 1.0f, 0);
+        rw::Animation* up = MakeAnim("LIN", 0x1C0, 2, uvs, times, 1.0f, 0);
+        rw::UVAnimDictionary* dict = rw::UVAnimDictionary::create();
+        dict->add(a0); dict->add(a1);                                                        // dictionary owns refCount 1 each
+        extern RtDictSchema RpUVAnimDictSchema;
+        RtDictSchemaSetCurrentDict(&RpUVAnimDictSchema, dict);
+        auto roundTrip = [&](rw::Animation* an) {
+            RpMaterial* m = RpMaterialCreate();
+            Attach(m, an);
+            std::vector<uint8_t> buf = WriteMaterial(m);
+            RpMaterialDestroy(m);
+            return ReadMaterial(buf);
+        };
+        // found in the dictionary: shared, reference count + 1; the channel-0 animation gets uv[0] only
+        const int rc0 = rw::UVAnimCustomData::get(a0)->refCount;
+        RpMaterial* f0 = roundTrip(a0);
+        CHECK(f0 && UV(f0)->interp[0] && UV(f0)->interp[0]->currentAnim == a0 && rw::UVAnimCustomData::get(a0)->refCount == rc0 + 1);
+        CHECK(f0 && UV(f0)->uv[0] != nullptr && UV(f0)->uv[1] == nullptr);                 // 0x7CBD80: matrix only for a used channel
+        if (f0) {
+            RpMaterialUVAnimAddAnimTime(f0, 0.5f); RpMaterialUVAnimApplyUpdate(f0);
+            rw::Matrix *b = nullptr, *d = nullptr; MatrixOf(f0, &b, &d);
+            CHECK(b == UV(f0)->uv[0] && d == nullptr && Near(b->pos.x, 2.0f));              // dual transform pointer stays NULL
+            RpMaterialDestroy(f0);
+        }
+        CHECK(rw::UVAnimCustomData::get(a0)->refCount == rc0);
+        RpMaterial* f1 = roundTrip(a1);
+        CHECK(f1 && UV(f1)->interp[0] && UV(f1)->interp[0]->currentAnim == a1 && UV(f1)->uv[0] == nullptr && UV(f1)->uv[1] != nullptr);
+        if (f1) RpMaterialDestroy(f1);
+        // missing name: private identity stand-in (0x7CBE00), reference count 1, NOT added to the dictionary
+        for (rw::Animation* an : { miss, up }) {
+            RpMaterial* mm = roundTrip(an);
+            CHECK(mm && UV(mm)->interp[0] != nullptr);
+            if (!mm) continue;
+            rw::Animation* d = UV(mm)->interp[0]->currentAnim;
+            auto* cd = rw::UVAnimCustomData::get(d);
+            CHECK(d != a0 && d != a1 && d != an && std::strcmp(cd->name, an == miss ? "zzz" : "LIN") == 0);   // "LIN" does not match "lin": case-sensitive
+            CHECK(cd->refCount == 1 && dict->count() == 2 && d->numFrames == 2 && Near(d->duration, 1.0f));
+            auto* kf = static_cast<rw::UVAnimKeyFrame*>(d->keyframes);
+            CHECK(kf[0].prev == nullptr && kf[1].prev == &kf[0] && Near(kf[0].time, 0) && Near(kf[1].time, 1));
+            for (int k = 0; k < 2; k++) CHECK(kf[k].uv[0] == 1 && kf[k].uv[1] == 0 && kf[k].uv[2] == 0 && kf[k].uv[3] == 1 && kf[k].uv[4] == 0 && kf[k].uv[5] == 0);
+            RpMaterialUVAnimAddAnimTime(mm, 0.3f); RpMaterialUVAnimApplyUpdate(mm);
+            rw::Matrix* b = nullptr; MatrixOf(mm, &b);
+            CHECK(b && b->right.x == 1 && b->up.y == 1 && b->right.y == 0 && b->up.x == 0 && b->pos.x == 0 && b->pos.y == 0);
+            RpMaterialDestroy(mm);                                                           // frees the stand-in (refCount 1 -> 0)
+        }
+        // no current dictionary at all: same stand-in
+        RtDictSchemaSetCurrentDict(&RpUVAnimDictSchema, nullptr);
+        RpMaterial* nd = roundTrip(a0);
+        CHECK(nd && UV(nd)->interp[0]->currentAnim != a0 && rw::UVAnimCustomData::get(UV(nd)->interp[0]->currentAnim)->refCount == 1);
+        if (nd) RpMaterialDestroy(nd);
+        dict->destroy();
+        rw::UVAnimCustomData::get(miss)->destroy(miss);
+        rw::UVAnimCustomData::get(up)->destroy(up);
+    }
+
+    Section("review: ApplyUpdate consumes an interpolated frame only for applied nodes (0x7CC110)");
+    {
+        // two nodes: node0 frames 0 -> 2 (pos.x 0 -> 1), node1 frames 1 -> 3 (pos.x 0 -> 2)
+        rw::AnimInterpolatorInfo* info = rw::AnimInterpolatorInfo::find(0x1C0);
+        rw::Animation* a = rw::Animation::create(info, 4, 0, 1.0f);
+        auto* cd = rw::UVAnimCustomData::get(a);
+        std::strcpy(cd->name, "two");
+        cd->refCount = 1;
+        auto* f = static_cast<rw::UVAnimKeyFrame*>(a->keyframes);
+        const float px[4] = { 0, 0, 1, 2 }, tm[4] = { 0, 0, 1, 1 };
+        for (int i = 0; i < 4; i++) { f[i].time = tm[i]; f[i].uv[0] = f[i].uv[3] = 1; f[i].uv[1] = f[i].uv[2] = f[i].uv[5] = 0; f[i].uv[4] = px[i]; }
+        f[0].prev = &f[3]; f[1].prev = &f[3]; f[2].prev = &f[0]; f[3].prev = &f[1];
+        CHECK(a->getNumNodes() == 2);
+        auto run = [&](int ch0, int ch1, float* base, float* dual) {
+            for (int i = 0; i < 8; i++) cd->nodeToUVChannel[i] = 0;
+            cd->nodeToUVChannel[0] = ch0; cd->nodeToUVChannel[1] = ch1;
+            RpMaterial* m = RpMaterialCreate();
+            Attach(m, a);
+            RpMaterialUVAnimAddAnimTime(m, 0.5f); RpMaterialUVAnimApplyUpdate(m);
+            *base = UV(m)->uv[0]->pos.x; *dual = UV(m)->uv[1]->pos.x;
+            RpMaterialDestroy(m);
+        };
+        float b, d;
+        run(1, 0, &b, &d);                                                                   // valid mapping: node0 -> channel 1, node1 -> channel 0
+        CHECK(Near(b, 1.0f) && Near(d, 0.5f));
+        run(5, 0, &b, &d);                                                                   // node0 skipped (channel >= 2): node1 applies interpolated frame 0 (the exe's quirk)
+        CHECK(Near(b, 0.5f) && Near(d, 0.0f));
+        run(0, 7, &b, &d);                                                                   // node1 skipped
+        CHECK(Near(b, 0.5f) && Near(d, 0.0f));
+        rw::UVAnimCustomData::get(a)->destroy(a);
+    }
 }
 
 // ---------------------------------------------------------------------------------------------------------------------------------
@@ -357,6 +492,7 @@ int main(int argc, char** argv) {
     MatFXTests();
     UVAnimSynthetic();
     UVAnimParam();
+    ReviewFixTests();
     for (int i = 1; i < argc; i++) ModelTests(argv[i]);
 
     rw::Driver::s_plglist[rw::PLATFORM_NULL].destruct(rw::engine->driver[rw::PLATFORM_NULL]);

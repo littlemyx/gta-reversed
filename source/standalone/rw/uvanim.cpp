@@ -6,6 +6,13 @@
 // then RpMatFXMaterialSetUVTransformMatrices 0x8129E0), linear / param interpolation 0x7CCA40 / 0x7CC600, apply 0x7CC9F0 / 0x7CC560,
 // RtDictSchemaStreamReadDict 0x7CF240 (FindChunk STRUCT, count, entries), RtDictDestroy 0x7CF130 (clears schema->currentDict if it is the dict,
 // unlinks, destroys every entry through the entry destroy callback = RpUVAnimDestroy: refcount--, free at 0).
+// Review (exe, independent walk): the material stream read 0x7CBC20 looks names up case-sensitively (strcmp, RtDictFindNamedEntry 0x7CEFE0), a missing name gets a
+// private identity stand-in 0x7CBE00 (reference count 1, not added to the dictionary), the uv matrices are created only for channels some node maps to (0x7CBD80);
+// ApplyUpdate steps to the next interpolated frame only after an applied node; float order of the interpolation callbacks (0x7CCA40 / 0x7CC600) is plain float
+// arithmetic (the game runs the x87 at 24 bit after D3D9 device creation, see .notes/PHASE2_PLAN.md D7).
+// Not ported by the exe-faithful path: the exe's material copy constructor (0x7CBB30) shares the uv matrices / interpolators with the source (double free on destroy);
+// librw deep-copies them instead. The anim / loop callbacks of AddAnimTime (0x7CD8D0) are never set by the game.
+// Cross-domain: the param-scheme rotation uses rw::Matrix::rotate (exe RwMatrixRotate 0x7F1FD0 converts degrees*(pi/180f) and uses x87 fsin/fcos).
 // librw's uvanim.cpp was "TODO fully"; the NOTSA fork of vendor/librw (branch `notsa`) fixes what differed from the exe: exact param interpolation
 // (single +-2pi correction), AddAnimTime keeps the overshoot when an animation wraps, cloned materials get their own uv matrices (and they are freed with
 // the plugin), unsigned channel check. Not implemented in librw (nil callbacks, never called by the game): key-frame blend / add / mul-recip.

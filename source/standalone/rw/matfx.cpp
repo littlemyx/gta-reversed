@@ -43,12 +43,20 @@ RpMatFXMaterialFlags RpMatFXMaterialGetEffects(const RpMaterial* material) {
     return static_cast<RpMatFXMaterialFlags>(rw::MatFX::getEffects(material));
 }
 
-// D: allocates the plugin data on first use (zeroed), clears the old pass data when the type changes (and for NULL), sets the two pass types.
+// D: 0x811C80: allocates the plugin data on first use (zeroed), clears the old pass data when the type changes (and for NULL), sets the two pass types,
+// DUAL passes get the default blend modes.
 RpMaterial* RpMatFXMaterialSetEffects(RpMaterial* material, RpMatFXMaterialFlags flags) {
     if (!Registered() || !material) {
         return nullptr;
     }
     rw::MatFX::setEffects(material, static_cast<rw::uint32>(flags));
+    // 0x811D31 / 0x811D81: DUAL and DUALUVTRANSFORM reset the dual pass' blend modes to SRCALPHA / INVSRCALPHA (the exe then calls a D3D9 no-op stub 0x816280).
+    if (flags == rpMATFXEFFECTDUAL || flags == rpMATFXEFFECTDUALUVTRANSFORM) {
+        if (rw::MatFX* fx = rw::MatFX::get(material)) {
+            fx->setDualSrcBlend(rw::BLENDSRCALPHA);
+            fx->setDualDestBlend(rw::BLENDINVSRCALPHA);
+        }
+    }
     return material;
 }
 

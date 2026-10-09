@@ -76,6 +76,46 @@ static void SkinTests() {
     CHECK(skin->usedBones[0] == 0 && skin->usedBones[1] == 1 && skin->usedBones[2] == 2 && skin->usedBones[3] == 3);   // used bones ascending after SetSkin
     CHECK(RpSkinGeometrySetSkin(geo, skin) == geo && RpSkinGeometryGetSkin(geo) == skin);              // same skin: no-op
 
+    // the streamed skin goes through the same _rpSkinInitialize (exe 0x7C8740, called at the end of the skin stream read): unsorted weights / used bones in the
+    // file come back sorted (librw's readSkin alone keeps the file order)
+    {
+        RpGeometry* g2 = RpGeometryCreate(3, 1, rpGEOMETRYTRISTRIP | rpGEOMETRYPOSITIONS);
+        RpMaterial* gm = RpMaterialCreate();
+        _rpMaterialListAppendMaterial(&g2->matList, gm);
+        RpMaterialDestroy(gm);
+        RpTriangle* tri = RpGeometryGetTriangles(g2);
+        tri[0].v[0] = 0; tri[0].v[1] = 1; tri[0].v[2] = 2; tri[0].matId = 0;
+        float w2[12] = { 0.25f, 0.75f, 0, 0,   1.0f, 0, 0, 0,   0.2f, 0.5f, 0.3f, 0 };
+        uint8_t i2[12] = { 3, 1, 0, 0,   2, 0, 0, 0,   0, 2, 1, 0 };
+        RpSkin* sk2 = RpSkinCreate(3, 4, reinterpret_cast<RwMatrixWeights*>(w2), reinterpret_cast<RwUInt32*>(i2), inv);
+        rw::Skin::set(g2, sk2);                                       // raw: not through RpSkinGeometrySetSkin, so nothing is sorted
+        CHECK(sk2->numUsedBones == 4 && sk2->usedBones[0] == 3);        // first-seen order
+        std::vector<uint8_t> buf(1 << 16);
+        rw::StreamMemory out;
+        out.open(buf.data(), 0, (uint32_t)buf.size());
+        CHECK(RpGeometryStreamWrite(g2, &out) == g2);
+        const uint32_t written = out.tell();
+        rw::StreamMemory in;
+        in.open(buf.data(), written);
+        uint32_t l2 = 0, v2 = 0;
+        CHECK(rw::findChunk(&in, rw::ID_GEOMETRY, &l2, &v2));
+        RpGeometry* back = RpGeometryStreamRead(&in);
+        CHECK(back != nullptr);
+        if (back) {
+            RpSkin* s2 = RpSkinGeometryGetSkin(back);
+            CHECK(s2 != nullptr);
+            if (s2) {
+                const RwMatrixWeights* bw2 = RpSkinGetVertexBoneWeights(s2);
+                const RwUInt32* bi2 = RpSkinGetVertexBoneIndices(s2);
+                CHECK(Near(bw2[0].w0, 0.75f) && Near(bw2[0].w1, 0.25f) && bi2[0] == 0x00000301u);
+                CHECK(Near(bw2[2].w0, 0.5f) && Near(bw2[2].w1, 0.3f) && Near(bw2[2].w2, 0.2f) && bi2[2] == 0x00000102u);
+                CHECK(s2->numUsedBones == 4 && s2->usedBones[0] == 0 && s2->usedBones[1] == 1 && s2->usedBones[2] == 2 && s2->usedBones[3] == 3);
+            }
+            RpGeometryDestroy(back);
+        }
+        RpGeometryDestroy(g2);
+    }
+
     // atomic slot / pipeline
     RpAtomic* atomic = RpAtomicCreate();
     CHECK(RpSkinAtomicGetHAnimHierarchy(atomic) == nullptr);

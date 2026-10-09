@@ -9,11 +9,13 @@
 // pipeline is librw's skin pipeline (skinGlobals.pipelines[platform], created when the D3D9 driver plugin opens); the skin type is ignored like in the exe
 // (0x7C89B0 stores one global pipeline for every type).
 // RpSkinGeometrySetSkin sorts every vertex's weights in descending order (bubble sort with the bone indices following) and the used-bone list ascending, like
-// _rpSkinInitialize. It does not destroy the previous skin (the exe's _rpSkinDeinitialize is a no-op).
+// _rpSkinInitialize (rw::Skin::sortLikeSA in the librw fork, which also runs at the end of librw's skin stream read: the exe's stream read finishes in
+// SetSkin too). It does not destroy the previous skin (the exe's _rpSkinDeinitialize is a no-op).
+// Skin PIPELINE: the exe renders skinned atomics with a vertex-shader pipeline (shader text assembled at run time, lights evaluated in the shader) or a
+// CPU skinning fallback, never D3D fixed-function vertex blending; see .notes/P2B_SKIN_PIPELINE.md for the comparison with librw's skin shaders.
 #ifdef NOTSA_RW_LIBRW
 #include "fakerw.h"
 
-#include <algorithm>
 #include <cassert>
 #include <cstring>
 
@@ -62,27 +64,7 @@ RpGeometry* RpSkinGeometrySetSkin(RpGeometry* geometry, RpSkin* skin) {
     if (!skin) {
         return geometry;
     }
-    float* w = skin->weights;
-    uint8_t* idx = skin->indices;
-    for (RwInt32 v = 0; w && idx && v < geometry->numVertices; v++, w += 4, idx += 4) {
-        if (w[0] >= 1.0f) {
-            continue;
-        }
-        bool swapped;
-        do {
-            swapped = false;
-            for (int k = 0; k < 3; k++) {
-                if (w[k] < w[k + 1]) {
-                    std::swap(w[k], w[k + 1]);
-                    std::swap(idx[k], idx[k + 1]);
-                    swapped = true;
-                }
-            }
-        } while (swapped);
-    }
-    if (skin->usedBones) {
-        std::sort(skin->usedBones, skin->usedBones + skin->numUsedBones);
-    }
+    skin->sortLikeSA(geometry->numVertices);
     return geometry;
 }
 

@@ -523,6 +523,148 @@ static void ModelTests(const char* path) {
     CHECK(RpClumpDestroy(clump) == TRUE);
 }
 
+// ---------------------------------------------------------------------------------------------------------------------------------
+// Bit-exact differential against the exe: tools/standalone/quat_unicorn.py runs the exe's RtQuat* / RpHAnimKeyFrame* / RtAnimBlendKeyFrameApply code under
+// Unicorn with the x87 precision control at 24 bits (the state the game runs in after RwEngineStart) and records the output bits. The shim must give the same
+// bits under the same precision control. Deliberate: the exe's RwSqrt is table based (replaced by fsqrt in the recording), RtQuatRotate cases use axes of
+// squared length exactly 1 (RwV3dNormalize is table based too).
+#include "rw_quat_cases.inc"
+#include <float.h>
+
+static uint32_t FBits(float f) { uint32_t u; std::memcpy(&u, &f, 4); return u; }
+static float    BitsF(uint32_t u) { float f; std::memcpy(&f, &u, 4); return f; }
+// exact float equality, NaN == NaN; +-0 differ (the exe's stores are compared as bits)
+static bool BitsEq(float a, uint32_t expected) { return FBits(a) == expected; }
+static int g_exeMismatch = 0;
+static void Mism(const char* what, int i, int k, float got, uint32_t exp) {
+    if (g_exeMismatch++ < 12) std::printf("  MISMATCH %s case %d field %d: shim %.9g (%08x) exe %.9g (%08x)\n", what, i, k, got, FBits(got), BitsF(exp), exp);
+}
+template <class T, size_t N, size_t W>
+static constexpr size_t Rows(const T (&)[N][W]) { return N; }
+
+struct Pc24 {
+    unsigned old = 0;
+    Pc24() { _controlfp_s(&old, 0, 0); unsigned cur; _controlfp_s(&cur, _PC_24, _MCW_PC); }
+    ~Pc24() { unsigned cur; _controlfp_s(&cur, old & _MCW_PC, _MCW_PC); }
+};
+
+static void ExeDifferentialTests() {
+    Pc24 pc;
+    auto cmp = [&](const char* what, int i, const float* got, const uint32_t* exp, int n) {
+        int bad = 0;
+        for (int k = 0; k < n; k++) { if (!BitsEq(got[k], exp[k])) { bad++; Mism(what, i, k, got[k], exp[k]); } }
+        CHECK(bad == 0);
+    };
+    Section("exe differential: RtQuatConvertFromMatrix 0x7EB5C0 (all four branches)");
+    for (size_t i = 0; i < Rows(kConvFromMat); i++) {
+        const uint32_t* r = kConvFromMat[i];
+        RwMatrix m{}; RtQuat q{};
+        m.right = { BitsF(r[0]), BitsF(r[1]), BitsF(r[2]) };
+        m.up    = { BitsF(r[3]), BitsF(r[4]), BitsF(r[5]) };
+        m.at    = { BitsF(r[6]), BitsF(r[7]), BitsF(r[8]) };
+        CHECK(RtQuatConvertFromMatrix(&q, &m) == TRUE);
+        const float got[4] = { q.imag.x, q.imag.y, q.imag.z, q.real };
+        cmp("ConvertFromMatrix", (int)i, got, r + 9, 4);
+    }
+    Section("exe differential: RtQuatTransformVectors 0x7EBBB0");
+    for (size_t i = 0; i < Rows(kTransformVec); i++) {
+        const uint32_t* r = kTransformVec[i];
+        RtQuat q; q.imag = { BitsF(r[0]), BitsF(r[1]), BitsF(r[2]) }; q.real = BitsF(r[3]);
+        RwV3d in[3], out[3];
+        for (int k = 0; k < 3; k++) in[k] = { BitsF(r[4 + 3 * k]), BitsF(r[5 + 3 * k]), BitsF(r[6 + 3 * k]) };
+        RtQuatTransformVectors(out, in, 3, &q);
+        float got[9]; for (int k = 0; k < 3; k++) { got[3 * k] = out[k].x; got[3 * k + 1] = out[k].y; got[3 * k + 2] = out[k].z; }
+        cmp("TransformVectors", (int)i, got, r + 13, 9);
+    }
+    Section("exe differential: RtQuatSetupSlerpCache 0x7EC220");
+    int nearlyZero = 0;
+    for (size_t i = 0; i < Rows(kSlerpCache); i++) {
+        const uint32_t* r = kSlerpCache[i];
+        RtQuat a, b; a.imag = { BitsF(r[0]), BitsF(r[1]), BitsF(r[2]) }; a.real = BitsF(r[3]); b.imag = { BitsF(r[4]), BitsF(r[5]), BitsF(r[6]) }; b.real = BitsF(r[7]);
+        RtQuatSlerpCache c; std::memset(&c, 0xcc, sizeof c);
+        RtQuatSetupSlerpCache(&a, &b, &c);
+        const float got[8] = { c.raFrom.imag.x, c.raFrom.imag.y, c.raFrom.imag.z, c.raFrom.real, c.raTo.imag.x, c.raTo.imag.y, c.raTo.imag.z, c.raTo.real };
+        cmp("SlerpCache", (int)i, got, r + 8, 8);
+        const float om[1] = { c.omega };
+        cmp("SlerpCache.omega", (int)i, om, r + 16, 1);
+        CHECK(c.nearlyZeroOm == (int32_t)r[17]);
+        nearlyZero += c.nearlyZeroOm;
+    }
+    CHECK(nearlyZero > 20 && nearlyZero < (int)Rows(kSlerpCache) - 20);   // both paths covered
+    Section("exe differential: RtQuatRotate 0x7EB7C0 (replace / preconcat / postconcat)");
+    for (size_t i = 0; i < Rows(kRotate); i++) {
+        const uint32_t* r = kRotate[i];
+        RtQuat q; q.imag = { BitsF(r[0]), BitsF(r[1]), BitsF(r[2]) }; q.real = BitsF(r[3]);
+        const RwV3d ax = { BitsF(r[4]), BitsF(r[5]), BitsF(r[6]) };
+        RtQuatRotate(&q, &ax, BitsF(r[7]), (RwOpCombineType)r[8]);
+        const float got[4] = { q.imag.x, q.imag.y, q.imag.z, q.real };
+        cmp("Rotate", (int)i, got, r + 9, 4);
+    }
+    Section("exe differential: RtQuatSetupSlerpCache + RtQuatSlerp (inlined macro of BoneNode_c::BlendKeyframe 0x616E30, blend in (0, 1))");
+    for (size_t i = 0; i < Rows(kBoneBlend); i++) {
+        const uint32_t* r = kBoneBlend[i];
+        RtQuat a, b, res; a.imag = { BitsF(r[0]), BitsF(r[1]), BitsF(r[2]) }; a.real = BitsF(r[3]); b.imag = { BitsF(r[4]), BitsF(r[5]), BitsF(r[6]) }; b.real = BitsF(r[7]);
+        RtQuatSlerpCache c;
+        RtQuatSetupSlerpCache(&a, &b, &c);
+        res = a;
+        RtQuatSlerp(&res, &a, &b, BitsF(r[8]), &c);
+        const float got[4] = { res.imag.x, res.imag.y, res.imag.z, res.real };
+        cmp("Slerp", (int)i, got, r + 9, 4);
+    }
+    Section("exe differential: RtQuatUnitConvertToMatrix (inlined in RtAnimBlendKeyFrameApply 0x4D5FA0)");
+    for (size_t i = 0; i < Rows(kUnitToMat); i++) {
+        const uint32_t* r = kUnitToMat[i];
+        RtQuat q; q.imag = { BitsF(r[0]), BitsF(r[1]), BitsF(r[2]) }; q.real = BitsF(r[3]);
+        RwMatrix m; std::memset(&m, 0xcc, sizeof m);
+        RtQuatUnitConvertToMatrix(&q, &m);
+        const float got[10] = { m.right.x, m.right.y, m.right.z, m.up.x, m.up.y, m.up.z, m.at.x, m.at.y, m.at.z, 0 };
+        const uint32_t exp[9] = { r[4 + 0], r[4 + 1], r[4 + 2], r[4 + 4], r[4 + 5], r[4 + 6], r[4 + 8], r[4 + 9], r[4 + 10] };
+        cmp("UnitConvertToMatrix", (int)i, got, exp, 9);
+        CHECK(m.flags == r[4 + 3]);
+    }
+    Section("exe differential: RtQuatConvertToMatrix (inlined in CPhysical::PositionAttachedEntity 0x5471CF..0x547352)");
+    for (size_t i = 0; i < Rows(kQuatToMat); i++) {
+        const uint32_t* r = kQuatToMat[i];
+        RtQuat q; q.imag = { BitsF(r[0]), BitsF(r[1]), BitsF(r[2]) }; q.real = BitsF(r[3]);
+        RwMatrix m; std::memset(&m, 0xcc, sizeof m);
+        RtQuatConvertToMatrix(&q, &m);
+        const float got[12] = { m.right.x, m.right.y, m.right.z, m.up.x, m.up.y, m.up.z, m.at.x, m.at.y, m.at.z, m.pos.x, m.pos.y, m.pos.z };
+        const uint32_t exp[12] = { r[4], r[5], r[6], r[8], r[9], r[10], r[11], r[12], r[13], r[14], r[15], r[16] };
+        cmp("ConvertToMatrix", (int)i, got, exp, 12);
+        CHECK(m.flags == r[7]);
+    }
+    Section("exe differential: RpHAnimKeyFrameBlend 0x7C60C0 / Add 0x7C6720 / MulRecip 0x7C65C0");
+    auto load = [](const uint32_t* r, rw::HAnimKeyFrame& f) {
+        std::memset(&f, 0, sizeof f); f.time = BitsF(r[1]);
+        f.q.x = BitsF(r[2]); f.q.y = BitsF(r[3]); f.q.z = BitsF(r[4]); f.q.w = BitsF(r[5]); f.t.x = BitsF(r[6]); f.t.y = BitsF(r[7]); f.t.z = BitsF(r[8]);
+    };
+    auto fvals = [](const rw::HAnimKeyFrame& f, float* o) { o[0] = f.q.x; o[1] = f.q.y; o[2] = f.q.z; o[3] = f.q.w; o[4] = f.t.x; o[5] = f.t.y; o[6] = f.t.z; };
+    for (size_t i = 0; i < Rows(kBlend); i++) {
+        const uint32_t* r = kBlend[i];
+        rw::HAnimKeyFrame a, b, out; load(r, a); load(r + 9, b); std::memset(&out, 0, sizeof out);
+        RpHAnimKeyFrameBlend(&out, &a, &b, BitsF(r[18]));
+        float g[7]; fvals(out, g);
+        cmp("KeyFrameBlend", (int)i, g, r + 19 + 2, 7);
+        fvals(b, g);   // in2 is negated in place when the quaternions face away from each other
+        cmp("KeyFrameBlend.in2", (int)i, g, r + 28 + 2, 7);
+    }
+    for (size_t i = 0; i < Rows(kAdd); i++) {
+        const uint32_t* r = kAdd[i];
+        rw::HAnimKeyFrame a, b, out; load(r, a); load(r + 9, b); std::memset(&out, 0, sizeof out);
+        RpHAnimKeyFrameAdd(&out, &a, &b);
+        float g[7]; fvals(out, g);
+        cmp("KeyFrameAdd", (int)i, g, r + 18 + 2, 7);
+    }
+    for (size_t i = 0; i < Rows(kMulRecip); i++) {
+        const uint32_t* r = kMulRecip[i];
+        rw::HAnimKeyFrame f, s; load(r, f); load(r + 9, s);
+        RpHAnimKeyFrameMulRecip(&f, &s);
+        float g[7]; fvals(f, g);
+        cmp("KeyFrameMulRecip", (int)i, g, r + 18 + 2, 7);
+    }
+    CHECK(g_exeMismatch == 0);
+}
+
 int main(int argc, char** argv) {
     std::setvbuf(stdout, nullptr, _IONBF, 0);
     _set_error_mode(_OUT_TO_STDERR);
@@ -547,6 +689,7 @@ int main(int argc, char** argv) {
     rw::Driver::s_plglist[rw::PLATFORM_NULL].construct(rw::engine->driver[rw::PLATFORM_NULL]);
     CHECK(rw::AnimInterpolatorInfo::find(1) != nullptr);
 
+    ExeDifferentialTests();
     QuatMatrixTests();
     RotateTests();
     TransformTests();

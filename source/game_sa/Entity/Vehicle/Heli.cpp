@@ -78,7 +78,10 @@ void CHeli::InjectHooks() {
     RH_ScopedInstall(Post_SearchLightCone, 0x6C46E0);
     RH_ScopedInstall(SwitchPoliceHelis, 0x6C4800);
     RH_ScopedInstall(SearchLightCone, 0x6C58E0);
+    RH_ScopedInstall(GenerateHeli, 0x6C6520);
+    RH_ScopedInstall(UpdateHelis, 0x6C79A0);
     RH_ScopedInstall(FindSwatPositionRelativeToHeli, 0x6C4760);
+    RH_ScopedInstall(SendDownSwat, 0x6C69C0);
     RH_ScopedInstall(RenderAllHeliSearchLights, 0x6C7C50);
     RH_ScopedInstall(TestSniperCollision, 0x6C6890);
     RH_ScopedVMTInstall(Render, 0x6C4400);
@@ -562,7 +565,96 @@ void CHeli::SearchLightCone(int32 coronaIndex,
 
 // 0x6C6520
 CHeli* CHeli::GenerateHeli(CPed* target, bool newsHeli) {
-    return ((CHeli * (__cdecl*)(CPed*, bool))0x6C6520)(target, newsHeli);
+    CHeli* const heli = newsHeli
+        ? new CHeli(MODEL_VCNMAV, PERMANENT_VEHICLE)
+        : new CHeli(MODEL_POLMAV, PERMANENT_VEHICLE);
+
+    // 0x6C65A0 - Pick a spot 250 units away from the target, in a random direction
+    const CVector targetPos = target->GetPosition();
+    const double  angle0    = (double)(rand() & 0xFF) * (double)std::bit_cast<float>(0x3CC8F5C3u); // 0x859C44
+    float         angle     = (float)angle0;
+
+    CVector pos{
+        (float)(std::cos(angle0) * 250.0f + targetPos.x), // 0x859F80
+        (float)(std::sin((double)angle) * 250.0f + targetPos.y),
+        targetPos.z
+    };
+
+    // 0x6C660F - Out of the map? Then the opposite direction
+    if (pos.x < -3000.0f || pos.x > 3000.0f || pos.y < -3000.0f || pos.y > 3000.0f) { // 0x859A90, 0x859A94
+        angle = (float)((double)angle + std::numbers::pi_v<float>); // 0x858CB8
+
+        const CVector targetPos2 = target->GetPosition();
+        pos = CVector{
+            (float)(std::cos((double)angle) * 250.0f + targetPos2.x),
+            (float)(std::sin((double)angle) * 250.0f + targetPos2.y),
+            targetPos2.z
+        };
+    }
+
+    // 0x6C66A8
+    float z = (float)((double)pos.z + 50.0f); // 0x858B40
+    const auto toChiliadX = (double)pos.x - StaticRef<float>(0x8717C0);
+    const auto toChiliadY = (double)pos.y - StaticRef<float>(0x8717BC);
+    if (std::sqrt(toChiliadY * toChiliadY + toChiliadX * toChiliadX) < 350.0f) { // Too close to Mt. Chiliad? Spawn right above the target. 0x858A4C
+        const CVector targetPos3 = target->GetPosition();
+        pos.x = targetPos3.x;
+        pos.y = targetPos3.y;
+
+        double zz = (double)targetPos3.z + 200.0f; // 0x858A48
+        if (!(zz > (double)StaticRef<float>(0x8717B8))) {
+            zz = StaticRef<float>(0x8717B8);
+        }
+        z = (float)zz;
+    }
+
+    // 0x6C6730 - Not underground please
+    const double groundZ = (double)CWorld::FindGroundZForCoord(pos.x, pos.y) + 20.0f; // 0x858BA4
+    const float  finalZ  = !((double)z > groundZ) ? (float)groundZ : z;
+
+    heli->GetMatrix().SetTranslate({ pos.x, pos.y, finalZ });
+    heli->vehicleFlags.bIsLocked = true;
+    heli->SetStatus(STATUS_PHYSICS);
+
+    // NOTSA: 0x6C6786 - The original searches for a free slot in `pHelis` here, but never uses the result.
+
+    if (newsHeli) {
+        heli->m_autoPilot.m_nCarMission = MISSION_HELI_NEWS_BEHAVIOUR;
+        // 0x6C67B7 - `FindPlayerPed()` is stored into the target here, but it's overwritten right below
+        heli->m_autoPilot.m_nCruiseSpeed = 35;
+    } else {
+        heli->m_autoPilot.m_nCarMission = MISSION_HELI_POLICE_BEHAVIOUR;
+        heli->m_autoPilot.m_nCruiseSpeed = 70;
+    }
+    heli->m_autoPilot.m_TargetEntity = reinterpret_cast<CVehicle*>(target); // `m_TargetEntity` is a `CEntity*` in practice
+    heli->m_fMaxAltitude = 20.0f;
+    heli->m_fMinAltitude = 12.0f;
+    if (newsHeli) {
+        heli->m_fMaxAltitude = 30.0f;
+        heli->m_fMinAltitude = 27.0f;
+    }
+
+    // 0x6C6813 - Orientation: heading = angle + pi
+    const float heading = (float)((double)angle + std::numbers::pi_v<float>);
+    heli->m_fHeliRotorSpeed = 0.165f; // 0x3E28F5C3
+
+    auto& mat = heli->GetMatrix();
+    mat.GetRight().z   = 0.0f;
+    mat.GetForward().z = 0.0f;
+    mat.GetUp().x      = 0.0f;
+    mat.GetUp().y      = 0.0f;
+    mat.GetUp().z      = 1.0f;
+    const double sinH = std::sin((double)heading);
+    mat.GetRight().x   = (float)sinH;
+    const double cosH = std::cos((double)heading);
+    mat.GetRight().y   = (float)-cosH;
+    mat.GetForward().x = (float)cosH;
+    mat.GetForward().y = (float)sinH;
+
+    CWorld::Add(heli); // 0x563220
+    heli->SetUpDriver(-1, false, false); // 0x6D1A50
+
+    return heli;
 }
 
 // 0x6C6890
@@ -587,14 +679,189 @@ void CHeli::TestSniperCollision(CVector* origin, CVector* target) {
 
 // 0x6C69C0
 bool CHeli::SendDownSwat() {
-    return ((bool(__thiscall*)(CHeli*))0x6C69C0)(this);
+    using namespace HeliImpl;
+
+    const CVector targetPos = m_autoPilot.m_TargetEntity->GetPosition();
+
+    if (m_nNumSwatOccupants == 0 || physicalFlags.bSubmergedInWater || !CStreaming::IsModelLoaded(MODEL_SWAT) || (rand() & 0x7F) != 0) { // 0x6C69C0, 0x6C6A24, 0x8E6314, 0x6C6A31
+        return false;
+    }
+
+    // 0x6C6A3E - Close enough to the target and slow enough?
+    const auto& pos = GetPosition();
+    const double dX = (double)pos.x - targetPos.x;
+    const double dY = (double)pos.y - targetPos.y;
+    const double dZ = (double)pos.z - targetPos.z;
+    if (std::sqrt((dX * dX + dY * dY) + dZ * dZ) > 50.0f) { // 0x858B40
+        return false;
+    }
+
+    const double speed = std::sqrt(((double)m_vecMoveSpeed.x * m_vecMoveSpeed.x + (double)m_vecMoveSpeed.y * m_vecMoveSpeed.y) + (double)m_vecMoveSpeed.z * m_vecMoveSpeed.z); // 0x4082C0
+    if (speed > 0.1f) { // 0x858B1C
+        return false;
+    }
+
+    // 0x6C6AA1 - Where's the rope?
+    const CMatrix mat{ GetMatrix() };
+    const auto    swatIdx   = (uint8)m_nNumSwatOccupants - 1;
+    const auto    swatOfs   = FindSwatPositionRelativeToHeli(swatIdx);
+    CVector       ropePos   = Multiply3x3Original(mat, swatOfs); // 0x59C790
+    ropePos += GetPosition(); // 0x411A00
+
+    const auto groundZ = CWorld::FindGroundZFor3DCoord(ropePos, nullptr, nullptr);
+
+    // 0x6C6B2E - Is the ground close to the target?
+    double zDiff = (double)targetPos.z - groundZ;
+    if (zDiff < 0.0) { // 0x858B50
+        zDiff = -zDiff;
+    }
+    if (!(zDiff < 2.5f)) { // 0x858FA0
+        return false;
+    }
+
+    // 0x6C6B52 - Not above the water
+    float waterLevel;
+    if (CWaterLevel::GetWaterLevelNoWaves(ropePos, &waterLevel, nullptr, nullptr) && !(waterLevel < groundZ)) {
+        return false;
+    }
+
+    // 0x6C6B89 - Let the rope down.
+    // NOTSA: The original checks the result for `< 0`, but it only returns 0 or 1, so this never fails.
+    const auto ropeId = reinterpret_cast<uint32>(this) + swatIdx; // The rope is identified by `this + i`
+    CRopes::RegisterRope(ropeId, 8, ropePos, false, 0, 0, nullptr, 20000);
+
+    // 0x6C6BCD - Spawn the SWAT guy and make him abseil
+    CPed* const swat = CPopulation::AddPed(PED_TYPE_COP, (eModelID)COP_TYPE_SWAT2, ropePos, true); // For cops this is the `eCopType`
+
+    auto* const seq = new CTaskComplexSequence();
+    seq->AddTask(new CTaskComplexUseSwatRope(ropeId, this));
+    seq->AddTask(new CTaskComplexWanderCop(PEDMOVE_WALK, CGeneral::GetRandomNumberInRange(0, 8)));
+    swat->GetTaskManager().SetTask(seq, TASK_PRIMARY_PRIMARY, false); // 0x681AF0
+
+    swat->m_bUsesCollision = false;
+
+    m_nNumSwatOccupants--;
+    m_aSwatState[(uint8)m_nNumSwatOccupants] = 0xAA;
+
+    CAnimManager::BlendAnimation(swat->GetRpClump(), ANIM_GROUP_DEFAULT, ANIM_ID_ABSEIL, 4.0f); // 0x4D4610
+
+    return true;
 }
 
 // 0x6C79A0
 void CHeli::UpdateHelis() {
     ZoneScoped;
 
-    ((void(__cdecl*)())0x6C79A0)();
+    NumberOfSearchLights = 0;
+
+    int32 numHelis{};
+    bool  policeHeliExists{};
+
+    int32 numHelisRequired = FindPlayerWanted()->NumOfHelisRequired(); // 0x561FA0
+
+    // 0x6C79C7 - Count the existing helis
+    const auto IsAlive = [](CHeli* heli) {
+        return !heli->physicalFlags.bRenderScorched && !heli->vehicleFlags.bIsDrowning;
+    };
+    if (pHelis[0]) {
+        numHelis = 1;
+        if (pHelis[0]->m_nModelIndex == MODEL_POLMAV && IsAlive(pHelis[0])) {
+            policeHeliExists = true;
+        }
+    }
+    if (pHelis[1]) {
+        numHelis++;
+        if (pHelis[1]->m_nModelIndex == MODEL_POLMAV && IsAlive(pHelis[1])) {
+            policeHeliExists = true;
+        }
+    }
+
+    // 0x6C7A18 - Do we want any?
+    if (CCullZones::PlayerNoRain() || CGame::currArea != AREA_CODE_NORMAL_WORLD) {
+        numHelisRequired = 0;
+    }
+    if (!bPoliceHelisAllowed) {
+        numHelisRequired = 0;
+    }
+    if (CWeather::OldWeatherType == WEATHER_SANDSTORM_DESERT || CWeather::NewWeatherType == WEATHER_SANDSTORM_DESERT) {
+        numHelisRequired = 0;
+    }
+
+    // Generate a news heli, if there is a police one already (and there's no news heli yet)
+    bool spawnNewsHeli = policeHeliExists;
+    if (pHelis[0] && pHelis[0]->m_nModelIndex == MODEL_VCNMAV) {
+        spawnNewsHeli = false;
+    }
+    if (pHelis[1] && pHelis[1]->m_nModelIndex == MODEL_VCNMAV) {
+        spawnNewsHeli = false;
+    }
+    if (!CWanted::UseNewsHeliInAdditionToPolice) {
+        spawnNewsHeli = false;
+    }
+
+    // 0x6C7A96 - Model loaded? (0x8E72F0 / 0x8E73A4)
+    const bool isModelLoaded = CStreaming::IsModelLoaded(spawnNewsHeli ? MODEL_VCNMAV : MODEL_POLMAV);
+    if (isModelLoaded && CTimer::GetTimeInMS() > TestForNewRandomHelisTimer) {
+        TestForNewRandomHelisTimer = CTimer::GetTimeInMS() + 15000;
+
+        if (numHelis < numHelisRequired) {
+            CHeli* const heli = GenerateHeli(FindPlayerPed(), spawnNewsHeli); // 0x6C7AC1
+            if (!pHelis[0]) {
+                pHelis[0] = heli;
+                heli->RegisterReference(reinterpret_cast<CEntity**>(&pHelis[0]));
+            } else if (!pHelis[1]) {
+                pHelis[1] = heli;
+                heli->RegisterReference(reinterpret_cast<CEntity**>(&pHelis[1]));
+            }
+            // BUG: The heli is leaked if there's no free slot
+        }
+    }
+
+    // 0x6C7B12 - Remove wrecked helis, and the ones that flew away
+    for (auto& slot : pHelis) {
+        CHeli* const heli = slot;
+        if (!heli) {
+            continue;
+        }
+
+        if (!IsAlive(heli)) {
+            heli->m_autoPilot.m_nCarMission = MISSION_HELI_FLY_AWAY_FROM_PLAYER;
+            slot = nullptr;
+            continue;
+        }
+
+        if (heli->m_autoPilot.m_nCarMission != MISSION_HELI_FLY_AWAY_FROM_PLAYER) {
+            continue;
+        }
+
+        const auto& helipos = heli->GetPosition();
+        const auto  plypos  = FindPlayerCoors(); // 0x56E010
+        const double dX = (double)plypos.x - helipos.x;
+        const double dY = (double)plypos.y - helipos.y;
+        const double dZ = (double)plypos.z - helipos.z;
+        if (std::abs(std::sqrt((dX * dX + dY * dY) + dZ * dZ)) > 170.0f) { // 0x858F98
+            CWorld::Remove(heli);
+            delete slot;
+            slot = nullptr;
+        }
+    }
+
+    // 0x6C7BCB - Too many helis? Send them away
+    const auto FlyAwayIfNotNeeded = [&](CHeli* heli) {
+        heli->m_autoPilot.m_nCarMission = MISSION_HELI_FLY_AWAY_FROM_PLAYER;
+        heli->m_fMinAltitude = 100.0f;
+        heli->m_fMaxAltitude = 100.0f;
+    };
+    if (pHelis[0] && pHelis[0]->m_autoPilot.m_nCarMission != MISSION_HELI_FLY_AWAY_FROM_PLAYER) {
+        if (numHelisRequired > 0) {
+            numHelisRequired--;
+        } else {
+            FlyAwayIfNotNeeded(pHelis[0]);
+        }
+    }
+    if (pHelis[1] && pHelis[1]->m_autoPilot.m_nCarMission != MISSION_HELI_FLY_AWAY_FROM_PLAYER && numHelisRequired <= 0) {
+        FlyAwayIfNotNeeded(pHelis[1]);
+    }
 }
 
 // 0x6C7C50

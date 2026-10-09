@@ -1631,11 +1631,6 @@ bool GeneratePedCreationCoors(
     );
 }
 
-//! 0x44DA30 - Picks a random point between the 2 nodes and writes it to `outX` and `outY` (`CPathFind` method, not reversed yet)
-void FindPedCreationPosBetweenNodes(CNodeAddress addr1, CNodeAddress addr2, int32 randomSeed, float* outX, float* outY) {
-    plugin::CallMethod<0x44DA30, CPathFind*, CNodeAddress, CNodeAddress, int32, float*, float*>(&ThePaths, addr1, addr2, randomSeed, outX, outY);
-}
-
 //! 0x6EABA0 - `CWaterLevel::CreateBeachToy` (not reversed yet, and not declared in `WaterLevel.h`)
 CObject* CreateBeachToy(const CVector& pos, int32 toyType) {
     return plugin::CallAndReturn<CObject*, 0x6EABA0, const CVector*, int32>(&pos, toyType);
@@ -2117,7 +2112,7 @@ bool CPopulation::AddToPopulation(float minRadius, float maxRadius, float minRad
     if (static_cast<uint32>(rand() & 0xF) > std::min(spawnProb1, spawnProb2)) {
         return result;
     }
-    FindPedCreationPosBetweenNodes(addr1, addr2, rand(), &pos.x, &pos.y);
+    ThePaths.FindPedCreationPosBetweenNodes(addr1, addr2, rand(), &pos.x, &pos.y); // 0x44DA30
 
     if (isGang) {
         PlaceGangMembers(pedType, static_cast<uint32>(numPeds), pos);

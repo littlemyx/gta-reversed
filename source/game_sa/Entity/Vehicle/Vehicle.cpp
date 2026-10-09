@@ -30,6 +30,10 @@
 #include "Skidmarks.h"
 
 static CVector TransformPointExt(const CMatrix& m, const CVector& v); // defined below
+static double MagnitudeExt(const CVector& v);  // defined below
+static void NormaliseExt(CVector& v);          // defined below
+
+static auto& fFlyingLiftLimit = StaticRef<float>(0x8D3670); // (BARON) lift limit tweak, 0.5f
 
 auto& planeRotorDmgTimeMS = StaticRef<uint32>(0xC1CC1C);
 
@@ -186,7 +190,7 @@ void CVehicle::InjectHooks() {
     RH_ScopedInstall(KillPedsGettingInVehicle, 0x6D82F0);
     RH_ScopedInstall(UsesSiren, 0x6D8470);
     RH_ScopedInstall(IsSphereTouchingVehicle, 0x6D84D0);
-    // RH_ScopedInstall(FlyingControl, 0x6D85F0);
+    RH_ScopedInstall(FlyingControl, 0x6D85F0);
     RH_ScopedInstall(BladeColSectorList<CPtrListSingleLink<CEntity*>>, 0x6DAF00);
     RH_ScopedInstall(SetComponentRotation, 0x6DBA30);
     RH_ScopedInstall(SetTransmissionRotation, 0x6DBBB0);
@@ -1888,7 +1892,7 @@ float CVehicle::HeightAboveCeiling(float height, eFlightModel flightModel) {
     default: {
         // Originally this was the condition used, but it's ugly
         // Leaving here to make sure it all works as expectd
-        assert(!(((int)flightModel - 1) <= 1));
+        assert(!((uint32)((int)flightModel - 1) <= 1u)); // (unsigned compare: the original treats model 2 like 1)
 
         if (height < 800.f)
             return -1.f;
@@ -3832,50 +3836,777 @@ bool CVehicle::IsSphereTouchingVehicle(CVector posn, float radius) {
     return true;
 }
 
-// 0x6D85F0
-void CVehicle::FlyingControl(eFlightModel flightModel, float leftRightSkid, float steeringUpDown, float steeringLeftRight, float accelerationBreakStatus) {
-    return ((void(__thiscall*)(CVehicle*, eFlightModel, float, float, float, float))0x6D85F0)(this, flightModel, leftRightSkid, steeringUpDown, steeringLeftRight, accelerationBreakStatus);
+//
+// CVehicle::FlyingControl (0x6D85F0) - split into file-local helpers, one per block of the original
+//
+// NOTE: The original keeps most intermediates on the x87 stack (extended precision), but stores some to float temporaries, hence the mix of `double`s and `float`s.
+//
 
-    /*
-    * Code below should be correct. I just didn't finish it, because I can't be bothered to figure out what
-    * 0x6D8BFD is.. maybe later.
-    */
-    if (!m_pFlyingHandlingData || CTimer::GetTimeStep() <= 0.f) {
-        return;
+// 0x4082C0 / 0x406DA0 - (squared) magnitude, left in the FPU
+static double SquaredMagnitudeExt(const CVector& v) {
+    return ((double)v.x * v.x + (double)v.y * v.y) + (double)v.z * v.z;
+}
+
+// 0x40FDB0 - `DotProduct`, left in the FPU
+static double DotProductExt(const CVector& a, const CVector& b) {
+    return ((double)a.z * b.z + (double)a.y * b.y) + (double)a.x * b.x;
+}
+
+// 0x59C730 - `CrossProduct`, the products stay in the FPU registers
+static CVector CrossProductExt(const CVector& a, const CVector& b) {
+    return {
+        (float)((double)a.y * b.z - (double)a.z * b.y),
+        (float)((double)a.z * b.x - (double)a.x * b.z),
+        (float)((double)a.x * b.y - (double)b.x * a.y)
+    };
+}
+
+// 0x59C790 - 3x3 matrix * vector (no translation), the sums stay in the FPU registers
+static CVector Multiply3x3Ext(const CMatrix& m, const CVector& v) {
+    const auto &r = m.GetRight(), &f = m.GetForward(), &u = m.GetUp();
+    return {
+        (float)(((double)u.x * v.z + (double)f.x * v.y) + (double)r.x * v.x),
+        (float)(((double)u.y * v.z + (double)r.y * v.x) + (double)f.y * v.y),
+        (float)(((double)u.z * v.z + (double)r.z * v.x) + (double)f.z * v.y)
+    };
+}
+
+// Hydra: the thrust direction rotates with the nozzles (0x6D8FFF & 0x6D9C10)
+static CVector FlyingControlHydraDirection(const CVehicle& v) {
+    const auto&  mat   = *v.m_matrix;
+    const double angle = ((double)v.AsAutomobile()->m_wMiscComponentAngle * 1.5707964f) / (double)(int16)CPlane::HARRIER_NOZZLE_ROTATE_LIMIT;
+    const float  cosA  = (float)std::cos(angle);
+    const float  sinA  = (float)std::sin(angle);
+    return (mat.GetForward() * cosA) + (mat.GetUp() * sinA);
+}
+
+
+//! State shared by the blocks of `CVehicle::FlyingControl`
+struct FlyingControlCtx {
+    CVehicle*    veh;
+    eFlightModel model;
+    CPad*        pad;           // The driver's pad if the vehicle is driven by a player, otherwise null
+    CVector      speed;         // Move speed relative to the wind
+    CVector      com;           // Center of mass (rotated into the world)
+    float        leftRightSkid;
+    float        steeringUpDown;
+    float        steeringLeftRight;
+    float        accelerationBreakStatus;
+};
+
+constexpr float FLYING_CONTROL_NOT_SET = -9999.99f; // 0x871F8C - "use the pad's value"
+
+// 0x6D8715 - flight model 0 (FLIGHT_MODEL_UNK)
+static void FlyingControlModel0(const FlyingControlCtx& c) {
+    CVehicle&     v   = *c.veh;
+    const auto&   mat = *v.m_matrix;
+    const auto&   V   = c.speed;
+    const float   ts  = CTimer::ms_fTimeStep;
+    const CVector right = mat.GetRight(), fwd = mat.GetForward(), up = mat.GetUp();
+
+    const float rightDot = (float)((((double)V.z * right.z + (double)V.y * right.y) + (double)V.x * right.x) * -1.0f);
+    const float rightFac = (float)((double)rightDot / MagnitudeExt(V));
+
+    const float dotFwd = (float)(((double)fwd.y * V.y + (double)fwd.x * V.x) + (double)fwd.z * V.z);
+    const float k      = (float)((SquaredMagnitudeExt(V) * dotFwd) * dotFwd);
+
+    const CVector fwdScaled = fwd * -4.0f;
+
+    const float steerTurn = (float)(((((double)v.m_fSteerAngle * 0.001 + (double)rightFac * 0.003) * ts) * k) * v.m_fTurnMass);
+    v.ApplyTurnForce(right * steerTurn, fwdScaled);
+
+    const float moveScale = (float)(((((double)ts * v.m_fMass) * k) * rightFac) * 0.2f);
+    const CVector sideMove = right * moveScale;
+    v.ApplyMoveForce(sideMove);
+    v.ApplyTurnForce(sideMove, up * 2.0f);
+
+    const float upDot = (float)((((double)V.z * up.z + (double)V.y * up.y) + (double)V.x * up.x) * -1.0f);
+    const float upFac = (float)((double)upDot / MagnitudeExt(V));
+
+    double pitchIn = 0.0;
+    if (c.pad) {
+        pitchIn = (double)(int32)c.pad->GetSteeringUpDown() * -0.0078125f;
     }
+    pitchIn *= 0.001f;
+    const float pitchTurn = (float)(((((pitchIn + (double)upFac * 0.002f) * ts) * k) * v.m_fTurnMass));
+    v.ApplyTurnForce(up * pitchTurn, fwdScaled);
 
-    const auto padOfPlayerDriver = (GetStatus() == STATUS_PLAYER && m_pDriver && m_pDriver->IsPlayer()) ? m_pDriver->AsPlayer()->GetPadFromPlayer() : nullptr;
-    const auto windDragForce     = IsMissionVehicle() ? CVector{} : -CWeather::WindDir * m_pFlyingHandlingData->m_fWindMult;
-    const auto velocityWithDrag = m_vecMoveSpeed + windDragForce; // Plus because `windDragForce` is opposing to our velocity already
-
-    switch (flightModel) {
-    case FLIGHT_MODEL_UNK:
-    case FLIGHT_MODEL_UNK2: {
-        NOTSA_UNREACHABLE("The function doesn't seem to be called with this model from anywhere, but it is present in the code.. So I wont bother");
-        return;
-    }
-    case FLIGHT_MODEL_BARON:
-    case FLIGHT_MODEL_PLANE:
-    case FLIGHT_MODEL_BOAT: {
-        if (leftRightSkid == -9999.9902f) { // What a weird fucking value lol
-            leftRightSkid = 0.f;
-            if (padOfPlayerDriver) {
-                leftRightSkid = (float)padOfPlayerDriver->GetSteeringLeftRight() / 128.f;
+    float lift = (float)((((((double)upFac * 3.5 + 0.5) * v.m_fMass) * ts) * k) * 0.05);
+    if (v.GetStatus() == STATUS_PLAYER || v.GetStatus() == STATUS_REMOTE_CONTROLLED) {
+        if (((double)ts * v.m_fMass) * 0.008f < lift) {
+            if (v.HeightAboveCeiling(v.GetPosition().z, FLIGHT_MODEL_UNK) > 0.0f) {
+                lift = (float)(((double)v.m_fMass * ts) * (double)0.0072f);
             }
         }
-        if (steeringUpDown == -9999.9902f) {
-            steeringUpDown = 0.f;
-            if (padOfPlayerDriver) {
-                steeringUpDown = (float)padOfPlayerDriver->GetSteeringUpDown() / 128.f;
-                const auto gunUpDown = padOfPlayerDriver->GetCarGunUpDown();
-                if (std::abs((float)gunUpDown) > 1.f) {
-                    steeringUpDown = -gunUpDown / 128.f;
+    }
+    const CVector liftForce = up * lift;
+    v.ApplyMoveForce(liftForce);
+    v.ApplyTurnForce(liftForce, (up * 2.0f) + c.com);
+
+    v.m_vecTurnSpeed.y = (float)(std::pow((double)0.9f, (double)ts) * v.m_vecTurnSpeed.y);
+}
+
+// 0x6D8B1D - flight models 1 (baron), 3 (plane), 4, 5 (boat)
+static void FlyingControlModel1345(FlyingControlCtx& c) {
+    CVehicle&     v     = *c.veh;
+    const auto&   mat   = *v.m_matrix;
+    const auto    fh    = v.m_pFlyingHandlingData;
+    const auto&   V     = c.speed;
+    const float   ts    = CTimer::ms_fTimeStep;
+    const auto    model = c.model;
+    const auto    pad   = c.pad;
+    float&        skid  = c.leftRightSkid;
+    float&        upDown = c.steeringUpDown;
+    float&        leftRight = c.steeringLeftRight;
+    float&        accel = c.accelerationBreakStatus;
+
+    // Inputs
+    if (skid == FLYING_CONTROL_NOT_SET) {
+        skid = 0.0f;
+        if (pad) {
+            skid = (float)((double)(int32)pad->GetSteeringLeftRight() * 0.0078125f);
+        }
+    }
+    if (upDown == FLYING_CONTROL_NOT_SET) {
+        upDown = 0.0f;
+        if (pad) {
+            upDown = (float)((double)(int32)pad->GetSteeringUpDown() * 0.0078125f);
+            if (std::fabs((double)(int32)pad->GetCarGunUpDown()) > 1.0) {
+                upDown = (float)((double)(-(int32)pad->GetCarGunUpDown()) * 0.0078125f);
+            }
+        }
+    }
+
+    // Scale the inputs by 1 / cos(angle to the nearest axis)
+    const float inputAngle = (float)std::atan2((double)upDown, (double)skid);
+    constexpr double PI = std::numbers::pi_v<float>, HALF_PI = 1.5707964f;
+    double angleFac = 1.0;
+    {
+        const double a = inputAngle;
+        if (inputAngle > -0.7853981852531433f && inputAngle <= 0.7853981852531433f) {
+            angleFac = 1.0 / std::cos(a);
+        } else if (inputAngle > 0.7853981852531433f && inputAngle <= 2.356194496154785f) {
+            angleFac = 1.0 / std::cos(a - HALF_PI);
+        } else if (inputAngle > 2.356194496154785f) {
+            angleFac = 1.0 / std::cos(a - PI);
+        } else if (inputAngle <= -2.356194496154785f) {
+            angleFac = 1.0 / std::cos(a + PI);
+        } else if (inputAngle < -0.7853981852531433f) {
+            angleFac = 1.0 / std::cos(a + HALF_PI);
+        }
+    }
+    skid   = (float)((double)skid * angleFac);
+    upDown = (float)(-(angleFac * upDown));
+
+    const CVector fwd  = mat.GetForward();
+    const CVector rear = fwd * v.GetColModel()->GetBoundingBox().m_vecMin.y; // (+4 = min.y)
+
+    const double dotFwdExt = ((double)fwd.y * V.y + (double)fwd.x * V.x) + (double)fwd.z * V.z;
+    const float  dotFwd    = (float)dotFwdExt;
+    const float  dotFwdSq  = (float)(dotFwdExt * dotFwd);
+
+    if (model == FLIGHT_MODEL_BARON) {
+        v.ApplyMoveForce(((CVector{ 0.0f, 0.0f, 0.004f } * v.m_fMass) * ts));
+    }
+
+    // Throttle
+    if (accel == FLYING_CONTROL_NOT_SET) {
+        accel = 0.0f;
+        if (pad) {
+            const int32 acc = pad->GetAccelerate();
+            const int32 brk = pad->GetBrake();
+            accel = (float)((double)(acc - brk) * 0.003921568859368563);
+        }
+    }
+
+    const auto modelIdx = v.m_nModelIndex;
+    {
+        bool gentle = true; // true => 0x6D8EFE, false => 0x6D8E83
+        if (v.m_nVehicleType == VEHICLE_TYPE_AUTOMOBILE) {
+            const auto& comp = v.AsAutomobile()->m_fWheelsSuspensionCompression;
+            bool        brakeCheck; // 0x6D8E6F
+            if (modelIdx == 0x21B || comp[0] != 1.0f || comp[1] != 1.0f || comp[2] != 1.0f || comp[3] != 1.0f) {
+                brakeCheck = true;
+            } else if (modelIdx != 0x1CC) {
+                brakeCheck = false;
+            } else if (!v.physicalFlags.bSubmergedInWater || dotFwd > 0.2f) { // +0x40 & 0x100
+                brakeCheck = false;
+            } else {
+                brakeCheck = true;
+            }
+            if (brakeCheck) {
+                gentle = accel > 0.0f;
+            }
+        }
+
+        if (!gentle) {
+            if (!(accel < 0.0f) || !(DotProductExt(fwd, v.m_vecMoveSpeed) < 0.02f)) {
+                accel = 0.0f;
+            } else {
+                double val = (double)accel - (double)dotFwd * 7.76f;
+                if (0.0 < val) {
+                    val = 0.0;
+                }
+                accel = (float)(val * fh->m_fThrust);
+            }
+        } else {
+            double val = (double)accel;
+            if (modelIdx == 0x21B) {
+                val = val * fh->m_fThrust;
+            } else {
+                val = ((val + 1.0f) * fh->m_fThrust) * 0.5f;
+            }
+            accel = (float)val;
+
+            if (dotFwd > 0.0f && fh->m_fThrustFallOff < 1.0f) {
+                double g;
+                if (!(fh->m_fThrustFallOff < 0.0f)) {
+                    const double d = (double)dotFwd - fh->m_fThrustFallOff;
+                    g = (d * d) * 0.65f;
+                } else {
+                    const double d = (double)dotFwd + fh->m_fThrustFallOff;
+                    g = (d * d) * 3.0f;
+                }
+                double h = 1.0 - g;
+                if (0.0 > h) {
+                    h = 0.0;
+                }
+                accel = (float)(h * accel);
+            }
+        }
+    }
+    if (model == FLIGHT_MODEL_UNK2) {
+        accel = (float)((double)accel * 0.3f);
+    } else if (model == FLIGHT_MODEL_BOAT) {
+        accel = (float)((double)accel * 0.1f);
+    }
+
+    // Direction of the thrust
+    CVector thrustDir = mat.GetForward();
+    if (modelIdx == 0x208) { // Hydra: the nozzles rotate
+        thrustDir = FlyingControlHydraDirection(v);
+    }
+
+    {
+        const double thrustScale = 0.008f;
+        const float  tx = (float)(((double)thrustDir.x * thrustScale) * accel);
+        const double ty = ((double)thrustDir.y * thrustScale) * accel;
+        const float  tz = (float)((double)thrustDir.z * thrustScale);
+        const float  mx = (float)((double)tx * v.m_fMass);
+        const float  my = (float)(ty * v.m_fMass);
+        const double mz = ((double)tz * accel) * v.m_fMass;
+        v.ApplyMoveForce({ (float)((double)mx * ts), (float)((double)my * ts), (float)(mz * ts) });
+    }
+
+    const CVector right = mat.GetRight(), up = mat.GetUp();
+
+    // Side drag
+    {
+        const double d = (((double)V.z * right.z + (double)V.y * right.y) + (double)V.x * right.x) * -1.0f;
+        const double g = d * (std::fabs(d) * fh->m_fSideSlip);
+        const double gx = (double)right.x * g;
+        const float  gy = (float)((double)right.y * g);
+        const float  gz = (float)((double)right.z * g);
+        const double xm = gx * v.m_fMass;
+        const double ym = (double)gy * v.m_fMass;
+        const float  zm = (float)((double)gz * v.m_fMass);
+        v.ApplyMoveForce({ (float)(xm * ts), (float)(ym * ts), (float)((double)zm * ts) });
+    }
+
+    // Yaw (rudder / skid)
+    {
+        const CVector spd = v.GetSpeed(rear);
+        const double  h   = (((double)spd.z * right.z + (double)spd.y * right.y) + (double)spd.x * right.x) * -1.0f;
+
+        double m;
+        if (modelIdx == 0x21B) {
+            if (dotFwd > 0.0f || std::isnan(dotFwd)) { // (0x6D9280: JP)
+                m = dotFwd > accel ? (double)dotFwd : (double)accel;
+            } else {
+                m = dotFwd < accel ? (double)dotFwd : (double)accel;
+            }
+        } else {
+            m = dotFwd;
+        }
+        const double hh  = (std::fabs(h) * fh->m_fYawStab) * h;
+        const float  s   = (float)((((hh + ((m * fh->m_fYaw) * skid)) * ts) * v.m_fTurnMass));
+        v.ApplyTurnForce(right * s, c.com + rear);
+    }
+
+    // Roll
+    {
+        const double in = leftRight == FLYING_CONTROL_NOT_SET ? (double)skid : (double)leftRight;
+        const float  s  = (float)(((((double)ts * fh->m_fRoll) * dotFwd) * in) * v.m_fTurnMass);
+        v.ApplyTurnForce(right * s, c.com + up);
+    }
+
+    // Roll stabilization
+    {
+        CVector cross = CrossProductExt(mat.GetForward(), { 0.0f, 0.0f, 1.0f });
+        if (!(up.z > 0.0f)) {
+            cross = cross * -1.0f;
+        }
+        const double sign = right.z > 0.0f ? -1.0f : 1.0f;
+        const double t1   = 1.0 - std::fabs((double)mat.GetForward().z);
+        const double t2   = 1.0 - (((double)cross.z * right.z + (double)cross.y * right.y) + (double)cross.x * right.x);
+        const double w    = t1 * (t2 * sign);
+        const float  s    = (float)(((((w * fh->m_fRollStab) * ts) * v.m_fTurnMass) * 0.5f));
+        v.ApplyTurnForce(right * s, c.com + up);
+    }
+
+    // Pitch
+    {
+        const CVector spd = v.GetSpeed(rear);
+        const double  d   = (((double)spd.z * up.z + (double)spd.y * up.y) + (double)spd.x * up.x) * -1.0f;
+        const double  g   = d * (std::fabs(d) * fh->m_fPitchStab);
+        const double  s   = ((g + (((double)dotFwd * fh->m_fPitch) * upDown)) * ts) * v.m_fTurnMass;
+        const CVector f{ (float)(up.x * s), (float)(up.y * s), (float)(up.z * s) };
+        v.ApplyTurnForce(f, c.com + rear);
+    }
+
+    // Lift
+    {
+        const double upDot  = (((double)V.z * up.z + (double)V.y * up.y) + (double)V.x * up.x);
+        const float  upDotF = (float)upDot;
+        const float  speedF = (float)MagnitudeExt(V);
+        const float  den    = (0.01f > speedF) ? 0.01f : speedF;     // 0x420800
+        const float  r1     = (float)((double)upDotF / den);
+        const float  r2     = (1.0f < r1) ? 1.0f : r1;               // 0x404330
+        const float  r3     = (-1.0f > r2) ? -1.0f : r2;             // 0x420800
+        const double pitch  = std::asin((double)r3) * -1.0f;         // 0x821E70
+        if (v.m_nVehicleSubType == VEHICLE_TYPE_PLANE && pitch > 0.3490658700466156f) {
+            v.AsPlane()->field_9A0 += (int32)(((double)ts * 0.02f) * 1000.0f);
+        }
+
+        double formLift = fh->m_fFormLift;
+        if (model == FLIGHT_MODEL_BARON) {
+            const float limit = (float)((double)fFlyingLiftLimit * 0.008f);
+            if ((double)dotFwdSq * formLift > limit) {
+                formLift = (double)limit / dotFwdSq;
+            }
+        } else if (v.m_nVehicleSubType == VEHICLE_TYPE_PLANE && v.AsPlane()->m_fLandingGearStatus < 1.0f) {
+            formLift = formLift * fh->m_fGearDownL;
+        }
+
+        const double lift  = (((pitch * fh->m_fAttackLift + formLift) * v.m_fMass) * ts) * dotFwdSq;
+        float        liftF = (float)lift;
+        if (lift > ((double)ts * v.m_fMass) * 0.008f) {
+            const float height = v.HeightAboveCeiling(v.GetPosition().z, model);
+            if (height > 0.0f) {
+                const double factor = (1.0 - (double)height * 0.02f) < 0.0 ? 0.0 : (1.0 - (double)height * 0.02f); // NOTE: the original calls `HeightAboveCeiling` 3 times
+                liftF = (float)(((factor * v.m_fMass) * ts) * 0.008f);
+            }
+        }
+        v.ApplyMoveForce(up * liftF);
+    }
+}
+
+// `in * dir * coeff * turnMass * timeStep`, with the original's float roundings (0x6DA4DA, 0x6DA5BF, 0x6DA84B)
+static CVector FlyingControlTorque(float in, const CVector& dir, float coeff, float turnMass, float ts) {
+    const float  xa = (float)(((double)in * dir.x) * coeff);
+    const float  xb = (float)((double)xa * turnMass);
+    const double ya = ((double)in * dir.y) * coeff;
+    const float  yb = (float)(ya * turnMass);
+    const float  za = (float)((double)in * dir.z);
+    const double zb = ((double)za * coeff) * turnMass;
+    return { (float)((double)xb * ts), (float)((double)yb * ts), (float)(zb * ts) };
+}
+
+// 0x6D986E - flight models 2 (RC), 6 (heli), 8
+static void FlyingControlModel268(FlyingControlCtx& c) {
+    CVehicle&   v     = *c.veh;
+    const auto& mat   = *v.m_matrix;
+    const auto  fh    = v.m_pFlyingHandlingData;
+    const auto& V     = c.speed;
+    const float ts    = CTimer::ms_fTimeStep;
+    const auto  model = c.model;
+    const auto  pad   = c.pad;
+    auto&       ms    = v.m_vecMoveSpeed;
+    float&      skid  = c.leftRightSkid;
+    float&      upDown = c.steeringUpDown;
+    float&      leftRight = c.steeringLeftRight;
+    float&      accel = c.accelerationBreakStatus;
+
+    // Move speed drag
+    {
+        const double r = std::pow((double)fh->m_fMoveRes, (double)ts);
+        ms.x = (float)(r * ms.x);
+        ms.y = (float)(r * ms.y);
+        ms.z = (float)(r * ms.z);
+    }
+
+    if ((int32)model == 8) {
+        const CVector fwd = mat.GetForward();
+        const float   dotF = (float)(((double)V.z * fwd.z + (double)V.y * fwd.y) + (double)V.x * fwd.x);
+
+        double throttle = (double)accel;
+        if (accel == FLYING_CONTROL_NOT_SET) {
+            throttle = 0.0;
+            if (pad) {
+                throttle = (double)((int32)pad->GetAccelerate() - (int32)pad->GetBrake()) * 0.003921568859368563;
+            }
+        }
+
+        float thrust;
+        if (dotF > 0.0f || throttle > 0.0) {
+            thrust = (float)((throttle - (double)dotF * fh->m_fThrustFallOff) * fh->m_fThrust);
+        } else {
+            double x = throttle - (((double)dotF * fh->m_fThrustFallOff) * 8.0f);
+            if (0.0 < x) {
+                x = 0.0;
+            }
+            thrust = (float)(x * fh->m_fThrust);
+        }
+        v.ApplyMoveForce(((fwd * thrust) * v.m_fMass) * ts);
+
+        CVector tilt = mat.GetUp() - (mat.GetForward() * AUTOGYRO_ROTORTILT_ANGLE);
+        NormaliseExt(tilt); // 0x59C910
+        float tiltDot = (float)(((double)tilt.x * V.x + (double)tilt.z * V.z) + (double)tilt.y * V.y);
+
+        float rotorSpin = 0.22f; // 0x8717AC
+        if (v.m_nVehicleType == VEHICLE_TYPE_AUTOMOBILE) {
+            auto&        spin = v.AsAutomobile()->m_fHeliRotorSpeed;
+            const double lo   = -AUTOGYRO_ROTORSPIN_MULTLIMIT;
+            if (0.0 < ((lo > tiltDot) ? lo : (double)tiltDot)) {
+                tiltDot = 0.0f;
+            } else if (lo > tiltDot) {
+                tiltDot = (float)lo;
+            }
+
+            const float spinNew = (float)((double)spin - (((double)tiltDot * ts) * AUTOGYRO_ROTORSPIN_MULT));
+            spin = spinNew;
+            const double damped = std::pow((double)AUTOGYRO_ROTORSPIN_DAMP, (double)ts) * spinNew;
+            spin = (float)damped;
+            if (damped > 0.4f) {
+                spin = 0.4f;
+            } else if (damped < 0.08f) {
+                spin = 0.08f;
+            }
+            rotorSpin = spin;
+        }
+
+        const float lift = (float)(((double)rotorSpin * AUTOGYRO_ROTORLIFT_MULT) - ((double)tiltDot * AUTOGYRO_ROTORLIFT_FALLOFF));
+        v.ApplyMoveForce((((tilt * 0.008f) * lift) * v.m_fMass) * ts);
+    } else {
+        CVector dir = mat.GetUp();
+        if (v.vehicleFlags.bHeliMinimumTilt) { // +0x42B & 0x10
+            dir.x = (float)std::sin(std::asin((double)dir.x) * 4.0f);
+            dir.y = (float)std::sin(std::asin((double)dir.y) * 4.0f);
+            dir.z = (float)std::cos(std::acos((double)dir.z) * 4.0f);
+        } else if (v.m_nModelIndex == 0x208) {
+            dir = FlyingControlHydraDirection(v);
+        }
+
+        float dirDot = (float)(((double)V.z * dir.z + (double)V.y * dir.y) + (double)V.x * dir.x);
+        if (dirDot > 0.0f) {
+            dirDot = (float)((double)dirDot + dirDot);
+        }
+
+        if (accel == FLYING_CONTROL_NOT_SET) {
+            accel = 0.0f;
+            if (pad) {
+                const int32 acc = pad->GetAccelerate();
+                const int32 brk = pad->GetBrake();
+                accel = (float)((double)(acc - brk) * 0.003921568859368563);
+                if (std::fabs((double)(int32)pad->GetCarGunUpDown()) > 1.0) {
+                    accel = (float)((double)(int32)pad->GetCarGunUpDown() * 0.0078125f);
                 }
             }
         }
+
+        float thrust = (float)((double)accel * fh->m_fThrust + 0.45f);
+        const float hover = (float)(0.5f - (double)ms.z);
+        v.ApplyMoveForce(((((CVector{ 0.0f, 0.0f, 1.0f } * hover) * 0.008f) * v.m_fMass) * ts));
+
+        thrust = (float)((double)thrust - (double)dirDot * fh->m_fThrustFallOff);
+        if (v.HeightAboveCeiling(v.GetPosition().z, model) > 0.0f) {
+            thrust = (float)(((double)thrust / ((double)v.HeightAboveCeiling(v.GetPosition().z, model) + 10.0f)) * 10.0f);
+        }
+        v.ApplyMoveForce((((dir * 0.008f) * thrust) * v.m_fMass) * ts);
+    }
+
+    // Stabilization
+    const CVector right = mat.GetRight(), fwd = mat.GetForward(), up = mat.GetUp();
+    if (up.z > 0.0f) {
+        CVector wind{ 0.0f, 0.0f, 1.0f };
+        wind += (CWeather::WindDir * fh->m_fWindMult);
+        NormaliseExt(wind);
+
+        const double lo = -fh->m_fFormLift;
+        const auto Clamp = [&](const CVector& axis) -> float {
+            const auto dot = [&] { return ((double)wind.z * axis.z + (double)wind.y * axis.y) + (double)wind.x * axis.x; };
+            const double m = (lo > dot()) ? lo : dot();
+            if (m > fh->m_fFormLift) {
+                return fh->m_fFormLift;
+            }
+            return (float)m;
+        };
+        {
+            const float val = Clamp(right);
+            const float s   = (float)(((((double)-val * fh->m_fAttackLift) * ts) * v.m_fTurnMass));
+            v.ApplyTurnForce(up * s, right + c.com);
+        }
+        {
+            const float val = Clamp(fwd);
+            const float s   = (float)(((((double)-val * fh->m_fAttackLift) * ts) * v.m_fTurnMass));
+            v.ApplyTurnForce(up * s, fwd + c.com);
+        }
+    } else {
+        {
+            const float val = right.z < 0.0f ? fh->m_fFormLift : -fh->m_fFormLift;
+            const float s   = (float)((((double)val * fh->m_fAttackLift) * ts) * v.m_fTurnMass);
+            v.ApplyTurnForce(up * s, right + c.com);
+        }
+        {
+            const float val = fwd.z < 0.0f ? fh->m_fFormLift : -fh->m_fFormLift;
+            const float s   = (float)((((double)val * fh->m_fAttackLift) * ts) * v.m_fTurnMass);
+            v.ApplyTurnForce(up * s, fwd + c.com);
+        }
+    }
+
+    // Inputs
+    if (!CHeli::bHeliControlsCheat) { // 0xC1C970
+        if (upDown == FLYING_CONTROL_NOT_SET) {
+            upDown = 0.0f;
+            if (pad) {
+                upDown = (float)((double)(int32)pad->GetSteeringUpDown() * 0.0078125f);
+            }
+        }
+        if (leftRight == FLYING_CONTROL_NOT_SET) {
+            leftRight = 0.0f;
+            if (pad) {
+                leftRight = (float)((double)(-(int32)pad->GetSteeringLeftRight()) * 0.0078125f);
+            }
+        }
+        if (skid == FLYING_CONTROL_NOT_SET) {
+            skid = 0.0f;
+            if (pad) {
+                skid = (float)pad->GetLookRight();
+                if (pad->GetLookLeft()) {
+                    skid = -1.0f;
+                }
+                if (std::fabs((double)(int32)pad->GetCarGunLeftRight()) > 1.0) {
+                    skid = (float)((double)(int32)pad->GetCarGunLeftRight() * 0.0078125f);
+                }
+            }
+        }
+    } else {
+        if (upDown == FLYING_CONTROL_NOT_SET) {
+            upDown = 0.0f;
+            if (pad) {
+                upDown = (float)((double)(int32)pad->GetSteeringUpDown() * 0.0078125f);
+            }
+        }
+        if (leftRight == FLYING_CONTROL_NOT_SET) {
+            leftRight = 0.0f;
+            if (pad) {
+                leftRight = (float)pad->GetLookLeft();
+            }
+        }
+        if (skid == FLYING_CONTROL_NOT_SET) {
+            skid = 0.0f;
+            if (pad) {
+                if (pad->GetLookRight()) {
+                    leftRight = -1.0f;
+                }
+                skid = (float)((double)(int32)pad->GetSteeringLeftRight() * 0.0078125f);
+            }
+        }
+    }
+
+    if (v.vehicleFlags.bHeliMinimumTilt) {
+        const double s = (std::sin(std::asin((double)fh->m_fPitch / (double)fh->m_fAttackLift) * 0.25f) / fh->m_fPitch) * fh->m_fAttackLift;
+        upDown    = (float)(upDown * s);
+        leftRight = (float)(s * leftRight);
+    }
+
+    // Pitch / roll
+    v.ApplyTurnForce(FlyingControlTorque(upDown, up, fh->m_fPitch, v.m_fTurnMass, ts), fwd + c.com);
+    v.ApplyTurnForce(FlyingControlTorque(leftRight, up, fh->m_fRoll, v.m_fTurnMass, ts), right + c.com);
+
+    // Side drag
+    {
+        const float  d    = (float)((((double)V.z * right.z + (double)V.y * right.y) + (double)V.x * right.x) * -1.0f);
+        const float  dAbs = std::fabsf(d);
+        const double g    = ((double)dAbs * fh->m_fSideSlip) * d;
+        const double xg   = (double)right.x * g;
+        const float  yg   = (float)((double)right.y * g);
+        const float  zg   = (float)((double)right.z * g);
+        const double xm   = xg * v.m_fMass;
+        const double ym   = (double)yg * v.m_fMass;
+        const float  zm   = (float)((double)zg * v.m_fMass);
+        v.ApplyMoveForce({ (float)(xm * ts), (float)(ym * ts), (float)((double)zm * ts) });
+
+        // Yaw
+        const double hh = ((double)dAbs * fh->m_fYawStab) * d;
+        const double s  = ((hh + (double)skid * fh->m_fYaw) * ts) * v.m_fTurnMass;
+        const CVector yawForce{ (float)(right.x * s), (float)(right.y * s), (float)(right.z * s) };
+        const CVector yawPoint{ (float)((double)-fwd.x + c.com.x), (float)((double)-fwd.y + c.com.y), (float)((double)-fwd.z + c.com.z) };
+        v.ApplyTurnForce(yawForce, yawPoint);
+    }
+
+    // Roll
+    v.ApplyTurnForce(FlyingControlTorque(skid, fwd, fh->m_fYaw, v.m_fTurnMass, ts), right + c.com);
+}
+
+// 0x59C810 - the transpose of `Multiply3x3`, the sums stay in the FPU registers
+static CVector InverseMultiply3x3Ext(const CVector& v, const CMatrix& m) {
+    const auto &r = m.GetRight(), &f = m.GetForward(), &u = m.GetUp();
+    return {
+        (float)(((double)r.y * v.y + (double)r.z * v.z) + (double)v.x * r.x),
+        (float)(((double)f.y * v.y + (double)f.x * v.x) + (double)f.z * v.z),
+        (float)(((double)u.y * v.y + (double)u.x * v.x) + (double)u.z * v.z)
+    };
+}
+
+// Reduces the length of `v` to 1.5 * the original (0x6DADBA & 0x6DAE4A)
+static void FlyingControlClampSpeed(CVector& v, double threshold, float factor) {
+    const double sq  = SquaredMagnitudeExt(v);
+    const float  sqF = (float)sq;
+    if (sq > threshold) {
+        const double x   = (double)v.x * factor;
+        const double y   = (double)v.y * factor;
+        const float  z   = (float)((double)v.z * factor);
+        const double inv = 1.0 / std::sqrt((double)sqF);
+        const float  invF = (float)inv;
+        v.x = (float)(inv * x);
+        v.y = (float)(y * invF);
+        v.z = (float)((double)z * invF);
+    }
+}
+
+// 0x6DA900 - air resistance of the turning / moving (all flight models)
+static void FlyingControlDrag(FlyingControlCtx& c) {
+    CVehicle&   v   = *c.veh;
+    const auto& mat = *v.m_matrix;
+    const auto  fh  = v.m_pFlyingHandlingData;
+    const float ts  = CTimer::ms_fTimeStep;
+    auto&       ms  = v.m_vecMoveSpeed;
+    const float tm  = v.m_fTurnMass;
+
+    CVector acc{ 0.0f, 0.0f, 0.0f }; // How much to change the (local) turn speed by (when `speedRes > 0`)
+    const float baseX = (float)std::pow((double)fh->m_vecTurnRes.x, (double)ts);
+    const float baseY = (float)std::pow((double)fh->m_vecTurnRes.y, (double)ts);
+    const float baseZ = (float)std::pow((double)fh->m_vecTurnRes.z, (double)ts);
+
+    CVector local = InverseMultiply3x3Ext(v.m_vecTurnSpeed, mat); // 0x59C810
+
+    float exponent = 1.0f; // [L10]
+    switch ((int32)c.model) {
+    case FLIGHT_MODEL_PLANE:
+    case FLIGHT_MODEL_UNK2:
+    case FLIGHT_MODEL_BOAT:
+        exponent = (float)(std::sqrt(SquaredMagnitudeExt(ms)) * 2.0);
+        break;
+    case FLIGHT_MODEL_BARON:
+        exponent = (float)(MagnitudeExt(ms) * 6.0f);
+        break;
+    case FLIGHT_MODEL_HELI:
+    case 8:
+        exponent = (float)(MagnitudeExt(ms) + 1.0f);
+        break;
+    default:
         break;
     }
+
+    const auto Axis = [&](float speedRes, float base, float& localAxis, float& accAxis) {
+        if (speedRes > 0.0f) {
+            const double q = (double)base / (((double)localAxis * localAxis) * speedRes + 1.0);
+            accAxis = (float)(std::pow(q, (double)ts) * localAxis - localAxis);
+        } else {
+            localAxis = (float)(std::pow((double)base, (double)exponent) * localAxis);
+        }
+    };
+    Axis(fh->m_vecSpeedRes.x, baseX, local.x, acc.x);
+    Axis(fh->m_vecSpeedRes.y, baseY, local.y, acc.y);
+    Axis(fh->m_vecSpeedRes.z, baseZ, local.z, acc.z);
+
+    v.m_vecTurnSpeed = Multiply3x3Ext(mat, local); // 0x59C790
+    acc.x = (float)(acc.x * exponent);
+    acc.y = (float)(acc.y * exponent);
+    acc.z = (float)(acc.z * exponent);
+
+    const auto Apply = [&](float amount, const CVector& dir, const CVector& point) {
+        const float  lx = (float)(amount * (dir.x * -1.0f));
+        const double ly = (double)amount * (dir.y * -1.0f);
+        const double lz = (double)amount * (dir.z * -1.0f);
+        v.ApplyTurnForce(
+            { (float)((double)lx * tm), (float)(ly * tm), (float)(lz * tm) },
+            point
+        );
+    };
+    if (acc.x != 0.0f) {
+        Apply(acc.x, mat.GetForward(), c.com + mat.GetUp());
     }
+    if (acc.y != 0.0f) {
+        Apply(acc.y, mat.GetUp(), c.com + mat.GetRight());
+    }
+    if (acc.z != 0.0f) {
+        Apply(acc.z, mat.GetRight(), c.com + mat.GetForward());
+    }
+
+    FlyingControlClampSpeed(ms, 2.25f, 1.5f);
+    FlyingControlClampSpeed(v.m_vecTurnSpeed, 0.04f, 0.2f);
+}
+
+// 0x6D85F0
+void CVehicle::FlyingControl(eFlightModel flightModel, float leftRightSkid, float steeringUpDown, float steeringLeftRight, float accelerationBreakStatus) {
+    if (!m_pFlyingHandlingData) {
+        return;
+    }
+    if (CTimer::ms_fTimeStep <= 0.0f) {
+        return;
+    }
+
+    FlyingControlCtx c{};
+    c.veh                     = this;
+    c.model                   = flightModel;
+    c.pad                     = nullptr;
+    c.leftRightSkid           = leftRightSkid;
+    c.steeringUpDown          = steeringUpDown;
+    c.steeringLeftRight       = steeringLeftRight;
+    c.accelerationBreakStatus = accelerationBreakStatus;
+
+    if (GetStatus() == STATUS_PLAYER && m_pDriver && m_pDriver->IsPlayer()) {
+        c.pad = m_pDriver->AsPlayer()->GetPadFromPlayer();
+    }
+
+    // Speed relative to the wind
+    {
+        CVector wind{ 0.0f, 0.0f, 0.0f };
+        if (m_nCreatedBy != MISSION_VEHICLE) {
+            const float s = m_pFlyingHandlingData->m_fWindMult;
+            wind = CVector{ (float)((double)CWeather::WindDir.x * s), (float)((double)CWeather::WindDir.y * s), (float)((double)s * CWeather::WindDir.z) };
+            wind = CVector{ -wind.x, -wind.y, -wind.z };
+        }
+        c.speed = CVector{
+            (float)((double)wind.x + m_vecMoveSpeed.x),
+            (float)((double)wind.y + m_vecMoveSpeed.y),
+            (float)((double)wind.z + m_vecMoveSpeed.z)
+        };
+    }
+    c.com = Multiply3x3Ext(*m_matrix, m_vecCentreOfMass); // 0x59C790
+
+    switch (flightModel) { // 0x6DAEE4 (jump table), indexed through the byte table at 0x6DAEF4 = { 0, 1, 2, 1, 1, 1, 2, 3, 2 }
+    case FLIGHT_MODEL_UNK:
+        FlyingControlModel0(c);
+        break;
+    case FLIGHT_MODEL_BARON:
+    case FLIGHT_MODEL_PLANE:
+    case FLIGHT_MODEL_UNK2:
+    case FLIGHT_MODEL_BOAT:
+        FlyingControlModel1345(c);
+        break;
+    case FLIGHT_MODEL_RC:
+    case FLIGHT_MODEL_HELI:
+    case (eFlightModel)8:
+        FlyingControlModel268(c);
+        break;
+    default: // 7 & everything > 8
+        break;
+    }
+
+    FlyingControlDrag(c);
 }
 
 // 0x6DAF00

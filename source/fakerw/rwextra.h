@@ -233,3 +233,35 @@ RwImage*       RtPNGImageRead(const RwChar* imageName);
 inline RwImage* RwImageSetStride(RwImage* image, RwInt32 stride)    { image->stride = stride; return image; }
 inline RwImage* RwImageSetPixels(RwImage* image, RwUInt8* pixels)   { image->pixels = pixels; return image; }
 inline RwImage* RwImageSetPalette(RwImage* image, RwRGBA* palette)  { image->palette = reinterpret_cast<uint8_t*>(palette); return image; }
+
+//--------------------------------------------------------------------------------------------------
+// 04ab (standalone/rw/{light,world,material,geometry}.cpp): light / world / material / geometry API beyond rwapi.h, plus shim-only helpers.
+// None of the extras is called by the game outside the stock RW headers (the game's own calls are declared in rwapi.h).
+//--------------------------------------------------------------------------------------------------
+RpLight* RpLightSetConeAngle(RpLight* light, RwReal angle);
+RwReal RpLightGetConeAngle(const RpLight* light);
+RpLight* RpLightStreamRead(RwStream* stream);
+RwUInt32 RpLightStreamGetSize(const RpLight* light);
+
+RpWorld* RpWorldAddAtomic(RpWorld* world, RpAtomic* atomic);
+RpWorld* RpWorldRemoveAtomic(RpWorld* world, RpAtomic* atomic);
+RpWorld* RpWorldAddClump(RpWorld* world, RpClump* clump);
+RpWorld* RpWorldRemoveClump(RpWorld* world, RpClump* clump);
+RpWorld* RpWorldForAllClumps(RpWorld* world, RpClumpCallBack callback, void* data);
+RpWorld* RpWorldForAllLights(RpWorld* world, RpLightCallBack callback, void* data);
+
+RpMaterial* RpMaterialClone(RpMaterial* material);
+RpMaterial* RpMaterialStreamRead(RwStream* stream);
+const RpMaterial* RpMaterialStreamWrite(const RpMaterial* material, RwStream* stream);
+RwUInt32 RpMaterialStreamGetSize(const RpMaterial* material);
+inline RpMaterial* RpMaterialAddRef(RpMaterial* material) { material->refCount++; return material; }
+
+RwInt32 RpGeometryAddMorphTargets(RpGeometry* geometry, RwInt32 mtcount);
+RwInt32 RpGeometryAddMorphTarget(RpGeometry* geometry);
+const RpGeometry* RpGeometryForAllMeshes(const RpGeometry* geometry, RpMeshCallBack fpCallBack, void* data);
+RpGeometry* RpGeometryStreamRead(RwStream* stream);
+const RpGeometry* RpGeometryStreamWrite(const RpGeometry* geometry, RwStream* stream);
+RwUInt32 RpGeometryStreamGetSize(const RpGeometry* geometry);
+inline RpGeometry* RpGeometryAddRef(RpGeometry* geometry) { geometry->refCount++; return geometry; }
+// the value last passed to RpD3D9GeometrySetUsageFlags (0 = never set); read by the custom pipelines' instance callbacks
+RwUInt32 RpD3D9GeometryGetUsageFlags(const RpGeometry* geometry);

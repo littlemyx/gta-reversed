@@ -581,6 +581,8 @@ void InjectHooksMain() {
     CCarFXRenderer::InjectHooks();
     CPedAttractorManager::InjectHooks();
     CPedAttractorPedPlacer::InjectHooks();
+    CAttractorScanner::InjectHooks();
+    CAutoPilot::InjectHooks();
     BoneNode_c::InjectHooks();
     BoneNodeManager_c::InjectHooks();
     IKChainManager_c::InjectHooks();

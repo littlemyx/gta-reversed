@@ -15,7 +15,8 @@ enum class eWeatherEvent {
 };
 
 
-constexpr CVector DEFAULT_POS = { -0.906f, 0.f, 0.423f };
+// NOTE: (x, y, z) = (-0.906, 0.423, 0), as built on the stack at 0x505A00 (compared against `sound->m_CurrPos`) and by `Service` (0x5052F0)
+constexpr CVector DEFAULT_POS = { -0.906f, 0.423f, 0.f };
 
 auto& m_snLastRainDropSoundID = StaticRef<int32>(0x8CC310); // TODO: Use `eSoundID`
 auto& m_sRainSoundL = StaticRef<CAETwinLoopSoundEntity>(0xB6BB18);  // dunno about names

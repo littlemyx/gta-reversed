@@ -43,6 +43,8 @@ public:
     CTask* ControlSubTask(CPed* ped) override;
     CTask* CreateSubTask(eTaskType taskType, CPed* ped);
 
+    // NOTSA names (no known original names)
+    void ComputeTargetDoor(CPed* ped); // 0x63BAB0
 private:
     friend void InjectHooksMain();
     static void InjectHooks();

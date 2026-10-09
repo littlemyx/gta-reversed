@@ -7,7 +7,9 @@
 #include "StdInc.h"
 
 #include "Radar.h"
+#include <numbers>
 #include "EntryExitManager.h"
+#include "Fx/FxFtol.h"
 
 constexpr std::array<airstrip_info, NUM_AIRSTRIPS> airstrip_table = { // 0x8D06E0
     airstrip_info{ { +1750.0f,  -2494.0f }, 180.0f, 1000.0f }, // AIRSTRIP_LS_AIRPORT
@@ -157,7 +159,7 @@ void CRadar::InjectHooks() {
     RH_ScopedInstall(DrawRadarSection, 0x586110);
     RH_ScopedInstall(DrawRadarSectionMap, 0x586520);
     RH_ScopedInstall(DrawRadarGangOverlay, 0x586650);
-    // RH_ScopedInstall(DrawEntityBlip, 0x587000);
+    RH_ScopedInstall(DrawEntityBlip, 0x587000);
     RH_ScopedGlobalInstall(LineRadarBoxCollision, 0x584E00);
 
     // unused
@@ -1723,9 +1725,321 @@ void CRadar::DrawCoordBlip(int32 blipIndex, bool isSprite) {
     AddBlipToLegendList(true, blipIndex);
 }
 
-// 0x587000
+/*
+ * @brief Draw a blip that is attached to an entity/script thing/pickup/airstrip by its index in `ms_RadarTrace`
+ * @param isSprite (arg1) If true only the sprite blips are drawn, otherwise only the non-sprite ones
+ * @addr 0x587000
+ *
+ * x87 notes: float expressions are evaluated in extended precision (double here) and only rounded on float stores.
+ * `_ftol` is 0x821B40.
+ */
 void CRadar::DrawEntityBlip(int32 blipIndex, uint8 arg1) {
-    plugin::Call<0x587000, int32, uint8>(blipIndex, arg1);
+    using notsa::detail::Ftol;
+    const bool isSprite = arg1 != 0;
+
+    // 0x859CF8 / 0xA444A2 / 0xA444A3 / 0xBA67A1 / 0xBA678F are named globals, see CTheScripts / FrontEndMenuManager
+    static_assert(sizeof(CSprite2d) == 4);
+    constexpr float kInv640   = 1.f / 640.f;                       // 0x859520
+    constexpr float kInv448   = 1.f / 448.f;                       // 0x859524
+    constexpr float kDegToRad = std::bit_cast<float>(0x3C8EFA35u); // 0x8595EC
+    static_assert(offsetof(CMenuManager, m_bDrawingMap) == 0xBA67A1 - 0xBA6748);
+    static_assert(offsetof(CMenuManager, m_ShowMissionBlips) == 0xBA678F - 0xBA6748);
+
+    // Function-local statics of the original (the guard bits live in `s_initFlags`)
+    static auto& s_initFlags   = StaticRef<uint32>(0xBAA380);
+    static auto& s_currRange   = StaticRef<int16>(0xBAA37C);
+    static auto& s_prevRange   = StaticRef<int16>(0xBAA378);
+    static auto& s_lastTime    = StaticRef<uint32>(0xBAA374);
+    static auto& s_airstripSeen = StaticRef<bool>(0xBAA370);
+
+    auto& trace = ms_RadarTrace[blipIndex];
+
+    CEntity*            entity{};
+    tScriptSearchlight* searchlight{};
+    bool                isAirstrip{};
+    float               airstripDist{};
+    CVector             pos{};
+
+    switch (trace.m_nBlipType) {
+    case BLIP_CAR:
+    case BLIP_CHAR:
+    case BLIP_OBJECT: {
+        if (trace.m_nBlipType == BLIP_CAR) {
+            entity = CPools::GetVehicle(trace.m_nEntityHandle);
+        } else if (trace.m_nBlipType == BLIP_CHAR) {
+            auto* const ped = CPools::GetPed(trace.m_nEntityHandle);
+            if (!ped) {
+                return;
+            }
+            entity = ped->bInVehicle ? (CEntity*)ped->m_pVehicle : ped;
+        } else {
+            entity = CPools::GetObject(trace.m_nEntityHandle);
+        }
+        if (!entity) {
+            return;
+        }
+        pos = entity->GetPosition();
+        if (entity->GetIsTypePed()) {
+            if (auto* const enex = entity->AsPed()->m_pEnex) {
+                enex->GetPositionRelativeToOutsideWorld(pos);
+            }
+        }
+        break;
+    }
+    case BLIP_SPOTLIGHT: {
+        const auto idx = CTheScripts::GetActualScriptThingIndex(trace.m_nEntityHandle, SCRIPT_THING_SEARCH_LIGHT);
+        if (idx < 0) {
+            return;
+        }
+        searchlight = &CTheScripts::ScriptSearchLightArray[idx];
+        pos         = searchlight->m_Target;
+        break;
+    }
+    case BLIP_PICKUP: {
+        const auto idx = CPickups::GetActualPickupIndex(trace.m_nEntityHandle);
+        if (idx < 0) {
+            return;
+        }
+        pos = CPickups::aPickUps[idx].GetPosn();
+        break;
+    }
+    case BLIP_AIRSTRIP: {
+        isAirstrip = true;
+
+        // BUG: The original doesn't check if the player is in a vehicle
+        const auto& vehPos = FindPlayerVehicle()->GetPosition();
+        const auto& strip  = airstrip_table[airstrip_location];
+
+        const double dy = (double)strip.position.y - (double)vehPos.y;
+        const double dx = (double)strip.position.x - (double)vehPos.x;
+        airstripDist    = (float)std::sqrt(dy * dy + dx * dx);
+
+        // BUG: In the original `pos` is left uninitialised (stack garbage) if the player is too far away, we use the trace's position
+        pos = trace.m_vPosition;
+
+        if (airstripDist < 500.f) {
+            int16 range{};
+            if (!(s_initFlags & 1)) {
+                s_initFlags |= 1;
+                range = (int16)Ftol(-(double)strip.radius);
+                s_currRange = range;
+            } else {
+                range = s_currRange;
+            }
+            if (!(s_initFlags & 2)) {
+                s_initFlags |= 2;
+                s_prevRange = (int16)Ftol(-(double)strip.radius);
+            }
+
+            pos = trace.m_vPosition;
+            (void)TransformRealWorldPointToRadarSpace(pos); // NOTE: Result is overwritten below
+
+            const double theta = (double)strip.direction * (double)kDegToRad; // 0x8595EC
+            pos.x = (float)(std::cos(theta) * (double)range + (double)pos.x);
+            pos.y = (float)((double)pos.y - std::sin(theta) * (double)range);
+
+            auto radarPos = TransformRealWorldPointToRadarSpace(pos);
+
+            const auto frame = CTimer::m_snTimeInMillisecondsPauseMode;
+            const double dist = std::sqrt((double)radarPos.y * (double)radarPos.y + (double)radarPos.x * (double)radarPos.x);
+            if (dist >= (double)0.9f || (uint32)(frame - s_lastTime) > 3) { // 0x858C20
+                range       = (int16)(range + 100);
+                s_currRange = range;
+                if ((double)range > (double)strip.radius) {
+                    range       = (int16)Ftol(-(double)strip.radius);
+                    s_currRange = range;
+                }
+                if (s_prevRange == range) {
+                    s_airstripSeen = false;
+                }
+                if (dist < (double)0.9f) {
+                    s_prevRange    = range;
+                    s_airstripSeen = true;
+                }
+                s_lastTime = frame;
+            }
+            (void)LimitRadarPoint(radarPos);
+        } else {
+            s_airstripSeen = false;
+        }
+        break;
+    }
+    default: // BLIP_NONE, BLIP_COORD, BLIP_CONTACT_POINT
+        return;
+    }
+
+    const auto color = GetRadarTraceColour(trace.m_nColour, trace.m_bBright, trace.m_bFriendly);
+
+    if ((trace.m_nBlipDisplayFlag == BLIP_DISPLAY_BOTH || trace.m_nBlipDisplayFlag == BLIP_DISPLAY_MARKERONLY) && CTheScripts::DbgFlag) {
+        ShowRadarMarker(pos, color, trace.m_fSphereRadius);
+        trace.m_fSphereRadius = (float)((double)trace.m_fSphereRadius - (double)0.1f); // 0x858B1C
+        if (trace.m_fSphereRadius < 1.f) {                                              // 0x858624
+            trace.m_fSphereRadius = 5.f;
+        }
+    }
+
+    if (trace.m_pEntryExit) {
+        trace.m_pEntryExit->GetPositionRelativeToOutsideWorld(pos);
+    }
+
+    if (trace.m_nBlipDisplayFlag != BLIP_DISPLAY_BOTH && trace.m_nBlipDisplayFlag != BLIP_DISPLAY_BLIPONLY) {
+        return;
+    }
+
+    auto  radarPos  = TransformRealWorldPointToRadarSpace(pos);
+    float radarDist = LimitRadarPoint(radarPos);
+    auto  screenPos = TransformRadarPointToScreenSpace(radarPos);
+
+    const bool isDrawingMap = FrontEndMenuManager.m_bDrawingMap;
+
+    if (trace.m_bShortRange && radarDist > 1.f && !isDrawingMap) {
+        return;
+    }
+
+    const auto RadarVecLength = [&] {
+        return std::sqrt((double)radarPos.y * (double)radarPos.y + (double)radarPos.x * (double)radarPos.x);
+    };
+    // x87: `maximum{Width|Height} * 1/{640|448} * scale` is kept in extended precision until `_ftol`
+    const auto ScaledWidth  = [&](float scale) { return (uint32)Ftol((double)RsGlobal.maximumWidth  * (double)kInv640  * (double)scale); }; // 0x859520
+    const auto ScaledHeight = [&](float scale) { return (uint32)Ftol((double)RsGlobal.maximumHeight * (double)kInv448 * (double)scale); }; // 0x859524
+    const auto Size         = (uint32)(int32)(int16)trace.m_nBlipSize;
+
+    if (CTheScripts::RadarZoomValue && !FindPlayerVehicle() && trace.m_nBlipType != BLIP_OBJECT && trace.m_nBlipType != BLIP_PICKUP) {
+        if (isSprite) {
+            return;
+        }
+        if (!trace.m_bBlipRemain && !(RadarVecLength() <= 1.0)) {
+            return;
+        }
+
+        float heading = 0.f;
+        if (entity) {
+            heading = entity->GetHeading();
+        }
+
+        if (isDrawingMap && !FrontEndMenuManager.m_ShowMissionBlips) {
+            return;
+        }
+
+        const auto playerZ = FindPlayerCentreOfWorldForMap(0).z;
+        if ((double)pos.z - 2.0 > (double)playerZ) {
+            if (!CTheScripts::RadarShowBlipOnAllLevels) {
+                return;
+            }
+            ShowRadarTraceWithHeight(screenPos.x, screenPos.y, Size, color >> 24, color >> 16, color >> 8, color, RADAR_TRACE_LOW);
+            return;
+        }
+        if ((double)pos.z + 4.0 < (double)playerZ) {
+            if (!CTheScripts::RadarShowBlipOnAllLevels) {
+                return;
+            }
+            ShowRadarTraceWithHeight(screenPos.x, screenPos.y, Size, color >> 24, color >> 16, color >> 8, color, RADAR_TRACE_HIGH);
+            return;
+        }
+
+        const CRGBA arrowColor{ (uint8)(color >> 24), (uint8)(color >> 16), (uint8)(color >> 8), 255 };
+        if (TheCamera.GetActiveCam().m_nMode == MODE_TOPDOWN) {
+            DrawRotatingRadarSprite(
+                RadarBlipSprites[RADAR_SPRITE_CENTRE], screenPos.x, screenPos.y,
+                (float)((double)heading + (double)std::numbers::pi_v<float>),
+                ScaledWidth(8.f), ScaledHeight(8.f), arrowColor
+            );
+        } else {
+            DrawRotatingRadarSprite(
+                RadarBlipSprites[RADAR_SPRITE_CENTRE], screenPos.x, screenPos.y,
+                (float)((double)heading - ((double)m_fRadarOrientation + (double)std::numbers::pi_v<float>)),
+                ScaledWidth(8.f), ScaledHeight(8.f), arrowColor
+            );
+        }
+        return;
+    }
+
+    if (isSprite) {
+        if (trace.m_nBlipSprite == RADAR_SPRITE_NONE) {
+            return;
+        }
+        if (!HasThisBlipBeenRevealed(blipIndex)) {
+            return;
+        }
+        DrawRadarSprite(trace.m_nBlipSprite, screenPos.x, screenPos.y, 255);
+        return;
+    }
+
+    if (trace.m_nBlipSprite != RADAR_SPRITE_NONE) {
+        return;
+    }
+    if (isDrawingMap && !FrontEndMenuManager.m_ShowMissionBlips) {
+        return;
+    }
+
+    if (searchlight) {
+        if (RadarVecLength() <= (double)0.9f && !isDrawingMap) {
+            const float radius = (float)(
+                (double)RsGlobal.maximumWidth * (double)kInv640 * (double)94.f / (double)m_radarRange
+                * (double)searchlight->m_fTargetRadius * (double)0.6f
+            ); // 0x859520, 0x866B78, 0x858CC8
+            CSprite2d::DrawCircleAtNearClip(screenPos, radius, CRGBA{ 0, 0, 0, 150 }, 15);
+            CSprite2d::DrawCircleAtNearClip(
+                screenPos,
+                (float)((double)radius - (double)RsGlobal.maximumWidth * (double)kInv640),
+                CRGBA{ 220, 220, 220, 200 },
+                15
+            );
+        }
+    } else if (isAirstrip) {
+        const CRGBA white{ 255, 255, 255, 255 };
+        if (!isDrawingMap) {
+            if (RadarVecLength() < (double)0.9f && airstripDist < 500.f) {
+                DrawRotatingRadarSprite(
+                    RadarBlipSprites[RADAR_SPRITE_LIGHT], screenPos.x, screenPos.y, 0.f,
+                    ScaledWidth(8.f), ScaledHeight(8.f), white
+                );
+            }
+        }
+
+        // Recompute using the trace's own position
+        pos       = trace.m_vPosition;
+        radarPos  = TransformRealWorldPointToRadarSpace(pos);
+        (void)LimitRadarPoint(radarPos);
+        screenPos = TransformRadarPointToScreenSpace(radarPos);
+
+        const auto& strip = airstrip_table[airstrip_location];
+        if (isDrawingMap) {
+            float dir = strip.direction;
+            if (airstrip_location != AIRSTRIP_SF_AIRPORT) {
+                dir = (float)((double)dir - (double)90.f); // 0x85991C
+            }
+            DrawRotatingRadarSprite(
+                RadarBlipSprites[RADAR_SPRITE_RUNWAY], screenPos.x, screenPos.y,
+                (float)((double)dir * (double)kDegToRad),
+                ScaledWidth(16.f), ScaledHeight(16.f), white // 0x8599D0
+            );
+            AddBlipToLegendList(false, RADAR_SPRITE_RUNWAY);
+        } else {
+            if (s_airstripSeen) {
+                return;
+            }
+            DrawRotatingRadarSprite(
+                RadarBlipSprites[RADAR_SPRITE_RUNWAY], screenPos.x, screenPos.y,
+                (float)((double)(-m_fRadarOrientation) - ((double)strip.direction - (double)90.f) * (double)kDegToRad),
+                ScaledWidth(16.f), ScaledHeight(16.f), white
+            );
+        }
+    } else {
+        const auto playerZ = FindPlayerCentreOfWorldForMap(0).z;
+        eRadarTraceHeight height;
+        if ((double)pos.z - 2.0 > (double)playerZ) {
+            height = RADAR_TRACE_LOW;
+        } else {
+            height = ((double)pos.z + 4.0 < (double)playerZ) ? RADAR_TRACE_HIGH : RADAR_TRACE_NORMAL;
+        }
+        // NOTE: The original passes a dword whose upper 3 bytes are stack garbage (only the low byte is set), the callee uses the low byte
+        ShowRadarTraceWithHeight(screenPos.x, screenPos.y, Size, color >> 24, color >> 16, color >> 8, color, height);
+    }
+
+    if (isDrawingMap && !searchlight && !isAirstrip) {
+        AddBlipToLegendList(true, blipIndex);
+    }
 }
 
 /*

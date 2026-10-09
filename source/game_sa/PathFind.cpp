@@ -29,6 +29,22 @@ auto& aExteriorNodeLinkedTo = StaticRef<std::array<CNodeAddress, NUM_PATH_INTERI
 
 auto& aNodesToBeCleared = StaticRef<std::array<CNodeAddress, 5000>>(0x972CD0);
 
+namespace {
+// 0x59C910 - `CVector::Normalise` as the original evaluates it: the sum of squares and the reciprocal root stay in the FPU
+// (extended precision), every component is stored as float. A length of 0 (or less) only writes `x = 1` (NaN takes the sqrt path).
+void NormaliseExt(CVector& v) {
+    const double sumSq = ((double)v.x * v.x + (double)v.y * v.y) + (double)v.z * v.z;
+    if (sumSq <= 0.0) {
+        v.x = 1.0f;
+    } else {
+        const double recip = 1.0 / std::sqrt(sumSq);
+        v.x = (float)(v.x * recip);
+        v.y = (float)(v.y * recip);
+        v.z = (float)(v.z * recip);
+    }
+}
+}; // namespace
+
 void CPathFind::InjectHooks() {
     RH_ScopedClass(CPathFind);
     RH_ScopedCategoryGlobal();
@@ -60,10 +76,11 @@ void CPathFind::InjectHooks() {
     RH_ScopedOverloadedInstall(FindNodeCoorsForScript, "LinkedNode", 0x4505E0, CVector(CPathFind::*)(CNodeAddress, bool*));
     RH_ScopedInstall(IsWaterNodeNearby, 0x450DE0);
     RH_ScopedInstall(CountNeighboursToBeSwitchedOff, 0x4504F0);
-    //RH_ScopedInstall(FindNodeOrientationForCarPlacement, 0x450320);
+    RH_ScopedInstall(FindNodeOrientationForCarPlacement, 0x450320);
+    RH_ScopedInstall(GeneratePedCreationCoors_Interior, 0x44ECA0);
     //RH_ScopedInstall(FindNodePairClosestToCoors, 0x44FEE0);
     RH_ScopedInstall(FindNodeClosestToCoorsFavourDirection, 0x44FCE0);
-    //RH_ScopedInstall(FindNodeClosestToCoors, 0x44FA30);
+    RH_ScopedInstall(FindNodeClosestToCoors, 0x44F460);
     RH_ScopedInstall(MarkRoadNodeAsDontWander, 0x450560);
     //RH_ScopedInstall(AddDynamicLinkBetween2Nodes, 0x4512D0);
     RH_ScopedOverloadedInstall(LoadPathFindData, "Area", 0x452F40, void(CPathFind::*)(int32));
@@ -258,7 +275,60 @@ bool CPathFind::TestCrossesRoad(CNodeAddress startNodeAddress, CNodeAddress targ
 
 // 0x44ECA0
 bool CPathFind::GeneratePedCreationCoors_Interior(float x, float y, CVector* outCoords, CNodeAddress* unused1, CNodeAddress* unused2, float* outOrientation) {
-    return plugin::CallMethodAndReturn<bool, 0x44ECA0>(this, x, y, outCoords, unused1, unused2, outOrientation);
+    const auto areaId = FindRegionForCoors({ x, y }); // 0x44D830
+
+    for (auto attempt = 0; attempt < 200; attempt++) {
+        auto* const nodes = m_pPathNodes[areaId];
+        if (!nodes || !m_anNumPedNodes[areaId]) {
+            continue;
+        }
+
+        // Pick a random ped node (ped nodes come after the vehicle nodes)
+        const auto& node = nodes[(rand() >> 6) % (int32)m_anNumPedNodes[areaId] + (int32)m_anNumVehicleNodes[areaId]]; // 0x821B1E
+
+        // The original keeps these on the x87 stack (exact: int16 * 0.125)
+        const double nodeX = (double)static_cast<float>(node.m_vPos.x);
+        const double nodeY = (double)static_cast<float>(node.m_vPos.y);
+        const double nodeZ = (double)static_cast<float>(node.m_vPos.z);
+
+        if (!((nodeY - (double)y) * (nodeY - (double)y) + (nodeX - (double)x) * (nodeX - (double)x) < 2500.0)) {
+            continue;
+        }
+        if (!(nodeZ > 900.0)) {
+            continue;
+        }
+
+        for (auto linkIdx = 0u; linkIdx < node.m_nNumLinks; linkIdx++) {
+            const auto linkedAddr = m_pNodeLinks[areaId][node.m_wBaseLinkId + (int32)linkIdx];
+            if (linkedAddr.m_wAreaId >= 0x40 || !m_pPathNodes[linkedAddr.m_wAreaId]) {
+                continue;
+            }
+            const auto& linked = m_pPathNodes[linkedAddr.m_wAreaId][linkedAddr.m_wNodeId];
+
+            for (auto tries = 0; tries < 5; tries++) {
+                const double t = (double)(rand() & 0xFF) * (double)0.00390625f; // 0x859AA0
+                *outOrientation = (float)t;
+
+                const double oneMinusT = (double)(1.0f - (float)t); // Spilled to a float temp
+                const double ax = (double)static_cast<float>(linked.m_vPos.x);
+                const double ay = (double)static_cast<float>(linked.m_vPos.y);
+                const double az = (double)static_cast<float>(linked.m_vPos.z);
+
+                // x and z go through float temporaries, y stays in extended precision
+                outCoords->x = (float)(nodeX * oneMinusT) + (float)(ax * t);
+                outCoords->y = (float)(ay * t + nodeY * oneMinusT);
+                outCoords->z = (float)(nodeZ * oneMinusT) + (float)(az * t);
+
+                bool foundGround{};
+                const auto groundZ = CWorld::FindGroundZFor3DCoord({ outCoords->x, outCoords->y, outCoords->z + 2.0f }, &foundGround, nullptr); // 0x5696C0
+                if (foundGround && std::abs((double)groundZ - (double)outCoords->z) < 3.0) {
+                    outCoords->z = groundZ;
+                    return true;
+                }
+            }
+        }
+    }
+    return false;
 }
 
 // 0x44D480
@@ -950,10 +1020,93 @@ CNodeAddress CPathFind::FindNodeClosestToCoors(
     uint16 bBoatsOnly,
     int32 unk6
 ) {
-    CNodeAddress tempAddress;
-    plugin::CallMethodAndReturn<CNodeAddress*, 0x44F460, CPathFind*, CNodeAddress*, CVector, ePathType, float, uint16, int32, uint16, uint16, int32>(
-        this, &tempAddress, pos, nodeType, maxDistance, unk2, unk3, unk4, bBoatsOnly, unk6);
-    return tempAddress;
+    float        dist = maxDistance; // Also used as the "best distance so far" by `FindNodeClosestInRegion`
+    CNodeAddress closest{};          // NOTE: Only the area ID is initialized in the original (the node ID is garbage)
+
+    // 0x44F2C0 - Not reversed yet. NOTE: `unk3` is never passed on.
+    const auto SearchRegion = [&](size_t areaId, int32 lastArg) {
+        plugin::CallMethod<0x44F2C0, CPathFind*, CNodeAddress*, uint16, CVector, int32, float*, uint16, uint16, uint16, int32>(
+            this, &closest, (uint16)areaId, pos, (int32)nodeType, &dist, unk2, unk4, bBoatsOnly, lastArg
+        );
+    };
+
+    // _ftol(), then clamped to [0, 7]
+    const auto GridCoordOf = [](float p) {
+        return std::clamp(notsa::detail::Ftol(((double)p - (double)-3000.f) * (double)0.0013333333f), 0, 7); // 0x859A90, 0x859A8C
+    };
+    const int32 xr = GridCoordOf(pos.x);
+    const int32 yr = GridCoordOf(pos.y);
+
+    // Distance to the nearest border of the grid cell (x87: borders are calculated in extended precision, `t` is stored as float)
+    const auto Border = [](int32 cell) { return (double)cell * 750.0 - 3000.0; };
+    float t;
+    {
+        const double a = (double)pos.x - Border(xr);
+        const double b = Border(xr + 1) - (double)pos.x;
+        t = (float)a;
+        if (!((double)t < b)) {
+            t = (float)b;
+        }
+        const double c = (double)pos.y - Border(yr);
+        if (!((double)t < c)) {
+            t = (float)c;
+        }
+        const double d = Border(yr + 1) - (double)pos.y;
+        if (!((double)t < d)) {
+            t = (float)d;
+        }
+    }
+
+    SearchRegion(xr + yr * 8, unk6);
+
+    // Search in rings around the origin cell, until the best distance is closer than the ring's distance
+    if (t < dist) {
+        for (int32 ring = 1; ring < 5; ring++) {
+            const int32 xl = xr - ring, xh = xr + ring;
+            const int32 yl = yr - ring, yh = yr + ring;
+
+            if (xl >= 0 && xl < 8) { // Left column
+                for (int32 y = yl; y <= yh; y++) {
+                    if (y >= 0 && y < 8) {
+                        SearchRegion(xl + y * 8, unk6);
+                    }
+                }
+            }
+            if (xh >= 0 && xh < 8) { // Right column
+                for (int32 y = yl; y <= yh; y++) {
+                    if (y >= 0 && y < 8) {
+                        SearchRegion(xh + y * 8, unk6);
+                    }
+                }
+            }
+            if (yl >= 0 && yl < 8) { // Bottom row (without the corners)
+                for (int32 x = xl + 1; x < xh; x++) {
+                    if (x >= 0 && x < 8) {
+                        SearchRegion(x + yl * 8, unk6);
+                    }
+                }
+            }
+            if (yh >= 0 && yh < 8) { // Top row (without the corners)
+                for (int32 x = xl + 1; x < xh; x++) {
+                    if (x >= 0 && x < 8) {
+                        SearchRegion(x + yh * 8, unk6);
+                    }
+                }
+            }
+
+            t = (float)((double)t + 750.0); // 0x859A98
+            if (dist < t) {
+                break;
+            }
+        }
+    }
+
+    if ((uint8)unk6 == 0) { // Interiors
+        for (auto areaId = NUM_PATH_MAP_AREAS; areaId < NUM_PATH_MAP_AREAS + NUM_PATH_INTERIOR_AREAS; areaId++) {
+            SearchRegion(areaId, 0);
+        }
+    }
+    return closest;
 }
 
 // 0x450A60
@@ -1544,7 +1697,43 @@ size_t CPathFind::CountNeighboursToBeSwitchedOff(const CPathNode& node) {
 
 // 0x450320
 float CPathFind::FindNodeOrientationForCarPlacement(CNodeAddress nodeInfo) {
-    return plugin::CallMethodAndReturn<float, 0x450320, CPathFind*, CNodeAddress>(this, nodeInfo);
+    const auto areaId = nodeInfo.m_wAreaId;
+    if (!m_pPathNodes[areaId]) {
+        return 0.0f; // 0x858B50
+    }
+    const auto& node = m_pPathNodes[areaId][nodeInfo.m_wNodeId];
+    if (!node.m_nNumLinks) {
+        return 0.0f;
+    }
+
+    // Find the first navi link (of the first `m_nNumLinks - 1` ones) that has any lanes in the direction of travel
+    const auto numLinksToCheck = (int32)node.m_nNumLinks - 1;
+    auto       linkIdx         = 0;
+    for (; linkIdx < numLinksToCheck; linkIdx++) {
+        const auto naviAddr = m_pNaviLinks[areaId][node.m_wBaseLinkId + linkIdx];
+        if (!m_pPathNodes[naviAddr.m_wAreaId]) {
+            continue;
+        }
+        const auto& navi = m_pNaviNodes[naviAddr.m_wAreaId][naviAddr.m_wCarPathLinkId];
+        if (navi.m_attachedTo == nodeInfo ? navi.m_numSameDirLanes : navi.m_numOppositeDirLanes) {
+            break;
+        }
+    }
+
+    const auto nextAddr = m_pNodeLinks[areaId][node.m_wBaseLinkId + linkIdx];
+    if (!m_pPathNodes[nextAddr.m_wAreaId]) {
+        return 0.0f;
+    }
+    const auto& nextNode = m_pPathNodes[nextAddr.m_wAreaId][nextAddr.m_wNodeId];
+
+    CVector dir{
+        (float)((double)(float)nextNode.m_vPos.x - (double)(float)node.m_vPos.x),
+        (float)((double)(float)nextNode.m_vPos.y - (double)(float)node.m_vPos.y),
+        0.0f
+    };
+    NormaliseExt(dir); // 0x59C910
+
+    return (float)(std::atan2(-(double)dir.x, (double)dir.y) * (double)57.2957763671875f); // 0x859878 - 180/pi
 }
 
 // 0x452160

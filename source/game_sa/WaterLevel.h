@@ -291,6 +291,14 @@ public:
 
     static void PreRenderWater();
     static bool GetWaterDepth(const CVector& vecPos, float* pOutWaterDepth, float* pOutWaterLevel, float* pOutGroundLevel);
+
+    //! The surface info (of the hit col. shape B) `GetGroundLevel` can output
+    struct ColData {
+        uint8 surfaceType; // CColPoint::m_nSurfaceTypeB
+        uint8 pieceType;   // CColPoint::m_nPieceTypeB
+    };
+    //! 0x6EA8A0 - Finds the ground (buildings and dummies only) below `pos` (looking `radius` above and below it)
+    static bool GetGroundLevel(const CVector& pos, float* outGroundZ, ColData* outColData, float radius);
     static bool TestLineAgainstWater(CVector start, CVector end, CVector* outHitPos); // 0x6E61B0 - Tests the line against the z = 0 plane, only considers quads (!)
     static bool GetWaterLevel(float x, float y, float z, float& pOutWaterLevel, uint8 bTouchingWater, CVector* pVecNormals);
     static bool LoadDataFile();
@@ -351,6 +359,9 @@ public:
     //! 0x6E91D0 - Renders one layer of the tessellated rectangle. The last 4 arguments are computed by `RenderHighDetailWaterRectangle` (`numTris` and `numVerts` are unused)
     static void RenderHighDetailWaterRectangle_OneLayer(int32 minX, int32 maxX, int32 Y1, int32 Y2, CRenPar P1, CRenPar P2, CRenPar P3, CRenPar P4, int32 WaterLayer, int32 numTris, int32 numVerts, int32 numCellsX, int32 numCellsY);
 
+    //! 0x6E8780 - Renders one layer of the tessellated triangle. The last 3 arguments are computed by `RenderHighDetailWaterTriangle` (`numTris` and `numVerts` are unused)
+    static void RenderHighDetailWaterTriangle_OneLayer(int32 X1, int32 Y1, CRenPar P1, int32 X2, int32 Y2, CRenPar P2, int32 X3, int32 Y3, CRenPar P3, int32 WaterLayer, int32 numTris, int32 numVerts, int32 numCells);
+
     static void SetCameraRange();
     static void HandleBeachToysStuff();
     static void UpdateFlow();
@@ -364,7 +375,6 @@ public:
     CreateBeachToy(const CVector&, eBeachToy)
     FindNearestWaterAndItsFlow()
     FixVertexOnToLine(CWaterVertex*, CWaterVertex*, CWaterVertex*, float*)
-    GetGroundLevel(const CVector&, float*, ColData*, float)
     GetGroundLevel_WS(const CVector&, float*, ColData*, float)
     RenderAndEmptyRenderBuffer()
     AddToQuadsAndTrianglesList(int32, int32, int32, uint32)
@@ -382,7 +392,6 @@ public:
     RenderHighDetailWaterRectangle_OneLayer(int32, int32, int32, int32, CRenPar, CRenPar, CRenPar, CRenPar, int32, int32, int32, int32, int32)
 
     RenderHighDetailWaterTriangle(int32, int32, CRenPar, int32, int32, CRenPar, int32, int32, CRenPar)
-    RenderHighDetailWaterTriangle_OneLayer(int32, int32, CRenPar, int32, int32, CRenPar, int32, int32, CRenPar, int32, int32, int32, int32)
 
     RenderShipsOnHorizon()
     RenderTransparentWater()

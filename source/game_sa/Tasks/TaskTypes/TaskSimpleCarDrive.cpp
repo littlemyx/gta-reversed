@@ -39,6 +39,7 @@ void CTaskSimpleCarDrive::InjectHooks() {
     RH_ScopedInstall(ProcessArmBopping, 0x642AE0);
     RH_ScopedInstall(ProcessBopping, 0x642E70);
     RH_ScopedInstall(StartRollDoorAnim, 0x642700);
+    RH_ScopedInstall(FinishRollDoorAnimCB, 0x63C840);
     RH_ScopedVMTInstall(Clone, 0x63DC20);
     RH_ScopedVMTInstall(GetTaskType, 0x63C450);
     RH_ScopedVMTInstall(MakeAbortable, 0x63C670);
@@ -362,9 +363,26 @@ void CTaskSimpleCarDrive::StartRollDoorAnim(CPed* ped) {
     const auto animGroup = CVehicleAnimGroupData::GetGroupForAnim((AssocGroupId)ped->m_pVehicle->m_pHandlingData->m_nAnimGroup, ANIM_ID_CAR_ROLLDOOR);
     m_pAnimCloseDoorRolling = CAnimManager::AddAnimation(ped->GetRpClump(), animGroup, ANIM_ID_CAR_ROLLDOOR);
 
-    // 0x63C840 - Not reversed yet (clears flags, resets `m_pAnimCloseDoorRolling`, ...)
-    const auto FinishCB = reinterpret_cast<void(*)(CAnimBlendAssociation*, void*)>(0x63C840);
-    m_pAnimCloseDoorRolling->SetFinishCallback(FinishCB, this);
+    m_pAnimCloseDoorRolling->SetFinishCallback(FinishRollDoorAnimCB, this);
+}
+
+// 0x63C840
+void CTaskSimpleCarDrive::FinishRollDoorAnimCB(CAnimBlendAssociation* anim, void* data) {
+    auto* const task = static_cast<CTaskSimpleCarDrive*>(data);
+    task->m_bClosingDoor = false;
+    task->m_pAnimCloseDoorRolling = nullptr;
+    if (auto* const veh = task->m_pVehicle) {
+        veh->ClearGettingOutFlags(1);
+        if (auto* const driver = veh->m_pDriver) {
+            veh->ProcessOpenDoor(
+                driver,
+                CAR_DOOR_LF,
+                CVehicleAnimGroupData::GetGroupForAnim((AssocGroupId)veh->m_pHandlingData->m_nAnimGroup, ANIM_ID_CAR_ROLLDOOR),
+                ANIM_ID_CAR_ROLLDOOR,
+                1.f
+            );
+        }
+    }
 }
 
 // 0x642E70

@@ -340,3 +340,26 @@ RpHAnimHierarchy* RpHAnimHierarchyDetachFrameIndex(RpHAnimHierarchy* hierarchy, 
 RwBool            RpHAnimFrameSetID(RwFrame* frame, RwInt32 id);
 RwInt32           RpHAnimFrameGetID(RwFrame* frame);
 RpSkinType        RpSkinAtomicGetType(RpAtomic* atomic);
+//--------------------------------------------------------------------------------------------------
+// 06 (standalone/rw/im2d_im3d.cpp)
+//--------------------------------------------------------------------------------------------------
+// RwIm3DRenderTriangle: the game never calls it (RwIm3DRenderLine is used once), but the original RW 3.6 API has it.
+RwBool RwIm3DRenderTriangle(RwInt32 vert1, RwInt32 vert2, RwInt32 vert3);
+
+// Im2D / Im3D vertex getters of the RW 3.6 D3D9 SDK (unused by the game, kept for completeness; RwIm2DVertex = RwD3D9Vertex, RwIm3DVertex = rw::d3d::Im3DVertex)
+#define RwIm2DVertexGetScreenX(vert)        ((vert)->x)
+#define RwIm2DVertexGetScreenY(vert)        ((vert)->y)
+#define RwIm2DVertexGetScreenZ(vert)        ((vert)->z)
+#define RwIm2DVertexGetRecipCameraZ(vert)   ((vert)->rhw)
+#define RwIm2DVertexGetU(vert)              ((vert)->u)
+#define RwIm2DVertexGetV(vert)              ((vert)->v)
+#define RwIm2DVertexGetRed(vert)            ((RwUInt8)(((vert)->emissiveColor >> 16) & 0xFF))
+#define RwIm2DVertexGetGreen(vert)          ((RwUInt8)(((vert)->emissiveColor >> 8) & 0xFF))
+#define RwIm2DVertexGetBlue(vert)           ((RwUInt8)(((vert)->emissiveColor) & 0xFF))
+#define RwIm2DVertexGetAlpha(vert)          ((RwUInt8)(((vert)->emissiveColor >> 24) & 0xFF))
+#define RwIm2DVertexCopyRGBA(dst, src)      ((dst)->emissiveColor = (src)->emissiveColor)
+#define RwIm3DVertexGetU(_vert)             ((_vert)->u)
+#define RwIm3DVertexGetV(_vert)             ((_vert)->v)
+#define RwIm3DVertexSetNormal(_vert, _nx, _ny, _nz) RxObjSpace3DVertexSetNormal(_vert, _nx, _ny, _nz)
+#define RwIm3DVertexGetNormal(_vert)        (&((_vert)->normal))
+#define RwIm3DVertexCopyRGBA(dst, src)      ((dst)->color = (src)->color)

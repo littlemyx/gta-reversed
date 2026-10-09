@@ -381,6 +381,23 @@ if (${RE_PROJECT}_RW_LIBRW)
     target_include_directories(rw_skin_hanim_test BEFORE PRIVATE fakerw)
     target_link_libraries(rw_skin_hanim_test PRIVATE librw d3d9 user32)
     set_target_properties(rw_skin_hanim_test PROPERTIES COMPILE_WARNING_AS_ERROR OFF)
+    # P2B-06 unit test of Im2D / Im3D (not part of `all`): ninja rw_im2d_im3d_test. Hidden window + librw's D3D9 device (Wine/wined3d is fine); pixels are read back
+    if (EXISTS "${PROJECT_SOURCE_DIR}/tests/standalone/rw_im2d_im3d_test.cpp")
+        add_executable(rw_im2d_im3d_test EXCLUDE_FROM_ALL
+            "${PROJECT_SOURCE_DIR}/tests/standalone/rw_im2d_im3d_test.cpp"
+            "${CMAKE_CURRENT_SOURCE_DIR}/standalone/rw/im2d_im3d.cpp"
+            "${CMAKE_CURRENT_SOURCE_DIR}/standalone/rw/renderstate.cpp"
+            "${CMAKE_CURRENT_SOURCE_DIR}/standalone/rw/rwd3d_ff.cpp"
+            "${CMAKE_CURRENT_SOURCE_DIR}/standalone/rw/frame.cpp"
+            "${CMAKE_CURRENT_SOURCE_DIR}/standalone/rw/camera.cpp"
+            "${CMAKE_CURRENT_SOURCE_DIR}/standalone/rw/math.cpp"
+        )
+        target_compile_features(rw_im2d_im3d_test PRIVATE cxx_std_23)
+        target_compile_definitions(rw_im2d_im3d_test PRIVATE NOTSA_RW_LIBRW NOTSA_RW_UNIT_TEST RW_D3D9)
+        target_include_directories(rw_im2d_im3d_test BEFORE PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/fakerw")
+        target_link_libraries(rw_im2d_im3d_test PRIVATE librw d3d9 user32)
+        set_target_properties(rw_im2d_im3d_test PROPERTIES COMPILE_WARNING_AS_ERROR OFF)
+    endif()
 endif()
 
 #--------------------------------------------------------------------
@@ -438,6 +455,8 @@ if (${RE_PROJECT}_RW_LIBRW)
     set_source_files_properties(standalone/rw/texture.cpp standalone/rw/texdict.cpp standalone/rw/rwtexdict.cpp PROPERTIES SKIP_UNITY_BUILD_INCLUSION ON)
     # P2B-05a: anonymous-namespace helpers in skin.cpp / hanim.cpp
     set_source_files_properties(standalone/rw/skin.cpp standalone/rw/hanim.cpp PROPERTIES SKIP_UNITY_BUILD_INCLUSION ON)
+    # P2B-06: Im2D/Im3D over the D3D9 device, same standalone style
+    set_source_files_properties(standalone/rw/im2d_im3d.cpp PROPERTIES SKIP_UNITY_BUILD_INCLUSION ON)
 endif()
 
 target_link_libraries(${RE_PROJECT_LIB_NAME} PRIVATE

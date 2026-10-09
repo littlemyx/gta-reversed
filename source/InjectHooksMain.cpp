@@ -779,6 +779,7 @@ void InjectHooksMain() {
     CFallingGlassPane::InjectHooks();
     CGlass::InjectHooks();
     CPedGroups::InjectHooks();
+    CPedStuckChecker::InjectHooks();
     CClock::InjectHooks();
     CClouds::InjectHooks();
     CCoronas::InjectHooks();

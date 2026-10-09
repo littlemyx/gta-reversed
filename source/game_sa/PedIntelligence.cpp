@@ -183,13 +183,13 @@ void CPedIntelligence::SetSeeingRange(float range) {
 // Unused
 // 0x600C00
 bool CPedIntelligence::IsInHearingRange(const CVector& posn) {
-    // The original accumulates the squared distance on the x87 stack (z, y, x term order)
+    // The original accumulates the squared distance on the x87 stack as ((z^2 + x^2) + y^2)
     const auto& pedPos = m_pPed->GetPosition();
     const double dx = (double)posn.x - (double)pedPos.x;
     const double dy = (double)posn.y - (double)pedPos.y;
     const double dz = (double)posn.z - (double)pedPos.z;
     const double range = m_fHearingRange;
-    return range * range > dz * dz + dy * dy + dx * dx;
+    return range * range > dz * dz + dx * dx + dy * dy;
 }
 
 // 0x600C60

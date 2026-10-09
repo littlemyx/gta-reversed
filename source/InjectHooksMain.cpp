@@ -560,6 +560,8 @@ void InjectHooksMain() {
     CHandShaker::InjectHooks();
     CCutsceneMgr::InjectHooks();
     CFileMgr::InjectHooks();
+    CMemoryMgr::InjectHooks();
+    D3DResourceSystem::InjectHooks();
     CPedGroupPlacer::InjectHooks();
     CLoadedCarGroup::InjectHooks();
     RenderBuffer::InjectHooks();

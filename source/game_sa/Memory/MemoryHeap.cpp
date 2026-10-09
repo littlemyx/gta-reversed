@@ -345,11 +345,13 @@ void CMemoryHeap::IntegrityCheck() {
     }
 
     // Sum the used memory per memory id
-    // BUG: The original has a 20 element array, and doesn't check that `m_nMemId` is in range (UB for ids >= 20 or < -1)
+    // BUG: The original has a 20 element array (exactly its stack frame, so index 20 is the return address) and doesn't
+    //      check that `m_nMemId` is in range: ids >= 20 (e.g. MEM_CARS) or < -1 corrupt the stack.
+    // NOTSA: We skip out-of-range ids instead (the array is write-only here, so nothing observable changes for valid ids).
     int32 usedPerMemId[20]{};
     auto* const last = m_LastBlock;
     for (auto* b = m_FirstBlock; b != last; b = b->_GetNextLocatedBlock()) {
-        if (b->m_bInUse && b->m_nMemId != -1) {
+        if (b->m_bInUse && b->m_nMemId != -1 && (uint32)b->m_nMemId < std::size(usedPerMemId)) {
             usedPerMemId[b->m_nMemId] += b->m_nSize + (int32)sizeof(HeapBlockDesc);
         }
     }

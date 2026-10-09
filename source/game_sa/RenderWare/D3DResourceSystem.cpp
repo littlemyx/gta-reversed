@@ -9,7 +9,7 @@
 
 // 0x730900
 void D3DResourceSystem::CancelBuffering() {
-    // NOTE: The arrays are freed, but the pointers are not nulled (same in the original)
+    // NOTE: The arrays are freed and their pointers nulled
     for (int32 i = 0; i < NumTextureBuffers; i++) {
         auto& buf = TextureBuffers[i];
         for (int32 j = 0; j < (int32)buf.m_nSize; j++) {
@@ -19,6 +19,7 @@ void D3DResourceSystem::CancelBuffering() {
         buf.m_nNumTexturesInBuffer = 0;
         if (buf.m_apTextures) {
             operator delete(buf.m_apTextures);
+            buf.m_apTextures = nullptr;
         }
     }
     NumTextureBuffers = 0;
@@ -31,6 +32,7 @@ void D3DResourceSystem::CancelBuffering() {
         buf.m_nNumDatasInBuffer = 0;
         if (buf.m_apIndexData) {
             operator delete(buf.m_apIndexData);
+            buf.m_apIndexData = nullptr;
         }
     }
 
@@ -42,6 +44,7 @@ void D3DResourceSystem::CancelBuffering() {
     large.m_nNumDatasInBuffer = 0;
     if (large.m_apIndexData) {
         operator delete(large.m_apIndexData);
+        large.m_apIndexData = nullptr;
     }
 
     UseD3DResourceBuffering = false;
@@ -196,7 +199,7 @@ void D3DResourceSystem::TidyUpD3DTextures(uint32 count) {
                 misses++;
             }
         }
-        idx = (idx + 1) % num; // NOTE: Division by zero if there are no buffers (same in the original)
+        idx = (idx + 1) % num; // `num` can't be 0 here: the loop condition above exits first
     }
     FreeTextureBufferIndex = idx;
 }
@@ -320,4 +323,18 @@ void D3DResourceSystem::InjectHooks() {
     RH_ScopedInstall(TidyUpD3DTextures, 0x7305E0);
     RH_ScopedInstall(DestroyIndexBuffer, 0x730D30);
     RH_ScopedInstall(DestroyTexture, 0x730B70);
+
+    {
+        RH_ScopedClass(D3DTextureBuffer);
+        RH_ScopedCategory("RenderWare");
+        RH_ScopedInstall(Resize, 0x730020);
+        RH_ScopedInstall(Setup, 0x72FE80);
+        RH_ScopedInstall(Push, 0x72FFF0);
+        RH_ScopedInstall(PushWithoutIncreasingCounter, 0x730AD0);
+    }
+    {
+        RH_ScopedClass(D3DIndexDataBuffer);
+        RH_ScopedCategory("RenderWare");
+        RH_ScopedInstall(Resize, 0x730330);
+    }
 }

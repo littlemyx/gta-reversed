@@ -35,6 +35,8 @@ void RsInjectHooks() {
     RH_ScopedGlobalInstall(RsWarningMessage, 0x619B30);
     RH_ScopedGlobalInstall(RsEventHandler, 0x619B60);
     RH_ScopedGlobalInstall(RsRwInitialize, 0x619C90);
+    RH_ScopedGlobalInstall(RsLoadPresetViews, 0x619D60);
+    RH_ScopedGlobalInstall(RsSavePresetView, 0x619FA0);
 }
 
 static auto& KeysShifted = StaticRef<std::array<uint8, 256>>(0x8D2D00);

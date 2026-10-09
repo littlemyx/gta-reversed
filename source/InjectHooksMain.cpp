@@ -230,6 +230,7 @@
 #include "TaskComplexDestroyCarArmed.h"
 #include "TaskSimpleAbseil.h"
 #include "TaskSimpleOnEscalator.h"
+#include "TaskComplexKillAllThreats.h"
 #include "TaskComplexExtinguishFireOnFoot.h"
 #include "TaskComplexFallAndStayDown.h"
 #include "TaskSimpleRunAnimLoopedMiddle.h"
@@ -1159,7 +1160,7 @@ void InjectHooksMain() {
         CTaskComplexInWater::InjectHooks();
         CTaskComplexInvestigateDeadPed::InjectHooks();
         CTaskComplexInvestigateDisturbance::InjectHooks();
-        // CTaskComplexKillAllThreats::InjectHooks();
+        CTaskComplexKillAllThreats::InjectHooks();
         CTaskComplexKillCriminal::InjectHooks();
 
         CTaskComplexKillPedOnFootArmed::InjectHooks();

@@ -246,11 +246,12 @@ FxEmitterPrt_c* FxEmitter_c::CreateParticle(const EmissionInfo_t& emissionInfo, 
     if (velOverride) {
         particle->m_Velocity = *velOverride;
     } else {
-        auto randomAngle = CGeneral::GetRandomNumberInRange(0.0f, TWO_PI);
-        auto minAngle = DegreesToRadians(emissionInfo.m_fAngleMin);
-        auto maxAngle = DegreesToRadians(emissionInfo.m_fAngleMax);
-
-        auto randomAngleBetweenMinMax = lerp(minAngle, maxAngle, CGeneral::GetRandomNumberInRange(0.0f, 1.0f));
+        // exe (0x4A2925..0x4A298D): `rand() % 10000 * 0.0001f` (0x858FC4) scaled by its OWN constants 6.2831802f (0x85A7C0) and 0.0174532793f (0x85A7BC);
+        // the lerp is `(max - min) * t + min`, angles are spilled to floats
+        const auto Rand01 = [] { return (double)(rand() % 10000) * (double)std::bit_cast<float>(0x38D1B717u); };
+        const auto randomAngle = (float)(Rand01() * (double)std::bit_cast<float>(0x40C90FD0u));
+        const auto minAngle    = (float)((double)emissionInfo.m_fAngleMin * (double)std::bit_cast<float>(0x3C8EFA2Eu));
+        const auto randomAngleBetweenMinMax = (float)(((double)emissionInfo.m_fAngleMax * (double)std::bit_cast<float>(0x3C8EFA2Eu) - (double)minAngle) * Rand01() + (double)minAngle);
 
         CVector randomizedAngleVec{
             CMaths::GetCosFast(randomAngle) * CMaths::GetSinFast(randomAngleBetweenMinMax),

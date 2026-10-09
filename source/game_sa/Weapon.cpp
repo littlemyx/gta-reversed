@@ -514,7 +514,7 @@ void CWeapon::DoBulletImpact(CEntity* firedBy, CEntity* victim, const CVector& s
                         victim,
                         hitCP.m_nSurfaceTypeB,
                         hitCP.m_vecPoint,
-                        RWRAD2DEG(std::asin(-angle))
+                        RadiansToDegrees(std::asin(-angle))
                     );
                 }
             }
@@ -2879,7 +2879,7 @@ void FireOneInstantHitRound(const CVector& startPoint, const CVector& endPoint, 
                 hitEntity,
                 hitCP.m_nSurfaceTypeB,
                 hitCP.m_vecPoint,
-                RWRAD2DEG(std::asin(-angleOfIncidenceCos)) // Really should've used `acos + PI / 2` here to make this cleaner
+                RadiansToDegrees(std::asin(-angleOfIncidenceCos)) // Really should've used `acos + PI / 2` here to make this cleaner
             );
         }
     } else { // no hit entity

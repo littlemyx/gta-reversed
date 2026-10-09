@@ -215,11 +215,26 @@ void FxManager_c::CalcFrustumInfo(RwCamera* camera) {
     const auto* viewWindow = RwCameraGetViewWindow(camera);
     const auto farClip     = RwCameraGetFarClipPlane(camera);
 
-    const auto dist  = RwV2dLength(viewWindow);
-    const auto angle = RadiansToDegrees(std::atan2(dist, 1.0f));
-    const auto radius = std::sqrt(sq(dist) + 1.0f) * farClip / std::sin(DegreesToRadians(180.0f - 2.0f * angle)) * std::sin(DegreesToRadians(angle));
+    // The exe keeps `dist` and the radius on the x87 stack (extended precision), spills `angle` and sin(angle * k) to floats, and uses its OWN
+    // rad->deg (0x85A998 = 57.29582595825195) and deg->rad (0x85A7BC = 0.017453279...) factors, neither is common.h's
+    constexpr double kRadToDeg = (double)std::bit_cast<float>(0x42652EEDu); // 0x85A998
+    constexpr double kDegToRad = (double)std::bit_cast<float>(0x3C8EFA2Eu); // 0x85A7BC
+    const double dist  = std::sqrt((double)viewWindow->x * (double)viewWindow->x + (double)viewWindow->y * (double)viewWindow->y);
+    const float  angle = (float)(std::atan2(dist, 1.0) * kRadToDeg);
+    const double radius0 = std::sqrt(dist * dist + (double)1.0f) * (double)farClip;
+    const double sinB    = std::sin(((double)180.0f - (double)angle * 2.0) * kDegToRad);
+    const double sinA    = (double)(float)std::sin((double)angle * kDegToRad);
+    const double radius  = radius0 / sinB * sinA;
+    const float  atZ     = (float)((double)matrix->at.z * radius);
 
-    m_Frustum.m_Sphere = {CVector{matrix->pos} + CVector{matrix->at} * radius, radius};
+    m_Frustum.m_Sphere = {
+        CVector{
+            (float)((double)matrix->pos.x + (double)matrix->at.x * radius),
+            (float)((double)matrix->pos.y + (double)matrix->at.y * radius),
+            (float)((double)matrix->pos.z + (double)atZ),
+        },
+        (float)radius
+    };
 
     m_Frustum.m_Planes[0] = camera->frustumPlanes[2].plane;
     m_Frustum.m_Planes[1] = camera->frustumPlanes[3].plane;
@@ -238,8 +253,7 @@ void FxManager_c::Update(RwCamera* camera, float timeDelta) {
         it->Update(timeDelta);
     }
 
-    for (FxSystem_c *it = m_FxSystems.GetHead(), *next{}; it; it = next) {
-        next = m_FxSystems.GetNext(it); // the exe reads the next link before the node can be destroyed (0x4A9ABB)
+    for (FxSystem_c* it = m_FxSystems.GetHead(); it; it = m_FxSystems.GetNext(it)) {
         if (it->Update(camera, timeDelta)) {
             DestroyFxSystem(it);
         }

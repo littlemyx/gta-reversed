@@ -9,6 +9,7 @@
 #include "Ped.h"
 
 #include "PedType.h"
+#include "Fx/FxFtol.h"
 #include "Buoyancy.h"
 #include "TaskSimpleSwim.h"
 #include "PedStats.h"
@@ -860,15 +861,17 @@ void CPed::ClearAimFlag() {
 * @param point Point should be relative to the ped's position. Eg.: point = actualPoint - ped.GetPostion2D()
 */
 int32 CPed::GetLocalDirection(const CVector2D& point) const {
-    float angle;
-    for (angle = point.Heading() - m_fCurrentRotation + DegreesToRadians(45.0f); angle < 0.0f; angle += TWO_PI); // TODO: This is quite stupid as well..
-    return (((int32)RadiansToDegrees(angle) / 90) % 4); // See original code below:
-
-    // Original R* code - Kinda stupid, we just use modulo instead.
-    // int32 dir;
-    //for (dir = (int)RWRAD2DEG(angle) / 90; angle > 3; angle -= 4);
-    // 0-forward, 1-left, 2-backward, 3-right.
-    //return angle;
+    // Exact x87 form of the exe (0x5DEF60): everything stays in extended precision (doubles), the angle is truncated by _ftol2 after `* (2/PI)` (0x858FB8)
+    // and then reduced with `(dir - 4) & 3` for dir > 3 (== dir & 3).
+    double angle = std::atan2(-(double)point.x, (double)point.y) - (double)m_fCurrentRotation + (double)std::bit_cast<float>(0x3F490FDBu); // 0x859AB0 (PI / 4)
+    while (angle < 0.0) {
+        angle += (double)TWO_PI; // 0x858CBC
+    }
+    int32 dir = notsa::detail::Ftol(angle * (double)std::bit_cast<float>(0x3F22F983u)); // 0x858FB8 (2 / PI)
+    if (dir > 3) {
+        dir = dir - 4 - (int32)(((uint32)(dir - 4) >> 2) << 2);
+    }
+    return dir;
 }
 
 /*!

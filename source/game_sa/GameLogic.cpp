@@ -610,7 +610,7 @@ void CGameLogic::Update() {
 
             if (IsCoopGameGoingOn()) {
                 restartPoint = vec2PlayerStartLocation;
-                restartAngle = DegreesToRadians(f2PlayerStartHeading);
+                restartAngle = RadiansToDegrees(f2PlayerStartHeading); // BUG (in this port): was DegreesToRadians; f2PlayerStartHeading is stored in radians (Pickup.cpp), the exe does `* 57.29578` (0x859878) as for player 1 above
                 RestorePedsWeapons(player1Ped);
             }
             Remove2ndPlayerIfPresent();

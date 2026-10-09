@@ -2585,12 +2585,14 @@ void CPhysical::ApplySpeed()
         fHeading -= PI * 2;
     }
 
+    // The exe reads the 108 degree limit from a .data float (0x8CD7E8 = 0x3FF1463B), which is NOT bit-identical to DegreesToRadians(108.0f) (0x3FF14639)
+    static auto& DOOR_MAX_OPEN_ANGLE = StaticRef<float>(0x8CD7E8);
     float fNewTimeStep = -1000.0f;
-    float fTheDoorAngle  = DegreesToRadians(108.0f) + fDoorStartAngle;
+    float fTheDoorAngle  = DOOR_MAX_OPEN_ANGLE + fDoorStartAngle;
     float fHeadingTimeStep = CTimer::GetTimeStep() * m_vecTurnSpeed.z + fHeading;
-    if (m_vecTurnSpeed.z <= 0.0f || fHeadingTimeStep <= DegreesToRadians(108.0f) + fDoorStartAngle) {
+    if (m_vecTurnSpeed.z <= 0.0f || fHeadingTimeStep <= DOOR_MAX_OPEN_ANGLE + fDoorStartAngle) {
         if (m_vecTurnSpeed.z < 0.0f) {
-            float fTheDoorAngle = fDoorStartAngle - DegreesToRadians(108.0f); // todo: shadow var
+            float fTheDoorAngle = fDoorStartAngle - DOOR_MAX_OPEN_ANGLE; // todo: shadow var
             if (fHeadingTimeStep < fTheDoorAngle)
                 fNewTimeStep = (fTheDoorAngle - fHeading) / m_vecTurnSpeed.z;
         }

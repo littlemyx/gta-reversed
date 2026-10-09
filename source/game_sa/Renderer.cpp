@@ -1464,7 +1464,7 @@ void CRenderer::RequestObjectsInDirection(const CVector& posn, float angle, int3
     };
     RwV3d axis = { 1.0f, 0.0f, 0.0f };
     RwMatrixRotate(&matrix, &axis, 90.0f, rwCOMBINEREPLACE);
-    angle = ((angle * 180.0f) / PI) + 180.0f;
+    angle = RadiansToDegrees(angle) + 180.0f; // exe: angle * 57.2957763671875 (0x859878) + 180.0
     axis = { 0.0f, 0.0f, 1.0f };
     RwMatrixRotate(&matrix, &axis, angle, rwCOMBINEPOSTCONCAT);
     RwMatrixTranslate(&matrix, &posn, rwCOMBINEPOSTCONCAT);

@@ -270,7 +270,7 @@ void CBirds::Render() {
         if (bird.m_eBirdMode == eBirdMode::BIRD_DRAW_NOUPDATE || bird.m_eBirdMode == eBirdMode::BIRD_DRAW_UPDATE) {
             auto& vecPos = matBirdTransform.GetPosition();
             auto uiTime = CTimer::GetTimeInMS() + uiWingMoveTimeOffset;
-            vecPos.z += std::sin((float)(uiTime % bird.m_nWingStillness) * (TWO_PI / (float)bird.m_nWingStillness)) * 0.1F;
+            vecPos.z += std::sin((float)(uiTime % bird.m_nWingStillness) * (6.28f / (float)bird.m_nWingStillness)) * 0.1F;
         }
 
         CVector vecScreenPos;
@@ -292,8 +292,9 @@ void CBirds::Render() {
                 }
 
                 auto uiTime = CTimer::GetTimeInMS() + uiWingMoveTimeOffset;
-                auto fSin1 = -std::sin((float)((uiTime + bird.m_nWingStillness / 6) % bird.m_nWingStillness) * TWO_PI / (float)bird.m_nWingStillness);
-                auto fSin2 = -std::sin((float)((uiTime + bird.m_nWingStillness) % bird.m_nWingStillness) * TWO_PI / (float)bird.m_nWingStillness);
+                // 0x872828: the exe divides 6.28f (NOT 2PI) by the wing period first, then multiplies by the phase
+                auto fSin1 = -std::sin((float)((uiTime + bird.m_nWingStillness / 6) % bird.m_nWingStillness) * (6.28f / (float)bird.m_nWingStillness));
+                auto fSin2 = -std::sin((float)((uiTime + bird.m_nWingStillness) % bird.m_nWingStillness) * (6.28f / (float)bird.m_nWingStillness));
 
                 auto fSizeUsed = std::max(1.0F, bird.m_fSize);
                 auto fSin1Factor = fSin1 / fSizeUsed;

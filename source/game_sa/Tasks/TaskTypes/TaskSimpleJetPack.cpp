@@ -13,13 +13,13 @@ constexpr float THRUST_NOMINAL         = 0.8f;
 constexpr float THRUST_FULL            = 0.6f;
 constexpr float THRUST_STRAFE          = 0.3f;
 constexpr float THRUST_STOP            = 0.5f;
-constexpr float THRUST_MAX_ANGLE       = 1.309f;
+constexpr float THRUST_MAX_ANGLE       = std::bit_cast<float>(0x3FA78D36u); // 0x8D2F48 (75 degrees, NOT 1.309f)
 constexpr float THRUST_MOVE_DAMPING    = 0.02f;
 
 constexpr float JETPACK_TURN_RATE      = -0.05f;
 constexpr float JETPACK_ANGLE_RATE     = 0.9f;
 
-constexpr float LEG_SWING_MAX_ANGLE    = 0.7854f;
+constexpr float LEG_SWING_MAX_ANGLE    = std::bit_cast<float>(0x3F490FDBu); // 0x8D2F58 (PI / 4, NOT 0.7854f)
 constexpr float LEG_SWING_DELTA_V_MULT = -0.2f;
 constexpr float LEG_SWING_GRAVITY_MULT = 0.01f;
 constexpr float LEG_SWING_DAMP_FRAC    = 0.98f;
@@ -174,7 +174,7 @@ void CTaskSimpleJetPack::RenderJetPack(CPed* ped) {
             currHeading += TWO_PI;
         }
         const auto headingDelta = std::clamp(currHeading - m_PrevHeading, -0.2f, 0.2f);
-        const auto rotX         = std::clamp(RWRAD2DEG(m_ThrustAngle - headingDelta * 10.f), -90.f, 90.f);
+        const auto rotX         = std::clamp(RadiansToDegrees(m_ThrustAngle - headingDelta * 10.f), -90.f, 90.f);
 
         const auto ProcessJetBall = [&](const char* jbFrameName, bool bLeftSide) {
             const auto jb = CClumpModelInfo::GetFrameFromName(m_JetPackClump, jbFrameName);
@@ -331,11 +331,10 @@ void CTaskSimpleJetPack::ProcessControlInput(CPlayerPed* player) {
     const auto padMoveMag = std::sqrt(sq(walkUpDown) + sq(walkLeftRight)) / 60.f;
 
     const auto InterpolateThrustAngle = [&, this]{
-        m_ThrustAngle = lerp(
-            (walkUpDown / 128.f) * THRUST_MAX_ANGLE,
-            m_ThrustAngle,
-            std::pow(JETPACK_ANGLE_RATE, CTimer::GetTimeStep())
-        );
+        // exe (0x67E938): `p = pow(0.9, timestep)` stays on the x87 stack; result = (1 - p) * (walkUpDown * (1/128)) * 75deg + thrustAngle * p
+        // (NOT common.h's `lerp`: this is the `from * (1 - t) + to * t` form with the multiplications in this order)
+        const double p = std::pow((double)JETPACK_ANGLE_RATE, (double)CTimer::GetTimeStep());
+        m_ThrustAngle = (float)(((1.0 - p) * (double)(walkUpDown / 128.f)) * (double)THRUST_MAX_ANGLE + (double)m_ThrustAngle * p);
     };
 
     const auto UpdateStrafe = [this](float step, float clampTo = 1.f) {
@@ -433,8 +432,8 @@ void CTaskSimpleJetPack::ApplyRollAndPitch(CPed* ped) {
     }
     for (const auto nodeId : { PED_NODE_LEFT_LEG, PED_NODE_RIGHT_LEG }) { // Rotate legs according to current swing values
         const auto q = &ped->m_apBones[nodeId]->KeyFrame->q;
-        RtQuatRotate(q, &CPedIK::ZaxisIK, RWRAD2DEG(m_LegSwingFwd), rwCOMBINEPOSTCONCAT);
-        RtQuatRotate(q, &CPedIK::YaxisIK, RWRAD2DEG(m_LegSwingSide), rwCOMBINEPOSTCONCAT);
+        RtQuatRotate(q, &CPedIK::ZaxisIK, RadiansToDegrees(m_LegSwingFwd), rwCOMBINEPOSTCONCAT);
+        RtQuatRotate(q, &CPedIK::YaxisIK, RadiansToDegrees(m_LegSwingSide), rwCOMBINEPOSTCONCAT);
     }
     ped->bUpdateMatricesRequired = true;
 }

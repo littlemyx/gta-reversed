@@ -3964,7 +3964,7 @@ bool CCam::Process_DW_BirdyCam(bool) {
     const auto to   = CVector{ n.x + n.x + p0.x, n.y + n.y + p0.y, n.z + n.z + p0.z };
 
     if (!gbExitCam[CAM_ID]) {
-        const double s = std::sin((270.0 - (double)t * 180.0) * 0.0174532924);
+        const double s = std::sin((270.0 - (double)t * 180.0) * (double)0.017453292f);
         const double k = (1.0 + s) * 0.5;
         src.x = (float)(((double)to.x - from.x) * k + from.x);
         src.y = (float)(((double)to.y - from.y) * k + from.y);
@@ -4086,10 +4086,10 @@ bool CCam::Process_DW_CamManCam(bool) {
 
     auto k = (float)(std::sqrt((double)sq(dest.y - src.y) + (double)sq(dest.z - src.z) + (double)sq(dest.x - src.x)) / 30.0);
     k      = std::clamp(k, 0.0f, 1.0f);
-    float fov = (float)((15.0 - 70.0) * (std::sin((270.0 - (double)k * 180.0) * 0.0174532924) + 1.0) * 0.5 + 70.0);
+    float fov = (float)((15.0 - 70.0) * (std::sin((270.0 - (double)k * 180.0) * (double)0.017453292f) + 1.0) * 0.5 + 70.0);
     if (t < 0.1f) {
         auto k2 = std::clamp(t / 0.1f, 0.0f, 1.0f);
-        fov     = (float)(((double)fov - 70.0) * (std::sin((270.0 - (double)k2 * 180.0) * 0.0174532924) + 1.0) * 0.5 + 70.0);
+        fov     = (float)(((double)fov - 70.0) * (std::sin((270.0 - (double)k2 * 180.0) * (double)0.017453292f) + 1.0) * 0.5 + 70.0);
     }
 
     if (IsTimeToExitThisDWCineyCamMode(CAM_ID, src, dest, t, false)) {
@@ -4252,7 +4252,7 @@ bool CCam::Process_DW_HeliChaseCam(bool) {
 
     double fovBase = S.fovEnd;
     if (t < S.fovBlendInFraction && !S.bFlag81) {
-        const double s = std::sin((270.0 - (double)(1.0f / S.fovBlendInFraction) * (double)t * 180.0) * 0.0174532924);
+        const double s = std::sin((270.0 - (double)(1.0f / S.fovBlendInFraction) * (double)t * 180.0) * (double)0.017453292f);
         fovBase        = ((double)S.fovEnd - (double)S.fovStart) * (s + 1.0) * 0.5 + (double)S.fovStart;
     }
     double fovZoom = 0.0;
@@ -4260,7 +4260,7 @@ bool CCam::Process_DW_HeliChaseCam(bool) {
     if (S.fovZoomDistMin < dist3D) {
         double k = ((double)dist3D - S.fovZoomDistMin) / ((double)S.fovZoomDistMax - S.fovZoomDistMin);
         k        = std::clamp(k, 0.0, 1.0);
-        const double s = std::sin((270.0 - k * 180.0) * 0.0174532924);
+        const double s = std::sin((270.0 - k * 180.0) * (double)0.017453292f);
         fovZoom        = (s + 1.0) * 0.5 * S.fovZoomAmount;
     }
     float fov        = (float)(fovBase - fovZoom);
@@ -4334,7 +4334,7 @@ bool CCam::Process_DW_HeliChaseCam(bool) {
     if (doFovLerp) {
         double f = ((double)(int32)now - (double)S.fovLerpStartTime) / ((double)S.fovLerpEndTime - (double)S.fovLerpStartTime);
         f        = std::clamp(f, 0.0, 1.0);
-        const double s = std::sin((270.0 - f * 180.0) * 0.0174532924);
+        const double s = std::sin((270.0 - f * 180.0) * (double)0.017453292f);
         fov            = (float)(((double)S.fovStart - (double)S.savedFov) * (s + 1.0) * 0.5 + (double)S.savedFov);
     }
 
@@ -4412,7 +4412,7 @@ bool CCam::Process_DW_PlaneCam1(bool) {
         const float c4 = t - 0.5f;
         const float a  = up.x * -150.0f * c4;
         const float b  = up.y * -150.0f * c4 * s_scale;
-        const double sinv = std::sin((double)4 * ((double)elapsed / (double)duration) * 360.0 * 0.0174532924);
+        const double sinv = std::sin((double)4 * ((double)elapsed / (double)duration) * 360.0 * (double)0.017453292f);
         const float c  = up.z * 0.5f;
         const float e  = (float)((double)up.x * 0.5 * sinv);
         const float g  = (float)((double)c * sinv);
@@ -4525,7 +4525,7 @@ bool CCam::Process_DW_PlaneCam2(bool) {
         fwd.z = dirA.z * 30.0f + dest.z;
 
         const float upZ5 = up.z * 5.0f;
-        const double sinv = std::sin((double)4 * ((double)elapsed / (double)duration) * 360.0 * 0.0174532924);
+        const double sinv = std::sin((double)4 * ((double)elapsed / (double)duration) * 360.0 * (double)0.017453292f);
         up.z              = up.z * 0.5f;
         right.x           = (float)((double)up.x * 0.5 * sinv);
         const float rz    = (float)((double)up.z * sinv);

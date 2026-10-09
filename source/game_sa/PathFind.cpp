@@ -940,7 +940,7 @@ CVector CPathFind::FindNodeCoorsForScript(CNodeAddress nodeAddrA, CNodeAddress n
         const auto posA  = nodeA->GetPosition();
         const auto dir   = CVector2D{ GetPathNode(nodeAddrB)->GetPosition() - posA }.Normalized();
 
-        outHeadingDeg = RWRAD2DEG(dir.Heading());
+        outHeadingDeg = RadiansToDegrees(dir.Heading());
 
         return nodeA->m_nPathWidth
             ? detail::GetPosnBetweenNodesForScript(nodeA, dir)

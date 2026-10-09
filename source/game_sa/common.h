@@ -9,6 +9,7 @@
 #include <Base.h>
 #include <string>
 #include <numbers>
+#include <bit>
 #include <initializer_list>
 #include <RenderWare.h>
 #include <GxtChar.h>
@@ -192,9 +193,11 @@ auto multiply_weighted(WeightedValue<T, Y> (&&values)[N]) {
 }
 
 // Converts radians to degrees
-// 57.295826
+// The exe multiplies by the float constant at 0x859878 (57.2957763671875 = 0x42652EE0), it never divides by PI
+// (a few functions use other constants, e.g. 0x85A998 in FxManager_c::CalcFrustumInfo: they write it out locally)
+constexpr float RAD_TO_DEG = std::bit_cast<float>(0x42652EE0u);
 constexpr float RadiansToDegrees(float angleInRadians) {
-    return angleInRadians * 180.0F / PI;
+    return angleInRadians * RAD_TO_DEG;
 }
 
 template<typename T>

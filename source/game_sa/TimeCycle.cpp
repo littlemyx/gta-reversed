@@ -197,10 +197,13 @@ void CTimeCycle::Initialise(bool padFile) {
     }
 
     CFileMgr::CloseFile(file);
-                                                                               // Android values
-    m_vecDirnLightToSun.x = std::cos(-3.0f * PI / 4.0f) * std::cos(PI / 4.0f); // -0.5f
-    m_vecDirnLightToSun.y = std::sin(-3.0f * PI / 4.0f) * std::cos(PI / 4.0f); // -0.5f
-    m_vecDirnLightToSun.z = std::sin(PI / 4.0f);                               // std::cos(-3 * rwPI / 3.0f) * std::cos(rwPI / 4.0f);
+    // exe (0x5BC026): x87 `fcos`/`fsin` of the doubles at 0x86A6C8 (-3PI/4 as widened float) and 0x86A6D0 (PI/4 as widened float), products stored as floats
+    constexpr double ANGLE_XY = -2.356194496154785;  // 0x86A6C8 (float 0xC016CBE4)
+    constexpr double ANGLE_Z  = 0.7853981852531433;  // 0x86A6D0 (float 0x3F490FDB)
+    const double     cosZ     = std::cos(ANGLE_Z);
+    m_vecDirnLightToSun.x = (float)(std::cos(ANGLE_XY) * cosZ); // -0.5f
+    m_vecDirnLightToSun.y = (float)(std::sin(ANGLE_XY) * cosZ); // -0.5f
+    m_vecDirnLightToSun.z = (float)std::sin(ANGLE_Z);
     m_vecDirnLightToSun.Normalise();
     m_FogReduction = 0;
     m_bExtraColourOn = false;

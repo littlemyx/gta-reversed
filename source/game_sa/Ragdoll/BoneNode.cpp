@@ -64,67 +64,72 @@ void BoneNode_c::InitLimits() {
 // Tait-Bryan XYZ convention
 // 0x6171F0
 void BoneNode_c::EulerToQuat(const CVector& angles, RtQuat& outQuat) {
-    const CVector halfRadAngles = {
-        DegreesToRadians(angles.x) / 2.f,
-        DegreesToRadians(angles.y) / 2.f,
-        DegreesToRadians(angles.z) / 2.f
-    };
- 
-    const float cx = std::cos(halfRadAngles.x), sx = std::sin(halfRadAngles.x);
-    const float cy = std::cos(halfRadAngles.y), sy = std::sin(halfRadAngles.y);
-    const float cz = std::cos(halfRadAngles.z), sz = std::sin(halfRadAngles.z);
- 
-    // quaternion component products
-    const float cc = cx * cz, cs = cx * sz;
-    const float sc = sx * cz, ss = sx * sz;
- 
-    RtQuat q;
-    q.imag.x = sc * cy - cs * sy;
-    q.imag.y = cc * sy + ss * cy;
-    q.imag.z = cs * cy - sc * sy;
-    q.real   = cc * cy + ss * sy;
- 
-    // normalise and store back into quat
-    const float magnitude = std::sqrt(q.imag.x * q.imag.x +
-                                q.imag.y * q.imag.y +
-                                q.imag.z * q.imag.z +
-                                q.real   * q.real);
-    outQuat.imag.x     = q.imag.x / magnitude;
-    outQuat.imag.y     = q.imag.y / magnitude;
-    outQuat.imag.z     = q.imag.z / magnitude;
-    outQuat.real       = q.real / magnitude;
+    // Exact x87 form of the exe (0x6171F0): half angles are `deg * PI * (1/180) * 0.5` (0x858CB8, 0x85F0AC, 0x858B8C), NOT DegreesToRadians(deg) / 2;
+    // intermediates stay in extended precision (doubles) except where the exe spills to floats. The normalisation multiplies by `1 / (|q|^2)`
+    // (no square root, an oddity of the original).
+    constexpr double kPi      = (double)std::numbers::pi_v<float>;                // 0x858CB8
+    constexpr double kInv180  = (double)std::bit_cast<float>(0x3BB60B61u);        // 0x85F0AC
+    const auto       HalfRad  = [&](float deg) { return (double)deg * kPi * kInv180 * (double)0.5f; };
+
+    const double ex = HalfRad(angles.x);
+    const double ey = HalfRad(angles.y);
+    const float  ez = (float)HalfRad(angles.z); // spilled
+    const float  cx = (float)std::cos(ex);
+    const float  cy = (float)std::cos(ey);
+    const float  cz = (float)std::cos((double)ez);
+    const float  sx = (float)std::sin(ex);
+    const double sy = std::sin(ey);
+    const double sz = std::sin((double)ez);
+
+    const float  cc = (float)((double)cz * (double)cx);
+    const double cs = (double)cx * sz;
+    const double sc = (double)sx * (double)cz;
+    const float  ss = (float)(sz * (double)sx);
+
+    const float  A = (float)((double)cy * sc - cs * sy);
+    const float  B = (float)((double)cc * sy + (double)ss * (double)cy);
+    const double C = cs * (double)cy - sc * sy;
+    const double Dx = (double)ss * sy + (double)cc * (double)cy;
+    const float  D = (float)Dx;
+
+    const double sumSq = ((Dx * (double)D + C * C) + (double)B * (double)B) + (double)A * (double)A;
+    const float  r     = (float)(1.0 / sumSq);
+
+    outQuat.imag.x = (float)((double)A * (double)r);
+    outQuat.imag.y = (float)((double)B * (double)r);
+    outQuat.imag.z = (float)((double)r * C);
+    outQuat.real   = (float)((double)r * (double)D);
 }
 
 // 0x617080
 void BoneNode_c::QuatToEuler(const RtQuat& quat, CVector& outAngles) {
-    // original code:
-    //const auto v9 = 2.0f * (quat.imag.x * quat.imag.z - quat.imag.y * quat.real);
-    //const auto v10 = std::sqrt(1.0f - sq(v9));
-    //
-    //outAngles.y = RadiansToDegrees(std::atan2(2.0f * (quat.imag.y * quat.real - quat.imag.x * quat.imag.z), v10));
-    //if (std::abs(v9) == 1.0f) {
-    //    outAngles.x = RadiansToDegrees(std::atan2(-2.0f * (quat.imag.y * quat.imag.z - quat.imag.x * quat.real), 1.0f - 2.0f * (sq(quat.imag.x) + sq(quat.imag.z))));
-    //    outAngles.z = RadiansToDegrees(0.0f);
-    //} else {
-    //    outAngles.x = RadiansToDegrees(std::atan2(2.0f * (quat.imag.x * quat.real + quat.imag.y * quat.imag.z) / v10, (1.0f - 2.0f * (sq(quat.imag.x) + sq(quat.imag.y))) / v10));
-    //    outAngles.z = RadiansToDegrees(std::atan2(2.0f * (quat.imag.z * quat.real + quat.imag.x * quat.imag.y) / v10, (1.0f - 2.0f * (sq(quat.imag.y) + sq(quat.imag.z))) / v10));
-    //}
+    // Exact x87 form of the exe (0x617080): intermediates stay in extended precision (doubles here), only A..D, V and the results are spilled to floats.
+    // Degrees = atan2(..) * 180 * (1/PI as float 0x86D2B4) (two separate multiplications), NOT common.h's RadiansToDegrees.
+    constexpr double kInvPi = (double)std::bit_cast<float>(0x3EA2F983u); // 0x86D2B4
+    const auto ToDeg = [](double a) { return (float)(a * 180.0 * kInvPi); };
 
-    const float x = quat.imag.x;
-    const float y = quat.imag.y;
-    const float z = quat.imag.z;
-    const float w = quat.real;
+    const double x = quat.imag.x;
+    const double y = quat.imag.y;
+    const double z = quat.imag.z;
+    const double w = quat.real;
 
-    const float sinPitch = 2.0f * (x * z - y * w);
-    outAngles.y = RadiansToDegrees(std::asin(-sinPitch)); // Simplified from the original atan2 logic
-    
-    // Code simplified here, originally it was divided by some value, but it didn't change the result, so we can skip that step
-    if (approxEqual(sinPitch, 1.f, 0.0001f)) { // Gimbal lock case: Yaw and Roll collapse into a single degree of freedom
-        outAngles.x = RadiansToDegrees(std::atan2(-2.0f * (y * z - x * w), 1.0f - 2.0f * (x * x + z * z)));
-        outAngles.z = 0.0f;
-    } else { // General case:
-        outAngles.x = RadiansToDegrees(std::atan2(2.0f * (x * w + y * z), 1.0f - 2.0f * (x * x + y * y)));
-        outAngles.z = RadiansToDegrees(std::atan2(2.0f * (z * w + x * y), 1.0f - 2.0f * (y * y + z * z)));
+    const float  A = (float)((1.0 - 2.0 * (y * y)) - 2.0 * (z * z));
+    const float  B = (float)(2.0 * (z * w) + 2.0 * (x * y));
+    const float  C = (float)(2.0 * (z * y) + 2.0 * (w * x));
+    const float  D = (float)((1.0 - 2.0 * (x * x)) - 2.0 * (y * y));
+    const double s = -(2.0 * (z * x) - 2.0 * (w * y));
+    const float  V = (float)std::sqrt(1.0 - s * s);
+
+    outAngles.y = ToDeg(std::atan2(s, (double)V));
+    if (s == 1.0 || s == -1.0) { // Gimbal lock case: Yaw and Roll collapse into a single degree of freedom
+        const double E = (1.0 - 2.0 * (x * x)) - 2.0 * (z * z);
+        const double G = -(2.0 * (z * y) - 2.0 * (w * x));
+        outAngles.x = ToDeg(std::atan2(G, E));
+        outAngles.z = ToDeg(std::atan2(0.0, 1.0));
+    } else { // General case
+        const double r = 1.0 / (double)V;
+        outAngles.x = ToDeg(std::atan2((double)C * r, (double)D * r));
+        outAngles.z = ToDeg(std::atan2((double)B * r, (double)A * r));
     }
 }
 

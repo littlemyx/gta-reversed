@@ -37,6 +37,20 @@
 #include "MissionCleanup.h"
 #include "Tasks/PedScriptedTaskRecord.h"
 #include "ModelIndices.h"
+#include "CopPed.h"
+#include "EmergencyPed.h"
+#include "CivilianPed.h"
+#include "Population.h"
+#include "Attractors/PedAttractorPedPlacer.h"
+#include "Tasks/TaskTypes/TaskComplexWanderStandard.h"
+#include "Tasks/TaskTypes/TaskComplexWanderCriminal.h"
+#include "Tasks/TaskTypes/TaskComplexUseEffect.h"
+#include "Tasks/TaskTypes/TaskComplexEnterCarAsPassenger.h"
+#include "Tasks/TaskTypes/TaskSimpleCarDrive.h"
+#include "Tasks/TaskComplexSequence.h"
+#include "Events/EventGroupEvent.h"
+#include "Events/EventLeaderEnteredCarAsDriver.h"
+#include "PedGroupIntelligence.h"
 
 using namespace notsa::script;
 
@@ -130,7 +144,7 @@ void FreezeCarPosition(CVehicle& veh, int32 freeze) {
 
 //! 1308 HAS_CAR_BEEN_DAMAGED_BY_CHAR (case @0x48D0D2): car, char => compare flag
 //! The ped is looked up only if the handle isn't -1. false if the car doesn't exist / has no last damage entity.
-//! handle == -1: the last damage entity is any ped (type 3). Otherwise: it is that ped, or (ped flag @+0x46D mask 0x01 and it is
+//! handle == -1: the last damage entity is any ped (type 3). Otherwise: it is that ped, or (the ped is bInVehicle [+0x46C bit 8] and it is
 //! the ped's vehicle @+0x58C). The ped pointer is dereferenced unchecked (exe crash on a stale handle).
 bool HasCarBeenDamagedByChar(CVehicle* veh, int32 pedHandle) {
     CPed* ped = nullptr;
@@ -151,7 +165,7 @@ bool HasCarBeenDamagedByChar(CVehicle* veh, int32 pedHandle) {
     if (last == ped) {
         result = true;
     }
-    if (ped->bCollidedWithMyVehicle && last == (CEntity*)ped->m_pVehicle) { // dword @+0x46C, `test dh, 1` = byte 0x46D mask 0x01
+    if (ped->bInVehicle && last == (CEntity*)ped->m_pVehicle) { // dword @+0x46C (first ped flags), `test dh, 1` = bit 8 = bInVehicle
         result = true;
     }
     return result;
@@ -902,6 +916,143 @@ void RemoveGroup(CRunningScript& S, int32 handle) {
         CTheScripts::MissionCleanUp.RemoveEntityFromList(handle, (MissionCleanUpEntityType)5);
     }
 }
+//! 1569 CREATE_CHAR_AT_ATTRACTOR (case @0x491C7F): pedType, model, attractor, taskCommand => 1 handle (-1 if the attractor is invalid)
+//! The ped is created like CREATE_CHAR (cop / emergency / civilian by type, PED_MISSION, bAllowMedicsToReviveMe = false), placed at the
+//! attractor (forward offset 0.01f), ClearSpaceForMissionEntity, static-waiting flag if the script uses mission cleanup, added to the world.
+//! Its default task depends on `taskCommand`: 1466 (TASK_STAND_STILL): StandStill(0, true, false, 8.0f); 1503: no task; 1504: WanderCriminal(WALK, rand(0,8), true);
+//! 1502 (TASK_WANDER_STANDARD) and everything else: WanderStandard(WALK, rand(0,8), true). Then the ped gets a CTaskComplexUseEffect through a CEventScriptCommand,
+//! recorded in the scripted task records (opcode = this command), ms_nTotalMissionPeds++ and (cleanup) AddEntityToList(handle, ped).
+int32 CreateCharAtAttractor(CRunningScript& S, eScriptCommands command, int32 pedTypeId, int32 modelId, int32 attractorHandle, int32 taskCommand) {
+    const int32 fxIdx = CTheScripts::GetActualScriptThingIndex(attractorHandle, SCRIPT_THING_2D_EFFECT);
+    if (fxIdx < 0 || fxIdx >= 0x40) {
+        return -1;
+    }
+    const auto pedType             = (ePedType)pedTypeId;
+    uint32     typeSpecificModelId = (uint32)modelId;
+    S.GetCorrectPedModelIndexForEmergencyServiceType(pedType, &typeSpecificModelId);
+    CPed* const ped = [&]() -> CPed* {
+        switch (pedType) {
+        case PED_TYPE_COP:     return new CCopPed{ typeSpecificModelId };
+        case PED_TYPE_MEDIC:
+        case PED_TYPE_FIREMAN: return new CEmergencyPed{ pedType, typeSpecificModelId };
+        default:               return new CCivilianPed{ pedType, typeSpecificModelId };
+        }
+    }();
+    ped->SetCharCreatedBy(PED_MISSION);
+    ped->bAllowMedicsToReviveMe = false;
+    auto* const fx = reinterpret_cast<C2dEffectPedAttractor*>(&CScripted2dEffects::ms_effects[fxIdx]);
+    CPedAttractorPedPlacer::PlacePedAtEffect(*fx, nullptr, ped, 0.01f);
+    CTheScripts::ClearSpaceForMissionEntity(ped->GetPosition(), ped);
+    if (S.m_UsesMissionCleanup) {
+        ped->m_bIsStaticWaitingForCollision = true;
+    }
+    CWorld::Add(ped);
+
+    if (taskCommand != 1503) {
+        CTask* task;
+        switch (taskCommand) {
+        case 1466:
+            task = new CTaskSimpleStandStill{ 0, true, false, 8.0f };
+            break;
+        case 1504:
+            task = new CTaskComplexWanderCriminal{ PEDMOVE_WALK, (uint8)CGeneral::GetRandomNumberInRange(0, 8), true };
+            break;
+        default: // 1502 and all others
+            task = new CTaskComplexWanderStandard{ PEDMOVE_WALK, (uint8)CGeneral::GetRandomNumberInRange(0, 8), true };
+            break;
+        }
+        ped->GetTaskManager().SetTask(task, TASK_PRIMARY_DEFAULT);
+    }
+
+    CEventScriptCommand ev{ TASK_PRIMARY_PRIMARY, new CTaskComplexUseEffect{ fx, nullptr }, false };
+    auto* const added = static_cast<CEventScriptCommand*>(ped->GetIntelligence()->m_eventGroup.Add(&ev, false));
+    const int32 slot  = CPedScriptedTaskRecord::GetVacantSlot();
+    CPedScriptedTaskRecord::ms_scriptedTasks[slot].Set(ped, (int32)command, added);
+    CPopulation::ms_nTotalMissionPeds++;
+    const int32 handle = GetPedPool()->GetRef(ped);
+    if (S.m_UsesMissionCleanup) {
+        CTheScripts::MissionCleanUp.AddEntityToList(handle, MISSION_CLEANUP_ENTITY_TYPE_PED);
+    }
+    return handle;
+}
+
+//! 1585 SET_GROUP_MEMBER (case @0x4923BA): group, ped (pool object, not null-checked)
+//! The ped gets a CEventScriptCommand(primary task, CTaskComplexBeInGroup(group, false)); a full group (7 followers) led by the player drops one follower;
+//! AddFollower, group.Process(). If the leader is in a vehicle (bInVehicle -> m_pVehicle, else its TASK_COMPLEX_ENTER_CAR_AS_DRIVER's car) that has a free
+//! passenger seat, a CEventLeaderEnteredCarAsDriver is evaluated for the group: TASK_GROUP_ENTER_CAR => the ped gets an enter-car-as-passenger group script task and
+//! (once, bHasGroupDriveTask) a default task sequence {CarDrive, previous default}; TASK_GROUP_ENTER_CAR_AND_PERFORM_SEQUENCE => the group intelligence gets
+//! a CEventGroupEvent(leader, new CEventLeaderEnteredCarAsDriver).
+void SetGroupMember(int32 groupHandle, int32 pedHandle) {
+    const int32 idx = CTheScripts::GetActualScriptThingIndex(groupHandle, SCRIPT_THING_PED_GROUP);
+    CPed* const ped = GetPedPool()->GetAtRef(pedHandle);
+    if (idx < 0 || idx >= 8) {
+        return;
+    }
+    CEventScriptCommand ev{ TASK_PRIMARY_PRIMARY, new CTaskComplexBeInGroup{ idx, false }, false };
+    ped->GetIntelligence()->m_eventGroup.Add(&ev, false);
+    auto& group      = CPedGroups::ms_groups[idx];
+    auto& membership = group.GetMembership();
+    if (membership.CountMembersExcludingLeader() >= 7 && membership.GetLeader() && membership.GetLeader()->IsPlayer()) {
+        membership.RemoveNFollowers(1);
+    }
+    membership.AddFollower(ped);
+    group.Process();
+    CPed* const leader = membership.GetLeader();
+    if (!leader) {
+        return;
+    }
+    CVehicle* veh = nullptr;
+    if (leader->bInVehicle) {
+        veh = leader->m_pVehicle;
+    }
+    if (!veh) {
+        const auto task = leader->GetIntelligence()->FindTaskByType(TASK_COMPLEX_ENTER_CAR_AS_DRIVER); // 0x2BD
+        if (!task) {
+            return;
+        }
+        veh = static_cast<CTaskComplexEnterCar*>(task)->GetTargetCar(); // +0xC
+        if (!veh) {
+            return;
+        }
+    }
+    bool hasFreeSeat = false;
+    for (int32 i = 0; i < (int32)veh->m_nMaxPassengers; i++) {
+        if (!veh->m_apPassengers[i]) {
+            hasFreeSeat = true;
+            break;
+        }
+    }
+    if (!hasFreeSeat) {
+        return;
+    }
+    CEventLeaderEnteredCarAsDriver leaderEvent{ veh };
+    leaderEvent.ComputeResponseTaskType(&group);
+    auto& intel = group.GetIntelligence();
+    switch ((int16)leaderEvent.m_TaskId) {
+    case TASK_GROUP_ENTER_CAR_AND_PERFORM_SEQUENCE: { // 0x5E9
+        CEventGroupEvent groupEvent{ leader, new CEventLeaderEnteredCarAsDriver{ veh } };
+        intel.AddEvent(&groupEvent);
+        break;
+    }
+    case TASK_GROUP_ENTER_CAR: { // 0x5E8
+        CTaskComplexEnterCarAsPassenger enterTask{ veh, 0, true };
+        intel.SetScriptCommandTask(ped, enterTask);
+        if (!ped->bHasGroupDriveTask) {
+            ped->bHasGroupDriveTask = true;
+            CTaskComplexSequence seq;
+            seq.AddTask(new CTaskSimpleCarDrive{ veh, nullptr, true });
+            if (const auto def = intel.GetTaskDefault(ped)) {
+                seq.AddTask(def->Clone());
+            }
+            intel.SetDefaultTask(ped, seq);
+        }
+        break;
+    }
+    default:
+        break;
+    }
+}
+
 } // namespace
 
 namespace notsa::script::commands::ported::g13_15 {
@@ -971,7 +1122,9 @@ void notsa::script::commands::ported::g13_15::RegisterHandlers() {
     REGISTER_COMMAND_HANDLER(COMMAND_CLEAR_ATTRACTOR, ClearAttractor);
     REGISTER_COMMAND_HANDLER(COMMAND_GET_SCRIPT_TASK_STATUS, GetScriptTaskStatus);
     REGISTER_COMMAND_HANDLER(COMMAND_CREATE_GROUP, CreateGroup);
+    REGISTER_COMMAND_HANDLER(COMMAND_CREATE_CHAR_AT_ATTRACTOR, CreateCharAtAttractor);
     REGISTER_COMMAND_HANDLER(COMMAND_SET_GROUP_LEADER, SetGroupLeader);
+    REGISTER_COMMAND_HANDLER(COMMAND_SET_GROUP_MEMBER, SetGroupMember);
     REGISTER_COMMAND_HANDLER(COMMAND_REMOVE_GROUP, RemoveGroup);
 
     RegisterTaskHandlers();

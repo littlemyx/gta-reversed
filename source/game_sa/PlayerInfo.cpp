@@ -52,17 +52,14 @@ void CPlayerInfo::InjectHooks() {
     RH_ScopedInstall(GetSpeed_Hook, 0x56DF50);
     RH_ScopedInstall(GivePlayerParachute, 0x56EC40);
     RH_ScopedInstall(SetLastTargetVehicle, 0x56DA80);
+    RH_ScopedInstall(ProcessCarGunCrosshair_Hook, 0x56EC80);
     RH_ScopedInstall(Load, 0x5D3B00);
     RH_ScopedInstall(Save, 0x5D3AC0);
 }
 
 // 0x571920
 CPlayerInfo::CPlayerInfo() {
-    plugin::CallMethod<0x571920, CPlayerInfo*>(this); // see hook
-    return;
-
-    m_PlayerData = CPlayerPedData();
-
+    // NOTE: `m_PlayerData` is constructed by `CPlayerPedData::CPlayerPedData` (0x56F810), which is inlined in the original
     m_pSkinTexture = nullptr;
     m_bParachuteReferenced = false;
     m_nRequireParachuteTimer = 0;
@@ -844,7 +841,7 @@ void CPlayerInfo::Process(uint32 playerIndex) {
     if ((CTimer::m_FrameCounter & 0xF) == 0) {
         const CEntity* const posEntity = m_pPed->bInVehicle ? static_cast<CEntity*>(m_pPed->m_pVehicle) : static_cast<CEntity*>(m_pPed);
         const auto&          pos       = posEntity->GetPosition();
-        m_fRoadDensityAroundPlayer     = plugin::CallMethodAndReturn<float, 0x44EFC0, CPathFind*, float, float>(&ThePaths, pos.x, pos.y); // CPathFind::CalcRoadDensity (declared but not yet reversed)
+        m_fRoadDensityAroundPlayer     = ThePaths.CalcRoadDensity(pos.x, pos.y); // 0x44EFC0
     }
     m_fRoadDensityAroundPlayer = static_cast<float>((static_cast<double>(m_fRoadDensityAroundPlayer) - static_cast<double>(1.0f)) * static_cast<double>(0.6f) + static_cast<double>(1.0f));
     if (m_fRoadDensityAroundPlayer < 0.5f) {
@@ -879,11 +876,93 @@ void CPlayerInfo::Process(uint32 playerIndex) {
     ProcessDistanceStats(*this);
     ProcessChaseValue(*this);
 
-    // NOTSA: `this` isn't really a CPlayerInfo, it's the address of the `m_nCrosshairActivated` member (see `CWeaponEffects::Render`)
-    plugin::CallMethod<0x56EC80, CPlayerInfo*, uint32, CPad*>(reinterpret_cast<CPlayerInfo*>(&m_nCrosshairActivated), playerIndex, pad);
+    ProcessCarGunCrosshair(playerIndex, pad); // 0x56EC80
 
     m_nMoney        = std::min(m_nMoney, 999'999'999);
     m_nDisplayMoney = std::min(m_nDisplayMoney, 999'999'999);
+}
+
+// 0x56EC80 - In the original `this` is the address of `m_nCrosshairActivated` (see `ProcessCarGunCrosshair_Hook`)
+void CPlayerInfo::ProcessCarGunCrosshair(uint32 playerIndex, CPad* pad) {
+    if ((uint8)m_nCrosshairActivated == 0) {
+        return;
+    }
+
+    // NOTE: The original keeps most of the below at extended precision (x87), hence the `double`s.
+    constexpr float STEER_SCALE = 0.00033333333f; // 0x865030
+    auto&           crossX      = m_vecCrosshairTarget.x;
+    auto&           crossY      = m_vecCrosshairTarget.y;
+
+    const float timeStep = CTimer::ms_fTimeStep;
+    crossX = (float)((double)pad->GetSteeringLeftRight() * (double)timeStep * (double)STEER_SCALE + (double)crossX);
+    if (CPad::bInvertLook4Pad) {
+        crossY = (float)((double)pad->GetSteeringUpDown() * (double)CTimer::ms_fTimeStep * (double)STEER_SCALE + (double)crossY);
+    } else {
+        crossY = (float)((double)crossY - (double)pad->GetSteeringUpDown() * (double)CTimer::ms_fTimeStep * (double)STEER_SCALE);
+    }
+
+    // Clamp to [-0.9, 0.9] (NaN-safe in the same way as the original)
+    if (crossX > 0.9f)  { crossX = 0.9f; }
+    if (crossX < -0.9f) { crossX = -0.9f; }
+    if (crossY > 0.9f)  { crossY = 0.9f; }
+    if (crossY < -0.9f) { crossY = -0.9f; }
+
+    if (pad->GetCarGunFired() == 0) {
+        return;
+    }
+
+    CamShakeNoPos(&TheCamera, 0.2f);
+
+    const auto& right = TheCamera.m_mCameraMatrix.GetRight();
+    const auto& fwd   = TheCamera.m_mCameraMatrix.GetForward();
+    const auto& up    = TheCamera.m_mCameraMatrix.GetUp();
+    constexpr double FOV_SCALE = (double)0.008726646f; // 0x8631D4
+
+    // Up component
+    const double v1 = std::tan((double)TheCamera.FindCamFOV() * FOV_SCALE) / (double)CDraw::ms_fAspectRatio * (double)crossY;
+    const float  upX = (float)((double)up.x * v1), upY = (float)((double)up.y * v1), upZ = (float)((double)up.z * v1);
+
+    // Right component
+    const double tan2 = std::tan((double)TheCamera.FindCamFOV() * FOV_SCALE);
+    const float  rX   = (float)((double)right.x * (double)crossX);
+    const float  rY   = (float)((double)right.y * (double)crossX);
+    const double rZ   = (double)crossX * (double)right.z;
+    const float  aX   = (float)((double)rX * tan2);
+    const float  aY   = (float)((double)rY * tan2);
+    const double aZ   = rZ * tan2;
+
+    const double t1 = (double)fwd.x - (double)aX;
+    const float  t2 = (float)((double)fwd.y - (double)aY);
+    const float  t3 = (float)((double)fwd.z - aZ);
+
+    const float dirX = (float)(t1 - (double)upX);
+    const float dirY = (float)((double)t2 - (double)upY);
+    const float dirZ = (float)((double)t3 - (double)upZ);
+
+    const auto& camPos = TheCamera.m_mCameraMatrix.GetPosition();
+    const double dx = (double)dirX * 200.0; // 0x858A48
+    const double dy = (double)dirY * 200.0;
+    const float  dz = (float)((double)dirZ * 200.0);
+    CVector target{
+        (float)(dx + (double)camPos.x),
+        (float)((double)camPos.y + dy),
+        (float)((double)camPos.z + (double)dz)
+    };
+
+    CWeapon weapon{ WEAPON_M4, 5000 };
+    CVector source = TheCamera.GetPosition();
+
+    auto* const ped    = CWorld::Players[playerIndex].m_pPed;
+    const bool  oldDoomAim = ped->bDoomAim;
+    ped->bDoomAim          = false;
+    weapon.FireInstantHit(ped, &source, &source, nullptr, &target, nullptr, true, true);
+    ped->bDoomAim = oldDoomAim;
+}
+
+// 0x56EC80 - Hook wrapper: `this` is the address of `m_nCrosshairActivated`
+void CPlayerInfo::ProcessCarGunCrosshair_Hook(uint32 playerIndex, CPad* pad) {
+    auto* const self = reinterpret_cast<CPlayerInfo*>(reinterpret_cast<uint8*>(this) - offsetof(CPlayerInfo, m_nCrosshairActivated));
+    self->ProcessCarGunCrosshair(playerIndex, pad);
 }
 
 // 0x56F4E0

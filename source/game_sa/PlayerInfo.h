@@ -14,6 +14,7 @@ class CPed;
 class CVehicle;
 class CPlayerPedData;
 class CPlayerPed;
+class CPad;
 class CPlayerInfoSaveStructure;
 
 enum ePlayerState : uint8 {
@@ -100,6 +101,9 @@ public:
     static CEntity* FindObjectToSteal(CPed* ped);
 
     void Process(uint32 playerIndex);
+
+    //! 0x56EC80 - Moves the crosshair using the pad and fires the car gun (instant hit) if requested
+    void ProcessCarGunCrosshair(uint32 playerIndex, CPad* pad);
     void FindClosestCarSectorList(CPtrListDoubleLink<CVehicle*>& ptrList, CPed* ped, float minX, float minY, float maxX, float maxY, float* outVehDist, CVehicle** outVehicle);
     void EvaluateCarPosition(CEntity* car, CPed* ped, float pedToVehDist, float* outDistance, CVehicle** outVehicle);
     void Clear();
@@ -135,6 +139,7 @@ private:
     CVector* GetPos_Hook(CVector* outPos);
 
     CPlayerInfo* Constructor();
+    void ProcessCarGunCrosshair_Hook(uint32 playerIndex, CPad* pad); // `this` is `&m_nCrosshairActivated`
 };
 
 VALIDATE_SIZE(CPlayerInfo, 0x190);

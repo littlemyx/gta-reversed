@@ -8,6 +8,9 @@ void CPedGroups::InjectHooks() {
 
     RH_ScopedInstall(Process, 0x5FC800);
     RH_ScopedInstall(RemoveGroup, 0x5FB870);
+    RH_ScopedInstall(RemoveAllFollowersFromGroup, 0x5FB8A0);
+    RH_ScopedInstall(Init, 0x5FB8C0);
+    RH_ScopedInstall(CleanUpForShutDown, 0x5FB930);
 }
 
 #ifdef ANDROID
@@ -37,12 +40,27 @@ void CPedGroups::RemoveGroup(int32 groupId) {
 
 // 0x5FB8A0
 void CPedGroups::RemoveAllFollowersFromGroup(int32 groupId) {
-    plugin::Call<0x5FB8A0, int32>(groupId);
+    if (ms_activeGroups[groupId]) {
+        GetGroup(groupId).RemoveAllFollowers();
+    }
 }
 
 // 0x5FB8C0
 void CPedGroups::Init() {
-    plugin::Call<0x5FB8C0>();
+    for (auto i = 0u; i < ms_groups.size(); i++) {
+        if (ms_activeGroups[i]) {
+            ms_activeGroups[i] = false;
+            auto& group = ms_groups[i];
+            for (int32 j = 0; j < TOTAL_PED_GROUP_MEMBERS; j++) {
+                if (group.GetMembership().GetMember(j)) {
+                    group.GetMembership().RemoveMember(j); // 0x5F80D0
+                }
+            }
+            group.GetIntelligence().Flush(); // 0x5F7350
+            group.m_bIsMissionGroup = false;
+        }
+        ScriptReferenceIndex[i] = 1;
+    }
 }
 
 // 0x5F7E30
@@ -53,7 +71,15 @@ void CPedGroups::RegisterKillByPlayer() {
 
 // 0x5FB930
 void CPedGroups::CleanUpForShutDown() {
-    plugin::Call<0x5FB930>();
+    for (auto& group : ms_groups) {
+        for (int32 j = 0; j < TOTAL_PED_GROUP_MEMBERS; j++) {
+            if (group.GetMembership().GetMember(j)) {
+                group.GetMembership().RemoveMember(j); // 0x5F80D0
+            }
+        }
+        group.GetIntelligence().Flush(); // 0x5F7350
+        group.m_bIsMissionGroup = false;
+    }
 }
 
 // 0x5F7E40

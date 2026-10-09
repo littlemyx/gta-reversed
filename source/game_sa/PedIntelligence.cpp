@@ -90,6 +90,8 @@ void CPedIntelligence::InjectHooks()
     RH_ScopedInstall(TestForStealthKill, 0x601E00);
     RH_ScopedInstall(RecordEventForScript, 0x602050);
     RH_ScopedInstall(IsInterestingEntity, 0x6020A0);
+    RH_ScopedInstall(RemoveAllInterestingEntities, 0x602320);
+    RH_ScopedInstall(IncrementAngerAtPlayer, 0x421050);
     RH_ScopedInstall(LookAtInterestingEntities, 0x6020D0);
     RH_ScopedInstall(IsPedGoingForCarDoor, 0x602350);
     RH_ScopedInstall(CanSeeEntityWithLights, 0x605550);
@@ -824,7 +826,9 @@ void CPedIntelligence::LookAtInterestingEntities() {
 // unused
 // 0x602320
 void CPedIntelligence::RemoveAllInterestingEntities() {
-    plugin::CallMethod<0x602320, CPedIntelligence*>(this);
+    for (auto& entity : m_apInterestingEntities) {
+        CEntity::ClearReference(entity); // 0x571A00
+    }
 }
 
 // 0x602350

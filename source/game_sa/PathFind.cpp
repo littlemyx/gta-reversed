@@ -85,7 +85,8 @@ void CPathFind::InjectHooks() {
     RH_ScopedInstall(FindNthNodeClosestToCoors, 0x44F8C0);
     //RH_ScopedInstall(FindNodeClosestInRegion, 0x44F2C0);
     //RH_ScopedInstall(CalcDistToAnyConnectingLinks, 0x44F190);
-    //RH_ScopedInstall(CalcRoadDensity, 0x44EFC0);
+    RH_ScopedInstall(CalcRoadDensity, 0x44EFC0);
+    RH_ScopedInstall(FindPedCreationPosBetweenNodes, 0x44DA30);
     RH_ScopedInstall(TestForPedTrafficLight, 0x44D480);
     RH_ScopedInstall(UnMarkAllRoadNodesAsDontWander, 0x44D400);
     RH_ScopedInstall(TidyUpNodeSwitchesAfterMission, 0x44D3B0);
@@ -1246,6 +1247,71 @@ CCarPathLinkAddress CPathFind::FindLinkBetweenNodes(CNodeAddress nodeAddrA, CNod
         }
     }
     return {};
+}
+
+// 0x44EFC0
+float CPathFind::CalcRoadDensity(float x, float y) {
+    // NOTE: The original keeps everything at extended precision (x87), hence the `double`s.
+    double density = 0.0;
+    for (auto areaId = 0u; areaId < NUM_PATH_MAP_AREAS; areaId++) {
+        auto* const nodes = m_pPathNodes[areaId];
+        if (!nodes) {
+            continue;
+        }
+        for (auto i = 0u; i < m_anNumVehicleNodes[areaId]; i++) {
+            const auto& node = nodes[i];
+
+            const float nodeX = node.m_vPos.x;
+            if (!(std::abs((double)nodeX - (double)x) < (double)80.f)) {
+                continue;
+            }
+            const float nodeY = node.m_vPos.y;
+            if (!(std::abs((double)nodeY - (double)y) < (double)80.f)) {
+                continue;
+            }
+
+            for (auto l = 0u; l < node.m_nNumLinks; l++) {
+                const auto linkIdx = node.m_wBaseLinkId + l;
+
+                const auto linked = m_pNodeLinks[areaId][linkIdx];
+                if (!m_pPathNodes[linked.m_wAreaId]) {
+                    continue;
+                }
+                const auto& linkedNode = m_pPathNodes[linked.m_wAreaId][linked.m_wNodeId];
+
+                const double dx  = (double)nodeX - (double)(float)linkedNode.m_vPos.x;
+                const double dy  = (double)nodeY - (double)(float)linkedNode.m_vPos.y;
+                const double len = std::sqrt(dy * dy + dx * dx);
+
+                const auto navi = m_pNaviLinks[areaId][linkIdx];
+                if (!m_pPathNodes[navi.m_wAreaId]) {
+                    continue;
+                }
+                const auto& link = m_pNaviNodes[navi.m_wAreaId][navi.m_wCarPathLinkId];
+                density += (double)link.m_numOppositeDirLanes * len;
+                density += (double)link.m_numSameDirLanes * len;
+            }
+        }
+    }
+    return (float)(density * (double)0.0004f);
+}
+
+// 0x44DA30
+void CPathFind::FindPedCreationPosBetweenNodes(CNodeAddress addr1, CNodeAddress addr2, int32 randomSeed, float* outX, float* outY) {
+    if (addr1.m_wAreaId == (uint16)-1 || !m_pPathNodes[addr1.m_wAreaId]) {
+        return;
+    }
+    if (addr2.m_wAreaId == (uint16)-1 || !m_pPathNodes[addr2.m_wAreaId]) {
+        return;
+    }
+    const auto& node1 = m_pPathNodes[addr1.m_wAreaId][addr1.m_wNodeId];
+    const auto& node2 = m_pPathNodes[addr2.m_wAreaId][addr2.m_wNodeId];
+
+    const auto seed  = (int16)randomSeed;
+    const auto width = (int32)std::min(node1.m_nPathWidth, node2.m_nPathWidth);
+
+    *outX = (float)((double)(((seed & 0xF) - 7) * width) * (double)0.00775f + (double)*outX);
+    *outY = (float)((double)((((int32)seed >> 4 & 0xF) - 7) * width) * (double)0.00775f + (double)*outY);
 }
 
 // 0x4513F0

@@ -243,6 +243,9 @@ public:
     void CheckGrid();
     float CalcRoadDensity(float x, float y);
 
+    //! 0x44DA30 - Picks a random point between the 2 nodes (using the lower 8 bits of `randomSeed`) and offsets `outX` and `outY` by it
+    void FindPedCreationPosBetweenNodes(CNodeAddress addr1, CNodeAddress addr2, int32 randomSeed, float* outX, float* outY);
+
     /*
     * @addr 0x44D1B0
     * 

@@ -5,7 +5,7 @@
 // Function classes (see .notes/P2B_SHIM_PLAN.md): D = direct, A = adapter, W = written here because librw has nothing equivalent.
 // Deliberately NOT here (not called by the game, nothing to adapt): RwEngineRegisterPlugin family (the game registers plugins through the
 // per-type Rp*/Rw*RegisterPlugin thunks), RwEngineGetMetrics, RwEngineGetTextureMemorySize, RwEngineGetMaxTextureSize, RwEngineSetFocus.
-// Not here either: _rwD3D9Device{Set,Get}RestoreCallback (P2B-09), RwD3D9CameraAttachWindow (P2B-02b; only WindowedMode.cpp called it).
+// Not here either: _rwD3D9Device{Set,Get}RestoreCallback (P2B-09, platform.cpp; RwEngineStart/Stop call its NotsaRwPlatform_* hooks), RwD3D9CameraAttachWindow (P2B-02b; only WindowedMode.cpp called it).
 //
 // This file only needs fakerw + librw + the CRT, so the standalone unit test (tests/standalone/rw_engine_test.cpp) builds it without
 // the game's PCH. Excluded from the unity build.
@@ -223,6 +223,7 @@ RwBool RwEngineStart(void) {
         return FALSE;
     }
     PublishDeviceRange();
+    NotsaRwPlatform_OnEngineStarted(); // 09: Reset watch for the restore callback (platform.cpp)
     // librw requests D3DPRESENT_RATE_DEFAULT in startD3D; honour a rate chosen with RwD3D9EngineSetRefreshRate for exclusive modes
     if (s_RefreshRate && !d3d9Globals.present.Windowed && d3d9Globals.present.FullScreen_RefreshRateInHz != s_RefreshRate) {
         d3d9Globals.present.FullScreen_RefreshRateInHz = s_RefreshRate;
@@ -236,6 +237,7 @@ RwBool RwEngineStop(void) {
     if (!Is(rw::Engine::Started) || !rw::engine) {
         return FALSE;
     }
+    NotsaRwPlatform_OnEngineStopping(); // 09 (platform.cpp)
     rw::Engine::stop();
     return TRUE;
 }

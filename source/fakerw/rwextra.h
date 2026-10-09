@@ -318,3 +318,9 @@ RwInt32 RpGeometrySetStreamAlwaysCallBack(RwUInt32 pluginID, RwPluginDataChunkAl
 RwInt32 RpMaterialSetStreamAlwaysCallBack(RwUInt32 pluginID, RwPluginDataChunkAlwaysCallBack alwaysCB);
 RwInt32 RpAtomicSetStreamRightsCallBack(RwUInt32 pluginID, RwPluginDataChunkRightsCallBack rightsCB);
 RwInt32 RpMaterialSetStreamRightsCallBack(RwUInt32 pluginID, RwPluginDataChunkRightsCallBack rightsCB);
+// 09 ---------------------------------------------------------------------------------------------------------------------------------
+// P2B-09 (standalone/rw/platform.cpp): lost-device / Reset watch behind _rwD3D9DeviceSetRestoreCallback. engine.cpp calls the first two from
+// RwEngineStart / RwEngineStop; the counter is for diagnostics and tests.
+void     NotsaRwPlatform_OnEngineStarted();
+void     NotsaRwPlatform_OnEngineStopping();
+unsigned NotsaRwPlatform_DeviceResetCount();

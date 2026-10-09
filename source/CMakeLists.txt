@@ -342,6 +342,22 @@ if (${RE_PROJECT}_RW_LIBRW)
     target_include_directories(rw_atomic_clump_test BEFORE PRIVATE fakerw)
     target_link_libraries(rw_atomic_clump_test PRIVATE librw d3d9 user32)
     set_target_properties(rw_atomic_clump_test PROPERTIES COMPILE_WARNING_AS_ERROR OFF)
+    # P2B-09 unit test of platform.cpp (device restore callback on Reset, gamma ramp through the engine's device); Wine-runnable, no game data
+    add_executable(rw_platform_test EXCLUDE_FROM_ALL
+        "${PROJECT_SOURCE_DIR}/tests/standalone/rw_platform_test.cpp"
+        standalone/rw/platform.cpp
+        standalone/rw/engine.cpp
+        standalone/rw/rwglobals.cpp
+        standalone/rw/raster.cpp
+        standalone/rw/image.cpp
+        standalone/rw/frame.cpp
+        standalone/rw/camera.cpp
+    )
+    target_compile_features(rw_platform_test PRIVATE cxx_std_23)
+    target_compile_definitions(rw_platform_test PRIVATE NOTSA_RW_LIBRW NOTSA_RW_UNIT_TEST RW_D3D9)
+    target_include_directories(rw_platform_test BEFORE PRIVATE fakerw)
+    target_link_libraries(rw_platform_test PRIVATE librw d3d9 user32)
+    set_target_properties(rw_platform_test PROPERTIES COMPILE_WARNING_AS_ERROR OFF)
 endif()
 
 #--------------------------------------------------------------------

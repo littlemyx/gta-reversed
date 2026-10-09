@@ -381,6 +381,33 @@ if (${RE_PROJECT}_RW_LIBRW)
     target_include_directories(rw_skin_hanim_test BEFORE PRIVATE fakerw)
     target_link_libraries(rw_skin_hanim_test PRIVATE librw d3d9 user32)
     set_target_properties(rw_skin_hanim_test PROPERTIES COMPILE_WARNING_AS_ERROR OFF)
+
+    # P2B-07 unit test of the RxPipeline façade + stock AllInOne callbacks (needs a D3D9 HAL device: Wine/wined3d is fine; optional SA DFF/TXD paths on the command line)
+    add_executable(rw_pipeline_test EXCLUDE_FROM_ALL
+        "${PROJECT_SOURCE_DIR}/tests/standalone/rw_pipeline_test.cpp"
+        standalone/rw/pipeline.cpp
+        standalone/rw/renderstate.cpp
+        standalone/rw/rwd3d_ff.cpp
+        standalone/rw/rwglobals.cpp
+        standalone/rw/atomic.cpp
+        standalone/rw/clump.cpp
+        standalone/rw/plugins.cpp
+        standalone/rw/frame.cpp
+        standalone/rw/camera.cpp
+        standalone/rw/light.cpp
+        standalone/rw/world.cpp
+        standalone/rw/material.cpp
+        standalone/rw/geometry.cpp
+        standalone/rw/raster.cpp
+        standalone/rw/image.cpp
+        standalone/rw/texture.cpp
+        standalone/rw/texdict.cpp
+    )
+    target_compile_features(rw_pipeline_test PRIVATE cxx_std_23)
+    target_compile_definitions(rw_pipeline_test PRIVATE NOTSA_RW_LIBRW NOTSA_RW_UNIT_TEST RW_D3D9)
+    target_include_directories(rw_pipeline_test BEFORE PRIVATE fakerw)
+    target_link_libraries(rw_pipeline_test PRIVATE librw d3d9 user32)
+    set_target_properties(rw_pipeline_test PROPERTIES COMPILE_WARNING_AS_ERROR OFF)
     # P2B-06 unit test of Im2D / Im3D (not part of `all`): ninja rw_im2d_im3d_test. Hidden window + librw's D3D9 device (Wine/wined3d is fine); pixels are read back
     if (EXISTS "${PROJECT_SOURCE_DIR}/tests/standalone/rw_im2d_im3d_test.cpp")
         add_executable(rw_im2d_im3d_test EXCLUDE_FROM_ALL
@@ -457,6 +484,8 @@ if (${RE_PROJECT}_RW_LIBRW)
     set_source_files_properties(standalone/rw/skin.cpp standalone/rw/hanim.cpp PROPERTIES SKIP_UNITY_BUILD_INCLUSION ON)
     # P2B-06: Im2D/Im3D over the D3D9 device, same standalone style
     set_source_files_properties(standalone/rw/im2d_im3d.cpp PROPERTIES SKIP_UNITY_BUILD_INCLUSION ON)
+    # P2B-07: pipeline.cpp includes the private d3d9 header and has anonymous-namespace helpers
+    set_source_files_properties(standalone/rw/pipeline.cpp PROPERTIES SKIP_UNITY_BUILD_INCLUSION ON)
 endif()
 
 target_link_libraries(${RE_PROJECT_LIB_NAME} PRIVATE

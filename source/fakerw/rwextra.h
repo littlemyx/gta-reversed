@@ -363,3 +363,32 @@ RwBool RwIm3DRenderTriangle(RwInt32 vert1, RwInt32 vert2, RwInt32 vert3);
 #define RwIm3DVertexSetNormal(_vert, _nx, _ny, _nz) RxObjSpace3DVertexSetNormal(_vert, _nx, _ny, _nz)
 #define RwIm3DVertexGetNormal(_vert)        (&((_vert)->normal))
 #define RwIm3DVertexCopyRGBA(dst, src)      ((dst)->color = (src)->color)
+
+//--------------------------------------------------------------------------------------------------
+// 07 (standalone/rw/pipeline.cpp): RxPipeline façade over librw's d3d9::ObjPipeline + the stock D3D9 AtomicAllInOne callbacks (ported from the
+// exe: node body 0x7575F0, instance 0x7578C0, reinstance 0x758270, lighting 0x757400, render 0x756DF0, resentry creation 0x756960).
+// An RxPipeline* is a rw::d3d9::ObjPipeline* (see fakerw.h): atomic->pipeline = pipe renders through the node body. The instanced data of a
+// geometry is a contiguous block [RwResEntry][RxD3D9ResEntryHeader][RxD3D9InstanceData x numMeshes] (what the game's `(header*)(resEntry + 1)` /
+// `(mesh*)(header + 1)` casts expect), referenced from rw::Geometry::instData (freed with the geometry by the NativeData plugin destructor).
+//--------------------------------------------------------------------------------------------------
+typedef void (*RxD3D9AllInOneLightingCallBack)(void* object);
+RxD3D9AllInOneLightingCallBack RxD3D9AllInOneGetLightingCallBack(RxPipelineNode* node);
+void                           RxD3D9AllInOneSetLightingCallBack(RxPipelineNode* node, RxD3D9AllInOneLightingCallBack callback);
+RxD3D9AllInOneRenderCallBack   RxD3D9AllInOneGetRenderCallBack(RxPipelineNode* node);
+
+// Stock callbacks (the node's defaults; RxD3D9AllInOneGetInstanceCallBack / GetReinstanceCallBack / GetRenderCallBack return these)
+RwBool _rpD3D9AtomicDefaultInstanceCallback(void* object, RxD3D9ResEntryHeader* resEntryHeader, RwBool reinstance);
+RwBool _rpD3D9AtomicDefaultReinstanceCallback(void* object, RwResEntry* resEntry, RxD3D9AllInOneInstanceCallBack instanceCallback);
+void   _rpD3D9AtomicDefaultLightingCallback(void* object);
+void   _rpD3D9AtomicDefaultRenderCallback(RwResEntry* resEntry, void* object, RwUInt8 type, RwUInt32 flags);
+
+// exe 0x7FE0A0 / 0x7FE190: the game's DN pipeline calls the first one through plugin::Call<0x7FE0A0> (08b must switch it to this)
+void   _rwD3D9RenderStateVertexAlphaEnable(RwBool enable);
+RwBool _rwD3D9RenderStateVertexAlphaIsEnabled();
+
+// Installs the façade as the D3D9 default pipeline of the started librw engine (atomics without ->pipeline then render through the stock AllInOne
+// node, as RW's did) and hooks the NativeData plugin destructor so that instanced data is released with its geometry. Idempotent; also done lazily by
+// RxPipelineCreate / RxNodeDefinitionGetD3D9AtomicAllInOne. Call it after RwEngineStart (the default pipeline is rebuilt by every Engine::open).
+void RwShimPipelineEnsure();
+// Drops the shim's default pipeline (call before RwEngineStop/Close; the registry of instanced data is cleared)
+void RwShimPipelineShutdown();

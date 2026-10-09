@@ -22,6 +22,7 @@
 #include <string>
 #include <vector>
 
+void NotsaRwRenderState_OnEngineStarted();
 static int g_fail = 0, g_pass = 0;
 static bool g_verbose = false;
 #define CHECK(c) do { const bool ok_ = !!(c); if (ok_) ++g_pass; else ++g_fail; if (!ok_ || g_verbose) std::printf("%-4s %s\n", ok_ ? "ok" : "FAIL", #c); } while (0)
@@ -476,6 +477,28 @@ static void PixelTests() {
     RpWorldDestroy(world);
 }
 
+// D3DRS_CLIPPING after a stock render (exe 0x756E1D: on unless the world bounding sphere is completely inside the frustum)
+static void ClippingTests() {
+    std::printf("--- stock render callback: D3DRS_CLIPPING\n");
+    RpMaterial* m = MakeMaterial({ 255, 255, 255, 255 });
+    RpGeometry* g = MakeTri(rpGEOMETRYPRELIT, m);
+    RwFrame* f = nullptr;
+    RpAtomic* a = MakeAtomic(g, &f);
+    auto clippingAfterRender = [&](float x, float y, float z) {
+        RwV3d t{ x, y, z };
+        RwFrameTranslate(f, &t, rwCOMBINEREPLACE);
+        BeginScene(); RpAtomicRender(a);
+        DWORD v = 0xDEAD; RwD3D9GetRenderState(D3DRS_CLIPPING, &v);
+        EndScene();
+        return v;
+    };
+    CHECK(clippingAfterRender(0, 0, 40) == FALSE);     // sphere well inside the frustum: clipping off
+    CHECK(clippingAfterRender(0, 0, 0) == TRUE);       // sphere (radius ~3) straddles the side planes at z = 5 (half width 2.5): boundary -> on
+    CHECK(clippingAfterRender(500, 0, 0) == TRUE);     // fully outside -> on
+    CHECK(clippingAfterRender(0, 0, 40) == FALSE);     // and off again
+    FreeAtomic(a); RpGeometryDestroy(g); RpMaterialDestroy(m);
+}
+
 // ---------------------------------------------------------------------------------------------------------------------------------
 // the game's usage: custom callbacks wrapping the defaults
 static int g_instCalls, g_instReinst, g_reinstCalls, g_renderCalls, g_lightCalls;
@@ -575,6 +598,16 @@ static void CustomPipelineTests() {
     CHECKV(rw::d3d::d3d9Globals.numVertexBuffers == vb0 + 1, "full re-instance released the old vertex buffer (%d)", rw::d3d::d3d9Globals.numVertexBuffers - vb0);
     CheckInstanceInvariants(a, "after full re-instance");
 
+    // more than one morph target (exe 0x758270): the STOCK instance callback runs directly (positions + normals added to the lock mask), the node's
+    // instance callback is not called, and lockedSinceInst is restored afterwards
+    {
+        const int calls = g_instCalls;
+        g->numMorphTargets = 2; g->lockedSinceInst = rpGEOMETRYLOCKPRELIGHT;
+        CHECK(_rpD3D9AtomicDefaultReinstanceCallback(a, (RwResEntry*)((char*)g->instData - sizeof(RwResEntry)), MyInstance) == TRUE);
+        CHECK(g_instCalls == calls && g->lockedSinceInst == rpGEOMETRYLOCKPRELIGHT);
+        g->numMorphTargets = 1; g->lockedSinceInst = 0;
+    }
+
     FreeAtomic(a); RpGeometryDestroy(g); RpMaterialDestroy(mat);
     CHECKV(rw::d3d::d3d9Globals.numVertexBuffers == vb0, "buffers freed with the geometry (%d)", rw::d3d::d3d9Globals.numVertexBuffers - vb0);
     CHECK(RxPipelineDestroy(pipe) == TRUE);
@@ -652,6 +685,8 @@ int main(int argc, char** argv) {
     CHECK(rw::Engine::open(&params));
     rw::Engine::start();
     g_dev = rw::d3d::d3ddevice;
+    if (g_dev) NotsaRwRenderState_OnEngineStarted();         // what RwEngineStart does via platform.cpp: RW's render-state defaults
+    if (g_dev) RwRenderStateSet(rwRENDERSTATECULLMODE, reinterpret_cast<void*>(uintptr_t(rwCULLMODECULLNONE))); // RW's default is BACK (the game sets its own); the test triangle's winding is not meant to be culled
     std::printf("D3D9 device: %s\n", g_dev ? "yes" : "NO (nothing testable without a device)");
     RwEngineInstance->dOpenDevice.zBufferNear = 0; RwEngineInstance->dOpenDevice.zBufferFar = 1;
     if (g_dev) {
@@ -663,6 +698,7 @@ int main(int argc, char** argv) {
         PipelineApiTests();
         DefaultPipelineTests();
         PixelTests();
+        ClippingTests();
         CustomPipelineTests();
         for (const char* p : dffs) DffTests(p);
         RwCameraSetRaster(g_cam, nullptr); RwCameraSetZRaster(g_cam, nullptr);

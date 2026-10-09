@@ -537,7 +537,7 @@ RwBool ReinstanceCallback(void* object, RwResEntry* resEntry, RxD3D9AllInOneInst
     if (geo->lockedSinceInst != 0) {
         const auto saved = geo->lockedSinceInst;
         geo->lockedSinceInst = static_cast<std::uint16_t>(saved | rpGEOMETRYLOCKVERTICES | rpGEOMETRYLOCKNORMALS);
-        instanceCallback(object, HeaderOf(resEntry), TRUE);
+        InstanceCallback(object, HeaderOf(resEntry), TRUE); // exe 0x7582A9: calls the stock instance callback (0x7578C0) directly, not the node's
         geo->lockedSinceInst = saved;
     }
     return TRUE;
@@ -581,6 +581,8 @@ void DirectionalLightEnable(rw::Light* light) { // exe 0x756260: D3DLIGHT9 {DIRE
     l.Diffuse.g = light->color.green;
     l.Diffuse.b = light->color.blue;
     l.Diffuse.a = 1.0f;
+    l.Specular.a = 1.0f; // exe 0x755E50..0x755EF0: the static D3DLIGHT9 (0xC92648) is initialised with alpha 1.0 for diffuse, specular and ambient
+    l.Ambient.a  = 1.0f;
     if (rw::Frame* f = light->getFrame()) {
         const rw::Matrix* m = f->getLTM();
         l.Direction = {m->at.x, m->at.y, m->at.z};
@@ -1030,6 +1032,19 @@ RwBool _rpD3D9AtomicDefaultReinstanceCallback(void* object, RwResEntry* resEntry
 }
 void _rpD3D9AtomicDefaultLightingCallback(void* object) { LightingCallback(object); }
 void _rpD3D9AtomicDefaultRenderCallback(RwResEntry* resEntry, void* object, RwUInt8 type, RwUInt32 flags) { RenderCallback(resEntry, object, type, flags); }
+
+// Port of the clip decision at the top of the stock render callback (exe 0x756E1D..0x756E5B): D3DRS_CLIPPING (136) is on unless the object's world
+// bounding sphere lies completely inside the current camera's frustum (0x7FAD30: every plane (n.c - d) <= -r, == librw's SPHEREINSIDE). `type` 1 is an
+// atomic (the only kind the shim renders; the exe's other branch tests a world sector box with 0x7FAD90).
+void _rwD3D9EnableClippingIfNeeded(void* object, RwUInt32 type) {
+    bool inside = false;
+    RwCamera* camera = RwEngineInstance ? RwEngineInstance->curCamera : nullptr;
+    if (camera && object && type == 1) {
+        const RwSphere* sphere = RpAtomicGetWorldBoundingSphere(static_cast<RpAtomic*>(object));
+        inside = sphere && RwCameraFrustumTestSphere(camera, sphere) == rwSPHEREINSIDE;
+    }
+    RwD3D9SetRenderState(D3DRS_CLIPPING, inside ? FALSE : TRUE);
+}
 
 // exe 0x7FE0A0 / 0x7FE190 are RW's rwRENDERSTATEVERTEXALPHAENABLE setter / getter
 void _rwD3D9RenderStateVertexAlphaEnable(RwBool enable) {

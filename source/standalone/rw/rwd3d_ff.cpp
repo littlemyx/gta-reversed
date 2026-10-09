@@ -59,6 +59,9 @@ struct SurfPropCache {
     float ambSat[3] = {0, 0, 0};
 } g_sp;
 D3DMATERIAL9 g_spMaterial{};
+// the exe's material cache (0xC98AF8, 17 dwords): the last material RwD3D9SetMaterial / RwD3D9SetSurfaceProperties handed to the device
+D3DMATERIAL9 g_matCache{};
+static_assert(sizeof(D3DMATERIAL9) == 17 * 4, "exe compares 0x11 dwords");
 
 // Set the D3D material through librw's cache. No-op without a device.
 bool ApplyMaterial(const D3DMATERIAL9* m) {
@@ -158,8 +161,7 @@ RwBool RwD3D9EnableLight(RwInt32 index, RwBool enable) {
         return FALSE;
     }
     if (static_cast<size_t>(index) >= g_lights.size()) {
-        g_lights.resize(index + 1, D3DLIGHT9{});
-        g_lightEnabled.resize(index + 1, false);
+        return TRUE; // exe 0x7FA860: a light index that was never SetLight'ed is ignored (TRUE), nothing is allocated or enabled
     }
     g_lightEnabled[index] = enable != FALSE;
     if (!Dev()) {
@@ -168,13 +170,18 @@ RwBool RwD3D9EnableLight(RwInt32 index, RwBool enable) {
     return SUCCEEDED(Dev()->LightEnable(index, enable ? TRUE : FALSE));
 }
 
+// Port of the exe's RwD3D9SetMaterial (0x7FC430): identical to the cached material -> TRUE and nothing else; otherwise remember it, zero the
+// early-out cache's flags word (0x7FC470; this does NOT invalidate a cached flags==0 entry, as in the exe: a SetSurfaceProperties call that
+// repeats the previous arguments with flags 0 right after a SetMaterial keeps the material set here) and hand it to the device.
 RwBool RwD3D9SetMaterial(const void* material) {
     if (!material) {
         return FALSE;
     }
-    // A direct material change makes RwD3D9SetSurfaceProperties' early-out cache stale (the exe zeroes its flags word here, which does not
-    // invalidate a cached flags==0 entry; an impossible flags value does).
-    g_sp.flags = 0xFFFFFFFFu;
+    if (std::memcmp(&g_matCache, material, sizeof(g_matCache)) == 0) {
+        return TRUE;
+    }
+    std::memcpy(&g_matCache, material, sizeof(g_matCache));
+    g_sp.flags = 0;
     return ApplyMaterial(static_cast<const D3DMATERIAL9*>(material)) ? TRUE : FALSE;
 }
 
@@ -188,8 +195,9 @@ RwBool RwD3D9SetSurfaceProperties(const RwSurfaceProperties* sp, const RwRGBA* c
     std::memcpy(&colorBits, color, sizeof(colorBits));
 
     const float ambSat[3] = {AmbientSaturated.red, AmbientSaturated.green, AmbientSaturated.blue};
-    if (g_sp.ambient == sp->ambient && g_sp.diffuse == sp->diffuse && g_sp.color == colorBits && g_sp.flags == f &&
-        std::memcmp(g_sp.ambSat, ambSat, sizeof(ambSat)) == 0) {
+    // the exe compares the cached values as dwords (0x7FC4E4..0x7FC53B), not as floats
+    if (std::memcmp(&g_sp.ambient, &sp->ambient, 4) == 0 && std::memcmp(&g_sp.diffuse, &sp->diffuse, 4) == 0 && g_sp.color == colorBits &&
+        g_sp.flags == f && std::memcmp(g_sp.ambSat, ambSat, sizeof(ambSat)) == 0) {
         return TRUE;
     }
     g_sp.ambient = sp->ambient;
@@ -204,9 +212,10 @@ RwBool RwD3D9SetSurfaceProperties(const RwSurfaceProperties* sp, const RwRGBA* c
     D3DMATERIAL9&   m        = g_spMaterial;
 
     if (modulate) {
-        const float r = color->red, g = color->green, b = color->blue, a = color->alpha;
-        const float d = sp->diffuse * inv255;
-        m.Diffuse = {r * d, g * d, b * d, a * inv255};
+        // x87: the scale factors stay in extended precision on the FPU stack (0x7FC59D: diffuse * (1/255) is not rounded to float); doubles
+        const double r = color->red, g = color->green, b = color->blue, a = color->alpha;
+        const double d = double(sp->diffuse) * double(inv255);
+        m.Diffuse = {float(r * d), float(g * d), float(b * d), float(a * double(inv255))};
 
         if (prelit) {
             const u32 argb = (u32(color->alpha) << 24) | (u32(color->red) << 16) | (u32(color->green) << 8) | u32(color->blue);
@@ -220,8 +229,9 @@ RwBool RwD3D9SetSurfaceProperties(const RwSurfaceProperties* sp, const RwRGBA* c
             RwD3D9SetRenderState(D3DRS_AMBIENTMATERIALSOURCE, D3DMCS_MATERIAL);
             RwD3D9SetRenderState(D3DRS_EMISSIVEMATERIALSOURCE, D3DMCS_MATERIAL);
         }
-        const float k = sp->ambient * inv255;
-        const D3DCOLORVALUE lit = {r * ambSat[0] * k, g * ambSat[1] * k, b * ambSat[2] * k, m.Ambient.a};
+        const double k = double(sp->ambient) * double(inv255); // fld ambient; fmul 1/255 (0x7FC609), kept as st(1)
+        // (byte * AmbientSaturated) * k : fild; fmul [AmbientSaturated]; fmul st(1) (0x7FC722..) - one rounding to float at the store
+        const D3DCOLORVALUE lit = {float(r * double(ambSat[0]) * k), float(g * double(ambSat[1]) * k), float(b * double(ambSat[2]) * k), m.Ambient.a};
         const D3DCOLORVALUE zero = {0.f, 0.f, 0.f, 0.f};
         // prelit: the ambient colour comes from the vertices (COLOR1) so the lit term goes into the emissive slot; otherwise into ambient
         m.Ambient  = prelit ? D3DCOLORVALUE{0.f, 0.f, 0.f, m.Ambient.a} : D3DCOLORVALUE{lit.r, lit.g, lit.b, m.Ambient.a};
@@ -245,6 +255,7 @@ RwBool RwD3D9SetSurfaceProperties(const RwSurfaceProperties* sp, const RwRGBA* c
         m.Ambient = (k == 1.0f) ? D3DCOLORVALUE{ambSat[0], ambSat[1], ambSat[2], m.Ambient.a}
                                 : D3DCOLORVALUE{ambSat[0] * k, ambSat[1] * k, ambSat[2] * k, m.Ambient.a};
     }
+    std::memcpy(&g_matCache, &m, sizeof(g_matCache)); // exe 0x7FCA91: rep movsd 0x11 dwords to the material cache, then the device call
     return ApplyMaterial(&m) ? TRUE : FALSE;
 }
 
@@ -301,14 +312,12 @@ void RwD3D9DrawPrimitive(RwUInt32 primitiveType, RwUInt32 startVertex, RwUInt32 
     Dev()->DrawPrimitive(static_cast<D3DPRIMITIVETYPE>(primitiveType), startVertex, primitiveCount);
 }
 
-// S: D3D clips in hardware; RW only forced clipping on for objects partially outside the frustum.
-void _rwD3D9EnableClippingIfNeeded(void* /*object*/, RwUInt32 /*type*/) {}
-
 namespace notsa_rw02c {
 // Test hook: drop the SetSurfaceProperties early-out cache and the light/transform shadows.
 void ResetFixedFunctionShadow() {
     g_sp = SurfPropCache{};
     g_spMaterial = D3DMATERIAL9{};
+    g_matCache = D3DMATERIAL9{};
     g_lights.clear();
     g_lightEnabled.clear();
     g_transforms = Transforms{};

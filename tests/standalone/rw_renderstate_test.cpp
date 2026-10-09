@@ -3,6 +3,7 @@
 // real device created by librw (hidden window), states read back from IDirect3DDevice9. If no device can be created part 2 is reported SKIPPED.
 // Exit code 0 = all checks passed.
 #include "fakerw.h"
+#include <src/d3d/rwd3dimpl.h>
 
 #include <cstdio>
 #include <cstring>
@@ -10,6 +11,8 @@
 #include <cmath>
 
 RwRGBAReal AmbientSaturated{}; // normally defined in rwglobals.cpp (kept out of this test's link line)
+
+void NotsaRwRenderState_OnEngineStarted(); // renderstate.cpp: RW's default state, applied by RwEngineStart via platform.cpp
 
 namespace notsa_rw02c {
 void ResetRenderStateShadow();
@@ -32,7 +35,6 @@ static const StateCase kCases[] = {
     {rwRENDERSTATETEXTUREADDRESS,      rwTEXTUREADDRESSCLAMP, rwTEXTUREADDRESSWRAP, "TEXTUREADDRESS"},
     {rwRENDERSTATETEXTUREADDRESSU,     rwTEXTUREADDRESSMIRROR, rwTEXTUREADDRESSBORDER, "TEXTUREADDRESSU"},
     {rwRENDERSTATETEXTUREADDRESSV,     rwTEXTUREADDRESSBORDER, rwTEXTUREADDRESSMIRROR, "TEXTUREADDRESSV"},
-    {rwRENDERSTATETEXTUREPERSPECTIVE,  0, 1, "TEXTUREPERSPECTIVE"},
     {rwRENDERSTATEZTESTENABLE,         0, 1, "ZTESTENABLE"},
     {rwRENDERSTATESHADEMODE,           rwSHADEMODEFLAT, rwSHADEMODEGOURAUD, "SHADEMODE"},
     {rwRENDERSTATEZWRITEENABLE,        0, 1, "ZWRITEENABLE"},
@@ -76,6 +78,14 @@ static void TestRoundTrips(const char* what) {
     Set(rwRENDERSTATETEXTUREADDRESSU, rwTEXTUREADDRESSWRAP);
     CHECK(Get(rwRENDERSTATETEXTUREADDRESSU) == rwTEXTUREADDRESSWRAP && Get(rwRENDERSTATETEXTUREADDRESSV) == rwTEXTUREADDRESSCLAMP);
     CHECK(Get(rwRENDERSTATETEXTUREADDRESS) == 0); // U != V -> no single mode (rwTEXTUREADDRESSNATEXTUREADDRESS)
+    { // exe 0x7FD868: ... and the call itself reports FALSE (value 0 written)
+        RwUInt32 a = 0xDEAD; CHECK(RwRenderStateGet(rwRENDERSTATETEXTUREADDRESS, &a) == FALSE && a == 0);
+        Set(rwRENDERSTATETEXTUREADDRESSV, rwTEXTUREADDRESSWRAP);
+        a = 0xDEAD; CHECK(RwRenderStateGet(rwRENDERSTATETEXTUREADDRESS, &a) == TRUE && a == rwTEXTUREADDRESSWRAP);
+    }
+    // TEXTUREPERSPECTIVE (exe 0x7FE8CF / 0x7FD810): Set changes nothing and returns (value != 0); Get is unsupported (FALSE, nothing written)
+    CHECK(Set(rwRENDERSTATETEXTUREPERSPECTIVE, 0) == FALSE && Set(rwRENDERSTATETEXTUREPERSPECTIVE, 1) == TRUE);
+    { RwUInt32 a = 0xDEAD; CHECK(RwRenderStateGet(rwRENDERSTATETEXTUREPERSPECTIVE, &a) == FALSE && a == 0xDEAD); }
     // a state set to 0 (RWRSTATE(rwRENDERSTATENARENDERSTATE), seen in the game) reads back false
     Set(rwRENDERSTATEZWRITEENABLE, rwRENDERSTATENARENDERSTATE);
     CHECK(Get(rwRENDERSTATEZWRITEENABLE) == 0);
@@ -84,7 +94,7 @@ static void TestRoundTrips(const char* what) {
     CHECK(Set(rwRENDERSTATESRCBLEND, 99) == FALSE && Get(rwRENDERSTATESRCBLEND) == rwBLENDONE);
     Set(rwRENDERSTATECULLMODE, rwCULLMODECULLBACK);
     CHECK(Set(rwRENDERSTATECULLMODE, 7) == FALSE && Get(rwRENDERSTATECULLMODE) == rwCULLMODECULLBACK);
-    CHECK(Set(rwRENDERSTATENARENDERSTATE, 1) == FALSE && Set(static_cast<RwRenderState>(19), 1) == FALSE && Set(static_cast<RwRenderState>(40), 1) == FALSE);
+    CHECK(Set(rwRENDERSTATENARENDERSTATE, 1) == FALSE && Set(static_cast<RwRenderState>(18), 1) == FALSE && Set(static_cast<RwRenderState>(19), 1) == FALSE && Set(static_cast<RwRenderState>(40), 1) == FALSE);
     RwUInt32 v;
     CHECK(RwRenderStateGet(rwRENDERSTATENARENDERSTATE, &v) == FALSE && RwRenderStateGet(rwRENDERSTATEZTESTENABLE, nullptr) == FALSE);
 }
@@ -185,7 +195,52 @@ static void TestDevice() {
     // default read-back before any Set comes from librw's loaded device state
     RwUInt32 v = 0;
     RwD3D9GetRenderState(D3DRS_LIGHTING, &v);
-    CHECK(v == 1); // D3D default (what CustomBuilding*/CarEnvMap query)
+    CHECK(v == 1); // D3D default (what CustomBuilding*/CarEnvMap query) - until RW's defaults are applied below
+
+    // RwEngineStart -> NotsaRwPlatform_OnEngineStarted -> this: RW's render-state defaults (exe 0x7FCAC0..0x7FD0F6) on librw's caches + the device
+    NotsaRwRenderState_OnEngineStarted();
+    flush();
+    CHECK(DevRS(D3DRS_ZENABLE) != D3DZB_FALSE && DevRS(D3DRS_ZWRITEENABLE) == TRUE && DevRS(D3DRS_ZFUNC) == D3DCMP_LESSEQUAL);
+    CHECK(DevRS(D3DRS_CULLMODE) == D3DCULL_CW);                      // RW default cull BACK
+    CHECK(DevRS(D3DRS_ALPHAFUNC) == D3DCMP_GREATER && DevRS(D3DRS_ALPHAREF) == 0 && DevRS(D3DRS_ALPHABLENDENABLE) == FALSE && DevRS(D3DRS_ALPHATESTENABLE) == FALSE);
+    CHECK(DevRS(D3DRS_SRCBLEND) == D3DBLEND_SRCALPHA && DevRS(D3DRS_DESTBLEND) == D3DBLEND_INVSRCALPHA && DevRS(D3DRS_SHADEMODE) == D3DSHADE_GOURAUD);
+    CHECK(DevRS(D3DRS_LIGHTING) == FALSE && DevRS(D3DRS_AMBIENT) == 0xFFFFFFFFu && DevRS(D3DRS_LOCALVIEWER) == FALSE && DevRS(D3DRS_SPECULARENABLE) == FALSE);
+    CHECK(DevRS(D3DRS_DIFFUSEMATERIALSOURCE) == D3DMCS_MATERIAL && DevRS(D3DRS_AMBIENTMATERIALSOURCE) == D3DMCS_MATERIAL && DevRS(D3DRS_SPECULARMATERIALSOURCE) == D3DMCS_MATERIAL);
+    CHECK(DevRS(D3DRS_FOGENABLE) == FALSE && DevRS(D3DRS_FOGDENSITY) == 0x3F800000u);
+    {   // fog type (exe 0x7FE515): table fog only when the device has table + W fog, else vertex fog
+        const DWORD caps = rw::d3d::d3d9Globals.caps.RasterCaps;
+        const bool table = (caps & D3DPRASTERCAPS_FOGTABLE) && (caps & 0x100000);
+        CHECK(DevRS(D3DRS_FOGTABLEMODE) == (table ? D3DFOG_LINEAR : D3DFOG_NONE) && DevRS(D3DRS_FOGVERTEXMODE) == (table ? D3DFOG_NONE : D3DFOG_LINEAR));
+    }
+    for (DWORD st = 0; st < 8; st++) {
+        DWORD mag = 0, min = 0, mip = 0, au = 0, av = 0, bc = 0, an = 0;
+        dev->GetSamplerState(st, D3DSAMP_MAGFILTER, &mag); dev->GetSamplerState(st, D3DSAMP_MINFILTER, &min); dev->GetSamplerState(st, D3DSAMP_MIPFILTER, &mip);
+        dev->GetSamplerState(st, D3DSAMP_ADDRESSU, &au); dev->GetSamplerState(st, D3DSAMP_ADDRESSV, &av);
+        dev->GetSamplerState(st, D3DSAMP_BORDERCOLOR, &bc); dev->GetSamplerState(st, D3DSAMP_MAXANISOTROPY, &an);
+        CHECK(mag == D3DTEXF_LINEAR && min == D3DTEXF_LINEAR && mip == D3DTEXF_NONE && au == D3DTADDRESS_WRAP && av == D3DTADDRESS_WRAP && bc == 0xFF000000u && an == 1);
+    }
+    CHECK(DevTSS(0, D3DTSS_COLOROP) == D3DTOP_SELECTARG2 && DevTSS(0, D3DTSS_COLORARG2) == D3DTA_DIFFUSE && DevTSS(0, D3DTSS_ALPHAOP) == D3DTOP_SELECTARG2);
+    for (DWORD st = 1; st < 8; st++) CHECK(DevTSS(st, D3DTSS_COLOROP) == D3DTOP_DISABLE && DevTSS(st, D3DTSS_ALPHAOP) == D3DTOP_DISABLE);
+    CHECK(Get(rwRENDERSTATEZTESTENABLE) == 1 && Get(rwRENDERSTATEZWRITEENABLE) == 1 && Get(rwRENDERSTATECULLMODE) == rwCULLMODECULLBACK &&
+          Get(rwRENDERSTATETEXTUREFILTER) == rwFILTERLINEAR && Get(rwRENDERSTATEALPHATESTFUNCTION) == rwALPHATESTFUNCTIONGREATER && Get(rwRENDERSTATEALPHATESTFUNCTIONREF) == 0 &&
+          Get(rwRENDERSTATEBORDERCOLOR) == 0xFF000000u && Get(rwRENDERSTATEFOGDENSITY) == 0x3F800000u);
+    // the first ZTEST=0 after start used to be dropped (librw's cache started at 0 while the device had ZENABLE TRUE)
+    Set(rwRENDERSTATEZWRITEENABLE, 0); Set(rwRENDERSTATEZTESTENABLE, 0); flush();
+    CHECK(DevRS(D3DRS_ZENABLE) == D3DZB_FALSE);
+    Set(rwRENDERSTATEZWRITEENABLE, 1); flush();                       // write without test: ZENABLE on, func ALWAYS
+    CHECK(DevRS(D3DRS_ZENABLE) != D3DZB_FALSE && DevRS(D3DRS_ZFUNC) == D3DCMP_ALWAYS && DevRS(D3DRS_ZWRITEENABLE) == TRUE);
+    Set(rwRENDERSTATEZTESTENABLE, 1); flush();
+    CHECK(DevRS(D3DRS_ZFUNC) == D3DCMP_LESSEQUAL);
+    // alpha test tie (exe 0x7FE0A0 / 0x7FE96D): vertex alpha switches blending and the alpha test on together; while blending, compare ALWAYS turns the test off
+    Set(rwRENDERSTATEVERTEXALPHAENABLE, 1); flush();
+    CHECK(DevRS(D3DRS_ALPHABLENDENABLE) == TRUE && DevRS(D3DRS_ALPHATESTENABLE) == TRUE);
+    Set(rwRENDERSTATEALPHATESTFUNCTION, rwALPHATESTFUNCTIONALWAYS); flush();
+    CHECK(DevRS(D3DRS_ALPHATESTENABLE) == FALSE && DevRS(D3DRS_ALPHAFUNC) == D3DCMP_ALWAYS && DevRS(D3DRS_ALPHABLENDENABLE) == TRUE);
+    Set(rwRENDERSTATEALPHATESTFUNCTION, rwALPHATESTFUNCTIONGREATER); flush();
+    CHECK(DevRS(D3DRS_ALPHATESTENABLE) == TRUE);
+    Set(rwRENDERSTATEVERTEXALPHAENABLE, 0); flush();
+    CHECK(DevRS(D3DRS_ALPHABLENDENABLE) == FALSE && DevRS(D3DRS_ALPHATESTENABLE) == FALSE);
+    CHECK(Get(rwRENDERSTATEVERTEXALPHAENABLE) == 0);
 
     // RW states -> D3D device states
     Set(rwRENDERSTATESRCBLEND, rwBLENDONE);           Set(rwRENDERSTATEDESTBLEND, rwBLENDINVSRCCOLOR);
@@ -208,7 +263,12 @@ static void TestDevice() {
     CHECK(DevRS(D3DRS_STENCILMASK) == 0x3F && DevRS(D3DRS_STENCILWRITEMASK) == 0xF0);
     CHECK(DevRS(D3DRS_ALPHAFUNC) == D3DCMP_GREATER && DevRS(D3DRS_ALPHAREF) == 100);
     CHECK(DevRS(D3DRS_FOGENABLE) == TRUE && DevRS(D3DRS_FOGCOLOR) == 0x80112233u); // RW 0xAARRGGBB == D3DCOLOR
-    CHECK(DevRS(D3DRS_FOGTABLEMODE) == D3DFOG_EXP2 && DevRS(D3DRS_FOGDENSITY) == 0x3F000000u);
+    {
+        const DWORD caps = rw::d3d::d3d9Globals.caps.RasterCaps;
+        const bool table = (caps & D3DPRASTERCAPS_FOGTABLE) && (caps & 0x100000);
+        CHECK(DevRS(table ? D3DRS_FOGTABLEMODE : D3DRS_FOGVERTEXMODE) == D3DFOG_EXP2 && DevRS(table ? D3DRS_FOGVERTEXMODE : D3DRS_FOGTABLEMODE) == D3DFOG_NONE);
+    }
+    CHECK(DevRS(D3DRS_FOGDENSITY) == 0x3F000000u);
     CHECK(DevRS(D3DRS_SHADEMODE) == D3DSHADE_FLAT);
     { DWORD b = 0; dev->GetSamplerState(0, D3DSAMP_BORDERCOLOR, &b); CHECK(b == 0xFF102030u); }
     // librw's own view of the same states (what its draws will use) agrees with ours
@@ -321,6 +381,22 @@ static void TestDevice() {
     CHECK(RwD3D9SetSurfaceProperties(&sp, &white, rxGEOMETRY_LIGHT | rxGEOMETRY_MODULATE | rxGEOMETRY_PRELIT) == TRUE);
     flush(); CHECK(DevRS(D3DRS_AMBIENT) == 0xFFFFFFFFu);          // applied again
     dev->GetMaterial(&dmat); CHECK(Near(dmat.Diffuse.r, 0.8f));
+
+    // exe 0x7FC430: SetMaterial of the cached material is a no-op (the device keeps whatever it has); a different one zeroes the early-out flags word,
+    // which does NOT invalidate a cached flags==0 SetSurfaceProperties entry: repeating the previous (flags 0) call afterwards keeps the SetMaterial material
+    notsa_rw02c::ResetFixedFunctionShadow();
+    CHECK(RwD3D9SetSurfaceProperties(&sp, &col, rxGEOMETRY_LIGHT) == TRUE);                 // cache: flags 0
+    D3DMATERIAL9 mat2{}; mat2.Diffuse = {0.1f, 0.2f, 0.3f, 1.f}; mat2.Power = 4.f;
+    CHECK(RwD3D9SetMaterial(&mat2) == TRUE); flush();
+    dev->GetMaterial(&dmat); CHECK(Near(dmat.Diffuse.g, 0.2f));
+    CHECK(RwD3D9SetSurfaceProperties(&sp, &col, rxGEOMETRY_LIGHT) == TRUE); flush();      // cache hit: material from SetMaterial stays
+    dev->GetMaterial(&dmat); CHECK(Near(dmat.Diffuse.g, 0.2f) && Near(dmat.Power, 4.f));
+    dev->SetMaterial(&mat);                                                                   // behind RW's back: identical SetMaterial arg is a cache hit
+    CHECK(RwD3D9SetMaterial(&mat2) == TRUE);
+    dev->GetMaterial(&dmat); CHECK(Near(dmat.Diffuse.g, 0.5f));
+    // lights: EnableLight on an index that was never SetLight'ed is ignored (TRUE), nothing reaches the device
+    CHECK(RwD3D9EnableLight(9, TRUE) == TRUE);
+    { BOOL e2 = TRUE; const HRESULT hr = dev->GetLightEnable(9, &e2); CHECK(FAILED(hr) || e2 == FALSE); }
 
     // shaders/streams/draw with nothing bound must not crash; stream 0 can be set and cleared
     RwD3D9SetVertexShader(nullptr); RwD3D9SetPixelShader(nullptr); RwD3D9SetIndices(nullptr); RwD3D9SetVertexDeclaration(nullptr);

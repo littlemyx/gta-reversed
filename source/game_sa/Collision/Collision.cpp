@@ -59,8 +59,10 @@ CVector InverseTransformPointOG(const CMatrix& m, const CVector& p) {
 
 //! 0x4119D0 `operator/(CVector, float)` => multiplies by a (float rounded) reciprocal, it is NOT a component-wise division
 CVector DivideByReciprocal(const CVector& v, float divisor) {
-    const float inv = 1.f / divisor;
-    return { v.x * inv, v.y * inv, v.z * inv };
+    // 0x4119D0: `fld 1.0; fdiv divisor; fst [inv]` - the z product uses the UNROUNDED reciprocal still on the FPU stack, x and y reload the rounded float
+    const double invE = 1.0 / (double)divisor;
+    const float  inv  = (float)invE;
+    return { v.x * inv, v.y * inv, (float)(invE * v.z) };
 }
 }
 
@@ -1839,7 +1841,7 @@ bool CCollision::ProcessSphereSphere(const CColSphere& spA, const CColSphere& sp
     colPoint.m_vecPoint = CVector{
         (float)((double)spA.m_vecCenter.x - (double)normal.x * touchDist),
         (float)((double)spA.m_vecCenter.y - (double)normal.y * touchDist),
-        spA.m_vecCenter.z - normal.z * touchDist
+        spA.m_vecCenter.z - (float)(normal.z * touchDist) // 0x41651B: the z product is spilled to a float (the x and y ones stay unrounded)
     };
     colPoint.m_vecNormal = normal;
 
@@ -2117,7 +2119,7 @@ bool CCollision::ProcessSphereTriangle(
         closest = CVector{
             (float)((double)c.x - (double)nx * planeDist),
             (float)((double)c.y - (double)ny * planeDist),
-            c.z - nz * planeDist
+            c.z - (float)(nz * planeDist) // 0x416F04..0x416F0F: the z product is spilled to a float [esp+0x50], x and y stay unrounded
         };
         break;
     }

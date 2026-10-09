@@ -543,6 +543,7 @@
 
 #ifndef NOTSA_STANDALONE
 #include "WindowedMode.hpp"
+#endif
 #include "EventCreatePartnerTask.h"
 #include "EventDraggedOutCar.h"
 #include "EventDeath.h"
@@ -631,7 +632,6 @@
 #include "OctTree.h"
 #include "OctTreeBase.h"
 #include "Projectile.h"
-#endif
 
 void InjectHooksMain() {
     const auto now = std::chrono::high_resolution_clock::now();

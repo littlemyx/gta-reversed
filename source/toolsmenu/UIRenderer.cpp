@@ -120,6 +120,9 @@ void UIRenderer::PostRenderUpdate() {
 
 void UIRenderer::DrawLoop() {
     ZoneScoped;
+#ifdef NOTSA_STANDALONE_RUN
+    return; // D8: no debug UI / debug hotkeys (DebugCode: '8' = task test, F7 = toggle) / hook checks in the behaviour-faithful build
+#endif
 
     if (m_ReInitRequested) {
         RecreateInstance(); // This will destruct the current object so we gotta stop here.
@@ -159,6 +162,9 @@ void UIRenderer::Render2D() {
 
 void UIRenderer::Render3D() {
     ZoneScoped;
+#ifdef NOTSA_STANDALONE_RUN
+    return; // D8
+#endif
 
     m_DebugModules.Render3D();
 }

@@ -239,7 +239,7 @@ struct std::formatter<Enum> : std::formatter<std::string> {
 #define _CAN_BE_NULL_
 
 // TODO: Use premake/cmake for this instead of relaying on `_DEBUG`
-#ifdef _DEBUG
+#if defined(_DEBUG) && !defined(NOTSA_STANDALONE_RUN) // D8: the runnable standalone build is behaviour-identical to the original (no debug-only cheats/UI hooks), whatever its CRT config
 #define NOTSA_DEBUG 1
 #endif
 

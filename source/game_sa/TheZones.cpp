@@ -57,7 +57,7 @@ bool& CTheZones::GetZoneWasVisited(CVector2D pos) {
 #ifdef FIX_BUGS
     return ZonesVisited[(size_t)((std::clamp(pos.x, -2999.f, 2999.f) + 3000.f) / 600.f)][9LL - (size_t)((std::clamp(pos.y, -2999.f, 2999.f) + 3000.f) / 600.f)];
 #else
-    return ZonesVisited[10 * (size_t)((pos.x + 3000.f) / 600.f) - (size_t)((pos.y + 3000.f) / 600.f) + 9];
+    return reinterpret_cast<bool*>(&ZonesVisited)[10 * (size_t)((pos.x + 3000.f) / 600.f) - (size_t)((pos.y + 3000.f) / 600.f) + 9]; // flat index, unchecked, as the original
 #endif
 }
 

@@ -102,7 +102,7 @@ void CPathFind::InjectHooks() {
     RH_ScopedInstall(ReturnInteriorNodeIndex, 0x451300);
     RH_ScopedInstall(FindNthNodeClosestToCoors, 0x44F8C0);
     RH_ScopedInstall(FindNodeClosestInRegion, 0x44F2C0);
-    //RH_ScopedInstall(CalcDistToAnyConnectingLinks, 0x44F190);
+    RH_ScopedInstall(CalcDistToAnyConnectingLinks, 0x44F190);
     RH_ScopedInstall(CalcRoadDensity, 0x44EFC0);
     RH_ScopedInstall(FindPedCreationPosBetweenNodes, 0x44DA30);
     RH_ScopedInstall(TestForPedTrafficLight, 0x44D480);
@@ -1124,6 +1124,32 @@ bool CPathFind::IsWaterNodeNearby(CVector position, float radius) {
     return false;
 }
 
+// Body of 0x44F190. The original returns the `fsqrt` result unrounded in st0 and `FindNodeClosestInRegion` keeps using it
+// in extended precision, hence the double result (the public function rounds to float).
+static double CalcDistToAnyConnectingLinksUnrounded(const CPathFind& paths, const CPathNode* node, const CVector& pos) {
+    float minDistSq = 999999.875f; // 0x497423FE
+
+    const CVector nodePos = node->GetPosition();
+    for (int32 i = 0; i < (int32)node->m_nNumLinks; i++) {
+        const CNodeAddress link = paths.m_pNodeLinks[node->m_wAreaId][node->m_wBaseLinkId + i];
+        if (!paths.m_pPathNodes[link.m_wAreaId]) { // Linked area is not loaded
+            continue;
+        }
+        const CPathNode& linked = paths.m_pPathNodes[link.m_wAreaId][link.m_wNodeId];
+
+        const float distSq = CCollision::DistToLineSqr(nodePos, linked.GetPosition(), pos); // 0x412850
+        if (!(minDistSq < distSq)) { // `fcomp` + `jnp`: update unless minDistSq < distSq (also for NaN)
+            minDistSq = distSq;
+        }
+    }
+    return std::sqrt((double)minDistSq);
+}
+
+// 0x44F190
+float CPathFind::CalcDistToAnyConnectingLinks(CPathNode* node, CVector pos) {
+    return (float)CalcDistToAnyConnectingLinksUnrounded(*this, node, pos);
+}
+
 // 0x44F2C0
 void CPathFind::FindNodeClosestInRegion(CNodeAddress* outAddress, uint16 areaId, CVector pos, uint8 nodeType, float* outDist, bool bLowTraffic, bool bUnkn, bool bBoats, bool bUnused) {
     if (!m_pPathNodes[areaId]) {
@@ -1171,8 +1197,8 @@ void CPathFind::FindNodeClosestInRegion(CNodeAddress* outAddress, uint16 areaId,
         }
         const float dF = (float)d;
 
-        // 0x44F190 (returns in st0)
-        const double total = (double)plugin::CallMethodAndReturn<float, 0x44F190, CPathFind*, CPathNode*, CVector>(this, node, pos) * (double)0.2f + (double)dF; // 0x858CC4
+        // 0x44F190 (returns the unrounded `fsqrt` result in st0)
+        const double total = CalcDistToAnyConnectingLinksUnrounded(*this, node, pos) * (double)0.2f + (double)dF; // 0x858CC4
         if (total < (double)*outDist) {
             *outDist = (float)total;
             outAddress->m_wAreaId = areaId;

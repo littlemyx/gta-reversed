@@ -210,6 +210,7 @@ void AddWheelSandOrDust(Fx_c& fx, CVehicle* vehicle, const CVector& pos, bool bW
 }
 } // namespace
 
+
 void Fx_c::InjectHooks() {
     RH_ScopedClass(Fx_c);
     RH_ScopedCategory("Fx");
@@ -246,7 +247,7 @@ void Fx_c::InjectHooks() {
     RH_ScopedInstall(AddWheelDust, 0x4A09C0);
     RH_ScopedInstall(TriggerWaterHydrant, 0x4A0D70);
     RH_ScopedInstall(TriggerGunshot, 0x4A0DE0);
-    // RH_ScopedInstall(TriggerTankFire, 0x4A0FA0);
+    RH_ScopedInstall(TriggerTankFire, 0x4A0FA0);
     RH_ScopedInstall(TriggerWaterSplash, 0x4A1070);
     RH_ScopedInstall(TriggerBulletSplash, 0x4A10E0);
     RH_ScopedInstall(TriggerFootSplash, 0x4A1150);
@@ -861,7 +862,17 @@ void Fx_c::TriggerGunshot(CEntity* entity, const CVector& origin, const CVector&
 
 // 0x4A0FA0
 void Fx_c::TriggerTankFire(const CVector& pos, const CVector& dir) {
-    ((void(__thiscall*)(Fx_c*, const CVector&, const CVector&))0x4A0FA0)(this, pos, dir);
+    if (CamDistSq_XZY(pos) > 625.0) { // 0x85A6E8 (FCOMP + JZ: NaN passes)
+        return;
+    }
+
+    auto* const mat = g_fxMan.FxRwMatrixCreate(); // 0x4A9440
+    CreateMatFromVec(mat, &pos, &dir); // 0x49E950
+    if (auto* const fxSystem = g_fxMan.CreateFxSystem("tank_fire", CVector{ 0.0f, 0.0f, 0.0f }, mat, false)) { // 0x4A9BE0
+        fxSystem->CopyParentMatrix(); // 0x4AA890
+        fxSystem->PlayAndKill(); // 0x4AA3D0
+    }
+    g_fxMan.FxRwMatrixDestroy(mat); // 0x4A9460
 }
 
 // 0x4A1070

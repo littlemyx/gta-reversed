@@ -18,15 +18,44 @@
 #include "TaskComplexGetUpAndStandStill.h"
 #include "TaskComplexCarSlowBeDraggedOut.h"
 #include "World.h"
+#include "PedGroups.h"
+#include "PedGroup.h"
+#include "EventGroupEvent.h"
+#include "EventLeaderExitedCarAsDriver.h"
 #include "Animation/AnimManager.h"
+
+namespace {
+// 0x646CF0 - NOTSA name, can't be hooked (not a member)
+// Checks whether the vehicle's door is currently being used to get in/out
+void GetDoorInUseFlags(const CVehicle* veh, int32 door, bool& gettingIn, bool& gettingOut) {
+    uint8 mask;
+    switch (door) {
+    case 8:  mask = 4; break;
+    case 9:  mask = 8; break;
+    case 10: mask = 1; break;
+    case 11: mask = 2; break;
+    default: return;
+    }
+    if (veh->m_nGettingInFlags & mask) {
+        gettingIn = true;
+    }
+    if (veh->m_nGettingOutFlags & mask) {
+        gettingOut = true;
+    }
+}
+}
 
 void CTaskComplexLeaveCar::InjectHooks() {
     RH_ScopedVirtualClass(CTaskComplexLeaveCar, 0x86E828, 11);
     RH_ScopedCategory("Tasks/TaskTypes");
 
+    RH_ScopedInstall(SetupGettingOut, 0x63BA00);
     RH_ScopedInstall(ComputeTargetDoor, 0x63BAB0);
+    RH_ScopedInstall(CreateLineUpTask, 0x63BAE0);
     RH_ScopedInstall(CreateSubTask, 0x641530);
     RH_ScopedVMTInstall(MakeAbortable, 0x641100);
+    RH_ScopedVMTInstall(CreateNextSubTask, 0x6419F0);
+    RH_ScopedVMTInstall(CreateFirstSubTask, 0x641FC0);
 }
 
 // 0x62F1A0
@@ -69,11 +98,35 @@ CTaskComplexLeaveCar::CTaskComplexLeaveCar(const CTaskComplexLeaveCar& o) :
 {
 }
 
+// 0x63BA00
+void CTaskComplexLeaveCar::SetupGettingOut(CPed* ped) {
+    const auto flags = (uint8)CCarEnterExit::ComputeDoorFlag(m_pTargetVehicle, m_nTargetDoor, true);
+    m_nDoorFlagsSet = flags;
+    m_pTargetVehicle->SetGettingOutFlags(flags);
+    m_nNumGettingInSet = 1;
+    m_pTargetVehicle->m_nNumGettingIn++;
+
+    const auto veh = m_pTargetVehicle;
+    if (veh->m_pDriver && !veh->m_pDriver->IsPlayer() && ped == veh->m_pDriver && m_bSensibleLeaveCar) {
+        veh->m_autoPilot.m_nCruiseSpeed = 0;
+        veh->m_autoPilot.m_nCarMission  = MISSION_NONE;
+    }
+
+    if (ped->IsPlayer() && ped == m_pTargetVehicle->m_pDriver) {
+        m_pTargetVehicle->SetStatus(STATUS_FORCED_STOP);
+    }
+}
+
 // 0x63BAB0
 void CTaskComplexLeaveCar::ComputeTargetDoor(CPed* ped) {
     if (!m_nTargetDoor) {
         m_nTargetDoor = CCarEnterExit::ComputeTargetDoorToExit(m_pTargetVehicle, ped);
     }
+}
+
+// 0x63BAE0
+void CTaskComplexLeaveCar::CreateLineUpTask(CPed*) {
+    m_pTaskUtilityLineUpPedWithCar = new CTaskUtilityLineUpPedWithCar{ CVector{}, 0, 0, m_nTargetDoor };
 }
 
 // 0x641100
@@ -210,12 +263,214 @@ bool CTaskComplexLeaveCar::MakeAbortable(CPed* ped, eAbortPriority priority, con
 
 // 0x6419F0
 CTask* CTaskComplexLeaveCar::CreateNextSubTask(CPed* ped) {
-    return plugin::CallMethodAndReturn<CTask*, 0x6419F0, CTask*, CPed*>(this, ped);
+    switch (m_pSubTask->GetTaskType()) {
+    case TASK_SIMPLE_PAUSE:
+    case TASK_SIMPLE_DIE:
+        return CreateSubTask(TASK_FINISHED, ped);
+    case TASK_COMPLEX_LEAVE_BOAT:
+        return CreateSubTask(m_bDie ? TASK_SIMPLE_DIE : TASK_FINISHED, ped);
+    case TASK_COMPLEX_GET_UP_AND_STAND_STILL:
+        return CreateSubTask(ped->bInVehicle ? TASK_SIMPLE_CAR_SET_PED_OUT : TASK_FINISHED, ped);
+    case TASK_SIMPLE_CAR_CLOSE_DOOR_FROM_OUTSIDE:
+        m_nDieAnimID = ANIM_ID_KO_SHOT_FRONT_0;
+        return CreateSubTask(TASK_SIMPLE_CAR_SET_PED_OUT, ped);
+    case TASK_SIMPLE_CAR_DRIVE_TIMED: {
+        if (!ped->bInVehicle) {
+            return CreateSubTask(TASK_FINISHED, ped);
+        }
+
+        if (!ped->m_pVehicle->IsPassenger(ped) && !ped->m_pVehicle->IsDriver(ped)) {
+            ped->bInVehicle = false;
+            return CreateSubTask(TASK_FINISHED, ped);
+        }
+
+        ComputeTargetDoor(ped);
+
+        bool gettingIn = false, gettingOut = false;
+        GetDoorInUseFlags(m_pTargetVehicle, m_nTargetDoor, gettingIn, gettingOut); // 0x646CF0
+
+        if (!m_bForceGetOut) {
+            if (gettingOut) {
+                return CreateSubTask(TASK_SIMPLE_CAR_WAIT_FOR_DOOR_NOT_TO_BE_IN_USE, ped);
+            }
+            if (gettingIn) {
+                return CreateSubTask(TASK_FINISHED, ped);
+            }
+        }
+        return CreateSubTask(TASK_SIMPLE_CAR_WAIT_TO_SLOW_DOWN, ped);
+    }
+    case TASK_SIMPLE_CAR_WAIT_FOR_DOOR_NOT_TO_BE_IN_USE:
+        return CreateSubTask(TASK_SIMPLE_CAR_WAIT_TO_SLOW_DOWN, ped);
+    case TASK_SIMPLE_CAR_WAIT_TO_SLOW_DOWN: {
+        const auto veh = m_pTargetVehicle;
+
+        // Jump out if the ped can't just step out
+        if (!veh->CanPedStepOutCar(false)) {
+            SetupGettingOut(ped);
+            ped->SetPedState(PEDSTATE_NONE);
+            return CreateSubTask(TASK_SIMPLE_CAR_JUMP_OUT, ped);
+        }
+
+        // The ped is forced out if there's no way to exit the vehicle
+        const auto ForcePedOut = [&] {
+            SetupGettingOut(ped);
+            ped->SetPedState(PEDSTATE_NONE);
+            CreateLineUpTask(ped);
+            return CreateSubTask(TASK_SIMPLE_CAR_FORCE_PED_OUT, ped);
+        };
+
+        if (!CCarEnterExit::IsRoomForPedToLeaveCar(veh, m_nTargetDoor, nullptr)) {
+            // Try the door on the other side
+            int32 altDoor = 0;
+            switch (m_nTargetDoor) {
+            case 8:
+                if (veh->m_pDriver || (veh->m_nGettingInFlags & 1)) {
+                    return ForcePedOut();
+                }
+                altDoor = 10;
+                break;
+            case 9:
+                if (veh->m_apPassengers[1] || (veh->m_nGettingInFlags & 2)) {
+                    return ForcePedOut();
+                }
+                altDoor = 11;
+                break;
+            case 10:
+                if (veh->m_nVehicleType != VEHICLE_TYPE_BIKE && !veh->m_pHandlingData->m_bTandemSeats) {
+                    if (veh->m_apPassengers[0] || (veh->m_nGettingInFlags & 4)) {
+                        return ForcePedOut();
+                    }
+                }
+                altDoor = 8;
+                break;
+            case 11:
+                altDoor = 9;
+                if (veh->m_nVehicleType != VEHICLE_TYPE_BIKE && !veh->m_pHandlingData->m_bTandemSeats) {
+                    if (veh->m_apPassengers[2] || (veh->m_nGettingInFlags & 8)) {
+                        return ForcePedOut();
+                    }
+                }
+                break;
+            }
+
+            if (!CCarEnterExit::IsRoomForPedToLeaveCar(veh, altDoor, nullptr)) {
+                return ForcePedOut();
+            }
+
+            if (veh->m_pHandlingData->m_bForceDoorCheck
+                && veh->m_nVehicleType == VEHICLE_TYPE_AUTOMOBILE
+                && !veh->AsAutomobile()->m_aCarNodes[altDoor]
+            ) {
+                return ForcePedOut();
+            }
+
+            m_nTargetDoor = altDoor;
+        }
+
+        SetupGettingOut(ped);
+        ped->SetPedState(PEDSTATE_NONE);
+
+        if (m_bDie) {
+            return CreateSubTask(TASK_COMPLEX_CAR_SLOW_BE_DRAGGED_OUT, ped);
+        }
+
+        CreateLineUpTask(ped);
+        return CreateSubTask(TASK_SIMPLE_CAR_GET_OUT, ped);
+    }
+    case TASK_SIMPLE_CAR_GET_OUT: {
+        m_pTaskUtilityLineUpPedWithCar->m_nDoorOpenPosType = 2;
+
+        if (!m_bForceGetOut || m_pTargetVehicle->m_nDoorLock != CARLOCK_UNLOCKED) {
+            if (CCarEnterExit::CarHasDoorToClose(m_pTargetVehicle, m_nTargetDoor)) {
+                return CreateSubTask(TASK_SIMPLE_CAR_CLOSE_DOOR_FROM_OUTSIDE, ped);
+            }
+        }
+
+        // Bash the door if it was left open
+        if (m_pTargetVehicle->m_nVehicleType == VEHICLE_TYPE_AUTOMOBILE && CCarEnterExit::CarHasDoorToClose(m_pTargetVehicle, m_nTargetDoor)) {
+            auto& dmgMgr = m_pTargetVehicle->AsAutomobile()->m_damageManager;
+            const auto door = (tComponent)m_nTargetDoor;
+            if (dmgMgr.GetDoorStatus_Component(door) == DAMSTATE_OK || dmgMgr.GetDoorStatus_Component(door) == DAMSTATE_DAMAGED) {
+                dmgMgr.SetDoorStatus_Component(door, (eDoorStatus)(dmgMgr.GetDoorStatus_Component(door) + 1));
+            }
+        }
+        return CreateSubTask(TASK_SIMPLE_CAR_SET_PED_OUT, ped);
+    }
+    case TASK_SIMPLE_CAR_JUMP_OUT: {
+        if (m_bDie) {
+            m_nDieAnimID         = ANIM_ID_KO_SHOT_FRONT_0;
+            m_fDieAnimBlendDelta = 1000.f;
+            m_fDieAnimSpeed      = 0.5f;
+            return CreateSubTask(TASK_SIMPLE_DIE, ped);
+        }
+
+        const auto veh = m_pTargetVehicle;
+        if (!veh || veh->m_nVehicleType == VEHICLE_TYPE_BIKE || veh->m_nVehicleSubType == VEHICLE_TYPE_QUAD) {
+            return CreateSubTask(TASK_FINISHED, ped);
+        }
+
+        if (m_bIsInAir) {
+            return CreateSubTask(TASK_SIMPLE_CAR_SET_PED_OUT, ped);
+        }
+
+        if (ped->bIsDrowning) {
+            return CreateSubTask(TASK_SIMPLE_CAR_SET_PED_OUT, ped);
+        }
+
+        veh->ClearGettingOutFlags(m_nDoorFlagsSet);
+        m_nDoorFlagsSet = 0;
+        veh->m_nNumGettingIn -= m_nNumGettingInSet;
+        m_nNumGettingInSet = 0;
+        return CreateSubTask(TASK_COMPLEX_GET_UP_AND_STAND_STILL, ped);
+    }
+    case TASK_SIMPLE_CAR_FORCE_PED_OUT:
+        return CreateSubTask(TASK_SIMPLE_CAR_SET_PED_OUT, ped);
+    case TASK_SIMPLE_CAR_SET_PED_OUT:
+        return CreateSubTask(m_bDie ? TASK_SIMPLE_DIE : TASK_FINISHED, ped);
+    case TASK_COMPLEX_CAR_SLOW_BE_DRAGGED_OUT: {
+        m_nDieAnimID         = ANIM_ID_FLOOR_HIT;
+        m_fDieAnimBlendDelta = 1000.f;
+        m_fDieAnimSpeed      = 0.5f;
+        if (m_pTargetVehicle && m_pTargetVehicle->m_nDoorLock == CARLOCK_COP_CAR) {
+            m_pTargetVehicle->m_nDoorLock = CARLOCK_UNLOCKED;
+        }
+        return CreateSubTask(TASK_SIMPLE_DIE, ped);
+    }
+    default:
+        return nullptr;
+    }
 }
 
 // 0x641FC0
 CTask* CTaskComplexLeaveCar::CreateFirstSubTask(CPed* ped) {
-    return plugin::CallMethodAndReturn<CTask*, 0x641FC0, CTask*, CPed*>(this, ped);
+    if ((ped->m_nPedState == PEDSTATE_ARRESTED || ped->bIsBeingArrested) && ped->IsPlayer()) {
+        return new CTaskSimplePause{ -1 };
+    }
+
+    if (!ped->bInVehicle) {
+        NOTSA_LOG_DEBUG("CTaskComplexLeaveCar - ped not in car"); // vanilla (printf)
+        return new CTaskSimplePause{ -1 };
+    }
+
+    if (m_pTargetVehicle->m_pDriver == ped) {
+        // Tell the group that the leader is leaving the vehicle
+        if (const auto grp = CPedGroups::GetPedsGroup(ped); grp && grp->GetMembership().IsLeader(ped)) {
+            CEventGroupEvent event{ ped, new CEventLeaderExitedCarAsDriver{} };
+            grp->GetIntelligence().AddEvent(&event);
+        }
+
+        if (!ped->IsPlayer()) {
+            ped->SetRadioStation();
+        } else if (ped->m_pVehicle) {
+            ped->m_pVehicle->m_vehicleAudio.PlayerAboutToExitVehicleAsDriver();
+        }
+    }
+
+    if (m_pTargetVehicle->m_nVehicleType == VEHICLE_TYPE_BOAT) {
+        return new CTaskComplexLeaveBoat{ m_pTargetVehicle, 0 };
+    }
+
+    return new CTaskSimpleCarDriveTimed{ m_pTargetVehicle, m_nDelayTime };
 }
 
 // 0x6421B0

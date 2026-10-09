@@ -44,7 +44,9 @@ public:
     CTask* CreateSubTask(eTaskType taskType, CPed* ped);
 
     // NOTSA names (no known original names)
+    void SetupGettingOut(CPed* ped);   // 0x63BA00
     void ComputeTargetDoor(CPed* ped); // 0x63BAB0
+    void CreateLineUpTask(CPed*);      // 0x63BAE0 (The argument is unused)
 private:
     friend void InjectHooksMain();
     static void InjectHooks();

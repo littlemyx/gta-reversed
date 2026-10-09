@@ -16,6 +16,7 @@
 #include "EventSoundQuiet.h"
 #include "EventVehicleDamageWeapon.h"
 #include "Plugins/RpAnimBlendPlugin/RpAnimBlend.h"
+#include "TaskSimpleFall.h"
 
 // Storage used by `FightSetUpCol` (The original keeps the collision model, its data, and the one sphere in .bss)
 // NOTE: `col1[1]` (Game.h) really is the `CCollisionData` at 0xC17854, see `CGame::ShutDownForRestart`
@@ -69,6 +70,7 @@ void CTaskSimpleFight::InjectHooks() {
     RH_ScopedInstall(FightHitObj, 0x61D400);
     RH_ScopedInstall(FightStrike, 0x6240B0);
 
+    RH_ScopedInstall(IsTargetInRange, 0x61D6F0);
     RH_ScopedInstall(GetAvailableComboSet, 0x61C7F0);
     RH_ScopedInstall(ChooseAttackPlayer, 0x624710);
     RH_ScopedInstall(ChooseAttackAI, 0x624A40);
@@ -356,9 +358,157 @@ static uint8 GetComboFlagsLo(int8 comboSet) {
     return *(reinterpret_cast<const uint8*>(&CTaskSimpleFight::m_aComboData[0]) + (comboSet - 4) * (int32)sizeof(CMeleeInfo) + offsetof(CMeleeInfo, m_wFlags));
 }
 
-// Not reversed yet (~0x3F0 bytes; called by `ChooseAttack{Player,AI}`)
-bool CTaskSimpleFight::IsTargetInRange(CPed* ped) { // 0x61D6F0 (name guessed)
-    return plugin::CallMethodAndReturn<bool, 0x61D6F0, CTaskSimpleFight*, CPed*>(this, ped);
+// Float member (at `offset` in `CMeleeInfo`) of the combo set `comboSet`
+// NOTE: Like `GetComboFlagsLo`, doesn't care that `comboSet` can be < 4 (the original reads whatever precedes the array)
+static float GetComboFloatRaw(int8 comboSet, size_t offset) {
+    return *reinterpret_cast<const float*>(reinterpret_cast<const uint8*>(&CTaskSimpleFight::m_aComboData[0]) + (comboSet - 4) * (int32)sizeof(CMeleeInfo) + offset);
+}
+
+// 0x61D6F0 (name guessed) - Is the target within reach of the current hit? Called by `ChooseAttack{Player,AI}`
+// Without a target it picks the best ped from the scanner (and turns the ped towards it), when the player is the one fighting
+bool CTaskSimpleFight::IsTargetInRange(CPed* ped) {
+    if (!CLocalisation::KickingWhenDown()) { // 0x56D270
+        return false;
+    }
+
+    // x87: The sum isn't rounded to float
+    // NOTE: `m_nComboSet` can be < 4 here
+    const double reach = (double)m_aHitOffsets[2].y + (double)GetComboFloatRaw(m_nComboSet, offsetof(CMeleeInfo, m_fRadius) + 3 * sizeof(float)); // 0xC177EC + (0xC1710C + ..)
+    const float  limitA = (float)((double)0.2f + reach); // 0x858CC4 - Limit for the "right" axis
+    float        limitB = (float)(reach + (double)0.4f);  // 0x858EE8 - Limit for the "forward" axis
+
+    CVector bonePos{};
+    auto* const target = m_pTargetEntity;
+    if (target) {
+        if (target->GetType() != ENTITY_TYPE_PED) {
+            // Not a ped => true only if it's what the ped is standing on
+            return target == ped->m_standingOnEntity;
+        }
+
+        auto* const tped = static_cast<CPed*>(target);
+        tped->GetBonePosition(&bonePos, BONE_SPINE1, false); // 0x5E4280
+        if (tped->IsAlive()) { // 0x5E0170
+            // Is the bone at least as high as the ped's feet?
+            if (!((double)ped->GetPosition().z - (double)0.2f > (double)bonePos.z)) {
+                if (!tped->bIsDucking) {
+                    return false;
+                }
+                limitB = (float)((double)limitB - (double)0.4f);
+            }
+        }
+
+        // Still falling down?
+        if (auto* const task = tped->GetIntelligence()->m_TaskMgr.GetSimplestActiveTask()) { // 0x6819D0
+            if (task->GetTaskType() == TASK_SIMPLE_FALL) {
+                if (auto* const anim = static_cast<CTaskSimpleFall*>(task)->m_pAnim) {
+                    if (anim->m_BlendHier->m_fTotalTime > anim->m_CurrentTime) {
+                        return false;
+                    }
+                }
+            }
+        }
+
+        const auto& tm = target->GetMatrix(); // 0x411990 (it's called twice in the original, the 2nd time is a no-op)
+        const auto& pp = ped->GetPosition();
+        const auto& tp = target->GetPosition();
+
+        // x87: The 1st dot product uses the unrounded differences
+        {
+            const double dx = (double)tp.x - (double)pp.x;
+            const double dy = (double)tp.y - (double)pp.y;
+            const double dz = (double)tp.z - (double)pp.z;
+            const auto&  f  = tm.GetForward();
+            if (!(std::fabs((dz * f.z + dy * f.y) + dx * f.x) < (double)limitB)) {
+                return false;
+            }
+        }
+
+        // 0x40FE60 (rounds to float), 0x40FDB0 (the sum stays in the FPU)
+        const CVector d{
+            (float)((double)tp.x - (double)pp.x),
+            (float)((double)tp.y - (double)pp.y),
+            (float)((double)tp.z - (double)pp.z)
+        };
+        const auto& r = tm.GetRight();
+        return std::fabs(((double)d.z * r.z + (double)d.y * r.y) + (double)d.x * r.x) < (double)limitA;
+    }
+
+    // No target => only the player looks for one
+    if (!ped->IsPlayer()) { // 0x5DF8F0
+        return false;
+    }
+
+    CPed*       best      = nullptr;
+    float       bestAngle = 0.f;
+    float       bestDiff  = std::numbers::pi_v<float>;
+    auto* const intel     = ped->GetIntelligence();
+    for (auto i = 0; i < 16; i++) {
+        auto* const cand = static_cast<CPed*>(intel->m_pedScanner.m_apEntities[i]);
+        if (!cand) {
+            continue;
+        }
+
+        CVector candBone{};
+        cand->GetBonePosition(&candBone, BONE_SPINE1, false); // 0x5E4280
+        if (cand->m_nPedState != PEDSTATE_DEAD) {
+            if (!((double)ped->GetPosition().z - (double)0.2f > (double)candBone.z)) {
+                continue;
+            }
+        }
+
+        const auto& pp = ped->GetPosition();
+        const auto& cp = cand->GetPosition();
+        // x87: X and Y are rounded to float, Z isn't
+        const float  dx = (float)((double)cp.x - (double)pp.x);
+        const float  dy = (float)((double)cp.y - (double)pp.y);
+        const double dz = (double)cp.z - (double)pp.z;
+
+        // NOTE: Like in the original, there's no check for the matrix
+        const auto& cm = *cand->m_matrix;
+        if (!(std::fabs((dz * cm.GetForward().z + (double)dy * cm.GetForward().y) + (double)dx * cm.GetForward().x) < (double)limitB)) {
+            continue;
+        }
+        if (!(std::fabs((dz * cm.GetRight().z + (double)dy * cm.GetRight().y) + (double)dx * cm.GetRight().x) < (double)limitA)) {
+            continue;
+        }
+
+        const float ang  = (float)std::atan2(-(double)dx, (double)dy);
+        double      diff = (double)ang - (double)ped->m_fCurrentRotation;
+        if (diff < -(double)std::numbers::pi_v<float>) { // 0x858CC0
+            diff += (double)(2.f * std::numbers::pi_v<float>); // 0x858CBC
+        } else if (diff > (double)std::numbers::pi_v<float>) { // 0x858CB8
+            diff -= (double)(2.f * std::numbers::pi_v<float>);
+        }
+        if (diff < 0.0) {
+            diff *= -1.0; // 0x858C1C
+        }
+        if (!(diff < (double)(std::numbers::pi_v<float> / 3.f))) { // 0x8630F8
+            continue;
+        }
+
+        // Better than the best one so far? (any living one is better than a dead one)
+        const bool bBetter = best && best->m_fHealth <= 0.f && (double)cand->m_fHealth > 0.0 // 0x859EF8 (double 0.0)
+            ? true
+            : !best || diff < (double)bestDiff;
+        if (bBetter) {
+            bestDiff  = (float)diff;
+            best      = cand;
+            bestAngle = ang;
+        }
+    }
+
+    if (best) {
+        ped->m_fAimingRotation = bestAngle;
+        return true;
+    }
+
+    // Nothing to aim at => true if the ped is standing on a car
+    if (auto* const contact = ped->m_standingOnEntity) {
+        if (contact->GetType() == ENTITY_TYPE_VEHICLE && static_cast<CVehicle*>(contact)->m_nVehicleType == VEHICLE_TYPE_AUTOMOBILE) {
+            return true;
+        }
+    }
+    return false;
 }
 
 // 0x61C7F0 - Picks the combo set for `command`, and makes sure its anim block is referenced (requests it if it's not loaded)
@@ -481,7 +631,7 @@ int16 CTaskSimpleFight::ChooseAttackPlayer(CPed* ped) {
                 }
             }
         } else {
-            if ((int32)ped->m_nMoveState > PEDMOVE_WALK) {
+            if ((int32)ped->m_nMoveState > (int32)PEDMOVE_WALK) { // Signed compare (`cmp [ped+0x534], 4`)
                 if (!(moves & 8)) {
                     m_nComboSet = 4;
                 }
@@ -603,7 +753,7 @@ void CTaskSimpleFight::StartAnim(CPed* ped, int32 move) {
             m_nCurrentMove    = (eFightAttackType)0;
             m_nContinueStrike = 0;
 
-            if ((int32)ped->m_nMoveState >= PEDMOVE_WALK && ped->IsPlayer()) { // 0x5DF8F0
+            if ((int32)ped->m_nMoveState >= (int32)PEDMOVE_WALK && ped->IsPlayer()) { // 0x5DF8F0
                 m_bIsFinished = true;
                 break;
             }

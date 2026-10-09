@@ -103,7 +103,7 @@ public:
     void SetPlayerMoveAnim(CPlayerPed* player); // 0x61C9B0
     void StartAnim(CPed* ped, int32 move);      // 0x623B10
 
-    bool IsTargetInRange(CPed* ped); // 0x61D6F0 - Not reversed yet (name guessed, ~0x3F0 bytes)
+    bool IsTargetInRange(CPed* ped); // 0x61D6F0 (name guessed)
 
 private:
     friend void InjectHooksMain();

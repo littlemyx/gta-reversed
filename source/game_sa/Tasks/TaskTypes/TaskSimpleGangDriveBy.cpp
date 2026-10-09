@@ -446,6 +446,28 @@ void CTaskSimpleGangDriveBy::ProcessAIPed(CPed* ped) {
     }
 }
 
+// 0x53CBE0 - `CGeneral::GetRadianAngleBetweenPoints` as the original evaluates it: the quotient, the arctangent and the result
+// stay in extended precision (the result is returned in ST0, unrounded), the quadrant offsets are (pi_f / 2) added/subtracted in a fixed order
+static double GetRadianAngleBetweenPointsExt(float x1, float y1, float x2, float y2) {
+    constexpr double HALF_PI = (double)(std::numbers::pi_v<float> / 2.f); // 0x858FE4 (and -HALF_PI at 0x859998)
+
+    const double x = (double)x2 - (double)x1;
+    double       y = (double)y2 - (double)y1;
+    if (y == 0.0) { // FCOM + JP: NaN keeps its value
+        y = (double)0.0001f; // 0x858FC4
+    }
+
+    const double a = std::atan2(x / y, 1.0);
+    if (x > 0.0) {
+        return y > 0.0
+            ? (HALF_PI - a) + HALF_PI
+            : HALF_PI - (a + HALF_PI);
+    }
+    return y > 0.0
+        ? -HALF_PI - (a + HALF_PI)
+        : (HALF_PI - a) - HALF_PI;
+}
+
 // 0x628350 (name guessed) - Points the gun (IK) at the target
 void CTaskSimpleGangDriveBy::ProcessAimIK(CPed* ped) {
     ped->m_pedIK.bUseArm = false;
@@ -488,7 +510,7 @@ void CTaskSimpleGangDriveBy::ProcessAimIK(CPed* ped) {
     const auto&   pedPos = ped->GetPosition();
     const CVector from{pedPos.x, pedPos.y, bone.z};
 
-    float aim  = CGeneral::GetRadianAngleBetweenPoints(target.x, target.y, from.x, from.y); // 0x53CBE0
+    float aim  = (float)GetRadianAngleBetweenPointsExt(target.x, target.y, from.x, from.y); // 0x53CBE0
     float tilt = 0.f;
 
     auto* const veh = ped->m_pVehicle; // NOTE: No check for the vehicle in the player's case either
@@ -496,7 +518,7 @@ void CTaskSimpleGangDriveBy::ProcessAimIK(CPed* ped) {
         // x87: The differences stay in extended precision
         const double dx    = (double)from.x - (double)target.x;
         const double dy    = (double)from.y - (double)target.y;
-        const double pitch = CGeneral::GetRadianAngleBetweenPoints(target.z, (float)std::sqrt(dy * dy + dx * dx), from.z, 0.f);
+        const double pitch = GetRadianAngleBetweenPointsExt(target.z, (float)std::sqrt(dy * dy + dx * dx), from.z, 0.f); // Not rounded to float (stays in the FPU)
 
         const auto* const bike = static_cast<CBike*>(veh);
         tilt = (float)(std::sin((double)aim - GetVehicleHeading(veh)) * (double)bike->m_RideAnimData.LeanAngle + pitch);

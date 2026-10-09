@@ -37,10 +37,10 @@ void CShopping::InjectHooks() {
     RH_ScopedInstall(Save, 0x5D3DE0);
 
     // address?
-    // RH_ScopedInstall(AddPriceModifier, 0x0, { .Reversed = false });
-    // RH_ScopedInstall(AddPriceModifier, 0x0, { .Reversed = false });
-    // RH_ScopedInstall(RemovePriceModifier, 0x0, { .Reversed = false });
-    // RH_ScopedInstall(RemovePriceModifier, 0x0, { .Reversed = false });
+    // RH_ScopedInstall(AddPriceModifier, 0x0, { .Reversed = false });  (name, section: inlined / address unknown)
+    RH_ScopedOverloadedInstall(AddPriceModifier, "key", 0x49BDD0, void(*)(uint32, int32));
+    // RH_ScopedInstall(RemovePriceModifier, 0x0, { .Reversed = false });  (name, section: 0x49BE50)
+    RH_ScopedOverloadedInstall(RemovePriceModifier, "key", 0x49ACD0, void(*)(uint32));
 
     // unused
     RH_ScopedInstall(SetCurrentProperty, 0x49B1F0);
@@ -628,19 +628,29 @@ void CShopping::AddPriceModifier(const char* name, const char* section, int32 pr
     AddPriceModifier(GetKey(name, GetPriceSectionFromName(section)), price);
 }
 
-// 0x (inlined)
+// 0x49BDD0
 void CShopping::AddPriceModifier(uint32 key, int32 price) {
-    // the code may not be same, can not test.
-    for (auto& priceModifier : std::span{ms_priceModifiers.data(), (size_t)ms_numPriceModifiers}) {
-        if (key == priceModifier.key) {
-            priceModifier.price = price;
+    // Update the modifier of `key` if there is one, else append a new one (no bounds check in the original)
+    int32 i = 0;
+    for (; i < ms_numPriceModifiers; i++) {
+        if (ms_priceModifiers[i].key == key) {
+            ms_priceModifiers[i].price = price;
+            break;
+        }
+    }
+    if (i == ms_numPriceModifiers) {
+        ms_priceModifiers[ms_numPriceModifiers].key   = key;
+        ms_priceModifiers[ms_numPriceModifiers].price = price;
+        ms_numPriceModifiers++;
+    }
+
+    // ... and apply it to the already loaded price of that item (the first entry with this key)
+    for (int32 j = 0; j < ms_numPrices; j++) {
+        if (ms_prices[j].key == key) {
+            ms_prices[j].price = price;
             return;
         }
     }
-
-    ms_priceModifiers[ms_numPriceModifiers].key = key;
-    ms_priceModifiers[ms_numPriceModifiers].price = price;
-    ms_numPriceModifiers++;
 }
 
 // 0x
@@ -648,18 +658,21 @@ void CShopping::RemovePriceModifier(const char* name, const char* section) {
     RemovePriceModifier(GetKey(name, GetPriceSectionFromName(section)));
 }
 
-// 0x (inlined)
+// 0x49ACD0
 void CShopping::RemovePriceModifier(uint32 key) {
-    if (ms_numPriceModifiers <= 0)
-        return;
-
-    for (const auto&& [i, priceMod] : rngv::enumerate(std::span{ms_priceModifiers.data(), (size_t)ms_numPriceModifiers})) {
-        if (key == priceMod.key) {
-            ms_numPriceModifiers--;
-            if (ms_numPriceModifiers >= 1u) {
-                ms_priceModifiers[i] = ms_priceModifiers[ms_numPriceModifiers];
-            }
+    // Find the first modifier of `key`; if there is one the last modifier takes its place (unless it was the only one)
+    int32 i = 0;
+    for (; i < ms_numPriceModifiers; i++) {
+        if (ms_priceModifiers[i].key == key) {
+            break;
         }
+    }
+    if (i == ms_numPriceModifiers) {
+        return;
+    }
+    ms_numPriceModifiers--;
+    if (ms_numPriceModifiers > 0) {
+        ms_priceModifiers[i] = ms_priceModifiers[ms_numPriceModifiers];
     }
 }
 

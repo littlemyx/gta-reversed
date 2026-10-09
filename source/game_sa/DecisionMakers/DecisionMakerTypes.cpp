@@ -42,7 +42,12 @@ int32 CDecisionMakerTypes::AddDecisionMaker(CDecisionMaker* decisionMaker, eDeci
 CDecisionMakerTypes* CDecisionMakerTypes::GetInstance() {
     auto& instance = StaticRef<CDecisionMakerTypes*>(0xC0B030);
     if (!instance) {
-        instance = new CDecisionMakerTypes(); // 0x4650F0 (ctor)
+        auto* const created = new CDecisionMakerTypes(); // 0x4650F0 (ctor)
+        // The original ctor also (re)initializes the static state: group flags, script reference indices, active flags
+        m_IsGroupDM.fill(false);
+        ScriptReferenceIndex.fill(1);
+        m_IsActive.fill(false);
+        instance = created;
     }
     return instance;
 }

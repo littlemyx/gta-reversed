@@ -5045,11 +5045,16 @@ void CVehicle::GetPlaneWeaponFiringStatus(bool& status, eOrdnanceType& ordnanceT
 
 // 0x49B010 - Checks if the upgrade model `modelId` can be installed on `vehicle`
 bool IsValidModForVehicle(uint32 modelId, CVehicle* vehicle) {
-    const auto* const vmi   = CModelInfo::GetVehicleModelInfo(vehicle->m_nModelIndex);
-    const auto        flags = CModelInfo::GetModelInfo(modelId)->m_nFlags; // Upgrade model flags: 0x100 = "has vehicle dummy", 0x7C00 = mod kind
+    // NOTE: `CarMod` isn't an `eVehicleMod` here: for upgrade models it holds the component id from the tables
+    //       in `CAtomicModelInfo::SetupVehicleUpgradeFlags` (dummy components if `bUsesVehDummy`, chassis components otherwise)
+    constexpr uint8 DUMMY_COMP_WHEEL    = 0x2;  // "wheel_"
+    constexpr uint8 CHASSIS_COMP_STEREO = 0x11; // "stereo"
 
-    if (flags & 0x100) {
-        if ((flags & 0x7C00) == 0x800) { // Wheels
+    const auto* const vmi = CModelInfo::GetVehicleModelInfo(vehicle->m_nModelIndex);
+    const auto* const mi  = CModelInfo::GetModelInfo(modelId);
+
+    if (mi->bUsesVehDummy) {
+        if (mi->CarMod == DUMMY_COMP_WHEEL) { // Wheels
             const auto wheelSet = (int32)(int8)vmi->m_nWheelUpgradeClass;
             for (int32 i = 0; i < CVehicleModelInfo::GetNumWheelUpgrades(wheelSet); i++) {
                 if ((uint32)CVehicleModelInfo::GetWheelUpgrade(wheelSet, i) == modelId) {
@@ -5058,7 +5063,7 @@ bool IsValidModForVehicle(uint32 modelId, CVehicle* vehicle) {
             }
             return false;
         }
-    } else if ((flags & 0x7C00) == 0x4400) { // Stereo
+    } else if (mi->CarMod == CHASSIS_COMP_STEREO) { // Stereo
         const auto& audio = vehicle->m_vehicleAudio.m_AuSettings;
         if ((uint8)audio.RadioType != 0) { // Not a civilian radio (+0x1D3)
             return false;

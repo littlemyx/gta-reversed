@@ -7,9 +7,10 @@
 // Exe facts that matter: RpAtomicDestroy does NOT unlink the atomic from a clump/world (the game never destroys an attached atomic); here
 // the atomic is unlinked first (leniency, harmless). RpAtomicSetGeometry with the geometry it already has is a complete no-op.
 // The world bounding sphere keeps RW's scaling rule: radius * sqrt(max(|right|^2, |up|^2, |at|^2)) of the frame's LTM unless the LTM is
-// orthonormal (matrix type bits == 3).
+// orthonormal (matrix type bits == 3); sqrt is the exe's table sqrt (rwx::WorldSphereRadius, call at 0x749445).
 #ifdef NOTSA_RW_LIBRW
 #include "fakerw.h"
+#include "rwmath_exact.h"
 
 #include <algorithm>
 #include <cassert>
@@ -113,13 +114,8 @@ const RwSphere* RpAtomicGetWorldBoundingSphere(RpAtomic* atomic) {
     }
     if (frame->dirty() || (atomic->object.object.privateFlags & rw::Atomic::WORLDBOUNDDIRTY)) {
         rw::Matrix* const ltm = frame->getLTM();
-        rw::V3d::transformPoints(&atomic->worldBoundingSphere.center, &atomic->boundingSphere.center, 1, ltm);
-        float radius = atomic->boundingSphere.radius;
-        if ((ltm->flags & rw::Matrix::TYPEMASK) != rw::Matrix::TYPEORTHONORMAL) {
-            const auto sq = [](const rw::V3d& v) { return v.x * v.x + v.y * v.y + v.z * v.z; };
-            radius *= std::sqrt(std::max({sq(ltm->right), sq(ltm->up), sq(ltm->at)}));
-        }
-        atomic->worldBoundingSphere.radius = radius;
+        rwx::TransformPoint(&atomic->worldBoundingSphere.center, &atomic->boundingSphere.center, ltm);   // 0x7EDD60 (exe x87 order)
+        atomic->worldBoundingSphere.radius = rwx::WorldSphereRadius(ltm, atomic->boundingSphere.radius);   // 01r: table sqrt, exe compare order
         atomic->object.object.privateFlags &= ~rw::Atomic::WORLDBOUNDDIRTY;
     }
     return &atomic->worldBoundingSphere;

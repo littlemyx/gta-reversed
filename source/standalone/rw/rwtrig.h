@@ -6,8 +6,11 @@
 #include <cmath>
 #include <cstdint>
 
+#include "fakerw.h"
+#include "rwmath_exact.h"
+
 namespace rwtrig {
-inline double Sqrt(float x) { return (double)std::sqrt(x); }   // RwSqrt 0x7EDB30 (the exe uses a table based approximation; known fidelity TODO)
+inline double Sqrt(float x) { return (double)rwx::Sqrt(x); }   // RwSqrt 0x7EDB30: the exe's table based approximation (01r2; bit-exact vs the exe, rw_math_stream_test)
 constexpr uint32_t Bits(float f) { return std::bit_cast<uint32_t>(f); }
 constexpr float    FromBits(uint32_t u) { return std::bit_cast<float>(u); }
 

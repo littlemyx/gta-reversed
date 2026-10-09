@@ -20,6 +20,8 @@
 // librw's D3D9 device internals (d3ddevice, d3d9Globals)
 #include <src/d3d/rwd3dimpl.h>
 
+#include "camera_sync.h"   // 01r: the exe's camera sync callback 0x7EE5A0 (lifted from the asm, bit-exact vs the exe), replaces librw's cameraSync
+
 #include <cassert>
 
 namespace rw { void calczShiftScale(Camera* cam); } // camera.cpp (librw): zScale/zShift from the device z range, not in a header (superseded by CalcZShiftScale below)
@@ -32,6 +34,11 @@ namespace {
 using rw::d3d::d3d9Globals;
 
 RwUInt32 s_StencilClear = 0; // RwD3D9SetStencilClear (the exe's StencilClearValue, default 0)
+
+// 01r: sync callback of every camera (0x7EE5A0 ported bit-exactly in camera_sync.h): view matrix, frustum corners, planes (table _rwInvSqrt), bound box
+void NotsaCameraSyncCB(rw::ObjectWithFrame* obj) {
+    rwx::CameraSync(reinterpret_cast<rw::Camera*>(obj));
+}
 
 // 01r: the exe's zScale / zShift (0x7EE200), evaluated as the asm does. librw's calczShiftScale is algebraically the same for the perspective case but
 // shrinks the device range differently (it updates N before using it for F); here delta = (F - N) * 1e-4f is taken once. n, f are 1/near, 1/far for a
@@ -81,6 +88,7 @@ bool ResetDeviceNow() {
 RwCamera* RwCameraCreate(void) {
     RwCamera* cam = rw::Camera::create();
     if (cam) {
+        cam->originalSync = NotsaCameraSyncCB;   // librw's world plugin wraps the sync callback (worldCameraSync -> originalSync): replace the inner one
         CalcZShiftScale(cam);
     }
     return cam;
@@ -100,27 +108,33 @@ RwBool RwCameraDestroy(RwCamera* camera) {
 
 // A: Camera::beginUpdate = syncDirty (LTMs, camera frustum/view matrix), device beginUpdate (view/proj into devView/devProj, window-size
 // reset, render surfaces, viewport, BeginScene) + the fixed-function view/projection upload RW did. The exe (0x7EF370) sets `curCamera` first, syncs the
-// dirty frames, calls the device's begin-update and returns NULL if that failed (curCamera stays set). It does NOT touch `renderFrame`: that counter
-// ("Camera display count", read by the env-map pipeline as its once-per-frame key) is incremented by RpWorldRender (0x750453).
-static bool s_worldRenderBumpsFrame = false; // set by NotsaRwBumpRenderFrame(): once RpWorldRender (world.cpp, not this file) bumps it, BeginUpdate must not
+// dirty frames, calls the device's begin-update and returns NULL if that failed (curCamera stays set). It does NOT touch `renderFrame` ("Camera display
+// count", the env-map pipeline's once-per-frame key): the only writer in the whole exe is the world's render callback 0x750430 (inc word [engine + 8] at
+// 0x750453), reached through RpWorldRender 0x74F570, which the game never calls (no call/jmp/data reference anywhere in the exe) - SA renders through its
+// own CRenderer -> RpAtomicRender. So renderFrame stays at its initial 0 for the whole run (the env-map guard `RenderFrame != renderFrame` never fires).
 RwCamera* RwCameraBeginUpdate(RwCamera* camera) {
     if (!camera || !camera->getFrame() || !camera->frameBuffer || !rw::d3d::d3ddevice) {
         return nullptr;
     }
     RwEngineInstance->curCamera = camera;
-    if (!s_worldRenderBumpsFrame) {
-        RwEngineInstance->renderFrame++; // fallback until world.cpp calls NotsaRwBumpRenderFrame(): one bump per begin-update, close to once per frame
-    }
     camera->beginUpdate();
     rw::d3d::d3ddevice->SetTransform(D3DTS_VIEW, reinterpret_cast<const D3DMATRIX*>(&camera->devView));
     rw::d3d::d3ddevice->SetTransform(D3DTS_PROJECTION, reinterpret_cast<const D3DMATRIX*>(&camera->devProj));
     return camera;
 }
 
-// 01r: to be called by the RpWorldRender shim (world.cpp) exactly where the exe increments RwEngineInstance->renderFrame (0x750453)
+// 01r: RpWorldRender's counter bump (exe 0x750453, the world render callback 0x750430)
 void NotsaRwBumpRenderFrame() {
-    s_worldRenderBumpsFrame = true;
     RwEngineInstance->renderFrame++;
+}
+
+// 0x74F570: RW's world render. The one observable effect without BSP sectors (librw has none) is the exe's render callback 0x750430, which makes the world
+// current and increments renderFrame (the env-map pipeline's once-per-frame key). The game never calls this function (no reference anywhere in the exe);
+// it lives here, next to the counter, so that it links wherever the camera does (world.cpp is built without rwglobals.cpp in several unit tests).
+RpWorld* RpWorldRender(RpWorld* world);
+RpWorld* RpWorldRender(RpWorld* world) {
+    NotsaRwBumpRenderFrame();
+    return world;
 }
 
 // D: EndScene; RW clears curCamera outside an update.

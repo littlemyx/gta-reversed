@@ -240,8 +240,10 @@ if (${RE_PROJECT}_RW_LIBRW)
             "${PROJECT_SOURCE_DIR}/tests/standalone/rw_math_stream_test.cpp"
             "${CMAKE_CURRENT_SOURCE_DIR}/standalone/rw/math.cpp"
             "${CMAKE_CURRENT_SOURCE_DIR}/standalone/rw/rwmath_tables.cpp"
+            "${CMAKE_CURRENT_SOURCE_DIR}/standalone/rw/rtquat.cpp"
             "${CMAKE_CURRENT_SOURCE_DIR}/standalone/rw/stream.cpp"
         )
+        target_include_directories(rw_math_stream_test PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/standalone/rw")
         target_compile_definitions(rw_math_stream_test PRIVATE NOTSA_RW_LIBRW NOTSA_RW_UNIT_TEST RW_D3D9)
         target_include_directories(rw_math_stream_test BEFORE PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/fakerw")
         target_link_libraries(rw_math_stream_test PRIVATE librw)

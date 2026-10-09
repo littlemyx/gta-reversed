@@ -251,7 +251,7 @@ static void CameraTests(bool device) {
 
         CHECK(RwEngineInstance->curCamera == nullptr);
         const RwUInt16 rf = RwEngineInstance->renderFrame;
-        CHECK(RwCameraBeginUpdate(cam) == cam && RwEngineInstance->curCamera == cam && RwEngineInstance->renderFrame == (RwUInt16)(rf + 1));
+        CHECK(RwCameraBeginUpdate(cam) == cam && RwEngineInstance->curCamera == cam && RwEngineInstance->renderFrame == rf);   // exe: only the world render callback bumps it
         D3DMATRIX v{}, p{};
         dev->GetTransform(D3DTS_VIEW, &v); dev->GetTransform(D3DTS_PROJECTION, &p);
         // camera at the origin, identity LTM: view = identity with x negated; projection = diag(1/vw), m33 = f/(f-n), m34 = 1, m43 = -n*f/(f-n)

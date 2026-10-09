@@ -95,12 +95,12 @@ static void QuatMatrixTests() {
         // back
         RtQuat back{};
         CHECK(RtQuatConvertFromMatrix(&back, &m) == TRUE);
-        CHECK(QNearSign(ToQd(back), ToQd(q), 2e-6));
+        CHECK(QNearSign(ToQd(back), ToQd(q), 5e-4));   // the exe's table sqrt (~1e-4 relative error) is used since 01r2
         const double len = std::sqrt(back.real * back.real + back.imag.x * back.imag.x + back.imag.y * back.imag.y + back.imag.z * back.imag.z);
-        CHECK(Near(len, 1.0, 2e-6));
+        CHECK(Near(len, 1.0, 5e-4));
         RwMatrix m3{};
         RtQuatUnitConvertToMatrix(&back, &m3);
-        CHECK(MatNearQ(m3, ToQd(q), 5e-6));
+        CHECK(MatNearQ(m3, ToQd(q), 1e-3));
         // which branch did the matrix select (RW's rule: trace > 0, else the largest diagonal element)
         const double trace = (double)m.at.z + m.right.x + m.up.y;
         int br;

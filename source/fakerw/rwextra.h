@@ -402,6 +402,6 @@ RwReal _rwInvSqrt(const RwReal num);
 void   _rwSqrtInit();
 // exe 0x7F1920 (dst may alias src); the game only reaches it through RwFrameOrthoNormalize
 RwMatrix* RwMatrixOrthoNormalize(RwMatrix* dst, const RwMatrix* src);
-// camera.cpp: RW increments RwEngineInstance->renderFrame in RpWorldRender (exe 0x750453), not in RwCameraBeginUpdate. world.cpp's RpWorldRender should call this
-// at the same point; until it does, RwCameraBeginUpdate bumps the counter itself (once a call arrives the BeginUpdate bump stops).
+// camera.cpp: RW increments RwEngineInstance->renderFrame only in the world render callback (exe 0x750453, reached through RpWorldRender 0x74F570, which the
+// game never calls); world.cpp's RpWorldRender calls this, RwCameraBeginUpdate does NOT bump the counter.
 void NotsaRwBumpRenderFrame();

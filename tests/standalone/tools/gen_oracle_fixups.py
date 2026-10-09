@@ -15,7 +15,12 @@ from capstone import *
 from capstone.x86 import *
 
 exe = open(sys.argv[1], 'rb').read()
-WINDOWS = [(0x7ED5F0, 0x7EE0C0), (0x7F12F0, 0x7F2720)]   # vector/sqrt plugin + matrix routines (disassembled); the whole span between is copied
+# code windows that the oracle executes (disassembled for the fixups); the whole span between the first and the last is copied contiguously so that
+# relative calls/jumps between windows stay valid:
+#   0x749330 RpAtomicGetWorldBoundingSphere, 0x74C200 RpMorphTargetCalcBoundingSphere, 0x7EB5C0 rtquat, 0x7ED5F0 vector/sqrt plugin, 0x7EE200 camera
+#   (zscale, sync 0x7EE5A0, clip builders), 0x7F0000 frame routines + 0x7F12F0 matrix routines, 0x808F60 bbox, 0x809550 frame sync
+WINDOWS = [(0x749330, 0x749480), (0x74C200, 0x74C310), (0x7EB5C0, 0x7EC800), (0x7ED5F0, 0x7EE0C0), (0x7EE200, 0x7EF3B0), (0x7F0000, 0x7F2720),
+           (0x808F60, 0x809020), (0x809550, 0x809900)]
 SPAN = (WINDOWS[0][0], WINDOWS[-1][1])
 TEXT = (0x401000, 0x858000); DATA = (0x858000, 0xCB0000)
 
@@ -27,7 +32,16 @@ print("static const unsigned kSpanVA = 0x%X, kSpanSize = 0x%X;" % (SPAN[0], SPAN
 print("static const unsigned kFix[][2] = {")
 for (lo, hi) in WINDOWS:
     code = exe[raw(lo):raw(hi)]
-    for i in md.disasm(code, lo):
+    def insns(code, base):
+        # capstone stops at the first undecodable byte (alignment filler, data): skip it and continue
+        off = 0
+        while off < len(code):
+            last = off
+            for i in md.disasm(code[off:], base + off):
+                yield i
+                last = i.address + i.size - base
+            off = last + 1
+    for i in insns(code, lo):
         branch = i.mnemonic.startswith('j') or i.mnemonic in ('call', 'loop')
         for op in i.operands:
             if op.type == X86_OP_MEM and i.disp_size == 4 and (TEXT[0] <= (op.mem.disp & 0xFFFFFFFF) < DATA[1]):

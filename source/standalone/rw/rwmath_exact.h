@@ -430,4 +430,54 @@ inline RwMatrix* OrthoNormalize(RwMatrix* dst, const RwMatrix* src) {
     return dst;
 }
 
+//--------------------------------------------------------------------------------------------------
+// Bounding spheres
+//--------------------------------------------------------------------------------------------------
+// 0x749330 (RpAtomicGetWorldBoundingSphere), the radius: unless the LTM is orthonormal (type bits == 3) the local radius is scaled by the table sqrt of the
+// largest squared axis length. Axis squares are (x^2 + y^2) + z^2 (extended in the exe: `double`; the first axis stays unrounded on the x87 stack and is only
+// compared with the float-rounded maximum of the other two, the others are spilled to float); the comparison is `s0 < max(s1, s2)` with NaN picking s0 / s1.
+inline float WorldSphereRadius(const RwMatrix* ltm, float radius) {
+    if ((ltm->flags & kTypeMask) == 3u) {
+        return radius;
+    }
+    const double s0 = (D(ltm->right.x) * ltm->right.x + D(ltm->right.y) * ltm->right.y) + D(ltm->right.z) * ltm->right.z;
+    const float  s1 = F((D(ltm->up.x) * ltm->up.x + D(ltm->up.y) * ltm->up.y) + D(ltm->up.z) * ltm->up.z);
+    const float  s2 = F((D(ltm->at.x) * ltm->at.x + D(ltm->at.y) * ltm->at.y) + D(ltm->at.z) * ltm->at.z);
+    const float  m12 = (s1 < s2) ? s2 : s1;
+    const float  mx  = (s0 < D(m12)) ? m12 : F(s0);
+    return F(D(Sqrt(mx)) * D(radius));
+}
+
+// 0x74C200 (RpMorphTargetCalcBoundingSphere): bounding box (0x808F60: maximum / minimum start at vertex 0, strict ordered compares) -> centre = (max + min) * 0.5
+// (x, y: the extended sum is not rounded before the multiplication, z: spilled to float first), radius = table sqrt of the largest squared distance (extended
+// subtraction, (dy^2 + dx^2) + dz^2, kept as float when it grows) * 1.001f; a squared radius <= 0 / NaN skips the sqrt.
+inline void MorphTargetSphere(const RwV3d* v, int32_t n, RwV3d* centre, float* radius) {
+    RwV3d hi{0, 0, 0}, lo{0, 0, 0};
+    if (n > 0 && v) {
+        hi = lo = v[0];
+        for (int32_t i = 1; i < n; i++) {
+            if (lo.x > v[i].x) lo.x = v[i].x;
+            if (lo.y > v[i].y) lo.y = v[i].y;
+            if (lo.z > v[i].z) lo.z = v[i].z;
+            if (hi.x < v[i].x) hi.x = v[i].x;
+            if (hi.y < v[i].y) hi.y = v[i].y;
+            if (hi.z < v[i].z) hi.z = v[i].z;
+        }
+    }
+    const RwV3d c{F((D(hi.x) + D(lo.x)) * 0.5), F((D(hi.y) + D(lo.y)) * 0.5), F(D(F(D(hi.z) + D(lo.z))) * 0.5)};
+    float maxSq = 0.0f;
+    for (int32_t i = 0; v && i < n; i++) {
+        const double dx = D(v[i].x) - D(c.x), dy = D(v[i].y) - D(c.y), dz = D(v[i].z) - D(c.z);
+        const double d  = (dy * dy + dx * dx) + dz * dz;
+        if (d > D(maxSq)) {
+            maxSq = F(d);
+        }
+    }
+    if (maxSq > 0.0f) {
+        maxSq = Sqrt(maxSq);
+    }
+    *centre = c;
+    *radius = F(D(maxSq) * D(FromBits(0x3F8020C5u)));   // 1.001f (.rdata 0x872490)
+}
+
 } // namespace rwx

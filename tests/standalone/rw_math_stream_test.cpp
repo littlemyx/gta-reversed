@@ -3,6 +3,7 @@
 // Expected values for the matrix tests are derived by hand from the RW 3.6 conventions (row vectors, p' = p.x*right + p.y*up + p.z*at + pos)
 // and from the exe disassembly noted in math.cpp.
 #include <rwcore.h>
+#include "camera_sync.h"   // 01r: lifted camera sync + helpers under test (source/standalone/rw)
 #include <cmath>
 #include <cstdlib>
 #include <float.h>
@@ -319,6 +320,13 @@ using MatRot   = RwMatrix*(__cdecl*)(RwMatrix*, const RwV3d*, float, int);
 using MatV     = RwMatrix*(__cdecl*)(RwMatrix*, const RwV3d*, int);
 using MatM     = RwMatrix*(__cdecl*)(RwMatrix*, const RwMatrix*, int);
 using Init     = void*(__cdecl*)(void*, int, int);
+using QConv    = int(__cdecl*)(RtQuat*, const RwMatrix*);
+using QRot     = RtQuat*(__cdecl*)(RtQuat*, const RwV3d*, float, int);
+using QSetup   = void(__cdecl*)(RtQuat*, RtQuat*, RtQuatSlerpCache*);
+using QXform   = RwV3d*(__cdecl*)(RwV3d*, const RwV3d*, int, const RtQuat*);
+using P1       = void*(__cdecl*)(void*);
+using P2       = void*(__cdecl*)(void*, void*);
+using P0       = int(__cdecl*)();
 
 static uint8_t g_engine[0x1000];
 static void* __cdecl FakeAlloc(size_t n, unsigned) { return std::calloc(1, n); }
@@ -359,6 +367,7 @@ static bool Map(const char* path) {
     *reinterpret_cast<int*>(G(0xC979BC)) = 0x600;
     *reinterpret_cast<uint32_t*>(g_engine + 0x604) = 0x20000;
     *reinterpret_cast<void**>(g_engine + 0x608) = Fn(0x7F12F0);
+    for (int k = 0; k < 3; k++) *reinterpret_cast<uint32_t*>(g_engine + 0x60C + 4 * k) = 0x3C23D70Au;   // RwMatrixOpen's default tolerances (0.01f)
     return true;
 }
 } // namespace oracle
@@ -451,6 +460,234 @@ static void TestAgainstExe(const char* exePath) {
         CHECK(bad[i] == 0);
     }
 }
+
+//--------------------------------------------------------------------------------------------------
+// 01r2 oracle checks: rtquat (table sqrt), camera sync (view matrix / frustum, RwMatrixOptimize), bounding spheres, frame LTM sync
+//--------------------------------------------------------------------------------------------------
+static RtQuat RndQuat() { return RtQuat{{Rnd(-1, 1), Rnd(-1, 1), Rnd(-1, 1)}, Rnd(-1, 1)}; }
+
+static void TestRtQuatAgainstExe() {
+    Section("exe oracle (01r2): rtquat vs the exe's code (table sqrt), bit-exact");
+    int bad[5] = {};
+    const int N = 3000;
+    int branches[4] = {};
+    for (int it = 0; it < N; it++) {
+        // ConvertFromMatrix (0x7EB5C0): rotation matrices, raw matrices and sign-flipped diagonals hit all four branches
+        RwMatrix m = RndMat(false);
+        if (it % 3 == 0) m = RndMat(true);
+        if (it % 3 == 1) { m.right = {Rnd(-1, 1), Rnd(-1, 1), Rnd(-1, 1)}; m.up = {Rnd(-1, 1), Rnd(-1, 1), Rnd(-1, 1)}; m.at = {Rnd(-1, 1), Rnd(-1, 1), Rnd(-1, 1)}; }
+        if (it % 7 == 0) { m.right.x = -std::fabs(m.right.x); m.up.y = -std::fabs(m.up.y); m.at.z = -std::fabs(m.at.z) - 0.2f * (it % 2); }
+        RtQuat a{}, b{};
+        const int ra = RtQuatConvertFromMatrix(&a, &m);
+        const int rb = reinterpret_cast<oracle::QConv>(oracle::Fn(0x7EB5C0))(&b, &m);
+        if (ra != rb || std::memcmp(&a, &b, sizeof(a)) != 0) bad[0]++;
+        const double tr = (double)m.at.z + m.right.x + m.up.y;
+        branches[tr > 0.0 ? 0 : (m.right.x > m.up.y ? (m.right.x > m.at.z ? 1 : 3) : (m.up.y > m.at.z ? 2 : 3))]++;
+
+        // Rotate (0x7EB7C0): all combine ops
+        RtQuat q = RndQuat(), r = q, e = q;
+        const RwV3d axis{Rnd(-1, 1), Rnd(-1, 1), Rnd(-1, 1)};
+        const float ang = Rnd(-720, 720);
+        const int op = it % 3;
+        RtQuatRotate(&r, &axis, ang, static_cast<RwOpCombineType>(op));
+        reinterpret_cast<oracle::QRot>(oracle::Fn(0x7EB7C0))(&e, &axis, ang, op);
+        if (std::memcmp(&r, &e, sizeof(r)) != 0) bad[1]++;
+
+        // SetupSlerpCache (0x7EC220): dot products over the whole range (close to +-1, around +-0.5, ~0)
+        RtQuat f = RndQuat(), t = RndQuat();
+        if (it % 4 == 1) { const float k = Rnd(0.0f, 0.2f); t = RtQuat{{f.imag.x + k * t.imag.x, f.imag.y + k * t.imag.y, f.imag.z + k * t.imag.z}, f.real + k * t.real}; }
+        if (it % 4 == 2) { const float k = Rnd(0.0f, 0.3f); t = RtQuat{{-f.imag.x + k * t.imag.x, -f.imag.y + k * t.imag.y, -f.imag.z + k * t.imag.z}, -f.real + k * t.real}; }
+        if (it % 4 == 3) { t = f; }
+        RtQuat f2 = f, t2 = t;
+        RtQuatSlerpCache ca, cb;
+        std::memset(&ca, 0, sizeof(ca)); std::memset(&cb, 0, sizeof(cb));
+        RtQuatSetupSlerpCache(&f, &t, &ca);
+        reinterpret_cast<oracle::QSetup>(oracle::Fn(0x7EC220))(&f2, &t2, &cb);
+        if (std::memcmp(&ca, &cb, sizeof(ca)) != 0) bad[2]++;
+
+        // TransformVectors (0x7EBBB0)
+        RwV3d vin[4], oa[4], ob[4];
+        for (auto& v : vin) v = {Rnd(-9, 9), Rnd(-9, 9), Rnd(-9, 9)};
+        RtQuatTransformVectors(oa, vin, 4, &q);
+        reinterpret_cast<oracle::QXform>(oracle::Fn(0x7EBBB0))(ob, vin, 4, &q);
+        if (std::memcmp(oa, ob, sizeof(oa)) != 0) bad[3]++;
+    }
+    std::printf("  ConvertFromMatrix branches hit: trace>0 %d, x %d, y %d, z %d\n", branches[0], branches[1], branches[2], branches[3]);
+    const char* names[] = {"ConvertFromMatrix", "Rotate", "SetupSlerpCache", "TransformVectors"};
+    for (int i = 0; i < 4; i++) {
+        std::printf("  %-18s mismatches: %d / %d\n", names[i], bad[i], N);
+        CHECK(bad[i] == 0);
+    }
+}
+
+static void TestBoundingSpheresAgainstExe() {
+    Section("exe oracle (01r2): RpMorphTargetCalcBoundingSphere 0x74C200 / RpAtomicGetWorldBoundingSphere 0x749330 vs the exe");
+    int badM = 0, badW = 0;
+    const int N = 3000;
+    for (int it = 0; it < N; it++) {
+        // morph target sphere
+        const int n = 1 + (it % 29);
+        std::vector<RwV3d> v(n);
+        const float sc = std::pow(10.0f, Rnd(-2, 3)), ox = Rnd(-500, 500), oy = Rnd(-500, 500), oz = Rnd(-500, 500);
+        for (auto& p : v) p = (it % 17 == 0) ? RwV3d{ox, oy, oz} : RwV3d{ox + Rnd(-sc, sc), oy + Rnd(-sc, sc), oz + Rnd(-sc, sc)};
+        uint32_t geom[0x20] = {}, mt[0x10] = {};
+        geom[0x14 / 4] = n;
+        mt[0] = static_cast<uint32_t>(reinterpret_cast<uintptr_t>(geom));
+        mt[0x14 / 4] = static_cast<uint32_t>(reinterpret_cast<uintptr_t>(v.data()));
+        RwSphere se{}, ss{};
+        reinterpret_cast<oracle::P2>(oracle::Fn(0x74C200))(mt, &se);
+        rwx::MorphTargetSphere(v.data(), n, &ss.center, &ss.radius);
+        if (std::memcmp(&se, &ss, sizeof(se)) != 0) badM++;
+
+        // world sphere: fake atomic {+3 flags=1 (dirty), +4 frame, +0x1c local centre, +0x28 radius, +0x2c world sphere}, fake clean frame {+3 flags, +0x50 ltm, +0xa0 root}
+        alignas(16) uint8_t atom[0x80] = {}, frm[0xA4] = {};
+        RwMatrix ltm = RndMat(it % 3 == 0);
+        if (it % 5 == 0) { ltm.right = {Rnd(0.1f, 4), 0, 0}; ltm.up = {0, Rnd(0.1f, 4), 0}; ltm.at = {0, 0, Rnd(0.1f, 4)}; ltm.flags = 1; }
+        std::memcpy(frm + 0x50, &ltm, 0x40);
+        *reinterpret_cast<uint32_t*>(frm + 0xA0) = static_cast<uint32_t>(reinterpret_cast<uintptr_t>(frm));
+        atom[3] = 1;
+        *reinterpret_cast<uint32_t*>(atom + 4) = static_cast<uint32_t>(reinterpret_cast<uintptr_t>(frm));
+        const RwV3d lc{Rnd(-50, 50), Rnd(-50, 50), Rnd(-50, 50)};
+        const float lr = Rnd(0.1f, 30);
+        std::memcpy(atom + 0x1C, &lc, 12);
+        std::memcpy(atom + 0x28, &lr, 4);
+        reinterpret_cast<oracle::P1>(oracle::Fn(0x749330))(atom);
+        RwSphere ws{};
+        rwx::TransformPoint(&ws.center, &lc, &ltm);
+        ws.radius = rwx::WorldSphereRadius(&ltm, lr);
+        if (std::memcmp(atom + 0x2C, &ws, 16) != 0) badW++;
+    }
+    std::printf("  MorphTargetSphere mismatches: %d / %d\n  WorldSphere       mismatches: %d / %d\n", badM, N, badW, N);
+    CHECK(badM == 0 && badW == 0);
+}
+
+static void TestCameraSyncAgainstExe() {
+    Section("exe oracle (01r2): camera sync 0x7EE5A0 (view matrix, frustum planes/corners/bound box, RwMatrixOptimize) vs the exe, bit-exact");
+    int bad[5] = {};
+    const int N = 3000;
+    static rw::Frame fakeFrame;
+    for (int it = 0; it < N; it++) {
+        RwMatrix ltm = RndMat(it & 1);
+        if (it % 11 == 0) ltm.setIdentity();
+        rw::Camera* cam = rw::Camera::create();
+        std::memset(&fakeFrame, 0, sizeof(fakeFrame));
+        fakeFrame.ltm = ltm;
+        cam->object.object.parent = &fakeFrame;
+        const bool par = (it % 5 == 4);
+        cam->projection = par ? rw::Camera::PARALLEL : rw::Camera::PERSPECTIVE;
+        cam->viewWindow.set(Rnd(0.2f, 3), Rnd(0.2f, 3));
+        cam->viewOffset.set(it % 3 ? Rnd(-0.5f, 0.5f) : 0.0f, it % 3 ? Rnd(-0.5f, 0.5f) : 0.0f);
+        cam->nearPlane = Rnd(0.05f, 2);
+        cam->farPlane = Rnd(10, 3000);
+        rwx::CameraSync(cam);
+
+        alignas(16) uint8_t buf[rwx::camoff::kSize] = {};
+        alignas(16) uint8_t frame[0xA4] = {};
+        std::memcpy(frame + 0x50, &ltm, 0x40);
+        *reinterpret_cast<uint32_t*>(buf + 4) = static_cast<uint32_t>(reinterpret_cast<uintptr_t>(frame));
+        *reinterpret_cast<int32_t*>(buf + 0x14) = cam->projection;
+        std::memcpy(buf + 0x68, &cam->viewWindow, 8);
+        const float rcp[2] = {rwx::CameraRecip(cam->viewWindow.x), rwx::CameraRecip(cam->viewWindow.y)};
+        std::memcpy(buf + 0x70, rcp, 8);
+        std::memcpy(buf + 0x78, &cam->viewOffset, 8);
+        std::memcpy(buf + 0x80, &cam->nearPlane, 4);
+        std::memcpy(buf + 0x84, &cam->farPlane, 4);
+        reinterpret_cast<oracle::P1>(oracle::Fn(0x7EE5A0))(buf);
+        if (std::memcmp(&cam->viewMatrix, buf + 0x20, 0x40) != 0) bad[0]++;
+        if (std::memcmp(cam->frustumPlanes, buf + 0x94, 6 * 0x14) != 0) bad[1]++;
+        if (std::memcmp(cam->frustumCorners, buf + 0x124, 8 * 12) != 0) bad[2]++;
+        if (std::memcmp(&cam->frustumBoundBox, buf + 0x10C, 0x18) != 0) bad[3]++;
+        // the shim's view matrix flags come from the lifted RwMatrixOptimize: also compare against librw's own idea for information only (not asserted)
+        cam->object.object.parent = nullptr;
+        cam->destroy();
+    }
+    const char* names[] = {"viewMatrix", "frustumPlanes", "frustumCorners", "frustumBoundBox"};
+    for (int i = 0; i < 4; i++) {
+        std::printf("  %-16s mismatches: %d / %d\n", names[i], bad[i], N);
+        CHECK(bad[i] == 0);
+    }
+}
+
+// ---- frame LTM sync: random hierarchies, librw (patched multiplication kernel) vs the exe's _rwFrameSyncDirty 0x809550 / RwFrameGetLTM 0x7F0990 ----
+struct ExeFrame { alignas(4) uint8_t b[0xA4]; };
+static void WriteU32(uint8_t* p, size_t off, const void* v) { uint32_t x = static_cast<uint32_t>(reinterpret_cast<uintptr_t>(v)); std::memcpy(p + off, &x, 4); }
+
+static void TestFrameSyncAgainstExe() {
+    Section("exe oracle (01r2): frame LTM sync (syncDirty, getLTM) on random hierarchies vs the exe, bit-exact");
+    int badLtm = 0, badFlags = 0, scenarios = 0, framesTotal = 0, mults = 0;
+    if (!rw::engine) {   // Engine::open was never called: only the dirty list is needed
+        rw::engine = static_cast<rw::Engine*>(std::calloc(1, rw::Engine::s_plglist.size));
+    }
+    rw::engine->frameDirtyList.init();
+    for (int sc = 0; sc < 400; sc++) {
+        const int n = 2 + (sc % 13);
+        std::vector<rw::Frame*> fr(n);
+        for (int i = 0; i < n; i++) {
+            fr[i] = rw::Frame::create();
+            RwMatrix mm = RndMat(i % 3 != 0);
+            if (i % 5 == 4) mm.setIdentity();
+            fr[i]->matrix = mm;
+            if (i) fr[(std::rand() % i)]->addChild(fr[i], (i & 1) != 0);
+        }
+        rw::Frame::syncDirty();   // everything clean, LTMs computed
+        const bool viaGetLTM = (sc & 1) != 0;
+        // random mutations: new modelling matrices + updateObjects on random frames (marks subtree / hierarchy dirty), a few get their LTM scribbled to prove it is not touched
+        const int muts = 1 + std::rand() % 3;
+        for (int k = 0; k < muts; k++) {
+            rw::Frame* f = fr[std::rand() % n];
+            f->matrix = RndMat(std::rand() & 1);
+            if ((std::rand() & 3) == 0) f->matrix.setIdentity();
+            f->updateObjects();
+        }
+        // mirror into the exe layout
+        std::vector<ExeFrame> ef(n);
+        auto index = [&](const rw::Frame* f) { for (int i = 0; i < n; i++) if (fr[i] == f) return i; return -1; };
+        for (int i = 0; i < n; i++) {
+            uint8_t* b = ef[i].b;
+            std::memset(b, 0, sizeof(ef[i].b));
+            b[3] = fr[i]->object.privateFlags;
+            if (fr[i]->getParent()) WriteU32(b, 4, ef[index(fr[i]->getParent())].b);
+            std::memcpy(b + 0x10, &fr[i]->matrix, 0x40);
+            std::memcpy(b + 0x50, &fr[i]->ltm, 0x40);
+            WriteU32(b, 0x90, b + 0x90); WriteU32(b, 0x94, b + 0x90);                       // empty object list
+            if (fr[i]->child) WriteU32(b, 0x98, ef[index(fr[i]->child)].b);
+            if (fr[i]->next) WriteU32(b, 0x9C, ef[index(fr[i]->next)].b);
+            WriteU32(b, 0xA0, ef[index(fr[i]->root)].b);
+        }
+        // dirty list in librw's order
+        uint8_t* head = oracle::g_engine + 0xBC;
+        uint8_t* prevNode = head;
+        for (rw::LLLink* l = rw::engine->frameDirtyList.link.next; l != rw::engine->frameDirtyList.end(); l = l->next) {
+            for (int i = 0; i < n; i++) if (&fr[i]->inDirtyList == l) { WriteU32(prevNode, 0, ef[i].b + 8); WriteU32(ef[i].b + 8, 4, prevNode); prevNode = ef[i].b + 8; }
+        }
+        WriteU32(prevNode, 0, head); WriteU32(head, 4, prevNode);
+        if (prevNode == head) { WriteU32(head, 0, head); }
+        if (!viaGetLTM) {
+            rw::Frame::syncDirty();
+            reinterpret_cast<oracle::P0>(oracle::Fn(0x809550))();
+        } else {
+            rw::Frame* t = fr[std::rand() % n];
+            t->getLTM();
+            reinterpret_cast<oracle::P1>(oracle::Fn(0x7F0990))(ef[index(t)].b);
+            // leave the shim's list consistent for the next scenario
+            rw::Frame::syncDirty();
+        }
+        for (int i = 0; i < n; i++) {
+            ++framesTotal;
+            if (std::memcmp(&fr[i]->ltm, ef[i].b + 0x50, 0x40) != 0) badLtm++;
+            if (viaGetLTM ? false : (fr[i]->object.privateFlags != ef[i].b[3])) badFlags++;
+            if (std::memcmp(&fr[i]->matrix, ef[i].b + 0x10, 0x40) != 0) badLtm++;
+        }
+        ++scenarios;
+        (void)mults;
+        // tear down (roots first is fine: orphans)
+        for (int i = n - 1; i >= 0; i--) { if (fr[i]->getParent()) fr[i]->removeChild(); }
+        rw::engine->frameDirtyList.init();
+        for (int i = 0; i < n; i++) fr[i]->destroy();
+    }
+    std::printf("  %d scenarios, %d frames: LTM/matrix mismatches %d, flag mismatches %d\n", scenarios, framesTotal, badLtm, badFlags);
+    CHECK(badLtm == 0 && badFlags == 0);
+}
 #endif
 
 int main(int argc, char** argv) {
@@ -460,6 +697,12 @@ int main(int argc, char** argv) {
 #ifdef _WIN32
     if (const char* exe = std::getenv("RW_EXE_ORACLE")) {
         TestAgainstExe(exe);
+        if (oracle::g_code) {
+            TestRtQuatAgainstExe();
+            TestBoundingSpheresAgainstExe();
+            TestCameraSyncAgainstExe();
+            TestFrameSyncAgainstExe();
+        }
     }
 #endif
     TestMatrix();

@@ -24,6 +24,7 @@
 #ifdef NOTSA_RW_LIBRW
 #include "fakerw.h"
 #include "geometry_strip.h"
+#include "rwmath_exact.h"
 
 #include <array>
 #include <cmath>
@@ -369,35 +370,8 @@ RwUInt32 RpD3D9GeometryGetUsageFlags(const RpGeometry* geometry) {
 
 // W: see the file header. Exe: bbox of the vertices, centre = (min+max)*0.5, radius = sqrt(max squared distance to the centre) * 1.001.
 const RpMorphTarget* RpMorphTargetCalcBoundingSphere(const RpMorphTarget* morphTarget, RwSphere* boundingSphere) {
-    const RwInt32 n = morphTarget->parent->numVertices;
-    const RwV3d*  v = morphTarget->vertices;
-    RwV3d lo{0, 0, 0}, hi{0, 0, 0};
-    if (n > 0 && v) {
-        lo = hi = v[0];
-        for (RwInt32 i = 1; i < n; i++) {
-            if (v[i].x < lo.x) lo.x = v[i].x;
-            if (v[i].y < lo.y) lo.y = v[i].y;
-            if (v[i].z < lo.z) lo.z = v[i].z;
-            if (v[i].x > hi.x) hi.x = v[i].x;
-            if (v[i].y > hi.y) hi.y = v[i].y;
-            if (v[i].z > hi.z) hi.z = v[i].z;
-        }
-    }
-    const RwV3d c{(lo.x + hi.x) * 0.5f, (lo.y + hi.y) * 0.5f, (lo.z + hi.z) * 0.5f};
-    float maxSq = 0.0f;
-    if (v) {
-        for (RwInt32 i = 0; i < n; i++) {
-            const float dx = v[i].x - c.x, dy = v[i].y - c.y, dz = v[i].z - c.z;
-            const float d = (dx * dx + dy * dy) + dz * dz;
-            if (d > maxSq) maxSq = d;
-        }
-    }
-    float radius = 0.0f;
-    if (maxSq > 0.0f) {
-        radius = std::sqrt(maxSq);
-    }
-    boundingSphere->center = c;
-    boundingSphere->radius = radius * 1.001f;
+    // 01r: exe 0x74C200 (extended-precision distances, table sqrt at 0x74C2CC): rwx::MorphTargetSphere in rwmath_exact.h
+    rwx::MorphTargetSphere(morphTarget->vertices, morphTarget->parent->numVertices, &boundingSphere->center, &boundingSphere->radius);
     return morphTarget;
 }
 

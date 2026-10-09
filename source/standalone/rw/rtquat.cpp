@@ -7,8 +7,9 @@
 // Every function was lifted from the x87 code with a small symbolic lifter (the SSA temporaries below are the x87 registers: `double`, i.e. no rounding;
 // `float` locals / `(float)` casts are the points where the exe stores to memory). The game sets the FPU precision control to 24 bits at start-up (D7), under which
 // the double temporaries round to float anyway; the explicit form here keeps the port exact on a plain SSE2 build too.
-// Deliberate difference: the exe's RwSqrt / RwV3dNormalize are the table-based RW approximations (7EDB30 / 7ED9B0, tables built at engine start); the shim uses the
-// exact square root like math.cpp's RwV3dNormalize (known fidelity TODO D8: ~1e-4 relative error in the original).
+// RwSqrt / RwV3dNormalize are the exe's table-based RW approximations (7EDB30 / 7ED9B0, relative error ~1e-4): rwx::Sqrt (rwmath_exact.h) here, RwV3dNormalize
+// from math.cpp. The exe calls them at 0x7EB5F9 / 0x7EB6BC / 0x7EB71C / 0x7EB77C (ConvertFromMatrix), 0x7EB85D / 0x7EB94C / 0x7EBA1B (Rotate, normalize) and
+// 0x7EC3DB / 0x7EC47F (SetupSlerpCache). Verified bit-exact against the exe's code by tests/standalone/rw_math_stream_test.cpp (RW_EXE_ORACLE).
 #ifdef NOTSA_RW_LIBRW
 #include "fakerw.h"
 #include "rwtrig.h"

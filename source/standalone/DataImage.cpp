@@ -8,7 +8,7 @@ namespace notsa::standalone::detail {
 bool g_DataImageLoaded = false;
 }
 
-extern "C" const unsigned char notsa_orig_pad[]; // source/standalone/OrigImagePad.cpp
+extern "C" const unsigned char notsa_orig_pad[]; // tools/standalone/make_orig_pad.py (plain `.text`, first object)
 
 namespace notsa::standalone::DataImage {
 namespace {
@@ -123,14 +123,14 @@ void LoadImpl() {
     const uint32_t reserveEnd = AlignUp(i.DataEnd, ALLOC_GRANULARITY);
     const uint32_t padLo = (uint32_t)notsa_orig_pad, padHi = padLo + ORIG_PAD_SIZE;
     if (padLo <= i.DataBase && padHi >= i.DataEnd) {
-        // A. The main image (linked at the original base, with the placeholder from OrigImagePad.cpp merged into .text) already owns the range:
+        // A. The main image (linked at the original base, with the placeholder from tools/standalone/make_orig_pad.py merged into .text) already owns the range:
         //    just make it writable. The placeholder pages in the original CODE range become NOACCESS so a raw jump/call to an
         //    original address faults with the exact address (see Fixups::InstallRedirectHandler).
         // S2: the pad must be the FIRST code of .text, otherwise [0x401000, padLo) holds OUR code which would run silently when called by an original address.
         if (padLo != i.CodeLo) {
             char what[400];
             wsprintfA(what, "the placeholder starts at 0x%08X, not at the original code start 0x%08X: code of this exe lies in the original code range "
-                "[0x%08X, 0x%08X) and raw calls to original addresses would run it silently. The pad (section .text$00, OrigImagePad.cpp) must be the first object in .text; "
+                "[0x%08X, 0x%08X) and raw calls to original addresses would run it silently. The pad (tools/standalone/make_orig_pad.py) must be the first object on the link line; "
                 "link with /INCREMENTAL:NO.", padLo, i.CodeLo, i.CodeLo, padLo);
             LoadFailed(what, padLo);
         }

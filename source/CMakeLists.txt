@@ -159,7 +159,7 @@ target_link_options(${RE_PROJECT_LIB_NAME} PRIVATE "/SUBSYSTEM:WINDOWS")
 if (${RE_PROJECT}_STANDALONE AND NOT ${RE_PROJECT}_STANDALONE_DUMP_HOOKS_ONLY)
     # The original data range (0x858000 ... 0xCB0000) must be at its original VA. A VirtualAlloc at startup is NOT reliable (the process heap /
     # NLS mappings already sit in low memory, see .notes/P2A_DESIGN.md), so the main image itself covers it: linked at the original base with a
-    # 9 MB zero placeholder (source/standalone/OrigImagePad.cpp, section .text$00 = first code of .text) merged into .text. No relocations (/FIXED): original addresses are baked in.
+    # 9 MB zero placeholder (tools/standalone/make_orig_pad.py: plain `.text`, FIRST object = start of .text = 0x401000). No relocations (/FIXED): original addresses are baked in.
     target_link_options(${RE_PROJECT_LIB_NAME} PRIVATE "$<$<CXX_COMPILER_ID:MSVC>:/BASE:0x400000;/DYNAMICBASE:NO;/FIXED;/MERGE:_TEXT=.text;/INCREMENTAL:NO>")
     # Keep the exe/pdb/map out of <repo>/bin/<config>, where the DLL build puts gta_reversed.asi/.pdb
     set_target_properties(${RE_PROJECT_LIB_NAME} PROPERTIES
@@ -169,12 +169,27 @@ if (${RE_PROJECT}_STANDALONE AND NOT ${RE_PROJECT}_STANDALONE_DUMP_HOOKS_ONLY)
         PDB_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin"
     )
 
+    # NOTE: the python needs `unicorn` (pip install unicorn) to replay the exe's static initialisers; pass -D${RE_PROJECT}_PYTHON=<venv python>
+    find_program(${RE_PROJECT}_PYTHON NAMES python3 python NO_CMAKE_FIND_ROOT_PATH)
+    if (NOT ${RE_PROJECT}_PYTHON)
+        message(FATAL_ERROR "python3 not found (needed for the original-image placeholder and the data image extraction)")
+    endif()
+    # The placeholder object (plain `.text` section, see tools/standalone/make_orig_pad.py) MUST be the first object on the link line
+    set(STANDALONE_PAD_OBJ "${CMAKE_BINARY_DIR}/orig_image_pad.obj")
+    add_custom_command(
+        OUTPUT "${STANDALONE_PAD_OBJ}"
+        COMMAND "${${RE_PROJECT}_PYTHON}" -I "${PROJECT_SOURCE_DIR}/tools/standalone/make_orig_pad.py" "${STANDALONE_PAD_OBJ}"
+        DEPENDS "${PROJECT_SOURCE_DIR}/tools/standalone/make_orig_pad.py"
+        COMMENT "Writing the original-image placeholder object"
+        VERBATIM
+    )
+    set_source_files_properties("${STANDALONE_PAD_OBJ}" PROPERTIES EXTERNAL_OBJECT TRUE GENERATED TRUE)
+    target_sources(${RE_PROJECT_LIB_NAME} PRIVATE "${STANDALONE_PAD_OBJ}")
+    get_target_property(_all_sources ${RE_PROJECT_LIB_NAME} SOURCES)
+    list(REMOVE_ITEM _all_sources "${STANDALONE_PAD_OBJ}")
+    set_property(TARGET ${RE_PROJECT_LIB_NAME} PROPERTY SOURCES "${STANDALONE_PAD_OBJ}" ${_all_sources})
+
     if (${RE_PROJECT}_ORIGINAL_EXE)
-        # NOTE: the python needs `unicorn` (pip install unicorn) to replay the exe's static initialisers; pass -D${RE_PROJECT}_PYTHON=<venv python>
-        find_program(${RE_PROJECT}_PYTHON NAMES python3 python NO_CMAKE_FIND_ROOT_PATH)
-        if (NOT ${RE_PROJECT}_PYTHON)
-            message(FATAL_ERROR "python3 not found (needed to extract the data image from ${RE_PROJECT}_ORIGINAL_EXE)")
-        endif()
         set(STANDALONE_DATA_DIR "${CMAKE_BINARY_DIR}/standalone_data")
         set(STANDALONE_DATA_OUT
             "${STANDALONE_DATA_DIR}/original_data.bin"

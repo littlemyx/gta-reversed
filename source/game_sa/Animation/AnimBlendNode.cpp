@@ -40,12 +40,17 @@ void CAnimBlendNode::InjectHooks() {
 
 // 0x4CFB70
 void CAnimBlendNode::Init() {
-    *this = CAnimBlendNode{};
+    // NOTE: The original does not touch m_Theta / m_InvSinTheta
+    m_KFCurr          = -1;
+    m_KFPrev          = -1;
+    m_KFRemainingTime = 0.0f;
+    m_Seq             = nullptr;
+    m_BlendAssoc      = nullptr;
 }
 
 // 0x4D0240
 bool CAnimBlendNode::FindKeyFrame(float time) {
-    if (m_Seq->m_FramesNum == 0) {
+    if (m_Seq->m_FramesNum < 1) {
         return false;
     }
 
@@ -54,36 +59,41 @@ bool CAnimBlendNode::FindKeyFrame(float time) {
 
     if (m_Seq->m_FramesNum == 1) {
         m_KFRemainingTime = 0.0f;
-    } else {
-        // Find kf that spans over the specified `time`
-        for (auto kf = m_Seq->GetUKeyFrame(++m_KFCurr); time > kf->DeltaTime; m_KFPrev = m_KFCurr++) {
-            time -= m_Seq->GetUKeyFrame(m_KFCurr)->DeltaTime;
+        CalcDeltas();
+        return true;
+    }
 
-            if (m_KFCurr + 1 >= m_Seq->m_FramesNum) {
-                // reached end of animation
-                if (!m_BlendAssoc->IsLooped()) {
-                    CalcDeltas();
-                    m_KFRemainingTime = 0.0f;
-                    return false;
-                }
-                m_KFCurr = 0;
+    // `time` lives on the x87 stack (unrounded) for the whole search
+    double t = time;
+
+    // Find kf that spans over the specified `time`
+    m_KFCurr = 1;
+    while (t > (double)m_Seq->GetUKeyFrame(m_KFCurr)->DeltaTime) { // `test ah, 0x41; jne` => leaves if !(t > dt) (NaN leaves)
+        t -= (double)m_Seq->GetUKeyFrame(m_KFCurr)->DeltaTime;
+
+        if (m_KFCurr + 1 >= m_Seq->m_FramesNum) {
+            // reached end of animation
+            if (!m_BlendAssoc->IsLooped()) {
+                CalcDeltas();
+                m_KFRemainingTime = 0.0f;
+                return false;
             }
+            m_KFCurr = 0;
         }
 
-        // Now calculate how much we have remaining from this frame
-        m_KFRemainingTime = m_Seq->GetUKeyFrame(m_KFCurr)->DeltaTime - time;
+        m_KFPrev = m_KFCurr++;
     }
+
+    // Now calculate how much we have remaining from this frame
+    m_KFRemainingTime = (float)((double)m_Seq->GetUKeyFrame(m_KFCurr)->DeltaTime - t);
 
     CalcDeltas();
     return true;
 }
 
 // NOTSA: The exe has no such member, its callers inline this (0x4D00E0 is the cdecl helper `CalcThetaFromQuats` above, which does the dot product too)
-void CAnimBlendNode::CalcTheta(float angleCos) {
-    m_Theta       = std::acos(std::min(angleCos, 1.0f));
-    m_InvSinTheta = m_Theta == 0.0f
-        ? 0.0f
-        : 1.0f / std::sin(m_Theta);
+void CAnimBlendNode::CalcTheta(const CQuaternion& a, const CQuaternion& b) {
+    CalcThetaFromQuats(&a, &b, &m_Theta, &m_InvSinTheta);
 }
 
 // 0x4D0190
@@ -93,10 +103,8 @@ void CAnimBlendNode::CalcDeltas() {
     }
 
     CalcTheta(
-        DotProduct(
-            m_Seq->GetUKeyFrame(m_KFCurr)->Rot,
-            m_Seq->GetUKeyFrame(m_KFPrev)->Rot
-        )
+        m_Seq->GetUKeyFrame(m_KFCurr)->Rot,
+        m_Seq->GetUKeyFrame(m_KFPrev)->Rot
     );
 }
 
@@ -109,18 +117,17 @@ void CAnimBlendNode::CalcDeltasCompressed() {
     KeyFrameCompressed* kfA = m_Seq->GetCKeyFrame(m_KFCurr);
     KeyFrameCompressed* kfB = m_Seq->GetCKeyFrame(m_KFPrev);
 
-    CQuaternion rotA = kfA->Rot, rotB = kfB->Rot;
-    const auto angleCos = DotProduct(rotA, rotB); // What kind of retarded hack is this
-    if (angleCos < 0.0f) {
-        rotB     = -rotB;
-        kfB->Rot = rotB;
-    }
-    CalcTheta(angleCos);
-}
+    CQuaternion rotB = kfB->Rot; // Decoded first
+    CQuaternion rotA = kfA->Rot;
 
-// 0x4CFB90 - Unused
-bool CAnimBlendNode::NextKeyFrameNoCalc() {
-    NOTSA_UNREACHABLE("Unused Function");
+    // Dot is accumulated in extended precision in this order (w, z, y, x) and NOT rounded before the comparison
+    const double dot = (((double)rotB.w * rotA.w + (double)rotB.z * rotA.z) + (double)rotB.y * rotA.y) + (double)rotB.x * rotA.x;
+    if (dot < 0.0) {
+        // Flip the CURRENT key frame (A) (not B), and write it back to the key-frame (re-quantised, truncating)
+        rotA     = -rotA;
+        kfA->Rot = rotA;
+    }
+    CalcTheta(rotA, rotB); // Uses the (float) negated values, not the re-quantised ones
 }
 
 // 0x4D0650
@@ -133,10 +140,11 @@ bool CAnimBlendNode::SetupKeyFrameCompressed() {
     m_KFPrev = 0;
 
     if (m_Seq->m_FramesNum == 1) {
-        m_KFCurr    = 0;
+        m_KFCurr          = 0;
         m_KFRemainingTime = 0.0f;
     } else {
-        m_KFRemainingTime = m_Seq->GetCKeyFrame(m_KFCurr)->DeltaTime;
+        // `fild; fmul [0x859044]; fstp` (NOT a division by 60)
+        m_KFRemainingTime = (float)AnimBlendNodeX87::CompressedDeltaTime(m_Seq->GetCKeyFrame(m_KFCurr));
     }
 
     CalcDeltasCompressed();

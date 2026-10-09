@@ -15,6 +15,8 @@
 #include "Timer.h"
 #include "Vehicle.h"
 
+#include <bit>
+
 static auto& TempVertexBuffer = StaticRef<std::array<RxObjSpace3DVertex, 4>>(0xC4D958);
 
 auto& g_fx = StaticRef<Fx_c>(0xA9AE00);
@@ -439,15 +441,9 @@ void Fx_c::AddBlood(const CVector& pos, const CVector& direction, int32 amount, 
         return;
     }
 
-    // Distance check, accumulated in extended precision
-    {
-        const auto& cam = TheCamera.GetPosition();
-        const double dx = (double)cam.x - pos.x;
-        const double dy = (double)cam.y - pos.y;
-        const double dz = (double)cam.z - pos.z;
-        if (dx * dx + dy * dy + dz * dz > 625.0) { // 0x85A6E8 = 25^2 (FCOMP + JE: NaN passes)
-            return;
-        }
+    // Distance check, accumulated in extended precision: (x^2 + z^2) + y^2
+    if (CamDistSq_XZY(pos) > 625.0) { // 0x85A6E8 = 25^2 (FCOMP + JE: NaN passes)
+        return;
     }
 
     // Wrap the 0..9999 random into a [0..1) float multiplier
@@ -490,9 +486,10 @@ void Fx_c::AddWood(const CVector& pos, const CVector& direction, int32 amount, f
 
     FxPrtMult_c fxMults{ 0.5f, 0.25f, 0.0f, 1.0f, 0.3f, 0.0f, 1.0f }; // 0x4AB290
     for (auto i = 0; i < amount; i++) {
-        fxMults.m_Color.red   = (float)(RandFrac10000() * (double)0.12f + (double)0.13f);  // 0x85A6F8, 0x859020
-        fxMults.m_Color.green = (float)(RandFrac10000() * (double)0.03f + (double)0.12f);  // 0x85A6F4, 0x85A6F0
-        fxMults.m_Color.blue  = (float)(RandFrac10000() * (double)0.03f + (double)0.04f);  // 0x85A6EC, 0x858CEC
+        // NOTE: the multipliers are NOT 0.12f/0.03f/0.03f, they differ in the last mantissa bits (0x85A6F8, 0x85A6F4, 0x85A6EC)
+        fxMults.m_Color.red   = (float)(RandFrac10000() * (double)std::bit_cast<float>(0x3DF5C290u) + (double)0.13f);  // 0x85A6F8, 0x859020
+        fxMults.m_Color.green = (float)(RandFrac10000() * (double)std::bit_cast<float>(0x3CF5C294u) + (double)0.12f);  // 0x85A6F4, 0x85A6F0
+        fxMults.m_Color.blue  = (float)(RandFrac10000() * (double)std::bit_cast<float>(0x3CF5C290u) + (double)0.04f);  // 0x85A6EC, 0x858CEC
         fxMults.m_fSize       = (float)(RandFrac10000() * (double)0.3f  + (double)0.7f);   // 0x858C24, 0x858CB0
 
         CVector vel{ direction.x * 4.0f, direction.y * 4.0f, direction.z * 4.0f }; // 0x858B90
@@ -619,11 +616,7 @@ void Fx_c::AddBulletImpact(const CVector& posn, const CVector& direction, int32 
 // 0x49F670
 // NOTE: the 3rd argument is unused by the original (RET 0xC, never read)
 void Fx_c::AddPunchImpact(const CVector& pos, const CVector& velocity, int32 num) {
-    const auto& cam = TheCamera.GetPosition();
-    const double dx = (double)cam.x - pos.x;
-    const double dy = (double)cam.y - pos.y;
-    const double dz = (double)cam.z - pos.z;
-    if (dx * dx + dy * dy + dz * dz > 625.0) { // 0x85A6E8 (FCOMP + JE: NaN passes)
+    if (CamDistSq_XZY(pos) > 625.0) { // 0x85A6E8 (FCOMP + JE: NaN passes), (x^2 + z^2) + y^2
         return;
     }
 

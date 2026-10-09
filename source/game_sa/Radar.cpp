@@ -1166,8 +1166,9 @@ int32 CRadar::ClipRadarPoly(CVector2D* out, const CVector2D* in) {
                 CVector2D*      dst        = outPoint;
                 for (int32 side = lastSide; side != side2; side = (side + 1) & 3) {
                     numOut++;
-                    assert(side >= 0); // The original would read garbage from the stack for -1
-                    *dst++ = corners[side];
+                    // The original indexes its corner table with -1 here and reads two stack slots (pointers) as floats:
+                    // such bit patterns are denormals/tiny values, i.e. the point (~0, ~0)
+                    *dst++ = side >= 0 ? corners[side] : CVector2D{0.0f, 0.0f};
                 }
                 out[numOut] = savedPoint;
             }

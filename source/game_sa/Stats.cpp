@@ -829,8 +829,6 @@ int32 CStats::ConstructStatLine(int32 arg0, uint8 arg1) {
     }();
 
     static auto& s_CurrentStatId = StaticRef<uint16>(0xB794CC);
-    static auto& s_GangValue    = StaticRef<int32[0x200]>(0x96A600); // Indexed by the stat id
-    static auto& s_GangIcon    = StaticRef<int32[0x200]>(0x96A60C); // Indexed by the stat id
 
     int32 line = 0; // Number of lines produced so far (ESI)
 
@@ -1160,8 +1158,9 @@ int32 CStats::ConstructStatLine(int32 arg0, uint8 arg1) {
             case 0x14B: // 0x55B528
             case 0x14C:
             case 0x14D: {
-                const int32 valueB = s_GangValue[id];
-                const int32 valueA = s_GangIcon[id];
+                // 0x96AB2C + id * 4 / 0x96AB38 + id * 4 (id = 0x14B..0x14D)
+                const int32 valueB = CGangWars::GangRatingStrength[id - 0x14B];
+                const int32 valueA = CGangWars::GangRatings[id - 0x14B];
                 if (valueA < 0) {
                     return R::Skip;
                 }

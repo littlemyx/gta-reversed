@@ -203,10 +203,10 @@ void CVehicle::InjectHooks() {
     RH_ScopedInstall(RemoveVehicleUpgrade, 0x6DF930);
     RH_ScopedInstall(AddUpgrade, 0x6DFA20);
     RH_ScopedInstall(UpdateTrailerLink, 0x6DFC50);
-    // RH_ScopedInstall(UpdateTractorLink, 0x6E0050);
-    // RH_ScopedInstall(ScanAndMarkTargetForHeatSeekingMissile, 0x6E0400);
-    // RH_ScopedInstall(FireHeatSeakingMissile, 0x6E05C0);
-    // RH_ScopedInstall(PossiblyDropFreeFallBombForPlayer, 0x6E07E0);
+    RH_ScopedInstall(UpdateTractorLink, 0x6E0050);
+    RH_ScopedInstall(ScanAndMarkTargetForHeatSeekingMissile, 0x6E0400);
+    RH_ScopedInstall(FireHeatSeakingMissile, 0x6E05C0);
+    RH_ScopedInstall(PossiblyDropFreeFallBombForPlayer, 0x6E07E0);
     // RH_ScopedInstall(ProcessSirenAndHorn, 0x6E0950);
     RH_ScopedInstall(DoHeadLightEffect, 0x6E0A50);
     RH_ScopedInstall(DoHeadLightReflectionSingle, 0x6E1440);
@@ -6051,22 +6051,191 @@ void CVehicle::UpdateTrailerLink(bool arg0, bool arg1) {
 
 // 0x6E0050
 void CVehicle::UpdateTractorLink(bool arg0, bool arg1) {
-    ((void(__thiscall*)(CVehicle*, bool, bool))0x6E0050)(this, arg0, arg1);
+    CVehicle* const trailer = m_pVehicleBeingTowed;
+    if (!trailer) {
+        return;
+    }
+
+    CVector barPos{}, hitchPos{};
+    if (!trailer->GetTowHitchPos(hitchPos, true, this) || !GetTowBarPos(barPos, true, trailer)) {
+        return; // Note: Doesn't break the link (unlike `UpdateTrailerLink`)
+    }
+
+    const CVector delta{ hitchPos.x - barPos.x, hitchPos.y - barPos.y, hitchPos.z - barPos.z };
+
+    // Tow truck / tractor with its hoist lowered doesn't apply any force
+    if (m_nModelIndex == MODEL_TOWTRUCK || m_nModelIndex == MODEL_TRACTOR) {
+        if ((int32)TOWTRUCK_HOIST_DOWN_LIMIT - 100 < (int32)static_cast<CAutomobile*>(this)->m_wMiscComponentAngle) {
+            return;
+        }
+    }
+
+    // Make the hitch/bar position relative to the vehicles
+    hitchPos -= trailer->GetPosition();
+    barPos   -= GetPosition();
+
+    const CVector trailerSpeed = trailer->GetSpeed(hitchPos);
+    const CVector mySpeed      = GetSpeed(barPos);
+    CVector relSpeed{
+        trailerSpeed.x - mySpeed.x,
+        trailerSpeed.y - mySpeed.y,
+        trailerSpeed.z - mySpeed.z
+    };
+
+    if (!arg0) {
+        // Scale by the (inverse) mass ratio - the factor stays unrounded in the original
+        const double scale = (1.0 - (double)m_fMass / ((double)trailer->m_fMass + (double)m_fMass)) * 0.5f;
+        relSpeed = CVector{
+            (float)((double)relSpeed.x * scale),
+            (float)((double)relSpeed.y * scale),
+            (float)((double)relSpeed.z * scale)
+        };
+
+        if (arg1) {
+            const auto step = 1.f > CTimer::ms_fTimeStep ? 1.f : CTimer::ms_fTimeStep;
+            const CVector scaled{ 0.1f * delta.x, 0.1f * delta.y, 0.1f * delta.z };
+            const double  invStep  = 1.0 / (double)step; // Note: `z` uses the unrounded value, `x` and `y` the rounded one
+            const auto    invStepF = (float)invStep;
+            relSpeed = CVector{
+                scaled.x * invStepF,
+                scaled.y * invStepF,
+                (float)((double)scaled.z * invStep)
+            };
+        }
+    }
+
+    if (trailer->m_nVehicleSubType == VEHICLE_TYPE_TRAILER && static_cast<CTrailer*>(trailer)->m_fTrailerTowedRatio == -1000.f) { // 0x6D0AF0 - Baggage trailer
+        // Remove the vertical component
+        const auto& up   = trailer->m_matrix->GetUp();
+        const auto  proj = (float)(((double)relSpeed.z * up.z + (double)relSpeed.y * up.y) + (double)relSpeed.x * up.x);
+        relSpeed.x -= proj * up.x;
+        relSpeed.y -= proj * up.y;
+        relSpeed.z -= proj * up.z;
+    }
+
+    const CVector com = Multiply3x3_x87(*m_matrix, m_vecCentreOfMass);
+
+    CVector dir = relSpeed;
+    Normalise_x87(dir);
+
+    const CVector lever{ barPos.x - com.x, barPos.y - com.y, barPos.z - com.z };
+    const CVector cross = Cross_x87(lever, dir);
+
+    // Note: Unlike in `UpdateTrailerLink` the impulse isn't rounded to a float before being applied
+    const double impulse = 1.0 / (SquaredMagnitude_x87(cross) / (double)m_fTurnMass + 1.0 / (double)m_fMass);
+    ApplyForce(
+        CVector{ (float)((double)relSpeed.x * impulse), (float)((double)relSpeed.y * impulse), (float)((double)relSpeed.z * impulse) },
+        barPos,
+        true
+    );
+    m_nFakePhysics = 0;
 }
 
 // 0x6E0400
 CEntity* CVehicle::ScanAndMarkTargetForHeatSeekingMissile(CEntity* entity) {
-    return ((CEntity * (__thiscall*)(CVehicle*, CEntity*))0x6E0400)(this, entity);
+    CEntity* target = CWeapon::PickTargetForHeatSeekingMissile(GetPosition(), m_matrix->GetForward(), 1.2f, this, true, entity);
+
+    CPlane* const plane = IsSubPlane() ? AsPlane() : nullptr;
+    // Re-check the line of sight right away if we haven't done it yet
+    const uint32 recheckBias = plane ? (plane->field_9E4 & 0x7FFFFFFF) == 0 : 0u;
+
+    bool isLOSClear;
+    if (target && CTimer::GetTimeInMS() - recheckBias > 1000) {
+        const bool myUsedCollision     = GetUsesCollision();
+        const bool targetUsedCollision = target->GetUsesCollision();
+        SetUsesCollision(false);
+        target->SetUsesCollision(false);
+
+        isLOSClear = CWorld::GetIsLineOfSightClear(GetPosition(), target->GetPosition(), true, true, false, true, false, true, false);
+
+        SetUsesCollision(myUsedCollision);
+        target->SetUsesCollision(targetUsedCollision);
+
+        if (plane) {
+            plane->field_9E4 = (uint32)(CTimer::GetTimeInMS() > 1) | ((uint32)isLOSClear << 31);
+        }
+    } else if (plane) {
+        isLOSClear = (uint32)plane->field_9E4 >> 31;
+    } else {
+        isLOSClear = true; // Not checked in this case
+    }
+
+    if (!isLOSClear) {
+        target = nullptr;
+        CWeaponEffects::ClearCrossHairImmediately(0);
+        return target;
+    }
+
+    if (target && GetStatus() == STATUS_PLAYER) {
+        CWeaponEffects::MarkTarget(0, target->GetPosition(), 255, 255, 255, 100, 1.3f, true);
+    } else {
+        CWeaponEffects::ClearCrossHairImmediately(0);
+    }
+    return target;
 }
 
 // 0x6E05C0
-void CVehicle::FireHeatSeakingMissile(CEntity* targetEntity, eOrdnanceType type, bool arg2) {
-    ((void(__thiscall*)(CVehicle*, CEntity*, eOrdnanceType, bool))0x6E05C0)(this, targetEntity, type, arg2);
+void CVehicle::FireHeatSeakingMissile(CEntity* targetEntity, eOrdnanceType type, bool checkTime) {
+    auto& lastFiredTime = type == 1 ? m_nProjectileWeaponFiringTime : m_nAdditionalProjectileWeaponFiringTime;
+    if (checkTime && CTimer::GetTimeInMS() <= GetPlaneOrdnanceRateOfFire(type) + lastFiredTime) {
+        return;
+    }
+
+    const CVector pos           = GetPosition();
+    const CVector ordnancePos   = GetPlaneOrdnancePosition(type);
+    const auto&   fwd           = m_matrix->GetForward();
+
+    // Alternate between the left/right hard-point
+    const double ordnanceX = m_nOrdnanceCycleIndex != 0 ? -(double)ordnancePos.x : (double)ordnancePos.x;
+    m_nOrdnanceCycleIndex = m_nOrdnanceCycleIndex == 0 ? 1 : 0;
+
+    // Place the missile somewhere in front of us, depending on our velocity (x87 evaluation order, see asm)
+    const double speedFwd = ((double)m_vecMoveSpeed.z * fwd.z + (double)m_vecMoveSpeed.y * fwd.y) + (double)m_vecMoveSpeed.x * fwd.x;
+    const double s        = speedFwd < 0.0 ? 0.0 : speedFwd; // Note: NaN is passed through
+    const double offX     = (s * fwd.x) * CTimer::ms_fTimeStep;
+    const float  fy       = (float)(s * fwd.y);
+    const float  fz       = (float)(s * fwd.z);
+    const double offY     = (double)fy * CTimer::ms_fTimeStep;
+    const float  offZ     = (float)((double)fz * CTimer::ms_fTimeStep);
+    const float  x        = (float)(offX + ordnanceX);
+
+    const CVector posn{
+        pos.x + x,
+        (float)((double)pos.y + ((double)ordnancePos.y + offY)),
+        (float)((double)pos.z + ((double)ordnancePos.z + (double)offZ))
+    };
+    const CVector direction = fwd;
+    CProjectileInfo::AddProjectile(this, WEAPON_ROCKET_HS, posn, 0.f, &direction, targetEntity);
+
+    if (m_pDriver && m_pDriver->IsPlayer()) {
+        CPad::GetPad(m_pDriver->GetPadNumber())->StartShake(240, 160, 0);
+    }
+
+    lastFiredTime = CTimer::GetTimeInMS();
 }
 
 // 0x6E07E0
-void CVehicle::PossiblyDropFreeFallBombForPlayer(eOrdnanceType type, bool arg1) {
-    ((void(__thiscall*)(CVehicle*, eOrdnanceType, bool))0x6E07E0)(this, type, arg1);
+void CVehicle::PossiblyDropFreeFallBombForPlayer(eOrdnanceType type, bool checkTime) {
+    auto& lastFiredTime = type == 1 ? m_nProjectileWeaponFiringTime : m_nAdditionalProjectileWeaponFiringTime;
+    if (checkTime && CTimer::GetTimeInMS() <= GetPlaneOrdnanceRateOfFire(type) + lastFiredTime) {
+        return;
+    }
+
+    const CVector pos         = GetPosition();
+    const CVector ordnancePos = GetPlaneOrdnancePosition(type);
+
+    // Alternate between the left/right hard-point
+    const float ordnanceX = m_nOrdnanceCycleIndex != 0 ? -ordnancePos.x : ordnancePos.x;
+    m_nOrdnanceCycleIndex = m_nOrdnanceCycleIndex == 0 ? 1 : 0;
+
+    const CVector posn{ pos.x + ordnanceX, ordnancePos.y + pos.y, ordnancePos.z + pos.z };
+    CProjectileInfo::AddProjectile(this, WEAPON_FREEFALL_BOMB, posn, 0.f, &m_matrix->GetForward(), nullptr);
+
+    if (m_pDriver && m_pDriver->IsPlayer()) {
+        CPad::GetPad(m_pDriver->GetPadNumber())->StartShake(240, 160, 0);
+    }
+
+    lastFiredTime = CTimer::GetTimeInMS();
 }
 
 // 0x6E0950

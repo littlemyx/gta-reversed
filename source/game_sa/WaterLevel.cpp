@@ -302,7 +302,7 @@ auto CWaterLevel::GetTextureUV(int32 X1, int32 Y1, int32 Y3, int32 WaterLayer) -
 
 // 0x6E8ED0
 void CWaterLevel::RenderFlatWaterTriangle_OneLayer(int32 X1, int32 Y1, CRenPar P1, int32 X2, int32 Y2, CRenPar P2, int32 X3, int32 Y3, CRenPar P3, int32 WaterLayer) {
-    RenderBuffer::RenderIfDoesntFit(5, 3);
+    RenderBuffer::RenderIfDoesntFit(3, 3);
 
     // First(!) push indices
     RenderBuffer::PushIndices({ 0, 1, 2 }, true);
@@ -629,18 +629,6 @@ auto& s_WaveNormalSink = StaticRef<CVector>(0xC278D4);
 
 // 0xC278E0 - If set, no indices are generated (and the vertex counter isn't advanced). Never written by anything known => always false
 auto& s_bDontGenerateIndices = StaticRef<bool>(0xC278E0);
-
-// 0x6E7680 - Render out (if there's anything) and empty the temporary (Im3D) buffer
-void RenderAndEmptyRenderBuffer() {
-    if (uiTempBufferVerticesStored) {
-        LittleTest();
-        if (RwIm3DTransform(TempBufferVertices.m_3d, uiTempBufferVerticesStored, nullptr, rwIM3D_VERTEXUV)) {
-            RwIm3DRenderIndexedPrimitive(rwPRIMTYPETRILIST, aTempBufferIndices, uiTempBufferIndicesStored);
-            RwIm3DEnd();
-        }
-    }
-    RenderBuffer::ClearRenderBuffer();
-}
 }
 
 // 0x6E91D0
@@ -650,7 +638,7 @@ void RenderAndEmptyRenderBuffer() {
 // NOTE: `numTris` and `numVerts` are unused by the original.
 void CWaterLevel::RenderHighDetailWaterRectangle_OneLayer(int32 minX, int32 maxX, int32 Y1, int32 Y2, CRenPar P1, CRenPar P2, CRenPar P3, CRenPar P4, int32 WaterLayer, int32 numTris, int32 numVerts, int32 numCellsX, int32 numCellsY) {
     s_VtxColorCacheIdx = 0;
-    RenderAndEmptyRenderBuffer(); // 0x6E7680
+    RenderBuffer::RenderAndEmptyRenderBuffer(); // 0x6E7680
 
     const float invX = (float)(1.0 / (double)numCellsX);
     const int32 stepX = (maxX - minX) / numCellsX;
@@ -1430,7 +1418,7 @@ void CWaterLevel::RenderWater() {
     SetCameraRange();
     DefinedState();
 
-    const auto FlushRenderBuffer = RenderAndEmptyRenderBuffer; // Renders out and clears the (immediate mode) buffers
+    const auto FlushRenderBuffer = RenderBuffer::RenderAndEmptyRenderBuffer; // Renders out and clears the (immediate mode) buffers
 
     //
     // Sea bed (Outside of the world only)

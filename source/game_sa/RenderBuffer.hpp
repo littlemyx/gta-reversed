@@ -53,7 +53,14 @@ void ClearRenderBuffer();
 
 /*!
 * @addr 0x6E7680
-* @brief Render out buffer if the specified number of vertices/indices doesn't fit
+* @brief Render out the contents of the temporary buffers as a trilist (calls `LittleTest()` first, unlike `RenderStuffInBuffer`) and empty them.
+*/
+void RenderAndEmptyRenderBuffer();
+
+/*!
+* @notsa
+* @brief Render out the buffer if the specified number of indices/vertices doesn't fit. The original has no such function, it is inlined at each call site
+*        as `idx >= (IdxBufferSize - nIdx) || vtx >= (VtxBufferSize - nVtx)` followed by a call to 0x6E7680.
 */
 void RenderIfDoesntFit(int32 nIdx, int32 nVtx);
 

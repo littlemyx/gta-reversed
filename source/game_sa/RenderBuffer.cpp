@@ -16,6 +16,7 @@ void InjectHooks() {
     RH_ScopedGlobalInstall(StopStoring, 0x7077A0);
     RH_ScopedGlobalInstall(RenderStuffInBuffer, 0x707800);
     RH_ScopedGlobalInstall(ClearRenderBuffer, 0x707790);
+    RH_ScopedGlobalInstall(RenderAndEmptyRenderBuffer, 0x6E7680);
 }
 
 // 0x708290
@@ -85,10 +86,22 @@ void ClearRenderBuffer() {
     uiTempBufferVerticesStored = 0;
 }
 
-// 0x6E7680 - I know, `LittlTest()` is missing, but nobody cares.
+// 0x6E7680
+void RenderAndEmptyRenderBuffer() {
+    if (uiTempBufferVerticesStored) {
+        LittleTest(); // 0x541330
+        if (RwIm3DTransform(TempBufferVertices.m_3d, uiTempBufferVerticesStored, nullptr, rwIM3D_VERTEXUV)) {
+            RwIm3DRenderIndexedPrimitive(rwPRIMTYPETRILIST, aTempBufferIndices, uiTempBufferIndicesStored);
+            RwIm3DEnd();
+        }
+    }
+    ClearRenderBuffer();
+}
+
+// NOTSA: The original has no such function, the check is inlined at each call site (e.g. 0x6E8ED0, 0x6E9940, 0x6EA260)
 void RenderIfDoesntFit(int32 nIdxNeeded, int32 nVtxNeeded) {
-    if (uiTempBufferIndicesStored + nIdxNeeded > IdxBufferSize || uiTempBufferVerticesStored + nVtxNeeded > VtxBufferSize) {
-        RenderStuffInBuffer();
+    if (uiTempBufferIndicesStored + nIdxNeeded >= IdxBufferSize || uiTempBufferVerticesStored + nVtxNeeded >= VtxBufferSize) {
+        RenderAndEmptyRenderBuffer(); // 0x6E7680
     }
 }
 

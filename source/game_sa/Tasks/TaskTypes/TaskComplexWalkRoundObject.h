@@ -11,11 +11,13 @@ public:
     CVector      m_targetPoint;
     CEntity*     m_object;
     CPointRoute* m_pointRoute;
-    int32        field_24;
-    int32        field_28;
-    int8         field_2C;
+    int32        field_24; // Time (ms) at which the route following was started
+    int32        field_28; // Time (ms) the ped has to follow the route
+    int8         field_2C; // Route following timer is active
     int8         field_2D;
-    int32        field_30;
+    CVector      field_30; // Position of the object when the route was computed
+    CVector      field_3C; // Forward vector of the object when the route was computed
+    CVector      field_48; // Right vector of the object when the route was computed
 
 public:
     static constexpr auto Type = TASK_COMPLEX_WALK_ROUND_OBJECT;
@@ -30,6 +32,8 @@ public:
     CTask* ControlSubTask(CPed* ped) override;
 
     CTask* CreateRouteTask(CPed* ped);
+    CTask* CreateSubTask(eTaskType taskType, CPed* ped);
+    float  ComputeRoute(CPed* ped);
 
 private:
     friend void InjectHooksMain();
@@ -38,4 +42,4 @@ private:
     CTaskComplexWalkRoundObject* Constructor(int32 moveState, const CVector& targetPoint, CEntity* object);
 };
 
-VALIDATE_SIZE(CTaskComplexWalkRoundObject, 0x34);
+VALIDATE_SIZE(CTaskComplexWalkRoundObject, 0x54);

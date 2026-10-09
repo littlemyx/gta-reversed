@@ -25,6 +25,7 @@ struct FixupStats {
     size_t VtableClassesNoExport{}; // RH_ScopedVirtualClass users without an exported vtable (nothing copied; MUST be 0)
     size_t FixedByVtableCopy{};   // slots written by the whole-vtable copy (also those that were not in the pointer list)
     size_t VtableCopyOverlap{};   // ... of which were also listed as code pointers (the rest were unaligned/unlisted dwords)
+    size_t UnverifiedHooks{};     // hooks registered with RedirectToGTA / Reversed=false / Unhooked: NOT ours
     size_t FixedBySlot{};
     size_t FixedByFunction{};
     size_t TrappedV{};            // unknown + replaced by a trap stub
@@ -38,6 +39,11 @@ void RegisterFunction(uint32_t exeAddr, void* ours, const char* name);
 //! Register a replacement for one vtable slot of the original exe: vtable at `vtblAddr`, slot index `slot`
 //! (`exeFn` is the exe function that slot originally holds: it is also used as a fallback for inherited slots in other vtables)
 void RegisterVMTSlot(uint32_t vtblAddr, size_t slot, uint32_t exeFn, void* ours, const char* name);
+
+//! A hook the authors disabled (state != RedirectToOurs, `Reversed = false`, or `Unhooked`): NOT ours. It is not registered, `vtblSlot` (exe vtable
+//! slot address, 0 for static hooks) is excluded from the whole-vtable copy, and it is listed in standalone_unverified_hooks.txt / the log.
+//! `state` is ReversibleHook::TwoWayHookState as int (0 Unhooked, 1 RedirectToGTA, 2 RedirectToOurs).
+void RegisterUnverified(uint32_t exeAddr, const char* name, int state, bool reversed, uint32_t vtblSlot);
 
 //! A class with `RH_ScopedVirtualClass(cls, exeVtbl, n)`: `ourVtbl` (null if the class does not export its vtable) has the same slot layout as the
 //! exe vtable at `exeVtbl`, so `ApplyToDataImage` copies all `n` slots over it.

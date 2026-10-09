@@ -35,6 +35,21 @@ std::vector<VtableClass>& VtableClasses() {
     static std::vector<VtableClass> v;
     return v;
 }
+struct UnverifiedHook {
+    uint32_t    ExeAddr;
+    uint32_t    VtblSlot;
+    int         State;
+    bool        Reversed;
+    std::string Name;
+};
+std::vector<UnverifiedHook>& Unverified() {
+    static std::vector<UnverifiedHook> v;
+    return v;
+}
+std::unordered_set<uint32_t>& NoCopySlots() { // exe vtable slots of unverified virtual hooks: the whole-vtable copy leaves them alone
+    static std::unordered_set<uint32_t> s;
+    return s;
+}
 FixupStats g_Stats{};
 
 // ---------------------------------------------------------------- trap stubs
@@ -180,6 +195,17 @@ void RegisterVMTSlot(uint32_t vtblAddr, size_t slot, uint32_t exeFn, void* ours,
     }
 }
 
+void RegisterUnverified(uint32_t exeAddr, const char* name, int state, bool reversed, uint32_t vtblSlot) {
+    if (!exeAddr) {
+        return;
+    }
+    Unverified().push_back({ exeAddr, vtblSlot, state, reversed, name });
+    if (vtblSlot) {
+        NoCopySlots().insert(vtblSlot);
+    }
+    g_Stats.UnverifiedHooks++;
+}
+
 void RegisterVMTClass(uint32_t exeVtbl, size_t n, void* const* ourVtbl, const char* cls) {
     if (!ourVtbl) {
         g_Stats.VtableClassesNoExport++;
@@ -254,7 +280,7 @@ FixupStats ApplyToDataImage() {
                 const uint32_t slotAddr = c.ExeVtbl + (uint32_t)(k * 4);
                 void* const ours = c.Ours[k];
                 const size_t i = (slotAddr - info.DataBase) / 4;
-                if (!ours || covered[i]) {
+                if (!ours || covered[i] || NoCopySlots().contains(slotAddr)) {
                     continue;
                 }
                 words[i] = (uint32_t)ours;
@@ -299,7 +325,27 @@ FixupStats ApplyToDataImage() {
     for (size_t i = 0; i < n; i++) {
         g_Stats.ChangedDwords += words[i] != original[i];
     }
+    {   // the porting TODO list: hooks the authors disabled / never reversed. They are not ours and trap with the exe address.
+        char up[MAX_PATH];
+        GetModuleFileNameA(nullptr, up, MAX_PATH);
+        if (char* slash = strrchr(up, '\\')) {
+            strcpy_s(slash + 1, up + MAX_PATH - slash - 1, "standalone_unverified_hooks.txt");
+        }
+        FILE* uf = nullptr;
+        fopen_s(&uf, up, "w");
+        for (const auto& h : Unverified()) {
+            const char* why = !h.Reversed ? "Reversed=false" : h.State == 1 ? "RedirectToGTA" : "Unhooked";
+            Log("unverified hook (not ours, traps): 0x%08X %s [%s]%s", h.ExeAddr, h.Name.c_str(), why, h.VtblSlot ? " (virtual)" : "");
+            if (uf) {
+                fprintf(uf, "0x%08X %s %s%s\n", h.ExeAddr, h.Name.c_str(), why, h.VtblSlot ? " virtual" : "");
+            }
+        }
+        if (uf) {
+            fclose(uf);
+        }
+    }
     const auto& s = g_Stats;
+    Log("fixups: unverified hooks excluded from the maps: %u (list in standalone_unverified_hooks.txt)", (unsigned)s.UnverifiedHooks);
     Log("fixups: registered %u functions + %u vtable slots (%u conflicts). Data image code pointers: V=%u C=%u (skipped, NOT rewritten: text-like %u, unaligned/u16-pair %u). "
         "Fixed: by slot %u, by function %u; trapped (unknown): V=%u C=%u (V/C exclude the %u listed slots covered by the vtable copy)",
         (unsigned)s.RegisteredFunctions, (unsigned)s.RegisteredVMTSlots, (unsigned)s.Conflicts, (unsigned)s.CodePointersV, (unsigned)s.CodePointersC,

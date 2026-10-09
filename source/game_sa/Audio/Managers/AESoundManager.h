@@ -63,7 +63,7 @@ public:
         // NOTSA Args //
         CEntity*        RegisterWithEntity{};     //!< The entity to register this sound with (Automatically adds the `SOUND_LIFESPAN_TIED_TO_PHYSICAL_ENTITY` flag)
         int32           EventID{ AE_UNDEFINED };  //!< Event ID, this can be anything, but it's usually `eAudioEvents` value
-        float           ClientVariable{ 0.f };    //!< Custom value that is just stored
+        float           ClientVariable{ -1.f };   //!< Custom value that is just stored (original `CAESound::Initialise` 0x4EFE50 sets -1.f when the caller doesn't override it)
     };
     /*!
      * @brief Play a new sound (Works like calling `RequestNewSound` with an initialized `CAESound` object)

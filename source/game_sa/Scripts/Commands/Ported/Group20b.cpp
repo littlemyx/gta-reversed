@@ -137,8 +137,8 @@ void TaskCharSlideToCoordAndPlayAnim(eScriptCommands command, CRunningScript& S)
         speed = 0.1f;
     }
 
-    char animName[24];
-    char animGroup[16];
+    char animName[24]{}; // NOTSA: zero-initialised (the exe leaves the 8-char label unterminated)
+    char animGroup[16]{};
     S.ReadTextLabelFromScript(animName, sizeof(animName));  // 0x463D50
     S.ReadTextLabelFromScript(animGroup, sizeof(animGroup));
 

@@ -1041,7 +1041,18 @@ void _rwD3D9EnableClippingIfNeeded(void* object, RwUInt32 type) {
     RwCamera* camera = RwEngineInstance ? RwEngineInstance->curCamera : nullptr;
     if (camera && object && type == 1) {
         const RwSphere* sphere = RpAtomicGetWorldBoundingSphere(static_cast<RpAtomic*>(object));
-        inside = sphere && RwCameraFrustumTestSphere(camera, sphere) == rwSPHEREINSIDE;
+        if (sphere) {
+            // exe 0x7FAD30 verbatim: for each of the 6 planes, dist = n.c - d must satisfy !(dist > -r) (NaN counts as inside); librw's
+            // frustumTestSphere differs only for a negative radius (it returns OUTSIDE when r < dist)
+            inside = true;
+            for (const auto& fp : camera->frustumPlanes) {
+                const float dist = fp.plane.normal.y * sphere->center.y + fp.plane.normal.x * sphere->center.x + fp.plane.normal.z * sphere->center.z - fp.plane.distance;
+                if (dist > -sphere->radius) {
+                    inside = false;
+                    break;
+                }
+            }
+        }
     }
     RwD3D9SetRenderState(D3DRS_CLIPPING, inside ? FALSE : TRUE);
 }

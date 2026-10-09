@@ -499,6 +499,32 @@ static void ClippingTests() {
     FreeAtomic(a); RpGeometryDestroy(g); RpMaterialDestroy(m);
 }
 
+// RwD3D9SetTexture sampler filters (exe 0x7FDE70): anisotropy plugin value > 1 forces MAG = MIN = ANISOTROPIC, MIP = LINEAR and sets MAXANISOTROPY;
+// otherwise the filter table row of the texture's filter mode
+static void AnisotropyFilterTests() {
+    std::printf("--- RwD3D9SetTexture: anisotropy filters\n");
+    auto samp = [&](DWORD type) { DWORD v = 0xDEAD; g_dev->GetSamplerState(0, (D3DSAMPLERSTATETYPE)type, &v); return v; };
+    rw::Raster* ras = rw::Raster::create(8, 8, 32, rw::Raster::TEXTURE | rw::Raster::C8888);
+    rw::Texture* tex = ras ? rw::Texture::create(ras) : nullptr;
+    CHECK(tex != nullptr);
+    if (!tex) return;
+    tex->setFilter(rw::Texture::MIPNEAREST);                       // exe row 3: POINT / POINT mip... (mag POINT, min POINT, mip POINT)
+    tex->setMaxAnisotropy(1);
+    CHECK(RwD3D9SetTexture(tex, 0) == TRUE);
+    CHECK(samp(D3DSAMP_MAGFILTER) == D3DTEXF_POINT && samp(D3DSAMP_MINFILTER) == D3DTEXF_POINT && samp(D3DSAMP_MIPFILTER) == D3DTEXF_POINT && samp(D3DSAMP_MAXANISOTROPY) == 1);
+    tex->setMaxAnisotropy(4);
+    CHECK(RwD3D9SetTexture(tex, 0) == TRUE);
+    CHECK(samp(D3DSAMP_MAGFILTER) == D3DTEXF_ANISOTROPIC && samp(D3DSAMP_MINFILTER) == D3DTEXF_ANISOTROPIC && samp(D3DSAMP_MIPFILTER) == D3DTEXF_LINEAR && samp(D3DSAMP_MAXANISOTROPY) == 4);
+    tex->setFilter(rw::Texture::NEAREST);                          // still forced while the value stays > 1
+    CHECK(RwD3D9SetTexture(tex, 0) == TRUE);
+    CHECK(samp(D3DSAMP_MAGFILTER) == D3DTEXF_ANISOTROPIC && samp(D3DSAMP_MINFILTER) == D3DTEXF_ANISOTROPIC && samp(D3DSAMP_MIPFILTER) == D3DTEXF_LINEAR);
+    tex->setMaxAnisotropy(1);                                      // back to the filter row (NEAREST: POINT / POINT / NONE)
+    CHECK(RwD3D9SetTexture(tex, 0) == TRUE);
+    CHECK(samp(D3DSAMP_MAGFILTER) == D3DTEXF_POINT && samp(D3DSAMP_MINFILTER) == D3DTEXF_POINT && samp(D3DSAMP_MIPFILTER) == D3DTEXF_NONE && samp(D3DSAMP_MAXANISOTROPY) == 1);
+    RwD3D9SetTexture(nullptr, 0);
+    tex->destroy();
+}
+
 // ---------------------------------------------------------------------------------------------------------------------------------
 // the game's usage: custom callbacks wrapping the defaults
 static int g_instCalls, g_instReinst, g_reinstCalls, g_renderCalls, g_lightCalls;
@@ -699,6 +725,7 @@ int main(int argc, char** argv) {
         DefaultPipelineTests();
         PixelTests();
         ClippingTests();
+        AnisotropyFilterTests();
         CustomPipelineTests();
         for (const char* p : dffs) DffTests(p);
         RwCameraSetRaster(g_cam, nullptr); RwCameraSetZRaster(g_cam, nullptr);

@@ -124,6 +124,14 @@ void CCover::Update() {
             next            = it->Next;
             auto* const obj = it->Item;
 
+#ifdef NOTSA_STANDALONE_RUN
+            // The exe reads buildings that were streamed out meanwhile (pool slot memory stays intact there); stale entries are dropped instead
+            if (obj && !GetBuildingPool()->IsObjectValid(obj)) {
+                RemoveCoverPointsForThisEntity(obj);
+                m_ListOfProcessedBuildings.DeleteNode(it);
+                continue;
+            }
+#endif
             if (!notsa::IsFixBugs() || obj) { // If fixbugs the reference may've got cleared
                 if (ShouldThisBuildingHaveItsCoverPointsCreated(obj)) {
                     continue;

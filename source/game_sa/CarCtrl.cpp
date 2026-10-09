@@ -181,6 +181,9 @@ void CCarCtrl::InjectHooks()
     RH_ScopedInstall(SteerAIHeliAsPoliceHeli, 0x42AAD0);
     RH_ScopedInstall(SteerAIHeliFlyingAwayFromPlayer, 0x42ACB0);
     RH_ScopedInstall(SteerAIHeliToLand, 0x42AD30);
+    RH_ScopedInstall(SteerAIHeliToKeepEntityInView, 0x42AEB0);
+    RH_ScopedInstall(FireHeliRocketsAtTarget, 0x42B270);
+    RH_ScopedInstall(FindLinksToGoWithTheseNodes, 0x42B470);
     RH_ScopedInstall(WeaveForObject, 0x426BC0);
     RH_ScopedInstall(WeaveForOtherCar, 0x426350);
 }
@@ -512,7 +515,58 @@ void CCarCtrl::FindIntersection2Lines(float x1, float y1, float dx1, float dy1, 
 
 // 0x42B470
 void CCarCtrl::FindLinksToGoWithTheseNodes(CVehicle* vehicle) {
-    plugin::Call<0x42B470, CVehicle*>(vehicle);
+    if (vehicle->m_nForcedRandomRouteSeed) {
+        srand((uint16)vehicle->m_nForcedRandomRouteSeed);
+    }
+
+    auto&      autoPilot = vehicle->m_autoPilot;
+    const auto cur       = autoPilot.m_currentAddress;
+    const auto start     = autoPilot.m_startingRouteNode;
+
+    const auto& curNode  = ThePaths.m_pPathNodes[cur.m_wAreaId][cur.m_wNodeId];
+    const auto  linkBase = (int32)curNode.m_wBaseLinkId;
+    const auto  GetLink  = [&](int32 idx) { return ThePaths.m_pNodeLinks[cur.m_wAreaId][linkBase + idx]; };
+    const auto  IsBefore = [](CNodeAddress a, CNodeAddress b) { // Compares the (area, node) pair
+        return a.m_wAreaId < b.m_wAreaId || (a.m_wAreaId == b.m_wAreaId && a.m_wNodeId < b.m_wNodeId);
+    };
+
+    // Find the link that leads to the starting node (BUG: If there's none the index ends up being 12, which is out of range)
+    int16 startLinkIdx = 0;
+    do {
+        if (GetLink(startLinkIdx) == start) {
+            break;
+        }
+        startLinkIdx++;
+    } while (startLinkIdx < 12);
+    autoPilot.m_nNextPathNodeInfo = ThePaths.m_pNaviLinks[cur.m_wAreaId][linkBase + startLinkIdx];
+    autoPilot._smthNext           = IsBefore(cur, start) ? -1 : 1;
+
+    // Find the link to the node that is closest to the vehicle (the line leading there)
+    int32 linkIdx;
+    if (curNode.m_nNumLinks == 1) {
+        linkIdx = 0;
+    } else {
+        linkIdx = -1;
+        auto closestDist = std::bit_cast<float>(0x497423FEu); // ~999999.9
+        for (int32 i = 0; i < (int32)curNode.m_nNumLinks; i++) {
+            const auto link = GetLink(i);
+            if (link == start || !ThePaths.m_pPathNodes[link.m_wAreaId]) {
+                continue;
+            }
+            const auto& linkedNode = ThePaths.m_pPathNodes[link.m_wAreaId][link.m_wNodeId];
+            const auto  dist       = CCollision::DistToLine(curNode.GetPosition(), linkedNode.GetPosition(), vehicle->GetPosition());
+            if (dist < closestDist) {
+                closestDist = dist;
+                linkIdx     = i;
+            }
+        }
+        if (linkIdx < 0) {
+            linkIdx = 0;
+        }
+    }
+
+    autoPilot.m_nCurrentPathNodeInfo = ThePaths.m_pNaviLinks[cur.m_wAreaId][linkBase + linkIdx];
+    autoPilot._smthCurr              = IsBefore(GetLink(linkIdx), cur) ? -1 : 1;
 }
 
 // 0x434400
@@ -556,7 +610,64 @@ float CCarCtrl::FindGhostRoadHeight(CVehicle* vehicle) {
 
 // 0x42B270
 void CCarCtrl::FireHeliRocketsAtTarget(CAutomobile* entityLauncher, CEntity* entity) {
-    plugin::Call<0x42B270, CAutomobile*, CEntity*>(entityLauncher, entity);
+    if (entityLauncher->m_nVehicleWeaponInUse != CAR_WEAPON_DOUBLE_ROCKET && entityLauncher->m_nVehicleWeaponInUse != CAR_WEAPON_NOT_USED) {
+        return;
+    }
+
+    // Four times a second
+    if (CTimer::GetTimeInMS() / 250u == CTimer::GetPreviousTimeInMS() / 250u) {
+        return;
+    }
+
+    // Only if the target is in range
+    const auto& launcherPos = entityLauncher->GetPosition();
+    const auto& targetPos   = entity->GetPosition();
+    {
+        // x87: The differences are kept in extended precision
+        const auto dx = (double)launcherPos.x - targetPos.x;
+        const auto dy = (double)launcherPos.y - targetPos.y;
+        const auto dz = (double)launcherPos.z - targetPos.z;
+        if (!(std::sqrt((dz * dz + dy * dy) + dx * dx) < 80.0f)) {
+            return;
+        }
+    }
+
+    // And if the launcher is (more or less) pointing at it
+    const auto& mat = *entityLauncher->m_matrix; // Not null checked in the original
+    const CVector ahead{
+        (float)((double)mat.GetForward().x + launcherPos.x),
+        (float)((double)mat.GetForward().y + launcherPos.y),
+        (float)((double)mat.GetForward().z + launcherPos.z)
+    };
+    if (!(CCollision::DistToMathematicalLine(&launcherPos, &ahead, &targetPos) < 7.0f)) {
+        return;
+    }
+
+    // Fire from the right or the left side of the heli (alternates)
+    const auto bLeft = ((CTimer::GetTimeInMS() / 250u) & 1) != 0;
+
+    // x87: Some values are rounded to float, others aren't
+    const auto& fwd   = mat.GetForward();
+    const auto  noseX = (double)fwd.x * 4.0f + launcherPos.x;
+    const auto  noseY = (double)(float)((double)fwd.y * 4.0f) + launcherPos.y;
+    const auto  noseZ = (float)((double)(float)((double)fwd.z * 4.0f) + launcherPos.z);
+
+    const auto& right = mat.GetRight();
+    auto        sideX = (float)((double)right.x * 1.5f);
+    auto        sideZ = (float)((double)right.z * 1.5f);
+    double      sideY = (double)right.y * 1.5f;
+    if (bLeft) {
+        sideX = -sideX;
+        sideY = (float)-sideY;
+        sideZ = -sideZ;
+    }
+
+    const CVector launchPos{
+        (float)((double)sideX + noseX),
+        (float)(sideY + noseY),
+        (float)((double)sideZ + noseZ)
+    };
+    CProjectileInfo::AddProjectile(entityLauncher, WEAPON_ROCKET, launchPos, 1.0f, &fwd, nullptr); // 0x737C80
 }
 
 // 0x429A70
@@ -2529,7 +2640,89 @@ void CCarCtrl::SteerAIHeliToFollowEntity(CAutomobile* automobile) {
 
 // 0x42AEB0
 void CCarCtrl::SteerAIHeliToKeepEntityInView(CAutomobile* automobile) {
-    plugin::Call<0x42AEB0, CAutomobile*>(automobile);
+    constexpr auto PI = std::numbers::pi_v<float>;
+
+    const auto heli      = static_cast<CHeli*>(automobile);
+    auto&      autoPilot = heli->m_autoPilot;
+    const auto target    = autoPilot.m_TargetEntity;
+    const auto targetDistance = (double)autoPilot.m_ucHeliTargetDist;
+
+    const auto& targetPos = target->GetPosition();
+    const auto& pos       = heli->GetPosition();
+    const auto  heading   = CGeneral::GetATanOfXY(
+        (float)((double)targetPos.x - pos.x),
+        (float)((double)targetPos.y - pos.y)
+    );
+
+    // x87: kept in extended precision (only the stored copy is rounded)
+    const auto dy       = (double)targetPos.y - pos.y;
+    const auto dx       = (double)targetPos.x - pos.x;
+    const auto dist     = std::sqrt(dy * dy + dx * dx);
+    const auto distF    = (float)dist;
+    if (dist > targetDistance + targetDistance) {
+        // Too far away: Just follow it
+        SteerAIHeliToFollowEntity(heli);
+        return;
+    }
+
+    // Rotate to look at the target
+    {
+        const auto wantedHeading = (float)((double)heading + PI / 2.0f);
+        auto       diff          = (double)wantedHeading - CGeneral::GetATanOfXY(heli->m_matrix->GetForward().x, heli->m_matrix->GetForward().y);
+        while (diff > PI) {
+            diff -= 2.0f * PI;
+        }
+        while (diff < -PI) {
+            diff += 2.0f * PI;
+        }
+        const auto skid = diff * -1.0f;
+        heli->m_fLeftRightSkid = (float)skid;
+        if (skid < 1.0f) {
+            if (-1.0f > skid) {
+                heli->m_fLeftRightSkid = -1.0f;
+            }
+        } else {
+            heli->m_fLeftRightSkid = 1.0f;
+        }
+    }
+
+    // Fly above the target, and don't change the altitude
+    heli->m_fMaxAltitude = (float)((double)target->GetPosition().z + 15.0f);
+    autoPilot.m_vecDestinationCoors = target->GetPosition();
+    heli->field_9AC = heli->m_fMaxAltitude;
+
+    // Throttle
+    {
+        const auto altDiff = (double)heli->m_fMaxAltitude - ((double)heli->m_vecMoveSpeed.z * 100.0f + heli->GetPosition().z);
+        heli->m_fAccelerationBreakStatus = 0.3f; // (Overwritten right below)
+        heli->m_fAccelerationBreakStatus = (float)(altDiff * (altDiff > 0.0 ? 0.1f : 0.2f) + 0.3f);
+
+        // Add some noise
+        const auto throttle = ((double)(rand() & 0xF) - 7.0f) * 0.00200000009f + heli->m_fAccelerationBreakStatus;
+        heli->m_fAccelerationBreakStatus = (float)throttle;
+        if (throttle < 1.0f) {
+            heli->m_fAccelerationBreakStatus = 0.0f > throttle ? 0.0f : (float)throttle;
+        } else {
+            heli->m_fAccelerationBreakStatus = 1.0f;
+        }
+    }
+
+    // Move sideways to keep the distance
+    const auto& moveSpeed = heli->m_vecMoveSpeed;
+    const auto& mat       = *heli->m_matrix; // Not null checked in the original
+    if (0.5f * targetDistance > distF) {
+        heli->m_fSteeringLeftRight = 0.5f;
+    } else if (distF > targetDistance) {
+        heli->m_fSteeringLeftRight = -0.5f;
+    } else {
+        heli->m_fSteeringLeftRight = (float)((double)moveSpeed.z * mat.GetRight().z + (double)moveSpeed.y * mat.GetRight().y + (double)mat.GetRight().x * moveSpeed.x);
+    }
+
+    // Pitch: Brake if the target is close
+    heli->m_fSteeringUpDown = 0.0f;
+    if (distF < 1.5f * targetDistance) {
+        heli->m_fSteeringUpDown = (float)((double)moveSpeed.z * mat.GetForward().z + (double)moveSpeed.y * mat.GetForward().y + (double)moveSpeed.x * mat.GetForward().x);
+    }
 }
 
 // 0x42AD30

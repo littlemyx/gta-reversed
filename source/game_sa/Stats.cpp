@@ -17,6 +17,7 @@
 #include "GangWars.h"
 #include "Localisation.h"
 #include "TagManager.h"
+#include "StuntJumpManager.h"
 #include "WeaponInfo.h"
 #include "Models/ModelInfo.h"
 #include "Models/VehicleModelInfo.h"
@@ -69,6 +70,7 @@ void CStats::InjectHooks() {
     RH_ScopedInstall(FindLeastFavoriteRadioStation, 0x559010);
     RH_ScopedInstall(GetFatAndMuscleModifier, 0x559AF0);
     RH_ScopedInstall(FindCriminalRatingString, 0x55A210);
+    RH_ScopedInstall(ConstructStatLine, 0x55A780);
     RH_ScopedOverloadedInstall(GetStatValue, "-OG", 0x558E40, float(*)(eStats));
     RH_ScopedInstall(SetStatValue, 0x55A070);
     RH_ScopedInstall(IsStatFloat, 0x558E30);
@@ -803,7 +805,527 @@ const GxtChar* CStats::FindCriminalRatingString() {
 
 // 0x55A780
 int32 CStats::ConstructStatLine(int32 arg0, uint8 arg1) {
-    return plugin::CallAndReturn<int32, 0x55A780, int32, uint8>(arg0, arg1);
+    // One line of the per-page stat tables in .data (0x8CD8A0 etc.)
+    struct tStatLine {
+        int16 statId; // -99 terminates the table
+        uint8 type;   // Value format (see below)
+        uint8 alwaysShow; // Show even if the stat is 0
+        uint8 special;    // Stat is processed by the "special" (non-generic) code
+        uint8 pad;
+    };
+    VALIDATE_SIZE(tStatLine, 6);
+
+    const tStatLine* const table = [&]() -> const tStatLine* {
+        switch (arg1) {
+        case 0:  return &StaticRef<tStatLine>(0x8CD8A0);
+        case 1:  return &StaticRef<tStatLine>(0x8CD938);
+        case 2:  return &StaticRef<tStatLine>(0x8CD9B0);
+        case 3:  return &StaticRef<tStatLine>(0x8CD9D8);
+        case 4:  return &StaticRef<tStatLine>(0x8CDA70);
+        case 5:  return &StaticRef<tStatLine>(0x8CDAC8);
+        case 6:  return &StaticRef<tStatLine>(0x8CDBF8);
+        default: return &StaticRef<tStatLine>(0x8CDE08);
+        }
+    }();
+
+    static auto& s_CurrentStatId = StaticRef<uint16>(0xB794CC);
+    static auto& s_GangValue    = StaticRef<int32[0x200]>(0x96A600); // Indexed by the stat id
+    static auto& s_GangIcon    = StaticRef<int32[0x200]>(0x96A60C); // Indexed by the stat id
+
+    int32 line = 0; // Number of lines produced so far (ESI)
+
+    // The stat's int storage, but without the bounds the callers ensure (0xB78E20 + id * 4)
+    const auto RawInt = [](uint32 id) { return (StatTypesInt.data() - FIRST_INT_STAT)[id]; };
+    const auto IntStat = [&](uint32 id) { return RawInt(id); };
+
+    enum class R { Skip, Count, Done }; // Skip: no line, Count: one more line, Done: the requested line is built
+
+    // 0x55A8D4: Label from the key in `gString`, value from `gString2`
+    const auto Tail = []() {
+        GxtCharStrcpy(gGxtString, TheText.Get(gString)); // 0x718660
+        CFont::FilterOutTokensFromString(gGxtString);    // 0x719240
+        AsciiToGxtChar(gString2, gGxtString2);
+        return R::Done;
+    };
+    // 0x55B60D: Label only
+    const auto TailNoValue = [&]() {
+        gString2[0] = '\0';
+        return Tail();
+    };
+    // NOTSA: The original uses unbounded sprintf
+    const auto Print = [](char (&buf)[352], const char* fmt, auto... args) {
+        snprintf(buf, sizeof(buf), fmt, args...);
+    };
+    const auto PrintValue = [&](const char* fmt, auto... args) {
+        gString2[0] = '\0';
+        Print(gString2, fmt, args...);
+        return Tail();
+    };
+    // 0x55B68F: Value text only, no label
+    const auto TextOnly = [](const char* key) {
+        gGxtString[0] = '\0';
+        GxtCharStrcpy(gGxtString2, TheText.Get(key));
+        return R::Done;
+    };
+    const auto Txt = [](const char* key) { // 0x6A0050 + 0x69F7E0
+        return GxtCharToUTF8(TheText.Get(key), 0u);
+    };
+    const auto PrintPair = [&](int32 a, int32 b) { // 0x55AC1F
+        gString2[0] = '\0';
+        Print(gString2, " %d %s %d", a, Txt("FEST_OO"), b);
+        return Tail();
+    };
+    // x87: `_ftol(FILD(value) * 1/60000)`, split into minutes and seconds with a signed division by 60
+    const auto TimeStat = [&](uint32 id, int32& minutes, int32& seconds) {
+        const int32 total = (int32)((double)IntStat(id) * (double)1.6666667e-05f);
+        minutes = total / 60;
+        seconds = total % 60;
+    };
+
+    const auto Step = [&](const tStatLine& e) -> R {
+        const uint16 id16 = (uint16)e.statId;
+        const int32  id   = (int32)e.statId;
+
+        if (!e.alwaysShow) {
+            const float value = id16 < 0x52 ? StatTypesFloat[id16] : (float)RawInt(id16);
+            if (!(value > 0.0f)) {
+                return R::Skip;
+            }
+        }
+
+        Print(gString, id < 10 ? "STAT00%d" : id < 100 ? "STAT0%d" : "STAT%d", id);
+
+        if (CLocalisation::GermanGame()) { // 0x56D200
+            switch ((uint8)id16) {
+            case 0xA7: case 0xA8: case 0xB1:
+            case 0xCD: case 0xCE: case 0xCF: case 0xD0: case 0xD1:
+                return R::Skip;
+            }
+        }
+
+        s_CurrentStatId = 0;
+
+        if (!e.special) {
+            switch (e.type) {
+            case 10: // 0x55A8A0
+                s_CurrentStatId = (uint16)id;
+                if (line != arg0) {
+                    return R::Count;
+                }
+                return PrintValue("%d", (int32)GetStatValue((eStats)id));
+            case 1: // 0x55A9EF
+                if (line != arg0) {
+                    return R::Count;
+                }
+                return PrintValue("%.2f", (double)GetStatValue((eStats)id));
+            case 3: // 0x55A95E
+                if (line != arg0) {
+                    return R::Count;
+                }
+                return PrintValue("$%.2f", (double)GetStatValue((eStats)id));
+            case 4: // 0x55A97A
+                if (line != arg0) {
+                    return R::Count;
+                }
+                return PrintValue("%d|", (int32)GetStatValue((eStats)id));
+            case 5: { // 0x55A914
+                if (line != arg0) {
+                    return R::Count;
+                }
+                const int32 pounds = (int32)GetStatValue((eStats)id);
+                gString2[0] = '\0';
+                if (CLocalisation::Metric()) { // 0x56D220
+                    const double kgs = (double)pounds * (double)0.4536f; // x87: FILD * 0.4536f, pushed as a double
+                    if constexpr (notsa::IsFixBugs()) {
+                        Print(gString2, "%dkgs", (int32)kgs);
+                    } else {
+                        Print(gString2, "%dkgs", kgs); // BUG: the original passes a double to "%d"
+                    }
+                } else {
+                    Print(gString2, "%dlbs", pounds);
+                }
+                return Tail();
+            }
+            case 6: { // 0x55AA0B, miles
+                if (line != arg0) {
+                    return R::Count;
+                }
+                const float miles = GetStatValue((eStats)id);
+                gString2[0] = '\0';
+                const auto* unit = Txt("ST_MILE");
+                Print(gString2, "%.2f %s", (double)miles, unit);
+                return Tail();
+            }
+            case 7: // 0x55AA63, metres or feet
+                if (CLocalisation::Metric()) {
+                    if (line != arg0) {
+                        return R::Count;
+                    }
+                    return PrintValue("%.2fm", (double)GetStatValue((eStats)id));
+                }
+                if (line != arg0) {
+                    return R::Count;
+                }
+                return PrintValue("%.2fft", (double)GetStatValue((eStats)id) * (double)3.3333333f); // x87: kept in extended precision
+            case 9: { // 0x55A998, minutes:seconds
+                if (line != arg0) {
+                    return R::Count;
+                }
+                int32 minutes = ConvertToMins((int32)GetStatValue((eStats)id));
+                int32 seconds = ConvertToSecs((int32)GetStatValue((eStats)id));
+                BuildStatLine(gString, &minutes, 0, &seconds, 1);
+                return R::Done;
+            }
+            default: // 0x55AAAA, plain integer (types 0, 2, 8 and everything above 10)
+                if (line != arg0) {
+                    return R::Count;
+                }
+                return PrintValue("%d", id16 < 0x52 ? (int32)StatTypesFloat[id16] : RawInt(id16));
+            }
+        }
+
+        // Special stats (0x55AAD0)
+        if (id > 0x101) {
+            const uint32 idx = (uint32)(id - 0x140);
+            if (idx > 0x11) {
+                return R::Skip;
+            }
+            switch (id) {
+            case 0x140: { // 0x55AE7E, time played (uses the game timer)
+                const int32 totalMinutes = CTimer::m_snTimeInMilliseconds / 60000u;
+                const int32 minutes      = totalMinutes / 60;
+                const int32 seconds      = totalMinutes % 60;
+                if (line != arg0) {
+                    return R::Count;
+                }
+                int32 a = minutes, b = seconds;
+                BuildStatLine(gString, &a, 0, &b, 1);
+                return R::Done;
+            }
+            case 0x142: // 0x55AE66, tags sprayed
+                if (line != arg0) {
+                    return R::Count;
+                }
+                return PrintPair(CTagManager::ms_numTagged, CTagManager::ms_numTags);
+            case 0x143: { // 0x55AEFB, gang whose members the player killed the most
+                int32  best  = 0;
+                uint32 bestN = 0;
+                for (int32 i = 7; i < 15; i++) {
+                    if ((uint32)PedsKilledOfThisType[i] > bestN) {
+                        best  = i;
+                        bestN = PedsKilledOfThisType[i];
+                    }
+                }
+                if (best == 0) {
+                    return R::Skip;
+                }
+                if (line == arg0) {
+                    return TailNoValue();
+                }
+                line++;
+                if ((uint32)(best - 7) > 7) {
+                    return R::Skip;
+                }
+                if (line != arg0) {
+                    return R::Count;
+                }
+                static constexpr const char* keys[] = {"ST_GNG0", "ST_GNG1", "ST_GNG2", "ST_GNG3", "ST_GNG4", "ST_GNG5", "ST_GNG6", "ST_GNG7"};
+                return TextOnly(keys[best - 7]);
+            }
+            case 0x144: { // 0x55B005, total of the gang kills
+                if (line != arg0) {
+                    return R::Count;
+                }
+                int32 sum = 0;
+                for (int32 i = 7; i <= 15; i++) {
+                    sum += PedsKilledOfThisType[i];
+                }
+                return PrintValue("%d", sum);
+            }
+            case 0x145: // 0x55B07A
+                if (line != arg0) {
+                    return R::Count;
+                }
+                return PrintValue("%d", PedsKilledOfThisType[20]);
+            case 0x146: // 0x55B344, most favourite radio station
+            case 0x147: { // 0x55B388, least favourite radio station
+                if (PopulateFavoriteRadioStationList()) {
+                    return R::Skip;
+                }
+                if (line == arg0) {
+                    return TailNoValue();
+                }
+                line++;
+                char key[8];
+                AudioEngine.GetRadioStationNameKey(id == 0x146 ? FindMostFavoriteRadioStation() : (eRadioID)FindLeastFavoriteRadioStation(), key);
+                if (line != arg0) {
+                    return R::Count;
+                }
+                return TextOnly(key);
+            }
+            case 0x148: { // 0x55B3CC, the weapon the player holds
+                auto* ped = FindPlayerPed(-1);
+                uint16 weaponType = (uint16)ped->m_aWeapons[(int8)ped->m_nActiveWeaponSlot].m_Type;
+                if (weaponType == 0x20) {
+                    weaponType = 0x1C;
+                } else if (weaponType < 0x16 || weaponType > 0x20) {
+                    return R::Skip;
+                }
+                uint8 weaponStatIdx = (uint8)(weaponType - 0x15);
+                if (line == arg0) {
+                    return PrintValue("%d", (int32)GetStatValue((eStats)(weaponStatIdx + 0x44)));
+                }
+                line++;
+                ped = FindPlayerPed(-1);
+                const char* fmt;
+                if ((uint32)ped->m_aWeapons[(int8)ped->m_nActiveWeaponSlot].m_Type == 0x20) {
+                    weaponStatIdx = 0xB;
+                    fmt           = "STWE0%d";
+                } else if (weaponStatIdx < 10) {
+                    fmt = "STWE00%d";
+                } else if (weaponStatIdx < 100) {
+                    fmt = "STWE0%d";
+                } else {
+                    fmt = "STWE%d";
+                }
+                Print(gString, fmt, (int32)weaponStatIdx);
+                if (line != arg0) {
+                    return R::Count;
+                }
+                return TextOnly(gString);
+            }
+            case 0x149: { // 0x55B492, skills of all the weapons
+                if (line == arg0) {
+                    return TailNoValue();
+                }
+                line++;
+                for (uint16 w = 1; w < 0xB; w++) {
+                    Print(gString, w < 10 ? "STWE00%d" : w < 100 ? "STWE0%d" : "STWE%d", (int32)w);
+                    const auto skill = (int8)FindPlayerPed(-1)->GetWeaponSkill((eWeaponType)(w + 0x15)); // 0x5E3B60
+                    Print(gString2, skill == 1 ? "WS_STD" : skill == 2 ? "WS_PRO" : "WS_POOR");
+                    if (line == arg0) {
+                        GxtCharStrcpy(gGxtString, TheText.Get(gString));
+                        GxtCharStrcpy(gGxtString2, TheText.Get(gString2));
+                        return R::Done;
+                    }
+                    line++;
+                }
+                return R::Skip;
+            }
+            case 0x14A: { // 0x55B0A6, flight time rank
+                int32 minutes, seconds;
+                TimeStat(169, minutes, seconds);
+                if (minutes > 0 || seconds >= 5) {
+                    if (line == arg0) {
+                        return TailNoValue();
+                    }
+                    line++;
+                }
+
+                const auto Emit = [&](const char* key) {
+                    if (line != arg0) {
+                        return R::Count;
+                    }
+                    return TextOnly(key);
+                };
+                if (minutes <= 0) {
+                    if (seconds < 5)  { return R::Skip; }
+                    if (seconds < 10) { return Emit("ST_PR01"); }
+                    if (seconds < 20) { return Emit("ST_PR02"); }
+                    if (seconds < 30) { return Emit("ST_PR03"); }
+                }
+                if (minutes <= 1) {
+                    if (seconds < 0)  { return Emit("ST_PR04"); }
+                    if (seconds < 30) { return Emit("ST_PR05"); }
+                }
+                if (minutes <= 2) {
+                    if (seconds < 0)  { return Emit("ST_PR06"); }
+                    if (seconds < 30) { return Emit("ST_PR07"); }
+                }
+                if (minutes <= 3) {
+                    if (seconds < 0)  { return Emit("ST_PR08"); }
+                    if (seconds < 30) { return Emit("ST_PR09"); }
+                }
+                if (minutes <= 4 && seconds < 0)   { return Emit("ST_PR10"); }
+                if (minutes <= 5 && seconds < 0)   { return Emit("ST_PR11"); }
+                if (minutes <= 10 && seconds < 0)  { return Emit("ST_PR12"); }
+                if (minutes <= 20 && seconds < 0)  { return Emit("ST_PR13"); }
+                if (minutes <= 25 && seconds < 0)  { return Emit("ST_PR14"); }
+                if (minutes <= 30 && seconds < 0)  { return Emit("ST_PR15"); }
+                if (minutes <= 49 && seconds < 2)  { return Emit("ST_PR16"); }
+                if (minutes <= 50 && seconds < 0)  { return Emit("ST_PR17"); }
+                if (minutes <= 100 && seconds < 0) { return Emit("ST_PR18"); }
+                return Emit("ST_PR19");
+            }
+            case 0x14B: // 0x55B528
+            case 0x14C:
+            case 0x14D: {
+                const int32 valueB = s_GangValue[id];
+                const int32 valueA = s_GangIcon[id];
+                if (valueA < 0) {
+                    return R::Skip;
+                }
+                Print(gString2, "ST_GNG%d", valueA);
+                Print(gString, "ST_LAB%d", id - 0x14B);
+                const GxtChar* label = TheText.Get(gString);
+                if (line == arg0) {
+                    GxtCharStrcpy(gGxtString, label);
+                    GxtCharStrcpy(gGxtString2, TheText.Get(gString2));
+                    return R::Done;
+                }
+                line++;
+                Print(gString, "%d", valueB);
+                AsciiToGxtChar(gString, gGxtString2);
+                if (line == arg0) {
+                    gGxtString[0] = '\0';
+                    // NOTSA: The original copies `gGxtString2` onto itself here (no-op)
+                    return R::Done;
+                }
+                return R::Count;
+            }
+            case 0x14E: { // 0x55AECB, money lost gambling (never negative)
+                double lost = (double)StatTypesFloat[STAT_MONEY_SPENT_GAMBLING] - (double)StatTypesFloat[STAT_MONEY_WON_GAMBLING]; // x87
+                if (lost < 0.0) {
+                    lost = 0.0;
+                }
+                if (line != arg0) {
+                    return R::Count;
+                }
+                return PrintValue("$%.2f", lost);
+            }
+            case 0x151: // 0x55B056, gang territory percentage
+                if (line != arg0) {
+                    return R::Count;
+                }
+                return PrintValue("%0.2f%%", (double)CGangWars::TerritoryUnderControlPercentage * (double)100.0f);
+            default: // 0x141, 0x14F, 0x150
+                return R::Skip;
+            }
+        }
+
+        if (id >= 0xFC) { // 0xFC..0x101, 0x55AE07
+            const float value = id16 < 0x52 ? StatTypesFloat[id16] : (float)RawInt(id16);
+            if (!(value > 0.0f)) {
+                return R::Skip;
+            }
+            if (line != arg0) {
+                return R::Count;
+            }
+            return PrintValue("%0.2f%%", (double)GetStatValue((eStats)id));
+        }
+
+        if ((uint32)id > 0xF3) {
+            return R::Skip;
+        }
+
+        switch (id) {
+        case 0x00: // 0x55AB1F
+            if (line != arg0) {
+                return R::Count;
+            }
+            return PrintValue("%0.2f%%", (double)GetPercentageProgress());
+        case 0x8F: { // 0x55AC59, stuck in the vehicle
+            if (line == arg0) {
+                return TailNoValue();
+            }
+            const int32 state = IntStat(0x8F);
+            line++;
+            const char* key;
+            switch ((uint32)(state - 1) > 7 ? 0 : state) {
+            case 1:  key = "INSTUN"; break;
+            case 2:  key = "PRINST"; break;
+            case 3:  key = "DBINST"; break;
+            case 4:  key = "DBPINS"; break;
+            case 5:  key = "TRINST"; break;
+            case 6:  key = "PRTRST"; break;
+            case 7:  key = "QUINST"; break;
+            case 8:  key = "PQUINS"; break;
+            default: key = "NOSTUC"; break;
+            }
+            if (line != arg0) {
+                return R::Count;
+            }
+            return TextOnly(key);
+        }
+        case 0x90: // 0x55ABC6
+        case 0x91: // 0x55ABE2
+            if (line != arg0) {
+                return R::Count;
+            }
+            return PrintPair(IntStat(id), CStuntJumpManager::m_iNumJumps);
+        case 0xA4: // 0x55AB02, armour of the player 0
+            if (line != arg0) {
+                return R::Count;
+            }
+            return PrintValue("%d", (int32)CWorld::Players[0].m_pPed->m_fArmour);
+        case 0xA9: { // 0x55AD5F
+            int32 minutes, seconds;
+            TimeStat(169, minutes, seconds);
+            if (line != arg0) {
+                return R::Count;
+            }
+            BuildStatLine(gString, &minutes, 0, &seconds, 1);
+            return R::Done;
+        }
+        case 0xAD: { // 0x55ADAD
+            int32 minutes, seconds;
+            TimeStat(173, minutes, seconds);
+            if (!(minutes > 0 || seconds > 0)) {
+                return R::Skip;
+            }
+            if (line != arg0) {
+                return R::Count;
+            }
+            BuildStatLine(gString, &minutes, 0, &seconds, 1);
+            return R::Done;
+        }
+        case 0xAE: // 0x55AB58
+            if (line != arg0) {
+                return R::Count;
+            }
+            return PrintPair(IntStat(174), 12);
+        case 0xAF: // 0x55AB74
+            if (line != arg0) {
+                return R::Count;
+            }
+            return PrintPair(IntStat(175), 25);
+        case 0xD5: // 0x55AB3C
+            if (line != arg0) {
+                return R::Count;
+            }
+            return PrintPair(IntStat(213), 30);
+        case 0xE7: // 0x55AB90
+            if (line != arg0) {
+                return R::Count;
+            }
+            return PrintPair(IntStat(231), IntStat(232));
+        case 0xF1: // 0x55ABFE
+            if (line != arg0) {
+                return R::Count;
+            }
+            return PrintPair(IntStat(241), IntStat(242));
+        case 0xF3: // 0x55ABAB
+            if (line != arg0) {
+                return R::Count;
+            }
+            return PrintPair(IntStat(243), IntStat(244));
+        default:
+            return R::Skip;
+        }
+    };
+
+    for (const tStatLine* e = table; e->statId != -99; e++) {
+        switch (Step(*e)) {
+        case R::Done:
+            return 0;
+        case R::Count:
+            line++;
+            break;
+        case R::Skip:
+            break;
+        }
+    }
+    return line;
 }
 
 // 0x55B900

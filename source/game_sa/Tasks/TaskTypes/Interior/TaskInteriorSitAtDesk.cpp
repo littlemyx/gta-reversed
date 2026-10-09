@@ -38,7 +38,7 @@ CTaskInteriorSitAtDesk::CTaskInteriorSitAtDesk(const CTaskInteriorSitAtDesk& o) 
 // 0x676080
 CTaskInteriorSitAtDesk::~CTaskInteriorSitAtDesk() {
     if (m_Anim) {
-        m_Anim->SetDefaultFinishCallback();
+        m_Anim->SetDefaultDeleteCallback(); // 0x4CEBC0
     }
 }
 
@@ -49,6 +49,7 @@ void CTaskInteriorSitAtDesk::FinishAnimCB(CAnimBlendAssociation* anim, void* dat
     assert(self && anim);
     assert(anim == self->m_Anim);
 
+    self->m_PrevAnimId = anim->GetAnimId();
     if (anim->m_AnimId == ANIM_ID_OFF_SIT_2IDLE_180 || self->m_bTaskAborting && self->m_PrevAnimId == ANIM_ID_OFF_SIT_IN) {
         anim->SetBlendDelta(-1000.f);
         self->m_bTaskFinished = true;
@@ -95,7 +96,7 @@ bool CTaskInteriorSitAtDesk::MakeAbortable(CPed* ped, eAbortPriority priority, C
     if (priority == ABORT_PRIORITY_IMMEDIATE) {
         if (m_Anim) {
             m_Anim->SetBlendDelta(-1000.f);
-            m_Anim->SetDefaultFinishCallback();
+            m_Anim->SetDefaultDeleteCallback(); // 0x4CEBC0
             m_Anim = nullptr;
         }
         return true;
@@ -230,7 +231,7 @@ bool CTaskInteriorSitAtDesk::ProcessPed(CPed* ped) {
 
 void CTaskInteriorSitAtDesk::StartAnim(CPed* ped, AnimationId animId, float blendDelta) {
     if (m_Anim) {
-        m_Anim->SetDefaultFinishCallback();
+        m_Anim->SetDefaultDeleteCallback(); // 0x4CEBC0
     }
     m_Anim = CAnimManager::BlendAnimation(ped->GetRpClump(), ANIM_GROUP_INT_OFFICE, animId, blendDelta);
     m_Anim->SetFinishCallback(FinishAnimCB, this);

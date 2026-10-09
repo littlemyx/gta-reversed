@@ -248,6 +248,8 @@
 #include "TaskComplexStealCar.h"
 #include "TaskComplexFollowPedFootsteps.h"
 #include "Interior/TaskInteriorSitAtDesk.h"
+#include "Interior/TaskInteriorSitOnChair.h"
+#include "TaskSimpleCarForcePedOut.h"
 #include "TaskComplexFollowLeaderAnyMeans.h"
 #include "TaskSimpleFightingControl.h"
 #include "TaskSimpleFinishBrain.h"
@@ -982,7 +984,7 @@ void InjectHooksMain() {
             CTaskInteriorLieInBed::InjectHooks();
             CTaskInteriorShopKeeper::InjectHooks();
             CTaskInteriorSitAtDesk::InjectHooks();
-        // CTaskInteriorSitInChair::InjectHooks();
+            CTaskInteriorSitOnChair::InjectHooks();
             CTaskInteriorUseInfo::InjectHooks();
         };
 
@@ -1123,7 +1125,7 @@ void InjectHooksMain() {
         CTaskSimpleCarCloseDoorFromInside::InjectHooks();
         CTaskSimpleCarCloseDoorFromOutside::InjectHooks();
         CTaskSimpleCarFallOut::InjectHooks();
-        // CTaskSimpleCarForcePedOut::InjectHooks();
+        CTaskSimpleCarForcePedOut::InjectHooks();
         CTaskSimpleCarGetOut::InjectHooks();
         CTaskSimpleCarGetIn::InjectHooks();
         CTaskSimpleCarGoToPointNearDoorUntilDoorNotInUse::InjectHooks();
@@ -1240,7 +1242,7 @@ void InjectHooksMain() {
         CTaskSimpleFall::InjectHooks();
         CTaskSimpleClimb::InjectHooks();
         CTaskComplexPlayHandSignalAnim::InjectHooks();
-        // CTaskComplexWaitForPed::InjectHooks();
+        CTaskComplexWaitForPed::InjectHooks();
         CTaskComplexJump::InjectHooks();
         CTaskComplexWanderStandard::InjectHooks();
         CTaskComplexSunbathe::InjectHooks();

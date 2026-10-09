@@ -597,9 +597,7 @@ void CRenderer::PreRender() {
         link != &CVisibilityPlugins::GetAlphaList().usedListTail;
         link = link->next
     ) {
-        // NOTSA: HACK: We compare function pointers, and want it to work with reversible hooks,
-        // we need to check for both original function and our one
-        if (link->data.m_pCallback == CVisibilityPlugins::RenderEntity || link->data.m_pCallback == (void*)0x732B40) {
+        if (link->data.m_pCallback == CVisibilityPlugins::RenderEntity) {
             auto* entity = (CEntity*)link->data.m_pObj;
             entity->m_bOffscreen = false;
             entity->PreRender();
@@ -610,9 +608,7 @@ void CRenderer::PreRender() {
         link != &CVisibilityPlugins::GetAlphaUnderwaterList().usedListTail;
         link = link->next
     ) {
-        // todo: NOTSA: HACK: We compare function pointers, and want it to work with reversible hooks,
-        // we need to check for both original function and our one
-        if (link->data.m_pCallback == CVisibilityPlugins::RenderEntity || link->data.m_pCallback == (void*)0x732B40) {
+        if (link->data.m_pCallback == CVisibilityPlugins::RenderEntity) {
             auto* entity = (CEntity*)link->data.m_pObj;
             entity->m_bOffscreen = false;
             entity->PreRender();

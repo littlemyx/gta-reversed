@@ -3,6 +3,7 @@
 #include <extensions/CommandLine.h>
 
 #include "PedSaveStructure.h"
+#include "SearchLight.h"
 
 // Audio
 // -- General
@@ -764,6 +765,8 @@ void InjectHooksMain() {
     CGameLogic::InjectHooks();
     CStuckCarCheck::InjectHooks();
     CUpsideDownCarCheck::InjectHooks();
+    CMissionCleanup::InjectHooks();
+    CSearchLight::InjectHooks();
     CCamera::InjectHooks();
     CMessages::InjectHooks();
     CGangWars::InjectHooks();

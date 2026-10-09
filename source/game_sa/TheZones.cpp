@@ -249,10 +249,10 @@ void CTheZones::SetCurrentZoneAsUnlocked() {
     }
 
     // Same lookup as the one in 0x572130 (the original inlines it a 2nd time to set the flag)
-    // The original does this in x87 registers, converts using `_ftol2` and only keeps the lowest byte
+    // The original does this in x87 registers, converts using `_ftol2` (64 bit result) and only keeps the lowest byte
     constexpr float ZONE_SIZE_RECIP = 0.0016666667f; // 1 / 600 (0x865060)
-    const auto      x               = (uint8)(int32)(((double)pos.x + 3000.0) * (double)ZONE_SIZE_RECIP);
-    const auto      y               = (uint8)(int32)(((double)pos.y + 3000.0) * (double)ZONE_SIZE_RECIP);
+    const auto      x               = (uint8)(int64)(((double)pos.x + 3000.0) * (double)ZONE_SIZE_RECIP);
+    const auto      y               = (uint8)(int64)(((double)pos.y + 3000.0) * (double)ZONE_SIZE_RECIP);
     const ptrdiff_t idx             = 10 * (ptrdiff_t)x - (ptrdiff_t)y + 9;
     // BUG: Not checked, `idx` is out of the 10x10 grid if the position is outside of the map (e.g. `pos.x >= 3000`)
     if (notsa::IsFixBugs() && (idx < 0 || idx >= (ptrdiff_t)sizeof(ZonesVisited))) {

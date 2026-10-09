@@ -43,7 +43,7 @@ void CTaskComplexWanderProstitute::ScanForStuff(CPed* ped) {
         if (!other || !other->GetPlayerData() || !other->m_pVehicle) {
             continue;
         }
-        if (other->GetPlayerData()->m_pCurrentProstitutePed == ped) {
+        if (other->GetPlayerData()->m_pLastProstituteShagged == ped) { // NOTE: 0xA8 (not `m_pCurrentProstitutePed` @ 0xA4)
             continue;
         }
 

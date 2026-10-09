@@ -341,7 +341,7 @@ void CTaskSimpleFight::FightHitCar(CPed* ped, CVehicle* vehicle, const CVector& 
         CEventVehicleDamageWeapon event{vehicle, ped, WEAPON_BASEBALLBAT};
         vehicle->m_pDriver->GetIntelligence()->m_eventGroup.Add(&event, false);
     }
-    for (auto i = 0u; i < vehicle->m_nNumPassengers; i++) {
+    for (auto i = 0u; i < vehicle->m_nMaxPassengers; i++) { // NOTE: Loops up to `m_nMaxPassengers` (0x488), not `m_nNumPassengers`
         if (const auto passenger = vehicle->m_apPassengers[i]) {
             CEventVehicleDamageWeapon event{vehicle, ped, WEAPON_BASEBALLBAT};
             passenger->GetIntelligence()->m_eventGroup.Add(&event, false);

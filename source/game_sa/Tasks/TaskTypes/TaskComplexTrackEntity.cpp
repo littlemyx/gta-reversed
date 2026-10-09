@@ -58,7 +58,7 @@ void CTaskComplexTrackEntity::CalcTargetPos(CPed* ped) {
     // NOTE: Products/sums below mirror the x87 code: values kept on the FPU stack are `double`, spilled ones are rounded to `float`
     m_goToPos = m_toTrack->GetPosition();
 
-    if (!a) {
+    if (!f) { // NOTE: The asm tests the byte at 0x2C (`f`), not 0x1C (`a`) like `CalcMoveRatio` does
         m_goToPos.x = (float)((double)m_offsetPosn.x + (double)m_goToPos.x);
         m_goToPos.y = (float)((double)m_offsetPosn.y + (double)m_goToPos.y);
     } else {

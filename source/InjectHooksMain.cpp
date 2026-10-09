@@ -1235,7 +1235,7 @@ void InjectHooksMain() {
         CTaskComplexPlayHandSignalAnim::InjectHooks();
         // CTaskComplexWaitForPed::InjectHooks();
         CTaskComplexJump::InjectHooks();
-        // CTaskComplexWanderStandard::InjectHooks();
+        CTaskComplexWanderStandard::InjectHooks();
         CTaskComplexSunbathe::InjectHooks();
         CTaskComplexEnterCar::InjectHooks();
         // CTaskSimpleTogglePedThreatScanner::InjectHooks();
@@ -1259,11 +1259,11 @@ void InjectHooksMain() {
         // CTaskSimpleCarDriveTimed::InjectHooks();
         // CTaskComplexDriveWander::InjectHooks();
         CTaskSimpleStealthKill::InjectHooks();
-        // CTaskSimpleCarSetPedOut::InjectHooks();
+        CTaskSimpleCarSetPedOut::InjectHooks();
         CTaskSimpleAnim::InjectHooks();
         CTaskSimpleRunAnim::InjectHooks();
-        // CTaskComplexWanderCriminal::InjectHooks();
-        // CTaskComplexWanderProstitute::InjectHooks();
+        CTaskComplexWanderCriminal::InjectHooks();
+        CTaskComplexWanderProstitute::InjectHooks();
         CTaskComplexPartnerGreet::InjectHooks();
         CTaskComplexWalkRoundCar::InjectHooks();
         CTaskComplexMedicTreatInjuredPed::InjectHooks();
@@ -1296,7 +1296,7 @@ void InjectHooksMain() {
         CTaskComplexUseWaterCannon::InjectHooks();
         // CTaskComplexDriveToPoint::InjectHooks();
         CTaskSimpleSlideToCoord::InjectHooks();
-        // CTaskComplexPartnerDeal::InjectHooks();
+        CTaskComplexPartnerDeal::InjectHooks();
         CTaskSimplePickUpEntity::InjectHooks();
         CTaskComplexBeInGroup::InjectHooks();
         // CTaskComplexBeCop::InjectHooks();

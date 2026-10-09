@@ -79,7 +79,7 @@ void CPathFind::InjectHooks() {
     RH_ScopedInstall(FindNodeOrientationForCarPlacement, 0x450320);
     RH_ScopedInstall(GeneratePedCreationCoors_Interior, 0x44ECA0);
     RH_ScopedInstall(GeneratePedCreationCoors, 0x44E790);
-    //RH_ScopedInstall(FindNodePairClosestToCoors, 0x44FEE0);
+    RH_ScopedInstall(FindNodePairClosestToCoors, 0x44FEE0);
     RH_ScopedInstall(FindNodeClosestToCoorsFavourDirection, 0x44FCE0);
     RH_ScopedInstall(FindNodeClosestToCoors, 0x44F460);
     RH_ScopedInstall(MarkRoadNodeAsDontWander, 0x450560);
@@ -1977,6 +1977,103 @@ size_t CPathFind::CountNeighboursToBeSwitchedOff(const CPathNode& node) {
     const auto ret = (size_t)rng::count_if(GetNodeLinkedNodes(node), &CPathNode::HasToBeSwitchedOff);
     __asm mov eax, this // It has to be `this`
     return ret;
+}
+
+// 0x44FEE0
+// Finds the node closest to `pos` (weighted manhattan distance, Z counts 3x, best < 10000 && < maxDist) that has a neighbour more than `minDist` away.
+// `outDist` receives the heading (degrees) of the segment first -> second (NOT a distance, despite the old name); (0xFFFF, 0xFFFF, 0) if nothing is found.
+// NOTE: the original keeps the running sums on the x87 stack => `double` intermediates, rounded to float only where it spills.
+void CPathFind::FindNodePairClosestToCoors(CVector pos, uint8 nodeType, CNodeAddress* outFirst, CNodeAddress* outSecond, float* outDist, float minDist, float maxDist, bool bLowTraffic, bool bUnused, bool bBoats) {
+    CNodeAddress bestFirst{ 0xFFFF, 0 };
+    CNodeAddress bestSecond{ 0xFFFF, 0 };
+    float        best = 10000.0f; // 0x859AA4
+
+    for (uint32 area = 0; area < NUM_TOTAL_PATH_NODE_AREAS; area++) {
+        CPathNode* const nodes = m_pPathNodes[area];
+        if (!nodes) {
+            continue;
+        }
+
+        uint32 first, end;
+        switch (nodeType) {
+        case 0:  first = 0;                        end = m_anNumVehicleNodes[area]; break;
+        case 1:  first = m_anNumVehicleNodes[area]; end = m_anNumNodes[area];       break;
+        default: continue; // NOTSA: the exe reuses uninitialised stack slots for the range here
+        }
+
+        for (uint32 i = first; i < end; i++) {
+            const CPathNode& node = nodes[i];
+            if (bLowTraffic && node.m_isSwitchedOff) {
+                continue;
+            }
+            if ((bool)node.m_bWaterNode != bBoats) {
+                continue;
+            }
+
+            const CVector np = node.GetPosition();
+            const double total = (std::fabs((double)np.y - (double)pos.y) + 3.0 * std::fabs((double)np.z - (double)pos.z)) + std::fabs((double)np.x - (double)pos.x); // 0x858B3C = 3.0
+            const float  totalF = (float)total; // spilled to [esp+0x30]
+            if (!(total < (double)best)) {
+                continue;
+            }
+
+            if (node.m_nNumLinks <= 0) {
+                continue;
+            }
+            const CNodeAddress* const links = &m_pNodeLinks[area][node.m_wBaseLinkId];
+            for (uint32 l = 0; l < node.m_nNumLinks; l++) {
+                const CNodeAddress link = links[l];
+                const CPathNode* const nodes2 = m_pPathNodes[link.m_wAreaId];
+                if (!nodes2) {
+                    continue;
+                }
+                const CPathNode& node2 = nodes2[link.m_wNodeId];
+                if (bLowTraffic && node2.m_isSwitchedOff) {
+                    continue;
+                }
+                if ((bool)node2.m_bWaterNode != bBoats) {
+                    continue;
+                }
+
+                const CVector p2 = node2.GetPosition();
+                const double dx = (double)(float)((double)np.x - (double)p2.x);
+                const double dy = (double)np.y - (double)p2.y;
+                const double dz = (double)np.z - (double)p2.z;
+                const double dist = std::sqrt((dz * dz + dy * dy) + dx * dx);
+                if (!(dist > (double)minDist)) { // JNE on C0|C3 => skip when <=, or unordered
+                    continue;
+                }
+
+                bestFirst  = { (uint16)area, (uint16)i };
+                bestSecond = link;
+                best       = totalF;
+            }
+        }
+    }
+
+    if (!(best < maxDist)) { // JP after FCOMP: only `best < maxDist` counts as found
+        outFirst->m_wAreaId  = 0xFFFF;
+        outSecond->m_wAreaId = 0xFFFF;
+        *outDist             = 0.0f;
+        return;
+    }
+
+    // BUG: with maxDist > 10000 the exe goes on with an unset pair (reads node 0xFFFF's area)
+    if (notsa::IsFixBugs() && (bestFirst.m_wAreaId == 0xFFFF || bestSecond.m_wAreaId == 0xFFFF)) {
+        outFirst->m_wAreaId  = 0xFFFF;
+        outSecond->m_wAreaId = 0xFFFF;
+        *outDist             = 0.0f;
+        return;
+    }
+
+    *outFirst  = bestFirst;
+    *outSecond = bestSecond;
+
+    const CVector p1 = m_pPathNodes[bestFirst.m_wAreaId][bestFirst.m_wNodeId].GetPosition();
+    const CVector p2 = m_pPathNodes[bestSecond.m_wAreaId][bestSecond.m_wNodeId].GetPosition();
+    CVector dir{ p1.x - p2.x, p1.y - p2.y, 0.0f };
+    dir.Normalise(); // 0x59C910
+    *outDist = (float)(std::atan2(-(double)dir.x, (double)dir.y) * (double)57.2957763671875f); // 0x859878
 }
 
 // 0x450320

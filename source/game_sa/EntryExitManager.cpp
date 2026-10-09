@@ -25,6 +25,7 @@ void CEntryExitManager::InjectHooks() {
     RH_ScopedInstall(PostEntryExitsCreation, 0x43F0A0);
     RH_ScopedInstall(LinkEntryExit, 0x43F050);
     RH_ScopedInstall(GetEntryExitIndex, 0x43EFD0);
+    RH_ScopedInstall(SetEntryExitFlagWithIndex, 0x43EF90);
     RH_ScopedInstall(ResetAreaCodeForVisibleObjects, 0x43ED80);
     RH_ScopedInstall(SetAreaCodeForVisibleObjects, 0x43ECF0);
     RH_ScopedInstall(Load, 0x5D55C0);
@@ -256,6 +257,20 @@ CObject* CEntryExitManager::FindNearestDoor(CEntryExit const& exit, float radius
         }
     }
     return closest;
+}
+
+// 0x43EF90
+void CEntryExitManager::SetEntryExitFlagWithIndex(int32 index, uint32 flag, bool enable) {
+    auto* const enex = mp_poolEntryExits->GetAt(index);
+    if (notsa::IsFixBugs() && !enex) { // BUG: the exe dereferences the null returned for a free slot (+0x30)
+        return;
+    }
+    // The exe only touches the low 16 bits (m_nFlags is a word)
+    if (enable) {
+        enex->m_nFlags |= (uint16)flag;
+    } else {
+        enex->m_nFlags &= (uint16)~flag;
+    }
 }
 
 // 0x43F4B0

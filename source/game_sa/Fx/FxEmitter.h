@@ -17,8 +17,8 @@ public:
     bool Init(FxPrimBP_c* primBP, FxSystem_c* system) override;
     void Update(float currentTime, float deltaTime) override;
     void Reset() override;
-    void AddParticle(const RwMatrix& mat, const CVector& vel, float timeSince, const FxPrtMult_c& fxMults, float rotZ, float brightness, bool createLocal) override;
     void AddParticle(const CVector& pos, const CVector& vel, float timeSince, const FxPrtMult_c& fxMults, float rotZ, float brightness, bool createLocal) override;
+    void AddParticle(const RwMatrix& mat, const CVector& vel, float timeSince, const FxPrtMult_c& fxMults, float rotZ, float brightness, bool createLocal) override;
     void CreateParticles(float currentTime, float deltaTime);
     FxEmitterPrt_c* CreateParticle(const EmissionInfo_t& emissionInfo, RwMatrix& wldMat, const CVector* velOverride, float timeSince, const FxPrtMult_c& fxMults, float brightness, bool createLocal);
 };

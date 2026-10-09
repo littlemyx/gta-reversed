@@ -250,7 +250,7 @@ protected: // Config:
             float FrqEngineRollFactor{ 0.1f };    // 0x8CBED4
             float FrqEngineBase{ 0.6f };          // 0xNONE
             float FrqEngineOnWaterFactor{ 0.4f }; // 0xNONE
-            float FrqEngineInAirFactor{ 0.7f };   // 0xB6BA74
+            float FrqEngineInAirFactor{ std::bit_cast<float>(0x3F333332u) }; // 0xB6BA74 - initterm 0x84D0B0: [0x8CBED0] - [0x858CC8] (1 ulp below 0.7f)
 
             float VolBase{ -3.f }; // 0xNONE
             float VolEngineSpeedFactor{3.f}; // 0xNONE
@@ -411,7 +411,7 @@ protected: // Config:
             struct {
                 float Ratio      = 0.15f; // 0x8CBBF4
 
-                float VolumeBase = -4.5f; // 0xB6BA2C
+                float VolumeBase = -4.5f; // 0x8CBC14. NOTE: 0xB6BA2C is NOT this value but the derived range `VolumeMax - VolumeBase` = +4.5 (initterm 0x84CE90); GetVolumeForDummyRev (0x4F53D0) computes `progress * [0xB6BA2C] + [0x8CBC14]`, which is exactly lerp(-4.5, VolumeMax, progress)
                 float VolumeMax  = 0.f;   // 0xB6B9D0
 
                 float FreqBase   = 0.9f; // 0x8CBC0C

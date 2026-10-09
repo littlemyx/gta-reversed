@@ -166,8 +166,7 @@ CRealTimeShadow* CRealTimeShadowManager::GetRealTimeShadow(CPhysical* physical) 
         }
 
         if (shdw) {
-            // CRealTimeShadow::SetupForThisEntity (0x706520) is declared but not reversed
-            plugin::CallMethod<0x706520, CRealTimeShadow*, CPhysical*>(shdw, physical);
+            (void)shdw->SetupForThisEntity(physical); // 0x706520
             physical->m_pShadowData = shdw;
             shdw->m_bKeepAlive = true;
             shdw->m_nIntensity = 0;

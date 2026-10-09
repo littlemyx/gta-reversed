@@ -15,6 +15,7 @@ void CRealTimeShadow::InjectHooks() {
     RH_ScopedInstall(Create, 0x706460);
     RH_ScopedInstall(Update, 0x706600);
     RH_ScopedInstall(Destroy, 0x705990);
+    RH_ScopedInstall(SetupForThisEntity, 0x706520);
 }
 
 CRealTimeShadow::~CRealTimeShadow() {
@@ -93,6 +94,45 @@ bool CRealTimeShadow::Create(bool isBlurred, int32 blurPasses, bool drawMoreBlur
 
     Destroy();
     return false;
+}
+
+// 0x706520
+bool CRealTimeShadow::SetupForThisEntity(CPhysical* owner) {
+    m_pOwner = owner;
+
+    auto* const obj = owner->GetRwObject();
+    if (!obj) {
+        return false;
+    }
+
+    m_nRwObjectType = RwObjectGetType(obj);
+    switch (m_nRwObjectType) {
+    case rpATOMIC: {
+        auto* const atomic = reinterpret_cast<RpAtomic*>(obj);
+        if (atomic->interpolator.flags & rpINTERPOLATORDIRTYSPHERE) {
+            _rpAtomicResyncInterpolatedSphere(atomic);
+        }
+        std::memcpy(&m_boundingSphere, &atomic->boundingSphere, sizeof(RwSphere));
+        m_baseSphere.m_fRadius = m_boundingSphere.m_fRadius;
+        // NOTE: Uses the frame's modelling matrix (not the LTM), as the original does
+        RwV3dTransformPoints(&m_baseSphere.m_vecCenter, &m_boundingSphere.m_vecCenter, 1, RwFrameGetMatrix(RpAtomicGetFrame(atomic)));
+        break;
+    }
+    case rpCLUMP: {
+        auto* const clump = reinterpret_cast<RpClump*>(obj);
+        RpClumpGetBoundingSphere(clump, reinterpret_cast<RwSphere*>(&m_boundingSphere), true);
+        m_baseSphere.m_fRadius = m_boundingSphere.m_fRadius;
+        RwV3dTransformPoints(&m_baseSphere.m_vecCenter, &m_boundingSphere.m_vecCenter, 1, RwFrameGetMatrix(RpClumpGetFrame(clump)));
+        break;
+    }
+    default: // type 0 or > 2
+        Destroy();
+        return false;
+    }
+
+    m_camera.SetFrustum(m_boundingSphere.m_fRadius * 1.1f); // 0x858F14
+    m_camera.SetCenter(m_baseSphere.m_vecCenter);
+    return true;
 }
 
 // 0x706600

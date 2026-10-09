@@ -538,11 +538,16 @@ RwRaster* RwRasterSetFromImage(RwRaster* raster, RwImage* image) {
     return raster;
 }
 
-// A (RwRGBAToPixel): the texel word of a colour in a raster format (what JPegCompress writes into a locked 8888 / 888 raster): 8888 keeps the
-// alpha, 888 is X8R8G8B8 with 0xFF in the unused byte, 1555 / 555 / 565 / 4444 truncate the channels. Formats it cannot encode give 0.
+// A (RwRGBAToPixel, exe 0x803740 -> D3D9 0x7FEE20): the texel word of a colour in a raster format (what JPegCompress writes into a locked 8888 / 888
+// raster). Only `rasterFormat & 0xF00` counts (PAL / mipmap bits are ignored); 8888 keeps the alpha, 888 is X8R8G8B8 with 0xFF in the unused byte,
+// 1555 keeps alpha bit 7 in bit 15, 555 / 565 / 4444 truncate the channels, LUM8 is (r*30+g*59+b*11)/100 * a / 255, and colour format 0 is encoded
+// as 8888 (the exe calls itself with 0x500). Other formats give 0 (the exe raises an error and returns an uninitialised word).
 RwUInt32 RwRGBAToPixel(RwRGBA* rgbIn, RwInt32 rasterFormat) {
     uint32_t px = 0;
     if (rgbIn) {
+        if ((rasterFormat & 0x0F00) == 0) {
+            rasterFormat = rwRASTERFORMAT8888;
+        }
         rwshim::EncodeTexel({ rgbIn->red, rgbIn->green, rgbIn->blue, rgbIn->alpha }, rasterFormat, &px);
     }
     return px;

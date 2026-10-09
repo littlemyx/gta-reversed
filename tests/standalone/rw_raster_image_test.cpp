@@ -126,6 +126,14 @@ static void ImageTests() {
     CHECK(RwRGBAToPixel(&c, rwRASTERFORMAT565) == (unsigned)(((0x12 & 0xF8) << 8) | ((0x34 & 0xFC) << 3) | (0x56 >> 3)));
     CHECK(RwRGBAToPixel(&c, rwRASTERFORMAT4444) == 0x7135u);
     RwRGBA white{255, 255, 255, 255};
+    // exe 0x7FEE20: format 0 is encoded as 8888, only bits 8-11 of the format count, 555 has no alpha bit, LUM8 = (r*30+g*59+b*11)/100 * a / 255
+    CHECK(RwRGBAToPixel(&c, 0) == 0x78123456u && RwRGBAToPixel(&c, rwRASTERFORMAT8888 | rwRASTERFORMATPAL8 | rwRASTERFORMATMIPMAP) == 0x78123456u);
+    CHECK(RwRGBAToPixel(&c, rwRASTERFORMAT555) == (unsigned)(((0x12 & 0xF8) << 7) | ((0x34 & 0xF8) << 2) | (0x56 >> 3)));
+    {
+        RwRGBA lum{200, 100, 50, 128};                   // (6000 + 5900 + 550) / 100 = 124; 124 * 128 / 255 = 62
+        RwRGBA lumOpaque{200, 100, 50, 255};
+        CHECK(RwRGBAToPixel(&lum, rwRASTERFORMATLUM8) == 62u && RwRGBAToPixel(&lumOpaque, rwRASTERFORMATLUM8) == 124u);
+    }
     CHECK(RwRGBAToPixel(&white, rwRASTERFORMAT1555) == 0xFFFFu && RwRGBAToPixel(&white, rwRASTERFORMAT565) == 0xFFFFu && RwRGBAToPixel(&white, rwRASTERFORMAT4444) == 0xFFFFu);
 
     // BMP: odd widths so the row padding matters, every depth
@@ -397,15 +405,15 @@ static void ImageRasterTests() {
     // FindRasterFormat
     RwInt32 w = 0, h = 0, d = 0, f = 0;
     RwImage* i24 = MakePatternImage(8, 4, 24);
-    CHECK(RwImageFindRasterFormat(i24, rwRASTERTYPETEXTURE, &w, &h, &d, &f) == i24 && w == 8 && h == 4 && d == 24 && f == (rwRASTERFORMAT888 | rwRASTERTYPETEXTURE));
+    CHECK(RwImageFindRasterFormat(i24, rwRASTERTYPETEXTURE, &w, &h, &d, &f) == i24 && w == 8 && h == 4 && d == 32 && f == (rwRASTERFORMAT888 | rwRASTERTYPETEXTURE));
     RwImage* i32 = MakePatternImage(8, 4, 32, true);
     CHECK(RwImageFindRasterFormat(i32, rwRASTERTYPETEXTURE, &w, &h, &d, &f) == i32 && d == 32 && f == (rwRASTERFORMAT8888 | rwRASTERTYPETEXTURE));
     RwImage* i32o = MakePatternImage(8, 4, 32, false);        // all opaque -> 888
-    CHECK(RwImageFindRasterFormat(i32o, rwRASTERTYPETEXTURE, &w, &h, &d, &f) == i32o && d == 24 && f == (rwRASTERFORMAT888 | rwRASTERTYPETEXTURE));
+    CHECK(RwImageFindRasterFormat(i32o, rwRASTERTYPETEXTURE, &w, &h, &d, &f) == i32o && d == 32 && f == (rwRASTERFORMAT888 | rwRASTERTYPETEXTURE));
     RwImage* i16 = MakePatternImage(8, 4, 16, true);
     CHECK(RwImageFindRasterFormat(i16, rwRASTERTYPETEXTURE, &w, &h, &d, &f) == i16 && d == 16 && f == (rwRASTERFORMAT1555 | rwRASTERTYPETEXTURE));
     RwImage* i8 = MakePatternImage(8, 4, 8);                   // device open: P8 unsupported -> expanded
-    CHECK(RwImageFindRasterFormat(i8, rwRASTERTYPETEXTURE, &w, &h, &d, &f) == i8 && d == 24 && f == (rwRASTERFORMAT888 | rwRASTERTYPETEXTURE));
+    CHECK(RwImageFindRasterFormat(i8, rwRASTERTYPETEXTURE, &w, &h, &d, &f) == i8 && d == 32 && f == (rwRASTERFORMAT888 | rwRASTERTYPETEXTURE));
     CHECK(RwImageFindRasterFormat(i8, rwRASTERTYPECAMERA, &w, &h, &d, &f) == nullptr);
     CHECK(RwImageFindRasterFormat(i8, rwRASTERTYPENORMAL, &w, &h, &d, &f) == i8 && f == rwRASTERFORMAT888);
 
@@ -499,6 +507,32 @@ static void ImageRasterTests() {
             RwRasterDestroy(r);
         }
         RwImageDestroy(src);
+    }
+    // raster texel -> image pixel: channels are shifted up without replicating the low bits (exe 0x7FF070 / 0x7FF450); 4444 alpha nibble F -> FF
+    {
+        struct { int fmt; uint16_t texel; unsigned char want[4]; } e[] = {
+            { rwRASTERFORMAT565,  0xFFFF, { 0xF8, 0xFC, 0xF8, 0xFF } },
+            { rwRASTERFORMAT565,  0x0821, { 0x08, 0x04, 0x08, 0xFF } },
+            { rwRASTERFORMAT1555, 0xFFFF, { 0xF8, 0xF8, 0xF8, 0xFF } },
+            { rwRASTERFORMAT1555, 0x7FFF, { 0xF8, 0xF8, 0xF8, 0x00 } },
+            { rwRASTERFORMAT555,  0x7FFF, { 0xF8, 0xF8, 0xF8, 0xFF } },
+            { rwRASTERFORMAT4444, 0xFFFF, { 0xF0, 0xF0, 0xF0, 0xFF } },
+            { rwRASTERFORMAT4444, 0x8123, { 0x10, 0x20, 0x30, 0x80 } },
+        };
+        for (auto& k : e) {
+            RwRaster* r = RwRasterCreate(2, 2, 16, k.fmt | rwRASTERTYPETEXTURE);
+            RwImage* back = RwImageCreate(2, 2, 32); RwImageAllocatePixels(back);
+            unsigned char* p = r ? RwRasterLock(r, 0, rwRASTERLOCKWRITE) : nullptr;
+            CHECK(p != nullptr);
+            if (p) {
+                for (int y = 0; y < 2; ++y) for (int x = 0; x < 2; ++x) std::memcpy(p + y * RwRasterGetStride(r) + x * 2, &k.texel, 2);
+                RwRasterUnlock(r);
+                CHECK(RwImageSetFromRaster(back, r) == back);
+                CHECKV(std::memcmp(back->pixels, k.want, 4) == 0, "fmt %x texel %04x -> %02x%02x%02x%02x", k.fmt, k.texel, back->pixels[0], back->pixels[1], back->pixels[2], back->pixels[3]);
+            }
+            RwImageDestroy(back);
+            if (r) RwRasterDestroy(r);
+        }
     }
     for (RwImage* z : { i24, i32, i32o, i16, i8 }) RwImageDestroy(z);
 }

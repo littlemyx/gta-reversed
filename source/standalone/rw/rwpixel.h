@@ -6,7 +6,10 @@
 //                    palette = 4 bytes R,G,B,A per entry (16 / 256 entries). Rows are top-down.
 //   d3d9 raster texels (little-endian words): C8888 = B,G,R,A; C888 = X8R8G8B8 (B,G,R,X; the raster depth is 32); C1555 / C555 = A1R5G5B5 /
 //                    X1R5G5B5; C565 = R5G6B5; C4444 = A4R4G4B4; LUM8 = one luminance byte; PAL8 = index per byte, palette in D3dRaster::palette (RGBA).
-// 5-bit channels expand with v*255/31 (what librw's conv_RGBA8888_from_ARGB1555 does), 4-bit with v*17, narrowing truncates (RW's RwRGBAToPixel).
+// RwImage side 16 bit (ImageGet): 5-bit channels expand with v*255/31 (what librw's conv_RGBA8888_from_ARGB1555 does). Raster texels (DecodeTexel) follow the
+// exe's RwRGBAFromPixel (0x7FF070) / D3D9 raster-to-image conversion (0x7FF450): channels are shifted into the high bits WITHOUT replicating the low bits
+// (565 white = F8,FC,F8), the 4444 alpha nibble 0xF is 0xFF, every other nibble n is n<<4. Narrowing (EncodeTexel) truncates (RwRGBAToPixel 0x7FEE20);
+// LUM8 is (r*30+g*59+b*11)/100 scaled by alpha/255.
 #pragma once
 #ifdef NOTSA_RW_LIBRW
 #include <cstdint>
@@ -18,7 +21,6 @@ struct Px {
 };
 
 inline uint8_t Expand5(unsigned v) { return (uint8_t)(v * 0xFF / 0x1F); }
-inline uint8_t Expand6(unsigned v) { return (uint8_t)(v * 0xFF / 0x3F); }
 
 // ---- RwImage side (top-down, `row` = image->pixels + y * image->stride) ----
 inline Px ImageGet(const rw::Image* img, int x, int y) {
@@ -88,7 +90,7 @@ inline bool EncodeTexel(Px p, int fmt, uint32_t* out) {
     case 0x0100: *out = ((p.a & 0x80) << 8) | ((p.r & 0xF8) << 7) | ((p.g & 0xF8) << 2) | (p.b >> 3); return true;      // 1555
     case 0x0200: *out = ((p.r & 0xF8) << 8) | ((p.g & 0xFC) << 3) | (p.b >> 3); return true;                             // 565
     case 0x0300: *out = ((p.a & 0xF0) << 8) | ((p.r & 0xF0) << 4) | (p.g & 0xF0) | (p.b >> 4); return true;              // 4444
-    case 0x0400: *out = (p.r * 30 + p.g * 59 + p.b * 11) / 100; return true;                                              // LUM8
+    case 0x0400: *out = ((p.r * 30 + p.g * 59 + p.b * 11) / 100) * p.a / 255; return true;                                // LUM8 (exe 0x7FEF45: luminance * alpha / 255)
     case 0x0500: *out = ((uint32_t)p.a << 24) | ((uint32_t)p.r << 16) | ((uint32_t)p.g << 8) | p.b; return true;           // 8888
     case 0x0600: *out = 0xFF000000u | ((uint32_t)p.r << 16) | ((uint32_t)p.g << 8) | p.b; return true;                     // 888 (X8R8G8B8)
     case 0x0A00: *out = ((p.r & 0xF8) << 7) | ((p.g & 0xF8) << 2) | (p.b >> 3); return true;                              // 555
@@ -98,13 +100,13 @@ inline bool EncodeTexel(Px p, int fmt, uint32_t* out) {
 
 inline bool DecodeTexel(uint32_t t, int fmt, Px* out) {
     switch (fmt & 0x0F00) {
-    case 0x0100: *out = { Expand5((t >> 10) & 0x1F), Expand5((t >> 5) & 0x1F), Expand5(t & 0x1F), (uint8_t)((t & 0x8000) ? 0xFF : 0) }; return true;
-    case 0x0200: *out = { Expand5((t >> 11) & 0x1F), Expand6((t >> 5) & 0x3F), Expand5(t & 0x1F), 0xFF }; return true;
-    case 0x0300: *out = { (uint8_t)(((t >> 8) & 0xF) * 17), (uint8_t)(((t >> 4) & 0xF) * 17), (uint8_t)((t & 0xF) * 17), (uint8_t)(((t >> 12) & 0xF) * 17) }; return true;
+    case 0x0100: *out = { (uint8_t)((t >> 7) & 0xF8), (uint8_t)((t >> 2) & 0xF8), (uint8_t)(t << 3), (uint8_t)((t & 0x8000) ? 0xFF : 0) }; return true;     // 1555
+    case 0x0200: *out = { (uint8_t)((t >> 8) & 0xF8), (uint8_t)((t >> 3) & 0xFC), (uint8_t)(t << 3), 0xFF }; return true;                                    // 565
+    case 0x0300: *out = { (uint8_t)((t >> 4) & 0xF0), (uint8_t)(t & 0xF0), (uint8_t)(t << 4), (uint8_t)((t & 0xF000) == 0xF000 ? 0xFF : ((t >> 8) & 0xF0)) }; return true; // 4444
     case 0x0400: *out = { (uint8_t)t, (uint8_t)t, (uint8_t)t, 0xFF }; return true;
     case 0x0500: *out = { (uint8_t)(t >> 16), (uint8_t)(t >> 8), (uint8_t)t, (uint8_t)(t >> 24) }; return true;
     case 0x0600: *out = { (uint8_t)(t >> 16), (uint8_t)(t >> 8), (uint8_t)t, 0xFF }; return true;
-    case 0x0A00: *out = { Expand5((t >> 10) & 0x1F), Expand5((t >> 5) & 0x1F), Expand5(t & 0x1F), 0xFF }; return true;
+    case 0x0A00: *out = { (uint8_t)((t >> 7) & 0xF8), (uint8_t)((t >> 2) & 0xF8), (uint8_t)(t << 3), 0xFF }; return true;                                   // 555
     }
     return false;
 }

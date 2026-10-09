@@ -236,6 +236,7 @@ static void StreamTests() {
     RwTexDictionaryAddTexture(d, a);
     RwTexDictionaryAddTexture(d, b);
     ((PluginData*)((char*)d + g_pluginOffset))->value = 0xBEEF;
+    a->filterAddressing |= 0x30000u;   // bits above the 16 filter / addressing bits are not read back (exe native reader 0x4CD820 merges 16 bits only)
     const unsigned size = RwTexDictionaryStreamGetSize(d);
     std::vector<unsigned char> buf(size + 4096);
     rw::StreamMemory ms;
@@ -256,6 +257,7 @@ static void StreamTests() {
         RwTexture* b2 = RwTexDictionaryFindNamedTexture(d2, "tex_b");
         CHECK(a2 && b2 && !std::strcmp(b2->mask, "tex_b_m"));
         CHECK(a2 && RwTextureGetFilterMode(a2) == rwFILTERLINEAR && RwTextureGetAddressingU(a2) == rwTEXTUREADDRESSCLAMP);
+        CHECKV(a2 && (a2->filterAddressing & ~0xFFFFu) == 0, "filterAddressing=%08x: upper 16 bits dropped on read", a2 ? a2->filterAddressing : 0u);
         CHECK(a2 && RwRasterGetWidth(a2->raster) == 16 && RwRasterGetHeight(a2->raster) == 16 && RwRasterGetFormat(a2->raster) == (rwRASTERFORMAT8888 | 0));
         CHECK(((PluginData*)((char*)d2 + g_pluginOffset))->value == 0xBEEF);   // dictionary plugin data survived the stream
         if (a2) {

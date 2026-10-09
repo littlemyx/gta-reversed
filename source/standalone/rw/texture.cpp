@@ -101,7 +101,8 @@ RwTexture* ReadNativeTexture(rw::Stream* stream) {
     if (!tex) {
         return nullptr;
     }
-    tex->filterAddressing = stream->readU32();
+    // exe 0x4CD820: filter (bits 0-7) and U / V addressing (bits 8-15) are merged into the fresh texture's word, the upper 16 bits of the file are dropped
+    tex->filterAddressing = stream->readU32() & 0xFFFFu;
     stream->read8(tex->name, 32);
     stream->read8(tex->mask, 32);
     tex->name[31] = '\0';

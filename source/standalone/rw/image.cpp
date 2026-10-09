@@ -254,6 +254,10 @@ RwImage* RwImageFindRasterFormat(RwImage* ipImage, RwInt32 nRasterType, RwInt32*
     if (!rw::Raster::imageFindRasterFormat(ipImage, rwRASTERTYPETEXTURE, &w, &h, &d, &f)) {
         return nullptr;
     }
+    // The exe reports the depth of the raster format it picks (0x85C674 table: 8888 / 888 -> 32, 16 bit formats -> 16, LUM8 -> 8); librw says 24 for 888.
+    if ((f & 0x0F00) == rwRASTERFORMAT8888 || (f & 0x0F00) == rwRASTERFORMAT888) {
+        d = 32;
+    }
     *npWidth  = w;
     *npHeight = h;
     *npDepth  = d;

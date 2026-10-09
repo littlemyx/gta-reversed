@@ -20,6 +20,8 @@ public:
 public:
     static constexpr auto Type = TASK_COMPLEX_CAR_DRIVE_TO_POINT;
 
+    static void InjectHooks();
+
     CTaskComplexDriveToPoint(CVehicle* vehicle, const CVector& point, float speed, int32 arg4, eModelID carModelIndexToCreate, float radius, eCarDrivingStyle drivingStyle);
     ~CTaskComplexDriveToPoint() override = default;
 

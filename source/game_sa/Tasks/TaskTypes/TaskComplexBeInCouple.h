@@ -19,6 +19,8 @@ public:
 public:
     static constexpr auto Type = TASK_COMPLEX_BE_IN_COUPLE;
 
+    static void InjectHooks();
+
     CTaskComplexBeInCouple(
         CPed* pPed,
         bool  isLeader,
@@ -36,5 +38,6 @@ public:
     CTask* CreateNextSubTask(CPed* ped) override;
     CTask* ControlSubTask(CPed* ped) override;
     void AbortArmIK(CPed* ped);
+    uint32 GetWalkSide(CPed* ped) const;
 };
 VALIDATE_SIZE(CTaskComplexBeInCouple, 0x20);

@@ -10,6 +10,8 @@ public:
 public:
     static constexpr auto Type = TASK_COMPLEX_EVASIVE_COWER;
 
+    static void InjectHooks();
+
     CTaskComplexEvasiveCower(CEntity* entity, const CVector& pos);
     ~CTaskComplexEvasiveCower() override;
 

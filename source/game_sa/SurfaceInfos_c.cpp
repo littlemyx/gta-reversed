@@ -9,6 +9,7 @@ void SurfaceInfos_c::InjectHooks()
     RH_ScopedCategoryGlobal();
 
     RH_ScopedInstall(GetSurfaceIdFromName, 0x55D220);
+    RH_ScopedInstall(LoadAdhesiveLimits, 0x55D0E0);
     RH_ScopedInstall(Init, 0x55F420);
 
     RH_ScopedInstall(GetAdhesionGroup, 0x55E5C0);
@@ -252,27 +253,47 @@ SurfaceId SurfaceInfos_c::GetSurfaceIdFromName(Const char* cName)
 // 0x55D0E0
 void SurfaceInfos_c::LoadAdhesiveLimits()
 {
-    return plugin::CallMethod<0x55D0E0, SurfaceInfos_c*>(this);
-
     CFileMgr::SetDir("");
     auto* file = CFileMgr::OpenFile("data\\surface.dat", "rb");
-#if FIX_BUGS
-    if (!file) {
+    if (notsa::IsFixBugs() && !file) {
+        // BUG: Original doesn't check if the file was opened
         NOTSA_LOG_DEBUG("[SurfaceInfos_c] Failed to open surface.dat");
-        CFileMgr::CloseFile(file);
         return;
     }
-#endif
-    for (const char* line = CFileLoader::LoadLine(file); line; line = CFileLoader::LoadLine(file)) {
-        if (*line == ';' || !*line)
-            continue;
 
-        char value[4];
-        VERIFY(sscanf_s(line, "%s", SCANF_S_STR(value)) == 1);
-        for (auto i = *line; i != ' '; i = *++line) {
-            if (i == '\t')
-                break;
+    // Lower triangle (incl. the diagonal) of a symmetric matrix: line `row` has `row + 1` values
+    int32 row = 0;
+    for (const char* line = CFileLoader::LoadLine(file); line; line = CFileLoader::LoadLine(file)) {
+        if (*line == ';' || !*line) {
+            continue;
         }
+
+        // First token: group name (the result is unused by the original)
+        char name[512]; // NOTSA: Original used a (much) smaller stack buffer
+        VERIFY(sscanf_s(line, "%s", SCANF_S_STR(name)) == 1);
+        // BUG: Doesn't check for the terminating null
+        while (*line != ' ' && *line != '\t') {
+            line++;
+        }
+
+        // NOTSA: Original checks `row >= 0` here (always true)
+        for (auto col = 0; col <= row; col++) {
+            while (*line == ' ' || *line == '\t') {
+                line++;
+            }
+
+            float value{};
+            if (*line != '-') { // A '-' means 0.0
+                VERIFY(sscanf_s(line, "%f", &value) == 1);
+            }
+            while (*line != ' ' && *line != '\t' && *line) {
+                line++;
+            }
+
+            m_adhesiveLimits[row][col] = value;
+            m_adhesiveLimits[col][row] = value;
+        }
+        row++;
     }
     CFileMgr::CloseFile(file);
 }

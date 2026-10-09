@@ -497,6 +497,8 @@
 #include "EventLeanOnVehicle.h"
 #include "EventOnFire.h"
 #include "EventEscalator.h"
+#include "CollisionEventScanner.h"
+#include "EventScanner.h"
 #include "EventCopCarBeingStolen.h"
 #include "EventDanger.h"
 #include "EventSeenCop.h"
@@ -695,6 +697,7 @@ void InjectHooksMain() {
     CPedIntelligence::InjectHooks();
     CPedGroupIntelligence::InjectHooks();
     CCollision::InjectHooks();
+    CCollisionEventScanner::InjectHooks();
     CTempColModels::InjectHooks();
     CColSphere::InjectHooks();
     CColLine::InjectHooks();
@@ -1384,7 +1387,8 @@ void InjectHooksMain() {
         // + CEventSignalAtPed
         // + CEventSoundLoud
         // - CEventSource::InjectHooks();
-        // - CEventScanner::InjectHooks();
+        CEventScanner::InjectHooks();
+        CVehiclePotentialCollisionScanner::InjectHooks();
     };
 
     const auto Fx = []() {

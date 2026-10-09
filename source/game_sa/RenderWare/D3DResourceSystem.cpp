@@ -52,9 +52,8 @@ void D3DResourceSystem::CancelBuffering() {
 
 // 0x7307F0
 uint32 D3DResourceSystem::GetTotalIndexDataSize() {
-    // NOTE: `D3DIndexDataBuffer::GetTotalDataSize` (0x7303B0) is not reversed yet
-    const auto GetBufferSize = [](D3DIndexDataBuffer& buf) {
-        return plugin::CallMethodAndReturn<uint32, 0x7303B0, D3DIndexDataBuffer*>(&buf);
+    const auto GetBufferSize = [](D3DIndexDataBuffer& buf) { // 0x7303B0
+        return buf.GetTotalDataSize();
     };
     uint32 total = 0;
     for (int32 i = NUM_INDEX_DATA_BUFFERS - 1; i >= 0; i--) { // Original goes backwards
@@ -65,10 +64,9 @@ uint32 D3DResourceSystem::GetTotalIndexDataSize() {
 
 // 0x730660
 uint32 D3DResourceSystem::GetTotalPixelsSize() {
-    // NOTE: `D3DTextureBuffer::GetTotalDataSize` (0x7300A0) is not reversed yet
     uint32 total = 0;
     for (int32 i = NumTextureBuffers; i != 0; i--) { // Original goes backwards
-        total += plugin::CallMethodAndReturn<uint32, 0x7300A0, D3DTextureBuffer*>(&TextureBuffers[i - 1]);
+        total += TextureBuffers[i - 1].GetTotalDataSize(); // 0x7300A0
     }
     return total;
 }
@@ -241,8 +239,7 @@ int32 D3DResourceSystem::CreateIndexBuffer(uint32 numIndices, uint32 format, voi
             return 0;
         }
     } else {
-        // NOTE: `D3DIndexDataBuffer::Pop(uint32)` (0x730270) is not reversed yet
-        ib = (IDirect3DIndexBuffer9*)plugin::CallMethodAndReturn<void*, 0x730270, D3DIndexDataBuffer*, uint32>(&LargeIndexDataBuffer, (uint32)capacity);
+        ib = LargeIndexDataBuffer.Pop((uint32)capacity); // 0x730270
         *ppIndexBuffer = ib;
         if (ib) {
             return 0;
@@ -280,8 +277,7 @@ int32 D3DResourceSystem::CreateTexture(int32 width, int32 height, int32 levels, 
         }
     }
     if (!popped) {
-        // NOTE: `D3DTextureBuffer::Pop(format, width, height, bOneLevel)` (0x72FF60) is not reversed yet
-        tex = plugin::CallMethodAndReturn<void*, 0x72FF60, D3DTextureBuffer*, uint32, int32, int32, int32>(&TextureBuffers[0], format, width, height, levels);
+        tex = TextureBuffers[0].Pop(format, width, height, levels); // 0x72FF60
     }
 
     *ppTexture = tex;
@@ -412,10 +408,14 @@ void D3DResourceSystem::InjectHooks() {
         RH_ScopedInstall(Setup, 0x72FE80);
         RH_ScopedInstall(Push, 0x72FFF0);
         RH_ScopedInstall(PushWithoutIncreasingCounter, 0x730AD0);
+        RH_ScopedOverloadedInstall(Pop, "4", 0x72FF60, IDirect3DTexture9*(D3DTextureBuffer::*)(uint32, int32, int32, int32));
+        RH_ScopedInstall(GetTotalDataSize, 0x7300A0);
     }
     {
         RH_ScopedClass(D3DIndexDataBuffer);
         RH_ScopedCategory("RenderWare");
         RH_ScopedInstall(Resize, 0x730330);
+        RH_ScopedOverloadedInstall(Pop, "1", 0x730270, IDirect3DIndexBuffer9*(D3DIndexDataBuffer::*)(uint32));
+        RH_ScopedInstall(GetTotalDataSize, 0x7303B0);
     }
 }

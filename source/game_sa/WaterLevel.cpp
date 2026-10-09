@@ -1051,16 +1051,18 @@ bool CWaterQuad::GetWaterLevel(float x, float y, float z, float* outWaterLevel, 
         const double a = 1.0 - (double)u;
         const double b = 1.0 - v;
         *outWaterLevel = (float)Interpolate(GetZ, v3, v2, a, v1, b);
-        if (outBigWaves) {
-            *outBigWaves   = (float)Interpolate(GetBig,   v3, v1, b, v2, a);
-            *outSmallWaves = (float)Interpolate(GetSmall, v3, v1, b, v2, a);
+        if (!outBigWaves) {
+            return true; // NOTE: The original returns here (skipping the depth tests below), unlike the triangle's
         }
+        *outBigWaves   = (float)Interpolate(GetBig,   v3, v1, b, v2, a);
+        *outSmallWaves = (float)Interpolate(GetSmall, v3, v1, b, v2, a);
     } else { // Lower triangle (v0, v1, v2)
         *outWaterLevel = (float)Interpolate(GetZ, v0, v2, v, v1, (double)u);
-        if (outBigWaves) {
-            *outBigWaves   = (float)Interpolate(GetBig,   v0, v2, v, v1, (double)u);
-            *outSmallWaves = (float)Interpolate(GetSmall, v0, v2, v, v1, (double)u);
+        if (!outBigWaves) {
+            return true; // See above
         }
+        *outBigWaves   = (float)Interpolate(GetBig,   v0, v2, v, v1, (double)u);
+        *outSmallWaves = (float)Interpolate(GetSmall, v0, v2, v, v1, (double)u);
     }
 
     // Limited depth polys only apply to the water close to `z`

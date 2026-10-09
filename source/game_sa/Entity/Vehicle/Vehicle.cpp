@@ -27,6 +27,7 @@
 #include "TaskComplexEnterCarAsPassenger.h"
 #include "Shadows.h"
 #include "PedClothesDesc.h"
+#include "Skidmarks.h"
 
 static CVector TransformPointExt(const CMatrix& m, const CVector& v); // defined below
 
@@ -193,7 +194,7 @@ void CVehicle::InjectHooks() {
     RH_ScopedInstall(DoSunGlare, 0x6DD6F0);
     RH_ScopedInstall(AddWaterSplashParticles, 0x6DDF60);
     RH_ScopedInstall(AddExhaustParticles, 0x6DE240);
-    // RH_ScopedInstall(AddSingleWheelParticles, 0x6DE880);
+    RH_ScopedInstall(AddSingleWheelParticles, 0x6DE880);
     RH_ScopedInstall(GetSpecialColModel, 0x6DF3D0);
     // RH_ScopedInstall(RemoveVehicleUpgrade, 0x6DF930);
     // RH_ScopedInstall(AddUpgrade, 0x6DFA20);
@@ -4862,10 +4863,227 @@ void CVehicle::AddExhaustParticles() {
     }
 }
 
+// 0x41BD90 - `CGeneral::GetRandomNumberInRange(min, max)` as the original evaluates it (CRT `rand()`; the result is left in the FPU)
+static double RandomInRangeExt(float min, float max) {
+    return ((double)max - (double)min) * ((double)rand() * (double)RAND_MAX_FLOAT_RECIPROCAL) + (double)min;
+}
+
+// 0x4082C0 - `CVector::Magnitude` (the result is left in the FPU)
+static double MagnitudeExt(const CVector& v) {
+    return std::sqrt(((double)v.x * v.x + (double)v.y * v.y) + (double)v.z * v.z);
+}
+
+// 0x59C970 - `CVector::NormaliseAndMag` as the original evaluates it. A length of 0 (or less) only writes `x = 1` and returns 1.
+static float NormaliseAndMagExt(CVector& v) {
+    const double sq = ((double)v.x * v.x + (double)v.y * v.y) + (double)v.z * v.z;
+    if (sq <= 0.0) {
+        v.x = 1.0f;
+        return 1.0f;
+    }
+    const double inv = 1.0 / std::sqrt(sq);
+    v.x = (float)(v.x * inv);
+    v.y = (float)(v.y * inv);
+    v.z = (float)(v.z * inv);
+    return (float)(1.0 / inv);
+}
+
 // always return false?
 // 0x6DE880
-bool CVehicle::AddSingleWheelParticles(tWheelState wheelState, uint32 arg1, float arg2, float arg3, CColPoint* arg4, CVector* arg5, float arg6, int32 arg7, uint32 surfaceType, bool* bloodState, uint32 arg10) {
-    return ((bool(__thiscall*)(CVehicle*, tWheelState, uint32, float, float, CColPoint*, CVector*, float, int32, uint32, bool*, uint32))0x6DE880)(this, wheelState, arg1, arg2, arg3, arg4, arg5, arg6, arg7, surfaceType, bloodState, arg10);
+bool CVehicle::AddSingleWheelParticles(tWheelState wheelState, uint32 arg1, float arg2, float arg3, CColPoint* colPoint, CVector* wheelPos, float arg6, int32 wheelId, uint32 skidmarkType, bool* bloodState, uint32 flags) {
+    // NOTE: The original keeps most intermediates on the x87 stack (extended precision), hence the `double`s below.
+    const auto playerVeh = FindPlayerVehicle(-1, false);
+    if (m_bOffscreen) {
+        return false;
+    }
+
+    // Distance to the camera
+    const auto& vehPos = GetPosition();
+    const auto& camPos = TheCamera.GetPosition();
+    const double dx = (double)camPos.x - vehPos.x, dy = (double)camPos.y - vehPos.y, dz = (double)camPos.z - vehPos.z;
+    const double distSq = (dz * dz + dy * dy) + dx * dx;
+    if (distSq > 625.0f && !vehicleFlags.bAlwaysSkidMarks) {
+        return false;
+    }
+
+    // Only every n-th frame for far away vehicles
+    bool canAddParticles = true;
+    if (distSq > 400.0f) {
+        if (((uint8)m_nModelIndex + CTimer::m_FrameCounter) & 3) { // (sic) only the low byte of the model index
+            canAddParticles = false;
+        }
+    } else if (distSq > 64.0f || !playerVeh) {
+        if (((uint8)m_nModelIndex + CTimer::m_FrameCounter) & 1) {
+            canAddParticles = false;
+        }
+    }
+
+    if (!(arg2 < 1.0f)) {
+        return false;
+    }
+
+    bool inWater = false;
+    if (g_surfaceInfos.IsWater(colPoint->m_nSurfaceTypeB)) {
+        inWater = true;
+    } else if (physicalFlags.bTouchingWater) {
+        float waterLevel;
+        if (CWaterLevel::GetWaterLevel(wheelPos->x, wheelPos->y, wheelPos->z, waterLevel, true, nullptr) && wheelPos->z <= waterLevel) {
+            inWater = true;
+        }
+    }
+
+    const bool isLowArg3 = arg3 < 1.0f;
+
+    // Sparks (metal on tarmac...)
+    if (arg1 == 1 && (arg3 > 0.1f || wheelState == WHEEL_STATE_SPINNING) && g_surfaceInfos.GetFrictionEffect(colPoint->m_nSurfaceTypeB) == 1) {
+        CVector sparkDir{
+            (float)((double)m_vecMoveSpeed.x * -50.0f),
+            (float)((double)m_vecMoveSpeed.y * -50.0f),
+            (float)((double)m_vecMoveSpeed.z * -50.0f + 2.5f)
+        };
+        float sparkForce = (float)((double)arg3 * 32.0f);
+        if (wheelState == WHEEL_STATE_SPINNING && arg3 < 0.2f) {
+            const CVector back = (m_matrix->GetForward() * m_GasPedal) * -12.0f;
+            sparkDir   = CVector{ back.x, back.y, (float)((double)back.z + 2.5f) };
+            sparkForce = 10.0f;
+        }
+        const float sparkMag = NormaliseAndMagExt(sparkDir);
+        g_fx.AddSparks(*wheelPos, sparkDir, sparkMag, (int32)sparkForce, m_vecMoveSpeed, SPARK_PARTICLE_SPARK, 0.1f, 0.3f); // 0x49F040
+        AudioEngine.ReportCollision(
+            this,
+            FindPlayerPed(0),
+            colPoint->m_nSurfaceTypeA,
+            colPoint->m_nSurfaceTypeB,
+            *wheelPos,
+            nullptr,
+            1.0f,
+            1.0f,
+            false,
+            true
+        ); // 0x506EB0
+    }
+
+    MakeDirty(*colPoint);
+
+    // Smoke / dust particles of a (skidding / fixed) wheel => the particle's size / life depend on the vehicle's type
+    const auto AdjustBikeParticleMults = [&](FxPrtMult_c& mults) {
+        if (m_nVehicleSubType == VEHICLE_TYPE_BIKE || m_nVehicleSubType == VEHICLE_TYPE_QUAD) {
+            mults.m_fSize *= 0.5f;
+        } else if (m_nVehicleSubType == VEHICLE_TYPE_BMX) {
+            mults.m_fSize *= 0.2f;
+            mults.m_fLife *= 0.3f;
+        }
+    };
+
+    // Used by the skidding & fixed wheel cases (0x6DED1A... & 0x6DEF50...)
+    const auto AddTrailOfSmoke = [&] {
+        FxPrtMult_c mults{ 0.9f, 0.9f, 1.0f, 0.5f, 0.7f, 1.0f, 0.3f };
+        const CVector vel{ 0.0f, 0.0f, 0.5f };
+        float countScale = 2.0f;
+        if (m_nVehicleSubType == VEHICLE_TYPE_BIKE || m_nVehicleSubType == VEHICLE_TYPE_QUAD) {
+            mults.m_fSize *= 0.5f;
+            countScale = 3.0f;
+        } else if (m_nVehicleSubType == VEHICLE_TYPE_BMX) {
+            mults.m_fSize *= 0.2f;
+            mults.m_fLife *= 0.3f;
+            countScale = 3.0f;
+        }
+
+        const CVector step  = m_vecMoveSpeed * CTimer::ms_fTimeStep;
+        const int32   num   = (int32)(MagnitudeExt(step) * countScale); // _ftol
+        const int32   count = num >= 1 ? num : 1;
+        const float   countF = (float)count;
+        for (int32 i = 0; i < count; i++) {
+            const double rnd = RandomInRangeExt(0.5f, 1.0f);
+            mults.m_Color.blue  = (float)rnd;
+            mults.m_Color.green = (float)(rnd * 0.9f);
+            mults.m_Color.red   = (float)(rnd * 0.9f);
+
+            const float   frac = (float)(1.0 - (double)i / (double)countF);
+            const CVector pos  = *wheelPos - step * frac;
+            g_fx.m_SmokeII3expand->AddParticle(pos, vel, 0.3f, mults, -1.0f, m_fContactSurfaceBrightness, 0.6f, false); // 0x4AA440
+        }
+    };
+
+    // Skidmark (+ the quad bike's wheels are offset to the sides)
+    const auto AddSkidmark = [&] {
+        if (arg1 == 1) {
+            return;
+        }
+
+        CVector skidPos = *wheelPos;
+        if (m_nModelIndex == MODEL_QUAD) {
+            const CVector offset = m_matrix->GetRight() * 0.15f;
+            if (wheelId < 2) {
+                skidPos += offset;
+            } else {
+                skidPos -= offset;
+            }
+        }
+
+        if (inWater) {
+            return;
+        }
+
+        const auto& mat   = m_matrix;
+        const float width = FindWheelWidth((uint8)wheelId & 1); // 0xFC
+        CSkidmarks::RegisterOne((uint32)wheelId + (uint32)(uintptr_t)this, skidPos, mat->GetForward().x, mat->GetForward().y, (eSkidmarkType)skidmarkType, bloodState, width); // 0x720930
+    };
+
+    switch (wheelState) {
+    case WHEEL_STATE_SPINNING: { // 0x6DF197
+        if (AddWheelDirtAndWater(*colPoint, isLowArg3, true, inWater) && canAddParticles) {
+            FxPrtMult_c mults{ 0.9f, 0.9f, 1.0f, 0.5f, 1.0f, 1.0f, 0.5f };
+            if (MagnitudeExt(m_vecMoveSpeed) > 0.15f) {
+                mults.m_Color.alpha = 0.3f;
+                mults.m_fSize       = 0.5f;
+            }
+            AdjustBikeParticleMults(mults);
+
+            const float gas = fabsf(m_GasPedal);
+            CVector     vel;
+            vel.x = (float)RandomInRangeExt(0.0f, (float)(((double)gas * m_vecMoveSpeed.x) * -30.0f));
+            vel.y = (float)RandomInRangeExt(0.0f, (float)(((double)gas * m_vecMoveSpeed.y) * -30.0f));
+            vel.z = (float)((double)(rand() % 10000) * 0.0001f * 0.8f);
+
+            const double rnd = RandomInRangeExt(0.5f, 1.0f);
+            mults.m_Color.blue  = (float)rnd;
+            mults.m_Color.green = (float)(rnd * 0.9f);
+            mults.m_Color.red   = (float)(rnd * 0.9f);
+            g_fx.m_SmokeII3expand->AddParticle(*wheelPos, vel, 0.0f, mults, -1.0f, m_fContactSurfaceBrightness, 0.6f, false); // 0x4AA440
+        }
+        AddSkidmark();
+        return false;
+    }
+    case WHEEL_STATE_SKIDDING: { // 0x6DEF03
+        if (flags & 4) {
+            return false;
+        }
+        if (arg3 > 0.03f && AddWheelDirtAndWater(*colPoint, isLowArg3, false, inWater) && canAddParticles) {
+            AddTrailOfSmoke();
+        }
+        AddSkidmark();
+        return false;
+    }
+    case WHEEL_STATE_FIXED: { // 0x6DECEA
+        if (arg3 > 0.03f && AddWheelDirtAndWater(*colPoint, isLowArg3, false, inWater) && canAddParticles) {
+            AddTrailOfSmoke();
+        }
+        AddSkidmark();
+        return false;
+    }
+    default: { // 0x6DEBD1
+        if (arg3 > 0.03f) {
+            AddWheelDirtAndWater(*colPoint, isLowArg3, false, inWater);
+        }
+
+        const bool alwaysSkid = vehicleFlags.bAlwaysSkidMarks && ((uint8)wheelId & 1) && std::sqrt(((double)m_vecMoveSpeed.x * m_vecMoveSpeed.x) + (double)m_vecMoveSpeed.y * m_vecMoveSpeed.y) > 0.04f;
+        if (!alwaysSkid && !*bloodState && !(flags & 2)) {
+            return false;
+        }
+        AddSkidmark();
+        return false;
+    }
+    }
 }
 
 // 0x6DF3D0

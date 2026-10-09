@@ -3,12 +3,20 @@
 #include "TaskSimpleCarSetPedOut.h"
 
 #include "World.h"
+#include "CarEnterExit.h"
+#include "Garages.h"
+#include "Bike.h"
+#include "TaskSimplePlayerOnFoot.h"
+#include "TaskSimpleStandStill.h"
+#include "TaskComplexWander.h"
 
 void CTaskSimpleCarSetPedOut::InjectHooks() {
     RH_ScopedVirtualClass(CTaskSimpleCarSetPedOut, 0x86EEB8, 9);
     RH_ScopedCategory("Tasks/TaskTypes");
 
     RH_ScopedInstall(PositionPedOutOfCollision, 0x6479B0);
+    RH_ScopedVMTInstall(Clone, 0x649F50);
+    RH_ScopedVMTInstall(ProcessPed, 0x647D10);
 }
 
 CTaskSimpleCarSetPedOut::CTaskSimpleCarSetPedOut(CVehicle* targetVehicle, eTargetDoor nTargetDoor, bool bSwitchOffEngine, bool warpingOutOfCar) :
@@ -119,10 +127,86 @@ void CTaskSimpleCarSetPedOut::PositionPedOutOfCollision(CPed* ped, CVehicle* veh
     CWorld::pIgnoreEntity = nullptr;
 }
 
+// 0x649F50
 CTask* CTaskSimpleCarSetPedOut::Clone() const {
-    return plugin::CallMethodAndReturn<CTask*, 0x649F50, const CTask*>(this);
+    auto* const task = new CTaskSimpleCarSetPedOut{ m_pTargetVehicle, m_nTargetDoor, m_bSwitchOffEngine }; // 0x6478B0
+    task->m_bWarpingOutOfCar     = m_bWarpingOutOfCar;
+    task->m_bFallingOutOfCar     = m_bFallingOutOfCar;
+    task->m_bKnockedOffBike      = m_bKnockedOffBike;
+    task->m_nDoorFlagsToClear    = m_nDoorFlagsToClear;
+    task->m_nNumGettingInToClear = m_nNumGettingInToClear;
+    return task;
 }
 
+// 0x647D10
 bool CTaskSimpleCarSetPedOut::ProcessPed(CPed* ped) {
-    return plugin::CallMethodAndReturn<bool, 0x647D10, CTask*, CPed*>(this, ped);
+    ped->bInVehicle = false;
+    ped->m_bUsesCollision = true;
+    ped->UpdateStatLeavingVehicle();
+
+    if (!m_bKnockedOffBike) {
+        PositionPedOutOfCollision(ped, nullptr, m_nTargetDoor);
+    }
+
+    CCarEnterExit::RemoveCarSitAnim(ped);
+    ped->RestartNonPartialAnims();
+
+    // BUG: `m_pTargetVehicle` is not null-checked here (nor below) in the original
+    if (!m_bKnockedOffBike && !m_bFallingOutOfCar && m_pTargetVehicle->m_nVehicleSubType != VEHICLE_TYPE_BOAT) {
+        ped->m_vecMoveSpeed = CVector{};
+    }
+
+    if (auto* const pedVeh = ped->m_pVehicle) {
+        if (m_nDoorFlagsToClear) {
+            m_pTargetVehicle->ClearGettingOutFlags(m_nDoorFlagsToClear);
+        }
+        if (m_nNumGettingInToClear) {
+            m_pTargetVehicle->m_nNumGettingIn -= m_nNumGettingInToClear;
+        }
+
+        if (pedVeh->m_pDriver == ped) {
+            pedVeh->RemoveDriver(!m_bSwitchOffEngine);
+            ped->m_pVehicle->SetStatus(STATUS_ABANDONED);
+            if (ped->m_pVehicle->m_nDoorLock == CARLOCK_COP_CAR) {
+                ped->m_pVehicle->m_nDoorLock = CARLOCK_UNLOCKED;
+            }
+            if (ped->m_nPedType == PED_TYPE_COP && ped->m_pVehicle->IsLawEnforcementVehicle()) {
+                ped->m_pVehicle->ChangeLawEnforcerState(false);
+            }
+        } else {
+            pedVeh->RemovePassenger(ped);
+        }
+
+        CVector pedPos = ped->GetPosition();
+        if (CGarages::IsPointWithinAnyGarage(pedPos)) { // 0x448990
+            ped->m_pVehicle->m_nOverrideLights = NO_CAR_LIGHT_OVERRIDE;
+            ped->m_pVehicle->vehicleFlags.bLightsOn = false;
+        }
+    }
+
+    if (!m_bFallingOutOfCar && !m_bKnockedOffBike) {
+        if (auto* const veh = ped->m_pVehicle; veh && veh->m_nVehicleType == VEHICLE_TYPE_BIKE) {
+            if (std::fabs((double)veh->m_vecMoveSpeed.x) < 0.1 && std::fabs((double)veh->m_vecMoveSpeed.y) < 0.1) { // 0x86EEE0 (double)
+                static_cast<CBike*>(veh)->bikeFlags.bOnSideStand = true;
+            }
+        }
+    }
+
+    if (ped->IsPlayer()) {
+        ped->GetIntelligence()->GetTaskManager().SetTask(new CTaskSimplePlayerOnFoot{}, TASK_PRIMARY_DEFAULT);
+    } else if (ped->IsCreatedBy(PED_MISSION)) {
+        ped->GetIntelligence()->GetTaskManager().SetTask(new CTaskSimpleStandStill{ 999'999, true, false, 8.0f }, TASK_PRIMARY_DEFAULT);
+    } else {
+        ped->GetIntelligence()->GetTaskManager().SetTask(CTaskComplexWander::GetWanderTaskByPedType(ped), TASK_PRIMARY_DEFAULT);
+    }
+
+    ped->ReplaceWeaponWhenExitingVehicle();
+    ped->bHasJustLeftCar = true;
+    ped->m_nPedState = PEDSTATE_IDLE;
+
+    if (m_pTargetVehicle && m_pTargetVehicle->physicalFlags.bTouchingWater) {
+        ped->physicalFlags.bTouchingWater = true;
+    }
+
+    return true;
 }

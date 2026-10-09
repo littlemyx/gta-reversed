@@ -1270,7 +1270,7 @@ void InjectHooksMain() {
         CTaskSimpleCarSlowBeDraggedOut::InjectHooks();
         CTaskSimpleCarWaitToSlowDown::InjectHooks();
         CTaskSimpleCarWaitForDoorNotToBeInUse::InjectHooks();
-        // CTaskSimpleChat::InjectHooks(); // NOTE: ~CTaskSimpleChat (0x5F7FD0) is hooked but asserts 'not reversed'
+        CTaskSimpleChat::InjectHooks();
         CTaskSimpleCower::InjectHooks();
         CTaskSimpleClearLookAt::InjectHooks();
         CTaskSimpleDead::InjectHooks();

@@ -32,7 +32,5 @@ CTaskSimpleChat::CTaskSimpleChat(const CTaskSimpleChat& o) :
 {
 }
 
-// 0x5F7FD0
-CTaskSimpleChat::~CTaskSimpleChat() {
-    assert(false && "Destructor not reversed"); // TODO: Reverse destructor}
-}
+// 0x5F7FD0 - the exe's body is a bare `jmp 0x61A6F0` (CTaskSimpleAnim dtor): CTaskSimpleRunTimedAnim/CTaskTimer add nothing
+CTaskSimpleChat::~CTaskSimpleChat() = default;

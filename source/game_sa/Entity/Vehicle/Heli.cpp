@@ -23,6 +23,7 @@ void CHeli::InjectHooks() {
     RH_ScopedInstall(Pre_SearchLightCone, 0x6C4650);
     RH_ScopedInstall(Post_SearchLightCone, 0x6C46E0);
     RH_ScopedInstall(SwitchPoliceHelis, 0x6C4800);
+    RH_ScopedInstall(FindSwatPositionRelativeToHeli, 0x6C4760);
     RH_ScopedInstall(RenderAllHeliSearchLights, 0x6C7C50);
     RH_ScopedInstall(TestSniperCollision, 0x6C6890);
     RH_ScopedVMTInstall(Render, 0x6C4400);
@@ -169,10 +170,6 @@ void CHeli::SpecialHeliPreRender() {
 
 // 0x6C4760
 CVector CHeli::FindSwatPositionRelativeToHeli(int32 swatNumber) {
-    CVector result;
-    ((void(__thiscall*)(CHeli*, CVector*, int32))0x6C4760)(this, &result, swatNumber);
-    return result;
-
     switch ( swatNumber ) {
     case 0:
         return { -1.2f, -1.0f, -0.5f };

@@ -245,7 +245,7 @@ RwCamera* RwCameraShowRaster(RwCamera* camera, void* /*pDev*/, RwUInt32 flags) {
             for (char* a = nullptr; VirtualQuery(a, &mbi, sizeof(mbi)) && (uintptr_t)a < 0x7FFE0000; a += mbi.RegionSize) {
                 if (mbi.State == MEM_COMMIT) priv += mbi.RegionSize;
             }
-            notsa::standalone::Fixups::Log("memlog frame %d: crt heap %lu bytes in %lu blocks, committed %lu KB", n, (unsigned long)(st.lSizes[1] + st.lSizes[2]), (unsigned long)(st.lCounts[1] + st.lCounts[2]), (unsigned long)(priv / 1024));
+            notsa::standalone::Fixups::Log("memlog t=%lu ms frame %d: crt heap %lu bytes in %lu blocks, committed %lu KB", (unsigned long)GetTickCount(), n, (unsigned long)(st.lSizes[1] + st.lSizes[2]), (unsigned long)(st.lCounts[1] + st.lCounts[2]), (unsigned long)(priv / 1024));
         }
     }
     if (std::getenv("NOTSA_STANDALONE_NOPRESENT")) { // S5 diagnostics: skip Present (leak hunting)

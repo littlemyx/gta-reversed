@@ -75,7 +75,7 @@ float CCustomCarEnvMapPipeline::GetFxEnvScaleX(RpMaterial* material) {
     if (data) {
         return data->Scale.x;
     }
-    NOTSA_UNREACHABLE();
+    return 0.f; // exe: fld 0.0f
 }
 
 // 0x5D6FC0
@@ -84,14 +84,14 @@ float CCustomCarEnvMapPipeline::GetFxEnvScaleY(RpMaterial* material) {
     if (data) {
         return data->Scale.y;
     }
-    NOTSA_UNREACHABLE();
+    return 0.f; // exe: fld 0.0f
 }
 
 // 0x5D6F40
 void CCustomCarEnvMapPipeline::SetFxEnvScale(RpMaterial* material, float x, float y) {
-    auto* const data = EnvMapPlGetData(material);
+    auto* const data = CCustomBuildingDNPipeline::SetFxEnvTexture(&EnvMapPlGetData(material)); // exe: unshares the fake data first (0x5D9570)
     if (data) {
-        data->Scale = {x, y};
+        data->Scale = {x, y}; // truncating FixedFloat(float) == the exe's _ftol(x * 8.0f)
     }
 }
 
@@ -101,7 +101,7 @@ float CCustomCarEnvMapPipeline::GetFxEnvTransSclX(RpMaterial* material) {
     if (data) {
         return data->TranslationScale.x;
     }
-    NOTSA_UNREACHABLE();
+    return 0.f; // exe: fld 0.0f
 }
 
 // 0x5D7070
@@ -110,12 +110,12 @@ float CCustomCarEnvMapPipeline::GetFxEnvTransSclY(RpMaterial* material) {
     if (data) {
         return data->TranslationScale.y;
     }
-    NOTSA_UNREACHABLE();
+    return 0.f; // exe: fld 0.0f
 }
 
 // 0x5D6FF0
 void CCustomCarEnvMapPipeline::SetFxEnvTransScl(RpMaterial* material, float x, float y) {
-    auto* const data = EnvMapPlGetData(material);
+    auto* const data = CCustomBuildingDNPipeline::SetFxEnvTexture(&EnvMapPlGetData(material)); // exe: unshares the fake data first (0x5D9570)
     if (data) {
         data->TranslationScale = {x, y};
     }
@@ -127,16 +127,15 @@ float CCustomCarEnvMapPipeline::GetFxEnvShininess(RpMaterial* material) {
     if (data) {
         return data->Shininess;
     }
-    NOTSA_UNREACHABLE();
+    return 0.f; // exe: fld 0.0f
 }
 
 // 0x5D70A0
 void CCustomCarEnvMapPipeline::SetFxEnvShininess(RpMaterial* material, float value) {
-    auto* const data = EnvMapPlGetData(material);
+    auto* const data = CCustomBuildingDNPipeline::SetFxEnvTexture(&EnvMapPlGetData(material)); // exe 0x5D70A0: calls 0x5D9570 first (unshares the fake data)
     if (data) {
-        data->Shininess = value;
+        data->Shininess = FixedFloat<uint8, 255.f>{ (uint8)(int32)(value * 255.f) }; // exe: _ftol(value * 255.0f), truncated, stored as a byte
     }
-    NOTSA_UNREACHABLE();
 }
 
 // 0x5D6F20
@@ -145,7 +144,7 @@ RwTexture* CCustomCarEnvMapPipeline::GetFxEnvTexture(RpMaterial* material) {
     if (data) {
         return data->Texture;
     }
-    NOTSA_UNREACHABLE();
+    return nullptr;
 }
 
 // TODO: Hacky shit

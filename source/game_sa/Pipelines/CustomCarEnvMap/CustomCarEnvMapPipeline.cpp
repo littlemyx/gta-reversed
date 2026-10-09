@@ -196,8 +196,8 @@ RxPipeline* CCustomCarEnvMapPipeline::CreateCustomObjPipe() {
 // 0x5D8490
 RwBool CCustomCarEnvMapPipeline::CustomPipeInstanceCB(void* object, RwResEntry* resEntry, RxD3D9AllInOneInstanceCallBack instanceCallback) {
     if (instanceCallback) {
-        auto entry = *reinterpret_cast<RwResEntrySA*>(resEntry);
-        return instanceCallback(object, &entry.header, true) != 0;
+        // exe: passes `resEntry + 0x18` (the header inside the resEntry, NOT a copy of it)
+        return instanceCallback(object, (RxD3D9ResEntryHeader*)(resEntry + 1), true) != 0;
     }
     return true;
 }
@@ -214,7 +214,7 @@ void CCustomCarEnvMapPipeline::CustomPipeRenderCB(RwResEntry* resEntry, void* ob
     _rwD3D9EnableClippingIfNeeded(atomic, type);
 
     const auto atmFlags = CVisibilityPlugins::GetAtomicId(atomic);
-    const auto noReflections = (atmFlags & (ATOMIC_PIPE_NO_EXTRA_PASSES_LOD | ATOMIC_UNIQUE_MATERIALS)) != 0;
+    const auto noReflections = (atmFlags & (ATOMIC_PIPE_NO_EXTRA_PASSES_LOD | ATOMIC_PIPE_NO_EXTRA_PASSES)) != 0; // exe: `test ah, 0x60` = 0x6000
 
     // Fixed blown up car rendering ("DarkVehiclesFix")
     // Credit: SilentPatch
@@ -321,7 +321,8 @@ void CCustomCarEnvMapPipeline::CustomPipeRenderCB(RwResEntry* resEntry, void* ob
             RwD3D9SetTexture(GetFxEnvTexture(mat), 1);
 
             // 0x5D9C04
-            const auto c = std::min(0xFFu, (uint32)(GetFxEnvShininess(mat) * specIntensity * 254.f));
+            // The whole expression is evaluated in extended precision, then truncated (_ftol): raw (unsigned) * (1/255) * specIntensity * 254
+            const auto c = (uint32)std::min<int64>(0xFF, (int64)(((double)std::bit_cast<uint8>(EnvMapPlGetData(mat)->Shininess) * (double)(1.f / 255.f) * (double)specIntensity) * 254.0)); // 0x859A3C, 0x86BE90
             RwD3D9SetRenderState(D3DRS_TEXTUREFACTOR, D3DCOLOR_ARGB(0xFF, c, c, c));
 
             // 0x5D9C38
@@ -430,13 +431,15 @@ void CCustomCarEnvMapPipeline::CustomPipeRenderCB(RwResEntry* resEntry, void* ob
         }
 
         // 0x5D9E0D
-        RwRenderStateSet(rwRENDERSTATEVERTEXALPHAENABLE, RWRSTATE(mesh->vertexAlpha || mesh->material->color.alpha != 0xFF));
+        RwCompatVertexAlphaEnable(mesh->vertexAlpha || mesh->material->color.alpha != 0xFF); // exe: call 0x7FE0A0
 
         if (geoHasNoLighting) { // 0x5D9E31 - Render without lighting
             RxD3D9InstanceDataRender(header, mesh);
         } else {
             if (isLightingEnabled) { // 0x5D9E3D
                 // Some car materials are initially painted over, so for those we use black (0, 0, 0) instead
+                // exe 0x5D9E62: the 24 bits of the RwRGBA read as a little endian dword, i.e. 0xBBGGRR (NOT CRGBA::ToIntRGB's 0xRRGGBB)
+                const uint32 bgr = (uint32)mat->color.red | ((uint32)mat->color.green << 8) | ((uint32)mat->color.blue << 16);
                 const auto isSpecialColor = notsa::contains<uint32>({
                     0xAF00FF, // @ 0x5D9E6B
                     0x00FFB9, // @ 0x5D9E8D
@@ -446,21 +449,23 @@ void CCustomCarEnvMapPipeline::CustomPipeRenderCB(RwResEntry* resEntry, void* ob
                     0xC8FF00, // @ 0x5D9E9B...
                     0xFF00FF,
                     0xFFFF00,
-                }, CRGBA{mat->color}.ToIntRGB());
+                }, bgr);
                 const auto color = isSpecialColor
                     ? CRGBA{0, 0, 0, mat->color.alpha}
                     : CRGBA{mat->color};
 
                 // 0x5DA790 - [Inlined] Create and set material using the calculated
+                // Port of the exe's private copy of RwD3D9SetSurfaceProperties (surfaceProps, &color, rxGeoFlags, spec, power): the products are
+                // evaluated in extended precision (here: double) and rounded to float on store
                 {
-                    D3DMATERIAL9 m;
+                    D3DMATERIAL9 m{}; // the exe's material is a zero-initialised global, only the fields below are ever written
 
                     m.Specular = { spec, spec, spec };
                     m.Power = power;
 
                     const auto isPrelit = (rxGeoFlags & rxGEOMETRY_PRELIT) != 0;
+                    const float d       = mat->surfaceProps.diffuse;
                     if (!(rxGeoFlags & rxGEOMETRY_MODULATE) || color == CRGBA{0xFF, 0xFF, 0xFF, 0xFF}) { // 0x5DA7A9
-                        const auto d = mat->surfaceProps.diffuse;
                         m.Diffuse = { d, d, d, 1.f };
 
                         // 0x5DA9DC
@@ -468,23 +473,20 @@ void CCustomCarEnvMapPipeline::CustomPipeRenderCB(RwResEntry* resEntry, void* ob
                         RwD3D9SetRenderState(D3DRS_AMBIENTMATERIALSOURCE, D3DMCS_MATERIAL);
 
                         // 0x5DA9F3
-                        if (!isPrelit) {
-                            m.Emissive = { 0.f, 0.f, 0.f, 0.f };
-                        }
                         RwD3D9SetRenderState(D3DRS_COLORVERTEX, isPrelit);
                         RwD3D9SetRenderState(D3DRS_EMISSIVEMATERIALSOURCE, isPrelit ? D3DMCS_COLOR1 : D3DMCS_MATERIAL);
 
-                        // 0x5DAA4F - Skipping useless `ambient == 1` optimization
+                        // 0x5DAA4F - `ambient == 1` shortcut of the exe gives the same values
                         m.Ambient.r = AmbientSaturated.red * mat->surfaceProps.ambient;
                         m.Ambient.g = AmbientSaturated.green * mat->surfaceProps.ambient;
                         m.Ambient.b = AmbientSaturated.blue * mat->surfaceProps.ambient;
                     } else { // 0x5DA7E2
-                        const auto d = mat->surfaceProps.diffuse;
+                        const double d255 = (double)d * (double)(1.f / 255.f);
                         m.Diffuse = {
-                            (float)(color.r) / 255.f * d,
-                            (float)(color.g) / 255.f * d,
-                            (float)(color.b) / 255.f * d,
-                            (float)(color.a) / 255.f
+                            (float)((double)color.r * d255),
+                            (float)((double)color.g * d255),
+                            (float)((double)color.b * d255),
+                            (float)((double)color.a * (double)(1.f / 255.f))
                         };
 
                         RwD3D9SetRenderState(D3DRS_AMBIENT, isPrelit ? color.ToIntARGB() : 0xFFFFFFFF);
@@ -493,13 +495,11 @@ void CCustomCarEnvMapPipeline::CustomPipeRenderCB(RwResEntry* resEntry, void* ob
                         RwD3D9SetRenderState(D3DRS_COLORVERTEX, isPrelit);
                         RwD3D9SetRenderState(D3DRS_EMISSIVEMATERIALSOURCE, D3DMCS_MATERIAL);
 
-                        const auto amb = mat->surfaceProps.ambient;
-                        (isPrelit ? m.Ambient : m.Emissive) = {0.f, 0.f, 0.f};
-                        (isPrelit ? m.Emissive : m.Ambient) = {
-                            (float)(color.r) / 255.f * AmbientSaturated.red * amb,
-                            (float)(color.g) / 255.f * AmbientSaturated.green * amb,
-                            (float)(color.b) / 255.f * AmbientSaturated.blue * amb,
-                        };
+                        const float amb255 = (float)((double)mat->surfaceProps.ambient * (double)(1.f / 255.f)); // stored as float by the exe
+                        auto& dst = isPrelit ? m.Emissive : m.Ambient; // the other one stays 0
+                        dst.r = (float)(((double)color.r * (double)AmbientSaturated.red) * (double)amb255);
+                        dst.g = (float)(((double)color.g * (double)AmbientSaturated.green) * (double)amb255);
+                        dst.b = (float)(((double)color.b * (double)AmbientSaturated.blue) * (double)amb255);
                     }
                     RwD3D9SetMaterial(&m);
                 }

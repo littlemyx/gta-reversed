@@ -91,10 +91,13 @@ RpMaterial* CCustomBuildingPipeline::CustomPipeMaterialSetup(RpMaterial* materia
 }
 
 // 0x5D77D0
+// Line-by-line from the exe: identical to CCustomBuildingDNPipeline::CustomPipeRenderCB (0x5D6480) except for its own texture matrix
+// (0xC02C70 vs 0xC02C28) and COLORARG2 of the env stage (D3DTA_TFACTOR here, D3DTA_DIFFUSE in the DN version).
 void CCustomBuildingPipeline::CustomPipeRenderCB(RwResEntry* resEntry, void* object, RwUInt8 type, RwUInt32 rxGeoFlags) {
-    const auto atomic = (RpAtomic*)(object);
+    // The texture transform matrix of the env map stage, only the diagonal is ever set (and it is never applied: D3DTS_TEXTURE1 isn't set here)
+    static auto& s_EnvMapTexMatrix = StaticRef<D3DMATRIX>(0xC02C70);
 
-    _rwD3D9EnableClippingIfNeeded(atomic, type);
+    _rwD3D9EnableClippingIfNeeded(object, type);
 
     DWORD isLightingEnabled = 0;
     RwD3D9GetRenderState(D3DRS_LIGHTING, &isLightingEnabled);
@@ -120,10 +123,10 @@ void CCustomBuildingPipeline::CustomPipeRenderCB(RwResEntry* resEntry, void* obj
     RwD3D9SetVertexDeclaration(header->vertexDeclaration);
 
     for (RwUInt32 i = 0; i < header->numMeshes; i++) { // 0x5D78A0
-        auto* const mesh       = &meshes[i];
-        auto* const mat        = mesh->material;
-        const auto  matFlags   = CCustomCarEnvMapPipeline::GetMaterialFlags(mat);
-        const auto  envMapData = CCustomCarEnvMapPipeline::EnvMapPlGetData(mat);
+        auto* const mesh             = &meshes[i];
+        auto* const mat              = mesh->material;
+        const auto  matFlags         = CCustomCarEnvMapPipeline::GetMaterialFlags(mat);
+        const auto* const envMapData = CCustomCarEnvMapPipeline::EnvMapPlGetData(mat);
 
         // 0x5D78B8
         RwD3D9SetTextureStageState(1, D3DTSS_COLOROP, D3DTOP_DISABLE);
@@ -133,8 +136,19 @@ void CCustomBuildingPipeline::CustomPipeRenderCB(RwResEntry* resEntry, void* obj
         if (matFlags & CCustomCarEnvMapPipeline::MF_HAS_SHINE_CAM) {
             RwRenderStateSet(rwRENDERSTATETEXTUREADDRESS, RWRSTATE(rwTEXTUREADDRESSWRAP));
 
+            s_EnvMapTexMatrix._11 = CCustomCarEnvMapPipeline::GetFxEnvScaleX(mat); // (float)(int8)raw * 0.125f
+            s_EnvMapTexMatrix._44 = 1.f;
+            s_EnvMapTexMatrix._33 = 1.f;
+            s_EnvMapTexMatrix._22 = CCustomCarEnvMapPipeline::GetFxEnvScaleY(mat);
+
             RwD3D9SetTexture(envMapData->Texture, 1);
-            RwD3D9SetRenderState(D3DRS_TEXTUREFACTOR, D3DCOLOR_ARGB((byte)(std::min<float>(envMapData->Shininess, 1.f) * 255.f), 0xFF, 0xFF, 0xFF));
+
+            // 0x5D7939 - The whole expression is evaluated in extended precision, then truncated (_ftol)
+            auto c = (int32)(int64)(((double)std::bit_cast<uint8>(envMapData->Shininess) /* raw, unsigned */ * (double)(1.f / 255.f)) * 254.0); // 0x859A3C, 0x86BE90
+            if (c > 0xFF) {
+                c = 0xFF;
+            }
+            RwD3D9SetRenderState(D3DRS_TEXTUREFACTOR, D3DCOLOR_ARGB(0xFF, (uint8)c, (uint8)c, (uint8)c));
 
             RwD3D9SetTextureStageState(1, D3DTSS_COLOROP, D3DTOP_MULTIPLYADD);
             RwD3D9SetTextureStageState(1, D3DTSS_COLORARG0, D3DTA_CURRENT);
@@ -148,11 +162,11 @@ void CCustomBuildingPipeline::CustomPipeRenderCB(RwResEntry* resEntry, void* obj
             RwD3D9SetTextureStageState(1, D3DTSS_TEXCOORDINDEX, 1 | D3DTSS_TCI_CAMERASPACENORMAL);
             RwD3D9SetTextureStageState(1, D3DTSS_TEXTURETRANSFORMFLAGS, D3DTTFF_DISABLE);
 
-            RwD3D9SetTextureStageState(2, D3DTSS_COLOROP, D3DTA_CURRENT);
+            RwD3D9SetTextureStageState(2, D3DTSS_COLOROP, D3DTOP_DISABLE);
         }
 
-        // 0x5D79EE
-        RwRenderStateSet(rwRENDERSTATEVERTEXALPHAENABLE, RWRSTATE(mesh->vertexAlpha || mesh->material->color.alpha != 0xFF));
+        // 0x5D79EE - exe: call 0x7FE0A0 (_rwD3D9RenderStateVertexAlphaEnable)
+        RwCompatVertexAlphaEnable(mesh->vertexAlpha || mesh->material->color.alpha != 0xFF);
 
         if (geoHasNoLighting) { // 0x5D7A12 - Render without lighting
             RxD3D9InstanceDataRender(header, mesh);
@@ -173,5 +187,5 @@ void CCustomBuildingPipeline::CustomPipeRenderCB(RwResEntry* resEntry, void* obj
 // 0x5D77A0
 RwBool CCustomBuildingPipeline::CustomPipeReinstanceCB(void* object, RwResEntry* resEntry, RxD3D9AllInOneInstanceCallBack instanceCallback) {
     auto* const header = (RxD3D9ResEntryHeader*)(resEntry + 1);
-    return instanceCallback && instanceCallback(object, header, true);
+    return !instanceCallback || instanceCallback(object, header, true) != 0; // exe: a missing callback counts as success
 }

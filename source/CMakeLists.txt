@@ -463,6 +463,55 @@ if (${RE_PROJECT}_RW_LIBRW)
     target_include_directories(rw_pipeline_test BEFORE PRIVATE fakerw)
     target_link_libraries(rw_pipeline_test PRIVATE librw d3d9 user32)
     set_target_properties(rw_pipeline_test PROPERTIES COMPILE_WARNING_AS_ERROR OFF)
+    # P2B-08 unit test of the game's four custom pipelines (CCustomBuildingPipeline / DNPipeline / CCustomCarEnvMapPipeline + plugins) on the façade: the REAL game
+    # TUs are compiled into the test with the game's compile settings and PCH (StdInc.h), the few game-side symbols they call (CMemoryMgr, g_fx, ...) and the data
+    # image globals they read (StaticRef at fixed addresses) are stubbed by the test. Needs a D3D9 HAL device (Wine/wined3d is fine); optional SA DFF paths on the command line.
+    add_executable(rw_custom_pipelines_test EXCLUDE_FROM_ALL
+        "${PROJECT_SOURCE_DIR}/tests/standalone/rw_custom_pipelines_test.cpp"
+        game_sa/Pipelines/CustomBuilding/CustomBuildingPipeline.cpp
+        game_sa/Pipelines/CustomBuilding/CustomBuildingDNPipeline.cpp
+        game_sa/Pipelines/CustomBuilding/CustomBuildingRenderer.cpp
+        game_sa/Pipelines/CustomCarEnvMap/CustomCarEnvMapPipeline.cpp
+        game_sa/Pipelines/CustomCarEnvMap/CustomCarEnvMapPipeline_EnvMat.cpp
+        game_sa/Pipelines/CustomCarEnvMap/CustomCarEnvMapPipeline_EnvAtm.cpp
+        game_sa/Pipelines/CustomCarEnvMap/CustomCarEnvMapPipeline_SpecMat.cpp
+        game_sa/Plugins/PipelinePlugin/PipelinePlugin.cpp
+        standalone/rw/engine.cpp
+        standalone/rw/platform.cpp
+        standalone/rw/stream.cpp
+        standalone/rw/math.cpp
+        standalone/rw/pipeline.cpp
+        standalone/rw/renderstate.cpp
+        standalone/rw/rwd3d_ff.cpp
+        standalone/rw/rwglobals.cpp
+        standalone/rw/atomic.cpp
+        standalone/rw/clump.cpp
+        standalone/rw/plugins.cpp
+        standalone/rw/frame.cpp
+        standalone/rw/camera.cpp
+        standalone/rw/light.cpp
+        standalone/rw/world.cpp
+        standalone/rw/material.cpp
+        standalone/rw/geometry.cpp
+        standalone/rw/raster.cpp
+        standalone/rw/image.cpp
+        standalone/rw/texture.cpp
+        standalone/rw/texdict.cpp
+    )
+    target_compile_features(rw_custom_pipelines_test PRIVATE cxx_std_23)
+    target_compile_definitions(rw_custom_pipelines_test PRIVATE NOTSA_RW_LIBRW RW_D3D9)
+    target_include_directories(rw_custom_pipelines_test PRIVATE $<TARGET_PROPERTY:${RE_PROJECT_LIB_NAME},INCLUDE_DIRECTORIES>)
+    target_compile_options(rw_custom_pipelines_test PRIVATE $<TARGET_PROPERTY:${RE_PROJECT_LIB_NAME},COMPILE_OPTIONS>)
+    target_precompile_headers(rw_custom_pipelines_test PRIVATE StdInc.cpp) # own PCH: REUSE_FROM would make the test depend on the whole game target
+    target_link_libraries(rw_custom_pipelines_test PRIVATE librw spdlog::spdlog Tracy::TracyClient d3d9 user32)
+    # the data image globals (StaticRef at 0x8D.... / 0xC0....) need the exe image itself to cover the original data range: the same 9 MB placeholder as the game exe
+    # (a VirtualAlloc there fails: Wine/Windows map NLS tables and the heap in low memory), made writable by the test at startup
+    target_sources(rw_custom_pipelines_test PRIVATE "${STANDALONE_PAD_OBJ}")
+    get_target_property(_rcp_sources rw_custom_pipelines_test SOURCES)
+    list(REMOVE_ITEM _rcp_sources "${STANDALONE_PAD_OBJ}")
+    set_property(TARGET rw_custom_pipelines_test PROPERTY SOURCES "${STANDALONE_PAD_OBJ}" ${_rcp_sources})
+    target_link_options(rw_custom_pipelines_test PRIVATE "$<$<CXX_COMPILER_ID:MSVC>:/BASE:0x400000;/DYNAMICBASE:NO;/FIXED;/MERGE:_TEXT=.text;/INCREMENTAL:NO;/SUBSYSTEM:CONSOLE;/FORCE:UNRESOLVED>") # the PCH object drags in vtables of game classes whose methods are not linked here
+    set_target_properties(rw_custom_pipelines_test PROPERTIES COMPILE_WARNING_AS_ERROR OFF CXX_SCAN_FOR_MODULES OFF)
     # P2B-06 unit test of Im2D / Im3D (not part of `all`): ninja rw_im2d_im3d_test. Hidden window + librw's D3D9 device (Wine/wined3d is fine); pixels are read back
     if (EXISTS "${PROJECT_SOURCE_DIR}/tests/standalone/rw_im2d_im3d_test.cpp")
         add_executable(rw_im2d_im3d_test EXCLUDE_FROM_ALL

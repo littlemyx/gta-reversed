@@ -26,7 +26,7 @@ struct EnvMapPipeMaterialDataBuffer {
 struct CustomEnvMapPipeMaterialData {
     FixedVector2D<int8, 8.f> Scale{1.f, 1.f};
     FixedVector2D<int8, 8.f> TranslationScale{1.f, 1.f};
-    FixedFloat<int8, 255.f>  Shininess{1.f};
+    FixedFloat<uint8, 255.f> Shininess{1.f}; // exe: unsigned byte (movzx, `* (1/255)`)
     RwUInt16                 RenderFrame{};
     RwTexture*               Texture{};
 

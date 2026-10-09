@@ -21,6 +21,8 @@
 #define RwCompatMeshHeaderMeshes(_h)        ((_h)->getMeshes())
 // RxPipeline::pluginId
 #define RwCompatPipelinePluginId(_p)        ((_p)->pluginID)
+// exe 0x7FE0A0 (_rwD3D9RenderStateVertexAlphaEnable), exported by the pipeline façade (pipeline.cpp)
+#define RwCompatVertexAlphaEnable(_b)       _rwD3D9RenderStateVertexAlphaEnable((_b) ? TRUE : FALSE)
 // RpTriangle::vertIndex[i]
 #define RwCompatTriangleVert(_t, _i)        ((_t).v[_i])
 // RpHAnimHierarchy::pNodeInfo (array; elements read with the RW field names nodeID / nodeIndex / flags / pFrame)
@@ -40,6 +42,7 @@
 #define RwCompatGeometryMeshHeader(_g)      ((_g)->mesh)
 #define RwCompatMeshHeaderMeshes(_h)        (reinterpret_cast<RpMesh*>((_h) + 1)) // NOTE: `firstMeshOffset` is not used by the original
 #define RwCompatPipelinePluginId(_p)        ((_p)->pluginId)
+#define RwCompatVertexAlphaEnable(_b)       plugin::Call<0x7FE0A0, uint32>((_b) ? 1u : 0u)
 #define RwCompatAtomicSphereDirty(_a)       (((_a)->interpolator.flags & rpINTERPOLATORDIRTYSPHERE) != 0)
 #define RwCompatGeometryPreLit(_g)          ((_g)->preLitLum)
 #define RwCompatGeometryMorphTargets(_g)    ((_g)->morphTarget)

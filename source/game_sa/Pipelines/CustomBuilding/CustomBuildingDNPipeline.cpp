@@ -121,10 +121,18 @@ void NVCPipelineProcess(RpAtomic* a, float DNBalance) {
     data->DNBalance = DNBalance;
     DNBalance = std::clamp(DNBalance, 0.f, 1.f);
 
+    // exe (0x5D6850, unrolled by 4): out = _ftol(night * t + day * (1.0f - t)) per channel, evaluated in extended precision (the products are exact
+    // in a double) and TRUNCATED, so e.g. day == night can come out one less when t + (1 - t) != 1 in float
+    const auto t   = (double)DNBalance;
+    const auto omt = (double)(1.f - DNBalance); // stored as float by the exe
+    const auto Mix = [&](uint8 day, uint8 night) { return (uint8)(int32)((double)night * t + (double)day * omt); };
+
     geo = RpGeometryLock(geo, rpGEOMETRYLOCKPRELIGHT);
     auto* const prelit = RpGeometryGetPreLightColors(geo);
     for (int32 i = RpGeometryGetNumVertices(geo); i --> 0; ) {
-        prelit[i] = lerp(data->DayColors[i], data->NightColors[i], DNBalance);
+        const auto d = data->DayColors[i];
+        const auto n = data->NightColors[i];
+        prelit[i] = RwRGBA{ Mix(d.red, n.red), Mix(d.green, n.green), Mix(d.blue, n.blue), Mix(d.alpha, n.alpha) };
     }
     RpGeometryUnlock(geo);
 }
@@ -201,8 +209,8 @@ void CCustomBuildingDNPipeline::DestroyPipe() {
 // 0x5D63E0
 RwBool CCustomBuildingDNPipeline::CustomPipeInstanceCB(void* object, RwResEntry* resEntry, RxD3D9AllInOneInstanceCallBack instanceCallback) {
     if (instanceCallback) {
-        auto entry = *reinterpret_cast<RwResEntrySA*>(resEntry);
-        return instanceCallback(object, &entry.header, true);
+        // exe: passes `resEntry + 0x18` (the header inside the resEntry, NOT a copy of it)
+        return instanceCallback(object, (RxD3D9ResEntryHeader*)(resEntry + 1), true) != 0;
     }
     return true;
 }
@@ -252,7 +260,7 @@ RpMaterial* CCustomBuildingDNPipeline::CustomPipeMaterialSetup(RpMaterial* mater
 void CCustomBuildingDNPipeline::CustomPipeRenderCB(RwResEntry* resEntry, void* object, uint8 type, uint32 rxGeoFlags) {
     // 0x7FE0A0 - `_rwD3D9RenderStateVertexAlphaEnable`
     const auto D3D9RenderStateVertexAlphaEnable = [](bool enable) {
-        plugin::Call<0x7FE0A0, uint32>(enable);
+        RwCompatVertexAlphaEnable(enable);
     };
 
     // The texture transform matrix used by the env map stage, only the diagonal is ever set

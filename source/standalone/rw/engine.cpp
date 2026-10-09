@@ -265,6 +265,14 @@ RwBool RwEngineOpen(RwEngineOpenParams* initParams) {
     return TRUE;
 }
 
+// P2B-08: the RxPipeline façade (pipeline.cpp) must replace the D3D9 default pipeline after every Engine::start/open and be dropped before the engine
+// stops. Units that link engine.cpp without pipeline.cpp (the lower-level unit tests) get no-ops through /alternatename.
+void RwShimPipelineEnsure();
+void RwShimPipelineShutdown();
+void NotsaRwEngineNoPipeline() {}
+#pragma comment(linker, "/alternatename:?RwShimPipelineEnsure@@YAXXZ=?NotsaRwEngineNoPipeline@@YAXXZ")
+#pragma comment(linker, "/alternatename:?RwShimPipelineShutdown@@YAXXZ=?NotsaRwEngineNoPipeline@@YAXXZ")
+
 // A: Engine::start. librw's DEVICEINIT result is dropped by Engine::start (a failing CreateDevice would leave state "Started" with no device).
 RwBool RwEngineStart(void) {
     if (!Is(rw::Engine::Opened) || !rw::engine) {
@@ -276,6 +284,7 @@ RwBool RwEngineStart(void) {
         return FALSE;
     }
     PublishDeviceRange();
+    RwShimPipelineEnsure(); // 08: default pipeline façade, custom pipelines created by the game afterwards (CCustomBuildingRenderer::Initialise ...)
     NotsaRwPlatform_OnEngineStarted(); // 09: Reset watch for the restore callback (platform.cpp)
     // librw requests D3DPRESENT_RATE_DEFAULT in startD3D; honour a rate chosen with RwD3D9EngineSetRefreshRate for exclusive modes
     if (s_RefreshRate && !d3d9Globals.present.Windowed && d3d9Globals.present.FullScreen_RefreshRateInHz != s_RefreshRate) {
@@ -291,6 +300,7 @@ RwBool RwEngineStop(void) {
         return FALSE;
     }
     NotsaRwPlatform_OnEngineStopping(); // 09 (platform.cpp)
+    RwShimPipelineShutdown(); // 08 (pipeline.cpp)
     rw::Engine::stop();
     return TRUE;
 }

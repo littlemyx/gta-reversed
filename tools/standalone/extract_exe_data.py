@@ -117,6 +117,36 @@ def is_code_pointer(v, starts):
     return True, None
 
 
+# Data-driven overrides of the classifier (the runtime reads data_pointers.bin, so this is the single source of truth).
+# DENY_RANGES: [lo, hi) of packed-int / non-pointer tables whose dwords happen to look like function starts in the compact exe.
+DENY_RANGES = [
+    (0x8A5FB0, 0x8A6140, "CPickups colour table (packed 0x00RRGGBB dwords, read as data by Pickups.cpp:395)"),
+    (0x8AA5A8, 0x8AA5A8 + 118 * 0x30, "CAnimManager::ms_aAnimAssocDefinitions: BlockName 'ped\\0' (0x646570) is text, not a function"),
+]
+# Heuristic-report findings (data_pointers_suspects.txt): dwords inside tables of packed u16 pairs / small ints (neighbours like 0x00100010,
+# 0x00840084, 0x00040004). No C++ reader exists (grep of the address in source/ is empty), so rewriting them is only a corruption risk.
+DENY_RANGES += [
+    (0x8832B0, 0x8832F0, "table of u16 pairs (neighbours 0x00040004, 0x00100008 ...), values 0x7E0160/0x7E0590/0x7E0B20 are pairs, not code"),
+    (0x8880E4, 0x8880E8, "u16-pair table (0x00840010 between 0x00100010 / 0x00840084)"),
+    (0x88C458, 0x88C45C, "u16-pair table (0x00840010 between 0x00100010 / 0x00840084)"),
+    (0x88C660, 0x88C664, "u16-pair table (0x00840010 between 0x00100010 / 0x00840084)"),
+    (0x8BC194, 0x8BC198, "u16-pair char table (0x00850080 between 0x0093008D / 0x0099008E)"),
+    (0x8BF230, 0x8BF234, "u16-pair char table (0x00830080)"),
+    (0x8BF738, 0x8BF73C, "u16-pair char table (0x00830080)"),
+    (0x8C0314, 0x8C0318, "u16-pair char table (0x00810080)"),
+    (0x8D5C58, 0x8D5C5C, "u16-pair table (0x00810080 between 0x00AF0000 / 0x00000082)"),
+    (0x885860, 0x885864, "small-int table (neighbours 0x14, 0x0B, 0x16)"),
+]
+# ALLOW_ADDRS: isolated text-like dwords that ARE real pointers (the rule below otherwise never accepts an isolated text-like dword)
+ALLOW_ADDRS = {
+    0x85DA64: "probe: pointer to 0x425F70 whose value looks like the text 'p_B\\0'",
+}
+
+
+def denied(a):
+    return next((why for lo, hi, why in DENY_RANGES if lo <= a < hi), None)
+
+
 def parse_pe(d):
     if d[:2] != b"MZ":
         raise SystemExit("not an MZ/PE file")
@@ -196,11 +226,25 @@ def main():
             data_ptrs += 1
     words_at = lambda a: words[(a - data_base) // 4]
     verdict = {a: is_code_pointer(words_at(a), starts) for a in in_code}
+    # (a) isolated text-like dwords are never rewritten, even when the value equals a known function start (".ped" block names, "*.ped"...):
+    #     a text-like dword is kept only inside a table (a accepted code pointer lies within +-2 dwords) or when allow-listed.
+    base_ok = {a for a in in_code if verdict[a][0]}  # decided on the original verdicts, so vtables made only of text-like-looking slots survive
+    text_dropped = []
+    for a in in_code:
+        if verdict[a][0] and text_like(words_at(a)) and a not in ALLOW_ADDRS and not any((a + o) in base_ok for o in (-8, -4, 4, 8)):
+            verdict[a] = (False, "S")
+            text_dropped.append(a)
+    # (b) explicit deny ranges
+    deny_dropped = []
+    for a in in_code:
+        if verdict[a][0] and denied(a):
+            verdict[a] = (False, "D")
+            deny_dropped.append(a)
     accepted = [a for a in in_code if verdict[a][0]]
     acc_set = set(accepted)
     by_sec, by_cls = {}, {"V": 0, "C": 0}
-    skipped = {"S": 0, "U": 0}
-    sample = {"S": [], "U": []}
+    skipped = {"S": 0, "U": 0, "D": 0}
+    sample = {"S": [], "U": [], "D": []}
     with open(out / "data_pointers.txt", "w") as f, open(out / "data_pointers.bin", "wb") as fb:
         for a in in_code:
             ok, why = verdict[a]
@@ -223,10 +267,22 @@ def main():
             fb.write(struct.pack("<II", a, 1 if c == "V" else 2))
             by_cls[c] += 1
             by_sec[sec_of(a)] = by_sec.get(sec_of(a), 0) + 1
+    # heuristic report: accepted isolated (C) dwords whose neighbours are all small ints (< 0x01000000) and whose target is not a known function start
+    suspects = []
+    for a in accepted:
+        if verdict[a][0] is False or (a - 4) in acc_set or (a + 4) in acc_set or words_at(a) in starts:
+            continue
+        nb = [words_at(x) for x in (a - 8, a - 4, a + 4, a + 8) if data_base <= x < data_end]
+        if all(v < 0x01000000 for v in nb):
+            suspects.append(a)
+    (out / "data_pointers_suspects.txt").write_text("".join(f"0x{a:08X} 0x{words_at(a):08X}\n" for a in suspects))
+    (out / "data_pointers_overridden.txt").write_text(
+        "".join(f"0x{a:08X} 0x{words_at(a):08X} text-isolated\n" for a in text_dropped) +
+        "".join(f"0x{a:08X} 0x{words_at(a):08X} deny: {denied(a)}\n" for a in deny_dropped))
     rdata = next((s for s in data if s["name"] == ".rdata"), None)
     rdata_lo = rdata["va"] if rdata else 0
     rdata_hi = align_up(rdata["va"] + rdata["virt_size"], PAGE) if rdata else 0
-    stats = dict(initterm=initterm, code_pointing_dwords=len(accepted), skipped_text_like=skipped["S"], skipped_unaligned=skipped["U"],
+    stats = dict(initterm=initterm, code_pointing_dwords=len(accepted), skipped_text_like=skipped["S"], skipped_unaligned=skipped["U"], skipped_denied=skipped["D"], text_isolated_dropped=len(text_dropped), suspects=len(suspects),
                  data_pointing_dwords=data_ptrs, code_pointing_by_section=by_sec, code_pointing_by_class=by_cls,
                  distinct_code_targets=len({words_at(a) for a in accepted}), function_starts=start_counts)
     for k in ("0x860E2C", "0x8A2A18", "0x85DA64"):

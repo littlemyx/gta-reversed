@@ -23,6 +23,8 @@ public:
         m_state = PED_STUCK_STATE_NONE;
     }
 
+    static void InjectHooks();
+
     bool TestPedStuck(CPed* ped, CEventGroup* eventGroup);
 
     auto GetState() const { return m_state; }

@@ -122,7 +122,6 @@ void CVehicle::InjectHooks() {
     RH_ScopedInstall(CanDoorsBeDamaged, 0x6D1E60);
     RH_ScopedInstall(CanPedEnterCar, 0x6D1E80);
     RH_ScopedInstall(ProcessCarAlarm, 0x6D21F0);
-    RH_ScopedInstall(DestroyVehicleAndDriverAndPassengers, 0x6D2250);
     RH_ScopedInstall(IsVehicleNormal, 0x6D22F0);
     RH_ScopedInstall(IsLawEnforcementVehicle, 0x6D2370);
     RH_ScopedInstall(ExtinguishCarFire, 0x6D2460);
@@ -234,6 +233,7 @@ void CVehicle::InjectHooks() {
     RH_ScopedGlobalInstall(CopyObjectsCB, 0x6D3450);
     // RH_ScopedGlobalInstall(FindReplacementUpgradeCB, 0x6D3490);
     RH_ScopedGlobalInstall(RemoveAllUpgradesCB, 0x6D34D0);
+    RH_ScopedNamedGlobalInstall(::DestroyVehicleAndDriverAndPassengers, "DestroyVehicleAndDriverAndPassengers", 0x6D2250); // `::` because the CVehicle member of the same name would win; cdecl (vehicle on the stack), NOT a thiscall member
 }
 
 // 0x6D5F10
@@ -1732,8 +1732,8 @@ void CVehicle::ProcessCarAlarm() {
     }
 }
 
-// 0x6D2250
-void CVehicle::DestroyVehicleAndDriverAndPassengers(CVehicle* vehicle) {
+// 0x6D2250 - cdecl in the exe (the vehicle is a stack argument, there is no `this`)
+void DestroyVehicleAndDriverAndPassengers(CVehicle* vehicle) {
     const auto ProcessOccupant = [](CPed* occupant) {
         if (occupant) {
             if (!CGameLogic::IsCoopGameGoingOn()) {
@@ -1743,11 +1743,16 @@ void CVehicle::DestroyVehicleAndDriverAndPassengers(CVehicle* vehicle) {
         }
     };
 
-    ProcessOccupant(m_pDriver);
-    rng::for_each(GetMaxPassengerSeats(), ProcessOccupant);
+    ProcessOccupant(vehicle->m_pDriver);
+    rng::for_each(vehicle->GetMaxPassengerSeats(), ProcessOccupant);
 
     CWorld::Remove(vehicle);
     delete vehicle;
+}
+
+// NOTSA: Member form kept for existing callers (e.g. `CGarage`), forwards to the free function above
+void CVehicle::DestroyVehicleAndDriverAndPassengers(CVehicle* vehicle) {
+    ::DestroyVehicleAndDriverAndPassengers(vehicle);
 }
 
 // 0x6D22F0

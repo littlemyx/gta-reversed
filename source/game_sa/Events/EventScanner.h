@@ -27,10 +27,7 @@ public:
     void ScanForPedAcquaintanceEvents(CPed& ped, CEntity** entities, int32 count); // 0x607D80
     bool IsScanAllowed(CPed& ped);                                                  // 0x603A30
 
-    // 0x607A90 - not reversed yet (`ped`, -1, `entities`, `count`, out: ped?, out: index?)
-    void ScanForPedAcquaintances(CPed& ped, int32 unk, CEntity** entities, int32 count, CPed*& outPed, int32& outIdx) {
-        plugin::CallMethod<0x607A90, CPedAcquaintanceScanner*, CPed*, int32, CEntity**, int32, CPed**, int32*>(this, &ped, unk, entities, count, &outPed, &outIdx);
-    }
+    void ScanForPedAcquaintances(CPed& ped, int32 acquaintanceId, CEntity** entities, int32 count, CPed*& outPed, int32& outIdx); // 0x607A90 - `acquaintanceId` is -1 for "any"
 
     void SetOnlyScriptPedAllowed() {
         m_bScanAllowedScriptPed    = true;

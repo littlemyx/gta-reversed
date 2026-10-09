@@ -8,8 +8,23 @@
 #include "World.h"
 #include "Sector.h"
 #include "RepeatSector.h"
+#include "PedAttractorManager.h"
+#include "Models/ModelInfo.h"
 
 static_assert(sizeof(C2dEffect) == 0x40 && sizeof(tUserList) == 0x24); // Strides used by the original (0xC3AB00, 0xC3A200)
+
+// 0x5FE960 - `tUserList` is declared in Scripts/Scripted2dEffects.h (not our zone), so it's a local helper for now, the original is `__thiscall(tUserList*, int32) -> bool`
+static bool IsPedTypeInUserList(const tUserList& list, int32 pedType) {
+    if (!list.m_bUseList) {
+        return true;
+    }
+    for (auto i = 0; i < 4; i++) {
+        if (list.m_UserTypes[i] == -2 && list.m_UserTypesByPedType[i] == pedType) {
+            return true;
+        }
+    }
+    return false;
+}
 
 void CAttractorScanner::InjectHooks() {
     RH_ScopedClass(CAttractorScanner);
@@ -17,6 +32,10 @@ void CAttractorScanner::InjectHooks() {
 
     RH_ScopedInstall(Clear, 0x5FFF90);
     RH_ScopedInstall(ScanForAttractors, 0x6060A0);
+    RH_ScopedInstall(ScanForAttractorsInPtrList, 0x6034B0);
+    RH_ScopedInstall(AddEffect, 0x5FFFD0);
+    RH_ScopedInstall(GetBestEffect, 0x600180);
+    RH_ScopedInstall(GetClosestPedToEffect, 0x603570);
 }
 
 // 0x5FFF90
@@ -94,8 +113,7 @@ void CAttractorScanner::ScanForAttractors(CPed& ped) {
         if (userList.m_bUseList) {
             const auto modelId = (int32)(int16)ped.m_nModelIndex; // Sign extended
             if (rng::none_of(userList.m_UserTypes, [&](int32 t) { return t == modelId; })) {
-                // 0x5FE960 - (this = &userList, ped type)
-                if (!plugin::CallMethodAndReturn<bool, 0x5FE960, tUserList*, int32>(&userList, ped.m_nPedType)) {
+                if (!IsPedTypeInUserList(userList, ped.m_nPedType)) { // 0x5FE960
                     continue;
                 }
             }
@@ -133,21 +151,146 @@ void CAttractorScanner::ScanForAttractors(CPed& ped) {
 }
 
 // 0x6034B0
-void CAttractorScanner::ScanForAttractorsInPtrList(const void* ptrList, const CPed& ped) {
-    plugin::CallMethod<0x6034B0, CAttractorScanner*, const void*, const CPed*>(this, ptrList, &ped);
+void CAttractorScanner::ScanForAttractorsInPtrList(const void* ptrList, CPed& ped) {
+    // Note: Works for both single and double linked lists (item @ +0, next @ +4)
+    // Note: `enableDisabled` is deliberately kept across iterations, the original keeps it in a register (`bl`),
+    //       so non-object entities see the value of the last object
+    bool enableDisabled = false;
+    for (auto* node = static_cast<const CPtrListSingleLink<CEntity*>*>(ptrList)->GetNode(); node;) {
+        CEntity* const entity = node->Item;
+        node = node->Next; // The original reads this before processing the entity
+
+        if (entity->GetType() == ENTITY_TYPE_OBJECT) {
+            const auto* const obj = entity->AsObject();
+            enableDisabled = obj->objectFlags.bEnableDisabledAttractors;
+            if (!entity->m_bIsStatic && !entity->m_bIsStaticWaitingForCollision) {
+                continue;
+            }
+            if (obj->objectFlags.bIsExploded) {
+                continue;
+            }
+        }
+
+        auto* const mi = CModelInfo::ms_modelInfoPtrs[(int16)entity->m_nModelIndex]; // Sign extended
+        for (auto i = 0; i < mi->m_n2dfxCount; i++) {
+            auto* const effect = mi->Get2dEffect(i);
+            if (effect->m_Type != EFFECT_ATTRACTOR) {
+                continue;
+            }
+            if ((effect->pedAttractor.m_nFlags & 1) && !enableDisabled) {
+                continue;
+            }
+            AddEffect(effect, entity, ped); // 0x603543
+        }
+    }
 }
 
 // 0x5FFFD0
-void CAttractorScanner::AddEffect(C2dEffect* effect, CEntity* entity, const CPed& ped) {
-    plugin::CallMethod<0x5FFFD0, CAttractorScanner*, C2dEffect*, CEntity*, const CPed*>(this, effect, entity, &ped);
+void CAttractorScanner::AddEffect(C2dEffect* effect, CEntity* entity, CPed& ped) {
+    const auto type = (uint8)effect->pedAttractor.m_nAttractorType; // The original reads this as a byte (@ +0x34)
+
+    // Shelter attractors only when it's raining, everything else only when it's not (0x858CC4 = 0.2f)
+    const bool isNotRaining = !(CWeather::Rain >= 0.2f);
+    if (isNotRaining == (type == PED_ATTRACTOR_SHELTER)) {
+        return;
+    }
+
+    const CVector effectPos = entity ? entity->TransformFromObjectSpace(effect->m_Pos) : effect->m_Pos; // 0x60003E
+    const CVector pedPos    = ped.GetPosition();
+
+    // The original keeps the sum on the x87 stack (extended precision): `(dz^2 + dy^2) + dx^2`
+    const double dx       = (double)pedPos.x - (double)effectPos.x;
+    const double dy       = (double)pedPos.y - (double)effectPos.y;
+    const double dz       = (double)pedPos.z - (double)effectPos.z;
+    const double distSq   = (dz * dz + dy * dy) + dx * dx;
+    const float  distSqF  = (float)distSq;
+    if (!(distSq < (double)field_68[type])) {
+        return;
+    }
+
+    if (type == PED_ATTRACTOR_SCRIPTED) {
+        const auto radius = CScripted2dEffects::ms_radii[CScripted2dEffects::GetIndex(reinterpret_cast<C2dEffectPedAttractor*>(effect))]; // 0x6F9F60
+        if (!(radius < 0.0f)) { // 0x858B50 = 0.0f
+            if (!((double)distSqF < (double)radius * (double)radius)) {
+                return;
+            }
+        }
+    }
+
+    if (!GetPedAttractorManager()->HasEmptySlot(reinterpret_cast<C2dEffectPedAttractor*>(effect), entity)) { // 0x5EBB00
+        return;
+    }
+
+    const auto mat = entity ? CMatrix{entity->GetMatrix()} : CMatrix::Identity(); // 0x60010F | 0x600120
+    if (CPedAttractorManager::IsApproachable(reinterpret_cast<C2dEffectPedAttractor*>(effect), mat, 0, &ped)) { // 0x60013B
+        field_68[type] = distSqF;
+        field_18[type] = (int32)entity;
+        field_40[type] = (int32)effect;
+    }
 }
 
 // 0x600180
 void CAttractorScanner::GetBestEffect(C2dEffect*& outEffect, CEntity*& outEntity) {
-    plugin::CallMethod<0x600180, CAttractorScanner*, C2dEffect**, CEntity**>(this, &outEffect, &outEntity);
+    outEffect = nullptr;
+    outEntity = nullptr;
+
+    // BUG: Checks the entity of slot 4, not the effect (scripted effects have no entity), but slot 4 effects always have one
+    if (field_18[4]) {
+        outEffect = (C2dEffect*)field_40[4];
+        outEntity = (CEntity*)field_18[4];
+        return;
+    }
+
+    float best = std::numeric_limits<float>::max(); // 0x863A3C
+    for (auto i = 0; i < 10; i++) {
+        if (best > field_68[i] && field_40[i]) {
+            best      = field_68[i];
+            outEffect = (C2dEffect*)field_40[i];
+            outEntity = (CEntity*)field_18[i];
+        }
+    }
 }
 
 // 0x603570
 CPed* CAttractorScanner::GetClosestPedToEffect(C2dEffect* effect) {
-    return plugin::CallAndReturn<CPed*, 0x603570, C2dEffect*>(effect);
+    float best    = std::numeric_limits<float>::max();
+    CPed* closest = nullptr;
+
+    auto* const pool = GetPedPool();
+    for (auto i = pool->GetSize(); i-- > 0;) {
+        auto* const ped = pool->GetAt(i);
+        if (!ped) {
+            continue;
+        }
+
+        // Skip peds that are already using an effect
+        if (const auto task = ped->GetTaskManager().GetActiveTask(); task && task->GetTaskType() == TASK_COMPLEX_USE_EFFECT) { // 0x681720
+            continue;
+        }
+
+        const CVector pedPos = ped->GetPosition();
+        const double  dx     = (double)effect->m_Pos.x - (double)pedPos.x;
+        const double  dy     = (double)effect->m_Pos.y - (double)pedPos.y;
+        const double  dz     = (double)effect->m_Pos.z - (double)pedPos.z;
+        const float   distSq = (float)((dz * dz + dy * dy) + dx * dx); // Extended precision sum, rounded on store
+        if (!(distSq < best)) {
+            continue;
+        }
+
+        const auto& userList = CScripted2dEffects::ms_userLists[CScripted2dEffects::GetIndex(reinterpret_cast<C2dEffectPedAttractor*>(effect))]; // 0x6F9F60
+        if (userList.m_bUseList) {
+            const auto modelId = (int32)(int16)ped->m_nModelIndex; // Sign extended
+            if (rng::none_of(userList.m_UserTypes, [&](int32 t) { return t == modelId; })) {
+                if (!IsPedTypeInUserList(userList, ped->m_nPedType)) {
+                    continue;
+                }
+            }
+        }
+
+        if (CPedAttractorManager::IsApproachable(reinterpret_cast<C2dEffectPedAttractor*>(effect), CMatrix::Identity(), 0, ped)) { // 0x6036CE
+            best    = distSq;
+            closest = ped;
+        }
+    }
+    return closest;
 }

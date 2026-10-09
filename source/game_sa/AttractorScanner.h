@@ -30,11 +30,10 @@ public:
     void ScanForAttractors(CPed& ped); // 0x6060A0
 
 private:
-    // Not reversed yet:
-    void ScanForAttractorsInPtrList(const void* ptrList, const CPed& ped); // 0x6034B0 - `ptrList` is a CPtrList (the head node pointer is at +0)
-    void AddEffect(C2dEffect* effect, CEntity* entity, const CPed& ped);   // 0x5FFFD0
+    void ScanForAttractorsInPtrList(const void* ptrList, CPed& ped); // 0x6034B0 - `ptrList` is a CPtrList (the head node pointer is at +0)
+    void AddEffect(C2dEffect* effect, CEntity* entity, CPed& ped);   // 0x5FFFD0
     void GetBestEffect(C2dEffect*& outEffect, CEntity*& outEntity);  // 0x600180 - slot 4 (if used), otherwise the closest one
-    static CPed* GetClosestPedToEffect(C2dEffect* effect);               // 0x603570
+    static CPed* GetClosestPedToEffect(C2dEffect* effect);           // 0x603570
 };
 
 VALIDATE_SIZE(CAttractorScanner, 0x90);

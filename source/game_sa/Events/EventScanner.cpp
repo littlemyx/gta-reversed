@@ -25,6 +25,10 @@
 #include "Object.h"
 #include "PedScriptedTaskRecord.h"
 #include "EventEditableResponse.h"
+#include "DecisionMakers/DecisionMakerTypes.h"
+#include "PedType.h"
+#include "GameLogic.h"
+#include "Acquaintance.h"
 
 // Sanity checks for the raw offsets used by the original
 static_assert(WEAPON_FLAMETHROWER == 0x25 && WEAPON_FALL == 0x36 && WEAPON_UNIDENTIFIED == 0x37 && PED_PIECE_TORSO == 3);
@@ -77,6 +81,7 @@ void CPedAcquaintanceScanner::InjectHooks() {
 
     RH_ScopedInstall(ScanForPedAcquaintanceEvents, 0x607D80);
     RH_ScopedInstall(IsScanAllowed, 0x603A30);
+    RH_ScopedInstall(ScanForPedAcquaintances, 0x607A90);
 }
 
 void CSexyPedScanner::InjectHooks() {
@@ -451,6 +456,97 @@ void CPedAcquaintanceScanner::ScanForPedAcquaintanceEvents(CPed& ped, CEntity** 
     CPed*  outPed = nullptr;
     int32  outIdx = -1;
     ScanForPedAcquaintances(ped, -1, entities, count, outPed, outIdx); // 0x607E16
+}
+
+// 0x59C910 - CVector::Normalise as the original evaluates it: the sum of squares and the reciprocal root stay in the FPU
+// (extended precision), every component is stored as float. A length of 0 (or less) yields (1, y, z) - only x is written.
+static void NormaliseExt(CVector& v) {
+    const double sq = ((double)v.x * v.x + (double)v.y * v.y) + (double)v.z * v.z;
+    if (sq <= 0.0) { // FCOM + JP: NaN takes the sqrt path
+        v.x = 1.0f;
+        return;
+    }
+    const double inv = 1.0 / std::sqrt(sq);
+    v.x = (float)(v.x * inv);
+    v.y = (float)(v.y * inv);
+    v.z = (float)(v.z * inv);
+}
+
+// 0x607A90
+void CPedAcquaintanceScanner::ScanForPedAcquaintances(CPed& ped, int32 acquaintanceId, CEntity** entities, int32 count, CPed*& outPed, int32& outIdx) {
+    outPed = nullptr;
+
+    // The original has room for 12 candidates only (and overruns its stack frame otherwise), `count` is 16 at most (`CPedIntelligence::GetPedEntities`)
+    CPed*   candidates[16];
+    int32   numCandidates = 0;
+    assert(count <= (int32)std::size(candidates));
+
+    for (int32 i = 0; i < count; i++) {
+        auto* const other = static_cast<CPed*>(entities[i]);
+        if (!other) {
+            continue;
+        }
+        if (!other->IsAlive()) { // 0x5E0170
+            continue;
+        }
+
+        // Is the other ped in front of us?
+        CVector toOther = other->GetPosition() - ped.GetPosition();
+        NormaliseExt(toOther); // 0x59C910
+        const auto& fwd = ped.GetMatrix().GetForward();
+        const double dot = ((double)toOther.z * fwd.z + (double)toOther.y * fwd.y) + (double)toOther.x * fwd.x;
+        if (!(dot > (double)ms_fThresholdDotProduct) && !ped.bInVehicle && !other->bInVehicle) {
+            continue;
+        }
+
+        // Do we have a (matching) acquaintance with the other ped?
+        bool isInteresting = acquaintanceId == -1 && other->m_nPedType == PED_TYPE_COP;
+        if (!isInteresting) {
+            for (auto id = 4; id >= 0 && !isInteresting; id--) {
+                if (acquaintanceId == -1 || acquaintanceId == id) {
+                    const auto mine   = ped.GetAcquaintance().GetAcquaintances((AcquaintanceId)id); // 0x608970
+                    const auto theirs = CPedType::GetPedFlag(other->m_nPedType);                   // 0x608830
+                    if (mine & theirs) {
+                        isInteresting = true;
+                    }
+                }
+            }
+            if (!isInteresting) {
+                // Riots
+                if (!CGameLogic::LaRiotsActiveHere()) { // 0x441C10
+                    continue;
+                }
+                if (!plugin::CallAndReturn<bool, 0x603AF0, CPed*, CPed*>(&ped, other)) { // Unreversed
+                    continue;
+                }
+            }
+        }
+
+        if (other->m_nPedType != PED_TYPE_COP) {
+            // Event types: HATE, DISLIKE, RESPECT, 40 (no name)
+            const int32 eventTypes[]{ EVENT_ACQUAINTANCE_PED_HATE, EVENT_ACQUAINTANCE_PED_DISLIKE, EVENT_ACQUAINTANCE_PED_RESPECT, 40 };
+            const bool  rioting = CGameLogic::LaRiotsActiveHere() && plugin::CallAndReturn<bool, 0x603AF0, CPed*, CPed*>(&ped, other);
+            if (!rioting) {
+                // 0x4684F0, 0x6042B0 (unreversed: this = CDecisionMakerTypes)
+                if (!plugin::CallMethodAndReturn<bool, 0x6042B0, CDecisionMakerTypes*, CPed*, const int32*, int32>(CDecisionMakerTypes::GetInstance(), &ped, eventTypes, 5)) {
+                    continue;
+                }
+            }
+        }
+        candidates[numCandidates++] = other;
+    }
+
+    int32 curIdx = -1;
+    for (int32 i = 0; i < numCandidates; i++) {
+        if (curIdx == 4) {
+            continue;
+        }
+        auto* const other = candidates[i];
+        if (CPedGeometryAnalyser::CanPedTargetPed(ped, *other, !ped.bInVehicle && !other->bInVehicle)) { // 0x5F1C40
+            // 0x607560 (unreversed)
+            curIdx = plugin::CallMethodAndReturn<int32, 0x607560, CPedAcquaintanceScanner*, CPed*, int32, int32, CPed*, CPed**, int32*>(this, &ped, acquaintanceId, curIdx, other, &outPed, &outIdx);
+        }
+    }
 }
 
 // 0x603A30

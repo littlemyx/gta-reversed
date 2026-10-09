@@ -2241,7 +2241,10 @@ float CPhysical::ApplyScriptCollision(CVector dir, float elasticity, float frict
     float      damage          = 0.0f;
 
     CColPoint colPoint;
-    // NOTSA: The original only initialises `m_vecPoint` and `m_vecNormal` (the rest is stack garbage), we zero-init everything else
+    // NOTSA: The original only initialises `m_vecPoint` and `m_vecNormal`, the rest is uninitialised stack garbage.
+    // BUG: The callees do read the rest: `m_nSurfaceTypeA/B` (AudioEngine.ReportCollision, g_surfaceInfos.GetFrictionEffect,
+    // SURFACE_CAR_MOVINGCOMPONENT checks) so the original's sound/spark effects depend on garbage. This can't be reproduced
+    // (non-deterministic), so everything else is zeroed (= SURFACE_DEFAULT) unconditionally (no `IsFixBugs` gate possible).
     std::memset(&colPoint, 0, sizeof(colPoint));
     colPoint.m_vecNormal = dir;
 

@@ -2,6 +2,20 @@
 
 #include "AnimBlendNode.h"
 
+namespace {
+// 0x4D00E0 - cdecl helper (NOT a CAnimBlendNode member): theta = acos(min(dot(a, b), 1)), invSinTheta = theta == 0 ? 0 : 1 / sin(theta)
+void CalcThetaFromQuats(const CQuaternion* a, const CQuaternion* b, float* theta, float* invSinTheta) {
+    // Dot is accumulated in extended precision in this order (w, z, y, x), then stored as float
+    float dot = (float)(((double)a->w * b->w + (double)a->z * b->z + (double)a->y * b->y) + (double)a->x * b->x);
+    if (dot > 1.0f) { // Clamped only if dot > 1 (NaN is not clamped)
+        dot = 1.0f;
+    }
+    const double t = std::acos((double)dot);
+    *theta = (float)t;
+    *invSinTheta = t == 0.0 ? 0.0f : (float)(1.0 / std::sin(t));
+}
+} // namespace
+
 void CAnimBlendNode::InjectHooks() {
     RH_ScopedClass(CAnimBlendNode);
     RH_ScopedCategory("Animation");
@@ -12,7 +26,7 @@ void CAnimBlendNode::InjectHooks() {
     RH_ScopedInstall(GetCurrentTranslationCompressed, 0x4CFE60);
     RH_ScopedInstall(GetEndTranslation, 0x4CFD90);
     RH_ScopedInstall(GetEndTranslationCompressed, 0x4D0000);
-    RH_ScopedInstall(CalcTheta, 0x4D00E0);
+    RH_ScopedGlobalInstall(CalcThetaFromQuats, 0x4D00E0); // NOTE: Is a cdecl helper (CQuaternion*, CQuaternion*, float*, float*), not a thiscall member
     RH_ScopedInstall(UpdateTime, 0x4D0160);
     RH_ScopedInstall(CalcDeltas, 0x4D0190);
     RH_ScopedInstall(FindKeyFrame, 0x4D0240);
@@ -64,7 +78,7 @@ bool CAnimBlendNode::FindKeyFrame(float time) {
     return true;
 }
 
-// 0x4D00E0
+// NOTSA: The exe has no such member, its callers inline this (0x4D00E0 is the cdecl helper `CalcThetaFromQuats` above, which does the dot product too)
 void CAnimBlendNode::CalcTheta(float angleCos) {
     m_Theta       = std::acos(std::min(angleCos, 1.0f));
     m_InvSinTheta = m_Theta == 0.0f

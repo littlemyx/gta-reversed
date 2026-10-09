@@ -20,8 +20,8 @@ CTaskSimpleThrowControl::CTaskSimpleThrowControl(CEntity* targetEntity, CVector 
     m_entity{targetEntity},
     m_pos{pos ? *pos : CVector{}}
 {
-    assert(m_entity);
-
+    // NOTE: no `assert(m_entity)`: the original (0x61F8B0) null-checks the entity before registering the reference, and
+    // TASK_SHOOT_AT_COORD (script 1640) constructs this task with a null target.
     CEntity::SafeRegisterRef(m_entity);
 }
 

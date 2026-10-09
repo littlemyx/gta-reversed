@@ -41,6 +41,11 @@ UIRenderer::UIRenderer() :
                         | ImGuiConfigFlags_ViewportsEnable;
     m_ImIO->DisplaySize = ImVec2(SCREEN_WIDTH, SCREEN_HEIGHT);
 
+#ifdef NOTSA_STANDALONE_RUN
+    // Standalone run build: no debug UI backends (no D3D9 device access, no SDL/Win32 hooks, no relative mouse mode)
+    m_InputActive = false;
+    return;
+#endif
 #ifdef NOTSA_USE_SDL3
     ImGui_ImplSDL3_InitForD3D(PSGLOBAL(sdlWindow));
 #else
@@ -54,6 +59,10 @@ UIRenderer::UIRenderer() :
 }
 
 UIRenderer::~UIRenderer() {
+#ifdef NOTSA_STANDALONE_RUN
+    ImGui::DestroyContext(m_ImCtx);
+    return;
+#endif
     ImGui_ImplDX9_Shutdown();
 #ifdef NOTSA_USE_SDL3
     ImGui_ImplSDL3_Shutdown();
@@ -66,6 +75,10 @@ UIRenderer::~UIRenderer() {
 }
 
 void UIRenderer::SetIsActive(bool active) {
+#ifdef NOTSA_STANDALONE_RUN
+    m_InputActive = false;
+    return;
+#endif
     const auto pad = CPad::GetPad(0);
 
     m_InputActive = active;
@@ -156,6 +169,9 @@ void UIRenderer::DrawLoop() {
 
 void UIRenderer::Render2D() {
     ZoneScoped;
+#ifdef NOTSA_STANDALONE_RUN
+    return;
+#endif
 
     m_DebugModules.Render2D();
 }

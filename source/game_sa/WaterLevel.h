@@ -340,7 +340,7 @@ public:
     //! 0x6E5750 (NOTSA name) - Adds a quad (`type` = 1) / triangle (`type` = 2) with index `polyId` to the poly info of the given block (turning it into a combo if needed)
     static void AddPolyToBlock(int32 blockX, int32 blockY, uint32 polyId, uint32 type);
 
-    //! 0x6E91D0 (NOT reversed yet) - Renders one layer of the tessellated rectangle. The last 4 arguments are computed by `RenderHighDetailWaterRectangle`
+    //! 0x6E91D0 - Renders one layer of the tessellated rectangle. The last 4 arguments are computed by `RenderHighDetailWaterRectangle` (`numTris` and `numVerts` are unused)
     static void RenderHighDetailWaterRectangle_OneLayer(int32 minX, int32 maxX, int32 Y1, int32 Y2, CRenPar P1, CRenPar P2, CRenPar P3, CRenPar P4, int32 WaterLayer, int32 numTris, int32 numVerts, int32 numCellsX, int32 numCellsY);
 
     static void SetCameraRange();

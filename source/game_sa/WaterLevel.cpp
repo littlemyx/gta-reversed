@@ -57,6 +57,7 @@ void CWaterLevel::InjectHooks() {
     RH_ScopedGlobalInstall(FillQuadsAndTrianglesList, 0x6E7B30);
     RH_ScopedGlobalInstall(AddPolyToBlock, 0x6E5750);
     RH_ScopedGlobalInstall(RenderHighDetailWaterRectangle, 0x6EB810);
+    RH_ScopedGlobalInstall(RenderHighDetailWaterRectangle_OneLayer, 0x6E91D0);
 }
 
 // NOTSA
@@ -614,9 +615,195 @@ void CWaterLevel::RenderHighDetailWaterRectangle(int32 minX, int32 maxX, int32 Y
     RenderWaterRectangle(minX, maxX, splitAtY, Y2, P13, P24, P3, P4);
 }
 
+namespace {
+// 0xC1F960 - Index of the vertex being generated (indexes the color caches below)
+auto& s_VtxColorCacheIdx = StaticRef<int32>(0xC1F960);
+
+// Per-vertex color (the first layer's) cache, so the second layer can reuse the exact same colors
+auto& s_VtxColorCacheB = StaticRef<std::array<uint8, 0x800>>(0xC1F968);
+auto& s_VtxColorCacheG = StaticRef<std::array<uint8, 0x800>>(0xC20168);
+auto& s_VtxColorCacheR = StaticRef<std::array<uint8, 0x800>>(0xC20968);
+
+// 0xC278D4 - Normal output of `CalculateWavesOnlyForCoordinate` (never read)
+auto& s_WaveNormalSink = StaticRef<CVector>(0xC278D4);
+
+// 0xC278E0 - If set, no indices are generated (and the vertex counter isn't advanced). Never written by anything known => always false
+auto& s_bDontGenerateIndices = StaticRef<bool>(0xC278E0);
+
+// 0x6E7680 - Render out (if there's anything) and empty the temporary (Im3D) buffer
+void RenderAndEmptyRenderBuffer() {
+    if (uiTempBufferVerticesStored) {
+        LittleTest();
+        if (RwIm3DTransform(TempBufferVertices.m_3d, uiTempBufferVerticesStored, nullptr, rwIM3D_VERTEXUV)) {
+            RwIm3DRenderIndexedPrimitive(rwPRIMTYPETRILIST, aTempBufferIndices, uiTempBufferIndicesStored);
+            RwIm3DEnd();
+        }
+    }
+    RenderBuffer::ClearRenderBuffer();
+}
+}
+
 // 0x6E91D0
+// Generates the `(numCellsX + 1) * (numCellsY + 1)` vertex grid (and the 2 triangles per cell) of the rectangle, with waves applied.
+// Layer 0 generates the vertices (position, UV, color) while layer 1 only overwrites the UV and color of the vertices
+// the previous call left in the (already rendered out) buffer.
+// NOTE: `numTris` and `numVerts` are unused by the original.
 void CWaterLevel::RenderHighDetailWaterRectangle_OneLayer(int32 minX, int32 maxX, int32 Y1, int32 Y2, CRenPar P1, CRenPar P2, CRenPar P3, CRenPar P4, int32 WaterLayer, int32 numTris, int32 numVerts, int32 numCellsX, int32 numCellsY) {
-    plugin::Call<0x6E91D0>(minX, maxX, Y1, Y2, P1, P2, P3, P4, WaterLayer, numTris, numVerts, numCellsX, numCellsY);
+    s_VtxColorCacheIdx = 0;
+    RenderAndEmptyRenderBuffer(); // 0x6E7680
+
+    const float invX = (float)(1.0 / (double)numCellsX);
+    const int32 stepX = (maxX - minX) / numCellsX;
+    const float invY = (float)(1.0 / (double)numCellsY);
+    const int32 stepY = (Y2 - Y1) / numCellsY;
+
+    const auto Grad = [](float a, float b, float inv) {
+        return (float)(((double)a - (double)b) * (double)inv);
+    };
+
+    // Gradients of the "upper" triangle (P1, P2, P3) - origin is P1
+    const float zX_A = Grad(P2.z,          P1.z,          invX), zY_A = Grad(P3.z,          P1.z,          invY);
+    const float bX_A = Grad(P2.bigWaves,   P1.bigWaves,   invX), bY_A = Grad(P3.bigWaves,   P1.bigWaves,   invY);
+    const float sX_A = Grad(P2.smallWaves, P1.smallWaves, invX), sY_A = Grad(P3.smallWaves, P1.smallWaves, invY);
+
+    // Gradients of the "lower" triangle - origin is P4 (and we're going backwards)
+    const float zX_B = Grad(P3.z,          P4.z,          invX), zY_B = Grad(P2.z,          P4.z,          invY);
+    const float bX_B = Grad(P3.bigWaves,   P4.bigWaves,   invX), bY_B = Grad(P2.bigWaves,   P4.bigWaves,   invY);
+    const float sX_B = Grad(P3.smallWaves, P4.smallWaves, invX), sY_B = Grad(P2.smallWaves, P4.smallWaves, invY);
+
+    // Base texture coordinates (just the fractional part)
+    float baseU{}, baseV{};
+    float uvScale{};
+    switch (WaterLayer) {
+    case 0:
+        uvScale = 0.08f; // 0x859018
+        baseU   = (float)((double)minX * (double)uvScale + (double)TextureShiftSecondU);
+        baseV   = (float)((double)Y1   * (double)uvScale + (double)TextureShiftSecondV);
+        break;
+    case 1:
+        uvScale = 0.04f; // 0x858CEC
+        baseU   = (float)((double)minX * (double)uvScale + (double)TextureShiftFirstU);
+        baseV   = (float)((double)Y1   * (double)uvScale + (double)TextureShiftFirstV);
+        break;
+    }
+    if (WaterLayer == 0 || WaterLayer == 1) {
+        baseU = (float)((double)baseU - std::floor((double)baseU)); // 0x8219F0 = floor
+        baseV = (float)((double)baseV - std::floor((double)baseV));
+    }
+
+    const CVector camPos = TheCamera.GetPosition();
+
+    // The positions of the "lower" triangle are calculated starting from the opposite corner (which is off by the division's remainder)
+    const int32 startX_B = maxX - stepX * numCellsX;
+    const int32 startY_B = Y2   - stepY * numCellsY;
+
+    for (int32 j = 0; j <= numCellsY; j++) {
+        const float fj = (float)j;
+        const float jInvY = (float)((double)fj * (double)invY);
+
+        for (int32 i = 0; i <= numCellsX; i++) {
+            const float fi = (float)i;
+
+            int32  X, Y;
+            float  z, smallWaves;
+            double bigWaves; // Stays in extended precision
+            if ((double)fi * (double)invX + (double)jInvY < 1.0) {
+                X = minX + i * stepX;
+                Y = Y1   + j * stepY;
+                z          = (float)((double)fj * (double)zY_A + (double)fi * (double)zX_A + (double)P1.z);
+                bigWaves   = (double)fj * (double)bY_A + (double)fi * (double)bX_A + (double)P1.bigWaves;
+                smallWaves = (float)((double)fi * (double)sX_A + (double)fj * (double)sY_A + (double)P1.smallWaves);
+            } else {
+                const float rj = (float)(numCellsY - j);
+                const float ri = (float)(numCellsX - i);
+                X = startX_B + i * stepX;
+                Y = startY_B + j * stepY;
+                z          = (float)((double)rj * (double)zY_B + (double)ri * (double)zX_B + (double)P4.z);
+                bigWaves   = (double)rj * (double)bY_B + (double)ri * (double)bX_B + (double)P4.bigWaves;
+                smallWaves = (float)((double)rj * (double)sY_B + (double)ri * (double)sX_B + (double)P4.smallWaves);
+            }
+
+            const float fX = (float)X;
+            const float fY = (float)Y;
+
+            // Fade the waves out with the distance from the camera
+            const float dx = (float)((double)camPos.x - (double)X);
+            const float dy = (float)((double)camPos.y - (double)Y);
+            const double dist = std::sqrt((double)dy * (double)dy + (double)dx * (double)dx) / (double)DETAILEDWATERDIST;
+            double fade;
+            if (dist > 1.0) {
+                fade = 0.0; // 0x858B50
+            } else {
+                const double distF = (double)(float)dist;
+                fade = distF > 0.75 // 0x858F34
+                    ? (1.0 - distF) * 4.0 // 0x858B90
+                    : 1.0;
+            }
+
+            const int32 uOff = i * stepX;
+            const int32 vOff = j * stepY;
+
+            switch (WaterLayer) {
+            case 0: {
+                float colorMult, glare;
+                CalculateWavesOnlyForCoordinate(
+                    X, Y,
+                    (float)(fade * bigWaves),
+                    (float)((double)smallWaves * fade),
+                    z, colorMult, glare, s_WaveNormalSink
+                );
+
+                auto* const vtx = &TempBufferVertices.m_3d[uiTempBufferVerticesStored];
+                RwIm3DVertexSetPos(vtx, fX, fY, z);
+                RwIm3DVertexSetU(vtx, (float)((double)uOff * (double)uvScale + (double)baseU));
+                RwIm3DVertexSetV(vtx, (float)((double)vOff * (double)uvScale + (double)baseV));
+
+                // Truncated to 8 bits (no clamping)
+                const auto r = (uint8)(int32)((double)WaterColor.r * (double)colorMult);
+                const auto g = (uint8)(int32)((double)WaterColor.g * (double)colorMult);
+                const auto b = (uint8)(int32)((double)WaterColor.b * (double)colorMult);
+                RwIm3DVertexSetRGBA(vtx, r, g, b, (uint8)WaterLayerAlpha[0]);
+
+                s_VtxColorCacheG[s_VtxColorCacheIdx] = g;
+                s_VtxColorCacheR[s_VtxColorCacheIdx] = r;
+                s_VtxColorCacheB[s_VtxColorCacheIdx] = b;
+                s_VtxColorCacheIdx++;
+                break;
+            }
+            case 1: {
+                auto* const vtx = &TempBufferVertices.m_3d[uiTempBufferVerticesStored]; // Position is already set by the previous layer
+                RwIm3DVertexSetU(vtx, (float)((double)uOff * (double)uvScale + (double)baseU));
+                RwIm3DVertexSetV(vtx, (float)((double)vOff * (double)uvScale + (double)baseV));
+                RwIm3DVertexSetRGBA(
+                    vtx,
+                    s_VtxColorCacheR[s_VtxColorCacheIdx],
+                    s_VtxColorCacheG[s_VtxColorCacheIdx],
+                    s_VtxColorCacheB[s_VtxColorCacheIdx],
+                    (uint8)WaterLayerAlpha[1]
+                );
+                s_VtxColorCacheIdx++;
+                break;
+            }
+            }
+
+            if (!s_bDontGenerateIndices) {
+                const int32 vtxIdx = uiTempBufferVerticesStored;
+                if (j != 0 && i != 0) {
+                    // Triangles: (above-left, above, left) and (this, above, left)
+                    const int32 above = vtxIdx - numCellsX;
+                    auto        idx   = (int32)uiTempBufferIndicesStored;
+                    aTempBufferIndices[idx++] = (RxVertexIndex)(above - 2);
+                    aTempBufferIndices[idx++] = (RxVertexIndex)(above - 1);
+                    aTempBufferIndices[idx++] = (RxVertexIndex)(vtxIdx - 1);
+                    aTempBufferIndices[idx++] = (RxVertexIndex)vtxIdx;
+                    aTempBufferIndices[idx++] = (RxVertexIndex)(above - 1);
+                    aTempBufferIndices[idx++] = (RxVertexIndex)(vtxIdx - 1);
+                    uiTempBufferIndicesStored = (uint16)idx;
+                }
+                uiTempBufferVerticesStored = (uint16)(vtxIdx + 1);
+            }
+        }
+    }
 }
 
 // 0x6E73A0
@@ -1243,17 +1430,7 @@ void CWaterLevel::RenderWater() {
     SetCameraRange();
     DefinedState();
 
-    // Renders out and clears the (immediate mode) buffers
-    const auto FlushRenderBuffer = [] {
-        if (uiTempBufferVerticesStored) {
-            LittleTest();
-            if (RwIm3DTransform(TempBufferVertices.m_3d, uiTempBufferVerticesStored, nullptr, rwIM3D_VERTEXUV)) {
-                RwIm3DRenderIndexedPrimitive(rwPRIMTYPETRILIST, aTempBufferIndices, uiTempBufferIndicesStored);
-                RwIm3DEnd();
-            }
-        }
-        RenderBuffer::ClearRenderBuffer();
-    };
+    const auto FlushRenderBuffer = RenderAndEmptyRenderBuffer; // Renders out and clears the (immediate mode) buffers
 
     //
     // Sea bed (Outside of the world only)

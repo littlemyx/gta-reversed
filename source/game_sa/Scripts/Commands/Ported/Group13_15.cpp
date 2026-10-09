@@ -518,14 +518,66 @@ bool IsObjectStatic(CObject& obj) {
     return obj.GetIsStatic();
 }
 
+//! The CRT acos (0x822380 -> 0x82239D) on the x87 stack at the CURRENT precision control: |x| < 1 => atan2(sqrt((1 + x) * (1 - x)), x) (fpatan); x == 1 => 0;
+//! x == -1 => pi; other (|x| > 1, inf) => the negative QNaN constant (0x8E3130); NaN => returned as is. (Same sequence as CQuaternion::CalcThetaFromQuats.)
+double AcosCrt(double x) {
+    const double ad   = std::fabs(x);
+    const int    mode = ad < 1.0 ? 0 : x == 1.0 ? 1 : x == -1.0 ? 2 : x != x ? 4 : 3;
+    static const unsigned char qnan[10] = { 0, 0, 0, 0, 0, 0, 0, 0xC0, 0xFF, 0xFF };
+    double                     out;
+    __asm {
+        fld   qword ptr [x]
+        mov   eax, mode
+        test  eax, eax
+        jne   L_special
+        fld1
+        fadd  st(0), st(1)
+        fld1
+        fsub  st(0), st(2)
+        fmulp st(1), st(0)
+        fsqrt
+        fxch  st(1)
+        fpatan
+        jmp   L_have
+    L_special:
+        cmp   eax, 4
+        je    L_have
+        fstp  st(0)
+        cmp   eax, 1
+        jne   L_not1
+        fldz
+        jmp   L_have
+    L_not1:
+        cmp   eax, 2
+        jne   L_nan
+        fldpi
+        jmp   L_have
+    L_nan:
+        fld   tbyte ptr [qnan]
+    L_have:
+        fstp  qword ptr [out]
+    }
+    return out;
+}
+
+//! x87 `fsqrt` at the current precision control (std::sqrt may be computed by the SSE2 CRT at full double precision)
+double Fsqrt(double v) {
+    __asm {
+        fld   qword ptr [v]
+        fsqrt
+        fstp  qword ptr [v]
+    }
+    return v;
+}
+
 //! 1444 GET_ANGLE_BETWEEN_2D_VECTORS (case @0x48F2A2): ax, ay, bx, by => 1 float (degrees)
-//! acos(dot / (|a| * |b|)) * 57.29578 (0x859878); everything stays on the x87 stack (acos = CRT 0x822380).
+//! acos(dot / (|a| * |b|)) * 57.29578 (0x859878); everything stays on the x87 stack (acos = the CRT's x87 sequence, see AcosCrt).
 float GetAngleBetween2DVectors(float ax, float ay, float bx, float by) {
     const double dot = (double)by * ay + (double)bx * ax;
-    const double lb  = std::sqrt((double)by * by + (double)bx * bx);
-    const double la  = std::sqrt((double)ay * ay + (double)ax * ax);
+    const double lb  = Fsqrt((double)by * by + (double)bx * bx);
+    const double la  = Fsqrt((double)ay * ay + (double)ax * ax);
     const double c   = dot / (lb * la);
-    return (float)(std::acos(c) * (double)57.2957763671875f);
+    return (float)(AcosCrt(c) * (double)57.2957763671875f);
 }
 
 //! 1445 DO_2D_RECTANGLES_COLLIDE (case @0x48F339): cx1, cy1, w1, h1, cx2, cy2, w2, h2 => compare flag

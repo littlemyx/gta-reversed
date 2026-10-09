@@ -9,6 +9,7 @@
 #include "StdInc.h"
 
 #include <numbers>
+#include <bit>
 
 #include "Collision.h"
 #include "ColHelpers.h"
@@ -21,6 +22,47 @@
 #define NOTSA_VANILLA_COLLISIONS // TODO: move to config.h?
 
 using Shape = CCollision::DebugSettings::ShapeShapeCollision::Shape;
+
+namespace {
+// The original keeps these expressions on the x87 stack (extended precision, fixed term order)
+// => use `double` intermediates and round to float only where the original stores to a float.
+
+//! x*x + y*y + z*z (0x406DA0 CVector::SquaredMagnitude, result stays unrounded on the x87 stack)
+double SquaredMagnitudeD(const CVector& v) {
+    return (double)v.x * v.x + (double)v.y * v.y + (double)v.z * v.z;
+}
+
+//! 0x59C790 `CMatrix * CVector` (3x3 part only). Unrounded accumulation in this exact term order, rounded when stored
+CVector TransformVectorOG(const CMatrix& m, const CVector& v) {
+    return {
+        (float)((double)m.GetUp().x * v.z + (double)m.GetForward().x * v.y + (double)m.GetRight().x * v.x),
+        (float)((double)m.GetUp().y * v.z + (double)m.GetRight().y * v.x + (double)m.GetForward().y * v.y),
+        (float)((double)m.GetUp().z * v.z + (double)m.GetRight().z * v.x + (double)m.GetForward().z * v.y),
+    };
+}
+
+//! 0x59C890 `CMatrix * CVector` (+ translation)
+CVector TransformPointOG(const CMatrix& m, const CVector& v) {
+    return {
+        (float)(((double)m.GetUp().x * v.z + (double)m.GetForward().x * v.y + (double)m.GetRight().x * v.x) + m.GetPosition().x),
+        (float)(((double)m.GetUp().y * v.z + (double)m.GetRight().y * v.x + (double)m.GetForward().y * v.y) + m.GetPosition().y),
+        (float)(((double)m.GetUp().z * v.z + (double)m.GetRight().z * v.x + (double)m.GetForward().z * v.y) + m.GetPosition().z),
+    };
+}
+
+//! Inverse of the rotation + translation of `m` applied to `p` (0x417BF0 inlines this): `(p - pos) . axis`, unrounded accumulation (terms: x, z, y)
+CVector InverseTransformPointOG(const CMatrix& m, const CVector& p) {
+    const double dx = (double)p.x - m.GetPosition().x, dy = (double)p.y - m.GetPosition().y, dz = (double)p.z - m.GetPosition().z;
+    const auto Dot = [&](const CVector& axis) { return (float)(dx * axis.x + dz * axis.z + dy * axis.y); };
+    return { Dot(m.GetRight()), Dot(m.GetForward()), Dot(m.GetUp()) };
+}
+
+//! 0x4119D0 `operator/(CVector, float)` => multiplies by a (float rounded) reciprocal, it is NOT a component-wise division
+CVector DivideByReciprocal(const CVector& v, float divisor) {
+    const float inv = 1.f / divisor;
+    return { v.x * inv, v.y * inv, v.z * inv };
+}
+}
 
 /*!
 * @addr 0x416260
@@ -37,7 +79,8 @@ void CCollision::Init() {
 void CCollision::Shutdown() {
     for (auto i = ms_colModelCache.freeListTail.prev; i != &ms_colModelCache.usedListHead; i = i->prev) {
         if (i->data) {
-            RemoveTrianglePlanes(i->data);
+            // Original (0x4162E0): calls the *member* function, the links must NOT be moved to the free list while iterating
+            i->data->RemoveTrianglePlanes();
         }
     }
     ms_colModelCache.Shutdown();
@@ -99,36 +142,44 @@ void CCollision::RemoveTrianglePlanes(CCollisionData* colData) {
 bool CCollision::TestSphereSphere(CColSphere const& sphere1, CColSphere const& sphere2) { // Yes, it's __stdcall
     ZoneScoped;
 
-    return (sphere1.m_vecCenter - sphere2.m_vecCenter).SquaredMagnitude() <= sq(sphere1.m_fRadius + sphere2.m_fRadius);
+    // Original (0x411E70): everything stays in extended precision, the compare is STRICT (`FCOMPP` + `test ah, 0x41` => false on `<=` and NaN)
+    const double dx = (double)sphere1.m_vecCenter.x - sphere2.m_vecCenter.x;
+    const double dy = (double)sphere1.m_vecCenter.y - sphere2.m_vecCenter.y;
+    const double dz = (double)sphere1.m_vecCenter.z - sphere2.m_vecCenter.z;
+    const double sumR = (double)sphere1.m_fRadius + sphere2.m_fRadius;
+    return sumR * sumR > dz * dz + dx * dx + dy * dy;
 }
 
 // 0x411EC0
 void CalculateColPointInsideBox(CBox const& box, CVector const& point, CColPoint& colPoint) {
     const auto pointToCenter = point - box.GetCenter();
 
-    // Calculate point's component-wise distance to each corner on each axis
-    #define DoAxis(a) pointToCenter.a <= 0 ? point.a - box.m_vecMin.a : box.m_vecMax.a - point.a
-    const CVector pointToClosest{ DoAxis(x), DoAxis(y), DoAxis(z) };
-    #undef DoAxis
+    // Distance of the point to the face on each axis (the face on the side of the point's offset from the center).
+    // Original: the X distance stays on the x87 stack (unrounded), Y and Z are spilled to floats.
+    const auto DistOnAxis = [&](float toCenter, float p, float mn, float mx) -> double {
+        return !(toCenter > 0.f) ? (double)p - mn : (double)mx - p; // `FCOMP` + `test ah, 0x41` + `jne` => <= 0 or NaN
+    };
+    const double xDist = DistOnAxis(pointToCenter.x, point.x, box.m_vecMin.x, box.m_vecMax.x);
+    const float  yDist = (float)DistOnAxis(pointToCenter.y, point.y, box.m_vecMin.y, box.m_vecMax.y);
+    const float  zDist = (float)DistOnAxis(pointToCenter.z, point.z, box.m_vecMin.z, box.m_vecMax.z);
 
     const auto CalcNormal = [](float a) {
-        return a <= 0.f ? -1.f : 1.f;
+        return a > 0.f ? 1.f : -1.f;
     };
 
-    colPoint = {};
+    // Original only writes the point, the normal and the depth (all other fields are left untouched)
     colPoint.m_vecPoint = point;
 
-    // Original (0x411EC0): pick the axis with the SMALLEST distance to a face (shallowest exit)
-    if (pointToClosest.x < pointToClosest.y && pointToClosest.x < pointToClosest.z) {
-        colPoint.m_vecNormal.x = CalcNormal(pointToCenter.x);
-        colPoint.m_fDepth = pointToClosest.x;
-    } else if (pointToClosest.y < pointToClosest.x && pointToClosest.y < pointToClosest.z) {
-        colPoint.m_vecNormal.y = CalcNormal(pointToCenter.y);
-        colPoint.m_fDepth = pointToClosest.y;
+    // Pick the axis with the SMALLEST distance to a face (shallowest exit)
+    if (xDist < yDist && xDist < zDist) {
+        colPoint.m_vecNormal = CVector{ CalcNormal(pointToCenter.x), 0.f, 0.f };
+        colPoint.m_fDepth    = (float)xDist;
+    } else if ((double)yDist < xDist && yDist < zDist) {
+        colPoint.m_vecNormal = CVector{ 0.f, CalcNormal(pointToCenter.y), 0.f };
+        colPoint.m_fDepth    = yDist;
     } else {
-        // Ties go to x first, then y (matching binary's chained comparisons)
-        colPoint.m_vecNormal.z = CalcNormal(pointToCenter.z);
-        colPoint.m_fDepth = pointToClosest.z;
+        colPoint.m_vecNormal = CVector{ 0.f, 0.f, CalcNormal(pointToCenter.z) };
+        colPoint.m_fDepth    = zDist;
     }
 }
 
@@ -139,9 +190,10 @@ void CalculateColPointInsideBox(CBox const& box, CVector const& point, CColPoint
 bool CCollision::TestSphereBox(CSphere const& sphere, CBox const& box) {
     ZoneScoped;
 
+    // Original: the sums stay unrounded on the x87 stack. NaN => the axis passes (`FCOMP` + `test ah, 5` / `0x41`)
     for (auto i = 0u; i < 3u; i++) {
-        if (sphere.m_vecCenter[i] + sphere.m_fRadius < box.m_vecMin[i] ||
-            sphere.m_vecCenter[i] - sphere.m_fRadius > box.m_vecMax[i]
+        if ((double)sphere.m_vecCenter[i] + sphere.m_fRadius < box.m_vecMin[i] ||
+            (double)sphere.m_vecCenter[i] - sphere.m_fRadius > box.m_vecMax[i]
         ) {
             return false;
         }
@@ -258,6 +310,7 @@ bool CCollision::ProcessSphereBox(CColSphere const& sph, CColBox const& box, CCo
         return false;
 
 	// Now find out where the sphere center lies in relation to all the sides
+    // (NaN => INSIDE: neither `c < min` nor `c > max` hold)
     enum class ClosestCorner {
         INSIDE,
         MIN,    
@@ -272,19 +325,24 @@ bool CCollision::ProcessSphereBox(CColSphere const& sph, CColBox const& box, CCo
                    INSIDE;
     }
 
-	if(axies[0] == INSIDE && axies[1] == INSIDE && axies[2] == INSIDE) { // Sphere center is inside the bb
-        CColPoint boxCP{};
-        CalculateColPointInsideBox(box, sph.m_vecCenter, boxCP);
-
-        // Original (0x412130): face-normal from CalculateColPointInsideBox, depth includes radius
-        colp.m_vecNormal     = boxCP.m_vecNormal;
-        colp.m_vecPoint      = sph.m_vecCenter - boxCP.m_vecNormal * sph.m_fRadius;
-        colp.m_fDepth        = boxCP.m_fDepth + sph.m_fRadius;
-
+    // Original surface copy: 3 bytes (material, piece, lighting) of each shape's surface
+    const auto CopySurfaces = [&] {
         colp.m_nSurfaceTypeA = sph.m_Surface.m_nMaterial;
+        colp.m_nPieceTypeA   = sph.m_Surface.m_nPiece;
         colp.m_nLightingA    = sph.m_Surface.m_nLighting;
+
         colp.m_nSurfaceTypeB = box.m_Surface.m_nMaterial;
+        colp.m_nPieceTypeB   = box.m_Surface.m_nPiece;
         colp.m_nLightingB    = box.m_Surface.m_nLighting;
+    };
+
+	if(axies[0] == INSIDE && axies[1] == INSIDE && axies[2] == INSIDE) { // Sphere center is inside the bb
+        // Original (0x412130): writes directly into `colp`: face-normal from CalculateColPointInsideBox, depth includes radius
+        CalculateColPointInsideBox(box, sph.m_vecCenter, colp);
+
+        colp.m_fDepth        = colp.m_fDepth + sph.m_fRadius;
+        colp.m_vecPoint      = colp.m_vecPoint - colp.m_vecNormal * sph.m_fRadius;
+        CopySurfaces();
 
         minDistSq            = 0.f; // Original sets it to 0 for inside hits
         return true;
@@ -303,22 +361,18 @@ bool CCollision::ProcessSphereBox(CColSphere const& sph, CColBox const& box, CCo
         };
 
         const auto dir    = sph.m_vecCenter - p;
-        const auto distSq = dir.SquaredMagnitude();
-        if (distSq < minDistSq) {
+        const auto distSqD = SquaredMagnitudeD(dir); // Unrounded on the x87 stack for the compare below
+        const auto distSq = (float)distSqD;          // ... but spilled to a float for everything else
+        if (distSqD < minDistSq) { // NaN => false
             const auto dist = std::sqrt(distSq);
-            if (dist >= sph.m_fRadius) {
+            if (!(dist <= sph.m_fRadius)) { // Original: `dist > radius || NaN` => false (equal passes!)
                 return false;
             }
 
-            colp.m_vecNormal     = dir / dist; // Normalize vector
             colp.m_vecPoint      = p;
+            colp.m_vecNormal     = DivideByReciprocal(dir, dist);
+            CopySurfaces();
             colp.m_fDepth        = sph.m_fRadius - dist;
-
-            colp.m_nSurfaceTypeA = sph.m_Surface.m_nMaterial;
-            colp.m_nLightingA    = sph.m_Surface.m_nLighting;
-
-            colp.m_nSurfaceTypeB = box.m_Surface.m_nMaterial;
-            colp.m_nLightingB    = box.m_Surface.m_nLighting;
 
             minDistSq            = distSq;
 
@@ -336,49 +390,46 @@ bool CCollision::ProcessSphereBox(CColSphere const& sph, CColBox const& box, CCo
 bool __stdcall CCollision::PointInTriangle(CVector const& point, CVector const* triPoints) {
     ZoneScoped;
 
-    // Make everything relative to 0th vertex of the triangle
-    const auto v1 = triPoints[1] - triPoints[0];
-    const auto v2 = triPoints[2] - triPoints[0];
-    const auto p  = point        - triPoints[0];
+    // Original (0x412700): the x87 stack keeps v1 and the two dot products with `point - tri[0]` unrounded, v2/p and the
+    // v1/v2 products are spilled to floats. Term order is fixed => `double` intermediates, rounding to float at the spills.
+    const CVector& p0 = triPoints[0];
 
-    // NOTE:
-    // Because no vectors are normalized all offset products are scaled.
-    // In order to compensate for this they multiply values by either vector's squared magnitude.
+    // v1 = tri[1] - tri[0] (extended)
+    const double v1x = (double)triPoints[1].x - p0.x, v1y = (double)triPoints[1].y - p0.y, v1z = (double)triPoints[1].z - p0.z;
+    // v2 = tri[2] - tri[0] (float spill)
+    const float  v2x = triPoints[2].x - p0.x, v2y = triPoints[2].y - p0.y, v2z = triPoints[2].z - p0.z;
 
-    const auto v1_dot_v2 = DotProduct(v1, v2); 
+    const float v1_magSq  = (float)(v1z * v1z + v1x * v1x + v1y * v1y);
+    const float v2_magSq  = (float)((double)v2z * v2z + (double)v2y * v2y + (double)v2x * v2x);
+    const float v1_dot_v2 = (float)(v2z * v1z + v2y * v1y + v2x * v1x);
 
-    const auto v2_dot_p = DotProduct(v2, p);
-    const auto v2_magSq = v2.SquaredMagnitude();
+    // p = point - tri[0] (float spill, except for `p.z` which is used unrounded for v1 dot p)
+    const float  px = point.x - p0.x, py = point.y - p0.y, pz = point.z - p0.z;
+    const double pzExt = (double)point.z - p0.z;
 
-    const auto v1_dot_p = DotProduct(v1, p);
-    const auto v1_magSq = v1.SquaredMagnitude();
+    const double v1_dot_p = pzExt * v1z + (double)px * v1x + (double)py * v1y;
+    const double v2_dot_p = (double)pz * v2z + (double)py * v2y + (double)px * v2x;
 
-    const auto a = (v2_magSq * v1_dot_p) - (v1_dot_v2 * v2_dot_p);
-    if (a >= 0.f) {
-        const auto b = (v1_magSq * v2_dot_p) - (v1_dot_v2 * v1_dot_p);
-        if (b >= 0.f) {
-            const auto c = (v1_magSq * v2_magSq) - (v1_dot_v2 * v1_dot_v2);
-            return c >= (a + b);
-        }
+    const double a = v1_dot_p * v2_magSq - v2_dot_p * v1_dot_v2;
+    if (a < 0.0) { // NaN passes
+        return false;
     }
-    return false;
+    const double b = v2_dot_p * v1_magSq - v1_dot_p * v1_dot_v2;
+    if (b < 0.0) { // NaN passes
+        return false;
+    }
+    const double c = (double)v2_magSq * v1_magSq - (double)v1_dot_v2 * v1_dot_v2;
+    return !(c < (double)(float)a + b); // `a` is spilled to a float for the sum
 }
 
-/*!
-* @addr 0x412850
-*
-* @param ln0 Origin of line seg.
-* @param ln1 End of line seg.
-* @param pt  The point
-* 
-* @returns Sq. dist. from `pt` to point closest to `pt` on the line segment (ln0, ln1) 
-*/
-float CCollision::DistToLineSqr(CVector const& ln0, CVector const& ln1, CVector const& pt) {
-    ZoneScoped;
-
+namespace {
+//! 0x412850 + 0x417610 share the evaluation, the result stays unrounded in the exe until the caller stores it
+double DistToLineSqrD(CVector const& ln0, CVector const& ln1, CVector const& pt) {
     // Make line end (l) and pt (pl_ip) relative to ln0 (by this ln0 becomes the space origin)
-    const auto l = ln1 - ln0;
-    const auto p = pt - ln0;
+    // Original (0x412850): `l` stays unrounded on the x87 stack (extended), `p` is spilled to floats.
+    // Term orders are fixed by the asm (see below).
+    const double lx = (double)ln1.x - ln0.x, ly = (double)ln1.y - ln0.y, lz = (double)ln1.z - ln0.z;
+    const float  px = pt.x - ln0.x, py = pt.y - ln0.y, pz = pt.z - ln0.z;
 
     //        * P
     //      / |
@@ -394,34 +445,53 @@ float CCollision::DistToLineSqr(CVector const& ln0, CVector const& ln1, CVector 
     // b, c - Triangle sides
     // a    - The distance we want to find out :D
 
-    const auto ll = l.Dot(l); // Line mag. sq.
-    const auto pl = p.Dot(l);
+    const float pl = (float)((double)px * lx + (double)pz * lz + (double)py * ly); // Dot product `p . l`
 
     if (pl <= 0.f) { // Before origin
-        return p.SquaredMagnitude(); // Dist to origin
+        return (double)pz * pz + (double)py * py + (double)px * px; // Dist to origin
     }
 
+    const double ll = lx * lx + lz * lz + ly * ly; // Line mag. sq.
+
     if (pl >= ll) { // After end
-        return (p - l).SquaredMagnitude(); // Dist to end
+        const double ex = (double)pt.x - ln1.x, ey = (double)pt.y - ln1.y, ez = (double)pt.z - ln1.z;
+        return ez * ez + ey * ey + ex * ex; // Dist to end
     }
 
     // Simple Pythagorean here, we gotta find `a^2`
-   
-    const auto cSq = p.Dot(p);
+    const double cSq = (double)pz * pz + (double)py * py + (double)px * px;
 
     // Clever trick to divide by |l| without taking it's sqrt
     // We have to do this, because `pl` is multiplied by |l|
     // (Result of the dot product)
-    const auto bSq = pl * pl / ll;
+    const double bSq = (double)pl * pl / ll;
 
-    return cSq - bSq; // return a^2
+    const double aSq = cSq - bSq;
+    return aSq <= 0.0 ? 0.0 : aSq; // Original: `<= 0` => +0.0 (NaN is returned as is)
+}
+}
+
+/*!
+* @addr 0x412850
+*
+* @param ln0 Origin of line seg.
+* @param ln1 End of line seg.
+* @param pt  The point
+* 
+* @returns Sq. dist. from `pt` to point closest to `pt` on the line segment (ln0, ln1) 
+*/
+float CCollision::DistToLineSqr(CVector const& ln0, CVector const& ln1, CVector const& pt) {
+    ZoneScoped;
+
+    return (float)DistToLineSqrD(ln0, ln1, pt);
 }
 
 // 0x417610
 float CCollision::DistToLine(const CVector& lineStart, const CVector& lineEnd, const CVector& point) {
     ZoneScoped;
 
-    return std::sqrt(DistToLineSqr(lineStart, lineEnd, point));
+    // Original (0x417610): the same evaluation as `DistToLineSqr`, but the squared distance is not rounded to a float before the sqrt
+    return (float)std::sqrt(DistToLineSqrD(lineStart, lineEnd, point));
 }
 
 /*!
@@ -431,18 +501,20 @@ float CCollision::DistToLine(const CVector& lineStart, const CVector& lineEnd, c
 float CCollision::DistToMathematicalLine(CVector const* lineStart, CVector const* lineEnd, CVector const* point) {
     ZoneScoped;
 
-    const auto l = *lineEnd - *lineStart;
-    const auto p = *point - *lineStart;
+    // Original (0x412970): `l` and `p.x` stay unrounded on the x87 stack, `p.y`/`p.z` are spilled to floats
+    const double lx = (double)lineEnd->x - lineStart->x, ly = (double)lineEnd->y - lineStart->y, lz = (double)lineEnd->z - lineStart->z;
+    const double px = (double)point->x - lineStart->x;
+    const float  py = point->y - lineStart->y, pz = point->z - lineStart->z;
 
     // See `DistToLineSqr` for a nice illustration.
     // Simple Pythagorean here, we gotta find side `a`
 
-    const auto pMagSq = p.SquaredMagnitude();
-    const auto cSq = pMagSq;
-    const auto bSq = pMagSq > 0.f ? (float)std::pow(DotProduct(p, l), 2) / pMagSq : 0.0f; // Dot product is scaled by `pMagSq` - guard against 0/0
+    const float  dot   = (float)(px * lx + (double)pz * lz + (double)py * ly); // `p . l`
+    const double pMagSq = (double)pz * pz + (double)py * py + px * px;
+    const double lMagSq = lx * lx + lz * lz + ly * ly; // NOTE: the dot product is scaled by `|l|^2` (NOT `|p|^2`)
 
-    const auto aSq = cSq - bSq;
-    return aSq > 0.0f ? std::sqrt(aSq) : 0.0f; // Little optimization to not call `sqrt` if the dist is 0 (it wont ever be negative)
+    const float aSq = (float)(pMagSq - (double)dot * dot / lMagSq);
+    return aSq <= 0.f ? 0.f : std::sqrt(aSq); // Original: `<= 0` => 0, NaN goes into sqrt
 }
 
 /*!
@@ -452,10 +524,11 @@ float CCollision::DistToMathematicalLine(CVector const* lineStart, CVector const
 float CCollision::DistToMathematicalLine2D(float lineStartX, float lineStartY, float lineEndX, float lineEndY, float pointX, float pointY) {
     ZoneScoped;
 
-    const float px{ pointX - lineStartX }, py{ pointY - lineStartY };
-    const auto  dot = px * lineEndX + py * lineEndY;
-    const auto distSq = px * px + py * py - dot * dot;
-    return distSq > 0.f ? std::sqrt(distSq) : 0.f;
+    // Original (0x412A30): everything stays unrounded on the x87 stack
+    const double px  = (double)pointX - lineStartX, py = (double)pointY - lineStartY;
+    const double dot = px * lineEndX + py * lineEndY;
+    const double distSq = py * py + px * px - dot * dot;
+    return distSq <= 0.0 ? 0.f : (float)std::sqrt(distSq); // NaN goes into sqrt
 }
 
 /*!
@@ -465,7 +538,7 @@ float CCollision::DistToMathematicalLine2D(float lineStartX, float lineStartY, f
 float CCollision::DistAlongLine2D(float lineX, float lineY, float lineDirX, float lineDirY, float pointX, float pointY) {
     ZoneScoped;
 
-    return (pointX - lineX) * lineDirX + (pointY - lineY) * lineDirY;
+    return (float)(((double)pointX - lineX) * lineDirX + ((double)pointY - lineY) * lineDirY); // Unrounded on the x87 stack
 }
 
 
@@ -490,15 +563,60 @@ CVector CCollision::GetClosestPtOnLine(const CVector& l0, const CVector& l1, con
 
 
 // 0x417FD0
-void CCollision::ClosestPointOnLine(const CVector& l0, const CVector& l1, const CVector& point, CVector& closest) {
+// NOTE: The exe's argument order is (point, lineStart, lineEnd, closest) - the header names are misleading
+void CCollision::ClosestPointOnLine(const CVector& point, const CVector& lineStart, const CVector& lineEnd, CVector& closest) {
     ZoneScoped;
 
-    closest = GetClosestPtOnLine(l0, l1, point);
+    // a = point - lineStart (extended), l = lineEnd - lineStart (extended)
+    const double ax = (double)point.x - lineStart.x, ay = (double)point.y - lineStart.y, az = (double)point.z - lineStart.z;
+    const double lx = (double)lineEnd.x - lineStart.x, ly = (double)lineEnd.y - lineStart.y, lz = (double)lineEnd.z - lineStart.z;
+    const float  lzF = (float)lz;
+
+    const float len = (float)std::sqrt(lz * lzF + ly * ly + lx * lx);
+    const float inv = (float)(1.0 / len);
+
+    // Direction (normalized): `z` is spilled to a float, but used unrounded for the dot product
+    const float  dirX = (float)(lx * inv), dirY = (float)(ly * inv);
+    const float  dirZ = lzF * inv;
+    const double dirZE = (double)lzF * inv;
+
+    const float t = (float)(dirZE * az + (double)dirY * ay + (double)dirX * ax);
+
+    if (t < 0.f) {
+        closest = lineStart;
+    } else if (t > len) {
+        closest = lineEnd;
+    } else {
+        closest = CVector{
+            (float)((double)dirX * t + lineStart.x),
+            (float)((double)dirY * t + lineStart.y),
+            (float)((double)(float)(dirZ * t) + lineStart.z)
+        };
+    }
 }
 
 // 0x415950
-void CCollision::Closest3(CVector* arg0, CVector* arg1) {
-    NOTSA_UNREACHABLE();
+// Unused in the exe (only called by `ClosestPointOnPoly`).
+// Overwrites `pt` with the one of the 3 points (`pts[0..2]`) that's closest to it
+void CCollision::Closest3(CVector* pts, CVector* pt) {
+    ZoneScoped;
+
+    // Original: d0 is kept unrounded on the x87 stack (term order z, x, y), d1/d2 are spilled to floats (z, y, x)
+    const double d0x = (double)pt->x - pts[0].x, d0y = (double)pt->y - pts[0].y, d0z = (double)pt->z - pts[0].z;
+    const double d0  = d0z * d0z + d0x * d0x + d0y * d0y;
+
+    const auto DistSq = [&](const CVector& p) {
+        const double dx = (double)pt->x - p.x, dy = (double)pt->y - p.y, dz = (double)pt->z - p.z;
+        return (float)(dz * dz + dy * dy + dx * dx);
+    };
+    const float d1 = DistSq(pts[1]);
+    const float d2 = DistSq(pts[2]);
+
+    if (d0 < d1) {
+        *pt = d0 < d2 ? pts[0] : pts[2];
+    } else {
+        *pt = d1 < d2 ? pts[1] : pts[2];
+    }
 }
 
 /*!
@@ -594,11 +712,8 @@ float CCollision::ClosestPtSegmentSegment(
 
 // 0x415A40
 /*!
-* This one took me quite a bit to figure out.
-* Of course they weren't logical at all and did something weird :)
-* Turns out, they used an algorithm out of a book by Dan Sunday,
-* see here (https://web.archive.org/web/20210330143700/http://geomalgorithms.com/a07-_distance.html)
-* I opted to use something different, but it remains to be seen how much more efficient it is (or isnt)
+* Algorithm of Dan Sunday (see https://web.archive.org/web/20210330143700/http://geomalgorithms.com/a07-_distance.html), but with the tweaks of the original:
+* the values are rounded to float where the original stores them to the stack, the rest stays in the (extended precision) x87 registers => `double`.
 *
 * @param s1p0 Seg. 1 origin
 * @param s2p0 Seg. 2 origin
@@ -607,98 +722,86 @@ float CCollision::ClosestPtSegmentSegment(
 * @param a    Sq. mag. of seg 1
 *
 * @returns Sq. dist. of the closest points on the 2 line segments
+*          NOTE: The original returns it in st0 (NOT rounded to float) => this returns a `double` (the callers might compare it unrounded)
 */
+double ClosestSquaredDistanceBetweenFiniteLinesOG(
+    const CVector& s1p0,
+    const CVector& s2p0, const CVector& s2p1,
+    const CVector& u, float a
+) {
+    const auto EPSILON = std::bit_cast<float>(0x3727C5ACu); // 0x858C14
+
+    const CVector v{ s2p1.x - s2p0.x, s2p1.y - s2p0.y, s2p1.z - s2p0.z };
+    const CVector w{ s1p0.x - s2p0.x, s1p0.y - s2p0.y, s1p0.z - s2p0.z };
+
+    const float b = (float)(((double)v.z * u.z + (double)v.y * u.y) + (double)v.x * u.x);
+    const float c = (float)(((double)v.x * v.x + (double)v.z * v.z) + (double)v.y * v.y);
+    const float d = (float)(((double)w.z * u.z + (double)w.y * u.y) + (double)w.x * u.x);
+    const float e = (float)(((double)w.x * v.x + (double)w.z * v.z) + (double)w.y * v.y);
+    const float D = (float)((double)c * a - (double)b * b);
+
+    float  sD = D, tD = D, tN;
+    double sN; // Stays in the x87 stack (not rounded)
+    if (D < EPSILON) { // The lines are almost parallel
+        sD = 1.f;
+        sN = 0.0;
+        tN = e;
+        tD = c;
+    } else {
+        sN = (double)e * b - (double)d * c;
+        tN = (float)((double)e * a - (double)d * b);
+        if (sN < 0.0) {
+            sN = 0.0;
+            tN = e;
+            tD = c;
+        } else if (sN > D) {
+            sN = D;
+            tN = (float)((double)e + b);
+            tD = c;
+        }
+    }
+
+    // Recompute `sN` (and `sD`) for the edge
+    const auto Recompute = [&](double x) {
+        if (x < 0.0) {
+            sN = 0.0;
+        } else if (!(x > a)) {
+            sN = x;
+            sD = a;
+        } else {
+            sN = sD;
+        }
+    };
+    if (tN < 0.f) {
+        tN = 0.f;
+        Recompute(-(double)d);
+    } else if (tN > tD) {
+        tN = tD;
+        Recompute((double)b - d);
+    }
+
+    const double sc = std::abs(sN) < EPSILON ? 0.0 : sN / sD;
+    const double tc = std::abs((double)tN) < EPSILON ? 0.0 : (double)tN / tD;
+
+    const float  tvx = (float)((double)v.x * tc);
+    const float  tvy = (float)((double)v.y * tc);
+    const double tvz = tc * v.z;
+    const float  suz = (float)(sc * u.z);
+    const float  px  = (float)(sc * u.x + w.x);
+    const double py  = sc * u.y + w.y;
+    const float  pz  = (float)((double)suz + w.z);
+    const float  dx  = (float)((double)px - tvx);
+    const float  dy  = (float)(py - tvy);
+    const double dz  = (double)pz - tvz;
+    return (dz * dz + (double)dy * dy) + (double)dx * dx;
+}
+
 float ClosestSquaredDistanceBetweenFiniteLines(
     const CVector& s1p0,
     const CVector& s2p0, const CVector& s2p1,
     const CVector& u, float a
 ) {
-    float s, t;
-    CVector c1, c2;
-    CVector d2 = s2p1 - s2p0;
-    return CCollision::ClosestPtSegmentSegment(
-        s1p0, u, a,
-        s2p0, d2, d2.Dot(d2),
-        s, t,
-        c1, c2
-    );
-    
-    /* Original code below:
-    constexpr auto EPSILON = 1e-5f;
-
-    // For completeness sake I'll include the copyright:
-    //
-    // Copyright 2001 softSurfer, 2012 Dan Sunday
-    // This code may be freely used and modified for any purpose
-    // providing that this copyright notice is included with it.
-    // SoftSurfer makes no warranty for this code, and cannot be held
-    // liable for any real or imagined damage resulting from its use.
-    // Users of this code must verify correctness for their application.
-
-    //CVector u = s1p1 - s1p0; //S1.P1 - S1.P0;
-    CVector v = s2p1 - s2p0; //S2.P1 - S2.P0;
-    CVector w = s1p0 - s2p0; //S1.P0 - S2.P0;
-    //float   a = u.Dot(u);         // always >= 0
-    float   b = u.Dot(v);
-    float   c = v.Dot(v);// v.Dot(v);         // always >= 0
-    float   d = u.Dot(w);
-    float   e = v.Dot(w);
-    float   D = a*c - b*b;        // always >= 0
-    float   sc, sN, sD = D;       // sc = sN / sD, default sD = D >= 0
-    float   tc, tN, tD = D;       // tc = tN / tD, default tD = D >= 0
-
-    // compute the line parameters of the two closest points
-    if (D < EPSILON) { // the lines are almost parallel
-        sN = 0.f;         // force using point P0 on segment S1
-        sD = 1.f;         // to prevent possible division by 0.0 later
-        tN = e;
-        tD = c;
-    } else {                 // get the closest points on the infinite lines
-        sN = (b*e - c*d);
-        tN = (a*e - b*d);
-        if (sN < 0.f) {        // sc < 0 => the s=0 edge is visible
-            sN = 0.f;
-            tN = e;
-            tD = c;
-        }
-        else if (sN > sD) {  // sc > 1  => the s=1 edge is visible
-            sN = sD;
-            tN = e + b;
-            tD = c;
-        }
-    }
-
-    if (tN < 0.f) {            // tc < 0 => the t=0 edge is visible
-        tN = 0.f;
-        // recompute sc for this edge
-        if (-d < 0.f)
-            sN = 0.f;
-        else if (-d > a)
-            sN = sD;
-        else {
-            sN = -d;
-            sD = a;
-        }
-    } else if (tN > tD) {      // tc > 1  => the t=1 edge is visible
-        tN = tD;
-        // recompute sc for this edge
-        if ((-d + b) < 0.0)
-            sN = 0;
-        else if ((-d + b) > a)
-            sN = sD;
-        else {
-            sN = (-d + b);
-            sD = a;
-        }
-    }
-    // finally do the division to get sc and tc
-    sc = (abs(sN) < EPSILON ? 0.f : sN / sD);
-    tc = (abs(tN) < EPSILON ? 0.f : tN / tD);
-
-    // get the difference of the two closest points
-    CVector dP = w + (sc * u) - (tc * v);  // =  S1(sc) - S2(tc)
-    return dP.SquaredMagnitude(); //return norm(dP);   // return the closest distance
-    */
+    return (float)ClosestSquaredDistanceBetweenFiniteLinesOG(s1p0, s2p0, s2p1, u, a);
 }
 
 /*!
@@ -837,81 +940,6 @@ CVector ClosestPtPointTriangle(
     return a + ab * v + ac * w; // = r*a + v*b + d1*c, r = va * denom = 1.0f-v-d1
 }
 
-NOTSA_FORCEINLINE bool ProcessLineSphere_Internal(
-    const CColLine& line,
-    const CColSphere& sphere,
-    CVector* ip,
-    float*   depth
-) {
-    if (!CCollision::s_DebugSettings.ShapeShapeCollision.IsEnabled(Shape::SSPHERE, Shape::SLINE)) {
-        return false;
-    }
-
-    // C - sphere center
-    // P - line segment origin
-    // d - line segment dir (unnormalized in our case)
-    // m - P - C
-    // Solve:             (d.d)t^2 + 2(m.d)t + (m.m) - r^2 = 0 (for t)
-    // Quadratic formula: (-b ± sqrt(b²-ac)) / a
-    // Where:              a = d.d, b = m.d, c = m.m - r^2
-
-    const auto d = line.m_vecEnd - line.m_vecStart;
-    const auto m = line.m_vecStart - sphere.m_vecCenter;
-    const auto c = m.Dot(m) - sq(sphere.m_fRadius);
-    const auto a = d.Dot(d);
-
-    // Line origin inside sphere
-    if (c <= 0.f) {
-        if (CCollision::s_DebugSettings.AllowLineOriginInsideSphere) {
-            if (depth) {
-                // No need to check for depth value, as 0 is the lowest it ever gets
-                *ip    = line.m_vecStart;
-                *depth = 0.f;
-            }
-            return true;
-        }
-        return false;
-    }
-
-    const auto b = m.Dot(d);
-
-    // Ray origin outside sphere and ray pointing away from sphere
-    if (b > 0.f) {
-        return false;
-    }
-
-    const auto discr = sq(b) - a * c;
-
-    // A negative discriminant corresponds to ray missing sphere
-    if (discr < 0.0f) {
-        return false;
-    }
-
-    // NOTSA: Zero-length line → a = d.Dot(d) == 0 → avoid 0/0
-    if (a <= 0.0f) {
-        return false;
-    }
-
-    // Solve quadratic for smallest `t` (As it's closer to the line origin)
-    const auto t = (-b - std::sqrt(discr)) / a;
-
-    // Finally, check if the intersection point is actually on the line segment
-    if (t > 1.f) {
-        return false;
-    }
-
-    // Calculate intersection point (if needed)
-    if (depth) {
-        if (t >= *depth) {
-            return false; // Act like there was no intersection
-        }
-        *depth = t;
-        *ip    = line.m_vecStart + d * t;
-    }
-
-    return true;
-}
-
 /*!
 * @addr 0x412AA0
 * @brief Process line sphere intersection - Doesn'maxTouchDist deal well with cases where line starts/ends inside the sphere.
@@ -921,17 +949,62 @@ NOTSA_FORCEINLINE bool ProcessLineSphere_Internal(
 bool CCollision::ProcessLineSphere(CColLine const& line, CColSphere const& sphere, CColPoint& colPoint, float& depth) {
     ZoneScoped;
 
-    if (!ProcessLineSphere_Internal(line, sphere, &colPoint.m_vecPoint, &depth)) {
+    // NOTSA: Debug setting (enabled by default)
+    if (!s_DebugSettings.ShapeShapeCollision.IsEnabled(Shape::SSPHERE, Shape::SLINE)) {
         return false;
     }
 
-    colPoint.m_vecNormal = (colPoint.m_vecPoint - sphere.m_vecCenter).Normalized(); // A little different from the original, but same effect
+    // Quadratic: (d.d)t^2 - 2(d.s)t + (s.s - r^2) = 0, where d = line dir (unnormalized), s = sphere center - line start
+    // The original keeps most things unrounded on the x87 stack => `double`, floats where the asm spills
 
-    colPoint.m_nSurfaceTypeA = {};
-    colPoint.m_nLightingA    = {};
+    // d = end - start (extended)
+    const double dx = (double)line.m_vecEnd.x - line.m_vecStart.x;
+    const double dy = (double)line.m_vecEnd.y - line.m_vecStart.y;
+    const double dz = (double)line.m_vecEnd.z - line.m_vecStart.z;
+    const float  a  = (float)(dz * dz + dx * dx + dy * dy);
 
+    // s = center - start (x, y spilled to floats; z is spilled, but the dot product uses the unrounded one)
+    const float  sx  = sphere.m_vecCenter.x - line.m_vecStart.x;
+    const float  sy  = sphere.m_vecCenter.y - line.m_vecStart.y;
+    const double szE = (double)sphere.m_vecCenter.z - line.m_vecStart.z;
+    const float  sz  = (float)szE;
+
+    const double B   = -(szE * dz + (double)sy * dy + (double)sx * dx);
+    const double s2  = (double)sz * sz + (double)sy * sy + (double)sx * sx;
+    const double r   = sphere.m_fRadius;
+
+    const double disc = B * B - (s2 - r * r) * a;
+    if (disc < 0.0) { // NaN passes
+        return false;
+    }
+
+    const float t = (float)((-B - std::sqrt(disc)) / a);
+    if (t < 0.f || t > 1.f || !(t < depth)) {
+        return false;
+    }
+
+    // Intersection point
+    const float dzF = (float)dz;
+    const CVector point{
+        (float)((double)(float)(dx * t) + line.m_vecStart.x),
+        (float)(dy * t + line.m_vecStart.y),
+        (float)((double)dzF * t + line.m_vecStart.z)
+    };
+
+    CVector normal = point - sphere.m_vecCenter;
+    normal.Normalise();
+
+    colPoint.m_vecPoint = point;
+    colPoint.m_vecNormal = normal;
+
+    // Original copies all 3 bytes (material, piece, lighting) of the sphere's surface to side B, side A's type and piece are zeroed (A's lighting is left untouched)
     colPoint.m_nSurfaceTypeB = sphere.m_Surface.m_nMaterial;
+    colPoint.m_nPieceTypeB   = sphere.m_Surface.m_nPiece;
     colPoint.m_nLightingB    = sphere.m_Surface.m_nLighting;
+    colPoint.m_nSurfaceTypeA = {};
+    colPoint.m_nPieceTypeA   = 0;
+
+    depth = t;
 
     ms_iProcessLineNumCrossings += 2;
 
@@ -945,90 +1018,138 @@ bool CCollision::TestLineSphere(
 ) {
     ZoneScoped;
 
-    return ProcessLineSphere_Internal(line, sphere, nullptr, nullptr);
+    // NOTSA: Debug setting (enabled by default)
+    if (!s_DebugSettings.ShapeShapeCollision.IsEnabled(Shape::SSPHERE, Shape::SLINE)) {
+        return false;
+    }
+
+    // d = end - start (x, y spilled to floats, z is spilled but multiplied unrounded by the spill)
+    const float  dxF = line.m_vecEnd.x - line.m_vecStart.x;
+    const float  dyF = line.m_vecEnd.y - line.m_vecStart.y;
+    const double dzE = (double)line.m_vecEnd.z - line.m_vecStart.z;
+    const float  dzF = (float)dzE;
+    const float  len = (float)std::sqrt(dzE * dzF + (double)dxF * dxF + (double)dyF * dyF);
+
+    // m = center - start (extended)
+    const double mx = (double)sphere.m_vecCenter.x - line.m_vecStart.x;
+    const double my = (double)sphere.m_vecCenter.y - line.m_vecStart.y;
+    const double mz = (double)sphere.m_vecCenter.z - line.m_vecStart.z;
+    const double r  = sphere.m_fRadius;
+
+    if (len < 0.000001f) { // Degenerate line (a point) => is it inside the sphere
+        const double m2 = mz * mz + my * my + mx * mx;
+        return r * r >= m2; // `FCOMPP` + `test ah, 1` => false if `r^2 < m2` or NaN
+    }
+
+    // Quadratic: A t^2 + B t + C = 0
+    const float  B = (float)((mz * dzF + mx * dxF + my * dyF) * -2.0);
+    const float  A = (float)((double)len * len);
+
+    const auto& c = sphere.m_vecCenter;
+    const auto& s = line.m_vecStart;
+    const double cc = (double)c.z * c.z + (double)c.y * c.y + (double)c.x * c.x;
+    const double ss = (double)s.z * s.z + (double)s.y * s.y + (double)s.x * s.x;
+    const double sc = (double)s.z * c.z + (double)s.x * c.x + (double)s.y * c.y;
+    const double C  = ((ss + cc) - (sc + sc)) - r * r;
+
+    const float disc = (float)((double)B * B - (C * A) * 4.0);
+    if (disc < 0.f) { // NaN passes
+        return false;
+    }
+
+    const double t = ((double)-B - std::sqrt((double)disc)) / (2.0 * A);
+    return !(t < 0.0) && !(t > 1.0);
 }
 
 // 0x412C70
-// Maybe just adapt the code from: http://www.3dkingdoms.com/weekly/weekly.php?a=3 ? Looks nicer than this one
+// Cohen-Sutherland style outcode test, followed by a test of the segment against the box planes the outcodes tell us to check
 bool CCollision::TestLineBox_DW(CColLine const& line, CBox const& box) {
     ZoneScoped;
 
-    const auto IsInBox = [bb = CBoundingBox(box)](const CVector& point) {
-        return bb.IsPointWithin(point);
+    const CVector& s = line.m_vecStart;
+    const CVector& e = line.m_vecEnd;
+
+    // Original gathers the sign bits of the 12 float differences below into two 6 bit codes
+    // (bit: 0 = x < min, 1 = x > max, 2 = y < min, 3 = y > max, 4 = z < min, 5 = z > max)
+    const auto MakeCode = [&](const CVector& p) {
+        return (uint32)std::signbit(p.x - box.m_vecMin.x) << 0
+             | (uint32)std::signbit(box.m_vecMax.x - p.x) << 1
+             | (uint32)std::signbit(p.y - box.m_vecMin.y) << 2
+             | (uint32)std::signbit(box.m_vecMax.y - p.y) << 3
+             | (uint32)std::signbit(p.z - box.m_vecMin.z) << 4
+             | (uint32)std::signbit(box.m_vecMax.z - p.z) << 5;
+    };
+    const uint32 startCode = MakeCode(s);
+    const uint32 endCode   = MakeCode(e);
+
+    if (startCode & endCode) { // Both outside on the same side
+        return false;
+    }
+    if (startCode == 0 || endCode == 0) { // One of the points is inside
+        return true;
+    }
+    const uint32 code = startCode | endCode;
+
+    const CVector d{ e.x - s.x, e.y - s.y, e.z - s.z };
+
+    // Is `a` strictly inside (min, max) (NaN => false)
+    const auto Inside = [](float a, float mn, float mx) {
+        return a > mn && a < mx;
     };
 
-    // Quick early exit if any of the line are in the bb
-    if (IsInBox(line.m_vecStart) || IsInBox(line.m_vecEnd))
-        return true;
+    // `t` is calculated in extended precision (=> double), the intersection coordinates are rounded to floats
+    const auto Coord = [&](int32 axis, double t) {
+        return (float)((double)d[axis] * t + s[axis]);
+    };
 
-    float x, y, z, t;
-
-    // check if points are on opposite sides of min x plane
-    if ((box.m_vecMin.x - line.m_vecEnd.x) * (box.m_vecMin.x - line.m_vecStart.x) < 0.0f) {
-        // parameter along line where we intersect
-        t = (box.m_vecMin.x - line.m_vecStart.x) / (line.m_vecEnd.x - line.m_vecStart.x);
-        // y of intersection
-        y = line.m_vecStart.y + (line.m_vecEnd.y - line.m_vecStart.y) * t;
-        if (y > box.m_vecMin.y && y < box.m_vecMax.y) {
-            // z of intersection
-            z = line.m_vecStart.z + (line.m_vecEnd.z - line.m_vecStart.z) * t;
-            if (z > box.m_vecMin.z && z < box.m_vecMax.z)
+    // X planes
+    if (code & 0x3) {
+        const float invDx = 1.f / d.x;
+        if (code & 0x1) { // min.x plane
+            const double t = -((double)(s.x - box.m_vecMin.x) * invDx);
+            if (Inside(Coord(1, t), box.m_vecMin.y, box.m_vecMax.y) && Inside(Coord(2, t), box.m_vecMin.z, box.m_vecMax.z)) {
                 return true;
+            }
+        }
+        if (code & 0x2) { // max.x plane
+            const double t = (double)(box.m_vecMax.x - s.x) * invDx;
+            if (Inside(Coord(1, t), box.m_vecMin.y, box.m_vecMax.y) && Inside(Coord(2, t), box.m_vecMin.z, box.m_vecMax.z)) {
+                return true;
+            }
         }
     }
 
-    // same test with max x plane
-    if ((line.m_vecEnd.x - box.m_vecMax.x) * (line.m_vecStart.x - box.m_vecMax.x) < 0.0f) {
-        t = (line.m_vecStart.x - box.m_vecMax.x) / (line.m_vecStart.x - line.m_vecEnd.x);
-        y = line.m_vecStart.y + (line.m_vecEnd.y - line.m_vecStart.y) * t;
-        if (y > box.m_vecMin.y && y < box.m_vecMax.y) {
-            z = line.m_vecStart.z + (line.m_vecEnd.z - line.m_vecStart.z) * t;
-            if (z > box.m_vecMin.z && z < box.m_vecMax.z)
+    // Y planes
+    if (code & 0xC) {
+        const float invDy = 1.f / d.y;
+        if (code & 0x4) { // min.y plane
+            const double t = -((double)(s.y - box.m_vecMin.y) * invDy);
+            if (Inside(Coord(0, t), box.m_vecMin.x, box.m_vecMax.x) && Inside(Coord(2, t), box.m_vecMin.z, box.m_vecMax.z)) {
                 return true;
+            }
+        }
+        if (code & 0x8) { // max.y plane
+            const double t = (double)(box.m_vecMax.y - s.y) * invDy;
+            if (Inside(Coord(0, t), box.m_vecMin.x, box.m_vecMax.x) && Inside(Coord(2, t), box.m_vecMin.z, box.m_vecMax.z)) {
+                return true;
+            }
         }
     }
 
-    // min y plne
-    if ((box.m_vecMin.y - line.m_vecStart.y) * (box.m_vecMin.y - line.m_vecEnd.y) < 0.0f) {
-        t = (box.m_vecMin.y - line.m_vecStart.y) / (line.m_vecEnd.y - line.m_vecStart.y);
-        x = line.m_vecStart.x + (line.m_vecEnd.x - line.m_vecStart.x) * t;
-        if (x > box.m_vecMin.x && x < box.m_vecMax.x) {
-            z = line.m_vecStart.z + (line.m_vecEnd.z - line.m_vecStart.z) * t;
-            if (z > box.m_vecMin.z && z < box.m_vecMax.z)
+    // Z planes
+    if (code & 0x30) {
+        const float invDz = 1.f / d.z;
+        if (code & 0x10) { // min.z plane
+            const double t = -((double)(s.z - box.m_vecMin.z) * invDz);
+            if (Inside(Coord(0, t), box.m_vecMin.x, box.m_vecMax.x) && Inside(Coord(1, t), box.m_vecMin.y, box.m_vecMax.y)) {
                 return true;
+            }
         }
-    }
-
-    // max y plane
-    if ((line.m_vecStart.y - box.m_vecMax.y) * (line.m_vecEnd.y - box.m_vecMax.y) < 0.0f) {
-        t = (line.m_vecStart.y - box.m_vecMax.y) / (line.m_vecStart.y - line.m_vecEnd.y);
-        x = line.m_vecStart.x + (line.m_vecEnd.x - line.m_vecStart.x) * t;
-        if (x > box.m_vecMin.x && x < box.m_vecMax.x) {
-            z = line.m_vecStart.z + (line.m_vecEnd.z - line.m_vecStart.z) * t;
-            if (z > box.m_vecMin.z && z < box.m_vecMax.z)
+        if (code & 0x20) { // max.z plane
+            const double t = (double)(box.m_vecMax.z - s.z) * invDz;
+            if (Inside(Coord(0, t), box.m_vecMin.x, box.m_vecMax.x) && Inside(Coord(1, t), box.m_vecMin.y, box.m_vecMax.y)) {
                 return true;
-        }
-    }
-
-    // min z plne
-    if ((box.m_vecMin.z - line.m_vecStart.z) * (box.m_vecMin.z - line.m_vecEnd.z) < 0.0f) {
-        t = (box.m_vecMin.z - line.m_vecStart.z) / (line.m_vecEnd.z - line.m_vecStart.z);
-        x = line.m_vecStart.x + (line.m_vecEnd.x - line.m_vecStart.x) * t;
-        if (x > box.m_vecMin.x && x < box.m_vecMax.x) {
-            y = line.m_vecStart.y + (line.m_vecEnd.y - line.m_vecStart.y) * t;
-            if (y > box.m_vecMin.y && y < box.m_vecMax.y)
-                return true;
-        }
-    }
-
-    // max z plane
-    if ((line.m_vecStart.z - box.m_vecMax.z) * (line.m_vecEnd.z - box.m_vecMax.z) < 0.0f) {
-        t = (line.m_vecStart.z - box.m_vecMax.z) / (line.m_vecStart.z - line.m_vecEnd.z);
-        x = line.m_vecStart.x + (line.m_vecEnd.x - line.m_vecStart.x) * t;
-        if (x > box.m_vecMin.x && x < box.m_vecMax.x) {
-            y = line.m_vecStart.y + (line.m_vecEnd.y - line.m_vecStart.y) * t;
-            if (y > box.m_vecMin.y && y < box.m_vecMax.y)
-                return true;
+            }
         }
     }
 
@@ -1049,17 +1170,23 @@ bool CCollision::TestLineBox(CColLine const& line, CBox const& box) {
 bool CCollision::TestVerticalLineBox(CColLine const& line, CBox const& box) {
     ZoneScoped;
 
+    // Original (0x413080): NaN handling is part of the comparisons (`!(start > min)`, `!(start < max)`)
     for (auto i = 0u; i < 2u; i++) { // Deal with x, y axies
-        if (   line.m_vecStart[i] <= box.m_vecMin[i]
-            || line.m_vecStart[i] >= box.m_vecMax[i]
-        ) {
+        if (!(line.m_vecStart[i] > box.m_vecMin[i])) {
+            return false;
+        }
+    }
+    for (auto i = 0u; i < 2u; i++) {
+        if (!(line.m_vecStart[i] < box.m_vecMax[i])) {
             return false;
         }
     }
 
     // Line might go from top to bottom, or from bottom to top, so we have to account for both cases
-    const auto [minz, maxz] = std::minmax(line.m_vecStart.z, line.m_vecEnd.z);
-    return minz <= box.m_vecMax.z && maxz >= box.m_vecMin.z;
+    const bool startIsLower = line.m_vecStart.z < line.m_vecEnd.z;
+    const float minz = startIsLower ? line.m_vecStart.z : line.m_vecEnd.z;
+    const float maxz = startIsLower ? line.m_vecEnd.z   : line.m_vecStart.z;
+    return !(minz > box.m_vecMax.z) && !(maxz < box.m_vecMin.z);
 }
 
 // 0x413100
@@ -1075,117 +1202,91 @@ bool CCollision::TestVerticalLineBox(CColLine const& line, CBox const& box) {
 bool CCollision::ProcessLineBox(CColLine const& line, CColBox const& box, CColPoint& colPoint, float& maxTouchDistance) {
     ZoneScoped;
 
-    float mint, t, x, y, z;
-    CVector normal;
-    CVector p;
+    const CVector& s = line.m_vecStart;
+    const CVector& e = line.m_vecEnd;
 
-    mint = 1.0f;
-    // check if points are on opposite sides of min x plane
-    if ((box.m_vecMin.x - line.m_vecEnd.x) * (box.m_vecMin.x - line.m_vecStart.x) < 0.0f) {
-        // parameter along line where we intersect
-        t = (box.m_vecMin.x - line.m_vecStart.x) / (line.m_vecEnd.x - line.m_vecStart.x);
-        // y of intersection
-        y = line.m_vecStart.y + (line.m_vecEnd.y - line.m_vecStart.y) * t;
-        if (y > box.m_vecMin.y && y < box.m_vecMax.y) {
-            // z of intersection
-            z = line.m_vecStart.z + (line.m_vecEnd.z - line.m_vecStart.z) * t;
-            if (z > box.m_vecMin.z && z < box.m_vecMax.z)
-                if (t < mint) {
-                    mint = t;
-                    p = CVector(box.m_vecMin.x, y, z);
-                    normal = CVector(-1.0f, 0.0f, 0.0f);
-                }
+    // Original copies all 3 bytes (material, piece, lighting) of the box's surface to side B,
+    // side A's type and piece are zeroed (A's lighting is left untouched)
+    const auto SetSurfaces = [&] {
+        colPoint.m_nSurfaceTypeA = eSurfaceType::SURFACE_DEFAULT;
+        colPoint.m_nPieceTypeA   = 0;
+        colPoint.m_nSurfaceTypeB = box.m_Surface.m_nMaterial;
+        colPoint.m_nPieceTypeB   = box.m_Surface.m_nPiece;
+        colPoint.m_nLightingB    = box.m_Surface.m_nLighting;
+    };
+
+    // Line starts strictly inside of the box?
+    if (   s.x > box.m_vecMin.x && s.y > box.m_vecMin.y && s.z > box.m_vecMin.z
+        && s.x < box.m_vecMax.x && s.y < box.m_vecMax.y && s.z < box.m_vecMax.z
+    ) {
+        // Line leaves the box => 1 crossing
+        if (   e.x < box.m_vecMin.x || e.y < box.m_vecMin.y || e.z < box.m_vecMin.z
+            || e.x > box.m_vecMax.x || e.y > box.m_vecMax.y || e.z > box.m_vecMax.z
+        ) {
+            ms_iProcessLineNumCrossings++;
         }
+
+        CalculateColPointInsideBox(box, s, colPoint);
+        SetSurfaces();
+        maxTouchDistance = 0.f;
+        return true;
     }
 
-    // max x plane
-    if ((line.m_vecEnd.x - box.m_vecMax.x) * (line.m_vecStart.x - box.m_vecMax.x) < 0.0f) {
-        t = (line.m_vecStart.x - box.m_vecMax.x) / (line.m_vecStart.x - line.m_vecEnd.x);
-        y = line.m_vecStart.y + (line.m_vecEnd.y - line.m_vecStart.y) * t;
-        if (y > box.m_vecMin.y && y < box.m_vecMax.y) {
-            z = line.m_vecStart.z + (line.m_vecEnd.z - line.m_vecStart.z) * t;
-            if (z > box.m_vecMin.z && z < box.m_vecMax.z)
-                if (t < mint) {
-                    mint = t;
-                    p = CVector(box.m_vecMax.x, y, z);
-                    normal = CVector(1.0f, 0.0f, 0.0f);
-                }
-        }
-    }
+    // NOTSA: Original leaves these uninitialized (only used if a plane was hit)
+    CVector p{}, normal{};
+    float   mint = 1.f; // Original keeps this on the x87 stack
 
-    // min y plne
-    if ((box.m_vecMin.y - line.m_vecStart.y) * (box.m_vecMin.y - line.m_vecEnd.y) < 0.0f) {
-        t = (box.m_vecMin.y - line.m_vecStart.y) / (line.m_vecEnd.y - line.m_vecStart.y);
-        x = line.m_vecStart.x + (line.m_vecEnd.x - line.m_vecStart.x) * t;
-        if (x > box.m_vecMin.x && x < box.m_vecMax.x) {
-            z = line.m_vecStart.z + (line.m_vecEnd.z - line.m_vecStart.z) * t;
-            if (z > box.m_vecMin.z && z < box.m_vecMax.z)
-                if (t < mint) {
-                    mint = t;
-                    p = CVector(x, box.m_vecMin.y, z);
-                    normal = CVector(0.0f, -1.0f, 0.0f);
-                }
-        }
-    }
+    // Tests the line against the min/max plane of `axis`.
+    // Original: `t` is calculated in extended precision and rounded to a float, intersection coordinates likewise.
+    const auto TryPlane = [&](int32 axis, bool isMax) {
+        const int32 o1 = (axis + 1) % 3, o2 = (axis + 2) % 3; // The other 2 axies (in ascending order: (y,z), (x,z), (x,y))
 
-    // max y plane
-    if ((line.m_vecStart.y - box.m_vecMax.y) * (line.m_vecEnd.y - box.m_vecMax.y) < 0.0f) {
-        t = (line.m_vecStart.y - box.m_vecMax.y) / (line.m_vecStart.y - line.m_vecEnd.y);
-        x = line.m_vecStart.x + (line.m_vecEnd.x - line.m_vecStart.x) * t;
-        if (x > box.m_vecMin.x && x < box.m_vecMax.x) {
-            z = line.m_vecStart.z + (line.m_vecEnd.z - line.m_vecStart.z) * t;
-            if (z > box.m_vecMin.z && z < box.m_vecMax.z)
-                if (t < mint) {
-                    mint = t;
-                    p = CVector(x, box.m_vecMax.y, z);
-                    normal = CVector(0.0f, 1.0f, 0.0f);
-                }
+        const double a = isMax ? (double)s[axis] - box.m_vecMax[axis] : (double)box.m_vecMin[axis] - s[axis];
+        const double b = isMax ? (double)e[axis] - box.m_vecMax[axis] : (double)box.m_vecMin[axis] - e[axis];
+        if (!(b * a < 0.0)) { // Points are not on opposite sides of the plane
+            return;
         }
-    }
+        const float t = (float)(a / (a - b));
 
-    // min z plne
-    if ((box.m_vecMin.z - line.m_vecStart.z) * (box.m_vecMin.z - line.m_vecEnd.z) < 0.0f) {
-        t = (box.m_vecMin.z - line.m_vecStart.z) / (line.m_vecEnd.z - line.m_vecStart.z);
-        x = line.m_vecStart.x + (line.m_vecEnd.x - line.m_vecStart.x) * t;
-        if (x > box.m_vecMin.x && x < box.m_vecMax.x) {
-            y = line.m_vecStart.y + (line.m_vecEnd.y - line.m_vecStart.y) * t;
-            if (y > box.m_vecMin.y && y < box.m_vecMax.y)
-                if (t < mint) {
-                    mint = t;
-                    p = CVector(x, y, box.m_vecMin.z);
-                    normal = CVector(0.0f, 0.0f, -1.0f);
-                }
+        const auto Coord = [&](int32 o) { return (float)(((double)e[o] - s[o]) * t + s[o]); };
+        const float c1 = Coord(o1), c2 = Coord(o2);
+
+        if (   c1 > box.m_vecMin[o1] && c1 < box.m_vecMax[o1]
+            && c2 > box.m_vecMin[o2] && c2 < box.m_vecMax[o2]
+            && t < mint
+        ) {
+            mint        = t;
+            p[axis]     = isMax ? box.m_vecMax[axis] : box.m_vecMin[axis];
+            p[o1]       = c1;
+            p[o2]       = c2;
+            normal      = CVector{};
+            normal[axis] = isMax ? 1.f : -1.f;
         }
-    }
+    };
+    TryPlane(0, false); // min x
+    TryPlane(0, true);  // max x
+    TryPlane(1, false); // min y
+    TryPlane(1, true);  // max y
+    TryPlane(2, false); // min z
+    TryPlane(2, true);  // max z
 
-    // max z plane
-    if ((line.m_vecStart.z - box.m_vecMax.z) * (line.m_vecEnd.z - box.m_vecMax.z) < 0.0f) {
-        t = (line.m_vecStart.z - box.m_vecMax.z) / (line.m_vecStart.z - line.m_vecEnd.z);
-        x = line.m_vecStart.x + (line.m_vecEnd.x - line.m_vecStart.x) * t;
-        if (x > box.m_vecMin.x && x < box.m_vecMax.x) {
-            y = line.m_vecStart.y + (line.m_vecEnd.y - line.m_vecStart.y) * t;
-            if (y > box.m_vecMin.y && y < box.m_vecMax.y)
-                if (t < mint) {
-                    mint = t;
-                    p = CVector(x, y, box.m_vecMax.z);
-                    normal = CVector(0.0f, 0.0f, 1.0f);
-                }
-        }
-    }
-
-    if (mint >= maxTouchDistance)
+    if (!(mint < maxTouchDistance)) {
         return false;
+    }
 
-    colPoint.m_vecPoint = p;
+    colPoint.m_vecPoint  = p;
     colPoint.m_vecNormal = normal;
-
-    colPoint.m_nSurfaceTypeA = eSurfaceType::SURFACE_DEFAULT;
-    colPoint.m_nLightingA = tColLighting(0);
-
-    colPoint.m_nSurfaceTypeB = box.m_Surface.m_nMaterial;
-    colPoint.m_nLightingB = box.m_Surface.m_nLighting;
-
+    SetSurfaces();
     maxTouchDistance = mint;
+
+    // Line ends inside of the box => 1 crossing, otherwise 2
+    if (   !(e.x < box.m_vecMin.x) && !(e.y < box.m_vecMin.y) && !(e.z < box.m_vecMin.z)
+        && !(e.x > box.m_vecMax.x) && !(e.y > box.m_vecMax.y) && !(e.z > box.m_vecMax.z)
+    ) {
+        ms_iProcessLineNumCrossings += 1;
+    } else {
+        ms_iProcessLineNumCrossings += 2;
+    }
 
     return true;
 }
@@ -1197,11 +1298,16 @@ bool CCollision::ProcessLineBox(CColLine const& line, CColBox const& box, CColPo
 bool CCollision::Test2DLineAgainst2DLine(float line1StartX, float line1StartY, float line1EndX, float line1EndY, float line2StartX, float line2StartY, float line2EndX, float line2EndY) {
     ZoneScoped;
 
-    return ((line2StartX - line1StartX + line2EndX) * line1EndY - (line2StartY - line1StartY + line2EndY) * line1EndX)
-        * ((line2StartX - line1StartX) * line1EndY - (line2StartY - line1StartY) * line1EndX) <= 0.0
-        &&
-        ((line1StartX - line2StartX + line1EndX) * line2EndY - (line1StartY - line2StartY + line1EndY) * line2EndX)
-        * ((line1StartX - line2StartX) * line2EndY - (line1StartY - line2StartY) * line2EndX) <= 0.0;
+    // Original (0x4138D0): evaluated entirely in extended precision. NaN => the `> 0` tests fail, so NaN counts as "intersecting"
+    const double ax = (double)line2StartX - line1StartX, ay = (double)line2StartY - line1StartY;
+    const double p1 = ((ax + line2EndX) * line1EndY - (ay + line2EndY) * line1EndX) * (ax * line1EndY - ay * line1EndX);
+    if (p1 > 0.0) {
+        return false;
+    }
+
+    const double bx = (double)line1StartX - line2StartX, by = (double)line1StartY - line2StartY;
+    const double p2 = ((bx + line1EndX) * line2EndY - (by + line1EndY) * line2EndX) * (bx * line2EndY - by * line2EndX);
+    return !(p2 > 0.0);
 }
 
 /*
@@ -1228,11 +1334,21 @@ bool CCollision::ProcessDiscCollision(
 ) {
     ZoneScoped;
 
-    const auto cp       = matBA.TransformPoint(tempTriCol.m_vecPoint);
-    const auto cpNormal = matBA.TransformVector(tempTriCol.m_vecNormal);
-    
-    if (std::abs((cpNormal * disk.m_vThickness).ComponentwiseSum()) >= 0.77f ||
-        std::abs(((cp - disk.m_vecCenter) * disk.m_vThickness).ComponentwiseSum()) >= disk.m_fThickness
+    // Original (0x413960): 0x59C890 / 0x59C790 accumulate unrounded, results are stored as floats
+    const auto cp       = TransformPointOG(matBA, tempTriCol.m_vecPoint);
+    const auto cpNormal = TransformVectorOG(matBA, tempTriCol.m_vecNormal);
+
+    // Dot of the (transformed) normal with the disk's thickness vector (terms: y, z, x)
+    const double normalDot = (double)cpNormal.y * disk.m_vThickness.y + (double)cpNormal.z * disk.m_vThickness.z + (double)cpNormal.x * disk.m_vThickness.x;
+
+    // Offset of the point from the disk center, `x`/`y` are unrounded for the thickness test, but rounded when used for the radius test
+    const double dxE = (double)cp.x - disk.m_vecCenter.x;
+    const double dyE = (double)cp.y - disk.m_vecCenter.y;
+    const double dzE = (double)cp.z - disk.m_vecCenter.z;
+
+    // Note: The 2nd test is only evaluated if the 1st one passed
+    if (!(std::abs(normalDot) < 0.77f) ||
+        !(std::abs(dzE * disk.m_vThickness.z + dyE * disk.m_vThickness.y + dxE * disk.m_vThickness.x) < disk.m_fThickness)
     ) {
         if (disk.m_Surface.m_nPiece < 17 && tempTriCol.m_fDepth > diskColPoint.m_fDepth) {
             diskColPoint = tempTriCol;
@@ -1241,13 +1357,14 @@ bool CCollision::ProcessDiscCollision(
             return true;
         }
     } else {
-        // Original (0x413960): hitK = sqrt(radius² - dx² - dy²) + cp.z
-        const auto dx = cp.x - disk.m_vecCenter.x;
-        const auto dy = cp.y - disk.m_vecCenter.y;
-        const auto lineRatioNow = std::sqrt(std::max(0.0f, sq(disk.m_fRadius) - dx * dx - dy * dy)) + cp.z;
+        const double dx = (float)dxE;
+        const double dy = (float)dyE;
+        const double rr = (double)disk.m_fRadius * disk.m_fRadius;
+        // NOTE: No clamping of the sqrt argument => NaN if the point is outside of the disk radius (=> `>=` below is false)
+        const double lineRatioNow = std::sqrt((rr - dy * dy) - dx * dx) + cp.z;
         if (lineRatioNow >= lineRatio) {
             lineCollision = true;
-            lineRatio     = lineRatioNow;
+            lineRatio     = (float)lineRatioNow;
             lineColPoint  = tempTriCol;
             // lineColPoint.m_fDepth = tempTriCol.m_fDepth;  // Done in operator=
             return false; // False is returned here, but `lineCollision` was set to true.
@@ -1438,13 +1555,143 @@ return false;
 #endif
 }
 
+namespace {
+//! Unpack the 3 vertices of `tri` (the exe converts `int16 * 0.0078125`, which is exact)
+void UnpackTriangle(const CompressedVector* verts, const CColTriangle& tri, CVector& a, CVector& b, CVector& c) {
+    a = CVector{ verts[tri.vA] };
+    b = CVector{ verts[tri.vB] };
+    c = CVector{ verts[tri.vC] };
+}
+
+//! Original (0x413AC0, 0x4140F0, 0x4147E0): the plane's normal and offset, exact (int16 / 4096, int16 / 128)
+struct LineTriPlane {
+    explicit LineTriPlane(const CColTrianglePlane& pl) :
+        nx{ pl.m_normal.x }, ny{ pl.m_normal.y }, nz{ pl.m_normal.z }, d{ (float)pl.m_normalOffset }
+    { }
+    float nx, ny, nz, d;
+};
+
+/*!
+* The 2D "is the intersection point inside of the triangle" test shared by `TestLineTriangle`, `ProcessLineTriangle` and `ProcessVerticalLineTriangle`.
+* The exe projects onto the plane that is perpendicular to the dominant axis of the normal. For odd orientations vertices B and C are swapped.
+* Everything stays in extended precision (=> `double`), a NaN passes every check (so the point is considered inside).
+*/
+bool LineTriangle_IsPointInside2D(CColTrianglePlane::Orientation orientation, const CVector& A, const CVector& B, const CVector& C, const CVector& ip) {
+    using enum CColTrianglePlane::Orientation;
+
+    int32 P, Q; // The 2 axes of the projection
+    switch (orientation) {
+    case POS_X: case NEG_X: P = 2; Q = 1; break;
+    case POS_Y: case NEG_Y: P = 0; Q = 2; break;
+    case POS_Z: case NEG_Z: P = 1; Q = 0; break;
+    default:                NOTSA_UNREACHABLE();
+    }
+    const bool  odd = ((uint8)orientation & 1) != 0;
+    const auto& Bc  = odd ? C : B;
+    const auto& Cc  = odd ? B : C;
+
+    const double uP = (double)ip[P] - A[P];
+    const double uQ = (double)ip[Q] - A[Q];
+
+    if (((double)Cc[Q] - A[Q]) * uP - ((double)Cc[P] - A[P]) * uQ < 0.0) {
+        return false;
+    }
+    if (((double)Bc[Q] - A[Q]) * uP - ((double)Bc[P] - A[P]) * uQ > 0.0) {
+        return false;
+    }
+    return !(((double)ip[P] - Cc[P]) * ((double)Bc[Q] - Cc[Q]) - ((double)ip[Q] - Cc[Q]) * ((double)Bc[P] - Cc[P]) < 0.0);
+}
+
+/*!
+* Intersect the line with the plane of a triangle.
+* @returns false if both line points are on the same side of the plane
+* @param outT  Line parameter of the intersection
+* @param outIP Intersection point (extended precision based, only used for the 2D test)
+*/
+bool LineTriangle_IntersectPlane(const CColLine& line, const LineTriPlane& pl, float& outT, CVector& outIP) {
+    const CVector& s = line.m_vecStart;
+    const CVector& e = line.m_vecEnd;
+
+    // Products with the start point are spilled to floats
+    const float nxsx = pl.nx * s.x, nysy = pl.ny * s.y, nzsz = pl.nz * s.z;
+
+    const double dE = ((double)pl.nz * e.z + (double)pl.ny * e.y + (double)pl.nx * e.x) - pl.d;
+    const double dS = (((double)nxsx + nysy) + nzsz) - pl.d;
+    if (!(dS * dE <= 0.0)) { // Both points on the same side of the plane (or NaN)
+        return false;
+    }
+
+    const double dx  = (double)e.x - s.x;
+    const double dy  = (double)e.y - s.y;
+    const float  dzF = e.z - s.z;
+
+    const double num = (((double)pl.d - nxsx) - nysy) - nzsz;
+    const double den = (double)dzF * pl.nz + dy * pl.ny + dx * pl.nx;
+    const float  t   = (float)(num / den);
+
+    outT  = t;
+    outIP = CVector{
+        (float)((double)(float)(dx * t) + s.x),
+        (float)(dy * t + s.y),
+        (float)((double)dzF * t + s.z)
+    };
+    return true;
+}
+
+//! `start + (end - start) * t`, using float ops (CVector operators in the exe: 0x40FE60, 0x40FEC0, 0x40FE30)
+CVector LineTriangle_PointAt(const CColLine& line, float t) {
+    const CVector d{ line.m_vecEnd.x - line.m_vecStart.x, line.m_vecEnd.y - line.m_vecStart.y, line.m_vecEnd.z - line.m_vecStart.z };
+    const CVector dt{ t * d.x, t * d.y, t * d.z };
+    return { line.m_vecStart.x + dt.x, line.m_vecStart.y + dt.y, line.m_vecStart.z + dt.z };
+}
+
+//! The colpoint output of `ProcessLineTriangle` / `ProcessVerticalLineTriangle`
+void LineTriangle_StoreResult(
+    const CColLine& line, float t, const LineTriPlane& pl, const CColTriangle& tri,
+    const CVector& A, const CVector& B, const CVector& C,
+    CColPoint& colPoint, float& maxTouchDistance, CStoredCollPoly* collPoly
+) {
+    colPoint.m_vecPoint  = LineTriangle_PointAt(line, t);
+    colPoint.m_vecNormal = CVector{ pl.nx, pl.ny, pl.nz };
+
+    colPoint.m_nSurfaceTypeB = tri.m_nMaterial;
+    colPoint.m_nPieceTypeB   = 0;
+    colPoint.m_nLightingB    = tri.m_nLight;
+    colPoint.m_nSurfaceTypeA = SURFACE_DEFAULT; // NOTE: Lighting A is left untouched
+    colPoint.m_nPieceTypeA   = 0;
+
+    if (collPoly) {
+        collPoly->verts[0] = A;
+        collPoly->verts[1] = B;
+        collPoly->verts[2] = C;
+        collPoly->valid    = true;
+        collPoly->ligthing = tri.m_nLight;
+    }
+
+    maxTouchDistance = t;
+}
+}
+
 /*!
 * @addr 0x413AC0
 */
 bool CCollision::TestLineTriangle(const CColLine& line, const CompressedVector* verts, const CColTriangle& tri, const CColTrianglePlane& plane) {
     ZoneScoped;
 
-    return ProcessLineTriangle_Internal<true>(line, tri.GetPoly(verts), plane, nullptr, nullptr, nullptr);
+    // NOTSA: Debug setting (enabled by default)
+    if (!s_DebugSettings.ShapeShapeCollision.IsEnabled(Shape::SLINE, Shape::STRI)) {
+        return false;
+    }
+
+    float   t;
+    CVector ip;
+    if (!LineTriangle_IntersectPlane(line, LineTriPlane{ plane }, t, ip)) {
+        return false;
+    }
+
+    CVector A, B, C;
+    UnpackTriangle(verts, tri, A, B, C);
+    return LineTriangle_IsPointInside2D(plane.m_orientation, A, B, C, ip);
 }
 
 /*!
@@ -1459,26 +1706,32 @@ bool CCollision::TestLineTriangle(const CColLine& line, const CompressedVector* 
 * @returns If there was a collision that was closer to the beginning of the line than `maxTouchDistance`
 */
 bool CCollision::ProcessLineTriangle(const CColLine& line, const CompressedVector* verts, const CColTriangle& tri, const CColTrianglePlane& plane, CColPoint& colPoint, float& maxTouchDistance, CStoredCollPoly* collPoly) {
-    CVector ip, normal;
-    const auto poly = tri.GetPoly(verts);
-    if (!ProcessLineTriangle_Internal<false>(line, poly, plane, &maxTouchDistance, &ip, &normal)) {
+    ZoneScoped;
+
+    // NOTSA: Debug setting (enabled by default)
+    if (!s_DebugSettings.ShapeShapeCollision.IsEnabled(Shape::SLINE, Shape::STRI)) {
         return false;
     }
 
-    colPoint.m_vecPoint  = ip;
-    colPoint.m_vecNormal = normal;
+    const LineTriPlane pl{ plane };
 
-    colPoint.m_nSurfaceTypeB = tri.m_nMaterial;
-    colPoint.m_nPieceTypeB = 0;
-    colPoint.m_nLightingB = tri.m_nLight;
-
-    colPoint.m_nSurfaceTypeA = SURFACE_DEFAULT;
-    colPoint.m_nPieceTypeA = 0;
-
-    if (collPoly) {
-        *collPoly = poly;
+    float   t;
+    CVector ip;
+    if (!LineTriangle_IntersectPlane(line, pl, t, ip)) {
+        return false;
     }
 
+    CVector A, B, C;
+    UnpackTriangle(verts, tri, A, B, C);
+    if (!LineTriangle_IsPointInside2D(plane.m_orientation, A, B, C, ip)) {
+        return false;
+    }
+
+    if (!(t < maxTouchDistance)) { // NaN => false
+        return false;
+    }
+
+    LineTriangle_StoreResult(line, t, pl, tri, A, B, C, colPoint, maxTouchDistance, collPoly);
     return true;
 }
 
@@ -1494,54 +1747,106 @@ bool CCollision::ProcessVerticalLineTriangle(
 ) {
     ZoneScoped;
 
-    // Not really SA, but the only difference is an early out bounds check that I've implemented into `ProcessLineTriangle_Internal`
-    return ProcessLineTriangle(line, verts, tri, plane, colPoint, maxTouchDistance, collPoly);
+    // NOTSA: Debug setting (enabled by default)
+    if (!s_DebugSettings.ShapeShapeCollision.IsEnabled(Shape::SLINE, Shape::STRI)) {
+        return false;
+    }
+
+    const CVector& s = line.m_vecStart;
+    const CVector& e = line.m_vecEnd;
+
+    CVector A, B, C;
+    UnpackTriangle(verts, tri, A, B, C);
+
+    // Quick reject: the (vertical) line's xy is outside of the triangle's bounding rect.
+    // Original (0x4147E0): this is NOT a plain min/max check, see the asm: it only rejects if all 3 vertices are on one side
+    // (the 2nd branch isn't even checking against the 1st vertex)
+    for (int32 i = 0; i < 2; i++) {
+        const bool reject = s[i] < A[i]
+            ? (s[i] < B[i] && s[i] < C[i])
+            : (s[i] > B[i] && s[i] > C[i]);
+        if (reject) {
+            return false;
+        }
+    }
+
+    const LineTriPlane pl{ plane };
+
+    // Original: `nx * sx` and `ny * sy` stay unrounded, only `nz * sz` is spilled to a float
+    const float  nzsz = pl.nz * s.z;
+    const double dE   = ((double)pl.nz * e.z + (double)pl.ny * e.y + (double)pl.nx * e.x) - pl.d;
+    const double dS   = (((double)pl.nx * s.x + (double)pl.ny * s.y) + nzsz) - pl.d;
+    if (!(dS * dE <= 0.0)) {
+        return false;
+    }
+
+    const double dz  = (double)e.z - s.z;
+    const double num = (((double)pl.d - (double)pl.nx * s.x) - (double)pl.ny * s.y) - nzsz;
+    const float  t   = (float)(num / ((double)pl.nz * dz));
+
+    // The intersection (only z needs to be calculated)
+    const CVector ip{ s.x, s.y, (float)((double)t * dz + s.z) };
+    if (!LineTriangle_IsPointInside2D(plane.m_orientation, A, B, C, ip)) {
+        return false;
+    }
+
+    if (!(t < maxTouchDistance)) { // NaN => false
+        return false;
+    }
+
+    LineTriangle_StoreResult(line, t, pl, tri, A, B, C, colPoint, maxTouchDistance, collPoly);
+    return true;
 }
 
 // 0x416450
 bool CCollision::ProcessSphereSphere(const CColSphere& spA, const CColSphere& spB, CColPoint& colPoint, float& maxTouchDistance) {
     ZoneScoped;
 
-    const auto spBToA = spA.m_vecCenter - spB.m_vecCenter;
-    const auto distSq = spBToA.SquaredMagnitude();
+    // Original (0x416450): `d.z` is multiplied unrounded by its (rounded) spill, the sum order is z, x, y
+    const float  dx  = spA.m_vecCenter.x - spB.m_vecCenter.x;
+    const float  dy  = spA.m_vecCenter.y - spB.m_vecCenter.y;
+    const double dzE = (double)spA.m_vecCenter.z - spB.m_vecCenter.z;
+    const float  dz  = (float)dzE;
 
-    if (distSq >= sq(spA.m_fRadius + spB.m_fRadius)) { // Original code did it differently (This way sqrt is only used when there's a collision)
+    const float u     = (float)(std::sqrt(dzE * dz + (double)dx * dx + (double)dy * dy) - spB.m_fRadius); // Unclamped touch distance
+    const float depth = spA.m_fRadius - u;
+    const float touchDist = u < 0.f ? 0.f : u; // NaN stays NaN
+    const double touchDistSq = (double)touchDist * touchDist; // Unrounded for the compare
+
+    if (!(touchDistSq < maxTouchDistance)) { // NaN => false
         return false;
     }
 
-    const auto touchDistUnclamped = std::sqrt(distSq) - spB.m_fRadius;
-    const auto touchDist          = std::max(touchDistUnclamped, 0.f);
-    const auto touchDistSq        = sq(touchDist);
-
-    if (touchDistSq >= maxTouchDistance) {
+    if (!(touchDist < spA.m_fRadius)) { // NaN => false
         return false;
     }
 
-    if (touchDist >= spA.m_fRadius) {
-        return false;
-    }
+    CVector normal{ dx, dy, dz };
+    normal.Normalise();
 
-    maxTouchDistance = touchDistSq;
-
-    colPoint.m_vecNormal = spBToA.Normalized();
-    colPoint.m_vecPoint  = spA.m_vecCenter - colPoint.m_vecNormal * touchDist;
-    colPoint.m_fDepth    = spA.m_fRadius - touchDistUnclamped;
+    colPoint.m_vecPoint = CVector{
+        (float)((double)spA.m_vecCenter.x - (double)normal.x * touchDist),
+        (float)((double)spA.m_vecCenter.y - (double)normal.y * touchDist),
+        spA.m_vecCenter.z - normal.z * touchDist
+    };
+    colPoint.m_vecNormal = normal;
 
     colPoint.m_nSurfaceTypeA = spA.m_Surface.m_nMaterial;
     colPoint.m_nPieceTypeA   = spA.m_Surface.m_nPiece;
     colPoint.m_nLightingA    = spA.m_Surface.m_nLighting;
 
-
     colPoint.m_nSurfaceTypeB = spB.m_Surface.m_nMaterial;
     colPoint.m_nPieceTypeB   = spB.m_Surface.m_nPiece;
     colPoint.m_nLightingB    = spB.m_Surface.m_nLighting;
+
+    colPoint.m_fDepth = depth;
+
+    maxTouchDistance = (float)touchDistSq;
 
     return true;
 }
 
 /*!
-* See: https://realtimecollisiondetection.net/blog/?p=103
-* 
 * @addr 0x4165B0
 */
 bool CCollision::TestSphereTriangle(
@@ -1552,48 +1857,140 @@ bool CCollision::TestSphereTriangle(
 ) {
     ZoneScoped;
 
+    // NOTSA: Debug setting (enabled by default)
     if (!CCollision::s_DebugSettings.ShapeShapeCollision.IsEnabled(Shape::SSPHERE, Shape::STRI)) {
         return false;
     }
 
-    const auto P = sphere.m_vecCenter;
-    const auto r = sphere.m_fRadius;
+    // The exe calculates the closest distance of the sphere's center to the triangle in a coordinate system `(e, M)` in the triangle's plane
+    // (e = unit vector of A->B, M = e x N), where A is at the origin, B at (|AB|, 0), C at (Ce, Cm), and the center is at (Pe, Pm).
+    // Mostly extended precision (=> double) with float spills (see comments), the term orders are the exe's.
 
-    const auto A  = verts[tri.vA] - P;
-    const auto B  = verts[tri.vB] - P;
-    const auto C  = verts[tri.vC] - P;
-    const auto rr = r * r;
-    const auto N  = plane.GetNormal();
-    const int  s1 = std::abs(A.Dot(N)) > r;
-    const auto aa = A.Dot(A);
-    const auto ab = A.Dot(B);
-    const auto ac = A.Dot(C);
-    const auto bb = B.Dot(B);
-    const auto bc = B.Dot(C);
-    const auto cc = C.Dot(C);
-    const int  s2 = (aa > rr) & (ab > aa) & (ac > aa);
-    const int  s3 = (bb > rr) & (ab > bb) & (bc > bb);
-    const int  s4 = (cc > rr) & (ac > cc) & (bc > cc);
-    const auto AB = B - A;
-    const auto BC = C - B;
-    const auto CA = A - C;
-    const auto d1 = ab - aa;
-    const auto d2 = bc - bb;
-    const auto d3 = ac - cc;
-    const auto e1 = AB.Dot(AB);
-    const auto e2 = BC.Dot(BC);
-    const auto e3 = CA.Dot(CA);
-    const auto Q1 = A * e1 - d1 * AB;
-    const auto Q2 = B * e2 - d2 * BC;
-    const auto Q3 = C * e3 - d3 * CA;
-    const auto QC = C * e1 - Q1;
-    const auto QA = A * e2 - Q2;
-    const auto QB = B * e3 - Q3;
-    const int  s5 = (Q1.Dot(Q1) > rr * e1 * e1) & (Q1.Dot(QC) > 0);
-    const int  s6 = (Q2.Dot(Q2) > rr * e2 * e2) & (Q2.Dot(QA) > 0);
-    const int  s7 = (Q3.Dot(Q3) > rr * e3 * e3) & (Q3.Dot(QB) > 0);
+    const auto& c = sphere.m_vecCenter;
+    const float r = sphere.m_fRadius;
 
-    return (s1 | s2 | s3 | s4 | s5 | s6 | s7) == 0;
+    const float nx = plane.m_normal.x, ny = plane.m_normal.y, nz = plane.m_normal.z;
+    const float planeOffset = (float)plane.m_normalOffset;
+
+    // Signed distance of the center from the plane
+    const double planeDistE = (((double)nx * c.x + (double)nz * c.z) + (double)ny * c.y) - planeOffset;
+    if (std::abs(planeDistE) > r) { // NaN passes
+        return false;
+    }
+    const float planeDist    = (float)planeDistE;
+    const float absPlaneDist = (float)std::abs(planeDistE);
+
+    CVector A, B, C;
+    UnpackTriangle(verts, tri, A, B, C);
+
+    // Unit vector A->B
+    const double abx = (double)B.x - A.x, aby = (double)B.y - A.y, abz = (double)B.z - A.z;
+    const float  abzF = (float)abz;
+    const float  len  = (float)std::sqrt(abz * abzF + aby * aby + abx * abx);
+    const float  invLen = (float)(1.0 / len);
+    const float  ex = (float)(abx * invLen), ey = (float)(aby * invLen), ez = abzF * invLen;
+
+    // M = e x N (CrossProduct: 0x59C730)
+    const float mx = (float)((double)nz * ey - (double)ez * ny);
+    const float my = (float)((double)ez * nx - (double)nz * ex);
+    const float mz = (float)((double)ex * ny - (double)nx * ey);
+
+    // C in the plane's coordinate system
+    const double cax = (double)C.x - A.x, cay = (double)C.y - A.y, caz = (double)C.z - A.z;
+    const float  Ce  = (float)((cay * ey + cax * ex) + caz * ez);
+    const float  Cm  = (float)((cax * mx + (double)mz * caz) + (double)my * cay);
+
+    // The sphere's center in the plane's coordinate system
+    const double pax = (double)c.x - A.x, pay = (double)c.y - A.y, paz = (double)c.z - A.z;
+    const float  Pe  = (float)((pax * ex + paz * ez) + pay * ey);
+    const float  Pm  = (float)((pax * mx + paz * mz) + pay * my);
+
+    // Which side of the 3 edges is the center on? (all 3 => inside of the triangle)
+    int32 numPassed = 0;
+    bool  abPassed = false, acPassed = false;
+
+    const double abSide = (double)Pm * len - (double)Pe * 0.0;
+    const float  abSideF = (float)abSide; // Spilled
+    if (abSide >= 0.0) { // NaN fails
+        numPassed++;
+        abPassed = true;
+    }
+
+    const float pec = (float)((double)Pe * Cm); // Pe * Cm
+    const float pmc = (float)((double)Pm * Ce); // Pm * Ce
+    if ((double)pec - pmc >= 0.0) { // NaN fails
+        numPassed++;
+        acPassed = true;
+    }
+
+    const float ceMinusLen = Ce - len;
+    const float peMinusLen = Pe - len;
+    if ((double)ceMinusLen * Pm - (double)peMinusLen * Cm >= 0.0) { // NaN fails
+        numPassed++;
+    }
+
+    // Distance to a vertex (`CVector::Magnitude` of `center - vertex`, order x, y, z)
+    const auto DistToVertex = [&](const CVector& v) {
+        const CVector d{ c.x - v.x, c.y - v.y, c.z - v.z };
+        return std::sqrt((double)d.x * d.x + (double)d.y * d.y + (double)d.z * d.z);
+    };
+
+    // Distance to the infinite edge line + the plane distance
+    const auto DistToEdgeLine = [&](double perp) {
+        return std::sqrt(perp * perp + (double)planeDist * planeDist);
+    };
+
+    // Projection (of the center) onto an edge: <= 0 => start vertex, >= 1 => end vertex (NaN => perpendicular)
+    double dist;
+    switch (numPassed) {
+    case 0: // Not possible geometrically
+        return false;
+    case 3: // Inside of the triangle => the distance to the plane
+        dist = absPlaneDist;
+        break;
+    case 2: {
+        if (!abPassed) { // Edge AB
+            const float abLenSq = (float)((double)len * len);
+            const double s = ((double)Pe * len + (double)Pm * 0.0) / abLenSq;
+            if (s <= 0.0) {
+                dist = DistToVertex(A);
+            } else if (s >= 1.0) {
+                dist = DistToVertex(B);
+            } else {
+                dist = DistToEdgeLine((double)abSideF / std::sqrt((double)abLenSq));
+            }
+        } else if (!acPassed) { // Edge AC
+            const float acLenSq = (float)((double)Cm * Cm + (double)Ce * Ce);
+            const double s = ((double)Pm * Cm + (double)Pe * Ce) / acLenSq;
+            if (s <= 0.0) {
+                dist = DistToVertex(A);
+            } else if (s >= 1.0) {
+                dist = DistToVertex(C);
+            } else {
+                dist = DistToEdgeLine(((double)pmc - pec) / std::sqrt((double)acLenSq));
+            }
+        } else { // Edge BC, from B to C: (Ce - len, Cm)
+            const float bcX = ceMinusLen, bcY = Cm;
+            const float bcLenSq = (float)((double)bcY * bcY + (double)bcX * bcX);
+            const double s = ((double)peMinusLen * bcX + (double)Pm * bcY) / bcLenSq;
+            if (s <= 0.0) {
+                dist = DistToVertex(B);
+            } else if (s >= 1.0) {
+                dist = DistToVertex(C);
+            } else {
+                dist = DistToEdgeLine(((double)Pm * bcX - (double)peMinusLen * bcY) / std::sqrt((double)bcLenSq));
+            }
+        }
+        break;
+    }
+    case 1: // Closest to a vertex
+        dist = abPassed ? DistToVertex(C) : acPassed ? DistToVertex(B) : DistToVertex(A);
+        break;
+    default:
+        NOTSA_UNREACHABLE();
+    }
+
+    return dist < r; // NaN => false
 }
 
 // 0x416BA0
@@ -1607,109 +2004,189 @@ bool CCollision::ProcessSphereTriangle(
 ) {
     ZoneScoped;
 
+    // NOTSA: Debug setting (enabled by default)
     if (!CCollision::s_DebugSettings.ShapeShapeCollision.IsEnabled(Shape::SSPHERE, Shape::STRI)) {
         return false;
     }
 
-    // Find closest point on triangle to sphere
-    const auto ip = ClosestPtPointTriangle(
-        verts[tri.vA],
-        verts[tri.vB],
-        verts[tri.vC],
-        sphere.m_vecCenter
-    );
+    // Same method as `TestSphereTriangle` (see there), but with slightly different term orders, and it also calculates the closest point.
+    // Original (0x416BA0): mostly extended precision (=> double) with float spills (see comments).
 
-    const auto spToIp      = sphere.m_vecCenter - ip;
-    const auto touchDistSq = spToIp.SquaredMagnitude();
+    const auto& c = sphere.m_vecCenter;
+    const float r = sphere.m_fRadius;
 
-    // Check touch distance first
-    if (touchDistSq >= maxTouchDistance) {
+    const float nx = plane.m_normal.x, ny = plane.m_normal.y, nz = plane.m_normal.z;
+    const float planeOffset = (float)plane.m_normalOffset;
+
+    // Signed distance of the center from the plane
+    const double planeDistE = (((double)nz * c.z + (double)ny * c.y) + (double)nx * c.x) - planeOffset;
+    if (std::abs(planeDistE) > r) { // NaN passes
+        return false;
+    }
+    const float planeDist    = (float)planeDistE;
+    const float absPlaneDist = (float)std::abs(planeDistE);
+    const float planeDistSq  = (float)((double)planeDist * planeDist);
+    if ((double)planeDist * planeDist > maxTouchDistance) { // NaN passes
         return false;
     }
 
-    // Check if it's within the sphere
-    if (touchDistSq >= sq(sphere.m_fRadius)) {
+    CVector A, B, C;
+    UnpackTriangle(verts, tri, A, B, C);
+
+    // Unit vector A->B (and the float versions of AB and AC)
+    const double abx = (double)B.x - A.x, aby = (double)B.y - A.y, abz = (double)B.z - A.z;
+    const CVector abF{ (float)abx, (float)aby, (float)abz };
+    const float  len = (float)std::sqrt(abx * abx + (double)abF.z * abF.z + aby * aby);
+    const float  invLen = (float)(1.0 / len);
+    const float  ex = (float)(abx * invLen), ey = (float)(aby * invLen), ez = abF.z * invLen;
+
+    // M = e x N (CrossProduct: 0x59C730)
+    const float mx = (float)((double)nz * ey - (double)ez * ny);
+    const float my = (float)((double)ez * nx - (double)nz * ex);
+    const float mz = (float)((double)ex * ny - (double)nx * ey);
+
+    // C in the plane's coordinate system
+    const double cax = (double)C.x - A.x, cay = (double)C.y - A.y, caz = (double)C.z - A.z;
+    const CVector acF{ (float)cax, (float)cay, (float)caz };
+    const float   Ce = (float)((cax * ex + caz * ez) + cay * ey);
+    const float   Cm = (float)((cax * mx + (double)mz * caz) + (double)my * cay);
+
+    // The sphere's center in the plane's coordinate system
+    const double pax = (double)c.x - A.x, pay = (double)c.y - A.y, paz = (double)c.z - A.z;
+    const float  Pe  = (float)((pax * ex + paz * ez) + pay * ey);
+    const float  Pm  = (float)((pax * mx + paz * mz) + pay * my);
+
+    // Which side of the 3 edges is the center on? (all 3 => inside of the triangle)
+    int32 numPassed = 0;
+    bool  abPassed = false, acPassed = false;
+
+    const double abSide  = (double)Pm * len - (double)Pe * 0.0;
+    const float  abSideF = (float)abSide;
+    if (abSide >= 0.0) { // NaN fails
+        numPassed++;
+        abPassed = true;
+    }
+
+    const float pec = (float)((double)Pe * Cm);
+    const float pmc = (float)((double)Pm * Ce);
+    if ((double)pec - pmc >= 0.0) { // NaN fails
+        numPassed++;
+        acPassed = true;
+    }
+
+    const float ceMinusLen = Ce - len;
+    const float peMinusLen = Pe - len;
+    if ((double)ceMinusLen * Pm - (double)peMinusLen * Cm >= 0.0) { // NaN fails
+        numPassed++;
+    }
+
+    // Distance to the closest point (`CVector::Magnitude` of `center - point`, order x, y, z), rounded to a float
+    const auto DistTo = [&](const CVector& v) {
+        const CVector d{ c.x - v.x, c.y - v.y, c.z - v.z };
+        return (float)std::sqrt((double)d.x * d.x + (double)d.y * d.y + (double)d.z * d.z);
+    };
+
+    // `from + dir * s` using float ops (0x40FEC0 + 0x40FE30)
+    const auto PointOnEdge = [](const CVector& from, const CVector& dir, float s) {
+        const CVector ds{ s * dir.x, s * dir.y, s * dir.z };
+        return CVector{ from.x + ds.x, from.y + ds.y, from.z + ds.z };
+    };
+
+    // Distance to the edge line + the plane distance (the exe uses the squared plane distance rounded to a float)
+    const auto DistToEdgeLine = [&](double perp) {
+        return (float)std::sqrt(perp * perp + planeDistSq);
+    };
+
+    CVector closest;
+    float   dist;
+    switch (numPassed) {
+    case 3: { // Inside of the triangle => the closest point is the center projected onto the plane
+        dist = absPlaneDist;
+        closest = CVector{
+            (float)((double)c.x - (double)nx * planeDist),
+            (float)((double)c.y - (double)ny * planeDist),
+            c.z - nz * planeDist
+        };
+        break;
+    }
+    case 2: {
+        if (!abPassed) { // Edge AB
+            const float abLenSq = (float)((double)len * len);
+            const double sE     = ((double)Pe * len + (double)Pm * 0.0) / abLenSq; // Compared unrounded with 0, but spilled to a float for the rest
+            const float  s      = (float)sE;
+            if (sE <= 0.0) {
+                closest = A;
+                dist    = DistTo(A);
+            } else if (s >= 1.f) {
+                closest = B;
+                dist    = DistTo(B);
+            } else {
+                dist    = DistToEdgeLine((double)abSideF / std::sqrt((double)abLenSq));
+                closest = PointOnEdge(A, abF, s);
+            }
+        } else if (!acPassed) { // Edge AC
+            const float acLenSq = (float)((double)Cm * Cm + (double)Ce * Ce);
+            const double sE     = ((double)Pm * Cm + (double)Pe * Ce) / acLenSq;
+            const float  s      = (float)sE;
+            if (sE <= 0.0) {
+                closest = A;
+                dist    = DistTo(A);
+            } else if (s >= 1.f) {
+                closest = C;
+                dist    = DistTo(C);
+            } else {
+                dist    = DistToEdgeLine(((double)pmc - pec) / std::sqrt((double)acLenSq));
+                closest = PointOnEdge(A, acF, s);
+            }
+        } else { // Edge BC, from B to C: (Ce - len, Cm)
+            const float bcX = ceMinusLen, bcY = Cm;
+            const float bcLenSq = (float)((double)bcY * bcY + (double)bcX * bcX);
+            const double sE     = ((double)peMinusLen * bcX + (double)Pm * bcY) / bcLenSq;
+            const float  s      = (float)sE;
+            if (sE <= 0.0) {
+                closest = B;
+                dist    = DistTo(B);
+            } else if (s >= 1.f) {
+                closest = C;
+                dist    = DistTo(C);
+            } else {
+                dist = DistToEdgeLine(((double)Pm * bcX - (double)peMinusLen * bcY) / std::sqrt((double)bcLenSq));
+                const CVector bc{ C.x - B.x, C.y - B.y, C.z - B.z };
+                closest = PointOnEdge(B, bc, s);
+            }
+        }
+        break;
+    }
+    case 1: // Closest to a vertex
+        closest = abPassed ? C : acPassed ? B : A;
+        dist    = DistTo(closest);
+        break;
+    default: // 0: Not possible geometrically. NOTSA: The original uses uninitialized data here
         return false;
     }
 
-    // Original: guard against touching exactly at the surface (touchDist == 0 leads to NaN normal)
-    if (touchDistSq <= 0.f) {
+    const float distSq = (float)((double)dist * dist);
+    if (!(dist < r) || !(distSq < maxTouchDistance)) { // NaN => false
         return false;
     }
 
-    maxTouchDistance = touchDistSq;
+    CVector normal = c - closest;
+    normal.Normalise();
 
-    const auto touchDist = std::sqrt(touchDistSq);
-    colPoint.m_vecNormal = spToIp / touchDist; // Normalize
-    colPoint.m_fDepth    = sphere.m_fRadius - touchDist;
-    colPoint.m_vecPoint  = ip;
+    colPoint.m_vecPoint  = closest;
+    colPoint.m_vecNormal = normal;
 
+    // NOTE: Lighting B is not written by the original
     colPoint.m_nSurfaceTypeA = sphere.m_Surface.m_nMaterial;
     colPoint.m_nPieceTypeA   = sphere.m_Surface.m_nPiece;
     colPoint.m_nLightingA    = sphere.m_Surface.m_nLighting;
-
-
     colPoint.m_nSurfaceTypeB = tri.m_nMaterial;
     colPoint.m_nPieceTypeB   = 0;
-    colPoint.m_nLightingB    = tri.m_nLight;
+    colPoint.m_fDepth        = r - dist;
+
+    maxTouchDistance = distSq;
 
     return true;
-} 
-
-// 0x417730
-bool CCollision::TestLineOfSight(
-    const CColLine& lnws,
-    const CMatrix& transform,
-    CColModel& cm,
-    bool doSeeThroughCheck,
-    bool doShootThroughCheck
-) {
-    ZoneScoped;
-
-    const auto cd = cm.GetData();
-    if (!cd) {
-        return false;
-    }
-
-    // Transform line to object space
-    const auto lnos{ TransformObject(lnws, Invert(transform)) };
-    
-    // If we don't intersect with the bounding box, no chance on the rest
-    if (!TestLineBox(lnos, cm.GetBoundingBox())) {
-        return false;
-    }
-
-    const auto ShouldTest = [=](eSurfaceType surf) {
-        return (!doSeeThroughCheck || g_surfaceInfos.IsSeeThrough(surf))
-            && (!doShootThroughCheck || g_surfaceInfos.IsShootThrough(surf));
-    };
-
-    const auto Process = [&](const auto& arr, auto TestFn) {
-        for (const auto& v : arr) {
-            if (ShouldTest(v.GetSurfaceType()) && TestFn(lnos, v)) {
-                return true;
-            }
-        }
-        return false;
-    };
-
-    // Check spheres / boxes
-    if (Process(cd->GetSpheres(), TestLineSphere) || Process(cd->GetBoxes(), TestLineBox)) {
-        return true;
-    }
-
-    // Lastly, check triangles
-    CalculateTrianglePlanes(cd);
-    const auto verts = cd->GetTriVerts();
-    const auto pls   = cd->GetTriPlanes();
-    for (const auto&& [idx, tri] : rngv::enumerate(cd->GetTris())) { // TODO: rng::zip
-        if (ShouldTest(tri.GetSurfaceType()) && TestLineTriangle(lnos, verts, tri, pls[idx])) {
-            return true;
-        }
-    }
-
-    // No intersection whatsovever
-    return false;
 }
 
 // 0x417950
@@ -1717,58 +2194,61 @@ bool CCollision::ProcessLineOfSight(const CColLine& lnws, const CMatrix& transfo
                                     bool doShootThroughCheck) {
     ZoneScoped;
 
-    assert(colModel.m_pColData);
-
     const auto colData = colModel.m_pColData;
-    if (!colData)
+    if (!colData) {
         return false;
+    }
 
-    const CMatrix invertedTransform = Invert(const_cast<CMatrix&>(transform)); // Hack: cast away constness. TODO: Fix-up constness of CMatrix methods
+    // Transform line into object space
+    const auto invTransform = Invert(transform);
+    const CColLine line_OS{ TransformPointOG(invTransform, lnws.m_vecStart), TransformPointOG(invTransform, lnws.m_vecEnd) };
 
-    // Transform lime into object space
-    const CColLine line_OS = {
-        invertedTransform.TransformPoint(lnws.m_vecStart),
-        invertedTransform.TransformPoint(lnws.m_vecEnd),
-    };
-
-    if (!TestLineBox_DW(line_OS, colModel.GetBoundingBox()))
+    if (!TestLineBox_DW(line_OS, colModel.GetBoundingBox())) {
         return false;
+    }
 
-    const auto CheckSeeAndShootThrough = [=](auto material) {
-        return (!doSeeThroughCheck || !g_surfaceInfos.IsSeeThrough(material)) && (!doShootThroughCheck || !g_surfaceInfos.IsShootThrough(material));
+    // Original: surfaces that are see-/shoot-through are SKIPPED (if the corresponding check is requested)
+    const auto ShouldSkip = [=](eSurfaceType surf) {
+        return (doSeeThroughCheck && g_surfaceInfos.IsSeeThrough(surf))
+            || (doShootThroughCheck && g_surfaceInfos.IsShootThrough(surf));
     };
 
     float localMinTouchDist = maxTouchDistance;
 
-    bool results{};
+    // NOTE: The results of the Process* functions are ignored, `localMinTouchDist` is what matters
     for (auto i = 0; i < colData->m_nNumSpheres; i++) {
-        if (const auto& sphere = colData->m_pSpheres[i]; CheckSeeAndShootThrough(sphere.m_Surface.m_nMaterial)) {
-            results |= ProcessLineSphere(line_OS, sphere, colPoint, localMinTouchDist);
+        const auto& sphere = colData->m_pSpheres[i];
+        if (!ShouldSkip(sphere.m_Surface.m_nMaterial)) {
+            ProcessLineSphere(line_OS, sphere, colPoint, localMinTouchDist);
         }
     }
 
     for (auto i = 0; i < colData->m_nNumBoxes; i++) {
-        if (const auto& box = colData->m_pBoxes[i]; CheckSeeAndShootThrough(box.m_Surface.m_nMaterial)) {
-            results |= ProcessLineBox(line_OS, box, colPoint, localMinTouchDist);
+        const auto& box = colData->m_pBoxes[i];
+        if (!ShouldSkip(box.m_Surface.m_nMaterial)) {
+            ProcessLineBox(line_OS, box, colPoint, localMinTouchDist);
         }
     }
 
     CalculateTrianglePlanes(colData);
 
     for (auto i = 0; i < colData->m_nNumTriangles; i++) {
-        if (const auto& tri = colData->m_pTriangles[i]; CheckSeeAndShootThrough(tri.m_nMaterial)) {
-            results |= ProcessLineTriangle(line_OS, colData->m_pVertices, tri, colData->m_pTrianglePlanes[i], colPoint, localMinTouchDist, nullptr);
-            ms_iProcessLineNumCrossings++;
+        const auto& tri = colData->m_pTriangles[i];
+        if (!ShouldSkip(tri.m_nMaterial)) {
+            if (ProcessLineTriangle(line_OS, colData->m_pVertices, tri, colData->m_pTrianglePlanes[i], colPoint, localMinTouchDist, nullptr)) {
+                ms_iProcessLineNumCrossings++;
+            }
         }
     }
 
-    if (localMinTouchDist < maxTouchDistance) {
-        colPoint.m_vecPoint = transform.TransformPoint(colPoint.m_vecPoint);
-        colPoint.m_vecNormal = transform.TransformVector(colPoint.m_vecNormal);
-        maxTouchDistance = localMinTouchDist;
-        return true;
+    if (!(localMinTouchDist < maxTouchDistance)) { // NaN => false
+        return false;
     }
-    return false;
+
+    colPoint.m_vecPoint  = TransformPointOG(transform, colPoint.m_vecPoint);
+    colPoint.m_vecNormal = TransformVectorOG(transform, colPoint.m_vecNormal);
+    maxTouchDistance = localMinTouchDist;
+    return true;
 }
 
 // 0x417BF0
@@ -1789,65 +2269,64 @@ bool CCollision::ProcessVerticalLine(
         return false;
     }
 
-    // Transform line to object space
-    //auto lnos = line;
-    //lnos.m_vecStart = Multiply3x3(lnos.m_vecStart, transform);
-    //lnos.m_vecEnd = Multiply3x3(lnos.m_vecEnd, transform);
-    //lnos.m_vecEnd.x = lnos.m_vecStart.x;
-    //lnos.m_vecEnd.y = lnos.m_vecStart.y;
+    // Transform line to object space (NOTE: The line is NOT forced to be vertical in object space, and `Invert` isn't used)
+    const CColLine lnos{ InverseTransformPointOG(transform, lnws.m_vecStart), InverseTransformPointOG(transform, lnws.m_vecEnd) };
 
-    auto lnos{ TransformObject(lnws, Invert(transform)) };
-    lnos.m_vecEnd.x = lnos.m_vecStart.x;
-    lnos.m_vecEnd.y = lnos.m_vecStart.y;
-
-    if (!TestLineBox(lnos, cm.GetBoundingBox())) {
+    if (!TestLineBox_DW(lnos, cm.GetBoundingBox())) {
         return false;
     }
 
-    auto localMaxTouchDist = maxTouchDistance;
+    float localMaxTouchDist = maxTouchDistance;
 
-    const auto ShouldTest = [=](eSurfaceType surf) {
-        return (!doSeeThroughCheck || g_surfaceInfos.IsSeeThrough(surf));
-            //&& (!doShootThroughCheck || g_surfaceInfos.IsShootThrough(surf)); // NOTSA: Also do this check
+    // Original: see-through surfaces are SKIPPED (shoot-through is ignored, `doShootThroughCheck` is unused)
+    const auto ShouldSkip = [=](eSurfaceType surf) {
+        return doSeeThroughCheck && g_surfaceInfos.IsSeeThrough(surf);
     };
-    
-    const auto Process = [&](const auto arr, auto ProcessFn) {
-        for (const auto& v : arr) {
-            if (ShouldTest(v.GetSurfaceType())) {
-                ProcessFn(lnos, v, cp, localMaxTouchDist);
-            }
+
+    for (auto i = 0; i < cd->m_nNumSpheres; i++) {
+        const auto& sphere = cd->m_pSpheres[i];
+        if (!ShouldSkip(sphere.m_Surface.m_nMaterial)) {
+            ProcessLineSphere(lnos, sphere, cp, localMaxTouchDist);
         }
-    };
-    Process(cd->GetSpheres(), ProcessLineSphere);
-    Process(cd->GetBoxes(), ProcessLineBox);
+    }
+
+    for (auto i = 0; i < cd->m_nNumBoxes; i++) {
+        const auto& box = cd->m_pBoxes[i];
+        if (!ShouldSkip(box.m_Surface.m_nMaterial)) {
+            ProcessLineBox(lnos, box, cp, localMaxTouchDist);
+        }
+    }
 
     // Lastly, triangles
     CalculateTrianglePlanes(cd);
-    CStoredCollPoly storedColPoly{};
-    const auto verts = cd->GetTriVerts();
-    const auto pls   = cd->GetTriPlanes();
-    for (const auto&& [idx, tri] : rngv::enumerate(cd->GetTris())) { // TODO: rng::zip
-        if (ShouldTest(tri.GetSurfaceType())) {
-            ProcessLineTriangle(lnos, verts, tri, pls[idx], cp, localMaxTouchDist, &storedColPoly);
+
+    // Original: static (the `valid` flag is reset on every call, the rest is only read if it's set)
+    static auto& storedColPoly = StaticRef<CStoredCollPoly>(0x9659FC);
+    storedColPoly.valid = false;
+
+    for (auto i = 0; i < cd->m_nNumTriangles; i++) {
+        const auto& tri = cd->m_pTriangles[i];
+        if (!ShouldSkip(tri.m_nMaterial)) {
+            ProcessLineTriangle(lnos, cd->m_pVertices, tri, cd->m_pTrianglePlanes[i], cp, localMaxTouchDist, &storedColPoly);
         }
     }
 
-    if (localMaxTouchDist >= maxTouchDistance) {
+    if (!(localMaxTouchDist < maxTouchDistance)) { // NaN => false
         return false; // No collisions closer to line origin than originally
     }
-    maxTouchDistance = localMaxTouchDist;
 
     // Transform back from object space
-    cp.m_vecPoint  = transform.TransformPoint(cp.m_vecPoint);
-    cp.m_vecNormal = transform.TransformVector(cp.m_vecNormal);
+    cp.m_vecPoint  = TransformPointOG(transform, cp.m_vecPoint);
+    cp.m_vecNormal = TransformVectorOG(transform, cp.m_vecNormal);
 
-    if (outColPoly && storedColPoly.valid) {
-        for (auto& vtx : storedColPoly.verts) {
-            vtx = transform.TransformPoint(vtx); // Transform back from object space
-        }
+    if (storedColPoly.valid && outColPoly) {
         *outColPoly = storedColPoly;
+        for (auto& vtx : outColPoly->verts) {
+            vtx = TransformPointOG(transform, vtx); // Transform back from object space
+        }
     }
 
+    maxTouchDistance = localMaxTouchDist;
     return true;
 }
 
@@ -1855,7 +2334,17 @@ bool CCollision::ProcessVerticalLine(
 bool CCollision::SphereCastVsSphere(const CColSphere& spA, const CColSphere& spB, const CColSphere& spS) {
     ZoneScoped;
 
-    if (TestSphereSphere(spA, spS) || TestSphereSphere(spB, spS)) {
+    // Original (0x417F20): the 1st test is an inlined TestSphereSphere (term order x, y, z)
+    {
+        const double dx = (double)spA.m_vecCenter.x - spS.m_vecCenter.x;
+        const double dy = (double)spA.m_vecCenter.y - spS.m_vecCenter.y;
+        const double dz = (double)spA.m_vecCenter.z - spS.m_vecCenter.z;
+        const double sumR = (double)spS.m_fRadius + spA.m_fRadius;
+        if (sumR * sumR > dx * dx + dy * dy + dz * dz) {
+            return true;
+        }
+    }
+    if (TestSphereSphere(spB, spS)) {
         return true;
     }
     return CCollision::TestLineSphere(
@@ -1865,13 +2354,25 @@ bool CCollision::SphereCastVsSphere(const CColSphere& spA, const CColSphere& spB
 }
 
 // 0x418100 // unused
-void CCollision::ClosestPointsOnPoly(CColTriangle* arg0, CVector* arg1, CVector* arg2, CVector* arg3) {
-    NOTSA_UNREACHABLE();
+// `arg0` is unused, `tri` points to the 3 vertices, `out` receives the closest point on each of the 3 edges (v1-v0, v2-v1, v0-v2)
+void CCollision::ClosestPointsOnPoly(CColTriangle* arg0, CVector* tri, CVector* point, CVector* out) {
+    ZoneScoped;
+
+    ClosestPointOnLine(*point, tri[1], tri[0], out[0]);
+    ClosestPointOnLine(*point, tri[2], tri[1], out[1]);
+    ClosestPointOnLine(*point, tri[0], tri[2], out[2]);
 }
 
 // 0x418150 // unused
-void CCollision::ClosestPointOnPoly(CColTriangle* arg0, CVector* arg1, CVector* arg2) {
-    NOTSA_UNREACHABLE();
+// `arg0` is unused, `tri` points to the 3 vertices, `pt` is overwritten with the closest point on the triangle's edges
+void CCollision::ClosestPointOnPoly(CColTriangle* arg0, CVector* tri, CVector* pt) {
+    ZoneScoped;
+
+    CVector closest[3];
+    ClosestPointOnLine(*pt, tri[1], tri[0], closest[0]);
+    ClosestPointOnLine(*pt, tri[2], tri[1], closest[1]);
+    ClosestPointOnLine(*pt, tri[0], tri[2], closest[2]);
+    Closest3(closest, pt);
 }
 
 // 0x418580
@@ -1951,7 +2452,7 @@ int32 CCollision::ProcessColModels(const CMatrix& transformA, CColModel& cmA,
     const auto transformAtoB = Invert(transformB) * transformA;
 
     // A's bounding bb in B's space
-    const CColSphere colABoundSphereSpaceB{ transformAtoB.TransformPoint(cmA.m_boundSphere.m_vecCenter), cmA.m_boundSphere.m_fRadius };
+    const CColSphere colABoundSphereSpaceB{ TransformPointOG(transformAtoB, cmA.m_boundSphere.m_vecCenter), cmA.m_boundSphere.m_fRadius };
 
     if (!TestSphereBox(colABoundSphereSpaceB, cmB.m_boundBox)) {
         return 0;
@@ -1972,7 +2473,7 @@ int32 CCollision::ProcessColModels(const CMatrix& transformA, CColModel& cmA,
     const auto TransformSpheres = []<size_t n>(auto&& spheres, const CMatrix& transform, CColSphere(&outSpheres)[n]) {
         std::ranges::transform(spheres, outSpheres, [&](const auto& sp) {
             CColSphere transformed  = sp;                                       // Copy sphere
-            transformed.m_vecCenter = transform.TransformPoint(sp.m_vecCenter); // Set copy's center as the transformed point
+            transformed.m_vecCenter = TransformPointOG(transform, sp.m_vecCenter); // Set copy's center as the transformed point
             return transformed;
         });
     };
@@ -2031,7 +2532,7 @@ int32 CCollision::ProcessColModels(const CMatrix& transformA, CColModel& cmA,
             const auto& disk{ cdB.m_pDisks[diskIdx] };
 
             auto& sph{ sphB[cdB.m_nNumSpheres + diskIdx] };
-            sph.m_vecCenter = transformBtoA.TransformPoint(disk.m_vecCenter);
+            sph.m_vecCenter = TransformPointOG(transformBtoA, disk.m_vecCenter);
             sph.m_fRadius   = disk.m_fRadius;
             sph.m_Surface   = disk.m_Surface;
 
@@ -2170,8 +2671,8 @@ int32 CCollision::ProcessColModels(const CMatrix& transformA, CColModel& cmA,
         // 0x41996E
         // Transform all colpoints into world space (Originally not here)
         for (auto&& cp : std::span{ sphereCPs.data(), nNumSphereCPs }) {
-            cp.m_vecPoint  = transformB.TransformPoint(cp.m_vecPoint);
-            cp.m_vecNormal = transformB.TransformVector(cp.m_vecNormal);
+            cp.m_vecPoint  = TransformPointOG(transformB, cp.m_vecPoint);
+            cp.m_vecNormal = TransformVectorOG(transformB, cp.m_vecNormal);
         }
     }
 
@@ -2214,7 +2715,7 @@ int32 CCollision::ProcessColModels(const CMatrix& transformA, CColModel& cmA,
                 const auto& disk{ cdA.m_pDisks[diskIdx] };
 
                 auto& sph{ sphA[cdA.m_nNumSpheres + diskIdx] };
-                sph.m_vecCenter = transformAtoB.TransformPoint(disk.m_vecCenter);
+                sph.m_vecCenter = TransformPointOG(transformAtoB, disk.m_vecCenter);
                 sph.m_fRadius   = disk.m_fRadius;
                 sph.m_Surface   = disk.m_Surface;
             }
@@ -2243,7 +2744,7 @@ int32 CCollision::ProcessColModels(const CMatrix& transformA, CColModel& cmA,
 
                         float minTouchDist{ 1e24f };
                         if (ProcessSphereSphere(sphereAinB, sphereB, cp, minTouchDist)) {
-                            const auto cpInA{ transformBtoA.TransformPoint(cp.m_vecPoint) };
+                            const auto cpInA{ TransformPointOG(transformBtoA, cp.m_vecPoint) };
                             const auto hitK = std::sqrt(std::max(0.0f, sq(disk.m_fRadius) - sq(cpInA.y - disk.m_vecCenter.y) - sq(cpInA.x - disk.m_vecCenter.x))) + cpInA.z;
                             if (maxTouchDistances[diskIdx] <= hitK) { // Original: strict <=, no epsilon
                                 maxTouchDistances[diskIdx] = hitK;
@@ -2262,8 +2763,8 @@ int32 CCollision::ProcessColModels(const CMatrix& transformA, CColModel& cmA,
                         float       minTouchDist{ 1e24f };
 
                         if (ProcessSphereBox(sphereAinB, bb, cp, minTouchDist)) {
-                            const auto cpInA     = transformBtoA.TransformPoint(cp.m_vecPoint);
-                            const auto normalInA = transformBtoA.TransformVector(cp.m_vecNormal);
+                            const auto cpInA     = TransformPointOG(transformBtoA, cp.m_vecPoint);
+                            const auto normalInA = TransformVectorOG(transformBtoA, cp.m_vecNormal);
 
                             if (cpInA.z >= disk.m_vecCenter.z || normalInA.z <= 0.5f) {
                                 // CP candidate: become the emitted CP only if closer than the previous best
@@ -2332,8 +2833,8 @@ int32 CCollision::ProcessColModels(const CMatrix& transformA, CColModel& cmA,
 
 
                 if (lineCollision) {
-                    thisLineCP.m_vecPoint  = transformB.TransformPoint(thisLineCP.m_vecPoint);
-                    thisLineCP.m_vecNormal = transformB.TransformVector(thisLineCP.m_vecNormal);
+                    thisLineCP.m_vecPoint  = TransformPointOG(transformB, thisLineCP.m_vecPoint);
+                    thisLineCP.m_vecNormal = TransformVectorOG(transformB, thisLineCP.m_vecNormal);
                 } else if (TestSphereBox(sphereAinB, cmB.GetBoundingBox())) {
                     // bbox passed but no sphere/box/tri produced a line contact:
                     // original writes -1e8f here (tells caller the line is entirely miss).
@@ -2352,15 +2853,15 @@ int32 CCollision::ProcessColModels(const CMatrix& transformA, CColModel& cmA,
             // transformed here. The original performs equivalent transforms inline
             // during the disk loop's emit handling.)
             for (auto& cp : std::span{ sphereCPs.data() + diskPhaseCPBegin, nNumSphereCPs - diskPhaseCPBegin }) {
-                cp.m_vecPoint  = transformB.TransformPoint(cp.m_vecPoint);
-                cp.m_vecNormal = transformB.TransformVector(cp.m_vecNormal);
+                cp.m_vecPoint  = TransformPointOG(transformB, cp.m_vecPoint);
+                cp.m_vecNormal = TransformVectorOG(transformB, cp.m_vecNormal);
             }
         } else { // 0x4196B9
             for (auto lineIdx = 0u; lineIdx < cdA.m_nNumLines; lineIdx++) {
                 const CColLine lineA{
                     // A's line in B's space
-                    transformAtoB.TransformPoint(cdA.m_pLines[lineIdx].m_vecStart),
-                    transformAtoB.TransformPoint(cdA.m_pLines[lineIdx].m_vecEnd),
+                    TransformPointOG(transformAtoB, cdA.m_pLines[lineIdx].m_vecStart),
+                    TransformPointOG(transformAtoB, cdA.m_pLines[lineIdx].m_vecEnd),
                 };
 
                 // if (!CCollision::TestLineSphere(line, CColSphere{ cmB.m_boundSphere })) { // NOTSA: Quick check to (possibly) speed things up
@@ -2393,8 +2894,8 @@ int32 CCollision::ProcessColModels(const CMatrix& transformA, CColModel& cmA,
                 // 0x4198DA
                 // Now, transform colpoint if it the line collided into world space
                 if (hasCollided) {
-                    thisLineCP.m_vecPoint  = transformB.TransformPoint(thisLineCP.m_vecPoint);
-                    thisLineCP.m_vecNormal = transformB.TransformVector(thisLineCP.m_vecNormal);
+                    thisLineCP.m_vecPoint  = TransformPointOG(transformB, thisLineCP.m_vecPoint);
+                    thisLineCP.m_vecNormal = TransformVectorOG(transformB, thisLineCP.m_vecNormal);
                 }
             }
         }
@@ -2407,7 +2908,7 @@ int32 CCollision::ProcessColModels(const CMatrix& transformA, CColModel& cmA,
     // Find all A's triangles and boxes colliding with B's b.sphere
     // Then process them all against B's colliding spheres
     if (numCollSphB && (cdA.m_nNumTriangles || cdA.m_nNumBoxes)) {
-        const CColSphere colBSphereInASpace{ transformBtoA.TransformPoint(cmB.m_boundSphere.m_vecCenter), cmB.m_boundSphere.m_fRadius };
+        const CColSphere colBSphereInASpace{ TransformPointOG(transformBtoA, cmB.m_boundSphere.m_vecCenter), cmB.m_boundSphere.m_fRadius };
 
         const auto numCPsPrev{ nNumSphereCPs };
 
@@ -2511,8 +3012,8 @@ int32 CCollision::ProcessColModels(const CMatrix& transformA, CColModel& cmA,
         // Transform added colpoints into world space
         if (numCPsPrev != nNumSphereCPs) {                                                            // If we've processed any items..
             for (auto& cp : std::span{ sphereCPs.data() + numCPsPrev, nNumSphereCPs - numCPsPrev }) { // Transform all newly added colpoints
-                cp.m_vecPoint  = transformA.TransformPoint(cp.m_vecPoint);
-                cp.m_vecNormal = transformA.TransformVector(cp.m_vecNormal);
+                cp.m_vecPoint  = TransformPointOG(transformA, cp.m_vecPoint);
+                cp.m_vecNormal = TransformVectorOG(transformA, cp.m_vecNormal);
 
                 // Original does a full 3-byte swap of {surface,piece,lighting} A<->B:
                 //   v175=*(u16*)&sA; v176=lA; *(u16*)&sA=*(u16*)&sB; lA=lB; *(u16*)&sB=v175; lB=v176;
@@ -2531,25 +3032,109 @@ int32 CCollision::ProcessColModels(const CMatrix& transformA, CColModel& cmA,
 
 
 // 0x414D70
+namespace {
+//! 0x59C730 `CrossProduct(out, a, b)` - the products stay in the FPU (extended precision), rounded to float only when stored
+CVector CrossProductOG(const CVector& a, const CVector& b) {
+    return {
+        (float)((double)b.z * a.y - (double)a.z * b.y),
+        (float)((double)a.z * b.x - (double)b.z * a.x),
+        (float)((double)a.x * b.y - (double)b.x * a.y),
+    };
+}
+}
+
 bool CCollision::IsStoredPolyStillValidVerticalLine(const CVector& lineOrigin, float lnMag, CColPoint& colPoint, CStoredCollPoly* collPoly) {
     ZoneScoped;
 
-    if (!collPoly->valid) {
+    // NOTE: `lnMag` is really the Z of the second point of the (vertical) line: the line goes from `lineOrigin` to (lineOrigin.x, lineOrigin.y, lnMag)
+    // NOTE: Every failure after the `valid` check clears `collPoly->valid`
+
+    if (!collPoly->valid) { // 0x414D79
         return false;
     }
 
-    // Not really SA (I really don'plSpCenterDist feel like copy pasting code :])
-    return ProcessLineTriangle_Internal<true>(
-        CColLine{
-            lineOrigin,
-            { lineOrigin.x, lineOrigin.y, lineOrigin.z * lnMag }
-        },
-        *collPoly,
-        CColTrianglePlane{ *collPoly },
-        nullptr,
-        nullptr,
-        nullptr
-    );
+    const auto& v0 = collPoly->verts[0];
+    const auto& v1 = collPoly->verts[1];
+    const auto& v2 = collPoly->verts[2];
+    const auto& P  = lineOrigin;
+
+    // 0x414D86 - plane of the triangle (note the operand order of the cross product: (v2 - v0) x (v1 - v0))
+    const CVector e1{ v1.x - v0.x, v1.y - v0.y, v1.z - v0.z };
+    const CVector e2{ v2.x - v0.x, v2.y - v0.y, v2.z - v0.z };
+    CVector n = CrossProductOG(e2, e1);
+    n.Normalise();
+    const float d = (float)(((double)n.z * v0.z + (double)n.y * v0.y) + (double)n.x * v0.x); // 0x414E22
+
+    // 0x414E3E - Find the dominant axis (and the sign of the normal along it)
+    const float ax = n.x < 0.f ? -n.x : n.x;
+    const float ay = n.y < 0.f ? -n.y : n.y;
+    const float az = n.z < 0.f ? -n.z : n.z;
+    uint8 axis;
+    if (ax > ay && ax > az) {
+        axis = n.x > 0.f ? 0 : 1;
+    } else if (ay > az) {
+        axis = n.y > 0.f ? 2 : 3;
+    } else {
+        axis = n.z > 0.f ? 4 : 5;
+    }
+
+    // 0x414F36 - Which side of the plane are the two end points of the line on?
+    const float  Py_ny = (float)((double)P.y * n.y);
+    const float  Px_nx = (float)((double)P.x * n.x);
+    const double Pz_nz = (double)P.z * n.z;
+    const double s = (((double)P.y * n.y + (double)P.x * n.x) + (double)lnMag * n.z) - d; // line end point (P.x, P.y, lnMag)
+    const double r = (((double)Px_nx + Py_ny) + Pz_nz) - d;                               // line origin
+    if (!(s * r <= 0.0)) { // jp after `test ah, 0x41` => taken if (s * r > 0) or NaN
+        collPoly->valid = false;
+        return false;
+    }
+
+    // 0x414F97 - Intersection of the line with the plane
+    const double dx  = (double)P.x - P.x;
+    const double dy  = (double)P.y - P.y;
+    const float  dzf = (float)((double)lnMag - P.z);
+    const double num = (((double)d - Px_nx) - Py_ny) - Pz_nz;
+    const float  t   = (float)(num / (((double)dzf * n.z + dy * n.y) + dx * n.x));
+    const float  hxs = (float)(dx * t);
+    CVector hit{
+        (float)(hxs + P.x),
+        (float)(dy * t + P.y),
+        (float)((double)dzf * t + P.z)
+    };
+
+    // 0x415021 - Project everything onto the plane of the dominant axis (odd cases = flipped winding => v1 and v2 swapped)
+    float v0a, v0b, v1a, v1b, v2a, v2b, Ha, Hb;
+    switch (axis) {
+    case 0: v0a = v0.y; v0b = v0.z; v1a = v1.y; v1b = v1.z; v2a = v2.y; v2b = v2.z; Ha = hit.y; Hb = hit.z; break;
+    case 1: v0a = v0.y; v0b = v0.z; v1a = v2.y; v1b = v2.z; v2a = v1.y; v2b = v1.z; Ha = hit.y; Hb = hit.z; break;
+    case 2: v0a = v0.z; v0b = v0.x; v1a = v1.z; v1b = v1.x; v2a = v2.z; v2b = v2.x; Ha = hit.z; Hb = hit.x; break;
+    case 3: v0a = v0.z; v0b = v0.x; v1a = v2.z; v1b = v2.x; v2a = v1.z; v2b = v1.x; Ha = hit.z; Hb = hit.x; break;
+    case 4: v0a = v0.x; v0b = v0.y; v1a = v1.x; v1b = v1.y; v2a = v2.x; v2b = v2.y; Ha = hit.x; Hb = hit.y; break;
+    case 5: v0a = v0.x; v0b = v0.y; v1a = v2.x; v1b = v2.y; v2a = v1.x; v2b = v1.y; Ha = hit.x; Hb = hit.y; break;
+    default: NOTSA_UNREACHABLE();
+    }
+
+    // 0x415158 - Point in triangle test (in 2D)
+    const double dHa = (double)Ha - v0a;
+    const double dHb = (double)Hb - v0b;
+    const double c1  = ((double)v2a - v0a) * dHb - ((double)v2b - v0b) * dHa;
+    if (c1 < 0.0) { // jp (test ah, 5) => continue if !(c1 < 0)
+        collPoly->valid = false;
+        return false;
+    }
+    const double c2 = ((double)v1a - v0a) * dHb - ((double)v1b - v0b) * dHa;
+    if (c2 > 0.0) { // je (test ah, 0x41) => fail if c2 > 0
+        collPoly->valid = false;
+        return false;
+    }
+    const double c3 = ((double)Hb - v2b) * ((double)v1a - v2a) - ((double)Ha - v2a) * ((double)v1b - v2b);
+    if (c3 < 0.0) { // jnp (test ah, 5) => fail if c3 < 0
+        collPoly->valid = false;
+        return false;
+    }
+
+    colPoint.m_vecPoint = hit; // 0x4151F0
+    return true;
 }
 
 // 0x415230
@@ -2558,10 +3143,13 @@ CColBox CCollision::GetBoundingBoxFromTwoSpheres(const CColSphere& spA, const CC
 
     CVector min, max;
     for (size_t i = 0; i < 3; i++) {
-        std::tie(min[i], max[i]) = std::minmax(spA.m_vecCenter[i], spB.m_vecCenter[i]);
-
-        min[i] -= spA.m_fRadius;
-        max[i] += spA.m_fRadius; // NOTE: They assume both spheres have the same spRadius, but that might not be the case. Really should be using max(spA.spRadius, spB.spRadius) instead!
+        // Original: `if (A < B) { min = A - rA; max = rA + B; } else { min = B - rA; max = rA + A; }` (extended precision, rounded when stored)
+        // (NOT `std::minmax` - they differ if there is a NaN)
+        const auto a = spA.m_vecCenter[i], b = spB.m_vecCenter[i];
+        const auto lo = a < b ? a : b;
+        const auto hi = a < b ? b : a;
+        min[i] = (float)((double)lo - spA.m_fRadius);
+        max[i] = (float)((double)spA.m_fRadius + hi); // NOTE: They assume both spheres have the same spRadius, but that might not be the case. Really should be using max(spA.spRadius, spB.spRadius) instead!
     }
     return CColBox{ CBox{min, max} };
 }
@@ -2614,11 +3202,14 @@ bool CCollision::CheckCameraCollisionPeds(
 ) {
     ZoneScoped;
 
-    constexpr auto gPedCylinderWidth = 1.f;
+    constexpr auto gPedCylinderWidth = 1.f; // 0x8CCB8C (float, never written)
+    const float    radiusSq          = gPedCylinderWidth * gPedCylinderWidth; // 0x415327
+
+    // NOTE: The original also normalises a copy of the (unused) direction here (0x41537A), it has no effect
 
     bool addedAny = false;
 
-    auto& sector = CWorld::GetRepeatSector(sectorX, sectorY);
+    auto& sector = CWorld::ms_aRepeatSectors[sectorY & 0xF][sectorX & 0xF]; // Original uses `& 0xF` (even for negative values)
     for (auto* const ped : sector.Peds) {
         if (ped->IsScanCodeCurrent()) {
             continue;
@@ -2629,34 +3220,43 @@ bool CCollision::CheckCameraCollisionPeds(
         if (!ped->GetIsVisible() || CWorld::pIgnoreEntity == ped || ped->IsPlayer()) {
             continue;
         }
-        
-        if ((CVector2D{ pos } - CVector2D{ ped->GetBoundCentre() }).SquaredMagnitude() >= sq(gPedCylinderWidth)) {
+
+        // 0x4153D6 - extended precision, strict `<` (=> skips if NaN)
+        const auto centre = ped->GetBoundCentre();
+        const double dx   = (double)pos.x - centre.x;
+        const double dy   = (double)pos.y - centre.y;
+        if (!(dy * dy + dx * dx < (double)radiusSq)) {
             continue;
         }
 
-        if (GetNearestDistanceOfPedSphereToCameraNearClip(ped) > 0.f) {
+        if (!(GetNearestDistanceOfPedSphereToCameraNearClip(ped) <= 0.f)) { // 0x415407 (jp after `test ah, 0x41` => skip if > 0 or NaN)
             continue;
         }
-        
-        const auto AddInvisibleEntity = [](CEntity* entity) {
-            entity->SetIsVisible(false);
 
-            auto& ref = gpMadeInvisibleEntities[gNumEntitiesSetInvisible++];
-            ref = entity;
+        // 0x41541C - Remember the ped (its visibility is cleared at the very end)
+        {
+            auto& ref = gpMadeInvisibleEntities[gNumEntitiesSetInvisible];
+            ref = ped;
             CEntity::RegisterReference(ref);
-        };
+            gNumEntitiesSetInvisible++;
+        }
 
-        AddInvisibleEntity(ped);
-
-        // Add entity the peds holds too (if any)
-        if (const auto task = ped->GetIntelligence()->GetTaskHold()) {
+        // 0x415438 - Add entity the peds holds too (if any)
+        // BUG-NOTE: The original passes `false` for `bIgnoreCheckingForSimplestActiveTask` (the default of our declaration is `true`)
+        if (const auto task = ped->GetIntelligence()->GetTaskHold(false)) {
             if (const auto ent = task->m_pEntityToHold) {
                 if (ent->GetIsVisible()) {
-                    AddInvisibleEntity(ent);
+                    ent->SetIsVisible(false);
+
+                    auto& ref = gpMadeInvisibleEntities[gNumEntitiesSetInvisible];
+                    ref = ent;
+                    CEntity::RegisterReference(ref);
+                    gNumEntitiesSetInvisible++;
                 }
             }
         }
 
+        ped->SetIsVisible(false); // 0x41547F
         addedAny = true;
     }
     return addedAny;
@@ -2664,19 +3264,45 @@ bool CCollision::CheckCameraCollisionPeds(
 
 // 0x415540
 void ResetMadeInvisibleObjects() {
-    for (auto ent : gpMadeInvisibleEntities | rng::views::take(gNumEntitiesSetInvisible)) {
-        if (!ent) { // Must check, as the reference system might've cleared it
+    for (uint32 i = 0; i < gNumEntitiesSetInvisible; i++) {
+        auto& slot = gpMadeInvisibleEntities[i]; // NOTE: Must use the slot itself (not a copy), as the reference system registered the address of the slot
+        if (!slot) { // Must check, as the reference system might've cleared it
             continue;
         }
-        ent->SetIsVisible(true);
-        CEntity::CleanUpOldReference(ent);
+        slot->SetIsVisible(true);
+        if (slot) { // 0x41555F - Reloaded
+            CEntity::CleanUpOldReference(slot);
+        }
+        slot = nullptr; // 0x41556B
     }
     gNumEntitiesSetInvisible = 0;
 }
 
 // 0x415620
-bool CCollision::RayPolyPOP(CVector* arg0, CVector* arg1, CColTriangle* arg2, CVector* arg3, CVector* arg4) {
-    NOTSA_UNREACHABLE(); // Unused
+// Unused in the exe. Pushes `A` along `D` onto the plane (normal `N`) through `P`, if `A` is in front of it. Returns true if `A` was moved
+bool CCollision::RayPolyPOP(CVector* A, CVector* D, CColTriangle* arg2, CVector* N, CVector* P) {
+    ZoneScoped;
+
+    // Original: all extended precision, term order z, x, y
+    const double vx = (double)P->x - A->x, vy = (double)P->y - A->y, vz = (double)P->z - A->z;
+    const double sE = vz * N->z + vx * N->x + vy * N->y; // (P - A) . N
+    if (sE > 0.0) {
+        return false;
+    }
+    const float s = (float)sE; // Spilled to a float
+
+    const double q = (double)N->z * D->z + (double)N->y * D->y + (double)D->x * N->x; // D . N
+    if (s <= q) { // NaN passes
+        return false;
+    }
+
+    const double t = s / q;
+    const float  dy = (float)(t * D->y);
+    const float  dz = (float)(t * D->z);
+    A->x = (float)(t * D->x + A->x);
+    A->y = (float)((double)dy + A->y);
+    A->z = (float)((double)dz + A->z);
+    return true;
 }
 
 // 0x4156D0
@@ -2689,20 +3315,9 @@ int32 CCollision::GetPrincipleAxis(const CVector& normal) {
     if (nx > ny && nx > nz) {
         return 0; // X
     }
-    return ny <= nz
-        ? 4  // Z
-        : 2; // Y
-}
-
-// NOTSA
-bool IsPointInPoly2D(CVector2D pt, CVector2D a, CVector2D b, CVector2D c) {
-    // Code they used originally: https://stackoverflow.com/revisions/2049593/4
-    // It's slower than than the one below.
-    
-    // Based on: https://stackoverflow.com/a/9755252
-    const auto pt_a = pt - a;
-    const bool s_ab = (b - a).Cross(pt_a) > 0.f;
-    return (c - a).Cross(pt_a) > 0.f != s_ab && (c - b).Cross(pt - b) > 0.f == s_ab;
+    return ny > nz // NaN => Z (original: `je` after `test ah, 0x41`)
+        ? 2  // Y
+        : 4; // Z
 }
 
 // 0x415730
@@ -2714,20 +3329,39 @@ bool CCollision::PointInPoly(
 ) {
     ZoneScoped;
 
-    // Shuffle look-up table
-    constexpr uint8 lut[3][2]{
-        { 1, 2 }, // X
-        { 0, 2 }, // Y
-        { 0, 1 }  // Z
+    // Projects onto the plane of the principal axis, then checks which side of each edge the point is on.
+    // `side` is the `(P.a - va) * (vn.b - va.b) - (P.b - va.b) * (vn.a - va.a)` test of an edge
+    const auto Edge = [](double Pa, double Pb, float va, float vb, float na, float nb) {
+        return (Pa - va) * ((double)nb - vb) - (Pb - vb) * ((double)na - va);
     };
+    const auto& v0 = verts[0];
+    const auto& v1 = verts[1];
+    const auto& v2 = verts[2];
 
-    // Shuffle vectors for the principal axis
-    const auto Do = [shuffle = lut[GetPrincipleAxis(normal) / 2]](const CVector& v) {
-        return CVector2D{ v[shuffle[0]], v[shuffle[1]] };
-    };
-
-    // Now we can do the test in 2D
-    return IsPointInPoly2D(Do(testPt), Do(verts[0]), Do(verts[1]), Do(verts[2]));
+    bool f1, f2, f3;
+    switch (GetPrincipleAxis(normal)) {
+    case 0: { // X => (y, z). `>= 0` (not `!(< 0)`: NaN => false)
+        f1 = Edge(testPt.y, testPt.z, v0.y, v0.z, v1.y, v1.z) >= 0.0;
+        f2 = Edge(testPt.y, testPt.z, v1.y, v1.z, v2.y, v2.z) >= 0.0;
+        f3 = Edge(testPt.y, testPt.z, v2.y, v2.z, v0.y, v0.z) >= 0.0;
+        break;
+    }
+    case 2: { // Y => (x, z). `<= 0`
+        f1 = Edge(testPt.x, testPt.z, v0.x, v0.z, v1.x, v1.z) <= 0.0;
+        f2 = Edge(testPt.x, testPt.z, v1.x, v1.z, v2.x, v2.z) <= 0.0;
+        f3 = Edge(testPt.x, testPt.z, v2.x, v2.z, v0.x, v0.z) <= 0.0;
+        break;
+    }
+    case 4: { // Z => (x, y). `>= 0`
+        f1 = Edge(testPt.x, testPt.y, v0.x, v0.y, v1.x, v1.y) >= 0.0;
+        f2 = Edge(testPt.x, testPt.y, v1.x, v1.y, v2.x, v2.y) >= 0.0;
+        f3 = Edge(testPt.x, testPt.y, v2.x, v2.y, v0.x, v0.y) >= 0.0;
+        break;
+    }
+    default:
+        NOTSA_UNREACHABLE(); // GetPrincipleAxis only returns 0, 2 or 4
+    }
+    return f1 == f2 && f1 == f3;
 }
 
 // 0x415CF0
@@ -2740,44 +3374,73 @@ bool CCollision::SphereCastVersusVsPoly(
 ) {
     ZoneScoped;
 
+    // NOTE: The original keeps the intermediates in the x87 registers (extended precision) => `double`, rounded to float where the original stores to the stack
+
+    const auto& A = spA.m_vecCenter;
+
+    // 0x415CF0 - spA => spB (AKA velocity)
+    const double ABzExact = (double)spB.m_vecCenter.z - A.z; // `fst` => the z² uses the unrounded value times the rounded one
+    const CVector spAToB{
+        spB.m_vecCenter.x - A.x,
+        spB.m_vecCenter.y - A.y,
+        (float)ABzExact
+    };
+    const float spAToBDistSq = (float)((ABzExact * spAToB.z + (double)spAToB.y * spAToB.y) + (double)spAToB.x * spAToB.x);
+
     const auto plNorm = triPlane.GetNormal();
 
     const auto spARadius = spA.m_fRadius;
 
-    const auto plSpCenterDist = triPlane.GetPtDotNormal(spA.m_vecCenter);
-    const auto isSpTouchingPl = std::abs(plSpCenterDist) <= spARadius;
+    // 0x415DBF - `GetPtDotNormal` (not rounded)
+    const double plSpCenterDist = (((double)A.z * plNorm.z + (double)A.y * plNorm.y) + (double)A.x * plNorm.x) - (float)triPlane.m_normalOffset;
+    const bool   isSpTouchingPl = !(std::abs(plSpCenterDist) > spARadius); // jne after `test ah, 0x41`
 
     // Sphere's center projected onto the plane's normal
-    auto spAProjPl = spA.m_vecCenter - plNorm * (isSpTouchingPl ? plSpCenterDist : spARadius); 
+    const double projDist = isSpTouchingPl ? plSpCenterDist : (double)spARadius;
+    const float  projZOff = (float)(plNorm.z * projDist);
+    const CVector spAProj0{
+        (float)(A.x - plNorm.x * projDist),
+        (float)(A.y - plNorm.y * projDist),
+        (float)((double)A.z - projZOff)
+    };
+    CVector spAProjPl = spAProj0;
 
-    const auto spAToB = spB.m_vecCenter - spA.m_vecCenter; // AKA velocity
-    const auto vA     = verts[tri.vA];
+    const CVector vA = verts[tri.vA];
 
     if (!isSpTouchingPl) {
-        const auto vtxAToSpDistSqOnPl = (vA - spAProjPl).Dot(plNorm);
-        if (vtxAToSpDistSqOnPl > 0.f) {
+        // 0x415E7E
+        const double vtxAToSpDistSqOnPl = ((((double)vA.z - spAProj0.z) * plNorm.z + ((double)vA.y - spAProj0.y) * plNorm.y) + ((double)vA.x - spAProj0.x) * plNorm.x);
+        if (vtxAToSpDistSqOnPl > 0.0) {
             return false;
         }
-        const auto spAToBDistSqOnPl = spAToB.Dot(plNorm);
-        if (vtxAToSpDistSqOnPl <= spAToBDistSqOnPl) {
+        const float  vtxDist           = (float)vtxAToSpDistSqOnPl; // Spilled to the stack
+        const double spAToBDistSqOnPl  = ((double)plNorm.z * spAToB.z + (double)plNorm.y * spAToB.y) + (double)plNorm.x * spAToB.x;
+        if ((double)vtxDist <= spAToBDistSqOnPl) {
             return false; // If spA was closer than spB then there's no way spB would touch it, so we're finished
         }
-        spAProjPl += spAToB * (vtxAToSpDistSqOnPl / spAToBDistSqOnPl); // Interpolate between spA -> spB
+        const double ratio = (double)vtxDist / spAToBDistSqOnPl;
+        const float  ry    = (float)(spAToB.y * ratio);
+        const float  rz    = (float)(spAToB.z * ratio);
+        spAProjPl = CVector{
+            (float)(spAToB.x * ratio + spAProj0.x),
+            (float)((double)ry + spAProj0.y),
+            (float)((double)rz + spAProj0.z)
+        };
     }
 
-    const auto vB = verts[tri.vB], vC = verts[tri.vC];
+    const CVector vB = verts[tri.vB], vC = verts[tri.vC];
 
     const CVector cverts[]{vA, vB, vC};
     if (PointInPoly(spAProjPl, tri, plNorm, cverts)) {
         return true;
     }
 
-    const auto& pos          = spA.m_vecCenter;
-    const auto  maxDistSq    = sq(spARadius);
-    const auto  spAToBDistSq = spAToB.SquaredMagnitude(); // AKA spB <-> spA dist sq
-    return ClosestSquaredDistanceBetweenFiniteLines(pos, vA, vB, spAToB, spAToBDistSq) < maxDistSq
-        || ClosestSquaredDistanceBetweenFiniteLines(pos, vC, vB, spAToB, spAToBDistSq) < maxDistSq
-        || ClosestSquaredDistanceBetweenFiniteLines(pos, vA, vC, spAToB, spAToBDistSq) < maxDistSq;
+    // 0x416050 - The result of `ClosestSquaredDistanceBetweenFiniteLines` is compared unrounded (st0)
+    const auto& pos       = spA.m_vecCenter;
+    const float maxDistSq = (float)((double)spARadius * spARadius);
+    return ClosestSquaredDistanceBetweenFiniteLinesOG(pos, vA, vB, spAToB, spAToBDistSq) < maxDistSq
+        || ClosestSquaredDistanceBetweenFiniteLinesOG(pos, vC, vB, spAToB, spAToBDistSq) < maxDistSq
+        || ClosestSquaredDistanceBetweenFiniteLinesOG(pos, vA, vC, spAToB, spAToBDistSq) < maxDistSq;
 }
 
 /*!
@@ -2897,83 +3560,84 @@ bool CCollision::SphereCastVsCaches(
 ) {
     ZoneScoped;
 
-    const CColSphere spBws{ spAws.m_vecCenter + velocity, spAws.m_fRadius };
+    const CColSphere spBws{ spAws.m_vecCenter + velocity, spAws.m_fRadius }; // 0x4181F9 (float adds)
 
-    assert(!numIn || in[0].ent); 
+    CColSphere       spAos, spBos; // Working copies (in the space of the entity of the current region)
+    CCollisionData*  ecd = nullptr;
 
     // Process entities now
-    for (auto i = 0; i < numIn; ) {
-        const auto entity = in[i].ent;
-        if (!entity) {
-        next:
-            i++;
+    for (int32 i = 0; i < numIn; i++) {
+        const auto& entry  = in[i];
+        const auto  entity = entry.ent;
+
+        if (entity) { // 0x418279 - New region
+            spAos = spAws;
+            spBos = spBws;
+
+            auto& entMat = entity->GetMatrix(); // 0x4182AC - Allocates the matrix if needed (even if there's no col data)
+
+            ecd = entity->GetColData(); // 0x4182D0
+            if (!ecd) {
+                continue; // 0x4182DE
+            }
+
+            // Transform speheres into entity's (object) space (0x418319)
+            // The original transforms the end points of a line (`0x59C890`, extended precision)
+            const auto invEntMat = Invert(entMat);
+            spBos.m_vecCenter = TransformPointOG(invEntMat, spBws.m_vecCenter);
+            spAos.m_vecCenter = TransformPointOG(invEntMat, spAws.m_vecCenter);
+
+            // Have to push this nevertheless
+            // If there are no collisions it will be overwritten
+            out[numOut].ent  = entity; // 0x4183C2
+            out[numOut].type = CColCacheEntry::eType::NONE;
+        } else if (!ecd) { // NOTSA: The original would crash here
             continue;
         }
 
-        const auto ecd = entity->GetColData();
-        if (!ecd) {
-            goto next;
+        // Now do the test - note: the first hit of a region overwrites the entry pushed above (=> keeps `ent` set)
+        using enum CColCacheEntry::eType;
+        switch (entry.type) {
+        case TRIANGLE: { // 0x418480
+            const auto triIdx = entry.triIdx;
+            const auto idx    = triIdx < (uint16)SHRT_MAX // I don'plSpCenterDist have a damn clue why complicate shit so much instead of using a 4th entry type (like `BACKSIDE_TRIANGLE`)
+                ? triIdx
+                : (uint16)(0xFFFFu - triIdx); // Search in file for: BULLSHIT_DETECTOR
+            if (!SphereCastVersusVsPoly(spAos, spBos, ecd->m_pTriangles[idx], ecd->m_pTrianglePlanes[idx], ecd->m_pVertices)) {
+                continue;
+            }
+            auto& dst = out[numOut++];
+            dst.triIdx = triIdx;
+            dst.type   = TRIANGLE;
+            break;
+        }
+        case SPHERE: { // 0x41843B
+            if (!SphereCastVsSphere(spAos, spBos, ecd->m_pSpheres[entry.sphIdx])) {
+                continue;
+            }
+            auto& dst = out[numOut++];
+            dst.sphIdx = entry.sphIdx;
+            dst.type   = SPHERE;
+            break;
+        }
+        case BOX: { // 0x4183F7
+            if (!SphereCastVsBBox(spAos, spBos, ecd->m_pBoxes[entry.boxIdx])) {
+                continue;
+            }
+            auto& dst = out[numOut++];
+            dst.boxIdx = entry.boxIdx;
+            dst.type   = BOX;
+            break;
+        }
+        default:
+            continue;
         }
 
-        // Have to push this nevertheless
-        // If there are no collisions it will be overwritten
-        out[numOut] = { entity };
-
-        auto PushEntry = [&, isFirst = true](CColCacheEntry entry) mutable {
-            // First entry has to keep `entity` set (As this overwrites the initial push above)
-            if (isFirst) {
-                entry.ent = entity;
-                isFirst = false;
-            }
-            out[numOut++] = entry;
-        };
-
-        // Transform speheres into entity's (object) space
-        const auto invEntMat = Invert(entity->GetMatrix());
-        const CColSphere spAos{ spAws.GetTransformed(invEntMat) },
-                         spBos{ spBws.GetTransformed(invEntMat) };
-
-        const auto verts   = ecd->GetTriVerts();
-        const auto tris    = ecd->GetTris();
-        const auto triPls  = ecd->GetTriPlanes();
-        const auto spheres = ecd->GetSpheres();
-        const auto bboxes  = ecd->GetBoxes();
-
-        // Now do the tests
-        for (;; i++) {
-            const auto& entry = in[i];
-            if ([&] {
-                using enum CColCacheEntry::eType;
-                switch (entry.type) {
-                case TRIANGLE: {
-                    const auto triIdx = entry.triIdx >= SHRT_MAX // I don'plSpCenterDist have a damn clue why complicate shit so much instead of using a 4th entry type (like `BACKSIDE_TRIANGLE`)
-                        ? (uint16)(-1) - entry.triIdx // Search in file for: BULLSHIT_DETECTOR
-                        : entry.triIdx;
-                    return SphereCastVersusVsPoly(spAos, spBos, tris[triIdx], triPls[triIdx], verts);
-                }
-                case SPHERE:
-                    return SphereCastVsSphere(spAos, spBos, spheres[entry.sphIdx]);
-                case BOX:
-                    return SphereCastVsBBox(spAos, spBos, bboxes[entry.boxIdx]);
-                default:
-                    NOTSA_UNREACHABLE();
-                }
-            }()) { // If there was a collision...
-                PushEntry(entry);
-            }
-
-            if (i + 1 >= numIn) { // No more entries
-                goto finished;
-            }
-
-            if (in[i + 1].ent) { // Found new region
-                goto next;
-            }
-        }
-    
+        // 0x418524 - Terminate
+        out[numOut].ent  = nullptr;
+        out[numOut].type = NONE;
     }
 
-finished:
     return numOut > 0;
 }
 
@@ -2989,21 +3653,23 @@ bool CCollision::SphereCastVsEntity(
 ) {
     ZoneScoped;
 
-    if (!entity->GetUsesCollision() || TheCamera.IsExtraEntityToIgnore(entity)) {
+    if (!entity->GetUsesCollision() || TheCamera.IsExtraEntityToIgnore(entity)) { // 0x419F23
         return false;
     }
 
-    const auto ecm = entity->GetColModel();
-    const auto ecd = ecm->GetData();
+    // 0x419F55 - Allocates the matrix if needed (even if there's no col data)
+    const auto invEntMat = Invert(entity->GetMatrix());
+
+    // 0x419F9A - Transform into object space (os) (the end points of a line are transformed, `0x59C890`)
+    // BUG: The original uses the radius of `spAws` for both spheres
+    CColSphere spAos{ TransformPointOG(invEntMat, spAws.m_vecCenter), spAws.m_fRadius },
+               spBos{ TransformPointOG(invEntMat, spBws.m_vecCenter), notsa::IsFixBugs() ? spBws.m_fRadius : spAws.m_fRadius };
+
+    const auto ecm = entity->GetColModel(); // 0x41A085
+    const auto ecd = ecm->m_pColData;
     if (!ecd) {
         return false;
     }
-
-    const auto invEntMat = Invert(entity->GetMatrix());
-
-    // There was a bug (Noteably spBws's spRadius was set to spAws's, I've fixed that here)
-    CColSphere spAos{ spAws.GetTransformed(invEntMat) }, // os = object space
-               spBos{ spBws.GetTransformed(invEntMat) };
 
     if (!SphereCastVsBBox(spAos, spBos, ecm->GetBoundingBox())) {
         return false;
@@ -3011,53 +3677,63 @@ bool CCollision::SphereCastVsEntity(
 
     using enum CColCacheEntry::eType;
 
+    auto* const cache = (ColCache*)gpColCache; // 0x41A0D6 - read once
+
+    // Note: All the loops below go from the LAST element to the first one (as the original does), as the order of the entries in the cache matters!
     auto anyCollisionsDetected = false;
     const auto AddEntryToColCache = [&, entity](CColCacheEntry::eType type, uint16 idx) {
-        if (gColCacheNumEntries >= COL_CACHE_SIZE - 1) { // TODO: Magic number
+        if ((int32)gColCacheNumEntries >= (int32)COL_CACHE_SIZE - 1) { // TODO: Magic number
             return true;
         }
-        (*gpColCache)[gColCacheNumEntries++] = CColCacheEntry{
-            anyCollisionsDetected ? nullptr : entity, // Only the first entry has the entity set, subsequent ones have nullptr
-            type,
-            idx
-        };
+        auto& e = (*cache)[gColCacheNumEntries];
+        e.type  = NONE;
+        e.ent   = anyCollisionsDetected ? nullptr : entity; // Only the first entry has the entity set, subsequent ones have nullptr
         anyCollisionsDetected = true;
+
+        auto& e2 = (*cache)[gColCacheNumEntries++];
+        switch (type) {
+        case SPHERE:   e2.sphIdx = idx; break;
+        case TRIANGLE: e2.triIdx = idx; break;
+        case BOX:      e2.boxIdx = idx; break;
+        default:       NOTSA_UNREACHABLE();
+        }
+        e2.type = type;
         return false;
     };
 
     // Process spheres
-    for (auto&& [idx, sp] : rngv::enumerate(ecd->GetSpheres())) {
-        if (!SphereCastVsSphere(spAos, spBos, sp)) {
+    for (int32 idx = (int16)ecd->m_nNumSpheres - 1; idx >= 0; idx--) {
+        if (!SphereCastVsSphere(spAos, spBos, ecd->m_pSpheres[idx])) {
             continue;
         }
-        if (AddEntryToColCache(SPHERE, idx)) {
+        if (AddEntryToColCache(SPHERE, (uint16)idx)) {
             return true;
         }
     }
 
     // Process triangles
     {
+        const bool tryDoubleSided = gbTryDoubleSidedCollision; // 0x41A16D
+
         CalculateTrianglePlanes(ecd);
 
-        const auto verts  = ecd->GetTriVerts();
-        const auto tris   = ecd->GetTris();
-        const auto triPls = ecd->GetTriPlanes();
+        const auto verts  = ecd->m_pVertices;
+        const auto tris   = ecd->m_pTriangles;
+        const auto triPls = ecd->m_pTrianglePlanes;
 
-        const auto ProcessTri = [&](uint16 triIdx) { // If `true` is returned the calle should `return true` too, otherwise nothing.
+        const auto ProcessTri = [&](int32 triIdx) { // If `true` is returned the calle should `return true` too, otherwise nothing.
             const auto& tri   = tris[triIdx];
             const auto& triPl = triPls[triIdx];
 
-            // Otherwise the logic will fail (and we'll get random ass crashes)
-            assert(!gbTryDoubleSidedCollision || triIdx <= SHRT_MAX);
-
             if (SphereCastVersusVsPoly(spAos, spBos, tri, triPl, verts)) {
-                if (AddEntryToColCache(TRIANGLE, triIdx)) {
+                if (AddEntryToColCache(TRIANGLE, (uint16)triIdx)) {
                     return true;
                 }
             }
 
-            if (gbTryDoubleSidedCollision && std::abs(triPl.m_normal.z < 0.05f) && SphereCastVersusVsPoly(spBos, spAos, tri, triPl, verts)) {
-                if (AddEntryToColCache(TRIANGLE, (uint16)(-1) - triIdx)) { // Search in file for: BULLSHIT_DETECTOR
+            // 0x41A2C8
+            if (tryDoubleSided && std::abs((float)triPl.m_normal.z) < 0.05f && SphereCastVersusVsPoly(spBos, spAos, tri, triPl, verts)) {
+                if (AddEntryToColCache(TRIANGLE, (uint16)(0xFFFFu - (uint32)triIdx))) { // Search in file for: BULLSHIT_DETECTOR
                     return true;
                 }
             }
@@ -3065,68 +3741,97 @@ bool CCollision::SphereCastVsEntity(
             return false;
         };
 
-        if (ecd->bHasFaceGroups) {
-            for (const auto& fg : ecd->GetFaceGroups()) {
-                if (!SphereCastVsBBox(spAos, spBos, fg.bb)) {
-                    continue;
-                }
+        if ((int16)ecd->m_nNumTriangles != 0) {
+            if (ecd->bHasFaceGroups) {
+                // The face groups are stored (in reverse order) right before the triangles (the number of them is right before them)
+                const auto numFGs = *reinterpret_cast<int32*>(reinterpret_cast<uint8*>(tris) - sizeof(uint32));
+                for (int32 j = 0; j < numFGs; j++) {
+                    const auto& fg = *reinterpret_cast<const ColHelpers::TFaceGroup*>(reinterpret_cast<const uint8*>(tris) - 0x20 - j * (int32)sizeof(ColHelpers::TFaceGroup));
+                    if (!SphereCastVsBBox(spAos, spBos, fg.bb)) {
+                        continue;
+                    }
 
-                for (auto triIdx = fg.first; triIdx <= fg.last; triIdx++) {
+                    for (int32 triIdx = (int16)fg.first; triIdx <= (int16)fg.last; triIdx++) {
+                        if (ProcessTri(triIdx)) {
+                            return true;
+                        }
+                    }
+                }
+            } else {
+                for (int32 triIdx = (int16)ecd->m_nNumTriangles - 1; triIdx >= 0; triIdx--) {
                     if (ProcessTri(triIdx)) {
                         return true;
                     }
-                }
-            }
-        } else {
-            for (uint16 i = 0; i < ecd->GetNumTris(); i++) {
-                if (ProcessTri(i)) {
-                    return true;
                 }
             }
         }
     }
 
     // Process boxes
-    for (auto&& [idx, bb] : rngv::enumerate(ecd->GetBoxes())) {
-        if (SphereCastVsBBox(spAos, spBos, bb)) {
-            if (AddEntryToColCache(BOX, idx)) {
+    for (int32 idx = (int16)ecd->m_nNumBoxes - 1; idx >= 0; idx--) {
+        if (SphereCastVsBBox(spAos, spBos, ecd->m_pBoxes[idx])) {
+            if (AddEntryToColCache(BOX, (uint16)idx)) {
                 return true;
             }
         }
     }
-    
+
     return anyCollisionsDetected;
+}
+
+namespace {
+//! The original reads the radius from the collision model of the model info (NOT `CEntity::GetColModel`, as that might be a special col model of a vehicle)
+CColSphere GetWorldBoundSphereOfEntity(CEntity* entity) {
+    const float radius = entity->GetModelInfo()->GetColModel()->m_boundSphere.m_fRadius;
+    return { entity->GetBoundCentre(), radius };
+}
+
+//! The test that is inlined in `CheckCameraCollisionBuildings` and `CheckCameraCollisionObjects` (STRICT; unrounded)
+bool IsEntityBoundSphereCloseTo(const CColSphere& spS, CEntity* entity) {
+    const auto sp = GetWorldBoundSphereOfEntity(entity);
+    const double dx = (double)spS.m_vecCenter.x - sp.m_vecCenter.x;
+    const double dy = (double)spS.m_vecCenter.y - sp.m_vecCenter.y;
+    const double dz = (double)spS.m_vecCenter.z - sp.m_vecCenter.z;
+    const double r  = (double)sp.m_fRadius + spS.m_fRadius;
+    return r * r > (dz * dz + dy * dy) + dx * dx; // `fcompp` + `test ah, 0x41` + `jne` => skip if !(r^2 > dist^2)
+}
 }
 
 // 0x41A820
 bool CCollision::CheckCameraCollisionBuildings(
     int32 X,
     int32 Y,
-    const CColBox& pBox,
+    const CColBox& pBox, // unused
     const CColSphere& spS,
     const CColSphere& spA,
     const CColSphere& spB
 ) {
     ZoneScoped;
 
-    const auto plyrVeh = FindPlayerVehicle();
+    const auto plyrVeh = FindPlayerVehicle(-1, false);
     const auto checkFlyerCollision = plyrVeh && plyrVeh->physicalFlags.bDontCollideWithFlyers;
 
     bool anyCollided = false;
-    for (auto* const entity : CWorld::GetSector(X, Y).Buildings) {
+    for (auto* const entity : CWorld::GetSector(X, Y).Buildings) { // `GetSector` clamps => same as the original
         if (!entity->ProcessScan()) {
             continue;
         }
 
-        if (checkFlyerCollision && (!entity->DoesNotCollideWithFlyers() || CWorld::pIgnoreEntity == entity)) {
+        if (checkFlyerCollision && entity->DoesNotCollideWithFlyers()) {
             continue;
         }
 
-        if (!TestSphereSphere(spS, TransformObject(entity->GetColModel()->GetBoundingSphere(), entity->GetMatrix()))) {
+        if (CWorld::pIgnoreEntity == entity) {
             continue;
         }
 
-        anyCollided |= SphereCastVsEntity(spA, spB, entity);
+        if (!IsEntityBoundSphereCloseTo(spS, entity)) {
+            continue;
+        }
+
+        if (SphereCastVsEntity(spA, spB, entity)) {
+            anyCollided = true;
+        }
     }
     return anyCollided;
 }
@@ -3135,7 +3840,7 @@ bool CCollision::CheckCameraCollisionBuildings(
 bool CCollision::CheckCameraCollisionVehicles(
     int32 X,
     int32 Y,
-    const CColBox& bbSpAB,
+    const CColBox& bbSpAB, // unused
     const CColSphere& spS,
     const CColSphere& spA,
     const CColSphere& spB,
@@ -3148,7 +3853,7 @@ bool CCollision::CheckCameraCollisionVehicles(
     static auto& gFramesToConsiderSittingOnStillTrue = StaticRef<int32>(0x8A5B1C); // 30
 
     bool anyCollided = false;
-    for (auto* const entity : CWorld::GetRepeatSector(X, Y).Vehicles) {
+    for (auto* const entity : CWorld::ms_aRepeatSectors[Y & 0xF][X & 0xF].Vehicles) { // Original uses `& 0xF` (even for negative values)
         if (!entity->ProcessScan()) {
             continue;
         }
@@ -3157,9 +3862,10 @@ bool CCollision::CheckCameraCollisionVehicles(
             continue;
         }
 
-        if (IsThisVehicleSittingOnMe(CWorld::pIgnoreEntity->AsVehicle(), entity)) {
-            gpLastSittingOnEntity = entity;
+        // NOTE: `pIgnoreEntity` is passed as is (it might not be a vehicle, or null)
+        if (IsThisVehicleSittingOnMe(static_cast<CVehicle*>(CWorld::pIgnoreEntity), entity)) {
             gFramesSittingOnTimeOut = gFramesToConsiderSittingOnStillTrue;
+            gpLastSittingOnEntity = entity;
             continue;
         }
 
@@ -3171,16 +3877,22 @@ bool CCollision::CheckCameraCollisionVehicles(
         }
 
         if (plyrVehVel) {
-            if (relVelCamCollisionVehiclesSqr <= (*plyrVehVel - entity->GetMoveSpeed()).SquaredMagnitude()) {
+            const auto& ms = entity->GetMoveSpeed();
+            const double dx = (double)plyrVehVel->x - ms.x;
+            const double dy = (double)plyrVehVel->y - ms.y;
+            const double dz = (double)plyrVehVel->z - ms.z;
+            if (!((dz * dz + dy * dy) + dx * dx < relVelCamCollisionVehiclesSqr)) { // jp after `test ah, 5` => continue if !(a < b)
                 continue;
             }
         }
 
-        if (!TestSphereSphere(spS, TransformObject(entity->GetColModel()->GetBoundingSphere(), entity->GetMatrix()))) {
+        if (!TestSphereSphere(spS, GetWorldBoundSphereOfEntity(entity))) {
             continue;
         }
 
-        anyCollided |= SphereCastVsEntity(spA, spB, entity);
+        if (SphereCastVsEntity(spA, spB, entity)) {
+            anyCollided = true;
+        }
     }
     return anyCollided;
 }
@@ -3189,7 +3901,7 @@ bool CCollision::CheckCameraCollisionVehicles(
 bool CCollision::CheckCameraCollisionObjects(
     int32 X,
     int32 Y,
-    const CColBox& pBox,
+    const CColBox& pBox, // unused
     const CColSphere& spS,
     const CColSphere& spA,
     const CColSphere& spB
@@ -3199,20 +3911,22 @@ bool CCollision::CheckCameraCollisionObjects(
     // Pirulax: At this point I'm certain R* devs were paid by lines written
 
     bool anyCollided = false;
-    for (auto* const entity : CWorld::GetRepeatSector(X, Y).Objects) {
+    for (auto* const entity : CWorld::ms_aRepeatSectors[Y & 0xF][X & 0xF].Objects) { // Original uses `& 0xF` (even for negative values)
         if (!entity->ProcessScan()) {
             continue;
         }
 
-        if (CWorld::CameraToIgnoreThisObject(entity) && CWorld::pIgnoreEntity == entity) {
+        if (CWorld::CameraToIgnoreThisObject(entity) || CWorld::pIgnoreEntity == entity) {
             continue;
         }
 
-        if (!TestSphereSphere(spS, TransformObject(entity->GetColModel()->GetBoundingSphere(), entity->GetMatrix()))) {
+        if (!IsEntityBoundSphereCloseTo(spS, entity)) {
             continue;
         }
 
-        anyCollided |= SphereCastVsEntity(spA, spB, entity);
+        if (SphereCastVsEntity(spA, spB, entity)) {
+            anyCollided = true;
+        }
     }
     return anyCollided;
 }
@@ -3235,11 +3949,16 @@ bool CCollision::CheckPeds(
         return false;
     }
 
+    // NOTE: Not using `CWorld::IterateSectors` as it asserts on an empty range, the original just does nothing
+    const auto left = gnLeft, right = gnRight, bottom = gnBottom, top = gnTop; // 0x4154B2
     bool anyCollides = false;
-    CWorld::IterateSectors(gnLeft, gnBottom, gnRight, gnTop, [&](int32 sx, int32 sy) {
-        anyCollides |= CheckCameraCollisionPeds(sx, sy, src, normal, nearest);
-        return true;
-    });
+    for (auto sy = bottom; sy <= top; sy++) {
+        for (auto sx = left; sx <= right; sx++) {
+            if (CheckCameraCollisionPeds(sx, sy, src, normal, nearest)) {
+                anyCollides = true;
+            }
+        }
+    }
     return anyCollides;
 }
 
@@ -3251,43 +3970,92 @@ bool CCollision::BuildCacheOfCameraCollision(
     ZoneScoped;
 
     const auto spABBox = GetBoundingBoxFromTwoSpheres(spA, spB);
-    const auto spABBSp = CColSphere{CSphere{ spABBox.GetCenter(), spABBox.GetSize().Magnitude() / 2.f} };
 
-    gnLeft   = CWorld::GetSectorX(spABBox.m_vecMin.x);
-    gnRight  = CWorld::GetSectorX(spABBox.m_vecMax.x);
-    gnBottom = CWorld::GetSectorY(spABBox.m_vecMin.y);
-    gnTop    = CWorld::GetSectorY(spABBox.m_vecMax.y);
+    // 0x41AC5B - Sphere around the box (extended precision, rounded when stored, see the original for what is rounded and what isn't)
+    const CColSphere spABBSp = [&] {
+        const double sx = (double)spABBox.m_vecMax.x - spABBox.m_vecMin.x;
+        const double sy = (double)spABBox.m_vecMax.y - spABBox.m_vecMin.y;
+        const double sz = (double)spABBox.m_vecMax.z - spABBox.m_vecMin.z;
+        const float  hz = (float)(sz * 0.5); // Spilled to the stack
+        const CVector center{
+            (float)(sx * 0.5 + spABBox.m_vecMin.x),
+            (float)(sy * 0.5 + spABBox.m_vecMin.y),
+            (float)((double)hz + spABBox.m_vecMin.z)
+        };
+        const float radius = (float)(std::sqrt((sz * sz + sy * sy) + sx * sx) * 0.5);
+        return CColSphere{ CSphere{ center, radius }, (eSurfaceType)0, 0, tColLighting{ 0xFF } };
+    }();
+
+    // 0x41ACE9 - `CWorld::GetSectorX/Y` inlined: `(int)floor((double)(v * 0.02f + 60.0f))`.
+    // The unrounded (x87) value is used to check the range, while the value that is used is calculated from the value spilled to the stack (float)
+    const auto GetSectorCoord = [](float v, auto&& Clamp) {
+        const double ext = (double)v * (double)0.02f + 60.0;
+        const auto   a   = (int32)std::floor(ext);
+        const auto   b   = (int32)std::floor((double)(float)ext);
+        return Clamp(a, b);
+    };
+    const auto ClampLow  = [](int32 a, int32 b) { return a > 0 ? b : 0; };       // 0x41AD12 jle
+    const auto ClampHigh = [](int32 a, int32 b) { return a >= 0x77 ? 0x77 : b; }; // 0x41ADA7 jge
+    const int32 left   = GetSectorCoord(spABBox.m_vecMin.x, ClampLow);
+    const int32 bottom = GetSectorCoord(spABBox.m_vecMin.y, ClampLow);
+    const int32 right  = GetSectorCoord(spABBox.m_vecMax.x, ClampHigh);
+    const int32 top    = GetSectorCoord(spABBox.m_vecMax.y, ClampHigh);
+    gnLeft   = left;
+    gnBottom = bottom;
+    gnRight  = right;
+    gnTop    = top;
 
     CWorld::AdvanceCurrentScanCode();
+
+    const bool doVehicles  = bCamCollideWithVehicles;
+    const bool doBuildings = bCamCollideWithBuildings;
+    const bool doObjects   = bCamCollideWithObjects;
 
     gColCacheNumEntries = 0;
 
     const auto ogpIgnoreEntity = CWorld::pIgnoreEntity;
-    if (!CWorld::pIgnoreEntity) {
+    if (!ogpIgnoreEntity) {
         auto& plyrtm = FindPlayerPed(0)->GetTaskManager();
 
-        if (const auto task = static_cast<CTaskComplexEnterCar*>(plyrtm.Find<CTaskComplexEnterCarAsPassenger, CTaskComplexEnterCarAsDriver>())) {
-            CWorld::pIgnoreEntity = task->GetCameraAvoidVehicle();
+        // NOTE: Order matters (driver is checked first)
+        auto task = plyrtm.FindActiveTaskByType(TASK_COMPLEX_ENTER_CAR_AS_DRIVER); // 0x2BD
+        if (!task) {
+            task = plyrtm.FindActiveTaskByType(TASK_COMPLEX_ENTER_CAR_AS_PASSENGER); // 0x2BC
+        }
+        if (task) {
+            CWorld::pIgnoreEntity = static_cast<CTaskComplexEnterCar*>(task)->GetCameraAvoidVehicle();
         }
     }
 
-    const auto plyrVeh = FindPlayerVehicle();
+    CVector plyrVelCopy;
+    const CVector* plyrVehVel = nullptr;
+    if (FindPlayerVehicle(0, false)) {
+        plyrVelCopy = FindPlayerSpeed(0);
+        plyrVehVel  = &plyrVelCopy;
+    }
 
     bool anyCollision = false;
-    CWorld::IterateSectors(gnLeft, gnBottom, gnRight, gnTop, [&](int32 sx, int32 sy) {
-        if (bCamCollideWithBuildings) {
-            gbTryDoubleSidedCollision = true;
-            anyCollision |= CheckCameraCollisionBuildings(sx, sy, spABBox, spABBSp, spA, spB);
-            gbTryDoubleSidedCollision = false;
+    for (auto sy = bottom; sy <= top; sy++) {
+        for (auto sx = left; sx <= right; sx++) {
+            if (doBuildings) {
+                gbTryDoubleSidedCollision = true;
+                if (CheckCameraCollisionBuildings(sx, sy, spABBox, spABBSp, spA, spB)) {
+                    anyCollision = true;
+                }
+                gbTryDoubleSidedCollision = false;
+            }
+            if (doVehicles) {
+                if (CheckCameraCollisionVehicles(sx, sy, spABBox, spABBSp, spA, spB, plyrVehVel)) {
+                    anyCollision = true;
+                }
+            }
+            if (doObjects) {
+                if (CheckCameraCollisionObjects(sx, sy, spABBox, spABBSp, spA, spB)) {
+                    anyCollision = true;
+                }
+            }
         }
-        if (bCamCollideWithVehicles) {
-            anyCollision |= CheckCameraCollisionVehicles(sx, sy, spABBox, spABBSp, spA, spB, plyrVeh ? &plyrVeh->GetMoveSpeed() : nullptr);
-        }
-        if (bCamCollideWithObjects) {
-            anyCollision |= CheckCameraCollisionObjects(sx, sy, spABBox, spABBSp, spA, spB);
-        }
-        return true;
-    });
+    }
 
     CWorld::pIgnoreEntity = ogpIgnoreEntity;
 
@@ -3326,40 +4094,55 @@ bool CCollision::CameraConeCastVsWorldCollision(
     }
 
     // Reminder: The 2 spheres are offset by the spBToA of the player...
-    const auto velocity = spB.m_vecCenter - spA.m_vecCenter;
+    const CVector velocity{
+        spB.m_vecCenter.x - spA.m_vecCenter.x,
+        spB.m_vecCenter.y - spA.m_vecCenter.y,
+        spB.m_vecCenter.z - spA.m_vecCenter.z
+    };
 
     // Radius of the badass spehere we're going to use
     const auto spRadius = spA.m_fRadius;
 
     // Badass sphere that represents the camera
     // (gets smaller and smaller as we progress with the binary search)
-    CColSphere spCam = CSphere{ spA.m_vecCenter, spRadius};
+    CColSphere spCam{ spA.m_vecCenter, spRadius };
 
     // Since writing to overlapping arrays is a bad idea we use 2 caches
     // one is the current, other one is the next one to use
-    size_t cacheToUse = 0;
+    ColCache* in  = &caches[0];
+    ColCache* out = &caches[1];
+    int32 numIn   = (int32)gColCacheNumEntries; // NOTE: The original keeps the count in a register (the global isn't updated)
 
     // Now, we do a badass binary search to find the closest 
     // possible distance to the collision such that the camera
     // (or well, the sphere representing it `spCam`)
     // isn'plSpCenterDist clipping into it
-    float max = 1.f, min = minDist, rng;
+    // 0x8A5B10 (float, = 0.001f)
+    const float limit = gLimitPrecisionOfBinarySearch;
+    float max = 1.f, min = minDist;
+    double rng = 1.0 - (double)minDist; // Unrounded, as the x87 stack
+    float dstF;
     do {
-        rng = max - min;
-        dst = min + rng / 2.f;
+        const double dstExt = rng * 0.5 + min;
+        dstF = (float)dstExt;
 
-        spCam.m_fRadius = spRadius * dst;
+        spCam.m_fRadius = (float)(dstExt * spRadius);
 
-        if (int32 numOut = 0; SphereCastVsCaches(spCam, velocity * dst, gColCacheNumEntries, caches[cacheToUse].data(), numOut, caches[(cacheToUse + 1) % 2].data())) {
-            gColCacheNumEntries = numOut;
-            cacheToUse          = (cacheToUse + 1) % 2;
-            max                 = dst;
+        const CVector scaledVel{ (float)((double)velocity.x * dstF), (float)((double)velocity.y * dstF), (float)((double)velocity.z * dstF) };
+
+        int32 numOut = 0;
+        if (SphereCastVsCaches(spCam, scaledVel, numIn, in->data(), numOut, out->data())) {
+            numIn = numOut;
+            std::swap(in, out);
+            max = dstF;
         } else {
-            min = dst;
+            min = dstF;
         }
-    } while (rng > gLimitPrecisionOfBinarySearch);
+        rng = (double)max - min;
+    } while (rng > limit); // Uses the NEW range
 
-    gLastRadiusUsedInCollisionPreventionOfCamera = dst;
+    dst = dstF;
+    gLastRadiusUsedInCollisionPreventionOfCamera = spCam.m_fRadius;
 
     return true;
 }
@@ -3368,7 +4151,73 @@ bool CCollision::CameraConeCastVsWorldCollision(
 bool CCollision::SphereVsEntity(CColSphere* sphere, CEntity* entity) {
     ZoneScoped;
 
-    NOTSA_UNREACHABLE(); /* unused */
+    // Unused in the exe (no callers). Note that the original never reads `sphere`: the "object space" sphere it tests
+    // against is an uninitialized stack variable (the transformation code is missing from the binary).
+    // NOTSA: We use a zeroed sphere instead of undefined data.
+    const CColSphere sphereOS{};
+
+    if (!entity->GetUsesCollision() || TheCamera.IsExtraEntityToIgnore(entity)) {
+        return false;
+    }
+
+    const auto invMat = Invert(entity->GetMatrix()); // Also unused, other than being constructed/destructed
+    (void)invMat;
+
+    const auto cd = entity->GetColModel()->m_pColData;
+    if (!cd) {
+        return false;
+    }
+
+    // Spheres (backwards)
+    for (auto i = (int32)cd->m_nNumSpheres - 1; i >= 0; i--) {
+        const auto& sp = cd->m_pSpheres[i];
+        // Original: unrounded, term order z, y, x. Strict compare (`FCOMPP` + `test ah, 0x41` + `je`)
+        const double dx = (double)sphereOS.m_vecCenter.x - sp.m_vecCenter.x;
+        const double dy = (double)sphereOS.m_vecCenter.y - sp.m_vecCenter.y;
+        const double dz = (double)sphereOS.m_vecCenter.z - sp.m_vecCenter.z;
+        const double sumR = (double)sphereOS.m_fRadius + sp.m_fRadius;
+        if (sumR * sumR > dz * dz + dy * dy + dx * dx) {
+            return true;
+        }
+    }
+
+    // Boxes (backwards)
+    for (auto i = (int32)cd->m_nNumBoxes - 1; i >= 0; i--) {
+        if (TestSphereBox(sphereOS, cd->m_pBoxes[i])) {
+            return true;
+        }
+    }
+
+    // Triangles
+    CalculateTrianglePlanes(cd);
+
+    if (!cd->m_nNumTriangles) {
+        return false;
+    }
+
+    if (cd->bHasFaceGroups) {
+        // Original goes through the face groups in memory-descending order (`GetFaceGroups()` is ascending) - doesn't matter here
+        const auto groups = cd->GetFaceGroups();
+        for (auto gi = (int32)groups.size() - 1; gi >= 0; gi--) {
+            const auto& group = groups[gi];
+            if (!TestSphereBox(sphereOS, group.bb)) {
+                continue;
+            }
+            for (auto ti = (int32)group.first; ti <= (int32)group.last; ti++) {
+                if (TestSphereTriangle(sphereOS, cd->m_pVertices, cd->m_pTriangles[ti], cd->m_pTrianglePlanes[ti])) {
+                    return true;
+                }
+            }
+        }
+    } else {
+        for (auto i = (int32)cd->m_nNumTriangles - 1; i >= 0; i--) {
+            if (TestSphereTriangle(sphereOS, cd->m_pVertices, cd->m_pTriangles[i], cd->m_pTrianglePlanes[i])) {
+                return true;
+            }
+        }
+    }
+
+    return false;
 }
 
 void CCollision::InjectHooks() {
@@ -3386,9 +4235,16 @@ void CCollision::InjectHooks() {
     // Test & Process
     ////
 
-    // Hooks disabled due to bad performance in debug mode
+    // NOTE: These used to be disabled (redirected to the original code) because of the bad performance in debug mode
+    // of the DLL build. The standalone exe has no original code => all of these are ours now and are reviewed against the exe.
+    // Define `NOTSA_DEBUG_SLOW_COLLISION_OFF` to redirect them to the original code again (DLL builds only).
+#ifdef NOTSA_DEBUG_SLOW_COLLISION_OFF
     const auto state = HS::RedirectToGTA;
-    const auto locked = state == HS::RedirectToGTA;
+    const auto locked = true;
+#else
+    const auto state = HS::RedirectToOurs;
+    const auto locked = false;
+#endif
     
     RH_ScopedInstall(Test2DLineAgainst2DLine, 0x4138D0, { .State = state, .Locked = locked });
 
@@ -3449,7 +4305,7 @@ void CCollision::InjectHooks() {
     RH_ScopedGlobalInstall(ClosestSquaredDistanceBetweenFiniteLines, 0x415A40, { .State = state, .Locked = locked });
     RH_ScopedInstall(SphereCastVersusVsPoly, 0x415CF0, { .State = state, .Locked = locked });
     RH_ScopedInstall(DistToLine, 0x417610, { .State = state, .Locked = locked }); 
-    RH_ScopedInstall(SphereCastVsSphere, 0x417F20, { .Locked = true }); // Can only be unhooked if `TestSphereSphere` is unhooked, eg { .State = state, .Locked = locked }
+    RH_ScopedInstall(SphereCastVsSphere, 0x417F20, { .State = state, .Locked = locked });
     RH_ScopedInstall(ClosestPointOnLine, 0x417FD0, { .State = state, .Locked = locked });
     RH_ScopedInstall(ClosestPointsOnPoly, 0x418100, { .State = state, .Locked = locked });
     RH_ScopedInstall(ClosestPointOnPoly, 0x418150, { .State = state, .Locked = locked });

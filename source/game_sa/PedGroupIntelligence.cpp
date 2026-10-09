@@ -20,6 +20,7 @@ void CPedGroupIntelligence::InjectHooks() {
     RH_ScopedInstall(SetDefaultTaskAllocatorType, 0x5FBB70);
     RH_ScopedInstall(SetDefaultTaskAllocator, 0x5FB280);
     RH_ScopedInstall(ComputeDefaultTasks, 0x5F88D0);
+    RH_ScopedInstall(ComputeScriptCommandTasks, 0x5F7800);
     RH_ScopedInstall(ProcessIgnorePlayerGroup, 0x5F87A0);
     RH_ScopedInstall(ReportAllBarScriptTasksFinished, 0x5F8780);
     RH_ScopedInstall(GetTaskDefault, 0x5F86C0);
@@ -437,6 +438,46 @@ CTaskAllocator* CPedGroupIntelligence::ComputeEventResponseTasks() {
     return CGroupEventHandler::ComputeEventResponseTasks(*m_CurrentEvent, m_pPedGroup);
 }
 
+// 0x5F7800
 void CPedGroupIntelligence::ComputeScriptCommandTasks() {
-    plugin::CallMethod<0x5F7800>(this);
+    // The new (ped, task) for each member slot
+    struct PedTask { CPed* Ped{}; CTask* Task{}; };
+    std::array<PedTask, TOTAL_PED_GROUP_MEMBERS> updated{};
+
+    // Follow the members of the group: If a slot's ped changed, take over the task of the ped from wherever it was before (or none)
+    for (auto&& [i, tp] : rngv::enumerate(m_ScriptCommandPedTaskPairs)) {
+        auto* const member = m_pPedGroup->GetMembership().GetMember((int32)i);
+        updated[i].Ped  = tp.Ped;
+        updated[i].Task = tp.Task;
+        if (member != tp.Ped) {
+            updated[i].Ped = member;
+            CTask* task{};
+            for (auto& other : m_ScriptCommandPedTaskPairs) {
+                if (other.Ped == member) {
+                    task = other.Task;
+                    break;
+                }
+            }
+            updated[i].Task = task;
+        }
+    }
+
+    // Delete tasks that didn't end up in the new list
+    for (auto& tp : m_ScriptCommandPedTaskPairs) {
+        if (!tp.Task) {
+            continue;
+        }
+        const auto it = rng::find(updated, tp.Ped, &PedTask::Ped);
+        if (it != updated.end() && it->Task) {
+            continue;
+        }
+        delete tp.Task; // 0x5F78E5 - Virtual destructor
+        tp.Ped  = nullptr;
+        tp.Task = nullptr;
+    }
+
+    for (auto&& [i, tp] : rngv::enumerate(m_ScriptCommandPedTaskPairs)) {
+        tp.Ped  = updated[i].Ped;
+        tp.Task = updated[i].Task;
+    }
 }

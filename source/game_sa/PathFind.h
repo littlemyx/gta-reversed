@@ -99,15 +99,21 @@ public:
         return (float)m_nPathNodeWidth;
     }
 
-    float OneWayLaneOffset() const {
-        if (m_numOppositeDirLanes) {
-            return 0.5f - (float)m_numSameDirLanes / 2.f;
-        }        
-        if (m_numSameDirLanes) {
-            // 0.011574074 = 1 / 16.f / 5.4f
-            return 0.5f - GetNodePathWidth() / 5.4f / 2.f;
+    //! 0x44DB00 - The original returns this at extended precision (x87 `st0`), use this if the result is used in further float math
+    double OneWayLaneOffsetExtended() const {
+        if (m_numOppositeDirLanes == 0) {
+            return 0.5 - (double)m_numSameDirLanes * 0.5;
         }
-        return 0.5f - (float)m_numOppositeDirLanes / 2.f;
+        if (m_numSameDirLanes == 0) {
+            return 0.5 - (double)m_numOppositeDirLanes * 0.5;
+        }
+        // The width is used as the raw (unsigned) byte here. 0.011574074f = 1 / 86.4f (0x858EEC)
+        return (double)*reinterpret_cast<const uint8*>(&m_nPathNodeWidth) * (double)0.011574074f + 0.5;
+    }
+
+    //! 0x44DB00
+    float OneWayLaneOffset() const {
+        return (float)OneWayLaneOffsetExtended();
     }
 
     /// Get uncompressed world position

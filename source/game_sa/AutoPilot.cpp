@@ -52,24 +52,6 @@ void CAutoPilot::InjectHooks() {
     RH_ScopedInstall(RemoveOnePathNode, 0x41B950);
 }
 
-namespace {
-//! 0x44DB00 - the original's lane offset of a car path link, returned at extended precision (x87 `st0`).
-//! NOTE: `CCarPathLink::OneWayLaneOffset` does NOT match this function's asm, so it isn't used here.
-double LaneOffsetOfLink(const CCarPathLink& link) {
-    const auto raw   = reinterpret_cast<const uint8*>(&link);
-    const auto flags = raw[0xB];
-    const auto opp   = flags & 7;        // bits 0..2
-    const auto same  = (flags >> 3) & 7; // bits 3..5
-    if (opp == 0) {
-        return 0.5 - (double)same * 0.5;
-    }
-    if (same == 0) {
-        return 0.5 - (double)opp * 0.5;
-    }
-    return (double)raw[0xA] * (double)0.011574074f + 0.5; // 0x858EEC = 1/86.4
-}
-}
-
 // 0x41B980
 void CAutoPilot::ModifySpeed(float target) {
     constexpr float c01   = 0.01f;  // 0x858C58
@@ -107,8 +89,8 @@ void CAutoPilot::ModifySpeed(float target) {
     const float bdx = Dir(rawB8[8], next);
     const float bdy = Dir(rawB8[9], next);
 
-    const auto k1 = (float)((LaneOffsetOfLink(linkA) + (double)m_nCurrentLane) * (double)c54);
-    const auto k2 = (LaneOffsetOfLink(linkB) + (double)m_nNextLane) * (double)c54; // not rounded to float
+    const auto k1 = (float)((linkA.OneWayLaneOffsetExtended() + (double)m_nCurrentLane) * (double)c54);
+    const auto k2 = (linkB.OneWayLaneOffsetExtended() + (double)m_nNextLane) * (double)c54; // not rounded to float
 
     const CVector end{
         (float)((double)rawB16[0] * (double)c0125 + k2 * (double)bdy),

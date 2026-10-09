@@ -122,6 +122,8 @@ void CRunningScript::InjectCustomCommandHooks() {
     c::zone::RegisterHandlers();
     c::stat::RegisterHandlers();
     c::conversation::RegisterHandlers();
+    c::path::RegisterHandlers();
+    c::draw::RegisterHandlers();
     c::ported::g01_04::RegisterHandlers();
     c::ported::g05_08::RegisterHandlers();
     c::ported::g09_12::RegisterHandlers();

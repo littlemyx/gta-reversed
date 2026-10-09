@@ -397,6 +397,9 @@
 #include "TaskSimpleFight.h"
 #include "TaskComplexUseWaterCannon.h"
 #include "TaskComplexDriveToPoint.h"
+#include "TaskComplexBeInCouple.h"
+#include "TaskComplexEvasiveCower.h"
+#include "TaskComplexEvasiveStep.h"
 #include "TaskSimpleSetPedAsAutoDriver.h"
 #include "TaskComplexWalkRoundFire.h"
 #include "TaskSimpleSlideToCoord.h"
@@ -1007,9 +1010,9 @@ void InjectHooksMain() {
         CTaskComplexEnterCarAsDriverTimed::InjectHooks();
         CTaskComplexEnterCarAsPassengerTimed::InjectHooks();
         CTaskComplexEnterCarAsPassengerWait::InjectHooks();
-        // CTaskComplexEvasiveCower::InjectHooks();
+        CTaskComplexEvasiveCower::InjectHooks();
         // CTaskComplexEvasiveDiveAndGetUp::InjectHooks();
-        // CTaskComplexEvasiveStep::InjectHooks();
+        CTaskComplexEvasiveStep::InjectHooks();
         // CTaskComplexExtinguishFireOnFoot::InjectHooks();
         CTaskComplexExtinguishFires::InjectHooks();
         // CTaskComplexFallAndStayDown::InjectHooks();
@@ -1244,7 +1247,7 @@ void InjectHooksMain() {
         CTaskComplexEnterCar::InjectHooks();
         // CTaskSimpleTogglePedThreatScanner::InjectHooks();
         CTaskComplexUseGoggles::InjectHooks();
-        // CTaskComplexCrossRoadLookAndAchieveHeading::InjectHooks();
+        CTaskComplexCrossRoadLookAndAchieveHeading::InjectHooks();
         CTaskComplexGoToPointAndStandStill::InjectHooks();
         CTaskSimpleAchieveHeading::InjectHooks();
         CTaskSimpleGiveCPR::InjectHooks();
@@ -1298,7 +1301,8 @@ void InjectHooksMain() {
         CTaskComplexEnterBoatAsDriver::InjectHooks();
         CTaskSimpleFight::InjectHooks();
         CTaskComplexUseWaterCannon::InjectHooks();
-        // CTaskComplexDriveToPoint::InjectHooks();
+        CTaskComplexDriveToPoint::InjectHooks();
+        CTaskComplexBeInCouple::InjectHooks();
         CTaskSimpleSlideToCoord::InjectHooks();
         CTaskComplexPartnerDeal::InjectHooks();
         CTaskSimplePickUpEntity::InjectHooks();

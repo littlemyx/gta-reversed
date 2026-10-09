@@ -145,6 +145,21 @@ static CVector CrossProductOriginal(const CVector& a, const CVector& b) {
     };
 }
 
+//! 0x4082C0 - `CVector::Magnitude`. The sum of squares and the square root stay in the FPU registers (extended precision)
+static double MagnitudeOriginal(const CVector& v) {
+    return std::sqrt(((double)v.x * v.x + (double)v.y * v.y) + (double)v.z * v.z);
+}
+
+//! 0x40FDB0 - `DotProduct`. The sum is returned in the FPU register (extended precision)
+static double DotProductOriginal(const CVector& a, const CVector& b) {
+    return ((double)a.z * b.z + (double)a.y * b.y) + (double)a.x * b.x;
+}
+
+//! The bounding box of the collision model of the vehicle's model (the original reads it through the model info pointer table)
+static const CBoundingBox& GetModelBoundBox(const CVehicle* vehicle) {
+    return CModelInfo::GetModelInfo(vehicle->m_nModelIndex)->GetColModel()->m_boundBox;
+}
+
 namespace {
 // These replicate the operation order of the original (`CMatrix::Multiply3x3` and `CMatrix::MultiplyMatrixWithVector`), as the ones in `CMatrix` do the additions
 // in a different order. (x87: the sum is kept in extended precision and rounded to float only once)
@@ -179,6 +194,20 @@ void CCarCtrl::InjectHooks()
     RH_ScopedInstall(Init, 0x4212E0);
     RH_ScopedInstall(ReInit, 0x4213B0);
     RH_ScopedInstall(InitSequence, 0x421740);
+    RH_ScopedInstall(FindSequenceElement, 0x421770);
+    RH_ScopedInstall(ThisVehicleShouldTryNotToTurn, 0x421FE0);
+    RH_ScopedInstall(FindPathDirection, 0x422090);
+    RH_ScopedInstall(FindGhostRoadHeight, 0x422370);
+    RH_ScopedInstall(FindSpeedMultiplier, 0x4224E0);
+    RH_ScopedInstall(StopCarIfNodesAreInvalid, 0x422590);
+    RH_ScopedInstall(FindPercDependingOnDistToLink, 0x422620);
+    RH_ScopedInstall(TestCollisionBetween2MovingRects, 0x425B30);
+    RH_ScopedInstall(TestCollisionBetween2MovingRects_OnlyFrontBumper, 0x425F70);
+    RH_ScopedInstall(WeaveForPed, 0x426970);
+    RH_ScopedInstall(PickNextNodeToChaseCar, 0x426EF0);
+    RH_ScopedInstall(IsThisAnAppropriateNode, 0x42DAB0);
+    RH_ScopedInstall(FindAngleToWeaveThroughTraffic, 0x4325C0);
+    RH_ScopedInstall(FindMaximumSpeedForThisCarInTraffic, 0x434400);
     RH_ScopedInstall(ChooseGangCarModel, 0x421A40);
     RH_ScopedInstall(ChoosePoliceCarModel, 0x421980);
     RH_ScopedInstall(CreateCarForScript, 0x431F80);
@@ -699,9 +728,116 @@ void CCarCtrl::DragCarToPoint(CVehicle* vehicle, CVector* pos) {
     }
 }
 
+namespace {
+//! The range of the (repeat) sectors that are overlapped by the given area (as used by the traffic AI)
+struct TrafficSectorRange {
+    int32 minX, minY, maxX, maxY;
+};
+
+//! x87: The sector coordinate is kept in extended precision for the first `floor` (that is used for the check against the limits),
+//! then the rounded (to float) copy is used for the 2nd one
+TrafficSectorRange GetTrafficSectorRange(float minX, float minY, float maxX, float maxY) {
+    const auto GetSector = [](float v) {
+        const double sector = (double)v * 0.02f + 60.0f; // 0x858B38, 0x858B34
+        return std::pair{ sector, (float)sector };
+    };
+    const auto GetMin = [&](float v) -> int32 {
+        const auto [ext, rounded] = GetSector(v);
+        return (int32)std::floor(ext) > 0 ? (int32)std::floor((double)rounded) : 0;
+    };
+    const auto GetMax = [&](float v) -> int32 {
+        const auto [ext, rounded] = GetSector(v);
+        return (int32)std::floor(ext) < 119 ? (int32)std::floor((double)rounded) : 119;
+    };
+    return { GetMin(minX), GetMin(minY), GetMax(maxX), GetMax(maxY) };
+}
+} // namespace
+
 // 0x4325C0
-float CCarCtrl::FindAngleToWeaveThroughTraffic(CVehicle* vehicle, CPhysical* physical, float arg3, float arg4, float arg5) {
-    return plugin::CallAndReturn<float, 0x4325C0, CVehicle*, CPhysical*, float, float, float>(vehicle, physical, arg3, arg4, arg5);
+float CCarCtrl::FindAngleToWeaveThroughTraffic(CVehicle* vehicle, CPhysical* physical, float targetAngle, float heading, float distMult) {
+    // x87: The search distance is kept in extended precision
+    const auto& moveSpeed = vehicle->m_vecMoveSpeed;
+    const auto  speed     = std::sqrt((double)moveSpeed.x * moveSpeed.x + (double)moveSpeed.y * moveSpeed.y);
+    double      lookAhead = speed * 2.5f + 1.0f; // 0x858FA0
+    if (!(lookAhead < 2.0f)) {
+        lookAhead = 2.0f;
+    }
+    const double searchDist = lookAhead * distMult * 12.0f; // 0x858CCC
+
+    const auto& pos  = vehicle->GetPosition();
+    const auto  minX = (float)((double)pos.x - searchDist);
+    const auto  maxX = (float)(searchDist + pos.x);
+    const auto  minY = (float)((double)pos.y - searchDist);
+    const auto  maxY = (float)(searchDist + pos.y);
+
+    const auto sectors = GetTrafficSectorRange(minX, minY, maxX, maxY);
+
+    CWorld::AdvanceCurrentScanCode();
+
+    // The range of angles that are free to go to (starts as just the target angle)
+    float lowerAngle = targetAngle;
+    float upperAngle = targetAngle;
+
+    // Repeat until the angles don't change anymore
+    float prevLower = std::bit_cast<float>(0xC61C3F9Au);
+    float prevUpper = prevLower;
+    while (!(prevLower == lowerAngle && prevUpper == upperAngle)) {
+        prevLower = lowerAngle;
+        prevUpper = upperAngle;
+
+        for (auto y = sectors.minY; y <= sectors.maxY; y++) {
+            for (auto x = sectors.minX; x <= sectors.maxX; x++) {
+                auto& sector = CWorld::GetRepeatSector(x, y);
+                WeaveThroughCarsSectorList(sector.Vehicles, vehicle, physical, minX, minY, maxX, maxY, &lowerAngle, &upperAngle); // 0x42D680
+                if (vehicle->m_autoPilot.m_nCarDrivingStyle != DRIVING_STYLE_DRIVINGMODE_AVOIDCARS_STOPFORPEDS_OBEYLIGHTS) {
+                    WeaveThroughPedsSectorList(sector.Peds, vehicle, physical, minX, minY, maxX, maxY, &lowerAngle, &upperAngle); // 0x42D7E0
+                }
+                WeaveThroughObjectsSectorList(sector.Objects, vehicle, minX, minY, maxX, maxY, &lowerAngle, &upperAngle); // 0x42D950
+                WeaveThroughCarsSectorList(sector.Vehicles, vehicle, physical, minX, minY, maxX, maxY, &lowerAngle, &upperAngle); // 0x42D680 (Again, but the vehicles were already scanned)
+            }
+        }
+    }
+
+    const auto pi = std::numbers::pi_v<float>;
+
+    // Makes the angle (in extended precision) to be in -PI to PI
+    const auto Wrap = [&](double angle) {
+        while (angle < -pi) {
+            angle += 2.0f * pi;
+        }
+        while (angle > pi) {
+            angle -= 2.0f * pi;
+        }
+        return angle;
+    };
+
+    // The angle between the target angle and the heading, then the middle of those two
+    double middle = Wrap((double)heading - targetAngle) * 0.5f + targetAngle;
+    auto   middleF = (float)middle; // Stored as float (and again, after each wrapping)
+    if (middle < -pi) {
+        do {
+            middle += 2.0f * pi;
+        } while (middle < -pi);
+        middleF = (float)middle;
+    }
+    if (middle > pi) {
+        do {
+            middle -= 2.0f * pi;
+        } while (middle > pi);
+        middleF = (float)middle;
+    }
+
+    // How far (absolute) are the ends of the free angle range from the middle
+    const auto lowerDiff = std::abs(Wrap((double)lowerAngle - middle));
+    const auto upperDiff = std::abs(Wrap((double)upperAngle - middleF));
+
+    if (lowerDiff > std::numbers::pi_v<float> / 2.0f && upperDiff > std::numbers::pi_v<float> / 2.0f) { // 0x858FE4
+        return middleF;
+    }
+    if (std::abs(lowerDiff - upperDiff) < 0.08f) { // 0x859018
+        return upperAngle;
+    }
+    return lowerDiff < upperDiff ? lowerAngle : upperAngle;
 }
 
 // 0x4226F0
@@ -771,9 +907,54 @@ void CCarCtrl::FindLinksToGoWithTheseNodes(CVehicle* vehicle) {
     autoPilot._smthCurr              = IsBefore(GetLink(linkIdx), cur) ? -1 : 1;
 }
 
+//! 0x434400 - The original returns the result in a FPU register (not rounded to float)
+static double FindMaximumSpeedForThisCarInTrafficOriginal(CVehicle* vehicle) {
+    auto& ap = vehicle->m_autoPilot;
+
+    const auto cruiseSpeed = (double)ap.m_nCruiseSpeed * ap.m_SpeedMult; // x87: kept in extended precision (exact)
+
+    switch (ap.m_nCarDrivingStyle) {
+    case DRIVING_STYLE_AVOID_CARS:
+    case DRIVING_STYLE_PLOUGH_THROUGH:
+    case DRIVING_STYLE_DRIVINGMODE_AVOIDCARS_OBEYLIGHTS:
+        return cruiseSpeed;
+    default:
+        break;
+    }
+
+    const auto& pos  = vehicle->GetPosition();
+    const auto  minX = (float)((double)pos.x - 14.0f); // 0x859030
+    const auto  maxX = (float)((double)pos.x + 14.0f);
+    const auto  minY = (float)((double)pos.y - 14.0f);
+    const auto  maxY = (float)((double)pos.y + 14.0f);
+
+    const auto sectors = GetTrafficSectorRange(minX, minY, maxX, maxY);
+
+    CWorld::AdvanceCurrentScanCode();
+
+    float speedFactor = (float)cruiseSpeed;
+    for (auto y = sectors.minY; y <= sectors.maxY; y++) {
+        for (auto x = sectors.minX; x <= sectors.maxX; x++) {
+            auto& sector = CWorld::GetRepeatSector(x, y);
+            if (ap.m_nCarDrivingStyle != DRIVING_STYLE_DRIVINGMODE_AVOIDCARS_STOPFORPEDS_OBEYLIGHTS) {
+                CCarCtrl::SlowCarDownForCarsSectorList(sector.Vehicles, vehicle, minX, minY, maxX, maxY, &speedFactor, (float)cruiseSpeed); // 0x432420
+            }
+            CCarCtrl::SlowCarDownForPedsSectorList(sector.Peds, vehicle, minX, minY, maxX, maxY, &speedFactor, (float)cruiseSpeed); // 0x425440
+            CCarCtrl::SlowCarDownForObjectsSectorList(sector.Objects, vehicle, minX, minY, maxX, maxY, &speedFactor, (float)cruiseSpeed); // 0x42D4F0
+        }
+    }
+
+    vehicle->vehicleFlags.bWarnedPeds = true;
+
+    if (ap.m_nCarDrivingStyle == DRIVING_STYLE_STOP_FOR_CARS || ap.m_nCarDrivingStyle == DRIVING_STYLE_STOP_FOR_CARS_IGNORE_LIGHTS) {
+        return speedFactor;
+    }
+    return (cruiseSpeed + speedFactor) * 0.5f;
+}
+
 // 0x434400
 float CCarCtrl::FindMaximumSpeedForThisCarInTraffic(CVehicle* vehicle) {
-    return plugin::CallAndReturn<float, 0x434400, CVehicle*>(vehicle);
+    return (float)FindMaximumSpeedForThisCarInTrafficOriginal(vehicle);
 }
 
 // 0x42BD20
@@ -868,23 +1049,115 @@ void CCarCtrl::FindNodesThisCarIsNearestTo(CVehicle* vehicle, CNodeAddress& node
 }
 
 // 0x422090
-int8 CCarCtrl::FindPathDirection(CNodeAddress nodeAddress1, CNodeAddress nodeAddress2, CNodeAddress nodeAddress3, bool* arg4) {
-    return plugin::CallAndReturn<int8, 0x422090, CNodeAddress, CNodeAddress, CNodeAddress, bool*>(nodeAddress1, nodeAddress2, nodeAddress3, arg4);
+int8 CCarCtrl::FindPathDirection(CNodeAddress nodeAddress1, CNodeAddress nodeAddress2, CNodeAddress nodeAddress3, bool* outUTurn) {
+    *outUTurn = false;
+
+    if (!nodeAddress1.IsAreaValid() || !nodeAddress2.IsAreaValid() || !nodeAddress3.IsAreaValid()) {
+        return 0;
+    }
+    if (!ThePaths.m_pPathNodes[nodeAddress1.m_wAreaId] || !ThePaths.m_pPathNodes[nodeAddress2.m_wAreaId] || !ThePaths.m_pPathNodes[nodeAddress3.m_wAreaId]) {
+        return 0;
+    }
+
+    const auto& nodeA = ThePaths.m_pPathNodes[nodeAddress1.m_wAreaId][nodeAddress1.m_wNodeId];
+    const auto& nodeB = ThePaths.m_pPathNodes[nodeAddress2.m_wAreaId][nodeAddress2.m_wNodeId];
+    const auto& nodeC = ThePaths.m_pPathNodes[nodeAddress3.m_wAreaId][nodeAddress3.m_wNodeId];
+    const auto  posA  = nodeA.GetPosition();
+    const auto  posB  = nodeB.GetPosition();
+    const auto  posC  = nodeC.GetPosition();
+
+    // Direction A -> B and B -> C (stored as float)
+    const auto abX = (float)((double)posB.x - posA.x);
+    const auto abY = (float)((double)posB.y - posA.y);
+    const auto bcX = (float)((double)posC.x - posB.x);
+    const auto bcY = (float)((double)posC.y - posB.y);
+
+    // x87: The normalized values are kept in extended precision, other than the X of the 1st one
+    const auto lenAB = std::sqrt((double)abY * abY + (double)abX * abX);
+    if (lenAB == 0.0) {
+        return 0;
+    }
+    const auto invAB = 1.0 / lenAB;
+    const auto nAbX  = (float)((double)abX * invAB);
+    const auto nAbY  = invAB * abY;
+
+    const auto lenBC = std::sqrt((double)bcY * bcY + (double)bcX * bcX);
+    if (lenBC == 0.0) {
+        return 0;
+    }
+    const auto invBC = 1.0 / lenBC;
+    const auto nBcX  = (double)bcX * invBC;
+    const auto nBcY  = invBC * bcY;
+
+    const auto cross = (float)(nAbX * nBcY - nBcX * nAbY); // Stored as float
+    const auto dot   = nAbY * nBcY + nBcX * nAbX;
+    if (dot > 0.4f) { // 0x858EE8 - Going (almost) straight
+        return 1;
+    }
+    if (dot < -0.3f) { // 0x858EE4 - Making a U-turn
+        *outUTurn = true;
+    }
+    return cross > 0.0f ? 4 : 2; // 4 = left, 2 = right
+}
+
+//! 0x422620 - The original returns the result in a FPU register (not rounded to float)
+static double FindPercDependingOnDistToLinkOriginal(CVehicle* vehicle, CCarPathLinkAddress linkAddress) {
+    // `CCarPathLink::m_posn` hides its raw values, but the original works on them
+    const auto raw = reinterpret_cast<const int16*>(&ThePaths.GetCarPathLink(linkAddress));
+    const auto& pos = vehicle->GetPosition();
+
+    const double linkY = (float)((double)raw[1] * 0.125f); // 0x858C48
+    const double linkX = (float)((double)raw[0] * 0.125f); // (both are exact in float)
+
+    // x87: The 1st compare uses the unrounded distance, the others the one stored as float
+    const double dist  = std::sqrt((linkX - pos.x) * (linkX - pos.x) + (linkY - pos.y) * (linkY - pos.y));
+    const auto   distF = (float)dist;
+    if (dist < 5.0f) { // 0x858C80
+        return 0.5f; // 0x858B8C
+    }
+    if (!(distF < 15.0f)) { // 0x858B48
+        return 1.0f;
+    }
+    return ((double)distF - 5.0f) * 0.05f + 0.5f; // 0x858C28
 }
 
 // 0x422620
 float CCarCtrl::FindPercDependingOnDistToLink(CVehicle* vehicle, CCarPathLinkAddress linkAddress) {
-    return plugin::CallAndReturn<float, 0x422620, CVehicle*, CCarPathLinkAddress>(vehicle, linkAddress);
+    return (float)FindPercDependingOnDistToLinkOriginal(vehicle, linkAddress);
 }
 
 // 0x421770
-int32 CCarCtrl::FindSequenceElement(int32 arg1) {
-    return plugin::CallAndReturn<int32, 0x421770, int32>(arg1);
+int32 CCarCtrl::FindSequenceElement(int32 index) {
+    if (bSequenceOtherWay) {
+        return (index + SequenceRandomOffset) % SequenceElements;
+    }
+    return ((SequenceElements - index) + SequenceRandomOffset) % SequenceElements;
 }
 
 // 0x4224E0
-float CCarCtrl::FindSpeedMultiplier(float arg1, float arg2, float arg3, float arg4) {
-    return plugin::CallAndReturn<float, 0x4224E0, float, float, float, float>(arg1, arg2, arg3, arg4);
+float CCarCtrl::FindSpeedMultiplier(float angle, float minAngle, float maxAngle, float minMult) {
+    // x87: everything is kept in extended precision until the final float store
+    double a = angle;
+    while (a < -std::numbers::pi_v<float>) { // 0x858CC0
+        a += 2.0f * std::numbers::pi_v<float>; // 0x858CBC
+    }
+    while (a > std::numbers::pi_v<float>) { // 0x858CB8
+        a -= 2.0f * std::numbers::pi_v<float>;
+    }
+    if (a < 0.0) {
+        a = -a;
+    }
+
+    double t = a - minAngle;
+    if (0.0 > t) { // (NaN stays)
+        t = 0.0;
+    }
+    const double range = (double)maxAngle - minAngle;
+    const auto   mult  = (float)(1.0 - (t / range) * (1.0 - (double)minMult)); // Stored as float
+    if (t > range) {
+        return minMult;
+    }
+    return mult;
 }
 
 // 0x424130
@@ -898,8 +1171,35 @@ float CCarCtrl::FindSpeedMultiplierWithSpeedFromNodes(int8 arg1) {
     }
 }
 
+//! 0x422370 - The original returns the result in a FPU register (not rounded to float)
+static double FindGhostRoadHeightOriginal(CVehicle* vehicle) {
+    const auto& ap = vehicle->m_autoPilot;
+    if (ap.m_currentAddress.m_wAreaId == 0xFFFF || ap.m_startingRouteNode.m_wAreaId == 0xFFFF) {
+        return 0.0f;
+    }
+    if (!ThePaths.m_pPathNodes[ap.m_currentAddress.m_wAreaId] || !ThePaths.m_pPathNodes[ap.m_startingRouteNode.m_wAreaId]) {
+        return 0.0f;
+    }
+
+    const auto& node1 = ThePaths.m_pPathNodes[ap.m_currentAddress.m_wAreaId][ap.m_currentAddress.m_wNodeId];
+    const auto& node2 = ThePaths.m_pPathNodes[ap.m_startingRouteNode.m_wAreaId][ap.m_startingRouteNode.m_wNodeId];
+    const auto  z1    = node1.GetPosition().z;
+    const auto  z2    = node2.GetPosition().z;
+
+    const auto& vehPos = vehicle->GetPosition();
+
+    // x87: The 1st distance is stored as float, the 2nd one is kept in the FPU register
+    const auto pos1  = node1.GetPosition();
+    const auto dist1 = (float)std::sqrt(((double)pos1.y - vehPos.y) * ((double)pos1.y - vehPos.y) + ((double)pos1.x - vehPos.x) * ((double)pos1.x - vehPos.x));
+    const auto pos2  = node2.GetPosition();
+    const auto dist2 = std::sqrt(((double)pos2.y - vehPos.y) * ((double)pos2.y - vehPos.y) + ((double)pos2.x - vehPos.x) * ((double)pos2.x - vehPos.x));
+
+    return ((double)dist1 * z2 + dist2 * z1) / (dist2 + dist1);
+}
+
+// 0x422370
 float CCarCtrl::FindGhostRoadHeight(CVehicle* vehicle) {
-    return plugin::CallAndReturn<float, 0x422370, CVehicle*>(vehicle);
+    return (float)FindGhostRoadHeightOriginal(vehicle);
 }
 
 // 0x42B270
@@ -1854,9 +2154,124 @@ bool CCarCtrl::IsAnyoneParking() {
     return false;
 }
 
+static_assert(offsetof(CVehicle, m_nCreatedBy) == 0x4A4);
+static_assert(offsetof(CPed, m_nPedType) == 0x598);
+static_assert(offsetof(CVehicleModelInfo, m_nVehicleClass) == 0x4D);
+
 // 0x42DAB0
 bool CCarCtrl::IsThisAnAppropriateNode(CVehicle* vehicle, CNodeAddress nodeAddress1, CNodeAddress nodeAddress2, CNodeAddress nodeAddress3, bool arg5, bool arg6) {
-    return plugin::CallAndReturn<bool, 0x42DAB0, CVehicle*, CNodeAddress, CNodeAddress, CNodeAddress, bool, bool>(vehicle, nodeAddress1, nodeAddress2, nodeAddress3, arg5, arg6);
+    // `arg6` is unused
+    // NOTE: `nodeAddress2` is the node the vehicle is at, `nodeAddress3` is the one that is being checked, `nodeAddress1` is the one it came from
+    if (!ThePaths.m_pPathNodes[nodeAddress3.m_wAreaId]) {
+        return false;
+    }
+    if (nodeAddress1 == nodeAddress3) { // Going back
+        return false;
+    }
+
+    // The node of `nodeAddress2` isn't checked in the original (the area isn't null checked)
+    const auto& curNode  = ThePaths.m_pPathNodes[nodeAddress2.m_wAreaId][nodeAddress2.m_wNodeId];
+    const auto& nextNode = ThePaths.m_pPathNodes[nodeAddress3.m_wAreaId][nodeAddress3.m_wNodeId];
+
+    // Only a hovercraft can go from water to land (or the other way around)
+    if (curNode.m_bWaterNode != nextNode.m_bWaterNode && vehicle->m_nModelIndex != MODEL_VORTEX) {
+        return false;
+    }
+
+    const auto IsMissionVehicleOrDriver = [&] {
+        return vehicle->m_nCreatedBy == MISSION_VEHICLE || (vehicle->m_pDriver && vehicle->m_pDriver->IsCreatedBy(PED_MISSION));
+    };
+    const auto HasBigVehicleClass = [&] {
+        return CModelInfo::GetModelInfo(vehicle->m_nModelIndex)->AsVehicleModelInfoPtr()->m_nVehicleClass == VEHICLE_CLASS_BIG;
+    };
+    const auto IsAnyoneBlockingNode = [&] { // The 2nd half of the checks of the roadblock (1) and parking (2) node types
+        if (vehicle->IsLawEnforcementVehicle()) { // 0x6D2370
+            return true;
+        }
+        if (HasBigVehicleClass()) {
+            return true;
+        }
+        if (vehicle->m_pDriver && vehicle->m_pDriver->m_nPedType == PED_TYPE_CRIMINAL) {
+            return true;
+        }
+        if (IsAnyoneParking()) { // 0x42C250
+            return true;
+        }
+        int16 numColliding;
+        CWorld::FindObjectsKindaColliding(nextNode.GetPosition(), 5.0f, true, &numColliding, 2, nullptr, false, true, false, false, false); // 0x568B80
+        return numColliding != 0;
+    };
+
+    switch (nextNode.m_nBehaviourType) {
+    case 1: { // Road blocks
+        if (IsMissionVehicleOrDriver() || HasBigVehicleClass()) {
+            return false;
+        }
+        if (!arg5) {
+            const auto toNode = nextNode.GetPosition() - vehicle->GetPosition();
+            const auto cross  = CrossProductOriginal(nextNode.GetPosition() - curNode.GetPosition(), toNode); // 0x59C730
+            if (cross.z < 0.0f) {
+                return false;
+            }
+        }
+        return !IsAnyoneBlockingNode();
+    }
+    case 2: { // Parking
+        if (IsMissionVehicleOrDriver()) {
+            return false;
+        }
+        if (!arg5) {
+            const auto toNode = nextNode.GetPosition() - vehicle->GetPosition();
+            if (DotProductOriginal(vehicle->GetRightVector(), toNode) < 0.0) { // 0x41CC70, 0x40FDB0
+                return false;
+            }
+        }
+        return !IsAnyoneBlockingNode();
+    }
+    case 5:
+    case 10: {
+        if (arg5) {
+            return false;
+        }
+        if (GetModelBoundBox(vehicle).m_vecMax.z < 2.0f) { // 0x858CA0
+            return false;
+        }
+        break;
+    }
+    case 8:
+    case 9: {
+        if (arg5) {
+            return false;
+        }
+        const auto& bb = GetModelBoundBox(vehicle);
+        if (bb.m_vecMax.z > 1.5f) { // 0x858CE8
+            return false;
+        }
+        if (bb.m_vecMax.x > 2.0f) { // 0x858CA0
+            return false;
+        }
+        if (bb.m_vecMax.y > 4.0f) { // 0x858B90
+            return false;
+        }
+        break;
+    }
+    default:
+        break;
+    }
+
+    // A mission vehicle that is cruising doesn't go to nodes that it's not allowed to wander to (unless the current node is the same)
+    if (vehicle->m_nCreatedBy == MISSION_VEHICLE && vehicle->m_autoPilot.m_nCarMission == MISSION_CRUISE && nextNode.m_bDontWander) {
+        if (!curNode.m_bDontWander) {
+            return false;
+        }
+    }
+    if (nextNode.m_onDeadEnd && !curNode.m_onDeadEnd) {
+        return false;
+    }
+    if (nextNode.m_isSwitchedOff && !curNode.m_isSwitchedOff) {
+        return false;
+    }
+    return !arg5;
 }
 
 // 0x423EA0
@@ -2315,7 +2730,204 @@ void CCarCtrl::PickNextNodeRandomly(CVehicle* vehicle) {
 
 // 0x426EF0
 bool CCarCtrl::PickNextNodeToChaseCar(CVehicle* vehicle, float destX, float destY, float destZ) {
-    return plugin::CallAndReturn<bool, 0x426EF0, CVehicle*, float, float, float>(vehicle, destX, destY, destZ);
+    auto& ap = vehicle->m_autoPilot;
+
+    // NOTE: The names of the autopilot's node addresses are misleading here (see `PickNextNodeRandomly`):
+    // `m_currentAddress` is the node the vehicle is coming from, `m_startingRouteNode` is the one it's heading to
+    CNodeAddress results[2]{}; // (The original only sets the area of these to -1)
+    CNodeAddress chosen{};
+
+    if (vehicle->m_nForcedRandomRouteSeed) {
+        srand((uint16)vehicle->m_nForcedRandomRouteSeed);
+    }
+
+    const auto cur  = ap.m_currentAddress;
+    const auto next = ap.m_startingRouteNode;
+
+    constexpr auto MAX_DIST = std::bit_cast<float>(0x497423FEu); // ~999999.9
+    const auto     isDefaultRegion = CWeather::WeatherRegion == WEATHER_REGION_DEFAULT || CWeather::WeatherRegion == WEATHER_REGION_DESERT;
+    const auto     maxSearchDist   = isDefaultRegion ? 50.0f : MAX_DIST; // 0x42480000
+
+    // NOTE: The area of `next` isn't null checked in the original
+    const auto& nextNode = ThePaths.m_pPathNodes[next.m_wAreaId][next.m_wNodeId];
+
+    int16 numResults{};
+    float pathDist{};
+    ThePaths.DoPathSearch(
+        PATH_TYPE_VEH,
+        nextNode.GetPosition(),
+        next,
+        CVector{ destX, destY, destZ },
+        results,
+        numResults,
+        2,
+        &pathDist,
+        maxSearchDist,
+        nullptr,
+        MAX_DIST,
+        false,
+        StaticRef<CNodeAddress>(0x8A5F44), // (area = -1, node = 0), effectively none
+        vehicle->m_nModelIndex == MODEL_VORTEX,
+        false
+    ); // 0x4515D0
+
+    if (isDefaultRegion) {
+        if (numResults == 0) {
+            return true;
+        }
+
+        // The path is too long compared to the distance to the destination
+        const auto& pos = vehicle->GetPosition();
+        const auto  dx  = (double)destX - pos.x;
+        const auto  dy  = (double)destY - pos.y;
+        if (std::sqrt(dy * dy + dx * dx) * 3.0f < pathDist) { // 0x858B3C
+            return true;
+        }
+    }
+
+    // Index of the `chosen` link in the links of `next`
+    int16 linkIdx = 0;
+    bool  decided = false;
+    if (numResults == 1 || numResults == 2) {
+        // Go to the first node of the route (unless it's the node we're at), otherwise to the 2nd one
+        if (results[0] != next) {
+            chosen  = results[0];
+            decided = true;
+        } else if (numResults == 2 && results[1] != next) {
+            chosen  = results[1];
+            decided = true;
+        }
+        if (decided) {
+            // NOTE: Not bounded in the original
+            while (ThePaths.m_pNodeLinks[next.m_wAreaId][nextNode.m_wBaseLinkId + linkIdx] != chosen) {
+                linkIdx++;
+            }
+        }
+    }
+
+    if (!decided) {
+        // Pick the link that leads the closest to the direction of the destination
+        const auto& pos     = vehicle->GetPosition();
+        const auto  heading = (float)CGeneral::GetATanOfXY((float)((double)destX - pos.x), (float)((double)destY - pos.y)); // 0x53CC70 (stored as float)
+
+        const auto numLinks  = (int16)nextNode.m_nNumLinks;
+        float      bestAngle = 10.0f; // 0x41200000
+        chosen = {};
+        for (int16 i = 0; i < numLinks; i++) {
+            const auto cand = ThePaths.m_pNodeLinks[next.m_wAreaId][nextNode.m_wBaseLinkId + i];
+            if (cand == cur && numLinks > 1) { // Don't go back (unless this is a dead end)
+                continue;
+            }
+            if (!ThePaths.m_pPathNodes[cand.m_wAreaId]) {
+                continue;
+            }
+
+            const auto candPos = ThePaths.m_pPathNodes[cand.m_wAreaId][cand.m_wNodeId].GetPosition();
+            const auto nodePos = nextNode.GetPosition();
+
+            // x87: The angle is kept in extended precision (only the final value is rounded to float)
+            double angle = (double)CGeneral::GetATanOfXY(candPos.x - nodePos.x, candPos.y - nodePos.y) - heading; // 0x53CC70
+            if (angle > std::numbers::pi_v<float>) {
+                do {
+                    angle -= 2.0f * std::numbers::pi_v<float>;
+                } while (angle > std::numbers::pi_v<float>);
+            }
+            if (angle < -std::numbers::pi_v<float>) {
+                do {
+                    angle += 2.0f * std::numbers::pi_v<float>;
+                } while (angle < -std::numbers::pi_v<float>);
+            }
+            if (angle < 0.0) {
+                angle = -angle;
+            }
+
+            if (angle <= bestAngle) {
+                bestAngle = (float)angle;
+                linkIdx   = i;
+                chosen    = cand;
+            }
+        }
+    }
+
+    // Move on to the next link
+    ap.m_endingRouteNode       = ap.m_currentAddress;
+    ap.m_currentAddress        = ap.m_startingRouteNode;
+    ap.m_startingRouteNode     = chosen;
+    ap.field_C                += (int32)ap.m_nSpeedScaleFactor;
+    ap.m_nPreviousPathNodeInfo = ap.m_nCurrentPathNodeInfo;
+    ap.m_nCurrentPathNodeInfo  = ap.m_nNextPathNodeInfo;
+    ap._smthPrev               = ap._smthCurr;
+    ap._smthCurr               = ap._smthNext;
+    ap.m_nCurrentLane          = ap.m_nNextLane;
+    ap.m_nNextPathNodeInfo     = ThePaths.m_pNaviLinks[next.m_wAreaId][nextNode.m_wBaseLinkId + linkIdx];
+
+    if (StopCarIfNodesAreInvalid(vehicle)) { // 0x422590
+        return true;
+    }
+
+    // The direction of travel on the new link (depends on the order of the nodes), and the number of lanes in that direction
+    int32 numLanes;
+    {
+        const auto& link = ThePaths.GetCarPathLink(ap.m_nNextPathNodeInfo);
+        const auto  goingToLowerNode = next.m_wAreaId < ap.m_startingRouteNode.m_wAreaId
+            || (next.m_wAreaId == ap.m_startingRouteNode.m_wAreaId && next.m_wNodeId < ap.m_startingRouteNode.m_wNodeId);
+        if (goingToLowerNode) {
+            ap._smthNext = -1;
+            numLanes     = link.m_numOppositeDirLanes;
+        } else {
+            ap._smthNext = 1;
+            numLanes     = link.m_numSameDirLanes;
+        }
+    }
+
+    // If the next link is far enough from the current one the vehicle changes lanes from time to time
+    {
+        // `CCarPathLink::m_posn` hides its raw values, but the original works on them
+        const auto curRaw  = reinterpret_cast<const int16*>(&ThePaths.GetCarPathLink(ap.m_nCurrentPathNodeInfo));
+        const auto nextRaw = reinterpret_cast<const int16*>(&ThePaths.GetCarPathLink(ap.m_nNextPathNodeInfo));
+        const auto dx      = (double)nextRaw[0] * 0.125f - (double)curRaw[0] * 0.125f; // 0x858C48
+        const auto dy      = (double)nextRaw[1] * 0.125f - (double)curRaw[1] * 0.125f;
+        if (dx * dx + dy * dy > 256.0f) { // 0x858FB4
+            switch (ap.m_nCarMission) {
+            case MISSION_RAMPLAYER_FARAWAY:
+            case MISSION_BLOCKPLAYER_FARAWAY:
+            case MISSION_RAMCAR_FARAWAY:
+            case MISSION_FOLLOWCAR_FARAWAY:
+            case MISSION_BLOCKCAR_FARAWAY:
+            case MISSION_KILLPED_FARAWAY:
+            case MISSION_APPROACHPLAYER_FARAWAY:
+            case MISSION_DO_DRIVEBY_FARAWAY:
+                break;
+            default:
+                if (--ap.field_50 == 0) {
+                    ap.field_50 = (char)((rand() & 3) + 4);
+                    ap.m_nNextLane += rand() >= 0x3FFF ? -1 : 1;
+                }
+                break;
+            }
+        }
+    }
+
+    // Keep the lane in range
+    {
+        int32 lane = ap.m_nNextLane;
+        if (lane >= numLanes - 1) {
+            lane = numLanes - 1;
+        }
+        ap.m_nNextLane = (int8)lane;
+        if (ap.m_nNextLane <= 0) {
+            ap.m_nNextLane = 0;
+        }
+    }
+
+    if (ap.carCtrlFlags.bStayInFastLane) {
+        ap.m_nNextLane = 0;
+    } else if (ap.carCtrlFlags.bStayInSlowLane || vehicle->m_nVehicleSubType == VEHICLE_TYPE_BMX) {
+        ap.m_nNextLane = (int8)std::max(numLanes - 1, 0);
+    }
+
+    // 0x44DB00 (x2): `OneWayLaneOffset` of the current and the next link, the results are discarded
+    return false;
 }
 
 // 0x427740
@@ -4143,7 +4755,7 @@ void CCarCtrl::SteerAICarWithPhysicsFollowPath(CVehicle* vehicle, float* pSteer,
     case DRIVING_STYLE_SLOW_DOWN_FOR_CARS:
     case DRIVING_STYLE_STOP_FOR_CARS_IGNORE_LIGHTS:
     case DRIVING_STYLE_DRIVINGMODE_AVOIDCARS_STOPFORPEDS_OBEYLIGHTS:
-        speedFactor = (float)((double)FindMaximumSpeedForThisCarInTraffic(vehicle) / (int32)ap.m_nCruiseSpeed); // 0x434400
+        speedFactor = (float)(FindMaximumSpeedForThisCarInTrafficOriginal(vehicle) / (int32)ap.m_nCruiseSpeed); // 0x434400
         break;
     default:
         speedFactor = 1.0f;
@@ -4397,7 +5009,7 @@ void CCarCtrl::SteerAICarWithPhysicsFollowPath_Racing(CVehicle* vehicle, float* 
         ClipOrientationToLinkPos(ap.m_nNextPathNodeInfo, ap._smthNext);
 
         // x87: kept in extended precision
-        const double t  = FindPercDependingOnDistToLink(vehicle, ap.m_nCurrentPathNodeInfo); // 0x422620
+        const double t  = FindPercDependingOnDistToLinkOriginal(vehicle, ap.m_nCurrentPathNodeInfo); // 0x422620
         const double tm = 1.0 - t;
         const auto   curP  = LinkPos(ap.m_nCurrentPathNodeInfo);
         const auto   nextP = LinkPos(ap.m_nNextPathNodeInfo);
@@ -4410,7 +5022,7 @@ void CCarCtrl::SteerAICarWithPhysicsFollowPath_Racing(CVehicle* vehicle, float* 
         }
 
         // x87: kept in extended precision
-        const double t  = FindPercDependingOnDistToLink(vehicle, ap.m_nCurrentPathNodeInfo); // 0x422620
+        const double t  = FindPercDependingOnDistToLinkOriginal(vehicle, ap.m_nCurrentPathNodeInfo); // 0x422620
         const double u  = (t + 2.0f) * 0.33333334f; // 0x859040
         const double um = 1.0 - u;
         const auto   curP  = LinkPos(ap.m_nCurrentPathNodeInfo);
@@ -4774,21 +5386,6 @@ void CCarCtrl::SteerAICarWithPhysicsTryingToBlockTarget_Stop(CVehicle* vehicle, 
         return;
     }
     LeaveCar();
-}
-
-//! 0x4082C0 - `CVector::Magnitude`. The sum of squares and the square root stay in the FPU registers (extended precision)
-static double MagnitudeOriginal(const CVector& v) {
-    return std::sqrt(((double)v.x * v.x + (double)v.y * v.y) + (double)v.z * v.z);
-}
-
-//! 0x40FDB0 - `DotProduct`. The sum is returned in the FPU register (extended precision)
-static double DotProductOriginal(const CVector& a, const CVector& b) {
-    return ((double)a.z * b.z + (double)a.y * b.y) + (double)a.x * b.x;
-}
-
-//! The bounding box of the collision model of the vehicle's model (the original reads it through the model info pointer table)
-static const CBoundingBox& GetModelBoundBox(const CVehicle* vehicle) {
-    return CModelInfo::GetModelInfo(vehicle->m_nModelIndex)->GetColModel()->m_boundBox;
 }
 
 // 0x436A90
@@ -5474,7 +6071,16 @@ void CCarCtrl::SteerAIPlaneTowardsTargetCoors(CAutomobile* automobile) {
 
 // 0x422590
 bool CCarCtrl::StopCarIfNodesAreInvalid(CVehicle* vehicle) {
-    return plugin::CallAndReturn<bool, 0x422590, CVehicle*>(vehicle);
+    auto& ap = vehicle->m_autoPilot;
+    if (ap.m_nCurrentPathNodeInfo.IsValid() && ThePaths.m_pPathNodes[ap.m_nCurrentPathNodeInfo.m_wAreaId]
+        && ap.m_nNextPathNodeInfo.IsValid() && ThePaths.m_pPathNodes[ap.m_nNextPathNodeInfo.m_wAreaId]
+        && ap.m_currentAddress.IsAreaValid() && ThePaths.m_pPathNodes[ap.m_currentAddress.m_wAreaId]
+        && ap.m_startingRouteNode.IsAreaValid() && ThePaths.m_pPathNodes[ap.m_startingRouteNode.m_wAreaId]
+    ) {
+        return false;
+    }
+    ap.movementFlags.bIsStopped = true;
+    return true;
 }
 
 // 0x4222A0
@@ -5533,13 +6139,202 @@ void CCarCtrl::SwitchVehicleToRealPhysics(CVehicle* vehicle) {
 }
 
 // 0x425B30
-float CCarCtrl::TestCollisionBetween2MovingRects(CVehicle* vehicle1, CVehicle* vehicle2, float arg3, float arg4, CVector* pos1, CVector* pos2) {
-    return plugin::CallAndReturn<float, 0x425B30, CVehicle*, CVehicle*, float, float, CVector*, CVector*>(vehicle1, vehicle2, arg3, arg4, pos1, pos2);
+float CCarCtrl::TestCollisionBetween2MovingRects(CVehicle* vehicle1, CVehicle* vehicle2, float moveX, float moveY, CVector* dir1, CVector* dir2) {
+    const auto& pos1 = vehicle1->GetPosition();
+    const auto& pos2 = vehicle2->GetPosition();
+
+    // Vector from vehicle 2 to vehicle 1
+    const auto dx = (float)((double)pos1.x - pos2.x);
+    const auto dy = (float)((double)pos1.y - pos2.y);
+
+    // The extents of the collision models (the original uses `min.y` of vehicle 2 negated)
+    const auto& bb2 = GetModelBoundBox(vehicle2);
+    const auto& bb1 = GetModelBoundBox(vehicle1);
+    const float hx2    = bb2.m_vecMax.x;
+    const float hy2    = bb2.m_vecMax.y;
+    const float negMin2 = -bb2.m_vecMin.y;
+    const float hx1    = bb1.m_vecMax.x;
+    const float hy1    = bb1.m_vecMax.y;
+
+    // Velocity of vehicle 2 relative to vehicle 1 (moveX/moveY) in the frame of vehicle 1
+    const auto f7 = (float)((double)moveX * dir1->y - (double)moveY * dir1->x);
+    const auto f8 = (float)((double)moveX * dir1->x + (double)moveY * dir1->y);
+
+    float best = 1.0f;
+    for (auto i = 0; i < 2; i++) {
+        // Corner of the rectangle of vehicle 1 (relative to vehicle 2)
+        float cx, cy;
+        if (i == 0) {
+            cx = (float)(((double)hy1 * dir2->x + (double)hx1 * dir2->y) + dx);
+            cy = (float)(((double)hy1 * dir2->y + dy) - (double)hx1 * dir2->x);
+        } else {
+            cx = (float)(((double)hy1 * dir2->x + dx) - (double)hx1 * dir2->y);
+            cy = (float)(((double)hx1 * dir2->x + (double)hy1 * dir2->y) + dy);
+        }
+
+        // Time interval of overlap on the X axis of vehicle 2: [tMin1 (float), tMax1 (x87 register)]
+        const auto pa = (float)((double)cx * dir1->y - (double)cy * dir1->x);
+        float      tMin1 = 0.0f;
+        double     tMax1 = 1.0;
+        if (pa > hx2) {
+            if (!(f7 < 0.0f)) {
+                tMin1 = 1.0f;
+            } else {
+                const double inv = 1.0 / f7;
+                const double t   = -(((double)pa - hx2) * inv);
+                if (!(t < 1.0)) {
+                    tMin1 = 1.0f;
+                } else {
+                    tMin1 = (float)t;
+                    const double u = t - inv * (hx2 + hx2);
+                    if (u < 1.0) {
+                        tMax1 = (float)u;
+                    }
+                }
+            }
+        } else if (-hx2 > pa) {
+            if (!(f7 > 0.0f)) {
+                tMin1 = 1.0f;
+            } else {
+                const double inv = 1.0 / f7;
+                const double t   = -(((double)pa + hx2) * inv);
+                if (!(t < 1.0)) {
+                    tMin1 = 1.0f;
+                } else {
+                    tMin1 = (float)t;
+                    const double u = inv * (hx2 + hx2) + t;
+                    if (u < 1.0) {
+                        tMax1 = (float)u;
+                    }
+                }
+            }
+        } else {
+            if (f7 > 0.0f) {
+                tMax1 = ((double)hx2 - pa) / f7;
+            } else if (f7 < 0.0f) {
+                tMax1 = -(((double)pa + hx2) / f7);
+            }
+        }
+
+        // Time interval of overlap on the Y axis of vehicle 2: [tMin2 (x87 register), tMax2 (float)]
+        const auto pb = (float)((double)cy * dir1->y + (double)cx * dir1->x);
+        double     tMin2 = 0.0;
+        float      tMax2 = 1.0f;
+        if (pb > hy2) {
+            tMin2 = 1.0;
+            if (f8 < 0.0f) {
+                const auto   inv = (float)(1.0 / f8);
+                const double q   = -(((double)pb - hy2) * inv);
+                if (q < 1.0) {
+                    const auto m = (float)q;
+                    tMin2 = m;
+                    const double r = m - ((double)negMin2 + hy2) * inv;
+                    if (r < 1.0) {
+                        tMax2 = (float)r;
+                    }
+                }
+            }
+        } else if (-negMin2 > pb) {
+            tMin2 = 1.0;
+            if (f8 > 0.0f) {
+                const auto   inv = (float)(1.0 / f8);
+                const double q   = -(((double)pb + negMin2) * inv);
+                if (q < 1.0) {
+                    const auto m = (float)q;
+                    tMin2 = m;
+                    const double r = ((double)negMin2 + hy2) * inv + m;
+                    if (r < 1.0) {
+                        tMax2 = (float)r;
+                    }
+                }
+            }
+        } else {
+            if (f8 > 0.0f) {
+                tMax2 = (float)(((double)hy2 - pb) / f8);
+            } else if (f8 < 0.0f) {
+                tMax2 = (float)(-(((double)pb + negMin2) / f8));
+            }
+        }
+
+        if (tMin1 > tMin2) {
+            tMin2 = tMin1;
+        }
+        const auto tMin2f = (float)tMin2;
+        if (tMin2 < tMax1 && tMin2f < tMax2 && !(best < tMin2f)) {
+            best = tMin2f;
+        }
+    }
+    return best;
 }
 
 // 0x425F70
-float CCarCtrl::TestCollisionBetween2MovingRects_OnlyFrontBumper(CVehicle* vehicle1, CVehicle* vehicle2, float arg3, float arg4, CVector* pos1, CVector* pos2) {
-    return plugin::CallAndReturn<float, 0x425F70, CVehicle*, CVehicle*, float, float, CVector*, CVector*>(vehicle1, vehicle2, arg3, arg4, pos1, pos2);
+float CCarCtrl::TestCollisionBetween2MovingRects_OnlyFrontBumper(CVehicle* vehicle1, CVehicle* vehicle2, float moveX, float moveY, CVector* dir1, CVector* dir2) {
+    const auto& pos1 = vehicle1->GetPosition();
+    const auto& pos2 = vehicle2->GetPosition();
+
+    const auto& bb2 = GetModelBoundBox(vehicle2);
+    const auto& bb1 = GetModelBoundBox(vehicle1);
+    const float x2  = bb2.m_vecMax.x;
+    const float y2  = bb2.m_vecMax.y;
+    const float x1  = bb1.m_vecMax.x;
+    const float y1  = bb1.m_vecMax.y;
+    const float ny1 = -bb1.m_vecMin.y;
+
+    // The corners of the (front edge of the) rectangle of vehicle 2 (x87: some are rounded to float, others aren't)
+    const double a = (double)x2 * dir1->y;
+    const double b = (double)y2 * dir1->x;
+    const auto   q1x = (float)((b + a) + pos2.x);
+    const auto   y2d = (float)((double)y2 * dir1->y);
+    const auto   x2d = (float)((double)x2 * dir1->x);
+    const auto   q1y = (float)(((double)y2d + pos2.y) - x2d);
+    const auto   q2x = (float)((b + pos2.x) - a);
+    const double q2y = (double)pos2.y + ((double)x2d + y2d);
+
+    float best = 1.0f;
+    for (auto i = 0; i < 4; i++) {
+        // The corners of the rectangle of vehicle 1
+        double u, v;
+        switch (i) {
+        case 0:
+            u = ((double)x1 * dir2->y + (double)y1 * dir2->x) + pos1.x;
+            v = ((double)y1 * dir2->y + pos1.y) - (double)x1 * dir2->x;
+            break;
+        case 1:
+            u = ((double)y1 * dir2->x + pos1.x) - (double)x1 * dir2->y;
+            v = ((double)y1 * dir2->y + (double)x1 * dir2->x) + pos1.y;
+            break;
+        case 2:
+            u = ((double)pos1.x - (double)ny1 * dir2->x) + (double)x1 * dir2->y;
+            v = ((double)pos1.y - (double)ny1 * dir2->y) - (double)x1 * dir2->x;
+            break;
+        default:
+            u = ((double)pos1.x - (double)ny1 * dir2->x) - (double)x1 * dir2->y;
+            v = ((double)pos1.y - (double)ny1 * dir2->y) + (double)x1 * dir2->x;
+            break;
+        }
+
+        // Where the corner is (side of the front edge), before and after moving
+        const double ux = u + moveX;
+        const double vy = v + moveY;
+        const auto   s1 = (float)((v - q1y) * dir1->y + (u - q1x) * dir1->x);
+        const auto   s2 = (float)((vy - q1y) * dir1->y + (ux - q1x) * dir1->x);
+        if (!(s1 > 0.0f) || !(s2 < 0.0f)) {
+            continue;
+        }
+
+        // Do the end points of the edge lie on different sides of the movement line?
+        const double m1 = (q2x - u) * moveY - (q2y - v) * moveX;
+        const double n1 = (q1x - u) * moveY - (q1y - v) * moveX;
+        if (!(m1 * n1 < 0.0)) {
+            continue;
+        }
+
+        const double t = (double)s1 / ((double)s1 - s2);
+        if (!(best < t)) {
+            best = (float)t;
+        }
+    }
+    return best;
 }
 
 // 0x429520
@@ -5576,7 +6371,20 @@ void CCarCtrl::TestWhetherToFirePlaneGuns(CVehicle* vehicle, CEntity* target) {
 
 // 0x421FE0
 bool CCarCtrl::ThisVehicleShouldTryNotToTurn(CVehicle* vehicle) {
-    return plugin::CallAndReturn<bool, 0x421FE0, CVehicle*>(vehicle);
+    switch (vehicle->m_nModelIndex) {
+    case MODEL_LINERUN:
+    case MODEL_DUMPER:
+    case MODEL_BUS:
+    case MODEL_COACH:
+    case MODEL_PACKER:
+    case MODEL_FLATBED:
+    case MODEL_PETRO:
+    case MODEL_RDTRAIN:
+    case MODEL_CEMENT:
+        return true;
+    default:
+        return false;
+    }
 }
 
 // 0x429300
@@ -5858,6 +6666,81 @@ static bool WouldBoxesCollide(
     };
 
     return TestSweptEdge(m0, m1) || TestSweptEdge(m2, m3);
+}
+
+// 0x426970
+void CCarCtrl::WeaveForPed(CPed* ped, CVehicle* vehicle, float* pLowerAngle, float* pUpperAngle) {
+    // Peds that are supposed to be rammed/killed by `vehicle` don't need to be avoided
+    const auto mission = vehicle->m_autoPilot.m_nCarMission;
+    if (mission == MISSION_RAMPLAYER_CLOSE && ped == FindPlayerPed(-1)) {
+        return;
+    }
+    if (mission == MISSION_KILLPED_CLOSE && static_cast<CEntity*>(ped) == static_cast<CEntity*>(vehicle->m_autoPilot.m_TargetEntity)) {
+        return;
+    }
+
+    const auto& pedPos = ped->GetPosition();
+    const auto& vehPos = vehicle->GetPosition();
+    const auto  toPedX = (float)((double)pedPos.x - vehPos.x);
+    const auto  toPedY = (float)((double)pedPos.y - vehPos.y);
+
+    // x87: The result is stored as float here
+    const auto heading = (float)CGeneral::GetATanOfXY(toPedX, toPedY); // 0x53CC70
+
+    // x87: the distance is kept in extended precision
+    const auto dist = std::sqrt((double)toPedY * toPedY + (double)toPedX * toPedX);
+    if (dist < 1.0f) {
+        return;
+    }
+
+    // Half of the angle (as seen from the vehicle) the ped (and the car) takes up
+    const auto pedAngleWidth = (float)(((double)GetModelBoundBox(vehicle).m_vecMax.x * 2.4f + 0.8f) / dist); // 0x858FB0, 0x858C98
+    const auto halfWidth     = (float)((double)pedAngleWidth * 0.5f);
+
+    const auto pi = std::numbers::pi_v<float>;
+
+    // Makes the angle (in extended precision) to be in -PI to PI
+    const auto Wrap = [&](double angle) {
+        while (angle < -pi) {
+            angle += 2.0f * pi;
+        }
+        while (pi < angle) {
+            angle -= 2.0f * pi;
+        }
+        return angle;
+    };
+
+    // Lower end
+    {
+        const auto diff = Wrap((double)heading - *pLowerAngle);
+        if ((diff < 0.0 ? -diff : diff) < halfWidth) {
+            const double lower = (double)heading - halfWidth;
+            *pLowerAngle = (float)lower;
+            if (lower < -pi) {
+                double angle = *pLowerAngle;
+                do {
+                    angle += 2.0f * pi;
+                } while (angle < -pi);
+                *pLowerAngle = (float)angle;
+            }
+        }
+    }
+
+    // Upper end
+    {
+        const auto diff = Wrap((double)heading - *pUpperAngle);
+        if ((diff < 0.0 ? -diff : diff) < halfWidth) {
+            const double upper = (double)halfWidth + heading;
+            *pUpperAngle = (float)upper;
+            if (upper > pi) {
+                double angle = *pUpperAngle;
+                do {
+                    angle -= 2.0f * pi;
+                } while (angle > pi);
+                *pUpperAngle = (float)angle;
+            }
+        }
+    }
 }
 
 // 0x426BC0
@@ -6146,8 +7029,7 @@ void CCarCtrl::WeaveThroughPedsSectorList(CPtrListDoubleLink<CPed*>& ptrList, CV
             continue;
         }
 
-        // 0x426970 - `CCarCtrl::WeaveForPed` (isn't in the headers/inventory, so it's called directly)
-        plugin::Call<0x426970, CPed*, CVehicle*, float*, float*>(ped, vehicle, pLowerAngle, pUpperAngle);
+        WeaveForPed(ped, vehicle, pLowerAngle, pUpperAngle); // 0x426970
     }
 }
 

@@ -26,7 +26,7 @@ void CPlayerInfo::InjectHooks() {
     RH_ScopedClass(CPlayerInfo);
     RH_ScopedCategoryGlobal();
 
-    RH_ScopedInstall(Constructor, 0x571920, { .State = HS::RedirectToGTA, .Locked = true }); // hooking ctor will produce bugs with weapons, you will never give weapon through cheat or something
+    RH_ScopedInstall(Constructor, 0x571920);
     RH_ScopedInstall(CancelPlayerEnteringCars, 0x56E860);
     RH_ScopedInstall(FindObjectToSteal, 0x56DBD0);
     RH_ScopedInstall(EvaluateCarPosition, 0x56DAD0);

@@ -212,6 +212,18 @@ if (${RE_PROJECT}_RW_LIBRW)
     add_subdirectory("${PROJECT_SOURCE_DIR}/vendor/librw" "${CMAKE_BINARY_DIR}/vendor/librw")
     # librw is third-party code: never -Werror (COMPILE_WARNING_AS_ERROR is set per target on ${RE_PROJECT_LIB_NAME} only)
     set_target_properties(librw PROPERTIES COMPILE_WARNING_AS_ERROR OFF)
+
+    # P2B-01 unit test (defined here, before add_dependency() leaks junk into the directory compile options) of the RW math/stream shim (not part of `all`): ninja rw_math_stream_test
+    if (EXISTS "${PROJECT_SOURCE_DIR}/tests/standalone/rw_math_stream_test.cpp")
+        add_executable(rw_math_stream_test EXCLUDE_FROM_ALL
+            "${PROJECT_SOURCE_DIR}/tests/standalone/rw_math_stream_test.cpp"
+            "${CMAKE_CURRENT_SOURCE_DIR}/standalone/rw/math.cpp"
+            "${CMAKE_CURRENT_SOURCE_DIR}/standalone/rw/stream.cpp"
+        )
+        target_compile_definitions(rw_math_stream_test PRIVATE NOTSA_RW_LIBRW NOTSA_RW_UNIT_TEST RW_D3D9)
+        target_include_directories(rw_math_stream_test BEFORE PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/fakerw")
+        target_link_libraries(rw_math_stream_test PRIVATE librw)
+    endif()
 endif()
 
 #--------------------------------------------------------------------

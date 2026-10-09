@@ -2,6 +2,7 @@
 
 #include "platform.h"
 
+#ifndef NOTSA_RW_LIBRW // the librw shim provides RwOsGetFileInterface() (fakerw/rwextra.h)
 // RenderWare file interface (RwOsGetFileInterface), see rwplcore.h in the SDK
 struct PresetRwFileFunctions {
     void*  rwfexist;
@@ -22,6 +23,7 @@ static_assert(sizeof(PresetRwFileFunctions) == 0x2C);
 static PresetRwFileFunctions* RwOsGetFileInterface() {
     return plugin::CallAndReturn<PresetRwFileFunctions*, 0x804130>();
 }
+#endif
 
 struct PresetView {
     CVector m_Translation;

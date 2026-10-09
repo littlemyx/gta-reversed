@@ -149,3 +149,29 @@ extern RwRGBAReal AmbientSaturated;
 #define _RW_S4  ((float) 2.7557314297e-06)
 #define _RW_S5  ((float)-2.5050759689e-08)
 #define _RW_S6  ((float) 1.5896910177e-10)
+
+// 01 ---------------------------------------------------------------------------------------------------------------------------------
+// P2B-01 (math + streams): memory-stream descriptor and the RW file interface. Implemented in source/standalone/rw/stream.cpp.
+//--------------------------------------------------------------------------------------------------
+// RwStreamOpen/_rwStreamInitialize(rwSTREAMMEMORY, ...) take a pointer to this (== the game's tRwStreamInitializeData); RwStreamClose(stream, &mem)
+// of a memory stream opened for writing fills it with the buffer (allocated through the engine, release with RwFree) and the number of bytes written.
+struct RwMemory {
+    RwUInt8* start;
+    RwUInt32 length;
+};
+// RwOsGetFileInterface(): the CRT file functions all RW file access goes through (11 pointers, 0x2C bytes, same order as the SDK).
+struct RwFileFunctions {
+    RwBool  (*rwfexist)(const RwChar* path);
+    void*   (*rwfopen)(const RwChar* path, const RwChar* mode);
+    int     (*rwfclose)(void* fp);
+    size_t  (*rwfread)(void* ptr, size_t size, size_t count, void* fp);
+    size_t  (*rwfwrite)(const void* ptr, size_t size, size_t count, void* fp);
+    RwChar* (*rwfgets)(RwChar* buf, int maxLen, void* fp);
+    int     (*rwfputs)(const RwChar* str, void* fp);
+    int     (*rwfeof)(void* fp);
+    int     (*rwfseek)(void* fp, long offset, int origin);
+    int     (*rwfflush)(void* fp);
+    long    (*rwftell)(void* fp);
+};
+static_assert(sizeof(RwFileFunctions) == 0x2C);
+RwFileFunctions* RwOsGetFileInterface();

@@ -27,6 +27,11 @@ namespace utility { void RegisterHandlers(); };
 namespace vehicle { void RegisterHandlers(); };
 namespace zone { void RegisterHandlers(); };
 namespace stat { void RegisterHandlers(); };
+// S6: handlers ported from the exe's per-100 group processors (script commands that had no handler)
+namespace ported {
+namespace g01_04 { void RegisterHandlers(); }; // S6-A part 1: ids 100..499
+namespace g05_08 { void RegisterHandlers(); }; // S6-A part 2: ids 500..899
+}; // namespace ported
 }; // namespace commands
 }; // namespace notsa
 }; // namespace script

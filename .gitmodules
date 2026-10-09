@@ -1,4 +1,4 @@
 [submodule "vendor/librw"]
 	path = vendor/librw
-	url = https://github.com/aap/librw
-	shallow = true
+	url = https://github.com/littlemyx/librw.git
+	branch = notsa

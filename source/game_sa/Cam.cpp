@@ -194,9 +194,16 @@ static double PedHeadingExt(CPed* ped) {
     return (double)ped->m_placement.m_fHeading;
 }
 
-// 0x50A0A0 - Rounds to the given number of decimal digits
+// 0x50A0A0 - Rounds to the given number of decimal digits (hooked below)
 static float LimitPrecision(float v, int32 digits) {
-    return plugin::CallAndReturn<float, 0x50A0A0, float, int32>(v, digits);
+    // NOTE: x87 extended precision in the original, the intermediates are kept in `double` here
+    //       (0x822130 = pow, 0x8232F0 = modf; the 5.0f / 0.1f are float constants from .rdata)
+    double ipart{};
+    std::modf(
+        (std::pow(10.0, (double)(digits + 1)) * (double)v + (v < 0.0f ? -5.0 : 5.0)) * (double)0.1f, // !(v < 0) <=> the original's JP after FCOMP (NaN adds)
+        &ipart
+    );
+    return (float)(ipart / std::pow(10.0, (double)digits));
 }
 
 // 0x50A120
@@ -524,6 +531,7 @@ void CCam::InjectHooks() {
     RH_ScopedInstall(Process_WheelCam, 0x512110);
 
     RH_ScopedGlobalInstall(WellBufferMe, 0x509AE0);
+    RH_ScopedGlobalOverloadedInstall(LimitPrecision, "float", 0x50A0A0, float(*)(float, int32));
     RH_ScopedGlobalInstall(FlyBySplineVec3, 0x5B2090);
     RH_ScopedGlobalInstall(FlyBySplineFloat, 0x5B2330);
     RH_ScopedGlobalInstall(GetArrestCamPosBesideCop, 0x515D80);
@@ -2255,9 +2263,9 @@ void CCam::Process_1rstPersonPedOnPC(const CVector& target, float orientation, f
     double     deltaH, deltaV; // NOTE: x87 extended precision in the original
     float      stickV;         // the original reuses `param_3` for this
     if (mouse.x == 0.0f && mouse.y == 0.0f) {
-        const int16 lookLR = plugin::CallMethodAndReturn<int16, 0x540E80, CPad*>(pad); // LookAroundLeftRight(void)
+        const int16 lookLR = pad->LookAroundLeftRight(); // LookAroundLeftRight(void)
         const float stickH = (float)-(int32)lookLR;
-        const int16 lookUD = plugin::CallMethodAndReturn<int16, 0x540F80, CPad*>(pad); // LookAroundUpDown(void)
+        const int16 lookUD = pad->LookAroundUpDown(); // LookAroundUpDown(void)
         stickV             = (float)(int32)lookUD;
         float signV        = 1.0f;
         float signH        = 1.0f;
@@ -5770,8 +5778,8 @@ void CCam::Process_FollowPedWithMouse(const CVector& target, float orientation, 
         const auto mouse = CPad::NewMouseControllerState.GetAmountMouseMoved();
         if ((mouse.x == 0.0f && mouse.y == 0.0f) || pad->DisablePlayerControls != 0) {
             // 0x540E80 and 0x540F80 - `LookAroundLeftRight(void)` and `LookAroundUpDown(void)`
-            const int16 lookLR = plugin::CallMethodAndReturn<int16, 0x540E80, CPad*>(pad);
-            const int16 lookUD = plugin::CallMethodAndReturn<int16, 0x540F80, CPad*>(pad);
+            const int16 lookLR = pad->LookAroundLeftRight();
+            const int16 lookUD = pad->LookAroundUpDown();
             const double fovScale = (double)m_fFOV * 0.0125f; // NOTE: x87 extended precision, same for the expressions below
             rotH = (float)(((0.0714285746f * fovScale) * CTimer::GetTimeStep() * 0.01f) * (float)-(int32)lookLR);
             rotV = (float)(((((double)(float)(int32)lookUD * 0.042857144f) * CTimer::GetTimeStep()) * fovScale) * 0.01f);

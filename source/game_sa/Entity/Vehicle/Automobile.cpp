@@ -93,6 +93,7 @@ void CAutomobile::InjectHooks()
     RH_ScopedInstall(IsInAir, 0x6A6140);
     RH_ScopedInstall(dmgDrawCarCollidingParticles, 0x6A6DC0);
     RH_ScopedInstall(SpawnFlyingComponent, 0x6A8580);
+    RH_ScopedInstall(UpdateWheelMatrix, 0x6AA290);
     RH_ScopedInstall(ProcessSwingingDoor, 0x6A9D70);
     RH_ScopedInstall(RemoveBonnetInPedCollision, 0x6AA200);
     RH_ScopedInstall(PopDoor, 0x6ADEF0);
@@ -5537,7 +5538,245 @@ CObject* CAutomobile::RemoveBonnetInPedCollision() {
 
 // 0x6AA290
 void CAutomobile::UpdateWheelMatrix(int32 nodeIndex, int32 flags) {
-    ((void(__thiscall*)(CAutomobile*, int32, int32))0x6AA290)(this, nodeIndex, flags); // TODO: Reverse
+    // Sanity checks for the raw offsets used by the original
+    static_assert(offsetof(CAutomobile, m_aCarNodes) == 0x648 && offsetof(CAutomobile, m_wheelColPoint) == 0x724 && offsetof(CAutomobile, m_fWheelsSuspensionCompressionPrev) == 0x7E4);
+    static_assert(offsetof(CAutomobile, m_wheelRotation) == 0x828 && offsetof(CAutomobile, m_wheelPosition) == 0x838 && offsetof(CAutomobile, m_fFrontHeightAboveRoad) == 0x898);
+    static_assert(offsetof(CAutomobile, m_damageManager) == 0x5A0 && offsetof(CAutomobile, autoFlags) == 0x868);
+    static_assert(offsetof(CAutomobile, m_fWheelScale) == 0x458 && offsetof(CAutomobile, m_fSteerAngle) == 0x494 && offsetof(CAutomobile, m_f2ndSteerAngle) == 0x498);
+    static_assert(offsetof(CAutomobile, m_nVehicleSubType) == 0x594 && offsetof(CAutomobile, m_nHandlingFlagsIntValue) == 0x38C && offsetof(CAutomobile, m_nVehicleUpperFlags) == 0x428);
+    static_assert(offsetof(CVehicleModelInfo, m_fWheelSizeFront) == 0x40 && offsetof(CVehicleModelInfo, m_fWheelSizeRear) == 0x44 && offsetof(CVehicleModelInfo, m_nWheelModelIndex) == 0x48);
+    static_assert(offsetof(tHandlingData, m_nModelFlags) == 0xCC && WHEEL_STATUS_BURST == 1 && CAR_WHEEL_FRONT_LEFT == 0 && CAR_WHEEL_REAR_LEFT == 1 && CAR_WHEEL_FRONT_RIGHT == 2 && CAR_WHEEL_REAR_RIGHT == 3);
+
+    constexpr auto PI = std::numbers::pi_v<float>;
+
+    auto* const frame = m_aCarNodes[nodeIndex];
+    if (!frame) {
+        return;
+    }
+
+    bool   isFront = false; // front wheel (LF/RF)
+    bool   isRear  = false; // everything else (LM/LB/RM/RB)
+    int32  wheel   = CAR_WHEEL_FRONT_LEFT;
+    float  dir     = 0.0f;  // -1 for the left side, +1 for the right side (uninitialized in the original for invalid nodes, but then it's never used)
+    float  steer   = 0.0f;  // rotation around Z
+    bool   steerFixed = false; // `steer` is final (skips the steering adjustments)
+
+    auto* const mi = GetVehicleModelInfo();
+    CMatrix     mat{};
+
+    switch (nodeIndex) {
+    case CAR_WHEEL_LF:
+        wheel   = CAR_WHEEL_FRONT_LEFT;
+        dir     = -1.0f;
+        isFront = true;
+        if (handlingFlags.bSteerRearwheels) {
+            steer      = PI;
+            steerFixed = true;
+        } else {
+            steer = m_fSteerAngle;
+        }
+        break;
+    case CAR_WHEEL_RF:
+        wheel   = CAR_WHEEL_FRONT_RIGHT;
+        dir     = 1.0f;
+        isFront = true;
+        if (handlingFlags.bSteerRearwheels) {
+            steer      = 0.0f;
+            steerFixed = true;
+        } else {
+            steer = m_fSteerAngle;
+        }
+        break;
+    case CAR_WHEEL_LM:
+    case CAR_WHEEL_LB:
+        wheel  = CAR_WHEEL_REAR_LEFT;
+        dir    = -1.0f;
+        isRear = true;
+        if (handlingFlags.bSteerRearwheels) {
+            steer = -m_fSteerAngle;
+        } else if (handlingFlags.bHbRearwheelSteer) {
+            steer = m_f2ndSteerAngle;
+        } else {
+            steer      = PI;
+            steerFixed = true;
+        }
+        break;
+    case CAR_WHEEL_RM:
+    case CAR_WHEEL_RB:
+        wheel  = CAR_WHEEL_REAR_RIGHT;
+        dir    = 1.0f;
+        isRear = true;
+        if (handlingFlags.bSteerRearwheels) {
+            steer = -m_fSteerAngle;
+        } else if (handlingFlags.bHbRearwheelSteer) {
+            steer = m_f2ndSteerAngle;
+        } else {
+            steer      = 0.0f;
+            steerFixed = true;
+        }
+        break;
+    default:
+        return;
+    }
+
+    if (!steerFixed) {
+        if (steer == 0.0f || (flags & 2)) { // 0x6AA3CB
+            steer = dir < 0.0f ? PI : 0.0f;
+        } else if (dir < 0.0f) {
+            if (isRear ? (steer > 0.0f) : (steer < 0.0f)) {
+                steer = 0.6f * steer;
+            }
+            steer = steer + PI;
+        } else {
+            if (isRear ? (steer < 0.0f) : (steer > 0.0f)) {
+                steer = 0.6f * steer;
+            }
+        }
+    }
+
+    mat.Attach(&frame->modelling, false); // 0x6AA490
+
+    CVector savedPos = mat.GetPosition();
+    savedPos.z = m_wheelPosition[wheel];
+
+    // `f` lives on the x87 stack (extended precision) until the `SetScale` call
+    float  scale = m_fWheelScale;
+    double f;
+    if (mi->m_nWheelModelIndex == -1) {
+        if (isRear) {
+            scale = (float)(((double)mi->m_fWheelSizeRear / (double)mi->m_fWheelSizeFront) * (double)scale);
+        }
+        f = (double)mi->m_fWheelSizeFront / ((double)m_fWheelScale * (double)0.7f); // 0x858CB0 = 0.7f
+    } else {
+        scale = isRear ? mi->m_fWheelSizeRear : mi->m_fWheelSizeFront;
+        f     = 1.0;
+    }
+
+    const auto& s_CombineWheelSize = StaticRef<float>(0x8D31D4); // 1.7f
+    const auto& s_CombineWheelZ    = StaticRef<float>(0x8D31D0); // 0.45f
+    if (m_nModelIndex == MODEL_COMBINE && (nodeIndex == CAR_WHEEL_LM || nodeIndex == CAR_WHEEL_RM)) {
+        scale      = (float)((double)s_CombineWheelSize / (double)mi->m_fWheelSizeFront);
+        savedPos.z = (float)((((double)s_CombineWheelSize - (double)mi->m_fWheelSizeRear) * (double)s_CombineWheelZ) + (double)savedPos.z);
+
+        double s = steer;
+        if (dir < 0.0f) {
+            s -= (double)PI;
+        }
+        steer = (float)(s * (double)0.5f);
+        if (dir < 0.0f) {
+            steer = steer + PI;
+        }
+    } else if (m_nModelIndex == MODEL_STUNT && nodeIndex == CAR_WHEEL_LF) {
+        steer = 0.0f;
+    }
+
+    if (m_nVehicleSubType == VEHICLE_TYPE_MTRUCK || m_nVehicleSubType == VEHICLE_TYPE_QUAD) {
+        f = 1.0;
+    } else if (isRear && (handlingFlags.bWheelRNarrow2 || handlingFlags.bWheelRNarrow || handlingFlags.bWheelRWide || handlingFlags.bWheelRWide2)) {
+        if (handlingFlags.bWheelRNarrow2) {
+            f *= (double)0.65f; // 0x858F50
+        } else if (handlingFlags.bWheelRNarrow) {
+            f *= (double)0.8f;  // 0x858C98
+        } else if (handlingFlags.bWheelRWide) {
+            f *= (double)1.1f;  // 0x858F14
+        } else {
+            f *= (double)1.25f; // 0x8595F0
+        }
+    } else if (isFront && (handlingFlags.bWheelFNarrow2 || handlingFlags.bWheelFNarrow || handlingFlags.bWheelFWide || handlingFlags.bWheelFWide2)) {
+        if (handlingFlags.bWheelFNarrow2) {
+            f *= (double)0.65f;
+        } else if (handlingFlags.bWheelFNarrow) {
+            f *= (double)0.8f;
+        } else if (handlingFlags.bWheelFWide) {
+            f *= (double)1.1f;
+        } else {
+            f *= (double)1.25f;
+        }
+    }
+    if (m_nModelIndex == MODEL_KART) {
+        f *= (double)3.0f; // 0x87104C
+    }
+
+    mat.SetScale((float)(f * (double)scale), scale, scale); // 0x6AA670
+
+    if (m_nVehicleSubType == VEHICLE_TYPE_HELI) {
+        mat.Rotate({ 0.0f, 0.0f, steer });
+    } else {
+        const auto   status = m_damageManager.GetWheelStatus((eCarWheel)wheel); // 0x6AA690
+        const double rot    = (double)dir * (double)m_wheelRotation[wheel];
+        if (status == WHEEL_STATUS_BURST) {
+            mat.Rotate({ (float)rot, 0.0f, (float)(std::sin(rot) * (double)0.3f + (double)steer) });
+        } else {
+            mat.Rotate({ (float)rot, 0.0f, steer });
+        }
+    }
+
+    const auto  modelFlags = m_pHandlingData->m_nModelFlags;
+    const auto  AddParticle = [&] { // 0x6AA7AA
+        const auto& colPoint = m_wheelColPoint[wheel];
+        const auto& right    = GetMatrix().GetRight();
+        const auto& move     = m_vecMoveSpeed;
+
+        const FxPrtMult_c waterMults{ 1.0f, 1.0f, 1.0f, 0.2f, 0.5f, 0.0f, 0.05f };
+        const CVector     dirRight{ dir * right.x, dir * right.y, dir * right.z };
+        const CVector     halfMove{ 0.5f * move.x, 0.5f * move.y, 0.5f * move.z };
+        CVector           vel{ halfMove.x + dirRight.x, halfMove.y + dirRight.y, halfMove.z + dirRight.z };
+
+        if (g_surfaceInfos.IsWater(colPoint.m_nSurfaceTypeB)) { // 0x6AA823
+            if ((CTimer::GetFrameCounter() - 1) & 1) {
+                vel.z = vel.z + 2.0f;
+                g_fx.m_WaterSplash->AddParticle(colPoint.m_vecPoint, vel, 0.0f, waterMults, -1.0f, 1.2f, 0.6f, false); // 0x6AA86F
+            } else {
+                g_fx.m_SmokeHuge->AddParticle(colPoint.m_vecPoint, vel, 0.0f, waterMults, -1.0f, 1.2f, 0.6f, false); // 0x6AA87F
+            }
+        } else if (g_surfaceInfos.IsSand(colPoint.m_nSurfaceTypeB)) { // 0x6AA896
+            const FxPrtMult_c sandMults{ 0.81f, 0.67f, 0.57f, 0.35f, 0.5f, 0.0f, 0.05f };
+            g_fx.m_Sand->AddParticle(colPoint.m_vecPoint, vel, 0.0f, sandMults, -1.0f, 1.2f, 0.6f, false); // 0x6AA8FA
+        }
+    };
+
+    bool solidAxle = autoFlags.bIsMonsterTruck || handlingFlags.bHydraulicInst || ((modelFlags & 0x20000) && isFront) || ((modelFlags & 0x200000) && isRear); // 0x6AA6D6
+    if (!solidAxle) {
+        const bool hovering = (CCheat::IsActive(CHEAT_CARS_ON_WATER) || m_nModelIndex == MODEL_VORTEX)
+            && m_fWheelsSuspensionCompressionPrev[wheel] < 1.0f
+            && !vehicleFlags.bIsDrowning; // 0x6AA724
+        if (hovering) {
+            if (!(flags & 4)) {
+                mat.RotateY((float)((double)dir * (double)-1.5707964f)); // 0x859998
+            }
+            if (!(flags & 8)) {
+                AddParticle();
+            }
+        } else if (!(flags & 1) && !(isFront && (modelFlags & 0x10000)) && !(isRear && (modelFlags & 0x100000))) { // 0x6AA904
+            const float  groundZ = (float)((double)savedPos.z + (double)m_fFrontHeightAboveRoad);
+            const double wheelHeight = (double)groundZ - (double)mi->GetWheelSize(isFront) * (double)0.5f; // 0x6AA94D
+            const bool   flipped = (isFront && (modelFlags & 0x80000)) || (isRear && (modelFlags & 0x800000));
+
+            const double v = (wheelHeight * -1.0) * (double)dir;
+            float        a;
+            if (-1.0 > v) {
+                a = -1.0f;
+            } else if (1.0 < v) {
+                a = 1.0f;
+            } else {
+                a = (float)v;
+            }
+            const double angle = std::asin((double)a);
+            mat.RotateY((float)(flipped ? -angle : angle));
+        }
+    } else {
+        // 0x6AAA8F
+        const int32 opposite = wheel > 1 ? wheel - 2 : wheel + 2;
+        const double y       = std::abs((double)savedPos.y) * 2.0;
+        const double x       = (((double)m_wheelPosition[wheel] - (double)m_wheelPosition[opposite]) * (double)dir) * -1.0;
+        mat.RotateY((float)std::atan2(x, y));
+    }
+
+    // 0x6AAAD0
+    mat.GetPosition().x = mat.GetPosition().x + savedPos.x;
+    mat.GetPosition().y = mat.GetPosition().y + savedPos.y;
+    mat.GetPosition().z = mat.GetPosition().z + savedPos.z;
+    mat.UpdateRW();
 }
 
 // 0x6ADEF0

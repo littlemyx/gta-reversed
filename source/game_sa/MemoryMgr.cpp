@@ -24,6 +24,16 @@ static LPCRITICAL_SECTION gpScratchPadCS;
 void CMemoryMgr::InjectHooks() {
     RH_ScopedClass(CMemoryMgr);
     RH_ScopedCategory("Memory");
+
+    RH_ScopedInstall(InitScratchPad, 0x72F480);
+    RH_ScopedInstall(FreeAlign, 0x72F4F0);
+    // CMemoryMgr::Free (0x72F430) and operator delete/delete[] (0x8214BD / 0x8213AE) are not hooked: see their definitions
+
+    {
+        RH_ScopedClass(CMemoryHeap);
+        RH_ScopedCategory("Memory");
+        RH_ScopedInstall(IntegrityCheck, 0x72E8E0);
+    }
 }
 
 // 0x72F3B0
@@ -98,9 +108,8 @@ void CMemoryMgr::SetHint(void* memory, const char* hint) {
 
 // 0x72F480
 void CMemoryMgr::InitScratchPad() {
-    return plugin::Call<0x72F480>();
-
-    g_Heaps[HEAP_SCRATCH].Init(PC_Scratch, sizeof(PC_Scratch), false);
+    static_assert(sizeof(CMemoryHeap) * HEAP_SCRATCH == 0xC87BD0 - 0xC87B40); // OG passes ECX = 0xC87BD0
+    g_Heaps[HEAP_SCRATCH].Init(s_MemoryHeapBuffer, sizeof(s_MemoryHeapBuffer), false);
 }
 
 void* CMemoryMgr::MallocFromScratchPad(uint32 size) {
@@ -251,8 +260,11 @@ void CMemoryMgr::Free(void* memory) {
     }
     UNLOCK_MEMORYHEAP();
 #else
+    // The original (0x72F430) is a plain jump to the exe's CRT `free` (small block heap / HeapFree).
+    // NOT HOOKED, and the call has to stay redirected: `CMemoryMgr::Malloc` (0x72F420) is still the exe's CRT `malloc`,
+    // and memory from the exe's CRT heap must not be passed to the CRT `free` of this module.
+    // Once Malloc is ported too, this becomes `::free(memory)`.
     return plugin::Call<0x72F430, void*>(memory);
-    return ::free(memory);
 #endif
 }
 
@@ -310,8 +322,8 @@ uint8* CMemoryMgr::MallocAlign(uint32 size, uint32 align, uint32 nHint) {
     return static_cast<uint8*>(result);
 }
 
+// 0x72F4F0
 void CMemoryMgr::FreeAlign(void* memory) {
-    return plugin::Call<0x72F4F0, void*>(memory);
     Free(*((void**)memory - 1));
 }
 
@@ -447,10 +459,14 @@ void* operator new[](size_t size) {
     return plugin::CallAndReturn<void*, 0x821195, size_t>(size);
 }
 
+// 0x8214BD
+// NOT HOOKED: it's the exe's CRT `free` (same body as CMemoryMgr::Free), see the note there.
 void operator delete(void* p) {
     plugin::Call<0x8214BD, void*>(p);
 }
 
+// 0x8213AE
+// NOT HOOKED: it's the exe's CRT `free` (same body as CMemoryMgr::Free), see the note there.
 void operator delete[](void* p) {
     plugin::Call<0x8213AE, void*>(p);
 }

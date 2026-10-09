@@ -328,7 +328,35 @@ uint32 CMemoryHeap::GetSizeOfHoles() {
 
 // 0x72E8E0
 void CMemoryHeap::IntegrityCheck() {
-    plugin::CallMethod<0x72E8E0, CMemoryHeap*>(this);
+    // NOTE: Debug-only walker. The original has no observable effects: it only walks the lists and
+    //       sums the used size per memory id into a local array whose result is discarded.
+
+    // Walk the free list
+    for (auto* b = m_FreeListBegin.m_Next; b != &m_FreeListEnd; b = b->m_Next) {
+    }
+
+    // Walk the common size lists
+    if (m_paCommonSizes) {
+        for (auto i = 0; i < MEMORY_HEAP_CSIZES; i++) {
+            auto& cs = m_paCommonSizes[i];
+            for (auto* b = cs.m_ListStart.m_Next; b != &cs.m_ListEnd; b = b->m_Next) {
+            }
+        }
+    }
+
+    // Sum the used memory per memory id
+    // BUG: The original has a 20 element array, and doesn't check that `m_nMemId` is in range (UB for ids >= 20 or < -1)
+    int32 usedPerMemId[20]{};
+    auto* const last = m_LastBlock;
+    for (auto* b = m_FirstBlock; b != last; b = b->_GetNextLocatedBlock()) {
+        if (b->m_bInUse && b->m_nMemId != -1) {
+            usedPerMemId[b->m_nMemId] += b->m_nSize + (int32)sizeof(HeapBlockDesc);
+        }
+    }
+
+    // Walk the blocks backwards
+    for (auto* b = last->m_PrevBlock; b; b = b->m_PrevBlock) {
+    }
 }
 
 void* CMemoryHeap::MoveHeapBlock(HeapFreeBlockDesc* free, HeapBlockDesc* used) {

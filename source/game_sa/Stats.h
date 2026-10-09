@@ -50,7 +50,7 @@ public:
     static inline auto& StatReactionValue = StaticRef<std::array<float, 59>>(0xB78F10);
     static inline auto& StatTypesInt = StaticRef<std::array<int32, 223>>(0xB79000);
     static inline auto& StatTypesFloat = StaticRef<std::array<float, 82>>(0xB79380);
-    static int16& m_ThisStatIsABarChart;
+    static uint16& m_ThisStatIsABarChart; // 0xB794CC: id of the stat currently being built/printed as a stat line (0 = none)
     static inline auto& bStatUpdateMessageDisplayed = StaticRef<bool>(0xB794D4);
     static inline auto& m_SprintStaminaCounter = StaticRef<uint32>(0xB794D8);
     static inline auto& m_CycleStaminaCounter = StaticRef<uint32>(0xB794DC);

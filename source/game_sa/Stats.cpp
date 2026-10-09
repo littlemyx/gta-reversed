@@ -60,6 +60,8 @@ uint32 TimeStepInMS() {
 }
 }
 
+uint16& CStats::m_ThisStatIsABarChart = StaticRef<uint16>(0xB794CC);
+
 void CStats::InjectHooks() {
     RH_ScopedClass(CStats);
     RH_ScopedCategoryGlobal();
@@ -828,8 +830,6 @@ int32 CStats::ConstructStatLine(int32 arg0, uint8 arg1) {
         }
     }();
 
-    static auto& s_CurrentStatId = StaticRef<uint16>(0xB794CC);
-
     int32 line = 0; // Number of lines produced so far (ESI)
 
     // The stat's int storage, but without the bounds the callers ensure (0xB78E20 + id * 4)
@@ -901,12 +901,12 @@ int32 CStats::ConstructStatLine(int32 arg0, uint8 arg1) {
             }
         }
 
-        s_CurrentStatId = 0;
+        m_ThisStatIsABarChart = 0;
 
         if (!e.special) {
             switch (e.type) {
             case 10: // 0x55A8A0
-                s_CurrentStatId = (uint16)id;
+                m_ThisStatIsABarChart = (uint16)id;
                 if (line != arg0) {
                     return R::Count;
                 }

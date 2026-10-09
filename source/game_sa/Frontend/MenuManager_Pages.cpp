@@ -396,7 +396,6 @@ void CMenuManager::PrintMap() {
 
 // 0x574900
 void CMenuManager::PrintStats() {
-    static auto& currentStatId  = StaticRef<eStats>(0xB794CC);
     static auto& scrollPos      = StaticRef<float>(0x8CDFF4); // -120.0f
     static auto& prevScreenItem = StaticRef<int8>(0x8CDFF8);  // 15
 
@@ -469,8 +468,8 @@ void CMenuManager::PrintStats() {
 
             const auto color = CRGBA(MENU_TEXT_SELECTED, alpha);
             // 0x574DD2
-            if (currentStatId) {
-                float val = CStats::GetStatValue(currentStatId) * 0.001f * 100.0f;
+            if (CStats::m_ThisStatIsABarChart) {
+                float val = CStats::GetStatValue((eStats)CStats::m_ThisStatIsABarChart) * 0.001f * 100.0f;
                 float clamped = std::min(val, 1000.0f);
 
                 CSprite2d::DrawBarChart(

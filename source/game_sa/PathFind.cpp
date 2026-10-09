@@ -7,6 +7,7 @@
 #include "StdInc.h"
 #include "PathFind.h"
 #include "NodeRoute.h"
+#include "Fx/FxFtol.h"
 
 #include <reversiblebugfixes/Bugs.hpp>
 
@@ -20,7 +21,8 @@ auto& ToBeStreamed = StaticRef<std::array<bool, NUM_PATH_MAP_AREAS>>(0x96EFD0);
 auto& XCoorGiven = StaticRef<std::array<float, 64>>(0x96EE80);
 auto& YCoorGiven = StaticRef<std::array<float, 64>>(0x96ED80);
 auto& ZCoorGiven = StaticRef<std::array<float, 64>>(0x96EC80);
-auto& ConnectsToGiven = StaticRef<std::array<std::array<int8, 8>, 64>>(0x96EAC0);
+auto& ConnectsToGiven = StaticRef<std::array<std::array<int8, 6>, 64>>(0x96EAC0); // Stride is 6 in the original (0x450E90, 0x44DED0)
+auto& DontWanderGiven = StaticRef<std::array<bool, 64>>(0x96EC40); // `bDontWander` of `AddNodeToNewInterior`
 
 auto& aInteriorNodeLinkedToExterior = StaticRef<std::array<int32, NUM_PATH_INTERIOR_AREAS>>(0x96EA98);
 auto& aExteriorNodeLinkedTo = StaticRef<std::array<CNodeAddress, NUM_PATH_INTERIOR_AREAS>>(0x977B7C);
@@ -70,7 +72,8 @@ void CPathFind::InjectHooks() {
     RH_ScopedInstall(SwitchRoadsOffInArea, 0x452C80);
     RH_ScopedInstall(SwitchRoadsOffInAreaForOneRegion, 0x452820);
     RH_ScopedInstall(ComputeRoute, 0x452760);
-    //RH_ScopedInstall(CompleteNewInterior, 0x452270);
+    RH_ScopedInstall(CompleteNewInterior, 0x452270);
+    RH_ScopedInstall(RemoveLinksToNewInteriorNode, 0x44DF60);
     RH_ScopedInstall(SwitchOffNodeAndNeighbours, 0x452160);
     //RH_ScopedInstall(Find2NodesForCarCreation, 0x452090);
     //RH_ScopedInstall(TestCoorsCloseness, 0x452000);
@@ -903,8 +906,170 @@ CNodeAddress CPathFind::AddNodeToNewInterior(
     XCoorGiven[idx] = x;
     YCoorGiven[idx] = y;
     ZCoorGiven[idx] = z;
+    DontWanderGiven[idx] = bDontWander;
     rng::copy(std::array{ con0, con1, con2, con3, con4, con5 }, ConnectsToGiven[idx].begin());
     return { (uint16)(NUM_PATH_MAP_AREAS + NewInteriorSlot), (uint16)idx };
+}
+
+// 0x44DF60 - Removes all the links of `nodeIdx` (and all links pointing to it) from the interior being built
+void CPathFind::RemoveLinksToNewInteriorNode(int32 nodeIdx) {
+    for (int32 i = 0; i < (int32)NumNodesGiven; i++) {
+        for (int32 j = 0; j < 6; j++) {
+            if (i == nodeIdx || (int32)ConnectsToGiven[i][j] == nodeIdx) {
+                ConnectsToGiven[i][j] = -1;
+            }
+        }
+    }
+}
+
+namespace {
+//! 0x450FB0 - Appends a link from the node (`areaA`, `nodeA`) to (`areaB`, `nodeB`) to the interior slot `slot` (area `0x40 + slot`).
+//! Not part of any class in the exe symbols (cdecl, implicitly uses `ThePaths`)
+void AddNewInteriorNodeLink(int32 areaA, int32 nodeA, int32 areaB, int32 nodeB, int32 slot, int32& linkIdx) {
+    auto& paths = ThePaths;
+
+    paths.m_pNodeLinks[NUM_PATH_MAP_AREAS + slot][linkIdx] = CNodeAddress{ (uint16)areaB, (uint16)nodeB };
+
+    auto* const src = &paths.m_pPathNodes[areaA][(int8)nodeA];
+    auto* const tgt = &paths.m_pPathNodes[areaB][nodeB];
+
+    // The original works with the compressed positions kept at extended precision (the compressed values are exact in float/double)
+    const auto Dist3D = [](const CPathNode& a, const CPathNode& b) {
+        const double dx = (double)(float)a.m_vPos.x - (double)(float)b.m_vPos.x;
+        const double dy = (double)(float)a.m_vPos.y - (double)(float)b.m_vPos.y;
+        const double dz = (double)(float)a.m_vPos.z - (double)(float)b.m_vPos.z;
+        return std::sqrt(dz * dz + dy * dy + dx * dx);
+    };
+
+    // The original computes the distance up to 3 times (inlined `min(dist, 255)` + `max(1, ...)` idioms); the observable result is:
+    // `255` if the distance (using the compressed positions) is > 255, otherwise the truncated distance. The `max(1, ...)` branch is dead code.
+    uint8 length;
+    if (Dist3D(*src, *tgt) > 255.0) {
+        length = 255;
+    } else {
+        const CVector srcPos = src->GetPosition(), tgtPos = tgt->GetPosition(); // 0x420A10
+        const double  dx = (double)srcPos.x - (double)tgtPos.x;
+        const double  dy = (double)srcPos.y - (double)tgtPos.y;
+        const double  dz = (double)srcPos.z - (double)tgtPos.z;
+        length = (uint8)notsa::detail::Ftol(std::sqrt(dz * dz + dy * dy + dx * dx));
+    }
+    paths.m_pLinkLengths[NUM_PATH_MAP_AREAS + slot][linkIdx]    = length;
+    paths.m_pPathIntersections[NUM_PATH_MAP_AREAS + slot][linkIdx] = {};
+    paths.m_pPathNodes[NUM_PATH_MAP_AREAS + slot][(int8)nodeA].m_nNumLinks++;
+    linkIdx++;
+}
+}; // namespace
+
+// 0x452270
+void CPathFind::CompleteNewInterior(CNodeAddress* outAddress) {
+    if (outAddress) {
+        outAddress->m_wAreaId = (uint16)-1;
+    }
+
+    if (NumNodesGiven != 0) {
+        const auto slot   = NewInteriorSlot;
+        const auto areaId = NUM_PATH_MAP_AREAS + slot;
+
+        // Flood fill id of the new nodes: Same as the exterior node the interior is linked to, or `slot + 100`
+        auto floodFill = (uint8)(slot + 100);
+        if (NumLinksToExteriorNodes > 0) {
+            const auto ext = aExteriorNodeLinkedTo[0];
+            floodFill      = m_pPathNodes[ext.m_wAreaId][ext.m_wNodeId].m_nFloodFill;
+        }
+
+        m_interiorIDs[slot] = InteriorIDBeingBuilt;
+
+        m_pPathNodes[areaId] = (CPathNode*)CMemoryMgr::Malloc(NumNodesGiven * sizeof(CPathNode));
+        for (int32 i = 0; i < (int32)NumNodesGiven; i++) {
+            auto& node = m_pPathNodes[areaId][i];
+
+            node.m_vPos.x = decltype(node.m_vPos.x){ (int16)notsa::detail::Ftol(XCoorGiven[i] * 8.0f) }; // `_ftol`, then the low 16 bits are stored
+            node.m_vPos.y = decltype(node.m_vPos.y){ (int16)notsa::detail::Ftol(YCoorGiven[i] * 8.0f) };
+            node.m_vPos.z = decltype(node.m_vPos.z){ (int16)notsa::detail::Ftol(ZCoorGiven[i] * 8.0f) };
+
+            node.m_wNodeId                = (uint16)i;
+            node.m_wAreaId                = (uint16)(slot + 0x40);
+            node.m_nPathWidth             = 0;
+            node.m_nFloodFill             = floodFill;
+            node.m_onDeadEnd              = false;
+            node.m_isSwitchedOff          = true;
+            node.m_isSwitchedOffOriginal  = true;
+            node.m_bRoadBlocks            = false;
+            node.m_bWaterNode             = false;
+            node.unk1                     = false;
+            node.m_bDontWander            = DontWanderGiven[i];
+            node.unk2                     = true;
+            node.m_bNotHighway            = false;
+            node.m_bHighway               = false;
+            node.m_nSpawnProbability      = 0xF;
+            node.m_nBehaviourType         = 0;
+            node.m_totalDistFromOrigin    = 0x7FFE;
+        }
+
+        // Make all links bidirectional
+        for (int32 i = 0; i < (int32)NumNodesGiven; i++) {
+            for (int32 j = 0; j < 6; j++) {
+                if (ConnectsToGiven[i][j] < 0) {
+                    continue;
+                }
+                auto& other = ConnectsToGiven[ConnectsToGiven[i][j]];
+                if (rng::any_of(other, [&](int8 c) { return c == (int8)i; })) { // Already linked back
+                    continue;
+                }
+                for (auto& c : other) {
+                    if (c < 0) {
+                        c = (int8)i;
+                        break;
+                    }
+                }
+            }
+        }
+
+        // Count links
+        int32 numLinks = 0;
+        for (int32 i = 0; i < (int32)NumNodesGiven; i++) {
+            for (int32 j = 0; j < 6; j++) {
+                if (ConnectsToGiven[i][j] >= 0) {
+                    numLinks++;
+                }
+            }
+        }
+
+        m_pNodeLinks[areaId]         = (CNodeAddress*)CMemoryMgr::Malloc((numLinks + 0xC0) * sizeof(CNodeAddress));
+        m_pLinkLengths[areaId]       = (uint8*)CMemoryMgr::Malloc(numLinks + 0xC0);
+        m_pPathIntersections[areaId] = (CPathIntersectionInfo*)CMemoryMgr::Malloc(numLinks + 0xC0);
+
+        int32 linkIdx = 0;
+        for (int32 i = 0; i < (int32)NumNodesGiven; i++) {
+            auto& node = m_pPathNodes[areaId][i];
+            node.m_wBaseLinkId = (int16)linkIdx;
+            node.m_nNumLinks   = 0;
+            for (int32 j = 0; j < 6; j++) {
+                if (ConnectsToGiven[i][j] >= 0) {
+                    AddNewInteriorNodeLink(areaId, i, areaId, ConnectsToGiven[i][j], slot, linkIdx); // 0x450FB0
+                }
+            }
+        }
+
+        // Padding for the dynamic links
+        for (int32 i = numLinks; i < numLinks + 0xC0; i++) {
+            m_pNodeLinks[areaId][i].m_wAreaId = (uint16)-1; // Written as 16 bits at offset 0, the node id is left uninitialized
+        }
+
+        m_anNumNodes[areaId]        = NumNodesGiven;
+        m_anNumVehicleNodes[areaId] = 0;
+        m_anNumPedNodes[areaId]     = NumNodesGiven;
+        m_anNumCarPathLinks[areaId] = 0;
+        m_anNumAddresses[areaId]    = numLinks;
+
+        for (int32 i = 0; i < NumLinksToExteriorNodes; i++) {
+            const CNodeAddress interior{ (uint16)areaId, (uint16)aInteriorNodeLinkedToExterior[i] };
+            const auto         exterior = aExteriorNodeLinkedTo[i];
+            AddDynamicLinkBetween2Nodes_For1Node(interior, exterior);
+            AddDynamicLinkBetween2Nodes_For1Node(exterior, interior);
+        }
+    }
+    bInteriorBeingBuilt = false;
 }
 
 // 0x451300 unused

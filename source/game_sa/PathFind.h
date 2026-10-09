@@ -447,6 +447,7 @@ public:
     void AddDynamicLinkBetween2Nodes_For1Node(CNodeAddress node1, CNodeAddress node2);
     void AddDynamicLinkBetween2Nodes(CNodeAddress node1, CNodeAddress node2);
     void CompleteNewInterior(CNodeAddress* outAddress);
+    void RemoveLinksToNewInteriorNode(int32 nodeIdx);
     void RemoveInterior(uint32 interior);
     CNodeAddress ReturnInteriorNodeIndex(int32 unkn, uint32 intId, int16 nodeId);
     CCarPathLinkAddress FindLinkBetweenNodes(CNodeAddress node1, CNodeAddress node2);

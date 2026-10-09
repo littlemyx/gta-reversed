@@ -336,8 +336,7 @@ void InteriorGroup_c::SetupPaths() {
             }
         }
         if (bestDist >= 3.f) {
-            // 0x44DF60 - Not reversed yet
-            plugin::CallMethod<0x44DF60, CPathFind*, int32>(&paths, unlinkedNode[i]);
+            paths.RemoveLinksToNewInteriorNode(unlinkedNode[i]); // 0x44DF60
         } else {
             unlinkedDone[i]    = true;
             unlinkedDone[best] = true;
@@ -345,8 +344,7 @@ void InteriorGroup_c::SetupPaths() {
         }
     }
 
-    // 0x452270 - `CPathFind::CompleteNewInterior` is declared, but not defined (yet)
-    plugin::CallMethod<0x452270, CPathFind*, CNodeAddress*>(&paths, nullptr);
+    paths.CompleteNewInterior(nullptr); // 0x452270
     m_pathSetupComplete = true;
 }
 

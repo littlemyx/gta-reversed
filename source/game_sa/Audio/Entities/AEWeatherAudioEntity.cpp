@@ -18,7 +18,7 @@ enum class eWeatherEvent {
 // NOTE: (x, y, z) = (-0.906, 0.423, 0), as built on the stack at 0x505A00 (compared against `sound->m_CurrPos`); `Service` (0x5052F0) builds its own 4 variants
 constexpr CVector DEFAULT_POS = { -0.906f, 0.423f, 0.f };
 
-auto& m_snLastRainDropSoundID = StaticRef<int32>(0x8CC310); // TODO: Use `eSoundID`
+auto& m_snLastRainDropSoundID = StaticRef<int16>(0x8CC310); // TODO: Use `eSoundID`. NOTE: The original loads 32 bits (high half is always 0) but stores only 16 (`mov word ptr [0x8CC310], di`)
 auto& m_sRainSoundL = StaticRef<CAETwinLoopSoundEntity>(0xB6BB18);  // dunno about names
 auto& m_sRainSoundR = StaticRef<CAETwinLoopSoundEntity>(0xB6BBC0);
 
@@ -370,9 +370,9 @@ void CAEWeatherAudioEntity::Service() {
         if (sound.IsActive()) {
             sound.UpdateTwinLoopSound(posFront, m_sfRainVolume, 1.f);
             if (sound.DoSoundsSwitchThisFrame()) {
-                m_snLastRainDropSoundID = m_snLastRainDropSoundID + 1 <= 11
-                    ? m_snLastRainDropSoundID + 1
-                    : 2;
+                m_snLastRainDropSoundID = (int16)(m_snLastRainDropSoundID + 1) <= 11
+                    ? (int16)(m_snLastRainDropSoundID + 1)
+                    : (int16)2;
                 // NOTE: The original calls the random number generator BEFORE `ResolveProbability`
                 // and computes `(vol - 15) + rand` with `vol - 15` in extended precision.
                 const auto rnd = CAEAudioUtility::GetRandomNumberInRange(-6.f, 6.f);

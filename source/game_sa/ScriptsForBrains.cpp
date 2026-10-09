@@ -20,6 +20,9 @@ void CScriptsForBrains::InjectHooks() {
     RH_ScopedInstall(StartOrRequestNewStreamedScriptBrain, 0x46CD80);
     RH_ScopedInstall(StartOrRequestNewStreamedScriptBrainWithThisName, 0x46CED0);
     RH_ScopedInstall(IsObjectWithinBrainActivationRange, 0x46B3D0);
+    RH_ScopedInstall(RequestAttractorScriptBrainWithThisName, 0x46AA80);
+    RH_ScopedInstall(MarkAttractorScriptBrainWithThisNameAsNoLongerNeeded, 0x46AAE0);
+    RH_ScopedInstall(CheckIfNewEntityNeedsScript, 0x46FF20);
 }
 
 
@@ -75,16 +78,52 @@ void CScriptsForBrains::AddNewStreamedScriptBrainForCodeUse(int16 a2, char* a3, 
     }
 }
 
+// 0x46FF20
 void CScriptsForBrains::CheckIfNewEntityNeedsScript(CEntity* entity, int8 attachType, void* unused) {
-    plugin::CallMethod<0x46FF20, CScriptsForBrains*, CEntity*, int8, void*>(this, entity, attachType, unused);
+    if (attachType == 0) {
+        const auto* const ped = static_cast<CPed*>(entity);
+        if (ped->bHasAScriptBrain || ped->bWaitingForScriptBrainToLoad) {
+            return;
+        }
+    } else {
+        if (static_cast<CObject*>(entity)->m_nObjectFlags & 0x300000) {
+            return;
+        }
+    }
+
+    for (uint8 i = 0; i < (uint8)m_aScriptForBrains.size(); i++) {
+        const auto& brain = m_aScriptForBrains[i];
+        if (brain.m_TypeOfBrain != attachType || (uint16)brain.m_PedModelOrPedGeneratorIndex != entity->m_nModelIndex) {
+            continue;
+        }
+        // x87: (rand() & 0xFFFF) * (1/32768) * 100.0 kept in extended precision, then _ftol (0x821B40)
+        const auto chance = (int32)((double)(CGeneral::GetRandomNumber() & 0xFFFF) * (double)(1.f / 32768.f) * 100.0);
+        if (chance < (int32)brain.m_PercentageChance) {
+            StartOrRequestNewStreamedScriptBrain(i, entity, attachType, true);
+            return;
+        }
+    }
 }
 
+// 0x46AAE0
 void CScriptsForBrains::MarkAttractorScriptBrainWithThisNameAsNoLongerNeeded(const char* name) {
-    plugin::CallMethod<0x46AAE0, CScriptsForBrains*, const char*>(this, name);
+    if (const auto idx = GetIndexOfScriptBrainWithThisName(name, 5); idx >= 0) {
+        auto& users = CTheScripts::StreamedScripts.m_aScripts[m_aScriptForBrains[idx].m_StreamedScriptIndex].m_NumberOfUsers;
+        if (users != 0) {
+            users--;
+        }
+    }
 }
 
+// 0x46AA80
 void CScriptsForBrains::RequestAttractorScriptBrainWithThisName(const char* name) {
-    plugin::CallMethod<0x46AA80, CScriptsForBrains*, const char*>(this, name);
+    if (const auto idx = GetIndexOfScriptBrainWithThisName(name, 5); idx >= 0) {
+        const auto scriptIdx = m_aScriptForBrains[idx].m_StreamedScriptIndex;
+        if (!CStreaming::IsModelLoaded(SCMToModelId(scriptIdx))) {
+            CStreaming::RequestModel(SCMToModelId(scriptIdx), STREAMING_MISSION_REQUIRED);
+        }
+        CTheScripts::StreamedScripts.m_aScripts[scriptIdx].m_NumberOfUsers++;
+    }
 }
 
 // 0x46B270

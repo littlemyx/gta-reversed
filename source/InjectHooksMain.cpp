@@ -230,6 +230,7 @@
 #include "TaskComplexDestroyCarArmed.h"
 #include "TaskSimpleAbseil.h"
 #include "TaskSimpleOnEscalator.h"
+#include "TaskSimpleWaitForPizza.h"
 #include "TaskComplexWanderCop.h"
 #include "TaskComplexEnterCarAsPassengerTimed.h"
 #include "TaskComplexEnterCarAsPassengerWait.h"
@@ -1298,7 +1299,7 @@ void InjectHooksMain() {
         CTaskSimpleUseAtm::InjectHooks();
         CTaskSimpleTurn180::InjectHooks();
         CTaskSimpleWaitForBus::InjectHooks();
-        // CTaskSimpleWaitForPizza::InjectHooks();
+        CTaskSimpleWaitForPizza::InjectHooks();
         CTaskSimpleWaitUntilAreaCodesMatch::InjectHooks();
         CTaskSimpleWaitUntilLeaderAreaCodesMatch::InjectHooks();
         CTaskSimpleWaitUntilPedIsInCar::InjectHooks();

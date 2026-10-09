@@ -162,7 +162,9 @@ uint32 CGeneral::GetNodeHeadingFromVector(float x, float y) {
     if (!(angle < K_TWO_PI) && angle == angle) { // FCOM + JNE on C0: NaN skips the subtraction
         angle -= K_TWO_PI;
     }
-    return (uint32)(int32)floor(angle * (double)0.15915494f * 8.0); // 0x8594F0 (1 / 2pi), 0x859000 (8.0); floor (0x8219F0) + _ftol
+    // 0x8594F0 (1 / 2pi), 0x859000 (8.0); floor (0x8219F0) + _ftol2 (0x821B40): `fistp qword`, only the LOW dword is returned (NaN / inf / out of range => the
+    // indefinite 0x8000000000000000 => 0, big values wrap), NOT the saturating 0x80000000 of a 32-bit conversion
+    return (uint32)(uint64)(int64)floor(angle * (double)0.15915494f * 8.0);
 }
 
 /*!

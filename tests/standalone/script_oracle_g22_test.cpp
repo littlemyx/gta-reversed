@@ -100,9 +100,9 @@ static uint32_t Tag(const void* p) { // identity of a fake entity, so that logs 
 
 // -- host recorders for the exe (cdecl / thiscall: __fastcall(this, edx, args...) pops the stack args like a thiscall callee)
 static void  __fastcall H_UpdateMovingCollision(void* self, int, float a) { LogF(40, { (float)Tag(self), a }); }
-static bool  __fastcall H_IsDoorMissing(void* self, int, int door) { LogF(36, { (float)door }); return (door * 7 + (int)(uintptr_t)self) % 3 == 0; }
+static bool  __fastcall H_IsDoorMissing(void* self, int, uint8_t door) { LogF(36, { (float)door }); return (door * 7 + (int)(uintptr_t)self) % 3 == 0; }
 static bool  __fastcall H_IsDoorFullyOpenU32(void* self, int, uint32_t node) { LogF(41, { (float)node }); return (node * 5 + (int)(uintptr_t)self) % 3 == 0; }
-static void  __fastcall H_OpenDoor(void* self, int, void* ped, int node, int door, float ratio, int sound) { LogF(35, { (float)Tag(self), (float)Tag(ped), (float)node, (float)door, ratio, (float)(uint8_t)sound }); }
+static void  __fastcall H_OpenDoor(void* self, int, void* ped, int node, uint8_t door, float ratio, int sound) { LogF(35, { (float)Tag(self), (float)Tag(ped), (float)node, (float)door, ratio, (float)(uint8_t)sound }); }
 static void  __fastcall H_BlowUp(void* self, int, int a, int b, int c, int d) { LogF(42, { (float)Tag(self), (float)(uint8_t)a, (float)(uint8_t)b, (float)(uint8_t)c, (float)(uint8_t)d }); }
 static void  __cdecl H_ForceRender(int v) { LogU(43, { (uint32_t)(uint8_t)v }); }
 static void  __cdecl H_RequestModel(int model, int flags) { LogU(44, { (uint32_t)model, (uint32_t)flags }); }

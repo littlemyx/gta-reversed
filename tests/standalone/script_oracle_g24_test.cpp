@@ -54,6 +54,10 @@ CObjectPool*  GetObjectPool()  { return *reinterpret_cast<CObjectPool**>(0xB7449
 
 // ---------------------------------------------------------------------------------------------------------------------------------
 // call log: the callees of the handlers are replaced by recorders on both sides
+// The exe's handlers keep uninitialised stack buffers (e.g. GET_HASH_KEY's 16-char label; the port zero-initialises). Zero the stack below the oracle call so the exe side is
+// deterministic and does not depend on the host compiler's frame layout (/Od vs /O2 left different junk there).
+__declspec(noinline) static void ScrubStack() { volatile char junk[8192]; for (auto& b : junk) b = 0; }
+
 static std::vector<uint32_t> g_log;
 static uint32_t FB(float f) { uint32_t b; std::memcpy(&b, &f, 4); return b; }
 static float    BF(uint32_t b) { float f; std::memcpy(&f, &b, 4); return f; }
@@ -171,6 +175,7 @@ static bool RunCase(Ctx& c, std::string& desc) {
         return o;
     };
 
+    ScrubStack();
     Reset(); g_log.clear();
     const bool exeRet = oracle::Fn<unsigned char __fastcall(CRunningScript*, int, int)>(groupFn[cmdId / 100])(&S, 0, cmdId) != 0;
     const Outcome a = Collect(exeRet);

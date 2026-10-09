@@ -1980,7 +1980,7 @@ void CPlayerPed::EvaluateNeighbouringTarget(CEntity* target, CEntity** outTarget
     const auto& camPos = TheCamera.GetPosition();
     const float diffY = targetPos.y - camPos.y;
     const float diffX = targetPos.x - camPos.x;
-    double angle = (double)CGeneral::GetATanOfXY(diffX, diffY) - (double)arg4;
+    double angle = CGeneral::GetATanOfXYExt(diffX, diffY) - (double)arg4;
     constexpr auto PI = std::numbers::pi_v<float>; // 0x858CB8
     while (angle > (double)PI) {
         angle -= (double)(2.f * PI); // 0x858CBC
@@ -2242,67 +2242,6 @@ void CPlayerPed::ProcessWeaponSwitch(CPad* pad) {
     }
 }
 
-// NOTSA: Extended-precision (x87) versions of `CGeneral::GetATanOfXY` (0x53CC70) and `CGeneral::GetRadianAngleBetweenPoints` (0x53CBE0).
-// The originals return their (unrounded) result in ST0 and the callers below keep computing with it in extended
-// precision, whereas the shared `CGeneral` versions round every step to `float`. `double` stands in for extended here.
-namespace {
-constexpr double ATAN_HALF_PI  = 1.5707963705062866; // 0x858FE4 (float)
-constexpr double ATAN_PI       = 3.1415927410125732; // 0x858CB8 (float)
-constexpr double ATAN_TWO_PI   = 6.2831854820251465; // 0x858CBC (float)
-constexpr double ATAN_1_5_PI   = 4.71238899230957;   // 0x863AC4 (float)
-
-// atan2(v, 1) (FPATAN with ST0 = 1)
-double AtanExt(double v) {
-    return std::atan2(v, 1.0);
-}
-
-// 0x53CC70
-double GetATanOfXYExt(float x, float y) {
-    if (x == 0.0f && y == 0.0f) {
-        return 0.0;
-    }
-    const float xabs = x < 0.0f ? -x : x;
-    const float yabs = y < 0.0f ? -y : y;
-    const double dx = x, dy = y;
-    if (xabs < yabs) {
-        if (y > 0.0f) {
-            return x > 0.0f
-                ? ATAN_HALF_PI - AtanExt(dx / dy)
-                : AtanExt((-1.0 / dy) * dx) + ATAN_HALF_PI;
-        }
-        return x > 0.0f
-            ? AtanExt((-1.0 / dy) * dx) + ATAN_1_5_PI
-            : ATAN_1_5_PI - AtanExt(dx / dy);
-    }
-    if (y > 0.0f) {
-        return x > 0.0f
-            ? AtanExt(dy / dx)
-            : ATAN_PI - AtanExt((-1.0 / dx) * dy);
-    }
-    return x > 0.0f
-        ? ATAN_TWO_PI - AtanExt((-1.0 / dx) * dy)
-        : AtanExt(dy / dx) + ATAN_PI;
-}
-
-// 0x53CBE0
-double GetRadianAngleBetweenPointsExt(float x1, float y1, float x2, float y2) {
-    const double x = (double)x2 - (double)x1;
-    double       y = (double)y2 - (double)y1;
-    if (y == 0.0) {
-        y = 0.0001f; // 0x858FC4
-    }
-    const double at = AtanExt(x / y);
-    if (x > 0.0) {
-        return y > 0.0
-            ? (ATAN_HALF_PI - at) + ATAN_HALF_PI
-            : ATAN_HALF_PI - (at + ATAN_HALF_PI);
-    }
-    return y > 0.0
-        ? -ATAN_HALF_PI - (at + ATAN_HALF_PI) // 0x859998 = -pi/2
-        : (ATAN_HALF_PI - at) - ATAN_HALF_PI;
-}
-}
-
 // 0x60DC50
 bool CPlayerPed::FindWeaponLockOnTarget() {
     constexpr auto PI     = std::numbers::pi_v<float>; // 0x858CB8
@@ -2344,7 +2283,7 @@ bool CPlayerPed::FindWeaponLockOnTarget() {
     float    bestPriority = -10000.0f; // 0xC61C4000
 
     const auto& fwd = GetForward();
-    float aimAngle = (float)GetATanOfXYExt(fwd.x, fwd.y); // 0x53CC70
+    float aimAngle = (float)CGeneral::GetATanOfXYExt(fwd.x, fwd.y); // 0x53CC70
 
     // 0x53FB70. NOTE: The original uses a null pad for other ped types (and would crash)
     CPad* const pad = m_nPedType == PED_TYPE_PLAYER1 ? CPad::GetPad(0)
@@ -2356,7 +2295,7 @@ bool CPlayerPed::FindWeaponLockOnTarget() {
     if (std::abs((float)pad->GetPedWalkLeftRight()) > STICK_THRESHOLD || std::abs((float)pad->GetPedWalkUpDown()) > STICK_THRESHOLD) {
         const auto upDown    = pad->GetPedWalkUpDown();
         const auto leftRight = pad->GetPedWalkLeftRight();
-        const double stickAngle = GetRadianAngleBetweenPointsExt(0.0f, 0.0f, (float)-(int32)leftRight, (float)upDown); // 0x53CBE0
+        const double stickAngle = CGeneral::GetRadianAngleBetweenPointsExt(0.0f, 0.0f, (float)-(int32)leftRight, (float)upDown); // 0x53CBE0
         aimAngle = CGeneral::LimitRadianAngle((float)(stickAngle - (double)TheCamera.m_fOrientation + (double)HALF_PI));
     }
 
@@ -2442,7 +2381,7 @@ bool CPlayerPed::FindWeaponLockOnTarget() {
         // Is the ped within the view cone?
         const auto& pedPos  = ped->GetPosition();
         const auto& selfPos = GetPosition();
-        const double angleToPed = GetATanOfXYExt(pedPos.x - selfPos.x, pedPos.y - selfPos.y); // 0x53CC70
+        const double angleToPed = CGeneral::GetATanOfXYExt(pedPos.x - selfPos.x, pedPos.y - selfPos.y); // 0x53CC70
         if (!(WrapAngleAbs(angleToPed - (double)aimAngle) < (double)PLAYER_MAX_TARGET_VIEW_ANGLE * (double)FOV_SCALE)) {
             continue;
         }
@@ -2451,7 +2390,7 @@ bool CPlayerPed::FindWeaponLockOnTarget() {
         CVector fwdNorm = GetForward();
         fwdNorm.Normalise(); // 0x59C910
         const CVector behindPos = GetPosition() - fwdNorm * StaticRef<float>(0x8D2440); // 3.0f
-        const double angleToPedFromBehind = GetATanOfXYExt(ped->GetPosition().x - behindPos.x, ped->GetPosition().y - behindPos.y); // 0x53CC70
+        const double angleToPedFromBehind = CGeneral::GetATanOfXYExt(ped->GetPosition().x - behindPos.x, ped->GetPosition().y - behindPos.y); // 0x53CC70
         if (!(WrapAngleAbs(angleToPedFromBehind - (double)aimAngle) < (double)StaticRef<float>(0x8D2438) * (double)FOV_SCALE)) { // 90.0f
             continue;
         }
@@ -2523,7 +2462,7 @@ bool CPlayerPed::FindNextWeaponLockOnTarget(CEntity* currentTarget, bool arg1) {
         refX = TheCamera.m_mCameraMatrix.GetForward().x; // 0xB6F9AC
         refY = TheCamera.m_mCameraMatrix.GetForward().y; // 0xB6F9B0
     }
-    const float angle = (float)GetATanOfXYExt(refX, refY); // 0x53CC70
+    const float angle = (float)CGeneral::GetATanOfXYExt(refX, refY); // 0x53CC70
 
     // BUG: In the original the range multiplier of the object and vehicle loops below is evaluated for
     // whatever the register held after the ped loop (the ped in slot 0 or null; `currentTarget` if the

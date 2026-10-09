@@ -1087,7 +1087,7 @@ void CCam::LookRight(bool bLookRight) {
 
     auto dir = target->GetMatrix().GetForward();
     dir.Normalise();
-    const double angle = (double)sign * (double)1.57079637f + (double)CGeneral::GetATanOfXY(dir.x, dir.y); // NOTE: x87 keeps this in extended precision
+    const double angle = (double)sign * (double)1.57079637f + CGeneral::GetATanOfXYExt(dir.x, dir.y); // NOTE: x87 keeps this in extended precision
     m_vecSource.x      = (float)(std::cos(angle) * dist + targetPos.x);
     m_vecSource.y      = (float)(std::sin(angle) * dist + targetPos.y);
 
@@ -5622,7 +5622,7 @@ void CCam::Process_FollowCar_SA(const CVector& target, float orientation, float 
     m_fHorizontalAngle = (float)((bMouse ? (double)yawIn : (double)ts * (double)m_fBetaSpeed) + (double)m_fHorizontalAngle);
 
     if (TheCamera.m_bJustCameOutOfGarage) {
-        m_fHorizontalAngle = (float)((double)CGeneral::GetATanOfXY(m_vecFront.x, m_vecFront.y) + (double)PI);
+        m_fHorizontalAngle = (float)(CGeneral::GetATanOfXYExt(m_vecFront.x, m_vecFront.y) + (double)PI);
     }
     ClipBeta();
 

@@ -251,7 +251,7 @@ CTask* CTaskComplexGoPickUpEntity::ControlSubTask(CPed* ped) {
         const float heading = (float)std::atan2(-((double)goTo->m_vecTargetPoint.x - pedPos.x), (double)goTo->m_vecTargetPoint.y - pedPos.y);
 
         // Heading of the stick relative to the camera
-        float stickAngle = (float)((double)CGeneral::GetRadianAngleBetweenPoints(0.f, 0.f, -(float)walkLeftRight, walkUpDown) - (double)TheCamera.m_fOrientation);
+        float stickAngle = (float)(CGeneral::GetRadianAngleBetweenPointsExt(0.f, 0.f, -(float)walkLeftRight, walkUpDown) - (double)TheCamera.m_fOrientation);
 
         constexpr auto kPi    = std::numbers::pi_v<float>;     // 0x858CB8
         constexpr auto kTwoPi = 2.f * std::numbers::pi_v<float>; // 0x858CBC

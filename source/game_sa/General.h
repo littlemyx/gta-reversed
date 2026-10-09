@@ -31,16 +31,35 @@ namespace CGeneral { // More like `Math` (Or `Meth`, given how bad the code is, 
     float LimitAngle(float angle);
 
     /*!
+     * @notsa
+     * @brief `LimitAngle` as the original evaluates it: ST0 is returned unrounded (extended precision, `double` here)
+     */
+    double LimitAngleExt(float angle);
+
+    /*!
      * @addr 0x53CB50
      * @returns The `angle` normalized to be between [-pi, pi]
      */
     float LimitRadianAngle(float angle);
 
     /*!
+     * @notsa
+     * @brief `LimitRadianAngle` as the original evaluates it: ST0 is returned unrounded (extended precision, `double` here)
+     */
+    double LimitRadianAngleExt(float angle);
+
+    /*!
      * @addr 0x53CC70
      * @returns atan2(??, ??) - TODO
      */
     float GetATanOfXY(float x, float y);
+
+    /*!
+     * @notsa
+     * @brief `GetATanOfXY` as the original evaluates it: the quotients, the arctangent and the result stay on the x87 stack
+     *        (unrounded, `double` here), the quadrant offsets are the float constants (pi/2, pi, 2pi, 1.5pi)
+     */
+    double GetATanOfXYExt(float x, float y);
 
     /*!
      * @notsa
@@ -68,10 +87,22 @@ namespace CGeneral { // More like `Math` (Or `Meth`, given how bad the code is, 
     float GetRadianAngleBetweenPoints(float x1, float y1, float x2, float y2);
 
     /*!
+     * @notsa
+     * @brief `GetRadianAngleBetweenPoints` as the original evaluates it (unrounded ST0 result, `double` here)
+     */
+    double GetRadianAngleBetweenPointsExt(float x1, float y1, float x2, float y2);
+
+    /*!
      * @addr 0x53CEA0
      * @returns Angle [in degrees] between 2 points (Prefer using `(p1 - p2).Heading()` instead [NOTE: The latter returns radians, not degrees])
      */
     float GetAngleBetweenPoints(float x1, float y1, float x2, float y2);
+
+    /*!
+     * @notsa
+     * @brief `GetAngleBetweenPoints` as the original evaluates it (unrounded ST0 result, `double` here)
+     */
+    double GetAngleBetweenPointsExt(float x1, float y1, float x2, float y2);
 
     /*!
      * @returns Angle [in degrees] between 2 points (Prefer using `(p1 - p2).Heading()` instead [NOTE: The latter returns radians, not degrees])

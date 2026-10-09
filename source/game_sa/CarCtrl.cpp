@@ -3829,7 +3829,7 @@ bool CCarCtrl::PickNextNodeToChaseCar(CVehicle* vehicle, float destX, float dest
             const auto nodePos = nextNode.GetPosition();
 
             // x87: The angle is kept in extended precision (only the final value is rounded to float)
-            double angle = (double)CGeneral::GetATanOfXY(candPos.x - nodePos.x, candPos.y - nodePos.y) - heading; // 0x53CC70
+            double angle = CGeneral::GetATanOfXYExt(candPos.x - nodePos.x, candPos.y - nodePos.y) - heading; // 0x53CC70
             if (angle > std::numbers::pi_v<float>) {
                 do {
                     angle -= 2.0f * std::numbers::pi_v<float>;
@@ -7940,7 +7940,7 @@ void CCarCtrl::WeaveForObject(CEntity* entity, CVehicle* vehicle, float* pLowerA
     const auto toPoleY = (float)(poleY - vehPos.y);
 
     // x87: The result of this is kept in extended precision (the function leaves it in ST0)
-    const double heading = CGeneral::GetATanOfXY(toPoleX, toPoleY); // 0x53CC70
+    const double heading = CGeneral::GetATanOfXYExt(toPoleX, toPoleY); // 0x53CC70
 
     // Half of the angle (as seen from the vehicle) the pole (and the car) takes up
     const auto poleAngleWidth = (float)(((double)CModelInfo::GetModelInfo(vehicle->m_nModelIndex)->GetColModel()->m_boundBox.m_vecMax.x * 2.4f + 0.3f) / std::sqrt((double)toPoleY * toPoleY + (double)toPoleX * toPoleX));

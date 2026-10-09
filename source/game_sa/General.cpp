@@ -31,104 +31,138 @@ void CGeneral::InjectHooks() {
     RH_ScopedOverloadedInstall(GetRandomNumberInRange<float>, "", 0x41BD90, float (*)(float, float), { .State = HS::RedirectToGTA, .Locked = true }); // There's a bug in the code at 0x6DF26D which causes the assert to be triggered, so I'm unhooking this for now
 }
 
+namespace {
+// The float constants the original uses (.rdata), widened exactly
+constexpr double K_HALF_PI     = (double)1.5707963705062866f; // 0x858FE4 (0x3FC90FDB), -K_HALF_PI at 0x859998
+constexpr double K_PI          = (double)3.1415927410125732f; // 0x858CB8 (0x40490FDB), -K_PI at 0x858CC0
+constexpr double K_TWO_PI      = (double)6.2831854820251465f; // 0x858CBC (0x40C90FDB)
+constexpr double K_ONE_HALF_PI = (double)4.71238899230957f;   // 0x863AC4 (0x4096CBE4)
+
+// `fpatan` with ST0 = 1: atan2(v, 1)
+inline double AtanExt(double v) {
+    return std::atan2(v, 1.0);
+}
+}
+
 // 0x53CB00
 float CGeneral::LimitAngle(float angle) {
-    while (angle >= 180.0f) {
-        angle -= 360.0f;
-    }
+    return (float)LimitAngleExt(angle);
+}
 
-    while (angle < -180.0f) {
-        angle += 360.0f;
+double CGeneral::LimitAngleExt(float angle) {
+    double result = angle;
+    if (!(result < 180.0f) && result == result) { // 0x85A994; FCOM + JNE on C0: NaN counts as "less" and skips
+        do {
+            result -= 360.0f; // 0x859E2C
+        } while (!(result < 180.0f));
     }
-
-    return angle;
+    while (result < -180.0f) { // 0x863ABC
+        result += 360.0f;
+    }
+    return result;
 }
 
 // 0x53CB50
 float CGeneral::LimitRadianAngle(float angle) {
-    float result = std::clamp(angle, -25.0f, 25.0f);
+    return (float)LimitRadianAngleExt(angle);
+}
 
-    while (result >= PI) {
-        result -= 2 * PI;
+double CGeneral::LimitRadianAngleExt(float angle) {
+    double result = angle;
+    if (-25.0f > result) { // 0x863AC0; FCOMP: NaN / equal / greater fall to the next check
+        result = -25.0;
+        do {
+            result += K_TWO_PI; // do-while: the add happens before the first check
+        } while (result < -K_PI);
+        return result;
     }
 
-    while (result < -PI) {
-        result += 2 * PI;
+    bool subtract = false;
+    if (25.0f < result) { // 0x858FE8
+        result   = 25.0;
+        subtract = true; // The first subtraction happens unconditionally
+    } else if (!(result < K_PI) && result == result) { // FCOM: NaN counts as "less"
+        subtract = true;
+    }
+    if (subtract) {
+        do {
+            result -= K_TWO_PI;
+        } while (!(result < K_PI));
     }
 
+    if (result < -K_PI) {
+        do {
+            result += K_TWO_PI;
+        } while (result < -K_PI);
+    }
     return result;
 }
 
 // 0x53CBE0
 float CGeneral::GetRadianAngleBetweenPoints(float x1, float y1, float x2, float y2) {
-    float x = x2 - x1;
-    float y = y2 - y1;
+    return (float)GetRadianAngleBetweenPointsExt(x1, y1, x2, y2);
+}
 
-    if (y == 0.0f)
-        y = 0.0001f;
-
-    if (x > 0.0f) {
-        if (y > 0.0f)
-            return PI - atan2(x / y, 1.0f);
-        else
-            return -atan2(x / y, 1.0f);
-    } else {
-        if (y > 0.0f)
-            return -(PI + atan2(x / y, 1.0f));
-        else
-            return -atan2(x / y, 1.0f);
+double CGeneral::GetRadianAngleBetweenPointsExt(float x1, float y1, float x2, float y2) {
+    const double x = (double)x2 - (double)x1;
+    double       y = (double)y2 - (double)y1;
+    if (y == 0.0) { // FCOM + JP: NaN keeps its value
+        y = (double)0.0001f; // 0x858FC4
     }
+    const double at = AtanExt(x / y);
+    if (x > 0.0) {
+        return y > 0.0
+            ? (K_HALF_PI - at) + K_HALF_PI
+            : K_HALF_PI - (at + K_HALF_PI);
+    }
+    return y > 0.0
+        ? -K_HALF_PI - (at + K_HALF_PI) // 0x859998
+        : (K_HALF_PI - at) - K_HALF_PI;
 }
 
 // 0x53CC70
 float CGeneral::GetATanOfXY(float x, float y) {
-    if (x == 0.0f && y == 0.0f)
-        return 0.0f;
+    return (float)GetATanOfXYExt(x, y);
+}
 
-    // Wikipedia explains this function in great detail: https://en.wikipedia.org/wiki/Atan2
-
-    float xabs = abs(x);
-    float yabs = abs(y);
-
+double CGeneral::GetATanOfXYExt(float x, float y) {
+    if (x == 0.0f && y == 0.0f) {
+        return 0.0;
+    }
+    const float  xabs = x < 0.0f ? -x : x; // FCOMP + JP + FCHS: NaN stays NaN
+    const float  yabs = y < 0.0f ? -y : y;
+    const double dx = x, dy = y;
     if (xabs < yabs) {
         if (y > 0.0f) {
-            if (x > 0.0f)
-                return 0.5f * PI - atan2(x / y, 1.0f);
-            else
-                return 0.5f * PI + atan2(-x / y, 1.0f);
-        } else {
-            if (x > 0.0f)
-                return 1.5f * PI + atan2(x / -y, 1.0f);
-            else
-                return 1.5f * PI - atan2(-x / -y, 1.0f);
+            return x > 0.0f
+                ? K_HALF_PI - AtanExt(dx / dy)
+                : AtanExt((-1.0 / dy) * dx) + K_HALF_PI; // 0x858C1C = -1.0
         }
-    } else {
-        if (y > 0.0f) {
-            if (x > 0.0f)
-                return atan2(y / x, 1.0f);
-            else
-                return PI - atan2(y / -x, 1.0f);
-        } else {
-            if (x > 0.0f)
-                return 2.0f * PI - atan2(-y / x, 1.0f);
-            else
-                return PI + atan2(-y / -x, 1.0f);
-        }
+        return x > 0.0f
+            ? AtanExt((-1.0 / dy) * dx) + K_ONE_HALF_PI
+            : K_ONE_HALF_PI - AtanExt(dx / dy);
     }
+    if (y > 0.0f) {
+        return x > 0.0f
+            ? AtanExt(dy / dx)
+            : K_PI - AtanExt((-1.0 / dx) * dy);
+    }
+    return x > 0.0f
+        ? K_TWO_PI - AtanExt((-1.0 / dx) * dy)
+        : AtanExt(dy / dx) + K_PI;
 }
 
 // 0x53CDC0
 uint32 CGeneral::GetNodeHeadingFromVector(float x, float y) {
-    float angle = GetRadianAngleBetweenPoints(x, y, 0.0f, 0.0f);
-    if (angle < 0.0f)
-        angle += TWO_PI;
-
-    angle = TWO_PI - angle + DegreesToRadians(22.5f);
-
-    if (angle >= TWO_PI)
-        angle -= TWO_PI;
-
-    return (uint32)floor(angle / DegreesToRadians(45.0f));
+    double angle = GetRadianAngleBetweenPointsExt(x, y, 0.0f, 0.0f);
+    if (angle < 0.0) {
+        angle += K_TWO_PI;
+    }
+    angle = K_TWO_PI - angle + (double)0.39269909f; // 0x859F50 (22.5 deg)
+    if (!(angle < K_TWO_PI) && angle == angle) { // FCOM + JNE on C0: NaN skips the subtraction
+        angle -= K_TWO_PI;
+    }
+    return (uint32)(int32)floor(angle * (double)0.15915494f * 8.0); // 0x8594F0 (1 / 2pi), 0x859000 (8.0); floor (0x8219F0) + _ftol
 }
 
 /*!
@@ -154,7 +188,11 @@ bool CGeneral::SolveQuadratic(float a, float b, float c, float& x1, float& x2) {
 
 // 0x53CEA0
 float CGeneral::GetAngleBetweenPoints(float x1, float y1, float x2, float y2) {
-    return RadiansToDegrees(GetRadianAngleBetweenPoints(x1, y1, x2, y2));
+    return (float)GetAngleBetweenPointsExt(x1, y1, x2, y2);
+}
+
+double CGeneral::GetAngleBetweenPointsExt(float x1, float y1, float x2, float y2) {
+    return GetRadianAngleBetweenPointsExt(x1, y1, x2, y2) * (double)57.2957764f; // 0x859878
 }
 
 uint16 CGeneral::GetRandomNumber() { // Why does this return `uint16`? Should be `int32` (same as retval of `rand()`)

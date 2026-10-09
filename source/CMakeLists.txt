@@ -22,6 +22,16 @@ if (${RE_PROJECT}_STANDALONE_DUMP_HOOKS_ONLY)
     endif()
     add_compile_definitions(NOTSA_STANDALONE_DUMP_HOOKS_ONLY)
 endif()
+# Standalone exe that is meant to RUN (not just dump the hooks table): needs the data image of the user's own original exe
+if (${RE_PROJECT}_STANDALONE AND NOT ${RE_PROJECT}_STANDALONE_DUMP_HOOKS_ONLY)
+    add_compile_definitions(NOTSA_STANDALONE_RUN)
+    set(${RE_PROJECT}_ORIGINAL_EXE "" CACHE FILEPATH "Original gta_sa.exe (1.0 US), the standalone build extracts the data image from it at build time")
+    if (NOT ${RE_PROJECT}_ORIGINAL_EXE)
+        message(WARNING "${RE_PROJECT}_STANDALONE without -D${RE_PROJECT}_ORIGINAL_EXE=<gta_sa.exe>: the exe will not find original_data.bin and refuse to start")
+    elseif (NOT EXISTS "${${RE_PROJECT}_ORIGINAL_EXE}")
+        message(FATAL_ERROR "${RE_PROJECT}_ORIGINAL_EXE does not exist: ${${RE_PROJECT}_ORIGINAL_EXE}")
+    endif()
+endif()
 
 #--------------------------------------------------------------------
 # Build options
@@ -123,6 +133,61 @@ set_target_properties(${RE_PROJECT_LIB_NAME}
     COMPILE_WARNING_AS_ERROR ON
 )
 target_link_options(${RE_PROJECT_LIB_NAME} PRIVATE "/SUBSYSTEM:WINDOWS")
+
+if (${RE_PROJECT}_STANDALONE AND NOT ${RE_PROJECT}_STANDALONE_DUMP_HOOKS_ONLY)
+    # The original data range (0x858000 ... 0xCB0000) must be at its original VA. A VirtualAlloc at startup is NOT reliable (the process heap /
+    # NLS mappings already sit in low memory, see .notes/P2A_DESIGN.md), so the main image itself covers it: linked at the original base with a
+    # 9 MB zero placeholder (tools/standalone/orig_image_pad.asm) merged into .text. No relocations (/FIXED): original addresses are baked in.
+    target_link_options(${RE_PROJECT_LIB_NAME} PRIVATE "$<$<CXX_COMPILER_ID:MSVC>:/BASE:0x400000;/DYNAMICBASE:NO;/FIXED;/MERGE:_TEXT=.text>")
+    # Keep the exe/pdb/map out of <repo>/bin/<config>, where the DLL build puts gta_reversed.asi/.pdb
+    set_target_properties(${RE_PROJECT_LIB_NAME} PROPERTIES
+        ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin"
+        LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin"
+        RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin"
+        PDB_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin"
+    )
+
+    get_filename_component(_msvc_bin_dir "${CMAKE_LINKER}" DIRECTORY)
+    find_program(${RE_PROJECT}_ML NAMES ml ml.exe HINTS "${_msvc_bin_dir}" REQUIRED)
+    set(STANDALONE_PAD_OBJ "${CMAKE_BINARY_DIR}/orig_image_pad.obj")
+    add_custom_command(
+        OUTPUT "${STANDALONE_PAD_OBJ}"
+        COMMAND "${${RE_PROJECT}_ML}" /nologo /c "/Fo${STANDALONE_PAD_OBJ}" "${PROJECT_SOURCE_DIR}/tools/standalone/orig_image_pad.asm"
+        DEPENDS "${PROJECT_SOURCE_DIR}/tools/standalone/orig_image_pad.asm"
+        COMMENT "Assembling the original-image placeholder"
+        VERBATIM
+    )
+    set_source_files_properties("${STANDALONE_PAD_OBJ}" PROPERTIES EXTERNAL_OBJECT TRUE GENERATED TRUE)
+    target_sources(${RE_PROJECT_LIB_NAME} PRIVATE "${STANDALONE_PAD_OBJ}")
+
+    if (${RE_PROJECT}_ORIGINAL_EXE)
+        # NOTE: the python needs `unicorn` (pip install unicorn) to replay the exe's static initialisers; pass -D${RE_PROJECT}_PYTHON=<venv python>
+        find_program(${RE_PROJECT}_PYTHON NAMES python3 python NO_CMAKE_FIND_ROOT_PATH)
+        if (NOT ${RE_PROJECT}_PYTHON)
+            message(FATAL_ERROR "python3 not found (needed to extract the data image from ${RE_PROJECT}_ORIGINAL_EXE)")
+        endif()
+        set(STANDALONE_DATA_DIR "${CMAKE_BINARY_DIR}/standalone_data")
+        set(STANDALONE_DATA_OUT
+            "${STANDALONE_DATA_DIR}/original_data.bin"
+            "${STANDALONE_DATA_DIR}/original_data.json"
+            "${STANDALONE_DATA_DIR}/data_pointers.txt")
+        add_custom_command(
+            OUTPUT ${STANDALONE_DATA_OUT}
+            COMMAND "${${RE_PROJECT}_PYTHON}" -I "${PROJECT_SOURCE_DIR}/tools/standalone/extract_exe_data.py"
+                    "${${RE_PROJECT}_ORIGINAL_EXE}" "${STANDALONE_DATA_DIR}"
+            DEPENDS "${PROJECT_SOURCE_DIR}/tools/standalone/extract_exe_data.py" "${PROJECT_SOURCE_DIR}/tools/standalone/initterm_delta.py" "${${RE_PROJECT}_ORIGINAL_EXE}"
+            COMMENT "Extracting the original data image from ${${RE_PROJECT}_ORIGINAL_EXE}"
+            VERBATIM
+        )
+        add_custom_target(${RE_PROJECT_LIB_NAME}_exe_data DEPENDS ${STANDALONE_DATA_OUT})
+        add_dependencies(${RE_PROJECT_LIB_NAME} ${RE_PROJECT_LIB_NAME}_exe_data)
+        # Next to the exe, where the loader looks for them
+        add_custom_command(TARGET ${RE_PROJECT_LIB_NAME} POST_BUILD
+            COMMAND ${CMAKE_COMMAND} -E copy_if_different "${STANDALONE_DATA_DIR}/original_data.bin" "${STANDALONE_DATA_DIR}/original_data.json" "$<TARGET_FILE_DIR:${RE_PROJECT_LIB_NAME}>"
+            VERBATIM
+        )
+    endif()
+endif()
 
 #--------------------------------------------------------------------
 # Add dependencies

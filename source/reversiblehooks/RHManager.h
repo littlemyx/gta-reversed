@@ -24,6 +24,9 @@
 
 #ifdef NOTSA_STANDALONE
 #include "ReversibleHook/NullHook.h"
+#ifdef NOTSA_STANDALONE_RUN
+#include "standalone/Fixups.h"
+#endif
 #else
 #include "ReversibleHook/VirtualDestructorHook.h"
 #include "ReversibleHook/StaticTwoWayHook.h"
@@ -132,6 +135,10 @@ public: // Script hooking functions //
                    ptrAddressGTA = std::bit_cast<void*>(addressGTA);
 
     #ifdef NOTSA_STANDALONE
+    #ifdef NOTSA_STANDALONE_RUN
+        // No code is patched: the (exe address -> our function) pair becomes a fixup applied to the data image
+        notsa::standalone::Fixups::RegisterFunction((uint32_t)addressGTA, ptrAddressOur, fnName.c_str());
+    #endif
         AddHookToCategory(path, std::move(opt), std::make_shared<ReversibleHook::NullHook>(
             std::move(fnName),
             ptrAddressOur,
@@ -215,11 +222,18 @@ public: // Script hooking functions //
         HookInstallOptions opt = {}
     ) {
     #ifdef NOTSA_STANDALONE
+    #ifdef NOTSA_STANDALONE_RUN
+        // Slot 0 of our class's vtable is the scalar deleting destructor, exactly what slot 0 of the exe vtable holds
+        void* const dtorOur = vmtInfoOur.GetAddress() ? vmtInfoOur.GetFunctionAt(Utility::VMTInfo::DESTRUCTOR_VMT_INDEX) : nullptr; // null: vtable not exported
+        notsa::standalone::Fixups::RegisterVMTSlot((uint32_t)vmtInfoGTA.GetAddress(), Utility::VMTInfo::DESTRUCTOR_VMT_INDEX, (uint32_t)addressGTA, dtorOur, "Destructor");
+        AddHookToCategory(path, std::move(opt), std::make_shared<ReversibleHook::NullHook>("Destructor", dtorOur, (void*)(addressGTA)));
+    #else
         AddHookToCategory(path, std::move(opt), std::make_shared<ReversibleHook::NullHook>(
             "Destructor",
             nullptr, // We don't have a VMT to get the actual scalar destructor address, and making a wrapper isn't any more meaningful in this case
             (void*)(addressGTA)
         ));
+    #endif
     #else
         AddHookToCategory(path, std::move(opt), std::make_shared<ReversibleHook::VirtualDestructorHook<T>>(
             vmtInfoOur,

@@ -28,6 +28,10 @@
 #include <InjectHooksMain.h>
 #include <extensions/CommandLine.h>
 #include <extensions/debug.hpp>
+#ifdef NOTSA_STANDALONE_RUN
+#include <standalone/DataImage.h>
+#include <standalone/Fixups.h>
+#endif
 #endif
 
 #include <toolsmenu/UIRenderer.h>
@@ -556,12 +560,22 @@ INT WINAPI WinMain(HINSTANCE instance, HINSTANCE hPrevInstance, LPSTR cmdLine, I
     InjectHooksMain(); // This will also end up calling the CLI to dump the hooks
 
     return 0;
-#else
-    notsa::ui::UIRenderer::CreateInstance();
-    // code..
-    notsa::ui::UIRenderer::CreateInstance();
-    NOTSA_LOG_ERR("This executable is meant to be used for dumping hooks only, see `NOTSA_STANDALONE_DUMP_HOOKS_ONLY` option");
-    return 1;
+#else // NOTSA_STANDALONE_RUN (P2a, see .notes/P2A_DESIGN.md)
+    // The data image was already mapped by the `.CRT$XIB` initializer (before any static constructor); this is a no-op safety net.
+    notsa::standalone::DataImage::Load();
+    notsa::standalone::Fixups::InstallRedirectHandler();
+
+    // Hooks do not patch code here: each RH_Scoped*Install registers (exe address -> our function) in notsa::standalone::Fixups
+    ReversibleHooks::RHManager::CreateInstance();
+    notsa::ScopeGuard cleanupRH{ [] {
+        ReversibleHooks::RHManager::DestroyInstance();
+    }};
+    InjectHooksMain();
+
+    // Replace code pointers in the data image (vtables, callback tables) with ours / trap stubs. Must come after ALL registrations.
+    notsa::standalone::Fixups::ApplyToDataImage();
+
+    return NOTSA_WinMain(instance, hPrevInstance, cmdLine, nCmdShow);
 #endif
 }
 #endif

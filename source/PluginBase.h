@@ -10,6 +10,7 @@
 #include <cstdint>
 
 #include "Base.h"
+#include "standalone/Fixups.h"
 
 namespace plugin {
 int GetBaseAddress();
@@ -30,22 +31,29 @@ inline void** GetVMT(const void* self) {
     return *(void***)(self);
 }
 
+// In the standalone build there is no original code at `address`: resolve to our reimplementation (hook table) or to a trap
+#ifdef NOTSA_STANDALONE_RUN
+#define NOTSA_PLUGIN_ADDR(address) (notsa::standalone::ResolveCallTarget(address))
+#else
+#define NOTSA_PLUGIN_ADDR(address) (address)
+#endif
+
 template <unsigned int address, typename... Args> void Call(Args... args) {
-    reinterpret_cast<void(__cdecl*)(Args...)>(address)(args...);
+    reinterpret_cast<void(__cdecl*)(Args...)>(NOTSA_PLUGIN_ADDR(address))(args...);
 }
 
 template <typename Ret, unsigned int address, typename... Args>  Ret CallAndReturn(Args... args) {
-    return reinterpret_cast<Ret(__cdecl*)(Args...)>(address)(args...);
+    return reinterpret_cast<Ret(__cdecl*)(Args...)>(NOTSA_PLUGIN_ADDR(address))(args...);
 }
 
 template <typename Ret, unsigned int address, typename C, typename... Args>
 Ret CallMethodAndReturn(C _this, Args... args) requires std::is_class_v<std::remove_pointer_t<C>> {
-    return reinterpret_cast<Ret(__thiscall*)(C, Args...)>(address)(_this, args...);
+    return reinterpret_cast<Ret(__thiscall*)(C, Args...)>(NOTSA_PLUGIN_ADDR(address))(_this, args...);
 }
 
 template <unsigned int address, typename C, typename... Args>
 void CallMethod(C _this, Args... args) requires std::is_class_v<std::remove_pointer_t<C>> {
-    return reinterpret_cast<void(__thiscall*)(C, Args...)>(address)(_this, args...);
+    return reinterpret_cast<void(__thiscall*)(C, Args...)>(NOTSA_PLUGIN_ADDR(address))(_this, args...);
 }
 
 template <unsigned int tableIndex, typename C, typename... Args>

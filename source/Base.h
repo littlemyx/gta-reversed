@@ -160,9 +160,22 @@ template<typename... Ts>
 * @tparam T    The type of the variable
 * @param Addr  The address of it
 */
+#ifdef NOTSA_STANDALONE_RUN
+namespace notsa::standalone::detail {
+// Set by source/standalone/DataImage.cpp once the original data image (.rdata/.data/BSS) is mapped at its original VA.
+// It is loaded from a `.CRT$XIB` initializer, i.e. before any C++ dynamic initializer, see .notes/P2A_DESIGN.md
+extern bool g_DataImageLoaded;
+}
+#endif
+
 template<typename T>
 T& StaticRef(uintptr addr) {
-#ifdef NOTSA_STANDALONE_DUMP_HOOKS_ONLY
+#ifdef NOTSA_STANDALONE_RUN
+    // Standalone run: the original data image lives at the ORIGINAL addresses, so this is a plain dereference (like the DLL build)
+    // Debug builds verify that nobody touches a global before the image is mapped.
+    assert(notsa::standalone::detail::g_DataImageLoaded);
+    return *reinterpret_cast<T*>(addr);
+#elif defined(NOTSA_STANDALONE_DUMP_HOOKS_ONLY)
     // NOTE/BUG:
     // In NOTSA_STANDALONE_DUMP_HOOKS_ONLY, StaticRef() returns a single per-type static buffer for all addresses.
     // That aliases unrelated globals of the same type (e.g., many StaticRef<int32>(...)), so writes intended for one address will overwrite the dummy storage for another.

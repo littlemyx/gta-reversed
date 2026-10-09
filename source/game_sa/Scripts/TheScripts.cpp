@@ -1,4 +1,5 @@
 #include "StdInc.h"
+#include <numbers>
 
 #include "TheScripts.h"
 #include "UpsideDownCarCheck.h"
@@ -1802,9 +1803,6 @@ void CTheScripts::DrawScriptSpritesAndRectangles(bool drawBeforeFade) {
 //   CTheScripts::ScriptDebugCircle2D(SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2 - 100, 50.f, 50.f, HudColour.GetRGB(HUD_COLOUR_RED).ToInt());
 // 0x485C20
 void CTheScripts::ScriptDebugCircle2D(float x, float y, float width, float height, CRGBA color) {
-    return plugin::Call<0x485C20, float, float, float, float, CRGBA>(x, y, width, height, color);
-
-    // untested
     RwRenderStateSet(rwRENDERSTATEZWRITEENABLE,      RWRSTATE(TRUE));
     RwRenderStateSet(rwRENDERSTATEZTESTENABLE,       RWRSTATE(FALSE));
     RwRenderStateSet(rwRENDERSTATEVERTEXALPHAENABLE, RWRSTATE(TRUE));
@@ -1813,19 +1811,34 @@ void CTheScripts::ScriptDebugCircle2D(float x, float y, float width, float heigh
     RwRenderStateSet(rwRENDERSTATETEXTUREFILTER,     RWRSTATE(rwFILTERLINEAR));
     RwRenderStateSet(rwRENDERSTATETEXTURERASTER,     RWRSTATE(NULL));
 
-    const auto iters = 16;
-    auto part = (CTimer::GetTimeInMS() >> 6) % iters;
-    for (auto i = 0; i < iters; i++) {
-        RwIm2DVertex vertex{
-            .x = std::sin((float)i * PI / 8.0f) * width + x,
-            .y = std::cos((float)i * PI / 8.0f) * height + y
+    // BUG: The original packs the colour as R,A,B,G (from the high byte down), not ARGB. Kept as is.
+    const auto Pack = [](uint32 r, uint32 g, uint32 b, uint32 a) {
+        return (r << 24) | (a << 16) | (b << 8) | g;
+    };
+    const auto Point = [&](int32 i) { // x87: everything kept in extended precision until the float store
+        const double angle = (double)i * (double)(std::numbers::pi_v<float> / 8.f); // 0x859F50 (float)
+        return CVector2D{
+            (float)(std::sin(angle) * (double)width  + (double)x),
+            (float)(std::cos(angle) * (double)height + (double)y)
         };
-        if (part == i)
-            vertex.emissiveColor = (3 * color.g / 4) | (((3 * color.b / 4) | (((3 * color.a / 4) | ((3 * color.r / 4) << 8)) << 8)) << 8); // todo: (3 * color / 4).ToIntARGB();
-        else
-            vertex.emissiveColor = color.ToIntARGB();
-        RwIm2DVertex vertices[2] = { vertex, vertex };
-        RwIm2DRenderLine(vertices, std::size(vertices), 0, 1); // todo: RwIm2DRenderLine_BUGFIX
+    };
+
+    const auto part = (CTimer::GetTimeInMS() >> 6) & 0xF;
+    for (int32 i = 0; i < 16; i++) {
+        // NOTSA: z, rhw, u, v are uninitialised stack garbage in the original
+        RwIm2DVertex vertices[2]{};
+        const auto p0 = Point(i), p1 = Point(i + 1);
+        vertices[0].x = p0.x;
+        vertices[0].y = p0.y;
+        vertices[1].x = p1.x;
+        vertices[1].y = p1.y;
+
+        const auto col = (int32)part == i
+            ? Pack(color.r * 3 / 4, color.g * 3 / 4, color.b * 3 / 4, color.a * 3 / 4)
+            : Pack(color.r, color.g, color.b, color.a);
+        vertices[0].emissiveColor = col;
+        vertices[1].emissiveColor = col;
+        RwIm2DRenderLine(vertices, std::size(vertices), 0, 1);
     }
 
     RwRenderStateSet(rwRENDERSTATEVERTEXALPHAENABLE, RWRSTATE(FALSE));

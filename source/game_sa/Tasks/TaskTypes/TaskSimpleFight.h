@@ -76,8 +76,8 @@ public:
     static void LoadMeleeData();
 
     bool BeHitWhileBlocking(CPed* victim, CPed* creator, int8 comboSet, int8 move); // 0x61C650 - Called on the *victim's* fight task, `comboSet`/`move` are the attacker's. Returns true if the hit is blocked
-    int16 ChooseAttackAI(CPed* ped);     // 0x624A40 - Not reversed yet
-    int16 ChooseAttackPlayer(CPed* ped); // 0x624710 - Not reversed yet
+    int16 ChooseAttackAI(CPed* ped);     // 0x624A40
+    int16 ChooseAttackPlayer(CPed* ped); // 0x624710
     bool ControlFight(CEntity* entity, uint8 command);
 
     void FightHitCar(CPed* ped, CVehicle* vehicle, const CVector& point, const CVector& normal, int16 piece, int8 surface); // 0x61D0B0
@@ -92,7 +92,7 @@ public:
     bool IsComboSet();
     bool IsHitComboSet();
 
-    int8 GetAvailableComboSet(CPed* ped, int8 command); // 0x61C7F0 - Not reversed yet
+    int8 GetAvailableComboSet(CPed* ped, int8 command); // 0x61C7F0
     void GetComboType(char*);
     AssocGroupId GetComboAnimGroupID();
     static uint8 GetHitLevel(const char*);   // 0x5BD360
@@ -100,8 +100,10 @@ public:
     void GetRange();
     float GetStrikeDamage(CPed* ped);        // 0x61C740
 
-    void SetPlayerMoveAnim(CPlayerPed* player); // 0x61C9B0 - Not reversed yet
-    void StartAnim(CPed* ped, int32 move);      // 0x623B10 - Not reversed yet
+    void SetPlayerMoveAnim(CPlayerPed* player); // 0x61C9B0
+    void StartAnim(CPed* ped, int32 move);      // 0x623B10
+
+    bool IsTargetInRange(CPed* ped); // 0x61D6F0 - Not reversed yet (name guessed, ~0x3F0 bytes)
 
 private:
     friend void InjectHooksMain();

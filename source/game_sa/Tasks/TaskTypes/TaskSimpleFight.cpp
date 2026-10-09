@@ -2,6 +2,8 @@
 
 #include "TaskSimpleFight.h"
 
+#include <numbers>
+
 #include "Game.h"
 #include "Glass.h"
 #include "Crime.h"
@@ -66,6 +68,12 @@ void CTaskSimpleFight::InjectHooks() {
     RH_ScopedInstall(FightHitCar, 0x61D0B0);
     RH_ScopedInstall(FightHitObj, 0x61D400);
     RH_ScopedInstall(FightStrike, 0x6240B0);
+
+    RH_ScopedInstall(GetAvailableComboSet, 0x61C7F0);
+    RH_ScopedInstall(ChooseAttackPlayer, 0x624710);
+    RH_ScopedInstall(ChooseAttackAI, 0x624A40);
+    RH_ScopedInstall(StartAnim, 0x623B10);
+    RH_ScopedInstall(SetPlayerMoveAnim, 0x61C9B0);
 
     RH_ScopedInstall(GetComboAnimGroupID, 0x4ABDA0);
     RH_ScopedInstall(IsComboSet, 0x4ABDC0);
@@ -342,25 +350,502 @@ void CTaskSimpleFight::FinishMeleeAnimCB(CAnimBlendAssociation* anim, void* data
     }
 }
 
-// Not reversed yet (called by `ProcessPed`)
-int8 CTaskSimpleFight::GetAvailableComboSet(CPed* ped, int8 command) { // 0x61C7F0
-    return plugin::CallMethodAndReturn<int8, 0x61C7F0, CTaskSimpleFight*, CPed*, int8>(this, ped, command);
+// Low byte of the flags of the combo set `comboSet`
+// NOTE: The original doesn't care that `comboSet` can be < 4 here (no set picked), and reads whatever precedes the array
+static uint8 GetComboFlagsLo(int8 comboSet) {
+    return *(reinterpret_cast<const uint8*>(&CTaskSimpleFight::m_aComboData[0]) + (comboSet - 4) * (int32)sizeof(CMeleeInfo) + offsetof(CMeleeInfo, m_wFlags));
 }
 
-int16 CTaskSimpleFight::ChooseAttackPlayer(CPed* ped) { // 0x624710
-    return plugin::CallMethodAndReturn<int16, 0x624710, CTaskSimpleFight*, CPed*>(this, ped);
+// Not reversed yet (~0x3F0 bytes; called by `ChooseAttack{Player,AI}`)
+bool CTaskSimpleFight::IsTargetInRange(CPed* ped) { // 0x61D6F0 (name guessed)
+    return plugin::CallMethodAndReturn<bool, 0x61D6F0, CTaskSimpleFight*, CPed*>(this, ped);
 }
 
-int16 CTaskSimpleFight::ChooseAttackAI(CPed* ped) { // 0x624A40
-    return plugin::CallMethodAndReturn<int16, 0x624A40, CTaskSimpleFight*, CPed*>(this, ped);
+// 0x61C7F0 - Picks the combo set for `command`, and makes sure its anim block is referenced (requests it if it's not loaded)
+int8 CTaskSimpleFight::GetAvailableComboSet(CPed* ped, int8 command) {
+    // Only make sure the required anims are referenced
+    if (command < 0) {
+        if (m_nRequiredAnimGroup != 0x21 && !m_bAnimsReferenced) {
+            auto* blk = CAnimManager::GetAnimationBlock(m_nRequiredAnimGroup);
+            if (!blk) {
+                blk = CAnimManager::GetAnimationBlock(CAnimManager::GetAnimBlockName(m_nRequiredAnimGroup));
+            }
+            if (blk->IsLoaded) {
+                CAnimManager::AddAnimBlockRef(CAnimManager::GetAnimationBlockIndex(blk)); // 0x4D3FB0
+                m_bAnimsReferenced = true;
+            }
+        }
+        return 0;
+    }
+
+    // 0 = idle, 2 = block, 11..14 = attacks
+    if (command != 2 && command != 0 && (command < 11 || command > 14)) {
+        return 0;
+    }
+
+    const auto* const wi = CWeaponInfo::GetWeaponInfo(ped->GetActiveWeapon().m_Type, (eWeaponSkill)1);
+    int8 comboSet = (int8)wi->m_nBaseCombo;
+    if (command == 12) {
+        comboSet = (int8)ped->m_nFightingStyle;
+    } else {
+        if (comboSet == 4 && (command == 2 || command == 0)) {
+            comboSet = (int8)ped->m_nFightingStyle;
+        }
+        if (command == 0 && !(m_aComboData[comboSet - 4].m_wFlags & 0x400)) {
+            return 4; // Doesn't have the "idle" set
+        }
+    }
+
+    const auto& combo = m_aComboData[comboSet - 4];
+    if (combo.m_nAnimGroup == 0x21) { // No group
+        return comboSet;
+    }
+
+    if (combo.m_nAnimGroup != m_nRequiredAnimGroup) {
+        if (m_bAnimsReferenced) {
+            CAnimManager::RemoveAnimBlockRef(CAnimManager::GetAnimationBlockIndex(m_nRequiredAnimGroup)); // 0x4D3FD0
+            m_bAnimsReferenced = false;
+        }
+        m_nRequiredAnimGroup = combo.m_nAnimGroup;
+    } else if (m_bAnimsReferenced) {
+        return comboSet;
+    }
+
+    auto* blk = CAnimManager::GetAnimationBlock(m_nRequiredAnimGroup);
+    if (!blk) {
+        blk = CAnimManager::GetAnimationBlock(CAnimManager::GetAnimBlockName(m_nRequiredAnimGroup));
+    }
+    const auto blkIdx = CAnimManager::GetAnimationBlockIndex(blk);
+    if (blk->IsLoaded) {
+        CAnimManager::AddAnimBlockRef(blkIdx);
+        m_bAnimsReferenced = true;
+        return comboSet;
+    }
+
+    // Not loaded yet => request it, and fall back to the standard set for now
+    CStreaming::RequestModel(IFPToModelId(blkIdx), STREAMING_KEEP_IN_MEMORY); // 8
+    if ((int8)m_nNextCommand >= 11 && (int8)m_nNextCommand <= 14) {
+        m_nNextCommand = 11;
+    }
+    return 4;
 }
 
-void CTaskSimpleFight::StartAnim(CPed* ped, int32 move) { // 0x623B10
-    plugin::CallMethod<0x623B10, CTaskSimpleFight*, CPed*, int32>(this, ped, move);
+// 0x624710 - Returns the move (-1 = none) the player should do next (see `ProcessPed` => `StartAnim`)
+int16 CTaskSimpleFight::ChooseAttackPlayer(CPed* ped) {
+    const bool bNoTarget = !m_pTargetEntity;
+
+    int16 move = -1;
+    if (!((int8)m_nNextCommand >= 11 && (int8)m_nNextCommand <= 14 && m_nComboSet >= 4)) {
+        move = 1;
+    }
+
+    // Moves this combo set has (bits 0/1 = 2nd/3rd hit, 2 = blocking, 3 = running)
+    uint8 moves = GetComboFlagsLo(m_nComboSet);
+    if (m_nComboSet > 4 && m_nComboSet <= 7) {
+        moves &= (uint8)ped->m_nAllowedAttackMoves;
+    }
+
+    if (move < 0) {
+        if (m_pAnim && m_nCurrentMove != FIGHT_ATTACK_FIGHT_BLOCK && m_nCurrentMove != FIGHT_ATTACK_FIGHTIDLE) {
+            ped->SetMoveState(PEDMOVE_STILL); // 0x5DEC00
+
+            int16 maxMove = 0;
+            if (moves & 2) {
+                maxMove = 2;
+            } else if (moves & 1) {
+                maxMove = 1;
+            }
+
+            if (IsTargetInRange(ped)) { // 0x61D6F0
+                move = -1;
+            } else {
+                bool bFallback = true;
+                if (m_nNextCommand != m_nLastCommand && (int32)m_nChainCounter <= StaticRef<int32>(0x8D2E48)) {
+                    m_nChainCounter++;
+                    const int32 v = (int8)m_nCurrentMove - (int8)m_nLastCommand + (int8)m_nNextCommand;
+                    if (v & 1) {
+                        move = 0;
+                    } else {
+                        move = (v & 2) ? 1 : 2;
+                    }
+                    bFallback = false;
+                    if (move > maxMove) {
+                        move = 0;
+                    }
+                }
+                if (bFallback) {
+                    move = (int16)((int8)m_nCurrentMove + 1);
+                    if (move > maxMove) {
+                        move = -1;
+                    }
+                }
+            }
+        } else {
+            if ((int32)ped->m_nMoveState > PEDMOVE_WALK) {
+                if (!(moves & 8)) {
+                    m_nComboSet = 4;
+                }
+                move = 4;
+            } else if (IsTargetInRange(ped)) { // 0x61D6F0
+                if (m_pAnim && m_nNextCommand != m_nLastCommand) {
+                    return -1;
+                }
+                if (!(moves & 4)
+                    || (m_pTargetEntity && m_pTargetEntity->GetType() == ENTITY_TYPE_PED && static_cast<CPed*>(m_pTargetEntity)->bIsDucking)
+                ) {
+                    m_nComboSet = 4;
+                }
+                return 3;
+            } else {
+                m_nChainCounter = 0;
+                move = 0;
+            }
+        }
+    }
+
+    // No target => aim at the best one in the scanner
+    if (bNoTarget) {
+        float bestAngle = -1000.f;
+        float bestDiff  = 1000.f;
+        const float range = StaticRef<float>(0x8D2E8C); // 2.0
+
+        auto* const intel = ped->GetIntelligence();
+        for (auto i = 0; i < 16; i++) {
+            auto* const cand = static_cast<CPed*>(intel->m_pedScanner.m_apEntities[i]);
+            if (!cand || !cand->IsAlive()) { // 0x5E0170
+                continue;
+            }
+
+            // x87: the differences aren't rounded to float
+            const auto& pedPos  = ped->GetPosition();
+            const auto& candPos = cand->GetPosition();
+            const double dx = (double)candPos.x - (double)pedPos.x;
+            const double dy = (double)candPos.y - (double)pedPos.y;
+            const double dz = (double)candPos.z - (double)pedPos.z;
+            const double distSq = (dz * dz + dy * dy) + dx * dx;
+            if (!((double)range * (double)range > distSq)) {
+                continue;
+            }
+
+            const double angle = std::atan2(-dx, dy);
+            double       diff  = angle - (double)ped->m_fCurrentRotation;
+            if (diff > (double)std::numbers::pi_v<float>) { // 0x858CB8
+                diff -= (double)(2.f * std::numbers::pi_v<float>); // 0x858CBC
+            } else if (diff < -(double)std::numbers::pi_v<float>) { // 0x858CC0
+                diff += (double)(2.f * std::numbers::pi_v<float>);
+            }
+            diff = std::fabs(diff);
+            if (diff < (double)bestDiff) {
+                bestDiff  = (float)diff;
+                bestAngle = (float)angle;
+            }
+        }
+        if (bestAngle > -10.f) { // 0x859004
+            ped->m_fAimingRotation = bestAngle;
+        }
+    }
+
+    return move;
 }
 
-void CTaskSimpleFight::SetPlayerMoveAnim(CPlayerPed* player) { // 0x61C9B0
-    plugin::CallMethod<0x61C9B0, CTaskSimpleFight*, CPlayerPed*>(this, player);
+// 0x624A40 - Returns the move (0 = hit, 1 = ..., 2 = block, 3 = ...) the AI ped should do next (see `ProcessPed` => `StartAnim`)
+int16 CTaskSimpleFight::ChooseAttackAI(CPed* ped) {
+    uint8 moves = GetComboFlagsLo(m_nComboSet);
+    if (m_nComboSet > 4 && m_nComboSet <= 7) {
+        moves &= (uint8)ped->m_nAllowedAttackMoves;
+    }
+
+    // x87: The product is exact, but only the second use sees it rounded to float
+    const double rollD = (double)rand() * (double)RAND_MAX_FLOAT_RECIPROCAL; // 0x821B1E, 0x858C7C
+    const float  rollF = (float)rollD;
+
+    if (rollD > (double)0.8f && (moves & 2)) { // 0x858C98
+        // Block unless the target is a player that's strong enough (wanted, healthy)
+        auto* const tgt = m_pTargetEntity;
+        if (!(moves & 0x40)
+            || !tgt
+            || tgt->GetType() != ENTITY_TYPE_PED
+            || !static_cast<CPed*>(tgt)->GetPlayerData()
+            || !((int32)static_cast<CPlayerPed*>(tgt)->GetWantedLevel() > 0) // 0x41BE60
+            || !(static_cast<CPed*>(tgt)->m_fHealth > 20.f)                  // 0x858BA4
+        ) {
+            return 2;
+        }
+    } else if (IsTargetInRange(ped) && (moves & 4)) { // 0x61D6F0
+        return 3;
+    }
+
+    if (rollF > 0.5f && (moves & 1)) { // 0x858B8C
+        return 1;
+    }
+    return 0;
+}
+
+// 0x623B10 - Starts the animation for the move (`move` < 0 = none) of the command in `m_nNextCommand`, and consumes it
+void CTaskSimpleFight::StartAnim(CPed* ped, int32 move) {
+    if (move < 0) {
+        m_nNextCommand = 0;
+        return;
+    }
+
+    if (m_pAnim) {
+        m_pAnim->SetDefaultDeleteCallback(); // 0x4CEBC0
+        m_pAnim = nullptr;
+    }
+
+    auto* const clump = ped->GetRpClump();
+    const int32 cmd   = (int8)m_nNextCommand;
+
+    if (cmd >= 0 && cmd <= 0x12) {
+        switch (cmd) {
+        case 0: { // Idle
+            m_nComboSet       = 0;
+            m_nCurrentMove    = (eFightAttackType)0;
+            m_nContinueStrike = 0;
+
+            if ((int32)ped->m_nMoveState >= PEDMOVE_WALK && ped->IsPlayer()) { // 0x5DF8F0
+                m_bIsFinished = true;
+                break;
+            }
+
+            const auto* const wi = CWeaponInfo::GetWeaponInfo(ped->GetActiveWeapon().m_Type, (eWeaponSkill)1);
+            int8 comboSet = (int8)wi->m_nBaseCombo;
+            if (comboSet == 4) {
+                comboSet = (int8)ped->m_nFightingStyle;
+            }
+            const auto& combo = m_aComboData[comboSet - 4];
+
+            bool bUseSet = true; // false => fall back to the standard set
+            if (!(combo.m_wFlags & 0x400)) {
+                bUseSet = false;
+            } else if (combo.m_nAnimGroup != 0x21) {
+                bool bGotAnims = true;
+                if (combo.m_nAnimGroup == m_nRequiredAnimGroup) {
+                    bGotAnims = m_bAnimsReferenced;
+                } else {
+                    if (m_bAnimsReferenced) {
+                        CAnimManager::RemoveAnimBlockRef(CAnimManager::GetAnimationBlockIndex(m_nRequiredAnimGroup)); // 0x4D3FD0
+                        m_bAnimsReferenced = false;
+                    }
+                    m_nRequiredAnimGroup = combo.m_nAnimGroup;
+                    bGotAnims = false;
+                }
+                if (!bGotAnims) {
+                    auto* blk = CAnimManager::GetAnimationBlock(m_nRequiredAnimGroup);
+                    if (!blk) {
+                        blk = CAnimManager::GetAnimationBlock(CAnimManager::GetAnimBlockName(m_nRequiredAnimGroup));
+                    }
+                    const auto blkIdx = CAnimManager::GetAnimationBlockIndex(blk);
+                    if (blk->IsLoaded) {
+                        CAnimManager::AddAnimBlockRef(blkIdx);
+                        m_bAnimsReferenced = true;
+                    } else {
+                        CStreaming::RequestModel(IFPToModelId(blkIdx), STREAMING_KEEP_IN_MEMORY); // 8
+                        if ((int8)m_nNextCommand >= 11 && (int8)m_nNextCommand <= 14) {
+                            m_nNextCommand = 11;
+                        }
+                        bUseSet = false;
+                    }
+                }
+            }
+            if (!bUseSet) {
+                comboSet = 4;
+            }
+
+            m_nComboSet = comboSet;
+            if (!m_pIdleAnim) {
+                m_pIdleAnim = CAnimManager::BlendAnimation(clump, m_aComboData[comboSet - 4].m_nAnimGroup, ANIM_ID_FIGHT_IDLE, 8.f); // 0x4D4610
+                m_pIdleAnim->SetDeleteCallback(FinishMeleeAnimCB, this); // 0x4CEBC0
+            } else if (m_pIdleAnim->m_BlendAmount < 1.f && m_pIdleAnim->m_BlendDelta <= 0.f) {
+                // NOTE: No callback this time
+                m_pIdleAnim = CAnimManager::BlendAnimation(clump, m_aComboData[comboSet - 4].m_nAnimGroup, ANIM_ID_FIGHT_IDLE, 8.f);
+            }
+
+            if (ped->IsPlayer()) {
+                ped->GetPlayerData()->m_vecFightMovement = CVector2D{0.f, 0.f};
+                SetPlayerMoveAnim(static_cast<CPlayerPed*>(ped)); // 0x61C9B0
+            }
+            m_nComboSet = 0;
+            break;
+        }
+        case 2: { // Block
+            m_nCurrentMove    = (eFightAttackType)0;
+            m_nContinueStrike = 0;
+            if (!(m_aComboData[m_nComboSet - 4].m_wFlags & 0x200)) {
+                m_nComboSet = 4;
+            }
+            m_pAnim = CAnimManager::BlendAnimation(clump, m_aComboData[m_nComboSet - 4].m_nAnimGroup, ANIM_ID_FIGHT_FIGHT_BLOCK, 8.f);
+            m_pAnim->SetFinishCallback(FinishMeleeAnimCB, this); // 0x4CEBE0
+            break;
+        }
+        case 3: case 4: case 5: case 6: case 7: case 8: case 9: case 10: { // Ground attacks/moves (non-players only)
+            if (ped->IsPlayer()) {
+                break;
+            }
+            m_nContinueStrike = 0;
+            m_nComboSet       = 1;
+
+            AnimationId animId;
+            switch (cmd) {
+            case 7:
+                m_nCurrentMove = (eFightAttackType)0;
+                animId         = ANIM_ID_FIGHTSHF;
+                break;
+            case 9:
+                m_nCurrentMove = (eFightAttackType)2;
+                animId         = ANIM_ID_FIGHTSHB;
+                break;
+            default:
+                m_nCurrentMove = (eFightAttackType)(cmd == 8 ? 1 : cmd == 10 ? 2 : (int8)(cmd - 3));
+                animId         = (AnimationId)(ANIM_ID_FIGHTSH_FWD + (int32)m_nCurrentMove);
+                break;
+            }
+            m_pAnim = CAnimManager::BlendAnimation(clump, ANIM_GROUP_DEFAULT, animId, 8.f);
+
+            if (m_nNextCommand == 3) {
+                m_pAnim->SetDeleteCallback(FinishMeleeAnimCB, this); // 0x4CEBC0
+                m_pAnim->m_Flags |= ANIMATION_IS_BLEND_AUTO_REMOVE;
+            } else {
+                m_pAnim->m_Flags &= ~ANIMATION_IS_LOOPED;
+                m_pAnim->m_Flags &= ~ANIMATION_IS_SYNCRONISED;
+                m_pAnim->m_Flags |= ANIMATION_IS_FINISH_AUTO_REMOVE;
+                m_pAnim->SetFinishCallback(FinishMeleeAnimCB, this); // 0x4CEBE0
+            }
+            break;
+        }
+        case 11: case 12: case 13: case 14: { // Attacks
+            const auto& combo = m_aComboData[m_nComboSet - 4];
+            m_nCurrentMove    = (eFightAttackType)(int8)move;
+            m_nContinueStrike = 1;
+            m_pAnim = CAnimManager::BlendAnimation(clump, combo.m_nAnimGroup, (AnimationId)(ANIM_ID_FIGHT_1 + (int8)move), 8.f);
+            m_pAnim->SetFinishCallback(FinishMeleeAnimCB, this); // 0x4CEBE0
+
+            if (m_nCurrentMove == FIGHT_ATTACK_FIGHT_BLOCK) {
+                // NOTE: The original checks for `!= 0` (NaN included)
+                if (!(m_pAnim->m_CurrentTime == 0.f)) {
+                    m_pAnim->SetCurrentTime(m_aComboData[m_nComboSet - 4].m_fGroundLoop); // 0x4CEA80
+                }
+            }
+
+            if (ped->GetPlayerData()) {
+                m_pAnim->m_Speed = CStats::GetFatAndMuscleModifier(STAT_MOD_3); // 0x559AF0
+                if (m_nCurrentMove < 4) {
+                    ped->SetMoveState(PEDMOVE_STILL); // 0x5DEC00
+                }
+            }
+            break;
+        }
+        default: { // 1, 15..18
+            if (auto* const pd = ped->GetPlayerData()) {
+                pd->m_vecFightMovement = CVector2D{0.f, 0.f};
+                SetPlayerMoveAnim(static_cast<CPlayerPed*>(ped)); // 0x61C9B0
+                if (cmd == 0x11) {
+                    pd->m_fMoveBlendRatio = 2.f;
+                } else if (cmd == 0x10) {
+                    pd->m_fMoveBlendRatio = 1.f;
+                }
+            } else {
+                ped->SetMoveState(cmd == 0x11 ? PEDMOVE_RUN : cmd == 0x10 ? PEDMOVE_WALK : PEDMOVE_STILL);
+                ped->m_nSwimmingMoveState = ped->m_nMoveState;
+            }
+
+            if (cmd == 0x11) {
+                CAnimManager::BlendAnimation(clump, ped->m_nAnimGroup, ANIM_ID_RUN, 8.f);
+            } else if (cmd == 0x10) {
+                CAnimManager::BlendAnimation(clump, ped->m_nAnimGroup, ANIM_ID_WALK, 8.f);
+            } else if (cmd == 0xF) {
+                CAnimManager::BlendAnimation(clump, ped->m_nAnimGroup, ANIM_ID_IDLE, 4.f);
+            } else if (cmd == 0x12 && ped->bIsDucking && ped->GetIntelligence()->GetTaskDuck(true)) { // 0x6010A0
+                CAnimManager::BlendAnimation(clump, ANIM_GROUP_DEFAULT, ANIM_ID_WEAPON_CROUCH, 4.f);
+            } else {
+                CAnimManager::BlendAnimation(clump, ped->m_nAnimGroup, ANIM_ID_IDLE, 2.f);
+            }
+
+            if (m_pIdleAnim) {
+                m_pIdleAnim->m_Flags &= ~ANIMATION_IS_PLAYING;
+            } else {
+                m_bIsFinished = true;
+            }
+            m_nNextCommand = 0x10;
+            break;
+        }
+        }
+    }
+
+    m_nLastCommand = m_nNextCommand;
+    m_nNextCommand = 0;
+}
+
+// 0x61C9B0 - Blends the walking-while-fighting anims according to the player's fight movement (stick) input
+void CTaskSimpleFight::SetPlayerMoveAnim(CPlayerPed* player) {
+    auto* const clump = player->GetRpClump();
+
+    auto* fwd   = RpAnimBlendClumpGetAssociation(clump, (uint32)ANIM_ID_FIGHTSH_FWD);
+    auto* left  = RpAnimBlendClumpGetAssociation(clump, (uint32)ANIM_ID_FIGHTSH_LEFT);
+    auto* bwd   = RpAnimBlendClumpGetAssociation(clump, (uint32)ANIM_ID_FIGHTSH_BWD);
+    auto* right = RpAnimBlendClumpGetAssociation(clump, (uint32)ANIM_ID_FIGHTSH_RIGHT);
+
+    if (m_nNextCommand != 0 || m_nComboSet != 0) {
+        const auto  mv  = player->GetPlayerData()->m_vecFightMovement;
+        const double len = std::sqrt((double)mv.x * mv.x + (double)mv.y * mv.y); // x87
+        if (!(len < (double)0.1f)) { // 0x858B1C (NaN normalises)
+            // Normalise so that |x| + |y| == 1
+            const double scale = (double)1.f / (std::fabs((double)mv.y) + std::fabs((double)mv.x)); // 0x858624
+            const float  x     = (float)(scale * (double)mv.x);
+            const float  y     = (float)(scale * (double)mv.y);
+
+            if (x > 0.f) {
+                if (left) {
+                    left->m_BlendAmount = 0.f;
+                }
+                if (!right) {
+                    right = CAnimManager::AddAnimation(clump, ANIM_GROUP_DEFAULT, ANIM_ID_FIGHTSH_RIGHT); // 0x4D3AA0
+                }
+                right->m_BlendAmount = x;
+            } else if (x < 0.f) {
+                if (right) {
+                    right->m_BlendAmount = 0.f;
+                }
+                if (!left) {
+                    left = CAnimManager::AddAnimation(clump, ANIM_GROUP_DEFAULT, ANIM_ID_FIGHTSH_LEFT);
+                }
+                left->m_BlendAmount = -x;
+            }
+
+            if (y < 0.f) {
+                if (bwd) {
+                    bwd->m_BlendAmount = 0.f;
+                }
+                if (!fwd) {
+                    fwd = CAnimManager::AddAnimation(clump, ANIM_GROUP_DEFAULT, ANIM_ID_FIGHTSH_FWD);
+                }
+                fwd->m_BlendAmount = -y;
+            } else if (y > 0.f) {
+                if (fwd) {
+                    fwd->m_BlendAmount = 0.f;
+                }
+                if (!bwd) {
+                    bwd = CAnimManager::AddAnimation(clump, ANIM_GROUP_DEFAULT, ANIM_ID_FIGHTSH_BWD);
+                }
+                bwd->m_BlendAmount = y;
+            }
+
+            m_nComboSet    = 1;
+            m_nLastCommand = m_nNextCommand;
+            m_nNextCommand = 0;
+            return;
+        }
+    }
+
+    // No input => fade all of them out
+    for (auto* const anim : {fwd, left, bwd, right}) {
+        if (anim) {
+            anim->m_BlendDelta = -8.f; // 0xC1000000
+        }
+    }
+    m_nComboSet    = 0;
+    m_nLastCommand = 0;
+    m_nNextCommand = 0;
 }
 
 // 0x6239F0

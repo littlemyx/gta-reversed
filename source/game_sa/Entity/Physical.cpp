@@ -12,6 +12,9 @@
 #include "TaskSimpleClimb.h"
 #include "RealTimeShadowManager.h"
 
+// NOTSA: Defined in `CarCtrl.cpp`. Returns the (x87) unrounded result of `CCarCtrl::FindGhostRoadHeight` (0x422370)
+double FindGhostRoadHeightOriginal(CVehicle* vehicle);
+
 namespace {
 // Sector index calculation as done by `Add`/`RemoveAndAdd` (`floor(v * 0.02f + 60.0f)`, constants at 0x858B38 and 0x858B34)
 int32 PhysicalGetSectorIdx(float v) {
@@ -311,7 +314,7 @@ void CPhysical::ProcessCollision() {
                     m_vecTurnSpeed.x = 0.0f;
                     m_vecTurnSpeed.y = 0.0f;
                     m_matrix->ForceUpVector(CVector(0.0f, 0.0f, 1.0f));
-                    GetPosition().z = CCarCtrl::FindGhostRoadHeight(vehicle) + vehicle->GetHeightAboveRoad();
+                    GetPosition().z = (float)(FindGhostRoadHeightOriginal(vehicle) + vehicle->GetHeightAboveRoad()); // 0x54E366 - x87: the road height is not rounded to float before the addition
                     ApplySpeed();
                     m_matrix->Reorthogonalise();
                     RemoveAndAdd();
@@ -327,8 +330,9 @@ void CPhysical::ProcessCollision() {
                 wheelColPoint->m_nSurfaceTypeA = SURFACE_WHEELBASE;
                 wheelColPoint->m_nSurfaceTypeB = SURFACE_TARMAC;
                 wheelColPoint->m_fDepth = 0.0f;
-                float fGhostRoadHeight = CCarCtrl::FindGhostRoadHeight(vehicle);
-                if (fGhostRoadHeight <= vecColLinePosStart.z) {
+                const double fGhostRoadHeightExt = FindGhostRoadHeightOriginal(vehicle); // 0x54E186
+                const float fGhostRoadHeight = (float)fGhostRoadHeightExt;
+                if (fGhostRoadHeightExt <= vecColLinePosStart.z) { // x87: the 1st compare uses the unrounded value, the later ones the one stored as float
                     if (fGhostRoadHeight > vecColLinePosEnd.z) {
                         float fWheelSuspensionCompression = (vecColLinePosStart.z - fGhostRoadHeight) / (vecColLinePosStart.z - vecColLinePosEnd.z);
                         pfWheelsSuspensionCompression[collisionIndex] = fWheelSuspensionCompression;

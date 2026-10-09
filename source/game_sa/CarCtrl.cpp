@@ -1172,7 +1172,8 @@ float CCarCtrl::FindSpeedMultiplierWithSpeedFromNodes(int8 arg1) {
 }
 
 //! 0x422370 - The original returns the result in a FPU register (not rounded to float)
-static double FindGhostRoadHeightOriginal(CVehicle* vehicle) {
+//! NOTSA: Not `static`, as `CPhysical::ProcessCollision` (`Physical.cpp`) uses the unrounded value too (declared there; not in the header, as that is in the PCH)
+double FindGhostRoadHeightOriginal(CVehicle* vehicle) {
     const auto& ap = vehicle->m_autoPilot;
     if (ap.m_currentAddress.m_wAreaId == 0xFFFF || ap.m_startingRouteNode.m_wAreaId == 0xFFFF) {
         return 0.0f;

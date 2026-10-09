@@ -236,9 +236,9 @@ void Fx_c::InjectHooks() {
     RH_ScopedInstall(AddTyreBurst, 0x49F300);
     RH_ScopedInstall(AddBulletImpact, 0x49F3D0);
     RH_ScopedInstall(AddPunchImpact, 0x49F670);
-    // RH_ScopedInstall(AddDebris, 0x49F750);
-    // RH_ScopedInstall(AddGlass, 0x49F970);
-    // RH_ScopedInstall(AddWheelSpray, 0x49FB30);
+    RH_ScopedInstall(AddDebris, 0x49F750);
+    RH_ScopedInstall(AddGlass, 0x49F970);
+    RH_ScopedInstall(AddWheelSpray, 0x49FB30);
     // RH_ScopedInstall(AddWheelGrass, 0x49FF20);
     // RH_ScopedInstall(AddWheelGravel, 0x4A0170);
     // RH_ScopedInstall(AddWheelMud, 0x4A03C0);
@@ -633,17 +633,142 @@ void Fx_c::AddPunchImpact(const CVector& pos, const CVector& velocity, int32 num
 
 // 0x49F750
 void Fx_c::AddDebris(const CVector& pos, const RwRGBA& color, float scale, int32 amount) {
-    ((void(__thiscall*)(Fx_c*, const CVector&, const RwRGBA&, float, int32))0x49F750)(this, pos, color, scale, amount);
+    if (CamDistSq_ZXY(pos) > 625.0) { // 0x85A6E8 (FCOMP + JZ: NaN passes)
+        return;
+    }
+
+    FxPrtMult_c fxMults{}; // 0x4AB270
+    fxMults.m_Color.red   = (float)((double)color.red   * (double)(1.0f / 255.0f)); // 0x859A3C
+    fxMults.m_Color.green = (float)((double)color.green * (double)(1.0f / 255.0f));
+    fxMults.m_Color.blue  = (float)((double)color.blue  * (double)(1.0f / 255.0f));
+    fxMults.m_Color.alpha = (float)((double)color.alpha * (double)(1.0f / 255.0f));
+    fxMults.m_fSize = scale;
+    fxMults.m_fLife = 0.2f;
+    fxMults.m_Rot   = (float)((RandFrac10000() + 1.0) * (double)0.5f); // 0x858624, 0x858B8C
+
+    for (auto i = 0; i < amount; i++) {
+        CVector vel;
+        vel.x = (float)((double)rand() * (double)RAND_MAX_FLOAT_RECIPROCAL * 0.5 * 20.0 - 5.0); // 0x858C7C, 0x858B8C, 0x858BA4, 0x858C80
+        vel.y = (float)((double)rand() * (double)RAND_MAX_FLOAT_RECIPROCAL * 0.5 * 20.0 - 5.0);
+        vel.z = (float)((double)rand() * (double)RAND_MAX_FLOAT_RECIPROCAL * (double)0.15f * 20.0 + 2.0); // 0x858FCC, 0x858CA0
+
+        // Only one of the 4 prims is enabled at a time
+        m_Cardebris->EnablePrim(0, false); // 0x4AA610
+        m_Cardebris->EnablePrim(1, false);
+        m_Cardebris->EnablePrim(2, false);
+        m_Cardebris->EnablePrim(3, false);
+        m_Cardebris->EnablePrim(s_DebrisPrimIdx, true);
+
+        m_Cardebris->AddParticle(pos, vel, 0.0f, fxMults, -1.0f, 1.2f, 0.6f, false); // 0x4AA440
+
+        s_DebrisPrimIdx = (s_DebrisPrimIdx + 1) & 3;
+    }
 }
 
 // 0x49F970
 void Fx_c::AddGlass(const CVector& pos, const RwRGBA& color, float scale, int32 amount) {
-    ((void(__thiscall*)(Fx_c*, const CVector&, const RwRGBA&, float, int32))0x49F970)(this, pos, color, scale, amount);
+    if (CamDistSq_ZXY(pos) > 625.0) { // 0x85A6E8 (FCOMP + JZ: NaN passes)
+        return;
+    }
+
+    FxPrtMult_c fxMults{}; // 0x4AB270
+    fxMults.m_Color.red   = (float)((double)color.red   * (double)(1.0f / 255.0f)); // 0x859A3C
+    fxMults.m_Color.green = (float)((double)color.green * (double)(1.0f / 255.0f));
+    fxMults.m_Color.blue  = (float)((double)color.blue  * (double)(1.0f / 255.0f));
+    fxMults.m_Color.alpha = (float)((double)color.alpha * (double)(1.0f / 255.0f));
+    fxMults.m_fSize = scale;
+    fxMults.m_fLife = 0.2f;
+    fxMults.m_Rot   = (float)((RandFrac10000() + 1.0) * (double)0.5f); // 0x858624, 0x858B8C
+
+    for (auto i = 0; i < amount; i++) {
+        CVector vel;
+        vel.x = (float)((double)rand() * (double)RAND_MAX_FLOAT_RECIPROCAL * 0.5 * 20.0 - 5.0); // 0x858C7C, 0x858B8C, 0x858BA4, 0x858C80
+        vel.y = (float)((double)rand() * (double)RAND_MAX_FLOAT_RECIPROCAL * 0.5 * 20.0 - 5.0);
+        vel.z = (float)((double)rand() * (double)RAND_MAX_FLOAT_RECIPROCAL * (double)0.15f * 20.0 + 2.0); // 0x858FCC, 0x858CA0
+
+        m_Glass->AddParticle(pos, vel, 0.0f, fxMults, -1.0f, 1.2f, 0.6f, false); // 0x4AA440
+    }
 }
 
 // 0x49FB30
+// NOTE: the original calls `ftol` (truncation) on a possibly-NaN double; `(int32)` matches (x86 `cvttsd2si`)
 void Fx_c::AddWheelSpray(CVehicle* vehicle, CVector pos, bool bWheelsSpinning, bool bInWater, float lightMult) {
-    ((void(__thiscall*)(Fx_c*, CVehicle*, CVector, uint8, uint8, float))0x49FB30)(this, vehicle, pos, bWheelsSpinning, bInWater, lightMult);
+    auto* const playerVeh = FindPlayerVehicle(-1, false); // 0x56E0D0
+
+    const double d2 = CamDistSq_ZYX(pos);
+    if (!(d2 <= 625.0)) { // 0x85A6E8 (FCOM + JP: NaN returns)
+        return;
+    }
+    const auto frameAndModel = [&] { return (uint8)vehicle->m_nModelIndex + CTimer::GetFrameCounter(); }; // byte [vehicle + 0x22]
+    if (d2 > 400.0) { // 0x85A700
+        if (frameAndModel() & 3) {
+            return;
+        }
+    } else if (d2 > 64.0 || !playerVeh) { // 0x859A44
+        if (frameAndModel() & 1) {
+            return;
+        }
+    }
+
+    const auto& moveSpeed = vehicle->m_vecMoveSpeed;
+    const auto Speed = [&] { return std::sqrt(((double)moveSpeed.x * moveSpeed.x + (double)moveSpeed.y * moveSpeed.y) + (double)moveSpeed.z * moveSpeed.z); };
+    if (!(std::fabs(Speed()) > (double)0.01f) && !bWheelsSpinning) { // 0x858C58
+        return;
+    }
+
+    FxPrtMult_c fxMults{ 1.0f, 1.0f, 1.0f, 0.05f, 0.0f, 1.0f, 0.0f }; // 0x4AB290
+
+    float speedMult;
+    if (bWheelsSpinning) {
+        speedMult = 1.0f;
+    } else if (Speed() + Speed() > 1.0) { // 0x858624 (NaN takes the else branch)
+        speedMult = 1.0f;
+    } else {
+        speedMult = (float)(Speed() + Speed());
+    }
+
+    fxMults.m_Color.alpha = (float)(((double)speedMult + 1.0) * (double)(bInWater ? 0.2f : 0.15f)); // 0x858CC4, 0x858FCC
+    fxMults.m_fLife       = 0.08f;
+    fxMults.m_fSize       = (float)(((double)speedMult + 1.0) * (double)0.2f);                     // 0x858CC4
+
+    const float rangeMax = (float)(((double)speedMult + 1.0) * 10.0); // 0x85862C
+    const float rangeMin = (float)(30.0 - (double)rangeMax);          // 0x858CA4
+    const double mult = (double)rand() * (double)RAND_MAX_FLOAT_RECIPROCAL * (((double)rangeMax + 30.0) - (double)rangeMin) + (double)rangeMin; // 0x821B1E, 0x858C7C
+    const CVector velBase{
+        (float)(mult * moveSpeed.x),
+        (float)(mult * moveSpeed.y),
+        (float)(mult * moveSpeed.z)
+    };
+
+    // Number of particles to cover the distance moved this frame
+    const double stepX = (double)CTimer::GetTimeStep() * moveSpeed.x;
+    const double stepY = (double)CTimer::GetTimeStep() * moveSpeed.y;
+    const double stepZ = (double)CTimer::GetTimeStep() * moveSpeed.z;
+    const int32  numParticles = std::max(1, (int32)std::sqrt((stepZ * stepZ + stepY * stepY) + stepX * stepX)); // 0x821B40 (ftol)
+
+    const float invNum = (float)(1.0 / (double)numParticles);
+    for (auto i = 0; i < numParticles; i++) {
+        const double perX = (double)invNum * moveSpeed.x;
+        const double perY = (double)invNum * moveSpeed.y;
+        const float  perZ = (float)((double)invNum * moveSpeed.z);
+        const float  fi   = (float)i;
+
+        const float  offX = (float)((double)(float)(perX * fi) * CTimer::GetTimeStep());
+        const float  offY = (float)(perY * fi * CTimer::GetTimeStep());
+        const float  offZ = (float)((double)perZ * fi * CTimer::GetTimeStep());
+
+        const float pz = (float)((double)pos.z - offZ);
+        const CVector partPos{
+            (float)((double)pos.x - offX),
+            (float)((double)pos.y - offY),
+            (float)((double)pz + (double)0.25f) // 0x858C84
+        };
+
+        CVector vel = velBase;
+        vel.z = (float)(((double)rand() * (double)RAND_MAX_FLOAT_RECIPROCAL + 1.0) * (double)speedMult + (double)vel.z);
+
+        m_BoatSplash->AddParticle(partPos, vel, 0.0f, fxMults, -1.0f, lightMult, 0.6f, false); // 0x4AA440
+    }
 }
 
 // 0x49FF20

@@ -53,6 +53,10 @@ void CWaterLevel::InjectHooks() {
     RH_ScopedGlobalInstall(RenderDetailedSeaBedSegment, 0x6E6A10);
     RH_ScopedGlobalInstall(AddWaveToResult, 0x6E81E0);
     RH_ScopedGlobalInstall(SetCameraRange, 0x6E9C80);
+    RH_ScopedGlobalInstall(CalculateWavesOnlyForCoordinate2, 0x6E7210);
+    RH_ScopedGlobalInstall(FillQuadsAndTrianglesList, 0x6E7B30);
+    RH_ScopedGlobalInstall(AddPolyToBlock, 0x6E5750);
+    RH_ScopedGlobalInstall(RenderHighDetailWaterRectangle, 0x6EB810);
 }
 
 // NOTSA
@@ -205,9 +209,9 @@ void CWaterLevel::AddWaveToResult(float x, float y, float* pfWaterLevel, float f
     const int32 iy      = (int32)((float)std::floor(scaledY) * 2.0f);
 
     if (fracY + fracX < 1.0f) { // Lower triangle
-        CalculateWavesOnlyForCoordinate2(ix,     iy,     &h0, fUnkn1, fUnkn2);
-        CalculateWavesOnlyForCoordinate2(ix + 2, iy,     &h1, fUnkn1, fUnkn2);
-        CalculateWavesOnlyForCoordinate2(ix,     iy + 2, &h2, fUnkn1, fUnkn2);
+        CalculateWavesOnlyForCoordinate2(ix,     iy,     fUnkn1, fUnkn2, &h0);
+        CalculateWavesOnlyForCoordinate2(ix + 2, iy,     fUnkn1, fUnkn2, &h1);
+        CalculateWavesOnlyForCoordinate2(ix,     iy + 2, fUnkn1, fUnkn2, &h2);
 
         const float dz1 = h2 - h0;
         const float dz2 = h1 - h0;
@@ -222,9 +226,9 @@ void CWaterLevel::AddWaveToResult(float x, float y, float* pfWaterLevel, float f
         *pVecNormal = CrossProduct(b, a);
         pVecNormal->Normalise();
     } else { // Upper triangle
-        CalculateWavesOnlyForCoordinate2(ix + 2, iy + 2, &h0, fUnkn1, fUnkn2);
-        CalculateWavesOnlyForCoordinate2(ix,     iy + 2, &h1, fUnkn1, fUnkn2);
-        CalculateWavesOnlyForCoordinate2(ix + 2, iy,     &h2, fUnkn1, fUnkn2);
+        CalculateWavesOnlyForCoordinate2(ix + 2, iy + 2, fUnkn1, fUnkn2, &h0);
+        CalculateWavesOnlyForCoordinate2(ix,     iy + 2, fUnkn1, fUnkn2, &h1);
+        CalculateWavesOnlyForCoordinate2(ix + 2, iy,     fUnkn1, fUnkn2, &h2);
 
         const float dz2 = h2 - h0;
         const float dz1 = h1 - h0;
@@ -558,8 +562,61 @@ void CWaterLevel::RenderFlatWaterRectangle_OneLayer(int32 minX, int32 maxX, int3
     PushVertex(minX, Y2, P4, { 0.f,    bruv.y }); // Bottom Left
 } 
 
+// 0x6EB810
 void CWaterLevel::RenderHighDetailWaterRectangle(int32 minX, int32 maxX, int32 Y1, int32 Y2, CRenPar P1, CRenPar P2, CRenPar P3, CRenPar P4) {
-    plugin::Call<0x6EB810>(minX, maxX, Y1, Y2, P1, P2, P3, P4);
+    // Bounding sphere of the rectangle (in 2D, Z is the one of the 1st vertex)
+    const int32  dx     = maxX - minX;
+    const double halfDX = (double)dx * 0.5;
+    const double halfDY = (double)(Y1 - Y2) * 0.5;
+    const CVector center{
+        (float)((double)(minX + maxX) * 0.5),
+        (float)((double)(Y1 + Y2) * 0.5),
+        P1.z
+    };
+    const float radius = (float)std::sqrt(halfDY * halfDY + halfDX * halfDX);
+
+    // 0x420C40 and (if the mirror is active) the same for the mirrored view
+    if (!TheCamera.IsSphereVisible(center, radius)) {
+        return;
+    }
+
+    const auto [minY, maxY] = std::minmax(Y1, Y2);
+
+    // Number of cells (each cell is 2x2 units)
+    const int32 numCellsX = dx / 2;
+    const int32 numCellsY = (maxY - minY) / 2;
+    const int32 numTris   = numCellsY * numCellsX * 2;
+    const int32 numVerts  = (numCellsY + 1) * (numCellsX + 1);
+
+    if (numTris * 3 < 0x1000 && numVerts < 0x800) { // Fits into the render buffer
+        SetUpWaterFog(minX, minY, maxX, maxY);
+        for (int32 layer = 0; layer < 2; layer++) {
+            RenderHighDetailWaterRectangle_OneLayer(minX, maxX, Y1, Y2, P1, P2, P3, P4, layer, numTris, numVerts, numCellsX, numCellsY);
+        }
+        return;
+    }
+
+    if (numCellsX > numCellsY) { // Too big => split along the longer side
+        SplitWaterRectangleAlongXLine(minX + (numCellsX / 2) * 2, minX, maxX, Y1, Y2, P1, P2, P3, P4);
+        return;
+    }
+
+    // Split along Y. Note: This isn't the same as `SplitWaterRectangleAlongYLine`, as `t` is calculated using `Y1` and `Y2` directly
+    const int32 splitAtY = minY + (numCellsY / 2) * 2;
+    const float t        = (float)((double)(splitAtY - Y1) / (double)(Y2 - Y1));
+    const auto  P13      = lerp(P1, P3, t);
+    const auto  P24      = lerp(P2, P4, t);
+
+    // Top
+    RenderWaterRectangle(minX, maxX, Y1, splitAtY, P1, P2, P13, P24);
+
+    // Bottom
+    RenderWaterRectangle(minX, maxX, splitAtY, Y2, P13, P24, P3, P4);
+}
+
+// 0x6E91D0
+void CWaterLevel::RenderHighDetailWaterRectangle_OneLayer(int32 minX, int32 maxX, int32 Y1, int32 Y2, CRenPar P1, CRenPar P2, CRenPar P3, CRenPar P4, int32 WaterLayer, int32 numTris, int32 numVerts, int32 numCellsX, int32 numCellsY) {
+    plugin::Call<0x6E91D0>(minX, maxX, Y1, Y2, P1, P2, P3, P4, WaterLayer, numTris, numVerts, numCellsX, numCellsY);
 }
 
 // 0x6E73A0
@@ -1043,11 +1100,38 @@ void CWaterLevel::MarkQuadsAndPolysToBeRendered(int32 blockX, int32 blockY, bool
 // 0x6E7210
 void CWaterLevel::CalculateWavesOnlyForCoordinate2( // TODO: Original name didn't have a 2 in it... I'm just lazy!
     int32 x, int32 y,
-    float* pResultHeight,
     float bigWavesAmpl,
-    float smallWavesAmpl
+    float smallWavesAmpl,
+    float* pResultHeight
 ) {
-    plugin::Call<0x6E7210>(x, y, bigWavesAmpl, smallWavesAmpl, pResultHeight);
+    static auto& SIN_LUT = StaticRef<std::array<float, 256>>(0xBB3E00);
+
+    // NOTE: The original keeps everything but the explicitly stored values on the x87 stack (extended precision) => `double`s
+    x = std::abs(x);
+    y = std::abs(y);
+
+    const double waveMult = (double)faWaveMultipliersX[(x / 2) & 7] * (double)faWaveMultipliersY[(y / 2) & 7] * (double)CWeather::Wavyness;
+    const float  yf       = (float)y; // Spilled to the stack as a float
+
+    constexpr float PHASE_TO_LUT = 40.7436638f; // 0x85A778 (= 256 / 2pi)
+    const auto TimeStep = [](uint32 period) { return (CTimer::m_snTimeInMilliseconds - m_nWaterTimeOffset) % period; };
+    const auto LutSin   = [&](double phase) { // `phase * PHASE_TO_LUT` is truncated by `_ftol2`
+        return (double)SIN_LUT[(int32)(phase * (double)PHASE_TO_LUT) & 0xFF];
+    };
+
+    // Wave 1 (big)
+    const double phase1 = (double)TimeStep(5000) * (double)0.00125663704f /* 0x872020 */ + ((double)yf + (double)x) * (double)0.0981747732f /* 0x87201C */;
+    *pResultHeight = (float)(LutSin(phase1) * (double)2.0f /* 0x871FF8 */ * waveMult * (double)bigWavesAmpl + (double)*pResultHeight);
+    const float afterWave1 = *pResultHeight; // Spilled as a float
+
+    // Wave 2 (small)
+    const double phase2 = ((double)TimeStep(3500) * (double)0.00179519586f /* 0x872018 */ + (double)yf * (double)0.120830491f /* 0x872014 */) + (double)x * (double)0.241660982f /* 0x872010 */;
+    const double afterWave2 = LutSin(phase2) * (double)1.0f /* 0x871FFC */ * waveMult * (double)smallWavesAmpl + (double)afterWave1;
+    *pResultHeight = (float)afterWave2;
+
+    // Wave 3 (small). Note: `afterWave2` is NOT rounded to a float here (it is still on the x87 stack)
+    const double phase3 = (double)TimeStep(3000) * (double)0.00209439523f /* 0x87200C */ + (double)yf * (double)0.314159274f /* 0x872008 */;
+    *pResultHeight = (float)(LutSin(phase3) * (double)0.5f /* 0x872000 */ * waveMult * (double)smallWavesAmpl + afterWave2);
 }
 
 // 0x6E6CA0
@@ -1531,8 +1615,78 @@ void CWaterLevel::AddWaterLevelTriangle(int32 X1, int32 Y1, CRenPar P1, int32 X2
     };
 }
 
+// 0x6E5750
+void CWaterLevel::AddPolyToBlock(int32 blockX, int32 blockY, uint32 polyId, uint32 type) {
+    using PType = PolyInfo::PType;
+
+    auto& block = m_BlockPolyInfo[blockX][blockY];
+    switch (block.Type()) {
+    case PType::NONE: { // Block was empty => just a single poly
+        block = PolyInfo{ (uint16)polyId, (PType)type };
+        break;
+    }
+    case PType::SINGLE_QUAD:
+    case PType::SINGLE_TRI: { // Block had a single poly => turn it into a combo of the old and the new
+        const auto first = NumWaterZonePolys;
+        m_PolyCombos[first + 0] = block;
+        m_PolyCombos[first + 1] = PolyInfo{ (uint16)polyId, (PType)type };
+        m_PolyCombos[first + 2] = PolyInfo{}; // End of sequence
+        NumWaterZonePolys       = first + 3;
+        block                   = PolyInfo{ (uint16)first, PType::COMBO };
+        break;
+    }
+    default: { // Already a combo => overwrite the terminator (it's always the last entry!) and add a new one
+        const auto first = NumWaterZonePolys;
+        m_PolyCombos[first - 1] = PolyInfo{ (uint16)polyId, (PType)type };
+        m_PolyCombos[first]     = PolyInfo{};
+        NumWaterZonePolys       = first + 1;
+        break;
+    }
+    }
+}
+
+// 0x6E7B30
 void CWaterLevel::FillQuadsAndTrianglesList() {
-    plugin::Call<0x6E7B30>();
+    const auto VertX = [](uint16 idx) { return (float)m_aVertices[idx].x; };
+    const auto VertY = [](uint16 idx) { return (float)m_aVertices[idx].y; };
+
+    for (int32 blockX = 0; blockX < NUM_WATER_BLOCKS_ROWCOL; blockX++) {
+        const float minX = (float)(blockX * WATER_BLOCK_SIZE) - 3000.f; // 0x859A94
+        const float maxX = minX + 500.f;                                // 0x858B58
+        for (int32 blockY = 0; blockY < NUM_WATER_BLOCKS_ROWCOL; blockY++) {
+            const float minY = (float)(blockY * WATER_BLOCK_SIZE) - 3000.f;
+            const float maxY = minY + 500.f;
+
+            // Quads (Note: The original re-reads the count every iteration)
+            for (int32 i = 0; i < (int32)NumWaterQuads; i++) {
+                const auto& quad = WaterQuads[i];
+                if (VertX(quad.verts[1]) > minX
+                    && VertX(quad.verts[0]) < maxX
+                    && VertY(quad.verts[2]) > minY
+                    && VertY(quad.verts[0]) < maxY
+                ) {
+                    AddPolyToBlock(blockX, blockY, i, 1);
+                }
+            }
+
+            // Triangles
+            const int32 numTris = (int32)NumWaterTriangles;
+            for (int32 i = 0; i < numTris; i++) {
+                const auto& tri  = WaterTriangles[i];
+                const auto  y0   = m_aVertices[tri.verts[0]].y;
+                const auto  y2   = m_aVertices[tri.verts[2]].y;
+                const float yMin = (float)std::min(y0, y2);
+                const float yMax = (float)std::max(y0, y2);
+                if (VertX(tri.verts[1]) > minX
+                    && VertX(tri.verts[0]) < maxX
+                    && yMax > minY
+                    && yMin < maxY
+                ) {
+                    AddPolyToBlock(blockX, blockY, i, 2);
+                }
+            }
+        }
+    }
 }
 
 // 0x6E9C80

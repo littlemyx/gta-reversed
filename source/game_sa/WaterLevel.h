@@ -186,6 +186,9 @@ class CWaterLevel {
         };
 
     public:
+        PolyInfo() = default;
+        PolyInfo(uint16 id, PType type) : m_id(id), m_type((uint16)type) {} // NOTSA
+
         auto Id()   const { return m_id; }
         auto Type() const { return (PType)(m_type); }
 
@@ -294,11 +297,12 @@ public:
     static void MarkQuadsAndPolysToBeRendered(int32 blockX, int32 blockY, bool isInInterior);
     static void BlockHit(int32 X, int32 Y);
 
+    //! 0x6E7210 - NOTE: The argument order is the one of the exe (the old declaration had `pResultHeight` in the middle)
     static void CalculateWavesOnlyForCoordinate2(
         int32 x, int32 y,
-        float* pResultHeight, // in/out variable => in is the "water level" from `GetWaterLevelNoWaves`/out is the Z coordinate of the wave
         float bigWavesAmpl,
-        float smallWavesAmpl
+        float smallWavesAmpl,
+        float* pResultHeight // in/out variable => in is the "water level" from `GetWaterLevelNoWaves`/out is the Z coordinate of the wave
     );
 
     static float CalculateWavesOnlyForCoordinate2_Direct( // TODO: Once the OG function is reversed, we should use this instead of it (once we've verified that the reversed version works as expected)
@@ -307,7 +311,7 @@ public:
         float bigWavesAmpl,
         float smallWavesAmpl
     ) {
-        CalculateWavesOnlyForCoordinate2(x, y, &waterLevel, bigWavesAmpl, smallWavesAmpl);
+        CalculateWavesOnlyForCoordinate2(x, y, bigWavesAmpl, smallWavesAmpl, &waterLevel);
         return waterLevel; // Result of the above function is stored in this variable.
     }
 
@@ -332,6 +336,12 @@ public:
     static void AddWaterLevelTriangle(int32 X1, int32 Y1, CRenPar P1, int32 X2, int32 Y2, CRenPar P2, int32 X3, int32 Y3, CRenPar P3, uint32 Flags);
 
     static void FillQuadsAndTrianglesList();
+
+    //! 0x6E5750 (NOTSA name) - Adds a quad (`type` = 1) / triangle (`type` = 2) with index `polyId` to the poly info of the given block (turning it into a combo if needed)
+    static void AddPolyToBlock(int32 blockX, int32 blockY, uint32 polyId, uint32 type);
+
+    //! 0x6E91D0 (NOT reversed yet) - Renders one layer of the tessellated rectangle. The last 4 arguments are computed by `RenderHighDetailWaterRectangle`
+    static void RenderHighDetailWaterRectangle_OneLayer(int32 minX, int32 maxX, int32 Y1, int32 Y2, CRenPar P1, CRenPar P2, CRenPar P3, CRenPar P4, int32 WaterLayer, int32 numTris, int32 numVerts, int32 numCellsX, int32 numCellsY);
 
     static void SetCameraRange();
     static void HandleBeachToysStuff();

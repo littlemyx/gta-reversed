@@ -7,8 +7,8 @@ void CLodTimeModelInfo::InjectHooks()
     RH_ScopedVirtualClass(CLodTimeModelInfo, 0x85BCF0, 16);
     RH_ScopedCategory("Models");
 
-    RH_ScopedVMTInstall(GetModelType, 0x4C5660);
-    RH_ScopedVMTInstall(GetTimeInfo, 0x4C5670);
+    RH_ScopedVMTInstall(GetModelType, 0x4C56C0);
+    RH_ScopedVMTInstall(GetTimeInfo, 0x4C56D0);
 }
 ModelInfoType CLodTimeModelInfo::GetModelType()
 {

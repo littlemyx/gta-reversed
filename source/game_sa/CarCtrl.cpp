@@ -171,6 +171,8 @@ void CCarCtrl::InjectHooks()
     RH_ScopedInstall(SlowCarOnRailsDownForTrafficAndLights, 0x434790);
     RH_ScopedInstall(FindMaxSteerAngle, 0x427FE0);
     RH_ScopedInstall(GenerateRandomCars, 0x4341C0);
+    RH_ScopedInstall(GenerateOneRandomCar, 0x430050);
+    RH_ScopedInstall(FindSpeedMultiplierWithSpeedFromNodes, 0x424130);
     RH_ScopedInstall(SetUpDriverAndPassengersForVehicle, 0x4217C0);
     RH_ScopedInstall(SwitchBetweenPhysicsAndGhost, 0x4222A0);
     RH_ScopedInstall(FindIntersection2Lines, 0x4226F0);
@@ -847,7 +849,13 @@ float CCarCtrl::FindSpeedMultiplier(float arg1, float arg2, float arg3, float ar
 
 // 0x424130
 float CCarCtrl::FindSpeedMultiplierWithSpeedFromNodes(int8 arg1) {
-    return plugin::CallAndReturn<float, 0x424130, int8>(arg1);
+    // `arg1` is `(CPathNode byte 1 >> 4) & 3` (bit 0 = `m_bNotHighway`, bit 1 = `m_bHighway`), or -1
+    switch ((uint8)arg1) {
+    case 0xFF: return 0.5f;  // 0x858B8C
+    case 0:    return 0.65f; // 0x858F50
+    case 2:    return 2.3f;  // 0x858F54
+    default:   return 1.0f;  // 0x858624
+    }
 }
 
 float CCarCtrl::FindGhostRoadHeight(CVehicle* vehicle) {
@@ -1578,11 +1586,6 @@ void CCarCtrl::GenerateEmergencyServicesCar() {
 // 0x42B7D0
 CAutomobile* CCarCtrl::GenerateOneEmergencyServicesCar(uint32 modelId, CVector posn) {
     return plugin::CallAndReturn<CAutomobile*, 0x42B7D0, uint32, CVector>(modelId, posn);
-}
-
-// 0x430050
-void CCarCtrl::GenerateOneRandomCar() {
-    plugin::Call<0x430050>();
 }
 
 // 0x4341C0
@@ -4389,4 +4392,901 @@ void CCarCtrl::WeaveThroughObjectsSectorList(CPtrListDoubleLink<CObject*>& ptrLi
 // 0x427FE0
 float CCarCtrl::FindMaxSteerAngle(CVehicle* veh) {
     return std::clamp(0.9f - veh->GetMoveSpeed().Magnitude(), 0.2f, 0.7f);
+}
+
+//
+// CCarCtrl::GenerateOneRandomCar (0x430050) and its file-local helpers.
+// The original is one 7915 bytes long function (3 jump tables: 0x431F3C, 0x431F4C, 0x431F5C), split here along its natural blocks.
+// The order of the calls (esp. the RNG ones) is the same as in the original.
+//
+namespace {
+// The raw offsets the original works with (checked, so the named members can be used)
+static_assert(offsetof(CVehicle, m_autoPilot) == 0x390);
+static_assert(offsetof(CVehicle, vehicleFlags) == 0x428);
+static_assert(offsetof(CVehicle, m_pDriver) == 0x460);
+static_assert(offsetof(CVehicle, m_nExtendedRemovalRange) == 0x4A6);
+static_assert(offsetof(CVehicle, m_fHealth) == 0x4C0);
+static_assert(offsetof(CVehicle, m_nPrimaryColor) == 0x434);
+static_assert(offsetof(CVehicle, m_nVehicleType) == 0x590);
+static_assert(offsetof(CVehicle, m_nVehicleSubType) == 0x594);
+static_assert(offsetof(CVehicle, m_vecMoveSpeed) == 0x44);
+static_assert(offsetof(CVehicleModelInfo, m_nVehicleType) == 0x3C);
+static_assert(offsetof(CVehicleModelInfo, m_nTimesUsed) == 0x50);
+static_assert(offsetof(CCamera, m_mCameraMatrix) + 0x18 == 0xB6F9B4 - 0xB6F028);   // `m_mCameraMatrix.GetForward().z`
+static_assert(offsetof(CCamera, m_fCamFrontXNorm) == 0xB6F104 - 0xB6F028);
+static_assert(offsetof(CCamera, m_fGenerationDistMultiplier) == 0xB6F11C - 0xB6F028);
+
+//! Where (and in what direction) `GenerateCarCreationCoors2` looks for a place for the new car
+struct RandomCarSearch {
+    float dirX{}, dirY{};
+    float arg4{};          //!< 0.707, 0.85 or -1
+    bool  arg5{};
+    bool  bLookingDown{};  //!< The camera is looking (almost) straight down
+};
+
+//! State shared between the blocks of `GenerateOneRandomCar`
+struct RandomCarState {
+    CVehicle*    veh{};
+    CVector      playerPos{};
+    CVector      origin{};           //!< Where the car is created (first the place found by `GenerateCarCreationCoors2`, later the point of the curve)
+    CNodeAddress nodeA{}, nodeB{};   //!< The 2 path nodes the car is created in between
+    CPathNode*   pnA{};
+    CPathNode*   pnB{};
+    float        fraction{};         //!< Position (0..1) along the link between the 2 nodes
+    int32        modelId{};
+    int32        carType{};          //!< 13 = cop car, 24 = cop boat, ...
+    bool         bBoat{};
+    bool         bLookingDown{};
+    bool         bMadDriver{};
+    bool         bZoneTypeMatches{};
+    int32        numLanes{};
+    CCarPathLinkAddress naviAddr{};
+};
+
+//! Pops the vehicle that was not added to the world yet (`delete veh`, 0x431AA5 / 0x431B2D / 0x431F28)
+void AbortRandomCar(CVehicle* veh) {
+    delete veh;
+}
+
+//! 0x420800 - `a > b ? a : b` (NaN => b)
+float Max420800(float a, float b) {
+    return a > b ? a : b;
+}
+
+//! x87: The length of the 2D vector is kept in extended precision
+double Length2DExt(const CVector& v) {
+    return std::sqrt((double)v.x * v.x + (double)v.y * v.y);
+}
+
+//! 0x420980 (CNodeAddress, unnamed) - `a < b`
+bool NodeAddressLess(const CNodeAddress& a, const CNodeAddress& b) {
+    return a.m_wAreaId < b.m_wAreaId || (a.m_wAreaId == b.m_wAreaId && a.m_wNodeId < b.m_wNodeId);
+}
+
+CPathNode& GetPathNodeAt(const CNodeAddress& addr) {
+    return ThePaths.m_pPathNodes[addr.m_wAreaId][addr.m_wNodeId];
+}
+
+CCarPathLink& GetNaviLinkAt(const CCarPathLinkAddress& addr) {
+    return ThePaths.m_pNaviNodes[addr.m_wAreaId][addr.m_wCarPathLinkId];
+}
+
+uint16 RawOf(const CCarPathLinkAddress& addr) {
+    return std::bit_cast<uint16>(addr);
+}
+
+//! 0x420A60 (CCarPathLink, unnamed) - World position of the link (z = 0)
+CVector GetNaviLinkCoors(const CCarPathLink& link) {
+    const auto raw = reinterpret_cast<const int16*>(&link);
+    return { (float)raw[0] * 0.125f, (float)raw[1] * 0.125f, 0.0f }; // 0x858C48
+}
+
+//! 0x4119D0 - `v / s`. x87: the reciprocal is kept in extended precision for the Z, and rounded to float for X and Y
+CVector DivideOriginal(const CVector& v, float s) {
+    const double recip  = 1.0 / (double)s;
+    const double recipF = (double)(float)recip;
+    return {
+        (float)((double)v.x * recipF),
+        (float)((double)v.y * recipF),
+        (float)((double)v.z * recip),
+    };
+}
+
+//! 0x4302AB - Direction (and the related parameters) the new car is searched in
+RandomCarSearch ChooseRandomCarSearchDirection() {
+    RandomCarSearch r{};
+
+    // 0x858CAC (-0.9). x87: Falls through only if `<`, NaN => else
+    if (TheCamera.m_mCameraMatrix.GetForward().z < -0.9f) {
+        r.bLookingDown = true;
+        r.dirX         = 0.707f;
+        r.dirY         = 0.707f;
+        r.arg4         = -1.0f;
+        r.arg5         = true;
+        return r;
+    }
+
+    constexpr float ARG4_A = 0.85f;  // 0x3F59999A
+    constexpr float ARG4_B = 0.707f; // 0x3F34FDF4
+
+    const auto frame = CTimer::m_FrameCounter;
+    bool       bUseCamFront = true;
+    if (const auto* const veh = FindPlayerVehicle(-1, false)) {
+        const float vx = veh->m_vecMoveSpeed.x; // 0x44
+        const float vy = veh->m_vecMoveSpeed.y; // 0x48
+        const double speed = std::sqrt((double)vy * vy + (double)vx * vx);
+
+        const auto SetDir = [&] {
+            const double inv = 1.0 / speed;
+            r.dirX = (float)(vx * inv);
+            r.dirY = (float)(inv * vy);
+        };
+
+        if (speed > 0.4f) { // 0x858EE8
+            SetDir();
+            bUseCamFront = false;
+            switch (frame & 3) { // jump table 0x431F3C
+            case 0:
+            case 1: r.arg4 = ARG4_A; r.arg5 = true;  break;
+            case 2: r.arg4 = ARG4_B; r.arg5 = true;  break;
+            case 3: r.arg4 = ARG4_B; r.arg5 = false; break;
+            }
+        } else if (speed > 0.1f) { // 0x858B1C
+            SetDir();
+            bUseCamFront = false;
+            switch (frame & 3) { // jump table 0x431F4C
+            case 0: r.arg4 = ARG4_A; r.arg5 = true;  break;
+            case 1: r.arg4 = ARG4_B; r.arg5 = true;  break;
+            case 2:
+            case 3: r.arg4 = ARG4_B; r.arg5 = false; break;
+            }
+        }
+    }
+    if (bUseCamFront) { // 0x4303BA
+        r.dirX = TheCamera.m_fCamFrontXNorm;
+        r.dirY = TheCamera.m_fCamFrontYNorm;
+        r.arg4 = ARG4_B;
+        r.arg5 = (frame & 1) == 0;
+    }
+    return r;
+}
+
+//! 0x430050 (top) - Chooses the model (and the type) of the car to create
+//! @returns false if no car should be created
+bool ChooseRandomCarModel(int32& modelId, int32& carType) {
+    const auto Wanted = [] { return FindPlayerWanted(-1); };
+
+    // 0x43016C
+    bool bPolice = false;
+    if ((int32)Wanted()->GetWantedLevel() > 1 && (int32)CCarCtrl::NumLawEnforcerCars < (int32)Wanted()->m_MaxCopCarsInPursuit) {
+        const auto* const w1 = Wanted();
+        const auto* const w2 = Wanted();
+        if (w2->m_NumCopsInPursuit < w1->m_MaxCopsInPursuit && CGame::currArea == 0 && !CGangWars::GangWarFightingGoingOn()) {
+            const auto now = CTimer::GetTimeInMS();
+            const auto last = (uint32)CCarCtrl::LastTimeLawEnforcerCreated;
+            if ((int32)Wanted()->GetWantedLevel() > 3) {
+                bPolice = true;
+            } else {
+                if ((int32)Wanted()->GetWantedLevel() > 2 && now > last + 5000) {
+                    bPolice = true;
+                } else if (now > last + 8000) {
+                    bPolice = true;
+                }
+            }
+        }
+    }
+
+    if (bPolice) {
+        modelId = CCarCtrl::ChoosePoliceCarModel(0); // 0x43020E
+        carType = 13;
+    } else {
+        modelId = CCarCtrl::ChooseModel(&carType); // 0x424CE0
+        if (modelId == -1) {
+            return false;
+        }
+        if ((carType == 13 || carType == 24) && (int32)Wanted()->GetWantedLevel() >= 1) {
+            return false;
+        }
+    }
+
+    // 0x430263
+    if (CGameLogic::LaRiotsActiveHere() && !gbLARiots_NoPoliceCars && (rand() & 0x7F) < 0x37) {
+        modelId = CCarCtrl::ChoosePoliceCarModel(0);
+        carType = 13;
+    }
+    return true;
+}
+
+//! 0x4306A6 (part) - Mission, driving style and cruise speed of the new car
+void InitRandomCarMission(CVehicle* veh, int32 carType, int32 modelId, bool bBoat) {
+    auto& ap = veh->m_autoPilot;
+
+    const auto SetCruiseSpeed = [&](float min, float max) { // 0x41BD90 + 0x821B40 (ftol)
+        ap.m_nCruiseSpeed = (uint8)(int32)CGeneral::GetRandomNumberInRange(min, max);
+    };
+
+    if (carType == 13) { // 0x43080B
+        ap.m_nTempAction = TEMPACT_NONE;
+        if (FindPlayerWanted(-1)->GetWantedLevel() == eWantedLevel::WANTED_CLEAN) {
+            SetCruiseSpeed(18.0f, 24.0f);
+            ap.m_nCarDrivingStyle = DRIVING_STYLE_STOP_FOR_CARS;
+            ap.m_nCarMission      = MISSION_CRUISE;
+        } else {
+            ap.m_nCruiseSpeed = (uint8)CCarAI::FindPoliceCarSpeedForWantedLevel(veh); // 0x430851
+            ap.m_nCarMission  = veh->GetVehicleAppearance() == VEHICLE_APPEARANCE_BIKE
+                ? CCarAI::FindPoliceBikeMissionForWantedLevel()
+                : CCarAI::FindPoliceCarMissionForWantedLevel();
+            ap.m_nCarDrivingStyle = DRIVING_STYLE_AVOID_CARS;
+        }
+        if (modelId == MODEL_FBIRANCH) { // 0x430884
+            veh->m_nPrimaryColor   = 0;
+            veh->m_nSecondaryColor = 0;
+        }
+        veh->vehicleFlags.bCreatedAsPoliceVehicle = true; // 0x43089A
+    } else if (carType == 24) { // 0x4307D0
+        ap.m_nTempAction = TEMPACT_NONE;
+        SetCruiseSpeed(14.0f, 18.0f);
+        ap.m_nCarDrivingStyle = DRIVING_STYLE_AVOID_CARS;
+        ap.m_nCarMission      = CCarAI::FindPoliceBoatMissionForWantedLevel();
+        veh->vehicleFlags.bCreatedAsPoliceVehicle = true;
+    } else {
+        SetCruiseSpeed(13.0f, 21.0f); // 0x4306E8
+        if (carType == 3) {
+            SetCruiseSpeed(18.0f, 27.0f);
+        } else if (carType == 1) {
+            SetCruiseSpeed(10.0f, 15.0f);
+        }
+
+        // x87: The difference is not rounded to float
+        const auto& bb = CModelInfo::GetModelInfo(veh->m_nModelIndex)->GetColModel()->GetBoundingBox();
+        if ((double)bb.m_vecMax.y - (double)bb.m_vecMin.y > 10.0f /* 0x85862C */ || carType == 5) {
+            ap.m_nCruiseSpeed = (uint8)(((int32)ap.m_nCruiseSpeed * 3) / 4);
+        }
+
+        if (bBoat) {
+            switch (veh->m_nModelIndex) {
+            case MODEL_SQUALO:
+            case MODEL_SPEEDER:
+            case MODEL_JETMAX: SetCruiseSpeed(25.0f, 35.0f); break;
+            default:           SetCruiseSpeed(15.0f, 24.0f); break;
+            }
+        }
+        ap.m_nCarMission      = MISSION_CRUISE; // 0x4307B6
+        ap.m_nTempAction      = TEMPACT_NONE;
+        ap.m_nCarDrivingStyle = DRIVING_STYLE_STOP_FOR_CARS;
+    }
+}
+
+//! 0x430A58..0x430C79 - Fraction along the link, lane directions, the link to go to and the orientation of the car
+//! @returns false if the car has to be thrown away
+bool OrientRandomCar(RandomCarState& s) {
+    auto* const veh = s.veh;
+    auto&       ap  = veh->m_autoPilot;
+
+    const CVector posA = s.pnA->GetPosition();
+    const CVector posB = s.pnB->GetPosition();
+
+    // Fraction along the link. Note: The values of this are mixed with a few other uses of the same variable in the original
+    {
+        const auto& colBB = CModelInfo::GetModelInfo(veh->m_nModelIndex)->GetColModel()->GetBoundingBox();
+        // x87: kept in extended precision until stored
+        const float halfLen = (float)(((double)colBB.m_vecMax.y - (double)colBB.m_vecMin.y) * 0.5f /* 0x858B8C */ + 1.0f);
+
+        const double dy   = (double)posA.y - posB.y;
+        const float  dyF  = (float)((double)posA.y - posB.y);
+        const double dist = std::sqrt(dy * dyF + ((double)posA.x - posB.x) * ((double)posA.x - posB.x));
+
+        if (0.5f * dist < halfLen) { // 0x430A4D, x87: NaN => else
+            s.fraction = 0.5f;
+        } else {
+            const double ratio = (double)halfLen / dist;
+            if (!((double)s.fraction > ratio)) {
+                s.fraction = (float)ratio;
+            }
+            const double oneMinusRatio = 1.0 - ratio;
+            if (!((double)s.fraction < oneMinusRatio)) {
+                s.fraction = (float)oneMinusRatio;
+            }
+        }
+    }
+    ap._smthNext = NodeAddressLess(s.nodeA, s.nodeB) ? -1 : 1; // 0x430A62
+
+    // 0x430AB2
+    if (s.pnA->m_nNumLinks == 1) {
+        return false;
+    }
+
+    // Pick a link that isn't the one the car was set up with
+    int16 linkIdx;
+    CCarPathLinkAddress newCur;
+    do {
+        linkIdx = (int16)(rand() % (int32)s.pnA->m_nNumLinks);
+        newCur  = ThePaths.m_pNaviLinks[s.nodeA.m_wAreaId][s.pnA->m_wBaseLinkId + linkIdx];
+    } while (RawOf(newCur) == RawOf(ap.m_nNextPathNodeInfo));
+    ap.m_nCurrentPathNodeInfo = newCur; // 0x430B10
+    if (!ThePaths.m_pPathNodes[newCur.m_wAreaId]) {
+        return false;
+    }
+    ap._smthCurr = NodeAddressLess(ThePaths.m_pNodeLinks[s.nodeA.m_wAreaId][s.pnA->m_wBaseLinkId + linkIdx], s.nodeA) ? -1 : 1; // 0x430B44
+
+    // Orientation. The matrix is used without checking if there is one (as in the original)
+    {
+        const CVector dirAB = posB - posA; // 0x430B9A
+        CVector       fwd   = dirAB;
+        CVector2D     w{ dirAB.x, dirAB.y };
+        {
+            const double len = Length2DExt(CVector{ dirAB.x, dirAB.y, 0.0f }); // 0x430BE7
+            if (len == 0.0) {
+                w.x = 1.0f;
+            } else {
+                const double inv = 1.0 / len;
+                w.x = (float)(w.x * inv);
+                w.y = (float)(inv * w.y);
+            }
+        }
+        NormaliseOriginal(fwd); // 0x430C21
+
+        auto& mat = *veh->m_matrix;
+        mat.GetForward() = fwd;
+        mat.GetRight()   = CVector{ w.y, -w.x, 0.0f };
+        mat.GetUp()      = CVector{ 0.0f, 0.0f, 1.0f };
+    }
+    return true;
+}
+
+//! 0x430C80..0x4315CB - Point (on the curve between the 2 links) the car is placed on
+void PlaceRandomCarOnCurve(RandomCarState& s, CVector& outCurveSpeed) {
+    auto* const veh = s.veh;
+    auto&       ap  = veh->m_autoPilot;
+
+    // Where the car is, in terms of the 'distance' to the next link (t)
+    float t;
+    {
+        const auto& nextLink0 = GetNaviLinkAt(ap.m_nNextPathNodeInfo);
+        const CVector pCur0   = GetPathNodeAt(ap.m_currentAddress).GetPosition();
+        const CVector nextPos = GetNaviLinkCoors(nextLink0);
+        const float   d1      = (float)Length2DExt(nextPos - pCur0); // 0x430D21
+        const CVector pStart  = GetPathNodeAt(ap.m_startingRouteNode).GetPosition();
+        const double  d2      = Length2DExt(nextPos - pStart);
+        const double  ratio   = (double)d1 / (d2 + (double)d1);
+
+        if (ratio > (double)s.fraction) { // 0x430D7D
+            const auto&   curLink = GetNaviLinkAt(ap.m_nCurrentPathNodeInfo);
+            const CVector pCur    = GetPathNodeAt(ap.m_currentAddress).GetPosition();
+            const float   d3      = (float)Length2DExt(GetNaviLinkCoors(curLink) - pCur); // 0x430E1A
+            const double  d4      = Length2DExt(s.origin - GetPathNodeAt(ap.m_currentAddress).GetPosition());
+            t = (float)((d4 + (double)d3) / ((double)d3 + (double)d1));
+        } else {
+            CCarCtrl::PickNextNodeRandomly(veh); // 0x430E63
+            const CVector pCur = GetPathNodeAt(ap.m_currentAddress).GetPosition();
+            const CVector v1   = GetNaviLinkCoors(GetNaviLinkAt(ap.m_nNextPathNodeInfo)) - pCur;
+            const CVector v2   = GetNaviLinkCoors(GetNaviLinkAt(ap.m_nCurrentPathNodeInfo)) - GetPathNodeAt(ap.m_currentAddress).GetPosition();
+            const float   d5   = (float)Length2DExt(v2);
+            const double  d6   = Length2DExt(s.origin - GetPathNodeAt(ap.m_currentAddress).GetPosition());
+            const double  d7   = std::sqrt((double)v1.x * v1.x + (double)v1.y * v1.y);
+            t = (float)(((double)d5 - d6) / (d7 + (double)d5));
+        }
+    }
+    if (0.0f > t) { // 0x430FD9
+        t = 0.0f;
+    } else if (1.0f < t) {
+        t = 1.0f;
+    }
+
+    // `CCarPathLink::m_dir`/`m_posn` hide their raw values, but the original works on them. x87: kept in extended precision until stored
+    const auto& curLink   = GetNaviLinkAt(ap.m_nCurrentPathNodeInfo);
+    const auto& nextLink  = GetNaviLinkAt(ap.m_nNextPathNodeInfo);
+    const auto  curRaw8   = reinterpret_cast<const int8*>(&curLink);
+    const auto  nextRaw8  = reinterpret_cast<const int8*>(&nextLink);
+    const auto  curRaw16  = reinterpret_cast<const int16*>(&curLink);
+    const auto  nextRaw16 = reinterpret_cast<const int16*>(&nextLink);
+
+    const auto Dir = [](int8 d, int8 sign) { return (float)((double)d * (double)0.01f * (double)sign); }; // 0x858C58
+    const float curDirX  = Dir(curRaw8[8], ap._smthCurr);
+    const float curDirY  = Dir(curRaw8[9], ap._smthCurr);
+    const float nextDirX = Dir(nextRaw8[8], ap._smthNext);
+    const float nextDirY = Dir(nextRaw8[9], ap._smthNext);
+
+    // Lane offsets (both are rounded to float, in contrast to `JoinCarWithRoadSystem`)
+    float k1 = (float)((curLink.OneWayLaneOffsetExtended() + (double)ap.m_nCurrentLane) * (double)5.4f);  // 0x858C50
+    float k2 = (float)((nextLink.OneWayLaneOffsetExtended() + (double)ap.m_nNextLane) * (double)5.4f);
+    if (veh->m_nVehicleSubType == VEHICLE_TYPE_BMX) { // 0x43116F
+        constexpr auto BMX_LANE_OFFSET = std::bit_cast<float>(0x3FBA9FBFu); // 0x859010
+        k1 = (float)((double)k1 + (double)BMX_LANE_OFFSET);
+        k2 = (float)((double)k2 + (double)BMX_LANE_OFFSET);
+    }
+
+    // 0x43118D
+    {
+        const auto& node = GetPathNodeAt(ap.m_startingRouteNode);
+        const int8  hw   = (int8)(node.m_bNotHighway | (node.m_bHighway << 1)); // (byte 1 >> 4) & 3
+        ap.field_41    = hw;
+        ap.m_SpeedMult = CCarCtrl::FindSpeedMultiplierWithSpeedFromNodes(hw); // 0x4311BA
+        ap.m_speed     = (float)((double)ap.m_nCruiseSpeed * ap.m_SpeedMult);
+    }
+
+    const float k2DirX = (float)((double)k2 * nextDirX);
+    const float k2DirY = (float)((double)k2 * nextDirY);
+    const float k1DirX = (float)((double)k1 * curDirX);
+    const float k1DirY = (float)((double)k1 * curDirY);
+    const CVector end{
+        (float)((double)nextRaw16[0] * (double)0.125f + (double)k2DirY),
+        (float)((double)nextRaw16[1] * (double)0.125f - (double)k2DirX),
+        0.0f
+    };
+    const CVector start{
+        (float)((double)curRaw16[0] * (double)0.125f + (double)k1DirY),
+        (float)((double)curRaw16[1] * (double)0.125f - (double)k1DirX),
+        0.0f
+    };
+
+    const auto scale      = CCurves::CalcSpeedScaleFactor(start, end, curDirX, curDirY, nextDirX, nextDirY); // 0x4313F1
+    const auto speedScale = (int32)((double)scale * (1000.0f / (double)ap.m_speed));                          // 0x858C4C
+    ap.m_nSpeedScaleFactor = (uint32)speedScale;
+
+    const auto now       = CTimer::GetTimeInMS();
+    const auto startTime = (int32)((double)now - (double)t * (double)speedScale); // 0x43143A, x87: extended precision
+    ap.field_C           = startTime;
+
+    const float time = (float)((double)(uint32)(now - (uint32)startTime) / (double)speedScale);
+    CCurves::CalcCurvePoint(start, end, CVector{ curDirX, curDirY, 0.0f }, CVector{ nextDirX, nextDirY, 0.0f }, time, speedScale, s.origin, outCurveSpeed); // 0x4315CB
+}
+
+//! 0x4315D0..0x43185B - Final position (the height) of the car
+//! @returns false if the car has to be thrown away
+bool SnapRandomCarToGround(RandomCarState& s, const CVector& curveSpeed, CVector& outPosBeforeGround) {
+    auto* const veh = s.veh;
+
+    const CVector pA = s.pnA->GetPosition();
+    const CVector pB = s.pnB->GetPosition();
+
+    const CVector vAB  = pA - pB; // 0x43161F
+    const auto    mag  = std::sqrt(((double)vAB.x * vAB.x + (double)vAB.y * vAB.y) + (double)vAB.z * vAB.z); // 0x4082C0, x87: not rounded to float
+    const auto    step = vAB * (float)(2.0f / mag); // 0x40FEC0
+
+    outPosBeforeGround = s.origin + step; // 0x40FE30
+    CVector posn       = outPosBeforeGround;
+
+    // x87: The 1st term is rounded to float
+    const float zA = (float)(((double)1.0f - s.fraction) * pA.z);
+    posn.z         = (float)((double)s.fraction * pB.z + (double)zA);
+
+    float ground = 1.0e9f; // 0x858FEC
+    if (s.bBoat) {
+        float waterLevel;
+        if (!CWaterLevel::GetWaterLevel(posn.x, posn.y, posn.z, waterLevel, true, nullptr)) { // 0x4316FC
+            return false;
+        }
+        ground = waterLevel;
+    } else {
+        CColPoint colPoint;
+        CEntity*  hitEntity;
+        if (CWorld::ProcessVerticalLine(posn, 1000.0f, colPoint, hitEntity, true, false, false, false, true, false, nullptr)) { // 0x431742
+            ground = colPoint.m_vecPoint.z;
+        }
+        if (CWorld::ProcessVerticalLine(posn, -1000.0f, colPoint, hitEntity, true, false, false, false, true, false, nullptr)) { // 0x431784
+            // x87: kept in extended precision
+            double d1 = (double)colPoint.m_vecPoint.z - posn.z;
+            if (d1 < 0.0) {
+                d1 = -d1;
+            }
+            double d2 = (double)ground - posn.z;
+            if (d2 < 0.0) {
+                d2 = -d2;
+            }
+            if (d1 < d2) {
+                ground = colPoint.m_vecPoint.z;
+            }
+        }
+    }
+
+    if (ground == 1.0e9f) { // 0x4317E3
+        return false;
+    }
+    {
+        double d = (double)ground - posn.z; // 0x4317F4
+        if (d < 0.0) {
+            d = -d;
+        }
+        if (d > 7.0f) { // 0x858F48
+            return false;
+        }
+    }
+
+    if (CModelInfo::IsBoatModel(veh->m_nModelIndex)) { // 0x431824
+        posn.z                       = ground;
+        veh->m_nExtendedRemovalRange = 0xFF;
+    } else {
+        posn.z = (float)((double)veh->GetHeightAboveRoad() + ground); // 0x431848 (vtable +0xD4)
+    }
+    veh->SetPosn(posn); // 0x431862
+    veh->m_vecMoveSpeed = CVector{ 0.0f, 0.0f, 0.0f };
+
+    return true;
+}
+
+//! 0x43194C - Entity status of the new car
+void SetRandomCarStatus(RandomCarState& s) {
+    auto* const veh = s.veh;
+    if (s.carType == 13) { // 0x43194C
+        if (veh->m_autoPilot.m_nCarMission == MISSION_CRUISE) {
+            veh->SetStatus(STATUS_SIMPLE);
+        } else {
+            veh->SetStatus(STATUS_PHYSICS);
+        }
+    } else if (s.carType == 24) { // 0x43193E
+        veh->SetStatus(STATUS_PHYSICS);
+    } else if (s.bBoat) {
+        veh->SetStatus(STATUS_PHYSICS);
+    } else if (veh->GetStatus() != STATUS_PHYSICS) {
+        veh->SetStatus(STATUS_SIMPLE);
+    }
+}
+
+//! Decides if the car is too far/close to be created (as it would be visible/not needed)
+//! @returns false if the car has to be thrown away
+bool IsRandomCarPositionOK(RandomCarState& s) {
+    auto* const veh = s.veh;
+
+    const auto genMult = TheCamera.m_fGenerationDistMultiplier; // 0xB6F11C
+    const auto range   = (float)veh->m_nExtendedRemovalRange;
+
+    if (veh->GetIsOnScreen()) { // 0x43199F
+        const CVector toPlayer = s.playerPos - veh->GetPosition();
+        const float   dist     = (float)Length2DExt(toPlayer);
+        if ((double)Max420800(170.0f, range) * genMult < dist) { // 0x431A04, x87: NaN => continue
+            return false;
+        }
+        if ((double)genMult * 150.0f /* 0x858A28 */ > dist) {
+            return false;
+        }
+        const CVector toCam = TheCamera.GetPosition() - veh->GetPosition();
+        if ((double)genMult * 120.0f /* 0x858BB0 */ > Length2DExt(toCam)) { // 0x431A80
+            return false;
+        }
+        if (s.bLookingDown) {
+            return false;
+        }
+        if (veh->m_nModelIndex == MODEL_MARQUIS) {
+            return false;
+        }
+    } else { // 0x431AB8
+        const CVector toPlayer = s.playerPos - veh->GetPosition();
+        const float   dist     = (float)Length2DExt(toPlayer);
+        constexpr auto INV_170 = std::bit_cast<float>(0x3BC0C0C1u); // 0x858F94
+        if ((double)Max420800(170.0f, range) * INV_170 * 45.0f /* 0x858CB4 */ < dist && !s.bLookingDown) { // x87: NaN => continue
+            return false;
+        }
+    }
+    return true;
+}
+} // namespace
+
+// 0x430050
+void CCarCtrl::GenerateOneRandomCar() {
+    RandomCarState s{};
+    s.nodeA = s.nodeB = CNodeAddress{ 0xFFFF, 0xFFFF };
+
+    s.playerPos = FindPlayerCentreOfWorld(CWorld::PlayerInFocus); // 0x430080
+    [[maybe_unused]] const auto playerSpeed = FindPlayerSpeed(-1); // 0x4300A4 (Unused, its stack slot is reused)
+
+    // 0x4300B1 - Is there room for more cars?
+    const int32 numCars = (int32)(NumFireTrucksOnDuty + NumAmbulancesOnDuty + NumMissionCars + NumLawEnforcerCars + NumRandomCars);
+    float density = CarDensityMultiplier;
+    if (CCullZones::FewerCars()) {
+        density *= 0.6f; // 0x858CC8
+    }
+    const float numCarsF = (float)numCars;
+    if ((double)CPopulation::FindCarMultiplierMotorway() * (int32)MaxNumberOfCarsInUse * density <= numCarsF) { // 0x43012D
+        return;
+    }
+    if (((double)CPopCycle::m_NumOther_Cars + CPopCycle::m_NumCops_Cars + CPopCycle::m_NumGangs_Cars + CPopCycle::m_NumDealers_Cars) * CPopulation::FindCarMultiplierMotorway() * density <= numCarsF) { // 0x43015F
+        return;
+    }
+
+    // 0x43016C
+    if (!ChooseRandomCarModel(s.modelId, s.carType)) {
+        return;
+    }
+
+    // 0x430298 - Where to look for a place
+    const auto search = ChooseRandomCarSearchDirection();
+    s.bLookingDown = search.bLookingDown;
+
+    {
+        // 0x4303E6
+        const bool arg12 = !(s.carType == 13 && (int32)FindPlayerWanted(-1)->GetWantedLevel() >= 1);
+        s.fraction = search.dirY; // (the out parameter reuses the variable of the direction)
+        if (!GenerateCarCreationCoors2(
+            s.playerPos,
+            search.dirX,
+            search.dirY,
+            search.arg4,
+            search.arg5,
+            TheCamera.m_fGenerationDistMultiplier * 160.0f, // 0x858970
+            38.0f,
+            &s.origin,
+            &s.nodeA,
+            &s.nodeB,
+            &s.fraction,
+            arg12,
+            false
+        )) {
+            return;
+        }
+    }
+
+    // 0x430465
+    s.pnA = &GetPathNodeAt(s.nodeA);
+    s.pnB = &GetPathNodeAt(s.nodeB);
+
+    const auto minSpawnProb = std::min<uint8>(s.pnA->m_nSpawnProbability, s.pnB->m_nSpawnProbability);
+    if ((rand() & 0xF) > minSpawnProb) { // 0x4304B9
+        return;
+    }
+
+    float searchRadius;
+    if (s.pnA->m_bWaterNode) { // 0x4304D4
+        s.bBoat = true;
+        if (s.carType == 13) {
+            s.modelId = MODEL_PREDATOR;
+            s.carType = 24;
+            if (!CStreaming::GetInfo(MODEL_PREDATOR).IsLoaded()) {
+                CStreaming::RequestModel(MODEL_PREDATOR, STREAMING_KEEP_IN_MEMORY); // 0x430506
+                return;
+            }
+        } else {
+            s.modelId = CPopulation::m_LoadedBoats.PickLeastUsedModel(1); // 0x430520
+            if (s.modelId == -1) {
+                return;
+            }
+            if (!CStreaming::GetInfo(s.modelId).IsLoaded()) {
+                return;
+            }
+        }
+        searchRadius = 40.0f;
+    } else {
+        searchRadius = 8.0f;
+    }
+
+    {
+        int16 numColliding{};
+        CWorld::FindObjectsKindaColliding(s.origin, searchRadius, true, &numColliding, 2, nullptr, false, true, true, false, false); // 0x430577
+        if (numColliding != 0) {
+            return;
+        }
+    }
+
+    // 0x43058B - Find the link (+ the navi link) that connects the 2 nodes
+    {
+        int16 linkIdx = 0;
+        const int32 numLinks = s.pnA->m_nNumLinks;
+        if (numLinks > 0) {
+            do {
+                if (!(ThePaths.m_pNodeLinks[s.nodeA.m_wAreaId][s.pnA->m_wBaseLinkId + linkIdx] != s.nodeB)) { // 0x4305B8
+                    break;
+                }
+                linkIdx++;
+            } while (linkIdx < numLinks);
+        }
+        s.naviAddr = ThePaths.m_pNaviLinks[s.nodeA.m_wAreaId][s.pnA->m_wBaseLinkId + linkIdx];
+
+        const auto& naviLink = GetNaviLinkAt(s.naviAddr);
+        s.numLanes = naviLink.m_attachedTo == s.nodeB // 0x430603
+            ? naviLink.m_numOppositeDirLanes
+            : naviLink.m_numSameDirLanes;
+    }
+
+    // 0x430625
+    if (s.numLanes > 1) {
+        if (CModelInfo::GetVehicleModelInfo(s.modelId)->m_nVehicleType == VEHICLE_TYPE_BMX) {
+            return;
+        }
+    } else if (s.modelId == MODEL_COACH || s.modelId == MODEL_BUS) {
+        return;
+    }
+    if (s.numLanes == 0) {
+        return;
+    }
+
+    // 0x430661 - The zone types where only certain cars are allowed
+    if (CPopCycle::m_pCurrZone) {
+        const auto popType = (int32)CTheZones::GetZoneInfo(s.origin, nullptr)->PopType;
+        if (popType >= +eZonePopulationType::GOLF_CLUB && popType <= +eZonePopulationType::AIRPORT_RUNWAY) {
+            if (popType != CPopCycle::m_nCurrentZoneType) {
+                return;
+            }
+            s.bZoneTypeMatches = true;
+        }
+    }
+
+    // 0x4306A1
+    s.veh = GetNewVehicleDependingOnCarModel(s.modelId, RANDOM_VEHICLE);
+    auto* const veh = s.veh;
+    auto&       ap  = veh->m_autoPilot;
+    ap.m_endingRouteNode.ResetAreaId();
+    ap.m_currentAddress      = s.nodeA;
+    ap.m_startingRouteNode   = s.nodeB;
+
+    InitRandomCarMission(veh, s.carType, s.modelId, s.bBoat);
+
+    // 0x4308A1
+    if (veh->m_nModelIndex == MODEL_MRWHOOP) {
+        veh->vehicleFlags.bSirenOrAlarm = true; // 0x42D |= 0x80
+    }
+    ap.m_nNextPathNodeInfo = s.naviAddr;
+    {
+        const auto lane       = (int8)(rand() % (int16)s.numLanes); // 0x4308BC
+        ap.m_nCurrentLane     = lane;
+        ap.m_nNextLane        = lane;
+    }
+
+    // 0x4308D5 - Chance for the car to become a 'mad driver' (1 / chance)
+    int32 madDriverChance;
+    if (CGameLogic::LaRiotsActiveHere()) {
+        madDriverChance = 80;
+    } else {
+        switch (veh->GetVehicleAppearance()) {
+        case VEHICLE_APPEARANCE_BIKE: madDriverChance = 50;  break;
+        case VEHICLE_APPEARANCE_BOAT: madDriverChance = 10;  break;
+        default:                      madDriverChance = 200; break;
+        }
+    }
+    if (!s.bBoat && s.carType != 13 && !s.bZoneTypeMatches) { // 0x430909
+        if (CGeneral::GetRandomNumberInRange(0, madDriverChance) == 0 || CCheat::IsActive(CHEAT_AGGRESSIVE_DRIVERS)) {
+            s.bMadDriver = true;
+            s.fraction   = 1.0f;
+        }
+    }
+
+    // 0x430943 - Place and orient the car
+    if (!OrientRandomCar(s)) {
+        AbortRandomCar(veh);
+        return;
+    }
+    CVector curveSpeed{};
+    PlaceRandomCarOnCurve(s, curveSpeed);
+
+    CVector posBeforeGround{};
+    if (!SnapRandomCarToGround(s, curveSpeed, posBeforeGround)) {
+        AbortRandomCar(veh);
+        return;
+    }
+
+    // 0x4318B2 - Is the car moving towards the player?
+    const CVector prevPos  = posBeforeGround - DivideOriginal(curveSpeed, 60.0f); // 0x4119D0, 0x40FE60
+    const CVector toOrigin = { s.origin.x - s.playerPos.x, s.origin.y - s.playerPos.y, 0.0f };
+
+    SetRandomCarStatus(s); // 0x4318FE
+    CVisibilityPlugins::SetClumpAlpha(veh->GetRpClump(), 0); // 0x431973
+
+    if (CCheat::IsActive(CHEAT_FUNHOUSE_THEME) && veh->m_nVehicleType == VEHICLE_TYPE_AUTOMOBILE) { // 0x969176
+        veh->AddVehicleUpgrade(ModelIndices::MI_HYDRAULICS); // 0x431998
+    }
+
+    if (!IsRandomCarPositionOK(s)) {
+        AbortRandomCar(veh);
+        return;
+    }
+
+    // 0x431B40
+    {
+        int16 numColliding{};
+        const auto radius = CModelInfo::GetModelInfo(veh->m_nModelIndex)->GetColModel()->GetBoundRadius();
+        CWorld::FindObjectsKindaColliding(veh->GetPosition(), radius, true, &numColliding, 2, nullptr, false, true, true, false, false); // 0x431B7A
+        if (numColliding != 0) {
+            AbortRandomCar(veh);
+            return;
+        }
+    }
+    // x87: kept in extended precision. Note: only when the car moves towards the player
+    if (!((double)prevPos.x * toOrigin.x + (double)prevPos.y * toOrigin.y < 0.0)) { // 0x431BA6
+        AbortRandomCar(veh);
+        return;
+    }
+
+    // 0x431BB7
+    CModelInfo::GetVehicleModelInfo(veh->m_nModelIndex)->ChooseVehicleColour(veh->m_nPrimaryColor, veh->m_nSecondaryColor, veh->m_nTertiaryColor, veh->m_nQuaternaryColor, 1);
+    CWorld::Add(veh); // 0x431BE6
+
+    if (veh->m_nModelIndex == MODEL_TRACTOR || veh->m_nModelIndex == MODEL_COMBINE || veh->m_nVehicleSubType == VEHICLE_TYPE_BMX) {
+        ap.m_nCruiseSpeed = (uint8)((int32)ap.m_nCruiseSpeed / 3);
+    }
+
+    if (CGameLogic::LaRiotsActiveHere()) { // 0x431C22
+        veh->m_fHealth = (float)(rand() % 1000);
+    }
+
+    if (s.carType == 13) { // 0x431C46
+        LastTimeLawEnforcerCreated = (int32)CTimer::GetTimeInMS();
+    }
+
+    if (veh->m_nModelIndex == MODEL_CADDY) { // 0x431C57
+        veh->SetStatus(STATUS_PHYSICS);
+        ap.m_nCarDrivingStyle = DRIVING_STYLE_AVOID_CARS;
+    }
+
+    // 0x431C70 - Random damage (jump table 0x431F5C, indexed by the byte table at 0x431F68)
+    if (veh->m_nVehicleType == VEHICLE_TYPE_AUTOMOBILE && (uint32)s.carType <= 0x17) {
+        constexpr uint8 DAMAGE_TYPES[24]{ 0, 1, 2, 2, 0, 0, 0, 2, 2, 2, 2, 2, 2, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1 };
+        switch (DAMAGE_TYPES[s.carType]) {
+        case 0:
+            if (CGeneral::GetRandomNumberInRange(0, 20) == 0) {
+                static_cast<CAutomobile*>(veh)->SetRandomDamage(false);
+            }
+            break;
+        case 1:
+            if (CGeneral::GetRandomNumberInRange(0, 8) == 0) {
+                static_cast<CAutomobile*>(veh)->SetRandomDamage(true);
+            }
+            break;
+        case 2:
+            break;
+        }
+    }
+
+    if (veh->m_nVehicleSubType == VEHICLE_TYPE_BIKE && ap.m_nCarDrivingStyle == DRIVING_STYLE_STOP_FOR_CARS) { // 0x431CB9
+        veh->SetStatus(STATUS_PHYSICS);
+        ap.m_nCarDrivingStyle = DRIVING_STYLE_DRIVINGMODE_AVOIDCARS_STOPFORPEDS_OBEYLIGHTS;
+    }
+
+    // 0x431CDF - Driver(s) of the car
+    bool bDriversDone = false;
+    if (!s.bBoat && s.carType != 13) {
+        if (FindPlayerPed(-1)->GetWantedLevel() == eWantedLevel::WANTED_CLEAN) {
+            // x87: `<= 0`, NaN => no
+            if (CCheat::IsActive(CHEAT_AGGRESSIVE_DRIVERS) || TimeNextMadDriverChaseCreated <= 0.0f) {
+                if (!s.bZoneTypeMatches && CreatePoliceChase(veh, s.carType, s.nodeA)) { // 0x431D34
+                    if (CGameLogic::LaRiotsActiveHere()) {
+                        TimeNextMadDriverChaseCreated = CGeneral::GetRandomNumberInRange(240.0f, 480.0f);
+                    } else {
+                        TimeNextMadDriverChaseCreated = CGeneral::GetRandomNumberInRange(600.0f, 1200.0f);
+                    }
+                    bDriversDone = true;
+                }
+            }
+        }
+    }
+
+    if (!bDriversDone) {
+        if (s.bMadDriver) { // 0x431D7D
+            const auto model = veh->m_nModelIndex;
+            const bool bBikerModel =
+                model == MODEL_FREEWAY || model == MODEL_PCJ600 || model == MODEL_FCR900 ||
+                model == MODEL_NRG500  || model == MODEL_BF400  || model == MODEL_WAYFARER;
+            if (bBikerModel && !gbLARiots && CGeneral::GetRandomNumberInRange(0, 7) == 0 && CreateConvoy(veh, s.carType)) { // 0x431DCC
+                SetUpDriverAndPassengersForVehicle(veh, s.carType, 1, true, false, 99); // 0x431DE2
+            } else {
+                SetUpDriverAndPassengersForVehicle(veh, s.carType, 1, true, false, 99); // 0x431DF9
+                veh->SetStatus(STATUS_PHYSICS);
+                ap.m_nCarDrivingStyle = DRIVING_STYLE_AVOID_CARS;
+                ap.m_nCruiseSpeed     = (uint8)(int32)((double)ap.m_nCruiseSpeed + 10.0f); // 0x431E1C, 0x85862C
+                veh->m_vecMoveSpeed   = (veh->GetForwardVector() * (float)ap.m_nCruiseSpeed) * 0.02f; // 0x431E4F, 0x431E5D, 0x431E6E (0x3CA3D70A)
+                if (CGameLogic::LaRiotsActiveHere() || CCheat::IsActive(CHEAT_AGGRESSIVE_DRIVERS)) { // 0x431E87
+                    if (veh->m_pDriver) {
+                        veh->m_pDriver->bWantedByPolice = true; // 0x478 |= 0x800
+                    }
+                }
+                veh->vehicleFlags.bMadDriver = true; // 0x42E |= 8
+            }
+        } else if (s.carType == 13 || s.carType == 24) { // 0x431EB6
+            CCarAI::AddPoliceCarOccupants(veh, false); // 0x431EE5
+        } else {
+            bCarIsBeingCreated = true;
+            SetUpDriverAndPassengersForVehicle(veh, s.carType, 0, false, false, 99); // 0x431ED1
+            bCarIsBeingCreated = false;
+        }
+    }
+
+    // 0x431EED
+    if (s.carType == 13 || s.carType == 24) {
+        veh->ChangeLawEnforcerState(true);
+    }
+    CStreaming::PossiblyStreamCarOutAfterCreation(veh->m_nModelIndex);
+
+    // 0x431F18 - 0x421120 (CVehicleModelInfo, unnamed in the original): `++m_nTimesUsed`, capped at 120
+    {
+        auto* const mi = CModelInfo::GetVehicleModelInfo(veh->m_nModelIndex);
+        mi->m_nTimesUsed = (uint8)std::min<int32>((int32)(int8)mi->m_nTimesUsed + 1, 0x78);
+    }
 }

@@ -17,6 +17,14 @@ public:
     static void InjectHooks();
 
     CDecisionMaker();
+
+private: // NOTSA:
+    friend void InjectHooksMain();
+
+    CDecisionMaker* Constructor() {
+        this->CDecisionMaker::CDecisionMaker();
+        return this;
+    }
 };
 
 VALIDATE_SIZE(CDecisionMaker, 0x99C);

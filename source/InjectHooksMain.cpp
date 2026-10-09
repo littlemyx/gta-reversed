@@ -230,6 +230,7 @@
 #include "TaskComplexDestroyCarArmed.h"
 #include "TaskSimpleAbseil.h"
 #include "TaskSimpleOnEscalator.h"
+#include "TaskComplexPresentIdToCop.h"
 #include "TaskSimpleDuckWhileShotsWhizzing.h"
 #include "TaskSimpleBeHitWhileMoving.h"
 #include "TaskSimpleBeKickedOnGround.h"

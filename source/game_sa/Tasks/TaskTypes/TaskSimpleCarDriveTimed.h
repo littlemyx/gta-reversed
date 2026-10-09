@@ -22,7 +22,7 @@ public:
 
 private:
     friend void InjectHooksMain();
-    static void InjectHooks() {};
+    static void InjectHooks();
     CTaskSimpleCarDriveTimed* Constructor(CVehicle* vehicle, int32 nTime);
 };
 VALIDATE_SIZE(CTaskSimpleCarDriveTimed, 0x70);

@@ -8,8 +8,11 @@
 // librw does the same restore (restoreVideoMemory) inside static functions of d3ddevice.cpp and knows no callback, so the Reset is *observed*:
 //   - IDirect3DDevice9::Reset is proxied (own copy of the device's vtable, slot 16) and only counts the resets,
 //   - rw::engine->device.beginUpdate / .showRaster (the only two librw entry points that can Reset; engine.cpp's ResetDeviceNow goes through
-//     showRaster as well) are wrapped: when the count changed while they ran, the restore callback is invoked right after librw finished
-//     restoring (same point as RW: render target, depth surface, rasters, dynamic buffers and render-state cache are valid again).
+//     showRaster as well) are wrapped: for every successful Reset that happened while they ran, the restore callback is invoked once after librw
+//     finished restoring (render target, depth surface, rasters, dynamic buffers and render-state cache are valid again). The exe calls it once
+//     per D3D9DeviceRestoreVideoMemory, which every code path runs only after a SUCCEEDED Reset (also in the fallback-to-previous-size path: two
+//     Resets, two calls) and regardless of whether the restore itself succeeded. Difference: RW called it at the end of the restore, i.e. before
+//     the rest of CameraBeginUpdate / the following Present; here it runs after librw's whole beginUpdate (inside BeginScene) / showRaster.
 //
 // Also here: RpAnisotPluginAttach, and the no-op RwCoreInjectHooks / RtAnim::InjectHooks (S).
 //
@@ -53,7 +56,9 @@ HRESULT __stdcall ProxyReset(IDirect3DDevice9* self, D3DPRESENT_PARAMETERS* pp) 
 }
 
 void FireRestoreCallbackIfReset(unsigned countBefore) {
-    if (s_ResetCount != countBefore && s_RestoreCallback) {
+    // one call per Reset (showRaster can Reset twice: presentation interval change, then lost device); the pointer is read at call time like
+    // the exe reads 0xC980B0, so a callback may clear or replace itself
+    for (unsigned n = s_ResetCount - countBefore; n != 0 && s_RestoreCallback; n--) {
         s_RestoreCallback();
     }
 }
@@ -77,12 +82,16 @@ void _rwD3D9DeviceSetRestoreCallback(rwD3D9DeviceRestoreCallBack callback) { s_R
 
 rwD3D9DeviceRestoreCallBack _rwD3D9DeviceGetRestoreCallback(void) { return s_RestoreCallback; }
 
+void NotsaRwRenderState_OnEngineStarted(); // renderstate.cpp: RW's render-state defaults + librw cache sync
+
 // Called by RwEngineStart (engine.cpp) once the device exists. Idempotent.
 void NotsaRwPlatform_OnEngineStarted() {
     auto* dev = rw::d3d::d3ddevice;
     if (!dev || !rw::engine || s_WatchedDevice) {
         return;
     }
+    NotsaRwRenderState_OnEngineStarted();
+    s_ResetCount    = 0; // "since RwEngineStart"
     s_WatchedDevice = dev;
     s_OrigVtbl      = *reinterpret_cast<void***>(dev);
     s_ProxyVtbl     = new void*[kVtblSlots];

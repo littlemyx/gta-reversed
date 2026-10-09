@@ -32,6 +32,18 @@ static void RestoreCb() {
 }
 static void OtherCb() {}
 
+// test doubles for two device vtable slots (the test patches the proxy vtable the Reset watch installed, restores it afterwards)
+static int   g_fakeLost = 0, g_fakeNotReset = 0;
+static void* g_origPresent = nullptr; static void* g_origTest = nullptr;
+static HRESULT __stdcall FakePresent(IDirect3DDevice9* d, const RECT* a, const RECT* b, HWND c, const RGNDATA* e) {
+    if (g_fakeLost > 0) { g_fakeLost--; return D3DERR_DEVICELOST; }
+    return reinterpret_cast<HRESULT(__stdcall*)(IDirect3DDevice9*, const RECT*, const RECT*, HWND, const RGNDATA*)>(g_origPresent)(d, a, b, c, e);
+}
+static HRESULT __stdcall FakeTestCoop(IDirect3DDevice9* d) {
+    if (g_fakeNotReset > 0) { g_fakeNotReset--; return D3DERR_DEVICENOTRESET; }
+    return reinterpret_cast<HRESULT(__stdcall*)(IDirect3DDevice9*)>(g_origTest)(d);
+}
+
 int main() {
     std::setvbuf(stdout, nullptr, _IONBF, 0);
     HWND wnd = CreateWindowA("STATIC", "rw_platform_test", WS_OVERLAPPEDWINDOW, 0, 0, 640, 480, nullptr, nullptr, GetModuleHandleA(nullptr), nullptr);
@@ -121,6 +133,29 @@ int main() {
     CHECK(RwCameraShowRaster(cam, nullptr, rwRASTERFLIPDONTWAIT) == cam);
     CHECK(g_calls == afterVsync + 1);
 
+    // exe: one callback per Reset. showRaster can Reset twice in one call: the interval change, then the lost device found by Present
+    {
+        void** vt = *reinterpret_cast<void***>(dev);
+        g_origPresent = vt[17]; g_origTest = vt[3];                  // IDirect3DDevice9::Present / TestCooperativeLevel
+        vt[17] = reinterpret_cast<void*>(&FakePresent); vt[3] = reinterpret_cast<void*>(&FakeTestCoop);
+        g_fakeLost = 1; g_fakeNotReset = 1;
+        const int c0 = g_calls; const unsigned r0 = NotsaRwPlatform_DeviceResetCount();
+        CHECK(RwCameraShowRaster(cam, nullptr, rwRASTERFLIPWAITVSYNC) == cam);   // interval differs from the last call (DONTWAIT)
+        vt[17] = g_origPresent; vt[3] = g_origTest;
+        std::printf("two resets in one showRaster: callbacks +%d, resets +%u\n", g_calls - c0, NotsaRwPlatform_DeviceResetCount() - r0);
+        CHECK(NotsaRwPlatform_DeviceResetCount() == r0 + 2 && g_calls == c0 + 2);
+        CHECK(g_fakeLost == 0 && g_fakeNotReset == 0);
+        // a callback that clears itself is not called again for the second Reset
+        static int selfClearing = 0;
+        _rwD3D9DeviceSetRestoreCallback([] { ++selfClearing; _rwD3D9DeviceSetRestoreCallback(nullptr); });
+        vt[17] = reinterpret_cast<void*>(&FakePresent); vt[3] = reinterpret_cast<void*>(&FakeTestCoop);
+        g_fakeLost = 1; g_fakeNotReset = 1;
+        CHECK(RwCameraShowRaster(cam, nullptr, rwRASTERFLIPDONTWAIT) == cam);
+        vt[17] = g_origPresent; vt[3] = g_origTest;
+        CHECK(selfClearing == 1 && _rwD3D9DeviceGetRestoreCallback() == nullptr);
+        _rwD3D9DeviceSetRestoreCallback(RestoreCb);
+    }
+
     // callback replaced / cleared
     _rwD3D9DeviceSetRestoreCallback(nullptr);
     const int calls = g_calls;
@@ -163,6 +198,17 @@ int main() {
     fb->destroy(); zb->destroy();
     RwCameraSetFrame(cam, nullptr);
     RwCameraDestroy(cam); RwFrameDestroy(frame);
+
+    // Stop / Start again: the Reset watch is installed on the new device and the Reset counter restarts
+    CHECK(RwEngineStop() == TRUE);
+    CHECK(RwEngineStart() == TRUE);
+    CHECK(rw::d3d::d3ddevice != nullptr);
+    CHECK(NotsaRwPlatform_DeviceResetCount() == 0);
+    _rwD3D9DeviceSetRestoreCallback(RestoreCb);
+    g_calls = 0;
+    CHECK(RwD3D9ChangeMultiSamplingLevels(1) == TRUE);
+    CHECK(g_calls == 1 && NotsaRwPlatform_DeviceResetCount() == 1);
+    _rwD3D9DeviceSetRestoreCallback(nullptr);
 
     CHECK(RwEngineStop() == TRUE);
     CHECK(RwEngineClose() == TRUE);

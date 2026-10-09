@@ -201,9 +201,55 @@ static void Im2DTests(IDirect3DDevice9* dev) {
 
     // invalid calls
     CHECK(RwIm2DRenderPrimitive(rwPRIMTYPENAPRIMTYPE, t, 3) == FALSE);
-    CHECK(RwIm2DRenderPrimitive(rwPRIMTYPETRILIST, t, 2) == FALSE);          // not even one triangle
     CHECK(RwIm2DRenderPrimitive(rwPRIMTYPETRILIST, nullptr, 3) == FALSE);
-    CHECK(RwIm2DRenderIndexedPrimitive(rwPRIMTYPETRILIST, q, 4, il, 0) == FALSE);
+    // exe 0x7FBB00/0x7FBD30: a count of 0 primitives is still "drawn" (state set, D3D9 returns S_OK), a negative count is rejected by D3D
+    {
+        RwD3D9SetFVF(0x42); RwD3D9SetRenderState(D3DRS_CLIPPING, TRUE); RwD3D9SetRenderState(D3DRS_LIGHTING, TRUE); rw::d3d::flushCache();
+        CHECK(RwIm2DRenderPrimitive(rwPRIMTYPETRILIST, t, 2) == TRUE);           // not even one triangle: empty draw
+        DWORD fvf = 0, clip = 1, light = 1;
+        dev->GetFVF(&fvf); dev->GetRenderState(D3DRS_CLIPPING, &clip); dev->GetRenderState(D3DRS_LIGHTING, &light);
+        CHECK(fvf == 0x144 && clip == 0 && light == 0);                          // ...but the Im2D state was applied
+        CHECK(RwIm2DRenderPrimitive(rwPRIMTYPELINELIST, t, 1) == TRUE);
+        CHECK(RwIm2DRenderPrimitive(rwPRIMTYPEPOLYLINE, t, 1) == TRUE);          // n-1 = 0
+        CHECK(RwIm2DRenderPrimitive(rwPRIMTYPETRISTRIP, t, 2) == TRUE);          // n-2 = 0
+        CHECK(RwIm2DRenderPrimitive(rwPRIMTYPETRISTRIP, t, 1) == FALSE);         // n-2 < 0
+        CHECK(RwIm2DRenderPrimitive(rwPRIMTYPETRIFAN, t, 0) == FALSE);
+        CHECK(RwIm2DRenderPrimitive(rwPRIMTYPEPOINTLIST, t, 3) == TRUE);         // count stays 0 in the exe
+        CHECK(RwIm2DRenderIndexedPrimitive(rwPRIMTYPETRILIST, q, 4, il, 0) == TRUE);
+        CHECK(RwIm2DRenderIndexedPrimitive(rwPRIMTYPETRILIST, q, 4, il, 2) == TRUE);
+        CHECK(RwIm2DRenderIndexedPrimitive(rwPRIMTYPETRILIST, q, 4, il, -1) == FALSE);
+        CHECK(RwIm2DRenderIndexedPrimitive(rwPRIMTYPETRISTRIP, q, 4, il, 1) == FALSE);
+        CHECK(RwIm2DRenderIndexedPrimitive(rwPRIMTYPENAPRIMTYPE, q, 4, il, 3) == FALSE);
+        // more than 10000 indices for fewer vertices: the exe has no index buffer big enough -> FALSE (before touching the state)
+        RwD3D9SetFVF(0x42); rw::d3d::flushCache();
+        std::vector<RwImVertexIndex> many(10002, 0);
+        CHECK(RwIm2DRenderIndexedPrimitive(rwPRIMTYPETRILIST, q, 4, many.data(), 10002) == FALSE);
+        dev->GetFVF(&fvf);
+        CHECK(fvf == 0x42);
+    }
+    // sub-raster offset (exe: raster offsets of the camera's frame buffer are added to x / y of every vertex; 0x7FB650..0x7FBD30)
+    {
+        RwRaster* fbr = g_cam->frameBuffer;
+        const auto ox = fbr->offsetX, oy = fbr->offsetY;
+        fbr->offsetX = 7; fbr->offsetY = 3;
+        RwIm2DVertex ot[3] = {V2(10, 10, 255, 0, 128), V2(110, 10, 255, 0, 128), V2(10, 110, 255, 0, 128)};
+        Clear(); BaseStates();
+        CHECK(RwIm2DRenderPrimitive(rwPRIMTYPETRILIST, ot, 3) == TRUE);
+        Shot os = Capture(dev);
+        int bx0, by0, bx1, by1;
+        CHECK(os.bbox(kBlack, bx0, by0, bx1, by1) && std::abs(bx0 - 17) <= 1 && std::abs(by0 - 13) <= 1 && std::abs(bx1 - 117) <= 1 && std::abs(by1 - 113) <= 1);
+        CHECK(ot[0].x == 10.0f && ot[0].y == 10.0f);                             // the caller's vertices are not modified
+        Clear();
+        CHECK(RwIm2DRenderLine(ot, 3, 0, 1) == TRUE);
+        os = Capture(dev);
+        CHECK(os.bbox(kBlack, bx0, by0, bx1, by1) && std::abs(bx0 - 17) <= 1 && by0 >= 12 && by1 <= 14);
+        Clear();
+        RwImVertexIndex oi[3] = {0, 1, 2};
+        CHECK(RwIm2DRenderIndexedPrimitive(rwPRIMTYPETRILIST, ot, 3, oi, 3) == TRUE);
+        os = Capture(dev);
+        CHECK(os.bbox(kBlack, bx0, by0, bx1, by1) && std::abs(bx0 - 17) <= 1 && std::abs(by0 - 13) <= 1);
+        fbr->offsetX = ox; fbr->offsetY = oy;
+    }
     // RwIm2DGetNearScreenZ / GetFarScreenZ come from the device z range
     CHECK(RwIm2DGetNearScreenZ() == rw::engine->device.zNear && RwIm2DGetFarScreenZ() == rw::engine->device.zFar);
     std::printf("2D z range %g..%g\n", RwIm2DGetNearScreenZ(), RwIm2DGetFarScreenZ());
@@ -342,6 +388,52 @@ static void Im3DTests(IDirect3DDevice9* dev, int W, int H) {
     RwIm3DEnd();
     CHECK(Capture(dev).countNot(kBlack) == 0);
     RwMatrixDestroy(rm); RwMatrixDestroy(tm); RwMatrixDestroy(m);
+
+    // exe 0x7EF450: the vertex count lives in a 16-bit field, 0x10000 vertices become 0 -> nothing is drawn (but the call succeeds)
+    {
+        std::vector<RwIm3DVertex> big(0x10000, V3(0, 0, z, 255, 0, 0));
+        big[0] = tri[0]; big[1] = tri[1]; big[2] = tri[2];
+        Clear();
+        CHECK(RwIm3DTransform(big.data(), 0x10000, nullptr, 0) == big.data());
+        CHECK(RwIm3DRenderPrimitive(rwPRIMTYPETRILIST) == TRUE);
+        CHECK(RwIm3DEnd() == TRUE);
+        CHECK(Capture(dev).countNot(kBlack) == 0);
+        Clear();
+        RwIm3DTransform(big.data(), 0xFFFF, nullptr, 0);
+        CHECK(RwIm3DRenderPrimitive(rwPRIMTYPETRILIST) == TRUE);
+        RwIm3DEnd();
+        CHECK(Capture(dev).countNot(kBlack) == basePx);
+    }
+    // a NULL vertex pointer is no transform in progress (Render / End test the pointer): everything fails
+    CHECK(RwIm3DTransform(nullptr, 3, nullptr, 0) == nullptr);
+    CHECK(RwIm3DRenderPrimitive(rwPRIMTYPETRILIST) == FALSE && RwIm3DRenderTriangle(0, 1, 2) == FALSE && RwIm3DEnd() == FALSE);
+    // an indexed call whose index count rounds down to 0 draws the whole vertex array non-indexed (node 0x80E40C: numIndices == 0 -> 0x80E7C5)
+    {
+        RwImVertexIndex bad[3] = {2, 2, 2};
+        Clear();
+        RwIm3DTransform(tri, 3, nullptr, 0);
+        CHECK(RwIm3DRenderIndexedPrimitive(rwPRIMTYPETRILIST, bad, 2) == TRUE);   // 2 -> 0 indices after rounding
+        RwIm3DEnd();
+        CHECK(Capture(dev).countNot(kBlack) == basePx);
+        Clear();
+        RwIm3DTransform(tri, 3, nullptr, 0);
+        CHECK(RwIm3DRenderIndexedPrimitive(rwPRIMTYPETRILIST, bad, 3) == TRUE);   // degenerate triangle (2,2,2): nothing
+        RwIm3DEnd();
+        CHECK(Capture(dev).countNot(kBlack) == 0);
+        // state set by the node: NOCLIP -> CLIPPING off, otherwise on; lighting / normalize off
+        DWORD clip = 7, light = 7, norm = 7;
+        RwD3D9SetRenderState(D3DRS_LIGHTING, TRUE); RwD3D9SetRenderState(D3DRS_NORMALIZENORMALS, TRUE);
+        RwIm3DTransform(tri, 3, nullptr, rwIM3D_NOCLIP);
+        RwIm3DRenderPrimitive(rwPRIMTYPETRILIST);
+        RwIm3DEnd();
+        dev->GetRenderState(D3DRS_CLIPPING, &clip); dev->GetRenderState(D3DRS_LIGHTING, &light); dev->GetRenderState(D3DRS_NORMALIZENORMALS, &norm);
+        CHECK(clip == 0 && light == 0 && norm == 0);
+        RwIm3DTransform(tri, 3, nullptr, 0);
+        RwIm3DRenderPrimitive(rwPRIMTYPETRILIST);
+        RwIm3DEnd();
+        dev->GetRenderState(D3DRS_CLIPPING, &clip);
+        CHECK(clip == 1);
+    }
 
     // Im2D after Im3D still works (FVF / shader / stage state are re-set per call)
     RwIm2DVertex t2[3] = {V2(10, 10, 255, 0, 128), V2(110, 10, 255, 0, 128), V2(10, 110, 255, 0, 128)};

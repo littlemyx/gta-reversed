@@ -11,12 +11,16 @@
 //         raster at [0xC9BCC0]+0x60. State: FVF 0x144, no vertex/pixel shader, CLIPPING off, LIGHTING off, texture stage 0 modulates when a texture
 //         is bound (rwRENDERSTATETEXTURERASTER) and passes the diffuse colour/alpha otherwise. All other states (blend, z, fog, ...) are the caller's.
 //         Return value = D3D call succeeded. Primitive count: line list n/2, polyline n-1, tri list n/3, strip/fan n-2; RwPrimitiveType 0 -> FALSE.
+//         An empty draw (count 0: too few vertices for one list primitive, point lists) still sets the state and returns TRUE like the exe; a
+//         negative count (strip / polyline with too few vertices) is rejected by D3D -> FALSE.
 //   Im3D  RwIm3DTransform only records {vertices, count, LTM pointer, flags|VERTEXXYZ|VERTEXRGBA} (RW ran a transform pipeline, D3D9 does the
 //         transform in hardware) and returns the vertex pointer (NULL when numVerts > 0x10000). Each Render* call then sets FVF XYZ|DIFFUSE(|TEX1 with
 //         rwIM3D_VERTEXUV), the LTM as D3DTS_WORLD (NULL or identity-flagged = identity), vertex alpha on unless rwIM3D_ALLOPAQUE, CLIPPING off with
 //         rwIM3D_NOCLIP, LIGHTING and NORMALIZENORMALS off, the stage-0 ops as in Im2D, and draws the vertices re-packed to 24 (or 16) bytes.
-//         Primitive/index counts are rounded down to whole lines/triangles. Render* without a transform in progress, and RwPrimitiveType 0 / 6
-//         (RW has no Im3D point lists) return FALSE; RwIm3DEnd returns FALSE when no transform is in progress.
+//         Primitive/index counts are rounded down to whole lines/triangles; an indexed call left with no index draws the whole vertex array
+//         like the exe. The vertex count is a 16-bit field (0x10000 -> 0 vertices). The render node reports TRUE whatever the D3D draw returned.
+//         Render* without a transform in progress (or a NULL vertex pointer), and RwPrimitiveType 0 / 6 (RW has no Im3D point lists) return
+//         FALSE; RwIm3DEnd returns FALSE when no transform is in progress.
 //
 // Only needs fakerw + librw + the CRT; shares librw's state caches with rwd3d_ff.cpp (RwD3D9Set*), so librw's own draws stay consistent.
 #ifdef NOTSA_RW_LIBRW
@@ -54,7 +58,8 @@ D3DPRIMITIVETYPE D3DPrim(RwPrimitiveType t) {
     }
 }
 
-// primitives that n vertices / indices make (exe jump tables 0x7FBD18 / 0x7FC1E4); 0 for point lists and invalid types
+// primitives that n vertices / indices make (exe jump tables 0x7FBD18 / 0x7FC1E4, Im3D node 0x80E944): 0 for point lists (the exe
+// leaves the count at 0 for them) and invalid types; may be negative for strips / polylines with too few vertices (D3D rejects those)
 int PrimCount(RwPrimitiveType t, int n) {
     switch (t) {
     case rwPRIMTYPELINELIST: return n / 2;
@@ -129,19 +134,25 @@ const RwIm2DVertex* OffsetVertices(const RwIm2DVertex* src, RwInt32 n, std::vect
 std::vector<RwIm2DVertex> s_Im2DScratch;
 
 RwBool Im2DDraw(RwPrimitiveType type, const RwIm2DVertex* verts, RwInt32 numVerts) {
-    if (!Dev() || !verts || numVerts <= 0) {
+    if (!Dev() || !verts || numVerts < 0) {
         return FALSE;
     }
     const D3DPRIMITIVETYPE prim = D3DPrim(type);
     if (prim == 0) {
+        if (type == rwPRIMTYPENAPRIMTYPE) {
+            SetupIm2DState(); // exe (0x7FBB00): the state is set before the draw call, D3D then rejects primitive type 0
+        }
         return FALSE;
     }
     const int primCount = PrimCount(type, numVerts);
-    if (primCount <= 0) {
-        return type == rwPRIMTYPEPOINTLIST ? TRUE : FALSE; // D3D9 returns S_OK for an empty draw; fewer vertices than one primitive is invalid
+    if (primCount < 0) {
+        return FALSE; // strip / polyline with too few vertices: the exe passes the negative count on and D3D rejects the call
     }
     const RwIm2DVertex* data = OffsetVertices(verts, numVerts, s_Im2DScratch);
     SetupIm2DState();
+    if (primCount == 0) {
+        return TRUE; // the exe still issues the call for an empty draw (and point lists, whose count it leaves at 0): D3D9 returns S_OK
+    }
     const HRESULT hr = Dev()->DrawPrimitiveUP(prim, primCount, data, sizeof(RwIm2DVertex));
     SyncCachesAfterUP();
     return SUCCEEDED(hr) ? TRUE : FALSE;
@@ -188,6 +199,9 @@ RwInt32 RoundCount(RwPrimitiveType type, RwInt32 n) {
     return n;
 }
 
+// The render node (0x80E270) always reports success once the state is set, whatever the D3D draw call returns (also for an empty draw).
+// `indices` + numIndices > 0: indexed draw; otherwise (RwIm3DRenderPrimitive, and RwIm3DRenderIndexedPrimitive with no index left after
+// rounding: node 0x80E40C falls back to the non-indexed path) the whole vertex array is drawn.
 bool Im3DDraw(RwPrimitiveType type, const RwImVertexIndex* indices, RwInt32 numIndices) {
     if (!Dev()) {
         return false;
@@ -209,6 +223,10 @@ bool Im3DDraw(RwPrimitiveType type, const RwImVertexIndex* indices, RwInt32 numI
     RwD3D9SetVertexShader(nullptr);
     RwD3D9SetPixelShader(nullptr);
 
+    if (s_Im3D.num == 0) {
+        return true; // 0x80E3F8: no vertices, no draw
+    }
+
     // 36 -> 24 / 16 bytes
     s_Im3DPacked.resize(static_cast<size_t>(s_Im3D.num) * stride);
     for (RwUInt32 i = 0; i < s_Im3D.num; i++) {
@@ -222,20 +240,19 @@ bool Im3DDraw(RwPrimitiveType type, const RwImVertexIndex* indices, RwInt32 numI
     }
     rw::d3d::flushCache();
 
-    HRESULT hr = D3D_OK;
-    if (indices) {
+    if (indices && numIndices != 0) {
         const int primCount = PrimCount(type, numIndices);
         if (primCount > 0) {
-            hr = Dev()->DrawIndexedPrimitiveUP(prim, 0, s_Im3D.num, primCount, indices, D3DFMT_INDEX16, s_Im3DPacked.data(), stride);
+            Dev()->DrawIndexedPrimitiveUP(prim, 0, s_Im3D.num, primCount, indices, D3DFMT_INDEX16, s_Im3DPacked.data(), stride);
         }
     } else {
-        const int primCount = PrimCount(type, numIndices);   // non-indexed: numIndices = number of vertices to draw
+        const int primCount = PrimCount(type, static_cast<RwInt32>(s_Im3D.num));
         if (primCount > 0) {
-            hr = Dev()->DrawPrimitiveUP(prim, primCount, s_Im3DPacked.data(), stride);
+            Dev()->DrawPrimitiveUP(prim, primCount, s_Im3DPacked.data(), stride);
         }
     }
     SyncCachesAfterUP();
-    return SUCCEEDED(hr);
+    return true;
 }
 
 bool Im3DPrimTypeSupported(RwPrimitiveType t) { return t >= rwPRIMTYPELINELIST && t <= rwPRIMTYPETRIFAN; }
@@ -266,22 +283,28 @@ RwBool RwIm2DRenderTriangle(RwIm2DVertex* vertices, RwInt32 numVertices, RwInt32
 }
 
 RwBool RwIm2DRenderIndexedPrimitive(RwPrimitiveType primType, RwIm2DVertex* vertices, RwInt32 numVertices, RwImVertexIndex* indices, RwInt32 numIndices) {
-    if (!Dev() || !vertices || !indices || numVertices <= 0 || numIndices <= 0) {
+    if (!Dev() || !vertices || !indices || numVertices < 0 || numIndices < 0) {
         return FALSE;
     }
     const D3DPRIMITIVETYPE prim = D3DPrim(primType);
     if (prim == 0) {
+        if (primType == rwPRIMTYPENAPRIMTYPE) {
+            SetupIm2DState(); // exe (0x7FBD30): state first, then D3D rejects type 0
+        }
         return FALSE;
     }
     if (numIndices > numVertices && numIndices > kMaxIm2DIndexedIndices) {
         return FALSE;
     }
     const int primCount = PrimCount(primType, numIndices);
-    if (primCount <= 0) {
-        return primType == rwPRIMTYPEPOINTLIST ? TRUE : FALSE;
+    if (primCount < 0) {
+        return FALSE;
     }
     const RwIm2DVertex* data = OffsetVertices(vertices, numVertices, s_Im2DScratch);
     SetupIm2DState();
+    if (primCount == 0) {
+        return TRUE; // empty draw (see Im2DDraw)
+    }
     const HRESULT hr = Dev()->DrawIndexedPrimitiveUP(prim, 0, numVertices, primCount, indices, D3DFMT_INDEX16, data, sizeof(RwIm2DVertex));
     SyncCachesAfterUP();
     return SUCCEEDED(hr) ? TRUE : FALSE;
@@ -295,10 +318,10 @@ void* RwIm3DTransform(RwIm3DVertex* pVerts, RwUInt32 numVerts, RwMatrix* ltm, Rw
         return nullptr;
     }
     s_Im3D.verts  = pVerts;
-    s_Im3D.num    = numVerts;
+    s_Im3D.num    = numVerts & 0xFFFF;   // the exe keeps the count in a 16-bit field (0x7EF498): exactly 0x10000 vertices become 0
     s_Im3D.ltm    = ltm;
     s_Im3D.flags  = flags | rwIM3D_VERTEXXYZ | rwIM3D_VERTEXRGBA;
-    s_Im3D.active = true;
+    s_Im3D.active = pVerts != nullptr;   // the Render / End functions test the vertex pointer (0x7EF52D, 0x7EF55E)
     return pVerts;
 }
 
@@ -314,7 +337,7 @@ RwBool RwIm3DRenderPrimitive(RwPrimitiveType primType) {
     if (!s_Im3D.active || !Im3DPrimTypeSupported(primType)) {
         return FALSE;
     }
-    return Im3DDraw(primType, nullptr, RoundCount(primType, static_cast<RwInt32>(s_Im3D.num))) ? TRUE : FALSE;
+    return Im3DDraw(primType, nullptr, 0) ? TRUE : FALSE;
 }
 
 RwBool RwIm3DRenderIndexedPrimitive(RwPrimitiveType primType, RwImVertexIndex* indices, RwInt32 numIndices) {

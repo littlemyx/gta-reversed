@@ -352,6 +352,8 @@ if (${RE_PROJECT}_RW_LIBRW)
     add_executable(rw_platform_test EXCLUDE_FROM_ALL
         "${PROJECT_SOURCE_DIR}/tests/standalone/rw_platform_test.cpp"
         standalone/rw/platform.cpp
+        standalone/rw/renderstate.cpp   # NotsaRwRenderState_OnEngineStarted (called by platform.cpp)
+        standalone/rw/rwd3d_ff.cpp
         standalone/rw/engine.cpp
         standalone/rw/rwglobals.cpp
         standalone/rw/raster.cpp

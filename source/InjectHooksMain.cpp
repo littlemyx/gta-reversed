@@ -174,6 +174,9 @@
 #include "HandShaker.h"
 #include "TempColModels.h"
 #include "Conversations.h"
+#include "Credits.h"
+#include "IdleCam.h"
+#include "VehicleSaveStructure.h"
 #include "DecisionMakers/DecisionMakerTypesFileLoader.h"
 
 // Plant
@@ -987,6 +990,17 @@ void InjectHooksMain() {
     CCustomBuildingDNPipeline::InjectHooks();
     CCustomCarEnvMapPipeline::InjectHooks();
     CConversations::InjectHooks();
+    CConversationForPed::InjectHooks();
+    CConversationNode::InjectHooks();
+    CPedToPlayerConversations::InjectHooks();
+    CCoverPoint::InjectHooks();
+    CCredits::InjectHooks();
+    CHud::InjectHooks();
+    CIdleCam::InjectHooks();
+    CPlayerSkin::InjectHooks();
+    CVehicleSaveStructure::InjectHooks();
+    CMaths::InjectHooks();
+    CTaskTimer::InjectHooks();
     CProjectileInfo::InjectHooks();
 
     const auto Pools = [] {
@@ -1330,6 +1344,7 @@ void InjectHooksMain() {
         CTaskSimpleWaitUntilPedIsInCar::InjectHooks();
         CTaskSimpleWaitUntilPedIsOutCar::InjectHooks();
         CTaskComplexSequence::InjectHooks();
+        CTaskSequences::InjectHooks();
         CTaskSimpleCarSlowDragPedOut::InjectHooks();
         CTaskManager::InjectHooks();
         CTaskSimple::InjectHooks();

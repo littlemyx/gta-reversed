@@ -77,7 +77,7 @@ void CCollision::Init() {
 
 // 0x4162E0
 void CCollision::Shutdown() {
-    for (auto i = ms_colModelCache.freeListTail.prev; i != &ms_colModelCache.usedListHead; i = i->prev) {
+    for (auto i = ms_colModelCache.usedListTail.prev; i != &ms_colModelCache.usedListHead; i = i->prev) { // Original: starts at the LEAST recently used link
         if (i->data) {
             // Original (0x4162E0): calls the *member* function, the links must NOT be moved to the free list while iterating
             i->data->RemoveTrianglePlanes();
@@ -139,7 +139,7 @@ void CCollision::RemoveTrianglePlanes(CCollisionData* colData) {
 }
 
 // 0x411E70
-bool CCollision::TestSphereSphere(CColSphere const& sphere1, CColSphere const& sphere2) { // Yes, it's __stdcall
+bool CCollision::TestSphereSphere(CColSphere const& sphere1, CColSphere const& sphere2) { // NOTE: it's a plain __cdecl (`ret`)
     ZoneScoped;
 
     // Original (0x411E70): everything stays in extended precision, the compare is STRICT (`FCOMPP` + `test ah, 0x41` => false on `<=` and NaN)
@@ -152,7 +152,12 @@ bool CCollision::TestSphereSphere(CColSphere const& sphere1, CColSphere const& s
 
 // 0x411EC0
 void CalculateColPointInsideBox(CBox const& box, CVector const& point, CColPoint& colPoint) {
-    const auto pointToCenter = point - box.GetCenter();
+    // Original (0x411EC0): `(max + min) * 0.5`: the X sum stays unrounded until the product is spilled, the Y sum + product stay
+    // on the x87 stack, the Z sum is spilled to a float (before the product). Then `point - center` is spilled to floats.
+    const float  cx = (float)(((double)box.m_vecMax.x + box.m_vecMin.x) * 0.5);
+    const double cy = ((double)box.m_vecMax.y + box.m_vecMin.y) * 0.5;
+    const double cz = (double)(float)((double)box.m_vecMax.z + box.m_vecMin.z) * 0.5;
+    const CVector pointToCenter{ (float)((double)point.x - cx), (float)((double)point.y - cy), (float)((double)point.z - cz) };
 
     // Distance of the point to the face on each axis (the face on the side of the point's offset from the center).
     // Original: the X distance stays on the x87 stack (unrounded), Y and Z are spilled to floats.
@@ -364,10 +369,11 @@ bool CCollision::ProcessSphereBox(CColSphere const& sph, CColBox const& box, CCo
         const auto distSqD = SquaredMagnitudeD(dir); // Unrounded on the x87 stack for the compare below
         const auto distSq = (float)distSqD;          // ... but spilled to a float for everything else
         if (distSqD < minDistSq) { // NaN => false
-            const auto dist = std::sqrt(distSq);
-            if (!(dist <= sph.m_fRadius)) { // Original: `dist > radius || NaN` => false (equal passes!)
+            const double distD = std::sqrt((double)distSq); // Original: `fsqrt` of the spilled float, compared before it's spilled itself
+            if (!(distD <= sph.m_fRadius)) { // Original: `dist > radius || NaN` => false (equal passes!)
                 return false;
             }
+            const auto dist = (float)distD;
 
             colp.m_vecPoint      = p;
             colp.m_vecNormal     = DivideByReciprocal(dir, dist);
@@ -430,6 +436,7 @@ double DistToLineSqrD(CVector const& ln0, CVector const& ln1, CVector const& pt)
     // Term orders are fixed by the asm (see below).
     const double lx = (double)ln1.x - ln0.x, ly = (double)ln1.y - ln0.y, lz = (double)ln1.z - ln0.z;
     const float  px = pt.x - ln0.x, py = pt.y - ln0.y, pz = pt.z - ln0.z;
+    const double pzE = (double)pt.z - ln0.z; // ... except for `p.z`, which is spilled but the unrounded value is used for the dot product
 
     //        * P
     //      / |
@@ -445,15 +452,16 @@ double DistToLineSqrD(CVector const& ln0, CVector const& ln1, CVector const& pt)
     // b, c - Triangle sides
     // a    - The distance we want to find out :D
 
-    const float pl = (float)((double)px * lx + (double)pz * lz + (double)py * ly); // Dot product `p . l`
+    const double plD = pzE * lz + (double)px * lx + (double)py * ly; // Dot product `p . l` (terms: z, x, y)
+    const float  pl  = (float)plD;                                   // ... is spilled to a float, but the 1st compare uses the unrounded value
 
-    if (pl <= 0.f) { // Before origin
+    if (plD <= 0.0) { // Before origin (NaN => no)
         return (double)pz * pz + (double)py * py + (double)px * px; // Dist to origin
     }
 
     const double ll = lx * lx + lz * lz + ly * ly; // Line mag. sq.
 
-    if (pl >= ll) { // After end
+    if (!(pl < ll)) { // After end (original: `pl < ll` => middle, so NaN ends up here)
         const double ex = (double)pt.x - ln1.x, ey = (double)pt.y - ln1.y, ez = (double)pt.z - ln1.z;
         return ez * ez + ey * ey + ex * ex; // Dist to end
     }
@@ -2394,7 +2402,7 @@ bool CCollision::SphereCastVsSphere(const CColSphere& spA, const CColSphere& spB
         const double dy = (double)spA.m_vecCenter.y - spS.m_vecCenter.y;
         const double dz = (double)spA.m_vecCenter.z - spS.m_vecCenter.z;
         const double sumR = (double)spS.m_fRadius + spA.m_fRadius;
-        if (sumR * sumR > dx * dx + dy * dy + dz * dz) {
+        if (sumR * sumR > dx * dx + dz * dz + dy * dy) { // Term order: x, z, y
             return true;
         }
     }

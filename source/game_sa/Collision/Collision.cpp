@@ -978,8 +978,9 @@ bool CCollision::ProcessLineSphere(CColLine const& line, CColSphere const& spher
         return false;
     }
 
-    const float t = (float)((-B - std::sqrt(disc)) / a);
-    if (t < 0.f || t > 1.f || !(t < depth)) {
+    const double tE = (-B - std::sqrt(disc)) / a; // The first compare (`< 0`) uses the unrounded value, the others the float spill
+    const float  t  = (float)tE;
+    if (tE < 0.0 || t > 1.f || !(t < depth)) {
         return false;
     }
 
@@ -2189,6 +2190,59 @@ bool CCollision::ProcessSphereTriangle(
     return true;
 }
 
+/*!
+* @addr 0x417730
+* @brief Is there anything (that isn't see-/shoot-through if requested) on the line? Everything is tested in the model's space.
+*/
+bool CCollision::TestLineOfSight(const CColLine& lnws, const CMatrix& transform, CColModel& cm, bool doSeeThroughCheck, bool doShootThroughCheck) {
+    ZoneScoped;
+
+    const auto cd = cm.m_pColData;
+    if (!cd) {
+        return false;
+    }
+
+    // Transform line into object space
+    const auto invTransform = Invert(transform);
+    const CColLine lnos{ TransformPointOG(invTransform, lnws.m_vecStart), TransformPointOG(invTransform, lnws.m_vecEnd) };
+
+    // If we don't intersect with the bounding box, no chance on the rest
+    if (!TestLineBox_DW(lnos, cm.GetBoundingBox())) {
+        return false;
+    }
+
+    // Original: surfaces that are see-/shoot-through are SKIPPED (if the corresponding check is requested)
+    const auto ShouldSkip = [=](eSurfaceType surf) {
+        return (doSeeThroughCheck && g_surfaceInfos.IsSeeThrough(surf))
+            || (doShootThroughCheck && g_surfaceInfos.IsShootThrough(surf));
+    };
+
+    for (auto i = 0; i < cd->m_nNumSpheres; i++) {
+        const auto& sphere = cd->m_pSpheres[i];
+        if (!ShouldSkip(sphere.m_Surface.m_nMaterial) && TestLineSphere(lnos, sphere)) {
+            return true;
+        }
+    }
+
+    for (auto i = 0; i < cd->m_nNumBoxes; i++) {
+        const auto& box = cd->m_pBoxes[i];
+        if (!ShouldSkip(box.m_Surface.m_nMaterial) && TestLineBox_DW(lnos, box)) {
+            return true;
+        }
+    }
+
+    CalculateTrianglePlanes(cd);
+
+    for (auto i = 0; i < cd->m_nNumTriangles; i++) {
+        const auto& tri = cd->m_pTriangles[i];
+        if (!ShouldSkip(tri.m_nMaterial) && TestLineTriangle(lnos, cd->m_pVertices, tri, cd->m_pTrianglePlanes[i])) {
+            return true;
+        }
+    }
+
+    return false;
+}
+
 // 0x417950
 bool CCollision::ProcessLineOfSight(const CColLine& lnws, const CMatrix& transform, CColModel& colModel, CColPoint& colPoint, float& maxTouchDistance, bool doSeeThroughCheck,
                                     bool doShootThroughCheck) {
@@ -2468,6 +2522,7 @@ int32 CCollision::ProcessColModels(const CMatrix& transformA, CColModel& cmA,
     constexpr auto MAX_BOXES{ 64u };    // Same, but for boxes      - If more, all following are ignored.
     constexpr auto MAX_TRIS{ 600u };    // Same, but for triangles  - If more, all following are ignored.
     constexpr auto MAX_LINES{ 16u };    // Game didn't originally check for this, so I assume no models ever have more than 16 lines.
+    constexpr auto TRIS_LIMIT{ 0x257u }; // The exe stops collecting triangles once it has 599 (`cmp eax, 0x257 / jge`), the arrays hold 600
 
     // Transform `spheres` center position using `transform` and store them in `outSpheres`
     const auto TransformSpheres = []<size_t n>(auto&& spheres, const CMatrix& transform, CColSphere(&outSpheres)[n]) {
@@ -2517,16 +2572,13 @@ int32 CCollision::ProcessColModels(const CMatrix& transformA, CColModel& cmA,
         return 0;
     }
 
-    // Number of B's REAL colliding spheres, before B's disk pseudo-spheres are appended below.
-    // The first block and the A-disk path use the FULL list (they decode disk indices), but the
-    // trailing "B-spheres vs A-tris/boxes" block must iterate only the real spheres - the original
-    // caps that loop at `numCollSphB - <appended disk count>` (0x419BA9: `v210 - v212`). Testing B's
-    // wheel pseudo-spheres against A's triangles otherwise yields phantom collision points.
-    const uint32 numRealCollSphB = numCollSphB;
-
     // 0x418902
-    // Transform B's disks into A's space and append them to the colliding sphere list
-    // (MS/Bump mapped disks as spheres + extra data onto the same pseudo-sphere list)
+    // B's disks: transformed into A's space right after B's regular spheres (`sphB[numSpheres + i]`), and the ones touching A's
+    // bounding box are counted in `numDisksB`. QUIRK (reproduced): the exe writes the indices of those disks into the list
+    // `collSphB` starting at its FIRST slot (a pointer reset to the list start, not appended after the real sphere hits) and
+    // leaves `numCollSphB` untouched. The trailing "B-spheres vs A-tris/boxes" block iterates `numCollSphB - numDisksB` entries of
+    // that list (0x419B91: `[esp+0x48] - [esp+0x50]`). Nothing else ever looks at B's disks.
+    uint32 numDisksB{};
     if (cdB.bUsesDisks && cdB.m_nNumLines) {
         for (auto diskIdx = 0u; diskIdx < cdB.m_nNumLines; diskIdx++) {
             const auto& disk{ cdB.m_pDisks[diskIdx] };
@@ -2535,20 +2587,36 @@ int32 CCollision::ProcessColModels(const CMatrix& transformA, CColModel& cmA,
             sph.m_vecCenter = TransformPointOG(transformBtoA, disk.m_vecCenter);
             sph.m_fRadius   = disk.m_fRadius;
             sph.m_Surface   = disk.m_Surface;
-
-            if (TestSphereBox(sph, cmA.GetBoundingBox())) {
-                assert(numCollSphB < MAX_SPHERES); // Same bounds as regular spheres
-                collSphB[numCollSphB++] = cdB.m_nNumSpheres + diskIdx;
+        }
+        for (auto diskIdx = 0u; diskIdx < cdB.m_nNumLines; diskIdx++) {
+            if (TestSphereBox(sphB[cdB.m_nNumSpheres + diskIdx], cmA.GetBoundingBox())) {
+                collSphB[numDisksB++] = diskIdx;
+                if (numDisksB >= MAX_SPHERES) { // 0x418A29: `cmp edi, 0x967340`
+                    break;
+                }
             }
         }
     }
+    // Number of entries of `collSphB` the trailing block (B's spheres vs A's triangles/boxes) walks
+    const int32 numCollSphBTail = (int32)numCollSphB - (int32)numDisksB;
 
     // 0x418A4E
     // Test B's boxes against A's bounding sphere
     static uint32 collBoxB[MAX_BOXES]; // Indices of B's boxes colliding with A's bounding sphere
     uint32        numCollBoxB{};
+    // 0x418A54: this inlined copy of TestSphereBox spills the first sum (`x + radius`) to a float temporary, the other five tests stay unrounded
+    const auto TestSphereBoxSpilledMinX = [](const CSphere& sph, const CBox& box) {
+        const auto& c = sph.m_vecCenter;
+        const auto  r = sph.m_fRadius;
+        return !((double)(float)((double)c.x + r) < box.m_vecMin.x
+              || (double)c.x - r > box.m_vecMax.x
+              || (double)c.y + r < box.m_vecMin.y
+              || (double)c.y - r > box.m_vecMax.y
+              || (double)c.z + r < box.m_vecMin.z
+              || (double)c.z - r > box.m_vecMax.z);
+    };
     for (auto&& [triIdx, bb] : rngv::enumerate(cdB.GetBoxes())) {
-        if (TestSphereBox(colABoundSphereSpaceB, bb)) {
+        if (TestSphereBoxSpilledMinX(colABoundSphereSpaceB, bb)) {
             collBoxB[numCollBoxB++] = triIdx;
             if (numCollBoxB >= MAX_BOXES) {
                 break;
@@ -2565,20 +2633,24 @@ int32 CCollision::ProcessColModels(const CMatrix& transformA, CColModel& cmA,
         CalculateTrianglePlanes(&cmB); // Moved check inside if (Doesn't make a difference practically)
         assert(cdB.m_pTrianglePlanes);
 
-        // Process a single triangle
+        // Process a single triangle, returns true if it was added to the list
         const auto ProcessOneTri = [&](uint32 triIdx) {
             if (TestSphereTriangle(colABoundSphereSpaceB, cdB.m_pVertices, cdB.m_pTriangles[triIdx], cdB.m_pTrianglePlanes[triIdx])) {
                 collTrisB[numCollTrisB++] = triIdx;
+                return true;
             }
+            return false;
         };
 
         if (cdB.bHasFaceGroups) { // Test by using face groups - Thanks to those who helped me figure this out :)
             // 0x418B23
-            for (auto&& group : cdB.GetFaceGroups()) {
+            // The exe walks the groups from the one nearest to the triangles downwards (group `i` lives at `m_pTriangles - 4 - 28 * (i + 1)`),
+            // i.e. in REVERSE of the memory order `GetFaceGroups()` returns => the order of the collected triangles (and so of the
+            // contact points when all collisions are returned) depends on it.
+            for (auto&& group : rngv::reverse(cdB.GetFaceGroups())) {
                 if (TestSphereBox(colABoundSphereSpaceB, group.bb)) {      // Quick BB check
-                    for (auto triIdx{ group.first }; triIdx <= group.last; triIdx++) { // Check all triangles in this group
-                        ProcessOneTri(triIdx);
-                        if (numCollTrisB >= MAX_TRIS) {
+                    for (auto triIdx{ (int32)(int16)group.first }; triIdx <= (int32)(int16)group.last; triIdx++) { // Check all triangles in this group (signed 16 bit, `movsx`)
+                        if (ProcessOneTri((uint32)triIdx) && numCollTrisB >= TRIS_LIMIT) { // Only checked after a hit; only leaves this group
                             break;
                         }
                     }
@@ -2586,7 +2658,7 @@ int32 CCollision::ProcessColModels(const CMatrix& transformA, CColModel& cmA,
             }
         } else { // Game checked here if B.m_nNumTriangles > 0, but that is a redundant check.
             // 0x418C40
-            for (auto triIdx = 0u; triIdx < cdB.m_nNumTriangles && numCollTrisB < MAX_TRIS; triIdx++) {
+            for (auto triIdx = 0u; triIdx < cdB.m_nNumTriangles && numCollTrisB < TRIS_LIMIT; triIdx++) {
                 ProcessOneTri(triIdx);
             }
         }
@@ -2612,7 +2684,10 @@ int32 CCollision::ProcessColModels(const CMatrix& transformA, CColModel& cmA,
             // 0x418CF9
             // Spheres
             for (auto sphereBIdx : std::span{ collSphB, numCollSphB }) {
-                // If it's a disk's sphere use that, otherwise use the regular sphere
+                // 0x418D00: indices past the regular spheres (only possible through the disk-index quirk, see above) are disks, if any
+                if (sphereBIdx >= cdB.m_nNumSpheres && !(cdB.bUsesDisks && cdB.m_nNumLines)) {
+                    continue;
+                }
                 const auto& sphereB{ sphereBIdx < cdB.m_nNumSpheres ? cdB.m_pSpheres[sphereBIdx] : static_cast<const CColSphere&>(cdB.m_pDisks[sphereBIdx - cdB.m_nNumSpheres]) };
 
                 if (ProcessSphereSphere(sphereA, sphereB, sphereCPs[nNumSphereCPs], minTouchDist)) {
@@ -2694,6 +2769,15 @@ int32 CCollision::ProcessColModels(const CMatrix& transformA, CColModel& cmA,
         // 0x419731 - Moved logic into loop (storing all lines in a separate array isn't necessary at all)
         // 0x419752 - Skipped this, as it just filled an array with 1:1 index mapping - Useless - They probably had some BB checking logic here?
 
+        // Disk contact height: `sqrt(r^2 - dy^2 - dx^2) + z`, all of it unrounded on the x87 stack and NOT clamped (a negative radicand gives NaN
+        // and then fails the comparisons below), the differences are not rounded to float either (0x4191C9, 0x419364)
+        const auto DiskHitK = [](const CVector& cpInA, const CColDisk& disk) -> double {
+            const double dy = (double)cpInA.y - disk.m_vecCenter.y;
+            const double dx = (double)cpInA.x - disk.m_vecCenter.x;
+            const double r  = disk.m_fRadius;
+            return std::sqrt(r * r - dy * dy - dx * dx) + cpInA.z;
+        };
+
         if (cdA.bUsesDisks) { // 0x418F5B
 
             // Mirror the original's quirk: the binary *writes* the caller's
@@ -2738,16 +2822,14 @@ int32 CCollision::ProcessColModels(const CMatrix& transformA, CColModel& cmA,
                 if (TestSphereBox(sphereAinB, cmB.GetBoundingBox())) {
                     // Spheres: accepted hits only produce a LINE contact (like wheels pressing down)
                     for (auto sphBIdx : std::span{ collSphB, numCollSphB }) {
-                        const auto& sphereB{ sphBIdx < cdB.m_nNumSpheres
-                                                 ? cdB.m_pSpheres[sphBIdx]
-                                                 : static_cast<const CColSphere&>(cdB.m_pDisks[sphBIdx - cdB.m_nNumSpheres]) };
+                        const auto& sphereB{ cdB.m_pSpheres[sphBIdx] }; // 0x419159: no disk lookup here
 
                         float minTouchDist{ 1e24f };
                         if (ProcessSphereSphere(sphereAinB, sphereB, cp, minTouchDist)) {
                             const auto cpInA{ TransformPointOG(transformBtoA, cp.m_vecPoint) };
-                            const auto hitK = std::sqrt(std::max(0.0f, sq(disk.m_fRadius) - sq(cpInA.y - disk.m_vecCenter.y) - sq(cpInA.x - disk.m_vecCenter.x))) + cpInA.z;
-                            if (maxTouchDistances[diskIdx] <= hitK) { // Original: strict <=, no epsilon
-                                maxTouchDistances[diskIdx] = hitK;
+                            const auto hitK = DiskHitK(cpInA, disk);
+                            if (maxTouchDistances[diskIdx] <= hitK) { // Original: `!(hitK < max)`, NaN rejects
+                                maxTouchDistances[diskIdx] = (float)hitK;
                                 thisLineCP                 = cp;
                                 thisLineCP.m_nSurfaceTypeA = disk.m_Surface.m_nMaterial;
                                 thisLineCP.m_nPieceTypeA   = disk.m_Surface.m_nPiece;
@@ -2766,7 +2848,7 @@ int32 CCollision::ProcessColModels(const CMatrix& transformA, CColModel& cmA,
                             const auto cpInA     = TransformPointOG(transformBtoA, cp.m_vecPoint);
                             const auto normalInA = TransformVectorOG(transformBtoA, cp.m_vecNormal);
 
-                            if (cpInA.z >= disk.m_vecCenter.z || normalInA.z <= 0.5f) {
+                            if (!(cpInA.z < disk.m_vecCenter.z) || !(normalInA.z > 0.5f)) { // NaN => first branch (0x419346, 0x41935E)
                                 // CP candidate: become the emitted CP only if closer than the previous best
                                 if (minTouchDist < bestBoxDist) {
                                     emitCP      = true;
@@ -2774,17 +2856,15 @@ int32 CCollision::ProcessColModels(const CMatrix& transformA, CColModel& cmA,
                                 }
                             } else {
                                 // Below the disk's plane & normal mostly vertical: project onto the disk plane & treat as line (wheel) hit
-                                const auto dx{ cpInA.x - disk.m_vecCenter.x };
-                                const auto dy{ cpInA.y - disk.m_vecCenter.y };
-                                const auto hitK = std::sqrt(std::max(0.0f, sq(disk.m_fRadius) - sq(dy) - sq(dx))) + cpInA.z;
+                                const auto hitK = DiskHitK(cpInA, disk);
 
-                                if (maxTouchDistances[diskIdx] <= hitK) { // Original: strict <=
-                                    if (hitK - maxTouchDistances[diskIdx] > 0.35f * disk.m_fRadius) {
+                                if (maxTouchDistances[diskIdx] <= hitK) { // Original: `!(hitK < max)`, NaN rejects
+                                    if (hitK - (double)maxTouchDistances[diskIdx] > (double)0.35f * disk.m_fRadius) { // 0x858C0C = 0.35f
                                         emitCP      = true;
                                         bestBoxDist = minTouchDist;
                                     }
                                     lineCollision              = true;
-                                    maxTouchDistances[diskIdx] = hitK;
+                                    maxTouchDistances[diskIdx] = (float)hitK;
                                     thisLineCP                 = cp;
                                     thisLineCP.m_nSurfaceTypeA = disk.m_Surface.m_nMaterial;
                                     thisLineCP.m_nPieceTypeA   = disk.m_Surface.m_nPiece;
@@ -2924,6 +3004,9 @@ int32 CCollision::ProcessColModels(const CMatrix& transformA, CColModel& cmA,
             for (auto triIdx = 0; triIdx < cdA.m_nNumTriangles; triIdx++) {
                 if (TestSphereTriangle(colBSphereInASpace, cdA.m_pVertices, cdA.m_pTriangles[triIdx], cdA.m_pTrianglePlanes[triIdx])) {
                     collTriA[numCollTriA++] = triIdx;
+                    if (numCollTriA >= TRIS_LIMIT) { // 0x419A99
+                        break;
+                    }
                 }
             }
         }
@@ -2946,9 +3029,12 @@ int32 CCollision::ProcessColModels(const CMatrix& transformA, CColModel& cmA,
         // Original (0x419B71): resets the working CP's depth sentinel to -1 here, BEFORE the loop.
         // We must do it explicitly: when `numCollSphA == 0` the first block never ran, so
         // `sphereCPs[nNumSphereCPs].m_fDepth` would otherwise be stale entering this block.
-        // NOTE: only REAL B spheres here - B's appended disk pseudo-spheres are excluded (see numRealCollSphB).
-        sphereCPs[nNumSphereCPs].m_fDepth = -1.f;
-        for (auto sphereIdx : std::span{ collSphB, numRealCollSphB }) {
+        // NOTE: `numCollSphB - numDisksB` entries of the list, see the quirk note at the disk block
+        // (the exe only does it if there are triangles to process, 0x419B76)
+        if (numCollTriA) {
+            sphereCPs[nNumSphereCPs].m_fDepth = -1.f;
+        }
+        for (auto sphereIdx : std::span{ collSphB, (size_t)std::max(numCollSphBTail, 0) }) {
             auto minTouchDist{ 1e24f };
             bool anyCollided{};
             for (auto triIdx : std::span{ collTriA, numCollTriA }) {
@@ -2974,18 +3060,15 @@ int32 CCollision::ProcessColModels(const CMatrix& transformA, CColModel& cmA,
 
         // 0x419CC4
         // Process all of B's colliding spheres against all of A's colliding boxes
-        // Only REAL B spheres (B's appended disk pseudo-spheres excluded) - see numRealCollSphB.
-        for (auto sphereIdx : std::span{ collSphB, numRealCollSphB }) {
+        // Same entry count as above (0x419CCE)
+        for (auto sphereIdx : std::span{ collSphB, (size_t)std::max(numCollSphBTail, 0) }) {
             const auto& sphere{ sphB[sphereIdx] }; // B's sphere in A's space
 
             float minTouchDist{ 1e24f };
             for (auto boxIdx : std::span{ collBoxA, numCollBoxA }) {
-                // Original: `if (v200 >= 31) break;` caps total at 31 CPs (`maxSphereCPs`).
-                // `nNumSphereCPs < maxSphereCPs` keeps the trailing index in-bounds for the
-                // forward depth-sentinel write (`sphereCPs[nNumSphereCPs + 1].m_fDepth = -1.f`).
-                if (nNumSphereCPs >= maxSphereCPs) {
-                    break;
-                }
+                // NOTE: unlike the triangle loop above there is NO check before the call (0x419D30): with 31 CPs already
+                //       collected the exe still calls ProcessSphereBox (writing into the 32nd slot) and only stops
+                //       this sphere's box loop after a hit (the next sphere is processed regardless).
                 const auto& bb{ cdA.m_pBoxes[boxIdx] };
                 auto&       cp = sphereCPs[nNumSphereCPs];
                 if (ProcessSphereBox(sphere, bb, cp, minTouchDist)) {
@@ -2999,7 +3082,7 @@ int32 CCollision::ProcessColModels(const CMatrix& transformA, CColModel& cmA,
 
                     cp.m_vecNormal *= -1.f; // Invert direction
 
-                    if (nNumSphereCPs >= maxSphereCPs) { // Original: `if (v200 >= 31) break;` caps total at 31 CPs
+                    if (nNumSphereCPs >= maxSphereCPs) { // 0x419DDE: `cmp eax, 0x1f / jge` - leaves only this sphere's box loop
                         break;
                     }
                     ++nNumSphereCPs;

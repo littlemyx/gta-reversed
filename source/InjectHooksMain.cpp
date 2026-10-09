@@ -233,6 +233,11 @@
 #include "TaskComplexFollowPatrolRoute.h"
 #include "TaskComplexReactToAttack.h"
 #include "TaskComplexAvoidEntity.h"
+#include "TaskComplexChat.h"
+#include "TaskComplexScreamInCarThenLeave.h"
+#include "TaskComplexUsePairedAttractor.h"
+#include "TaskSimpleDead.h"
+#include "TaskSimpleDoHandSignal.h"
 #include "TaskComplexKillAllThreats.h"
 #include "TaskComplexExtinguishFireOnFoot.h"
 #include "TaskComplexFallAndStayDown.h"
@@ -694,6 +699,8 @@ void InjectHooksMain() {
     CCarAI::InjectHooks();
     CMenuSystem::InjectHooks();
     CCarFXRenderer::InjectHooks();
+    CPedAttractor::InjectHooks();
+    CPedShelterAttractor::InjectHooks();
     CPedAttractorManager::InjectHooks();
     CPedAttractorPedPlacer::InjectHooks();
     CPedATMAttractor::InjectHooks();
@@ -792,6 +799,7 @@ void InjectHooksMain() {
     CBaseModelInfo::InjectHooks();
     CAtomicModelInfo::InjectHooks();
     CLodAtomicModelInfo::InjectHooks();
+    CLodTimeModelInfo::InjectHooks();
     CVehicleModelInfo::InjectHooks();
     CClumpModelInfo::InjectHooks();
     CTimeModelInfo::InjectHooks();
@@ -1107,6 +1115,7 @@ void InjectHooksMain() {
             CTaskInteriorSitOnChair::InjectHooks();
             CTaskInteriorUseInfo::InjectHooks();
         };
+        Interior();
 
         CTaskComplexUseClosestFreeScriptedAttractorRun::InjectHooks();
         CTaskComplexUseClosestFreeScriptedAttractorSprint::InjectHooks();
@@ -1187,7 +1196,7 @@ void InjectHooksMain() {
         CTaskComplexReactToAttack::InjectHooks();
         CTaskComplexReactToGunAimedAt::InjectHooks();
         CTaskComplexRoadRage::InjectHooks();
-        // CTaskComplexScreamInCarThenLeave::InjectHooks();
+        CTaskComplexScreamInCarThenLeave::InjectHooks();
         CTaskComplexSeekCoverUntilTargetDead::InjectHooks();
 
         // CTaskComplexSeekEntity<CEntitySeekPosCalculator>::InjectHooks();
@@ -1224,7 +1233,10 @@ void InjectHooksMain() {
         CTaskComplexUseEffectRunning::InjectHooks();
         CTaskComplexUseEffectSprinting::InjectHooks();
         // CTaskComplexUseEntryExit::InjectHooks();
-        // CTaskComplexUsePairedAttractor::InjectHooks();
+        CTaskComplexUsePairedAttractor::InjectHooks();
+        CTaskComplexUseSequence::InjectHooks();
+        CTaskComplexAvoidEntity::InjectHooks();
+        CTaskComplexChat::InjectHooks();
         CTaskComplexUseScriptedBrain::InjectHooks();
         CTaskComplexUseScriptedAttractor::InjectHooks();
         CTaskComplexWaitAtAttractor::InjectHooks();
@@ -1258,13 +1270,13 @@ void InjectHooksMain() {
         CTaskSimpleCarSlowBeDraggedOut::InjectHooks();
         CTaskSimpleCarWaitToSlowDown::InjectHooks();
         CTaskSimpleCarWaitForDoorNotToBeInUse::InjectHooks();
-        // CTaskSimpleChat::InjectHooks();
+        // CTaskSimpleChat::InjectHooks(); // NOTE: ~CTaskSimpleChat (0x5F7FD0) is hooked but asserts 'not reversed'
         CTaskSimpleCower::InjectHooks();
         CTaskSimpleClearLookAt::InjectHooks();
-        // CTaskSimpleDead::InjectHooks();
+        CTaskSimpleDead::InjectHooks();
         // CTaskSimpleDetonate::InjectHooks();
         // + CTaskSimpleDieInCar
-        // CTaskSimpleDoHandSignal::InjectHooks();
+        CTaskSimpleDoHandSignal::InjectHooks();
         CTaskSimpleDrown::InjectHooks();
         CTaskSimpleDrownInCar::InjectHooks();
         CTaskSimpleDuckToggle::InjectHooks();
@@ -1402,7 +1414,7 @@ void InjectHooksMain() {
         CTaskComplexCarDrive::InjectHooks();
         CTaskComplexCarDriveMission::InjectHooks();
         CTaskComplexKillPedFromBoat::InjectHooks();
-        // CTaskComplexLeaveCar::InjectHooks();
+        CTaskComplexLeaveCar::InjectHooks();
         CTaskComplexTreatAccident::InjectHooks();
         CTaskComplexGoToPointAndStandStillTimed::InjectHooks();
         CTaskComplexPartnerShove::InjectHooks();

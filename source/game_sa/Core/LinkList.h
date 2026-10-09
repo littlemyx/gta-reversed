@@ -16,6 +16,11 @@ public:
     CLink<T>  freeListTail{};
     CLink<T>* links{};
 
+#ifdef NOTSA_STANDALONE
+    // NOTSA_STANDALONE: the exe's CRT operator new[] / delete[] (0x821195 / 0x8213AE) are not available, use our own
+    void* operator new(size_t size) { return ::operator new(size); }
+    void operator delete(void* object) { ::operator delete(object); }
+#else
     void* operator new(unsigned size) {
         return ((void*(__cdecl*)(uint32))0x821195)(size);
     }
@@ -23,6 +28,7 @@ public:
     void operator delete(void* object) {
         ((void(__cdecl*)(void*))0x8213AE)(object);
     }
+#endif
 
     void Init(int32 count) {
         usedListHead.next = &usedListTail;

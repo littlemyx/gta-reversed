@@ -1011,12 +1011,12 @@ void CPostEffects::Grain(int32 strengthMask, bool update) {
     if (update) {
         auto* pixels = RwRasterLock(m_pGrainRaster, 0, rwRASTERLOCKWRITE);
 
-        // std::srand(CTimer::GetTimeInMS() + OS_TimeMS())
-        std::srand(CTimer::GetCurrentTimeInCycles() / CTimer::GetCyclesPerMillisecond());
+        // srand(CTimer::GetTimeInMS() + OS_TimeMS())
+        srand(CTimer::GetCurrentTimeInCycles() / CTimer::GetCyclesPerMillisecond());
         for (auto i = 0u, reSeedCounter = 0u; i < sq(GRAIN_TEXTURE_DIM); i++) {
             if (++reSeedCounter >= 100) {
                 reSeedCounter = 0;
-                std::srand(CTimer::GetTimeInMS() + OS_TimeMS() + ++s_NumberOfReseeds);
+                srand(CTimer::GetTimeInMS() + OS_TimeMS() + ++s_NumberOfReseeds);
             }
             pixels[4 * i] = pixels[4 * i + 1] = pixels[4 * i + 2] = pixels[4 * i + 3] = static_cast<uint8>(CGeneral::GetRandomNumber());
         }

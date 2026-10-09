@@ -22,6 +22,8 @@
 #include <tuple>
 #include <initializer_list>
 #include <format>
+
+#include "standalone/GameRand.h" // NOTSA_STANDALONE_RUN: game-owned rand/srand (after the CRT headers)
 #include "app/platform/win/winincl.h"
 
 #include "Base.h"

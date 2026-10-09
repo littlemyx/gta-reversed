@@ -27,6 +27,15 @@ void CMemoryMgr::InjectHooks() {
 
     RH_ScopedInstall(InitScratchPad, 0x72F480);
     RH_ScopedInstall(FreeAlign, 0x72F4F0);
+#ifdef NOTSA_STANDALONE_RUN
+    // The exe's malloc/free/realloc/calloc/aligned-malloc wrappers (all plain CRT, see the definitions below) are re-routed
+    // to our own CRT so code/data-image pointers to them never reach the (trapped) original addresses.
+    RH_ScopedOverloadedInstall(Malloc, "NoHint", 0x72F420, void*(*)(uint32));
+    RH_ScopedOverloadedInstall(Free, "", 0x72F430, void(*)(void*));
+    RH_ScopedOverloadedInstall(Realloc, "NoHint", 0x72F440, uint8*(*)(void*, uint32));
+    RH_ScopedOverloadedInstall(Calloc, "NoHint", 0x72F460, void*(*)(uint32, uint32));
+    RH_ScopedOverloadedInstall(MallocAlign, "NoHint", 0x72F4C0, void*(*)(uint32, uint32));
+#endif
     // CMemoryMgr::Free (0x72F430) and operator delete/delete[] (0x8214BD / 0x8213AE) are not hooked: see their definitions
 
     {
@@ -240,6 +249,8 @@ void* CMemoryMgr::Malloc(uint32 size, uint32 nHint) {
     CMemoryHeap::SetDebugInfo(memory, nHint);
     _UNLOCK_MEMORYHEAP();
     return memory;
+#elif defined(NOTSA_STANDALONE_RUN)
+    return ::malloc(size); // 0x72F420 => CRT malloc (0x824257)
 #else
     return plugin::CallAndReturn<void*, 0x72F420, size_t>(size);
     return ::malloc(size);
@@ -259,6 +270,8 @@ void CMemoryMgr::Free(void* memory) {
         g_Heaps[HEAP_PRIMARY].Free(memory);
     }
     UNLOCK_MEMORYHEAP();
+#elif defined(NOTSA_STANDALONE_RUN)
+    ::free(memory); // 0x72F430 => CRT free (0x82413F)
 #else
     // The original (0x72F430) is a plain jump to the exe's CRT `free` (small block heap / HeapFree).
     // NOT HOOKED, and the call has to stay redirected: `CMemoryMgr::Malloc` (0x72F420) is still the exe's CRT `malloc`,
@@ -296,6 +309,8 @@ uint8* CMemoryMgr::Realloc(void* memory, uint32 size, uint32 nHint) {
     CMemoryHeap::SetDebugInfo(newMemory, nHint);
     UNLOCK_MEMORYHEAP();
     return newMemory;
+#elif defined(NOTSA_STANDALONE_RUN)
+    return static_cast<uint8*>(::realloc(memory, size)); // 0x72F440 => CRT realloc (0x824269)
 #else
     return plugin::CallAndReturn<uint8*, 0x72F440, void*, size_t>(memory, size);
     return static_cast<uint8*>(::realloc(memory, size));
@@ -304,6 +319,9 @@ uint8* CMemoryMgr::Realloc(void* memory, uint32 size, uint32 nHint) {
 
 // 0x72F460
 uint8* CMemoryMgr::Calloc(uint32 numObj, uint32 sizeObj, uint32 hint) {
+#ifdef NOTSA_STANDALONE_RUN
+    return static_cast<uint8*>(::calloc(numObj, sizeObj)); // 0x72F460 => CRT calloc (0x824416)
+#endif
     return plugin::CallAndReturn<uint8*, 0x72F460, uint32, uint32>(numObj, sizeObj);
 
 #ifdef MEMORY_MGR_USE_MEMORY_HEAP
@@ -382,6 +400,10 @@ void* CMemoryMgr::Malloc(uint32 size) {
 }
 
 void* CMemoryMgr::MallocAlign(uint32 size, uint32 align) {
+#ifdef NOTSA_STANDALONE_RUN
+    // 0x72F4C0: malloc(size + align), result = (base + align) & ~(align - 1), base pointer stored at result[-1] (matches FreeAlign 0x72F4F0)
+    return MallocAlign(size, align, 0);
+#endif
     return plugin::CallAndReturn<void*, 0x72F4C0, uint32, uint32>(size, align);
 
     void* memory = MallocAlign(size, align, 0);

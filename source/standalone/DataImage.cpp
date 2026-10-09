@@ -8,7 +8,7 @@ namespace notsa::standalone::detail {
 bool g_DataImageLoaded = false;
 }
 
-extern "C" char notsa_orig_pad[], notsa_orig_pad_end[]; // tools/standalone/orig_image_pad.asm
+extern "C" const unsigned char notsa_orig_pad[]; // source/standalone/OrigImagePad.cpp
 
 namespace notsa::standalone::DataImage {
 namespace {
@@ -121,18 +121,25 @@ void LoadImpl() {
 
     const uint32_t dataGranule = AlignDown(i.DataBase, ALLOC_GRANULARITY);
     const uint32_t reserveEnd = AlignUp(i.DataEnd, ALLOC_GRANULARITY);
-    const uint32_t padLo = (uint32_t)notsa_orig_pad, padHi = (uint32_t)notsa_orig_pad_end;
+    const uint32_t padLo = (uint32_t)notsa_orig_pad, padHi = padLo + ORIG_PAD_SIZE;
     if (padLo <= i.DataBase && padHi >= i.DataEnd) {
-        // A. The main image (linked at the original base, with the placeholder from orig_image_pad.asm merged into .text) already owns the range:
-        //    just make it writable. The remaining placeholder pages in the original CODE range become NOACCESS so a raw jump/call to an
+        // A. The main image (linked at the original base, with the placeholder from OrigImagePad.cpp merged into .text) already owns the range:
+        //    just make it writable. The placeholder pages in the original CODE range become NOACCESS so a raw jump/call to an
         //    original address faults with the exact address (see Fixups::InstallRedirectHandler).
+        // S2: the pad must be the FIRST code of .text, otherwise [0x401000, padLo) holds OUR code which would run silently when called by an original address.
+        if (padLo != i.CodeLo) {
+            char what[400];
+            wsprintfA(what, "the placeholder starts at 0x%08X, not at the original code start 0x%08X: code of this exe lies in the original code range "
+                "[0x%08X, 0x%08X) and raw calls to original addresses would run it silently. The pad (section .text$00, OrigImagePad.cpp) must be the first object in .text; "
+                "link with /INCREMENTAL:NO.", padLo, i.CodeLo, i.CodeLo, padLo);
+            LoadFailed(what, padLo);
+        }
         DWORD old;
         if (!VirtualProtect((void*)i.DataBase, committed, PAGE_READWRITE, &old)) {
             LoadFailed("VirtualProtect(RW) on the placeholder failed", i.DataBase);
         }
-        const uint32_t codeLo = AlignUp(padLo, 0x1000);
-        if (codeLo < i.DataBase) {
-            VirtualProtect((void*)codeLo, i.DataBase - codeLo, PAGE_NOACCESS, &old);
+        if (!VirtualProtect((void*)padLo, i.DataBase - padLo, PAGE_NOACCESS, &old)) {
+            LoadFailed("VirtualProtect(NOACCESS) on the original code range failed", padLo);
         }
         g_ImageMode = true;
     } else {

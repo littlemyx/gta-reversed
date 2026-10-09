@@ -157,8 +157,8 @@ target_link_options(${RE_PROJECT_LIB_NAME} PRIVATE "/SUBSYSTEM:WINDOWS")
 if (${RE_PROJECT}_STANDALONE AND NOT ${RE_PROJECT}_STANDALONE_DUMP_HOOKS_ONLY)
     # The original data range (0x858000 ... 0xCB0000) must be at its original VA. A VirtualAlloc at startup is NOT reliable (the process heap /
     # NLS mappings already sit in low memory, see .notes/P2A_DESIGN.md), so the main image itself covers it: linked at the original base with a
-    # 9 MB zero placeholder (tools/standalone/orig_image_pad.asm) merged into .text. No relocations (/FIXED): original addresses are baked in.
-    target_link_options(${RE_PROJECT_LIB_NAME} PRIVATE "$<$<CXX_COMPILER_ID:MSVC>:/BASE:0x400000;/DYNAMICBASE:NO;/FIXED;/MERGE:_TEXT=.text>")
+    # 9 MB zero placeholder (source/standalone/OrigImagePad.cpp, section .text$00 = first code of .text) merged into .text. No relocations (/FIXED): original addresses are baked in.
+    target_link_options(${RE_PROJECT_LIB_NAME} PRIVATE "$<$<CXX_COMPILER_ID:MSVC>:/BASE:0x400000;/DYNAMICBASE:NO;/FIXED;/MERGE:_TEXT=.text;/INCREMENTAL:NO>")
     # Keep the exe/pdb/map out of <repo>/bin/<config>, where the DLL build puts gta_reversed.asi/.pdb
     set_target_properties(${RE_PROJECT_LIB_NAME} PROPERTIES
         ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin"
@@ -166,19 +166,6 @@ if (${RE_PROJECT}_STANDALONE AND NOT ${RE_PROJECT}_STANDALONE_DUMP_HOOKS_ONLY)
         RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin"
         PDB_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin"
     )
-
-    get_filename_component(_msvc_bin_dir "${CMAKE_LINKER}" DIRECTORY)
-    find_program(${RE_PROJECT}_ML NAMES ml ml.exe HINTS "${_msvc_bin_dir}" REQUIRED)
-    set(STANDALONE_PAD_OBJ "${CMAKE_BINARY_DIR}/orig_image_pad.obj")
-    add_custom_command(
-        OUTPUT "${STANDALONE_PAD_OBJ}"
-        COMMAND "${${RE_PROJECT}_ML}" /nologo /c "/Fo${STANDALONE_PAD_OBJ}" "${PROJECT_SOURCE_DIR}/tools/standalone/orig_image_pad.asm"
-        DEPENDS "${PROJECT_SOURCE_DIR}/tools/standalone/orig_image_pad.asm"
-        COMMENT "Assembling the original-image placeholder"
-        VERBATIM
-    )
-    set_source_files_properties("${STANDALONE_PAD_OBJ}" PROPERTIES EXTERNAL_OBJECT TRUE GENERATED TRUE)
-    target_sources(${RE_PROJECT_LIB_NAME} PRIVATE "${STANDALONE_PAD_OBJ}")
 
     if (${RE_PROJECT}_ORIGINAL_EXE)
         # NOTE: the python needs `unicorn` (pip install unicorn) to replay the exe's static initialisers; pass -D${RE_PROJECT}_PYTHON=<venv python>

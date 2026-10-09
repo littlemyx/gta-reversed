@@ -8,6 +8,8 @@
 #include <cstdint>
 
 namespace notsa::standalone::DataImage {
+constexpr uint32_t ORIG_PAD_SIZE = 0x8B0000; // size of the in-image placeholder (OrigImagePad.cpp): >= 0xCB1000 - 0x401000
+
 struct Info {
     uint32_t ImageBase{};     // original exe image base (0x400000)
     uint32_t CodeLo{}, CodeHi{}; // original code range [CodeLo, CodeHi) (0x401000, 0x858000); reserved PAGE_NOACCESS

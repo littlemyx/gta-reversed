@@ -5,14 +5,7 @@
 namespace {
 // 0x4D00E0 - cdecl helper (NOT a CAnimBlendNode member): theta = acos(min(dot(a, b), 1)), invSinTheta = theta == 0 ? 0 : 1 / sin(theta)
 void CalcThetaFromQuats(const CQuaternion* a, const CQuaternion* b, float* theta, float* invSinTheta) {
-    // Dot is accumulated in extended precision in this order (w, z, y, x), then stored as float
-    float dot = (float)(((double)a->w * b->w + (double)a->z * b->z + (double)a->y * b->y) + (double)a->x * b->x);
-    if (dot > 1.0f) { // Clamped only if dot > 1 (NaN is not clamped)
-        dot = 1.0f;
-    }
-    const double t = std::acos((double)dot);
-    *theta = (float)t;
-    *invSinTheta = t == 0.0 ? 0.0f : (float)(1.0 / std::sin(t));
+    CQuaternion::CalcThetaFromQuats(*a, *b, *theta, *invSinTheta); // the exe's x87 sequence, shared with 0x59C630
 }
 } // namespace
 

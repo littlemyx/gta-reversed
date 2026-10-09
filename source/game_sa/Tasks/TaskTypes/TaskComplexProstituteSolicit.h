@@ -50,6 +50,8 @@ public:
     CTask* CreateSubTask(eTaskType taskType, CPed* prostitute);
     static void GetRidOfPlayerProstitute();
     static bool IsTaskValid(CPed* prostitute, CPed* ped);
+
+    static void InjectHooks();
 };
 
 VALIDATE_SIZE(CTaskComplexProstituteSolicit, 0x30);

@@ -1,0 +1,93 @@
+#!/bin/bash
+# Build and run every *_test target (rw_*_test, game/review/script oracle tests) under Wine; print a summary table.
+# usage: tools/standalone/run_all_tests.sh [build-dir (default build/StandaloneRW)] [test-name-filter-regex]
+# env:   SCRATCH   scratchpad holding the shared build mutex (build.lock)
+#        SKIP_BUILD=1  run only, do not build     ATTEMPTS=6   retries on hang/crash (known wined3d flake)
+#        ASSETS=<dir>  dir with infernus.dff/male01.dff/vgsnbuild07.dff (passed to the model-reading rw tests)
+# Exit code: non-zero if any test reports failures/mismatches, never produced a result, or failed to build.
+# A fresh build dir is configured exactly like build/StandaloneRW (librw ON, SDL3, Debug via the conan toolchain).
+set -u
+REPO="$(cd "$(dirname "$0")/../.." && pwd)"
+BDIR="${1:-build/StandaloneRW}"; FILTER="${2:-.}"
+case "$BDIR" in /*) ;; *) BDIR="$REPO/$BDIR";; esac
+SCRATCH="${SCRATCH:-/private/tmp/claude-501/-Users-Andrei-Mukhin-github-recomp-gta-reversed/aa4942c3-1b0c-4e82-a9c0-0c095cb1fe07/scratchpad}"
+ATTEMPTS="${ATTEMPTS:-6}"
+ASSETS="${ASSETS:-$SCRATCH/librw-aa/assets}"
+export PATH="/Users/Andrei.Mukhin/tools/Wine Staging.app/Contents/Resources/wine/bin:$HOME/.local/bin:/opt/homebrew/bin:$PATH" WINEPREFIX=~/.wine-msvc WINEDEBUG=-all
+EXE="${GTA_EXE:-$REPO/gta_sa_compact.exe}"
+export RW_EXE_ORACLE="Z:${EXE//\//\\}"
+OUT="$SCRATCH/run_all_tests.$$"; mkdir -p "$OUT"
+
+lock()   { until mkdir "$SCRATCH/build.lock" 2>/dev/null; do sleep 15; done; }
+unlock() { rmdir "$SCRATCH/build.lock" 2>/dev/null; }
+trap 'unlock_if_held' EXIT
+HELD=0; unlock_if_held() { [ "$HELD" = 1 ] && unlock; }
+
+if [ "${SKIP_BUILD:-0}" != 1 ]; then
+  lock; HELD=1
+  if [ ! -f "$BDIR/build.ninja" ]; then
+    mkdir -p "$BDIR"
+    cmake -S "$REPO" -B "$BDIR" -G Ninja -DCMAKE_BUILD_TYPE=Debug \
+      -DCMAKE_TOOLCHAIN_FILE="$REPO/build/Debug/generators/conan_toolchain.cmake" -DCMAKE_MAKE_PROGRAM=/opt/homebrew/bin/ninja \
+      "-DCMAKE_CXX_FLAGS=/WX- /wd4005 /DWIN32 /D_WINDOWS /Zm1000 /GX" \
+      -DGTASA_STANDALONE=ON -DGTASA_RW_LIBRW=ON -DGTASA_RW_LIBRW_OPT_OUT=OFF -DGTASA_USE_SDL3=ON \
+      -DGTASA_ORIGINAL_EXE="$EXE" -DGTASA_PYTHON="$SCRATCH/capvenv/bin/python" -DGTASA_ML=/Users/Andrei.Mukhin/tools/msvc/bin/x86/ml \
+      -DGTASA_WITH_OPENAL=OFF -DGTASA_WITH_CLEO_COMMANDS=OFF -DGTASA_WITH_SCRIPT_COMMAND_HOOKS=OFF -DGTASA_WITH_LTO=OFF -DGTASA_UNITY_BUILD=OFF \
+      > "$OUT/configure.log" 2>&1 || { echo "configure failed, see $OUT/configure.log"; exit 2; }
+  fi
+fi
+TESTS=$(ninja -C "$BDIR" -t targets all 2>/dev/null | sed -n 's/^\([A-Za-z0-9_]*_test\): phony$/\1/p' | sort -u | grep -E "$FILTER")
+[ -n "$TESTS" ] || { echo "no *_test targets found in $BDIR"; exit 2; }
+BUILD_FAIL=""
+if [ "${SKIP_BUILD:-0}" != 1 ]; then
+  # shellcheck disable=SC2086
+  ninja -C "$BDIR" -k 0 $TESTS > "$OUT/ninja.log" 2>&1 || BUILD_FAIL=1
+  unlock; HELD=0
+  [ -n "$BUILD_FAIL" ] && echo "ninja reported errors (see $OUT/ninja.log); tests whose exe is missing are marked NOBUILD"
+fi
+
+# parse: prints "checks fails mismatches" or nothing when no result line exists in the output
+parse() { python3 - "$1" <<'PY'
+import re,sys
+t=open(sys.argv[1],errors='replace').read()
+c=f=m=None
+for x in re.finditer(r'(\d+) checks passed, (\d+) failed',t): c,f=int(x[1]),int(x[2]); m=m or 0
+x=re.findall(r'(\d+) commands, (\d+) with mismatches',t)
+if x: c,m=int(x[-1][0]),int(x[-1][1]); f=f or 0
+x=re.findall(r'(\d+) functions, mismatches \(strict / excluding NaN-payload-only\): PC24 (\d+) / (\d+), PC53 (\d+) / (\d+)',t)
+if x: c,m=int(x[-1][0]),int(x[-1][2])+int(x[-1][4]); f=f or 0
+x=re.findall(r'(\d+) commands, PC24 mismatches \(excluding NaN-payload-only\): (\d+)',t)
+if x: c,m=int(x[-1][0]),int(x[-1][1]); f=f or 0
+if c is not None: print(c,f or 0,m or 0)
+PY
+}
+
+MODEL_TESTS=" rw_custom_pipelines_test rw_matfx_pipeline_test rw_matfx_uvanim_test rw_atomic_clump_test rw_skin_hanim_test rw_pipeline_test rw_rtanim_rtquat_test rw_math_stream_test "
+ROWS=""; RC=0
+for t in $TESTS; do
+  exe="$BDIR/source/$t.exe"
+  if [ ! -f "$exe" ]; then ROWS+="$t - - - 0 0 NOBUILD"$'\n'; RC=1; continue; fi
+  args=()
+  if [[ "$MODEL_TESTS" == *" $t "* ]]; then for f in infernus male01 vgsnbuild07; do [ -f "$ASSETS/$f.dff" ] && args+=("Z:${ASSETS//\//\\}\\$f.dff"); done; fi
+  case "$t" in *oracle*) TMO=${TIMEOUT:-900};; *) TMO=${TIMEOUT:-180};; esac
+  start=$SECONDS; status=NORESULT; res=""; n=0
+  while [ $n -lt "$ATTEMPTS" ]; do
+    n=$((n+1)); log="$OUT/$t.$n.log"
+    ( cd "$BDIR/source" && exec wine "$t.exe" "${args[@]+"${args[@]}"}" ) > "$log" 2>&1 &
+    pid=$!; code=""
+    for ((s=0; s<TMO; s++)); do sleep 1; kill -0 $pid 2>/dev/null || { wait $pid; code=$?; break; }; done
+    if [ -z "$code" ]; then kill -9 $pid 2>/dev/null; echo "  $t attempt $n: hang >${TMO}s"; code=hang; fi
+    res=$(parse "$log")
+    if [ -z "$res" ] || [ "$code" = hang ]; then pkill -9 -f "$t.exe" 2>/dev/null; pkill -9 winedbg 2>/dev/null; sleep 1; fi
+    if [ -n "$res" ] && [ "$code" != hang ]; then break; fi
+    res=""; [ "$code" != hang ] && echo "  $t attempt $n: crash/no result (exit $code)"
+  done
+  if [ -z "$res" ]; then ROWS+="$t - - - $n $((SECONDS-start)) NORESULT"$'\n'; RC=1; continue; fi
+  set -- $res
+  if [ "$2" -gt 0 ] || [ "$3" -gt 0 ]; then status=FAIL; RC=1; else status=ok; fi
+  ROWS+="$t $1 $2 $3 $n $((SECONDS-start)) $status"$'\n'
+done
+echo; printf '%-30s %8s %9s %10s %8s %7s  %s\n' test checks failures mismatches attempts seconds status
+printf '%s' "$ROWS" | while read -r a b c d e f g; do printf '%-30s %8s %9s %10s %8s %7s  %s\n' "$a" "$b" "$c" "$d" "$e" "$f" "$g"; done
+echo "logs: $OUT"
+exit $RC

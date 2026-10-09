@@ -113,6 +113,7 @@ void CPad::InjectHooks() {
     RH_ScopedGlobalInstall(GetCurrentKeyPressed, 0x541490);
 #ifndef NOTSA_USE_SDL3
     RH_ScopedInstall(GetMouseState, 0x746ED0);
+    RH_ScopedGlobalInstall(DIReleaseMouse, 0x746F70);
 #endif
 }
 
@@ -1531,8 +1532,14 @@ void GetCurrentKeyPressed(RsKeyCodes& keys) {
 }
 
 #ifndef NOTSA_USE_SDL3
-IDirectInputDevice8* DIReleaseMouse() { // todo: wininput
-    return plugin::CallAndReturn<IDirectInputDevice8*>(0x746F70);
+// 0x746F70
+void DIReleaseMouse() { // todo: wininput
+    // NOTE: The original has no return value (the `IDirectInputDevice8*` return type was bogus, nobody uses it)
+    if (PSGLOBAL(diMouse)) {
+        PSGLOBAL(diMouse)->Unacquire();
+        PSGLOBAL(diMouse)->Release();
+        PSGLOBAL(diMouse) = nullptr;
+    }
 }
 
 void InitialiseMouse(bool exclusive) {

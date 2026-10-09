@@ -45,6 +45,7 @@ void CModelInfo::InjectHooks()
     RH_ScopedInstall(AddVehicleModel, 0x4C6770);
     RH_ScopedInstall(AddPedModel, 0x4C67A0);
 
+    RH_ScopedInstall(Get2dEffectStore, 0x4C5A60);
     RH_ScopedInstall(IsBoatModel, 0x4C5A70);
     RH_ScopedInstall(IsCarModel, 0x4C5AA0);
     RH_ScopedInstall(IsTrainModel, 0x4C5AD0);
@@ -335,7 +336,7 @@ CBaseModelInfo* CModelInfo::GetModelInfo(const char* name, int32 minIndex, int32
 // 0x4C5A60
 CStore<C2dEffect, CModelInfo::NUM_2DFX_INFOS>* CModelInfo::Get2dEffectStore()
 {
-    return ((CStore<C2dEffect, NUM_2DFX_INFOS>* (__cdecl *)())0x4C5A60)();
+    return &ms_2dFXInfoStore;
 }
 
 // 0x4C5A70

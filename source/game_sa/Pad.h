@@ -384,7 +384,7 @@ void GetCurrentKeyPressed(RsKeyCodes& keys);
 
 // todo: move these fucks out
 #ifndef NOTSA_USE_SDL3
-IDirectInputDevice8* DIReleaseMouse();
+void DIReleaseMouse();
 void InitialiseMouse(bool exclusive);
 #endif
 

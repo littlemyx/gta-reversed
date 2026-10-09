@@ -1078,8 +1078,6 @@ void CWorld::FindObjectsIntersectingAngledCollisionBoxSectorList(PtrListType& pt
 // Also, seems like namespaces weren't a thing in C++03.. Well, at least to R*.
 template<typename PtrListType>
 void CWorld::FindMissionEntitiesIntersectingCubeSectorList(PtrListType& ptrList, const CVector& cornerA, const CVector& cornerB, int16* outCount, int16 maxCount, CEntity** outEntities, bool vehiclesList, bool pedsList, bool objectsList) {
-    // NOTSA - Easier to do it this way..
-    const CBoundingBox bb{ cornerA, cornerB };
     for (auto* const entity : ptrList) {
         if (entity->IsScanCodeCurrent()) {
             continue;
@@ -1105,14 +1103,21 @@ void CWorld::FindMissionEntitiesIntersectingCubeSectorList(PtrListType& ptrList,
             }
         }
 
-        if (bb.IsPointWithin(entity->GetPosition())) {
-            if (*outCount < maxCount) {
-                if (outEntities) {
-                    outEntities[*outCount++] = entity;
-                }
-            } else {
-                break; // NOTSA - But makes sense lol
+        // The entity's bounding sphere (centre = position, radius of the col model) has to overlap the box, tested per axis:
+        // `min <= pos + r` and `pos - r <= max`. NaNs fail (`fcomp` + `test ah, 1/0x41` + `jne/jp`).
+        const auto& pos = entity->GetPosition();
+        const float r   = entity->GetColModel()->GetBoundRadius();
+        if (!(r + pos.x >= cornerA.x) || !(pos.x - r <= cornerB.x)
+            || !(r + pos.y >= cornerA.y) || !(pos.y - r <= cornerB.y)
+            || !(r + pos.z >= cornerA.z) || !(pos.z - r <= cornerB.z)) {
+            continue;
+        }
+
+        if (*outCount < maxCount) { // (there is no early exit when the buffer is full)
+            if (outEntities) {
+                outEntities[*outCount] = entity;
             }
+            ++*outCount;
         }
     }
 }

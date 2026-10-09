@@ -88,6 +88,7 @@ void CPlayerPed::InjectHooks() {
     RH_ScopedInstall(MakePlayerGroupDisappear, 0x60A440);
     RH_ScopedInstall(MakePlayerGroupReappear, 0x60A4B0);
     RH_ScopedInstall(HandleSprintEnergy, 0x60A550);
+    RH_ScopedInstall(ControlButtonSprint, 0x60A610);
     RH_ScopedInstall(GetButtonSprintResults, 0x60A820);
     RH_ScopedInstall(SetRealMoveAnim, 0x60A9C0);
     RH_ScopedInstall(HandlePlayerBreath, 0x60A8D0);
@@ -99,6 +100,7 @@ void CPlayerPed::InjectHooks() {
     RH_ScopedInstall(KeepAreaAroundPlayerClear, 0x60C1E0);
     RH_ScopedInstall(SetPlayerMoveBlendRatio, 0x60C520);
     RH_ScopedInstall(FindPedToAttack, 0x60C5F0);
+    RH_ScopedInstall(PlayerWantsToAttack, 0x60CC50);
     RH_ScopedInstall(ForceGroupToAlwaysFollow, 0x60C7C0);
     RH_ScopedInstall(ForceGroupToNeverFollow, 0x60C800);
     RH_ScopedInstall(MakeThisPedJoinOurGroup, 0x60C840);
@@ -858,7 +860,58 @@ constexpr struct tPlayerSprintSet { // From 0x8D2460
 
 // 0x60A610
 float CPlayerPed::ControlButtonSprint(eSprintType sprintType) {
-    return plugin::CallMethodAndReturn<float, 0x60A610, CPlayerPed *, eSprintType>(this, sprintType);
+    const auto pd = GetPlayerData();
+    if (!pd) {
+        return 0.0f;
+    }
+
+    // 0x53FB70. NOTE: The original passes a null pad on for other ped types (and would crash on it)
+    CPad* const pad = m_nPedType == PED_TYPE_PLAYER1 ? CPad::GetPad(0)
+                    : m_nPedType == PED_TYPE_PLAYER2 ? CPad::GetPad(1)
+                    : nullptr;
+
+    const auto& set = PLAYER_SPRINT_SET[sprintType];
+    const double ts = CTimer::GetTimeStep();
+
+    const bool canSprint = !pd->m_bPlayerSprintDisabled && (pd->m_fMoveSpeed > 0.0f || pd->m_fTimeCanRun > 0.0f);
+
+    if (pad->SprintJustDown() && canSprint) { // 0x5407F0
+        // The original keeps the sum in extended precision (and compares it as such)
+        const double sum = (double)set.field_0 + (double)pd->m_fMoveSpeed;
+        pd->m_fMoveSpeed = set.field_10 < sum ? set.field_10 : (float)sum;
+    } else if (pad->GetSprint() && canSprint) { // 0x5407A0
+        const double val = (double)pd->m_fMoveSpeed - ts * (double)set.field_4;
+        pd->m_fMoveSpeed = 1.0f > val ? 1.0f : (float)val;
+    } else if (pd->m_fMoveSpeed > 0.0f) {
+        const double val = (double)pd->m_fMoveSpeed - ts * (double)set.field_8;
+        pd->m_fMoveSpeed = 0.0f > val ? 0.0f : (float)val;
+    }
+
+    float  progress;
+    float  energyRate;
+    double progressD;
+    if (pd->m_fMoveSpeed > set.field_C) {
+        progressD  = (double)pd->m_fMoveSpeed / (double)set.field_C;
+        progress   = (float)progressD;
+        energyRate = set.field_18;
+        if (!(progressD > 0.0)) {
+            return 0.0f;
+        }
+    } else {
+        if (!(pd->m_fMoveSpeed > 0.0f) || !canSprint) {
+            return 0.0f;
+        }
+        progress   = 1.0f;
+        energyRate = set.field_14;
+    }
+
+    if (!HandleSprintEnergy(true, energyRate)) { // 0x60A550
+        pd->m_fMoveSpeed = 0.0f;
+        return 0.0f;
+    }
+
+    const double excess = (double)progress - 1.0;
+    return (float)((0.0 > excess ? 0.0 : excess) * (double)set.field_1C + 1.0);
 }
 
 // 0x60A820
@@ -1762,7 +1815,42 @@ void CPlayerPed::MakeThisPedJoinOurGroup(CPed* ped) {
 
 // 0x60CC50
 bool CPlayerPed::PlayerWantsToAttack() {
-    return plugin::CallMethodAndReturn<bool, 0x60CC50, CPlayerPed *>(this);
+    auto& group = CPedGroups::ms_groups[GetPlayerData()->m_nPlayerGroup]; // 0xC09920 + group * 0x2D4
+    if (group.GetMembership().CountMembersExcludingLeader() < 1) {
+        return false; // NOTSA: The original returns void (AL is garbage), nobody uses the result
+    }
+
+    if (!group.m_bMembersEnterLeadersVehicle) { // 0xC09924 + group * 0x2D4
+        return false;
+    }
+
+    group.GetIntelligence().ReportAllBarScriptTasksFinished(); // 0xC09950 + group * 0x2D4
+
+    CEntity* target = m_pTargetedObject;
+    if (CCamera::m_bUseMouse3rdPerson && !target) {
+        target = m_p3rdPersonMouseTarget;
+    }
+
+    CPed* pedToAttack;
+    if (target && target->GetType() == ENTITY_TYPE_PED) {
+        pedToAttack = target->AsPed();
+    } else {
+        if (target) {
+            if (CTagManager::IsTag(*target)) { // 0x49CCE0
+                return false;
+            }
+            if (target->GetType() == ENTITY_TYPE_OBJECT && target->AsObject()->CanBeTargetted()) { // 0x59F320
+                return false;
+            }
+        }
+        pedToAttack = FindPedToAttack(); // 0x60C5F0
+    }
+
+    if (pedToAttack) {
+        CPedGroups::ms_groups[GetPlayerData()->m_nPlayerGroup].PlayerGaveCommand_Attack(this, pedToAttack); // 0x5F7CC0
+    }
+
+    return false; // NOTSA: see above
 }
 
 // 0x60CD20

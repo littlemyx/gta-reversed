@@ -69,6 +69,9 @@ void InstallRedirectHandler();
 [[noreturn]] void Fatal(const char* fmt, ...);
 //! Append a line to the log
 void Log(const char* fmt, ...);
+//! D7 self-check: log the x87 precision control (`_controlfp(0,0) & _MCW_PC`: 0x00000 = 24 bit, 0x10000 = 53 bit, 0x20000 = 64 bit), the rounding/exception
+//! masks and the sticky `_statusfp()` flags, tagged with `where`. The original runs at PC=53 (CRT) until D3D9 CreateDevice lowers the thread to PC=24.
+void LogFpuState(const char* where);
 } // namespace Fixups
 
 //! Used by `plugin::Call*<addr>`

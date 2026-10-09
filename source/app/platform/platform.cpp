@@ -3,6 +3,9 @@
 #include "platform.h"
 #include "VideoMode.h"
 #include "app/app.h"
+#ifdef NOTSA_STANDALONE_RUN
+#include <standalone/Fixups.h>
+#endif
 
 void RsInjectHooks() {
     RH_ScopedNamespaceName("Rs");
@@ -266,12 +269,18 @@ bool RsRwInitialize(void* param) { // Win32: Param is HWND
         }
     }();
 
+#ifdef NOTSA_STANDALONE_RUN
+    notsa::standalone::Fixups::LogFpuState("before RwEngineStart");
+#endif
     if (res == rsEVENTERROR || !RwEngineStart()) {
         RwEngineClose();
         RwEngineTerm();
         return false;
     }
 
+#ifdef NOTSA_STANDALONE_RUN
+    notsa::standalone::Fixups::LogFpuState("after RwEngineStart");
+#endif
     AppEventHandler(rsREGISTERIMAGELOADER, nullptr);
     psNativeTextureSupport();
     RwTextureSetMipmapping(true);

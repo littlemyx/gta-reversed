@@ -25,6 +25,12 @@ endif()
 # Standalone exe that is meant to RUN (not just dump the hooks table): needs the data image of the user's own original exe
 if (${RE_PROJECT}_STANDALONE AND NOT ${RE_PROJECT}_STANDALONE_DUMP_HOOKS_ONLY)
     add_compile_definitions(NOTSA_STANDALONE_RUN)
+    set(${RE_PROJECT}_STANDALONE_RUN_BUILD ON)
+    # D7 (.notes/PHASE2_PLAN.md): the original is x87 code (no SSE) running at PC=24 (D3D9 CreateDevice without FPU_PRESERVE). Everything compiled
+    # in this directory (game code, shim, librw, shim unit tests) uses x87 + strict FP: no SSE/SSE2 codegen, no /fp:fast, no FMA contraction.
+    if (MSVC)
+        add_compile_options(/arch:IA32 /fp:precise)
+    endif()
     set(${RE_PROJECT}_ORIGINAL_EXE "" CACHE FILEPATH "Original gta_sa.exe (1.0 US), the standalone build extracts the data image from it at build time")
     if (NOT ${RE_PROJECT}_ORIGINAL_EXE)
         message(WARNING "${RE_PROJECT}_STANDALONE without -D${RE_PROJECT}_ORIGINAL_EXE=<gta_sa.exe>: the exe will not find original_data.bin and refuse to start")
@@ -631,12 +637,15 @@ target_compile_definitions(${RE_PROJECT_LIB_NAME} PRIVATE
     NOMINMAX
     USE_GTASA_ALLOCATOR
     EXTRA_DEBUG_FEATURES
-    FIX_BUGS
     NOTSA_WINDOWED_MODE # NOTE: This is a workaround for the game to run in windowed mode, and it must be enabled, otherwise shit's gonna crash
     SA_SKINNED_PEDS
 
     USE_D3D9 # TODO
 )
+# D8 (.notes/PHASE2_STATUS.md "D8 defaults"): the runnable standalone build reproduces the ORIGINAL behaviour, so no FIX_BUGS (EXTRA_DEBUG_FEATURES only adds the occlusion debug-module header; the debug UI itself is disabled in source)
+if (NOT ${RE_PROJECT}_STANDALONE_RUN_BUILD)
+    target_compile_definitions(${RE_PROJECT_LIB_NAME} PRIVATE FIX_BUGS)
+endif()
 target_compile_features(${RE_PROJECT_LIB_NAME} PRIVATE cxx_std_23)
 target_precompile_headers(${RE_PROJECT_LIB_NAME} PRIVATE StdInc.cpp)
 

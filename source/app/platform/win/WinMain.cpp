@@ -35,6 +35,9 @@
 #endif
 
 #include <toolsmenu/UIRenderer.h>
+#ifdef NOTSA_STANDALONE_RUN
+#include <float.h>
+#endif
 
 constexpr auto NO_FOREGROUND_PAUSE = true;
 
@@ -564,6 +567,11 @@ INT WINAPI WinMain(HINSTANCE instance, HINSTANCE hPrevInstance, LPSTR cmdLine, I
     // The data image was already mapped by the `.CRT$XIB` initializer (before any static constructor); this is a no-op safety net.
     notsa::standalone::DataImage::Load();
     notsa::standalone::Fixups::InstallRedirectHandler();
+
+    // D7: the original's CRT runs x87 libm (VS2005); the 32-bit UCRT would otherwise route sin/cos/pow/... to its SSE2 implementations on any SSE2 CPU
+    _set_SSE2_enable(0);
+    notsa::standalone::Fixups::LogFpuState("WinMain");
+    _clearfp(); // the CRT's _FPinit ends with fnclex: start without sticky exception flags
 
     // Hooks do not patch code here: each RH_Scoped*Install registers (exe address -> our function) in notsa::standalone::Fixups
     ReversibleHooks::RHManager::CreateInstance();

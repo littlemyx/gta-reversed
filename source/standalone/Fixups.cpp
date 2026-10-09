@@ -5,6 +5,7 @@
 #include <mutex>
 #include <atomic>
 #include <crtdbg.h>
+#include <float.h>
 #include <csignal>
 #include <cstdlib>
 #include <unordered_set>
@@ -205,6 +206,14 @@ void Log(const char* fmt, ...) {
     if (const HANDLE e = GetStdHandle(STD_ERROR_HANDLE); e && e != INVALID_HANDLE_VALUE) {
         WriteFile(e, line, n + 2, &w, nullptr);
     }
+}
+
+void LogFpuState(const char* where) {
+    const unsigned cw = _controlfp(0, 0);
+    const unsigned sw = _statusfp();
+    Log("FPU[%s]: PC=%s (cw=0x%05x) RC=0x%x EM=0x%02x sw=0x%x", where,
+        (cw & _MCW_PC) == _PC_24 ? "24" : (cw & _MCW_PC) == _PC_53 ? "53" : "64",
+        cw, cw & _MCW_RC, cw & _MCW_EM, sw);
 }
 
 [[noreturn]] void Fatal(const char* fmt, ...) {

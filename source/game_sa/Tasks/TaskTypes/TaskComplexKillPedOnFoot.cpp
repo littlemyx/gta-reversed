@@ -12,6 +12,7 @@
 #include "TaskComplexKillPedOnFootArmed.h"
 #include "TaskComplexKillPedOnFootMelee.h"
 #include "TaskComplexSignalAtPed.h"
+#include "TaskComplexGangLeader.h"
 #include "PedGroups.h"
 #include "General.h"
 #include "CopPed.h"
@@ -386,7 +387,7 @@ epilogue:
     }
 
     if (m_target) {
-        plugin::Call<0x65E9A0, CPed*, CPed*>(ped, m_target); // Makes gang peds say something when they see an enemy
+        CTaskComplexGangLeader::DoGangAttackSpeech(ped, m_target); // 0x65E9A0 // Makes gang peds say something when they see an enemy
     }
 
     return m_pSubTask;

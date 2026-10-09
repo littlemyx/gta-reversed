@@ -43,6 +43,7 @@ void CTaskComplexGangLeader::InjectHooks() {
     RH_ScopedInstall(GetRandomGangAmbientAnim, 0x65E730, { .State = HS::RedirectToGTA, .Locked = true });
     RH_ScopedInstall(ShouldLoadGangAnims, 0x65E7F0, { .State = HS::RedirectToGTA, .Locked = true });
     RH_ScopedInstall(DoGangAbuseSpeech, 0x65E860, { .State = HS::RedirectToGTA, .Locked = true });
+    RH_ScopedInstall(DoGangAttackSpeech, 0x65E9A0);
     RH_ScopedInstall(TryToPassObject, 0x65EA50);
 
     RH_ScopedVMTInstall(Clone, 0x661FA0, { .State = HS::RedirectToGTA, .Locked = true });
@@ -130,6 +131,29 @@ void CTaskComplexGangLeader::DoGangAbuseSpeech(CPed* talker, CPed* sayTo) {
         }
     }()) {
         talker->Say(phrase);
+    }
+}
+
+// 0x65E9A0 (cdecl, free function in the original)
+void CTaskComplexGangLeader::DoGangAttackSpeech(CPed* talker, CPed* target) {
+    if (!talker || !target) {
+        return;
+    }
+
+    if (!talker->IsGangster()) {
+        return;
+    }
+
+    // Only gangsters, or the player (checked by pointer, not by ped type), are valid targets
+    if (!target->IsGangster() && target != FindPlayerPed(0)) {
+        return;
+    }
+
+    switch (target->m_nPedType) {
+    case PED_TYPE_GANG1: talker->Say(CTX_GLOBAL_ATTACK_GANG_BALLAS, 0, 1.f, false, false, false); break; // 0x5EFFE0
+    case PED_TYPE_GANG3: talker->Say(CTX_GLOBAL_ATTACK_GANG_LSV,    0, 1.f, false, false, false); break; // 0x5EFFE0
+    case PED_TYPE_GANG8: talker->Say(CTX_GLOBAL_ATTACK_GANG_VLA,    0, 1.f, false, false, false); break; // 0x5EFFE0
+    default: break;
     }
 }
 

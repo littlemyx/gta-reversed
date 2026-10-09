@@ -29,6 +29,7 @@ public:
     static auto ShouldLoadGangAnims() -> bool;
     static auto DoGangAbuseSpeech(CPed* talker, CPed* sayTo) -> void;
 
+    static void DoGangAttackSpeech(CPed* talker, CPed* target);
     static CPed* TryToPassObject(CPed* ped, CPedGroup* group);
     void  UnrefAnimBlock(); // NOTSA
 

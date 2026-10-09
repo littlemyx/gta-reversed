@@ -186,6 +186,8 @@ void CCarCtrl::InjectHooks()
     RH_ScopedInstall(FindLinksToGoWithTheseNodes, 0x42B470);
     RH_ScopedInstall(WeaveForObject, 0x426BC0);
     RH_ScopedInstall(WeaveForOtherCar, 0x426350);
+    RH_ScopedInstall(FindNodesThisCarIsNearestTo, 0x42BD20);
+    RH_ScopedInstall(ScanForPedDanger, 0x42CE40);
 }
 
 // 0x4212E0
@@ -576,7 +578,93 @@ float CCarCtrl::FindMaximumSpeedForThisCarInTraffic(CVehicle* vehicle) {
 
 // 0x42BD20
 void CCarCtrl::FindNodesThisCarIsNearestTo(CVehicle* vehicle, CNodeAddress& nodeAddress1, CNodeAddress& nodeAddress2) {
-    plugin::Call<0x42BD20, CVehicle*, CNodeAddress&, CNodeAddress&>(vehicle, nodeAddress1, nodeAddress2);
+    // BUG: In the original the high words (node ids) of the results are uninitialized stack memory if no node is found, the area ids are 0xFFFF
+    CNodeAddress bestNode{};
+    CNodeAddress bestLinkedNode{};
+    float        bestScore = std::bit_cast<float>(0x47C34FF3u); // ~99999.9
+
+    const auto& pos = vehicle->GetPosition();
+
+    const auto xRegion = (int32)ThePaths.FindXRegionForCoors(pos.x);
+    const auto yRegion = (int32)ThePaths.FindYRegionForCoors(pos.y);
+
+    // Position inside of the region (x87: only the X one is rounded to float)
+    const auto relX = (float)((double)pos.x - ThePaths.FindXCoorsForRegion(xRegion));
+    const auto relY = (double)pos.y - ThePaths.FindYCoorsForRegion(yRegion);
+
+    // Also check the neighbouring regions if the vehicle is close to the border
+    auto minX = xRegion, minY = yRegion, maxX = xRegion, maxY = yRegion;
+    if (!(relX >= 200.0f)) {
+        minX--;
+    }
+    if (!(relY >= 200.0f)) {
+        minY--;
+    }
+    if (!(relX <= 550.0f)) {
+        maxX++;
+    }
+    if (!(relY <= 550.0f)) {
+        maxY++;
+    }
+    minX = std::max(minX, 0);
+    minY = std::max(minY, 0);
+    maxX = std::min(maxX, 7);
+    maxY = std::min(maxY, 7);
+
+    // Note: The matrix is used directly (not null checked) when it's needed for the direction
+    for (auto x = minX; x <= maxX; x++) {
+        for (auto y = minY; y <= maxY; y++) {
+            const auto areaId = x + y * 8;
+            const auto nodes  = ThePaths.m_pPathNodes[areaId];
+            if (!nodes) {
+                continue;
+            }
+            for (auto i = 0u; i < ThePaths.m_anNumVehicleNodes[areaId]; i++) {
+                const auto& node    = nodes[i];
+                const auto  nodePos = node.GetPosition();
+
+                // x87: the Y/Z differences are kept in extended precision (only X is rounded to float)
+                const auto dx = (float)((double)nodePos.x - pos.x);
+                const auto dy = (double)nodePos.y - pos.y;
+                const auto dz = (double)nodePos.z - pos.z;
+                if (std::sqrt((dz * dz + dy * dy) + (double)dx * dx) >= 150.0f) {
+                    continue;
+                }
+
+                for (auto j = 0; j < (int32)node.m_nNumLinks; j++) {
+                    const auto linkedAddr = ThePaths.m_pNodeLinks[areaId][node.m_wBaseLinkId + j];
+                    const auto linkedArea = ThePaths.m_pPathNodes[linkedAddr.m_wAreaId];
+                    if (!linkedArea) {
+                        continue;
+                    }
+                    const auto& linkedNode    = linkedArea[linkedAddr.m_wNodeId];
+                    const auto  linkedNodePos = linkedNode.GetPosition();
+
+                    // The Z coordinates are scaled by 3
+                    const CVector lineStart{ nodePos.x, nodePos.y, nodePos.z * 3.0f };
+                    const CVector lineEnd{ linkedNodePos.x, linkedNodePos.y, linkedNodePos.z * 3.0f };
+                    const CVector point{ pos.x, pos.y, pos.z * 3.0f };
+                    const auto    distToLine = CCollision::DistToLine(lineStart, lineEnd, point); // 0x417610
+
+                    CVector dir = linkedNodePos - nodePos;
+                    NormaliseOriginal(dir); // 0x59C910
+
+                    // x87: the dot product is kept in extended precision
+                    const auto& fwd = vehicle->m_matrix->GetForward();
+                    const auto  dot = ((double)dir.z * fwd.z + (double)dir.y * fwd.y) + (double)dir.x * fwd.x;
+                    const auto  score = (1.0f - dot) * 5.0f + distToLine;
+                    if (!(score >= bestScore)) {
+                        bestScore      = (float)score;
+                        bestNode       = { (uint16)areaId, (uint16)i };
+                        bestLinkedNode = linkedAddr;
+                    }
+                }
+            }
+        }
+    }
+
+    nodeAddress1 = bestNode;
+    nodeAddress2 = bestLinkedNode;
 }
 
 // 0x422090
@@ -1901,7 +1989,51 @@ void CCarCtrl::RemoveFromInterestingVehicleList(CVehicle* vehicle) {
 
 // 0x42CE40
 void CCarCtrl::ScanForPedDanger(CVehicle* vehicle) {
-    plugin::Call<0x42CE40, CVehicle*>(vehicle);
+    const auto radius = vehicle == FindPlayerVehicle(-1, false) ? 44.0f : 11.0f;
+
+    const auto bHonkAtPedBefore = vehicle->m_autoPilot.carCtrlFlags.bHonkAtPed;
+
+    const auto& pos = vehicle->GetPosition();
+    const auto  minX = pos.x - radius;
+    const auto  maxX = radius + pos.x;
+    const auto  minY = pos.y - radius;
+    const auto  maxY = radius + pos.y;
+
+    // x87: The value is kept in extended precision for the first `floor`, then the rounded (to float) copy is used for the second one
+    const auto GetSector = [](float v) {
+        const double sector = (double)v * 0.02f + 60.0f;
+        return std::pair{ sector, (float)sector };
+    };
+    const auto GetMinSector = [&](float v) -> int32 {
+        const auto [ext, rounded] = GetSector(v);
+        return (int32)std::floor(ext) > 0 ? (int32)std::floor((double)rounded) : 0;
+    };
+    const auto GetMaxSector = [&](float v) -> int32 {
+        const auto [ext, rounded] = GetSector(v);
+        return (int32)std::floor(ext) < 119 ? (int32)std::floor((double)rounded) : 119;
+    };
+    const auto sectorMinX = GetMinSector(minX);
+    const auto sectorMinY = GetMinSector(minY);
+    const auto sectorMaxX = GetMaxSector(maxX);
+    const auto sectorMaxY = GetMaxSector(maxY);
+
+    CWorld::AdvanceCurrentScanCode();
+
+    float speedFactor = (float)vehicle->m_autoPilot.m_nCruiseSpeed;
+    for (auto y = sectorMinY; y <= sectorMaxY; y++) {
+        for (auto x = sectorMinX; x <= sectorMaxX; x++) {
+            SlowCarDownForPedsSectorList( // 0x425440
+                CWorld::GetRepeatSector(x, y).Peds,
+                vehicle,
+                minX, minY, maxX, maxY,
+                &speedFactor,
+                (float)vehicle->m_autoPilot.m_nCruiseSpeed
+            );
+        }
+    }
+
+    vehicle->vehicleFlags.bWarnedPeds = true;
+    vehicle->m_autoPilot.carCtrlFlags.bHonkAtPed = bHonkAtPedBefore;
 }
 
 // 0x42FBC0

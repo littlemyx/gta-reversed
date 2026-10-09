@@ -120,7 +120,7 @@ void CScriptsForBrains::RequestAttractorScriptBrainWithThisName(const char* name
     if (const auto idx = GetIndexOfScriptBrainWithThisName(name, 5); idx >= 0) {
         const auto scriptIdx = m_aScriptForBrains[idx].m_StreamedScriptIndex;
         if (!CStreaming::IsModelLoaded(SCMToModelId(scriptIdx))) {
-            CStreaming::RequestModel(SCMToModelId(scriptIdx), STREAMING_MISSION_REQUIRED);
+            CStreaming::RequestModel(SCMToModelId(scriptIdx), STREAMING_PRIORITY_REQUEST); // 0x10
         }
         CTheScripts::StreamedScripts.m_aScripts[scriptIdx].m_NumberOfUsers++;
     }

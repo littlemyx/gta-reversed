@@ -568,6 +568,7 @@ void InjectHooksMain() {
     CPedGroupMembership::InjectHooks();
     CRealTimeShadowManager::InjectHooks();
     CRealTimeShadow::InjectHooks();
+    CRemote::InjectHooks();
     CPopCycle::InjectHooks();
     ProcObjectMan_c::InjectHooks();
     ProcSurfaceInfo_c::InjectHooks();

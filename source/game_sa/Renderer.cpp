@@ -129,10 +129,11 @@ void CWorldScan::ScanWorld(CVector2D* points, int32 pointsCount, tScanFunction s
                     angle += (double)(2.f * std::numbers::pi_v<float>); // 0x858CBC
                 } while (angle < 0.0);
             }
-            if (!(angle < (double)(2.f * std::numbers::pi_v<float>))) {
+            // NOTE: `>=` and not `!(<)`: the original skips this for NaN (FCOM sets C0 when unordered), `!(<)` would loop forever
+            if (angle >= (double)(2.f * std::numbers::pi_v<float>)) {
                 do {
                     angle -= (double)(2.f * std::numbers::pi_v<float>);
-                } while (!(angle < (double)(2.f * std::numbers::pi_v<float>)));
+                } while (angle >= (double)(2.f * std::numbers::pi_v<float>));
             }
             if (angle < (double)bestAngle) {
                 bestAngle = (float)angle;
@@ -363,9 +364,12 @@ void CWorldScan::SetExtraRectangleToScan(float minX, float maxX, float minY, flo
     for (auto x = Ftol(std::floor((double)minX)); x < Ftol(std::ceil((double)maxX)); x++) {
         for (auto y = Ftol(std::floor((double)minY)); y < Ftol(std::ceil((double)maxY)); y++) {
             // BUG: no bounds check, the original arrays hold 4 entries (Y array is directly followed by the X array)
-            ms_aExtraRectangleY[ms_nExtraRectangleCount] = y;
-            ms_aExtraRectangleX[ms_nExtraRectangleCount] = x;
-            ms_nExtraRectangleCount++;
+            // NOTE: The count is cached in a register in the original: when it's 4, `X[4]` aliases the count itself, but the count is
+            // stored back as `cached + 1` (not re-read), so we must not re-read it either
+            const int32 count = ms_nExtraRectangleCount;
+            ms_aExtraRectangleY[count] = y;
+            ms_aExtraRectangleX[count] = x;
+            ms_nExtraRectangleCount    = count + 1;
         }
     }
 }

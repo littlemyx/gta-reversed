@@ -40,13 +40,15 @@ void CRemote::TakeRemoteControlledCarFromPlayer(bool bCreateRemoteVehicleExplosi
 // 0x45AB10
 void CRemote::GivePlayerRemoteControlledCar(CVector pos, float rotation, int16 modelId) {
     // NOTE: `operator new` returns null if the pool is full, the original then crashes below
+    // NOTE: the original zero-extends the model id (`movzx`)
+    const int32 model = (uint16)modelId;
     CVehicle* veh;
-    if (CModelInfo::IsHeliModel(modelId)) {
-        veh = new CHeli(modelId, MISSION_VEHICLE);
-    } else if (CModelInfo::IsPlaneModel(modelId)) {
-        veh = new CPlane(modelId, MISSION_VEHICLE);
+    if (CModelInfo::IsHeliModel(model)) {
+        veh = new CHeli(model, MISSION_VEHICLE);
+    } else if (CModelInfo::IsPlaneModel(model)) {
+        veh = new CPlane(model, MISSION_VEHICLE);
     } else {
-        veh = new CAutomobile(modelId, MISSION_VEHICLE, true);
+        veh = new CAutomobile(model, MISSION_VEHICLE, true);
     }
 
     // x87: the sum below is kept in extended precision until the float store

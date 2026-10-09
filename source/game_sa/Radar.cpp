@@ -1814,8 +1814,13 @@ void CRadar::DrawEntityBlip(int32 blipIndex, uint8 arg1) {
         const double dx = (double)strip.position.x - (double)vehPos.x;
         airstripDist    = (float)std::sqrt(dy * dy + dx * dx);
 
-        // BUG: In the original `pos` is left uninitialised (stack garbage) if the player is too far away, we use the trace's position
-        pos = trace.m_vPosition;
+        // BUG: In the original `pos` is left uninitialised (a stale stack slot, whatever the caller's previous calls left there,
+        // not reproducible) if the player is >= 500 units away. In practice this is only observable via the short range check and
+        // the debug marker, as the airstrip drawing below recomputes everything from the trace's position.
+        // The non-fixed path keeps `pos` zeroed (deterministic stand-in for the garbage).
+        if (notsa::IsFixBugs()) {
+            pos = trace.m_vPosition;
+        }
 
         if (airstripDist < 500.f) {
             int16 range{};

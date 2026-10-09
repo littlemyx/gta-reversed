@@ -1,11 +1,20 @@
 #include "StdInc.h"
 
 #include "TaskComplexPartner.h"
+#include "TaskComplexPartnerChat.h"
+#include "TaskComplexWanderStandard.h"
+#include "TaskComplexTurnToFaceEntityOrCoord.h"
+#include "TaskComplexGoToPointAndStandStill.h"
+#include "TaskSimpleStandStill.h"
+#include <Ragdoll/IKChainManager.h>
 
 void CTaskComplexPartner::InjectHooks() {
     RH_ScopedVirtualClass(CTaskComplexPartner, 0x870664, 14);
     RH_ScopedCategory("Tasks/TaskTypes");
     RH_ScopedInstall(Constructor, 0x681E70);
+    RH_ScopedVMTInstall(CreateNextSubTask, 0x683AD0);
+    RH_ScopedVMTInstall(CreateFirstSubTask, 0x681F20);
+    RH_ScopedVMTInstall(ControlSubTask, 0x6840D0);
     RH_ScopedVMTInstall(StreamRequiredAnims, 0x682310);
     RH_ScopedVMTInstall(RemoveStreamedAnims, 0x682370);
 }
@@ -47,16 +56,187 @@ CTaskComplexPartner* CTaskComplexPartner::Constructor(const char* commandName, C
     return this;
 }
 
+// 0x683AD0
 CTask* CTaskComplexPartner::CreateNextSubTask(CPed* ped) {
-    return plugin::CallMethodAndReturn<CTask*, 0x683AD0, CTaskComplexPartner*, CPed*>(this, ped);
+    if (!m_partner) {
+        return nullptr;
+    }
+    const auto partnerTask = static_cast<CTaskComplexPartner*>(m_partner->GetTaskManager().FindActiveTaskByType(static_cast<eTaskType>(m_taskId)));
+    if (!partnerTask || partnerTask->m_partner != ped) {
+        return nullptr;
+    }
+
+    const auto MakeStandStill = [] { return new CTaskSimpleStandStill(50, false, false, 8.0f); };
+
+    switch (m_partnerState) {
+    case PARTNER_STATE_UNK_6: {
+        if (!m_requiredAnimsStreamedIn || !m_updateDirectionCount) {
+            return nullptr;
+        }
+        m_updateDirectionCount--;
+        return GetPartnerSequence();
+    }
+    case PARTNER_STATE_UNK_5: {
+        if (!m_makePedAlwaysFacePartner) {
+            if (partnerTask->m_partnerState >= PARTNER_STATE_UNK_5) { // 0x6822B0
+                const auto defaultTask = ped->GetTaskManager().m_aPrimaryTasks[TASK_PRIMARY_DEFAULT];
+                if (defaultTask && defaultTask->GetTaskType() == TASK_COMPLEX_WANDER && static_cast<CTaskComplexWander*>(defaultTask)->GetWanderType() == WANDER_TYPE_STANDARD) {
+                    const auto fwd     = ped->GetForwardVector(); // 0x41CCB0
+                    const auto heading = CGeneral::GetNodeHeadingFromVector(-fwd.x, -fwd.y);
+                    const auto wander  = new CTaskComplexWanderStandard(PEDMOVE_WALK, (uint8)heading, true);
+                    wander->m_nMinNextScanTime = CTimer::GetTimeInMS() + 100'000; // 0x66B150
+                    ped->GetTaskManager().SetTask(wander, TASK_PRIMARY_DEFAULT, false);
+                }
+                m_partnerState = PARTNER_STATE_UNK_6;
+            }
+            return MakeStandStill();
+        }
+
+        if (m_firstToTargetFlag == 1) {
+            if (partnerTask->m_partnerState == PARTNER_STATE_UNK_6) {
+                m_partnerState = PARTNER_STATE_UNK_6;
+            }
+            return MakeStandStill();
+        }
+
+        // The mix of float stores and extended precision temporaries follows the x87 code
+        const CVector2D pedPos     = ped->GetPosition();
+        const CVector2D partnerPos = m_partner->GetPosition();
+        const auto      dyExt      = (double)pedPos.y - (double)partnerPos.y;
+        CVector2D       diff{ (float)((double)pedPos.x - (double)partnerPos.x), (float)dyExt };
+        const auto      dist = std::sqrt((double)diff.x * (double)diff.x + dyExt * dyExt);
+        if (dist > 0.99f && dist < 1.01f) { // `!(dist > c)` / `dist >= c` ⇒ normalise (NaN included)
+            m_partnerState = PARTNER_STATE_UNK_6;
+            return MakeStandStill();
+        }
+
+        diff.Normalise();
+        const auto txExt = ((double)diff.x + (double)partnerPos.x) - (double)pedPos.x;
+        const auto tyExt = ((double)diff.y + (double)partnerPos.y) - (double)pedPos.y;
+        CVector2D  t{ (float)txExt, (float)tyExt };
+        const auto len = std::sqrt(txExt * txExt + (double)t.y * (double)t.y);
+        double     x, y;
+        if (len > 0.02f) {
+            t.Normalise();
+            x = (double)t.x * (double)0.02f;
+            y = (double)t.y * (double)0.02f;
+        } else {
+            x = t.x;
+            y = t.y;
+        }
+        const auto& right = ped->GetRight();
+        const auto& fwd   = ped->GetForward();
+        ped->m_vecAnimMovingShiftLocal.x = (float)((double)right.x * x + (double)right.y * y);
+        ped->m_vecAnimMovingShiftLocal.y = (float)((double)fwd.x * x + (double)fwd.y * y);
+        return MakeStandStill();
+    }
+    case PARTNER_STATE_UNK_4: {
+        const auto partnerState = partnerTask->m_partnerState;
+        if (partnerState == PARTNER_STATE_UNK_4 || partnerState == PARTNER_STATE_UNK_5) {
+            if (m_firstToTargetFlag == -1) {
+                m_firstToTargetFlag = 0;
+            }
+            if (partnerTask->m_firstToTargetFlag == -1) {
+                partnerTask->m_firstToTargetFlag = 1;
+            }
+            m_partnerState = PARTNER_STATE_UNK_5;
+        } else {
+            if (m_firstToTargetFlag == -1) {
+                m_firstToTargetFlag = 1;
+            }
+            if (partnerTask->m_firstToTargetFlag == -1) {
+                partnerTask->m_firstToTargetFlag = 0;
+            }
+            partnerTask->m_point = m_targetPoint;
+        }
+        return MakeStandStill();
+    }
+    case PARTNER_STATE_UNK_3: {
+        if (m_pSubTask->GetTaskType() == TASK_COMPLEX_GO_TO_POINT_AND_STAND_STILL) {
+            return new CTaskComplexTurnToFaceEntityOrCoord(m_partner, 0.5f, 0.2f);
+        }
+        if (m_pSubTask->GetTaskType() != TASK_COMPLEX_TURN_TO_FACE_ENTITY) {
+            return nullptr;
+        }
+        m_partnerState = PARTNER_STATE_UNK_4;
+        return MakeStandStill();
+    }
+    case PARTNER_STATE_UNK_2: {
+        if (m_pSubTask->GetTaskType() != TASK_SIMPLE_STAND_STILL) {
+            return nullptr;
+        }
+        if (m_point.x != 0.0f || m_point.y != 0.0f) { // NaN-preserving: `!=` is true for NaN, like the JP in the exe
+            m_partnerState = PARTNER_STATE_UNK_3;
+            GetGoToPointFrameCounter() = 0;
+            return new CTaskComplexGoToPointAndStandStill(PEDMOVE_WALK, m_point, 0.1f, 0.0f, false, true);
+        }
+        return MakeStandStill();
+    }
+    case PARTNER_STATE_UNK_1: {
+        if (m_pSubTask->GetTaskType() != TASK_SIMPLE_STAND_STILL) {
+            return nullptr;
+        }
+        if (m_leadSpeaker) {
+            // 0x681FE0 (unnamed, not part of this batch): computes `m_targetPoint` from `m_point`
+            plugin::CallMethod<0x681FE0, CTaskComplexPartner*, CPed*, CVector*, CVector*>(this, ped, &m_point, &m_targetPoint);
+            partnerTask->m_point = m_targetPoint;
+        }
+        m_partnerState = PARTNER_STATE_UNK_2;
+        return MakeStandStill();
+    }
+    default:
+        return nullptr;
+    }
 }
 
+// 0x681F20 (also the target of the 5-byte thunk 0x6823B0 used by `CTaskComplexPartnerDeal`)
 CTask* CTaskComplexPartner::CreateFirstSubTask(CPed* ped) {
-    return plugin::CallMethodAndReturn<CTask*, 0x681F20, CTaskComplexPartner*, CPed*>(this, ped);
+    if (m_leadSpeaker && m_taskId == TASK_COMPLEX_PARTNER_CHAT) {
+        const auto chat = static_cast<CTaskComplexPartnerChat*>(this);
+        if (chat->m_conversationEnabled) {
+            if (CAEPedSpeechAudioEntity::RequestPedConversation(ped, m_partner)) {
+                chat->m_pedConversationLoaded = true;
+            } else if (!chat->field_75) {
+                return nullptr;
+            } else {
+                chat->m_conversationEnabled = false;
+            }
+        }
+    }
+    ped->StopPlayingHandSignal();
+    return new CTaskSimpleStandStill(50, false, false, 8.0f);
 }
 
+// 0x6840D0
 CTask* CTaskComplexPartner::ControlSubTask(CPed* ped) {
-    return plugin::CallMethodAndReturn<CTask*, 0x6840D0, CTaskComplexPartner*, CPed*>(this, ped);
+    const auto ShouldAbort = [&] {
+        if (m_partnerState <= PARTNER_STATE_UNK_1 && m_partner && !m_taskCompleted) {
+            return false;
+        }
+        if (m_partner) {
+            const auto partnerTask = static_cast<CTaskComplexPartner*>(m_partner->GetTaskManager().FindActiveTaskByType(static_cast<eTaskType>(m_taskId)));
+            if (partnerTask && partnerTask->m_partner == ped && !m_taskCompleted) {
+                return false;
+            }
+        }
+        return true;
+    };
+    if (ShouldAbort() && m_pSubTask->MakeAbortable(ped, ABORT_PRIORITY_URGENT, nullptr)) {
+        return nullptr;
+    }
+
+    if (m_pSubTask->GetTaskType() == TASK_COMPLEX_GO_TO_POINT_AND_STAND_STILL) {
+        if (++GetGoToPointFrameCounter() > 150 && m_pSubTask->MakeAbortable(ped, ABORT_PRIORITY_URGENT, nullptr)) {
+            return nullptr;
+        }
+    }
+
+    ped->DropEntityThatThisPedIsHolding(true);
+    StreamRequiredAnims();
+    if (g_ikChainMan.IsLooking(ped)) {
+        g_ikChainMan.AbortLookAt(ped, 500);
+    }
+    return m_pSubTask;
 }
 
 // 0x682310

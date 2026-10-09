@@ -5,7 +5,12 @@
 class CTaskComplexSequence;
 
 enum ePartnerState : int8 {
-    PARTNER_STATE_UNK_1 = 1
+    PARTNER_STATE_UNK_1 = 1,
+    PARTNER_STATE_UNK_2,
+    PARTNER_STATE_UNK_3,
+    PARTNER_STATE_UNK_4,
+    PARTNER_STATE_UNK_5,
+    PARTNER_STATE_UNK_6,
 };
 
 class NOTSA_EXPORT_VTABLE CTaskComplexPartner : public CTaskComplex {
@@ -39,6 +44,11 @@ public:
     CTask*       ControlSubTask(CPed* ped) override;
     virtual void StreamRequiredAnims();
     virtual void RemoveStreamedAnims();
+    virtual CTaskComplexSequence* GetPartnerSequence() = 0; // vtable slot 13 is `_purecall` in the exe
+
+protected:
+    // NOTSA: the base class code uses a 16-bit counter at +0x70, which is `field_70` of the derived classes (the base is 0x70 bytes)
+    int16& GetGoToPointFrameCounter() { return *reinterpret_cast<int16*>(reinterpret_cast<uint8*>(this) + 0x70); }
 
 private:
     friend void InjectHooksMain();

@@ -5208,15 +5208,21 @@ uint8 CPed::SpecialEntityCalcCollisionSteps(bool& bProcessCollisionBeforeSetting
     if (!m_pPlayerData) {
         steps = (int32)std::ceil(moveSpeed * 5.0f); // 0x5E3FA8 (the product is stored as a double)
     } else {
-        // 0x5E3F29: the product is rounded to float (FST) before being passed to ceil
+        // 0x5E3F2B..: `FST float [tmp]` keeps a float-rounded copy, but the argument of the first `ceil`
+        // is `FSTP double` of the unrounded product. The clamp decision is made on that first ceil;
+        // when it is not taken, `ceil` is called AGAIN with the float-rounded copy and that result is used.
         const auto Calc = [&](float mult, double minSteps) {
-            const double ceiled = std::ceil((double)(float)(moveSpeed * mult));
-            // FCOMP + `TEST AH, 5` + JP => take the clamp only if ceiled < minSteps (ordered)
-            return (int32)(ceiled < minSteps ? minSteps : ceiled);
+            const double product = moveSpeed * mult;
+            const double ceiled0 = std::ceil(product);
+            // FCOMP + `TEST AH, 5` + JP => take the clamp only if ceiled0 < minSteps (ordered)
+            if (ceiled0 < minSteps) {
+                return (int32)minSteps;
+            }
+            return (int32)std::ceil((double)(float)product);
         };
         steps = m_standingOnEntity
-            ? Calc(6.6666665f, 4.0f)
-            : Calc(3.3333333f, 2.0f);
+            ? Calc(6.6666665f, 4.0)
+            : Calc(3.3333333f, 2.0);
     }
 
     if (!m_pPlayerData) {

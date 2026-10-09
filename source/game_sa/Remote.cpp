@@ -18,6 +18,7 @@ void CRemote::InjectHooks() {
 
     RH_ScopedInstall(GivePlayerRemoteControlledCar, 0x45AB10);
     RH_ScopedInstall(TakeRemoteControlledCarFromPlayer, 0x45AE80);
+    RH_ScopedInstall(TakeRemoteControlOfCar, 0x45AD40);
 }
 
 // 0x45AE80
@@ -89,5 +90,45 @@ void CRemote::GivePlayerRemoteControlledCar(CVector pos, float rotation, int16 m
     veh->RegisterReference(reinterpret_cast<CEntity**>(&remote));
 
     TheCamera.TakeControl(veh, MODE_CAM_ON_A_STRING, eSwitchType::INTERPOLATION, 1);
+    TheCamera.SetZoomValueCamStringScript(1);
+}
+
+// 0x45AD40
+void CRemote::TakeRemoteControlOfCar(CVehicle* veh) {
+    auto& pi = CWorld::Players[CWorld::PlayerInFocus];
+
+    // The previous remote vehicle (if any) goes back to STATUS_PHYSICS. The camera switch is a jump cut (2) when it's another car
+    bool isNewVehicle = false;
+    if (auto* const old = pi.m_pRemoteVehicle) {
+        old->SetStatus(STATUS_PHYSICS);
+        if (old != veh) {
+            isNewVehicle = true;
+        }
+    }
+
+    veh->SetStatus(STATUS_REMOTE_CONTROLLED);
+    veh->vehicleFlags.bIsLocked = true;
+    auto& ap                   = veh->m_autoPilot;
+    ap.m_nCarMission           = MISSION_NONE;
+    ap.m_nTempAction           = (eAutoPilotTempAction)0; // +0x3BB
+    ap.m_nCarDrivingStyle      = DRIVING_STYLE_STOP_FOR_CARS; // +0x3B9
+    ap.m_speed                 = 9.0f;          // 0x41100000
+    ap.m_nCruiseSpeed          = 9;
+    ap.m_nCurrentLane          = 0;             // +0x3B7
+    ap.m_nNextLane             = 0;             // +0x3B8
+    veh->vehicleFlags.bEngineOn = !veh->vehicleFlags.bEngineBroken; // inlined SetEngineOn(true)
+
+    if (auto* const playerVeh = FindPlayerVehicle(-1, false)) {
+        playerVeh->SetStatus(STATUS_FORCED_STOP);
+    }
+
+    // pi.m_pRemoteVehicle = veh (with reference bookkeeping)
+    if (pi.m_pRemoteVehicle) {
+        pi.m_pRemoteVehicle->CleanUpOldReference(reinterpret_cast<CEntity**>(&pi.m_pRemoteVehicle));
+    }
+    pi.m_pRemoteVehicle = veh;
+    veh->RegisterReference(reinterpret_cast<CEntity**>(&pi.m_pRemoteVehicle));
+
+    TheCamera.TakeControl(veh, MODE_CAM_ON_A_STRING, isNewVehicle ? eSwitchType::JUMPCUT : eSwitchType::INTERPOLATION, 1);
     TheCamera.SetZoomValueCamStringScript(1);
 }

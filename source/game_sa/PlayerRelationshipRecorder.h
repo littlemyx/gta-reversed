@@ -4,7 +4,7 @@ class CPed;
 
 struct PlayerRelationship {
     const CPed* Ped;
-    int32       Relationship;
+    uint8       Relationship; // asm: byte at +4
 
     PlayerRelationship() { Flush(); }
 
@@ -28,8 +28,21 @@ public:
     void Flush();
     void ClearRelationshipWithPlayer(const CPed* ped);
     void AddRelationship(const CPed* ped, int32 value);
-    int32 GetRelationshipWithPlayer(const CPed* ped);
+    uint8 GetRelationshipWithPlayer(const CPed* ped);
     void RecordRelationshipWithPlayer(const CPed* ped);
+
+private: // NOTSA:
+    friend void InjectHooksMain();
+
+    CPlayerRelationshipRecorder* Constructor() {
+        this->CPlayerRelationshipRecorder::CPlayerRelationshipRecorder();
+        return this;
+    }
+
+    CPlayerRelationshipRecorder* Destructor() {
+        this->CPlayerRelationshipRecorder::~CPlayerRelationshipRecorder();
+        return this;
+    }
 };
 
 CPlayerRelationshipRecorder& GetPlayerRelationshipRecorder();

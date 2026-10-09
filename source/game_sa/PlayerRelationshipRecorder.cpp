@@ -7,7 +7,14 @@ void CPlayerRelationshipRecorder::InjectHooks() {
     RH_ScopedClass(CPlayerRelationshipRecorder);
     RH_ScopedCategoryGlobal();
 
+    RH_ScopedInstall(Constructor, 0x61A130);
+    RH_ScopedInstall(Destructor, 0x61A2C0);
+    RH_ScopedInstall(Flush, 0x61A2A0);
+    RH_ScopedInstall(ClearRelationshipWithPlayer, 0x61A150);
+    RH_ScopedInstall(AddRelationship, 0x61A180);
+    RH_ScopedInstall(GetRelationshipWithPlayer, 0x61A1A0);
     RH_ScopedInstall(RecordRelationshipWithPlayer, 0x61A1D0);
+    RH_ScopedGlobalInstall(GetPlayerRelationshipRecorder, 0x61A2E0);
 }
 
 // 0x61A130
@@ -29,10 +36,11 @@ void CPlayerRelationshipRecorder::Flush() {
 
 // 0x61A180
 void CPlayerRelationshipRecorder::AddRelationship(const CPed* ped, int32 value) {
+    // BUG (original): only overwrites slot 0, and only if it is already occupied (`Ped != null`), so nothing is ever recorded.
     auto& rel = m_Relationships[0];
     if (rel.Ped) {
         rel.Ped = ped;
-        rel.Relationship = value;
+        rel.Relationship = (uint8)value;
     }
 }
 
@@ -65,7 +73,7 @@ void CPlayerRelationshipRecorder::RecordRelationshipWithPlayer(const CPed* ped) 
 }
 
 // 0x61A1A0
-int32 CPlayerRelationshipRecorder::GetRelationshipWithPlayer(const CPed* ped) {
+uint8 CPlayerRelationshipRecorder::GetRelationshipWithPlayer(const CPed* ped) {
     for (auto& relationship : m_Relationships) {
         if (relationship.Ped != ped)
             continue;

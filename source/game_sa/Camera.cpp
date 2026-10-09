@@ -59,7 +59,7 @@ CCam& CCamera::GetActiveCamera() {
 }
 
 void CCamera::InjectHooks() {
-    RH_ScopedClass(CCamera);
+    RH_ScopedVirtualClass(CCamera, 0x8630E8, 1);
     RH_ScopedCategoryGlobal();
 
     RH_ScopedInstall(GetArrPosForVehicleType, 0x50AF00);

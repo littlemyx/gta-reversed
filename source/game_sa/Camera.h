@@ -76,7 +76,7 @@ struct CamTweak {
 };
 VALIDATE_SIZE(CamTweak, 0x10);
 
-class CCamera : public CPlaceable {
+class NOTSA_EXPORT_VTABLE CCamera : public CPlaceable {
 public:
     bool            m_bAboveGroundTrainNodesLoaded{};
     bool            m_bBelowGroundTrainNodesLoaded{};

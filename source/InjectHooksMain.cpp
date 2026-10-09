@@ -1396,7 +1396,7 @@ void InjectHooksMain() {
         // + CEventSexyPed
         // + CEventSignalAtPed
         // + CEventSoundLoud
-        // - CEventSource::InjectHooks();
+        CEventSource::InjectHooks();
         CEventScanner::InjectHooks();
         CVehiclePotentialCollisionScanner::InjectHooks();
     };
@@ -1409,7 +1409,7 @@ void InjectHooksMain() {
         FxMemoryPool_c::InjectHooks();
         FxInfoManager_c::InjectHooks();
         FxManager_c::InjectHooks();
-        // ReversibleHooks::Install("FxFrustumInfo_c", "IsCollision", 0x4AA030, &FxFrustumInfo_c::IsCollision);
+        FxFrustumInfo_c::InjectHooks();
         FxEmitterPrt_c::InjectHooks();
         FxEmitterBP_c::InjectHooks();
         FxEmitter_c::InjectHooks();

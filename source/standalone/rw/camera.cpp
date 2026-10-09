@@ -23,6 +23,10 @@
 #include "camera_sync.h"   // 01r: the exe's camera sync callback 0x7EE5A0 (lifted from the asm, bit-exact vs the exe), replaces librw's cameraSync
 
 #include <cassert>
+#include <cstdio>
+#include <cstdlib>
+#include <cstring>
+#include <vector>
 
 namespace rw { void calczShiftScale(Camera* cam); } // camera.cpp (librw): zScale/zShift from the device z range, not in a header (superseded by CalcZShiftScale below)
 
@@ -168,10 +172,67 @@ RwCamera* RwCameraClear(RwCamera* camera, RwRGBA* colour, RwInt32 clearMode) {
 
 // A: Raster::show on the camera's frame buffer = Present. RW's `pDev` was the destination HWND; librw presents to the device window
 // (the only window in the standalone build) and ignores it. flags: rwRASTERFLIPWAITVSYNC == Raster::FLIPWAITVSYNCH.
+#ifdef NOTSA_STANDALONE_RUN
+// S5: NOTSA_STANDALONE_SCREENSHOT=<k> writes frame_<n>.bmp (back buffer, 24 bit) into the current directory before every k-th Present (k>=1, first 30 files)
+static void ShimDumpBackBuffer() {
+    static int  s_Every = -2;
+    static int  s_Frame = 0, s_Written = 0;
+    if (s_Every == -2) {
+        const char* e = std::getenv("NOTSA_STANDALONE_SCREENSHOT");
+        s_Every = e ? (std::atoi(e) > 0 ? std::atoi(e) : 1) : -1;
+    }
+    if (s_Every < 0 || s_Written >= 30 || (s_Frame++ % s_Every) != 0) {
+        return;
+    }
+    IDirect3DDevice9* dev = rw::d3d::d3ddevice;
+    IDirect3DSurface9 *bb = nullptr, *sys = nullptr;
+    if (FAILED(dev->GetBackBuffer(0, 0, D3DBACKBUFFER_TYPE_MONO, &bb)) || !bb) {
+        return;
+    }
+    D3DSURFACE_DESC d{};
+    bb->GetDesc(&d);
+    if (SUCCEEDED(dev->CreateOffscreenPlainSurface(d.Width, d.Height, d.Format, D3DPOOL_SYSTEMMEM, &sys, nullptr)) && SUCCEEDED(dev->GetRenderTargetData(bb, sys))) {
+        D3DLOCKED_RECT lr{};
+        if (SUCCEEDED(sys->LockRect(&lr, nullptr, D3DLOCK_READONLY))) {
+            char name[64];
+            std::snprintf(name, sizeof(name), "frame_%d.bmp", s_Written++);
+            if (FILE* f = std::fopen(name, "wb")) {
+                const uint32_t rowBytes = (d.Width * 3 + 3) & ~3u, imgSize = rowBytes * d.Height;
+                uint8_t        hdr[54] = { 'B', 'M' };
+                auto           put32   = [&](int o, uint32_t v) { std::memcpy(hdr + o, &v, 4); };
+                put32(2, 54 + imgSize); put32(10, 54); put32(14, 40); put32(18, d.Width); put32(22, d.Height);
+                hdr[26] = 1; hdr[28] = 24; put32(34, imgSize);
+                std::fwrite(hdr, 1, 54, f);
+                std::vector<uint8_t> row(rowBytes, 0);
+                for (int y = (int)d.Height - 1; y >= 0; y--) {
+                    const uint8_t* src = (const uint8_t*)lr.pBits + (size_t)y * lr.Pitch;
+                    for (UINT x = 0; x < d.Width; x++) {
+                        if (d.Format == D3DFMT_R5G6B5) {
+                            const uint16_t v = ((const uint16_t*)src)[x];
+                            row[x * 3 + 0] = (uint8_t)((v & 31) * 255 / 31); row[x * 3 + 1] = (uint8_t)(((v >> 5) & 63) * 255 / 63); row[x * 3 + 2] = (uint8_t)(((v >> 11) & 31) * 255 / 31);
+                        } else {
+                            row[x * 3 + 0] = src[x * 4 + 0]; row[x * 3 + 1] = src[x * 4 + 1]; row[x * 3 + 2] = src[x * 4 + 2];
+                        }
+                    }
+                    std::fwrite(row.data(), 1, rowBytes, f);
+                }
+                std::fclose(f);
+            }
+            sys->UnlockRect();
+        }
+    }
+    if (sys) sys->Release();
+    bb->Release();
+}
+#endif
+
 RwCamera* RwCameraShowRaster(RwCamera* camera, void* /*pDev*/, RwUInt32 flags) {
     if (!camera || !camera->frameBuffer || !rw::d3d::d3ddevice) {
         return nullptr;
     }
+#ifdef NOTSA_STANDALONE_RUN
+    ShimDumpBackBuffer();
+#endif
     camera->showRaster(flags);
     return camera;
 }

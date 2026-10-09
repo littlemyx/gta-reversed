@@ -62,6 +62,15 @@ void NoteHook(uint32_t exeAddr, const char* name) {
 }
 
 void __cdecl AbortHandler(int) {
+    // Standalone S5: make the symbolising unhandled-exception filter (app_debug.cpp) print the call stack of the failing assert()/terminate() into logs/log.log
+    if (!std::getenv("NOTSA_STANDALONE_NO_ABORT_TRACE")) {
+        static bool s_Raised = false;
+        if (!s_Raised) {
+            s_Raised = true;
+            Fixups::Log("abort(): raising exception 0xE0AB0001 for a stack trace (last hook %s)", g_LastHook);
+            RaiseException(0xE0AB0001u, EXCEPTION_NONCONTINUABLE, 0, nullptr);
+        }
+    }
     Fixups::Fatal("abort() called (failed assert()/terminate). Last hook registered: %s", g_LastHook);
 }
 

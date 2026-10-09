@@ -10,6 +10,7 @@
 // This file only needs fakerw + librw + the CRT, so the standalone unit test (tests/standalone/rw_engine_test.cpp) builds it without
 // the game's PCH. Excluded from the unity build.
 #ifdef NOTSA_RW_LIBRW
+#include "standalone/Fixups.h"
 #include "fakerw.h"
 
 // librw's D3D9 device internals (d3d9Globals: adapter / mode list / present parameters). Same header the library itself compiles with.
@@ -137,6 +138,12 @@ void BuildExeModeList() {
             }
         }
     }
+#ifdef NOTSA_STANDALONE_RUN
+    notsa::standalone::Fixups::Log("rw video modes: %d (desktop %ux%u fmt %d)", g.numModes, g.modes[0].mode.Width, g.modes[0].mode.Height, (int)g.modes[0].mode.Format);
+    for (int i = 0; i < g.numModes && i < 64; i++) {
+        notsa::standalone::Fixups::Log("  mode %d: %ux%u fmt %d rr %u flags %d", i, g.modes[i].mode.Width, g.modes[i].mode.Height, (int)g.modes[i].mode.Format, g.modes[i].mode.RefreshRate, (int)g.modes[i].flags);
+    }
+#endif
 }
 
 void PublishDeviceRange() {

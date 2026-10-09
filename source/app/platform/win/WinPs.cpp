@@ -448,6 +448,31 @@ static BOOL CheckDefaultVideoModeSupported() {
         return TRUE;
     }
 
+#ifdef NOTSA_STANDALONE_RUN
+    // Standalone on hosts without a 800x600 display mode (Wine on macOS lists only the scaled native modes): take the smallest 32 bit exclusive
+    // mode with width >= 800 (override: NOTSA_STANDALONE_VIDEOMODE=<index>)
+    if (const char* ov = std::getenv("NOTSA_STANDALONE_VIDEOMODE")) {
+        GcurSelVM = std::atoi(ov);
+        return TRUE;
+    }
+    {
+        int32 best = -1;
+        RwUInt32 bestArea = ~0u;
+        for (auto i = 0; i < RwEngineGetNumVideoModes(); i++) {
+            RwVideoMode vmi;
+            RwEngineGetVideoModeInfo(&vmi, i);
+            if (vmi.width >= 800 && vmi.height >= 600 && vmi.depth == 32 && (vmi.flags & rwVIDEOMODEEXCLUSIVE) && vmi.width * vmi.height < bestArea) {
+                best     = i;
+                bestArea = vmi.width * vmi.height;
+            }
+        }
+        if (best != -1) {
+            NOTSA_LOG_DEBUG("No 800x600x32 video mode: using mode {}", best);
+            GcurSelVM = best;
+            return TRUE;
+        }
+    }
+#endif
     MessageBox(NULL, "Cannot find 800x600x32 video mode", "GTA: San Andreas", IDOK);
     return FALSE;
 }

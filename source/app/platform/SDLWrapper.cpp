@@ -32,9 +32,11 @@ void ProcessEvents() {
     const auto* const imCtx = ImGui::GetCurrentContext();
     const auto* const imIO  = imCtx ? &imCtx->IO : nullptr;
     for (SDL_Event e; SDL_PollEvent(&e);) {
+#ifndef NOTSA_STANDALONE_RUN // no imgui backend in the standalone run build (UIRenderer stub)
         if (imIO) {
             ImGui_ImplSDL3_ProcessEvent(&e);
         }
+#endif
 
         switch (e.type) {
         case SDL_EVENT_QUIT: {

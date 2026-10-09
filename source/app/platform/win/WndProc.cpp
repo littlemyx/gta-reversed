@@ -36,9 +36,11 @@ LRESULT CALLBACK __MainWndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lPara
         }
     }
 
+#ifndef NOTSA_STANDALONE_RUN
     if (ImGui_ImplWin32_WndProcHandler(hWnd, uMsg, wParam, lParam)) {
         return true;
     }
+#endif
 
     switch (uMsg) {
     case WM_SETCURSOR: {

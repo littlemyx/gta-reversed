@@ -2,6 +2,15 @@
 
 #include "FxInfoEmRotation.h"
 
+void FxInfoEmRotation_c::InjectHooks() {
+    RH_ScopedVirtualClass(FxInfoEmRotation_c, 0x85A83C, 3);
+    RH_ScopedCategory("Fx");
+
+    RH_ScopedVMTDestructorInstall(0x4A6DF0);
+    RH_ScopedVMTInstall(Load, 0x4A5220);
+    RH_ScopedVMTInstall(GetValue, 0x4A5240);
+}
+
 // 0x4A51B0
 FxInfoEmRotation_c::FxInfoEmRotation_c() : FxInfo_c() {
     m_nType = FX_INFO_EMROTATION_DATA;

@@ -8,6 +8,7 @@ protected:
     FxInterpInfoFloat_c m_InterpInfo;
 
 public:
+    static void InjectHooks();
     FxInfoFloat_c();
     ~FxInfoFloat_c() override = default; // 0x4A7500
 

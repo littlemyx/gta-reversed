@@ -2,6 +2,15 @@
 
 #include "FxInfoForce.h"
 
+void FxInfoForce_c::InjectHooks() {
+    RH_ScopedVirtualClass(FxInfoForce_c, 0x85A854, 3);
+    RH_ScopedCategory("Fx");
+
+    RH_ScopedVMTDestructorInstall(0x4A6ED0);
+    RH_ScopedVMTInstall(Load, 0x4A54C0);
+    RH_ScopedVMTInstall(GetValue, 0x4A54E0);
+}
+
 // 0x4A5450
 FxInfoForce_c::FxInfoForce_c() : FxInfo_c(), m_InterpInfo() {
     m_nType = FX_INFO_FORCE_DATA;

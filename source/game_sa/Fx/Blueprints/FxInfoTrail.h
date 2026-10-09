@@ -8,6 +8,7 @@ protected:
     FxInterpInfoU255_c m_InterpInfo;
 
 public:
+    static void InjectHooks();
     FxInfoTrail_c();
     ~FxInfoTrail_c() override = default; // 0x4A77A0
 

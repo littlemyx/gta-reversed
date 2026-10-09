@@ -2,6 +2,15 @@
 
 #include "FxInfoNoise.h"
 
+void FxInfoNoise_c::InjectHooks() {
+    RH_ScopedVirtualClass(FxInfoNoise_c, 0x85A848, 3);
+    RH_ScopedCategory("Fx");
+
+    RH_ScopedVMTDestructorInstall(0x4A6E60);
+    RH_ScopedVMTInstall(Load, 0x4A52E0);
+    RH_ScopedVMTInstall(GetValue, 0x4A5300);
+}
+
 FxInfoNoise_c::FxInfoNoise_c() : FxInfo_c() {
     m_nType = FX_INFO_NOISE_DATA;
     m_InterpInfo.Allocate(1);

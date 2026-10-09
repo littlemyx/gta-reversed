@@ -2,6 +2,15 @@
 
 #include "FxInfoColourBright.h"
 
+void FxInfoColourBright_c::InjectHooks() {
+    RH_ScopedVirtualClass(FxInfoColourBright_c, 0x85A944, 3);
+    RH_ScopedCategory("Fx");
+
+    RH_ScopedVMTDestructorInstall(0x4A7A20);
+    RH_ScopedVMTInstall(Load, 0x4A6840);
+    RH_ScopedVMTInstall(GetValue, 0x4A6860);
+}
+
 // 0x4A67D0
 FxInfoColourBright_c::FxInfoColourBright_c() : FxInfo_c() {
     m_nType = FX_INFO_COLOURBRIGHT_DATA;

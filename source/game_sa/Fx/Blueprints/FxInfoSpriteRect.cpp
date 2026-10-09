@@ -2,6 +2,15 @@
 
 #include "FxInfoSpriteRect.h"
 
+void FxInfoSpriteRect_c::InjectHooks() {
+    RH_ScopedVirtualClass(FxInfoSpriteRect_c, 0x85A8E4, 3);
+    RH_ScopedCategory("Fx");
+
+    RH_ScopedVMTDestructorInstall(0x4A76A0);
+    RH_ScopedVMTInstall(Load, 0x4A6120);
+    RH_ScopedVMTInstall(GetValue, 0x4A6140);
+}
+
 // 0x4A60B0
 FxInfoSpriteRect_c::FxInfoSpriteRect_c() : FxInfo_c() {
     m_nType = FX_INFO_SPRITERECT_DATA;

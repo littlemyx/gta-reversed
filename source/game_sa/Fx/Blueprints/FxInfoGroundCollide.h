@@ -8,6 +8,7 @@ protected:
     FxInterpInfo32_c m_InterpInfo;
 
 public:
+    static void InjectHooks();
     FxInfoGroundCollide_c();
     ~FxInfoGroundCollide_c() override = default;
 

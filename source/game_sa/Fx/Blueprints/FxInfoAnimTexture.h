@@ -8,6 +8,7 @@ protected:
     FxInterpInfo32_c m_InterpInfo;
 
 public:
+    static void InjectHooks();
     FxInfoAnimTexture_c();
     ~FxInfoAnimTexture_c() override = default; // 0x4A78F0
 

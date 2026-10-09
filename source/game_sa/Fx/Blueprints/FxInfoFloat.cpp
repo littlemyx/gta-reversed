@@ -3,6 +3,15 @@
 #include "FxInfoFloat.h"
 #include "FxManager.h"
 
+void FxInfoFloat_c::InjectHooks() {
+    RH_ScopedVirtualClass(FxInfoFloat_c, 0x85A8B4, 3);
+    RH_ScopedCategory("Fx");
+
+    RH_ScopedVMTDestructorInstall(0x4A74E0);
+    RH_ScopedVMTInstall(Load, 0x4A5DF0);
+    RH_ScopedVMTInstall(GetValue, 0x4A5E10);
+}
+
 // 0x4A5DA0
 FxInfoFloat_c::FxInfoFloat_c() : FxInfo_c(), m_InterpInfo() {
     m_nType = FX_INFO_FLOAT_DATA;

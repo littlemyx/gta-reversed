@@ -5,11 +5,14 @@
 #include "FxInterpInfoGetVal.h"
 
 void FxInterpInfoFloat_c::InjectHooks() {
-    RH_ScopedClass(FxInterpInfoFloat_c);
+    RH_ScopedVirtualClass(FxInterpInfoFloat_c, 0x85A970, 2);
     RH_ScopedCategory("Fx");
 
     RH_ScopedOverloadedInstall(GetVal, "", 0x4A8470, void(FxInterpInfoFloat_c::*)(float*, float));
     RH_ScopedOverloadedInstall(GetVal, "integral", 0x4A85C0, float(FxInterpInfoFloat_c::*)(int32, float, float));
+
+    RH_ScopedVMTDestructorInstall(0x4A8D30);
+    RH_ScopedVMTInstall(Load, 0x5C16F0);
 }
 
 // 0x4A8440

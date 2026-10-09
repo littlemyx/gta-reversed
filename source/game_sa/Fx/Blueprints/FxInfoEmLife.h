@@ -8,6 +8,7 @@ protected:
     FxInterpInfoU255_c m_InterpInfo;
 
 public:
+    static void InjectHooks();
     FxInfoEmLife_c();
     ~FxInfoEmLife_c() override = default; // 0x4A6CC0
 

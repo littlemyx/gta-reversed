@@ -8,6 +8,7 @@ protected:
     FxInterpInfo255_c m_InterpInfo;
 
 public:
+    static void InjectHooks();
     FxInfoHeatHaze_c();
     ~FxInfoHeatHaze_c() override = default;
 

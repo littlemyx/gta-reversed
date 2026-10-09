@@ -2,6 +2,15 @@
 
 #include "FxInfoEmSize.h"
 
+void FxInfoEmSize_c::InjectHooks() {
+    RH_ScopedVirtualClass(FxInfoEmSize_c, 0x85A7E8, 3);
+    RH_ScopedCategory("Fx");
+
+    RH_ScopedVMTDestructorInstall(0x4A6AE0);
+    RH_ScopedVMTInstall(Load, 0x4A4C90);
+    RH_ScopedVMTInstall(GetValue, 0x4A4CB0);
+}
+
 // 0x4A4C20
 FxInfoEmSize_c::FxInfoEmSize_c() : FxInfo_c() {
     m_nType = FX_INFO_EMSIZE_DATA;

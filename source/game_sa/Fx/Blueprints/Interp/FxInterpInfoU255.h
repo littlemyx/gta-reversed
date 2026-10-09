@@ -10,7 +10,7 @@ public:
     static void InjectHooks();
 
     FxInterpInfoU255_c();
-    ~FxInterpInfoU255_c() = default; // 0x4A87F0
+    ~FxInterpInfoU255_c() override = default; // 0x4A87F0
 
     void Load(FILESTREAM file) override;
 

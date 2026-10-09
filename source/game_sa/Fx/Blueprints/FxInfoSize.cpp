@@ -3,6 +3,15 @@
 #include "FxInfoSize.h"
 #include "RenderInfo.h"
 
+void FxInfoSize_c::InjectHooks() {
+    RH_ScopedVirtualClass(FxInfoSize_c, 0x85A8D8, 3);
+    RH_ScopedCategory("Fx");
+
+    RH_ScopedVMTDestructorInstall(0x4A7630);
+    RH_ScopedVMTInstall(Load, 0x4A6010);
+    RH_ScopedVMTInstall(GetValue, 0x4A6030);
+}
+
 // 0x4A5FA0
 FxInfoSize_c::FxInfoSize_c() : FxInfo_c(), m_InterpInfo() {
     m_nType = FX_INFO_SIZE_DATA;

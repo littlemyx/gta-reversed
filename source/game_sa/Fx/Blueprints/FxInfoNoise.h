@@ -8,6 +8,7 @@ protected:
     FxInterpInfo32_c m_InterpInfo;
 
 public:
+    static void InjectHooks();
     FxInfoNoise_c();
     ~FxInfoNoise_c() override = default;
 

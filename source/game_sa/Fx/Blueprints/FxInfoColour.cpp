@@ -2,6 +2,15 @@
 
 #include "FxInfoColour.h"
 
+void FxInfoColour_c::InjectHooks() {
+    RH_ScopedVirtualClass(FxInfoColour_c, 0x85A8CC, 3);
+    RH_ScopedCategory("Fx");
+
+    RH_ScopedVMTDestructorInstall(0x4A75C0);
+    RH_ScopedVMTInstall(Load, 0x4A5F10);
+    RH_ScopedVMTInstall(GetValue, 0x4A5F30);
+}
+
 // 0x4A5EA0
 FxInfoColour_c::FxInfoColour_c() : FxInfo_c() {
     m_nType = FX_INFO_COLOUR_DATA;

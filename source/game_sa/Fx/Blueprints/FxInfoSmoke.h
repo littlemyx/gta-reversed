@@ -8,6 +8,7 @@ protected:
     FxInterpInfoU255_c m_InterpInfo;
 
 public:
+    static void InjectHooks();
     FxInfoSmoke_c();
     ~FxInfoSmoke_c() override = default; // 0x4A7AB0
 

@@ -8,6 +8,7 @@ protected:
     FxInterpInfoFloat_c m_InterpInfo;
 
 public:
+    static void InjectHooks();
     FxInfoEmPos_c();
     ~FxInfoEmPos_c() override = default; // 0x4A6D30
 

@@ -2,6 +2,15 @@
 
 #include "FxInfoHeatHaze.h"
 
+void FxInfoHeatHaze_c::InjectHooks() {
+    RH_ScopedVirtualClass(FxInfoHeatHaze_c, 0x85A8F0, 3);
+    RH_ScopedCategory("Fx");
+
+    RH_ScopedVMTDestructorInstall(0x4A7710);
+    RH_ScopedVMTInstall(Load, 0x4A61F0);
+    RH_ScopedVMTInstall(GetValue, 0x4A6210);
+}
+
 // 0x4A61A0
 FxInfoHeatHaze_c::FxInfoHeatHaze_c() : FxInfo_c() {
     m_nType = FX_INFO_HEATHAZE_DATA;

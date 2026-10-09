@@ -2,6 +2,15 @@
 
 #include "FxInfoTrail.h"
 
+void FxInfoTrail_c::InjectHooks() {
+    RH_ScopedVirtualClass(FxInfoTrail_c, 0x85A8FC, 3);
+    RH_ScopedCategory("Fx");
+
+    RH_ScopedVMTDestructorInstall(0x4A7780);
+    RH_ScopedVMTInstall(Load, 0x4A6290);
+    RH_ScopedVMTInstall(GetValue, 0x4A62B0);
+}
+
 // 0x4A6220
 FxInfoTrail_c::FxInfoTrail_c() : FxInfo_c(), m_InterpInfo() {
     m_nType = FX_INFO_TRAIL_DATA;

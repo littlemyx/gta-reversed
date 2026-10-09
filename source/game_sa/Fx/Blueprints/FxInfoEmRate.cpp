@@ -2,6 +2,15 @@
 
 #include "FxInfoEmRate.h"
 
+void FxInfoEmRate_c::InjectHooks() {
+    RH_ScopedVirtualClass(FxInfoEmRate_c, 0x85A95C, 3);
+    RH_ScopedCategory("Fx");
+
+    RH_ScopedVMTDestructorInstall(0x4A6A70);
+    RH_ScopedVMTInstall(Load, 0x4A4B40);
+    RH_ScopedVMTInstall(GetValue, 0x4A4B60);
+}
+
 // 0x4A6A00
 FxInfoEmRate_c::FxInfoEmRate_c() : FxInfo_c() {
     m_nType = FX_INFO_EMRATE_DATA;

@@ -8,6 +8,7 @@ protected:
     FxInterpInfoU255_c m_InterpInfo;
 
 public:
+    static void InjectHooks();
     FxInfoColour_c();
     ~FxInfoColour_c() override = default; // 0x4A75E0
 

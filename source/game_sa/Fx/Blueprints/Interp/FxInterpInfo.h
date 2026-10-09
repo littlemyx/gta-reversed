@@ -4,6 +4,7 @@
 
 class NOTSA_EXPORT_VTABLE FxInterpInfo_c {
 public:
+    static void InjectHooks();
     bool    m_bLooped;  // (4 bytes in Manhunt)
     int8    m_nNumKeys;
     int16   m_nCount;
@@ -11,7 +12,7 @@ public:
 
 public:
     FxInterpInfo_c();
-    ~FxInterpInfo_c() = default; // 0x4A8430
+    virtual ~FxInterpInfo_c() = default; // 0x4A8430
 
     virtual void Load(FILESTREAM file) = 0;
 };

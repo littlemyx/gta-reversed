@@ -2,6 +2,15 @@
 
 #include "FxInfoGroundCollide.h"
 
+void FxInfoGroundCollide_c::InjectHooks() {
+    RH_ScopedVirtualClass(FxInfoGroundCollide_c, 0x85A884, 3);
+    RH_ScopedCategory("Fx");
+
+    RH_ScopedVMTDestructorInstall(0x4A7090);
+    RH_ScopedVMTInstall(Load, 0x4A59F0);
+    RH_ScopedVMTInstall(GetValue, 0x4A7100);
+}
+
 // 0x4A5980
 FxInfoGroundCollide_c::FxInfoGroundCollide_c() : FxInfo_c() {
     m_nType = FX_INFO_GROUNDCOLLIDE_DATA;

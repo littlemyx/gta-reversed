@@ -2,6 +2,15 @@
 
 #include "FxInfoEmDir.h"
 
+void FxInfoEmDir_c::InjectHooks() {
+    RH_ScopedVirtualClass(FxInfoEmDir_c, 0x85A800, 3);
+    RH_ScopedCategory("Fx");
+
+    RH_ScopedVMTDestructorInstall(0x4A6BC0);
+    RH_ScopedVMTInstall(Load, 0x4A4E30);
+    RH_ScopedVMTInstall(GetValue, 0x4A4E50);
+}
+
 // 0x4A4DC0
 FxInfoEmDir_c::FxInfoEmDir_c() : FxInfo_c(), m_InterpInfo() {
     m_nType = FX_INFO_EMDIR_DATA;

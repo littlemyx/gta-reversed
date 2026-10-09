@@ -8,6 +8,7 @@ protected:
     FxInterpInfoU255_c m_InterpInfo;
 
 public:
+    static void InjectHooks();
     FxInfoSelfLit_c();
     ~FxInfoSelfLit_c() override = default; // 0x4A79D0
 

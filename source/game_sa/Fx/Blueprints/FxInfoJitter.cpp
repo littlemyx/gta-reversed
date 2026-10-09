@@ -2,6 +2,15 @@
 
 #include "FxInfoJitter.h"
 
+void FxInfoJitter_c::InjectHooks() {
+    RH_ScopedVirtualClass(FxInfoJitter_c, 0x85A89C, 3);
+    RH_ScopedCategory("Fx");
+
+    RH_ScopedVMTDestructorInstall(0x4A7400);
+    RH_ScopedVMTInstall(Load, 0x4A5B90);
+    RH_ScopedVMTInstall(GetValue, 0x4A5BB0);
+}
+
 // 0x4A5B20
 FxInfoJitter_c::FxInfoJitter_c() : FxInfo_c() {
     m_nType = FX_INFO_JITTER_DATA;

@@ -3,6 +3,15 @@
 #include "FxInfoEmWeather.h"
 #include "EmissionInfo.h"
 
+void FxInfoEmWeather_c::InjectHooks() {
+    RH_ScopedVirtualClass(FxInfoEmWeather_c, 0x85A830, 3);
+    RH_ScopedCategory("Fx");
+
+    RH_ScopedVMTDestructorInstall(0x4A6D80);
+    RH_ScopedVMTInstall(Load, 0x4A5150);
+    RH_ScopedVMTInstall(GetValue, 0x4A5170);
+}
+
 // 0x4A50E0
 FxInfoEmWeather_c::FxInfoEmWeather_c() : FxInfo_c(), m_InterpInfo() {
     m_nType = FX_INFO_EMWEATHER_DATA;

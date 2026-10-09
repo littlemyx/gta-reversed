@@ -3,6 +3,15 @@
 #include "FxInfoFlat.h"
 #include "FxManager.h"
 
+void FxInfoFlat_c::InjectHooks() {
+    RH_ScopedVirtualClass(FxInfoFlat_c, 0x85A908, 3);
+    RH_ScopedCategory("Fx");
+
+    RH_ScopedVMTDestructorInstall(0x4A77F0);
+    RH_ScopedVMTInstall(Load, 0x4A6390);
+    RH_ScopedVMTInstall(GetValue, 0x4A63B0);
+}
+
 // 0x4A6320
 FxInfoFlat_c::FxInfoFlat_c() : FxInfo_c(), m_InterpInfo() {
     m_nType = FX_INFO_FLAT_DATA;

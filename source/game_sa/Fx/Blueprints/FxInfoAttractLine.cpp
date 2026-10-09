@@ -5,10 +5,14 @@
 void FindClosestPtOnLine(CVector& out, CVector& lineA, CVector& lineB, CVector& point);
 
 void FxInfoAttractLine_c::InjectHooks() {
-    RH_ScopedClass(FxInfoAttractLine_c);
+    RH_ScopedVirtualClass(FxInfoAttractLine_c, 0x85A878, 3);
     RH_ScopedCategory("Fx");
 
     RH_ScopedGlobalInstall(FindClosestPtOnLine, 0x4A4880);
+
+    RH_ScopedVMTDestructorInstall(0x4A7020);
+    RH_ScopedVMTInstall(Load, 0x4A5830);
+    RH_ScopedVMTInstall(GetValue, 0x4A5850);
 }
 
 // 0x4A57C0

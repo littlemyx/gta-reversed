@@ -8,6 +8,7 @@ protected:
     FxInterpInfoFloat_c m_InterpInfo;
 
 public:
+    static void InjectHooks();
     FxInfoEmRotation_c();
     ~FxInfoEmRotation_c() override = default;
 

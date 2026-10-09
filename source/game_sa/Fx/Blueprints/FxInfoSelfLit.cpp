@@ -3,6 +3,15 @@
 #include "FxInfoSelfLit.h"
 #include "RenderInfo.h"
 
+void FxInfoSelfLit_c::InjectHooks() {
+    RH_ScopedVirtualClass(FxInfoSelfLit_c, 0x85A938, 3);
+    RH_ScopedCategory("Fx");
+
+    RH_ScopedVMTDestructorInstall(0x4A79B0);
+    RH_ScopedVMTInstall(Load, 0x4A67B0);
+    RH_ScopedVMTInstall(GetValue, 0x4A67C0);
+}
+
 // 0x4A6760
 FxInfoSelfLit_c::FxInfoSelfLit_c() : FxInfo_c(), m_InterpInfo() {
     m_nType = FX_INFO_SELFLIT_DATA;

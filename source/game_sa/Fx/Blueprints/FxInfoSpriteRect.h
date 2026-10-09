@@ -8,6 +8,7 @@ protected:
     FxInterpInfo255_c m_InterpInfo;
 
 public:
+    static void InjectHooks();
     FxInfoSpriteRect_c();
     ~FxInfoSpriteRect_c() override = default;
 

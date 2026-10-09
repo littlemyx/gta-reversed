@@ -2,6 +2,15 @@
 
 #include "FxInfoDir.h"
 
+void FxInfoDir_c::InjectHooks() {
+    RH_ScopedVirtualClass(FxInfoDir_c, 0x85A914, 3);
+    RH_ScopedCategory("Fx");
+
+    RH_ScopedVMTDestructorInstall(0x4A7860);
+    RH_ScopedVMTInstall(Load, 0x4A64B0);
+    RH_ScopedVMTInstall(GetValue, 0x4A64D0);
+}
+
 // 0x4A6440
 FxInfoDir_c::FxInfoDir_c() : FxInfo_c() {
     m_nType = FX_INFO_DIR_DATA;

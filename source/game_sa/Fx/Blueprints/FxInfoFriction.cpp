@@ -2,6 +2,15 @@
 
 #include "FxInfoFriction.h"
 
+void FxInfoFriction_c::InjectHooks() {
+    RH_ScopedVirtualClass(FxInfoFriction_c, 0x85A860, 3);
+    RH_ScopedCategory("Fx");
+
+    RH_ScopedVMTDestructorInstall(0x4A6F40);
+    RH_ScopedVMTInstall(Load, 0x4A55C0);
+    RH_ScopedVMTInstall(GetValue, 0x4A55E0);
+}
+
 // 0x4A5550
 FxInfoFriction_c::FxInfoFriction_c() : FxInfo_c(), m_InterpInfo() {
     m_nType = FX_INFO_FRICTION_DATA;

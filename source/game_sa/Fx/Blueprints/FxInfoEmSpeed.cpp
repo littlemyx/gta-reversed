@@ -3,6 +3,15 @@
 #include "FxInfoEmSpeed.h"
 #include "FxManager.h"
 
+void FxInfoEmSpeed_c::InjectHooks() {
+    RH_ScopedVirtualClass(FxInfoEmSpeed_c, 0x85A7F4, 3);
+    RH_ScopedCategory("Fx");
+
+    RH_ScopedVMTDestructorInstall(0x4A6B50);
+    RH_ScopedVMTInstall(Load, 0x4A4D70);
+    RH_ScopedVMTInstall(GetValue, 0x4A4D90);
+}
+
 // 0x4A4D00
 FxInfoEmSpeed_c::FxInfoEmSpeed_c() : FxInfo_c(), m_InterpInfo() {
     m_nType = FX_INFO_EMSPEED_DATA;

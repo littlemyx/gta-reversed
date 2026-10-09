@@ -10,6 +10,7 @@ protected:
     FxInterpInfoFloat_c m_InterpInfo;
 
 public:
+    static void InjectHooks();
     FxInfoEmWeather_c();
     ~FxInfoEmWeather_c() override = default;
 

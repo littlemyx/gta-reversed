@@ -3,6 +3,15 @@
 #include "FxInfoRotSpeed.h"
 #include "MovementInfo.h"
 
+void FxInfoRotSpeed_c::InjectHooks() {
+    RH_ScopedVirtualClass(FxInfoRotSpeed_c, 0x85A8A8, 3);
+    RH_ScopedCategory("Fx");
+
+    RH_ScopedVMTDestructorInstall(0x4A7470);
+    RH_ScopedVMTInstall(Load, 0x4A5D20);
+    RH_ScopedVMTInstall(GetValue, 0x4A5D40);
+}
+
 // 0x4A5CB0
 FxInfoRotSpeed_c::FxInfoRotSpeed_c() : FxInfo_c() {
     m_nType = FX_INFO_ROTSPEED_DATA;

@@ -2,6 +2,15 @@
 
 #include "FxInfoSmoke.h"
 
+void FxInfoSmoke_c::InjectHooks() {
+    RH_ScopedVirtualClass(FxInfoSmoke_c, 0x85A950, 3);
+    RH_ScopedCategory("Fx");
+
+    RH_ScopedVMTDestructorInstall(0x4A7A90);
+    RH_ScopedVMTInstall(Load, 0x4A6950);
+    RH_ScopedVMTInstall(GetValue, 0x4A6970);
+}
+
 // 0x4A68E0
 FxInfoSmoke_c::FxInfoSmoke_c() : FxInfo_c() {
     m_nType = FX_INFO_SMOKE_DATA;

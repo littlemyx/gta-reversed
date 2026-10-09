@@ -10,7 +10,7 @@ public:
     static void InjectHooks();
 
     FxInterpInfoFloat_c();
-    ~FxInterpInfoFloat_c() = default; // 0x4A8460
+    ~FxInterpInfoFloat_c() override = default; // 0x4A8460
 
     void Load(FILESTREAM file) override;
 

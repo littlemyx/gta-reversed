@@ -2,6 +2,15 @@
 
 #include "FxInfoAttractPt.h"
 
+void FxInfoAttractPt_c::InjectHooks() {
+    RH_ScopedVirtualClass(FxInfoAttractPt_c, 0x85A86C, 3);
+    RH_ScopedCategory("Fx");
+
+    RH_ScopedVMTDestructorInstall(0x4A6FB0);
+    RH_ScopedVMTInstall(Load, 0x4A56C0);
+    RH_ScopedVMTInstall(GetValue, 0x4A56E0);
+}
+
 // 0x4A5650
 FxInfoAttractPt_c::FxInfoAttractPt_c() : FxInfo_c() {
     m_nType = FX_INFO_ATTRACTPT_DATA;

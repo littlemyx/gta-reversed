@@ -3,6 +3,15 @@
 #include "FxInfoWind.h"
 #include "MovementInfo.h"
 
+void FxInfoWind_c::InjectHooks() {
+    RH_ScopedVirtualClass(FxInfoWind_c, 0x85A890, 3);
+    RH_ScopedCategory("Fx");
+
+    RH_ScopedVMTDestructorInstall(0x4A7390);
+    RH_ScopedVMTInstall(Load, 0x4A5A80);
+    RH_ScopedVMTInstall(GetValue, 0x4A5AA0);
+}
+
 // 0x4A5A10
 FxInfoWind_c::FxInfoWind_c() : FxInfo_c() {
     m_nType = FX_INFO_WIND_DATA;

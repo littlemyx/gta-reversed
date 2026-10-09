@@ -3,6 +3,15 @@
 #include "FxInfoAnimTexture.h"
 #include "RenderInfo.h"
 
+void FxInfoAnimTexture_c::InjectHooks() {
+    RH_ScopedVirtualClass(FxInfoAnimTexture_c, 0x85A920, 3);
+    RH_ScopedCategory("Fx");
+
+    RH_ScopedVMTDestructorInstall(0x4A78D0);
+    RH_ScopedVMTInstall(Load, 0x4A65C0);
+    RH_ScopedVMTInstall(GetValue, 0x4A65E0);
+}
+
 // 0x4A6550
 FxInfoAnimTexture_c::FxInfoAnimTexture_c() : FxInfo_c() {
     m_nType = FX_INFO_ANIMTEX_DATA;

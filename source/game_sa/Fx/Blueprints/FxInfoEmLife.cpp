@@ -2,6 +2,15 @@
 
 #include "FxInfoEmLife.h"
 
+void FxInfoEmLife_c::InjectHooks() {
+    RH_ScopedVirtualClass(FxInfoEmLife_c, 0x85A818, 3);
+    RH_ScopedCategory("Fx");
+
+    RH_ScopedVMTDestructorInstall(0x4A6CA0);
+    RH_ScopedVMTInstall(Load, 0x4A4FC0);
+    RH_ScopedVMTInstall(GetValue, 0x4A4FE0);
+}
+
 // 0x4A4F50
 FxInfoEmLife_c::FxInfoEmLife_c() : FxInfo_c() {
     m_nType = FX_INFO_EMLIFE_DATA;

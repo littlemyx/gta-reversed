@@ -8,6 +8,7 @@ protected:
     FxInterpInfo32_c m_InterpInfo;
 
 public:
+    static void InjectHooks();
     FxInfoEmSize_c();
     ~FxInfoEmSize_c() override = default;
 

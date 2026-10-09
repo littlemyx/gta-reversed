@@ -2,6 +2,17 @@
 
 #include "TaskSimpleTogglePedThreatScanner.h"
 
+void CTaskSimpleTogglePedThreatScanner::InjectHooks() {
+    RH_ScopedVirtualClass(CTaskSimpleTogglePedThreatScanner, 0x85A334, 9);
+    RH_ScopedCategory("Tasks/TaskTypes");
+
+    RH_ScopedVMTDestructorInstall(0x492DF0);
+    RH_ScopedVMTInstall(Clone, 0x492D50);
+    RH_ScopedVMTInstall(GetTaskType, 0x492DD0);
+    RH_ScopedVMTInstall(MakeAbortable, 0x492DE0);
+    RH_ScopedVMTInstall(ProcessPed, 0x6337A0);
+}
+
 // 0x492D10
 CTaskSimpleTogglePedThreatScanner::CTaskSimpleTogglePedThreatScanner(bool bScanAllowedScriptPed, bool bScanAllowedInVehicle, bool bScanAllowedScriptedTask)
     : CTaskSimple()

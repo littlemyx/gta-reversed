@@ -4,6 +4,7 @@
 
 class NOTSA_EXPORT_VTABLE CTaskComplexObserveTrafficLights : public CTaskComplex {
 public:
+    static void InjectHooks();
     CTaskTimer m_Timer;
 
 public:

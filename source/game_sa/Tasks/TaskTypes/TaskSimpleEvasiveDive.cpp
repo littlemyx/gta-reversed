@@ -3,6 +3,17 @@
 #include "EventDamage.h"
 #include "TaskSimpleEvasiveDive.h"
 
+void CTaskSimpleEvasiveDive::InjectHooks() {
+    RH_ScopedVirtualClass(CTaskSimpleEvasiveDive, 0x86F244, 9);
+    RH_ScopedCategory("Tasks/TaskTypes");
+
+    RH_ScopedVMTDestructorInstall(0x655F00);
+    RH_ScopedVMTInstall(Clone, 0x6558E0);
+    RH_ScopedVMTInstall(GetTaskType, 0x6535C0);
+    RH_ScopedVMTInstall(MakeAbortable, 0x653640);
+    RH_ScopedVMTInstall(ProcessPed, 0x657AC0);
+}
+
 // 0x653560
 CTaskSimpleEvasiveDive::CTaskSimpleEvasiveDive(CVehicle* vehicle) :
     m_EvadeVeh{vehicle}

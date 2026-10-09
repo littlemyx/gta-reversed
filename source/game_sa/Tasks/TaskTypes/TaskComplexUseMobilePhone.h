@@ -11,6 +11,7 @@
 
 class NOTSA_EXPORT_VTABLE CTaskComplexUseMobilePhone : public CTaskComplex {
 public:
+    static void InjectHooks();
     int32      m_nDuration;
     CTaskTimer m_timer;
     bool       m_bIsAborting;

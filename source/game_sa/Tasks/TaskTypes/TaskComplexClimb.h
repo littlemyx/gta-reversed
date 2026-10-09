@@ -4,6 +4,7 @@
 
 class NOTSA_EXPORT_VTABLE CTaskComplexClimb : public CTaskComplexJump {
 public:
+    static void InjectHooks();
     static constexpr auto Type = TASK_COMPLEX_CLIMB;
 
     CTaskComplexClimb() : CTaskComplexJump(CTaskComplexJump::eForceClimb::FORCE) {}; // 0x46A630

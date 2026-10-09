@@ -4,6 +4,7 @@
 
 class NOTSA_EXPORT_VTABLE CTaskSimpleDieInCar : public CTaskSimpleDie {
 public:
+    static void InjectHooks();
     static constexpr auto Type = TASK_SIMPLE_DIE_IN_CAR;
 
     CTaskSimpleDieInCar(AssocGroupId groupId, AnimationId animId);

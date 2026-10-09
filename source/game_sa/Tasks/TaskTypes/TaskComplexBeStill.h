@@ -4,6 +4,7 @@
 
 class NOTSA_EXPORT_VTABLE CTaskComplexBeStill : public CTaskComplex {
 public:
+    static void InjectHooks();
     static constexpr auto Type = TASK_COMPLEX_BE_STILL;
 
     CTaskComplexBeStill() = default;

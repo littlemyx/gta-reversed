@@ -5,6 +5,7 @@ class CEntity;
 
 class NOTSA_EXPORT_VTABLE CTaskSimpleEvasiveStep : public CTaskSimple {
 public:
+    static void InjectHooks();
     CEntity* m_Entity;
     bool     m_bFinished;
     CAnimBlendAssociation *m_Assoc;

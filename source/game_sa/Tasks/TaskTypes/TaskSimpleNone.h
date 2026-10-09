@@ -4,6 +4,7 @@
 
 class NOTSA_EXPORT_VTABLE CTaskSimpleNone : public CTaskSimple {
 public:
+    static void InjectHooks();
     static constexpr auto Type = TASK_NONE;
 
     CTaskSimpleNone() = default;

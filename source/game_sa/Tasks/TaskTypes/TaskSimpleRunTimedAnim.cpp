@@ -15,6 +15,11 @@ void CTaskSimpleRunTimedAnim::InjectHooks() {
     RH_ScopedVMTInstall(Clone, 0x61B810);
     RH_ScopedVMTInstall(GetTaskType, 0x48E0E0);
     RH_ScopedVMTInstall(ProcessPed, 0x61BBE0);
+
+    RH_ScopedVMTDestructorInstall(0x61BC80);
+    RH_ScopedVMTInstall(Clone, 0x61B890);
+    RH_ScopedVMTInstall(GetTaskType, 0x61AD00);
+    RH_ScopedVMTInstall(ProcessPed, 0x61BCB0);
 }
 
 // 0x61AB70

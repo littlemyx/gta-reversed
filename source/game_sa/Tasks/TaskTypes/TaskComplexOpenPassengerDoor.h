@@ -4,6 +4,7 @@
 
 class NOTSA_EXPORT_VTABLE CTaskComplexOpenPassengerDoor : public CTaskComplexEnterCar {
 public:
+    static void InjectHooks();
     static constexpr auto Type = TASK_COMPLEX_CAR_OPEN_PASSENGER_DOOR;
 
     CTaskComplexOpenPassengerDoor(CVehicle* vehicle, int32 targetSeat) : CTaskComplexEnterCar(vehicle, false, true, false, false) {

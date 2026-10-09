@@ -2,6 +2,15 @@
 
 #include "TaskComplexEnterCarAsDriver.h"
 
+void CTaskComplexEnterCarAsDriver::InjectHooks() {
+    RH_ScopedVirtualClass(CTaskComplexEnterCarAsDriver, 0x86EAAC, 12);
+    RH_ScopedCategory("Tasks/TaskTypes");
+
+    RH_ScopedVMTDestructorInstall(0x643C60);
+    RH_ScopedVMTInstall(Clone, 0x643780);
+    RH_ScopedVMTInstall(GetTaskType, 0x640320);
+}
+
 // 0x6402F0
 CTaskComplexEnterCarAsDriver::CTaskComplexEnterCarAsDriver(CVehicle* targetVehicle) :
     CTaskComplexEnterCar(targetVehicle, true, false, false, false)

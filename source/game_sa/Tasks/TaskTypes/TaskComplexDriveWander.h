@@ -6,6 +6,7 @@
 
 class NOTSA_EXPORT_VTABLE CTaskComplexCarDriveWander : public CTaskComplexCarDrive {
 public:
+    static void InjectHooks();
     static constexpr auto Type = TASK_COMPLEX_CAR_DRIVE_WANDER;
 
     CTaskComplexCarDriveWander(CVehicle* vehicle, eCarDrivingStyle carDrivingStyle = DRIVING_STYLE_STOP_FOR_CARS, float fSpeed = 10.f);

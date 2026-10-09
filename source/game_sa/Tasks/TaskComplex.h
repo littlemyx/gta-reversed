@@ -12,6 +12,7 @@ class CPed;
 
 class NOTSA_EXPORT_VTABLE CTaskComplex : public CTask {
 public:
+    static void InjectHooks();
     CTaskComplex() = default;
     ~CTaskComplex() override {
         delete m_pSubTask;

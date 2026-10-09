@@ -2,6 +2,17 @@
 
 #include "TaskSimpleSetStayInSamePlace.h"
 
+void CTaskSimpleSetStayInSamePlace::InjectHooks() {
+    RH_ScopedVirtualClass(CTaskSimpleSetStayInSamePlace, 0x86DD50, 9);
+    RH_ScopedCategory("Tasks/TaskTypes");
+
+    RH_ScopedVMTDestructorInstall(0x6374A0);
+    RH_ScopedVMTInstall(Clone, 0x635BD0);
+    RH_ScopedVMTInstall(GetTaskType, 0x62F5B0);
+    RH_ScopedVMTInstall(MakeAbortable, 0x62F5C0);
+    RH_ScopedVMTInstall(ProcessPed, 0x62F5E0);
+}
+
 // 0x62F590
 CTaskSimpleSetStayInSamePlace::CTaskSimpleSetStayInSamePlace(bool bStayInSamePlace) : CTaskSimple() {
     m_bStayInSamePlace = bStayInSamePlace;

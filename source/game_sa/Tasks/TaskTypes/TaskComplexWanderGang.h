@@ -5,6 +5,7 @@
 
 class NOTSA_EXPORT_VTABLE CTaskComplexWanderGang : public CTaskComplexWander {
 public:
+    static void InjectHooks();
     CTaskTimer m_TaskTimer;
     uint32     m_NextScanTime;
 

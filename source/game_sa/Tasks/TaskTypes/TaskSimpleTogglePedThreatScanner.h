@@ -2,6 +2,7 @@
 
 class NOTSA_EXPORT_VTABLE CTaskSimpleTogglePedThreatScanner : public CTaskSimple {
 public:
+    static void InjectHooks();
     bool m_bScanAllowedScriptPed;
     bool m_bScanAllowedInVehicle;
     bool m_bScanAllowedScriptedTask;

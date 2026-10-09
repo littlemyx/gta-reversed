@@ -3,8 +3,9 @@
 #include "TaskSimple.h"
 #include "Vehicle.h"
 
-class NOTSA_EXPORT_VTABLE CTaskSimpleEvasiveDive final : public CTaskSimple {
+class NOTSA_EXPORT_VTABLE CTaskSimpleEvasiveDive : public CTaskSimple {
 public:
+    static void InjectHooks();
     static constexpr auto Type = TASK_SIMPLE_EVASIVE_DIVE;
 
     CTaskSimpleEvasiveDive(CVehicle *vehicle);

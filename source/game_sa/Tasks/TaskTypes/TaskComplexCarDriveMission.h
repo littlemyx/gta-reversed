@@ -32,6 +32,7 @@ VALIDATE_SIZE(CTaskComplexCarDriveMission, 0x2C);
 
 class NOTSA_EXPORT_VTABLE CTaskComplexCarDriveMissionFleeScene : public CTaskComplexCarDriveMission {
 public:
+    static void InjectHooks();
     explicit CTaskComplexCarDriveMissionFleeScene(CVehicle* vehicle) : CTaskComplexCarDriveMission(vehicle, nullptr, MISSION_CRUISE, DRIVING_STYLE_AVOID_CARS, 40.0f) { }; // 0x4B8920
     ~CTaskComplexCarDriveMissionFleeScene() override = default; // 0x4B89F0
 
@@ -42,6 +43,7 @@ public:
 
 class NOTSA_EXPORT_VTABLE CTaskComplexCarDriveMissionKillPed : public CTaskComplexCarDriveMission {
 public:
+    static void InjectHooks();
     CTaskComplexCarDriveMissionKillPed(CVehicle* vehicle, CEntity* targetVehicle) : CTaskComplexCarDriveMission(vehicle, targetVehicle, MISSION_KILLPED_FARAWAY, DRIVING_STYLE_PLOUGH_THROUGH, 40.0f) { } // 0x4B8A00
     ~CTaskComplexCarDriveMissionKillPed() override = default; // 0x4B8AD0
 

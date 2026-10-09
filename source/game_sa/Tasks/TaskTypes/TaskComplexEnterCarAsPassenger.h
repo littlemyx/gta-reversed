@@ -10,6 +10,7 @@
 
 class NOTSA_EXPORT_VTABLE CTaskComplexEnterCarAsPassenger : public CTaskComplexEnterCar {
 public:
+    static void InjectHooks();
     static constexpr auto Type = TASK_COMPLEX_ENTER_CAR_AS_PASSENGER;
 
     CTaskComplexEnterCarAsPassenger(CVehicle* targetVehicle, int32 nTargetSeat = 0, bool bCarryOnAfterFallingOff = false);

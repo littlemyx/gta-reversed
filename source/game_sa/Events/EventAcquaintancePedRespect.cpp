@@ -9,4 +9,6 @@ void CEventAcquaintancePedRespect::InjectHooks() {
     RH_ScopedVMTInstall(GetEventType, 0x5FF040);
     RH_ScopedVMTInstall(GetEventPriority, 0x5FF8B0);
     RH_ScopedVMTInstall(CloneEditable, 0x5FF050);
+
+    RH_ScopedVMTDestructorInstall(0x5FF0B0);
 }

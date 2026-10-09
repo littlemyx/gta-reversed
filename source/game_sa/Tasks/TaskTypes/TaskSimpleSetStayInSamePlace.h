@@ -4,6 +4,7 @@
 
 class NOTSA_EXPORT_VTABLE CTaskSimpleSetStayInSamePlace : public CTaskSimple {
 public:
+    static void InjectHooks();
     bool m_bStayInSamePlace;
 
 public:

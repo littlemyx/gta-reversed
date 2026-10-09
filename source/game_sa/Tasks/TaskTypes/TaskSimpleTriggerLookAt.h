@@ -12,6 +12,7 @@
 
 class NOTSA_EXPORT_VTABLE CTaskSimpleTriggerLookAt : public CTaskSimple {
 public:
+    static void InjectHooks();
     CEntity* m_pEntity;
     int32    m_time;
     int32    m_nOffsetBoneTag;

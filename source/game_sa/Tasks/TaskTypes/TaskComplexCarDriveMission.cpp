@@ -2,6 +2,24 @@
 #include "TaskComplexCarDriveMission.h"
 #include "CarCtrl.h"
 
+void CTaskComplexCarDriveMissionKillPed::InjectHooks() {
+    RH_ScopedVirtualClass(CTaskComplexCarDriveMissionKillPed, 0x85B994, 14);
+    RH_ScopedCategory("Tasks/TaskTypes");
+
+    RH_ScopedVMTDestructorInstall(0x4B8AB0);
+    RH_ScopedVMTInstall(Clone, 0x4B8A30);
+    RH_ScopedVMTInstall(GetTaskType, 0x4B8AA0);
+}
+
+void CTaskComplexCarDriveMissionFleeScene::InjectHooks() {
+    RH_ScopedVirtualClass(CTaskComplexCarDriveMissionFleeScene, 0x85B95C, 14);
+    RH_ScopedCategory("Tasks/TaskTypes");
+
+    RH_ScopedVMTDestructorInstall(0x4B89D0);
+    RH_ScopedVMTInstall(Clone, 0x4B8950);
+    RH_ScopedVMTInstall(GetTaskType, 0x4B89C0);
+}
+
 void CTaskComplexCarDriveMission::InjectHooks() {
     RH_ScopedVirtualClass(CTaskComplexCarDriveMission, 0x86E9A4, 14);
     RH_ScopedCategory("Tasks/TaskTypes");

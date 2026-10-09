@@ -5,6 +5,7 @@
 
 class NOTSA_EXPORT_VTABLE CTaskComplexWanderMedic : public CTaskComplexWander {
 public:
+    static void InjectHooks();
     CTaskComplexWanderMedic(eMoveState MoveState, uint8 Dir, bool bWanderSensibly = true);
 
     eWanderType GetWanderType() override { return WANDER_TYPE_MEDIC; } // 0x658810

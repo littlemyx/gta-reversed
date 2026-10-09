@@ -12,6 +12,7 @@ class CPed;
 
 class NOTSA_EXPORT_VTABLE CTaskSimple : public CTask {
 public:
+    static void InjectHooks();
     CTaskSimple() = default;
     ~CTaskSimple() override = default;
 

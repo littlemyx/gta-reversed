@@ -528,6 +528,7 @@ static void ModelTests(const char* path) {
 // Unicorn with the x87 precision control at 24 bits (the state the game runs in after RwEngineStart) and records the output bits. The shim must give the same
 // bits under the same precision control. Deliberate: the exe's RwSqrt is table based (replaced by fsqrt in the recording), RtQuatRotate cases use axes of
 // squared length exactly 1 (RwV3dNormalize is table based too).
+#include "../../source/standalone/rw/rwtrig.h"
 #include "rw_quat_cases.inc"
 #include <float.h>
 
@@ -550,6 +551,7 @@ struct Pc24 {
 
 static void ExeDifferentialTests() {
     Pc24 pc;
+    struct ExactSqrt { ExactSqrt() { rwtrig::g_exactSqrt = true; } ~ExactSqrt() { rwtrig::g_exactSqrt = false; } } exactSqrt;   // recordings use fsqrt (see above)
     auto cmp = [&](const char* what, int i, const float* got, const uint32_t* exp, int n) {
         int bad = 0;
         for (int k = 0; k < n; k++) { if (!BitsEq(got[k], exp[k])) { bad++; Mism(what, i, k, got[k], exp[k]); } }

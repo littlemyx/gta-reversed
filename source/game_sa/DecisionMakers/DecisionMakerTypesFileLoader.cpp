@@ -17,7 +17,8 @@ void CDecisionMakerTypesFileLoader::InjectHooks() {
 
 // 0x607D00
 void CDecisionMakerTypesFileLoader::ReStart() {
-    for (int32 i = 0; i < +eDecisionMakerType::COUNT_GAME_DM; i++) {
+    // 0x607D00: the exe unloads slots [10, 20) (the mission decision makers), NOT the built-in ones [0, 10)
+    for (int32 i = +eDecisionMakerType::MISSION0; i < +eDecisionMakerType::COUNT_TOTAL; i++) {
         UnloadDecisionMaker((eDecisionTypes)(i));
     }
 }

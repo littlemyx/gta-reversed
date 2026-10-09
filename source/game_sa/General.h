@@ -137,7 +137,9 @@ namespace CGeneral { // More like `Math` (Or `Meth`, given how bad the code is, 
         return std::uniform_real_distribution<float>{min, max}(randomEngine);
 #else
         // NOTSA: no `max >= min` assert - the original (0x41BD90) just lerps, and callers legitimately pass max < min (e.g. 0x6DF26D)
-        return lerp<T>(min, max, static_cast<float>(GetRandomNumber()) * RAND_MAX_FLOAT_RECIPROCAL);
+        // 0x41BD90: x87 chain `min + (rand() * 1/32767) * (max - min)` with no float spill until the return
+        const double t = static_cast<double>(GetRandomNumber()) * static_cast<double>(RAND_MAX_FLOAT_RECIPROCAL);
+        return static_cast<T>(static_cast<double>(min) + t * (static_cast<double>(max) - static_cast<double>(min)));
 #endif
     }
 
@@ -148,9 +150,14 @@ namespace CGeneral { // More like `Math` (Or `Meth`, given how bad the code is, 
      */
     template<std::integral T>
     inline T GetRandomNumberInRange(T min, T max, bool inclusive = false) {
-        return inclusive
-            ? static_cast<T>(GetRandomNumberInRange<float>(static_cast<float>(min), static_cast<float>(max)))
-            : static_cast<T>(GetRandomNumberInRange<float>(static_cast<float>(min), static_cast<float>(max) - 1.f));
+        if (inclusive) {
+            return static_cast<T>(GetRandomNumberInRange<float>(static_cast<float>(min), static_cast<float>(max)));
+        }
+        // 0x407180: `min + (int)(rand() * (1/32768) * (max - min))` => uniform in [min, max). (NOT the float version with `max - 1`,
+        // that one would almost never yield `max - 1`.) The product stays in extended precision in the original.
+        const double t = static_cast<double>(GetRandomNumber() & 0xFFFF) * static_cast<double>(1.f / 32768.f); // 0x858B14
+        const auto   range = static_cast<int64>(max) - static_cast<int64>(min);
+        return static_cast<T>(static_cast<int64>(min) + static_cast<int64>(t * static_cast<double>(range)));
     }
 
     /**

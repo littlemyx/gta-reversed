@@ -97,15 +97,19 @@ AnimationId CTaskComplexGangLeader::GetRandomGangAmbientAnim(CPed* ped, CEntity*
 
 // 0x65E7F0
 bool CTaskComplexGangLeader::ShouldLoadGangAnims() {
-    if (CStreaming::IsVeryBusy()) {
-        return false;
-    }
-
-    // NOTE: The original checks the speed first (and the streaming state second); both are side-effect free.
+    // The original checks the speed first (and the streaming state second); both are side-effect free.
     // The threshold is 0x863244 = 0x3D23D70B (~0.04, i.e. 0.2^2), and the compare is `!(x > c)` (NaN => "not too fast")
+    // The squared magnitude stays on the x87 stack (extended precision), hence the doubles.
     const auto player = FindPlayerPed();
-    constexpr auto MAX_SPEED_SQ = std::bit_cast<float>(0x3D23D70Bu);
-    return !(player->IsInVehicle() && player->m_pVehicle->m_vecMoveSpeed.SquaredMagnitude() > MAX_SPEED_SQ);
+    if (player->IsInVehicle()) {
+        constexpr auto MAX_SPEED_SQ = std::bit_cast<float>(0x3D23D70Bu);
+        const auto& spd = player->m_pVehicle->m_vecMoveSpeed;
+        const double speedSq = (double)spd.x * (double)spd.x + (double)spd.y * (double)spd.y + (double)spd.z * (double)spd.z;
+        if (speedSq > (double)MAX_SPEED_SQ) {
+            return false;
+        }
+    }
+    return !CStreaming::IsVeryBusy(); // 0x4076A0
 }
 
 // 0x65E860
@@ -203,8 +207,9 @@ CTask* CTaskComplexGangLeader::CreateNextSubTask(CPed* ped) {
         }
     }
 
-    // 0x65E0C3
-    if (numMembers >= 3 && RandScaled(100.0) <= 95) {
+    // 0x65E0C3 - NOTE: The random number is always drawn (even if `numMembers < 3`), so it must not be short-circuited
+    const auto standStillRoll = RandScaled(100.0);
+    if (numMembers >= 3 && standStillRoll <= 95) {
         return new CTaskSimpleStandStill{ 5000 };
     }
 
@@ -244,12 +249,13 @@ CTask* CTaskComplexGangLeader::ControlSubTask(CPed* ped) {
         if (m_wanderTimer.IsOutOfTime()) {
             if (tWander->GetDistSqOfClosestPathNodeToPed(ped) < 2.f) { // 0x66246C (FCOMP, JP: strictly less)
                 m_gang->GetIntelligence().SetDefaultTaskAllocatorType(ePedGroupDefaultTaskAllocatorType::RANDOM);
-                // Above call causes this task to be flushed (deleted), and changes our vfptr to `CTaskComplex`'s.
-                // If we return non-null here, `CTaskManager::ParentsControlChildren` will be called, and calls our
-                // `ControlSubTask` causing an assert (as CTaskComplex defines it as `pure` (`= 0`))
-                // This is an OG bug, and we can't even wrap it into `FIX_BUGS` because it literally aborts the process, 
-                // makes no sense keeping it.
-                return nullptr; //return new CTaskSimpleStandStill{ 500 };
+                // NOTE: The exe (0x662486..0x6624B5) allocates and returns a `CTaskSimpleStandStill(500)` here.
+                // `SetDefaultTaskAllocator` (0x5FB280) only deletes the *template* tasks stored in the group intelligence's
+                // default task pairs; the instance running on the ped is a `Clone()` handed out by
+                // `CTaskComplexBeInGroup::MonitorMainGroupTask` (which only remembers the template's pointer), so `this` is
+                // NOT freed by the call above and returning a new sub-task is safe (the parent is replaced by
+                // `CTaskComplexBeInGroup` on its next update, as the template pointer changed).
+                return new CTaskSimpleStandStill{ 500 };
             }
         }
     }
@@ -308,21 +314,17 @@ CTask* CTaskComplexGangLeader::ControlSubTask(CPed* ped) {
             return m_pSubTask;
         }
 
-        // Otherwise create a new partial anim task
-        ped->GetTaskManager().SetTaskSecondary([this, ped]() -> CTask* {
-            const auto rnd = CGeneral::GetRandomNumberInRange(0, 500);
-            if (50 >= rnd || rnd >= 56) { // 5%
-                if (rnd != 100) { // 99.8%
-                    return m_pSubTask;
-                }
-
-                // Overall chance to reach this point... 0.02% * 5% = 0.1%
-                return new CTaskComplexPlayHandSignalAnim{};
-            } else { // 95%
-                return new CTaskSimpleRunAnim{ ANIM_GROUP_GANGS, CGeneral::RandomChoice(s_gangTalkAnims) };
-            }
-        }(), TASK_SECONDARY_PARTIAL_ANIM);
-
+        // Otherwise (maybe) create a new partial anim task (0x66291D)
+        const auto rnd = CGeneral::GetRandomNumberInRange(0, 500);
+        CTask* newTask{};
+        if (rnd > 50 && rnd < 56) { // 1% - NOTE: rnd in [51, 55]
+            newTask = new CTaskSimpleRunAnim{ ANIM_GROUP_GANGS, CGeneral::RandomChoice(s_gangTalkAnims) };
+        } else if (rnd == 100) { // 0.2%
+            newTask = new CTaskComplexPlayHandSignalAnim{};
+        } else {
+            return m_pSubTask; // Nothing is set otherwise
+        }
+        ped->GetTaskManager().SetTaskSecondary(newTask, TASK_SECONDARY_PARTIAL_ANIM);
         return m_pSubTask;
     }
 
@@ -437,7 +439,12 @@ void CTaskComplexGangLeader::ScanForStuff(CPed* ped) {
 
             // 0x65E351 || 0x65E330 (in that order)
             // (FCOMP + JP: the conditions are "strictly less", NaN => skip)
-            if (const auto vehToPed = veh.GetPosition() - pedPos; !(vehToPed.SquaredMagnitude() < 300.f) || !(std::abs(vehToPed.z) < 5.f)) {
+            // NOTE: The differences/products are kept on the x87 stack (extended precision) => doubles here
+            const auto& vehPos = veh.GetPosition();
+            const double dx = (double)vehPos.x - (double)pedPos.x;
+            const double dy = (double)vehPos.y - (double)pedPos.y;
+            const double dz = (double)vehPos.z - (double)pedPos.z;
+            if (!(dx * dx + dy * dy + dz * dz < 300.0) || !(std::abs(dz) < 5.0)) {
                 continue;
             }
 
@@ -488,7 +495,7 @@ void CTaskComplexGangLeader::ScanForStuff(CPed* ped) {
             }
 
             // If scanned ped has no group try to add them to this gang
-            if (!scannedPedGrp && m_gang->GetMembership().CanAddFollower()) { // 0x65E4EA
+            if (!scannedPedGrp && m_gang->GetMembership().CountMembersExcludingLeader() < TOTAL_PED_GROUP_FOLLOWERS) { // 0x65E4EA (0x5F6AA0 `< 7`)
                 // 0x65E551 - NOTE: The event is added to the SCANNED ped's event group (not the gang's)
                 scannedPed.GetEventGroup().Add(
                     CEventScriptCommand{

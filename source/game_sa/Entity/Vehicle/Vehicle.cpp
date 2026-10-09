@@ -6771,8 +6771,8 @@ bool CVehicle::DoBladeCollision(CVector pos, CMatrix& matrix, int16 rotorType, f
 }
 
 // 0x6E3290
-void CVehicle::AddVehicleUpgrade(int32 modelId) {
-    // Note: The original returns `replacedUpgrade` (in EAX), but none of the callers use it
+int32 CVehicle::AddVehicleUpgrade(int32 modelId) {
+    // Note: The original returns `replacedUpgrade` (in EAX); COMMAND_ADD_VEHICLE_MOD (1767) stores it as its result
     const auto* const mi = CModelInfo::GetModelInfo(modelId);
 
     int32 replacedUpgrade = -1;
@@ -6818,6 +6818,7 @@ void CVehicle::AddVehicleUpgrade(int32 modelId) {
             toStore = -1;
         }
     }
+    return replacedUpgrade;
 }
 
 // 0x6E3400

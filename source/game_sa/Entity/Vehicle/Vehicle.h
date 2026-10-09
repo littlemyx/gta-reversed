@@ -663,7 +663,7 @@ public:
 
     void FillVehicleWithPeds(bool bSetClothesToAfro);
     bool DoBladeCollision(CVector pos, CMatrix& matrix, int16 rotorType, float radius, float damageMult);
-    void AddVehicleUpgrade(int32 modelId);
+    int32 AddVehicleUpgrade(int32 modelId); // Returns the replaced upgrade model (-1 if none), the original leaves it in EAX (used by COMMAND_ADD_VEHICLE_MOD)
     void SetupUpgradesAfterLoad();
     CEntity* GetPlaneWeaponFiringStatus(bool& status, eOrdnanceType& ordnanceType); // Returns the heat-seeking target (if any)
     void ProcessWeapons();

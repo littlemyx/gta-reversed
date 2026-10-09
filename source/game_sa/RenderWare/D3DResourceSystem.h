@@ -14,10 +14,18 @@
 
 class D3DResourceSystem {
 public:
-    static bool &UseD3DResourceBuffering;
-    static uint32 &FreeTextureBufferIndex;
-    static D3DTextureBuffer &TextureBuffer;
-    static D3DIndexDataBuffer &IndexDataBuffer;
+    static constexpr int32 MAX_TEXTURE_BUFFERS    = 17;
+    static constexpr int32 NUM_INDEX_DATA_BUFFERS = 16;
+
+    static inline auto& UseD3DResourceBuffering = StaticRef<bool>(0x8D6084);
+    static inline auto& NumTextureBuffers       = StaticRef<int32>(0xC87C60);
+    static inline auto& TextureBuffers          = StaticRef<std::array<D3DTextureBuffer, MAX_TEXTURE_BUFFERS>>(0xC87C68); // [0] is the buffer for small textures of any format
+    static inline auto& IndexDataBuffers        = StaticRef<std::array<D3DIndexDataBuffer, NUM_INDEX_DATA_BUFFERS>>(0xC87E48);
+    static inline auto& LargeIndexDataBuffer    = StaticRef<D3DIndexDataBuffer>(0xC87FC8); // For buffers that don't fit into the ones above
+    static inline auto& FreeTextureBufferIndex  = StaticRef<int32>(0xC87FE0);
+    static inline auto& FreeIndexBufferIndex    = StaticRef<int32>(0xC87FE4);
+
+    static void InjectHooks();
 
     static void CancelBuffering();
     static uint32 GetTotalIndexDataSize();

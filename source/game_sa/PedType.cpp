@@ -145,11 +145,12 @@ ePedType CPedType::FindPedType(const char* pedTypeName) {
 // 0x608830
 // TODO: Stuff related to this should use `size_t`'s
 uint32 CPedType::GetPedFlag(ePedType pedType) {
-    if ((size_t)pedType < (sizeof(uint32) * 8)) { // Make sure we aren't shifting more than 31 bits, otherwise it's U.B.
-        return 1 << (size_t)pedType;
-    } else {
+    // 0x608830: `cmp ecx, 0x20; jge -> 0; mov eax, 1; shl eax, cl` - SIGNED compare, so negative types shift by (n & 31)
+    const auto n = (int32)pedType;
+    if (n >= 32) {
         return 0;
     }
+    return 1u << (n & 31);
 }
 
 // 0x6089B0

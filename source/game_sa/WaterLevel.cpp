@@ -6,6 +6,16 @@
 
 #define TRIANGLE_ARGS_OUT X1, Y1, P1, X2, Y2, P2, X3, Y3, P3
 
+namespace {
+// The originals are cdecl with `this` as the first stack argument => can't be hooked as members
+bool CWaterQuad_GetWaterLevel(const CWaterQuad* self, float x, float y, float z, float* outWaterLevel, float* outBigWaves, float* outSmallWaves) {
+    return self->GetWaterLevel(x, y, z, outWaterLevel, outBigWaves, outSmallWaves);
+}
+bool CWaterTriangle_GetWaterLevel(const CWaterTriangle* self, float x, float y, float z, float* outWaterLevel, float* outBigWaves, float* outSmallWaves) {
+    return self->GetWaterLevel(x, y, z, outWaterLevel, outBigWaves, outSmallWaves);
+}
+}
+
 void CWaterLevel::InjectHooks() {
     RH_ScopedClass(CWaterLevel);
     RH_ScopedCategoryGlobal();
@@ -58,6 +68,11 @@ void CWaterLevel::InjectHooks() {
     RH_ScopedGlobalInstall(AddPolyToBlock, 0x6E5750);
     RH_ScopedGlobalInstall(RenderHighDetailWaterRectangle, 0x6EB810);
     RH_ScopedGlobalInstall(RenderHighDetailWaterRectangle_OneLayer, 0x6E91D0);
+    RH_ScopedGlobalInstall(GetWaterDepth, 0x6EA960);
+    RH_ScopedGlobalInstall(TestLineAgainstWater, 0x6E61B0);
+    RH_ScopedGlobalInstall(RenderHighDetailWaterTriangle, 0x6EDDC0);
+    RH_ScopedNamedGlobalInstall(CWaterQuad_GetWaterLevel, "CWaterQuad::GetWaterLevel", 0x6E5BB0);
+    RH_ScopedNamedGlobalInstall(CWaterTriangle_GetWaterLevel, "CWaterTriangle::GetWaterLevel", 0x6E5E90);
 }
 
 // NOTSA
@@ -995,6 +1010,129 @@ void CWaterLevel::FindNearestWaterAndItsFlow() {
     TheCamera.m_fHeightOfNearestWater = nearestWaterZ;
 }
 
+// 0x6E5BB0
+// NOTE: x87 extended precision in the original => `double` intermediates. `u` is rounded to float (spilled), `v` is NOT (stays on the x87 stack)
+// NOTE: All the early-outs are written like the original's FCOMP + flags tests (NaN of the inputs => rejected)
+template<>
+bool CWaterQuad::GetWaterLevel(float x, float y, float z, float* outWaterLevel, float* outBigWaves, float* outSmallWaves) const {
+    const auto& v0 = CWaterLevel::m_aVertices[verts[0]];
+    const auto& v1 = CWaterLevel::m_aVertices[verts[1]];
+    const auto& v2 = CWaterLevel::m_aVertices[verts[2]];
+    const auto& v3 = CWaterLevel::m_aVertices[verts[3]];
+
+    // Bounding box test (v0 = min corner, v1 = max X, v2 = max Y)
+    const float x0 = (float)v0.x;
+    if (!(x >= x0)) {
+        return false;
+    }
+    if (!((float)v1.x >= x)) {
+        return false;
+    }
+    const float y0 = (float)v0.y;
+    if (!(y >= y0)) {
+        return false;
+    }
+    if (!((float)v2.y >= y)) {
+        return false;
+    }
+
+    const float  u = (float)(((double)x - (double)x0) / (double)(v1.x - v0.x));
+    const double v = ((double)y - (double)y0) / (double)(v2.y - v0.y);
+
+    // Interpolate `Get` (a member of `CRenPar`) in the triangle `base`, `a`, `b`: `base + (a - base) * wa + (b - base) * wb`
+    const auto Interpolate = [](auto get, const CWaterVertex& base, const CWaterVertex& a, double wa, const CWaterVertex& b, double wb) {
+        return ((double)get(a.rp) - (double)get(base.rp)) * wa + ((double)get(b.rp) - (double)get(base.rp)) * wb + (double)get(base.rp);
+    };
+    const auto GetZ     = [](const CRenPar& rp) { return rp.z; };
+    const auto GetBig   = [](const CRenPar& rp) { return rp.bigWaves; };
+    const auto GetSmall = [](const CRenPar& rp) { return rp.smallWaves; };
+
+    if (!((double)u + v <= 1.0)) { // Upper triangle (v1, v2, v3)
+        const double a = 1.0 - (double)u;
+        const double b = 1.0 - v;
+        *outWaterLevel = (float)Interpolate(GetZ, v3, v2, a, v1, b);
+        if (outBigWaves) {
+            *outBigWaves   = (float)Interpolate(GetBig,   v3, v1, b, v2, a);
+            *outSmallWaves = (float)Interpolate(GetSmall, v3, v1, b, v2, a);
+        }
+    } else { // Lower triangle (v0, v1, v2)
+        *outWaterLevel = (float)Interpolate(GetZ, v0, v2, v, v1, (double)u);
+        if (outBigWaves) {
+            *outBigWaves   = (float)Interpolate(GetBig,   v0, v2, v, v1, (double)u);
+            *outSmallWaves = (float)Interpolate(GetSmall, v0, v2, v, v1, (double)u);
+        }
+    }
+
+    // Limited depth polys only apply to the water close to `z`
+    if ((double)*outWaterLevel - (double)6.f > (double)z && bLimitedDepth) {
+        return false;
+    }
+    return !((double)*outWaterLevel + (double)20.f < (double)z);
+}
+
+// 0x6E5E90
+// NOTE: Same notes as the quad's. Here both `u` and `v` are rounded to float
+template<>
+bool CWaterTriangle::GetWaterLevel(float x, float y, float z, float* outWaterLevel, float* outBigWaves, float* outSmallWaves) const {
+    const auto& v0 = CWaterLevel::m_aVertices[verts[0]];
+    const auto& v1 = CWaterLevel::m_aVertices[verts[1]];
+    const auto& v2 = CWaterLevel::m_aVertices[verts[2]];
+
+    // Bounding box test
+    const float x0 = (float)v0.x;
+    if (!(x >= x0)) {
+        return false;
+    }
+    if (!((float)v1.x >= x)) {
+        return false;
+    }
+    const auto [minY, maxY] = std::minmax(v0.y, v2.y); // Original: compares them as int16, then loads them as float
+    if (!(y >= (float)minY)) {
+        return false;
+    }
+    if (!(y <= (float)maxY)) {
+        return false;
+    }
+
+    const float y0 = (float)v0.y;
+    const float u  = (float)(((double)x - (double)x0) / (double)(v1.x - v0.x));
+    const float v  = (float)(((double)y - (double)y0) / (double)(v2.y - v0.y));
+
+    // `base + (a - base) * wa + (b - base) * wb`
+    const auto Interpolate = [](auto get, const CWaterVertex& base, const CWaterVertex& a, double wa, const CWaterVertex& b, double wb) {
+        return ((double)get(a.rp) - (double)get(base.rp)) * wa + ((double)get(b.rp) - (double)get(base.rp)) * wb + (double)get(base.rp);
+    };
+    const auto GetZ     = [](const CRenPar& rp) { return rp.z; };
+    const auto GetBig   = [](const CRenPar& rp) { return rp.bigWaves; };
+    const auto GetSmall = [](const CRenPar& rp) { return rp.smallWaves; };
+
+    if (v0.x == v2.x) { // Vertical left edge => (v0, v1, v2) with (u, v) as is
+        if (!((double)v + (double)u <= 1.0)) {
+            return false;
+        }
+        *outWaterLevel = (float)Interpolate(GetZ, v0, v1, (double)u, v2, (double)v);
+        if (outBigWaves) {
+            *outBigWaves   = (float)Interpolate(GetBig,   v0, v1, (double)u, v2, (double)v);
+            *outSmallWaves = (float)Interpolate(GetSmall, v0, v1, (double)u, v2, (double)v);
+        }
+    } else { // Vertical right edge => base is v1
+        if (!(u >= v)) {
+            return false;
+        }
+        const double a = 1.0 - (double)u;
+        *outWaterLevel = (float)Interpolate(GetZ, v1, v2, (double)v, v0, a);
+        if (outBigWaves) {
+            *outBigWaves   = (float)Interpolate(GetBig,   v1, v0, a, v2, (double)v);
+            *outSmallWaves = (float)Interpolate(GetSmall, v1, v0, a, v2, (double)v);
+        }
+    }
+
+    if ((double)*outWaterLevel - (double)6.f > (double)z && bLimitedDepth) {
+        return false;
+    }
+    return !((double)*outWaterLevel + (double)20.f < (double)z);
+}
+
 // 0x6E8580
 bool CWaterLevel::GetWaterLevelNoWaves(CVector pos, float* pOutWaterLevel, float* pOutBigWaves, float* pOutSmallWaves) {
     const int32 blockX = (int32)std::floor(pos.x * 0.002f + 6.0f);
@@ -1012,16 +1150,11 @@ bool CWaterLevel::GetWaterLevelNoWaves(CVector pos, float* pOutWaterLevel, float
         return true;
     }
 
-    // NOTE: `CWaterQuad::GetWaterLevel` (0x6E5BB0) and `CWaterTriangle::GetWaterLevel` (0x6E5E90) are not reversed yet
-    const auto GetLevelInQuad = [&](uint32 idx) {
-        return plugin::CallAndReturn<bool, 0x6E5BB0, CWaterQuad*, float, float, float, float*, float*, float*>(
-            &WaterQuads[idx], pos.x, pos.y, pos.z, pOutWaterLevel, pOutBigWaves, pOutSmallWaves
-        );
+    const auto GetLevelInQuad = [&](uint32 idx) { // 0x6E5BB0
+        return WaterQuads[idx].GetWaterLevel(pos.x, pos.y, pos.z, pOutWaterLevel, pOutBigWaves, pOutSmallWaves);
     };
-    const auto GetLevelInTri = [&](uint32 idx) {
-        return plugin::CallAndReturn<bool, 0x6E5E90, CWaterTriangle*, float, float, float, float*, float*, float*>(
-            &WaterTriangles[idx], pos.x, pos.y, pos.z, pOutWaterLevel, pOutBigWaves, pOutSmallWaves
-        );
+    const auto GetLevelInTri = [&](uint32 idx) { // 0x6E5E90
+        return WaterTriangles[idx].GetWaterLevel(pos.x, pos.y, pos.z, pOutWaterLevel, pOutBigWaves, pOutSmallWaves);
     };
 
     const auto& info = m_BlockPolyInfo[blockX][blockY];
@@ -1057,10 +1190,115 @@ bool CWaterLevel::GetWaterLevelNoWaves(CVector pos, float* pOutWaterLevel, float
     }
 }
 
-bool CWaterLevel::GetWaterDepth(const CVector& vecPos, float* pOutWaterDepth, float* pOutWaterLevel, float* pOutGroundLevel)
-{
-    return plugin::CallAndReturn<bool, 0x6EA960, const CVector&, float*, float*, float*>
-        (vecPos, pOutWaterDepth, pOutWaterLevel, pOutGroundLevel);
+// 0x6EA960
+bool CWaterLevel::GetWaterDepth(const CVector& vecPos, float* pOutWaterDepth, float* pOutWaterLevel, float* pOutGroundLevel) {
+    float waterLevel;
+    if (!GetWaterLevelNoWaves(vecPos, &waterLevel, nullptr, nullptr)) {
+        return false;
+    }
+
+    // 0x6EA8A0 `CWaterLevel::GetGroundLevel(const CVector&, float*, ColData*, float)` - Not reversed yet
+    float groundLevel;
+    if (!plugin::CallAndReturn<bool, 0x6EA8A0, const CVector*, float*, void*, float>(&vecPos, &groundLevel, nullptr, 30.f)) {
+        groundLevel = -100.f; // 0x859014
+    }
+
+    if (pOutWaterDepth) {
+        *pOutWaterDepth = waterLevel - groundLevel;
+    }
+    if (pOutWaterLevel) {
+        *pOutWaterLevel = waterLevel;
+    }
+    if (pOutGroundLevel) {
+        *pOutGroundLevel = groundLevel;
+    }
+    return true;
+}
+
+// 0x6E61B0
+// Tests whether the line `start` -> `end` crosses the z = 0 plane (the caller passes the points relative to the water level) inside a water block
+// that has water there. If so, the crossing point is written to `outHitPos` and `true` is returned.
+// NOTE: Only quads are considered (a block of type `SINGLE_TRI` is skipped, as are triangles in combos), as in the original
+// NOTE: The original uses truncation (and not `floor`) to calculate the block coordinates, so negative coordinates in (-500, 0) end up in block 6
+// NOTE: x87 extended precision in the original => `double` intermediates, with the float spills (`t`, `dx * t`, `dz`) of the original
+bool CWaterLevel::TestLineAgainstWater(CVector start, CVector end, CVector* outHitPos) {
+    // Original selects with FCOMP + flags tests => NaN handling as `a < b ? a : b` / `a > b ? a : b`
+    const float minZ = start.z < end.z ? start.z : end.z;
+    const float minY = start.y < end.y ? start.y : end.y;
+    const float minX = start.x < end.x ? start.x : end.x;
+    const float maxZ = start.z > end.z ? start.z : end.z;
+    const float maxY = start.y > end.y ? start.y : end.y;
+    const float maxX = start.x > end.x ? start.x : end.x;
+
+    // 0x821B40 (ftol => truncation) of `v * 0.002 + 6`
+    const auto ToBlock = [](float v) {
+        return (int32)((double)v * (double)0.002f + (double)6.f); // 0x858F44, 0x858B44
+    };
+    const int32 minBlockY = ToBlock(minY);
+    const int32 maxBlockX = ToBlock(maxX);
+    const int32 maxBlockY = ToBlock(maxY);
+    const int32 minBlockX = ToBlock(minX);
+
+    // Calculates the point where the line crosses z = 0 (`t` is the fraction of the way) and writes it to the output
+    const auto CalcHitPos = [&] {
+        const float t  = (float)(std::fabs((double)start.z) / ((double)maxZ - (double)minZ));
+        const float dx = (float)(((double)end.x - (double)start.x) * (double)t);      // Rounded to float
+        const double dy = ((double)end.y - (double)start.y) * (double)t;              // NOT rounded
+        const float dz = (float)((double)end.z - (double)start.z);                    // Rounded to float
+        outHitPos->x = (float)((double)dx + (double)start.x);
+        outHitPos->y = (float)(dy + (double)start.y);
+        outHitPos->z = (float)((double)dz * (double)t + (double)start.z);
+    };
+
+    // Tests the quad: Does the line cross z = 0 here, and is the hit pos inside the quad?
+    const auto TestQuad = [&](uint32 quadId) {
+        if (!((double)start.z * (double)end.z < 0.0)) { // 0x858B50
+            return false;
+        }
+        CalcHitPos();
+        const auto& quad = WaterQuads[quadId];
+        const auto& v0   = m_aVertices[quad.verts[0]];
+        const auto& v1   = m_aVertices[quad.verts[1]];
+        const auto& v2   = m_aVertices[quad.verts[2]];
+        return (float)v0.x <= outHitPos->x
+            && (float)v1.x >= outHitPos->x
+            && (float)v0.y <= outHitPos->y
+            && (float)v2.y >= outHitPos->y;
+    };
+
+    for (int32 blockX = minBlockX; blockX <= maxBlockX; blockX++) {
+        for (int32 blockY = minBlockY; blockY <= maxBlockY; blockY++) {
+            if (blockX < 0 || blockX >= NUM_WATER_BLOCKS_ROWCOL || blockY < 0 || blockY >= NUM_WATER_BLOCKS_ROWCOL) { // Outside of the world (flat water)
+                if (!(minZ < 0.f) || !(maxZ > 0.f)) { // 0x858B50
+                    continue;
+                }
+                CalcHitPos();
+                if (blockX == ToBlock(outHitPos->x) && blockY == ToBlock(outHitPos->y)) {
+                    return true;
+                }
+                continue;
+            }
+
+            const auto& info = m_BlockPolyInfo[blockX][blockY];
+            switch (info.Type()) {
+            case PolyInfo::PType::SINGLE_QUAD:
+                if (TestQuad(info.Id())) {
+                    return true;
+                }
+                break;
+            case PolyInfo::PType::COMBO:
+                for (auto* poly = &m_PolyCombos[info.Id()]; poly->Type() != PolyInfo::PType::NONE; poly++) {
+                    if (poly->Type() == PolyInfo::PType::SINGLE_QUAD && TestQuad(poly->Id())) {
+                        return true;
+                    }
+                }
+                break;
+            default: // NONE / SINGLE_TRI
+                break;
+            }
+        }
+    }
+    return false;
 }
 
 // 0x6E7760
@@ -1337,8 +1575,41 @@ void CWaterLevel::ScanThroughBlocks() {
     CWorldScan::ScanWorld(scanPts, 5, BlockHit);
 }
 
+// 0x6EDDC0
 void CWaterLevel::RenderHighDetailWaterTriangle(int32 X1, int32 Y1, CRenPar P1, int32 X2, int32 Y2, CRenPar P2, int32 X3, int32 Y3, CRenPar P3) {
-    plugin::CallAndReturn<void, 0x6EDDC0, int32, int32, CRenPar, int32, int32, CRenPar, int32, int32, CRenPar>(X1, Y1, P1, X2, Y2, P2, X3, Y3, P3);
+    // Bounding sphere of the triangle (in 2D, Z is the one of the 1st vertex). NOTE: x87 => `double` intermediates, the radius is based on `X2 - X1` only
+    const CVector center{
+        (float)((double)(X1 + X2 + X3) * (double)std::bit_cast<float>(0x3EAAAAAAu)), // 0x8594EC (1/3, one ULP below the nearest float to 1/3)
+        (float)((double)(Y1 + Y2 + Y3) * (double)std::bit_cast<float>(0x3EAAAAAAu)),
+        P1.z
+    };
+    const float radius = (float)((double)(X2 - X1) * (double)0.71f); // 0x872168
+
+    // 0x420C40 and (if the mirror is active) the same for the mirrored view
+    if (!TheCamera.IsSphereVisible(center, radius)) {
+        return;
+    }
+
+    // Number of cells along the X axis
+    const int32 numCells = (X2 - X1) / 2;
+    const int32 numTris  = numCells * numCells;
+    int32 numVerts = 0;
+    for (int32 i = 1; i <= numCells + 1; i++) {
+        numVerts += i;
+    }
+
+    if (numTris * 3 < 0x1000 && numVerts < 0x800) { // Fits into the render buffer
+        // 0x6E8780 `CWaterLevel::RenderHighDetailWaterTriangle_OneLayer` - Not reversed yet
+        for (int32 layer = 0; layer < 2; layer++) {
+            plugin::Call<0x6E8780, int32, int32, CRenPar, int32, int32, CRenPar, int32, int32, CRenPar, int32, int32, int32, int32>(
+                X1, Y1, P1, X2, Y2, P2, X3, Y3, P3, layer, numTris, numVerts, numCells
+            );
+        }
+        return;
+    }
+
+    // Too big => split
+    SplitWaterTriangleAlongXLine(X1 + (numCells / 2) * 2, X1, Y1, P1, X2, Y2, P2, X3, Y3, P3);
 }
 
 // 0x6E6870 - cdecl

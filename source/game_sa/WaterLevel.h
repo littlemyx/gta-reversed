@@ -46,6 +46,10 @@ struct CWaterPolygon { // NOTSA - I hate duplicate code
     bool bLimitedDepth : 1{};
 
     auto GetVertex(uint16 idx) const -> CWaterVertex;
+
+    //! 0x6E5BB0 (quad) / 0x6E5E90 (triangle) - Original is a `cdecl` with `this` as the first stack argument (so it can't be hooked as a member)
+    //! Returns whether (x, y) is inside the polygon (and, if limited depth, `z` is close enough to the water). Specialized for `CWaterQuad` and `CWaterTriangle`, see below.
+    bool GetWaterLevel(float x, float y, float z, float* outWaterLevel, float* outBigWaves, float* outSmallWaves) const;
     auto IsInInterior()        const { return GetVertex(0).rp.z > 950.f; }
 
     auto DoMarkToBeRendered(bool isInInterior) {
@@ -59,6 +63,9 @@ VALIDATE_SIZE(CWaterTriangle, 0x8);
 
 using CWaterQuad = CWaterPolygon<4>;
 VALIDATE_SIZE(CWaterQuad, 0xA);
+
+template<> bool CWaterQuad::GetWaterLevel(float x, float y, float z, float* outWaterLevel, float* outBigWaves, float* outSmallWaves) const;
+template<> bool CWaterTriangle::GetWaterLevel(float x, float y, float z, float* outWaterLevel, float* outBigWaves, float* outSmallWaves) const;
 
 class CWaterLevel {
  public:
@@ -284,6 +291,7 @@ public:
 
     static void PreRenderWater();
     static bool GetWaterDepth(const CVector& vecPos, float* pOutWaterDepth, float* pOutWaterLevel, float* pOutGroundLevel);
+    static bool TestLineAgainstWater(CVector start, CVector end, CVector* outHitPos); // 0x6E61B0 - Tests the line against the z = 0 plane, only considers quads (!)
     static bool GetWaterLevel(float x, float y, float z, float& pOutWaterLevel, uint8 bTouchingWater, CVector* pVecNormals);
     static bool LoadDataFile();
     static void LoadTextures();
@@ -389,7 +397,6 @@ public:
     SetUpWaterFog(int32, int32, int32, int32)
     SplitWaterRectangleAlongXLine(int32, int32, int32, int32, int32, CRenPar, CRenPar, CRenPar, CRenPar)
     SplitWaterRectangleAlongYLine(int32, int32, int32, int32, int32, CRenPar, CRenPar, CRenPar, CRenPar)
-    TestLineAgainstWater(CVector, CVector, CVector*)
     TestQuadToGetWaterLevel(CWaterQuad*, float, float, float, float*, float*, float*)
     TestTriangleToGetWaterLevel(CWaterTriangle*, float, float, float, float*, float*, float*)
     */

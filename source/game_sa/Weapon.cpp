@@ -2151,8 +2151,8 @@ bool CWeapon::FireInstantHit(CEntity* firingEntity, CVector* origin, CVector* mu
         }
         if (testWater) { // 0x740EA3
             CVector waterHitPos{};
-            const auto TestWater = [&](CVector to) { // 0x6E61B0 - Not reversed yet
-                return plugin::CallAndReturn<bool, 0x6E61B0, CVector, CVector, CVector*>(start, to, &waterHitPos);
+            const auto TestWater = [&](CVector to) { // 0x6E61B0
+                return CWaterLevel::TestLineAgainstWater(start, to, &waterHitPos);
             };
             if (TestWater(hitEntity ? colPoint.m_vecPoint : endPt)) { // 0x740F42
                 g_fx.TriggerBulletSplash(waterHitPos);

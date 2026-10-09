@@ -373,7 +373,8 @@ void Fx_c::CreateEntityFx(CEntity* entity, const char* fxName, const CVector& po
 void Fx_c::DestroyEntityFx(CEntity* entity) {
     // ((void(__thiscall*)(Fx_c*, CEntity*))0x4A1280)(this, entity);
 
-    for (auto it = m_FxEntities.GetHead(); it; it = m_FxEntities.GetNext(it)) {
+    for (auto it = m_FxEntities.GetHead(), next = decltype(it){}; it; it = next) {
+        next = m_FxEntities.GetNext(it); // the exe reads the next link BEFORE freeing the node (0x4A1294)
         if (it->m_Entity == entity) {
             m_FxEntities.RemoveItem(it);
             it->m_System->Kill();

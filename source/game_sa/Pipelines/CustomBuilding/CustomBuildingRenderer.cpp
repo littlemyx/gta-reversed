@@ -44,7 +44,7 @@ bool CCustomBuildingRenderer::PluginAttach() {
 // 0x5D7F00
 void CCustomBuildingRenderer::AtomicSetup(RpAtomic* atomic) {
     auto* const geometry = RpAtomicGetGeometry(atomic);
-    if (CCustomBuildingDNPipeline::GetExtraVertColourPtr(geometry) && RwCompatGeometryPreLit(geometry)) {
+    if (CCustomBuildingDNPipeline::GetExtraVertColourPtr(geometry)->NightColors && RwCompatGeometryPreLit(geometry)) { // exe 0x5D6E90 returns the night colours pointer (the first field), not the plugin data address
         CCustomBuildingDNPipeline::CustomPipeAtomicSetup(atomic);
     } else {
         CCustomBuildingPipeline::CustomPipeAtomicSetup(atomic);

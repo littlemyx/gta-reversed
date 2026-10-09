@@ -75,7 +75,7 @@ static_assert(offsetof(CHeli, m_fMinAltitude) == 0x9B0);
 static_assert(offsetof(CVehicle, m_pTowingVehicle) == 0x4C4 && offsetof(CVehicle, m_pVehicleBeingTowed) == 0x4C8);
 static_assert(offsetof(CPed, m_acquaintance) == 0x4E0);
 static_assert(offsetof(CWeaponInfo, m_nModelId1) == 0xC && offsetof(CWeaponInfo, m_nSlot) == 0x14);
-static_assert(offsetof(CVehicleModelInfo, m_nPlateType) == 0x31);
+static_assert(offsetof(CVehicleModelInfo, m_nPlateType) == 0x31 && offsetof(CVehicleModelInfo, m_pPlateMaterial) == 0x24);
 static_assert(offsetof(tBeatInfo, IsBeatInfoPresent) == 0xA0 && offsetof(tBeatInfo, BeatNumber) == 0xA8 && sizeof(tTrackInfo::tBeat) == 8);
 static_assert(offsetof(CTaskComplexUseSequence, m_nCurrentTaskIndex) == 0x10 && offsetof(CTaskComplexUseSequence, m_nEndTaskIndex) == 0x14);
 static_assert(offsetof(CTaskComplexJump, m_UsePlayerLaunchForce) == 0x10);
@@ -174,11 +174,15 @@ void SetCharIsTargetPriority(CPed& ped, int32 flag) {
 }
 
 //! 1905 CUSTOM_PLATE_DESIGN_FOR_NEXT_CAR (case @0x46B5E8): model, design
-//! `ms_modelInfoPtrs[model]` (no range check): if it exists, is a vehicle model (type 6) and has an RW object (+0x24) => plate type byte (+0x31) = design.
+//! `ms_modelInfoPtrs[model]` (no range check): if it exists, is a vehicle model (type 6) and its plate material (+0x24, `m_pPlateMaterial`, the first member
+//! of CVehicleModelInfo - NOT the RW object of CBaseModelInfo at +0x1C) is set => plate type byte (+0x31) = design.
 void CustomPlateDesignForNextCar(int32 modelId, int32 design) {
     auto* const mi = CModelInfo::ms_modelInfoPtrs[modelId]; // 0xA9B0C8
-    if (mi && mi->GetModelType() == MODEL_INFO_VEHICLE && mi->GetRwObject()) {
-        static_cast<CVehicleModelInfo*>(mi)->m_nPlateType = (uint8)design;
+    if (mi && mi->GetModelType() == MODEL_INFO_VEHICLE) {
+        auto* const vmi = static_cast<CVehicleModelInfo*>(mi);
+        if (vmi->m_pPlateMaterial) {
+            vmi->m_nPlateType = (uint8)design;
+        }
     }
 }
 
@@ -229,10 +233,13 @@ void ClearAllCharRelationships(CPed& ped, int32 acquaintanceId) {
 }
 
 //! 1917 GET_CAR_PITCH (case @0x46B80C): car => float (degrees)
-//! `CAutomobile::GetCarPitch` (0x6A6050, called on any vehicle type) * 57.29578f (0x859878) stored as float; < 0 (ordered) => + 360.0f (0x859E2C); then > 360 (ordered) => - 360.
+//! `CAutomobile::GetCarPitch` (0x6A6050, called on any vehicle type) * 57.29578f (0x859878): the product is stored as a float (`fst`) but the first compare
+//! (`fcomp 0.0f`, ordered `< 0`) is made on the x87 register (NOT rounded to float: a tiny negative product that rounds to -0.0f still adds); then
+//! + 360.0f (0x859E2C) onto the stored float; then the float > 360 (ordered) => - 360.
 float GetCarPitchScript(CVehicle& veh) {
-    float pitch = (float)((double)static_cast<CAutomobile&>(veh).GetCarPitch() * (double)57.2957763671875f);
-    if (pitch < 0.0f) {
+    const double product = (double)static_cast<CAutomobile&>(veh).GetCarPitch() * (double)57.2957763671875f;
+    float        pitch   = (float)product;
+    if (product < 0.0) {
         pitch = (float)((double)pitch + 360.0);
     }
     if (pitch > 360.0f) {
@@ -406,8 +413,9 @@ void TaskGotoCharAiming(CRunningScript& S, eScriptCommands cmd, int32 pedHandle,
 MultiRet<int32, int32> GetSequenceProgressRecursive(CPed& ped) {
     int32 progress = -1, subProgress = -1;
     if (CPedScriptedTaskRecord::GetStatus(&ped, 0x618) != eScriptedTaskStatus::EVENT_ASSOCIATED) {
-        auto* const task = static_cast<CTaskComplexUseSequence*>(ped.GetIntelligence()->GetTaskManager().GetPrimaryTasks()[TASK_PRIMARY_PRIMARY]);
-        progress = task->m_nCurrentTaskIndex;
+        CTask* const task = ped.GetIntelligence()->GetTaskManager().GetPrimaryTasks()[TASK_PRIMARY_PRIMARY];
+        progress = static_cast<CTaskComplexUseSequence*>(task)->m_nCurrentTaskIndex; // raw read of +0x10, no type check
+        // virtual call through `CTask` (vtable slot 2): `CTaskComplex::GetSubTask` is `final` and would be bound statically through a CTaskComplexUseSequence*
         if (CTask* const sub = task->GetSubTask(); sub && sub->GetTaskType() == TASK_COMPLEX_USE_SEQUENCE) {
             subProgress = static_cast<CTaskComplexUseSequence*>(sub)->m_nCurrentTaskIndex;
         }

@@ -53,6 +53,7 @@ void CPlayerInfo::InjectHooks() {
     RH_ScopedInstall(GivePlayerParachute, 0x56EC40);
     RH_ScopedInstall(SetLastTargetVehicle, 0x56DA80);
     RH_ScopedInstall(ProcessCarGunCrosshair_Hook, 0x56EC80);
+    RH_ScopedInstall(DrawCrosshair_Hook, 0x56EF90);
     RH_ScopedInstall(Load, 0x5D3B00);
     RH_ScopedInstall(Save, 0x5D3AC0);
 }
@@ -963,6 +964,89 @@ void CPlayerInfo::ProcessCarGunCrosshair(uint32 playerIndex, CPad* pad) {
 void CPlayerInfo::ProcessCarGunCrosshair_Hook(uint32 playerIndex, CPad* pad) {
     auto* const self = reinterpret_cast<CPlayerInfo*>(reinterpret_cast<uint8*>(this) - offsetof(CPlayerInfo, m_nCrosshairActivated));
     self->ProcessCarGunCrosshair(playerIndex, pad);
+}
+
+// 0x56EF90 - In the original `this` is the address of `m_nCrosshairActivated` (see `DrawCrosshair_Hook`)
+void CPlayerInfo::DrawCrosshair(int32 playerIndex) {
+    if ((uint8)m_nCrosshairActivated == 0) { // The original only tests the lowest byte
+        return;
+    }
+
+    // Per-player (2 players) history of the last 5 crosshair positions (index 0 is the newest)
+    static auto& s_TrailTime = StaticRef<std::array<std::array<uint32, 5>, 2>>(0xB9B8F8); // Only [i][0] is ever read (see the BUG note below)
+    static auto& s_TrailY    = StaticRef<std::array<std::array<float, 5>, 2>>(0xB9B920);
+    static auto& s_TrailX    = StaticRef<std::array<std::array<float, 5>, 2>>(0xB9B948);
+    static auto& s_CoronaTex = StaticRef<int32>(0x8CDF1C); // NOTSA name: index into `gpCoronaTexture` (value is 8 = CORONATYPE_STREAK)
+
+    RwRenderStateSet(rwRENDERSTATEZWRITEENABLE,      RWRSTATE(FALSE));
+    RwRenderStateSet(rwRENDERSTATEZTESTENABLE,       RWRSTATE(FALSE));
+    RwRenderStateSet(rwRENDERSTATEVERTEXALPHAENABLE, RWRSTATE(TRUE));
+    RwRenderStateSet(rwRENDERSTATESRCBLEND,          RWRSTATE(rwBLENDSRCALPHA));
+    RwRenderStateSet(rwRENDERSTATEDESTBLEND,         RWRSTATE(rwBLENDINVDESTALPHA)); // The exe really passes 8 here (not INVSRCALPHA)
+    RwRenderStateSet(rwRENDERSTATETEXTURERASTER,     RWRSTATE(RwTextureGetRaster(gpCoronaTexture[s_CoronaTex])));
+
+    // Player 0 is drawn green, the other one blue
+    uint32 r, g, b;
+    if (playerIndex == 0) {
+        r = 0;
+        g = 255;
+        b = 50;
+    } else {
+        r = 50;
+        g = 0;
+        b = 255;
+    }
+
+    // Shift the history
+    auto& timeHist = s_TrailTime[playerIndex];
+    auto& yHist    = s_TrailY[playerIndex];
+    auto& xHist    = s_TrailX[playerIndex];
+    for (auto k = 0; k < 4; k++) {
+        xHist[4 - k] = xHist[3 - k];
+        yHist[4 - k] = yHist[3 - k];
+        // BUG: The source of this copy is `s_TrailY[0][3 - k]` (absolute address 0xB9B92C - 4 * k) instead of `timeHist[3 - k]`.
+        // The destination slots ([i][1..4]) are never read, so it is harmless. Kept as is.
+        timeHist[4 - k] = std::bit_cast<uint32>(s_TrailY[0][3 - k]);
+    }
+    xHist[0]    = m_vecCrosshairTarget.x;
+    yHist[0]    = m_vecCrosshairTarget.y;
+    timeHist[0] = CTimer::m_snTimeInMilliseconds;
+
+    // NOTE: The original keeps all intermediate values on the x87 stack (extended precision) => `double`s
+    for (auto step = 0; step < 5; step++) {
+        const float pulse = (float)(std::sin((double)(timeHist[0] & 0x3FF) * (double)0.006135923322290182f /* 0x865034 */) * (double)0.2f /* 0x858CC4 */ + (double)1.0f /* 0x858624 */);
+        for (auto ring = 0; ring < 3; ring++) {
+            const float radius = (float)((double)ring * (double)10.0f /* 0x85862C */ + (double)20.0f /* 0x858BA4 */);
+            for (auto n = 0; n < 4; n++) {
+                const double angle = (double)n * (double)1.5707964f /* 0x858FE4 */ + (double)0.78539819f /* 0x859AB0 */;
+                const double cosV  = std::cos(angle);
+                const double sinV  = std::sin(angle);
+                const float  posY  = (float)(cosV * (double)radius * (double)pulse + ((double)yHist[step] + 1.0) * (double)RsGlobal.maximumHeight * 0.5);
+                const float  posX  = (float)(sinV * (double)radius * (double)pulse + ((double)xHist[step] + 1.0) * (double)RsGlobal.maximumWidth * 0.5);
+                CSprite::RenderOneXLUSprite_Rotate_Aspect(
+                    { posX, posY, 100.0f },
+                    { 15.0f, 15.0f },
+                    (uint8)r, (uint8)g, (uint8)b,
+                    255,
+                    0.01f, // 0x3C23D70A
+                    0.0f,
+                    255
+                );
+            }
+        }
+        r >>= 1;
+        g >>= 1;
+        b >>= 1;
+    }
+
+    RwRenderStateSet(rwRENDERSTATEZWRITEENABLE, RWRSTATE(TRUE));
+    RwRenderStateSet(rwRENDERSTATEZTESTENABLE,  RWRSTATE(TRUE));
+}
+
+// 0x56EF90 - Hook wrapper: `this` is the address of `m_nCrosshairActivated`
+void CPlayerInfo::DrawCrosshair_Hook(int32 playerIndex) {
+    auto* const self = reinterpret_cast<CPlayerInfo*>(reinterpret_cast<uint8*>(this) - offsetof(CPlayerInfo, m_nCrosshairActivated));
+    self->DrawCrosshair(playerIndex);
 }
 
 // 0x56F4E0

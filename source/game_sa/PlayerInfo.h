@@ -104,6 +104,9 @@ public:
 
     //! 0x56EC80 - Moves the crosshair using the pad and fires the car gun (instant hit) if requested
     void ProcessCarGunCrosshair(uint32 playerIndex, CPad* pad);
+
+    //! 0x56EF90 - Draws the (car gun) crosshair and its trail of the given player (called from `CWeaponEffects::Render`)
+    void DrawCrosshair(int32 playerIndex);
     void FindClosestCarSectorList(CPtrListDoubleLink<CVehicle*>& ptrList, CPed* ped, float minX, float minY, float maxX, float maxY, float* outVehDist, CVehicle** outVehicle);
     void EvaluateCarPosition(CEntity* car, CPed* ped, float pedToVehDist, float* outDistance, CVehicle** outVehicle);
     void Clear();
@@ -140,6 +143,7 @@ private:
 
     CPlayerInfo* Constructor();
     void ProcessCarGunCrosshair_Hook(uint32 playerIndex, CPad* pad); // `this` is `&m_nCrosshairActivated`
+    void DrawCrosshair_Hook(int32 playerIndex);                      // `this` is `&m_nCrosshairActivated`
 };
 
 VALIDATE_SIZE(CPlayerInfo, 0x190);

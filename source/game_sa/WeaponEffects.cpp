@@ -438,9 +438,7 @@ void CWeaponEffects::Render() {
         RwRenderStateSet(rwRENDERSTATEZTESTENABLE,  RWRSTATE(TRUE));
     }
 
-    // TODO: Reverse 0x56EF90 (draws the player's crosshair, `this` points to `CPlayerInfo::m_nCrosshairActivated`)
     for (auto i = 0; i < 2; i++) {
-        // NOTSA: `this` isn't really a CPlayerInfo, it is the address of its `m_nCrosshairActivated` member
-        plugin::CallMethod<0x56EF90, CPlayerInfo*, int32>(reinterpret_cast<CPlayerInfo*>(&CWorld::Players[i].m_nCrosshairActivated), i);
+        CWorld::Players[i].DrawCrosshair(i); // 0x56EF90
     }
 }

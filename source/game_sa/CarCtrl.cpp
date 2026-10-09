@@ -20,6 +20,7 @@
 #include "CutsceneMgr.h"
 #include "TheCarGenerators.h"
 #include "eAreaCodes.h"
+#include "TaskTypes/TaskComplexWander.h"
 
 #include <reversiblebugfixes/Bugs.hpp>
 #include <numbers>
@@ -174,6 +175,12 @@ void CCarCtrl::InjectHooks()
     RH_ScopedInstall(GetAIPlaneToAttackPlayer, 0x429780);
     RH_ScopedInstall(GetAIPlaneToDoDogFight, 0x429890);
     RH_ScopedInstall(FlyAIHeliInCertainDirection, 0x429A70);
+    RH_ScopedInstall(SteerAIHeliTowardsTargetCoors, 0x42A630);
+    RH_ScopedInstall(GetAIHeliToFlyInDirection, 0x42A730);
+    RH_ScopedInstall(SteerAIHeliToFollowEntity, 0x42A750);
+    RH_ScopedInstall(SteerAIHeliAsPoliceHeli, 0x42AAD0);
+    RH_ScopedInstall(SteerAIHeliFlyingAwayFromPlayer, 0x42ACB0);
+    RH_ScopedInstall(SteerAIHeliToLand, 0x42AD30);
     RH_ScopedInstall(WeaveForObject, 0x426BC0);
     RH_ScopedInstall(WeaveForOtherCar, 0x426350);
 }
@@ -1209,7 +1216,8 @@ void CCarCtrl::GetAIHeliToAttackPlayer(CAutomobile* automobile) {
 
 // 0x42A730
 void CCarCtrl::GetAIHeliToFlyInDirection(CAutomobile* automobile) {
-    plugin::Call<0x42A730, CAutomobile*>(automobile);
+    const auto heli = static_cast<CHeli*>(automobile);
+    FlyAIHeliInCertainDirection(heli, heli->field_9B4, 1000.0f, false);
 }
 
 // 0x429780
@@ -2384,12 +2392,47 @@ void CCarCtrl::SteerAICarWithPhysics_OnlyMission(CVehicle* vehicle, float* arg2,
 
 // 0x42AAD0
 void CCarCtrl::SteerAIHeliAsPoliceHeli(CAutomobile* automobile) {
-    plugin::Call<0x42AAD0, CAutomobile*>(automobile);
+    const auto heli   = static_cast<CHeli*>(automobile);
+    const auto target = heli->m_autoPilot.m_TargetEntity;
+
+    const auto heading = CGeneral::GetATanOfXY(
+        (float)((double)target->GetPosition().x - heli->GetPosition().x),
+        (float)((double)target->GetPosition().y - heli->GetPosition().y)
+    );
+
+    // x87: The differences are kept in extended precision
+    const auto& targetPos = target->GetPosition();
+    const auto& heliPos   = heli->GetPosition();
+    const auto  dy        = (double)targetPos.y - heliPos.y;
+    const auto  dx        = (double)targetPos.x - heliPos.x;
+    const auto  dist      = (float)std::sqrt(dy * dy + dx * dx);
+
+    // Stay above the target, further away fly higher
+    const auto altitude = targetPos.z > 6.0f ? targetPos.z : 6.0f; // 0x858B44
+    heli->m_fMaxAltitude = altitude;
+    if (dist > 50.0f) {
+        heli->m_fMaxAltitude = altitude > 25.0f ? altitude : 25.0f; // 0x858FE8
+    }
+
+    heli->m_autoPilot.m_vecDestinationCoors = target->GetPosition();
+    FlyAIHeliInCertainDirection(heli, heading, dist, true);
+
+    if (heli->m_fHealth < 230.0f) {
+        heli->m_autoPilot.m_nCarMission = MISSION_HELI_FLY_AWAY_FROM_PLAYER;
+    }
 }
 
 // 0x42ACB0
 void CCarCtrl::SteerAIHeliFlyingAwayFromPlayer(CAutomobile* automobile) {
-    plugin::Call<0x42ACB0, CAutomobile*>(automobile);
+    const auto heli = static_cast<CHeli*>(automobile);
+    const auto& pos = heli->GetPosition();
+
+    // Face away from the player
+    const auto heading = CGeneral::GetATanOfXY(
+        (float)((double)FindPlayerCoors(-1).x - pos.x),
+        (float)((double)FindPlayerCoors(-1).y - pos.y)
+    );
+    FlyAIHeliInCertainDirection(heli, (float)((double)heading + std::numbers::pi_v<float>), 1000.0f, false);
 }
 
 // 0x4238E0
@@ -2404,7 +2447,84 @@ void CCarCtrl::SteerAIHeliToCrashAndBurn(CAutomobile* automobile) {
 
 // 0x42A750
 void CCarCtrl::SteerAIHeliToFollowEntity(CAutomobile* automobile) {
-    plugin::Call<0x42A750, CAutomobile*>(automobile);
+    const auto heli      = static_cast<CHeli*>(automobile);
+    auto&      autoPilot = heli->m_autoPilot;
+    CEntity* const target = autoPilot.m_TargetEntity; // Not necessarily a vehicle
+
+    // Fly to where the target is (or will be)
+    auto& dest = autoPilot.m_vecDestinationCoors;
+    dest = target->GetPosition();
+    if (autoPilot.field_4A) {
+        if (!target->m_matrix) {
+            target->AllocateMatrix();
+            target->m_placement.UpdateMatrix(target->m_matrix);
+        }
+        const auto  k   = (double)(int8)autoPilot.field_4A;
+        const auto& fwd = target->m_matrix->GetForward();
+        dest.x = (float)((double)fwd.x * k + dest.x);
+        dest.y = (float)((double)(float)((double)fwd.y * k) + dest.y);
+        dest.z = (float)((double)(float)(k * 0.0f) + dest.z);
+    }
+
+    const auto  heading = CGeneral::GetATanOfXY(
+        (float)((double)dest.x - heli->GetPosition().x),
+        (float)((double)dest.y - heli->GetPosition().y)
+    );
+
+    // x87: The differences are kept in extended precision
+    const auto& targetPos = target->GetPosition();
+    const auto& heliPos   = heli->GetPosition();
+    const auto  dy        = (double)targetPos.y - heliPos.y;
+    const auto  dx        = (double)targetPos.x - heliPos.x;
+    const auto  dist      = (float)std::sqrt(dy * dy + dx * dx);
+
+    // Stay above the target, further away fly higher
+    const auto altitude = targetPos.z > 6.0f ? targetPos.z : 6.0f; // 0x858B44
+    heli->m_fMaxAltitude = altitude;
+    if (dist > 50.0f) {
+        heli->m_fMaxAltitude = altitude > 25.0f ? altitude : 25.0f; // 0x858FE8
+    }
+
+    if (heli->m_fForcedOrientation >= 0.0f) {
+        FlyAIHeliToTarget_FixedOrientation(heli, heli->m_fForcedOrientation, target->GetPosition());
+    } else {
+        FlyAIHeliInCertainDirection(heli, heading, dist, true);
+    }
+
+    // Once we're close to the target make it move on
+    if (autoPilot.carCtrlFlags.bDoTargetCatchupCheck) {
+        const auto& targetPos2 = target->GetPosition();
+        const auto& heliPos2   = heli->GetPosition();
+        const auto  dx2        = (double)heliPos2.x - targetPos2.x;
+        const auto  dy2        = (double)heliPos2.y - targetPos2.y;
+        if (std::sqrt(dy2 * dy2 + dx2 * dx2) < 25.0f) {
+            if (target->GetType() == ENTITY_TYPE_VEHICLE) {
+                if (target->GetStatus() == STATUS_SIMPLE || target->GetStatus() == STATUS_PHYSICS) {
+                    auto& targetAP = static_cast<CVehicle*>(target)->m_autoPilot;
+                    targetAP.m_nCarMission      = MISSION_CRUISE;
+                    targetAP.m_nCruiseSpeed     = 100;
+                    targetAP.m_nCarDrivingStyle = DRIVING_STYLE_AVOID_CARS;
+                    target->SetStatus(STATUS_PHYSICS);
+                }
+            } else if (target->GetType() == ENTITY_TYPE_PED) {
+                if (const auto task = static_cast<CPed*>(target)->GetTaskManager().GetActiveTask()) {
+                    if (task->GetTaskType() == TASK_COMPLEX_WANDER) {
+                        static_cast<CTaskComplexWander*>(task)->m_nMoveState = PEDMOVE_SPRINT;
+                    }
+                }
+            }
+            autoPilot.carCtrlFlags.bDoTargetCatchupCheck = false;
+        }
+    }
+
+    // Stop following after a while / when the heli got damaged
+    if (autoPilot.carCtrlFlags.bHeliFollowTarget && CTimer::GetTimeInMS() > heli->m_nCreationTime + 50000u) {
+        autoPilot.carCtrlFlags.bHeliFollowTarget = false;
+        autoPilot.m_nCarMission                  = MISSION_HELI_FLY_AWAY_FROM_PLAYER;
+    }
+    if (autoPilot.m_nCarMission == MISSION_HELI_NEWS_BEHAVIOUR && heli->m_fHealth < 300.0f) {
+        autoPilot.m_nCarMission = MISSION_HELI_FLY_AWAY_FROM_PLAYER;
+    }
 }
 
 // 0x42AEB0
@@ -2414,12 +2534,58 @@ void CCarCtrl::SteerAIHeliToKeepEntityInView(CAutomobile* automobile) {
 
 // 0x42AD30
 void CCarCtrl::SteerAIHeliToLand(CAutomobile* automobile) {
-    plugin::Call<0x42AD30, CAutomobile*>(automobile);
+    const auto  heli = static_cast<CHeli*>(automobile);
+    const auto& dest = heli->m_autoPilot.m_vecDestinationCoors;
+    const auto& pos  = heli->GetPosition();
+
+    const auto heading = CGeneral::GetATanOfXY((float)((double)dest.x - pos.x), (float)((double)dest.y - pos.y));
+
+    // x87: The differences are kept in extended precision
+    const auto dy   = (double)dest.y - pos.y;
+    const auto dx   = (double)dest.x - pos.x;
+    const auto dist = (float)std::sqrt(dy * dy + dx * dx);
+    FlyAIHeliInCertainDirection(heli, heading, dist, true);
+
+    // Touched down? Stop the engines
+    if (!(dist < 10.0f)) {
+        return;
+    }
+    const auto& moveSpeed = heli->m_vecMoveSpeed;
+    if (!(std::sqrt((double)moveSpeed.y * moveSpeed.y + (double)moveSpeed.x * moveSpeed.x) < 0.05f)) { // 0x858C28
+        return;
+    }
+
+    heli->m_fMinAltitude = 0.0f;
+    heli->m_fMaxAltitude = 0.0f;
+
+    const auto& compression = heli->m_fWheelsSuspensionCompression;
+    if (compression[0] < 1.0f || compression[1] < 1.0f || compression[2] < 1.0f || compression[3] < 1.0f) {
+        heli->m_fAccelerationBreakStatus = 0.0f;
+        heli->m_fLeftRightSkid           = 0.0f;
+        heli->m_fSteeringUpDown          = 0.0f;
+        heli->m_fSteeringLeftRight       = 0.0f;
+    }
 }
 
 // 0x42A630
 void CCarCtrl::SteerAIHeliTowardsTargetCoors(CAutomobile* automobile) {
-    plugin::Call<0x42A630, CAutomobile*>(automobile);
+    const auto heli = static_cast<CHeli*>(automobile);
+    const auto& dest = heli->m_autoPilot.m_vecDestinationCoors;
+
+    // Flies to the destination with a specific orientation, if one is set
+    if (heli->m_fForcedOrientation >= 0.0f) {
+        FlyAIHeliToTarget_FixedOrientation(heli, heli->m_fForcedOrientation, dest);
+        return;
+    }
+
+    // Otherwise face towards it
+    const auto& pos     = heli->GetPosition();
+    const auto  heading = CGeneral::GetATanOfXY((float)((double)dest.x - pos.x), (float)((double)dest.y - pos.y));
+
+    // x87: The differences are kept in extended precision
+    const auto dy = (double)dest.y - pos.y;
+    const auto dx = (double)dest.x - pos.x;
+    FlyAIHeliInCertainDirection(heli, heading, (float)std::sqrt(dy * dy + dx * dx), true);
 }
 
 // 0x423880

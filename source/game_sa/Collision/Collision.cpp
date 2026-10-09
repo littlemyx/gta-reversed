@@ -3264,13 +3264,19 @@ float GetNearestDistanceOfPedSphereToCameraNearClip(CPed* ped) {
 
     // Calculate some other shite
     auto&       cam     = TheCamera.GetActiveCamera();
-    const auto  offset  = cam.m_vecFront.Dot(cam.m_vecSource);
+    // 0x50D5E1: the camera's `front . source` is accumulated unrounded (terms z, y, x) and spilled to a float
+    const float offset  = (float)((double)cam.m_vecFront.z * cam.m_vecSource.z + (double)cam.m_vecFront.y * cam.m_vecSource.y + (double)cam.m_vecFront.x * cam.m_vecSource.x);
     const auto  nearClp = RwCameraGetNearClipPlane(Scene.m_pRwCamera);
 
     // Now find the closest sphere's distance sq
-    float ret = FLT_MAX;
+    float ret = 1000000.f; // 0x50D5AA: 0x497423F0, NOT FLT_MAX
     for (auto& sp : hitCM->GetData()->GetSpheres()) {
-        ret = std::min(ret, sp.m_vecCenter.Dot(cam.m_vecFront) - offset - sp.m_fRadius - nearClp);
+        // 0x50D620: `center . front` (terms z, x, y) unrounded, then `- offset - radius - nearClip`, rounded to a float when spilled
+        const double dot = (double)sp.m_vecCenter.z * cam.m_vecFront.z + (double)sp.m_vecCenter.x * cam.m_vecFront.x + (double)cam.m_vecFront.y * sp.m_vecCenter.y;
+        const float  v   = (float)(((dot - offset) - sp.m_fRadius) - nearClp);
+        if (v < ret) { // NaN keeps the old value
+            ret = v;
+        }
     }
     return ret;
 }
@@ -3682,11 +3688,16 @@ bool CCollision::SphereCastVsCaches(
         using enum CColCacheEntry::eType;
         switch (entry.type) {
         case TRIANGLE: { // 0x418480
-            const auto triIdx = entry.triIdx;
-            const auto idx    = triIdx < (uint16)SHRT_MAX // I don'plSpCenterDist have a damn clue why complicate shit so much instead of using a 4th entry type (like `BACKSIDE_TRIANGLE`)
-                ? triIdx
-                : (uint16)(0xFFFFu - triIdx); // Search in file for: BULLSHIT_DETECTOR
-            if (!SphereCastVersusVsPoly(spAos, spBos, ecd->m_pTriangles[idx], ecd->m_pTrianglePlanes[idx], ecd->m_pVertices)) {
+            const auto triIdx   = entry.triIdx;
+            const bool backside = !(triIdx < (uint16)SHRT_MAX); // I don'plSpCenterDist have a damn clue why complicate shit so much instead of using a 4th entry type (like `BACKSIDE_TRIANGLE`)
+            const auto idx      = backside
+                ? (uint16)(0xFFFFu - triIdx) // Search in file for: BULLSHIT_DETECTOR
+                : triIdx;
+            // 0x4184D0 - NOTE: For the backside entries the original passes the spheres the other way around (B, A), see `SphereCastVsEntity` where these are added
+            const bool hit = backside
+                ? SphereCastVersusVsPoly(spBos, spAos, ecd->m_pTriangles[idx], ecd->m_pTrianglePlanes[idx], ecd->m_pVertices)
+                : SphereCastVersusVsPoly(spAos, spBos, ecd->m_pTriangles[idx], ecd->m_pTrianglePlanes[idx], ecd->m_pVertices);
+            if (!hit) {
                 continue;
             }
             auto& dst = out[numOut++];

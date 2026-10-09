@@ -408,15 +408,13 @@ inline CSector& CWorld::GetSector(int32 x, int32 y) {
 // 0x4072A0
 inline CRepeatSector& CWorld::GetRepeatSector(int32 x, int32 y) {
     /**
-     * Original code uses `&` instead of `%` to also clear the sign bit.
-     * (And no, it's not just a compiler optimization, because it wouldn't emit `&` for signed ints)
+     * Original (0x4072A0) masks the coordinate with `& 0xF` (two's complement), so NEGATIVE coordinates wrap around:
+     * `-1` => 15, which is NOT `abs(-1) % 16` (=> 1). Done on the unsigned bit pattern (well-defined).
      * This is important for positions outside the world boundary to work.
-     * We won't be using `&` because using it on signed ints is technically undefined behaviour,
-     * but `std::abs()` + a cast will work just as well.
-     * We leave the optimization of `%` to a `&` to the compiler, which will do it automatically if the max is a power of 2.
      **/
     const auto GetIndexOfSector = [] (int32 coord, size_t max) {
-        return static_cast<size_t>(std::abs(coord)) % max;
+        assert((max & (max - 1)) == 0); // The mask only works for powers of 2
+        return static_cast<size_t>(static_cast<uint32>(coord) & static_cast<uint32>(max - 1));
     };
     return CWorld::ms_aRepeatSectors[GetIndexOfSector(y, MAX_REPEAT_SECTORS_Y)][GetIndexOfSector(x, MAX_REPEAT_SECTORS_X)];
 }

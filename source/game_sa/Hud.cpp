@@ -1437,64 +1437,89 @@ void CHud::DrawRadar() {
         return;
     }
 
+    const float ws = RvStretchX(1.0f); // W * (1/640)
+    const float hs = RvStretchY(1.0f); // H * (1/448)
+
     CVehicle* vehicle = FindPlayerVehicle();
-    CRect rect;
     if (vehicle && vehicle->IsSubPlane() && vehicle->m_nModelIndex != MODEL_VORTEX) {
-        float angle = PI - std::atan2(-vehicle->m_matrix->GetRight().z, vehicle->m_matrix->GetUp().z);
-        CRadar::DrawRotatingRadarSprite(
-            Sprites[SPRITE_RADAR_RING_PLANE],
-            SCREEN_STRETCH_X(87.0f),
-            SCREEN_STRETCH_FROM_BOTTOM(66.0f),
-            angle,
-            (uint32)SCREEN_STRETCH_X(78.0f),
-            (uint32)SCREEN_STRETCH_Y(59.0f),
-            CRGBA(255, 255, 255, 255)
-        );
+        // NOTE: the exe inlines its own rotating quad here (NOT CRadar::DrawRotatingRadarSprite: other radius, other corner order, no `Limit`).
+        const auto& mat = *vehicle->m_matrix;
+        const float a   = -mat.GetRight().z;
+        const float b   = mat.GetUp().z;
+        const double ang0 = -std::atan2((double)a, (double)b) - (double)0.7853982f; // 0x859AB0 = pi/4
+
+        const float X0 = 94.0f * ws;
+        const float cx = X0 - 18.0f * ws; // radius X (spilled)
+        const float hx = X0 * 0.5f;       // spilled
+        const float ex = ws * 40.0f;
+        const float T  = 76.0f * hs;      // spilled
+        const float cy = T - 18.0f * hs;  // radius Y (spilled)
+        const float by = (float)RsGlobal.maximumHeight - 104.0f * hs;
+        const float hy = T * 0.5f;
+
+        float vx[4], vy[4];
+        for (auto i = 0; i < 4; i++) {
+            const double th = (double)i * (double)1.5707964f + ang0; // 0x858FE4 = pi/2
+            const double s  = std::sin(th);
+            const double c  = std::cos(th);
+            vx[i] = (float)((((0.0 * c + s) * (double)cx) + (double)ex) + (double)hx);
+            vy[i] = (float)((((c - s * 0.0) * (double)cy) + (double)hy) + (double)by);
+        }
+        Sprites[SPRITE_RADAR_RING_PLANE].Draw(vx[1], vy[1], vx[0], vy[0], vx[2], vy[2], vx[3], vy[3], CRGBA(255, 255, 255, 255));
     }
 
     CPlayerPed* player = FindPlayerPed();
     // Draws Altimeter on Planes And Helis or when parachuting down
-    if (vehicle && (vehicle->IsSubPlane() || vehicle->IsSubHeli() && vehicle->m_nModelIndex != MODEL_VORTEX)
+    // (the exe: `(plane || heli) && model != VORTEX`, else the parachute test)
+    if (vehicle && (vehicle->IsSubPlane() || vehicle->IsSubHeli()) && vehicle->m_nModelIndex != MODEL_VORTEX
         || player->GetActiveWeapon().m_Type == WEAPON_PARACHUTE
     ) {
-        rect.left   = SCREEN_STRETCH_X(40.0f) - SCREEN_STRETCH_X(20.0f);
-        rect.bottom    = SCREEN_STRETCH_FROM_BOTTOM(104.0f);
-        rect.right  = SCREEN_STRETCH_X(40.0f) - SCREEN_STRETCH_X(10.0f);
-        rect.top = SCREEN_STRETCH_Y(76.0f) + SCREEN_STRETCH_FROM_BOTTOM(104.0f);
+        const float ws40 = ws * 40.0f;
+        const float by   = (float)RsGlobal.maximumHeight - hs * 104.0f;
+        CRect rect; // NOTE: `top` (+4) holds the larger Y, `bottom` (+0xC) the smaller one, as in the exe
+        rect.left   = ws40 - ws * 20.0f;
+        rect.right  = ws40 - ws * 10.0f;
+        rect.bottom = by;
+        rect.top    = hs * 76.0f + by;
         CSprite2d::DrawRect(rect, { 10, 10, 10, 100 }); // rectangle
 
         const CVector& pos = vehicle ? vehicle->GetPosition() : player->GetPosition();
-        auto lineY = 950.0f;
-        if (pos.z <= 200.0f) {
-            lineY = 200.0f;
-        };
+        const float k = (pos.z > 200.0f) ? 0.0010526315309107304f /* 0x866C08 */ : 0.004999999888241291f /* 0x858B4C */;
+        const float h = (pos.z * k) * (hs * 76.0f);
         RwRenderStateSet(rwRENDERSTATETEXTURERASTER, RWRSTATE(NULL));
 
-        rect.left   = SCREEN_STRETCH_X(40.0f) - SCREEN_STRETCH_X(25.0f);
-        rect.bottom    = SCREEN_STRETCH_FROM_BOTTOM(104.0f) + SCREEN_STRETCH_Y(76.0f) - std::min(SCREEN_STRETCH_Y(76.0f), SCREEN_STRETCH_Y(76.0f) * pos.z / lineY);
-        rect.right  = SCREEN_STRETCH_X(40.0f) - 5.0f;
-        rect.top = rect.bottom + 2.0f;
+        const float T   = hs * 76.0f;
+        const float y0  = ((float)RsGlobal.maximumHeight - hs * 104.0f) + T;
+        const float mn  = (T < h) ? T : h; // 0x404330
+        const float ybt = y0 - mn;
+        rect.left   = ws40 - ws * 25.0f;
+        rect.right  = ws40 - 5.0f;
+        rect.bottom = ybt;
+        rect.top    = ybt + 2.0f;
         CSprite2d::DrawRect(rect, { 200, 200, 200, 200 }); // horizontal line (current height)
     }
 
-    // NOTSA: rects are optimized
-    const auto black = CRGBA(0, 0, 0, 255);
-
-    rect.left   = SCREEN_STRETCH_X(36.0f);
-    rect.bottom    = SCREEN_STRETCH_FROM_BOTTOM(108.0f);
-    rect.right  = SCREEN_STRETCH_X(87.0f);
-    rect.top = SCREEN_STRETCH_FROM_BOTTOM(66.0f);
-    Sprites[SPRITE_RADAR_DISC].Draw(rect, black); // top left
-
-    rect.bottom = SCREEN_STRETCH_FROM_BOTTOM(24.0f);
-    Sprites[SPRITE_RADAR_DISC].Draw(rect, black); // bottom left
-
-    rect.left = SCREEN_STRETCH_X(138.0f);
-    rect.bottom  = SCREEN_STRETCH_FROM_BOTTOM(108.0f);
-    Sprites[SPRITE_RADAR_DISC].Draw(rect, black); // top right
-
-    rect.bottom = SCREEN_STRETCH_FROM_BOTTOM(24.0f);
-    Sprites[SPRITE_RADAR_DISC].Draw(rect, black); // bottom right
+    // The 4 quarters of the radar disc mask (the right ones are flipped: left > right). Each rect is computed from scratch in the exe.
+    {
+        const auto black = CRGBA(0, 0, 0, 255);
+        const float ws40 = ws * 40.0f;
+        const float by104 = (float)RsGlobal.maximumHeight - hs * 104.0f;
+        const float T     = hs * 76.0f;
+        CRect rect;
+        const auto Quarter = [&](float left, float bottom) {
+            rect.left   = left;
+            rect.bottom = bottom;
+            rect.right  = (ws * 94.0f) * 0.5f + ws40;
+            rect.top    = T * 0.5f + by104;
+            Sprites[SPRITE_RADAR_DISC].Draw(rect, black);
+        };
+        const float leftL = ws40 - ws * 4.0f;
+        const float leftR = (ws * 4.0f + ws40) + ws * 94.0f;
+        Quarter(leftL, by104 - hs * 4.0f);            // top left
+        Quarter(leftR, by104 - hs * 4.0f);            // top right
+        Quarter(leftL, (hs * 4.0f + by104) + T);      // bottom left
+        Quarter(leftR, (hs * 4.0f + by104) + T);      // bottom right
+    }
 
     CRadar::DrawBlips();
 }
@@ -1845,17 +1870,17 @@ void CHud::DrawVitalStats() {
             // `weaponType` is in range [WEAPON_PISTOL, WEAPON_TEC9] (22..32), which is the range of weapons with skills
             const float bottom = (float)RsGlobal.maximumHeight - hs * 140.0f;
             windowRect.left   = 40.0f;
-            windowRect.top    = hs * 15.0f + bottom;
+            windowRect.bottom = hs * 15.0f + bottom; // NOTE: `top` (+4) holds the larger Y, `bottom` (+0xC) the smaller one, as in the exe
             windowRect.right  = ws * 170.0f + 40.0f;
-            windowRect.bottom = hs * 127.0f + bottom;
+            windowRect.top    = hs * 127.0f + bottom;
             FrontEndMenuManager.DrawWindow(windowRect, "FEH_STA", 0, CRGBA{ 0, 0, 0, 190 }, false, true);
             yf = bottom + (hs * 15.0f) * 2.0f;
         } else {
             const float bottom = (float)RsGlobal.maximumHeight - hs * 140.0f;
             windowRect.left   = 40.0f;
-            windowRect.top    = bottom;
+            windowRect.bottom = bottom;
             windowRect.right  = ws * 170.0f + 40.0f;
-            windowRect.bottom = hs * 127.0f + bottom;
+            windowRect.top    = hs * 127.0f + bottom;
             FrontEndMenuManager.DrawWindow(windowRect, "FEH_STA", 0, CRGBA{ 0, 0, 0, 190 }, false, true);
             yf = bottom + hs * 15.0f;
         }
@@ -2069,7 +2094,7 @@ static float ProcessInlinedFadeState(uint32& stateVar, uint32& fadeTimerVar, uin
             }
             break;
         case NAME_FADE_IN:
-            fadeTimer += (int32)CTimer::GetTimeStepInMS();
+            fadeTimer += notsa::detail::Ftol(OGTimeStepInMS());
             if (1000.0f < (float)fadeTimer) {
                 fadeTimer = 1000;
                 state     = NAME_SHOW;
@@ -2077,7 +2102,7 @@ static float ProcessInlinedFadeState(uint32& stateVar, uint32& fadeTimerVar, uin
             alpha = (float)fadeTimer * 0.001f * 255.0f;
             break;
         case NAME_FADE_OUT:
-            fadeTimer += (int32)(CTimer::GetTimeStep() * 0.02f * -1000.0f);
+            fadeTimer += notsa::detail::Ftol(CTimer::GetTimeStep() * 0.02f * -1000.0f);
             if ((float)fadeTimer < 0.0f) {
                 fadeTimer = 0;
                 state     = NAME_DONT_SHOW;
@@ -2087,7 +2112,7 @@ static float ProcessInlinedFadeState(uint32& stateVar, uint32& fadeTimerVar, uin
         default:
             break;
         }
-        timer += (int32)CTimer::GetTimeStepInMS();
+        timer += notsa::detail::Ftol(OGTimeStepInMS());
     }
 
     stateVar     = state;
@@ -2259,12 +2284,16 @@ inline void CHud::DrawWeapon(CPlayerPed* ped0, CPlayerPed* ped1, float alpha) {
 
 // 0x58A160
 void CHud::DrawTripSkip() {
-    CRect rect{
-        SCREEN_STRETCH_X(54.0f),
-        SCREEN_STRETCH_FROM_BOTTOM(189.0f),
-        SCREEN_STRETCH_X(118.0f),
-        SCREEN_STRETCH_FROM_BOTTOM(125.0f)
-    };
+    // exe: top = (H - hs * 104) - hs * 85 (NOT H - 189 * hs); the sprite is 64 x 64 (in layout units)
+    const float ws   = RvStretchX(1.0f);
+    const float hs   = RvStretchY(1.0f);
+    const float topY = ((float)RsGlobal.maximumHeight - hs * 104.0f) - hs * 85.0f;
+    const float left = RvStretchX(54.0f);
+    CRect rect; // NOTE: `top` (+4) holds the larger Y, `bottom` (+0xC) the smaller one, as in the exe
+    rect.left   = left;
+    rect.top    = topY + hs * 64.0f;
+    rect.right  = ws * 64.0f + left;
+    rect.bottom = topY;
     Sprites[SPRITE_SKIP_ICON].Draw(rect, CRGBA(255, 255, 255, 255));
 
     CFont::SetBackground(false, false);
@@ -2277,8 +2306,8 @@ void CHud::DrawTripSkip() {
     CFont::SetFontStyle(eFontStyle::FONT_MENU);
     CFont::SetColor(HudColour.GetRGB(HUD_COLOUR_LIGHT_GRAY));
     CFont::PrintString(
-        SCREEN_STRETCH_X(64.0f) / 2.0f + SCREEN_STRETCH_X(54.0f),
-        SCREEN_STRETCH_FROM_BOTTOM(127.0f),
+        ws * 64.0f * 0.5f + ws * 54.0f,
+        (topY + hs * 64.0f) - hs * 2.0f,
         TheText.Get("FEC_TSK") // TRIP SKIP
     );
 }
@@ -2373,7 +2402,7 @@ void CHud::DrawWeaponIcon(CPed* ped, int32 x, int32 y, float alpha) {
 
     auto mi = CModelInfo::GetModelInfo(modelId);
     auto txd = CTxdStore::ms_pTxdPool->GetAt(mi->m_nTxdIndex);
-    if (!txd)
+    if (!txd || !txd->m_pRwDictionary) // NOTSA: `!txd` (the exe dereferences the null of a free slot); the dictionary check is the exe's
         return;
 
     auto texture = RwTexDictionaryFindHashNamedTexture(txd->m_pRwDictionary, CKeyGen::AppendStringToKey(mi->m_nKey, "ICON"));

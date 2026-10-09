@@ -98,6 +98,8 @@ if (${RE_PROJECT}_RW_LIBRW)
         "${CMAKE_CURRENT_SOURCE_DIR}/game_sa/RenderWare/rw/*.c*"
     )
     list(REMOVE_ITEM SOURCE_FILES_WITHOUT_MODULES_LIST ${RW_WRAPPER_FILES})
+    # WindowedMode.cpp is a copy of RW's D3D9 device layer (hooked into the exe's RenderWare internals); librw owns the device/swap chain instead
+    list(REMOVE_ITEM SOURCE_FILES_WITHOUT_MODULES_LIST app/platform/win/WindowedMode.cpp)
 endif()
 
 #

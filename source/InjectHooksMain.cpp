@@ -801,6 +801,7 @@ void InjectHooksMain() {
     CPathNode::InjectHooks();
     CNodeRoute::InjectHooks();
     CLoadMonitor::InjectHooks();
+    CDecision::InjectHooks();
     CDecisionMakerTypes::InjectHooks();
     CDecisionMakerTypesFileLoader::InjectHooks();
     CPedStats::InjectHooks();

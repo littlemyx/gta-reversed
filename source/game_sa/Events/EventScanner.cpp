@@ -206,7 +206,7 @@ void CVehiclePotentialCollisionScanner::ScanForVehiclePotentialCollisionEvents(c
         return;
     }
 
-    if (!ped.bPushedAlongByCar) { // 0x474 & 8
+    if (!ped.bHasJustLeftCar) { // `TEST byte [ped+0x474], 8` (9th flags byte, bit 3)
         const double sqMag = (double)pedToVeh.x * pedToVeh.x + (double)pedToVeh.y * pedToVeh.y + (double)pedToVeh.z * pedToVeh.z; // 0x406DA0
         if (!((double)dist * dist > sqMag)) {
             return;

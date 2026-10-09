@@ -18,6 +18,9 @@ EXE="${GTA_EXE:-$REPO/gta_sa_compact.exe}"
 export RW_EXE_ORACLE="Z:${EXE//\//\\}"
 OUT="$SCRATCH/run_all_tests.$$"; mkdir -p "$OUT"
 
+# conan toolchain: from this checkout, else from the main worktree (a linked worktree has no build/Debug)
+TOOLCHAIN="${CONAN_TOOLCHAIN:-$REPO/build/Debug/generators/conan_toolchain.cmake}"
+[ -f "$TOOLCHAIN" ] || TOOLCHAIN="$(git -C "$REPO" worktree list --porcelain | sed -n '1s/^worktree //p')/build/Debug/generators/conan_toolchain.cmake"
 lock()   { until mkdir "$SCRATCH/build.lock" 2>/dev/null; do sleep 15; done; }
 unlock() { rmdir "$SCRATCH/build.lock" 2>/dev/null; }
 trap 'unlock_if_held' EXIT
@@ -28,7 +31,7 @@ if [ "${SKIP_BUILD:-0}" != 1 ]; then
   if [ ! -f "$BDIR/build.ninja" ]; then
     mkdir -p "$BDIR"
     cmake -S "$REPO" -B "$BDIR" -G Ninja -DCMAKE_BUILD_TYPE=Debug \
-      -DCMAKE_TOOLCHAIN_FILE="$REPO/build/Debug/generators/conan_toolchain.cmake" -DCMAKE_MAKE_PROGRAM=/opt/homebrew/bin/ninja \
+      -DCMAKE_TOOLCHAIN_FILE="$TOOLCHAIN" -DCMAKE_MAKE_PROGRAM=/opt/homebrew/bin/ninja \
       "-DCMAKE_CXX_FLAGS=/WX- /wd4005 /DWIN32 /D_WINDOWS /Zm1000 /GX" \
       -DGTASA_STANDALONE=ON -DGTASA_RW_LIBRW=ON -DGTASA_RW_LIBRW_OPT_OUT=OFF -DGTASA_USE_SDL3=ON \
       -DGTASA_ORIGINAL_EXE="$EXE" -DGTASA_PYTHON="$SCRATCH/capvenv/bin/python" -DGTASA_ML=/Users/Andrei.Mukhin/tools/msvc/bin/x86/ml \
@@ -36,7 +39,7 @@ if [ "${SKIP_BUILD:-0}" != 1 ]; then
       > "$OUT/configure.log" 2>&1 || { echo "configure failed, see $OUT/configure.log"; exit 2; }
   fi
 fi
-TESTS=$(ninja -C "$BDIR" -t targets all 2>/dev/null | sed -n 's/^\([A-Za-z0-9_]*_test\): phony$/\1/p' | sort -u | grep -E "$FILTER")
+TESTS=$(ninja -C "$BDIR" -t targets all 2>/dev/null | sed -n 's/^\([A-Za-z0-9_]*_test\): phony$/\1/p' | sort -u | grep -v "^cmake_" | grep -E "$FILTER")
 [ -n "$TESTS" ] || { echo "no *_test targets found in $BDIR"; exit 2; }
 BUILD_FAIL=""
 if [ "${SKIP_BUILD:-0}" != 1 ]; then
@@ -58,6 +61,8 @@ x=re.findall(r'(\d+) functions, mismatches \(strict / excluding NaN-payload-only
 if x: c,m=int(x[-1][0]),int(x[-1][2])+int(x[-1][4]); f=f or 0
 x=re.findall(r'(\d+) commands, PC24 mismatches \(excluding NaN-payload-only\): (\d+)',t)
 if x: c,m=int(x[-1][0]),int(x[-1][1]); f=f or 0
+x=re.findall(r'(?m)^(PASSED|FAILED) \((\d+) failed\)',t)
+if x and c is None: c=len(re.findall(r'(?m)^(?:ok|FAIL)\s',t)); f=int(x[-1][1]); m=0
 if c is not None: print(c,f or 0,m or 0)
 PY
 }
@@ -68,7 +73,9 @@ for t in $TESTS; do
   exe="$BDIR/source/$t.exe"
   if [ ! -f "$exe" ]; then ROWS+="$t - - - 0 0 NOBUILD"$'\n'; RC=1; continue; fi
   args=()
-  if [[ "$MODEL_TESTS" == *" $t "* ]]; then for f in infernus male01 vgsnbuild07; do [ -f "$ASSETS/$f.dff" ] && args+=("Z:${ASSETS//\//\\}\\$f.dff"); done; fi
+  if [[ "$MODEL_TESTS" == *" $t "* ]]; then
+    case "$t" in rw_skin_hanim_test|rw_rtanim_rtquat_test) models="male01";; *) models="infernus male01 vgsnbuild07";; esac   # these two need skinned models
+    for f in $models; do [ -f "$ASSETS/$f.dff" ] && args+=("Z:${ASSETS//\//\\}\\$f.dff"); done; fi
   case "$t" in *oracle*) TMO=${TIMEOUT:-900};; *) TMO=${TIMEOUT:-180};; esac
   start=$SECONDS; status=NORESULT; res=""; n=0
   while [ $n -lt "$ATTEMPTS" ]; do

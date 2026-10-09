@@ -476,7 +476,7 @@ static void NormaliseExt(CVector& v) {
 void CPedAcquaintanceScanner::ScanForPedAcquaintances(CPed& ped, int32 acquaintanceId, CEntity** entities, int32 count, CPed*& outPed, int32& outIdx) {
     outPed = nullptr;
 
-    // The original has room for 12 candidates only (and overruns its stack frame otherwise), `count` is 16 at most (`CPedIntelligence::GetPedEntities`)
+    // The original has room for exactly 16 candidates on its stack (esp+0x3C..0x7C) and `count` is 16 at most (`CPedIntelligence::GetPedEntities`)
     CPed*   candidates[16];
     int32   numCandidates = 0;
     assert(count <= (int32)std::size(candidates));
@@ -524,11 +524,13 @@ void CPedAcquaintanceScanner::ScanForPedAcquaintances(CPed& ped, int32 acquainta
 
         if (other->m_nPedType != PED_TYPE_COP) {
             // Event types: HATE, DISLIKE, RESPECT, 40 (no name)
+            // BUG: The original passes a count of 5, but only initializes 4 entries - the 5th is an uninitialized stack slot (read only if the first 4 all fail).
+            //      We can't reproduce garbage, so only the 4 valid ones are checked.
             const int32 eventTypes[]{ EVENT_ACQUAINTANCE_PED_HATE, EVENT_ACQUAINTANCE_PED_DISLIKE, EVENT_ACQUAINTANCE_PED_RESPECT, 40 };
             const bool  rioting = CGameLogic::LaRiotsActiveHere() && plugin::CallAndReturn<bool, 0x603AF0, CPed*, CPed*>(&ped, other);
             if (!rioting) {
                 // 0x4684F0, 0x6042B0 (unreversed: this = CDecisionMakerTypes)
-                if (!plugin::CallMethodAndReturn<bool, 0x6042B0, CDecisionMakerTypes*, CPed*, const int32*, int32>(CDecisionMakerTypes::GetInstance(), &ped, eventTypes, 5)) {
+                if (!plugin::CallMethodAndReturn<bool, 0x6042B0, CDecisionMakerTypes*, CPed*, const int32*, int32>(CDecisionMakerTypes::GetInstance(), &ped, eventTypes, (int32)std::size(eventTypes))) {
                     continue;
                 }
             }

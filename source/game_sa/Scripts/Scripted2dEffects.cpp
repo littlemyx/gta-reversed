@@ -11,6 +11,26 @@ void CScripted2dEffects::InjectHooks() {
     RH_ScopedInstall(GetIndex, 0x6F9F60);
     RH_ScopedInstall(AddScripted2DEffect, 0x6FA7C0);
     RH_ScopedInstall(ReturnScripted2DEffect, 0x6F9E80);
+
+    {
+        RH_ScopedNamedClass(tUserList, "tUserList");
+        RH_ScopedCategory("Scripts");
+
+        RH_ScopedInstall(IsPedTypeInList, 0x5FE960);
+    }
+}
+
+// 0x5FE960
+bool tUserList::IsPedTypeInList(int32 pedType) const {
+    if (!m_bUseList) {
+        return true;
+    }
+    for (auto i = 0; i < 4; i++) {
+        if (m_UserTypes[i] == -2 && m_UserTypesByPedType[i] == pedType) {
+            return true;
+        }
+    }
+    return false;
 }
 
 // 0x6F9EB0 - Resets the effect pairs (`CScriptedEffectPairs::Clear`)

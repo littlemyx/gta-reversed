@@ -13,19 +13,6 @@
 
 static_assert(sizeof(C2dEffect) == 0x40 && sizeof(tUserList) == 0x24); // Strides used by the original (0xC3AB00, 0xC3A200)
 
-// 0x5FE960 - `tUserList` is declared in Scripts/Scripted2dEffects.h (not our zone), so it's a local helper for now, the original is `__thiscall(tUserList*, int32) -> bool`
-static bool IsPedTypeInUserList(const tUserList& list, int32 pedType) {
-    if (!list.m_bUseList) {
-        return true;
-    }
-    for (auto i = 0; i < 4; i++) {
-        if (list.m_UserTypes[i] == -2 && list.m_UserTypesByPedType[i] == pedType) {
-            return true;
-        }
-    }
-    return false;
-}
-
 void CAttractorScanner::InjectHooks() {
     RH_ScopedClass(CAttractorScanner);
     RH_ScopedCategory("Scanners");
@@ -113,7 +100,7 @@ void CAttractorScanner::ScanForAttractors(CPed& ped) {
         if (userList.m_bUseList) {
             const auto modelId = (int32)(int16)ped.m_nModelIndex; // Sign extended
             if (rng::none_of(userList.m_UserTypes, [&](int32 t) { return t == modelId; })) {
-                if (!IsPedTypeInUserList(userList, ped.m_nPedType)) { // 0x5FE960
+                if (!userList.IsPedTypeInList(ped.m_nPedType)) { // 0x5FE960
                     continue;
                 }
             }
@@ -281,7 +268,7 @@ CPed* CAttractorScanner::GetClosestPedToEffect(C2dEffect* effect) {
         if (userList.m_bUseList) {
             const auto modelId = (int32)(int16)ped->m_nModelIndex; // Sign extended
             if (rng::none_of(userList.m_UserTypes, [&](int32 t) { return t == modelId; })) {
-                if (!IsPedTypeInUserList(userList, ped->m_nPedType)) {
+                if (!userList.IsPedTypeInList(ped->m_nPedType)) {
                     continue;
                 }
             }

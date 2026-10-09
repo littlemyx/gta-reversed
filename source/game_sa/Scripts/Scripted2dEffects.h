@@ -41,6 +41,8 @@ struct tUserList {
     std::array<int32, 4> m_UserTypes{ -1, -1, -1, -1 };
     std::array<int32, 4> m_UserTypesByPedType{ -1, -1, -1, -1 };
     bool  m_bUseList{};
+
+    bool IsPedTypeInList(int32 pedType) const; // 0x5FE960 - true if the list is unused, or if it contains `pedType` (an entry with `m_UserTypes[i] == -2` matches by `m_UserTypesByPedType[i]`)
 };
 VALIDATE_SIZE(tUserList, 0x24);
 

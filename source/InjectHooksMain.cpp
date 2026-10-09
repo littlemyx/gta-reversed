@@ -1219,7 +1219,7 @@ void InjectHooksMain() {
         CTaskSimplePlayerOnFoot::InjectHooks();
         CTaskComplexFollowPedFootsteps::InjectHooks();
         CTaskComplexGetUpAndStandStill::InjectHooks();
-        // CTaskComplexGoPickUpEntity::InjectHooks();
+        CTaskComplexGoPickUpEntity::InjectHooks();
         CTaskSimpleDie__InjectHooks();
         CTaskSimpleDuck::InjectHooks();
         CTaskComplexPolicePursuit::InjectHooks();

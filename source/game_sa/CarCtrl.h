@@ -112,9 +112,8 @@ public:
     template<typename PtrListType>
     static void SlowCarDownForCarsSectorList(PtrListType& ptrList, CVehicle* vehicle, float arg3, float arg4, float arg5, float arg6, float* arg7, float arg8);
     static void SlowCarDownForObject(CEntity* entity, CVehicle* vehicle, float* arg3, float arg4);
-    template<typename PtrListType>
-    static void SlowCarDownForObjectsSectorList(PtrListType& PtrList, CVehicle* vehicle, float arg3, float arg4, float arg5, float arg6, float* arg7, float arg8);
-    static void SlowCarDownForOtherCar(CEntity* car1, CVehicle* car2, float* arg3, float arg4);
+    static void SlowCarDownForObjectsSectorList(CPtrListDoubleLink<CObject*>& objList, CVehicle* vehicle, float minX, float minY, float maxX, float maxY, float* speedFactor, float speedMult);
+    static void SlowCarDownForOtherCar(CEntity* entity, CVehicle* vehicle, float* speedFactor, float speedMult);
     static void SlowCarDownForPedsSectorList(CPtrListDoubleLink<CPed*>& pedList, CVehicle* vehicle, float minX, float minY, float maxX, float maxY, float* speedFactor, float speedMult);
     static void SlowCarOnRailsDownForTrafficAndLights(CVehicle* vehicle);
     static void SteerAIBoatWithPhysicsAttackingPlayer(CVehicle* vehicle, float* arg2, float* arg3, float* arg4, bool* arg5);
@@ -154,11 +153,8 @@ public:
     static void UpdateCarOnRails(CVehicle* vehicle);
     static void WeaveForObject(CEntity* entity, CVehicle* vehicle, float* arg3, float* arg4);
     static void WeaveForOtherCar(CEntity* entity, CVehicle* vehicle, float* arg3, float* arg4);
-    template<typename PtrListType>
-    static void WeaveThroughCarsSectorList(PtrListType& ptrList, CVehicle* vehicle, CPhysical* physical, float arg4, float arg5, float arg6, float arg7, float* arg8, float* arg9);
-    template<typename PtrListType>
-    static void WeaveThroughObjectsSectorList(PtrListType& ptrList, CVehicle* vehicle, float arg3, float arg4, float arg5, float arg6, float* arg7, float* arg8);
-    template<typename PtrListType>
-    static void WeaveThroughPedsSectorList(PtrListType& ptrList, CVehicle* vehicle, CPhysical* physical, float arg4, float arg5, float arg6, float arg7, float* arg8, float* arg9);
+    static void WeaveThroughCarsSectorList(CPtrListDoubleLink<CVehicle*>& ptrList, CVehicle* vehicle, CPhysical* physical, float minX, float minY, float maxX, float maxY, float* pLowerAngle, float* pUpperAngle);
+    static void WeaveThroughObjectsSectorList(CPtrListDoubleLink<CObject*>& ptrList, CVehicle* vehicle, float minX, float minY, float maxX, float maxY, float* pLowerAngle, float* pUpperAngle);
+    static void WeaveThroughPedsSectorList(CPtrListDoubleLink<CPed*>& ptrList, CVehicle* vehicle, CPhysical* physical, float minX, float minY, float maxX, float maxY, float* pLowerAngle, float* pUpperAngle);
     static float FindMaxSteerAngle(CVehicle* veh);
 };

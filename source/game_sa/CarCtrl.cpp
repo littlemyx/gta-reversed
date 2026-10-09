@@ -121,6 +121,18 @@ static float FindPlaneObstacleAltitude(CPlane* plane, float heading) {
     return highest;
 }
 
+//! Normalized 2D (X, Y) forward vector of the vehicle (the one used by the AI boat code)
+//! x87: The length is kept in extended precision. Note: Uses the matrix directly (not null checked)
+static CVector2D GetNormalizedForward2D(CVehicle* vehicle) {
+    const auto& fwd = vehicle->m_matrix->GetForward();
+    const auto  len = std::sqrt((double)fwd.y * fwd.y + (double)fwd.x * fwd.x);
+    if (len == 0.0) {
+        return { 1.0f, fwd.y };
+    }
+    const auto invLen = 1.0 / len;
+    return { (float)(invLen * fwd.x), (float)(invLen * fwd.y) };
+}
+
 void CCarCtrl::InjectHooks()
 {
     RH_ScopedClass(CCarCtrl);
@@ -188,6 +200,11 @@ void CCarCtrl::InjectHooks()
     RH_ScopedInstall(WeaveForOtherCar, 0x426350);
     RH_ScopedInstall(FindNodesThisCarIsNearestTo, 0x42BD20);
     RH_ScopedInstall(ScanForPedDanger, 0x42CE40);
+    RH_ScopedInstall(SlowCarDownForOtherCar, 0x42D0E0);
+    RH_ScopedInstall(SlowCarDownForObjectsSectorList, 0x42D4F0);
+    RH_ScopedInstall(WeaveThroughCarsSectorList, 0x42D680);
+    RH_ScopedInstall(WeaveThroughPedsSectorList, 0x42D7E0);
+    RH_ScopedInstall(WeaveThroughObjectsSectorList, 0x42D950);
 }
 
 // 0x4212E0
@@ -2123,14 +2140,163 @@ void CCarCtrl::SlowCarDownForObject(CEntity* entity, CVehicle* vehicle, float* a
 }
 
 // 0x42D4F0
-template<typename PtrListType>
-void CCarCtrl::SlowCarDownForObjectsSectorList(PtrListType& ptrList, CVehicle* vehicle, float arg3, float arg4, float arg5, float arg6, float* arg7, float arg8) {
-    plugin::Call<0x42D4F0, PtrListType&, CVehicle*, float, float, float, float, float*, float>(ptrList, vehicle, arg3, arg4, arg5, arg6, arg7, arg8);
+void CCarCtrl::SlowCarDownForObjectsSectorList(CPtrListDoubleLink<CObject*>& objList, CVehicle* vehicle, float minX, float minY, float maxX, float maxY, float* speedFactor, float speedMult) {
+    // The original stores the next node before processing the current one
+    for (auto it = objList.begin(); it != objList.end();) {
+        CObject* const obj = *it;
+        ++it;
+
+        if (obj->IsScanCodeCurrent()) {
+            continue;
+        }
+        obj->SetCurrentScanCode();
+
+        // Only these objects block the road
+        if (   obj->m_nModelIndex != ModelIndices::MI_ROADWORKBARRIER1
+            && obj->m_nModelIndex != ModelIndices::MI_ROADBLOCKFUCKEDCAR1
+            && obj->m_nModelIndex != ModelIndices::MI_ROADBLOCKFUCKEDCAR2
+        ) {
+            continue;
+        }
+
+        CVector centre;
+        obj->GetBoundCentre(centre); // 0x534250
+        if (centre.x <= minX || centre.x >= maxX || centre.y <= minY || centre.y >= maxY) {
+            continue;
+        }
+
+        {
+            const auto zDiff = (double)centre.z - vehicle->GetPosition().z;
+            if ((zDiff < 0.0 ? -zDiff : zDiff) >= 10.0f) {
+                continue;
+            }
+        }
+
+        // Note: The matrix is used directly (not null checked)
+        const auto& fwd = vehicle->m_matrix->GetForward();
+        const auto distAlongLine = CCollision::DistAlongLine2D(
+            vehicle->GetPosition().x, vehicle->GetPosition().y,
+            fwd.x, fwd.y,
+            centre.x, centre.y
+        ); // 0x412A80
+        const auto  vehPosZ = vehicle->GetPosition().z;
+        const auto  vehFwdZ = vehicle->GetForwardVector().z;
+
+        // x87: kept in extended precision
+        const auto zErr = (double)centre.z - ((double)distAlongLine * vehFwdZ + vehPosZ);
+        if ((zErr >= 0.0 ? zErr : -zErr) >= 3.0f) {
+            continue;
+        }
+
+        SlowCarDownForObject(obj, vehicle, speedFactor, speedMult); // 0x426220
+    }
 }
 
 // 0x42D0E0
-void CCarCtrl::SlowCarDownForOtherCar(CEntity* car1, CVehicle* car2, float* arg3, float arg4) {
-    plugin::Call<0x42D0E0, CEntity*, CVehicle*, float*, float>(car1, car2, arg3, arg4);
+void CCarCtrl::SlowCarDownForOtherCar(CEntity* entity, CVehicle* vehicle, float* speedFactor, float speedMult) {
+    // Note: Both entities are assumed to be vehicles, and `vehicle`'s matrix is used directly (not null checked)
+    const auto dir = GetNormalizedForward2D(vehicle);
+
+    // Only the cars that are in front of `vehicle` are of interest. x87: kept in extended precision
+    {
+        const auto& entPos = entity->GetPosition();
+        const auto& vehPos = vehicle->GetPosition();
+        const auto  dot    = ((double)entPos.y - vehPos.y) * dir.y + ((double)entPos.x - vehPos.x) * dir.x;
+        if (!(dot >= 0.0)) {
+            return;
+        }
+    }
+
+    // Velocity of the other car, and `vehicle`'s own (desired) velocity
+    const auto& entSpeed = entity->AsPhysical()->m_vecMoveSpeed;
+    const auto  entVelX  = entSpeed.x * 60.0f;
+    const auto  entVelY  = entSpeed.y * 60.0f;
+    const auto  vehVelX  = dir.x * speedMult;
+    const auto  vehVelY  = dir.y * speedMult;
+
+    entity->GetMatrix(); // Allocates the matrix if it hasn't got one (the original does this twice, the second is a no-op)
+
+    CVector vehDir{ dir.x, dir.y, 0.0f };
+    const auto entDir2D = GetNormalizedForward2D(entity->AsVehicle());
+    CVector entDir{ entDir2D.x, entDir2D.y, 0.0f };
+
+    // Relative velocity
+    const auto relX = entVelX - vehVelX;
+    const auto relY = entVelY - vehVelY;
+
+    // Time (?) till the collision of the 2 cars
+    float dist = TestCollisionBetween2MovingRects_OnlyFrontBumper(entity->AsVehicle(), vehicle, relX, relY, &vehDir, &entDir); // 0x425F70
+    {
+        const auto dist2 = TestCollisionBetween2MovingRects(vehicle, entity->AsVehicle(), -relX, -relY, &entDir, &vehDir); // 0x425B30
+        if (dist2 <= dist) {
+            dist = dist2;
+        }
+    }
+    if (dist < 0.0f) {
+        return;
+    }
+
+    if (!(dist >= 1.5f)) {
+        vehicle->m_autoPilot.carCtrlFlags.bHonkAtCar = true;
+        vehicle->m_autoPilot.m_ObstructingEntity = entity;
+        entity->RegisterReference(&vehicle->m_autoPilot.m_ObstructingEntity); // 0x571B70
+
+        const double recip = 1.0f / (double)speedMult; // x87: kept in extended precision
+        if (!(dist >= recip)) {
+            *speedFactor = 0.0f;
+        } else if (!(dist >= 3.0f * recip)) {
+            if (*speedFactor >= 1.0f) {
+                *speedFactor = 1.0f;
+            }
+        } else {
+            const double scaled = ((double)dist - 0.2f) * std::bit_cast<float>(0x3F44EC4Fu); // 0x858FFC (~0.7692308)
+            dist = 0.0 <= scaled ? (float)scaled : 0.0f;
+
+            const double newFactor = (double)dist * speedMult;
+            if (newFactor <= *speedFactor) {
+                *speedFactor = (float)newFactor;
+            }
+        }
+    }
+
+    // Cars that are moving towards each other and have been in the traffic for a while make the one with the lower address go on (and stop being 'simple')
+    if (dist < 0.0f || dist >= 0.5f) {
+        return;
+    }
+    if (!entity->GetIsTypeVehicle()) {
+        return;
+    }
+    const auto timeMs = CTimer::GetTimeInMS();
+    if (!(timeMs - vehicle->m_autoPilot.m_nTimeSwitchedToRealPhysics > 15000u)) {
+        return;
+    }
+    if (!(timeMs - entity->AsVehicle()->m_autoPilot.m_nTimeSwitchedToRealPhysics > 15000u)) {
+        return;
+    }
+
+    // x87: the dot product is kept in extended precision (rounded to float when stored)
+    const auto& vehFwd = vehicle->m_matrix->GetForward();
+    const auto& entFwd = entity->GetMatrix().GetForward();
+    const auto  fwdDot = (float)((double)entFwd.y * vehFwd.y + (double)entFwd.x * vehFwd.x);
+    if (entity == FindPlayerVehicle(-1, false)) {
+        return;
+    }
+    if (fwdDot >= -0.5f) {
+        return;
+    }
+    if (vehicle >= entity->AsVehicle()) { // Only one of the 2 cars (the one with the lower address) is affected
+        return;
+    }
+
+    const double newFactor = (double)speedMult * 0.2f; // x87: the comparison is done with the not rounded value
+    if (newFactor >= *speedFactor) {
+        *speedFactor = (float)newFactor;
+    }
+    if (vehicle->GetStatus() == STATUS_SIMPLE) {
+        SwitchVehicleToRealPhysics(vehicle);
+    }
+    vehicle->m_autoPilot.m_nCarDrivingStyle = DRIVING_STYLE_AVOID_CARS;
+    vehicle->m_autoPilot.m_nTempActionTime  = CTimer::GetTimeInMS() + 1000;
 }
 
 // 0x425440
@@ -2302,18 +2468,6 @@ void CCarCtrl::SlowCarOnRailsDownForTrafficAndLights(CVehicle* vehicle) {
     } else if (autoPilot.m_speed != 0.0f) {
         autoPilot.ModifySpeed(0.0f);
     }
-}
-
-//! Normalized 2D (X, Y) forward vector of the vehicle (the one used by the AI boat code)
-//! x87: The length is kept in extended precision. Note: Uses the matrix directly (not null checked)
-static CVector2D GetNormalizedForward2D(CVehicle* vehicle) {
-    const auto& fwd = vehicle->m_matrix->GetForward();
-    const auto  len = std::sqrt((double)fwd.y * fwd.y + (double)fwd.x * fwd.x);
-    if (len == 0.0) {
-        return { 1.0f, fwd.y };
-    }
-    const auto invLen = 1.0 / len;
-    return { (float)(invLen * fwd.x), (float)(invLen * fwd.y) };
 }
 
 //! Wraps the angle (extended precision) into [-PI, PI]
@@ -3464,21 +3618,104 @@ void CCarCtrl::WeaveForOtherCar(CEntity* entity, CVehicle* vehicle, float* pLowe
 }
 
 // 0x42D680
-template<typename PtrListType>
-void CCarCtrl::WeaveThroughCarsSectorList(PtrListType& ptrList, CVehicle* vehicle, CPhysical* physical, float arg4, float arg5, float arg6, float arg7, float* arg8, float* arg9) {
-    plugin::Call<0x42D680, PtrListType&, CVehicle*, CPhysical*, float, float, float, float, float*, float*>(ptrList, vehicle, physical, arg4, arg5, arg6, arg7, arg8, arg9);
-}
+void CCarCtrl::WeaveThroughCarsSectorList(CPtrListDoubleLink<CVehicle*>& ptrList, CVehicle* vehicle, CPhysical* physical, float minX, float minY, float maxX, float maxY, float* pLowerAngle, float* pUpperAngle) {
+    // The original stores the next node before processing the current one
+    for (auto it = ptrList.begin(); it != ptrList.end();) {
+        CVehicle* const other = *it;
+        ++it;
 
-// 0x42D950
-template<typename PtrListType>
-void CCarCtrl::WeaveThroughObjectsSectorList(PtrListType& ptrList, CVehicle* vehicle, float arg3, float arg4, float arg5, float arg6, float* arg7, float* arg8) {
-    plugin::Call<0x42D950, PtrListType&, CVehicle*, float, float, float, float, float*, float*>(ptrList, vehicle, arg3, arg4, arg5, arg6, arg7, arg8);
+        if (other->IsScanCodeCurrent() || !other->m_bUsesCollision || other == physical) {
+            continue;
+        }
+        other->SetCurrentScanCode();
+
+        CVector centre;
+        other->GetBoundCentre(centre); // 0x534250
+        if (centre.x <= minX || centre.x >= maxX || centre.y <= minY || centre.y >= maxY) {
+            continue;
+        }
+
+        {
+            const auto zDiff = (double)other->GetPosition().z - vehicle->GetPosition().z; // x87: kept in extended precision
+            if ((zDiff >= 0.0 ? zDiff : -zDiff) >= 8.0f) {
+                continue;
+            }
+        }
+
+        // Convoy vehicles don't avoid each other
+        if (other == vehicle || (vehicle->vehicleFlags.bPartOfConvoy && other->vehicleFlags.bPartOfConvoy)) {
+            continue;
+        }
+
+        WeaveForOtherCar(other, vehicle, pLowerAngle, pUpperAngle); // 0x426350
+    }
 }
 
 // 0x42D7E0
-template<typename PtrListType>
-void CCarCtrl::WeaveThroughPedsSectorList(PtrListType& ptrList, CVehicle* vehicle, CPhysical* physical, float arg4, float arg5, float arg6, float arg7, float* arg8, float* arg9) {
-    plugin::Call<0x42D7E0, PtrListType&, CVehicle*, CPhysical*, float, float, float, float, float*, float*>(ptrList, vehicle, physical, arg4, arg5, arg6, arg7, arg8, arg9);
+void CCarCtrl::WeaveThroughPedsSectorList(CPtrListDoubleLink<CPed*>& ptrList, CVehicle* vehicle, CPhysical* physical, float minX, float minY, float maxX, float maxY, float* pLowerAngle, float* pUpperAngle) {
+    // The original stores the next node before processing the current one
+    for (auto it = ptrList.begin(); it != ptrList.end();) {
+        CPed* const ped = *it;
+        ++it;
+
+        if (ped->IsScanCodeCurrent() || !ped->m_bUsesCollision || ped == physical) {
+            continue;
+        }
+        ped->SetCurrentScanCode();
+
+        const auto& pedPos = ped->GetPosition();
+        if (pedPos.x <= minX || pedPos.x >= maxX || pedPos.y <= minY || pedPos.y >= maxY) {
+            continue;
+        }
+
+        {
+            const auto zDiff = (double)ped->GetPosition().z - vehicle->GetPosition().z; // x87: kept in extended precision
+            if ((zDiff >= 0.0 ? zDiff : -zDiff) >= 4.0f) {
+                continue;
+            }
+        }
+
+        // Peds standing on/attached to the vehicle aren't avoided
+        if (ped->m_pContactEntity == vehicle || ped->m_pAttachedTo == vehicle) {
+            continue;
+        }
+
+        // 0x426970 - `CCarCtrl::WeaveForPed` (isn't in the headers/inventory, so it's called directly)
+        plugin::Call<0x426970, CPed*, CVehicle*, float*, float*>(ped, vehicle, pLowerAngle, pUpperAngle);
+    }
+}
+
+// 0x42D950
+void CCarCtrl::WeaveThroughObjectsSectorList(CPtrListDoubleLink<CObject*>& ptrList, CVehicle* vehicle, float minX, float minY, float maxX, float maxY, float* pLowerAngle, float* pUpperAngle) {
+    // The original stores the next node before processing the current one
+    for (auto it = ptrList.begin(); it != ptrList.end();) {
+        CObject* const obj = *it;
+        ++it;
+
+        if (obj->IsScanCodeCurrent() || !obj->m_bUsesCollision) {
+            continue;
+        }
+        obj->SetCurrentScanCode();
+
+        const auto& objPos = obj->GetPosition();
+        if (objPos.x <= minX || objPos.x >= maxX || objPos.y <= minY || objPos.y >= maxY) {
+            continue;
+        }
+
+        {
+            const auto zDiff = (double)obj->GetPosition().z - vehicle->GetPosition().z; // x87: kept in extended precision
+            if ((zDiff >= 0.0 ? zDiff : -zDiff) >= 8.0f) {
+                continue;
+            }
+        }
+
+        // Only the objects that are standing upright
+        if (obj->GetMatrix().GetUp().z <= 0.9f) {
+            continue;
+        }
+
+        WeaveForObject(obj, vehicle, pLowerAngle, pUpperAngle); // 0x426BC0
+    }
 }
 
 // 0x427FE0

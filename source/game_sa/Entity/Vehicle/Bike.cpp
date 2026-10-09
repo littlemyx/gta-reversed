@@ -89,7 +89,7 @@ void CBike::InjectHooks() {
     RH_ScopedCategory("Vehicle");
 
     RH_ScopedInstall(Constructor, 0x6BF430);
-    RH_ScopedInstall(Destructor, 0x6B57A0);
+    RH_ScopedNamedInstall(Destructor, "DestructorBody", 0x6B57A0);
     RH_ScopedInstall(dmgDrawCarCollidingParticles, 0x6B5A00);
     RH_ScopedInstall(DamageKnockOffRider, 0x6B5A10);
     RH_ScopedInstall(KnockOffRider, 0x6B5F40);

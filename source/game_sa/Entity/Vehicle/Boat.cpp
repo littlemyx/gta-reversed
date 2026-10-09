@@ -31,7 +31,7 @@ void CBoat::InjectHooks() {
     RH_ScopedCategory("Vehicle");
 
     RH_ScopedInstall(Constructor, 0x6F2940);
-    RH_ScopedInstall(Destructor, 0x6F00F0);
+    RH_ScopedNamedInstall(Destructor, "DestructorBody", 0x6F00F0);
 
     RH_ScopedVMTInstall(SetModelIndex, 0x6F1140);
     RH_ScopedVMTInstall(ProcessControl, 0x6F1770);

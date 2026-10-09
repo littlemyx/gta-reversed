@@ -48,6 +48,9 @@ void CSprite2d::InjectHooks() {
     RH_ScopedInstall(Draw2DPolygon, 0x7285B0);
     RH_ScopedInstall(DrawBarChart, 0x728640);
     RH_ScopedInstall(DrawCircleAtNearClip, 0x727D60);
+    RH_ScopedInstall(SetVerticesForSniper, 0x727FD0);
+    RH_ScopedInstall(OffsetTexCoordForBilinearFiltering, 0x728150);
+    RH_ScopedInstall(AddToBuffer, 0x728200);
 }
 
 CSprite2d::CSprite2d()
@@ -404,20 +407,81 @@ void CSprite2d::DrawCircleAtNearClip(const CVector2D& posn, float size, const CR
 }
 
 // this makes some trick with sprite z position (z = NearScreenZ + 0.000001).
+// 0x727FD0
 void CSprite2d::SetVerticesForSniper(const CRect& posn, const CRGBA& color1, const CRGBA& color2, const CRGBA& color3, const CRGBA& color4)
 {
-    ((void(__cdecl*)(const CRect&, const CRGBA&, const CRGBA&, const CRGBA&, const CRGBA&))0x727FD0)(posn, color1, color2, color3, color4);
+    const float z = (float)((double)NearScreenZ + (double)0.000001f); // Evaluated in an x87 register in the original
+
+    // NOTE: The texture is flipped vertically (v = 0 at the bottom edge)
+    // Bottom left
+    RwIm2DVertexSetScreenX(&maVertices[0], posn.left);
+    RwIm2DVertexSetScreenY(&maVertices[0], posn.bottom);
+    RwIm2DVertexSetScreenZ(&maVertices[0], z);
+    RwIm2DVertexSetRecipCameraZ(&maVertices[0], RecipNearClip);
+    maVertices[0].u = 0.0f;
+    maVertices[0].v = 0.0f;
+    RwIm2DVertexSetIntRGBA(&maVertices[0], color3.r, color3.g, color3.b, color3.a);
+
+    // Bottom right
+    RwIm2DVertexSetScreenX(&maVertices[1], posn.right);
+    RwIm2DVertexSetScreenY(&maVertices[1], posn.bottom);
+    RwIm2DVertexSetScreenZ(&maVertices[1], z);
+    RwIm2DVertexSetRecipCameraZ(&maVertices[1], RecipNearClip);
+    maVertices[1].u = 1.0f;
+    maVertices[1].v = 0.0f;
+    RwIm2DVertexSetIntRGBA(&maVertices[1], color4.r, color4.g, color4.b, color4.a);
+
+    // Top right
+    RwIm2DVertexSetScreenX(&maVertices[2], posn.right);
+    RwIm2DVertexSetScreenY(&maVertices[2], posn.top);
+    RwIm2DVertexSetScreenZ(&maVertices[2], z);
+    RwIm2DVertexSetRecipCameraZ(&maVertices[2], RecipNearClip);
+    maVertices[2].u = 1.0f;
+    maVertices[2].v = 1.0f;
+    RwIm2DVertexSetIntRGBA(&maVertices[2], color2.r, color2.g, color2.b, color2.a);
+
+    // Top left
+    RwIm2DVertexSetScreenX(&maVertices[3], posn.left);
+    RwIm2DVertexSetScreenY(&maVertices[3], posn.top);
+    RwIm2DVertexSetScreenZ(&maVertices[3], z);
+    RwIm2DVertexSetRecipCameraZ(&maVertices[3], RecipNearClip);
+    maVertices[3].u = 0.0f;
+    maVertices[3].v = 1.0f;
+    RwIm2DVertexSetIntRGBA(&maVertices[3], color1.r, color1.g, color1.b, color1.a);
 }
 
+// 0x728150
 void CSprite2d::OffsetTexCoordForBilinearFiltering(float width, float height)
 {
-    ((void(__cdecl*)(float, float))0x728150)(width, height);
+    // NOTE: The offsets are kept in x87 registers (extended precision) in the original
+    const double offsetU = 1.0 / ((double)width + (double)width);
+    const double offsetV = 1.0 / ((double)height + (double)height);
+    for (auto& vertex : std::span{ maVertices.data(), 4 }) {
+        vertex.u = (float)((double)vertex.u + offsetU);
+        vertex.v = (float)((double)vertex.v + offsetV);
+    }
 }
 
 // add vertices to buffer
+// 0x728200
 void CSprite2d::AddToBuffer(const CRect& posn, const CRGBA& color, float u1, float v1, float u2, float v2, float u3, float v3, float u4, float v4)
 {
-    ((void(__cdecl*)(const CRect&, const CRGBA&, float, float, float, float, float, float, float, float))0x728200)(posn, color, u1, v1, u2, v2, u3, v3, u4, v4);
+    const auto base = nextBufferVertex;
+    SetVertices(&aRadiosityVertexBuffer[base], posn, color, color, color, color, u1, v1, u2, v2, u3, v3, u4, v4);
+
+    const auto idx = nextBufferIndex;
+    aTempBufferIndices[idx + 1] = (RxVertexIndex)(base + 1);
+    aTempBufferIndices[idx + 0] = (RxVertexIndex)(base + 0);
+    aTempBufferIndices[idx + 4] = (RxVertexIndex)(base + 0);
+    aTempBufferIndices[idx + 2] = (RxVertexIndex)(base + 2);
+    aTempBufferIndices[idx + 3] = (RxVertexIndex)(base + 3);
+    aTempBufferIndices[idx + 5] = (RxVertexIndex)(base + 2);
+
+    nextBufferVertex = base + 4;
+    nextBufferIndex  = idx + 6;
+    if (nextBufferVertex > TOTAL_RADIOSITY_VERTEX_BUFFER || nextBufferIndex > 0xFFA) { // NOTE: Not the same limit as in `IsVertexBufferFull` (it uses TOTAL_TEMP_BUFFER_INDICES)
+        RenderVertexBuffer();
+    }
 }
 
 // non-textured polygon

@@ -74,16 +74,68 @@ bool IsOpenedOrStarted() { return (Is(rw::Engine::Opened) || Is(rw::Engine::Star
 
 bool ModeIndexValid(RwInt32 i) { return i >= 0 && i < d3d9Globals.numModes && d3d9Globals.modes; }
 
-// Raster format RW reports for a display format (RwVideoMode::format)
+// Raster format RW reports for a display format (RwVideoMode::format). Table of the exe's D3D9 driver (0x7F6105 -> jump table 0x7F6AB0):
+// A8R8G8B8 8888, X8R8G8B8 888, R5G6B5 565, X1R5G5B5 555, A1R5G5B5 1555, A2R10G10B10 8888; every other format (A4R4G4B4 too) -> 0
 RwInt32 RasterFormatOf(D3DFORMAT f) {
     switch (f) {
-    case D3DFMT_A8R8G8B8: return rwRASTERFORMAT8888;
+    case D3DFMT_A8R8G8B8:
+    case D3DFMT_A2R10G10B10: return rwRASTERFORMAT8888;
     case D3DFMT_X8R8G8B8: return rwRASTERFORMAT888;
     case D3DFMT_R5G6B5:   return rwRASTERFORMAT565;
     case D3DFMT_X1R5G5B5: return rwRASTERFORMAT555;
     case D3DFMT_A1R5G5B5: return rwRASTERFORMAT1555;
-    case D3DFMT_A4R4G4B4: return rwRASTERFORMAT4444;
     default:              return rwRASTERFORMATDEFAULT;
+    }
+}
+
+// W: the exe's video mode list (0x7F7540), whose ORDER the game's settings file depends on (VideoMode.cpp picks by index).
+// librw lists X8R8G8B8 then R5G6B5 and skips A2R10G10B10; the exe lists R5G6B5, X8R8G8B8, A2R10G10B10 (formats at 0x884788). Both keep mode 0 =
+// the desktop mode as a windowed mode and merge entries with equal width/height/format keeping the first position and the highest refresh rate.
+// The exe also reports NO modes at all when the desktop format is not one of A8R8G8B8 / X8R8G8B8 / R5G6B5 / X1R5G5B5 / A1R5G5B5.
+void BuildExeModeList() {
+    auto& g = d3d9Globals;
+    if (!g.d3d9) {
+        return;
+    }
+    static const D3DFORMAT kFormats[] = { D3DFMT_R5G6B5, D3DFMT_X8R8G8B8, D3DFMT_A2R10G10B10 };
+    int total = 1;
+    for (const D3DFORMAT f : kFormats) {
+        total += (int)g.d3d9->GetAdapterModeCount((UINT)g.adapter, f);
+    }
+    rw::Engine::memfuncs.rwfree(g.modes);
+    g.modes = rwNewT(rw::d3d::DisplayMode, total, rw::ID_DRIVER | rw::MEMDUR_EVENT);
+    std::memset(g.modes, 0, sizeof(rw::d3d::DisplayMode) * total);
+    g.d3d9->GetAdapterDisplayMode((UINT)g.adapter, &g.modes[0].mode);
+    g.modes[0].flags = 0;
+    switch (g.modes[0].mode.Format) {
+    case D3DFMT_A8R8G8B8: case D3DFMT_X8R8G8B8: case D3DFMT_R5G6B5: case D3DFMT_X1R5G5B5: case D3DFMT_A1R5G5B5:
+        g.numModes = 1;
+        break;
+    default:
+        g.numModes = 0;
+        return;
+    }
+    for (const D3DFORMAT f : kFormats) {
+        const UINT n = g.d3d9->GetAdapterModeCount((UINT)g.adapter, f);
+        for (UINT j = 0; j < n; j++) {
+            D3DDISPLAYMODE m{};
+            g.d3d9->EnumAdapterModes((UINT)g.adapter, f, j, &m);
+            int i = 1;
+            for (; i < g.numModes; i++) {
+                if (g.modes[i].mode.Width == m.Width && g.modes[i].mode.Height == m.Height && g.modes[i].mode.Format == m.Format) {
+                    break;
+                }
+            }
+            if (i < g.numModes) {
+                if (g.modes[i].mode.RefreshRate < m.RefreshRate) {
+                    g.modes[i].mode.RefreshRate = m.RefreshRate;
+                }
+            } else {
+                g.modes[g.numModes].mode  = m;
+                g.modes[g.numModes].flags = rw::VIDEOMODEEXCLUSIVE;
+                g.numModes++;
+            }
+        }
     }
 }
 
@@ -208,6 +260,7 @@ RwBool RwEngineOpen(RwEngineOpenParams* initParams) {
         rw::Engine::state = rw::Engine::Initialized;
         return FALSE;
     }
+    BuildExeModeList();
     PublishDeviceRange();
     return TRUE;
 }
@@ -300,6 +353,7 @@ RwBool RwEngineSetSubSystem(RwInt32 subSystemIndex) {
     if (!rw::Engine::setSubSystem(subSystemIndex)) {
         return FALSE;
     }
+    BuildExeModeList(); // the exe rebuilds the list too (0x7F7540)
     d3d9Globals.currentMode = 0;
     return TRUE;
 }

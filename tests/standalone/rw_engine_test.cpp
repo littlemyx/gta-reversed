@@ -3,6 +3,10 @@
 #include "fakerw.h"
 #include <cstdio>
 
+// engine.cpp calls these platform.cpp (P2B-09) hooks; this unit test does not link platform.cpp
+void NotsaRwPlatform_OnEngineStarted() {}
+void NotsaRwPlatform_OnEngineStopping() {}
+
 static int g_fail = 0;
 #define CHECK(c) do { const bool ok_ = !!(c); std::printf("%-4s %s\n", ok_ ? "ok" : "FAIL", #c); if (!ok_) ++g_fail; } while (0)
 
@@ -39,6 +43,30 @@ int main() {
         CHECK(RwEngineGetVideoModeInfo(&vm, i) == &vm);
         std::printf("videomode %d: %d x %d x %d  %d Hz  fmt 0x%04x  %s\n", i, vm.width, vm.height, vm.depth, vm.refRate, vm.format,
                     (vm.flags & rwVIDEOMODEEXCLUSIVE) ? "exclusive" : "windowed");
+    }
+    // 01r: the exe lists R5G6B5 (16 bit) modes first, then X8R8G8B8 / A2R10G10B10 (32 bit); mode 0 is the desktop as a windowed mode; entries are unique
+    // per (width, height, format) and the raster format follows the exe's table (565 -> 0x0200, 888 -> 0x0600)
+    {
+        bool seen32 = false, order16After32 = false, dup = false, rasterOk = true;
+        for (int i = 1; i < numVM; i++) {
+            RwVideoMode vm{};
+            RwEngineGetVideoModeInfo(&vm, i);
+            if (vm.depth == 32) { seen32 = true; }
+            if (vm.depth == 16 && seen32) { order16After32 = true; }
+            if (vm.depth == 16 && vm.format != rwRASTERFORMAT565) { rasterOk = false; }
+            for (int j = 1; j < i; j++) {
+                RwVideoMode o{};
+                RwEngineGetVideoModeInfo(&o, j);
+                if (o.width == vm.width && o.height == vm.height && o.depth == vm.depth && o.format == vm.format) { dup = true; }
+            }
+            CHECK((vm.flags & rwVIDEOMODEEXCLUSIVE) != 0);
+        }
+        CHECK(!order16After32);
+        CHECK(!dup);
+        CHECK(rasterOk);
+        RwVideoMode m0{};
+        RwEngineGetVideoModeInfo(&m0, 0);
+        CHECK((m0.flags & rwVIDEOMODEEXCLUSIVE) == 0);
     }
     RwVideoMode bad{};
     CHECK(RwEngineGetVideoModeInfo(&bad, numVM) == nullptr);

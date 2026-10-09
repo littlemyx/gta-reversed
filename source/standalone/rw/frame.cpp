@@ -11,6 +11,7 @@
 // target the PCH is force-included.
 #ifdef NOTSA_RW_LIBRW
 #include "fakerw.h"
+#include "rwmath_exact.h"
 
 #include <cassert>
 #include <cmath>
@@ -96,46 +97,44 @@ RwMatrix* RwFrameGetLTM(RwFrame* frame) {
     return frame ? frame->getLTM() : nullptr;
 }
 
-// W: RW's RwMatrixOrthoNormalize on the modelling matrix: `at` is kept (normalised), right = up x at (normalised), up = at x right;
-// the translation is untouched. Marks the matrix orthonormal and drops the identity flag. (librw has no equivalent.)
+// RW (0x7F1170): RwMatrixOrthoNormalize(&modelling, &modelling), then RwFrameUpdateObjects. The matrix routine is the exe's (rwmath_exact.h): all
+// three axes are normalised, then the two axes least orthogonal to the third are rebuilt by cross products; translation untouched, flags |= ORTHONORMAL.
 RwFrame* RwFrameOrthoNormalize(RwFrame* frame) {
     if (!frame) {
         return nullptr;
     }
-    rw::Matrix& m = frame->matrix;
-    rw::V3d at    = rw::normalize(m.at);
-    rw::V3d right = rw::normalize(rw::cross(m.up, at));
-    rw::V3d up    = rw::cross(at, right);
-    m.right = right;
-    m.up    = up;
-    m.at    = at;
-    m.flags = (m.flags & ~(static_cast<RwUInt32>(rw::Matrix::IDENTITY) | static_cast<RwUInt32>(rw::Matrix::TYPEMASK))) | rw::Matrix::TYPEORTHONORMAL;
+    rwx::OrthoNormalize(&frame->matrix, &frame->matrix);
     frame->updateObjects();
     return frame;
 }
 
-// D: angle in degrees, combine as RwOpCombineType (static_assert'ed against rw::CombineOp in fakerw.h); marks the hierarchy dirty.
+// 0x7F1010: RwMatrixRotate(&modelling, ...) with the exe's numerics (rwmath_exact.h; angle in degrees, combine as RwOpCombineType), then update
 RwFrame* RwFrameRotate(RwFrame* frame, const RwV3d* axis, RwReal angle, RwOpCombineType combine) {
     if (!frame || !axis) {
         return nullptr;
     }
-    frame->rotate(axis, angle, ToCombine(combine));
+    rwx::Rotate(&frame->matrix, axis, angle, static_cast<int>(combine));
+    frame->updateObjects();
     return frame;
 }
 
+// 0x7F0E30
 RwFrame* RwFrameTranslate(RwFrame* frame, const RwV3d* v, RwOpCombineType combine) {
     if (!frame || !v) {
         return nullptr;
     }
-    frame->translate(v, ToCombine(combine));
+    rwx::Translate(&frame->matrix, v, static_cast<int>(combine));
+    frame->updateObjects();
     return frame;
 }
 
+// 0x7F0F70
 RwFrame* RwFrameTransform(RwFrame* frame, const RwMatrix* m, RwOpCombineType combine) {
     if (!frame || !m) {
         return nullptr;
     }
-    frame->transform(m, ToCombine(combine));
+    rwx::Transform(&frame->matrix, m, static_cast<int>(combine));
+    frame->updateObjects();
     return frame;
 }
 

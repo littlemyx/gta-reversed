@@ -393,3 +393,15 @@ RwBool _rwD3D9RenderStateVertexAlphaIsEnabled();
 void RwShimPipelineEnsure();
 // Drops the shim's default pipeline (call before RwEngineStop/Close; the registry of instanced data is cleared)
 void RwShimPipelineShutdown();
+
+// 01r: RW 3.6 table-based approximate sqrt / inverse sqrt (exe 0x7EDB30 / 0x7EDB90; tables built at engine init 0x7EDE90, ~1e-4 relative error).
+// _rwSqrt(+0.0f) == +0.0f. Definitions: standalone/rw/rwmath_tables.cpp (algorithm: standalone/rw/rwmath_exact.h, header-only). rtquat.cpp
+// (RtQuatConvertFromMatrix / RtQuatRotate / RtQuatSetupSlerpCache) must use these instead of sqrtf.
+RwReal _rwSqrt(const RwReal num);
+RwReal _rwInvSqrt(const RwReal num);
+void   _rwSqrtInit();
+// exe 0x7F1920 (dst may alias src); the game only reaches it through RwFrameOrthoNormalize
+RwMatrix* RwMatrixOrthoNormalize(RwMatrix* dst, const RwMatrix* src);
+// camera.cpp: RW increments RwEngineInstance->renderFrame in RpWorldRender (exe 0x750453), not in RwCameraBeginUpdate. world.cpp's RpWorldRender should call this
+// at the same point; until it does, RwCameraBeginUpdate bumps the counter itself (once a call arrives the BeginUpdate bump stops).
+void NotsaRwBumpRenderFrame();

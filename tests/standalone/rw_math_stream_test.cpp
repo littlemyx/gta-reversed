@@ -4,6 +4,8 @@
 // and from the exe disassembly noted in math.cpp.
 #include <rwcore.h>
 #include <cmath>
+#include <cstdlib>
+#include <float.h>
 #include <cstdio>
 #include <cstring>
 #include <vector>
@@ -111,12 +113,13 @@ static void TestMatrix() {
 static void TestVectors() {
     Section("vectors");
     const RwV2d v2{3, 4};
-    CHECK(Near(RwV2dLength(&v2), 5));
+    // 01r: the exe's lengths come from the sqrt tables (relative error up to ~1e-3), 25 / 169 / 25 are exact table hits for the length
+    CHECK(Near(RwV2dLength(&v2), 5, 5e-3f));
     const RwV3d v3{3, 4, 12};
-    CHECK(Near(RwV3dLength(&v3), 13));
+    CHECK(RwV3dLength(&v3) == 13.0f);                       // bits(sqrt(169)) = 0x41500000 through the table (checked against Python in TestExeNumerics)
     RwV3d n;
     const RwV3d a{3, 4, 0};
-    CHECK(Near(RwV3dNormalize(&n, &a), 5) && NearV(n, 0.6f, 0.8f, 0));
+    CHECK(Near(RwV3dNormalize(&n, &a), 5, 5e-3f) && NearV(n, 0.6f, 0.8f, 0, 2e-3f));
     const RwV3d z{0, 0, 0};
     const float lz = RwV3dNormalize(&n, &z);
     CHECK(lz == 0.0f && n.x == 0 && n.y == 0 && n.z == 0); // no NaN
@@ -254,8 +257,211 @@ static void TestStreams(int argc, char** argv) {
     }
 }
 
+//--------------------------------------------------------------------------------------------------
+// 01r: exe numerics. (1) values of the table sqrt computed by an independent transcription of the asm (Python, float32 rounding at every store),
+// (2) structural checks of RwMatrixOrthoNormalize, (3) differential run against the REAL RW code of gta_sa_compact.exe: the exe's image is mapped at its
+// own addresses (the test is linked at a different base), a fake RwEngineInstance is built and the exe's own functions are called through function
+// pointers; results must be bit-identical to the shim (needs env RW_EXE_ORACLE=<path of gta_sa_compact.exe>, skipped otherwise).
+//--------------------------------------------------------------------------------------------------
+static bool SameBits(float a, float b) { return std::memcmp(&a, &b, 4) == 0; }
+static bool SameMat(const RwMatrix& a, const RwMatrix& b, bool flags = true) {
+    return std::memcmp(&a.right, &b.right, 12) == 0 && std::memcmp(&a.up, &b.up, 12) == 0 && std::memcmp(&a.at, &b.at, 12) == 0 &&
+           std::memcmp(&a.pos, &b.pos, 12) == 0 && (!flags || a.flags == b.flags);
+}
+
+static void TestExeNumerics() {
+    Section("exe numerics (01r): table sqrt");
+    struct { float x; unsigned sq, isq; } kv[] = {
+        {1.0f, 0x3f800000, 0x3f800000}, {2.0f, 0x3fb504f3, 0x3f3504f3}, {3.0f, 0x3fddb3d7, 0x3f13cd3a}, {4.0f, 0x40000000, 0x3f000000},
+        {10.0f, 0x404a62c2, 0x3ea1e89b}, {169.0f, 0x41500000, 0x3d9d89d9}, {0.5f, 0x3f3504f3, 0x3fb504f3}, {0.001f, 0x3d0185af, 0x41fcfdcb},
+        {12345.678f, 0x42de3505, 0x3c13774e},
+    };
+    for (const auto& k : kv) {
+        unsigned a, b;
+        const float s = _rwSqrt(k.x), i = _rwInvSqrt(k.x);
+        std::memcpy(&a, &s, 4); std::memcpy(&b, &i, 4);
+        CHECK(a == k.sq && b == k.isq);
+    }
+    CHECK(_rwSqrt(0.0f) == 0.0f && _rwInvSqrt(0.0f) == 0.0f);
+    // structural: the approximation is NOT sqrtf (the exe's error ~7e-4 at 12345.678), and RwV3dNormalize's vector is not unit length exactly
+    CHECK(_rwSqrt(12345.678f) != std::sqrt(12345.678f));
+
+    Section("exe numerics (01r): RwMatrixOrthoNormalize keeps the most orthogonal pair");
+    {
+        RwMatrix m; m.setIdentity();
+        m.right = {1, 0, 0}; m.up = {0, 1, 0}; m.at = {0.2f, 0, 1}; m.pos = {5, 6, 7}; m.flags = 0;
+        RwMatrix o = m;
+        CHECK(RwMatrixOrthoNormalize(&o, &m) == &o);
+        CHECK(NearV(o.right, 1, 0, 0, 2e-3f) && NearV(o.up, 0, 1, 0, 2e-3f) && NearV(o.at, 0, 0, 1, 2e-3f)); // at rebuilt as right x up
+        CHECK(NearV(o.pos, 5, 6, 7, 0) && o.flags == kOrthoNormal);
+        RwMatrix k = m; k.right = {1, 0.1f, 0}; k.at = {0, 0, 1}; k.flags = kIdent;
+        RwMatrixOrthoNormalize(&k, &k);                        // in place; identity flag cleared
+        // |A.U| = |A.R| = 0 < |U.R|: right and at are kept, up is rebuilt as at x right = (-0.0995, 0.995, 0)
+        CHECK(NearV(k.up, -0.0995f, 0.995f, 0, 2e-3f) && NearV(k.right, 0.995f, 0.0995f, 0, 2e-3f) && k.flags == kOrthoNormal);
+        RwMatrix z = m; z.right = {0, 0, 0};                   // zero axis: rebuilt from the other two
+        RwMatrixOrthoNormalize(&z, &z);
+        CHECK(NearV(z.right, 0.9806f, 0, -0.1961f, 2e-3f));    // right = up x at (at = (0.2, 0, 1) normalised)
+    }
+}
+
+#ifdef _WIN32
+// ---- the real RW code of the exe -----------------------------------------------------------------------------------
+namespace oracle {
+using VecLen   = float(__cdecl*)(const RwV3d*);
+using V3dNorm  = float(__cdecl*)(RwV3d*, const RwV3d*);
+using V2dLen   = float(__cdecl*)(const RwV2d*);
+using F1       = float(__cdecl*)(float);
+using Xform    = RwV3d*(__cdecl*)(RwV3d*, const RwV3d*, const RwMatrix*);
+using XformN   = RwV3d*(__cdecl*)(RwV3d*, const RwV3d*, int, const RwMatrix*);
+using Mat3     = RwMatrix*(__cdecl*)(RwMatrix*, const RwMatrix*, const RwMatrix*);
+using Mat2     = RwMatrix*(__cdecl*)(RwMatrix*, const RwMatrix*);
+using MatRot   = RwMatrix*(__cdecl*)(RwMatrix*, const RwV3d*, float, int);
+using MatV     = RwMatrix*(__cdecl*)(RwMatrix*, const RwV3d*, int);
+using MatM     = RwMatrix*(__cdecl*)(RwMatrix*, const RwMatrix*, int);
+using Init     = void*(__cdecl*)(void*, int, int);
+
+static uint8_t g_engine[0x1000];
+static void* __cdecl FakeAlloc(size_t n, unsigned) { return std::calloc(1, n); }
+static void  __cdecl FakeFree(void* p) { std::free(p); }
+
+#include "rw_exe_oracle_fixups.inc"   // offsets of the absolute addresses inside the two copied .text windows (tools/gen_oracle_fixups.py)
+static uint8_t* g_data;     // copy of the exe's .rdata + .data (+ zeroed .bss) = VA 0x858000..0xCB0000
+static uint8_t* g_code;   // copy of the exe .text span [kSpanVA, kSpanVA + kSpanSize)
+static uint8_t* G(unsigned va) { return g_data + (va - 0x858000); }
+static void* Fn(unsigned va) { return g_code + (va - kSpanVA); }
+
+static bool Map(const char* path) {
+    FILE* fh = std::fopen(path, "rb");
+    if (!fh) { std::printf("  cannot open %s\n", path); return false; }
+    std::vector<uint8_t> exe;
+    exe.resize(0x600000);
+    exe.resize(std::fread(exe.data(), 1, exe.size(), fh));
+    std::fclose(fh);
+    if (exe.size() < 0x4E1C00) return false;
+    g_data = static_cast<uint8_t*>(VirtualAlloc(nullptr, 0xCB0000 - 0x858000, MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE));
+    g_code = static_cast<uint8_t*>(VirtualAlloc(nullptr, kSpanSize, MEM_RESERVE | MEM_COMMIT, PAGE_EXECUTE_READWRITE));
+    if (!g_data || !g_code) return false;
+    std::memcpy(g_data, exe.data() + 0x456800, 0x4B400);                          // .rdata  (VA 0x858000)
+    std::memcpy(G(0x8A4000), exe.data() + 0x4A1C00, 0x40000);                     // .data   (VA 0x8A4000), the rest up to 0xCB0000 is .bss
+    std::memcpy(g_code, exe.data() + (kSpanVA - 0x401000 + 0x400), kSpanSize);
+    for (const auto& f : kFix) {
+        uint32_t* p = reinterpret_cast<uint32_t*>(g_code + f[0]);
+        *p += f[1] ? static_cast<uint32_t>(reinterpret_cast<uintptr_t>(g_code)) - kSpanVA : static_cast<uint32_t>(reinterpret_cast<uintptr_t>(g_data)) - 0x858000u;
+    }
+    *reinterpret_cast<void**>(G(0xC97B24)) = g_engine;                                             // RwEngineInstance
+    *reinterpret_cast<void**>(g_engine + 0x134) = reinterpret_cast<void*>(&FakeAlloc);
+    *reinterpret_cast<void**>(g_engine + 0x138) = reinterpret_cast<void*>(&FakeFree);
+    // the exe's own plugin constructor builds the sqrt tables (0x7EDE90 stores the plugin offset into 0xC97934)
+    std::printf("  mapped: data %p code %p\n", g_data, g_code);
+    reinterpret_cast<Init>(Fn(0x7EDE90))(nullptr, 0x400, 0);
+    std::printf("  plugin constructor done\n");
+    // matrix plugin data (RwMatrixOpen 0x7F16C0): identity mask, multiply kernel, tolerances
+    *reinterpret_cast<int*>(G(0xC979BC)) = 0x600;
+    *reinterpret_cast<uint32_t*>(g_engine + 0x604) = 0x20000;
+    *reinterpret_cast<void**>(g_engine + 0x608) = Fn(0x7F12F0);
+    return true;
+}
+} // namespace oracle
+
+static uint32_t g_rng = 12345;
+static float Rnd(float lo, float hi) {
+    g_rng = g_rng * 1664525u + 1013904223u;
+    return lo + (hi - lo) * ((g_rng >> 8) * (1.0f / 16777216.0f));
+}
+static RwMatrix RndMat(bool ortho) {
+    RwMatrix m; m.setIdentity();
+    m.right = {Rnd(-3, 3), Rnd(-3, 3), Rnd(-3, 3)};
+    m.up    = {Rnd(-3, 3), Rnd(-3, 3), Rnd(-3, 3)};
+    m.at    = {Rnd(-3, 3), Rnd(-3, 3), Rnd(-3, 3)};
+    m.pos   = {Rnd(-500, 500), Rnd(-500, 500), Rnd(-500, 500)};
+    m.flags = 0;
+    if (ortho) {
+        RwMatrixOrthoNormalize(&m, &m);
+    }
+    return m;
+}
+
+static void TestAgainstExe(const char* exePath) {
+    Section("exe oracle (01r): the exe's own RW code vs the shim, bit-exact");
+    if (!oracle::Map(exePath)) {
+        std::printf("  (skipped: cannot map %s at its addresses)\n", exePath);
+        return;
+    }
+    std::printf("  x87 control word: 0x%04x\n", _controlfp(0, 0));
+    // tables: the exe built them in its own plugin constructor; every table cell is hit by the grid below (all exponent parities, 4096 cells per decade)
+    // compare outputs on a dense grid instead: every table cell is hit by x = bits(i << 12 ...) for both exponent parities
+    int sqBad = 0, isqBad = 0, total = 0;
+    for (uint32_t e = 100; e < 140; e++) {
+        for (uint32_t m = 0; m < 0x800000; m += 0x1001) {
+            const uint32_t bits = (e << 23) | m;
+            float x; std::memcpy(&x, &bits, 4);
+            ++total;
+            if (!SameBits(_rwSqrt(x), reinterpret_cast<oracle::F1>(oracle::Fn(0x7EDB30))(x))) ++sqBad;
+            if (!SameBits(_rwInvSqrt(x), reinterpret_cast<oracle::F1>(oracle::Fn(0x7EDB90))(x))) ++isqBad;
+        }
+    }
+    std::printf("  sqrt / invsqrt mismatches: %d / %d of %d\n", sqBad, isqBad, total);
+    CHECK(sqBad == 0 && isqBad == 0);
+
+    int bad[16] = {};
+    const char* names[] = {"V3dLength", "V3dNormalize", "V2dLength", "Point", "Vector", "Multiply", "Invert(ortho)", "Invert(gen)", "Rotate", "Scale", "Translate", "Transform", "OrthoNormalize", "Normalize.len", "", ""};
+    for (int it = 0; it < 3000; it++) {
+        const RwV3d v{Rnd(-50, 50), Rnd(-50, 50), Rnd(-50, 50)};
+        const RwV2d v2{Rnd(-50, 50), Rnd(-50, 50)};
+        if (!SameBits(RwV3dLength(&v), reinterpret_cast<oracle::VecLen>(oracle::Fn(0x7EDAC0))(&v))) bad[0]++;
+        RwV3d a, b;
+        const float la = RwV3dNormalize(&a, &v), lb = reinterpret_cast<oracle::V3dNorm>(oracle::Fn(0x7ED9B0))(&b, &v);
+        if (std::memcmp(&a, &b, 12) != 0) bad[1]++;
+        if (!SameBits(la, lb)) bad[13]++;
+        if (!SameBits(RwV2dLength(&v2), reinterpret_cast<oracle::V2dLen>(oracle::Fn(0x7EDBF0))(&v2))) bad[2]++;
+
+        const RwMatrix m = RndMat(it & 1), n = RndMat(it & 2);
+        RwV3d pa, pb;
+        RwV3dTransformPoint(&pa, &v, &m); reinterpret_cast<oracle::Xform>(oracle::Fn(0x7EDD60))(&pb, &v, &m);
+        if (std::memcmp(&pa, &pb, 12) != 0) bad[3]++;
+        RwV3dTransformVector(&pa, &v, &m); reinterpret_cast<oracle::Xform>(oracle::Fn(0x7EDDC0))(&pb, &v, &m);
+        if (std::memcmp(&pa, &pb, 12) != 0) bad[4]++;
+
+        RwMatrix x, y; x = y = RndMat(false);
+        RwMatrixMultiply(&x, &m, &n); reinterpret_cast<oracle::Mat3>(oracle::Fn(0x7F18B0))(&y, &m, &n);
+        if (!SameMat(x, y)) bad[5]++;
+        RwMatrixInvert(&x, &m); reinterpret_cast<oracle::Mat2>(oracle::Fn(0x7F2070))(&y, &m);
+        if (!SameMat(x, y)) bad[(it & 1) ? 6 : 7]++;
+        const RwV3d axis{Rnd(-1, 1), Rnd(-1, 1), Rnd(-1, 1)};
+        const float ang = Rnd(-360, 360);
+        const int op = it % 3;
+        x = y = m;
+        RwMatrixRotate(&x, &axis, ang, static_cast<RwOpCombineType>(op)); reinterpret_cast<oracle::MatRot>(oracle::Fn(0x7F1FD0))(&y, &axis, ang, op);
+        if (!SameMat(x, y)) bad[8]++;
+        x = y = m;
+        RwMatrixScale(&x, &axis, static_cast<RwOpCombineType>(op)); reinterpret_cast<oracle::MatV>(oracle::Fn(0x7F22C0))(&y, &axis, op);
+        if (!SameMat(x, y)) bad[9]++;
+        x = y = m;
+        RwMatrixTranslate(&x, &axis, static_cast<RwOpCombineType>(op)); reinterpret_cast<oracle::MatV>(oracle::Fn(0x7F2450))(&y, &axis, op);
+        if (!SameMat(x, y)) bad[10]++;
+        x = y = m;
+        RwMatrixTransform(&x, &n, static_cast<RwOpCombineType>(op)); reinterpret_cast<oracle::MatM>(oracle::Fn(0x7F25A0))(&y, &n, op);
+        if (!SameMat(x, y)) bad[11]++;
+        x = y = m;
+        RwMatrixOrthoNormalize(&x, &m); reinterpret_cast<oracle::Mat2>(oracle::Fn(0x7F1920))(&y, &m);
+        if (!SameMat(x, y)) bad[12]++;
+    }
+    for (int i = 0; i < 14; i++) {
+        std::printf("  %-16s mismatches: %d / 3000\n", names[i], bad[i]);
+        CHECK(bad[i] == 0);
+    }
+}
+#endif
+
 int main(int argc, char** argv) {
+    std::setvbuf(stdout, nullptr, _IONBF, 0);
     rw::Engine::init(); // memory functions (rwMalloc / RwFree)
+    TestExeNumerics();
+#ifdef _WIN32
+    if (const char* exe = std::getenv("RW_EXE_ORACLE")) {
+        TestAgainstExe(exe);
+    }
+#endif
     TestMatrix();
     TestVectors();
     TestStreams(argc, argv);

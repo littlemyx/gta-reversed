@@ -22,7 +22,7 @@
 
 #include <cassert>
 
-namespace rw { void calczShiftScale(Camera* cam); } // camera.cpp (librw): RW's zScale/zShift from the device z range, not in a header
+namespace rw { void calczShiftScale(Camera* cam); } // camera.cpp (librw): zScale/zShift from the device z range, not in a header (superseded by CalcZShiftScale below)
 
 static_assert(rwSPHEREOUTSIDE == rw::Camera::SPHEREOUTSIDE && rwSPHEREBOUNDARY == rw::Camera::SPHEREBOUNDARY && rwSPHEREINSIDE == rw::Camera::SPHEREINSIDE);
 static_assert(rwPERSPECTIVE == rw::Camera::PERSPECTIVE && rwPARALLEL == rw::Camera::PARALLEL);
@@ -32,6 +32,30 @@ namespace {
 using rw::d3d::d3d9Globals;
 
 RwUInt32 s_StencilClear = 0; // RwD3D9SetStencilClear (the exe's StencilClearValue, default 0)
+
+// 01r: the exe's zScale / zShift (0x7EE200), evaluated as the asm does. librw's calczShiftScale is algebraically the same for the perspective case but
+// shrinks the device range differently (it updates N before using it for F); here delta = (F - N) * 1e-4f is taken once. n, f are 1/near, 1/far for a
+// perspective camera, near, far for a parallel one; zScale = (F' - N') / (f - n), zShift = 0.5 * ((F' + N') - (n + f) * zScale) with F' = float(F - delta).
+void CalcZShiftScale(RwCamera* cam) {
+    if (!rw::engine) {
+        return;
+    }
+    const double dNear = rw::engine->device.zNear, dFar = rw::engine->device.zFar;
+    double       n, f;
+    if (cam->projection == rw::Camera::PARALLEL) {
+        n = cam->nearPlane;
+        f = cam->farPlane;
+    } else {
+        f = 1.0 / static_cast<double>(cam->farPlane);
+        n = 1.0 / static_cast<double>(cam->nearPlane);
+    }
+    const double delta = (dFar - dNear) * static_cast<double>(0.0001f);
+    const float  far2  = static_cast<float>(dFar - delta);
+    const double near2 = delta + dNear;
+    const double zs    = (static_cast<double>(far2) - near2) / (f - n);
+    cam->zScale        = static_cast<float>(zs);
+    cam->zShift        = static_cast<float>(0.5 * ((static_cast<double>(far2) + near2) - (n + f) * zs));
+}
 
 bool DepthFormatHasStencil(D3DFORMAT f) {
     return f == D3DFMT_D24S8 || f == D3DFMT_D24X4S4 || f == D3DFMT_D24FS8 || f == D3DFMT_D15S1;
@@ -57,7 +81,7 @@ bool ResetDeviceNow() {
 RwCamera* RwCameraCreate(void) {
     RwCamera* cam = rw::Camera::create();
     if (cam) {
-        rw::calczShiftScale(cam);
+        CalcZShiftScale(cam);
     }
     return cam;
 }
@@ -75,18 +99,28 @@ RwBool RwCameraDestroy(RwCamera* camera) {
 }
 
 // A: Camera::beginUpdate = syncDirty (LTMs, camera frustum/view matrix), device beginUpdate (view/proj into devView/devProj, window-size
-// reset, render surfaces, viewport, BeginScene) + the fixed-function view/projection upload RW did. `curCamera` / `renderFrame` are the
-// RwEngineInstance fields the game reads (renderFrame is RW's per-camera-pass counter, used as the env-map "already updated" key).
+// reset, render surfaces, viewport, BeginScene) + the fixed-function view/projection upload RW did. The exe (0x7EF370) sets `curCamera` first, syncs the
+// dirty frames, calls the device's begin-update and returns NULL if that failed (curCamera stays set). It does NOT touch `renderFrame`: that counter
+// ("Camera display count", read by the env-map pipeline as its once-per-frame key) is incremented by RpWorldRender (0x750453).
+static bool s_worldRenderBumpsFrame = false; // set by NotsaRwBumpRenderFrame(): once RpWorldRender (world.cpp, not this file) bumps it, BeginUpdate must not
 RwCamera* RwCameraBeginUpdate(RwCamera* camera) {
     if (!camera || !camera->getFrame() || !camera->frameBuffer || !rw::d3d::d3ddevice) {
         return nullptr;
     }
     RwEngineInstance->curCamera = camera;
-    RwEngineInstance->renderFrame++;
+    if (!s_worldRenderBumpsFrame) {
+        RwEngineInstance->renderFrame++; // fallback until world.cpp calls NotsaRwBumpRenderFrame(): one bump per begin-update, close to once per frame
+    }
     camera->beginUpdate();
     rw::d3d::d3ddevice->SetTransform(D3DTS_VIEW, reinterpret_cast<const D3DMATRIX*>(&camera->devView));
     rw::d3d::d3ddevice->SetTransform(D3DTS_PROJECTION, reinterpret_cast<const D3DMATRIX*>(&camera->devProj));
     return camera;
+}
+
+// 01r: to be called by the RpWorldRender shim (world.cpp) exactly where the exe increments RwEngineInstance->renderFrame (0x750453)
+void NotsaRwBumpRenderFrame() {
+    s_worldRenderBumpsFrame = true;
+    RwEngineInstance->renderFrame++;
 }
 
 // D: EndScene; RW clears curCamera outside an update.
@@ -128,9 +162,22 @@ RwCamera* RwCameraShowRaster(RwCamera* camera, void* /*pDev*/, RwUInt32 flags) {
     return camera;
 }
 
-// D: 6 planes in RW's order, boundary when the sphere straddles one. Planes are those of the last sync (BeginUpdate / syncDirty).
+// 0x7EE2D0: 6 planes in RW's order (far, near, right, top, left, bottom), distance = (n.y*c.y + n.x*c.x) + n.z*c.z - plane distance (x87 order);
+// OUTSIDE (0) if it exceeds the radius for any plane, else BOUNDARY (1) if it is above -radius for any plane, else INSIDE (2). NaN counts as inside.
+// Planes are those of the last sync (BeginUpdate / syncDirty).
 RwFrustumTestResult RwCameraFrustumTestSphere(const RwCamera* camera, const RwSphere* sphere) {
-    return static_cast<RwFrustumTestResult>(camera->frustumTestSphere(sphere));
+    int res = rwSPHEREINSIDE;
+    for (int i = 0; i < 6; i++) {
+        const auto&  pl = camera->frustumPlanes[i].plane;
+        const double d  = ((double)pl.normal.y * sphere->center.y + (double)pl.normal.x * sphere->center.x) + (double)pl.normal.z * sphere->center.z - (double)pl.distance;
+        if (d > (double)sphere->radius) {
+            return rwSPHEREOUTSIDE;
+        }
+        if (d > -(double)sphere->radius) {
+            res = rwSPHEREBOUNDARY;
+        }
+    }
+    return static_cast<RwFrustumTestResult>(res);
 }
 
 // D: also refreshes zScale/zShift (librw) and marks the camera's frame dirty so the frustum is rebuilt on the next sync.
@@ -139,6 +186,7 @@ RwCamera* RwCameraSetNearClipPlane(RwCamera* camera, RwReal nearClip) {
         return nullptr;
     }
     camera->setNearPlane(nearClip);
+    CalcZShiftScale(camera);
     return camera;
 }
 
@@ -147,6 +195,7 @@ RwCamera* RwCameraSetFarClipPlane(RwCamera* camera, RwReal farClip) {
         return nullptr;
     }
     camera->setFarPlane(farClip);
+    CalcZShiftScale(camera);
     return camera;
 }
 
@@ -156,7 +205,7 @@ RwCamera* RwCameraSetProjection(RwCamera* camera, RwCameraProjection projection)
         return nullptr;
     }
     camera->setProjection(projection);
-    rw::calczShiftScale(camera);
+    CalcZShiftScale(camera);
     return camera;
 }
 

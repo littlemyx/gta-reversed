@@ -239,11 +239,14 @@ if (${RE_PROJECT}_RW_LIBRW)
         add_executable(rw_math_stream_test EXCLUDE_FROM_ALL
             "${PROJECT_SOURCE_DIR}/tests/standalone/rw_math_stream_test.cpp"
             "${CMAKE_CURRENT_SOURCE_DIR}/standalone/rw/math.cpp"
+            "${CMAKE_CURRENT_SOURCE_DIR}/standalone/rw/rwmath_tables.cpp"
             "${CMAKE_CURRENT_SOURCE_DIR}/standalone/rw/stream.cpp"
         )
         target_compile_definitions(rw_math_stream_test PRIVATE NOTSA_RW_LIBRW NOTSA_RW_UNIT_TEST RW_D3D9)
         target_include_directories(rw_math_stream_test BEFORE PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/fakerw")
         target_link_libraries(rw_math_stream_test PRIVATE librw)
+        # the exe-oracle part of the test maps gta_sa_compact.exe at its own addresses (0x401000..0xCB0000): keep the test image out of that range
+        target_link_options(rw_math_stream_test PRIVATE /BASE:0x20000000 /DYNAMICBASE:NO /FIXED:NO)
     endif()
 
     # (defined here, BEFORE add_dependency() below: that macro calls add_compile_options(<pkg> PRIVATE ...) at directory scope, which every later target inherits as bogus sources)

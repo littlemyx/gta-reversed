@@ -19,6 +19,7 @@
 #include "TaskSimpleStandStill.h"
 #include "TaskSimpleGoToPoint.h"
 #include "SeekEntity/TaskComplexSeekEntity.h"
+#include "TaskComplexFollowLeaderInFormation.h"
 
 void CTaskComplexGangFollower::InjectHooks() {
     RH_ScopedVirtualClass(CTaskComplexGangFollower, 0x86F938, 11);
@@ -26,7 +27,7 @@ void CTaskComplexGangFollower::InjectHooks() {
 
     RH_ScopedInstall(Constructor, 0x65EAA0);
     RH_ScopedInstall(Destructor, 0x65EBB0);
-    //RH_ScopedInstall(CalculateOffsetPosition, 0x65ED40, { .Reversed = false }); // not hooked because i want to keep CVector return, but original function took a CVector&
+    RH_ScopedInstall(CalculateOffsetPosition, 0x65ED40); // returns `CVector` by value == hidden sret pointer on stack, same as the original `CVector&` param
     RH_ScopedVMTInstall(Clone, 0x65ECB0);
     RH_ScopedVMTInstall(MakeAbortable, 0x65EC30);
     RH_ScopedVMTInstall(CreateNextSubTask, 0x665E00);
@@ -69,9 +70,29 @@ CTaskComplexGangFollower::~CTaskComplexGangFollower() {
 
 // 0x65ED40
 CVector CTaskComplexGangFollower::CalculateOffsetPosition() {
-    CVector ret;
-    plugin::CallMethod<0x65ED40, CTaskComplexGangFollower*>(this, &ret);
-    return ret;
+    CPed* const leader = m_Leader;
+
+    const auto moveState = leader->m_nMoveState;
+    const bool bLeaderMoving = moveState == PEDMOVE_WALK || moveState == PEDMOVE_RUN || moveState == PEDMOVE_SPRINT;
+
+    // Squared distance the leader moved since the last update (the original evaluates it in extended precision: (dz^2 + dy^2) + dx^2)
+    const auto& leaderPos = leader->GetPosition();
+    const double dx = (double)leaderPos.x - (double)m_PedPosn.x;
+    const double dy = (double)leaderPos.y - (double)m_PedPosn.y;
+    const double dz = (double)leaderPos.z - (double)m_PedPosn.z;
+    const double distSq = (dz * dz + dy * dy) + dx * dx;
+
+    if (bLeaderMoving) {
+        const auto& moving = CTaskComplexFollowLeaderInFormation::ms_offsets.MovingOffsets[m_Arg3C];
+        m_Offset.FromMultiply3x3(*leader->m_matrix, CVector{moving.x, moving.y, 0.f});
+        m_bFlag4 = false;
+    } else if (distSq > 9.0 || !m_bFlag4) { // skipped only if `!(distSq > 9.0f)` (NaN-safe) and the flag is set
+        m_PedPosn = leaderPos;
+        const auto& standing = CTaskComplexFollowLeaderInFormation::ms_offsets.Offsets[m_Arg3C];
+        m_Offset  = CVector{standing.x, standing.y, 0.f};
+        m_bFlag4  = true;
+    }
+    return m_Offset;
 }
 
 // 0x65ECB0

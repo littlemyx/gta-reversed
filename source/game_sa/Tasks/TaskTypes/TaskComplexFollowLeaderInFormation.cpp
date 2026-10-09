@@ -150,7 +150,7 @@ CTask* CTaskComplexFollowLeaderInFormation::ControlSubTask(CPed* ped) {
         if (m_pSubTask->GetTaskType() == TASK_COMPLEX_SEEK_ENTITY) {
             // Set the seek task's max dist to the vehicle's bound radius (this also resets the seek task's scan timer)
             const auto radius = CModelInfo::GetModelInfo(leaderVeh->m_nModelIndex)->GetColModel()->GetBoundRadius();
-            plugin::CallMethod<0x6955D0, CTask*, float>(m_pSubTask, radius); // `CTaskComplexSeekEntity::SetMaxEntityDist2D`
+            static_cast<CTaskComplexSeekEntity<>*>(m_pSubTask)->SetMaxEntityDist2D(radius); // 0x6955D0
 
             if (m_Dist <= 0.f) {
                 return ret;

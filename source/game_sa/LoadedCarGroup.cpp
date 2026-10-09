@@ -101,11 +101,9 @@ eModelID CLoadedCarGroup::PickRandomCar(bool bNotTooManyInTheWorld, bool bOnlyPi
             })
         );
     } else {
-#ifdef FIX_BUGS
+        // The exe counts the leading valid members (loop 0x611C60, stops at the first negative) and only ever uses those; iterating all 23 slots
+        // (the former non-FIX_BUGS path) walks into MODEL_INVALID entries and dereferences a null model info
         return PickRandom(GetAllModels());
-#else
-        return PickRandom(m_models);
-#endif
     }
 }
 

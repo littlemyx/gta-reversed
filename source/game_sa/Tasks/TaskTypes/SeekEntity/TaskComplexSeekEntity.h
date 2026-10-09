@@ -427,15 +427,15 @@ protected: // Wrappers for hooks
     // 0x493730
     CTaskComplexSeekEntity* Constructor(
         CEntity* entity,
-        int32    taskTimer2Interval,
-        int32    taskTimer1Interval,
+        int32    seekInterval,  // Stored at +0x10 (`m_seekInterval`) by the original
+        int32    scanInterval,  // Stored at +0x14 (`m_scanInterval`)
         float    maxEntityDist2D,
         float    unk1,
         float    unk2,
         bool     flag0,
         bool     flag1
     ) {
-        this->CTaskComplexSeekEntity::CTaskComplexSeekEntity(entity, taskTimer1Interval, taskTimer2Interval, maxEntityDist2D, unk1, unk2, flag0, flag1);
+        this->CTaskComplexSeekEntity::CTaskComplexSeekEntity(entity, seekInterval, scanInterval, maxEntityDist2D, unk1, unk2, flag0, flag1);
         return this;
     }
 

@@ -5,5 +5,28 @@
         "minor": 2,
         "patch": 0
     },
-    "include": ["./ConanPresets.json"]
+    "configurePresets": [
+        {
+            "name": "StandaloneRelease",
+            "displayName": "Standalone (librw, x87/PC24) optimised: /O2 /Ob2 /fp:precise /arch:IA32 -MT, /Z7+PDB, NDEBUG",
+            "description": "Optimised standalone exe that must stay bit-exact with the Debug one. Needs `conan install . -s build_type=Release` (deps in build/Release/generators) first, and -DGTASA_PYTHON=<python>. See .notes/PHASE2_STATUS.md (StandaloneRelease).",
+            "generator": "Ninja",
+            "binaryDir": "${sourceDir}/build/StandaloneRelease",
+            "toolchainFile": "${sourceDir}/build/Release/generators/conan_toolchain.cmake",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "Release",
+                "CMAKE_POLICY_DEFAULT_CMP0091": "NEW",
+                "GTASA_STANDALONE": "ON",
+                "GTASA_STANDALONE_DUMP_HOOKS_ONLY": "OFF",
+                "GTASA_STANDALONE_RELEASE": "ON",
+                "GTASA_ORIGINAL_EXE": "${sourceDir}/gta_sa_compact.exe",
+                "GTASA_WITH_SCRIPT_COMMAND_HOOKS": "OFF",
+                "GTASA_USE_SDL3": "ON",
+                "GTASA_UNITY_BUILD": "OFF"
+            }
+        }
+    ],
+    "include": [
+        "./ConanPresets.json"
+    ]
 }

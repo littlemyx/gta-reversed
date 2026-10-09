@@ -98,7 +98,9 @@ CPlayerRelationshipRecorder& GetPlayerRelationshipRecorder() {
     static auto& g_sPlayerRelationshipRecorder = StaticRef<CPlayerRelationshipRecorder*>(0xC17084);
 
     if (!g_sPlayerRelationshipRecorder) {
-        g_sPlayerRelationshipRecorder = new CPlayerRelationshipRecorder();
+        // The original allocates via 0x82119A and on failure stores null (and returns it); mirror that with a nothrow new.
+        // NOTE: The original returns a pointer, so a null "reference" is only ever observable through the hook on OOM.
+        g_sPlayerRelationshipRecorder = new (std::nothrow) CPlayerRelationshipRecorder();
     }
     return *g_sPlayerRelationshipRecorder;
 }

@@ -802,6 +802,7 @@ int32 CPedAcquaintanceScanner::ScanCandidateForAcquaintance(CPed& ped, int32 acq
 }
 
 // 0x606BA0 (unreversed)
+// asm: thiscall (the caller loads ECX = this, RET 0xC) but the body never reads ECX, so `this` is unused; args (ped, acquaintanceType, other).
 bool CPedAcquaintanceScanner::CreateAcquaintanceEvent(CPed& ped, int32 acquaintanceType, CPed* other) {
     return plugin::CallMethodAndReturn<bool, 0x606BA0, CPedAcquaintanceScanner*, CPed*, int32, CPed*>(this, &ped, acquaintanceType, other);
 }

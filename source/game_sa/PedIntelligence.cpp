@@ -53,6 +53,7 @@ void CPedIntelligence::InjectHooks()
     RH_ScopedInstall(RestorePedDecisionMakerType, 0x600BC0);
     RH_ScopedInstall(SetHearingRange, 0x600BE0);
     RH_ScopedInstall(SetSeeingRange, 0x600BF0);
+    RH_ScopedInstall(IsInHearingRange, 0x600C00);
     RH_ScopedInstall(IsInSeeingRange, 0x600C60);
     RH_ScopedInstall(FindRespectedFriendInInformRange, 0x600CF0);
     RH_ScopedInstall(IsRespondingToEvent, 0x600DB0);
@@ -89,6 +90,7 @@ void CPedIntelligence::InjectHooks()
     RH_ScopedInstall(FlushIntelligence, 0x601DA0);
     RH_ScopedInstall(TestForStealthKill, 0x601E00);
     RH_ScopedInstall(RecordEventForScript, 0x602050);
+    RH_ScopedInstall(HasInterestingEntites, 0x602080);
     RH_ScopedInstall(IsInterestingEntity, 0x6020A0);
     RH_ScopedInstall(RemoveAllInterestingEntities, 0x602320);
     RH_ScopedInstall(IncrementAngerAtPlayer, 0x421050);
@@ -181,7 +183,13 @@ void CPedIntelligence::SetSeeingRange(float range) {
 // Unused
 // 0x600C00
 bool CPedIntelligence::IsInHearingRange(const CVector& posn) {
-    return plugin::CallMethodAndReturn<bool, 0x600C00, CPedIntelligence*, const CVector&>(this, posn);
+    // The original accumulates the squared distance on the x87 stack (z, y, x term order)
+    const auto& pedPos = m_pPed->GetPosition();
+    const double dx = (double)posn.x - (double)pedPos.x;
+    const double dy = (double)posn.y - (double)pedPos.y;
+    const double dz = (double)posn.z - (double)pedPos.z;
+    const double range = m_fHearingRange;
+    return range * range > dz * dz + dy * dy + dx * dx;
 }
 
 // 0x600C60
@@ -753,7 +761,12 @@ void CPedIntelligence::RecordEventForScript(int32 eventId, int32 eventPriority) 
 // typo: Entities
 // 0x602080
 bool CPedIntelligence::HasInterestingEntites() {
-    return plugin::CallMethodAndReturn<bool, 0x602080, CPedIntelligence*>(this);
+    for (const auto* const entity : m_apInterestingEntities) {
+        if (entity) {
+            return true;
+        }
+    }
+    return false;
 }
 
 // 0x6020A0

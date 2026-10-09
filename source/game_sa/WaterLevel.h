@@ -14,12 +14,12 @@ struct CRenPar {
     int8  flowX{}, flowY{};           // Fixed-point float. Divide by 64
 };
 
-// 0x6E5280
-static CRenPar lerp(CRenPar rp1, CRenPar rp2, float t) {
+// 0x6E5280 - `(1 - t) * a + b * t` per component (the exe's blend form, see `lerpBlend` in common.h)
+static CRenPar lerpBlend(CRenPar rp1, CRenPar rp2, float t) {
     return {
-        lerp(rp1.z, rp2.z, t),
-        lerp(rp1.bigWaves, rp2.bigWaves, t),
-        lerp(rp1.smallWaves, rp2.smallWaves, t),
+        lerpBlend(rp1.z, rp2.z, t),
+        lerpBlend(rp1.bigWaves, rp2.bigWaves, t),
+        lerpBlend(rp1.smallWaves, rp2.smallWaves, t),
         0, 0
     };
 }

@@ -258,6 +258,7 @@ void CCarCtrl::InjectHooks()
     RH_ScopedInstall(SteerAICarWithPhysicsFollowPath, 0x434900);
     RH_ScopedInstall(SteerAICarWithPhysicsFollowPath_Racing, 0x435830);
     RH_ScopedInstall(SteerAICarWithPhysics_OnlyMission, 0x436A90);
+    RH_ScopedInstall(SteerAICarWithPhysics, 0x437C20);
     RH_ScopedInstall(SteerAICarWithPhysicsTryingToBlockTarget, 0x4335E0);
     RH_ScopedInstall(SteerAICarTowardsPointInEscort, 0x4336D0);
     RH_ScopedInstall(SteerAICarParkParallel, 0x433BA0);
@@ -3680,7 +3681,279 @@ void CCarCtrl::SteerAICarTowardsPointInEscort(CVehicle* vehicle, CVehicle* escor
 
 // 0x437C20
 void CCarCtrl::SteerAICarWithPhysics(CVehicle* vehicle) {
-    plugin::Call<0x437C20, CVehicle*>(vehicle);
+    auto& ap = vehicle->m_autoPilot;
+
+    float steer     = 0.0f;
+    float gas       = 0.0f;
+    float brake     = 0.0f;
+    bool  handbrake = false;
+
+    if (ap.m_vehicleRecordingId >= 0 && !CVehicleRecording::bUseCarAI[ap.m_vehicleRecordingId]) {
+        return;
+    }
+
+    SwitchBetweenPhysicsAndGhost(vehicle); // 0x4222A0
+    ap.m_ObstructingEntity = nullptr;
+
+    // Missions that need a target entity are dropped when it is gone
+    switch (ap.m_nCarMission) {
+    case MISSION_RAMCAR_FARAWAY:
+    case MISSION_RAMCAR_CLOSE:
+    case MISSION_BLOCKCAR_FARAWAY:
+    case MISSION_BLOCKCAR_CLOSE:
+    case MISSION_BLOCKCAR_HANDBRAKESTOP:
+    case MISSION_PROTECTION_REAR:
+    case MISSION_PROTECTION_FRONT:
+    case MISSION_ESCORT_LEFT:
+    case MISSION_ESCORT_RIGHT:
+    case MISSION_ESCORT_REAR:
+    case MISSION_ESCORT_FRONT:
+    case MISSION_PLANE_FOLLOW_ENTITY:
+    case MISSION_FOLLOWCAR_FARAWAY:
+    case MISSION_FOLLOWCAR_CLOSE:
+    case MISSION_KILLPED_FARAWAY:
+    case MISSION_KILLPED_CLOSE:
+        if (!ap.m_TargetEntity) {
+            ap.m_nCarMission = MISSION_NONE;
+        }
+        break;
+    case MISSION_HELI_FOLLOW_ENTITY:
+        if (!ap.m_TargetEntity) {
+            ap.m_nCarMission = MISSION_HELI_FLY_AWAY_FROM_PLAYER;
+        }
+        break;
+    default:
+        break;
+    }
+
+    // Resets the temp action once its time is over
+    const auto ExpireTempAction = [&] {
+        if (CTimer::GetTimeInMS() > ap.m_nTempActionTime) {
+            ap.m_nTempAction = TEMPACT_NONE;
+        }
+    };
+
+    if (ap.movementFlags.bIsStopped) {
+        // Waiting for the road nodes around to be loaded
+        steer = 0.0f;
+        gas   = 0.0f;
+        brake = 0.2f; // 0x858CC4
+
+        const auto& pos = vehicle->GetPosition();
+        if (ThePaths.AreNodesLoadedForArea(pos.x - 270.0f, pos.x + 270.0f, pos.y - 270.0f, pos.y + 270.0f)) { // 0x44DD10, 0x859070
+            ap.movementFlags.bIsStopped = false;
+            JoinCarWithRoadAccordingToMission(vehicle); // 0x432CB0
+        }
+    } else {
+        if (ap.movementFlags.bIsParked && ap.m_nCarMission != MISSION_STOP_FOREVER && ap.m_nCarMission != MISSION_NONE) {
+            // Leave the parking spot: reverse out of it
+            ap.m_nTempAction = TEMPACT_REVERSE_STRAIGHT;
+            ap.m_nTempActionTime = CTimer::GetTimeInMS() + 2000;
+            ap.movementFlags.bIsParked = false;
+
+            const auto cur   = ap.m_currentAddress;
+            const auto start = ap.m_startingRouteNode;
+            ap.m_startingRouteNode = cur;
+            ap.m_currentAddress    = start;
+            ap.m_endingRouteNode   = cur;
+        }
+
+        const auto tempAction = ap.m_nTempAction;
+        switch (tempAction) {
+        case TEMPACT_WAIT:
+        case TEMPACT_BRAKE:
+            steer     = 0.0f;
+            gas       = 0.0f;
+            handbrake = false;
+            brake     = tempAction == TEMPACT_WAIT ? 0.2f : 1.0f; // 0x858CC4, 0x858624
+            if (CTimer::GetTimeInMS() > ap.m_nTempActionTime) {
+                ap.m_nTempAction                  = TEMPACT_NONE;
+                ap.m_nTimeToStartMission          = CTimer::GetTimeInMS();
+                ap.m_nTimeSwitchedToRealPhysics   = CTimer::GetTimeInMS();
+            }
+            break;
+        case TEMPACT_REVERSE: {
+            SteerAICarWithPhysics_OnlyMission(vehicle, &steer, &gas, &brake, &handbrake); // 0x436A90
+            steer = -steer;
+            handbrake = false;
+
+            // x87: The dot product is kept in extended precision
+            const auto& moveSpeed = vehicle->m_vecMoveSpeed;
+            const auto& fwd       = vehicle->m_matrix->GetForward();
+            const auto  dot       = ((double)moveSpeed.z * fwd.z + (double)moveSpeed.y * fwd.y) + (double)moveSpeed.x * fwd.x; // 0x40FDB0
+            if (!(dot > 0.04f)) { // 0x858CEC
+                gas   = -0.5f;
+                brake = 0.0f; // 0x858B50
+            } else {
+                gas   = 0.0f;
+                brake = 0.5f; // 0x858B8C
+            }
+            if (CTimer::GetTimeInMS() > ap.m_nTempActionTime) {
+                ap.m_nTempAction                = TEMPACT_NONE;
+                ap.m_nTimeToStartMission        = CTimer::GetTimeInMS();
+            }
+            break;
+        }
+        case TEMPACT_HANDBRAKETURNLEFT:
+            handbrake = true;
+            steer     = 1.0f;
+            gas       = 0.0f;
+            brake     = 0.0f;
+            ExpireTempAction();
+            break;
+        case TEMPACT_HANDBRAKETURNRIGHT:
+            handbrake = true;
+            steer     = -1.0f;
+            gas       = 0.0f;
+            brake     = 0.0f;
+            ExpireTempAction();
+            break;
+        case TEMPACT_HANDBRAKESTRAIGHT:
+            handbrake = true;
+            steer     = 0.0f;
+            gas       = 0.0f;
+            brake     = 0.0f;
+            ExpireTempAction();
+            break;
+        case TEMPACT_TURNLEFT:
+            handbrake = false;
+            steer     = 1.0f;
+            gas       = 1.0f;
+            brake     = 0.0f;
+            ExpireTempAction();
+            break;
+        case TEMPACT_TURNRIGHT:
+            handbrake = false;
+            steer     = -1.0f;
+            gas       = 1.0f;
+            brake     = 0.0f;
+            ExpireTempAction();
+            break;
+        case TEMPACT_GOFORWARD:
+            handbrake = false;
+            steer     = 0.0f;
+            gas       = 0.5f;
+            brake     = 0.0f;
+            ExpireTempAction();
+            break;
+        case TEMPACT_SWIRVELEFT:
+        case TEMPACT_SWIRVERIGHT:
+        case TEMPACT_SWIRVELEFT_STOP:
+        case TEMPACT_SWIRVERIGHT_STOP: {
+            handbrake = false;
+            steer     = (tempAction == TEMPACT_SWIRVERIGHT || tempAction == TEMPACT_SWIRVERIGHT_STOP) ? 0.25f : -0.25f;
+            gas       = 0.0f;
+            brake     = 0.001f; // 0x858CDC
+            if (CTimer::GetTimeInMS() > ap.m_nTempActionTime - 1250u) { // Unsigned wrap-around is intended
+                steer = -steer;
+            }
+            if (CTimer::GetTimeInMS() > ap.m_nTempActionTime) {
+                if (tempAction == TEMPACT_SWIRVELEFT_STOP || tempAction == TEMPACT_SWIRVERIGHT_STOP) {
+                    ap.m_nTempAction     = TEMPACT_WAIT;
+                    ap.m_nTempActionTime = CTimer::GetTimeInMS() + 4000;
+                } else {
+                    ap.m_nTempAction = TEMPACT_NONE;
+                }
+            }
+            break;
+        }
+        case TEMPACT_REVERSE_LEFT:
+        case TEMPACT_REVERSE_RIGHT: {
+            handbrake = false;
+            gas       = -0.75f;
+            brake     = 0.0f;
+            const auto maxSteer = FindMaxSteerAngle(vehicle); // 0x427FE0
+            steer = tempAction == TEMPACT_REVERSE_LEFT ? maxSteer : -maxSteer;
+            if (CTimer::GetTimeInMS() > ap.m_nTempActionTime) {
+                ap.m_nTempAction         = TEMPACT_NONE;
+                ap.m_nTimeToStartMission = CTimer::GetTimeInMS();
+            }
+            break;
+        }
+        case TEMPACT_PLANE_FLY_UP:
+        case TEMPACT_PLANE_FLY_STRAIGHT:
+        case TEMPACT_PLANE_SHARP_LEFT:
+        case TEMPACT_PLANE_SHARP_RIGHT:
+            if (CTimer::GetTimeInMS() > ap.m_nTempActionTime) {
+                ap.m_nTempAction = TEMPACT_NONE;
+            }
+            SteerAICarWithPhysics_OnlyMission(vehicle, &steer, &gas, &brake, &handbrake); // 0x436A90
+            break;
+        case TEMPACT_HEADON_COLLISION: {
+            handbrake = false;
+            gas       = 0.0f;
+            brake     = CTimer::GetTimeInMS() > ap.m_nTempActionTime ? 1.0f : 0.0f; // 0x858624, 0x858B50
+
+            // x87: The new angle is kept in extended precision (0x859068, 0x859060, 0x859058)
+            const auto current = vehicle->m_fSteerAngle;
+            const auto delta   = (double)CTimer::GetTimeStep() * 0.05;
+            if (current > 0.0f) {
+                double angle = delta + current;
+                if (0.5 < angle) {
+                    angle = 0.5;
+                }
+                steer = (float)angle;
+            } else {
+                double angle = current - delta;
+                if (-0.5 > angle) {
+                    angle = -0.5;
+                }
+                steer = (float)angle;
+            }
+            ExpireTempAction();
+            break;
+        }
+        case TEMPACT_REVERSE_STRAIGHT: {
+            handbrake = false;
+            steer     = 0.0f;
+
+            // x87: The dot product is kept in extended precision
+            const auto& moveSpeed = vehicle->m_vecMoveSpeed;
+            const auto& fwd       = vehicle->m_matrix->GetForward();
+            const auto  dot       = ((double)moveSpeed.z * fwd.z + (double)moveSpeed.y * fwd.y) + (double)moveSpeed.x * fwd.x; // 0x40FDB0
+            if (!(dot > 0.1f)) { // 0x858B1C
+                gas   = -0.5f;
+                brake = 0.0f; // 0x858B50
+            } else {
+                gas   = 0.0f;
+                brake = 0.5f; // 0x858B8C
+            }
+            ExpireTempAction();
+            break;
+        }
+        case TEMPACT_BOOST_USE_STEERING_ANGLE: {
+            handbrake = false;
+            steer     = vehicle->m_fSteerAngle;
+            gas       = 1.0f;
+            brake     = 0.0f;
+
+            // Boost forwards
+            const auto scale = CTimer::GetTimeStep() * 0.012f; // 0x859054
+            const auto fwd   = vehicle->GetForwardVector();    // 0x41CCB0
+            vehicle->m_vecMoveSpeed = vehicle->m_vecMoveSpeed + fwd * scale;
+            ExpireTempAction();
+            break;
+        }
+        default: // Includes `TEMPACT_NONE`, `TEMPACT_EMPTYTOBEREUSED` and `TEMPACT_STUCKINTRAFFIC`
+            SteerAICarWithPhysics_OnlyMission(vehicle, &steer, &gas, &brake, &handbrake); // 0x436A90
+            break;
+        }
+    }
+
+    vehicle->m_BrakePedal                   = brake;
+    vehicle->m_fSteerAngle                  = steer;
+    vehicle->vehicleFlags.bIsHandbrakeOn    = handbrake;
+    vehicle->m_GasPedal                     = gas;
+
+    if (vehicle->m_nModelIndex == MODEL_VORTEX) {
+        // BUG: The original stores into the +0x988 / +0x994 floats, which are beyond the end of a `CAutomobile`
+        // (they belong to the bigger vehicle classes, so most likely a wrong model check)
+        if (!notsa::IsFixBugs()) {
+            auto* const raw = reinterpret_cast<uint8*>(vehicle);
+            *reinterpret_cast<float*>(raw + 0x994) = gas;
+            *reinterpret_cast<float*>(raw + 0x988) = steer;
+        }
+    }
 }
 
 // 0x434900

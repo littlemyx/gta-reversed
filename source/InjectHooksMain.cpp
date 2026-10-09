@@ -281,6 +281,7 @@
 #include "TaskSimpleUninterruptable.h"
 #include "TaskComplexFallAndGetUp.h"
 #include "TaskComplexFollowNodeRoute.h"
+#include "PatrolRoute.h"
 #include "TaskComplexFollowLeaderInFormation.h"
 #include "TaskSimpleTriggerLookAt.h"
 #include "TaskSimpleHitHead.h"
@@ -929,6 +930,7 @@ void InjectHooksMain() {
     CPathFind::InjectHooks();
     CPathNode::InjectHooks();
     CNodeRoute::InjectHooks();
+    CPatrolRoute::InjectHooks();
     CLoadMonitor::InjectHooks();
     CDecision::InjectHooks();
     CDecisionMaker::InjectHooks();

@@ -194,10 +194,11 @@ bool CTaskInteriorLieInBed::ProcessPed(CPed* ped) {
             // x87: Each of these is stored as a float
             const float dx = m_IntInfo->Pos.x - pedPos.x;
             const float dy = m_IntInfo->Pos.y - pedPos.y;
-            const float dz = m_IntInfo->Pos.z - pedPos.z;
+            const double dzX = (double)m_IntInfo->Pos.z - (double)pedPos.z; // `fst` stores a float copy, but st0 keeps the exact difference
+            const float  dz  = (float)dzX;
 
             // x87: The sum of squares + sqrt is kept in extended precision until the comparison
-            const double lenD    = std::sqrt((double)dz * (double)dz + (double)dy * (double)dy + (double)dx * (double)dx);
+            const double lenD    = std::sqrt(dzX * (double)dz + (double)dy * (double)dy + (double)dx * (double)dx);
             const float  len     = (float)lenD;
             const float  clamped = lenD < (double)0.02f ? len : 0.02f; // 0x858B38 is 0.02f
 

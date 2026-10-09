@@ -90,10 +90,10 @@ void CTaskInteriorSitAtDesk::StartRandomLoopAnim(CPed* ped, float blendDelta) {
         animId   = ANIM_ID_OFF_SIT_TYPE_LOOP;
         duration = 7000 + RandomScaled(5000);
     } else if (chance > 10) {
-        animId   = ANIM_ID_OFF_SIT_BORED_LOOP;
+        animId   = ANIM_ID_OFF_SIT_IDLE_LOOP; // 0x14A
         duration = 2000 + RandomScaled(3000);
     } else {
-        animId   = ANIM_ID_OFF_SIT_IDLE_LOOP;
+        animId   = ANIM_ID_OFF_SIT_BORED_LOOP; // 0x14C
         duration = 2000 + RandomScaled(3000);
     }
 
@@ -233,10 +233,11 @@ bool CTaskInteriorSitAtDesk::ProcessPed(CPed* ped) {
         // x87: Each of these is stored as a float
         const float dx = m_InteriorInfo->Pos.x - pedPos.x;
         const float dy = m_InteriorInfo->Pos.y - pedPos.y;
-        const float dz = m_InteriorInfo->Pos.z - pedPos.z;
+        const double dzX = (double)m_InteriorInfo->Pos.z - (double)pedPos.z; // `fst` stores a float copy, but st0 keeps the exact difference
+        const float  dz  = (float)dzX;
 
         // x87: The sum of squares + sqrt is kept in extended precision until the comparison
-        const double lenD = std::sqrt((double)dz * (double)dz + (double)dy * (double)dy + (double)dx * (double)dx);
+        const double lenD = std::sqrt(dzX * (double)dz + (double)dy * (double)dy + (double)dx * (double)dx);
         const float  len  = (float)lenD;
         const float  clamped = lenD < (double)0.02f ? len : 0.02f;
 

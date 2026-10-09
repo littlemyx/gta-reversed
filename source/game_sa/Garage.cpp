@@ -375,9 +375,10 @@ bool CGarage::RestoreCarsForThisImpoundingGarage(CStoredCar* cars) {
         if (auto* const veh = car.RestoreCar()) {
             veh->vehicleFlags.bImpounded = true;
             CWorld::Add(veh);
-            if (veh->m_nVehicleType == VEHICLE_TYPE_AUTOMOBILE) {
+            // NOTE: the original reads the sub-type (+0x594), not m_nVehicleType (+0x590)
+            if (veh->m_nVehicleSubType == VEHICLE_TYPE_AUTOMOBILE) {
                 static_cast<CAutomobile*>(veh)->PlaceOnRoadProperly(); // 0x6AF420
-            } else if (veh->m_nVehicleType == VEHICLE_TYPE_BIKE) {
+            } else if (veh->m_nVehicleSubType == VEHICLE_TYPE_BIKE) {
                 static_cast<CBike*>(veh)->PlaceOnRoadProperly(); // 0x6BEEB0
             }
             car.Clear();
@@ -445,7 +446,8 @@ void CGarage::ThrowCarsNearDoorOutOfGarage(CVehicle* ignoredVehicle) {
             const double dx = (double)dir.x * 0.02f; // 0x858B38
             const double dy = (double)dir.y * 0.02f;
             const float  dz = dir.z * 0.02f;
-            veh->m_vecMoveSpeed.x = (float)(dx * ts + veh->m_vecMoveSpeed.x);
+            // NOTE: the original spills `dx * timestep` to a float temp before adding the speed (y and z stay in the FPU)
+            veh->m_vecMoveSpeed.x = (float)((double)(float)(dx * ts) + veh->m_vecMoveSpeed.x);
             veh->m_vecMoveSpeed.y = (float)(dy * ts + veh->m_vecMoveSpeed.y);
             veh->m_vecMoveSpeed.z = (float)((double)dz * ts + veh->m_vecMoveSpeed.z);
             break;

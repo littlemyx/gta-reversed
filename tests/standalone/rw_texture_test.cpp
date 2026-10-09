@@ -285,6 +285,118 @@ static void StreamTests() {
     CHECKV(bad == nullptr && rw::TexDictionary::numAllocated == dicts && rw::Texture::numAllocated == texs, "dicts %d textures %d", rw::TexDictionary::numAllocated, rw::Texture::numAllocated);
 }
 
+
+static bool SameDicts(RwTexDictionary* x, RwTexDictionary* y, bool ignoreFilter = false);
+extern bool rwshim_AnisotropySupportedByGFX;
+extern int  rwshim_FxQuality;
+
+// 03c: SA's RW patches RwTexDictionaryGtaStreamRead / Read1 + Read2
+static void GtaStreamTests() {
+    std::printf("-- GtaStreamRead (synthetic)\n");
+    RwTexDictionary* d = RwTexDictionaryCreate();
+    const char* names[5] = {"t0", "t1", "t2", "t3", "t4"};
+    const int filters[5] = {rwFILTERNEAREST, rwFILTERMIPNEAREST, rwFILTERLINEAR, rwFILTERMIPLINEAR, rwFILTERLINEARMIPLINEAR};
+    for (int i = 0; i < 5; ++i) {
+        RwTexture* t = NewTex(names[i], 4 << (i % 3), 4);
+        RwTextureSetFilterMode(t, (RwTextureFilterMode)filters[i]);
+        RwTexDictionaryAddTexture(d, t);   // list order in memory: t4,t3,t2,t1,t0 ; written in that order
+    }
+    const unsigned size = RwTexDictionaryStreamGetSize(d);
+    std::vector<unsigned char> buf(size + 64);
+    rw::StreamMemory ms;
+    ms.open(buf.data(), 0, (unsigned)buf.size());
+    RwTexDictionaryStreamWrite(d, &ms);
+    const unsigned total = ms.length;
+    RwTexDictionary* ref = nullptr;
+    ms.open(buf.data(), total, total);
+    if (rw::findChunk(&ms, rw::ID_TEXDICTIONARY, nullptr, nullptr)) ref = RwTexDictionaryStreamRead(&ms);
+    CHECK(ref && ref->count() == 5);
+
+    // whole read
+    ms.open(buf.data(), total, total);
+    RwTexDictionary* g = nullptr;
+    CHECK(rw::findChunk(&ms, rw::ID_TEXDICTIONARY, nullptr, nullptr));
+    g = RwTexDictionaryGtaStreamRead(&ms);
+    CHECK(g && g->count() == 5);
+    if (g) {
+        CHECKV(Names(g) == Names(ref), "order g=%s ref=%s", Names(g).c_str(), Names(ref).c_str());
+        CHECK(RwTextureGetFilterMode(RwTexDictionaryFindNamedTexture(g, "t4")) == rwFILTERLINEARMIPLINEAR);
+    }
+    if (g) {
+        // t0 NEAREST->LINEAR, t1 MIPNEAREST->MIPLINEAR, others unchanged
+        CHECK(RwTextureGetFilterMode(RwTexDictionaryFindNamedTexture(g, "t0")) == rwFILTERLINEAR);
+        CHECK(RwTextureGetFilterMode(RwTexDictionaryFindNamedTexture(g, "t1")) == rwFILTERMIPLINEAR);
+        CHECK(RwTextureGetFilterMode(RwTexDictionaryFindNamedTexture(g, "t2")) == rwFILTERLINEAR);
+        CHECK(RwTextureGetFilterMode(RwTexDictionaryFindNamedTexture(g, "t3")) == rwFILTERMIPLINEAR);
+        CHECK(SameDicts(g, ref, true));
+    }
+    // split read: Read1 reads n - n/2 = 3 textures, Read2 (a NEW stream over the same memory) the other 2
+    ms.open(buf.data(), total, total);
+    CHECK(rw::findChunk(&ms, rw::ID_TEXDICTIONARY, nullptr, nullptr));
+    RwTexDictionary* s = RwTexDictionaryGtaStreamRead1(&ms);
+    CHECK(s && s->count() == 3);
+    const unsigned posAfter1 = ms.position;
+    rw::StreamMemory ms2;
+    ms2.open(buf.data(), total, total);
+    CHECK(rw::findChunk(&ms2, rw::ID_TEXDICTIONARY, nullptr, nullptr));   // a fresh stream: Read2 skips to the remembered position
+    RwTexDictionary* s2 = RwTexDictionaryGtaStreamRead2(&ms2, s);
+    CHECK(s2 == s && s->count() == 5);
+    CHECKV(ms2.position > posAfter1 && ms2.position <= total, "stream pos after Read1 %u, after Read2 %u (of %u)", posAfter1, ms2.position, total);
+    if (g && s) {
+        CHECKV(Names(s) == Names(g), "split order %s", Names(s).c_str());
+        CHECK(SameDicts(g, s));
+    }
+    if (s) RwTexDictionaryDestroy(s);
+    // n = 1: Read1 reads the single texture (n - n/2 = 1), Read2 nothing
+    RwTexDictionary* one = RwTexDictionaryCreate();
+    RwTexDictionaryAddTexture(one, NewTex("only"));
+    std::vector<unsigned char> b1(RwTexDictionaryStreamGetSize(one) + 64);
+    rw::StreamMemory m1;
+    m1.open(b1.data(), 0, (unsigned)b1.size());
+    RwTexDictionaryStreamWrite(one, &m1);
+    const unsigned l1 = m1.length;
+    m1.open(b1.data(), l1, l1);
+    rw::findChunk(&m1, rw::ID_TEXDICTIONARY, nullptr, nullptr);
+    RwTexDictionary* o1 = RwTexDictionaryGtaStreamRead1(&m1);
+    CHECK(o1 && o1->count() == 1);
+    rw::StreamMemory m1b;
+    m1b.open(b1.data(), l1, l1);
+    rw::findChunk(&m1b, rw::ID_TEXDICTIONARY, nullptr, nullptr);
+    CHECK(RwTexDictionaryGtaStreamRead2(&m1b, o1) == o1 && o1->count() == 1);
+    if (o1) RwTexDictionaryDestroy(o1);
+    RwTexDictionaryDestroy(one);
+
+    // truncated inside the first texture -> NULL, nothing leaked
+    const int dicts = rw::TexDictionary::numAllocated, texs = rw::Texture::numAllocated;
+    ms.open(buf.data(), 100, 100);
+    rw::findChunk(&ms, rw::ID_TEXDICTIONARY, nullptr, nullptr);
+    CHECK(RwTexDictionaryGtaStreamRead(&ms) == nullptr);
+    ms.open(buf.data(), 100, 100);
+    rw::findChunk(&ms, rw::ID_TEXDICTIONARY, nullptr, nullptr);
+    RwTexDictionary* half = RwTexDictionaryGtaStreamRead1(&ms);
+    CHECKV(half == nullptr && rw::TexDictionary::numAllocated == dicts && rw::Texture::numAllocated == texs, "dicts %d tex %d", rw::TexDictionary::numAllocated, rw::Texture::numAllocated);
+
+    // anisotropy patch: only with GPU support, plugin value >= 1, FX quality >= HIGH
+    rwshim_AnisotropySupportedByGFX = true;
+    rwshim_FxQuality = 1;
+    ms.open(buf.data(), total, total);
+    rw::findChunk(&ms, rw::ID_TEXDICTIONARY, nullptr, nullptr);
+    RwTexDictionary* a1 = RwTexDictionaryGtaStreamRead(&ms);
+    const int caps = rw::getMaxSupportedMaxAnisotropy();
+    CHECKV(a1 && GetFirstTexture(a1)->getMaxAnisotropy() == 1, "FX quality 1: aniso=%d (device max %d)", a1 ? GetFirstTexture(a1)->getMaxAnisotropy() : -1, caps);
+    rwshim_FxQuality = 2;
+    ms.open(buf.data(), total, total);
+    rw::findChunk(&ms, rw::ID_TEXDICTIONARY, nullptr, nullptr);
+    RwTexDictionary* a2 = RwTexDictionaryGtaStreamRead(&ms);
+    CHECKV(a2 && GetFirstTexture(a2)->getMaxAnisotropy() == caps, "FX quality 2: aniso=%d (device max %d)", a2 ? GetFirstTexture(a2)->getMaxAnisotropy() : -1, caps);
+    rwshim_AnisotropySupportedByGFX = false;
+    if (a1) RwTexDictionaryDestroy(a1);
+    if (a2) RwTexDictionaryDestroy(a2);
+    if (g) RwTexDictionaryDestroy(g);
+    if (ref) RwTexDictionaryDestroy(ref);
+    RwTexDictionaryDestroy(d);
+}
+
 //--------------------------------------------------------------------------------------------------
 // real files
 //--------------------------------------------------------------------------------------------------
@@ -348,11 +460,11 @@ static RwTexDictionary* LoadTxd(const std::string& path, std::vector<unsigned ch
 }
 
 // Compare every mip level of every texture of two dictionaries (same names).
-static bool SameDicts(RwTexDictionary* x, RwTexDictionary* y) {
+static bool SameDicts(RwTexDictionary* x, RwTexDictionary* y, bool ignoreFilter) {
     for (rw::LLLink* l = x->textures.link.next; l != &x->textures.link; l = l->next) {
         RwTexture* tx = rw::Texture::fromDict(l);
         RwTexture* ty = RwTexDictionaryFindNamedTexture(y, tx->name);
-        if (!ty || tx->filterAddressing != ty->filterAddressing || std::strcmp(tx->mask, ty->mask)) return false;
+        if (!ty || (ignoreFilter ? (tx->filterAddressing & ~0xFFu) != (ty->filterAddressing & ~0xFFu) : tx->filterAddressing != ty->filterAddressing) || std::strcmp(tx->mask, ty->mask)) return false;
         RwRaster *rx = tx->raster, *ry = ty->raster;
         if (rx->width != ry->width || rx->height != ry->height || rx->format != ry->format || rx->getNumLevels() != ry->getNumLevels()) return false;
         for (int lv = 0; lv < rx->getNumLevels(); ++lv) {
@@ -375,7 +487,8 @@ static bool SameDicts(RwTexDictionary* x, RwTexDictionary* y) {
 static void RealFile(const std::string& models, const char* rel, bool expectPal8) {
     std::printf("-- %s\n", rel);
     std::vector<unsigned char> raw;
-    RwTexDictionary* d = LoadTxd(models + "/" + rel, raw);
+    const std::string path = models + "/" + rel;
+    RwTexDictionary* d = LoadTxd(path, raw);
     CHECK(d != nullptr);
     if (!d) return;
     const std::vector<RawTex> rt = ParseRaw(raw);
@@ -470,6 +583,25 @@ static void RealFile(const std::string& models, const char* rel, bool expectPal8
         CHECK(SameDicts(d, d2));
         RwTexDictionaryDestroy(d2);
     }
+    // SA patched readers on the real file: whole read and Read1 + Read2 give the same dictionary as the plain reader (filters NEAREST->LINEAR aside)
+    {
+        rw::StreamFile sf;
+        RwTexDictionary *g = nullptr, *s = nullptr;
+        if (sf.open(path.c_str(), "rb") && rw::findChunk(&sf, rw::ID_TEXDICTIONARY, nullptr, nullptr)) g = RwTexDictionaryGtaStreamRead(&sf);
+        sf.close();
+        CHECKV(g && g->count() == d->count() && Names(g) == Names(d) && SameDicts(d, g, true), "GtaStreamRead: %d textures, same order and data", g ? g->count() : -1);
+        std::vector<unsigned char> mem = ReadAll(path);
+        rw::StreamMemory m1, m2;
+        m1.open(mem.data(), (unsigned)mem.size(), (unsigned)mem.size());
+        m2.open(mem.data(), (unsigned)mem.size(), (unsigned)mem.size());
+        if (rw::findChunk(&m1, rw::ID_TEXDICTIONARY, nullptr, nullptr)) s = RwTexDictionaryGtaStreamRead1(&m1);
+        const int afterRead1 = s ? s->count() : -1;
+        rw::findChunk(&m2, rw::ID_TEXDICTIONARY, nullptr, nullptr);
+        if (s) s = RwTexDictionaryGtaStreamRead2(&m2, s);
+        CHECKV(s && s->count() == d->count() && afterRead1 == d->count() - d->count() / 2 && Names(s) == Names(d) && SameDicts(d, s, true), "Read1 (%d of %d) + Read2: same dictionary", afterRead1, d->count());
+        if (g) RwTexDictionaryDestroy(g);
+        if (s) RwTexDictionaryDestroy(s);
+    }
     const int texBefore = rw::Texture::numAllocated, d3dBefore = rw::d3d::d3d9Globals.numTextures;
     const int n = d->count();
     RwTexDictionaryDestroy(d);
@@ -486,6 +618,7 @@ int main(int argc, char** argv) {
     mf.rwfree    = [](void* p) { std::free(p); };
     CHECK(rw::Engine::init(&mf));
     // the game registers its dictionary plugin (CTxdStore::PluginAttach) between RwEngineInit and RwEngineOpen
+    rw::registerAnisotropyPlugin();   // what RpAnisotPluginAttach will do
     g_pluginOffset = RwTexDictionaryRegisterPlugin(sizeof(PluginData), kPluginId, PlugCtor, PlugDtor, PlugCopy);
     CHECK(g_pluginOffset >= 0);
     CHECK(RwTexDictionaryRegisterPluginStream(kPluginId, PlugRead, PlugWrite, PlugSize) >= 0);
@@ -503,6 +636,7 @@ int main(int argc, char** argv) {
         DictionaryTests();
         ReadTests();
         StreamTests();
+        GtaStreamTests();
         if (argc > 1) {
             const std::string m = argv[1];
             RealFile(m, "generic/vehicle.txd", false);

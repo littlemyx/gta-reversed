@@ -57,6 +57,7 @@ public:
     void AddEventResponse(int32 decisionMakerIndex, eEventType eventType, eTaskType taskId, float* responseChances, int32* flags);
     void FlushDecisionMakerEventResponse(int32 decisionMakerIndex, eEventType eventId);
     void LoadEventIndices();
+    static void __stdcall LoadEventIndicesFromFile(int32* indices, const char* filename);
     bool HasAnyEventResponse(CPed* ped, const int32* eventTypes, int32 count);
 
 public:

@@ -138,6 +138,7 @@ void CPed::InjectHooks() {
     RH_ScopedInstall(RemoveWeaponForScriptedCutscene, 0x5E6550);
     RH_ScopedInstall(GiveWeaponAtStartOfFight, 0x5E8AB0);
     RH_ScopedInstall(ProcessBuoyancy, 0x5E1FA0);
+    RH_ScopedInstall(SortPeds, 0x5E17E0);
     RH_ScopedInstall(PositionPedOutOfCollision, 0x5E0820);
     RH_ScopedInstall(GrantAmmo, 0x5DF220);
     RH_ScopedInstall(GetWeaponSlot, 0x5DF200);
@@ -1945,9 +1946,45 @@ bool CPed::OurPedCanSeeThisEntity(CEntity* entity, bool isSpotted) {
 * @addr 0x5E17E0
 * @unused
 */
-void CPed::SortPeds(CPed** pedList, int32 arg1, int32 arg2)
-{
-    ((void(__thiscall *)(CPed*, CPed**, int32, int32))0x5E17E0)(this, pedList, arg1, arg2);
+void CPed::SortPeds(CPed** pedList, int32 lo, int32 hi) {
+    if (lo >= hi) {
+        return;
+    }
+
+    // Distance to this ped, accumulated in extended precision (z, y, x order) like the x87 code
+    const auto DistTo = [this](const CPed* other) -> double {
+        const auto& a = GetPosition();
+        const auto& b = other->GetPosition();
+        const double dx = (double)a.x - b.x;
+        const double dy = (double)a.y - b.y;
+        const double dz = (double)a.z - b.z;
+        return std::sqrt((dz * dz + dy * dy) + dx * dx);
+    };
+
+    // Quicksort (ascending distance), recursion on the left part, loop on the right part
+    do {
+        int32 i = lo;
+        int32 j = hi;
+
+        const float pivotDist = (float)DistTo(pedList[(i + j) / 2]); // Spilled to a float in the original
+        do {
+            while (DistTo(pedList[i]) < (double)pivotDist) { // `!(x < pivot)` ends the loop (NaN too)
+                i++;
+            }
+            while (DistTo(pedList[j]) > (double)pivotDist) {
+                j--;
+            }
+            if (i > j) {
+                break;
+            }
+            std::swap(pedList[i], pedList[j]);
+            i++;
+            j--;
+        } while (i <= j);
+
+        SortPeds(pedList, lo, j);
+        lo = i;
+    } while (lo < hi);
 }
 
 /*!

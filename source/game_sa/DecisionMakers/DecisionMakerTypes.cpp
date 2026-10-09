@@ -9,6 +9,7 @@ void CDecisionMakerTypes::InjectHooks() {
     RH_ScopedCategory("DecisionMakers");
 
     RH_ScopedInstall(LoadEventIndices, 0x600840);
+    RH_ScopedInstall(LoadEventIndicesFromFile, 0x5BB9F0);
     RH_ScopedInstall(HasAnyEventResponse, 0x6042B0);
     RH_ScopedInstall(RemoveDecisionMaker, 0x6043A0);
     RH_ScopedInstall(FlushDecisionMakerEventResponse, 0x604490);
@@ -132,8 +133,31 @@ void CDecisionMakerTypes::FlushDecisionMakerEventResponse(int32 decisionMakerInd
 
 // 0x600840
 void CDecisionMakerTypes::LoadEventIndices() {
-    // 0x5BB9F0 is a __stdcall (RET 8) file loader: (int32 indices[], const char* filename), original passes the string at 0x86CD44
-    reinterpret_cast<void(__stdcall*)(int32*, const char*)>(0x5BB9F0)(m_EventIndices.data(), "PedEvent.txt");
+    LoadEventIndicesFromFile(m_EventIndices.data(), "PedEvent.txt"); // Original passes the string at 0x86CD44
+}
+
+// 0x5BB9F0 (__stdcall, RET 8)
+// Fills `indices` (96 entries) with the line number of each event listed in `data\decision\<filename>`.
+void __stdcall CDecisionMakerTypes::LoadEventIndicesFromFile(int32* indices, const char* filename) {
+    std::fill_n(indices, +eEventType::EVENT_TOTAL_NUM_EVENTS, 0);
+
+    CFileMgr::SetDir("");
+    CFileMgr::SetDir("data\\decision\\");
+    const auto file = CFileMgr::OpenFile(filename, "r");
+    CFileMgr::SetDir("");
+
+    char line[256];
+    char name[256];
+    int32 eventIdx = 0; // NOTE: Uninitialised in the original (stale if a line fails to parse)
+    int32 lineNo = 0;
+    while (CFileMgr::ReadLine(file, line, (int32)sizeof(line))) {
+        if (line[0] && line[0] != '\n') {
+            // BUG: No bounds check on `eventIdx` (and `name` is unbounded), as in the original
+            (void)sscanf(line, "%s %d", name, &eventIdx);
+            indices[eventIdx] = lineNo++;
+        }
+    }
+    CFileMgr::CloseFile(file);
 }
 
 // 0x6042B0

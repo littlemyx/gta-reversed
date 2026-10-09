@@ -8,6 +8,8 @@
 
 #include "Renderer.h"
 
+#include "Fx/FxFtol.h"
+#include <numbers>
 #include "Occlusion.h"
 #include "PostEffects.h"
 #include "Shadows.h"
@@ -56,16 +58,316 @@ void CRenderer::InjectHooks()
     RH_ScopedInstall(RequestObjectsInFrustum, 0x555960);
     RH_ScopedInstall(RequestObjectsInDirection, 0x555CB0);
 
+    CWorldScan::InjectHooks();
 }
 
-void CWorldScan::ScanWorld(CVector2D *points, int32 pointsCount, tScanFunction scanFunction)
-{
-    plugin::Call<0x72CAE0,CVector2D*, int32, tScanFunction>(points,pointsCount, scanFunction);
+void CWorldScan::InjectHooks() {
+    RH_ScopedClass(CWorldScan);
+    RH_ScopedCategoryGlobal();
+
+    RH_ScopedInstall(ScanWorld, 0x72CAE0);
+    RH_ScopedInstall(SetExtraRectangleToScan, 0x72D5E0);
 }
 
-void CWorldScan::SetExtraRectangleToScan(float minX, float maxX, float minY, float maxY)
-{
-    plugin::Call<0x72D5E0, float, float, float, float>(minX, maxX, minY, maxY);
+// 0x72CAE0
+// Scan-converts the convex hull of `points` and calls `scanFunction(x, y)` for every cell of every row.
+// x87 notes: all float expressions are evaluated in extended precision (double here) and rounded on a float store.
+// `_floor` (0x8219F0) / `_ceil` (0x823820) results go through `_ftol` (0x821B40).
+void CWorldScan::ScanWorld(CVector2D* points, int32 pointsCount, tScanFunction scanFunction) {
+    using notsa::detail::Ftol;
+    const auto FloorI = [](double v) { return Ftol(std::floor(v)); };
+
+    int32 n = pointsCount;
+
+    // Remove duplicate points (in place)
+    for (int32 i = 0; i < n - 1; i++) {
+        for (int32 j = i + 1; j < n; j++) {
+            if (points[i].x == points[j].x && points[i].y == points[j].y) {
+                for (int32 k = j; k < n - 1; k++) {
+                    points[k] = points[k + 1];
+                }
+                n--;
+                j--;
+            }
+        }
+    }
+
+    // Find the point with the lowest Y
+    int32 startIdx  = 0;
+    float lowestY   = points[0].y;
+    for (int32 k = 1; k < n; k++) {
+        if (points[k].y < lowestY) {
+            lowestY  = points[k].y;
+            startIdx = k;
+        }
+    }
+
+    // Gift wrapping
+    uint8 visited[8]{};
+    CVector2D hull[8];
+    visited[startIdx] = 1;
+    hull[0]           = points[startIdx];
+    int32 hullCount   = 1;
+    float hullAngle   = 0.f;
+    int32 cur         = startIdx;
+
+    // BUG: the original never initialises `best` before the loop, it holds the first 4 bytes of the `visited` array
+    // (stack garbage in the sense of an index); it is only used if no candidate is found at all.
+    uint32 bestWord{};
+    std::memcpy(&bestWord, visited, sizeof(bestWord));
+    int32 best = (int32)bestWord;
+
+    while (true) {
+        float bestAngle = 99999.9f; // 0x47C34FF3
+        for (int32 i = 0; i < n; i++) {
+            if (i == cur) {
+                continue;
+            }
+            double angle = (double)CGeneral::GetATanOfXY(points[i].x - points[cur].x, points[i].y - points[cur].y) - (double)hullAngle;
+            if (angle < 0.0) { // 0x858B50 = 0.0f
+                do {
+                    angle += (double)(2.f * std::numbers::pi_v<float>); // 0x858CBC
+                } while (angle < 0.0);
+            }
+            if (!(angle < (double)(2.f * std::numbers::pi_v<float>))) {
+                do {
+                    angle -= (double)(2.f * std::numbers::pi_v<float>);
+                } while (!(angle < (double)(2.f * std::numbers::pi_v<float>)));
+            }
+            if (angle < (double)bestAngle) {
+                bestAngle = (float)angle;
+                best      = i;
+            }
+        }
+        if (visited[best]) {
+            break;
+        }
+        hullAngle = (float)((double)bestAngle + (double)hullAngle);
+        hull[hullCount++] = points[best];
+        visited[best] = 1;
+        cur = best;
+    }
+
+    if (hullCount < 3) {
+        return;
+    }
+
+    // Y range of the hull
+    float highestY = hull[0].y;
+    lowestY        = hull[0].y;
+    startIdx       = 0;
+    for (int32 k = 1; k < hullCount; k++) {
+        if (lowestY > hull[k].y) {
+            lowestY  = hull[k].y;
+            startIdx = k;
+        } else if (hull[k].y > highestY) {
+            highestY = hull[k].y;
+        }
+    }
+
+    int32 y    = FloorI(lowestY);
+    int32 yEnd = FloorI(highestY);
+
+    int32 minX = 9999;
+    int32 maxX = -9999;
+
+    // Left edge (indices going down from the lowest point)
+    int32 la, lb = startIdx;
+    for (int32 cnt = 0;;) {
+        cnt++;
+        la = lb;
+        lb--;
+        if (lb < 0) {
+            lb = hullCount - 1;
+        }
+        if ((double)minX > (double)hull[la].x) {
+            minX = FloorI(hull[la].x);
+        }
+        const float nextY = (float)std::floor((double)hull[lb].y);
+        if (!(FloorI(hull[la].y) == Ftol((double)nextY) && cnt < hullCount)) {
+            break;
+        }
+    }
+
+    // Right edge (indices going up from the lowest point)
+    int32 ra, rb = startIdx;
+    for (int32 cnt = 0;;) {
+        cnt++;
+        ra = rb;
+        rb++;
+        if (rb == hullCount) {
+            rb = 0;
+        }
+        if ((double)maxX < (double)hull[ra].x) {
+            maxX = FloorI(hull[ra].x);
+        }
+        const float nextY = (float)std::floor((double)hull[rb].y);
+        if (!(FloorI(hull[ra].y) == Ftol((double)nextY) && cnt < hullCount)) {
+            break;
+        }
+    }
+
+    const auto Slope = [](const CVector2D& from, const CVector2D& to) {
+        return (float)(((double)to.x - (double)from.x) / ((double)to.y - (double)from.y));
+    };
+    const auto StartX = [](const CVector2D& from, float slope) {
+        return (float)((std::ceil((double)from.y) - (double)from.y) * (double)slope + (double)from.x);
+    };
+
+    float rs = Slope(hull[ra], hull[rb]);
+    float rx = StartX(hull[ra], rs);
+    float ls = Slope(hull[la], hull[lb]);
+    float lx = StartX(hull[la], ls);
+
+    if (y != yEnd) {
+        if (ls < 0.f) {
+            if (const auto v = FloorI((double)lx); minX > v) {
+                minX = v;
+            }
+        }
+        if (rs >= 0.f) {
+            if (const auto v = FloorI((double)rx); maxX < v) {
+                maxX = v;
+            }
+        }
+    }
+
+    while (y <= yEnd) {
+        // BUG: `minX` doubles as the "last index" of the extra rectangle list below (original reuses the stack slot)
+        int32 x = minX;
+        if (!(minX > maxX)) {
+            do {
+                scanFunction(x, y);
+
+                int32 count = ms_nExtraRectangleCount;
+                if (count > 0) {
+                    minX = count - 1;
+                    int32 k = 0;
+                    do {
+                        if (x == ms_aExtraRectangleX[k] && y == ms_aExtraRectangleY[k]) {
+                            if (k < minX) {
+                                for (int32 m = k; m < minX; m++) {
+                                    ms_aExtraRectangleY[m] = ms_aExtraRectangleY[m + 1];
+                                }
+                                for (int32 m = k; m < minX; m++) {
+                                    ms_aExtraRectangleX[m] = ms_aExtraRectangleX[m + 1];
+                                }
+                            }
+                            count = --ms_nExtraRectangleCount;
+                            minX--;
+                            k = 4; // BUG: after a removal the original continues with index 5, not `k`
+                        }
+                        k++;
+                    } while (k < count);
+                }
+                x++;
+            } while (x <= maxX);
+        }
+
+        rx = (float)((double)rs + (double)rx);
+        y++;
+        lx = (float)((double)ls + (double)lx);
+
+        // Left edge
+        if (y == FloorI(hull[lb].y)) {
+            if (y != yEnd) {
+                const double t = (ls < 0.f) ? (double)hull[lb].x : (double)lx - (double)ls;
+                minX = FloorI(t);
+                do {
+                    la = lb;
+                    lb--;
+                    if (lb < 0) {
+                        lb = hullCount - 1;
+                    }
+                    lx = hull[la].x;
+                    if (const auto v = FloorI((double)lx); minX > v) {
+                        minX = v;
+                    }
+                } while (y == FloorI(hull[lb].y));
+                ls = Slope(hull[la], hull[lb]);
+                lx = StartX(hull[la], ls);
+                if (ls < 0.f) {
+                    if (const auto v = FloorI((double)lx); minX > v) {
+                        minX = v;
+                    }
+                }
+            } else {
+                if (!(ls < 0.f)) {
+                    minX = FloorI((double)lx - (double)ls);
+                } else {
+                    do {
+                        minX = FloorI(hull[lb].x);
+                        lb--;
+                        if (lb < 0) {
+                            lb = hullCount - 1;
+                        }
+                    } while (minX > FloorI(hull[lb].x));
+                }
+            }
+        } else {
+            const double t = (ls < 0.f) ? (double)lx : (double)lx - (double)ls;
+            minX = FloorI(t);
+        }
+
+        // Right edge
+        if (y == FloorI(hull[rb].y)) {
+            if (y != yEnd) {
+                const double t = (rs >= 0.f) ? (double)hull[rb].x : (double)rx - (double)rs;
+                maxX = FloorI(t);
+                do {
+                    ra = rb;
+                    rb++;
+                    if (rb == hullCount) {
+                        rb = 0;
+                    }
+                    rx = hull[ra].x;
+                    if (const auto v = FloorI((double)rx); maxX < v) {
+                        maxX = v;
+                    }
+                } while (y == FloorI(hull[rb].y));
+                rs = Slope(hull[ra], hull[rb]);
+                rx = StartX(hull[ra], rs);
+                if (rs >= 0.f) {
+                    if (const auto v = FloorI((double)rx); maxX < v) {
+                        maxX = v;
+                    }
+                }
+            } else {
+                if (!(rs >= 0.f)) {
+                    maxX = FloorI((double)rx - (double)rs);
+                } else {
+                    do {
+                        maxX = FloorI(hull[rb].x);
+                        rb++;
+                        if (rb == hullCount) {
+                            rb = 0;
+                        }
+                    } while (maxX < FloorI(hull[rb].x));
+                }
+            }
+        } else {
+            const double t = (rs >= 0.f) ? (double)rx : (double)rx - (double)rs;
+            maxX = FloorI(t);
+        }
+    }
+
+    for (int32 k = 0; k < ms_nExtraRectangleCount; k++) {
+        scanFunction(ms_aExtraRectangleX[k], ms_aExtraRectangleY[k]);
+    }
+    ms_nExtraRectangleCount = 0;
+}
+
+// 0x72D5E0
+void CWorldScan::SetExtraRectangleToScan(float minX, float maxX, float minY, float maxY) {
+    using notsa::detail::Ftol;
+    for (auto x = Ftol(std::floor((double)minX)); x < Ftol(std::ceil((double)maxX)); x++) {
+        for (auto y = Ftol(std::floor((double)minY)); y < Ftol(std::ceil((double)maxY)); y++) {
+            // BUG: no bounds check, the original arrays hold 4 entries (Y array is directly followed by the X array)
+            ms_aExtraRectangleY[ms_nExtraRectangleCount] = y;
+            ms_aExtraRectangleX[ms_nExtraRectangleCount] = x;
+            ms_nExtraRectangleCount++;
+        }
+    }
 }
 
 void CRenderer::Init() {

@@ -61,6 +61,13 @@ constexpr auto MAX_VISIBLE_SUPERLOD_PTRS = 50u;
 class CWorldScan {
 public:
     using tScanFunction = void(__cdecl*)(int32, int32);
+
+    // NOTSA names. The original keeps 4 + 4 ints back to back (Y at 0xC81598, X at 0xC815A8) and a count at 0xC815B8
+    static inline auto& ms_aExtraRectangleY = StaticRef<int32[4]>(0xC81598);
+    static inline auto& ms_aExtraRectangleX = StaticRef<int32[4]>(0xC815A8);
+    static inline auto& ms_nExtraRectangleCount = StaticRef<int32>(0xC815B8);
+
+    static void InjectHooks();
     static void ScanWorld(CVector2D* points, int32 pointsCount, tScanFunction scanFunction);
     static void SetExtraRectangleToScan(float minX, float maxX, float minY, float maxY);
 };

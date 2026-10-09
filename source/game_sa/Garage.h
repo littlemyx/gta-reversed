@@ -152,10 +152,10 @@ public:
     void Update(int32 garageId);
 
     bool RightModTypeForThisGarage(CVehicle* vehicle);
-    float CalcDistToGarageRectangleSquared(float, float);
-    void NeatlyLineUpStoredCars(CStoredCar* car);
-    bool RestoreCarsForThisHideOut(CStoredCar* car);
-    bool RestoreCarsForThisImpoundingGarage(CStoredCar* car);
+    float CalcDistToGarageRectangleSquared(float x, float y);
+    void NeatlyLineUpStoredCars(CStoredCar* cars);
+    bool RestoreCarsForThisHideOut(CStoredCar* cars);
+    bool RestoreCarsForThisImpoundingGarage(CStoredCar* cars);
     int32 FindMaxNumStoredCarsForGarage();
     bool IsPlayerOutsideGarage(float fRadius);
     bool IsPlayerEntirelyInsideGarage();

@@ -25,6 +25,19 @@ void CGarage::InjectHooks() {
     // RH_ScopedInstall(IsPointInsideGarage, 0x4487D0);
     RH_ScopedInstall(Update, 0x44AA50);
     RH_ScopedInstall(FindDoorsWithGarage, 0x449FF0);
+    RH_ScopedInstall(CalcDistToGarageRectangleSquared, 0x447D80);
+    RH_ScopedInstall(RightModTypeForThisGarage, 0x447720);
+    RH_ScopedInstall(NeatlyLineUpStoredCars, 0x448330);
+    RH_ScopedInstall(RestoreCarsForThisHideOut, 0x448550);
+    RH_ScopedInstall(RestoreCarsForThisImpoundingGarage, 0x4485C0);
+    RH_ScopedInstall(IsPlayerOutsideGarage, 0x448E50);
+    RH_ScopedInstall(IsAnyOtherCarTouchingGarage, 0x449100);
+    RH_ScopedInstall(ThrowCarsNearDoorOutOfGarage, 0x449220);
+    RH_ScopedInstall(IsAnyCarBlockingDoor, 0x4494F0);
+    RH_ScopedInstall(CountCarsWithCenterPointWithinGarage, 0x4495F0);
+    RH_ScopedInstall(StoreAndRemoveCarsForThisImpoundingGarage, 0x449A50);
+    RH_ScopedInstall(SlideDoorOpen, 0x44A660);
+    RH_ScopedInstall(SlideDoorClosed, 0x44A750);
 
     {
         RH_ScopedClass(CStoredCar);
@@ -54,6 +67,20 @@ static CVector TransformPointExt(const CMatrix& m, const CVector& v) {
         (float)((((double)u.y * v.z + (double)r.y * v.x) + (double)f.y * v.y) + p.y),
         (float)((((double)u.z * v.z + (double)r.z * v.x) + (double)f.z * v.y) + p.z)
     };
+}
+
+// 0x59C910 - CVector::Normalise as the original evaluates it: the sum of squares and the reciprocal root stay in the FPU
+// (extended precision), every component is stored as float. A length of 0 (or less) yields (1, y, z) - only x is written.
+static void NormaliseExt(CVector& v) {
+    const double sq = ((double)v.x * v.x + (double)v.y * v.y) + (double)v.z * v.z;
+    if (sq <= 0.0) { // FCOM + JP: NaN takes the sqrt path
+        v.x = 1.0f;
+        return;
+    }
+    const double inv = 1.0 / std::sqrt(sq);
+    v.x = (float)(v.x * inv);
+    v.y = (float)(v.y * inv);
+    v.z = (float)(v.z * inv);
 }
 
 // 0x449D10
@@ -246,67 +273,269 @@ bool CGarage::IsPointInsideGarage(CVector point, float radius) {
 
 // 0x447D80
 float CGarage::CalcDistToGarageRectangleSquared(float x, float y) {
-    return plugin::CallMethodAndReturn<float, 0x447D80, CGarage*, float, float>(this, x, y);
+    // The differences stay on the x87 stack (extended precision); only the result is returned (st0)
+    double dx = 0.0;
+    if (x < m_fLeftCoord) {
+        dx = (double)x - m_fLeftCoord;
+    } else if (x > m_fRightCoord) {
+        dx = (double)x - m_fRightCoord;
+    }
+    double dy = 0.0;
+    if (y < m_fFrontCoord) {
+        dy = (double)y - m_fFrontCoord;
+    } else if (y > m_fBackCoord) {
+        dy = (double)y - m_fBackCoord;
+    }
+    return (float)(dy * dy + dx * dx);
 }
 
 // 0x447720
 bool CGarage::RightModTypeForThisGarage(CVehicle* vehicle) {
-    return plugin::CallMethodAndReturn<bool, 0x447720, CGarage*, CVehicle*>(this, vehicle);
+    if (!vehicle) {
+        return false;
+    }
+    const auto* const mi = CModelInfo::ms_modelInfoPtrs[vehicle->m_nModelIndex]->AsVehicleModelInfoPtr();
+    // NOTE: the original reads only the low byte of `m_nHandlingId` (movzx byte ptr [edx + 0x4A])
+    const auto flags = (uint32)gHandlingDataMgr.m_aVehicleHandling[(uint8)mi->m_nHandlingId].m_nHandlingFlags;
+    switch (m_nType) {
+    case TUNING_LOCO_LOW_CO:
+        return (flags & VEHICLE_HANDLING_LOW_RIDER) != 0;
+    case TUNING_WHEEL_ARCH_ANGELS:
+        return (flags & VEHICLE_HANDLING_STREET_RACER) != 0;
+    case TUNING_TRANSFENDER:
+        return (flags & (VEHICLE_HANDLING_LOW_RIDER | VEHICLE_HANDLING_STREET_RACER)) == 0;
+    default:
+        return false;
+    }
 }
 
 // 0x448330
-void CGarage::NeatlyLineUpStoredCars(CStoredCar* car) {
-    plugin::CallMethod<0x448330, CGarage*, CStoredCar*>(this, car);
+void CGarage::NeatlyLineUpStoredCars(CStoredCar* cars) {
+    // Center of the garage: position + (A * width + B * height) / 2 and 0.5 higher.
+    // Which intermediates are rounded to float and which stay in the FPU follows the asm.
+    const float zRaised = m_vPosn.z + 0.5f;
+    const float ax      = (m_vDirectionA.x * m_fWidth) * 0.5f;
+    const float ay      = (m_vDirectionA.y * m_fWidth) * 0.5f;
+    const float az      = (m_fWidth * 0.0f) * 0.5f;
+    const float bx      = (m_fHeight * m_vDirectionB.x) * 0.5f;
+    const float by      = (m_vDirectionB.y * m_fHeight) * 0.5f;
+    const float bz      = (m_fHeight * 0.0f) * 0.5f;
+
+    const float cy = (float)((double)by + (float)((double)m_vPosn.y + ay));
+    const float cz = (float)((double)bz + (float)((double)zRaised + az));
+    const float cx = (float)((double)bx + ((double)ax + m_vPosn.x));
+
+    // Direction in which the cars are lined up: the garage's A direction in 2D, with length 4
+    CVector dir{ m_vDirectionA.x, m_vDirectionA.y, 0.0f };
+    NormaliseExt(dir);
+    const float stepX = dir.x * 4.0f; // 0x858B90
+    const float stepY = dir.y * 4.0f;
+    const float stepZ = dir.z * 4.0f;
+
+    // Position of the "-1st" car; the i-th one is `start + step * i`
+    const float startX = (float)((double)cx - stepX);
+    const float startY = (float)((double)cy - stepY);
+    const float startZ = (float)((double)cz - stepZ);
+
+    for (auto i = 0; i < 3 && cars[i].HasCar(); i++) {
+        auto& car = cars[i];
+        car.m_vPosn.x = (float)((double)stepX * i + startX);
+        car.m_vPosn.y = (float)((double)stepY * i + startY);
+        car.m_vPosn.z = (float)((double)i * stepZ + startZ);
+        car.m_nPackedForwardX = (uint8)(int32)((double)dir.y * 100.0);    // 0x858628
+        car.m_nPackedForwardY = (uint8)(int32)((double)(-dir.x) * 100.0);
+        car.m_nPackedForwardZ = 0;
+    }
 }
 
 // 0x448550
-bool CGarage::RestoreCarsForThisHideOut(CStoredCar* car) {
-    return plugin::CallMethodAndReturn<bool, 0x448550, CGarage*, CStoredCar*>(this, car);
+bool CGarage::RestoreCarsForThisHideOut(CStoredCar* cars) {
+    for (auto i = 0u; i < NUM_GARAGE_STORED_CARS; i++) {
+        auto& car = cars[i];
+        if (!car.HasCar()) {
+            continue;
+        }
+        if (auto* const veh = car.RestoreCar()) {
+            veh->vehicleFlags.bImpounded = false;
+            CWorld::Add(veh);
+            car.Clear();
+        }
+    }
+    return std::ranges::none_of(std::span{cars, NUM_GARAGE_STORED_CARS}, &CStoredCar::HasCar);
 }
 
 // 0x4485C0
-bool CGarage::RestoreCarsForThisImpoundingGarage(CStoredCar* car) {
-    return plugin::CallMethodAndReturn<bool, 0x4485C0, CGarage*, CStoredCar*>(this, car);
+bool CGarage::RestoreCarsForThisImpoundingGarage(CStoredCar* cars) {
+    constexpr auto NUM_IMPOUND_STORED_CARS = 3u; // Only the first 3 slots are used for impounding garages
+    for (auto i = 0u; i < NUM_IMPOUND_STORED_CARS; i++) {
+        auto& car = cars[i];
+        if (!car.HasCar()) {
+            continue;
+        }
+        if (auto* const veh = car.RestoreCar()) {
+            veh->vehicleFlags.bImpounded = true;
+            CWorld::Add(veh);
+            if (veh->m_nVehicleType == VEHICLE_TYPE_AUTOMOBILE) {
+                static_cast<CAutomobile*>(veh)->PlaceOnRoadProperly(); // 0x6AF420
+            } else if (veh->m_nVehicleType == VEHICLE_TYPE_BIKE) {
+                static_cast<CBike*>(veh)->PlaceOnRoadProperly(); // 0x6BEEB0
+            }
+            car.Clear();
+        }
+    }
+    return std::ranges::none_of(std::span{cars, NUM_IMPOUND_STORED_CARS}, &CStoredCar::HasCar);
 }
 
 // 0x448E50
-bool CGarage::IsPlayerOutsideGarage(float fRadius) {
-    return plugin::CallMethodAndReturn<bool, 0x448E50, CGarage*, float>(this, fRadius);
+bool CGarage::IsPlayerOutsideGarage(float radius) {
+    if (FindPlayerVehicle(-1, false)) {
+        return IsEntityEntirelyOutside(FindPlayerVehicle(-1, false), radius);
+    }
+    return IsEntityEntirelyOutside(FindPlayerPed(-1), radius);
 }
 
 // 0x449100
 bool CGarage::IsAnyOtherCarTouchingGarage(CVehicle* ignoredVehicle) {
-    return plugin::CallMethodAndReturn<bool, 0x449100, CGarage*, CVehicle*>(this, ignoredVehicle);
+    auto* const pool = GetVehiclePool();
+    for (int32 i = pool->GetSize(); i-- > 0;) {
+        auto* const veh = pool->GetAt(i);
+        if (!veh || veh == ignoredVehicle || veh->GetStatus() == STATUS_WRECKED) {
+            continue;
+        }
+        if (!IsEntityTouching3D(veh)) {
+            continue;
+        }
+        // NOTE: `m_pColData` and the matrix are dereferenced unchecked in the original too
+        const auto* const colData = veh->GetColModel()->m_pColData;
+        for (int32 s = 0; s < colData->m_nNumSpheres; s++) {
+            const auto& sphere = colData->m_pSpheres[s];
+            if (IsPointInsideGarage(TransformPointExt(*veh->m_matrix, sphere.m_vecCenter), sphere.m_fRadius)) { // 0x4487D0
+                return true;
+            }
+        }
+    }
+    return false;
 }
 
 // 0x449220
 void CGarage::ThrowCarsNearDoorOutOfGarage(CVehicle* ignoredVehicle) {
-    plugin::CallMethod<0x449220, CGarage*, CVehicle*>(this, ignoredVehicle);
+    auto* const pool = GetVehiclePool();
+    for (int32 i = pool->GetSize(); i-- > 0;) {
+        auto* const veh = pool->GetAt(i);
+        if (!veh || veh == ignoredVehicle || !IsEntityTouching3D(veh)) {
+            continue;
+        }
+        const auto* const colData = veh->GetColModel()->m_pColData;
+        for (int32 s = 0; s < colData->m_nNumSpheres; s++) {
+            const auto& sphere = colData->m_pSpheres[s];
+            if (IsPointInsideGarage(TransformPointExt(*veh->m_matrix, sphere.m_vecCenter), 0.0f)) { // 0x4487D0
+                continue;
+            }
+
+            // A sphere sticks out: push the car away from the garage's center (2D), only once per car
+            const auto& pos = veh->GetPosition();
+            CVector dir{
+                (float)(pos.x - ((double)m_fRightCoord + m_fLeftCoord) * 0.5),
+                (float)(pos.y - ((double)m_fBackCoord + m_fFrontCoord) * 0.5),
+                0.0f
+            };
+            NormaliseExt(dir);
+
+            const float ts = CTimer::ms_fTimeStep;
+            const double dx = (double)dir.x * 0.02f; // 0x858B38
+            const double dy = (double)dir.y * 0.02f;
+            const float  dz = dir.z * 0.02f;
+            veh->m_vecMoveSpeed.x = (float)(dx * ts + veh->m_vecMoveSpeed.x);
+            veh->m_vecMoveSpeed.y = (float)(dy * ts + veh->m_vecMoveSpeed.y);
+            veh->m_vecMoveSpeed.z = (float)((double)dz * ts + veh->m_vecMoveSpeed.z);
+            break;
+        }
+    }
 }
 
 // 0x4494F0
 bool CGarage::IsAnyCarBlockingDoor() {
-    return plugin::CallMethodAndReturn<bool, 0x4494F0, CGarage*>(this);
+    auto* const pool = GetVehiclePool();
+    for (int32 i = pool->GetSize(); i-- > 0;) {
+        auto* const veh = pool->GetAt(i);
+        if (!veh || !IsEntityTouching3D(veh)) {
+            continue;
+        }
+        const auto* const colData = veh->GetColModel()->m_pColData;
+        for (int32 s = 0; s < colData->m_nNumSpheres; s++) {
+            const auto& sphere = colData->m_pSpheres[s];
+            if (!IsPointInsideGarage(TransformPointExt(*veh->m_matrix, sphere.m_vecCenter), sphere.m_fRadius)) { // 0x4487D0
+                return true;
+            }
+        }
+    }
+    return false;
 }
 
 // 0x4495F0
 int32 CGarage::CountCarsWithCenterPointWithinGarage(CVehicle* ignoredVehicle) {
-    return plugin::CallMethodAndReturn<int32, 0x4495F0, CGarage*, CVehicle*>(this, ignoredVehicle);
+    int32 n = 0;
+    auto* const pool = GetVehiclePool();
+    for (int32 i = pool->GetSize(); i-- > 0;) {
+        auto* const veh = pool->GetAt(i);
+        if (!veh || veh == ignoredVehicle) {
+            continue;
+        }
+        if (IsPointInsideGarage(veh->GetPosition())) { // 0x448740
+            n++;
+        }
+    }
+    return n;
 }
 
 // 0x449A50
-void CGarage::StoreAndRemoveCarsForThisImpoundingGarage(CStoredCar* storedCars, int32 iMaxSlot) {
-    plugin::CallMethod<0x449A50, CGarage*, CStoredCar*, int32>(this, storedCars, iMaxSlot);
+void CGarage::StoreAndRemoveCarsForThisImpoundingGarage(CStoredCar* storedCars, int32 maxSlot) {
+    // The machine code is identical to `StoreAndRemoveCarsForThisHideOut` (0x449900)
+    StoreAndRemoveCarsForThisHideOut(storedCars, maxSlot);
 }
 
 // 0x44A660
 bool CGarage::SlideDoorOpen() {
-    return plugin::CallMethodAndReturn<bool, 0x44A660, CGarage*>(this);
+    const bool isHangar = m_nType == HANGAR_AT400 || m_nType == HANGAR_ABANDONED_AIRPORT;
+    m_fDoorPosition = (float)((double)CTimer::ms_fTimeStep * (isHangar ? 0.0011f : 0.011f) + m_fDoorPosition); // 0x8599AC / 0x8599A8
+
+    CObject* door1{};
+    CObject* door2{};
+    if (m_fDoorPosition >= 1.0f) {
+        m_fDoorPosition = 1.0f;
+        FindDoorsWithGarage(&door1, &door2);
+        if (door1) {
+            m_GarageAudio.AddAudioEvent(AE_GARAGE_DOOR_OPENED, door1->GetPosition(), 0.0f, 1.0f);
+        }
+        return true;
+    }
+    FindDoorsWithGarage(&door1, &door2);
+    if (door1) {
+        m_GarageAudio.AddAudioEvent(AE_GARAGE_DOOR_OPENING, door1->GetPosition(), 0.0f, 1.0f);
+    }
+    return false;
 }
 
 // 0x44A750
 bool CGarage::SlideDoorClosed() {
-    return plugin::CallMethodAndReturn<bool, 0x44A750, CGarage*>(this);
+    const bool isHangar = m_nType == HANGAR_AT400 || m_nType == HANGAR_ABANDONED_AIRPORT;
+    m_fDoorPosition = (float)(m_fDoorPosition - (double)CTimer::ms_fTimeStep * (isHangar ? 0.0013f : 0.013f)); // 0x8599B4 / 0x8599B0
+
+    CObject* door1{};
+    CObject* door2{};
+    if (m_fDoorPosition <= 0.0f) {
+        m_fDoorPosition = 0.0f;
+        FindDoorsWithGarage(&door1, &door2);
+        if (door1) {
+            m_GarageAudio.AddAudioEvent(AE_GARAGE_DOOR_CLOSED, door1->GetPosition(), 0.0f, 1.0f);
+        }
+        return true;
+    }
+    FindDoorsWithGarage(&door1, &door2);
+    if (door1) {
+        m_GarageAudio.AddAudioEvent(AE_GARAGE_DOOR_CLOSING, door1->GetPosition(), 0.0f, 1.0f);
+    }
+    return false;
 }
 
 // ---------------------------------------------------------------------------------------------------------------------

@@ -31,6 +31,14 @@ if (${RE_PROJECT}_STANDALONE AND NOT ${RE_PROJECT}_STANDALONE_DUMP_HOOKS_ONLY)
     if (MSVC)
         add_compile_options(/arch:IA32 /fp:precise)
     endif()
+    # StandaloneRelease (CMakePresets.json): optimised config of the same exe. /O2 /Ob2 /DNDEBUG come from CMAKE_CXX_FLAGS_RELEASE, -MT from CMAKE_MSVC_RUNTIME_LIBRARY (top CMakeLists.txt).
+    # /fp:precise forbids reassociation/contraction and /arch:IA32 keeps x87, so under PC=24 every op still rounds to 24 bits whether it lives in a register or a spill slot.
+    # No /GL (no LTCG: keeps per-object disassembly comparable), no /fp:fast; ICF/REF off: hooks key on function addresses, folded functions would alias.
+    option(${RE_PROJECT}_STANDALONE_RELEASE "Optimised (/O2) standalone config, see CMakePresets.json" OFF)
+    if (MSVC AND ${RE_PROJECT}_STANDALONE_RELEASE)
+        # debug info: /Z7 (GTASA_NO_EDIT_AND_CONTINUE=ON from the toolchain) + linker /DEBUG -> gta_reversed.pdb
+        add_link_options(/DEBUG /INCREMENTAL:NO /OPT:NOREF /OPT:NOICF)
+    endif()
     set(${RE_PROJECT}_ORIGINAL_EXE "" CACHE FILEPATH "Original gta_sa.exe (1.0 US), the standalone build extracts the data image from it at build time")
     if (NOT ${RE_PROJECT}_ORIGINAL_EXE)
         message(WARNING "${RE_PROJECT}_STANDALONE without -D${RE_PROJECT}_ORIGINAL_EXE=<gta_sa.exe>: the exe will not find original_data.bin and refuse to start")
@@ -647,6 +655,25 @@ if (${RE_PROJECT}_RW_LIBRW)
     set_property(TARGET script_oracle_g24_test PROPERTY SOURCES "${STANDALONE_PAD_OBJ}" ${_s6i_sources})
     target_link_options(script_oracle_g24_test PRIVATE "$<$<CXX_COMPILER_ID:MSVC>:/BASE:0x400000;/DYNAMICBASE:NO;/FIXED;/MERGE:_TEXT=.text;/INCREMENTAL:NO;/SUBSYSTEM:CONSOLE;/FORCE:UNRESOLVED>")
     set_target_properties(script_oracle_g24_test PROPERTIES COMPILE_WARNING_AS_ERROR OFF CXX_SCAN_FOR_MODULES OFF)
+    # S6-J differential test of script command handlers (g25 + g26) against the exe's group processors (same exe-oracle machinery as script_oracle_g24_test; Group25_26a/b/c.cpp are #included by the test)
+    add_executable(script_oracle_g25_26_test EXCLUDE_FROM_ALL
+        "${PROJECT_SOURCE_DIR}/tests/standalone/script_oracle_g25_26_test.cpp"
+        game_sa/General.cpp
+        game_sa/Core/Vector.cpp
+        game_sa/Core/Matrix.cpp
+    )
+    target_compile_features(script_oracle_g25_26_test PRIVATE cxx_std_23)
+    target_compile_definitions(script_oracle_g25_26_test PRIVATE NOTSA_RW_LIBRW RW_D3D9)
+    target_include_directories(script_oracle_g25_26_test PRIVATE $<TARGET_PROPERTY:${RE_PROJECT_LIB_NAME},INCLUDE_DIRECTORIES>)
+    target_compile_options(script_oracle_g25_26_test PRIVATE $<TARGET_PROPERTY:${RE_PROJECT_LIB_NAME},COMPILE_OPTIONS>)
+    target_precompile_headers(script_oracle_g25_26_test PRIVATE StdInc.cpp)
+    target_link_libraries(script_oracle_g25_26_test PRIVATE librw spdlog::spdlog Tracy::TracyClient user32)
+    target_sources(script_oracle_g25_26_test PRIVATE "${STANDALONE_PAD_OBJ}")
+    get_target_property(_s6j_sources script_oracle_g25_26_test SOURCES)
+    list(REMOVE_ITEM _s6j_sources "${STANDALONE_PAD_OBJ}")
+    set_property(TARGET script_oracle_g25_26_test PROPERTY SOURCES "${STANDALONE_PAD_OBJ}" ${_s6j_sources})
+    target_link_options(script_oracle_g25_26_test PRIVATE "$<$<CXX_COMPILER_ID:MSVC>:/BASE:0x400000;/DYNAMICBASE:NO;/FIXED;/MERGE:_TEXT=.text;/INCREMENTAL:NO;/SUBSYSTEM:CONSOLE;/FORCE:UNRESOLVED>")
+    set_target_properties(script_oracle_g25_26_test PROPERTIES COMPILE_WARNING_AS_ERROR OFF CXX_SCAN_FOR_MODULES OFF)
     # S6-F differential test of script command handlers (g20..g21) against the exe's group processors (same machinery as script_oracle_test; Group20a/20b/21a/21b.cpp are #included by the test)
     add_executable(script_oracle_g20_21_test EXCLUDE_FROM_ALL
         "${PROJECT_SOURCE_DIR}/tests/standalone/script_oracle_g20_21_test.cpp"

@@ -365,6 +365,7 @@ FixupStats ApplyToDataImage() {
     if (char* slash = strrchr(dir, '\\')) {
         strcpy_s(slash + 1, dir + MAX_PATH - slash - 1, "standalone_unknown_pointers.txt");
     }
+    size_t skippedNotExeCode = 0;
     FILE* unk = nullptr;
     fopen_s(&unk, dir, "w");
     for (const auto& [slotAddr, klass] : ptrs) {
@@ -373,6 +374,10 @@ FixupStats ApplyToDataImage() {
             continue; // already written by the whole-vtable copy
         }
         const uint32_t orig = words[i];
+        if (orig < info.CodeLo || orig >= info.CodeHi) { // already rewritten by C++ (e.g. CCheat::m_aCheatFunctions filled by Cheat.cpp InjectHooks): not an exe code pointer any more
+            skippedNotExeCode++;
+            continue;
+        }
         (klass == 1 ? g_Stats.CodePointersV : g_Stats.CodePointersC)++;
         if (const auto it = SlotMap().find(slotAddr); it != SlotMap().end()) {
             words[i] = (uint32_t)it->second.Ours;
@@ -419,6 +424,7 @@ FixupStats ApplyToDataImage() {
         "Fixed: by slot %u, by function %u; trapped (unknown): V=%u C=%u (V/C exclude the %u listed slots covered by the vtable copy)",
         (unsigned)s.RegisteredFunctions, (unsigned)s.RegisteredVMTSlots, (unsigned)s.Conflicts, (unsigned)s.CodePointersV, (unsigned)s.CodePointersC,
         (unsigned)s.TextLikeIgnored, (unsigned)s.UnalignedIgnored, (unsigned)s.FixedBySlot, (unsigned)s.FixedByFunction, (unsigned)s.TrappedV, (unsigned)s.TrappedC, (unsigned)s.VtableCopyOverlap);
+    Log("fixups: skipped %u listed dwords whose current value is no longer an exe code pointer (already rewritten by C++ code)", (unsigned)skippedNotExeCode);
     Log("fixups vtable copy: %u classes copied whole (%u slots written, %u of them listed pointers), %u classes without exported vtable",
         (unsigned)s.VtableClasses, (unsigned)s.FixedByVtableCopy, (unsigned)s.VtableCopyOverlap, (unsigned)s.VtableClassesNoExport);
     if (info.DataBase <= 0x860E2C && info.DataBase + info.InitializedSize > 0x8A2A18) { // regression probes of the S1 classifier (1.0 US compact)

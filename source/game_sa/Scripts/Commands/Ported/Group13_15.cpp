@@ -114,18 +114,18 @@ CVector TransformPointOriginal(const CMatrix& m, const CVector& v) {
 //! text = TheText.Get(label). The dead GetActualPickupIndex(CollectNextParameterWithoutIncreasingPC()) call is kept.
 int32 CreateLockedPropertyPickup(CRunningScript& S, CVector pos, const char* label) {
     pos.z = GroundZIfAutoPlusHalf(pos.x, pos.y, pos.z);
-    char* const text = (char*)TheText.Get(label);
+    (void)TheText.Get(label); // the result is unused by the exe: GenerateNewOne gets the label buffer itself (CPickup::FindTextIndexForString compares the key)
     CPickups::GetActualPickupIndex(tPickupReference{ S.CollectNextParameterWithoutIncreasingPC() });
-    return CPickups::GenerateNewOne(pos, (uint32)(uint16)ModelIndices::MI_PICKUP_PROPERTY, PICKUP_PROPERTY_LOCKED, 0, 0, false, text).num;
+    return CPickups::GenerateNewOne(pos, (uint32)(uint16)ModelIndices::MI_PICKUP_PROPERTY, PICKUP_PROPERTY_LOCKED, 0, 0, false, const_cast<char*>(label)).num;
 }
 
 //! 1304 CREATE_FORSALE_PROPERTY_PICKUP (case @0x48CEDB): x, y, z, price, label(8) => 1 handle
 //! Same as above, model MI_PICKUP_PROPERTY_FORSALE (word @0x8CD5EC), type 0x12 (PICKUP_PROPERTY_FORSALE), ammo = price.
 int32 CreateForsalePropertyPickup(CRunningScript& S, CVector pos, int32 price, const char* label) {
     pos.z = GroundZIfAutoPlusHalf(pos.x, pos.y, pos.z);
-    char* const text = (char*)TheText.Get(label);
+    (void)TheText.Get(label); // unused result, see above
     CPickups::GetActualPickupIndex(tPickupReference{ S.CollectNextParameterWithoutIncreasingPC() });
-    return CPickups::GenerateNewOne(pos, (uint32)(uint16)ModelIndices::MI_PICKUP_PROPERTY_FORSALE, PICKUP_PROPERTY_FORSALE, (uint32)price, 0, false, text).num;
+    return CPickups::GenerateNewOne(pos, (uint32)(uint16)ModelIndices::MI_PICKUP_PROPERTY_FORSALE, PICKUP_PROPERTY_FORSALE, (uint32)price, 0, false, const_cast<char*>(label)).num;
 }
 
 //! 1305 FREEZE_CAR_POSITION (case @0x48CFA5): car, freeze. No null check on the car.
@@ -950,8 +950,8 @@ void SetGroupLeader(int32 groupHandle, int32 pedHandle) {
 }
 
 //! 1586 REMOVE_GROUP (case @0x4926E9): group
-//! If the group is valid and active: a group led by the player only loses its followers (and the handler returns WITHOUT the mission cleanup
-//! removal); otherwise RemoveGroup. Then, with mission cleanup: RemoveEntityFromList(handle, 5).
+//! If the group is valid: an active group led by the player only loses its followers (and the handler returns WITHOUT the mission cleanup
+//! removal); in every other case (inactive group, no leader, non-player leader) RemoveGroup. Then, with mission cleanup: RemoveEntityFromList(handle, 5).
 void RemoveGroup(CRunningScript& S, int32 handle) {
     const int32 idx = CTheScripts::GetActualScriptThingIndex(handle, SCRIPT_THING_PED_GROUP);
     if (idx >= 0 && idx < 8) {
@@ -961,8 +961,8 @@ void RemoveGroup(CRunningScript& S, int32 handle) {
                 CPedGroups::RemoveAllFollowersFromGroup(idx);
                 return;
             }
-            CPedGroups::RemoveGroup(idx);
         }
+        CPedGroups::RemoveGroup(idx); // 0x492753: also reached for an inactive group / a group without (player) leader
     }
     if (S.m_UsesMissionCleanup) {
         CTheScripts::MissionCleanUp.RemoveEntityFromList(handle, (MissionCleanUpEntityType)5);

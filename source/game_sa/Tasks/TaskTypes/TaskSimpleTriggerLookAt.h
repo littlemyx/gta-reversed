@@ -37,7 +37,7 @@ public:
                              float speed = 0.25f,
                              int32 blendTime = 1000,
                              int32 priority = 3);
-    ~CTaskSimpleTriggerLookAt() override = default; // 0x6394D0
+    ~CTaskSimpleTriggerLookAt() override; // 0x6394D0 (-> 0x634500)
 
     CTask*    Clone() const override;
     eTaskType GetTaskType() const override { return Type; }

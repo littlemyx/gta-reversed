@@ -34,6 +34,11 @@ CTaskSimpleTriggerLookAt::CTaskSimpleTriggerLookAt(CEntity* entity, int32 time, 
     }
 }
 
+// 0x634500 (deleting dtor 0x6394D0): unregisters the reference to the entity registered by the ctor
+CTaskSimpleTriggerLookAt::~CTaskSimpleTriggerLookAt() {
+    CEntity::SafeCleanUpRef(m_pEntity);
+}
+
 // 0x634560
 CTask* CTaskSimpleTriggerLookAt::Clone() const {
     auto time = m_time;

@@ -151,7 +151,7 @@ void CRadar::InjectHooks() {
 
     RH_ScopedInstall(SetupAirstripBlips, 0x587D20); // TEST
     RH_ScopedInstall(DrawBlips, 0x588050);
-    // RH_ScopedInstall(ClipRadarPoly, 0x585040);
+    RH_ScopedInstall(ClipRadarPoly, 0x585040);
     RH_ScopedInstall(DrawAreaOnRadar, 0x5853D0);
     RH_ScopedOverloadedInstall(StreamRadarSections, "xy", 0x584C50, void (*)(int32, int32));
     RH_ScopedInstall(AddBlipToLegendList, 0x5859F0);
@@ -1119,7 +1119,76 @@ int32 LineRadarBoxCollision(CVector2D& result, const CVector2D& lineStart, const
 
 // 0x585040
 int32 CRadar::ClipRadarPoly(CVector2D* out, const CVector2D* in) {
-    return plugin::CallAndReturn<int32, 0x585040, CVector2D*, const CVector2D*>(out, in);
+    int32 numOut   = 0;
+    int32 lastSide = -1;
+
+    // Unit square corners, indexed by side
+    const CVector2D corners[4] = {{1.0f, -1.0f}, {1.0f, 1.0f}, {-1.0f, 1.0f}, {-1.0f, -1.0f}};
+
+    // NaN passes the check (original: FCOMP + JNP/JZ patterns)
+    const auto IsInside = [](const CVector2D& p) {
+        return !(p.x < -1.0f) && !(p.x > 1.0f) && !(p.y < -1.0f) && !(p.y > 1.0f);
+    };
+    const bool inside[4] = {IsInside(in[0]), IsInside(in[1]), IsInside(in[2]), IsInside(in[3])};
+
+    for (int32 i = 0; i < 4; i++) {
+        const CVector2D* cur = &in[i];
+        if (inside[i]) {
+            out[numOut++] = *cur;
+            continue;
+        }
+
+        const int32 next = (i + 1) & 3;
+        const int32 side1 = LineRadarBoxCollision(out[numOut], *cur, in[(i - 1) & 3]);
+        if (side1 != -1) {
+            numOut++;
+            lastSide = side1;
+        }
+
+        CVector2D* const outPoint = &out[numOut];
+        const int32 side2 = LineRadarBoxCollision(*outPoint, *cur, in[next]);
+        if (side2 != -1) {
+            if (side1 == -1) {
+                if (lastSide == -1) {
+                    for (int32 k = 3; k >= i; k--) { // i <= 3 is always true
+                        CVector2D unused; // 0x585040 stores the result over its loop counter
+                        const int32 side = k == 0
+                            ? LineRadarBoxCollision(unused, in[0], in[3])
+                            : LineRadarBoxCollision(unused, in[k], in[k - 1]);
+                        if (side != -1) {
+                            lastSide = side;
+                            break;
+                        }
+                    }
+                }
+
+                const CVector2D savedPoint = *outPoint;
+                CVector2D*      dst        = outPoint;
+                for (int32 side = lastSide; side != side2; side = (side + 1) & 3) {
+                    numOut++;
+                    assert(side >= 0); // The original would read garbage from the stack for -1
+                    *dst++ = corners[side];
+                }
+                out[numOut] = savedPoint;
+            }
+            numOut++;
+        }
+    }
+
+    if (numOut == 0) {
+        // Polygon encloses the whole radar? Slopes stay in extended precision in the original
+        const double slope1 = (double(in[0].y) - double(in[1].y)) / (double(in[0].x) - double(in[1].x));
+        const float  slope2 = (float)((double(in[0].y) - double(in[3].y)) / (double(in[0].x) - double(in[3].x)));
+        if ((slope1 * in[3].x - in[3].y) * (slope1 * in[0].x - in[0].y) < 0.0
+         && (double(slope2) * in[1].x - in[1].y) * (double(slope2) * in[0].x - in[0].y) < 0.0) {
+            for (int32 k = 0; k < 4; k++) {
+                out[k] = corners[k];
+            }
+            return 4;
+        }
+    }
+
+    return numOut;
 }
 
 // 0x5853D0

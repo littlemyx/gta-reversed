@@ -11,18 +11,18 @@ void CGarage::InjectHooks() {
     RH_ScopedInstall(TidyUpGarageClose, 0x449D10);
     RH_ScopedInstall(TidyUpGarage, 0x449C50);
     RH_ScopedInstall(StoreAndRemoveCarsForThisHideOut, 0x449900);
-    // RH_ScopedInstall(EntityHasASphereWayOutsideGarage, 0x449050);
+    RH_ScopedInstall(EntityHasASphereWayOutsideGarage, 0x449050);
     RH_ScopedInstall(RemoveCarsBlockingDoorNotInside, 0x449690);
-    // RH_ScopedInstall(IsEntityTouching3D, 0x448EE0);
-    // RH_ScopedInstall(IsEntityEntirelyOutside, 0x448D30);
-    // RH_ScopedInstall(IsStaticPlayerCarEntirelyInside, 0x44A830);
-    // RH_ScopedInstall(IsEntityEntirelyInside3D, 0x448BE0);
-    // RH_ScopedInstall(IsPointInsideGarage, 0x448740);
-    // RH_ScopedInstall(PlayerArrestedOrDied, 0x4486C0);
+    RH_ScopedInstall(IsEntityTouching3D, 0x448EE0);
+    RH_ScopedInstall(IsEntityEntirelyOutside, 0x448D30);
+    RH_ScopedInstall(IsStaticPlayerCarEntirelyInside, 0x44A830);
+    RH_ScopedInstall(IsEntityEntirelyInside3D, 0x448BE0);
+    RH_ScopedOverloadedInstall(IsPointInsideGarage, "1", 0x448740, bool(CGarage::*)(CVector));
+    RH_ScopedInstall(PlayerArrestedOrDied, 0x4486C0);
     RH_ScopedInstall(OpenThisGarage, 0x447D50);
     RH_ScopedInstall(CloseThisGarage, 0x447D70);
     RH_ScopedInstall(InitDoorsAtStart, 0x447600);
-    // RH_ScopedInstall(IsPointInsideGarage, 0x4487D0);
+    RH_ScopedOverloadedInstall(IsPointInsideGarage, "2", 0x4487D0, bool(CGarage::*)(CVector, float));
     RH_ScopedInstall(Update, 0x44AA50);
     RH_ScopedInstall(FindDoorsWithGarage, 0x449FF0);
     RH_ScopedInstall(CalcDistToGarageRectangleSquared, 0x447D80);
@@ -38,12 +38,14 @@ void CGarage::InjectHooks() {
     RH_ScopedInstall(StoreAndRemoveCarsForThisImpoundingGarage, 0x449A50);
     RH_ScopedInstall(SlideDoorOpen, 0x44A660);
     RH_ScopedInstall(SlideDoorClosed, 0x44A750);
+    RH_ScopedInstall(IsGarageEmpty, 0x44A9C0);
 
     {
         RH_ScopedClass(CStoredCar);
         RH_ScopedCategoryGlobal();
 
         RH_ScopedInstall(StoreCar, 0x449760);
+        RH_ScopedInstall(RestoreCar, 0x447E40);
     }
 }
 
@@ -170,7 +172,16 @@ void CGarage::StoreAndRemoveCarsForThisHideOut(CStoredCar* storedCars, int32 max
 
 // 0x449050
 bool CGarage::EntityHasASphereWayOutsideGarage(CEntity* entity, float fRadius) {
-    return plugin::CallMethodAndReturn<bool, 0x449050, CGarage*, CEntity*, float>(this, entity, fRadius);
+    // NOTE: `m_pColData` is dereferenced unchecked in the original too
+    const auto* const colData = entity->GetColModel()->m_pColData;
+    for (int16 i = 0; i < (int16)colData->m_nNumSpheres; i++) {
+        const auto& sphere = colData->m_pSpheres[i];
+        const auto  center = TransformPointExt(entity->GetMatrix(), sphere.m_vecCenter); // 0x59C890; GetMatrix() allocates the matrix if missing
+        if (!IsPointInsideGarage(center, fRadius + sphere.m_fRadius)) { // 0x4487D0
+            return true;
+        }
+    }
+    return false;
 }
 
 // 0x449690
@@ -195,32 +206,151 @@ void CGarage::RemoveCarsBlockingDoorNotInside() {
 
 // 0x448EE0
 bool CGarage::IsEntityTouching3D(CEntity* entity) {
-    return plugin::CallMethodAndReturn<bool, 0x448EE0, CGarage*, CEntity*>(this, entity);
+    // Bounding sphere radius of the model's collision (not of the entity's own `GetColModel()`)
+    const float radius = CModelInfo::GetModelInfo(entity->m_nModelIndex)->m_pColModel->GetBoundRadius();
+    const auto& pos    = entity->GetPosition();
+    if ((double)m_fLeftCoord  - radius > pos.x) { return false; }
+    if ((double)radius + m_fRightCoord < pos.x) { return false; }
+    if ((double)m_fFrontCoord - radius > pos.y) { return false; }
+    if ((double)radius + m_fBackCoord  < pos.y) { return false; }
+    if ((double)m_vPosn.z     - radius > pos.z) { return false; }
+    if ((double)radius + m_fTopZ       < pos.z) { return false; }
+
+    // NOTE: `m_pColData` is dereferenced unchecked in the original too
+    const auto* const colData = entity->GetColModel()->m_pColData;
+    for (int16 i = 0; i < (int16)colData->m_nNumSpheres; i++) {
+        const auto& sphere = colData->m_pSpheres[i];
+        if (IsPointInsideGarage(TransformPointExt(entity->GetMatrix(), sphere.m_vecCenter), sphere.m_fRadius)) { // 0x4487D0
+            return true;
+        }
+    }
+    return false;
 }
 
 // 0x448D30
 bool CGarage::IsEntityEntirelyOutside(CEntity* entity, float radius) {
-    return plugin::CallMethodAndReturn<bool, 0x448D30, CGarage*, CEntity*, float>(this, entity, radius);
+    const auto& pos = entity->GetPosition();
+    // Position inside the rectangle grown by `radius` => not outside (all four comparisons are strict, NaN falls through to the spheres)
+    if ((double)m_fLeftCoord - radius < pos.x && (double)radius + m_fRightCoord > pos.x &&
+        (double)m_fFrontCoord - radius < pos.y && (double)radius + m_fBackCoord > pos.y) {
+        return false;
+    }
+
+    const auto* const colData = entity->GetColModel()->m_pColData;
+    if (!colData) {
+        return true;
+    }
+    for (int16 i = 0; i < (int16)colData->m_nNumSpheres; i++) {
+        const auto& sphere = colData->m_pSpheres[i];
+        if (IsPointInsideGarage(TransformPointExt(entity->GetMatrix(), sphere.m_vecCenter), radius + sphere.m_fRadius)) { // 0x4487D0
+            return false;
+        }
+    }
+    return true;
 }
 
 // 0x44A830
 bool CGarage::IsStaticPlayerCarEntirelyInside() {
-    return plugin::CallMethodAndReturn<bool, 0x44A830, CGarage*>(this);
+    auto* const veh = FindPlayerVehicle(-1, false);
+    if (!veh) {
+        return false;
+    }
+    // NOTE: `m_nVehicleType` (+0x590), not `m_nVehicleSubType`
+    if (veh->m_nVehicleType != VEHICLE_TYPE_AUTOMOBILE && veh->m_nVehicleType != VEHICLE_TYPE_BIKE) {
+        return false;
+    }
+    static_assert(TASK_COMPLEX_LEAVE_CAR == 704);
+    // NOTE: the player ped is dereferenced unchecked in the original too
+    if (FindPlayerPed(-1)->GetIntelligence()->m_TaskMgr.FindActiveTaskByType(TASK_COMPLEX_LEAVE_CAR)) {
+        return false;
+    }
+
+    // The vehicle is fetched again here in the original (same result)
+    auto* const car = FindPlayerVehicle(-1, false);
+    const auto& pos = car->GetPosition();
+    if (pos.x < m_fLeftCoord  || pos.x > m_fRightCoord) { return false; }
+    if (pos.y < m_fFrontCoord || pos.y > m_fBackCoord)  { return false; }
+
+    // Must be (almost) standing still: 0.01f @ 0x858C58 per axis, 0.0001f @ 0x858FC4 for the squared length
+    const auto& speed = car->m_vecMoveSpeed;
+    const float ax = speed.x < 0.0f ? -speed.x : speed.x;
+    if (ax > 0.01f) { return false; }
+    const float ay = speed.y < 0.0f ? -speed.y : speed.y;
+    if (ay > 0.01f) { return false; }
+    const float az = speed.z < 0.0f ? -speed.z : speed.z;
+    if (az > 0.01f) { return false; }
+    if (((double)ay * ay + (double)az * az) + (double)ax * ax > (double)0.0001f) {
+        return false;
+    }
+    return IsEntityEntirelyInside3D(car, 0.0f);
 }
 
 // 0x448BE0
 bool CGarage::IsEntityEntirelyInside3D(CEntity* entity, float radius) {
-    return plugin::CallMethodAndReturn<bool, 0x448BE0, CGarage*, CEntity*, float>(this, entity, radius);
+    const auto& pos = entity->GetPosition();
+    if ((double)m_fLeftCoord  - radius > pos.x) { return false; }
+    if ((double)radius + m_fRightCoord < pos.x) { return false; }
+    if ((double)m_fFrontCoord - radius > pos.y) { return false; }
+    if ((double)radius + m_fBackCoord  < pos.y) { return false; }
+    if ((double)m_vPosn.z     - radius > pos.z) { return false; }
+    if ((double)radius + m_fTopZ       < pos.z) { return false; }
+
+    const auto* const colData = entity->GetColModel()->m_pColData;
+    if (!colData) {
+        return true;
+    }
+    for (int16 i = 0; i < (int16)colData->m_nNumSpheres; i++) {
+        const auto& sphere = colData->m_pSpheres[i];
+        const auto  center = TransformPointExt(entity->GetMatrix(), sphere.m_vecCenter); // 0x59C890
+        if (!IsPointInsideGarage(center, radius - sphere.m_fRadius)) { // 0x4487D0
+            return false;
+        }
+    }
+    return true;
 }
 
 // 0x448740
 bool CGarage::IsPointInsideGarage(CVector point) {
-    return plugin::CallMethodAndReturn<bool, 0x448740, CGarage*, CVector>(this, point);
+    if (point.z < m_vPosn.z) { return false; }
+    if (point.z > m_fTopZ)   { return false; }
+
+    // dy is spilled to a float; dx stays extended for the first product and is spilled (rounded) for the second
+    const float  dy = point.y - m_vPosn.y;
+    const double dx = (double)point.x - m_vPosn.x;
+    const float  dxf = (float)dx;
+
+    const double a = dx * m_vDirectionA.x + (double)dy * m_vDirectionA.y;
+    if (a < 0.0)     { return false; }
+    if (a > m_fWidth) { return false; }
+
+    const double b = (double)dxf * m_vDirectionB.x + (double)dy * m_vDirectionB.y;
+    if (b < 0.0)      { return false; }
+    if (b > m_fHeight) { return false; }
+    return true;
 }
 
 // 0x4486C0
-eGarageDoorState CGarage::PlayerArrestedOrDied() {
-    return plugin::CallMethodAndReturn<eGarageDoorState, 0x4486C0, CGarage*>(this);
+void CGarage::PlayerArrestedOrDied() {
+    // NOTE: the return type was `eGarageDoorState` in the old declaration, but the original leaves `al` as garbage (the only
+    // caller, `CGarages::PlayerArrestedOrDied`, ignores it), so it is `void` now.
+    switch (m_nType) {
+    case BOMBSHOP_TIMED:
+    case BOMBSHOP_ENGINE:
+    case BOMBSHOP_REMOTE:
+    case PAYNSPRAY:
+    case 13: // no named type
+        if (m_nDoorState == GARAGE_DOOR_CLOSED || (m_nDoorState > GARAGE_DOOR_OPEN && m_nDoorState <= GARAGE_DOOR_OPENING)) {
+            m_nDoorState = GARAGE_DOOR_OPENING;
+        }
+        break;
+    default:
+        if (m_nType >= ONLY_TARGET_VEH && m_nType <= HANGAR_ABANDONED_AIRPORT) {
+            if (m_nDoorState > GARAGE_DOOR_CLOSED && m_nDoorState <= GARAGE_DOOR_OPENING) {
+                m_nDoorState = GARAGE_DOOR_CLOSING;
+            }
+        }
+        break;
+    }
 }
 
 // 0x447D50
@@ -268,7 +398,23 @@ void CGarage::InitDoorsAtStart() {
 
 // 0x4487D0
 bool CGarage::IsPointInsideGarage(CVector point, float radius) {
-    return plugin::CallMethodAndReturn<bool, 0x4487D0, CGarage*, CVector, float>(this, point, radius);
+    if ((double)m_vPosn.z - radius > point.z) { return false; }
+    if ((double)radius + m_fTopZ < point.z)   { return false; }
+
+    // dy is spilled to a float; dx stays extended for the first product and is spilled (rounded) for the second
+    const float  dy  = point.y - m_vPosn.y;
+    const double dx  = (double)point.x - m_vPosn.x;
+    const float  dxf = (float)dx;
+    const float  negRadius = -radius;
+
+    const double a = dx * m_vDirectionA.x + (double)dy * m_vDirectionA.y;
+    if (a < negRadius)                       { return false; }
+    if (a > (double)radius + m_fWidth)       { return false; }
+
+    const double b = (double)dxf * m_vDirectionB.x + (double)dy * m_vDirectionB.y;
+    if (b < negRadius)                       { return false; }
+    if (b > (double)radius + m_fHeight)      { return false; }
+    return true;
 }
 
 // 0x447D80
@@ -1572,8 +1718,6 @@ bool CGarage::IsHideOut() const {
 
 // 0x44A9C0
 bool CGarage::IsGarageEmpty() {
-    return plugin::CallMethodAndReturn<bool, 0x44A9C0, CGarage*>(this);
-
     CVector cornerA = { m_fLeftCoord, m_fFrontCoord, m_vPosn.z };
     CVector cornerB = { m_fRightCoord, m_fBackCoord, m_fTopZ   };
 
@@ -1729,7 +1873,95 @@ void CStoredCar::StoreCar(CVehicle* vehicle) {
 
 // 0x447E40
 CVehicle* CStoredCar::RestoreCar() {
-    return plugin::CallMethodAndReturn<CVehicle*, 0x447E40, CStoredCar*>(this);
+    CStreaming::RequestModel(m_wModelIndex, STREAMING_KEEP_IN_MEMORY);
+    for (const auto mod : m_awCarMods) {
+        if (mod != -1) {
+            CStreaming::RequestVehicleUpgrade(mod, 0);
+        }
+    }
+
+    if (!CStreaming::IsModelLoaded(m_wModelIndex)) {
+        return nullptr;
+    }
+    for (const auto mod : m_awCarMods) {
+        if (mod != -1 && !CStreaming::HasVehicleUpgradeLoaded(mod)) {
+            return nullptr;
+        }
+    }
+
+    CVehicleModelInfo::ms_compsToUse[0] = m_anCompsToUse[0];
+    CVehicleModelInfo::ms_compsToUse[1] = m_anCompsToUse[1];
+
+    // NOTE: `operator new` returns null when the vehicle pool is full; the original then crashes below (dereferences null)
+    CVehicle* veh{};
+    switch (CModelInfo::GetModelInfo(m_wModelIndex)->AsVehicleModelInfoPtr()->m_nVehicleType) {
+    case VEHICLE_TYPE_MTRUCK:  veh = new CMonsterTruck(m_wModelIndex, RANDOM_VEHICLE); break;
+    case VEHICLE_TYPE_QUAD:    veh = new CQuadBike(m_wModelIndex, RANDOM_VEHICLE);     break;
+    case VEHICLE_TYPE_HELI:    veh = new CHeli(m_wModelIndex, RANDOM_VEHICLE);         break;
+    case VEHICLE_TYPE_PLANE:   veh = new CPlane(m_wModelIndex, RANDOM_VEHICLE);        break;
+    case VEHICLE_TYPE_BOAT:    veh = new CBoat(m_wModelIndex, RANDOM_VEHICLE);         break;
+    case VEHICLE_TYPE_BIKE:
+        veh = new CBike(m_wModelIndex, RANDOM_VEHICLE);
+        veh->AsBike()->bikeFlags.bOnSideStand = true; // 0x614 |= 0x10
+        break;
+    case VEHICLE_TYPE_BMX:
+        veh = new CBmx(m_wModelIndex, RANDOM_VEHICLE);
+        veh->AsBike()->bikeFlags.bOnSideStand = true; // 0x614 |= 0x10
+        break;
+    case VEHICLE_TYPE_TRAILER: veh = new CTrailer(m_wModelIndex, RANDOM_VEHICLE);      break;
+    default:                   veh = new CAutomobile(m_wModelIndex, RANDOM_VEHICLE, true); break; // incl. VEHICLE_TYPE_TRAIN and the fake aircraft
+    }
+
+    if (veh->m_matrix) {
+        veh->m_matrix->GetPosition() = m_vPosn;
+    } else {
+        veh->m_placement.m_vPosn = m_vPosn;
+    }
+
+    // The packed forward vector (x0.01, signed bytes); the products stay extended until stored
+    const auto fwdX = (float)((double)(int8)m_nPackedForwardX * 0.01f);
+    const auto fwdY = (float)((double)(int8)m_nPackedForwardY * 0.01f);
+    const auto fwdZ = (float)((double)(int8)m_nPackedForwardZ * 0.01f);
+    // NOTE: the matrix is dereferenced unchecked in the original from here on
+    auto& mat = *veh->m_matrix;
+    mat.GetForward() = CVector{ fwdX, fwdY, fwdZ };
+    mat.GetRight()   = CVector{ fwdY, -fwdX, 0.0f };
+    mat.GetUp()      = CVector{ 0.0f, 0.0f, 1.0f };
+
+    veh->SetStatus(STATUS_ABANDONED);
+    veh->m_pDriver = nullptr;
+    veh->m_vehicleAudio.m_AuSettings.RadioStation = static_cast<eRadioID>(m_nRadioStation);
+    veh->m_nHandlingFlagsIntValue = static_cast<eVehicleHandlingFlags>(m_nHandlingFlags);
+    veh->vehicleFlags.bFreebies = false;
+    veh->vehicleFlags.bHasBeenOwnedByPlayer = true;
+    veh->m_nDoorLock = CARLOCK_UNLOCKED;
+    if (veh->m_nVehicleType == VEHICLE_TYPE_AUTOMOBILE) { // 0x590 (m_nVehicleType, not SubType)
+        veh->m_nBombOnBoard = m_nBombType & 7;
+    }
+
+    if (m_nStoredCarFlags & 0x01) { veh->physicalFlags.bBulletProof    = true; }
+    if (m_nStoredCarFlags & 0x02) { veh->physicalFlags.bFireProof      = true; }
+    if (m_nStoredCarFlags & 0x04) { veh->physicalFlags.bExplosionProof = true; }
+    if (m_nStoredCarFlags & 0x08) { veh->physicalFlags.bCollisionProof = true; }
+    if (m_nStoredCarFlags & 0x10) { veh->physicalFlags.bMeleeProof     = true; }
+    if (m_nStoredCarFlags & 0x20) {
+        veh->vehicleFlags.bUpgradedStereo = true;
+        veh->m_vehicleAudio.m_AuSettings.BassSetting = eBassSetting::BOOST;
+    }
+    if (m_nStoredCarFlags & 0x40) { veh->handlingFlags.bHydraulicInst = true; }
+    if (m_nStoredCarFlags & 0x80) { veh->handlingFlags.bNosInst       = true; }
+
+    std::ranges::copy(m_awCarMods, veh->m_anUpgrades.begin());
+    veh->SetupUpgradesAfterLoad();
+    veh->SetRemap((int8)m_nPaintJob);
+    veh->vehicleFlags.bEngineOn = false;
+    veh->m_nNitroBoosts         = m_nNitroBoosts;
+    veh->m_nPrimaryColor        = m_nPrimaryColor;
+    veh->m_nSecondaryColor      = m_nSecondaryColor;
+    veh->m_nTertiaryColor       = m_nTertiaryColor;
+    veh->vehicleFlags.bDontSetColourWhenRemapping = true;
+    veh->m_nQuaternaryColor     = m_nQuaternaryColor;
+    return veh;
 }
 
 // 0x449FF0

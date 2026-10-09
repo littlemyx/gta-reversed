@@ -17,7 +17,7 @@ void CGarages::InjectHooks() {
     RH_ScopedInstall(AllRespraysCloseOrOpen, 0x448B30);
     RH_ScopedInstall(IsModelIndexADoor, 0x448AF0);
     RH_ScopedInstall(FindSafeHouseIndexForGarageType, 0x4489F0);
-    // RH_ScopedInstall(FindGarageForObject, 0x44A240);
+    RH_ScopedInstall(FindGarageForObject, 0x44A240);
     RH_ScopedInstall(IsPointWithinHideOutGarage, 0x448900);
     RH_ScopedInstall(IsGarageOpen, 0x447D00);
     RH_ScopedInstall(IsGarageClosed, 0x447D30);
@@ -32,7 +32,7 @@ void CGarages::InjectHooks() {
     RH_ScopedInstall(PrintMessages, 0x447790);
     RH_ScopedInstall(ChangeGarageType, 0x4476D0);
     RH_ScopedInstall(GetGarageNumberByName, 0x447680);
-    // RH_ScopedInstall(CountCarsInHideoutGarage, 0x44A210);
+    RH_ScopedInstall(CountCarsInHideoutGarage, 0x44A210);
     RH_ScopedInstall(Load, 0x5D3270);
     RH_ScopedInstall(Save, 0x5D3160);
 }
@@ -276,7 +276,44 @@ int32 CGarages::FindSafeHouseIndexForGarageType(eGarageType type) {
 
 // 0x44A240
 int16 CGarages::FindGarageForObject(CObject* obj) {
-    return plugin::CallAndReturn<int16, 0x44A240, CObject*>(obj);
+    float best    = std::bit_cast<float>(0x47C34FF3u); // ~100000.0f
+    int32 bestIdx = -1;
+    for (uint32 i = 0; i < (uint32)NumGarages; i++) {
+        auto& g = aGarages[i];
+
+        const auto& pos = obj->GetPosition();
+        if (!g.IsPointInsideGarage(pos, 7.0f)) { // 0x4487D0
+            continue;
+        }
+
+        // Centre of the garage, as the original evaluates it: the products and the partial sums stay in the FPU (extended
+        // precision) where the asm does not spill them to a float
+        const float  hw  = g.m_fWidth * 0.5f;
+        const float  ax  = (float)((double)g.m_vDirectionA.x * hw);
+        const double ay  = (double)g.m_vDirectionA.y * hw;
+        const float  z0  = hw * 0.0f;
+        const float  cx1 = (float)((double)ax + g.m_vPosn.x);
+        const double y1  = ay + g.m_vPosn.y;
+        const double z1  = (double)z0 + g.m_vPosn.z;
+
+        const float  hh  = g.m_fHeight * 0.5f;
+        const float  bx  = (float)((double)g.m_vDirectionB.x * hh);
+        const double by  = (double)g.m_vDirectionB.y * hh;
+        const float  z0b = hh * 0.0f;
+        const float  cx  = (float)((double)bx + cx1);
+        const float  cy  = (float)(by + y1);
+        const float  cz  = (float)((double)z0b + z1);
+
+        const double dx = (double)pos.x - cx;
+        const double dy = (double)pos.y - cy;
+        const double dz = (double)pos.z - cz;
+        const double dist = std::sqrt((dy * dy + dz * dz) + dx * dx);
+        if (dist < best) { // FCOM + JP: NaN keeps the old best
+            best    = (float)dist;
+            bestIdx = (int32)i;
+        }
+    }
+    return (int16)bestIdx;
 }
 
 // 0x447680
@@ -626,5 +663,12 @@ bool CGarages::HasResprayHappened(int16 garageId) {
 
 // 0x44A210
 int32 CGarages::CountCarsInHideoutGarage(eGarageType type) {
-    return plugin::CallAndReturn<int32, 0x44A210, eGarageType>(type);
+    int32 n = 0;
+    const auto* const cars = GetStoredCarsInSafehouse(FindSafeHouseIndexForGarageType(type)); // 0x4489F0
+    for (auto i = 0; i < MAX_CARS_IN_SAFEHOUSE; i++) {
+        if (cars[i].HasCar()) {
+            n++;
+        }
+    }
+    return n;
 }

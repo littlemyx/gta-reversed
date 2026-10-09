@@ -144,7 +144,7 @@ public:
     bool IsStaticPlayerCarEntirelyInside();
     bool IsEntityEntirelyInside3D(CEntity* entity, float radius);
     bool IsPointInsideGarage(CVector point);
-    eGarageDoorState PlayerArrestedOrDied();
+    void PlayerArrestedOrDied();
     void OpenThisGarage();
     void CloseThisGarage();
     void InitDoorsAtStart();

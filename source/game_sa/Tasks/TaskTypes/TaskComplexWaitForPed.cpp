@@ -111,7 +111,7 @@ CTask* CTaskComplexWaitForPed::ControlSubTask(CPed* ped) {
 
     if (m_bRotateOtherPedsToWaitingPed && m_framesToWaitForSettingRotation == 0) {
         const CVector toPartner = m_ped->GetPosition() - ped->GetPosition(); // 0x40FE60
-        ped->m_fCurrentRotation = CGeneral::LimitRadianAngle(CGeneral::GetRadianAngleBetweenPoints(toPartner.x, toPartner.y, 0.f, 0.f)); // 0x53CBE0, 0x53CB50
+        ped->m_fAimingRotation = CGeneral::LimitRadianAngle(CGeneral::GetRadianAngleBetweenPoints(toPartner.x, toPartner.y, 0.f, 0.f)); // 0x53CBE0, 0x53CB50
     }
 
     m_framesToWaitForSettingRotation++;

@@ -202,6 +202,9 @@ RpClump* RpClumpStreamRead(RwStream* stream) {
     RwShimEnsureAtomicRenderSlot();
     RpClump* const clump = rw::Clump::streamRead(stream);
     if (clump) {
+        for (rw::LLLink* l = clump->atomics.link.next; l != clump->atomics.end(); l = l->next) {
+            RwShimGeometryEnsureMesh(rw::Atomic::fromClump(l)->geometry); // geometry chunks read by librw: see RpGeometryStreamRead
+        }
         ReverseList(clump->atomics);
         ReverseList(clump->lights);
         ReverseList(clump->cameras);
@@ -368,7 +371,7 @@ bool ReadGeometries(rw::Stream* stream, int32_t from, int32_t to) {
         if (!rw::findChunk(stream, rw::ID_GEOMETRY, nullptr, nullptr)) {
             return false;
         }
-        rw::Geometry* const g = rw::Geometry::streamRead(stream);
+        rw::Geometry* const g = RpGeometryStreamRead(stream); // exe 0x74D190 (builds the mesh header when the file has no Bin Mesh chunk)
         if (!g) {
             return false;
         }

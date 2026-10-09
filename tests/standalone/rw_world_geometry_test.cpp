@@ -288,6 +288,11 @@ static void MeshOrderTests() {
         CHECK(RpGeometryUnlock(g) == g && g->meshHeader && g->meshHeader->numMeshes == 3);
         RpMesh* mesh = g->meshHeader->getMeshes();
         CHECK(mesh[0].material == b && mesh[1].material == c && mesh[2].material == a);
+        // streamed geometry without a Bin Mesh chunk: the exe's StreamRead unlocks (builds) it; RwShimGeometryEnsureMesh is that step
+        RpGeometryLock(g, rpGEOMETRYLOCKPOLYGONS);
+        CHECK(g->meshHeader == nullptr && RwShimGeometryEnsureMesh(g) && g->meshHeader && g->meshHeader->numMeshes == 3);
+        RpMeshHeader* const hdr = g->meshHeader;
+        CHECK(RwShimGeometryEnsureMesh(g) && g->meshHeader == hdr);              // already has one (file order is kept)
         RpGeometryDestroy(g);
         RpMaterialDestroy(a); RpMaterialDestroy(b); RpMaterialDestroy(c);
     }

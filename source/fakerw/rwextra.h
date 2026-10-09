@@ -260,6 +260,7 @@ RwInt32 RpGeometryAddMorphTargets(RpGeometry* geometry, RwInt32 mtcount);
 RwInt32 RpGeometryAddMorphTarget(RpGeometry* geometry);
 const RpGeometry* RpGeometryForAllMeshes(const RpGeometry* geometry, RpMeshCallBack fpCallBack, void* data);
 RpGeometry* RpGeometryStreamRead(RwStream* stream);
+RwBool     RwShimGeometryEnsureMesh(RpGeometry* geometry); // builds the mesh header of a streamed geometry that came without a Bin Mesh chunk (exe: RpGeometryUnlock inside StreamRead)
 const RpGeometry* RpGeometryStreamWrite(const RpGeometry* geometry, RwStream* stream);
 RwUInt32 RpGeometryStreamGetSize(const RpGeometry* geometry);
 inline RpGeometry* RpGeometryAddRef(RpGeometry* geometry) { geometry->refCount++; return geometry; }

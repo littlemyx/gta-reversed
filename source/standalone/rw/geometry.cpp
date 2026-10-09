@@ -498,8 +498,24 @@ const RpGeometry* RpGeometryForAllMeshes(const RpGeometry* geometry, RpMeshCallB
     return geometry;
 }
 
+// A: the exe's RpGeometryStreamRead (0x74D190) calls RpGeometryUnlock (0x74C800) right after the material list, i.e. BEFORE the plugin chunks,
+// so a geometry without a Bin Mesh PLG chunk gets a mesh header built from its triangles; librw leaves it NULL. Streamed geometry that has the
+// chunk keeps the file's mesh order (the chunk replaces the built header in the exe; here it is simply not built).
 RpGeometry* RpGeometryStreamRead(RwStream* stream) {
-    return rw::Geometry::streamRead(stream);
+    RpGeometry* geometry = rw::Geometry::streamRead(stream);
+    if (geometry && !RwShimGeometryEnsureMesh(geometry)) {
+        RpGeometryDestroy(geometry);
+        return nullptr;
+    }
+    return geometry;
+}
+
+// W: see RpGeometryStreamRead. TRUE when the geometry has (or needs no) mesh header afterwards.
+RwBool RwShimGeometryEnsureMesh(RpGeometry* geometry) {
+    if (!geometry || geometry->meshHeader || (geometry->flags & rpGEOMETRYNATIVE)) {
+        return TRUE;
+    }
+    return BuildMeshHeader(geometry) ? TRUE : FALSE;
 }
 
 const RpGeometry* RpGeometryStreamWrite(const RpGeometry* geometry, RwStream* stream) {

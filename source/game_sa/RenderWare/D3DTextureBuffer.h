@@ -31,12 +31,12 @@ public:
     void Setup(uint32 format, int32 width, int32 bOneLevel, uint32 capacity);
 #ifdef _D3D9_H_
     IDirect3DTexture9* Pop();
-    IDirect3DTexture9* Pop(uint32 format, int32 width, int32 height, int32 bOneLevel);
+    IDirect3DTexture9* Pop(uint32 format, int32 width, int32 height, int32 levels);
     bool Push(IDirect3DTexture9* texture);
     bool PushWithoutIncreasingCounter(IDirect3DTexture9* texture);
 #else
     void* Pop();
-    void* Pop(uint32 format, int32 width, int32 height, int32 bOneLevel);
+    void* Pop(uint32 format, int32 width, int32 height, int32 levels);
     bool Push(void* texture);
     bool PushWithoutIncreasingCounter(void* texture);
 #endif

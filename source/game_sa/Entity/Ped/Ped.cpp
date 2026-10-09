@@ -199,7 +199,7 @@ void CPed::InjectHooks() {
     RH_ScopedVMTInstall(ProcessControl, 0x5E8CD0);
     RH_ScopedVMTInstall(Teleport, 0x5E4110);
     RH_ScopedVMTInstall(SpecialEntityPreCollisionStuff, 0x5E3C30);
-    //RH_ScopedVirtualInstall(SpecialEntityCalcCollisionSteps, 0x5E3E90, { .Reversed = false });
+    RH_ScopedVMTInstall(SpecialEntityCalcCollisionSteps, 0x5E3E90);
     RH_ScopedVMTInstall(PreRender, 0x5E8A20);
     RH_ScopedVMTInstall(Render, 0x5E7680);
     RH_ScopedVMTInstall(SetupLighting, 0x553F00);
@@ -5183,7 +5183,44 @@ void CPed::SpecialEntityPreCollisionStuff(CPhysical* colPhysical,
 */
 uint8 CPed::SpecialEntityCalcCollisionSteps(bool& bProcessCollisionBeforeSettingTimeStep, bool& unk2)
 {
-    return plugin::CallMethodAndReturn<uint8, 0x5E3E90, CPed*, bool&, bool&>(this, bProcessCollisionBeforeSettingTimeStep, unk2);
+    if (m_pAttachedTo) { // 0xFC
+        return 1;
+    }
+
+    const double ts = CTimer::GetTimeStep();
+
+    // The original keeps everything on the x87 stack (extended precision) up to the final stores
+    const double sqMoveSpeed = (double)m_vecMoveSpeed.x * m_vecMoveSpeed.x + (double)m_vecMoveSpeed.y * m_vecMoveSpeed.y + (double)m_vecMoveSpeed.z * m_vecMoveSpeed.z;
+
+    if (!m_pPlayerData) {
+        // 0x5E3EE5: `TEST DL, AH` after FCOMP => taken if less than OR unordered
+        if (!(sqMoveSpeed * ts * ts >= 0.09f)) {
+            return 1;
+        }
+    }
+
+    const double moveSpeed = std::sqrt(sqMoveSpeed) * ts;
+
+    int32 steps;
+    if (!m_pPlayerData) {
+        steps = (int32)std::ceil(moveSpeed * 5.0f); // 0x5E3FA8 (the product is stored as a double)
+    } else {
+        // 0x5E3F29: the product is rounded to float (FST) before being passed to ceil
+        const auto Calc = [&](float mult, double minSteps) {
+            const double ceiled = std::ceil((double)(float)(moveSpeed * mult));
+            // FCOMP + `TEST AH, 5` + JP => take the clamp only if ceiled < minSteps (ordered)
+            return (int32)(ceiled < minSteps ? minSteps : ceiled);
+        };
+        steps = m_standingOnEntity
+            ? Calc(6.6666665f, 4.0f)
+            : Calc(3.3333333f, 2.0f);
+    }
+
+    if (!m_pPlayerData) {
+        m_fElasticity += m_fElasticity;
+    }
+
+    return (uint8)steps;
 }
 
 /*!

@@ -77,7 +77,8 @@ void CWorld::InjectHooks() {
     RH_ScopedInstall(FindObjectsKindaColliding, 0x568B80);
     RH_ScopedInstall(FindObjectsOfTypeInRangeSectorList<CPtrListDoubleLink<CPhysical*>>, 0x5635C0);
     RH_ScopedInstall(FindObjectsInRangeSectorList<CPtrListDoubleLink<CPhysical*>>, 0x563500);
-    RH_ScopedInstall(FindPlayerSlotWithVehiclePointer, 0x563FD0);
+    RH_ScopedInstall(FindPlayerSlotWithRemoteVehiclePointer, 0x563FD0);
+    RH_ScopedInstall(FindPlayerSlotWithVehiclePointer, 0x564000);
     RH_ScopedInstall(FindNearestObjectOfTypeSectorList<CPtrListDoubleLink<CPhysical*>>, 0x565450);
     RH_ScopedInstall(FindMissionEntitiesIntersectingCubeSectorList<CPtrListDoubleLink<CPhysical*>>, 0x565300);
     RH_ScopedInstall(FindObjectsIntersectingAngledCollisionBoxSectorList<CPtrListDoubleLink<CPhysical*>>, 0x565200);
@@ -671,15 +672,16 @@ int32 CWorld::FindPlayerSlotWithRemoteVehiclePointer(void* vehicle) {
     return -1;
 }
 
-// Returns p ID (0 or 1), -1 - not found
+// Returns p ID (0 or 1); note: unlike the other `FindPlayerSlotWith*` functions the original returns 0 (NOT -1) if not found
 // 0x564000
 int32 CWorld::FindPlayerSlotWithVehiclePointer(CEntity* vehiclePtr) {
     for (int32 i = 0; i < MAX_PLAYERS; i++) {
-        if (FindPlayerVehicle(i) == vehiclePtr) {
+        const auto* const ped = Players[i].m_pPed;
+        if (ped && ped->m_pVehicle == vehiclePtr) {
             return i;
         }
     }
-    return -1;
+    return 0; // BUG?: Not -1
 }
 
 // 0x564050

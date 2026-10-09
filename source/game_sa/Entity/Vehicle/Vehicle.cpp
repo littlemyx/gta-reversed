@@ -82,8 +82,8 @@ void CVehicle::InjectHooks() {
     RH_ScopedVMTInstall(CanPedJumpOutCar, 0x6D2030);
     RH_ScopedVMTInstall(GetTowHitchPos, 0x6DFB70);
     RH_ScopedVMTInstall(GetTowBarPos, 0x6DFBE0);
-    RH_ScopedVMTInstall(Save, 0x5D4760, {.State = HS::RedirectToGTA });
-    RH_ScopedVMTInstall(Load, 0x5D2900, {.State = HS::RedirectToGTA });
+    RH_ScopedVMTInstall(Save, 0x5D4760);
+    RH_ScopedVMTInstall(Load, 0x5D2900);
 
     // It can't be properly unhooked, original function assumes that CVehicle::GetVehicleAppearance doesn't spoil ECX register, and calls
     // it without making sure that the pointer in it still points to current instance. While it worked for original function, we can't
@@ -1106,7 +1106,7 @@ bool CVehicle::GetTowBarPos(CVector& outPos, bool bCheckModelInfo, CVehicle* veh
     return true;
 }
 
-// 0x871F80// 0x5D4760
+// 0x5D4760
 bool CVehicle::Save() {
     uint32 size = sizeof(CVehicleSaveStructure);
     CVehicleSaveStructure data;
@@ -1116,7 +1116,7 @@ bool CVehicle::Save() {
     return true;
 }
 
-// 0x871F84// 0x5D2900
+// 0x5D2900
 bool CVehicle::Load() {
     uint32 size;
     CVehicleSaveStructure data;
@@ -3082,6 +3082,57 @@ void CVehicle::FirePlaneGuns() {
     m_nGunFiringTime = CTimer::GetTimeInMS();
 }
 
+namespace {
+// Helpers that mimic the original's x87 (extended precision) vector math, term order included.
+// (The shared `CVector` / `CMatrix` helpers are float-based, which gives slightly different results.)
+
+// 0x59C730 - a x b, each component computed in extended precision, then stored as float
+CVector Cross_x87(const CVector& a, const CVector& b) {
+    return {
+        (float)((double)a.y * b.z - (double)a.z * b.y),
+        (float)((double)a.z * b.x - (double)a.x * b.z),
+        (float)((double)a.x * b.y - (double)a.y * b.x)
+    };
+}
+
+// 0x59C790 - Rotates `v` by the 3x3 part of `m` (no translation)
+CVector Multiply3x3_x87(const CMatrix& m, const CVector& v) {
+    return {
+        (float)(((double)m.GetUp().x * v.z + (double)m.GetForward().x * v.y) + (double)m.GetRight().x * v.x),
+        (float)(((double)m.GetUp().y * v.z + (double)m.GetRight().y * v.x) + (double)m.GetForward().y * v.y),
+        (float)(((double)m.GetUp().z * v.z + (double)m.GetRight().z * v.x) + (double)m.GetForward().z * v.y)
+    };
+}
+
+// 0x59C890 - Transforms `v` by `m` (rotation + translation). The translation is added before the result is rounded to float
+CVector TransformPoint_x87(const CMatrix& m, const CVector& v) {
+    const auto& p = m.GetPosition();
+    return {
+        (float)((((double)m.GetUp().x * v.z + (double)m.GetForward().x * v.y) + (double)m.GetRight().x * v.x) + (double)p.x),
+        (float)((((double)m.GetUp().y * v.z + (double)m.GetRight().y * v.x) + (double)m.GetForward().y * v.y) + (double)p.y),
+        (float)((((double)m.GetUp().z * v.z + (double)m.GetRight().z * v.x) + (double)m.GetForward().z * v.y) + (double)p.z)
+    };
+}
+
+// 0x406DA0 - x^2 + y^2 + z^2 (the result stays in extended precision in the original)
+double SquaredMagnitude_x87(const CVector& v) {
+    return ((double)v.x * v.x + (double)v.y * v.y) + (double)v.z * v.z;
+}
+
+// 0x59C910 - In place normalisation
+void Normalise_x87(CVector& v) {
+    const double sq = SquaredMagnitude_x87(v);
+    if (sq > 0.0 || std::isnan(sq)) {
+        const double inv = 1.0 / std::sqrt(sq);
+        v.x = (float)(inv * v.x);
+        v.y = (float)(inv * v.y);
+        v.z = (float)(inv * v.z);
+    } else {
+        v.x = 1.f; // Note: y/z are left as-is
+    }
+}
+}; // namespace
+
 // 0x6D5110
 void CVehicle::FireUnguidedMissile(eOrdnanceType type, bool bCheckTime) {
     auto& firingTimeForOrdnanceType = type == 1 ? m_nProjectileWeaponFiringTime : m_nAdditionalProjectileWeaponFiringTime;
@@ -3104,9 +3155,26 @@ void CVehicle::FireUnguidedMissile(eOrdnanceType type, bool bCheckTime) {
     CWeapon weapon{ WEAPON_RLAUNCHER, 5000 };
 
     for (auto i = 0; i < 2; i++) {
-        const auto ordnancePos = m_matrix->TransformPoint(GetPlaneOrdnancePosition(type));
-        // This places a point somewhere in front of us, depending on our velocity's direction
-        auto origin = ordnancePos + m_matrix->GetForward() * (std::max(0.f, DotProduct(m_matrix->GetForward(), m_vecMoveSpeed)) * CTimer::GetTimeStep());
+        // Fire one missile from each hard-point (the second one is mirrored along X)
+        CVector ordnancePos = GetPlaneOrdnancePosition(type);
+        if (i == 1) {
+            ordnancePos.x = -ordnancePos.x;
+        }
+
+        // This places a point somewhere in front of us, depending on our velocity's direction (x87 evaluation order, see asm)
+        const auto& fwd      = m_matrix->GetForward();
+        const double speedFwd = ((double)m_vecMoveSpeed.z * fwd.z + (double)m_vecMoveSpeed.y * fwd.y) + (double)m_vecMoveSpeed.x * fwd.x;
+        const double s        = speedFwd < 0.0 ? 0.0 : speedFwd; // Note: NaN is passed through
+        const float  fy       = (float)(s * fwd.y);
+        const float  fz       = (float)(s * fwd.z);
+        const CVector offset{
+            (float)((s * fwd.x) * CTimer::ms_fTimeStep),
+            (float)((double)fy * CTimer::ms_fTimeStep),
+            (float)((double)fz * CTimer::ms_fTimeStep)
+        };
+
+        const CVector posn = TransformPoint_x87(*m_matrix, ordnancePos);
+        const CVector origin{ offset.x + posn.x, offset.y + posn.y, offset.z + posn.z };
         weapon.FireProjectile(this, origin);
     }
 
@@ -5846,46 +5914,6 @@ bool CVehicle::GetSpecialColModel() {
     return true;
 }
 
-namespace {
-// Helpers that mimic the original's x87 (extended precision) vector math, term order included.
-// (The shared `CVector` / `CMatrix` helpers are float-based, which gives slightly different results.)
-
-// 0x59C730 - a x b, each component computed in extended precision, then stored as float
-CVector Cross_x87(const CVector& a, const CVector& b) {
-    return {
-        (float)((double)a.y * b.z - (double)a.z * b.y),
-        (float)((double)a.z * b.x - (double)a.x * b.z),
-        (float)((double)a.x * b.y - (double)a.y * b.x)
-    };
-}
-
-// 0x59C790 - Rotates `v` by the 3x3 part of `m` (no translation)
-CVector Multiply3x3_x87(const CMatrix& m, const CVector& v) {
-    return {
-        (float)(((double)m.GetUp().x * v.z + (double)m.GetForward().x * v.y) + (double)m.GetRight().x * v.x),
-        (float)(((double)m.GetUp().y * v.z + (double)m.GetRight().y * v.x) + (double)m.GetForward().y * v.y),
-        (float)(((double)m.GetUp().z * v.z + (double)m.GetRight().z * v.x) + (double)m.GetForward().z * v.y)
-    };
-}
-
-// 0x406DA0 - x^2 + y^2 + z^2 (the result stays in extended precision in the original)
-double SquaredMagnitude_x87(const CVector& v) {
-    return ((double)v.x * v.x + (double)v.y * v.y) + (double)v.z * v.z;
-}
-
-// 0x59C910 - In place normalisation
-void Normalise_x87(CVector& v) {
-    const double sq = SquaredMagnitude_x87(v);
-    if (sq > 0.0 || std::isnan(sq)) {
-        const double inv = 1.0 / std::sqrt(sq);
-        v.x = (float)(inv * v.x);
-        v.y = (float)(inv * v.y);
-        v.z = (float)(inv * v.z);
-    } else {
-        v.x = 1.f; // Note: y/z are left as-is
-    }
-}
-}; // namespace
 
 // 0x6DF930
 void CVehicle::RemoveVehicleUpgrade(int32 upgradeModelIndex) {
@@ -6257,8 +6285,7 @@ void CVehicle::ProcessSirenAndHorn(bool horn) {
             m_HornCounter = HornAt(4) && HornAt(3) ? 1 : 0;
         }
     } else if (horn) {
-        // Note: `m_nAlarmState` is an uint16, so can't use `CanUpdateHornCounter()` (which compares it against -1)
-        if (m_nAlarmState == 0 || m_nAlarmState == 0xFFFF || GetStatus() == STATUS_WRECKED) {
+        if (CanUpdateHornCounter()) {
             m_HornCounter = CPad::GetPad(0)->GetHorn();
         }
     }
@@ -6804,8 +6831,7 @@ void CVehicle::SetupUpgradesAfterLoad() {
 
 // 0x6E3440
 CEntity* CVehicle::GetPlaneWeaponFiringStatus(bool& status, eOrdnanceType& ordnanceType) {
-    // NOTSA: The original returns -1 here if it fails to find the slot, but the asm of `CWorld::FindPlayerSlotWithVehiclePointer` (0x564000) returns 0
-    auto& pad = *CPad::GetPad(std::max(0, CWorld::FindPlayerSlotWithVehiclePointer(this)));
+    auto& pad = *CPad::GetPad(CWorld::FindPlayerSlotWithVehiclePointer(this)); // Note: returns 0 if not found
 
     switch (m_nModelIndex) {
     case MODEL_HUNTER:

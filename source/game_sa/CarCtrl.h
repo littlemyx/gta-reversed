@@ -124,7 +124,7 @@ public:
     static void SteerAICarTowardsPointInEscort(CVehicle* vehicle, CVehicle* escorted, float offsetX, float offsetY, float* pSteer, float* pGas, float* pBrake, bool* pHandbrake);
     static void SteerAICarWithPhysics(CVehicle* vehicle);
     static void SteerAICarWithPhysicsFollowPath(CVehicle* vehicle, float* pSteer, float* pGas, float* pBrake, bool* pHandbrake);
-    static void SteerAICarWithPhysicsFollowPath_Racing(CVehicle* vehicle, float* arg2, float* arg3, float* arg4, bool* arg5);
+    static void SteerAICarWithPhysicsFollowPath_Racing(CVehicle* vehicle, float* pSteer, float* pGas, float* pBrake, bool* pHandbrake);
     static void SteerAICarWithPhysicsFollowPreRecordedPath(CVehicle* vehicle, float* pSteer, float* pGas, float* pBrake, bool* pHandbrake);
     static void SteerAICarWithPhysicsHeadingForTarget(CVehicle* vehicle, CPhysical* target, float x, float y, float* pSteer, float* pGas, float* pBrake, bool* pHandbrake);
     static void SteerAICarWithPhysicsTryingToBlockTarget(CVehicle* vehicle, CEntity* Unusued, float x, float y, float dirX, float dirY, float* pSteer, float* pGas, float* pBrake, bool* pHandbrake);

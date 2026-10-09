@@ -25,23 +25,7 @@ namespace {
 float OGTimeStepInMS() {
     return CTimer::GetTimeStep() * 0.02f * 1000.0f;
 }
-
-// NOTSA: the exe computes the HUD layout as `maximumWidth * (1/640) * a` / `maximumHeight * (1/448) * a` (multiply by the float
-// reciprocal), while common.h's SCREEN_STRETCH_X/Y divide: `a * w / 640`. Not bit-identical, so the reversed code uses these.
-float RvStretchX(float a) { return (float)RsGlobal.maximumWidth * (1.0f / 640.0f) * a; }
-float RvStretchY(float a) { return (float)RsGlobal.maximumHeight * (1.0f / 448.0f) * a; }
 }
-
-// NOTSA: inside this file ALL the layout helpers of common.h are replaced by the exe's exact form (`W * (1/640) * a`, `H * (1/448) * a`, `W - W * (1/640) * a`).
-// The original HUD code has no aspect-ratio correction (SCREEN_SCALE_X == SCREEN_STRETCH_X here). Where the exe computes a layout value differently, write it out explicitly.
-#define SCREEN_STRETCH_X(a)           RvStretchX(a)
-#define SCREEN_STRETCH_Y(a)           RvStretchY(a)
-#define SCREEN_SCALE_X(a)             RvStretchX(a)
-#define SCREEN_SCALE_Y(a)             RvStretchY(a)
-#define SCREEN_STRETCH_FROM_RIGHT(a)  ((float)RsGlobal.maximumWidth  - RvStretchX(a))
-#define SCREEN_STRETCH_FROM_BOTTOM(a) ((float)RsGlobal.maximumHeight - RvStretchY(a))
-#define SCREEN_SCALE_FROM_RIGHT(a)    SCREEN_STRETCH_FROM_RIGHT(a)
-#define SCREEN_SCALE_FROM_BOTTOM(a)   SCREEN_STRETCH_FROM_BOTTOM(a)
 
 void CHud::InjectHooks() {
     RH_ScopedClass(CHud);
@@ -577,10 +561,10 @@ void CHud::DrawAreaName() {
     m_ZoneNameTimer += (uint32)(int32)OGTimeStepInMS();
     CFont::SetProportional(true);
     CFont::SetBackground(false, false);
-    CFont::SetScaleForCurrentLanguage(RvStretchX(1.2f), RvStretchY(1.9f));
+    CFont::SetScaleForCurrentLanguage(SCREEN_STRETCH_X(1.2f), SCREEN_STRETCH_Y(1.9f));
     CFont::SetEdge(2);
     CFont::SetOrientation(eFontAlignment::ALIGN_RIGHT);
-    CFont::SetRightJustifyWrap(RvStretchX(180.0f));
+    CFont::SetRightJustifyWrap(SCREEN_STRETCH_X(180.0f));
     CFont::SetDropColor({ 0, 0, 0, (uint8)alpha });
     CFont::SetFontStyle(FONT_GOTHIC);
 
@@ -592,7 +576,7 @@ void CHud::DrawAreaName() {
         CFont::SetColor(HudColour.GetRGBA(HUD_COLOUR_LIGHT_BLUE, (uint8)alpha));
     }
 
-    CFont::PrintStringFromBottom((float)RsGlobal.maximumWidth - RvStretchX(32.0f), ((float)RsGlobal.maximumHeight - RvStretchY(104.0f)) + RvStretchY(76.0f), m_ZoneToPrint);
+    CFont::PrintStringFromBottom((float)RsGlobal.maximumWidth - SCREEN_STRETCH_X(32.0f), ((float)RsGlobal.maximumHeight - SCREEN_STRETCH_Y(104.0f)) + SCREEN_STRETCH_Y(76.0f), m_ZoneToPrint);
     CFont::SetSlant(0.0f);
 }
 
@@ -610,7 +594,7 @@ void CHud::DrawBustedWastedMessage() {
     // Function-local `static float posY` (0xBAB220) with its init guard (bit 0 of 0xBAB224). Computed on the first call and every time the message (re)starts.
     static auto& posY      = StaticRef<float>(0xBAB220);
     static auto& posYGuard = StaticRef<uint32>(0xBAB224);
-    const auto ComputePosY = [] { return (float)(RsGlobal.maximumHeight / 2) - RvStretchY(30.0f); };
+    const auto ComputePosY = [] { return (float)(RsGlobal.maximumHeight / 2) - SCREEN_STRETCH_Y(30.0f); };
     if (!(posYGuard & 1)) {
         posYGuard |= 1;
         posY = ComputePosY();
@@ -634,7 +618,7 @@ void CHud::DrawBustedWastedMessage() {
     messageAlpha = std::min(messageAlpha, 255.0f);
 
     CFont::SetBackground(false, false);
-    CFont::SetScale(RvStretchX(2.1f), RvStretchY(2.1f));
+    CFont::SetScale(SCREEN_STRETCH_X(2.1f), SCREEN_STRETCH_Y(2.1f));
     CFont::SetProportional(true);
     CFont::SetJustify(false);
     CFont::SetOrientation(eFontAlignment::ALIGN_CENTER);
@@ -753,8 +737,8 @@ void CHud::DrawCrossHairs() {
             CSprite2d::DrawRect(CRect{ centerX - 1.0f, centerY + 1.0f, centerX + 1.0f, centerY - 1.0f }, white);
         }
 
-        const float w = SCREEN_WIDTH * (1.0f / 640.0f) * 64.0f * radius;
-        const float h = SCREEN_HEIGHT * (1.0f / 448.0f) * 64.0f * radius;
+        const float w = SCREEN_WIDTH * SCREEN_RECIPROCAL_X * 64.0f * radius;
+        const float h = SCREEN_HEIGHT * SCREEN_RECIPROCAL_Y * 64.0f * radius;
         DrawM16Quadrants((w * 0.5f + centerX) - w, (h * 0.5f + centerY) - h, w, h);
     } else if (
         CTheScripts::bDrawCrossHair == eCrossHairType::FIXED_DRAW_1STPERSON_WEAPON ||
@@ -769,11 +753,11 @@ void CHud::DrawCrossHairs() {
         const auto weaponType = FindPlayerPed()->GetActiveWeapon().m_Type;
         if (weaponType == WEAPON_CAMERA || weaponType == WEAPON_SNIPERRIFLE || CTheScripts::bDrawCrossHair == eCrossHairType::FIXED_DRAW_1STPERSON_WEAPON) {
             if (weaponType == WEAPON_CAMERA || CTheScripts::bDrawCrossHair == eCrossHairType::FIXED_DRAW_1STPERSON_WEAPON) {
-                sizeX = SCREEN_WIDTH * (1.0f / 640.0f) * 256.0f;
-                sizeY = SCREEN_HEIGHT * (1.0f / 448.0f) * 192.0f;
+                sizeX = SCREEN_WIDTH * SCREEN_RECIPROCAL_X * 256.0f;
+                sizeY = SCREEN_HEIGHT * SCREEN_RECIPROCAL_Y * 192.0f;
             } else {
-                sizeX = SCREEN_WIDTH * (1.0f / 640.0f) * 210.0f;
-                sizeY = SCREEN_HEIGHT * (1.0f / 448.0f) * 210.0f;
+                sizeX = SCREEN_WIDTH * SCREEN_RECIPROCAL_X * 210.0f;
+                sizeY = SCREEN_HEIGHT * SCREEN_RECIPROCAL_Y * 210.0f;
             }
 
             const auto* const wi = CWeaponInfo::GetWeaponInfo(player->GetActiveWeapon().m_Type, eWeaponSkill::STD);
@@ -791,10 +775,10 @@ void CHud::DrawCrossHairs() {
             if (mode != MODE_ROCKETLAUNCHER && mode != MODE_1STPERSON && mode != MODE_ROCKETLAUNCHER_RUNABOUT && mode != MODE_ROCKETLAUNCHER_HS && mode != MODE_ROCKETLAUNCHER_RUNABOUT_HS) {
                 return;
             }
-            sizeX   = SCREEN_WIDTH * (1.0f / 640.0f) * 24.0f;
-            sizeY   = SCREEN_HEIGHT * (1.0f / 448.0f) * 24.0f;
-            offsetX = SCREEN_WIDTH * (1.0f / 640.0f) * 20.0f;
-            offsetY = SCREEN_HEIGHT * (1.0f / 448.0f) * 20.0f;
+            sizeX   = SCREEN_WIDTH * SCREEN_RECIPROCAL_X * 24.0f;
+            sizeY   = SCREEN_HEIGHT * SCREEN_RECIPROCAL_Y * 24.0f;
+            offsetX = SCREEN_WIDTH * SCREEN_RECIPROCAL_X * 20.0f;
+            offsetY = SCREEN_HEIGHT * SCREEN_RECIPROCAL_Y * 20.0f;
             texture = Sprites[SPRITE_SITE_ROCKET].m_pTexture;
         }
 
@@ -816,8 +800,8 @@ void CHud::DrawCrossHairs() {
             RwRenderStateSet(rwRENDERSTATEZWRITEENABLE, RWRSTATE(FALSE));
         }
     } else {
-        const float w = SCREEN_WIDTH * (1.0f / 640.0f) * 64.0f;
-        const float h = SCREEN_HEIGHT * (1.0f / 448.0f) * 64.0f;
+        const float w = SCREEN_WIDTH * SCREEN_RECIPROCAL_X * 64.0f;
+        const float h = SCREEN_HEIGHT * SCREEN_RECIPROCAL_Y * 64.0f;
         DrawM16Quadrants(halfW - w * 0.5f, halfH - h * 0.5f, w, h);
     }
 }
@@ -1437,8 +1421,8 @@ void CHud::DrawRadar() {
         return;
     }
 
-    const float ws = RvStretchX(1.0f); // W * (1/640)
-    const float hs = RvStretchY(1.0f); // H * (1/448)
+    const float ws = SCREEN_STRETCH_X(1.0f); // W * (1/640)
+    const float hs = SCREEN_STRETCH_Y(1.0f); // H * (1/448)
 
     CVehicle* vehicle = FindPlayerVehicle();
     if (vehicle && vehicle->IsSubPlane() && vehicle->m_nModelIndex != MODEL_VORTEX) {
@@ -1536,7 +1520,7 @@ void CHud::DrawScriptText(bool isBeforeFade) {
             continue;
         }
 
-        CFont::SetScale(SCREEN_SCALE_X(t.Scale.x), RvStretchY(t.Scale.y) * 0.5f);
+        CFont::SetScale(SCREEN_SCALE_X(t.Scale.x), SCREEN_STRETCH_Y(t.Scale.y) * 0.5f);
         CFont::SetColor(t.Color);
         CFont::SetJustify(t.Justify);
         if (t.HasRightJustify) {
@@ -2285,10 +2269,10 @@ inline void CHud::DrawWeapon(CPlayerPed* ped0, CPlayerPed* ped1, float alpha) {
 // 0x58A160
 void CHud::DrawTripSkip() {
     // exe: top = (H - hs * 104) - hs * 85 (NOT H - 189 * hs); the sprite is 64 x 64 (in layout units)
-    const float ws   = RvStretchX(1.0f);
-    const float hs   = RvStretchY(1.0f);
+    const float ws   = SCREEN_STRETCH_X(1.0f);
+    const float hs   = SCREEN_STRETCH_Y(1.0f);
     const float topY = ((float)RsGlobal.maximumHeight - hs * 104.0f) - hs * 85.0f;
-    const float left = RvStretchX(54.0f);
+    const float left = SCREEN_STRETCH_X(54.0f);
     CRect rect; // NOTE: `top` (+4) holds the larger Y, `bottom` (+0xC) the smaller one, as in the exe
     rect.left   = left;
     rect.top    = topY + hs * 64.0f;
@@ -2475,7 +2459,7 @@ void CHud::RenderHealthBar(int32 playerId, int32 x, int32 y) {
     const float x109 = SCREEN_STRETCH_X(109.0f);
     const auto info = player->GetPlayerInfoForThisPlayerPed();
     // exe: (W * (1/640) * maxHealth) * 109 (spilled to float) / modifier; NOT (x109 * maxHealth)
-    const float totalWidthF = RvStretchX(1.0f) * (float)info->m_nMaxHealth * 109.0f;
+    const float totalWidthF = SCREEN_STRETCH_X(1.0f) * (float)info->m_nMaxHealth * 109.0f;
     const auto totalWidth = uint16(notsa::detail::Ftol(totalWidthF / CStats::GetFatAndMuscleModifier(STAT_MOD_10)));
 
     CSprite2d::DrawBarChart(

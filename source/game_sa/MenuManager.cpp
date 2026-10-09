@@ -397,12 +397,14 @@ void CMenuManager::DoSettingsBeforeStartingAGame() {
 
 // 0x5733E0
 float CMenuManager::StretchX(float x) {
-    return (SCREEN_WIDTH == DEFAULT_SCREEN_WIDTH) ? x : SCREEN_STRETCH_X(x);
+    // exe: `(W * x) * (1/640)` (0x859520): NOT SCREEN_STRETCH_X's `W * (1/640) * x` (multiplication order differs in the last bit)
+    return (RsGlobal.maximumWidth == DEFAULT_SCREEN_WIDTH) ? x : (float)((double)RsGlobal.maximumWidth * (double)x * (double)SCREEN_RECIPROCAL_X);
 }
 
 // 0x573410
 float CMenuManager::StretchY(float y) {
-    return (SCREEN_HEIGHT == DEFAULT_SCREEN_HEIGHT) ? y : SCREEN_STRETCH_Y(y);
+    // exe: `(H * y) * (1/448)` (0x859524), see StretchX
+    return (RsGlobal.maximumHeight == DEFAULT_SCREEN_HEIGHT) ? y : (float)((double)RsGlobal.maximumHeight * (double)y * (double)SCREEN_RECIPROCAL_Y);
 }
 
 // 0x573680

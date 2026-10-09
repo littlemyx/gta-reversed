@@ -77,8 +77,6 @@ static_assert(sizeof(CPlayerInfo) == 0x190);
 
 //! 0x859A3C: 1/255
 constexpr float ONE_OVER_255 = std::bit_cast<float>(0x3B808081u);
-//! 0x859520: the screen width scale (see Group22b)
-constexpr float SCREEN_WIDTH_SCALE = std::bit_cast<float>(0x3ACCCCCDu);
 
 //! 2500 SET_PETROL_TANK_WEAKPOINT (case @0x47A7A2): car, flag  -- bPetrolTankIsWeakPoint (+0x42E bit 6) = bit 0 of flag (`shl cl, 6; xor; and 0x40`)
 void SetPetrolTankWeakpoint(CVehicle& veh, int32 flag) {
@@ -184,7 +182,7 @@ bool IsMoneyPickupAtCoords(CVector coords) {
 //! width = _ftol2( (maximumWidth [0xC17044] * 0x859520) * (int)(uint16)width ) -- x87: every step rounded by the PC=24 mode
 //! CMenuSystem::SetColumnWidth(menu, column, (uint16)result) [0x582050]
 void SetMenuColumnWidth(int32 menu, int32 column, int32 width) {
-    const double scaled = ((double)RsGlobal.maximumWidth * (double)SCREEN_WIDTH_SCALE) * (double)(int32)(uint16)width;
+    const double scaled = ((double)RsGlobal.maximumWidth * (double)SCREEN_RECIPROCAL_X) * (double)(int32)(uint16)width;
     CMenuSystem::SetColumnWidth((MenuId)(uint8)menu, (uint8)column, (uint16)Ftol(scaled));
 }
 

@@ -372,18 +372,29 @@ float CRadar::LimitRadarPoint(CVector2D& point) {
 
 // 0x583350
 void CRadar::LimitToMap(float& x, float& y) {
-    const auto zoom = FrontEndMenuManager.m_bMapLoaded ? FrontEndMenuManager.m_fMapZoom : 140.0f;
+    // Exact x87 form of the exe (0x583350): the zoom is truncated to an int16 (ftol), the bounds are `(origin -+ zoom) * (W * (1/640))`
+    // and compared/stored without std::clamp (no assert on min > max, NaN keeps the input)
+    using notsa::detail::Ftol;
+    const double zoom = FrontEndMenuManager.m_bMapLoaded ? (double)(int16)Ftol((double)FrontEndMenuManager.m_fMapZoom) : 140.0;
+    const double wk   = (double)RsGlobal.maximumWidth * (double)SCREEN_RECIPROCAL_X; // 0x859520
+    const double hk   = (double)RsGlobal.maximumHeight * (double)SCREEN_RECIPROCAL_Y; // 0x859524
 
-    {
-        const auto min = SCREEN_STRETCH_X(FrontEndMenuManager.m_vMapOrigin.x - zoom);
-        const auto max = SCREEN_STRETCH_X(FrontEndMenuManager.m_vMapOrigin.x + zoom);
-        x = std::clamp(x, min, max);
+    const double minX = ((double)FrontEndMenuManager.m_vMapOrigin.x - zoom) * wk;
+    if (minX > (double)x) {
+        x = (float)minX;
+    }
+    const double maxX = (zoom + (double)FrontEndMenuManager.m_vMapOrigin.x) * wk;
+    if (maxX < (double)x) {
+        x = (float)maxX;
     }
 
-    {
-        const auto min = SCREEN_STRETCH_Y(FrontEndMenuManager.m_vMapOrigin.y - zoom);
-        const auto max = SCREEN_STRETCH_Y(FrontEndMenuManager.m_vMapOrigin.y + zoom);
-        y = std::clamp(y, min, max);
+    const double minY = ((double)FrontEndMenuManager.m_vMapOrigin.y - zoom) * hk;
+    if (minY > (double)y) {
+        y = (float)minY;
+    }
+    const double maxY = (zoom + (double)FrontEndMenuManager.m_vMapOrigin.y) * hk;
+    if (maxY < (double)y) {
+        y = (float)maxY;
     }
 }
 
@@ -419,9 +430,14 @@ CVector2D CRadar::TransformRadarPointToScreenSpace(const CVector2D& in) {
         };
     } else {
         _asm { pop edx };
+        // Exact x87 form of the exe (0x583480), everything stays in extended precision: wk = W * (1/640), hk = (1/448) * H
+        const double wk = (double)RsGlobal.maximumWidth * (double)SCREEN_RECIPROCAL_X; // 0x859520
+        const double hk = (double)SCREEN_RECIPROCAL_Y * (double)RsGlobal.maximumHeight; // 0x859524
+        const double a  = 94.0 * wk;
+        const double g  = 76.0 * hk;
         return {
-            SCREEN_STRETCH_X(94.0f) / 2.0f + SCREEN_STRETCH_X(40.0f) + SCREEN_STRETCH_X(94.0f * in.x) / 2.0f,
-            SCREEN_STRETCH_FROM_BOTTOM(104.0f) + SCREEN_STRETCH_Y(76.0f) / 2.0f - SCREEN_STRETCH_Y(76.0f * in.y) / 2.0f
+            (float)((0.5 * a + wk * 40.0) + (a * (double)in.x) * 0.5),
+            (float)(((double)RsGlobal.maximumHeight - hk * 104.0 + g * 0.5) - (g * (double)in.y) * 0.5)
         };
     }
 }

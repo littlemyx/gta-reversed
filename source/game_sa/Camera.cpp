@@ -5037,8 +5037,10 @@ void CCamera::GetScreenRect(CRect* rect) const {
     rect->right = SCREEN_WIDTH;
 
     if (m_bWideScreenOn) {
-        rect->top    = (float)(RsGlobal.maximumHeight / 2) * m_fScreenReductionPercentage / 100.f - SCREEN_SCALE_Y(22.0f);
-        rect->bottom = SCREEN_HEIGHT - (RsGlobal.maximumHeight / 2) * m_fScreenReductionPercentage / 100.f - SCREEN_SCALE_Y(14.0f);
+        // exe: the reduction is multiplied by 0.01f (0x858C58), not divided by 100; `half * red * 0.01` stays in extended precision
+        const double reduction = (double)(RsGlobal.maximumHeight / 2) * (double)m_fScreenReductionPercentage * (double)0.01f;
+        rect->top    = (float)(reduction - (double)SCREEN_SCALE_Y(22.0f));
+        rect->bottom = (float)(((double)SCREEN_HEIGHT - reduction) - (double)SCREEN_SCALE_Y(14.0f));
     } else {
         rect->top    = 0.0f;
         rect->bottom = SCREEN_HEIGHT;

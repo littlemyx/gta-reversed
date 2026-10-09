@@ -84,8 +84,8 @@ OpcodeResult ScriptCreateMenu(CRunningScript& S) {
     char title[16]{};
     ReadMenuText(S, title);
     S.CollectParameters(7);
-    const double widthScale  = (double)RsGlobal.maximumWidth * (double)std::bit_cast<float>(0x3ACCCCCDu);  // 0x859520
-    const double heightScale = (double)RsGlobal.maximumHeight * (double)std::bit_cast<float>(0x3B124925u); // 0x859524
+    const double widthScale  = (double)RsGlobal.maximumWidth * (double)SCREEN_RECIPROCAL_X; // 0x859520
+    const double heightScale = (double)RsGlobal.maximumHeight * (double)SCREEN_RECIPROCAL_Y; // 0x859524
     const float  x           = (float)((double)ScriptParams[0].fParam * widthScale);
     const float  w           = (float)(widthScale * (double)ScriptParams[2].fParam);
     const float  y           = (float)(heightScale * (double)ScriptParams[1].fParam);

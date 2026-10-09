@@ -39,22 +39,27 @@ constexpr auto DEFAULT_VIEW_WINDOW        = 0.7f;
 #define SCREEN_ASPECT_RATIO (CDraw::ms_fAspectRatio)
 #define SCREEN_VIEW_WINDOW (std::tan(DegreesToRadians(CDraw::GetFOV() / (2.0f)))) // todo: GetScaledFov
 
-// This scales from PS2 pixel coordinates to the real resolution
-inline float SCREEN_STRETCH_X(float a)           { return a * SCREEN_WIDTH  / (float)DEFAULT_SCREEN_WIDTH; } // RsGlobal.maximumWidth * 0.0015625 * value
-inline float SCREEN_STRETCH_Y(float a)           { return a * SCREEN_HEIGHT / (float)DEFAULT_SCREEN_HEIGHT; }
+// This scales from PS2 pixel coordinates to the real resolution.
+// The exe computes `maximumWidth * (1/640) * a` / `maximumHeight * (1/448) * a` (float reciprocals 0x859520 / 0x859524, multiplied in this order),
+// which is NOT bit-identical to `a * W / 640`. Keep this exact form.
+// NOTE: the reciprocals MUST be real float constants: with x87 codegen MSVC folds `1.0f / 640.0f` as an extended-precision constant, not as the .rdata float
+constexpr float SCREEN_RECIPROCAL_X = std::bit_cast<float>(0x3ACCCCCDu); // 0x859520 = 1 / 640
+constexpr float SCREEN_RECIPROCAL_Y = std::bit_cast<float>(0x3B124925u); // 0x859524 = 1 / 448
+inline float SCREEN_STRETCH_X(float a)           { return SCREEN_WIDTH  * SCREEN_RECIPROCAL_X * a; }
+inline float SCREEN_STRETCH_Y(float a)           { return SCREEN_HEIGHT * SCREEN_RECIPROCAL_Y * a; }
 inline float SCREEN_STRETCH_FROM_RIGHT(float a)  { return SCREEN_WIDTH  - SCREEN_STRETCH_X(a); }
 inline float SCREEN_STRETCH_FROM_BOTTOM(float a) { return SCREEN_HEIGHT - SCREEN_STRETCH_Y(a); }
 
-#define ASPECT_RATIO_SCALE
-#ifdef ASPECT_RATIO_SCALE
+// NOTSA: widescreen correction. The original has NONE (SCREEN_SCALE_X == SCREEN_STRETCH_X); only define NOTSA_ASPECT_RATIO_SCALE for a deliberately non-original build.
+#ifdef NOTSA_ASPECT_RATIO_SCALE
 #define SCREEN_SCALE_AR(a) ((a) * DEFAULT_ASPECT_RATIO / SCREEN_ASPECT_RATIO)
 #else
 #define SCREEN_SCALE_AR(a) (a)
 #endif
 
-// This scales from PS2 pixel coordinates while optionally maintaining the aspect ratio
+// This scales from PS2 pixel coordinates (the original does not maintain the aspect ratio, see above)
 inline float SCREEN_SCALE_X(float a)           { return SCREEN_SCALE_AR(SCREEN_STRETCH_X(a)); }
-inline float SCREEN_SCALE_Y(float a)           { return SCREEN_STRETCH_Y(a); } // RsGlobal.maximumHeight * 0.  * value
+inline float SCREEN_SCALE_Y(float a)           { return SCREEN_STRETCH_Y(a); }
 inline float SCREEN_SCALE_FROM_RIGHT(float a)  { return SCREEN_WIDTH  - SCREEN_SCALE_X(a); }
 inline float SCREEN_SCALE_FROM_BOTTOM(float a) { return SCREEN_HEIGHT - SCREEN_SCALE_Y(a); }
 

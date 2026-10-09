@@ -381,9 +381,7 @@ void HeliFollowEntity(CVehicle& veh, int32 pedH, int32 vehH, float value) {
 //! if `!m_bQuit` => m_bQuit = true and MakeAbortable(ped, LEISURE).
 void TaskUseMobilePhone(CRunningScript& S, eScriptCommands cmd, int32 pedH, int32 flag) {
     if (flag > 0) {
-        // The task class is not ported (abstract here): allocate it like CTask::operator new and run the exe constructor (0x6348A0, listed as a stub)
-        auto* const task = static_cast<CTaskComplexUseMobilePhone*>(CTask::operator new(sizeof(CTaskComplexUseMobilePhone)));
-        reinterpret_cast<CTaskComplexUseMobilePhone*(__thiscall*)(CTaskComplexUseMobilePhone*, int32)>(0x6348A0)(task, -1);
+        auto* const task = new CTaskComplexUseMobilePhone{ -1 }; // 0x6348A0
         S.GivePedScriptedTask(pedH, task, (int32)cmd);
         return;
     }

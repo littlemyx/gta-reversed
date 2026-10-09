@@ -354,6 +354,8 @@ public:
 
     int16 LookAroundLeftRight(CPed* entity) noexcept;
     int16 LookAroundUpDown(CPed* ped) noexcept;
+    int16 LookAroundLeftRight() noexcept; // 0x540E80
+    int16 LookAroundUpDown() noexcept;    // 0x540F80
 
     int32 sub_541320() { return AverageWeapon / AverageEntries; } // 0x541320
     int32 sub_541290();
@@ -378,7 +380,7 @@ public:
 VALIDATE_SIZE(CPad, 0x134);
 
 // return pressed key, in order of CKeyboardState
-int GetCurrentKeyPressed(RsKeyCodes& keys);
+void GetCurrentKeyPressed(RsKeyCodes& keys);
 
 // todo: move these fucks out
 #ifndef NOTSA_USE_SDL3

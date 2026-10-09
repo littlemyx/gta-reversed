@@ -102,12 +102,15 @@ void CPad::InjectHooks() {
     RH_ScopedInstall(ConversationNoJustDown, 0x541200);
     RH_ScopedInstall(GroupControlForwardJustDown, 0x541230);
     RH_ScopedInstall(GroupControlBackJustDown, 0x541260);
-    RH_ScopedInstall(LookAroundLeftRight, 0x540BD0);
-    RH_ScopedInstall(LookAroundUpDown, 0x540CC0);
+    RH_ScopedOverloadedInstall(LookAroundLeftRight, "ped", 0x540BD0, int16(CPad::*)(CPed*));
+    RH_ScopedOverloadedInstall(LookAroundUpDown, "ped", 0x540CC0, int16(CPad::*)(CPed*));
+    RH_ScopedOverloadedInstall(LookAroundLeftRight, "", 0x540E80, int16(CPad::*)());
+    RH_ScopedOverloadedInstall(LookAroundUpDown, "", 0x540F80, int16(CPad::*)());
     RH_ScopedInstall(GetAnaloguePadUp, 0x540950);
     RH_ScopedInstall(GetAnaloguePadLeft, 0x5409B0);
     RH_ScopedInstall(GetAnaloguePadRight, 0x5409E0);
     RH_ScopedInstall(GetAnaloguePadDown, 0x540980);
+    RH_ScopedGlobalInstall(GetCurrentKeyPressed, 0x541490);
 #ifndef NOTSA_USE_SDL3
     RH_ScopedInstall(GetMouseState, 0x746ED0);
 #endif
@@ -1244,6 +1247,25 @@ int16 CPad::LookAroundLeftRight(CPed* ped) noexcept {
     return static_cast<int16>((static_cast<float>(s1) + (s1 < 0 ? 35.0f : -35.0f)) * UNK);
 }
 
+// 0x540E80
+int16 CPad::LookAroundLeftRight() noexcept {
+    // NOTE: The original reads the stick of pad 0 (0xB7345C), not `this`
+    const float stick = (float)Pads[0].NewState.RightStickX;
+    if (std::fabs(stick) > 100.0f && (DisablePlayerControls || !NewState.ShockButtonR)) {
+        if (stick > 0.0f) {
+            return (int16)(int32)((double)stick - 100.0 + 50.0);
+        }
+        return (int16)(int32)((double)stick + 100.0 - 50.0);
+    }
+    if (TheCamera.m_aCams[0].Using3rdPersonMouseCam() && std::fabs(stick) > 50.0f) { // 0x50A850
+        if (stick > 0.0f) {
+            return (int16)(int32)(((double)stick - 50.0) * 0.5f);
+        }
+        return (int16)(int32)(((double)stick + 50.0) * 0.5f);
+    }
+    return 0;
+}
+
 // 0x540CC0
 int16 CPad::LookAroundUpDown(CPed* ped) noexcept {
     if (DisablePlayerControls) {
@@ -1272,6 +1294,23 @@ int16 CPad::LookAroundUpDown(CPed* ped) noexcept {
 
     constexpr auto UNK = 1.3763441f;
     return static_cast<int16>((static_cast<float>(s1) + (s1 < 0 ? 35.0f : -35.0f)) * UNK);
+}
+
+// 0x540F80
+int16 CPad::LookAroundUpDown() noexcept {
+    // NOTE: The original reads the stick of pad 0 (0xB7345E), not `this`
+    int16 stick = Pads[0].NewState.RightStickY;
+    if (bInvertLook4Pad) {
+        stick = (int16)-(int32)stick;
+    }
+    if (std::abs((int32)stick) > 100 && (DisablePlayerControls || !NewState.ShockButtonR)) {
+        return (int16)(stick > 0 ? stick - 50 : stick + 50);
+    }
+    if (TheCamera.m_aCams[0].Using3rdPersonMouseCam() && std::abs((int32)stick) > 50) { // 0x50A850
+        const int32 v = stick > 0 ? stick - 50 : stick + 50;
+        return (int16)(int32)((float)v * 0.5f);
+    }
+    return 0;
 }
 
 // 0x541290
@@ -1421,8 +1460,74 @@ bool CPad::DebugMenuJustPressed() {
 }
 
 // 0x541490
-int GetCurrentKeyPressed(RsKeyCodes& keys) {
-    return plugin::CallAndReturn<int, 0x541490, RsKeyCodes&>(keys);
+void GetCurrentKeyPressed(RsKeyCodes& keys) {
+    const auto& nks = CPad::NewKeyState;
+    const auto& oks = CPad::OldKeyState;
+    const auto  JustDown = [](int16 now, int16 old) { return now != 0 && old == 0; };
+
+    keys = rsNULL;
+
+    // Standard keys 0..254, the last one pressed wins (the original unrolls this by 5)
+    for (int32 i = 0; i < 255; i++) {
+        if (JustDown(nks.standardKeys[i], oks.standardKeys[i])) {
+            keys = (RsKeyCodes)i;
+        }
+    }
+
+    // F1 - F12
+    for (int32 i = 0; i < 12; i++) {
+        if (JustDown(nks.FKeys[i], oks.FKeys[i])) {
+            keys = (RsKeyCodes)(rsF1 + i);
+        }
+    }
+
+    // Special keys, in the order the original checks them (matters when more than one went down: last wins)
+#define CHECK_KEY(field, code) if (JustDown(nks.field, oks.field)) { keys = code; }
+    CHECK_KEY(esc,      rsESC);
+    CHECK_KEY(insert,   rsINS);
+    CHECK_KEY(del,      rsDEL);
+    CHECK_KEY(home,     rsHOME);
+    CHECK_KEY(end,      rsEND);
+    CHECK_KEY(pgup,     rsPGUP);
+    CHECK_KEY(pgdn,     rsPGDN);
+    CHECK_KEY(up,       rsUP);
+    CHECK_KEY(down,     rsDOWN);
+    CHECK_KEY(left,     rsLEFT);
+    CHECK_KEY(right,    rsRIGHT);
+    CHECK_KEY(scroll,   rsSCROLL);
+    CHECK_KEY(pause,    rsPAUSE);
+    CHECK_KEY(numlock,  rsNUMLOCK);
+    CHECK_KEY(div,      rsDIVIDE);
+    CHECK_KEY(mul,      rsTIMES);
+    CHECK_KEY(sub,      rsMINUS);
+    CHECK_KEY(add,      rsPLUS);
+    CHECK_KEY(enter,    rsPADENTER);
+    CHECK_KEY(decimal,  rsPADDEL);
+    CHECK_KEY(num1,     rsPADEND);
+    CHECK_KEY(num2,     rsPADDOWN);
+    CHECK_KEY(num3,     rsPADPGDN);
+    CHECK_KEY(num4,     rsPADLEFT);
+    CHECK_KEY(num5,     rsPAD5);
+    CHECK_KEY(num6,     rsPADRIGHT);
+    CHECK_KEY(num7,     rsPADHOME);
+    CHECK_KEY(num8,     rsPADUP);
+    CHECK_KEY(num9,     rsPADPGUP);
+    CHECK_KEY(num0,     rsPADINS);
+    CHECK_KEY(back,     rsBACKSP);
+    CHECK_KEY(tab,      rsTAB);
+    CHECK_KEY(capslock, rsCAPSLK);
+    CHECK_KEY(extenter, rsENTER);
+    CHECK_KEY(lshift,   rsLSHIFT);
+    CHECK_KEY(shift,    rsSHIFT);  // NOTE: checked before rshift in the original
+    CHECK_KEY(rshift,   rsRSHIFT);
+    CHECK_KEY(lctrl,    rsLCTRL);
+    CHECK_KEY(rctrl,    rsRCTRL);
+    CHECK_KEY(lalt,     rsLALT);
+    CHECK_KEY(ralt,     rsRALT);
+    CHECK_KEY(lwin,     rsLWIN);
+    CHECK_KEY(rwin,     rsRWIN);
+    CHECK_KEY(apps,     rsAPPS);
+#undef CHECK_KEY
 }
 
 #ifndef NOTSA_USE_SDL3

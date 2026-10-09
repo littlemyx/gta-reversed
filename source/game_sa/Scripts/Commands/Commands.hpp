@@ -31,6 +31,7 @@ namespace stat { void RegisterHandlers(); };
 namespace ported {
 namespace g01_04 { void RegisterHandlers(); }; // S6-A part 1: ids 100..499
 namespace g05_08 { void RegisterHandlers(); }; // S6-A part 2: ids 500..899
+namespace g13_15 { void RegisterHandlers(); }; // S6-C: ids 1300..1599
 }; // namespace ported
 }; // namespace commands
 }; // namespace notsa

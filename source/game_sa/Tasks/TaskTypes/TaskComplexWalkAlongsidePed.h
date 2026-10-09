@@ -19,6 +19,7 @@ public:
     CTask* CreateSubTask(eTaskType tt, CPed* ped);
 
     void SetOffset(const CVector& offset) { m_Offset = offset; }
+    const CVector& GetOffset() const { return m_Offset; }
 
     CTask*    Clone() const override { return new CTaskComplexWalkAlongsidePed{ *this }; }
     eTaskType GetTaskType() const override { return Type; }

@@ -3,6 +3,7 @@
 #include "TaskComplexBeInCouple.h"
 #include "TaskComplexWanderStandard.h"
 #include "TaskComplexWalkAlongsidePed.h"
+#include "TaskComplexWaitForPed.h"
 #include "Ragdoll/IKChainManager.h"
 
 void CTaskComplexBeInCouple::InjectHooks() {
@@ -146,12 +147,7 @@ CTask* CTaskComplexBeInCouple::ControlSubTask(CPed* ped) {
     if (distSq > 4.f && m_isLeader) {
         AbortArmIK(ped);
         if (!ped->GetIntelligence()->FindTaskByType(TASK_COMPLEX_WAIT_FOR_PED)) {
-            // CTaskComplexWaitForPed has no C++ port yet (ctor 0x683340: ped, radius, time, rotateOthers)
-            const auto mem = static_cast<CTask*>(CTask::operator new(0x2C));
-            if (!mem) {
-                return nullptr;
-            }
-            return plugin::CallMethodAndReturn<CTask*, 0x683340, CTask*, CPed*, float, uint32, bool>(mem, m_partner, 0.75f, 20'000u, false);
+            return new CTaskComplexWaitForPed{ m_partner, 0.75f, 20'000u, false }; // 0x683340
         }
     }
 

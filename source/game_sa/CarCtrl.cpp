@@ -289,6 +289,7 @@ void CCarCtrl::InjectHooks()
     RH_ScopedInstall(WeaveThroughPedsSectorList, 0x42D7E0);
     RH_ScopedInstall(WeaveThroughObjectsSectorList, 0x42D950);
     RH_ScopedInstall(PickNextNodeRandomly, 0x42DE80);
+    RH_ScopedInstall(PickNextNodeAccordingStrategy, 0x432B10);
     RH_ScopedInstall(DragCarToPoint, 0x42EC90);
     RH_ScopedInstall(GetAIPlaneToDoDogFightAgainstPlayer, 0x42F370);
     RH_ScopedInstall(GetAIHeliToAttackPlayer, 0x42F3C0);
@@ -3389,7 +3390,47 @@ bool CCarCtrl::JoinCarWithRoadSystemGotoCoors(CVehicle* vehicle, const CVector& 
 
 // 0x432B10
 bool CCarCtrl::PickNextNodeAccordingStrategy(CVehicle* vehicle) {
-    return plugin::CallAndReturn<bool, 0x432B10, CVehicle*>(vehicle);
+    auto& ap = vehicle->m_autoPilot;
+
+    // Remember the road type of the node the car is heading to (no null check on the area in the original)
+    {
+        const auto& node = ThePaths.m_pPathNodes[ap.m_startingRouteNode.m_wAreaId][ap.m_startingRouteNode.m_wNodeId];
+        ap.field_41 = (int8)(node.m_bNotHighway | (node.m_bHighway << 1)); // (byte 1 >> 4) & 3
+        if (node.m_nBehaviourType == 8 || node.m_nBehaviourType == 9) { // (byte 2 >> 4) in [8, 9]
+            ap.field_41 = -1;
+        }
+    }
+
+    switch (ap.m_nCarMission) {
+    case MISSION_RAMPLAYER_FARAWAY:
+    case MISSION_BLOCKPLAYER_FARAWAY:
+    case MISSION_APPROACHPLAYER_FARAWAY: {
+        // NOTE: The original also calls `FindPlayerVehicle(-1, false)` here and ignores the result (no side effects)
+        const auto x = FindPlayerCoors(-1).x; // 0x56E010
+        const auto z = FindPlayerCoors(-1).z; // 0x56E010
+        const auto y = FindPlayerCoors(-1).y; // 0x56E010
+        return PickNextNodeToChaseCar(vehicle, x, y, z); // 0x426EF0
+    }
+    case MISSION_GOTOCOORDINATES:
+    case MISSION_GOTOCOORDINATES_ACCURATE:
+        return PickNextNodeToFollowPath(vehicle); // 0x427740
+    case MISSION_RAMCAR_FARAWAY:
+    case MISSION_BLOCKCAR_FARAWAY:
+    case MISSION_FOLLOWCAR_FARAWAY:
+    case MISSION_KILLPED_FARAWAY:
+    case MISSION_DO_DRIVEBY_FARAWAY:
+    case MISSION_ESCORT_LEFT_FARAWAY:
+    case MISSION_ESCORT_RIGHT_FARAWAY:
+    case MISSION_ESCORT_REAR_FARAWAY:
+    case MISSION_ESCORT_FRONT_FARAWAY: {
+        // The target isn't null-checked in the original
+        const auto& pos = ap.m_TargetEntity->GetPosition();
+        return PickNextNodeToChaseCar(vehicle, pos.x, pos.y, pos.z); // 0x426EF0
+    }
+    default:
+        PickNextNodeRandomly(vehicle); // 0x42DE80
+        return false;
+    }
 }
 
 // 0x421740

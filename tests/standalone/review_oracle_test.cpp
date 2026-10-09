@@ -22,6 +22,14 @@
 #include "Maths.h"
 #include "VehicleSaveStructure.h"
 #include "HandShaker.h"
+#include "Ragdoll/BoneNode.h"
+#include "Entity/Ped/Ped.h"
+#include "Cam.h"
+#include "Camera.h"
+#include "Radar.h"
+#include "MenuManager.h"
+#include "PostEffects.h"
+#include "Attractors/PedShelterAttractor.h"
 #include "standalone/Fixups.h"
 #include "MemoryMgr.h"
 
@@ -490,6 +498,162 @@ static void TestPath() {
 }
 
 // ---------------------------------------------------------------------------------------------------------------------------------
+// common.h fidelity (SCREEN_STRETCH / SCREEN_SCALE macros, PI family, deg/rad factors): functions whose result depends on them, port vs exe
+// BoneNode_c::QuatToEuler / EulerToQuat are private statics: explicit instantiation may name them
+using BoneQuatToEulerFn = void (*)(const RtQuat&, CVector&);
+using BoneEulerToQuatFn = void (*)(const CVector&, RtQuat&);
+template<BoneQuatToEulerFn P> struct HoldQuatToEuler { friend BoneQuatToEulerFn StealQuatToEuler() { return P; } };
+template<BoneEulerToQuatFn P> struct HoldEulerToQuat { friend BoneEulerToQuatFn StealEulerToQuat() { return P; } };
+template struct HoldQuatToEuler<&BoneNode_c::QuatToEuler>;
+template struct HoldEulerToQuat<&BoneNode_c::EulerToQuat>;
+BoneQuatToEulerFn StealQuatToEuler();
+BoneEulerToQuatFn StealEulerToQuat();
+
+static void TestFidelity() {
+    const auto GenDim = [](Rng& r, bool width) {   // 640x448 is the special case of CMenuManager::Stretch*, the rest are arbitrary resolutions
+        if (r.below(5) == 0) return width ? 640 : 448;
+        static const int w[] = { 800, 1024, 1280, 1366, 1600, 1920, 2560, 3840, 7, 101 }, h[] = { 600, 768, 720, 1050, 1080, 1440, 2160, 5, 333 };
+        return r.below(3) ? (width ? w[r.below(10)] : h[r.below(9)]) : 1 + (int)r.below(width ? 5000 : 3000);
+    };
+    const auto SetRes = [&](Rng& r) { RsGlobal.maximumWidth = GenDim(r, true); RsGlobal.maximumHeight = GenDim(r, false); };
+
+    Run("CMenuManager::StretchX 0x5733E0", [&](Rng& r, std::string& d) {
+        SetRes(r);
+        const float x = GenF(r, PickScale(r) * 100.f);
+        const float a = FrontEndMenuManager.StretchX(x), b = oracle::Fn<float __fastcall(CMenuManager*, int, float)>(0x5733E0)(&FrontEndMenuManager, 0, x);
+        if (SameF(a, b)) return true;
+        d = "W " + std::to_string(RsGlobal.maximumWidth) + " x " + F(x) + " got " + F(a) + " exe " + F(b); return false;
+    });
+    Run("CMenuManager::StretchY 0x573410", [&](Rng& r, std::string& d) {
+        SetRes(r);
+        const float y = GenF(r, PickScale(r) * 100.f);
+        const float a = FrontEndMenuManager.StretchY(y), b = oracle::Fn<float __fastcall(CMenuManager*, int, float)>(0x573410)(&FrontEndMenuManager, 0, y);
+        if (SameF(a, b)) return true;
+        d = "H " + std::to_string(RsGlobal.maximumHeight) + " y " + F(y) + " got " + F(a) + " exe " + F(b); return false;
+    });
+    Run("CRadar::LimitToMap 0x583350", [&](Rng& r, std::string& d) {
+        SetRes(r);
+        FrontEndMenuManager.m_bMapLoaded = r.below(2) != 0;
+        FrontEndMenuManager.m_fMapZoom   = std::fabs(GenF(r, r.below(2) ? 400.f : 32000.f, S_NAN | S_ZERO | S_TINY));   // (non-negative: std::clamp asserts lo <= hi in the debug STL)
+        FrontEndMenuManager.m_vMapOrigin = { GenF(r, 400.f, S_NAN | S_ZERO | S_TINY), GenF(r, 400.f, S_NAN | S_ZERO | S_TINY) };
+        float x1 = GenF(r, 1500.f, S_NAN | S_ZERO | S_TINY), y1 = GenF(r, 1500.f, S_NAN | S_ZERO | S_TINY), x2 = x1, y2 = y1;
+        CRadar::LimitToMap(x1, y1);
+        oracle::Fn<void __cdecl(float*, float*)>(0x583350)(&x2, &y2);
+        if (SameF(x1, x2) && SameF(y1, y2)) return true;
+        d = "W " + std::to_string(RsGlobal.maximumWidth) + " H " + std::to_string(RsGlobal.maximumHeight) + " zoom " + F(FrontEndMenuManager.m_fMapZoom) + " in " + F(x2) + "," + F(y2) + " got " + F(x1) + "," + F(y1);
+        return false;
+    });
+    Run("CRadar::TransformRadarPointToScreenSpace 0x583480", [&](Rng& r, std::string& d) {
+        SetRes(r);
+        FrontEndMenuManager.m_bDrawingMap = r.below(4) == 0;
+        FrontEndMenuManager.m_fMapZoom    = GenF(r, 400.f, S_NAN | S_ZERO | S_TINY);
+        FrontEndMenuManager.m_vMapOrigin  = { GenF(r, 400.f, S_NAN | S_ZERO | S_TINY), GenF(r, 400.f, S_NAN | S_ZERO | S_TINY) };
+        const CVector2D in{ GenF(r, r.below(2) ? 1.5f : 300.f, S_NAN | S_ZERO | S_TINY), GenF(r, r.below(2) ? 1.5f : 300.f, S_NAN | S_ZERO | S_TINY) };
+        const CVector2D a = CRadar::TransformRadarPointToScreenSpace(in);
+        CVector2D b{ BitsF(0xDEADBEEF), BitsF(0xDEADBEEF) };
+        oracle::Fn<void __cdecl(CVector2D*, const CVector2D*)>(0x583480)(&b, &in);
+        if (SameF(a.x, b.x) && SameF(a.y, b.y)) return true;
+        d = "W " + std::to_string(RsGlobal.maximumWidth) + " H " + std::to_string(RsGlobal.maximumHeight) + " map " + std::to_string(FrontEndMenuManager.m_bDrawingMap) + " in " + F(in.x) + "," + F(in.y) + " got " + F(a.x) + "," + F(a.y) + " exe " + F(b.x) + "," + F(b.y);
+        return false;
+    });
+    Run("CCamera::GetScreenRect 0x50AB50", [&](Rng& r, std::string& d) {
+        SetRes(r);
+        TheCamera.m_bWideScreenOn = r.below(2) != 0;
+        TheCamera.m_fScreenReductionPercentage = r.below(3) ? r.f01() * 100.f : GenF(r, 300.f, S_NAN | S_ZERO | S_TINY);
+        CRect a{ 1.f, 2.f, 3.f, 4.f }, b = a;
+        TheCamera.GetScreenRect(&a);
+        oracle::Fn<void __fastcall(CCamera*, int, CRect*)>(0x50AB50)(&TheCamera, 0, &b);
+        if (SameBlob(&a, &b, sizeof(CRect))) return true;
+        d = "W " + std::to_string(RsGlobal.maximumWidth) + " H " + std::to_string(RsGlobal.maximumHeight) + " wide " + std::to_string(TheCamera.m_bWideScreenOn) + " red " + F(TheCamera.m_fScreenReductionPercentage) +
+            " got {" + F(a.left) + "," + F(a.bottom) + "," + F(a.right) + "," + F(a.top) + "} exe {" + F(b.left) + "," + F(b.bottom) + "," + F(b.right) + "," + F(b.top) + "}";
+        return false;
+    });
+    Run("CPostEffects::HeatHazeFXInit 0x701450", [&](Rng& r, std::string& d) {
+        // the whole block of globals it writes: hpS / hpY / hpX (0xC3F868 .. 0xC3FEA8) and the effect state (0xC402BC .. 0xC40314), + the type bookkeeping at 0x8D50E4..0x8D50F4
+        constexpr unsigned LO = 0xC3F868, HI = 0xC40314, TLO = 0x8D50E4, THI = 0x8D50F4;
+        static std::vector<uint8_t> rasterStore(0x100);
+        std::memset(rasterStore.data(), 0, rasterStore.size());
+        const int32 rw = 8 + (int32)r.below(2000), rh = 8 + (int32)r.below(2000);
+        auto* raster = reinterpret_cast<RwRaster*>(rasterStore.data());
+        raster->width = rw; raster->height = rh;                                       // the port's view of the raster
+        std::memcpy(&rasterStore[0xC], &rw, 4); std::memcpy(&rasterStore[0x10], &rh, 4); // the exe's view (RwRaster: width +0xC, height +0x10)
+        SetRes(r);
+        const auto saveA = Snap(LO, HI - LO), saveB = Snap(TLO, THI - TLO);
+        auto a = RandBytes(r, HI - LO); auto b = RandBytes(r, THI - TLO);
+        const int32 type = (int32)r.below(5);   // the 5 cases of the jump table (the game only ever uses 0; anything else would feed garbage ranges to the 32 bit `max - min` of the random helpers)
+        const int32 last = r.below(8) == 0 ? type : -1;
+        const uint32 rasterPtr = (uint32)reinterpret_cast<uintptr_t>(rasterStore.data());
+        std::memcpy(&a[0xC402BC - LO], &type, 4); std::memcpy(&a[0xC402D8 - LO], &rasterPtr, 4); std::memcpy(&b[0], &last, 4);
+        const uint32 seed = r.u32();
+        Put(LO, a); Put(TLO, b);
+        SeedBoth(seed); CPostEffects::HeatHazeFXInit();
+        const auto A1 = Snap(LO, HI - LO), B1 = Snap(TLO, THI - TLO);
+        Put(LO, a); Put(TLO, b);
+        SeedBoth(seed); oracle::Fn<void __cdecl()>(0x701450)();
+        const auto A2 = Snap(LO, HI - LO), B2 = Snap(TLO, THI - TLO);
+        Put(LO, saveA); Put(TLO, saveB);
+        const bool ok = SameMem(A1, A2, "HeatHaze globals (0xC3F868..)", d) && SameMem(B1, B2, "HeatHaze globals (0x8D50E4..)", d);
+        if (!ok) d += " (type " + std::to_string(type) + " W " + std::to_string(RsGlobal.maximumWidth) + " H " + std::to_string(RsGlobal.maximumHeight) + ")";
+        return ok;
+    });
+
+    // PI family
+    Run("BoneNode_c::QuatToEuler 0x617080", [&](Rng& r, std::string& d) {
+        RtQuat q;
+        const int mode = r.below(6);
+        if (mode == 0) { q.imag.x = 0.f; q.imag.y = r.below(2) ? 0.5f : -0.5f; q.imag.z = 0.f; q.real = 1.f; }   // 2 * w * y == +-1 exactly: the gimbal-lock branch
+        else if (mode == 1) { q.imag = { GenF(r, 1.f), GenF(r, 1.f), GenF(r, 1.f) }; q.real = GenF(r, 1.f); }
+        else { const float sc = PickScale(r); q.imag = { GenF(r, sc), GenF(r, sc), GenF(r, sc) }; q.real = GenF(r, sc); }
+        CVector a{ BitsF(0xDEADBEEF), BitsF(0xDEADBEEF), BitsF(0xDEADBEEF) }, b = a;
+        StealQuatToEuler()(q, a);
+        oracle::Fn<void __cdecl(const RtQuat*, CVector*)>(0x617080)(&q, &b);
+        if (SameV(a, b)) return true;
+        d = "q {" + F(q.imag.x) + "," + F(q.imag.y) + "," + F(q.imag.z) + "," + F(q.real) + "} got " + V(a) + " exe " + V(b); return false;
+    });
+    Run("BoneNode_c::EulerToQuat 0x6171F0", [&](Rng& r, std::string& d) {
+        const CVector ang = GenV(r, r.below(3) ? 180.f : PickScale(r) * 100.f, S_NAN | S_ZERO | S_TINY);
+        RtQuat a{}, b{};
+        StealEulerToQuat()(ang, a);
+        oracle::Fn<void __cdecl(const CVector*, RtQuat*)>(0x6171F0)(&ang, &b);
+        if (SameBlob(&a, &b, sizeof(RtQuat))) return true;
+        d = "angles " + V(ang) + " got {" + F(a.imag.x) + "," + F(a.imag.y) + "," + F(a.imag.z) + "," + F(a.real) + "} exe {" + F(b.imag.x) + "," + F(b.imag.y) + "," + F(b.imag.z) + "," + F(b.real) + "}"; return false;
+    });
+    Run("CPed::GetLocalDirection 0x5DEF60", [&](Rng& r, std::string& d) {
+        static std::vector<uint8_t> pedStore(sizeof(CPed) + 16);
+        auto* ped = reinterpret_cast<CPed*>(pedStore.data());
+        ped->m_fCurrentRotation = r.below(3) ? (r.f01() * 2.f - 1.f) * 7.f : GenF(r, 1000.f, S_NAN | S_ZERO | S_TINY);
+        const CVector2D pt{ GenF(r, PickScale(r), S_NAN | S_ZERO | S_TINY), GenF(r, PickScale(r), S_NAN | S_ZERO | S_TINY) };
+        const int32 a = ped->GetLocalDirection(pt);
+        const int32 b = oracle::Fn<int32 __fastcall(CPed*, int, const CVector2D*)>(0x5DEF60)(ped, 0, &pt);
+        if (a == b) return true;
+        d = "rot " + F(ped->m_fCurrentRotation) + " pt " + F(pt.x) + "," + F(pt.y) + " got " + std::to_string(a) + " exe " + std::to_string(b); return false;
+    });
+    Run("CCam::ClipBeta 0x509C50", [&](Rng& r, std::string& d) {
+        static std::vector<uint8_t> camStore(sizeof(CCam) + 16);
+        auto* cam = reinterpret_cast<CCam*>(camStore.data());
+        const float v = r.below(4) == 0 ? ((r.below(2) ? 1.f : -1.f) * (std::numbers::pi_v<float> + (float)((int)r.below(5) - 2) * 1e-6f * (float)r.below(8))) : r.below(2) ? (r.f01() * 2.f - 1.f) * 20.f : GenF(r, 200.f, S_NAN | S_ZERO | S_TINY);
+        cam->m_fHorizontalAngle = v;
+        cam->ClipBeta();
+        const float a = cam->m_fHorizontalAngle;
+        cam->m_fHorizontalAngle = v;
+        oracle::Fn<void __fastcall(CCam*, int)>(0x509C50)(cam, 0);
+        const float b = cam->m_fHorizontalAngle;
+        if (SameF(a, b)) return true;
+        d = "in " + F(v) + " got " + F(a) + " exe " + F(b); return false;
+    });
+    Run("CPedShelterAttractor::ComputeAttractHeading 0x5E9690", [&](Rng& r, std::string& d) {
+        static std::vector<uint8_t> attrStore(sizeof(CPedShelterAttractor) + 16);
+        auto* at = reinterpret_cast<CPedShelterAttractor*>(attrStore.data());
+        const uint32 seed = r.u32();
+        float a = 0.f, b = 0.f;
+        SeedBoth(seed); at->CPedShelterAttractor::ComputeAttractHeading(0, a);
+        SeedBoth(seed); oracle::Fn<void __fastcall(CPedShelterAttractor*, int, int, float*)>(0x5E9690)(at, 0, 0, &b);
+        if (SameF(a, b)) return true;
+        d = "seed " + std::to_string(seed) + " got " + F(a) + " exe " + F(b); return false;
+    });
+}
+
+// ---------------------------------------------------------------------------------------------------------------------------------
 int main(int argc, char** argv) {
     std::setvbuf(stdout, nullptr, _IONBF, 0);
     for (int i = 1; i < argc; ++i) {
@@ -514,6 +678,7 @@ int main(int argc, char** argv) {
     TestMisc();
     TestIdleCam();
     TestPath();
+    TestFidelity();
     int bad24 = 0, bad53 = 0, hard24 = 0, hard53 = 0;
     for (auto& r : g_rows) { bad24 += r.bad24; bad53 += r.bad53; hard24 += r.hardReg24 + r.hardSpec24; hard53 += r.hardReg53 + r.hardSpec53; }
     std::printf("\n%zu functions, mismatches (strict / excluding NaN-payload-only): PC24 %d / %d, PC53 %d / %d\n", g_rows.size(), bad24, hard24, bad53, hard53);

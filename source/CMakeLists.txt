@@ -600,6 +600,15 @@ if (${RE_PROJECT}_RW_LIBRW)
         game_sa/Tasks/TaskSequences.cpp
         game_sa/VehicleSaveStructure.cpp
         game_sa/PathFind.cpp
+        # common.h fidelity cases (TestFidelity): SCREEN_* / PI family users
+        game_sa/Ragdoll/BoneNode.cpp
+        game_sa/Entity/Ped/Ped.cpp
+        game_sa/Cam.cpp
+        game_sa/Camera.cpp
+        game_sa/Radar.cpp
+        game_sa/MenuManager.cpp
+        game_sa/PostEffects.cpp
+        game_sa/Attractors/PedShelterAttractor.cpp
     )
     target_compile_features(review_oracle_test PRIVATE cxx_std_23)
     target_compile_definitions(review_oracle_test PRIVATE NOTSA_RW_LIBRW RW_D3D9)

@@ -1,5 +1,6 @@
 #include "ConversationForPed.h"
 #include "Conversations.h"
+#include "PedGroups.h"
 
 void CConversationForPed::InjectHooks() {
     RH_ScopedClass(CConversationForPed);
@@ -115,5 +116,52 @@ void CConversationForPed::Update() {
 
 // 0x43AC40
 bool CConversationForPed::IsPlayerInPositionForConversation(bool randomConversation) {
-    return plugin::CallMethodAndReturn<bool, 0x43AC40, CConversationForPed*, bool>(this, randomConversation);
+    const auto* const pedPos = &std::as_const(*m_pPed).GetPosition();
+    const auto playerPos = FindPlayerCoors();
+
+    // Distance in extended precision (term order: z, y, x), compared as `dist > 4.0f`
+    {
+        const double dx = (double)playerPos.x - (double)pedPos->x;
+        const double dy = (double)playerPos.y - (double)pedPos->y;
+        const double dz = (double)playerPos.z - (double)pedPos->z;
+        const double dist = std::sqrt(dz * dz + dy * dy + dx * dx);
+        if (dist > 4.0f) {
+            return false;
+        }
+    }
+
+    // Both must (roughly) not face away from each other
+    {
+        const auto& pedFwd    = m_pPed->GetForward();
+        const auto& playerFwd = FindPlayerPed()->GetForward();
+        const double dot      = (double)playerFwd.z * (double)pedFwd.z + (double)playerFwd.y * (double)pedFwd.y + (double)playerFwd.x * (double)pedFwd.x;
+        if (dot > 0.0f) {
+            return false;
+        }
+    }
+
+    // Player must (nearly) stand still
+    {
+        const auto& spd = FindPlayerPed()->m_vecMoveSpeed;
+        const double speed = std::sqrt((double)spd.x * (double)spd.x + (double)spd.y * (double)spd.y);
+        if (speed > 0.01f) {
+            return false;
+        }
+    }
+
+    // Recently damaged by the player?
+    if (m_pPed->m_pLastEntityDamage == FindPlayerPed() && CTimer::GetTimeInMS() < m_pPed->field_768 + 6000u) {
+        return false;
+    }
+
+    if (randomConversation) {
+        if (CPedGroups::GetGroup(FindPlayerPed()->GetPlayerData()->m_nPlayerGroup).GetMembership().CountMembersExcludingLeader() >= 1) {
+            return false;
+        }
+    }
+
+    if (!FindPlayerPed()->PedIsReadyForConversation(randomConversation)) {
+        return false;
+    }
+    return m_pPed->PedIsReadyForConversation(randomConversation);
 }

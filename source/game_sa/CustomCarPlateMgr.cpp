@@ -22,6 +22,7 @@ void CCustomCarPlateMgr::InjectHooks() {
     RH_ScopedInstall(AtomicSetCarplateTextureCB, 0x6FE0D0);
     RH_ScopedInstall(SetupClump, 0x6FE0F0);
     RH_ScopedInstall(RenderLicenseplateTextToRaster, 0x6FDD70);
+    RH_ScopedInstall(LoadPlatecharsetDat, 0x6FDC00);
 }
 
 // 0x6FD500
@@ -94,7 +95,44 @@ int8 CCustomCarPlateMgr::GetMapRegionPlateDesign() {
 // 0x6FDC00
 // unused
 int8 CCustomCarPlateMgr::LoadPlatecharsetDat(const char* filename, uint8* data) {
-    return plugin::CallAndReturn<int8, 0x6FDC00, const char*, uint8*>(filename, data);
+    CFileMgr::SetDir("DATA");
+    const auto file = CFileMgr::OpenFile(filename, "r");
+    CFileMgr::SetDir("");
+
+    auto* out = reinterpret_cast<uint32*>(data);
+    while (const auto line = CFileLoader::LoadLine(file)) {
+        if (std::strcmp(line, ";the end") == 0) { // Original: 9 byte compare against ";the end\0"
+            break;
+        }
+        if (*line == ';') {
+            continue;
+        }
+
+        // Parses up to 3 numbers (R, G, B), each clamped to 255
+        uint8 rgb[3];
+        size_t numRead = 0;
+        auto* tok = std::strtok(line, " \t");
+        do {
+            // BUG: The original doesn't check for a null token (e.g. an empty line), and passes it to atol => crash
+            if (!tok && notsa::IsFixBugs()) {
+                break;
+            }
+            if (numRead < 3) {
+                const auto v = static_cast<uint16>(std::atol(tok));
+                rgb[numRead] = v <= 0xFF ? static_cast<uint8>(v) : 0xFF;
+            }
+            tok = std::strtok(nullptr, " \t");
+            numRead++;
+        } while (tok);
+
+        if (numRead < 3) {
+            return 0; // BUG: The file isn't closed here
+        }
+
+        *out++ = ((((uint32)rgb[2] | 0xFFFF8000u) << 8 | (uint32)rgb[1]) << 8) | (uint32)rgb[0]; // Always has the top bit set
+    }
+    CFileMgr::CloseFile(file);
+    return 1;
 }
 
 auto ResolvePlateType(uint8 plateType) {

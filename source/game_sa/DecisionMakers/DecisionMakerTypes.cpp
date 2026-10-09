@@ -13,17 +13,38 @@ void CDecisionMakerTypes::InjectHooks() {
     RH_ScopedInstall(RemoveDecisionMaker, 0x6043A0);
     RH_ScopedInstall(FlushDecisionMakerEventResponse, 0x604490);
     RH_ScopedInstall(AddEventResponse, 0x6044C0);
+    RH_ScopedInstall(GetInstance, 0x4684F0);
+    RH_ScopedInstall(AddDecisionMaker, 0x607050);
+    RH_ScopedOverloadedInstall(MakeDecision, "group", 0x606F80, eTaskType(CDecisionMakerTypes::*)(CPedGroup*, eEventType, int32, bool, eTaskType, eTaskType, eTaskType, eTaskType));
     RH_ScopedOverloadedInstall(MakeDecision, "ped", 0x606E70, void(CDecisionMakerTypes::*)(CPed*, eEventType, int32, bool, eTaskType, eTaskType, eTaskType, eTaskType, bool, int16&, int16&));
 }
 
 // 0x607050
 int32 CDecisionMakerTypes::AddDecisionMaker(CDecisionMaker* decisionMaker, eDecisionTypes decisionMakerType, bool bDecisionMakerForMission) {
-    return plugin::CallMethodAndReturn<int32, 0x607050, CDecisionMakerTypes*, CDecisionMaker*, eDecisionTypes, bool>(this, decisionMaker, decisionMakerType, bDecisionMakerForMission);
+    // NOTE: Mission decision makers use slots [15, 20), the others [0, 15) (not [10, 20) like `eDecisionMakerType::MISSION0` suggests)
+    const auto [begin, end] = bDecisionMakerForMission ? std::pair{15, 20} : std::pair{0, 15};
+    for (auto i = begin; i < end; i++) {
+        if (m_IsActive[i]) {
+            continue;
+        }
+        m_IsActive[i]  = true;
+        m_IsGroupDM[i] = decisionMakerType != 0; // The original stores the (byte) `decisionMakerType` as-is
+        for (auto j = 0u; j < m_DecisionMakers[i].m_aDecisions.size(); j++) { // 0x6006B0
+            m_DecisionMakers[i].m_aDecisions[j].From(decisionMaker->m_aDecisions[j]);
+        }
+        m_NoOfDecisionMakers++;
+        return i;
+    }
+    return -1;
 }
 
 // 0x4684F0
 CDecisionMakerTypes* CDecisionMakerTypes::GetInstance() {
-    return plugin::CallAndReturn<CDecisionMakerTypes*, 0x4684F0>();
+    auto& instance = StaticRef<CDecisionMakerTypes*>(0xC0B030);
+    if (!instance) {
+        instance = new CDecisionMakerTypes(); // 0x4650F0 (ctor)
+    }
+    return instance;
 }
 
 // 0x606E70
@@ -76,8 +97,22 @@ void CDecisionMakerTypes::RemoveDecisionMaker(eDecisionTypes dm) {
 
 // 0x606F80
 eTaskType CDecisionMakerTypes::MakeDecision(CPedGroup* pedGroup, eEventType eventType, int32 eventSourceType, bool bIsPedInVehicle, eTaskType taskId1, eTaskType taskId2, eTaskType taskId3, eTaskType taskId4) {
-    return plugin::CallMethodAndReturn<eTaskType, 0x606F80, CDecisionMakerTypes*, CPedGroup*, int32, int32, bool, int32, int32, int32, int32>(
-        this, pedGroup, eventType, eventSourceType, bIsPedInVehicle, taskId1, taskId2, taskId3, taskId4);
+    const auto eventIdx = m_EventIndices[eventType];
+    const auto dmType   = (int32)pedGroup->GetIntelligence().GetGroupDecisionMakerType();
+
+    int16 taskType       = 200;
+    int16 facialTaskType; // Always written by `CDecision::MakeDecision`, and not used by the original
+
+    CDecisionMaker* dm;
+    if (dmType == -1) { // 0x606FA3
+        dm = pedGroup->m_bIsMissionGroup
+            ? &m_DefaultMissionPedGroupDecisionMaker
+            : &m_DefaultRandomPedGroupDecisionMaker;
+    } else { // 0x607002
+        dm = &m_DecisionMakers[dmType];
+    }
+    dm->m_aDecisions[eventIdx].MakeDecision(eventSourceType, bIsPedInVehicle, taskId1, taskId2, taskId3, taskId4, taskType, facialTaskType);
+    return (eTaskType)taskType;
 }
 
 // 0x6044C0

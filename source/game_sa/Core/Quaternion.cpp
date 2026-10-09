@@ -103,24 +103,77 @@ void CQuaternion::Multiply(const CQuaternion& a, const CQuaternion& b) { // 0x59
 
 // Spherical linear interpolation
 void CQuaternion::Slerp(const CQuaternion& from, const CQuaternion& to, float halftheta, float sintheta_inv, float t) { // 0x59C300
-    if (halftheta == 0.0f) { // NOTE: NaN goes to the interpolation below, as in the original
+    if (halftheta == 0.0f) { // fcomp 0; test ah, 0x44; jp => NaN goes to the interpolation below, as in the original
         Copy(to);
         return;
     }
 
-    double a, b;
-    if (halftheta > std::numbers::pi_v<float> / 2.0f) { // 0x858FE4 (pi/2)
-        halftheta = std::numbers::pi_v<float> - halftheta; // 0x858CB8 (pi), stored to float
-        a = std::sin((1.0 - t) * halftheta) * sintheta_inv;
-        b = -(std::sin((double)halftheta * t) * sintheta_inv);
-    } else {
-        a = std::sin((1.0 - t) * halftheta) * sintheta_inv;
-        b = std::sin((double)halftheta * t) * sintheta_inv;
+    // The exe's code verbatim (fsin is the x87 instruction: arguments beyond 2^63 are left unchanged, a CRT sin() would reduce them; every product / sum is rounded at the
+    // current precision control, the two weights stay on the FPU stack)
+    static const float halfPi = std::numbers::pi_v<float> / 2.0f; // 0x858FE4
+    static const float pi     = std::numbers::pi_v<float>;        // 0x858CB8
+    static const float one    = 1.0f;                             // 0x858624
+    CQuaternion*       self   = this;
+    const CQuaternion* pFrom  = &from;
+    const CQuaternion* pTo    = &to;
+    __asm {
+        fld   dword ptr [halftheta]
+        fcomp dword ptr [halfPi]
+        fnstsw ax
+        test  ah, 0x41
+        jne   L_normal
+        fld   dword ptr [pi]
+        fsub  dword ptr [halftheta]
+        fstp  dword ptr [halftheta]
+        fld   dword ptr [one]
+        fsub  dword ptr [t]
+        fmul  dword ptr [halftheta]
+        fsin
+        fmul  dword ptr [sintheta_inv]
+        fld   dword ptr [halftheta]
+        fmul  dword ptr [t]
+        fsin
+        fmul  dword ptr [sintheta_inv]
+        fchs
+        jmp   L_blend
+    L_normal:
+        fld   dword ptr [one]
+        fsub  dword ptr [t]
+        fmul  dword ptr [halftheta]
+        fsin
+        fmul  dword ptr [sintheta_inv]
+        fld   dword ptr [halftheta]
+        fmul  dword ptr [t]
+        fsin
+        fmul  dword ptr [sintheta_inv]
+    L_blend:                       // st0 = b (weight of `to`), st1 = a (weight of `from`)
+        mov   eax, pFrom
+        fld   st(1)
+        fmul  dword ptr [eax]
+        mov   edx, pTo
+        fld   st(1)
+        fmul  dword ptr [edx]
+        faddp st(1), st(0)
+        mov   ecx, self
+        fstp  dword ptr [ecx]
+        fld   st(0)
+        fmul  dword ptr [edx + 4]
+        fld   st(2)
+        fmul  dword ptr [eax + 4]
+        faddp st(1), st(0)
+        fstp  dword ptr [ecx + 4]
+        fld   st(0)
+        fmul  dword ptr [edx + 8]
+        fld   st(2)
+        fmul  dword ptr [eax + 8]
+        faddp st(1), st(0)
+        fstp  dword ptr [ecx + 8]
+        fmul  dword ptr [edx + 0xC]
+        fxch  st(1)
+        fmul  dword ptr [eax + 0xC]
+        faddp st(1), st(0)
+        fstp  dword ptr [ecx + 0xC]
     }
-    x = (float)(a * from.x + b * to.x);
-    y = (float)(b * to.y + a * from.y);
-    z = (float)(b * to.z + a * from.z);
-    w = (float)(b * to.w + a * from.w);
 }
 
 // Quat from matrix
@@ -198,16 +251,76 @@ void CQuaternion::Set(RwV3d* axis, float angle) { // 0x59C600
 
 // Spherical linear interpolation
 void CQuaternion::Slerp(const CQuaternion& from, const CQuaternion& to, float t) { // 0x59C630
-    // Inlined 0x4D00E0 (cdecl: from, to, float* theta, float* sinThetaInv)
+    // 0x4D00E0 (cdecl: from, to, float* theta, float* sinThetaInv), then 0x59C300
     // NOTE: 0x4D00E0 is a cdecl helper (a, b, float* theta, float* invSinTheta); it is hooked as `CalcThetaFromQuats` in AnimBlendNode.cpp (CAnimBlendNode::CalcTheta is a NOTSA wrapper around it), not here.
-    float dot = (float)(((double)from.w * to.w + (double)from.z * to.z + (double)from.y * to.y) + (double)from.x * to.x);
+    float halftheta, sintheta_inv;
+    CalcThetaFromQuats(from, to, halftheta, sintheta_inv);
+    Slerp(from, to, halftheta, sintheta_inv, t);
+}
+
+void CQuaternion::CalcThetaFromQuats(const CQuaternion& a, const CQuaternion& b, float& theta, float& invSinTheta) { // 0x4D00E0
+    // Dot is accumulated in extended precision in this order (w, z, y, x), stored as float
+    float dot = (float)(((double)a.w * b.w + (double)a.z * b.z + (double)a.y * b.y) + (double)b.x * a.x);
     if (dot > 1.0f) { // Original: FCOMP + `test ah, 0x41; jne` => clamp only if dot > 1 (NaN is not clamped)
         dot = 1.0f;
     }
-    const double theta = std::acos((double)dot);
-    const float  halftheta = (float)theta;
-    const float  sintheta_inv = theta == 0.0 ? 0.0f : (float)(1.0 / std::sin(theta));
-    Slerp(from, to, halftheta, sintheta_inv, t);
+    // The CRT acos (0x82239D): |x| < 1 => atan2(sqrt((1 + x) * (1 - x)), x) on the x87 stack; x == 1 => 0, x == -1 => pi (fldpi), anything else (|x| > 1, NaN) => the
+    // negative QNaN constant at 0x8E3130 (including +-inf); a NaN input is returned as is (quieted, payload and sign kept)
+    const float ad   = std::fabs(dot);
+    const int   mode = ad < 1.0f ? 0 : dot == 1.0f ? 1 : dot == -1.0f ? 2 : dot != dot ? 4 : 3;
+    static const unsigned char qnan[10] = { 0, 0, 0, 0, 0, 0, 0, 0xC0, 0xFF, 0xFF };
+    static const float         zero     = 0.0f; // 0x858B50
+    static const float         one      = 1.0f; // 0x858624
+    float*                     pTheta   = &theta;
+    float*                     pInv     = &invSinTheta;
+    __asm {
+        fld   dword ptr [dot]
+        mov   eax, mode
+        test  eax, eax
+        jne   L_special
+        fld1
+        fadd  st(0), st(1)
+        fld1
+        fsub  st(0), st(2)
+        fmulp st(1), st(0)
+        fsqrt
+        fxch  st(1)
+        fpatan
+        jmp   L_have
+    L_special:
+        cmp   eax, 4
+        je    L_have
+        fstp  st(0)
+        cmp   eax, 1
+        jne   L_not1
+        fldz
+        jmp   L_have
+    L_not1:
+        cmp   eax, 2
+        jne   L_nan
+        fldpi
+        jmp   L_have
+    L_nan:
+        fld   tbyte ptr [qnan]
+    L_have:
+        fld   st(0)
+        mov   eax, pTheta
+        fstp  dword ptr [eax]
+        fcom  dword ptr [zero]
+        fnstsw ax
+        test  ah, 0x44
+        jnp   L_zero
+        fsin
+        mov   ecx, pInv
+        fdivr dword ptr [one]
+        fstp  dword ptr [ecx]
+        jmp   L_done
+    L_zero:
+        fstp  st(0)
+        mov   ecx, pInv
+        mov   dword ptr [ecx], 0
+    L_done:
+    }
 }
 
 // Conjugate of a quat

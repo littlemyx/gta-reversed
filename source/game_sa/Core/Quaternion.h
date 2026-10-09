@@ -55,6 +55,10 @@ public:
     // Spherical linear interpolation
     void Slerp(const CQuaternion& from, const CQuaternion& to, float t);
 
+    //! @notsa The body of the exe's cdecl helper 0x4D00E0 (hooked in AnimBlendNode.cpp, inlined into 0x59C630): theta = acos(min(a.b, 1)), invSinTheta = theta == 0 ? 0 : 1 / sin(theta),
+    //! evaluated with the exe's x87 sequence (the CRT's acos for |x| < 1 is fadd/fsub/fmul/fsqrt/fpatan at the CURRENT precision control, then fsin on the unrounded theta)
+    static void CalcThetaFromQuats(const CQuaternion& a, const CQuaternion& b, float& theta, float& invSinTheta);
+
     // Conjugate of a quat
     void Conjugate();
     CQuaternion Conjugated() const { CQuaternion c = *this; c.Conjugate(); return c; }

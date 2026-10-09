@@ -43,7 +43,7 @@ void CTaskComplexGangLeader::InjectHooks() {
     RH_ScopedInstall(GetRandomGangAmbientAnim, 0x65E730, { .State = HS::RedirectToGTA, .Locked = true });
     RH_ScopedInstall(ShouldLoadGangAnims, 0x65E7F0, { .State = HS::RedirectToGTA, .Locked = true });
     RH_ScopedInstall(DoGangAbuseSpeech, 0x65E860, { .State = HS::RedirectToGTA, .Locked = true });
-    RH_ScopedInstall(TryToPassObject, 0x65EA50, { .State = HS::RedirectToGTA, .Locked = true });
+    RH_ScopedInstall(TryToPassObject, 0x65EA50);
 
     RH_ScopedVMTInstall(Clone, 0x661FA0, { .State = HS::RedirectToGTA, .Locked = true });
     RH_ScopedVMTInstall(GetTaskType, 0x65DF20, { .State = HS::RedirectToGTA, .Locked = true });
@@ -133,29 +133,17 @@ void CTaskComplexGangLeader::DoGangAbuseSpeech(CPed* talker, CPed* sayTo) {
     }
 }
 
-// 0x65EA50
+// 0x65EA50 (cdecl, free function in the original)
 CPed* CTaskComplexGangLeader::TryToPassObject(CPed* ped, CPedGroup* group) {
-    const auto [closestPed, distSq] = group->GetMembership().GetMemberClosestTo(ped);
-    if (closestPed && sq(4.f) >= distSq) {
-        if (!closestPed->GetIsTypePed()) {
+    float distSq;
+    if (const auto closestPed = group->GetClosestGroupPed(ped, &distSq)) {
+        // NOTE: `distSq` is a squared distance, but it's compared against 4.0 (0x858B90) as is.
+        // NOTE: The player check is done on `ped` (the one passing the object), not on `closestPed`.
+        if (distSq < 4.f && !ped->IsPlayer()) {
             return closestPed;
         }
     }
-
     return nullptr;
-    /*
-    * Using this code causes a crash for some reason (probably some register gets fucked, idk)
-    * Crash always on the same offset: 0xebf328
-    float distSq{};
-    if (const auto closestPed = group->GetClosestGroupPed(ped, &distSq)) {
-        if (distSq < sq(4.f)) {
-            if (!closestPed->GetIsTypePed()) {
-                return closestPed;
-            }
-        }
-    }
-    return nullptr;
-    */
 }
 
 // 0x65DFA0

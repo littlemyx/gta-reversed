@@ -451,8 +451,7 @@ CTask* CTaskComplexGangFollower::ControlSubTask(CPed* ped) {
         return m_pSubTask;
     }
 
-    // NOTSA: `CTaskComplexGangLeader::TryToPassObject` is a non-static member in our header, but the original is a plain cdecl function
-    const auto passObjTo = plugin::CallAndReturn<CPed*, 0x65EA50, CPed*, CPedGroup*>(ped, m_PedGroup);
+    const auto passObjTo = CTaskComplexGangLeader::TryToPassObject(ped, m_PedGroup); // 0x65EA50
     if (!passObjTo || passObjTo->GetEntityThatThisPedIsHolding() || !passObjTo->IsCurrentlyUnarmed()) {
         return m_pSubTask;
     }

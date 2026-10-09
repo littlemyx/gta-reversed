@@ -4834,7 +4834,7 @@ void PlaceRandomCarOnCurve(RandomCarState& s, CVector& outCurveSpeed) {
 
 //! 0x4315D0..0x43185B - Final position (the height) of the car
 //! @returns false if the car has to be thrown away
-bool SnapRandomCarToGround(RandomCarState& s, const CVector& curveSpeed, CVector& outPosBeforeGround) {
+bool SnapRandomCarToGround(RandomCarState& s) {
     auto* const veh = s.veh;
 
     const CVector pA = s.pnA->GetPosition();
@@ -4844,8 +4844,7 @@ bool SnapRandomCarToGround(RandomCarState& s, const CVector& curveSpeed, CVector
     const auto    mag  = std::sqrt(((double)vAB.x * vAB.x + (double)vAB.y * vAB.y) + (double)vAB.z * vAB.z); // 0x4082C0, x87: not rounded to float
     const auto    step = vAB * (float)(2.0f / mag); // 0x40FEC0
 
-    outPosBeforeGround = s.origin + step; // 0x40FE30
-    CVector posn       = outPosBeforeGround;
+    CVector posn = s.origin + step; // 0x40FE30
 
     // x87: The 1st term is rounded to float
     const float zA = (float)(((double)1.0f - s.fraction) * pA.z);
@@ -4968,7 +4967,7 @@ void CCarCtrl::GenerateOneRandomCar() {
     s.nodeA = s.nodeB = CNodeAddress{ 0xFFFF, 0xFFFF };
 
     s.playerPos = FindPlayerCentreOfWorld(CWorld::PlayerInFocus); // 0x430080
-    [[maybe_unused]] const auto playerSpeed = FindPlayerSpeed(-1); // 0x4300A4 (Unused, its stack slot is reused)
+    const CVector playerSpeed = FindPlayerSpeed(-1); // 0x4300A4 (copied to the stack, used for the 'moving towards the player' check at 0x4318B2)
 
     // 0x4300B1 - Is there room for more cars?
     const int32 numCars = (int32)(NumFireTrucksOnDuty + NumAmbulancesOnDuty + NumMissionCars + NumLawEnforcerCars + NumRandomCars);
@@ -5147,14 +5146,13 @@ void CCarCtrl::GenerateOneRandomCar() {
     CVector curveSpeed{};
     PlaceRandomCarOnCurve(s, curveSpeed);
 
-    CVector posBeforeGround{};
-    if (!SnapRandomCarToGround(s, curveSpeed, posBeforeGround)) {
+    if (!SnapRandomCarToGround(s)) {
         AbortRandomCar(veh);
         return;
     }
 
     // 0x4318B2 - Is the car moving towards the player?
-    const CVector prevPos  = posBeforeGround - DivideOriginal(curveSpeed, 60.0f); // 0x4119D0, 0x40FE60
+    const CVector relSpeed = DivideOriginal(curveSpeed, 60.0f) - playerSpeed; // 0x4119D0, 0x40FE60 (curve speed per frame minus the speed of the player)
     const CVector toOrigin = { s.origin.x - s.playerPos.x, s.origin.y - s.playerPos.y, 0.0f };
 
     SetRandomCarStatus(s); // 0x4318FE
@@ -5180,7 +5178,7 @@ void CCarCtrl::GenerateOneRandomCar() {
         }
     }
     // x87: kept in extended precision. Note: only when the car moves towards the player
-    if (!((double)prevPos.x * toOrigin.x + (double)prevPos.y * toOrigin.y < 0.0)) { // 0x431BA6
+    if (!((double)relSpeed.x * toOrigin.x + (double)relSpeed.y * toOrigin.y < 0.0)) { // 0x431BA6
         AbortRandomCar(veh);
         return;
     }

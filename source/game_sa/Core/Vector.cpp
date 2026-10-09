@@ -60,28 +60,42 @@ float CVector::Magnitude2D() const
     return sqrt(x * x + y * y);
 }
 
+// 0x59C910
 // Normalises a vector
+// NOTE: The original keeps the squared magnitude and the reciprocal length unrounded on the x87 stack (extended precision),
+//       components are only rounded when stored => `double` intermediates, fixed term order (x, y, z)
 void CVector::Normalise()
 {
-    (void)NormaliseAndMag();
+    const double sqMag = (double)x * x + (double)y * y + (double)z * z;
+    if (sqMag <= 0.0) // NaN is NOT handled here (goes on to the division)
+    {
+        x = 1.0F;
+        return;
+    }
+
+    const double recip = 1.0 / std::sqrt(sqMag);
+    x = (float)(x * recip);
+    y = (float)(y * recip);
+    z = (float)(z * recip);
 }
 
-// Normalises a vector and returns length
+// 0x59C970
+// Normalises a vector and returns length (see `Normalise` for the precision notes)
 float CVector::NormaliseAndMag()
 {
-    const auto fDot = x * x + y * y + z * z;
-    if (fDot <= 0.0F)
+    const double sqMag = (double)x * x + (double)y * y + (double)z * z;
+    if (sqMag <= 0.0)
     {
         x = 1.0F;
         return 1.0F;
     }
 
-    const auto fRecip = 1.0F / sqrt(fDot);
-    x *= fRecip;
-    y *= fRecip;
-    z *= fRecip;
+    const double recip = 1.0 / std::sqrt(sqMag);
+    x = (float)(x * recip);
+    y = (float)(y * recip);
+    z = (float)(z * recip);
 
-    return 1.0F / fRecip;
+    return (float)(1.0 / recip);
 }
 
 auto CVector::Dot(const CVector& o) const -> float{

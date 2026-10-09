@@ -49,7 +49,7 @@ public:
     static RwInt32   pluginExtraVertColourStreamGetSizeCB(const void* object, RwInt32 offsetInObject, RwInt32 sizeInObject);
 
     static RpMaterial* CustomPipeMaterialSetup(RpMaterial* material, void* a2);
-    static void CustomPipeRenderCB(RwResEntry* entry, void* object, uint8 type, uint32 flags);
+    static void CustomPipeRenderCB(RwResEntry* resEntry, void* object, uint8 type, uint32 rxGeoFlags);
 
     static ExtraVertColour* GetExtraVertColourPtr(const void* geometry);
 

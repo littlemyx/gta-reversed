@@ -35,7 +35,7 @@ CTaskComplexFallAndStayDown::CTaskComplexFallAndStayDown(int32 dir) :
     case 1: m_FallAnimId = ANIM_ID_KO_SPIN_R;     break;
     case 2: m_FallAnimId = ANIM_ID_KO_SKID_BACK;  break;
     case 3: m_FallAnimId = ANIM_ID_KO_SPIN_L;     break;
-    default: break; // The original leaves the anim id uninitialized
+    default: break; // NOTSA: The original leaves the anim id untouched (= stale task pool memory, see the header), we use 0
     }
 }
 

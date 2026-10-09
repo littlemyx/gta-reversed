@@ -6,9 +6,21 @@ void CPatrolRoute::InjectHooks() {
     RH_ScopedClass(CPatrolRoute);
     RH_ScopedCategory("Core");
 
+    RH_ScopedInstall(operator new, 0x41B810);
+    RH_ScopedInstall(operator delete, 0x41B820);
     RH_ScopedInstall(Constructor, 0x66D440);
     RH_ScopedInstall(Set, 0x66D4B0);
     RH_ScopedInstall(Reverse, 0x66D550);
+}
+
+// 0x41B810
+void* CPatrolRoute::operator new(size_t) {
+    return GetPatrolRoutePool()->New();
+}
+
+// 0x41B820
+void CPatrolRoute::operator delete(void* ptr) {
+    GetPatrolRoutePool()->Delete(static_cast<CPatrolRoute*>(ptr));
 }
 
 // 0x66D440

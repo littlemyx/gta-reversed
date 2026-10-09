@@ -996,7 +996,7 @@ void InjectHooksMain() {
         CPtrNodeDoubleLinkPool::InjectHooks();
         CEntryInfoNodePool::InjectHooks();
         CPointRoutePool::InjectHooks();
-        //CPatrolRoutePool::InjectHooks();
+        CPatrolRoutePool::InjectHooks();
         CEventPool::InjectHooks();
         CNodeRoutePool::InjectHooks();
         CTaskAllocatorPool::InjectHooks();
@@ -1183,7 +1183,7 @@ void InjectHooksMain() {
         CTaskComplexOpenDriverDoor::InjectHooks();
         CTaskComplexOpenPassengerDoor::InjectHooks();
         CTaskComplexPassObject::InjectHooks();
-        // CTaskComplexPresentIDToCop::InjectHooks();
+        CTaskComplexPresentIdToCop::InjectHooks();
         CTaskComplexReactToAttack::InjectHooks();
         CTaskComplexReactToGunAimedAt::InjectHooks();
         CTaskComplexRoadRage::InjectHooks();

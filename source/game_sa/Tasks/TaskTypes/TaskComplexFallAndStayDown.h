@@ -14,7 +14,8 @@ public:
 
     /*!
     * @param dir 0 = ANIM_ID_KO_SKID_FRONT, 1 = ANIM_ID_KO_SPIN_R, 2 = ANIM_ID_KO_SKID_BACK, 3 = ANIM_ID_KO_SPIN_L (Uses the default anim group).
-    *            For anything else the anim id is left uninitialized by the original (here it's 0).
+    *            For anything else the original never writes the anim id (+0x0C): the task lives in the task pool (not on the stack), whose storage is
+    *            neither cleared nor filled, so it holds whatever the slot contained before (not deterministic). Here it's 0.
     */
     CTaskComplexFallAndStayDown(int32 dir); // 0x678A10
 

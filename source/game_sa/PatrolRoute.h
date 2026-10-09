@@ -3,8 +3,7 @@
 #include "Vector.h"
 
 //! A patrol route (As used by `CTaskComplexFollowPatrolRoute`): Up to 8 points, each with an (optional) animation to play when reaching it.
-//! NOTE: The original allocates these from `CPatrolRoutePool` (0x41B810 / 0x41B820). That pool is declared as `CPool<void*>` here (so its
-//! slots are 4 bytes, not 0x1A4), which is why this class uses the global allocator instead (There's no other user of that pool).
+//! NOTE: Allocated from `CPatrolRoutePool` (0x41B810 / 0x41B820), 32 slots of 0x1A4 bytes.
 class CPatrolRoute {
 public:
     static constexpr size_t MAX_NODES = 8;
@@ -17,6 +16,9 @@ public:
 
 public:
     static void InjectHooks();
+
+    static void* operator new(size_t size); // 0x41B810
+    static void operator delete(void* ptr); // 0x41B820
 
     CPatrolRoute(); // 0x66D440
     CPatrolRoute(const CPatrolRoute&) = delete;

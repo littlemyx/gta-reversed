@@ -57,12 +57,8 @@ void FxInfoManager_c::InjectHooks() {
     RH_ScopedInstall(ProcessMovementInfo, 0x4A4A10);
     RH_ScopedInstall(ProcessRenderInfo, 0x4A4A80);
 
-    // NOTSA: hooks of the Fx blueprint classes that have no registration in InjectHooksMain.cpp
-    FxInfoAttractLine_c::InjectHooks();
-    FxInterpInfoFloat_c::InjectHooks();
-    FxInterpInfo32_c::InjectHooks();
-    FxInterpInfo255_c::InjectHooks();
-    FxInterpInfoU255_c::InjectHooks();
+    // NOTSA: the Fx blueprint classes (FxInfoAttractLine_c, FxInterpInfo{Float,32,255,U255}_c) are registered in InjectHooksMain.cpp;
+    // a second registration here trips the "Category already contains an item" assert at startup
 }
 
 // 0x4A7B00

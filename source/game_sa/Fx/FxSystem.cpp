@@ -457,12 +457,13 @@ bool FxSystem_c::Update(RwCamera* camera, float timeDelta) {
 
     const float prevCamDist = m_fCameraDistance;
     const RwV3d& camPos     = RwFrameGetMatrix(RwCameraGetFrame(camera))->pos;
-    g_fxMan.FxRwMatrixDestroy(mat); // NOTE: `mat` is still read below (as in the original)
+    const RwV3d matPos = mat->pos; // the exe keeps reading `mat` after releasing it to its freelist (still valid there); a copy is equivalent
+    g_fxMan.FxRwMatrixDestroy(mat);
 
     const RwV3d delta = {
-        camPos.x - mat->pos.x,
-        camPos.y - mat->pos.y,
-        camPos.z - mat->pos.z,
+        camPos.x - matPos.x,
+        camPos.y - matPos.y,
+        camPos.z - matPos.z,
     };
     m_fCameraDistance = RwV3dLength(&delta);
 
@@ -526,7 +527,7 @@ bool FxSystem_c::Update(RwCamera* camera, float timeDelta) {
     } else if (Process()) {
         m_prevCulled = false;
         if (m_nPlayStatus == eFxSystemPlayStatus::FX_PLAYING) {
-            DoFxAudio(CVector{mat->pos});
+            DoFxAudio(CVector{matPos});
         }
         return false;
     }
@@ -540,7 +541,7 @@ bool FxSystem_c::Update(RwCamera* camera, float timeDelta) {
     }
     m_prevCulled = culled;
     if (m_nPlayStatus == eFxSystemPlayStatus::FX_PLAYING) {
-        DoFxAudio(CVector{mat->pos});
+        DoFxAudio(CVector{matPos});
     }
     return false;
 }

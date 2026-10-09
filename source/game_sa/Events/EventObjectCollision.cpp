@@ -9,6 +9,13 @@ void CEventObjectCollision::InjectHooks()
 
     RH_ScopedInstall(Constructor, 0x4ACCF0);
     RH_ScopedVMTInstall(AffectsPed, 0x4ACE30);
+
+    RH_ScopedVMTDestructorInstall(0x4B59D0);
+    RH_ScopedVMTInstall(GetEventType, 0x4ACDA0);
+    RH_ScopedVMTInstall(GetEventPriority, 0x4ACDC0);
+    RH_ScopedVMTInstall(GetLifeTime, 0x4ACDB0);
+    RH_ScopedVMTInstall(Clone, 0x4B6CC0);
+    RH_ScopedVMTInstall(TakesPriorityOver, 0x4ACEF0);
 }
 
 // 0x4ACCF0

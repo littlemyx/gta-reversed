@@ -36,6 +36,9 @@ void CBmx::InjectHooks() {
     RH_ScopedVMTInstall(ProcessAI, 0x6C1470);
     RH_ScopedInstall(ProcessBunnyHop, 0x6C0590);
     RH_ScopedInstall(LaunchBunnyHopCB, 0x6C0390);
+
+    RH_ScopedVMTDestructorInstall(0x6C0570);
+    RH_ScopedVMTInstall(BlowUpCar, 0x6C0560);
 }
 
 // 0x6BF820

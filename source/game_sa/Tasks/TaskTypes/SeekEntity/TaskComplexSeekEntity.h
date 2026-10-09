@@ -63,6 +63,7 @@ public:
 
             RH_ScopedInstall(Constructor, 0x661DC0);
             RH_ScopedInstall(Destructor, 0x661F30);
+            RH_ScopedVMTDestructorInstall(0x661F10);
 
             RH_ScopedInstall(CreateSubTask, 0x496DC0);
 

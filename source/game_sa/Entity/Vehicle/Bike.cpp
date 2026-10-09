@@ -128,6 +128,22 @@ void CBike::InjectHooks() {
     RH_ScopedVMTInstall(ProcessControlCollisionCheck, 0x6B6620);
     RH_ScopedVMTInstall(GetComponentWorldPosition, 0x6B5990);
     RH_ScopedVMTInstall(ProcessOpenDoor, 0x6B58D0);
+
+    RH_ScopedVMTDestructorInstall(0x6B8950);
+    RH_ScopedVMTInstall(IsComponentPresent, 0x6B59E0);
+    RH_ScopedVMTInstall(IsDoorReadyU32, 0x6B5920);
+    RH_ScopedVMTInstall(IsDoorReady, 0x6B58E0);
+    RH_ScopedVMTInstall(IsDoorFullyOpenU32, 0x6B5930);
+    RH_ScopedVMTInstall(IsDoorFullyOpen, 0x6B58F0);
+    RH_ScopedVMTInstall(IsDoorClosedU32, 0x6B5940);
+    RH_ScopedVMTInstall(IsDoorClosed, 0x6B5900);
+    RH_ScopedVMTInstall(IsDoorMissingU32, 0x6B5950);
+    RH_ScopedVMTInstall(IsDoorMissing, 0x6B5910);
+    RH_ScopedVMTInstall(IsRoomForPedToLeaveCar, 0x6B7270);
+    RH_ScopedVMTInstall(GetRideAnimData, 0x6B58C0);
+    RH_ScopedVMTInstall(GetHeightAboveRoad, 0x6B58B0);
+    RH_ScopedVMTInstall(GetNumContactWheels, 0x6B58A0);
+    RH_ScopedVMTInstall(FindWheelWidth, 0x6B8940);
 }
 
 // 0x6BF430

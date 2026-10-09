@@ -91,6 +91,8 @@ void CTrain::InjectHooks() {
     RH_ScopedGlobalInstall(PlayAnnouncement, 0x6F5920);
     RH_ScopedGlobalInstall(MarkSurroundingEntitiesForCollisionWithTrain, 0x6F6640);
     RH_ScopedGlobalInstall(TrainHitStuff<CPtrListSingleLink<CPhysical*>>, 0x6F5CF0);
+
+    RH_ScopedVMTDestructorInstall(0x6F6300);
 }
 
 // 0x6F6030

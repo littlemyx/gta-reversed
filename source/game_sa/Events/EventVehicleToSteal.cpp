@@ -7,6 +7,12 @@ void CEventVehicleToSteal::InjectHooks() {
 
     RH_ScopedInstall(Constructor, 0x4AF670);
     RH_ScopedVMTInstall(AffectsPed, 0x4AF760);
+
+    RH_ScopedVMTDestructorInstall(0x4B62B0);
+    RH_ScopedVMTInstall(GetEventType, 0x4AF6D0);
+    RH_ScopedVMTInstall(GetEventPriority, 0x4AF6F0);
+    RH_ScopedVMTInstall(GetLifeTime, 0x4AF6E0);
+    RH_ScopedVMTInstall(Clone, 0x4B74B0);
 }
 
 // 0x4AF670

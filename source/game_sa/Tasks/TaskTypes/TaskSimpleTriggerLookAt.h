@@ -10,6 +10,9 @@
 #include "AnimBlendAssociation.h"
 #include "Entity.h"
 
+class CPed;
+class CEvent;
+
 class NOTSA_EXPORT_VTABLE CTaskSimpleTriggerLookAt : public CTaskSimple {
 public:
     static void InjectHooks();
@@ -34,6 +37,19 @@ public:
                              float speed = 0.25f,
                              int32 blendTime = 1000,
                              int32 priority = 3);
+    ~CTaskSimpleTriggerLookAt() override = default; // 0x6394D0
+
+    CTask*    Clone() const override;
+    eTaskType GetTaskType() const override { return Type; }
+    bool      MakeAbortable(CPed* ped, eAbortPriority priority = ABORT_PRIORITY_URGENT, const CEvent* event = nullptr) override { return true; }
+    bool      ProcessPed(CPed* ped) override;
+
+private: // Wrapper for the hook
+    // 0x634440
+    CTaskSimpleTriggerLookAt* Constructor(CEntity* entity, int32 time, int32 offsetBoneTag, RwV3d offsetPos, bool bUseTorso, float speed, int32 blendTime, int32 priority) {
+        this->CTaskSimpleTriggerLookAt::CTaskSimpleTriggerLookAt(entity, time, offsetBoneTag, offsetPos, bUseTorso, speed, blendTime, priority);
+        return this;
+    }
 };
 
 VALIDATE_SIZE(CTaskSimpleTriggerLookAt, 0x30);

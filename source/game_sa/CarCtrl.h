@@ -109,8 +109,7 @@ public:
     static bool ScriptGenerateOneEmergencyServicesCar(uint32 modelId, CVector posn);
     static void SetCoordsOfScriptCar(CVehicle* vehicle, float x, float y, float z, uint8 arg5, uint8 arg6);
     static void SetUpDriverAndPassengersForVehicle(CVehicle* vehicle, int32 pedType, int32 minPassengers, bool arg4, bool arg5, int32 maxPassengers);
-    template<typename PtrListType>
-    static void SlowCarDownForCarsSectorList(PtrListType& ptrList, CVehicle* vehicle, float arg3, float arg4, float arg5, float arg6, float* arg7, float arg8);
+    static void SlowCarDownForCarsSectorList(CPtrListDoubleLink<CVehicle*>& carList, CVehicle* vehicle, float minX, float minY, float maxX, float maxY, float* speedFactor, float speedMult);
     static void SlowCarDownForObject(CEntity* entity, CVehicle* vehicle, float* arg3, float arg4);
     static void SlowCarDownForObjectsSectorList(CPtrListDoubleLink<CObject*>& objList, CVehicle* vehicle, float minX, float minY, float maxX, float maxY, float* speedFactor, float speedMult);
     static void SlowCarDownForOtherCar(CEntity* entity, CVehicle* vehicle, float* speedFactor, float speedMult);
@@ -126,8 +125,8 @@ public:
     static void SteerAICarWithPhysics(CVehicle* vehicle);
     static void SteerAICarWithPhysicsFollowPath(CVehicle* vehicle, float* arg2, float* arg3, float* arg4, bool* arg5);
     static void SteerAICarWithPhysicsFollowPath_Racing(CVehicle* vehicle, float* arg2, float* arg3, float* arg4, bool* arg5);
-    static void SteerAICarWithPhysicsFollowPreRecordedPath(CVehicle* vehicle, float* arg2, float* arg3, float* arg4, bool* arg5);
-    static void SteerAICarWithPhysicsHeadingForTarget(CVehicle* vehicle, CPhysical* target, float arg3, float arg4, float* arg5, float* arg6, float* arg7, bool* arg8);
+    static void SteerAICarWithPhysicsFollowPreRecordedPath(CVehicle* vehicle, float* pSteer, float* pGas, float* pBrake, bool* pHandbrake);
+    static void SteerAICarWithPhysicsHeadingForTarget(CVehicle* vehicle, CPhysical* target, float x, float y, float* pSteer, float* pGas, float* pBrake, bool* pHandbrake);
     static void SteerAICarWithPhysicsTryingToBlockTarget(CVehicle* vehicle, CEntity* Unusued, float arg3, float arg4, float arg5, float arg6, float* arg7, float* arg8, float* arg9, bool* arg10);
     static void SteerAICarWithPhysicsTryingToBlockTarget_Stop(CVehicle* vehicle, float x, float y, float arg4, float arg5, float* arg6, float* arg7, float* arg8, bool* arg9);
     static void SteerAICarWithPhysics_OnlyMission(CVehicle* vehicle, float* arg2, float* arg3, float* arg4, bool* arg5);

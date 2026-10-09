@@ -21,6 +21,7 @@
 #include "TheCarGenerators.h"
 #include "eAreaCodes.h"
 #include "TaskTypes/TaskComplexWander.h"
+#include "VehicleRecording.h"
 #include "Curves.h"
 
 #include <reversiblebugfixes/Bugs.hpp>
@@ -143,6 +144,31 @@ static CVector CrossProductOriginal(const CVector& a, const CVector& b) {
     };
 }
 
+namespace {
+// These replicate the operation order of the original (`CMatrix::Multiply3x3` and `CMatrix::MultiplyMatrixWithVector`), as the ones in `CMatrix` do the additions
+// in a different order. (x87: the sum is kept in extended precision and rounded to float only once)
+
+// 0x59C790
+CVector TransformVectorOriginal(const CMatrix& m, const CVector& v) {
+    const auto &r = m.GetRight(), &f = m.GetForward(), &u = m.GetUp();
+    return CVector{
+        (float)(((double)u.x * v.z + (double)f.x * v.y) + (double)r.x * v.x),
+        (float)(((double)u.y * v.z + (double)r.y * v.x) + (double)f.y * v.y),
+        (float)(((double)u.z * v.z + (double)r.z * v.x) + (double)f.z * v.y)
+    };
+}
+
+// 0x59C890
+CVector TransformPointOriginal(const CMatrix& m, const CVector& v) {
+    const auto &r = m.GetRight(), &f = m.GetForward(), &u = m.GetUp(), &p = m.GetPosition();
+    return CVector{
+        (float)((((double)u.x * v.z + (double)f.x * v.y) + (double)r.x * v.x) + p.x),
+        (float)((((double)u.y * v.z + (double)r.y * v.x) + (double)f.y * v.y) + p.y),
+        (float)((((double)u.z * v.z + (double)r.z * v.x) + (double)f.z * v.y) + p.z)
+    };
+}
+} // namespace
+
 void CCarCtrl::InjectHooks()
 {
     RH_ScopedClass(CCarCtrl);
@@ -167,6 +193,7 @@ void CCarCtrl::InjectHooks()
     RH_ScopedInstall(RemoveDistantCars, 0x42CD10);
     RH_ScopedInstall(RemoveFromInterestingVehicleList, 0x423ED0);
     RH_ScopedInstall(ScriptGenerateOneEmergencyServicesCar, 0x42FBC0);
+    RH_ScopedInstall(SlowCarDownForCarsSectorList, 0x432420);
     RH_ScopedInstall(SlowCarDownForObject, 0x426220);
     RH_ScopedInstall(SlowCarOnRailsDownForTrafficAndLights, 0x434790);
     RH_ScopedInstall(FindMaxSteerAngle, 0x427FE0);
@@ -224,6 +251,8 @@ void CCarCtrl::InjectHooks()
     RH_ScopedInstall(JoinCarWithRoadSystem, 0x42F5A0);
     RH_ScopedInstall(GenerateEmergencyServicesCar, 0x42F9C0);
     RH_ScopedInstall(ReconsiderRoute, 0x42FC40);
+    RH_ScopedInstall(SteerAICarWithPhysicsFollowPreRecordedPath, 0x432DD0);
+    RH_ScopedInstall(SteerAICarWithPhysicsHeadingForTarget, 0x433280);
 }
 
 // 0x4212E0
@@ -2790,9 +2819,48 @@ void CCarCtrl::SetUpDriverAndPassengersForVehicle(CVehicle* vehicle, int32 pedTy
 }
 
 // 0x432420
-template<typename PtrListType>
-void CCarCtrl::SlowCarDownForCarsSectorList(PtrListType& ptrList, CVehicle* vehicle, float arg3, float arg4, float arg5, float arg6, float* arg7, float arg8) {
-    plugin::Call<0x432420, PtrListType&, CVehicle*, float, float, float, float, float*, float>(ptrList, vehicle, arg3, arg4, arg5, arg6, arg7, arg8);
+void CCarCtrl::SlowCarDownForCarsSectorList(CPtrListDoubleLink<CVehicle*>& carList, CVehicle* vehicle, float minX, float minY, float maxX, float maxY, float* speedFactor, float speedMult) {
+    // The original stores the next node before processing the current one
+    for (auto it = carList.begin(); it != carList.end();) {
+        CVehicle* const other = *it;
+        ++it;
+
+        if (other == vehicle || other->IsScanCodeCurrent() || !other->m_bUsesCollision) {
+            continue;
+        }
+        other->SetCurrentScanCode();
+
+        CVector centre;
+        other->GetBoundCentre(centre); // 0x534250
+        if (!(centre.x > minX) || !(centre.x < maxX) || !(centre.y > minY) || !(centre.y < maxY)) {
+            continue;
+        }
+
+        {
+            const auto zDiff = (double)centre.z - vehicle->GetPosition().z;
+            if (!((zDiff < 0.0 ? -zDiff : zDiff) < 10.0f)) { // x87: FABS
+                continue;
+            }
+        }
+
+        // Note: The matrix is used directly (not null checked)
+        const auto& fwd = vehicle->m_matrix->GetForward();
+        const auto distAlongLine = CCollision::DistAlongLine2D(
+            vehicle->GetPosition().x, vehicle->GetPosition().y,
+            fwd.x, fwd.y,
+            centre.x, centre.y
+        ); // 0x412A80
+        const auto vehPosZ = vehicle->GetPosition().z;
+        const auto vehFwdZ = vehicle->GetForwardVector().z;
+
+        // x87: kept in extended precision
+        const auto zErr = (double)centre.z - ((double)distAlongLine * vehFwdZ + vehPosZ);
+        if (!((zErr < 0.0 ? -zErr : zErr) < 3.0f)) {
+            continue;
+        }
+
+        SlowCarDownForOtherCar(other, vehicle, speedFactor, speedMult); // 0x42D0E0
+    }
 }
 
 // 0x426220
@@ -3327,6 +3395,28 @@ void CCarCtrl::SteerAICarBlockingPlayerForwardAndBack(CVehicle* vehicle, float* 
     }
 }
 
+// The raw offsets the AI steering code of the original works with (checked, so the named members can be used)
+static_assert(offsetof(CVehicle, m_autoPilot) + offsetof(CAutoPilot, m_vehicleRecordingId) == 0x424);
+static_assert(offsetof(CVehicle, m_autoPilot) + offsetof(CAutoPilot, m_nCarDrivingStyle) == 0x3B9);
+static_assert(offsetof(CVehicle, m_autoPilot) + offsetof(CAutoPilot, m_nCarMission) == 0x3BA);
+static_assert(offsetof(CVehicle, m_autoPilot) + offsetof(CAutoPilot, m_nTempAction) == 0x3BB);
+static_assert(offsetof(CVehicle, m_autoPilot) + offsetof(CAutoPilot, m_nCruiseSpeed) == 0x3D0);
+static_assert(offsetof(CVehicle, m_autoPilot) + offsetof(CAutoPilot, m_nMovementFlags) == 0x3DC);
+static_assert(offsetof(CVehicle, m_autoPilot) + offsetof(CAutoPilot, m_startingRouteNode) == 0x394);
+static_assert(offsetof(CBmx, m_fControlPedaling) == 0x818);
+
+//! Limits the steering angle to +-`FindMaxSteerAngle`
+static float ClampSteerToMax(CVehicle* vehicle, float steer) {
+    const auto maxSteer = CCarCtrl::FindMaxSteerAngle(vehicle);
+    if (steer < -maxSteer) {
+        steer = -maxSteer;
+    }
+    if (steer > maxSteer) {
+        steer = maxSteer;
+    }
+    return steer;
+}
+
 // 0x433BA0
 void CCarCtrl::SteerAICarParkParallel(CVehicle* vehicle, float* arg2, float* arg3, float* arg4, bool* arg5) {
     plugin::Call<0x433BA0, CVehicle*, float*, float*, float*, bool*>(vehicle, arg2, arg3, arg4, arg5);
@@ -3358,13 +3448,185 @@ void CCarCtrl::SteerAICarWithPhysicsFollowPath_Racing(CVehicle* vehicle, float* 
 }
 
 // 0x432DD0
-void CCarCtrl::SteerAICarWithPhysicsFollowPreRecordedPath(CVehicle* vehicle, float* arg2, float* arg3, float* arg4, bool* arg5) {
-    plugin::Call<0x432DD0, CVehicle*, float*, float*, float*, bool*>(vehicle, arg2, arg3, arg4, arg5);
+void CCarCtrl::SteerAICarWithPhysicsFollowPreRecordedPath(CVehicle* vehicle, float* pSteer, float* pGas, float* pBrake, bool* pHandbrake) {
+    const auto StopRecordedPath = [&] {
+        *pBrake     = 0.0f;
+        *pGas       = 0.0f;
+        *pSteer     = 0.0f;
+        *pHandbrake = false;
+        vehicle->m_autoPilot.m_nCarMission = MISSION_STOP_FOREVER;
+    };
+
+    const int32 id = vehicle->m_autoPilot.m_vehicleRecordingId;
+    if (id < 0) {
+        StopRecordedPath();
+        return;
+    }
+
+    const auto buffer = reinterpret_cast<const uint8*>(CVehicleRecording::pPlaybackBuffer[id]);
+    if (!buffer) {
+        StopRecordedPath();
+        return;
+    }
+
+    if (CVehicleRecording::bPlaybackPaused[id]) {
+        *pSteer     = 0.0f;
+        *pGas       = 0.0f;
+        *pBrake     = 0.5f;
+        *pHandbrake = false;
+        return;
+    }
+
+    auto& playbackOffset = CVehicleRecording::PlaybackIndex[id]; // Byte offset into the buffer (it's advanced by the size of a frame)
+    const auto FrameAt = [&](int32 byteOffset) -> const CVehicleStateEachFrame& {
+        return *reinterpret_cast<const CVehicleStateEachFrame*>(buffer + byteOffset);
+    };
+    // x87: the squared distance is kept in extended precision
+    const auto DistTo = [&](const CVector& p) {
+        const auto& pos = vehicle->GetPosition();
+        const double dx = (double)pos.x - p.x, dy = (double)pos.y - p.y, dz = (double)pos.z - p.z;
+        return std::sqrt((dz * dz + dy * dy) + dx * dx);
+    };
+
+    // BUG: The original keeps using the frame it started with (instead of the one it advanced to) for the rest of the function
+    const auto& startFrame = FrameAt(playbackOffset);
+    const CVehicleStateEachFrame* frame = &startFrame;
+    while (true) {
+        const auto& cur  = FrameAt(playbackOffset);
+        const auto& next = FrameAt(playbackOffset + (int32)sizeof(CVehicleStateEachFrame));
+        const auto  distToCur  = DistTo(cur.m_vecPosn);
+        const auto  distToNext = DistTo(next.m_vecPosn);
+        if (!(distToCur < 10.0f) && !(distToNext < distToCur)) {
+            break;
+        }
+
+        playbackOffset += (int32)sizeof(CVehicleStateEachFrame);
+        if ((uint32)playbackOffset >= (uint32)(CVehicleRecording::PlaybackBufferSize[id] - (int32)sizeof(CVehicleStateEachFrame))) { // Reached the end
+            CVehicleRecording::StopPlaybackWithIndex(id); // 0x459440
+            vehicle->m_autoPilot.m_vehicleRecordingId = -1;
+            StopRecordedPath();
+            return;
+        }
+        if (notsa::IsFixBugs()) {
+            frame = &FrameAt(playbackOffset);
+        }
+    }
+
+    const auto& vehFwd = vehicle->m_matrix->GetForward(); // Note: Not null checked
+    const auto  heading = CGeneral::GetATanOfXY(vehFwd.x, vehFwd.y); // 0x53CC70
+    const auto  targetAngle = CGeneral::GetATanOfXY( // 0x53CC70
+        (float)((double)frame->m_vecPosn.x - vehicle->GetPosition().x),
+        (float)((double)frame->m_vecPosn.y - vehicle->GetPosition().y)
+    );
+    const auto weaveAngle = FindAngleToWeaveThroughTraffic(vehicle, nullptr, targetAngle, heading, 2.0f); // 0x4325C0
+    float steer = (float)WrapAngleToPi((double)weaveAngle - heading);
+    steer = ClampSteerToMax(vehicle, steer); // 0x427FE0
+
+    // Speed we should have. x87: kept in extended precision (the scale is 1/16383.5, 0x858EAC)
+    constexpr auto VELOCITY_SCALE = std::bit_cast<float>(0x38800100u);
+    const auto     vel            = std::bit_cast<std::array<int16, 3>>(frame->m_sVelocity);
+    const double   velX           = (double)vel[0] * VELOCITY_SCALE;
+    const double   velY           = (double)vel[1] * VELOCITY_SCALE;
+    double targetSpeed = std::sqrt(velX * velX + velY * velY) * CVehicleRecording::PlaybackSpeed[id] * 60.0f;
+    if ((uint32)playbackOffset <= 0x320u && !(targetSpeed > 5.0f)) {
+        targetSpeed = 5.0f;
+    }
+
+    *pBrake = 0.0f;
+    const auto curSpeed = (float)(std::sqrt((double)vehicle->m_vecMoveSpeed.x * vehicle->m_vecMoveSpeed.x + (double)vehicle->m_vecMoveSpeed.y * vehicle->m_vecMoveSpeed.y) * 60.0f);
+    const double speedDiff = targetSpeed - curSpeed;
+    if (speedDiff > 0.0) {
+        double gas = speedDiff * (curSpeed < 2.0f ? 0.25f : 0.125f);
+        if (1.0f < gas) {
+            gas = 1.0f;
+        }
+        *pGas = (float)gas;
+    } else {
+        double brake = speedDiff * -0.05f; // 0x85901C
+        *pGas = 0.0f;
+        if (0.5f < brake) {
+            brake = 0.5f;
+        }
+        *pBrake = (float)brake;
+    }
+    *pSteer     = steer;
+    *pHandbrake = false;
 }
 
 // 0x433280
-void CCarCtrl::SteerAICarWithPhysicsHeadingForTarget(CVehicle* vehicle, CPhysical* target, float arg3, float arg4, float* arg5, float* arg6, float* arg7, bool* arg8) {
-    plugin::Call<0x433280, CVehicle*, CPhysical*, float, float, float*, float*, float*, bool*>(vehicle, target, arg3, arg4, arg5, arg6, arg7, arg8);
+void CCarCtrl::SteerAICarWithPhysicsHeadingForTarget(CVehicle* vehicle, CPhysical* target, float x, float y, float* pSteer, float* pGas, float* pBrake, bool* pHandbrake) {
+    *pHandbrake = false;
+
+    const auto dir = GetNormalizedForward2D(vehicle);
+
+    const auto& pos         = vehicle->GetPosition();
+    const auto  targetAngle = CGeneral::GetATanOfXY((float)((double)x - pos.x), (float)((double)y - pos.y)); // 0x53CC70
+    const auto  heading     = CGeneral::GetATanOfXY(dir.x, dir.y); // 0x53CC70
+
+    float angle = targetAngle;
+    const auto drivingStyle = vehicle->m_autoPilot.m_nCarDrivingStyle;
+    if (   drivingStyle == DRIVING_STYLE_AVOID_CARS
+        || drivingStyle == DRIVING_STYLE_DRIVINGMODE_AVOIDCARS_OBEYLIGHTS
+        || drivingStyle == DRIVING_STYLE_DRIVINGMODE_AVOIDCARS_STOPFORPEDS_OBEYLIGHTS
+    ) {
+        angle = FindAngleToWeaveThroughTraffic(vehicle, target, targetAngle, heading, 1.0f); // 0x4325C0
+    }
+
+    // x87: the wrapped difference stays in extended precision (used for the handbrake below), the steering is rounded to float
+    const double angleDiff = WrapAngleToPi((double)angle - heading);
+    float        steer     = (float)angleDiff;
+
+    // Handbrake when moving and the turn is too sharp
+    {
+        const auto& ms = vehicle->m_vecMoveSpeed;
+        const double speed = std::sqrt(((double)ms.x * ms.x + (double)ms.y * ms.y) + (double)ms.z * ms.z);
+        if (0.3f < speed) {
+            if (0.7f < (angleDiff < 0.0 ? -angleDiff : angleDiff)) {
+                *pHandbrake = true;
+            }
+        }
+    }
+
+    steer = ClampSteerToMax(vehicle, steer); // 0x427FE0
+
+    const auto& pos2 = vehicle->GetPosition();
+    const auto  targetAngle2 = CGeneral::GetATanOfXY((float)((double)x - pos2.x), (float)((double)y - pos2.y)); // 0x53CC70
+    const auto  speedMult = FindSpeedMultiplier((float)((double)targetAngle2 - heading), 0.4f, 1.2f, 0.4f); // 0x4224E0
+
+    const auto& ms = vehicle->m_vecMoveSpeed;
+    *pBrake = 0.0f;
+    const auto curSpeed = (float)(std::sqrt(((double)ms.z * ms.z + (double)ms.y * ms.y) + (double)ms.x * ms.x) * 60.0f);
+    const double speedDiff = (double)speedMult * (int32)vehicle->m_autoPilot.m_nCruiseSpeed - curSpeed;
+
+    if (!(speedDiff > 0.0)) {
+        double brake = speedDiff * -0.05f; // 0x85901C
+        *pGas = 0.0f;
+        if (0.5f < brake) {
+            brake = 0.5f;
+        }
+        *pBrake = (float)brake;
+        *pSteer = steer;
+        return;
+    }
+
+    if (curSpeed < 25.0f) {
+        double gas = 0.1f * speedDiff;
+        if (1.0f < gas) {
+            gas = 1.0f;
+        }
+        *pGas = (float)gas;
+    } else {
+        *pGas = 1.0f;
+    }
+
+    // Bikes (BMX) have to be kept pedaling/jumping
+    if (vehicle->m_nVehicleSubType == VEHICLE_TYPE_BMX && 3.0f < speedDiff) {
+        auto* const bmx = static_cast<CBmx*>(vehicle);
+        if (bmx->m_fControlPedaling <= 0.0f) { // Note: "always 0.0f" according to the header
+            bmx->m_fControlPedaling = 10.0f;
+        }
+    }
+    *pSteer = steer;
 }
 
 // 0x4335E0
@@ -3993,29 +4255,6 @@ void CCarCtrl::UpdateCarOnRails(CVehicle* vehicle) {
 }
 
 namespace {
-// These replicate the operation order of the original (`CMatrix::Multiply3x3` and `CMatrix::MultiplyMatrixWithVector`), as the ones in `CMatrix` do the additions
-// in a different order. (x87: the sum is kept in extended precision and rounded to float only once)
-
-// 0x59C790
-CVector TransformVectorOriginal(const CMatrix& m, const CVector& v) {
-    const auto &r = m.GetRight(), &f = m.GetForward(), &u = m.GetUp();
-    return CVector{
-        (float)(((double)u.x * v.z + (double)f.x * v.y) + (double)r.x * v.x),
-        (float)(((double)u.y * v.z + (double)r.y * v.x) + (double)f.y * v.y),
-        (float)(((double)u.z * v.z + (double)r.z * v.x) + (double)f.z * v.y)
-    };
-}
-
-// 0x59C890
-CVector TransformPointOriginal(const CMatrix& m, const CVector& v) {
-    const auto &r = m.GetRight(), &f = m.GetForward(), &u = m.GetUp(), &p = m.GetPosition();
-    return CVector{
-        (float)((((double)u.x * v.z + (double)f.x * v.y) + (double)r.x * v.x) + p.x),
-        (float)((((double)u.y * v.z + (double)r.y * v.x) + (double)f.y * v.y) + p.y),
-        (float)((((double)u.z * v.z + (double)r.z * v.x) + (double)f.z * v.y) + p.z)
-    };
-}
-
 constexpr auto WEAVE_ANGLE_STEP = std::bit_cast<float>(0x3DD67750u); // 0x858FAC - 6 degrees (in radians)
 } // namespace
 

@@ -1,6 +1,7 @@
 #include "StdInc.h"
 
 #include "Credits.h"
+#include "Fx/FxFtol.h"
 
 void CCredits::InjectHooks() {
     RH_ScopedClass(CCredits);
@@ -42,22 +43,22 @@ void CCredits::PrintCreditText(float scaleX, float scaleY, const GxtChar* text, 
     if (pos > minPosY && pos < SCREEN_HEIGHT - minPosY) {
         CFont::SetScale(scaleX, scaleY);
         CFont::SetColor({0, 0, 0, 255});
-        CFont::PrintString((SCREEN_WIDTH / 2.0f), pos, text);
+        CFont::PrintString((float)(RsGlobal.maximumWidth / 2), pos, text); // integer division in the exe
 
         if (highlighted)
             CFont::SetColor({255, 255, 255, 255});
         else
             CFont::SetColor({210, 210, 210, 210});
 
-        CFont::PrintString((SCREEN_WIDTH / 2.0f - 1), pos - 1.0f, text);
+        CFont::PrintString((float)(RsGlobal.maximumWidth / 2 - 1), pos - 1.0f, text);
     }
 
-    position += (uint32)scaleY * minPosY;
+    position = (uint32)notsa::detail::Ftol((double)scaleY * 20.0 + (double)position); // exe: _ftol2(scaleY * 20 + position) (NOT `(uint32)scaleY * 20`)
 }
 
 // 0x5A87C0
 void CCredits::PrintCreditSpace(float spaceSize, uint32& position) {
-    position += (uint32)(spaceSize * 25.0f);
+    position = (uint32)notsa::detail::Ftol((double)spaceSize * 25.0 + (double)position); // 0x858FE8
 }
 
 // 0x5A87F0
@@ -72,7 +73,7 @@ void CCredits::RenderCredits() {
     DefinedState2d();
 
     uint32 lineOffset = 0;
-    float  scrollOffset = float(CTimer::GetTimeInMS() - CreditsStartTime) / 23.0f; // magic number
+    float  scrollOffset = float(CTimer::GetTimeInMS() - CreditsStartTime) * 0.043478262f; // 0x8684DC (NOT `/ 23`)
     
     CFont::SetBackground(false, false);
     CFont::SetCentreSize(SCREEN_WIDTH * 0.92f);
@@ -80,7 +81,7 @@ void CCredits::RenderCredits() {
     CFont::SetProportional(true);
     CFont::SetFontStyle(eFontStyle::FONT_SUBTITLES);
     CFont::SetEdge(0);
-    CFont::SetDropColor(CRGBA(0, 0, 255));
+    CFont::SetDropColor(CRGBA(0, 0, 0, 255));
 
     const auto PrintCreditText_ = [&](const char* textKey, float scale, bool highlighted = false) {
         auto text = TheText.Get(textKey);

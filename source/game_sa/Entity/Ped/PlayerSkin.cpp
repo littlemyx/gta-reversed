@@ -27,10 +27,10 @@ void CPlayerSkin::Shutdown() {
 // unused
 // 0x6FF900
 void CPlayerSkin::RenderFrontendSkinEdit() {
-    static uint32 s_LastFlash; // 0xC3F04C
-    static float  s_Angle;     // 0xC3F048
+    static auto& s_LastFlash = StaticRef<uint32>(0xC3F04C);
+    static auto& s_Angle     = StaticRef<float>(0xC3F048);
 
-    RwRGBAReal color{ 255, 255, 255, 1.0f };
+    RwRGBAReal color{ 0.65f, 0.65f, 0.65f, 1.0f }; // 0x3F266666
     if (CTimer::GetTimeInMSPauseMode() - s_LastFlash > 7) {
         s_Angle = s_Angle + 2.0f;
         if (s_Angle > 360.0) {

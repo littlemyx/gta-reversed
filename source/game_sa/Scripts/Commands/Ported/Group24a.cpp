@@ -232,7 +232,7 @@ int32 GetCurrentCarMod(CVehicle& veh, int32 slotRaw) {
 
 //! The handling entry the exe reaches through the model info (byte +0x4A of the vehicle model info; table @0xC2B9DC, stride 0xE0), NOT through the vehicle's own pointer
 const tHandlingData& HandlingOfModel(CVehicle& veh) {
-    const auto* const mi = static_cast<CVehicleModelInfo*>(CModelInfo::ms_modelInfoPtrs[veh.m_nModelIndex]); // 0xA9B0C8, movsx word +0x22
+    const auto* const mi = static_cast<CVehicleModelInfo*>(CModelInfo::ms_modelInfoPtrs[(int16)veh.m_nModelIndex]); // 0xA9B0C8, movsx word +0x22
     return gHandlingDataMgr.m_aVehicleHandling[(uint8)mi->m_nHandlingId];
 }
 
@@ -274,7 +274,8 @@ void ResetStuffUponResurrection() {
 
 //! 2421 IS_EMERGENCY_SERVICES_VEHICLE (case @0x478611): car => compare flag: IsLawEnforcementVehicle() [0x6D2370] || model 416 (ambulan) / 407 (firetruk) / 544 (firela)
 bool IsEmergencyServicesVehicle(CVehicle& veh) {
-    return veh.IsLawEnforcementVehicle() || veh.m_nModelIndex == 0x1A0 || veh.m_nModelIndex == 0x197 || veh.m_nModelIndex == 0x220;
+    const int32 model = (int16)veh.m_nModelIndex; // movsx word +0x22
+    return veh.IsLawEnforcementVehicle() || model == 0x1A0 || model == 0x197 || model == 0x220;
 }
 
 //! 2422 KILL_FX_SYSTEM_NOW (case @0x47866F): handle  -- idx = GetActualScriptThingIndex(handle, SCRIPT_THING_EFFECT_SYSTEM); if idx >= 0 and the slot's system (+4) is set:
@@ -347,7 +348,7 @@ void AttachMissionAudioToObject(int32 slot, CObject* obj) {
 
 //! 2429 GET_NUM_CAR_COLOURS (case @0x4788B8): car => the model info's colour variation count (+0x2D0, zero-extended byte)
 int32 GetNumCarColours(CVehicle& veh) {
-    return static_cast<CVehicleModelInfo*>(CModelInfo::ms_modelInfoPtrs[veh.m_nModelIndex])->m_nNumColorVariations;
+    return static_cast<CVehicleModelInfo*>(CModelInfo::ms_modelInfoPtrs[(int16)veh.m_nModelIndex])->m_nNumColorVariations; // movsx word +0x22
 }
 
 //! 2432 EXTINGUISH_FIRE_AT_POINT (case @0x4788FB): x, y, z, radius  -- gFireManager.ExtinguishPoint(pos, radius) [0x539450]
@@ -372,7 +373,7 @@ void SetOnlyCreateGangMembers(int32 flag) {
 
 //! 2436 GET_OBJECT_MODEL (case @0x4789DE): object => model index (+0x22, movsx word)
 int32 GetObjectModel(CObject& obj) {
-    return (int32)obj.m_nModelIndex;
+    return (int32)(int16)obj.m_nModelIndex; // movsx
 }
 
 //! 2437 SET_CHAR_USES_COLLISION_CLOSEST_OBJECT_OF_TYPE (case @0x478A13): x, y, z, radius, model, flag, ped

@@ -403,7 +403,7 @@ int32 GetRandomCarOfTypeInAngledAreaNoSave(float x1, float y1, float x2, float y
         if (veh->GetVehicleAppearance() != VEHICLE_APPEARANCE_AUTOMOBILE && veh->GetVehicleAppearance() != VEHICLE_APPEARANCE_BIKE) { // 0x6D1080
             continue;
         }
-        if (veh->m_nModelIndex != model && model >= 0) {
+        if ((int32)(int16)veh->m_nModelIndex != model && model >= 0) { // movsx word +0x22
             continue;
         }
         if (!veh->CanBeDeleted()) { // 0x6D1180

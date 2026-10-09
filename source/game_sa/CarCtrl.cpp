@@ -635,7 +635,7 @@ bool CCarCtrl::DealWithBend_Racing(CVehicle* vehicle, CCarPathLinkAddress LinkAd
     const auto& vehPos = vehicle->GetPosition();
     const double dist = std::sqrt(((double)y1 - vehPos.y) * ((double)y1 - vehPos.y) + ((double)x1 - vehPos.x) * ((double)x1 - vehPos.x));
     *arg14 = (float)dist;
-    if (!(dist <= 60.0f)) { // 0x858B34
+    if (dist > 60.0f) { // 0x858B34 (NaN => continue)
         return false;
     }
 
@@ -650,13 +650,13 @@ bool CCarCtrl::DealWithBend_Racing(CVehicle* vehicle, CCarPathLinkAddress LinkAd
     int8 dirSignB = dirSign2;
     if (LinkAddress3.IsValid()) {
         const auto* link3 = &ThePaths.GetCarPathLink(LinkAddress3); // (the area isn't null checked)
-        if (!(DistSq(linkB, link3) >= 100.0f)) { // 0x858628
+        if (DistSq(linkB, link3) < 100.0f) { // 0x858628
             linkB    = link3;
             dirSignB = dirSign3;
         }
         if (LinkAddress4.IsValid()) {
             const auto* link4 = &ThePaths.GetCarPathLink(LinkAddress4);
-            if (!(DistSq(linkB, link4) >= 100.0f)) {
+            if (DistSq(linkB, link4) < 100.0f) {
                 linkB    = link4;
                 dirSignB = dirSign4;
             }
@@ -679,22 +679,22 @@ bool CCarCtrl::DealWithBend_Racing(CVehicle* vehicle, CCarPathLinkAddress LinkAd
             angle -= 2.0f * std::numbers::pi_v<float>; // 0x858CBC
         } while (angle > std::numbers::pi_v<float>);
     }
-    if (!(angle >= -std::numbers::pi_v<float>)) { // 0x858CC0
+    if (angle < -std::numbers::pi_v<float>) { // 0x858CC0
         do {
             angle += 2.0f * std::numbers::pi_v<float>;
-        } while (!(angle >= -std::numbers::pi_v<float>));
+        } while (angle < -std::numbers::pi_v<float>);
     }
     const float angleF   = (float)angle;
-    const auto  AbsNaN   = [](double v) { return v >= 0.0 ? v : -v; };
+    const auto  AbsNaN   = [](double v) { return v < 0.0 ? -v : v; }; // (NaN stays NaN)
     const auto  LaneSum  = [](const CCarPathLink* l) { return l->m_numOppositeDirLanes + l->m_numSameDirLanes; };
     const auto  Opposite = [](const CCarPathLink* l) { return (double)l->m_numOppositeDirLanes; };
     const auto  Same     = [](const CCarPathLink* l) { return (double)l->m_numSameDirLanes; };
 
-    if (!(AbsNaN(angle) >= minAngle)) {
+    if (AbsNaN(angle) < minAngle) {
         return false; // The bend is too slight
     }
     if (LaneSum(linkB) >= 4 && LaneSum(link1) >= 4) {
-        if (!(AbsNaN(angle) >= maxAngle)) {
+        if (AbsNaN(angle) < maxAngle) {
             return false; // (Wide roads) The bend is not sharp enough
         }
     }
@@ -755,7 +755,7 @@ bool CCarCtrl::DealWithBend_Racing(CVehicle* vehicle, CCarPathLinkAddress LinkAd
 
     // The point to steer to: Either the edge of the first link, or the intersection of the 2 lines
     // (Only X and Y of `pos` are written)
-    if (!(AbsNaN((double)d1x - d2x) >= 0.1f) && AbsNaN((double)d1y - d2y) != 0.0) { // 0x858B1C
+    if (AbsNaN((double)d1x - d2x) < 0.1f && AbsNaN((double)d1y - d2y) != 0.0) { // 0x858B1C
         pos->x = Nx;
         pos->y = Ny;
     } else {
@@ -766,18 +766,18 @@ bool CCarCtrl::DealWithBend_Racing(CVehicle* vehicle, CCarPathLinkAddress LinkAd
     const double bendFactor = [&] {
         const double t = (double)angleF * 0.6366197f; // 0x858FB8 (2/PI)
         const double a = AbsNaN(t);
-        return 1.0 >= a ? a : 1.0; // (min(abs(t), 1.0))
+        return 1.0 < a ? 1.0 : a; // (min(abs(t), 1.0))
     }();
-    if (!(*arg14 >= distLim)) {
+    if (*arg14 < distLim) {
         *arg12 = (float)(1.0 - (((double)distLim - *arg14) / distLim) * bendFactor * 0.6f); // 0x858CC8
     }
 
     // Decide how far ahead to look
     const double speedFactor = (double)arg10 * 0.033333335f; // 0x858F10
-    const double lookAhead   = 1.0 >= speedFactor
-        ? (0.2f > speedFactor ? (double)0.2f : speedFactor) // 0x858CC4
-        : 1.0;
-    if (!(*arg14 >= lookAhead * bendFactor * 20.0f)) { // 0x858BA4
+    const double lookAhead   = 1.0 < speedFactor
+        ? 1.0
+        : (0.2f > speedFactor ? (double)0.2f : speedFactor); // 0x858CC4
+    if (*arg14 < lookAhead * bendFactor * 20.0f) { // 0x858BA4
         // Close enough => steer towards the point calculated above
         const auto& curPos = vehicle->GetPosition();
         *arg11 = CGeneral::GetATanOfXY(pos->x - curPos.x, pos->y - curPos.y); // 0x53CC70
@@ -2198,14 +2198,14 @@ CAutomobile* CCarCtrl::GenerateOneEmergencyServicesCar(uint32 modelId, CVector p
     if (CWorld::ProcessVerticalLine(origin, -1000.0f, colPoint, hitEntity, true, false, false, false, true, false, nullptr)) {
         // x87: kept in extended precision
         double d1 = (double)colPoint.m_vecPoint.z - origin.z;
-        if (!(d1 >= 0.0)) {
+        if (d1 < 0.0) {
             d1 = -d1;
         }
         double d2 = (double)ground - origin.z;
-        if (!(d2 >= 0.0)) {
+        if (d2 < 0.0) {
             d2 = -d2;
         }
-        if (!(d1 >= d2)) {
+        if (d1 < d2) {
             ground = colPoint.m_vecPoint.z;
         }
     }
@@ -2815,7 +2815,7 @@ bool CCarCtrl::PickNextNodeAccordingStrategy(CVehicle* vehicle) {
 void CCarCtrl::InitSequence(int32 numSequenceElements) {
     SequenceElements = numSequenceElements;
     SequenceRandomOffset = CGeneral::GetRandomNumber() % numSequenceElements;
-    bSequenceOtherWay = (CGeneral::GetRandomNumber() / 4) % 2;
+    bSequenceOtherWay = (CGeneral::GetRandomNumber() >> 4) & 1; // BUG (fixed): The port used bit 2, the original (0x421760) uses bit 4
 }
 
 // 0x42DE80

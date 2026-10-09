@@ -1535,7 +1535,7 @@ void CPlayerPed::DrawTriangleForMouseRecruitPed() {
     const uint32 colRGB = ((uint32)colR << 16) | ((uint32)colG << 8) | (uint32)colB;
     for (auto i = 0u; i < std::size(verts); i++) {
         auto& vtx = TempBufferVertices.m_3d[i];
-        vtx.objVertex = { verts[i].x, verts[i].y, verts[i].z };
+        RwCompatVertexPos(vtx) = { verts[i].x, verts[i].y, verts[i].z };
         vtx.color     = (i == 0) ? (0xFF000000 | colRGB) : colRGB;
         aTempBufferIndices[i] = (RxVertexIndex)i;
     }

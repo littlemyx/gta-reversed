@@ -59,7 +59,7 @@ RxPipeline* CCustomBuildingPipeline::CreateCustomObjPipe() {
     RxD3D9AllInOneSetReinstanceCallBack(node, CustomPipeReinstanceCB);
     RxD3D9AllInOneSetRenderCallBack(node, CustomPipeRenderCB);
 
-    pipe->pluginId = PLUGIN_ID;
+    RwCompatPipelinePluginId(pipe) = PLUGIN_ID;
     pipe->pluginData = PLUGIN_ID;
 
     return pipe;

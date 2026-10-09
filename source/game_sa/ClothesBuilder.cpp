@@ -258,7 +258,7 @@ void CClothesBuilder::StoreBoneArray(RpClump* clump, int32 idx) {
     
     rng::fill(gBoneIndices[idx], -1);
     for (auto i = h->numNodes; i-- > 0;) {
-        gBoneIndices[idx][i] = static_cast<int16>(h->pNodeInfo[i].nodeID);
+        gBoneIndices[idx][i] = static_cast<int16>(RwCompatHAnimNodeInfo(h)[i].nodeID);
     }
 }
 
@@ -795,8 +795,8 @@ void CClothesBuilder::ConstructGeometryAndSkinArrays(RpHAnimHierarchy* pBoneHier
     const auto out = RpGeometryCreate(totalVerts, totalTris, rpGEOMETRYTRISTRIP | rpGEOMETRYTEXTURED | rpGEOMETRYNORMALS | rpGEOMETRYLIGHT /*0x35*/);
     *ppGeometry = out;
 
-    const auto outMT    = out->morphTarget;
-    auto       outVerts = outMT->verts;
+    const auto outMT    = RwCompatGeometryMorphTargets(out);
+    auto       outVerts = RpMorphTargetGetVertices(outMT);
     auto       outNrmls = outMT->normals;
     auto       outUVs   = out->texCoords[0];
     auto       outTri   = out->triangles;
@@ -807,9 +807,9 @@ void CClothesBuilder::ConstructGeometryAndSkinArrays(RpHAnimHierarchy* pBoneHier
         if (!g) {
             continue;
         }
-        const auto mt = g->morphTarget;
+        const auto mt = RwCompatGeometryMorphTargets(g);
         for (auto v = 0; v < g->numVertices; v++) {
-            *outVerts++ = mt->verts[v];
+            *outVerts++ = RpMorphTargetGetVertices(mt)[v];
             *outNrmls++ = mt->normals[v];
             *outUVs++   = g->texCoords[0][v];
         }
@@ -818,9 +818,9 @@ void CClothesBuilder::ConstructGeometryAndSkinArrays(RpHAnimHierarchy* pBoneHier
             RpGeometryTriangleSetVertexIndices(
                 out,
                 outTri,
-                (RwUInt16)(srcTris[t].vertIndex[0] + vertexBase),
-                (RwUInt16)(srcTris[t].vertIndex[1] + vertexBase),
-                (RwUInt16)(srcTris[t].vertIndex[2] + vertexBase)
+                (RwUInt16)(RwCompatTriangleVert(srcTris[t], 0) + vertexBase),
+                (RwUInt16)(RwCompatTriangleVert(srcTris[t], 1) + vertexBase),
+                (RwUInt16)(RwCompatTriangleVert(srcTris[t], 2) + vertexBase)
             );
             RpGeometryTriangleSetMaterial(out, outTri, pMaterial[i]);
             outTri++;
@@ -992,7 +992,7 @@ RpClump* CClothesBuilder::CreateSkinnedClump(RpClump* bones, RwTexDictionary* di
     const auto hier = RpHAnimHierarchyCreateFromHierarchy(
         boneAnimHr,
         (RpHAnimHierarchyFlag)boneAnimHr->flags,       // TODO: Use function to access
-        boneAnimHr->currentAnim->maxInterpKeyFrameSize // TODO: Use function to access
+        RwCompatInterpMaxKeyFrameSize(RwCompatHAnimInterpolator(boneAnimHr)) // TODO: Use function to access
     );
 
     const auto childFrame = RwFrameCreate();

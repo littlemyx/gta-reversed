@@ -44,7 +44,7 @@ bool CCustomBuildingRenderer::PluginAttach() {
 // 0x5D7F00
 void CCustomBuildingRenderer::AtomicSetup(RpAtomic* atomic) {
     auto* const geometry = RpAtomicGetGeometry(atomic);
-    if (CCustomBuildingDNPipeline::GetExtraVertColourPtr(geometry) && geometry->preLitLum) {
+    if (CCustomBuildingDNPipeline::GetExtraVertColourPtr(geometry) && RwCompatGeometryPreLit(geometry)) {
         CCustomBuildingDNPipeline::CustomPipeAtomicSetup(atomic);
     } else {
         CCustomBuildingPipeline::CustomPipeAtomicSetup(atomic);
@@ -58,7 +58,7 @@ bool CCustomBuildingRenderer::IsCBPCPipelineAttached(RpAtomic* atomic) {
     if (pipeID == CUSTOM_BUILDING_DN_PIPELINE_ID || pipeID == CUSTOM_BUILDING_PIPELINE_ID) {
         return true;
     }
-    return CCustomBuildingDNPipeline::GetExtraVertColourPtr(geometry) && geometry->preLitLum;
+    return CCustomBuildingDNPipeline::GetExtraVertColourPtr(geometry) && RwCompatGeometryPreLit(geometry);
 }
 
 // 0x5D7F80

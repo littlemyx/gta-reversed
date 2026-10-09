@@ -18,6 +18,7 @@
 #include "rw/skeleton.h"
 #include "rw/rwplcore.h"
 #endif
+#include "RwCompat.h"
 #include <type_traits>
 
 #ifdef _DX9_SDK_INSTALLED
@@ -63,12 +64,10 @@ inline void _rpMaterialSetDefaultSurfaceProperties(RwSurfaceProperties *surfProp
 */
 #define rpPDS_MAKEPIPEID(vendorID, pipeID) ((((vendorID) & 0xFFFF) << 16) | ((pipeID) & 0xFFFF))
 
-#ifndef NOTSA_RW_LIBRW
 struct RwResEntrySA : RwResEntry {
     RxD3D9ResEntryHeader header;
     RxD3D9InstanceData meshData;
 };
-#endif
 
 
 void RwCoreInjectHooks();

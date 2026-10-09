@@ -187,7 +187,7 @@ RpAtomic* SkinAtomicGetHAnimHierarchCB(RpAtomic* atomic, void* data) {
 RpAtomic* AtomicRemoveAnimFromSkinCB(RpAtomic* atomic, void* data) {
     if (RpSkinGeometryGetSkin(RpAtomicGetGeometry(atomic))) {
         if (RpHAnimHierarchy* hier = RpSkinAtomicGetHAnimHierarchy(atomic)) {
-            RtAnimAnimation*& currAnim = hier->currentAnim->pCurrentAnim;
+            RtAnimAnimation*& currAnim = RwCompatInterpCurrentAnim(RwCompatHAnimInterpolator(hier));
             if (currAnim) {
                 RtAnimAnimationDestroy(currAnim);
             }
@@ -287,8 +287,8 @@ bool SetFilterModeOnClumpsTextures(RpClump* clump, RwTextureFilterMode filtering
 bool RpGeometryReplaceOldMaterialWithNewMaterial(RpGeometry* geometry, RpMaterial* oldMaterial, RpMaterial* newMaterial) {
     bool replaced{};
 
-    const auto header = geometry->mesh;
-    auto       mesh   = (RpMesh*)(header + 1); // NOTE: `firstMeshOffset` is not used by the original
+    const auto header = RwCompatGeometryMeshHeader(geometry);
+    auto       mesh   = RwCompatMeshHeaderMeshes(header); // NOTE: `firstMeshOffset` is not used by the original
     for (auto i = (uint32)header->numMeshes; i > 0; i--, mesh++) {
         if (mesh->material != oldMaterial) {
             continue;
@@ -305,9 +305,9 @@ bool RpGeometryReplaceOldMaterialWithNewMaterial(RpGeometry* geometry, RpMateria
 
 // 0x734E50
 RwTexture* RwTexDictionaryFindHashNamedTexture(RwTexDictionary* txd, uint32 hash) {
-    const auto end = rwLinkListGetTerminator(&txd->texturesInDict);
-    for (auto link = rwLinkListGetFirstLLLink(&txd->texturesInDict); link != end; link = rwLLLinkGetNext(link)) {
-        const auto texture = rwLLLinkGetData(link, RwTexture, lInDictionary);
+    const auto end = rwLinkListGetTerminator(RwCompatTxdTextureList(txd));
+    for (auto link = rwLinkListGetFirstLLLink(RwCompatTxdTextureList(txd)); link != end; link = rwLLLinkGetNext(link)) {
+        const auto texture = rwLLLinkGetData(link, RwTexture, RwCompatTextureInDictLink);
         // NOTE: The original also checked `&texture->name != nullptr` here (always true)
         if (CKeyGen::GetUppercaseKey(texture->name) == hash) { // 0x53CF30
             return texture;
@@ -322,7 +322,7 @@ static auto& s_bUseLTMForClumpBoundingSphere = StaticRef<bool>(0x8D60BC); // NOT
 static RwV3d AtomicGetBoundingSphereCenterTransformed(RpAtomic* atomic) {
     const auto frame = RpClumpGetFrame(atomic->clump);
     RwV3d      center;
-    if (atomic->interpolator.flags & rpINTERPOLATORDIRTYSPHERE) {
+    if (RwCompatAtomicSphereDirty(atomic)) {
         _rpAtomicResyncInterpolatedSphere(atomic);
     }
     RwV3dTransformPoints(&center, &atomic->boundingSphere.center, 1, s_bUseLTMForClumpBoundingSphere ? RwFrameGetLTM(frame) : RwFrameGetMatrix(frame));
@@ -345,7 +345,7 @@ static RpAtomic* ClumpBoundingSphereSumCentersCB(RpAtomic* atomic, void* data) {
 static RpAtomic* ClumpBoundingSphereCalcRadiusCB(RpAtomic* atomic, void* data) {
     const auto sphere = (RwSphere*)data;
 
-    if (atomic->interpolator.flags & rpINTERPOLATORDIRTYSPHERE) { // The original does this check up front, too
+    if (RwCompatAtomicSphereDirty(atomic)) { // The original does this check up front, too
         _rpAtomicResyncInterpolatedSphere(atomic);
     }
     const auto center = AtomicGetBoundingSphereCenterTransformed(atomic);
@@ -443,7 +443,7 @@ void SkinGetBonePositions(RpClump* clump) {
         RwV3dTransformPoints(&s_SkinBonePositions[i].pos, RwMatrixGetPos(&invBoneMat), 1, &RpSkinGetSkinToBoneMatrices(skin)[currNodeIdx]);
         s_SkinBonePositions[i].parent = currNodeIdx;
 
-        const auto nodeFlags = hier->pNodeInfo[i].flags;
+        const auto nodeFlags = RwCompatHAnimNodeInfo(hier)[i].flags;
         if (nodeFlags & rpHANIMPUSHPARENTMATRIX) {
             *++nodeStkPtr = currNodeIdx;
         }
@@ -493,7 +493,7 @@ void SkinGetBonePositionsToTable(RpClump* clump, RwV3d* table) {
         RwMatrixInvert(&invBoneMat, &RpSkinGetSkinToBoneMatrices(skin)[i]);
         RwV3dTransformPoints(&table[i], RwMatrixGetPos(&invBoneMat), 1, &RpSkinGetSkinToBoneMatrices(skin)[currNodeIdx]);
 
-        const auto nodeFlags = hier->pNodeInfo[i].flags;
+        const auto nodeFlags = RwCompatHAnimNodeInfo(hier)[i].flags;
         if (nodeFlags & rpHANIMPUSHPARENTMATRIX) {
             *++nodeStkPtr = currNodeIdx;
         }

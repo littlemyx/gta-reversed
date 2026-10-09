@@ -181,7 +181,7 @@ RxPipeline* CCustomCarEnvMapPipeline::CreateCustomObjPipe() {
             RxD3D9AllInOneSetInstanceCallBack(node, RxD3D9AllInOneGetInstanceCallBack(node));
             RxD3D9AllInOneSetReinstanceCallBack(node, CustomPipeInstanceCB);
             RxD3D9AllInOneSetRenderCallBack(node, CustomPipeRenderCB);
-            pipe->pluginId = CUSTOM_CAR_ENV_MAP_PIPELINE_PLUGIN_ID;
+            RwCompatPipelinePluginId(pipe) = CUSTOM_CAR_ENV_MAP_PIPELINE_PLUGIN_ID;
             pipe->pluginData = CUSTOM_CAR_ENV_MAP_PIPELINE_PLUGIN_ID;
             return pipe;
         }

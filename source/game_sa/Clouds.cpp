@@ -962,30 +962,30 @@ void CClouds::RenderBottomFromHeight() {
 
             auto* const verts = &TempBufferVertices.m_3d[numVerts];
 
-            verts[0].objVertex.x = vx - sizeX;
-            verts[0].objVertex.y = sizeY + vy;
-            verts[0].objVertex.z = vz;
+            RwCompatVertexPos(verts[0]).x = vx - sizeX;
+            RwCompatVertexPos(verts[0]).y = sizeY + vy;
+            RwCompatVertexPos(verts[0]).z = vz;
             verts[0].color       = colBright;
             verts[0].u           = 0.0f;
             verts[0].v           = 0.0f;
 
-            verts[1].objVertex.x = sizeX + vx;
-            verts[1].objVertex.y = sizeY + vy;
-            verts[1].objVertex.z = vz;
+            RwCompatVertexPos(verts[1]).x = sizeX + vx;
+            RwCompatVertexPos(verts[1]).y = sizeY + vy;
+            RwCompatVertexPos(verts[1]).z = vz;
             verts[1].color       = colBase;
             verts[1].u           = 0.0f;
             verts[1].v           = 1.0f;
 
-            verts[2].objVertex.x = vx - sizeX;
-            verts[2].objVertex.y = vy - sizeY;
-            verts[2].objVertex.z = vz;
+            RwCompatVertexPos(verts[2]).x = vx - sizeX;
+            RwCompatVertexPos(verts[2]).y = vy - sizeY;
+            RwCompatVertexPos(verts[2]).z = vz;
             verts[2].color       = colBase;
             verts[2].u           = 1.0f;
             verts[2].v           = 0.0f;
 
-            verts[3].objVertex.x = sizeX + vx;
-            verts[3].objVertex.y = vy - sizeY;
-            verts[3].objVertex.z = vz;
+            RwCompatVertexPos(verts[3]).x = sizeX + vx;
+            RwCompatVertexPos(verts[3]).y = vy - sizeY;
+            RwCompatVertexPos(verts[3]).z = vz;
             verts[3].color       = colBase;
             verts[3].u           = 1.0f;
             verts[3].v           = 1.0f;

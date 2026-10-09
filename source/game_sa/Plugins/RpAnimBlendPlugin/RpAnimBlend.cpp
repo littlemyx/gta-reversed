@@ -143,7 +143,7 @@ void RpAnimBlendClumpInitSkinned(RpClump* clump) { // Can't hook, `clump` passed
             );
 
             // Handle node stack now
-            const auto nodeFlags = rpHAHier->pNodeInfo[i].flags;
+            const auto nodeFlags = RwCompatHAnimNodeInfo(rpHAHier)[i].flags;
             if (nodeFlags & rpHANIMPUSHPARENTMATRIX) {
                 *++nodeStkPtr = currNodeIdx;
             }
@@ -157,8 +157,8 @@ void RpAnimBlendClumpInitSkinned(RpClump* clump) { // Can't hook, `clump` passed
     for (size_t i = 0; i < nBones; i++) {
         const auto fd = &bd->m_FrameDatas[i]; // Frame blend data
             
-        fd->KeyFrame = (RpHAnimBlendInterpFrame*)rtANIMGETINTERPFRAME(rpHAHier->currentAnim, i);
-        fd->BoneTag  = rpHAHier->pNodeInfo[i].nodeID;
+        fd->KeyFrame = (RpHAnimBlendInterpFrame*)rtANIMGETINTERPFRAME(RwCompatHAnimInterpolator(rpHAHier), i);
+        fd->BoneTag  = RwCompatHAnimNodeInfo(rpHAHier)[i].nodeID;
         fd->BonePos  = bonePositions[i];
     }
 

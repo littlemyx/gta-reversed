@@ -141,7 +141,9 @@ void* RsGetPresetViewDescription() {
 // 0x619910 - usercall: EAX = camera, EDI = pos, EBX = yaw, stack = elevation
 // Gets the parameters of the camera that are saved into a preset view.
 static void GetPresetViewParams(RwCamera* camera, CVector& pos, float& elevation, float& yaw) {
+#ifndef NOTSA_RW_LIBRW // the offsets pin the RW 3.6 RwCamera layout the exe code uses; librw's RwCamera is a different type
     static_assert(offsetof(RwCamera, nearPlane) == 0x80 && offsetof(RwCamera, farPlane) == 0x84);
+#endif
 
     const RwMatrix* const ltm = RwFrameGetLTM(RwCameraGetFrame(camera));
 

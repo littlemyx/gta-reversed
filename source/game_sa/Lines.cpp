@@ -12,10 +12,11 @@ void CLines::InjectHooks() {
 
 // 0x6FF460
 void CLines::RenderLineNoClipping(float startX, float startY, float startZ, float endX, float endY, float endZ, uint32 startColor, uint32 endColor) {
-    RxObjSpace3DVertex vertices[] = {
-        { .objVertex = { startX, startY, startZ }, .color = startColor >> 8 | startColor << 24 },
-        { .objVertex = { endX,   endY,   endZ   }, .color =   endColor >> 8 | endColor   << 24 }
-    };
+    RxObjSpace3DVertex vertices[2]{};
+    RwCompatVertexPos(vertices[0]) = { startX, startY, startZ };
+    vertices[0].color              = startColor >> 8 | startColor << 24;
+    RwCompatVertexPos(vertices[1]) = { endX, endY, endZ };
+    vertices[1].color              = endColor >> 8 | endColor << 24;
 
     LittleTest();
     if (RwIm3DTransform(vertices, 2u, nullptr, 0)) {
@@ -55,9 +56,9 @@ void CLines::RenderLineWithClipping(float startX, float startY, float startZ, fl
             const uint32 c0 = Channel(0), c3 = Channel(3), c2 = Channel(2), c1 = Channel(1); // Same order as in the original
             vert.color = c0 << 24 | c3 << 16 | c2 << 8 | c1;
 
-            vert.objVertex.x = (float)((double)deltaX * t[k] + (double)startX);
-            vert.objVertex.y = (float)((double)deltaY * t[k] + (double)startY);
-            vert.objVertex.z = (float)((double)deltaZ * t[k] + (double)startZ);
+            RwCompatVertexPos(vert).x = (float)((double)deltaX * t[k] + (double)startX);
+            RwCompatVertexPos(vert).y = (float)((double)deltaY * t[k] + (double)startY);
+            RwCompatVertexPos(vert).z = (float)((double)deltaZ * t[k] + (double)startZ);
         }
     }
 

@@ -486,7 +486,7 @@ uint16 CVisibilityPlugins::GetUserValue(const RpAtomic* atomic) {
 // unused
 // 0x732990
 bool CVisibilityPlugins::IsAtomicVisible(RpAtomic* atomic) {
-    if (atomic->interpolator.flags & rpINTERPOLATORDIRTYSPHERE) {
+    if (RwCompatAtomicSphereDirty(atomic)) {
         _rpAtomicResyncInterpolatedSphere(atomic);
     }
     RwSphere sphere = atomic->boundingSphere;

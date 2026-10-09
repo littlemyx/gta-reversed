@@ -109,7 +109,7 @@ bool CRealTimeShadow::SetupForThisEntity(CPhysical* owner) {
     switch (m_nRwObjectType) {
     case rpATOMIC: {
         auto* const atomic = reinterpret_cast<RpAtomic*>(obj);
-        if (atomic->interpolator.flags & rpINTERPOLATORDIRTYSPHERE) {
+        if (RwCompatAtomicSphereDirty(atomic)) {
             _rpAtomicResyncInterpolatedSphere(atomic);
         }
         std::memcpy(&m_boundingSphere, &atomic->boundingSphere, sizeof(RwSphere));

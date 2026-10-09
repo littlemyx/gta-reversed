@@ -265,4 +265,9 @@ struct std::formatter<Enum> : std::formatter<std::string> {
 #define _SWSTRING_STATIC_FROM(id, src) for (size_t i = 0; i < strlen(src); i++) my_ws##id[i] = src[i]
 #define _SWSTRING_STATIC_TO(id, dst) for (size_t i = 0; i < wcslen(my_ws##id); i++) dst[i] = static_cast<char>(my_ws##id[i])
 
+#ifdef NOTSA_RW_LIBRW
+// RwRGBAReal is an alias of rw::RGBAf: nlohmann finds (de)serializers by ADL, so they have to live next to the aliased type
+namespace rw { NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(RGBAf, red, blue, green, alpha); }
+#else
 NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(RwRGBAReal, red, blue, green, alpha);
+#endif

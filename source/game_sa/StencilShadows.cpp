@@ -277,7 +277,7 @@ void CStencilShadows::Render(const CRGBA& color) {
             const auto firstIdx  = (size_t)uiTempBufferIndicesStored;
             for (auto i = 0u; i < 6; i++) {
                 aTempBufferIndices[firstIdx + i]            = (RxVertexIndex)(firstIdx + i);
-                TempBufferVertices.m_3d[firstVert + i].objVertex = verts[i];
+                RwCompatVertexPos(TempBufferVertices.m_3d[firstVert + i]) = verts[i];
                 TempBufferVertices.m_3d[firstVert + i].color     = intColor;
             }
             uiTempBufferIndicesStored  += 6;
@@ -294,7 +294,7 @@ void CStencilShadows::Render(const CRGBA& color) {
             const auto firstIdx  = (size_t)uiTempBufferIndicesStored;
             for (auto i = 0u; i < 3; i++) {
                 aTempBufferIndices[firstIdx + i]            = (RxVertexIndex)(firstIdx + i);
-                TempBufferVertices.m_3d[firstVert + i].objVertex = verts[i];
+                RwCompatVertexPos(TempBufferVertices.m_3d[firstVert + i]) = verts[i];
                 TempBufferVertices.m_3d[firstVert + i].color     = intColor;
             }
             uiTempBufferIndicesStored  += 3;

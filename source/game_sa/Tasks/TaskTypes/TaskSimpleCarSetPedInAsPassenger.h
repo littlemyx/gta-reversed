@@ -36,5 +36,9 @@ public:
     CTask* Clone() const override { return new CTaskSimpleCarSetPedInAsPassenger{*this}; }  // 0x649D90
     bool MakeAbortable(CPed* ped, eAbortPriority priority = ABORT_PRIORITY_URGENT, const CEvent* event = nullptr) override { return false; }
     bool ProcessPed(CPed* ped) override;
+
+private:
+    friend void InjectHooksMain();
+    static void InjectHooks();
 };
 VALIDATE_SIZE(CTaskSimpleCarSetPedInAsPassenger, 0x20);

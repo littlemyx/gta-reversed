@@ -93,7 +93,7 @@ void CGarage::TidyUpGarageClose() {
         if (!veh) {
             continue;
         }
-        if (veh->m_nVehicleType != VEHICLE_TYPE_AUTOMOBILE && veh->m_nVehicleType != VEHICLE_TYPE_BIKE) {
+        if (veh->m_nVehicleType != VEHICLE_TYPE_AUTOMOBILE && veh->m_nVehicleType != VEHICLE_TYPE_BIKE) { // NOTE: +0x590 (m_nVehicleType), verified against the asm
             continue;
         }
         if (veh->GetStatus() != STATUS_WRECKED || !IsEntityTouching3D(veh)) {
@@ -128,7 +128,7 @@ void CGarage::TidyUpGarage() {
         if (!veh) {
             continue;
         }
-        if (veh->m_nVehicleType != VEHICLE_TYPE_AUTOMOBILE && veh->m_nVehicleType != VEHICLE_TYPE_BIKE) {
+        if (veh->m_nVehicleType != VEHICLE_TYPE_AUTOMOBILE && veh->m_nVehicleType != VEHICLE_TYPE_BIKE) { // NOTE: +0x590 (m_nVehicleType), verified against the asm
             continue;
         }
         if (!IsPointInsideGarage(veh->GetPosition())) {
@@ -812,7 +812,7 @@ void UpdatePaynSpray(CGarage& g, int32 garageId) {
 
         bool bColourChanged{};
         if (auto* const veh = FindPlayerVehicle(-1, false)) {
-            if (veh->m_nVehicleType == VEHICLE_TYPE_AUTOMOBILE || veh->m_nVehicleType == VEHICLE_TYPE_BIKE) {
+            if (veh->m_nVehicleType == VEHICLE_TYPE_AUTOMOBILE || veh->m_nVehicleType == VEHICLE_TYPE_BIKE) { // NOTE: +0x590 (m_nVehicleType) @ 0x44AF30/0x44AF45
                 if (veh->m_fHealth < 970.0f) { // 0x859A40
                     bServiced = true;
                 }
@@ -912,7 +912,7 @@ void UpdatePaynSpray(CGarage& g, int32 garageId) {
                     FindPlayerVehicle(-1, false)->m_fDirtLevel = 0.0f;
                 }
             } else { // 0x44ACE4
-                const auto subType = FindPlayerVehicle(-1, false)->m_nVehicleSubType;
+                const auto subType = FindPlayerVehicle(-1, false)->m_nVehicleSubType; // NOTE: +0x594 (m_nVehicleSubType) @ 0x44ACEC
                 CGarages::TriggerMessage(subType == VEHICLE_TYPE_BMX ? "GA_1B" : "GA_1", -1, 4000, -1); // 0x859A50, 0x859A48
                 g.m_nDoorState = GARAGE_DOOR_WAITING_PLAYER_TO_EXIT;
                 AudioEngine.ReportFrontendAudioEvent(AE_FRONTEND_CAR_IS_HOT, 0.0f, 1.0f);
@@ -993,7 +993,7 @@ void UpdateBombShop(CGarage& g) {
             }
         }
         if (FindPlayerVehicle(-1, false)) {
-            const auto vehType = FindPlayerVehicle(-1, false)->m_nVehicleType;
+            const auto vehType = FindPlayerVehicle(-1, false)->m_nVehicleType; // NOTE: +0x590 (m_nVehicleType) @ 0x44B66F/0x44B684
             if (vehType == VEHICLE_TYPE_AUTOMOBILE || FindPlayerVehicle(-1, false)->m_nVehicleType == VEHICLE_TYPE_BIKE) {
                 FindPlayerVehicle(-1, false)->m_nBombOnBoard = g.m_nType - 1;
                 auto* const player = FindPlayerPed(-1);
@@ -1036,10 +1036,10 @@ void UpdateBombShop(CGarage& g) {
         if (!FindPlayerVehicle(-1, false)) {
             return;
         }
-        if (FindPlayerVehicle(-1, false)->m_nVehicleSubType == VEHICLE_TYPE_BIKE) {
+        if (FindPlayerVehicle(-1, false)->m_nVehicleSubType == VEHICLE_TYPE_BIKE) { // NOTE: +0x594 (m_nVehicleSubType) @ 0x44B457
             return;
         }
-        if (FindPlayerVehicle(-1, false)->m_nVehicleSubType == VEHICLE_TYPE_BMX) {
+        if (FindPlayerVehicle(-1, false)->m_nVehicleSubType == VEHICLE_TYPE_BMX) { // NOTE: +0x594 @ 0x44B471
             return;
         }
         if (FindPlayerVehicle(-1, false)->m_nBombOnBoard != 0) { // 0x44B52B

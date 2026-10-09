@@ -8,6 +8,7 @@
 #include "Tasks/TaskTypes/TaskComplexFacial.h"
 #include "Tasks/TaskTypes/TaskSimpleUseGun.h"
 #include "Tasks/TaskTypes/TaskSimpleStandStill.h"
+#include "Tasks/TaskTypes/TaskSimpleOnEscalator.h"
 #include "Tasks/TaskTypes/TaskComplexInAirAndLand.h"
 #include "Tasks/TaskTypes/TaskComplexStuckInAir.h"
 #include "Tasks/TaskTypes/TaskSimpleWaitUntilAreaCodesMatch.h"
@@ -1742,7 +1743,7 @@ void CEventHandler::ComputeObjectCollisionResponse(CEventObjectCollision* e, CTa
 
 // 0x4BC150
 void CEventHandler::ComputeOnEscalatorResponse(CEvent* e, CTask* tactive, CTask* tsimplest) {
-    m_EventResponseTask = new CTaskSimpleStandStill{0, true};
+    m_EventResponseTask = new CTaskSimpleOnEscalator{}; // BUG-FIX: original (0x4BC150) allocates 0x20 bytes with vtable 0x85B8DC (CTaskSimpleOnEscalator), not a plain CTaskSimpleStandStill
 }
 
 // 0x4BAD50

@@ -118,14 +118,24 @@ typedef rw::Mesh                RpMesh;
 typedef rw::MeshHeader          RpMeshHeader;
 typedef rw::Skin                RpSkin;
 typedef rw::HAnimHierarchy      RpHAnimHierarchy;
-typedef rw::HAnimNodeInfo       RpHAnimNodeInfo;
 typedef rw::HAnimKeyFrame       RpHAnimKeyFrame;
 typedef rw::Animation           RtAnimAnimation;
 typedef rw::AnimInterpolator    RtAnimInterpolator;
 typedef rw::Charset             RtCharset;
 typedef rw::MemoryFunctions     RwMemoryFunctions;
 typedef rw::SubSystemInfo       RwSubSystemInfo;
-typedef rw::EngineOpenParams    RwEngineOpenParams;
+
+// RpHAnimNodeInfo with the RW field names (librw: id/index/flags/frame, same layout): the game reads hierarchy->nodeInfo through
+// RwCompatHAnimNodeInfo(h) (reinterpreted), see game_sa/RenderWare/RwCompat.h
+struct RpHAnimNodeInfo {
+    RwInt32     nodeID;
+    RwInt32     nodeIndex;
+    RwInt32     flags;
+    RwFrame*    pFrame;
+};
+static_assert(sizeof(RpHAnimNodeInfo) == sizeof(rw::HAnimNodeInfo) && offsetof(RpHAnimNodeInfo, nodeID) == offsetof(rw::HAnimNodeInfo, id) &&
+              offsetof(RpHAnimNodeInfo, nodeIndex) == offsetof(rw::HAnimNodeInfo, index) && offsetof(RpHAnimNodeInfo, flags) == offsetof(rw::HAnimNodeInfo, flags) &&
+              offsetof(RpHAnimNodeInfo, pFrame) == offsetof(rw::HAnimNodeInfo, frame));
 
 // Vertex index types
 typedef RwUInt16                RxVertexIndex;
@@ -180,7 +190,11 @@ struct RwVideoMode {
     RwInt32         format;
 };
 
-// RwEngineOpenParams: the original is {void* displayID}; librw's is {HWND window} (same size, filled by RwEngineOpen).
+// RwEngineOpenParams: the original is {void* displayID}; librw's rw::EngineOpenParams is {HWND window} (same size): RwEngineOpen converts.
+struct RwEngineOpenParams {
+    void* displayID;
+};
+static_assert(sizeof(RwEngineOpenParams) == sizeof(rw::EngineOpenParams));
 #define RW_SUBSYSTEMNAME_MAXLEN 80
 
 //--------------------------------------------------------------------------------------------------
@@ -336,3 +350,5 @@ static_assert(rwRASTERLOCKWRITE == rw::Raster::LOCKWRITE && rwRASTERLOCKREAD == 
 static_assert(rwID_CLUMP == rw::ID_CLUMP && rwID_TEXDICTIONARY == rw::ID_TEXDICTIONARY && rwID_UVANIMDICT == rw::ID_UVANIMDICT);
 
 #include "rwaccessors.h"
+#include "rwextra.h"
+#include "rwapi.h"

@@ -200,9 +200,9 @@ void CVehicle::InjectHooks() {
     RH_ScopedInstall(AddExhaustParticles, 0x6DE240);
     RH_ScopedInstall(AddSingleWheelParticles, 0x6DE880);
     RH_ScopedInstall(GetSpecialColModel, 0x6DF3D0);
-    // RH_ScopedInstall(RemoveVehicleUpgrade, 0x6DF930);
-    // RH_ScopedInstall(AddUpgrade, 0x6DFA20);
-    // RH_ScopedInstall(UpdateTrailerLink, 0x6DFC50);
+    RH_ScopedInstall(RemoveVehicleUpgrade, 0x6DF930);
+    RH_ScopedInstall(AddUpgrade, 0x6DFA20);
+    RH_ScopedInstall(UpdateTrailerLink, 0x6DFC50);
     // RH_ScopedInstall(UpdateTractorLink, 0x6E0050);
     // RH_ScopedInstall(ScanAndMarkTargetForHeatSeekingMissile, 0x6E0400);
     // RH_ScopedInstall(FireHeatSeakingMissile, 0x6E05C0);
@@ -5846,19 +5846,207 @@ bool CVehicle::GetSpecialColModel() {
     return true;
 }
 
+namespace {
+// Helpers that mimic the original's x87 (extended precision) vector math, term order included.
+// (The shared `CVector` / `CMatrix` helpers are float-based, which gives slightly different results.)
+
+// 0x59C730 - a x b, each component computed in extended precision, then stored as float
+CVector Cross_x87(const CVector& a, const CVector& b) {
+    return {
+        (float)((double)a.y * b.z - (double)a.z * b.y),
+        (float)((double)a.z * b.x - (double)a.x * b.z),
+        (float)((double)a.x * b.y - (double)a.y * b.x)
+    };
+}
+
+// 0x59C790 - Rotates `v` by the 3x3 part of `m` (no translation)
+CVector Multiply3x3_x87(const CMatrix& m, const CVector& v) {
+    return {
+        (float)(((double)m.GetUp().x * v.z + (double)m.GetForward().x * v.y) + (double)m.GetRight().x * v.x),
+        (float)(((double)m.GetUp().y * v.z + (double)m.GetRight().y * v.x) + (double)m.GetForward().y * v.y),
+        (float)(((double)m.GetUp().z * v.z + (double)m.GetRight().z * v.x) + (double)m.GetForward().z * v.y)
+    };
+}
+
+// 0x406DA0 - x^2 + y^2 + z^2 (the result stays in extended precision in the original)
+double SquaredMagnitude_x87(const CVector& v) {
+    return ((double)v.x * v.x + (double)v.y * v.y) + (double)v.z * v.z;
+}
+
+// 0x59C910 - In place normalisation
+void Normalise_x87(CVector& v) {
+    const double sq = SquaredMagnitude_x87(v);
+    if (sq > 0.0 || std::isnan(sq)) {
+        const double inv = 1.0 / std::sqrt(sq);
+        v.x = (float)(inv * v.x);
+        v.y = (float)(inv * v.y);
+        v.z = (float)(inv * v.z);
+    } else {
+        v.x = 1.f; // Note: y/z are left as-is
+    }
+}
+}; // namespace
+
 // 0x6DF930
 void CVehicle::RemoveVehicleUpgrade(int32 upgradeModelIndex) {
-    ((void(__thiscall*)(CVehicle*, int32))0x6DF930)(this, upgradeModelIndex);
+    const auto* const mi = CModelInfo::GetModelInfo(upgradeModelIndex);
+    if (ClearVehicleUpgradeFlags(upgradeModelIndex, mi->CarMod)) { // 0x6D3210
+        return;
+    }
+
+    // Note: The "linked" upgrade (eg.: left/right side skirts) is looked up BEFORE anything is removed
+    const auto linkedUpgrade = CVehicleModelInfo::ms_linkedUpgrades.FindOtherUpgrade((int16)upgradeModelIndex);
+
+    if (mi->bUsesVehDummy) {
+        RemoveReplacementUpgrade(mi->CarMod);
+        if (mi->CarMod == 2) { // Wheels
+            m_fWheelScale = 1.f;
+            RemoveReplacementUpgrade(5);
+            RemoveReplacementUpgrade(4);
+            RemoveReplacementUpgrade(7);
+        }
+    } else {
+        RpClumpForAllAtomics(GetRpClump(), RemoveUpgradeCB, (void*)(intptr_t)mi->CarMod);
+    }
+
+    if (linkedUpgrade != -1) {
+        const auto* const linkedMI = CModelInfo::GetModelInfo(linkedUpgrade);
+        if (linkedMI->bUsesVehDummy) {
+            RemoveReplacementUpgrade(linkedMI->CarMod);
+        } else {
+            RpClumpForAllAtomics(GetRpClump(), RemoveUpgradeCB, (void*)(intptr_t)linkedMI->CarMod);
+        }
+    }
+
+    for (auto& upgrade : m_anUpgrades) {
+        if (upgrade == upgradeModelIndex) {
+            upgrade = -1;
+        }
+    }
 }
 
 // 0x6DFA20
 void CVehicle::AddUpgrade(int32 modelIndex, int32 upgradeIndex) {
-    ((void(__thiscall*)(CVehicle*, int32, int32))0x6DFA20)(this, modelIndex, upgradeIndex);
+    const auto* const vmi       = CModelInfo::GetModelInfo(m_nModelIndex)->AsVehicleModelInfoPtr();
+    auto* const       upgradeMI = CModelInfo::GetModelInfo(modelIndex);
+    const auto&       upgrades  = vmi->m_pVehicleStruct->m_aUpgrades;
+    const auto*       posn      = &upgrades[upgradeIndex];
+
+    const auto parentFrame = CClumpModelInfo::GetFrameFromId(GetRpClump(), posn->m_nParentComponentId);
+    RpClumpForAllAtomics(GetRpClump(), RemoveUpgradeCB, (void*)(intptr_t)upgradeIndex);
+    CreateUpgradeAtomic(upgradeMI, posn, parentFrame, false);
+
+    if (posn->m_nParentComponentId == 1) {
+        return;
+    }
+
+    // Use the position of the "damaged" variant's slot, if there is one
+    switch (upgradeIndex) {
+    case 0:  if (upgrades[3].m_nParentComponentId  != -1) posn = &upgrades[3];  break;
+    case 1:  if (upgrades[4].m_nParentComponentId  != -1) posn = &upgrades[4];  break;
+    case 2:  if (upgrades[5].m_nParentComponentId  != -1) posn = &upgrades[5];  break;
+    case 6:  if (upgrades[7].m_nParentComponentId  != -1) posn = &upgrades[7];  break;
+    case 12: if (upgrades[13].m_nParentComponentId != -1) posn = &upgrades[13]; break;
+    }
+    CreateUpgradeAtomic(upgradeMI, posn, parentFrame, true);
+
+    if (parentFrame) {
+        // Inlined `SetComponentVisibility(parentFrame, ATOMIC_OK)` (0x6D2690 / 0x6D26D0)
+        RwFrameForAllObjects(parentFrame, SetVehicleAtomicVisibilityCB, (void*)ATOMIC_OK);
+        RwFrameForAllChildren(parentFrame, SetVehicleAtomicVisibilityCB, (void*)ATOMIC_OK);
+    }
+
+    CCustomCarPlateMgr::SetupClumpAfterVehicleUpgrade(GetRpClump(), vmi->m_pPlateMaterial, vmi->m_nPlateType);
 }
 
 // 0x6DFC50
 void CVehicle::UpdateTrailerLink(bool arg0, bool arg1) {
-    ((void(__thiscall*)(CVehicle*, bool, bool))0x6DFC50)(this, arg0, arg1);
+    CVector hitchPos{}, barPos{};
+    if (!m_pTowingVehicle
+        || (GetStatus() != STATUS_IS_TOWED && GetStatus() != STATUS_IS_SIMPLE_TOWED)
+        || !GetTowHitchPos(hitchPos, true, m_pTowingVehicle)
+        || !m_pTowingVehicle->GetTowBarPos(barPos, true, this)
+    ) {
+        BreakTowLink();
+        return;
+    }
+    CVehicle* const tractor = m_pTowingVehicle;
+
+    // Is the link too stretched?
+    CVector delta = barPos - hitchPos;
+    const auto distSq = (float)(((double)delta.z * delta.z + (double)delta.y * delta.y) + (double)delta.x * delta.x);
+    const auto maxStretch = (CTimer::ms_fTimeStep > 0.7f ? CTimer::ms_fTimeStep : 0.7f) * 1.f;
+    if (maxStretch < std::sqrt((double)distSq)) { // Note: NaN doesn't break the link
+        BreakTowLink();
+        return;
+    }
+
+    // Are we facing roughly the same way?
+    const auto& tractorFwd = tractor->m_matrix->GetForward();
+    const auto& myFwd      = m_matrix->GetForward();
+    const auto  fwdDot     = ((double)tractorFwd.z * myFwd.z + (double)tractorFwd.y * myFwd.y) + (double)tractorFwd.x * myFwd.x;
+    if (fwdDot < -0.3f) {
+        BreakTowLink();
+        return;
+    }
+    const auto& tractorUp = tractor->m_matrix->GetUp();
+    const auto& myUp      = m_matrix->GetUp();
+    const auto  upDot     = ((double)tractorUp.z * myUp.z + (double)tractorUp.y * myUp.y) + (double)tractorUp.x * myUp.x;
+    if (upDot < 0.0) {
+        BreakTowLink();
+        return;
+    }
+
+    // Tow truck / tractor with its hoist lowered doesn't apply any force
+    if (tractor->m_nModelIndex == MODEL_TOWTRUCK || tractor->m_nModelIndex == MODEL_TRACTOR) {
+        if ((int32)TOWTRUCK_HOIST_DOWN_LIMIT - 100 < (int32)static_cast<CAutomobile*>(tractor)->m_wMiscComponentAngle) {
+            return;
+        }
+    }
+
+    // Make the hitch/bar position relative to the vehicle
+    hitchPos -= GetPosition();
+    barPos   -= tractor->GetPosition();
+
+    const CVector mySpeed      = GetSpeed(hitchPos);
+    const CVector tractorSpeed = tractor->GetSpeed(barPos);
+    CVector relSpeed{
+        tractorSpeed.x - mySpeed.x,
+        tractorSpeed.y - mySpeed.y,
+        tractorSpeed.z - mySpeed.z
+    };
+
+    if (!arg0 && arg1) {
+        const auto step = 1.f > CTimer::ms_fTimeStep ? 1.f : CTimer::ms_fTimeStep;
+        const CVector scaled{ 0.3f * delta.x, 0.3f * delta.y, 0.3f * delta.z };
+        const double  invStep = 1.0 / (double)step; // Note: `z` uses the unrounded value, `x` and `y` the rounded one
+        const auto    invStepF = (float)invStep;
+        relSpeed = CVector{
+            scaled.x * invStepF,
+            scaled.y * invStepF,
+            (float)((double)scaled.z * invStep)
+        };
+    }
+
+    if (m_nVehicleSubType == VEHICLE_TYPE_TRAILER && static_cast<CTrailer*>(this)->m_fTrailerTowedRatio == -1000.f) { // 0x6D0AF0 - Baggage trailer
+        // Remove the vertical component
+        const auto& up   = m_matrix->GetUp();
+        const auto  proj = (float)(((double)relSpeed.z * up.z + (double)relSpeed.y * up.y) + (double)relSpeed.x * up.x);
+        relSpeed.x -= proj * up.x;
+        relSpeed.y -= proj * up.y;
+        relSpeed.z -= proj * up.z;
+    }
+
+    const CVector com = Multiply3x3_x87(*m_matrix, m_vecCentreOfMass);
+
+    CVector dir = relSpeed;
+    Normalise_x87(dir);
+
+    const CVector lever{ hitchPos.x - com.x, hitchPos.y - com.y, hitchPos.z - com.z };
+    const CVector cross = Cross_x87(lever, dir);
+
+    const auto impulse = (float)(1.0 / (SquaredMagnitude_x87(cross) / (double)m_fTurnMass + 1.0 / (double)m_fMass));
+    ApplyForce(relSpeed * impulse, hitchPos, true);
 }
 
 // 0x6E0050

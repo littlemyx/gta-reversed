@@ -386,6 +386,47 @@ double MagnitudeOriginal(const CVector& v) {
     return std::sqrt(((double)v.x * v.x + (double)v.y * v.y) + (double)v.z * v.z);
 }
 
+//! 0x411A30 - `CVector::operator/=(float)`: the reciprocal `1.0f / d` is computed ONCE by the FPU (rounded to the current precision control: the
+//! game runs with 24 bits, so it is NOT the compile-time double 1.0 / d) and stays in the register for the three products.
+void DivideAssignOriginal(CVector& v, float d) {
+    const float one = 1.0f; // 0x858624
+    float* const p = &v.x;
+    __asm {
+        mov   eax, p
+        fld   dword ptr [one]
+        fdiv  dword ptr [d]
+        fld   st(0)
+        fmul  dword ptr [eax]
+        fstp  dword ptr [eax]
+        fld   st(0)
+        fmul  dword ptr [eax + 4]
+        fstp  dword ptr [eax + 4]
+        fmul  dword ptr [eax + 8]
+        fstp  dword ptr [eax + 8]
+    }
+}
+
+//! The direction of a 1565 attractor heading (degrees), exactly as the exe's x87 code computes it: angle = deg * 0.01745329f [0x8595EC] stays in the register,
+//! x = -fsin(angle), y = fcos(angle) are stored as floats (fsin / fcos leave the operand unchanged for |angle| >= 2^63, which std::sin / std::cos do not),
+//! z = 0, then 0x59C910 (Normalise).
+CVector AttractorDirOriginal(float degrees) {
+    const float k = 0.01745329238474369f; // 0x8595EC
+    float       x, y;
+    __asm {
+        fld   dword ptr [degrees]
+        fmul  dword ptr [k]
+        fld   st(0)
+        fsin
+        fchs
+        fstp  dword ptr [x]
+        fcos
+        fstp  dword ptr [y]
+    }
+    CVector d{ x, y, 0.0f };
+    NormaliseOriginal(d);
+    return d;
+}
+
 //! 1415 SET_LOAD_COLLISION_FOR_CAR_FLAG (case @0x48EBF4): car, load. No null check.
 //! load: physicalFlags &= ~0x4000 (bDontLoadCollision); if the script uses mission cleanup: Remove, entity flag 0x40000 (m_bIsStaticWaitingForCollision), Add.
 //! else: physicalFlags |= 0x4000; if the entity has the 0x40000 flag: clear it and, if it isn't static anymore, AddToMovingList().
@@ -622,10 +663,7 @@ void AddVelocityRelativeToObjectVelocity(CObject& obj, CVector v) {
     v.x = (float)((double)step * v.x); // 0x40FEF0 (operator*=)
     v.y = (float)((double)step * v.y);
     v.z = (float)((double)step * v.z);
-    const double recip = 1.0 / (double)50.0f; // 0x411A30 (operator/=): 1.0f / 50.0f stays in the FPU
-    v.x = (float)(v.x * recip);
-    v.y = (float)(v.y * recip);
-    v.z = (float)(v.z * recip);
+    DivideAssignOriginal(v, 50.0f); // 0x411A30
     if (obj.m_nFlags & 4) {
         return;
     }
@@ -878,13 +916,8 @@ int32 AddAttractor(CRunningScript& S, CVector pos, float a1, float a2, int32 seq
     if (fx < 0 || fx >= 0x40 || seq < 0 || seq >= 0x40) {
         return -1;
     }
-    constexpr float DEG2RAD = 0.01745329238474369f; // 0x8595EC
-    const double    r1      = (double)a1 * DEG2RAD;
-    CVector         d1{ (float)(-std::sin(r1)), (float)std::cos(r1), 0.0f };
-    NormaliseOriginal(d1);
-    const double r2 = (double)a2 * DEG2RAD;
-    CVector      d2{ (float)(-std::sin(r2)), (float)std::cos(r2), 0.0f };
-    NormaliseOriginal(d2);
+    CVector d1 = AttractorDirOriginal(a1);
+    CVector d2 = AttractorDirOriginal(a2);
     auto& e = *CScripted2dEffects::GetEffect(fx);
     e.m_Pos              = pos;
     e.m_vecQueueDir      = RwV3d{ d1.x, d1.y, d1.z };

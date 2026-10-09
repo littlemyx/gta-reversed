@@ -157,6 +157,8 @@ static void SeedBoth(uint32_t seed) { notsa::GameSRand(seed); g_fakePtd[5] = see
 
 
 #include "../../source/game_sa/Scripts/Commands/Ported/Group13_15.cpp"
+#include "../../source/game_sa/Tasks/TaskSequences.cpp"   // CTaskSequences::GetAvailableSlot (0x632E00) is tested through 1557
+#include <functional>
 
 // CRunningScript members used by the parser / handlers (RunningScript.cpp is not part of this test)
 uint8 CRunningScript::ScriptArgCharNextFreeBuffer = 0;
@@ -266,6 +268,346 @@ static void TestScriptCommands() {
     }, 300);
 }
 
+
+// =================================================================================================================================
+// Second part (S6-C review): handlers that touch game memory (fake entities in the real pools, the sequence-task / ped-group / 2d-effect
+// tables of the data image) and call game functions. The callees are replaced by host recorders on BOTH sides (exe: oracle::Patch,
+// C++: the definitions below); compared: the watched memory (dword-wise, NaN payload differences are classified separately), the call log,
+// the script state (IP, compare flag, result variables).
+// =================================================================================================================================
+static std::vector<uint32_t> g_mlog;
+static uint32_t g_hostRet;
+static uint32_t U(const void* p) { return (uint32_t)(uintptr_t)p; }
+template<class... A> static void ML(uint32_t tag, A... a) { g_mlog.push_back(tag); (g_mlog.push_back((uint32_t)(a)), ...); }
+
+static void __fastcall H_Skip(void* self, int) { ML(1, U(self)); }
+static void __fastcall H_AddMoving(void* self, int) { ML(2, U(self)); }
+static void __cdecl    H_WorldRemove(void* e) { ML(3, U(e)); }
+static void __cdecl    H_WorldAdd(void* e) { ML(4, U(e)); }
+static void __fastcall H_RegRef(void* self, int, void** ref) { ML(5, U(self), U(ref)); }
+static void __fastcall H_ClearWeapon(void* self, int, int t) { ML(6, U(self), t); }
+static void __fastcall H_ReqNodes(void* self, int, float a, float b, float c, float d) { ML(7, FBits(a), FBits(b), FBits(c), FBits(d)); }
+static void __fastcall H_RelNodes(void* self, int) { ML(8); }
+static void __cdecl    H_RecStart(void* v, int f, int ai, int loop) { ML(9, U(v), f, (uint8_t)ai, (uint8_t)loop); }
+static void __cdecl    H_RecStop(void* v) { ML(10, U(v)); }
+static void __cdecl    H_RecPause(void* v) { ML(11, U(v)); }
+static void __cdecl    H_RecUnpause(void* v) { ML(12, U(v)); }
+static char __cdecl    H_RecIs(void* v) { ML(13, U(v)); return (char)(g_hostRet & 1); }
+static int  __cdecl    H_GAST(int ref, int type) { ML(14, ref, (uint8_t)type); return ref; }                       // identity: the test chooses the (in)valid index
+static int  __cdecl    H_GNU(int idx, int type) { ML(15, idx, (uint8_t)type); return idx | (type << 16) | 0x1000000; }
+static void __fastcall H_CleanAdd(void* self, int, int h, int t) { ML(16, h, t); }
+static void __fastcall H_CleanRemove(void* self, int, int h, int t) { ML(17, h, t); }
+static void __fastcall H_Flush(void* self, int) { ML(18, U(self)); }
+static void __cdecl    H_RemoveGroup(int g) { ML(19, g); }
+static void __cdecl    H_RemoveFollowers(int g) { ML(20, g); }
+static int  __cdecl    H_AddFx(float radius) { ML(22, FBits(radius)); return (int)(int8_t)g_hostRet; }
+static void __fastcall H_SetIsStatic(void* self, int, int flag) { ML(21, U(self), flag & 0xFF); auto* b = (uint8_t*)self + 0x1C; *b = (uint8_t)((*b & ~4) | ((flag & 1) << 2)); }
+
+void    CPhysical::SkipPhysics() { ML(1, U(this)); }
+void    CPhysical::AddToMovingList() { ML(2, U(this)); }
+void    CWorld::Remove(CEntity* e) { ML(3, U(e)); }
+void    CWorld::Add(CEntity* e) { ML(4, U(e)); }
+void    CEntity::RegisterReference(CEntity** r) { ML(5, U(this), U(r)); }
+void    CPed::ClearWeapon(eWeaponType t) { ML(6, U(this), (int)t); }
+void    CPathFind::MakeRequestForNodesToBeLoaded(float a, float b, float c, float d) { ML(7, FBits(a), FBits(b), FBits(c), FBits(d)); }
+void    CPathFind::ReleaseRequestedNodes() { ML(8); }
+void    CVehicleRecording::StartPlaybackRecordedCar(CVehicle* v, int32 f, bool ai, bool loop) { ML(9, U(v), f, (uint8_t)ai, (uint8_t)loop); }
+void    CVehicleRecording::StopPlaybackRecordedCar(CVehicle* v) { ML(10, U(v)); }
+void    CVehicleRecording::PausePlaybackRecordedCar(CVehicle* v) { ML(11, U(v)); }
+void    CVehicleRecording::UnpausePlaybackRecordedCar(CVehicle* v) { ML(12, U(v)); }
+bool    CVehicleRecording::IsPlaybackGoingOnForCar(CVehicle* v) { ML(13, U(v)); return g_hostRet & 1; }
+int32   CTheScripts::GetActualScriptThingIndex(int32 ref, eScriptThingType type) { ML(14, ref, (uint8_t)type); return ref; }
+int32   CTheScripts::GetNewUniqueScriptThingIndex(int32 idx, eScriptThingType type) { ML(15, idx, (uint8_t)type); return idx | ((int)type << 16) | 0x1000000; }
+void    CMissionCleanup::AddEntityToList(int32 h, MissionCleanUpEntityType t) { ML(16, h, (int)t); }
+void    CMissionCleanup::RemoveEntityFromList(int32 h, MissionCleanUpEntityType t) { ML(17, h, (int)t); }
+void    CTaskComplexSequence::Flush() { ML(18, U(this)); }
+void    CPedGroups::RemoveGroup(int32 g) { ML(19, g); }
+void    CPedGroups::RemoveAllFollowersFromGroup(int32 g) { ML(20, g); }
+C2dEffectPedAttractor* CScripted2dEffects::GetEffect(int32 index) { return reinterpret_cast<C2dEffectPedAttractor*>(&ms_effects[index]); }
+int32   CScripted2dEffects::AddScripted2DEffect(float radius) { ML(22, FBits(radius)); return (int)(int8_t)g_hostRet; }
+void    CObject::SetIsStatic(bool f) { H_SetIsStatic(this, 0, f); }   // (never reached: the fake object's vtable points at the host recorder)
+// accessors that are not part of this test: forward to the exe's own
+bool    CPed::IsPlayer() const { return oracle::Fn<char __fastcall(const CPed*, int)>(0x5DF8F0)(this, 0) != 0; }
+CPed*   CPedGroupMembership::GetLeader() const { return oracle::Fn<CPed* __fastcall(const CPedGroupMembership*, int)>(0x5F69A0)(this, 0); }
+
+int32 CRunningScript::CollectNextParameterWithoutIncreasingPC() { return oracle::Fn<int __fastcall(CRunningScript*, int)>(0x464250)(this, 0); }   // (RunningScript.cpp is not part of this test)
+CMatrix& CPlaceable::GetMatrix() { return *m_matrix; }   // (the test objects always have a matrix)
+CPedPool*     GetPedPool()     { return *reinterpret_cast<CPedPool**>(0xB74490); }
+CVehiclePool* GetVehiclePool() { return *reinterpret_cast<CVehiclePool**>(0xB74494); }
+CObjectPool*  GetObjectPool()  { return *reinterpret_cast<CObjectPool**>(0xB7449C); }
+
+static CVehicle* g_veh; static CVehicle* g_veh2; static int g_vehRef, g_veh2Ref;
+static CObject*  g_obj; static int g_objRef;
+static CPed*     g_ped; static CPed* g_ped2; static int g_pedRef, g_ped2Ref;
+static CMatrix*  g_mat;
+static void*     g_fakeVtbl[256];
+static void*     g_fakeObjVtbl[256];
+static void*     g_fakePedVtbl[256];
+
+static void RFill(void* p, size_t n, Rng& r) { auto* b = (uint8_t*)p; for (size_t i = 0; i < n; ++i) b[i] = (uint8_t)r.u32(); }
+static float RF(Rng& r, float scale) { return GenF(r, scale); }
+static void RType(void* e, Rng& r, int type) { auto* b = (uint8_t*)e + 0x36; if (r.below(10)) *b = (uint8_t)((*b & ~7) | type); }   // entity type bits (mostly the right one)
+static CEntity* RPick(Rng& r, bool allowNull = true) {
+    CEntity* c[] = { nullptr, g_ped, g_ped2, g_veh, g_veh2, g_obj };
+    return c[r.below(allowNull ? 6 : 5) + (allowNull ? 0 : 1)];
+}
+static void FillVeh(CVehicle* v, Rng& r) {
+    RFill(v, sizeof(CAutomobile), r);
+    *reinterpret_cast<void**>(v) = g_fakeVtbl;
+    v->m_matrix = reinterpret_cast<decltype(v->m_matrix)>(g_mat);
+    RType(v, r, 2);
+    v->m_pLastDamageEntity = RPick(r);
+    v->m_vecMoveSpeed = CVector{ RF(r, 1.f), RF(r, 1.f), RF(r, 1.f) };
+    v->m_vecTurnSpeed = CVector{ RF(r, 1.f), RF(r, 1.f), RF(r, 1.f) };
+    v->m_autoPilot.m_TargetEntity = (CVehicle*)RPick(r);
+    const int k = r.below(4);
+    v->m_autoPilot.m_nCarMission = (eCarMission)(k == 0 ? 0x39 : k == 1 ? 0x3A : (int)(r.u32() & 0xFF));
+    if (r.below(3) == 0) v->m_nFlags &= ~4u;
+    if (r.below(3) == 0) v->m_nFlags |= 4u;
+    if (r.below(3) == 0) v->m_nFlags &= ~0x40000u;
+}
+static void FillPed(CPed* p, Rng& r) {
+    RFill(p, sizeof(CPed), r);
+    *reinterpret_cast<void**>(p) = g_fakePedVtbl;
+    p->m_matrix = reinterpret_cast<decltype(p->m_matrix)>(g_mat);
+    RType(p, r, 3);
+    const int k = r.below(3);
+    p->m_pVehicle = k == 0 ? nullptr : k == 1 ? g_veh : g_veh2;
+    *reinterpret_cast<uint32_t*>((uint8_t*)p + 0x598) = (uint32_t)r.below(5);   // m_nPedType (IsPlayer: 0 / 1)
+}
+static void FillObj(CObject* o, Rng& r) {
+    RFill(o, sizeof(CObject), r);
+    *reinterpret_cast<void**>(o) = g_fakeObjVtbl;
+    o->m_matrix = reinterpret_cast<decltype(o->m_matrix)>(g_mat);
+    RType(o, r, 4);
+    const int sc = r.below(3);
+    o->m_vecMoveSpeed = CVector{ RF(r, 1.f), RF(r, 1.f), RF(r, 1.f) };
+    if (sc == 0) o->m_vecMoveSpeed = CVector{ 0.f, 0.f, RF(r, 1.f) > 0 ? 1.f : (r.below(2) ? 2.5f : -0.3f) };
+    if (sc == 1) o->m_vecMoveSpeed = CVector{ 0.f, 0.f, 0.f };
+    o->m_vecTurnSpeed = CVector{ RF(r, 1.f), RF(r, 1.f), RF(r, 1.f) };
+    if (r.below(3) == 0) o->m_nFlags &= ~4u;
+    if (r.below(3) == 0) o->m_nFlags |= 4u;
+    CTimer::ms_fTimeStep = r.below(10) ? r.f01() * 4.f + 0.01f : RF(r, 5.f);
+}
+static void FillMat(Rng& r) {
+    RFill(g_mat, sizeof(CMatrix), r);
+    float* f = reinterpret_cast<float*>(g_mat);
+    for (int i = 0; i < 16; ++i) f[i] = RF(r, r.below(4) ? 1.5f : 100.f);
+}
+static void FillWorld(Rng& r) {
+    FillMat(r);
+    FillVeh(g_veh, r); FillVeh(g_veh2, r); FillPed(g_ped, r); FillPed(g_ped2, r); FillObj(g_obj, r);
+}
+static void SetupFakeWorld() {
+    auto* vp = new CVehiclePool(4, "oracle_veh"); auto* op = new CObjectPool(4, "oracle_obj"); auto* pp = new CPedPool(4, "oracle_ped");
+    *reinterpret_cast<CVehiclePool**>(0xB74494) = vp; *reinterpret_cast<CObjectPool**>(0xB7449C) = op; *reinterpret_cast<CPedPool**>(0xB74490) = pp;
+    g_veh = vp->New(); g_veh2 = vp->New(); g_vehRef = vp->GetRef(g_veh); g_veh2Ref = vp->GetRef(g_veh2);
+    g_obj = op->New(); g_objRef = op->GetRef(g_obj);
+    g_ped = pp->New(); g_ped2 = pp->New(); g_pedRef = pp->GetRef(g_ped); g_ped2Ref = pp->GetRef(g_ped2);
+    g_mat = new CMatrix();
+    g_fakeObjVtbl[0x10 / 4] = (void*)&H_SetIsStatic;
+}
+
+struct MCtx {
+    Rng* r{};
+    Code code;
+    std::vector<std::pair<void*, size_t>> watch;
+    bool cleanup{};
+    bool notFlag{};
+};
+
+static void MTest(const char* name, int grp, int cmd, notsa::script::CommandHandlerFunction port, std::function<void(MCtx&)> gen, int cases = 3000, bool flagCmd = false) {
+    if (!Wanted(name)) return;
+    static Rig rig;
+    Row row{ name, -1, cases };
+    oracle::g_where = name;
+    SetPC(24);
+    int shown = 0; g_hits = 0;
+    for (int i = 0; i < cases; ++i) {
+        Rng r(0xBEEF00ull + (uint64_t)cmd * 104729 + (uint64_t)i * 7919);
+        static const int spTab[] = { 0, 3, 10, 0, 25, 6 };
+        r.sp = spTab[i % 6];
+        MCtx c; c.r = &r; c.cleanup = r.below(2); c.notFlag = r.below(5) == 0;
+        g_nanDiff = g_hardDiff = g_special = false;
+        gen(c);
+        std::vector<uint8_t> pre;
+        for (auto& w : c.watch) pre.insert(pre.end(), (uint8_t*)w.first, (uint8_t*)w.first + w.second);
+        rig.Reset(c.code);
+        for (auto* sc : { &rig.A(), &rig.B() }) { sc->m_UsesMissionCleanup = c.cleanup; sc->m_NotFlag = c.notFlag; }
+        g_mlog.clear();
+        static std::string phase; phase = std::string(name) + " [exe]"; oracle::g_where = phase.c_str();
+        rig.RunExe(grp, cmd);
+        std::vector<uint8_t> postExe;
+        for (auto& w : c.watch) postExe.insert(postExe.end(), (uint8_t*)w.first, (uint8_t*)w.first + w.second);
+        const auto logExe = g_mlog;
+        Hit(rig.A().m_CondResult);
+        size_t o = 0;
+        for (auto& w : c.watch) { std::memcpy(w.first, pre.data() + o, w.second); o += w.second; }
+        g_mlog.clear();
+        phase = std::string(name) + " [port]"; oracle::g_where = phase.c_str();
+        rig.RunPort(port);
+        std::vector<uint8_t> postPort;
+        for (auto& w : c.watch) postPort.insert(postPort.end(), (uint8_t*)w.first, (uint8_t*)w.first + w.second);
+        std::string d;
+        bool ok = rig.Same(d);
+        ok &= SameBlob(postExe.data(), postPort.data(), postExe.size() & ~3u);
+        const bool logSame = logExe == g_mlog;
+        ok &= logSame;
+        if (!ok) {
+            const bool payloadOnly = g_nanDiff && !g_hardDiff && logSame;
+            row.bad24++;
+            (payloadOnly ? row.nan24 : g_special ? row.hardSpec24 : row.hardReg24)++;
+            if (shown < 2 && !payloadOnly) {
+                ++shown;
+                std::string t = " memdiff:";
+                for (size_t k = 0; k + 4 <= postExe.size() && t.size() < 200; k += 4) if (std::memcmp(&postExe[k], &postPort[k], 4)) { char b[64]; std::snprintf(b, sizeof b, " +0x%zx exe %08X port %08X", k, *(uint32_t*)&postExe[k], *(uint32_t*)&postPort[k]); t += b; }
+                std::string l = logSame ? "" : " LOG exe[" + std::to_string(logExe.size()) + "] port[" + std::to_string(g_mlog.size()) + "]";
+                for (size_t k = 0; !logSame && k < logExe.size() && k < g_mlog.size(); ++k) if (logExe[k] != g_mlog[k]) { char b[64]; std::snprintf(b, sizeof b, " first diff [%zu] exe %X port %X", k, logExe[k], g_mlog[k]); l += b; break; }
+                std::printf("    MISMATCH case %d (cleanup %d not %d)%s: %s%s%s\n", i, c.cleanup, c.notFlag, g_special ? " (special)" : "", d.c_str(), t.c_str(), l.c_str());
+            }
+        }
+    }
+    SetPC(53);
+    row.hits = g_hits;
+    std::printf("%-58s %5d%s  PC24 %4d [reg %d spec %d nanpayload %d]\n", name, cases, (flagCmd ? (" true:" + std::to_string(row.hits)).c_str() : ""), row.bad24, row.hardReg24, row.hardSpec24, row.nan24);
+    g_rows.push_back(row);
+}
+
+#define MT(id, NAME, FN, GRP, ...) MTest("script " #id " " #NAME, GRP, id, &notsa::script::detail::CommandParser<COMMAND_##NAME, FN>, __VA_ARGS__)
+
+static int PickVehRef(Rng& r, bool allowBad = false) {
+    const int k = r.below(allowBad ? 6 : 2);
+    if (k == 0) return g_vehRef; if (k == 1) return g_veh2Ref;
+    return k == 2 ? -1 : (int)((r.below(4) << 8) | r.below(256));   // stale / free slot handle (the pools are not bounds-checked)
+}
+static int PickPedRef(Rng& r) { return r.below(2) ? g_pedRef : g_ped2Ref; }
+
+
+static double ExeMagnitude(const CVector* pv) {
+    double ex;
+    __asm { mov ecx, pv
+            mov eax, 0x4082C0
+            call eax
+            fstp qword ptr [ex] }
+    return ex;
+}
+// ---- the local re-implementations of the original CVector / CMatrix helpers (Group13_15.cpp) against the exe's own functions
+static void TestHelpers() {
+    Run("helper 0x59C910 NormaliseOriginal", [](Rng& r, std::string& d) {
+        const float sc = PickScale(r); CVector v = GenV(r, sc), a = v, b = v;
+        oracle::Fn<void __fastcall(CVector*, int)>(0x59C910)(&a, 0);
+        NormaliseOriginal(b);
+        if (SameV(a, b)) return true; d = "in " + V(v) + " exe " + V(a) + " port " + V(b); return false; });
+    Run("helper 0x59C730 CrossProductOriginal", [](Rng& r, std::string& d) {
+        const float sc = PickScale(r); CVector a = GenV(r, sc), b = GenV(r, sc), x;
+        oracle::Fn<CVector* __cdecl(CVector*, const CVector*, const CVector*)>(0x59C730)(&x, &a, &b);
+        const CVector y = CrossProductOriginal(a, b);
+        if (SameV(x, y)) return true; d = "in " + V(a) + V(b) + " exe " + V(x) + " port " + V(y); return false; });
+    Run("helper 0x59C790 TransformVectorOriginal", [](Rng& r, std::string& d) {
+        CMatrix m; float* f = reinterpret_cast<float*>(&m); for (int i = 0; i < 16; ++i) f[i] = GenF(r, 1.5f);
+        const CVector v = GenV(r, 3.f); CVector x;
+        oracle::Fn<CVector* __cdecl(CVector*, const CMatrix*, const CVector*)>(0x59C790)(&x, &m, &v);
+        const CVector y = TransformVectorOriginal(m, v);
+        if (SameV(x, y)) return true; d = "exe " + V(x) + " port " + V(y); return false; });
+    Run("helper 0x59C810 Multiply3x3VMOriginal", [](Rng& r, std::string& d) {
+        CMatrix m; float* f = reinterpret_cast<float*>(&m); for (int i = 0; i < 16; ++i) f[i] = GenF(r, 1.5f);
+        const CVector v = GenV(r, 3.f); CVector x;
+        oracle::Fn<CVector* __cdecl(CVector*, const CVector*, const CMatrix*)>(0x59C810)(&x, &v, &m);
+        const CVector y = Multiply3x3VMOriginal(v, m);
+        if (SameV(x, y)) return true; d = "exe " + V(x) + " port " + V(y); return false; });
+    Run("helper 0x59C890 TransformPointOriginal", [](Rng& r, std::string& d) {
+        CMatrix m; float* f = reinterpret_cast<float*>(&m); for (int i = 0; i < 16; ++i) f[i] = GenF(r, 1.5f);
+        const CVector v = GenV(r, 3.f); CVector x;
+        oracle::Fn<CVector* __cdecl(CVector*, const CMatrix*, const CVector*)>(0x59C890)(&x, &m, &v);
+        const CVector y = TransformPointOriginal(m, v);
+        if (SameV(x, y)) return true; d = "exe " + V(x) + " port " + V(y); return false; });
+    Run("helper 0x4082C0 MagnitudeOriginal", [](Rng& r, std::string& d) {
+        const float sc = PickScale(r); const CVector v = GenV(r, sc); const double ex = ExeMagnitude(&v);
+        const double po = MagnitudeOriginal(v);
+        uint64_t a, b; std::memcpy(&a, &ex, 8); std::memcpy(&b, &po, 8);
+        if (a == b || (ex != ex && po != po)) return true;
+        char t[120]; std::snprintf(t, sizeof t, "exe %.17g port %.17g", ex, po); d = std::string("in ") + V(v) + t; g_hardDiff = true; return false; });
+}
+
+static void TestMemCommands() {
+    auto WatchAll = [](MCtx& c) {
+        c.watch = { { g_veh, sizeof(CAutomobile) }, { g_veh2, sizeof(CAutomobile) }, { g_ped, sizeof(CPed) }, { g_ped2, sizeof(CPed) }, { g_obj, sizeof(CObject) } };
+    };
+    auto Veh = [&](int h, auto&& extra) { return [=](MCtx& c) { FillWorld(*c.r); WatchAll(c); c.code.I(PickVehRef(*c.r)); extra(c); }; };
+    (void)Veh;
+    // ---- vehicles
+    MT(1305, FREEZE_CAR_POSITION, FreezeCarPosition, 13, [&](MCtx& c) { FillWorld(*c.r); WatchAll(c); c.code.I(PickVehRef(*c.r)).I(c.r->below(3) ? (int)c.r->below(2) : (int)c.r->u32()); });
+    MT(1308, HAS_CAR_BEEN_DAMAGED_BY_CHAR, HasCarBeenDamagedByChar, 13, [&](MCtx& c) {
+        FillWorld(*c.r); WatchAll(c);
+        auto* veh = c.r->below(2) ? g_veh : g_veh2; auto* ped = c.r->below(2) ? g_ped : g_ped2;
+        if (c.r->below(2)) veh->m_pLastDamageEntity = ped; else if (c.r->below(2)) veh->m_pLastDamageEntity = ped->m_pVehicle;
+        c.code.I(veh == g_veh ? g_vehRef : g_veh2Ref).I(c.r->below(4) ? (ped == g_ped ? g_pedRef : g_ped2Ref) : -1); }, 3000, true);
+    MT(1309, HAS_CAR_BEEN_DAMAGED_BY_CAR, HasCarBeenDamagedByCar, 13, [&](MCtx& c) {
+        FillWorld(*c.r); WatchAll(c);
+        auto* veh = c.r->below(2) ? g_veh : g_veh2; auto* other = c.r->below(2) ? g_veh : g_veh2;
+        if (c.r->below(2)) veh->m_pLastDamageEntity = other;
+        c.code.I(veh == g_veh ? g_vehRef : g_veh2Ref).I(c.r->below(4) ? (other == g_veh ? g_vehRef : g_veh2Ref) : (c.r->below(2) ? -1 : (int)((c.r->below(4) << 8) | c.r->below(256)))); }, 3000, true);
+    MT(1343, SET_CAN_BURST_CAR_TYRES, SetCanBurstCarTyres, 13, [&](MCtx& c) { FillWorld(*c.r); WatchAll(c); c.code.I(PickVehRef(*c.r)).I(c.r->below(3) ? (int)c.r->below(2) : (int)c.r->u32()); });
+    MT(1359, CLEAR_CAR_LAST_DAMAGE_ENTITY, ClearCarLastDamageEntity, 13, [&](MCtx& c) { FillWorld(*c.r); WatchAll(c); c.code.I(PickVehRef(*c.r, true)); });
+    MT(1380, MAKE_HELI_COME_CRASHING_DOWN, MakeHeliComeCrashingDown, 13, [&](MCtx& c) { FillWorld(*c.r); WatchAll(c); c.code.I(PickVehRef(*c.r)); });
+    MT(1390, DOES_VEHICLE_EXIST, DoesVehicleExist, 13, [&](MCtx& c) { FillWorld(*c.r); WatchAll(c); c.code.I(PickVehRef(*c.r, true)); }, 3000, true);
+    MT(1396, FREEZE_CAR_POSITION_AND_DONT_LOAD_COLLISION, FreezeCarPositionAndDontLoadCollision, 13, [&](MCtx& c) { FillWorld(*c.r); WatchAll(c); c.code.I(PickVehRef(*c.r)).I(c.r->below(3) ? (int)c.r->below(2) : (int)c.r->u32()); });
+    MT(1415, SET_LOAD_COLLISION_FOR_CAR_FLAG, SetLoadCollisionForCarFlag, 14, [&](MCtx& c) { FillWorld(*c.r); WatchAll(c); c.code.I(PickVehRef(*c.r)).I(c.r->below(3) ? (int)c.r->below(2) : (int)c.r->u32()); });
+    MT(1521, SET_CAR_ESCORT_CAR_LEFT, SetCarEscortCar<MISSION_ESCORT_LEFT>, 15, [&](MCtx& c) { FillWorld(*c.r); WatchAll(c); c.code.I(g_vehRef).I(g_veh2Ref); });
+    MT(1522, SET_CAR_ESCORT_CAR_RIGHT, SetCarEscortCar<MISSION_ESCORT_RIGHT>, 15, [&](MCtx& c) { FillWorld(*c.r); WatchAll(c); c.code.I(g_veh2Ref).I(g_vehRef); });
+    MT(1523, SET_CAR_ESCORT_CAR_REAR, SetCarEscortCar<MISSION_ESCORT_REAR>, 15, [&](MCtx& c) { FillWorld(*c.r); WatchAll(c); c.code.I(g_vehRef).I(g_veh2Ref); });
+    MT(1524, SET_CAR_ESCORT_CAR_FRONT, SetCarEscortCar<MISSION_ESCORT_FRONT>, 15, [&](MCtx& c) { FillWorld(*c.r); WatchAll(c); c.code.I(g_vehRef).I(g_veh2Ref); });
+    MT(1365, REMOVE_WEAPON_FROM_CHAR, RemoveWeaponFromChar, 13, [&](MCtx& c) { FillWorld(*c.r); WatchAll(c); c.code.I(PickPedRef(*c.r)).I((int)c.r->u32() % 60); });
+    // ---- vehicle recordings (callee log: the handle -> pointer conversion and the argument shapes)
+    MT(1515, START_PLAYBACK_RECORDED_CAR, StartPlaybackRecordedCar, 15, [&](MCtx& c) { FillWorld(*c.r); WatchAll(c); c.code.I(PickVehRef(*c.r, true)).I((int)c.r->u32() % 1000); });
+    MT(1516, STOP_PLAYBACK_RECORDED_CAR, StopPlaybackRecordedCar, 15, [&](MCtx& c) { FillWorld(*c.r); WatchAll(c); c.code.I(PickVehRef(*c.r, true)); });
+    MT(1517, PAUSE_PLAYBACK_RECORDED_CAR, PausePlaybackRecordedCar, 15, [&](MCtx& c) { FillWorld(*c.r); WatchAll(c); c.code.I(PickVehRef(*c.r, true)); });
+    MT(1518, UNPAUSE_PLAYBACK_RECORDED_CAR, UnpausePlaybackRecordedCar, 15, [&](MCtx& c) { FillWorld(*c.r); WatchAll(c); c.code.I(PickVehRef(*c.r, true)); });
+    MT(1550, IS_PLAYBACK_GOING_ON_FOR_CAR, IsPlaybackGoingOnForCar, 15, [&](MCtx& c) { FillWorld(*c.r); WatchAll(c); g_hostRet = c.r->u32(); c.code.I(PickVehRef(*c.r, true)); }, 3000, true);
+    // ---- path nodes
+    MT(1542, LOAD_PATH_NODES_IN_AREA, LoadPathNodesInArea, 15, [&](MCtx& c) { auto& r = *c.r; const float s = PickScale(r); c.code.F(GenS(r, s)).F(GenS(r, s)).F(GenS(r, s)).F(GenS(r, s)); });
+    MT(1543, RELEASE_PATH_NODES, ReleasePathNodes, 15, [&](MCtx& c) { (void)c; }, 200);
+    // ---- objects
+    MT(1360, FREEZE_OBJECT_POSITION, FreezeObjectPosition, 13, [&](MCtx& c) { FillWorld(*c.r); WatchAll(c); c.code.I(g_objRef).I(c.r->below(3) ? (int)c.r->below(2) : (int)c.r->u32()); });
+    MT(1382, SET_OBJECT_AREA_VISIBLE, SetObjectAreaVisible, 13, [&](MCtx& c) { FillWorld(*c.r); WatchAll(c); c.code.I(g_objRef).I(c.r->below(2) ? (int)c.r->below(24) : (int)c.r->u32()); });
+    MT(1441, ADD_TO_OBJECT_ROTATION_VELOCITY, AddToObjectRotationVelocity, 14, [&](MCtx& c) { FillWorld(*c.r); WatchAll(c); c.code.I(g_objRef).F(RF(*c.r, 3.f)).F(RF(*c.r, 3.f)).F(RF(*c.r, 3.f)); });
+    MT(1442, SET_OBJECT_ROTATION_VELOCITY, SetObjectRotationVelocity, 14, [&](MCtx& c) { FillWorld(*c.r); WatchAll(c); c.code.I(g_objRef).F(RF(*c.r, 3.f)).F(RF(*c.r, 3.f)).F(RF(*c.r, 3.f)); });
+    MT(1443, IS_OBJECT_STATIC, IsObjectStatic, 14, [&](MCtx& c) { FillWorld(*c.r); WatchAll(c); c.code.I(g_objRef); }, 3000, true);
+    MT(1446, GET_OBJECT_ROTATION_VELOCITY, GetObjectRotationVelocity, 14, [&](MCtx& c) { FillWorld(*c.r); WatchAll(c); c.code.I(g_objRef).Out(0).Out(1).Out(2); });
+    MT(1447, ADD_VELOCITY_RELATIVE_TO_OBJECT_VELOCITY, AddVelocityRelativeToObjectVelocity, 14, [&](MCtx& c) { FillWorld(*c.r); WatchAll(c); c.code.I(g_objRef).F(RF(*c.r, 30.f)).F(RF(*c.r, 30.f)).F(RF(*c.r, 30.f)); });
+    MT(1448, GET_OBJECT_SPEED, GetObjectSpeed, 14, [&](MCtx& c) { FillWorld(*c.r); WatchAll(c); c.code.I(g_objRef).Out(0); });
+    // ---- sequence tasks / attractors / groups: tables of the data image
+    auto SeqWatch = [](MCtx& c) {
+        c.watch = { { (void*)0xC17898, 64 }, { (void*)0x8D2E98, 4 }, { (void*)0xC178F0, 64 * 0x40 }, { (void*)0xA43F68, 64 * 4 }, { (void*)0xC3A1A0, 64 } };
+    };
+    auto SeqFill = [](MCtx& c) {
+        auto& r = *c.r;
+        RFill((void*)0xC17898, 64, r); for (int i = 0; i < 64; ++i) ((uint8_t*)0xC17898)[i] &= 1;
+        RFill((void*)0xC178F0, 64 * 0x40, r);
+        for (int i = 0; i < 64; ++i) { auto* b = (uint8_t*)0xC178F0 + i * 0x40; *(uint32_t*)(b + 0x10) = r.below(3) ? 0 : r.u32(); *(uint32_t*)(b + 0x3C) = r.below(2) ? 0 : r.below(3); *(uint8_t*)(b + 0x38) = (uint8_t)r.below(2); }
+        RFill((void*)0xA43F68, 64 * 4, r); RFill((void*)0xC3A1A0, 64, r);
+        *(int32_t*)0x8D2E98 = (int32_t)r.u32();
+    };
+    auto Idx = [](Rng& r) { return r.below(8) == 0 ? (int)r.below(200) - 70 : (int)r.below(64); };
+    MT(1557, OPEN_SEQUENCE_TASK, OpenSequenceTask, 15, [&](MCtx& c) { SeqFill(c); SeqWatch(c); c.code.Out(0); }, 3000);
+    MT(1558, CLOSE_SEQUENCE_TASK, CloseSequenceTask, 15, [&](MCtx& c) { SeqFill(c); SeqWatch(c); c.code.I(Idx(*c.r)); });
+    MT(1563, CLEAR_SEQUENCE_TASK, ClearSequenceTask, 15, [&](MCtx& c) { SeqFill(c); SeqWatch(c); c.code.I(Idx(*c.r)); });
+    MT(1566, CLEAR_ATTRACTOR, ClearAttractor, 15, [&](MCtx& c) { SeqFill(c); SeqWatch(c); c.code.I(Idx(*c.r)); });
+    MT(1565, ADD_ATTRACTOR, AddAttractor, 15, [&](MCtx& c) {
+        auto& r = *c.r; SeqFill(c); SeqWatch(c);
+        c.watch.push_back({ (void*)0xC3AB00, 64 * 0x40 }); c.watch.push_back({ (void*)0xC3A020, 64 * 4 });
+        RFill((void*)0xC3AB00, 64 * 0x40, r);
+        g_hostRet = (uint32_t)(r.below(8) == 0 ? (int)r.below(200) - 70 : (int)r.below(64));
+        const float sc = r.below(3) ? 4000.f : 40000.f;
+        c.code.F(GenS(r, 3000.f)).F(GenS(r, 3000.f)).F(GenS(r, 300.f)).F(GenS(r, sc)).F(GenS(r, sc)).I(Idx(r)).Out(0); }, 3000);
+    MT(1586, REMOVE_GROUP, RemoveGroup, 15, [&](MCtx& c) {
+        auto& r = *c.r; FillWorld(r); WatchAll(c);
+        c.watch.push_back({ (void*)0xC098E0, 8 });
+        RFill((void*)0xC098E0, 8, r); for (int i = 0; i < 8; ++i) ((uint8_t*)0xC098E0)[i] &= 1;
+        for (int i = 0; i < 8; ++i) *(CPed**)(0xC09920 + i * 0x2D4 + 0x28) = r.below(3) == 0 ? nullptr : r.below(2) ? g_ped : g_ped2;
+        c.code.I(r.below(8) == 0 ? (int)r.below(30) - 10 : (int)r.below(8)); });
+}
+
 int main(int argc, char** argv) {
     std::setvbuf(stdout, nullptr, _IONBF, 0);
     for (int i = 1; i < argc; ++i) {
@@ -281,8 +623,33 @@ int main(int argc, char** argv) {
     *reinterpret_cast<int*>(0xC9C400) = 1; // __sse2_available
     oracle::Patch(0x82872C, (void*)&HostMathErr);
     oracle::Patch(0x827B3D, (void*)&HostGetPtd);
+    oracle::Patch(0x5433B0, (void*)&H_Skip);
+    oracle::Patch(0x542800, (void*)&H_AddMoving);
+    oracle::Patch(0x563280, (void*)&H_WorldRemove);
+    oracle::Patch(0x563220, (void*)&H_WorldAdd);
+    oracle::Patch(0x571B70, (void*)&H_RegRef);
+    oracle::Patch(0x5E62B0, (void*)&H_ClearWeapon);
+    oracle::Patch(0x450D70, (void*)&H_ReqNodes);
+    oracle::Patch(0x44DD00, (void*)&H_RelNodes);
+    oracle::Patch(0x45A980, (void*)&H_RecStart);
+    oracle::Patch(0x45A280, (void*)&H_RecStop);
+    oracle::Patch(0x459740, (void*)&H_RecPause);
+    oracle::Patch(0x459850, (void*)&H_RecUnpause);
+    oracle::Patch(0x4594C0, (void*)&H_RecIs);
+    oracle::Patch(0x4839A0, (void*)&H_GAST);
+    oracle::Patch(0x483720, (void*)&H_GNU);
+    oracle::Patch(0x4637E0, (void*)&H_CleanAdd);
+    oracle::Patch(0x4654B0, (void*)&H_CleanRemove);
+    oracle::Patch(0x632C10, (void*)&H_Flush);
+    oracle::Patch(0x6FA7C0, (void*)&H_AddFx);
+    oracle::Patch(0x5FB870, (void*)&H_RemoveGroup);
+    oracle::Patch(0x5FB8A0, (void*)&H_RemoveFollowers);
     std::printf("script_oracle_g13_15_test: %d cases per command and precision mode; PC24 = game mode, PC53 = CRT default\n", g_cases);
     TestScriptCommands();
+    SetupFakeWorld();
+    static CRunningScript dummy; (void)dummy;
+    TestHelpers();
+    TestMemCommands();
     int hard24 = 0;
     for (auto& r : g_rows) hard24 += r.hardReg24 + r.hardSpec24;
     std::printf("\n%zu commands, PC24 mismatches (excluding NaN-payload-only): %d\n", g_rows.size(), hard24);

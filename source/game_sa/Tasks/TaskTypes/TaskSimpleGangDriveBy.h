@@ -68,6 +68,12 @@ public:
     bool ProcessPed(CPed* ped) override;
 
     void FireGun(CPed* ped);
+
+    // Not reversed yet (names guessed)
+    bool StartDriveByAnim(CPed* ped); // 0x627B20
+    void ProcessPlayerPed(CPed* ped); // 0x621960
+    void ProcessAIPed(CPed* ped);     // 0x627600
+    void ProcessAimIK(CPed* ped);     // 0x628350
 };
 VALIDATE_SIZE(CTaskSimpleGangDriveBy, 0x44);
 

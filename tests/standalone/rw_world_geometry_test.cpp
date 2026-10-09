@@ -13,6 +13,7 @@
 #include <map>
 #include <set>
 #include <vector>
+#include <vector>
 
 static int g_fail = 0, g_pass = 0;
 #define CHECK(c) do { if (c) { ++g_pass; } else { ++g_fail; std::printf("  FAIL %s:%d  %s\n", __FILE__, __LINE__, #c); } } while (0)
@@ -125,6 +126,9 @@ static RpLight* LightCB(RpLight*, void*) { ++g_cbCount; return g_cbCount >= 2 ? 
 static RpClump* ClumpCB(RpClump*, void*) { ++g_cbCount; return (RpClump*)1; }
 static RpLight* LightCount(RpLight*, void*) { ++g_cbCount; return (RpLight*)1; }
 
+static std::vector<RpLight*> g_order;
+static RpLight* LightOrder(RpLight* l, void*) { g_order.push_back(l); return l; }
+
 static void WorldTests() {
     Section("world");
     RwBBox bb{{100, 100, 100}, {-100, -100, -100}};
@@ -136,6 +140,10 @@ static void WorldTests() {
     CHECK(RpWorldAddLight(w, amb) == w && RpWorldAddLight(w, dir) == w && RpWorldAddLight(w, pt) == w);
     CHECK(amb->world == w && w->globalLights.count() == 2 && w->localLights.count() == 1);
     CHECK(RpWorldAddLight(w, amb) == w && w->globalLights.count() == 2);        // re-adding is a no-op
+    {   // exe order (0x751910): new lights are linked at the FRONT, ForAllLights walks globals first, then locals
+        g_order.clear(); RpWorldForAllLights(w, LightOrder, nullptr);
+        CHECK(g_order.size() == 3 && g_order[0] == dir && g_order[1] == amb && g_order[2] == pt);
+    }
     g_cbCount = 0; RpWorldForAllLights(w, LightCount, nullptr);
     CHECK(g_cbCount == 3);
     g_cbCount = 0; RpWorldForAllLights(w, LightCB, nullptr);
@@ -260,6 +268,31 @@ static void GeometryCreateTests() {
     CHECK(rw::Geometry::numAllocated == baseG);
 }
 
+// Mesh order of the exe's builder (qsort comparator 0x759640): opaque before transparent, then first-seen raster / pipeline / texture index,
+// then the material index - NOT the material-list order.
+static void MeshOrderTests() {
+    Section("geometry mesh order (exe sort)");
+    for (int strip = 0; strip < 2; strip++) {
+        RpGeometry* g = RpGeometryCreate(6, 3, rpGEOMETRYTEXTURED | (strip ? rpGEOMETRYTRISTRIP : 0));
+        RpMaterial* a = RpMaterialCreate(); RpMaterial* b = RpMaterialCreate(); RpMaterial* c = RpMaterialCreate();
+        a->color.alpha = 100;                       // transparent, matId 0 -> goes last
+        c->color.alpha = 255;
+        RpGeometryLock(g, rpGEOMETRYLOCKALL);
+        RpTriangle* t = RpGeometryGetTriangles(g);
+        RpGeometryTriangleSetVertexIndices(g, &t[0], 0, 1, 2);
+        RpGeometryTriangleSetVertexIndices(g, &t[1], 1, 2, 3);
+        RpGeometryTriangleSetVertexIndices(g, &t[2], 3, 4, 5);
+        RpGeometryTriangleSetMaterial(g, &t[0], a);  // matId 0
+        RpGeometryTriangleSetMaterial(g, &t[1], b);  // matId 1
+        RpGeometryTriangleSetMaterial(g, &t[2], c);  // matId 2
+        CHECK(RpGeometryUnlock(g) == g && g->meshHeader && g->meshHeader->numMeshes == 3);
+        RpMesh* mesh = g->meshHeader->getMeshes();
+        CHECK(mesh[0].material == b && mesh[1].material == c && mesh[2].material == a);
+        RpGeometryDestroy(g);
+        RpMaterialDestroy(a); RpMaterialDestroy(b); RpMaterialDestroy(c);
+    }
+}
+
 static void GeometryMeshTests() {
     Section("geometry lock / unlock / mesh header");
     const int baseG = rw::Geometry::numAllocated, baseM = rw::Material::numAllocated;
@@ -287,8 +320,9 @@ static void GeometryMeshTests() {
     CHECK(h->numMeshes == 2 && h->flags == 0 && h->totalIndices == 12);          // 'unused' has no mesh: empty materials are dropped
     RpMesh* mesh = h->getMeshes();
     CHECK(mesh[0].material == m1 && mesh[0].numIndices == 6 && mesh[1].material == m2 && mesh[1].numIndices == 6);
-    CHECK(mesh[0].indices[0] == 0 && mesh[0].indices[1] == 1 && mesh[0].indices[2] == 2 && mesh[0].indices[3] == 3 && mesh[0].indices[5] == 5);
-    CHECK(mesh[1].indices[0] == 2 && mesh[1].indices[2] == 3 && mesh[1].indices[3] == 5);
+    // triangle order inside a mesh = the exe's CRT qsort (unstable; shortsort of [t0 m1, t1 m2, t2 m1, t3 m2] -> t2 t0 t3 t1)
+    CHECK(mesh[0].indices[0] == 3 && mesh[0].indices[1] == 4 && mesh[0].indices[2] == 5 && mesh[0].indices[3] == 0 && mesh[0].indices[5] == 2);
+    CHECK(mesh[1].indices[0] == 5 && mesh[1].indices[1] == 4 && mesh[1].indices[2] == 0 && mesh[1].indices[3] == 2 && mesh[1].indices[5] == 3);
     CHECK(FromMeshes(g) == FromTriangles(g));
     const uint16_t serial = h->serialNum;
 
@@ -540,6 +574,7 @@ int main(int argc, char** argv) {
     MaterialTests();
     GeometryCreateTests();
     GeometryMeshTests();
+    MeshOrderTests();
     StripTests();
     MorphTargetTests();
     for (int i = 1; i < argc; i++) DffTest(argv[i]);

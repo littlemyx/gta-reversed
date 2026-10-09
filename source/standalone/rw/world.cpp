@@ -65,8 +65,8 @@ RpWorld* RpWorldRemoveCamera(RpWorld* world, RwCamera* camera) {
     return world;
 }
 
-// A: global lights (type < 0x80: ambient / directional) go to the global list, positioned lights to the local list; a light that is already
-// in a world is moved (the exe would corrupt both lists).
+// W: global lights (type < 0x80: ambient / directional) go to the global list, positioned lights to the local list, both at the HEAD like
+// the exe (librw appends); a light that is already in a world is moved (the exe would corrupt both lists).
 RpWorld* RpWorldAddLight(RpWorld* world, RpLight* light) {
     if (!world || !light) {
         return nullptr;
@@ -77,7 +77,17 @@ RpWorld* RpWorldAddLight(RpWorld* world, RpLight* light) {
     if (light->world) {
         light->world->removeLight(light);
     }
-    world->addLight(light);
+    // The exe (0x751910) links the light at the FRONT of its list (rwLinkListAddLLLink); librw's World::addLight appends. The order is
+    // observable: ForAllLights (0x74FC00) and the D3D9 global-light setup walk the list from the head.
+    light->world = world;
+    if (light->getType() < rw::Light::POINT) {
+        world->globalLights.add(&light->inWorld);
+    } else {
+        world->localLights.add(&light->inWorld);
+        if (light->getFrame()) {
+            light->getFrame()->updateObjects();
+        }
+    }
     return world;
 }
 

@@ -219,6 +219,9 @@ void CCarCtrl::InjectHooks()
     RH_ScopedInstall(DragCarToPoint, 0x42EC90);
     RH_ScopedInstall(GetAIPlaneToDoDogFightAgainstPlayer, 0x42F370);
     RH_ScopedInstall(GetAIHeliToAttackPlayer, 0x42F3C0);
+    RH_ScopedInstall(JoinCarWithRoadSystem, 0x42F5A0);
+    RH_ScopedInstall(GenerateEmergencyServicesCar, 0x42F9C0);
+    RH_ScopedInstall(ReconsiderRoute, 0x42FC40);
 }
 
 // 0x4212E0
@@ -749,16 +752,16 @@ void CCarCtrl::FindNodesThisCarIsNearestTo(CVehicle* vehicle, CNodeAddress& node
 
     // Also check the neighbouring regions if the vehicle is close to the border
     auto minX = xRegion, minY = yRegion, maxX = xRegion, maxY = yRegion;
-    if (!(relX >= 200.0f)) {
+    if (relX < 200.0f) {
         minX--;
     }
-    if (!(relY >= 200.0f)) {
+    if (relY < 200.0f) {
         minY--;
     }
-    if (!(relX <= 550.0f)) {
+    if (relX > 550.0f) {
         maxX++;
     }
-    if (!(relY <= 550.0f)) {
+    if (relY > 550.0f) {
         maxY++;
     }
     minX = std::max(minX, 0);
@@ -782,7 +785,7 @@ void CCarCtrl::FindNodesThisCarIsNearestTo(CVehicle* vehicle, CNodeAddress& node
                 const auto dx = (float)((double)nodePos.x - pos.x);
                 const auto dy = (double)nodePos.y - pos.y;
                 const auto dz = (double)nodePos.z - pos.z;
-                if (std::sqrt((dz * dz + dy * dy) + (double)dx * dx) >= 150.0f) {
+                if (!(std::sqrt((dz * dz + dy * dy) + (double)dx * dx) < 150.0f)) {
                     continue;
                 }
 
@@ -808,7 +811,7 @@ void CCarCtrl::FindNodesThisCarIsNearestTo(CVehicle* vehicle, CNodeAddress& node
                     const auto& fwd = vehicle->m_matrix->GetForward();
                     const auto  dot = ((double)dir.z * fwd.z + (double)dir.y * fwd.y) + (double)dir.x * fwd.x;
                     const auto  score = (1.0f - dot) * 5.0f + distToLine;
-                    if (!(score >= bestScore)) {
+                    if (score < bestScore) {
                         bestScore      = (float)score;
                         bestNode       = { (uint16)areaId, (uint16)i };
                         bestLinkedNode = linkedAddr;
@@ -1520,7 +1523,56 @@ bool CCarCtrl::GenerateCarCreationCoors2(CVector posn, float radius, float arg3,
 
 // 0x42F9C0
 void CCarCtrl::GenerateEmergencyServicesCar() {
-    plugin::Call<0x42F9C0>();
+    if (!bAllowEmergencyServicesToBeCreated) {
+        return;
+    }
+    if (CGangWars::GangWarFightingGoingOn()) { // 0x443AC0
+        return;
+    }
+
+    // Note: The original doesn't check for the player data to be there (it crashes if it's not)
+    const auto* const playerData = FindPlayerPed(-1)->GetPlayerData();
+    const auto* const wanted     = playerData ? playerData->m_pWanted : nullptr;
+    if ((int32)wanted->m_WantedLevel > 3) {
+        return;
+    }
+
+    if (CGame::currArea != 0 || CTheZones::m_CurrLevel == 0) {
+        return;
+    }
+
+    if ((int32)NumAmbulancesOnDuty + (int32)NumFireTrucksOnDuty + (int32)NumParkedCars + (int32)NumMissionCars + (int32)NumLawEnforcerCars + (int32)NumRandomCars > (int32)MaxNumberOfCarsInUse) {
+        return;
+    }
+
+    if (NumAmbulancesOnDuty == 0) {
+        if (CAccidentManager::GetInstance()->GetNumberOfFreeAccidents() < 2) { // 0x56CEE0
+            CStreaming::StreamAmbulanceAndMedic(false); // 0x40A2A0
+        } else {
+            auto playerPos = FindPlayerCoors(-1);
+            if (const auto accident = CAccidentManager::GetInstance()->GetNearestFreeAccident(playerPos, false)) { // 0x56D050
+                if (CStreaming::StreamAmbulanceAndMedic(true) && CTimer::GetTimeInMS() > (uint32)LastTimeAmbulanceCreated + 30000u) {
+                    const auto model = CStreaming::ms_aDefaultAmbulanceModel[CTheZones::m_CurrLevel]; // 0x407D30
+                    if (GenerateOneEmergencyServicesCar(model, accident->m_pPed->GetPosition())) { // 0x42B7D0
+                        LastTimeAmbulanceCreated = CTimer::GetTimeInMS();
+                    }
+                }
+            }
+        }
+    }
+
+    if (NumFireTrucksOnDuty == 0) {
+        if ((uint16)gFireManager.GetNumOfNonScriptFires() < 3) { // 0x538F10 (the original compares the low 16 bits)
+            CStreaming::StreamFireEngineAndFireman(false); // 0x40A400
+        } else if (const auto fire = gFireManager.FindNearestFire(FindPlayerCoors(-1), true, true)) { // 0x538F40
+            if (CStreaming::StreamFireEngineAndFireman(true) && CTimer::GetTimeInMS() > (uint32)LastTimeFireTruckCreated + 35000u) {
+                const auto model = CStreaming::ms_aDefaultFireEngineModel[CTheZones::m_CurrLevel]; // 0x407DC0
+                if (GenerateOneEmergencyServicesCar(model, fire->GetPosition())) {
+                    LastTimeFireTruckCreated = CTimer::GetTimeInMS();
+                }
+            }
+        }
+    }
 }
 
 // 0x42B7D0
@@ -1585,12 +1637,12 @@ void CCarCtrl::GetAIHeliToAttackPlayer(CAutomobile* automobile) {
     heli->m_autoPilot.m_vecDestinationCoors = playerPos;
 
     if (heli->m_autoPilot.m_nCarMission == MISSION_HELI_ATTACK_PLAYER) {
-        if (!(dist >= 15.0f)) { // 0x858B48
+        if (dist < 15.0f) { // 0x858B48
             heli->m_autoPilot.m_nCarMission = MISSION_HELI_ATTACK_PLAYER_FLY_AWAY;
         }
         dist += 50.0f; // 0x858B40
     } else if (heli->m_autoPilot.m_nCarMission == MISSION_HELI_ATTACK_PLAYER_FLY_AWAY) {
-        if (!(dist <= 18.0f)) { // 0x859008
+        if (dist > 18.0f) { // 0x859008
             heli->m_autoPilot.m_nCarMission = MISSION_HELI_ATTACK_PLAYER;
         }
         heading += std::numbers::pi_v<float>;
@@ -1841,7 +1893,73 @@ void CCarCtrl::JoinCarWithRoadAccordingToMission(CVehicle* vehicle) {
 
 // 0x42F5A0
 void CCarCtrl::JoinCarWithRoadSystem(CVehicle* vehicle) {
-    plugin::Call<0x42F5A0, CVehicle*>(vehicle);
+    auto& ap = vehicle->m_autoPilot;
+
+    // Note: Only the area ids of the node addresses are reset
+    ap.m_endingRouteNode.ResetAreaId();
+    ap.m_currentAddress.ResetAreaId();
+    ap.m_startingRouteNode.ResetAreaId();
+    ap.m_nCurrentPathNodeInfo  = {};
+    ap.m_nPreviousPathNodeInfo = {};
+    ap.m_nNextPathNodeInfo     = {};
+    ap.m_nPathFindNodesCount   = 0;
+
+    // Note: The matrix is used directly (not null checked)
+    const auto& fwd = vehicle->m_matrix->GetForward();
+    const auto  nearest = ThePaths.FindNodeClosestToCoorsFavourDirection(vehicle->GetPosition(), PATH_TYPE_VEH, CVector2D{ fwd.x, fwd.y }); // 0x44FCE0
+    if (nearest.m_wAreaId == UINT16_MAX) {
+        return;
+    }
+    if (!ThePaths.m_pPathNodes[nearest.m_wAreaId]) {
+        return;
+    }
+
+    const auto& nearestNode = ThePaths.m_pPathNodes[nearest.m_wAreaId][nearest.m_wNodeId];
+    const auto  nearestPos  = nearestNode.GetPosition();
+
+    // Find the linked node that's the closest to this one
+    float        closestDist = std::bit_cast<float>(0x497423FEu); // ~999999.9
+    CNodeAddress closest{}; // Note: Only the area id is reset in the original (the node id is only used if a node was found)
+    for (auto i = 0; i < (int32)nearestNode.m_nNumLinks; i++) {
+        const auto link = ThePaths.m_pNodeLinks[nearest.m_wAreaId][nearestNode.m_wBaseLinkId + i];
+        if (!ThePaths.m_pPathNodes[link.m_wAreaId]) {
+            continue;
+        }
+        const auto  linkedPos = ThePaths.m_pPathNodes[link.m_wAreaId][link.m_wNodeId].GetPosition();
+        const auto dist = std::sqrt(((double)linkedPos.y - nearestPos.y) * ((double)linkedPos.y - nearestPos.y) + ((double)linkedPos.x - nearestPos.x) * ((double)linkedPos.x - nearestPos.x)); // x87: kept in extended precision
+        if (dist < closestDist) {
+            closestDist = (float)dist;
+            closest     = link;
+        }
+    }
+    if (closest.m_wAreaId == UINT16_MAX) {
+        return;
+    }
+
+    // The vehicle should be heading from the node that's behind it to the one that's in front of it
+    float dirX = fwd.x;
+    const float dirY = fwd.y;
+    if (dirX == 0.0f && dirY == 0.0f) {
+        dirX = 1.0f;
+    }
+
+    const auto closestPos = ThePaths.m_pPathNodes[closest.m_wAreaId][closest.m_wNodeId].GetPosition();
+    const auto dot        = ((double)nearestPos.y - closestPos.y) * dirY + ((double)nearestPos.x - closestPos.x) * dirX;
+
+    CNodeAddress from, to;
+    if (!(dot < 0.0)) {
+        from = closest;
+        to   = nearest;
+    } else {
+        from = nearest;
+        to   = closest;
+    }
+    ap.m_endingRouteNode.ResetAreaId();
+    ap.m_currentAddress      = from;
+    ap.m_startingRouteNode   = to;
+    FindLinksToGoWithTheseNodes(vehicle); // 0x42B470
+    ap.m_nCurrentLane = 0;
+    ap.m_nNextLane    = 0;
 }
 
 // 0x42F870
@@ -2102,7 +2220,7 @@ void CCarCtrl::PickNextNodeRandomly(CVehicle* vehicle) {
         const auto nextPos = ThePaths.m_pPathNodes[ap.m_startingRouteNode.m_wAreaId][ap.m_startingRouteNode.m_wNodeId].GetPosition();
         const auto dx      = (double)nextPos.x - curPos.x;
         const auto dy      = (double)nextPos.y - curPos.y;
-        if (!(dx * dx + dy * dy <= 256.0f)) { // 0x858FB4
+        if (dx * dx + dy * dy > 256.0f) { // 0x858FB4
             if (--ap.field_50 == 0) {
                 ap.field_50 = (char)((rand() & 3) + 4);
                 ap.m_nNextLane += rand() >= 0x3FFF ? -1 : 1;
@@ -2349,7 +2467,94 @@ void CCarCtrl::PruneVehiclesOfInterest() {
 
 // 0x42FC40
 void CCarCtrl::ReconsiderRoute(CVehicle* vehicle) {
-    plugin::Call<0x42FC40, CVehicle*>(vehicle);
+    auto& ap = vehicle->m_autoPilot;
+
+    // Only every 2 seconds (the seed makes it so that not every vehicle does this at the same time)
+    const auto seed = (uint32)vehicle->m_nRandomSeed;
+    if ((seed + CTimer::GetTimeInMS()) / 2000u == (seed + CTimer::GetPreviousTimeInMS()) / 2000u) {
+        return;
+    }
+
+    switch (ap.m_nCarMission) {
+    case MISSION_RAMPLAYER_FARAWAY:
+    case MISSION_BLOCKPLAYER_FARAWAY:
+    case MISSION_GOTOCOORDINATES:
+    case MISSION_RAMCAR_FARAWAY:
+    case MISSION_BLOCKCAR_FARAWAY:
+    case MISSION_APPROACHPLAYER_FARAWAY:
+    case MISSION_FOLLOWCAR_FARAWAY:
+    case MISSION_KILLPED_FARAWAY:
+    case MISSION_DO_DRIVEBY_FARAWAY:
+        break;
+    default:
+        ap.m_ucCarMissionModeCounter = 0;
+        return;
+    }
+
+    // BUG: In the original the node ids (only the area ids are reset) are uninitialized if `FindNodesThisCarIsNearestTo` doesn't find anything
+    CNodeAddress nodeA{}, nodeB{};
+    FindNodesThisCarIsNearestTo(vehicle, nodeA, nodeB); // 0x42BD20
+    if (nodeA.m_wAreaId == UINT16_MAX) {
+        return;
+    }
+
+    // Is the vehicle already going the way it should?
+    const auto& cur  = ap.m_currentAddress;
+    const auto& next = ap.m_startingRouteNode;
+    const auto& prev = ap.m_endingRouteNode;
+    if (   (cur == nodeA && next == nodeB)
+        || (cur == nodeB && next == nodeA)
+        || (prev == nodeA && cur == nodeB)
+        || (prev == nodeB && cur == nodeA)
+        || cur == nodeB
+        || prev == nodeB
+    ) {
+        ap.m_ucCarMissionModeCounter = 0;
+        return;
+    }
+
+    // It must have been like this for a few ticks
+    if (++ap.m_ucCarMissionModeCounter <= 4) {
+        return;
+    }
+
+    // Where the vehicle is heading
+    CVector target;
+    switch (ap.m_nCarMission) {
+    case MISSION_RAMPLAYER_FARAWAY:
+    case MISSION_BLOCKPLAYER_FARAWAY:
+    case MISSION_APPROACHPLAYER_FARAWAY:
+        target = FindPlayerCoors(-1);
+        break;
+    case MISSION_GOTOCOORDINATES:
+        target = ap.m_vecDestinationCoors;
+        break;
+    default: // MISSION_RAMCAR_FARAWAY, MISSION_BLOCKCAR_FARAWAY, MISSION_FOLLOWCAR_FARAWAY, MISSION_KILLPED_FARAWAY, MISSION_DO_DRIVEBY_FARAWAY
+        target = ap.m_TargetEntity->GetPosition();
+        break;
+    }
+
+    const auto forVortex = vehicle->m_nModelIndex == MODEL_VORTEX;
+    const auto oneSide   = (bool)ap.carCtrlFlags.bCantGoAgainstTraffic;
+    constexpr auto MAX_DIST = std::bit_cast<float>(0x497423FEu); // ~999999.9
+
+    int16 numNodes;
+    float dist;
+    ThePaths.DoPathSearch(PATH_TYPE_VEH, vehicle->GetPosition(), nodeB, target, nullptr, numNodes, 0, &dist, MAX_DIST, nullptr, MAX_DIST, oneSide, ap.m_currentAddress, forVortex, false); // 0x4515D0
+    if (!(dist < 90000.0f) || numNodes < 2) { // 0x85900C
+        ap.m_ucCarMissionModeCounter = 0;
+        return;
+    }
+
+    // There is a route, so go along it
+    ap.m_currentAddress    = nodeA;
+    ap.m_startingRouteNode = nodeB;
+    FindLinksToGoWithTheseNodes(vehicle); // 0x42B470
+
+    ThePaths.DoPathSearch(PATH_TYPE_VEH, vehicle->GetPosition(), nodeB, target, ap.m_aPathFindNodesInfo.data(), reinterpret_cast<int16&>(ap.m_nPathFindNodesCount), 8, nullptr, MAX_DIST, nullptr, MAX_DIST, oneSide, ap.m_currentAddress, forVortex, false);
+    ap.RemoveOnePathNode(); // 0x41B950
+
+    ap.m_ucCarMissionModeCounter = 0;
 }
 
 // 0x423DE0
@@ -2624,13 +2829,13 @@ void CCarCtrl::SlowCarDownForObjectsSectorList(CPtrListDoubleLink<CObject*>& obj
 
         CVector centre;
         obj->GetBoundCentre(centre); // 0x534250
-        if (centre.x <= minX || centre.x >= maxX || centre.y <= minY || centre.y >= maxY) {
+        if (!(centre.x > minX) || !(centre.x < maxX) || !(centre.y > minY) || !(centre.y < maxY)) {
             continue;
         }
 
         {
             const auto zDiff = (double)centre.z - vehicle->GetPosition().z;
-            if ((zDiff < 0.0 ? -zDiff : zDiff) >= 10.0f) {
+            if (!((zDiff < 0.0 ? -zDiff : zDiff) < 10.0f)) { // x87: FABS
                 continue;
             }
         }
@@ -2647,7 +2852,7 @@ void CCarCtrl::SlowCarDownForObjectsSectorList(CPtrListDoubleLink<CObject*>& obj
 
         // x87: kept in extended precision
         const auto zErr = (double)centre.z - ((double)distAlongLine * vehFwdZ + vehPosZ);
-        if ((zErr >= 0.0 ? zErr : -zErr) >= 3.0f) {
+        if (!((zErr < 0.0 ? -zErr : zErr) < 3.0f)) {
             continue;
         }
 
@@ -2665,7 +2870,7 @@ void CCarCtrl::SlowCarDownForOtherCar(CEntity* entity, CVehicle* vehicle, float*
         const auto& entPos = entity->GetPosition();
         const auto& vehPos = vehicle->GetPosition();
         const auto  dot    = ((double)entPos.y - vehPos.y) * dir.y + ((double)entPos.x - vehPos.x) * dir.x;
-        if (!(dot >= 0.0)) {
+        if (dot < 0.0) {
             return;
         }
     }
@@ -2691,39 +2896,39 @@ void CCarCtrl::SlowCarDownForOtherCar(CEntity* entity, CVehicle* vehicle, float*
     float dist = TestCollisionBetween2MovingRects_OnlyFrontBumper(entity->AsVehicle(), vehicle, relX, relY, &vehDir, &entDir); // 0x425F70
     {
         const auto dist2 = TestCollisionBetween2MovingRects(vehicle, entity->AsVehicle(), -relX, -relY, &entDir, &vehDir); // 0x425B30
-        if (dist2 <= dist) {
+        if (!(dist < dist2)) {
             dist = dist2;
         }
     }
-    if (dist < 0.0f) {
+    if (!(dist >= 0.0f)) {
         return;
     }
 
-    if (!(dist >= 1.5f)) {
+    if (dist < 1.5f) {
         vehicle->m_autoPilot.carCtrlFlags.bHonkAtCar = true;
         vehicle->m_autoPilot.m_ObstructingEntity = entity;
         entity->RegisterReference(&vehicle->m_autoPilot.m_ObstructingEntity); // 0x571B70
 
         const double recip = 1.0f / (double)speedMult; // x87: kept in extended precision
-        if (!(dist >= recip)) {
+        if (dist < recip) {
             *speedFactor = 0.0f;
-        } else if (!(dist >= 3.0f * recip)) {
-            if (*speedFactor >= 1.0f) {
+        } else if (dist < 3.0f * recip) {
+            if (!(*speedFactor < 1.0f)) {
                 *speedFactor = 1.0f;
             }
         } else {
             const double scaled = ((double)dist - 0.2f) * std::bit_cast<float>(0x3F44EC4Fu); // 0x858FFC (~0.7692308)
-            dist = 0.0 <= scaled ? (float)scaled : 0.0f;
+            dist = 0.0 > scaled ? 0.0f : (float)scaled;
 
             const double newFactor = (double)dist * speedMult;
-            if (newFactor <= *speedFactor) {
+            if (!(newFactor > *speedFactor)) {
                 *speedFactor = (float)newFactor;
             }
         }
     }
 
     // Cars that are moving towards each other and have been in the traffic for a while make the one with the lower address go on (and stop being 'simple')
-    if (dist < 0.0f || dist >= 0.5f) {
+    if (!(dist >= 0.0f) || !(dist < 0.5f)) {
         return;
     }
     if (!entity->GetIsTypeVehicle()) {
@@ -2744,7 +2949,7 @@ void CCarCtrl::SlowCarDownForOtherCar(CEntity* entity, CVehicle* vehicle, float*
     if (entity == FindPlayerVehicle(-1, false)) {
         return;
     }
-    if (fwdDot >= -0.5f) {
+    if (!(fwdDot < -0.5f)) {
         return;
     }
     if (vehicle >= entity->AsVehicle()) { // Only one of the 2 cars (the one with the lower address) is affected
@@ -2752,7 +2957,7 @@ void CCarCtrl::SlowCarDownForOtherCar(CEntity* entity, CVehicle* vehicle, float*
     }
 
     const double newFactor = (double)speedMult * 0.2f; // x87: the comparison is done with the not rounded value
-    if (newFactor >= *speedFactor) {
+    if (!(newFactor < *speedFactor)) {
         *speedFactor = (float)newFactor;
     }
     if (vehicle->GetStatus() == STATUS_SIMPLE) {
@@ -4094,13 +4299,13 @@ void CCarCtrl::WeaveThroughCarsSectorList(CPtrListDoubleLink<CVehicle*>& ptrList
 
         CVector centre;
         other->GetBoundCentre(centre); // 0x534250
-        if (centre.x <= minX || centre.x >= maxX || centre.y <= minY || centre.y >= maxY) {
+        if (!(centre.x > minX) || !(centre.x < maxX) || !(centre.y > minY) || !(centre.y < maxY)) {
             continue;
         }
 
         {
             const auto zDiff = (double)other->GetPosition().z - vehicle->GetPosition().z; // x87: kept in extended precision
-            if ((zDiff >= 0.0 ? zDiff : -zDiff) >= 8.0f) {
+            if (!((zDiff < 0.0 ? -zDiff : zDiff) < 8.0f)) {
                 continue;
             }
         }
@@ -4127,13 +4332,13 @@ void CCarCtrl::WeaveThroughPedsSectorList(CPtrListDoubleLink<CPed*>& ptrList, CV
         ped->SetCurrentScanCode();
 
         const auto& pedPos = ped->GetPosition();
-        if (pedPos.x <= minX || pedPos.x >= maxX || pedPos.y <= minY || pedPos.y >= maxY) {
+        if (!(pedPos.x > minX) || !(pedPos.x < maxX) || !(pedPos.y > minY) || !(pedPos.y < maxY)) {
             continue;
         }
 
         {
             const auto zDiff = (double)ped->GetPosition().z - vehicle->GetPosition().z; // x87: kept in extended precision
-            if ((zDiff >= 0.0 ? zDiff : -zDiff) >= 4.0f) {
+            if (!((zDiff < 0.0 ? -zDiff : zDiff) < 4.0f)) {
                 continue;
             }
         }
@@ -4161,19 +4366,19 @@ void CCarCtrl::WeaveThroughObjectsSectorList(CPtrListDoubleLink<CObject*>& ptrLi
         obj->SetCurrentScanCode();
 
         const auto& objPos = obj->GetPosition();
-        if (objPos.x <= minX || objPos.x >= maxX || objPos.y <= minY || objPos.y >= maxY) {
+        if (!(objPos.x > minX) || !(objPos.x < maxX) || !(objPos.y > minY) || !(objPos.y < maxY)) {
             continue;
         }
 
         {
             const auto zDiff = (double)obj->GetPosition().z - vehicle->GetPosition().z; // x87: kept in extended precision
-            if ((zDiff >= 0.0 ? zDiff : -zDiff) >= 8.0f) {
+            if (!((zDiff < 0.0 ? -zDiff : zDiff) < 8.0f)) {
                 continue;
             }
         }
 
         // Only the objects that are standing upright
-        if (obj->GetMatrix().GetUp().z <= 0.9f) {
+        if (!(obj->GetMatrix().GetUp().z > 0.9f)) {
             continue;
         }
 

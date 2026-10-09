@@ -6,8 +6,9 @@
 #include "Ped.h"
 
 
-class CEventHealthLow : public CEventEditableResponse {
+class NOTSA_EXPORT_VTABLE CEventHealthLow : public CEventEditableResponse {
 public:
+    static void InjectHooks();
     CEventHealthLow() = default;
     ~CEventHealthLow() override = default;
 

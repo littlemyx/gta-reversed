@@ -6,6 +6,7 @@
 
 class NOTSA_EXPORT_VTABLE CEventChatPartner : public CEvent {
 public:
+    static void InjectHooks();
     bool  m_leadSpeaker;
     CPed* m_partner;
 

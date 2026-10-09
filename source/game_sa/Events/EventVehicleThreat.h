@@ -5,6 +5,7 @@
 
 class NOTSA_EXPORT_VTABLE CEventVehicleThreat : public CEventEditableResponse {
 public:
+    static void InjectHooks();
     CVehicle* m_Vehicle;
 
 public:

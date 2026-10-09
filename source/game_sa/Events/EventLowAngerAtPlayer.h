@@ -6,6 +6,7 @@
 
 class NOTSA_EXPORT_VTABLE CEventLowAngerAtPlayer : public CEventEditableResponse {
 public:
+    static void InjectHooks();
     CEventLowAngerAtPlayer() = default;
     ~CEventLowAngerAtPlayer() override = default;
 

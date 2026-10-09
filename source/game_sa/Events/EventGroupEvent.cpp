@@ -2,6 +2,20 @@
 
 #include "EventGroupEvent.h"
 
+void CEventGroupEvent::InjectHooks() {
+    RH_ScopedVirtualClass(CEventGroupEvent, 0x85AE48, 16);
+    RH_ScopedCategory("Events");
+
+    RH_ScopedVMTDestructorInstall(0x4B5E50);
+    RH_ScopedVMTInstall(GetEventType, 0x4AE030);
+    RH_ScopedVMTInstall(GetEventPriority, 0x4AE060);
+    RH_ScopedVMTInstall(GetLifeTime, 0x4AE040);
+    RH_ScopedVMTInstall(Clone, 0x4B6EE0);
+    RH_ScopedVMTInstall(AffectsPed, 0x4AE0D0);
+    RH_ScopedVMTInstall(AffectsPedGroup, 0x4AE0E0);
+    RH_ScopedVMTInstall(GetLocalSoundLevel, 0x4AE050);
+}
+
 // 0x4ADFD0
 CEventGroupEvent::CEventGroupEvent(CPed* ped, CEvent* event) : CEvent() {
     m_ped = ped;

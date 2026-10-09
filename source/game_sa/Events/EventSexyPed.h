@@ -9,6 +9,7 @@
 
 class NOTSA_EXPORT_VTABLE CEventSexyPed : public CEventEditableResponse {
 public:
+    static void InjectHooks();
     CPed* m_SexyPed;
 
 public:

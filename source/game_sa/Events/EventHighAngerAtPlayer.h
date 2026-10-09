@@ -6,8 +6,9 @@
 #include "Ped.h"
 
 
-class CEventHighAngerAtPlayer : public CEventEditableResponse {
+class NOTSA_EXPORT_VTABLE CEventHighAngerAtPlayer : public CEventEditableResponse {
 public:
+    static void InjectHooks();
     CEventHighAngerAtPlayer() = default;
     ~CEventHighAngerAtPlayer() override = default;
 

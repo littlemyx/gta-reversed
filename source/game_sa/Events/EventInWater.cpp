@@ -1,6 +1,19 @@
 #include "StdInc.h"
 #include "EventInWater.h"
 
+void CEventInWater::InjectHooks() {
+    RH_ScopedVirtualClass(CEventInWater, 0x85B4C8, 16);
+    RH_ScopedCategory("Events");
+
+    RH_ScopedVMTDestructorInstall(0x4B6610);
+    RH_ScopedVMTInstall(GetEventType, 0x4B1390);
+    RH_ScopedVMTInstall(GetEventPriority, 0x4B13B0);
+    RH_ScopedVMTInstall(GetLifeTime, 0x4B13A0);
+    RH_ScopedVMTInstall(Clone, 0x4B7810);
+    RH_ScopedVMTInstall(AffectsPed, 0x4B13D0);
+    RH_ScopedVMTInstall(TakesPriorityOver, 0x4B1420);
+}
+
 
 CEventInWater::CEventInWater(float acceleration) {
     m_acceleration = acceleration;

@@ -7,6 +7,7 @@ class CPed;
 
 class NOTSA_EXPORT_VTABLE CEventGunAimedAt : public CEventEditableResponse {
 public:
+    static void InjectHooks();
     CPed* m_AimedBy;
 
 public:

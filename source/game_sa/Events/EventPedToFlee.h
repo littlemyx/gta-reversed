@@ -5,6 +5,7 @@
 
 class NOTSA_EXPORT_VTABLE CEventPedToFlee : public CEvent {
 public:
+    static void InjectHooks();
     CPed* m_ped;
 
 public:

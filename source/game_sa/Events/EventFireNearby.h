@@ -5,6 +5,7 @@
 
 class NOTSA_EXPORT_VTABLE CEventFireNearby : public CEventEditableResponse {
 public:
+    static void InjectHooks();
     CVector m_position;
 
 public:

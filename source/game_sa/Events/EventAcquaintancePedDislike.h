@@ -9,6 +9,7 @@
 
 class NOTSA_EXPORT_VTABLE CEventAcquaintancePedDislike : public CEventAcquaintancePed {
 public:
+    static void InjectHooks();
     using CEventAcquaintancePed::CEventAcquaintancePed;
 
     eEventType GetEventType() const override { return EVENT_ACQUAINTANCE_PED_DISLIKE; }

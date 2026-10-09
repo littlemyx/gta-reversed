@@ -4,12 +4,13 @@
 
 class CPed;
 
-class NOTSA_EXPORT_VTABLE CEventDeadPed final : public CEventEditableResponse {
+class NOTSA_EXPORT_VTABLE CEventDeadPed : public CEventEditableResponse {
     CPed*  m_ped;
     bool   field_18;
     uint32 m_deathTimeInMs;
 
 public:
+    static void InjectHooks();
     CEventDeadPed(CPed* ped, bool bUnknown, uint32 deathTimeInMs);
     ~CEventDeadPed() override;
 

@@ -7,6 +7,7 @@ class CPed;
 
 class NOTSA_EXPORT_VTABLE CEventGroupEvent : public CEvent {
 public:
+    static void InjectHooks();
     CPed*   m_ped;
     CEvent* m_event;
 

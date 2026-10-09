@@ -5,6 +5,7 @@
 
 class NOTSA_EXPORT_VTABLE CEventGotKnockedOverByCar : public CEventEditableResponse {
 public:
+    static void InjectHooks();
     CVehicle* m_vehicle;
 
 public:

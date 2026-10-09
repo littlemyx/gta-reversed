@@ -6,6 +6,7 @@
 
 class NOTSA_EXPORT_VTABLE CEventSexyVehicle : public CEvent {
 public:
+    static void InjectHooks();
     CVehicle* m_vehicle;
 
 public:

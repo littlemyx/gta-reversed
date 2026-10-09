@@ -7,6 +7,7 @@ class NOTSA_EXPORT_VTABLE CEventDeath : public CEvent {
     uint32 m_deathTimeInMs;
 
 public:
+    static void InjectHooks();
     CEventDeath(bool bDrowning);
     CEventDeath(bool bDrowning, uint32 deathTimeInMs);
     ~CEventDeath() override = default;

@@ -6,6 +6,7 @@
 
 class NOTSA_EXPORT_VTABLE CEventCreatePartnerTask : public CEvent {
 public:
+    static void InjectHooks();
     int32 m_partnerType;
     CPed* m_partner;
     bool  m_isLeadSpeaker;

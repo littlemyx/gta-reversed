@@ -543,6 +543,33 @@
 
 #ifndef NOTSA_STANDALONE
 #include "WindowedMode.hpp"
+#include "EventCreatePartnerTask.h"
+#include "EventDraggedOutCar.h"
+#include "EventDeath.h"
+#include "EventDeadPed.h"
+#include "EventGroupEvent.h"
+#include "EventPotentialGetRunOver.h"
+#include "EventPedEnteredMyVehicle.h"
+#include "EventRevived.h"
+#include "EventChatPartner.h"
+#include "EventSexyPed.h"
+#include "EventSexyVehicle.h"
+#include "EventPedToChase.h"
+#include "EventPedToFlee.h"
+#include "EventVehicleThreat.h"
+#include "EventGunAimedAt.h"
+#include "EventInWater.h"
+#include "EventSpecial.h"
+#include "EventGotKnockedOverByCar.h"
+#include "EventFireNearby.h"
+#include "EventAcquaintancePedRespect.h"
+#include "EventAcquaintancePedLike.h"
+#include "EventAcquaintancePedDislike.h"
+#include "EventHealthLow.h"
+#include "EventHealthReallyLow.h"
+#include "EventLowAngerAtPlayer.h"
+#include "EventHighAngerAtPlayer.h"
+#include "EventInteriorUseInfo.h"
 #endif
 
 void InjectHooksMain() {
@@ -1334,7 +1361,7 @@ void InjectHooksMain() {
         CEventLeanOnVehicle::InjectHooks();
         CEventSeenCop::InjectHooks();
         CEventOnFire::InjectHooks();
-        // + CEventRevived::InjectHooks();
+        CEventRevived::InjectHooks();
         CEventHandlerHistory::InjectHooks();
         CEventEditableResponse::InjectHooks();
         CEventDamage::InjectHooks();
@@ -1342,16 +1369,16 @@ void InjectHooksMain() {
         CEventScriptedAttractor::InjectHooks();
         CEventGunShot::InjectHooks();
         CEventGunShotWhizzedBy::InjectHooks();
-        // + CEventGunAimedAt::InjectHooks();
-        // + CEventDeath::InjectHooks();
-        // + CEventDeadPed::InjectHooks();
-        // + CEventDraggedOutCar::InjectHooks();
-        // + CEventGotKnockedOverByCar::InjectHooks();
+        CEventGunAimedAt::InjectHooks();
+        CEventDeath::InjectHooks();
+        CEventDeadPed::InjectHooks();
+        CEventDraggedOutCar::InjectHooks();
+        CEventGotKnockedOverByCar::InjectHooks();
         CEventKnockOffBike::InjectHooks();
         CEventScriptCommand::InjectHooks();
         CEventSoundQuiet::InjectHooks();
-        // + CEventPedToChase::InjectHooks();
-        // + CEventPedToFlee::InjectHooks();
+        CEventPedToChase::InjectHooks();
+        CEventPedToFlee::InjectHooks();
         CEventPotentialWalkIntoVehicle::InjectHooks();
         CEventPotentialWalkIntoObject::InjectHooks();
         CEventPotentialWalkIntoFire::InjectHooks();
@@ -1370,8 +1397,8 @@ void InjectHooksMain() {
         CEventVehicleCollision::InjectHooks();
         CEventVehicleDamageCollision::InjectHooks();
         CEventHitByWaterCannon::InjectHooks();
-        // + CEventInWater::InjectHooks();
-        // + CEventCreatePartnerTask::InjectHooks();
+        CEventInWater::InjectHooks();
+        CEventCreatePartnerTask::InjectHooks();
         CEventInAir::InjectHooks();
         CEventStuckInAir::InjectHooks();
         CEventAcquaintancePed::InjectHooks();
@@ -1380,9 +1407,9 @@ void InjectHooksMain() {
         CEventLeaderQuitEnteringCarAsDriver::InjectHooks();
         CEventAreaCodes::InjectHooks();
         CEventLeaderEntryExit::InjectHooks();
-        // + CEventSpecial::InjectHooks();
-        // + CEventFireNearby::InjectHooks();
-        // + CEventGroupEvent::InjectHooks();
+        CEventSpecial::InjectHooks();
+        CEventFireNearby::InjectHooks();
+        CEventGroupEvent::InjectHooks();
         CEventGroup::InjectHooks();
         CEventGlobalGroup::InjectHooks();
         CEventPlayerCommandToGroup::InjectHooks();
@@ -1392,8 +1419,8 @@ void InjectHooksMain() {
         CEventNewGangMember::InjectHooks();
         CEventEscalator::InjectHooks();
         CEventDanger::InjectHooks();
-        // + CEventSexyVehicle::InjectHooks();
-        // + CEventChatPartner::InjectHooks();
+        CEventSexyVehicle::InjectHooks();
+        CEventChatPartner::InjectHooks();
         CEventCopCarBeingStolen::InjectHooks();
         CEventHandler::InjectHooks();
         CEventAcquaintancePedHate::InjectHooks();
@@ -1409,6 +1436,18 @@ void InjectHooksMain() {
         CEventSource::InjectHooks();
         CEventScanner::InjectHooks();
         CVehiclePotentialCollisionScanner::InjectHooks();
+        CEventPotentialGetRunOver::InjectHooks();
+        CEventPedEnteredMyVehicle::InjectHooks();
+        CEventSexyPed::InjectHooks();
+        CEventVehicleThreat::InjectHooks();
+        CEventAcquaintancePedRespect::InjectHooks();
+        CEventAcquaintancePedLike::InjectHooks();
+        CEventAcquaintancePedDislike::InjectHooks();
+        CEventHealthLow::InjectHooks();
+        CEventHealthReallyLow::InjectHooks();
+        CEventLowAngerAtPlayer::InjectHooks();
+        CEventHighAngerAtPlayer::InjectHooks();
+        CEventInteriorUseInfo::InjectHooks();
     };
 
     const auto Fx = []() {

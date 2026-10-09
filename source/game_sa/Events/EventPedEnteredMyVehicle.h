@@ -6,6 +6,7 @@
 
 class NOTSA_EXPORT_VTABLE CEventPedEnteredMyVehicle : public CEventEditableResponse {
 public:
+    static void InjectHooks();
     CEventPedEnteredMyVehicle(/*const*/ CPed* ped, /*const*/ CVehicle* vehicle, eTargetDoor targetDoor); // todo: make const as OG
     ~CEventPedEnteredMyVehicle() override;
 

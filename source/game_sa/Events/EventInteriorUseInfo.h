@@ -9,6 +9,7 @@
 
 class NOTSA_EXPORT_VTABLE CEventInteriorUseInfo : public CEvent {
 public:
+    static void InjectHooks();
     InteriorInfo_t* m_InteriorInfo;
     Interior_c*     m_Interior;
     uint32          m_ActionAnimTime;

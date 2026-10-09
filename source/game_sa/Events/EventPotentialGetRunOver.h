@@ -6,6 +6,7 @@
 
 class NOTSA_EXPORT_VTABLE CEventPotentialGetRunOver : public CEventEditableResponse {
 public:
+    static void InjectHooks();
     CVehicle* m_Vehicle;
 
 public:

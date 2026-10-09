@@ -7,6 +7,7 @@
 
 class NOTSA_EXPORT_VTABLE CEventRevived : public CEvent {
 public:
+    static void InjectHooks();
     CEventRevived() = default;
     ~CEventRevived() override = default;
 

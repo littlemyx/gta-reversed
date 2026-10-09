@@ -6,6 +6,7 @@
 
 class NOTSA_EXPORT_VTABLE CEventInWater : public CEvent {
 public:
+    static void InjectHooks();
     float m_acceleration;
 
 public:

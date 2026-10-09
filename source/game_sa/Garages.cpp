@@ -382,7 +382,7 @@ bool CGarages::IsThisCarWithinGarageArea(int16 garageId, CEntity* entity) {
 // 0x448990
 bool CGarages::IsPointWithinAnyGarage(CVector& point) {
     for (auto& garage : aGarages) {
-        if (garage.m_nType != eGarageType::INVALID || garage.IsPointInsideGarage(point)) {
+        if (garage.m_nType != eGarageType::INVALID && garage.IsPointInsideGarage(point)) {
             return true;
         }
     }

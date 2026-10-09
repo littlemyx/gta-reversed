@@ -94,7 +94,6 @@ void CTaskComplexWanderStandard::SetNextMinScanTime(CPed* ped) {
 // 0x66AFD0
 bool CTaskComplexWanderStandard::LookForSexyCars(CPed* ped) {
     const auto& pedPos = ped->GetPosition();
-    const auto  pedFwd = ped->GetForward();
 
     for (auto* const entity : ped->GetIntelligence()->m_vehicleScanner.m_apEntities) {
         auto* const veh = static_cast<CVehicle*>(entity);
@@ -118,6 +117,7 @@ bool CTaskComplexWanderStandard::LookForSexyCars(CPed* ped) {
         if (!((dz * dz + dy * dy) + dx * dx < (double)RANGE * (double)RANGE)) {
             continue;
         }
+        const auto& pedFwd = ped->GetForward(); // NOTE: the original reads the matrix only here
         if (!((dz * pedFwd.z + dy * pedFwd.y) + dx * pedFwd.x > 0.0)) { // 0x858B50
             continue;
         }
@@ -194,8 +194,8 @@ bool CTaskComplexWanderStandard::LookForChatPartners(CPed* ped) {
 
         const auto& otherPos = other->GetPosition();
         const CVector diff   = otherPos - pedPos; // 0x40FE00
-        // 0x406DA0 (extended precision: (z^2 + y^2) + x^2)
-        const double distSq = ((double)diff.z * diff.z + (double)diff.y * diff.y) + (double)diff.x * diff.x;
+        // 0x406DA0 (extended precision: (x^2 + y^2) + z^2)
+        const double distSq = ((double)diff.x * diff.x + (double)diff.y * diff.y) + (double)diff.z * diff.z;
         constexpr float RANGE = 10.0f; // 0x86FCD4
         if (!(distSq < (double)RANGE * (double)RANGE)) {
             continue;

@@ -1248,7 +1248,7 @@ void InjectHooksMain() {
         CTaskComplexGoToPointAndStandStill::InjectHooks();
         CTaskSimpleAchieveHeading::InjectHooks();
         CTaskSimpleGiveCPR::InjectHooks();
-        // CTaskSimpleCarSetPedInAsPassenger::InjectHooks();
+        CTaskSimpleCarSetPedInAsPassenger::InjectHooks();
         CTaskComplexDriveFireTruck::InjectHooks();
         CTaskSimpleSwim::InjectHooks();
         CTaskComplexWalkRoundObject::InjectHooks();
@@ -1260,7 +1260,7 @@ void InjectHooksMain() {
         CTaskSimpleThrowProjectile::InjectHooks();
         CTaskSimpleGoToPoint::InjectHooks();
         // CTaskComplexWanderMedic::InjectHooks();
-        // CTaskSimpleCarDriveTimed::InjectHooks();
+        CTaskSimpleCarDriveTimed::InjectHooks();
         // CTaskComplexDriveWander::InjectHooks();
         CTaskSimpleStealthKill::InjectHooks();
         CTaskSimpleCarSetPedOut::InjectHooks();
@@ -1285,7 +1285,7 @@ void InjectHooksMain() {
         CTaskSimpleHoldEntity::InjectHooks();
         CTaskSimpleGoTo::InjectHooks();
         CTaskComplexPartner::InjectHooks();
-        // CTaskSimpleCarSetPedInAsDriver::InjectHooks();
+        CTaskSimpleCarSetPedInAsDriver::InjectHooks();
         CTaskComplexWander::InjectHooks();
         CTaskSimplePutDownEntity::InjectHooks();
         CTaskComplexUseSwatRope::InjectHooks();

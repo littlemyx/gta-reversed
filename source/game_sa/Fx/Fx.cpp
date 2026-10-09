@@ -8,6 +8,9 @@
 #include "StdInc.h"
 
 #include "Fx.h"
+#include "Localisation.h"
+#include "Shadows.h"
+#include "Camera.h"
 
 static auto& TempVertexBuffer = StaticRef<std::array<RxObjSpace3DVertex, 4>>(0xC4D958);
 
@@ -33,12 +36,12 @@ void Fx_c::InjectHooks() {
     // RH_ScopedInstall(CreateMatFromVec, 0x49E950);
     // + RH_ScopedInstall(SetFxQuality, 0x49EA40);
     // + RH_ScopedInstall(GetFxQuality, 0x49EA50);
-    // RH_ScopedInstall(AddBlood, 0x49EB00);
+    RH_ScopedInstall(AddBlood, 0x49EB00);
     // RH_ScopedInstall(AddWood, 0x49EE10);
     // RH_ScopedInstall(AddSparks, 0x49F040);
     // RH_ScopedInstall(AddTyreBurst, 0x49F300);
     // RH_ScopedInstall(AddBulletImpact, 0x49F3D0);
-    // RH_ScopedInstall(AddPunchImpact, 0x49F670);
+    RH_ScopedInstall(AddPunchImpact, 0x49F670);
     // RH_ScopedInstall(AddDebris, 0x49F750);
     // RH_ScopedInstall(AddGlass, 0x49F970);
     // RH_ScopedInstall(AddWheelSpray, 0x49FB30);
@@ -230,7 +233,51 @@ FxQuality_e Fx_c::GetFxQuality() const {
 
 // 0x49EB00
 void Fx_c::AddBlood(const CVector& pos, const CVector& direction, int32 amount, float lightMult) {
-    ((void(__thiscall*)(Fx_c*, const CVector&, const CVector&, int32, float))0x49EB00)(this, pos, direction, amount, lightMult);
+    if (!CLocalisation::Blood()) { // 0x56D230
+        return;
+    }
+
+    // Distance check, accumulated in extended precision
+    {
+        const auto& cam = TheCamera.GetPosition();
+        const double dx = (double)cam.x - pos.x;
+        const double dy = (double)cam.y - pos.y;
+        const double dz = (double)cam.z - pos.z;
+        if (dx * dx + dy * dy + dz * dz > 625.0) { // 0x85A6E8 = 25^2 (FCOMP + JE: NaN passes)
+            return;
+        }
+    }
+
+    // Wrap the 0..9999 random into a [0..1) float multiplier
+    const auto Rand10000 = [] { return (double)(rand() % 10000) * (double)1e-4f; }; // 0x821B1E, 0x858FC4
+
+    FxPrtMult_c fxMults{ 0.5f, 0.0f, 0.0f, 1.0f, 0.8f, 0.0f, 0.8f }; // 0x4AB290
+    for (auto i = 0; i < amount; i++) {
+        fxMults.m_fSize = (float)(Rand10000() * (double)0.3f + (double)0.7f); // 0x858C24, 0x858CB0
+
+        CVector vel{ direction.x * 1.5f, direction.y * 1.5f, direction.z * 1.5f }; // 0x858CE8
+        vel.x = (float)(Rand10000() * 2.0 - 1.0 + vel.x);
+        vel.y = (float)(Rand10000() * 2.0 - 1.0 + vel.y);
+        vel.z = (float)(Rand10000() * 2.0 - 1.0 + vel.z);
+
+        m_Blood->AddParticle(pos, vel, 0.0f, fxMults, -1.0f, lightMult, 0.6f, false); // 0x4AA440
+    }
+
+    CVector dropPos{ direction.x * 0.5f + pos.x, direction.y * 0.5f + pos.y, direction.z * 0.5f + pos.z }; // 0x858B8C
+    dropPos.x = (float)(Rand10000() * (double)0.2f - (double)0.1f + dropPos.x); // 0x858CC4, 0x858B1C
+    const auto yRand = Rand10000();
+    m_Randomizer++;
+    dropPos.y = (float)(yRand * (double)0.2f - (double)0.1f + dropPos.y);
+    dropPos.z += 1.0f;
+
+    switch (m_Randomizer & 7) {
+    case 5:
+        CShadows::AddPermanentShadow(SHADOW_DEFAULT, gpBloodPoolTex, &dropPos, 0.1f, 0.0f, 0.0f, -0.1f, 255, 200, 0, 0, 4.0f, (rand() & 0xFFF) + 2000, 1.0f); // 0x706F60
+        break;
+    case 2:
+        CShadows::AddPermanentShadow(SHADOW_DEFAULT, gpBloodPoolTex, &dropPos, 0.2f, 0.0f, 0.0f, -0.2f, 255, 200, 0, 0, 4.0f, (rand() & 0xFFF) + 8000, 1.0f); // 0x706F60
+        break;
+    }
 }
 
 // 0x49EE10
@@ -254,8 +301,19 @@ void Fx_c::AddBulletImpact(const CVector& posn, const CVector& direction, int32 
 }
 
 // 0x49F670
+// NOTE: the 3rd argument is unused by the original (RET 0xC, never read)
 void Fx_c::AddPunchImpact(const CVector& pos, const CVector& velocity, int32 num) {
-    ((void(__thiscall*)(Fx_c*, const CVector&, const CVector&, int32))0x49F670)(this, pos, velocity, num);
+    const auto& cam = TheCamera.GetPosition();
+    const double dx = (double)cam.x - pos.x;
+    const double dy = (double)cam.y - pos.y;
+    const double dz = (double)cam.z - pos.z;
+    if (dx * dx + dy * dy + dz * dz > 625.0) { // 0x85A6E8 (FCOMP + JE: NaN passes)
+        return;
+    }
+
+    const FxPrtMult_c fxMults{ 1.0f, 1.0f, 1.0f, 0.4f, 0.1f, 0.0f, 0.1f }; // 0x4AB290
+    m_SmokeII3expand->AddParticle(pos, velocity, 0.0f,  fxMults, -1.0f, 1.2f, 0.6f, false); // 0x4AA440
+    m_SmokeII3expand->AddParticle(pos, velocity, 0.05f, fxMults, -1.0f, 1.2f, 0.6f, false); // 0x4AA440
 }
 
 // 0x49F750

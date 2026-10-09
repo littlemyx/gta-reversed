@@ -323,6 +323,25 @@ if (${RE_PROJECT}_RW_LIBRW)
     target_include_directories(rw_texture_test BEFORE PRIVATE fakerw)
     target_link_libraries(rw_texture_test PRIVATE librw d3d9 user32)
     set_target_properties(rw_texture_test PROPERTIES COMPILE_WARNING_AS_ERROR OFF)
+
+
+    # P2B-04c unit test of the atomic / clump / plugin-registration layer (Wine-runnable; optional SA DFF paths on the command line)
+    add_executable(rw_atomic_clump_test EXCLUDE_FROM_ALL
+        "${PROJECT_SOURCE_DIR}/tests/standalone/rw_atomic_clump_test.cpp"
+        standalone/rw/atomic.cpp
+        standalone/rw/clump.cpp
+        standalone/rw/plugins.cpp
+        standalone/rw/frame.cpp
+        standalone/rw/light.cpp
+        standalone/rw/world.cpp
+        standalone/rw/material.cpp
+        standalone/rw/geometry.cpp
+    )
+    target_compile_features(rw_atomic_clump_test PRIVATE cxx_std_23)
+    target_compile_definitions(rw_atomic_clump_test PRIVATE NOTSA_RW_LIBRW RW_D3D9)
+    target_include_directories(rw_atomic_clump_test BEFORE PRIVATE fakerw)
+    target_link_libraries(rw_atomic_clump_test PRIVATE librw d3d9 user32)
+    set_target_properties(rw_atomic_clump_test PROPERTIES COMPILE_WARNING_AS_ERROR OFF)
 endif()
 
 #--------------------------------------------------------------------

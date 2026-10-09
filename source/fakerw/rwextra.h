@@ -288,3 +288,33 @@ RwUInt32                RwTexDictionaryStreamGetSize(const RwTexDictionary* texD
 #define rwTEXTUREADDRESSINGVMASK    0x0000F000
 #define rwTEXTUREADDRESSINGMASK     (rwTEXTUREADDRESSINGUMASK | rwTEXTUREADDRESSINGVMASK)
 #endif
+
+
+//--------------------------------------------------------------------------------------------------
+// 04c (standalone/rw/{atomic,clump,plugins}.cpp): atomic / clump API beyond rwapi.h + plugin helpers. Only RwShimEnsureAtomicRenderSlot is
+// shim-specific; the rest is stock RW API the game does not call outside the stock headers.
+//--------------------------------------------------------------------------------------------------
+// Registers the shim-private atomic render-callback plugin (idempotent per Engine::init cycle); needs numAllocated(Atomic) == 0 the first time.
+void RwShimEnsureAtomicRenderSlot();
+const RwSphere* RpAtomicGetWorldBoundingSphere(RpAtomic* atomic);
+
+RpClump* RpClumpStreamWrite(RpClump* clump, RwStream* stream);
+RwUInt32 RpClumpStreamGetSize(RpClump* clump);
+RpClump* RpClumpAddLight(RpClump* clump, RpLight* light);
+RpClump* RpClumpRemoveLight(RpClump* clump, RpLight* light);
+RpClump* RpClumpForAllLights(RpClump* clump, RpLightCallBack callback, void* data);
+RwInt32  RpClumpGetNumLights(RpClump* clump);
+RpClump* RpClumpAddCamera(RpClump* clump, RwCamera* camera);
+RpClump* RpClumpRemoveCamera(RpClump* clump, RwCamera* camera);
+RpClump* RpClumpForAllCameras(RpClump* clump, RwCameraCallBack callback, void* data);
+RwInt32  RpClumpGetNumCameras(RpClump* clump);
+
+RwInt32 RpAtomicGetPluginOffset(RwUInt32 pluginID);
+RwInt32 RpClumpGetPluginOffset(RwUInt32 pluginID);
+RwInt32 RpGeometryGetPluginOffset(RwUInt32 pluginID);
+RwInt32 RpMaterialGetPluginOffset(RwUInt32 pluginID);
+RwInt32 RpAtomicSetStreamAlwaysCallBack(RwUInt32 pluginID, RwPluginDataChunkAlwaysCallBack alwaysCB);
+RwInt32 RpGeometrySetStreamAlwaysCallBack(RwUInt32 pluginID, RwPluginDataChunkAlwaysCallBack alwaysCB);
+RwInt32 RpMaterialSetStreamAlwaysCallBack(RwUInt32 pluginID, RwPluginDataChunkAlwaysCallBack alwaysCB);
+RwInt32 RpAtomicSetStreamRightsCallBack(RwUInt32 pluginID, RwPluginDataChunkRightsCallBack rightsCB);
+RwInt32 RpMaterialSetStreamRightsCallBack(RwUInt32 pluginID, RwPluginDataChunkRightsCallBack rightsCB);

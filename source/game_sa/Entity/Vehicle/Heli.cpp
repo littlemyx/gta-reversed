@@ -441,12 +441,12 @@ void CHeli::SearchLightCone(int32 coronaIndex,
 
         auto& vtxNear = TempBufferVertices.m_3d[idx];
         auto& vtxFar  = TempBufferVertices.m_3d[idx + 1];
-        vtxNear.objVertex.x = P.x;
-        vtxNear.objVertex.y = P.y;
-        vtxNear.objVertex.z = P.z;
-        vtxFar.objVertex.x  = R.x;
-        vtxFar.objVertex.y  = R.y;
-        vtxFar.objVertex.z  = R.z;
+        RwCompatVertexPos(vtxNear).x = P.x;
+        RwCompatVertexPos(vtxNear).y = P.y;
+        RwCompatVertexPos(vtxNear).z = P.z;
+        RwCompatVertexPos(vtxFar).x  = R.x;
+        RwCompatVertexPos(vtxFar).y  = R.y;
+        RwCompatVertexPos(vtxFar).z  = R.z;
 
         CVector toVtx{ P.x - origin.x, P.y - origin.y, P.z - origin.z };
         NormaliseOriginal(toVtx);
@@ -1187,7 +1187,7 @@ void CHeli::ProcessFlyingCarStuff() {
         // 0x6C501D - Rotor blades
         if (m_fHeliRotorSpeed > 0.015f && m_aCarNodes[HELI_STATIC_ROTOR]) { // 0x8717A8
             auto* const rotorFrame = m_aCarNodes[HELI_STATIC_ROTOR];
-            CMatrix rotorMat{ &rotorFrame->modelling, false };
+            CMatrix rotorMat{ RwFrameGetMatrix(rotorFrame), false };
 
             RpAtomic* atomic = nullptr;
             RwFrameForAllObjects(rotorFrame, GetCurrentAtomicObjectCB, &atomic);
@@ -1235,7 +1235,7 @@ void CHeli::ProcessFlyingCarStuff() {
 
         const double distSq = dxe * dx + (double)dy * dy + (double)dz * dz;
         if (distSq < 400.0 && std::abs((double)m_fPropRotate - (double)m_wheelRotation[1]) > (double)0.5235988f) { // 0x85A700, 0x858F20
-            CMatrix rotorMat{ &m_aCarNodes[HELI_STATIC_ROTOR]->modelling, false };
+            CMatrix rotorMat{ RwFrameGetMatrix(m_aCarNodes[HELI_STATIC_ROTOR]), false };
             // NOTSA: The original also constructs a second, never used, local CMatrix here
 
             const auto& right = rotorMat.GetRight();
@@ -1360,7 +1360,7 @@ void CHeli::PreRender() {
         if (!frame) {
             return;
         }
-        rotorMat.Attach(&frame->modelling, false);
+        rotorMat.Attach(RwFrameGetMatrix(frame), false);
         const auto pos = rotorMat.GetPosition();
         if (aroundZ) {
             rotorMat.SetRotateZ(angle);

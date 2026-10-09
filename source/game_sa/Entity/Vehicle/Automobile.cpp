@@ -5635,7 +5635,7 @@ void CAutomobile::UpdateWheelMatrix(int32 nodeIndex, int32 flags) {
         }
     }
 
-    mat.Attach(&frame->modelling, false); // 0x6AA490
+    mat.Attach(RwFrameGetMatrix(frame), false); // 0x6AA490
 
     CVector savedPos = mat.GetPosition();
     savedPos.z = m_wheelPosition[wheel];
@@ -7447,9 +7447,8 @@ void CAutomobile::Render() {
     RwRenderStateSet(rwRENDERSTATEALPHATESTFUNCTIONREF, RWRSTATE(1));
 
     const auto RenderNodeAtomic = [](RwFrame* frame) {
-        // The original calls `GetFirstObject` twice (once for the callee, once for the argument)
-        auto* const callee = (RpAtomic*)GetFirstObject(frame);
-        callee->renderCallBack((RpAtomic*)GetFirstObject(frame));
+        // The original calls `GetFirstObject` twice (once for the callee, once for the argument): `atomic->renderCallBack(atomic)` == RpAtomicRender(atomic)
+        RpAtomicRender((RpAtomic*)GetFirstObject(frame));
     };
 
     if (!CCheat::IsActive(CHEAT_INVISIBLE_CAR)) { // 0x96914B

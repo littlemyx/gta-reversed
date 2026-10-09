@@ -195,3 +195,41 @@ inline RwV2d RwCameraGetRecipViewWindow(const RwCamera* camera) {
     recip.y = 1.0f / camera->viewWindow.y;
     return recip;
 }
+
+// 03a --------------------------------------------------------------------------------------------------------------------------------
+// P2B-03a (raster + image, standalone/rw/{raster,image}.cpp): RW functions that are not in rwapi.h because the game calls them only through
+// the stock RW headers (the generated rwapi.h lists what game code calls). Same signatures as RW 3.6.
+//--------------------------------------------------------------------------------------------------
+RwUInt8*  RwRasterLockPalette(RwRaster* raster, RwInt32 lockMode);
+RwRaster* RwRasterGetOffset(RwRaster* raster, RwInt16* xOffset, RwInt16* yOffset);
+RwInt32   RwRasterGetNumLevels(RwRaster* raster);
+RwRaster* RwRasterSubRaster(RwRaster* subRaster, RwRaster* raster, RwRect* rect);
+RwRaster* RwRasterGetCurrentContext(void);
+RwRaster* RwRasterRender(RwRaster* raster, RwInt32 x, RwInt32 y);
+RwRaster* RwRasterRenderScaled(RwRaster* raster, RwRect* rect);
+RwBool    RwRasterClear(RwInt32 pixelValue);
+RwBool    RwRasterClearRect(RwRect* rpRect, RwInt32 pixelValue);
+RwRaster* RwRasterShowRaster(RwRaster* raster, void* dev, RwUInt32 flags);
+RwRaster* RwRasterRead(const RwChar* filename);
+RwRaster* RwRasterReadMaskedRaster(const RwChar* filename, const RwChar* maskname);
+void      RwRasterSetFreeListCreateParams(RwInt32 blockSize, RwInt32 numBlocksToPrealloc);
+
+RwImage*       RwImageFreePixels(RwImage* image);
+RwImage*       RwImageCopy(RwImage* destImage, const RwImage* sourceImage);
+RwImage*       RwImageResize(RwImage* image, RwInt32 width, RwInt32 height);
+RwImage*       RwImageResample(RwImage* dstImage, const RwImage* srcImage);
+RwImage*       RwImageCreateResample(const RwImage* srcImage, RwInt32 width, RwInt32 height);
+RwImage*       RwImageApplyMask(RwImage* image, const RwImage* mask);
+RwImage*       RwImageMakeMask(RwImage* image);
+RwImage*       RwImageRead(const RwChar* imageName);
+RwImage*       RwImageReadMaskedImage(const RwChar* imageName, const RwChar* maskname);
+RwImage*       RwImageWrite(RwImage* image, const RwChar* imageName);
+const RwChar*  RwImageSetPath(const RwChar* path);
+RwChar*        RwImageGetPath(void);
+RwImage*       RtBMPImageWrite(RwImage* image, const RwChar* imageName);
+RwImage*       RtPNGImageRead(const RwChar* imageName);
+
+// Not macros in RW 3.6 headers' function form; as in RW they only store the pointer / value (the image does not own what it is given).
+inline RwImage* RwImageSetStride(RwImage* image, RwInt32 stride)    { image->stride = stride; return image; }
+inline RwImage* RwImageSetPixels(RwImage* image, RwUInt8* pixels)   { image->pixels = pixels; return image; }
+inline RwImage* RwImageSetPalette(RwImage* image, RwRGBA* palette)  { image->palette = reinterpret_cast<uint8_t*>(palette); return image; }

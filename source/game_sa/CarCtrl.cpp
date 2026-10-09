@@ -42,6 +42,19 @@ auto& s_PlaneAIElevatorGain = StaticRef<float>(0x8A5B50);
 //! 0x8A5B54 - Cruise speed of remote controlled planes
 auto& s_PlaneAIRCCruiseSpeed = StaticRef<float>(0x8A5B54);
 
+//! 0x59C910 - `CVector::Normalise`. The sum of squares and the reciprocal stay in the FPU registers (extended precision), the shared `CVector::Normalise` rounds them to float
+static void NormaliseOriginal(CVector& v) {
+    const double sumSq = ((double)v.x * v.x + (double)v.y * v.y) + (double)v.z * v.z;
+    if (sumSq <= 0.0) {
+        v.x = 1.0f; // (NaN takes the sqrt path)
+    } else {
+        const double recip = 1.0 / std::sqrt(sumSq);
+        v.x = (float)(v.x * recip);
+        v.y = (float)(v.y * recip);
+        v.z = (float)(v.z * recip);
+    }
+}
+
 //! 0x422E10 - Casts a ray ahead of the plane in the given direction (pitch/heading), returns true (and the z of the hit point) if something was hit
 static bool ProbePlaneObstacle(CPlane* plane, float pitch, float heading, float* outHitZ) {
     const auto& moveSpeed = plane->m_vecMoveSpeed;
@@ -156,6 +169,10 @@ void CCarCtrl::InjectHooks()
     RH_ScopedInstall(SteerAIBoatWithPhysicsHeadingForTarget, 0x428BE0);
     RH_ScopedInstall(SteerAIBoatWithPhysicsAttackingPlayer, 0x428DE0);
     RH_ScopedInstall(SteerAIBoatWithPhysicsCirclingPlayer, 0x429090);
+    RH_ScopedInstall(TriggerDogFightMoves, 0x429300);
+    RH_ScopedInstall(TestWhetherToFirePlaneGuns, 0x429520);
+    RH_ScopedInstall(GetAIPlaneToAttackPlayer, 0x429780);
+    RH_ScopedInstall(GetAIPlaneToDoDogFight, 0x429890);
     RH_ScopedInstall(WeaveForObject, 0x426BC0);
     RH_ScopedInstall(WeaveForOtherCar, 0x426350);
 }
@@ -950,12 +967,85 @@ void CCarCtrl::GetAIHeliToFlyInDirection(CAutomobile* automobile) {
 
 // 0x429780
 void CCarCtrl::GetAIPlaneToAttackPlayer(CAutomobile* automobile) {
-    plugin::Call<0x429780, CAutomobile*>(automobile);
+    const auto plane = static_cast<CPlane*>(automobile);
+
+    // Aim at where the player will be in 50 frames
+    const auto& playerSpeed = FindPlayerSpeed(-1);
+    const auto  speedX      = (float)((double)playerSpeed.x * 50.0f);
+    const auto  speedY      = (float)((double)playerSpeed.y * 50.0f);
+    const auto  speedZ      = (float)((double)playerSpeed.z * 50.0f);
+    const auto  playerPos   = FindPlayerCoors(-1);
+
+    // x87: The X, Y values are kept in extended precision (the Z is rounded, as it's stored)
+    const auto  targetZ = (float)((double)speedZ + playerPos.z);
+    const auto& pos     = plane->GetPosition();
+    plane->m_planeHeading = CGeneral::GetATanOfXY(
+        (float)(((double)speedX + playerPos.x) - pos.x),
+        (float)(((double)speedY + playerPos.y) - pos.y)
+    );
+    plane->m_maxAltitude = targetZ;
+    FlyAIPlaneInCertainDirection(plane);
+
+    if (FindPlayerVehicle(-1, false)) {
+        if (FindPlayerVehicle(-1, false)->GetVehicleAppearance() == VEHICLE_APPEARANCE_PLANE) {
+            TriggerDogFightMoves(plane, FindPlayerVehicle(-1, false));
+        }
+    }
+    TestWhetherToFirePlaneGuns(plane, FindPlayerVehicle(-1, false));
+    PossiblyFireHSMissile(plane, FindPlayerVehicle(-1, false));
 }
 
 // 0x429890
 void CCarCtrl::GetAIPlaneToDoDogFight(CAutomobile* automobile) {
-    plugin::Call<0x429890, CAutomobile*>(automobile);
+    const auto plane  = static_cast<CPlane*>(automobile);
+    const auto target = plane->m_autoPilot.m_TargetEntity;
+
+    // Where the target will be in 50 frames
+    // x87: The X, Y values are kept in extended precision (the Z is rounded, as it's stored)
+    const auto& targetPos   = target->GetPosition();
+    const auto& targetSpeed = target->m_vecMoveSpeed;
+    const auto  stepZ       = (float)((double)targetSpeed.z * 50.0f);
+    const auto  predX       = (float)((double)targetSpeed.x * 50.0f + targetPos.x);
+    const auto  predY       = (float)((double)targetSpeed.y * 50.0f + targetPos.y);
+    const auto  predZ       = (float)((double)stepZ + targetPos.z);
+
+    auto&       dest = plane->m_autoPilot.m_vecDestinationCoors;
+    const auto& pos  = plane->GetPosition();
+    if (plane->m_autoPilot.m_bPlaneDogfightSomething) {
+        // Flying to the random point
+        plane->m_planeHeading = CGeneral::GetATanOfXY(
+            (float)((double)dest.x - pos.x),
+            (float)((double)dest.y - pos.y)
+        );
+        plane->m_maxAltitude = dest.z;
+
+        // Reached it?
+        const auto& pos2 = plane->GetPosition();
+        const auto  dx   = (double)dest.x - pos2.x; // x87: not rounded
+        const auto  dy   = (double)dest.y - pos2.y;
+        if (std::sqrt(dy * dy + dx * dx) < 50.0f) {
+            plane->m_autoPilot.m_bPlaneDogfightSomething = false;
+        }
+    } else {
+        // Chase the target
+        plane->m_planeHeading = CGeneral::GetATanOfXY(
+            (float)((double)predX - pos.x),
+            (float)((double)predY - pos.y)
+        );
+        plane->m_maxAltitude = predZ;
+
+        // Every now and then fly to a random point near the target instead
+        if ((rand() & 0x3FF) == 500) {
+            plane->m_autoPilot.m_bPlaneDogfightSomething = true;
+            dest.x = (float)((((double)rand() * RAND_MAX_FLOAT_RECIPROCAL) * 600.0f + predX) - 300.0f);
+            dest.y = (float)((((double)rand() * RAND_MAX_FLOAT_RECIPROCAL) * 600.0f + predY) - 300.0f);
+            dest.z = (float)((double)predZ + 50.0f);
+        }
+    }
+
+    FlyAIPlaneInCertainDirection(plane);
+    TestWhetherToFirePlaneGuns(plane, target);
+    PossiblyFireHSMissile(plane, target);
 }
 
 // 0x42F370
@@ -1801,17 +1891,7 @@ void CCarCtrl::SteerAIBoatWithPhysicsCirclingPlayer(CVehicle* vehicle, float* pS
     // Direction from the vehicle to the player (2D)
     const auto playerPos = FindPlayerCoors();
     CVector toPlayer{ (float)((double)playerPos.x - vehPos.x), (float)((double)playerPos.y - vehPos.y), 0.0f };
-    { // 0x59C910 - the sum of squares and the reciprocal stay in the FPU registers (extended precision); the shared `CVector::Normalise` rounds them to float
-        const double sumSq = ((double)toPlayer.x * toPlayer.x + (double)toPlayer.y * toPlayer.y) + (double)toPlayer.z * toPlayer.z;
-        if (sumSq <= 0.0) {
-            toPlayer.x = 1.0f;
-        } else {
-            const double recip = 1.0 / std::sqrt(sumSq);
-            toPlayer.x = (float)(toPlayer.x * recip);
-            toPlayer.y = (float)(toPlayer.y * recip);
-            toPlayer.z = (float)(toPlayer.z * recip);
-        }
-    }
+    NormaliseOriginal(toPlayer); // 0x59C910
 
     // Offset (perpendicular to the direction) to the point to circle around - the direction of circling depends on the random seed
     const auto radius = (vehicle->m_nRandomSeed & 1) ? -12.0f : 26.0f;
@@ -2198,7 +2278,34 @@ float CCarCtrl::TestCollisionBetween2MovingRects_OnlyFrontBumper(CVehicle* vehic
 
 // 0x429520
 void CCarCtrl::TestWhetherToFirePlaneGuns(CVehicle* vehicle, CEntity* target) {
-    plugin::Call<0x429520, CVehicle*, CEntity*>(vehicle, target);
+    vehicle->vehicleFlags.bFireGun = false;
+
+    if (vehicle->m_nVehicleWeaponInUse != CAR_WEAPON_NOT_USED && vehicle->m_nVehicleWeaponInUse != CAR_WEAPON_HEAVY_GUN) {
+        return;
+    }
+    if (!target) {
+        return;
+    }
+
+    // x87: The difference is kept in extended precision (only X is rounded to float for the length)
+    const auto& vehPos    = vehicle->GetPosition();
+    const auto& targetPos = target->GetPosition();
+    CVector     dir{
+        (float)((double)targetPos.x - vehPos.x),
+        (float)((double)targetPos.y - vehPos.y),
+        (float)((double)targetPos.z - vehPos.z)
+    };
+    const auto dy = (double)targetPos.y - vehPos.y;
+    const auto dz = (double)targetPos.z - vehPos.z;
+    if (!(std::sqrt(((double)dir.x * dir.x + dy * dy) + dz * dz) < 150.0f)) {
+        return;
+    }
+
+    NormaliseOriginal(dir); // 0x59C910
+    const auto& fwd = vehicle->m_matrix->GetForward(); // Not null checked in the original
+    if ((double)dir.z * fwd.z + (double)dir.y * fwd.y + (double)dir.x * fwd.x > 0.8f) {
+        vehicle->vehicleFlags.bFireGun = true;
+    }
 }
 
 // 0x421FE0
@@ -2208,7 +2315,60 @@ bool CCarCtrl::ThisVehicleShouldTryNotToTurn(CVehicle* vehicle) {
 
 // 0x429300
 void CCarCtrl::TriggerDogFightMoves(CVehicle* vehicle1, CVehicle* vehicle2) {
-    plugin::Call<0x429300, CVehicle*, CVehicle*>(vehicle1, vehicle2);
+    auto& autoPilot = vehicle1->m_autoPilot;
+    if (autoPilot.m_nTempAction != TEMPACT_NONE) {
+        return;
+    }
+
+    // x87: The Y, Z differences are kept in extended precision (only X is rounded to float for the length)
+    const auto& pos1 = vehicle1->GetPosition();
+    const auto& pos2 = vehicle2->GetPosition();
+    CVector     dir{
+        (float)((double)pos1.x - pos2.x),
+        (float)((double)pos1.y - pos2.y),
+        (float)((double)pos1.z - pos2.z)
+    };
+    const auto dy = (double)pos1.y - pos2.y;
+    const auto dz = (double)pos1.z - pos2.z;
+    if (!(std::sqrt(((double)dir.x * dir.x + dy * dy) + dz * dz) < 70.0f)) {
+        return;
+    }
+
+    NormaliseOriginal(dir); // 0x59C910
+
+    // How much vehicle1 is in front of vehicle2
+    const auto& fwd2 = vehicle2->m_matrix->GetForward(); // Not null checked in the original
+    const auto  dot  = (float)((double)dir.z * fwd2.z + (double)dir.y * fwd2.y + (double)dir.x * fwd2.x);
+
+    // Vertical distance
+    const auto heightDiff = (double)vehicle1->GetPosition().z - vehicle2->GetPosition().z;
+    const auto heightDist = heightDiff < 0.0 ? -heightDiff : heightDiff;
+    if (!(heightDist < 15.0f)) {
+        return;
+    }
+
+    switch (rand() & 0xFF) {
+    case 0xC:
+        if (dot > 0.0f) {
+            autoPilot.SetTempAction(TEMPACT_PLANE_FLY_STRAIGHT, (rand() & 0x3FF) + 0x5DC);
+        }
+        break;
+    case 0xD:
+        if (dot > 0.0f) {
+            autoPilot.SetTempAction(TEMPACT_PLANE_SHARP_LEFT, (rand() & 0x1FF) + 0x2BC);
+        }
+        break;
+    case 0xE:
+        if (dot > 0.0f) {
+            autoPilot.SetTempAction(TEMPACT_PLANE_SHARP_RIGHT, (rand() & 0x1FF) + 0x2BC);
+        }
+        break;
+    case 0xF:
+        if (dot > 0.7f) {
+            autoPilot.SetTempAction(TEMPACT_PLANE_FLY_UP, (rand() & 0x7FF) + 0xBB8);
+        }
+        break;
+    }
 }
 
 // 0x424000

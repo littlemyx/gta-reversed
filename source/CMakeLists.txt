@@ -147,9 +147,12 @@ if (SOURCE_FILES_WITHOUT_MODULES_LIST)
     set_source_files_properties(${SOURCE_FILES_WITHOUT_MODULES_LIST} PROPERTIES CXX_SCAN_FOR_MODULES OFF)
     target_sources(${RE_PROJECT_LIB_NAME} PRIVATE ${SOURCE_FILES_WITHOUT_MODULES_LIST})
 endif()
-target_link_options(${RE_PROJECT_LIB_NAME} PRIVATE
-    "$<$<CXX_COMPILER_ID:MSVC>:/INCREMENTAL>"
-)
+# (StandaloneRelease links non-incrementally: ILT thunks would change every function address a hook/fixup registers)
+if (NOT ${RE_PROJECT}_STANDALONE_RELEASE)
+    target_link_options(${RE_PROJECT_LIB_NAME} PRIVATE
+        "$<$<CXX_COMPILER_ID:MSVC>:/INCREMENTAL>"
+    )
+endif()
 target_compile_options(${RE_PROJECT_LIB_NAME} PRIVATE
     "$<$<CXX_COMPILER_ID:MSVC>:/MP;/Zc:preprocessor;/W3;/wd4200;/wd4251;/wd4275;/wd4996;/wd26495;/wd26812;/wd28159>"
     "$<$<OR:$<CXX_COMPILER_ID:Clang,GCC>,$<CXX_COMPILER_ID:GNU>>:-Wall;-Wno-switch>"

@@ -24,6 +24,12 @@
 #include "TaskTypes/TaskComplexLeaveAnyCar.h"
 #include "VehicleRecording.h"
 #include "Curves.h"
+#include "Cheat.h"
+#include "TaskTypes/TaskComplexDriveWander.h"
+#include "Events/EventAcquaintancePedHate.h"
+#include "PopCycle.h"
+#include "Population.h"
+#include "Streaming.h"
 
 #include <reversiblebugfixes/Bugs.hpp>
 #include <numbers>
@@ -207,6 +213,10 @@ void CCarCtrl::InjectHooks()
     RH_ScopedInstall(PickNextNodeToChaseCar, 0x426EF0);
     RH_ScopedInstall(PickNextNodeToFollowPath, 0x427740);
     RH_ScopedInstall(DealWithBend_Racing, 0x428040);
+    RH_ScopedInstall(CreateConvoy, 0x42C740);
+    RH_ScopedInstall(CreatePoliceChase, 0x42C2B0);
+    RH_ScopedInstall(GenerateCarCreationCoors2, 0x424210);
+    RH_ScopedInstall(ChooseModel, 0x424CE0);
     RH_ScopedInstall(GenerateOneEmergencyServicesCar, 0x42B7D0);
     RH_ScopedInstall(JoinCarWithRoadSystemGotoCoors, 0x42F870);
     RH_ScopedInstall(IsThisAnAppropriateNode, 0x42DAB0);
@@ -378,8 +388,103 @@ eModelID CCarCtrl::ChooseGangCarModel(eGangID loadedCarGroupId) {
 }
 
 // 0x424CE0
-int32 CCarCtrl::ChooseModel(int32* arg1) {
-    return plugin::CallAndReturn<int32, 0x424CE0, int32*>(arg1);
+int32 CCarCtrl::ChooseModel(int32* carType) {
+    // x87: The sum of the (float) counts is kept in extended precision
+    const auto total = (int32)((((double)CPopCycle::m_NumOther_Cars + CPopCycle::m_NumCops_Cars) + CPopCycle::m_NumGangs_Cars) + CPopCycle::m_NumDealers_Cars);
+    if (total <= 0) {
+        return -1;
+    }
+
+    if (CCheat::IsActive(CHEAT_REDUCED_TRAFFIC)) { // 0x96917A
+        // Only create a car ~0.5% of the time. 0x858B14 = 1/32768
+        if ((int32)((double)CGeneral::GetRandomNumber() * std::bit_cast<float>(0x38000000u) * 100.0f) != 0) { // 0x858628
+            return -1;
+        }
+    }
+
+    const auto rnd           = (float)((double)rand() * RAND_MAX_FLOAT_RECIPROCAL); // Stored as float. 0x858C7C
+    const auto gangsControl  = CCheat::IsActive(CHEAT_GANGS_CONTROLS_THE_STREETS); // 0x96915B
+    const auto totalF        = (float)total;
+    const auto numCops       = (double)CPopCycle::m_NumCops_Cars;
+    const auto numGangs      = (double)CPopCycle::m_NumGangs_Cars;
+    const auto numDealers    = (double)CPopCycle::m_NumDealers_Cars;
+
+    // The chance of each type is its share of the total (dealers, then gangs, cops, anything else)
+    if (numDealers / totalF > rnd && !gangsControl) {
+        // Dealers
+        *carType = 25;
+        const auto model = (uint16)CPopulation::m_CarGroups[POPCYCLE_CARGROUP_DEALERS][0];
+        return CStreaming::IsModelLoaded(model) ? (int32)model : -1;
+    }
+
+    if ((numGangs + numDealers) / totalF > rnd || gangsControl) {
+        // Gangs
+        if (CPopulation::m_bDontCreateRandomGangMembers) {
+            return -1;
+        }
+
+        const auto* const zoneInfo = CPopCycle::m_pCurrZoneInfo;
+        int32 sumGangStrength = 0;
+        for (auto i = 9; i >= 0; i--) { // (The original sums them in a different order, but it doesn't matter)
+            sumGangStrength += zoneInfo->GangStrength[i];
+        }
+        if (sumGangStrength <= 0) {
+            return -1;
+        }
+
+        // x87: The product is kept in extended precision. NOTE: The random number is in [0, 1) only because `GetRandomNumber` is <= 0x7FFF
+        auto remaining = (int32)((double)CGeneral::GetRandomNumber() * std::bit_cast<float>(0x38000000u) * (double)sumGangStrength);
+        auto gang      = 0;
+        if (zoneInfo->GangStrength[0] < remaining) {
+            do {
+                remaining -= zoneInfo->GangStrength[gang];
+                gang++;
+            } while (zoneInfo->GangStrength[gang] < remaining); // BUG: Not bounded (the array only has 10 elements)
+        }
+        if (gangsControl) {
+            gang = CGeneral::GetRandomNumberInRange(0, 9); // 0x407180
+        }
+
+        *carType = gang + 14;
+        if (CPopulation::PickGangCar((eGangID)gang) < 0) { // 0x614490, the result is only used to check if there are any cars
+            return -1;
+        }
+
+        // Pick a car of the (ped) car group of the gang, it has to be loaded (10 tries). The groups of the gangs are right after each other
+        const auto* const gangCars = reinterpret_cast<const int16*>(&CPopulation::m_CarGroups[POPCYCLE_CARGROUP_BALLAS][0]);
+        for (auto numTries = 0; numTries < 10;) {
+            // x87: kept in extended precision
+            const auto idx   = (int32)((double)CGeneral::GetRandomNumber() * std::bit_cast<float>(0x38000000u) * 23.0f); // 0x858F84
+            const auto model = (uint16)gangCars[gang * 23 + idx];
+            if (model == CPopulation::m_DefaultModelIDForUnusedSlot) { // Empty slot (doesn't count as a try)
+                continue;
+            }
+            if (CStreaming::IsModelLoaded(model)) {
+                return model;
+            }
+            numTries++;
+        }
+        return -1;
+    }
+
+    if ((((numCops + numGangs) + numDealers) / totalF) > rnd) {
+        // Cops
+        if (CGangWars::GangWarFightingGoingOn()) { // 0x443AC0
+            return -1;
+        }
+        if (CPopulation::m_bDontCreateRandomCops) {
+            return -1;
+        }
+        *carType = 13;
+        return ChoosePoliceCarModel(0); // 0x421980
+    }
+
+    // Anything else
+    *carType = 0;
+    if (CTheScripts::ForceRandomCarModel != -1) {
+        return CTheScripts::ForceRandomCarModel;
+    }
+    return CPopulation::m_AppropriateLoadedCars.PickRandomCar(true, false); // 0x611C50
 }
 
 int32 CCarCtrl::ChoosePoliceCarModel(uint32 ignoreLvpd1Model) {
@@ -588,14 +693,252 @@ CVehicle* CCarCtrl::CreateCarForScript(int32 modelid, CVector posn, bool doMissi
     return vehicle;
 }
 
+
+
 // 0x42C740
-bool CCarCtrl::CreateConvoy(CVehicle* vehicle, int32 arg2) {
-    return plugin::CallAndReturn<bool, 0x42C740, CVehicle*, int32>(vehicle, arg2);
+// Creates a convoy (2 or 3 cars) of the same model as `vehicle` that follow it
+bool CCarCtrl::CreateConvoy(CVehicle* vehicle, int32 carType) {
+    CVehicle* prev    = vehicle; // The car that is followed by the next one of the convoy
+    bool      created = false;
+
+    // x87: kept in extended precision. 0x858B14 = 1/32768
+    const auto numCars = ((int32)((double)CGeneral::GetRandomNumber() * std::bit_cast<float>(0x38000000u) * 100.0f) > 50 ? 1 : 0) + 2; // 0x858628
+
+    const auto radius = CModelInfo::GetModelInfo(vehicle->m_nModelIndex)->GetColModel()->GetBoundRadius();
+    vehicle->m_nForcedRandomRouteSeed = vehicle->m_nRandomSeed;
+
+    for (auto i = 0; i < numCars; i++) {
+        auto* const car = GetNewVehicleDependingOnCarModel(vehicle->m_nModelIndex, 1); // 0x421440
+        if (!car) {
+            continue;
+        }
+
+        // The place behind `vehicle`, `i + 1` car lengths away
+        // NOTE: The original uses the matrix without a null check (but then looks for the position without it too)
+        const auto  k    = (float)(i + 1);
+        const auto& fwd  = vehicle->m_matrix->GetForward();
+        const auto  kfx  = (float)((double)k * fwd.x);
+        const auto  kfy  = (float)((double)k * fwd.y);
+        const auto  kfz  = (double)k * fwd.z; // Not rounded
+        const auto  dist = (float)((double)radius + radius + 2.5f); // 0x858FA0
+        const auto  offX = (float)((double)kfx * dist);
+        const auto  offY = (float)((double)kfy * dist);
+
+        const auto& vehPos = vehicle->GetPosition();
+        CVector     pos{
+            (float)((double)vehPos.x - offX),
+            (float)((double)vehPos.y - offY),
+            (float)((double)vehPos.z - kfz * dist)
+        };
+
+        // Find the ground
+        float     ground = 1.0e9f; // 0x858FEC
+        CColPoint colPoint;
+        CEntity*  hitEntity;
+        if (CWorld::ProcessVerticalLine(pos, 1000.0f, colPoint, hitEntity, true, false, false, false, true, false, nullptr)) { // 0x5674E0
+            ground = colPoint.m_vecPoint.z;
+        }
+        if (CWorld::ProcessVerticalLine(pos, -1000.0f, colPoint, hitEntity, true, false, false, false, true, false, nullptr)) {
+            // x87: kept in extended precision
+            double d1 = (double)colPoint.m_vecPoint.z - pos.z;
+            if (d1 < 0.0) {
+                d1 = -d1;
+            }
+            double d2 = (double)ground - pos.z;
+            if (d2 < 0.0) {
+                d2 = -d2;
+            }
+            if (d1 < d2) {
+                ground = colPoint.m_vecPoint.z;
+            }
+        }
+        if (ground > 1.0e9f) { // BUG: Should be `==` (as it's only set to that if nothing was found), this is never true
+            delete car;
+            continue;
+        }
+
+        pos.z = (float)(car->GetHeightAboveRoad() + (double)ground); // 0x6B...(vtable +0xD4), x87: the sum is rounded only once
+
+        int16 numColliding = 0;
+        CWorld::FindObjectsKindaColliding(pos, radius, true, &numColliding, 2, nullptr, false, true, true, false, false); // 0x568B80
+        if (numColliding != 0) {
+            delete car;
+            continue;
+        }
+
+        if (!created) {
+            // The first car of the convoy makes `vehicle` start driving, too
+            vehicle->SetStatus(STATUS_PHYSICS);
+            const auto cruise = (float)vehicle->m_autoPilot.m_nCruiseSpeed;
+            vehicle->m_autoPilot.m_nCarDrivingStyle = DRIVING_STYLE_AVOID_CARS;
+            const auto vfwd = vehicle->GetForwardVector(); // 0x41CCB0
+            const auto cfx  = (float)((double)cruise * vfwd.x);
+            const auto cfy  = (float)((double)cruise * vfwd.y);
+            const auto cfz  = (double)cruise * vfwd.z; // Not rounded
+            vehicle->m_vecMoveSpeed = CVector{
+                (float)((double)cfx * 0.02f), // 0x858B38
+                (float)((double)cfy * 0.02f),
+                (float)(cfz * 0.02f)
+            };
+        }
+
+        *car->m_matrix       = *vehicle->m_matrix; // 0x59BBC0
+        car->GetPosition()   = pos;
+        car->m_vecMoveSpeed  = vehicle->m_vecMoveSpeed;
+        car->SetStatus(vehicle->GetStatus());
+        car->vehicleFlags.bPartOfConvoy = true;
+        CWorld::Add(car); // 0x563220
+        if (car->m_nVehicleType == VEHICLE_TYPE_BIKE) {
+            car->AsBike()->PlaceOnRoadProperly(); // 0x6BEEB0
+        } else if (car->m_nVehicleType == VEHICLE_TYPE_AUTOMOBILE) {
+            car->AsAutomobile()->PlaceOnRoadProperly(); // 0x6AF420
+        }
+        SetUpDriverAndPassengersForVehicle(car, carType, 0, true, false, 99); // 0x4217C0
+
+        car->m_pDriver->GetIntelligence()->m_TaskMgr.SetTask(new CTaskComplexCarDriveWander(car, DRIVING_STYLE_STOP_FOR_CARS, 10.0f), TASK_PRIMARY_DEFAULT, false); // 0x61A5A0, 0x63CB10, 0x681AF0
+
+        // Drive like the first car, but a bit slower the further behind it is. x87: The difference is compared before it is rounded to float
+        car->m_autoPilot.m_nCruiseSpeed = vehicle->m_autoPilot.m_nCruiseSpeed;
+        const double speed = (double)vehicle->m_autoPilot.m_speed - (double)i;
+        car->m_autoPilot.m_speed = (float)speed;
+        if (speed < 0.0) {
+            car->m_autoPilot.m_speed = 0.0f;
+        }
+        car->m_autoPilot.m_nCarDrivingStyle = vehicle->m_autoPilot.m_nCarDrivingStyle;
+        car->m_autoPilot.m_nCarMission      = vehicle->m_autoPilot.m_nCarMission;
+        car->m_nRandomSeed                  = vehicle->m_nRandomSeed;
+        car->m_nForcedRandomRouteSeed       = vehicle->m_nForcedRandomRouteSeed;
+
+        // Follow the previous car
+        car->m_autoPilot.m_TargetEntity = prev;
+        CEntity::RegisterReference(car->m_autoPilot.m_TargetEntity);
+
+        prev    = car;
+        created = true;
+    }
+    return created;
 }
 
 // 0x42C2B0
-bool CCarCtrl::CreatePoliceChase(CVehicle* vehicle, int32 arg2, CNodeAddress NodeAddress) {
-    return plugin::CallAndReturn<bool, 0x42C2B0, CVehicle*, int32, CNodeAddress>(vehicle, arg2, NodeAddress);
+// Creates a police car that chases `vehicle` (that is a car of the type `carType` that has just been created), it is created at the node `nodeAddress`
+bool CCarCtrl::CreatePoliceChase(CVehicle* vehicle, int32 carType, CNodeAddress nodeAddress) {
+    // Only some of the cars are chased if there are gangs around
+    if (!(CPopCycle::m_NumGangs_Cars == 0.0f)) {
+        if (carType < 14 || carType > 23) { // Not a gang car
+            // x87: kept in extended precision. 0x858B14 = 1/32768, 0x858B90 = 4.0
+            if ((int32)((double)CGeneral::GetRandomNumber() * std::bit_cast<float>(0x38000000u) * 4.0f) != 0) {
+                return false;
+            }
+        }
+    }
+
+    const auto model = ChoosePoliceCarModel(1); // 0x421980
+    if (model <= -1 || !CStreaming::IsModelLoaded(model)) {
+        return false;
+    }
+    auto* const police = GetNewVehicleDependingOnCarModel(model, 1); // 0x421440
+    if (!police) {
+        return false;
+    }
+
+    // The place of the police car: the node, on the ground
+    CVector pos = ThePaths.m_pPathNodes[nodeAddress.m_wAreaId][nodeAddress.m_wNodeId].GetPosition(); // 0x420A10
+    {
+        float     ground = 1.0e9f; // 0x858FEC
+        CColPoint colPoint;
+        CEntity*  hitEntity;
+        if (CWorld::ProcessVerticalLine(pos, 1000.0f, colPoint, hitEntity, true, false, false, false, true, false, nullptr)) { // 0x5674E0
+            ground = colPoint.m_vecPoint.z;
+        }
+        if (CWorld::ProcessVerticalLine(pos, -1000.0f, colPoint, hitEntity, true, false, false, false, true, false, nullptr)) {
+            // x87: kept in extended precision
+            double d1 = (double)colPoint.m_vecPoint.z - pos.z;
+            if (d1 < 0.0) {
+                d1 = -d1;
+            }
+            double d2 = (double)ground - pos.z;
+            if (d2 < 0.0) {
+                d2 = -d2;
+            }
+            if (d1 < d2) {
+                ground = colPoint.m_vecPoint.z;
+            }
+        }
+        if (ground > 1.0e9f) { // BUG: Should be `==` (as it's only set to that if nothing was found), this is never true
+            delete police;
+            return false;
+        }
+        pos.z = (float)(police->GetHeightAboveRoad() + (double)ground); // vtable +0xD4, x87: the sum is rounded only once
+    }
+
+    // It must not be visible, and must not collide with anything
+    const auto radius = CModelInfo::GetModelInfo(police->m_nModelIndex)->GetColModel()->GetBoundRadius();
+    if (!vehicle->GetIsOnScreen() && TheCamera.IsSphereVisible(pos, radius)) { // 0x534540, 0x420D40
+        delete police;
+        return false;
+    }
+    int16 numColliding = 0;
+    CWorld::FindObjectsKindaColliding(pos, radius, true, &numColliding, 2, nullptr, false, true, true, false, false); // 0x568B80
+    if (numColliding != 0) {
+        delete police;
+        return false;
+    }
+
+    // Make `vehicle` flee
+    auto&      ap     = vehicle->m_autoPilot;
+    const auto cruise = (uint8)(int32)((double)ap.m_nCruiseSpeed + 10.0f); // 0x85862C
+    vehicle->SetStatus(STATUS_PHYSICS);
+    ap.m_nCarDrivingStyle           = DRIVING_STYLE_AVOID_CARS;
+    vehicle->vehicleFlags.bMadDriver = true;
+    ap.m_nCruiseSpeed               = cruise;
+    {
+        // Each operation is rounded to float (0x40FEC0)
+        const auto fwd = vehicle->GetForwardVector(); // 0x41CCB0
+        const auto c   = (float)cruise;
+        const CVector scaled{ fwd.x * c, fwd.y * c, fwd.z * c };
+        vehicle->m_vecMoveSpeed = CVector{ scaled.x * 0.02f, scaled.y * 0.02f, scaled.z * 0.02f }; // 0x3CA3D70A
+    }
+    SetUpDriverAndPassengersForVehicle(vehicle, carType, 2, true, true, 99); // 0x4217C0
+
+    // Place the police car right behind it
+    *police->m_matrix      = *vehicle->m_matrix; // 0x59BBC0
+    police->SetPosn(pos);                        // 0x4241C0
+    police->m_vecMoveSpeed = vehicle->m_vecMoveSpeed;
+    police->SetStatus(STATUS_PHYSICS);
+    police->vehicleFlags.bCreatedAsPoliceVehicle = true;
+    police->ChangeLawEnforcerState(true); // 0x6D2330
+    CWorld::Add(police);                  // 0x563220
+    if (police->m_nVehicleType == VEHICLE_TYPE_BIKE) {
+        police->AsBike()->PlaceOnRoadProperly(); // 0x6BEEB0
+    } else {
+        police->AsAutomobile()->PlaceOnRoadProperly(); // 0x6AF420
+    }
+    CCarAI::AddPoliceCarOccupants(police, true); // 0x41C070
+
+    // The occupants of `vehicle` are wanted by the police
+    // BUG: The original doesn't check if there's a driver
+    if constexpr (notsa::IsFixBugs()) {
+        if (vehicle->m_pDriver) {
+            vehicle->m_pDriver->bWantedByPolice = true;
+        }
+    } else {
+        vehicle->m_pDriver->bWantedByPolice = true;
+    }
+    for (auto i = 0; i < vehicle->m_nNumPassengers; i++) {
+        if (auto* const passenger = vehicle->m_apPassengers[i]) {
+            passenger->bWantedByPolice = true;
+        }
+    }
+
+    // The police car just drives around, and its driver hates the other driver
+    police->m_pDriver->GetIntelligence()->m_TaskMgr.SetTask(new CTaskComplexCarDriveWander(police, DRIVING_STYLE_STOP_FOR_CARS, 10.0f), TASK_PRIMARY_DEFAULT, false); // 0x61A5A0, 0x63CB10, 0x681AF0
+
+    CEventAcquaintancePedHate event{ vehicle->m_pDriver }; // 0x4AF820, vtable of 0x858E68
+    event.m_TaskId = TASK_COMPLEX_KILL_CRIMINAL;
+    police->m_pDriver->GetIntelligence()->m_eventGroup.Add(&event, false); // 0x4AB420
+    police->vehicleFlags.bNeverUseSmallerRemovalRange = true;
+    police->m_nExtendedRemovalRange = 0xFF;
+    return true;
 }
 
 // 0x428040
@@ -2055,9 +2398,295 @@ void CCarCtrl::FlyAIPlaneInCertainDirection(CPlane* plane) {
     }
 }
 
+//! 0x452090 - `CPathFind::Find2NodesForCarCreation` (declared in `PathFind.h`, but not implemented there yet)
+//! Finds 2 nodes near `pos` that are not adjacent to each other (`out2` is left untouched if there's no such node)
+static void Find2NodesForCarCreationOriginal(CPathFind& paths, CVector pos, CNodeAddress* out1, CNodeAddress* out2, bool lowTraffic) {
+    constexpr auto MAX_DIST = std::bit_cast<float>(0x497423FEu); // ~999999.9
+
+    CNodeAddress nodes[4]; // (the original only sets the area of these)
+    // 0x44FA30 - `CPathFind::RecordNodesClosestToCoors` (not reversed yet)
+    plugin::CallMethod<0x44FA30, CPathFind*, CVector, uint8, int32, CNodeAddress*, float, bool, bool, bool, bool>(&paths, pos, 0, 4, nodes, MAX_DIST, lowTraffic, false, false, true);
+
+    if (nodes[0].m_wAreaId == 0xFFFF) {
+        out1->m_wAreaId = 0xFFFF; // (the node isn't touched)
+        out2->m_wAreaId = 0xFFFF;
+        return;
+    }
+    *out1 = nodes[0];
+    for (auto i = 1; i < 4; i++) {
+        if (nodes[i].m_wAreaId == 0xFFFF) {
+            continue;
+        }
+        if (!paths.These2NodesAreAdjacent(nodes[0], nodes[i])) { // 0x44D230
+            *out2 = nodes[i];
+            return;
+        }
+    }
+}
+
 // 0x424210
+// `radius` and `arg3` are the (X, Y) direction the created car has to be (not) in, relative to `posn`: `arg4` is the threshold of the dot product with it
+// (the cars are created if the dot product is above it if `arg5`, below or equal to it otherwise). `arg6` and `arg7` are the distances from `posn`
+// where the car is created (`arg6`: where it has to be visible, `arg7`: where it must not be). `arg12`: use the low traffic nodes. `arg13`: be strict about the nodes.
+// Returns the position (`pOrigin`), the 2 nodes it's between (`pNodeAddress1`, `pNodeAddress12`) and where (`arg11`: fraction) between them.
 bool CCarCtrl::GenerateCarCreationCoors2(CVector posn, float radius, float arg3, float arg4, bool arg5, float arg6, float arg7, CVector* pOrigin, CNodeAddress* pNodeAddress1, CNodeAddress* pNodeAddress12, float* arg11, bool arg12, bool arg13) {
-    return plugin::CallAndReturn<bool, 0x424210, CVector, float, float, float, bool, float, float, CVector*, CNodeAddress*, CNodeAddress*, float*, bool, bool>(posn, radius, arg3, arg4, arg5, arg6, arg7, pOrigin, pNodeAddress1, pNodeAddress12, arg11, arg12, arg13);
+    // Function-local statics of the original (the flags @ 0x969108 are the "initialized" flags of them)
+    auto& staticInitFlags = StaticRef<uint32>(0x969108);
+    auto& nextUpdateTime  = StaticRef<uint32>(0x9690E8);
+    auto& lastUpdatePos   = StaticRef<CVector>(0x9690EC);
+    auto& nodeLow1        = StaticRef<CNodeAddress>(0x969104); // Nodes found for low traffic
+    auto& nodeLow2        = StaticRef<CNodeAddress>(0x969100);
+    auto& nodeNormal1     = StaticRef<CNodeAddress>(0x9690FC); // Nodes found for normal traffic
+    auto& nodeNormal2     = StaticRef<CNodeAddress>(0x9690F8);
+
+    float accumDist = 0.0f; // Distance travelled along the nodes
+
+    // Init the statics (only the area of the nodes is set)
+    if (!(staticInitFlags & 1)) {
+        staticInitFlags |= 1;
+        nodeLow1.m_wAreaId = 0xFFFF;
+    }
+    if (!(staticInitFlags & 2)) {
+        staticInitFlags |= 2;
+        nodeLow2.m_wAreaId = 0xFFFF;
+    }
+    if (!(staticInitFlags & 4)) {
+        staticInitFlags |= 4;
+        nodeNormal1.m_wAreaId = 0xFFFF;
+    }
+    if (!(staticInitFlags & 8)) {
+        staticInitFlags |= 8;
+        nodeNormal2.m_wAreaId = 0xFFFF;
+    }
+    if (!(staticInitFlags & 0x10)) {
+        staticInitFlags |= 0x10;
+    }
+
+    // Find the nodes near the position (not on every call)
+    {
+        // x87: kept in extended precision
+        const double dx   = (double)posn.x - lastUpdatePos.x;
+        const double dy   = (double)posn.y - lastUpdatePos.y;
+        const double dist = std::sqrt(dy * dy + dx * dx);
+        if (dist > 10.0f || CTimer::GetTimeInMS() > nextUpdateTime) { // 0x85862C
+            Find2NodesForCarCreationOriginal(ThePaths, posn, &nodeLow1, &nodeLow2, true);       // 0x452090
+            Find2NodesForCarCreationOriginal(ThePaths, posn, &nodeNormal1, &nodeNormal2, false); // 0x452090
+            nextUpdateTime = CTimer::GetTimeInMS() + 5000;
+            lastUpdatePos  = posn;
+
+            // Update `m_bMoreCarsAndFewerPeds`: Set if the closest low traffic node is on a wide highway
+            if (nodeLow1.m_wAreaId != 0xFFFF && ThePaths.m_pPathNodes[nodeLow1.m_wAreaId]) {
+                const auto& node     = ThePaths.m_pPathNodes[nodeLow1.m_wAreaId][nodeLow1.m_wNodeId];
+                const auto  naviAddr = ThePaths.m_pNaviLinks[node.m_wAreaId][node.m_wBaseLinkId];
+                if (ThePaths.m_pPathNodes[naviAddr.m_wAreaId]) { // (The original checks the path node area table with the area of the link)
+                    const auto& link = ThePaths.m_pNaviNodes[naviAddr.m_wAreaId][naviAddr.m_wCarPathLinkId];
+                    bool        more = false;
+                    if (link.m_numOppositeDirLanes >= 2 || link.m_numSameDirLanes >= 2) {
+                        const auto   linkPos = link.GetNodeCoors(); // 0x420A60
+                        const double ldx     = (double)linkPos.x - posn.x;
+                        const double ldy     = (double)linkPos.y - posn.y;
+                        if (std::sqrt(ldy * ldy + ldx * ldx) < 40.0f && node.m_bHighway) { // 0x858A10
+                            more = true;
+                        }
+                    }
+                    CPopulation::m_bMoreCarsAndFewerPeds = more;
+                }
+            }
+        }
+    }
+
+    // Pick the node to start from
+    CNodeAddress start;
+    if ((rand() & 0xF) == 4 && !arg13) {
+        // Anywhere near the position. NOTE: The last 2 args are (1, 1) in the original
+        start = ThePaths.FindNodeClosestToCoors(posn, PATH_TYPE_VEH, 50.0f, 0, 0, 0, 1, 1); // 0x44F460
+        arg6  = (float)((double)arg6 * 1.5f);                                                // 0x858CE8
+    } else if (rand() & 3) {
+        start = arg12 ? nodeLow1 : nodeNormal1;
+    } else {
+        start = arg12 ? nodeLow2 : nodeNormal2;
+    }
+    if (start.m_wAreaId == 0xFFFF || !ThePaths.m_pPathNodes[start.m_wAreaId]) {
+        return false;
+    }
+
+    CNodeAddress visited[30]; // The nodes we have been at
+    visited[0]       = start;
+    int32 numVisited = 1;
+    CNodeAddress cur = start;
+
+    // Walk along the nodes (in a random direction), until a place far enough from `posn` is found (that is, between 2 nodes)
+    do {
+        if (!(accumDist < 230.0f)) { // 0x858F80
+            return false;
+        }
+        if (!ThePaths.m_pPathNodes[cur.m_wAreaId]) {
+            return false;
+        }
+        const auto& curNode  = ThePaths.m_pPathNodes[cur.m_wAreaId][cur.m_wNodeId];
+        const auto  numLinks = (int32)curNode.m_nNumLinks;
+        InitSequence(numLinks); // 0x421740
+
+        for (int32 i = 0;; i++) {
+            if (i >= numLinks) {
+                return false;
+            }
+
+            const auto idx = bSequenceOtherWay
+                ? (SequenceRandomOffset + i) % SequenceElements
+                : (SequenceElements + SequenceRandomOffset - i) % SequenceElements;
+            const auto linkIdx = curNode.m_wBaseLinkId + idx;
+            const auto next    = ThePaths.m_pNodeLinks[cur.m_wAreaId][linkIdx];
+            if (!ThePaths.m_pPathNodes[next.m_wAreaId]) {
+                continue;
+            }
+            const auto navi = ThePaths.m_pNaviLinks[cur.m_wAreaId][linkIdx];
+            if (!ThePaths.m_pPathNodes[navi.m_wAreaId]) { // (The original checks the path node area table with the area of the link)
+                continue;
+            }
+
+            bool isVisited = false;
+            for (auto j = 0; j < numVisited; j++) {
+                if (visited[j] == next) {
+                    isVisited = true;
+                }
+            }
+            if (isVisited) {
+                continue;
+            }
+
+            const auto& nextNode = ThePaths.m_pPathNodes[next.m_wAreaId][next.m_wNodeId];
+            const auto  curPos   = curNode.GetPosition();
+            const auto  nextPos  = nextNode.GetPosition();
+
+            // Distances of the nodes from the position. x87: Y (and the squares) are kept in extended precision
+            const auto   dxCur   = (float)((double)posn.x - curPos.x);
+            const double dyCur   = (double)posn.y - curPos.y;
+            const auto   distCur = (float)std::sqrt(dyCur * dyCur + (double)dxCur * dxCur);
+            const auto   dxNext   = (float)((double)posn.x - nextPos.x);
+            const double dyNext   = (double)posn.y - nextPos.y;
+            const auto   distNext = (float)std::sqrt(dyNext * dyNext + (double)dxNext * dxNext);
+
+            // Is this place OK?
+            bool foundPlace = false;
+            if (!((nextNode.m_isSwitchedOff || curNode.m_isSwitchedOff) && arg13)) {
+                const auto AbsNaN = [](double v) { return v < 0.0 ? -v : v; }; // (NaN stays NaN)
+
+                // The place where the line between the nodes crosses the circle of the radius `arg6` (it has to be visible)
+                {
+                    const double a = (double)distNext - arg6;
+                    const double b = (double)distCur - arg6;
+                    if (b * a < 0.0) {
+                        const double absA = AbsNaN(a);
+                        const auto   absB = (float)AbsNaN(b);
+
+                        const auto   cxA = (float)((double)curPos.x * absA);
+                        const double cyA = (double)curPos.y * absA;
+                        const double czA = (double)curPos.z * absA;
+                        const auto   nxB = (float)((double)nextPos.x * absB);
+                        const double nyB = (double)nextPos.y * absB;
+                        const auto   nzB = (float)((double)nextPos.z * absB);
+                        const auto   px  = (float)((double)nxB + cxA);
+                        const auto   py  = (float)(nyB + cyA);
+                        const double pz  = (double)nzB + czA;
+                        const double inv = 1.0 / (absA + absB);
+
+                        pOrigin->x = (float)((double)px * inv);
+                        pOrigin->y = (float)((double)py * inv);
+                        pOrigin->z = (float)(pz * inv);
+                        if (TheCamera.IsSphereVisible(*pOrigin, 5.0f)) { // 0x420D40
+                            *arg11     = (float)((double)(float)inv * absB);
+                            foundPlace = true;
+                        }
+                    }
+                }
+
+                // The place where the line between the nodes crosses the circle of the radius `arg7` (it must not be visible)
+                if (!foundPlace) {
+                    const double a = (double)distNext - arg7;
+                    const double b = (double)distCur - arg7;
+                    if (b * a < 0.0) {
+                        const auto absB = (float)AbsNaN(b);
+                        const auto absA = (float)AbsNaN(a);
+
+                        const auto   cxA = (float)((double)absA * curPos.x);
+                        const auto   cyA = (float)((double)absA * curPos.y);
+                        const auto   czA = (float)((double)absA * curPos.z);
+                        const double nxB = (double)absB * nextPos.x;
+                        const double nyB = (double)absB * nextPos.y;
+                        const auto   nzB = (float)((double)absB * nextPos.z);
+                        const auto   px  = (float)(nxB + cxA);
+                        const double py  = nyB + cyA;
+                        const double pz  = (double)nzB + czA;
+                        const double inv = 1.0 / ((double)absA + absB);
+
+                        pOrigin->x = (float)((double)px * inv);
+                        pOrigin->y = (float)(py * inv);
+                        pOrigin->z = (float)(pz * inv);
+                        if (!TheCamera.IsSphereVisible(*pOrigin, 5.0f)) { // 0x420D40
+                            *arg11     = (float)((double)(float)inv * absB);
+                            foundPlace = true;
+                        }
+                    }
+                }
+            }
+
+            if (foundPlace) {
+                // The road can't be too steep. x87: kept in extended precision
+                const auto   dx  = (float)((double)curPos.x - nextPos.x);
+                const double dy  = (double)curPos.y - nextPos.y;
+                const double dz  = std::fabs((double)curPos.z - nextPos.z);
+                const double len = std::sqrt(dy * dy + (double)dx * dx);
+                if (!(len * 0.5f < dz)) { // 0x858B8C (NaN => continue)
+                    // Which one is the first node is random
+                    if (rand() & 8) {
+                        *pNodeAddress1  = cur;
+                        *pNodeAddress12 = next;
+                    } else {
+                        *pNodeAddress1  = next;
+                        *pNodeAddress12 = cur;
+                        *arg11          = (float)(1.0 - *arg11);
+                    }
+
+                    // Dead ends
+                    auto& nodeA = ThePaths.m_pPathNodes[pNodeAddress1->m_wAreaId][pNodeAddress1->m_wNodeId];
+                    auto& nodeB = ThePaths.m_pPathNodes[pNodeAddress12->m_wAreaId][pNodeAddress12->m_wNodeId];
+                    if (nodeB.m_onDeadEnd && ThePaths.ThisNodeWillLeadIntoADeadEnd(&nodeB, &nodeA) && arg13) { // 0x44D310
+                        return false;
+                    }
+
+                    // The direction (from `posn` to the found position) has to be (not) in the direction of (radius, arg3). x87: kept in extended precision
+                    const double ox  = (double)pOrigin->x - posn.x;
+                    const double oy  = (double)pOrigin->y - posn.y;
+                    const double inv = 1.0 / std::sqrt(oy * oy + ox * ox);
+                    const double dot = inv * oy * arg3 + inv * ox * radius;
+                    if (arg5) {
+                        if (!(dot > arg4)) {
+                            return false;
+                        }
+                    } else if (!(dot <= arg4)) {
+                        return false;
+                    }
+
+                    // BUG: The index of the link is never used (and the name of the debug message is bogus)
+                    sprintf_s(gString, "tell Obbe it happened again %d/%d %d/%d", pNodeAddress1->m_wAreaId, pNodeAddress1->m_wNodeId, pNodeAddress12->m_wAreaId, pNodeAddress12->m_wNodeId); // 0x858F58
+                    return true;
+                }
+            }
+
+            // Move on to the next node
+            {
+                cur                     = next;
+                visited[numVisited++]   = next;
+                const auto   dxMoved = (float)((double)nextPos.x - curPos.x);
+                const double dyMoved = (double)nextPos.y - curPos.y;
+                accumDist            = (float)(std::sqrt(dyMoved * dyMoved + (double)dxMoved * dxMoved) + (double)accumDist);
+            }
+            break;
+        }
+    } while (numVisited < 30);
+
+    return false;
 }
 
 // 0x42F9C0

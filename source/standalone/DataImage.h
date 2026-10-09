@@ -13,6 +13,8 @@ struct Info {
     uint32_t CodeLo{}, CodeHi{}; // original code range [CodeLo, CodeHi) (0x401000, 0x858000); reserved PAGE_NOACCESS
     uint32_t DataBase{}, DataEnd{}; // committed data range (0x858000, 0xCB0000), BSS included
     uint32_t InitializedSize{};     // bytes copied from original_data.bin (the rest is zero = BSS)
+    uint32_t RdataLo{}, RdataHi{};  // original .rdata [RdataLo, RdataHi) (0x858000, 0x8A4000): made read-only after the pointer rewrite (0 = unknown)
+    uint32_t SkippedTextLike{}, SkippedUnaligned{}; // code-range dwords the extractor rejected as non-pointers (log only)
 };
 
 //! Maps the image. Idempotent. Normally called by the `.CRT$XIB` initializer (before any C++ dynamic initializer),

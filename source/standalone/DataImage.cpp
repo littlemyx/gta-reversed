@@ -113,6 +113,11 @@ void LoadImpl() {
         !JsonUInt(json, jlen, "committed_size", committed) || committed != i.DataEnd - i.DataBase || i.InitializedSize > committed) {
         LoadFailed("original_data.json is malformed");
     }
+    // Optional (older json): .rdata range for the read-only protection, extractor statistics for the log
+    JsonUInt(json, jlen, "rdata_lo", i.RdataLo);
+    JsonUInt(json, jlen, "rdata_hi", i.RdataHi);
+    JsonUInt(json, jlen, "skipped_text_like", i.SkippedTextLike);
+    JsonUInt(json, jlen, "skipped_unaligned", i.SkippedUnaligned);
 
     const uint32_t dataGranule = AlignDown(i.DataBase, ALLOC_GRANULARITY);
     const uint32_t reserveEnd = AlignUp(i.DataEnd, ALLOC_GRANULARITY);

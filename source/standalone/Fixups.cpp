@@ -92,12 +92,6 @@ LONG CALLBACK RedirectVEH(EXCEPTION_POINTERS* ep) {
         pc, retAddr, retAddr - (uint32_t)GetModuleHandleA(nullptr));
 }
 
-// Keep in sync with text_like() in tools/standalone/extract_exe_data.py: isolated dwords that are really ASCII/UTF-16 text
-bool TextLike(uint32_t v) {
-    const uint8_t b0 = v & 255, b1 = (v >> 8) & 255, b2 = (v >> 16) & 255, b3 = v >> 24;
-    const auto pr = [](uint8_t c) { return c >= 32 && c < 127; };
-    return (b3 == 0 && pr(b0) && pr(b1) && pr(b2)) || (b1 == 0 && b3 == 0 && pr(b0) && pr(b2));
-}
 } // namespace
 
 namespace Fixups {
@@ -195,18 +189,32 @@ FixupStats ApplyToDataImage() {
     const auto& info = DataImage::GetInfo();
     auto* const words = reinterpret_cast<uint32_t*>(info.DataBase);
     const size_t n = info.InitializedSize / 4;
-    const auto inCode = [&](uint32_t v) { return v >= info.CodeLo && v < info.CodeHi; };
 
-    // Pass 1 classify on the ORIGINAL values: 1 = V (part of a run >= 2), 2 = C (isolated), 3 = S (isolated text-like), 0 = not a code pointer
-    std::vector<uint8_t> cls(n, 0);
-    for (size_t i = 0; i < n; i++) {
-        if (!inCode(words[i])) {
-            continue;
+    // The classification (which dwords are code pointers, V = run / C = isolated) is done ONCE, by tools/standalone/extract_exe_data.py
+    // (function-start set + alignment + text filter, see its docstring) and shipped as data_pointers.bin: {u32 addr, u32 class(1=V,2=C)}.
+    std::vector<std::pair<uint32_t, uint8_t>> ptrs;
+    {
+        char listPath[MAX_PATH];
+        GetModuleFileNameA(nullptr, listPath, MAX_PATH);
+        if (char* slash = strrchr(listPath, '\\')) {
+            strcpy_s(slash + 1, listPath + MAX_PATH - slash - 1, "data_pointers.bin");
         }
-        const bool run = (i > 0 && inCode(words[i - 1])) || (i + 1 < n && inCode(words[i + 1]));
-        cls[i] = run ? 1 : TextLike(words[i]) ? 3 : 2;
+        FILE* lf = nullptr;
+        if (fopen_s(&lf, listPath, "rb") || !lf) {
+            Fatal("ApplyToDataImage: cannot open data_pointers.bin next to the exe (re-run the extractor / build)");
+        }
+        uint32_t rec[2];
+        while (fread(rec, sizeof(rec), 1, lf) == 1) {
+            if (rec[0] < info.DataBase || rec[0] + 4 > info.DataBase + info.InitializedSize || (rec[0] & 3) || rec[1] < 1 || rec[1] > 2) {
+                Fatal("ApplyToDataImage: data_pointers.bin record 0x%08X/%u out of range", rec[0], rec[1]);
+            }
+            ptrs.emplace_back(rec[0], (uint8_t)rec[1]);
+        }
+        fclose(lf);
     }
-
+    g_Stats.TextLikeIgnored = info.SkippedTextLike;
+    g_Stats.UnalignedIgnored = info.SkippedUnaligned;
+    const std::vector<uint32_t> original(words, words + n); // for the self-check
     // Pass 2 replace
     char dir[MAX_PATH];
     GetModuleFileNameA(nullptr, dir, MAX_PATH);
@@ -215,16 +223,10 @@ FixupStats ApplyToDataImage() {
     }
     FILE* unk = nullptr;
     fopen_s(&unk, dir, "w");
-    for (size_t i = 0; i < n; i++) {
-        if (!cls[i]) {
-            continue;
-        }
-        if (cls[i] == 3) {
-            g_Stats.TextLikeIgnored++;
-            continue;
-        }
-        (cls[i] == 1 ? g_Stats.CodePointersV : g_Stats.CodePointersC)++;
-        const uint32_t slotAddr = info.DataBase + (uint32_t)i * 4, orig = words[i];
+    for (const auto& [slotAddr, klass] : ptrs) {
+        const size_t i = (slotAddr - info.DataBase) / 4;
+        const uint32_t orig = words[i];
+        (klass == 1 ? g_Stats.CodePointersV : g_Stats.CodePointersC)++;
         if (const auto it = SlotMap().find(slotAddr); it != SlotMap().end()) {
             words[i] = (uint32_t)it->second.Ours;
             g_Stats.FixedBySlot++;
@@ -233,20 +235,32 @@ FixupStats ApplyToDataImage() {
             g_Stats.FixedByFunction++;
         } else {
             words[i] = (uint32_t)GetTrapStub(orig);
-            (cls[i] == 1 ? g_Stats.TrappedV : g_Stats.TrappedC)++;
+            (klass == 1 ? g_Stats.TrappedV : g_Stats.TrappedC)++;
             if (unk) {
-                fprintf(unk, "0x%08X 0x%08X %c\n", slotAddr, orig, cls[i] == 1 ? 'V' : 'C');
+                fprintf(unk, "0x%08X 0x%08X %c\n", slotAddr, orig, klass == 1 ? 'V' : 'C');
             }
         }
     }
     if (unk) {
         fclose(unk);
     }
+    for (size_t i = 0; i < n; i++) {
+        g_Stats.ChangedDwords += words[i] != original[i];
+    }
     const auto& s = g_Stats;
-    Log("fixups: registered %u functions + %u vtable slots (%u conflicts). Data image code pointers: V=%u C=%u (text-like ignored %u). "
+    Log("fixups: registered %u functions + %u vtable slots (%u conflicts). Data image code pointers: V=%u C=%u (skipped, NOT rewritten: text-like %u, unaligned/u16-pair %u). "
         "Fixed: by slot %u, by function %u; trapped (unknown): V=%u C=%u",
         (unsigned)s.RegisteredFunctions, (unsigned)s.RegisteredVMTSlots, (unsigned)s.Conflicts, (unsigned)s.CodePointersV, (unsigned)s.CodePointersC,
-        (unsigned)s.TextLikeIgnored, (unsigned)s.FixedBySlot, (unsigned)s.FixedByFunction, (unsigned)s.TrappedV, (unsigned)s.TrappedC);
+        (unsigned)s.TextLikeIgnored, (unsigned)s.UnalignedIgnored, (unsigned)s.FixedBySlot, (unsigned)s.FixedByFunction, (unsigned)s.TrappedV, (unsigned)s.TrappedC);
+    if (info.DataBase <= 0x860E2C && info.DataBase + info.InitializedSize > 0x8A2A18) { // regression probes of the S1 classifier (1.0 US compact)
+        Log("fixups probes: 0x860E2C=0x%08X (data, must stay 0x004F0000) 0x8A2A18=0x%08X (data, must stay 0x004D0000) 0x85DA64=0x%08X (pointer to 0x425F70, must be rewritten)",
+            *(uint32_t*)0x860E2C, *(uint32_t*)0x8A2A18, *(uint32_t*)0x85DA64);
+    }
+    const size_t expectedChanged = s.FixedBySlot + s.FixedByFunction + s.TrappedV + s.TrappedC;
+    Log("fixups self-check: changed dwords %u, fixed+trapped %u: %s", (unsigned)s.ChangedDwords, (unsigned)expectedChanged, s.ChangedDwords == expectedChanged ? "OK" : "MISMATCH");
+    if (s.ChangedDwords != expectedChanged) {
+        Fatal("ApplyToDataImage self-check failed: %u dwords changed but %u were fixed/trapped (something else wrote into the image)", (unsigned)s.ChangedDwords, (unsigned)expectedChanged);
+    }
     return s;
 }
 

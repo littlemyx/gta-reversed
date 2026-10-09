@@ -190,12 +190,13 @@ if (${RE_PROJECT}_STANDALONE AND NOT ${RE_PROJECT}_STANDALONE_DUMP_HOOKS_ONLY)
         set(STANDALONE_DATA_OUT
             "${STANDALONE_DATA_DIR}/original_data.bin"
             "${STANDALONE_DATA_DIR}/original_data.json"
+            "${STANDALONE_DATA_DIR}/data_pointers.bin"
             "${STANDALONE_DATA_DIR}/data_pointers.txt")
         add_custom_command(
             OUTPUT ${STANDALONE_DATA_OUT}
             COMMAND "${${RE_PROJECT}_PYTHON}" -I "${PROJECT_SOURCE_DIR}/tools/standalone/extract_exe_data.py"
                     "${${RE_PROJECT}_ORIGINAL_EXE}" "${STANDALONE_DATA_DIR}"
-            DEPENDS "${PROJECT_SOURCE_DIR}/tools/standalone/extract_exe_data.py" "${PROJECT_SOURCE_DIR}/tools/standalone/initterm_delta.py" "${${RE_PROJECT}_ORIGINAL_EXE}"
+            DEPENDS "${PROJECT_SOURCE_DIR}/tools/standalone/extract_exe_data.py" "${PROJECT_SOURCE_DIR}/tools/standalone/initterm_delta.py" "${PROJECT_SOURCE_DIR}/.notes/symbols.txt" "${${RE_PROJECT}_ORIGINAL_EXE}"
             COMMENT "Extracting the original data image from ${${RE_PROJECT}_ORIGINAL_EXE}"
             VERBATIM
         )
@@ -203,7 +204,7 @@ if (${RE_PROJECT}_STANDALONE AND NOT ${RE_PROJECT}_STANDALONE_DUMP_HOOKS_ONLY)
         add_dependencies(${RE_PROJECT_LIB_NAME} ${RE_PROJECT_LIB_NAME}_exe_data)
         # Next to the exe, where the loader looks for them
         add_custom_command(TARGET ${RE_PROJECT_LIB_NAME} POST_BUILD
-            COMMAND ${CMAKE_COMMAND} -E copy_if_different "${STANDALONE_DATA_DIR}/original_data.bin" "${STANDALONE_DATA_DIR}/original_data.json" "$<TARGET_FILE_DIR:${RE_PROJECT_LIB_NAME}>"
+            COMMAND ${CMAKE_COMMAND} -E copy_if_different "${STANDALONE_DATA_DIR}/original_data.bin" "${STANDALONE_DATA_DIR}/original_data.json" "${STANDALONE_DATA_DIR}/data_pointers.bin" "$<TARGET_FILE_DIR:${RE_PROJECT_LIB_NAME}>"
             VERBATIM
         )
     endif()

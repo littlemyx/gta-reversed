@@ -16,9 +16,11 @@ struct FixupStats {
     size_t RegisteredFunctions{}; // distinct exe function addresses with a replacement
     size_t RegisteredVMTSlots{};  // distinct (vtable, slot) replacements
     size_t Conflicts{};           // same exe address registered twice with a different target (first one wins)
-    size_t CodePointersV{};       // data-image dwords classified as vtable/callback-table entries (run >= 2)
+    size_t CodePointersV{};       // data-image dwords classified as vtable/callback-table entries (run >= 2), by the extractor
     size_t CodePointersC{};       // isolated code pointers
-    size_t TextLikeIgnored{};     // isolated dwords that look like text, not pointers
+    size_t TextLikeIgnored{};     // code-range dwords the extractor rejected as text (not rewritten)
+    size_t UnalignedIgnored{};    // ... as unaligned / u16 pairs (not rewritten)
+    size_t ChangedDwords{};       // dwords of the image that differ from the loaded original after ApplyToDataImage (self-check: == fixed + trapped)
     size_t FixedBySlot{};
     size_t FixedByFunction{};
     size_t TrappedV{};            // unknown + replaced by a trap stub

@@ -16,11 +16,18 @@ Outputs (all derived from the USER'S OWN exe, never commit them):
                       "<addr hex> <value hex> <class> <run>"
                       class V = member of a run (>= 2) of consecutive code pointers (vtable / callback table)
                       class C = isolated code pointer (callback global, CRT hook, ...)
-                      class S = isolated and looks like ASCII/UTF-16 text, NOT a pointer (ignored by the runtime)
-                      run = length of the run of consecutive code-range dwords (class S is only ever assigned to run == 1)
+                      class S = looks like ASCII/UTF-16 text and is not a known function start: NOT a pointer (ignored)
+                      class U = unaligned (low nibble != 0, or low 16 bits == 0) and not a known function start: NOT a pointer (ignored)
+                      run = length of the run of consecutive ACCEPTED (V/C) code pointers around it (1 for S/U)
+  data_pointers.bin   the ACCEPTED pointers (V/C) for the runtime: u32 addr, u32 class (1 = V, 2 = C), little endian. The runtime does not
+                      classify anything itself (single source of truth = `is_code_pointer` below).
+Acceptance rule (S1 of .notes/P2A_REVIEW.md): a dword in [code_lo, code_hi) is a code pointer iff it is a known function start
+(symbols.txt + E8/E9 call/jmp targets in the code sections + every RH_Scoped*Install address in source/) OR
+((v & 0xF) == 0 and not text_like(v)); in both cases (v & 0xFFFF) != 0 is required.
 Also prints a short summary. The PE section table is parsed, nothing is hardcoded.
 """
 import json
+import re
 import struct
 import sys
 from pathlib import Path
@@ -39,6 +46,75 @@ def text_like(v):
     """dword that is really ASCII ('abc\\0') or UTF-16 ('a\\0b\\0') text, not a pointer. Keep in sync with Fixups.cpp."""
     b = [(v >> (8 * i)) & 255 for i in range(4)]
     return (b[3] == 0 and all(32 <= x < 127 for x in b[:3])) or (b[1] == 0 and b[3] == 0 and 32 <= b[0] < 127 and 32 <= b[2] < 127)
+
+
+def function_starts(d, secs, image_base, code_lo, code_hi):
+    """Set of VAs known to be function entries: .notes/symbols.txt, E8/E9 rel32 targets in the code sections (only when the target is
+    preceded by padding/ret, which rejects most random E8 bytes inside code), and the addresses of all active RH_Scoped*Install lines."""
+    repo = Path(__file__).resolve().parents[2]
+    out, counts = set(), {}
+    sym = repo / ".notes" / "symbols.txt"
+    if sym.exists():
+        for line in sym.read_text().splitlines():
+            m = re.match(r"([0-9A-Fa-f]{8})\s", line)
+            if m and code_lo <= int(m.group(1), 16) < code_hi:
+                out.add(int(m.group(1), 16))
+    counts["symbols"] = len(out)
+    n0 = len(out)
+    calls = set()
+    for s in secs:
+        if not s["code"]:
+            continue
+        raw = d[s["raw_offset"]:s["raw_offset"] + min(s["raw_size"], s["virt_size"])]
+        va0 = s["va"]
+        for op in (b"\xe8", b"\xe9"):
+            i = raw.find(op)
+            while i != -1:
+                if i + 5 <= len(raw):
+                    t = (va0 + i + 5 + struct.unpack_from("<i", raw, i + 1)[0]) & 0xFFFFFFFF
+                    if code_lo <= t < code_hi:
+                        calls.add(t)
+                i = raw.find(op, i + 1)
+    # keep only targets that look like entries: previous byte is padding (CC/90) or ret (C3), or `ret imm16` (C2 xx xx)
+    def boundary(t):
+        o = next((s for s in secs if s["code"] and s["va"] <= t < s["va"] + s["virt_size"]), None)
+        if o is None or t == o["va"]:
+            return o is not None
+        off = o["raw_offset"] + t - o["va"]
+        return d[off - 1] in (0xCC, 0x90, 0xC3) or (off >= 3 and d[off - 3] == 0xC2)
+    good = {t for t in calls if boundary(t)}
+    counts["call_targets_all"] = len(calls)
+    counts["call_targets_kept"] = len(good)
+    out |= good
+    inst = set()
+    for f in (repo / "source").rglob("*.cpp"):
+        try:
+            txt = f.read_text(errors="ignore")
+        except OSError:
+            continue
+        for line in txt.splitlines():
+            if "RH_Scoped" in line and "Install" in line and not line.lstrip().startswith("//"):
+                for m in re.finditer(r"\b0x([0-9A-Fa-f]{6})\b", line):
+                    a = int(m.group(1), 16)
+                    if code_lo <= a < code_hi:
+                        inst.add(a)
+    counts["install_addresses"] = len(inst)
+    out |= inst
+    counts["total"] = len(out)
+    return out, counts
+
+
+def is_code_pointer(v, starts):
+    """S1 rule, the ONLY classifier (the runtime reads data_pointers.bin)."""
+    if (v & 0xFFFF) == 0:
+        return False, "U"  # 0x00NN0000 = a pair of u16 {0, NN}; collides with real functions (0x4F0000, 0x4D0000), data wins
+    if v in starts:
+        return True, None
+    if (v & 0xF) != 0:
+        return False, "U"
+    if text_like(v):
+        return False, "S"
+    return True, None
 
 
 def parse_pe(d):
@@ -110,41 +186,54 @@ def main():
     # pointer scan (4-byte aligned in VA terms); BSS is zero so only the initialised bytes matter
     assert data_base % 4 == 0
     words = struct.unpack_from(f"<{bin_size // 4}I", img, 0)
-    code_ptrs, text_fp, data_ptrs = [], [], 0
+    starts, start_counts = function_starts(d, secs, image_base, code_lo, code_hi)
+    in_code, data_ptrs = [], 0
     sec_of = lambda a: next((s["name"] for s in data if s["va"] <= a < s["va"] + s["virt_size"]), "?")
     for i, w in enumerate(words):
         if code_lo <= w < code_hi:
-            code_ptrs.append(data_base + i * 4)
+            in_code.append(data_base + i * 4)
         elif data_base <= w < data_end:
             data_ptrs += 1
-    # runs
     words_at = lambda a: words[(a - data_base) // 4]
-    runs, i = {}, 0
-    while i < len(code_ptrs):
-        j = i
-        while j + 1 < len(code_ptrs) and code_ptrs[j + 1] == code_ptrs[j] + 4:
-            j += 1
-        for k in range(i, j + 1):
-            runs[code_ptrs[k]] = j - i + 1
-        i = j + 1
+    verdict = {a: is_code_pointer(words_at(a), starts) for a in in_code}
+    accepted = [a for a in in_code if verdict[a][0]]
+    acc_set = set(accepted)
     by_sec, by_cls = {}, {"V": 0, "C": 0}
-    with open(out / "data_pointers.txt", "w") as f:
-        for a in code_ptrs:
-            if runs[a] >= 2:
-                c = "V"
-            elif text_like(words_at(a)):
-                c = "S"
-                text_fp.append(a)
-            else:
-                c = "C"
-            f.write(f"0x{a:08X} 0x{words_at(a):08X} {c} {runs[a]}\n")
-            if c != "S":
-                by_cls[c] += 1
-                by_sec[sec_of(a)] = by_sec.get(sec_of(a), 0) + 1
-    stats = dict(initterm=initterm, code_pointing_dwords=len(code_ptrs) - len(text_fp), text_like_ignored=len(text_fp), data_pointing_dwords=data_ptrs,
-                 code_pointing_by_section=by_sec, code_pointing_by_class=by_cls,
-                 distinct_code_targets=len({words_at(a) for a in code_ptrs}))
-    meta = dict(image_base=image_base, code_lo=code_lo, code_hi=code_hi, data_base=data_base, data_end=data_end,
+    skipped = {"S": 0, "U": 0}
+    sample = {"S": [], "U": []}
+    with open(out / "data_pointers.txt", "w") as f, open(out / "data_pointers.bin", "wb") as fb:
+        for a in in_code:
+            ok, why = verdict[a]
+            if not ok:
+                f.write(f"0x{a:08X} 0x{words_at(a):08X} {why} 1\n")
+                skipped[why] += 1
+                if len(sample[why]) < 4:
+                    sample[why].append(f"0x{a:X}=0x{words_at(a):X}")
+                continue
+            run, j = 1, a - 4
+            while j in acc_set:
+                run += 1
+                j -= 4
+            j = a + 4
+            while j in acc_set:
+                run += 1
+                j += 4
+            c = "V" if run >= 2 else "C"
+            f.write(f"0x{a:08X} 0x{words_at(a):08X} {c} {run}\n")
+            fb.write(struct.pack("<II", a, 1 if c == "V" else 2))
+            by_cls[c] += 1
+            by_sec[sec_of(a)] = by_sec.get(sec_of(a), 0) + 1
+    rdata = next((s for s in data if s["name"] == ".rdata"), None)
+    rdata_lo = rdata["va"] if rdata else 0
+    rdata_hi = align_up(rdata["va"] + rdata["virt_size"], PAGE) if rdata else 0
+    stats = dict(initterm=initterm, code_pointing_dwords=len(accepted), skipped_text_like=skipped["S"], skipped_unaligned=skipped["U"],
+                 data_pointing_dwords=data_ptrs, code_pointing_by_section=by_sec, code_pointing_by_class=by_cls,
+                 distinct_code_targets=len({words_at(a) for a in accepted}), function_starts=start_counts)
+    for k in ("0x860E2C", "0x8A2A18", "0x85DA64"):
+        a = int(k, 16)
+        stats["check_" + k] = "accepted" if a in acc_set else "skipped"
+    meta = dict(image_base=image_base, code_lo=code_lo, code_hi=code_hi, rdata_lo=rdata_lo, rdata_hi=rdata_hi,
+                skipped_text_like=skipped["S"], skipped_unaligned=skipped["U"], pointer_count=len(accepted), data_base=data_base, data_end=data_end,
                 committed_size=data_end - data_base, bin_size=bin_size, initterm_applied=bool(initterm),
                 sections=[{k: v for k, v in s.items()} for s in secs], data_sections=[s["name"] for s in data], stats=stats)
     (out / "original_data.json").write_text(json.dumps(meta, indent=2))

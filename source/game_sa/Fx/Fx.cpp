@@ -239,9 +239,9 @@ void Fx_c::InjectHooks() {
     RH_ScopedInstall(AddDebris, 0x49F750);
     RH_ScopedInstall(AddGlass, 0x49F970);
     RH_ScopedInstall(AddWheelSpray, 0x49FB30);
-    // RH_ScopedInstall(AddWheelGrass, 0x49FF20);
-    // RH_ScopedInstall(AddWheelGravel, 0x4A0170);
-    // RH_ScopedInstall(AddWheelMud, 0x4A03C0);
+    RH_ScopedInstall(AddWheelGrass, 0x49FF20);
+    RH_ScopedInstall(AddWheelGravel, 0x4A0170);
+    RH_ScopedInstall(AddWheelMud, 0x4A03C0);
     // RH_ScopedInstall(AddWheelSand, 0x4A0610);
     // RH_ScopedInstall(AddWheelDust, 0x4A09C0);
     // RH_ScopedInstall(TriggerWaterHydrant, 0x4A0D70);
@@ -773,17 +773,17 @@ void Fx_c::AddWheelSpray(CVehicle* vehicle, CVector pos, bool bWheelsSpinning, b
 
 // 0x49FF20
 void Fx_c::AddWheelGrass(CVehicle* vehicle, CVector pos, bool bWheelsSpinning, float lightMult) {
-    ((void(__thiscall*)(Fx_c*, CVehicle*, CVector, uint8, float))0x49FF20)(this, vehicle, pos, bWheelsSpinning, lightMult);
+    AddWheelDirt(*this, vehicle, pos, lightMult, { 0.03f, 0.09f, 0.03f }); // NOTE: `bWheelsSpinning` is unused
 }
 
 // 0x4A0170
 void Fx_c::AddWheelGravel(CVehicle* vehicle, CVector pos, bool bWheelsSpinning, float lightMult) {
-    ((void(__thiscall*)(Fx_c*, CVehicle*, CVector, uint8, float))0x4A0170)(this, vehicle, pos, bWheelsSpinning, lightMult);
+    AddWheelDirt(*this, vehicle, pos, lightMult, { 0.25f, 0.25f, 0.25f }); // NOTE: `bWheelsSpinning` is unused
 }
 
 // 0x4A03C0
 void Fx_c::AddWheelMud(CVehicle* vehicle, CVector pos, bool bWheelsSpinning, float lightMult) {
-    ((void(__thiscall*)(Fx_c*, CVehicle*, CVector, uint8, float))0x4A03C0)(this, vehicle, pos, bWheelsSpinning, lightMult);
+    AddWheelDirt(*this, vehicle, pos, lightMult, { 0.25f, 0.12f, 0.06f }); // NOTE: `bWheelsSpinning` is unused
 }
 
 // 0x4A0610

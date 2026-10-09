@@ -18,6 +18,7 @@
 #include "PlayerPedData.h"
 #include "CarEnterExit.h"
 #include "EventAreaCodes.h"
+#include "CullZones.h"
 
 void CTaskComplexKillPedOnFoot::InjectHooks() {
     RH_ScopedVirtualClass(CTaskComplexKillPedOnFoot, 0x86D894, 11);
@@ -25,6 +26,8 @@ void CTaskComplexKillPedOnFoot::InjectHooks() {
     RH_ScopedInstall(Constructor, 0x620E30);
     RH_ScopedInstall(CreateSubTask, 0x625E70);
     RH_ScopedVMTInstall(MakeAbortable, 0x625E40);
+    RH_ScopedVMTInstall(CreateNextSubTask, 0x62B150);
+    RH_ScopedVMTInstall(CreateFirstSubTask, 0x62B490);
     RH_ScopedVMTInstall(ControlSubTask, 0x626260);
 }
 
@@ -64,14 +67,6 @@ CTaskComplexKillPedOnFoot* CTaskComplexKillPedOnFoot::Constructor(CPed* target, 
 bool CTaskComplexKillPedOnFoot::MakeAbortable(CPed* ped, eAbortPriority priority, const CEvent* event) {
     ped->bDontAcceptIKLookAts = false;
     return !m_pSubTask || m_pSubTask->MakeAbortable(ped, priority, event);
-}
-
-CTask* CTaskComplexKillPedOnFoot::CreateNextSubTask(CPed* ped) {
-    return plugin::CallMethodAndReturn<CTask*, 0x62B150, CTaskComplexKillPedOnFoot*, CPed*>(this, ped);
-}
-
-CTask* CTaskComplexKillPedOnFoot::CreateFirstSubTask(CPed* ped) {
-    return plugin::CallMethodAndReturn<CTask*, 0x62B490, CTaskComplexKillPedOnFoot*, CPed*>(this, ped);
 }
 
 // 0x625E70
@@ -395,4 +390,156 @@ epilogue:
     }
 
     return m_pSubTask;
+}
+
+namespace {
+// NOTSA: Shared by CreateNextSubTask and CreateFirstSubTask (inlined in the original)
+void GivePistolToPedIfPlayerIsStandingStill(CPed* ped) {
+    const auto type = ped->m_nPedType;
+    if ((IsPedTypeGang(type) || type == PED_TYPE_COP) && !ped->IsCreatedByMission()) {
+        ped->GiveWeapon(WEAPON_PISTOL, 1000, true);
+        ped->SetCurrentWeapon(WEAPON_PISTOL);
+        ped->SetMoveState(PEDMOVE_STILL);
+    }
+}
+}
+
+// 0x62B150
+CTask* CTaskComplexKillPedOnFoot::CreateNextSubTask(CPed* ped) {
+    if (!m_target) {
+        return CreateSubTask(TASK_FINISHED, ped);
+    }
+
+    switch (m_pSubTask->GetTaskType()) {
+    case TASK_SIMPLE_STAND_STILL:
+    case TASK_NONE:
+    case TASK_COMPLEX_DESTROY_CAR:
+    case TASK_COMPLEX_KILL_PED_ON_FOOT_MELEE:
+    case TASK_COMPLEX_KILL_PED_ON_FOOT_ARMED:
+        return CreateSubTask(TASK_FINISHED, ped);
+    case TASK_SIMPLE_CAR_DRIVE_TIMED:
+        return CreateSubTask(TASK_COMPLEX_LEAVE_CAR, ped);
+    case TASK_SIMPLE_PAUSE: {
+        if (ped->m_nPedType == PED_TYPE_COP && ped->AsCop()->m_bDontPursuit) {
+            if (FindPlayerWanted(-1)->m_ChanceOnRoadBlock != 0) {
+                return CreateSubTask(TASK_COMPLEX_KILL_PED_ON_FOOT_ARMED, ped);
+            }
+            return CreateSubTask(TASK_SIMPLE_PAUSE, ped);
+        }
+        if (m_bWaitForPlayerToBeSafe && m_bWaitingForPlayerToBeSafe && !FindPlayerWanted(-1)->m_bEverybodyBackOff) {
+            m_bWaitingForPlayerToBeSafe = false;
+            return CreateFirstSubTask(ped);
+        }
+        return CreateSubTask(TASK_FINISHED, ped);
+    }
+    case TASK_COMPLEX_DRAG_PED_FROM_CAR: {
+        if (static_cast<CTaskComplexDragPedFromCar*>(m_pSubTask)->IsQuitAfterDraggingPedOut()) {
+            return CreateSubTask(TASK_COMPLEX_DESTROY_CAR, ped);
+        }
+        break; // -> Melee / Armed
+    }
+    case TASK_COMPLEX_LEAVE_CAR: {
+        CPed* const player = m_target->IsPlayer() ? m_target : nullptr;
+
+        if (ped->bInVehicle) {
+            return CreateSubTask(TASK_SIMPLE_CAR_DRIVE_TIMED, ped);
+        }
+
+        const auto& pedPos = ped->GetPosition();
+        const auto& tgtPos = m_target->GetPosition();
+        const float dx     = tgtPos.x - pedPos.x; // Stored as floats
+        const float dy     = tgtPos.y - pedPos.y;
+        const float dz     = tgtPos.z - pedPos.z;
+
+        if (CCullZones::NoPolice()
+            || (m_target->m_standingOnEntity
+                && m_target->m_standingOnEntity != ped->m_standingOnEntity
+                && std::sqrt((double)dz * (double)dz + (double)dy * (double)dy + (double)dx * (double)dx) < 5.f) // x87: Kept in extended precision
+        ) {
+            if (player && player->GetPlayerData()->m_bStoppedMoving) {
+                GivePistolToPedIfPlayerIsStandingStill(ped);
+            }
+        }
+        break; // -> Melee / Armed
+    }
+    default:
+        return nullptr;
+    }
+
+    return CreateSubTask(
+        ped->GetActiveWeapon().IsTypeMelee()
+            ? TASK_COMPLEX_KILL_PED_ON_FOOT_MELEE
+            : TASK_COMPLEX_KILL_PED_ON_FOOT_ARMED,
+        ped
+    );
+}
+
+// 0x62B490
+CTask* CTaskComplexKillPedOnFoot::CreateFirstSubTask(CPed* ped) {
+    m_bNewTarget             = false;
+    m_bRoomToDragPedOutOfCar = true;
+
+    if (!m_target) {
+        ped->bDontAcceptIKLookAts = false;
+        return nullptr;
+    }
+
+    if (m_target->m_fHealth <= 0.f) {
+        m_bTargetKilled = true;
+    }
+
+    // x87: Kept in extended precision, but then stored as a float
+    const auto& pedPos = ped->GetPosition();
+    const auto& tgtPos = m_target->GetPosition();
+    const double dx    = (double)tgtPos.x - (double)pedPos.x;
+    const double dy    = (double)tgtPos.y - (double)pedPos.y;
+    const double dz    = (double)tgtPos.z - (double)pedPos.z;
+    const float dist   = (float)std::sqrt((dz * dz + dy * dy) + dx * dx);
+
+    CPed* const player = m_target->IsPlayer() ? m_target : nullptr;
+
+    eTaskType taskType;
+    if (ped->m_pVehicle && ped->bInVehicle) {
+        taskType = TASK_COMPLEX_LEAVE_CAR;
+    } else {
+        if (player
+            && (CCullZones::NoPolice()
+                || (m_target->m_standingOnEntity && m_target->m_standingOnEntity != ped->m_standingOnEntity && dist < 5.f))
+            && player->GetPlayerData()->m_bStoppedMoving
+        ) {
+            GivePistolToPedIfPlayerIsStandingStill(ped);
+        }
+
+        const auto tgtVeh = m_target->m_pVehicle;
+        if (!m_target->bInVehicle || !tgtVeh || (!tgtVeh->IsDriver(m_target) && !tgtVeh->IsPassenger(m_target))) {
+            taskType = ped->GetActiveWeapon().IsTypeMelee()
+                ? TASK_COMPLEX_KILL_PED_ON_FOOT_MELEE
+                : TASK_COMPLEX_KILL_PED_ON_FOOT_ARMED;
+        } else {
+            m_bRoomToDragPedOutOfCar = true;
+
+            taskType = TASK_COMPLEX_DESTROY_CAR;
+            // x87: Kept in extended precision
+            const double speed2D = std::sqrt((double)tgtVeh->m_vecMoveSpeed.y * (double)tgtVeh->m_vecMoveSpeed.y + (double)tgtVeh->m_vecMoveSpeed.x * (double)tgtVeh->m_vecMoveSpeed.x);
+            if (tgtVeh->m_nVehicleSubType != VEHICLE_TYPE_HELI
+                && tgtVeh->m_nVehicleSubType != VEHICLE_TYPE_PLANE
+                && !ped->bStayInSamePlace
+                && !(speed2D > 0.1f)
+                && tgtVeh->CanPedOpenLocks(ped)
+                && (tgtVeh->m_nVehicleType != VEHICLE_TYPE_BIKE || ped->GetActiveWeapon().IsTypeMelee())
+                && tgtVeh->m_nVehicleType != VEHICLE_TYPE_BOAT
+            ) {
+                m_bRoomToDragPedOutOfCar = CCarEnterExit::IsRoomForPedToLeaveCar(tgtVeh, CCarEnterExit::ComputeTargetDoorToExit(tgtVeh, m_target), nullptr);
+                if (m_bRoomToDragPedOutOfCar) {
+                    taskType = m_target->bDontDragMeOutCar
+                        ? TASK_COMPLEX_DESTROY_CAR
+                        : TASK_COMPLEX_DRAG_PED_FROM_CAR;
+                }
+            }
+        }
+    }
+
+    const auto task = CreateSubTask(taskType, ped);
+    ped->DropEntityThatThisPedIsHolding(true);
+    return task;
 }

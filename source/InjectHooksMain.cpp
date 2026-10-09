@@ -230,6 +230,7 @@
 #include "TaskComplexDestroyCarArmed.h"
 #include "TaskSimpleAbseil.h"
 #include "TaskSimpleOnEscalator.h"
+#include "TaskComplexFollowPatrolRoute.h"
 #include "TaskComplexReactToAttack.h"
 #include "TaskComplexAvoidEntity.h"
 #include "TaskComplexKillAllThreats.h"
@@ -1144,7 +1145,7 @@ void InjectHooksMain() {
         CTaskComplexFleeShooting::InjectHooks();
         CTaskComplexFollowLeaderAnyMeans::InjectHooks();
         // CTaskComplexFollowNodeRouteShooting::InjectHooks();
-        // CTaskComplexFollowPatrolRoute::InjectHooks();
+        CTaskComplexFollowPatrolRoute::InjectHooks();
         CTaskComplexFollowPointRoute::InjectHooks();
         CTaskComplexGangFollower::InjectHooks();
         CTaskComplexGangJoinRespond::InjectHooks();

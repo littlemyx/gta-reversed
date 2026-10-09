@@ -23,6 +23,8 @@ void CFont::InjectHooks() {
     RH_ScopedInstall(Shutdown, 0x7189B0);
     RH_ScopedInstall(PrintChar, 0x718A10);
     RH_ScopedInstall(ParseToken, 0x718F00);
+    RH_ScopedInstall(FilterOutTokensFromString, 0x719240);
+    RH_ScopedInstall(RenderString, 0x719B40);
 
     // styling functions
     RH_ScopedInstall(SetScale, 0x719380);
@@ -263,6 +265,164 @@ void CFont::PrintChar(float x, float y, char character) {
         const float vb = v + 0.078125f;
         const float u2 = (u + 0.0625f) - 0.001f;
         CSprite2d::AddToBuffer(rect, col, u, v + 0.00055f, u2, v + 0.0121f, u, vb - 0.009f, u2, (vb - 0.0021f) + 0.01f);
+    }
+}
+
+// Removes all `~x~` style tokens from the string (in place)
+// 0x719240
+void CFont::FilterOutTokensFromString(GxtChar* str) {
+    // NOTSA: Original copied the string into a 252 bytes long stack buffer (no bounds check)
+    const std::string copy{ (const char*)str };
+
+    // BUG: Original doesn't stop at the terminating null of an unterminated token (reads past the end of its buffer), we do
+    const char* cur = copy.c_str();
+    char*       out = (char*)str;
+    for (; *cur; cur++) {
+        if (*cur == '~') {
+            cur++; // Skip the opening '~'
+            while (*cur && *cur != '~') { // Skip everything up to (and including) the closing '~'
+                cur++;
+            }
+            if (!*cur) {
+                break;
+            }
+        } else {
+            *out++ = *cur;
+        }
+    }
+    *out = '\0';
+}
+
+// Adds a (part of a) line to the font buffer (`wrap` is stored as the wrap of the buffered text)
+// 0x719B40
+void CFont::RenderString(float x, float y, const char* text, const char* textEnd, float wrap) {
+    const auto origColor = m_Color; // Color before the (possible) buffer flush
+
+    if (RenderState.m_wFontTexture != m_FontTextureId) {
+        RenderFontBuffer();
+        RenderState.m_wFontTexture = m_FontTextureId;
+    }
+
+    const auto savedColor  = m_Color;         // Color after it (restored after the shadow/outline passes)
+    auto       finalRGB    = origColor;       // Color to be restored at the end (updated by tokens)
+    auto       finalAlpha  = origColor.a;
+
+    // 0x859520 / 0x859524 (1/640, 1/448 as floats)
+    constexpr auto SCALE_X = std::bit_cast<float>(0x3ACCCCCDu);
+    constexpr auto SCALE_Y = std::bit_cast<float>(0x3B124925u);
+
+    // The original keeps these on the x87 stack, hence `double`
+    const auto Scale = [](int32 screenDim, float factor, int32 offset) {
+        return (double)screenDim * (double)factor * (double)offset;
+    };
+    const auto SetDropColorAndBlip = [&] {
+        m_Color        = m_FontDropColor;
+        m_bFontIsBlip  = true;
+    };
+
+    if ((float)(int8)m_nFontShadow != 0.0f) { // Drop shadow
+        const auto shadow = (int8)m_nFontShadow;
+
+        SetDropColorAndBlip();
+        m_nFontShadow = 0;
+
+        if (m_fSlant != 0.0f) {
+            m_fSlantRefPoint.x = (float)(Scale(RsGlobal.maximumWidth,  SCALE_X, shadow) + (double)m_fSlantRefPoint.x); // 0x859520
+            m_fSlantRefPoint.y = (float)(Scale(RsGlobal.maximumHeight, SCALE_Y, shadow) + (double)m_fSlantRefPoint.y); // 0x859524
+        }
+
+        RenderString(
+            (float)(Scale(RsGlobal.maximumWidth,  SCALE_X, shadow) + (double)x),
+            (float)(Scale(RsGlobal.maximumHeight, SCALE_Y, shadow) + (double)y),
+            text, textEnd, wrap
+        );
+
+        m_Color       = savedColor;
+        m_nFontShadow = shadow;
+        m_bFontIsBlip = false;
+    } else if ((float)(int8)m_nFontOutlineSize != 0.0f) { // Outline
+        const auto outline = (int8)m_nFontOutlineSize;
+
+        SetDropColorAndBlip();
+        m_nFontOutlineSize = 0;
+
+        if (m_fSlant != 0.0f) {
+            m_fSlantRefPoint.x = (float)(Scale(RsGlobal.maximumWidth,  SCALE_X, outline) + (double)m_fSlantRefPoint.x);
+            m_fSlantRefPoint.y = (float)(Scale(RsGlobal.maximumHeight, SCALE_Y, outline) + (double)m_fSlantRefPoint.y);
+        }
+
+        const auto dx = Scale(RsGlobal.maximumWidth,  SCALE_X, outline);
+        const auto dy = Scale(RsGlobal.maximumHeight, SCALE_Y, outline);
+        RenderString((float)(dx + (double)x), (float)((double)y - dy), text, textEnd, wrap);
+        RenderString((float)((double)x - dx), (float)((double)y - dy), text, textEnd, wrap);
+        RenderString((float)(dx + (double)x), (float)(dy + (double)y), text, textEnd, wrap);
+        RenderString((float)((double)x - dx), (float)(dy + (double)y), text, textEnd, wrap);
+        RenderString((float)(dx + (double)x), y,                       text, textEnd, wrap);
+        RenderString((float)((double)x - dx), y,                       text, textEnd, wrap);
+        RenderString(x,                       (float)(dy + (double)y), text, textEnd, wrap);
+        RenderString(x,                       (float)((double)y - dy), text, textEnd, wrap);
+
+        m_Color            = savedColor;
+        m_nFontOutlineSize = outline;
+        m_bFontIsBlip      = false;
+    }
+
+    // Make sure there's enough space left in the buffer
+    if ((uintptr_t)pEmptyChar >= 0xC7187Cu - (uintptr_t)textEnd + (uintptr_t)text) {
+        RenderFontBuffer();
+    }
+
+    // Header
+    pEmptyChar->m_vPosn          = { x, y };
+    pEmptyChar->m_fWidth         = m_Scale.x;
+    pEmptyChar->m_fHeight        = m_Scale.y;
+    pEmptyChar->m_color.r        = m_Color.r;
+    pEmptyChar->m_color.g        = m_Color.g;
+    pEmptyChar->m_color.b        = m_Color.b;
+    pEmptyChar->m_color.a        = m_Color.a;
+    pEmptyChar->m_fWrap          = wrap;
+    pEmptyChar->m_fSlant         = m_fSlant;
+    pEmptyChar->m_vSlanRefPoint  = m_fSlantRefPoint;
+    pEmptyChar->m_nFontStyle     = m_FontStyle;
+    pEmptyChar->m_bPropOn        = m_bFontPropOn;
+    pEmptyChar->m_wFontTexture   = m_FontTextureId;
+    pEmptyChar->m_bContainImages = m_bFontIsBlip;
+    pEmptyChar->m_nOutline       = m_nFontOutlineOrShadow;
+
+    // Followed by the (null terminated, 4 byte aligned) text. See `RenderFontBuffer`
+    auto* dst = reinterpret_cast<char*>(pEmptyChar + 1);
+    pEmptyChar = reinterpret_cast<CFontChar*>(dst);
+
+    const auto* cur = text;
+    while (cur < textEnd) {
+        if (*cur == '~') {
+            CRGBA color = m_Color;
+            const auto* next = ParseToken((char*)cur, color, RenderState.m_bContainImages, nullptr);
+            if (!m_bFontIsBlip && PS2Symbol == EXSYMBOL_NONE) {
+                m_Color.r = finalRGB.r = color.r;
+                m_Color.g = finalRGB.g = color.g;
+                m_Color.b = finalRGB.b = color.b;
+                finalAlpha = m_Color.a;
+            }
+            PS2Symbol = EXSYMBOL_NONE;
+            for (; cur != next; cur++) {
+                *dst++ = *cur;
+            }
+        } else {
+            *dst++ = *cur++;
+        }
+        pEmptyChar = reinterpret_cast<CFontChar*>(dst);
+    }
+
+    *dst++ = '\0';
+    pEmptyChar = reinterpret_cast<CFontChar*>(dst);
+    while ((uintptr_t)dst & 3) {
+        dst++;
+    }
+    pEmptyChar = reinterpret_cast<CFontChar*>(dst);
+
+    if (!m_bFontIsBlip) {
+        m_Color = { finalRGB.r, finalRGB.g, finalRGB.b, finalAlpha };
     }
 }
 
@@ -718,11 +878,6 @@ void CFont::DrawFonts() {
 
 // 0x71A220
 int16 CFont::ProcessCurrentString(bool print, float x, float y, const GxtChar* text) {
-    // 0x719B40 - Adds a (part of a) line to the font buffer (not reversed yet)
-    const auto RenderString = [](float px, float py, const char* str, const char* strEnd, float spaceExtra) {
-        plugin::Call<0x719B40, float, float, const char*, const char*, float>(px, py, str, strEnd, spaceExtra);
-    };
-
     int32 spaceCount     = 0;                     // Number of spaces in the current line (used for justify)
     int32 lineCount      = 0;
     const CRGBA savedColor = m_Color;

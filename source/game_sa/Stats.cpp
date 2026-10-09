@@ -274,7 +274,7 @@ void CStats::BuildStatLine(char* line, void* pValue1, int32 metrics, void* pValu
     }
 
     GxtCharStrcpy(gGxtString, TheText.Get(line)); // 0x718660
-    plugin::Call<0x719240, GxtChar*>(gGxtString); // CFont::FilterOutTokensFromString (not reversed yet)
+    CFont::FilterOutTokensFromString(gGxtString); // 0x719240
     AsciiToGxtChar(gString2, gGxtString2);
 }
 

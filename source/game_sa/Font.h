@@ -130,6 +130,8 @@ public:
     // Get next ' ' character in a string
     static char* GetNextSpace(char* string);
     static char* ParseToken(char* text, CRGBA& color, bool isBlip, char* tag);
+    static void FilterOutTokensFromString(GxtChar* str);
+    static void RenderString(float x, float y, const char* text, const char* textEnd, float wrap);
     static void SetScale(float w, float h);
     static void SetScaleForCurrentLanguage(float w, float h);
     static void SetSlantRefPoint(float x, float y);

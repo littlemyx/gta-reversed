@@ -207,7 +207,13 @@ constexpr float RadiansToDegrees(float angleInRadians) {
 
 template<typename T>
 T lerp(const T& from, const T& to, float t) {
-    // Same as `from + (to - from) * t` (Or `from + t * (to - from)`
+    // The exe's (inlined) lerps are `(to - from) * t + from`; NOT the `to * t + from * (1 - t)` form (differs in the last bit)
+    return static_cast<T>((to - from) * t + from);
+}
+
+//! `from * (1 - t) + to * t`: the exe's blend in the functions that do NOT use `(to - from) * t + from` (see `lerp`); the two forms differ in the last bit
+template<typename T>
+T lerpBlend(const T& from, const T& to, float t) {
     return static_cast<T>(to * t + from * (1.f - t));
 }
 

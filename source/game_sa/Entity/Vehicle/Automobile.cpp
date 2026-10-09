@@ -1857,7 +1857,7 @@ int32 CAutomobile::ProcessEntityCollision(CEntity* entity, CColPoint* outColPoin
             }
             const auto compressionNow = std::min(
                 originalWheelSuspCompr[i],
-                lerp(m_fWheelsSuspensionCompressionPrev[i], 1.f, 1.f - m_aSuspensionSpringLength[i] / m_aSuspensionLineLength[i])
+                lerpBlend(m_fWheelsSuspensionCompressionPrev[i], 1.f, 1.f - m_aSuspensionSpringLength[i] / m_aSuspensionLineLength[i]) // exe: `(1 - t) * prev + t`
             );
             const auto suspComprDelta = (compressionNow - m_fWheelsSuspensionCompression[i]) * m_aSuspensionLineLength[i]; // Suspension compression delta (In meters)
             if (suspComprDelta <= 0.1f /* 0x8D3200 */) {
@@ -2047,7 +2047,7 @@ void CAutomobile::ProcessControlInputs(uint8 playerNum) {
     //> 0x6ADD28 - Rear wheel steer
     if (m_pHandlingData->m_bHbRearwheelSteer) {
         m_f2ndSteerAngle = vehicleFlags.bIsHandbrakeOn
-            ? lerp(m_f2ndSteerAngle, -m_fSteerAngle, 0.9f) // TODO/NOTE: `lerp`'s `from` and `to` arguments must be constant, this is textbook bad practice!
+            ? 0.9f * m_f2ndSteerAngle - (1.0f - 0.9f) * m_fSteerAngle // 0x6ADD39: the exe weights the OLD value by 0.9 (0x8D3208) and the new one by (1 - 0.9); the previous `lerp(old, -steer, 0.9f)` had the weights the other way round
             : m_f2ndSteerAngle * 0.9f; // TODO/NOTE: Seems incorrect, maybe they meant `m_fSteerAngle * 0.9f`?
     }
 
@@ -2636,12 +2636,12 @@ void CAutomobile::SetupSuspensionLines() {
 
         for (auto i = 0u; i < NUM_AUTOMOBILE_SUSP_LINES; i += NUM_AUTOMOBILE_SUSP_LINES / 2) { // Do left, and right side - Wheels 0, 1 are on the left side, while 2, 3 are on the right
             for (auto j = 0u; j < NUM_AUTOMOBILE_SUSP_LINES; j++, lineIndex++) { // Add 4 extra lines on each side
-                const auto wheelRelativePos = (float)(j + 1u) / (float)(NUM_AUTOMOBILE_SUSP_LINES + 1);
+                const auto wheelRelativePos = (float)(j + 1u) * 0.2f; // 0x858CC4 = 1 / (NUM_AUTOMOBILE_SUSP_LINES + 1) as float, the exe MULTIPLIES
 
                 // Calculate positions of this wheel's line by lerping between the 2 wheel's lines on this side
                 auto& line      = cd.m_pLines[lineIndex];
-                line.m_vecStart = lerp(cd.m_pLines[i].m_vecStart, cd.m_pLines[i + 1].m_vecStart, wheelRelativePos);
-                line.m_vecEnd   = lerp(cd.m_pLines[i].m_vecEnd, cd.m_pLines[i + 1].m_vecEnd, wheelRelativePos);
+                line.m_vecStart = lerpBlend(cd.m_pLines[i].m_vecStart, cd.m_pLines[i + 1].m_vecStart, wheelRelativePos);
+                line.m_vecEnd   = lerpBlend(cd.m_pLines[i].m_vecEnd, cd.m_pLines[i + 1].m_vecEnd, wheelRelativePos);
             }
         }
     }

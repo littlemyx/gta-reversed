@@ -374,10 +374,10 @@ void CWaterLevel::RenderWakeSegment(
         RenderBuffer::PushIndices({ 0, 2, 1, 0, 3, 2 }, true);
 
         const CVector2D corners[]{
-            lerp(vecB, vecA, (float)(partIdx + 0) / (float)(NUM_PARTS)),
-            lerp(vecB, vecA, (float)(partIdx + 1) / (float)(NUM_PARTS)),
-            lerp(vecC, vecD, (float)(partIdx + 1) / (float)(NUM_PARTS)),
-            lerp(vecC, vecD, (float)(partIdx + 0) / (float)(NUM_PARTS)),
+            lerpBlend(vecB, vecA, (float)(partIdx + 0) / (float)(NUM_PARTS)),
+            lerpBlend(vecB, vecA, (float)(partIdx + 1) / (float)(NUM_PARTS)),
+            lerpBlend(vecC, vecD, (float)(partIdx + 1) / (float)(NUM_PARTS)),
+            lerpBlend(vecC, vecD, (float)(partIdx + 0) / (float)(NUM_PARTS)),
         };
 
         CVector2D uvs[4]{};
@@ -443,9 +443,9 @@ void CWaterLevel::SplitWaterTriangleAlongXLine(int32 splitAtX, int32 X1, int32 Y
     const auto t = (float)splitWidth / (float)triWidth;
 
     // New interpolations of RenPar's along a few segments
-    const auto P12 = lerp(P1, P2, t);
-    const auto P13 = lerp(P1, P3, t);
-    const auto P23 = lerp(P2, P3, t);
+    const auto P12 = lerpBlend(P1, P2, t);
+    const auto P13 = lerpBlend(P1, P3, t);
+    const auto P23 = lerpBlend(P2, P3, t);
 
     // Vertex 1 and 2 are always (top left), (top right)
     // Also the triangles always contain a 90deg corner at either the left or right side.
@@ -622,8 +622,8 @@ void CWaterLevel::RenderHighDetailWaterRectangle(int32 minX, int32 maxX, int32 Y
     // Split along Y. Note: This isn't the same as `SplitWaterRectangleAlongYLine`, as `t` is calculated using `Y1` and `Y2` directly
     const int32 splitAtY = minY + (numCellsY / 2) * 2;
     const float t        = (float)((double)(splitAtY - Y1) / (double)(Y2 - Y1));
-    const auto  P13      = lerp(P1, P3, t);
-    const auto  P24      = lerp(P2, P4, t);
+    const auto  P13      = lerpBlend(P1, P3, t);
+    const auto  P24      = lerpBlend(P2, P4, t);
 
     // Top
     RenderWaterRectangle(minX, maxX, Y1, splitAtY, P1, P2, P13, P24);
@@ -984,8 +984,8 @@ void CWaterLevel::RenderHighDetailWaterTriangle_OneLayer(int32 X1, int32 Y1, CRe
 void CWaterLevel::SplitWaterRectangleAlongXLine(int32 splitAtX, int32 minX, int32 maxX, int32 Y1, int32 Y2, CRenPar P1, CRenPar P2, CRenPar P3, CRenPar P4) {
     const auto t = (float)(splitAtX - minX) / (float)(maxX - minX);
 
-    const auto P12 = lerp(P1, P2, t);
-    const auto P34 = lerp(P3, P4, t);
+    const auto P12 = lerpBlend(P1, P2, t);
+    const auto P34 = lerpBlend(P3, P4, t);
 
     // Left
     RenderWaterRectangle(
@@ -1008,8 +1008,8 @@ void CWaterLevel::SplitWaterRectangleAlongYLine(int32 splitAtY, int32 minX, int3
 
     const auto t = (float)(splitAtY - minY) / (float)(maxY - minY);
 
-    const auto P13 = lerp(P1, P3, t);
-    const auto P24 = lerp(P2, P4, t);
+    const auto P13 = lerpBlend(P1, P3, t);
+    const auto P24 = lerpBlend(P2, P4, t);
 
     // Top
     RenderWaterRectangle(

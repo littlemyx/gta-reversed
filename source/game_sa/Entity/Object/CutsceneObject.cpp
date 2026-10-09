@@ -137,7 +137,7 @@ void CCutsceneObject::PreRender() {
     CEntity* entity = nullptr;
     if (CWorld::ProcessVerticalLine(vecPos, fHeight, colPoint, entity, true)) {
         const auto fDayNight = colPoint.m_nLightingB.GetCurrentLighting();
-        m_fContactSurfaceBrightness = lerp(m_fContactSurfaceBrightness, fDayNight, CTimer::GetTimeStep() / 10.0F);
+        m_fContactSurfaceBrightness = lerpBlend(m_fContactSurfaceBrightness, fDayNight, CTimer::GetTimeStep() / 10.0F);
     }
 }
 

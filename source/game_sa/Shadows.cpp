@@ -496,9 +496,10 @@ void CShadows::AffectColourWithLighting(
     if (shadowType != SHADOW_ADDITIVE) {
         const auto mult = std::min(
             0.4f + 0.6f * (1.f - CCustomBuildingDNPipeline::m_fDNBalanceParam),
-            0.3f + 0.7f * lerp(
-                (float)(dayNightIntensity >> 0 & 0b1111) / 30.f,
-                (float)(dayNightIntensity >> 4 & 0b1111) / 30.f,
+            // exe: nibbles are multiplied by 1/30 (0x858F10 = 0.033333335f, NOT divided by 30) and blended as `(1 - t) * day + night * t`
+            0.3f + 0.7f * lerpBlend(
+                (float)(dayNightIntensity >> 0 & 0b1111) * 0.033333335f,
+                (float)(dayNightIntensity >> 4 & 0b1111) * 0.033333335f,
                 CCustomBuildingDNPipeline::m_fDNBalanceParam
             )
         );
@@ -601,8 +602,8 @@ void CShadows::StoreRealTimeShadow(CPhysical* physical, float displacementX, flo
 
     const auto& vecToSun = CTimeCycle::m_VectorToSun[CTimeCycle::m_CurrentStoredValue];
     const auto lightFrame = rtshdw->SetLightProperties(
-        RWRAD2DEG(+std::atan2(-vecToSun.x, -vecToSun.y)),
-        RWRAD2DEG(-std::atan2(+vecToSun.x, -vecToSun.z)),
+        RadiansToDegrees(+std::atan2(-vecToSun.x, -vecToSun.y)),
+        RadiansToDegrees(-std::atan2(+vecToSun.x, -vecToSun.z)),
         true
     );
     CalcPedShadowValues(

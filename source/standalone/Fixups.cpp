@@ -8,6 +8,7 @@
 #include <float.h>
 #include <csignal>
 #include <cstdlib>
+#include <cstring>
 #include <unordered_set>
 #include <vector>
 #include "Fixups.h"
@@ -77,6 +78,17 @@ void __cdecl AbortHandler(int) {
 #ifdef _DEBUG
 // The debug CRT's assert() would open a modal message box (invisible/hanging under Wine, and in a headless run): log it and terminate instead
 int __cdecl CrtReportHook(int type, char* message, int* returnValue) {
+    if ((type == _CRT_ASSERT || type == _CRT_ERROR) && message && std::strstr(message, "array subscript out of range")) {
+        // Known original bugs read std::array/arrays out of range (e.g. CTaskManager::GetTaskSecondary(-1)); the exe just reads the neighbour: continue
+        static int s_N = 0;
+        if (s_N++ < 20) {
+            Fixups::Log("tolerated: %.200s", message);
+        }
+        if (returnValue) {
+            *returnValue = 0;
+        }
+        return TRUE;
+    }
     if (type == _CRT_ASSERT || type == _CRT_ERROR) {
         static bool s_Raised = false; // symbolised stack via the unhandled-exception filter (app_debug.cpp), see AbortHandler
         if (!s_Raised && !std::getenv("NOTSA_STANDALONE_NO_ABORT_TRACE")) {

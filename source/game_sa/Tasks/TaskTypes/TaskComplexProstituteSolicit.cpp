@@ -89,6 +89,7 @@ CTask* CTaskComplexProstituteSolicit::CreateSubTask(eTaskType taskType, CPed* pr
     switch (taskType) {
     case TASK_COMPLEX_CAR_DRIVE:
         bSearchingForSecludedPlace = true;
+        bSexProcessStarted         = false; // the exe does `flags = (flags & ~2) | 1` on the 16-bit flag word
         return new CTaskComplexCarDrive(m_pClient->m_pVehicle);
 
     case TASK_SIMPLE_STAND_STILL:

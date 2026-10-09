@@ -8,6 +8,19 @@
 #include "TaskSimpleStandStill.h"
 #include <Ragdoll/IKChainManager.h>
 
+// 0x44E480 - `CVector2D::Normalise` as the exe has it: the squared length and `1 / sqrt` stay in extended precision,
+// a NaN length is normalised (JP), a non-positive one yields (1, y)
+static void NormaliseOriginal(CVector2D& v) {
+    const double sq = (double)v.x * (double)v.x + (double)v.y * (double)v.y;
+    if (!(sq <= 0.0)) {
+        const double recip = 1.0 / std::sqrt(sq);
+        v.x = (float)((double)v.x * recip);
+        v.y = (float)((double)v.y * recip);
+    } else {
+        v.x = 1.0f;
+    }
+}
+
 void CTaskComplexPartner::InjectHooks() {
     RH_ScopedVirtualClass(CTaskComplexPartner, 0x870664, 14);
     RH_ScopedCategory("Tasks/TaskTypes");
@@ -110,14 +123,14 @@ CTask* CTaskComplexPartner::CreateNextSubTask(CPed* ped) {
             return MakeStandStill();
         }
 
-        diff.Normalise();
+        NormaliseOriginal(diff); // 0x44E480
         const auto txExt = ((double)diff.x + (double)partnerPos.x) - (double)pedPos.x;
         const auto tyExt = ((double)diff.y + (double)partnerPos.y) - (double)pedPos.y;
         CVector2D  t{ (float)txExt, (float)tyExt };
         const auto len = std::sqrt(txExt * txExt + (double)t.y * (double)t.y);
         double     x, y;
         if (len > 0.02f) {
-            t.Normalise();
+            NormaliseOriginal(t); // 0x44E480
             x = (double)t.x * (double)0.02f;
             y = (double)t.y * (double)0.02f;
         } else {

@@ -173,6 +173,7 @@ void CCarCtrl::InjectHooks()
     RH_ScopedInstall(TestWhetherToFirePlaneGuns, 0x429520);
     RH_ScopedInstall(GetAIPlaneToAttackPlayer, 0x429780);
     RH_ScopedInstall(GetAIPlaneToDoDogFight, 0x429890);
+    RH_ScopedInstall(FlyAIHeliInCertainDirection, 0x429A70);
     RH_ScopedInstall(WeaveForObject, 0x426BC0);
     RH_ScopedInstall(WeaveForOtherCar, 0x426350);
 }
@@ -552,8 +553,254 @@ void CCarCtrl::FireHeliRocketsAtTarget(CAutomobile* entityLauncher, CEntity* ent
 }
 
 // 0x429A70
-void CCarCtrl::FlyAIHeliInCertainDirection(CHeli* heli, float arg2, float arg3, bool arg4) {
-    plugin::Call<0x429A70, CHeli*, float, float, bool>(heli, arg2, arg3, arg4);
+//! @param angle           The direction to fly in (radians)
+//! @param targetDist      Distance to the target; the heli only closes in (via the pitch) if it's not further than 60 units
+//! @param bUseDestination Pitch towards the destination (`m_vecDestinationCoors`) to get closer to it
+void CCarCtrl::FlyAIHeliInCertainDirection(CHeli* heli, float angle, float targetDist, bool bUseDestination) {
+    constexpr auto PI = std::numbers::pi_v<float>; // 0x858CB8
+    const auto&    moveSpeed = heli->m_vecMoveSpeed;
+    auto&          autoPilot = heli->m_autoPilot;
+
+    // News heli: Look sideways when it's (almost) stopped
+    bool bSlowNewsHeli = false;
+    if (autoPilot.m_nCarMission == MISSION_HELI_NEWS_BEHAVIOUR
+        && targetDist < (float)autoPilot.m_ucHeliTargetDist2
+        && std::sqrt((double)moveSpeed.y * moveSpeed.y + (double)moveSpeed.x * moveSpeed.x) < 0.01f
+    ) {
+        bSlowNewsHeli = true;
+        angle         = (float)((double)angle + PI / 2.0f); // 0x858FE4
+    }
+
+    // Twice a second (at a different time for each heli) check for obstacles ahead and to the sides
+    const uint32 seed = heli->m_nRandomSeed;
+    if ((CTimer::GetTimeInMS() + seed) % 500 < (seed + CTimer::GetPreviousTimeInMS()) % 500) {
+        heli->field_9AC = heli->m_fMaxAltitude;
+
+        const auto  LineOfSight = [](const CVector& from, const CVector& to, CColPoint& colPoint) {
+            CEntity* hitEntity{};
+            return CWorld::ProcessLineOfSight(from, to, colPoint, hitEntity, true, false, false, false, false, false, false, true); // 0x56BA00
+        };
+        CColPoint colPoint;
+
+        const auto stepX = (float)((double)moveSpeed.x * 50.0f);
+        const auto stepY = (float)((double)moveSpeed.y * 50.0f);
+        const auto stepZ = (double)moveSpeed.z * 50.0f; // x87: kept in extended precision
+        const auto& pos  = heli->GetPosition();
+        const CVector origin{
+            (float)((double)stepX + pos.x),
+            (float)((double)stepY + pos.y),
+            (float)(stepZ + pos.z)
+        };
+
+        // Probe ahead (and downwards)
+        const auto cosF = (float)std::cos((double)angle);
+        const auto sinF = (float)std::sin((double)angle);
+        CVector    dir{ cosF, sinF, -1.0f };
+        NormaliseOriginal(dir); // 0x59C910
+        const CVector probeTarget{
+            (float)((double)dir.x * 60.0f + origin.x),
+            (float)((double)dir.y * 60.0f + origin.y),
+            (float)((double)(float)((double)dir.z * 60.0f) + origin.z)
+        };
+        if (LineOfSight(origin, probeTarget, colPoint)) {
+            const auto altitude = bSlowNewsHeli
+                ? (double)heli->m_fMinAltitude * 0.5f + colPoint.m_vecPoint.z
+                : (double)colPoint.m_vecPoint.z + heli->m_fMinAltitude;
+            if (!((double)heli->field_9AC > altitude)) {
+                heli->field_9AC = (float)altitude;
+            }
+        }
+
+        // Probe ahead (level): How far ahead do we look depends on the speed
+        const auto len = (float)(std::sqrt((double)moveSpeed.y * moveSpeed.y + (double)moveSpeed.x * moveSpeed.x) * 100.0f + (heli->vehicleFlags.bIsRCVehicle ? 5.0f : 30.0f));
+        heli->field_9B8 = 1;
+
+        const auto ProbeTarget = [&](const CVector& from) { // The point `len` away from `from` in the flying direction
+            return CVector{
+                (float)((double)cosF * len + from.x),
+                (float)((double)sinF * len + from.y),
+                (float)((double)(float)((double)0.0f * len) + from.z)
+            };
+        };
+        if (!LineOfSight(origin, ProbeTarget(origin), colPoint)) {
+            heli->field_9B8              = 0;
+            heli->m_fSteeringLeftRight   = 0.0f;
+        } else {
+            // Something is ahead: Find out which side is free for longer
+            const auto& mat = *heli->m_matrix; // Not null checked in the original
+            CVector right{ mat.GetRight().x, mat.GetRight().y, 0.0f };
+            NormaliseOriginal(right); // 0x59C910
+
+            const auto DistToHit = [&](const CVector& from) { // x87: the differences and the sum are kept in extended precision
+                const auto dx = (double)colPoint.m_vecPoint.x - from.x;
+                const auto dy = (double)colPoint.m_vecPoint.y - from.y;
+                const auto dz = (double)colPoint.m_vecPoint.z - from.z;
+                return std::sqrt((dz * dz + dy * dy) + dx * dx);
+            };
+
+            // Right side
+            const auto& pos1 = heli->GetPosition();
+            const CVector sideR{
+                (float)((double)right.x * 10.0f + pos1.x),
+                (float)((double)right.y * 10.0f + pos1.y),
+                (float)((double)(float)((double)right.z * 10.0f) + pos1.z)
+            };
+            float distR = 1000.0f;
+            if (LineOfSight(pos1, sideR, colPoint)) {
+                distR = 0.0f;
+            } else if (LineOfSight(sideR, ProbeTarget(sideR), colPoint)) {
+                distR = (float)DistToHit(sideR);
+            }
+
+            // Left side
+            const auto& pos2 = heli->GetPosition();
+            const CVector sideL{
+                (float)((double)pos2.x - (double)right.x * 10.0f),
+                (float)((double)pos2.y - (double)right.y * 10.0f),
+                (float)((double)pos2.z - (float)((double)right.z * 10.0f))
+            };
+            double distL = 1000.0f;
+            if (LineOfSight(pos2, sideL, colPoint)) {
+                distL = 0.0f;
+            } else if (LineOfSight(sideL, ProbeTarget(sideL), colPoint)) {
+                distL = DistToHit(sideL); // not rounded (x87)
+            }
+
+            heli->m_fSteeringLeftRight = distL > distR ? 0.5f : -0.5f;
+        }
+    }
+
+    if (autoPilot.m_nCarMission == MISSION_HELI_LAND_TOUCHING_DOWN) {
+        heli->field_9B8            = 0;
+        heli->m_fSteeringLeftRight = 0.0f;
+    }
+
+    const auto& mat     = *heli->m_matrix; // Not null checked in the original
+    const auto  heading = CGeneral::GetATanOfXY(mat.GetForward().x, mat.GetForward().y);
+
+    // Throttle: Try to get to the wanted altitude
+    float climbFactor; // 0.5 less than the throttle (before it's clamped)
+    {
+        heli->m_fAccelerationBreakStatus = 0.0f;
+        const auto altDiff = (double)heli->field_9AC - ((double)moveSpeed.z * 100.0f + heli->GetPosition().z);
+        heli->m_fAccelerationBreakStatus = (float)(altDiff * (altDiff > 0.0 ? 0.1f : 0.2f));
+
+        // Add some noise
+        const auto throttle = ((double)(rand() & 0xF) - 7.0f) * 0.00200000009f + heli->m_fAccelerationBreakStatus;
+        heli->m_fAccelerationBreakStatus = (float)throttle;
+        climbFactor = (float)(throttle - 0.5f);
+
+        if (!(throttle < 1.0f)) {
+            heli->m_fAccelerationBreakStatus = 1.0f;
+        } else {
+            const auto throttleF = (float)throttle;
+            heli->m_fAccelerationBreakStatus = -0.3f > throttleF ? -0.3f : throttleF;
+        }
+    }
+
+    // Steer: Rotate towards the wanted direction
+    {
+        auto headingDiff = (double)angle - heading;
+        while (headingDiff > PI) {
+            headingDiff -= 2.0f * PI;
+        }
+        while (headingDiff < -PI) {
+            headingDiff += 2.0f * PI;
+        }
+        const auto skid = headingDiff * -2.0f;
+        heli->m_fLeftRightSkid = (float)skid;
+        if (skid < 1.0f) {
+            if (-1.0f > skid) {
+                heli->m_fLeftRightSkid = -1.0f;
+            }
+        } else {
+            heli->m_fLeftRightSkid = 1.0f;
+        }
+    }
+
+    // Pitch: Fly forward / slow down to get to the destination
+    if (targetDist > 60.0f || !bUseDestination) {
+        heli->m_fSteeringUpDown = -0.8f;
+    } else {
+        const auto  stepY   = (float)((double)moveSpeed.y * 50.0f);
+        const auto& pos     = heli->GetPosition();
+        const auto& dest    = autoPilot.m_vecDestinationCoors;
+        const auto  dx      = (float)(((double)moveSpeed.x * 50.0f + pos.x) - dest.x);
+        const auto  dy      = ((double)stepY + pos.y) - dest.y; // x87: not rounded
+        const auto  distF   = (float)autoPilot.m_ucHeliTargetDist2;
+        const auto  excess  = std::sqrt(dy * dy + (double)dx * dx) - distF;
+        if (!(excess < 0.0)) {
+            heli->m_fSteeringUpDown = (float)((excess * -0.8f) / (30.0 - distF));
+        } // else: unchanged (keeps the value of the last frame)
+    }
+
+    // Leveling out: Don't pitch forward (too much) if we're not facing the way we want to go
+    if (heli->m_fSteeringUpDown < 0.0f) {
+        auto diff = (double)heading - angle;
+        while (diff < -PI) {
+            diff += 2.0f * PI;
+        }
+        while (diff > PI) {
+            diff -= 2.0f * PI;
+        }
+        if (diff < 0.0) {
+            diff = -diff;
+        }
+        auto factor = 1.0 - std::bit_cast<float>(0x4007CFEDu) * diff; // 0x858FE0
+        if (0.0f > factor) {
+            factor = 0.0f;
+        }
+        heli->m_fSteeringUpDown = (float)(factor * heli->m_fSteeringUpDown);
+
+        if (diff > PI / 2.0f && (double)moveSpeed.z * mat.GetForward().z + (double)moveSpeed.y * mat.GetForward().y + (double)mat.GetForward().x * moveSpeed.x > 0.0) {
+            heli->m_fSteeringUpDown = 0.3f;
+        }
+    }
+
+    // Don't pitch forward as much if we're climbing quickly
+    if (climbFactor > 0.0f) {
+        const auto factor = climbFactor < 1.0f ? climbFactor : 1.0f;
+        heli->m_fSteeringUpDown = (float)((1.0f - factor) * heli->m_fSteeringUpDown);
+    }
+
+    // Still pitching forward: Limit the pitch by the speed (so the heli can brake)
+    if (heli->m_fSteeringUpDown < 0.0f) {
+        const auto fwdSpeed = (double)moveSpeed.z * mat.GetForward().z + (double)moveSpeed.y * mat.GetForward().y + (double)moveSpeed.x * mat.GetForward().x;
+        auto       limit    = ((double)autoPilot.m_nCruiseSpeed - fwdSpeed * 60.0f) * 0.1f;
+        if (limit > 1.0f) {
+            limit = 1.0f;
+        } else if (0.0f > limit) {
+            limit = 0.0f;
+        }
+        const auto steer = -limit < heli->m_fSteeringUpDown ? (double)heli->m_fSteeringUpDown : -limit;
+        heli->m_fSteeringUpDown = (float)steer;
+
+        // Speed boost (while it's not that much pitched back)
+        if (autoPilot.m_ucHeliSpeedMult && steer < -0.2f && !heli->field_9B8) {
+            const auto k = (double)(int8)autoPilot.m_ucHeliSpeedMult * CTimer::GetTimeStep() * 0.001f;
+            const auto& fwd = mat.GetForward();
+            const auto newX = (float)((double)fwd.x * k + moveSpeed.x);
+            const auto newY = (float)((double)(float)((double)fwd.y * k) + moveSpeed.y);
+            const auto newZ = (float)((double)(float)(k * 0.0f) + moveSpeed.z);
+            heli->m_vecMoveSpeed = CVector{ newX, newY, newZ };
+        }
+    }
+
+    // About to hit something ahead: Brake
+    if (heli->field_9B8) {
+        CVector fwd{ mat.GetForward().x, mat.GetForward().y, 0.0f };
+        NormaliseOriginal(fwd); // 0x59C910
+        heli->m_fSteeringUpDown = (float)(((double)fwd.y * moveSpeed.y + (double)fwd.z * moveSpeed.z + (double)fwd.x * moveSpeed.x) * 2.0);
+    }
+
+    // Clamp
+    if (heli->m_fSteeringUpDown < 1.0f) {
+        if (-1.0f > heli->m_fSteeringUpDown) {
+            heli->m_fSteeringUpDown = -1.0f;
+        }
+    } else {
+        heli->m_fSteeringUpDown = 1.0f;
+    }
 }
 
 // 0x423940

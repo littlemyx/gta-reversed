@@ -1801,7 +1801,17 @@ void CCarCtrl::SteerAIBoatWithPhysicsCirclingPlayer(CVehicle* vehicle, float* pS
     // Direction from the vehicle to the player (2D)
     const auto playerPos = FindPlayerCoors();
     CVector toPlayer{ (float)((double)playerPos.x - vehPos.x), (float)((double)playerPos.y - vehPos.y), 0.0f };
-    toPlayer.Normalise();
+    { // 0x59C910 - the sum of squares and the reciprocal stay in the FPU registers (extended precision); the shared `CVector::Normalise` rounds them to float
+        const double sumSq = ((double)toPlayer.x * toPlayer.x + (double)toPlayer.y * toPlayer.y) + (double)toPlayer.z * toPlayer.z;
+        if (sumSq <= 0.0) {
+            toPlayer.x = 1.0f;
+        } else {
+            const double recip = 1.0 / std::sqrt(sumSq);
+            toPlayer.x = (float)(toPlayer.x * recip);
+            toPlayer.y = (float)(toPlayer.y * recip);
+            toPlayer.z = (float)(toPlayer.z * recip);
+        }
+    }
 
     // Offset (perpendicular to the direction) to the point to circle around - the direction of circling depends on the random seed
     const auto radius = (vehicle->m_nRandomSeed & 1) ? -12.0f : 26.0f;

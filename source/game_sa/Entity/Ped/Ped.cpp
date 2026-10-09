@@ -54,6 +54,9 @@
 #include "Localisation.h"
 #include "General.h"
 #include "WaterLevel.h"
+#include "TaskSimpleUseGun.h"
+#include "TempColModels.h"
+#include "CustomBuildingDNPipeline.h"
 
 void CPed::InjectHooks() {
     RH_ScopedVirtualClass(CPed, 0x86C358, 26);
@@ -205,7 +208,7 @@ void CPed::InjectHooks() {
     RH_ScopedVMTInstall(SetupLighting, 0x553F00);
     RH_ScopedVMTInstall(RemoveLighting, 0x5533B0);
     RH_ScopedVMTInstall(FlagToDestroyWhenNextProcessed, 0x5E7B70);
-    //RH_ScopedVirtualInstall(ProcessEntityCollision, 0x5E2530, { .Reversed = false });
+    RH_ScopedVMTInstall(ProcessEntityCollision, 0x5E2530);
     RH_ScopedVMTInstall(SetMoveAnim, 0x5E4A00);
     RH_ScopedVMTInstall(Save, 0x5D5730);
     RH_ScopedVMTInstall(Load, 0x5D4640);
@@ -5455,9 +5458,486 @@ void CPed::FlagToDestroyWhenNextProcessed() {
 /*!
 * @addr 0x5E2530
 */
-int32 CPed::ProcessEntityCollision(CEntity* entity, CColPoint* colPoint)
-{
-    return plugin::CallMethodAndReturn<int32, 0x5E2530, CPed*, CEntity*, CColPoint*>(this, entity, colPoint);
+int32 CPed::ProcessEntityCollision(CEntity* entity, CColPoint* colPoint) {
+    // Constants from .rdata
+    constexpr float STEP_DOWN_MULT          = -0.15f;      // 0x86C330
+    constexpr float STEEP_NORMAL_Z          = -0.867f;     // 0x86C32C
+    constexpr float NO_CEILING_Z            = 99999.99f;   // 0x86C328
+    constexpr float FALL_ANIM_Z_MULT        = -0.016f;     // 0x86C320
+    constexpr float SOFT_LANDING_SPEED      = 0.375f;      // 0x86C324
+    constexpr float FALL_SPEED_XY           = 0.33f;       // 0x86C290
+    constexpr float FALL_SPEED_Z            = -0.25f;      // 0x86C294
+    constexpr float FALL_DMG_MULT_XY        = 100.0f;      // 0x86C298
+    constexpr float FALL_DMG_MULT_Z         = 400.0f;      // 0x86C29C
+    constexpr float FALL_DEADLY_SPEED_Z     = -0.6f;       // 0x86C2A0
+    constexpr float MOVE_THRESHOLD          = 0.01f;       // 0x858C58 / -0x86C310
+    constexpr float WALL_NORMAL_Z           = -0.99f;      // 0x86C314
+    constexpr double SAVED_HEADING_THRESHOLD = -1000.0;    // 0x86C318 (double)
+    constexpr float CONTACT_LIGHT_SCALE     = 0.033333335f; // 0x858F10
+    constexpr float EXTRA_POINT_DIST        = 0.35f;       // 0x858F9C
+
+    const float stepDown = CTimer::GetTimeStep() * STEP_DOWN_MULT; // 0x86C330
+
+    float           lineTouchDists[2]{ 1.0f, 1.0f };
+    CColPoint       lineCPs[2];
+    CColModel*      colModel = CModelInfo::GetModelInfo(m_nModelIndex)->GetColModel();
+    CCollisionData* colData  = colModel->m_pColData;
+    CVector         extraNormal{ 0.0f, 0.0f, 1.0f };
+    bool            bEntityIsBoat = false;
+    bool            bDoLineTest   = false;
+    float           sphereTop     = 0.94f;
+    float           savedHeading  = -1001.0f;
+
+    // Peds that test for blocked positions use a special col model (with extra spheres)
+    if (bTestForBlockedPositions) {
+        if (m_bUsesCollision) {
+            if ((m_nPedType == PED_TYPE_PLAYER1 || m_nPedType == PED_TYPE_PLAYER2)
+                && TheCamera.m_aCams[TheCamera.m_nActiveCam].m_nMode == MODE_AIMWEAPON // 0x35
+            ) {
+                const auto* const gun = GetIntelligence()->GetTaskUseGun(); // 0x600F70
+                if (gun && gun->m_WeaponInfo && gun->m_WeaponInfo->flags.bAimWithArm) {
+                    savedHeading = GetHeading(); // 0x441DB0
+                    const auto& camFront = TheCamera.m_aCams[TheCamera.m_nActiveCam].m_vecFront;
+                    SetHeading((float)std::atan2((double)-camFront.x, (double)camFront.y)); // 0x43E0C0
+                }
+            }
+            colModel = &CTempColModels::ms_colModelPed2; // 0x968E20
+            colData  = colModel->m_pColData;
+        }
+    }
+
+    if (!m_bUsesCollision && !physicalFlags.bForceHitReturnFalse) { // 0x42, 0x1
+        return 0;
+    }
+
+    const auto otherType = entity->GetType();
+    if (otherType == ENTITY_TYPE_VEHICLE && entity->AsVehicle()->m_nVehicleType == VEHICLE_TYPE_BOAT) {
+        bEntityIsBoat = true;
+    }
+
+    // NOTE: For non-physical entities the original reads the flags at +0x40 anyways
+    const auto GetEntityPhysFlags = [](CEntity* e) { return e->AsPhysical()->m_nPhysicalFlags; };
+
+    // Set up the col model for the ground checks
+    if (!(m_nPhysicalFlags & 0x19000) && !m_pAttachedTo && otherType != ENTITY_TYPE_PED) { // bSkipLineCol | bProcessingShift | bForceHitReturnFalse
+        m_bCollisionProcessed = true;
+
+        auto* const lines = colData->m_pLines;
+        lines[0].m_vecStart.z = 0.0f;
+        lines[0].m_vecEnd.z   = -1.0f;
+        bDoLineTest = true;
+        if (bWasStanding) {
+            lines[0].m_vecEnd.z = stepDown + lines[0].m_vecEnd.z;
+        }
+
+        auto* const spheres = colData->m_pSpheres;
+        sphereTop = spheres[2].m_fRadius + spheres[2].m_vecCenter.z;
+
+        if (bCheckColAboveHead) {
+            // The original keeps this in extended precision
+            const double t = ((double)spheres[0].m_vecCenter.z - (double)spheres[0].m_fRadius) + 1.0;
+            lines[1].m_vecStart.z = sphereTop;
+            lines[1].m_vecStart.z = (float)((double)lines[1].m_vecStart.z - t);
+            lines[1].m_vecEnd.z   = sphereTop;
+            lines[1].m_vecEnd.z   = (float)(t + (double)lines[1].m_vecEnd.z);
+
+            colData->m_nNumLines = 2;
+            colModel->m_boundSphere.m_fRadius = lines[1].m_vecEnd.z;
+            colModel->m_boundBox.m_vecMax.z   = lines[1].m_vecEnd.z;
+            colModel->m_boundBox.m_vecMin.z   = lines[0].m_vecEnd.z;
+        } else {
+            colData->m_nNumLines = 1;
+            colModel->m_boundSphere.m_fRadius = std::abs(lines[0].m_vecEnd.z);
+            colModel->m_boundBox.m_vecMax.z   = 0.95f;
+            colModel->m_boundBox.m_vecMin.z   = lines[0].m_vecEnd.z;
+        }
+    } else {
+        colData->m_nNumLines = 0;
+        colModel->m_boundSphere.m_fRadius = 1.0f;
+        colModel->m_boundBox.m_vecMax.z   = 0.95f;
+        colModel->m_boundBox.m_vecMin.z   = -1.0f;
+    }
+
+    const bool bUnkColArg = m_bIsStuck && (otherType == ENTITY_TYPE_BUILDING || (GetEntityPhysFlags(entity) & 4));
+
+    // 0x535300 (GetColModel) is called with a few unused stack arguments
+    int32 numCols = CCollision::ProcessColModels(
+        *m_matrix,
+        *colModel,
+        entity->GetMatrix(),
+        *entity->GetColModel(),
+        *(std::array<CColPoint, 32>*)colPoint, // should be okay for now
+        lineCPs,
+        lineTouchDists,
+        bUnkColArg
+    ); // 0x4185C0
+    const float colPedZ = m_matrix->GetPosition().z;
+
+    if (bDoLineTest) {
+        colData->m_nNumLines = 0;
+        colModel->m_boundSphere.m_fRadius = 1.0f;
+        colModel->m_boundBox.m_vecMin.z   = -1.0f;
+        colModel->m_boundBox.m_vecMax.z   = 0.95f;
+
+        const CColPoint& lineCP0 = lineCPs[0];
+        const CColPoint& lineCP1 = lineCPs[1];
+
+        const bool bWasOnGround = bIsStanding;
+        if (lineTouchDists[0] < 1.0f) { // 0x4185C0 found ground below the ped
+            bool bProcessGround;
+            if (!bWasOnGround) {
+                bProcessGround = true;
+            } else if ((double)lineCP0.m_vecPoint.z + 1.0 > (double)m_matrix->GetPosition().z) {
+                bProcessGround = true;
+            } else {
+                bProcessGround = bEntityIsBoat && ((double)lineCP0.m_vecPoint.z + 3.0 > (double)m_matrix->GetPosition().z); // 0x858B3C
+            }
+
+            if (bProcessGround) {
+                bool bSteepNormal = false;
+                for (int32 i = 0; i < numCols; i++) {
+                    if (colPoint[i].m_vecNormal.z < STEEP_NORMAL_Z) {
+                        bSteepNormal = true;
+                    }
+                }
+
+                // Update the brightness of the surface the ped is on
+                // The original keeps the intermediate results in extended precision, hence `double`
+                {
+                    const double a = (double)CTimer::GetTimeStep() * (double)StaticRef<float>(0x8D21E4);
+                    const double d = (double)lineCP0.m_nLightingB.day   * (double)CONTACT_LIGHT_SCALE;
+                    const double n = (double)lineCP0.m_nLightingB.night * (double)CONTACT_LIGHT_SCALE;
+                    const double w = (double)CCustomBuildingDNPipeline::m_fDNBalanceParam;
+                    const double blended = (1.0 - w) * d + w * n;
+                    if (m_nPedType == PED_TYPE_PLAYER1 || m_nPedType == PED_TYPE_PLAYER2) {
+                        m_fContactSurfaceBrightness = (float)(blended * a + (1.0 - a) * (double)m_fContactSurfaceBrightness);
+                    } else {
+                        m_fContactSurfaceBrightness = (float)blended;
+                    }
+                }
+
+                if (!bWasOnGround && (otherType == ENTITY_TYPE_VEHICLE || otherType == ENTITY_TYPE_OBJECT)) {
+                    m_standingOnEntity = entity;
+                    entity->RegisterReference(&m_standingOnEntity); // 0x571B70
+
+                    const auto& entityPos = entity->GetPosition();
+                    m_pContactEntity = entity;
+                    field_56C = CVector{
+                        lineCP0.m_vecPoint.x - entityPos.x,
+                        lineCP0.m_vecPoint.y - entityPos.y,
+                        lineCP0.m_vecPoint.z - entityPos.z,
+                    };
+                    entity->RegisterReference(&m_pContactEntity);
+
+                    bOnBoat = otherType == ENTITY_TYPE_VEHICLE && entity->AsVehicle()->m_nVehicleType == VEHICLE_TYPE_BOAT;
+                    if (otherType == ENTITY_TYPE_VEHICLE) {
+                        m_fContactSurfaceBrightness = m_standingOnEntity->AsPhysical()->m_fContactSurfaceBrightness;
+                    }
+                } else {
+                    m_pContactEntity = entity;
+                    entity->RegisterReference(&m_pContactEntity);
+                    bOnBoat                 = false;
+                    bTryingToReachDryLand   = false; // 0xFFFFFF7D
+                }
+
+                // Ceiling
+                if (bCheckColAboveHead
+                    && lineTouchDists[1] < 1.0f
+                    && lineCP1.m_vecPoint.z < field_588
+                    && (!entity->GetIsTypePhysical() || (GetEntityPhysFlags(entity) & 8))
+                ) {
+                    field_588 = lineCP1.m_vecPoint.z;
+                }
+
+                bool bUseExtraNormal;
+                if (bHeadStuckInCollision && !((double)lineCP0.m_vecPoint.z + 1.0 < (double)m_matrix->GetPosition().z)) {
+                    if (otherType != ENTITY_TYPE_BUILDING) {
+                        bUseExtraNormal = true;
+                    } else {
+                        const double dot = ((double)lineCP0.m_vecNormal.y * (double)m_vecMoveSpeed.y + (double)lineCP0.m_vecNormal.z * (double)m_vecMoveSpeed.z)
+                                         + (double)lineCP0.m_vecNormal.x * (double)m_vecMoveSpeed.x;
+                        bUseExtraNormal = !(dot > 0.0);
+                    }
+                } else {
+                    bUseExtraNormal = false;
+                }
+                if (!bUseExtraNormal) {
+                    bUseExtraNormal = bSteepNormal;
+                }
+
+                if (bUseExtraNormal) {
+                    if (bHeadStuckInCollision && otherType != ENTITY_TYPE_VEHICLE) {
+                        extraNormal = lineCP0.m_vecNormal;
+                    }
+                } else if (!(field_588 < NO_CEILING_Z)) {
+                    m_matrix->GetPosition().z = (float)((double)lineCP0.m_vecPoint.z + 1.0);
+                    bHeadStuckInCollision = false;
+                } else {
+                    double newZ = (double)lineCP0.m_vecPoint.z + 1.0;
+                    if (((double)lineCP0.m_vecPoint.z + (double)sphereTop) + 1.0 > (double)field_588) {
+                        extraNormal = lineCP0.m_vecNormal;
+
+                        const double ceilingZ = (double)field_588 - (double)sphereTop;
+                        const float  ceilingZF = (float)ceilingZ;
+                        if (ceilingZ < newZ) {
+                            newZ = (double)ceilingZF;
+                        }
+                    }
+                    m_matrix->GetPosition().z = (float)newZ;
+                }
+
+                field_578         = lineCP0.m_vecNormal;
+                m_nContactSurface = lineCP0.m_nSurfaceTypeB;
+                if (g_surfaceInfos.IsSteepSlope(lineCP0.m_nSurfaceTypeB)) { // 0x55E770
+                    bHitSteepSlope = true;
+                }
+            }
+
+            // Fall damage
+            float fallSpeedXY = FALL_SPEED_XY;
+            float fallSpeedZ  = FALL_SPEED_Z;
+            if (m_nPedState == PEDSTATE_IDLE) {
+                fallSpeedXY = fallSpeedXY + fallSpeedXY;
+                fallSpeedZ  = fallSpeedZ * 1.5f; // 0x858CE8
+            }
+
+            auto* const fallAnim = RpAnimBlendClumpGetAssociation(GetRpClump(), (uint32)ANIM_ID_FALL_FALL); // 0x4D68B0
+
+            CVector vel = m_vecMoveSpeed;
+            if (otherType > ENTITY_TYPE_BUILDING && otherType < ENTITY_TYPE_DUMMY) { // 2..4
+                const auto& otherVel = entity->AsPhysical()->m_vecMoveSpeed;
+                vel.x = vel.x - otherVel.x;
+                vel.y = vel.y - otherVel.y;
+                vel.z = vel.z - otherVel.z;
+            }
+
+            bool bFallDamage = false;
+            if (!bWasStanding) {
+                const double speedXY = std::sqrt((double)vel.y * (double)vel.y + (double)vel.x * (double)vel.x);
+                const float  speedXYF = (float)speedXY;
+
+                bool bCheckFall;
+                if (speedXY > (double)fallSpeedXY && !bPushedAlongByCar) {
+                    bCheckFall = true;
+                } else {
+                    bCheckFall = vel.z < fallSpeedZ;
+                }
+
+                if (bCheckFall && m_pEntityIgnoredCollision != entity && m_pVehicle != entity) {
+                    bFallDamage = true;
+
+                    float  landingFallSpeedZ = FALL_SPEED_Z; // 0x86C294
+                    double softLanding;
+                    if (g_surfaceInfos.IsSoftLanding(lineCP0.m_nSurfaceTypeB)) { // 0x55E690
+                        softLanding = (double)SOFT_LANDING_SPEED;
+                        landingFallSpeedZ = landingFallSpeedZ * 1.5f; // 0x858CE8
+                    } else {
+                        softLanding = 0.25;
+                    }
+
+                    double dXY = (double)speedXYF - softLanding;
+                    if (0.0 > dXY) {
+                        dXY = 0.0;
+                    }
+                    const double dmgXY = dXY * (double)FALL_DMG_MULT_XY;
+
+                    double dZ = (double)landingFallSpeedZ - (double)vel.z;
+                    if (0.0 > dZ) {
+                        dZ = 0.0;
+                    }
+                    const double dmgZ = dZ * (double)FALL_DMG_MULT_Z;
+
+                    float damage = (float)(dmgZ + dmgXY);
+                    if (vel.z < FALL_DEADLY_SPEED_Z) {
+                        damage = 500.0f;
+                    }
+
+                    uint8 direction = 2;
+                    if (vel.x > MOVE_THRESHOLD || vel.x < -MOVE_THRESHOLD || vel.y > MOVE_THRESHOLD || vel.y < -MOVE_THRESHOLD) {
+                        const CVector2D point{ vel.x * -1.0f, vel.y * -1.0f }; // 0x858C1C
+                        direction = (uint8)GetLocalDirection(point); // 0x5DEF60
+                    }
+
+                    CEventDamage event{ entity, CTimer::GetTimeInMS(), WEAPON_FALL, PED_PIECE_TORSO, direction, false, false }; // 0x4AD830
+                    if (event.AffectsPed(this)) { // 0x4B35A0
+                        CPedDamageResponseCalculator calc{ entity, damage, WEAPON_FALL, PED_PIECE_TORSO, false }; // 0x4AD3F0
+                        calc.ComputeDamageResponse(this, event.m_damageResponse, true); // 0x4B5AC0
+                        GetIntelligence()->m_eventGroup.Add(&event, false); // 0x4AB420
+                    }
+                }
+            }
+
+            if (!bFallDamage) {
+                if (!bWasStanding && fallAnim && (double)CTimer::GetTimeStep() * (double)FALL_ANIM_Z_MULT > (double)vel.z && m_pVehicle != entity) {
+                    CEventDamage event{ entity, CTimer::GetTimeInMS(), WEAPON_FALL, PED_PIECE_TORSO, 2, false, false };
+                    if (event.AffectsPed(this)) {
+                        CPedDamageResponseCalculator calc{ entity, 15.0f, WEAPON_FALL, PED_PIECE_TORSO, false };
+                        calc.ComputeDamageResponse(this, event.m_damageResponse, true);
+                        GetIntelligence()->m_eventGroup.Add(&event, false);
+                    }
+                }
+            }
+
+            bIsStanding = true;
+            m_vecMoveSpeed.z = 0.0f;
+
+            // Moved up by more than a bit => check again without the line tests
+            if ((double)colPedZ + (double)0.1f < (double)m_matrix->GetPosition().z // 0x858B1C
+                && colData->m_nNumLines == 0
+                && (m_nPedType == PED_TYPE_PLAYER1 || m_nPedType == PED_TYPE_PLAYER2)
+            ) {
+                numCols = CCollision::ProcessColModels(
+                    *m_matrix,
+                    *colModel,
+                    entity->GetMatrix(),
+                    *entity->GetColModel(),
+                    *(std::array<CColPoint, 32>*)colPoint,
+                    nullptr,
+                    nullptr,
+                    false
+                );
+            }
+        } else { // No ground found
+            if (bCheckColAboveHead
+                && lineTouchDists[1] < 1.0f
+                && lineCP1.m_vecPoint.z < field_588
+                && (!entity->GetIsTypePhysical() || (GetEntityPhysFlags(entity) & 8))
+            ) {
+                field_588 = lineCP1.m_vecPoint.z;
+                if (bIsStanding) {
+                    if ((double)sphereTop + (double)GetPosition().z > (double)lineCP1.m_vecPoint.z) {
+                        m_matrix->GetPosition().z = (float)((double)lineCP1.m_vecPoint.z - (double)sphereTop);
+                    }
+                }
+            }
+            bOnBoat = false;
+        }
+    }
+
+    // Process the collision points
+    for (int32 i = 0; i < numCols;) {
+        CColPoint& cp = colPoint[i];
+
+        if (bTestForBlockedPositions && m_bUsesCollision && cp.m_nPieceTypeA > 2) {
+            bool bArmFlag1 = true;
+            bool bArmFlag2 = true;
+            bool bMidriff  = true;
+            if (otherType == ENTITY_TYPE_PED) {
+                bMidriff = false;
+                if (entity->AsPed()->bFallenDown) {
+                    bArmFlag1 = false;
+                } else if (entity->AsPed()->bIsDucking) {
+                    bArmFlag2 = false;
+                }
+            }
+
+            if (cp.m_nPieceTypeA == 6 && bArmFlag1 && bArmFlag2) {
+                bRightArmBlocked = true;
+            } else if (cp.m_nPieceTypeA == 5 && bArmFlag1 && bArmFlag2) {
+                bLeftArmBlocked = true;
+            } else if (cp.m_nPieceTypeA == 8 && bArmFlag1) {
+                bDuckRightArmBlocked = true;
+            } else if (cp.m_nPieceTypeA == 4 && bMidriff) {
+                bMidriffBlockedForJump = true;
+            }
+
+            // Remove this col point
+            for (int32 j = i; j < numCols - 1; j++) {
+                colPoint[j] = colPoint[j + 1]; // 0x40FC80
+            }
+            numCols--;
+            continue;
+        }
+
+        if (otherType == ENTITY_TYPE_VEHICLE
+            && entity->AsVehicle()->m_nVehicleSubType == VEHICLE_TYPE_TRAIN
+            && (GetEntityPhysFlags(entity) & 4)
+            && cp.m_vecNormal.z < 0.0f
+        ) {
+            cp.m_vecNormal.z = 0.0f;
+            cp.m_vecNormal.Normalise(); // 0x59C910
+        }
+        i++;
+    }
+
+    // Restore the heading
+    if ((double)savedHeading > SAVED_HEADING_THRESHOLD) {
+        if (m_matrix) {
+            m_matrix->SetRotateZOnly(savedHeading); // 0x59B020
+        } else {
+            m_placement.m_fHeading = savedHeading;
+        }
+    }
+
+    const bool bOtherIsStaticLike = otherType == ENTITY_TYPE_BUILDING || entity->m_bIsStatic || entity->m_bIsStaticWaitingForCollision; // 0x1C: 4, 0x40000
+
+    // Fix up the normals of collision points of static things
+    if (bOtherIsStaticLike && bWasStanding && numCols > 0) {
+        for (int32 i = 0; i < numCols; i++) {
+            CColPoint& cp = colPoint[i];
+            CVector    n  = cp.m_vecNormal;
+
+            if (n.z < WALL_NORMAL_Z && cp.m_nPieceTypeA == 2 && (m_nPedType == PED_TYPE_PLAYER1 || m_nPedType == PED_TYPE_PLAYER2)) {
+                // Wedged under something => push the ped down and away from its movement direction
+                double speed = std::sqrt((double)m_vecMoveSpeed.x * (double)m_vecMoveSpeed.x + (double)m_vecMoveSpeed.y * (double)m_vecMoveSpeed.y);
+                if (speed < 0.001f) { // 0x858CDC
+                    speed = (double)0.001f;
+                }
+                const double mult = (double)-1.0f / speed; // 0x858C1C
+                n.x = (float)(mult * (double)m_vecMoveSpeed.x);
+                n.y = (float)(mult * (double)m_vecMoveSpeed.y);
+
+                m_matrix->GetPosition().z = (float)((double)m_matrix->GetPosition().z - (double)0.05f); // 0x858C28
+                bHeadStuckInCollision = true;
+                bHitSteepSlope        = true; // 0x200020
+            } else {
+                const double len = std::sqrt((double)n.y * (double)n.y + (double)n.x * (double)n.x);
+                if (!(len == 0.0)) {
+                    const double mult = 1.0 / len;
+                    n.x = (float)((double)n.x * mult);
+                    n.y = (float)((double)n.y * mult);
+                }
+            }
+            n.Normalise(); // 0x59C910
+            cp.m_vecNormal = n;
+
+            if (g_surfaceInfos.IsSteepSlope(cp.m_nSurfaceTypeB)) { // 0x55E770
+                bHitSteepSlope = true;
+            }
+        }
+    }
+
+    // Add a col point pushing the ped away from the stuck-in wall
+    if (extraNormal.z < 1.0f) {
+        CColPoint& cp = colPoint[numCols];
+        cp.m_vecNormal.x = extraNormal.x;
+        cp.m_vecNormal.y = extraNormal.y;
+        cp.m_vecNormal.z = 0.0f;
+        cp.m_vecNormal.Normalise(); // 0x59C910
+
+        const auto& pos = GetPosition();
+        const double nx = (double)cp.m_vecNormal.x * (double)EXTRA_POINT_DIST;
+        const double ny = (double)cp.m_vecNormal.y * (double)EXTRA_POINT_DIST;
+        const float  nz = (float)((double)cp.m_vecNormal.z * (double)EXTRA_POINT_DIST);
+        cp.m_vecPoint.x = (float)((double)pos.x - nx);
+        cp.m_vecPoint.y = (float)((double)pos.y - ny);
+        cp.m_vecPoint.z = (float)((double)pos.z - (double)nz);
+
+        numCols++;
+        bHitSteepSlope = true;
+    }
+
+    if (numCols > 0 || lineTouchDists[0] < 1.0f) {
+        AddCollisionRecord(entity); // 0x543490
+        if (otherType != ENTITY_TYPE_BUILDING) {
+            entity->AsPhysical()->AddCollisionRecord(this);
+        }
+        if (numCols > 0 && bOtherIsStaticLike) {
+            m_bHasHitWall = true; // 0x1000
+        }
+    }
+
+    return numCols;
 }
 
 // NOTSA

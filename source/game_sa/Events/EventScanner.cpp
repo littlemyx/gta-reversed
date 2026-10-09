@@ -13,12 +13,35 @@
 #include "Fire.h"
 #include "ModelIndices.h"
 #include "Weapon.h"
+#include "PedStats.h"
+#include "EventPotentialWalkIntoPed.h"
+#include "EventPotentialWalkIntoObject.h"
+#include "EventPotentialWalkIntoFire.h"
+#include "EventFireNearby.h"
+#include "EventSexyPed.h"
+#include "InterestingEvents.h"
+#include "FireManager.h"
+#include "ObjectScanner.h"
+#include "Object.h"
+#include "PedScriptedTaskRecord.h"
+#include "EventEditableResponse.h"
 
 // Sanity checks for the raw offsets used by the original
 static_assert(WEAPON_FLAMETHROWER == 0x25 && WEAPON_FALL == 0x36 && WEAPON_UNIDENTIFIED == 0x37 && PED_PIECE_TORSO == 3);
 static_assert(offsetof(CPed, m_fHealth) == 0x540 && offsetof(CPed, m_pContactEntity) == 0x584 && offsetof(CPed, m_pVehicle) == 0x58C && offsetof(CPed, m_pFire) == 0x730);
 static_assert(offsetof(CVehicle, m_nVehicleType) == 0x590 && offsetof(CVehicle, m_nVehicleSubType) == 0x594);
 static_assert(offsetof(CTaskComplexKillPedOnFoot, m_target) == 0x10);
+static_assert(offsetof(CObject, objectFlags) == 0x140 && offsetof(CPedIntelligence, m_nDmNumPedsToScan) == 0xC4);
+static_assert(offsetof(CPedIntelligence, m_pedScanner) + offsetof(CPedScanner, m_apEntities) == 0x130);
+static_assert(offsetof(CPed, m_nPedType) == 0x598 && offsetof(CPed, m_pStats) == 0x59C);
+
+// x87 helpers (0x406DA0 and 0x40FDB0 return an extended precision value in ST0)
+static double SqMagnitude(const CVector& v) {
+    return ((double)v.x * v.x + (double)v.y * v.y) + (double)v.z * v.z;
+}
+static double X87DotProduct(const CVector& a, const CVector& b) {
+    return ((double)a.z * b.z + (double)a.y * b.y) + (double)a.x * b.x;
+}
 
 void CVehiclePotentialCollisionScanner::InjectHooks() {
     RH_ScopedClass(CVehiclePotentialCollisionScanner);
@@ -32,6 +55,42 @@ void CEventScanner::InjectHooks() {
     RH_ScopedCategory("Events");
 
     RH_ScopedInstall(ScanForEvents, 0x607E30);
+    RH_ScopedInstall(ScanForPedPotentialCollisionEvents, 0x606580);
+
+    // NOTSA: These aren't registered in InjectHooksMain.cpp
+    CObjectPotentialCollisionScanner::InjectHooks();
+    CPedAcquaintanceScanner::InjectHooks();
+    CSexyPedScanner::InjectHooks();
+    CNearbyFireScanner::InjectHooks();
+}
+
+void CObjectPotentialCollisionScanner::InjectHooks() {
+    RH_ScopedClass(CObjectPotentialCollisionScanner);
+    RH_ScopedCategory("Events");
+
+    RH_ScopedInstall(ScanForObjectPotentialCollisionEvents, 0x606890);
+}
+
+void CPedAcquaintanceScanner::InjectHooks() {
+    RH_ScopedClass(CPedAcquaintanceScanner);
+    RH_ScopedCategory("Events");
+
+    RH_ScopedInstall(ScanForPedAcquaintanceEvents, 0x607D80);
+    RH_ScopedInstall(IsScanAllowed, 0x603A30);
+}
+
+void CSexyPedScanner::InjectHooks() {
+    RH_ScopedClass(CSexyPedScanner);
+    RH_ScopedCategory("Events");
+
+    RH_ScopedInstall(ScanForSexyPedEvents, 0x603BF0);
+}
+
+void CNearbyFireScanner::InjectHooks() {
+    RH_ScopedClass(CNearbyFireScanner);
+    RH_ScopedCategory("Events");
+
+    RH_ScopedInstall(ScanForNearbyFireEvents, 0x603E70);
 }
 
 // 0x605300
@@ -53,13 +112,12 @@ void CEventScanner::ScanForEvents(CPed& ped) {
 
     m_vehiclePotentialCollisionScanner.ScanForVehiclePotentialCollisionEvents(ped, intel->GetVehicleEntities(), 16); // 0x607E76
 
-    // Unreversed scanners (unnamed in the symbol table), the 1st one is a __stdcall that doesn't use `this`
-    reinterpret_cast<void(__stdcall*)(CPed*, CEntity*)>(0x606580)(&ped, intel->m_pedScanner.GetClosestPedInRange()); // 0x607E8A
-    plugin::CallMethod<0x606890, CObjectPotentialCollisionScanner*, CPed*>(&m_objectPotentialCollisionScanner, &ped); // 0x607E93
-    plugin::CallMethod<0x607D80, CPedAcquaintanceScanner*, CPed*, CEntity**, int32>(&m_pedAcquaintanceScanner, &ped, intel->GetPedEntities(), 16); // 0x607EA8
-    plugin::CallMethod<0x6060A0, CAttractorScanner*, CPed*>(&m_attractorScanner, &ped); // 0x607EB1
-    plugin::CallMethod<0x603E70, CNearbyFireScanner*, CPed*>(&m_nearbyFireScanner, &ped); // 0x607EBD
-    plugin::CallMethod<0x6008A0, CMentalState*, CPed*>(&intel->m_mentalState, &ped); // 0x607EC9 (CMentalState::Process, but the stub in MentalHealth.cpp has the wrong signature)
+    ScanForPedPotentialCollisionEvents(&ped, intel->m_pedScanner.GetClosestPedInRange()); // 0x607E8A
+    m_objectPotentialCollisionScanner.ScanForObjectPotentialCollisionEvents(ped);          // 0x607E93
+    m_pedAcquaintanceScanner.ScanForPedAcquaintanceEvents(ped, intel->GetPedEntities(), 16); // 0x607EA8
+    m_attractorScanner.ScanForAttractors(ped);                                             // 0x607EB1
+    m_nearbyFireScanner.ScanForNearbyFireEvents(ped);                                      // 0x607EBD
+    intel->m_mentalState.Process(ped);                                                     // 0x607EC9
 
     if (!ped.bIsStanding && (ped.bIsInTheAir || CPedGeometryAnalyser::IsInAir(ped))) { // 0x607ECE
         CEventInAir event{};
@@ -81,7 +139,7 @@ void CEventScanner::ScanForEvents(CPed& ped) {
         }
     }
 
-    plugin::CallMethod<0x603BF0, CSexyPedScanner*, CPed*, CEntity**, int32>(&m_sexyPedScanner, &ped, intel->GetPedEntities(), 16); // 0x607FFA
+    m_sexyPedScanner.ScanForSexyPedEvents(ped, intel->GetPedEntities(), 16); // 0x607FFA
 
     { // 0x607FFF
         auto& taskMgr = ped.GetIntelligence()->m_TaskMgr;
@@ -223,4 +281,321 @@ void CVehiclePotentialCollisionScanner::ScanForVehiclePotentialCollisionEvents(c
 
     CEventPotentialWalkIntoVehicle event{ veh, (int32)intel->GetMoveStateFromGoToTask() }; // 0x601D70, 0x4AE320
     intel->m_eventGroup.Add(&event, false); // 0x4AB420
+}
+
+// 0x606580
+void __stdcall CEventScanner::ScanForPedPotentialCollisionEvents(CPed* ped, CPed* closestPed) {
+    // NOTE: Doesn't use `this`, `closestPed` is only used as a boolean
+    if (!closestPed) {
+        return;
+    }
+    if (!ped->m_bUsesCollision) {
+        return;
+    }
+
+    auto* const intel = ped->GetIntelligence();
+
+    const auto task = intel->m_TaskMgr.GetSimplestActiveTask();
+    if (!task || !CTask::IsGoToTask(task)) {
+        return;
+    }
+    const auto goToTask = static_cast<CTaskSimpleGoTo*>(task);
+    if (intel->GetMoveStateFromGoToTask() == PEDMOVE_STILL) {
+        return;
+    }
+
+    // Find the closest ped in front of us whose sphere intersects our path
+    CPed* bestPed       = nullptr;
+    float bestDistSq    = (float)((double)2.5f * (double)2.5f); // 0x86C8C0
+    const CVector pedPos = ped->GetPosition();
+    for (auto i = 0; i < 16; i++) {
+        const auto other = static_cast<CPed*>(intel->GetPedEntities()[i]); // 0x130 + i * 4
+        if (!other || !other->IsAlive() || !other->m_bUsesCollision) {
+            continue;
+        }
+
+        const CVector otherPos = other->GetPosition();
+        const CVector diff     = otherPos - pedPos; // 0x40FE00
+        const auto&   fwd      = ped->GetForward();
+        if (!(((double)diff.y * fwd.y + (double)diff.z * fwd.z) + (double)diff.x * fwd.x > 0.0)) { // 0x858B50 = 0.0
+            continue;
+        }
+
+        CColSphere sphere;
+        sphere.Set(0.7f, otherPos, SURFACE_DEFAULT, 0, tColLighting{0xFF}); // 0x3F333333
+        CVector isect1, isect2;
+        if (!sphere.IntersectEdge(pedPos, goToTask->m_vecTargetPoint, isect1, isect2)) {
+            continue;
+        }
+
+        const double sqMag = SqMagnitude(diff);
+        if (sqMag < (double)bestDistSq) {
+            bestDistSq = (float)sqMag;
+            bestPed    = other;
+        }
+    }
+    if (!bestPed) {
+        return;
+    }
+
+    // If both peds are walking in the same direction at similar speeds there's no need for an event
+    const auto bestTask = bestPed->GetIntelligence()->m_TaskMgr.GetSimplestActiveTask();
+    if (bestTask && CTask::IsGoToTask(bestTask) && X87DotProduct(ped->GetForward(), bestPed->GetForward()) >= (double)0.923f) { // 0x86CD98
+        CVector pedSpeed  = ped->m_vecMoveSpeed * 50.f;     // 0x40FEC0
+        CVector bestSpeed = bestPed->m_vecMoveSpeed * 50.f;
+        pedSpeed.z  = 0.f;
+        bestSpeed.z = 0.f;
+
+        const float pedSpeedSq  = (float)SqMagnitude(pedSpeed);
+        const float bestSpeedSq = (float)(SqMagnitude(bestSpeed) + (double)0.25f); // 0x86CD94
+
+        if (bestDistSq > 1.f // 0x86CD90
+            && !approxEqual(bestSpeedSq, 0.f, 0.01f) // 0x4EEA80
+            && bestSpeedSq > pedSpeedSq
+        ) {
+            return;
+        }
+    }
+
+    CEventPotentialWalkIntoPed event{ bestPed, goToTask->m_vecTargetPoint, intel->GetMoveStateFromGoToTask() }; // 0x4AE6E0
+    intel->m_eventGroup.Add(&event, false); // 0x4AB420
+}
+
+// 0x606890
+void CObjectPotentialCollisionScanner::ScanForObjectPotentialCollisionEvents(CPed& ped) {
+    if (!m_timer.m_bStarted) {
+        m_timer.Start(500);
+        if (!m_timer.m_bStarted) { // Always false
+            return;
+        }
+    }
+    if (!m_timer.IsOutOfTime()) {
+        return;
+    }
+    m_timer.Start(500);
+
+    auto* const intel = ped.GetIntelligence();
+
+    auto task = intel->m_TaskMgr.GetSimplestActiveTask();
+    const auto moveState = task && CTask::IsGoToTask(task)
+        ? static_cast<CTaskSimpleGoTo*>(task)->m_moveState
+        : PEDMOVE_STILL;
+    if (ped.IsPlayer() || moveState == PEDMOVE_STILL) {
+        return;
+    }
+
+    task = intel->m_TaskMgr.GetSimplestActiveTask();
+    if (!task || !CTask::IsGoToTask(task)) {
+        return;
+    }
+    const auto goToTask = static_cast<CTaskSimpleGoTo*>(task);
+
+    CObjectScanner scanner{};
+    scanner.ScanForObjectsInRange(ped); // 0x5FFF30
+    CObject* const obj = scanner.GetClosestObjectInRange();
+    if (!obj || obj->objectFlags.bIsBroken || obj->objectFlags.bIsPickup || !obj->m_bUsesCollision) {
+        return;
+    }
+
+    const CVector pedPos = ped.GetPosition();
+    const CVector diff   = pedPos - obj->GetPosition(); // 0x40FE00
+    if (!((double)7.5f * (double)7.5f > SqMagnitude(diff))) { // 0x86C8FC
+        return;
+    }
+
+    const CVector centre = obj->GetBoundCentre(); // 0x534250
+    const float   radius = obj->GetModelInfo()->GetColModel()->GetBoundRadius(); // +0x24 of the col model
+    const float   lowZ   = (float)((double)centre.z - radius);
+    const float   highZ  = (float)((double)pedPos.z + 1.0); // 0x858624 = 1.0f
+    if ((double)pedPos.z - 1.0 > (double)radius + (double)centre.z) {
+        return;
+    }
+    if (highZ < lowZ) {
+        return;
+    }
+
+    float dist = 0.f;
+    if (CPedGeometryAnalyser::GetIsLineOfSightClear(ped, goToTask->m_vecTargetPoint, *obj, dist)) { // 0x5F5A30
+        return;
+    }
+    if (!(dist > 0.5f)) { // 0x86C900
+        return;
+    }
+
+    const CVector start = ped.GetPosition() - CVector{0.f, 0.f, 0.75f}; // 0x40FE60, 0x3F400000
+    if (CPedGeometryAnalyser::GetIsLineOfSightClear(start, goToTask->m_vecTargetPoint, *obj)) { // 0x5F2F00
+        return;
+    }
+
+    CEventPotentialWalkIntoObject event{ obj, (int32)moveState }; // 0x4AE5D0
+    intel->m_eventGroup.Add(&event, false); // 0x4AB420
+}
+
+// 0x607D80
+void CPedAcquaintanceScanner::ScanForPedAcquaintanceEvents(CPed& ped, CEntity** entities, int32 count) {
+    if (!m_timer.m_bStarted) {
+        m_timer.m_nStartTime = CTimer::GetTimeInMS();
+        m_timer.m_nInterval  = ms_nScanInterval;
+        m_timer.m_bStarted   = true;
+    }
+    if (!m_timer.IsOutOfTime()) {
+        return;
+    }
+    m_timer.m_nStartTime = CTimer::GetTimeInMS();
+    m_timer.m_nInterval  = ms_nScanInterval;
+    m_timer.m_bStarted   = true;
+
+    if (!IsScanAllowed(ped)) { // 0x607DE4
+        return;
+    }
+    CPed*  outPed = nullptr;
+    int32  outIdx = -1;
+    ScanForPedAcquaintances(ped, -1, entities, count, outPed, outIdx); // 0x607E16
+}
+
+// 0x603A30
+bool CPedAcquaintanceScanner::IsScanAllowed(CPed& ped) {
+    if (!ped.IsAlive()) {
+        return false;
+    }
+
+    bool allowed;
+    if (!ped.IsCreatedByMission() || m_bScanAllowedScriptPed) {
+        allowed = true;
+    } else {
+        allowed = ped.bInVehicle && m_bScanAllowedInVehicle;
+        if (CPedScriptedTaskRecord::GetStatus(&ped) != eScriptedTaskStatus::EVENT_ASSOCIATED && m_bScanAllowedScriptedTask) {
+            allowed = true;
+        }
+    }
+    if (!allowed) {
+        return false;
+    }
+
+    auto* const intel = ped.GetIntelligence();
+    const auto  event = intel->m_eventHandler.GetHistory().GetCurrentEvent();
+    if (!event || event->GetEventType() != EVENT_ACQUAINTANCE_PED_HATE) { // 0x24
+        return allowed;
+    }
+    if (!intel->m_nDmNumPedsToScan) {
+        return false;
+    }
+    if (!static_cast<CEventEditableResponse*>(event)->ComputeResponseTaskOfType(&ped, TASK_SIMPLE_INFORM_RESPECTED_FRIENDS)) { // 0x6A4
+        return false;
+    }
+    return intel->FindRespectedFriendInInformRange() ? allowed : false;
+}
+
+// 0x603BF0
+void CSexyPedScanner::ScanForSexyPedEvents(CPed& ped, CEntity** entities, int32 count) {
+    if (!m_timer.m_bStarted) {
+        m_timer.Start(500);
+        if (!m_timer.m_bStarted) { // Always false
+            return;
+        }
+    }
+    if (!m_timer.IsOutOfTime()) {
+        return;
+    }
+    m_timer.Start(500);
+
+    if (!(ped.IsCreatedByMission() || !ped.bInVehicle)) {
+        return;
+    }
+
+    CPed*         bestPed    = nullptr;
+    float         bestDistSq = 1e10f; // 0x501502F9
+    const CVector pedPos     = ped.GetPosition();
+    for (auto i = 0; i < count; i++) {
+        const auto other = static_cast<CPed*>(entities[i]);
+        if (!other || other->m_nPedType != PED_TYPE_CIVFEMALE) {
+            continue;
+        }
+        if (!((int8)ped.m_pStats->m_nSexiness < (int8)other->m_pStats->m_nSexiness)) { // Signed compare
+            continue;
+        }
+        if (other->bInVehicle) {
+            continue;
+        }
+
+        const CVector otherPos = other->GetPosition();
+        const CVector diff     = otherPos - pedPos;
+        const double  sqDist   = ((double)diff.z * diff.z + (double)diff.y * diff.y) + (double)diff.x * diff.x; // x87
+        const float   sqDistF  = (float)sqDist;
+        if (!(sqDist < 10000.0)) { // 0x859AA4
+            continue;
+        }
+
+        if (ped.GetPlayerData()) {
+            g_InterestingEvents.Add(CInterestingEvents::INTERESTING_EVENT_9, other); // 0x603D87
+        }
+
+        if (!(sqDistF < bestDistSq)) {
+            continue;
+        }
+        const auto& fwd = ped.GetForward();
+        if (!(((double)diff.z * fwd.z + (double)diff.y * fwd.y) + (double)diff.x * fwd.x > 0.0)) { // 0x858B50
+            continue;
+        }
+        if (!CWorld::GetIsLineOfSightClear(pedPos, otherPos, true, false, false, true, false, false, false)) { // 0x56A490
+            continue;
+        }
+        bestDistSq = sqDistF;
+        bestPed    = other;
+    }
+
+    if (bestPed) {
+        CEventSexyPed event{bestPed}; // 0x4AEDF0
+        ped.GetIntelligence()->m_eventGroup.Add(&event, false); // 0x4AB420
+        m_timer.Start(3000);
+    }
+}
+
+// 0x603E70
+void CNearbyFireScanner::ScanForNearbyFireEvents(CPed& ped) {
+    if (!m_timer.m_bStarted) {
+        m_timer.Start(0);
+        if (!m_timer.m_bStarted) { // Always false
+            return;
+        }
+    }
+    if (!m_timer.IsOutOfTime()) {
+        return;
+    }
+    m_timer.Start(100);
+
+    auto* const intel = ped.GetIntelligence();
+
+    const auto simplestTask = intel->m_TaskMgr.GetSimplestActiveTask();
+    const auto moveState    = simplestTask && CTask::IsGoToTask(simplestTask)
+        ? static_cast<CTaskSimpleGoTo*>(simplestTask)->m_moveState
+        : PEDMOVE_STILL;
+    const auto activeTask = intel->m_TaskMgr.GetActiveTask();
+
+    CFire* const fire = gFireManager.FindNearestFire(ped.GetPosition(), false, false); // 0x538F40
+
+    float sqDistF = 0.f; // Uninitialized in the original, only used if `fire`
+    float dz      = 0.f;
+    if (fire) {
+        // dx and dy are kept in the x87 registers (extended precision), dz is stored as a float
+        const auto&  firePos = fire->GetPosition();
+        const auto&  pedPos  = ped.GetPosition();
+        const double dx      = (double)firePos.x - (double)pedPos.x;
+        const double dy      = (double)firePos.y - (double)pedPos.y;
+        dz                   = firePos.z - pedPos.z;
+        const double sqDist  = (dy * dy + dx * dx) + (double)dz * dz;
+        sqDistF              = (float)sqDist;
+        if (sqDist < (double)20.f * 20.f && std::fabs(dz) < 2.f) { // 0x86C918, 0x858CA0
+            CEventFireNearby event{firePos}; // 0x4B1F10
+            intel->m_eventGroup.Add(&event, false); // 0x4AB420
+        }
+    }
+
+    if (activeTask && activeTask->GetTaskType() != TASK_COMPLEX_WALK_ROUND_FIRE) { // 0x202
+        const auto task = intel->m_TaskMgr.GetSimplestActiveTask();
+        if (task && CTask::IsGoToTask(task) && fire && (double)4.f * 4.f > sqDistF && std::fabs(dz) < 2.f) { // 0x86C91C
+            CEventPotentialWalkIntoFire event{fire->GetPosition(), fire->GetStrength(), moveState}; // 0x4B1E20
+            intel->m_eventGroup.Add(&event, false); // 0x4AB420
+        }
+    }
 }

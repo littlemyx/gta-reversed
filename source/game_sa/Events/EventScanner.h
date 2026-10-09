@@ -10,15 +10,27 @@
 #include "AttractorScanner.h"
 
 class CPed;
+class CObject;
 
 class CPedAcquaintanceScanner {
 public:
     static inline auto& ms_fThresholdDotProduct = StaticRef<float>(0xC0B034);
+    static inline auto& ms_nScanInterval        = StaticRef<int32>(0x8D2358); // 500
 
     CTaskTimer m_timer;
     bool m_bScanAllowedScriptPed;
     bool m_bScanAllowedInVehicle;
     bool m_bScanAllowedScriptedTask;
+
+    static void InjectHooks();
+
+    void ScanForPedAcquaintanceEvents(CPed& ped, CEntity** entities, int32 count); // 0x607D80
+    bool IsScanAllowed(CPed& ped);                                                  // 0x603A30
+
+    // 0x607A90 - not reversed yet (`ped`, -1, `entities`, `count`, out: ped?, out: index?)
+    void ScanForPedAcquaintances(CPed& ped, int32 unk, CEntity** entities, int32 count, CPed*& outPed, int32& outIdx) {
+        plugin::CallMethod<0x607A90, CPedAcquaintanceScanner*, CPed*, int32, CEntity**, int32, CPed**, int32*>(this, &ped, unk, entities, count, &outPed, &outIdx);
+    }
 
     void SetOnlyScriptPedAllowed() {
         m_bScanAllowedScriptPed    = true;
@@ -43,16 +55,25 @@ public:
 class CObjectPotentialCollisionScanner {
 public:
     CTaskTimer m_timer;
+
+    static void InjectHooks();
+    void ScanForObjectPotentialCollisionEvents(CPed& ped); // 0x606890
 };
 
 class CSexyPedScanner {
 public:
     CTaskTimer m_timer;
+
+    static void InjectHooks();
+    void ScanForSexyPedEvents(CPed& ped, CEntity** entities, int32 count); // 0x603BF0
 };
 
 class CNearbyFireScanner {
 public:
     CTaskTimer m_timer;
+
+    static void InjectHooks();
+    void ScanForNearbyFireEvents(CPed& ped); // 0x603E70
 };
 
 VALIDATE_SIZE(CPedAcquaintanceScanner, 0x10);
@@ -81,6 +102,7 @@ public:
 
     void Clear();
     void ScanForEvents(CPed& ped);
+    static void __stdcall ScanForPedPotentialCollisionEvents(CPed* ped, CPed* closestPed); // 0x606580
     void ScanForEventsNow(const CPed& ped, bool bDontScan);
 
     auto& GetAcquaintanceScanner() {

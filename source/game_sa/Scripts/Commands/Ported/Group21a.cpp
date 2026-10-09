@@ -104,8 +104,8 @@ OpcodeResult GetCurrentDate(CRunningScript& S) {
 }
 
 //! 2111 GET_CAR_UPRIGHT_VALUE (case @0x470E15): car => z of the matrix' "up" vector (+0x14 -> +0x20 .. +0x28) (no null check)
-float GetCarUprightValue(CVehicle& veh) {
-    return veh.m_matrix->GetUp().z;
+int32 GetCarUprightValue(CVehicle& veh) {
+    return std::bit_cast<int32>(veh.m_matrix->GetUp().z); // the exe copies the raw dword (a signalling NaN must not be quietened by an x87 round trip) -- stored as an int
 }
 
 //! 2112 SET_VEHICLE_AREA_VISIBLE (case @0x470E5B): car, area  -- byte store to +0x2F (area code)

@@ -628,6 +628,25 @@ if (${RE_PROJECT}_RW_LIBRW)
     set_property(TARGET script_oracle_g13_15_test PROPERTY SOURCES "${STANDALONE_PAD_OBJ}" ${_s6c_sources})
     target_link_options(script_oracle_g13_15_test PRIVATE "$<$<CXX_COMPILER_ID:MSVC>:/BASE:0x400000;/DYNAMICBASE:NO;/FIXED;/MERGE:_TEXT=.text;/INCREMENTAL:NO;/SUBSYSTEM:CONSOLE;/FORCE:UNRESOLVED>")
     set_target_properties(script_oracle_g13_15_test PROPERTIES COMPILE_WARNING_AS_ERROR OFF CXX_SCAN_FOR_MODULES OFF)
+    # S6-F differential test of script command handlers (g20..g21) against the exe's group processors (same machinery as script_oracle_test; Group20a/20b/21a/21b.cpp are #included by the test)
+    add_executable(script_oracle_g20_21_test EXCLUDE_FROM_ALL
+        "${PROJECT_SOURCE_DIR}/tests/standalone/script_oracle_g20_21_test.cpp"
+        game_sa/General.cpp
+        game_sa/Core/Vector.cpp
+        game_sa/Core/Matrix.cpp
+    )
+    target_compile_features(script_oracle_g20_21_test PRIVATE cxx_std_23)
+    target_compile_definitions(script_oracle_g20_21_test PRIVATE NOTSA_RW_LIBRW RW_D3D9)
+    target_include_directories(script_oracle_g20_21_test PRIVATE $<TARGET_PROPERTY:${RE_PROJECT_LIB_NAME},INCLUDE_DIRECTORIES>)
+    target_compile_options(script_oracle_g20_21_test PRIVATE $<TARGET_PROPERTY:${RE_PROJECT_LIB_NAME},COMPILE_OPTIONS>)
+    target_precompile_headers(script_oracle_g20_21_test PRIVATE StdInc.cpp)
+    target_link_libraries(script_oracle_g20_21_test PRIVATE librw spdlog::spdlog Tracy::TracyClient user32)
+    target_sources(script_oracle_g20_21_test PRIVATE "${STANDALONE_PAD_OBJ}")
+    get_target_property(_s6f_sources script_oracle_g20_21_test SOURCES)
+    list(REMOVE_ITEM _s6f_sources "${STANDALONE_PAD_OBJ}")
+    set_property(TARGET script_oracle_g20_21_test PROPERTY SOURCES "${STANDALONE_PAD_OBJ}" ${_s6f_sources})
+    target_link_options(script_oracle_g20_21_test PRIVATE "$<$<CXX_COMPILER_ID:MSVC>:/BASE:0x400000;/DYNAMICBASE:NO;/FIXED;/MERGE:_TEXT=.text;/INCREMENTAL:NO;/SUBSYSTEM:CONSOLE;/FORCE:UNRESOLVED>")
+    set_target_properties(script_oracle_g20_21_test PROPERTIES COMPILE_WARNING_AS_ERROR OFF CXX_SCAN_FOR_MODULES OFF)
     # P2B-06 unit test of Im2D / Im3D (not part of `all`): ninja rw_im2d_im3d_test. Hidden window + librw's D3D9 device (Wine/wined3d is fine); pixels are read back
     if (EXISTS "${PROJECT_SOURCE_DIR}/tests/standalone/rw_im2d_im3d_test.cpp")
         add_executable(rw_im2d_im3d_test EXCLUDE_FROM_ALL

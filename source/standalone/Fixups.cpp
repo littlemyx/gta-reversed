@@ -78,6 +78,12 @@ void __cdecl AbortHandler(int) {
 // The debug CRT's assert() would open a modal message box (invisible/hanging under Wine, and in a headless run): log it and terminate instead
 int __cdecl CrtReportHook(int type, char* message, int* returnValue) {
     if (type == _CRT_ASSERT || type == _CRT_ERROR) {
+        static bool s_Raised = false; // symbolised stack via the unhandled-exception filter (app_debug.cpp), see AbortHandler
+        if (!s_Raised && !std::getenv("NOTSA_STANDALONE_NO_ABORT_TRACE")) {
+            s_Raised = true;
+            Fixups::Log("CRT assertion/error: %.500s", message ? message : "?");
+            RaiseException(0xE0AB0002u, EXCEPTION_NONCONTINUABLE, 0, nullptr);
+        }
         Fixups::Fatal("CRT assertion/error: %.700s (last hook registered: %s)", message ? message : "?", g_LastHook);
     }
     if (returnValue) {

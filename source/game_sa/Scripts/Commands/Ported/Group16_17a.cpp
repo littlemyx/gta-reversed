@@ -387,7 +387,7 @@ void TaskDiveAndGetUp(CRunningScript& S, eScriptCommands cmd, int32 pedHandle, f
 
 //! 1652 CUSTOM_PLATE_FOR_NEXT_CAR (case @0x494EA4): model, plate(9)
 //! The label is read AFTER the model. Every '_' or NUL of the first 8 chars becomes ' '. Then, if the model info exists, is a
-//! vehicle model (GetModelType() == MODEL_INFO_VEHICLE = 6) and has an RW object (+0x24), the plate text is set.
+//! vehicle model (GetModelType() == MODEL_INFO_VEHICLE = 6) and has a plate material (CVehicleModelInfo::m_pPlateMaterial, +0x24; NOT the RW object at +0x1C), the plate text is set.
 void CustomPlateForNextCar(CRunningScript& S, int32 modelId) {
     char plate[9];
     S.ReadTextLabelFromScript(plate, 9);
@@ -398,8 +398,11 @@ void CustomPlateForNextCar(CRunningScript& S, int32 modelId) {
     }
     plate[8] = '\0';
     auto* const mi = CModelInfo::ms_modelInfoPtrs[modelId]; // 0xA9B0C8, no range check
-    if (mi && mi->GetModelType() == MODEL_INFO_VEHICLE && mi->GetRwObject()) {
-        static_cast<CVehicleModelInfo*>(mi)->SetCustomCarPlateText(plate);
+    if (mi && mi->GetModelType() == MODEL_INFO_VEHICLE) {
+        auto* const vmi = static_cast<CVehicleModelInfo*>(mi);
+        if (vmi->m_pPlateMaterial) { // +0x24 (0x494EFF)
+            vmi->SetCustomCarPlateText(plate);
+        }
     }
 }
 

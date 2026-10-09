@@ -12,8 +12,8 @@ void CTaskComplexTrackEntity::InjectHooks() {
     RH_ScopedInstall(Destructor, 0x65F460);
 
     RH_ScopedInstall(SetOffsetPos, 0x65F760, {.State = HS::RedirectToGTA, .Locked = true});
-    RH_ScopedInstall(CalcTargetPos, 0x65F780, {.State = HS::RedirectToGTA, .Locked = true});
-    RH_ScopedInstall(CalcMoveRatio, 0x65F930, {.State = HS::RedirectToGTA, .Locked = true});
+    RH_ScopedInstall(CalcTargetPos, 0x65F780);
+    RH_ScopedInstall(CalcMoveRatio, 0x65F930);
 
     RH_ScopedVMTInstall(Clone, 0x65F4E0);
     RH_ScopedVMTInstall(GetTaskType, 0x65F450);
@@ -55,12 +55,83 @@ void CTaskComplexTrackEntity::SetOffsetPos(CVector posn) {
 
 // 0x65F780
 void CTaskComplexTrackEntity::CalcTargetPos(CPed* ped) {
-    plugin::CallMethod<0x65F780, CTaskComplexTrackEntity*, CPed*>(this, ped);
+    // NOTE: Products/sums below mirror the x87 code: values kept on the FPU stack are `double`, spilled ones are rounded to `float`
+    m_goToPos = m_toTrack->GetPosition();
+
+    if (!a) {
+        m_goToPos.x = (float)((double)m_offsetPosn.x + (double)m_goToPos.x);
+        m_goToPos.y = (float)((double)m_offsetPosn.y + (double)m_goToPos.y);
+    } else {
+        const CVector right = m_toTrack->GetMatrix().GetRight();
+        const CVector fwd   = m_toTrack->GetMatrix().GetForward();
+
+        const double offX = m_offsetPosn.x;
+        m_goToPos.x = (float)((double)right.x * offX + (double)m_goToPos.x);
+        const float ry = (float)((double)right.y * offX);
+        const float rz = (float)((double)right.z * offX);
+        m_goToPos.y = (float)((double)ry + (double)m_goToPos.y);
+        m_goToPos.z = (float)((double)rz + (double)m_goToPos.z);
+
+        const double offY = m_offsetPosn.y;
+        m_goToPos.x = (float)((double)fwd.x * offY + (double)m_goToPos.x);
+        const float fy = (float)((double)fwd.y * offY);
+        const float fz = (float)((double)fwd.z * offY);
+        m_goToPos.y = (float)((double)fy + (double)m_goToPos.y);
+        m_goToPos.z = (float)((double)fz + (double)m_goToPos.z);
+    }
+
+    // Predict where the tracked entity will be
+    if (m_toTrack->GetType() == ENTITY_TYPE_VEHICLE || m_toTrack->GetType() == ENTITY_TYPE_PED) {
+        const auto&  speed = m_toTrack->AsPhysical()->m_vecMoveSpeed;
+        const double ts    = CTimer::GetTimeStep();
+        const double px    = ts * speed.x;
+        const double py    = ts * speed.y;
+        const float  pz    = (float)(ts * speed.z);
+        m_goToPos.x = (float)(px + (double)m_goToPos.x);
+        m_goToPos.y = (float)(py + (double)m_goToPos.y);
+        m_goToPos.z = (float)((double)pz + (double)m_goToPos.z);
+    }
+
+    const auto&  pedPos = ped->GetPosition();
+    const double dx     = (double)m_goToPos.x - (double)pedPos.x;
+    const double dy     = (double)m_goToPos.y - (double)pedPos.y;
+    m_distToTargetSq    = (float)(dy * dy + dx * dx);
 }
 
 // 0x65F930
 void CTaskComplexTrackEntity::CalcMoveRatio(CPed* ped) {
-    plugin::CallMethod<0x65F930, CTaskComplexTrackEntity*, CPed*>(this, ped);
+    // Function-local statics in the original (lazily initialised, guarded by flags in 0xC18D08)
+    constexpr float RANGE_MIN = 0.2f, RANGE_MID = 1.f, RANGE_MAX = 5.f;
+    static const float sqMin    = (float)((double)RANGE_MIN * (double)RANGE_MIN); // 0xC18D04
+    static const float sqMid    = (float)((double)RANGE_MID * (double)RANGE_MID); // 0xC18D00
+    static const float sqMax    = (float)((double)RANGE_MAX * (double)RANGE_MAX); // 0xC18CFC
+    static const float scaleHi  = (float)(1.0 / ((double)RANGE_MAX - (double)RANGE_MID)); // 0xC18CF8
+    static const float scaleLow = (float)(1.0 / ((double)RANGE_MID - (double)RANGE_MIN)); // 0xC18CF4
+
+    if (m_distToTargetSq < sqMin) {
+        float40 = 0.f;
+    } else if (m_distToTargetSq > sqMax) {
+        float40 = 1.f;
+    } else {
+        const double dist = std::sqrt((double)m_distToTargetSq);
+        if (m_distToTargetSq < sqMid) {
+            float40 = (float)((dist - (double)RANGE_MIN) * (double)scaleLow * 0.5);
+        } else {
+            float40 = (float)((dist - (double)RANGE_MID) * (double)scaleHi * 0.5 + 0.5);
+        }
+    }
+
+    const double ratio = std::sqrt((double)float40) * 3.0;
+    float40 = (float)ratio;
+    if (!a && ratio > 2.0) { // FCOMP on the unrounded value; NaN => not taken
+        float40 = 2.0f;
+    }
+
+    if ((double)float40 - (double)m_fMoveRatio > (double)0.2f) { // NaN => copy
+        m_fMoveRatio = (float)((double)0.2f + (double)m_fMoveRatio);
+    } else {
+        m_fMoveRatio = float40;
+    }
 }
 
 // 0x65F4C0

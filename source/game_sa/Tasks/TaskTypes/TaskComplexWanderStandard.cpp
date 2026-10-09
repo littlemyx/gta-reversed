@@ -2,6 +2,13 @@
 
 #include "TaskComplexWanderStandard.h"
 
+void CTaskComplexWanderStandard::InjectHooks() {
+    RH_ScopedVirtualClass(CTaskComplexWanderStandard, 0x85A200, 15);
+    RH_ScopedCategory("Tasks/TaskTypes");
+
+    RH_ScopedInstall(SetNextMinScanTime, 0x66AF60);
+}
+
 // 0x48E4F0
 CTaskComplexWanderStandard::CTaskComplexWanderStandard(eMoveState MoveState, uint8 Dir, bool bWanderSensibly) :
     CTaskComplexWander(MoveState, Dir, bWanderSensibly),
@@ -44,7 +51,20 @@ bool CTaskComplexWanderStandard::WillChat(const CPed& first, const CPed& second)
 
 // 0x66AF60
 void CTaskComplexWanderStandard::SetNextMinScanTime(CPed* ped) {
-    plugin::CallMethod<0x66AF60, CTaskComplexWanderStandard*, CPed*>(this, ped);
+    auto& taskMgr = ped->GetIntelligence()->GetTaskManager();
+
+    const auto active = taskMgr.GetActiveTask();
+    if (!active) {
+        return;
+    }
+    if (active->GetTaskType() != GetTaskType()) {
+        return;
+    }
+    if (static_cast<CTaskComplexWander*>(active)->GetWanderType() != GetWanderType()) {
+        return;
+    }
+
+    static_cast<CTaskComplexWanderStandard*>(taskMgr.GetActiveTask())->m_nMinNextScanTime = CTimer::GetTimeInMS() + 100'000;
 }
 
 // 0x66AFD0

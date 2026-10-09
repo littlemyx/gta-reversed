@@ -21,6 +21,10 @@ public:
     bool LookForSexyCars(CPed* ped);
     bool LookForChatPartners(CPed* ped);
     bool LookForGangMembers(CPed* ped);
+
+private:
+    friend void InjectHooksMain();
+    static void InjectHooks();
 };
 
 VALIDATE_SIZE(CTaskComplexWanderStandard, 0x38);

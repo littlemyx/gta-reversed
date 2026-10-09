@@ -598,7 +598,7 @@ void UpdateBombShop(CGarage& g) {
         if (!(CTimer::GetTimeInMS() > g.m_nTimeToOpen)) {
             return;
         }
-        if (g.m_nType == BOMBSHOP_REMOTE && !CStreaming::IsModelLoaded(MODEL_BOMB)) { // original: dword compare of the load state @ 0x8E6940
+        if (g.m_nType == BOMBSHOP_REMOTE && !CStreaming::IsModelLoaded(MODEL_BOMB)) { // original: `cmp byte [0x8E6940], 1` = ms_aInfoForModel[364].m_LoadState == LOADSTATE_LOADED, same as IsModelLoaded
             CStreaming::RequestModel(MODEL_BOMB, STREAMING_GAME_REQUIRED); // 0x44B5AE
             return;
         }

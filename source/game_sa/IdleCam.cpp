@@ -386,12 +386,18 @@ float CIdleCam::ProcessSlerp(float& outX, float& outZ) {
         GetLookAtPositionOnTarget(m_Target, lookAtPos);
     }
 
-    auto [slerpAtan, slerpDistAtan]   = VectorToAnglesRotXRotZ(m_PositionToSlerpFrom - m_Cam->m_vecSource);
-    auto [lookAtAtan, lookAtDistAtan] = VectorToAnglesRotXRotZ(lookAtPos - m_Cam->m_vecSource);
+    // exe: `GetATanOfXY` leaves its result unrounded on the x87 stack; only the first atan of each vector (+ pi) and the 2nd atan of the
+    // slerp-from vector are spilled to float, the 2nd atan of the look-at vector stays in extended precision until the final store
+    const CVector fromVec = m_PositionToSlerpFrom - m_Cam->m_vecSource;
+    const CVector toVec   = lookAtPos - m_Cam->m_vecSource;
+    float  slerpAtan      = (float)(CGeneral::GetATanOfXYExt(fromVec.x, fromVec.y) + 3.1415927f);
+    float  slerpDistAtan  = (float)CGeneral::GetATanOfXYExt(fromVec.Magnitude2D(), fromVec.z);
+    float  lookAtAtan     = (float)(CGeneral::GetATanOfXYExt(toVec.x, toVec.y) + 3.1415927f);
+    double lookAtDistAtan = CGeneral::GetATanOfXYExt(toVec.Magnitude2D(), toVec.z);
 
     constexpr float PI_F     = 3.1415927f; // 0x858CB8
     constexpr float TWO_PI_F = 6.2831855f; // 0x858CBC
-    const auto ClampAngle = [&](float& angle, float diff) {
+    const auto ClampAngle = [&](auto& angle, auto diff) {
         if (diff > PI_F) {
             angle -= TWO_PI_F;
         } else if (diff < -PI_F) { // 0x858CC0
@@ -399,7 +405,7 @@ float CIdleCam::ProcessSlerp(float& outX, float& outZ) {
         }
     };
 
-    ClampAngle(lookAtDistAtan, lookAtDistAtan - slerpDistAtan);
+    ClampAngle(lookAtDistAtan, lookAtDistAtan - (double)slerpDistAtan);
     ClampAngle(lookAtAtan, lookAtAtan - slerpAtan);
 
     float slerpT = ((float)beginTime - m_TimeLastTargetSelected) / m_SlerpDuration;
@@ -410,7 +416,7 @@ float CIdleCam::ProcessSlerp(float& outX, float& outZ) {
     const float lerpT = (float)((std::sin((double)((270.0f - slerpT * 180.0f) * 0.017453292f)) + 1.0) * 0.5);
 
     // NOTE: NOT the common.h `lerp` (that one is `to * t + from * (1 - t)`); the exe computes `(to - from) * t + from`
-    outX = (lookAtDistAtan - slerpDistAtan) * lerpT + slerpDistAtan;
+    outX = (float)((lookAtDistAtan - (double)slerpDistAtan) * (double)lerpT + (double)slerpDistAtan);
     outZ = (lookAtAtan - slerpAtan) * lerpT + slerpAtan;
     return slerpT;
 }

@@ -9,6 +9,7 @@ void CDecisionMakerTypes::InjectHooks() {
     RH_ScopedCategory("DecisionMakers");
 
     RH_ScopedInstall(LoadEventIndices, 0x600840);
+    RH_ScopedInstall(HasAnyEventResponse, 0x6042B0);
     RH_ScopedInstall(RemoveDecisionMaker, 0x6043A0);
     RH_ScopedInstall(FlushDecisionMakerEventResponse, 0x604490);
     RH_ScopedInstall(AddEventResponse, 0x6044C0);
@@ -93,4 +94,32 @@ void CDecisionMakerTypes::FlushDecisionMakerEventResponse(int32 decisionMakerInd
 void CDecisionMakerTypes::LoadEventIndices() {
     // 0x5BB9F0 is a __stdcall (RET 8) file loader: (int32 indices[], const char* filename), original passes the string at 0x86CD44
     reinterpret_cast<void(__stdcall*)(int32*, const char*)>(0x5BB9F0)(m_EventIndices.data(), "PedEvent.txt");
+}
+
+// 0x6042B0
+// Returns true if the ped's decision maker has a non-default (any task != 200) decision for at least one of the given events.
+bool CDecisionMakerTypes::HasAnyEventResponse(CPed* ped, const int32* eventTypes, int32 count) {
+    const auto dmType = ped->GetIntelligence()->m_nDecisionMakerType;
+
+    bool found = false;
+    for (int32 i = 0; i < count && !found; i++) {
+        const auto  eventIdx = m_EventIndices[eventTypes[i]];
+        CDecision* decision;
+        if (dmType == -2) {
+            decision = &m_DefaultPlayerPedDecisionMaker.m_aDecisions[eventIdx];
+        } else if (dmType == -1) {
+            decision = ped->IsCreatedBy(PED_MISSION)
+                ? &m_DefaultMissionPedDecisionMaker.m_aDecisions[eventIdx]
+                : &m_DefaultRandomPedDecisionMaker.m_aDecisions[eventIdx];
+        } else {
+            decision = &m_DecisionMakers[dmType].m_aDecisions[eventIdx];
+        }
+        for (auto& task : decision->m_Tasks) {
+            if (task != 200) {
+                found = true;
+                break;
+            }
+        }
+    }
+    return found;
 }

@@ -28,6 +28,7 @@
 #include "DecisionMakers/DecisionMakerTypes.h"
 #include "PedType.h"
 #include "GameLogic.h"
+#include "PedGroups.h"
 #include "Acquaintance.h"
 
 // Sanity checks for the raw offsets used by the original
@@ -82,6 +83,8 @@ void CPedAcquaintanceScanner::InjectHooks() {
     RH_ScopedInstall(ScanForPedAcquaintanceEvents, 0x607D80);
     RH_ScopedInstall(IsScanAllowed, 0x603A30);
     RH_ScopedInstall(ScanForPedAcquaintances, 0x607A90);
+    RH_ScopedInstall(WantsToRiotAgainst, 0x603AF0);
+    RH_ScopedInstall(ScanCandidateForAcquaintance, 0x607560);
 }
 
 void CSexyPedScanner::InjectHooks() {
@@ -516,7 +519,7 @@ void CPedAcquaintanceScanner::ScanForPedAcquaintances(CPed& ped, int32 acquainta
                 if (!CGameLogic::LaRiotsActiveHere()) { // 0x441C10
                     continue;
                 }
-                if (!plugin::CallAndReturn<bool, 0x603AF0, CPed*, CPed*>(&ped, other)) { // Unreversed
+                if (!WantsToRiotAgainst(&ped, other)) { // 0x603AF0
                     continue;
                 }
             }
@@ -527,10 +530,10 @@ void CPedAcquaintanceScanner::ScanForPedAcquaintances(CPed& ped, int32 acquainta
             // BUG: The original passes a count of 5, but only initializes 4 entries - the 5th is an uninitialized stack slot (read only if the first 4 all fail).
             //      We can't reproduce garbage, so only the 4 valid ones are checked.
             const int32 eventTypes[]{ EVENT_ACQUAINTANCE_PED_HATE, EVENT_ACQUAINTANCE_PED_DISLIKE, EVENT_ACQUAINTANCE_PED_RESPECT, 40 };
-            const bool  rioting = CGameLogic::LaRiotsActiveHere() && plugin::CallAndReturn<bool, 0x603AF0, CPed*, CPed*>(&ped, other);
+            const bool  rioting = CGameLogic::LaRiotsActiveHere() && WantsToRiotAgainst(&ped, other); // 0x603AF0
             if (!rioting) {
-                // 0x4684F0, 0x6042B0 (unreversed: this = CDecisionMakerTypes)
-                if (!plugin::CallMethodAndReturn<bool, 0x6042B0, CDecisionMakerTypes*, CPed*, const int32*, int32>(CDecisionMakerTypes::GetInstance(), &ped, eventTypes, (int32)std::size(eventTypes))) {
+                // 0x4684F0, 0x6042B0
+                if (!CDecisionMakerTypes::GetInstance()->HasAnyEventResponse(&ped, eventTypes, (int32)std::size(eventTypes))) {
                     continue;
                 }
             }
@@ -545,8 +548,7 @@ void CPedAcquaintanceScanner::ScanForPedAcquaintances(CPed& ped, int32 acquainta
         }
         auto* const other = candidates[i];
         if (CPedGeometryAnalyser::CanPedTargetPed(ped, *other, !ped.bInVehicle && !other->bInVehicle)) { // 0x5F1C40
-            // 0x607560 (unreversed)
-            curIdx = plugin::CallMethodAndReturn<int32, 0x607560, CPedAcquaintanceScanner*, CPed*, int32, int32, CPed*, CPed**, int32*>(this, &ped, acquaintanceId, curIdx, other, &outPed, &outIdx);
+            curIdx = ScanCandidateForAcquaintance(ped, acquaintanceId, curIdx, other, outPed, outIdx); // 0x607560
         }
     }
 }
@@ -698,4 +700,108 @@ void CNearbyFireScanner::ScanForNearbyFireEvents(CPed& ped) {
             intel->m_eventGroup.Add(&event, false); // 0x4AB420
         }
     }
+}
+
+// 0x603AF0
+// Should `ped` riot against `other`? (cdecl, called from the acquaintance scanner)
+bool CPedAcquaintanceScanner::WantsToRiotAgainst(CPed* ped, CPed* other) {
+    const auto pedType = ped->m_nPedType;
+    if (pedType == PED_TYPE_COP || pedType == PED_TYPE_MEDIC || pedType == PED_TYPE_FIREMAN) {
+        return false;
+    }
+    if (ped->IsPlayer() || ped->IsCreatedBy(PED_MISSION)) {
+        return false;
+    }
+
+    if (other->IsPlayer()) {
+        return !ped->GetIntelligence()->Respects(other);
+    }
+    if (const auto* const group = CPedGroups::GetPedsGroup(other)) { // 0x5F7E80
+        auto& membership = group->GetMembership();
+        if (const auto leader = membership.GetLeader()) {
+            if (leader->IsPlayer()) {
+                return !ped->GetIntelligence()->Respects(membership.GetLeader());
+            }
+        }
+    }
+
+    // Members of the same gang don't riot against each other
+    const auto otherType = other->m_nPedType;
+    return !(IsPedTypeGang(pedType) && IsPedTypeGang(otherType) && pedType == otherType);
+}
+
+// 0x607560
+// Scans the 5 acquaintance types (4 down to 0) for `candidate`. Returns `acquaintanceId` if a (specific) type matched, the matched
+// type if `acquaintanceId == -1` and the event was created, otherwise -1. Also (re)starts the scan timer on a match.
+int32 CPedAcquaintanceScanner::ScanCandidateForAcquaintance(CPed& ped, int32 acquaintanceId, int32 curIdx, CPed* candidate, CPed*& outPed, int32& outIdx) {
+    const float lightLevel = ped.GetIntelligence()->CanSeeEntityWithLights(candidate, 0); // 0x605550
+
+    // 0x6075B0
+    const auto IsAcquaintanceMatching = [&](CPed& p, int32 idx, CPed* cand) {
+        const auto mine   = p.GetAcquaintance().GetAcquaintances((AcquaintanceId)idx); // 0x608970
+        const auto theirs = CPedType::GetPedFlag(cand->m_nPedType);                    // 0x608830
+        if (mine & theirs) {
+            return true;
+        }
+        return CGameLogic::LaRiotsActiveHere() && WantsToRiotAgainst(&p, cand); // 0x441C10, 0x603AF0
+    };
+
+    for (int32 idx = 4; idx >= 0; idx--) {
+        if (idx == curIdx) {
+            break;
+        }
+
+        if (acquaintanceId == -1) {
+            // Cops are always matched for type 2 (Respect), skipping the checks below
+            if (!(idx == 2 && candidate->m_nPedType == PED_TYPE_COP)) {
+                if (!IsAcquaintanceMatching(ped, idx, candidate)) {
+                    continue;
+                }
+            }
+        } else {
+            if (acquaintanceId != idx) {
+                continue;
+            }
+            if (!IsAcquaintanceMatching(ped, idx, candidate)) {
+                continue;
+            }
+        }
+
+        // Light level check (FCOMP + JP semantics: NaN counts as "not greater" and "not equal")
+        if (!(lightLevel > 0.0f)) {
+            if (idx != 4) {
+                continue;
+            }
+            if (lightLevel == 0.0f) {
+                continue;
+            }
+        }
+
+        outPed = candidate;
+        outIdx = idx;
+        if (acquaintanceId != -1) {
+            return acquaintanceId;
+        }
+        if (!outPed) { // Note: always false in practice
+            continue;
+        }
+
+        const bool created = CreateAcquaintanceEvent(ped, idx, outPed); // 0x606BA0
+
+        const int32 interval = (outIdx == 4 && (double)lightLevel < 0.0)
+            ? ms_nShortInterval
+            : ms_nLongInterval;
+        m_timer.m_nStartTime = CTimer::GetTimeInMS();
+        m_timer.m_nInterval  = interval;
+        m_timer.m_bStarted   = true;
+        if (created) {
+            return outIdx;
+        }
+    }
+    return -1;
+}
+
+// 0x606BA0 (unreversed)
+bool CPedAcquaintanceScanner::CreateAcquaintanceEvent(CPed& ped, int32 acquaintanceType, CPed* other) {
+    return plugin::CallMethodAndReturn<bool, 0x606BA0, CPedAcquaintanceScanner*, CPed*, int32, CPed*>(this, &ped, acquaintanceType, other);
 }

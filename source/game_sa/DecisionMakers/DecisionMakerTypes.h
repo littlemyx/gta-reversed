@@ -57,6 +57,7 @@ public:
     void AddEventResponse(int32 decisionMakerIndex, eEventType eventType, eTaskType taskId, float* responseChances, int32* flags);
     void FlushDecisionMakerEventResponse(int32 decisionMakerIndex, eEventType eventId);
     void LoadEventIndices();
+    bool HasAnyEventResponse(CPed* ped, const int32* eventTypes, int32 count);
 
 public:
     int32                                                              m_NoOfDecisionMakers{};

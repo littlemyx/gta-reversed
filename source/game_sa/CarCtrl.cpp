@@ -21,6 +21,7 @@
 #include "TheCarGenerators.h"
 #include "eAreaCodes.h"
 #include "TaskTypes/TaskComplexWander.h"
+#include "TaskTypes/TaskComplexLeaveAnyCar.h"
 #include "VehicleRecording.h"
 #include "Curves.h"
 
@@ -253,6 +254,10 @@ void CCarCtrl::InjectHooks()
     RH_ScopedInstall(ReconsiderRoute, 0x42FC40);
     RH_ScopedInstall(SteerAICarWithPhysicsFollowPreRecordedPath, 0x432DD0);
     RH_ScopedInstall(SteerAICarWithPhysicsHeadingForTarget, 0x433280);
+    RH_ScopedInstall(SteerAICarWithPhysicsTryingToBlockTarget, 0x4335E0);
+    RH_ScopedInstall(SteerAICarTowardsPointInEscort, 0x4336D0);
+    RH_ScopedInstall(SteerAICarParkParallel, 0x433BA0);
+    RH_ScopedInstall(SteerAICarParkPerpendicular, 0x433EA0);
 }
 
 // 0x4212E0
@@ -3417,19 +3422,212 @@ static float ClampSteerToMax(CVehicle* vehicle, float steer) {
     return steer;
 }
 
+//! Parked vehicles: the driver and all the passengers get out of the vehicle (that is parked now)
+static void MakeOccupantsLeaveParkedVehicle(CVehicle* vehicle) {
+    const auto MakeLeave = [](CPed* ped) {
+        ped->GetTaskManager().SetTask(new CTaskComplexLeaveAnyCar{ 0, true, false }, TASK_PRIMARY_PRIMARY, false); // 0x681AF0
+    };
+    if (vehicle->m_pDriver) {
+        MakeLeave(vehicle->m_pDriver);
+    }
+    for (auto* const passenger : vehicle->m_apPassengers) {
+        if (passenger) {
+            MakeLeave(passenger);
+        }
+    }
+}
+
 // 0x433BA0
-void CCarCtrl::SteerAICarParkParallel(CVehicle* vehicle, float* arg2, float* arg3, float* arg4, bool* arg5) {
-    plugin::Call<0x433BA0, CVehicle*, float*, float*, float*, bool*>(vehicle, arg2, arg3, arg4, arg5);
+void CCarCtrl::SteerAICarParkParallel(CVehicle* vehicle, float* pSteer, float* pGas, float* pBrake, bool* pHandbrake) {
+    auto& autoPilot = vehicle->m_autoPilot;
+
+    // Note: Only the nodes' areas are checked (not the validity of the node's address)
+    const auto startNodes = ThePaths.m_pPathNodes[autoPilot.m_startingRouteNode.m_wAreaId];
+    const auto curNodes   = ThePaths.m_pPathNodes[autoPilot.m_currentAddress.m_wAreaId];
+    if (!startNodes || !curNodes) {
+        autoPilot.m_nCarMission = MISSION_STOP_FOREVER;
+        *pBrake = 0.0f;
+        *pGas   = 0.0f;
+        *pSteer = 0.0f;
+        return;
+    }
+    const auto& startNode = startNodes[autoPilot.m_startingRouteNode.m_wNodeId];
+    const auto& curNode   = curNodes[autoPilot.m_currentAddress.m_wNodeId];
+
+    CVector target;
+    if (autoPilot.m_nCarMission == MISSION_PARK_PARALLEL) {
+        // Aim a bit past the start node (in the direction of the road)
+        const auto curPos   = curNode.GetPosition(); // 0x420A10
+        const auto startPos = startNode.GetPosition(); // 0x420A10
+        CVector dir{ startPos.x - curPos.x, startPos.y - curPos.y, startPos.z - curPos.z };
+        NormaliseOriginal(dir); // 0x59C910
+        const auto startPos2 = startNode.GetPosition(); // 0x420A10
+        target = CVector{
+            (float)((double)dir.x + startPos2.x),
+            (float)((double)dir.y + startPos2.y),
+            (float)((double)dir.z + startPos2.z)
+        };
+    } else {
+        target = startNode.GetPosition(); // 0x420A10
+    }
+
+    SteerAICarWithPhysicsHeadingForTarget(vehicle, nullptr, target.x, target.y, pSteer, pGas, pBrake, pHandbrake); // 0x433280
+
+    autoPilot.m_nCruiseSpeed = std::min<uint8>(autoPilot.m_nCruiseSpeed, 8);
+
+    // x87: extended precision
+    const auto&  pos  = vehicle->GetPosition();
+    const double toY  = (double)target.y - pos.y;
+    const double toX  = (double)target.x - pos.x;
+    const double dist = std::sqrt(toX * toX + toY * toY);
+
+    if (autoPilot.m_nCarMission == MISSION_PARK_PARALLEL) {
+        if (dist < 4.0f) {
+            autoPilot.m_nCarMission = MISSION_PARK_PARALLEL_2;
+        }
+    } else if (dist < 2.0f) { // Parked
+        autoPilot.m_nCarMission = MISSION_STOP_FOREVER;
+        vehicle->vehicleFlags.bEngineOn = false;
+        vehicle->vehicleFlags.bLightsOn = false;
+        MakeOccupantsLeaveParkedVehicle(vehicle);
+    }
 }
 
 // 0x433EA0
-void CCarCtrl::SteerAICarParkPerpendicular(CVehicle* vehicle, float* arg2, float* arg3, float* arg4, bool* arg5) {
-    plugin::Call<0x433EA0, CVehicle*, float*, float*, float*, bool*>(vehicle, arg2, arg3, arg4, arg5);
+void CCarCtrl::SteerAICarParkPerpendicular(CVehicle* vehicle, float* pSteer, float* pGas, float* pBrake, bool* pHandbrake) {
+    auto& autoPilot = vehicle->m_autoPilot;
+
+    // Note: Only the nodes' areas are checked (not the validity of the node's address)
+    const auto startNodes = ThePaths.m_pPathNodes[autoPilot.m_startingRouteNode.m_wAreaId];
+    const auto curNodes   = ThePaths.m_pPathNodes[autoPilot.m_currentAddress.m_wAreaId];
+    if (!startNodes || !curNodes) {
+        autoPilot.m_nCarMission = MISSION_STOP_FOREVER;
+        *pBrake = 0.0f;
+        *pGas   = 0.0f;
+        *pSteer = 0.0f;
+        return;
+    }
+    const auto& startNode = startNodes[autoPilot.m_startingRouteNode.m_wNodeId];
+    const auto& curNode   = curNodes[autoPilot.m_currentAddress.m_wNodeId];
+
+    bool headForStartNode = true;
+    if (autoPilot.m_nCarMission == MISSION_PARK_PERPENDICULAR) {
+        // As long as we are too far from the line (cur -> start) aim for the current node, once we are close enough (to the line) switch to the next phase
+        const auto startPos = startNode.GetPosition(); // 0x420A10
+        const auto curPos   = curNode.GetPosition();   // 0x420A10
+        const CVector lineStart{ startPos.x, startPos.y, 0.0f };
+        const CVector lineEnd{ curPos.x, curPos.y, 0.0f };
+        const auto&   pos = vehicle->GetPosition();
+        const CVector point{ pos.x, pos.y, 0.0f };
+        if (CCollision::DistToMathematicalLine(&lineStart, &lineEnd, &point) < 6.0f) { // 0x412970
+            autoPilot.m_nCarMission = MISSION_PARK_PERPENDICULAR_2;
+        }
+        headForStartNode = autoPilot.m_nCarMission != MISSION_PARK_PERPENDICULAR;
+    }
+    const auto target = (headForStartNode ? startNode : curNode).GetPosition(); // 0x420A10
+
+    SteerAICarWithPhysicsHeadingForTarget(vehicle, nullptr, target.x, target.y, pSteer, pGas, pBrake, pHandbrake); // 0x433280
+
+    autoPilot.m_nCruiseSpeed = std::min<uint8>(autoPilot.m_nCruiseSpeed, 8);
+
+    // Distance to the start node (not the target!). x87: extended precision
+    const auto   startPos = startNode.GetPosition(); // 0x420A10
+    const auto&  pos      = vehicle->GetPosition();
+    const double toY      = (double)startPos.y - pos.y;
+    const double toX      = (double)startPos.x - pos.x;
+    if (std::sqrt(toX * toX + toY * toY) < 2.0f) { // Parked
+        autoPilot.movementFlags.bIsParked = true;
+        vehicle->vehicleFlags.bEngineOn   = false;
+        vehicle->vehicleFlags.bLightsOn   = false;
+        autoPilot.m_nCarMission           = MISSION_STOP_FOREVER;
+        MakeOccupantsLeaveParkedVehicle(vehicle);
+    }
 }
 
 // 0x4336D0
-void CCarCtrl::SteerAICarTowardsPointInEscort(CVehicle* vehicle1, CVehicle* vehicle2, float arg3, float arg4, float* arg5, float* arg6, float* arg7, bool* arg8) {
-    plugin::Call<0x4336D0, CVehicle*, CVehicle*, float, float, float*, float*, float*, bool*>(vehicle1, vehicle2, arg3, arg4, arg5, arg6, arg7, arg8);
+void CCarCtrl::SteerAICarTowardsPointInEscort(CVehicle* vehicle, CVehicle* escorted, float offsetX, float offsetY, float* pSteer, float* pGas, float* pBrake, bool* pHandbrake) {
+    // The point (offset in the escorted vehicle's space) we have to reach. Note: The matrices are used directly (not null checked)
+    const auto offset = TransformPointOriginal(*escorted->m_matrix, { offsetX, offsetY, 0.0f }); // 0x59C890
+    const auto targetX = (float)((double)escorted->m_vecMoveSpeed.x + offset.x);
+    const auto targetY = (float)((double)escorted->m_vecMoveSpeed.y + offset.y);
+
+    *pHandbrake = false;
+
+    const auto  dir = GetNormalizedForward2D(vehicle);
+    const auto& escortedFwd = escorted->m_matrix->GetForward();
+    const auto& pos = vehicle->GetPosition();
+
+    // Steer towards a point a bit ahead of the target. x87: Y stays in extended precision
+    const auto   lookAtX = (float)((double)escortedFwd.x * 3.0f + targetX);
+    const double lookAtY = (double)escortedFwd.y * 3.0f + targetY;
+    const auto   targetAngle = CGeneral::GetATanOfXY((float)((double)lookAtX - pos.x), (float)(lookAtY - pos.y)); // 0x53CC70
+    const auto   heading     = CGeneral::GetATanOfXY(dir.x, dir.y); // 0x53CC70
+    const auto   weaveAngle  = FindAngleToWeaveThroughTraffic(vehicle, nullptr, targetAngle, heading, 1.0f); // 0x4325C0
+    float steer = (float)WrapAngleToPi((double)weaveAngle - heading);
+    steer = ClampSteerToMax(vehicle, steer); // 0x427FE0
+
+    // NOTSA: The original also calls `GetATanOfXY(targetX - pos.x, targetY - pos.y)` here, but ignores the result (it has no side effects)
+
+    // How far is the target in front of us, and how far is it in general. x87: extended precision
+    const double toTargetY = (double)targetY - pos.y;
+    const double toTargetX = (double)targetX - pos.x;
+    const double ahead     = toTargetY * dir.y + toTargetX * dir.x;
+    const double dist      = std::sqrt(toTargetY * toTargetY + toTargetX * toTargetX);
+    const auto   distF     = (float)dist;
+
+    double targetSpeed;
+    if (ahead > 0.5f) {
+        const auto& escSpeed = escorted->m_vecMoveSpeed;
+        const auto  escortedSpeed = (float)(std::sqrt(((double)escSpeed.x * escSpeed.x + (double)escSpeed.y * escSpeed.y) + (double)escSpeed.z * escSpeed.z) * 60.0f);
+        if (dist < 15.0f) {
+            const double aheadLimited = (ahead - 0.5f) - 0.1f;
+            const double extra        = 4.0f < aheadLimited ? 4.0f : aheadLimited;
+            const auto   distScaled   = (float)((double)distF * 3.5f); // 0x859028
+            if ((double)escortedSpeed + extra > distScaled) {
+                targetSpeed = extra + escortedSpeed;
+            } else {
+                targetSpeed = distScaled;
+            }
+        } else {
+            targetSpeed = 300.0f; // 0x858FD8
+        }
+        const auto maxSpeed = (float)((double)escortedSpeed + 10.0f);
+        if (!(targetSpeed < maxSpeed)) {
+            targetSpeed = maxSpeed;
+        }
+    } else {
+        if (dist < 15.0f) { // Target is behind us (or right next to us), just stop (or crawl)
+            *pSteer = 0.0f;
+            *pGas   = 0.0f;
+            *pBrake = ahead < -3.0f ? 1.0f : 0.1f;
+            return;
+        }
+        targetSpeed = 8.0f; // 0x859000
+    }
+
+    const auto& ms = vehicle->m_vecMoveSpeed;
+    *pBrake = 0.0f;
+    const auto   curSpeed  = (float)(std::sqrt(((double)ms.z * ms.z + (double)ms.y * ms.y) + (double)ms.x * ms.x) * 60.0f);
+    const double speedDiff = targetSpeed - curSpeed;
+    if (speedDiff > 0.0) {
+        if (curSpeed < 25.0f) {
+            double gas = speedDiff * 0.1f;
+            if (1.0f < gas) {
+                gas = 1.0f;
+            }
+            *pGas = (float)gas;
+        } else {
+            *pGas = 1.0f;
+        }
+    } else {
+        double brake = speedDiff * -0.05f; // 0x85901C
+        *pGas = 0.0f;
+        if (0.5f < brake) {
+            brake = 0.5f;
+        }
+        *pBrake = (float)brake;
+    }
+    *pSteer = steer;
 }
 
 // 0x437C20
@@ -3630,8 +3828,31 @@ void CCarCtrl::SteerAICarWithPhysicsHeadingForTarget(CVehicle* vehicle, CPhysica
 }
 
 // 0x4335E0
-void CCarCtrl::SteerAICarWithPhysicsTryingToBlockTarget(CVehicle* vehicle, CEntity* Unusued, float arg3, float arg4, float arg5, float arg6, float* arg7, float* arg8, float* arg9, bool* arg10) {
-    plugin::Call<0x4335E0, CVehicle*, CEntity*, float, float, float, float, float*, float*, float*, bool*>(vehicle, Unusued, arg3, arg4, arg5, arg6, arg7, arg8, arg9, arg10);
+void CCarCtrl::SteerAICarWithPhysicsTryingToBlockTarget(CVehicle* vehicle, CEntity* Unusued, float x, float y, float dirX, float dirY, float* pSteer, float* pGas, float* pBrake, bool* pHandbrake) {
+    // x87: the (limited) direction stays in extended precision
+    double dx = dirX, dy = dirY;
+    const double len = std::sqrt((double)dirX * dirX + (double)dirY * dirY);
+    if (len > 0.13f) { // 0x859020
+        const double factor = 0.13f / len;
+        dx *= factor;
+        dy *= factor;
+    }
+    const auto targetX = (float)(dx * 60.0f + x);
+    const auto targetY = (float)(dy * 60.0f + y);
+
+    vehicle->m_autoPilot.m_nCarDrivingStyle = DRIVING_STYLE_AVOID_CARS;
+    SteerAICarWithPhysicsHeadingForTarget(vehicle, nullptr, targetX, targetY, pSteer, pGas, pBrake, pHandbrake); // 0x433280
+
+    // Close enough to the target? (Stop and block)
+    const auto&  pos    = vehicle->GetPosition();
+    const double distY  = (double)targetY - pos.y;
+    const double distX  = (double)targetX - pos.x;
+    if (distY * distY + distX * distX < 25.0f) {
+        auto& mission = vehicle->m_autoPilot.m_nCarMission;
+        mission = mission == MISSION_BLOCKCAR_CLOSE
+            ? MISSION_BLOCKCAR_HANDBRAKESTOP
+            : MISSION_BLOCKPLAYER_HANDBRAKESTOP;
+    }
 }
 
 // 0x428990

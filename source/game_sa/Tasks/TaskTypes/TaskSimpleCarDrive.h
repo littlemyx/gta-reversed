@@ -56,6 +56,7 @@ eTaskType GetTaskType() const override { return Type; }
     void ProcessHeadBopping(CPed* ped, bool a3, float a4);
     void ProcessArmBopping(CPed* pPed, bool a3, float a4);
     void ProcessBopping(CPed* ped, bool a3);
+    void StartRollDoorAnim(CPed* ped);
 
     [[nodiscard]] auto GetVehicle() const { return m_pVehicle; }
 

@@ -11,6 +11,8 @@ class CAnimBlendAssociation;
 class CEntity;
 class CPed;
 class CPlayerPed;
+class CVehicle;
+class CObject;
 
 enum eFightAttackType : int8 {
     FIGHT_ATTACK_HIT_1 = 0,
@@ -22,20 +24,20 @@ enum eFightAttackType : int8 {
 
 class NOTSA_EXPORT_VTABLE CMeleeInfo {
 public:
-    AssocGroupId m_nAnimGroup;
-    float  m_fRanges;
-    std::array<float, 5> m_fHit;
-    std::array<float, 5> m_fChain;
-    std::array<float, 5> m_fRadius;
-    float  m_fGroundLoop;
-    int32  ABlockHit;
-    int32  ABlockChain;
-    uint8  m_nHitLevel;
-    int32  m_nDamage;
-    int32  field_58;
-    std::array<int32, 5> m_Hit;
-    std::array<int32, 5> m_AltHit;
-    uint16 m_wFlags;
+    AssocGroupId         m_nAnimGroup;      // 0x00
+    float                m_fRanges;         // 0x04
+    std::array<float, 5> m_fHit;            // 0x08 - Hit time (in 1/30s => in seconds when loaded from `melee.dat`)
+    std::array<float, 5> m_fChain;          // 0x1C
+    std::array<float, 5> m_fRadius;         // 0x30
+    float                m_fGroundLoop;     // 0x44
+    float                ABlockHit;         // 0x48
+    float                ABlockChain;       // 0x4C
+    std::array<uint8, 5> m_nHitLevel;       // 0x50 - See `GetHitLevel`
+    std::array<uint8, 5> m_nDamage;         // 0x55
+    uint8                pad_5A[2];         // 0x5A
+    std::array<int32, 5> m_Hit;             // 0x5C - Audio event id (See `GetHitSound`)
+    std::array<int32, 5> m_AltHit;          // 0x70
+    uint16               m_wFlags;          // 0x84
 };
 VALIDATE_SIZE(CMeleeInfo, 0x88);
 
@@ -57,7 +59,8 @@ public:
     uint8                  m_nNextCommand;
     uint8                  m_nLastCommand;
 
-    static inline auto& m_aComboData = StaticRef<std::array<CMeleeInfo, 12>>(0xC170D0);
+    static inline auto& m_aComboData = StaticRef<std::array<CMeleeInfo, 13>>(0xC170D0); // NOTE: 12 fighting styles (indexed with `m_nComboSet - 4`) + 1 (used by the pistol whip, `m_nComboSet == 16`)
+    static inline auto& m_aHitOffsets = StaticRef<std::array<CVector, 7>>(0xC177D0); // Loaded from the `START_LEVELS` section of `melee.dat`
 
 public:
     static constexpr auto Type = eTaskType::TASK_SIMPLE_FIGHT;
@@ -77,11 +80,11 @@ public:
     void ChooseAttackPlayer(CPed* ped);
     bool ControlFight(CEntity* entity, uint8 command);
 
-    void FightHitCar(CPed* ped, CVehicle* vehicle, CVector& posn1, CVector& posn2, int16, int8);
-    void FightHitObj(CPed* ped, CObject* object, CVector& posn1, CVector& posn2, int16, int8);
-    void FightHitPed(CPed* creator, CPed* victim, CVector& posn1, CVector& posn2, int16);
-    void FightSetUpCol(float);
-    void FightStrike(CPed* ped, CVector& posn);
+    void FightHitCar(CPed* ped, CVehicle* vehicle, const CVector& point, const CVector& normal, int16 piece, int8 surface); // 0x61D0B0
+    void FightHitObj(CPed* ped, CObject* object, const CVector& point, const CVector& normal, int16 piece, int8 surface);  // 0x61D400
+    CPed* FightHitPed(CPed* creator, CPed* victim, const CVector& point, const CVector& dir, int16);                        // 0x61CBA0 - Returns the ped that was hit (or null)
+    void FightSetUpCol(float radius);                                                                                       // 0x61D5F0
+    bool FightStrike(CPed* ped, CVector& posn);                                                                             // 0x6240B0 - Always returns false
 
     void FindTargetOnGround(CPed* ped);
     void FinishMeleeAnimCB(CAnimBlendAssociation*, void*);
@@ -92,10 +95,10 @@ public:
     void GetAvailableComboSet(CPed* ped, int8);
     void GetComboType(char*);
     AssocGroupId GetComboAnimGroupID();
-    void GetHitLevel(const char*);
-    void GetHitSound(int32);
+    static uint8 GetHitLevel(const char*);   // 0x5BD360
+    static int32 GetHitSound(int32);         // 0x5BD3B0
     void GetRange();
-    void GetStrikeDamage(CPed* ped);
+    float GetStrikeDamage(CPed* ped);        // 0x61C740
 
     void SetPlayerMoveAnim(CPlayerPed* player);
     void StartAnim(CPed* ped, int32);

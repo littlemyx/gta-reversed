@@ -2,14 +2,77 @@
 
 #include "TaskSimpleFight.h"
 
+#include "Game.h"
+#include "Glass.h"
+#include "Crime.h"
+#include "FileMgr.h"
+#include "FileLoader.h"
+#include "Fx.h"
+#include "RwHelper.h"
+#include "PedModelInfo.h"
+#include "EventSoundQuiet.h"
+#include "EventVehicleDamageWeapon.h"
+#include "Plugins/RpAnimBlendPlugin/RpAnimBlend.h"
+
+// Storage used by `FightSetUpCol` (The original keeps the collision model, its data, and the one sphere in .bss)
+// NOTE: `col1[1]` (Game.h) really is the `CCollisionData` at 0xC17854, see `CGame::ShutDownForRestart`
+static inline auto& s_FightColModel = StaticRef<CColModel>(0xC17824);
+static inline auto& s_FightColData  = StaticRef<CCollisionData>(0xC17854);
+static inline auto& s_FightColSphere = StaticRef<CColSphere>(0xC17884);
+
+void CTaskSimpleFight::InjectHooks() {
+    RH_ScopedVirtualClass(CTaskSimpleFight, 0x86D684, 9);
+    RH_ScopedCategory("Tasks/TaskTypes");
+
+    RH_ScopedInstall(Constructor, 0x61C470);
+    RH_ScopedInstall(Destructor, 0x61C530);
+
+    RH_ScopedInstall(LoadMeleeData, 0x5BEDC0);
+    RH_ScopedInstall(GetHitLevel, 0x5BD360);
+    RH_ScopedInstall(GetHitSound, 0x5BD3B0);
+
+    RH_ScopedInstall(FightSetUpCol, 0x61D5F0);
+    RH_ScopedInstall(FightHitCar, 0x61D0B0);
+    RH_ScopedInstall(FightStrike, 0x6240B0);
+}
+
 // 0x61C470
 CTaskSimpleFight::CTaskSimpleFight(CEntity* entity, int32 nCommand, uint32 nIdlePeriod) : CTaskSimple() {
-    plugin::CallMethod<0x61C470, CTaskSimpleFight*, CEntity*, int32, uint32>(this, entity, nCommand, nIdlePeriod);
+    m_nComboSet          = -1;
+    m_nCurrentMove       = (eFightAttackType)-1;
+    m_bIsFinished        = false;
+    m_bIsInControl       = true;
+    m_bAnimsReferenced   = false;
+    m_nRequiredAnimGroup = (AssocGroupId)0x21; // "No group"
+    m_nIdleCounter       = 0;
+    m_nContinueStrike    = 0;
+    m_nChainCounter      = 0;
+    m_pTargetEntity      = entity;
+    m_pAnim              = nullptr;
+    m_pIdleAnim          = nullptr;
+    m_nNextCommand       = (uint8)nCommand;
+    m_nLastCommand       = 0;
+
+    CEntity::SafeRegisterRef(m_pTargetEntity);
+
+    m_nIdlePeriod = (uint16)std::min<uint32>(nIdlePeriod, 60'000);
 }
 
 // 0x61C530
 CTaskSimpleFight::~CTaskSimpleFight() {
-    plugin::CallMethod<0x61C530, CTaskSimpleFight*>(this);
+    CEntity::SafeCleanUpRef(m_pTargetEntity);
+
+    if (m_pAnim) {
+        m_pAnim->SetDefaultDeleteCallback();
+    }
+    if (m_pIdleAnim) {
+        m_pIdleAnim->SetDefaultDeleteCallback();
+    }
+
+    if (m_bAnimsReferenced && m_nRequiredAnimGroup != 0x21) {
+        CAnimManager::RemoveAnimBlockRef(CAnimManager::GetAnimationBlockIndex(m_nRequiredAnimGroup));
+        m_bAnimsReferenced = false;
+    }
 }
 
 // 0x61C5E0
@@ -32,11 +95,169 @@ AssocGroupId CTaskSimpleFight::GetComboAnimGroupID() {
     return plugin::CallMethodAndReturn<AssocGroupId, 0x4ABDA0, CTaskSimpleFight*>(this);
 }
 
+// 0x5BD360
+uint8 CTaskSimpleFight::GetHitLevel(const char* str) {
+    switch (str[0]) {
+    case 'H': return 0;
+    case 'L': return 1;
+    case 'G': return 2;
+    case 'B': return 3;
+    }
+    // BUG: The original continues by comparing the (zero extended) first char with 2 char constants ("HL", "LL", "GL"), which can never be true.
+    return 7;
+}
+
+// 0x5BD3B0
+int32 CTaskSimpleFight::GetHitSound(int32 level) {
+    switch (level) {
+    case 1:
+    case 2:
+    case 3:
+    case 4:
+    case 5:
+    case 6:
+    case 7:
+    case 8: return 60 + level;
+    default: return 62;
+    }
+}
+
 // 0x5BEDC0
 void CTaskSimpleFight::LoadMeleeData() {
     ZoneScoped;
 
-    plugin::Call<0x5BEDC0>();
+    // Defaults
+    for (auto& info : m_aComboData) {
+        info.m_nAnimGroup = (AssocGroupId)0x21;
+        info.m_fRanges    = 1.5f;
+        for (auto i = 0u; i < 5; i++) {
+            info.m_fHit[i]      = 100.f;
+            info.m_fChain[i]    = 100.f;
+            info.m_fRadius[i]   = 1.f;
+            info.m_nHitLevel[i] = 7;
+            info.m_nDamage[i]   = 0;
+            info.m_Hit[i]       = 0;
+            info.m_AltHit[i]    = 0;
+        }
+        info.m_fGroundLoop = 0.f;
+        info.ABlockHit     = 100.f;
+        info.ABlockChain   = 100.f;
+        info.m_wFlags      = 0;
+    }
+    for (auto& offset : m_aHitOffsets) {
+        offset = CVector{0.f, 0.75f, 0.f};
+    }
+
+    const auto f = CFileMgr::OpenFile("DATA\\melee.dat", "rb");
+
+    bool bInCombo  = false;
+    bool bInLevels = false;
+    auto lineIdx   = 0u; // Index of the line inside the current section
+    auto comboIdx  = 0u;
+
+    for (auto line = CFileLoader::LoadLine(f); line; line = CFileLoader::LoadLine(f)) {
+        if (line[0] == '#' || line[0] == '\0') {
+            continue;
+        }
+
+        if (strncmp(line, "END_MELEE_DATA", 14) == 0) {
+            break;
+        }
+
+        if (!bInCombo && !bInLevels) {
+            if (strncmp(line, "START_COMBO", 11) == 0) {
+                bInCombo = true;
+            } else if (strncmp(line, "START_LEVELS", 12) == 0) {
+                bInLevels = true;
+            }
+            continue;
+        }
+
+        if (strncmp(line, "END_COMBO", 9) == 0) {
+            if (bInCombo) {
+                comboIdx++;
+            }
+            lineIdx   = 0;
+            bInCombo  = false;
+            bInLevels = false;
+            continue;
+        }
+
+        if (bInLevels) {
+            char  name[64]{};
+            float x{}, y{}, z{};
+            sscanf_s(line, "%s %f %f %f", SCANF_S_STR(name), &x, &y, &z);
+            m_aHitOffsets[lineIdx] = CVector{x, y, z};
+            lineIdx++;
+            continue;
+        }
+
+        // Inside a combo, each line has a different meaning
+        auto& info = m_aComboData[comboIdx];
+        switch (lineIdx++) {
+        case 0: { // Anim group name
+            char name[64]{}, grpName[64]{};
+            sscanf_s(line, "%s %s", SCANF_S_STR(name), SCANF_S_STR(grpName));
+            for (auto g = 0u; g < CAnimManager::GetAssocGroupDefs().size(); g++) {
+                if (strcmp(grpName, CAnimManager::GetAnimGroupName((AssocGroupId)g)) == 0) {
+                    info.m_nAnimGroup = (AssocGroupId)g;
+                    break;
+                }
+            }
+            break;
+        }
+        case 1: { // Range
+            char  name[64]{};
+            float range{};
+            sscanf_s(line, "%s %f", SCANF_S_STR(name), &range);
+            info.m_fRanges = range;
+            break;
+        }
+        case 2:
+        case 3:
+        case 4:
+        case 5:
+        case 6: { // Moves
+            const auto move = lineIdx - 1 - 2;
+
+            char  name[64]{}, level[64]{};
+            float hit{}, chain{}, radius{}, groundLoop{};
+            int32 damage{}, sound{}, altSound{};
+            sscanf_s(line, "%s %f %f %f %s %d %d %d %f", SCANF_S_STR(name), &hit, &chain, &radius, SCANF_S_STR(level), &damage, &sound, &altSound, &groundLoop);
+
+            constexpr float FRAMES_TO_SECS = 1.f / 30.f; // 0x858F10
+            info.m_fHit[move]      = hit * FRAMES_TO_SECS;
+            info.m_fChain[move]    = chain * FRAMES_TO_SECS;
+            info.m_fRadius[move]   = radius;
+            info.m_nHitLevel[move] = GetHitLevel(level);
+            info.m_nDamage[move]   = (uint8)damage;
+            info.m_Hit[move]       = (int16)GetHitSound(sound);
+            info.m_AltHit[move]    = (int16)GetHitSound(altSound);
+            if (groundLoop > 0.f) {
+                info.m_fGroundLoop = groundLoop * FRAMES_TO_SECS;
+            }
+            break;
+        }
+        case 7: { // Block
+            char  name[64]{};
+            float hit{}, chain{};
+            sscanf_s(line, "%s %f %f", SCANF_S_STR(name), &hit, &chain);
+            constexpr float FRAMES_TO_SECS = 1.f / 30.f; // 0x858F10
+            info.ABlockHit   = hit * FRAMES_TO_SECS;
+            info.ABlockChain = chain * FRAMES_TO_SECS;
+            break;
+        }
+        case 8: { // Flags
+            char   name[64]{};
+            uint32 flags{};
+            sscanf_s(line, "%s %x", SCANF_S_STR(name), &flags);
+            info.m_wFlags = (uint16)flags;
+            break;
+        }
+        }
+    }
+
+    CFileMgr::CloseFile(f);
 }
 
 // 0x6239F0
@@ -49,10 +270,275 @@ bool CTaskSimpleFight::ProcessPed(CPed* ped) {
     return plugin::CallMethodAndReturn<bool, 0x629920, CTaskSimpleFight*, CPed*>(this, ped);
 }
 
-void CTaskSimpleFight::InjectHooks() {
-    RH_ScopedVirtualClass(CTaskSimpleFight, 0x86D684, 9);
-    RH_ScopedCategory("Tasks/TaskTypes");
+// 0x61C740
+float CTaskSimpleFight::GetStrikeDamage(CPed* ped) {
+    return plugin::CallMethodAndReturn<float, 0x61C740, CTaskSimpleFight*, CPed*>(this, ped); // Not reversed yet
+}
 
+// 0x61CBA0
+CPed* CTaskSimpleFight::FightHitPed(CPed* creator, CPed* victim, const CVector& point, const CVector& dir, int16 piece) {
+    return plugin::CallMethodAndReturn<CPed*, 0x61CBA0, CTaskSimpleFight*, CPed*, CPed*, const CVector*, const CVector*, int16>(this, creator, victim, &point, &dir, piece); // Not reversed yet
+}
+
+// 0x61D400
+void CTaskSimpleFight::FightHitObj(CPed* ped, CObject* object, const CVector& point, const CVector& normal, int16 piece, int8 surface) {
+    plugin::CallMethod<0x61D400, CTaskSimpleFight*, CPed*, CObject*, const CVector*, const CVector*, int16, int8>(this, ped, object, &point, &normal, piece, surface); // Not reversed yet
+}
+
+// 0x61D5F0
+void CTaskSimpleFight::FightSetUpCol(float radius) {
+    if (!s_FightColModel.m_pColData) {
+        s_FightColModel.m_pColData    = &s_FightColData;
+        s_FightColData.m_pSpheres     = &s_FightColSphere;
+        s_FightColData.m_nNumSpheres  = 1;
+    }
+
+    s_FightColSphere.Set(radius, CVector{0.f, 0.f, 0.f}, SURFACE_DEFAULT, 0, tColLighting{0xFF});
+
+    s_FightColModel.m_boundBox.m_vecMin = CVector{-radius, -radius, -radius};
+    s_FightColModel.m_boundBox.m_vecMax = CVector{radius, radius, radius};
+    s_FightColModel.m_boundSphere.m_vecCenter = CVector{0.f, 0.f, 0.f};
+    s_FightColModel.m_boundSphere.m_fRadius   = radius;
+}
+
+// 0x61D0B0
+void CTaskSimpleFight::FightHitCar(CPed* ped, CVehicle* vehicle, const CVector& point, const CVector& normal, int16 piece, int8 surface) {
+    const float healthBefore = vehicle->m_fHealth;
+
+    const float strikeDamage = GetStrikeDamage(ped);
+    const auto  weaponType   = ped->GetActiveWeapon().m_Type;
+
+    if (weaponType == WEAPON_CHAINSAW) {
+        // Sparks along the hand bone's `at` vector
+        const auto hier = GetAnimHierarchyFromSkinClump(ped->GetRpClump());
+        const auto idx  = RpHAnimIDGetIndex(hier, BONE_R_HAND);
+        const auto& mat = RpHAnimHierarchyGetMatrixArray(hier)[idx];
+        g_fx.AddSparks(point, CVector{mat.at.x, mat.at.y, mat.at.z}, 5.f, 32, CVector{}, SPARK_PARTICLE_SPARK, 0.3f, 1.f);
+
+        vehicle->VehicleDamage(
+            (float)((double)vehicle->m_pHandlingData->m_fMass * (double)strikeDamage * (double)0.00075f), // 0x86D6AC
+            (eVehicleCollisionComponent)piece,
+            ped,
+            const_cast<CVector*>(&point),
+            const_cast<CVector*>(&normal),
+            WEAPON_CHAINSAW
+        );
+    } else {
+        vehicle->VehicleDamage(
+            (float)((double)vehicle->m_pHandlingData->m_fMass * (double)strikeDamage * (double)0.01f), // 0x858C58
+            (eVehicleCollisionComponent)piece,
+            ped,
+            const_cast<CVector*>(&point),
+            const_cast<CVector*>(&normal),
+            weaponType
+        );
+    }
+
+    CCrime::ReportCrime(CRIME_HIT_CAR, vehicle, ped);
+
+    // Let the occupants know
+    if (vehicle->m_pDriver) {
+        CEventVehicleDamageWeapon event{vehicle, ped, WEAPON_BASEBALLBAT};
+        vehicle->m_pDriver->GetIntelligence()->m_eventGroup.Add(&event, false);
+    }
+    for (auto i = 0u; i < vehicle->m_nNumPassengers; i++) {
+        if (const auto passenger = vehicle->m_apPassengers[i]) {
+            CEventVehicleDamageWeapon event{vehicle, ped, WEAPON_BASEBALLBAT};
+            passenger->GetIntelligence()->m_eventGroup.Add(&event, false);
+        }
+    }
+
+    if (vehicle->m_fHealth < healthBefore) {
+        vehicle->m_nLastWeaponDamageType = (uint8)weaponType;
+        vehicle->m_pLastDamageEntity     = ped;
+        ped->RegisterReference(&vehicle->m_pLastDamageEntity);
+    }
+
+    if (ped->GetActiveWeapon().m_Type == WEAPON_CHAINSAW) {
+        ped->GetWeaponAE().AddAudioEvent(AE_WEAPON_CHAINSAW_CUTTING); // 0x4E69F0
+    }
+
+    ped->GetAE().AddAudioEvent(
+        (eAudioEvents)m_aComboData[m_nComboSet - 4].m_Hit[m_nCurrentMove],
+        0.f,
+        1.f,
+        vehicle,
+        (eSurfaceType)surface,
+        0,
+        0
+    );
+
+    g_fx.AddPunchImpact(point, normal, 4);
+}
+
+// 0x6240B0
+bool CTaskSimpleFight::FightStrike(CPed* ped, CVector& pos) {
+    // NOTE: A lot of the math here is done in extended precision by the original, hence the `double`s
+    bool bNoPedHit = true;
+
+    // (The original also calls `CWeaponInfo::GetWeaponInfo(<ped's weapon>, 1)` here, but doesn't use the result)
+
+    const auto& combo = m_aComboData[m_nComboSet - 4];
+
+    if (ped == FindPlayerPed(-1) && ped->GetActiveWeapon().m_Type != WEAPON_UNARMED) {
+        CGlass::BreakGlassPhysically(pos, combo.m_fRadius[m_nCurrentMove]);
+    }
+
+    auto* const intel = ped->GetIntelligence();
+
+    // Objects close to the strike
+    int16                          numObjects = 0;
+    std::array<CEntity*, 16>       objects{};
+    CPed*                          hitPed     = nullptr;
+    if (ped->IsPlayer()) {
+        CWorld::FindObjectsInRange(pos, 5.f, true, &numObjects, (int16)objects.size(), objects.data(), false, false, false, true, false);
+    }
+
+    FightSetUpCol(combo.m_fRadius[m_nCurrentMove]);
+
+    CMatrix hitMat{*ped->m_matrix};
+    hitMat.SetTranslateOnly(pos);
+
+    for (auto i = 0; i < numObjects + 32; i++) {
+        CPed*     candPed = nullptr;
+        CVehicle* candVeh = nullptr;
+        CEntity*  candObj = nullptr;
+        CEntity*  entity;
+        if (i < 16) {
+            entity = candPed = static_cast<CPed*>(intel->m_pedScanner.m_apEntities[i]);
+        } else if (i < 32) {
+            entity = candVeh = static_cast<CVehicle*>(intel->m_vehicleScanner.m_apEntities[i - 16]);
+        } else {
+            entity = candObj = objects[i - 32];
+        }
+        if (!entity) {
+            continue;
+        }
+
+        // Max distance to the entity
+        float maxDist = (float)((double)CModelInfo::GetModelInfo(entity->m_nModelIndex)->GetColModel()->GetBoundRadius() + (double)combo.m_fRadius[m_nCurrentMove]);
+
+        if (candPed) {
+            if (combo.m_nHitLevel[m_nCurrentMove] >= 4) {
+                maxDist = (float)((double)combo.m_fRadius[m_nCurrentMove] * (double)0.5f + (double)maxDist);
+            }
+
+            // Skip peds that don't use collision, are alive, and aren't riding a bike
+            if (!candPed->m_bUsesCollision
+                && candPed->IsAlive()
+                && !(candPed->bInVehicle && candPed->m_pVehicle && candPed->m_pVehicle->m_nVehicleType == VEHICLE_TYPE_BIKE)
+            ) {
+                continue;
+            }
+        } else if (candVeh) {
+            if (candVeh->m_nVehicleType != VEHICLE_TYPE_AUTOMOBILE) {
+                continue;
+            }
+        } else if (!candObj->m_bUsesCollision) {
+            continue;
+        }
+
+        // Is it close enough?
+        double distSq;
+        if (candPed) {
+            const auto c  = candPed->GetBoundCentre();
+            const auto dx = (double)c.x - (double)pos.x;
+            const auto dy = (double)c.y - (double)pos.y;
+            distSq = dx * dx + dy * dy;
+        } else {
+            const auto c  = entity->GetBoundCentre();
+            const auto dx = (double)c.x - (double)pos.x;
+            const auto dy = (double)c.y - (double)pos.y;
+            const auto dz = (double)c.z - (double)pos.z;
+            distSq = (dx * dx + dy * dy) + dz * dz;
+        }
+        if (!(distSq < (double)maxDist * (double)maxDist)) {
+            continue;
+        }
+
+        if (candPed) {
+            // Test against the ped's collision spheres
+            const auto colModel = static_cast<CPedModelInfo*>(CModelInfo::GetModelInfo(candPed->m_nModelIndex))->AnimatePedColModelSkinnedWorld(candPed->GetRpClump());
+            const auto colData  = colModel->m_pColData;
+
+            for (auto tries = 0;;) {
+                for (auto s = 0; s < (int16)colData->m_nNumSpheres; s++) {
+                    const auto& sphere = colData->m_pSpheres[s];
+
+                    const float  dxf = (float)((double)sphere.m_vecCenter.x - (double)pos.x);
+                    const double dyd = (double)sphere.m_vecCenter.y - (double)pos.y;
+                    const double dzd = (double)sphere.m_vecCenter.z - (double)pos.z;
+                    const CVector diff{dxf, (float)dyd, (float)dzd};
+
+                    const double sphereDistSq = ((double)dxf * (double)dxf + dyd * dyd) + dzd * dzd;
+                    const double r            = (double)sphere.m_fRadius + (double)combo.m_fRadius[m_nCurrentMove];
+                    if (sphereDistSq < r * r) {
+                        if (const auto hit = FightHitPed(ped, candPed, pos, diff, 3)) {
+                            hitPed = hit;
+                        }
+                        bNoPedHit = false;
+                        goto NextEntity;
+                    }
+                }
+
+                if (combo.m_nHitLevel[m_nCurrentMove] < 4) {
+                    break;
+                }
+
+                // Nothing hit yet => move the strike position forward a bit, and try again (once)
+                const auto&  fwd    = ped->m_matrix->GetForward();
+                const double fx     = (double)fwd.x * (double)1.5f; // 0x858CE8
+                const double fy     = (double)fwd.y * (double)1.5f;
+                const double fz     = (double)fwd.z * (double)1.5f;
+                const float  fxf    = (float)fx;
+                const double radius = combo.m_fRadius[m_nCurrentMove];
+                tries++;
+                pos.x = (float)((double)fxf * radius + (double)pos.x);
+                pos.y = (float)(fy * radius + (double)pos.y);
+                const float zOffs = (float)(fz * radius);
+                pos.z = (float)((double)zOffs + (double)pos.z);
+                if (tries >= 2) {
+                    break;
+                }
+            }
+        } else {
+            // Vehicle/object => collide against the strike's col. model
+            entity->GetMatrix(); // Makes sure the matrix is allocated
+            const auto colB   = entity->GetColModel();
+            const auto numCPs = CCollision::ProcessColModels(hitMat, col1[0], *entity->m_matrix, *colB, CWorld::m_aTempColPts, nullptr, nullptr, false);
+            if (numCPs > 0) {
+                const auto& cp = CWorld::m_aTempColPts[0];
+                if (candVeh) {
+                    FightHitCar(ped, candVeh, cp.m_vecPoint, cp.m_vecNormal, (int16)cp.m_nPieceTypeB, (int8)cp.m_nSurfaceTypeB);
+                } else if (candObj) {
+                    FightHitObj(ped, static_cast<CObject*>(candObj), cp.m_vecPoint, cp.m_vecNormal, (int16)cp.m_nPieceTypeB, (int8)cp.m_nSurfaceTypeB);
+                }
+            }
+        }
+    NextEntity:;
+    }
+
+    // Nobody got hit => make some noise
+    if (bNoPedHit && ped->IsPlayer()) {
+        CEventSoundQuiet event{ped, 40.f, (uint32)-1, CVector{0.f, 0.f, 0.f}};
+        GetEventGlobalGroup()->Add(&event, false);
+    }
+
+    // Stop the "ground attack" animation unless it hit someone who's also doing it
+    if (m_nComboSet == 7 && m_nCurrentMove == FIGHT_ATTACK_HIT_2 && m_pAnim) {
+        if (!hitPed || !RpAnimBlendClumpGetAssociation(hitPed->GetRpClump(), ANIM_ID_FIGHT_HIT_2)) {
+            m_pAnim->m_BlendDelta = -4.f;
+            m_pAnim->m_Flags &= ~ANIMATION_IS_PLAYING;
+            m_pAnim->m_Flags |= ANIMATION_IS_BLEND_AUTO_REMOVE;
+        }
+    }
+
+    // Last strike position
+    ped->field_720 = std::bit_cast<int32>(pos.x);
+    ped->field_724 = std::bit_cast<int32>(pos.y);
+    ped->field_728 = std::bit_cast<int32>(pos.z);
+
+    return false;
 }
 
 CTaskSimpleFight* CTaskSimpleFight::Constructor(CEntity* entity, int32 nCommand, uint32 nIdlePeriod) {

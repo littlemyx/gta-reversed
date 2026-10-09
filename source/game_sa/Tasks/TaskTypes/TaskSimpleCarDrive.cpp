@@ -38,6 +38,7 @@ void CTaskSimpleCarDrive::InjectHooks() {
     RH_ScopedInstall(ProcessHeadBopping, 0x6428C0);
     RH_ScopedInstall(ProcessArmBopping, 0x642AE0);
     RH_ScopedInstall(ProcessBopping, 0x642E70);
+    RH_ScopedInstall(StartRollDoorAnim, 0x642700);
     RH_ScopedVMTInstall(Clone, 0x63DC20);
     RH_ScopedVMTInstall(GetTaskType, 0x63C450);
     RH_ScopedVMTInstall(MakeAbortable, 0x63C670);
@@ -355,6 +356,17 @@ void CTaskSimpleCarDrive::ProcessArmBopping(CPed* ped, bool a3, float a4) {
     }
 }
 
+// 0x642700
+void CTaskSimpleCarDrive::StartRollDoorAnim(CPed* ped) {
+    // NOTE: Uses the vehicle the *ped* is in/was in (`ped->m_pVehicle`), not `m_pVehicle`
+    const auto animGroup = CVehicleAnimGroupData::GetGroupForAnim((AssocGroupId)ped->m_pVehicle->m_pHandlingData->m_nAnimGroup, ANIM_ID_CAR_ROLLDOOR);
+    m_pAnimCloseDoorRolling = CAnimManager::AddAnimation(ped->GetRpClump(), animGroup, ANIM_ID_CAR_ROLLDOOR);
+
+    // 0x63C840 - Not reversed yet (clears flags, resets `m_pAnimCloseDoorRolling`, ...)
+    const auto FinishCB = reinterpret_cast<void(*)(CAnimBlendAssociation*, void*)>(0x63C840);
+    m_pAnimCloseDoorRolling->SetFinishCallback(FinishCB, this);
+}
+
 // 0x642E70
 void CTaskSimpleCarDrive::ProcessBopping(CPed* ped, bool a3) {
     if (ped->m_pVehicle->m_pDriver == FindPlayerPed(0)
@@ -516,7 +528,7 @@ bool CTaskSimpleCarDrive::ProcessPed(CPed* ped) {
                         // Start closing the door
                         veh->SetGettingOutFlags(1);
                         m_bClosingDoor = true;
-                        plugin::CallMethod<0x642700, CTaskSimpleCarDrive*, CPed*>(this, ped); // Plays the "roll door" anim, and sets `m_pAnimCloseDoorRolling`
+                        StartRollDoorAnim(ped); // 0x642700 - Plays the "roll door" anim, and sets `m_pAnimCloseDoorRolling`
                         return false;
                     }
                 } else if (doorAnim) {

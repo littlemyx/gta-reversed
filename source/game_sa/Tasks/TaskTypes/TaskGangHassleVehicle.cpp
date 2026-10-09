@@ -386,7 +386,7 @@ CTask* CTaskGangHassleVehicle::ControlSubTask(CPed* ped) {
     CMatrix hitMat{ped->GetMatrix()};
     hitMat.GetPosition() += ped->GetForward();
 
-    plugin::CallMethod<0x61D5F0, CTaskSimpleFight*, float>(&fight, 0.5f); // `CTaskSimpleFight::FightSetUpCol`
+    fight.FightSetUpCol(0.5f); // 0x61D5F0
 
     // NOTE: These are set after `FightSetUpCol` (like the original does)
     fight.m_nComboSet     = 4;
@@ -405,13 +405,11 @@ CTask* CTaskGangHassleVehicle::ControlSubTask(CPed* ped) {
     );
     if (numColPts > 0) {
         const auto& cp = CWorld::m_aTempColPts[0];
-        // `CTaskSimpleFight::FightHitCar`
-        plugin::CallMethod<0x61D0B0, CTaskSimpleFight*, CPed*, CVehicle*, const CVector*, const CVector*, int16, int8>(
-            &fight,
+        fight.FightHitCar( // 0x61D0B0
             ped,
             m_Vehicle,
-            &CWorld::m_aTempColPts[0].m_vecPoint,
-            &CWorld::m_aTempColPts[0].m_vecNormal,
+            cp.m_vecPoint,
+            cp.m_vecNormal,
             (int16)cp.m_nPieceTypeB,
             (int8)cp.m_nSurfaceTypeB
         );

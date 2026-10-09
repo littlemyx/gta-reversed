@@ -598,7 +598,7 @@ bool CTaskSimpleUseGun::ProcessPed(CPed* ped) {
                     tFight.m_nComboSet    = 0x10;
                     tFight.m_nCurrentMove = (eFightAttackType)isDucking;
                     tFight.m_nLastCommand = 0xB;
-                    plugin::CallMethod<0x6240B0, CTaskSimpleFight*, CPed*, CVector*>(&tFight, ped, &hitPos); // CTaskSimpleFight::FightStrike
+                    tFight.FightStrike(ped, hitPos); // 0x6240B0
                     tFight.m_pAnim = nullptr;
                 }
 

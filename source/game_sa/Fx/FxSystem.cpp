@@ -82,6 +82,8 @@ bool FxSystem_c::Init(FxSystemBP_c* systemBP, const RwMatrix& local, RwMatrix* p
     m_nRateMult    = 1000;
     m_nTimeMult    = 1000;
     m_VelAdd       = CVector();
+    m_allocatedParentMat = false; // exe 0x4AA77F: flags byte [+0x62] = (b & 0xFC) | 4
+    m_createLocal        = false;
     m_useZTest     = true;
 
     m_BoundingSphere = nullptr;

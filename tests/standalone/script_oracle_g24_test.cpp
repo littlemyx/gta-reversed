@@ -111,6 +111,7 @@ struct Ctx {
 };
 
 static int  g_cases = 3000;
+static bool g_usesCleanup = false;
 static bool g_verbose = false;
 static std::vector<std::string> g_filters;
 struct Row { std::string name; int cases = 0, bad = 0; };
@@ -156,7 +157,7 @@ static bool RunCase(Ctx& c, std::string& desc) {
         S.m_NotFlag = c.notFlag;
         S.m_CondResult = false;
         S.m_AndOrState = 0;
-        S.m_UsesMissionCleanup = false;
+        S.m_UsesMissionCleanup = g_usesCleanup;
         for (int i = 0; i < 4; ++i) std::memcpy(&S.m_LocalVars[i], &c.lv[i], 4);
     };
     auto Collect = [&](bool ret) {
@@ -388,6 +389,15 @@ static int __fastcall H_PickRandomCar(void*, int, int a, int b) { Log(130, (floa
 eModelID CLoadedCarGroup::PickRandomCar(bool a, bool b) { return (eModelID)H_PickRandomCar(this, 0, a, b); }
 
 void CRunningScript::ReadTextLabelFromScript(char* buf, uint8 len) { oracle::Fn<void __fastcall(CRunningScript*, int, char*, int)>(0x463D50)(this, 0, buf, len); } // the exe's own (RunningScript.cpp is not part of this test)
+static void __cdecl H_SetHeading(unsigned id, float h) { Log(131, (float)id, h); }
+void CCheckpoints::SetHeading(uint32 id, float h) { H_SetHeading(id, h); }
+static void __fastcall H_DestroyFx(void*, int, void* fx) { Log(132, (float)(uintptr_t)fx); }
+void FxManager_c::DestroyFxSystem(FxSystem_c* fx) { H_DestroyFx(this, 0, fx); }
+static void __cdecl H_RemoveScriptFx(int id) { Log(133, (float)id); }
+void CTheScripts::RemoveScriptEffectSystem(int32 id) { H_RemoveScriptFx(id); }
+static void __fastcall H_CleanupRemove(void*, int, int handle, int type) { Log(134, (float)handle, (float)(type & 0xFF)); }
+void CMissionCleanup::RemoveEntityFromList(int32 handle, MissionCleanUpEntityType type) { H_CleanupRemove(this, 0, handle, type); }
+static uint8_t g_fakeCheckpoint[64];
 static int __cdecl H_toupper(int c) { return (c >= 'a' && c <= 'z') ? c - 32 : c; } // the exe's CRT toupper (0x823A0E) needs the locale state
 
 static void SetupFakeWorld24() {
@@ -542,6 +552,22 @@ static void TestAll24() {
         auto op = Ped(c, 2405); static uint8_t intel[0x294]; RandomFill(intel, sizeof(intel), *c.rng); *reinterpret_cast<void**>(reinterpret_cast<uint8_t*>(g_ped) + 0x47C) = intel;
         c.opcode = op.b; });
 
+    Test<COMMAND_GET_CHAR_SWIM_STATE, &GetCharSwimState>("2406 GET_CHAR_SWIM_STATE", [&](Ctx& c) {
+        auto op = Ped(c, 2406); static uint8_t intel[0x294]; RandomFill(intel, sizeof(intel), *c.rng); intel[0] |= 1; RandomFill(g_fakeSwim, sizeof(g_fakeSwim), *c.rng);
+        *reinterpret_cast<void**>(reinterpret_cast<uint8_t*>(g_ped) + 0x47C) = intel; c.opcode = op.GV(4).b; });
+    Test<COMMAND_SET_CHECKPOINT_HEADING, &SetCheckpointHeading>("2454 SET_CHECKPOINT_HEADING", [&](Ctx& c) {
+        RandomFill(g_fakeCheckpoint, sizeof(g_fakeCheckpoint), *c.rng);
+        auto* arr = reinterpret_cast<uint8_t*>(0xA44070); const int idx = c.rng->below(3), id = 1 + c.rng->below(1000);
+        for (int i = 0; i < 3; ++i) { arr[i * 8] = (uint8_t)c.rng->below(2); *reinterpret_cast<int16_t*>(arr + i * 8 + 2) = (int16_t)id; *reinterpret_cast<void**>(arr + i * 8 + 4) = c.rng->below(4) ? (void*)g_fakeCheckpoint : nullptr; }
+        const int32_t handle = c.rng->below(6) == 0 ? -1 : (c.rng->below(5) == 0 ? (int32_t)c.rng->u32() & 0x00FF0003 : ((id << 16) | idx));
+        c.opcode = Op(2454).I(handle).Fl(c.rng->F(400)).b; });
+    Test<COMMAND_KILL_FX_SYSTEM_NOW, &KillFxSystemNow>("2422 KILL_FX_SYSTEM_NOW", [&](Ctx& c) {
+        g_usesCleanup = c.rng->below(2) != 0;
+        auto* arr = reinterpret_cast<uint8_t*>(0xA44110); const int idx = c.rng->below(3), id = 1 + c.rng->below(1000);
+        for (int i = 0; i < 3; ++i) { arr[i * 8] = (uint8_t)c.rng->below(2); *reinterpret_cast<int16_t*>(arr + i * 8 + 2) = (int16_t)id; *reinterpret_cast<uintptr_t*>(arr + i * 8 + 4) = c.rng->below(4) ? 0x1000 + i : 0; }
+        const int32_t handle = c.rng->below(6) == 0 ? -1 : ((id << 16) | idx);
+        c.opcode = Op(2422).I(handle).b; });
+
     // ---- scanning / searching
     Test<COMMAND_IS_COP_VEHICLE_IN_AREA_3D_NO_SAVE, &IsCopVehicleInArea3DNoSave>("2499 IS_COP_VEHICLE_IN_AREA_3D_NO_SAVE", [&](Ctx& c) {
         static const int models[] = { 596, 597, 598, 599, 523, 427, 490, 528, 601, 0x1AE, 400, 411 };
@@ -612,6 +638,10 @@ int main(int argc, char** argv) {
     oracle::Patch(0x569660, (void*)&H_GroundZ);
     oracle::Patch(0x564C70, (void*)&H_FindObjs);
     oracle::Patch(0x611C50, (void*)&H_PickRandomCar);
+    oracle::Patch(0x722970, (void*)&H_SetHeading);
+    oracle::Patch(0x4A9810, (void*)&H_DestroyFx);
+    oracle::Patch(0x492FD0, (void*)&H_RemoveScriptFx);
+    oracle::Patch(0x4654B0, (void*)&H_CleanupRemove);
     static CRunningScript script;
     g_S = &script;
     SetupFakeWorld24();

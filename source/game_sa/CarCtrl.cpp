@@ -254,6 +254,7 @@ void CCarCtrl::InjectHooks()
     RH_ScopedInstall(ReconsiderRoute, 0x42FC40);
     RH_ScopedInstall(SteerAICarWithPhysicsFollowPreRecordedPath, 0x432DD0);
     RH_ScopedInstall(SteerAICarWithPhysicsHeadingForTarget, 0x433280);
+    RH_ScopedInstall(UpdateCarOnRails, 0x436540);
     RH_ScopedInstall(SteerAICarWithPhysicsTryingToBlockTarget, 0x4335E0);
     RH_ScopedInstall(SteerAICarTowardsPointInEscort, 0x4336D0);
     RH_ScopedInstall(SteerAICarParkParallel, 0x433BA0);
@@ -4505,7 +4506,122 @@ void CCarCtrl::UpdateCarCount(CVehicle* vehicle, uint8 bDecrease) {
 
 // 0x436540
 void CCarCtrl::UpdateCarOnRails(CVehicle* vehicle) {
-    plugin::Call<0x436540, CVehicle*>(vehicle);
+    StopCarIfNodesAreInvalid(vehicle); // 0x422590 - Result unused
+
+    auto& ap = vehicle->m_autoPilot;
+    if (ap.movementFlags.bIsStopped) {
+        return;
+    }
+
+    const auto StopOnTheSpot = [&] {
+        vehicle->m_vecMoveSpeed = CVector{};
+        ap.ModifySpeed(0.0f); // 0x41B980
+    };
+
+    switch (ap.m_nTempAction) {
+    case TEMPACT_STUCKINTRAFFIC:
+        StopOnTheSpot();
+        return;
+    case TEMPACT_WAIT:
+    case TEMPACT_BRAKE:
+        StopOnTheSpot();
+        if (CTimer::GetTimeInMS() > ap.m_nTempActionTime) {
+            ap.m_nTempAction              = TEMPACT_NONE;
+            ap.m_nTimeToStartMission      = CTimer::GetTimeInMS();
+            ap.m_nTimeSwitchedToRealPhysics = CTimer::GetTimeInMS();
+        }
+        return;
+    default:
+        break;
+    }
+
+    SlowCarOnRailsDownForTrafficAndLights(vehicle); // 0x434790
+
+    // Time at which the car arrives on the next link
+    const auto arrivalTime = (int32)((uint32)ap.field_C + ap.m_nSpeedScaleFactor);
+    if (arrivalTime < 0 || !(CTimer::GetTimeInMS() < (uint32)arrivalTime)) {
+        PickNextNodeAccordingStrategy(vehicle); // 0x432B10
+    }
+
+    if (vehicle->GetStatus() == STATUS_PHYSICS) {
+        return;
+    }
+
+    // x87: The time (0..1) is kept in extended precision until it is stored to a float
+    const auto elapsed = (int32)(CTimer::GetTimeInMS() - (uint32)ap.field_C);
+    const auto time    = (float)((elapsed < 0 ? (double)(uint32)elapsed : (double)elapsed) / (double)(int32)ap.m_nSpeedScaleFactor);
+
+    const auto  curAddr   = std::bit_cast<uint16>(ap.m_nCurrentPathNodeInfo);
+    const auto  nextAddr  = std::bit_cast<uint16>(ap.m_nNextPathNodeInfo);
+    const auto& curLink   = ThePaths.m_pNaviNodes[ap.m_nCurrentPathNodeInfo.m_wAreaId][ap.m_nCurrentPathNodeInfo.m_wCarPathLinkId];
+    const auto& nextLink  = ThePaths.m_pNaviNodes[ap.m_nNextPathNodeInfo.m_wAreaId][ap.m_nNextPathNodeInfo.m_wCarPathLinkId];
+    // `CCarPathLink::m_dir`/`m_posn` hide their raw values, but the original works on them
+    const auto  curRaw8   = reinterpret_cast<const int8*>(&curLink);
+    const auto  nextRaw8  = reinterpret_cast<const int8*>(&nextLink);
+    const auto  curRaw16  = reinterpret_cast<const int16*>(&curLink);
+    const auto  nextRaw16 = reinterpret_cast<const int16*>(&nextLink);
+
+    const auto Dir = [](int8 d, int8 sign) { return (float)((double)d * (double)0.01f * (double)sign); }; // 0x858C58
+    const float curDirX  = Dir(curRaw8[8], ap._smthCurr);
+    const float curDirY  = Dir(curRaw8[9], ap._smthCurr);
+    const float nextDirX = Dir(nextRaw8[8], ap._smthNext);
+    const float nextDirY = Dir(nextRaw8[9], ap._smthNext);
+
+    // Lane offsets. x87: rounded to float
+    float curK  = (float)((curLink.OneWayLaneOffsetExtended() + (double)ap.m_nCurrentLane) * (double)5.4f); // 0x44DB00, 0x858C50
+    float nextK = (float)((nextLink.OneWayLaneOffsetExtended() + (double)ap.m_nNextLane) * (double)5.4f);
+    if (vehicle->m_nVehicleSubType == VEHICLE_TYPE_BMX) {
+        constexpr auto BMX_LANE_OFFSET = std::bit_cast<float>(0x3FBA9FBFu); // 0x859010
+        curK  = (float)((double)curK + (double)BMX_LANE_OFFSET);
+        nextK = (float)((double)nextK + (double)BMX_LANE_OFFSET);
+    }
+
+    // Per-car randomization of the directions (0x859048 = 0.009f). x87: the start's offsets are not rounded to float, the end's are
+    const int32 seed = vehicle->m_nRandomSeed;
+    const auto  Jitter = [&](uint16 addr, bool second) {
+        const int32 sum = seed + addr;
+        return (double)((second ? ((sum >> 3) & 7) : (sum & 7)) - 3) * (double)0.009f;
+    };
+    CVector startDir{
+        (float)(Jitter(curAddr, false) + curDirX),
+        (float)(Jitter(curAddr, true) + curDirY),
+        0.0f
+    };
+    CVector endDir{
+        (float)((double)(float)Jitter(nextAddr, false) + nextDirX),
+        (float)((double)(float)Jitter(nextAddr, true) + nextDirY),
+        0.0f
+    };
+    NormaliseOriginal(startDir); // 0x59C910
+    NormaliseOriginal(endDir);   // 0x59C910
+
+    // x87: kept in extended precision until stored
+    const CVector end{
+        (float)((double)nextRaw16[0] * (double)0.125f + (double)nextK * nextDirY), // 0x858C48
+        (float)((double)nextRaw16[1] * (double)0.125f - (double)nextK * nextDirX),
+        0.0f
+    };
+    const CVector start{
+        (float)((double)curRaw16[0] * (double)0.125f + (double)curK * curDirY),
+        (float)((double)curRaw16[1] * (double)0.125f - (double)curK * curDirX),
+        0.0f
+    };
+
+    CVector pos, speed;
+    CCurves::CalcCurvePoint(start, end, startDir, endDir, time, (int32)ap.m_nSpeedScaleFactor, pos, speed); // 0x43C900
+    pos.z = 15.0f;
+    DragCarToPoint(vehicle, &pos); // 0x42EC90
+
+    constexpr auto INV_60 = std::bit_cast<float>(0x3C888889u); // 0x859044
+    speed.x = (float)((double)speed.x * INV_60);
+    speed.y = (float)((double)speed.y * INV_60);
+    speed.z = (float)((double)speed.z * INV_60);
+
+    if (ap.m_nCurrentPathNodeInfo.m_wCarPathLinkId == ap.m_nNextPathNodeInfo.m_wCarPathLinkId &&
+        ap.m_nCurrentPathNodeInfo.m_wAreaId == ap.m_nNextPathNodeInfo.m_wAreaId) {
+        return;
+    }
+    vehicle->m_vecMoveSpeed = speed;
 }
 
 namespace {

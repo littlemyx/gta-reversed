@@ -127,7 +127,7 @@ namespace CGeneral { // More like `Math` (Or `Meth`, given how bad the code is, 
     /**
      * @addr 0x41BD90
      * @param min Minimum value
-     * @param max Maximum value. Must be greater than min.
+     * @param max Maximum value (the original does not require max >= min, the result is then in [max, min]).
      * @return A pseudo-random number between min and max, inclusive [min, max].
      */
     template<typename T>
@@ -136,7 +136,7 @@ namespace CGeneral { // More like `Math` (Or `Meth`, given how bad the code is, 
 #ifdef BETTER_RNG
         return std::uniform_real_distribution<float>{min, max}(randomEngine);
 #else
-        assert(max >= min); // Check is not empty range (We must use `>=` because the `int` version relies on it)
+        // NOTSA: no `max >= min` assert - the original (0x41BD90) just lerps, and callers legitimately pass max < min (e.g. 0x6DF26D)
         return lerp<T>(min, max, static_cast<float>(GetRandomNumber()) * RAND_MAX_FLOAT_RECIPROCAL);
 #endif
     }

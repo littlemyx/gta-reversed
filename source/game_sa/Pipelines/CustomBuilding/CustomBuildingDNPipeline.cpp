@@ -227,7 +227,25 @@ uint32 CCustomBuildingDNPipeline::UsesThisPipeline(RpAtomic* atomic) {
 
 // 0x5D7120
 RpMaterial* CCustomBuildingDNPipeline::CustomPipeMaterialSetup(RpMaterial* material, void* data) {
-    return plugin::CallAndReturn<RpMaterial*, 0x5D7120, RpMaterial*, void*>(material, data);
+    CCustomCarEnvMapPipeline::SetMaterialFlags(material, 0); // The whole dword (surfaceProps.specular) is cleared
+    if (RpMatFXMaterialGetEffects(material) == rpMATFXEFFECTENVMAP) { // 0x812140
+        if (auto* const envData = SetFxEnvTexture(&CCustomCarEnvMapPipeline::EnvMapPlGetData(material))) { // 0x5D9570
+            auto* const tex = (MATFXD3D9ENVMAPGETDATA(material, rpSECONDPASS))->texture;
+            envData->Texture = tex;
+            if (tex) { // Linear filtering, wrapped addressing
+                auto* const filterAddressing = reinterpret_cast<uint8*>(&tex->filterAddressing);
+                filterAddressing[1] = 0x11;
+                filterAddressing[0] = 2;
+            }
+        }
+    }
+
+    auto* const envData = CCustomCarEnvMapPipeline::EnvMapPlGetData(material);
+    const RwUInt32 hasEnvMap = envData
+        && std::bit_cast<uint8>(envData->Shininess) != 0 // raw, unsigned (`(float)raw / 255 != 0`)
+        && envData->Texture;
+    CCustomCarEnvMapPipeline::SetMaterialFlags(material, (CCustomCarEnvMapPipeline::GetMaterialFlags(material) & ~7u) | hasEnvMap);
+    return material;
 }
 
 // 0x5D6480
@@ -395,5 +413,6 @@ void CCustomBuildingDNPipeline::InjectHooks() {
     RH_ScopedInstall(CreateCustomObjPipe, 0x5D6750);
     RH_ScopedInstall(CustomPipeAtomicSetup, 0x5D71C0);
     RH_ScopedInstall(SetFxEnvTexture, 0x5D9570);
+    RH_ScopedInstall(CustomPipeMaterialSetup, 0x5D7120);
     RH_ScopedInstall(CustomPipeRenderCB, 0x5D6480);
 }

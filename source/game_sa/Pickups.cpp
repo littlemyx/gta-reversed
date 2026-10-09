@@ -16,8 +16,12 @@
 #include "Clock.h"
 #include "Sprite.h"
 #include "PostEffects.h"
+#include "Fx/FxFtol.h"
 
 using namespace ModelIndices;
+
+static uint32 GenerateNewOneRaw(CVector coors, uint32 modelId, ePickupType pickupType, uint32 ammo, uint32 moneyPerDay, bool isEmpty, char* message);
+
 void CPickups::InjectHooks() {
     RH_ScopedClass(CPickups);
     RH_ScopedCategoryGlobal();
@@ -34,8 +38,8 @@ void CPickups::InjectHooks() {
     RH_ScopedInstall(DoPickUpEffects, 0x455720);
     RH_ScopedInstall(FindPickUpForThisObject, 0x4551C0);
 
-    // Cannot be hooked at all for now due to ABI fuckery, the return value is 32 bit, but causes the function to assume the calling convention of of T* Function(T*, ...)
-    //RH_ScopedInstall(GenerateNewOne, 0x456F20, { .Reversed = false });
+    // The return value is a plain 32 bit integer, but `tPickupReference` (non trivial) is returned through a hidden pointer, so the hook is installed on a free function with the original ABI
+    RH_ScopedGlobalInstall(GenerateNewOneRaw, 0x456F20);
 
     RH_ScopedInstall(GenerateNewOne_WeaponType, 0x457380);
     RH_ScopedInstall(GetActualPickupIndex, 0x4552A0);
@@ -454,11 +458,115 @@ CPickup* CPickups::FindPickUpForThisObject(CObject* object) {
     return aPickUps.data();
 }
 
+// 0x456F20 - NOTSA: the original returns the handle as a plain 32 bit integer in `eax` (cdecl), which `tPickupReference` (hidden return pointer) can't express, so this is what's hooked
+static uint32 GenerateNewOneRaw(CVector coors, uint32 modelId, ePickupType pickupType, uint32 ammo, uint32 moneyPerDay, bool isEmpty, char* message) {
+    using namespace notsa::detail;
+    auto& pickups = CPickups::aPickUps;
+
+    // Reuses the pickup object slot of an old pickup
+    const auto FreeObjectOf = [](CPickup& pickup) {
+        if (pickup.m_pObject) {
+            CWorld::Remove(pickup.m_pObject);
+            delete pickup.m_pObject;
+            pickup.m_pObject = nullptr;
+        }
+    };
+    const auto FindFirst = [&](auto&& pred) {
+        for (auto i = 0u; i < pickups.size(); i++) {
+            if (pred(pickups[i].m_nPickupType)) {
+                return (int32)i;
+            }
+        }
+        return (int32)pickups.size();
+    };
+
+    int32 slot = -1;
+    bool  reuse{}; // Whenever an used slot has to be cleaned up
+    if (pickupType == PICKUP_FLOATINGPACKAGE || pickupType == PICKUP_NAUTICAL_MINE_INACTIVE || isEmpty) {
+        // Search for a free slot, starting from the back
+        for (auto i = (int32)pickups.size() - 1; i >= 0; i--) {
+            if (pickups[i].m_nPickupType == PICKUP_NONE) {
+                slot = i;
+                break;
+            }
+        }
+    }
+    if (slot < 0) {
+        slot = FindFirst([](ePickupType t) { return t == PICKUP_NONE; });
+        if (slot >= (int32)pickups.size()) {
+            slot = FindFirst([](ePickupType t) { return t == PICKUP_MONEY; });
+            if (slot >= (int32)pickups.size()) {
+                slot = FindFirst([](ePickupType t) { return t == PICKUP_ONCE_TIMEOUT || t == PICKUP_ONCE_TIMEOUT_SLOW; });
+                if (slot >= (int32)pickups.size()) {
+                    return (uint32)-1;
+                }
+            }
+            reuse = true;
+        }
+    }
+    auto& pickup = pickups[slot];
+    if (reuse) {
+        FreeObjectOf(pickup);
+    }
+
+    pickup.m_nAmmo        = ammo;
+    pickup.m_nMoneyPerDay = (uint16)moneyPerDay;
+    pickup.m_nFlags.bDisabled              = false;
+    pickup.m_nFlags.bEmpty                 = isEmpty;
+    pickup.m_nFlags.bHelpMessageDisplayed  = false;
+    pickup.m_nPickupType         = pickupType;
+    pickup.m_fRevenueValue       = 0.0f;
+    pickup.m_nRegenerationTime   = CTimer::m_snTimeInMilliseconds;
+
+    const auto now = CTimer::m_snTimeInMilliseconds;
+    if (pickupType == PICKUP_ONCE_TIMEOUT) {
+        pickup.m_nRegenerationTime = now + 20'000;
+    } else if (pickupType == PICKUP_ONCE_TIMEOUT_SLOW) {
+        pickup.m_nRegenerationTime = now + 120'000;
+    } else if (pickupType == PICKUP_MONEY) {
+        pickup.m_nRegenerationTime = now + 30'000;
+    } else {
+        if (pickupType == PICKUP_MINE_INACTIVE || pickupType == PICKUP_MINE_ARMED) {
+            pickup.m_nPickupType       = PICKUP_MINE_INACTIVE;
+            pickup.m_nRegenerationTime = now + 1500;
+        }
+        if (pickupType == PICKUP_NAUTICAL_MINE_INACTIVE || pickupType == PICKUP_NAUTICAL_MINE_ARMED) {
+            pickup.m_nPickupType       = PICKUP_NAUTICAL_MINE_INACTIVE;
+            pickup.m_nRegenerationTime = now + 1500;
+        }
+    }
+
+    pickup.m_nModelIndex = (int16)modelId;
+    pickup.m_nFlags.nPropertyTextIndex = (uint8)CPickup::FindTextIndexForString(message); // 0x455500
+
+    // x87: `x * 8.0f`, truncated (_ftol), the low 16 bits are used
+    pickup.m_vecPos = CompressedLargeVector{
+        (int16)Ftol((double)coors.x * 8.0),
+        (int16)Ftol((double)coors.y * 8.0),
+        (int16)Ftol((double)coors.z * 8.0)
+    };
+
+    pickup.m_nFlags.bVisible = pickup.IsVisible(); // 0x454C70
+    pickup.m_pObject         = nullptr;
+    if (pickup.m_nFlags.bVisible) {
+        pickup.GiveUsAPickUpObject(pickup.m_pObject, -1); // 0x4567E0
+        if (pickup.m_pObject) {
+            CWorld::Add(pickup.m_pObject);
+        }
+    }
+
+    if ((uint16)pickup.m_nReferenceIndex < 0xFFFE) {
+        pickup.m_nReferenceIndex++;
+    } else {
+        pickup.m_nReferenceIndex = 1;
+    }
+    return ((uint32)(uint16)pickup.m_nReferenceIndex << 16) | (uint32)slot;
+}
+
 // returns pickup handle
-// g
+// 0x456F20
 tPickupReference CPickups::GenerateNewOne(CVector coors, uint32 modelId, ePickupType pickupType, uint32 ammo, uint32 moneyPerDay, bool isEmpty, char* message) {
-    auto retVal = plugin::CallAndReturn<int32, 0x456F20, CVector, uint32, ePickupType, uint32, uint32, bool, char*>(coors, modelId, pickupType, ammo, moneyPerDay, isEmpty, message);
-    return tPickupReference(retVal);
+    return tPickupReference((int32)GenerateNewOneRaw(coors, modelId, pickupType, ammo, moneyPerDay, isEmpty, message));
 }
 
 /*!

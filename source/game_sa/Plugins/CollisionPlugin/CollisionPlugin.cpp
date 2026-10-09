@@ -4,12 +4,15 @@
 
 auto& gCollisionPluginOffset = StaticRef<RwInt32>(0x9689DC);
 
+static RwStream* ClumpCollisionStreamRead(RwStream* stream, RwInt32 binaryLength, void* object, RwInt32 offsetInObject, RwInt32 sizeInObject);
+
 void CCollisionPlugin::InjectHooks() {
     RH_ScopedClass(CCollisionPlugin);
     RH_ScopedCategory("Plugins");
 
     RH_ScopedInstall(PluginAttach, 0x41B310);
     RH_ScopedInstall(SetModelInfo, 0x41B350);
+    RH_ScopedGlobalInstall(ClumpCollisionStreamRead, 0x41B1D0);
 }
 
 // internal
@@ -33,29 +36,31 @@ static void* ClumpCollisionCopyConstructor(void* dstObject, const void* srcObjec
 // internal
 // 0x41B1D0
 static RwStream* ClumpCollisionStreamRead(RwStream* stream, RwInt32 binaryLength, void* object, RwInt32 offsetInObject, RwInt32 sizeInObject) {
-    return plugin::CallAndReturn<RwStream*, 0x41B1D0, RwStream*, RwInt32, void*, RwInt32, RwInt32>(stream, binaryLength, object, offsetInObject, sizeInObject);
+    CMemoryMgr::LockScratchPad(); // 0x72F4A0
+    RwStreamRead(stream, &PC_Scratch, binaryLength); // 0x7EC9D0
+    auto* const model = new CColModel(); // 0x40FC30, 0x40FB60
 
-    // incomplete
-    CMemoryMgr::LockScratchPad();
-    RwStreamRead(stream, &PC_Scratch, binaryLength);
-    CColModel* model = new CColModel();
-
-    switch (*(uint32*)PC_Scratch) {
+    uint8* const header = reinterpret_cast<uint8*>(&PC_Scratch[0]);
+    uint8* const data   = reinterpret_cast<uint8*>(&PC_Scratch[0x20]);
+    switch (*reinterpret_cast<uint32*>(header)) {
     case MakeFourCC("COLL"):
-        CFileLoader::LoadCollisionModel((uint8*)(&PC_Scratch[32]), *model);
+        CFileLoader::LoadCollisionModel(data, *model); // 0x537580
         break;
     case MakeFourCC("COL2"):
-        CFileLoader::LoadCollisionModelVer2((uint8*)(&PC_Scratch[32]), (PC_Scratch[4] - 24), *model, nullptr);
+        CFileLoader::LoadCollisionModelVer2(data, *reinterpret_cast<uint32*>(&header[4]) - 0x18, *model, nullptr); // 0x537EE0
         break;
     case MakeFourCC("COL3"):
-        CFileLoader::LoadCollisionModelVer3((uint8*)(&PC_Scratch[32]), (PC_Scratch[4] - 24), *model, nullptr);
+        CFileLoader::LoadCollisionModelVer3(data, *reinterpret_cast<uint32*>(&header[4]) - 0x18, *model, nullptr); // 0x537CE0
+        break;
+    default: // NOTE: Unknown signature, the original loads it as `COLL` but from the start of the buffer (not from the data after the header)
+        CFileLoader::LoadCollisionModel(header, *model);
         break;
     }
 
     model->MakeMultipleAlloc();
-    CCollisionPlugin::ms_currentModel->SetColModel(model, true);
-    CCollisionPlugin::ms_currentModel->bDontWriteZBuffer = true;
-    CMemoryMgr::ReleaseScratchPad();
+    CCollisionPlugin::ms_currentModel->SetColModel(model, true); // 0x4C4BC0
+    CCollisionPlugin::ms_currentModel->bOwnsCollisionModel = true;
+    CMemoryMgr::ReleaseScratchPad(); // 0x72F4B0
     return stream;
 }
 

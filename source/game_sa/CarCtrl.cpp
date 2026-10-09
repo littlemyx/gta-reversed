@@ -257,6 +257,7 @@ void CCarCtrl::InjectHooks()
     RH_ScopedInstall(UpdateCarOnRails, 0x436540);
     RH_ScopedInstall(SteerAICarWithPhysicsFollowPath, 0x434900);
     RH_ScopedInstall(SteerAICarWithPhysicsFollowPath_Racing, 0x435830);
+    RH_ScopedInstall(SteerAICarWithPhysics_OnlyMission, 0x436A90);
     RH_ScopedInstall(SteerAICarWithPhysicsTryingToBlockTarget, 0x4335E0);
     RH_ScopedInstall(SteerAICarTowardsPointInEscort, 0x4336D0);
     RH_ScopedInstall(SteerAICarParkParallel, 0x433BA0);
@@ -3444,6 +3445,17 @@ static_assert(offsetof(CVehicle, m_autoPilot) + offsetof(CAutoPilot, m_nTempActi
 static_assert(offsetof(CVehicle, m_autoPilot) + offsetof(CAutoPilot, m_nCruiseSpeed) == 0x3D0);
 static_assert(offsetof(CVehicle, m_autoPilot) + offsetof(CAutoPilot, m_nMovementFlags) == 0x3DC);
 static_assert(offsetof(CVehicle, m_autoPilot) + offsetof(CAutoPilot, m_startingRouteNode) == 0x394);
+static_assert(offsetof(CVehicle, m_autoPilot) + offsetof(CAutoPilot, m_nTimeToStartMission) == 0x3AC);
+static_assert(offsetof(CVehicle, m_autoPilot) + offsetof(CAutoPilot, m_nTimeSwitchedToRealPhysics) == 0x3B0);
+static_assert(offsetof(CVehicle, m_autoPilot) + offsetof(CAutoPilot, m_nTempActionTime) == 0x3BC);
+static_assert(offsetof(CVehicle, m_autoPilot) + offsetof(CAutoPilot, m_vecDestinationCoors) == 0x3EC);
+static_assert(offsetof(CVehicle, m_autoPilot) + offsetof(CAutoPilot, m_ucCarFollowDist) == 0x3DE);
+static_assert(offsetof(CVehicle, m_autoPilot) + offsetof(CAutoPilot, m_TargetEntity) == 0x41C);
+static_assert(offsetof(CVehicle, m_autoPilot) + offsetof(CAutoPilot, m_ObstructingEntity) == 0x420);
+static_assert(offsetof(CVehicle, m_fSteerAngle) == 0x494);
+static_assert(offsetof(CVehicle, m_GasPedal) == 0x49C);
+static_assert(offsetof(CVehicle, m_BrakePedal) == 0x4A0);
+static_assert(offsetof(CVehicle, m_nRandomSeed) == 0x20);
 static_assert(offsetof(CBmx, m_fControlPedaling) == 0x818);
 
 //! Limits the steering angle to +-`FindMaxSteerAngle`
@@ -4491,9 +4503,389 @@ void CCarCtrl::SteerAICarWithPhysicsTryingToBlockTarget_Stop(CVehicle* vehicle, 
     LeaveCar();
 }
 
+//! 0x4082C0 - `CVector::Magnitude`. The sum of squares and the square root stay in the FPU registers (extended precision)
+static double MagnitudeOriginal(const CVector& v) {
+    return std::sqrt(((double)v.x * v.x + (double)v.y * v.y) + (double)v.z * v.z);
+}
+
+//! 0x40FDB0 - `DotProduct`. The sum is returned in the FPU register (extended precision)
+static double DotProductOriginal(const CVector& a, const CVector& b) {
+    return ((double)a.z * b.z + (double)a.y * b.y) + (double)a.x * b.x;
+}
+
+//! The bounding box of the collision model of the vehicle's model (the original reads it through the model info pointer table)
+static const CBoundingBox& GetModelBoundBox(const CVehicle* vehicle) {
+    return CModelInfo::GetModelInfo(vehicle->m_nModelIndex)->GetColModel()->m_boundBox;
+}
+
 // 0x436A90
-void CCarCtrl::SteerAICarWithPhysics_OnlyMission(CVehicle* vehicle, float* arg2, float* arg3, float* arg4, bool* arg5) {
-    plugin::Call<0x436A90, CVehicle*, float*, float*, float*, bool*>(vehicle, arg2, arg3, arg4, arg5);
+void CCarCtrl::SteerAICarWithPhysics_OnlyMission(CVehicle* vehicle, float* pSteer, float* pGas, float* pBrake, bool* pHandbrake) {
+    auto& ap = vehicle->m_autoPilot;
+
+    const auto HeadForTarget = [&](CPhysical* target, float x, float y) {
+        SteerAICarWithPhysicsHeadingForTarget(vehicle, target, x, y, pSteer, pGas, pBrake, pHandbrake); // 0x433280
+    };
+    const auto Stop = [&] {
+        *pSteer     = 0.0f;
+        *pGas       = 0.0f;
+        *pHandbrake = true;
+        *pBrake     = 0.5f; // 0x858B8C
+    };
+    const auto TowardsTarget = [&](float offsetX, float offsetY) {
+        SteerAICarTowardsPointInEscort(vehicle, ap.m_TargetEntity, offsetX, offsetY, pSteer, pGas, pBrake, pHandbrake); // 0x4336D0
+    };
+
+    switch (ap.m_nCarMission) {
+    case MISSION_NONE:
+    case MISSION_EMERGENCYVEHICLE_STOP:
+    case MISSION_STOP_FOREVER:
+        Stop();
+        return;
+
+    case MISSION_CRUISE:
+    case MISSION_RAMPLAYER_FARAWAY:
+    case MISSION_BLOCKPLAYER_FARAWAY:
+    case MISSION_GOTOCOORDINATES:
+    case MISSION_GOTOCOORDINATES_ACCURATE:
+    case MISSION_RAMCAR_FARAWAY:
+    case MISSION_BLOCKCAR_FARAWAY:
+    case MISSION_APPROACHPLAYER_FARAWAY:
+    case MISSION_FOLLOWCAR_FARAWAY:
+    case MISSION_KILLPED_FARAWAY:
+    case MISSION_DO_DRIVEBY_FARAWAY:
+    case MISSION_ESCORT_LEFT_FARAWAY:
+    case MISSION_ESCORT_RIGHT_FARAWAY:
+    case MISSION_ESCORT_REAR_FARAWAY:
+    case MISSION_ESCORT_FRONT_FARAWAY:
+        SteerAICarWithPhysicsFollowPath(vehicle, pSteer, pGas, pBrake, pHandbrake); // 0x434900
+        return;
+
+    case MISSION_RAMPLAYER_CLOSE: {
+        auto target = FindPlayerCoors(-1); // 0x56E010
+        if (auto* const playerVeh = FindPlayerVehicle(-1, false)) { // 0x56E0D0
+            const auto& playerMat = *playerVeh->m_matrix;
+            // x87: The dot product is returned in extended precision, but stored as a float
+            const auto dot = (float)DotProductOriginal(playerMat.GetForward(), vehicle->m_matrix->GetForward()); // 0x40FDB0
+
+            const auto seed = (uint8)vehicle->m_nRandomSeed;
+            if (!(seed & 1) || !(dot > 0.5f)) { // 0x858B8C
+                // Spread the cars around the player. x87: Each coordinate is rounded to float once
+                const auto spread = (double)((int32)seed - 0x80);
+                target.x = (float)(spread * playerMat.GetRight().x * 0.00625f + target.x); // 0x859050
+                target.y = (float)(spread * playerMat.GetRight().y * 0.00625f + target.y);
+            } else {
+                // Get next to the player
+                // x87: The sum of the extents is rounded to float
+                const auto sideOffset = (float)(((double)GetModelBoundBox(vehicle).m_vecMax.x + GetModelBoundBox(playerVeh).m_vecMax.x) - 0.2f); // 0x858CC4
+                if (seed & 2) {
+                    target.x = (float)((double)sideOffset * playerMat.GetRight().x + target.x);
+                    target.y = (float)((double)sideOffset * playerMat.GetRight().y + target.y);
+                } else {
+                    target.x = (float)(target.x - (double)sideOffset * playerMat.GetRight().x);
+                    target.y = (float)(target.y - (double)sideOffset * playerMat.GetRight().y);
+                }
+
+                // x87: The threshold is kept in extended precision
+                const auto  relSpeed = playerVeh->m_vecMoveSpeed - vehicle->m_vecMoveSpeed; // 0x40FE60
+                const auto  maxDist  = MagnitudeOriginal(relSpeed) * 12.0f + 2.0f;          // 0x4082C0, 0x858CCC, 0x858CA0
+                const auto& pos      = vehicle->GetPosition();
+                const auto  dy       = (double)pos.y - target.y;
+                const auto  dx       = (double)pos.x - target.x;
+                if (std::sqrt(dy * dy + dx * dx) < maxDist && ap.m_nTempAction == TEMPACT_NONE) {
+                    ap.m_nTempAction     = (seed & 2) ? TEMPACT_TURNLEFT : TEMPACT_TURNRIGHT;
+                    ap.m_nTempActionTime = CTimer::GetTimeInMS() + 250;
+                }
+            }
+
+            if (dot < 0.0f) {
+                // The player is going the other way, so lead the target. x87: The factor is only rounded to float for the Y coordinate
+                const auto& playerSpeed = FindPlayerSpeed(-1); // 0x56E090
+                const auto  factor      = (double)dot * -0.02f; // 0x85904C
+                target.x = (float)(factor * playerSpeed.x + target.x);
+                target.y = (float)((double)(float)factor * playerSpeed.y + target.y);
+            }
+
+            if (vehicle->vehicleFlags.bIsLawEnforcer) {
+                const auto& playerMoveSpeed = playerVeh->m_vecMoveSpeed;
+                if (std::sqrt((double)playerMoveSpeed.x * playerMoveSpeed.x + (double)playerMoveSpeed.y * playerMoveSpeed.y) > 0.4f) { // 0x858EE8
+                    if (auto* const passenger = playerVeh->PickRandomPassenger()) { // 0x6D2A10
+                        passenger->Say(CTX_GLOBAL_CAR_POLICE_PURSUIT, 0, 1.0f, false, false, false); // 0x5EFFE0
+                    }
+                }
+            }
+        }
+        HeadForTarget(FindPlayerVehicle(-1, false), target.x, target.y);
+        return;
+    }
+
+    case MISSION_BLOCKPLAYER_CLOSE: {
+        const auto& speed  = FindPlayerSpeed(-1);
+        const auto  coords = FindPlayerCoors(-1);
+        SteerAICarWithPhysicsTryingToBlockTarget(vehicle, FindPlayerEntity(-1), coords.x, coords.y, speed.x, speed.y, pSteer, pGas, pBrake, pHandbrake); // 0x4335E0
+        return;
+    }
+
+    case MISSION_BLOCKPLAYER_HANDBRAKESTOP: {
+        const auto& speed  = FindPlayerSpeed(-1);
+        const auto  coords = FindPlayerCoors(-1);
+        SteerAICarWithPhysicsTryingToBlockTarget_Stop(vehicle, coords.x, coords.y, speed.x, speed.y, pSteer, pGas, pBrake, pHandbrake); // 0x428990
+        return;
+    }
+
+    case MISSION_WAITFORDELETION:
+    case MISSION_PROTECTION_REAR:
+    case MISSION_PROTECTION_FRONT:
+        return;
+
+    case MISSION_GOTOCOORDINATES_STRAIGHTLINE:
+    case MISSION_GOTOCOORDINATES_STRAIGHTLINE_ACCURATE:
+    case MISSION_SLOWLY_DRIVE_TOWARDS_PLAYER_1:
+        HeadForTarget(nullptr, ap.m_vecDestinationCoors.x, ap.m_vecDestinationCoors.y);
+        return;
+
+    case MISSION_GOTOCOORDINATES_ASTHECROWSWIMS:
+        SteerAIBoatWithPhysicsHeadingForTarget(vehicle, ap.m_vecDestinationCoors.x, ap.m_vecDestinationCoors.y, pSteer, pGas, pBrake); // 0x428BE0
+        *pHandbrake = false;
+        return;
+
+    case MISSION_RAMCAR_CLOSE:
+    case MISSION_KILLPED_CLOSE: {
+        const auto* const target = ap.m_TargetEntity;
+        const auto&       pos    = target->GetPosition();
+        HeadForTarget(ap.m_TargetEntity, pos.x, pos.y);
+        return;
+    }
+
+    case MISSION_BLOCKCAR_CLOSE: {
+        const auto* const target = ap.m_TargetEntity;
+        const auto&       pos    = target->GetPosition();
+        SteerAICarWithPhysicsTryingToBlockTarget(vehicle, ap.m_TargetEntity, pos.x, pos.y, target->m_vecMoveSpeed.x, target->m_vecMoveSpeed.y, pSteer, pGas, pBrake, pHandbrake); // 0x4335E0
+        return;
+    }
+
+    case MISSION_BLOCKCAR_HANDBRAKESTOP: {
+        const auto* const target = ap.m_TargetEntity;
+        const auto&       pos    = target->GetPosition();
+        SteerAICarWithPhysicsTryingToBlockTarget_Stop(vehicle, pos.x, pos.y, target->m_vecMoveSpeed.x, target->m_vecMoveSpeed.y, pSteer, pGas, pBrake, pHandbrake); // 0x428990
+        return;
+    }
+
+    case MISSION_HELI_FLYTOCOORS:
+        SteerAIHeliTowardsTargetCoors(static_cast<CAutomobile*>(vehicle)); // 0x42A630
+        return;
+
+    case MISSION_BOAT_ATTACKPLAYER:
+        SteerAIBoatWithPhysicsAttackingPlayer(vehicle, pSteer, pGas, pBrake, pHandbrake); // 0x428DE0
+        return;
+
+    case MISSION_PLANE_FLYTOCOORS:
+        SteerAIPlaneTowardsTargetCoors(static_cast<CAutomobile*>(vehicle)); // 0x423790
+        return;
+
+    case MISSION_HELI_ATTACK_PLAYER:
+    case MISSION_HELI_ATTACK_PLAYER_FLY_AWAY:
+        GetAIHeliToAttackPlayer(static_cast<CAutomobile*>(vehicle)); // 0x42F3C0
+        return;
+
+    case MISSION_SLOWLY_DRIVE_TOWARDS_PLAYER_2: {
+        const auto coords = FindPlayerCoors(-1);
+        HeadForTarget(nullptr, coords.x, coords.y);
+        return;
+    }
+
+    case MISSION_BLOCKPLAYER_FORWARDANDBACK:
+        SteerAICarBlockingPlayerForwardAndBack(vehicle, pSteer, pGas, pBrake, pHandbrake); // 0x422B20
+        return;
+
+    case MISSION_ESCORT_LEFT:
+    case MISSION_ESCORT_RIGHT: {
+        // x87: The offset is rounded to float once
+        const auto offset = (float)(((double)GetModelBoundBox(ap.m_TargetEntity).m_vecMax.x + GetModelBoundBox(vehicle).m_vecMax.x) + 2.0f); // 0x858CA0
+        TowardsTarget(ap.m_nCarMission == MISSION_ESCORT_LEFT ? -offset : offset, 0.0f);
+        return;
+    }
+
+    case MISSION_ESCORT_REAR:
+    case MISSION_ESCORT_FRONT: {
+        const auto offset = (float)(((double)GetModelBoundBox(ap.m_TargetEntity).m_vecMax.y + GetModelBoundBox(vehicle).m_vecMax.y) + 7.0f); // 0x858F48
+        TowardsTarget(0.0f, ap.m_nCarMission == MISSION_ESCORT_REAR ? -offset : offset);
+        return;
+    }
+
+    case MISSION_GOTOCOORDINATES_RACING:
+        SteerAICarWithPhysicsFollowPath_Racing(vehicle, pSteer, pGas, pBrake, pHandbrake); // 0x435830
+        return;
+
+    case MISSION_FOLLOW_RECORDED_PATH:
+        SteerAICarWithPhysicsFollowPreRecordedPath(vehicle, pSteer, pGas, pBrake, pHandbrake); // 0x432DD0
+        return;
+
+    case MISSION_PLANE_ATTACK_PLAYER:
+    case MISSION_PLANE_ATTACK_PLAYER_POLICE:
+        GetAIPlaneToAttackPlayer(static_cast<CAutomobile*>(vehicle)); // 0x429780
+        return;
+
+    case MISSION_PLANE_FLYINDIRECTION:
+        FlyAIPlaneInCertainDirection(static_cast<CPlane*>(vehicle)); // 0x423000
+        return;
+
+    case MISSION_PLANE_FOLLOW_ENTITY:
+        SteerAIPlaneToFollowEntity(static_cast<CAutomobile*>(vehicle)); // 0x4237F0
+        return;
+
+    case MISSION_HELI_FLYINDIRECTION:
+        GetAIHeliToFlyInDirection(static_cast<CAutomobile*>(vehicle)); // 0x42A730
+        return;
+
+    case MISSION_HELI_FOLLOW_ENTITY:
+    case MISSION_HELI_NEWS_BEHAVIOUR:
+        SteerAIHeliToFollowEntity(static_cast<CAutomobile*>(vehicle)); // 0x42A750
+        return;
+
+    case MISSION_HELI_POLICE_BEHAVIOUR:
+        SteerAIHeliAsPoliceHeli(static_cast<CAutomobile*>(vehicle)); // 0x42AAD0
+        return;
+
+    case MISSION_HELI_FLY_AWAY_FROM_PLAYER:
+        SteerAIHeliFlyingAwayFromPlayer(static_cast<CAutomobile*>(vehicle)); // 0x42ACB0
+        return;
+
+    case MISSION_APPROACHPLAYER_CLOSE: {
+        const auto& pos = vehicle->GetPosition();
+
+        // Close enough: stop
+        if (MagnitudeOriginal(FindPlayerCoors(-1) - pos) < 10.0f) { // 0x56E010, 0x40FE60, 0x4082C0, 0x85862C
+            *pSteer     = 0.0f;
+            *pGas       = 0.0f;
+            *pBrake     = 1.0f;
+            *pHandbrake = false;
+            return;
+        }
+
+        auto target = FindPlayerCoors(-1);
+        if (auto* const playerVeh = FindPlayerVehicle(-1, false)) {
+            const auto& playerMat = *playerVeh->m_matrix;
+            const auto  diff      = pos - FindPlayerCoors(-1);
+            // x87: The sum is kept in extended precision
+            if (((double)playerMat.GetForward().y + playerMat.GetForward().x) * diff.x > 0.0f) { // 0x858B50
+                // Go to the closer one of the points in front and behind the player's vehicle
+                const auto front = TransformPointOriginal(playerMat, { 4.0f, 0.0f, 0.0f });  // 0x59C890
+                const auto back  = TransformPointOriginal(playerMat, { -4.0f, 0.0f, 0.0f }); // 0x59C890
+                // x87: The first distance is rounded to float, the second one is not
+                const auto distFront = (float)MagnitudeOriginal(pos - front);
+                const auto distBack  = MagnitudeOriginal(pos - back);
+                target = distBack > distFront ? front : back;
+            }
+        }
+        HeadForTarget(FindPlayerVehicle(-1, false), target.x, target.y);
+        return;
+    }
+
+    case MISSION_PARK_PERPENDICULAR:
+    case MISSION_PARK_PERPENDICULAR_2:
+        SteerAICarParkPerpendicular(vehicle, pSteer, pGas, pBrake, pHandbrake); // 0x433EA0
+        return;
+
+    case MISSION_PARK_PARALLEL:
+    case MISSION_PARK_PARALLEL_2:
+        SteerAICarParkParallel(vehicle, pSteer, pGas, pBrake, pHandbrake); // 0x433BA0
+        return;
+
+    case MISSION_HELI_LAND:
+    case MISSION_HELI_LAND_TOUCHING_DOWN:
+        SteerAIHeliToLand(static_cast<CAutomobile*>(vehicle)); // 0x42AD30
+        return;
+
+    case MISSION_HELI_KEEP_ENTITY_IN_VIEW:
+        SteerAIHeliToKeepEntityInView(static_cast<CAutomobile*>(vehicle)); // 0x42AEB0
+        return;
+
+    case MISSION_FOLLOWCAR_CLOSE: {
+        auto* const target = ap.m_TargetEntity;
+        const auto& targetPos = target->GetPosition();
+        HeadForTarget(target, targetPos.x, targetPos.y);
+
+        // x87: The distance is kept in extended precision
+        const auto dist   = MagnitudeOriginal(vehicle->GetPosition() - target->GetPosition()); // 0x40FE60, 0x4082C0
+        const auto follow = (float)ap.m_ucCarFollowDist;
+        if (!(dist < (double)follow + 10.0f)) { // 0x85862C
+            return;
+        }
+
+        // Match the speed of the target (x87: the target's speed is not rounded to float, ours is)
+        const auto targetSpeed = std::sqrt((double)target->m_vecMoveSpeed.x * target->m_vecMoveSpeed.x + (double)target->m_vecMoveSpeed.y * target->m_vecMoveSpeed.y) * 60.0f; // 0x858B34
+        const auto ownSpeed    = (float)(std::sqrt((double)vehicle->m_vecMoveSpeed.x * vehicle->m_vecMoveSpeed.x + (double)vehicle->m_vecMoveSpeed.y * vehicle->m_vecMoveSpeed.y) * 60.0f);
+
+        double gap = (double)(float)dist - follow;
+        if (gap < 0.0) {
+            gap *= 5.0f; // 0x858C80
+        } else {
+            gap += gap;
+        }
+
+        double speedDiff = (targetSpeed + gap) - ownSpeed;
+        if (speedDiff < 0.0) {
+            speedDiff *= -0.1f; // 0x858EF4
+            *pGas = 0.0f;
+            if (1.0f < speedDiff) { // 0x858624
+                speedDiff = 1.0f;
+            }
+            *pBrake = (float)speedDiff;
+        } else {
+            speedDiff *= 0.05f; // 0x858C28
+            if (1.0f < speedDiff) {
+                speedDiff = 1.0f;
+            }
+            *pGas   = (float)speedDiff;
+            *pBrake = 0.0f;
+        }
+        return;
+    }
+
+    case MISSION_PLANE_CRASH_AND_BURN:
+        SteerAIPlaneToCrashAndBurn(static_cast<CAutomobile*>(vehicle)); // 0x423880
+        return;
+
+    case MISSION_HELI_CRASH_AND_BURN:
+        SteerAIHeliToCrashAndBurn(static_cast<CAutomobile*>(vehicle)); // 0x4238E0
+        return;
+
+    case MISSION_DO_DRIVEBY_CLOSE: {
+        const auto* const target = ap.m_TargetEntity;
+        if (!target) {
+            return;
+        }
+        const auto  targetPos = target->GetPosition();
+        const auto& pos       = vehicle->GetPosition();
+
+        // Drive next to the target, on the side that's decided by the random seed
+        CVector side{ targetPos.y - pos.y, pos.x - targetPos.x, 0.0f };
+        NormaliseOriginal(side); // 0x59C910
+        side.x *= 10.0f; // 0x85862C
+        side.y *= 10.0f;
+        side.z *= 10.0f;
+        if ((uint8)vehicle->m_nRandomSeed & 1) {
+            side = -side;
+        }
+        HeadForTarget(nullptr, side.x + targetPos.x, side.y + targetPos.y);
+        return;
+    }
+
+    case MISSION_PLANE_DOG_FIGHT_ENTITY:
+        GetAIPlaneToDoDogFight(static_cast<CAutomobile*>(vehicle)); // 0x429890
+        return;
+
+    case MISSION_PLANE_DOG_FIGHT_PLAYER:
+        GetAIPlaneToDoDogFightAgainstPlayer(static_cast<CAutomobile*>(vehicle)); // 0x42F370
+        return;
+
+    case MISSION_BOAT_CIRCLEPLAYER:
+        SteerAIBoatWithPhysicsCirclingPlayer(vehicle, pSteer, pGas, pBrake, pHandbrake); // 0x429090
+        return;
+
+    default:
+        return;
+    }
 }
 
 // 0x42AAD0

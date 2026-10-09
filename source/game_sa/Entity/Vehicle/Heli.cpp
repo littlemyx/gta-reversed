@@ -13,6 +13,60 @@
 #include "InterestingEvents.h"
 #include "Ropes.h"
 #include "FireManager.h"
+#include "Coronas.h"
+#include "Population.h"
+#include "Streaming.h"
+#include "WaterLevel.h"
+#include "AnimManager.h"
+#include "TaskComplexSequence.h"
+#include "TaskComplexUseSwatRope.h"
+#include "TaskComplexWanderCop.h"
+#include "CustomBuildingDNPipeline.h"
+
+namespace HeliImpl {
+// The original does its vector maths on the x87 stack: intermediates stay in extended precision and are rounded to float only where the original stores them.
+// These replicate the operation order of the original helpers, as the shared ones in `CVector`/`CMatrix` round (and add) in a different way.
+
+//! 0x59C910 - `CVector::Normalise`. A length of 0 (or less) only writes `x = 1` (NaN takes the sqrt path)
+void NormaliseOriginal(CVector& v) {
+    const double sumSq = ((double)v.x * v.x + (double)v.y * v.y) + (double)v.z * v.z;
+    if (sumSq <= 0.0) {
+        v.x = 1.0f;
+    } else {
+        const double recip = 1.0 / std::sqrt(sumSq);
+        v.x = (float)(v.x * recip);
+        v.y = (float)(v.y * recip);
+        v.z = (float)(v.z * recip);
+    }
+}
+
+//! 0x59C730 - `CrossProduct`
+CVector CrossProductOriginal(const CVector& a, const CVector& b) {
+    return {
+        (float)((double)b.z * a.y - (double)a.z * b.y),
+        (float)((double)a.z * b.x - (double)b.z * a.x),
+        (float)((double)a.x * b.y - (double)b.x * a.y),
+    };
+}
+
+//! 0x59C790 - `CMatrix::Multiply3x3` (matrix * vector, no translation)
+CVector Multiply3x3Original(const CMatrix& m, const CVector& v) {
+    const auto &r = m.GetRight(), &f = m.GetForward(), &u = m.GetUp();
+    return CVector{
+        (float)(((double)u.x * v.z + (double)f.x * v.y) + (double)r.x * v.x),
+        (float)(((double)u.y * v.z + (double)r.y * v.x) + (double)f.y * v.y),
+        (float)(((double)u.z * v.z + (double)r.z * v.x) + (double)f.z * v.y)
+    };
+}
+
+//! 0x821B40 - `_ftol`: truncates towards zero, out of range / NaN gives 0x80000000
+int32 Ftol(double v) {
+    if (!(v > -2147483649.0 && v < 2147483648.0)) {
+        return INT32_MIN;
+    }
+    return (int32)v;
+}
+} // namespace HeliImpl
 
 void CHeli::InjectHooks() {
     RH_ScopedVirtualClass(CHeli, 0x871680, 71);
@@ -23,6 +77,7 @@ void CHeli::InjectHooks() {
     RH_ScopedInstall(Pre_SearchLightCone, 0x6C4650);
     RH_ScopedInstall(Post_SearchLightCone, 0x6C46E0);
     RH_ScopedInstall(SwitchPoliceHelis, 0x6C4800);
+    RH_ScopedInstall(SearchLightCone, 0x6C58E0);
     RH_ScopedInstall(FindSwatPositionRelativeToHeli, 0x6C4760);
     RH_ScopedInstall(RenderAllHeliSearchLights, 0x6C7C50);
     RH_ScopedInstall(TestSniperCollision, 0x6C6890);
@@ -206,7 +261,303 @@ void CHeli::SearchLightCone(int32 coronaIndex,
                             float a14,
                             float a15
 ) {
-    ((void(__cdecl*)(int32, CVector, CVector, float, float, uint8, uint8, CVector&, CVector&, CVector&, bool, float, float, float, float))0x6C58E0)(coronaIndex, origin, target, targetRadius, power, unknownFlag, drawShadow, useless0, useless1, useless2, a11, baseRadius, a13, a14, a15);
+    using namespace HeliImpl;
+
+    const CVector& camPos = TheCamera.GetPosition();
+
+    // 0x6C5909 - Direction of the light
+    CVector dir{ target.x - origin.x, target.y - origin.y, target.z - origin.z };
+    NormaliseOriginal(dir);
+
+    // 0x6C593E - Extend the ray by 3 units, and stop at the first building
+    const float dirZ3 = (float)((double)dir.z * 3.0f); // 0x858B3C
+    target.x = (float)((double)dir.x * 3.0f + target.x);
+    target.y = (float)((double)dir.y * 3.0f + target.y);
+    target.z = (float)((double)dirZ3 + target.z);
+
+    CColPoint colPoint;
+    CEntity*  hitEntity{};
+    if (CWorld::ProcessLineOfSight(origin, target, colPoint, hitEntity, true, false, false, false, false, false, false, false)) { // 0x56BA00
+        target = colPoint.m_vecPoint;
+    }
+
+    // 0x6C59F7 - The point 100 units down the light
+    const float dirZ100 = (float)((double)dir.z * 100.0f); // 0x858628
+    const CVector farMid{
+        (float)((double)dir.x * 100.0f + origin.x),
+        (float)((double)dir.y * 100.0f + origin.y),
+        (float)((double)dirZ100 + origin.z)
+    };
+
+    // 0x6C5A50 - Direction to the camera
+    CVector toCam{ camPos.x - origin.x, camPos.y - origin.y, camPos.z - origin.z };
+    NormaliseOriginal(toCam);
+
+    double camDot = ((double)toCam.x * dir.x + (double)toCam.y * dir.y) + (double)toCam.z * dir.z;
+    if (camDot < 0.0) { // 0x858B50
+        camDot = 0.0;
+    }
+
+    // 0x6C5ABF - Corona at the origin, brighter the more we look into the light
+    {
+        const double pow6 = ((((camDot * camDot) * camDot) * camDot) * camDot) * camDot;
+        CCoronas::RegisterCorona(
+            coronaIndex,
+            nullptr,
+            200, 200, 255,
+            (uint8)Ftol(pow6 * 255.0f), // 0x859AAC
+            origin,
+            (float)(20.0f * pow6), // 0x858BA4
+            100.0f,
+            CORONATYPE_SHINYSTAR,
+            FLARETYPE_NONE,
+            CORREFL_SIMPLE,
+            LOSCHECK_OFF,
+            TRAIL_OFF,
+            0.0f,
+            false,
+            1.5f,
+            false,
+            15.0f,
+            false,
+            false
+        );
+    }
+
+    // 0x6C5B27 - Build the cone: a "near" and a "far" vertex for every step around the circle
+    uiTempBufferIndicesStored  = 0;
+    uiTempBufferVerticesStored = 0;
+
+    float                maxDotSq = 0.0f;
+    std::array<float, 82> vtxFade{};  // [idx] = fade of the near vertex, [idx + 1] = 0.0f (far vertex)
+    std::array<float, 82> vtxDotSq{}; // Squared dot product of the direction to the vertex with the direction to the camera
+    CVector              cornerA{}, cornerB{};
+
+    for (int32 i = 0; i <= 40; i++) {
+        // 0x6C5B42 - Basis of the circle
+        CVector right = CrossProductOriginal(dir, { 0.0f, 0.0f, 1.0f });
+        NormaliseOriginal(right);
+        CVector up = CrossProductOriginal(right, dir);
+        NormaliseOriginal(up);
+
+        const double angle = (double)i * (double)std::bit_cast<float>(0x3E20D97Cu); // 0x8717B4 (pi / 20)
+        const float  sinA  = (float)std::sin(angle);
+        const float  cosA  = (float)std::cos(angle);
+
+        // 0x6C5BCD
+        const double rightXs  = (double)right.x * sinA;
+        const float  rightXsF = (float)rightXs;
+        const double rightYs  = (double)right.y * sinA;
+        const double rightZs  = (double)right.z * sinA;
+        const float  rightZsF = (float)rightZs;
+
+        const float  nearRightX = (float)((double)rightXsF * baseRadius);
+        const float  nearRightY = (float)(rightYs * baseRadius);
+        const double nearRightZ = rightZs * baseRadius;
+        const double nearRightXOrigin = (double)nearRightX + origin.x;
+        const float  nearTmpY = (float)((double)nearRightY + origin.y);
+        const float  nearTmpZ = (float)(nearRightZ + origin.z);
+
+        // 0x6C5C54
+        const double upXc = (double)up.x * cosA;
+        const double upYc = (double)up.y * cosA;
+        const float  upXcF = (float)upXc;
+        const float  upYcF = (float)upYc;
+        const float  upZcF = (float)((double)up.z * cosA);
+
+        const float nearUpX = (float)(upXc * baseRadius);
+        const float nearUpY = (float)(upYc * baseRadius);
+        const float nearUpZ = (float)((double)upZcF * baseRadius);
+
+        // The vertex on the small circle (near the origin)
+        const CVector P{
+            (float)((double)nearUpX + nearRightXOrigin),
+            (float)((double)nearUpY + nearTmpY),
+            (float)((double)nearUpZ + nearTmpZ)
+        };
+
+        // 0x6C5CF3 - The point on the big circle (at the end of the light)
+        const float  farRightX = (float)((double)rightXsF * targetRadius);
+        const float  farRightY = (float)(rightYs * targetRadius);
+        const double farRightZ = (double)rightZsF * targetRadius;
+
+        const float  farTmpY = (float)((double)farRightY + farMid.y);
+        const float  farTmpZ = (float)(farRightZ + farMid.z);
+        const double farTmpX = (double)farRightX + farMid.x;
+
+        const float farUpX = (float)((double)upXcF * targetRadius);
+        const float farUpY = (float)((double)upYcF * targetRadius);
+        const float farUpZ = (float)((double)upZcF * targetRadius);
+
+        const double Qx = farTmpX + farUpX;
+        const double Qy = (double)farUpY + farTmpY;
+        const float  Qz = (float)((double)farUpZ + farTmpZ);
+
+        // 0x6C5DB5 - Intersect P->Q with the plane at the target's height
+        const float  t  = (float)(((double)P.z - target.z) / ((double)P.z - Qz));
+        const float  dX = (float)(Qx - P.x);
+        const double dY = Qy - P.y;
+        const double dZ = (double)Qz - P.z;
+
+        const float  tX = (float)((double)dX * t);
+        const float  tY = (float)(dY * t);
+        const double tZ = dZ * t;
+
+        CVector R{
+            (float)((double)tX + P.x),
+            (float)((double)tY + P.y),
+            (float)(tZ + P.z)
+        };
+
+        // 0x6C5E3E - Remember the corners of the lit area
+        if (i == 20) {
+            cornerA = R;
+        } else if (i == 30) {
+            cornerB = R;
+        }
+
+        // 0x6C5E7B - Limit the length of P->R to 100 units
+        const double rpX = (double)R.x - P.x;
+        const double rpY = (double)R.y - P.y;
+        const double rpZ = (double)R.z - P.z;
+        const float  rpYF = (float)rpY;
+        const float  rpZF = (float)rpZ;
+        if (std::sqrt((rpZ * rpZ + rpY * rpY) + rpX * rpX) > 100.0) { // 0x858628
+            CVector v{ (float)rpX, rpYF, rpZF };
+            NormaliseOriginal(v);
+
+            const float vZ100 = (float)((double)v.z * 100.0f);
+            R.x = (float)((double)v.x * 100.0f + P.x);
+            R.y = (float)((double)v.y * 100.0f + P.y);
+            R.z = (float)((double)vZ100 + P.z);
+        }
+
+        // 0x6C5F5D
+        const auto idx = (int32)uiTempBufferVerticesStored;
+        const auto fade = (float)((double)CCustomBuildingDNPipeline::m_fDNBalanceParam * 0.15f + 0.1f); // 0x8D12C0, 0x858FCC, 0x858B1C
+
+        auto& vtxNear = TempBufferVertices.m_3d[idx];
+        auto& vtxFar  = TempBufferVertices.m_3d[idx + 1];
+        vtxNear.objVertex.x = P.x;
+        vtxNear.objVertex.y = P.y;
+        vtxNear.objVertex.z = P.z;
+        vtxFar.objVertex.x  = R.x;
+        vtxFar.objVertex.y  = R.y;
+        vtxFar.objVertex.z  = R.z;
+
+        CVector toVtx{ P.x - origin.x, P.y - origin.y, P.z - origin.z };
+        NormaliseOriginal(toVtx);
+
+        double vtxCamDot = ((double)toVtx.x * toCam.x + (double)toVtx.z * toCam.z) + (double)toVtx.y * toCam.y;
+        if (vtxCamDot < 0.0) {
+            vtxCamDot = -vtxCamDot;
+        }
+        const double vtxCamDotSq = vtxCamDot * vtxCamDot;
+        if (vtxCamDotSq > (double)maxDotSq) {
+            maxDotSq = (float)vtxCamDotSq;
+        }
+
+        vtxFade[idx]       = fade;
+        vtxFade[idx + 1]   = 0.0f;
+        vtxDotSq[idx]      = (float)vtxCamDotSq;
+        vtxDotSq[idx + 1]  = (float)vtxCamDotSq;
+
+        if (i != 40) {
+            auto indices = (int32)uiTempBufferIndicesStored;
+            aTempBufferIndices[indices + 0] = (RxVertexIndex)idx;
+            aTempBufferIndices[indices + 1] = (RxVertexIndex)(idx + 3);
+            aTempBufferIndices[indices + 2] = (RxVertexIndex)(idx + 1);
+            indices += 3;
+            uiTempBufferIndicesStored = (uint16)indices;
+            if (baseRadius > 0.0f) {
+                aTempBufferIndices[indices + 0] = (RxVertexIndex)idx;
+                aTempBufferIndices[indices + 1] = (RxVertexIndex)(idx + 2);
+                aTempBufferIndices[indices + 2] = (RxVertexIndex)(idx + 3);
+                indices += 3;
+                uiTempBufferIndicesStored = (uint16)indices;
+            }
+        }
+
+        uiTempBufferVerticesStored = (uint16)(idx + 2);
+    }
+
+    // 0x6C60D5 - Colour of every vertex
+    const auto numVertices = (int32)uiTempBufferVerticesStored;
+    {
+        const double k = 1.0 / (double)maxDotSq; // 0x858624
+        for (int32 j = 0; j < numVertices; j++) {
+            const double v  = ((double)vtxDotSq[j] * (double)vtxFade[j]) * k;
+            const auto   c1 = (uint8)Ftol(200.0f * v); // 0x858A48
+            const auto   c2 = (uint8)Ftol(v * 255.0f); // 0x859AAC
+            TempBufferVertices.m_3d[j].color = ((uint32)c1 << 16) | ((uint32)c1 << 8) | (uint32)c2;
+        }
+    }
+
+    // 0x6C6280 - Render
+    if (uiTempBufferIndicesStored > 0) {
+        if (RwIm3DTransform(TempBufferVertices.m_3d, numVertices, nullptr, rwIM3D_VERTEXXYZ | rwIM3D_VERTEXRGBA)) { // flags = 0x18
+            RwIm3DRenderIndexedPrimitive(rwPRIMTYPETRILIST, aTempBufferIndices, uiTempBufferIndicesStored);
+            RwIm3DEnd();
+        }
+    }
+
+    // 0x6C62B5 - Results
+    useless0 = target;
+    useless1 = CVector{
+        cornerA.x - target.x,
+        cornerA.y - target.y,
+        cornerA.z - target.z
+    };
+    useless2 = CVector{
+        cornerB.x - target.x,
+        cornerB.y - target.y,
+        cornerB.z - target.z
+    };
+
+    // 0x6C6387 - Shadow of the light
+    if (!drawShadow) {
+        return;
+    }
+
+    CVector shadowPos{ target.x, target.y, (float)((double)target.z + 5.0f) }; // 0x858C80
+    const auto topX   = (float)((double)useless1.x * 1.2f); // 0x858F08
+    const auto topY   = (float)((double)useless1.y * 1.2f);
+    const auto rightX = (float)((double)useless2.x * 1.2f);
+    const auto rightY = (float)((double)useless2.y * 1.2f);
+
+    if (!(std::sqrt((double)topX * topX + (double)topY * topY) < 100.0)) { // 0x858628
+        return;
+    }
+    if (!(std::sqrt((double)rightX * rightX + (double)rightY * rightY) < 100.0)) {
+        return;
+    }
+
+    const double dx = (double)target.x - camPos.x;
+    const double dy = (double)target.y - camPos.y;
+    const double camDist = std::sqrt(dy * dy + dx * dx);
+    if (camDist > 25.0) { // 0x858FE8
+        return;
+    }
+
+    const double s = ((1.0 - camDist * 0.04f) * (double)power) * 0.5; // 0x858CEC, 0x858B8C
+    const auto red   = (uint8)Ftol(200.0f * s); // 0x858A48
+    const auto blue  = (uint8)Ftol(255.0f * s); // 0x859AAC
+    const auto inten = (int16)Ftol(s * 128.0f); // 0x858BF4
+
+    CShadows::StoreShadowToBeRendered(
+        2,
+        gpShadowExplosionTex,
+        shadowPos,
+        topX, topY,
+        rightX, rightY,
+        inten,
+        red, red, blue,
+        15.0f,
+        true,
+        1.0f,
+        nullptr,
+        false
+    );
 }
 
 // 0x6C6520

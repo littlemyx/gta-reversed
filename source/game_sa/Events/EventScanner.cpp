@@ -520,7 +520,9 @@ void CSexyPedScanner::ScanForSexyPedEvents(CPed& ped, CEntity** entities, int32 
 
         const CVector otherPos = other->GetPosition();
         const CVector diff     = otherPos - pedPos;
-        const double  sqDist   = ((double)diff.z * diff.z + (double)diff.y * diff.y) + (double)diff.x * diff.x; // x87
+        // x87: `diff.z` is stored as a float ([esp+0x20]), but ST0 keeps the unrounded difference, which is what gets squared (times the rounded one)
+        const double  dzExact  = (double)otherPos.z - (double)pedPos.z;
+        const double  sqDist   = (dzExact * (double)diff.z + (double)diff.y * diff.y) + (double)diff.x * diff.x;
         const float   sqDistF  = (float)sqDist;
         if (!(sqDist < 10000.0)) { // 0x859AA4
             continue;

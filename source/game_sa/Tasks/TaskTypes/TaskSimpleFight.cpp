@@ -10,6 +10,7 @@
 #include "Fx.h"
 #include "RwHelper.h"
 #include "PedModelInfo.h"
+#include "PedStats.h"
 #include "EventSoundQuiet.h"
 #include "EventVehicleDamageWeapon.h"
 #include "Plugins/RpAnimBlendPlugin/RpAnimBlend.h"
@@ -19,6 +20,20 @@
 static inline auto& s_FightColModel = StaticRef<CColModel>(0xC17824);
 static inline auto& s_FightColData  = StaticRef<CCollisionData>(0xC17854);
 static inline auto& s_FightColSphere = StaticRef<CColSphere>(0xC17884);
+
+// 0x59C910 - CVector::Normalise as the original evaluates it: the sum of squares and the reciprocal root stay in the FPU
+// (extended precision), every component is stored as float. A length of 0 (or less) yields (1, y, z) - only x is written.
+static void NormaliseExt(CVector& v) {
+    const double sq = ((double)v.x * v.x + (double)v.y * v.y) + (double)v.z * v.z;
+    if (sq <= 0.0) { // FCOM + JP: NaN takes the sqrt path
+        v.x = 1.0f;
+        return;
+    }
+    const double inv = 1.0 / std::sqrt(sq);
+    v.x = (float)(v.x * inv);
+    v.y = (float)(v.y * inv);
+    v.z = (float)(v.z * inv);
+}
 
 void CTaskSimpleFight::InjectHooks() {
     RH_ScopedVirtualClass(CTaskSimpleFight, 0x86D684, 9);
@@ -32,7 +47,11 @@ void CTaskSimpleFight::InjectHooks() {
     RH_ScopedInstall(GetHitSound, 0x5BD3B0);
 
     RH_ScopedInstall(FightSetUpCol, 0x61D5F0);
+    RH_ScopedInstall(BeHitWhileBlocking, 0x61C650);
+    RH_ScopedInstall(GetStrikeDamage, 0x61C740);
+    RH_ScopedInstall(FightHitPed, 0x61CBA0);
     RH_ScopedInstall(FightHitCar, 0x61D0B0);
+    RH_ScopedInstall(FightHitObj, 0x61D400);
     RH_ScopedInstall(FightStrike, 0x6240B0);
 }
 
@@ -270,19 +289,247 @@ bool CTaskSimpleFight::ProcessPed(CPed* ped) {
     return plugin::CallMethodAndReturn<bool, 0x629920, CTaskSimpleFight*, CPed*>(this, ped);
 }
 
+// 0x61C650
+bool CTaskSimpleFight::BeHitWhileBlocking(CPed* victim, CPed* creator, int8 comboSet, int8 move) {
+    if (m_nLastCommand != 2) { // Not blocking
+        return false;
+    }
+
+    auto* const anim = m_pAnim;
+    if (!anim || (anim->m_Flags & ANIMATION_IS_PLAYING)) {
+        return false;
+    }
+
+    // `!(total > current)` (NaN fails as well)
+    if (!(anim->m_BlendHier->m_fTotalTime > anim->m_CurrentTime)) {
+        return false;
+    }
+
+    // Is the attacker in front of the victim? (Dot product is accumulated in extended precision)
+    // BUG: The original doesn't check for the victim's matrix, and would crash if it had none
+    const auto& victimPos  = victim->GetPosition();
+    const auto& creatorPos = creator->GetPosition();
+    const auto& fwd        = victim->m_matrix->GetForward();
+    const double dx = (double)creatorPos.x - (double)victimPos.x;
+    const double dy = (double)creatorPos.y - (double)victimPos.y;
+    const double dz = (double)creatorPos.z - (double)victimPos.z;
+    const double dot = (dz * fwd.z + dy * fwd.y) + dx * fwd.x;
+    const bool   bNotFacing = dot < (double)0.3f; // 0x858C24
+
+    switch (comboSet) {
+    case 8:
+    case 10:
+    case 11:
+    case 12:
+        if (m_nComboSet < 8 || m_nComboSet > 12 || m_nComboSet == 9) {
+            return false;
+        }
+        break;
+    case 9:
+        if (m_nComboSet < 8 || m_nComboSet > 12) {
+            return false;
+        }
+        break;
+    case 7:
+        if (move == 1) {
+            return false;
+        }
+        break;
+    }
+
+    if (bNotFacing) {
+        return false;
+    }
+
+    anim->m_Flags |= ANIMATION_IS_PLAYING;
+    return true;
+}
+
+// Max volume of the melee hit sounds (indexed with `m_nCurrentMove`)
+static inline auto& s_HitSoundMaxVolume = StaticRef<std::array<uint32, 3>>(0x8D2E3C);
+
+// Strike damage the way the original leaves it in st0 (the products are not rounded to float, and `FightHitPed` truncates them)
+static double GetStrikeDamageExt(const CTaskSimpleFight& task, CPed* ped) {
+    const double base = (double)CTaskSimpleFight::m_aComboData[task.m_nComboSet - 4].m_nDamage[task.m_nCurrentMove];
+
+    if (ped->IsPlayer()) {
+        if (ped->GetPlayerData()->m_bAdrenaline) {
+            return 50.0; // 0x858B40
+        }
+        return base * (double)CStats::GetFatAndMuscleModifier(STAT_MOD_4);
+    }
+
+    switch (ped->GetActiveWeapon().m_Type) {
+    case WEAPON_BRASSKNUCKLE: return base * (double)1.5f; // 0x858CE8
+    case WEAPON_UNARMED:      return base * (double)ped->m_pStats->m_fAttackStrength;
+    default:                  return base;
+    }
+}
+
 // 0x61C740
 float CTaskSimpleFight::GetStrikeDamage(CPed* ped) {
-    return plugin::CallMethodAndReturn<float, 0x61C740, CTaskSimpleFight*, CPed*>(this, ped); // Not reversed yet
+    return (float)GetStrikeDamageExt(*this, ped);
 }
 
 // 0x61CBA0
 CPed* CTaskSimpleFight::FightHitPed(CPed* creator, CPed* victim, const CVector& point, const CVector& dir, int16 piece) {
-    return plugin::CallMethodAndReturn<CPed*, 0x61CBA0, CTaskSimpleFight*, CPed*, CPed*, const CVector*, const CVector*, int16>(this, creator, victim, &point, &dir, piece); // Not reversed yet
+    // Can't hit a player that's getting up
+    // NOTE: The original doesn't check if there's an active task (there always is for the player)
+    if (victim->IsPlayer() && victim->GetTaskManager().GetActiveTask()->GetTaskType() == TASK_SIMPLE_GET_UP) {
+        return nullptr;
+    }
+
+    const auto& combo = m_aComboData[m_nComboSet - 4];
+
+    // Blocked?
+    if (const auto victimFight = victim->GetIntelligence()->GetTaskFighting()) {
+        if (victimFight->BeHitWhileBlocking(victim, creator, m_nComboSet, m_nCurrentMove)) {
+            creator->GetAE().AddAudioEvent((eAudioEvents)combo.m_AltHit[m_nCurrentMove], -9.f, 1.f, victim, SURFACE_DEFAULT, 0, 0); // 0xC1100000
+            if (m_nComboSet == 5 && m_nCurrentMove >= 0 && m_nCurrentMove <= 2) {
+                creator->GetAE().AddAudioEvent((eAudioEvents)combo.m_AltHit[m_nCurrentMove], -9.f, 1.f, victim, SURFACE_DEFAULT, 0, s_HitSoundMaxVolume[m_nCurrentMove]);
+            }
+            return nullptr;
+        }
+    }
+
+    // (The original also calls `CWeaponInfo::GetWeaponInfo(<creator's weapon>, 1)` here, but doesn't use the result)
+
+    const int32 damage = (int32)GetStrikeDamageExt(*this, creator); // 0x821B40 (ftol) => truncated
+
+    m_nContinueStrike = -1;
+
+    const auto side = CPedGeometryAnalyser::ComputePedShotSide(*victim, creator->GetPosition()); // 0x5F13F0
+    const bool bHit = CWeapon::GenerateDamageEvent(victim, creator, creator->GetActiveWeapon().m_Type, damage, (ePedPieceTypes)piece, (uint8)side);
+
+    if (creator->GetActiveWeapon().m_Type == WEAPON_CHAINSAW) {
+        creator->GetWeaponAE().AddAudioEvent(AE_WEAPON_CHAINSAW_CUTTING); // 0x4E69F0
+    }
+
+    auto& creatorAE = creator->GetAE();
+    if (side == 0) {
+        if (m_nComboSet == 5 && m_nCurrentMove >= 0 && m_nCurrentMove <= 2) {
+            creatorAE.AddAudioEvent((eAudioEvents)combo.m_Hit[m_nCurrentMove], 0.f, 1.f, victim, SURFACE_DEFAULT, 0, 0);
+            creatorAE.AddAudioEvent((eAudioEvents)combo.m_Hit[m_nCurrentMove], 0.f, 1.f, victim, SURFACE_DEFAULT, 0, s_HitSoundMaxVolume[m_nCurrentMove]);
+        } else if (m_nComboSet == 7 && m_nCurrentMove == FIGHT_ATTACK_HIT_2) {
+            creatorAE.AddAudioEvent((eAudioEvents)combo.m_Hit[1], 0.f, 1.f, victim, SURFACE_DEFAULT, 0, s_HitSoundMaxVolume[1]);
+            creatorAE.AddAudioEvent(
+                (eAudioEvents)combo.m_Hit[m_nCurrentMove],
+                0.f,
+                1.f,
+                victim,
+                SURFACE_DEFAULT,
+                0,
+                (uint32)(int32)((double)s_HitSoundMaxVolume[m_nCurrentMove] * (double)2.8f) // 0x86D6A8 (ftol)
+            );
+        } else {
+            creatorAE.AddAudioEvent((eAudioEvents)combo.m_Hit[m_nCurrentMove], 0.f, 1.f, victim, SURFACE_DEFAULT, 0, 0);
+        }
+    } else {
+        creatorAE.AddAudioEvent((eAudioEvents)combo.m_AltHit[m_nCurrentMove], 0.f, 1.f, victim, SURFACE_DEFAULT, 0, 0);
+        if (m_nComboSet == 5 && m_nCurrentMove >= 0 && m_nCurrentMove <= 2) {
+            creatorAE.AddAudioEvent((eAudioEvents)combo.m_AltHit[m_nCurrentMove], 0.f, 1.f, victim, SURFACE_DEFAULT, 0, s_HitSoundMaxVolume[m_nCurrentMove]);
+        }
+    }
+
+    if (creator->IsPlayer()) {
+        creator->Say(CTX_GLOBAL_FIGHT, 0, 1.f, false, false, false);
+    }
+
+    // Make some noise
+    CEventSoundQuiet event{creator, 55.f, (uint32)-1, CVector{}}; // 0x425C0000
+    GetEventGlobalGroup()->Add(&event, false);
+
+    // Blood
+    const bool bIsHeavyMelee = m_nComboSet >= 8 && m_nComboSet <= 12;
+
+    int32 bloodChance;
+    if (bIsHeavyMelee) {
+        bloodChance = 100;
+    } else if (m_nComboSet == 4 && m_nCurrentMove == FIGHT_ATTACK_FIGHTIDLE) {
+        bloodChance = -1;
+    } else {
+        bloodChance = (int32)((double)100.f - (double)victim->m_fHealth); // 0x858628 (ftol)
+    }
+
+    const auto roll = (int32)(((double)(CGeneral::GetRandomNumber() & 0xFFFF) * (double)(1.f / 32768.f)) * (double)100.f); // 0x858B14, 0x858628 (ftol)
+    if (roll < bloodChance) {
+        const CVector bloodPos = point;
+
+        const auto& victimPos  = victim->GetPosition();
+        const auto& creatorPos = creator->GetPosition();
+        CVector     bloodDir{
+            creatorPos.x - victimPos.x,
+            creatorPos.y - victimPos.y,
+            creatorPos.z - victimPos.z,
+        };
+        NormaliseExt(bloodDir);
+
+        if (!victim->IsAlive()) {
+            bloodDir = CVector{0.f, 0.f, 2.f};
+        }
+
+        int32 amount = 8;
+        if (bIsHeavyMelee) {
+            amount = 16;
+            if (victim->IsAlive()) {
+                bloodDir.x *= 1.5f; // 0x858CE8
+                bloodDir.y *= 1.5f;
+                bloodDir.z *= 1.5f;
+            }
+        }
+
+        g_fx.AddBlood(bloodPos, bloodDir, amount, victim->m_fContactSurfaceBrightness);
+    }
+
+    return bHit ? victim : nullptr;
 }
 
 // 0x61D400
 void CTaskSimpleFight::FightHitObj(CPed* ped, CObject* object, const CVector& point, const CVector& normal, int16 piece, int8 surface) {
-    plugin::CallMethod<0x61D400, CTaskSimpleFight*, CPed*, CObject*, const CVector*, const CVector*, int16, int8>(this, ped, object, &point, &normal, piece, surface); // Not reversed yet
+    const CVector dir = normal; // The original works on a copy
+
+    const float strikeDamage = GetStrikeDamage(ped);
+
+    if (object->m_nColDamageEffect < 200
+        && !object->physicalFlags.bDisableCollisionForce
+        && object->m_pObjectInfo->m_fColDamageMultiplier < 99.9f // 0x86D6B0
+    ) {
+        // Wake it up if it was static (and could be uprooted)
+        if (object->GetIsStatic() && object->m_pObjectInfo->m_fUprootLimit <= 0.f) { // 0x858B50 == 0.0f
+            object->SetIsStatic(false);
+            object->AddToMovingList();
+        }
+
+        if (!object->GetIsStatic()) {
+            const float forceMult = object->physicalFlags.bDisableZ
+                ? -0.1f  // 0x858EF4
+                : -0.5f; // 0x858F40
+            const auto& objPos = object->GetPosition();
+            object->ApplyForce(
+                CVector{dir.x * forceMult, dir.y * forceMult, dir.z * forceMult},
+                CVector{point.x - objPos.x, point.y - objPos.y, point.z - objPos.z},
+                true
+            );
+        }
+    }
+
+    object->ObjectDamage(strikeDamage * 10.f, &point, &dir, ped, ped->GetActiveWeapon().m_Type); // 0x85862C
+
+    if (ped->GetActiveWeapon().m_Type == WEAPON_CHAINSAW) {
+        ped->GetWeaponAE().AddAudioEvent(AE_WEAPON_CHAINSAW_CUTTING); // 0x4E69F0
+    }
+
+    ped->GetAE().AddAudioEvent(
+        (eAudioEvents)m_aComboData[m_nComboSet - 4].m_Hit[m_nCurrentMove],
+        0.f,
+        1.f,
+        object,
+        (eSurfaceType)surface,
+        0,
+        0
+    );
+
+    g_fx.AddPunchImpact(point, dir, 4);
 }
 
 // 0x61D5F0

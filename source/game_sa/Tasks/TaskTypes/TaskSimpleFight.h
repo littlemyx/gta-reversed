@@ -75,7 +75,7 @@ public:
 
     static void LoadMeleeData();
 
-    void BeHitWhileBlocking(CPed* ped1, CPed* ped2, int8, int8);
+    bool BeHitWhileBlocking(CPed* victim, CPed* creator, int8 comboSet, int8 move); // 0x61C650 - Called on the *victim's* fight task, `comboSet`/`move` are the attacker's. Returns true if the hit is blocked
     void ChooseAttackAI(CPed* ped);
     void ChooseAttackPlayer(CPed* ped);
     bool ControlFight(CEntity* entity, uint8 command);

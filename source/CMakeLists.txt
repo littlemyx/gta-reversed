@@ -579,6 +579,36 @@ if (${RE_PROJECT}_RW_LIBRW)
     set_property(TARGET game_oracle_test PROPERTY SOURCES "${STANDALONE_PAD_OBJ}" ${_go_sources})
     target_link_options(game_oracle_test PRIVATE "$<$<CXX_COMPILER_ID:MSVC>:/BASE:0x400000;/DYNAMICBASE:NO;/FIXED;/MERGE:_TEXT=.text;/INCREMENTAL:NO;/SUBSYSTEM:CONSOLE;/FORCE:UNRESOLVED>")
     set_target_properties(game_oracle_test PROPERTIES COMPILE_WARNING_AS_ERROR OFF CXX_SCAN_FOR_MODULES OFF)
+    # Review oracle (3e73083e hooks): CHud / CMaths / CTaskTimer / CTaskSequences / CIdleCam / CCoverPoint / CConversations / CCredits / CVehicleSaveStructure /
+    # CPathFind::FindNodePairClosestToCoors against the exe machine code (same machinery as game_oracle_test)
+    add_executable(review_oracle_test EXCLUDE_FROM_ALL
+        "${PROJECT_SOURCE_DIR}/tests/standalone/review_oracle_test.cpp"
+        game_sa/General.cpp
+        game_sa/Core/Vector.cpp
+        game_sa/Core/Matrix.cpp
+        game_sa/Hud.cpp
+        game_sa/IdleCam.cpp
+        game_sa/Maths.cpp
+        game_sa/CoverPoint.cpp
+        game_sa/Conversations/Conversations.cpp
+        game_sa/Credits.cpp
+        game_sa/Tasks/TaskTimer.cpp
+        game_sa/Tasks/TaskSequences.cpp
+        game_sa/VehicleSaveStructure.cpp
+        game_sa/PathFind.cpp
+    )
+    target_compile_features(review_oracle_test PRIVATE cxx_std_23)
+    target_compile_definitions(review_oracle_test PRIVATE NOTSA_RW_LIBRW RW_D3D9)
+    target_include_directories(review_oracle_test PRIVATE $<TARGET_PROPERTY:${RE_PROJECT_LIB_NAME},INCLUDE_DIRECTORIES>)
+    target_compile_options(review_oracle_test PRIVATE $<TARGET_PROPERTY:${RE_PROJECT_LIB_NAME},COMPILE_OPTIONS>)
+    target_precompile_headers(review_oracle_test PRIVATE StdInc.cpp)
+    target_link_libraries(review_oracle_test PRIVATE librw spdlog::spdlog Tracy::TracyClient user32)
+    target_sources(review_oracle_test PRIVATE "${STANDALONE_PAD_OBJ}")
+    get_target_property(_ro_sources review_oracle_test SOURCES)
+    list(REMOVE_ITEM _ro_sources "${STANDALONE_PAD_OBJ}")
+    set_property(TARGET review_oracle_test PROPERTY SOURCES "${STANDALONE_PAD_OBJ}" ${_ro_sources})
+    target_link_options(review_oracle_test PRIVATE "$<$<CXX_COMPILER_ID:MSVC>:/BASE:0x400000;/DYNAMICBASE:NO;/FIXED;/MERGE:_TEXT=.text;/INCREMENTAL:NO;/SUBSYSTEM:CONSOLE;/FORCE:UNRESOLVED>")
+    set_target_properties(review_oracle_test PROPERTIES COMPILE_WARNING_AS_ERROR OFF CXX_SCAN_FOR_MODULES OFF)
     # S6-B differential test of script command handlers (g9..g12) against the exe's group processors (same exe-oracle machinery as game_oracle_test; the handler TUs are #included by the test)
     add_executable(script_oracle_test EXCLUDE_FROM_ALL
         "${PROJECT_SOURCE_DIR}/tests/standalone/script_oracle_test.cpp"
@@ -776,6 +806,13 @@ if (${RE_PROJECT}_RW_LIBRW)
     target_include_directories(rw_matfx_uvanim_test BEFORE PRIVATE fakerw)
     target_link_libraries(rw_matfx_uvanim_test PRIVATE librw d3d9 user32)
     set_target_properties(rw_matfx_uvanim_test PROPERTIES COMPILE_WARNING_AS_ERROR OFF)
+    # engine.cpp / camera.cpp log through standalone/Fixups.h: give the shim unit tests the include path (AFTER, so it cannot shadow fakerw) and a Log() stub
+    foreach (_t rw_engine_test rw_frame_camera_test rw_raster_image_test rw_texture_test rw_platform_test rw_pipeline_test rw_matfx_pipeline_test rw_matfx_uvanim_test rw_im2d_im3d_test)
+        if (TARGET ${_t})
+            target_include_directories(${_t} AFTER PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}")
+            target_sources(${_t} PRIVATE "${PROJECT_SOURCE_DIR}/tests/standalone/fixups_log_stub.cpp")
+        endif()
+    endforeach()
 endif()
 
 #--------------------------------------------------------------------

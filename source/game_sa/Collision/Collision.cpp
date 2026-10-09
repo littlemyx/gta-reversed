@@ -429,14 +429,13 @@ bool __stdcall CCollision::PointInTriangle(CVector const& point, CVector const* 
 }
 
 namespace {
-//! 0x412850 + 0x417610 share the evaluation, the result stays unrounded in the exe until the caller stores it
-double DistToLineSqrD(CVector const& ln0, CVector const& ln1, CVector const& pt) {
+//! 0x412850 + 0x417610 share the evaluation (but for the dot product's terms), the result stays unrounded in the exe until the caller stores it
+double DistToLineSqrD(CVector const& ln0, CVector const& ln1, CVector const& pt, bool unroundedZ) {
     // Make line end (l) and pt (pl_ip) relative to ln0 (by this ln0 becomes the space origin)
     // Original (0x412850): `l` stays unrounded on the x87 stack (extended), `p` is spilled to floats.
     // Term orders are fixed by the asm (see below).
     const double lx = (double)ln1.x - ln0.x, ly = (double)ln1.y - ln0.y, lz = (double)ln1.z - ln0.z;
     const float  px = pt.x - ln0.x, py = pt.y - ln0.y, pz = pt.z - ln0.z;
-    const double pzE = (double)pt.z - ln0.z; // ... except for `p.z`, which is spilled but the unrounded value is used for the dot product
 
     //        * P
     //      / |
@@ -452,7 +451,10 @@ double DistToLineSqrD(CVector const& ln0, CVector const& ln1, CVector const& pt)
     // b, c - Triangle sides
     // a    - The distance we want to find out :D
 
-    const double plD = pzE * lz + (double)px * lx + (double)py * ly; // Dot product `p . l` (terms: z, x, y)
+    // Dot product `p . l`. 0x412850 (DistToLineSqr): terms x, z, y of the SPILLED p (0x41288B); 0x417610 (DistToLine): `fst` keeps the unrounded p.z on the FPU stack and
+    // multiplies it first (0x41764B): terms z, x, y. The sum is rounded at the current precision control either way.
+    const double pzE = (double)pt.z - ln0.z;
+    const double plD = unroundedZ ? (pzE * lz + (double)px * lx) + (double)py * ly : ((double)px * lx + (double)pz * lz) + (double)py * ly;
     const float  pl  = (float)plD;                                   // ... is spilled to a float, but the 1st compare uses the unrounded value
 
     if (plD <= 0.0) { // Before origin (NaN => no)
@@ -461,7 +463,7 @@ double DistToLineSqrD(CVector const& ln0, CVector const& ln1, CVector const& pt)
 
     const double ll = lx * lx + lz * lz + ly * ly; // Line mag. sq.
 
-    if (!(pl < ll)) { // After end (original: `pl < ll` => middle, so NaN ends up here)
+    if (pl >= ll) { // After end (original 0x4128F0: `fcomp; test ah, 1; jne middle` - C0 is also set for unordered, so NaN goes to the MIDDLE branch)
         const double ex = (double)pt.x - ln1.x, ey = (double)pt.y - ln1.y, ez = (double)pt.z - ln1.z;
         return ez * ez + ey * ey + ex * ex; // Dist to end
     }
@@ -491,15 +493,15 @@ double DistToLineSqrD(CVector const& ln0, CVector const& ln1, CVector const& pt)
 float CCollision::DistToLineSqr(CVector const& ln0, CVector const& ln1, CVector const& pt) {
     ZoneScoped;
 
-    return (float)DistToLineSqrD(ln0, ln1, pt);
+    return (float)DistToLineSqrD(ln0, ln1, pt, false);
 }
 
 // 0x417610
 float CCollision::DistToLine(const CVector& lineStart, const CVector& lineEnd, const CVector& point) {
     ZoneScoped;
 
-    // Original (0x417610): the same evaluation as `DistToLineSqr`, but the squared distance is not rounded to a float before the sqrt
-    return (float)std::sqrt(DistToLineSqrD(lineStart, lineEnd, point));
+    // Original (0x417610): the same evaluation as `DistToLineSqr` except for the dot product's terms (see there), and the squared distance is not rounded to a float before the sqrt
+    return (float)std::sqrt(DistToLineSqrD(lineStart, lineEnd, point, true));
 }
 
 /*!

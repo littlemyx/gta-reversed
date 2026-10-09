@@ -113,7 +113,7 @@ void TaskLookAtCoord(int32 pedHandle, CVector pos, int32 time) {
             BONE_UNKNOWN, // -1
             &pos,
             false,
-            0.125f,
+            0.25f, // 0x3E800000
             500,
             6,
             true
@@ -121,7 +121,7 @@ void TaskLookAtCoord(int32 pedHandle, CVector pos, int32 time) {
         return;
     }
     CTaskSequences::AddTaskToActiveSequence(
-        new CTaskSimpleTriggerLookAt{ nullptr, time, BONE_UNKNOWN, RwV3d{ pos.x, pos.y, pos.z }, true, 0.125f, 1000, 3 }
+        new CTaskSimpleTriggerLookAt{ nullptr, time, BONE_UNKNOWN, RwV3d{ pos.x, pos.y, pos.z }, true, 0.25f, 1000, 3 }
     );
 }
 

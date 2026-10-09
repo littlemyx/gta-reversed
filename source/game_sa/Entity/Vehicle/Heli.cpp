@@ -59,12 +59,12 @@ CVector Multiply3x3Original(const CMatrix& m, const CVector& v) {
     };
 }
 
-//! 0x821B40 - `_ftol`: truncates towards zero, out of range / NaN gives 0x80000000
+//! 0x821B40 - `_ftol`: truncates towards zero (through a 64 bit `fistp`, the caller gets the low 32 bits). NaN / out of the 64 bit range gives 0 (low half of the "integer indefinite" 0x8000000000000000)
 int32 Ftol(double v) {
-    if (!(v > -2147483649.0 && v < 2147483648.0)) {
-        return INT32_MIN;
+    if (!(v > -9223372036854775809.0 && v < 9223372036854775808.0)) {
+        return 0;
     }
-    return (int32)v;
+    return (int32)(uint32)(uint64)(int64)v;
 }
 } // namespace HeliImpl
 
@@ -727,7 +727,7 @@ bool CHeli::SendDownSwat() {
 
     // 0x6C6B89 - Let the rope down.
     // NOTSA: The original checks the result for `< 0`, but it only returns 0 or 1, so this never fails.
-    const auto ropeId = reinterpret_cast<uint32>(this) + swatIdx; // The rope is identified by `this + i`
+    const auto ropeId = GetRopeId(); // The rope is identified by `this + i`
     CRopes::RegisterRope(ropeId, 8, ropePos, false, 0, 0, nullptr, 20000);
 
     // 0x6C6BCD - Spawn the SWAT guy and make him abseil
@@ -839,7 +839,7 @@ void CHeli::UpdateHelis() {
         const double dX = (double)plypos.x - helipos.x;
         const double dY = (double)plypos.y - helipos.y;
         const double dZ = (double)plypos.z - helipos.z;
-        if (std::abs(std::sqrt((dX * dX + dY * dY) + dZ * dZ)) > 170.0f) { // 0x858F98
+        if (std::abs(std::sqrt((dZ * dZ + dY * dY) + dX * dX)) > 170.0f) { // NOTE: the original adds z, y, x in this order // 0x858F98
             CWorld::Remove(heli);
             delete slot;
             slot = nullptr;

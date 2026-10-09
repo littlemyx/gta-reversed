@@ -114,7 +114,8 @@ public:
     CVector FindSwatPositionRelativeToHeli(int32 swatNumber);
     bool SendDownSwat();
 
-    inline uint32 GetRopeId() { return reinterpret_cast<int32>(this + m_nNumSwatOccupants - 1); }
+    // 0x6C69C0 - The rope is identified by the heli's address plus the (0 based) swat index, in *bytes*
+    inline uint32 GetRopeId() { return (uint32)reinterpret_cast<uintptr_t>(this) + (uint8)m_nNumSwatOccupants - 1; }
 
     static void InitHelis();
     static void AddHeliSearchLight(const CVector& origin, const CVector& target, float targetRadius, float power, uint32 coronaIndex, uint8 unknownFlag, uint8 drawShadow);

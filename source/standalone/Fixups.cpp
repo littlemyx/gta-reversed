@@ -458,7 +458,34 @@ FixupStats ApplyToDataImage() {
     return s;
 }
 
+#ifdef _DEBUG
+// S5 diagnostics: NOTSA_STANDALONE_ALLOCTRACE=<min bytes> logs (module-relative return addresses) every 200th allocation >= min bytes (find per-frame leaks)
+static int s_AllocMin = 0;
+static int __cdecl AllocTraceHook(int allocType, void*, size_t size, int, long, const unsigned char*, int) {
+    if (allocType == _HOOK_ALLOC && (int)size >= s_AllocMin) {
+        static std::atomic<int> s_N{0};
+        if (s_N.fetch_add(1) % 200 == 0) {
+            void* bt[10];
+            const USHORT n = CaptureStackBackTrace(1, 10, bt, nullptr);
+            char line[400];
+            int  o = wsprintfA(line, "alloc %u:", (unsigned)size);
+            for (USHORT i = 0; i < n && o < 380; i++) {
+                o += wsprintfA(line + o, " %08X", (unsigned)(uintptr_t)bt[i]);
+            }
+            Log("%s", line);
+        }
+    }
+    return TRUE;
+}
+#endif
+
 void InstallRedirectHandler() {
+#ifdef _DEBUG
+    if (const char* e = std::getenv("NOTSA_STANDALONE_ALLOCTRACE")) {
+        s_AllocMin = std::atoi(e);
+        _CrtSetAllocHook(AllocTraceHook);
+    }
+#endif
     // assert()/abort() must not open a modal message box (it hangs a headless/Wine run forever): print to stderr and end in AbortHandler -> log + exit
     _set_error_mode(_OUT_TO_STDERR);
     _set_abort_behavior(0, _WRITE_ABORT_MSG | _CALL_REPORTFAULT);

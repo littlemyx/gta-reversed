@@ -215,7 +215,14 @@ bool ProcessGameLogic(INT nCmdShow) {
 
         CPad::UpdatePads();
         auto* pad = CPad::GetPad();
+#ifdef NOTSA_STANDALONE_RUN
+        // No DirectShow under Wine: VideoPlayer::Play fails and nothing ends the "playing" state (the original needs a key press then). Test hook:
+        static const bool s_SkipVideos = std::getenv("NOTSA_STANDALONE_SKIP_VIDEOS") != nullptr;
+#else
+        constexpr bool s_SkipVideos = false;
+#endif
         if (   Windowed
+            || s_SkipVideos
             || ControlsManager.GetJoyButtonJustDown()
             || pad->NewState.CheckForInput()
             || CPad::IsMouseLButtonPressed()

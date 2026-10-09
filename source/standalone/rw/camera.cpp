@@ -23,6 +23,9 @@
 #include "camera_sync.h"   // 01r: the exe's camera sync callback 0x7EE5A0 (lifted from the asm, bit-exact vs the exe), replaces librw's cameraSync
 
 #include <cassert>
+#include <crtdbg.h>
+#include <Windows.h>
+#include "standalone/Fixups.h"
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
@@ -232,6 +235,22 @@ RwCamera* RwCameraShowRaster(RwCamera* camera, void* /*pDev*/, RwUInt32 flags) {
     }
 #ifdef NOTSA_STANDALONE_RUN
     ShimDumpBackBuffer();
+    if (std::getenv("NOTSA_STANDALONE_MEMLOG")) {
+        static int n = 0;
+        if (++n % 100 == 0) {
+            _CrtMemState st;
+            _CrtMemCheckpoint(&st);
+            size_t priv = 0;
+            MEMORY_BASIC_INFORMATION mbi;
+            for (char* a = nullptr; VirtualQuery(a, &mbi, sizeof(mbi)) && (uintptr_t)a < 0x7FFE0000; a += mbi.RegionSize) {
+                if (mbi.State == MEM_COMMIT) priv += mbi.RegionSize;
+            }
+            notsa::standalone::Fixups::Log("memlog frame %d: crt heap %lu bytes in %lu blocks, committed %lu KB", n, (unsigned long)(st.lSizes[1] + st.lSizes[2]), (unsigned long)(st.lCounts[1] + st.lCounts[2]), (unsigned long)(priv / 1024));
+        }
+    }
+    if (std::getenv("NOTSA_STANDALONE_NOPRESENT")) { // S5 diagnostics: skip Present (leak hunting)
+        return camera;
+    }
 #endif
     camera->showRaster(flags);
     return camera;

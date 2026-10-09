@@ -4819,7 +4819,7 @@ void CPed::ProcessControl()
     m_pedAudio.Service(); // 0x4E2EE0
 
     // Molotov fire effect in hand
-    if (m_nPedType == PED_TYPE_PLAYER1 || m_nPedType == PED_TYPE_PLAYER_NETWORK) {
+    if (m_nPedType == PED_TYPE_PLAYER1 || m_nPedType == PED_TYPE_PLAYER2) {
         if (auto& wep = GetActiveWeapon(); wep.m_Type == WEAPON_MOLOTOV) {
             if (!bDontRender
                 && m_bIsVisible
@@ -4973,7 +4973,7 @@ void CPed::ProcessControl()
     }
 
     if (   m_nPedType == PED_TYPE_PLAYER1
-        || m_nPedType == PED_TYPE_PLAYER_NETWORK
+        || m_nPedType == PED_TYPE_PLAYER2
         || !bWasStandingAtStart
         || m_vecMoveSpeed.x != 0.f
         || m_vecMoveSpeed.y != 0.f
@@ -5171,7 +5171,7 @@ void CPed::SpecialEntityPreCollisionStuff(CPhysical* colPhysical,
         physicalFlags.bSkipLineCol = true; // 0x1000
     }
 
-    if (m_nPedType == PED_TYPE_PLAYER1 || m_nPedType == PED_TYPE_PLAYER_NETWORK) {
+    if (m_nPedType == PED_TYPE_PLAYER1 || m_nPedType == PED_TYPE_PLAYER2) {
         if (GetIntelligence()->GetTaskClimb()) {
             physicalFlags.bSkipLineCol = true;
         }

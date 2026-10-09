@@ -665,7 +665,7 @@ public:
     bool DoBladeCollision(CVector pos, CMatrix& matrix, int16 rotorType, float radius, float damageMult);
     void AddVehicleUpgrade(int32 modelId);
     void SetupUpgradesAfterLoad();
-    void GetPlaneWeaponFiringStatus(bool& status, eOrdnanceType& ordnanceType);
+    CEntity* GetPlaneWeaponFiringStatus(bool& status, eOrdnanceType& ordnanceType); // Returns the heat-seeking target (if any)
     void ProcessWeapons();
     void DoFixedMachineGuns();
     void FireFixedMachineGuns();

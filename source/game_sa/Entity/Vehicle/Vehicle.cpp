@@ -207,7 +207,7 @@ void CVehicle::InjectHooks() {
     RH_ScopedInstall(ScanAndMarkTargetForHeatSeekingMissile, 0x6E0400);
     RH_ScopedInstall(FireHeatSeakingMissile, 0x6E05C0);
     RH_ScopedInstall(PossiblyDropFreeFallBombForPlayer, 0x6E07E0);
-    // RH_ScopedInstall(ProcessSirenAndHorn, 0x6E0950);
+    RH_ScopedInstall(ProcessSirenAndHorn, 0x6E0950);
     RH_ScopedInstall(DoHeadLightEffect, 0x6E0A50);
     RH_ScopedInstall(DoHeadLightReflectionSingle, 0x6E1440);
     RH_ScopedInstall(DoHeadLightReflectionTwin, 0x6E1600);
@@ -216,10 +216,10 @@ void CVehicle::InjectHooks() {
     RH_ScopedInstall(DoVehicleLights, 0x6E1A60);
     RH_ScopedInstall(FillVehicleWithPeds, 0x6E2900);
     RH_ScopedInstall(DoBladeCollision, 0x6E2E50);
-    // RH_ScopedInstall(AddVehicleUpgrade, 0x6E3290);
+    RH_ScopedInstall(AddVehicleUpgrade, 0x6E3290);
     RH_ScopedInstall(SetupUpgradesAfterLoad, 0x6E3400);
-    // RH_ScopedInstall(GetPlaneWeaponFiringStatus, 0x6E3440);
-    // RH_ScopedInstall(ProcessWeapons, 0x6E3950);
+    RH_ScopedInstall(GetPlaneWeaponFiringStatus, 0x6E3440);
+    RH_ScopedInstall(ProcessWeapons, 0x6E3950);
     RH_ScopedInstall(DoFixedMachineGuns, 0x73F400);
     RH_ScopedInstall(FireFixedMachineGuns, 0x73DF00);
     RH_ScopedInstall(DoDriveByShootings, 0x741FD0);
@@ -6239,8 +6239,29 @@ void CVehicle::PossiblyDropFreeFallBombForPlayer(eOrdnanceType type, bool checkT
 }
 
 // 0x6E0950
-void CVehicle::ProcessSirenAndHorn(bool arg0) {
-    ((void(__thiscall*)(CVehicle*, bool))0x6E0950)(this, arg0);
+void CVehicle::ProcessSirenAndHorn(bool horn) {
+    if (UsesSiren()) {
+        // The pad's horn history (5 entries) is used to detect a "double tap" of the horn
+        const auto& pad = *CPad::GetPad(0);
+        const auto  idx = (uint8)pad.iCurrHornHistory;
+        const auto  HornAt = [&](size_t offset) { return pad.bHornHistory.data()[(idx + offset) % pad.bHornHistory.size()] != 0; };
+
+        if (!pad.bHornHistory.data()[idx]) {
+            if (HornAt(4) && !HornAt(1)) { // Tap, release => toggle the siren
+                m_HornCounter = 0;
+                vehicleFlags.bSirenOrAlarm = !vehicleFlags.bSirenOrAlarm;
+                return;
+            }
+            m_HornCounter = 0;
+        } else {
+            m_HornCounter = HornAt(4) && HornAt(3) ? 1 : 0;
+        }
+    } else if (horn) {
+        // Note: `m_nAlarmState` is an uint16, so can't use `CanUpdateHornCounter()` (which compares it against -1)
+        if (m_nAlarmState == 0 || m_nAlarmState == 0xFFFF || GetStatus() == STATUS_WRECKED) {
+            m_HornCounter = CPad::GetPad(0)->GetHorn();
+        }
+    }
 }
 
 // NOTSA
@@ -6724,7 +6745,52 @@ bool CVehicle::DoBladeCollision(CVector pos, CMatrix& matrix, int16 rotorType, f
 
 // 0x6E3290
 void CVehicle::AddVehicleUpgrade(int32 modelId) {
-    ((void(__thiscall*)(CVehicle*, int32))0x6E3290)(this, modelId);
+    // Note: The original returns `replacedUpgrade` (in EAX), but none of the callers use it
+    const auto* const mi = CModelInfo::GetModelInfo(modelId);
+
+    int32 replacedUpgrade = -1;
+    if (!SetVehicleUpgradeFlags(modelId, mi->CarMod, replacedUpgrade)) { // 0x6D30E0
+        const auto linkedUpgrade = CVehicleModelInfo::ms_linkedUpgrades.FindOtherUpgrade((int16)modelId);
+
+        if (mi->bUsesVehDummy) {
+            replacedUpgrade = GetReplacementUpgrade(mi->CarMod);
+            AddReplacementUpgrade(modelId, mi->CarMod);
+            if (mi->CarMod == 2) { // Wheels
+                m_fWheelScale = CModelInfo::GetModelInfo(m_nModelIndex)->AsVehicleModelInfoPtr()->m_fWheelSizeFront;
+                AddReplacementUpgrade(modelId, 5);
+                AddReplacementUpgrade(modelId, 4);
+                AddReplacementUpgrade(modelId, 7);
+                if (m_nVehicleSubType == VEHICLE_TYPE_AUTOMOBILE) {
+                    if (modelId == ModelIndices::MI_OFFROAD_WHEEL) {
+                        handlingFlags.bOffroadAbility = true;
+                    } else if (!m_pHandlingData->m_bOffroadAbility) {
+                        handlingFlags.bOffroadAbility = false;
+                    }
+                }
+            }
+        } else {
+            replacedUpgrade = GetUpgrade(mi->CarMod);
+            AddUpgrade(modelId, mi->CarMod);
+        }
+
+        if (linkedUpgrade != -1) {
+            const auto* const linkedMI = CModelInfo::GetModelInfo(linkedUpgrade);
+            if (linkedMI->bUsesVehDummy) {
+                AddReplacementUpgrade(linkedUpgrade, linkedMI->CarMod);
+            } else {
+                AddUpgrade(linkedUpgrade, linkedMI->CarMod);
+            }
+        }
+    }
+
+    // Store the upgrade in the first slot that is free (or holds the upgrade we replaced)
+    int32 toStore = modelId;
+    for (auto& slot : m_anUpgrades) {
+        if (slot == replacedUpgrade || slot == -1) {
+            slot    = (int16)toStore;
+            toStore = -1;
+        }
+    }
 }
 
 // 0x6E3400
@@ -6737,8 +6803,116 @@ void CVehicle::SetupUpgradesAfterLoad() {
 }
 
 // 0x6E3440
-void CVehicle::GetPlaneWeaponFiringStatus(bool& status, eOrdnanceType& ordnanceType) {
-    ((void(__thiscall*)(CVehicle*, bool&, eOrdnanceType&))0x6E3440)(this, status, ordnanceType);
+CEntity* CVehicle::GetPlaneWeaponFiringStatus(bool& status, eOrdnanceType& ordnanceType) {
+    // NOTSA: The original returns -1 here if it fails to find the slot, but the asm of `CWorld::FindPlayerSlotWithVehiclePointer` (0x564000) returns 0
+    auto& pad = *CPad::GetPad(std::max(0, CWorld::FindPlayerSlotWithVehiclePointer(this)));
+
+    switch (m_nModelIndex) {
+    case MODEL_HUNTER:
+    case MODEL_TORNADO: { // 0x6E34A6
+        if (pad.GetCarGunFired() == 2) {
+            status = true;
+            return nullptr;
+        }
+        if (pad.CarGunJustDown() == 1) {
+            ordnanceType = 1;
+            return nullptr;
+        }
+        break;
+    }
+    case MODEL_SEASPAR:
+    case MODEL_RCBARON:
+    case MODEL_MAVERICK:
+    case MODEL_POLMAV:
+    case MODEL_CARGOBOB: { // 0x6E3780
+        if (pad.GetCarGunFired() == 2) {
+            status = true;
+        }
+        if (m_nModelIndex == MODEL_RCBARON && bDisableRemoteDetonation && CCamera::m_bUseMouse3rdPerson) {
+            if (pad.GetCarGunFired() == 1) {
+                status = true;
+            }
+        }
+        ordnanceType = 0;
+        return nullptr;
+    }
+    case MODEL_RUSTLER: { // 0x6E347C
+        if (pad.GetCarGunFired() == 2) {
+            status = true;
+        }
+        ordnanceType = 0;
+        return nullptr;
+    }
+    case MODEL_HYDRA: { // 0x6E34ED
+        ordnanceType = 0;
+
+        const auto now = CTimer::GetTimeInMS();
+        if (pad.CarGunJustDown() == 1 && CTimer::GetTimeInMS() > m_nGunFiringTime + 2000) { // Flares
+            const CVector pos    = GetPosition();
+            const CVector offset = (m_matrix->GetForward() * -2.5f) + (m_matrix->GetUp() * -1.f);
+            CProjectileInfo::AddProjectile(this, WEAPON_FLARE, pos + offset, 0.f, &m_matrix->GetForward(), nullptr);
+            m_nGunFiringTime = CTimer::GetTimeInMS();
+        }
+
+        auto* const plane = AsPlane();
+        auto&       crossHair = gCrossHair[0];
+        if (pad.CarGunJustDown() == 2) {
+            if (CWeaponEffects::IsLockedOn(0) && plane->field_9DC) {
+                CEntity* const target = ScanAndMarkTargetForHeatSeekingMissile((CEntity*)plane->field_9E0);
+                if (target && target == (CEntity*)plane->field_9E0 && now - (uint32)plane->field_9DC > 1500) {
+                    ordnanceType = 2;
+                    crossHair.m_color.r      = 255;
+                    crossHair.m_color.g      = 0;
+                    crossHair.m_color.b      = 0;
+                    crossHair.m_fRotation    = 1.f;
+                    crossHair.m_nTimeWhenToDeactivate = 0;
+                    return target;
+                }
+            }
+            ordnanceType = 1;
+            return nullptr;
+        }
+
+        if (pad.GetEnterTargeting()) {
+            plane->field_9DC = now;
+            plane->field_9E0 = 0;
+            return nullptr;
+        }
+
+        if (pad.GetTarget()) {
+            if (!plane->field_9DC) {
+                plane->field_9DC = now;
+            }
+            CEntity* const target = ScanAndMarkTargetForHeatSeekingMissile((CEntity*)plane->field_9E0);
+            if (!target || target != (CEntity*)plane->field_9E0) {
+                plane->field_9DC = now;
+            }
+            crossHair.m_nTimeWhenToDeactivate = 0;
+            if (now - (uint32)plane->field_9DC > 1500) { // Locked on
+                crossHair.m_color.r   = 255;
+                crossHair.m_color.g   = 0;
+                crossHair.m_color.b   = 0;
+                crossHair.m_fRotation = 1.f;
+            } else {
+                crossHair.m_color.r   = 255;
+                crossHair.m_color.g   = 255;
+                crossHair.m_color.b   = 255;
+                crossHair.m_fRotation = 0.f;
+            }
+            plane->field_9E0 = (int32)target;
+            return nullptr;
+        }
+
+        plane->field_9DC = 0;
+        plane->field_9E0 = 0;
+        return nullptr;
+    }
+    }
+
+    // 0x6E37D3
+    status       = false;
+    ordnanceType = 0;
+    return nullptr;
 }
 
 // 0x49B010 - Checks if the upgrade model `modelId` can be installed on `vehicle`
@@ -6785,7 +6959,92 @@ bool IsVehiclePointerValid(CVehicle* vehicle) {
 
 // 0x6E3950
 void CVehicle::ProcessWeapons() {
-    ((void(__thiscall*)(CVehicle*))0x6E3950)(this);
+    CEntity* heatSeekingTarget = nullptr;
+
+    if (IsSubPlane() && this == FindPlayerVehicle(-1, false) && AsPlane()->field_9DC == 0) {
+        CWeaponEffects::ClearCrossHairImmediately(0);
+    }
+
+    if (physicalFlags.bRenderScorched) { // 0x20000000
+        return;
+    }
+
+    bool           fireGuns = false;
+    eOrdnanceType  ordnance = 0;
+    const bool     isControlledByPlayer = GetStatus() == STATUS_PLAYER || GetStatus() == STATUS_REMOTE_CONTROLLED;
+    if (isControlledByPlayer) {
+        bool          status = false;
+        eOrdnanceType type   = 0;
+        heatSeekingTarget = GetPlaneWeaponFiringStatus(status, type);
+        ordnance          = type;
+        SelectPlaneWeapon(status, type);
+        fireGuns          = status;
+    } else if (vehicleFlags.bFireGun) {
+        fireGuns = true;
+        ordnance = 1;
+        if (m_nModelIndex == MODEL_HYDRA && m_nVehicleWeaponInUse == CAR_WEAPON_LOCK_ON_ROCKET) {
+            ordnance = 2;
+        }
+    }
+
+    switch (m_nVehicleWeaponInUse) {
+    case CAR_WEAPON_HEAVY_GUN: {
+        if (fireGuns) {
+            FirePlaneGuns();
+        }
+        break;
+    }
+    case CAR_WEAPON_FREEFALL_BOMB: {
+        if (ordnance) {
+            PossiblyDropFreeFallBombForPlayer(ordnance, true);
+        }
+        break;
+    }
+    case CAR_WEAPON_LOCK_ON_ROCKET: {
+        if (ordnance) {
+            if (!isControlledByPlayer) {
+                switch (m_autoPilot.m_nCarMission) {
+                case MISSION_PLANE_ATTACK_PLAYER:
+                case MISSION_PLANE_ATTACK_PLAYER_POLICE:
+                case MISSION_PLANE_DOG_FIGHT_PLAYER:
+                    heatSeekingTarget = FindPlayerVehicle(-1, false);
+                    break;
+                default:
+                    heatSeekingTarget = m_autoPilot.m_TargetEntity;
+                    break;
+                }
+            }
+            if (heatSeekingTarget) {
+                FireHeatSeakingMissile(heatSeekingTarget, ordnance, true);
+            }
+        }
+        break;
+    }
+    case CAR_WEAPON_DOUBLE_ROCKET: {
+        if (ordnance) {
+            FireUnguidedMissile(ordnance, true);
+        }
+        break;
+    }
+    }
+
+    FxSystem_c** gunParticles;
+    if (IsSubHeli()) {
+        gunParticles = AsHeli()->m_ppGunflashFx;
+    } else if (IsSubPlane()) {
+        gunParticles = AsPlane()->m_pGunParticles;
+    } else {
+        return;
+    }
+
+    if (gunParticles) {
+        const auto numGuns = GetPlaneNumGuns();
+        for (auto i = 0; i < numGuns; i++) {
+            if (const auto fx = gunParticles[i]) {
+                fx->SetMatrix(GetRwObject() ? RwFrameGetMatrix(reinterpret_cast<RwFrame*>(rwObjectGetParent(GetRwObject()))) : nullptr);
+            }
+        }
+    }
 }
 
 // 0x73F400

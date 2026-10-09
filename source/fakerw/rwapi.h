@@ -23,6 +23,7 @@ RwBool RpHAnimPluginAttach(void);
 
 // ---- rpmatfx.h ----
 RwBool RpMatFXAtomicQueryEffects(RpAtomic *atomic);
+RpAtomic * RpMatFXAtomicEnableEffects(RpAtomic *atomic); // pipeline_matfx.cpp
 RpMatFXMaterialFlags RpMatFXMaterialGetEffects(const RpMaterial *material);
 RwTexture * RpMatFXMaterialGetEnvMapTexture(const RpMaterial *material);
 RpMaterial * RpMatFXMaterialSetEffects(RpMaterial *material, RpMatFXMaterialFlags flags);

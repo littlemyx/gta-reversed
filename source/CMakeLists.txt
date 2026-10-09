@@ -465,6 +465,39 @@ if (${RE_PROJECT}_RW_LIBRW)
     target_include_directories(rw_pipeline_test BEFORE PRIVATE fakerw)
     target_link_libraries(rw_pipeline_test PRIVATE librw d3d9 user32)
     set_target_properties(rw_pipeline_test PROPERTIES COMPILE_WARNING_AS_ERROR OFF)
+    # P2B-23 unit test of the MatFX AllInOne pipeline on the façade (env map / dual / UV transform; needs a D3D9 HAL device: Wine/wined3d is fine)
+    add_executable(rw_matfx_pipeline_test EXCLUDE_FROM_ALL
+        "${PROJECT_SOURCE_DIR}/tests/standalone/rw_matfx_pipeline_test.cpp"
+        standalone/rw/pipeline.cpp
+        standalone/rw/pipeline_matfx.cpp
+        standalone/rw/matfx.cpp
+        standalone/rw/uvanim.cpp
+        standalone/rw/renderstate.cpp
+        standalone/rw/rwd3d_ff.cpp
+        standalone/rw/rwglobals.cpp
+        standalone/rw/atomic.cpp
+        standalone/rw/clump.cpp
+        standalone/rw/plugins.cpp
+        standalone/rw/math.cpp
+        standalone/rw/rwmath_tables.cpp
+        standalone/rw/stream.cpp
+        standalone/rw/frame.cpp
+        standalone/rw/camera.cpp
+        standalone/rw/light.cpp
+        standalone/rw/world.cpp
+        standalone/rw/material.cpp
+        standalone/rw/geometry.cpp
+        standalone/rw/geometry_strip.cpp
+        standalone/rw/raster.cpp
+        standalone/rw/image.cpp
+        standalone/rw/texture.cpp
+        standalone/rw/texdict.cpp
+    )
+    target_compile_features(rw_matfx_pipeline_test PRIVATE cxx_std_23)
+    target_compile_definitions(rw_matfx_pipeline_test PRIVATE NOTSA_RW_LIBRW NOTSA_RW_UNIT_TEST RW_D3D9)
+    target_include_directories(rw_matfx_pipeline_test BEFORE PRIVATE fakerw)
+    target_link_libraries(rw_matfx_pipeline_test PRIVATE librw d3d9 user32)
+    set_target_properties(rw_matfx_pipeline_test PROPERTIES COMPILE_WARNING_AS_ERROR OFF)
     # P2B-08 unit test of the game's four custom pipelines (CCustomBuildingPipeline / DNPipeline / CCustomCarEnvMapPipeline + plugins) on the façade: the REAL game
     # TUs are compiled into the test with the game's compile settings and PCH (StdInc.h), the few game-side symbols they call (CMemoryMgr, g_fx, ...) and the data
     # image globals they read (StaticRef at fixed addresses) are stubbed by the test. Needs a D3D9 HAL device (Wine/wined3d is fine); optional SA DFF paths on the command line.
@@ -642,7 +675,7 @@ if (${RE_PROJECT}_RW_LIBRW)
     # P2B-06: Im2D/Im3D over the D3D9 device, same standalone style
     set_source_files_properties(standalone/rw/im2d_im3d.cpp PROPERTIES SKIP_UNITY_BUILD_INCLUSION ON)
     # P2B-07: pipeline.cpp includes the private d3d9 header and has anonymous-namespace helpers
-    set_source_files_properties(standalone/rw/pipeline.cpp PROPERTIES SKIP_UNITY_BUILD_INCLUSION ON)
+    set_source_files_properties(standalone/rw/pipeline.cpp standalone/rw/pipeline_matfx.cpp PROPERTIES SKIP_UNITY_BUILD_INCLUSION ON)
     # P2B-05b: anonymous-namespace helpers in matfx.cpp / uvanim.cpp
     set_source_files_properties(standalone/rw/matfx.cpp standalone/rw/uvanim.cpp PROPERTIES SKIP_UNITY_BUILD_INCLUSION ON)
 endif()

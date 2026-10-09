@@ -935,6 +935,13 @@ void PipeUninstance(rw::ObjPipeline*, rw::Atomic* atomic) {
 //--------------------------------------------------------------------------------------------------
 // Public API
 //--------------------------------------------------------------------------------------------------
+// P2B-23: the MatFX AllInOne pipeline (pipeline_matfx.cpp); units that link pipeline.cpp without it get no-ops through /alternatename.
+void RwShimMatFXPipelineEnsure();
+void RwShimMatFXPipelineShutdown();
+void NotsaPipelineNoMatFX() {}
+#pragma comment(linker, "/alternatename:?RwShimMatFXPipelineEnsure@@YAXXZ=?NotsaPipelineNoMatFX@@YAXXZ")
+#pragma comment(linker, "/alternatename:?RwShimMatFXPipelineShutdown@@YAXXZ=?NotsaPipelineNoMatFX@@YAXXZ")
+
 void RwShimPipelineEnsure() {
     HookNativeDataPlugin();
     if (!g_defaultPipe) {
@@ -944,9 +951,11 @@ void RwShimPipelineEnsure() {
     if (rw::engine && rw::engine->driver[rw::PLATFORM_D3D9]) {
         rw::engine->driver[rw::PLATFORM_D3D9]->defaultPipeline = g_defaultPipe;
     }
+    RwShimMatFXPipelineEnsure(); // atomics with the MatFX flag render through the exe's fixed-function MatFX AllInOne
 }
 
 void RwShimPipelineShutdown() {
+    RwShimMatFXPipelineShutdown();
     if (rw::engine && rw::engine->driver[rw::PLATFORM_D3D9] && rw::engine->driver[rw::PLATFORM_D3D9]->defaultPipeline == g_defaultPipe) {
         rw::engine->driver[rw::PLATFORM_D3D9]->defaultPipeline = rw::engine->dummyDefaultPipeline;
     }

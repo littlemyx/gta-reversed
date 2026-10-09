@@ -1674,7 +1674,8 @@ void LineTriangle_StoreResult(
         collPoly->verts[1] = B;
         collPoly->verts[2] = C;
         collPoly->valid    = true;
-        collPoly->ligthing = tri.m_nLight;
+        // Original (0x4147A5): `movzx edx, byte [tri+7]; mov dword [poly+0x28], edx` - the whole dword is written, the 3 bytes after the 1 byte lighting are zeroed
+        *reinterpret_cast<uint32*>(&collPoly->ligthing) = tri.m_nLight.value;
     }
 
     maxTouchDistance = t;

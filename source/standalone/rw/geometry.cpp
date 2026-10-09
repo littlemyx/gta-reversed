@@ -14,8 +14,8 @@
 //  * RpGeometryUnlock [0x74C800]: the mesh header is rebuilt here, NOT with rw::Geometry::buildMeshes: librw's tristripper verifies with an
 //    O(triangles^2) search, exit(1)s on a mismatch and underflows on empty materials. The shim ports the exe's mesh ORDER (qsort comparator
 //    0x759640 over triangles tagged with first-seen texture/raster/pipeline indices, one mesh per run of equal material: opaque before
-//    transparent, then raster / pipeline / texture / material index); with rpGEOMETRYTRISTRIP a greedy strip builder (own, not the exe's
-//    tunnelling stripper) joins strips with degenerate triangles (even start parity).
+//    transparent, then raster / pipeline / texture / material index); with rpGEOMETRYTRISTRIP every mesh is stripped by the exe's tristrip
+//    generator 0x7591D0 ported 1:1 (geometry_strip.cpp, bit-exact index streams, checked against the exe under Unicorn).
 //    Invalid input (a triangle with a material index >= numMaterials, e.g. 0xFFFF) makes Unlock fail with NULL instead of asserting.
 //  * RpMorphTargetCalcBoundingSphere [0x74C200]: centre of the vertex bounding box, radius = farthest vertex distance * 1.001
 //    (librw: half-diagonal of the box, no margin).
@@ -23,7 +23,9 @@
 //    exactly the locked streams, or everything when the mesh header's serial number changed) and drops the mesh header on LOCKPOLYGONS.
 #ifdef NOTSA_RW_LIBRW
 #include "fakerw.h"
+#include "geometry_strip.h"
 
+#include <array>
 #include <cmath>
 #include <cstring>
 #include <unordered_map>
@@ -36,80 +38,6 @@ namespace {
 std::unordered_map<const rw::Geometry*, RwUInt32>& UsageFlags() {
     static std::unordered_map<const rw::Geometry*, RwUInt32> s;
     return s;
-}
-
-// Greedy triangle-strip builder for the triangles `ids` (indices into g->triangles) of one material. A triangle k of a strip s is
-// (s[k], s[k+1], s[k+2]) for even k and (s[k+1], s[k], s[k+2]) for odd k, so the strip continues over the directed edge (s[k+2] -> s[k+1])
-// when k+1 is odd and (s[k+1] -> s[k+2]) when k+1 is even. Strips are joined with duplicated vertices; the next strip always starts at an even index.
-void BuildStrips(const rw::Triangle* tris, const std::vector<int>& ids, std::vector<uint16_t>& out) {
-    const size_t n = ids.size();
-    auto key = [](uint16_t p, uint16_t q) { return (uint32_t(p) << 16) | q; };
-    std::unordered_multimap<uint32_t, uint32_t> edges; // directed edge -> index into `ids`
-    edges.reserve(n * 3);
-    for (uint32_t i = 0; i < n; i++) {
-        const rw::Triangle& t = tris[ids[i]];
-        edges.emplace(key(t.v[0], t.v[1]), i);
-        edges.emplace(key(t.v[1], t.v[2]), i);
-        edges.emplace(key(t.v[2], t.v[0]), i);
-    }
-    std::vector<char> used(n, 0);
-    auto thirdOf = [&](uint32_t i, uint16_t p, uint16_t q) -> uint16_t {
-        const rw::Triangle& t = tris[ids[i]];
-        for (int e = 0; e < 3; e++) {
-            if (t.v[e] == p && t.v[(e + 1) % 3] == q) {
-                return t.v[(e + 2) % 3];
-            }
-        }
-        return t.v[2];
-    };
-    auto next = [&](uint16_t p, uint16_t q, uint16_t& w) -> int {
-        auto range = edges.equal_range(key(p, q));
-        for (auto it = range.first; it != range.second; ++it) {
-            if (!used[it->second]) {
-                w = thirdOf(it->second, p, q);
-                return int(it->second);
-            }
-        }
-        return -1;
-    };
-
-    std::vector<uint16_t> s;
-    for (uint32_t start = 0; start < n; start++) {
-        if (used[start]) {
-            continue;
-        }
-        used[start] = 1;
-        const rw::Triangle& t = tris[ids[start]];
-        uint16_t a = t.v[0], b = t.v[1], c = t.v[2];
-        // prefer a rotation that can be continued over its (c -> b) edge
-        for (int r = 0; r < 3; r++) {
-            uint16_t w;
-            if (next(c, b, w) >= 0) {
-                break;
-            }
-            const uint16_t na = b, nb = c, nc = a;
-            a = na; b = nb; c = nc;
-        }
-        s.assign({a, b, c});
-        for (size_t k = 0;; k++) { // k = index of the last triangle in the strip
-            const uint16_t y = s[k + 1], z = s[k + 2];
-            uint16_t w;
-            const int i = ((k + 1) % 2 == 0) ? next(y, z, w) : next(z, y, w);
-            if (i < 0) {
-                break;
-            }
-            used[i] = 1;
-            s.push_back(w);
-        }
-        if (!out.empty()) {
-            out.push_back(out.back());
-            out.push_back(s[0]);
-            if (out.size() % 2) {
-                out.push_back(s[0]);
-            }
-        }
-        out.insert(out.end(), s.begin(), s.end());
-    }
 }
 
 // One entry per triangle of the exe's mesh builder (_rpBuildMeshAddTriangle 0x758C00, 20 bytes): the material and four sort keys.
@@ -240,8 +168,8 @@ void MsvcQsort(void* base, size_t num, size_t w, QsortCmp cmp) {
 // Rebuilds g->meshHeader from g->triangles / g->matList like the exe's RpGeometryUnlock (0x74C800): triangles are tagged with first-seen
 // texture / raster / pipeline indices, sorted with BuildCompare and cut into one mesh per run of equal material (so the MESH ORDER is the
 // exe's: opaque before transparent, then by raster / pipeline / texture / material index, NOT material-list order). Tristrip geometry
-// gets the same mesh order; the strips themselves come from our own greedy builder (the exe's RpBuildMeshGenerateDefaultTriStrip
-// 0x7591D0 is a ~6 KB tunnelling/cost stripper; its output only changes the index sequence inside a mesh, not what is drawn).
+// gets the same mesh order and every mesh is stripped by the exe's generator (RpBuildMeshGenerateDefaultTriStrip 0x7591B0 -> 0x7591D0, ported
+// in geometry_strip.cpp).
 // Returns false (header left empty) on invalid triangle material indices.
 bool BuildMeshHeader(rw::Geometry* g) {
     const int32_t nMat = g->matList.numMaterials;
@@ -294,7 +222,12 @@ bool BuildMeshHeader(rw::Geometry* g) {
         }
         Run r{order[k]->mat, {}};
         if (strip) {
-            BuildStrips(g->triangles, ids, r.idx);
+            // the exe's tristrip generator 0x7591D0 (default strip method of _rpMeshOptimise: RpBuildMeshGenerateDefaultTriStrip 0x7591B0)
+            std::vector<std::array<uint16_t, 3>> tris(ids.size());
+            for (size_t i = 0; i < ids.size(); i++) {
+                std::memcpy(tris[i].data(), g->triangles[ids[i]].v, sizeof(tris[i]));
+            }
+            RwShim::TriStripMesh(reinterpret_cast<const uint16_t(*)[3]>(tris.data()), tris.size(), false, true, r.idx);
         } else {
             r.idx.reserve(ids.size() * 3);
             for (int t : ids) {

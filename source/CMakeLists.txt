@@ -307,12 +307,28 @@ if (${RE_PROJECT}_RW_LIBRW)
         standalone/rw/world.cpp
         standalone/rw/material.cpp
         standalone/rw/geometry.cpp
+        standalone/rw/geometry_strip.cpp
     )
     target_compile_features(rw_world_geometry_test PRIVATE cxx_std_23)
     target_compile_definitions(rw_world_geometry_test PRIVATE NOTSA_RW_LIBRW RW_D3D9)
     target_include_directories(rw_world_geometry_test BEFORE PRIVATE fakerw)
     target_link_libraries(rw_world_geometry_test PRIVATE librw d3d9 user32)
     set_target_properties(rw_world_geometry_test PROPERTIES COMPILE_WARNING_AS_ERROR OFF)
+    # P2B-04b follow-up: bit-exact check of the exe's tristrip generator (0x7591D0) port against index streams dumped from the exe under Unicorn
+    # (tools/standalone/strip_unicorn.py); Wine-runnable, no game data
+    add_executable(rw_strip_test EXCLUDE_FROM_ALL
+        "${PROJECT_SOURCE_DIR}/tests/standalone/rw_strip_test.cpp"
+        standalone/rw/light.cpp
+        standalone/rw/world.cpp
+        standalone/rw/material.cpp
+        standalone/rw/geometry.cpp
+        standalone/rw/geometry_strip.cpp
+    )
+    target_compile_features(rw_strip_test PRIVATE cxx_std_23)
+    target_compile_definitions(rw_strip_test PRIVATE NOTSA_RW_LIBRW RW_D3D9)
+    target_include_directories(rw_strip_test BEFORE PRIVATE fakerw)
+    target_link_libraries(rw_strip_test PRIVATE librw d3d9 user32)
+    set_target_properties(rw_strip_test PROPERTIES COMPILE_WARNING_AS_ERROR OFF)
     # P2B-03b unit test of texture.cpp + texdict.cpp (Wine-runnable; optional argv[1] = SA `models` directory for the real TXD checks)
     add_executable(rw_texture_test EXCLUDE_FROM_ALL
         "${PROJECT_SOURCE_DIR}/tests/standalone/rw_texture_test.cpp"
@@ -342,6 +358,7 @@ if (${RE_PROJECT}_RW_LIBRW)
         standalone/rw/world.cpp
         standalone/rw/material.cpp
         standalone/rw/geometry.cpp
+        standalone/rw/geometry_strip.cpp
     )
     target_compile_features(rw_atomic_clump_test PRIVATE cxx_std_23)
     target_compile_definitions(rw_atomic_clump_test PRIVATE NOTSA_RW_LIBRW RW_D3D9)
@@ -383,6 +400,7 @@ if (${RE_PROJECT}_RW_LIBRW)
         standalone/rw/world.cpp
         standalone/rw/material.cpp
         standalone/rw/geometry.cpp
+        standalone/rw/geometry_strip.cpp
     )
     target_compile_features(rw_skin_hanim_test PRIVATE cxx_std_23)
     target_compile_definitions(rw_skin_hanim_test PRIVATE NOTSA_RW_LIBRW NOTSA_RW_UNIT_TEST RW_D3D9)
@@ -407,6 +425,7 @@ if (${RE_PROJECT}_RW_LIBRW)
         standalone/rw/world.cpp
         standalone/rw/material.cpp
         standalone/rw/geometry.cpp
+        standalone/rw/geometry_strip.cpp
     )
     target_compile_features(rw_rtanim_rtquat_test PRIVATE cxx_std_23)
     target_compile_definitions(rw_rtanim_rtquat_test PRIVATE NOTSA_RW_LIBRW NOTSA_RW_UNIT_TEST RW_D3D9)
@@ -430,6 +449,7 @@ if (${RE_PROJECT}_RW_LIBRW)
         standalone/rw/world.cpp
         standalone/rw/material.cpp
         standalone/rw/geometry.cpp
+        standalone/rw/geometry_strip.cpp
         standalone/rw/raster.cpp
         standalone/rw/image.cpp
         standalone/rw/texture.cpp
@@ -472,6 +492,7 @@ if (${RE_PROJECT}_RW_LIBRW)
         standalone/rw/world.cpp
         standalone/rw/material.cpp
         standalone/rw/geometry.cpp
+        standalone/rw/geometry_strip.cpp
         standalone/rw/texture.cpp
         standalone/rw/texdict.cpp
         standalone/rw/raster.cpp
@@ -535,7 +556,7 @@ if (${RE_PROJECT}_RW_LIBRW)
     set_source_files_properties(standalone/rw/raster.cpp standalone/rw/image.cpp PROPERTIES SKIP_UNITY_BUILD_INCLUSION ON)
 
     # P2B-04ab: anonymous-namespace helpers (geometry.cpp mesh builder)
-    set_source_files_properties(standalone/rw/geometry.cpp standalone/rw/light.cpp standalone/rw/world.cpp standalone/rw/material.cpp PROPERTIES SKIP_UNITY_BUILD_INCLUSION ON)
+    set_source_files_properties(standalone/rw/geometry.cpp standalone/rw/geometry_strip.cpp standalone/rw/light.cpp standalone/rw/world.cpp standalone/rw/material.cpp PROPERTIES SKIP_UNITY_BUILD_INCLUSION ON)
     # P2B-03b: texture.cpp includes the private d3d9 header; texdict.cpp pairs with it
     set_source_files_properties(standalone/rw/texture.cpp standalone/rw/texdict.cpp standalone/rw/rwtexdict.cpp PROPERTIES SKIP_UNITY_BUILD_INCLUSION ON)
     # P2B-05a: anonymous-namespace helpers in skin.cpp / hanim.cpp

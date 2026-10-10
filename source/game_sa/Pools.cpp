@@ -1,4 +1,7 @@
 #include "StdInc.h"
+#ifdef NOTSA_STANDALONE_RUN
+#include "InterestingEvents.h"
+#endif
 
 #include <Pools/Pools.h>
 #include "CarCtrl.h"
@@ -91,6 +94,16 @@ void CPools::Initialise() {
 // 0x5519F0
 void CPools::ShutDown() {
     NOTSA_LOG_DEBUG("Shutdown pool started");
+#ifdef NOTSA_STANDALONE_RUN
+    // Pool storage is freed without running the entity destructors (no ResolveReferences), and unlike the exe's heap the freed memory is not left intact:
+    // forget the entities of CInterestingEvents (the idle camera read a 0xDDDD-filled ped from the previous session)
+    for (auto& event : g_InterestingEvents.m_Events) {
+        event.entity = nullptr;
+        event.type   = 0;
+        event.time   = 0;
+    }
+    g_InterestingEvents.m_nInterestingEvent = -1;
+#endif
     delete std::exchange(ms_pPtrNodeSingleLinkPool, nullptr);
     delete std::exchange(ms_pPtrNodeDoubleLinkPool, nullptr);
     delete std::exchange(ms_pEntryInfoNodePool, nullptr);

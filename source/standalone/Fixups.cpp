@@ -512,7 +512,65 @@ static void __cdecl OnPurecall() { RaiseNamed("pure virtual function call", 0xE0
 static void __cdecl OnInvalidParam(const wchar_t*, const wchar_t*, const wchar_t*, unsigned, uintptr_t) { RaiseNamed("invalid CRT parameter", 0xE0AB0004u); }
 static void __cdecl OnTerminate() { RaiseNamed("std::terminate", 0xE0AB0005u); }
 
+// S5 diagnostics: NOTSA_STANDALONE_SAMPLER=1 samples the main thread's EIP / caller chain (EBP walk, 12 frames) every ~10 ms and logs the hottest
+// return addresses every 15 s (resolve against the .map: "profile" lines, address = absolute VA)
+#include <map>
+#include <thread>
+static void SamplerThread(HANDLE mainThread) {
+    std::map<uint32_t, uint32_t> hist;       // innermost 'interesting' frame (first address in the exe image)
+    std::map<uint32_t, uint32_t> inclusive;  // every frame of the chain (inclusive time)
+    int samples = 0;
+    Sleep(35000); // not during device creation: suspending the main thread inside wined3d init deadlocks it
+    ULONGLONG last = GetTickCount64();
+    for (;;) {
+        Sleep(10);
+        if (SuspendThread(mainThread) == (DWORD)-1) {
+            continue;
+        }
+        CONTEXT c{};
+        c.ContextFlags = CONTEXT_CONTROL | CONTEXT_INTEGER;
+        uint32_t frames[14];
+        int n = 0;
+        // no CRT / heap calls while the main thread is suspended (it may hold the heap lock)
+        if (GetThreadContext(mainThread, &c)) {
+            frames[n++] = c.Eip;
+            uint32_t ebp = c.Ebp;
+            for (int i = 0; i < 13 && ebp && !(ebp & 3) && ebp > 0x10000; i++) {
+                uint32_t pair[2];
+                SIZE_T rd = 0;
+                if (!ReadProcessMemory(GetCurrentProcess(), (void*)(uintptr_t)ebp, pair, 8, &rd) || rd != 8) break;
+                frames[n++] = pair[1];
+                if (pair[0] <= ebp) break;
+                ebp = pair[0];
+            }
+        }
+        ResumeThread(mainThread);
+        if (n) {
+            hist[frames[0]]++;
+            for (int i = 0; i < n; i++) inclusive[frames[i]]++;
+            samples++;
+        }
+        if (GetTickCount64() - last > 15000 && samples) {
+            last = GetTickCount64();
+            std::multimap<uint32_t, uint32_t, std::greater<>> top;
+            for (auto& [a, k] : inclusive) { if (a >= 0x401000 && a < 0x3400000) top.insert({ k, a }); }
+            Fixups::Log("profile: %d samples; top inclusive return addresses:", samples);
+            int shown = 0;
+            for (auto& [k, a] : top) {
+                if (shown++ >= 25) break;
+                Fixups::Log("  profile %5u/%u %08X", (unsigned)k, (unsigned)samples, a);
+            }
+            hist.clear(); inclusive.clear(); samples = 0;
+        }
+    }
+}
+
 void InstallRedirectHandler() {
+    if (std::getenv("NOTSA_STANDALONE_SAMPLER")) {
+        HANDLE h = nullptr;
+        DuplicateHandle(GetCurrentProcess(), GetCurrentThread(), GetCurrentProcess(), &h, 0, FALSE, DUPLICATE_SAME_ACCESS);
+        std::thread(SamplerThread, h).detach();
+    }
     std::atexit(OnAtExit);
     _set_purecall_handler(OnPurecall);
     _set_invalid_parameter_handler(OnInvalidParam);

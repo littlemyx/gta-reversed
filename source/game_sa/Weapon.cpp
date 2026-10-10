@@ -1326,12 +1326,15 @@ auto CWeapon::GetProjectileType() {
 
 // 0x73E560
 float CWeapon::EvaluateTargetForHeatSeekingMissile(CEntity* potentialTarget, const CVector& origin, const CVector& aimingDir, float tolerance, bool arePlanesPriority, CEntity* preferredExistingTarget) {
-    const auto potentialTargetDist = (origin - potentialTarget->GetPosition()).Magnitude();
+    // 0x73E560: the distance is summed z, y, x in extended precision and spilled to a float; the result is returned unrounded
+    const auto targetPos = potentialTarget->GetPosition();
+    const double dx = (double)targetPos.x - origin.x, dy = (double)targetPos.y - origin.y, dz = (double)targetPos.z - origin.z;
+    const float  potentialTargetDist = (float)std::sqrt((dz * dz + dy * dy) + dx * dx);
 
-    const auto potentialTargetDistToLine = CCollision::DistToLine(origin, origin + aimingDir * 250.f, potentialTarget->GetPosition());
-    auto ret = std::sqrt(potentialTargetDist) * ExeRecip(10.f) + potentialTargetDistToLine / potentialTargetDist;
+    const auto potentialTargetDistToLine = CCollision::DistToLine(origin, origin + aimingDir * 250.f, targetPos);
+    auto ret = std::sqrt((double)potentialTargetDist) * ExeRecip(10.f) + (double)potentialTargetDistToLine / potentialTargetDist;
 
-    if (potentialTargetDistToLine * tolerance >= potentialTargetDist) {
+    if (!((double)potentialTargetDistToLine * tolerance < potentialTargetDist)) { // FCOMP + JP: also taken for a NaN
         return -1.f;
     }
 
@@ -1345,7 +1348,7 @@ float CWeapon::EvaluateTargetForHeatSeekingMissile(CEntity* potentialTarget, con
         ret *= 0.25f;
     }
 
-    return ret;
+    return (float)ret;
 }
 
 // 0x73E690

@@ -56,13 +56,13 @@ public:
     CVector m_vecTurnPoint;              // Calculated buoyancy move force
     uint32  field_CC;                    // 204
 
-    static inline auto& fPointVolMultiplier = StaticRef<float>(0x8D32C8);
-    static inline auto& calcStruct = StaticRef<CBuoyancyCalcStruct>(0xC1C858);
-    static inline auto& afBoatVolumeDistribution = StaticRef<float[3][3]>(0x8D32CC); // 3x3 array of buoyancy modifiers for other boats
-    static inline auto& afBoatVolumeDistributionCat = StaticRef<float[3][3]>(0x8D32F0); // Catamaran volume distribution, unused in game, as there is no matching vehicle (Address fixed via DWARF)
-    static inline auto& afBoatVolumeDistributionSail = StaticRef<float[3][3]>(0x8D3314); // 3x3 array of buoyancy modifiers for sailboats
-    static inline auto& afBoatVolumeDistributionDinghy = StaticRef<float[3][3]>(0x8D3338); // 3x3 array of buoyancy modifiers for small boats
-    static inline auto& afBoatVolumeDistributionSpeed = StaticRef<float[3][3]>(0x8D335C); // 3x3 array of buoyancy modifiers for speedboats
+    static inline NOTSA_GLOBAL(fPointVolMultiplier, 0x8D32C8, (float), { 1.0f });
+    static inline NOTSA_GLOBAL(calcStruct, 0xC1C858, (CBuoyancyCalcStruct), {});
+    static inline NOTSA_GLOBAL(afBoatVolumeDistribution, 0x8D32CC, (float[3][3]), { { 0.75f, 0.9f, 0.75f }, { 0.95f, 1.0f, 0.95f }, { 0.4f, 0.7f, 0.4f } }); // 3x3 array of buoyancy modifiers for other boats
+    static inline NOTSA_GLOBAL(afBoatVolumeDistributionCat, 0x8D32F0, (float[3][3]), { { 0.9f, 0.3f, 0.9f }, { 1.0f, 0.5f, 1.0f }, { 0.95f, 0.4f, 0.95f } }); // Catamaran volume distribution, unused in game, as there is no matching vehicle (Address fixed via DWARF)
+    static inline NOTSA_GLOBAL(afBoatVolumeDistributionSail, 0x8D3314, (float[3][3]), { { 0.55f, 0.95f, 0.55f }, { 0.75f, 1.1f, 0.75f }, { 0.3f, 0.8f, 0.3f } }); // 3x3 array of buoyancy modifiers for sailboats
+    static inline NOTSA_GLOBAL(afBoatVolumeDistributionDinghy, 0x8D3338, (float[3][3]), { { 0.65f, 0.85f, 0.65f }, { 0.85f, 1.1f, 0.85f }, { 0.65f, 0.95f, 0.65f } }); // 3x3 array of buoyancy modifiers for small boats
+    static inline NOTSA_GLOBAL(afBoatVolumeDistributionSpeed, 0x8D335C, (float[3][3]), { { 0.7f, 0.9f, 0.7f }, { 0.95f, 1.0f, 0.95f }, { 0.6f, 0.7f, 0.6f } }); // 3x3 array of buoyancy modifiers for speedboats
 
 public:
     static void InjectHooks();

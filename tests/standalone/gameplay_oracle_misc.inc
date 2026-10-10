@@ -9,6 +9,7 @@
 #include "FireManager.h"
 #include "Fire.h"
 #include "VehicleRecording.h"
+#include "Pad.h"
 
 namespace mfx {
 // key curves: up to 6 keys, up to 4 attributes; the layout is that of FxInterpInfo_c (+ m_Keys at +0xC) for all four key types
@@ -39,8 +40,56 @@ inline void Build(Rng& r, Curve& c, int keyType /*0 float, 1 int16 (32 / 255), 2
 }
 }
 
+// ---- CPad: the zero-argument input queries on a randomised pad (both pads + the globals around them); return value and all pad memory are compared
+#define PADFN(name, va) { #name " " #va, va, [](CPad* p, bool exe) -> int64_t { using R = decltype(p->name()); if (!exe) return (int64_t)p->name(); return (int64_t)oracle::Fn<R __fastcall(CPad*, int)>(va)(p, 0); } }
+#define PADFNB(name, va, arg) { #name " " #va " " #arg, va, [](CPad* p, bool exe) -> int64_t { using R = decltype(p->name(arg)); if (!exe) return (int64_t)p->name(arg); return (int64_t)oracle::Fn<R __fastcall(CPad*, int, bool)>(va)(p, 0, arg); } }
+#define PADFNP(name, va) { #name " " #va " (null ped)", va, [](CPad* p, bool exe) -> int64_t { using R = decltype(p->name(nullptr)); if (!exe) return (int64_t)p->name(nullptr); return (int64_t)oracle::Fn<R __fastcall(CPad*, int, CPed*)>(va)(p, 0, nullptr); } }
+struct PadFn { const char* n; unsigned va; int64_t (*f)(CPad*, bool); };
+static void TestPad() {
+    if (std::getenv("PRINT_OFFS")) std::printf("CPad offsets: Mode %zX Disable %zX EnterCar %zX Duck %zX FireWeapon %zX FireL1 %zX CycleWeapon %zX Jump %zX VitalStats %zX NewState %zX OldState %zX\n", offsetof(CPad, Mode), offsetof(CPad, DisablePlayerControls), offsetof(CPad, bDisablePlayerEnterCar), offsetof(CPad, bDisablePlayerDuck), offsetof(CPad, bDisablePlayerFireWeapon), offsetof(CPad, bDisablePlayerFireWeaponWithL1), offsetof(CPad, bDisablePlayerCycleWeapon), offsetof(CPad, bDisablePlayerJump), offsetof(CPad, bDisablePlayerDisplayVitalStats), offsetof(CPad, NewState), offsetof(CPad, OldState));
+    static const PadFn fns[] = {
+        PADFN(GetSteeringLeftRight, 0x53FB80), PADFN(GetSteeringUpDown, 0x53FBD0), PADFN(GetCarGunLeftRight, 0x53FC50), PADFN(GetCarGunUpDown, 0x53FC10),
+        PADFN(GetCarGunFired, 0x53FF90), PADFN(CarGunJustDown, 0x53FFE0), PADFN(GetPedWalkLeftRight, 0x53FC90), PADFN(GetPedWalkUpDown, 0x53FD30),
+        PADFN(GetLookLeft, 0x53FDD0), PADFN(GetLookRight, 0x53FE10), PADFN(GetLookBehindForCar, 0x53FE70), PADFN(GetLookBehindForPed, 0x53FEC0),
+        PADFN(GetHorn, 0x53FEE0), PADFN(HornJustDown, 0x53FF30), PADFN(GetHandBrake, 0x540040), PADFN(GetBrake, 0x540080), PADFN(GetExitVehicle, 0x5400D0),
+        PADFN(ExitVehicleJustDown, 0x540120), PADFNB(GetMeleeAttack, 0x540340, true), PADFNB(GetMeleeAttack, 0x540340, false), PADFNB(MeleeAttackJustDown, 0x540390, true), PADFNB(MeleeAttackJustDown, 0x540390, false), PADFN(GetAccelerate, 0x5403F0),
+        PADFN(GetAccelerateJustDown, 0x540440), PADFN(CycleWeaponLeftJustDown, 0x540610), PADFN(CycleWeaponRightJustDown, 0x540640), PADFN(GetTarget, 0x540670),
+        PADFN(GetSprint, 0x5407A0), PADFN(SprintJustDown, 0x5407F0), PADFNP(GetDisplayVitalStats, 0x5408B0), PADFN(CollectPickupJustDown, 0x540A70),
+        PADFN(GetForceCameraBehindPlayer, 0x540AE0), PADFN(SniperZoomIn, 0x540B30), PADFN(SniperZoomOut, 0x540B80), PADFNP(WeaponJustDown, 0x540250),
+        PADFN(GetEnterTargeting, 0x5406B0), PADFNP(GetWeapon, 0x540180), PADFN(NextStationJustUp, 0x5405B0), PADFN(LastStationJustUp, 0x5405E0),
+        PADFN(GetHydraulicJump, 0x53FF70), PADFN(GetDuck, 0x540700), PADFN(DuckJustDown, 0x540720), PADFN(GetJump, 0x540750), PADFN(JumpJustDown, 0x540770),
+        PADFN(ShiftTargetLeftJustDown, 0x540850), PADFN(ShiftTargetRightJustDown, 0x540880), PADFN(GetGroupControlForward, 0x541190), PADFN(GetGroupControlBack, 0x5411B0),
+        PADFN(ConversationYesJustDown, 0x5411D0), PADFN(ConversationNoJustDown, 0x541200), PADFN(GroupControlForwardJustDown, 0x541230), PADFN(GroupControlBackJustDown, 0x541260),
+        PADFN(LookAroundLeftRight, 0x540E80), PADFN(LookAroundUpDown, 0x540F80), PADFN(GetAnaloguePadUp, 0x540950), PADFN(GetAnaloguePadLeft, 0x5409B0),
+        PADFN(GetAnaloguePadRight, 0x5409E0), PADFN(GetAnaloguePadDown, 0x540980),
+    };
+    for (const auto& fn : fns) {
+        Run(std::string("CPad::") + fn.n, [=](Rng& r, std::string& d) {
+            constexpr uintptr_t BASE = 0xB73400, N = 0x300;   // both pads + the function-local statics up to 0xB73700 (oldfStickX / Y ...)
+            Snap in(BASE, N), pa(BASE, N), pe(BASE, N);
+            auto* b = reinterpret_cast<uint8_t*>(BASE);
+            for (size_t i = 0; i < N; ++i) b[i] = (uint8_t)(r.below(3) ? r.u32() : (r.below(2) ? 0 : 0xFF));
+            CPad& pad = CPad::Pads[r.below(2)];
+            pad.Mode = (int16)(r.below(8) ? r.below(4) : r.below(6));
+            pad.DrunkDrivingBufferUsed = r.below(10);   // index into SteeringLeftRightBuffer[10]
+            pad.DisablePlayerControls = r.below(5) == 0;
+            *reinterpret_cast<uint8_t*>(0x8CD782) = (uint8_t)r.below(2);
+            CCamera::m_bUseMouse3rdPerson = r.below(2);
+            in.Save();
+            const int64_t ra = fn.f(&pad, false); pa.Save(); in.Restore();
+            const int64_t re = fn.f(&pad, true);  pe.Save(); in.Restore();
+            Hit(ra != 0);
+            if (ra == re && pa.SameAs(pe)) return true;
+            d = "mode " + std::to_string(pad.Mode) + " disabled " + std::to_string(pad.DisablePlayerControls) + " got " + std::to_string(ra) + " exe " + std::to_string(re) + DiffDesc(pa.b.data(), pe.b.data(), pa.b.size(), "pad");
+            return false;
+        });
+    }
+}
+
 static_assert(sizeof(CFire) == 0x28);
+
 static void TestMisc() {
+    TestPad();
     // ---- Fx interpolation
     struct FxVar { const char* n; unsigned va; int type; };
     static const FxVar vs[] = { { "FxInterpInfoFloat_c::GetVal(out) 0x4A8470", 0x4A8470, 0 }, { "FxInterpInfo32_c::GetVal(out) 0x4A89C0", 0x4A89C0, 1 }, { "FxInterpInfo255_c::GetVal(out) 0x4A8B80", 0x4A8B80, 1 }, { "FxInterpInfoU255_c::GetVal(out) 0x4A8800", 0x4A8800, 2 } };

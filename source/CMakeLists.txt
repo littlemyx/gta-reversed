@@ -609,6 +609,15 @@ if (${RE_PROJECT}_RW_LIBRW)
         game_sa/MenuManager.cpp
         game_sa/PostEffects.cpp
         game_sa/Attractors/PedShelterAttractor.cpp
+        # reciprocal-constant fidelity cases (TestRecip)
+        game_sa/Collision/Collision.cpp
+        game_sa/Curves.cpp
+        game_sa/TrainNode.cpp
+        game_sa/GridRef.cpp
+        game_sa/Audio/AEAudioUtility.cpp
+        game_sa/Font.cpp
+        game_sa/TimeCycle.cpp
+        game_sa/Entity/Vehicle/Train.cpp
     )
     target_compile_features(review_oracle_test PRIVATE cxx_std_23)
     target_compile_definitions(review_oracle_test PRIVATE NOTSA_RW_LIBRW RW_D3D9)

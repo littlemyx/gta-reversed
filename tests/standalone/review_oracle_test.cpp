@@ -30,6 +30,13 @@
 #include "MenuManager.h"
 #include "PostEffects.h"
 #include "Attractors/PedShelterAttractor.h"
+#include "Curves.h"
+#include "TrainNode.h"
+#include "GridRef.h"
+#include "Audio/AEAudioUtility.h"
+#include "Font.h"
+#include "TimeCycle.h"
+#include "Entity/Vehicle/Train.h"
 #include "standalone/Fixups.h"
 #include "MemoryMgr.h"
 
@@ -654,6 +661,112 @@ static void TestFidelity() {
 }
 
 // ---------------------------------------------------------------------------------------------------------------------------------
+// reciprocal-constant fidelity: the exe multiplies by a FLOAT reciprocal constant (1/N rounded to float, in .rdata) where the source has `x / N` or `x * (1.f / N)`
+// (ExeRecip in common.h). The functions with the most such sites that can be driven in isolation.
+static void TestRecip() {
+    const auto Dir = [](Rng& r, float& x, float& y, float ang) { x = std::cos(ang); y = std::sin(ang); (void)r; };
+    const auto GenDirPair = [&](Rng& r, float& sx, float& sy, float& ex, float& ey) {
+        const float a = r.f01() * 6.2831853f;
+        const float d = r.below(3) ? (r.f01() - 0.5f) * (r.below(2) ? 1.2f : 6.2831853f) : (r.f01() - 0.5f) * 0.05f;   // mostly near-parallel (dot > 0.7) and in the interpolation range
+        Dir(r, sx, sy, a); Dir(r, ex, ey, a + d);
+        if (r.sp && r.below(100) < r.sp) { sx = GenF(r, 2.f); sy = GenF(r, 2.f); }
+    };
+
+    Run("CCurves::CalcSpeedVariationInBend 0x43C660", [&](Rng& r, std::string& d) {
+        const CVector s = GenV(r, r.below(2) ? 100.f : 3000.f), e = GenV(r, r.below(2) ? 100.f : 3000.f);
+        float sx, sy, ex, ey; GenDirPair(r, sx, sy, ex, ey);
+        const float a = CCurves::CalcSpeedVariationInBend(s, e, sx, sy, ex, ey);
+        const float b = oracle::Fn<float __cdecl(const CVector*, const CVector*, float, float, float, float)>(0x43C660)(&s, &e, sx, sy, ex, ey);
+        if (SameF(a, b)) return true;
+        d = "s " + V(s) + " e " + V(e) + " dirs " + F(sx) + "," + F(sy) + " " + F(ex) + "," + F(ey) + " got " + F(a) + " exe " + F(b); return false;
+    });
+    Run("CTrainNode::GetDistanceFromStart 0x6F54B0", [&](Rng& r, std::string& d) {
+        CTrainNode n{}; n.m_nDistanceFromStart = (uint16)r.u32();
+        const float a = n.GetDistanceFromStart(), b = oracle::Fn<float __fastcall(CTrainNode*, int)>(0x6F54B0)(&n, 0);
+        if (SameF(a, b)) return true;
+        d = "dist " + std::to_string(n.m_nDistanceFromStart) + " got " + F(a) + " exe " + F(b); return false;
+    });
+    Run("CGridRef::GetGridRefPositions(vec) 0x71D5A0", [&](Rng& r, std::string& d) {
+        const CVector p{ GenF(r, r.below(4) ? 3500.f : 20000.f), GenF(r, r.below(4) ? 3500.f : 20000.f), 0.f };
+        uint8 ax = 0xCC, ay = 0xCC, bx = 0xDD, by = 0xDD;
+        CGridRef::GetGridRefPositions(p, &ax, &ay);
+        oracle::Fn<void __cdecl(CVector, uint8*, uint8*)>(0x71D5A0)(p, &bx, &by);
+        if (ax == bx && ay == by) return true;
+        d = "p " + V(p) + " got " + std::to_string(ax) + "," + std::to_string(ay) + " exe " + std::to_string(bx) + "," + std::to_string(by); return false;
+    });
+    Run("CAEAudioUtility::ConvertFromBytesToMS 0x4D9EF0", [&](Rng& r, std::string& d) {
+        const uint32 bytes = r.u32() >> r.below(20), rate = 8000 + r.below(48000); const uint16 ch = 1 + (uint16)r.below(2);
+        const uint32 a = CAEAudioUtility::ConvertFromBytesToMS(bytes, rate, ch), b = oracle::Fn<uint32 __cdecl(uint32, uint32, uint16)>(0x4D9EF0)(bytes, rate, ch);
+        if (a == b) return true;
+        d = std::to_string(bytes) + " " + std::to_string(rate) + " " + std::to_string(ch) + " got " + std::to_string(a) + " exe " + std::to_string(b); return false;
+    });
+    Run("CAEAudioUtility::ConvertFromMSToBytes 0x4D9F40", [&](Rng& r, std::string& d) {
+        const uint32 ms = r.u32() >> r.below(20), freq = 8000 + r.below(48000); const uint16 mult = 1 + (uint16)r.below(2);
+        const uint32 a = CAEAudioUtility::ConvertFromMSToBytes(ms, freq, mult), b = oracle::Fn<uint32 __cdecl(uint32, uint32, uint16)>(0x4D9F40)(ms, freq, mult);
+        if (a == b) return true;
+        d = std::to_string(ms) + " " + std::to_string(freq) + " " + std::to_string(mult) + " got " + std::to_string(a) + " exe " + std::to_string(b); return false;
+    });
+    Run("CRadar::CalculateBlipAlpha 0x583420", [&](Rng& r, std::string& d) {
+        FrontEndMenuManager.m_bDrawingMap = false;
+        const float dist = std::fabs(GenF(r, r.below(3) ? 60.f : 3000.f));
+        const uint8 a = CRadar::CalculateBlipAlpha(dist), b = oracle::Fn<uint8 __cdecl(float)>(0x583420)(dist);
+        if (a == b) return true;
+        d = "dist " + F(dist) + " got " + std::to_string(a) + " exe " + std::to_string(b); return false;
+    });
+    Run("CTimeCycle::AddOne 0x55FF40", [&](Rng& r, std::string& d) {
+        CBox box{ GenV(r, 3000.f, S_NOHUGE), GenV(r, 3000.f, S_NOHUGE) };
+        const int16 farClip = (int16)r.u32(); const int32 extra = (int32)r.u32();
+        const float strength = GenF(r, r.below(2) ? 100.f : 1e5f, S_NOHUGE | S_INF), falloff = GenF(r, 100.f), lod = GenF(r, 6.f, S_NOHUGE | S_INF);
+        const auto saveN = CTimeCycle::m_NumBoxes; auto saveBoxes = Snap(0xB7C550, sizeof CTimeCycle::m_aBoxes);
+        CTimeCycle::m_NumBoxes = 3; CTimeCycle::AddOne(box, farClip, extra, strength, falloff, lod);
+        auto ra = Snap(0xB7C550, sizeof CTimeCycle::m_aBoxes); const auto na = CTimeCycle::m_NumBoxes;
+        Put(0xB7C550, saveBoxes); CTimeCycle::m_NumBoxes = 3;
+        oracle::Fn<void __cdecl(CBox*, int16, int32, float, float, float)>(0x55FF40)(&box, farClip, extra, strength, falloff, lod);
+        auto rb = Snap(0xB7C550, sizeof CTimeCycle::m_aBoxes); const auto nb = CTimeCycle::m_NumBoxes;
+        Put(0xB7C550, saveBoxes); CTimeCycle::m_NumBoxes = saveN;
+        if (na == nb && SameMem(ra, rb, "m_aBoxes", d)) return true;
+        d += " strength " + F(strength) + " lod " + F(lod); return false;
+    });
+    Run("CTrain::SetTrainSpeed 0x6F5E20", [&](Rng& r, std::string& d) {
+        alignas(16) static uint8 bufA[sizeof(CTrain)], bufB[sizeof(CTrain)];
+        std::memset(bufA, 0, sizeof bufA);
+        auto* ta = reinterpret_cast<CTrain*>(bufA);
+        ta->trainFlags.bClockwiseDirection = r.below(2);
+        std::memcpy(bufB, bufA, sizeof bufA);
+        auto* tb = reinterpret_cast<CTrain*>(bufB);
+        const float speed = GenF(r, r.below(2) ? 60.f : 1e4f);
+        CTrain::SetTrainSpeed(ta, speed);
+        oracle::Fn<void __cdecl(CTrain*, float)>(0x6F5E20)(tb, speed);
+        if (SameF(ta->m_fTrainSpeed, tb->m_fTrainSpeed)) return true;
+        d = "speed " + F(speed) + " cw " + std::to_string(ta->trainFlags.bClockwiseDirection) + " got " + F(ta->m_fTrainSpeed) + " exe " + F(tb->m_fTrainSpeed); return false;
+    });
+    Run("CCamera::CamShake 0x50A9F0", [&](Rng& r, std::string& d) {
+        auto& cam = TheCamera.GetActiveCam();
+        cam.m_vecSource = GenV(r, 200.f, S_NOHUGE);
+        const CVector from = GenV(r, 200.f, S_NOHUGE);
+        const float strength = r.f01() * 20.f;
+        const float force0 = r.f01() * 3.f; const uint32 start0 = r.u32() >> 4, now = start0 + r.below(8000);
+        CTimer::m_snTimeInMilliseconds = now;
+        TheCamera.m_fCamShakeForce = force0; TheCamera.m_nCamShakeStart = start0;
+        TheCamera.CamShake(strength, from);
+        const float fa = TheCamera.m_fCamShakeForce; const uint32 sa = TheCamera.m_nCamShakeStart;
+        TheCamera.m_fCamShakeForce = force0; TheCamera.m_nCamShakeStart = start0;
+        oracle::Fn<void __fastcall(CCamera*, int, float, CVector)>(0x50A9F0)(&TheCamera, 0, strength, from);
+        if (SameF(fa, TheCamera.m_fCamShakeForce) && sa == TheCamera.m_nCamShakeStart) return true;
+        d = "src " + V(cam.m_vecSource) + " from " + V(from) + " now-start " + std::to_string(now - start0) + " force0 " + F(force0) + " strength " + F(strength) + " got " + F(fa) + " exe " + F(TheCamera.m_fCamShakeForce); return false;
+    });
+    Run("CFont::SetColor 0x719430", [&](Rng& r, std::string& d) {
+        CFont::m_fFontAlpha = r.below(4) ? r.f01() * 255.f : 255.f + r.f01() * 50.f;
+        const CRGBA c{ (uint8)r.u32(), (uint8)r.u32(), (uint8)r.u32(), (uint8)r.u32() };
+        CFont::SetColor(c); const CRGBA ra = CFont::m_Color;
+        CFont::m_Color = {};
+        oracle::Fn<void __cdecl(CRGBA)>(0x719430)(c);
+        if (!std::memcmp(&ra, &CFont::m_Color, sizeof ra)) return true;
+        d = "alpha " + F(CFont::m_fFontAlpha) + " a " + std::to_string(c.a) + " got " + std::to_string(ra.a) + " exe " + std::to_string(CFont::m_Color.a); return false;
+    });
+}
+
+// ---------------------------------------------------------------------------------------------------------------------------------
 int main(int argc, char** argv) {
     std::setvbuf(stdout, nullptr, _IONBF, 0);
     for (int i = 1; i < argc; ++i) {
@@ -679,6 +792,7 @@ int main(int argc, char** argv) {
     TestIdleCam();
     TestPath();
     TestFidelity();
+    TestRecip();
     int bad24 = 0, bad53 = 0, hard24 = 0, hard53 = 0;
     for (auto& r : g_rows) { bad24 += r.bad24; bad53 += r.bad53; hard24 += r.hardReg24 + r.hardSpec24; hard53 += r.hardReg53 + r.hardSpec53; }
     std::printf("\n%zu functions, mismatches (strict / excluding NaN-payload-only): PC24 %d / %d, PC53 %d / %d\n", g_rows.size(), bad24, hard24, bad53, hard53);

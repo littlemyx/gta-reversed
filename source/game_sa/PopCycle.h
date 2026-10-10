@@ -234,7 +234,7 @@ public:
 
     static void  Initialise();
     static bool  FindNewPedType(ePedType& outPedType, eModelID& outPedMI, bool noGangs, bool noCops);
-    static float GetCurrentPercOther_Peds();
+    static int32 GetCurrentPercOther_Peds();
 
     /*
     * @addr 0x610150

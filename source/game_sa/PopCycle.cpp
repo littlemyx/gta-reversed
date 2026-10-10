@@ -7,6 +7,7 @@
 #include "StdInc.h"
 
 #include "PopCycle.h"
+#include "Core/X87Intrinsics.h"
 #include <CustomBuildingDNPipeline.h>
 
 void CPopCycle::InjectHooks() {
@@ -200,12 +201,12 @@ bool CPopCycle::FindNewPedType(ePedType& outPedType, eModelID& outPedMI, bool no
 }
 
 // 0x610310
-float CPopCycle::GetCurrentPercOther_Peds() {
-    const auto percOther = (float)m_nPercOther[CPopCycle::m_nCurrentTimeIndex][CPopCycle::m_nCurrentTimeOfWeek][CPopCycle::m_nCurrentZoneType];
+int32 CPopCycle::GetCurrentPercOther_Peds() {
+    // Exe: the answer is an INT (`_ftol` of `percOther * factor`, eax is returned and st0 popped), not a float
+    const auto percOther = (int32)m_nPercOther[CPopCycle::m_nCurrentTimeIndex][CPopCycle::m_nCurrentTimeOfWeek][CPopCycle::m_nCurrentZoneType];
 
-    if (CDarkel::FrenzyOnGoing()) {
-        return percOther;
-    }
+    // 0x610339: `1.0f - sqrt(Rain) * 0.8f`, spilled to a float
+    float factor = 1.f - x87::sqrt(CWeather::Rain) * 0.8f;
 
     if (CTheScripts::IsPlayerOnAMission()) {
         if (const auto plyr = FindPlayerPed()) {
@@ -213,13 +214,18 @@ float CPopCycle::GetCurrentPercOther_Peds() {
                 switch (plyr->m_pVehicle->m_nModelIndex) {
                 case MODEL_TAXI:
                 case MODEL_CABBIE:
-                    return percOther;
+                    factor = 1.f;
+                    break;
                 }
             }
         }
     }
 
-    return percOther * (1.f - std::sqrt(CWeather::Rain) * 0.8f);
+    if (CDarkel::FrenzyOnGoing()) { // 0x610398: `fld 1.0f` instead of the factor
+        factor = 1.f;
+    }
+
+    return (int32)((double)percOther * (double)factor);
 }
 
 // 0x610150
@@ -229,9 +235,9 @@ bool CPopCycle::IsPedAppropriateForCurrentZone(int32 modelIndex) {
     }
 
     // Check if any group active in this zone contains the given model
-    for (auto grpId = 0; grpId < POPCYCLE_TOTAL_GROUPS; grpId++) {
-        // Check if this group is active now
-        if (!m_nPercTypeGroup[m_nCurrentTimeIndex][m_nCurrentTimeOfWeek][m_pCurrZoneInfo->PopType]) {
+    for (auto grpId = 0; grpId < POPCYCLE_TOTAL_GROUP_PERCS; grpId++) { // 0x6101F6: the 18 civilian groups (the gang / dealer groups after them are not scanned)
+        // Check if this group is active now (0x6101C0: the percentage OF THIS GROUP in the current zone's row must be non-zero)
+        if (!m_nPercTypeGroup[m_nCurrentTimeIndex][m_nCurrentTimeOfWeek][m_pCurrZoneInfo->PopType][grpId]) {
             continue;
         }
 
@@ -388,114 +394,169 @@ void CPopCycle::UpdateDealerStrengths() {
         return;
     }
 
-    if (CTimer::m_snTimeInMilliseconds / 60000 != CTimer::m_snPreviousTimeInMilliseconds / 60000) {
+    // 0x6104BE: only in the frame the game minute changes (the exe returns when the minute of the current and previous time are EQUAL)
+    if (CTimer::m_snTimeInMilliseconds / 60000 == CTimer::m_snPreviousTimeInMilliseconds / 60000) {
         return;
     }
 
-    if (!CTheZones::TotalNumberOfMapZones) {
-        return;
-    }
-
-    for (auto& zone : CTheZones::ZoneInfoArray) {
+    // 0x6104E3: walks the used zone infos (CTheZones::TotalNumberOfZoneInfos), not the map zone count / the whole array
+    for (auto& zone : CTheZones::GetZoneInfos()) {
         const auto Chk = [&](eGangID gangId) { return zone.GangStrength[gangId] > 10u; };
         if (!Chk(GANG_BALLAS) && !Chk(GANG_GROVE) && !Chk(GANG_VAGOS)) {
             continue;
         }
 
         constexpr float chances[]{ 0.05f, 0.2f, 0.3f, 0.35f, 0.4f, 0.5f, 0.55f, 0.6f, 0.65f, 0.7f, 0.7f, 0.7f, 0.7f, 0.7f, 0.7f }; // 0x8D24F0
-        if (zone.DealerStrength >= std::size(chances)) {
+
+        // 0x610505: the index is clamped to 14 and rand() is consumed whatever the dealer strength is; the chance is compared against `rand() * (1/32767)`
+        const auto idx = std::min<size_t>(zone.DealerStrength, 14);
+        if (!((float)CGeneral::GetRandomNumber() * RAND_MAX_FLOAT_RECIPROCAL < chances[idx])) {
             continue;
         }
 
-        if (CGeneral::GetRandomNumber() >= chances[zone.DealerStrength]) {
-            continue;
+        if (zone.DealerStrength < 0xF) {
+            zone.DealerStrength++;
         }
-
-        zone.DealerStrength++;
     }
 }
 
 // 0x610770
 void CPopCycle::UpdatePercentages() {
-    m_fPercDealers = std::max(0.1f, (float)m_pCurrZoneInfo->DealerStrength * ExeRecip(100.f));
+    const auto zone = m_pCurrZoneInfo;
+    const auto rcp  = ExeRecip(100.f); // 0x858C58 (0.01f)
 
-    m_fPercGangs = std::min(0.5f, (float)m_pCurrZoneInfo->GetSumOfGangDensity() * ExeRecip(100.f));
-    m_fPercCops = m_fPercGangs >= 0.15f
-        ? std::max(0.03f, 0.3f - m_fPercGangs)
-        : std::max(0.02f, m_fPercGangs);
-
-    // 0x610881
-    m_fPercCops = [] {
-        switch (m_pCurrZoneInfo->PopType) {
-        case POPCYCLE_PEDGROUP_BUSINESS_SF:
-        case POPCYCLE_PEDGROUP_CASUAL_RICH_LA:
-        case POPCYCLE_PEDGROUP_CASUAL_RICH_VG:
-            return m_fPercCops <= 0.1f ? 0.1f : m_fPercCops;
-        case POPCYCLE_PEDGROUP_BUSINESS_VG:
-            return m_fPercCops <= 0.05f ? 0.05f : m_fPercCops;
-        case POPCYCLE_PEDGROUP_CLUBBERS_VG:
-        case POPCYCLE_PEDGROUP_CASUAL_AVERAGE_LA:
-            return 0.f;
-        }
-        return m_fPercCops;
-    }();
-
-    // 0x610922:
-    if (const auto sum = m_fPercDealers + m_fPercGangs + m_fPercCops; sum <= 1.f) {
-        m_fPercOther = 1.f - sum;
-    } else { // Otherwise normalize all values by the sum (This will make their new sum be `1.f`)
-        m_fPercOther    = 0.f;
-        m_fPercDealers /= sum;
-        m_fPercGangs   /= sum;
-        m_fPercCops    /= sum;
+    // 0x610781: the dealer share is CAPPED at 0.1 (`fcomp`/`jp`: 0.1f < x ? 0.1f : x), not floored
+    {
+        const float x = (float)zone->DealerStrength * rcp;
+        m_fPercDealers = (0.1f < x) ? 0.1f : x;
     }
 
-    // 0x610A7D
-    gfLaRiotsLightMult = (CGameLogic::LaRiotsActiveHere() && (1.f - CCustomBuildingDNPipeline::m_fDNBalanceParam) > 0.5f)
-        ? std::max(0.6f, gfLaRiotsLightMult - 0.01f) // Decrease
-        : std::min(1.f, gfLaRiotsLightMult + 0.01f); // Increase
+    // 0x6107AE: gangs capped at 0.5; cops derived from the (capped) gang share
+    {
+        const float g = (float)zone->GetSumOfGangDensity() * rcp;
+        m_fPercGangs  = (0.5f < g) ? 0.5f : g;
+    }
+    if (!(m_fPercGangs < 0.15f)) { // 0x61083F (taken when >= or unordered)
+        const float v = 0.3f - m_fPercGangs;
+        m_fPercCops   = (0.03f > v) ? 0.03f : v;
+    } else {
+        m_fPercCops = (0.02f > m_fPercGangs) ? 0.02f : m_fPercGangs;
+    }
 
-    // 0x610A41 + 0x610A57
-    const auto maxNumPeds = (float)(
-        CGameLogic::LaRiotsActiveHere()
-            ? std::min<uint8>(20u, GetMaxPedsCurrently())
-            : GetMaxPedsCurrently()
-    );
-
-    // From all the data above, calculate the actual ped/car numbers for this zone
-    const auto Process = [
-        maxNumPeds,
-        maxNumCars = GetMaxCarsCurrently()
-    ](PercDataArray& maxPercLUT, float percPeds, float percCars, float& nOutPeds, float& nOutCars) {
-        const auto maxPercOfType = (float)maxPercLUT[m_nCurrentTimeIndex][m_nCurrentTimeOfWeek][m_nCurrentZoneType] * ExeRecip(100.f);
-
-        nOutPeds = maxNumPeds * (maxPercOfType * percPeds);
-        nOutCars = maxNumCars * (maxPercOfType * percCars);
-
-        if (CGameLogic::LaRiotsActiveHere()) {
-            nOutCars *= 0.75f;
+    // 0x610881: jump table over `PopType - 4` (case 0: floor 0.1, case 1: floor 0.05, case 2: none at all)
+    switch (zone->PopType) {
+    case +eZonePopulationType::RESIDENTIAL_RICH:
+    case +eZonePopulationType::SHOPPING_POSH:
+    case +eZonePopulationType::AIRPORT:
+        if (!(m_fPercCops > 0.1f)) {
+            m_fPercCops = 0.1f;
         }
-    };
-    Process(m_nPercDealers, m_fPercDealers,                                    m_fPercDealers, m_NumDealers_Peds, m_NumDealers_Cars);
-    Process(m_nPercGang,    m_fPercGangs,                                      m_fPercGangs,   m_NumGangs_Peds,   m_NumGangs_Cars  );
-    Process(m_nPercCops,    m_fPercCops,                                       m_fPercCops,    m_NumCops_Peds,    m_NumCops_Cars   );
-    Process(m_nPercOther,   m_fPercOther * GetCurrentPercOther_Peds() * ExeRecip(100.f), m_fPercOther,   m_NumOther_Peds,   m_NumOther_Cars  );
+        break;
+    case +eZonePopulationType::RESIDENTIAL_AVERAGE:
+        if (!(m_fPercCops > 0.05f)) {
+            m_fPercCops = 0.05f;
+        }
+        break;
+    case +eZonePopulationType::BEACH:
+    case +eZonePopulationType::GOLF_CLUB:
+        m_fPercCops = 0.f;
+        break;
+    }
+
+    // 0x610905: `(cops + gangs) + dealers`; <= 1 => other = ((1 - dealers) - gangs) - cops, else every share is multiplied by 1 / sum (NOT divided)
+    const float sum = (m_fPercCops + m_fPercGangs) + m_fPercDealers;
+    if (!(sum > 1.f)) {
+        m_fPercOther = ((1.f - m_fPercDealers) - m_fPercGangs) - m_fPercCops;
+    } else {
+        const float inv = 1.f / sum;
+        m_fPercOther    = 0.f;
+        m_fPercDealers  = m_fPercDealers * inv;
+        m_fPercGangs    = m_fPercGangs * inv;
+        m_fPercCops     = inv * m_fPercCops;
+    }
+
+    // 0x61097E: share of the max count per group: `(table% * share) * 0.01f`, others' peds use the int from `GetCurrentPercOther_Peds`
+    const auto ti = m_nCurrentTimeIndex, tw = m_nCurrentTimeOfWeek, zt = m_nCurrentZoneType;
+    const float shareDealers = ((float)m_nPercDealers[ti][tw][zt] * m_fPercDealers) * rcp;
+    const float shareGangs   = ((float)m_nPercGang[ti][tw][zt] * m_fPercGangs) * rcp;
+    const float shareCops    = ((float)m_nPercCops[ti][tw][zt] * m_fPercCops) * rcp;
+    const float shareOtherCars = ((float)m_nPercOther[ti][tw][zt] * m_fPercOther) * rcp;
+    const float shareOtherPeds = ((float)GetCurrentPercOther_Peds() * m_fPercOther) * rcp; // 0x610A16
+
+    // 0x610A49 + 0x610A57: in an LA riot area the ped limit is at least 20
+    int32 maxPeds = GetMaxPedsCurrently();
+    if (CGameLogic::LaRiotsActiveHere() && maxPeds <= 20) {
+        maxPeds = 20;
+    }
+
+    // 0x610A6D + 0x610A87: riot light multiplier (-0.01 down to 0.6 while a riot is active and the DN balance is < 0.5, else +0.01 up to 1)
+    const float dnInv = 1.f - CCustomBuildingDNPipeline::m_fDNBalanceParam;
+    if (CGameLogic::LaRiotsActiveHere() && dnInv > 0.5f) {
+        gfLaRiotsLightMult = gfLaRiotsLightMult - rcp;
+        if (gfLaRiotsLightMult < 0.6f) {
+            gfLaRiotsLightMult = 0.6f;
+        }
+    } else {
+        gfLaRiotsLightMult = gfLaRiotsLightMult + rcp;
+        if (gfLaRiotsLightMult > 1.f) {
+            gfLaRiotsLightMult = 1.f;
+        }
+    }
+
+    // 0x610AEC: peds
+    const float fMaxPeds = (float)maxPeds;
+    m_NumDealers_Peds = shareDealers * fMaxPeds;
+    m_NumGangs_Peds   = shareGangs * fMaxPeds;
+    m_NumCops_Peds    = shareCops * fMaxPeds;
+    m_NumOther_Peds   = fMaxPeds * shareOtherPeds;
+
+    // 0x610B41: cars
+    const float fMaxCars = (float)GetMaxCarsCurrently();
+    m_NumDealers_Cars = shareDealers * fMaxCars;
+    m_NumGangs_Cars   = shareGangs * fMaxCars;
+    m_NumCops_Cars    = shareCops * fMaxCars;
+    m_NumOther_Cars   = fMaxCars * shareOtherCars;
+
+    // 0x610B73
+    if (CGameLogic::LaRiotsActiveHere()) {
+        m_NumDealers_Cars *= 0.75f;
+        m_NumGangs_Cars   *= 0.75f;
+        m_NumCops_Cars    *= 0.75f;
+        m_NumOther_Cars   *= 0.75f;
+    }
 }
 
 // 0x60F8D0
 ePedType CPopCycle::PickGangToCreateMembersOf() {
     if (CCheat::IsActive(CHEAT_GANGS_CONTROLS_THE_STREETS)) {
-        return CGeneral::RandomChoice(GetAllGangPedTypes());
+        // 0x60F8DC: `7 - (int)(rand01 * -8.0f)`: only GANG1..GANG8 (the last two gangs never appear with this cheat)
+        return (ePedType)(PED_TYPE_GANG1 + CGeneral::GetRandomNumberInRange(0, 8));
     }
 
-    const auto dominatingGangId = rng::max(
-        rng::iota_view{0u, (size_t)TOTAL_GANGS},
-        rng::less{},
-        [sumGangDensity = (float)m_pCurrZoneInfo->GetSumOfGangDensity()](auto gangId) {
-            return (float)m_pCurrZoneInfo->GangStrength[gangId] / sumGangDensity - (float)CPopulation::ms_nNumGang[gangId] / m_NumGangs_Peds;
+    // 0x60F90C: sum of the gang densities as float; nothing to pick from with a zero sum => type 0
+    const float sumGangDensity = (float)m_pCurrZoneInfo->GetSumOfGangDensity();
+    if (sumGangDensity <= 0.f) {
+        return (ePedType)0;
+    }
+
+    // Both reciprocals are real divisions (spilled floats), the per-gang value is `strength * (1/sum) - numGang * (1/numGangPeds)`;
+    // the best starts at 0.0 (gang 0), another gang must be strictly greater
+    const float invSum = 1.f / sumGangDensity;
+    const float invNum = 1.f / m_NumGangs_Peds;
+    const auto  Value  = [&](size_t gang) { return (float)m_pCurrZoneInfo->GangStrength[gang] * invSum - (float)(int32)CPopulation::ms_nNumGang[gang] * invNum; };
+
+    float  best    = 0.f;
+    size_t bestIdx = 0;
+    if (const float v = Value(0); v > best) {
+        best = v;
+    }
+    for (size_t gang = 1; gang < TOTAL_GANGS; gang++) {
+        if (const float v = Value(gang); v > best) {
+            best    = v;
+            bestIdx = gang;
         }
-    );
-    return (ePedType)((size_t)PED_TYPE_GANG1 + dominatingGangId);
+    }
+    return (ePedType)((size_t)PED_TYPE_GANG1 + bestIdx);
 }
 
 // notsa

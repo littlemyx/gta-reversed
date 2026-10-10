@@ -738,6 +738,7 @@ if (${RE_PROJECT}_RW_LIBRW)
         game_sa/TrainNode.cpp
         game_sa/Collision/ColPoint.cpp
         game_sa/Entity/Vehicle/Train.cpp
+        game_sa/Entity/Vehicle/Boat.cpp
         game_sa/Collision/Collision.cpp
         game_sa/Radar.cpp
         game_sa/MenuManager.cpp

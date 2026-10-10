@@ -4,6 +4,7 @@
 #include "Models/BaseModelInfo.h"
 #include "Models/ModelInfo.h"
 #include "Collision/ColModel.h"
+#include "Entity/Vehicle/Boat.h"
 
 // ------------------------------------------------------------------------------------------------------------------------------
 // CTrain fixture: 4 tracks of random nodes (statics at 0xC38014..), a fake train object, a fake model info with a collision box
@@ -141,4 +142,80 @@ static void TestVeh() {
         if (SameBlob(a.b, e.b, sizeof a.b)) return true;
         d = "track " + std::to_string(track) + " pos " + V(pos) + DiffDesc(a.b, e.b, sizeof a.b, "t"); return false;
     });
+
+    // ---- CBoat wake trail
+    struct BoatFx {
+        static void Fill(Rng& r, Raw<CBoat>& b) {
+            b.Fill(r);
+            b->m_NumWakeCoords = (uint16)r.below(33);   // <= 32 (the arrays' size)
+            const int live = r.below(33);
+            for (int i = 0; i < 32; ++i) {
+                b->m_WakeCoords[i] = { GenF(r, 200.f), GenF(r, 200.f) };
+                b->m_WakePtCounters[i] = i < live ? (r.below(8) ? r.f01() * 150.f : GenF(r, 200.f)) : (r.below(2) ? 0.f : GenF(r, 5.f));
+                b->m_WakeBoatSpeed[i] = (uint8)r.u32();
+            }
+            *reinterpret_cast<uint32_t*>(b.b + 0x14) = 0;   // m_matrix = null: position from the placement
+            const CVector p = GenV(r, 200.f); std::memcpy(b.b + 4, &p, 12);
+            b->m_vecMoveSpeed = GenV(r, r.below(2) ? 1.f : 5.f);
+            CTimer::ms_fTimeStep = r.below(8) ? r.f01() * 4.f : GenF(r, 6.f);
+        }
+    };
+    Run("CBoat::PruneWakeTrail 0x6F0E20", [](Rng& r, std::string& d) {
+        Raw<CBoat> a; BoatFx::Fill(r, a); Raw<CBoat> e; std::memcpy(e.b, a.b, sizeof a.b);
+        a->PruneWakeTrail();
+        oracle::Fn<void __fastcall(CBoat*, int)>(0x6F0E20)(e.get(), 0);
+        if (SameBlob(a.b, e.b, sizeof a.b)) return true;
+        d = "ts " + F(CTimer::ms_fTimeStep) + DiffDesc(a.b, e.b, sizeof a.b, "b"); return false;
+    });
+    Run("CBoat::AddWakePoint 0x6F2550", [](Rng& r, std::string& d) {
+        Raw<CBoat> a; BoatFx::Fill(r, a); Raw<CBoat> e; std::memcpy(e.b, a.b, sizeof a.b);
+        const CVector p = r.below(2) ? GenV(r, 200.f) : CVector(a->m_WakeCoords[0].x + GenF(r, 3.f), a->m_WakeCoords[0].y + GenF(r, 3.f), 0.f);
+        if (r.below(3) == 0) { const CVector q = r.below(2) ? CVector(a->m_WakeCoords[0].x + GenF(r, 2.f), a->m_WakeCoords[0].y + GenF(r, 2.f), 0.f) : p; std::memcpy(a.b + 4, &q, 12); std::memcpy(e.b + 4, &q, 12); }
+        a->AddWakePoint(p);
+        oracle::Fn<void __fastcall(CBoat*, int, float, float, float)>(0x6F2550)(e.get(), 0, p.x, p.y, p.z);
+        if (SameBlob(a.b, e.b, sizeof a.b)) return true;
+        d = "p " + V(p) + " n " + std::to_string(a->m_NumWakeCoords) + DiffDesc(a.b, e.b, sizeof a.b, "b"); return false;
+    });
+    {   // static wake queries: the frame's wake generating boats (0xC27994) and the skip counters (0xC279A4 / 0xC279AC)
+        static constexpr uintptr_t WK = 0xC27994, WKE = 0xC279D0;
+        static const auto Prep = [](Rng& r, Raw<CBoat>* bs) {
+            for (int i = 0; i < 4; ++i) { BoatFx::Fill(r, bs[i]); reinterpret_cast<CBoat**>(WK)[i] = r.below(4) ? bs[i].get() : nullptr; }
+            for (int i = 0; i < 4; ++i) { reinterpret_cast<int16*>(0xC279A4)[i] = (int16)(r.below(3) ? (int)r.below(10) - 1 : (int)r.u32()); reinterpret_cast<int16*>(0xC279AC)[i] = (int16)(r.below(3) ? (int)r.below(10) - 1 : (int)r.u32()); }
+        };
+        Run("CBoat::IsSectorAffectedByWake 0x6F0E80", [](Rng& r, std::string& d) {
+            Raw<CBoat> bs[4]; Prep(r, bs);
+            const CVector2D c(GenF(r, 200.f), GenF(r, 200.f)); const float semi = r.below(2) ? GenF(r, 50.f) : GenF(r, PickScale(r));
+            CBoat* pa[4] = { (CBoat*)1, (CBoat*)2, (CBoat*)3, (CBoat*)4 }; CBoat* pe[4] = { (CBoat*)1, (CBoat*)2, (CBoat*)3, (CBoat*)4 };
+            const bool a = CBoat::IsSectorAffectedByWake(c, semi, pa), e = oracle::Fn<int __cdecl(float, float, float, CBoat**)>(0x6F0E80)(c.x, c.y, semi, pe) & 0xFF;
+            Hit(a);
+            if (a == e && !std::memcmp(pa, pe, sizeof pa)) return true;
+            d = "c {" + F(c.x) + "," + F(c.y) + "} semi " + F(semi) + " got " + std::to_string(a) + " exe " + std::to_string(e);
+            {   // manual re-evaluation of the exe's logic, for the report
+                bool found = false; int hitB = -1, hitT = -1;
+                for (int i = 0; i < 4 && !found; ++i) { CBoat* b = reinterpret_cast<CBoat**>(WK)[i]; if (!b) break;
+                    for (int k = 0; k < b->m_NumWakeCoords; ++k) { const float dist = (150.f - b->m_WakePtCounters[k]) * 0.05f + (float)k * 0.4f + semi; if (std::fabs(b->m_WakeCoords[k].x - c.x) < dist && std::fabs(b->m_WakeCoords[k].y - c.y) < dist) { found = true; hitB = i; hitT = k; break; } } }
+                d += " &arr " + std::to_string((uintptr_t)&CBoat::apFrameWakeGeneratingBoats[0]) + " arr0 " + std::to_string((uintptr_t)CBoat::apFrameWakeGeneratingBoats[0]) + " mem0 " + std::to_string((uintptr_t)reinterpret_cast<CBoat**>(WK)[0]) + " manual " + std::to_string(found) + " b" + std::to_string(hitB) + " k" + std::to_string(hitT) + " port[0]=" + std::to_string((uintptr_t)pa[0]) + " pe[0]=" + std::to_string((uintptr_t)pe[0]);
+            }
+            for (int i = 0; i < 4; ++i) { CBoat* b = reinterpret_cast<CBoat**>(WK)[i]; if (!b) { d += " [null]"; continue; } d += " [n=" + std::to_string(b->m_NumWakeCoords) + " p0={" + F(b->m_WakeCoords[0].x) + "," + F(b->m_WakeCoords[0].y) + "} t0=" + F(b->m_WakePtCounters[0]) + "]"; }
+            return false;
+        });
+        Run("CBoat::IsVertexAffectedByWake 0x6F0F50", [](Rng& r, std::string& d) {
+            Raw<CBoat> bs[4]; Prep(r, bs);
+            const CVector c = GenV(r, 200.f); const int q = r.below(4); const bool force = r.below(3) == 0;
+            Snap init(0xC279A4, 16), ga(0xC279A4, 16), ge(0xC279A4, 16); init.Save();
+            const float a = CBoat::IsVertexAffectedByWake(c, bs[0].get(), (int16)q, force); ga.Save(); init.Restore();
+            const float e = oracle::Fn<float __cdecl(float, float, float, CBoat*, int, int)>(0x6F0F50)(c.x, c.y, c.z, bs[0].get(), q, force); ge.Save();
+            Hit(a != 0.f);
+            if (SameF(a, e) && ga.SameAs(ge)) return true;
+            d = "c " + V(c) + " q " + std::to_string(q) + " force " + std::to_string(force) + " got " + F(a) + " exe " + F(e) + DiffDesc(ga.b.data(), ge.b.data(), 16, "s"); return false;
+        });
+        Run("CBoat::CheckForSkippingCalculations 0x6F10C0", [](Rng& r, std::string& d) {
+            Raw<CBoat> bs[4]; Prep(r, bs);
+            Snap init(0xC279A4, 16), ga(0xC279A4, 16), ge(0xC279A4, 16); init.Save();
+            CBoat::CheckForSkippingCalculations(); ga.Save(); init.Restore();
+            oracle::Fn<void __cdecl()>(0x6F10C0)(); ge.Save();
+            if (ga.SameAs(ge)) return true;
+            d = "state " + Hex(init.b.data(), 16) + DiffDesc(ga.b.data(), ge.b.data(), 16, "s"); return false;
+        });
+    }
 }

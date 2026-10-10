@@ -1,0 +1,69 @@
+# S6-J table (g25 + g26, ids 2500..2638, 60 commands) - files `source/game_sa/Scripts/Commands/Ported/Group25_26a.cpp` (2500..2546), `Group25_26b.cpp` (2556..2595), `Group25_26c.cpp` (2602..2632), `Group25_26.cpp/.hpp` (registration)
+
+Group processors g25 `CRunningScript::ProcessCommands2500To2599` @0x47A760 (table 0x8A6168 + 4*25; switch base 2500 = `lea eax,[ecx-0x9C4]`, 100 entries, index = id - 2500, jump table @0x47BF4C) and g26 `ProcessCommands2600To2699` @0x479DA0 (switch base 2600 = `add eax,0xFFFFF5D8`, 39 entries 2600..2638, jump table @0x47A6C4). All cases return `xor al, al` (OR_CONTINUE).
+Columns: id | name | exe case | in -> out / notes | oracle (differentially tested against the exe code by `tests/standalone/script_oracle_g25_26_test.cpp`, 3000 random cases each, bit-exact; "part" = the task creating path is not covered).
+
+61 commands were listed in `TRAP_READERS_script_missing.txt` for ids 2500..2699; 2638 (listed under its Xbox alias COMMAND_IS_XBOX_PLAYER2_PRESSING_START) is DO_DEBUG_STUFF in the PC build (`BUILD_XBOX` off) and already registered in GameCommands.cpp, so 60 are ported here. Unported exe functions that had to be ported: none (all callees already exist in source/).
+
+| id | name | case | in -> out / notes | oracle |
+|---|---|---|---|---|
+| 2500 | SET_PETROL_TANK_WEAKPOINT | 0x47A7A2 | car, flag  -- bPetrolTankIsWeakPoint (+0x42E bit 6) = bit 0 of flag (`shl cl, 6; xor; and 0x40`) | yes |
+| 2503 | SET_PLAYER_MODEL | 0x47A820 | player, model  (the ped isn't null checked) ped = CWorld::Players[player].m_pPed; the anim group (+0x4D4) survives: save it, DeleteRwObject() (vtable +0x20), m_nModelIndex (+0x22) = -1, SetModelIndex(model) (vtable +0x14), restore the anim group. | yes |
+| 2504 | ARE_SUBTITLES_SWITCHED_ON | 0x47A869 | no params => compare flag = FrontEndMenuManager.m_bShowSubtitles (+0x44, zero extended byte) | yes |
+| 2506 | SET_OBJECT_PROOFS | 0x47A921 | object, bullet, fire, explosion, collision, melee  -- each flag = bit 0 of its param: bBulletProof (+0x40 bit 18), bFireProof (19), bExplosionProof (23), bCollisionProof (20), bMeleeProof (21) | yes |
+| 2507 | IS_CAR_TOUCHING_CAR | 0x47A9B6 | car A, car B => compare flag = A->GetHasCollidedWith(B) [0x543540] | yes |
+| 2511 | SET_TRAIN_FORCED_TO_SLOW_DOWN | 0x47AA49 | train (vehicle pool handle, not type checked), flag  -- bForceSlowDown (+0x5B9 bit 1) = (flag != 0) | yes |
+| 2512 | IS_VEHICLE_ON_ALL_WHEELS | 0x47AA8D | vehicle => compare flag (+0x590) == 9 [bike] && CBike::m_nNoOfContactWheels (+0x804) == 4, or (+0x590) == 0 [automobile] && CAutomobile::m_nNumContactWheels (+0x960) == 4 | yes |
+| 2513 | DOES_PICKUP_EXIST | 0x47AAEB | pickup handle => compare flag = CPickups::GetActualPickupIndex(handle) [0x4552A0] != -1 | yes |
+| 2514 | ENABLE_AMBIENT_CRIME | 0x47AB20 | on  -- CLoadMonitor::m_bEnableAmbientCrime (g_LoadMonitor [0xB72994]) = (on != 0) | yes |
+| 2516 | CLEAR_WANTED_LEVEL_IN_GARAGE | 0x47AB3F | FindPlayerWanted(-1)->ClearWantedLevelAndGoOnParole() [0x5625A0] (no null check) | yes |
+| 2519 | FORCE_INTERIOR_LIGHTING_FOR_PLAYER | 0x47AC06 | player, flag  -- Players[player].m_pPed->m_pPlayerData->m_bForceInteriorLighting (+0x86) = (flag != 0) | yes |
+| 2521 | USE_DETONATOR | 0x47AC4E | CWorld::UseDetonator(FindPlayerPed(-1)) [0x5660B0] | yes |
+| 2522 | IS_MONEY_PICKUP_AT_COORDS | 0x47AC65 | x, y, z => compare flag The first pickup (of the 620 slots, in order) with type 8 [PICKUP_MONEY] whose position is closer than 0.5 [0x858B8C] to (x, y, z): `pos - coords` (0x40FE60, each component rounded to float), Magnitude (0x4082C0, kept unrounded) compared with `test ah, 5; jp skip` => dist < 0.5 | yes |
+| 2523 | SET_MENU_COLUMN_WIDTH | 0x47AD10 | menu (byte), column (byte), width (word) width = _ftol2( (maximumWidth [0xC17044] * 0x859520) * (int)(uint16)width ) -- x87: every step rounded by the PC=24 mode CMenuSystem::SetColumnWidth(menu, column, (uint16)result) [0x582050] | yes |
+| 2525 | MAKE_ROOM_IN_PLAYER_GANG_FOR_MISSION_PEDS | 0x47AD5A | n group = CPedGroups::ms_groups[player data +0x38 (m_nPlayerGroup)]; extra = group.CountMembersExcludingLeader() [0x5F6AA0] - (byte)playerData+0x43 (m_nScriptLimitToGangSize) - n; if extra > 0 (signed): membership.RemoveNFollowers(extra) [0x5FB1D0] | yes |
+| 2528 | SET_UP_SKIP_FOR_SPECIFIC_VEHICLE | 0x47AE2C | x, y, z, heading (float), vehicle CGameLogic::SetUpSkip(pos, heading, false, vehicle, false) [0x4423C0] | yes |
+| 2529 | GET_CAR_MODEL_VALUE | 0x47AE95 | model => value  (the model info isn't null checked) gHandlingDataMgr.m_aVehicleHandling[(byte)modelInfo->+0x4A].m_nMonetaryValue (entry stride 0xE0, field +0xD8 [0xC2BAB4]) | yes |
+| 2530 | CREATE_CAR_GENERATOR_WITH_PLATE | 0x47AECF | CollectParameters(12): x, y, z, heading, model, colour1 (word), colour2 (word), forceSpawn (byte), alarm (byte), doorLock (byte), minDelay (word), maxDelay (word); then the plate text label (ReadTextLabelFromScript(buf, 9)) => generator id z > -100.0 [0x859014] (ordered; NaN / <= -100 keep z) => z += 0.015 [0x859F00], stored as float (fadd; fstp). CTheCarGenerators::CreateCarGenerator(pos, heading, model, c1, c2, force, alarm, lock, min, max, iplId = 0, ignorePopLimit = 1) [0x6F31A0]. The plate: chars 0..7 that are '_' or NUL become ' '; buf[8] = 0; CSpecialPlateHandler::Add(id, buf) [0x6F2D90] on 0xC279D8; StoreParameters(1) = the id. | yes |
+| 2531 | FIND_TRAIN_DIRECTION | 0x47AFD2 | train => compare flag = bClockwiseDirection (trainFlags bit 6, +0x5B8) | yes |
+| 2532 | SET_AIRCRAFT_CARRIER_SAM_SITE | 0x47B00C | flag  -- CObject::bAircraftCarrierSamSiteDisabled (0x8D0A24) = (flag == 0) | yes |
+| 2533 | DRAW_LIGHT_WITH_RANGE | 0x47B02B | x, y, z, red, green, blue (ints), range (float) CPointLights::AddLight(0, pos, (0, 0, 0), range, r/255, g/255, b/255, fogType 0, extra shadows 1, no entity) [0x7000E0]; each colour = (float)((double)int * (float)0x859A3C [1/255]) (fild; fmul; fstp) | yes |
+| 2534 | ENABLE_BURGLARY_HOUSES | 0x47B0E7 | on => CEntryExitManager::EnableBurglaryHouses(on != 0) [0x43F180] | yes |
+| 2535 | IS_PLAYER_CONTROL_ON | 0x47B109 | pad => compare flag = !(CPad::GetPad(pad) [0x53FB70] +0x10E bit 5 [bPlayerSafe]) | yes |
+| 2537 | GIVE_NON_PLAYER_CAR_NITRO | 0x47B179 | car  -- CAutomobile::NitrousControl(1) [0x6A3EA0] (the vehicle isn't type checked) | yes |
+| 2539 | PLAYER_TAKE_OFF_GOGGLES | 0x47B1A4 | player, instantly  (the ped isn't null checked) instantly != 0: needs the goggles on (+0x4FC != 0) and a free PRIMARY slot (CTaskManager primary task 3 [intelligence +0x10] == null): then the primary task 3 = new CTaskComplexUseGoggles [0x634EF0] (SetTask(task, 3) [0x681AF0]) and playerData (+0x480, may be null) +0x85 = 1 instantly == 0: CPed::TakeOffGoggles() [0x5E6010] | part |
+| 2542 | FORCE_BIG_MESSAGE_AND_COUNTER | 0x47B2BC | flag  -- CHud::bScriptForceDisplayWithCounters (0xBAA3FA) = low byte of flag (raw byte store) | yes |
+| 2546 | DOES_DECISION_MAKER_EXIST | 0x47B37A | handle => compare flag idx = GetActualScriptThingIndex(handle, 7 [DECISION_MAKER]); idx in [0, 20) (signed) and CDecisionMakerTypes::m_IsActive[idx] [0xC0B01C] (CDecisionMakerTypes::GetInstance() [0x4684F0] is called first, its result is unused) | yes |
+| 2556 | IS_OBJECT_INTERSECTING_WORLD | 0x47B509 | object => compare flag = object->TestCollision(false) (vtable +0x34) | yes |
+| 2557 | GET_STRING_WIDTH | 0x47B543 | text label (8) => width. No CollectParameters. CFont::GetStringWidth(TheText.Get(label), full = true, scriptText = true) [0x71A0E0] -> _ftol2 of the float returned in ST0 | yes |
+| 2558 | RESET_VEHICLE_HYDRAULICS | 0x47B587 | car  -- if handlingFlags (+0x38C) & 0x20000 [bHydraulicInst] and the type (+0x590) is 0 [automobile]: CAutomobile::m_wMiscComponentAngle (+0x86C) = 0 | yes |
+| 2561 | IS_THIS_MODEL_A_CAR | 0x47B619 | model (raw id, not translated) => compare flag. CModelInfo::IsCarModel [0x4C5AA0] | yes |
+| 2562 | SWITCH_ON_GROUND_SEARCHLIGHT | 0x47B63A | searchlight handle, flag idx = GetActualScriptThingIndex(handle, 2 [SEARCH_LIGHT]); idx >= 0 (signed; no upper bound check) => ScriptSearchLightArray[idx] (stride 0x7C, 0xA94D68) byte +2 (m_bEnableShadow) = low byte of flag (raw byte store) | yes |
+| 2563 | IS_GANG_WAR_FIGHTING_GOING_ON | 0x47B672 | => compare flag = CGangWars::GangWarFightingGoingOn() [0x443AC0] | yes |
+| 2566 | IS_NEXT_STATION_ALLOWED | 0x47B698 | train (vehicle pool handle) => compare flag = CTrain::IsNextStationAllowed(train) [0x6F7260] | yes |
+| 2568 | GET_STRING_WIDTH_WITH_NUMBER | 0x47B6EB | text label (8), then CollectParameters(1): number => width text = TheText.Get(label) [0x6A0050]; CMessages::InsertNumberInString(text, number, -1 x5, out) [0x69DE90]; width = _ftol2(CFont::GetStringWidth(out, true, true)) [0x71A0E0] | yes |
+| 2572 | IS_PLAYER_USING_JETPACK | 0x47B84C | player => compare flag = Players[player].m_pPed->GetIntelligence()->GetTaskJetPack() != null [0x601110] | yes |
+| 2575 | HAS_LANGUAGE_CHANGED | 0x47B8AD | => compare flag = FrontEndMenuManager.HasLanguageChanged() [0x573CD0] | yes |
+| 2577 | SET_EXTRA_CAR_COLOURS | 0x47B8FA | car, colour3, colour4  -- bytes +0x436 (m_nTertiaryColor), +0x437 (m_nQuaternaryColor) | yes |
+| 2579 | MANAGE_ALL_POPULATION | 0x47B977 | CPopulation::ManageAllPopulation() [0x6160A0] | yes |
+| 2581 | HAS_CAR_BEEN_RESPRAYED | 0x47B9AF | car => compare flag = bHasBeenResprayed (+0x42F bit 0); the flag is reset when it was set | yes |
+| 2586 | TASK_PLAY_ANIM_SECONDARY | 0x47BB08 | no CollectParameters here, CRunningScript::PlayAnimScriptCommand(command) [0x470150] reads everything | yes |
+| 2589 | TASK_HAND_GESTURE | 0x47BBF7 | ped A, ped B A gets CTaskComplexSignalAtPed(B [CPedPool::GetAtRef 0x404910], -1, false) [0x660A30] | no (tasks need the task pools) |
+| 2593 | IMPROVE_CAR_BY_CHEATING | 0x47BCE8 | car, flag  -- bUseCarCheats (+0x42F bit 1) = bit 0 of flag (`shl dl, 1; xor; and 2`) | yes |
+| 2594 | CHANGE_CAR_COLOUR_FROM_MENU | 0x47BD27 | menu (byte), car, which, grid index (byte) colour = CMenuSystem::GetCarColourFromGrid(menu, gridIndex) [0x5822B0]; which == 1 => primary colour (+0x434) = colour, else secondary (+0x435) | yes |
+| 2595 | HIGHLIGHT_MENU_ITEM | 0x47BD82 | menu (byte), item (byte), bought (byte) => CMenuSystem::HighlightOneItem(menu, item, bought) [0x581C10] (the exe stores the raw byte of `bought` into m_abRowAlreadyBought, here it is the bool (bought != 0)) | yes |
+| 2602 | IS_THIS_HELP_MESSAGE_BEING_DISPLAYED | 0x479E75 | text label (8) => compare flag. No CollectParameters. text = TheText.Get(label) [0x6A0050]; if CHud::HelpMessageDisplayed() [0x588B50]: StringCopy(buf, text, 400) [0x69DB70]; InsertPlayerControlKeysInString(buf) [0x69E160]; result = StringCompare(buf, CHud::m_pHelpMessageToPrint [0xBAA480], GetStringLength(buf) [0x69DB50]) [0x69DBD0] | yes |
+| 2606 | TASK_FOLLOW_PATH_NODES_TO_COORD_WITH_RADIUS | 0x479F3D | CollectParameters(7): ped, x, y, z, moveState, time, radius time == -1 => the default 0xC350 (50000, the dword at 0x86FCAC); time == -2 => -1. new CTaskComplexFollowNodeRoute(moveState, pos, radius, slowDownDist = 3.0 [0x86FCA4], heightChange = 2.0 [0x86FCA8], true, time, true) [0x66EA30] | no (tasks need the task pools) |
+| 2608 | FIX_CAR | 0x47A020 | car (not null checked)  -- vehicle->Fix() (vtable +0xC8), then m_fHealth (+0x4C0) = 1000.0f (0x447A0000) | yes |
+| 2609 | SET_PLAYER_GROUP_TO_FOLLOW_NEVER | 0x47A057 | player, flag  -- FindPlayerPed(player)->ForceGroupToNeverFollow(flag != 0) [0x60C800] (no null check) | yes |
+| 2613 | SET_UP_SKIP_FOR_VEHICLE_FINISHED_BY_SCRIPT | 0x47A129 | x, y, z, heading (float), vehicle CGameLogic::SetUpSkip(pos, heading, false, vehicle, true) [0x4423C0] | yes |
+| 2614 | IS_SKIP_WAITING_FOR_SCRIPT_TO_FADE_IN | 0x47A195 | => compare flag = CGameLogic::IsSkipWaitingForScriptToFadeIn() [0x4416C0] | yes |
+| 2615 | FORCE_ALL_VEHICLE_LIGHTS_OFF | 0x47A1B1 | flag  -- CVehicle::ms_forceVehicleLightsOff (0xC1CC18) = low byte of flag (raw byte store) | yes |
+| 2618 | IS_LAST_BUILDING_MODEL_SHOT_BY_PLAYER | 0x47A1E7 | player, model => compare flag model < 0 (signed): model = CTheScripts::UsedObjectArray[-model].nModelIndex (stride 0x1C, field +0x18 [0xA44B88]) then CWorld::Players[player] +0xA0 (m_PlayerData.m_nModelIndexOfLastBuildingShot) == model | yes |
+| 2619 | CLEAR_LAST_BUILDING_MODEL_SHOT_BY_PLAYER | 0x47A23B | player  -- Players[player] +0xA0 (m_nModelIndexOfLastBuildingShot) = -1 | yes |
+| 2622 | GET_RANDOM_CHAR_IN_AREA_OFFSET_NO_SAVE | 0x47A2CD | CollectParameters(6): x, y, z, dx, dy, dz => ped handle (-1 = none) The box is (x - dx, y - dy, z - dz) .. (dx + x, dy + y, dz + z), each bound computed on the x87 stack and stored as float. Peds from the last pool slot to the first (the first one that fits is taken): createdBy == 1 (game), !bRemoveFromWorld (+0x1C bit 11), !bFadeOut (+0x470 bit 3), !IsPedDead [0x464D70], !bInVehicle (+0x46C bit 8), no ped group (CPedGroups::GetPedsGroup 0x5F7E80), and the position inside the box: per axis `pos < min` (or NaN) rejects, `pos > max` (or NaN) rejects. NO_SAVE: no mission-ped marking, no last random ped id. The result is the pool ref (CPool::GetRef 0x4442D0). | yes |
+| 2623 | SET_SCRIPT_COOP_GAME | 0x47A498 | flag  -- CGameLogic::bScriptCoopGameGoingOn (0x96A8A8) = (flag != 0) | yes |
+| 2624 | CREATE_USER_3D_MARKER | 0x47A4B8 | x, y, z, colour => marker slot  -- C3dMarkers::User3dMarkerSet(x, y, z, colour) [0x720FD0] | yes |
+| 2625 | REMOVE_USER_3D_MARKER | 0x47A50E | marker slot  -- C3dMarkers::User3dMarkerDelete(slot) [0x721090] | yes |
+| 2630 | SWITCH_OBJECT_BRAINS | 0x47A5A0 | brain id (byte), on  -- CTheScripts::ScriptsForBrains (0xA90CF0).SwitchAllObjectBrainsWithThisID(id, on != 0) [0x46A900] | yes |
+| 2632 | ALLOW_PAUSE_IN_WIDESCREEN | 0x47A5F5 | flag  -- FrontEndMenuManager.m_bMenuAccessWidescreen (0xBA677C) = (flag != 0) | yes |

@@ -12,12 +12,13 @@ The original `gta_sa.exe` (v1.0 US, "compact") is used only as an **input**:
 
 Never commit the original exe (it is git-ignored). Legal note: private use only; you need your own legitimate copy of the game and its data.
 
-Design details: `.notes/P2A_DESIGN.md` (data image, hooks-as-fixups, traps), `.notes/P2B_SHIM_PLAN.md` (RW shim), `.notes/PHASE2_STATUS.md` (history).
+Design details (committed snapshots, `git add -f`-ed because `.notes/` is a local scratch dir elsewhere): `.notes/P2A_DESIGN.md` (data image, hooks-as-fixups, traps), `.notes/P2B_SHIM_PLAN.md` (RW shim), `.notes/PHASE2_STATUS.md` (history).
 
 ## Prerequisites
 * **MSVC x86 toolchain.** Windows: VS 2022/2026 with the x86 C++ tools. macOS/Linux: [msvc-wine](https://github.com/mstorsjo/msvc-wine) plus Wine
   (tested: Wine Staging 11.x on macOS, `WINEPREFIX=~/.wine-msvc`, MSVC 14.51, SDK 10.0.26100, `cl` at `~/tools/msvc/bin/x86/cl`).
-  Wine toolchain files: `.notes/msvc-wine/{toolchain-msvc-wine.cmake,no-wx.cmake,conanprofile-wine.txt}`.
+  Wine toolchain files (committed, portable): `tools/standalone/msvc-wine/{toolchain-msvc-wine.cmake,no-wx.cmake,conanprofile-wine-debug.txt,conanprofile-wine-release.txt}`;
+  point them at your msvc-wine install with `export MSVC_WINE_ROOT=<dir>` (default `~/tools/msvc`; `cl` must be `$MSVC_WINE_ROOT/bin/x86/cl`).
 * CMake >= 4.2, Ninja, conan 2 (e.g. `pipx install conan`), git (with submodules: `git submodule update --init vendor/librw`).
 * Python 3 with `unicorn` and `capstone` (`pip install unicorn capstone`); passed as `-DGTASA_PYTHON=<python>`. The extractor replays the
   exe's 1667 static initialisers under Unicorn and classifies code pointers.
@@ -27,14 +28,16 @@ Design details: `.notes/P2A_DESIGN.md` (data image, hooks-as-fixups, traps), `.n
 
 ## Build
 Dependencies (Debug and Release are separate installs). On Windows use the repo's `conan/profiles/windows-msvc.txt` as is. Under msvc-wine
-use a profile that includes it and adds the tweaks below, then:
+use the committed profiles (they include it and add the tweaks below; Wine on PATH, `WINEPREFIX` set up for msvc-wine):
 ```
-conan install . --build=missing --profile <your-profile> -s build_type=Debug   -c tools.cmake.cmaketoolchain:user_presets=
-conan install . --build=missing --profile <your-profile> -s build_type=Release -c tools.cmake.cmaketoolchain:user_presets=
+export MSVC_WINE_ROOT=$HOME/tools/msvc     # your msvc-wine install
+conan install . --build=missing --profile tools/standalone/msvc-wine/conanprofile-wine-debug.txt         -s build_type=Debug   -c tools.cmake.cmaketoolchain:user_presets=
+conan install . --build=missing --profile tools/standalone/msvc-wine/conanprofile-wine-release.txt -s build_type=Release -c tools.cmake.cmaketoolchain:user_presets=
 ```
-Known msvc-wine profile tweaks (see `.notes/msvc-wine/conanprofile-wine.txt`): `sdl/*:libusb=False` (needs MSBuild), toolchain +
+(The first install also generates `source/libs/imgui/*` - ImGui bindings copied from the conan package by `conanfile.py`; they are not committed.)
+Known msvc-wine profile tweaks (already in those profiles; see `tools/standalone/msvc-wine/conanprofile-wine-debug.txt`): `sdl/*:libusb=False` (needs MSBuild), toolchain +
 `compiler_executables` pointing at msvc-wine `cl`, `/WX- /wd4005`, extra variables `CMAKE_NINJA_FORCE_RESPONSE_FILE=ON`,
-`CMAKE_PROJECT_INCLUDE=.notes/msvc-wine/no-wx.cmake`. For **Release** additionally: `CMAKE_TRY_COMPILE_TARGET_TYPE=STATIC_LIBRARY`,
+`CMAKE_PROJECT_INCLUDE=tools/standalone/msvc-wine/no-wx.cmake`. For **Release** additionally: `CMAKE_TRY_COMPILE_TARGET_TYPE=STATIC_LIBRARY`,
 `libjpeg-turbo/*` extra variables `HAVE_BUILTIN_CTZL=0`, and no response files for nasm. Outputs: `build/Debug/generators`, `build/Release/generators`.
 
 Common flags used below (shown with the msvc-wine paths; adapt):
@@ -79,7 +82,8 @@ Wine quirks: about half of the starts die in wined3d `Direct3DCreate9` (`nested 
 ## Tests
 `tools/standalone/run_all_tests.sh [build-dir] [regex]` configures (if needed) a Debug librw build, builds every `*_test` target, runs them under Wine
 with a retry loop for the wined3d flake and prints a table; exit code is non-zero on any failure/mismatch. Set `ASSETS=<dir>` (infernus.dff, male01.dff,
-vgsnbuild07.dff) for the model-reading tests and `RW_EXE_ORACLE=<path to the original exe>` (done by the script, Windows path form).
+vgsnbuild07.dff) or `GAME_DIR=<game install>` (the script then extracts them from `models/gta3.img`) for the model-reading tests and `RW_EXE_ORACLE=<path to the original exe>` (done by the script, Windows path form).
+Environment for the script: `GTASA_PYTHON` (python with unicorn+capstone), `MSVC_WINE_ROOT`, `WINE_BIN` (dir of `wine`), `WINEPREFIX` (default `~/.wine-msvc`), `SCRATCH` (build mutex dir, default `$TMPDIR/gta-standalone-scratch`).
 
 The **oracle idea**: `tests/standalone/game_oracle.h` maps the original exe's code over the address pad at its original VAs, so a test can call the
 original function and our port with the same randomised inputs (incl. NaN/0/denormals, under PC=24 and PC=53) and compare the results bit by bit.
@@ -123,7 +127,7 @@ Deliberate deviations are listed in `docs/STANDALONE_FIDELITY.md`.
 ## Status / known issues (2026-10-10)
 * Both librw builds link with 0 unresolved symbols. The exe boots to the main menu (~4-5 s under Wine), then NEW GAME -> loading -> intro cutscene ->
   **gameplay renders** (Los Santos, HUD, radar; ~29 fps with the frame limiter, ~530 fps in the menu, ~300 MB, no leak). Zero RW traps hit so far.
-  Screenshots: `.notes/standalone_{mainmenu,loading,ingame}.png`. All 2640 script commands are ported.
+All 2640 script commands are ported.
 * Open: (1) `CStreaming::ConvertBufferToObject` -> `RwStreamClose` on a stale stream after ~130 s (suspect the heap-stream decision in `_rwStreamInitialize`);
   (2) `CIdleCam` -> `CInterestingEvents::InvalidateNonVisibleEvents` reads a freed entity after ~60 s of idle; (3) `CEntryExit` pool (400) allocation failures logged once in game.
 * Not done: skin pipeline fidelity (exe vs_1_1 / CPU skinning; `.notes/P2B_SKIN_PIPELINE.md`, in progress), `CCurves::CalcCurvePoint` and `CWeapon::FireM16_1stPerson`

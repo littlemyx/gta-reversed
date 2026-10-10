@@ -1,0 +1,14 @@
+{# Debug conan profile for msvc-wine (macOS/Linux). Needs env MSVC_WINE_ROOT (default ~/tools/msvc) - the msvc-wine install dir. #}
+{% set msvc = os.getenv("MSVC_WINE_ROOT") or os.path.expanduser("~/tools/msvc") %}
+include({{ profile_dir }}/../../../conan/profiles/windows-msvc.txt)
+
+[options]
+# libusb in SDL3 needs MSBuild (.vcxproj), which msvc-wine does not have
+sdl/*:libusb=False
+
+[conf]
+tools.cmake.cmaketoolchain:generator=Ninja
+tools.cmake.cmaketoolchain:user_toolchain=["{{ profile_dir }}/toolchain-msvc-wine.cmake"]
+tools.build:compiler_executables={"c": "{{ msvc }}/bin/x86/cl", "cpp": "{{ msvc }}/bin/x86/cl"}
+tools.cmake.cmaketoolchain:extra_variables={"GTASA_NO_EDIT_AND_CONTINUE": "ON", "CMAKE_NINJA_FORCE_RESPONSE_FILE": "ON", "CMAKE_PROJECT_INCLUDE": "{{ profile_dir }}/no-wx.cmake"}
+tools.build:cxxflags=["/WX-", "/wd4005"]

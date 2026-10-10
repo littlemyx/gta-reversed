@@ -1,0 +1,7 @@
+{# Release conan profile for msvc-wine: the Debug one plus the Release-only tweaks (see docs/STANDALONE.md). #}
+{% set msvc = os.getenv("MSVC_WINE_ROOT") or os.path.expanduser("~/tools/msvc") %}
+include({{ profile_dir }}/conanprofile-wine-debug.txt)
+
+[conf]
+tools.cmake.cmaketoolchain:extra_variables={"GTASA_NO_EDIT_AND_CONTINUE": "ON", "CMAKE_NINJA_FORCE_RESPONSE_FILE": "ON", "CMAKE_TRY_COMPILE_TARGET_TYPE": "STATIC_LIBRARY", "CMAKE_PROJECT_INCLUDE": "{{ profile_dir }}/no-wx.cmake"}
+libjpeg-turbo/*:tools.cmake.cmaketoolchain:extra_variables={"CMAKE_TRY_COMPILE_TARGET_TYPE": "STATIC_LIBRARY", "HAVE_BUILTIN_CTZL": "0"}

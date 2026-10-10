@@ -235,6 +235,7 @@ T& ScopedStaticRef(uintptr varAddr, uintptr flagsAddr, uint32 flagsMask, T&& ini
  *    class scope / namespace scope of a .cpp:   `static inline NOTSA_GLOBAL(m_x, 0xB7CB84, (uint32), {});`
  *    function scope:                              `NOTSA_GLOBAL_LOCAL(v, 0xC0FFEE, (int), {});`   (detached: `static T v`)
  *    namespace scope of a header:                 `NOTSA_GLOBAL_HDR(g, 0xA, (int), {});`          (address: `static inline auto&`, detached: `inline T`)
+ *                                                 `NOTSA_GLOBAL_HDR_EXT(...)` for a header variable declared `inline auto&` WITHOUT `static` (external linkage; address: `inline auto&`, so the object code stays identical)
  *    big/pointer-table initialisers: header `static NOTSA_GLOBAL_DECL(CCheat, name, 0xA, (T));` + the .cpp `NOTSA_GLOBAL_DEF(CCheat, name, 0xA, (T), { &f, ... });`
  *      (address mode: DECL = the old `static inline auto&`, DEF = nothing)
  *    header declaration of a namespace-scope .cpp global:   `NOTSA_GLOBAL_EXTERN(name, (T));`   (address: `extern T& name;`, detached: `extern T name;`)
@@ -272,6 +273,7 @@ T& ScopedStaticRef(uintptr varAddr, uintptr flagsAddr, uint32 flagsMask, T&& ini
 namespace notsa { inline constexpr bool kGlobalsDetached = true; }
 #define NOTSA_GLOBAL(name, addr, type, ...)       std::type_identity_t<NOTSA_UNPAREN type> name __VA_ARGS__ NOTSA_GLOBAL_REG_(static inline const, NOTSA_GLOBAL_CAT(name, _gReg_), name, name, addr)
 #define NOTSA_GLOBAL_HDR(name, addr, type, ...)   inline std::type_identity_t<NOTSA_UNPAREN type> name __VA_ARGS__ NOTSA_GLOBAL_REG_(inline const, NOTSA_GLOBAL_CAT(name, _gReg_), name, name, addr)
+#define NOTSA_GLOBAL_HDR_EXT(name, addr, type, ...) NOTSA_GLOBAL_HDR(name, addr, type, __VA_ARGS__)
 #define NOTSA_GLOBAL_LOCAL(name, addr, type, ...) static std::type_identity_t<NOTSA_UNPAREN type> name __VA_ARGS__
 #define NOTSA_GLOBAL_LOCAL_REF(name, addr, type, obj) const auto* name = &(obj)[0]
 #define NOTSA_GLOBAL_ALIAS(name, addr, type, ...) auto& name = __VA_ARGS__
@@ -291,7 +293,8 @@ namespace notsa { inline constexpr bool kGlobalsDetached = true; }
 namespace notsa { inline constexpr bool kGlobalsDetached = false; }
 #define NOTSA_GLOBAL(name, addr, type, ...)       auto& name = StaticRef<NOTSA_UNPAREN type>(addr)
 #define NOTSA_GLOBAL_HDR(name, addr, type, ...)   static inline auto& name = StaticRef<NOTSA_UNPAREN type>(addr)
-#define NOTSA_GLOBAL_LOCAL(name, addr, type, ...) auto& name = StaticRef<NOTSA_UNPAREN type>(addr)
+#define NOTSA_GLOBAL_HDR_EXT(name, addr, type, ...) inline auto& name = StaticRef<NOTSA_UNPAREN type>(addr)
+#define NOTSA_GLOBAL_LOCAL(name, addr, type, ...) static auto& name = StaticRef<NOTSA_UNPAREN type>(addr)
 #define NOTSA_GLOBAL_LOCAL_REF(name, addr, type, obj) auto* name = reinterpret_cast<std::remove_extent_t<NOTSA_UNPAREN type>*>(addr)
 #define NOTSA_GLOBAL_ALIAS(name, addr, type, ...) auto& name = StaticRef<NOTSA_UNPAREN type>(addr)
 #define NOTSA_GLOBAL_EXPR(addr, type, ...) StaticRef<NOTSA_UNPAREN type>(addr)

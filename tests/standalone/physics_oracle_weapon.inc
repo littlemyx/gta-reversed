@@ -10,7 +10,6 @@
 
 namespace fm16 {
 alignas(16) static uint8 g_weaponInfo[sizeof(CWeaponInfo)];
-alignas(16) static uint8 g_player[0x800];
 alignas(16) static uint8 g_victim[0x40];
 static CEntity* g_hitEntity = nullptr;
 static CVector  g_hitPoint{};
@@ -23,7 +22,6 @@ static Rec g_rec;
 bool CWorld::ProcessLineOfSight(const CVector&, const CVector&, CColPoint& outColPoint, CEntity*& outEntity, bool, bool, bool, bool, bool, bool, bool, bool) {
     ++fm16::g_rec.losCount; outEntity = fm16::g_hitEntity; outColPoint.m_vecPoint = fm16::g_hitPoint; return false;
 }
-CPlayerPed* FindPlayerPed(int32) { return reinterpret_cast<CPlayerPed*>(fm16::g_player); }
 void CPad::StartShake(int16 time, uint8 freq, uint32 delay) { ++fm16::g_rec.shakeCount; fm16::g_rec.time = time; fm16::g_rec.freq = freq; fm16::g_rec.delay = (int)delay; }
 CWeaponInfo* CWeaponInfo::GetWeaponInfo(eWeaponType, eWeaponSkill) { return reinterpret_cast<CWeaponInfo*>(fm16::g_weaponInfo); }
 void CBirds::HandleGunShot(const CVector*, const CVector*) {}
@@ -51,6 +49,7 @@ template<class PM> static void* PmAddr(PM pm) { void* p; static_assert(sizeof(pm
 
 static void TestWeapon() {
     if (!Wanted("FireM16")) return;
+    fm16::g_playerActive = true;
     // redirect the callees
     PatchHostFn(PmAddr(&CWeapon::DoBulletImpact), (void*)&StubDoBulletImpact);
     PatchHostFn(PmAddr(&CWeapon::TargetWeaponRangeMultiplier), (void*)&StubRangeMult);

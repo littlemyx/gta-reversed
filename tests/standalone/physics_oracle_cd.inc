@@ -11,11 +11,11 @@
 
 // the sector-list scanners of the traffic AI ask for the player's vehicle: there is no player in this test
 CVehicle* FindPlayerVehicle(int, bool) { return nullptr; }
-CPlayerPed* FindPlayerPed(int) { return nullptr; }
+namespace fm16 { alignas(16) static uint8 g_player[0x800]; static bool g_playerActive = false; }   // the FireM16 case (physics_oracle_weapon.inc) switches the fake player on
+CPlayerPed* FindPlayerPed(int) { return fm16::g_playerActive ? reinterpret_cast<CPlayerPed*>(fm16::g_player) : nullptr; }
 // not under test here: the exe's own (the traffic-light checks ask for the appearance of the fake vehicles)
 bool CGameLogic::LaRiotsActiveHere() { return oracle::Fn<bool __cdecl()>(0x441C10)(); }
 void CCarAI::CarHasReasonToStop(CVehicle* veh) { oracle::Fn<void __cdecl(CVehicle*)>(0x41C050)(veh); }
-eVehicleAppearance CVehicle::GetVehicleAppearance() const { return (eVehicleAppearance)oracle::Fn<int __fastcall(const CVehicle*, int)>(0x6D1080)(this, 0); }
 
 namespace cd {
 

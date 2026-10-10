@@ -570,19 +570,20 @@ eCJMood __stdcall CAEPedSpeechAudioEntity::GetNextMoodToUse(eCJMood currMood) {
 
 // 0x4E4760
 ePedSpeechVoiceS16 __stdcall CAEPedSpeechAudioEntity::GetVoiceForMood(eCJMood mood) {
+    // 0x4E4760: result = rand(0,1) + 2 * mood (voices are laid out pairwise: X, X2)
     const auto b = CAEAudioUtility::GetRandomNumberInRange(0, 1) != 0;
     switch (mood) {
-    case MOOD_AG: return b ? VOICE_PLY_AG : VOICE_PLY_AG2;
-    case MOOD_AR: return b ? VOICE_PLY_AR : VOICE_PLY_AR2;
-    case MOOD_CD: return b ? VOICE_PLY_CD : VOICE_PLY_CD2;
-    case MOOD_CF: return b ? VOICE_PLY_CF : VOICE_PLY_CF2;
-    case MOOD_CG: return b ? VOICE_PLY_CG : VOICE_PLY_CG2;
-    case MOOD_CR: return b ? VOICE_PLY_CR : VOICE_PLY_CR2;
-    case MOOD_PG: return b ? VOICE_PLY_PG : VOICE_PLY_PG2;
-    case MOOD_PR: return b ? VOICE_PLY_PR : VOICE_PLY_PR2;
-    case MOOD_WG: return b ? VOICE_PLY_WG : VOICE_PLY_WG2;
-    case MOOD_WR: return b ? VOICE_PLY_WR : VOICE_PLY_WR2;
-    default:      NOTSA_UNREACHABLE(); return b ? VOICE_PLY_CR : VOICE_PLY_CR2; // 0x4E47AD: default shares the MOOD_CR entry
+    case MOOD_AG: return b ? VOICE_PLY_AG2 : VOICE_PLY_AG;
+    case MOOD_AR: return b ? VOICE_PLY_AR2 : VOICE_PLY_AR;
+    case MOOD_CD: return b ? VOICE_PLY_CD2 : VOICE_PLY_CD;
+    case MOOD_CF: return b ? VOICE_PLY_CF2 : VOICE_PLY_CF;
+    case MOOD_CG: return b ? VOICE_PLY_CG2 : VOICE_PLY_CG;
+    case MOOD_CR: return b ? VOICE_PLY_CR2 : VOICE_PLY_CR;
+    case MOOD_PG: return b ? VOICE_PLY_PG2 : VOICE_PLY_PG;
+    case MOOD_PR: return b ? VOICE_PLY_PR2 : VOICE_PLY_PR;
+    case MOOD_WG: return b ? VOICE_PLY_WG2 : VOICE_PLY_WG;
+    case MOOD_WR: return b ? VOICE_PLY_WR2 : VOICE_PLY_WR;
+    default:      NOTSA_UNREACHABLE(); return b ? VOICE_PLY_CR2 : VOICE_PLY_CR; // 0x4E47AD: default shares the MOOD_CR entry
     }
 }
 

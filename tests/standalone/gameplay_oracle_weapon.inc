@@ -11,19 +11,29 @@
 namespace wfx {
 // the port and the exe work on two copies of one random buffer: compares the returned value (kind 0 = integer (masked), 1 = float bits, 2 = ignored) and the whole buffer
 template<size_t N, class Init, class FP, class FE>
-static bool Obj(Rng& r, std::string& d, Init&& init, FP&& fp, FE&& fe, int kind = 0, uint32_t mask = 0xFFFFFFFFu, const char* tag = "") {
+static bool Obj(Rng& r, std::string& d, Init&& init, FP&& fp, FE&& fe, int kind = 0, uint32_t mask = 0xFFFFFFFFu, uintptr_t gva = 0, size_t gn = 0, const std::function<void(uint8*, bool)>& fix = {}) {
     alignas(16) uint8 A[N + 16], E[N + 16], O[N + 16];
     std::memset(A, 0, sizeof A);
     init(r, A);
-    std::memcpy(E, A, sizeof A); std::memcpy(O, A, sizeof A);
-    const uint32_t ra = fp(A), re = fe(E);
+    std::memcpy(E, A, sizeof A); std::memcpy(O, A, sizeof A);   // fix(b, true) wires the buffer-internal pointers before a call, fix(b, false) unwires them for the comparison
+    std::vector<uint8> g0(gn), ga(gn), ge(gn);
+    if (gn) std::memcpy(g0.data(), (void*)gva, gn);
+    if (fix) fix(A, true);
+    const uint32_t ra = fp(A);
+    if (fix) fix(A, false);
+    if (gn) { std::memcpy(ga.data(), (void*)gva, gn); std::memcpy((void*)gva, g0.data(), gn); }
+    if (fix) fix(E, true);
+    const uint32_t re = fe(E);
+    if (fix) fix(E, false);
+    if (gn) { std::memcpy(ge.data(), (void*)gva, gn); std::memcpy((void*)gva, g0.data(), gn); }
     bool ok = true;
     if (kind == 0) { if ((ra & mask) != (re & mask)) { g_hardDiff = true; ok = false; } }
     else if (kind == 1) ok &= SameBits(ra, re);
     ok &= SameBlob(A, E, N + 16);
+    if (gn) ok &= SameBlob(ga.data(), ge.data(), gn);
     if (ok) return true;
-    char b[96]; std::snprintf(b, sizeof b, "%s ret %08X/%08X ", tag, ra, re);
-    d = b + DiffDesc(A, E, N + 16, "buf") + " in " + Hex(O, N < 96 ? N : 96);
+    char b[96]; std::snprintf(b, sizeof b, "ret %08X/%08X ", ra, re);
+    d = b + DiffDesc(A, E, N + 16, "buf") + (gn ? DiffDesc(ga.data(), ge.data(), gn, "glob") : "") + " in " + Hex(O, N < 160 ? N : 160);
     return false;
 }
 // the same for exe globals: `n` bytes at `va` are randomised (fill), saved after each side and compared
@@ -105,13 +115,14 @@ static void TestWeaponMisc() {
         d = "type " + std::to_string(t) + " skill " + std::to_string(sk) + " got " + std::to_string((uintptr_t)a) + " exe " + std::to_string((uintptr_t)e); return false;
     });
     Run("CWeaponInfo::GetSkillStatIndex 0x743CD0", [](Rng& r, std::string& d) {
-        const int t = 22 + r.below(12);
+        const int t = 22 + r.below(11);   // exe: 22..32 (cmp 0x20; jg -> -1)
         const int a = (int)CWeaponInfo::GetSkillStatIndex((eWeaponType)t), e = oracle::Fn<int __cdecl(int)>(0x743CD0)(t);
         if (a == e) return true;
         d = "type " + std::to_string(t) + " got " + std::to_string(a) + " exe " + std::to_string(e); return false;
     });
+    // m_nSkillLevel is a byte in the port (always 0..3 in the data): the fixture keeps it below 128
     Run("CWeaponInfo::GetTargetHeadRange 0x743D50", [](Rng& r, std::string& d) {
-        return Obj<0x70>(r, d, [](Rng& rr, uint8* b) { FillU(rr, b, 0x70); Put<float>(b, 8, GenF(rr, rr.below(2) ? 100.f : PickScale(rr))); Put<int32_t>(b, 0x30, rr.below(3) ? rr.below(5) : (int)rr.u32()); },
+        return Obj<0x70>(r, d, [](Rng& rr, uint8* b) { FillU(rr, b, 0x70); Put<float>(b, 8, GenF(rr, rr.below(2) ? 100.f : PickScale(rr))); Put<int32_t>(b, 0x30, rr.below(3) ? rr.below(5) : rr.below(128)); },
             [](uint8* b) { return FB(reinterpret_cast<CWeaponInfo*>(b)->GetTargetHeadRange()); },
             [](uint8* b) { return FB(oracle::Fn<float __fastcall(void*, int)>(0x743D50)(b, 0)); }, 1);
     });
@@ -140,11 +151,14 @@ static void TestWeaponMisc() {
     });
     // ---- CExplosion statics (16 x 0x7C bytes at 0xC88950)
     constexpr uintptr_t EX = 0xC88950; constexpr size_t EXN = 16 * 0x7C;
-    Run("CExplosion::ClearAllExplosions 0x736840", [](Rng& r, std::string& d) {
-        return Glob(r, d, EX, EXN, [](Rng& rr, uint8* g) { FillU(rr, g, EXN); }, [] { CExplosion::ClearAllExplosions(); return 0u; }, [] { oracle::Fn<void __cdecl()>(0x736840)(); return 0u; }, 2);
+    // NOTE: the exe's ClearAllExplosions/Initialise clear the fuel arrays (+0x40..+0x7C) through a mis-strided loop (zero vectors at B_k+0x40+0xC*k ... and a few stray words outside the array,
+    // 18 inner iterations for 16 explosions); the port clears them per explosion. The two agree whenever the fuel arrays are already zero (static zero-init, the only time the game calls it), which the fixture enforces.
+    auto fillClear = [](Rng& rr, uint8* g) { FillU(rr, g, EXN); for (int i = 0; i < 16; ++i) std::memset(g + i * 0x7C + 0x40, 0, 0x7C - 0x40); };
+    Run("CExplosion::ClearAllExplosions 0x736840", [&](Rng& r, std::string& d) {
+        return Glob(r, d, EX, EXN, fillClear, [] { CExplosion::ClearAllExplosions(); return 0u; }, [] { oracle::Fn<void __cdecl()>(0x736840)(); return 0u; }, 2);
     });
-    Run("CExplosion::Initialise 0x736A40", [](Rng& r, std::string& d) {
-        return Glob(r, d, EX, EXN, [](Rng& rr, uint8* g) { FillU(rr, g, EXN); }, [] { CExplosion::Initialise(); return 0u; }, [] { oracle::Fn<void __cdecl()>(0x736A40)(); return 0u; }, 2);
+    Run("CExplosion::Initialise 0x736A40", [&](Rng& r, std::string& d) {
+        return Glob(r, d, EX, EXN, fillClear, [] { CExplosion::Initialise(); return 0u; }, [] { oracle::Fn<void __cdecl()>(0x736A40)(); return 0u; }, 2);
     });
     Run("CExplosion::GetExplosionActiveCounter 0x736900", [](Rng& r, std::string& d) {
         const uint8 id = (uint8)r.below(16);
@@ -189,10 +203,11 @@ static void TestWeaponMisc() {
         constexpr size_t n = 0xC8A7E9 - 0xC89628;
         return Glob(r, d, 0xC89628, n, [](Rng& rr, uint8* g) { FillU(rr, g, n); }, [] { CShotInfo::Initialise(); return 0u; }, [] { oracle::Fn<void __cdecl()>(0x739B60)(); return 0u; }, 2);
     });
+    // (origins are finite: a float copy through the FPU would quiet a signalling NaN)
     Run("CShotInfo::GetFlameThrowerShotPosn 0x739DE0", [](Rng& r, std::string& d) {
         const uint8 id = (uint8)r.below(100);
         alignas(16) uint8 o[24];
-        return Glob(r, d, 0xC89690, 100 * 0x2c, [&](Rng& rr, uint8* g) { FillU(rr, g, 100 * 0x2c); for (int i = 0; i < 100; ++i) { Put<int32_t>(g, i * 0x2c, rr.below(2) ? 0x25 : rr.below(60)); Put<uint8>(g, i * 0x2c + 0x28, rr.below(2)); } FillU(rr, o, sizeof o); },
+        return Glob(r, d, 0xC89690, 100 * 0x2c, [&](Rng& rr, uint8* g) { FillU(rr, g, 100 * 0x2c); for (int i = 0; i < 100; ++i) { Put<int32_t>(g, i * 0x2c, rr.below(2) ? 0x25 : rr.below(60)); Put<uint8>(g, i * 0x2c + 0x28, rr.below(2)); for (int k = 0; k < 3; ++k) Put<float>(g, i * 0x2c + 4 + 4 * k, rr.f01() * 100.f - 50.f); } FillU(rr, o, sizeof o); },
             [&] { alignas(16) uint8 p[24]; std::memcpy(p, o, 24); const bool b = CShotInfo::GetFlameThrowerShotPosn(id, *reinterpret_cast<CVector*>(p + 4)); uint32_t h = b; for (int i = 0; i < 24; ++i) h = h * 31 + p[i]; return h; },
             [&] { alignas(16) uint8 p[24]; std::memcpy(p, o, 24); const bool b = oracle::Fn<bool __cdecl(uint8, CVector*)>(0x739DE0)(id, reinterpret_cast<CVector*>(p + 4)); uint32_t h = b; for (int i = 0; i < 24; ++i) h = h * 31 + p[i]; return h; });
     });

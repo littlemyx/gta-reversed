@@ -257,11 +257,13 @@ static void TestHeatSeeking() {
 #include "World.h"
 #include "FireManager.h"
 namespace sfx {
-struct Rec { int kind; CVector pos; float a; const void* ent; };
+struct Rec { int kind; CVector pos; float a; const void* ent; float b = 0.f, c = 0.f; };
 inline std::vector<Rec> g_rec;
 inline int      g_spray = 0;
 inline CVector  g_sprayDir{};
 inline bool     g_extinguish = false;
+inline bool     g_pvl = false;
+inline CVector  g_pvlPoint{};
 }
 void CWorld::SetCarsOnFire(CVector pos, float radius, CEntity* c) { sfx::g_rec.push_back({ 0, pos, radius, c }); }
 void CWorld::SetWorldOnFire(CVector pos, float radius, CEntity* c) { sfx::g_rec.push_back({ 1, pos, radius, c }); }
@@ -272,7 +274,7 @@ static void __cdecl ExeCarsOnFire(CVector pos, float radius, CEntity* c) { g_rec
 static void __cdecl ExeWorldOnFire(CVector pos, float radius, CEntity* c) { g_rec.push_back({ 1, pos, radius, c }); }
 static int  __cdecl ExeSpray(CVector* posn, CVector* outDir, float radius, bool f) { g_rec.push_back({ 2 + (int)f * 10, *posn, radius, nullptr }); *outDir = g_sprayDir; return g_spray; }
 static bool __fastcall ExeExtinguish(void*, int, CVector point, float r, float sz) { g_rec.push_back({ 3, point, r + sz * 1000.f, nullptr }); return g_extinguish; }
-inline std::string Dump(const std::vector<Rec>& v) { std::string s = std::to_string(v.size()) + " effects"; for (size_t i = 0; i < v.size() && i < 4; ++i) s += " [" + std::to_string(v[i].kind) + V(v[i].pos) + F(v[i].a) + "]"; return s; }
+inline std::string Dump(const std::vector<Rec>& v) { std::string s = std::to_string(v.size()) + " effects"; for (size_t i = 0; i < v.size() && i < 6; ++i) s += " [" + std::to_string(v[i].kind) + V(v[i].pos) + F(v[i].a) + (v[i].b != 0.f || v[i].c != 0.f ? F(v[i].b) + F(v[i].c) : std::string()) + "]"; return s; }
 }
 
 static void TestShotInfoUpdate() {
@@ -394,8 +396,181 @@ static void TestWeaponState() {
     });
 }
 
+
+// CExplosion::Update (creator-less / victim-less explosions): lights, fire / explosion world calls and fx creation are recorded on both sides
+#include "PointLights.h"
+#include "CreepingFire.h"
+#include "Fx/FxManager.h"
+void CPointLights::AddLight(uint8 lightType, CVector point, CVector direction, float radius, float red, float green, float blue, uint8 fogType, bool generateExtraShadows, CEntity* entityAffected) {
+    sfx::g_rec.push_back({ 4 + lightType * 100, point, radius, entityAffected, red + 2.f * green + 4.f * blue, (float)fogType + 2.f * generateExtraShadows + direction.x + direction.y + direction.z });
+}
+void CWorld::TriggerExplosion(const CVector& point, float radius, float visibleDistance, CEntity* victim, CEntity* creator, bool processVehicleBombTimer, float damage) {
+    sfx::g_rec.push_back({ 5, point, radius, creator, visibleDistance + 2.f * processVehicleBombTimer, damage + (victim ? 1000.f : 0.f) });
+}
+void CWorld::SetPedsOnFire(float x, float y, float z, float radius, CEntity* fireCreator) { sfx::g_rec.push_back({ 6, { x, y, z }, radius, fireCreator }); }
+bool CWorld::ProcessVerticalLine(const CVector& origin, float distance, CColPoint& outColPoint, CEntity*& outEntity, bool buildings, bool vehicles, bool peds, bool objects, bool dummies, bool doSeeThroughCheck, CStoredCollPoly* outCollPoly) {
+    sfx::g_rec.push_back({ 7, origin, distance, nullptr, (float)(buildings + 2 * vehicles + 4 * peds + 8 * objects + 16 * dummies + 32 * doSeeThroughCheck), outCollPoly ? 1.f : 0.f });
+    outEntity = nullptr; outColPoint.m_vecPoint = sfx::g_pvlPoint; return sfx::g_pvl;
+}
+bool CCreepingFire::TryToStartFireAtCoors(CVector pos, uint8 nGenerations, bool a5, bool bScriptFire, float fDistance) { sfx::g_rec.push_back({ 8, pos, fDistance, nullptr, (float)(nGenerations + 2 * a5 + 4 * bScriptFire) }); return false; }
+FxSystem_c* FxManager_c::CreateFxSystem(const char* name, const CVector& point, RwMatrix* objectMatrix, bool ignoreBoundingChecks) { sfx::g_rec.push_back({ 9, point, (float)(unsigned char)name[10], objectMatrix, (float)ignoreBoundingChecks }); return nullptr; }
+namespace sfx {
+static void __cdecl ExeAddLight(uint8 lightType, CVector point, CVector direction, float radius, float red, float green, float blue, uint8 fogType, bool genShadows, CEntity* e) {
+    g_rec.push_back({ 4 + lightType * 100, point, radius, e, red + 2.f * green + 4.f * blue, (float)fogType + 2.f * genShadows + direction.x + direction.y + direction.z });
+}
+static void __cdecl ExeTrigger(const CVector* point, float radius, float vis, CEntity* victim, CEntity* creator, bool bomb, float damage) { g_rec.push_back({ 5, *point, radius, creator, vis + 2.f * bomb, damage + (victim ? 1000.f : 0.f) }); }
+static void __cdecl ExePeds(float x, float y, float z, float radius, CEntity* c) { g_rec.push_back({ 6, { x, y, z }, radius, c }); }
+static bool __cdecl ExeVertical(const CVector* origin, float distance, CColPoint* cp, CEntity** outEntity, bool b, bool v, bool p, bool o, bool dm, bool st, void* poly) {
+    g_rec.push_back({ 7, *origin, distance, nullptr, (float)(b + 2 * v + 4 * p + 8 * o + 16 * dm + 32 * st), poly ? 1.f : 0.f });
+    *outEntity = nullptr; cp->m_vecPoint = g_pvlPoint; return g_pvl;
+}
+static bool __cdecl ExeCreeping(CVector pos, uint8 gen, bool a5, bool script, float dist) { g_rec.push_back({ 8, pos, dist, nullptr, (float)(gen + 2 * a5 + 4 * script) }); return false; }
+static void* __fastcall ExeCreateFx(void*, int, const char* name, const CVector* point, void* mat, bool ign) { g_rec.push_back({ 9, *point, (float)(unsigned char)name[10], mat, (float)ign }); return nullptr; }
+}
+
+static void TestExplosionUpdate() {
+    using namespace wfx;
+    if (!Wanted("CExplosion::Update")) return;
+    oracle::Patch(0x7000E0, (void*)&sfx::ExeAddLight);
+    oracle::Patch(0x56B790, (void*)&sfx::ExeTrigger);
+    oracle::Patch(0x565610, (void*)&sfx::ExePeds);
+    oracle::Patch(0x5674E0, (void*)&sfx::ExeVertical);
+    oracle::Patch(0x53A450, (void*)&sfx::ExeCreeping);
+    oracle::Patch(0x4A9BE0, (void*)&sfx::ExeCreateFx);
+    oracle::Patch(0x5659F0, (void*)&sfx::ExeCarsOnFire);
+    oracle::Patch(0x56B910, (void*)&sfx::ExeWorldOnFire);
+    Run("CExplosion::Update (no victim / creator) 0x737620", [&](Rng& r, std::string& d) {
+        constexpr size_t N = 16 * 0x7C;
+        std::vector<sfx::Rec> ra, re;
+        sfx::g_pvl = r.below(2); sfx::g_pvlPoint = CVector{ GenF(r, 50.f), GenF(r, 50.f), GenF(r, 50.f) };
+        const unsigned seed = r.u32();
+        const bool ok = Glob(r, d, 0xC88950, N, [&](Rng& rr, uint8* g) {
+                FillU(rr, g, N);
+                CTimer::m_snTimeInMilliseconds = rr.u32() & 0xFFFFF; CTimer::m_FrameCounter = rr.u32() & 0xFFFF;
+                CTimer::ms_fTimeStep = rr.below(6) ? 0.2f + rr.f01() * 2.f : GenF(rr, 3.f, S_NAN | S_ZERO | S_TINY | S_DEN);
+                for (int i = 0; i < 16; ++i) {
+                    uint8* e = g + i * 0x7C;
+                    Put<int32_t>(e, 0, rr.below(4) ? (int)rr.below(14) : (int)rr.below(30));
+                    for (int k = 0; k < 3; ++k) Put<float>(e, 4 + 4 * k, GenF(rr, 100.f));
+                    Put<float>(e, 0x10, rr.below(2) ? rr.f01() * 30.f : GenF(rr, 30.f));                                // radius
+                    Put<float>(e, 0x14, rr.below(2) ? 0.5f : GenF(rr, 2.f));                                           // propagation rate
+                    Put<uint32_t>(e, 0x18, 0); Put<uint32_t>(e, 0x1C, 0);                                              // creator / victim
+                    Put<float>(e, 0x20, rr.below(2) ? (float)CTimer::GetTimeInMS() + GenF(rr, 3000.f) : GenF(rr, 1e6f));       // expire time
+                    Put<float>(e, 0x24, rr.below(2) ? 1.f : rr.f01());
+                    Put<uint8>(e, 0x28, (uint8)(rr.below(3) ? rr.below(4) : rr.below(256))); Put<uint8>(e, 0x29, (uint8)rr.below(2)); Put<uint8>(e, 0x2A, (uint8)rr.below(2));
+                    Put<uint32_t>(e, 0x30, rr.below(3) ? 0 : (uint32_t)(CTimer::GetTimeInMS() + (int)rr.below(1000) - 500));      // particles expire time
+                    Put<float>(e, 0x34, rr.below(3) ? 0.f : 300.f * rr.f01());                                         // visible distance
+                    Put<int32_t>(e, 0x3C, (int)rr.below(400) - 100);                                                   // fuel timer
+                    for (int k = 0; k < 3; ++k) { Put<float>(e, 0x64 + 4 * k, rr.below(3) ? 0.f : rr.f01() * 2.f); Put<float>(e, 0x70 + 4 * k, 20.f + rr.f01() * 10.f); for (int c = 0; c < 3; ++c) Put<float>(e, 0x40 + 12 * k + 4 * c, GenF(rr, 1.f)); }
+                }
+            },
+            [&] { SeedBoth(seed); sfx::g_rec.clear(); CExplosion::Update(); ra = sfx::g_rec; return 0u; },
+            [&] { SeedBoth(seed); sfx::g_rec.clear(); oracle::Fn<void __cdecl()>(0x737620)(); re = sfx::g_rec; return 0u; }, 2);
+        bool same = ra.size() == re.size();
+        for (size_t i = 0; same && i < ra.size(); ++i) same = ra[i].kind == re[i].kind && SameV(ra[i].pos, re[i].pos) && SameF(ra[i].a, re[i].a) && SameF(ra[i].b, re[i].b) && SameF(ra[i].c, re[i].c) && ra[i].ent == re[i].ent;
+        Hit(!ra.empty());
+        if (ok && same) return true;
+        d += " port " + sfx::Dump(ra) + " exe " + sfx::Dump(re);
+        for (size_t i = 0; i < ra.size() && i < re.size(); ++i) if (ra[i].kind != re[i].kind || !SameV(ra[i].pos, re[i].pos) || !SameF(ra[i].a, re[i].a) || !SameF(ra[i].b, re[i].b) || !SameF(ra[i].c, re[i].c) || ra[i].ent != re[i].ent) { d += " FIRST DIFF #" + std::to_string(i) + " " + F(ra[i].b) + F(re[i].b) + F(ra[i].c) + F(re[i].c) + F(ra[i].a) + F(re[i].a); break; }
+        return false;
+    });
+}
+
+
+// CProjectileInfo::Update for grenades / tear gas / molotov / bombs / satchels / flares (no rocket types: their smoke needs an fx system); the callees are recorded on both sides
+#include "Entity/Object/Projectile.h"
+namespace pjx {
+struct Rec { int kind; int idx; CVector a, b; float f; };
+inline std::vector<Rec> g_rec;
+inline uint8* g_base = nullptr;           // projectile buffers of the side that is running
+constexpr size_t PS = 0x200;
+inline int IdxOf(const void* p) { return p ? (int)(((const uint8*)p - g_base) / PS) : -1; }
+inline int g_clearCounter = 0; inline unsigned g_clearMask = 0;
+}
+bool CWorld::GetIsLineOfSightClear(const CVector& origin, const CVector& target, bool buildings, bool vehicles, bool peds, bool objects, bool dummies, bool doSeeThroughCheck, bool doCameraIgnoreCheck) {
+    const bool res = (pjx::g_clearMask >> (pjx::g_clearCounter++ & 31)) & 1;
+    pjx::g_rec.push_back({ 1, res, origin, target, (float)(buildings + 2 * vehicles + 4 * peds + 8 * objects + 16 * dummies + 32 * doSeeThroughCheck + 64 * doCameraIgnoreCheck) });
+    return res;
+}
+void CWorld::SetPedsChoking(float x, float y, float z, float radius, CEntity* gasCreator) { pjx::g_rec.push_back({ 2, 0, { x, y, z }, {}, radius }); }
+namespace pjx {
+static bool __cdecl ExeClear(const CVector* origin, const CVector* target, bool a, bool b, bool c, bool d, bool e, bool f, bool g) {
+    const bool res = (g_clearMask >> (g_clearCounter++ & 31)) & 1;
+    g_rec.push_back({ 1, res, *origin, *target, (float)(a + 2 * b + 4 * c + 8 * d + 16 * e + 32 * f + 64 * g) });
+    return res;
+}
+static void __cdecl ExeChoking(float x, float y, float z, float radius, CEntity*) { g_rec.push_back({ 2, 0, { x, y, z }, {}, radius }); }
+static void __cdecl ExeRemove(CProjectileInfo* info, CProjectile* proj) { g_rec.push_back({ 3, (int)(info - &gaProjectileInfo[0]), {}, {}, (float)IdxOf(proj) }); }
+inline std::string Dump(const std::vector<Rec>& v) { std::string s = std::to_string(v.size()) + " calls"; for (size_t i = 0; i < v.size() && i < 6; ++i) s += " [" + std::to_string(v[i].kind) + "," + std::to_string(v[i].idx) + V(v[i].a) + V(v[i].b) + F(v[i].f) + "]"; return s; }
+}
+
+static void TestProjectileInfoUpdate() {
+    using namespace wfx;
+    if (!Wanted("CProjectileInfo::Update")) return;
+    oracle::Patch(0x56A490, (void*)&pjx::ExeClear);
+    oracle::Patch(0x565800, (void*)&pjx::ExeChoking);
+    oracle::Patch(0x7388F0, (void*)&pjx::ExeRemove);
+    PatchFn((void*)&CProjectileInfo::RemoveProjectile, (void*)&pjx::ExeRemove);
+    Run("CProjectileInfo::Update (no rockets) 0x738B20", [&](Rng& r, std::string& d) {
+        constexpr int NP = 32;
+        alignas(16) static uint8 setA[NP][pjx::PS], setE[NP][pjx::PS], mats[2][NP][0x40];
+        static const int types[] = { 16, 17, 18, 21, 39, 58, 58, 16, 17, 22 };
+        pjx::g_clearMask = r.u32(); pjx::g_clearCounter = 0;
+        const unsigned seed = r.u32();
+        CTimer::m_snTimeInMilliseconds = r.u32() & 0xFFFFFF; CTimer::ms_fTimeStep = r.below(6) ? 0.2f + r.f01() * 2.f : GenF(r, 3.f, S_NAN | S_ZERO | S_TINY);
+        // projectile entities (two identical copies, wired to their own matrices) and the info array
+        for (int i = 0; i < NP; ++i) {
+            FillU(r, setA[i], pjx::PS);
+            auto& pr = *reinterpret_cast<CProjectile*>(setA[i]);
+            pr.m_vecMoveSpeed = GenV(r, r.below(3) ? 0.03f : 1.f);
+            pr.m_fElasticity = r.below(2) ? 0.5f : r.f01() * 0.2f;
+            Put<uint32_t>(setA[i], 0x40, r.u32() & ~0x100u); if (r.below(8) == 0) Put<uint32_t>(setA[i], 0x40, Get<uint32_t>(setA[i], 0x40) | 0x100u);
+            pr.m_nNumEntitiesCollided = (uint8)r.below(3); pr.m_apCollidedEntities[0] = nullptr; pr.m_pEntityIgnoredCollision = nullptr;
+            pr.m_fDamageIntensity = 0.f; pr.m_pDamageEntity = nullptr; pr.m_pAttachedTo = nullptr;                // (satchel attach is excluded)
+            FillF(r, mats[0][i], 0x40, 1.f);
+            std::memcpy(mats[1][i], mats[0][i], 0x40);
+        }
+        std::memcpy(setE, setA, sizeof setE);
+        Snap infoSave(0xC891A8, NP * 0x24), ptrSave(0xC89110, NP * 4);
+        infoSave.Save(); ptrSave.Save();
+        for (int i = 0; i < NP; ++i) {
+            uint8* e = (uint8*)0xC891A8 + i * 0x24;
+            Put<uint32_t>(e, 0, r.below(5) ? types[r.below(10)] : r.below(60)); Put<uint32_t>(e, 4, 0); Put<uint32_t>(e, 8, 0);
+            Put<int32_t>(e, 0xC, r.below(3) == 0 ? 0 : r.below(2) ? (int)CTimer::GetTimeInMS() + (int)r.below(40000) - 20000 : (int)r.u32());
+            if (Get<uint32_t>(e, 0) == 19 || Get<uint32_t>(e, 0) == 20) Put<uint32_t>(e, 0, 22);                  // (no rocket types: smoke particles need an fx system)
+            if (Get<uint32_t>(e, 0) == 39) Put<int32_t>(e, 0xC, 0);                                               // (an expired satchel dereferences its creator: null crashes the exe as well)
+            Put<uint8>(e, 0x10, (uint8)(r.below(4) != 0));
+            for (int k = 0; k < 3; ++k) Put<float>(e, 0x14 + 4 * k, GenF(r, 50.f));
+            Put<uint32_t>(e, 0x20, 0);
+        }
+        auto wire = [&](uint8 (*set)[pjx::PS], int side, bool on) { for (int i = 0; i < NP; ++i) Put<uint32_t>(set[i], 0x14, on ? (uint32_t)(uintptr_t)mats[side][i] : 0u); };
+        Snap infoIn(0xC891A8, NP * 0x24); infoIn.Save();
+        std::vector<pjx::Rec> ra, re;
+        // port
+        for (int i = 0; i < NP; ++i) { uint32_t p = (uint32_t)(uintptr_t)setA[i]; std::memcpy((uint8*)0xC89110 + 4 * i, &p, 4); }
+        wire(setA, 0, true); pjx::g_base = &setA[0][0]; pjx::g_rec.clear(); pjx::g_clearCounter = 0; SeedBoth(seed);
+        CProjectileInfo::Update(); ra = pjx::g_rec; wire(setA, 0, false);
+        Snap infoPort(0xC891A8, NP * 0x24); infoPort.Save();
+        // exe
+        infoIn.Restore();
+        for (int i = 0; i < NP; ++i) { uint32_t p = (uint32_t)(uintptr_t)setE[i]; std::memcpy((uint8*)0xC89110 + 4 * i, &p, 4); }
+        wire(setE, 1, true); pjx::g_base = &setE[0][0]; pjx::g_rec.clear(); pjx::g_clearCounter = 0; SeedBoth(seed);
+        oracle::Fn<void __cdecl()>(0x738B20)(); re = pjx::g_rec; wire(setE, 1, false);
+        Snap infoExe(0xC891A8, NP * 0x24); infoExe.Save();
+        infoSave.Restore(); ptrSave.Restore();
+        bool ok = infoPort.SameAs(infoExe) && SameBlob(setA, setE, sizeof setA) && ra.size() == re.size();
+        for (size_t i = 0; ok && i < ra.size(); ++i) ok = ra[i].kind == re[i].kind && ra[i].idx == re[i].idx && SameV(ra[i].a, re[i].a) && SameV(ra[i].b, re[i].b) && SameF(ra[i].f, re[i].f);
+        Hit(!ra.empty());
+        if (ok) return true;
+        d = "info " + DiffDesc(infoPort.b.data(), infoExe.b.data(), infoPort.b.size(), "info") + " ents " + DiffDesc(setA, setE, sizeof setA, "ent") + " port " + pjx::Dump(ra) + " exe " + pjx::Dump(re);
+        return false;
+    });
+}
+
 static void TestWeapons() {
     TestWeaponMisc();
+    TestProjectileInfoUpdate();
+    TestExplosionUpdate();
     TestWeaponState();
     TestHeatSeeking();
     TestShotInfoUpdate();

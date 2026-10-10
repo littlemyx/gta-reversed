@@ -311,7 +311,7 @@ void CInterestingEvents::InvalidateNonVisibleEvents() {
             continue;
 
         event.time = 0;
-        CEntity::SafeCleanUpRef(event.entity);
+        CEntity::ClearReference(event.entity); // 0x602A28: CleanUpOldReference + `event.entity = nullptr`
         if (m_nInterestingEvent == i) {
             m_nInterestingEvent = -1;
         }

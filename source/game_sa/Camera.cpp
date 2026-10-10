@@ -338,7 +338,8 @@ void CCamera::ApplyVehicleCameraTweaks(CVehicle* vehicle) {
 
     InitCameraVehicleTweaks();
     for (auto& camTweak : m_aCamTweak) {
-        if (camTweak.ModelID == vehicle->GetModelIndex()) {
+        if (camTweak.ModelID >= 0 && camTweak.ModelID == vehicle->GetModelIndex()) {
+            m_nCurrentTweakModelIndex = camTweak.ModelID; // 0x50A4CA
             m_fCurrentTweakDistance = camTweak.Dist;
             m_fCurrentTweakAltitude = camTweak.Alt;
             m_fCurrentTweakAngle    = camTweak.Angle;
@@ -449,9 +450,9 @@ uint32 CCamera::GetCutSceneFinishTime() {
         return cam.m_nFinishTime;
     }
 
-    cam = m_aCams[(m_nActiveCam + 1) % 2];
-    if (cam.m_nMode == eCamMode::MODE_FLYBY) {
-        return cam.m_nFinishTime;
+    auto& other = m_aCams[(m_nActiveCam + 1) % 2]; // NOTE: Not an assignment (the port used to copy the whole CCam over the active one)
+    if (other.m_nMode == eCamMode::MODE_FLYBY) {
+        return other.m_nFinishTime;
     }
 
     return 0;
@@ -928,16 +929,23 @@ void CCamera::SetParametersForScriptInterpolation(float interpolationToStopMovin
 
 // 0x50C070
 void CCamera::SetPercentAlongCutScene(float percent) {
+    // 0x50C0A8: `percent * 0.01f` first (0x858C58), then the finish time as an unsigned int converted via fild + 2^32 fixup
+    const auto SetTime = [percent](CCam& cam) {
+        double finishTime = (double)(int32)cam.m_nFinishTime; // fild: exact, signed
+        if ((int32)cam.m_nFinishTime < 0) {
+            finishTime += 4294967296.0; // 0x858C54 (rounded by the x87 add)
+        }
+        cam.m_fTimeElapsedFloat = (float)((double)percent * (double)std::bit_cast<float>(0x3C23D70Au) * finishTime);
+    };
     auto& cam = m_aCams[m_nActiveCam];
     if (cam.m_nMode == eCamMode::MODE_FLYBY) {
-        cam.m_fTimeElapsedFloat = (float)cam.m_nFinishTime * percent * ExeRecip(100.0f);
+        SetTime(cam);
         return;
     }
 
-    cam = m_aCams[(m_nActiveCam + 1) % 2];
-    if (cam.m_nMode == eCamMode::MODE_FLYBY) {
-        cam.m_fTimeElapsedFloat = (float)cam.m_nFinishTime * percent * ExeRecip(100.0f);
-        return;
+    auto& other = m_aCams[(m_nActiveCam + 1) % 2]; // NOTE: Not an assignment (the port used to copy the whole CCam over the active one)
+    if (other.m_nMode == eCamMode::MODE_FLYBY) {
+        SetTime(other);
     }
 }
 

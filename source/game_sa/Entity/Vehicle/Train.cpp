@@ -5,6 +5,7 @@
     Do not delete this comment block. Respect others' work!
 */
 #include "StdInc.h"
+#include "Core/X87Intrinsics.h"
 
 #include "Train.h"
 
@@ -715,10 +716,11 @@ void CTrain::FindPositionOnTrackFromCoors() {
                 m_fCurrentRailDistance += arrTotalTrackLength[m_nTrackId];
             }
 
-            const float speed = m_vecMoveSpeed.Magnitude();
+            // 0x6F6F8D (oracle-proven): the inlined magnitude sums z, y, x in that order; the dot product is (dy*vy + vz*0) + dx*vx
+            const float speed = (float)x87::sqrt((double)((m_vecMoveSpeed.z * m_vecMoveSpeed.z + m_vecMoveSpeed.y * m_vecMoveSpeed.y) + m_vecMoveSpeed.x * m_vecMoveSpeed.x));
             m_fTrainSpeed = speed;
 
-            const float dot = (nextX - nodeX) * m_vecMoveSpeed.x + (nextY - nodeY) * m_vecMoveSpeed.y + m_vecMoveSpeed.z * 0.0f;
+            const float dot = ((nextY - nodeY) * m_vecMoveSpeed.y + m_vecMoveSpeed.z * 0.0f) + (nextX - nodeX) * m_vecMoveSpeed.x;
             if (trainFlags.bClockwiseDirection == (dot > 0.0f)) {
                 m_fTrainSpeed = -speed;
             }

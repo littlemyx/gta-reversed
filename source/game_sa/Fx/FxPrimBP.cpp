@@ -30,7 +30,11 @@ void FxPrimBP_c::GetRWMatrix(RwMatrix& outMatrix) {
     if (m_pMatrixBuffered) {
         m_pMatrixBuffered->CopyToRwMatrix(outMatrix);
     } else {
-        RwMatrixSetIdentity(&outMatrix);
+        // 0x4A9DCA: the exe only stores the 12 floats (the flags / padding words of the RwMatrix stay untouched, `RwMatrixSetIdentity` would set the flags)
+        outMatrix.right = { 1.f, 0.f, 0.f };
+        outMatrix.up    = { 0.f, 1.f, 0.f };
+        outMatrix.at    = { 0.f, 0.f, 1.f };
+        outMatrix.pos   = { 0.f, 0.f, 0.f };
     }
 }
 

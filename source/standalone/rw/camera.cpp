@@ -165,6 +165,13 @@ RwCamera* RwCameraClear(RwCamera* camera, RwRGBA* colour, RwInt32 clearMode) {
     if ((mode & rwCAMERACLEARSTENCIL) && !DepthFormatHasStencil(d3d9Globals.present.AutoDepthStencilFormat)) {
         mode &= ~static_cast<RwUInt32>(rwCAMERACLEARSTENCIL);
     }
+    // The exe (_rwD3D9CameraClear 0x7F7DC8..0x7F7DD7): `test al, 6 / mov edx, [camera + 0x64] (zBuffer) / test edx, edx / jne / and al, 0xF9` - a camera without a z raster (the
+    // real-time shadow cameras, mirror / blur cameras) has no depth surface bound (librw setRenderSurfaces: SetDepthStencilSurface(NULL)) and RW drops the Z and STENCIL bits.
+    // Without it IDirect3DDevice9::Clear(TARGET | ZBUFFER) fails as a whole (D3DERR_INVALIDCALL) and the camera texture is never cleared: the player's real-time shadow texture
+    // then accumulated the previous frame's inverted image and flickered with the frame parity (see .notes/reports/SHADOW.md).
+    if (!camera->zBuffer) {
+        mode &= ~static_cast<RwUInt32>(rwCAMERACLEARZ | rwCAMERACLEARSTENCIL);
+    }
     RwRGBA black{0, 0, 0, 0};
     camera->clear(colour ? colour : &black, mode); // sets the render surfaces + viewport, clears with stencil value 0
     if ((mode & rwCAMERACLEARSTENCIL) && s_StencilClear != 0) {
@@ -178,7 +185,12 @@ RwCamera* RwCameraClear(RwCamera* camera, RwRGBA* colour, RwInt32 clearMode) {
 #ifdef NOTSA_STANDALONE_RUN
 // S5: NOTSA_STANDALONE_SCREENSHOT=<k> writes frame_<n>.bmp (back buffer, 24 bit) into the current directory before every k-th Present (k>=1, first 30 files)
 static char s_MarkShot[48];   // pending "mark_<name>.bmp" request from the input script's `mark:` lines (outside the cadence and the cap)
+static bool s_ShotArmed = false;   // NOTSA_STANDALONE_SCREENSHOT_ARM=<mark>: the every-k-th-frame cadence only starts once the input script reached `mark:<mark>` (frame-exact bursts)
 void RequestMarkScreenshot(const char* name) {
+    if (const char* arm = std::getenv("NOTSA_STANDALONE_SCREENSHOT_ARM"); arm && std::strcmp(arm, name) == 0) {
+        s_ShotArmed = true;
+        return;
+    }
     if (std::getenv("NOTSA_STANDALONE_SCREENSHOT")) {
         std::snprintf(s_MarkShot, sizeof(s_MarkShot), "mark_%s.bmp", name);
     }
@@ -194,7 +206,7 @@ static void ShimDumpBackBuffer() {
     if (s_MarkShot[0]) {
         std::memcpy(markName, s_MarkShot, sizeof(markName));
         s_MarkShot[0] = 0;
-    } else if (s_Every < 0 || s_Written >= (std::getenv("NOTSA_STANDALONE_SCREENSHOT_MAX") ? std::atoi(std::getenv("NOTSA_STANDALONE_SCREENSHOT_MAX")) : 30) || (s_Frame++ % s_Every) != 0) {
+    } else if ((std::getenv("NOTSA_STANDALONE_SCREENSHOT_ARM") && !s_ShotArmed) || s_Every < 0 || s_Written >= (std::getenv("NOTSA_STANDALONE_SCREENSHOT_MAX") ? std::atoi(std::getenv("NOTSA_STANDALONE_SCREENSHOT_MAX")) : 30) || (s_Frame++ % s_Every) != 0) {
         return;
     }
     IDirect3DDevice9* dev = rw::d3d::d3ddevice;

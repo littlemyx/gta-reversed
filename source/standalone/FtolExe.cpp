@@ -33,6 +33,13 @@ __declspec(naked) int __cdecl _ftol2_sse_excpt() {
     __asm { jmp _ftol2 }
 }
 
+// Third-party objects built for IA32 (conan's imgui.lib: ImGui::ImGui*.cpp use float -> unsigned) reference __ftoul2_legacy, which lives in the same CRT
+// member (ftol2.obj) as the three above; without a definition here the linker pulls that member in and fails with LNK2005 (_ftol2, _ftol2_sse, _ftol2_sse_excpt).
+// Only the game's own objects must follow the exe's semantics, so the truncating x87 sequence is enough (exact for 0 <= x < 2^63).
+__declspec(naked) unsigned long long __cdecl _ftoul2_legacy() {
+    __asm { jmp _ftol2 }
+}
+
 }
 
 #endif // NOTSA_STANDALONE

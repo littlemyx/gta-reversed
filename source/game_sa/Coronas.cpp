@@ -289,7 +289,8 @@ void CCoronas::Render() {
             RwRenderStateSet(rwRENDERSTATETEXTURERASTER, RWRSTATE(RwTextureGetRaster(gpCoronaTexture[CORONATYPE_SHINYSTAR])));
 
             //< 0x6FB35B
-            const auto colorVariationMult = CGeneral::GetRandomNumberInRange(0.7f, 1.f) * (float)c.m_FadedIntensity;
+            // 0x6FB319..0x6FB35B: (rand() * 1/32767 * 0.3 + 0.7) * FadedIntensity * 2^-16 (0x859D5C), stored as a float
+            const auto colorVariationMult = CGeneral::GetRandomNumberInRange(0.7f, 1.f) * (float)c.m_FadedIntensity * ExeRecip(65536.f);
 
             //< 0x6FB2FC [Moved here]
             auto it = [&] {
@@ -318,10 +319,11 @@ void CCoronas::Render() {
                         false,
                         true
                     )) { //< 0x6FB409
+                    // 0x6FB370: the product with the raw table value is an INTEGER multiplication (`imul`), converted to float afterwards
                     CRGBA color = {
-                        static_cast<uint8>(static_cast<float>(c.m_Color.r) * colorVariationMult * it->ColorMult.x),
-                        static_cast<uint8>(static_cast<float>(c.m_Color.g) * colorVariationMult * it->ColorMult.y),
-                        static_cast<uint8>(static_cast<float>(c.m_Color.b) * colorVariationMult * it->ColorMult.z),
+                        static_cast<uint8>(static_cast<float>(it->ColorMult.x * (int32)c.m_Color.r) * colorVariationMult),
+                        static_cast<uint8>(static_cast<float>(it->ColorMult.y * (int32)c.m_Color.g) * colorVariationMult),
+                        static_cast<uint8>(static_cast<float>(it->ColorMult.z * (int32)c.m_Color.b) * colorVariationMult),
                         255
                     };
                     CSprite::RenderBufferedOneXLUSprite2D(
@@ -340,7 +342,7 @@ void CCoronas::Render() {
             if (c.m_nFlareType == FLARETYPE_HEADLIGHTS && CWeather::HeadLightsSpectrum != 0.f && CGame::CanSeeOutSideFromCurrArea()) {
                 for (auto it = HeadLightsFlareDef; it->Sprite; it++) {
                     const auto RenderFlareSprite = [&,
-                                                    spriteIntensity = (int16)((float)intensity * it->IntensityMult)](RwRGBA clr, float posOffset) {
+                                                    spriteIntensity = (int16)(((int32)it->IntensityMult * (int32)intensity) >> 8)](RwRGBA clr, float posOffset) { // 0x6FB510: imul; sar 8
                         CSprite::RenderBufferedOneXLUSprite2D(
                             lerp(rasterSize / 2.f, CVector2D{ onScrPos }, it->Position + posOffset),
                             CVector2D{ it->Size, it->Size },
@@ -349,8 +351,10 @@ void CCoronas::Render() {
                             255
                         );
                     };
-                    RenderFlareSprite({ LerpColorC(c.m_Color.r, it->ColorMult.x * CWeather::HeadLightsSpectrum), 0, 0, 255 }, +0.05f); // 0x6FB561
-                    RenderFlareSprite({ 0, 0, LerpColorC(c.m_Color.b, it->ColorMult.z * CWeather::HeadLightsSpectrum), 255 }, -0.05f); // 0x6FB5EA
+                    // 0x6FB4F3: ftol(float(Raw * c) * HeadLightsSpectrum * 2^-8)
+                    const auto HeadLightColor = [](int16 raw, uint8 cc) { return (uint8)(float)(((double)(float)(raw * (int32)cc) * (double)CWeather::HeadLightsSpectrum) * (double)ExeRecip(256.f)); };
+                    RenderFlareSprite({ HeadLightColor(it->ColorMult.x, c.m_Color.r), 0, 0, 255 }, +0.05f); // 0x6FB561
+                    RenderFlareSprite({ 0, 0, HeadLightColor(it->ColorMult.z, c.m_Color.b), 255 }, -0.05f); // 0x6FB5EA
                 }
             }
         }

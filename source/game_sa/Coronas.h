@@ -13,9 +13,11 @@ constexpr auto MAX_NUM_CORONAS = 64;
 struct CFlareDefinition {
     float                       Position;
     float                       Size;
-    FixedVector<int16, 65535.f> ColorMult;
-    FixedFloat<int16, 256.f>    IntensityMult;
-    int16                       Sprite; // Only used for array-end checking
+    // NOTE: these are NOT FixedFloat/FixedVector: the exe multiplies the raw values with the colour / intensity as integers (`imul`) and scales afterwards
+    // (0x6FB370: colour = ftol(float(Raw * c) * Variation), Variation including 2^-16; 0x6FB4FF headlights: ftol(float(Raw * c) * Spectrum * 2^-8); intensity = (Raw * i) >> 8)
+    struct { int16 x, y, z; } ColorMult;
+    int16                     IntensityMult;
+    int16                     Sprite; // Only used for array-end checking
 };
 
 class CCoronas {

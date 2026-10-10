@@ -566,15 +566,16 @@ void CCarCtrl::ClitargetOrientationToLink(CVehicle* vehicle, CCarPathLinkAddress
     const auto y2 = (float)((double)targetY + (double)laneBOffset * dirXScaled * 5.4f);
 
     const auto& vehPos = vehicle->GetPosition();
-    const auto angle1 = CGeneral::GetATanOfXY(x1 - vehPos.x, (float)(y1 - vehPos.y));
-    const auto angle2 = CGeneral::GetATanOfXY(x2 - vehPos.x, y2 - vehPos.y);
+    // The 1st result is stored as float, the 2nd one is kept on the x87 stack (`GetATanOfXY` returns its `st0` unrounded)
+    const auto angle1 = (float)CGeneral::GetATanOfXYExt(x1 - vehPos.x, (float)(y1 - vehPos.y));
+    const auto angle2 = CGeneral::GetATanOfXYExt(x2 - vehPos.x, y2 - vehPos.y);
 
     constexpr auto PI = std::numbers::pi_v<float>;
 
     const auto origOrientation = *pOrientation;
     auto  diff1  = (double)(float)(angle1 - origOrientation);
     auto  diff1f = (float)diff1; // stored copy (only updated if wrapped)
-    auto  diff2  = (double)angle2 - origOrientation;
+    auto  diff2  = angle2 - origOrientation;
 
     if (diff1 > PI) {
         do { diff1 -= 2.0f * PI; } while (diff1 > PI);
@@ -1017,7 +1018,7 @@ bool CCarCtrl::DealWithBend_Racing(CVehicle* vehicle, CCarPathLinkAddress LinkAd
     // Angle between the heading of the vehicle and the direction of the link (wrapped to -PI..PI)
     const auto& fwd = vehicle->m_matrix->GetForward();
     const float heading = CGeneral::GetATanOfXY(fwd.x, fwd.y); // 0x53CC70
-    double      angle   = (double)heading - CGeneral::GetATanOfXY(d2x, d2y); // 0x53CC70
+    double      angle   = (double)heading - CGeneral::GetATanOfXYExt(d2x, d2y); // 0x53CC70 (the result of the 2nd call stays unrounded on the x87 stack)
     if (angle > std::numbers::pi_v<float>) { // 0x858CB8
         do {
             angle -= 2.0f * std::numbers::pi_v<float>; // 0x858CBC
@@ -5075,7 +5076,7 @@ void CCarCtrl::SteerAIBoatWithPhysicsAttackingPlayer(CVehicle* vehicle, float* p
     const auto  targetY      = (double)targetYDelta + FindPlayerCoors().y;
 
     const float targetHeading = CGeneral::GetATanOfXY((float)((double)targetX - vehPos.x), (float)(targetY - vehPos.y));
-    const auto  steer         = WrapAngleToPi((double)targetHeading - CGeneral::GetATanOfXY(fwd.x, fwd.y));
+    const auto  steer         = WrapAngleToPi((double)targetHeading - CGeneral::GetATanOfXYExt(fwd.x, fwd.y)); // (the 2nd `GetATanOfXY` result stays unrounded on the x87 stack)
 
     CalcBoatAIGas(vehicle, pGas);
     *pBrake     = 0.0f;
@@ -5108,7 +5109,7 @@ void CCarCtrl::SteerAIBoatWithPhysicsCirclingPlayer(CVehicle* vehicle, float* pS
     const auto fwd = GetNormalizedForward2D(vehicle);
 
     const float targetHeading = CGeneral::GetATanOfXY((float)(targetX - vehPos.x), (float)(targetY - vehPos.y));
-    const auto  steer         = WrapAngleToPi((double)targetHeading - CGeneral::GetATanOfXY(fwd.x, fwd.y));
+    const auto  steer         = WrapAngleToPi((double)targetHeading - CGeneral::GetATanOfXYExt(fwd.x, fwd.y)); // (the 2nd `GetATanOfXY` result stays unrounded on the x87 stack)
 
     CalcBoatAIGas(vehicle, pGas);
     *pBrake     = 0.0f;
@@ -5123,7 +5124,7 @@ void CCarCtrl::SteerAIBoatWithPhysicsHeadingForTarget(CVehicle* vehicle, float x
 
     // Angle needed to turn to face the target (in [-PI, PI])
     const float targetHeading = CGeneral::GetATanOfXY(x - pos.x, y - pos.y);
-    auto        steer         = WrapAngleToPi((double)targetHeading - CGeneral::GetATanOfXY(fwd.x, fwd.y));
+    auto        steer         = WrapAngleToPi((double)targetHeading - CGeneral::GetATanOfXYExt(fwd.x, fwd.y)); // (the 2nd `GetATanOfXY` result stays unrounded on the x87 stack)
 
     // Clamp to [-0.5, 0.5]
     if (steer < -0.5f) {
@@ -7082,7 +7083,7 @@ void CCarCtrl::SteerAIHeliToKeepEntityInView(CAutomobile* automobile) {
     // Rotate to look at the target
     {
         const auto wantedHeading = (float)((double)heading + PI / 2.0f);
-        auto       diff          = (double)wantedHeading - CGeneral::GetATanOfXY(heli->m_matrix->GetForward().x, heli->m_matrix->GetForward().y);
+        auto       diff          = (double)wantedHeading - CGeneral::GetATanOfXYExt(heli->m_matrix->GetForward().x, heli->m_matrix->GetForward().y); // (unrounded, 0x42B004)
         while (diff > PI) {
             diff -= 2.0f * PI;
         }

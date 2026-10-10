@@ -375,6 +375,23 @@ void CIdleCam::ProcessTargetSelection() {
     }
 }
 
+#if defined(_MSC_VER) && !defined(__clang__) && defined(_M_IX86)
+// (fsin(x) + 1) * 0.5 on the x87 stack: the extended-precision sine must not be rounded to double before the `+ 1` (the sine is within 1e-15 of -1 here)
+static double X87SinP1Half(double x) {
+    const float one = 1.0f, half = 0.5f; // 0x858624, 0x858B8C
+    __asm {
+        fld qword ptr [x]
+        fsin
+        fadd dword ptr [one]
+        fmul dword ptr [half]
+        fstp qword ptr [x]
+    }
+    return x;
+}
+#else
+static double X87SinP1Half(double x) { return (std::sin(x) + 1.0) * 0.5; }
+#endif
+
 // 0x5179E0
 float CIdleCam::ProcessSlerp(float& outX, float& outZ) {
     const auto beginTime = CTimer::GetTimeInMS();
@@ -389,11 +406,13 @@ float CIdleCam::ProcessSlerp(float& outX, float& outZ) {
     // exe: `GetATanOfXY` leaves its result unrounded on the x87 stack; only the first atan of each vector (+ pi) and the 2nd atan of the
     // slerp-from vector are spilled to float, the 2nd atan of the look-at vector stays in extended precision until the final store
     const CVector fromVec = m_PositionToSlerpFrom - m_Cam->m_vecSource;
+    // exe: x*x + y*y stays on the x87 stack (extended exponent range, no float overflow) and only the sqrt is spilled to float
+    const auto Mag2D = [](const CVector& v) { return (float)std::sqrt((double)v.x * (double)v.x + (double)v.y * (double)v.y); };
     const CVector toVec   = lookAtPos - m_Cam->m_vecSource;
     float  slerpAtan      = (float)(CGeneral::GetATanOfXYExt(fromVec.x, fromVec.y) + 3.1415927f);
-    float  slerpDistAtan  = (float)CGeneral::GetATanOfXYExt(fromVec.Magnitude2D(), fromVec.z);
+    float  slerpDistAtan  = (float)CGeneral::GetATanOfXYExt(Mag2D(fromVec), fromVec.z);
     float  lookAtAtan     = (float)(CGeneral::GetATanOfXYExt(toVec.x, toVec.y) + 3.1415927f);
-    double lookAtDistAtan = CGeneral::GetATanOfXYExt(toVec.Magnitude2D(), toVec.z);
+    double lookAtDistAtan = CGeneral::GetATanOfXYExt(Mag2D(toVec), toVec.z);
 
     constexpr float PI_F     = 3.1415927f; // 0x858CB8
     constexpr float TWO_PI_F = 6.2831855f; // 0x858CBC
@@ -413,11 +432,12 @@ float CIdleCam::ProcessSlerp(float& outX, float& outZ) {
         slerpT = 1.0f;
     }
     // exe: (sin((270 - slerpT * 180) * 0.017453292) + 1) * 0.5  (0x859070, 0x85A994, 0x8595EC)
-    const float lerpT = (float)((std::sin((double)((270.0f - slerpT * 180.0f) * 0.017453292f)) + 1.0) * 0.5);
+    // `fsin` is used directly: for |x| >= 2^63 it sets C2 and leaves the operand unchanged (the exe does not reduce), unlike the CRT's sin
+    const double lerpT = X87SinP1Half((double)((270.0f - slerpT * 180.0f) * 0.017453292f)); // stays unrounded on the x87 stack
 
     // NOTE: NOT the common.h `lerp` (that one is `to * t + from * (1 - t)`); the exe computes `(to - from) * t + from`
-    outX = (float)((lookAtDistAtan - (double)slerpDistAtan) * (double)lerpT + (double)slerpDistAtan);
-    outZ = (lookAtAtan - slerpAtan) * lerpT + slerpAtan;
+    outX = (float)((lookAtDistAtan - (double)slerpDistAtan) * lerpT + (double)slerpDistAtan);
+    outZ = (float)(((double)lookAtAtan - (double)slerpAtan) * lerpT + (double)slerpAtan);
     return slerpT;
 }
 

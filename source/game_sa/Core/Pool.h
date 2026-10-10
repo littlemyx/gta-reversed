@@ -141,7 +141,7 @@ public:
         for (auto i = 0; i < m_Capacity; i++) {
             m_SlotState[i].IsEmpty = true;
         }
-        DoFill(DEADLAND_FILL);
+        DoFillDebug(DEADLAND_FILL);
     }
 
     auto GetSize() {
@@ -201,10 +201,12 @@ public:
     * @brief Allocates object
     */
     T* New() {
-        const auto i = m_LastFreeSlot = FindFreeSlot();
+        const auto i = FindFreeSlot(); // also updates `m_LastFreeSlot` like the exe (0x5E45E0)
         if (i == -1) {
             if (CanDealWithNoMemory()) {
+#ifndef NOTSA_STANDALONE_RUN // the exe fails silently
                 NOTSA_LOG_ERR("Allocation failed for type {:?}", typeid(T).name());
+#endif
             } else {
                 NOTSA_DEBUG_BREAK();
             }
@@ -223,7 +225,7 @@ public:
         //if (!isFirstAllocation) {
         //    CheckFill(DEADLAND_FILL, ptr); // Theoretically `isFirstAllocation ? NOMANSLAND_FILL : DEADLAND_FILL` would work, but we don't have every and all constructor of this class hooked
         //}
-        DoFill(CLEANLAND_FILL, ptr);
+        DoFillDebug(CLEANLAND_FILL, ptr);
         return (T*)(void*)(ptr);
     }
 
@@ -252,7 +254,7 @@ public:
 
         StorageType* ptr = &m_Storage[idx];
         CreateAtRef(ref);
-        DoFill(CLEANLAND_FILL, ptr);
+        DoFillDebug(CLEANLAND_FILL, ptr);
         return (T*)(void*)(ptr);
     }
 
@@ -270,7 +272,7 @@ public:
         const auto idx = GetIndex(obj);
         m_SlotState[idx].IsEmpty = true;
         m_LastFreeSlot          = std::min(m_LastFreeSlot, idx);
-        DoFill(DEADLAND_FILL, (StorageType*)(obj));
+        DoFillDebug(DEADLAND_FILL, (StorageType*)(obj)); // the exe only sets the 0x80 flag (0x5E4784) and lowers the first-free index
     }
 
     /*!
@@ -364,6 +366,13 @@ public:
     }
 
 protected:
+    // Debug-only poisoning: the exe leaves freed/new object memory untouched, so stale reads (benign there) must stay benign in the run build
+    void DoFillDebug(byte fill, StorageType* at = nullptr) {
+#ifndef NOTSA_STANDALONE_RUN
+        DoFill(fill, at);
+#endif
+    }
+
     void DoFill(byte fill, StorageType* at = nullptr) {
         if (at) {
             memset(at, fill, sizeof(StorageType)); /* One object */
@@ -380,26 +389,21 @@ protected:
         }
     }
 
-    int32 FindFreeSlot() const {
-        const auto last = m_LastFreeSlot != -1 ? m_LastFreeSlot : 0;
-        const auto cap  = m_Capacity;
-
-        // Try [last, cap)
-        for (auto i = last; i < cap; i++) {
-            if (m_SlotState[i].IsEmpty) {
-                return i;
+    // 0x5E45E0: the scan starts at the slot AFTER `m_LastFreeSlot`, wraps to 0 once, and leaves `m_LastFreeSlot` on the slot it stopped at
+    int32 FindFreeSlot() {
+        bool wrapped = false;
+        for (;;) {
+            if (++m_LastFreeSlot == (int32)m_Capacity) {
+                m_LastFreeSlot = 0;
+                if (wrapped) {
+                    return -1;
+                }
+                wrapped = true;
+            }
+            if (m_SlotState[m_LastFreeSlot].IsEmpty) {
+                return m_LastFreeSlot;
             }
         }
-
-        // Try [0, last)
-        for (auto i = 0; i < last; i++) {
-            if (m_SlotState[i].IsEmpty) {
-                return i;
-            }
-        }
-
-        // No free slots
-        return -1;
     }
 
 private:

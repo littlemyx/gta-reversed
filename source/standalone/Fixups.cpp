@@ -244,6 +244,12 @@ void LogFpuState(const char* where) {
         cw, cw & _MCW_RC, cw & _MCW_EM, sw);
 }
 
+// A CPool::Delete of a pointer that is not inside the pool's storage (the exe would flip a random byte and set first-free to a wild index; diagnosing: who deletes it)
+void PoolBadDelete(const void* pool, const void* obj, const void* storage, unsigned capacity, unsigned objSize, const void* caller) {
+    Log("POOLBAD: Delete(0x%08X) outside pool %08X [storage %08X, %u x 0x%X]; caller 0x%08X (exe +0x%X)", (unsigned)(uintptr_t)obj, (unsigned)(uintptr_t)pool,
+        (unsigned)(uintptr_t)storage, capacity, objSize, (unsigned)(uintptr_t)caller, (unsigned)((uintptr_t)caller - (uintptr_t)GetModuleHandleA(nullptr)));
+}
+
 [[noreturn]] void Fatal(const char* fmt, ...) {
     char msg[1024];
     va_list va;

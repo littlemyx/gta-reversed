@@ -14,7 +14,9 @@
 
 // The exe's pool has no checks at all (a double delete just sets the flag again; a stale pointer is a valid index): the run build must not abort on what the exe tolerates
 #ifdef NOTSA_STANDALONE_RUN
+#include <intrin.h>
 #define POOL_ASSERT(...) ((void)0)
+namespace notsa::standalone::Fixups { void PoolBadDelete(const void* pool, const void* obj, const void* storage, unsigned capacity, unsigned objSize, const void* caller); }
 #else
 #define POOL_ASSERT(...) assert(__VA_ARGS__)
 #endif
@@ -276,6 +278,12 @@ public:
 #endif
         POOL_ASSERT(!IsFreeSlotAtIndex(GetIndex(obj)) && "Can't delete an already deleted object");
 
+#ifdef NOTSA_STANDALONE_RUN // diagnostic (NOT in the exe): a delete of a pointer outside the storage would corrupt the heap and the first-free index; log the caller and skip it
+        if (!IsPtrFromPool(obj)) {
+            notsa::standalone::Fixups::PoolBadDelete(this, obj, m_Storage, (unsigned)m_Capacity, (unsigned)sizeof(StorageType), _ReturnAddress());
+            return;
+        }
+#endif
         const auto idx = GetIndex(obj);
         m_SlotState[idx].IsEmpty = true;
         m_LastFreeSlot          = std::min(m_LastFreeSlot, idx);

@@ -8,11 +8,11 @@ struct RwFrame;
 #endif
 
 class  CBouncingPanel {
-    static inline auto& BOUNCE_SPRING_DAMP_MULT = StaticRef<float>(0x8D3954); // 0.95
-    static inline auto& BOUNCE_SPRING_RETURN_MULT = StaticRef<float>(0x8D3958); // 0.1
-    static inline auto& BOUNCE_VEL_CHANGE_LIMIT = StaticRef<float>(0x8D395C); // 0.1
-    static inline auto& BOUNCE_HANGING_DAMP_MULT = StaticRef<float>(0x8D3960); // 0.98
-    static inline auto& BOUNCE_HANGING_RETURN_MULT = StaticRef<float>(0x8D3964); // 0.02
+    static inline NOTSA_GLOBAL(BOUNCE_SPRING_DAMP_MULT, 0x8D3954, (float), { 0.95f }); // 0.95
+    static inline NOTSA_GLOBAL(BOUNCE_SPRING_RETURN_MULT, 0x8D3958, (float), { 0.1f }); // 0.1
+    static inline NOTSA_GLOBAL(BOUNCE_VEL_CHANGE_LIMIT, 0x8D395C, (float), { 0.1f }); // 0.1
+    static inline NOTSA_GLOBAL(BOUNCE_HANGING_DAMP_MULT, 0x8D3960, (float), { 0.98f }); // 0.98
+    static inline NOTSA_GLOBAL(BOUNCE_HANGING_RETURN_MULT, 0x8D3964, (float), { 0.02f }); // 0.02
 
 public:
     uint16 m_nFrameId{(uint16)-1};

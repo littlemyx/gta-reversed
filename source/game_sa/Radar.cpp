@@ -273,6 +273,7 @@ void CRadar::DrawLegend(int32 x, int32 y, eRadarSprite blipType) {
             case RADAR_TRACE_NORMAL: return RADAR_TRACE_LOW;
             default:
                 NOTSA_UNREACHABLE();
+                return (eRadarTraceHeight)(legendTraceHeight + 1); // 0x582EA4: the exe does `if (h == 2) h = 0; else h++;`
             }
         }();
     }

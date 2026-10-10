@@ -66,8 +66,13 @@ void CPedGroupIntelligence::Flush() {
     }
     delete std::exchange(m_CurrentEvent, nullptr);
 
-    delete std::exchange(m_PrimaryTaskAllocator, nullptr);
-    delete std::exchange(m_EventResponseTaskAllocator, nullptr);
+    // 0x5F73C5: the exe deletes both allocators unconditionally
+    auto* const primary = std::exchange(m_PrimaryTaskAllocator, nullptr);
+    delete primary;
+    auto* const eventResponse = std::exchange(m_EventResponseTaskAllocator, nullptr);
+    if (!notsa::IsFixBugs() || eventResponse != primary) { // BUG: `Process` (0x5FC7A7) makes the primary allocator alias the event-response one, so the exe frees it twice (harmless there: freed pool memory stays intact; with the port's poisoned pools it crashes in CPedGroups::RemoveGroup)
+        delete eventResponse;
+    }
 
     m_DecisionMakerType = eDecisionMakerType::UNKNOWN;
     m_TaskSeqId         = TASK_INVALID;

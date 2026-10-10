@@ -4,6 +4,9 @@
 #include "Weather.h"
 #include "Timer.h"
 #include "CullZones.h"
+#include "Clock.h"
+#include "Game.h"
+#include "Audio/Entities/AEWeatherAudioEntity.h"
 
 // ------------------------------------------------------------------------------------------------------------------------------
 // water fixture: random well-formed quads / triangles with their vertices, block table entries (single / combo), time and wave statics
@@ -114,6 +117,55 @@ static CVector Setup(Rng& r) {
     return q;
 }
 }   // namespace czfx
+
+// ------------------------------------------------------------------------------------------------------------------------------
+// CWeather fixture. The weather audio entity (Service) is stubbed on both sides; Update's AddRain is skipped by a camera above z = 900 (its first early-out)
+void CAEWeatherAudioEntity::Service() {}
+static void __fastcall HostNoop(void*) {}
+namespace wxfx {
+static constexpr uintptr_t BEG = 0xC812A8, END = 0xC81460;
+alignas(16) static uint8 g_fakePlayerPed[0x800];
+alignas(16) static uint8 g_fakePedIntel[0x400];
+static void Setup(Rng& r) {
+    std::memset(reinterpret_cast<void*>(BEG), 0, END - BEG);
+    for (uintptr_t a = BEG; a < END; a += 4) if (!(a >= 0xC81360 && a < 0xC813E0)) *reinterpret_cast<uint32_t*>(a) = r.below(2) ? 0 : r.u32();
+    std::memset(reinterpret_cast<void*>(0xC81420), 0, 0x20);   // the tunnel points + their init flag: function-local statics the exe constructs on its first call
+    const auto wt = [&] { return (eWeatherType)r.below(23); };
+    CWeather::OldWeatherType = wt(); CWeather::NewWeatherType = wt();
+    CWeather::ForcedWeatherType = r.below(3) ? WEATHER_UNDEFINED : wt();
+    CWeather::WeatherTypeInList = r.below(64);
+    CWeather::WeatherRegion = (eWeatherRegion)r.below(5);
+    CWeather::InterpolationValue = r.below(6) ? r.f01() : GenF(r, 1.5f);
+    auto fl = [&](float& v, float sc = 1.f) { v = r.below(4) ? r.f01() * sc : GenF(r, sc * 2.f); };
+    fl(CWeather::Rain); fl(CWeather::Sandstorm); fl(CWeather::WetRoads); fl(CWeather::UnderWaterness); fl(CWeather::InTunnelness); fl(CWeather::Foggyness); fl(CWeather::SunGlare); fl(CWeather::HeatHaze);
+    fl(CWeather::WaterFogFXFade); fl(CWeather::HeatHazeFXFade); fl(CWeather::Wind, 1.5f); fl(CWeather::Wavyness);
+    CWeather::LightningBurst = r.below(3) == 0; CWeather::LightningFlash = r.below(2); CWeather::WhenToPlayLightningSound = 0; CWeather::LightningStart = r.below(2000); CWeather::LightningDuration = r.below(30);
+    CWeather::LightningFlashLastChange = (int32)(r.u32() % 1000000); CWeather::WaterFogFXFadingOut = r.below(2); CWeather::HeatHazeFXLastMinute = r.below(62) - 1; CWeather::bScriptsForceRain = r.below(2);
+    CWeather::CurrentRainParticleStrength = r.below(111); CWeather::StreamAfterRainTimer = (int32)r.below(900);
+    CClock::ms_nGameClockHours = (uint8)r.below(24); CClock::ms_nGameClockMinutes = (uint8)r.below(60); CClock::ms_nGameClockSeconds = (uint16)r.below(60);
+    CTimer::m_FrameCounter = r.below(2) ? r.below(100) * 16 : r.u32() % 100000;
+    CTimer::m_snTimeInMilliseconds = r.u32() % 2000000000u;
+    CTimer::ms_fTimeStep = r.below(8) ? r.f01() * 3.f : GenF(r, 4.f);
+    CGame::currArea = (eAreaCodes)(r.below(4) ? 0 : r.below(18));
+    *reinterpret_cast<uint32_t*>(0xB6F028 + 0x14) = 0;   // TheCamera.m_matrix = null: position from the placement
+    const CVector cp(GenF(r, 3000.f), GenF(r, 3000.f), 901.f + r.f01() * 47.f); std::memcpy(reinterpret_cast<void*>(0xB6F028 + 4), &cp, 12);
+    CCullZones::CurrentFlags_Camera = r.below(3) ? 0 : (int32)(r.u32() & 0x2008); CCullZones::CurrentFlags_Player = r.below(3) ? 0 : (int32)(r.u32() & 0x8);
+    CTimeCycle::m_CurrentStoredValue = r.below(16); CTimeCycle::m_VectorToSun[CTimeCycle::m_CurrentStoredValue] = GenV(r, 1.f);
+    CTimeCycle::m_CurrentColours.m_nWaterFogAlpha = r.below(3) ? 0 : (uint16)r.below(120);
+    *reinterpret_cast<uint8*>(0xC7C714) = r.below(2);   // CSpecialFX::bSnapShotActive
+    *reinterpret_cast<int32_t*>(0xA43088) = 0;          // CReplay::Mode = MODE_OFF
+    // player ped (Players[0].m_pPed) with a random area code
+    std::memset(g_fakePlayerPed, 0, sizeof g_fakePlayerPed);
+    g_fakePlayerPed[0x2F] = (uint8)(r.below(3) ? 0 : r.below(18));   // CEntity::m_nAreaCode
+    std::memset(g_fakePedIntel, 0, sizeof g_fakePedIntel); *reinterpret_cast<void**>(g_fakePlayerPed + 0x47C) = g_fakePedIntel;   // CPed::m_pIntelligence (the exe walks a 5-pointer array in it, a no-op in the port)
+    *reinterpret_cast<void**>(0xB7CD98) = g_fakePlayerPed; *reinterpret_cast<int32_t*>(0xB7CD74) = 0;
+}
+}   // namespace wxfx
+// host stand-ins for the world / game services the port's CWeather::Update calls (not part of this test)
+CPlayerPed* FindPlayerPed(int) { return reinterpret_cast<CPlayerPed*>(wxfx::g_fakePlayerPed); }
+CVector     FindPlayerCoors(int) { return {}; }
+CVehicle*   FindPlayerVehicle(int, bool) { return nullptr; }
+bool CGame::CanSeeOutSideFromCurrArea() { return oracle::Fn<int __cdecl()>(0x53C4A0)() & 0xFF; }
 
 static void TestEnv() {
     {   // CMaths: the exe fills the sine table at start-up (0x59AC90); the port computes it in a static initialiser; afterwards the exe's table is the one in memory
@@ -354,5 +406,66 @@ static void TestEnv() {
         ge.Save();
         if (ga.SameAs(ge)) return true;
         d = "pos " + V(pos) + " flags " + std::to_string(flags) + " n " + F(nx) + F(ny) + F(nz) + DiffDesc(ga.b.data(), ge.b.data(), ga.b.size(), "z"); return false;
+    });
+
+    // ---- CWeather
+    oracle::Patch(0x5052F0, (void*)&HostNoop);   // CAEWeatherAudioEntity::Service (exe side)
+    Run("CWeather::Update 0x72B850", [](Rng& r, std::string& d) {
+        wxfx::Setup(r);
+        const uint32 seed = r.u32();
+        SeedBoth(seed);   // the port uses the game-owned LCG, the exe its CRT rand on the fake per-thread block: same seed, each side consumes its own
+        Snap init(wxfx::BEG, wxfx::END - wxfx::BEG), ga(wxfx::BEG, wxfx::END - wxfx::BEG), ge(wxfx::BEG, wxfx::END - wxfx::BEG);
+        Snap i2(0x8D5EAC, 4), a2(0x8D5EAC, 4), e2(0x8D5EAC, 4), i3(0x8D6078, 4), a3(0x8D6078, 4), e3(0x8D6078, 4);
+        init.Save(); i2.Save(); i3.Save();
+        CWeather::Update();
+        ga.Save(); a2.Save(); a3.Save();
+        init.Restore(); i2.Restore(); i3.Restore();
+        oracle::Fn<void __cdecl()>(0x72B850)();
+        ge.Save(); e2.Save(); e3.Save();
+        for (auto* s : { &ga, &ge }) std::memset(s->b.data() + (0xC81420 - wxfx::BEG), 0, 0x20);   // function-local statics (tunnel points) the exe constructs on its first call
+        if (ga.SameAs(ge) && a2.SameAs(e2) && a3.SameAs(e3)) return true;
+        d = "old " + std::to_string(CWeather::OldWeatherType) + " new " + std::to_string(CWeather::NewWeatherType) + DiffDesc(ga.b.data(), ge.b.data(), ga.b.size(), "w");
+        return false;
+    });
+
+    Run("CWeather::UpdateInTunnelness 0x72B630", [](Rng& r, std::string& d) {
+        wxfx::Setup(r);
+        CCullZones::CurrentFlags_Camera = r.below(5) ? 0x2000 : 0;
+        const CVector cp = r.below(2) ? CVector(GenF(r, 3000.f), GenF(r, 3000.f), GenF(r, 100.f)) : CVector(85.f + GenF(r, 400.f), -1020.f + GenF(r, 400.f), 20.f);
+        std::memcpy(reinterpret_cast<void*>(0xB6F028 + 4), &cp, 12);
+        alignas(16) static uint8 s_camMat[0x80];
+        std::memset(s_camMat, 0, sizeof s_camMat);
+        const CVector fw = r.below(2) ? GenV(r, 1.f) : GenDir(r);
+        if (r.below(2)) {   // m_matrix set: forward = matrix->y-axis (+0x10), position = matrix->pos (+0x30)
+            std::memcpy(s_camMat + 0x10, &fw, 12); std::memcpy(s_camMat + 0x30, &cp, 12);
+            *reinterpret_cast<void**>(0xB6F028 + 0x14) = s_camMat;
+        } else {            // placement only: heading at +0x10
+            *reinterpret_cast<float*>(0xB6F028 + 0x10) = r.below(8) ? GenF(r, 7.f) : GenF(r, PickScale(r));
+        }
+        CTimer::ms_fTimeStep = r.below(8) ? r.f01() * 4.f : GenF(r, 6.f);
+        const float cur = CWeather::InTunnelness;
+        CWeather::UpdateInTunnelness(); const float a = CWeather::InTunnelness;
+        CWeather::InTunnelness = cur;
+        oracle::Fn<void __cdecl()>(0x72B630)(); const float e = CWeather::InTunnelness;
+        if (SameF(a, e)) return true;
+        d = "cam " + V(cp) + " fwd " + V(fw) + " heading " + F(*reinterpret_cast<float*>(0xB6F028 + 0x10)) + " m_matrix " + std::to_string(*reinterpret_cast<uint32_t*>(0xB6F028 + 0x14) != 0) + " ts " + F(CTimer::ms_fTimeStep) + " cur " + F(cur) + " got " + F(a) + " exe " + F(e);
+        return false;
+    });
+
+    Run("CCollision::DistToLine (tunnel use) 0x417610", [](Rng& r, std::string& d) {
+        const CVector p(r.below(2) ? 85.f : 1683.f, r.below(2) ? -1020.f : -1956.f, 0.f);
+        CVector dir = GenV(r, 1.f); dir.Normalise();
+        const CVector a(p.x + GenF(r, 300.f), p.y + GenF(r, 300.f), 0.f), b(a.x + dir.x * 100.f, a.y + dir.y * 100.f, dir.z * 100.f);
+        const float x = CCollision::DistToLine(a, b, p), e = oracle::Fn<float __cdecl(const CVector*, const CVector*, const CVector*)>(0x417610)(&a, &b, &p);
+        if (SameF(x, e)) return true;
+        d = "a " + V(a) + " b " + V(b) + " got " + F(x) + " exe " + F(e); return false;
+    });
+
+    Run("CVector::Normalise 0x59C910", [](Rng& r, std::string& d) {
+        CVector a = r.below(2) ? GenV(r, 1.f) : GenV(r, PickScale(r)), e = a;
+        a.Normalise();
+        oracle::Fn<void __fastcall(CVector*, int)>(0x59C910)(&e, 0);
+        if (SameV(a, e)) return true;
+        d = "got " + V(a) + " exe " + V(e); return false;
     });
 }

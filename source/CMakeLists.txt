@@ -695,6 +695,10 @@ if (${RE_PROJECT}_RW_LIBRW)
         game_sa/Weapon.cpp
         game_sa/Entity/Placeable.cpp
         game_sa/CullZones.cpp
+        game_sa/Weather.cpp
+        game_sa/TimeCycle.cpp
+        game_sa/Clock.cpp
+        game_sa/Timer.cpp
         game_sa/CarCtrl.cpp
         game_sa/PathFind.cpp
         game_sa/TrafficLights.cpp
@@ -729,6 +733,8 @@ if (${RE_PROJECT}_RW_LIBRW)
         game_sa/Maths.cpp
         game_sa/WaterLevel.cpp
         game_sa/CullZones.cpp
+        game_sa/Weather.cpp
+        game_sa/Collision/Collision.cpp
         game_sa/Radar.cpp
         game_sa/MenuManager.cpp
         game_sa/Camera.cpp

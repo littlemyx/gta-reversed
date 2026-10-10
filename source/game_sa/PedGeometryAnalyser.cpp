@@ -242,24 +242,28 @@ bool CPedGeometryAnalyser::ComputeClosestSurfacePoint(const CVector& posn, const
         const float edgeX = b.x - a.x;
         const float edgeY = b.y - a.y;
         const float edgeZ = b.z - a.z;
-        const float len   = std::sqrt(edgeX * edgeX + edgeY * edgeY + edgeZ * edgeZ);
+        const float len   = (float)std::sqrt((double)edgeZ * edgeZ + (double)edgeY * edgeY + (double)edgeX * edgeX); // 0x5F2C6A: the exe sums z, y, x on the x87 stack (no float overflow of the squares); the sqrt is stored as a float
         const float inv   = 1.f / len;
 
+        // The direction is rounded to float first, then dotted with (posn - a) in z, y, x order
+        const float dirX = edgeX * inv;
+        const float dirY = edgeY * inv;
         const float dirZ = edgeZ * inv;
-        const float t    = (posn.x - a.x) * edgeX * inv + (posn.y - a.y) * edgeY * inv + (posn.z - a.z) * dirZ; // Distance along the edge
+        const float t    = (posn.z - a.z) * dirZ + (posn.y - a.y) * dirY + (posn.x - a.x) * dirX; // Distance along the edge
         if (t >= 0.f && t <= len) {
             const CVector p = {
-                edgeX * inv * t + a.x,
-                edgeY * inv * t + a.y,
+                dirX * t + a.x,
+                dirY * t + a.y,
                 dirZ * t + a.z,
             };
             const float dx = posn.x - p.x;
             const float dy = posn.y - p.y;
-            const float distSq = dx * dx + dy * dy + (posn.z - p.z) * (posn.z - p.z);
+            const float dz = posn.z - p.z;
+            const double distSq = (double)dz * dz + (double)dy * dy + (double)dx * dx; // compared unrounded, the stored closest is the float copy (0x5F2D6E / 0x5F2D87)
             if (distSq < closestDistSq) {
                 point         = p;
                 found         = true;
-                closestDistSq = distSq;
+                closestDistSq = (float)distSq;
             }
         }
     }
@@ -268,11 +272,12 @@ bool CPedGeometryAnalyser::ComputeClosestSurfacePoint(const CVector& posn, const
     if (!found) {
         for (auto i = 0u; i < 4; i++) {
             const auto& c = corners[i];
-            const float distSq = (c.x - posn.x) * (c.x - posn.x) + (c.y - posn.y) * (c.y - posn.y) + (c.z - posn.z) * (c.z - posn.z);
+            const float dx = c.x - posn.x, dy = c.y - posn.y, dz = c.z - posn.z;
+            const double distSq = (double)dz * dz + (double)dy * dy + (double)dx * dx; // 0x5F2DC0: z, y, x order, unrounded compare
             if (distSq < closestDistSq) {
                 point         = c;
                 found         = true;
-                closestDistSq = distSq;
+                closestDistSq = (float)distSq;
             }
         }
     }
@@ -401,7 +406,7 @@ void CPedGeometryAnalyser::ComputeEntityBoundingBoxCornersUncached(float zPos, C
     const CVector center = mat.TransformPoint(localCenter);
 
     // Find the axis of the entity (right, forward or up) that is the longest when projected onto the XY plane
-    const float projX = halfX * rightLen2D * 2.f;
+    const double projX = (double)halfX * rightLen2D * 2.0; // 0x5F24E1: stays on the x87 stack (unrounded exponent) while projY / projZ are stored as floats (0x5F24F1 / 0x5F24FF)
     const float projY = halfY * fwdLen2D * 2.f;
     const float projZ = halfZ * upLen2D * 2.f;
 
@@ -1030,21 +1035,24 @@ bool CPedGeometryAnalyser::ComputeRouteRoundSphere(const CPed& ped, const CColSp
         return false;
     }
 
-    // Is `a5` closer to the ped than the first intersection point?
-    const float distA5Sq = (a5.x - pedPos.x) * (a5.x - pedPos.x) + (a5.y - pedPos.y) * (a5.y - pedPos.y) + (a5.z - pedPos.z) * (a5.z - pedPos.z);
-    const float distP1Sq = (p1.x - pedPos.x) * (p1.x - pedPos.x) + (p1.y - pedPos.y) * (p1.y - pedPos.y) + (p1.z - pedPos.z) * (p1.z - pedPos.z);
+    // Is `a5` closer to the ped than the first intersection point? (0x5F198D: x87 stack values, summed in z, y, x order; only p1.z - ped.z is spilled to a float)
+    const double d5x = (double)a5.x - pedPos.x, d5y = (double)a5.y - pedPos.y, d5z = (double)a5.z - pedPos.z;
+    const double e1x = (double)p1.x - pedPos.x, e1y = (double)p1.y - pedPos.y;
+    const float  e1z = (float)((double)p1.z - pedPos.z);
+    const double distA5Sq = d5z * d5z + d5y * d5y + d5x * d5x;
+    const double distP1Sq = (double)e1z * e1z + e1y * e1y + e1x * e1x;
     if (distA5Sq < distP1Sq) {
         a6 = a5;
         return false;
     }
 
     if (sphere.IntersectRay(pedPos, dir, p1, p2)) {
-        // Find the point on the ray that is the closest to the center of the sphere
-        const float t = (sphere.m_vecCenter.x - pedPos.x) * dir.x + (sphere.m_vecCenter.y - pedPos.y) * dir.y + (sphere.m_vecCenter.z - pedPos.z) * dir.z;
+        // Find the point on the ray that is the closest to the center of the sphere (0x5F1A29: the dot product is summed in z, y, x order and stays on the x87 stack)
+        const double t = ((double)sphere.m_vecCenter.z - pedPos.z) * dir.z + ((double)sphere.m_vecCenter.y - pedPos.y) * dir.y + ((double)sphere.m_vecCenter.x - pedPos.x) * dir.x;
         const CVector closestOnRay = {
-            dir.x * t + pedPos.x,
-            dir.y * t + pedPos.y,
-            dir.z * t + pedPos.z,
+            (float)(dir.x * t + pedPos.x),
+            (float)(dir.y * t + pedPos.y),
+            (float)(dir.z * t + pedPos.z),
         };
 
         // Then offset it to the surface of the sphere

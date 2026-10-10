@@ -755,6 +755,7 @@ if (${RE_PROJECT}_RW_LIBRW)
         game_sa/Coronas.cpp
         game_sa/RegisteredCorona.cpp
         game_sa/Clouds.cpp
+        game_sa/Core/Rect.cpp
         standalone/FtolExe.cpp
     )
     target_compile_features(world_oracle_test PRIVATE cxx_std_23)

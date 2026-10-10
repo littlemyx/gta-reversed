@@ -231,6 +231,14 @@ static void TestStreams(int argc, char** argv) {
     RwStream* is = _rwStreamInitialize(reinterpret_cast<RwStream*>(storage), 0, rwSTREAMMEMORY, rwSTREAMREAD, &im);
     CHECK(is && RwStreamReadChunkHeaderInfo(is, &ci) == is && ci.type == 0x10 && ci.version == 0x37002);
     CHECK(RwStreamClose(is, &im));
+    // exe identity semantics (CStreaming::ConvertBufferToObject): the same storage yields the same stream address, a re-initialise after a close
+    // revives that address, and a close through the old pointer is valid / a double close harmless
+    RwStream* is1 = _rwStreamInitialize(reinterpret_cast<RwStream*>(storage), 0, rwSTREAMMEMORY, rwSTREAMREAD, &im);
+    CHECK(is1 && RwStreamClose(is1, &im));
+    RwStream* is2 = _rwStreamInitialize(reinterpret_cast<RwStream*>(storage), 0, rwSTREAMMEMORY, rwSTREAMREAD, &im);
+    CHECK(is2 == is1 && RwStreamReadChunkHeaderInfo(is2, &ci) == is2 && ci.type == 0x10);
+    CHECK(RwStreamClose(is1, &im));  // old pointer, live stream
+    CHECK(RwStreamClose(is1, &im));  // closed twice
 
     Section("stream: real SA DFF files");
     for (int i = 1; i < argc; ++i) {

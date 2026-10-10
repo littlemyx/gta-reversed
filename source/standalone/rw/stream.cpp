@@ -14,8 +14,11 @@
       * RwStreamFindChunk: 12-byte headers, skips non-matching chunks by length; only accepts a matching chunk whose library version is within
         [0x34000, 0x36003] (RW 3.4 .. 3.6.0.3), anything else fails like the original; length/version outputs may be NULL.
       * RwStreamReadChunkHeaderInfo fills {type, length, version (unpacked), buildNum, isComplex} and returns NULL if the 12 bytes cannot be read.
-      * _rwStreamInitialize: the caller storage (the game's `gRwStream`) is NOT used (rw::Stream is polymorphic, the exe's RwStream is a plain struct);
-        a heap stream is created and released by RwStreamClose, which the game calls on every path.
+      * _rwStreamInitialize: the caller storage (the game's `gRwStream`) is NOT used as the object (rw::Stream is polymorphic, the exe's RwStream is a plain
+        struct), but the exe's identity semantics are kept: every storage address owns ONE persistent slot, the returned stream lives at a fixed address and is
+        re-initialised in place by the next _rwStreamInitialize of the same storage; RwStreamClose finishes the stream but never frees the slot (the exe's
+        close does not free the struct, and CStreaming::ConvertBufferToObject closes a stream pointer it already closed and re-initialised: the exe closes the
+        same static struct twice, 0x7ECE20 on a closed stream is harmless). A close on a dead slot returns TRUE.
 */
 #ifdef NOTSA_RW_UNIT_TEST
 #include <rwcore.h>
@@ -24,6 +27,8 @@
 #endif
 #include <cstdio>
 #include <cstring>
+#include <new>
+#include <unordered_map>
 
 #ifdef NOTSA_RW_LIBRW
 
@@ -177,14 +182,15 @@ public:
     }
 };
 
-ShimStream* CreateStream(RwStreamType type, RwStreamAccessType access, const void* pData) {
+ShimStream* CreateStream(RwStreamType type, RwStreamAccessType access, const void* pData, void* at = nullptr) {
+#define NEW_STREAM(T, ...) (at ? new (at) T(__VA_ARGS__) : new T(__VA_ARGS__))
     switch (type) {
     case rwSTREAMFILE: {
         void* const file = const_cast<void*>(pData);
         if (!file || RwOsGetFileInterface()->rwftell(file) == -1L) {
             return nullptr;
         }
-        return new FileStream(file);
+        return NEW_STREAM(FileStream, file);
     }
     case rwSTREAMFILENAME: {
         const char* mode = access == rwSTREAMREAD ? "rb" : access == rwSTREAMWRITE ? "wb" : access == rwSTREAMAPPEND ? "ab" : nullptr;
@@ -192,17 +198,27 @@ ShimStream* CreateStream(RwStreamType type, RwStreamAccessType access, const voi
             return nullptr;
         }
         void* const file = RwOsGetFileInterface()->rwfopen(static_cast<const char*>(pData), mode);
-        return file ? new FileStream(file) : nullptr;
+        return file ? NEW_STREAM(FileStream, file) : nullptr;
     }
     case rwSTREAMMEMORY:
         if (access < rwSTREAMREAD || access > rwSTREAMAPPEND || (!pData && access != rwSTREAMWRITE)) {
             return nullptr;
         }
-        return new MemoryStream(access, static_cast<const RwMemory*>(pData));
+        return NEW_STREAM(MemoryStream, access, static_cast<const RwMemory*>(pData));
     default: // rwSTREAMCUSTOM, rwNASTREAM
         return nullptr;
     }
+#undef NEW_STREAM
 }
+
+// One persistent object slot per _rwStreamInitialize storage address (see the file header)
+struct PersistentSlot {
+    alignas(16) unsigned char mem[(sizeof(FileStream) > sizeof(MemoryStream) ? sizeof(FileStream) : sizeof(MemoryStream))];
+    bool live = false;
+    ShimStream* obj() { return reinterpret_cast<ShimStream*>(mem); }
+};
+std::unordered_map<const void*, PersistentSlot*>& SlotsByStorage() { static std::unordered_map<const void*, PersistentSlot*> m; return m; }
+std::unordered_map<const void*, PersistentSlot*>& SlotsByObject() { static std::unordered_map<const void*, PersistentSlot*> m; return m; }
 
 // 12-byte chunk header {type, length, libraryID}; version = libraryIDUnpackVersion, build = libraryIDUnpackBuild
 bool ReadChunkHeader(RwStream* stream, RwUInt32& type, RwUInt32& length, RwUInt32& version, RwUInt32& build) {
@@ -237,12 +253,36 @@ RwStream* _rwStreamInitialize(RwStream* stream, RwBool /*rwOwned*/, RwStreamType
     if (!stream) {
         return nullptr;
     }
-    return CreateStream(type, accessType, pData);
+    auto*& slot = SlotsByStorage()[stream];
+    if (!slot) {
+        slot = new PersistentSlot();
+    }
+    if (slot->live) { // re-initialised over a stream that is still open (the exe just overwrites the struct)
+        slot->obj()->~ShimStream();
+        slot->live = false;
+    }
+    ShimStream* const s = CreateStream(type, accessType, pData, slot->mem);
+    if (!s) {
+        return nullptr;
+    }
+    slot->live = true;
+    SlotsByObject()[s] = slot;
+    return s;
 }
 
 RwBool RwStreamClose(RwStream* stream, void* pData) {
     if (!stream) {
         return FALSE;
+    }
+    if (const auto it = SlotsByObject().find(stream); it != SlotsByObject().end()) {
+        PersistentSlot* const slot = it->second;
+        if (!slot->live) {
+            return TRUE; // closing a closed static stream
+        }
+        const RwBool ok = slot->obj()->finish(static_cast<RwMemory*>(pData));
+        slot->obj()->~ShimStream();
+        slot->live = false;
+        return ok;
     }
     if (auto* const s = dynamic_cast<ShimStream*>(stream)) {
         const RwBool ok = s->finish(static_cast<RwMemory*>(pData));

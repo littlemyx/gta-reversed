@@ -62,6 +62,47 @@ static double ExePow(double x, double y) {   // the exe's _CIpow (0x822130): x i
     return r;
 }
 static void TestMisc() {
+    {   // CClock (integer logic): random clock state, both implementations from the same state, whole clock statics compared
+        static constexpr uintptr_t CK = 0xB70140, CKN = 0x24;
+        const auto setup = [](Rng& r) {
+            Snap c(CK, CKN); c.Save();
+            *reinterpret_cast<uint8_t*>(0xB70153) = (uint8_t)(r.below(8) ? r.below(24) : r.u32());   // hours (sometimes out of range)
+            *reinterpret_cast<uint8_t*>(0xB70152) = (uint8_t)(r.below(8) ? r.below(60) : r.u32());   // minutes
+            *reinterpret_cast<uint16_t*>(0xB70150) = (uint16_t)(r.below(8) ? r.below(60) : r.u32());  // seconds
+            *reinterpret_cast<uint8_t*>(0xB70154) = (uint8_t)(1 + r.below(31)); // day
+            *reinterpret_cast<uint8_t*>(0xB70155) = (uint8_t)(1 + r.below(12)); // month (1..12: daysInMonth[] is indexed by it)
+            *reinterpret_cast<uint8_t*>(0xB7014E) = (uint8_t)r.below(8);                               // weekday
+        };
+        const auto cmp = [&](const char* what, auto&& port, auto&& exe, Rng& r, std::string& d) {
+            setup(r);
+            Snap init(CK, CKN), ga(CK, CKN), ge(CK, CKN); init.Save();
+            const int a = port(); ga.Save();
+            init.Restore();
+            const int e = exe(); ge.Save();
+            if (a == e && ga.SameAs(ge)) return true;
+            d = std::string(what) + " h/m/s/d/mo " + std::to_string(init.b[0x13]) + "/" + std::to_string(init.b[0x12]) + "/" + std::to_string(*(uint16_t*)&init.b[0x10]) + "/" + std::to_string(init.b[0x14]) + "/" + std::to_string(init.b[0x15]) + " got " + std::to_string(a) + " exe " + std::to_string(e) + DiffDesc(ga.b.data(), ge.b.data(), CKN, "ck");
+            return false;
+        };
+        Run("CClock::GetGameClockMinutesUntil 0x52CEB0", [=](Rng& r, std::string& d) {
+            const uint8 h = (uint8)(r.below(4) ? r.below(24) : r.u32()), m = (uint8)(r.below(4) ? r.below(60) : r.u32());
+            return cmp("until", [&] { return (int)CClock::GetGameClockMinutesUntil(h, m); }, [&] { return (int)oracle::Fn<uint16 __cdecl(uint8, uint8)>(0x52CEB0)(h, m); }, r, d);
+        });
+        Run("CClock::GetIsTimeInRange 0x52CEE0", [=](Rng& r, std::string& d) {
+            const uint8 f = (uint8)(r.below(4) ? r.below(24) : r.u32()), t = (uint8)(r.below(4) ? r.below(24) : r.u32());
+            return cmp("range", [&] { return (int)CClock::GetIsTimeInRange(f, t); }, [&] { return (int)(oracle::Fn<uint8 __cdecl(uint8, uint8)>(0x52CEE0)(f, t) & 1); }, r, d);
+        });
+        Run("CClock::NormaliseGameClock 0x52CDE0", [=](Rng& r, std::string& d) {
+            return cmp("norm", [&] { CClock::NormaliseGameClock(); return 0; }, [&] { oracle::Fn<void __cdecl()>(0x52CDE0)(); return 0; }, r, d);
+        });
+        Run("CClock::OffsetClockByADay 0x52D0B0", [=](Rng& r, std::string& d) {
+            const uint32 dir = r.below(3) == 0 ? 0u : r.below(2) ? 1u : r.u32();
+            return cmp("offset", [&] { CClock::OffsetClockByADay(dir); return 0; }, [&] { oracle::Fn<void __cdecl(uint32)>(0x52D0B0)(dir); return 0; }, r, d);
+        });
+        Run("CClock::SetGameClock 0x52D150", [=](Rng& r, std::string& d) {
+            const uint8 h = (uint8)(r.below(4) ? r.below(24) : r.u32()), m = (uint8)(r.below(4) ? r.below(60) : r.u32()), dy = (uint8)r.u32();
+            return cmp("set", [&] { CClock::SetGameClock(h, m, dy); return 0; }, [&] { oracle::Fn<void __cdecl(uint8, uint8, uint8)>(0x52D150)(h, m, dy); return 0; }, r, d);
+        });
+    }
     Run("CTimeCycle::FindFarClipForCoors 0x5616E0", [](Rng& r, std::string& d) {
         TCSetup(r, r.below(2));
         Snap init(TC_BEG, TC_END - TC_BEG), ga(TC_BEG, TC_END - TC_BEG), ge(TC_BEG, TC_END - TC_BEG);

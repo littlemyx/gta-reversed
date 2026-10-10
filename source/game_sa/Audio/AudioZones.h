@@ -26,19 +26,19 @@ VALIDATE_SIZE(tAudioZoneBox, 0x18);
 
 class CAudioZones {
 public:
-    static inline auto& m_aActiveBoxes = StaticRef<std::array<int32, 10>>(0xB6DC6C);
-    static inline auto& m_aActiveSpheres = StaticRef<std::array<int32, 10>>(0xB6DC94);
+    static inline NOTSA_GLOBAL(m_aActiveBoxes, 0xB6DC6C, (std::array<int32, 10>), {});
+    static inline NOTSA_GLOBAL(m_aActiveSpheres, 0xB6DC94, (std::array<int32, 10>), {});
 
-    static inline auto& m_NumActiveBoxes = StaticRef<uint32>(0xB6DCBC);
-    static inline auto& m_NumActiveSpheres = StaticRef<uint32>(0xB6DCC0);
-    static inline auto& m_NumBoxes = StaticRef<uint32>(0xB6DCC4);
-    static inline auto& m_NumSpheres = StaticRef<uint32>(0xB6DCC8);
+    static inline NOTSA_GLOBAL(m_NumActiveBoxes, 0xB6DCBC, (uint32), {});
+    static inline NOTSA_GLOBAL(m_NumActiveSpheres, 0xB6DCC0, (uint32), {});
+    static inline NOTSA_GLOBAL(m_NumBoxes, 0xB6DCC4, (uint32), {});
+    static inline NOTSA_GLOBAL(m_NumSpheres, 0xB6DCC8, (uint32), {});
 
     static constexpr int32 NUM_AUDIO_BOXES = 158;
-    static inline auto& m_aBoxes = StaticRef<std::array<tAudioZoneBox, NUM_AUDIO_BOXES>>(0xB6DCD0);
+    static inline NOTSA_GLOBAL(m_aBoxes, 0xB6DCD0, (std::array<tAudioZoneBox, NUM_AUDIO_BOXES>), {});
 
     static constexpr int32 NUM_AUDIO_SPHERES = 3;
-    static inline auto& m_aSpheres = StaticRef<std::array<tAudioZoneSphere, NUM_AUDIO_SPHERES>>(0xB6EBA8);
+    static inline NOTSA_GLOBAL(m_aSpheres, 0xB6EBA8, (std::array<tAudioZoneSphere, NUM_AUDIO_SPHERES>), {});
 
 public:
     static void InjectHooks();

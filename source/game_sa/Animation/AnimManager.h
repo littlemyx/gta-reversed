@@ -23,17 +23,17 @@ class CAnimManager {
 private:
     static std::array<AnimAssocDefinition, NUM_ANIM_ASSOC_GROUPS> ms_aAnimAssocDefinitionsX; // replacement
     static inline auto& ms_aAnimAssocDefinitions = StaticRef<AnimAssocDefinition[NUM_ANIM_ASSOC_GROUPS]>(0x8AA5A8); // std::array - see SurfaceInfos_c
-    static inline auto& ms_numAnimAssocDefinitions = StaticRef<uint32>(0xB4EA28);
+    static inline NOTSA_GLOBAL(ms_numAnimAssocDefinitions, 0xB4EA28, (uint32), {});
 
-    static inline auto& ms_aAnimAssocGroups = StaticRef<CAnimBlendAssocGroup*>(0xB4EA34);
+    static inline NOTSA_GLOBAL(ms_aAnimAssocGroups, 0xB4EA34, (CAnimBlendAssocGroup*), {});
 
     static inline auto& ms_aAnimations = StaticRef<std::array<CAnimBlendHierarchy, 2500>>(0xB4EA40);
-    static inline auto& ms_numAnimations = StaticRef<int32>(0xB4EA2C);
+    static inline NOTSA_GLOBAL(ms_numAnimations, 0xB4EA2C, (int32), {});
 
-    static inline auto& ms_aAnimBlocks = StaticRef<std::array<CAnimBlock, NUM_ANIM_BLOCKS>>(0xB5D4A0);
-    static inline auto& ms_numAnimBlocks = StaticRef<uint32>(0xB4EA30);
+    static inline NOTSA_GLOBAL(ms_aAnimBlocks, 0xB5D4A0, (std::array<CAnimBlock, NUM_ANIM_BLOCKS>), {});
+    static inline NOTSA_GLOBAL(ms_numAnimBlocks, 0xB4EA30, (uint32), {});
 
-    static inline auto& ms_AnimCache = StaticRef<CLinkList<CAnimBlendHierarchy*>>(0xB5EB20);
+    static inline NOTSA_GLOBAL(ms_AnimCache, 0xB5EB20, (CLinkList<CAnimBlendHierarchy*>), {});
 
 public:
     static void InjectHooks();

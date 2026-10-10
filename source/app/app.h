@@ -16,16 +16,16 @@
 
 void AppInjectHooks();
 
-static inline auto& gGameState = StaticRef<int32>(0xC8D4C0);
+NOTSA_GLOBAL_HDR(gGameState, 0xC8D4C0, (int32), {});
 
 //! NOTSA (We wanna have this wrapper for debugging)
 void ChangeGameStateTo(eGameState newgs);
 
-static inline auto& ForegroundApp = StaticRef<bool>(0x8D621C);
+NOTSA_GLOBAL_HDR(ForegroundApp, 0x8D621C, (bool), { true });
 
-static inline auto& gColourTop = StaticRef<RwRGBA>(0xB72CA0);
-static inline auto& gColourBottom = StaticRef<RwRGBA>(0xB72CA4);
-static inline auto& gHorZ = StaticRef<float>(0xB72C6C);
+NOTSA_GLOBAL_HDR(gColourTop, 0xB72CA0, (RwRGBA), {});
+NOTSA_GLOBAL_HDR(gColourBottom, 0xB72CA4, (RwRGBA), {});
+NOTSA_GLOBAL_HDR(gHorZ, 0xB72C6C, (float), {});
 
 extern RsEventStatus AppEventHandler(RsEvent event, void* param);
 extern bool PluginAttach();

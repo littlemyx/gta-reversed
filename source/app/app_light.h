@@ -4,18 +4,18 @@
 
 extern void AppLightInjectHooks();
 
-static inline auto& pAmbient = StaticRef<RpLight*>(0xC886E8);
-static inline auto& AmbientLightColour = StaticRef<RwRGBAReal>(0xC886A4);
-static inline auto& AmbientLightColourForFrame = StaticRef<RwRGBAReal>(0xC886D4);
-static inline auto& AmbientLightColourForFrame_PedsCarsAndObjects = StaticRef<RwRGBAReal>(0xC886C4);
+NOTSA_GLOBAL_HDR(pAmbient, 0xC886E8, (RpLight*), {});
+NOTSA_GLOBAL_HDR(AmbientLightColour, 0xC886A4, (RwRGBAReal), {});
+NOTSA_GLOBAL_HDR(AmbientLightColourForFrame, 0xC886D4, (RwRGBAReal), {});
+NOTSA_GLOBAL_HDR(AmbientLightColourForFrame_PedsCarsAndObjects, 0xC886C4, (RwRGBAReal), {});
 
-static inline auto& pDirect = StaticRef<RpLight*>(0xC886EC);
-static inline auto& DirectionalLightColour = StaticRef<RwRGBAReal>(0xC88694);
-static inline auto& DirectionalLightColourForFrame = StaticRef<RwRGBAReal>(0xC886B4);
-static inline auto& DirectAmbientLight = StaticRef<std::array<RwRGBAReal, 2>>(0xC8865C); // Direct, Ambient Light
-static inline auto& pExtraDirectionals = StaticRef<std::array<RpLight*, 6>>(0xC886F0);
-static inline auto& NumExtraDirectionalLights = StaticRef<int32>(0xC88708);
-static inline auto& LightStrengths = StaticRef<std::array<float, 6>>(0xC8867C);
+NOTSA_GLOBAL_HDR(pDirect, 0xC886EC, (RpLight*), {});
+NOTSA_GLOBAL_HDR(DirectionalLightColour, 0xC88694, (RwRGBAReal), {});
+NOTSA_GLOBAL_HDR(DirectionalLightColourForFrame, 0xC886B4, (RwRGBAReal), {});
+NOTSA_GLOBAL_HDR(DirectAmbientLight, 0xC8865C, (std::array<RwRGBAReal, 2>), {}); // Direct, Ambient Light
+NOTSA_GLOBAL_HDR(pExtraDirectionals, 0xC886F0, (std::array<RpLight*, 6>), {});
+NOTSA_GLOBAL_HDR(NumExtraDirectionalLights, 0xC88708, (int32), {});
+NOTSA_GLOBAL_HDR(LightStrengths, 0xC8867C, (std::array<float, 6>), {});
 
 extern void ActivateDirectional();
 extern void DeActivateDirectional();

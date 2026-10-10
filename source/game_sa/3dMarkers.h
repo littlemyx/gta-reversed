@@ -51,14 +51,14 @@ VALIDATE_SIZE(tDirectionArrow, 0x30);
 
 class C3dMarkers {
 public:
-    static inline auto& m_colDiamond = StaticRef<uint8>(0x8D5D8B); // default 255
-    static inline auto& m_user3dMarkerColor = StaticRef<CRGBA>(0xC7C620);
-    static inline auto& IgnoreRenderLimit = StaticRef<bool>(0xC7C704);
-    static inline auto& m_angleDiamondDeg = StaticRef<float>(0xC7C700);
-    static inline auto& NumActiveMarkers = StaticRef<uint32>(0xC7C6D8);
-    static inline auto& m_pRpClumpArray = StaticRef<std::array<RpClump*, 7>>(0xC7C6DC);
-    static inline auto& ms_directionArrows = StaticRef<std::array<tDirectionArrow, 5>>(0xC802E8);
-    static inline auto& ms_user3dMarkers = StaticRef<std::array<tUser3dMarker, 5>>(0xC80258);
+    static inline NOTSA_GLOBAL(m_colDiamond, 0x8D5D8B, (uint8), { 255 }); // default 255
+    static inline NOTSA_GLOBAL(m_user3dMarkerColor, 0xC7C620, (CRGBA), {});
+    static inline NOTSA_GLOBAL(IgnoreRenderLimit, 0xC7C704, (bool), {});
+    static inline NOTSA_GLOBAL(m_angleDiamondDeg, 0xC7C700, (float), {});
+    static inline NOTSA_GLOBAL(NumActiveMarkers, 0xC7C6D8, (uint32), {});
+    static inline NOTSA_GLOBAL(m_pRpClumpArray, 0xC7C6DC, (std::array<RpClump*, 7>), {});
+    static inline NOTSA_GLOBAL(ms_directionArrows, 0xC802E8, (std::array<tDirectionArrow, 5>), {});
+    static inline NOTSA_GLOBAL(ms_user3dMarkers, 0xC80258, (std::array<tUser3dMarker, 5>), {});
     static inline auto& m_aMarkerArray = StaticRef<std::array<C3dMarker, 32>>(0xC7DD58);
 
 public:

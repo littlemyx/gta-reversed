@@ -10,7 +10,7 @@ class CAccidentManager {
 public:
     std::array<CAccident, NUM_ACCIDENTS> m_Accidents;
 
-    static inline auto& gAccidentManager = StaticRef<CAccidentManager*>(0xB9B7D0);
+    static inline NOTSA_GLOBAL(gAccidentManager, 0xB9B7D0, (CAccidentManager*), {});
 
 public:
     static void InjectHooks();

@@ -15,16 +15,17 @@ void CCurves::InjectHooks() {
 
 // 0x43C610
 float CCurves::DistForLineToCrossOtherLine(float lineBaseX, float lineBaseY, float lineDirX, float lineDirY, float otherLineBaseX, float otherLineBaseY, float otherLineDirX, float otherLineDirY) {
-    float dir = lineDirX * otherLineDirY - lineDirY * otherLineDirX;
+    // All intermediates stay on the x87 stack (extended precision) until the return value
+    const double dir = (double)lineDirX * otherLineDirY - (double)lineDirY * otherLineDirX;
 
-    if (dir == 0.0f) {
+    if (dir == 0.0) {
         return -1.0f; // Lines are parallel, no intersection
     }
 
-    float dist = (lineBaseX - otherLineBaseX) * otherLineDirY - (lineBaseY - otherLineBaseY) * otherLineDirX;
-    float distOfCrossing = -dist / dir;
+    const double dist = ((double)lineBaseX - otherLineBaseX) * otherLineDirY - ((double)lineBaseY - otherLineBaseY) * otherLineDirX;
 
-    return distOfCrossing;
+    // 0x43C652: `fld -1.0; fdiv dir; fmulp` => dist * (-1 / dir), NOT -dist / dir
+    return (float)(dist * (-1.0 / dir));
 }
 
 // 0x8594EC: the exe's `1/3` here is 0x3EAAAAAA (truncated, NOT the rounded 0x3EAAAAAB)
@@ -107,7 +108,8 @@ float CCurves::CalcSpeedScaleFactor(
         totalDist_Time = bendDist / bendDist_Time;
     }
 
-    return totalDist_Time + straightDist1 + straightDist2;
+    // 0x43C834..0x43C83A: (2 * bendDistOneSegment + (distToPoint2 - bendDistOneSegment)) + (distToPoint1 - bendDistOneSegment): the second leg is added first
+    return totalDist_Time + straightDist2 + straightDist1;
 }
 
 // 0x43C880
@@ -118,76 +120,118 @@ float CCurves::CalcCorrectedDist(float current, float total, float speedVariatio
         return 0.0f;
     }
 
-    *outT = 0.5f - (std::cos(PI * (current / total)) * 0.5f);
+    // 0x43C880: everything stays on the x87 stack (extended precision) except `*outT`; the constants are the exe's float literals
+    // (0x40490FDB = pi, 0x40C90FDB = 2pi, 0x3E22F983 = the reciprocal of 2pi folded by the compiler: NOT `1.0f / TWO_PI` evaluated in extended)
+    const double t = (double)current / (double)total;
+    *outT = (float)(0.5 - std::cos((double)std::numbers::pi_v<float> * t) * 0.5);
 
-    float averageSpeed = std::sin((current / total) * TWO_PI);
-    float correctedDist = averageSpeed * (total * (1.0f / TWO_PI)) * speedVariation + ((1.0f - (speedVariation + speedVariation) + 1.0f) * 0.5f) * current;
-
-    return correctedDist;
+    const double averageSpeed = std::sin(t * (double)std::bit_cast<float>(0x40C90FDBu));
+    const double sv = speedVariation;
+    const double corrected = averageSpeed * ((double)total * (double)std::bit_cast<float>(0x3E22F983u)) * sv
+                           + ((1.0 - (sv + sv) + 1.0) * 0.5) * (double)current;
+    return (float)corrected;
 }
 
 // 0x43C900
+// Written from the asm: the x87 stack keeps several intermediates unrounded (modelled with double), the rest is spilled to float. Differences to the old port:
+// NaN `time` -> 0, the `d <= 0` tests are `!(d > 0)`, `bendDist + 2m <= bdt` is `!(.. > bdt)`, sums add (2m + s2) + s1, the bend/end lerps are `from*(1-t) + to*t`
+// with `(dir * f) * m` association, and the speed is `lerp(dir) * S / (ms * 0.001f)` with S the plain total length (NO (1 - time) factor).
 void CCurves::CalcCurvePoint(const CVector& startCoors, const CVector& endCoors, const CVector& startDir, const CVector& endDir, float time, int32 traversalTimeInMS, CVector& resultCoor, CVector& resultSpeed) {
-    time = std::max(0.0f, std::min(1.0f, time));
+    // 0x43C907: `time > 0` ? (`time < 1` ? time : 1) : 0  (NaN -> 0)
+    time = (time > 0.0f) ? ((time < 1.0f) ? time : 1.0f) : 0.0f;
 
-    float bendDist, bendDist_Time, currentDist_Time, interpol, straightDist2, straightDist1, totalDist_Time, ourTime;
-    float bendDistOneSegment;
-    CVector coorsOnLine1, coorsOnLine2;
-
-    float speedVariation = CalcSpeedVariationInBend(startCoors, endCoors, startDir.x, startDir.y, endDir.x, endDir.y);
+    const float speedVariation = CalcSpeedVariationInBend(startCoors, endCoors, startDir.x, startDir.y, endDir.x, endDir.y);
 
     // Find where the ray from start position would intersect with end ray
-    float distToPoint1 = DistForLineToCrossOtherLine(
+    const float distToPoint1 = DistForLineToCrossOtherLine(
         startCoors.x, startCoors.y, startDir.x, startDir.y, endCoors.x, endCoors.y, endDir.x, endDir.y
     );
 
     // Find where the ray from end position would intersect with start ray (negative because direction is flipped)
-    float distToPoint2 = DistForLineToCrossOtherLine(
+    const float distToPoint2 = DistForLineToCrossOtherLine(
         endCoors.x, endCoors.y, -endDir.x, -endDir.y, startCoors.x, startCoors.y, startDir.x, startDir.y
     );
 
-    if (distToPoint1 <= 0.0f || distToPoint2 <= 0.0f) {
-        straightDist1 = (startCoors - endCoors).Magnitude2D();
+    double x87Total; // `X + Z + [0x50]` of the tail (0x43CDFB): the total length, unrounded
 
-        interpol = straightDist1 / (1.0f - speedVariation);
+    if (!(distToPoint1 > 0.0f) || !(distToPoint2 > 0.0f)) { // 0x43CA10 / 0x43CA21 (NaN included)
+        const float straightDist = (startCoors - endCoors).Magnitude2D();
+        const float interpol     = (float)((double)straightDist / (1.0 - (double)speedVariation)); // fdivr, spilled
 
-        currentDist_Time = CalcCorrectedDist(time * interpol, interpol, speedVariation, &ourTime);
+        float ourTime;
+        const double corrected = CalcCorrectedDist((float)((double)interpol * time), interpol, speedVariation, &ourTime); // x87 return value, `current` spilled
 
-        coorsOnLine1 = startCoors + startDir * currentDist_Time;
-        coorsOnLine2 = endCoors + endDir * (currentDist_Time - straightDist1);
+        const CVector coorsOnLine1 = startCoors + startDir * (float)corrected;
+        const CVector coorsOnLine2 = endCoors + endDir * (float)(corrected - straightDist);
 
-        resultCoor = Lerp(coorsOnLine1, coorsOnLine2, ourTime);
+        // from * (1 - t) + to * t
+        const float nt = 1.0f - ourTime;
+        resultCoor.x = coorsOnLine2.x * ourTime + coorsOnLine1.x * nt;
+        resultCoor.y = coorsOnLine2.y * ourTime + coorsOnLine1.y * nt;
+        resultCoor.z = coorsOnLine2.z * ourTime + coorsOnLine1.z * nt;
 
-        totalDist_Time = straightDist1;
+        x87Total = ((double)straightDist + 0.0) + 0.0;
     } else {
-        straightDist2 = std::min(distToPoint1, distToPoint2);
-        straightDist2 = std::min(5.0f, straightDist2);
+        // 0x43CA27..: m = min(d1, d2) (`d1 < d2 ? d1 : d2`), then min(5, m) (`5 < m ? 5 : m`)
+        float m = (distToPoint1 < distToPoint2) ? distToPoint1 : distToPoint2;
+        m = (5.0f < m) ? 5.0f : m;
 
-        bendDist = distToPoint1 - straightDist2;
-        bendDistOneSegment = distToPoint2 - straightDist2;
-        totalDist_Time = bendDist + (straightDist2 + straightDist2) + bendDistOneSegment;
-        bendDist_Time = time * totalDist_Time;
+        const float  s1 = distToPoint1 - m;            // [0x50], spilled
+        const double s2 = (double)distToPoint2 - m;    // left on the x87 stack unrounded
+        const float  twoM = m + m;                     // [0x48]
 
-        if (bendDist > bendDist_Time) {
-            resultCoor = startCoors + startDir * bendDist_Time;
-        } else if (bendDist + (straightDist2 + straightDist2) <= bendDist_Time) {
-            bendDist_Time = bendDist_Time - totalDist_Time;
-            resultCoor = endCoors + endDir * bendDist_Time;
+        const double totalExt = ((double)twoM + s2) + s1;
+        const float  total    = (float)totalExt;       // [0x10]
+        const float  bdt      = (float)(totalExt * time); // [0x4C]: the unrounded total times time
+
+        if (s1 > bdt) { // fcomp [0x50] / jp
+            resultCoor = startCoors + startDir * bdt;
+        } else if (!((twoM + s1) > bdt)) { // 0x43CAE4: `jne` also takes the unordered case
+            resultCoor = endCoors + endDir * (bdt - total);
         } else {
-            float bendInter = (bendDist_Time - bendDist) / (straightDist2 + straightDist2);
+            const double bi = ((double)bdt - s1) / twoM; // unrounded
 
-            CVector bendStartCoors = startCoors + startDir * bendDist + startDir * (straightDist2 * bendInter);
-            CVector bendEndCoors = endCoors - endDir * bendDistOneSegment - endDir * (straightDist2 * (1.0f - bendInter));
-
-            resultCoor = Lerp(bendStartCoors, bendEndCoors, bendInter);
+            // start side: P = startCoors + startDir * s1 (x spilled, y unrounded, z product spilled)
+            const float  Px = (float)((double)startDir.x * s1 + startCoors.x);
+            const double Py = (double)startDir.y * s1 + startCoors.y;
+            const double Pz = (double)(float)(startDir.z * s1) + startCoors.z;
+            // end side: Q = endCoors - endDir * s2 (all spilled to float)
+            const float Qx = (float)(endCoors.x - s2 * endDir.x);
+            const float Qy = (float)(endCoors.y - s2 * endDir.y);
+            const float Qz = (float)(endCoors.z - (double)(float)(s2 * endDir.z));
+            // bendStart = P + (startDir * bi) * m
+            const float  rx = (float)(((double)startDir.x * bi) * m);
+            const double ry = ((double)startDir.y * bi) * m;
+            const float  rz = (float)(((double)(float)(startDir.z * bi)) * m);
+            const float  bsx = (float)((double)rx + Px);
+            const float  bsy = (float)(ry + Py);
+            const double bsz = (double)rz + Pz;
+            // bendEnd = Q - (endDir * (1 - bi)) * m
+            const double nbi = 1.0 - bi;
+            const double exm = (nbi * endDir.x) * m;
+            const float  ey  = (float)(nbi * endDir.y);
+            const float  ez  = (float)(nbi * endDir.z);
+            const float  bex = (float)(Qx - exm);
+            const float  bey = (float)(Qy - (double)ey * m);
+            const float  bez = (float)(Qz - (double)(float)((double)ez * m));
+            // Lerp(bendStart, bendEnd, bi) = bendStart * (1 - bi) + bendEnd * bi
+            const float  ax = (float)(bsx * nbi), ay = (float)(bsy * nbi);
+            const double az = bsz * nbi;
+            const float  cz = (float)(bez * bi);
+            resultCoor.x = (float)(bex * bi + ax);
+            resultCoor.y = (float)(bey * bi + ay);
+            resultCoor.z = (float)((double)cz + az);
         }
+
+        x87Total = ((double)twoM + s2) + s1;
     }
 
-    float speedFactor = (1.0f - time) * totalDist_Time;
-    float speedMillisFactor = static_cast<float>(traversalTimeInMS) * ExeRecip(1000.0f);
-
-    resultSpeed = Lerp(startDir, endDir, time) * (speedFactor / speedMillisFactor);
+    // 0x43CDFB: speed = lerp(startDir, endDir, time) * total / (ms * 0.001f)
+    const double A = 1.0 - (double)time;
+    const double M = (double)traversalTimeInMS * (double)std::bit_cast<float>(0x3A83126Fu);
+    resultSpeed.x = (float)((((double)time * endDir.x + A * startDir.x) * x87Total) / M);
     resultSpeed.z = 0.0f;
+    resultSpeed.y = (float)((((double)time * endDir.y + A * startDir.y) * x87Total) / M);
 }
 
 // unused

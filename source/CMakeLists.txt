@@ -830,14 +830,10 @@ if (${RE_PROJECT}_RW_LIBRW)
         # --- sources needed by logic_oracle_misc.inc
         game_sa/Collision/Box.cpp
         game_sa/Core/KeyGen.cpp
-        game_sa/Cheat.cpp
         game_sa/TheZones.cpp
         game_sa/Zone.cpp
-        game_sa/Gangs.cpp
         game_sa/Acquaintance.cpp
         game_sa/Weather.cpp
-        game_sa/Streaming.cpp
-        game_sa/StreamingInfo.cpp
         game_sa/Timer.cpp
         standalone/FtolExe.cpp
     )

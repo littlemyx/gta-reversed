@@ -21,7 +21,6 @@
 #include "PedIntelligence.h"
 #include "Entity/Vehicle/Vehicle.h"
 
-LO_STEAL(T_PedCreatedBy, ePedCreatedBy CPed::*, &CPed::m_nCreatedBy)
 namespace sg {
 constexpr int kMi = 3000;
 static CEntity*  Ent;          // the entity under test (type object / vehicle / ped)

@@ -215,6 +215,65 @@ T& ScopedStaticRef(uintptr varAddr, uintptr flagsAddr, uint32 flagsMask, T&& ini
     return var;
 }
 
+/*!
+ * @brief NOTSA_GLOBAL*: declare a game global that the original exe keeps at a fixed address (slice A2 of .notes/DETACH_DATA_PLAN.md).
+ *
+ * Three modes (the same source line serves all of them):
+ *  1. ADDRESS (default: ASI/DLL build, hook dump, everything that is not "detached"): the global is a reference to the original storage,
+ *     `auto& name = StaticRef<Type>(addr)` - exactly what the hand-written declarations were, bit for bit.
+ *  2. DETACHED (`NOTSA_DETACHED_GLOBALS`, CMake `GTASA_DETACHED_GLOBALS`, run build only): a real C++ variable with the exe's initial value
+ *     (`init`), no use of the original data image.
+ *  3. ORACLE (`NOTSA_ORACLE_ADDRESS_GLOBALS`): forces mode 1 even when the build configuration is detached. The oracle tests compile game sources
+ *     next to the REAL original code, both must see the same storage at the original VA.
+ *
+ * @param name  declarator (unqualified; class static members keep their name, so no use site changes)
+ * @param addr  original virtual address
+ * @param type  PARENTHESISED type, e.g. `(float)`, `(bool[92])`, `(std::array<int, 4>)`, `(void (*[92])())`
+ * @param ...   initialiser appended verbatim after the declarator in detached mode: `{}`, `{ 1.0f }`, `{ 1, 2, 3 }`, `= 5`. Ignored in address mode.
+ *
+ * The call site supplies the storage specifiers and the trailing `;`:
+ *    class scope / namespace scope of a .cpp:   `static inline NOTSA_GLOBAL(m_x, 0xB7CB84, (uint32), {});`
+ *    function scope:                              `NOTSA_GLOBAL_LOCAL(v, 0xC0FFEE, (int), {});`   (detached: `static T v`)
+ *    namespace scope of a header:                 `NOTSA_GLOBAL_HDR(g, 0xA, (int), {});`          (address: `static inline auto&`, detached: `inline T`)
+ *    big/pointer-table initialisers: header `static NOTSA_GLOBAL_DECL(CCheat, name, 0xA, (T));` + the .cpp `NOTSA_GLOBAL_DEF(CCheat, name, 0xA, (T), { &f, ... });`
+ *      (address mode: DECL = the old `static inline auto&`, DEF = nothing)
+ *
+ * With `NOTSA_VERIFY_GLOBALS` every detached global registers itself for `tools/standalone/verify_globals.py` (source/standalone/GlobalsVerify.h).
+ */
+#if defined(NOTSA_DETACHED_GLOBALS) && !defined(NOTSA_ORACLE_ADDRESS_GLOBALS)
+#define NOTSA_GLOBALS_DETACHED 1
+#endif
+
+#define NOTSA_UNPAREN(...) __VA_ARGS__
+#define NOTSA_GLOBAL_CAT_(a, b) a##b
+#define NOTSA_GLOBAL_CAT(a, b) NOTSA_GLOBAL_CAT_(a, b)
+
+#ifdef NOTSA_GLOBALS_DETACHED
+#include <type_traits>
+#ifdef NOTSA_VERIFY_GLOBALS
+#include "standalone/GlobalsVerify.h"
+// `reg` is a second declaration right behind the variable (the call site's `;` terminates it); `qname` is what `&` is applied to
+#define NOTSA_GLOBAL_REG_(spec, reg, qname, name, addr) \
+    ; spec ::notsa::globals::Reg reg { #name, __FILE__, __LINE__, (addr), sizeof(qname), &(qname) }
+#else
+#define NOTSA_GLOBAL_REG_(spec, reg, qname, name, addr)
+#endif
+namespace notsa { inline constexpr bool kGlobalsDetached = true; }
+#define NOTSA_GLOBAL(name, addr, type, ...)       std::type_identity_t<NOTSA_UNPAREN type> name __VA_ARGS__ NOTSA_GLOBAL_REG_(static inline const, NOTSA_GLOBAL_CAT(name, _gReg_), name, name, addr)
+#define NOTSA_GLOBAL_HDR(name, addr, type, ...)   inline std::type_identity_t<NOTSA_UNPAREN type> name __VA_ARGS__ NOTSA_GLOBAL_REG_(inline const, NOTSA_GLOBAL_CAT(name, _gReg_), name, name, addr)
+#define NOTSA_GLOBAL_LOCAL(name, addr, type, ...) static std::type_identity_t<NOTSA_UNPAREN type> name __VA_ARGS__
+#define NOTSA_GLOBAL_DECL(cls, name, addr, type)  std::type_identity_t<NOTSA_UNPAREN type> name
+#define NOTSA_GLOBAL_DEF(cls, name, addr, type, ...) \
+    std::type_identity_t<NOTSA_UNPAREN type> cls::name __VA_ARGS__ NOTSA_GLOBAL_REG_(static inline const, NOTSA_GLOBAL_CAT(NOTSA_GLOBAL_CAT(name, _gRegDef_), __COUNTER__), cls::name, name, addr)
+#else
+namespace notsa { inline constexpr bool kGlobalsDetached = false; }
+#define NOTSA_GLOBAL(name, addr, type, ...)       auto& name = StaticRef<NOTSA_UNPAREN type>(addr)
+#define NOTSA_GLOBAL_HDR(name, addr, type, ...)   static inline auto& name = StaticRef<NOTSA_UNPAREN type>(addr)
+#define NOTSA_GLOBAL_LOCAL(name, addr, type, ...) auto& name = StaticRef<NOTSA_UNPAREN type>(addr)
+#define NOTSA_GLOBAL_DECL(cls, name, addr, type)  inline auto& name = StaticRef<NOTSA_UNPAREN type>(addr)
+#define NOTSA_GLOBAL_DEF(cls, name, addr, type, ...) static_assert(true)
+#endif
+
 template<typename T>
 void SAFE_RELEASE(T*& ptr) { // DirectX stuff `Release()`
     if (ptr) {

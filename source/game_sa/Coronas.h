@@ -22,20 +22,20 @@ struct CFlareDefinition {
 
 class CCoronas {
 public:
-    static inline auto& LightsMult = StaticRef<float>(0x8D4B5C); // 1.0f
-    static inline auto& SunScreenX = StaticRef<float>(0xC3E028);
-    static inline auto& SunScreenY = StaticRef<float>(0xC3E02C);
+    static inline NOTSA_GLOBAL(LightsMult, 0x8D4B5C, (float), { 1.0f }); // 1.0f
+    static inline NOTSA_GLOBAL(SunScreenX, 0xC3E028, (float), {});
+    static inline NOTSA_GLOBAL(SunScreenY, 0xC3E02C, (float), {});
     // are there any obstacles between sun and camera
-    static inline auto& SunBlockedByClouds = StaticRef<bool>(0xC3E030);
+    static inline NOTSA_GLOBAL(SunBlockedByClouds, 0xC3E030, (bool), {});
     // frame counter for immediate corona brightness updates after camera turn (3-frame duration).
-    static inline auto& bChangeBrightnessImmediately = StaticRef<int32>(0xC3E034);
+    static inline NOTSA_GLOBAL(bChangeBrightnessImmediately, 0xC3E034, (int32), {});
     // coronas intensity multiplier
     // this is used to control moon size when you shooting it with sniper
-    static inline auto& MoonSize = StaticRef<uint32>(0x8D4B60); // 3
+    static inline NOTSA_GLOBAL(MoonSize, 0x8D4B60, (uint32), { 3 }); // 3
     // num of registered coronas in frame
-    static inline auto& NumCoronas = StaticRef<uint32>(0xC3E038);
+    static inline NOTSA_GLOBAL(NumCoronas, 0xC3E038, (uint32), {});
 
-    static inline auto& aCoronas = StaticRef<std::array<CRegisteredCorona, MAX_NUM_CORONAS>>(0xC3E058);
+    static inline NOTSA_GLOBAL(aCoronas, 0xC3E058, (std::array<CRegisteredCorona, MAX_NUM_CORONAS>), {});
    
     inline static struct { // NOTSA
         bool DisableWetRoadReflections;
@@ -83,4 +83,4 @@ public:
     static CRegisteredCorona* GetFree();
 };
 
-inline auto& gpCoronaTexture = StaticRef<std::array<RwTexture*, eCoronaType::CORONATYPE_COUNT>>(0xC3E000); // in source file
+NOTSA_GLOBAL_HDR_EXT(gpCoronaTexture, 0xC3E000, (std::array<RwTexture*, eCoronaType::CORONATYPE_COUNT>), {}); // in source file

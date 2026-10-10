@@ -798,6 +798,11 @@ if (${RE_PROJECT}_RW_LIBRW)
         game_sa/Tasks/TaskManager.cpp
         game_sa/Tasks/Task.cpp
         # --- sources needed by logic_oracle_dm.inc
+        game_sa/DecisionMakers/Decision.cpp
+        game_sa/DecisionMakers/DecisionMaker.cpp
+        game_sa/DecisionMakers/DecisionMakerTypes.cpp
+        game_sa/DecisionMakers/DecisionMakerTypesFileLoader.cpp
+        game_sa/DecisionMakers/DecisionSimple.cpp
         # --- sources needed by logic_oracle_pop.inc
         # --- sources needed by logic_oracle_scan.inc
         # --- sources needed by logic_oracle_misc.inc

@@ -2320,7 +2320,7 @@ void CBike::ResetSuspension() {
 
 // 0x6B6790
 bool CBike::GetAllWheelsOffGround() const {
-    return m_nNoOfContactWheels == 0;
+    return m_NumDriveWheelsOnGround == 0; // 0x6B6790 reads +0x805 (the drive wheels), not +0x804 (the contact wheels)
 }
 
 // 0x6B67A0

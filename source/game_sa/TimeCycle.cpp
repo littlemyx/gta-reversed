@@ -612,22 +612,32 @@ void CTimeCycle::FindTimeCycleBox(
             continue;
         }
 
-        // Check if the point is at least within the `FallOff`
-        const auto CheckPointWithin = [&](int32 i, float tolerance) {
-            return v.Box.m_vecMin[i] - tolerance > pos[i] || v.Box.m_vecMax[i] + tolerance < pos[i];
+        // Check if the point is at least within the `FallOff`. Every compare is of the form `fcomp; test ah, 0x41/1; jp/jne` => an unordered (NaN) compare SKIPS the box
+        const float falloffZ = (float)((double)v.Falloff * (double)std::bit_cast<float>(0x3EAAAAABu)); // 0x560085 (spilled)
+        const auto  Skip = [&](int32 i, float tolerance) {
+            return !((double)v.Box.m_vecMin[i] - tolerance <= (double)pos[i]) || !((double)v.Box.m_vecMax[i] + tolerance >= (double)pos[i]);
         };
-        if (CheckPointWithin(0, v.Falloff) || CheckPointWithin(1, v.Falloff) || CheckPointWithin(2, v.Falloff * ExeRecip(3.f))) {
+        if (Skip(0, v.Falloff) || Skip(1, v.Falloff) || Skip(2, falloffZ)) {
             continue;
         }
 
-        // Calculate the distance to the box and interpolation
-        const auto vdist = v.Box.GetShortestVectorDistToPt(pos); // 0x5600EC
-        const auto dist  = CVector{ vdist.x, vdist.y, vdist.z * 3.f }.Magnitude(); // 0x560188
-        if (dist > 0.f) { // Point not inside the box, but within `FallOff`
-            const auto t = 1.f - dist / v.Falloff;
+        // Calculate the distance to the box (0x5600E6, inlined `GetShortestVectorDistToPt`): `p > max ? p - max : (p >= min || NaN ? 0 : min - p)`
+        const auto Axis = [&](int32 i) -> double {
+            if (pos[i] > v.Box.m_vecMax[i]) {
+                return (double)pos[i] - v.Box.m_vecMax[i];
+            }
+            if (pos[i] < v.Box.m_vecMin[i]) {
+                return (double)v.Box.m_vecMin[i] - pos[i];
+            }
+            return 0.0;
+        };
+        const double dx = Axis(0), dy = Axis(1), dz = Axis(2) * 3.0f;
+        const double dist = std::sqrt((dz * dz + dy * dy) + dx * dx); // 0x560178
+        if (!(dist <= 0.0)) { // `fcom 0; test ah, 0x41; jp`: NaN takes this branch
+            const double t = 1.0 - dist / v.Falloff; // Point not inside the box, but within `FallOff`
             if (t > *interpolation) {
                 *curr          = &v;
-                *interpolation = t;
+                *interpolation = (float)t;
             }
         } else { // Point inside the box
             *curr          = &v;

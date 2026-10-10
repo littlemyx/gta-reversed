@@ -472,18 +472,23 @@ void CShadows::CalcPedShadowValues(
     float& sideX,         float& sideY,
     float& displacementX, float& displacementY
 ) {
-    const auto sunDist = sunPosn.Magnitude2D();
-    const auto recip = 1.0f / sunDist;
+    // 0x7076C0: the exe stores -x / -y into the outputs first, runs the x87 math on those, spills every result to float and halves each output in a separate step
+    frontX = -sunPosn.x;
+    frontY = -sunPosn.y;
+    const double sunDist = std::sqrt((double)frontX * frontX + (double)frontY * frontY);
+    const double recip   = 1.0 / sunDist;
+    const double mult    = (sunDist + 1.0) * recip;
 
-    const auto mult = (sunDist + 1.0f) * recip;
-    frontX = -sunPosn.x * mult / 2.0f;
-    frontY = -sunPosn.y * mult / 2.0f;
+    displacementX = frontX; // the duplicated -x / -y stay on the x87 stack and are stored as the displacement
+    displacementY = frontY;
+    frontX = (float)(frontX * mult);
+    frontY = (float)(frontY * mult);
+    sideX  = (float)(-((double)sunPosn.y * recip));
+    sideY  = (float)((double)sunPosn.x * recip);
 
-    sideX = -sunPosn.y * recip / 2.0f;
-    sideY = +sunPosn.x * recip / 2.0f;
-
-    displacementX = -sunPosn.x / 2.0f;
-    displacementY = -sunPosn.y / 2.0f;
+    for (float* v : { &frontX, &frontY, &sideX, &sideY, &displacementX, &displacementY }) {
+        *v = (float)((double)*v * 0.5f);
+    }
 }
 
 // 0x707850

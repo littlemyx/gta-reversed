@@ -42,7 +42,7 @@ public:
     }
 
 private:
-    static inline auto& m_sfLogLookup = StaticRef<float[50][2]>(0xb61100);
+    static inline NOTSA_GLOBAL(m_sfLogLookup, 0xb61100, (float[50][2]), {});
 
 private:
     friend void InjectHooksMain();

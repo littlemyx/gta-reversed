@@ -1,7 +1,44 @@
 #include "StdInc.h"
 #include "AEAudioEnvironment.h"
 
-auto& gAudioZoneToReverbEnvironmentMap = StaticRef<sReverbEnvironment[NUM_AUDIO_ENVIRONMENTS]>(0x8AD670);
+NOTSA_GLOBAL(gAudioZoneToReverbEnvironmentMap, 0x8AD670, (sReverbEnvironment[NUM_AUDIO_ENVIRONMENTS]), {
+    std::bit_cast<sReverbEnvironment>(0xFFFFFF9C00000017ULL), std::bit_cast<sReverbEnvironment>(0xFFFFFF9C00000013ULL),
+    std::bit_cast<sReverbEnvironment>(0xFFFFFF9C0000000FULL), std::bit_cast<sReverbEnvironment>(0xFFFFFF9C00000010ULL),
+    std::bit_cast<sReverbEnvironment>(0xFFFFFFF400000004ULL), std::bit_cast<sReverbEnvironment>(0xFFFFFF9C00000017ULL),
+    std::bit_cast<sReverbEnvironment>(0xFFFFFFF400000004ULL), std::bit_cast<sReverbEnvironment>(0xFFFFFF9C00000017ULL),
+    std::bit_cast<sReverbEnvironment>(0xFFFFFFE20000000AULL), std::bit_cast<sReverbEnvironment>(0xFFFFFF9C00000017ULL),
+    std::bit_cast<sReverbEnvironment>(0xFFFFFF9C00000017ULL), std::bit_cast<sReverbEnvironment>(0xFFFFFF9C00000017ULL),
+    std::bit_cast<sReverbEnvironment>(0xFFFFFF9C00000017ULL), std::bit_cast<sReverbEnvironment>(0xFFFFFF9C00000017ULL),
+    std::bit_cast<sReverbEnvironment>(0xFFFFFFF400000004ULL), std::bit_cast<sReverbEnvironment>(0xFFFFFFF400000004ULL),
+    std::bit_cast<sReverbEnvironment>(0xFFFFFFF400000004ULL), std::bit_cast<sReverbEnvironment>(0xFFFFFFE200000005ULL),
+    std::bit_cast<sReverbEnvironment>(0xFFFFFFEC00000002ULL), std::bit_cast<sReverbEnvironment>(0xFFFFFFE20000000AULL),
+    std::bit_cast<sReverbEnvironment>(0xFFFFFFE20000000AULL), std::bit_cast<sReverbEnvironment>(0xFFFFFFF400000004ULL),
+    std::bit_cast<sReverbEnvironment>(0xFFFFFFEC00000002ULL), std::bit_cast<sReverbEnvironment>(0xFFFFFFE20000000AULL),
+    std::bit_cast<sReverbEnvironment>(0xFFFFFFF400000004ULL), std::bit_cast<sReverbEnvironment>(0xFFFFFFF400000004ULL),
+    std::bit_cast<sReverbEnvironment>(0xFFFFFFF400000004ULL), std::bit_cast<sReverbEnvironment>(0xFFFFFFEC00000002ULL),
+    std::bit_cast<sReverbEnvironment>(0xFFFFFFEC00000002ULL), std::bit_cast<sReverbEnvironment>(0xFFFFFFE200000005ULL),
+    std::bit_cast<sReverbEnvironment>(0xFFFFFFF400000004ULL), std::bit_cast<sReverbEnvironment>(0xFFFFFF9C00000017ULL),
+    std::bit_cast<sReverbEnvironment>(0xFFFFFFF400000004ULL), std::bit_cast<sReverbEnvironment>(0xFFFFFFE200000005ULL),
+    std::bit_cast<sReverbEnvironment>(0xFFFFFFEC00000002ULL), std::bit_cast<sReverbEnvironment>(0xFFFFFFF400000004ULL),
+    std::bit_cast<sReverbEnvironment>(0xFFFFFFF400000001ULL), std::bit_cast<sReverbEnvironment>(0xFFFFFFEC00000002ULL),
+    std::bit_cast<sReverbEnvironment>(0xFFFFFF9C00000017ULL), std::bit_cast<sReverbEnvironment>(0xFFFFFFEC00000002ULL),
+    std::bit_cast<sReverbEnvironment>(0xFFFFFFF400000004ULL), std::bit_cast<sReverbEnvironment>(0xFFFFFFEC00000009ULL),
+    std::bit_cast<sReverbEnvironment>(0xFFFFFFF400000004ULL), std::bit_cast<sReverbEnvironment>(0xFFFFFFF400000004ULL),
+    std::bit_cast<sReverbEnvironment>(0xFFFFFFF400000004ULL), std::bit_cast<sReverbEnvironment>(0xFFFFFFF400000004ULL),
+    std::bit_cast<sReverbEnvironment>(0xFFFFFFF400000004ULL), std::bit_cast<sReverbEnvironment>(0xFFFFFFF400000004ULL),
+    std::bit_cast<sReverbEnvironment>(0xFFFFFFEC00000005ULL), std::bit_cast<sReverbEnvironment>(0xFFFFFFEC00000002ULL),
+    std::bit_cast<sReverbEnvironment>(0xFFFFFFE20000000AULL), std::bit_cast<sReverbEnvironment>(0xFFFFFF9C00000017ULL),
+    std::bit_cast<sReverbEnvironment>(0xFFFFFFF400000004ULL), std::bit_cast<sReverbEnvironment>(0xFFFFFFF400000004ULL),
+    std::bit_cast<sReverbEnvironment>(0xFFFFFFF400000004ULL), std::bit_cast<sReverbEnvironment>(0xFFFFFFF400000004ULL),
+    std::bit_cast<sReverbEnvironment>(0xFFFFFFF400000004ULL), std::bit_cast<sReverbEnvironment>(0xFFFFFFF400000004ULL),
+    std::bit_cast<sReverbEnvironment>(0xFFFFFFF400000004ULL), std::bit_cast<sReverbEnvironment>(0xFFFFFFF400000004ULL),
+    std::bit_cast<sReverbEnvironment>(0xFFFFFFF400000004ULL), std::bit_cast<sReverbEnvironment>(0xFFFFFFF400000004ULL),
+    std::bit_cast<sReverbEnvironment>(0xFFFFFFF400000004ULL), std::bit_cast<sReverbEnvironment>(0xFFFFFFF400000004ULL),
+    std::bit_cast<sReverbEnvironment>(0xFFFFFFF400000004ULL), std::bit_cast<sReverbEnvironment>(0xFFFFFFF400000004ULL),
+    std::bit_cast<sReverbEnvironment>(0xFFFFFFEC00000002ULL), std::bit_cast<sReverbEnvironment>(0xFFFFFFF400000004ULL)
+});
+#line 4
+
 
 #include "data/SoundAttenuationTable.h"
 

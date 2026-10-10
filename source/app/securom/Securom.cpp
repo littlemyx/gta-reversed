@@ -3,8 +3,8 @@
 #include "Securom.h"
 #include "GxtChar.h"
 
-static auto& trapDisplay = StaticRef<std::array<int32, 32>>(0xC8CDE8);
-static auto& triggerDisplay = StaticRef<std::array<int32, 32>>(0xC8CE68);
+static NOTSA_GLOBAL(trapDisplay, 0xC8CDE8, (std::array<int32, 32>), {});
+static NOTSA_GLOBAL(triggerDisplay, 0xC8CE68, (std::array<int32, 32>), {});
 
 namespace Securom {
     void InjectHooks() {

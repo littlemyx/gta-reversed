@@ -92,8 +92,8 @@ void C3dMarkers::Shutdown() {
 void C3dMarkers::Render() {
     ZoneScoped;
 
-    static auto& ambient = StaticRef<RwRGBAReal>(0xC80444);
-    static auto& directional = StaticRef<RwRGBAReal>(0xC80434);
+    NOTSA_GLOBAL_LOCAL(ambient, 0xC80444, (RwRGBAReal), {});
+    NOTSA_GLOBAL_LOCAL(directional, 0xC80434, (RwRGBAReal), {});
 
     // Setup render states
     ActivateDirectional();

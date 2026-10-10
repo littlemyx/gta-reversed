@@ -7,11 +7,11 @@
 
 namespace VideoPlayer {
 
-auto& pvGraphBuilder = StaticRef<IGraphBuilder*>(0xC920D4);
-auto& pvMediaControl = StaticRef<IMediaControl*>(0xC920D8);
-auto& pvMediaEvent = StaticRef<IMediaEventEx*>(0xC920DC);
-auto& pvVideoWindow = StaticRef<IVideoWindow*>(0xC920E0);
-auto& pvMediaSeeking = StaticRef<IMediaSeeking*>(0xC920E4);
+NOTSA_GLOBAL(pvGraphBuilder, 0xC920D4, (IGraphBuilder*), {});
+NOTSA_GLOBAL(pvMediaControl, 0xC920D8, (IMediaControl*), {});
+NOTSA_GLOBAL(pvMediaEvent, 0xC920DC, (IMediaEventEx*), {});
+NOTSA_GLOBAL(pvVideoWindow, 0xC920E0, (IVideoWindow*), {});
+NOTSA_GLOBAL(pvMediaSeeking, 0xC920E4, (IMediaSeeking*), {});
 
 void InjectHooks() {
     RH_ScopedNamespace(VideoPlayer);

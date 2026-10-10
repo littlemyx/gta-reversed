@@ -129,7 +129,7 @@ void C3dMarker::Render() {
     }
 
     // TODO: What the fuck? I dont' think this does what they intended it to.
-    static auto& s_SavedAlpha = StaticRef<uint8>(0x8D5E44);
+    NOTSA_GLOBAL_LOCAL(s_SavedAlpha, 0x8D5E44, (uint8), { 255 });
     if (m_Color.a == s_SavedAlpha) {
         m_Color.a += m_Color.a < 128u ? 1 : -1; // But then again, this doesn't make a lot more sense either
     }

@@ -10,7 +10,7 @@ class CPed;
 class CTask;
 
 class NOTSA_EXPORT_VTABLE CPedAttractor {
-    inline static auto& ms_tasks = StaticRef<SArray<CTask*>>(0xC0985C);
+    inline static NOTSA_GLOBAL(ms_tasks, 0xC0985C, (SArray<CTask*>), {});
 
 public:
     static void InjectHooks();

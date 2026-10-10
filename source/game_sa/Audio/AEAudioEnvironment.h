@@ -22,4 +22,8 @@ public:
 };
 
 static constexpr int32 NUM_AUDIO_ENVIRONMENTS = 68;
+#ifdef NOTSA_GLOBALS_DETACHED // NOTSA_GLOBAL_EXTERN cannot spell an array reference
+extern sReverbEnvironment gAudioZoneToReverbEnvironmentMap[NUM_AUDIO_ENVIRONMENTS];
+#else
 extern sReverbEnvironment (&gAudioZoneToReverbEnvironmentMap)[NUM_AUDIO_ENVIRONMENTS];
+#endif

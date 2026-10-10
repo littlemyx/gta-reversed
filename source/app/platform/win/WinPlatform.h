@@ -21,7 +21,6 @@ enum class WinVer {
 
     UNKNOWN
 };
-static auto& s_WinVer = StaticRef<WinVer>(0xC8CF68);
 
 struct OSStatus {
     WinVer OSVer;
@@ -37,11 +36,12 @@ struct OSStatus {
         SIZE_T Avail;
     } VRAM;
 };
-inline auto& s_OSStatus = StaticRef<OSStatus>(0xC8CF68);
+NOTSA_GLOBAL_HDR_EXT(s_OSStatus, 0xC8CF68, (OSStatus), {});
+static NOTSA_GLOBAL_ALIAS(s_WinVer, 0xC8CF68, (WinVer), *reinterpret_cast<WinVer*>(reinterpret_cast<uint8*>(&s_OSStatus) + 0));
 
-inline auto& anisotropySupportedByGFX = StaticRef<bool>(0xC87FFC);
-inline auto& isForeground = StaticRef<bool>(0xC920EC);
-inline auto& Windowed = StaticRef<bool>(0xC920CC);
+NOTSA_GLOBAL_HDR_EXT(anisotropySupportedByGFX, 0xC87FFC, (bool), {});
+NOTSA_GLOBAL_HDR_EXT(isForeground, 0xC920EC, (bool), {});
+NOTSA_GLOBAL_HDR_EXT(Windowed, 0xC920CC, (bool), {});
 
 void Win32InjectHooks();
 

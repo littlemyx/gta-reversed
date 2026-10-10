@@ -13,39 +13,39 @@
 constexpr auto MAX_SUBSYSTEMS = 16;
 
 //! Subsystem infos (Populated using `RwEngineGetSubSystemInfo`)
-static inline auto& GsubSysInfo = StaticRef<std::array<RwSubSystemInfo, MAX_SUBSYSTEMS>>(0xC8CFC0);
+NOTSA_GLOBAL_HDR(GsubSysInfo, 0xC8CFC0, (std::array<RwSubSystemInfo, MAX_SUBSYSTEMS>), {});
 
 //! Number of subsystems
-static inline auto& GnumSubSystems = StaticRef<RwInt32>(0xC920F0);
+NOTSA_GLOBAL_HDR(GnumSubSystems, 0xC920F0, (RwInt32), {});
 
 //! Currently selected subsystem
-static inline auto& GcurSelSS = StaticRef<RwInt32>(0xC920F4);
+NOTSA_GLOBAL_HDR(GcurSelSS, 0xC920F4, (RwInt32), {});
 
 //! Whenever there are multiple subsystems available
-static inline auto& MultipleSubSystems = StaticRef<RwBool>(0xC92118);
+NOTSA_GLOBAL_HDR(MultipleSubSystems, 0xC92118, (RwBool), {});
 
 //
 // Video Mode
 //
 
 //! Currently selected videomode
-static inline auto& GcurSelVM = StaticRef<RwInt32>(0x8D6220); // VM = Video Mode
+NOTSA_GLOBAL_HDR(GcurSelVM, 0x8D6220, (RwInt32), { -1 }); // VM = Video Mode
 
 //! Whenever to use the default videomode (Instead of the user selecting it)
-static inline auto& UseDefaultVM = StaticRef<RwBool>(0xC920FC);
+NOTSA_GLOBAL_HDR(UseDefaultVM, 0xC920FC, (RwBool), {});
 
 //! Unused shit
-static inline auto& DefaultVM = StaticRef<RwBool>(0x8D2E34);
+NOTSA_GLOBAL_HDR(DefaultVM, 0x8D2E34, (RwBool), { 1 });
 
 //! Whenever FrontEndMemnuManager videomode stuff was **NOT** yet set (See WinMain)
-static inline auto& IsVMNotSelected = StaticRef<RwBool>(0x8D6218);
+NOTSA_GLOBAL_HDR(IsVMNotSelected, 0x8D6218, (RwBool), { 1 });
 
 /*
 * Dynamic array of video modes with format "width x height x depth"
 */
-static inline auto& gVideoModes = StaticRef<char**>(0xC920D0);
-static inline auto& gCurrentGpu = StaticRef<uint32>(0x8D6248);
-static inline auto& gCurrentVideoMode = StaticRef<int32>(0x8D6220);
+NOTSA_GLOBAL_HDR(gVideoModes, 0xC920D0, (char**), {});
+NOTSA_GLOBAL_HDR(gCurrentGpu, 0x8D6248, (uint32), { 0xFFFFFFFFU });
+static inline NOTSA_GLOBAL_ALIAS(gCurrentVideoMode, 0x8D6220, (int32), GcurSelVM);
 
 void VideoModeInjectHooks();
 

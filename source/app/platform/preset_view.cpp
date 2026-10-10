@@ -42,9 +42,9 @@ constexpr CVector PresetViewAxisZ = {0.0f, 0.0f, 1.0f}; // 0x8D2E18
 
 constexpr auto ViewsFileName = "./views.txt"; // 0x8D2E24;
 
-auto& PresetViews = StaticRef<PresetView*>(0xC1707C);
-auto& NumPresetViews = StaticRef<int32>(0xC17080);
-auto& CurrentPresetView = StaticRef<int32>(0x8D2E30); // -1
+NOTSA_GLOBAL(PresetViews, 0xC1707C, (PresetView*), {});
+NOTSA_GLOBAL(NumPresetViews, 0xC17080, (int32), {});
+NOTSA_GLOBAL(CurrentPresetView, 0x8D2E30, (int32), { -1 }); // -1
 
 // 0x619780
 bool RsSetPresetView(RwCamera* camera, int32 viewNum) {

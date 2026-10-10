@@ -56,7 +56,7 @@ void GameInit() {
 void InitialiseGame() {
     ZoneScoped;
 
-    static auto& version_number = StaticRef<int16>(0xB72C68);
+    NOTSA_GLOBAL_LOCAL(version_number, 0xB72C68, (int16), {});
     version_number = 78;
 
     CGame::Initialise(GAME_LEVEL_FILE);

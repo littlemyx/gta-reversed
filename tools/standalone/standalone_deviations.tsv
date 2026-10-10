@@ -1,2 +1,3 @@
 # addr	offset	length	reason   (length 0 = the whole global). Intended differences between a detached run and the exe data image.
 # Nothing needed for the A2 pilot. Known later candidates (plan 3.3 step 6 / R8): rand()-derived bytes of gHandShaker / FrontEndMenuManager; the 9 known header-default fixes.
+0x8D6228	0	0	RwMemoryFunctions (psGetMemoryFunctions): the exe holds 4 exe code pointers in the ORIGINAL RW layout (+ "Unkn" garbage); the detached table is zero and never read (RwEngineInit in standalone/rw/engine.cpp ignores it)

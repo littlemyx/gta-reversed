@@ -23,7 +23,7 @@
 static inline char gCpuVendor[13] = "GTAReversed!"; // = "UnknownVendr";
 
 #ifndef NOTSA_USE_SDL3 // For SDL we do a `new`
-static auto& PsGlobal = StaticRef<psGlobalType>(0xC8CF88);
+static NOTSA_GLOBAL(PsGlobal, 0xC8CF88, (psGlobalType), {});
 #endif
 
 // 0x7455E0 - Get available videomem

@@ -10,6 +10,7 @@
 #include <Enums/eAreaCodes.h>
 
 class CColModel;
+class CCollisionData;
 class CEntity;
 
 class CGame {
@@ -57,7 +58,10 @@ public:
 static inline auto& gameTxdSlot = StaticRef<int32>(0xB728E8);
 static inline auto& gbLARiots = StaticRef<bool>(0xB72958);
 static inline auto& gbLARiots_NoPoliceCars = StaticRef<bool>(0xB72959);
-static inline auto& col1 = StaticRef<std::array<CColModel, 2>>(0xC17824);
+// The collision model of the fight strike (CTaskSimpleFight::FightSetUpCol) is ONE CColModel (0x30 bytes at 0xC17824, ctor 0x40FB60).
+// The 0x30 bytes behind it (0xC17854) are the CCollisionData it points to (ctor 0x40F030), NOT a second CColModel.
+static inline auto& col1     = StaticRef<CColModel>(0xC17824);
+static inline auto& col1Data = StaticRef<CCollisionData>(0xC17854);
 
 bool MoveMem(void **pMem);
 bool MoveColModelMemory(CColModel &colModel, bool a2);

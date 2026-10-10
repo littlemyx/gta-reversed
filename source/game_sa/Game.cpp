@@ -268,8 +268,8 @@ bool CGame::Shutdown() {
     CHud::ReInitialise();
     CTxdStore::RemoveTxdSlot(gameTxdSlot);
     CTxdStore::RemoveTxdSlot(CTxdStore::FindTxdSlot("particle"));
-    col1[1].m_boundBox.m_vecMin.z = 0.0f;
-    col1[0].m_pColData = nullptr;
+    col1Data.m_pSpheres = nullptr; // 0x53CAA8 (was `col1[1].m_boundBox.m_vecMin.z = 0.0f`: col1[1] is really the CCollisionData)
+    col1.m_pColData     = nullptr; // 0x53CAAE
     CTaskSimpleClimb::Shutdown();
     CPedAttractor::Shutdown();
     CTheScripts::RemoveScriptTextureDictionary();

@@ -395,7 +395,7 @@ CTask* CTaskGangHassleVehicle::ControlSubTask(CPed* ped) {
 
     const auto numColPts = CCollision::ProcessColModels(
         hitMat,
-        col1[0],
+        col1,
         m_Vehicle->GetMatrix(),
         *CModelInfo::GetModelInfo(m_Vehicle->m_nModelIndex)->GetColModel(),
         CWorld::m_aTempColPts,

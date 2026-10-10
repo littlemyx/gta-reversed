@@ -19,9 +19,9 @@
 #include "TaskSimpleFall.h"
 
 // Storage used by `FightSetUpCol` (The original keeps the collision model, its data, and the one sphere in .bss)
-// NOTE: `col1[1]` (Game.h) really is the `CCollisionData` at 0xC17854, see `CGame::ShutDownForRestart`
-static inline auto& s_FightColModel = StaticRef<CColModel>(0xC17824);
-static inline auto& s_FightColData  = StaticRef<CCollisionData>(0xC17854);
+// The model and its data are `col1` / `col1Data` (Game.h)
+static inline auto& s_FightColModel  = col1;
+static inline auto& s_FightColData   = col1Data;
 static inline auto& s_FightColSphere = StaticRef<CColSphere>(0xC17884);
 
 // 0x59C910 - CVector::Normalise as the original evaluates it: the sum of squares and the reciprocal root stay in the FPU
@@ -1746,7 +1746,7 @@ bool CTaskSimpleFight::FightStrike(CPed* ped, CVector& pos) {
             // Vehicle/object => collide against the strike's col. model
             entity->GetMatrix(); // Makes sure the matrix is allocated
             const auto colB   = entity->GetColModel();
-            const auto numCPs = CCollision::ProcessColModels(hitMat, col1[0], *entity->m_matrix, *colB, CWorld::m_aTempColPts, nullptr, nullptr, false);
+            const auto numCPs = CCollision::ProcessColModels(hitMat, col1, *entity->m_matrix, *colB, CWorld::m_aTempColPts, nullptr, nullptr, false);
             if (numCPs > 0) {
                 const auto& cp = CWorld::m_aTempColPts[0];
                 if (candVeh) {

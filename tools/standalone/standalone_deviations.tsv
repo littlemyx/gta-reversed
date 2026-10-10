@@ -1,0 +1,2 @@
+# addr	offset	length	reason   (length 0 = the whole global). Intended differences between a detached run and the exe data image.
+# Nothing needed for the A2 pilot. Known later candidates (plan 3.3 step 6 / R8): rand()-derived bytes of gHandShaker / FrontEndMenuManager; the 9 known header-default fixes.

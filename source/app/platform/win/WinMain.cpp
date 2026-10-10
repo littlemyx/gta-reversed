@@ -589,7 +589,7 @@ INT WINAPI WinMain(HINSTANCE instance, HINSTANCE hPrevInstance, LPSTR cmdLine, I
 
     // Replace code pointers in the data image (vtables, callback tables) with ours / trap stubs. Must come after ALL registrations.
     notsa::standalone::Fixups::ApplyToDataImage();
-
+    NOTSA_VERIFY_GLOBALS_BOOT(); // A2: boot dump for tools/standalone/verify_globals.py (nothing unless NOTSA_VERIFY_GLOBALS)
     return NOTSA_WinMain(instance, hPrevInstance, cmdLine, nCmdShow);
 #endif
 }

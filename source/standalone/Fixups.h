@@ -11,6 +11,10 @@
 #include <cstddef>
 #include <cstdint>
 
+#ifdef NOTSA_VERIFY_GLOBALS
+namespace notsa::globals { void DumpAtBoot(); } // source/standalone/GlobalsVerify.cpp
+#endif
+
 namespace notsa::standalone {
 struct FixupStats {
     size_t RegisteredFunctions{}; // distinct exe function addresses with a replacement
@@ -72,6 +76,13 @@ void Log(const char* fmt, ...);
 //! D7 self-check: log the x87 precision control (`_controlfp(0,0) & _MCW_PC`: 0x00000 = 24 bit, 0x10000 = 53 bit, 0x20000 = 64 bit), the rounding/exception
 //! masks and the sticky `_statusfp()` flags, tagged with `where`. The original runs at PC=53 (CRT) until D3D9 CreateDevice lowers the thread to PC=24.
 void LogFpuState(const char* where);
+//! A2 (.notes/DETACH_DATA_PLAN.md): boot dump of the detached globals for tools/standalone/verify_globals.py. WinMain uses it right after ApplyToDataImage;
+//! it is `((void)0)` unless built with NOTSA_VERIFY_GLOBALS (no code at all: the default build's object code is unchanged).
+#ifdef NOTSA_VERIFY_GLOBALS
+#define NOTSA_VERIFY_GLOBALS_BOOT() ::notsa::globals::DumpAtBoot()
+#else
+#define NOTSA_VERIFY_GLOBALS_BOOT() ((void)0)
+#endif
 } // namespace Fixups
 
 //! Used by `plugin::Call*<addr>`

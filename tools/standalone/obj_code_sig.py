@@ -53,7 +53,7 @@ def parse(path, with_data=False):
             n = d[p:d.index(b"\0", p)].decode("latin1")
         else:
             n = nm.rstrip(b"\0").decode("latin1")
-        aux = d[o + (16 if symrec == 20 else 17)]
+        aux = d[o + (19 if symrec == 20 else 17)]
         names.append(n)
         for _ in range(aux):
             names.append("")

@@ -689,6 +689,7 @@ if (${RE_PROJECT}_RW_LIBRW)
         game_sa/Collision/ColourSet.cpp
         game_sa/Collision/Box.cpp
         game_sa/Shadows.cpp
+        game_sa/Core/Vector2D.cpp
         game_sa/Entity/Placeable.cpp
         game_sa/CullZones.cpp
         game_sa/CarCtrl.cpp

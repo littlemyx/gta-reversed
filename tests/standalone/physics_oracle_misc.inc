@@ -15,6 +15,7 @@ struct Snap {   // snapshot / restore of a range of exe globals (both implementa
 #include "Coronas.h"
 #include "Camera.h"
 #include "Shadows.h"
+#include "CullZones.h"
 #include "MenuManager.h"
 #include "PostEffects.h"
 
@@ -61,6 +62,56 @@ static double ExePow(double x, double y) {   // the exe's _CIpow (0x822130): x i
     return r;
 }
 static void TestMisc() {
+    Run("CTimeCycle::FindFarClipForCoors 0x5616E0", [](Rng& r, std::string& d) {
+        TCSetup(r, r.below(2));
+        Snap init(TC_BEG, TC_END - TC_BEG), ga(TC_BEG, TC_END - TC_BEG), ge(TC_BEG, TC_END - TC_BEG);
+        init.Save();
+        const CVector p = GenV(r, r.below(2) ? 500.f : 3000.f);
+        const float a = CTimeCycle::FindFarClipForCoors(p); ga.Save();
+        init.Restore();
+        const float e = oracle::Fn<float __cdecl(CVector)>(0x5616E0)(p); ge.Save();
+        if (SameF(a, e) & ga.SameAs(ge)) return true;
+        d = "p " + V(p) + " got " + F(a) + " exe " + F(e) + DiffDesc(ga.b.data(), ge.b.data(), ga.b.size(), "tc");
+        return false;
+    });
+    Run("CWeather::UpdateInTunnelness 0x72B630", [](Rng& r, std::string& d) {
+        alignas(16) static float camMat[16];
+        for (auto& v : camMat) v = GenF(r, r.below(2) ? 1.f : 3000.f);
+        if (r.below(3)) { camMat[12] = r.below(2) ? 85.f + GenF(r, 50.f) : 1683.f + GenF(r, 50.f); camMat[13] = r.below(2) ? -1020.f + GenF(r, 50.f) : -1956.f + GenF(r, 50.f); }   // near the two tunnel points
+        for (int i : { 4, 5, 6, 12, 13, 14 }) if (!std::isfinite(camMat[i])) return true;   // NaN / inf camera: std::min({..}) vs the exe's compare chain differ on NaN; not reachable in game
+        *reinterpret_cast<uint32_t*>(0xB6F028 + 0x14) = (uint32_t)(uintptr_t)camMat;   // TheCamera.m_matrix
+        CCullZones::CurrentFlags_Camera = r.below(4) ? 0x2000 : (int32)r.u32();
+        CTimer::ms_fTimeStep = r.below(8) ? r.f01() * 3.f : GenF(r, 4.f);
+        if (std::isnan(CTimer::ms_fTimeStep)) return true;   // step_to() with a NaN step: port clamps to 0, the exe's compare chain propagates NaN (a NaN time step never occurs)
+        const float start = r.below(3) ? r.f01() : GenF(r, 1.5f);
+        if (std::isnan(start)) return true;   // NaN state is not reachable
+        CWeather::InTunnelness = start;
+        CWeather::UpdateInTunnelness();
+        const float a = CWeather::InTunnelness;
+        CWeather::InTunnelness = start;
+        oracle::Fn<void __cdecl()>(0x72B630)();
+        const float e = CWeather::InTunnelness;
+        *reinterpret_cast<uint32_t*>(0xB6F028 + 0x14) = 0;
+        if (SameF(a, e)) return true;
+        d = "start " + F(start) + " ts " + F(CTimer::ms_fTimeStep) + " pos " + F(camMat[12]) + "," + F(camMat[13]) + "," + F(camMat[14]) + " fwd " + F(camMat[4]) + "," + F(camMat[5]) + "," + F(camMat[6]) + " got " + F(a) + " exe " + F(e);
+        return false;
+    });
+    Run("CWeather::UpdateWeatherRegion 0x72A640", [](Rng& r, std::string& d) {
+        const bool usePos = r.below(3) != 0;
+        CVector p = GenV(r, r.below(2) ? 3000.f : 1500.f);
+        if (r.below(4) == 0) { p.x = r.below(2) ? 1000.f : -850.f; p.y = r.below(2) ? 910.f : 1280.f; }   // exact edges
+        *reinterpret_cast<uint32_t*>(0xB6F028 + 0x14) = 0;
+        const CVector cp = GenV(r, 3000.f); std::memcpy(reinterpret_cast<void*>(0xB6F028 + 4), &cp, 12);
+        CWeather::WeatherRegion = (eWeatherRegion)99;
+        CWeather::UpdateWeatherRegion(usePos ? &p : nullptr);
+        const auto a = CWeather::WeatherRegion;
+        CWeather::WeatherRegion = (eWeatherRegion)99;
+        oracle::Fn<void __cdecl(CVector*)>(0x72A640)(usePos ? &p : nullptr);
+        const auto e = CWeather::WeatherRegion;
+        if (a == e) return true;
+        d = "p " + V(usePos ? p : cp) + " got " + std::to_string((int)a) + " exe " + std::to_string((int)e);
+        return false;
+    });
     Run("CShadows::CalcPedShadowValues 0x7076C0", [](Rng& r, std::string& d) {
         const CVector sun = GenV(r, r.below(2) ? 1.f : PickScale(r));
         float a[6], e[6]; for (int i = 0; i < 6; ++i) a[i] = e[i] = -77.f;

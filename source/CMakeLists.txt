@@ -780,6 +780,7 @@ if (${RE_PROJECT}_RW_LIBRW)
         game_sa/Core/Vector2D.cpp
         game_sa/Core/Matrix.cpp
         game_sa/Core/Quaternion.cpp
+        game_sa/Crime.cpp
         game_sa/Wanted.cpp
         game_sa/Stats.cpp
         game_sa/GameLogic.cpp

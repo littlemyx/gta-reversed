@@ -18,6 +18,10 @@
 #include "Entity/Ped/PlayerPed.h"
 #include "Entity/Vehicle/Vehicle.h"
 #include "PedType.h"
+#include "Crime.h"
+#include "Messages.h"
+#include "Text/Text.h"
+#include "Localisation.h"
 #include "eModelID.h"
 
 // private / protected members via explicit instantiation (access checks do not apply to the template arguments of an explicit instantiation)
@@ -165,10 +169,10 @@ static void GenWanted(CWanted& w, Rng& r) {
 // statics a CWanted function may change
 struct Statics {
     Snap stats{ 0xB79000, 223 * 4 + 82 * 4 + 0x80 }, wl{ 0x8CDEE4, 8 }, news{ 0xB7CB8C, 4 };
-    Snap statmsg{ 0xB794CC, 0x40 };
-    void Save()            { stats.Save(); wl.Save(); news.Save(); statmsg.Save(); }
-    void Restore() const   { stats.Restore(); wl.Restore(); news.Restore(); statmsg.Restore(); }
-    bool Same(const Statics& o) const { return stats.SameAs(o.stats) && wl.SameAs(o.wl) && news.SameAs(o.news) && statmsg.SameAs(o.statmsg); }
+    Snap statmsg{ 0xB794CC, 0x40 }, players{ 0xB7CD98, 0x190 };
+    void Save()            { stats.Save(); wl.Save(); news.Save(); statmsg.Save(); players.Save(); }
+    void Restore() const   { stats.Restore(); wl.Restore(); news.Restore(); statmsg.Restore(); players.Restore(); }
+    bool Same(const Statics& o) const { return stats.SameAs(o.stats) && wl.SameAs(o.wl) && news.SameAs(o.news) && statmsg.SameAs(o.statmsg) && players.SameAs(o.players); }
 };
 static void RandomStats(Rng& r) {
     for (auto& v : CStats::StatTypesFloat) v = r.below(4) ? r.f01() * 100.f : GenF(r, 1e5f);
@@ -223,12 +227,23 @@ static void __fastcall HostAddAudioEvent(void*, int, int event, int crimeType, c
     g_audioEv.push_back({ (uint32)event, (uint32)crimeType, FBits(point->x), FBits(point->y), FBits(point->z) });
 }
 
+static const GxtChar kGoodBoy[] = { 'G','O','O','D','B','O','Y',0 };
+const GxtChar* CText::Get(const char*) { return kGoodBoy; }
+static const GxtChar* __fastcall HostTextGet(void*, int, const char*) { return kGoodBoy; }
+void CMessages::AddBigMessage(const GxtChar* text, uint32 time, eMessageStyle style) { g_audioEv.push_back({ 0xB16, (uint32)(uintptr_t)text, time, (uint32)style, 0 }); }
+static void __cdecl HostBigMessage(const GxtChar* text, uint32 time, int style) { g_audioEv.push_back({ 0xB16, (uint32)(uintptr_t)text, time, (uint32)style, 0 }); }
+static bool g_german = false;
+bool CLocalisation::GermanGame() { return g_german; }
+static bool __cdecl HostGerman() { return g_german; }
 static int __cdecl HostPrintf(const char*, ...) { return 0; }   // the exe's leftover debug printf (CWanted::Update "CopPursuit ... messed up"): its CRT stdout state does not exist here
 
 static void TestWanted() {
     using namespace lw;
     oracle::Patch(0x4E71E0, (void*)&HostAddAudioEvent);
     oracle::Patch(0x821982, (void*)&HostPrintf);
+    oracle::Patch(0x6A0050, (void*)&HostTextGet);
+    oracle::Patch(0x69F2B0, (void*)&HostBigMessage);
+    oracle::Patch(0x56D200, (void*)&HostGerman);
     using VoidThis = void __fastcall(CWanted*, int);
     auto sub = [](Rng& r) { return Rng(r.u32() * 2654435761ull + 77); };
     const auto Cop = [](Rng& a) -> CCopPed* { return a.below(5) == 0 ? nullptr : PedObj[a.below(kPeds)]; };
@@ -396,5 +411,39 @@ static void TestWanted() {
         return Case<int>(r, d, [&](CWanted&) { CGameLogic::SetPlayerWantedLevelForForbiddenTerritories(imm); return 0; },
                          [&](CWanted&) { oracle::Fn<void __cdecl(bool)>(0x441770)(imm); return 0; }, false, "Forbidden");
     }, 6000);
+    // ---- CCrime
+    Run("CCrime::FindImmediateDetectionRange 0x531FC0", [&](Rng& r, std::string& d) {
+        const eCrimeType t = (eCrimeType)(r.below(3) ? r.below(MAX_CRIMES) : r.u32() % 64);
+        const float a = CCrime::FindImmediateDetectionRange(t); const float e = oracle::Fn<float __cdecl(int)>(0x531FC0)((int)t);
+        if (SameF(a, e)) return true; d = "type " + std::to_string((int)t) + " got " + F(a) + " exe " + F(e); return false;
+    }, 600);
+    struct CrimeCfg { int victimKind = 0, victimIdx = 0, byKind = 0, byIdx = 0; bool german = false; };
+    static CrimeCfg cc;
+    g_prepWorld = [](Rng& r) {
+        auto setType = [](void* e, int t) { auto& b = *((uint8*)e + 0x36); b = (uint8)((b & ~7) | t); };
+        for (int i = 0; i < kPeds; ++i) {
+            setType(PedObj[i], 3);
+            reinterpret_cast<uint32&>(*((uint8*)PedObj[i] + 0x46C)) = r.below(2) ? 0x800000u : (uint32)r.u32();   // bBeingChasedByPolice is bit 23
+            PedObj[i]->m_nPedType = (ePedType)(r.below(3) ? 2 + r.below(30) : (int)PED_TYPE_GANG1 + (int)r.below(12));   // pool peds are never the player (no player data)
+            PedObj[i]->m_pCollisionList = {}; if (r.below(2)) *reinterpret_cast<uint32*>(&PedObj[i]->m_pCollisionList) = 0x1000;
+        }
+        for (int i = 0; i < kVehs; ++i) setType(VehObj[i], 2);
+        Pl->m_nPedType = (ePedType)(r.below(4) ? PED_TYPE_PLAYER1 : (int)r.below(6));
+        setType(Pl, 3);
+        W->m_Multiplier = r.below(8) ? W->m_Multiplier : (r.below(2) ? -r.f01() : GenF(r, 2.f));
+        g_german = cc.german;
+        CWorld::Players[0].m_nMoney = (int32)r.u32();
+    };
+    Run("CCrime::ReportCrime 0x532010", [&](Rng& r, std::string& d) {
+        Rng a = sub(r);
+        cc.victimKind = a.below(5); cc.victimIdx = a.below(kPeds); cc.byKind = a.below(6); cc.byIdx = a.below(kPeds); cc.german = a.below(4) == 0;
+        const eCrimeType t = (eCrimeType)(a.below(3) == 0 ? 2 : (a.below(8) ? a.below(MAX_CRIMES) : a.u32() % 40));
+        if (t == CRIME_DAMAGED_PED && cc.victimKind == 0) cc.victimKind = 1;   // the exe dereferences the victim unconditionally for DAMAGED_PED
+        const int vk = cc.victimKind, vi = cc.victimIdx, bk = cc.byKind, bi = cc.byIdx;
+        const auto pickVictim = [&]() -> CEntity* { switch (vk) { case 0: return nullptr; case 1: case 2: case 3: return PedObj[vi]; default: return VehObj[vi % kVehs]; } };
+        const auto pickBy = [&]() -> CPed* { switch (bk) { case 0: return nullptr; case 1: case 2: case 3: return Pl; default: return PedObj[bi]; } };
+        return Case<int>(r, d, [&](CWanted&) { CCrime::ReportCrime(t, pickVictim(), pickBy()); return 0; },
+                         [&](CWanted&) { oracle::Fn<void __cdecl(int, CEntity*, CPed*)>(0x532010)((int)t, pickVictim(), pickBy()); return 0; }, false, "ReportCrime");
+    }, 8000);
     g_prepWorld = nullptr;
 }

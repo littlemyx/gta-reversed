@@ -357,17 +357,23 @@ void CRadar::DrawLegend(int32 x, int32 y, eRadarSprite blipType) {
  * @returns Magnitude of the vector before limiting.
  */
 float CRadar::LimitRadarPoint(CVector2D& point) {
-    const auto mag = point.Magnitude();
+    // Exact x87 form of the exe (0x5832F0): x*x + y*y and the sqrt stay in extended range (float math would overflow to inf for |x| > 1.8e19) and the
+    // magnitude is returned unrounded (the caller stores it); the normalisation multiplies by the extended-precision 1/mag, only the stores round to float
+    const double x   = point.x;
+    const double y   = point.y;
+    const double mag = x87::sqrt(x * x + y * y);
 
     if (FrontEndMenuManager.m_bDrawingMap)
-        return mag;
+        return (float)mag;
 
-    if (mag > 1.0f) {
-        // not in unit circle
-        point.Normalise();
+    if (mag > 1.0) {
+        // not in unit circle (NaN: no normalisation)
+        const double r = 1.0 / mag;
+        point.x = (float)(r * x);
+        point.y = (float)(r * y);
     }
 
-    return mag;
+    return (float)mag;
 }
 
 // 0x583350
@@ -411,8 +417,18 @@ uint8 CRadar::CalculateBlipAlpha(float distance) {
         return 255;
     }
 
-    const auto alpha = 255 - (uint32)(distance * ExeRecip(6.0f) * 255.0f);
-    return (uint8)std::max((float)alpha, 70.0f);
+    // Exact form of the exe (0x583420): _ftol of dist * (1/6) * 255, `255 - that` as a signed int converted back to float (+2^32 when negative, i.e. as uint32),
+    // max with 70.0, _ftol again (low byte returned)
+    using notsa::detail::Ftol;
+    const int32  alpha = 255 - Ftol((double)distance * (double)ExeRecip(6.0f) * 255.0);
+    double       value = (double)alpha;
+    if (alpha < 0) {
+        value += 4294967296.0;
+    }
+    if (70.0 > value) {
+        value = 70.0;
+    }
+    return (uint8)Ftol(value);
 }
 
 /*!
@@ -447,7 +463,17 @@ CVector2D CRadar::TransformRadarPointToScreenSpace(const CVector2D& in) {
  * @addr 0x583530
  */
 CVector2D CRadar::TransformRealWorldPointToRadarSpace(const CVector2D& in) {
-    return CachedRotateClockwise((in - vec2DRadarOrigin) / m_radarRange);
+    // Exact x87 form of the exe (0x583530): k = 1.0 / range (extended); k * dx is STORED as a float temp, k * dy stays extended; both rotated with the cached sin / cos
+    const double k  = 1.0 / (double)m_radarRange;
+    const double dx = (double)in.x - (double)vec2DRadarOrigin.x;
+    const double dy = (double)in.y - (double)vec2DRadarOrigin.y;
+    const float  tx = (float)(k * dx);
+    const double ty = k * dy;
+    const double sn = cachedSin, cs = cachedCos;
+    return {
+        (float)(sn * ty + cs * (double)tx),
+        (float)(cs * ty - sn * (double)tx)
+    };
 }
 
 /*!
@@ -470,6 +496,38 @@ CVector2D CRadar::TransformRealWorldToTexCoordSpace(const CVector2D& in, int32 x
 }
 
 // 0x583670
+namespace {
+// atan2(y, x) via fpatan (the extended result stays on the FPU stack), stored as the radar orientation, and its sin / cos computed from the UNROUNDED angle (0x5837B5 / 0x5837E9)
+__declspec(naked) void __cdecl SetRadarAngleAtan2(float y, float x) {
+    __asm {
+        fld  dword ptr [esp + 4]
+        fld  dword ptr [esp + 8]
+        fpatan
+        fst  dword ptr ds:[0xBA8310]
+        fld  st(0)
+        fsin
+        fstp dword ptr ds:[0xBA830C]
+        fcos
+        fstp dword ptr ds:[0xBA8308]
+        ret
+    }
+}
+// a float angle (0x5837F5)
+__declspec(naked) void __cdecl SetRadarAngle(float a) {
+    __asm {
+        fld  dword ptr [esp + 4]
+        fst  dword ptr ds:[0xBA8310]
+        fld  st(0)
+        fsin
+        fstp dword ptr ds:[0xBA830C]
+        fcos
+        fstp dword ptr ds:[0xBA8308]
+        ret
+    }
+}
+}
+
+// 0x583670
 void CRadar::CalculateCachedSinCos() {
     if (FrontEndMenuManager.m_bDrawingMap) {
         cachedSin = x87::sin(0.0f);
@@ -478,15 +536,12 @@ void CRadar::CalculateCachedSinCos() {
         return;
     }
 
-    const auto SaveAngle = [](float angle) {
-        m_fRadarOrientation = angle;
-        cachedSin = x87::sin(angle);
-        cachedCos = x87::cos(angle);
-    };
-
     if (TheCamera.GetLookDirection() == LOOKING_DIRECTION_FORWARD) {
-        SaveAngle(TheCamera.GetHeading());
-
+        if (const auto* m = TheCamera.m_matrix) { // heading of the camera matrix = atan2(-top.x, top.y)
+            SetRadarAngleAtan2(-m->GetForward().x, m->GetForward().y);
+        } else {
+            SetRadarAngle(TheCamera.m_placement.m_fHeading);
+        }
         return;
     }
 
@@ -501,7 +556,7 @@ void CRadar::CalculateCachedSinCos() {
         }
     }();
 
-    SaveAngle(directionToTarget.Heading());
+    SetRadarAngleAtan2(-directionToTarget.x, directionToTarget.y);
 }
 
 /*!
@@ -1072,65 +1127,67 @@ void CRadar::RemoveRadarSections() {
  * @addr 0x584D40
  */
 bool IsPointInsideRadar(const CVector2D& point) {
-    return std::abs(point.x) < 1.0f
-        && std::abs(point.y) < 1.0f;
+    // exe (0x584D40): fcomp / test ah,5 / test ah,0x41 -> only a real x < -1 or x > 1 fails; NaN and exactly +-1 pass
+    return !(point.x < -1.0f) && !(point.x > 1.0f)
+        && !(point.y < -1.0f) && !(point.y > 1.0f);
 }
 
 // 0x584D90
 void GetTextureCorners(int32 x, int32 y, CVector2D* corners) {
     // Magic numbers probably come from `MAX_RADAR_WIDTH_TILES` and `MAX_RADAR_HEIGHT_TILES`
+    // (the products are int multiplications that wrap, converted to float afterwards)
+    const auto X0 = float((int32)((uint32)(x - 6) * 500u)), X1 = float((int32)((uint32)(x - 6) * 500u + 500u));
+    const auto Y0 = float((int32)((uint32)(5 - y) * 500u)), Y1 = float((int32)((uint32)(5 - y) * 500u + 500u));
 
-    corners[0] = {500.0f * float(x - 6), 500.0f * float(5 - y)};
-    corners[1] = {500.0f * float(x - 5), 500.0f * float(5 - y)};
-    corners[2] = {500.0f * float(x - 5), 500.0f * float(6 - y)};
-    corners[3] = {500.0f * float(x - 6), 500.0f * float(6 - y)};
+    corners[0] = {X0, Y0};
+    corners[1] = {X1, Y0};
+    corners[2] = {X1, Y1};
+    corners[3] = {X0, Y1};
 }
 
 // Returns number of intersections
 // 0x584E00
 int32 LineRadarBoxCollision(CVector2D& result, const CVector2D& lineStart, const CVector2D& lineEnd) {
-    auto closestIntersectionParam = 1.0f;
-    auto intersectionSide         = -1;
+    // Exact x87 form of the exe (0x584E00): the distances, their product and the interpolation stay in extended range; the parameter of the first three edges is
+    // stored as a float (and becomes the new closest), the last edge keeps it unrounded and does not update anything; there is no `param >= 0` test and no early return
+    double closest = 1.0;
+    int32  side    = -1;
 
-    const auto deltaY = lineEnd.y - lineStart.y;
-    const auto deltaX = lineEnd.x - lineStart.x;
-
-    const auto CheckIntersection = [&](float edgeCoord, bool isX, float startDist, float endDist, int side) {
-        if (startDist * endDist < 0.0f) {
-            float intersectionParam = startDist / (startDist - endDist);
-            float intersectionVal   = (isX ? deltaY : deltaX) * intersectionParam + (isX ? lineStart.y : lineStart.x);
-            if (intersectionVal >= -1.0f && intersectionVal <= 1.0f && intersectionParam >= 0.0f && intersectionParam <= closestIntersectionParam) {
-                closestIntersectionParam = intersectionParam;
-                if (isX) {
-                    result.x = edgeCoord;
-                    result.y = intersectionVal;
-                } else {
-                    result.x = intersectionVal;
-                    result.y = edgeCoord;
-                }
-                intersectionSide = side;
-                if (intersectionParam == 0.0f) {
-                    return true; // Indicate early return
-                }
-            }
+    const auto Edge = [&](double a, double b, bool edgeIsX, float edgeCoord, int32 edgeSide, bool storeT) {
+        if (!(a * b < 0.0)) {
+            return false;
         }
-        return false; // No early return
+        double t = a / (a - b);
+        if (storeT) {
+            t = (double)(float)t;
+        }
+        const double s   = edgeIsX ? lineStart.y : lineStart.x;
+        const double e   = edgeIsX ? lineEnd.y : lineEnd.x;
+        const double val = (e - s) * t + s;
+        const float  v   = (float)val;
+        if (val < -1.0 || !(v <= 1.0f) || !(t <= closest)) {
+            return false;
+        }
+        if (edgeIsX) {
+            result.x = edgeCoord;
+            result.y = v;
+        } else {
+            result.x = v;
+            result.y = edgeCoord;
+        }
+        if (storeT) {
+            closest = t;
+        }
+        side = edgeSide;
+        return true;
     };
 
-    if (CheckIntersection(-1.0f, true, -1.0f - lineStart.x, -1.0f - lineEnd.x, 3)) {
-        return 3;
-    }
-    if (CheckIntersection(1.0f, true, lineStart.x - 1.0f, lineEnd.x - 1.0f, 1)) {
-        return 1;
-    }
-    if (CheckIntersection(-1.0f, false, -1.0f - lineStart.y, -1.0f - lineEnd.y, 0)) {
-        return 0;
-    }
-    if (CheckIntersection(1.0f, false, lineStart.y - 1.0f, lineEnd.y - 1.0f, 2)) {
-        return 2;
-    }
+    Edge(-1.0 - (double)lineStart.x, -1.0 - (double)lineEnd.x, true, -1.0f, 3, true);
+    Edge((double)lineStart.x - 1.0, (double)lineEnd.x - 1.0, true, 1.0f, 1, true);
+    Edge(-1.0 - (double)lineStart.y, -1.0 - (double)lineEnd.y, false, -1.0f, 0, true);
+    Edge((double)lineStart.y - 1.0, (double)lineEnd.y - 1.0, false, 1.0f, 2, false);
 
-    return intersectionSide;
+    return side;
 }
 
 // 0x585040

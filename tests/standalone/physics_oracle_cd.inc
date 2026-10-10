@@ -16,6 +16,9 @@ CPlayerPed* FindPlayerPed(int) { return fm16::g_playerActive ? reinterpret_cast<
 // not under test here: the exe's own (the traffic-light checks ask for the appearance of the fake vehicles)
 bool CGameLogic::LaRiotsActiveHere() { return oracle::Fn<bool __cdecl()>(0x441C10)(); }
 void CCarAI::CarHasReasonToStop(CVehicle* veh) { oracle::Fn<void __cdecl(CVehicle*)>(0x41C050)(veh); }
+// CWorld::AdvanceCurrentScanCode (inline, called by the traffic sector scans) clears all scan codes when the code wraps at 0xFFFF - after ~65k scans of a full CCarCtrl:: run. World.cpp is not linked
+// here: without this definition /FORCE:UNRESOLVED turns the call into a jump to 0x400000 (case 2518 of SteerAICarWithPhysicsFollowPath in the full run). The sector lists are empty in this test.
+void CWorld::ClearScanCodes() { oracle::Fn<void __cdecl()>(0x563470)(); }
 
 namespace cd {
 

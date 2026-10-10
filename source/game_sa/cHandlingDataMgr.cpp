@@ -281,6 +281,7 @@ int32 cHandlingDataMgr::GetHandlingId(const char* nameToFind) {
         }
     }
     NOTSA_UNREACHABLE("Can't find {}", nameToFind);
+    return (int32)std::size(VehicleNames); // 0x6F4FFC: the loop counter (210) is returned when nothing matches
 }
 
 // 0x6F5010

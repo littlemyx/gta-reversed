@@ -134,6 +134,6 @@ uint32 CStreamedScripts::GetStreamedScriptWithThisStartAddress(uint8* dataPtr)
             return i;
         }
     }
-    // Originally returns '0', possibly unintended.
     NOTSA_UNREACHABLE();
+    return (uint32)std::size(m_aScripts); // 0x47092B: the loop counter (0x52) is returned when nothing matches
 }

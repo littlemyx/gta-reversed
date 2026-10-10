@@ -239,6 +239,7 @@ int32 CShopping::FindItem(uint32 itemKey) {
     }
 
     NOTSA_UNREACHABLE();
+    return -1; // 0x49AD42
 }
 
 /*!
@@ -304,6 +305,7 @@ int32 CShopping::GetItemIndex(uint32 itemKey) {
     }
 
     NOTSA_UNREACHABLE();
+    return -1; // 0x49AB27
 }
 
 // 0x49AB30
@@ -378,6 +380,7 @@ ePriceSection CShopping::GetPriceSectionFromName(const char* name) {
     }
 
     NOTSA_UNREACHABLE();
+    return static_cast<ePriceSection>(-1); // 0x49AAFB
 }
 
 // 0x49B610

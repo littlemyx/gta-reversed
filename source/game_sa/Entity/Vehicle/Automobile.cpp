@@ -3897,7 +3897,8 @@ void CAutomobile::TellHeliToGoToCoors(float x, float y, float z, float altitudeM
 
     if (m_fAircraftGoToHeading == 0.f) {
         // 0x6A23F2: atan2 + PI, then brought back below 2 PI by repeated subtraction (there is no extra `- 2 PI`)
-        m_fAircraftGoToHeading = CGeneral::GetATanOfXY(m_matrix->GetForward().x, m_matrix->GetForward().y) + PI;
+        // `call 0x53CC70` leaves its result UNROUNDED on the x87 stack; `fadd [0x858CB8]` (pi, 0x40490FDB) and a single `fst` round it once
+        m_fAircraftGoToHeading = (float)(CGeneral::GetATanOfXYExt(m_matrix->GetForward().x, m_matrix->GetForward().y) + (double)std::bit_cast<float>(0x40490FDBu));
         if (m_fAircraftGoToHeading > TWO_PI) {
             auto heading = m_fAircraftGoToHeading;
             do

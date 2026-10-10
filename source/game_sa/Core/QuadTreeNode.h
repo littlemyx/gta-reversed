@@ -38,7 +38,7 @@ public:
 
 protected:
     using CQuadTreeNodePool = CPool<CQuadTreeNode<void*>>;
-    static inline auto& ms_pQuadTreeNodePool = StaticRef<CQuadTreeNodePool*>(0xB745BC);
+    static inline NOTSA_GLOBAL(ms_pQuadTreeNodePool, 0xB745BC, (CQuadTreeNodePool*), {});
 
 public:
     static void* operator new(size_t sz) {

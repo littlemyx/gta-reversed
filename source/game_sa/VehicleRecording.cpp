@@ -83,7 +83,14 @@ void CVehicleRecording::InterpolateInfoForCar(CVehicle* vehicle, const CVehicleS
     RestoreInfoForMatrix(transition, frame);
 
     vehicle->GetMatrix() = Lerp(vehicle->GetMatrix(), transition, interpValue);
-    vehicle->GetMoveSpeed() = Lerp(vehicle->GetMoveSpeed(), frame.m_sVelocity, interpValue);
+    // 0x459C62: the blend form `vel * t + (1 - t) * current` with the recorded int16 velocity * 1/16383.5 (0x858EAC) - not the (b - a) * t + a lerp
+    const auto* const raw = reinterpret_cast<const uint8*>(&frame);
+    const float       omt = 1.0f - interpValue;
+    auto&             spd = vehicle->GetMoveSpeed();
+    const auto        Vel = [&](size_t off) { return (float)*reinterpret_cast<const int16*>(raw + off) * std::bit_cast<float>(0x38800100u); };
+    spd.x = Vel(4) * interpValue + omt * spd.x;
+    spd.y = Vel(6) * interpValue + omt * spd.y;
+    spd.z = Vel(8) * interpValue + omt * spd.z;
 }
 
 // 0x45A060
@@ -371,7 +378,7 @@ void CVehicleRecording::SetRecordingToPointClosestToCoors(int32 playbackId, CVec
     auto minDist = 1'000'000.0f; // FLT_MAX
     for (auto&& [i, frame] : rngv::enumerate(GetFramesFromPlaybackBuffer(playbackId))) {
         if (const auto d = DistanceBetweenPoints(frame.m_vecPosn, posn); d < minDist) {
-            PlaybackIndex[playbackId] = i;
+            PlaybackIndex[playbackId] = (int32)(i * sizeof(CVehicleStateEachFrame)); // 0x45A1E0: a BYTE offset into the playback buffer (see GetCurrentFrameIndex)
             minDist = d;
         }
     }

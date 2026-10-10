@@ -17,6 +17,7 @@
 #include "Models/ModelInfo.h"
 #include "Collision/ColModel.h"
 #include "Weather.h"
+#include "Cheat.h"
 #include "Entity/Vehicle/Automobile.h"
 
 static void TestDamageManager() {
@@ -814,6 +815,73 @@ static void TestBikeBmxBoat() {
     });
 }
 
+// ProcessFlyingCarStuff of CAutomobile / CHeli with CVehicle::FlyingControl replaced by a recorder on both sides (restored afterwards; the heli's rotor node is null: the blade / wind part is not run)
+namespace fcx {
+struct FcCall { int model; float a, b, c, d; };
+inline std::vector<FcCall> g_fc;
+static void __fastcall StubFlying(void*, int, int model, float a, float b, float c, float d) { g_fc.push_back({ model, a, b, c, d }); }
+struct Patched { void* addr = nullptr; uint8 saved[16] {}; void Set(void* a, void* host) { addr = a; std::memcpy(saved, a, 16); wfx::PatchFn(a, host); } void Restore() { if (addr) { DWORD o; VirtualProtect(addr, 16, PAGE_EXECUTE_READWRITE, &o); std::memcpy(addr, saved, 16); FlushInstructionCache(GetCurrentProcess(), addr, 16); addr = nullptr; } } };
+}
+
+static void TestProcessFlyingCarStuff() {
+    using namespace wfx;
+    auto fcInit = [](Rng& rr, uint8* b) {
+        vfx::Gen(rr, b);
+        static const int st[] = { 0, 3, 8, 1, 2, 4, 5, 6, 7 };
+        Put<uint8>(b, 0x36, (uint8)((rr.below(10) < 7 ? st[rr.below(3)] : st[rr.below(9)]) << 3 | 2));
+        auto& v = *reinterpret_cast<CVehicle*>(b);
+        v.m_vecMoveSpeed = rr.below(4) ? GenV(rr, 0.1f) : CVector{ 0.f, 0.f, 0.f };
+        if (rr.below(5) == 0) v.m_vecMoveSpeed = GenV(rr, 0.03f);
+        CTimer::ms_fTimeStep = rr.below(6) ? 0.2f + rr.f01() * 2.f : GenF(rr, 2.f);
+    };
+    Run("CAutomobile::ProcessFlyingCarStuff 0x6A8500", [&](Rng& r, std::string& d) {
+        const bool cheat = r.below(3) != 0;
+        std::vector<fcx::FcCall> ca, ce;
+        fcx::Patched pp, pe;
+        pp.Set(PmAddr(&CVehicle::FlyingControl), (void*)&fcx::StubFlying); pe.Set((void*)0x6D85F0, (void*)&fcx::StubFlying);
+        const bool ok = Obj<vfx::ALL>(r, d, fcInit,
+            [&](uint8* b) { CCheat::m_aCheatsActive[CHEAT_CARS_FLY] = cheat; fcx::g_fc.clear(); reinterpret_cast<CAutomobile*>(b)->CAutomobile::ProcessFlyingCarStuff(); ca = fcx::g_fc; return 0u; },
+            [&](uint8* b) { CCheat::m_aCheatsActive[CHEAT_CARS_FLY] = cheat; fcx::g_fc.clear(); oracle::Fn<void __fastcall(void*, int)>(0x6A8500)(b, 0); ce = fcx::g_fc; return 0u; }, 2, 0, 0, 0, vfx::Fix);
+        pp.Restore(); pe.Restore();
+        bool same = ca.size() == ce.size();
+        for (size_t i = 0; same && i < ca.size(); ++i) same = ca[i].model == ce[i].model && SameF(ca[i].a, ce[i].a) && SameF(ca[i].b, ce[i].b) && SameF(ca[i].c, ce[i].c) && SameF(ca[i].d, ce[i].d);
+        Hit(!ca.empty());
+        if (ok && same) return true;
+        d += " port calls " + std::to_string(ca.size()) + " exe calls " + std::to_string(ce.size()); return false;
+    });
+    Run("CHeli::ProcessFlyingCarStuff (no rotor node) 0x6C4E60", [&](Rng& r, std::string& d) {
+        std::vector<fcx::FcCall> ca, ce;
+        fcx::Patched pp, pe;
+        pp.Set(PmAddr(&CVehicle::FlyingControl), (void*)&fcx::StubFlying); pe.Set((void*)0x6D85F0, (void*)&fcx::StubFlying);
+        auto heliInit = [&](Rng& rr, uint8* b) {
+            fcInit(rr, b);
+            auto& h = *reinterpret_cast<CHeli*>(b);
+            h.m_aCarNodes[HELI_STATIC_ROTOR] = nullptr;
+            h.m_fHeliRotorSpeed = rr.below(3) ? rr.f01() * 0.3f : GenF(rr, 0.3f);
+            h.m_fLeftRightSkid = GenF(rr, 1.f); h.m_fSteeringUpDown = GenF(rr, 1.f); h.m_fSteeringLeftRight = GenF(rr, 1.f); h.m_fAccelerationBreakStatus = rr.below(3) ? GenF(rr, 1.f) : 0.f;
+            h.m_nNumContactWheels = (uint8)rr.below(6);
+            h.physicalFlags.bSubmergedInWater = rr.below(3) == 0; h.physicalFlags.bTouchingWater = rr.below(3) == 0; h.vehicleFlags.bIsRCVehicle = rr.below(4) == 0;
+            Put<int16_t>(b, 0x22, (int16_t)(rr.below(3) ? rr.below(2) ? 0x1d1 : 0x1f5 : 400 + (int)rr.below(200)));
+            Put<uint32_t>(b, vfx::HND + 0xCC, rr.u32());
+        };
+        const bool ok = Obj<vfx::ALL>(r, d, heliInit,
+            [&](uint8* b) { fcx::g_fc.clear(); reinterpret_cast<CHeli*>(b)->CHeli::ProcessFlyingCarStuff(); ca = fcx::g_fc; return 0u; },
+            [&](uint8* b) { fcx::g_fc.clear(); oracle::Fn<void __fastcall(void*, int)>(0x6C4E60)(b, 0); ce = fcx::g_fc; return 0u; }, 2, 0, 0, 0, vfx::Fix);
+        pp.Restore(); pe.Restore();
+        bool same = ca.size() == ce.size();
+        for (size_t i = 0; same && i < ca.size(); ++i) same = ca[i].model == ce[i].model && SameF(ca[i].a, ce[i].a) && SameF(ca[i].b, ce[i].b) && SameF(ca[i].c, ce[i].c) && SameF(ca[i].d, ce[i].d);
+        Hit(!ca.empty());
+        if (ok && same) return true;
+        d += " port calls " + std::to_string(ca.size()) + " exe calls " + std::to_string(ce.size()); return false;
+    });
+    Run("CVehicle::ProcessWheelRotation 0x6D1230", [&](Rng& r, std::string& d) {
+        const int ws = r.below(4);
+        const CVector a = GenV(r, 3.f), c = GenV(r, 3.f); const float f = r.below(3) ? 0.1f + r.f01() * 2.f : GenF(r, 2.f);
+        return Obj<0x40>(r, d, [](Rng&, uint8*) {}, [&](uint8* b) { return FB(reinterpret_cast<CVehicle*>(b)->CVehicle::ProcessWheelRotation((tWheelState)ws, a, c, f)); },
+            [&](uint8* b) { return FB(oracle::Fn<float __fastcall(void*, int, int, const CVector*, const CVector*, float)>(0x6D1230)(b, 0, ws, &a, &c, f)); }, 1);
+    });
+}
+
 static void TestVehicles() {
     TestDamageManager();
     TestTransmission();
@@ -827,4 +895,5 @@ static void TestVehicles() {
     TestFlyingControl();
     TestAircraftOrders();
     TestBikeBmxBoat();
+    TestProcessFlyingCarStuff();
 }

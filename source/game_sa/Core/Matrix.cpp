@@ -11,7 +11,7 @@
 
 uint8* CMatrix::EulerIndices1 = (uint8*)0x866D9C;
 uint8* CMatrix::EulerIndices2 = (uint8*)0x866D94;
-auto& numMatrices = StaticRef<int32>(0xB74238);
+NOTSA_GLOBAL(numMatrices, 0xB74238, (int32), {});
 auto& gDummyMatrix = StaticRef<CMatrix>(0xB74240);
 
 

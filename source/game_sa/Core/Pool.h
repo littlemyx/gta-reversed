@@ -12,6 +12,13 @@
 
 #define INVALID_POOL_SLOT (-1)
 
+// The exe's pool has no checks at all (a double delete just sets the flag again; a stale pointer is a valid index): the run build must not abort on what the exe tolerates
+#ifdef NOTSA_STANDALONE_RUN
+#define POOL_ASSERT(...) ((void)0)
+#else
+#define POOL_ASSERT(...) assert(__VA_ARGS__)
+#endif
+
 /*
     R* terminology      Our terminology
     JustIndex           Index
@@ -153,7 +160,7 @@ public:
     */
     // 0x404940
     bool IsFreeSlotAtIndex(size_t idx) const {
-        assert(IsIndexInBounds(idx));
+        POOL_ASSERT(IsIndexInBounds(idx));
         return m_SlotState[idx].IsEmpty;
     }
 
@@ -161,7 +168,7 @@ public:
     * @brief Returns slot index for this object
     */
     auto GetIndex(const T* obj) const {
-        assert(IsPtrFromPool(obj));
+        POOL_ASSERT(IsPtrFromPool(obj));
         return (StorageType*)(obj) - (StorageType*)(m_Storage);
     }
 
@@ -169,7 +176,7 @@ public:
     * @brief Returns pointer to object by slot index
     */
     T* GetAt(size_t idx) {
-        assert(IsIndexInBounds(idx));
+        POOL_ASSERT(IsIndexInBounds(idx));
         return !IsFreeSlotAtIndex(idx) ? (T*)&m_Storage[idx] : nullptr;
     }
 
@@ -177,7 +184,7 @@ public:
     * @brief Marks slot as free / used (0x404970)
     */
     void SetFreeAt(size_t idx, bool isFree) {
-        assert(IsIndexInBounds(idx));
+        POOL_ASSERT(IsIndexInBounds(idx));
         m_SlotState[idx].IsEmpty = isFree;
     }
 
@@ -185,7 +192,7 @@ public:
     * @brief Set new id for slot (0x54F9F0)
     */
     void SetIdAt(size_t idx, uint8 id) {
-        assert(IsIndexInBounds(idx));
+        POOL_ASSERT(IsIndexInBounds(idx));
         m_SlotState[idx].Ref = id;
     }
 
@@ -193,7 +200,7 @@ public:
     * @brief Get id for slot (0x552200)
     */
     uint8 GetIdAt(size_t idx) {
-        assert(IsIndexInBounds(idx));
+        POOL_ASSERT(IsIndexInBounds(idx));
         return m_SlotState[idx].Ref;
     }
 
@@ -203,17 +210,17 @@ public:
     T* New() {
         const auto i = FindFreeSlot(); // also updates `m_LastFreeSlot` like the exe (0x5E45E0)
         if (i == -1) {
+#ifndef NOTSA_STANDALONE_RUN // the exe fails silently (returns null)
             if (CanDealWithNoMemory()) {
-#ifndef NOTSA_STANDALONE_RUN // the exe fails silently
                 NOTSA_LOG_ERR("Allocation failed for type {:?}", typeid(T).name());
-#endif
             } else {
                 NOTSA_DEBUG_BREAK();
             }
+#endif
             return nullptr;
         }
-        assert(IsIndexInBounds(i) && "Free slot index is out-of-bounds");
-        assert(IsFreeSlotAtIndex(i) && "Can't allocate an object at a non-free slot");
+        POOL_ASSERT(IsIndexInBounds(i) && "Free slot index is out-of-bounds");
+        POOL_ASSERT(IsFreeSlotAtIndex(i) && "Can't allocate an object at a non-free slot");
 
         auto* const state = &m_SlotState[i];
         const auto isFirstAllocation = state->Ref == 0; // First allocation of this slot?
@@ -234,7 +241,7 @@ public:
     */
     void CreateAtRef(int32 ref) {
         const auto idx           = GetIndexFromRef(ref); // GetIndexFromRef asserts if idx out of range
-        assert(IsFreeSlotAtIndex(idx) && "Can't create an object at a non-free slot");
+        POOL_ASSERT(IsFreeSlotAtIndex(idx) && "Can't create an object at a non-free slot");
 
         m_SlotState[idx].IsEmpty = false;
         m_SlotState[idx].Ref     = ref & 0x7F;
@@ -250,7 +257,7 @@ public:
     */
     T* NewAt(int32 ref) {
         const auto idx = GetIndexFromRef(ref);
-        assert(IsFreeSlotAtIndex(idx) && "Can't create an object at a non-free slot");
+        POOL_ASSERT(IsFreeSlotAtIndex(idx) && "Can't create an object at a non-free slot");
 
         StorageType* ptr = &m_Storage[idx];
         CreateAtRef(ref);
@@ -267,7 +274,7 @@ public:
             return;
         }
 #endif
-        assert(!IsFreeSlotAtIndex(GetIndex(obj)) && "Can't delete an already deleted object");
+        POOL_ASSERT(!IsFreeSlotAtIndex(GetIndex(obj)) && "Can't delete an already deleted object");
 
         const auto idx = GetIndex(obj);
         m_SlotState[idx].IsEmpty = true;
@@ -318,7 +325,12 @@ public:
 
     // 0x5A1CD0
     bool IsObjectValid(const T* obj) const {
+#ifdef NOTSA_STANDALONE_RUN // the exe: idx = (int)(obj - base) / sizeof (truncating toward 0, so a pointer less than one object below the base maps to slot 0), valid if 0 <= idx < size and the slot is not free
+        const int32 idx = ((int32)(uintptr_t)obj - (int32)(uintptr_t)m_Storage) / (int32)sizeof(StorageType);
+        return idx >= 0 && idx < (int32)m_Capacity && !m_SlotState[idx].IsEmpty;
+#else
         return IsPtrFromPool(obj) && !IsFreeSlotAtIndex(GetIndex(obj));
+#endif
     }
 
     /*!
@@ -340,7 +352,7 @@ public:
     */
     int32 GetIndexFromRef(int32 ref) {
         const auto idx = ref >> 8;
-        assert(IsIndexInBounds(idx));
+        POOL_ASSERT(IsIndexInBounds(idx));
         return idx;
     }
 

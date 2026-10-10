@@ -759,6 +759,22 @@ if (${RE_PROJECT}_RW_LIBRW)
     set_property(TARGET x87_oracle_test PROPERTY SOURCES "${STANDALONE_PAD_OBJ}" ${_x87_sources})
     target_link_options(x87_oracle_test PRIVATE "$<$<CXX_COMPILER_ID:MSVC>:/BASE:0x400000;/DYNAMICBASE:NO;/FIXED;/MERGE:_TEXT=.text;/INCREMENTAL:NO;/SUBSYSTEM:CONSOLE;/FORCE:UNRESOLVED>")
     set_target_properties(x87_oracle_test PROPERTIES COMPILE_WARNING_AS_ERROR OFF CXX_SCAN_FOR_MODULES OFF)
+    # CPool fidelity oracle: the exe's CPool<CPlayerPed> instance (New/Delete/IsObjectValid machine code) vs Core/Pool.h under NOTSA_STANDALONE_RUN, random op sequences
+    add_executable(pool_oracle_test EXCLUDE_FROM_ALL
+        "${PROJECT_SOURCE_DIR}/tests/standalone/pool_oracle_test.cpp"
+    )
+    target_compile_features(pool_oracle_test PRIVATE cxx_std_23)
+    target_compile_definitions(pool_oracle_test PRIVATE NOTSA_RW_LIBRW RW_D3D9 NOTSA_STANDALONE_RUN)
+    target_include_directories(pool_oracle_test PRIVATE $<TARGET_PROPERTY:${RE_PROJECT_LIB_NAME},INCLUDE_DIRECTORIES>)
+    target_compile_options(pool_oracle_test PRIVATE $<TARGET_PROPERTY:${RE_PROJECT_LIB_NAME},COMPILE_OPTIONS>)
+    target_precompile_headers(pool_oracle_test PRIVATE StdInc.cpp)
+    target_link_libraries(pool_oracle_test PRIVATE librw spdlog::spdlog Tracy::TracyClient user32)
+    target_sources(pool_oracle_test PRIVATE "${STANDALONE_PAD_OBJ}")
+    get_target_property(_po_sources pool_oracle_test SOURCES)
+    list(REMOVE_ITEM _po_sources "${STANDALONE_PAD_OBJ}")
+    set_property(TARGET pool_oracle_test PROPERTY SOURCES "${STANDALONE_PAD_OBJ}" ${_po_sources})
+    target_link_options(pool_oracle_test PRIVATE "$<$<CXX_COMPILER_ID:MSVC>:/BASE:0x400000;/DYNAMICBASE:NO;/FIXED;/MERGE:_TEXT=.text;/INCREMENTAL:NO;/SUBSYSTEM:CONSOLE;/FORCE:UNRESOLVED>")
+    set_target_properties(pool_oracle_test PROPERTIES COMPILE_WARNING_AS_ERROR OFF CXX_SCAN_FOR_MODULES OFF)
     # Review oracle (3e73083e hooks): CHud / CMaths / CTaskTimer / CTaskSequences / CIdleCam / CCoverPoint / CConversations / CCredits / CVehicleSaveStructure /
     # CPathFind::FindNodePairClosestToCoors against the exe machine code (same machinery as game_oracle_test)
     add_executable(review_oracle_test EXCLUDE_FROM_ALL

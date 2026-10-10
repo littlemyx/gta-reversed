@@ -89,7 +89,7 @@ struct CamWorldScript {   // random script for the stubs of one case + the camer
         cwf::waterTab[0].ret = cwf::waterRet; cwf::waterTab[0].level = cwf::waterLevel;
         static alignas(16) uint8 veh[16]; cwf::playerVeh = r.below(2) ? veh : nullptr;
         auto* w = reinterpret_cast<uint32_t*>(0xB7C500);   // CTimeCycle current colours: water rgb at 0xB7C508..0xB7C510
-        for (int i = 0; i < 8; ++i) { const float v = r.below(3) ? r.f01() * 300.f : std::fabs(GenF(r, 300.f, S_NOHUGE)); std::memcpy(&w[i], &v, 4); /* water colours >= 0 (the exe inlines SetMotionBlur and stores the raw int) */ }
+        for (int i = 0; i < 8; ++i) { const float v = r.below(3) ? r.f01() * 300.f : std::fabs(GenF(r, 300.f, S_ZERO | S_DEN | S_TINY)); std::memcpy(&w[i], &v, 4); /* water colours >= 0 (the exe inlines SetMotionBlur and stores the raw int) */ }
         *reinterpret_cast<uint8_t*>(0xB6EC2C) = r.below(2);    // gAllowScriptedFixedCameraCollision (exe global)
         cwf::Reset();
     }
@@ -198,6 +198,7 @@ static void TestCamera() {
         return false;
     });
     Run("CCamera::CalculateMirroredMatrix 0x50B380", [](Rng& r, std::string& d) {
+        ZeroSpecials zs;   // denormal mirror distance: the exe keeps the products unrounded
         CamRun c; c.Begin(r);
         CMatrix in1, out1, out2; std::memset((void*)&in1, 0, sizeof in1); std::memset((void*)&out1, 0, sizeof out1); std::memset((void*)&out2, 0, sizeof out2);
         GenMatrix(r, reinterpret_cast<uint8*>(&in1), 50.f); std::memcpy((void*)&out2, (void*)&out1, sizeof out1);

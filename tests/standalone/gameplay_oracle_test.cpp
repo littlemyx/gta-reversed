@@ -78,6 +78,8 @@ static float PickScale(Rng& r) {
     return sc[r.below(9)];
 }
 static CVector GenV(Rng& r, float scale, unsigned mask = g_defMask) { return { GenF(r, scale, mask), GenF(r, scale, mask), GenF(r, scale, mask) }; }
+struct ZeroSpecials { unsigned old; ZeroSpecials() : old(g_defMask) { g_defMask = S_ZERO; } ~ZeroSpecials() { g_defMask = old; } };   // RAII: only exact zeros (denormal / tiny products differ by an ulp where the exe keeps them unrounded on the x87 stack)
+struct FiniteSpecials { unsigned old; FiniteSpecials() : old(g_defMask) { g_defMask = S_ZERO | S_DEN | S_TINY; } ~FiniteSpecials() { g_defMask = old; } };   // RAII: GenF / GenV inject only zero / denormal / tiny specials (NaN / inf / huge excluded, e.g. absurd boxes, matrices, radar polygons)
 
 static std::string F(float f) { char b[40]; std::snprintf(b, sizeof b, "%08X(%g)", FBits(f), (double)f); return b; }
 static std::string V(const CVector& v) { return "{" + F(v.x) + "," + F(v.y) + "," + F(v.z) + "}"; }

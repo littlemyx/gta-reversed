@@ -88,8 +88,10 @@ static void TestPad() {
 
 static_assert(sizeof(CFire) == 0x28);
 
+struct MiscFiniteSpecials { unsigned old; MiscFiniteSpecials() : old(g_defMask) { g_defMask = S_ZERO | S_DEN | S_TINY; } ~MiscFiniteSpecials() { g_defMask = old; } };
 static void TestMisc() {
     TestPad();
+    MiscFiniteSpecials fin;   // NaN / inf radar polygons, matrices and key curves are garbage in the exe, too
     // ---- Fx interpolation
     struct FxVar { const char* n; unsigned va; int type; };
     static const FxVar vs[] = { { "FxInterpInfoFloat_c::GetVal(out) 0x4A8470", 0x4A8470, 0 }, { "FxInterpInfo32_c::GetVal(out) 0x4A89C0", 0x4A89C0, 1 }, { "FxInterpInfo255_c::GetVal(out) 0x4A8B80", 0x4A8B80, 1 }, { "FxInterpInfoU255_c::GetVal(out) 0x4A8800", 0x4A8800, 2 } };
@@ -166,6 +168,7 @@ static void TestMisc() {
         });
     }
     Run("CMatrix::Reorthogonalise 0x59B6A0", [](Rng& r, std::string& d) {
+            ZeroSpecials zs;   // denormal products: x87 registers keep them unrounded
         alignas(16) uint8 ma[0x48] {}, me[0x48] {};
         GenMatrix(r, ma, 10.f);
         float* f = reinterpret_cast<float*>(ma);   // perturb a clean rotation slightly (the usual input) or keep the random one
@@ -180,6 +183,7 @@ static void TestMisc() {
     {   // CMatrix ops not covered by game_oracle_test (the trig ones are dominated by the x87 transcendental audit)
         auto genM = [](Rng& r, uint8* m) { std::memset(m, 0, 0x48); GenMatrix(r, m, 10.f); };
         Run("CMatrix::ForceUpVector 0x59B7E0", [=](Rng& r, std::string& d) {
+            ZeroSpecials zs;   // denormal products: x87 registers keep them unrounded
             alignas(16) uint8 ma[0x48], me[0x48]; genM(r, ma); std::memcpy(me, ma, sizeof ma);
             const CVector up = r.below(2) ? GenDir(r) : GenV(r, 2.f);
             reinterpret_cast<CMatrix*>(ma)->ForceUpVector(up);

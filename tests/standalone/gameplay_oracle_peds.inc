@@ -166,6 +166,8 @@ static void TestPedGeometry() {
         return false;
     });
     Run("CPedGeometryAnalyser::ComputeRouteRoundSphere 0x5F1890", [](Rng& r, std::string& d) {
+        const unsigned oldMask = g_defMask; g_defMask = S_ZERO;   // inf / denormal radius or positions: the exe's x87-register sequence differs by an ulp
+        struct Restore { unsigned m; ~Restore() { g_defMask = m; } } restore{ oldMask };
         PedFx a; BuildPedFx(r, a, 20.f); PedFx e(a);
         alignas(16) uint8 sph[sizeof(CColSphere)] {};
         auto& s = *reinterpret_cast<CColSphere*>(sph);
@@ -244,6 +246,7 @@ static void BuildMovingPed(Rng& r, PedFx& f) {
 }
 
 static void TestPedMovement() {
+    FiniteSpecials finMove;   // NaN / inf matrices and times are not frame data
     Run("CPed::TurnBody 0x5E4000", [](Rng& r, std::string& d) {
         PedFx a; BuildMovingPed(r, a);
         if (r.below(3) == 0) { auto* lt = reinterpret_cast<CPlaceable*>(g_lookTarget); std::memset(g_lookTarget, 0, sizeof g_lookTarget); lt->m_placement.m_vPosn = GenV(r, 100.f); lt->m_matrix = nullptr; a.ped().m_pLookTarget = reinterpret_cast<CEntity*>(g_lookTarget); }
@@ -436,7 +439,6 @@ static std::string EntDesc(PedFx& f) {
     return PedDesc(f) + " type " + std::to_string((int)f.ent().GetType()) + " bb " + V(cm.m_boundBox.m_vecMin) + V(cm.m_boundBox.m_vecMax) + " data " + (cm.m_pColData ? std::to_string(cm.m_pColData->m_nNumBoxes) + "b" + std::to_string(cm.m_pColData->m_nNumSpheres) + "s" : "none");
 }
 
-struct FiniteSpecials { unsigned old; FiniteSpecials() : old(g_defMask) { g_defMask = S_ZERO | S_DEN | S_TINY; } ~FiniteSpecials() { g_defMask = old; } };   // NaN / inf / huge excluded (x87 compare / overflow semantics of absurd boxes)
 static void TestEntityBBox() {
     FiniteSpecials fin;
     Run("CPedGeometryAnalyser::ComputeEntityBoundingBoxCornersUncached 0x5F1FA0", [](Rng& r, std::string& d) {

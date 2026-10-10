@@ -21,21 +21,21 @@ struct BuoyRun {
     Snap vin{ 0x8D32C8, 4 }, vpa{ 0x8D32C8, 4 }, vpe{ 0x8D32C8, 4 };
     void Begin(Rng& r) {
         auto* w = reinterpret_cast<uint32_t*>(0xC1C890);
-        for (size_t i = 0; i < 0xD0 / 4; ++i) { const float v = GenF(r, 5.f, S_NOHUGE); std::memcpy(&w[i], &v, 4); }
+        for (size_t i = 0; i < 0xD0 / 4; ++i) { const float v = GenF(r, 5.f, S_ZERO); std::memcpy(&w[i], &v, 4); }
         auto& b = mod_Buoyancy;
         std::memset(reinterpret_cast<uint8*>(&b.m_EntityMatrix) + 0x40, 0, 8);   // the CMatrix attach pointer / owns flag must not be garbage
         b.m_bInWater = r.below(2); b.m_bFlipUnknVector = r.below(2); b.m_bProcessingBoat = r.below(2);
-        b.m_fNumCheckedPoints = r.below(4) ? 1.f + r.below(9) : GenF(r, 12.f, S_NOHUGE);
-        b.m_fWaterLevel = GenF(r, 30.f, S_NOHUGE); b.m_fUnkn2 = r.below(2) ? 0.f : GenF(r, 1.f, S_NOHUGE);
-        b.m_vecBoundingMin = CVector{ -std::fabs(GenF(r, 3.f, S_NOHUGE)), -std::fabs(GenF(r, 6.f, S_NOHUGE)), -std::fabs(GenF(r, 2.f, S_NOHUGE)) };
-        b.m_vecBoundingMax = CVector{ std::fabs(GenF(r, 3.f, S_NOHUGE)), std::fabs(GenF(r, 6.f, S_NOHUGE)), std::fabs(GenF(r, 2.f, S_NOHUGE)) };
+        b.m_fNumCheckedPoints = r.below(4) ? 1.f + r.below(9) : GenF(r, 12.f, S_ZERO);
+        b.m_fWaterLevel = GenF(r, 30.f, S_ZERO); b.m_fUnkn2 = r.below(2) ? 0.f : GenF(r, 1.f, S_ZERO);
+        b.m_vecBoundingMin = CVector{ -std::fabs(GenF(r, 3.f, S_ZERO)), -std::fabs(GenF(r, 6.f, S_ZERO)), -std::fabs(GenF(r, 2.f, S_ZERO)) };
+        b.m_vecBoundingMax = CVector{ std::fabs(GenF(r, 3.f, S_ZERO)), std::fabs(GenF(r, 6.f, S_ZERO)), std::fabs(GenF(r, 2.f, S_ZERO)) };
         b.m_vecCenterOffset = (b.m_vecBoundingMax - b.m_vecBoundingMin) * 0.5f;
         b.m_vecNormalizedCenterOffset = CVector{ r.f01(), r.f01(), r.f01() };
         auto* c = reinterpret_cast<uint32_t*>(0xC1C858);
-        for (size_t i = 0; i < 7; ++i) { const float v = GenF(r, 3.f, S_NOHUGE); std::memcpy(&c[i], &v, 4); }
+        for (size_t i = 0; i < 7; ++i) { const float v = GenF(r, 3.f, S_ZERO); std::memcpy(&c[i], &v, 4); }
         *reinterpret_cast<uint32_t*>(0xC1C870) = r.below(2);   // the static-init guard dword (bit 0) / bBuoyancyDataSummed
-        *reinterpret_cast<float*>(0x8D32C8) = r.below(3) ? 0.5f + r.f01() * 0.5f : GenF(r, 2.f, S_NOHUGE);
-        CTimer::ms_fTimeStep = r.below(8) ? r.f01() * 3.f : GenF(r, 4.f, S_NOHUGE);
+        *reinterpret_cast<float*>(0x8D32C8) = r.below(3) ? 0.5f + r.f01() * 0.5f : GenF(r, 2.f, S_ZERO);
+        CTimer::ms_fTimeStep = r.below(8) ? r.f01() * 3.f : GenF(r, 4.f, S_ZERO);
         cwf::Reset(); bfx::splashes.clear(); bfx::turns.clear();
     }
     void Mark()     { in.Save(); cin.Save(); vin.Save(); }
@@ -49,10 +49,18 @@ static bool SameSplashes(const std::vector<bfx::Splash>& a, const std::vector<bf
     for (size_t i = 0; i < a.size(); ++i) if (!SameV(a[i].from, b[i].from) || !SameV(a[i].to, b[i].to) || !SameV(a[i].dir, b[i].dir) || a[i].reduce != b[i].reduce || a[i].role != b[i].role) return false;
     return true;
 }
+static bool SameZ(const CVector& x, const CVector& y) {   // bit-identical, except that +0 and -0 are the same force
+    const auto f = [](float a, float b) { return (a == 0.f && b == 0.f) || FBits(a) == FBits(b) || (IsNanBits(FBits(a)) && IsNanBits(FBits(b))); };
+    return f(x.x, y.x) && f(x.y, y.y) && f(x.z, y.z);
+}
 static bool SameTurns(const std::vector<bfx::Turn>& a, const std::vector<bfx::Turn>& b) {
     if (a.size() != b.size()) return false;
-    for (size_t i = 0; i < a.size(); ++i) if (!SameV(a[i].force, b[i].force) || !SameV(a[i].point, b[i].point) || a[i].role != b[i].role) return false;
+    for (size_t i = 0; i < a.size(); ++i) if (!SameZ(a[i].force, b[i].force) || !SameV(a[i].point, b[i].point) || a[i].role != b[i].role) return false;
     return true;
+}
+static std::string TurnsDiff(const std::vector<bfx::Turn>& a, const std::vector<bfx::Turn>& b) {
+    for (size_t i = 0; i < a.size() && i < b.size(); ++i) if (!SameV(a[i].force, b[i].force) || !SameV(a[i].point, b[i].point) || a[i].role != b[i].role) return " turn[" + std::to_string(i) + "] got " + V(a[i].force) + V(a[i].point) + " exe " + V(b[i].force) + V(b[i].point);
+    return "";
 }
 static std::string SplashDesc(const std::vector<bfx::Splash>& s) { std::string r = std::to_string(s.size()) + " splashes"; for (size_t i = 0; i < s.size() && i < 4; ++i) r += " [" + V(s[i].from) + V(s[i].to) + V(s[i].dir) + "]"; return r; }
 
@@ -67,7 +75,7 @@ static void BuildBuoyEntity(Rng& r, PedFx& f, bool vehicle) {
     CModelInfo::ms_modelInfoPtrs[model] = reinterpret_cast<CBaseModelInfo*>(efx::g_info);
     e.SetType(vehicle ? ENTITY_TYPE_VEHICLE : (r.below(2) ? ENTITY_TYPE_PED : ENTITY_TYPE_OBJECT));
     auto& p = *reinterpret_cast<CPhysical*>(f.e);
-    p.m_fMass = r.below(8) ? 1.f + r.f01() * 3000.f : GenF(r, 100.f, S_NOHUGE);
+    p.m_fMass = r.below(8) ? 1.f + r.f01() * 3000.f : GenF(r, 100.f, S_ZERO);
     p.m_vecMoveSpeed = GenV(r, r.below(2) ? 0.5f : 5.f);
     if (vehicle) {
         auto& v = *reinterpret_cast<CVehicle*>(f.e);
@@ -75,13 +83,13 @@ static void BuildBuoyEntity(Rng& r, PedFx& f, bool vehicle) {
         if (r.below(2)) v.m_nVehicleType = VEHICLE_TYPE_BOAT;
         v.m_vehicleSpecialColIndex = -1;
         std::memset(g_buoyHandling, 0, sizeof g_buoyHandling);
-        reinterpret_cast<tHandlingData*>(g_buoyHandling)->m_fSuspensionDampingLevel = r.below(2) ? 0.1f + r.f01() * 0.3f : GenF(r, 1.f, S_NOHUGE);
+        reinterpret_cast<tHandlingData*>(g_buoyHandling)->m_fSuspensionDampingLevel = r.below(2) ? 0.1f + r.f01() * 0.3f : GenF(r, 1.f, S_ZERO);
         v.m_pHandlingData = reinterpret_cast<tHandlingData*>(g_buoyHandling);
     }
 }
 
 static void TestBuoyancy() {
-    FiniteSpecials fin;
+    ZeroSpecials fin;   // denormal products of tiny values: 1 ulp (x87 registers vs float spills) in the exe's x87 sequences
     PatchHostFn(PmAddr(&cBuoyancy::AddSplashParticles), (void*)&HostSplash);
     oracle::Patch(0x6C34E0, (void*)&HostSplash);
     PatchHostFn(PmAddr(&CPhysical::ApplyTurnForce), (void*)&HostTurn);
@@ -197,7 +205,7 @@ static void TestBuoyancy() {
         const bool re = oracle::Fn<bool __fastcall(cBuoyancy*, int, CVehicle*, float, CVector*, CVector*, bool)>(0x6C3030)(&mod_Buoyancy, 0, reinterpret_cast<CVehicle*>(e.e), buoy, &te, &fe, under); const auto recE = cwf::g_rec; const auto tuE = bfx::turns; b.ExeDone();
         Hit(ra);
         if (ra == re && SameV(ta, te) && SameV(fa, fe) && b.Same() && cwf::SameRec(recA, recE) && SameTurns(tuA, tuE) && SamePedFx(a, e)) return true;
-        d = EntDesc(a) + " model " + std::to_string(a.ent().m_nModelIndex) + " buoy " + F(buoy) + " under " + std::to_string(under) + " got " + std::to_string(ra) + V(ta) + V(fa) + " exe " + std::to_string(re) + V(te) + V(fe) + " turns " + std::to_string(tuA.size()) + "/" + std::to_string(tuE.size()) + " " + cwf::Desc(recA) + " / " + cwf::Desc(recE) + b.Diff();
+        d = EntDesc(a) + " model " + std::to_string(a.ent().m_nModelIndex) + " buoy " + F(buoy) + " under " + std::to_string(under) + " got " + std::to_string(ra) + V(ta) + V(fa) + " exe " + std::to_string(re) + V(te) + V(fe) + " turns " + std::to_string(tuA.size()) + "/" + std::to_string(tuE.size()) + TurnsDiff(tuA, tuE) + " " + cwf::Desc(recA) + " / " + cwf::Desc(recE) + b.Diff();
         return false;
     });
 }

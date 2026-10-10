@@ -767,6 +767,37 @@ static void TestRecip() {
 }
 
 // ---------------------------------------------------------------------------------------------------------------------------------
+// float -> int conversions: MSVC compiles `(int)f` / `(short)f` to _ftol2_sse (cvttsd2si: 0x80000000 for NaN / out of range), the exe's CRT _ftol2 (0x821B40) returns the low dword of
+// a truncating fistp qword (NaN / inf -> 0, 2^31..2^63 wraps). source/standalone/FtolExe.cpp replaces _ftol2_sse with the exe's semantics; this proves it.
+static int32_t ExeFtol(double v) {
+    int32_t r;
+    __asm {
+        fld qword ptr [v]
+        mov eax, 0x821B40
+        call eax
+        mov r, eax
+    }
+    return r;
+}
+static void TestFtol() {
+    const auto Gen = [](Rng& r) {
+        static const float sc[] = { 1.f, 1000.f, 3e4f, 2.1e9f, 3e9f, 4.4e9f, 1e10f, 9e18f, 1e19f, 1e30f };
+        return GenF(r, sc[r.below(10)]);
+    };
+    Run("_ftol2 override: (int)float / (int16)float / (int)double", [&](Rng& r, std::string& d) {
+        volatile float f = Gen(r);
+        volatile double dd = (double)Gen(r) * (r.below(2) ? 1.0 : (double)Gen(r));
+        const int32_t e1 = ExeFtol(f), e2 = ExeFtol(dd);
+        const int32_t a1 = (int32_t)f, a2 = (int32_t)dd;
+        const int16_t a3 = (int16_t)f, a4 = (int16_t)dd;
+        const uint32_t a5 = (uint32_t)dd; const uint8_t a6 = (uint8_t)f; const int64_t a7 = (int64_t)dd;
+        if (a1 == e1 && a2 == e2 && a3 == (int16_t)e1 && a4 == (int16_t)e2 && a5 == (uint32_t)e2 && a6 == (uint8_t)e1 && (int32_t)a7 == e2) return true;
+        char b[200]; std::snprintf(b, sizeof b, "f %s d %g: int(f) %08X/%08X int(d) %08X/%08X s16 %04X/%04X u32(d) %08X u8 %02X i64lo %08X", F(f).c_str(), dd, a1, e1, a2, e2, (uint16_t)a3, (uint16_t)e1, a5, a6, (uint32_t)a7);
+        d = b; return false;
+    });
+}
+
+// ---------------------------------------------------------------------------------------------------------------------------------
 int main(int argc, char** argv) {
     std::setvbuf(stdout, nullptr, _IONBF, 0);
     for (int i = 1; i < argc; ++i) {
@@ -793,6 +824,7 @@ int main(int argc, char** argv) {
     TestPath();
     TestFidelity();
     TestRecip();
+    TestFtol();
     int bad24 = 0, bad53 = 0, hard24 = 0, hard53 = 0;
     for (auto& r : g_rows) { bad24 += r.bad24; bad53 += r.bad53; hard24 += r.hardReg24 + r.hardSpec24; hard53 += r.hardReg53 + r.hardSpec53; }
     std::printf("\n%zu functions, mismatches (strict / excluding NaN-payload-only): PC24 %d / %d, PC53 %d / %d\n", g_rows.size(), bad24, hard24, bad53, hard53);

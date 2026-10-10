@@ -619,6 +619,7 @@ if (${RE_PROJECT}_RW_LIBRW)
         game_sa/Font.cpp
         game_sa/TimeCycle.cpp
         game_sa/Entity/Vehicle/Train.cpp
+        standalone/FtolExe.cpp   # _ftol2_sse with the exe's semantics (TestFtol)
     )
     target_compile_features(review_oracle_test PRIVATE cxx_std_23)
     target_compile_definitions(review_oracle_test PRIVATE NOTSA_RW_LIBRW RW_D3D9)

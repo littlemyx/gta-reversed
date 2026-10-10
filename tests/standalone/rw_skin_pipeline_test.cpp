@@ -25,7 +25,7 @@
 #include <string>
 struct ID3DBlob : IUnknown { virtual void* STDMETHODCALLTYPE GetBufferPointer() = 0; virtual SIZE_T STDMETHODCALLTYPE GetBufferSize() = 0; };
 
-namespace notsa::standalone::Fixups { void Log(const char*, ...) {} }
+namespace notsa::standalone::Fixups { void Log(const char*, ...) {} void LogGameStateTrace(int, unsigned long, unsigned long, unsigned long) {} }
 void NotsaRwRenderState_OnEngineStarted();
 void RwShimPipelineEnsure();
 void RwShimSkinForceCpu(bool force);

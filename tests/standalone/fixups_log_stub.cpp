@@ -12,5 +12,6 @@ void Log(const char* fmt, ...) {
     std::fputc('\n', stderr);
     va_end(va);
 }
+void LogGameStateTrace(int, unsigned long, unsigned long, unsigned long) {} // game state is not available in the unit tests
 } // namespace notsa::standalone::Fixups
 #endif

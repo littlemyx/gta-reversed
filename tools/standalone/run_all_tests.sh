@@ -89,7 +89,7 @@ for t in $TESTS; do
   if [[ "$MODEL_TESTS" == *" $t "* ]]; then
     case "$t" in rw_skin_hanim_test|rw_skin_pipeline_test|rw_rtanim_rtquat_test) models="male01";; *) models="infernus male01 vgsnbuild07";; esac   # these two need skinned models
     for f in $models; do [ -f "$ASSETS/$f.dff" ] && args+=("Z:${ASSETS//\//\\}\\$f.dff"); done; fi
-  case "$t" in *oracle*) TMO=${TIMEOUT:-900};; rw_skin_vs_test) TMO=${TIMEOUT:-900};; *) TMO=${TIMEOUT:-180};; esac   # vs_test: ~2.2M exe-composer keys (> 180 s under Wine)
+  case "$t" in logic_oracle_test) TMO=${TIMEOUT:-3000};; *oracle*) TMO=${TIMEOUT:-900};; rw_skin_vs_test) TMO=${TIMEOUT:-900};; *) TMO=${TIMEOUT:-180};; esac   # vs_test: ~2.2M exe-composer keys (> 180 s under Wine); logic_oracle_test: ~224 functions x >=1000 cases, ~20 min under Wine
   tv="TIMEOUT_$t"; [ -n "${!tv:-}" ] && TMO=${!tv}                                                              # per-test override: TIMEOUT_<test>=<seconds>
   start=$SECONDS; status=NORESULT; res=""; n=0
   while [ $n -lt "$ATTEMPTS" ]; do

@@ -76,6 +76,8 @@ void Log(const char* fmt, ...);
 //! D7 self-check: log the x87 precision control (`_controlfp(0,0) & _MCW_PC`: 0x00000 = 24 bit, 0x10000 = 53 bit, 0x20000 = 64 bit), the rounding/exception
 //! masks and the sticky `_statusfp()` flags, tagged with `where`. The original runs at PC=53 (CRT) until D3D9 CreateDevice lowers the thread to PC=24.
 void LogFpuState(const char* where);
+//! NOTSA_STANDALONE_MEMLOG line set (playerlog / clocklog / memlog): the part that reads game state. Defined in Fixups.cpp (game lib); the PCH-less rw_* unit tests link a no-op stub.
+void LogGameStateTrace(int frame, unsigned long crtHeapBytes, unsigned long crtHeapBlocks, unsigned long committedKB);
 //! A2 (.notes/DETACH_DATA_PLAN.md): boot dump of the detached globals for tools/standalone/verify_globals.py. WinMain uses it right after ApplyToDataImage;
 //! it is `((void)0)` unless built with NOTSA_VERIFY_GLOBALS (no code at all: the default build's object code is unchanged).
 #ifdef NOTSA_VERIFY_GLOBALS

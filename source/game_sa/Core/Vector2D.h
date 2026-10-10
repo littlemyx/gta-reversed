@@ -9,6 +9,7 @@
 #include <span>
 #include <rwplcore.h>
 #include <Base.h>
+#include "Core/X87Intrinsics.h"
 
 class CVector;
 class CVector2D;
@@ -122,7 +123,7 @@ public:
     float Heading() const {
         // -x, y is basically GetPerpRight()
         // that's the same as std::atan(y, x) - 90deg;
-        return std::atan2(-x, y);
+        return x87::atan2(-x, y);
     }
 
     auto GetComponents() const {

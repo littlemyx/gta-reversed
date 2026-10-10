@@ -8,6 +8,7 @@
 
 #include <Base.h>
 #include "ExeRecip.h"
+#include "Core/X87Intrinsics.h"
 #include <string>
 #include <numbers>
 #include <bit>
@@ -38,7 +39,7 @@ constexpr auto DEFAULT_VIEW_WINDOW        = 0.7f;
 #define SCREEN_WIDTH ((float)RsGlobal.maximumWidth)
 #define SCREEN_HEIGHT ((float)RsGlobal.maximumHeight)
 #define SCREEN_ASPECT_RATIO (CDraw::ms_fAspectRatio)
-#define SCREEN_VIEW_WINDOW (std::tan(DegreesToRadians(CDraw::GetFOV() / (2.0f)))) // todo: GetScaledFov
+#define SCREEN_VIEW_WINDOW (x87::tan(DegreesToRadians(CDraw::GetFOV() / (2.0f)))) // todo: GetScaledFov
 
 // This scales from PS2 pixel coordinates to the real resolution.
 // The exe computes `maximumWidth * (1/640) * a` / `maximumHeight * (1/448) * a` (float reciprocals 0x859520 / 0x859524, multiplied in this order),

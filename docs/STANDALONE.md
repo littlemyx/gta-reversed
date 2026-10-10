@@ -30,10 +30,10 @@ Dependencies (Debug and Release are separate installs). On Windows use the repo'
 use the committed profiles (they include it and add the tweaks below; Wine on PATH, `WINEPREFIX` set up for msvc-wine):
 ```
 export MSVC_WINE_ROOT=$HOME/tools/msvc     # your msvc-wine install
-conan install . --build=missing --profile tools/standalone/msvc-wine/conanprofile-wine-debug.txt         -s build_type=Debug   -c tools.cmake.cmaketoolchain:user_presets=
-conan install . --build=missing --profile tools/standalone/msvc-wine/conanprofile-wine-release.txt -s build_type=Release -c tools.cmake.cmaketoolchain:user_presets=
+conan install . --build=missing --profile tools/standalone/msvc-wine/conanprofile-wine-debug.txt -s build_type=Debug
+conan install . --build=missing --profile tools/standalone/msvc-wine/conanprofile-wine-release.txt -s build_type=Release
 ```
-(The first install also generates `source/libs/imgui/*` - ImGui bindings copied from the conan package by `conanfile.py`; they are not committed.)
+(Do not pass `-c tools.cmake.cmaketoolchain:user_presets=`: `conanfile.py` writes `ConanPresets.json`, which `CMakePresets.json` includes. The first install also generates `source/libs/imgui/*` - ImGui bindings copied from the conan package by `conanfile.py`; they are not committed.)
 Known msvc-wine profile tweaks (already in those profiles; see `tools/standalone/msvc-wine/conanprofile-wine-debug.txt`): `sdl/*:libusb=False` (needs MSBuild), toolchain +
 `compiler_executables` pointing at msvc-wine `cl`, `/WX- /wd4005`, extra variables `CMAKE_NINJA_FORCE_RESPONSE_FILE=ON`,
 `CMAKE_PROJECT_INCLUDE=tools/standalone/msvc-wine/no-wx.cmake`. For **Release** additionally: `CMAKE_TRY_COMPILE_TARGET_TYPE=STATIC_LIBRARY`,

@@ -947,6 +947,9 @@ int16 CFont::ProcessCurrentString(bool print, float x, float y, const GxtChar* t
                 for (const char* src = gString; *src && len + 1 < bufSize; src++) {
                     buf[len++] = *src;
                 }
+                // 0x71A3F5: the exe terminates the copied tag before appending the rest; when `lineEnd` points INTO `buf` (a second flush of the rebuilt line)
+                // this NUL cuts the rest off - the text ends with the tag (the old port kept the rest and looped forever)
+                buf[len] = '\0';
                 if (m_bNewLine) {
                     lineEnd += 3;
                 }
@@ -1094,10 +1097,12 @@ float CFont::GetCharacterSize(uint8 letterId) {
     else if (propValueIdx > 155)
         propValueIdx = 0;
 
+    // 0x719750: the outline size is a signed byte (movsx); the prop index is NOT bounds-checked (the table is 208 bytes, indices up to 255 read on into the next bytes)
+    const auto* fd = gFontData.data() + m_FontTextureId;
     if (m_bFontPropOn) {
-        return ((float)gFontData[m_FontTextureId].m_propValues[propValueIdx] + (float)m_nFontOutlineSize) * m_Scale.x;
+        return ((float)fd->m_propValues.data()[propValueIdx] + (float)(int8)m_nFontOutlineSize) * m_Scale.x;
     } else {
-        return ((float)gFontData[m_FontTextureId].m_unpropValue + (float)m_nFontOutlineSize) * m_Scale.x;
+        return ((float)fd->m_unpropValue + (float)(int8)m_nFontOutlineSize) * m_Scale.x;
     }
 }
 

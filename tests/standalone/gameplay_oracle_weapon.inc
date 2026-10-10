@@ -66,7 +66,6 @@ static void PatchFn(void* fn, void* host) {
     auto* p = reinterpret_cast<uint8_t*>(fn); p[0] = 0xE9; *reinterpret_cast<int32_t*>(p + 1) = (int32_t)((uintptr_t)host - ((uintptr_t)fn + 5));
     FlushInstructionCache(GetCurrentProcess(), fn, 16);
 }
-template<class PM> static void* PmAddr(PM pm) { void* p; static_assert(sizeof(pm) == sizeof(p)); std::memcpy(&p, &pm, sizeof p); return p; }
 }
 
 static void TestWeaponMisc() {
@@ -256,6 +255,7 @@ static void TestHeatSeeking() {
 // CShotInfo::Update with creator-less shots (no ped loop): the world effects it triggers are recorded on both sides. The port-side symbols of the (unlinked) World / FireManager TUs are defined here.
 #include "World.h"
 #include "FireManager.h"
+static void InstallPortFxPatches();
 namespace sfx {
 struct Rec { int kind; CVector pos; float a; const void* ent; float b = 0.f, c = 0.f; };
 inline std::vector<Rec> g_rec;
@@ -268,7 +268,7 @@ inline CVector  g_pvlPoint{};
 void CWorld::SetCarsOnFire(CVector pos, float radius, CEntity* c) { sfx::g_rec.push_back({ 0, pos, radius, c }); }
 void CWorld::SetWorldOnFire(CVector pos, float radius, CEntity* c) { sfx::g_rec.push_back({ 1, pos, radius, c }); }
 eSprayPaintState CWorld::SprayPaintWorld(CVector& posn, CVector& outDir, float radius, bool f) { sfx::g_rec.push_back({ 2 + (int)f * 10, posn, radius, nullptr }); outDir = sfx::g_sprayDir; return (eSprayPaintState)sfx::g_spray; }
-bool CFireManager::ExtinguishPointWithWater(CVector point, float r, float sz) { sfx::g_rec.push_back({ 3, point, r + sz * 1000.f, nullptr }); return sfx::g_extinguish; }
+static bool __fastcall HostExtinguish(void*, int, CVector point, float r, float sz) { sfx::g_rec.push_back({ 3, point, r + sz * 1000.f, nullptr }); return sfx::g_extinguish; }
 namespace sfx {
 static void __cdecl ExeCarsOnFire(CVector pos, float radius, CEntity* c) { g_rec.push_back({ 0, pos, radius, c }); }
 static void __cdecl ExeWorldOnFire(CVector pos, float radius, CEntity* c) { g_rec.push_back({ 1, pos, radius, c }); }
@@ -284,6 +284,7 @@ static void TestShotInfoUpdate() {
     oracle::Patch(0x56B910, (void*)&sfx::ExeWorldOnFire);
     oracle::Patch(0x565B70, (void*)&sfx::ExeSpray);
     oracle::Patch(0x5394C0, (void*)&sfx::ExeExtinguish);
+    InstallPortFxPatches();
     Run("CShotInfo::Update (no creators) 0x739E60", [&](Rng& r, std::string& d) {
         constexpr size_t N = 100 * 0x2c;
         std::vector<sfx::Rec> ra, re;
@@ -587,13 +588,19 @@ float CWorld::FindGroundZFor3DCoord(CVector coord, bool* outResult, CEntity** ou
 }
 bool CWaterLevel::GetWaterLevelNoWaves(CVector pos, float* out, float* a, float* b) { sfx::g_rec.push_back({ 11, pos, (float)aex::g_hasWater }); if (out) *out = aex::g_water; return aex::g_hasWater; }
 void CAEExplosionAudioEntity::AddAudioEvent(eAudioEvents ev, CVector& posn, float vol) { sfx::g_rec.push_back({ 12, posn, vol, nullptr, (float)ev }); }
-CFire* CFireManager::StartFire(CVector pos, float size, uint8 unused, CEntity* creator, uint32 nTimeToBurn, int8 nGenerations, uint8 unused_) { sfx::g_rec.push_back({ 13, pos, size, creator, (float)nTimeToBurn, (float)(nGenerations + 16 * unused_) }); return nullptr; }
+static CFire* __fastcall HostStartFire(void*, int, CVector pos, float size, uint8 unused, CEntity* creator, uint32 nTimeToBurn, int8 nGenerations, uint8 unused_) { sfx::g_rec.push_back({ 13, pos, size, creator, (float)nTimeToBurn, (float)(nGenerations + 16 * unused_) }); return nullptr; }
 void CShadows::AddPermanentShadow(uint8 type, RwTexture* texture, CVector* posn, float topX, float topY, float rightX, float rightY, int16 intensity, uint8 red, uint8 green, uint8 blue, float drawDistance, uint32 time, float upDistance) {
     sfx::g_rec.push_back({ 14, *posn, topX + 2.f * topY + 3.f * rightX + 4.f * rightY, texture, (float)(intensity + red + green + blue + type) + drawDistance, (float)time + upDistance });
 }
-void CCamera::CamShake(float strength, CVector from) { sfx::g_rec.push_back({ 15, from, strength }); }
-void CPad::StartShake_Distance(int16 time, uint8 frequency, CVector pos) { sfx::g_rec.push_back({ 16, pos, (float)(time * 1000 + frequency), this }); }
+static void __fastcall HostCamShake(void*, int, float strength, CVector from) { sfx::g_rec.push_back({ 15, from, strength }); }
+static void __fastcall HostShakeDist(CPad* self, int, int16 time, uint8 frequency, CVector pos) { sfx::g_rec.push_back({ 16, pos, (float)(time * 1000 + frequency), self }); }
 bool CGameLogic::IsCoopGameGoingOn() { sfx::g_rec.push_back({ 17, {}, 0.f }); return aex::g_coop; }
+static void InstallPortFxPatches() {
+    PatchHostFn(PmAddr(&CFireManager::ExtinguishPointWithWater), (void*)&HostExtinguish);
+    PatchHostFn(PmAddr(static_cast<CFire* (CFireManager::*)(CVector, float, uint8, CEntity*, uint32, int8, uint8)>(&CFireManager::StartFire)), (void*)&HostStartFire);
+    PatchHostFn(PmAddr(&CCamera::CamShake), (void*)&HostCamShake);
+    PatchHostFn(PmAddr(&CPad::StartShake_Distance), (void*)&HostShakeDist);
+}
 namespace aex {
 static float __cdecl ExeGround(float x, float y, float z, bool* outResult, CEntity** outEntity) {
     const bool hit = (g_hitMask >> (g_n++ & 31)) & 1;

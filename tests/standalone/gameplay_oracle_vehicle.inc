@@ -659,14 +659,6 @@ static void TestVehicleTypes() {
     });
 }
 
-// CEntity::GetColModel (Entity.cpp is not linked; same logic as the port / 0x535300 - the fixtures keep m_vehicleSpecialColIndex = -1)
-CColModel* CEntity::GetColModel() const {
-    if (GetIsTypeVehicle()) {
-        const auto veh = AsVehicle();
-        if (veh->m_vehicleSpecialColIndex > -1) return &CVehicle::m_aSpecialColModel[veh->m_vehicleSpecialColIndex];
-    }
-    return GetModelInfo()->GetColModel();
-}
 
 // ---- CVehicle::FlyingControl: ApplyMoveForce / ApplyTurnForce are recorded on both sides (CPhysical's own code is covered by the physics test)
 namespace fcx {

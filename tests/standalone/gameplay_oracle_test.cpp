@@ -296,6 +296,7 @@ int main(int argc, char** argv) {
     DuplicateHandle(GetCurrentProcess(), GetCurrentThread(), GetCurrentProcess(), &g_mainThread, 0, FALSE, DUPLICATE_SAME_ACCESS);
     CreateThread(nullptr, 0, WatchdogProc, nullptr, 0, nullptr);
     std::printf("gameplay_oracle_test: %d cases per function and precision mode; PC24 = game mode (D3D CreateDevice), PC53 = CRT default\n", g_cases);
+    InstallPortFxPatches();
     TestPeds();
     TestCamera();
     TestWeapons();

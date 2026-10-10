@@ -68,7 +68,7 @@ inline std::string Desc(const Rec& a) {
 }
 bool CWaterLevel::GetWaterLevel(float x, float y, float z, float& out, uint8, CVector* n) { return cwf::Water(x, y, z, out, n); }
 bool CWaterLevel::GetWaterLevel(const CVector& pos, float& out, bool, CVector* n) { return cwf::Water(pos.x, pos.y, pos.z, out, n); }
-CVehicle* FindPlayerVehicle(int32, bool) { ++cwf::g_rec.playerVeh; return reinterpret_cast<CVehicle*>(cwf::playerVeh); }
+static CVehicle* HostFindPlayerVehicle(int32, bool) { ++cwf::g_rec.playerVeh; return reinterpret_cast<CVehicle*>(cwf::playerVeh); }
 static bool __fastcall HostCone(CCamera*, int, const CVector& pos, const CVector& look, CVector& out, float rad, float mn, float& dist) { return cwf::Cone(pos, look, out, rad, mn, dist); }
 static void* __cdecl ExeFindPlayerVehicle(int, bool) { ++cwf::g_rec.playerVeh; return cwf::playerVeh; }
 static bool __cdecl ExeWater(float x, float y, float z, float* out, bool, CVector* n) { return cwf::Water(x, y, z, *out, n); }
@@ -79,6 +79,7 @@ static void InstallCamStubs() {
     PatchHostFn(PmAddr(&CCamera::ConeCastCollisionResolve), (void*)&HostCone);
     oracle::Patch(0x51A5D0, (void*)&HostCone);
     oracle::Patch(0x56E0D0, (void*)&ExeFindPlayerVehicle);
+    PatchHostFn((void*)&FindPlayerVehicle, (void*)&HostFindPlayerVehicle);
     oracle::Patch(0x6EB690, (void*)&ExeWater);
 }
 struct CamWorldScript {   // random script for the stubs of one case + the camera-related exe globals (water colours, allow-collision flag)

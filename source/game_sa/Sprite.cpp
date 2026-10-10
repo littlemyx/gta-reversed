@@ -209,10 +209,11 @@ void CSprite::Draw3DSprite(float, float, float, float, float, float, float, floa
 bool CSprite::CalcScreenCoors(const RwV3d& posn, RwV3d* out, float* w, float* h, bool checkMaxVisible, bool checkMinVisible) {
     *out = TheCamera.GetViewMatrix().TransformPoint(posn);
 
-    if (out->z <= CDraw::GetNearClipZ() + 1.0f && checkMinVisible)
+    // 0x70CE30: fcomp / test ah,5 - an unordered compare (NaN z) falls through to the flag test, so a NaN depth is rejected when the check is requested
+    if (!(out->z > (double)CDraw::GetNearClipZ() + 1.0) && checkMinVisible)
         return false;
 
-    if (out->z >= CDraw::GetFarClipZ() && checkMaxVisible)
+    if (!(out->z < CDraw::GetFarClipZ()) && checkMaxVisible)
         return false;
 
     const float rd = 1.0f / out->z; // reciprocal of depth

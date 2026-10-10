@@ -34,26 +34,28 @@
 #include "Messages.h"
 #include "Hud.h"
 #include "Text/Text.h"
+#include "game_sa/WeaponEffects.h"
+#line 37
 
-auto& gbFirstPersonRunThisFrame = StaticRef<bool>(0xB6EC20);
-auto& gLastFrameProcessedDWCineyCam = StaticRef<uint32>(0x8CCB9C);
+NOTSA_GLOBAL(gbFirstPersonRunThisFrame, 0xB6EC20, (bool), {});
+NOTSA_GLOBAL(gLastFrameProcessedDWCineyCam, 0x8CCB9C, (uint32), { 0xFFFFFFFFU });
 
 // Indexed by the DW cinematic cam id (20..28), see `IsTimeToExitThisDWCineyCamMode`
 // NOTE: Only the indices 20..28 are used (= 0xB6EC70..0xB6EC78), the first 20 bytes overlap other (unrelated) variables, eg. `gArrestCamOneCop` (0xB6EC5C)
-static inline auto& gbExitCam = StaticRef<std::array<bool, 29>>(0xB6EC5C);
-static inline auto& gDWCineyCamMinDist = StaticRef<std::array<float, 9>>(0x8CCBCC);
-static inline auto& gDWCineyCamMaxDist = StaticRef<std::array<float, 9>>(0x8CCBF0);
-static inline auto& gLastDWCineyCamMode = StaticRef<int32>(0x8CC488);    // NOTE: name made up, holds the id of the last processed DW cinematic cam mode (reset to -1 in `Process`)
-static inline auto& gDWCineyCamStartTime = StaticRef<uint32>(0x8CCBA0); // NOTE: name made up
-static inline auto& gDWCineyCamEndTime = StaticRef<uint32>(0x8CCBA4); // NOTE: name made up, only compared against the current time in `IsTimeToExitThisDWCineyCamMode`
+NOTSA_GLOBAL_LOCAL(gbExitCam, 0xB6EC5C, (std::array<bool, 29>), {}); // detached: own storage (a VIEW over unrelated bytes in the exe, only [20,29) are used; aliases.json "views")
+static inline NOTSA_GLOBAL(gDWCineyCamMinDist, 0x8CCBCC, (std::array<float, 9>), { 3.0f, 3.0f, 1.0f, 3.0f, 5.0f, 3.0f, 3.0f, 3.0f, 3.0f });
+static inline NOTSA_GLOBAL(gDWCineyCamMaxDist, 0x8CCBF0, (std::array<float, 9>), { 185.0f, 100.0f, 100.0f, 100.0f, 30.0f, 30.0f, 100.0f, 100.0f, 100.0f });
+static inline NOTSA_GLOBAL(gLastDWCineyCamMode, 0x8CC488, (int32), { -1 });    // NOTE: name made up, holds the id of the last processed DW cinematic cam mode (reset to -1 in `Process`)
+static inline NOTSA_GLOBAL(gDWCineyCamStartTime, 0x8CCBA0, (uint32), { 0xFFFFFFFFU }); // NOTE: name made up
+static inline NOTSA_GLOBAL(gDWCineyCamEndTime, 0x8CCBA4, (uint32), { 0xFFFFFFFFU }); // NOTE: name made up, only compared against the current time in `IsTimeToExitThisDWCineyCamMode`
 
-static inline auto& DWCineyCamLastPos = StaticRef<CVector>(0xB6FE8C);
-static inline auto& DWCineyCamLastUp = StaticRef<CVector>(0xB6FE98);
-static inline auto& DWCineyCamLastRight = StaticRef<CVector>(0xB6FEA4);
-static inline auto& DWCineyCamLastFwd = StaticRef<CVector>(0xB6FEB0);
+static inline NOTSA_GLOBAL(DWCineyCamLastPos, 0xB6FE8C, (CVector), {});
+static inline NOTSA_GLOBAL(DWCineyCamLastUp, 0xB6FE98, (CVector), {});
+static inline NOTSA_GLOBAL(DWCineyCamLastRight, 0xB6FEA4, (CVector), {});
+static inline NOTSA_GLOBAL(DWCineyCamLastFwd, 0xB6FEB0, (CVector), {});
 
-static inline auto& DWCineyCamLastNearClip = StaticRef<float>(0xB6EC08);
-static inline auto& DWCineyCamLastFov = StaticRef<float>(0xB6EC0C);
+static inline NOTSA_GLOBAL(DWCineyCamLastNearClip, 0xB6EC08, (float), {});
+static inline NOTSA_GLOBAL(DWCineyCamLastFov, 0xB6EC0C, (float), {});
 
 //! Settings of the DW (David Wood) heli chase cinematic camera, a global at 0xB6FEC0 (names made up)
 struct DWHeliChaseCamSettings {
@@ -141,7 +143,7 @@ extern float&                      gCurDistForCam;
 extern std::array<CColPoint, 32>& gaTempSphereColPoints;
 
 //! Written by `Process_FollowCar_SA`, read by `LookBehind` (name made up)
-static inline auto& gCamFollowCarLookAt = StaticRef<CVector>(0xB6F018);
+static inline NOTSA_GLOBAL(gCamFollowCarLookAt, 0xB6F018, (CVector), {});
 
 //! A row of the follow ped camera tuning table at 0x8CC548 (2 rows: outside, interior - selected by the current area), see `Process_FollowPed_SA`. All names made up.
 struct FollowPedCamTuning {
@@ -162,18 +164,23 @@ struct FollowPedCamTuning {
     float alphaMinMag;   // 0x38 - Magnitude of the min vertical angle
 };
 VALIDATE_SIZE(FollowPedCamTuning, 0x3C);
-static inline auto& gFollowPedCamTuning = StaticRef<std::array<FollowPedCamTuning, 2>>(0x8CC548);
+static inline NOTSA_GLOBAL(gFollowPedCamTuning, 0x8CC548, (std::array<FollowPedCamTuning, 3>), { // the 3rd row (0x8CC5C0) is read by `Process_Cam_TwoPlayer` (exe), same values as the 1st
+    FollowPedCamTuning{ 0.6f, 2.0f, 0.15f, 2.0f, 4.0f, 0.8f, 0.1f, 0.5f, 0.8f, 0.1f, 0.1f, 0.02f, 1.0f, 0.7853982f, 1.4835299f },
+    FollowPedCamTuning{ 0.6f, 2.0f, 0.15f, 2.0f, 3.0f, 0.9f, 0.1f, 1.0f, 0.8f, 0.1f, 0.3f, 0.05f, 1.0f, 0.7853982f, 0.7853982f },
+    FollowPedCamTuning{ 0.6f, 2.0f, 0.15f, 2.0f, 4.0f, 0.8f, 0.1f, 0.5f, 0.8f, 0.1f, 0.1f, 0.02f, 1.0f, 0.7853982f, 1.4835299f },
+});
+#line 166
 
 // Globals of `Process_FollowPed_SA` (names made up)
-static inline auto& gFollowPedLastZoomDist        = StaticRef<float>(0xB6EC50); // Camera distance of the last frame
-static inline auto& gbFollowPedCamBehindPlayer    = StaticRef<bool>(0xB6EC54);  // Set while the "camera behind player" button is held (until the ped moves)
-static inline auto& gFollowPedLastAlpha           = StaticRef<float>(0x8CCE74);
-static inline auto& gFollowPedLastBeta            = StaticRef<float>(0x8CCE6C);
+static inline NOTSA_GLOBAL(gFollowPedLastZoomDist, 0xB6EC50, (float), {}); // Camera distance of the last frame
+static inline NOTSA_GLOBAL(gbFollowPedCamBehindPlayer, 0xB6EC54, (bool), {});  // Set while the "camera behind player" button is held (until the ped moves)
+static inline NOTSA_GLOBAL(gFollowPedLastAlpha, 0x8CCE74, (float), { -9999.0f });
+static inline NOTSA_GLOBAL(gFollowPedLastBeta, 0x8CCE6C, (float), { -9999.0f });
 
 // Shared by `Process` and `Process_FollowPed_SA` (names made up)
-static inline auto& gCamPlayerLastPos             = StaticRef<CVector>(0x8CCC3C); // Position of the followed player of the last frame (`Process_FollowPed_SA` resets it)
-static inline auto& gCamPlayerPosVel              = StaticRef<CVector>(0xB6EC7C); // Smoothed velocity of the above (`Process_FollowPed_SA` resets it)
-static inline auto& gCamUnkB6FE34                 = StaticRef<int32>(0xB6FE34);   // Compared with 0xB6FDC8 in `Process`, zeroed by `Process_FollowPed_SA` and `CIdleCam::IdleCamGeneralProcess`
+static inline NOTSA_GLOBAL(gCamPlayerLastPos, 0x8CCC3C, (CVector), { 0.0f, 0.0f, 10000.0f }); // Position of the followed player of the last frame (`Process_FollowPed_SA` resets it)
+static inline NOTSA_GLOBAL(gCamPlayerPosVel, 0xB6EC7C, (CVector), {}); // Smoothed velocity of the above (`Process_FollowPed_SA` resets it)
+static inline NOTSA_GLOBAL_ALIAS(gCamUnkB6FE34, 0xB6FE34, (int32), *reinterpret_cast<int32*>(reinterpret_cast<uint8*>(&gIdleCam) + 148));   // Compared with 0xB6FDC8 in `Process`, zeroed by `Process_FollowPed_SA` and `CIdleCam::IdleCamGeneralProcess`
 
 // 0x4082C0 (and 0x406DA0 for the squared one) - Kept in the FPU registers in the original (extended precision)
 static double SqMagExt(const CVector& v) {
@@ -284,9 +291,9 @@ static void LimitAngleToPi(float& a) { a = WrapAngleToPi(a); }
 void WellBufferMe(float target, float& valueToChange, float& speedSoFar, float topSpeed, float speedStep, bool isAnAngle); // Defined below
 
 //! Names made up: `AvoidTheGeometry` smooths the strength of the push-away vector with these (see `WellBufferMe`)
-static inline auto& gAvoidGeometryStrength      = StaticRef<float>(0xB6EC38);
-static inline auto& gAvoidGeometrySpeed         = StaticRef<float>(0xB6EC3C);
-static inline auto& gbAvoidGeometryDoSecondLOS  = StaticRef<bool>(0xB6EC65); // NOTSA name
+static inline NOTSA_GLOBAL(gAvoidGeometryStrength, 0xB6EC38, (float), {});
+static inline NOTSA_GLOBAL(gAvoidGeometrySpeed, 0xB6EC3C, (float), {});
+static inline NOTSA_GLOBAL(gbAvoidGeometryDoSecondLOS, 0xB6EC65, (bool), {}); // NOTSA name
 
 // 0x514030 - Defined here (and not in Camera.cpp), as it's only used by the cams
 void CCamera::AvoidTheGeometry(const CVector* src, const CVector* dst, CVector* out, float FOV) {
@@ -811,13 +818,13 @@ bool CCam::IsTimeToExitThisDWCineyCamMode(int32 camId, const CVector& src, const
 // 0x509DF0
 void CCam::KeepTrackOfTheSpeed(const CVector& source, const CVector& target, const CVector& up, const float& alpha, const float& beta, const float& fov) {
     // The original uses function-local statics (+ their MSVC init guard bits at 0xB6FF8C), names made up
-    static auto& prevFov       = StaticRef<float>(0xB6FF5C);
-    static auto& prevAlpha     = StaticRef<float>(0xB6FF60);
-    static auto& prevBeta      = StaticRef<float>(0xB6FF64);
-    static auto& prevUp        = StaticRef<CVector>(0xB6FF68);
-    static auto& prevTarget    = StaticRef<CVector>(0xB6FF74);
-    static auto& prevSource    = StaticRef<CVector>(0xB6FF80);
-    static auto& initGuardMask = StaticRef<uint32>(0xB6FF8C);
+    NOTSA_GLOBAL_LOCAL(prevFov, 0xB6FF5C, (float), {});
+    NOTSA_GLOBAL_LOCAL(prevAlpha, 0xB6FF60, (float), {});
+    NOTSA_GLOBAL_LOCAL(prevBeta, 0xB6FF64, (float), {});
+    NOTSA_GLOBAL_LOCAL(prevUp, 0xB6FF68, (CVector), {});
+    NOTSA_GLOBAL_LOCAL(prevTarget, 0xB6FF74, (CVector), {});
+    NOTSA_GLOBAL_LOCAL(prevSource, 0xB6FF80, (CVector), {});
+    NOTSA_GLOBAL_LOCAL(initGuardMask, 0xB6FF8C, (uint32), {});
 
     if (!(initGuardMask & 0x1)) {
         prevSource = source;
@@ -1222,11 +1229,11 @@ void CCam::ClipBeta() {
 // 0x526FC0
 void CCam::Process() {
     // Globals whose purpose is unknown (names made up)
-    static auto& s_unk_B6FDC8       = StaticRef<float>(0xB6FDC8);
-    static auto& s_unk_C0B184       = StaticRef<uint8>(0xC0B184);
-    static auto& s_unk_C8A860       = StaticRef<uint8>(0xC8A860);
-    static auto& s_unk_8CCF00       = StaticRef<bool>(0x8CCF00);
-    static auto& s_firstPersonFlag  = StaticRef<bool>(0xB6EC20);
+    static NOTSA_GLOBAL_ALIAS(s_unk_B6FDC8, 0xB6FDC8, (float), *reinterpret_cast<float*>(reinterpret_cast<uint8*>(&gIdleCam) + 40));
+    static NOTSA_GLOBAL_ALIAS(s_unk_C0B184, 0xC0B184, (uint8), *reinterpret_cast<uint8*>(reinterpret_cast<uint8*>(&g_InterestingEvents) + 300));
+    static NOTSA_GLOBAL_ALIAS(s_unk_C8A860, 0xC8A860, (uint8), *reinterpret_cast<uint8*>(reinterpret_cast<uint8*>(&gCrossHair) + 40));
+    NOTSA_GLOBAL_LOCAL(s_unk_8CCF00, 0x8CCF00, (bool), { true });
+    static NOTSA_GLOBAL_ALIAS(s_firstPersonFlag, 0xB6EC20, (bool), gbFirstPersonRunThisFrame);
 
     if ((float)gCamUnkB6FE34 <= s_unk_B6FDC8) {
         s_unk_C0B184 &= 0xFE;
@@ -1586,16 +1593,16 @@ void CCam::Process() {
 
 namespace {
 // The state of the "arrest cam one" (names made up)
-auto& gArrestCamOneMode      = StaticRef<int32>(0xB6EC58);    // 0 = none yet, 1 = from the cop's head, 2 = beside the cop, 3..7 = free cams (see `ProcessArrestCamOne`), 8 = from a lamp post
-auto& gArrestCamOneCop       = StaticRef<CEntity*>(0xB6EC5C); // The cop the cam is set up at (registered reference)
-auto& gArrestCamOneStartTime = StaticRef<float>(0xB6EC60);    // `CTimer::m_snTimeInMilliseconds` when the "from the cop's head" mode was started
+NOTSA_GLOBAL(gArrestCamOneMode, 0xB6EC58, (int32), {});    // 0 = none yet, 1 = from the cop's head, 2 = beside the cop, 3..7 = free cams (see `ProcessArrestCamOne`), 8 = from a lamp post
+NOTSA_GLOBAL(gArrestCamOneCop, 0xB6EC5C, (CEntity*), {}); // The cop the cam is set up at (registered reference)
+NOTSA_GLOBAL(gArrestCamOneStartTime, 0xB6EC60, (float), {});    // `CTimer::m_snTimeInMilliseconds` when the "from the cop's head" mode was started
 
 // Function local statics (with their init flags) of 0x512EF0 (names made up)
-auto& gArrestCamHeadOffset    = StaticRef<CVector>(0xB70004); // Offset applied to the camera's position, (0, 0, -0.5)
-auto& gArrestCamUnusedVec     = StaticRef<CVector>(0xB70010); // Only initialised to (0, 0, 0), never read by the original code
-auto& gArrestCamStaticsInit   = StaticRef<uint32>(0xB7001C);  // Bit 0: `gArrestCamUnusedVec` is initialised, bit 1: `gArrestCamHeadOffset` is initialised
-auto& gbArrestCamHeadPhase    = StaticRef<bool>(0xB70020);    // Flips every call once the time passed
-auto& gArrestCamHeadTimeShift = StaticRef<float>(0xB70024);   // Subtracted from the elapsed time (never written to by the code seen)
+NOTSA_GLOBAL(gArrestCamHeadOffset, 0xB70004, (CVector), {}); // Offset applied to the camera's position, (0, 0, -0.5)
+NOTSA_GLOBAL(gArrestCamUnusedVec, 0xB70010, (CVector), {}); // Only initialised to (0, 0, 0), never read by the original code
+NOTSA_GLOBAL(gArrestCamStaticsInit, 0xB7001C, (uint32), {});  // Bit 0: `gArrestCamUnusedVec` is initialised, bit 1: `gArrestCamHeadOffset` is initialised
+NOTSA_GLOBAL(gbArrestCamHeadPhase, 0xB70020, (bool), {});    // Flips every call once the time passed
+NOTSA_GLOBAL(gArrestCamHeadTimeShift, 0xB70024, (float), {});   // Subtracted from the elapsed time (never written to by the code seen)
 
 constexpr float RAND_RECIPROCAL = 3.05185094e-05f; // 0x858C7C, ~ 1/RAND_MAX
 
@@ -2086,8 +2093,8 @@ bool CCam::ProcessArrestCamOne() {
 
 // 0x519250
 void CCam::ProcessPedsDeadBaby() {
-    static auto& s_startTime = StaticRef<float>(0xB70054); // NOTE: write-only as far as this function is concerned
-    static auto& s_unused    = StaticRef<float>(0xB70050); // ^
+    NOTSA_GLOBAL_LOCAL(s_startTime, 0xB70054, (float), {}); // NOTE: write-only as far as this function is concerned
+    NOTSA_GLOBAL_LOCAL(s_unused, 0xB70050, (float), {}); // ^
 
     auto* const target = TheCamera.m_pTargetEntity;
 
@@ -2181,11 +2188,11 @@ void CCam::ProcessPedsDeadBaby() {
 
 // 0x50EB70
 void CCam::Process_1rstPersonPedOnPC(const CVector& target, float orientation, float speedVar, float speedVarWanted) {
-    static auto& v3d_8CCC54  = StaticRef<CVector>(0x8CCC54);
-    static auto& byte_B6FFDC = StaticRef<bool>(0xB6FFDC);
-    static auto& v3d_B6FFC4  = StaticRef<CVector>(0xB6FFC4);
-    static auto& v3d_B6FFD0  = StaticRef<CVector>(0xB6FFD0);
-    static auto& guard_B6FFE0 = StaticRef<uint32>(0xB6FFE0); // MSVC static init guard, nothing else reads it
+    NOTSA_GLOBAL_LOCAL(v3d_8CCC54, 0x8CCC54, (CVector), { 0.06f, 0.05f, 0.0f });
+    NOTSA_GLOBAL_LOCAL(byte_B6FFDC, 0xB6FFDC, (bool), {});
+    NOTSA_GLOBAL_LOCAL(v3d_B6FFC4, 0xB6FFC4, (CVector), {});
+    NOTSA_GLOBAL_LOCAL(v3d_B6FFD0, 0xB6FFD0, (CVector), {});
+    NOTSA_GLOBAL_LOCAL(guard_B6FFE0, 0xB6FFE0, (uint32), {}); // MSVC static init guard, nothing else reads it
 
     guard_B6FFE0 |= 1;
     if (m_nMode != MODE_SNIPER_RUNABOUT) {
@@ -2372,10 +2379,10 @@ void CCam::Process_1rstPersonPedOnPC(const CVector& target, float orientation, f
 
 // 0x517EA0
 void CCam::Process_1stPerson(const CVector& target, float orientation, float speedVar, float speedVarWanted) {
-    static auto& s_LastWheelieTime = StaticRef<float>(0x8CCD14);
+    NOTSA_GLOBAL_LOCAL(s_LastWheelieTime, 0x8CCD14, (float), { -1.0f });
     // Making sure player doesn't see below ground when flipped.
     // Name is made up cuz I found it funny to name it like that.
-    static auto& s_GroundFaultProtection = StaticRef<float>(0xB7004C);
+    NOTSA_GLOBAL_LOCAL(s_GroundFaultProtection, 0xB7004C, (float), {});
 
     gbFirstPersonRunThisFrame = true;
 
@@ -2518,28 +2525,34 @@ struct AimWeaponCamSettings {
 };
 static_assert(sizeof(AimWeaponCamSettings) == 0x1C);
 
-auto& gAimWeaponCamSettings = StaticRef<std::array<AimWeaponCamSettings, 4>>(0x8CC4C0);
+NOTSA_GLOBAL(gAimWeaponCamSettings, 0x8CC4C0, (std::array<AimWeaponCamSettings, 4>), {
+    AimWeaponCamSettings{ 1.0f, 1.6f, 1.0f, -0.12f, 0.0f, 0.7853982f, 1.553343f },
+    AimWeaponCamSettings{ 3.5f, 0.7f, 1.0f, -0.16f, 0.2f, 0.61086524f, 1.2217305f },
+    AimWeaponCamSettings{ 6.0f, 0.7f, 1.0f, -0.16f, 0.4f, 0.61086524f, 1.2217305f },
+    AimWeaponCamSettings{ 2.5f, 0.7f, 1.0f, -0.12f, 0.15f, 0.7853982f, 0.79412484f },
+});
+#line 2522
 
 // Tuning values of the aiming camera (names made up)
-auto& gAimStickScale           = StaticRef<float>(0x8CC4A0); // Scale of the stick input (shared with other cameras)
-auto& gAimLockOnTurnRate       = StaticRef<float>(0x8CC4A4); // Maximum angle change per time step when locked on to a target
-auto& gAimFreeTurnRate         = StaticRef<float>(0x8CC4A8); // Maximum angle change per time step when the camera follows the player's heading
-auto& gAimDriverTurnRateScale  = StaticRef<float>(0x8CC4AC); // ^ for drivers
-auto& gAimDriverDeadzone       = StaticRef<float>(0x8CC4B0); // Angle difference (for drivers) the camera doesn't follow
-auto& gAimFovRifle             = StaticRef<float>(0x8CC4B4); // FOV when aiming with an AK-47 / M4
-auto& gAimFovSniper            = StaticRef<float>(0x8CC4B8); // FOV when aiming with a country rifle
-auto& gAimHeading              = StaticRef<float>(0x8CC530); // Heading the player is turned to when the camera isn't moved for a while (-1001 = not set)
-auto& gAimIdleTimeMax          = StaticRef<int32>(0x8CC534); // Above this the camera follows `gAimHeading`
-auto& gAimIdleTimeMin          = StaticRef<int32>(0x8CC538);
-auto& gAimLockOnBlend          = StaticRef<float>(0x8CC39C); // Base of the `pow` used to smooth the lock on position (also read by `Process`)
-auto& gAimEnterTargetingDelay  = StaticRef<float>(0x8CCE54); // Time (ms) after which the camera is turned around again when "enter targeting" is pressed as a passenger
-auto& gAimStickRateCentered    = StaticRef<float>(0x8CCE58); // Base of the `pow` used to smooth the stick input (sticks centered)
-auto& gAimStickRate            = StaticRef<float>(0x8CCE5C); // ^ otherwise
-auto& gAimMeleeLockZScale      = StaticRef<float>(0x8CCE60); // Scale of the height difference added to the lock on position when using melee weapons
-auto& gbAimLookAtUsesCrossProd = StaticRef<bool>(0x8CCE64);  // Initially true
-auto& gbAimFreeRotation        = StaticRef<bool>(0xB6EC44);  // Whether the camera rotates freely (otherwise it's moved towards `gAimHeading`)
-auto& gAimIdleTime             = StaticRef<int32>(0xB6EC48); // Time (ms) the driver hasn't moved the camera
-auto& gAimLastEnterTargeting   = StaticRef<uint32>(0xB6EC4C);
+NOTSA_GLOBAL(gAimStickScale, 0x8CC4A0, (float), { 0.007f }); // Scale of the stick input (shared with other cameras)
+NOTSA_GLOBAL(gAimLockOnTurnRate, 0x8CC4A4, (float), { 0.1f }); // Maximum angle change per time step when locked on to a target
+NOTSA_GLOBAL(gAimFreeTurnRate, 0x8CC4A8, (float), { 0.1f }); // Maximum angle change per time step when the camera follows the player's heading
+NOTSA_GLOBAL(gAimDriverTurnRateScale, 0x8CC4AC, (float), { 0.25f }); // ^ for drivers
+NOTSA_GLOBAL(gAimDriverDeadzone, 0x8CC4B0, (float), { 0.17453294f }); // Angle difference (for drivers) the camera doesn't follow
+NOTSA_GLOBAL(gAimFovRifle, 0x8CC4B4, (float), { 50.0f }); // FOV when aiming with an AK-47 / M4
+NOTSA_GLOBAL(gAimFovSniper, 0x8CC4B8, (float), { 35.0f }); // FOV when aiming with a country rifle
+NOTSA_GLOBAL(gAimHeading, 0x8CC530, (float), { -1001.0f }); // Heading the player is turned to when the camera isn't moved for a while (-1001 = not set)
+NOTSA_GLOBAL(gAimIdleTimeMax, 0x8CC534, (int32), { 5000 }); // Above this the camera follows `gAimHeading`
+NOTSA_GLOBAL(gAimIdleTimeMin, 0x8CC538, (int32), { 2000 });
+NOTSA_GLOBAL(gAimLockOnBlend, 0x8CC39C, (float), { 0.9f }); // Base of the `pow` used to smooth the lock on position (also read by `Process`)
+NOTSA_GLOBAL(gAimEnterTargetingDelay, 0x8CCE54, (float), { 500.0f }); // Time (ms) after which the camera is turned around again when "enter targeting" is pressed as a passenger
+NOTSA_GLOBAL(gAimStickRateCentered, 0x8CCE58, (float), { 0.5f }); // Base of the `pow` used to smooth the stick input (sticks centered)
+NOTSA_GLOBAL(gAimStickRate, 0x8CCE5C, (float), { 0.8f }); // ^ otherwise
+NOTSA_GLOBAL(gAimMeleeLockZScale, 0x8CCE60, (float), { 0.75f }); // Scale of the height difference added to the lock on position when using melee weapons
+NOTSA_GLOBAL(gbAimLookAtUsesCrossProd, 0x8CCE64, (bool), { true });  // Initially true
+NOTSA_GLOBAL(gbAimFreeRotation, 0xB6EC44, (bool), {});  // Whether the camera rotates freely (otherwise it's moved towards `gAimHeading`)
+NOTSA_GLOBAL(gAimIdleTime, 0xB6EC48, (int32), {}); // Time (ms) the driver hasn't moved the camera
+NOTSA_GLOBAL(gAimLastEnterTargeting, 0xB6EC4C, (uint32), {});
 
 //! `CrossProduct` (0x59C730) - the products stay in the FPU registers (extended precision)
 CVector AimWeaponCrossExt(const CVector& a, const CVector& b) {
@@ -2567,12 +2580,12 @@ void CCam::Process_AimWeapon(const CVector& target, float orientation, float spe
     constexpr float DEG2RAD  = 0.0174532924f; // 0x8595EC
 
     // Statics of the function (the original keeps them at these addresses)
-    static auto& s_InitGuard      = StaticRef<uint32>(0xB70110); // MSVC static init guard
-    static auto& s_LockOnPos      = StaticRef<CVector>(0xB70104); // Smoothed position of the locked on target
-    static auto& s_MeleeAimAlpha  = StaticRef<float>(0xB70100);   // Smoothed vertical crosshair angle (in degrees) when using melee weapons (initially 3)
-    static auto& s_MeleeAimBeta   = StaticRef<float>(0xB700FC);   // Smoothed horizontal crosshair angle (in degrees) when using melee weapons (initially 20)
-    static auto& s_LockOnLosTimer = StaticRef<float>(0xB700F8);   // Time until the line of sight to the melee target has to be checked again (+/-100 = clear / blocked)
-    static auto& s_LockOnBlend    = StaticRef<float>(0xB700F4);   // [0, 1], how much the camera is looking at the (melee) target instead of the player
+    NOTSA_GLOBAL_LOCAL(s_InitGuard, 0xB70110, (uint32), {}); // MSVC static init guard
+    NOTSA_GLOBAL_LOCAL(s_LockOnPos, 0xB70104, (CVector), {}); // Smoothed position of the locked on target
+    NOTSA_GLOBAL_LOCAL(s_MeleeAimAlpha, 0xB70100, (float), {});   // Smoothed vertical crosshair angle (in degrees) when using melee weapons (initially 3)
+    NOTSA_GLOBAL_LOCAL(s_MeleeAimBeta, 0xB700FC, (float), {});   // Smoothed horizontal crosshair angle (in degrees) when using melee weapons (initially 20)
+    NOTSA_GLOBAL_LOCAL(s_LockOnLosTimer, 0xB700F8, (float), {});   // Time until the line of sight to the melee target has to be checked again (+/-100 = clear / blocked)
+    NOTSA_GLOBAL_LOCAL(s_LockOnBlend, 0xB700F4, (float), {});   // [0, 1], how much the camera is looking at the (melee) target instead of the player
 
     if (!(s_InitGuard & 1u)) {
         s_InitGuard |= 1u;
@@ -4749,8 +4762,8 @@ bool CCam::Process_DW_PlaneSpotterCam(bool) {
 
 // 0x50F3F0 - debug
 void CCam::Process_Editor(const CVector& target, float orientation, float speedVar, float speedVarWanted) {
-    static auto& s_LookAtAngle     = StaticRef<float>(0xB6FFE4);
-    static auto& s_DoRenderShadows = StaticRef<bool>(0xB7295A);
+    NOTSA_GLOBAL_LOCAL(s_LookAtAngle, 0xB6FFE4, (float), {});
+    NOTSA_GLOBAL_LOCAL(s_DoRenderShadows, 0xB7295A, (bool), {});
 
     if (m_bResetStatics) {
         m_vecSource.Set(796.0f, -937.0f, 40.0f);
@@ -4869,15 +4882,15 @@ void CCam::Process_Fixed(const CVector& target, float orientation, float speedVa
 
 namespace {
 //! Minimal duration (ms) of a fly-by spline segment: shorter ones are skipped while searching the segment (a global at 0x8D0F80, name made up)
-auto& gFlyByMinSegmentTimeMs = StaticRef<float>(0x8D0F80);
+NOTSA_GLOBAL(gFlyByMinSegmentTimeMs, 0x8D0F80, (float), { 32.0f });
 
 // Fly-by state (names made up)
-auto& gFlyByFov            = StaticRef<float>(0xBC4074); // Result of the FOV spline
-auto& gFlyByFovCopy        = StaticRef<float>(0xBC4078); // NOTE: Only written (together with `gFlyByFov`) when the fly-by starts, never read
-auto& gFlyByLookSegmentIdx = StaticRef<int32>(0xBC407C); // Current position in the spline `CCamera::m_aPathArray[3]` (where the camera looks at)
-auto& gFlyBySrcSegmentIdx  = StaticRef<int32>(0xBC4080); // Current position in the spline `CCamera::m_aPathArray[2]` (camera position)
-auto& gFlyByFovSegmentIdx  = StaticRef<int32>(0xBC4084); // Current position in the spline `CCamera::m_aPathArray[0]` (FOV)
-auto& gFlyByRollSegmentIdx = StaticRef<int32>(0xBC4088); // Current position in the spline `CCamera::m_aPathArray[1]` (roll)
+NOTSA_GLOBAL(gFlyByFov, 0xBC4074, (float), {}); // Result of the FOV spline
+NOTSA_GLOBAL(gFlyByFovCopy, 0xBC4078, (float), {}); // NOTE: Only written (together with `gFlyByFov`) when the fly-by starts, never read
+NOTSA_GLOBAL(gFlyByLookSegmentIdx, 0xBC407C, (int32), {}); // Current position in the spline `CCamera::m_aPathArray[3]` (where the camera looks at)
+NOTSA_GLOBAL(gFlyBySrcSegmentIdx, 0xBC4080, (int32), {}); // Current position in the spline `CCamera::m_aPathArray[2]` (camera position)
+NOTSA_GLOBAL(gFlyByFovSegmentIdx, 0xBC4084, (int32), {}); // Current position in the spline `CCamera::m_aPathArray[0]` (FOV)
+NOTSA_GLOBAL(gFlyByRollSegmentIdx, 0xBC4088, (int32), {}); // Current position in the spline `CCamera::m_aPathArray[1]` (roll)
 
 //! Evaluates a Bezier spline of 3D points at the time `time` (ms), 0x5B2090 (cdecl)
 //! @param out  Result (the cutscene offset is added to it)
@@ -5114,15 +5127,27 @@ struct FollowCarCamSettings {
 };
 VALIDATE_SIZE(FollowCarCamSettings, 0x3C);
 
-auto& gFollowCarCamSettings = StaticRef<std::array<FollowCarCamSettings, 7>>(0x8CC600);
-auto& gFollowCarZoomAngle   = StaticRef<std::array<std::array<float, 5>, 3>>(0x8CC41C); // [zoom][arrPos], see `CCamera::GetArrPosForVehicleType`
+NOTSA_GLOBAL(gFollowCarCamSettings, 0x8CC600, (std::array<FollowCarCamSettings, 7>), {
+    FollowCarCamSettings{ 1.3f, 1.0f, 0.4f, 10.0f, 15.0f, 0.5f, 1.0f, 1.0f, 0.85f, 0.2f, 0.075f, 0.05f, 0.8f, 0.7853982f, 1.553343f },
+    FollowCarCamSettings{ 1.1f, 1.0f, 0.1f, 10.0f, 11.0f, 0.5f, 1.0f, 1.0f, 0.85f, 0.2f, 0.075f, 0.05f, 0.75f, 0.7853982f, 1.553343f },
+    FollowCarCamSettings{ 1.1f, 1.0f, 0.2f, 10.0f, 15.0f, 0.05f, 0.05f, 0.0f, 0.9f, 0.05f, 0.01f, 0.05f, 1.0f, 0.17453294f, 1.2217305f },
+    FollowCarCamSettings{ 1.1f, 3.5f, 0.2f, 10.0f, 25.0f, 0.5f, 1.0f, 1.0f, 0.75f, 0.1f, 0.005f, 0.2f, 1.0f, 1.553343f, 1.553343f },
+    FollowCarCamSettings{ 1.3f, 1.0f, 0.4f, 10.0f, 15.0f, 0.5f, 1.0f, 0.0f, 0.9f, 0.05f, 0.005f, 0.05f, 1.0f, 0.34906587f, 1.2217305f },
+    FollowCarCamSettings{ 1.1f, 1.0f, 0.2f, 10.0f, 5.0f, 0.5f, 1.0f, 1.0f, 0.75f, 0.1f, 0.005f, 0.2f, 1.0f, 0.7853982f, 1.553343f },
+    FollowCarCamSettings{ 1.1f, 1.0f, 0.2f, 10.0f, 5.0f, 0.5f, 1.0f, 1.0f, 0.75f, 0.1f, 0.005f, 0.2f, 1.0f, 0.34906587f, 1.2217305f },
+});
+#line 5118
+NOTSA_GLOBAL(gFollowCarZoomAngle, 0x8CC41C, (std::array<std::array<float, 5>, 3>), { {
+    { 0.08f, 0.08f, 0.15f, 0.08f, 0.08f }, { 0.07f, 0.08f, 0.3f, 0.08f, 0.08f }, { 0.055f, 0.05f, 0.15f, 0.06f, 0.08f }
+} }); // [zoom][arrPos], see `CCamera::GetArrPosForVehicleType`
+#line 5119
 
-auto& gFollowCarTrailerBlend = StaticRef<float>(0xB7011C); // [0, 1]: Blend factor between the vehicle (alone) and the vehicle + trailer/passenger (names made up)
-auto& gFollowCarMouseTimer   = StaticRef<float>(0xB70118); // Set to 50 when the mouse is moved, counts down while it's idle
-auto& gbFollowCarAlphaReset  = StaticRef<bool>(0xB70114);  // Set once the vertical angle has been reset for a (special) vehicle
-auto& gFollowCarPrevAlpha    = StaticRef<float>(0x8CCEB0); // Initially -9999
-auto& gFollowCarPrevBeta     = StaticRef<float>(0x8CCEA8); // Initially -9999
-auto& gbCamUnk_9655E5        = StaticRef<bool>(0x9655E5);  // Set to true when the followed vehicle is "big". Never read anywhere in the exe, purpose unknown
+NOTSA_GLOBAL(gFollowCarTrailerBlend, 0xB7011C, (float), {}); // [0, 1]: Blend factor between the vehicle (alone) and the vehicle + trailer/passenger (names made up)
+NOTSA_GLOBAL(gFollowCarMouseTimer, 0xB70118, (float), {}); // Set to 50 when the mouse is moved, counts down while it's idle
+NOTSA_GLOBAL(gbFollowCarAlphaReset, 0xB70114, (bool), {});  // Set once the vertical angle has been reset for a (special) vehicle
+NOTSA_GLOBAL(gFollowCarPrevAlpha, 0x8CCEB0, (float), { -9999.0f }); // Initially -9999
+NOTSA_GLOBAL(gFollowCarPrevBeta, 0x8CCEA8, (float), { -9999.0f }); // Initially -9999
+NOTSA_GLOBAL(gbCamUnk_9655E5, 0x9655E5, (bool), {});  // Set to true when the followed vehicle is "big". Never read anywhere in the exe, purpose unknown
 
 // 0x420800 (see `RopeMax` in Rope.cpp)
 float FollowCarMax(float a, float b) {
@@ -6597,24 +6622,24 @@ void CCam::Process_FollowPed_SA(const CVector& target, float orientation, float 
 
 namespace {
 // Camera bump tuning (names made up), see `DoCamBump`
-auto& gM16CamBumpPeriod   = StaticRef<int32>(0x8CC474); // 800
-auto& gM16CamBumpDuration = StaticRef<int32>(0x8CC478); // 600
-auto& gM16CamBumpDecay    = StaticRef<float>(0x8CC47C); // 0.95
-auto& gM16CamBumpScale    = StaticRef<float>(0x8CC480); // 0.1
+NOTSA_GLOBAL(gM16CamBumpPeriod, 0x8CC474, (int32), { 800 }); // 800
+NOTSA_GLOBAL(gM16CamBumpDuration, 0x8CC478, (int32), { 600 }); // 600
+NOTSA_GLOBAL(gM16CamBumpDecay, 0x8CC47C, (float), { 0.95f }); // 0.95
+NOTSA_GLOBAL(gM16CamBumpScale, 0x8CC480, (float), { 0.1f }); // 0.1
 
 // Used by `Process_M16_1stPerson` when the ped is crouching (names made up)
-auto& gM16CrouchBackOffset = StaticRef<float>(0x8CC7BC); // 0.5
-auto& gM16CrouchSideOffset = StaticRef<float>(0x8CC7B8); // 0.18
+NOTSA_GLOBAL(gM16CrouchBackOffset, 0x8CC7BC, (float), { 0.5f }); // 0.5
+NOTSA_GLOBAL(gM16CrouchSideOffset, 0x8CC7B8, (float), { 0.18f }); // 0.18
 
 // Pitch limit of `Process_M16_1stPerson` and the stick damping factors (names made up)
-auto& gM16MaxPitch        = StaticRef<float>(0x8CCC90); // 1.2
-auto& gM16StickDampSlow   = StaticRef<float>(0x8CCC94); // 0.5 (both sticks almost centered)
-auto& gM16StickDampNormal = StaticRef<float>(0x8CCC98); // 0.8
+NOTSA_GLOBAL(gM16MaxPitch, 0x8CCC90, (float), { 1.2f }); // 1.2
+NOTSA_GLOBAL(gM16StickDampSlow, 0x8CCC94, (float), { 0.5f }); // 0.5 (both sticks almost centered)
+NOTSA_GLOBAL(gM16StickDampNormal, 0x8CCC98, (float), { 0.8f }); // 0.8
 
-auto& gM16TargetFov           = StaticRef<float>(0xB6FFE8);  // The FOV the zoom is blended towards (names made up)
-auto& gM16Unused_B6FFEC       = StaticRef<uint32>(0xB6FFEC); // Only ever reset by `Process_M16_1stPerson`
-auto& gM16Unused_B6FFF0       = StaticRef<uint32>(0xB6FFF0); // ^
-auto& gbM16CamObstructed      = StaticRef<bool>(0xB6FFF4);   // Set when the (collision checked) camera is too close to the geometry, in that case the near clip isn't touched
+NOTSA_GLOBAL(gM16TargetFov, 0xB6FFE8, (float), {});  // The FOV the zoom is blended towards (names made up)
+NOTSA_GLOBAL(gM16Unused_B6FFEC, 0xB6FFEC, (uint32), {}); // Only ever reset by `Process_M16_1stPerson`
+NOTSA_GLOBAL(gM16Unused_B6FFF0, 0xB6FFF0, (uint32), {}); // ^
+NOTSA_GLOBAL(gbM16CamObstructed, 0xB6FFF4, (bool), {});   // Set when the (collision checked) camera is too close to the geometry, in that case the near clip isn't touched
 
 // Heading of the entity the way `CPlaceable::GetHeading` (0x441DB0) leaves it in the FPU (extended precision)
 double M16HeadingExt(const CPlaceable& placeable) {
@@ -7053,9 +7078,9 @@ void CCam::Process_M16_1stPerson(const CVector& target, float orientation, float
 
 // 0x511B50
 void CCam::Process_Rocket(const CVector& target, float orientation, float speedVar, float speedVarWanted, bool isHeatSeeking) {
-    static auto& dword_B6FFF8 = StaticRef<uint32>(0xB6FFF8);
-    static auto& dword_B6FFFC = StaticRef<uint32>(0xB6FFFC);
-    static auto& byte_B70000  = StaticRef<bool>(0xB70000);
+    NOTSA_GLOBAL_LOCAL(dword_B6FFF8, 0xB6FFF8, (uint32), {});
+    NOTSA_GLOBAL_LOCAL(dword_B6FFFC, 0xB6FFFC, (uint32), {});
+    NOTSA_GLOBAL_LOCAL(byte_B70000, 0xB70000, (bool), {});
 
     if (!m_pCamTargetEntity->GetIsTypePed()) {
         return;

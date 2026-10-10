@@ -300,6 +300,7 @@ if (${RE_PROJECT}_RW_LIBRW)
             "${PROJECT_SOURCE_DIR}/tests/standalone/rw_renderstate_test.cpp"
             "${CMAKE_CURRENT_SOURCE_DIR}/standalone/rw/renderstate.cpp"
             "${CMAKE_CURRENT_SOURCE_DIR}/standalone/rw/rwd3d_ff.cpp"
+            "${CMAKE_CURRENT_SOURCE_DIR}/standalone/rw/rwglobals.cpp"
         )
         target_compile_features(rw_renderstate_test PRIVATE cxx_std_23)
         target_compile_definitions(rw_renderstate_test PRIVATE NOTSA_RW_LIBRW NOTSA_RW_UNIT_TEST RW_D3D9)

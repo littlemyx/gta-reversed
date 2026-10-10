@@ -45,6 +45,8 @@ static bool IsInFullscreen()
 // `until:COND[:MAXMS]` is a barrier: the script clock stops until COND holds (or MAXMS, default 60000, elapsed), then continues from there, so everything after it is
 // relative to the moment the game was actually ready (deterministic car entry etc.). COND = control (player ped exists, no menu / cutscene / fade, pad not disabled)
 // | invehicle (the player ped is in a vehicle). Logs "[until] COND ok|TIMEOUT after N ms".
+// `label:NAME` / `skipif:COND:NAME` (COND as above, evaluated once, no waiting): when COND holds the script jumps forward to `label:NAME` (the clock jumps with it, i.e.
+// the skipped waits are not waited), e.g. a second car-entry attempt that is skipped when the first one worked.
 // `mark:NAME` logs a progress marker; newlines also separate items. K = return|escape|up|down|left|right|space|tab|lshift|lctrl|f1..f12|<single char>.
 #include <string>
 #include <vector>
@@ -54,12 +56,12 @@ static bool IsInFullscreen()
 void RequestMarkScreenshot(const char* name); // standalone/rw/camera.cpp
 #endif
 namespace {
-struct InjEv { uint64_t t; bool down; SDL_Keycode key; int mx = -1, my = -1; std::string mark; std::string until; uint64_t maxMs = 0; };
+struct InjEv { uint64_t t; bool down; SDL_Keycode key; int mx = -1, my = -1; std::string mark; std::string until; uint64_t maxMs = 0; std::string skipIf, label; size_t skipTo = 0; };
 std::vector<InjEv> s_InjEvents;
 size_t             s_InjNext = 0;
 bool               s_InjInit = false;
 uint64_t           s_InjStart = 0;
-uint64_t           s_InjShift = 0;     // total ms the script clock was held by `until:` barriers
+int64_t            s_InjShift = 0;     // total ms the script clock was held by `until:` barriers (minus the waits skipped by `skipif:`)
 bool               s_InjHolding = false;
 uint64_t           s_InjHoldBegin = 0; // real clock (GetTickCount64 - start) when the current hold began
 
@@ -113,6 +115,19 @@ void InjInit() {
             ev.maxMs = c2 == std::string::npos ? 60000 : (uint64_t)std::atoll(arg.c_str() + c2 + 1);
             s_InjEvents.push_back(ev);
         }
+        else if (cmd == "label") { // label:NAME  (target of skipif)
+            InjEv ev{ t, true, 0 };
+            ev.label = arg;
+            s_InjEvents.push_back(ev);
+        }
+        else if (cmd == "skipif") { // skipif:COND:LABEL
+            InjEv ev{ t, true, 0 };
+            const auto c2 = arg.find(':');
+            if (c2 == std::string::npos) continue;
+            ev.skipIf = arg.substr(0, c2);
+            ev.label = arg.substr(c2 + 1);
+            s_InjEvents.push_back(ev);
+        }
         else if (cmd == "mark") { // mark:NAME  logs "[mark] NAME" when the script clock reaches it (progress markers for tools/standalone/soak.sh)
             InjEv ev{ t, true, 0 };
             ev.mark = arg;
@@ -121,6 +136,13 @@ void InjInit() {
         else if (cmd == "down" || cmd == "up") { s_InjEvents.push_back({ t, cmd == "down", InjKey(arg) }); }
     }
     std::stable_sort(s_InjEvents.begin(), s_InjEvents.end(), [](auto& a, auto& b) { return a.t < b.t; });
+    for (auto& ev : s_InjEvents) { // resolve `skipif:COND:LABEL` to the index of `label:LABEL` (the first one after the skipif)
+        if (ev.skipIf.empty()) continue;
+        ev.skipTo = s_InjEvents.size();
+        for (size_t i = &ev - s_InjEvents.data() + 1; i < s_InjEvents.size(); i++) {
+            if (s_InjEvents[i].skipIf.empty() && s_InjEvents[i].label == ev.label) { ev.skipTo = i; break; }
+        }
+    }
     s_InjStart = GetTickCount64();
     NOTSA_INJ_LOG("input injector: %u events", (unsigned)s_InjEvents.size());
 }
@@ -128,7 +150,7 @@ void InjPump() {
     if (!s_InjInit) InjInit();
     const uint64_t real = GetTickCount64() - s_InjStart;
     // script clock: frozen at the barrier's time while it holds, shifted by the total hold time afterwards
-    const auto clock = [&] { return s_InjHolding ? s_InjEvents[s_InjNext].t : real - s_InjShift; };
+    const auto clock = [&]() -> uint64_t { return s_InjHolding ? s_InjEvents[s_InjNext].t : (uint64_t)((int64_t)real - s_InjShift); };
     while (s_InjNext < s_InjEvents.size() && s_InjEvents[s_InjNext].t <= clock()) {
         const auto& ev = s_InjEvents[s_InjNext];
         if (!ev.until.empty()) {
@@ -136,11 +158,23 @@ void InjPump() {
             const bool ok = InjCond(ev.until), timeout = !ok && real - s_InjHoldBegin >= ev.maxMs;
             if (!ok && !timeout) break; // keep holding, retry next pump
             NOTSA_INJ_LOG("[until] %s %s after %u ms (script %u ms)", ev.until.c_str(), ok ? "ok" : "TIMEOUT", (unsigned)(real - s_InjHoldBegin), (unsigned)ev.t);
-            s_InjShift += real - s_InjHoldBegin;
+            s_InjShift += (int64_t)(real - s_InjHoldBegin);
             s_InjHolding = false;
             s_InjNext++;
             continue;
         }
+        if (!ev.skipIf.empty()) {
+            const bool jump = InjCond(ev.skipIf);
+            NOTSA_INJ_LOG("[skipif] %s %s -> %s", ev.skipIf.c_str(), jump ? "true, skipping to" : "false, continuing at", ev.label.c_str());
+            if (jump && ev.skipTo < s_InjEvents.size()) {
+                s_InjShift -= (int64_t)(s_InjEvents[ev.skipTo].t - ev.t); // the script clock jumps with the script position
+                s_InjNext = ev.skipTo;
+            } else {
+                s_InjNext++;
+            }
+            continue;
+        }
+        if (!ev.label.empty()) { s_InjNext++; continue; }
         s_InjNext++;
         const uint64_t now = clock();
         SDL_Event e{};

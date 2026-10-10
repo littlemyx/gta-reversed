@@ -186,7 +186,8 @@ wait:1000
 key:space
 wait:1500
 mark:walk_end
-# normal car cheat (JQNTDMH), step back from the spawn, F = enter (gated: wait until CJ is really in the car), drive W 20 s, F = exit
+# normal car cheat (JQNTDMH), step back from the spawn, F = enter (gated: until:invehicle waits for CJ to really be in the car). If the first attempt
+# fails (the car spawns in front of CJ: a wall / the scripted LSPD car of the intro drop-off in the way) he sidesteps and tries once more; `skipif` skips attempt 2 on success.
 until:control:30000
 mark:cheat_car
 key:j
@@ -203,7 +204,28 @@ up:s
 wait:1500
 mark:car_enter
 key:f
-until:invehicle:10000
+until:invehicle:8000
+skipif:invehicle:got_car
+mark:car_retry
+down:d
+wait:2500
+up:d
+wait:500
+key:j
+key:q
+key:n
+key:t
+key:d
+key:m
+key:h
+wait:3000
+down:s
+wait:1500
+up:s
+wait:1500
+key:f
+until:invehicle:8000
+label:got_car
 wait:500
 mark:drive
 down:w

@@ -685,7 +685,7 @@ inline void Wire(uint8* b, bool on) {
 
 static void TestFlyingControl() {
     using namespace wfx;
-    if (!Wanted("FlyingControl")) return;
+    if (!Wanted("CVehicle::FlyingControl")) return;
     static const int models[] = { 0x21B, 0x1CC, 0x208, 0x1F0, 0x1D7, 0x1E5, 0x1B7, 0x200, 0x1A6 };
     *reinterpret_cast<void**>(fcx::g_info + 0x14) = fcx::g_col;
     for (int m : models) CModelInfo::ms_modelInfoPtrs[m] = reinterpret_cast<CBaseModelInfo*>(fcx::g_info);

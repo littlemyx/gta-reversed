@@ -202,7 +202,7 @@ void CExplosion::AddExplosion(CEntity* victim, CEntity* creator, eExplosionType 
 
     // Originally most likely a separate function
     // but this way its nicer
-    const auto CreateAndPlayFxWithSound = [&](const char* name, float volume = .0f) {
+    const auto CreateAndPlayFxWithSound = [&](const char* name, float volume = .0f, bool fxWithoutVictim = true) {
         FxSystem_c* fx{nullptr};
         if (exp->m_pVictim) {
             if (exp->m_pVictim->GetRwObject()) {
@@ -211,8 +211,8 @@ void CExplosion::AddExplosion(CEntity* victim, CEntity* creator, eExplosionType 
                     fx = g_fxMan.CreateFxSystem(name, expToVictimDir, matrix, false);
                 }
             }
-        } else {
-            fx = g_fxMan.CreateFxSystem(name, exp->m_vecPosition, nullptr, false);
+        } else if (fxWithoutVictim) {
+            fx = g_fxMan.CreateFxSystem(name, pos, nullptr, false); // 0x737234: the local `pos` (a molotov's ground-adjusted z), not the stored position
         }
         if (fx) {
             PlaySoundIfEnabled(volume);
@@ -246,6 +246,7 @@ void CExplosion::AddExplosion(CEntity* victim, CEntity* creator, eExplosionType 
             exp->m_fRadius = 6.0f;
         }
         exp->m_nExpireTime = (float)(CTimer::GetTimeInMS() + lifetime + 3000);
+        exp->m_fPropagationRate = 0.5f; // 0x736D3B
 
         bool bHit = false;
         const float fGroundPos = CWorld::FindGroundZFor3DCoord({pos.x, pos.y, pos.z + 3.0f}, &bHit, nullptr);
@@ -294,7 +295,7 @@ void CExplosion::AddExplosion(CEntity* victim, CEntity* creator, eExplosionType 
         if (exp->m_pVictim) {
             CCrime::ReportCrime(eCrimeType::CRIME_EXPLOSION, exp->m_pVictim->AsPed(), nullptr); /* won't do anything as second ped is nullptr */
         }
-        CreateAndPlayFxWithSound("explosion_medium");
+        CreateAndPlayFxWithSound("explosion_medium", 0.f, false); // 0x736F0C: no victim -> no fx for the car explosions
         break;
     }
     case eExplosionType::EXPLOSION_BOAT:
@@ -305,6 +306,7 @@ void CExplosion::AddExplosion(CEntity* victim, CEntity* creator, eExplosionType 
         }
         exp->m_nExpireTime = (float)(CTimer::GetTimeInMS() + lifetime + 3000);
         exp->m_nCreatedTime = (float)CTimer::GetTimeInMS();
+        exp->m_fPropagationRate = 0.5f; // 0x736E57 / 0x736EEE: boat and aircraft too
 
         CreateAndPlayFxWithSound("explosion_large");
         break;
@@ -317,6 +319,7 @@ void CExplosion::AddExplosion(CEntity* victim, CEntity* creator, eExplosionType 
         exp->m_nExpireTime = (float)(CTimer::GetTimeInMS() + lifetime + 750);
         exp->m_fPropagationRate = 0.5f;
 
+        CWorld::FindGroundZFor3DCoord({ pos.x, pos.y, pos.z + 4.0f }, nullptr, nullptr); // 0x73702F: the probe's result is discarded
         PlaySoundIfEnabled();
         /* No fx for this */
         break;
@@ -367,21 +370,37 @@ void CExplosion::AddExplosion(CEntity* victim, CEntity* creator, eExplosionType 
     }
     }
 
+    // 0x737270: the attractor event comes first, a molotov that fell into the water deactivates the explosion and returns false
+    if (victim)
+        g_InterestingEvents.Add(CInterestingEvents::EType::EVENT_ATTRACTOR, victim);
+
+    if (bNoFire) {
+        exp->m_nActiveCounter = 0;
+        return;
+    }
+
     if (!bNoFire) {
         switch (type) {
         case eExplosionType::EXPLOSION_MOLOTOV:
         case eExplosionType::EXPLOSION_ROCKET:
         case eExplosionType::EXPLOSION_WEAK_ROCKET:
         case eExplosionType::EXPLOSION_OBJECT: {
-            const auto numFires = (type == eExplosionType::EXPLOSION_MOLOTOV) ? (CGeneral::GetRandomNumber() - 2) % 4 : (CGeneral::GetRandomNumber() + 1) % 4;
+            // 0x7372AB: the CRT rand() is masked with 3 (a signed % would give negative counts for rand() < 2)
+            const auto numFires = (type == eExplosionType::EXPLOSION_MOLOTOV) ? ((rand() - 2) & 3) : ((rand() + 1) & 3);
 
             if (numFires) {
                 for (auto i = 0; i < numFires; i++) {
-                    CVector firePos = exp->m_vecPosition + CVector{CGeneral::GetRandomNumberInRange(-4.0f, 4.0f), CGeneral::GetRandomNumberInRange(-4.0f, 4.0f), 0.0f};
+                    CVector firePos = exp->m_vecPosition;
+                    if (i) { // 0x7372D4: the first fire is started exactly at the explosion, only the others are scattered
+                        firePos.x = (float)(((double)rand() * RAND_MAX_FLOAT_RECIPROCAL * 8.0f + firePos.x) - 4.0f);
+                        firePos.y = (float)(((double)rand() * RAND_MAX_FLOAT_RECIPROCAL * 8.0f + firePos.y) - 4.0f);
+                    }
                     bool bHitGround{};
                     firePos.z = CWorld::FindGroundZFor3DCoord({firePos.x, firePos.y, firePos.z + 3.0f}, &bHitGround, nullptr); // 0x73735C
                     if (bHitGround && std::fabs(firePos.z - exp->m_vecPosition.z) < 10.0f) {
-                        gFireManager.StartFire(firePos, 0.8f, 0, exp->m_pCreator, (uint32)(CGeneral::GetRandomNumberInRange(5'600.0f, 12'600.0f) * std::bit_cast<float>(0x3ECCCCCEu))  /* 0x872820: the exe's 0.4f is 0x3ECCCCCE, not 0x3ECCCCCD */, 3, 1);
+                        // 0x737386: burn time = (rand01 * 0.4 * 7000 + 5600) (0.4 is 0x3ECCCCCE here, not 0x3ECCCCCD)
+                        const auto burnTime = (int32)(float)((double)rand() * RAND_MAX_FLOAT_RECIPROCAL * std::bit_cast<float>(0x3ECCCCCEu) * 7000.0f + 5600.0f);
+                        gFireManager.StartFire(firePos, 0.8f, 0, exp->m_pCreator, (uint32)burnTime, 3, 1);
                     }
                 }
                 if (creator && creator->GetIsTypePed() && creator->AsPed()->IsPlayer()) {
@@ -393,10 +412,8 @@ void CExplosion::AddExplosion(CEntity* victim, CEntity* creator, eExplosionType 
         }
     }
 
-    if (victim)
-        g_InterestingEvents.Add(CInterestingEvents::EType::EVENT_ATTRACTOR, victim);
-
-    CShadows::AddPermanentShadow(eShadowType::SHADOW_DEFAULT, gpShadowHeliTex, &pos, 8.0f, 0.0f, 0.0f, -8.0f, 200, 0, 0, 0, 10.0f, 30000, 1.0f);
+    CVector shadowPos{ pos.x, pos.y, pos.z + 5.0f }; // 0x73742E
+    CShadows::AddPermanentShadow(eShadowType::SHADOW_DEFAULT, gpShadowHeliTex, &shadowPos, 8.0f, 0.0f, 0.0f, -8.0f, 200, 0, 0, 0, 10.0f, 30000, 1.0f);
 
     if (exp->m_fVisibleDistance != 0.0f && !exp->m_nParticlesExpireTime) {
         CWorld::TriggerExplosion(pos, exp->m_fRadius, exp->m_fVisibleDistance, victim, creator, DoesNeedToVehProcessBombTimer(type), exp->m_fDamagePercentage);

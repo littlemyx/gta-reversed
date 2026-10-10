@@ -17,9 +17,9 @@ class CPed;
 
 class CCover {
 public:
-    static inline auto& m_NumPoints = StaticRef<uint32>(0xC197A4);
-    static inline auto& m_Points = StaticRef<std::array<CCoverPoint, 100>>(0xC197C8);
-    inline static auto&                          m_ListOfProcessedBuildings = StaticRef<CPtrListDoubleLink<CBuilding*>>(0xC1A2B8);
+    static inline NOTSA_GLOBAL(m_NumPoints, 0xC197A4, (uint32), {});
+    static inline NOTSA_GLOBAL(m_Points, 0xC197C8, (std::array<CCoverPoint, 100>), {});
+    inline static NOTSA_GLOBAL(m_ListOfProcessedBuildings, 0xC1A2B8, (CPtrListDoubleLink<CBuilding*>), {});
 
 public:
     static void InjectHooks();

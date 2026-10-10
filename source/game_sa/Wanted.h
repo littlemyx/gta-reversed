@@ -19,8 +19,8 @@ class CWanted {
 public:
     static constexpr auto MAX_COPS_IN_PURSUIT{ 10u };
 
-    uint32 m_ChaosLevel; // m_nWantedLevel
-    uint32 m_ChaosLevelBeforeParole; // m_nWantedLevelBeforeParole
+    int32  m_ChaosLevel; // m_nWantedLevel; SIGNED in the exe (all the compares in UpdateWantedLevel are jl/jle)
+    int32  m_ChaosLevelBeforeParole; // m_nWantedLevelBeforeParole
     uint32 m_LastTimeWantedDecreased;
     uint32 m_LastTimeWantedLevelChanged;
     uint32 m_TimeOfParole;
@@ -61,7 +61,7 @@ private:
 
 public:
     static inline auto& MaximumWantedLevel = StaticRef<eWantedLevel>(0x8CDEE4); // 6
-    static inline auto& MaximumChaosLevel = StaticRef<uint32>(0x8CDEE8); // 9200; nMaximumWantedLevel
+    static inline auto& MaximumChaosLevel = StaticRef<int32>(0x8CDEE8); // 9200; nMaximumWantedLevel
     static inline auto& UseNewsHeliInAdditionToPolice = StaticRef<bool>(0xB7CB8C);
 
 public:

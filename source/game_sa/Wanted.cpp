@@ -224,7 +224,8 @@ void CWanted::UpdateCrimesQ() {
             continue;
         }
 
-        if (CTimer::GetTimeInMS() - crime.m_nStartTime > 500 && !crime.m_bAlreadyReported) {
+        // NOTE: the exe compares `now > start + 500` (unsigned, `jbe`), not `now - start > 500`: they differ when `start` lies in the future
+        if (CTimer::GetTimeInMS() > crime.m_nStartTime + 500 && !crime.m_bAlreadyReported) {
             ReportCrimeNow(crime.m_nCrimeType, crime.m_vecCoors, crime.m_bPoliceDontReallyCare);
 
             crime.m_bAlreadyReported = true;
@@ -244,35 +245,40 @@ void CWanted::ClearQdCrimes() {
 }
 
 // 0x562000
+// Returns true only if the crime was ALREADY queued and ALREADY reported (a new crime always answers false, even when `alreadyReported`)
 bool CWanted::AddCrimeToQ(eCrimeType crimeType, uint32 crimeId, const CVector& posn, bool alreadyReported, bool policeDontReallyCare) {
     assert(crimeType != eCrimeType::CRIME_NONE); // IV
 
-    const auto ReportCrimeIfPossible = [alreadyReported](CCrimeBeingQd& c) {
-        const auto old       = c.m_bAlreadyReported;
+    for (auto& c : m_CrimesBeingQd) {
+        if (c.m_nCrimeType != crimeType || c.m_nCrimeId != crimeId) {
+            continue;
+        }
 
-        NOTSA_LOG_DEBUG("New crime! Type: {}, made by: {}, reported already?: {}", c.m_nCrimeType, c.m_nCrimeId, old ? "yes" : "no");
-
-        c.m_bAlreadyReported = notsa::coalesce(c.m_bAlreadyReported, alreadyReported);
-        return old;
-    };
-
-    if (auto c = rng::find_if(m_CrimesBeingQd, [&](const auto& c) { return c.m_nCrimeType == crimeType && c.m_nCrimeId == crimeId; }); c != std::end(m_CrimesBeingQd)) {
-        // If already queued, early return
-        return ReportCrimeIfPossible(*c);
-    }
-
-    auto free = rng::find_if(m_CrimesBeingQd, [](const auto& c) { return c.m_nCrimeType == eCrimeType::CRIME_NONE; });
-    if (free == std::end(m_CrimesBeingQd)) {
+        // Already queued: early return
+        NOTSA_LOG_DEBUG("New crime! Type: {}, made by: {}, reported already?: {}", c.m_nCrimeType, c.m_nCrimeId, c.m_bAlreadyReported ? "yes" : "no");
+        if (c.m_bAlreadyReported) {
+            return true;
+        }
+        if (alreadyReported) {
+            c.m_bAlreadyReported = alreadyReported;
+        }
         return false;
     }
 
-    free->m_nCrimeType            = crimeType;
-    free->m_nCrimeId              = crimeId;
-    free->m_nStartTime            = CTimer::GetTimeInMS();
-    free->m_vecCoors              = posn;
-    free->m_bAlreadyReported      = alreadyReported;
-    free->m_bPoliceDontReallyCare = policeDontReallyCare;
-    return ReportCrimeIfPossible(*free);
+    // First free slot
+    for (auto& c : m_CrimesBeingQd) {
+        if (c.m_nCrimeType != eCrimeType::CRIME_NONE) {
+            continue;
+        }
+        c.m_nCrimeType            = crimeType;
+        c.m_nCrimeId              = crimeId;
+        c.m_nStartTime            = CTimer::GetTimeInMS();
+        c.m_vecCoors              = posn;
+        c.m_bAlreadyReported      = alreadyReported;
+        c.m_bPoliceDontReallyCare = policeDontReallyCare;
+        break;
+    }
+    return false;
 }
 
 // 0x562120
@@ -281,85 +287,87 @@ void CWanted::ReportCrimeNow(eCrimeType crimeType, const CVector& posn, bool bPo
         return;
     }
 
-    auto wantedLevel = m_WantedLevel;
-    auto mul = m_Multiplier;
+    const auto wantedLevel = m_WantedLevel;
+    float mul = m_Multiplier;
 
     if (CDarkel::ReadStatus() == eDarkelStatus::FRENZY_ON_GOING) {
-        mul *= 0.3f;
+        mul *= 0.3f; // 0x858C24
     }
 
-    mul = std::max(mul, 0.0f);
+    // 0x562148: `if (0.0f > mul) mul = 0.0f` (NaN stays NaN)
+    if (0.0f > mul) {
+        mul = 0.0f;
+    }
 
     if (CGangWars::GangWarFightingGoingOn()) {
         mul = 0.0f;
     }
 
     if (bPoliceDontReallyCare) {
-        mul /= 3.0f;
+        mul *= std::bit_cast<float>(0x3EAA7EFAu); // 0x864E30: 0.333f (NOT 1/3, and a multiplication in the exe)
     }
 
     if (CGangWars::GangWarFightingGoingOn()) {
         mul = 0.0f;
     }
 
-    switch (crimeType) {
-    case CRIME_DAMAGED_PED:
-    case CRIME_VEHICLE_DAMAGE:
-    case CRIME_SPEEDING:
-        mul *= 5.0f;
-        break;
-    case CRIME_DAMAGED_COP:
-        mul *= 45.0f;
-        break;
-    case CRIME_DAMAGE_CAR:
-        mul *= 30.0f;
-        break;
-    case CRIME_DAMAGE_COP_CAR:
-    case CRIME_KILL_COP_PED_WITH_CAR:
-    case CRIME_SET_COP_PED_ON_FIRE:
-        mul *= 80.0f;
-        break;
-    case CRIME_CAR_STEAL:
-        mul *= 15.0f;
-        break;
-    case CRIME_RUN_REDLIGHT:
-        mul *= 10.0f;
-        break;
-    case CRIME_KILL_PED_WITH_CAR:
-        mul *= 18.0f;
-        break;
-    case CRIME_DESTROY_HELI:
-    case CRIME_DESTROY_PLANE:
-        mul *= 400.0f;
-        break;
-    case CRIME_SET_PED_ON_FIRE:
-    case CRIME_SET_CAR_ON_FIRE:
-        mul *= 20.0f;
-        break;
-    case CRIME_EXPLOSION:
-        mul *= 25.0f;
-        break;
-    case CRIME_STAB_PED:
-        mul *= 35.0f;
-        break;
-    case CRIME_STAB_COP:
-        mul *= 100.0f;
-        break;
-    case CRIME_DESTROY_VEHICLE:
-        mul *= 70.0f;
-        break;
-    case CRIME_HIT_CAR:
-    case CRIME_AIM_GUN:
-        mul *= 2.0f;
-        break;
-    default:
-        break;
-    }
+    // 0x5621B0: jump table 0x5622A0 over crimeType - 2 in [0, 20]; everything else (NONE, FIRE_WEAPON, > AIM_GUN) adds nothing
+    if (crimeType >= CRIME_DAMAGED_PED && crimeType <= CRIME_AIM_GUN) {
+        float factor;
+        switch (crimeType) {
+        case CRIME_DAMAGED_PED:
+        case CRIME_VEHICLE_DAMAGE:
+        case CRIME_SPEEDING:
+            factor = 5.0f;
+            break;
+        case CRIME_DAMAGED_COP:
+            factor = 45.0f;
+            break;
+        case CRIME_DAMAGE_CAR:
+            factor = 30.0f;
+            break;
+        case CRIME_DAMAGE_COP_CAR:
+        case CRIME_KILL_COP_PED_WITH_CAR:
+        case CRIME_SET_COP_PED_ON_FIRE:
+            factor = 80.0f;
+            break;
+        case CRIME_CAR_STEAL:
+            factor = 15.0f;
+            break;
+        case CRIME_RUN_REDLIGHT:
+            factor = 10.0f;
+            break;
+        case CRIME_KILL_PED_WITH_CAR:
+            factor = 18.0f;
+            break;
+        case CRIME_DESTROY_HELI:
+        case CRIME_DESTROY_PLANE:
+            factor = 400.0f;
+            break;
+        case CRIME_SET_PED_ON_FIRE:
+        case CRIME_SET_CAR_ON_FIRE:
+            factor = 20.0f;
+            break;
+        case CRIME_EXPLOSION:
+            factor = 25.0f;
+            break;
+        case CRIME_STAB_PED:
+            factor = 35.0f;
+            break;
+        case CRIME_STAB_COP:
+            factor = 100.0f;
+            break;
+        case CRIME_DESTROY_VEHICLE:
+            factor = 70.0f;
+            break;
+        default: // CRIME_HIT_CAR, CRIME_AIM_GUN: `fadd st(0), st(0)`
+            factor = 2.0f;
+            break;
+        }
+        NOTSA_LOG_DEBUG("{} : {} (Mult:{})", crimeType, m_WantedLevel, mul); // IV
 
-    NOTSA_LOG_DEBUG("{} : {} (Mult:{})", crimeType, m_WantedLevel, mul); // IV
-
-    if (crimeType != CRIME_NONE && crimeType != CRIME_FIRE_WEAPON) {
-        m_ChaosLevel += static_cast<uint32>(mul);
+        // 0x56225F: fiadd [chaos] on the unrounded x87 product, then _ftol (the sum is NOT `chaos + (int)product`)
+        m_ChaosLevel = (int32)((double)mul * (double)factor + (double)m_ChaosLevel);
     }
 
     m_ChaosLevel = std::max(m_ChaosLevel, m_ChaosLevelBeforeParole);
@@ -505,19 +513,48 @@ int32 CWanted::WorkOutPolicePresence(CVector posn, float radius) {
 }
 
 // 0x5627D0
-// Returns true if the specified ped is one of the closest to the player.
+// Returns true if the specified ped is one of the `numCopsToCheck` closest pursuit cops to the player.
 bool CWanted::IsClosestCop(CPed* ped, const int32 numCopsToCheck) const {
-    // NOTSA: A bit different but should have the same behavior.
-    std::pair<CCopPed*, float /* distance */> closestCops[MAX_COPS_IN_PURSUIT];
-
-    for (const auto&& [i, cop] : rngv::enumerate(m_CopsInPursuit)) {
-        closestCops[i].first = cop;
-        closestCops[i].second = cop ? DistanceBetweenPointsSquared(FindPlayerCoors(), cop->GetPosition()) : FLT_MAX;
+    // Compact the non-null cops (order kept) and compute the squared distances (x87: dz*dz + dx*dx + dy*dy, stored to float)
+    CCopPed* cops[MAX_COPS_IN_PURSUIT];
+    float    dists[MAX_COPS_IN_PURSUIT];
+    auto     numCops = 0u;
+    for (const auto cop : m_CopsInPursuit) {
+        if (cop) {
+            cops[numCops++] = cop;
+        }
     }
-    rng::sort(closestCops, [](const auto& a, const auto& b) { return a.second < b.second; });
 
-    for (const auto& [cop, _] : closestCops | rngv::take(numCopsToCheck)) {
-        if (cop == ped->AsCop()) {
+    const auto& playerPos = FindPlayerPed()->GetPosition(); // NOTE: the ped's position, NOT FindPlayerCoors() (which is the vehicle's when driving)
+    for (auto i = 0u; i < numCops; i++) {
+        const auto& copPos = cops[i]->GetPosition();
+        const double dx = (double)playerPos.x - (double)copPos.x;
+        const double dy = (double)playerPos.y - (double)copPos.y;
+        const double dz = (double)playerPos.z - (double)copPos.z;
+        dists[i] = (float)(dz * dz + dx * dx + dy * dy);
+    }
+
+    // Selection of the `numCopsToCheck` smallest (strictly smaller than the best so far, starting from FLT_MAX; NaN never wins; ties keep the first)
+    CCopPed* closest[MAX_COPS_IN_PURSUIT]{};
+    const auto numToCheck = (uint32)std::clamp(numCopsToCheck, 0, (int32)MAX_COPS_IN_PURSUIT); // NOTSA: the exe overflows its stack buffer above 10
+    for (auto i = 0u; i < numToCheck; i++) {
+        auto best = FLT_MAX;
+        auto bestIdx = -1;
+        for (auto k = 0u; k < numCops; k++) {
+            if (best > dists[k]) {
+                best    = dists[k];
+                bestIdx = (int32)k;
+            }
+        }
+        if (bestIdx != -1) {
+            closest[i]      = cops[bestIdx];
+            cops[bestIdx]   = nullptr;
+            dists[bestIdx]  = FLT_MAX;
+        }
+    }
+
+    for (auto i = 0u; i < numToCheck; i++) {
+        if ((CPed*)closest[i] == ped) {
             return true;
         }
     }
@@ -594,9 +631,10 @@ void CWanted::RemoveExcessPursuitCops() {
 void CWanted::Update() {
     if (m_WantedLevel < eWantedLevel::WANTED_LEVEL_5) {
         if (m_TimeCounting) {
-            auto newStatValue = m_CurrentChaseTime;
-            CStats::SetNewRecordStat(STAT_LONGEST_CHASE_TIME_WITH_5_OR_MORE_STARS, static_cast<float>(newStatValue));
-            CStats::SetStatValue(STAT_LONGEST_CHASE_TIME_WITH_5_OR_MORE_STARS, static_cast<float>(newStatValue));
+            // NOTE: exe converts the uint32 via `fild` + (+2^32 if negative)
+            const auto chaseTime = static_cast<float>(static_cast<double>(m_CurrentChaseTime));
+            CStats::SetNewRecordStat(STAT_LONGEST_CHASE_TIME_WITH_5_OR_MORE_STARS, chaseTime);
+            CStats::SetStatValue(STAT_LAST_CHASE_TIME_WITH_5_OR_MORE_STARS, chaseTime); // 0x34 (the port used the "longest" stat here)
             m_TimeCounting = false;
         }
     } else {
@@ -611,20 +649,28 @@ void CWanted::Update() {
         }
     }
 
-    if (CTimer::GetTimeInMS() - m_TimeOfParole > 20000) {
+    // NOTE: exe: `now > parole + 20000` (unsigned), not `now - parole > 20000`
+    if (CTimer::GetTimeInMS() > m_TimeOfParole + 20000) {
         m_ChaosLevelBeforeParole = 0;
         m_WantedLevelBeforeParole = eWantedLevel::WANTED_CLEAN;
     }
 
     if (CTimer::GetTimeInMS() - m_LastTimeWantedDecreased > 1000) {
-        bool inElusiveZone = CWeather::WeatherRegion == WEATHER_REGION_DEFAULT
-                          || CWeather::WeatherRegion == WEATHER_REGION_DESERT
-                          || !CGame::CanSeeOutSideFromCurrArea();
+        // 0x562D4F: `bl` = the weather region is DEFAULT or DESERT (the "countryside": chaos decays by 2, the area code is NOT part of it)
+        const bool inCountryside = CWeather::WeatherRegion == WEATHER_REGION_DEFAULT
+                                || CWeather::WeatherRegion == WEATHER_REGION_DESERT;
 
-        auto vehicle = FindPlayerVehicle();
-        bool hasElusiveVehicle = vehicle && (vehicle->IsLawEnforcementVehicle() || vehicle->IsSubHeli() || vehicle->IsSubPlane());
+        // 0x562D66: above one star the level only decays outdoors in the countryside; there is no vehicle test then (the timestamp is refreshed)
+        // otherwise (or at <= 1 star) the level does not decay while the player is in a law enforcement vehicle / helicopter / plane
+        bool noDecay;
+        if (m_WantedLevel > eWantedLevel::WANTED_LEVEL_1 && (!inCountryside || !CGame::CanSeeOutSideFromCurrArea())) {
+            noDecay = true;
+        } else {
+            auto vehicle = FindPlayerVehicle();
+            noDecay = vehicle && (vehicle->IsLawEnforcementVehicle() || vehicle->IsSubHeli() || vehicle->IsSubPlane());
+        }
 
-        if (m_WantedLevel > eWantedLevel::WANTED_LEVEL_1 && inElusiveZone && hasElusiveVehicle) {
+        if (noDecay) {
             m_LastTimeWantedDecreased = CTimer::GetTimeInMS();
         }
         else {
@@ -634,7 +680,7 @@ void CWanted::Update() {
                 int32 chaosLevel = m_ChaosLevel;
                 m_LastTimeWantedDecreased = CTimer::GetTimeInMS();
 
-                chaosLevel -= (inElusiveZone) ? 2 : 1;
+                chaosLevel -= inCountryside ? 2 : 1;
                 m_ChaosLevel = std::max(chaosLevel, 0);
 
                 UpdateWantedLevel();

@@ -8,8 +8,8 @@
 
 class CCredits {
 public:
-    static inline auto& CreditsStartTime = StaticRef<uint32>(0xC6E978);
-    static inline auto& bCreditsGoing = StaticRef<bool>(0xC6E97C);
+    static inline NOTSA_GLOBAL(CreditsStartTime, 0xC6E978, (uint32), {});
+    static inline NOTSA_GLOBAL(bCreditsGoing, 0xC6E97C, (bool), {});
 
 public:
     static void InjectHooks();

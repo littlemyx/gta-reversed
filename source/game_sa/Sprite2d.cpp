@@ -193,7 +193,7 @@ bool CSprite2d::IsVertexBufferEmpty()
 
 bool CSprite2d::IsVertexBufferFull()
 {
-    return nextBufferVertex > TOTAL_RADIOSITY_VERTEX_BUFFER || nextBufferIndex > TOTAL_TEMP_BUFFER_INDICES;
+    return nextBufferVertex > 0x5FC || nextBufferIndex > 0xFFA; // 0x7273A0 (the exe's literals: 1532 and 4090, NOT TOTAL_TEMP_BUFFER_INDICES)
 }
 
 void CSprite2d::RenderVertexBuffer()
@@ -281,7 +281,9 @@ void CSprite2d::SetVertices(int32 numVerts, const CVector2D* posn, const CRGBA& 
         RwIm2DVertexSetRecipCameraZ(&maVertices[i], RecipNearClip);
         RwIm2DVertexSetU(&maVertices[i], 1.f, RecipNearClip);
         RwIm2DVertexSetV(&maVertices[i], 1.f, RecipNearClip);
-        RwIm2DVertexSetIntRGBA(&maVertices[i], color.r, color.g, color.b, color.a);
+        // 0x727920 advances its colour pointer by one CRGBA per vertex (reads `color` as an array; the function is unused in the game)
+        const CRGBA& c = reinterpret_cast<const CRGBA*>(&color)[i];
+        RwIm2DVertexSetIntRGBA(&maVertices[i], c.r, c.g, c.b, c.a);
     }
 }
 

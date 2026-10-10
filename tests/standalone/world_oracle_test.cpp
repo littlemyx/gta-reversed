@@ -21,6 +21,12 @@
 #include <string>
 #include <vector>
 
+// Port TUs with dynamic initialisers that write exe-owned memory (Maths.cpp: the sine LUT at 0xBB3E00) run before main(), i.e. before oracle::Map() makes the placeholder image writable:
+// make it RWX from an earlier initialisation segment (lib runs before the user segment of the game TUs)
+#pragma warning(disable : 4075)
+#pragma init_seg(lib)
+static struct PadWritable { PadWritable() { DWORD old = 0; VirtualProtect(reinterpret_cast<void*>(0x401000), 0xCB0000 - 0x401000, PAGE_EXECUTE_READWRITE, &old); } } g_padWritable;
+
 // ---------------------------------------------------------------------------------------------------------------------------------
 // stubs of the symbols the compiled game TUs reference but the test never calls
 namespace notsa::standalone::detail { bool g_DataImageLoaded = true; }
@@ -196,6 +202,15 @@ struct Snap {   // snapshot / restore of a range of exe globals (both implementa
     bool SameAs(const Snap& o) const { return SameBlob(b.data(), o.b.data(), b.size()); }
     void FillRandom(Rng& r) { for (size_t i = 0; i + 4 <= b.size(); i += 4) { const uint32_t v = r.u32() * 2654435761u; std::memcpy(&b[i], &v, 4); } }
 };
+
+static std::string DiffDesc(const void* a, const void* b, size_t n, const char* tag) {   // differing dwords only
+    std::string s; int shown = 0;
+    for (size_t i = 0; i + 4 <= n && shown < 8; i += 4) {
+        uint32_t x, y; std::memcpy(&x, (const uint8*)a + i, 4); std::memcpy(&y, (const uint8*)b + i, 4);
+        if (x != y) { char t[80]; std::snprintf(t, sizeof t, " %s+%02zX got %08X exe %08X", tag, i, x, y); s += t; ++shown; }
+    }
+    return s;
+}
 
 #include "world_oracle_inits.inc"
 #include "world_oracle_audio.inc"

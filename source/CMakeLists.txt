@@ -726,6 +726,15 @@ if (${RE_PROJECT}_RW_LIBRW)
         game_sa/Core/Quaternion.cpp
         game_sa/Audio/AEAudioUtility.cpp
         game_sa/Audio/Entities/AEVehicleAudioEntity.cpp
+        game_sa/Maths.cpp
+        game_sa/WaterLevel.cpp
+        game_sa/Radar.cpp
+        game_sa/MenuManager.cpp
+        game_sa/Camera.cpp
+        game_sa/Cam.cpp
+        game_sa/HudColours.cpp
+        game_sa/Font.cpp
+        game_sa/Entity/Placeable.cpp
         standalone/FtolExe.cpp
     )
     target_compile_features(world_oracle_test PRIVATE cxx_std_23)

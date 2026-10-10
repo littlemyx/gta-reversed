@@ -1,5 +1,7 @@
 #include "StdInc.h"
 #include "VehicleRecording.h"
+#include "Entity/Vehicle/Bike.h"
+#include "Fx/FxFtol.h"
 
 #ifdef EXTRA_CARREC_LOGS
     #define CARREC_LOG(...) NOTSA_LOG_DEBUG(__VA_ARGS__)
@@ -115,10 +117,21 @@ void CVehicleRecording::Load(RwStream* stream, int32 recordId, int32 totalSize) 
 
 // 0x45A0F0
 void CVehicleRecording::SmoothRecording(int32 recordId) {
-    auto frames = StreamingArray[recordId].GetFrames();
-
-    for (auto i = 4u; i < frames.size(); i++) {
-        frames[i - 1].m_nTime = (uint32)((float)(frames[i].m_nTime + frames[i - 2].m_nTime) / 2.0f);
+    // 0x45A0F0: smooths the time of frame j - 1 to the mean of the times of frames j - 2 and j, for j = 2 .. n - 1 (the port started at j = 4).
+    // The sum is added as an int (wraps), converted via fild (+ 2^32 for a "negative" sum), halved on the x87 stack (24-bit mantissa) and truncated by _ftol2.
+    auto& path = StreamingArray[recordId];
+    const uint32 limit = (uint32)path.m_nSize - 0x20u;
+    if (limit <= 0x20u) {
+        return;
+    }
+    auto* const frames = path.m_pData;
+    for (size_t j = 2; j * sizeof(CVehicleStateEachFrame) - 0x20u < limit; j++) {
+        const uint32 sum = frames[j - 2].m_nTime + frames[j].m_nTime;
+        double       v   = (double)(int32)sum;
+        if ((int32)sum < 0) {
+            v += 4294967296.0; // 0x858C54
+        }
+        frames[j - 1].m_nTime = (uint32)notsa::detail::Ftol(v * 0.5);
     }
 }
 
@@ -254,24 +267,38 @@ void CVehicleRecording::RemoveAllRecordingsThatArentUsed() {
 
 // 0x459A30
 void CVehicleRecording::RestoreInfoForCar(CVehicle* vehicle, const CVehicleStateEachFrame& frame, bool pause) {
+    // 0x459A30: the recorded bytes are SIGNED (movsx) and converted with float constants: 1/16383.5 (0x858EAC), 0.05 (0x858C28 steering), 0.01 (0x858C58 pedals).
+    // The recorded velocity is restored, too; the pause only clears gas / brake / speed / handbrake (the steering angle is kept).
+    const auto* const raw = reinterpret_cast<const uint8*>(&frame);
+    const auto Vel = [&](size_t off) { return (float)*reinterpret_cast<const int16*>(raw + off) * std::bit_cast<float>(0x38800100u); };
+
     RestoreInfoForMatrix(vehicle->GetMatrix(), frame);
+    vehicle->m_vecMoveSpeed = CVector{ Vel(4), Vel(6), Vel(8) };
     vehicle->ResetTurnSpeed();
-    vehicle->m_fSteerAngle = frame.m_bSteeringAngle;
-    vehicle->m_GasPedal   = frame.m_bGasPedalPower;
-    vehicle->m_BrakePedal = frame.m_bBreakPedalPower;
-    vehicle->vehicleFlags.bIsHandbrakeOn = pause || frame.m_bHandbrakeUsed;
+    vehicle->m_fSteerAngle = (float)(int8)raw[0x10] * 0.05f;
+    vehicle->m_GasPedal    = (float)(int8)raw[0x11] * 0.01f;
+    vehicle->m_BrakePedal  = (float)(int8)raw[0x12] * 0.01f;
+    vehicle->vehicleFlags.bIsHandbrakeOn = frame.m_bHandbrakeUsed;
 
     if (pause) {
-        vehicle->m_fSteerAngle = vehicle->m_GasPedal = vehicle->m_BrakePedal = 0.0f;
-        vehicle->ResetMoveSpeed();
+        vehicle->m_GasPedal   = 0.0f;
+        vehicle->m_BrakePedal = 0.0f;
+        vehicle->m_vecMoveSpeed = CVector{};
+        vehicle->vehicleFlags.bIsHandbrakeOn = false;
+    }
+
+    if (vehicle->m_nVehicleType == VEHICLE_TYPE_BIKE) {
+        static_assert(offsetof(CBike, nBikeFlags) == 0x614);
+        static_cast<CBike*>(vehicle)->nBikeFlags &= 0xE7; // bGettingPickedUp, bOnSideStand
     }
 }
-
-// 0x459960
 void CVehicleRecording::RestoreInfoForMatrix(CMatrix& matrix, const CVehicleStateEachFrame& frame) {
-    matrix.GetRight()    = frame.m_bRight;
-    matrix.GetForward()  = frame.m_bTop;
-    matrix.GetUp()       = matrix.GetRight().Cross(matrix.GetForward());
+    // 0x459960: signed bytes * the float constant 0x859BCC (= 0.0078740157f); `FixedFloat` divides by 127 (different last bit)
+    const auto* const comp = reinterpret_cast<const int8*>(&frame) + 0xA; // m_bRight (3), m_bTop (3)
+    const auto Dec = [](int8 v) { return (float)v * std::bit_cast<float>(0x3C010204u); };
+    matrix.GetRight()    = CVector{ Dec(comp[0]), Dec(comp[1]), Dec(comp[2]) };
+    matrix.GetForward()  = CVector{ Dec(comp[3]), Dec(comp[4]), Dec(comp[5]) };
+    matrix.GetUp()       = CrossProduct(matrix.GetRight(), matrix.GetForward());
     matrix.GetPosition() = frame.m_vecPosn;
 }
 

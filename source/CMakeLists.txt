@@ -697,6 +697,7 @@ if (${RE_PROJECT}_RW_LIBRW)
         game_sa/CullZones.cpp
         game_sa/CarCtrl.cpp
         game_sa/PathFind.cpp
+        game_sa/TrafficLights.cpp
         game_sa/Weather.cpp
         game_sa/TimeCycle.cpp
         game_sa/Clock.cpp

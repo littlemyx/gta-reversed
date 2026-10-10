@@ -5,9 +5,17 @@
 #include "PathFind.h"
 #include "Entity/Vehicle/Vehicle.h"
 #include "MatrixLink.h"
+#include "TrafficLights.h"
+#include "GameLogic.h"
+#include "CarAI.h"
 
 // the sector-list scanners of the traffic AI ask for the player's vehicle: there is no player in this test
 CVehicle* FindPlayerVehicle(int, bool) { return nullptr; }
+CPlayerPed* FindPlayerPed(int) { return nullptr; }
+// not under test here: the exe's own (the traffic-light checks ask for the appearance of the fake vehicles)
+bool CGameLogic::LaRiotsActiveHere() { return oracle::Fn<bool __cdecl()>(0x441C10)(); }
+void CCarAI::CarHasReasonToStop(CVehicle* veh) { oracle::Fn<void __cdecl(CVehicle*)>(0x41C050)(veh); }
+eVehicleAppearance CVehicle::GetVehicleAppearance() const { return (eVehicleAppearance)oracle::Fn<int __fastcall(const CVehicle*, int)>(0x6D1080)(this, 0); }
 
 namespace cd {
 
@@ -20,6 +28,7 @@ struct VehFx {
 };
 static_assert(sizeof(CVehicle) < 0x1000);
 static VehFx g_veh;
+alignas(16) static uint8 mi[2][0x80], cm[2][0x80];   // fake model infos / col models of the model indices 600 and 601
 static CVehicle* MakeVeh(Rng& r, const CVector& pos, const CVector& moveSpeed, bool forceMat = false) {
     std::memset(g_veh.buf, 0, sizeof g_veh.buf);
     std::memset(g_veh.mat, 0, sizeof g_veh.mat);
@@ -51,6 +60,7 @@ static CCarPathLinkAddress g_naviLinks[NAREA][NLINK];
 static uint8            g_linkLen[NAREA][NLINK];
 static CPathIntersectionInfo g_inter[NAREA][NLINK];
 
+static bool g_forceLinks = false;   // every node has at least one link (the route logic divides by the number of links)
 static void PutI16(void* base, size_t off, int v) { int16 x = (int16)v; std::memcpy((uint8*)base + off, &x, 2); }
 
 // deterministic from `seed`
@@ -86,11 +96,13 @@ static void BuildPaths(uint64_t seed, int loadedPct = 85, float posSpread = 1.f)
             PutI16(raw, 0x12, a); PutI16(raw, 0x14, n);          // own address
             raw[0x16] = (uint8)r.u32();                          // m_nPathWidth
             raw[0x18] = (uint8)((r.below(7)) | (r.below(5) == 0 ? 0x20 : 0) | (r.below(7) == 0 ? 0x80 : 0) | (r.u32() & 0x50));
+            if (g_forceLinks && !(raw[0x18] & 0xF)) raw[0x18] |= (uint8)(1 + r.below(5));
             raw[0x19] = (uint8)(r.u32() & (r.below(3) ? 0x3C : 0xFF));
             raw[0x1A] = (uint8)r.u32();
+            if (g_forceLinks) raw[0x1A] &= 0x0F;   // no roadblock / parking nodes (they ask the world / the model infos)
         }
         for (int l = 0; l < NLINK; ++l) {
-            g_links[a][l] = CNodeAddress{ (uint16)r.below(NAREA), (uint16)r.below(NNODE) };
+            g_links[a][l] = CNodeAddress{ (uint16)r.below(g_forceLinks ? NUM_PATH_MAP_AREAS : NAREA), (uint16)r.below(NNODE) };
             auto& nv2 = g_navi[a][l];
             auto* raw = reinterpret_cast<uint8_t*>(&nv2);
             std::memset(raw, 0, sizeof nv2);
@@ -112,9 +124,9 @@ static uint32_t PathHash() {   // everything the functions under test may modify
     return h;
 }
 static uint32 Addr32(CNodeAddress a) { uint32 v; std::memcpy(&v, &a, 4); return v; }
-static CNodeAddress RandAddr(Rng& r, int pctInvalid = 8) {
+static CNodeAddress RandAddr(Rng& r, int pctInvalid = 8, int numAreas = NAREA) {
     if ((int)r.below(100) < pctInvalid) return CNodeAddress{ (uint16)0xFFFF, (uint16)r.below(NNODE) };
-    return CNodeAddress{ (uint16)r.below(NAREA), (uint16)r.below(NNODE) };
+    return CNodeAddress{ (uint16)r.below(numAreas), (uint16)r.below(NNODE) };
 }
 static std::string A(CNodeAddress a) { return std::to_string(a.m_wAreaId) + ":" + std::to_string(a.m_wNodeId); }
 
@@ -126,23 +138,41 @@ static CVector GenWorldPos(Rng& r) {
 }
 
 
-// outputs of the Steer* functions (steer, gas, brake, handbrake) + the whole vehicle afterwards
-struct SteerOut { float steer = BitsF(0xDEADBEEF), gas = BitsF(0xDEADBEEF), brake = BitsF(0xDEADBEEF); bool hand = false; std::vector<uint8> veh; };
+// the whole path fixture (nodes, links, ThePaths) as a byte blob: the AI functions that pick nodes change the car's route (and maybe node flags), so the second run starts from the same state
+static std::vector<uint8> g_pathSnap;
+static void SavePaths() {
+    g_pathSnap.resize(sizeof g_nodes + sizeof g_links + sizeof g_navi + sizeof g_naviLinks + sizeof g_linkLen + sizeof g_inter + sizeof(CPathFind));
+    uint8* p = g_pathSnap.data();
+    const auto put = [&](const void* src, size_t n) { std::memcpy(p, src, n); p += n; };
+    put(g_nodes, sizeof g_nodes); put(g_links, sizeof g_links); put(g_navi, sizeof g_navi); put(g_naviLinks, sizeof g_naviLinks); put(g_linkLen, sizeof g_linkLen); put(g_inter, sizeof g_inter); put(&ThePaths, sizeof(CPathFind));
+}
+static void RestorePaths() {
+    const uint8* p = g_pathSnap.data();
+    const auto get = [&](void* dst, size_t n) { std::memcpy(dst, p, n); p += n; };
+    get(g_nodes, sizeof g_nodes); get(g_links, sizeof g_links); get(g_navi, sizeof g_navi); get(g_naviLinks, sizeof g_naviLinks); get(g_linkLen, sizeof g_linkLen); get(g_inter, sizeof g_inter); get(&ThePaths, sizeof(CPathFind));
+}
+
+// outputs of the Steer* functions (steer, gas, brake, handbrake) + the whole vehicle afterwards (+ the path fixture)
+struct SteerOut { float steer = BitsF(0xDEADBEEF), gas = BitsF(0xDEADBEEF), brake = BitsF(0xDEADBEEF); bool hand = false; std::vector<uint8> veh, paths; };
 template<class P, class E>
 static bool CompareSteer(P&& port, E&& exe, std::string& d, const std::string& in) {
     std::vector<uint8> snap(g_veh.buf, g_veh.buf + sizeof g_veh.buf);
+    SavePaths();
+    const std::vector<uint8> pathsInit = g_pathSnap;
     SteerOut a, b;
     port(a);
     a.veh.assign(g_veh.buf, g_veh.buf + sizeof g_veh.buf);
+    SavePaths(); a.paths = g_pathSnap;
     std::memcpy(g_veh.buf, snap.data(), snap.size());
+    g_pathSnap = pathsInit; RestorePaths();
     exe(b);
     b.veh.assign(g_veh.buf, g_veh.buf + sizeof g_veh.buf);
+    SavePaths(); b.paths = g_pathSnap;
     Hit(a.gas != BitsF(0xDEADBEEF));
-    if (SameF(a.steer, b.steer) & SameF(a.gas, b.gas) & SameF(a.brake, b.brake) & (a.hand == b.hand) & SameBlob(a.veh.data(), b.veh.data(), a.veh.size())) return true;
-    d = in + " got " + F(a.steer) + "," + F(a.gas) + "," + F(a.brake) + "," + std::to_string(a.hand) + " exe " + F(b.steer) + "," + F(b.gas) + "," + F(b.brake) + "," + std::to_string(b.hand) + (a.veh == b.veh ? "" : " (vehicle differs)");
+    if (SameF(a.steer, b.steer) & SameF(a.gas, b.gas) & SameF(a.brake, b.brake) & (a.hand == b.hand) & SameBlob(a.veh.data(), b.veh.data(), a.veh.size()) & (a.paths == b.paths)) return true;
+    d = in + " got " + F(a.steer) + "," + F(a.gas) + "," + F(a.brake) + "," + std::to_string(a.hand) + " exe " + F(b.steer) + "," + F(b.gas) + "," + F(b.brake) + "," + std::to_string(b.hand) + (a.veh == b.veh ? "" : " (vehicle differs)") + (a.paths == b.paths ? "" : " (paths differ)");
     return false;
 }
-
 } // namespace cd
 
 static void TestCD() {
@@ -238,7 +268,6 @@ static void TestCD() {
 
     // two fake vehicle models (model info table entries 600 / 601 -> raw model info with the colmodel pointer at +0x14, bounding box first in the colmodel)
     {
-        static alignas(16) uint8 mi[2][0x80], cm[2][0x80];
         for (int i = 0; i < 2; ++i) { void* p = cm[i]; std::memcpy(mi[i] + 0x14, &p, 4); void* q = mi[i]; std::memcpy(reinterpret_cast<uint8*>(0xA9B0C8) + (600 + i) * 4, &q, 4); }
         const auto Rects = [](const char* name, unsigned va, float (*port)(CVehicle*, CVehicle*, float, float, CVector*, CVector*)) {
             Run(name, [va, port](Rng& r, std::string& d) {
@@ -354,6 +383,153 @@ static void TestCD() {
         if (same(a1, b1) && same(a2, b2)) return true;
         d = "pos " + V(v->GetPosition()) + " got " + A(a1) + "," + A(a2) + " exe " + A(b1) + "," + A(b2); return false;
     });
+
+    // WeaveFor*: the angle range [lower, upper] that is blocked by a ped / by another car
+    Run("CCarCtrl::WeaveForPed 0x426970", [MakeSteerVeh](Rng& r, std::string& d) {
+        auto* v = MakeSteerVeh(r);
+        alignas(16) static uint8 pedBuf[0x800];
+        std::memset(pedBuf, 0, sizeof pedBuf);
+        auto* ped = reinterpret_cast<CPed*>(pedBuf);
+        const CVector pp = r.below(2) ? CVector{ v->GetPosition().x + GenF(r, 20.f), v->GetPosition().y + GenF(r, 20.f), 0.f } : GenV(r, 100.f, S_ZERO | S_TINY);
+        ped->m_placement.m_vPosn = pp;
+        const float lo = GenF(r, r.below(3) ? 3.5f : 10.f, S_NAN | S_ZERO | S_DEN | S_TINY), hi = r.below(3) ? lo + r.f01() * 0.3f : GenF(r, 3.5f, S_NAN | S_ZERO | S_DEN | S_TINY);
+        float lo2 = lo, hi2 = hi;
+        if (r.below(3)) { const float h = CGeneral::GetATanOfXY(pp.x - v->GetPosition().x, pp.y - v->GetPosition().y); lo2 = h + (r.f01() - 0.5f) * 0.4f; hi2 = lo2 + r.f01() * 0.4f; }   // ranges around the bearing of the ped
+        float l1 = lo2, u1 = hi2, l2 = lo2, u2 = hi2;
+        CCarCtrl::WeaveForPed(ped, v, &l1, &u1);
+        oracle::Fn<void __cdecl(CPed*, CVehicle*, float*, float*)>(0x426970)(ped, v, &l2, &u2);
+        Hit(l1 != lo2 || u1 != hi2);
+        if (SameF(l1, l2) & SameF(u1, u2)) return true;
+        d = "veh " + V(v->GetPosition()) + " ped " + V(pp) + " range " + F(lo) + "," + F(hi) + " got " + F(l1) + "," + F(u1) + " exe " + F(l2) + "," + F(u2); return false;
+    });
+    Run("CCarCtrl::WeaveForOtherCar 0x426350", [MakeSteerVeh](Rng& r, std::string& d) {
+        auto* v = MakeSteerVeh(r);
+        v->m_autoPilot.m_nCarMission = MISSION_NONE;
+        static VehFx fx2;
+        std::memset(fx2.buf, 0, sizeof fx2.buf); std::memset(fx2.mat, 0, sizeof fx2.mat);
+        CVehicle* e = fx2.veh();
+        e->m_nModelIndex = 601;
+        e->m_matrix = reinterpret_cast<CMatrixLink*>(fx2.mat);
+        const CVector vp = v->GetPosition();
+        const auto set = [&](CVector& dst, const CVector& src) { dst.x = src.x; dst.y = src.y; dst.z = src.z; };
+        { const int sp0 = r.sp; r.sp = 0; 
+          const float ang = r.f01() * 6.2831853f, ca = std::cos(ang), sa = std::sin(ang);
+          set(e->m_matrix->GetRight(), CVector{ ca, sa, 0.f }); set(e->m_matrix->GetForward(), CVector{ -sa, ca, 0.f }); set(e->m_matrix->GetUp(), CVector{ 0.f, 0.f, 1.f });
+          const float dist = r.below(4) ? 2.f + r.f01() * 14.f : r.f01() * 60.f, a2 = r.f01() * 6.2831853f;
+          set(e->m_matrix->GetPosition(), CVector{ vp.x + std::cos(a2) * dist, vp.y + std::sin(a2) * dist, vp.z });
+          r.sp = sp0; }
+        e->m_vecMoveSpeed = GenV(r, 1.f, S_ZERO | S_TINY);
+        e->m_autoPilot.m_nCarMission = (eCarMission)(r.below(4) ? 0 : r.below(60));
+        v->m_vecMoveSpeed = GenV(r, 1.f, S_ZERO | S_TINY);
+        for (int i = 0; i < 2; ++i) {   // vehicle model 600, entity model 601 (random boxes)
+            float* bb = reinterpret_cast<float*>(cm[i]);
+            const float hx = 0.8f + r.f01() * 1.5f, hy = 1.5f + r.f01() * 3.f;
+            bb[0] = -hx; bb[1] = -hy * (0.7f + 0.3f * r.f01()); bb[2] = -1.f; bb[3] = hx; bb[4] = hy; bb[5] = 1.f;
+        }
+        const float lo = r.f01() * 6.28f, hi = r.below(2) ? lo : r.f01() * 6.28f;
+        float l1 = lo, u1 = hi, l2 = lo, u2 = hi;
+        CCarCtrl::WeaveForOtherCar(e, v, &l1, &u1);
+        oracle::Fn<void __cdecl(CEntity*, CVehicle*, float*, float*)>(0x426350)(e, v, &l2, &u2);
+        Hit(l1 != lo || u1 != hi);
+        if (SameF(l1, l2) & SameF(u1, u2)) return true;
+        d = "veh " + V(vp) + " ms " + V(v->m_vecMoveSpeed) + " ent " + V(e->GetPosition()) + " ems " + V(e->m_vecMoveSpeed) + " fwd " + V(e->m_matrix->GetForward()) + " range " + F(lo) + "," + F(hi) + " got " + F(l1) + "," + F(u1) + " exe " + F(l2) + "," + F(u2); return false;
+    });
+
+    // parking: the vehicle follows the nodes of its route
+    const auto ParkTest = [MakeSteerVeh](const char* name, unsigned va, void (*port)(CVehicle*, float*, float*, float*, bool*), std::initializer_list<eCarMission> missions) {
+        Run(name, [MakeSteerVeh, va, port, missions](Rng& r, std::string& d) {
+            BuildPaths(r.u32(), 90);
+            auto* v = MakeSteerVeh(r);
+            auto& ap = v->m_autoPilot;
+            ap.m_startingRouteNode = RandAddr(r, 0);
+            ap.m_currentAddress    = RandAddr(r, 0);
+            ap.m_nCarMission = *(missions.begin() + r.below((uint32)missions.size()));
+            if (ThePaths.m_pPathNodes[ap.m_startingRouteNode.m_wAreaId] && r.below(2)) {   // close to the node that is the target
+                const auto sp = g_nodes[ap.m_startingRouteNode.m_wAreaId][ap.m_startingRouteNode.m_wNodeId].GetPosition();
+                v->GetPosition() = CVector{ sp.x + GenF(r, r.below(2) ? 3.f : 20.f, S_ZERO | S_TINY), sp.y + GenF(r, r.below(2) ? 3.f : 20.f, S_ZERO | S_TINY), sp.z };
+            }
+            return CompareSteer(
+                [&](SteerOut& o) { port(v, &o.steer, &o.gas, &o.brake, &o.hand); },
+                [&](SteerOut& o) { oracle::Fn<void __cdecl(CVehicle*, float*, float*, float*, bool*)>(va)(v, &o.steer, &o.gas, &o.brake, &o.hand); },
+                d, "pos " + V(v->GetPosition()) + " ms " + V(v->m_vecMoveSpeed) + " start " + A(ap.m_startingRouteNode) + " cur " + A(ap.m_currentAddress) + " mission " + std::to_string((int)ap.m_nCarMission));
+        });
+    };
+    ParkTest("CCarCtrl::SteerAICarParkParallel 0x433BA0", 0x433BA0, &CCarCtrl::SteerAICarParkParallel, { MISSION_PARK_PARALLEL, MISSION_PARK_PARALLEL_2 });
+    ParkTest("CCarCtrl::SteerAICarParkPerpendicular 0x433EA0", 0x433EA0, &CCarCtrl::SteerAICarParkPerpendicular, { MISSION_PARK_PERPENDICULAR, MISSION_PARK_PERPENDICULAR_2 });
+
+    // traffic lights: the three path links of the vehicle decide
+    const auto MakeLightVeh = [MakeSteerVeh](Rng& r) {
+        BuildPaths(r.u32(), 90);
+        auto* v = MakeSteerVeh(r);
+        alignas(16) static uint8 handling[0x100];
+        std::memset(handling, 0, sizeof handling);
+        static const uint32 flags[] = { 0x0, 0x1000000, 0x2000000, 0x4000000, 0x8000000, 0x3000000, 0x5000000 };
+        const uint32 fl = flags[r.below(r.below(4) ? 4 : 7)];
+        std::memcpy(handling + 0xCC, &fl, 4);
+        void* hp = handling; std::memcpy(g_veh.buf + 0x384, &hp, 4);
+        auto& ap = v->m_autoPilot;
+        const auto PickLink = [&](CCarPathLinkAddress& dst, int8& sign) {
+            dst = r.below(10) == 0 ? CCarPathLinkAddress{ 63, 1023 } : CCarPathLinkAddress{ (size_t)r.below(NUM_PATH_MAP_AREAS), (size_t)r.below(NLINK) };
+            sign = r.below(2) ? 1 : -1;
+        };
+        PickLink(ap.m_nCurrentPathNodeInfo, ap._smthCurr);
+        PickLink(ap.m_nNextPathNodeInfo, ap._smthNext);
+        PickLink(ap.m_nPreviousPathNodeInfo, ap._smthPrev);
+        ap.m_currentAddress = RandAddr(r, 5, NUM_PATH_MAP_AREAS); ap.m_startingRouteNode = RandAddr(r, 5, NUM_PATH_MAP_AREAS); ap.m_endingRouteNode = RandAddr(r, 5, NUM_PATH_MAP_AREAS);
+        // addresses that are the "attached to" of the links make the direction checks pass
+        for (auto* pi : { &ap.m_nCurrentPathNodeInfo, &ap.m_nNextPathNodeInfo, &ap.m_nPreviousPathNodeInfo }) {
+            if (pi->m_wCarPathLinkId == 1023 && pi->m_wAreaId == 63) continue;
+            auto& nv = g_navi[pi->m_wAreaId][pi->m_wCarPathLinkId];
+            if (r.below(2)) { CNodeAddress* targets[] = { &ap.m_currentAddress, &ap.m_startingRouteNode, &ap.m_endingRouteNode }; std::memcpy(reinterpret_cast<uint8*>(&nv) + 4, targets[pi == &ap.m_nCurrentPathNodeInfo ? 0 : pi == &ap.m_nNextPathNodeInfo ? 1 : 2], 4); }
+            if (r.below(2)) {   // the vehicle stands close to the link
+                const auto lp = nv.m_posn; const auto dir = nv.m_dir; const float k = (r.f01() * 2 - 1) * 14.f;
+                v->GetPosition() = CVector{ (float)lp.x + (float)dir.x * k, (float)lp.y + (float)dir.y * k, 0.f };
+            }
+        }
+        v->SetStatus(r.below(2) ? STATUS_PHYSICS : STATUS_SIMPLE);
+        CTimer::m_snTimeInMillisecondsNonClipped = r.u32() & 0xFFFFF;
+        return v;
+    };
+    Run("CTrafficLights::ShouldCarStopForBridge 0x49D420", [MakeLightVeh](Rng& r, std::string& d) {
+        auto* v = MakeLightVeh(r);
+        auto& ap = v->m_autoPilot;
+        const bool a = CTrafficLights::ShouldCarStopForBridge(v), b = oracle::Fn<bool __cdecl(CVehicle*)>(0x49D420)(v);
+        Hit(a);
+        if (a == b) return true;
+        d = "cur " + std::to_string(*(uint16*)&ap.m_nCurrentPathNodeInfo) + " next " + std::to_string(*(uint16*)&ap.m_nNextPathNodeInfo) + " got " + std::to_string(a) + " exe " + std::to_string(b); return false;
+    });
+    Run("CTrafficLights::ShouldCarStopForLight 0x49D610", [MakeLightVeh](Rng& r, std::string& d) {
+        auto* v = MakeLightVeh(r);
+        const bool unkn = r.below(2);
+        const bool a = CTrafficLights::ShouldCarStopForLight(v, unkn), b = oracle::Fn<bool __cdecl(CVehicle*, bool)>(0x49D610)(v, unkn);
+        Hit(a);
+        if (a == b) return true;
+        d = "pos " + V(v->GetPosition()) + " unkn " + std::to_string(unkn) + " got " + std::to_string(a) + " exe " + std::to_string(b); return false;
+    });
+
+    // the main traffic AI: follows the links of the route (needs the next node -> PickNextNodeRandomly: rand() on both sides, seeded alike)
+    const auto FollowTest = [MakeLightVeh](const char* name, unsigned va, void (*port)(CVehicle*, float*, float*, float*, bool*)) { Run(name, [MakeLightVeh, va, port](Rng& r, std::string& d) {
+        g_forceLinks = true;
+        auto* v = MakeLightVeh(r);
+        g_forceLinks = false;
+        auto& ap = v->m_autoPilot;
+        ap.m_nCurrentLane = (uint8)r.below(4); ap.m_nNextLane = (uint8)r.below(4);
+        ap.m_nCarMission = r.below(4) ? MISSION_CRUISE : MISSION_NONE;
+        ap.m_nCarDrivingStyle = (eCarDrivingStyle)r.below(8);
+        ap.m_nCruiseSpeed = (uint8)(r.below(3) ? 10 + r.below(40) : r.u32());
+        ap.m_vecDestinationCoors = GenV(r, 100.f, S_ZERO | S_TINY);
+        ap.m_nTempAction = TEMPACT_NONE;
+        // the vehicle near the current link so that the node logic is exercised
+        const auto& cur = g_navi[ap.m_nCurrentPathNodeInfo.m_wAreaId][ap.m_nCurrentPathNodeInfo.m_wCarPathLinkId];
+        if (r.below(4)) v->GetPosition() = CVector{ (float)cur.m_posn.x + GenF(r, r.below(2) ? 12.f : 80.f, S_ZERO | S_TINY), (float)cur.m_posn.y + GenF(r, r.below(2) ? 12.f : 80.f, S_ZERO | S_TINY), 0.f };
+        const uint32 seed = r.u32();
+        return CompareSteer(
+            [&](SteerOut& o) { SeedBoth(seed); port(v, &o.steer, &o.gas, &o.brake, &o.hand); },
+            [&](SteerOut& o) { SeedBoth(seed); oracle::Fn<void __cdecl(CVehicle*, float*, float*, float*, bool*)>(va)(v, &o.steer, &o.gas, &o.brake, &o.hand); },
+            d, "pos " + V(v->GetPosition()) + " ms " + V(v->m_vecMoveSpeed) + " style " + std::to_string((int)ap.m_nCarDrivingStyle) + " cruise " + std::to_string(ap.m_nCruiseSpeed) + " cur " + std::to_string(*(uint16*)&ap.m_nCurrentPathNodeInfo) + " next " + std::to_string(*(uint16*)&ap.m_nNextPathNodeInfo) + " seed " + std::to_string(seed));
+    }); };
+    FollowTest("CCarCtrl::SteerAICarWithPhysicsFollowPath 0x434900", 0x434900, &CCarCtrl::SteerAICarWithPhysicsFollowPath);
+    FollowTest("CCarCtrl::SteerAICarWithPhysicsFollowPath_Racing 0x435830", 0x435830, &CCarCtrl::SteerAICarWithPhysicsFollowPath_Racing);
 
     // the world is empty here (zeroed sector lists), so the traffic scans only exercise the geometry / speed arithmetic around them
     Run("CCarCtrl::FindMaximumSpeedForThisCarInTraffic 0x434400", [](Rng& r, std::string& d) {
@@ -604,7 +780,9 @@ static void TestCD() {
         const bool low = r.below(2);
         CNodeAddress a1{ 0x7777, 0x8888 }, a2 = a1, b1 = a1, b2 = a1;
         BuildPaths(sd, 90);
+        static std::string where; where = "Find2Nodes seed " + std::to_string(sd) + " pos " + V(pos) + " low " + std::to_string(low) + " PORT"; oracle::g_where = where.c_str();
         ThePaths.Find2NodesForCarCreation(pos, &a1, &a2, low);
+        where = "Find2Nodes seed " + std::to_string(sd) + " pos " + V(pos) + " low " + std::to_string(low) + " EXE";
         const uint32_t h1 = PathHash();
         BuildPaths(sd, 90);
         oracle::Fn<void __fastcall(CPathFind*, int, float, float, float, CNodeAddress*, CNodeAddress*, uint32)>(0x452090)(&ThePaths, 0, pos.x, pos.y, pos.z, &b1, &b2, low);

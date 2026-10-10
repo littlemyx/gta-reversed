@@ -203,13 +203,17 @@ bool CGameLogic::IsPlayerUse2PlayerControls(CPed* ped) {
 
 // 0x4416E0
 bool CGameLogic::IsPointWithinLineArea(const CVector* points, uint32 numPoints, float x, float y) {
+    // The exe counts the edges hit by the +X ray and answers with the PARITY of the count (even-odd rule); the port used to answer "any edge hit"
+    // (0x4416E0: `inc [count]` per hit, `and eax, 1` at the end), which flagged points OUTSIDE the polygon whose ray crossed it twice as inside
+    // (=> a spurious wanted level 4 from SetPlayerWantedLevelForForbiddenTerritories).
+    int32 hits = 0;
     for (auto&& [i, point] : rngv::enumerate(std::span{points, numPoints})) {
         const auto nextPoint = (i != numPoints - 1) ? points[i + 1] : points[0];
         if (CCollision::Test2DLineAgainst2DLine(x, y, 1'000'000.0f, 0.0f, point.x, point.y, nextPoint.x - point.x, nextPoint.y - point.y))
-            return true;
+            hits++;
     }
 
-    return false;
+    return (hits & 1) != 0;
 }
 
 // 0x4416C0
@@ -437,20 +441,20 @@ void CGameLogic::RestorePlayerStuffDuringResurrection(CPlayerPed* player, CVecto
 // @param immediately   Do position check without waiting for the frame counter.
 // @addr 0x441770
 void CGameLogic::SetPlayerWantedLevelForForbiddenTerritories(bool immediately) {
-    const auto  ped = FindPlayerPed();
-    const auto& coords = ped->GetPosition();
+    const auto ped = FindPlayerPed();
 
-    if ((!immediately && (CTimer::GetFrameCounter() % 32) != 18) || coords.z > 950.0f)
+    if ((!immediately && (CTimer::GetFrameCounter() % 32) != 18) || FindPlayerCoors().z > 950.0f) // NOTE: FindPlayerCoors (the vehicle's position when driving), not the ped's
         return;
 
     if (ped->GetIntelligence()->GetTaskSwim() || ped->GetWantedLevel() >= eWantedLevel::WANTED_LEVEL_4)
         return;
 
     const auto SetWantedIfInArea = [&](auto* vertices, size_t size) {
+        const auto coords = FindPlayerCoors(); // fetched again for every area, as in the exe
         if (IsPointWithinLineArea(vertices, size, coords.x, coords.y)) {
             ped->SetWantedLevel(eWantedLevel::WANTED_LEVEL_4);
             if (immediately) {
-                ped->GetWanted()->m_LastTimeWantedLevelChanged = 0;
+                FindPlayerWanted()->m_LastTimeWantedLevelChanged = 0;
             }
         }
     };

@@ -926,6 +926,40 @@ static void TestDamageManagerVehicle() {
     });
 }
 
+static void TestVehicleMisc2() {
+    using namespace wfx;
+    auto veh = [](uint8* b) -> CVehicle& { return *reinterpret_cast<CVehicle*>(b); };
+    auto speedInit = [](Rng& rr, uint8* b) {
+        vfx::Gen(rr, b);
+        auto& v = *reinterpret_cast<CVehicle*>(b);
+        const float sc = rr.below(3) == 0 ? 0.05f : 1.f;
+        v.m_vecMoveSpeed = GenV(rr, sc); v.m_vecTurnSpeed = GenV(rr, sc * 0.05f);
+        if (rr.below(3) == 0) { v.m_vecMoveSpeed.x = v.m_vecMoveSpeed.y = 0.f; }
+        Put<uint32_t>(b, 0x590, rr.below(3) == 0 ? 5 : rr.below(12));
+        if (rr.below(2)) Put<float>(b, vfx::MAT + 0x28, GenF(rr, 0.2f));                // up.z near the 0.1 thresholds
+    };
+    Run("CVehicle::CanPedStepOutCar 0x6D1F30", [&](Rng& r, std::string& d) {
+        const bool ign = r.below(2);
+        return Obj<vfx::ALL>(r, d, speedInit, [&](uint8* b) { Hit(true); return (uint32_t)veh(b).CVehicle::CanPedStepOutCar(ign); },
+            [&](uint8* b) { return (uint32_t)oracle::Fn<bool __fastcall(void*, int, bool)>(0x6D1F30)(b, 0, ign); }, 0, 0xFF, 0, 0, vfx::Fix);
+    });
+    Run("CVehicle::CanPedLeanOut 0x6D5CF0", [&](Rng& r, std::string& d) {
+        const int k = r.below(11);
+        return Obj<vfx::ALL>(r, d, [&](Rng& rr, uint8* b) { vfx::Gen(rr, b); Put<uint8>(b, vfx::HND + 0xDE, (uint8)(rr.below(2) ? 0x0D + rr.below(8) : rr.below(256))); },
+            [&](uint8* b) { return (uint32_t)veh(b).CVehicle::CanPedLeanOut(k == 10 ? nullptr : (CPed*)vfx::g_ped[k]); },
+            [&](uint8* b) { return (uint32_t)oracle::Fn<bool __fastcall(void*, int, void*)>(0x6D5CF0)(b, 0, k == 10 ? nullptr : vfx::g_ped[k]); }, 0, 0xFF, 0, 0, vfx::Fix);
+    });
+    Run("CVehicle::SetCollisionLighting 0x6D0CA0", [&](Rng& r, std::string& d) {
+        const uint8 l = (uint8)r.below(256);
+        return Obj<vfx::ALL>(r, d, [&](Rng& rr, uint8* b) { vfx::Gen(rr, b); }, [&](uint8* b) { veh(b).CVehicle::SetCollisionLighting(tColLighting(l)); return 0u; },
+            [&](uint8* b) { oracle::Fn<void __fastcall(void*, int, int)>(0x6D0CA0)(b, 0, l); return 0u; }, 2, 0, 0, 0, vfx::Fix);
+    });
+    Run("CVehicle::UpdateLightingFromStoredPolys 0x6D0CC0", [&](Rng& r, std::string& d) {
+        return Obj<vfx::ALL>(r, d, [&](Rng& rr, uint8* b) { vfx::Gen(rr, b); }, [&](uint8* b) { veh(b).CVehicle::UpdateLightingFromStoredPolys(); return 0u; },
+            [&](uint8* b) { oracle::Fn<void __fastcall(void*, int)>(0x6D0CC0)(b, 0); return 0u; }, 2, 0, 0, 0, vfx::Fix);
+    });
+}
+
 static void TestVehicles() {
     TestDamageManager();
     TestTransmission();
@@ -941,4 +975,5 @@ static void TestVehicles() {
     TestBikeBmxBoat();
     TestProcessFlyingCarStuff();
     TestDamageManagerVehicle();
+    TestVehicleMisc2();
 }

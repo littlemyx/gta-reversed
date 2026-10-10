@@ -40,7 +40,7 @@
 
 #include <extensions/Casting.hpp>
 
-#ifdef NOTSA_STANDALONE_RUN
+#if defined(NOTSA_STANDALONE_RUN) || defined(NOTSA_INPUT_INJECT)
 // The run build has no profiler client: without a connected server Tracy queues every zone event in memory forever (~40 MB/s leak, 2 GB address space gone in a minute)
 #undef TRACY_ENABLE
 #endif

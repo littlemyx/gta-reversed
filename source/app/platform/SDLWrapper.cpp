@@ -9,7 +9,21 @@
 #include "UIRenderer.h"
 #ifdef NOTSA_STANDALONE_RUN
 #include "standalone/Fixups.h"
+#endif
 #include <algorithm>
+#if defined(NOTSA_STANDALONE_RUN)
+#define NOTSA_INJ_LOG(...) notsa::standalone::Fixups::Log(__VA_ARGS__)
+#else
+#include <cstdarg>
+static void InjLogV(const char* fmt, ...) {
+    char buf[256];
+    va_list va;
+    va_start(va, fmt);
+    vsnprintf(buf, sizeof(buf), fmt, va);
+    va_end(va);
+    NOTSA_LOG_INFO("[inject] {}", buf);
+}
+#define NOTSA_INJ_LOG(...) InjLogV(__VA_ARGS__)
 #endif
 
 static bool IsInFullscreen()
@@ -20,9 +34,10 @@ static bool IsInFullscreen()
 }
 
 
-#ifdef NOTSA_STANDALONE_RUN
+#if defined(NOTSA_STANDALONE_RUN) || defined(NOTSA_INPUT_INJECT)
 // Test-only input injector: NOTSA_STANDALONE_INPUT="wait:3000;key:return;wait:500;down:w;wait:2000;up:w;..." (also a path to a file with the same text).
 // Times are ms of wall clock; `wait:N` advances the script clock by N after the previous action; `key:K` = down now + up 150 ms later;
+// NOTSA_INPUT_INJECT (cmake -DGTASA_INPUT_INJECT=ON) enables it in the ASI/DLL build too (logs through spdlog instead of Fixups).
 // K = return|escape|up|down|left|right|space|tab|lshift|lctrl|f1..f12|<single char>.
 #include <string>
 #include <vector>
@@ -62,7 +77,7 @@ void InjInit() {
     }
     std::stable_sort(s_InjEvents.begin(), s_InjEvents.end(), [](auto& a, auto& b) { return a.t < b.t; });
     s_InjStart = GetTickCount64();
-    notsa::standalone::Fixups::Log("input injector: %u events", (unsigned)s_InjEvents.size());
+    NOTSA_INJ_LOG("input injector: %u events", (unsigned)s_InjEvents.size());
 }
 void InjPump() {
     if (!s_InjInit) InjInit();
@@ -75,10 +90,67 @@ void InjPump() {
         e.key.down     = ev.down;
         e.key.scancode = SDL_GetScancodeFromKey(ev.key, nullptr);
         SDL_PushEvent(&e);
-        notsa::standalone::Fixups::Log("injected key %d %s at %u ms", (int)ev.key, ev.down ? "down" : "up", (unsigned)now);
+        NOTSA_INJ_LOG("injected key %d %s at %u ms", (int)ev.key, ev.down ? "down" : "up", (unsigned)now);
     }
 }
 } // namespace
+
+#ifndef NOTSA_STANDALONE_RUN
+// DLL build only: NOTSA_STANDALONE_SCREENSHOT=<k> writes frame_<n>.bmp (back buffer, 24 bit) every k-th ProcessEvents call (first NOTSA_STANDALONE_SCREENSHOT_MAX=30 files)
+static void InjDumpBackBuffer() {
+    static int s_Every = -2, s_Frame = 0, s_Written = 0;
+    if (s_Every == -2) {
+        const char* e = std::getenv("NOTSA_STANDALONE_SCREENSHOT");
+        s_Every = e ? (std::atoi(e) > 0 ? std::atoi(e) : 1) : -1;
+    }
+    const char* mx = std::getenv("NOTSA_STANDALONE_SCREENSHOT_MAX");
+    if (s_Every < 0 || s_Written >= (mx ? std::atoi(mx) : 30) || (s_Frame++ % s_Every) != 0) {
+        return;
+    }
+    auto* dev = (IDirect3DDevice9*)RwD3D9GetCurrentD3DDevice();
+    if (!dev) {
+        return;
+    }
+    IDirect3DSurface9 *bb = nullptr, *sys = nullptr;
+    if (FAILED(dev->GetBackBuffer(0, 0, D3DBACKBUFFER_TYPE_MONO, &bb)) || !bb) {
+        return;
+    }
+    D3DSURFACE_DESC d{};
+    bb->GetDesc(&d);
+    if (SUCCEEDED(dev->CreateOffscreenPlainSurface(d.Width, d.Height, d.Format, D3DPOOL_SYSTEMMEM, &sys, nullptr)) && SUCCEEDED(dev->GetRenderTargetData(bb, sys))) {
+        D3DLOCKED_RECT lr{};
+        if (SUCCEEDED(sys->LockRect(&lr, nullptr, D3DLOCK_READONLY))) {
+            char name[64];
+            std::snprintf(name, sizeof(name), "frame_%d.bmp", s_Written++);
+            if (FILE* f = std::fopen(name, "wb")) {
+                const uint32_t rowBytes = (d.Width * 3 + 3) & ~3u, imgSize = rowBytes * d.Height;
+                uint8_t        hdr[54] = { 'B', 'M' };
+                auto           put32   = [&](int o, uint32_t v) { std::memcpy(hdr + o, &v, 4); };
+                put32(2, 54 + imgSize); put32(10, 54); put32(14, 40); put32(18, d.Width); put32(22, d.Height);
+                hdr[26] = 1; hdr[28] = 24; put32(34, imgSize);
+                std::fwrite(hdr, 1, 54, f);
+                std::vector<uint8_t> row(rowBytes, 0);
+                for (int y = (int)d.Height - 1; y >= 0; y--) {
+                    const uint8_t* src = (const uint8_t*)lr.pBits + (size_t)y * lr.Pitch;
+                    for (UINT x = 0; x < d.Width; x++) {
+                        if (d.Format == D3DFMT_R5G6B5) {
+                            const uint16_t v = ((const uint16_t*)src)[x];
+                            row[x * 3 + 0] = (uint8_t)((v & 31) * 255 / 31); row[x * 3 + 1] = (uint8_t)(((v >> 5) & 63) * 255 / 63); row[x * 3 + 2] = (uint8_t)(((v >> 11) & 31) * 255 / 31);
+                        } else {
+                            row[x * 3 + 0] = src[x * 4 + 0]; row[x * 3 + 1] = src[x * 4 + 1]; row[x * 3 + 2] = src[x * 4 + 2];
+                        }
+                    }
+                    std::fwrite(row.data(), 1, rowBytes, f);
+                }
+                std::fclose(f);
+            }
+            sys->UnlockRect();
+        }
+    }
+    if (sys) sys->Release();
+    bb->Release();
+}
+#endif
 #endif
 
 namespace notsa {
@@ -93,8 +165,11 @@ void Terminate() {
 
 void ProcessEvents() {
     ZoneScoped;
-#ifdef NOTSA_STANDALONE_RUN
+#if defined(NOTSA_STANDALONE_RUN) || defined(NOTSA_INPUT_INJECT)
     InjPump();
+#ifndef NOTSA_STANDALONE_RUN
+    InjDumpBackBuffer();
+#endif
 #endif
 
     // Now process events

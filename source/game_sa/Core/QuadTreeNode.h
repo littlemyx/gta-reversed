@@ -28,7 +28,7 @@ node level 2
 
  Total rectangles = 4^startLevel
 */
-
+template<typename T> class CQuadTreeNode; namespace notsa::detail { NOTSA_GLOBAL_SYNTH(s_QuadTreeNodePool, 0xB745BC, (CPool<CQuadTreeNode<void*>>*), {}); } // ONE pool for every CQuadTreeNode<T> instantiation (a class-template static would be one variable per T)
 template<typename T>
 class CQuadTreeNode {
 public:
@@ -38,7 +38,7 @@ public:
 
 protected:
     using CQuadTreeNodePool = CPool<CQuadTreeNode<void*>>;
-    static inline NOTSA_GLOBAL(ms_pQuadTreeNodePool, 0xB745BC, (CQuadTreeNodePool*), {});
+    static inline NOTSA_GLOBAL_ALIAS(ms_pQuadTreeNodePool, 0xB745BC, (CQuadTreeNodePool*), notsa::detail::s_QuadTreeNodePool);
 
 public:
     static void* operator new(size_t sz) {

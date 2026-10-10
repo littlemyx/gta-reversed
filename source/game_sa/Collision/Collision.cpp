@@ -18,6 +18,8 @@
 
 #include "TaskComplexEnterCarAsDriver.h"
 #include "TaskComplexEnterCarAsPassenger.h"
+#include "game_sa/DetachedShared.h"
+#line 21
 
 #define NOTSA_VANILLA_COLLISIONS // TODO: move to config.h?
 
@@ -2368,7 +2370,7 @@ bool CCollision::ProcessVerticalLine(
     CalculateTrianglePlanes(cd);
 
     // Original: static (the `valid` flag is reset on every call, the rest is only read if it's set)
-    static auto& storedColPoly = StaticRef<CStoredCollPoly>(0x9659FC);
+    NOTSA_GLOBAL_LOCAL(storedColPoly, 0x9659FC, (CStoredCollPoly), {});
     storedColPoly.valid = false;
 
     for (auto i = 0; i < cd->m_nNumTriangles; i++) {
@@ -3608,19 +3610,19 @@ constexpr size_t COL_CACHE_SIZE = 100;
 using ColCache = std::array<CColCacheEntry, COL_CACHE_SIZE>;
 
 //! Cache used currently
-static inline auto& gpColCache = StaticRef<ColCache*>(0x9655CC);
+static inline NOTSA_GLOBAL(gpColCache, 0x9655CC, (ColCache*), {});
 
 //! Entries in the cache that is used currently
-static inline auto& gColCacheNumEntries = StaticRef<uint32>(0x9655D8);
+static inline NOTSA_GLOBAL(gColCacheNumEntries, 0x9655D8, (uint32), {});
 
 //! Unused
-static inline auto& gpColCache2 = StaticRef<ColCache*>(0x9655C8);
+static inline NOTSA_GLOBAL(gpColCache2, 0x9655C8, (ColCache*), {});
 
 //! Fuck knows
-static inline auto& gbTryDoubleSidedCollision = StaticRef<bool>(0x9655E4);
+static inline NOTSA_GLOBAL(gbTryDoubleSidedCollision, 0x9655E4, (bool), {});
 
 //! Last "distance" that wasn'plSpCenterDist colliding - result from the binary search
-static inline auto& gLastRadiusUsedInCollisionPreventionOfCamera = StaticRef<float>(0xB6EC6C);
+static inline NOTSA_GLOBAL_ALIAS(gLastRadiusUsedInCollisionPreventionOfCamera, 0xB6EC6C, (float), notsa::shared::CamColLastRadius);
 
 // 0x415590
 bool CCollision::SphereCastVsBBox(
@@ -3955,9 +3957,9 @@ bool CCollision::CheckCameraCollisionVehicles(
 ) {
     ZoneScoped;
 
-    static auto& gpLastSittingOnEntity   = StaticRef<CEntity*>(0x9689D8);
-    static auto& gFramesSittingOnTimeOut = StaticRef<int32>(0x9689D4);
-    static auto& gFramesToConsiderSittingOnStillTrue = StaticRef<int32>(0x8A5B1C); // 30
+    NOTSA_GLOBAL_LOCAL(gpLastSittingOnEntity, 0x9689D8, (CEntity*), {});
+    NOTSA_GLOBAL_LOCAL(gFramesSittingOnTimeOut, 0x9689D4, (int32), {});
+    NOTSA_GLOBAL_LOCAL(gFramesToConsiderSittingOnStillTrue, 0x8A5B1C, (int32), { 30 }); // 30
 
     bool anyCollided = false;
     for (auto* const entity : CWorld::ms_aRepeatSectors[Y & 0xF][X & 0xF].Vehicles) { // Original uses `& 0xF` (even for negative values)
@@ -4039,10 +4041,10 @@ bool CCollision::CheckCameraCollisionObjects(
 }
 
 // Ah, yes, the ultimate solution, just use static variables!
-static inline auto& gnBottom = StaticRef<int32>(0x965598);
-static inline auto& gnTop = StaticRef<int32>(0x965590);
-static inline auto& gnRight = StaticRef<int32>(0x965594);
-static inline auto& gnLeft = StaticRef<int32>(0x96559C);
+static inline NOTSA_GLOBAL(gnBottom, 0x965598, (int32), {});
+static inline NOTSA_GLOBAL(gnTop, 0x965590, (int32), {});
+static inline NOTSA_GLOBAL(gnRight, 0x965594, (int32), {});
+static inline NOTSA_GLOBAL(gnLeft, 0x96559C, (int32), {});
 
 // 0x4154A0
 bool CCollision::CheckPeds(

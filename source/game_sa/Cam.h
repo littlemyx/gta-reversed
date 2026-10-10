@@ -17,7 +17,7 @@ class CEntity;
 class CPed;
 class CVehicle;
 
-extern bool& gbFirstPersonRunThisFrame;
+NOTSA_GLOBAL_EXTERN(gbFirstPersonRunThisFrame, (bool));
 
 class CCam {
 public:

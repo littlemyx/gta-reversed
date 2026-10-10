@@ -3,14 +3,6 @@
 
 #include "Clouds.h"
 #include "PostEffects.h"
-#ifndef NOTSA_GLOBAL_LOCAL_NS // B04: function-local 'auto& v = StaticRef<T>(addr)' WITHOUT 'static' in address mode (NOTSA_GLOBAL_LOCAL says 'static': changes the object code)
-#ifdef NOTSA_GLOBALS_DETACHED
-#define NOTSA_GLOBAL_LOCAL_NS(name, addr, type, ...) static std::type_identity_t<NOTSA_UNPAREN type> name __VA_ARGS__
-#else
-#define NOTSA_GLOBAL_LOCAL_NS(name, addr, type, ...) auto& name = StaticRef<NOTSA_UNPAREN type>(addr)
-#endif
-#endif
-#line 6
 
 NOTSA_GLOBAL(CurrentFogIntensity, 0x8D5798, (float), { 1.0f });
 

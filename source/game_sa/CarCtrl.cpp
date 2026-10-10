@@ -36,14 +36,6 @@
 #include <bit>
 #include "game_sa/DetachedShared.h"
 #line 37
-#ifndef NOTSA_GLOBAL_LOCAL_NS // B04: function-local 'auto& v = StaticRef<T>(addr)' WITHOUT 'static' in address mode (NOTSA_GLOBAL_LOCAL says 'static': changes the object code)
-#ifdef NOTSA_GLOBALS_DETACHED
-#define NOTSA_GLOBAL_LOCAL_NS(name, addr, type, ...) static std::type_identity_t<NOTSA_UNPAREN type> name __VA_ARGS__
-#else
-#define NOTSA_GLOBAL_LOCAL_NS(name, addr, type, ...) auto& name = StaticRef<NOTSA_UNPAREN type>(addr)
-#endif
-#endif
-#line 37
 
 NOTSA_GLOBAL(apCarsToKeep, 0x969084, (CVehicle*[2]), {});
 NOTSA_GLOBAL(aCarsToKeepTime, 0x96907C, (std::array<uint32, 2>), {});

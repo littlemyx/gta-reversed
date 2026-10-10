@@ -4,14 +4,6 @@
 
 #include "ClothesBuilder.h"
 #include "PedClothesDesc.h"
-#ifndef NOTSA_GLOBAL_LOCAL_NS // B04: function-local 'auto& v = StaticRef<T>(addr)' WITHOUT 'static' in address mode (NOTSA_GLOBAL_LOCAL says 'static': changes the object code)
-#ifdef NOTSA_GLOBALS_DETACHED
-#define NOTSA_GLOBAL_LOCAL_NS(name, addr, type, ...) static std::type_identity_t<NOTSA_UNPAREN type> name __VA_ARGS__
-#else
-#define NOTSA_GLOBAL_LOCAL_NS(name, addr, type, ...) auto& name = StaticRef<NOTSA_UNPAREN type>(addr)
-#endif
-#endif
-#line 7
 
 auto& playerImg = StaticRef<CDirectory>(0xBC12C0);
 NOTSA_GLOBAL(playerImgEntries, 0xBBCDC8, (CDirectory::DirectoryInfo[550]), {}); // 550 entries (playerImg.Init(550, ...)), NOT one: the table audit declared a single DirectoryInfo

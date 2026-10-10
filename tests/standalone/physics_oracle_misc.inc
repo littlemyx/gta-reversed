@@ -78,7 +78,7 @@ static void TestMisc() {
         alignas(16) static float camMat[16];
         for (auto& v : camMat) v = GenF(r, r.below(2) ? 1.f : 3000.f);
         if (r.below(3)) { camMat[12] = r.below(2) ? 85.f + GenF(r, 50.f) : 1683.f + GenF(r, 50.f); camMat[13] = r.below(2) ? -1020.f + GenF(r, 50.f) : -1956.f + GenF(r, 50.f); }   // near the two tunnel points
-        for (int i : { 4, 5, 6, 12, 13, 14 }) if (!std::isfinite(camMat[i])) return true;   // NaN / inf camera: std::min({..}) vs the exe's compare chain differ on NaN; not reachable in game
+        for (int i : { 4, 5, 6, 12, 13, 14 }) if (!(std::fabs(camMat[i]) < 1e15f)) return true;   // NaN / inf / huge camera values: std::min({..}) vs the exe's compare chain differ on NaN, the 2D normalise squares overflow float but not x87; not reachable in game
         *reinterpret_cast<uint32_t*>(0xB6F028 + 0x14) = (uint32_t)(uintptr_t)camMat;   // TheCamera.m_matrix
         CCullZones::CurrentFlags_Camera = r.below(4) ? 0x2000 : (int32)r.u32();
         CTimer::ms_fTimeStep = r.below(8) ? r.f01() * 3.f : GenF(r, 4.f);

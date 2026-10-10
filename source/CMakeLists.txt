@@ -796,6 +796,10 @@ if (${RE_PROJECT}_RW_LIBRW)
         game_sa/PedIntelligence.cpp
         game_sa/Tasks/TaskManager.cpp
         game_sa/Tasks/Task.cpp
+        # --- sources needed by logic_oracle_dm.inc
+        # --- sources needed by logic_oracle_pop.inc
+        # --- sources needed by logic_oracle_scan.inc
+        # --- sources needed by logic_oracle_misc.inc
         standalone/FtolExe.cpp
     )
     target_compile_features(logic_oracle_test PRIVATE cxx_std_23)

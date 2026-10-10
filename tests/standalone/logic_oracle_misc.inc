@@ -1,0 +1,2 @@
+// (e) zones / cheats / stats / streaming / gangs: see logic_oracle_wanted.inc for the fixture pattern (Run / Case / oracle::Fn)
+static void TestMisc() {}

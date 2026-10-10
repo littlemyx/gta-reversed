@@ -173,18 +173,16 @@ uint32 CGeneral::GetNodeHeadingFromVector(float x, float y) {
 * @addr 0x53CE30
 */
 bool CGeneral::SolveQuadratic(float a, float b, float c, float& x1, float& x2) {
-    // x12 = (-b ± √(b²-4ac)) / 2a
-
-    const auto discr = b * b - 4.f * a * c;
-    if (discr < 0.0f) {
+    // x12 = (-b ± √(b²-4ac)) / 2a, in the exe's x87 form (0x53CE30): disc = b*b - (a*c)*4, recip = 1 / a, x = ((±-b ± s) * recip) * 0.5
+    const double discr = (double)b * b - ((double)a * c) * 4.0f;
+    if (discr < 0.0f) { // `fcom; test ah, 5; jp`: NaN continues
         return false; // No solution
     }
 
-
-    const auto discriminantSqrt = std::sqrt(discr);
-    const auto denom = 1.f / (2.f * a);
-    x1 = (-b - discriminantSqrt) * denom;
-    x2 = (-b + discriminantSqrt) * denom;
+    const double s     = std::sqrt(discr);
+    const double recip = 1.0 / (double)a;
+    x2 = (float)(((s - b) * recip) * 0.5f);
+    x1 = (float)(((-(double)b - s) * recip) * 0.5f);
     return true;
 }
 

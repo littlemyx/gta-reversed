@@ -43,6 +43,19 @@ void NormaliseExt(CVector& v) {
         v.z = (float)(v.z * recip);
     }
 }
+
+// 0x44E480 - `CVector2D::Normalise` as the original evaluates it: the sum of squares and the reciprocal root stay in the FPU (extended precision),
+// the components are stored as float. A length of 0 (or less) only writes `x = 1` (NaN takes the sqrt path).
+void Normalise2DExt(float& x, float& y) {
+    const double sumSq = (double)x * x + (double)y * y;
+    if (sumSq <= 0.0) {
+        x = 1.0f;
+    } else {
+        const double recip = 1.0 / std::sqrt(sumSq);
+        x = (float)(x * recip);
+        y = (float)(y * recip);
+    }
+}
 }; // namespace
 
 void CPathFind::InjectHooks() {
@@ -463,8 +476,9 @@ CVector CPathFind::TakeWidthIntoAccountForWandering(CNodeAddress nodeAddress, in
 
     auto node         = GetPathNode(nodeAddress);
     auto basePosition = node->GetPosition();
-    auto offsetX      = float(node->m_nPathWidth * ((randomSeed % 16) - 7)); // bottom 8 bits remapped to [-7 : +8]
-    auto offsetY      = float(node->m_nPathWidth * (((randomSeed / 16) % 16) - 7)); // top 8 bits remapped to [-7 : +8]
+    // NOTE: The original masks the (sign extended) seed, `%` / `/` would differ for negative seeds
+    auto offsetX      = float(node->m_nPathWidth * ((randomSeed & 0xF) - 7)); // bottom 4 bits remapped to [-7 : +8]
+    auto offsetY      = float(node->m_nPathWidth * (((randomSeed >> 4) & 0xF) - 7)); // next 4 bits remapped to [-7 : +8]
     auto offset       = CVector{ offsetX * 0.00775f, offsetY * 0.00775f, 0.f };
     return basePosition + offset;
 }
@@ -884,71 +898,76 @@ void CPathFind::SetLinksBridgeLights(float fXMin, float fXMax, float fYMin, floa
     }
 }
 
-namespace detail {
-// NOTSA
-CVector GetPosnBetweenNodesForScript(CPathNode* nodeA, CVector2D dir) {
-    return nodeA->GetPosition() + CVector{dir.GetPerpLeft() * ((float)nodeA->m_nPathWidth / 16.f + 2.7f)};
-}
-};
-
 // 0x4505E0
 CVector CPathFind::FindNodeCoorsForScript(CNodeAddress address, bool* bFound) {
-    const auto SetFound = [&](bool found) {
+    if (address.m_wAreaId == (uint16)-1 || !m_pPathNodes[address.m_wAreaId]) {
         if (bFound) {
-            *bFound = found;
+            *bFound = false;
         }
-    };
-    if (!address.IsValid() || !IsAreaNodesAvailable(address)) {
-        SetFound(false);
         return {};
-    } else {
-        SetFound(true);
+    }
+    if (bFound) {
+        *bFound = true;
+    }
 
-        const auto node = GetPathNode(address);
-        const auto nodePos = node->GetPosition();
- 
-        // If this node has a link return some kind of position between this and the first link
-        if (node->m_nPathWidth && node->m_nNumLinks) {
-            if (const auto firstLink = m_pNodeLinks[node->m_wBaseLinkId]) {
-                if (const auto firstLinkedNode = GetPathNode(*firstLink)) {
-                    auto dir = CVector2D{ firstLinkedNode->GetPosition() - nodePos }.Normalized();
+    const auto& node    = m_pPathNodes[address.m_wAreaId][address.m_wNodeId];
+    const auto  nodePos = node.GetPosition();
 
-                    // By negating here we invert the direction
-                    dir = dir.x >= 0 ? dir : -dir;
-
-                    return detail::GetPosnBetweenNodesForScript(node, dir);
-                }
-            }
-        }
-
-        // Otherwise just return this node's position
+    // Without a width, or without links, this is just the node's position
+    if (!node.m_nPathWidth || !node.m_nNumLinks) {
         return nodePos;
     }
+
+    // The node's first link (NOTE: the area of the linked node can be invalid, the original doesn't check that)
+    const auto link = m_pNodeLinks[address.m_wAreaId][node.m_wBaseLinkId];
+    if (!m_pPathNodes[link.m_wAreaId]) {
+        return nodePos;
+    }
+    const auto linkedPos = m_pPathNodes[link.m_wAreaId][link.m_wNodeId].GetPosition();
+
+    // Direction to the linked node (stored as float)
+    float dx = (float)((double)linkedPos.x - nodePos.x);
+    float dy = (float)((double)linkedPos.y - nodePos.y);
+    Normalise2DExt(dx, dy); // 0x44E480
+
+    // The (left) perpendicular of the direction (that is flipped to point to +X, NaN counts as +X), at `width / 16 + 2.7` distance
+    const auto perp   = dx < 0.0f ? CVector{ dy, -dx, 0.0f } : CVector{ -dy, dx, 0.0f };
+    const auto offset = (float)((double)node.m_nPathWidth * 0.0625f + 2.7f); // 0x858620, 0x859AA8
+    return nodePos + CVector{ perp.x * offset, perp.y * offset, perp.z * offset };
 }
 
 // 0x450780
 CVector CPathFind::FindNodeCoorsForScript(CNodeAddress nodeAddrA, CNodeAddress nodeAddrB, float& outHeadingDeg, bool* outFound) {
-    const auto SetFound = [&](bool found) {
+    if (nodeAddrA.m_wAreaId == (uint16)-1 || nodeAddrB.m_wAreaId == (uint16)-1 || !m_pPathNodes[nodeAddrA.m_wAreaId] || !m_pPathNodes[nodeAddrB.m_wAreaId]) {
         if (outFound) {
-            *outFound = found;
+            *outFound = false;
         }
-    };
-    if (nodeAddrA.IsValid() && nodeAddrB.IsValid() && AreNodeAreasLoaded({ nodeAddrA, nodeAddrB })) { // Inverted
-        SetFound(true);
-
-        const auto nodeA = GetPathNode(nodeAddrA);
-        const auto posA  = nodeA->GetPosition();
-        const auto dir   = CVector2D{ GetPathNode(nodeAddrB)->GetPosition() - posA }.Normalized();
-
-        outHeadingDeg = RadiansToDegrees(dir.Heading());
-
-        return nodeA->m_nPathWidth
-            ? detail::GetPosnBetweenNodesForScript(nodeA, dir)
-            : posA;
-    } else {
-        SetFound(false);
         return {};
     }
+    if (outFound) {
+        *outFound = true;
+    }
+
+    const auto& nodeA = m_pPathNodes[nodeAddrA.m_wAreaId][nodeAddrA.m_wNodeId];
+    const auto  posA  = nodeA.GetPosition();
+    const auto  posB  = m_pPathNodes[nodeAddrB.m_wAreaId][nodeAddrB.m_wNodeId].GetPosition();
+
+    // The heading: `atan2(-dx, dy) * (180 / PI)`, where `dx` is not rounded to float (x87), `dy` is
+    const auto dy = (float)((double)posB.y - posA.y);
+    const auto dx = (double)posB.x - posA.x;
+    outHeadingDeg = (float)(std::atan2(-dx, (double)dy) * (double)57.2957763671875f); // 0x859878
+
+    if (!nodeA.m_nPathWidth) {
+        return posA;
+    }
+
+    // BUG: The original normalizes the 3D vector (dx, dy, posA.z) (the Z is left over from the position of A on the stack)
+    CVector dir{ (float)dx, dy, posA.z };
+    NormaliseExt(dir); // 0x59C910
+
+    // The (right) perpendicular of the direction, at `width / 16 + 2.7` distance
+    const auto offset = (float)((double)nodeA.m_nPathWidth * 0.0625f + 2.7f); // 0x858620, 0x859AA8
+    return posA + CVector{ dir.y * offset, -dir.x * offset, 0.0f * offset };
 }
 
 // 0x450560
@@ -1114,12 +1133,22 @@ void CPathFind::LoadSceneForPathNodes(CVector point) {
 
 // 0x450DE0
 bool CPathFind::IsWaterNodeNearby(CVector position, float radius) {
+    // NOTE: The Z coordinate is not used. x87: `dx` is stored as float, the rest stays at extended precision
     for (auto areaId = 0u; areaId < NUM_PATH_MAP_AREAS; areaId++) {
-        for (const auto& node : GetPathNodesInArea(areaId, PATH_TYPE_VEH)) {
-            if (node.m_bWaterNode) {
-                if ((node.GetPosition() - position).SquaredMagnitude() <= sq(radius)) {
-                    return true;
-                }
+        auto* const nodes = m_pPathNodes[areaId];
+        if (!nodes) {
+            continue;
+        }
+        for (auto i = 0; i < (int32)m_anNumVehicleNodes[areaId]; i++) {
+            const auto& node = nodes[i];
+            if (!node.m_bWaterNode) {
+                continue;
+            }
+            const auto   dx   = (float)((double)position.x - (float)node.m_vPos.x);
+            const double dy   = (double)position.y - (float)node.m_vPos.y;
+            const double dist = std::sqrt(dy * dy + (double)dx * dx);
+            if (dist < radius) {
+                return true;
             }
         }
     }
@@ -1721,10 +1750,8 @@ CVector CPathFind::FindParkingNodeInArea(float minX, float maxX, float minY, flo
     if (haveSelected) {
         return selected;
     }
-    // BUG: When the round-robin index didn't match any node, the original returns `first.y` as the `z` (reads the wrong stack slot at 0x4515BD)
-    return notsa::IsFixBugs()
-        ? first
-        : CVector{ first.x, first.y, first.y };
+    // When the round-robin index didn't match any node, the first one is returned (0x4515AF; the `pop edi` between the loads shifts the 3rd slot to `first.z`)
+    return first;
 }
 
 // 0x450F30
@@ -1884,26 +1911,55 @@ void CPathFind::Find2NodesForCarCreation(CVector pos, CNodeAddress* outAddress1,
 
 // 0x44FCE0
 CNodeAddress CPathFind::FindNodeClosestToCoorsFavourDirection(CVector pos, ePathType nodeType, CVector2D dir) {
-    dir = dir.Normalized(); // In-place normalize
-    
-    CNodeAddress closest{};
-    float        scoreOfClosest{std::numeric_limits<float>::max()};
+    // NOTE: The original keeps the normalized X of `dir` and the unrounded `dy`, `dot` etc. at extended precision (x87), hence the `double`s.
+    double dirX;
+    {
+        const double len = std::sqrt((double)dir.x * dir.x + (double)dir.y * dir.y);
+        if (len == 0.0) { // (NaN is normalized, too)
+            dirX = 1.0; // The Y is left as is
+        } else {
+            const auto recip = (float)(1.0 / len); // Stored as float
+            dirX  = (double)recip * dir.x; // Not rounded
+            dir.y = (float)((double)recip * dir.y);
+        }
+    }
+
+    CNodeAddress closest{ 0xFFFF, 0 }; // NOTE: The node ID is uninitialized in the original if nothing was found
+    float        scoreOfClosest{ 10000.f }; // 0x461C4000
     for (auto areaId{ 0u }; areaId < NUM_TOTAL_PATH_NODE_AREAS; areaId++) {
-        for (const auto& node : GetPathNodesInArea(areaId, nodeType)) { // NOTE: Function takes care of checking whenever the area is loaded
-            const auto playerToNodeDirection = node.GetPosition() - pos;
-
-            const auto dotScore = (abs(playerToNodeDirection) * CVector { 1.f, 1.f, 3.f }).ComponentwiseSum();
-            if (dotScore >= scoreOfClosest) {
+        const auto nodes = GetPathNodesInArea(areaId, nodeType); // NOTE: Function takes care of checking whenever the area is loaded
+        for (const auto& node : nodes) {
+            // Weighted manhattan distance, the sum is kept at extended precision
+            const float  nodeX = node.m_vPos.x;
+            const float  nodeY = node.m_vPos.y;
+            const double nodeZ = (double)(float)node.m_vPos.z;
+            const double dotScoreExt = (std::abs(nodeZ - pos.z) * 3.0 + std::abs((double)nodeY - pos.y)) + std::abs((double)nodeX - pos.x); // 0x858B3C
+            const auto   dotScore    = (float)dotScoreExt; // Stored as float
+            if (!(dotScoreExt < scoreOfClosest)) { // (`fcomp`, then `jp`: taken for greater, equal, unordered)
                 continue;
             }
 
-            const auto score = dotScore - (dir.Dot(CVector2D{ playerToNodeDirection }.Normalized()) - 1.f) * 20.f;
-            if (score > scoreOfClosest) {
+            // Direction to the node (X stored as float, Y is not rounded)
+            const auto   dx = (float)((double)nodeX - pos.x);
+            const double dy = (double)nodeY - pos.y;
+            double       nx, ny;
+            const double len = std::sqrt(dy * dy + (double)dx * dx);
+            if (len == 0.0) { // (NaN is normalized, too)
+                nx = 1.0;
+                ny = dy;
+            } else {
+                const auto recip = (float)(1.0 / len); // Stored as float
+                nx = (double)recip * dx;
+                ny = dy * recip;
+            }
+            const double dot   = nx * dirX + ny * dir.y;
+            const double score = (double)dotScore - (dot - 1.0) * 20.0; // 0x858BA4
+            if (!(score < scoreOfClosest)) {
                 continue;
             }
 
-            scoreOfClosest = score;
-            closest = node.GetAddress();
+            scoreOfClosest = (float)score;
+            closest        = CNodeAddress{ (uint16)areaId, (uint16)(&node - m_pPathNodes[areaId]) };
         }
     }
     return closest;
@@ -1938,17 +1994,20 @@ void CPathFind::SetPathsNeededAtPosition(const CVector& posn) {
 }
 
 namespace detail {
-constexpr size_t RegionValueOf(float p, size_t nareas) {
-    return std::clamp((uint32)((p + 3000.f) / (6000.f / (float)nareas)), 0u, (uint32)nareas - 1);
+//! 0x44D890 / 0x44D8C0 / 0x44D830 - x87: `(p - -3000) * 0.0013333333f` is not rounded to float before `_ftol` (a multiplication by the float reciprocal, not a division), then clamped to [0, 7] (signed)
+inline size_t RegionValueOf(float p) {
+    return (size_t)std::clamp(notsa::detail::Ftol(((double)p - (double)-3000.f) * (double)0.0013333333f), 0, 7); // 0x859A90, 0x859A8C
 }
 }; // namespace detail
 
+// 0x44D890
 size_t CPathFind::FindXRegionForCoors(float x) const {
-    return detail::RegionValueOf(x, NUM_PATH_MAP_AREA_X);
+    return detail::RegionValueOf(x);
 }
 
+// 0x44D8C0
 size_t CPathFind::FindYRegionForCoors(float y) const {
-    return detail::RegionValueOf(y, NUM_PATH_MAP_AREA_Y);
+    return detail::RegionValueOf(y);
 }
 
 // 0x44DB60

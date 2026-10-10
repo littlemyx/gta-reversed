@@ -8,6 +8,7 @@
 #include <float.h>
 #include <csignal>
 #include <cstdlib>
+#include <exception>
 #include <cstring>
 #include <unordered_set>
 #include <vector>
@@ -497,7 +498,25 @@ static int __cdecl AllocTraceHook(int allocType, void*, size_t size, int, long, 
 }
 #endif
 
+// S5 diagnostics: silent process ends (exit(), purecall, invalid CRT parameter, std::terminate) are logged with a stack via the exception filter
+static void RaiseNamed(const char* what, DWORD code) {
+    static bool s_Raised = false;
+    Fixups::Log("process end requested: %s", what);
+    if (!s_Raised) {
+        s_Raised = true;
+        RaiseException(code, EXCEPTION_NONCONTINUABLE, 0, nullptr);
+    }
+}
+static void __cdecl OnAtExit() { Fixups::Log("atexit handler ran (exit() or normal return from WinMain)"); }
+static void __cdecl OnPurecall() { RaiseNamed("pure virtual function call", 0xE0AB0003u); }
+static void __cdecl OnInvalidParam(const wchar_t*, const wchar_t*, const wchar_t*, unsigned, uintptr_t) { RaiseNamed("invalid CRT parameter", 0xE0AB0004u); }
+static void __cdecl OnTerminate() { RaiseNamed("std::terminate", 0xE0AB0005u); }
+
 void InstallRedirectHandler() {
+    std::atexit(OnAtExit);
+    _set_purecall_handler(OnPurecall);
+    _set_invalid_parameter_handler(OnInvalidParam);
+    std::set_terminate(OnTerminate);
 #ifdef _DEBUG
     if (const char* e = std::getenv("NOTSA_STANDALONE_ALLOCTRACE")) {
         s_AllocMin = std::atoi(e);

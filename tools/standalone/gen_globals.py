@@ -23,6 +23,7 @@ Heuristics are documented next to the code they belong to ("HEURISTIC:") and sum
 """
 import argparse
 import collections
+import csv
 import json
 import os
 import re
@@ -647,13 +648,13 @@ class Image:
         img = img or self.post
         return struct.unpack_from("<I", img, a - self.base)[0]
 
-    def ptr_scan(self, a, size):
+    def ptr_scan(self, a, size, canon=""):
         """pointer-like dwords in [a, a+size): (code, str, data, vtbl, [(off, kind, value)]).
         HEURISTIC: code = accepted by extract_exe_data's classifier (data_pointers.txt V/C); vtbl = points at the start of a code-pointer run
         in .rdata; str = points at a printable-ASCII NUL-terminated string (>= 2 chars) in .rdata/.data; data = any other value inside the image."""
         pc = ps = pd = pv = 0
         lst = []
-        if a % 4:
+        if a % 4 or small_elem(canon):
             return 0, 0, 0, 0, []
         for off in range(0, size - size % 4, 4):
             v = self.dword(a + off)
@@ -687,6 +688,21 @@ class Image:
         if all(32 <= c < 127 or c in (9, 10, 13) for c in s):
             return s.decode("ascii")
         return None
+
+
+SMALL_SCALARS = ("bool", "char", "signed char", "unsigned char", "short", "unsigned short")
+
+
+def small_elem(canon):
+    """True if the innermost element of an (array of) scalar type is narrower than a pointer: such storage cannot hold pointer slots, so the
+    4-byte-aligned dword scan would only produce false hits (review D-A4: std::array<short,14> gBeatTrackLookup was counted as 7 data pointers)."""
+    t = canon.strip()
+    while True:
+        m = re.match(r"^(?:class |struct )?std::array<(.*),\s*\d+>$", t) or re.match(r"^(.*?)\s*\[[^\]]*\]$", t)
+        if not m:
+            break
+        t = m.group(1).strip()
+    return t in SMALL_SCALARS
 
 
 def parse_audit(path):
@@ -835,7 +851,7 @@ def stage_classify(args):
         r["nz"] = sum(1 for c in post if c)
         r["delta"] = sum(1 for x, y in zip(post, pre) if x != y)
         r["delta_nz"] = sum(1 for x, y in zip(post, pre) if x != y and x)
-        pc, ps, pd, pv, ptr_list = img.ptr_scan(a, size) if r["in_image"] else (0, 0, 0, 0, [])
+        pc, ps, pd, pv, ptr_list = img.ptr_scan(a, size, r["probe"]["type"] if r["probe"] else "") if r["in_image"] else (0, 0, 0, 0, [])
         r["ptr_code"], r["ptr_str"], r["ptr_data"], r["ptr_vtbl"] = pc, ps, pd, pv
         r["ptrs"] = ptr_list
         fl = r["probe"]["flags"] if r["probe"] else 0
@@ -1071,13 +1087,152 @@ def write_objects(out, rows, img, audit_rows, audit_floats):
     print(f"objects: {n} rows")
 
 
+
+# ----------------------------------------------------------------------------------------------------------------------------
+# slice A4: --check = every duplicate / conflict / overlap / under-declared extent of the CURRENT source tree is decided in aliases.json
+# ----------------------------------------------------------------------------------------------------------------------------
+
+def live_sites():
+    """hex-literal StaticRef sites of the current source tree (no snapshot), enriched like stage_scan does."""
+    sites, _ = scan_tree(SRC)
+    for st in sites:
+        chain, local, func = qualified_scope(st)
+        st["chain"] = [list(c) for c in chain]
+        st["local"] = local
+        st["func"] = func
+        st.pop("scope", None)
+    return [s for s in sites if s["file"] != "source/Base.h" and s["kind"] != "scoped" and s["addr_txt"] and s["addr_txt"].startswith("0x")]
+
+
+def site_key(s, addr=None):
+    """identity of a site that survives line drift: (file, address, kind, qualified name, enclosing function)"""
+    return (s["file"], int(s["addr_txt"], 16) if addr is None else addr, s["kind"], qual_name(s) if s["name"] else "", s["func"])
+
+
+def listed_key(r, addr):
+    return (r["file"], addr, r["kind"], r["name"], r["func"])
+
+
+def stage_check(args):
+    """`--check`: 0 unresolved or exit status 1. Unresolved = (1) a live site of an address that has several sites (duplicate / conflict) or that
+    aliases.json treats specially and that aliases.json does not list; (2) two effective extents that intersect after applying aliases.json
+    (members / views / virtual rows removed, size overrides, new globals added); (3) a row with non-zero bytes behind its extent (tail_nz) without a
+    tail_audit verdict, or an EXTEND verdict without an `extents` override; (4) a category-a row with a non-trivial default ctor without a ctor_audit
+    verdict; (5) an address in the source that DETACH_GLOBALS.tsv does not know. Stale entries (listed but no longer in the source) are only warnings:
+    after the codemod converted a site it disappears from the scan."""
+    out = Path(args.out)
+    J = json.loads(Path(args.aliases or out / "aliases.json").read_text())
+    rows = {}
+    for r in csv.DictReader(open(out / "DETACH_GLOBALS.tsv"), delimiter="\t"):
+        rows[int(r["addr"], 16)] = r
+    live = live_sites()
+    by_addr = collections.defaultdict(list)
+    for s in live:
+        by_addr[int(s["addr_txt"], 16)].append(s)
+    bad, warn = [], []
+    H = lambda a: "0x%X" % a
+    # ---- listed sites
+    listed = collections.Counter()
+    special = set()          # addresses with a decision
+    def add(r, a):
+        listed[listed_key(r, a)] += 1
+    for ak, g in J["globals"].items():
+        a = int(ak, 16)
+        special.add(a)
+        if "file" in g["owner"]:
+            add(g["owner"], a)
+        for r in g["aliases"]:
+            add(r, a)
+    for m in J["members"]:
+        special.add(int(m["addr"], 16))
+        for r in m["sites"]:
+            add(r, int(m["addr"], 16))
+    for v in J["views"]:
+        special.add(int(v["addr"], 16))
+        add(v["site"], int(v["addr"], 16))
+    for v in J["virtual"]:
+        special.add(int(v["addr"], 16))
+        for r in v["sites"]:
+            add(r, int(v["addr"], 16))
+    for v in J["readdress"]:
+        special.add(int(v["frm"], 16))
+        add(v["site"], int(v["frm"], 16))
+    have = collections.Counter(site_key(s) for s in live)
+    for a, ss in sorted(by_addr.items()):
+        if len(ss) < 2 and a not in special:
+            continue
+        for s in ss:
+            k = site_key(s)
+            if listed[k] <= 0:
+                bad.append(f"unlisted site {H(a)} {s['file']}:{s['line']} [{s['kind']} {k[3] or k[4]}]")
+            else:
+                listed[k] -= 1
+    for k, n in listed.items():
+        if n > 0:
+            warn.append(f"stale entry (no longer in source): {H(k[1])} {k[0]} [{k[2]} {k[3] or k[4]}]")
+    for a in by_addr:
+        if a not in rows:
+            bad.append(f"address {H(a)} is not a row of DETACH_GLOBALS.tsv (rerun scan/probe/classify)")
+    # ---- effective extents
+    ext = {}
+    for a, r in rows.items():
+        ext[a] = (a, int(r["size"]), r["name"])
+    for m in J["members"]:
+        if int(m["addr"], 16) != int(m["owner"], 16):
+            ext.pop(int(m["addr"], 16), None)
+    for v in J["virtual"]:
+        ext.pop(int(v["addr"], 16), None)
+    for v in J["views"]:
+        ext.pop(int(v["addr"], 16), None)
+        ext[int(v["verify_addr"], 16)] = (int(v["verify_addr"], 16), v["verify_size"], "view of " + v["site"]["name"])
+    for ak, g in J["globals"].items():
+        a = int(ak, 16)
+        if a in ext:
+            ext[a] = (a, g["size"], ext[a][2])
+    for ak, e in J.get("extents", {}).items():
+        a = int(ak, 16)
+        if a in ext:
+            ext[a] = (a, e["true_size"], ext[a][2])
+    for n in J["new_globals"]:
+        ext[int(n["addr"], 16)] = (int(n["addr"], 16), n["size"], "new " + n["type"])
+    prev = None   # (end, addr, size, name) of the extent that reaches furthest
+    for a, sz, nm in sorted(ext.values()):
+        if prev is not None and a < prev[0]:
+            bad.append(f"overlap: {H(a)}+{sz} ({nm}) intersects {H(prev[1])}+{prev[2]} ({prev[3]})")
+        if prev is None or a + sz > prev[0]:
+            prev = (a + sz, a, sz, nm)
+    # ---- tails / ctors
+    ta = J.get("tail_audit", {})
+    for a, r in sorted(rows.items()):
+        if int(r["tail_nz"] or 0) > 0:
+            v = ta.get(H(a))
+            if v is None:
+                bad.append(f"tail_nz>0 without tail_audit verdict: {H(a)} {r['name']}")
+            elif v.startswith("EXTEND") and H(a) not in J.get("extents", {}):
+                bad.append(f"tail_audit EXTEND without extents entry: {H(a)} {r['name']}")
+    ca = J.get("ctor_audit", {})
+    for a, r in sorted(rows.items()):
+        if r["cat"] == "a" and "triv_def" not in r["traits"].split(","):
+            if H(a) not in ca:
+                bad.append(f"non-trivial default ctor on a zero row without ctor_audit verdict: {H(a)} {r['name']}")
+    for w in warn[:20]:
+        print("warning:", w)
+    for b in bad:
+        print("UNRESOLVED:", b)
+    print(f"check: {len(live)} live sites, {len(by_addr)} addresses, {len(special)} decided addresses, {len(ext)} effective extents; "
+          f"{len(bad)} unresolved, {len(warn)} stale")
+    if bad:
+        sys.exit(1)
+
 # ----------------------------------------------------------------------------------------------------------------------------
 # main
 # ----------------------------------------------------------------------------------------------------------------------------
 
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("stage", choices=["scan", "probe", "merge", "classify", "all"])
+    ap.add_argument("stage", nargs="?", choices=["scan", "probe", "merge", "classify", "all", "check"])
+    ap.add_argument("--check", action="store_true", help="same as the stage `check` (slice A4): every duplicate / conflict / overlap / tail of the current source is decided in aliases.json")
+    ap.add_argument("--aliases", default=None, help="aliases.json for the check (default: <out>/aliases.json)")
     ap.add_argument("--exe", default=str(REPO / "gta_sa_compact.exe"))
     ap.add_argument("--work", default=str(REPO / "build" / "detach_work"))
     ap.add_argument("--out", default=str(REPO / ".notes"))
@@ -1086,6 +1241,13 @@ def main():
     ap.add_argument("--build-dir", default=str(REPO / "build" / "StandaloneRelease"), help="configured build dir whose compile_commands.json gives the cl flags")
     ap.add_argument("--lock", default=None, help="build mutex directory (mkdir lock) held while cl runs")
     args = ap.parse_args()
+    if args.check:
+        args.stage = "check"
+    if args.stage is None:
+        ap.error("stage required")
+    if args.stage == "check":
+        stage_check(args)
+        return
     if args.stage in ("scan", "all"):
         stage_scan(args)
     if args.stage in ("probe", "all"):

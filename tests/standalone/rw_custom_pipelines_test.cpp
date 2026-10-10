@@ -203,9 +203,10 @@ static RpGeometry* MakeQuad(RwUInt32 flags, RpMaterial* mat, RwRGBA prelit) {
     if (flags & rpGEOMETRYPRELIT) {
         for (int i = 0; i < 4; i++) g->colors[i] = prelit;
     }
+    // winding is front-facing under RW's start default (cull back, applied at RwEngineStart)
     RpTriangle* t = RpGeometryGetTriangles(g);
-    RpGeometryTriangleSetVertexIndices(g, &t[0], 0, 1, 2);
-    RpGeometryTriangleSetVertexIndices(g, &t[1], 0, 2, 3);
+    RpGeometryTriangleSetVertexIndices(g, &t[0], 0, 2, 1);
+    RpGeometryTriangleSetVertexIndices(g, &t[1], 0, 3, 2);
     RpGeometryTriangleSetMaterial(g, &t[0], mat);
     RpGeometryTriangleSetMaterial(g, &t[1], mat);
     RpGeometryUnlock(g);
@@ -731,7 +732,12 @@ static void BuildingAssetTest(const char* path) {
         CHECK((a->pipeline == CCustomBuildingDNPipeline::ObjPipeline) == (ev->NightColors && geo->colors));
     }
     INFO("%zu atomics, %d with night colours (%d vertices, %d differ from day), %d on the DN pipe, %d on the plain building pipe", atoms.size(), withNight, verts, nightDiffers, dn, plain);
-    CHECK(withNight > 0);
+    if (withNight == 0) {
+        // no day/night chunk (a ped such as male01): CCustomBuildingRenderer::AtomicSetup tests the night colours pointer (exe 0x5D6E90), so every atomic stays on the plain building pipe
+        CHECKV(dn == 0 && plain == (int)atoms.size(), "geometry without a day/night chunk is not on the DN pipe (dn %d, plain %d)", dn, plain);
+        RpClumpDestroy(clump);
+        return;
+    }
     FrameClump(clump, 0.f);
     auto render = [&](float balance) {
         CCustomBuildingDNPipeline::m_fDNBalanceParam = balance;

@@ -649,7 +649,7 @@ void CAEPoliceScannerAudioEntity::Service() {
         }
 
         if (CTimer::GetTimeInMS() >= s_nPlaybackStartTime) {
-            s_fVolumeOffset = CAEVehicleAudioEntity::s_pVehicleAudioSettingsForRadio ? 0.0f : -8.0f; // todo: -8 is gSpeechContextLookup[367][2]
+            s_fVolumeOffset = CAEVehicleAudioEntity::s_pPlayerAttachedForRadio ? 0.0f : -8.0f; // 0x4E769B: tests the driver at 0xB6B98C. todo: -8 is gSpeechContextLookup[367][2]
             AudioEngine.ReportFrontendAudioEvent(AE_FRONTEND_SCANNER_CLICK,       s_fVolumeOffset + clickVolume, 1.0f);
             AudioEngine.ReportFrontendAudioEvent(AE_FRONTEND_SCANNER_NOISE_START, s_fVolumeOffset + noiseVolume, 1.0f); // todo: noiseVolume is gSpeechContextLookup[367][0]
             s_nPlaybackStartTime = startDelay + CTimer::GetTimeInMS(); // todo: startDelay is gSpeechContextLookup[366][6]

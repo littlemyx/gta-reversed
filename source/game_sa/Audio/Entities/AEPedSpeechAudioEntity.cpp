@@ -1286,7 +1286,7 @@ int16 CAEPedSpeechAudioEntity::I_AddSayEvent(CVector pos, eAudioEvents audioEven
     }
 
     if (IsGlobalContextImportantForStreaming(gCtx) || isForceAudible || isFrontEnd) {
-        if (CStreaming::ms_numModelsRequested > 15 && CAEVehicleAudioEntity::s_pVehicleAudioSettingsForRadio) {
+        if (CStreaming::ms_numModelsRequested > 15 && CAEVehicleAudioEntity::s_pPlayerAttachedForRadio) { // 0x4E61D5, 0x4E66F0: the exe tests the driver at 0xB6B98C
             return -1;
         }
     } else if (CStreaming::IsVeryBusy()) {
@@ -1453,7 +1453,7 @@ void CAEPedSpeechAudioEntity::I_PlayLoadedSound(CEntity* attachTo) {
             attachTo->GetPosition(),
             SOUND_REQUEST_UPDATES | SOUND_IS_CANCELLABLE,
             IsPedless ? 12.f : m_EventVolume,
-            IsPedless ? 3.5f : CAEVehicleAudioEntity::s_pVehicleAudioSettingsForRadio ? 3.f : 2.f
+            IsPedless ? 3.5f : CAEVehicleAudioEntity::s_pPlayerAttachedForRadio ? 3.f : 2.f // 0x4E5DD2: tests the driver at 0xB6B98C
         );
     }
 

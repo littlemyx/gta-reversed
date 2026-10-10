@@ -495,6 +495,7 @@ eModelID CPopulation::ChooseGangOccupation(eGangID gangId) {
 // 0x611560 (Unused)
 CPed* CPopulation::AddExistingPedInCar(CPed* ped, CVehicle* vehicle) {
     NOTSA_UNREACHABLE(); // Does nothing (At least not what the name suggests)
+    return ped; // 0x611560: mov eax, [esp+4]; ret
 }
 
 // 0x611570
@@ -2519,7 +2520,7 @@ void CPopulation::PopulateInterior(int32 numPedsToCreate, CVector pos) {
 void CPopulation::Update(bool generatePeds) {
     ZoneScoped;
 
-    CurrentWorldZone = [] {
+    CurrentWorldZone = []() -> uint32 {
         switch (CWeather::WeatherRegion) {
         case WEATHER_REGION_DEFAULT:
         case WEATHER_REGION_LA:
@@ -2531,6 +2532,7 @@ void CPopulation::Update(bool generatePeds) {
             return 2;
         default:
             NOTSA_UNREACHABLE();
+            return CurrentWorldZone; // 0x616686: regions above 4 leave the value untouched
         }
     }();
 

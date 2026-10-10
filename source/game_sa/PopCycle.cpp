@@ -292,6 +292,14 @@ ePopcycleGroup CPopCycle::PickARandomGroupOfOtherPeds() {
         rndPerc -= (int32)(grpPerc);
     }
     NOTSA_UNREACHABLE();
+    // 0x610480: the exe's search loop has no bound (known vanilla bug, the row can sum to < 100): it keeps going over the bytes that follow the row
+    for (auto grpIdx = std::size(percs);; grpIdx++) {
+        const auto grpPerc = reinterpret_cast<const uint8*>(&percs[0])[grpIdx];
+        if ((int32)(grpPerc) >= rndPerc) {
+            return (ePopcycleGroup)grpIdx;
+        }
+        rndPerc -= (int32)(grpPerc);
+    }
 }
 
 // 0x60FFD0
@@ -337,7 +345,7 @@ void CPopCycle::PlayerKilledADealer() {
 void CPopCycle::Update() {
     ZoneScoped;
 
-    m_nCurrentTimeOfWeek = [] {
+    m_nCurrentTimeOfWeek = []() -> int32 {
         switch (CClock::GetGameWeekDay()) {
         case 0: // Not sure (Maybe Sunday)
         case 7: // Sunday
@@ -353,6 +361,7 @@ void CPopCycle::Update() {
             return CClock::GetGameClockHours() >= 20 ? 1 : 0;
         }
         NOTSA_UNREACHABLE();
+        return m_nCurrentTimeOfWeek; // 0x610C3E: weekdays above 7 leave the value untouched
     }();
 
     m_nCurrentTimeIndex = CClock::GetGameClockHours() / 2;

@@ -177,6 +177,12 @@ RwCamera* RwCameraClear(RwCamera* camera, RwRGBA* colour, RwInt32 clearMode) {
 // (the only window in the standalone build) and ignores it. flags: rwRASTERFLIPWAITVSYNC == Raster::FLIPWAITVSYNCH.
 #ifdef NOTSA_STANDALONE_RUN
 // S5: NOTSA_STANDALONE_SCREENSHOT=<k> writes frame_<n>.bmp (back buffer, 24 bit) into the current directory before every k-th Present (k>=1, first 30 files)
+static char s_MarkShot[48];   // pending "mark_<name>.bmp" request from the input script's `mark:` lines (outside the cadence and the cap)
+void RequestMarkScreenshot(const char* name) {
+    if (std::getenv("NOTSA_STANDALONE_SCREENSHOT")) {
+        std::snprintf(s_MarkShot, sizeof(s_MarkShot), "mark_%s.bmp", name);
+    }
+}
 static void ShimDumpBackBuffer() {
     static int  s_Every = -2;
     static int  s_Frame = 0, s_Written = 0;
@@ -184,7 +190,11 @@ static void ShimDumpBackBuffer() {
         const char* e = std::getenv("NOTSA_STANDALONE_SCREENSHOT");
         s_Every = e ? (std::atoi(e) > 0 ? std::atoi(e) : 1) : -1;
     }
-    if (s_Every < 0 || s_Written >= (std::getenv("NOTSA_STANDALONE_SCREENSHOT_MAX") ? std::atoi(std::getenv("NOTSA_STANDALONE_SCREENSHOT_MAX")) : 30) || (s_Frame++ % s_Every) != 0) {
+    char markName[48]{};
+    if (s_MarkShot[0]) {
+        std::memcpy(markName, s_MarkShot, sizeof(markName));
+        s_MarkShot[0] = 0;
+    } else if (s_Every < 0 || s_Written >= (std::getenv("NOTSA_STANDALONE_SCREENSHOT_MAX") ? std::atoi(std::getenv("NOTSA_STANDALONE_SCREENSHOT_MAX")) : 30) || (s_Frame++ % s_Every) != 0) {
         return;
     }
     IDirect3DDevice9* dev = rw::d3d::d3ddevice;
@@ -198,7 +208,11 @@ static void ShimDumpBackBuffer() {
         D3DLOCKED_RECT lr{};
         if (SUCCEEDED(sys->LockRect(&lr, nullptr, D3DLOCK_READONLY))) {
             char name[64];
-            std::snprintf(name, sizeof(name), "frame_%d.bmp", s_Written++);
+            if (markName[0]) {
+                std::snprintf(name, sizeof(name), "%s", markName);
+            } else {
+                std::snprintf(name, sizeof(name), "frame_%d.bmp", s_Written++);
+            }
             if (FILE* f = std::fopen(name, "wb")) {
                 const uint32_t rowBytes = (d.Width * 3 + 3) & ~3u, imgSize = rowBytes * d.Height;
                 uint8_t        hdr[54] = { 'B', 'M' };

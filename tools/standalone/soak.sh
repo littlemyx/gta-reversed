@@ -58,7 +58,7 @@ started=0; STATUS_START=0
 cd "$DATA" || exit 2
 for a in 1 2 3 4 5 6; do
   kill_exe
-  rm -f gta_reversed.exe data_pointers.bin original_data.* standalone*.log frame_*.bmp; rm -rf logs
+  rm -f gta_reversed.exe data_pointers.bin original_data.* standalone*.log frame_*.bmp mark_*.bmp; rm -rf logs
   cp -c "$BIN/gta_reversed.exe" "$BIN/original_data.bin" "$BIN/original_data.json" "$BIN/data_pointers.bin" .
   wine gta_reversed.exe > "$OUT/wine.out" 2>&1 &
   WPID=$!
@@ -83,8 +83,8 @@ done
 kill_exe
 cp -f standalone.log logs/log.log "$OUT/" 2>/dev/null; cp -f standalone_unknown_pointers.txt "$OUT/" 2>/dev/null
 mkdir -p "$OUT/shots"
-for b in frame_*.bmp; do [ -f "$b" ] && sips -s format png "$b" --out "$OUT/shots/${b%.bmp}.png" >/dev/null 2>&1; done
-rm -f frame_*.bmp
+for b in frame_*.bmp mark_*.bmp; do [ -f "$b" ] && sips -s format png "$b" --out "$OUT/shots/${b%.bmp}.png" >/dev/null 2>&1; done
+rm -f frame_*.bmp mark_*.bmp
 
 python3 -I - "$OUT" "${TIMEOUT:-0}" 2>&1 <<'PY' | tee "$OUT/report.txt"
 import sys, re, os, glob
@@ -99,7 +99,7 @@ for l in sl:
     if m: marks.append((m.group(1), int(m.group(2)), int(m.group(3))))
 mem = []     # (tick, frame, heap bytes, committed KB)
 for l in sl:
-    m = re.search(r"memlog t=(\d+) ms frame (\d+): crt heap (\d+) bytes in \d+ blocks, committed (\d+) KB", l)
+    m = re.search(r"memlog t=(\d+) ms frame (\d+) .*?crt heap (\d+) bytes in \d+ blocks, committed (\d+) KB", l)
     if m: mem.append(tuple(int(x) for x in m.groups()))
 bad_re = re.compile(r"FATAL|TRAP|[Aa]ssert|abort|[Ee]xception|Unhandled|pure virtual|invalid CRT|terminate")
 errs = [l[:200] for l in sl if bad_re.search(l) and "atexit" not in l and "trapped" not in l and "exception handler" not in l]

@@ -47,6 +47,9 @@ static bool IsInFullscreen()
 #include <vector>
 #include <sstream>
 #include <fstream>
+#ifdef NOTSA_STANDALONE_RUN
+void RequestMarkScreenshot(const char* name); // standalone/rw/camera.cpp
+#endif
 namespace {
 struct InjEv { uint64_t t; bool down; SDL_Keycode key; int mx = -1, my = -1; std::string mark; };
 std::vector<InjEv> s_InjEvents;
@@ -103,6 +106,9 @@ void InjPump() {
         SDL_Event e{};
         if (!ev.mark.empty()) {
             NOTSA_INJ_LOG("[mark] %s at %u ms t=%lu", ev.mark.c_str(), (unsigned)now, (unsigned long)GetTickCount()); // t= is the same clock as the standalone memlog lines
+#ifdef NOTSA_STANDALONE_RUN
+            RequestMarkScreenshot(ev.mark.c_str()); // tools/standalone/soak.sh: one mark_<name>.bmp at the next Present (needs NOTSA_STANDALONE_SCREENSHOT)
+#endif
             continue;
         }
         if (ev.mx >= 0) {

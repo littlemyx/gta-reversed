@@ -2744,7 +2744,7 @@ eModelID CStreaming::GetDefaultCopCarModel(bool ignoreLvpd1Model) {
         if (!GetInfo(ms_aDefaultCopModel[CTheZones::m_CurrLevel]).IsLoaded()
          || !GetInfo(carModelId).IsLoaded()
         ) {
-            for (int32 i = 0; i < (ignoreLvpd1Model ? 3 : 4); i++) {
+            for (int32 i = 0; i < (ignoreLvpd1Model ? 4 : 5); i++) { // 0x407CB5: the 5th entry is the bike cop (skipped when asked to ignore it)
                 if (GetInfo(ms_aDefaultCopModel[i]).IsLoaded()
                  && GetInfo(ms_aDefaultCopCarModel[i]).IsLoaded()
                 ) {
@@ -2765,10 +2765,10 @@ eModelID CStreaming::GetDefaultCopModel() {
     if (GetInfo(modelId).IsLoaded())
         return (eModelID)modelId;
 
-    // Try all other level's model
-    for (const auto& mId : ms_aDefaultCopModel) {
-        if (GetInfo(mId).IsLoaded()) {
-            return (eModelID)mId;
+    // Try all other level's model (the 4 levels only: the 5th entry is the biker, 0x407C34 `cmp ecx, 4`)
+    for (int32 i = 0; i < 4; i++) {
+        if (GetInfo(ms_aDefaultCopModel[i]).IsLoaded()) {
+            return (eModelID)ms_aDefaultCopModel[i];
         }
     }
 

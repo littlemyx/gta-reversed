@@ -175,8 +175,8 @@ void CEntryExit::FindValidTeleportPoint(CVector& outTeleportPoint) {
         for (auto i = 0; i < NumTestPoints; i++) {
             const auto rot{ (float)i * TWO_PI / (float)NumTestPoints };
             const auto point = outTeleportPoint + CVector{
-                std::cos(rot) * r,
-                std::sin(rot) * r,
+                (float)(x87::cos(rot) * r),
+                (float)(x87::sin(rot) * r),
                 0.f
             };
             if (IsTeleportPointValid(outTeleportPoint, point)) {

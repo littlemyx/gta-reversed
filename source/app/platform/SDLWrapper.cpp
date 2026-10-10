@@ -42,13 +42,13 @@ static bool IsInFullscreen()
 // Test-only input injector: NOTSA_STANDALONE_INPUT="wait:3000;key:return;wait:500;down:w;wait:2000;up:w;..." (also a path to a file with the same text).
 // Times are ms of wall clock; `wait:N` advances the script clock by N after the previous action; `key:K` = down now + up 150 ms later;
 // NOTSA_INPUT_INJECT (cmake -DGTASA_INPUT_INJECT=ON) enables it in the ASI/DLL build too (logs through spdlog instead of Fixups).
-// K = return|escape|up|down|left|right|space|tab|lshift|lctrl|f1..f12|<single char>.
+// `mark:NAME` logs a progress marker; newlines also separate items. K = return|escape|up|down|left|right|space|tab|lshift|lctrl|f1..f12|<single char>.
 #include <string>
 #include <vector>
 #include <sstream>
 #include <fstream>
 namespace {
-struct InjEv { uint64_t t; bool down; SDL_Keycode key; int mx = -1, my = -1; };
+struct InjEv { uint64_t t; bool down; SDL_Keycode key; int mx = -1, my = -1; std::string mark; };
 std::vector<InjEv> s_InjEvents;
 size_t             s_InjNext = 0;
 bool               s_InjInit = false;
@@ -84,6 +84,11 @@ void InjInit() {
             ev.mx = x; ev.my = y;
             s_InjEvents.push_back(ev);
         }
+        else if (cmd == "mark") { // mark:NAME  logs "[mark] NAME" when the script clock reaches it (progress markers for tools/standalone/soak.sh)
+            InjEv ev{ t, true, 0 };
+            ev.mark = arg;
+            s_InjEvents.push_back(ev);
+        }
         else if (cmd == "down" || cmd == "up") { s_InjEvents.push_back({ t, cmd == "down", InjKey(arg) }); }
     }
     std::stable_sort(s_InjEvents.begin(), s_InjEvents.end(), [](auto& a, auto& b) { return a.t < b.t; });
@@ -96,6 +101,10 @@ void InjPump() {
     while (s_InjNext < s_InjEvents.size() && s_InjEvents[s_InjNext].t <= now) {
         const auto& ev = s_InjEvents[s_InjNext++];
         SDL_Event e{};
+        if (!ev.mark.empty()) {
+            NOTSA_INJ_LOG("[mark] %s at %u ms", ev.mark.c_str(), (unsigned)now);
+            continue;
+        }
         if (ev.mx >= 0) {
             e.type     = SDL_EVENT_MOUSE_MOTION;
             e.motion.x = (float)ev.mx;

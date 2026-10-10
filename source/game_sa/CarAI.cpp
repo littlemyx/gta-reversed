@@ -1231,10 +1231,19 @@ void CCarAI::UpdateCarAI(CVehicle* veh) {
                     if (vehToPlyrDist3DSq <= sq(20.f) && thisVehFwdDir2D.Dot(plyrVehFwdDir2D) > 0.8f && plyrSpeed3DSq >= sq(0.6f)) { // 0x420087 + 0x4200D6
                         ap->SetTempAction(TEMPACT_BOOST_USE_STEERING_ANGLE, 250);
 
-                        const auto targetSteerAngle = CGeneral::LimitRadianAngle(
-                            CGeneral::GetATanOf(plyrCoors + plyrVelocity3D * 120.f - veh->GetPosition()) // 0x42019F
-                            - CGeneral::GetATanOf(thisVehFwdDir2D) // 0x4201B3
-                        ); 
+                        // 0x42019F: the 1st atan is spilled to a float, the 2nd (0x4201B3) stays unrounded on the x87 stack for the `fsubr`;
+                        // the inlined `LimitRadianAngle` (0x4201BF..0x420213: `< -pi` loop first, then `> pi`) keeps extended precision until the store
+                        const auto toPlyrPos = plyrCoors + plyrVelocity3D * 120.f - veh->GetPosition();
+                        const auto angleToPlyr = CGeneral::GetATanOfXY(toPlyrPos.x, toPlyrPos.y);
+                        double     steerDiff   = (double)angleToPlyr - CGeneral::GetATanOfXYExt(veh->GetForward().x, veh->GetForward().y); // (the raw matrix forward, [matrix + 0x10 / 0x14], not the normalised copy)
+                        constexpr auto pi = std::numbers::pi_v<float>; // 0x858CB8 / 0x858CC0
+                        while (steerDiff < -pi) {
+                            steerDiff += 2.0f * pi; // 0x858CBC
+                        }
+                        while (steerDiff > pi) {
+                            steerDiff -= 2.0f * pi;
+                        }
+                        const auto targetSteerAngle = (float)steerDiff;
                         const auto maxSteerAngle = CCarCtrl::FindMaxSteerAngle(veh);
                         veh->m_fSteerAngle = std::clamp(targetSteerAngle, -maxSteerAngle, maxSteerAngle); // 0x42025C
                     }

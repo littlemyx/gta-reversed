@@ -902,7 +902,7 @@ void CObject::ProcessSamSiteBehaviour() {
     }
 
     CEntity* targetEntity = nullptr;
-    auto fHeading = CGeneral::GetATanOfXY(m_matrix->GetForward().x, m_matrix->GetForward().y);
+    auto fHeading = CGeneral::GetATanOfXY(m_matrix->GetForward().x, m_matrix->GetForward().y); // 0x5A081F (stored as float)
     auto* playerVeh = FindPlayerVehicle();
     if (!playerVeh
         || playerVeh->GetVehicleAppearance() == eVehicleAppearance::VEHICLE_APPEARANCE_BIKE
@@ -922,12 +922,23 @@ void CObject::ProcessSamSiteBehaviour() {
             && vecTargetPos.y <= 2100.0F
         ) {
             const auto vecDir = vecTargetPos - vecPos;
-            const auto fAngle = CGeneral::GetATanOfXY(vecDir.x, vecDir.y);
-            const auto fAngleDiff = CGeneral::LimitRadianAngle(fAngle - fHeading);
+            // 0x5A093C: `fst` spills a float copy of the atan result (`fAngle`), the unrounded value itself stays on the x87 stack for the `fsub`
+            const auto fAngleExt = CGeneral::GetATanOfXYExt(vecDir.x, vecDir.y);
+            const auto fAngle    = (float)fAngleExt;
+
+            // `fAngle - fHeading`, then the inlined `LimitRadianAngle` loops (0x5A094C..0x5A09A3); NaN skips both loops
+            double fAngleDiffExt = fAngleExt - (double)fHeading;
+            while (fAngleDiffExt > PI) {
+                fAngleDiffExt -= 2.0f * PI; // 0x858CBC
+            }
+            while (fAngleDiffExt < -PI) {
+                fAngleDiffExt += 2.0f * PI;
+            }
+            const auto fAngleDiff = (float)fAngleDiffExt;
 
             float fNewAngle;
-            const auto fTimeStep = CTimer::GetTimeStep() / 20.0F;
-            if (abs(fAngleDiff) <= fTimeStep)
+            const auto fTimeStep = CTimer::GetTimeStep() * 0.05f; // 0x858C28 (`fmul`, not a division by 20)
+            if (!(std::fabs(fAngleDiff) > fTimeStep)) // 0x5A09C8: FCOMP + `test ah, 0x41` + `jne` (taken for <=, and for NaN)
                 fNewAngle = fAngle;
             else if (fAngleDiff < 0.0F)
                 fNewAngle = fHeading - fTimeStep;
@@ -939,10 +950,10 @@ void CObject::ProcessSamSiteBehaviour() {
             CEntity::UpdateRwFrame();
 
             auto vecShootDir = vecPos - vecTargetPos;
-            if (vecShootDir.Magnitude2D() >= 120.0F)
+            if (!(vecShootDir.Magnitude2D() < 120.0F)) // 0x5A0A83: FCOMP + `test ah, 5` + `jp` (NaN returns)
                 return;
 
-            if (std::fabs(fAngleDiff) >= 0.1F || CTimer::GetTimeInMS() / 4000 == CTimer::GetPreviousTimeInMS() / 4000)
+            if (!(std::fabs(fAngleDiff) < 0.1F) || CTimer::GetTimeInMS() / 4000 == CTimer::GetPreviousTimeInMS() / 4000) // 0x5A0AAB (NaN returns)
                 return;
 
             auto vecRocketDir = m_matrix->GetForward() + m_matrix->GetUp();
@@ -952,7 +963,7 @@ void CObject::ProcessSamSiteBehaviour() {
         }
     }
 
-    fHeading += CTimer::GetTimeStep() / 200.0F;
+    fHeading += CTimer::GetTimeStep() * 0.005F; // 0x5A0A00: `fmul [0x858B4C]` (not a division by 200)
     CPlaceable::SetHeading(fHeading - HALF_PI);
     CEntity::UpdateRwMatrix();
     CEntity::UpdateRwFrame();

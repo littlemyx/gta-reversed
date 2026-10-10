@@ -154,20 +154,31 @@ void CPlayerInfo::EvaluateCarPosition(CEntity* car, CPed* ped, float pedToVehDis
     const auto& forward = ped->GetForward();
 
     // Find our rotation (so that is, at which angle the forward vector is)
-    const auto angleFront = CGeneral::GetATanOfXY(forward.x, forward.y);
+    const auto angleFront = CGeneral::GetATanOfXY(forward.x, forward.y); // 0x56DAE2 (stored as float, 0x56DAE7)
 
     // Find car angle, not relative to our rotation
-    const auto carAngle = CGeneral::GetATanOfXY(carPosn.x - pedPosn.x, carPosn.y - pedPosn.y);
+    // 0x56DB35: its result stays unrounded on the x87 stack (`GetATanOfXY` leaves its `st0`), the whole wrap below happens in extended precision
+    double carAngleFromFront = (double)angleFront - CGeneral::GetATanOfXYExt(carPosn.x - pedPosn.x, carPosn.y - pedPosn.y);
 
     // Make car's angle relative to our rotation (notice: it's an abs value)
     // Basically, we calculate how much the car is in our FOV.
-    const auto carAngleFromFront = std::abs(CGeneral::LimitRadianAngle(angleFront - carAngle));
+    constexpr auto pi = std::numbers::pi_v<float>; // 0x858CB8 / 0x858CC0
+    while (carAngleFromFront > pi) {               // inlined `LimitRadianAngle` (0x56DB42..0x56DB81): FCOM + `test ah, 0x41` / `test ah, 5`, NaN skips both loops
+        carAngleFromFront -= 2.0f * pi;            // 0x858CBC
+    }
+    while (carAngleFromFront < -pi) {
+        carAngleFromFront += 2.0f * pi;
+    }
+    if (carAngleFromFront < 0.0f) {                // 0x56DB83: FCOM + `jp` + FCHS
+        carAngleFromFront = -carAngleFromFront;
+    }
 
     // Calculate imaginary distance based on the car's angle: The higher the angle the greater the distance
-    const auto distance = (1.0f - carAngleFromFront / TWO_PI) * (10.0f - pedToVehDist);
-    if (distance >= *outDistance) {
-        *outDistance = distance;
-        *outVehicle = car->AsVehicle();
+    // 0x56DB92: `fmul [0x8594F0]` = 1 / (2 * pi) as the float constant 0x3E22F983 (not a division)
+    const double distance = (1.0f - carAngleFromFront * std::bit_cast<float>(0x3E22F983u)) * (10.0f - (double)pedToVehDist);
+    if (distance >= *outDistance) { // 0x56DBB0: FCOMP + `test ah, 1` + `jne` (skips if less or unordered)
+        *outDistance = (float)distance;
+        *outVehicle  = car->AsVehicle();
     }
 }
 

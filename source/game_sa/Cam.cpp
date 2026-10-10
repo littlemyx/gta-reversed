@@ -304,12 +304,13 @@ void CCamera::AvoidTheGeometry(const CVector* src, const CVector* dst, CVector* 
     const float heading = (dx == 0.0 && dy == 0.f)
         ? CGeneral::GetATanOfXY(m_mCameraMatrix.GetForward().x, m_mCameraMatrix.GetForward().y)
         : CGeneral::GetATanOfXY(dxf, dy);
-    const float pitch = (len2D == 0.f && dz == 0.f)
-        ? 0.f
-        : CGeneral::GetATanOfXY(len2D, dz);
-    dir.x = (float)(x87::cos((double)heading) * x87::cos((double)pitch));
-    dir.y = (float)(x87::sin((double)heading) * x87::cos((double)pitch));
-    dir.z = (float)x87::sin((double)pitch);
+    // 0x514133: the 2nd result is NOT spilled, `fcos` / `fsin` below use it unrounded (`fld st(0); fcos; ...; fsin`); the 1st one is stored as float (0x514100)
+    const double pitch = (len2D == 0.f && dz == 0.f)
+        ? 0.0
+        : CGeneral::GetATanOfXYExt(len2D, dz);
+    dir.x = (float)(x87::cos((double)heading) * x87::cos(pitch));
+    dir.y = (float)(x87::sin((double)heading) * x87::cos(pitch));
+    dir.z = (float)x87::sin(pitch);
 
     // Move the camera `len3D` away from the target, along `dir`
     {
@@ -7104,7 +7105,8 @@ void CCam::Process_Rocket(const CVector& target, float orientation, float speedV
     );
     GetVectorsReadyForRW();
 
-    const auto heading = CGeneral::GetATanOfXY(m_vecFront.x, m_vecFront.y) - DegreesToRadians(90.0f);
+    // 0x511E94: the unrounded atan result minus pi/2 (`fsub [0x858FE4]`), stored twice (`fld st(0)` + 2x `fstp`)
+    const auto heading = (float)(CGeneral::GetATanOfXYExt(m_vecFront.x, m_vecFront.y) - (double)HALF_PI);
     TheCamera.m_pTargetEntity->AsPed()->m_fCurrentRotation = heading;
     TheCamera.m_pTargetEntity->AsPed()->m_fAimingRotation  = heading;
 

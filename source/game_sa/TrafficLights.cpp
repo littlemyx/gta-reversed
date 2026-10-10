@@ -136,7 +136,8 @@ int32 CTrafficLights::FindTrafficLightType(CEntity* entity) {
 // 0x49D520
 float CTrafficLights::FindOrientationForTrafficLightType(CEntity* entity) {
     const auto& mat = entity->GetMatrix();
-    return RadiansToDegrees(CGeneral::GetATanOfXY(mat.GetForward().x, mat.GetForward().y));
+    // 0x49D565: `fmul [0x859878]` (57.29578f) consumes the unrounded result of `GetATanOfXY` straight from the x87 stack
+    return (float)(CGeneral::GetATanOfXYExt(mat.GetForward().x, mat.GetForward().y) * (double)RAD_TO_DEG);
 }
 
 // 0x49D4D0

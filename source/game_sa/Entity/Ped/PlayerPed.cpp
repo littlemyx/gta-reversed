@@ -1938,18 +1938,36 @@ static auto& PLAYER_MAX_TARGET_VIEW_ANGLE = StaticRef<float>(0x8D243C); // 140.0
 
 // 0x60D020
 void CPlayerPed::EvaluateTarget(CEntity* target, CEntity *& outTarget, float & outTargetPriority, float maxDistance, float compensationRotRad, bool arg5) {
-    const CVector dir = target->GetPosition() - GetPosition();
-    const float dist = dir.Magnitude();
+    // 0x60D045: `target - self` (the differences stay on the x87 stack for the distance)
+    const auto& selfPos   = GetPosition();
+    const auto& targetPos = target->GetPosition();
+    const double ddx = (double)targetPos.x - (double)selfPos.x;
+    const double ddy = (double)targetPos.y - (double)selfPos.y;
+    const double ddz = (double)targetPos.z - (double)selfPos.z;
+    const float dist = (float)std::sqrt(ddz * ddz + ddy * ddy + ddx * ddx); // 0x60D065: z*z + y*y + x*x, in this order
 
-    if (dist > maxDistance)
+    if (!(dist <= maxDistance)) // 0x60D071: FCOMP + `test ah, 0x41` + `jp` (NaN returns too)
         return;
 
     if (DoesTargetHaveToBeBroken(target, &GetActiveWeapon()))
         return;
 
-    const float targetAngleDeg = std::fabs(RadiansToDegrees(CGeneral::LimitRadianAngle(CGeneral::GetATanOf(dir) - compensationRotRad)));
+    // 0x60D0E9: `GetATanOfXY`'s result stays unrounded on the x87 stack through `- compensationRotRad`, the inlined `LimitRadianAngle` loops,
+    // `* 57.29578f` (0x859878), the sign flip and `/ 140.0f`; the multiplier is spilled to a float at 0x60D156
+    double targetAngle = CGeneral::GetATanOfXYExt((float)ddx, (float)ddy) - (double)compensationRotRad;
+    constexpr auto PI = std::numbers::pi_v<float>; // 0x858CB8
+    while (targetAngle > (double)PI) {
+        targetAngle -= (double)(2.f * PI); // 0x858CBC
+    }
+    while (targetAngle < (double)-PI) { // 0x858CC0
+        targetAngle += (double)(2.f * PI);
+    }
+    double targetAngleDeg = targetAngle * (double)RAD_TO_DEG;
+    if (targetAngleDeg < 0.0) { // FCOM + `jp` + FCHS (NaN keeps its sign)
+        targetAngleDeg = -targetAngleDeg;
+    }
 
-    float viewAngleMultiplier = 1.0f - targetAngleDeg / PLAYER_MAX_TARGET_VIEW_ANGLE;
+    float viewAngleMultiplier = (float)(1.0f - targetAngleDeg / PLAYER_MAX_TARGET_VIEW_ANGLE);
     if (dist > 1.0f)
         viewAngleMultiplier /= sqrt(sqrt(dist)); // Take quad root of dist
 

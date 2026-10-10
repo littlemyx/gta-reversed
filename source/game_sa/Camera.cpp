@@ -2358,9 +2358,9 @@ void CCamera::Process() {
         const float dx = pos.x - target.x;
         const float dy = pos.y - target.y;
         if (std::sqrt((double)dy * dy + (double)dx * dx) < MIN_DIST) {
-            const float angle = CGeneral::GetATanOfXY(dx, dy);
-            pos.x = (float)(x87::cos((double)angle) * MIN_DIST + target.x);
-            pos.y = (float)(x87::sin((double)angle) * MIN_DIST + target.y);
+            const double angle = CGeneral::GetATanOfXYExt(dx, dy); // 0x52BDD6 / 0x52C125: `fld st(0); fcos ... fsin` consume the unrounded atan result on the x87 stack
+            pos.x = (float)(x87::cos(angle) * MIN_DIST + target.x);
+            pos.y = (float)(x87::sin(angle) * MIN_DIST + target.y);
         }
     };
 
@@ -3187,7 +3187,7 @@ void SnapToGroundOrRoof(CVector& pos, float heightOffset) {
 
 // Rotate (the XY of) the velocity by `angleOffset` around the heading (the original keeps `cos` in extended precision)
 void RotateHeading(CVector& vel, float angleOffset) {
-    const double angle = static_cast<double>(CGeneral::GetATanOfXY(vel.x, vel.y)) + static_cast<double>(angleOffset);
+    const double angle = CGeneral::GetATanOfXYExt(vel.x, vel.y) + static_cast<double>(angleOffset); // 0x51F5DD / 0x51F82C / 0x51FB14 / 0x51FD8F: `fadd [const]` on the unrounded atan result
     const double cosA  = x87::cos(angle);
     const float  sinA  = static_cast<float>(x87::sin(angle));
     vel.x = static_cast<float>(cosA + static_cast<double>(vel.x));
@@ -4783,7 +4783,8 @@ void CCamera::CamControl() {
                         }, activeMode2)) {
                             // Make the ped face where the camera is looking
                             auto&       cam      = GetActiveCam();
-                            const float heading  = CGeneral::GetATanOfXY(cam.m_vecFront.x, cam.m_vecFront.y) - std::numbers::pi_v<float> / 2.f;
+                            // 0x52ACC9: the unrounded atan result minus pi/2 (`fsub [0x858FE4]`), stored twice (`fst` + `fstp`)
+                            const float heading  = (float)(CGeneral::GetATanOfXYExt(cam.m_vecFront.x, cam.m_vecFront.y) - (double)(std::numbers::pi_v<float> / 2.f));
                             m_pTargetEntity->AsPed()->m_fCurrentRotation = heading;
                             m_pTargetEntity->AsPed()->m_fAimingRotation  = heading;
                         }
@@ -4794,7 +4795,7 @@ void CCamera::CamControl() {
                         if (GetActiveCam().m_nMode == MODE_TOP_DOWN_PED) {
                             GetActiveCam().m_fTransitionBeta = CGeneral::GetATanOfXY(0.001f, 1.f);
                         } else {
-                            GetActiveCam().m_fTransitionBeta = CGeneral::GetATanOfXY(GetActiveCam().m_vecFront.x, GetActiveCam().m_vecFront.y) + std::numbers::pi_v<float>;
+                            GetActiveCam().m_fTransitionBeta = (float)(CGeneral::GetATanOfXYExt(GetActiveCam().m_vecFront.x, GetActiveCam().m_vecFront.y) + (double)std::numbers::pi_v<float>); // 0x52ADA6 (`fadd [0x858CB8]` on the unrounded result)
                         }
                     }
                 }
@@ -5163,7 +5164,8 @@ void CCamera::StartTransition(eCamMode newCamMode) {
 
     // Handle player rotation for weapon modes
     if (m_pTargetEntity && m_pTargetEntity->GetIsTypePed() && notsa::contains({ MODE_SNIPER, MODE_ROCKETLAUNCHER, MODE_ROCKETLAUNCHER_HS, MODE_M16_1STPERSON, MODE_SNIPER_RUNABOUT, MODE_ROCKETLAUNCHER_RUNABOUT, MODE_ROCKETLAUNCHER_RUNABOUT_HS, MODE_M16_1STPERSON_RUNABOUT, MODE_FIGHT_CAM_RUNABOUT, MODE_HELICANNON_1STPERSON, MODE_CAMERA, MODE_1STPERSON_RUNABOUT }, activeCamMode)) {
-        const float angle                            = CGeneral::GetATanOfXY(activeCam.m_vecFront.x, activeCam.m_vecFront.y) - HALF_PI;
+        // 0x5152A9: the result of `GetATanOfXY` stays unrounded on the x87 stack; `fsub [0x858FE4]` (pi/2) rounds it, `fst` + `fstp` store the same value twice
+        const float angle                            = (float)(CGeneral::GetATanOfXYExt(activeCam.m_vecFront.x, activeCam.m_vecFront.y) - (double)HALF_PI);
         m_pTargetEntity->AsPed()->m_fCurrentRotation = angle;
         m_pTargetEntity->AsPed()->m_fAimingRotation  = angle;
     }
@@ -5187,7 +5189,7 @@ void CCamera::StartTransition(eCamMode newCamMode) {
         break;
     case MODE_FOLLOWPED: {
         if (m_bJustCameOutOfGarage) {
-            activeCam.m_fHorizontalAngle = CGeneral::GetATanOfXY(activeCam.m_vecFront.x, activeCam.m_vecFront.y) + PI;
+            activeCam.m_fHorizontalAngle = (float)(CGeneral::GetATanOfXYExt(activeCam.m_vecFront.x, activeCam.m_vecFront.y) + (double)PI); // 0x515463 (`fadd [0x858CB8]` on the unrounded result)
             activeCam.m_fTransitionBeta  = 0.0f;
         }
 
@@ -5195,8 +5197,9 @@ void CCamera::StartTransition(eCamMode newCamMode) {
 
         if (activeCamMode == MODE_CAM_ON_A_STRING) {
             m_bUseTransitionBeta        = true;
-            const float angle           = CGeneral::GetATanOfXY(activeCam.m_vecFront.x, activeCam.m_vecFront.y);
-            activeCam.m_fTransitionBeta = angle + (fabs(angle) <= HALF_PI ? DegreesToRadians(235.0f) : DegreesToRadians(55.0f));
+            // 0x5154CA: the atan result stays unrounded on the x87 stack. The original runs the inlined `LimitRadianAngle` + `fabs(...) <= pi/2` on a
+            // freshly loaded constant 0.0 (0x858B50), NOT on the angle (`fld 0.0` sits on top of it), so the 235 degree branch (0x8631DC) is always taken.
+            activeCam.m_fTransitionBeta = (float)(CGeneral::GetATanOfXYExt(activeCam.m_vecFront.x, activeCam.m_vecFront.y) + (double)std::bit_cast<float>(0x40833FAFu));
         }
         break;
     }
@@ -5214,21 +5217,15 @@ void CCamera::StartTransition(eCamMode newCamMode) {
     case MODE_ROCKETLAUNCHER_RUNABOUT_HS: {
         CEntity* vehicle             = FindPlayerVehicle();
         CMatrix* playerMat           = vehicle ? &vehicle->GetMatrix() : &FindPlayerPed()->GetMatrix();
-        activeCam.m_fHorizontalAngle = CGeneral::GetATanOfXY(playerMat->GetForward().x, playerMat->GetForward().y);
+        activeCam.m_fHorizontalAngle = (float)x87::atan2((double)playerMat->GetForward().x, (double)playerMat->GetForward().y); // 0x515417: inline `fld x; fld y; fpatan` (NOT `GetATanOfXY`)
         activeCam.m_fVerticalAngle   = 0.0f;
         break;
     }
     case MODE_CAM_ON_A_STRING: {
         if (m_bLookingAtPlayer && !m_bJustCameOutOfGarage) {
             m_bUseTransitionBeta = true;
-            const float angle    = CGeneral::GetATanOfXY(activeCam.m_vecFront.x, activeCam.m_vecFront.y);
-            if (activeCamMode == MODE_FIXED) { // Ghidra
-                activeCam.m_fTransitionBeta = angle;
-                break;
-            }
-
-            // Reconstruced + android simplified
-            activeCam.m_fTransitionBeta = angle + (fabs(angle) <= HALF_PI ? DegreesToRadians(235.0f) : DegreesToRadians(55.0f));
+            // 0x5155BC: both arms (`bl` = activeCamMode == MODE_FIXED) store the atan result as is (`fstp [cam + 0x210]`), no offset is added
+            activeCam.m_fTransitionBeta = CGeneral::GetATanOfXY(activeCam.m_vecFront.x, activeCam.m_vecFront.y);
         }
         break;
     }

@@ -34,12 +34,15 @@ namespace cwf {
 struct Rec {
     int cone = 0; CVector conePos{}, coneLook{}; float coneRad = 0, coneMin = 0; CEntity* coneIgnore = nullptr;
     int blur = 0; int blurR = 0, blurG = 0, blurB = 0, blurV = 0, blurType = 0;
-    int water = 0; float wx = 0, wy = 0, wz = 0;
+    int water = 0; float wx = 0, wy = 0, wz = 0; std::vector<CVector> waterCalls;
     int playerVeh = 0;
 };
 inline Rec g_rec;
 inline bool coneRet = false; inline CVector coneOut{}; inline float coneDist = 0;
 inline bool waterRet = false; inline float waterLevel = 0;
+struct WaterEntry { bool ret = false; float level = 0; CVector normal{ 0, 0, 1 }; };
+inline WaterEntry waterTab[16]; inline size_t waterIdx = 0;   // the k-th call of a run uses entry k % 16 (entry 0 = waterRet / waterLevel)
+inline void Reset() { g_rec = Rec{}; waterIdx = 0; }
 inline void* playerVeh = nullptr;
 inline bool Cone(const CVector& pos, const CVector& look, CVector& out, float rad, float mn, float& dist) {
     ++g_rec.cone; g_rec.conePos = pos; g_rec.coneLook = look; g_rec.coneRad = rad; g_rec.coneMin = mn; g_rec.coneIgnore = CWorld::pIgnoreEntity;
@@ -47,22 +50,28 @@ inline bool Cone(const CVector& pos, const CVector& look, CVector& out, float ra
     return coneRet;
 }
 inline void Blur(int r, int g, int b, int v, int type) { ++g_rec.blur; g_rec.blurR = r; g_rec.blurG = g; g_rec.blurB = b; g_rec.blurV = v; g_rec.blurType = type; }
-inline bool Water(float x, float y, float z, float& out) { ++g_rec.water; g_rec.wx = x; g_rec.wy = y; g_rec.wz = z; if (waterRet) out = waterLevel; return waterRet; }
+inline bool Water(float x, float y, float z, float& out, CVector* normals = nullptr) {
+    ++g_rec.water; g_rec.wx = x; g_rec.wy = y; g_rec.wz = z; g_rec.waterCalls.push_back({ x, y, z });
+    const WaterEntry& e = waterTab[waterIdx++ % 16];
+    if (e.ret) out = e.level;
+    if (normals) *normals = e.normal;
+    return e.ret;
+}
 inline bool SameRec(const Rec& a, const Rec& b) {
     return a.cone == b.cone && SameV(a.conePos, b.conePos) && SameV(a.coneLook, b.coneLook) && SameF(a.coneRad, b.coneRad) && SameF(a.coneMin, b.coneMin) && a.coneIgnore == b.coneIgnore
         && a.blur == b.blur && a.blurR == b.blurR && a.blurG == b.blurG && a.blurB == b.blurB && a.blurV == b.blurV && a.blurType == b.blurType
-        && a.water == b.water && (a.water == 0 || (SameF(a.wx, b.wx) && SameF(a.wy, b.wy) && SameF(a.wz, b.wz))) && a.playerVeh == b.playerVeh;
+        && a.water == b.water && (a.water == 0 || (SameF(a.wx, b.wx) && SameF(a.wy, b.wy) && SameF(a.wz, b.wz))) && a.playerVeh == b.playerVeh && SameV3Arr(a.waterCalls.data(), b.waterCalls.data(), (int)std::min(a.waterCalls.size(), b.waterCalls.size())) && a.waterCalls.size() == b.waterCalls.size();
 }
 inline std::string Desc(const Rec& a) {
     return "cone " + std::to_string(a.cone) + " blur " + std::to_string(a.blur) + "(" + std::to_string(a.blurR) + "," + std::to_string(a.blurG) + "," + std::to_string(a.blurB) + "," + std::to_string(a.blurV) + "," + std::to_string(a.blurType) + ") water " + std::to_string(a.water) + " pveh " + std::to_string(a.playerVeh);
 }
 }
-bool CWaterLevel::GetWaterLevel(float x, float y, float z, float& out, uint8, CVector*) { return cwf::Water(x, y, z, out); }
-bool CWaterLevel::GetWaterLevel(const CVector& pos, float& out, bool, CVector*) { return cwf::Water(pos.x, pos.y, pos.z, out); }
+bool CWaterLevel::GetWaterLevel(float x, float y, float z, float& out, uint8, CVector* n) { return cwf::Water(x, y, z, out, n); }
+bool CWaterLevel::GetWaterLevel(const CVector& pos, float& out, bool, CVector* n) { return cwf::Water(pos.x, pos.y, pos.z, out, n); }
 CVehicle* FindPlayerVehicle(int32, bool) { ++cwf::g_rec.playerVeh; return reinterpret_cast<CVehicle*>(cwf::playerVeh); }
 static bool __fastcall HostCone(CCamera*, int, const CVector& pos, const CVector& look, CVector& out, float rad, float mn, float& dist) { return cwf::Cone(pos, look, out, rad, mn, dist); }
 static void* __cdecl ExeFindPlayerVehicle(int, bool) { ++cwf::g_rec.playerVeh; return cwf::playerVeh; }
-static bool __cdecl ExeWater(float x, float y, float z, float* out, bool, CVector*) { return cwf::Water(x, y, z, *out); }
+static bool __cdecl ExeWater(float x, float y, float z, float* out, bool, CVector* n) { return cwf::Water(x, y, z, *out, n); }
 static bool g_camStubsInstalled = false;
 static void InstallCamStubs() {
     if (g_camStubsInstalled) return;
@@ -76,11 +85,13 @@ struct CamWorldScript {   // random script for the stubs of one case + the camer
     static void Roll(Rng& r) {
         cwf::coneRet = r.below(2); cwf::coneOut = GenV(r, 100.f); cwf::coneDist = GenF(r, 5.f);
         cwf::waterRet = r.below(2); cwf::waterLevel = GenF(r, 100.f);
+        for (auto& e : cwf::waterTab) { e.ret = r.below(2); e.level = GenF(r, 100.f, S_NOHUGE); e.normal = r.below(2) ? CVector{ 0, 0, 1 } : GenDir(r); }
+        cwf::waterTab[0].ret = cwf::waterRet; cwf::waterTab[0].level = cwf::waterLevel;
         static alignas(16) uint8 veh[16]; cwf::playerVeh = r.below(2) ? veh : nullptr;
         auto* w = reinterpret_cast<uint32_t*>(0xB7C500);   // CTimeCycle current colours: water rgb at 0xB7C508..0xB7C510
         for (int i = 0; i < 8; ++i) { const float v = r.below(3) ? r.f01() * 300.f : std::fabs(GenF(r, 300.f, S_NOHUGE)); std::memcpy(&w[i], &v, 4); /* water colours >= 0 (the exe inlines SetMotionBlur and stores the raw int) */ }
         *reinterpret_cast<uint8_t*>(0xB6EC2C) = r.below(2);    // gAllowScriptedFixedCameraCollision (exe global)
-        cwf::g_rec = cwf::Rec{};
+        cwf::Reset();
     }
 };
 
@@ -96,9 +107,9 @@ static void TestCamCam() {
         CamWorldScript::Roll(r);
         const CVector target = GenV(r, 100.f); const float ori = GenF(r, 6.f), sv = GenF(r, 1.f), svw = GenF(r, 1.f);
         c.Mark();
-        cwf::g_rec = cwf::Rec{};
+        cwf::Reset();
         cam.Process_Fixed(target, ori, sv, svw); const auto recA = cwf::g_rec; c.PortDone();
-        cwf::g_rec = cwf::Rec{};
+        cwf::Reset();
         oracle::Fn<void __fastcall(CCam*, int, const CVector*, float, float, float)>(0x51D470)(&cam, 0, &target, ori, sv, svw); const auto recE = cwf::g_rec; c.ExeDone();
         if (c.Same() && cwf::SameRec(recA, recE)) return true;
         d = "target " + V(target) + " fixedsrc " + V(cam.m_vecCamFixedModeSource) + " " + cwf::Desc(recA) + " / exe " + cwf::Desc(recE) + c.Diff();

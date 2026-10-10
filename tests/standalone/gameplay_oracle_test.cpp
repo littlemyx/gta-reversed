@@ -217,7 +217,6 @@ static std::string DiffDesc(const void* a, const void* b, size_t n, const char* 
 #include "Models/ModelInfo.h"
 #include "World.h"
 #include "Collision/ColPoint.h"
-CBaseModelInfo* CEntity::GetModelInfo() const { return CModelInfo::GetModelInfo(m_nModelIndex); }
 
 
 // redirects a port function (member or free) to a host function with the same calling convention by overwriting its entry with a JMP (as physics_oracle_weapon.inc does)
@@ -259,6 +258,7 @@ static bool __cdecl ExeProcessLineOfSight(const CVector& a, const CVector& b, CC
 #include "gameplay_oracle_camera.inc"
 #include "gameplay_oracle_weapon.inc"
 #include "gameplay_oracle_vehicle.inc"
+#include "gameplay_oracle_buoy.inc"
 
 static int __cdecl AssertHook(int, char* msg, int*) {   // prints the call stack of a failed assert (map the addresses with the linker .map)
     void* fr[16]; const USHORT n = RtlCaptureStackBackTrace(0, 16, fr, nullptr);
@@ -297,6 +297,7 @@ int main(int argc, char** argv) {
     TestCamera();
     TestWeapons();
     TestVehicles();
+    TestBuoyancy();
     int bad24 = 0, bad53 = 0, hard24 = 0, hard53 = 0;
     for (auto& r : g_rows) { bad24 += r.bad24; bad53 += r.bad53; hard24 += r.hardReg24 + r.hardSpec24; hard53 += r.hardReg53 + r.hardSpec53; }
     std::printf("\n%zu functions, mismatches (strict / excluding NaN-payload-only): PC24 %d / %d, PC53 %d / %d\n", g_rows.size(), bad24, hard24, bad53, hard53);

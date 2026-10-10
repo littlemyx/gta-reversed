@@ -404,6 +404,22 @@ static void TestPop() {
         return ok;
     }, 3000);
 
+    Run("CPopulation::FindNumberOfPedsWeCanPlaceOnBenches 0x612240", [&](Rng& r, std::string& d) {
+        return Case<int>(r, d, [&] { return CPopulation::FindNumberOfPedsWeCanPlaceOnBenches(); }, [&] { return oracle::Fn<int __cdecl()>(0x612240)(); }, "PedsOnBenches");
+    }, 4000);
+    Run("CPopulation::FindDistanceToNearestPedOfType 0x6143E0", [&](Rng& r, std::string& d) {
+        Rng a = sub(r); const ePedType t = (ePedType)(a.below(4) ? (a.below(2) ? PED_TYPE_CIVMALE : PED_TYPE_COP) : a.below(32)); const CVector pos = GenV(a, a.below(2) ? 60.f : 3000.f, S_NOHUGE);
+        return Case<float>(r, d, [&](Rng& rr) { for (int i = 0; i < lw::kPeds; ++i) { auto* p = lw::PedObj[i]; std::memset((void*)p, 0, 0x7C4); lw::PedState[i] = rr.below(4) ? (uint8)rr.below(0x7F) : 0x80;
+                                                  p->m_nPedType = (ePedType)(rr.below(2) ? t : (ePedType)rr.below(32)); p->m_matrix = nullptr; p->m_placement.m_vPosn = rr.below(2) ? CVector{ pos.x + GenF(rr, 40.f), pos.y + GenF(rr, 40.f), pos.z + GenF(rr, 10.f) } : GenV(rr, 3000.f, S_NOHUGE); } },
+                         [&] { return CPopulation::FindDistanceToNearestPedOfType(t, pos); }, [&] { return oracle::Fn<float __cdecl(int, float, float, float)>(0x6143E0)((int)t, pos.x, pos.y, pos.z); }, "NearestPedOfType");
+    }, 3000);
+    Run("CPopulation::PedCreationDistMultiplier 0x6116C0", [&](Rng& r, std::string& d) {
+        Rng a = sub(r);
+        return Case<float>(r, d, [&](Rng& rr) { auto* v = lw::VehObj[0]; std::memset((void*)v, 0, sizeof(CHeli)); v->m_vecMoveSpeed = GenV(rr, rr.below(2) ? 3.f : 0.5f, S_NOHUGE); lw::VehState[0] = 1;
+                                                  lw::Pl->bInVehicle = rr.below(4) != 0; lw::Pl->m_pVehicle = rr.below(5) ? v : nullptr; },
+                         [&] { return CPopulation::PedCreationDistMultiplier(); }, [&] { return oracle::Fn<float __cdecl()>(0x6116C0)(); }, "PedCreationDistMultiplier");
+    }, 2500);
+
     // ---- CPopCycle
     Run("CPopCycle::GetCurrentPercOther_Peds 0x610310", [&](Rng& r, std::string& d) {
         return Case<int>(r, d, [&] { return CPopCycle::GetCurrentPercOther_Peds(); }, [&] { return oracle::Fn<int __cdecl()>(0x610310)(); }, "PercOther");

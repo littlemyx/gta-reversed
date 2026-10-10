@@ -31,47 +31,62 @@ void CPointLights::Init() {
 
 // 0x6FFBB0
 float CPointLights::GenerateLightsAffectingObject(const CVector* point, float* totalLighting, CEntity* entity) {
+    // Exact x87 form of the exe: the deltas and the distance are stored as floats, the sum of squares is z + y + x, the ratio / 1/dist / (1 - ratio) stay in
+    // extended precision, the in-range tests are strict and false for NaN
     float antilightMult = 1.0f;
     for (const auto& light : GetActiveLights()) {
         if (light.m_nType == PLTYPE_ONLYFOGEFFECT_ALWAYS || light.m_nType == PLTYPE_ONLYFOGEFFECT) {
             continue;
         }
-        const CVector delta  = light.m_vecPosn - *point;
-        const float   radius = light.m_fRadius;
-        if (!CRect{ CVector2D{ *point }, radius }.IsPointInside(light.m_vecPosn) || std::abs(delta.z) >= radius) {
+        const float radius = light.m_fRadius;
+        const float nRad   = -radius;
+        const float dx = (float)((double)light.m_vecPosn.x - (double)point->x);
+        if (!(dx > nRad && dx < radius)) {
             continue;
         }
-        const float dist = delta.Magnitude();
-        if (dist >= radius) {
+        const float dy = (float)((double)light.m_vecPosn.y - (double)point->y);
+        if (!(dy > nRad && dy < radius)) {
+            continue;
+        }
+        const float dz = (float)((double)light.m_vecPosn.z - (double)point->z);
+        if (!(dz > nRad && dz < radius)) {
+            continue;
+        }
+        const float dist = (float)x87::sqrt((double)dz * dz + (double)dy * dy + (double)dx * dx);
+        if (!(dist < radius)) {
             continue;
         }
 
-        const float ratio = dist / radius;
+        const double ratio = (double)dist / (double)radius;
         if (light.m_nType == PLTYPE_ANTILIGHT) {
-            antilightMult *= ratio;
+            antilightMult = (float)(ratio * (double)antilightMult);
             continue;
         }
 
+        constexpr double k3 = (double)ExeRecip(3.0f);
+        const double oneMinusRatio = 1.0 - ratio;
         if (totalLighting) {
-            *totalLighting += (1.0f - ratio) * light.m_fColorRed   * ExeRecip(3.0f);
-            *totalLighting += (1.0f - ratio) * light.m_fColorGreen * ExeRecip(3.0f);
-            *totalLighting += (1.0f - ratio) * light.m_fColorBlue  * ExeRecip(3.0f);
+            *totalLighting = (float)(oneMinusRatio * light.m_fColorRed * k3 + *totalLighting);
+            *totalLighting = (float)((double)*totalLighting + oneMinusRatio * light.m_fColorGreen * k3);
+            *totalLighting = (float)(oneMinusRatio * light.m_fColorBlue * k3 + (double)*totalLighting);
         }
 
-        float intensity = ratio >= 0.5f ? 1.0f - ((ratio - 0.5f) + (ratio - 0.5f)) : 1.0f;
+        float intensity = (ratio >= 0.5 || ratio != ratio) ? (float)(1.0 - (ratio - 0.5) * 2.0) : 1.0f;
         if (dist == 0.0f) {
             continue;
         }
-        const CVector dir = delta * (1.0f / dist);
+        const double inv = 1.0 / (double)dist;
+        const float  nx = (float)((double)dx * inv), ny = (float)((double)dy * inv), nz = (float)((double)dz * inv);
         if (light.m_nType == PLTYPE_DIRECTIONAL && light.m_pEntityToLight != entity) {
-            const float dot = -DotProduct(dir, light.m_vecDirection) - 0.5f;
-            intensity *= std::max(dot + dot, 0.0f);
+            const double dot = -((double)nz * light.m_vecDirection.z + (double)ny * light.m_vecDirection.y + (double)nx * light.m_vecDirection.x) - 0.5;
+            const float  t   = (float)(dot + dot);
+            intensity = (float)((t < 0.0f ? 0.0f : t) * (double)intensity);
         }
         if (intensity > 0.0f) {
-            AddAnExtraDirectionalLight(Scene.m_pRpWorld, dir.x, dir.y, dir.z,
-                intensity * light.m_fColorRed,
-                intensity * light.m_fColorGreen,
-                intensity * light.m_fColorBlue);
+            AddAnExtraDirectionalLight(Scene.m_pRpWorld, nx, ny, nz,
+                (float)((double)intensity * light.m_fColorRed),
+                (float)((double)intensity * light.m_fColorGreen),
+                (float)((double)intensity * light.m_fColorBlue));
         }
     }
     return antilightMult;
@@ -79,31 +94,43 @@ float CPointLights::GenerateLightsAffectingObject(const CVector* point, float* t
 
 // 0x6FFE70
 float CPointLights::GetLightMultiplier(const CVector* point) {
-    float antilightMult = 1.0f;
-    float lightSum     = 0.0f;
+    // Exact x87 form of the exe (see GenerateLightsAffectingObject): the anti-light product and the light sum stay in extended precision, each colour channel is added separately
+    double antilightMult = 1.0;
+    double lightSum      = 0.0;
     for (const auto& light : GetActiveLights()) {
         if (light.m_nType == PLTYPE_ONLYFOGEFFECT_ALWAYS || light.m_nType == PLTYPE_ONLYFOGEFFECT) {
             continue;
         }
-        const CVector delta  = light.m_vecPosn - *point;
-        const float   radius = light.m_fRadius;
-        if (!CRect{ CVector2D{ *point }, radius }.IsPointInside(light.m_vecPosn) || std::abs(delta.z) >= radius) {
+        const float radius = light.m_fRadius;
+        const float nRad   = -radius;
+        const float dx = (float)((double)light.m_vecPosn.x - (double)point->x);
+        if (!(dx > nRad && dx < radius)) {
             continue;
         }
-        const float dist = delta.Magnitude();
-        if (dist >= radius) {
+        const float dy = (float)((double)light.m_vecPosn.y - (double)point->y);
+        if (!(dy > nRad && dy < radius)) {
             continue;
         }
-        const float ratio = dist / radius;
+        const float dz = (float)((double)light.m_vecPosn.z - (double)point->z);
+        if (!(dz > nRad && dz < radius)) {
+            continue;
+        }
+        const double dist = x87::sqrt((double)dz * dz + (double)dy * dy + (double)dx * dx);
+        if (!(dist < radius)) {
+            continue;
+        }
+        const double ratio = dist / (double)radius;
         if (light.m_nType == PLTYPE_ANTILIGHT) {
             antilightMult *= ratio;
         } else {
-            lightSum += (1.0f - ratio)
-                      * (light.m_fColorRed + light.m_fColorGreen + light.m_fColorBlue)
-                      * ExeRecip(3.0f);
+            constexpr double k3 = (double)ExeRecip(3.0f);
+            const double om = 1.0 - ratio;
+            lightSum += om * light.m_fColorRed * k3;
+            lightSum += om * light.m_fColorGreen * k3;
+            lightSum += om * light.m_fColorBlue * k3;
         }
     }
-    return antilightMult + lightSum;
+    return (float)(antilightMult + lightSum);
 }
 
 // 0x6FFFE0
@@ -136,34 +163,52 @@ bool CPointLights::ProcessVerticalLineUsingCache(CVector point, float* outZ) {
 
 // 0x7000E0
 void CPointLights::AddLight(uint8 lightType, CVector point, CVector direction, float radius, float red, float green, float blue, uint8 fogType, bool generateExtraShadows, CEntity* entityAffected) {
+    // Exact x87 form of the exe: float deltas (x, y), z only in the sum of squares (z + y + x), strict range tests (false for NaN), the light is written BEFORE the fade
+    // test (fields assigned one by one: the padding byte is left alone), the colours are scaled by the extended-precision fade factor
     const float   maxDist = radius + 15.0f;
     const CVector camPos  = TheCamera.GetPosition();
-    if (!CRect{ CVector2D{ point }, maxDist }.IsPointInside(CVector2D{ camPos })) {
+    const float dx = (float)((double)point.x - (double)camPos.x);
+    if (!(dx < maxDist)) {
+        return;
+    }
+    const float nMax = -maxDist;
+    if (!(dx > nMax)) {
+        return;
+    }
+    const float dy = (float)((double)point.y - (double)camPos.y);
+    if (!(dy < maxDist) || !(dy > nMax)) {
         return;
     }
     if (NumLights >= MAX_POINT_LIGHTS) {
         return;
     }
-    const float dist = (point - camPos).Magnitude();
-    if (dist >= maxDist) {
+    const double dz   = (double)point.z - (double)camPos.z;
+    const float  dist = (float)x87::sqrt(dz * dz + (double)dy * dy + (double)dx * dx);
+    if (!(dist < maxDist)) {
         return;
     }
 
-    // Fade color out starting at 75% of the max distance
-    const float fade = dist < maxDist * 0.75f ? 1.0f : 1.0f - (dist / maxDist - 0.75f) * 4.0f;
-
-    new (&aLights[NumLights++]) CPointLight{
-        .m_vecPosn          = point,
-        .m_vecDirection     = direction,
-        .m_fRadius          = radius,
-        .m_fColorRed        = red * fade,
-        .m_fColorGreen      = green * fade,
-        .m_fColorBlue       = blue * fade,
-        .m_pEntityToLight   = entityAffected,
-        .m_nType            = static_cast<ePointLightType>(lightType),
-        .m_nFogType         = fogType,
-        .m_bGenerateShadows = generateExtraShadows,
-    };
+    CPointLight& l = aLights[NumLights];
+    l.m_nType           = static_cast<ePointLightType>(lightType);
+    l.m_nFogType        = fogType;
+    l.m_vecPosn         = point;
+    l.m_vecDirection    = direction;
+    l.m_fRadius         = radius;
+    l.m_bGenerateShadows = generateExtraShadows;
+    l.m_pEntityToLight  = entityAffected;
+    if ((double)dist < (double)maxDist * 0.75) { // (dist cannot be NaN here)
+        l.m_fColorRed   = red;
+        l.m_fColorGreen = green;
+        l.m_fColorBlue  = blue;
+        NumLights++;
+    } else {
+        NumLights++;
+        // fade the colour out starting at 75% of the max distance
+        const double fade = 1.0 - ((double)dist / (double)maxDist - 0.75) * 4.0;
+        l.m_fColorRed   = (float)(red * fade);
+        l.m_fColorGreen = (float)(green * fade);
+        l.m_fColorBlue  = (float)(blue * fade);
+    }
 }
 
 // 0x7002D0

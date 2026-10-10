@@ -764,8 +764,11 @@ void CPopulation::ManagePed(CPed* ped, const CVector& playerPosn) {
 
 // 0x612240
 int32 CPopulation::FindNumberOfPedsWeCanPlaceOnBenches() {
+    // 0x612247: `(Max < NumOther) ? Max : NumOther` is TRUNCATED (_ftol, not floor: differs for negative values), then * PedDensityMultiplier * cull zone multiplier, truncated again
+    const float maxPeds = (float)(int32)MaxNumberOfPedsInUse;
+    const float lim     = (maxPeds < CPopCycle::m_NumOther_Peds) ? maxPeds : CPopCycle::m_NumOther_Peds;
     const int32 base = CGame::CanSeeOutSideFromCurrArea()
-        ? (int32)(std::floor(std::min((float)(MaxNumberOfPedsInUse), CPopCycle::m_NumOther_Peds)) * PedDensityMultiplier * FindPedDensityMultiplierCullZone())
+        ? (int32)((double)(int32)lim * PedDensityMultiplier * FindPedDensityMultiplierCullZone())
         : (int32)(NumberOfPedsInUseInterior);
     return base - (int32)(ms_nNumCivMale) - (int32)(ms_nNumCivFemale) + 2;
 }
@@ -1490,7 +1493,10 @@ float CPopulation::FindDistanceToNearestPedOfType(ePedType pedType, CVector posn
         if (pedType != PED_TYPE_NONE /*notsa*/ && ped.m_nPedType != pedType) {
             continue;
         }
-        closest3DSq = std::min(closest3DSq, (ped.GetPosition() - posn).SquaredMagnitude());
+        // 0x614444: posn - ped, squares summed z, y, x
+        const auto& pp = ped.GetPosition();
+        const float dx = posn.x - pp.x, dy = posn.y - pp.y, dz = posn.z - pp.z;
+        closest3DSq = std::min(closest3DSq, (dz * dz + dy * dy) + dx * dx);
     }
     return std::sqrt(closest3DSq);
 

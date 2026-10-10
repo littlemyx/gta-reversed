@@ -754,17 +754,36 @@ void CMatrix::Rotate(CVector rotation)
 
 void CMatrix::Reorthogonalise()
 {
-    auto vecCross = CrossProduct(m_right, m_forward);
-    vecCross.Normalise();
+    // 0x59B6A0: fully inlined x87 code. Squared lengths are summed z, y, x on the x87 stack; the reciprocal 1 / sqrt(..) is stored as a float
+    // (the x component is scaled with the unrounded one), cy / cz / nz / my / mz / the cross products are spilled to floats.
+    const auto NormaliseInline = [](float x, float y, float z) {
+        const double recip = 1.0 / std::sqrt((double)z * z + (double)y * y + (double)x * x);
+        const float  recipF = (float)recip;
+        return CVector{ (float)(x * recip), (float)(recipF * y), (float)(recipF * z) };
+    };
 
-    auto vecCross2 = CrossProduct(m_forward, vecCross);
-    vecCross2.Normalise();
+    // vecCross = right x forward
+    const float cx = m_right.y * m_forward.z - m_forward.y * m_right.z;
+    const float cy = m_forward.x * m_right.z - m_right.x * m_forward.z;
+    const float cz = m_forward.y * m_right.x - m_forward.x * m_right.y;
+    const CVector n1 = NormaliseInline(cx, cy, cz);
 
-    auto vecCross3 = CrossProduct(vecCross, vecCross2);
+    // vecCross2 = forward x vecCross
+    const float mx = n1.z * m_forward.y - n1.y * m_forward.z;
+    const float my = n1.x * m_forward.z - n1.z * m_forward.x;
+    const float mz = n1.y * m_forward.x - n1.x * m_forward.y;
+    const CVector n2 = NormaliseInline(mx, my, mz);
 
-    m_right = vecCross2;
-    m_forward = vecCross3;
-    m_up = vecCross;
+    // vecCross3 = vecCross x vecCross2
+    const CVector n3{
+        n2.z * n1.y - n2.y * n1.z,
+        n2.x * n1.z - n2.z * n1.x,
+        n2.y * n1.x - n2.x * n1.y,
+    };
+
+    m_right   = n2;
+    m_forward = n3;
+    m_up      = n1;
 }
 
 // similar to UpdateRW(RwMatrixTag *)

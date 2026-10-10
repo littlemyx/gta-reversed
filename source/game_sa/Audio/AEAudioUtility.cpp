@@ -106,15 +106,28 @@ uint64 CAEAudioUtility::GetCurrentTimeInMS() {
     //return counter.QuadPart / SampleFrequency.QuadPart * 1000 - startTimeMs;
 }
 
+namespace {
+//! The exe's uint32 -> x87 conversion: `fild` of the SIGNED dword, then `fadd 4294967296.0f` (0x858C54) when the sign bit is set (rounded to the x87 precision in force)
+double U32ToX87(uint32 v) {
+    double d = (double)(int32)v;
+    if ((int32)v < 0) {
+        d += 4294967296.0f;
+    }
+    return d;
+}
+}
+
 // 0x4d9ef0
 uint32 CAEAudioUtility::ConvertFromBytesToMS(uint32 lengthInBytes, uint32 sampleRate, uint16 numChannels) {
-    return static_cast<uint32>(std::floorf(lengthInBytes / (float(sampleRate * numChannels) / 500.0f)));
+    // x87: the unsigned operands are loaded exactly (fild), `rate * channels * 0.002f` stays on the stack (0x858F44 = 1/500 as float), the quotient is passed to floor() as a double
+    return static_cast<uint32>(std::floor(U32ToX87(lengthInBytes) / (U32ToX87(sampleRate * numChannels) * (double)ExeRecip(500.0f))));
 }
 
 // 0x4d9f40
 uint32 CAEAudioUtility::ConvertFromMSToBytes(uint32 a, uint32 frequency, uint16 frequencyMult) {
-    const auto value = static_cast<uint32>(std::floorf(a * float(frequency * frequencyMult) / 500.0f));
-    return value + value % (2 * frequencyMult);
+    // exe: a * ((frequency * mult) * 0.002f) (NOT (a * f) / 500), then the signed idiv by 2 * mult
+    const auto value = static_cast<int32>(static_cast<uint32>(std::floor(U32ToX87(a) * (U32ToX87(frequency * frequencyMult) * (double)ExeRecip(500.0f)))));
+    return static_cast<uint32>(value + value % (2 * (int32)frequencyMult));
 }
 
 // CHANGED?

@@ -378,7 +378,7 @@ void CExplosion::AddExplosion(CEntity* victim, CEntity* creator, eExplosionType 
                     bool bHitGround{};
                     firePos.z = CWorld::FindGroundZFor3DCoord({firePos.x, firePos.y, firePos.z + 3.0f}, &bHitGround, nullptr); // 0x73735C
                     if (bHitGround && std::fabs(firePos.z - exp->m_vecPosition.z) < 10.0f) {
-                        gFireManager.StartFire(firePos, 0.8f, 0, exp->m_pCreator, (uint32)(CGeneral::GetRandomNumberInRange(5'600.0f, 12'600.0f) * 0.4f), 3, 1);
+                        gFireManager.StartFire(firePos, 0.8f, 0, exp->m_pCreator, (uint32)(CGeneral::GetRandomNumberInRange(5'600.0f, 12'600.0f) * std::bit_cast<float>(0x3ECCCCCEu))  /* 0x872820: the exe's 0.4f is 0x3ECCCCCE, not 0x3ECCCCCD */, 3, 1);
                     }
                 }
                 if (creator && creator->GetIsTypePed() && creator->AsPed()->IsPlayer()) {
@@ -497,7 +497,7 @@ void CExplosion::Update() {
             case eExplosionType::EXPLOSION_QUICK_CAR:
             case eExplosionType::EXPLOSION_BOAT:
             case eExplosionType::EXPLOSION_AIRCRAFT: {
-                const float fFuelTimerProgress = (float)exp.m_nFuelTimer / 1000.0f;
+                const float fFuelTimerProgress = (float)exp.m_nFuelTimer * ExeRecip(1000.0f);
                 for (auto i = 0; i < NUM_FUEL; i++) {
                     const float& fOffsetDistance = exp.m_fFuelOffsetDistance[i];
                     if (fOffsetDistance > 0.0f) {

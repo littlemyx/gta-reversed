@@ -27,6 +27,9 @@ float CCurves::DistForLineToCrossOtherLine(float lineBaseX, float lineBaseY, flo
     return distOfCrossing;
 }
 
+// 0x8594EC: the exe's `1/3` here is 0x3EAAAAAA (truncated, NOT the rounded 0x3EAAAAAB)
+constexpr float CURVE_THIRD = std::bit_cast<float>(0x3EAAAAAAu);
+
 // 0x43C660
 float CCurves::CalcSpeedVariationInBend(
     const CVector& startCoors,
@@ -41,7 +44,7 @@ float CCurves::CalcSpeedVariationInBend(
 
     if (dotProduct <= 0.0f) {
         // If the dot product is <= 0, return a constant value (1/3)
-        returnVal = 1.0f / 3.0f;
+        returnVal = CURVE_THIRD;
         return returnVal;
     }
 
@@ -53,12 +56,12 @@ float CCurves::CalcSpeedVariationInBend(
         float straightDist = (startCoors - endCoors).Magnitude2D();
 
         // Normalize the distance to the line by the straight-line distance
-        returnVal = (distToLine / straightDist) * (1.0f / 3.0f);
+        returnVal = (distToLine / straightDist) * CURVE_THIRD;
         return returnVal;
     }
 
     // If the dot product is <= 0.7, interpolate the return value
-    returnVal = (1.0f - (dotProduct / 0.7f)) * (1.0f / 3.0f);
+    returnVal = (1.0f - (dotProduct * ExeRecip(0.7f))) * CURVE_THIRD;
 
     return returnVal;
 }
@@ -181,7 +184,7 @@ void CCurves::CalcCurvePoint(const CVector& startCoors, const CVector& endCoors,
     }
 
     float speedFactor = (1.0f - time) * totalDist_Time;
-    float speedMillisFactor = static_cast<float>(traversalTimeInMS) / 1000.0f;
+    float speedMillisFactor = static_cast<float>(traversalTimeInMS) * ExeRecip(1000.0f);
 
     resultSpeed = Lerp(startDir, endDir, time) * (speedFactor / speedMillisFactor);
     resultSpeed.z = 0.0f;

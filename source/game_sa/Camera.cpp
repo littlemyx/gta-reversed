@@ -349,11 +349,16 @@ void CCamera::ApplyVehicleCameraTweaks(CVehicle* vehicle) {
 
 // 0x50A9F0
 void CCamera::CamShake(float strength, CVector from) {
-    auto dist = DistanceBetweenPoints(from, GetActiveCamera().m_vecSource);
-    dist = std::clamp(dist, 0.0f, 100.0f);
+    // The exe (inlined CVector::Magnitude) keeps everything in extended precision: z is spilled to a float, x/y/the 2D length are not, and the length is
+    // sqrt(z^2 + (sqrt(x^2 + y^2))^2). The clamped distance is then multiplied by the DOUBLE 0.01 (0x85A308) and subtracted from the double 1.0 (0x85A310)
+    const auto& src  = GetActiveCamera().m_vecSource;
+    const double dx  = (double)src.x - (double)from.x, dy = (double)src.y - (double)from.y;
+    const float  dz  = (float)((double)src.z - (double)from.z);
+    const double m2d = std::sqrt(dx * dx + dy * dy);
+    const double dist = std::clamp(std::sqrt((double)dz * dz + m2d * m2d), 0.0, 100.0);
 
-    float percentShakeForce = 1.0f - dist / 100.f;
-    float shakeForce = (m_fCamShakeForce - float(CTimer::GetTimeInMS() - m_nCamShakeStart) / 1000.f) * percentShakeForce;
+    float percentShakeForce = (float)(1.0 - dist * 0.01);
+    float shakeForce = (m_fCamShakeForce - float(CTimer::GetTimeInMS() - m_nCamShakeStart) * ExeRecip(1000.f)) * percentShakeForce;
 
     float toShakeForce = percentShakeForce * strength * 0.35f;
     if (toShakeForce > std::clamp(shakeForce, 0.0f, 2.0f)) {
@@ -364,7 +369,7 @@ void CCamera::CamShake(float strength, CVector from) {
 
 // 0x50A970
 void CamShakeNoPos(CCamera* camera, float strength) {
-    float oldShake = camera->m_fCamShakeForce - float(CTimer::GetTimeInMS() - camera->m_nCamShakeStart) / 1000.f;
+    float oldShake = camera->m_fCamShakeForce - float(CTimer::GetTimeInMS() - camera->m_nCamShakeStart) * ExeRecip(1000.f);
 
     if (strength > std::clamp(oldShake, 0.0f, 2.0f)) {
         camera->m_fCamShakeForce = strength;
@@ -917,21 +922,21 @@ bool CCamera::Using1stPersonWeaponMode() const {
 void CCamera::SetParametersForScriptInterpolation(float interpolationToStopMoving, float interpolationToCatchUp, uint32 timeForInterpolation) {
     m_nScriptTimeForInterpolation = timeForInterpolation;
     m_bScriptParametersSetForInterp = true;
-    m_fScriptPercentageInterToStopMoving = interpolationToStopMoving / 100.0f;
-    m_fScriptPercentageInterToCatchUp = interpolationToCatchUp / 100.0f;
+    m_fScriptPercentageInterToStopMoving = interpolationToStopMoving * ExeRecip(100.0f);
+    m_fScriptPercentageInterToCatchUp = interpolationToCatchUp * ExeRecip(100.0f);
 }
 
 // 0x50C070
 void CCamera::SetPercentAlongCutScene(float percent) {
     auto& cam = m_aCams[m_nActiveCam];
     if (cam.m_nMode == eCamMode::MODE_FLYBY) {
-        cam.m_fTimeElapsedFloat = (float)cam.m_nFinishTime * percent / 100.0f;
+        cam.m_fTimeElapsedFloat = (float)cam.m_nFinishTime * percent * ExeRecip(100.0f);
         return;
     }
 
     cam = m_aCams[(m_nActiveCam + 1) % 2];
     if (cam.m_nMode == eCamMode::MODE_FLYBY) {
-        cam.m_fTimeElapsedFloat = (float)cam.m_nFinishTime * percent / 100.0f;
+        cam.m_fTimeElapsedFloat = (float)cam.m_nFinishTime * percent * ExeRecip(100.0f);
         return;
     }
 }

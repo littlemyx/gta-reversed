@@ -1108,7 +1108,7 @@ bool CCarCtrl::DealWithBend_Racing(CVehicle* vehicle, CCarPathLinkAddress LinkAd
 
     // Slow down the sharper the bend is (and the closer we are to it)
     const double bendFactor = [&] {
-        const double t = (double)angleF * 0.6366197f; // 0x858FB8 (2/PI)
+        const double t = (double)angleF * std::bit_cast<float>(0x3F22F983u); // 0x858FB8 (2/PI, the correctly rounded float; the literal 0.6366197f is one ulp lower)
         const double a = AbsNaN(t);
         return 1.0 < a ? 1.0 : a; // (min(abs(t), 1.0))
     }();
@@ -4184,7 +4184,7 @@ void CCarCtrl::PossiblyRemoveVehicle(CVehicle* vehicle) {
         const auto maxRange = extRange > 170.0f ? extRange : 170.0f;
 
         // x87: kept in extended precision until the comparison
-        if ((double)maxRange * removalRange * (double)(1.0f / 170.0f) < (double)distToPlayer2D && vehicle->m_autoPilot.m_nCarMission != MISSION_PLANE_ATTACK_PLAYER_POLICE) {
+        if ((double)maxRange * removalRange * (double)ExeRecip(170.0f) < (double)distToPlayer2D && vehicle->m_autoPilot.m_nCarMission != MISSION_PLANE_ATTACK_PLAYER_POLICE) {
             if (!CGarages::IsPointWithinHideOutGarage(vehicle->GetPosition())) {
                 if (IsThisVehicleInteresting(vehicle)) {
                     vehicle->m_nFakePhysics = 10;
@@ -4682,7 +4682,7 @@ void CCarCtrl::SlowCarDownForObject(CEntity* entity, CVehicle* vehicle, float* a
     if (entityHeading > 0.0f && entityHeading < 20.0f) {
         if (entity->GetColModel()->GetBoundRadius() + vehicle->GetColModel()->GetBoundingBox().m_vecMax.x > fabs(DotProduct(entityDir, vehicle->GetMatrix().GetRight()))) {
             if (entityHeading >= 7.0f) {
-                *arg3 = std::min(*arg3, (1.0f - (entityHeading - 7.0f) / 13.0f)) * arg4; // Original code multiplies by 0.07692308, which is the recp. of 13
+                *arg3 = std::min(*arg3, (1.0f - (entityHeading - 7.0f) * ExeRecip(13.0f))) * arg4; // Original code multiplies by 0.07692308, which is the recp. of 13
             } else {
                 *arg3 = 0.0f;
             }
@@ -4944,7 +4944,7 @@ void CCarCtrl::SlowCarDownForPedsSectorList(CPtrListDoubleLink<CPed*>& pedList, 
                 if (pedRightDist <= (double)halfWidth + 0.5f && distToFrontF < 13.0f) {
                     const auto gap = distToFrontF - 1.0f;
                     const double clampedGap = 0.0f > gap ? 0.0f : gap;
-                    const auto   scaledGap  = ((double)(1.0f / 13.0f) * clampedGap) * speedMult;
+                    const auto   scaledGap  = ((double)ExeRecip(13.0f) * clampedGap) * speedMult;
                     const auto   newFactor  = 1.0f > scaledGap ? 1.0 : scaledGap;
                     *speedFactor = newFactor > *speedFactor ? *speedFactor : (float)newFactor;
 

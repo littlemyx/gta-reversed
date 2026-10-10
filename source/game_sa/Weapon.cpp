@@ -621,7 +621,7 @@ void CWeapon::DoBulletImpact(CEntity* firedBy, CEntity* victim, const CVector& s
                             }
                         }();
                         victimVeh->ApplyForce(
-                            hitCP.m_vecNormal * (wepForceMult * std::min(1.f, victimVeh->m_fMass / 1000.f)),
+                            hitCP.m_vecNormal * (wepForceMult * std::min(1.f, victimVeh->m_fMass * ExeRecip(1000.f))),
                             hitCP.m_vecPoint - victimVeh->GetPosition(),
                             true
                         );
@@ -1184,7 +1184,7 @@ void CWeapon::Update(CPed* owner) {
                 }
                 if (animRLoad) { // 0x73DD30
                     ProcessReloadAudioIf([&](uint32 rloadMs, eAudioEvents ae) {
-                        const auto rloadS = (float)rloadMs / 1000.f;
+                        const auto rloadS = (float)rloadMs * ExeRecip(1000.f);
                         return rloadS <= animRLoad->m_CurrentTime && animRLoad->m_CurrentTime - animRLoad->m_TimeStep < rloadS;
                     });
                     if (CTimer::GetTimeInMS() > m_TimeForNextShotMs) {
@@ -1240,7 +1240,7 @@ bool CWeapon::CanBeUsedFor2Player() {
 
 // 0x73E240
 CEntity* CWeapon::FindNearestTargetEntityWithScreenCoors(float screenX, float screenY, float range, CVector point, float* outScrX, float* outScrY) {
-    float closestScrDist = SCREEN_WIDTH * (1.f / 15.f); // 0x863E0C
+    float closestScrDist = SCREEN_WIDTH * ExeRecip(15.f); // 0x863E0C
     screenX              = (screenX + 1.f) * SCREEN_WIDTH * 0.5f;
     screenY              = (screenY + 1.f) * SCREEN_HEIGHT * 0.5f;
 
@@ -1328,7 +1328,7 @@ float CWeapon::EvaluateTargetForHeatSeekingMissile(CEntity* potentialTarget, con
     const auto potentialTargetDist = (origin - potentialTarget->GetPosition()).Magnitude();
 
     const auto potentialTargetDistToLine = CCollision::DistToLine(origin, origin + aimingDir * 250.f, potentialTarget->GetPosition());
-    auto ret = std::sqrt(potentialTargetDist) / 10.f + potentialTargetDistToLine / potentialTargetDist;
+    auto ret = std::sqrt(potentialTargetDist) * ExeRecip(10.f) + potentialTargetDistToLine / potentialTargetDist;
 
     if (potentialTargetDistToLine * tolerance >= potentialTargetDist) {
         return -1.f;
@@ -2546,7 +2546,7 @@ bool CWeapon::Fire(CEntity* firedBy, CVector* startPosn, CVector* barrelPosn, CE
                         *shotOrigin,
                         targetEnt,
                         targetPosn,
-                        std::clamp(((firedBy->GetPosition() - *targetPosn).Magnitude() - 10.f) / 10.f, 0.2f, 1.f)
+                        std::clamp(((firedBy->GetPosition() - *targetPosn).Magnitude() - 10.f) * ExeRecip(10.f), 0.2f, 1.f)
                     ),
                     true
                 };

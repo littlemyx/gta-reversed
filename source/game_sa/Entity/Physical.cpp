@@ -1396,10 +1396,10 @@ void CPhysical::DettachAutoAttachedEntity()
 float CPhysical::GetLightingFromCol(bool bInteriorLighting)
 {
     float fAmbientRedBlue = CTimeCycle::GetAmbientRed_BeforeBrightness() + CTimeCycle::GetAmbientBlue_BeforeBrightness();
-    float fLighting = (CTimeCycle::GetAmbientGreen_BeforeBrightness() + fAmbientRedBlue) * (1.0f / 3.0f) + m_fContactSurfaceBrightness;
+    float fLighting = (CTimeCycle::GetAmbientGreen_BeforeBrightness() + fAmbientRedBlue) * std::bit_cast<float>(0x3EAAAA9Fu) /* 0x863C10: the exe's 1/3 here is 0.333333f rounded to 0x3EAAAA9F */ + m_fContactSurfaceBrightness;
     if (!bInteriorLighting) {
-        fLighting *= (CTimeCycle::SumOfCurrentRGB1() * (1.0f / 765.0f) * TEST_ADD_AMBIENT_LIGHT_FRAC + 1.0f - TEST_ADD_AMBIENT_LIGHT_FRAC)
-                    + CTimeCycle::SumOfCurrentRGB2() * (1.0f / 765.0f)  * TEST_ADD_AMBIENT_LIGHT_FRAC;
+        fLighting *= (CTimeCycle::SumOfCurrentRGB1() * ExeRecip(765.0f) * TEST_ADD_AMBIENT_LIGHT_FRAC + 1.0f - TEST_ADD_AMBIENT_LIGHT_FRAC)
+                    + CTimeCycle::SumOfCurrentRGB2() * ExeRecip(765.0f)  * TEST_ADD_AMBIENT_LIGHT_FRAC;
     }
     return fLighting;
 }
@@ -2382,10 +2382,10 @@ void CPhysical::PositionAttachedEntity()
             CMatrix& attachedToEntityMatrix = attachedTo->GetMatrix(); // todo: shadow var
             CVector randomRight = attachedToEntityMatrix.GetRight() * randomNumber;
             CVector randomForward = attachedToEntityMatrix.GetForward() * randomNumber;
-            CVector force = (randomRight + randomForward) * (m_fMass / 50.0f);
+            CVector force = (randomRight + randomForward) * (m_fMass * ExeRecip(50.0f));
             ApplyMoveForce(force);
             if (attachedToAuto->m_wMiscComponentAngle > attachedToAuto->m_wMiscComponentAnglePrev)
-                ApplyMoveForce(attachedTo->GetMatrix().GetUp() * m_fMass / 50.0f);
+                ApplyMoveForce(attachedTo->GetMatrix().GetUp() * m_fMass * ExeRecip(50.0f));
         }
         return;
     }
@@ -2721,7 +2721,7 @@ bool CPhysical::ApplyCollision(CEntity* theEntity, CColPoint& colPoint, float& t
             {
                 fTheEntityMass = 0.0f;
             }
-            fEntityMassFactor = 1.0f / (fTheEntityMass / 5000.0f + 1.0f);
+            fEntityMassFactor = 1.0f / (fTheEntityMass * ExeRecip(5000.0f) + 1.0f);
         }
         else if (!entity->physicalFlags.bDisableMoveForce)
         {

@@ -313,7 +313,7 @@ void CGlass::GeneratePanesForWindow(ePaneType type, CVector point, CVector fwd, 
                 }
 
                 {
-                    constexpr auto RandomFactor = [] { return (float)((CGeneral::GetRandomNumber() % 128) - 64) / 500.f; }; // Random number in range (-0.128, 0.128)
+                    constexpr auto RandomFactor = [] { return (float)((CGeneral::GetRandomNumber() % 128) - 64) * ExeRecip(500.f); }; // Random number in range (-0.128, 0.128)
                     pane->m_RandomNumbers = CVector{ RandomFactor(), RandomFactor(), RandomFactor() };
                 }
 

@@ -2125,7 +2125,7 @@ void CPed::UpdatePosition()
             } else {
                 const auto vehType = standingOn2->AsVehicle()->m_nVehicleType;
                 if (vehType == VEHICLE_TYPE_BIKE && standingOn2->AsPhysical()->m_vecMoveSpeed.SquaredMagnitude() > 0.04f) {
-                    maxMag = CTimer::GetTimeStep() * 0.0002f;
+                    maxMag = CTimer::GetTimeStep() * std::bit_cast<float>(0x3951B718u); // 0x86C304 (one ulp above the literal 0.0002f)
                 } else {
                     maxMag = mag;
                     if (vehType == VEHICLE_TYPE_AUTOMOBILE) {
@@ -2506,7 +2506,7 @@ bool CPed::TurnBody() {
     if (std::abs(m_fCurrentRotation - m_fLookDirection) <= 0.05f) {
         return true;
     } else {
-        m_fCurrentRotation -= (m_fCurrentRotation - m_fLookDirection) / 5.f;
+        m_fCurrentRotation -= (m_fCurrentRotation - m_fLookDirection) * ExeRecip(5.f);
         return false;
     }
 }
@@ -3045,7 +3045,7 @@ void CPed::PlayFootSteps() {
     const float timeStep = walkAssoc->m_TimeStep;
 
     const float totalTime = walkAssoc->m_BlendHier->m_fTotalTime;
-    float       minAnimTime = totalTime * (1.0f / 15.0f); // 0x863E0C
+    float       minAnimTime = totalTime * ExeRecip(15.0f); // 0x863E0C
     float       maxAnimTime = totalTime * 0.5f + minAnimTime;
     if (bIsDucking) {
         minAnimTime += 0.2f;
@@ -3761,7 +3761,7 @@ void CPed::PreRenderAfterTest()
         pos.x += CGeneral::GetRandomNumberInRange(-0.03f, 0.03f);
         pos.y += CGeneral::GetRandomNumberInRange(-0.03f, 0.03f);
         pos.z += CGeneral::GetRandomNumberInRange(-0.8f, 0.2f);
-        p.m_Color.alpha *= (float)GetPlayerData()->m_nWetness / 100.0f;
+        p.m_Color.alpha *= (float)GetPlayerData()->m_nWetness * ExeRecip(100.0f);
         g_fx.m_WaterSplash->AddParticle(pos, {}, 0.0f, p);
     }
 

@@ -9,7 +9,7 @@ void COctTree::InjectHooks() {
     RH_ScopedVMTInstall(InsertTree, 0x5A75B0);
     RH_ScopedVMTInstall(FillPalette, 0x5A70F0);
 }
-auto& gpTmpOctTree = StaticRef<COctTree*>(0xBC12D8);
+NOTSA_GLOBAL(gpTmpOctTree, 0xBC12D8, (COctTree*), {});
 
 // 0x5A6DB0
 COctTree::COctTree() {

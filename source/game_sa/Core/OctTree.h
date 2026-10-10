@@ -21,9 +21,16 @@ public:
     uint32 m_nBlueComponent;
 
 public:
-    static inline auto& ms_bFailed = StaticRef<bool>(0xBC12DC);
-    static inline auto& ms_level = StaticRef<uint32>(0xBC12E0);
+    static inline NOTSA_GLOBAL(ms_bFailed, 0xBC12DC, (bool), {});
+    static inline NOTSA_GLOBAL(ms_level, 0xBC12E0, (uint32), {});
+#ifdef NOTSA_GLOBALS_DETACHED
+    // The image holds 20 zero bytes: no CPool NSDMI (m_LastFreeSlot{-1}) and no ~CPool() (Flush() at exit) in the exe -> raw zeroed storage viewed as the pool
+    static inline NOTSA_GLOBAL(ms_octTreePoolRaw, 0xBC12E4, (std::array<uint32, 5>), {});
+    static COctTreePool& ms_octTreePool; // defined after the class (COctTree must be complete)
+#else
     static inline auto& ms_octTreePool = StaticRef<COctTreePool>(0xBC12E4);
+#endif
+#line 27
 
 public:
     COctTree();
@@ -44,5 +51,9 @@ public:
     void        empty();
 };
 VALIDATE_SIZE(COctTree, 0x28);
+#ifdef NOTSA_GLOBALS_DETACHED
+inline COctTreePool& COctTree::ms_octTreePool = *reinterpret_cast<COctTreePool*>(&COctTree::ms_octTreePoolRaw);
+#endif
+#line 47
 
-extern COctTree*& gpTmpOctTree;
+NOTSA_GLOBAL_EXTERN(gpTmpOctTree, (COctTree*));

@@ -437,7 +437,7 @@ int main(int argc, char** argv) {
         std::printf("selftest: class %s mul %s div %s\n", F(viaClass).c_str(), F(viaMul).c_str(), F(viaDiv).c_str());
     }
     TestOcclusion();
-    if (std::getenv("FIXED_OCCLUDER_FULL") || !g_filters.empty()) TestOccluders();   // ProcessLineSegment / ProcessOneOccluder differ from the exe for reasons unrelated to the fixed-point types (known, see the report): opt-in
+    TestOccluders();
     TestAnim();
     TestMatrixCover();
     int bad24 = 0, bad53 = 0, hard24 = 0, hard53 = 0;

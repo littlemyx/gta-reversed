@@ -14,6 +14,8 @@ void COccluder::InjectHooks() {
 }
 
 // 0x71E5D0
+// The asm is followed literally (verified against the exe with fixed_oracle_test): the visibility dot products have a different
+// term order per face, the face offsets use the UNNORMALISED direction, the flat variant normalises its normal.
 bool COccluder::ProcessOneOccluder(CActiveOccluder* out) {
     out->m_LinesUsed = 0;
     const auto center = CVector{m_Center};
@@ -21,15 +23,24 @@ bool COccluder::ProcessOneOccluder(CActiveOccluder* out) {
     if (!CalcScreenCoors(center, CenterOnScreen)) {
         return false;
     }
-    if (CenterOnScreen.z < -150.0F || CenterOnScreen.z > 300.0F) {
+    if (CenterOnScreen.z < -150.0F || CenterOnScreen.z > 300.0F) { // 0x71E684: `z < -150` / `z > 300` (NaN passes)
         return false;
     }
     const auto size = GetSize();
 
-    out->m_DistToCam = (uint16)(CenterOnScreen.z - size.Magnitude());
+    // 0x71E6D5: sqrt((l^2 + w^2) + h^2) stays on the x87 stack, `fsubr` from the centre depth, then _ftol2; only the low word is stored
+    {
+        const double mag = x87::sqrt(((double)size.y * size.y + (double)size.x * size.x) + (double)size.z * size.z);
+        out->m_DistToCam = (uint16)(int32)((double)CenterOnScreen.z - mag);
+    }
 
-    CMatrix transform{};
-    transform.SetRotate(GetRotation());
+    // 0x71E743..0x71E7FF: NOT SetRotate(x, y, z) (0x59B120): the exe builds X, Y, Z rotations (0x59B060 / 0x59B0A0 / 0x59B0E0) and multiplies (Y * X) * Z (0x59BE30)
+    const auto rot = GetRotation();
+    CMatrix rotX{}, rotY{}, rotZ{};
+    rotX.SetRotateX(rot.x);
+    rotY.SetRotateY(rot.y);
+    rotZ.SetRotateZ(rot.z);
+    const CMatrix transform = (rotY * rotX) * rotZ;
 
     MinXInOccluder = 999999.88F;
     MinYInOccluder = 999999.88F;
@@ -57,19 +68,39 @@ bool COccluder::ProcessOneOccluder(CActiveOccluder* out) {
             forward, -forward
         };
 
-        // Figure out if we see the front or back of a face
-        const auto IsVertexOnScreen = [&, cam = TheCamera.GetPosition()](int32 i) {
-            return (center + directions[i] - cam).Dot(directions[i]) < 0.0F;
+        // Figure out if we see the front or back of a face: (center + dir - cam) . dir < 0
+        // 0x71EAFF..0x71EDDD: the per-component sums are partly spilled to float, partly kept on the x87 stack, and the three products
+        // are added in a different order per face (the compiler scheduled each inlined copy differently)
+        const auto& cam = TheCamera.GetPosition();
+        enum class Sum { XYZ, XZY, ZYX };
+        const auto IsVertexOnScreen = [&](int32 i, Sum order, bool dxStack) -> bool {
+            const auto& d = directions[i];
+            const double dy = ((double)center.y + d.y) - cam.y;
+            double dxD, dzD;
+            if (!dxStack) { // 0x71EB30: x spilled as float (`fstp [esp+0x10]`), z summed to float then `fsub` stays on the stack
+                dxD = (float)(((double)d.x + center.x) - cam.x);
+                dzD = (double)(float)((double)center.z + d.z) - cam.z;
+            } else { // 0x71ED97 (last face): x summed to float, z subtracted and spilled to float
+                dzD = (float)(((double)center.z + d.z) - cam.z);
+                dxD = (double)(float)((double)center.x + d.x) - cam.x;
+            }
+            double sum;
+            switch (order) {
+            case Sum::XYZ: sum = (dxD * d.x + dy * d.y) + dzD * d.z; break;
+            case Sum::XZY: sum = (dxD * d.x + dzD * d.z) + dy * d.y; break;
+            default:       sum = (dzD * d.z + dy * d.y) + dxD * d.x; break;
+            }
+            return sum < 0.0; // FCOMP + JP: NaN is false
         };
         const std::array onScreen{
-            IsVertexOnScreen(DUP),
-            IsVertexOnScreen(DBOTTOM),
+            IsVertexOnScreen(DUP,     Sum::XYZ, false),
+            IsVertexOnScreen(DBOTTOM, Sum::XZY, false),
 
-            IsVertexOnScreen(DRIGHT),
-            IsVertexOnScreen(DLEFT),
+            IsVertexOnScreen(DRIGHT,  Sum::XYZ, false),
+            IsVertexOnScreen(DLEFT,   Sum::XZY, false),
 
-            IsVertexOnScreen(DBACK),
-            IsVertexOnScreen(DFRONT),
+            IsVertexOnScreen(DBACK,   Sum::ZYX, false),
+            IsVertexOnScreen(DFRONT,  Sum::ZYX, true),
         };
 
         OccluderCoors[0] = center + directions[DUP]     + directions[DRIGHT] + directions[DBACK]; // back top right
@@ -100,18 +131,23 @@ bool COccluder::ProcessOneOccluder(CActiveOccluder* out) {
          && (onScreen[DLEFT] == onScreen[DFRONT] || !ProcessLineSegment(6, 7, out))
          && (onScreen[DRIGHT] == onScreen[DFRONT] || !ProcessLineSegment(4, 5, out))
         ) {
-            if (SCREEN_WIDTH * 0.15F <= MaxXInOccluder - MinXInOccluder
-             && SCREEN_HEIGHT * 0.1F <= MaxYInOccluder - MinYInOccluder
+            // 0x71F321: `fcompp` + `je`: fails only if W * 0.15 > dx (ordered), so NaN passes
+            if (!(SCREEN_WIDTH * 0.15F > MaxXInOccluder - MinXInOccluder)
+             && !(SCREEN_HEIGHT * 0.1F > MaxYInOccluder - MinYInOccluder)
             ) {
                 out->m_NumFaces = 0;
                 for (auto i = 0; i < 6; ++i) {
                     if (!onScreen[i]) {
                         continue;
                     }
-                    const auto& dir = directions[i].Normalized();
+                    // 0x71F38E: (dir + center) is built from the UNNORMALISED direction, `dir` itself is then normalised (0x59C910)
+                    const auto& d = directions[i];
+                    const float vx = d.x + center.x, vy = d.y + center.y, vz = d.z + center.z;
+                    CVector dir = d;
+                    dir.Normalise();
 
-                    out->m_FaceNormals[out->m_NumFaces] = dir;
-                    out->m_FaceOffsets[out->m_NumFaces] = (center + dir).Dot(dir);
+                    out->m_FaceNormals[(int8)out->m_NumFaces] = dir;
+                    out->m_FaceOffsets[(int8)out->m_NumFaces] = (float)(((double)vx * dir.x + (double)vy * dir.y) + (double)vz * dir.z);
 
                     ++out->m_NumFaces;
                 }
@@ -151,15 +187,18 @@ bool COccluder::ProcessOneOccluder(CActiveOccluder* out) {
     )  {
         return false;
     }
-    if (MaxXInOccluder - MinXInOccluder < SCREEN_WIDTH * 0.1F
-     || MaxYInOccluder - MinYInOccluder < SCREEN_HEIGHT * 0.07F
+    // 0x71F7EB: fails only if W * 0.1 > dx / H * 0.07 > dy (ordered)
+    if (SCREEN_WIDTH * 0.1F > MaxXInOccluder - MinXInOccluder
+     || SCREEN_HEIGHT * 0.07F > MaxYInOccluder - MinYInOccluder
     ) {
         return false;
     }
 
-    const auto normal = right.Cross(up);
+    // 0x71F844: CrossProduct, 0x71F850: Normalise, offset = (n.x * c.x + n.y * c.y) + n.z * c.z
+    auto normal = right.Cross(up);
+    normal.Normalise();
     out->m_FaceNormals[0] = normal;
-    out->m_FaceOffsets[0] = normal.Dot(center);
+    out->m_FaceOffsets[0] = (float)(((double)normal.x * center.x + (double)normal.y * center.y) + (double)normal.z * center.z);
     out->m_NumFaces       = 1;
 
     return true;
@@ -167,64 +206,88 @@ bool COccluder::ProcessOneOccluder(CActiveOccluder* out) {
 
 
 // 0x71E130
+// (static in spirit: `this` is unused, ECX is ignored)
 bool COccluder::ProcessLineSegment(int32 idxFrom, int32 idxTo, CActiveOccluder* activeOccluder) {
     if (!OccluderCoorsValid[idxFrom] && !OccluderCoorsValid[idxTo]) {
         return true;
     }
 
     // Calcualte/get on-screen coordinates of the occluder
-    const auto GetScreenCoorsOf = [=](int32 i, int32 other) -> std::optional<CVector2D> {
+    // 0x71E184 / 0x71E28F: BOTH endpoints use the same formula (interpolate FROM -> TO to the plane z = 1.1 using the depths of both
+    // endpoints, the weights are |zTo| / (|zFrom| + |zTo|) for FROM and the rest for TO), whichever of the two is behind the camera.
+    // The upstream "fix" (swapping the index roles for the second endpoint) computes the same point mathematically, but rounds
+    // differently, so it is NOT applied.
+    const auto GetScreenCoorsOf = [&](int32 i) -> std::optional<CVector> {
         if (OccluderCoorsValid[i]) {
             return OccluderCoorsOnScreen[i];
         }
 
-        // BUG/NOTE/TODO:
-        // Originally they used `idxFrom` and `idxTo` for both calculations
-        // but that doesn't make sense, so I changed it up to be like this
-        // I haven't noticed any real-world difference, but we'll see....
-        // (So, to undo the change, just change `i` to `idxFrom` and `other` to `idxTo`)
-        const auto zA = std::fabsf((TheCamera.m_mViewMatrix.TransformPoint(OccluderCoors[i])).z - 1.1F);
-        const auto zB = std::fabsf((TheCamera.m_mViewMatrix.TransformPoint(OccluderCoors[other])).z - 1.1F);
-        const auto pt = lerp(OccluderCoors[other], OccluderCoors[i], zB / (zA + zB));
+        const auto& from = OccluderCoors[idxFrom];
+        const auto& to   = OccluderCoors[idxTo];
+
+        const float  zFrom = (float)((double)TheCamera.m_mViewMatrix.TransformPoint(from).z - (double)1.1F); // spilled to float (`fstp [esp+0x70]`)
+        const double zTo   = (double)TheCamera.m_mViewMatrix.TransformPoint(to).z - (double)1.1F;            // stays on the stack
+        const double t     = std::fabs(zTo) / (std::fabs((double)zFrom) + std::fabs(zTo));
+        const double u     = 1.0 - t;
+
+        // 0x71E1E0: u * to is spilled for x / y, the z products stay on the stack
+        const float ax = (float)(u * to.x);
+        const float ay = (float)(u * to.y);
+        const float bz = (float)(t * from.z);
+        const CVector pt{
+            (float)(t * from.x + ax),
+            (float)(t * from.y + ay),
+            (float)(bz + u * to.z)
+        };
 
         if (CVector pos; CalcScreenCoors(pt, pos)) {
             return pos;
         }
         return std::nullopt;
     };
-    const auto from = GetScreenCoorsOf(idxFrom, idxTo);
+    const auto from = GetScreenCoorsOf(idxFrom);
     if (!from) {
         return true;
     }
-    const auto to = GetScreenCoorsOf(idxTo, idxFrom);
+    const auto to = GetScreenCoorsOf(idxTo);
     if (!to) {
         return true;
     }
 
-    MinXInOccluder = std::min({ MinXInOccluder, from->x, to->x });
-    MaxXInOccluder = std::max({ MaxXInOccluder, from->x, to->x });
-    MinYInOccluder = std::min({ MinYInOccluder, from->y, to->y });
-    MaxYInOccluder = std::max({ MaxYInOccluder, from->y, to->y });
+    // 0x71E36A: FCOMP/FCOM + JP/JNP chains (not std::min/max: ties and NaN take the later operand)
+    const auto Min2 = [](float cur, float a, float b) { const float r = cur < a ? cur : a; return r < b ? r : b; };
+    const auto Max2 = [](float cur, float a, float b) { const float r = cur > a ? cur : a; return r > b ? r : b; };
+    MinXInOccluder = Min2(MinXInOccluder, from->x, to->x);
+    MaxXInOccluder = Max2(MaxXInOccluder, from->x, to->x);
+    MinYInOccluder = Min2(MinYInOccluder, from->y, to->y);
+    MaxYInOccluder = Max2(MaxYInOccluder, from->y, to->y);
 
-    // Now see if 
-    auto* const l = &activeOccluder->m_Lines[activeOccluder->m_LinesUsed];
+    auto* const l = reinterpret_cast<CActiveOccluderLine*>(activeOccluder) + (int8)activeOccluder->m_LinesUsed; // `movsx`
 
-    // Calculate line origin and dir
-    l->Origin = *from;
-    l->Dir    = *to - *from;
-    if (!IsPointInsideLine(l->Origin, l->Dir, CenterOnScreen, 0.f)) {
-        l->Origin = *to;
-        l->Dir    = -l->Dir; // basically *from - *to
+    // 0x71E43A: calculate line origin and dir (the deltas stay on the x87 stack)
+    double dx = (double)to->x - from->x;
+    double dy = (double)to->y - from->y;
+    float  ox = from->x, oy = from->y;
+    // IsPointInsideLine(origin, dir, centre, 0): (cx - ox) * dy - (cy - oy) * dx >= 0, the line is flipped when it is < 0 (NaN: not flipped)
+    if (((double)CenterOnScreen.x - from->x) * dy - ((double)CenterOnScreen.y - from->y) * dx < 0.0) {
+        // the new origin is `from + delta`, which is not exactly `to`
+        ox = (float)(dx + from->x);
+        oy = (float)(from->y + dy);
+        dx = -dx;
+        dy = -dy;
     }
-    l->Dir = l->Dir.Normalized(&l->Length);
+    // 0x71E4B6: Normalized(&length): fsqrt of the sum of squares, 1.0 / length (the float length), both components multiplied
+    const float  len = (float)x87::sqrt(dy * dy + dx * dx);
+    const double inv = 1.0 / (double)len;
+    l->Length = len;
+    l->Origin = { ox, oy };
+    l->Dir    = { (float)(inv * dx), (float)(inv * dy) };
 
     if (!DoesInfiniteLineTouchScreen(l->Origin, l->Dir)) {
-        return !IsPointInsideLine(
-            l->Origin,
-            l->Dir,
-            {SCREEN_WIDTH * 0.5f, SCREEN_HEIGHT * 0.5f},
-            0.f
-        );
+        // 0x71E52C: !IsPointInsideLine(origin, dir, screen centre, 0): (W/2 - ox) * dirY - (H/2 - oy) * dirX < 0
+        const double w = (double)RsGlobal.maximumWidth  * 0.5;
+        const double h = (double)RsGlobal.maximumHeight * 0.5;
+        return (w - l->Origin.x) * l->Dir.y - (h - l->Origin.y) * l->Dir.x < 0.0;
     }
 
     ++activeOccluder->m_LinesUsed;

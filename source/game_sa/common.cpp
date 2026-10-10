@@ -137,7 +137,7 @@ bool CalcScreenCoors(const CVector& in, CVector& out, float& scaleX, float& scal
 */
 bool CalcScreenCoors(const CVector& in, CVector& out) {
     out = TheCamera.GetViewMatrix().TransformPoint(in);
-    if (out.z <= 1.0f) {
+    if (!(out.z > 1.0f)) { // 0x71DAE1: FCOMP + `test ah, 0x41` + JNE: z <= 1 AND NaN are rejected
         return false;
     }
 
@@ -174,22 +174,28 @@ bool DoesInfiniteLineCrossFiniteLine(
 }
 
 // used only in COccluder::ProcessLineSegment
-// 0x71DB80
+// 0x71DB80 - the exe tests the origin against the screen STRICTLY (0 < x < W, 0 < y < H), then the crossings of the two edges
+// through the origin-side corners with inline products, and only the right and bottom edges go through the 0x71DB30 helper
 bool DoesInfiniteLineTouchScreen(
     //float oX, float oY, float dX, float dY
     CVector2D origin,
     CVector2D dir
 ) {
-    // Point is on screen
-    if (IsPointInRect2D(origin, { 0.f, 0.f }, { SCREEN_WIDTH, SCREEN_HEIGHT })) {
+    const float w = (float)RsGlobal.maximumWidth, h = (float)RsGlobal.maximumHeight;
+    if (origin.x > 0.f && origin.y > 0.f && w > origin.x && h > origin.y) {
         return true;
     }
 
-    // Or line touches any of the screen's bezzles (?)
-    return DoesInfiniteLineCrossFiniteLine({0.f, 0.f},           {SCREEN_WIDTH, 0.f},           origin, dir)
-        || DoesInfiniteLineCrossFiniteLine({0.f, 0.f},           {0.f, SCREEN_HEIGHT},          origin, dir)
-        || DoesInfiniteLineCrossFiniteLine({SCREEN_WIDTH, 0.f},  {SCREEN_WIDTH, SCREEN_HEIGHT}, origin, dir)
-        || DoesInfiniteLineCrossFiniteLine({0.f, SCREEN_HEIGHT}, {SCREEN_WIDTH, SCREEN_HEIGHT}, origin, dir);
+    const double a   = (double)(-origin.y) * dir.x;                           // kept on the x87 stack
+    const float  c00 = (float)((double)(-origin.x) * dir.y - a);               // spilled to [esp+4]
+    if ((((double)w - origin.x) * dir.y - a) * c00 < 0.0) {                    // top edge
+        return true;
+    }
+    if (((double)(-origin.x) * dir.y - ((double)h - origin.y) * dir.x) * c00 < 0.0) { // left edge
+        return true;
+    }
+    return DoesInfiniteLineCrossFiniteLine({w, 0.f}, {w, h}, origin, dir)      // right edge
+        || DoesInfiniteLineCrossFiniteLine({0.f, h}, {w, h}, origin, dir);     // bottom edge
 }
 
 // Used only in COcclusion, COccluder, CActiveOccluder

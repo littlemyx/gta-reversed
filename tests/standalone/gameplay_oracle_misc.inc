@@ -212,6 +212,36 @@ static void TestMisc() {
             d = "frame " + Hex(&f, 0x20) + " pause " + std::to_string(pause) + PedDiff(a, e);
             return false;
         });
+        Run("CVehicleRecording::InterpolateInfoForCar 0x459B30", [=](Rng& r, std::string& d) {
+            CVehicleStateEachFrame f; genFrame(r, f);
+            PedFx a; BuildPedFx(r, a, 50.f); a.Rewire(true); PedFx e(a);
+            const float t = r.below(4) ? r.f01() : GenF(r, 2.f, S_NOHUGE);
+            CVehicleRecording::InterpolateInfoForCar(reinterpret_cast<CVehicle*>(a.e), f, t);
+            oracle::Fn<void __cdecl(CVehicle*, const CVehicleStateEachFrame*, float)>(0x459B30)(reinterpret_cast<CVehicle*>(e.e), &f, t);
+            for (int off : { 0x0C, 0x1C, 0x2C, 0x3C }) { *reinterpret_cast<uint32_t*>(a.m + off) = 0; *reinterpret_cast<uint32_t*>(e.m + off) = 0; }   // matrix padding is stack garbage on both sides
+            if (SamePedFx(a, e)) return true;
+            d = "frame " + Hex(&f, 0x20) + " t " + F(t) + PedDiff(a, e);
+            return false;
+        });
+        Run("CVehicleRecording::SetRecordingToPointClosestToCoors 0x45A1E0", [=](Rng& r, std::string& d) {
+            const int id = r.below(16);
+            constexpr int N = 10;
+            static CVehicleStateEachFrame fr[N];
+            const int n = 1 + r.below(N);
+            for (int i = 0; i < n; ++i) genFrame(r, fr[i]);
+            CVehicleRecording::pPlaybackBuffer[id] = fr; CVehicleRecording::PlaybackBufferSize[id] = n * (int)sizeof(CVehicleStateEachFrame);
+            const int32 start = (int32)r.below(50);
+            const CVector p = GenV(r, 600.f);
+            CVehicleRecording::PlaybackIndex[id] = start;
+            CVehicleRecording::SetRecordingToPointClosestToCoors(id, p);
+            const int32 ra = CVehicleRecording::PlaybackIndex[id];
+            CVehicleRecording::PlaybackIndex[id] = start;
+            oracle::Fn<void __cdecl(int, CVector)>(0x45A1E0)(id, p);
+            const int32 re = CVehicleRecording::PlaybackIndex[id];
+            if (ra == re) return true;
+            d = "n " + std::to_string(n) + " p " + V(p) + " got " + std::to_string(ra) + " exe " + std::to_string(re);
+            return false;
+        });
         Run("CVehicleRecording::SmoothRecording 0x45A0F0", [=](Rng& r, std::string& d) {
             const int id = r.below(8);
             constexpr int N = 12;

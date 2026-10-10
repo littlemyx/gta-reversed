@@ -446,7 +446,7 @@ void CExplosion::Update() {
             case eExplosionType::EXPLOSION_MINE:
             case eExplosionType::EXPLOSION_OBJECT: {
                 if (CTimer::GetFrameCounter() % 2) {
-                    CPointLights::AddLight(ePointLightType::PLTYPE_POINTLIGHT, exp.m_vecPosition, {}, 20.0f, 1.0f, 1.0f, 0.5f, 0, false, nullptr);
+                    CPointLights::AddLight(ePointLightType::PLTYPE_POINTLIGHT, exp.m_vecPosition, {}, 20.0f, 1.0f, 1.0f, 0.5f, 0, true, nullptr); // 0x737724: generateExtraShadows
                 }
                 if (exp.m_nType == eExplosionType::EXPLOSION_AIRCRAFT && CGeneral::GetRandomNumberInRange(0, 100) < 5) {
                     if (exp.m_pVictim) {
@@ -457,14 +457,15 @@ void CExplosion::Update() {
             }
             case eExplosionType::EXPLOSION_MOLOTOV: {
                 const CVector& pos = exp.m_vecPosition;
+                // 0x737936: peds (6.0), cars (6.0), world (0.1) - in this order
                 CWorld::SetPedsOnFire(pos.x, pos.y, pos.z, 6.0f, exp.m_pCreator);
-                CWorld::SetWorldOnFire(pos, 6.0f, exp.m_pCreator);
-                CWorld::SetCarsOnFire(pos, 0.1f, exp.m_pCreator);
+                CWorld::SetCarsOnFire(pos, 6.0f, exp.m_pCreator);
+                CWorld::SetWorldOnFire(pos, 0.1f, exp.m_pCreator);
 
                 if (exp.m_nActiveCounter < 10 && exp.m_nActiveCounter == 1) {
                     CEntity* hitEntity;
                     CColPoint colPoint{};
-                    const bool bGroundHit = CWorld::ProcessVerticalLine(pos, -1000.0f, colPoint, hitEntity, true, false, false, false, true, false, nullptr);
+                    const bool bGroundHit = CWorld::ProcessVerticalLine(CVector{ pos.x, pos.y, pos.z + 5.0f }, -1000.0f, colPoint, hitEntity, true, false, false, false, true, false, nullptr); // 0x7379A2: starts 5 units above
                     exp.m_fGroundZ = bGroundHit ? colPoint.m_vecPoint.z : pos.z;
                 }
                 break;
@@ -485,14 +486,15 @@ void CExplosion::Update() {
             }
             }
 
-            if ((uint32)exp.m_nExpireTime - CTimer::GetTimeInMS() <= 0)
+            // 0x7376E6: the remaining time is (int)(expireTime - (float)timeInMS), expired when <= 0
+            if ((int32)(exp.m_nExpireTime - (float)CTimer::GetTimeInMS()) <= 0)
                 exp.m_nActiveCounter = 0;
             else
                 exp.m_nActiveCounter++;
 
             exp.m_nFuelTimer += (int32)CTimer::GetTimeStepInMS();
 
-            if (exp.m_nFuelTimer > 200)
+            if ((uint32)exp.m_nFuelTimer > 200u) // 0x737A31: JA, an unsigned compare
                 continue;
 
             switch (exp.m_nType) {

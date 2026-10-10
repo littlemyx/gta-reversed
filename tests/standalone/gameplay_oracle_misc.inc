@@ -127,6 +127,62 @@ static void TestMisc() {
         d = "got " + Hex(ma, 0x40) + " exe " + Hex(me, 0x40);
         return false;
     });
+    {   // CMatrix ops not covered by game_oracle_test (the trig ones are dominated by the x87 transcendental audit)
+        auto genM = [](Rng& r, uint8* m) { std::memset(m, 0, 0x48); GenMatrix(r, m, 10.f); };
+        Run("CMatrix::ForceUpVector 0x59B7E0", [=](Rng& r, std::string& d) {
+            alignas(16) uint8 ma[0x48], me[0x48]; genM(r, ma); std::memcpy(me, ma, sizeof ma);
+            const CVector up = r.below(2) ? GenDir(r) : GenV(r, 2.f);
+            reinterpret_cast<CMatrix*>(ma)->ForceUpVector(up);
+            oracle::Fn<void __fastcall(CMatrix*, int, CVector)>(0x59B7E0)(reinterpret_cast<CMatrix*>(me), 0, up);
+            if (SameBlob(ma, me, 0x40)) return true;
+            d = "up " + V(up) + " got " + Hex(ma, 0x40) + " exe " + Hex(me, 0x40);
+            return false;
+        });
+        Run("CMatrix::SetRotate(x, y, z) 0x59B120", [=](Rng& r, std::string& d) {
+            alignas(16) uint8 ma[0x48], me[0x48]; genM(r, ma); std::memcpy(me, ma, sizeof ma);
+            const float x = GenF(r, 7.f, S_NOHUGE), y = GenF(r, 7.f, S_NOHUGE), z = GenF(r, 7.f, S_NOHUGE);
+            reinterpret_cast<CMatrix*>(ma)->SetRotate(x, y, z);
+            oracle::Fn<void __fastcall(CMatrix*, int, float, float, float)>(0x59B120)(reinterpret_cast<CMatrix*>(me), 0, x, y, z);
+            if (SameBlob(ma, me, 0x40)) return true;
+            d = "angles " + F(x) + F(y) + F(z) + " got " + Hex(ma, 0x40) + " exe " + Hex(me, 0x40);
+            return false;
+        });
+        struct AxisFn { const char* n; unsigned va; int axis; };
+        static const AxisFn axes[] = { { "CMatrix::SetRotateX 0x59B060", 0x59B060, 0 }, { "CMatrix::SetRotateY 0x59B0A0", 0x59B0A0, 1 }, { "CMatrix::SetRotateZ 0x59B0E0", 0x59B0E0, 2 } };
+        for (const auto& ax : axes) {
+            Run(ax.n, [=](Rng& r, std::string& d) {
+                alignas(16) uint8 ma[0x48], me[0x48]; genM(r, ma); std::memcpy(me, ma, sizeof ma);
+                const float a = GenF(r, 7.f, S_NOHUGE);
+                auto* m = reinterpret_cast<CMatrix*>(ma);
+                if (ax.axis == 0) m->SetRotateX(a); else if (ax.axis == 1) m->SetRotateY(a); else m->SetRotateZ(a);
+                oracle::Fn<void __fastcall(CMatrix*, int, float)>(ax.va)(reinterpret_cast<CMatrix*>(me), 0, a);
+                if (SameBlob(ma, me, 0x40)) return true;
+                d = "angle " + F(a) + " got " + Hex(ma, 0x40) + " exe " + Hex(me, 0x40);
+                return false;
+            });
+        }
+        Run("CMatrix::ConvertToEulerAngles 0x59A840", [=](Rng& r, std::string& d) {
+            alignas(16) uint8 ma[0x48]; genM(r, ma);
+            if (r.below(2)) { const float h = r.f01() * 6.28f, p = (r.f01() - 0.5f) * 3.f; reinterpret_cast<CMatrix*>(ma)->SetRotate(p, 0.f, h); }
+            const uint32 flags = r.below(3) ? (uint32)(r.below(2) | (r.below(6) << 2) | (r.below(2) << 1)) : r.u32();
+            float xa = 1, ya = 2, za = 3, xe = 1, ye = 2, ze = 3;
+            reinterpret_cast<CMatrix*>(ma)->ConvertToEulerAngles(&xa, &ya, &za, flags);
+            oracle::Fn<void __fastcall(CMatrix*, int, float*, float*, float*, uint32)>(0x59A840)(reinterpret_cast<CMatrix*>(ma), 0, &xe, &ye, &ze, flags);
+            if (SameF(xa, xe) && SameF(ya, ye) && SameF(za, ze)) return true;
+            d = "flags " + std::to_string(flags) + " m " + Hex(ma, 0x40) + " got " + F(xa) + F(ya) + F(za) + " exe " + F(xe) + F(ye) + F(ze);
+            return false;
+        });
+        Run("CMatrix::ConvertFromEulerAngles 0x59AA40", [=](Rng& r, std::string& d) {
+            alignas(16) uint8 ma[0x48], me[0x48]; genM(r, ma); std::memcpy(me, ma, sizeof ma);
+            const float x = GenF(r, 4.f, S_NOHUGE), y = GenF(r, 4.f, S_NOHUGE), z = GenF(r, 7.f, S_NOHUGE);
+            const uint32 flags = (uint32)(r.below(2) | (r.below(6) << 2) | (r.below(2) << 1));
+            reinterpret_cast<CMatrix*>(ma)->ConvertFromEulerAngles(x, y, z, flags);
+            oracle::Fn<void __fastcall(CMatrix*, int, float, float, float, uint32)>(0x59AA40)(reinterpret_cast<CMatrix*>(me), 0, x, y, z, flags);
+            if (SameBlob(ma, me, 0x40)) return true;
+            d = "angles " + F(x) + F(y) + F(z) + " flags " + std::to_string(flags) + " got " + Hex(ma, 0x40) + " exe " + Hex(me, 0x40);
+            return false;
+        });
+    }
     // ---- compressed matrix
     Run("CCompressedMatrixNotAligned::DecompressIntoFullMatrix 0x59B9F0", [](Rng& r, std::string& d) {
         CCompressedMatrixNotAligned cm{};

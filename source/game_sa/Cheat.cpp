@@ -1214,3 +1214,39 @@ void CCheat::InjectHooks() {
     }
 }
 
+// Initial values of the globals declared with NOTSA_GLOBAL_DECL in Cheat.h (detached mode; ignored in address mode)
+NOTSA_GLOBAL_DEF(CCheat, m_aCheatFunctions, 0x8A5B58, (void (*[TOTAL_CHEATS])()), {
+    &CCheat::WeaponCheat1, &CCheat::WeaponCheat2, &CCheat::WeaponCheat3, &CCheat::MoneyArmourHealthCheat,
+    &CCheat::WantedLevelUpCheat, &CCheat::WantedLevelDownCheat, &CCheat::SunnyWeatherCheat,
+    &CCheat::ExtraSunnyWeatherCheat, &CCheat::CloudyWeatherCheat, &CCheat::RainyWeatherCheat, &CCheat::FoggyWeatherCheat,
+    nullptr, &CCheat::FastTimeCheat, &CCheat::SlowTimeCheat, &CCheat::MayhemCheat, &CCheat::EverybodyAttacksPlayerCheat,
+    nullptr, &CCheat::TankCheat, &CCheat::StockCarCheat, &CCheat::StockCar2Cheat, &CCheat::StockCar3Cheat,
+    &CCheat::StockCar4Cheat, &CCheat::HearseCheat, &CCheat::LovefistCheat, &CCheat::TrashmasterCheat,
+    &CCheat::GolfcartCheat, &CCheat::BlowUpCarsCheat, nullptr, nullptr, &CCheat::SuicideCheat, nullptr, nullptr,
+    &CCheat::PinkCarsCheat, &CCheat::BlackCarsCheat, nullptr, nullptr, &CCheat::FatCheat, &CCheat::MuscleCheat,
+    &CCheat::SkinnyCheat, &CCheat::ElvisLivesCheat, &CCheat::VillagePeopleCheat, &CCheat::BeachPartyCheat,
+    &CCheat::GangsCheat, &CCheat::GangLandCheat, &CCheat::NinjaCheat, &CCheat::LoveConquersAllCheat,
+    &CCheat::AllCarsAreShitCheat, &CCheat::AllCarsAreGreatCheat, nullptr, nullptr, &CCheat::FlyboyCheat,
+    &CCheat::VortexCheat, nullptr, nullptr, nullptr, &CCheat::MidnightCheat, &CCheat::DuskCheat, &CCheat::StormCheat,
+    &CCheat::SandstormCheat, &CCheat::PredatorCheat, nullptr, nullptr, nullptr, &CCheat::ParachuteCheat,
+    &CCheat::JetpackCheat, &CCheat::NotWantedCheat, &CCheat::WantedCheat, nullptr, nullptr, &CCheat::RiotCheat,
+    &CCheat::FunhouseCheat, &CCheat::AdrenalineCheat, nullptr, &CCheat::DrivebyCheat, nullptr,
+    &CCheat::CountrysideInvasionCheat, nullptr, nullptr, nullptr, nullptr, nullptr, &CCheat::StaminaCheat,
+    &CCheat::WeaponSkillsCheat, &CCheat::VehicleSkillsCheat, &CCheat::ApacheCheat, &CCheat::QuadCheat,
+    &CCheat::TankerCheat, &CCheat::DozerCheat, &CCheat::StuntPlaneCheat, &CCheat::MonsterTruckCheat
+});
+NOTSA_GLOBAL_DEF(CCheat, m_aCheatHashKeys, 0x8A5CC8, (int32[TOTAL_CHEATS]), {
+    (int32)0xDE4B237DU, (int32)0xB22A28D1U, 0x5A783FAE, (int32)0xEECCEA2BU, 0x42AF1E28, 0x555FC201, 0x2A845345,
+    (int32)0xE1EF01EAU, 0x771B83FC, 0x5BF12848, 0x44453A17, (int32)0xFCFF1D08U, (int32)0xB69E8532U, (int32)0x8B828076U,
+    (int32)0xDD6ED9E9U, (int32)0xA290FD8CU, 0x3484B5A7, 0x43DB914E, (int32)0xDBC0DD65U, 0, (int32)0xD08A30FEU, 0x37BF1B4E,
+    (int32)0xB5D40866U, (int32)0xE63B0D99U, 0x675B8945, 0x4987D5EE, 0x2E8F84E8, 0x1A9AA3D6, (int32)0xE842F3BCU,
+    0x0D5C6A4E, 0x74D4FCB1, (int32)0xB01D13B8U, 0x66516EBC, 0x4B137E45, 0, 0x78520E33, 0x3A577325, (int32)0xD4966D59U,
+    0x5FD1B49D, (int32)0xA7613F99U, 0x1792D871, (int32)0xCBC579DFU, 0x4FEDCCFF, 0x44B34866, 0x2EF877DB, 0x2781E797,
+    0x2BC1A045, (int32)0xB2AFE368U, (int32)0xFA8DD45BU, (int32)0x8DED75BDU, 0x1A5526BC, (int32)0xA48A770BU,
+    (int32)0xB07D3B32U, (int32)0x80C1E54BU, 0x5DAD0087, 0x7F80B950, 0x6C0FA650, (int32)0xF46F2FA4U, 0x70164385, 0,
+    (int32)0x885D0B50U, 0x151BDCB3, (int32)0xADFA640AU, (int32)0xE57F96CEU, 0x040CF761, (int32)0xE1B33EB9U,
+    (int32)0xFEDA77F7U, (int32)0x8CA870DDU, (int32)0x9A629401U, (int32)0xF53EF5A5U, (int32)0xF2AA0C1DU,
+    (int32)0xF36345A8U, (int32)0x8990D5E1U, (int32)0xB7013B1BU, (int32)0xCAEC94EEU, 0x31F0C3CC, (int32)0xB3B3E72AU,
+    (int32)0xC25CDBFFU, (int32)0xD5CF4EFFU, 0x680416B1, (int32)0xCF5FDA18U, (int32)0xF01286E9U, (int32)0xA841CC0AU,
+    0x31EA09CF, (int32)0xE958788AU, 0x02C83A7C, (int32)0xE49C3ED4U, 0x171BA8CC, (int32)0x86988DAEU, 0x2BDD2FA1
+});

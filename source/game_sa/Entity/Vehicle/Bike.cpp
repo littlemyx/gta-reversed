@@ -16,6 +16,8 @@
 #include "VehicleRecording.h"
 #include "Shadows.h"
 #include "Automobile.h"
+#include "game_sa/Cheat.h"
+#line 19
 
 
 
@@ -76,7 +78,7 @@ static auto& s_BikeWheelThrust = StaticRef<float>(0xC1C27C);
 static auto& s_BikeTractionScale = StaticRef<float>(0xC1C818);
 
 // 0x96914C - Handling cheat type passed to `CalculateDriveAcceleration` by `ProcessControl` (named by hand, never written => always `CHEAT_HANDLING_NONE`)
-static auto& s_BikeHandlingCheat = StaticRef<uint8>(0x96914C);
+static NOTSA_GLOBAL_ALIAS(s_BikeHandlingCheat, 0x96914C, (uint8), *reinterpret_cast<uint8*>(reinterpret_cast<uint8*>(&CCheat::m_aCheatsActive) + 28));
 
 // 0xC1C81C - Divisor of the forward speed when deciding whether to emit exhaust particles in `PreRender` (named by hand, initialised by the CRT static initializer at 0x853620 to `(1 / 3.6) / 50`, never written to afterwards)
 static auto& s_BikeExhaustSpeedDivisor = StaticRef<float>(0xC1C81C);

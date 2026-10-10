@@ -19,90 +19,90 @@ class CHud {
 public:
     static constexpr auto BIG_MESSAGE_SIZE = 128;
 
-    static inline auto& bScriptDontDisplayAreaName = StaticRef<bool>(0xBAA3F8);
-    static inline auto& bScriptDontDisplayVehicleName = StaticRef<bool>(0xBAA3F9);
-    static inline auto& bScriptForceDisplayWithCounters = StaticRef<bool>(0xBAA3FA);
-    static inline auto& bScriptDontDisplayRadar = StaticRef<bool>(0xBAA3FB);
+    static inline NOTSA_GLOBAL(bScriptDontDisplayAreaName, 0xBAA3F8, (bool), {});
+    static inline NOTSA_GLOBAL(bScriptDontDisplayVehicleName, 0xBAA3F9, (bool), {});
+    static inline NOTSA_GLOBAL(bScriptForceDisplayWithCounters, 0xBAA3FA, (bool), {});
+    static inline NOTSA_GLOBAL(bScriptDontDisplayRadar, 0xBAA3FB, (bool), {});
 
-    static inline auto& bDrawClock = StaticRef<bool>(0xBAA400);
+    static inline NOTSA_GLOBAL(bDrawClock, 0xBAA400, (bool), {});
 
-    static inline auto& m_pVehicleNameToPrint = StaticRef<const GxtChar*>(0xBAA444);
-    static inline auto& m_VehicleState = StaticRef<eNameState>(0xBAA448);
-    static inline auto& m_VehicleFadeTimer = StaticRef<int32>(0xBAA44C);
-    static inline auto& m_VehicleNameTimer = StaticRef<int32>(0xBAA450);
-    static inline auto& m_pLastVehicleName = StaticRef<const GxtChar*>(0xBAA454);
-    static inline auto& m_pVehicleName = StaticRef<const GxtChar*>(0xBAA458);
+    static inline NOTSA_GLOBAL(m_pVehicleNameToPrint, 0xBAA444, (const GxtChar*), {});
+    static inline NOTSA_GLOBAL(m_VehicleState, 0xBAA448, (eNameState), {});
+    static inline NOTSA_GLOBAL(m_VehicleFadeTimer, 0xBAA44C, (int32), {});
+    static inline NOTSA_GLOBAL(m_VehicleNameTimer, 0xBAA450, (int32), {});
+    static inline NOTSA_GLOBAL(m_pLastVehicleName, 0xBAA454, (const GxtChar*), {});
+    static inline NOTSA_GLOBAL(m_pVehicleName, 0xBAA458, (const GxtChar*), {});
 
-    static inline auto& m_bDraw3dMarkers = StaticRef<bool>(0xBAA45C);
-    static inline auto& m_Wants_To_Draw_Hud = StaticRef<bool>(0xBAA45D);
+    static inline NOTSA_GLOBAL(m_bDraw3dMarkers, 0xBAA45C, (bool), {});
+    static inline NOTSA_GLOBAL(m_Wants_To_Draw_Hud, 0xBAA45D, (bool), {});
 
-    static inline auto& m_fHelpMessageTime = StaticRef<float>(0xBAA460); // in seconds
-    static inline auto& m_fHelpMessageBoxWidth = StaticRef<float>(0x8D0934); // default 200.0
-    static inline auto& m_bHelpMessagePermanent = StaticRef<bool>(0xBAA464);
-    static inline auto& m_fHelpMessageStatUpdateValue = StaticRef<float>(0xBAA468);
-    static inline auto& m_nHelpMessageMaxStatValue = StaticRef<uint16>(0xBAA46C);
-    static inline auto& m_nHelpMessageStatId = StaticRef<uint16>(0xBAA470);
-    static inline auto& m_bHelpMessageQuick = StaticRef<bool>(0xBAA472);
-    static inline auto& m_nHelpMessageState = StaticRef<int32>(0xBAA474);
-    static inline auto& m_nHelpMessageFadeTimer = StaticRef<uint32>(0xBAA478);
-    static inline auto& m_nHelpMessageTimer = StaticRef<uint32>(0xBAA47C);
-    static inline auto& m_pHelpMessageToPrint = StaticRef<GxtChar[400]>(0xBAA480);
-    static inline auto& m_pLastHelpMessage = StaticRef<GxtChar[400]>(0xBAA610);
-    static inline auto& m_pHelpMessage = StaticRef<GxtChar[400]>(0xBAA7A0);
+    static inline NOTSA_GLOBAL(m_fHelpMessageTime, 0xBAA460, (float), {}); // in seconds
+    static inline NOTSA_GLOBAL(m_fHelpMessageBoxWidth, 0x8D0934, (float), { 200.0f }); // default 200.0
+    static inline NOTSA_GLOBAL(m_bHelpMessagePermanent, 0xBAA464, (bool), {});
+    static inline NOTSA_GLOBAL(m_fHelpMessageStatUpdateValue, 0xBAA468, (float), {});
+    static inline NOTSA_GLOBAL(m_nHelpMessageMaxStatValue, 0xBAA46C, (uint16), {});
+    static inline NOTSA_GLOBAL(m_nHelpMessageStatId, 0xBAA470, (uint16), {});
+    static inline NOTSA_GLOBAL(m_bHelpMessageQuick, 0xBAA472, (bool), {});
+    static inline NOTSA_GLOBAL(m_nHelpMessageState, 0xBAA474, (int32), {});
+    static inline NOTSA_GLOBAL(m_nHelpMessageFadeTimer, 0xBAA478, (uint32), {});
+    static inline NOTSA_GLOBAL(m_nHelpMessageTimer, 0xBAA47C, (uint32), {});
+    static inline NOTSA_GLOBAL(m_pHelpMessageToPrint, 0xBAA480, (GxtChar[400]), {});
+    static inline NOTSA_GLOBAL(m_pLastHelpMessage, 0xBAA610, (GxtChar[400]), {});
+    static inline NOTSA_GLOBAL(m_pHelpMessage, 0xBAA7A0, (GxtChar[400]), {});
 
-    static inline auto& m_ZoneState = StaticRef<eNameState>(0xBAA930);
-    static inline auto& m_ZoneFadeTimer = StaticRef<int32>(0xBAA934);
-    static inline auto& m_ZoneNameTimer = StaticRef<uint32>(0xBAA938);
-    static inline auto& m_ZoneToPrint = StaticRef<const GxtChar*>(0xBAB1D0);
-    static inline auto& m_pLastZoneName = StaticRef<const GxtChar*>(0xBAB1D4);
-    static inline auto& m_pZoneName = StaticRef<const GxtChar*>(0xBAB1D8);
+    static inline NOTSA_GLOBAL(m_ZoneState, 0xBAA930, (eNameState), {});
+    static inline NOTSA_GLOBAL(m_ZoneFadeTimer, 0xBAA934, (int32), {});
+    static inline NOTSA_GLOBAL(m_ZoneNameTimer, 0xBAA938, (uint32), {});
+    static inline NOTSA_GLOBAL(m_ZoneToPrint, 0xBAB1D0, (const GxtChar*), {});
+    static inline NOTSA_GLOBAL(m_pLastZoneName, 0xBAB1D4, (const GxtChar*), {});
+    static inline NOTSA_GLOBAL(m_pZoneName, 0xBAB1D8, (const GxtChar*), {});
 
-    static inline auto& m_ItemToFlash = StaticRef<eHudItem>(0xBAB1DC);
-    static inline auto& bDrawingVitalStats = StaticRef<bool>(0xBAB1DE);
+    static inline NOTSA_GLOBAL(m_ItemToFlash, 0xBAB1DC, (eHudItem), {});
+    static inline NOTSA_GLOBAL(bDrawingVitalStats, 0xBAB1DE, (bool), {});
 
-    static inline auto& m_LastBreathTime = StaticRef<int32>(0xBAA3FC);
+    static inline NOTSA_GLOBAL(m_LastBreathTime, 0xBAA3FC, (int32), {});
 
-    static inline auto& m_WeaponState = StaticRef<uint32>(0xBAA404);
-    static inline auto& m_WeaponFadeTimer = StaticRef<uint32>(0xBAA408);
-    static inline auto& m_WeaponTimer = StaticRef<uint32>(0xBAA40C);
-    static inline auto& m_LastWeapon = StaticRef<uint32>(0xBAA410);
+    static inline NOTSA_GLOBAL(m_WeaponState, 0xBAA404, (uint32), {});
+    static inline NOTSA_GLOBAL(m_WeaponFadeTimer, 0xBAA408, (uint32), {});
+    static inline NOTSA_GLOBAL(m_WeaponTimer, 0xBAA40C, (uint32), {});
+    static inline NOTSA_GLOBAL(m_LastWeapon, 0xBAA410, (uint32), {});
 
-    static inline auto& m_WantedState = StaticRef<uint32>(0xBAA414);
-    static inline auto& m_WantedFadeTimer = StaticRef<uint32>(0xBAA418);
-    static inline auto& m_WantedTimer = StaticRef<uint32>(0xBAA41C);
-    static inline auto& m_LastWanted = StaticRef<uint32>(0xBAA420);
+    static inline NOTSA_GLOBAL(m_WantedState, 0xBAA414, (uint32), {});
+    static inline NOTSA_GLOBAL(m_WantedFadeTimer, 0xBAA418, (uint32), {});
+    static inline NOTSA_GLOBAL(m_WantedTimer, 0xBAA41C, (uint32), {});
+    static inline NOTSA_GLOBAL(m_LastWanted, 0xBAA420, (uint32), {});
 
-    static inline auto& m_DisplayScoreState = StaticRef<uint32>(0xBAA424);
-    static inline auto& m_DisplayScoreFadeTimer = StaticRef<uint32>(0xBAA428);
-    static inline auto& m_DisplayScoreTimer = StaticRef<uint32>(0xBAA42C);
-    static inline auto& m_LastDisplayScore = StaticRef<uint32>(0xBAA430);
+    static inline NOTSA_GLOBAL(m_DisplayScoreState, 0xBAA424, (uint32), {});
+    static inline NOTSA_GLOBAL(m_DisplayScoreFadeTimer, 0xBAA428, (uint32), {});
+    static inline NOTSA_GLOBAL(m_DisplayScoreTimer, 0xBAA42C, (uint32), {});
+    static inline NOTSA_GLOBAL(m_LastDisplayScore, 0xBAA430, (uint32), {});
 
-    static inline auto& m_EnergyLostState = StaticRef<uint32>(0xBAA434);
-    static inline auto& m_EnergyLostFadeTimer = StaticRef<uint32>(0xBAA438);
-    static inline auto& m_EnergyLostTimer = StaticRef<uint32>(0xBAA43C);
-    static inline auto& m_LastTimeEnergyLost = StaticRef<uint32>(0xBAA440);
+    static inline NOTSA_GLOBAL(m_EnergyLostState, 0xBAA434, (uint32), {});
+    static inline NOTSA_GLOBAL(m_EnergyLostFadeTimer, 0xBAA438, (uint32), {});
+    static inline NOTSA_GLOBAL(m_EnergyLostTimer, 0xBAA43C, (uint32), {});
+    static inline NOTSA_GLOBAL(m_LastTimeEnergyLost, 0xBAA440, (uint32), {});
 
-    static inline auto& m_Message = StaticRef<GxtChar[400]>(0xBAB040);
-    static inline auto& m_BigMessage = StaticRef<GxtChar[NUM_MESSAGE_STYLES][BIG_MESSAGE_SIZE]>(0xBAACC0);
-    static inline auto& LastBigMessage = StaticRef<GxtChar[NUM_MESSAGE_STYLES][BIG_MESSAGE_SIZE]>(0xBAA940);
-    static inline auto& BigMessageAlpha = StaticRef<float[NUM_MESSAGE_STYLES]>(0xBAA3A4);
-    static inline auto& BigMessageInUse = StaticRef<float[NUM_MESSAGE_STYLES]>(0xBAA3C0);
-    static inline auto& BigMessageX = StaticRef<float[NUM_MESSAGE_STYLES]>(0xBAA3DC);
+    static inline NOTSA_GLOBAL(m_Message, 0xBAB040, (GxtChar[400]), {});
+    static inline NOTSA_GLOBAL(m_BigMessage, 0xBAACC0, (GxtChar[NUM_MESSAGE_STYLES][BIG_MESSAGE_SIZE]), {});
+    static inline NOTSA_GLOBAL(LastBigMessage, 0xBAA940, (GxtChar[NUM_MESSAGE_STYLES][BIG_MESSAGE_SIZE]), {});
+    static inline NOTSA_GLOBAL(BigMessageAlpha, 0xBAA3A4, (float[NUM_MESSAGE_STYLES]), {});
+    static inline NOTSA_GLOBAL(BigMessageInUse, 0xBAA3C0, (float[NUM_MESSAGE_STYLES]), {});
+    static inline NOTSA_GLOBAL(BigMessageX, 0xBAA3DC, (float[NUM_MESSAGE_STYLES]), {});
 
     static inline auto& Sprites = StaticRef<std::array<CSprite2d, 6>>(0xBAB1FC);
 
-    static inline auto& TimerMainCounterHideState = StaticRef<int16>(0xBAA388);
-    static inline auto& TimerMainCounterWasDisplayed = StaticRef<bool>(0xBAA38A);
-    static inline auto& TimerCounterHideState = StaticRef<std::array<int16, 4>>(0xBAA38C);
-    static inline auto& TimerCounterWasDisplayed = StaticRef<std::array<bool, 4>>(0xBAA394);
+    static inline NOTSA_GLOBAL(TimerMainCounterHideState, 0xBAA388, (int16), {});
+    static inline NOTSA_GLOBAL(TimerMainCounterWasDisplayed, 0xBAA38A, (bool), {});
+    static inline NOTSA_GLOBAL(TimerCounterHideState, 0xBAA38C, (std::array<int16, 4>), {});
+    static inline NOTSA_GLOBAL(TimerCounterWasDisplayed, 0xBAA394, (std::array<bool, 4>), {});
 
-    static inline auto& OddJob2OffTimer = StaticRef<float>(0xBAA398);
-    static inline auto& OddJob2XOffset = StaticRef<float>(0xBAA39C);
-    static inline auto& OddJob2Timer = StaticRef<uint16>(0xBAA3A0);
-    static inline auto& OddJob2On = StaticRef<uint16>(0xBAB1E0);
+    static inline NOTSA_GLOBAL(OddJob2OffTimer, 0xBAA398, (float), {});
+    static inline NOTSA_GLOBAL(OddJob2XOffset, 0xBAA39C, (float), {});
+    static inline NOTSA_GLOBAL(OddJob2Timer, 0xBAA3A0, (uint16), {});
+    static inline NOTSA_GLOBAL(OddJob2On, 0xBAB1E0, (uint16), {});
 
-    static inline auto& PagerXOffset = StaticRef<float>(0x8D0938); // 150.0f
-    static inline auto& HelpTripSkipShown = StaticRef<bool>(0xBAB229);
+    static inline NOTSA_GLOBAL(PagerXOffset, 0x8D0938, (float), { 150.0f }); // 150.0f
+    static inline NOTSA_GLOBAL(HelpTripSkipShown, 0xBAB229, (bool), {});
 
 public:
     static void InjectHooks();

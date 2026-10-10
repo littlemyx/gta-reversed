@@ -213,6 +213,19 @@ static void TestCD() {
         if (SameF(a, b)) return true;
         d = "speed " + V(sp) + " got " + F(a) + " exe " + F(b); return false;
     });
+    // empty traffic sectors (the world lists are zero here): the loop in the exe ends after one pass for finite angles and spins forever on a NaN/inf angle, exactly like the port
+    // (fcomp+test ah,0x44 is "not equal" for NaN; the wrap loops exit on NaN and spin on +-inf in both), so only finite inputs are compared; the angles go up to 1e4 for the wrap loops
+    Run("CCarCtrl::FindAngleToWeaveThroughTraffic 0x4325C0", [](Rng& r, std::string& d) {
+        const auto sp = GenV(r, PickScale(r));
+        const float px = (float)(r.below(6000) - 3000) + r.f01(), py = (float)(r.below(6000) - 3000) + r.f01();
+        auto* v = MakeVeh(r, CVector{ px, py, 10.f }, sp);
+        v->m_autoPilot.m_nCarDrivingStyle = r.below(2) ? DRIVING_STYLE_DRIVINGMODE_AVOIDCARS_STOPFORPEDS_OBEYLIGHTS : DRIVING_STYLE_STOP_FOR_CARS;
+        const auto Ang = [&] { const int k = r.below(5); return k == 0 ? 0.f : k == 1 ? (r.f01() - 0.5f) * 8.f : k == 2 ? (r.f01() - 0.5f) * 40.f : k == 3 ? (r.f01() - 0.5f) * 20000.f : (float)(r.below(9) - 4) * 3.14159265f; };
+        const float ta = Ang(), hd = Ang(), dm = r.below(4) ? 1.f : r.f01() * 3.f;
+        const float a = CCarCtrl::FindAngleToWeaveThroughTraffic(v, nullptr, ta, hd, dm), b = oracle::Fn<float __cdecl(CVehicle*, CPhysical*, float, float, float)>(0x4325C0)(v, nullptr, ta, hd, dm);
+        if (SameF(a, b)) return true;
+        d = "target " + F(ta) + " heading " + F(hd) + " mult " + F(dm) + " got " + F(a) + " exe " + F(b); return false;
+    });
     Run("CCarCtrl::ThisVehicleShouldTryNotToTurn 0x421FE0", [](Rng& r, std::string& d) {
         auto* v = MakeVeh(r, {}, {});
         v->m_nModelIndex = r.below(3) ? (int16)(400 + r.below(220)) : (int16)(int)(r.u32());

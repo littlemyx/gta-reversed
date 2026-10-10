@@ -14,7 +14,7 @@
 #line 7
 
 auto& playerImg = StaticRef<CDirectory>(0xBC12C0);
-NOTSA_GLOBAL(playerImgEntries, 0xBBCDC8, (CDirectory::DirectoryInfo), {});
+NOTSA_GLOBAL(playerImgEntries, 0xBBCDC8, (CDirectory::DirectoryInfo[550]), {}); // 550 entries (playerImg.Init(550, ...)), NOT one: the table audit declared a single DirectoryInfo
 
 NOTSA_GLOBAL(gBoneIndices, 0xBBC8C8, (notsa::mdarray<int16, 10, 64>), {});
 
@@ -58,7 +58,7 @@ void CClothesBuilder::InjectHooks() {
 // inlined
 // 0x5A4190
 void CClothesBuilder::LoadCdDirectory() {
-    playerImg.Init(550, &playerImgEntries);
+    playerImg.Init(550, playerImgEntries);
     playerImg.ReadDirFile("MODELS\\PLAYER.IMG");
 }
 

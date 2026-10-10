@@ -9,6 +9,19 @@
 
 static inline auto& bRotateWithNeck = StaticRef<bool>(0x8D2354);
 
+namespace {
+// The exe tests `v > max` first, then `v < min` (0x5FDAB5..): unlike std::clamp this is well defined (and asserts nothing) when min > max
+float ClampMaxFirst(float v, float lo, float hi) {
+    if (v > hi) {
+        return hi;
+    }
+    if (v < lo) {
+        return lo;
+    }
+    return v;
+}
+}
+
 void CPedIK::InjectHooks() {
     RH_ScopedClass(CPedIK);
     RH_ScopedCategoryGlobal();
@@ -253,7 +266,7 @@ MoveLimbResult CPedIK::MoveLimb(LimbOrientation& limb, float targetYaw, float ta
     }
 
     if (limb.m_fYaw > moveInfo.maxYaw || limb.m_fYaw < moveInfo.minYaw) {
-        limb.m_fYaw = std::clamp(limb.m_fYaw, moveInfo.minYaw, moveInfo.maxYaw);
+        limb.m_fYaw = ClampMaxFirst(limb.m_fYaw, moveInfo.minYaw, moveInfo.maxYaw);
         result = CANT_REACH_TARGET;
     }
 
@@ -261,16 +274,18 @@ MoveLimbResult CPedIK::MoveLimb(LimbOrientation& limb, float targetYaw, float ta
     if (std::abs(limb.m_fPitch - targetPitch) < moveInfo.pitchD) {
         limb.m_fPitch = targetPitch;
     } else {
-        if (limb.m_fPitch > targetPitch) {
-            limb.m_fPitch -= moveInfo.pitchD;
-        } else if (limb.m_fPitch < targetPitch) {
+        // 0x5FDAF1: the result is only reset when the pitch actually moved (not for a NaN pitch / a non-positive step)
+        if (limb.m_fPitch < targetPitch) {
             limb.m_fPitch += moveInfo.pitchD;
+            result = HAVENT_REACHED_TARGET;
+        } else if (limb.m_fPitch > targetPitch) {
+            limb.m_fPitch -= moveInfo.pitchD;
+            result = HAVENT_REACHED_TARGET;
         }
-        result = HAVENT_REACHED_TARGET;
     }
 
     if (limb.m_fPitch > moveInfo.maxPitch || limb.m_fPitch < moveInfo.minPitch) {
-        limb.m_fPitch = std::clamp(limb.m_fPitch, moveInfo.minPitch, moveInfo.maxPitch);
+        limb.m_fPitch = ClampMaxFirst(limb.m_fPitch, moveInfo.minPitch, moveInfo.maxPitch);
         result = CANT_REACH_TARGET;
     }
 
@@ -285,12 +300,12 @@ MoveLimbResult CPedIK::MoveLimb(LimbOrientation& limb, float targetYaw, float ta
     limb.m_fPitch = normalize * targetPitch;
 
     if (limb.m_fYaw > moveInfo.maxYaw || limb.m_fYaw < moveInfo.minYaw) {
-        limb.m_fYaw = std::clamp(limb.m_fYaw, moveInfo.minYaw, moveInfo.maxYaw);
+        limb.m_fYaw = ClampMaxFirst(limb.m_fYaw, moveInfo.minYaw, moveInfo.maxYaw);
         result = CANT_REACH_TARGET;
     }
 
     if (limb.m_fPitch > moveInfo.maxPitch || limb.m_fPitch < moveInfo.minPitch) {
-        limb.m_fPitch = std::clamp(limb.m_fPitch, moveInfo.minPitch, moveInfo.maxPitch);
+        limb.m_fPitch = ClampMaxFirst(limb.m_fPitch, moveInfo.minPitch, moveInfo.maxPitch);
         result = CANT_REACH_TARGET;
     } else if (normalize > 0.9f && result == HAVENT_REACHED_TARGET) {
         result = REACHED_TARGET;

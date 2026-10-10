@@ -199,7 +199,8 @@ void CPedGroupIntelligence::Process() {
                     m_PrimaryTaskAllocator = nullptr;
                 }
             }
-            delete std::exchange(m_EventResponseTaskAllocator, ComputeEventResponseTasks());
+            delete std::exchange(m_EventResponseTaskAllocator, nullptr); // 0x5FC74F: delete + null BEFORE ComputeEventResponseTasks
+            m_EventResponseTaskAllocator = ComputeEventResponseTasks();
         } else if ( // 0x5FC6F6
                m_HighestPriorityEvent->GetEvent().GetEventType() == m_CurrentEvent->GetEvent().GetEventType()
             && m_HighestPriorityEvent->GetEvent().CanBeInterruptedBySameEvent()
@@ -218,7 +219,9 @@ void CPedGroupIntelligence::Process() {
 
     if (!m_PrimaryTaskAllocator && m_CurrentEvent) { // 0x5FC7A7
         if (m_EventResponseTaskAllocator) {
-            m_PrimaryTaskAllocator = m_EventResponseTaskAllocator->ProcessGroup(this);
+            // 0x5FC7C1: the exe calls ProcessGroup (vtbl+8) and DISCARDS the result (no store to +0x290). Storing it here made the primary allocator
+            // alias the event-response one, which the exe never does (-> double delete / dangling primary -> jump through a recycled object's vtable).
+            (void)m_EventResponseTaskAllocator->ProcessGroup(this);
         }
     }
 

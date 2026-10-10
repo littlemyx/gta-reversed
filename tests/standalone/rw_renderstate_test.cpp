@@ -11,6 +11,8 @@
 #include <cmath>
 
 RwRGBAReal AmbientSaturated{}; // normally defined in rwglobals.cpp (kept out of this test's link line)
+static RwGlobals s_testGlobals{};
+RwGlobals* RwEngineInstance = &s_testGlobals; // renderstate.cpp reads RwEngineInstance->curCamera (fog)
 
 void NotsaRwRenderState_OnEngineStarted(); // renderstate.cpp: RW's default state, applied by RwEngineStart via platform.cpp
 

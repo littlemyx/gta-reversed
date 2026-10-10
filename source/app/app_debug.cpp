@@ -133,6 +133,24 @@ LONG WINAPI WindowsExceptionHandler(PEXCEPTION_POINTERS pExceptionInfo) {
     }
 #endif
 
+#ifdef NOTSA_STANDALONE_RUN
+    Section("RAW STACK (words that point into the image .text; module-relative)");
+    {
+        const auto base = (uintptr_t)GetModuleHandleA(nullptr);
+        const auto* sp = (const uintptr_t*)context.Esp;
+        for (int i = 0; i < 1024; i++) {
+            uintptr_t w{};
+            SIZE_T    rd{};
+            if (!ReadProcessMemory(GetCurrentProcess(), sp + i, &w, sizeof(w), &rd) || rd != sizeof(w)) {
+                break;
+            }
+            if (w >= base + 0x1000 && w < base + 0x1C00000) {
+                SPDLOG_INFO("\tstack+{:#x}: {:#010x}", i * 4, w);
+            }
+        }
+    }
+#endif
+
     Section("CALL STACK");
     {
         HANDLE hProcess = GetCurrentProcess();

@@ -716,6 +716,30 @@ if (${RE_PROJECT}_RW_LIBRW)
     set_property(TARGET physics_oracle_test PROPERTY SOURCES "${STANDALONE_PAD_OBJ}" ${_po_sources})
     target_link_options(physics_oracle_test PRIVATE "$<$<CXX_COMPILER_ID:MSVC>:/BASE:0x400000;/DYNAMICBASE:NO;/FIXED;/MERGE:_TEXT=.text;/INCREMENTAL:NO;/SUBSYSTEM:CONSOLE;/FORCE:UNRESOLVED>")
     set_target_properties(physics_oracle_test PROPERTIES COMPILE_WARNING_AS_ERROR OFF CXX_SCAN_FOR_MODULES OFF)
+    # P2E-4 world differential test (audio math, radar/HUD/sprites, water/weather/fire/explosion/cull zones/population/garages/pickups, trains/boats/helis/planes/ropes); same machinery as physics_oracle_test
+    add_executable(world_oracle_test EXCLUDE_FROM_ALL
+        "${PROJECT_SOURCE_DIR}/tests/standalone/world_oracle_test.cpp"
+        game_sa/General.cpp
+        game_sa/Core/Vector.cpp
+        game_sa/Core/Vector2D.cpp
+        game_sa/Core/Matrix.cpp
+        game_sa/Core/Quaternion.cpp
+        game_sa/Audio/AEAudioUtility.cpp
+        game_sa/Audio/Entities/AEVehicleAudioEntity.cpp
+        standalone/FtolExe.cpp
+    )
+    target_compile_features(world_oracle_test PRIVATE cxx_std_23)
+    target_compile_definitions(world_oracle_test PRIVATE $<TARGET_PROPERTY:${RE_PROJECT_LIB_NAME},COMPILE_DEFINITIONS>)   # the run build's own definitions (NOTSA_STANDALONE_RUN, USE_DSOUND, ...): the audio / HUD headers need them
+    target_include_directories(world_oracle_test PRIVATE $<TARGET_PROPERTY:${RE_PROJECT_LIB_NAME},INCLUDE_DIRECTORIES>)
+    target_compile_options(world_oracle_test PRIVATE $<TARGET_PROPERTY:${RE_PROJECT_LIB_NAME},COMPILE_OPTIONS>)
+    target_precompile_headers(world_oracle_test PRIVATE StdInc.cpp)
+    target_link_libraries(world_oracle_test PRIVATE librw spdlog::spdlog Tracy::TracyClient user32)
+    target_sources(world_oracle_test PRIVATE "${STANDALONE_PAD_OBJ}")
+    get_target_property(_wo_sources world_oracle_test SOURCES)
+    list(REMOVE_ITEM _wo_sources "${STANDALONE_PAD_OBJ}")
+    set_property(TARGET world_oracle_test PROPERTY SOURCES "${STANDALONE_PAD_OBJ}" ${_wo_sources})
+    target_link_options(world_oracle_test PRIVATE "$<$<CXX_COMPILER_ID:MSVC>:/BASE:0x400000;/DYNAMICBASE:NO;/FIXED;/MERGE:_TEXT=.text;/INCREMENTAL:NO;/SUBSYSTEM:CONSOLE;/FORCE:UNRESOLVED>")
+    set_target_properties(world_oracle_test PROPERTIES COMPILE_WARNING_AS_ERROR OFF CXX_SCAN_FOR_MODULES OFF)
     # x87 intrinsic fidelity oracle: inline fsin/fcos/fpatan/fptan/fsqrt/fyl2x of the exe vs the ports' math, and the CRT entry points the exe calls (pow, asin, acos, tan, floor, ceil, modf)
     add_executable(x87_oracle_test EXCLUDE_FROM_ALL
         "${PROJECT_SOURCE_DIR}/tests/standalone/x87_oracle_test.cpp"

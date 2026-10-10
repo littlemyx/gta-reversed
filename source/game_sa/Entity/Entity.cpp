@@ -7,6 +7,7 @@
 #include "StdInc.h"
 
 #include "Entity.h"
+#include "DbgDangling.h"
 
 #include "PointLights.h"
 #include "Escalators.h"
@@ -1070,6 +1071,9 @@ void CEntity::CreateEffects() {
                 effect->enEx.m_szInteriorName
             );
 
+#ifdef NOTSA_INPUT_INJECT
+            NOTSA_LOG_ERR("DBG3 enex CreateEffects entity={} model={} fx#{} -> enex {} at ({:.1f},{:.1f},{:.1f})", (void*)this, (int)m_nModelIndex, iFxInd, iEnExId, vecWorldEffect.x, vecWorldEffect.y, vecWorldEffect.z);
+#endif
             if (iEnExId != -1) {
                 if (auto* const enex = CEntryExitManager::GetInSlot(iEnExId)) {
                     if (enex->m_pLink && !enex->m_pLink->bEnableAccess) {
@@ -1155,6 +1159,9 @@ void CEntity::DestroyEffects() {
         case e2dEffectType::EFFECT_ENEX: {
             const auto vecWorld = TransformFromObjectSpace(effect->m_Pos);
             const auto iNearestEnex = CEntryExitManager::FindNearestEntryExit(vecWorld, 1.5F, -1);
+#ifdef NOTSA_INPUT_INJECT
+            NOTSA_LOG_ERR("DBG3 enex DestroyEffects entity={} model={} fx#{} at ({:.1f},{:.1f},{:.1f}) -> nearest {}", (void*)this, (int)m_nModelIndex, iFxInd, vecWorld.x, vecWorld.y, vecWorld.z, iNearestEnex);
+#endif
 
             if (iNearestEnex != -1) {
                 auto enex = CEntryExitManager::GetInSlot(iNearestEnex);
@@ -1627,6 +1634,9 @@ void CEntity::CleanUpOldReference(CEntity** entity) {
 // in references.cpp
 // 0x571A40
 void CEntity::ResolveReferences() {
+#ifdef NOTSA_INPUT_INJECT
+    dbg3::NoteResolved(this);
+#endif
     for (auto ref = m_pReferences; ref; ref = ref->m_pNext) {
         if (ref->m_ppEntity && *ref->m_ppEntity == this) {
             *ref->m_ppEntity = nullptr;

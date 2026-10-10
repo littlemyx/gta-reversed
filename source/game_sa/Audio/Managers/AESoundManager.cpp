@@ -1,6 +1,7 @@
 #include "StdInc.h"
 
 #include "AESoundManager.h"
+#include "DbgDangling.h"
 
 #include "AEAudioEnvironment.h"
 #include "AEAudioHardware.h"
@@ -338,6 +339,9 @@ CAESound* CAESoundManager::RequestNewSound(CAESound* pSound) {
         *s = *pSound;
         pSound->UnregisterWithPhysicalEntity();
         s->NewVPSLEntry();
+#ifdef NOTSA_INPUT_INJECT
+        if (s->m_AudioEntity) { auto& sh = dbg3::g_sndShadow[sidx]; sh.owner = s->m_AudioEntity; sh.vtbl = *(const uint32*)s->m_AudioEntity; sh.cls = dbg3::Classify(s->m_AudioEntity); sh.frame = CTimer::GetFrameCounter(); sh.ms = CTimer::GetTimeInMS(); }
+#endif
         AEAudioHardware.RequestVirtualChannelSoundInfo((uint16)sidx, s->m_SoundID, s->m_BankSlot);
     }
 

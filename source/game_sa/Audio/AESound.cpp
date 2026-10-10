@@ -12,6 +12,8 @@
 #include "AEAudioEnvironment.h"
 #include "AEAudioHardware.h"
 #include "AEAudioUtility.h"
+#include "DbgDangling.h"
+#include "Managers/AESoundManager.h"
 
 void CAESound::InjectHooks() {
     RH_ScopedClass(CAESound);
@@ -258,6 +260,7 @@ void CAESound::UpdateParameters(int16 curPlayPos) {
         if (m_AudioEntity) { // NB: References are clearable, so must check!
 #ifdef NOTSA_INPUT_INJECT // Wine run diagnostics: a freed owner (debug heap 0xDD fill) would crash on the vtable read below
             if (*(const uint32*)m_AudioEntity == 0xDDDDDDDDu) {
+                { const auto idx = (size_t)(this - AESoundManager.m_VirtuallyPlayingSoundList); const auto& sh = dbg3::g_sndShadow[idx]; NOTSA_LOG_ERR("DBG3 DEAD SOUND OWNER slot={} owner={} vtbl@add={:#x} class@add=[{}] addedFrame={} addedMs={} nowFrame={} nowMs={} resolvedEntityBefore={}", idx, (void*)m_AudioEntity, sh.vtbl, sh.cls, sh.frame, sh.ms, CTimer::GetFrameCounter(), CTimer::GetTimeInMS(), dbg3::FindResolved(m_AudioEntity) != nullptr); }
                 NOTSA_LOG_ERR("CAESound::UpdateParameters: owner {} is freed (event={}, bank={}, sound={}, pos=({}, {}, {}), vol={}, flags={:#x})", (void*)m_AudioEntity, m_Event, (int)m_BankSlot, (int)m_SoundID, m_CurrPos.x, m_CurrPos.y, m_CurrPos.z, m_Volume, m_Flags);
             }
 #endif

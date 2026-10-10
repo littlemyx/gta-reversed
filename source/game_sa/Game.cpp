@@ -57,6 +57,7 @@
 #include "CarFXRenderer.h"
 #include "ProcObjectMan.h"
 #include "InterestingEvents.h"
+#include "DbgDangling.h"
 #include "WindModifiers.h"
 #include "GrassRenderer.h"
 
@@ -799,6 +800,9 @@ void CGame::Process() {
         if (g_InterestingEvents.m_b1) {
             g_InterestingEvents.ScanForNearbyEntities();
         }
+#ifdef NOTSA_INPUT_INJECT
+        dbg3::CheckEvents();
+#endif
 
         if (CReplay::ShouldStandardCameraBeProcessed()) {
             TheCamera.Process();

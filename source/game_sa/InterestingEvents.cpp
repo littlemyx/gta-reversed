@@ -1,6 +1,7 @@
 #include "StdInc.h"
 
 #include "InterestingEvents.h"
+#include "DbgDangling.h"
 
 auto& g_InterestingEvents = StaticRef<CInterestingEvents>(0xC0B058);
 
@@ -157,6 +158,10 @@ void CInterestingEvents::Add(CInterestingEvents::EType type, CEntity* entity) {
         event.entity = entity;
         event.time   = now;
         entity->RegisterReference(&event.entity);
+#ifdef NOTSA_INPUT_INJECT
+        dbg3::g_evShadow[i] = { entity, type, (int)entity->GetType(), (int)entity->m_nModelIndex, CTimer::GetFrameCounter(), now };
+        { bool found = false; for (auto* r = entity->m_pReferences; r; r = r->m_pNext) { found |= r->m_ppEntity == &event.entity; } if (!found) { NOTSA_LOG_ERR("DBG3 interesting event ref NOT registered (pool exhausted?) entity={} etype={} model={} free={}", (void*)entity, (int)entity->GetType(), (int)entity->m_nModelIndex, CReferences::ListSize(CReferences::pEmptyList)); } }
+#endif
 
         m_nEndsOfTime[type] = m_b8
             ? now + (m_nDelays[type] >> 1)
@@ -311,7 +316,10 @@ void CInterestingEvents::InvalidateNonVisibleEvents() {
             continue;
 
         event.time = 0;
-        CEntity::ClearReference(event.entity); // 0x602A28: CleanUpOldReference + `event.entity = nullptr`
+#ifdef NOTSA_INPUT_INJECT
+        if (std::getenv("DBG3_OLD_INVALIDATE")) { CEntity::SafeCleanUpRef(event.entity); } else // before/after switch for the repro runs
+#endif
+        CEntity::ClearReference(event.entity); // 0x602A28: CleanUpOldReference + `event.entity = nullptr` (a bare SafeCleanUpRef left the pointer dangling once the entity died)
         if (m_nInterestingEvent == i) {
             m_nInterestingEvent = -1;
         }

@@ -567,8 +567,100 @@ static void TestProjectileInfoUpdate() {
     });
 }
 
+
+// CExplosion::AddExplosion with creator = victim = null (FindPlayerPed() == null as well: the "havoc" counters of player 0 are updated); effects recorded on both sides
+#include "Shadows.h"
+#include "GameLogic.h"
+#include "Camera.h"
+#include "WaterLevel.h"
+#include "Audio/Entities/AEExplosionAudioEntity.h"
+namespace aex {
+inline unsigned g_hitMask = 0, g_n = 0;
+inline float    g_water = 0.f; inline bool g_hasWater = false, g_coop = false;
+}
+float CWorld::FindGroundZFor3DCoord(CVector coord, bool* outResult, CEntity** outEntity) {
+    const bool hit = (aex::g_hitMask >> (aex::g_n++ & 31)) & 1;
+    sfx::g_rec.push_back({ 10, coord, (float)hit });
+    if (outResult) *outResult = hit;
+    if (outEntity) *outEntity = nullptr;
+    return coord.z - 3.0f + 0.25f * (float)(aex::g_n & 7);
+}
+bool CWaterLevel::GetWaterLevelNoWaves(CVector pos, float* out, float* a, float* b) { sfx::g_rec.push_back({ 11, pos, (float)aex::g_hasWater }); if (out) *out = aex::g_water; return aex::g_hasWater; }
+void CAEExplosionAudioEntity::AddAudioEvent(eAudioEvents ev, CVector& posn, float vol) { sfx::g_rec.push_back({ 12, posn, vol, nullptr, (float)ev }); }
+CFire* CFireManager::StartFire(CVector pos, float size, uint8 unused, CEntity* creator, uint32 nTimeToBurn, int8 nGenerations, uint8 unused_) { sfx::g_rec.push_back({ 13, pos, size, creator, (float)nTimeToBurn, (float)(nGenerations + 16 * unused_) }); return nullptr; }
+void CShadows::AddPermanentShadow(uint8 type, RwTexture* texture, CVector* posn, float topX, float topY, float rightX, float rightY, int16 intensity, uint8 red, uint8 green, uint8 blue, float drawDistance, uint32 time, float upDistance) {
+    sfx::g_rec.push_back({ 14, *posn, topX + 2.f * topY + 3.f * rightX + 4.f * rightY, texture, (float)(intensity + red + green + blue + type) + drawDistance, (float)time + upDistance });
+}
+void CCamera::CamShake(float strength, CVector from) { sfx::g_rec.push_back({ 15, from, strength }); }
+void CPad::StartShake_Distance(int16 time, uint8 frequency, CVector pos) { sfx::g_rec.push_back({ 16, pos, (float)(time * 1000 + frequency), this }); }
+bool CGameLogic::IsCoopGameGoingOn() { sfx::g_rec.push_back({ 17, {}, 0.f }); return aex::g_coop; }
+namespace aex {
+static float __cdecl ExeGround(float x, float y, float z, bool* outResult, CEntity** outEntity) {
+    const bool hit = (g_hitMask >> (g_n++ & 31)) & 1;
+    sfx::g_rec.push_back({ 10, { x, y, z }, (float)hit });
+    if (outResult) *outResult = hit;
+    if (outEntity) *outEntity = nullptr;
+    return z - 3.0f + 0.25f * (float)(g_n & 7);
+}
+static bool __cdecl ExeWater(float x, float y, float z, float* out, float*, float*) { sfx::g_rec.push_back({ 11, { x, y, z }, (float)g_hasWater }); if (out) *out = g_water; return g_hasWater; }
+static void __fastcall ExeAudio(void*, int, int ev, CVector* posn, float vol) { sfx::g_rec.push_back({ 12, *posn, vol, nullptr, (float)ev }); }
+static void* __fastcall ExeFire(void*, int, CVector pos, float size, uint8 unused, CEntity* creator, uint32 t, int8 gens, uint8 unused_) { sfx::g_rec.push_back({ 13, pos, size, creator, (float)t, (float)(gens + 16 * unused_) }); return nullptr; }
+static void __cdecl ExeShadow(uint8 type, RwTexture* texture, CVector* posn, float topX, float topY, float rightX, float rightY, int16 intensity, uint8 red, uint8 green, uint8 blue, float drawDistance, uint32 time, float upDistance) {
+    sfx::g_rec.push_back({ 14, *posn, topX + 2.f * topY + 3.f * rightX + 4.f * rightY, texture, (float)(intensity + red + green + blue + type) + drawDistance, (float)time + upDistance });
+}
+static void __fastcall ExeShake(void*, int, float strength, CVector from) { sfx::g_rec.push_back({ 15, from, strength }); }
+static void __fastcall ExePadShake(void* self, int, int time, int freq, CVector pos) { sfx::g_rec.push_back({ 16, pos, (float)((int16)time * 1000 + (uint8)freq), self }); }
+static bool __cdecl ExeCoop() { sfx::g_rec.push_back({ 17, {}, 0.f }); return g_coop; }
+}
+
+static void TestAddExplosion() {
+    using namespace wfx;
+    if (!Wanted("CExplosion::AddExplosion")) return;
+    oracle::Patch(0x7000E0, (void*)&sfx::ExeAddLight);
+    oracle::Patch(0x56B790, (void*)&sfx::ExeTrigger);
+    oracle::Patch(0x4A9BE0, (void*)&sfx::ExeCreateFx);
+    oracle::Patch(0x5696C0, (void*)&aex::ExeGround);
+    oracle::Patch(0x6E8580, (void*)&aex::ExeWater);
+    oracle::Patch(0x4DCBE0, (void*)&aex::ExeAudio);
+    oracle::Patch(0x539F00, (void*)&aex::ExeFire);
+    oracle::Patch(0x706F60, (void*)&aex::ExeShadow);
+    oracle::Patch(0x50A9F0, (void*)&aex::ExeShake);
+    oracle::Patch(0x53F9A0, (void*)&aex::ExePadShake);
+    oracle::Patch(0x441390, (void*)&aex::ExeCoop);
+    Run("CExplosion::AddExplosion (no creator / victim) 0x736A50", [&](Rng& r, std::string& d) {
+        constexpr size_t N = 16 * 0x7C;
+        std::vector<sfx::Rec> ra, re;
+        const int type = (int)r.below(13);                                                       // (types > 12 are ignored by the exe's switch; the port's bInvisible pre-clear would differ)
+        const CVector pos = GenV(r, r.below(2) ? 100.f : 3000.f);
+        const uint32 lifetime = r.below(2) ? 0 : r.below(5000); const uint8 sound = (uint8)r.below(2); const uint8 inv = (uint8)r.below(3) == 0;
+        const float shake = r.below(2) ? -1.f : GenF(r, 2.f);
+        aex::g_hitMask = r.u32(); aex::g_n = 0; aex::g_water = GenF(r, 50.f); aex::g_hasWater = r.below(2); aex::g_coop = r.below(3) == 0;
+        const unsigned seed = r.u32();
+        Snap playersSave(0xB7CD98, 0x400); playersSave.Save();
+        std::memset((void*)0xB7CD98, 0, 0x400);                                                   // player 0 ped = null
+        const bool ok = Glob(r, d, 0xC88950, N, [&](Rng& rr, uint8* g) {
+                FillU(rr, g, N);
+                for (int i = 0; i < 16; ++i) { uint8* e = g + i * 0x7C; Put<uint8>(e, 0x28, (uint8)(rr.below(3) ? rr.below(3) : 0)); Put<uint32_t>(e, 0x18, 0); Put<uint32_t>(e, 0x1C, 0); }
+                CTimer::m_snTimeInMilliseconds = rr.u32() & 0xFFFFF;
+            },
+            [&] { SeedBoth(seed); aex::g_n = 0; sfx::g_rec.clear(); CExplosion::AddExplosion(nullptr, nullptr, (eExplosionType)type, pos, lifetime, sound, shake, inv); ra = sfx::g_rec; return 0u; },
+            [&] { SeedBoth(seed); aex::g_n = 0; sfx::g_rec.clear(); oracle::Fn<void __cdecl(void*, void*, int, float, float, float, uint32, uint8, float, uint8)>(0x736A50)(nullptr, nullptr, type, pos.x, pos.y, pos.z, lifetime, sound, shake, inv); re = sfx::g_rec; return 0u; }, 2);
+        // havoc counters of the player 0 info (written when FindPlayerPed() == creator)
+        const uint32_t havocA = Get<uint32_t>((uint8*)0xB7CD98, 0x140), havocBytes = 0; (void)havocA; (void)havocBytes;
+        playersSave.Restore();
+        bool same = ra.size() == re.size();
+        for (size_t i = 0; same && i < ra.size(); ++i) same = ra[i].kind == re[i].kind && SameV(ra[i].pos, re[i].pos) && SameF(ra[i].a, re[i].a) && SameF(ra[i].b, re[i].b) && SameF(ra[i].c, re[i].c) && ra[i].ent == re[i].ent;
+        Hit(!ra.empty());
+        if (ok && same) return true;
+        d += " type " + std::to_string(type) + " port " + sfx::Dump(ra) + " exe " + sfx::Dump(re);
+        for (size_t i = 0; i < ra.size() && i < re.size(); ++i) if (ra[i].kind != re[i].kind || !SameV(ra[i].pos, re[i].pos) || !SameF(ra[i].a, re[i].a) || !SameF(ra[i].b, re[i].b) || !SameF(ra[i].c, re[i].c) || ra[i].ent != re[i].ent) { d += " FIRST DIFF #" + std::to_string(i) + " " + F(ra[i].a) + F(re[i].a) + F(ra[i].b) + F(re[i].b) + F(ra[i].c) + F(re[i].c); break; }
+        return false;
+    });
+}
+
 static void TestWeapons() {
     TestWeaponMisc();
+    TestAddExplosion();
     TestProjectileInfoUpdate();
     TestExplosionUpdate();
     TestWeaponState();

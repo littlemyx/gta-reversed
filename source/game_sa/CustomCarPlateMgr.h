@@ -27,12 +27,12 @@ private:
     static constexpr uint32 CHARSET_COL_WIDTH{ 4 * CHARSET_CHAR_WIDTH }; // 4x chars / row
     static constexpr uint32 CHARSET_ROW_HEIGHT{ 16u };
     
-    static inline auto& pCharsetTex = StaticRef<RwTexture*>(0xC3EF5C);
-    static inline auto& CurrentLicensePlateMaterial = StaticRef<RpMaterial*>(0xC3EF7C);
-    static inline auto& CurrentLicensePlateType = StaticRef<uint8>(0xC3EF80);
-    static inline auto& pPlatebackTexTab = StaticRef<RwTexture*[3]>(0xC3EF60);
-    static inline auto& pPalette1555Tab = StaticRef<void*[3]>(0xC3EF6C);
-    static inline auto& pCharsetLockedData = StaticRef<RwUInt8*>(0xC3EF78); 
+    static inline NOTSA_GLOBAL(pCharsetTex, 0xC3EF5C, (RwTexture*), {});
+    static inline NOTSA_GLOBAL(CurrentLicensePlateMaterial, 0xC3EF7C, (RpMaterial*), {});
+    static inline NOTSA_GLOBAL(CurrentLicensePlateType, 0xC3EF80, (uint8), {});
+    static inline NOTSA_GLOBAL(pPlatebackTexTab, 0xC3EF60, (RwTexture*[3]), {});
+    static inline NOTSA_GLOBAL(pPalette1555Tab, 0xC3EF6C, (void*[3]), {});
+    static inline NOTSA_GLOBAL(pCharsetLockedData, 0xC3EF78, (RwUInt8*), {}); 
 public:
     static void InjectHooks();
 

@@ -24,9 +24,12 @@ void CColSphere::Set(float radius, const CVector& center, eSurfaceType material,
 
 // 0x40FF20
 bool CColSphere::IntersectRay(const CVector& rayOrigin, const CVector& direction, CVector& intersectPoint1, CVector& intersectPoint2) {
-    CVector distance = rayOrigin - m_vecCenter;
-    float b = 2.0f * DotProduct(direction, distance);
-    float c = DotProduct(distance, distance) - m_fRadius * m_fRadius;
+    // The exe keeps the distance on the x87 stack (no float rounding of the components' exponent range) and sums in z, x, y order (0x40FF49..)
+    const double dx = (double)rayOrigin.x - m_vecCenter.x;
+    const double dy = (double)rayOrigin.y - m_vecCenter.y;
+    const double dz = (double)rayOrigin.z - m_vecCenter.z;
+    const float  b  = (float)(2.0 * (dx * direction.x + dz * direction.z + dy * direction.y));   // stored to a float (0x40FF5F)
+    const float  c  = (float)((dz * dz + dx * dx + dy * dy) - (double)m_fRadius * m_fRadius);     // stored to a float (0x40FF7D)
     float t0 = 0.0f, t1 = 0.0f;
     if (CGeneral::SolveQuadratic(1.0f, b, c, t0, t1)) {
         intersectPoint1 = (t0 * direction) + rayOrigin;
@@ -38,23 +41,21 @@ bool CColSphere::IntersectRay(const CVector& rayOrigin, const CVector& direction
 
 // 0x4100E0
 bool CColSphere::IntersectEdge(const CVector& startPoint, const CVector& endPoint, CVector& intersectPoint1, CVector& intersectPoint2) {
-    CVector originCenterDistance = startPoint - m_vecCenter;
-    CVector rayDirection = endPoint - startPoint;
-    float rayLength = rayDirection.Magnitude();
+    const CVector oc{ startPoint.x - m_vecCenter.x, startPoint.y - m_vecCenter.y, startPoint.z - m_vecCenter.z };   // stored as floats (0x4100F8..)
+    CVector rayDirection{ endPoint.x - startPoint.x, endPoint.y - startPoint.y, endPoint.z - startPoint.z };
+    const float rayLength = (float)std::sqrt((double)rayDirection.z * rayDirection.z + (double)rayDirection.y * rayDirection.y + (double)rayDirection.x * rayDirection.x); // 0x410130: z, y, x
     rayDirection.Normalise();
-    float a = DotProduct(rayDirection, rayDirection);
-    float b = 2.0f * DotProduct(originCenterDistance, rayDirection);
-    float c = DotProduct(originCenterDistance, originCenterDistance) - m_fRadius * m_fRadius;
-    float discriminant = b * b - 4.0f * a * c; // discriminant = b^2-4ac
-    // discriminant == 0: the ray intersects one point on the sphere
-    // discriminant > 0: the ray intersects two points on the sphere
-    if (discriminant < 0.0f) {
+    // 0x410153: `a` (= dir . dir) is not used by the exe (the direction is normalised); b / c / the discriminant live on the x87 stack, summed in z, x, y order
+    const double b = 2.0 * ((double)rayDirection.z * oc.z + (double)rayDirection.x * oc.x + (double)rayDirection.y * oc.y);
+    const double c = ((double)oc.z * oc.z + (double)oc.x * oc.x + (double)oc.y * oc.y) - (double)m_fRadius * m_fRadius;
+    const double discriminant = b * b - c * 4.0;
+    if (discriminant < 0.0) {
         return false;
     }
 
-    float discriminantSquareRoot = sqrt(discriminant);
-    float numerator1 = (-b - discriminantSquareRoot) * 0.5f;
-    float numerator2 = (discriminantSquareRoot - b) * 0.5f;
+    const double discriminantSquareRoot = std::sqrt(discriminant);
+    const float numerator2 = (float)((discriminantSquareRoot - b) * 0.5);
+    const float numerator1 = (float)(((-b) - discriminantSquareRoot) * 0.5);
     if (numerator1 > rayLength || numerator2 < 0.0f) {
         return false;
     }
@@ -79,8 +80,12 @@ bool CColSphere::IntersectPoint(const CVector& point) {
 
 // 0x410090
 bool CColSphere::IntersectSphere(const CColSphere& right) const {
-    CVector distance = m_vecCenter - right.m_vecCenter;
-    return std::powf(m_fRadius + right.m_fRadius, 2.0f) > distance.SquaredMagnitude();
+    // 0x410090: everything stays on the x87 stack (extended exponent range); the squared distance is summed in z, x, y order
+    const double dx = (double)m_vecCenter.x - right.m_vecCenter.x;
+    const double dy = (double)m_vecCenter.y - right.m_vecCenter.y;
+    const double dz = (double)m_vecCenter.z - right.m_vecCenter.z;
+    const double radii = (double)right.m_fRadius + m_fRadius;
+    return radii * radii > dz * dz + dx * dx + dy * dy;
 }
 
 auto TransformObject(const CColSphere& sp, const CMatrix& transform) -> CColSphere {

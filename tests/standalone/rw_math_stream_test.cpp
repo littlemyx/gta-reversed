@@ -3,6 +3,8 @@
 // Expected values for the matrix tests are derived by hand from the RW 3.6 conventions (row vectors, p' = p.x*right + p.y*up + p.z*at + pos)
 // and from the exe disassembly noted in math.cpp.
 #include <rwcore.h>
+#include "fakerw.h"   // RpLight / RpLightGet/SetConeAngle (light.cpp)
+#include <limits>
 #include "camera_sync.h"   // 01r: lifted camera sync + helpers under test (source/standalone/rw)
 #include <cmath>
 #include <cstdlib>
@@ -520,6 +522,45 @@ static void TestRtQuatAgainstExe() {
     }
 }
 
+static void TestLightConeAngleAgainstExe() {
+    Section("exe oracle (fix4): RpLightGetConeAngle 0x751AE0 (inline RwACos, table sqrt) / RpLightSetConeAngle 0x751D20 vs the exe, bit-exact");
+    using GetFn = float(__cdecl*)(const void*);
+    using SetFn = void*(__cdecl*)(void*, float);
+    alignas(16) uint8_t sbuf[sizeof(RpLight) + 16] = {}, ebuf[0x40] = {};   // the exe touches only the float at +0x28
+    RpLight* sl = reinterpret_cast<RpLight*>(sbuf);
+    CHECK(reinterpret_cast<uint8_t*>(&sl->minusCosAngle) - sbuf == 0x28);
+    int badG = 0, badS = 0, badR = 0;
+    const int N = 40000;
+    for (int it = 0; it < N; it++) {
+        float c;
+        switch (it % 6) {
+        case 0: c = Rnd(-1.2f, 1.2f); break;
+        case 1: c = Rnd(-0.5f, 0.5f); break;
+        case 2: c = Rnd(0.5f, 1.0f); break;
+        case 3: c = Rnd(-1.0f, -0.5f); break;
+        case 4: c = Rnd(-1e-6f, 1e-6f); break;
+        default: c = (it % 12 == 5) ? 1.0f : -1.0f; break;
+        }
+        sl->minusCosAngle = c;
+        std::memcpy(ebuf + 0x28, &c, 4);
+        if (!SameBits(RpLightGetConeAngle(sl), reinterpret_cast<GetFn>(oracle::Fn(0x751AE0))(ebuf))) badG++;
+        // set: angles inside and outside [0, pi/2], plus NaN / exact bounds
+        float ang = Rnd(-0.5f, 2.0f);
+        if (it % 50 == 0) ang = std::numeric_limits<float>::quiet_NaN();
+        if (it % 50 == 1) ang = 1.5707964f;
+        if (it % 50 == 2) ang = 0.0f;
+        if (it % 50 == 3) ang = 1.5707965f;
+        sl->minusCosAngle = 7.0f; std::memcpy(ebuf + 0x28, &sl->minusCosAngle, 4);
+        void* rs = RpLightSetConeAngle(sl, ang);
+        void* re = reinterpret_cast<SetFn>(oracle::Fn(0x751D20))(ebuf, ang);
+        float ev; std::memcpy(&ev, ebuf + 0x28, 4);
+        if ((rs != nullptr) != (re != nullptr)) badR++;
+        if (!SameBits(sl->minusCosAngle, ev)) badS++;
+    }
+    std::printf("  GetConeAngle mismatches: %d / %d, SetConeAngle value: %d, accept/reject: %d\n", badG, N, badS, badR);
+    CHECK(badG == 0 && badS == 0 && badR == 0);
+}
+
 static void TestBoundingSpheresAgainstExe() {
     Section("exe oracle (01r2): RpMorphTargetCalcBoundingSphere 0x74C200 / RpAtomicGetWorldBoundingSphere 0x749330 vs the exe");
     int badM = 0, badW = 0;
@@ -700,6 +741,7 @@ int main(int argc, char** argv) {
         if (oracle::g_code) {
             TestRtQuatAgainstExe();
             TestBoundingSpheresAgainstExe();
+            TestLightConeAngleAgainstExe();
             TestCameraSyncAgainstExe();
             TestFrameSyncAgainstExe();
         }

@@ -317,6 +317,20 @@ static void TestDevice() {
             CHECK(t1 != nullptr); if (t1) t1->Release();
             DWORD au = 0, av = 0; dev->GetSamplerState(1, D3DSAMP_ADDRESSU, &au); dev->GetSamplerState(1, D3DSAMP_ADDRESSV, &av);
             CHECK(au == D3DTADDRESS_CLAMP && av == D3DTADDRESS_MIRROR);
+            {   // fix4: the stage >= 1 sampler filter reaches the device through librw's per-stage cache, also after the engine defaults were applied again
+                const auto filt = [&](DWORD stg, D3DSAMPLERSTATETYPE t) { DWORD v = 0xDEAD; dev->GetSamplerState(stg, t, &v); return v; };
+                tex->setFilter(rw::Texture::NEAREST);
+                CHECK(RwD3D9SetTexture(tex, 1) == TRUE);
+                CHECK(filt(1, D3DSAMP_MINFILTER) == D3DTEXF_POINT && filt(1, D3DSAMP_MAGFILTER) == D3DTEXF_POINT && filt(1, D3DSAMP_MIPFILTER) == D3DTEXF_NONE);
+                NotsaRwRenderState_OnEngineStarted();   // device back to the exe's linear defaults; the cache must follow (it used to keep NEAREST)
+                CHECK(filt(1, D3DSAMP_MINFILTER) == D3DTEXF_LINEAR && filt(1, D3DSAMP_MAGFILTER) == D3DTEXF_LINEAR);
+                int32_t cf = -1, ca = -1, cu = -1, cv = -1;
+                rw::d3d::getTextureStageSamplers(1, &cf, &ca, &cu, &cv);
+                CHECK(cf == rw::Texture::LINEAR && ca == 1 && cu == rw::Texture::WRAP && cv == rw::Texture::WRAP);
+                CHECK(RwD3D9SetTexture(tex, 1) == TRUE);   // same NEAREST texture again: must be POINT, not swallowed by a stale NEAREST cache
+                CHECK(filt(1, D3DSAMP_MINFILTER) == D3DTEXF_POINT && filt(1, D3DSAMP_MAGFILTER) == D3DTEXF_POINT);
+                CHECK(filt(1, D3DSAMP_ADDRESSU) == D3DTADDRESS_CLAMP && filt(1, D3DSAMP_ADDRESSV) == D3DTADDRESS_MIRROR);   // the texture's own addressing re-applied
+            }
             CHECK(RwD3D9SetTexture(nullptr, 1) == TRUE);
             tex->destroy();
         } else {

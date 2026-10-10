@@ -316,6 +316,13 @@ static void EnvTests() {
         RwTexture* envA = Halves({ 255, 0, 0, 128 }, { 0, 0, 255, 128 }, true);
         s = run("env alpha", base, envA, 0.5f, nullptr, false);
         Expect("env with alpha 128, coef 0.5", s, 100 + 64, 100, 100, 100, 100, 100 + 64, 6);
+        {   // fix4: librw's flushCache writes the fog colour into PS c0 when it is dirty; the env coefficient (c0) must survive a fog-colour change made just before
+            DWORD oldFog = 0; RwRenderStateGet(rwRENDERSTATEFOGCOLOR, &oldFog);
+            RwRenderStateSet(rwRENDERSTATEFOGCOLOR, reinterpret_cast<void*>(static_cast<uintptr_t>(0xFFFFFFFFu)));
+            s = run("env alpha + fog colour change", base, envA, 0.5f, nullptr, false);
+            Expect("env with alpha 128, coef 0.5, white fog colour set before the draw (c0 not clobbered)", s, 100 + 64, 100, 100, 100, 100, 100 + 64, 6);
+            RwRenderStateSet(rwRENDERSTATEFOGCOLOR, reinterpret_cast<void*>(static_cast<uintptr_t>(oldFog)));
+        }
         // no base texture: the second shader (0x8853A0): diffuse + env.rgb * env.a * coef
         {
             RpMaterial* m = MakeMat(nullptr, rpMATFXEFFECTENVMAP);

@@ -17,9 +17,9 @@ from capstone.x86 import *
 exe = open(sys.argv[1], 'rb').read()
 # code windows that the oracle executes (disassembled for the fixups); the whole span between the first and the last is copied contiguously so that
 # relative calls/jumps between windows stay valid:
-#   0x749330 RpAtomicGetWorldBoundingSphere, 0x74C200 RpMorphTargetCalcBoundingSphere, 0x7EB5C0 rtquat, 0x7ED5F0 vector/sqrt plugin, 0x7EE200 camera
+#   0x749330 RpAtomicGetWorldBoundingSphere, 0x74C200 RpMorphTargetCalcBoundingSphere, 0x751AE0 RpLightGet/SetConeAngle, 0x7EB5C0 rtquat, 0x7ED5F0 vector/sqrt plugin, 0x7EE200 camera
 #   (zscale, sync 0x7EE5A0, clip builders), 0x7F0000 frame routines + 0x7F12F0 matrix routines, 0x808F60 bbox, 0x809550 frame sync
-WINDOWS = [(0x749330, 0x749480), (0x74C200, 0x74C310), (0x7EB5C0, 0x7EC800), (0x7ED5F0, 0x7EE0C0), (0x7EE200, 0x7EF3B0), (0x7F0000, 0x7F2720),
+WINDOWS = [(0x749330, 0x749480), (0x74C200, 0x74C310), (0x751AE0, 0x751D58), (0x7EB5C0, 0x7EC800), (0x7ED5F0, 0x7EE0C0), (0x7EE200, 0x7EF3B0), (0x7F0000, 0x7F2720),
            (0x808F60, 0x809020), (0x809550, 0x809900)]
 SPAN = (WINDOWS[0][0], WINDOWS[-1][1])
 TEXT = (0x401000, 0x858000); DATA = (0x858000, 0xCB0000)

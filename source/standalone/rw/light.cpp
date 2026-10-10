@@ -8,6 +8,8 @@
 // belongs to the lighting setup of the render path (P2B-02c/07/08c), not to this file.
 #ifdef NOTSA_RW_LIBRW
 #include "fakerw.h"
+#include "rwtrig.h"
+#include <cmath>
 
 // D + W: Light::create, then the exe's defaults that librw differs in: RpLightCreate leaves minusCosAngle = 0 (librw: 1) and the colour at
 // white/alpha 1; privateFlags = 1 ("grey colour"), flags = rpLIGHTLIGHTATOMICS | rpLIGHTLIGHTWORLD (same in librw).
@@ -57,16 +59,19 @@ RpLight* RpLightSetRadius(RpLight* light, RwReal radius) {
 
 // ---- 04ab extras (declared in rwextra.h): not called by the game outside the stock RW headers ----
 
+// W: exe 0x751D20 / 0x751AE0 (not called by the game itself; the exe's inline RwACos is the same table-sqrt polynomial as rtquat / hanim).
+// Set: rejects angle < 0 and angle > pi/2 (returns NULL; a NaN passes both x87 compares, as in the exe: fcomp unordered sets C0|C2|C3 -> not 'less', not 'greater'), else minusCosAngle = -cos(angle) (x87 fcos, float store), returns the light.
 RpLight* RpLightSetConeAngle(RpLight* light, RwReal angle) {
-    if (!light) {
+    if (!light || angle < 0.0f || angle > rwtrig::FromBits(0x3fc90fdbu)) {   // 0x858B50 = 0, 0x858FE4 = pi/2
         return nullptr;
     }
-    light->setAngle(angle);
+    light->minusCosAngle = static_cast<float>(-std::cos(static_cast<double>(angle)));
     return light;
 }
 
+// Get: acos(-minusCosAngle) with the exe's inlined RwACos (FreeBSD e_acosf structure, _rwSqrt 0x7EDB30 table) instead of libm acosf.
 RwReal RpLightGetConeAngle(const RpLight* light) {
-    return const_cast<RpLight*>(light)->getAngle();
+    return rwtrig::ACos(-light->minusCosAngle);
 }
 
 RpLight* RpLightStreamRead(RwStream* stream) {

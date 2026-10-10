@@ -376,15 +376,14 @@ void NotsaRwRenderState_OnEngineStarted() {
     RwD3D9SetTextureStageState(0, D3DTSS_COLORARG2, D3DTA_DIFFUSE);
     RwD3D9SetTextureStageState(0, D3DTSS_ALPHAOP, D3DTOP_SELECTARG2);
     RwD3D9SetTextureStageState(0, D3DTSS_ALPHAARG2, D3DTA_DIFFUSE);
+    // stage 0: RwRenderStateSet above wrote filter / address through librw's cache; make cache and device agree even when the cache already held the value
+    d3d::resetTextureStageSamplers(0, rw::Texture::LINEAR, 1, rw::Texture::WRAP, rw::Texture::WRAP);
     for (RwUInt32 st = 1; st < 8; st++) {
-        // the exe's per-stage sampler defaults (stage 0 went through RwRenderStateSet above)
-        d3d::setSamplerState(st, D3DSAMP_MAGFILTER, D3DTEXF_LINEAR);
-        d3d::setSamplerState(st, D3DSAMP_MINFILTER, D3DTEXF_LINEAR);
-        d3d::setSamplerState(st, D3DSAMP_MIPFILTER, D3DTEXF_NONE);
-        d3d::setSamplerState(st, D3DSAMP_ADDRESSU, D3DTADDRESS_WRAP);
-        d3d::setSamplerState(st, D3DSAMP_ADDRESSV, D3DTADDRESS_WRAP);
+        // the exe's per-stage sampler defaults
+        // filter / address / anisotropy go through librw's per-stage sampler cache as well (rwStateCache.texstage): a cache that kept the values of an
+        // earlier texture would otherwise swallow the next texture with equal settings (a NEAREST texture on stage >= 1 kept sampling linear)
+        d3d::resetTextureStageSamplers(st, rw::Texture::LINEAR, 1, rw::Texture::WRAP, rw::Texture::WRAP);
         d3d::setSamplerState(st, D3DSAMP_BORDERCOLOR, 0xFF000000u);
-        d3d::setSamplerState(st, D3DSAMP_MAXANISOTROPY, 1);
         RwD3D9SetTextureStageState(st, D3DTSS_COLOROP, D3DTOP_DISABLE);
         RwD3D9SetTextureStageState(st, D3DTSS_ALPHAOP, D3DTOP_DISABLE);
     }

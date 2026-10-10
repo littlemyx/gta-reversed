@@ -302,7 +302,7 @@ RwBool RpHAnimHierarchyUpdateMatrices(RpHAnimHierarchy* hierarchy) {
 // exe does; a NaN dot product does not flip: fcom + test ah,5 + jp) and a linear mix when the quaternions are closer than 0.999 (a NaN dot takes the slerp
 // path: C0 is also set for unordered). The slerp uses the exe's inlined RwACos (FreeBSD e_acosf polynomials) and RwSinMinusPiToPi minimax polynomial, not
 // libm: omega = acos(cosom), invSin = 1 / sin(omega), scale0 = sin(omega (1 - alpha)) invSin, scale1 = sin(omega alpha) invSin (rwtrig.h; the exe's RwSqrt
-// inside the acos is table based, the shim uses the exact square root).
+// inside the acos is the table based rwx::Sqrt 0x7EDB30, which rwtrig::ACos uses too).
 void RpHAnimKeyFrameBlend(void* voidOut, void* voidIn1, void* voidIn2, RwReal alpha) {
     StdFrame* out = static_cast<StdFrame*>(voidOut);
     StdFrame* in1 = static_cast<StdFrame*>(voidIn1);

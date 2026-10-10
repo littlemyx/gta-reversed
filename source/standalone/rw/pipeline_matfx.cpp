@@ -512,12 +512,14 @@ void EnvRender(const Header* h, const Inst* inst, u32 flags, u32 pass, RwTexture
             if (RasterHasAlpha(env)) {
                 if (g.psEnvBase) { // 0x813C7A: one pass with a pixel shader
                     float c[4] = {e.coefficient, e.coefficient, e.coefficient, e.coefficient};
-                    // librw's flushCache writes its fog colour into PS constant 0 (PSLOC_fogColor) when the fog data is dirty: flush first, then set c0
-                    rw::d3d::flushCache();
-                    rw::d3d::d3ddevice->SetPixelShaderConstantF(0, c, 1);
+                    // librw's flushCache writes its fog colour into PS constant 0 (PSLOC_fogColor) when the fog data is dirty (the exe's RW never uses c0 for
+                    // fog): every PS-constant write is the LAST state change before the draw, after a flush, so nothing can overwrite c0 until Draw
+                    // (Draw's own flush finds the fog data clean). The exe sets its constant before the matrix / shader; the draw sees the same value.
                     if (hasBase) {
                         SetEnvMapMatrix(env, 1, e.frame);
                         RwD3D9SetPixelShader(g.psEnvBase);
+                        rw::d3d::flushCache();
+                        rw::d3d::d3ddevice->SetPixelShaderConstantF(0, c, 1);
                         Draw(h, inst);
                         RwD3D9SetPixelShader(nullptr); // (the exe leaves it bound until the next effect resets it)
                         ClearStage(1);
@@ -526,6 +528,8 @@ void EnvRender(const Header* h, const Inst* inst, u32 flags, u32 pass, RwTexture
                     } else {
                         SetEnvMapMatrix(env, 0, e.frame);
                         RwD3D9SetPixelShader(g.psEnvNoBase);
+                        rw::d3d::flushCache();
+                        rw::d3d::d3ddevice->SetPixelShaderConstantF(0, c, 1);
                         Draw(h, inst);
                         RwD3D9SetPixelShader(nullptr);
                         RwD3D9SetTexture(nullptr, 0);

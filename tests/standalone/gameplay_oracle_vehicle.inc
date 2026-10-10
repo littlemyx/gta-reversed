@@ -882,6 +882,50 @@ static void TestProcessFlyingCarStuff() {
     });
 }
 
+// CDamageManager::ApplyDamage / ProgressDoorDamage on a vehicle fixture (the damage manager lives at +0x5A0); the three CAutomobile::Set*Damage callees are recorded on both sides
+namespace dmx {
+struct Rec { int kind, idx; bool flag; };
+inline std::vector<Rec> g_rec;
+static void __fastcall RecBumper(void*, int, int panel, bool f) { g_rec.push_back({ 0, panel, f }); }
+static void __fastcall RecPanel(void*, int, int panel, bool f) { g_rec.push_back({ 1, panel, f }); }
+static void __fastcall RecDoor(void*, int, int door, bool f) { g_rec.push_back({ 2, door, f }); }
+}
+
+static void TestDamageManagerVehicle() {
+    using namespace wfx;
+    if (!Wanted("CDamageManager::ApplyDamage") && !Wanted("CDamageManager::ProgressDoorDamage")) return;
+    PatchFn(PmAddr(&CAutomobile::SetBumperDamage), (void*)&dmx::RecBumper);
+    PatchFn(PmAddr(&CAutomobile::SetPanelDamage), (void*)&dmx::RecPanel);
+    PatchFn(PmAddr(&CAutomobile::SetDoorDamage), (void*)&dmx::RecDoor);
+    oracle::Patch(0x6B1350, (void*)&dmx::RecBumper);
+    oracle::Patch(0x6B1480, (void*)&dmx::RecPanel);
+    oracle::Patch(0x6B1600, (void*)&dmx::RecDoor);
+    auto init = [](Rng& rr, uint8* b) {
+        vfx::Gen(rr, b);
+        Put<uint8>(b, 0x868, (uint8)(rr.u32() | (rr.below(5) ? 0x10 : 0)));       // autoFlags.bCanBeVisiblyDamaged
+        for (int i = 0; i < 6; ++i) Put<uint8>(b, 0x5A0 + 9 + i, (uint8)rr.below(5));
+        Put<uint32_t>(b, 0x5A0 + 0x10, rr.u32()); Put<uint32_t>(b, 0x5A0 + 0x14, rr.u32());
+    };
+    Run("CDamageManager::ApplyDamage 0x6C24B0", [&](Rng& r, std::string& d) {
+        const int comp = r.below(18); const float inten = r.below(5) ? r.f01() * 400.f : GenF(r, 600.f); const float mult = GenF(r, 2.f); const unsigned seed = r.u32();
+        std::vector<dmx::Rec> ra, re;
+        const bool ok = Obj<vfx::ALL>(r, d, init,
+            [&](uint8* b) { SeedBoth(seed); dmx::g_rec.clear(); const bool ret = reinterpret_cast<CAutomobile*>(b)->m_damageManager.ApplyDamage(reinterpret_cast<CAutomobile*>(b), (tComponent)comp, inten, mult); ra = dmx::g_rec; return (uint32_t)ret; },
+            [&](uint8* b) { SeedBoth(seed); dmx::g_rec.clear(); const bool ret = oracle::Fn<bool __fastcall(void*, int, void*, int, float, float)>(0x6C24B0)(b + 0x5A0, 0, b, comp, inten, mult); re = dmx::g_rec; return (uint32_t)ret; }, 0, 0xFF, 0, 0, vfx::Fix);
+        bool same = ra.size() == re.size();
+        for (size_t i = 0; same && i < ra.size(); ++i) same = ra[i].kind == re[i].kind && ra[i].idx == re[i].idx && ra[i].flag == re[i].flag;
+        Hit(!ra.empty());
+        if (ok && same) return true;
+        d += " comp " + std::to_string(comp) + " in " + F(inten) + F(mult) + " port " + std::to_string(ra.size()) + " recs, exe " + std::to_string(re.size()); return false;
+    });
+    Run("CDamageManager::ProgressDoorDamage 0x6C2320", [&](Rng& r, std::string& d) {
+        const int door = r.below(8) - 1; const unsigned seed = r.u32();
+        return Obj<vfx::ALL>(r, d, init,
+            [&](uint8* b) { SeedBoth(seed); return (uint32_t)reinterpret_cast<CAutomobile*>(b)->m_damageManager.ProgressDoorDamage((eDoors)(uint8)door, reinterpret_cast<CAutomobile*>(b)); },
+            [&](uint8* b) { SeedBoth(seed); return (uint32_t)oracle::Fn<bool __fastcall(void*, int, int, void*)>(0x6C2320)(b + 0x5A0, 0, (uint8)door, b); }, 0, 0xFF, 0, 0, vfx::Fix);
+    });
+}
+
 static void TestVehicles() {
     TestDamageManager();
     TestTransmission();
@@ -896,4 +940,5 @@ static void TestVehicles() {
     TestAircraftOrders();
     TestBikeBmxBoat();
     TestProcessFlyingCarStuff();
+    TestDamageManagerVehicle();
 }

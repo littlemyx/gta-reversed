@@ -298,7 +298,7 @@ namespace notsa { inline constexpr bool kGlobalsDetached = false; }
 #define NOTSA_GLOBAL_LOCAL_REF(name, addr, type, obj) auto* name = reinterpret_cast<std::remove_extent_t<NOTSA_UNPAREN type>*>(addr)
 #define NOTSA_GLOBAL_ALIAS(name, addr, type, ...) auto& name = StaticRef<NOTSA_UNPAREN type>(addr)
 #define NOTSA_GLOBAL_EXPR(addr, type, ...) StaticRef<NOTSA_UNPAREN type>(addr)
-#define NOTSA_SCOPED_GLOBAL(name, varAddr, flagsAddr, mask, type, ...) auto& name = ScopedStaticRef<NOTSA_UNPAREN type>(varAddr, flagsAddr, mask, __VA_ARGS__)
+#define NOTSA_SCOPED_GLOBAL(name, varAddr, flagsAddr, mask, type, ...) static auto& name = ScopedStaticRef<NOTSA_UNPAREN type>(varAddr, flagsAddr, mask, __VA_ARGS__)
 #define NOTSA_GLOBAL_SYNTH(name, addr, type, ...) static_assert(true)
 #define NOTSA_GLOBAL_VERIFY(addr, obj) static_assert(true)
 #define NOTSA_GLOBAL_DECL(cls, name, addr, type)  inline auto& name = StaticRef<NOTSA_UNPAREN type>(addr)

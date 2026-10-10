@@ -6,6 +6,8 @@
 */
 #pragma once
 
+#include "ExeRecip.h"
+
 class CClock {
 public:
     static uint8 daysInMonth[12];
@@ -48,7 +50,7 @@ public:
     static uint8  GetGameClockMonth()     { return ms_nGameClockMonth; }   // 0x4E7EE0
     static uint8  GetGameWeekDay()        { return CurrentDay; }           // NOTSA, maybe
 
-    static float GetMinutesToday() { return float(ms_nGameClockMinutes) + 60.0f * (float)ms_nGameClockHours + (float)ms_nGameClockSeconds / 60.0f; } // 0x55F470
+    static float GetMinutesToday() { return (float)((int32)ms_nGameClockHours * 60 + (int32)ms_nGameClockMinutes) + (float)ms_nGameClockSeconds * ExeRecip(60.0f); } // 0x55F470: (hours * 60 + minutes) is an int, seconds * (1/60)
     static float GetHoursToday() { return (float)(CClock::GetGameClockMinutes()) / 60.0f + (float)(CClock::GetGameClockSeconds()) / 3600.0f + (float)(CClock::GetGameClockHours()); } // notsa
 
     static bool ClockHoursInRange(uint8 start, uint8 end) { return ms_nGameClockHours > start && ms_nGameClockHours < end; }

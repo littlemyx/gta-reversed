@@ -6,6 +6,8 @@
 */
 #pragma once
 
+#include "ExeRecip.h"
+
 class CTimer {
 public:
     /*!
@@ -81,11 +83,11 @@ public:
     static float  GetTimeStep() { return ms_fTimeStep; }
     static void   SetTimeStep(float ts) { ms_fTimeStep = ts; }
     static void   UpdateTimeStep(float ts) { ms_fTimeStep = std::max(ts, 0.00001f); }
-    static float  GetTimeStepInSeconds() { return ms_fTimeStep / TIMESTEP_PER_SECOND; }
+    static float  GetTimeStepInSeconds() { return ms_fTimeStep * ExeRecip(TIMESTEP_PER_SECOND); } // exe: ms_fTimeStep * 0.02f (0x858B38; 132 inlined sites, no fdiv)
     static float  GetTimeStepInMS() { return GetTimeStepInSeconds() * 1000.0f; } // pattern: CTimer::ms_fTimeStep * 0.02f * 1000.0f
 
     static float  GetTimeStepNonClipped() { return ms_fTimeStepNonClipped; }
-    static float  GetTimeStepNonClippedInSeconds() { return ms_fTimeStepNonClipped / 50.0f; }
+    static float  GetTimeStepNonClippedInSeconds() { return ms_fTimeStepNonClipped * ExeRecip(TIMESTEP_PER_SECOND); }
     static float  GetTimeStepNonClippedInMS() { return GetTimeStepNonClippedInSeconds() * 1000.0f; }
     static void   SetTimeStepNonClipped(float ts) { ms_fTimeStepNonClipped = ts; }
 

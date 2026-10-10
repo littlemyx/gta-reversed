@@ -165,7 +165,7 @@ ProcObjectListItem* ProcSurfaceInfo_c::AddObject(CVector pos, CVector normal, tC
 
 // 0x5A3850
 int32 ProcSurfaceInfo_c::AddObjects(CPlantLocTri* plant) {
-    auto centerPos = (plant->m_V1 + plant->m_V2 + plant->m_V3) / 3.f;
+    auto centerPos = (plant->m_V1 + plant->m_V2 + plant->m_V3) * 0.3333f; // 0x867028 (NOT 1/3: 0x3EAAA64C)
     auto camPos    = TheCamera.GetPosition();
     if (DistanceBetweenPointsSquared(centerPos, camPos) < m_fSquaredMinDistance) {
         return 0;

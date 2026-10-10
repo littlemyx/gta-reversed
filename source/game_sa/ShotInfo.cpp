@@ -98,14 +98,26 @@ void CShotInfo::Update() {
         }
 
         if (weaponInfo.flags.bSlowdown) {
-            shot.m_vecTargetOffset *= pow(0.96f, CTimer::GetTimeStep());
+            // 0x739EF8: the double result of pow stays unrounded on the x87 stack while the 3 components are multiplied
+            const double slowdown = pow((double)0.96f, (double)CTimer::GetTimeStep());
+            shot.m_vecTargetOffset.x = (float)(slowdown * shot.m_vecTargetOffset.x);
+            shot.m_vecTargetOffset.y = (float)(slowdown * shot.m_vecTargetOffset.y);
+            shot.m_vecTargetOffset.z = (float)(slowdown * shot.m_vecTargetOffset.z);
         }
 
         if (weaponInfo.flags.bRangeIncreasesOverTime) {
-            shot.m_fRange += CTimer::GetTimeStep() * 0.0075f;
+            shot.m_fRange += CTimer::GetTimeStep() * 0.075f; // 0x8714A8
         }
 
-        shot.m_vecOrigin += shot.m_vecTargetOffset * CTimer::GetTimeStep();
+        // 0x739F2B: the x / y products stay on the x87 stack (extended exponent range), the z one is spilled to a float
+        {
+            const double ts = CTimer::GetTimeStep();
+            const double px = ts * shot.m_vecTargetOffset.x, py = ts * shot.m_vecTargetOffset.y;
+            const float  pz = (float)(ts * shot.m_vecTargetOffset.z);
+            shot.m_vecOrigin.x = (float)(px + shot.m_vecOrigin.x);
+            shot.m_vecOrigin.y = (float)(py + shot.m_vecOrigin.y);
+            shot.m_vecOrigin.z = (float)((double)pz + shot.m_vecOrigin.z);
+        }
 
         if (shot.m_pCreator) {
             const auto range = std::max(shot.m_fRange, 1.0f);

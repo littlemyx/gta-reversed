@@ -196,6 +196,10 @@ static CVector GenDir(Rng& r) {   // mostly unit-ish 2D directions, sometimes ar
 
 // ---------------------------------------------------------------------------------------------------------------------------------
 // (a) CAnimBlendNode: full state machine on raw sequences / associations (separate copies for the port and for the exe, compared afterwards)
+static bool AntipodalDot(const CQuaternion& a, const CQuaternion& b) {
+    float dot = (float)(((double)a.w * b.w + (double)a.z * b.z + (double)a.y * b.y) + (double)a.x * b.x);
+    return dot == -1.0f;
+}
 struct NodeFx {
     alignas(16) uint8 seqBuf[sizeof(CAnimBlendSequence)] {};
     alignas(16) uint8 assocBuf[sizeof(CAnimBlendAssociation)] {};
@@ -242,6 +246,9 @@ static void BuildNode(Rng& r, NodeFx& n, bool compressed) {
             f->DeltaTime = delta(i);
             if (seq.m_bHasTranslation) f->Trans = GenV(r, ts);
         }
+    }
+    if (!compressed) {   // antipodal key-frame pair (dot == -1 exactly): the CRT acos(-1) result depends on the process FPU sticky flags (see AntipodalDot in game_oracle_test): perturb
+        for (int i = 0; i < nf; ++i) for (int j = 0; j < nf; ++j) if (i != j && AntipodalDot(seq.GetUKeyFrame(i)->Rot, seq.GetUKeyFrame(j)->Rot)) seq.GetUKeyFrame(j)->Rot.w += 0.25f;
     }
     assoc.m_BlendAmount = r.below(6) ? r.f01() * 1.5f : GenF(r, 2.f);
     // time step: usually small positive; 0 / negative / NaN occasionally (inf and huge excluded: the exe loops over `remaining <= 0` once per frame)

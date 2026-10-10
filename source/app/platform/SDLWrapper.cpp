@@ -44,7 +44,7 @@ static bool IsInFullscreen()
 #include <sstream>
 #include <fstream>
 namespace {
-struct InjEv { uint64_t t; bool down; SDL_Keycode key; };
+struct InjEv { uint64_t t; bool down; SDL_Keycode key; int mx = -1, my = -1; };
 std::vector<InjEv> s_InjEvents;
 size_t             s_InjNext = 0;
 bool               s_InjInit = false;
@@ -73,6 +73,13 @@ void InjInit() {
         const auto cmd = item.substr(0, c), arg = item.substr(c + 1);
         if (cmd == "wait") { t += std::atoll(arg.c_str()); }
         else if (cmd == "key") { s_InjEvents.push_back({ t, true, InjKey(arg) }); s_InjEvents.push_back({ t + 150, false, InjKey(arg) }); t += 150; }
+        else if (cmd == "mouse") { // mouse:x,y  (window pixels): SDL_EVENT_MOUSE_MOTION, e.g. to select a menu item the real pointer hovers over
+            int x = 0, y = 0;
+            std::sscanf(arg.c_str(), "%d,%d", &x, &y);
+            InjEv ev{ t, true, 0 };
+            ev.mx = x; ev.my = y;
+            s_InjEvents.push_back(ev);
+        }
         else if (cmd == "down" || cmd == "up") { s_InjEvents.push_back({ t, cmd == "down", InjKey(arg) }); }
     }
     std::stable_sort(s_InjEvents.begin(), s_InjEvents.end(), [](auto& a, auto& b) { return a.t < b.t; });
@@ -85,6 +92,14 @@ void InjPump() {
     while (s_InjNext < s_InjEvents.size() && s_InjEvents[s_InjNext].t <= now) {
         const auto& ev = s_InjEvents[s_InjNext++];
         SDL_Event e{};
+        if (ev.mx >= 0) {
+            e.type     = SDL_EVENT_MOUSE_MOTION;
+            e.motion.x = (float)ev.mx;
+            e.motion.y = (float)ev.my;
+            SDL_PushEvent(&e);
+            notsa::standalone::Fixups::Log("injected mouse %d,%d at %u ms", ev.mx, ev.my, (unsigned)now);
+            continue;
+        }
         e.type         = ev.down ? SDL_EVENT_KEY_DOWN : SDL_EVENT_KEY_UP;
         e.key.key      = ev.key;
         e.key.down     = ev.down;
@@ -104,7 +119,19 @@ static void InjDumpBackBuffer() {
         s_Every = e ? (std::atoi(e) > 0 ? std::atoi(e) : 1) : -1;
     }
     const char* mx = std::getenv("NOTSA_STANDALONE_SCREENSHOT_MAX");
-    if (s_Every < 0 || s_Written >= (mx ? std::atoi(mx) : 30) || (s_Frame++ % s_Every) != 0) {
+    if (s_Every < 0 || s_Written >= (mx ? std::atoi(mx) : 30)) {
+        return;
+    }
+    // NOTSA_STANDALONE_SCREENSHOT_MS=<ms>: wall-clock cadence instead of every k-th call (ProcessEvents runs far more often than frames while loading)
+    static const uint64_t s_Ms = std::getenv("NOTSA_STANDALONE_SCREENSHOT_MS") ? (uint64_t)std::atoll(std::getenv("NOTSA_STANDALONE_SCREENSHOT_MS")) : 0;
+    static uint64_t       s_Last = 0;
+    if (s_Ms) {
+        const auto now = GetTickCount64();
+        if (now - s_Last < s_Ms) {
+            return;
+        }
+        s_Last = now;
+    } else if ((s_Frame++ % s_Every) != 0) {
         return;
     }
     auto* dev = (IDirect3DDevice9*)RwD3D9GetCurrentD3DDevice();

@@ -123,7 +123,7 @@ uint32 CWeaponInfo::GetWeaponInfoIndex(eWeaponType wt, eWeaponSkill skill) {
     case eWeaponSkill::STD:  return (uint32)wt;
     case eWeaponSkill::PRO:  return GetNonSTDSkillLevelIndex(1);
     case eWeaponSkill::COP:  return GetNonSTDSkillLevelIndex(2);
-    default:                 NOTSA_UNREACHABLE("Invalid weapon skill");
+    default:                 NOTSA_UNREACHABLE("Invalid weapon skill"); return 0x2F; // 0x743C66: `mov eax, 0x2F` is what is left when no skill matches
     }
 }
 
@@ -361,7 +361,7 @@ eStats CWeaponInfo::GetSkillStatIndex(eWeaponType wt) {
     case WEAPON_AK47:            return STAT_AK_47_SKILL;
     case WEAPON_M4:              return STAT_M4_SKILL;
     case WEAPON_TEC9:            return STAT_MACHINE_PISTOL_SKILL;
-    default:                     NOTSA_UNREACHABLE("Weapon type({}) has no skill levels", (int)wt);
+    default:                     NOTSA_UNREACHABLE("Weapon type({}) has no skill levels", (int)wt); return (eStats)-1; // 0x743D0C: `or eax, -1`
     }
 }
 

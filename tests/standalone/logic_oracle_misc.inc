@@ -235,6 +235,23 @@ static void TestStreamingPure() {
     }, 1500);
 }
 
+// FIXADDR: CGameLogic's GameState / ActivePlayers / bPlayersCannotTargetEachOther / bPlayersCanBeInSeparateCars are four separate BYTES at 0x96A8B0..0x96A8B3 in the exe
+// (the repo had GameState and ActivePlayers as int32, so InitAtStartOfGame's `ActivePlayers = true` / `GameState = PLAYING` rewrote the flag bytes behind them).
+// The globals are pre-filled with random bytes: the port must leave exactly the bytes the exe leaves (and nothing else).
+static void TestGameLogicLayout() {
+    Run("CGameLogic::InitAtStartOfGame 0x441210", [&](Rng& r, std::string& d) {
+        constexpr uintptr_t kBase = 0x96A880; constexpr size_t kSize = 0x40;   // SkipState .. nPrintFocusHelpCounter and a margin on both sides
+        Snap init(kBase, kSize), got(kBase, kSize), exe(kBase, kSize);
+        init.FillRandom(r);
+        init.Restore(); CGameLogic::InitAtStartOfGame(); got.Save();
+        init.Restore(); oracle::Fn<void __cdecl()>(0x441210)(); exe.Save();
+        init.Restore();
+        if (got.SameAs(exe)) return true;
+        d = DiffDesc(got.b.data(), exe.b.data(), kSize, "0x96A880");
+        return false;
+    }, 300);
+}
+
 static void TestMisc() {
     using namespace lm;
     auto sub = [](Rng& r) { return Rng(r.u32() * 2654435761ull + 4242); };
@@ -503,4 +520,5 @@ static void TestMisc() {
     }
     TestStats();
     TestStreamingPure();
+    TestGameLogicLayout();
 }

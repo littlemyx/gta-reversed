@@ -276,14 +276,18 @@ void CTheZones::CreateZone(
     eLevelName  level,
     const char* textLabel
 ) {
-    const auto z = [type]{
+    const auto z = [type]() -> CZone* {
         switch (type) {
         case ZONE_TYPE_LOCAL_NAVI:
         case ZONE_TYPE_NAVI:       return &NavigationZoneArray[TotalNumberOfNavigationZones++];
         case ZONE_TYPE_MAP:        return &MapZoneArray[TotalNumberOfMapZones++];
         }
         NOTSA_UNREACHABLE();
+        return nullptr;
     }();
+    if (!z) {
+        return; // 0x572B52: any other zone type creates nothing
+    }
 
     const auto StrCpyUpper = [](auto& dst, auto& src) {
         rng::fill(dst, 0);

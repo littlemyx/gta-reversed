@@ -59,7 +59,9 @@ eModelID CLoadedCarGroup::PickRandomCar(bool bNotTooManyInTheWorld, bool bOnlyPi
             // First, pick a model
             const auto pickedModel = [&] {
                 auto pickedWeight = CGeneral::GetRandomNumberInRange(0, weightSum);
+                auto lastModelId  = MODEL_INVALID;
                 for (auto modelId : choices) {
+                    lastModelId = (eModelID)(modelId);
                     const auto thisModelFrq = CModelInfo::GetVehicleModelInfo(modelId)->m_nFrq;
                     if (thisModelFrq >= pickedWeight) {
                         return (eModelID)(modelId);
@@ -69,6 +71,7 @@ eModelID CLoadedCarGroup::PickRandomCar(bool bNotTooManyInTheWorld, bool bOnlyPi
                 // No frequency of any model in the array was `>=` than `pickedWeight`
                 // Originally in this case the last value from `choices` was used, but most likely unintentionally
                 NOTSA_UNREACHABLE();
+                return lastModelId; // 0x611C50: the exe keeps the last model of the array
             }();
 
             // Check if it's suitable

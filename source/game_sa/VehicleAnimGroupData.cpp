@@ -132,7 +132,8 @@ AssocGroupId CVehicleAnimGroup::GetGroup(AnimationId animId) const {
     }
 
     NOTSA_UNREACHABLE(); // Shouldn't ever get to this point
-    //return (m_animFlags.intValue & (1 << animId)) != 0 ? GetSecondGroup() : GetFirstGroup();
+    // 0x6E3BE4: every other anim id tests the flag bit `2^animId` (pow, then _ftol)
+    return (m_animFlags.intValue & (uint32)(int32)std::pow(2.0, (double)animId)) != 0 ? GetSecondGroup() : GetFirstGroup();
 }
 
 float CVehicleAnimGroup::ComputeCriticalBlendTime(AnimationId animId) {

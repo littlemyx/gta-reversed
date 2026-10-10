@@ -106,6 +106,94 @@ static bool ZCase(Rng& r, std::string& d, PortFn&& port, ExeFn&& exe, const char
 }
 } // namespace lm
 
+
+// ================================================================== CStats
+namespace lm {
+struct StatMem {
+    std::vector<uint8> a, b, pl; float health;
+    void Save() { a.resize(0xB79600 - 0xB78200); std::memcpy(a.data(), (void*)0xB78200, a.size()); b.resize(0xE0); std::memcpy(b.data(), (void*)0x8CDE00, b.size()); pl.resize(0x190); std::memcpy(pl.data(), (void*)0xB7CD98, 0x190); health = lw::Pl->m_fHealth; }
+    bool Same(const StatMem& o) const { return SameBlob(a.data(), o.a.data(), a.size()) && SameBlob(b.data(), o.b.data(), b.size()) && SameBlob(pl.data(), o.pl.data(), pl.size()) && SameF(health, o.health); }
+    void Restore() const { std::memcpy((void*)0xB78200, a.data(), a.size()); std::memcpy((void*)0x8CDE00, b.data(), b.size()); std::memcpy((void*)0xB7CD98, pl.data(), 0x190); lw::Pl->m_fHealth = health; }
+};
+static eStats PickStat(Rng& r) { return (eStats)(r.below(10) < 6 ? r.below(82) : 120 + r.below(223)); }
+static void GenStats(Rng& r) {
+    lw::Init();
+    for (auto& v : CStats::StatTypesFloat) v = r.below(4) ? (r.below(2) ? r.f01() * 120.f : r.f01() * 1500.f) : GenF(r, 3000.f);
+    for (auto& v : CStats::StatTypesInt) v = r.below(4) ? (int32)r.below(1100) : (int32)r.u32();
+    for (auto& v : CStats::StatReactionValue) v = r.below(5) ? r.f01() * 30.f : GenF(r, 1000.f);
+    for (auto& v : CStats::PedsKilledOfThisType) v = (int32)r.below(100);
+    CStats::TotalNumStatMessages = 0; CStats::bShowUpdateStats = false;
+    uint32* cnt[] = { &CStats::m_SprintStaminaCounter, &CStats::m_CycleStaminaCounter, &CStats::m_CycleSkillCounter, &CStats::m_SwimStaminaCounter, &CStats::m_SwimUnderWaterCounter, &CStats::m_DrivingCounter, &CStats::m_FlyingCounter,
+                      &CStats::m_BoatCounter, &CStats::m_BikeCounter, &CStats::m_FatCounter, &CStats::m_RunningCounter, &CStats::m_WeaponCounter, &CStats::m_DeathCounter, &CStats::m_MaxHealthCounter, &CStats::m_AddToHealthCounter };
+    for (auto* c : cnt) *c = r.below(3) ? r.below(200000) : r.u32();
+    CStats::m_FatMuscleMessageState = (uint8)r.below(4);
+    CTimer::ms_fTimeStep = r.below(8) ? r.f01() * 4.f : GenF(r, 50.f);
+    lw::Pl->m_fHealth = r.below(4) ? r.f01() * 200.f : GenF(r, 500.f);
+    lw::Pl->m_nPedType = PED_TYPE_PLAYER1;
+    CWorld::Players[0].m_nMaxHealth = (uint8)(r.below(4) ? 100 + r.below(150) : r.u32());
+    CWorld::Players[0].m_nNumHoursDidntEat = (uint8)r.below(40);
+    CWorld::Players[0].m_nMoney = (int32)r.u32();
+    g_german = r.below(5) == 0;
+}
+template<class PortFn, class ExeFn>
+static bool StCase(Rng& r, std::string& d, PortFn&& port, ExeFn&& exe, const char* what) {
+    GenStats(r);
+    static StatMem m0, m1, m2;
+    m0.Save();
+    g_audioEv.clear(); const long long a = port(); const auto e1 = g_audioEv; m1.Save(); m0.Restore();
+    g_audioEv.clear(); const long long e = exe(); const auto e2 = g_audioEv; m2.Save();
+    const bool ok = a == e && m1.Same(m2) && e1 == e2;
+    if (!ok) d = std::string(what) + " ret got " + std::to_string(a) + " exe " + std::to_string(e) + " events " + std::to_string(e1.size()) + "/" + std::to_string(e2.size()) + DiffDesc(m1.a.data(), m2.a.data(), m1.a.size(), "s") + DiffDesc(m1.b.data(), m2.b.data(), m1.b.size(), "k") + DiffDesc(m1.pl.data(), m2.pl.data(), 0x190, "pl") + (SameF(m1.health, m2.health) ? "" : " health " + F(m1.health) + " vs " + F(m2.health));
+    return ok;
+}
+inline long long FBitsLL(float f) { return (long long)FBits(f); }
+} // namespace lm
+
+static void TestStats() {
+    using namespace lm;
+    auto sub = [](Rng& r) { return Rng(r.u32() * 2654435761ull + 777); };
+    Run("CStats::IsStatFloat 0x558E30", [&](Rng& r, std::string& d) { const eStats st = PickStat(r); const bool a = CStats::IsStatFloat(st), e = oracle::Fn<bool __cdecl(int)>(0x558E30)(st) & 1; if (a == e) return true; d = "stat " + std::to_string(st); return false; }, 600);
+    Run("CStats::GetStatValue 0x558E40", [&](Rng& r, std::string& d) { Rng a = sub(r); const eStats st = PickStat(a); return StCase(r, d, [&] { return FBitsLL(CStats::GetStatValue(st)); }, [&] { return FBitsLL(oracle::Fn<float __cdecl(int)>(0x558E40)(st)); }, "GetStatValue"); }, 1500);
+    Run("CStats::SetStatValue 0x55A070", [&](Rng& r, std::string& d) { Rng a = sub(r); const eStats st = PickStat(a); const float v = a.below(3) ? a.f01() * 2000.f - 500.f : GenF(a, 1e10f);
+        return StCase(r, d, [&] { CStats::SetStatValue(st, v); return 0LL; }, [&] { oracle::Fn<void __cdecl(int, float)>(0x55A070)(st, v); return 0LL; }, "SetStatValue"); }, 3000);
+    Run("CStats::IsStatCapped 0x559630", [&](Rng& r, std::string& d) { const eStats st = PickStat(r); const bool a = CStats::IsStatCapped(st), e = oracle::Fn<bool __cdecl(int)>(0x559630)(st) & 1; Hit(a); if (a == e) return true; d = "stat " + std::to_string(st); return false; }, 1500);
+    Run("CStats::IncrementStat 0x55C180", [&](Rng& r, std::string& d) { Rng a = sub(r); const eStats st = PickStat(a); const float v = a.below(4) ? a.f01() * 50.f : GenF(a, 1e6f);
+        return StCase(r, d, [&] { CStats::IncrementStat(st, v); return 0LL; }, [&] { oracle::Fn<void __cdecl(int, float)>(0x55C180)(st, v); return 0LL; }, "IncrementStat"); }, 4000);
+    Run("CStats::DecrementStat 0x559FA0", [&](Rng& r, std::string& d) { Rng a = sub(r); const eStats st = PickStat(a); const float v = a.below(4) ? a.f01() * 50.f : GenF(a, 1e6f);
+        return StCase(r, d, [&] { CStats::DecrementStat(st, v); return 0LL; }, [&] { oracle::Fn<void __cdecl(int, float)>(0x559FA0)(st, v); return 0LL; }, "DecrementStat"); }, 3000);
+    Run("CStats::ModifyStat 0x55D090", [&](Rng& r, std::string& d) { Rng a = sub(r); const eStats st = PickStat(a); const float v = a.below(4) ? a.f01() * 50.f - 20.f : GenF(a, 1e6f);
+        return StCase(r, d, [&] { CStats::ModifyStat(st, v); return 0LL; }, [&] { oracle::Fn<void __cdecl(int, float)>(0x55D090)(st, v); return 0LL; }, "ModifyStat"); }, 3000);
+    Run("CStats::ProcessReactionStatsOnIncrement 0x55B900", [&](Rng& r, std::string& d) { Rng a = sub(r); const eStats st = PickStat(a);
+        return StCase(r, d, [&] { CStats::ProcessReactionStatsOnIncrement(st); return 0LL; }, [&] { oracle::Fn<void __cdecl(int)>(0x55B900)(st); return 0LL; }, "ProcessReactionStatsOnIncrement"); }, 3000);
+    Run("CStats::ProcessReactionStatsOnDecrement 0x559730", [&](Rng& r, std::string& d) { Rng a = sub(r); const eStats st = PickStat(a);
+        return StCase(r, d, [&] { CStats::ProcessReactionStatsOnDecrement(st); return 0LL; }, [&] { oracle::Fn<void __cdecl(int)>(0x559730)(st); return 0LL; }, "ProcessReactionStatsOnDecrement"); }, 3000);
+    Run("CStats::RegisterFastestTime 0x55A0B0", [&](Rng& r, std::string& d) { Rng a = sub(r); const eStats st = PickStat(a); const int32 v = a.below(2) ? (int32)a.below(100000) : (int32)a.u32();
+        return StCase(r, d, [&] { CStats::RegisterFastestTime(st, v); return 0LL; }, [&] { oracle::Fn<void __cdecl(int, int)>(0x55A0B0)(st, v); return 0LL; }, "RegisterFastestTime"); }, 1500);
+    Run("CStats::RegisterBestPosition 0x55A160", [&](Rng& r, std::string& d) { Rng a = sub(r); const eStats st = PickStat(a); const int32 v = a.below(2) ? (int32)a.below(100) : (int32)a.u32();
+        return StCase(r, d, [&] { CStats::RegisterBestPosition(st, v); return 0LL; }, [&] { oracle::Fn<void __cdecl(int, int)>(0x55A160)(st, v); return 0LL; }, "RegisterBestPosition"); }, 1500);
+    Run("CStats::SafeToShowThisStat 0x559590", [&](Rng& r, std::string& d) { Rng a = sub(r); const eStats st = PickStat(a);
+        return StCase(r, d, [&] { return (long long)CStats::SafeToShowThisStat(st); }, [&] { return (long long)(oracle::Fn<bool __cdecl(int)>(0x559590)(st) & 1); }, "SafeToShowThisStat"); }, 1500);
+    Run("CStats::ConvertToMins 0x559540", [&](Rng& r, std::string& d) { const int32 v = r.below(2) ? (int32)r.below(1000000) : (int32)r.u32(); const int a = CStats::ConvertToMins(v), e = oracle::Fn<int __cdecl(int)>(0x559540)(v); if (a == e) return true; d = "v " + std::to_string(v); return false; }, 1500);
+    Run("CStats::ConvertToSecs 0x559560", [&](Rng& r, std::string& d) { const int32 v = r.below(2) ? (int32)r.below(1000000) : (int32)r.u32(); const int a = CStats::ConvertToSecs(v), e = oracle::Fn<int __cdecl(int)>(0x559560)(v); if (a == e) return true; d = "v " + std::to_string(v); return false; }, 1500);
+    Run("CStats::CheckForThreshold 0x5595F0", [&](Rng& r, std::string& d) { float v = r.below(2) ? r.f01() * 100.f : GenF(r, 1e5f); const float rg = r.below(2) ? r.f01() * 100.f : GenF(r, 1e5f);
+        float vp = v, ve = v; const bool a = CStats::CheckForThreshold(&vp, rg), e = oracle::Fn<bool __cdecl(float*, float)>(0x5595F0)(&ve, rg) & 1; if (a == e && SameF(vp, ve)) return true; d = "v " + F(v) + " r " + F(rg); return false; }, 3000);
+    Run("CStats::FindMaxNumberOfGroupMembers 0x559A50", [&](Rng& r, std::string& d) { return StCase(r, d, [&] { return (long long)CStats::FindMaxNumberOfGroupMembers(); }, [&] { return (long long)oracle::Fn<int __cdecl()>(0x559A50)(); }, "FindMaxNumberOfGroupMembers"); }, 1500);
+    Run("CStats::FindCriminalRatingNumber 0x559080", [&](Rng& r, std::string& d) { return StCase(r, d, [&] { return (long long)CStats::FindCriminalRatingNumber(); }, [&] { return (long long)oracle::Fn<int __cdecl()>(0x559080)(); }, "FindCriminalRatingNumber"); }, 3000);
+    Run("CStats::GetFatAndMuscleModifier 0x559AF0", [&](Rng& r, std::string& d) { Rng a = sub(r); const int m = a.below(14);
+        return StCase(r, d, [&] { return FBitsLL(CStats::GetFatAndMuscleModifier((eStatModAbilities)m)); }, [&] { return FBitsLL(oracle::Fn<float __cdecl(int)>(0x559AF0)(m)); }, "GetFatAndMuscleModifier"); }, 3000);
+    Run("CStats::UpdateFatAndMuscleStats 0x55C470", [&](Rng& r, std::string& d) { Rng a = sub(r); const uint32 v = a.below(3) ? a.below(100000) : a.u32();
+        return StCase(r, d, [&] { CStats::UpdateFatAndMuscleStats(v); return 0LL; }, [&] { oracle::Fn<void __cdecl(uint32)>(0x55C470)(v); return 0LL; }, "UpdateFatAndMuscleStats"); }, 3000);
+    {
+        struct G { const char* n; unsigned va; void (*pf)(); };
+        static const G gs[] = { { "UpdateStatsWhenSprinting", 0x55C660, &CStats::UpdateStatsWhenSprinting }, { "UpdateStatsWhenRunning", 0x55C6F0, &CStats::UpdateStatsWhenRunning }, { "UpdateStatsWhenFighting", 0x55CFA0, &CStats::UpdateStatsWhenFighting }, { "UpdateStatsOnRespawn", 0x55CFC0, &CStats::UpdateStatsOnRespawn } };
+        for (auto& g : gs) Run(std::string("CStats::") + g.n + " 0x" + HexVA(g.va), [&](Rng& r, std::string& d) { return StCase(r, d, [&] { g.pf(); return 0LL; }, [&] { oracle::Fn<void __cdecl()>(g.va)(); return 0LL; }, g.n); }, 3000);
+    }
+    Run("CStats::UpdateStatsWhenSwimming 0x55C990", [&](Rng& r, std::string& d) { Rng a = sub(r); const bool b1 = a.below(2), b2 = a.below(2);
+        return StCase(r, d, [&] { CStats::UpdateStatsWhenSwimming(b1, b2); return 0LL; }, [&] { oracle::Fn<void __cdecl(bool, bool)>(0x55C990)(b1, b2); return 0LL; }, "UpdateStatsWhenSwimming"); }, 3000);
+    Run("CStats::UpdateStatsAddToHealth 0x55D030", [&](Rng& r, std::string& d) { Rng a = sub(r); const uint32 v = a.below(3) ? a.below(500) : a.u32();
+        return StCase(r, d, [&] { CStats::UpdateStatsAddToHealth(v); return 0LL; }, [&] { oracle::Fn<void __cdecl(uint32)>(0x55D030)(v); return 0LL; }, "UpdateStatsAddToHealth"); }, 3000);
+}
+
 static void TestMisc() {
     using namespace lm;
     auto sub = [](Rng& r) { return Rng(r.u32() * 2654435761ull + 4242); };
@@ -372,4 +460,5 @@ static void TestMisc() {
                 }, [&] { CCheat::DoCheats(); return 0LL; }, [&] { oracle::Fn<void __cdecl()>(0x439AF0)(); return 0LL; }, "DoCheats");
         }, 3000);
     }
+    TestStats();
 }

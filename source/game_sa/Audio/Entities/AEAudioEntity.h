@@ -19,7 +19,7 @@ public:
 
 protected:
     CAEAudioEntity() = default;
-    ~CAEAudioEntity() = default;
+    ~CAEAudioEntity(); // out-of-line on purpose, see AEAudioEntity.cpp
 
 public:
     virtual void UpdateParameters(CAESound* sound, int16 curPlayPos) { /* Empty on purpose */ };

@@ -326,8 +326,17 @@ void CAEAudioHardware::GetChannelPlayTimes(int16 channel, int16* playTimes) {
     if (!playTimes)
         return;
 
-    for (auto i = m_anNumChannelsInSlot[channel]; i-- > 0;) {
-        playTimes[i] = m_aChannels[channel + i]->GetPlayTime();
+    // The exe loops `numInSlot - 1` times, ascending, and skips the loop when `numInSlot <= 1` (0x4D8820: `lea edx,[num+ch-1]; cmp ch,edx; jae`;
+    // `ebx = edx - ch`), i.e. the position of the LAST channel of the slot is never written (the caller's `new int16[]` keeps its garbage there).
+    const uint32 ch  = (uint32)(int32)channel;
+    const uint32 end = (uint32)m_anNumChannelsInSlot[channel] + ch - 1;
+    if (ch >= end) {
+        return;
+    }
+    auto* out = playTimes;
+    auto* src = &m_aChannels[channel];
+    for (uint32 n = end - ch; n != 0; --n) {
+        *out++ = (*src++)->GetPlayTime();
     }
 }
 

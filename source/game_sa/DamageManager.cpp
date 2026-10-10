@@ -572,6 +572,6 @@ eCarNodes CDamageManager::GetCarNodeIndexFromDoor(eDoors door) {
     case eDoors::DOOR_RIGHT_FRONT: return eCarNodes::CAR_DOOR_RF;
     case eDoors::DOOR_LEFT_REAR:   return eCarNodes::CAR_DOOR_LR;
     case eDoors::DOOR_RIGHT_REAR:  return eCarNodes::CAR_DOOR_RR;
-    default:                       NOTSA_UNREACHABLE_CASE(+door); /* notsa: originally `return -1` */
+    default:                       NOTSA_UNREACHABLE_CASE(+door); return (eCarNodes)-1; // 0x6C2726: `or eax, -1`
     }
 }

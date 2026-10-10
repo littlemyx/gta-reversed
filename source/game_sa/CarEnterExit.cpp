@@ -114,7 +114,7 @@ int32 CCarEnterExit::ComputeDoorFlag(const CVehicle* vehicle, int32 doorId, bool
         case 18: return 5;
         case 9:
         case 11: return 10;
-        default: NOTSA_UNREACHABLE(); // Originally `return 0`
+        default: NOTSA_UNREACHABLE(); return 0; // Originally `return 0` (`xor eax, eax` at the function start)
         }
     } else {
         switch (doorId) {
@@ -123,7 +123,7 @@ int32 CCarEnterExit::ComputeDoorFlag(const CVehicle* vehicle, int32 doorId, bool
         case 10:
         case 18: return 1;
         case 11: return 2;
-        default: NOTSA_UNREACHABLE(); // Originally `return 0`
+        default: NOTSA_UNREACHABLE(); return 0; // Originally `return 0` (`xor eax, eax` at the function start)
         }
     }
 }
@@ -137,7 +137,7 @@ int32 CCarEnterExit::ComputeOppositeDoorFlag(const CVehicle* vehicle, int32 door
         case 18: return 5;
         case 9:
         case 11: return 10;
-        default: NOTSA_UNREACHABLE(); // Originally `return 0`
+        default: NOTSA_UNREACHABLE(); return 0; // Originally `return 0` (`xor eax, eax` at the function start)
         }
     } else {
         switch (doorId) {
@@ -146,7 +146,7 @@ int32 CCarEnterExit::ComputeOppositeDoorFlag(const CVehicle* vehicle, int32 door
         case 10:
         case 18: return 4;
         case 11: return 8;
-        default: NOTSA_UNREACHABLE(); // Originally `return 0`
+        default: NOTSA_UNREACHABLE(); return 0; // Originally `return 0` (`xor eax, eax` at the function start)
         }
     }
 }

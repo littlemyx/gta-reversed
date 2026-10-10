@@ -70,6 +70,7 @@ const char* CPickup::FindStringForTextIndex(ePickupPropertyText index) {
         return "FESZ_CA"; // Cancel
     default:
         NOTSA_UNREACHABLE();
+        return "FESZ_CA"; // 0x45554A: everything but 1 and 2 answers with the 'Cancel' string
     }
 }
 

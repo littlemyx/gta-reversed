@@ -730,7 +730,7 @@ void CGameLogic::Update() {
                         case eWantedLevel::WANTED_LEVEL_4: return 600;
                         case eWantedLevel::WANTED_LEVEL_5: return 900;
                         case eWantedLevel::WANTED_LEVEL_6: return 1500;
-                        default:                           NOTSA_UNREACHABLE(); // NOTSA, SA returns 100.
+                        default:                           NOTSA_UNREACHABLE(); return 100; // 0x4431CA: `mov ecx, 0x64`
                         }
                     }();
                     PunishPlayer(fee);

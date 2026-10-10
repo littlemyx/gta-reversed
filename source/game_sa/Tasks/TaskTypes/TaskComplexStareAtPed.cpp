@@ -65,6 +65,8 @@ CTask* CTaskComplexStareAtPed::CreateFirstSubTask(CPed* ped) {
 
 // 0x6605C0
 CTask* CTaskComplexStareAtPed::ControlSubTask(CPed* ped) {
+    // 0x6605DD: `timedOut` is evaluated before the anim-block logic (IsOutOfTime restarts a stopped timer)
+    const bool timedOut = m_timer.IsOutOfTime();
 
     // Below code copied from `CTaskComplexGangLeader::ControlSubTask`
     // Make sure anmims are loaded (if they can/need to be)
@@ -82,11 +84,27 @@ CTask* CTaskComplexStareAtPed::ControlSubTask(CPed* ped) {
         }
     }
 
-    CTaskComplexGangLeader::DoGangAbuseSpeech(ped, m_pPed);
+    // 0x66068A: the whole stare logic only runs while the target ped is alive (the reference is cleared on its death) and the timeout hasn't elapsed
+    if (m_pPed && !timedOut) {
+        CTaskComplexGangLeader::DoGangAbuseSpeech(ped, m_pPed);
 
-    if (m_lookInitialised) {
-        m_pPed = m_pPed;
-        if (g_ikChainMan.GetLookAtEntity(ped) != m_pPed) {
+        if (m_lookInitialised) {
+            if (g_ikChainMan.GetLookAtEntity(ped) != m_pPed) {
+                g_ikChainMan.LookAt(
+                    "TaskStareAtPed",
+                    ped,
+                    m_pPed,
+                    (int32)&gDefaultTaskTime,
+                    BONE_HEAD,
+                    nullptr,
+                    true,
+                    0.15f,
+                    500,
+                    3,
+                    false
+                );
+            }
+        } else {
             g_ikChainMan.LookAt(
                 "TaskStareAtPed",
                 ped,
@@ -100,46 +118,32 @@ CTask* CTaskComplexStareAtPed::ControlSubTask(CPed* ped) {
                 3,
                 false
             );
+            m_lookInitialised = true;
         }
-    } else {
-        g_ikChainMan.LookAt(
-            "TaskStareAtPed",
-            ped,
-            m_pPed,
-            (int32)&gDefaultTaskTime,
-            BONE_HEAD,
-            nullptr,
-            true,
-            0.15f,
-            500,
-            3,
-            false
-        );
-        m_lookInitialised = true;
-    }
 
-    if ([this] {
-        if (m_animsReferenced && m_pPed && m_pPedGroup) {
-            if (const auto leader = m_pPedGroup->GetMembership().GetLeader()) {
-                if (sq(8.f) >= (leader->GetPosition() - m_pPed->GetPosition()).SquaredMagnitude()) {
-                    return true;
+        if ([this] {
+            if (m_animsReferenced && m_pPed && m_pPedGroup) {
+                if (const auto leader = m_pPedGroup->GetMembership().GetLeader()) {
+                    if (sq(8.f) >= (leader->GetPosition() - m_pPed->GetPosition()).SquaredMagnitude()) {
+                        return true;
+                    }
                 }
             }
-        }
-        return false;
-    }()) {
-        if (!ped->GetTaskManager().GetTaskSecondary(TASK_SECONDARY_PARTIAL_ANIM) && CGeneral::RandomBool(1.f)) {
-            ped->GetTaskManager().SetTaskSecondary(
-                new CTaskSimpleRunAnim{ ANIM_GROUP_GANGS, CAnimManager::GetRandomGangTalkAnim(), 4.f},
-                TASK_SECONDARY_PARTIAL_ANIM
-            );
-        }
+            return false;
+        }()) {
+            if (!ped->GetTaskManager().GetTaskSecondary(TASK_SECONDARY_PARTIAL_ANIM) && CGeneral::RandomBool(1.f)) {
+                ped->GetTaskManager().SetTaskSecondary(
+                    new CTaskSimpleRunAnim{ ANIM_GROUP_GANGS, CAnimManager::GetRandomGangTalkAnim(), 4.f},
+                    TASK_SECONDARY_PARTIAL_ANIM
+                );
+            }
 
-        return m_pSubTask;
-    } else {
-        AbortIK(ped);
-        return nullptr;
+            return m_pSubTask;
+        }
     }
+
+    AbortIK(ped);
+    return nullptr;
 }
 
 void CTaskComplexStareAtPed::UnrefAnimBlock() {

@@ -28,9 +28,25 @@ void CLoadedCarGroup::InjectHooks() {
 // 0x611E10
 void CLoadedCarGroup::SortBasedOnUsage() {
     // Sort from higher to lower usage
-    rng::sort(GetAllModels(), std::greater<>{}, [](int16 modelid) {
-        return CModelInfo::GetVehicleModelInfo(modelid)->m_nTimesUsed; }
-    );
+    // The exe (0x611E10) is a plain bubble sort over the leading valid members: swap neighbours while `used(a) < used(b)`.
+    // `m_nTimesUsed` (+0x50) is compared as a SIGNED byte (`cmp al, [ebx+0x50]; jge`); equal usages keep their order (stable). std::sort was neither.
+    const auto n = (int32)CountMembers();
+    if (n - 1 <= 0) {
+        return;
+    }
+    const auto Used = [](int16 modelId) { return (int8)CModelInfo::GetVehicleModelInfo(modelId)->m_nTimesUsed; };
+    bool swapped;
+    do {
+        swapped = false;
+        for (int32 i = 0; i < n - 1; i++) {
+            const int16 a = m_models[i], b = m_models[i + 1];
+            if (Used(a) < Used(b)) {
+                m_models[i]     = b;
+                m_models[i + 1] = a;
+                swapped         = true;
+            }
+        }
+    } while (swapped);
 }
 
 // 0x611BD0
@@ -42,97 +58,82 @@ void CLoadedCarGroup::RemoveMember(eModelID modelIndex) {
 
 // 0x611C50
 eModelID CLoadedCarGroup::PickRandomCar(bool bNotTooManyInTheWorld, bool bOnlyPickNormalCars) {
+    // Shape of the exe: build the candidate list and the sum of `m_nFrq` (a SIGNED word, +0x52) in one pass; with a zero sum the answer is -1 and
+    // no random number is consumed. Then up to 10 tries of: one rand() -> `(rand() & 0xFFFF) * (1/32768) * (float)sum` truncated -> walk the list
+    // subtracting frq until `pick <= frq(candidate)`.
     if (Empty()) {
         return MODEL_INVALID;
     }
 
-    const auto PickRandom = [&](auto&& choices) {
-        if (rng::empty(choices)) {
-            return MODEL_INVALID;
-        }
-
-        const auto weightSum = notsa::accumulate(choices, 0, [](int16 model) {
-            return CModelInfo::GetVehicleModelInfo(model)->m_nFrq;
-        });
-
-        for (auto tr{ 0 }; tr < 10; tr++) { // tr = tries
-            // First, pick a model
-            const auto pickedModel = [&] {
-                auto pickedWeight = CGeneral::GetRandomNumberInRange(0, weightSum);
-                auto lastModelId  = MODEL_INVALID;
-                for (auto modelId : choices) {
-                    lastModelId = (eModelID)(modelId);
-                    const auto thisModelFrq = CModelInfo::GetVehicleModelInfo(modelId)->m_nFrq;
-                    if (thisModelFrq >= pickedWeight) {
-                        return (eModelID)(modelId);
-                    }
-                    pickedWeight -= thisModelFrq;
-                }
-                // No frequency of any model in the array was `>=` than `pickedWeight`
-                // Originally in this case the last value from `choices` was used, but most likely unintentionally
-                NOTSA_UNREACHABLE();
-                return lastModelId; // 0x611C50: the exe keeps the last model of the array
-            }();
-
-            // Check if it's suitable
-            if (   !CTheScripts::HasCarModelBeenSuppressed(pickedModel)
-                && !CTheScripts::HasVehicleModelBeenBlockedByScript(pickedModel)
-                && !CStreaming::WeAreTryingToPhaseVehicleOut(pickedModel)
-                && (!bNotTooManyInTheWorld || CModelInfo::GetVehicleModelInfo(pickedModel)->m_nRefCount <= 2)
-            ) {
-                return pickedModel;
+    std::array<int16, 23> choices;
+    size_t                nChoices  = 0;
+    int32                 weightSum = 0;
+    for (const auto modelId : GetAllModels()) {
+        const auto mi = CModelInfo::GetVehicleModelInfo(modelId);
+        if (bOnlyPickNormalCars) {
+            // movsx byte [+0x4d]: accepts 0..2 (NORMAL, POORFAMILY, RICHFAMILY) and 8 (MOTORBIKE)
+            const auto cls = (int8)mi->m_nVehicleClass;
+            if (!((cls >= 0 && cls <= 2) || cls == 8)) {
+                continue;
             }
         }
-
-        // 10 tries, but no luck
-        return MODEL_INVALID;
-    };
-
-    if (bOnlyPickNormalCars) {
-        // Originally an array was created here, and that was used
-        // That is more performant, but I doubt that this is so performance critical to care about that.
-        return PickRandom(
-            GetAllModels() | rng::views::filter([](int16 modelId) {
-                switch (CModelInfo::GetVehicleModelInfo(modelId)->m_nVehicleClass) {
-                case VEHICLE_CLASS_NORMAL:
-                case VEHICLE_CLASS_POORFAMILY:
-                case VEHICLE_CLASS_RICHFAMILY:
-                case VEHICLE_CLASS_MOTORBIKE:
-                    return true;
-                }
-                return false;
-            })
-        );
-    } else {
-        // The exe counts the leading valid members (loop 0x611C60, stops at the first negative) and only ever uses those; iterating all 23 slots
-        // (the former non-FIX_BUGS path) walks into MODEL_INVALID entries and dereferences a null model info
-        return PickRandom(GetAllModels());
+        choices[nChoices++] = modelId;
+        weightSum += (int16)mi->m_nFrq;
     }
+    if (weightSum == 0) {
+        return MODEL_INVALID;
+    }
+
+    const auto Frq = [&](size_t i) { return (int32)(int16)CModelInfo::GetVehicleModelInfo(choices[i])->m_nFrq; };
+
+    for (auto tr{ 0 }; tr < 10; tr++) { // tr = tries
+        // First, pick a model
+        const auto pickedModel = [&] {
+            auto   pickedWeight = CGeneral::GetRandomNumberInRange(0, weightSum);
+            size_t i{};
+            // 0x611D65: the exe does not bound this walk (the sum guarantees it ends inside the list)
+            while (pickedWeight > Frq(i)) {
+                pickedWeight -= Frq(i);
+                i++;
+                assert(i < nChoices);
+            }
+            return (eModelID)(choices[i]);
+        }();
+
+        // Check if it's suitable
+        if (   !CTheScripts::HasCarModelBeenSuppressed(pickedModel)
+            && !CTheScripts::HasVehicleModelBeenBlockedByScript(pickedModel)
+            && !CStreaming::WeAreTryingToPhaseVehicleOut(pickedModel)
+            && (!bNotTooManyInTheWorld || (int16)CModelInfo::GetVehicleModelInfo(pickedModel)->m_nRefCount < 3) // 0x611DD0: signed word compare `< 3`
+        ) {
+            return pickedModel;
+        }
+    }
+
+    // 10 tries, but no luck
+    return MODEL_INVALID;
 }
 
 // 0x611E90
 eModelID CLoadedCarGroup::PickLeastUsedModel(int32 maxTimesUsed) {
-    if (Empty()) {
-        return MODEL_INVALID;
-    }
-
-    const auto GetMI = [](auto model) { return CModelInfo::GetVehicleModelInfo(model); };
-    const auto ret = rng::min(GetAllModels(), [&](int16 modelA, int16 modelB) {
-        const auto miA = GetMI(modelA), miB = GetMI(modelB);
-        if (miA->m_nRefCount < miB->m_nRefCount) { // Primary sort criteria is `m_nRefCount`
-            return true;
+    // Exe: the best candidate starts at {ref = 999, used = 999} and is replaced when `ref < bestRef` or (`ref == bestRef` and `used < bestUsed`);
+    // `m_nRefCount` is read as a signed word, `m_nTimesUsed` as a signed byte, the final test is a signed `bestUsed <= maxTimesUsed`.
+    int32    bestRef  = 999;
+    int32    bestUsed = 999;
+    eModelID best     = MODEL_INVALID;
+    for (const auto modelId : GetAllModels()) {
+        const auto mi   = CModelInfo::GetVehicleModelInfo(modelId);
+        const auto ref  = (int32)(int16)mi->m_nRefCount;
+        const auto used = (int32)(int8)mi->m_nTimesUsed;
+        if (ref < bestRef || (ref == bestRef && used < bestUsed)) {
+            best     = (eModelID)(modelId);
+            bestRef  = ref;
+            bestUsed = used;
         }
-        if (miA->m_nRefCount == miB->m_nRefCount) { // If that fails, secondary is `m_nTimesUsed`
-            return miA->m_nTimesUsed < miB->m_nTimesUsed;
-        }
-        return false;
-    });
-
-    if (GetMI(ret)->m_nTimesUsed <= maxTimesUsed) {
-        return (eModelID)(ret);
     }
-
-    return MODEL_INVALID;
+    return bestUsed <= maxTimesUsed
+        ? best
+        : MODEL_INVALID;
 }
 
 // 0x611C20

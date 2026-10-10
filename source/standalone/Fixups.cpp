@@ -553,6 +553,8 @@ static void __cdecl OnPurecall() { RaiseNamed("pure virtual function call", 0xE0
 static void __cdecl OnInvalidParam(const wchar_t*, const wchar_t*, const wchar_t*, unsigned, uintptr_t) { RaiseNamed("invalid CRT parameter", 0xE0AB0004u); }
 static void __cdecl OnTerminate() { RaiseNamed("std::terminate", 0xE0AB0005u); }
 
+// WARNING: suspending the game thread (SuspendThread/GetThreadContext/ResumeThread) under Wine on Apple silicon corrupts its x87 register stack (TOP drifts; the
+// next fcomp/fld/fstp then hit empty registers => NaN positions/speeds, junk comparisons, wanted level 5 via the military zone). Use for profiling only.
 // S5 diagnostics: NOTSA_STANDALONE_SAMPLER=1 samples the main thread's EIP / caller chain (EBP walk, 12 frames) every ~10 ms and logs the hottest
 // return addresses every 15 s (resolve against the .map: "profile" lines, address = absolute VA)
 #include <map>

@@ -8,6 +8,7 @@
 #      PREFIX=<dir>             private Wine prefix (default /tmp/d3s-prefix, cloned from $WINE_PREFIX_SRC = ~/.wine-msvc on first use)
 #      WINE_BIN=<dir>           directory with the wine binary (default: Wine Staging.app in ~/tools)
 #      SHOT_EVERY=<frames>      screenshot cadence (default 500 frames, NOTSA_STANDALONE_SCREENSHOT_MAX=40)
+#      SAMPLER=1                enable the in-process profiler (CORRUPTS the x87 state of the game thread, see below: profiling runs only)
 #      SHOT_MAX=<n>             screenshot cap (default 40)
 #      OUT=<dir>                output dir (default /tmp/d3s-out/<timestamp>): logs, frame_*.png, report.txt
 #      ROUTE=<file>             input route (default tools/standalone/soak_route.txt)
@@ -53,7 +54,12 @@ UNTIL_MS=$(sed 's/#.*//' "$ROUTE" | awk -F: '/^until:/ {t+=($3 ? $3 : 60000)} EN
 LIMIT_S=$(( (ROUTE_MS + UNTIL_MS) / 1000 + 90 ))   # route + barrier holds + slack for the quit sequence
 
 export NOTSA_STANDALONE_SKIP_VIDEOS=1 NOTSA_STANDALONE_SCREENSHOT="$SHOT_EVERY" NOTSA_STANDALONE_SCREENSHOT_MAX="${SHOT_MAX:-40}"
-export NOTSA_STANDALONE_MEMLOG=1 NOTSA_STANDALONE_SAMPLER=1 NOTSA_STANDALONE_INPUT="$OUT/route.txt"
+export NOTSA_STANDALONE_MEMLOG=1 NOTSA_STANDALONE_INPUT="$OUT/route.txt"
+# The in-process sampler (SuspendThread/GetThreadContext/ResumeThread of the main thread every ~10 ms, from 35 s on) CORRUPTS THE x87 STACK of the
+# game thread under Wine on Apple silicon (the FPU TOP drifts, later pushes/pops hit empty registers => -nan positions, wanted level 5 from the
+# military-zone check, 'fell through the map', CObject pool exhaustion, crashes in CPhysical::Add): it is NOT enabled by default. SAMPLER=1 opts in
+# (profiling only; never for a regression soak).
+[ "${SAMPLER:-0}" = 1 ] && export NOTSA_STANDALONE_SAMPLER=1
 
 kill_exe() { pkill -f "$(basename "$DATA").gta_reversed" 2>/dev/null; WINEPREFIX="$PREFIX" wineserver -k 2>/dev/null; sleep 1; }
 started=0; STATUS_START=0

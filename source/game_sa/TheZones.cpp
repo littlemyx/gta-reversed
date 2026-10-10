@@ -276,42 +276,54 @@ void CTheZones::CreateZone(
     eLevelName  level,
     const char* textLabel
 ) {
-    const auto z = [type]() -> CZone* {
-        switch (type) {
-        case ZONE_TYPE_LOCAL_NAVI:
-        case ZONE_TYPE_NAVI:       return &NavigationZoneArray[TotalNumberOfNavigationZones++];
-        case ZONE_TYPE_MAP:        return &MapZoneArray[TotalNumberOfMapZones++];
-        }
-        NOTSA_UNREACHABLE();
-        return nullptr;
-    }();
-    if (!z) {
-        return; // 0x572B52: any other zone type creates nothing
-    }
+    // 0x5728A0: the exe orders pos1/pos2 per axis on the float args (swap when pos1 > pos2, ordered compare)
+    // before anything else, then uppercases BOTH caller strings in place (ASCII a-z only), then copies
+    // them with strncpy(.., 7) into 8-byte locals (terminator forced at [7]), and only then looks at `type`.
+    if (pos1.x > pos2.x) { std::swap(pos1.x, pos2.x); }
+    if (pos1.y > pos2.y) { std::swap(pos1.y, pos2.y); }
+    if (pos1.z > pos2.z) { std::swap(pos1.z, pos2.z); }
 
-    const auto StrCpyUpper = [](auto& dst, auto& src) {
-        rng::fill(dst, 0);
-        strcpy_s(dst, src);
-        for (auto& ch : dst) {
-            if (ch == 0) {
-                break;
+    const auto StrCpyUpper = [](char (&dst)[8], const char* src) {
+        for (auto* p = const_cast<char*>(src); *p; p++) { // in place, like the exe
+            if (*p >= 'a' && *p <= 'z') {
+                *p -= 0x20;
             }
-            ch = toupper(ch);
         }
+        char tmp[8]{};
+        strncpy_s(tmp, 8, src, 7);
+        std::memcpy(dst, tmp, 8);
     };
-    StrCpyUpper(z->m_TextLabel, textLabel);
-    StrCpyUpper(z->m_InfoLabel, infoLabel);
+    char infoTmp[8], textTmp[8];
+    StrCpyUpper(infoTmp, infoLabel);
+    StrCpyUpper(textTmp, textLabel);
 
-    std::tie(z->m_fX1, z->m_fX2) = std::minmax((int16)pos1.x, (int16)pos2.x);
-    std::tie(z->m_fY1, z->m_fY2) = std::minmax((int16)pos1.y, (int16)pos2.y);
-    std::tie(z->m_fZ1, z->m_fZ2) = std::minmax((int16)pos1.z, (int16)pos2.z);
+    const auto Fill = [&](CZone& z) {
+        std::memcpy(z.m_InfoLabel, infoTmp, 8);
+        std::memcpy(z.m_TextLabel, textTmp, 8);
+        z.m_fX1 = (int16)pos1.x; z.m_fY1 = (int16)pos1.y; z.m_fZ1 = (int16)pos1.z;
+        z.m_fX2 = (int16)pos2.x; z.m_fY2 = (int16)pos2.y; z.m_fZ2 = (int16)pos2.z;
+        z.m_nLevel = level;
+    };
 
-    z->m_nLevel = level;
-
-    switch (type) {
-    case ZONE_TYPE_LOCAL_NAVI:
+    switch ((int32)type) {
     case ZONE_TYPE_NAVI:
-        AssignZoneInfoForThisZone(TotalNumberOfNavigationZones - 1);
+    case ZONE_TYPE_LOCAL_NAVI: { // 0x572A79
+        const auto idx = TotalNumberOfNavigationZones;
+        auto& z = NavigationZoneArray[idx];
+        Fill(z);
+        z.m_nType = type;
+        AssignZoneInfoForThisZone(idx); // called BEFORE the counter is incremented
+        TotalNumberOfNavigationZones = idx + 1;
+        break;
+    }
+    case ZONE_TYPE_MAP: { // 0x5729AC
+        auto& z = MapZoneArray[TotalNumberOfMapZones];
+        Fill(z);
+        z.m_nType = ZONE_TYPE_MAP;
+        TotalNumberOfMapZones++;
+        break;
+    }
+    default: // ZONE_TYPE_INFO (and out-of-range): nothing is created
         break;
     }
 }

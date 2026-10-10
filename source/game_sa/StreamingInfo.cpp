@@ -44,14 +44,8 @@ bool CStreamingInfo::GetCdPosnAndSize(CdStreamPos& pos, size_t& size) {
 
 // 0x407560
 bool CStreamingInfo::InList() const {
-    if (m_NextIndex != -1) {
-        assert(m_PrevIndex != -1);
-    }
-
-    // Yeah, that's partially true
-    // Because the way these lists work, items actually always have both `next` and `prev` defined
-    // So, I guess here they just assume that, and "optimize" the check :D
-    return m_NextIndex != -1 /*notsa => */ && m_PrevIndex != -1;
+    // 0x407F93: `cmp [next], 0; jge yes; cmp [prev], 0; jl no` => EITHER link being >= 0 (signed) counts as "in a list"
+    return m_NextIndex >= 0 || m_PrevIndex >= 0;
 }
 
 // 0x407480

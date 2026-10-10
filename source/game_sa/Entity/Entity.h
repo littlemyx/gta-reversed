@@ -444,4 +444,4 @@ static RpMaterial* MaterialUpdateUVAnimCB(RpMaterial* material, void* data);
 
 bool IsEntityPointerValid(CEntity* entity);
 
-static inline auto& GAME_GRAVITY = StaticRef<float>(0x863984); // default 0.008f
+NOTSA_GLOBAL_HDR(GAME_GRAVITY, 0x863984, (float), { 0.008f }); // default 0.008f

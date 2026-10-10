@@ -145,7 +145,7 @@ void CColourSet::Interpolate(CColourSet* A, CColourSet* B, float multA, float mu
 
     m_fLightsOnGroundBrightness = multA * A->m_fLightsOnGroundBrightness + multB * B->m_fLightsOnGroundBrightness;
     m_fCloudAlpha = multA * A->m_fCloudAlpha + multB * B->m_fCloudAlpha;
-    m_nHighLightMinIntensity = (uint16)(A->m_nHighLightMinIntensity * multA + B->m_nHighLightMinIntensity * multB);
+    m_nHighLightMinIntensity = (int32)((double)A->m_nHighLightMinIntensity * multA + (double)B->m_nHighLightMinIntensity * multB); // 0x55FDF6: the full _ftol dword is stored (the field is int32), not a truncated uint16
     m_nWaterFogAlpha = (uint16)(A->m_nWaterFogAlpha * multA + B->m_nWaterFogAlpha * multB);
     m_fIllumination = multA * A->m_fIllumination + multB * B->m_fIllumination;
     m_fLodDistMult = multA * A->m_fLodDistMult + multB * B->m_fLodDistMult;

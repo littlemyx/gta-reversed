@@ -3896,6 +3896,7 @@ void CAutomobile::TellHeliToGoToCoors(float x, float y, float z, float altitudeM
     SetStatus(STATUS_PHYSICS);
 
     if (m_fAircraftGoToHeading == 0.f) {
+        // 0x6A23F2: atan2 + PI, then brought back below 2 PI by repeated subtraction (there is no extra `- 2 PI`)
         m_fAircraftGoToHeading = CGeneral::GetATanOfXY(m_matrix->GetForward().x, m_matrix->GetForward().y) + PI;
         if (m_fAircraftGoToHeading > TWO_PI) {
             auto heading = m_fAircraftGoToHeading;
@@ -3904,7 +3905,6 @@ void CAutomobile::TellHeliToGoToCoors(float x, float y, float z, float altitudeM
             while (heading > TWO_PI);
             m_fAircraftGoToHeading = heading;
         }
-        m_fAircraftGoToHeading -= TWO_PI; // TODO: Is dis some inlined function? CGeneral::LimitRadianAngle ?
     }
 }
 
@@ -3924,8 +3924,9 @@ void CAutomobile::TellPlaneToGoToCoors(float x, float y, float z, float altitude
     m_autoPilot.SetCarMission(MISSION_PLANE_FLYTOCOORS);
     m_autoPilot.SetCruiseSpeed(0);
 
-    AsPlane()->m_minAltitude = std::max(altitudeMin, z);
-    AsPlane()->m_maxAltitude = altitudeMax;
+    // 0x6A2470: the 4th argument is stored as is (+0x9B0 = min altitude), the 5th one is raised to the destination height (+0x9A8 = max altitude)
+    AsPlane()->m_minAltitude = altitudeMin;
+    AsPlane()->m_maxAltitude = std::max(z, altitudeMax);
 
     SetStatus(STATUS_PHYSICS);
 

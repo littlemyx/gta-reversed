@@ -1027,23 +1027,33 @@ float CVehicle::GetHeightAboveRoad() {
 
 // 0x6D1F30
 bool CVehicle::CanPedStepOutCar(bool bIgnoreSpeedUpright) const {
-    auto const fUpZ = m_matrix->GetUp().z;
-    if (std::fabs(fUpZ) <= 0.1F) {
-        if (std::fabs(m_vecMoveSpeed.z) > 0.05F || m_vecMoveSpeed.Magnitude2D() > 0.01F || m_vecTurnSpeed.SquaredMagnitude() > 0.0004F) { // 0.02F / 50.0f
+    // 0x6D1F30: FCOMP forms on extended precision values (NaN -> 'upright' and 'slow enough')
+    const float fUpZ = m_matrix->GetUp().z;
+    const auto  Mag2D = [&] { return std::sqrt((double)m_vecMoveSpeed.x * m_vecMoveSpeed.x + (double)m_vecMoveSpeed.y * m_vecMoveSpeed.y); };
+    const auto  TurnSlowEnough = [&] { // 0x6D1FA4
+        const double sq = ((double)m_vecTurnSpeed.x * m_vecTurnSpeed.x + (double)m_vecTurnSpeed.y * m_vecTurnSpeed.y) + (double)m_vecTurnSpeed.z * m_vecTurnSpeed.z;
+        return !(sq > (double)0.0004F);
+    };
+    const bool tilted = !(fUpZ <= 0.1F) || fUpZ < -0.1F; // |up.z| > 0.1 (or NaN): the car is not on its side
+
+    if (!tilted) {
+        if (std::fabs((double)m_vecMoveSpeed.z) > 0.05F || Mag2D() > 0.01F) {
             return false;
         }
-        return true;
+        return TurnSlowEnough();
     }
 
     if (IsBoat())
         return true;
 
     if (bIgnoreSpeedUpright)
-        return m_vecTurnSpeed.SquaredMagnitude() > 0.0004F;
+        return TurnSlowEnough();
 
-    return m_vecMoveSpeed.Magnitude2D() <= 0.01F &&
-           std::fabs(m_vecMoveSpeed.z) <= 0.05F &&
-           m_vecTurnSpeed.SquaredMagnitude() <= 0.0004F;
+    if (Mag2D() > 0.01F)
+        return false;
+    if (std::fabs((double)m_vecMoveSpeed.z) > 0.05F)
+        return false;
+    return TurnSlowEnough();
 }
 
 // 0x6D2030

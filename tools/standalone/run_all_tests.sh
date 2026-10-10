@@ -65,7 +65,7 @@ c=f=m=None
 for x in re.finditer(r'(\d+) checks passed, (\d+) failed',t): c,f=int(x[1]),int(x[2]); m=m or 0
 x=re.findall(r'(\d+) commands, (\d+) with mismatches',t)
 if x: c,m=int(x[-1][0]),int(x[-1][1]); f=f or 0
-x=re.findall(r'(\d+) functions, mismatches \(strict / excluding NaN-payload-only\): PC24 (\d+) / (\d+), PC53 (\d+) / (\d+)',t)
+x=re.findall(r'(\d+) (?:functions|rows), mismatches \(strict / excluding NaN-payload-only(?:, INFO rows excluded)?\): PC24 (\d+) / (\d+), PC53 (\d+) / (\d+)',t)
 if x: c,m=int(x[-1][0]),int(x[-1][2]); f=f or 0     # PC24 (game FPU mode) excluding NaN-payload-only; PC53 (CRT default) is informational, the tests' own exit code ignores it too
 x=re.findall(r'(\d+) commands, PC24 mismatches \(excluding NaN-payload-only\): (\d+)',t)
 if x: c,m=int(x[-1][0]),int(x[-1][1]); f=f or 0

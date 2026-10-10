@@ -30,21 +30,28 @@ void CQuaternion::InjectHooks() {
 }
 
 // Quat to matrix
-void CQuaternion::Get(RwMatrix* out) const {
-    auto vecImag2 = imag + imag;
-    auto x2x = vecImag2.x * imag.x;
-    auto y2x = vecImag2.y * imag.x;
-    auto z2x = vecImag2.z * imag.x;
+void CQuaternion::Get(RwMatrix* out) const { // 0x59C080
+    // x87 (asm 0x59C080): 2x and 2y stay on the FPU stack, 2z is spilled to a float; of the 9 products only y2r and z2r stay unrounded (extended exponent range, no
+    // denormal rounding) and enter right.y / right.z / up.x / at.x as such; every sum is evaluated on the stack and rounded to float by the store only.
+    const double x2 = (double)imag.x + imag.x;
+    const double y2 = (double)imag.y + imag.y;
+    const float  z2 = (float)((double)imag.z + imag.z);
 
-    auto y2y = vecImag2.y * imag.y;
-    auto z2y = vecImag2.z * imag.y;
-    auto z2z = vecImag2.z * imag.z;
+    const float x2x = (float)(x2 * imag.x);
+    const float y2x = (float)(y2 * imag.x);
+    const float z2x = (float)((double)z2 * imag.x);
 
-    auto x2r = vecImag2.x * real;
-    auto y2r = vecImag2.y * real;
-    auto z2r = vecImag2.z * real;
+    const float y2y = (float)(y2 * imag.y);
+    const float z2y = (float)((double)z2 * imag.y);
+    const float z2z = (float)((double)z2 * imag.z);
 
-    CVector right{1.0F - (z2z + y2y), z2r + y2x, z2x - y2r}, up{y2x - z2r, 1.0F - (z2z + x2x), x2r + z2y}, at{y2r + z2x, z2y - x2r, 1.0F - (y2y + x2x)};
+    const float  x2r = (float)(x2 * real);
+    const double y2r = y2 * real;
+    const double z2r = (double)z2 * real;
+
+    CVector right{(float)(1.0 - ((double)z2z + y2y)), (float)(z2r + y2x), (float)(z2x - y2r)};
+    CVector up{(float)(y2x - z2r), (float)(1.0 - ((double)z2z + x2x)), (float)((double)x2r + z2y)};
+    CVector at{(float)(y2r + z2x), (float)((double)z2y - x2r), (float)(1.0 - ((double)y2y + x2x))};
     RwV3dAssign(RwMatrixGetRight(out), &right);
     RwV3dAssign(RwMatrixGetUp(out), &up);
     RwV3dAssign(RwMatrixGetAt(out), &at);

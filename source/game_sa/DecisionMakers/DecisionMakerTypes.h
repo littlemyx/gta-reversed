@@ -42,9 +42,9 @@ class CDecisionMakerTypes {
 public:
     static constexpr auto NUM_TYPES = 20u;
 
-    static inline auto& ScriptReferenceIndex = StaticRef<std::array<uint16, NUM_TYPES>>(0xC0AFF4);
-    static inline auto& m_IsGroupDM = StaticRef<std::array<bool, NUM_TYPES>>(0xC0AFE0); //!< Whenever the decision maker is a group one (set => group, unset => ped)
-    static inline auto& m_IsActive = StaticRef<std::array<bool, NUM_TYPES>>(0xC0B01C);
+    static inline NOTSA_GLOBAL(ScriptReferenceIndex, 0xC0AFF4, (std::array<uint16, NUM_TYPES>), {});
+    static inline NOTSA_GLOBAL(m_IsGroupDM, 0xC0AFE0, (std::array<bool, NUM_TYPES>), {}); //!< Whenever the decision maker is a group one (set => group, unset => ped)
+    static inline NOTSA_GLOBAL(m_IsActive, 0xC0B01C, (std::array<bool, NUM_TYPES>), {});
 
     static void InjectHooks();
 

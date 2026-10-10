@@ -43,8 +43,8 @@ CDamageManager::CDamageManager(float wheelDamageEffect) :
 
 // 0x6A0520
 void CDamageManager::Init() {
-    m_fWheelDamageEffect = 0.0f;
-    ResetDamageStatus(); /* R* used memset here, but let's be a more elegant than that. */
+    // 0x6A0520: `rep stosd` over the whole 0x18 bytes (the float, the byte at +0xF between the doors and the lights, and the upper bits of the light / panel dwords included)
+    std::memset(this, 0, sizeof(*this));
 }
 
 // 0x6A04E0
@@ -56,7 +56,7 @@ void CDamageManager::ResetDamageStatusAndWheelDamage() {
 // 0x6C25D0
 void CDamageManager::FuckCarCompletely(bool bDontDetachWheel) {
     if (!bDontDetachWheel)
-        SetWheelStatus((eCarWheel)CGeneral::GetRandomNumberInRange((size_t)eCarWheel::MAX_CARWHEELS), eCarWheelStatus::WHEEL_STATUS_MISSING);
+        SetWheelStatus((eCarWheel)CGeneral::GetRandomNumberInRange(0, 3), eCarWheelStatus::WHEEL_STATUS_MISSING); // 0x6C25D0: (rand() & 0xFFFF) / 32768 * 3 -> only wheels 0..2 are ever picked
 
     for (size_t i = 0; i < eDoors::MAX_DOORS; i++)
         SetDoorStatus((eDoors)i, eDoorStatus::DAMSTATE_NOTPRESENT);
@@ -66,11 +66,8 @@ void CDamageManager::FuckCarCompletely(bool bDontDetachWheel) {
         ProgressPanelDamage(ePanels::REAR_BUMPER);
     }
 
-    for (size_t i = 0; i < eLights::MAX_LIGHTS; i++)
-        SetLightStatus((eLights)i, eLightsState::VEHICLE_LIGHT_OK);
-
-    for (size_t i = 0; i < ePanels::MAX_PANELS; i++)
-        SetPanelStatus((ePanels)i, ePanelDamageState::DAMSTATE_OK);
+    m_nLightsStatus = 0; // 0x6C268A: whole dwords
+    m_nPanelsStatus = 0;
 
     SetEngineStatus(250u);
 }
@@ -147,12 +144,12 @@ bool CDamageManager::ProgressPanelDamage(ePanels panel) {
     {
         switch (panel) {
         case ePanels::WINDSCREEN_PANEL: {
-            if (CGeneral::GetRandomNumberInRange(0, 2))
+            if (rand() & 1) // 0x6C23E2: CRT rand() & 1
                 return false;
             break;
         }
         default: {
-            if (CGeneral::GetRandomNumberInRange(0, 8))
+            if (rand() & 7) // 0x6C23F2: CRT rand() & 7
                 return false;
             break;
         }
@@ -191,7 +188,7 @@ bool CDamageManager::ProgressDoorDamage(eDoors door, CAutomobile* pAuto) {
         break;
     }
     case eDoorStatus::DAMSTATE_OPENED_DAMAGED: {
-        if (CGeneral::GetRandomNumberInRange(0, 8))
+        if (rand() & 7) // 0x6C237C: CRT rand() & 7
             return false;
         SetDoorStatus(door, eDoorStatus::DAMSTATE_NOTPRESENT);
         break;
@@ -210,13 +207,13 @@ bool CDamageManager::ProgressDoorDamage(eDoors door, CAutomobile* pAuto) {
 
 // 0x6C2300
 uint8 CDamageManager::GetAeroplaneCompStatus(uint8 frame) {
-    return m_nPanelsStatus >> (2 * (m_nPanelsStatus - 12)) & 3;
+    return (m_nPanelsStatus >> (((uint8)((uint8)(frame - 12) << 1)) & 31)) & 3; // 0x6C2300: the shift count is an 8 bit value (x86 masks it to 5 bits)
 }
 
 // 0x6C22D0
 void CDamageManager::SetAeroplaneCompStatus(uint8 frame, ePanelDamageState status) {
-    const auto component = frame - 12;
-    m_nPanelsStatus = (status << (2 * component)) | m_nPanelsStatus & ~(3 << (2 * component));
+    const uint32 shift = ((uint8)((uint8)(frame - 12) << 1)) & 31; // 0x6C22D0
+    m_nPanelsStatus = ((uint32)status << shift) | (m_nPanelsStatus & ~(3u << shift));
 }
 
 // 0x6C22C0
@@ -226,7 +223,7 @@ uint32 CDamageManager::GetEngineStatus() {
 
 // 0x6C22A0
 void CDamageManager::SetEngineStatus(uint32 status) {
-    m_nEngineStatus = std::min<uint8>(status, 250u);
+    m_nEngineStatus = (uint8)std::min<uint32>(status, 250u); // 0x6C22A0: unsigned compare of the whole 32 bit argument
 }
 
 // 0x6C26A0
@@ -328,67 +325,38 @@ void CDamageManager::SetLightStatus(eLights light, eLightsState status) {
 
 // 0x6C20E0
 void CDamageManager::ResetDamageStatus() {
-    SetEngineStatus(0);
-
-    for (size_t i = 0; i < eCarWheel::MAX_CARWHEELS; i++)
-        SetWheelStatus((eCarWheel)i, eCarWheelStatus::WHEEL_STATUS_OK);
-
-    for (size_t i = 0; i < eDoors::MAX_DOORS; i++)
-        SetDoorStatus((eDoors)i, eDoorStatus::DAMSTATE_OK);
-
-    for (size_t i = 0; i < eLights::MAX_LIGHTS; i++)
-        SetLightStatus((eLights)i, eLightsState::VEHICLE_LIGHT_OK);
-
-    for (size_t i = 0; i < ePanels::MAX_PANELS; i++)
-        SetPanelStatus((ePanels)i, ePanelDamageState::DAMSTATE_OK);
+    // 0x6C20E0: engine byte, wheels dword, doors (dword + word), lights dword, panels dword - the upper bits of the light / panel dwords are cleared too
+    m_nEngineStatus = 0;
+    m_anWheelsStatus.fill(eCarWheelStatus::WHEEL_STATUS_OK);
+    m_aDoorsStatus.fill(eDoorStatus::DAMSTATE_OK);
+    m_nLightsStatus = 0;
+    m_nPanelsStatus = 0;
 }
 
 // 0x6C2040
 bool CDamageManager::GetComponentGroup(tComponent nComp, tComponentGroup& outCompGroup, uint8& outComponentRelativeIdx) {
+    // 0x6C2040: signed compares on the 32 bit component id; ids >= 11 are lights (11..15) / panels (16+), 5 = bonnet, 6 = boot, 7..10 = doors, 1..4 = wheels, 0 = N/A
     outComponentRelativeIdx = (uint8)-2;
-    switch (nComp) {
-    case tComponent::COMPONENT_WHEEL_LF:
-    case tComponent::COMPONENT_WHEEL_RF:
-    case tComponent::COMPONENT_WHEEL_LR:
-    case tComponent::COMPONENT_WHEEL_RR: {
+    const int32 comp = (int32)nComp;
+    if (comp >= 11) {
+        outCompGroup = comp >= 16 ? tComponentGroup::COMPGROUP_PANEL : tComponentGroup::COMPGROUP_LIGHT;
+        outComponentRelativeIdx = (uint8)(comp - 11);
+        return true;
+    }
+    if (comp >= 5) {
+        outCompGroup = comp == 5 ? tComponentGroup::COMPGROUP_BONNET : comp == 6 ? tComponentGroup::COMPGROUP_BOOT : tComponentGroup::COMPGROUP_DOOR;
+        outComponentRelativeIdx = (uint8)(comp - 5);
+        return true;
+    }
+    if (comp >= 1) {
         outCompGroup = tComponentGroup::COMPGROUP_WHEEL;
-        outComponentRelativeIdx = (uint8)nComp - 1;
+        outComponentRelativeIdx = (uint8)(comp - 1);
         return true;
     }
-    case tComponent::COMPONENT_BONNET: {
-        outCompGroup = tComponentGroup::COMPGROUP_BONNET;
-        outComponentRelativeIdx = (uint8)eDoors::DOOR_BONNET;
+    if (comp >= 0) {
+        outCompGroup = tComponentGroup::COMPGROUP_NA;
+        outComponentRelativeIdx = 0;
         return true;
-    }
-    case tComponent::COMPONENT_BOOT: {
-        outCompGroup = tComponentGroup::COMPGROUP_BOOT;
-        outComponentRelativeIdx = (uint8)eDoors::DOOR_BOOT;
-        return true;
-    }
-    case tComponent::COMPONENT_DOOR_LF:
-    case tComponent::COMPONENT_DOOR_RF:
-    case tComponent::COMPONENT_DOOR_LR:
-    case tComponent::COMPONENT_DOOR_RR: {
-        outCompGroup = tComponentGroup::COMPGROUP_DOOR;
-        outComponentRelativeIdx = (uint8)nComp - (uint8)tComponent::COMPONENT_BONNET;
-        return true;
-    }
-    case tComponent::COMPONENT_WING_LF:
-    case tComponent::COMPONENT_WING_RF:
-    case tComponent::COMPONENT_WING_LR:
-    case tComponent::COMPONENT_WING_RR: {
-        outCompGroup = tComponentGroup::COMPGROUP_LIGHT;
-        outComponentRelativeIdx = (uint8)nComp - (uint8)tComponent::COMPONENT_WING_LF;
-        return true;
-    }
-    case tComponent::COMPONENT_NA:
-    case tComponent::COMPONENT_WINDSCREEN:
-    case tComponent::COMPONENT_BUMP_FRONT:
-    case tComponent::COMPONENT_BUMP_REAR: {
-        outCompGroup = tComponentGroup::COMPGROUP_PANEL;
-        outComponentRelativeIdx = (uint8)nComp - (uint8)tComponent::COMPONENT_WING_LF;
-        return true;
-    }
     }
     return false;
 }

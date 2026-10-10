@@ -194,6 +194,47 @@ static void TestStats() {
         return StCase(r, d, [&] { CStats::UpdateStatsAddToHealth(v); return 0LL; }, [&] { oracle::Fn<void __cdecl(uint32)>(0x55D030)(v); return 0LL; }, "UpdateStatsAddToHealth"); }, 3000);
 }
 
+
+// ================================================================== CStreaming (pure model-choice helpers: police / medic / fireman / cab driver models)
+#include "Streaming.h"
+static void TestStreamingPure() {
+    using namespace lm;
+    // the models these helpers look at: random load states for ids 0..24 + the default tables
+    const auto Gen = [](Rng& r) {
+        lw::Init();
+        for (auto& v : CStreaming::ms_aDefaultCopModel) v = (int32)r.below(16);
+        for (auto& v : CStreaming::ms_aDefaultCopCarModel) v = (int32)r.below(16);
+        for (auto& v : CStreaming::ms_aDefaultMedicModel) v = (int32)r.below(16);
+        for (auto& v : CStreaming::ms_aDefaultFiremanModel) v = (int32)r.below(16);
+        CStreaming::ms_DefaultCopBikeModel = (int32)r.below(16); CStreaming::ms_DefaultCopBikerModel = (int32)r.below(16);
+        CStreaming::m_bCopBikeLoaded = r.below(2);
+        for (int m = 0; m < 24; ++m) { auto& si = CStreaming::ms_aInfoForModel[m]; std::memset(&si, 0, sizeof si); si.m_LoadState = (eStreamingLoadState)(r.below(3) ? r.below(2) : r.below(5)); si.m_NextIndex = (int16)(r.below(2) ? -1 : (int)r.below(24)); si.m_PrevIndex = (int16)(r.below(2) ? -1 : (int)r.below(24)); }
+        CTheZones::m_CurrLevel = (eLevelName)r.below(4);
+        CStreaming::ms_numModelsRequested = (int32)r.below(10);
+        CRenderer::m_loadingPriority = r.below(2);
+        for (int i = 0; i < 4; ++i) CStreaming::ms_aInfoForModel[26316 - 1 - i].m_LoadState = (eStreamingLoadState)r.below(2);   // special char slots (SPECIAL_MODELS_RESOURCE_ID ...) are checked in a few cases below
+    };
+    struct G { const char* n; unsigned va; int kind; };
+    static const G gs[] = { { "GetDefaultCopModel", 0x407C00, 0 }, { "GetDefaultMedicModel", 0x407D20, 1 }, { "GetDefaultFiremanModel", 0x407D40, 2 }, { "IsVeryBusy", 0x4076A0, 3 } };
+    for (auto& g : gs)
+        Run(std::string("CStreaming::") + g.n + " 0x" + HexVA(g.va), [&](Rng& r, std::string& d) {
+            Gen(r); long long a = 0, e = 0;
+            switch (g.kind) { case 0: a = CStreaming::GetDefaultCopModel(); e = oracle::Fn<int __cdecl()>(g.va)(); break; case 1: a = CStreaming::GetDefaultMedicModel(); e = oracle::Fn<int __cdecl()>(g.va)(); break;
+                              case 2: a = CStreaming::GetDefaultFiremanModel(); e = oracle::Fn<int __cdecl()>(g.va)(); break; default: a = CStreaming::IsVeryBusy(); e = oracle::Fn<bool __cdecl()>(g.va)() & 1; }
+            Hit(a != 0 && a != -1); if (a == e) return true; d = "got " + std::to_string(a) + " exe " + std::to_string(e); return false;
+        }, 1500);
+    Run("CStreaming::GetDefaultCopCarModel 0x407C50", [&](Rng& r, std::string& d) {
+        Gen(r); const bool ign = r.below(2);
+        const long long a = CStreaming::GetDefaultCopCarModel(ign), e = oracle::Fn<int __cdecl(bool)>(0x407C50)(ign);
+        Hit(a != -1); if (a == e) return true; d = "ign " + std::to_string(ign) + " got " + std::to_string(a) + " exe " + std::to_string(e); return false;
+    }, 3000);
+    Run("CStreaming::WeAreTryingToPhaseVehicleOut 0x407F80", [&](Rng& r, std::string& d) {
+        Gen(r); const int m = (int)r.below(24);
+        const bool a = CStreaming::WeAreTryingToPhaseVehicleOut(m), e = oracle::Fn<bool __cdecl(int)>(0x407F80)(m) & 1;
+        Hit(a); if (a == e) return true; d = "m " + std::to_string(m); return false;
+    }, 1500);
+}
+
 static void TestMisc() {
     using namespace lm;
     auto sub = [](Rng& r) { return Rng(r.u32() * 2654435761ull + 4242); };
@@ -461,4 +502,5 @@ static void TestMisc() {
         }, 3000);
     }
     TestStats();
+    TestStreamingPure();
 }

@@ -815,6 +815,8 @@ if (${RE_PROJECT}_RW_LIBRW)
         game_sa/Gangs.cpp
         game_sa/Acquaintance.cpp
         game_sa/Weather.cpp
+        game_sa/Streaming.cpp
+        game_sa/StreamingInfo.cpp
         game_sa/Timer.cpp
         standalone/FtolExe.cpp
     )

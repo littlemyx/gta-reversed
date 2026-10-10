@@ -207,6 +207,15 @@ void CWeather::ForceWeatherNow(eWeatherType weatherType) {
     NewWeatherType = weatherType;
 }
 
+//! The exe's inlined "move towards" (0x72BC47, 0x72BCD8, 0x72B7EB): a distance below the step snaps to the target, otherwise +-step by the sign of the distance (NaN distance: subtract)
+static float ExeStepToward(float cur, float target, float step) {
+    const float d = target - cur;
+    if (std::fabs(d) < step) {
+        return target;
+    }
+    return d > 0.0f ? cur + step : cur - step;
+}
+
 // 0x72A590
 bool CWeather::ForecastWeather(eWeatherType weatherType, int32 numSteps) {
     for (auto step = 0; step <= numSteps; step++) {
@@ -484,14 +493,14 @@ void CWeather::Update() {
     const auto step      = CTimer::GetTimeStep() * 0.005f;
     const auto intensity = (float)((CTimer::GetTimeInMS() >> 13) % 4) * 0.1f + 0.7f;
 
-    Rain = notsa::step_to(
+    Rain = ExeStepToward(
         Rain,
         intensity * LerpOldToNew(IsRainy),
         step
     );
 
     // 0x72BC98
-    Sandstorm = notsa::step_to(
+    Sandstorm = ExeStepToward(
         Sandstorm,
         intensity * LerpOldToNew(IsSandstorm),
         step
@@ -594,7 +603,7 @@ void CWeather::Update() {
     WaterFogFXControl = std::clamp(WaterFogFXFade * 1.4f, 0.0f, 1.0f);
 
     // 0x72C398
-    Wind = lerp(WIND_FOR_WEATHER_TYPE[OldWeatherType], WIND_FOR_WEATHER_TYPE[NewWeatherType], InterpolationValue);
+    Wind = lerpBlend(WIND_FOR_WEATHER_TYPE[OldWeatherType], WIND_FOR_WEATHER_TYPE[NewWeatherType], InterpolationValue); // 0x72C398: from * (1 - t) + to * t
     WindClipped = std::min(Wind, 1.0f);
 
     // 0x72C3F3
@@ -604,7 +613,7 @@ void CWeather::Update() {
     const auto timeMs = CTimer::GetTimeInMS();
 
     const auto LerpWindDirOffset = [](size_t idx, float t) {
-        return lerp(WIND_DIR_OFFSETS[idx % std::size(WIND_DIR_OFFSETS)], WIND_DIR_OFFSETS[(idx + 1) % std::size(WIND_DIR_OFFSETS)], t);
+        return lerpBlend(WIND_DIR_OFFSETS[idx % std::size(WIND_DIR_OFFSETS)], WIND_DIR_OFFSETS[(idx + 1) % std::size(WIND_DIR_OFFSETS)], t);
     };
 
     const auto slowIdx = (timeMs / 1024) % std::size(WIND_DIR_OFFSETS);
@@ -625,14 +634,14 @@ void CWeather::Update() {
     // 0x72C5B6
     const auto scaleIdx = (timeMs / 2048) % std::size(WIND_DIR_SCALES);
     const auto scaleT   = 0.5f - x87::cos((float)(timeMs % 2048) / 2048.0f * PI) * 0.5f;
-    const auto scale    = lerp(WIND_DIR_SCALES[scaleIdx], WIND_DIR_SCALES[(scaleIdx + 1) % std::size(WIND_DIR_SCALES)], scaleT);
+    const auto scale    = lerpBlend(WIND_DIR_SCALES[scaleIdx], WIND_DIR_SCALES[(scaleIdx + 1) % std::size(WIND_DIR_SCALES)], scaleT);
     WindDir.x  = scale * windX;
     WindDir.y  = scale * windY;
     WindDir.z *= scale;
 
     // 0x72C63C
     Wavyness = std::min(WindClipped + 0.3f, 1.0f);
-    Rain     = std::min(Rain, 1.0f - UnderWaterness);
+    Rain     = Rain < 1.0f - UnderWaterness ? Rain : 1.0f - UnderWaterness; // 0x72C66B: NOT std::min (a NaN Rain takes the other operand)
 
     // 0x72C690
     const auto hours = CClock::GetGameClockHours();
@@ -649,8 +658,13 @@ void CWeather::Update() {
     }
 
     // 0x72C6FA
-    HeadLightsSpectrum      = std::min(std::max(Rain, Foggyness), 1.0f);
-    TrafficLightsBrightness = std::max({ TrafficLightsBrightness, WetRoads, Foggyness, Rain });
+    HeadLightsSpectrum      = std::min(Foggyness > Rain ? Foggyness : Rain, 1.0f);
+    // 0x72C765: each step is `if (!(current > next)) current = next` (NaN takes the next operand), not std::max({...})
+    for (const float next : { WetRoads, Foggyness, Rain }) {
+        if (!(TrafficLightsBrightness > next)) {
+            TrafficLightsBrightness = next;
+        }
+    }
 
     AddRain();
 
@@ -670,17 +684,36 @@ void CWeather::UpdateInTunnelness() {
 
     float target = 0.0f;
     if (CCullZones::CurrentFlags_Camera & 0x2000) { // TODO: Unnamed tunnel-related eZoneAttributes flag (bit 0x2000)
-        const CVector from{ CVector2D{ TheCamera.GetPosition() } };
-        const CVector to = from + CVector{ CVector2D{ TheCamera.GetForwardVector() }.Normalized() } * 100.0f;
-        const auto dist = std::min({
-            CCollision::DistToLine(from, to, s_TunnelPoint1),
-            CCollision::DistToLine(from, to, s_TunnelPoint2),
-            100.0f,
-        });
-        target = std::min(1.0f, dist * ExeRecip(100.0f));
+        // exe (oracle-proven): forward = matrix->forward (z cleared) or, without a matrix, (-sin(heading), cos(heading), 0) with the x87 instructions; normalised in 3D (CVector::Normalise)
+        const auto  camPos = TheCamera.GetPosition();
+        const CVector from{ camPos.x, camPos.y, 0.0f };
+        CVector dir;
+        if (const auto* mat = TheCamera.m_matrix) {
+            dir = mat->GetForward();
+        } else {
+            const float heading = TheCamera.m_placement.m_fHeading;
+            dir.x = (float)-x87::sin(heading);
+            dir.y = (float)x87::cos(heading);
+            dir.z = 0.0f;
+        }
+        dir.z = 0.0f; // 0x72B6C2: z is cleared after both branches, then the 3D Normalise (so a zero vector stays handled by CVector::Normalise)
+        dir.Normalise();
+        const CVector to{ dir.x * 100.0f + from.x, dir.y * 100.0f + from.y, dir.z * 100.0f + from.z };
+
+        // 0x72B77B..: `min(100, d1)` then `min(., d2)` as compare-and-select (NaN takes the new distance), then `v = m * 0.01f`, target = (1 < v) ? 1 : v
+        float m = 100.0f;
+        const float d1 = CCollision::DistToLine(from, to, s_TunnelPoint1);
+        m = (100.0f < d1) ? 100.0f : d1;
+        const float d2 = CCollision::DistToLine(from, to, s_TunnelPoint2);
+        m = (m < d2) ? m : d2;
+        const float v = m * 0.01f;
+        target = (1.0f < v) ? 1.0f : v;
     }
 
-    InTunnelness = notsa::step_to(InTunnelness, target, CTimer::GetTimeStep() * 0.01f);
+    // 0x72B7E7: same idiom as the rain / sandstorm one, but the sign test is `d < 0 ? sub : add` (a NaN or zero distance adds)
+    const float step = CTimer::GetTimeStep() * 0.01f;
+    const float d    = target - InTunnelness;
+    InTunnelness     = std::fabs(d) < step ? target : (d < 0.0f ? InTunnelness - step : InTunnelness + step);
 }
 
 // Based on 0x72A640

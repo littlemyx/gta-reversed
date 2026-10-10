@@ -1,6 +1,7 @@
 #include "StdInc.h"
 
 #include "Cover.h"
+#include "Fx/FxFtol.h"
 
 void CCover::InjectHooks() {
     RH_ScopedClass(CCover);
@@ -354,7 +355,7 @@ void CCover::FindCoverPointsForThisBuilding(CBuilding* building) {
                 building,
                 &pos,
                 fx->m_Usage,
-                std::atan2(-dir.x, dir.y)
+                x87::atan2(-dir.x, dir.y)
             );
         }
     }
@@ -362,12 +363,73 @@ void CCover::FindCoverPointsForThisBuilding(CBuilding* building) {
 
 // 0x698D40 - unused
 CCoverPoint::Dir CCover::FindDirFromVector(CVector dir) {
-    return atan2(-dir.x, dir.y);
+    // 0x698D40: atan2(-x, y) * 256 / 2pi on the x87 stack, truncated by _ftol2 (the product is NOT rounded to float first).
+    static const uint32 K85A778 = 0x4222F983u;
+    double res;
+    const float a_x = dir.x;
+    const float a_y = dir.y;
+    const float a_z = dir.z;
+    __asm {
+        push dword ptr [a_z]
+        push dword ptr [a_y]
+        push dword ptr [a_x]
+        call L_BODY
+        add esp, 12
+        fstp qword ptr [res]
+        jmp L_END
+    L_BODY:
+        fld dword ptr [esp + 4]
+        fchs
+        fld dword ptr [esp + 8]
+        fpatan
+        fmul dword ptr [K85A778]
+        ret
+    L_END:
+    }
+    return CCoverPoint::Dir{ static_cast<uint8>(notsa::detail::Ftol(res)) }; // _ftol2 of the unrounded product, low byte
 }
 
 // 0x698D60
 CVector CCover::FindVectorFromDir(CCoverPoint::Dir direction) {
-    return CVector{ std::sin(direction), std::cos(direction), 0.f };
+    // 0x698D60: (-sin(a), cos(a), 0) with a = raw * 0x3CC90FDB (2pi / 256, a float product on the x87 stack), x87 code verbatim.
+    float out[3]{};
+    const uint32 raw = std::bit_cast<uint8>(direction);
+    static const uint32 K859BBC = 0x3CC90FDBu;
+
+    const uint32 a_raw = raw;
+    __asm {
+        push dword ptr [a_raw]
+        lea eax, [out]
+        push eax
+        call L_BODY
+        add esp, 8
+        jmp L_END
+    L_BODY:
+        sub esp, 0xc
+        movzx eax, byte ptr [esp + 0x14]
+        mov dword ptr [esp + 0x14], eax
+        mov eax, dword ptr [esp + 0x10]
+        mov ecx, eax
+        fild dword ptr [esp + 0x14]
+        mov dword ptr [esp + 8], 0
+        fmul dword ptr [K859BBC]
+        fld st(0)
+        fsin
+        fchs
+        fstp dword ptr [esp]
+        mov edx, dword ptr [esp]
+        mov dword ptr [ecx], edx
+        fcos
+        fstp dword ptr [esp + 4]
+        mov edx, dword ptr [esp + 4]
+        mov dword ptr [ecx + 4], edx
+        mov edx, dword ptr [esp + 8]
+        mov dword ptr [ecx + 8], edx
+        add esp, 0xc
+        ret
+    L_END:
+    }
+    return CVector{ out[0], out[1], out[2] };
 }
 
 // unused

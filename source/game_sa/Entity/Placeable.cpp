@@ -46,13 +46,13 @@ CPlaceable::~CPlaceable() {
 CVector CPlaceable::GetRightVector() {
     if (m_matrix)
         return m_matrix->GetRight();
-    return { std::cos(m_placement.m_fHeading), std::sin(m_placement.m_fHeading), 0.0f };
+    return { (float)(x87::cos(m_placement.m_fHeading)), (float)(x87::sin(m_placement.m_fHeading)), 0.0f };
 }
 
 CVector CPlaceable::GetForwardVector() {
     if (m_matrix)
         return m_matrix->GetForward();
-    return { -std::sin(m_placement.m_fHeading), std::cos(m_placement.m_fHeading), 0.0f };
+    return { (float)(-x87::sin(m_placement.m_fHeading)), (float)(x87::cos(m_placement.m_fHeading)), 0.0f };
 }
 
 CVector CPlaceable::GetUpVector() {
@@ -97,13 +97,48 @@ float CPlaceable::GetHeading() const {
 
 // 0x420B30
 float CPlaceable::GetRoll() const {
-    if (!m_matrix) {
-        return 0.f;
+    // 0x420B30: // The exe's x87 code VERBATIM (note: atan2(right.z, +-sqrt(right.x^2 + right.y^2)), the old port used the SQUARED magnitude) (generated from the asm, called inside the __asm block with the original stack frame): every product / sum is rounded at the current
+    // precision control and the sine / cosine / arctangent results stay unrounded on the FPU stack exactly like the original.
+    static const uint32 K858B50 = 0x00000000u;
+    static const uint32 K858C1C = 0xBF800000u;
+    float res;
+    const CPlaceable* self_ = this;
+    __asm {
+        mov ecx, self_
+        call L_BODY
+        fstp dword ptr [res]
+        jmp L_END
+    L_BODY:
+        mov ecx, dword ptr [ecx + 0x14]
+        test ecx, ecx
+        je L_420B6A
+        fld dword ptr [ecx + 4]
+        fld dword ptr [ecx]
+        fld st(0)
+        fmul st(0), st(1)
+        fld st(2)
+        fmul st(0), st(3)
+        faddp st(1), st(0)
+        fsqrt
+        fstp st(2)
+        fstp st(0)
+        fld dword ptr [ecx + 0x28]
+        fcomp dword ptr [K858B50]
+        fnstsw ax
+        test ah, 5
+        jp L_420B62
+        fmul dword ptr [K858C1C]
+    L_420B62:
+        fld dword ptr [ecx + 8]
+        fxch st(1)
+        fpatan
+        ret
+    L_420B6A:
+        fld dword ptr [K858B50]
+        ret
+    L_END:
     }
-
-    const auto& right = m_matrix->GetRight();
-    const auto  xymag = CVector2D{ right }.SquaredMagnitude(); // NOTE: We're using sqmag here because it doesn't matter, and we save a sqrt this way.
-    return std::atan2(right.z, m_matrix->GetUp().z < 0.f ? -xymag : xymag);
+    return res;
 }
 
 bool CPlaceable::IsWithinArea(float x1, float y1, float x2, float y2) const {
@@ -139,7 +174,7 @@ bool CPlaceable::IsWithinArea(float x1, float y1, float z1, float x2, float y2, 
 
 void CPlaceable::RemoveMatrix() {
     const auto& vecForward = m_matrix->GetForward();
-    auto fHeading = std::atan2(-vecForward.x, vecForward.y);
+    auto fHeading = x87::atan2(-vecForward.x, vecForward.y);
 
     m_placement.m_vPosn = m_matrix->GetPosition();
     m_placement.m_fHeading = fHeading;
@@ -175,7 +210,7 @@ void CPlaceable::SetMatrix(CMatrix& matrix) {
     if (!m_matrix) {
         if (matrix.GetUp().z == 1.0F) {
             auto& vecForward = matrix.GetForward();
-            auto fHeading = std::atan2(-vecForward.x, vecForward.y);
+            auto fHeading = x87::atan2(-vecForward.x, vecForward.y);
 
             m_placement.m_vPosn = matrix.GetPosition();
             m_placement.m_fHeading = fHeading;
@@ -221,12 +256,12 @@ void CPlaceable::GetOrientation(float& x, float& y, float& z) {
         return;
     }
 
-    x = asinf(GetForward().z);
+    x = x87::asin(GetForward().z);
 
-    float cosx = std::cosf(x);
+    float cosx = x87::cos(x);
     float cosy = GetUp().z / cosx;
-    y = std::acosf(cosy);
+    y = x87::acos(cosy);
 
     float cosz = GetForward().y / cosx;
-    z = std::acosf(cosz);
+    z = x87::acos(cosz);
 }

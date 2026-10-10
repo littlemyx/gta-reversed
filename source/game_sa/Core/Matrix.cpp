@@ -178,8 +178,8 @@ void CMatrix::SetTranslate(CVector translation)
 
 void CMatrix::SetRotateXOnly(float angle)
 {
-    auto fSin = sin(angle);
-    auto fCos = cos(angle);
+    auto fSin = x87::sin(angle);
+    auto fCos = x87::cos(angle);
 
     m_right.Set  (1.0F,  0.0F,  0.0F);
     m_forward.Set(0.0F,  fCos,  fSin);
@@ -188,8 +188,8 @@ void CMatrix::SetRotateXOnly(float angle)
 
 void CMatrix::SetRotateYOnly(float angle)
 {
-    auto fSin = sin(angle);
-    auto fCos = cos(angle);
+    auto fSin = x87::sin(angle);
+    auto fCos = x87::cos(angle);
 
     m_right.Set  (fCos,  0.0F, -fSin);
     m_forward.Set(0.0F,  1.0F,  0.0F);
@@ -198,8 +198,8 @@ void CMatrix::SetRotateYOnly(float angle)
 
 void CMatrix::SetRotateZOnly(float angle)
 {
-    auto fSin = sin(angle);
-    auto fCos = cos(angle);
+    auto fSin = x87::sin(angle);
+    auto fCos = x87::cos(angle);
 
     m_right.Set  ( fCos, fSin, 0.0F);
     m_forward.Set(-fSin, fCos, 0.0F);
@@ -225,19 +225,88 @@ void CMatrix::SetRotateZ(float angle)
 }
 
 // set rotate on 3 axes
-void CMatrix::SetRotate(float x, float y, float z)
-{
-    auto fSinX = sin(x);
-    auto fCosX = cos(x);
-    auto fSinY = sin(y);
-    auto fCosY = cos(y);
-    auto fSinZ = sin(z);
-    auto fCosZ = cos(z);
-
-    m_right.Set  ( fCosZ*fCosY-(fSinZ*fSinX)*fSinY,  fCosZ*fSinX*fSinY+fSinZ*fCosY,  -(fSinY*fCosX));
-    m_forward.Set(-(fSinZ*fCosX),                    fCosZ*fCosX,                     fSinX);
-    m_up.Set     ( fCosZ*fSinY+fSinZ*fSinX*fCosY,    fSinZ*fSinY-fCosZ*fSinX*fCosY,   fCosY*fCosX);
-    m_pos.Set(0.0F, 0.0F, 0.0F);
+void CMatrix::SetRotate(float x, float y, float z) {
+    // 0x59B120: // The exe's x87 code VERBATIM (generated from the asm, called inside the __asm block with the original stack frame): every product / sum is rounded at the current
+    // precision control and the sine / cosine / arctangent results stay unrounded on the FPU stack exactly like the original.
+    const float a_x = x;
+    const float a_y = y;
+    const float a_z = z;
+    CMatrix* self_ = this;
+    __asm {
+        push dword ptr [a_z]
+        push dword ptr [a_y]
+        push dword ptr [a_x]
+        mov ecx, self_
+        call L_BODY
+        jmp L_END
+    L_BODY:
+        fld dword ptr [esp + 4]
+        xor eax, eax
+        fcos
+        mov dword ptr [ecx + 0x30], eax
+        mov dword ptr [ecx + 0x34], eax
+        mov dword ptr [ecx + 0x38], eax
+        fld dword ptr [esp + 4]
+        fsin
+        fld dword ptr [esp + 8]
+        fcos
+        fstp dword ptr [esp + 4]
+        fld dword ptr [esp + 8]
+        fsin
+        fld dword ptr [esp + 0xc]
+        fcos
+        fld dword ptr [esp + 0xc]
+        fsin
+        fst dword ptr [esp + 8]
+        fmul st(0), st(3)
+        fld st(1)
+        fmul st(0), st(4)
+        fstp dword ptr [esp + 0xc]
+        fld st(1)
+        fmul dword ptr [esp + 4]
+        fld st(1)
+        fmul st(0), st(4)
+        fsubp st(1), st(0)
+        fstp dword ptr [ecx]
+        fld dword ptr [esp + 0xc]
+        fmul st(0), st(3)
+        fld dword ptr [esp + 8]
+        fmul dword ptr [esp + 4]
+        faddp st(1), st(0)
+        fstp dword ptr [ecx + 4]
+        fld st(2)
+        fmul st(0), st(5)
+        fchs
+        fstp dword ptr [ecx + 8]
+        fld dword ptr [esp + 8]
+        fmul st(0), st(5)
+        fchs
+        fstp dword ptr [ecx + 0x10]
+        fld st(1)
+        fmul st(0), st(5)
+        fstp dword ptr [ecx + 0x14]
+        fxch st(3)
+        fstp dword ptr [ecx + 0x18]
+        fmul st(0), st(1)
+        fxch st(2)
+        fmul dword ptr [esp + 4]
+        faddp st(2), st(0)
+        fxch st(1)
+        fstp dword ptr [ecx + 0x20]
+        fld dword ptr [esp + 8]
+        fmul st(0), st(1)
+        fld dword ptr [esp + 0xc]
+        fmul dword ptr [esp + 4]
+        fsubp st(1), st(0)
+        fstp dword ptr [ecx + 0x24]
+        fstp st(0)
+        fld dword ptr [esp + 4]
+        fmul st(0), st(1)
+        fstp dword ptr [ecx + 0x28]
+        fstp st(0)
+        ret 12
+    L_END:
+    }
 }
 
 // 0x59B1E0: the exe's x87 code verbatim (the sin is spilled to a float, the cos stays unrounded on the FPU stack, every row is mixed with the
@@ -741,164 +810,424 @@ void CMatrix::ForceUpVector(CVector vecUp) {
     m_up      = vecUp;
 }
 
-void CMatrix::ConvertToEulerAngles(float* pX, float* pY, float* pZ, uint32 uiFlags)
-{
-    float fArr[3][3];
-
-    fArr[0][0] = m_right.x;
-    fArr[0][1] = m_right.y;
-    fArr[0][2] = m_right.z;
-
-    fArr[1][0] = m_forward.x;
-    fArr[1][1] = m_forward.y;
-    fArr[1][2] = m_forward.z;
-
-    fArr[2][0] = m_up.x;
-    fArr[2][1] = m_up.y;
-    fArr[2][2] = m_up.z;
-
-    /* Original indices deciding logic, i replaced it with clearer one
-    auto iInd1 = CMatrix::EulerIndices1[(uiFlags >> 3) & 0x3];
-    auto iInd2 = CMatrix::EulerIndices2[iInd1 + ((uiFlags & 0x4) != 0)];
-    auto iInd3 = CMatrix::EulerIndices2[iInd1 - ((uiFlags & 0x4) != 0) + 1]; */
-    int8 iInd1 = 0, iInd2 = 1, iInd3 = 2;
-    switch (uiFlags & eMatrixEulerFlags::_ORDER_MASK) {
-    case ORDER_XYZ:
-        iInd1 = 0, iInd2 = 1, iInd3 = 2;
-        break;
-    case ORDER_XZY:
-        iInd1 = 0, iInd2 = 2, iInd3 = 1;
-        break;
-    case ORDER_YZX:
-        iInd1 = 1, iInd2 = 2, iInd3 = 0;
-        break;
-    case ORDER_YXZ:
-        iInd1 = 1, iInd2 = 0, iInd3 = 2;
-        break;
-    case ORDER_ZXY:
-        iInd1 = 2, iInd2 = 0, iInd3 = 1;
-        break;
-    case ORDER_ZYX:
-        iInd1 = 2, iInd2 = 1, iInd3 = 0;
-        break;
-    }
-
-    if (uiFlags & eMatrixEulerFlags::EULER_ANGLES) {
-        auto r13 = fArr[iInd1][iInd3];
-        auto r12 = fArr[iInd1][iInd2];
-        auto cy = sqrt(r12 * r12 + r13 * r13);
-        if (cy > 0.0000019073486) { // Some epsilon?
-            *pX = atan2(r12, r13);
-            *pY = atan2(cy, fArr[iInd1][iInd1]);
-            *pZ = atan2(fArr[iInd2][iInd3], -fArr[iInd3][iInd1]);
-        }
-        else {
-            *pX = atan2(-fArr[iInd2][iInd3], fArr[iInd2][iInd2]);
-            *pY = atan2(cy, fArr[iInd1][iInd1]);
-            *pZ = 0.0F;
-        }
-    }
-    else {
-        auto r21 = fArr[iInd2][iInd1];
-        auto r11 = fArr[iInd1][iInd1];
-        auto cy = sqrt(r11 * r11 + r21 * r21);
-        if (cy > 0.0000019073486) { // Some epsilon?
-            *pX = atan2(fArr[iInd3][iInd2], fArr[iInd3][iInd3]);
-            *pY = atan2(-fArr[iInd3][iInd1], cy);
-            *pZ = atan2(r21, r11);
-        }
-        else {
-            *pX = atan2(-fArr[iInd2][iInd3], fArr[iInd2][iInd2]);
-            *pY = atan2(-fArr[iInd3][iInd1], cy);
-            *pZ = 0.0F;
-        }
-    }
-
-    if (uiFlags & eMatrixEulerFlags::SWAP_XZ)
-        std::swap(*pX, *pZ);
-
-    if (uiFlags & eMatrixEulerFlags::_ORDER_NEEDS_SWAP) {
-        *pX = -*pX;
-        *pY = -*pY;
-        *pZ = -*pZ;
+void CMatrix::ConvertToEulerAngles(float* pX, float* pY, float* pZ, uint32 uiFlags) {
+    // 0x59A840: // The exe's x87 code VERBATIM (generated from the asm, called inside the __asm block with the original stack frame): every product / sum is rounded at the current
+    // precision control and the sine / cosine / arctangent results stay unrounded on the FPU stack exactly like the original.
+    alignas(16) static const unsigned char T866D9C[96] = {0x00,0x00,0x48,0x42,0x00,0x00,0x00,0x36,0x01,0x02,0x00,0x01,0x00,0x00,0x00,0x00,0x00,0x01,0x02,0x00,0x00,0x00,0x00,0x00,0x0A,0xD7,0xA3,0x3B,0x66,0x66,0x66,0x40,0x00,0x00,0x48,0x42,0x70,0xCB,0x59,0x00,0x3A,0x26,0x82,0x00,0x3A,0x26,0x82,0x00,0x3A,0x26,0x82,0x00,0x3A,0x26,0x82,0x00,0x50,0xCD,0x59,0x00,0x70,0xCC,0x59,0x00,0xC0,0xCC,0x59,0x00,0xE0,0xCC,0x59,0x00,0x10,0xCD,0x59,0x00,0x57,0x49,0x4E,0x53,0x4F,0x43,0x4B,0x2E,0x44,0x4C,0x4C,0x20,0x64,0x6F,0x65,0x73,0x20,0x6E,0x6F,0x74};
+    alignas(16) static const unsigned char T866D95[96] = {0xD7,0xA3,0x3B,0x66,0x66,0x66,0x40,0x00,0x00,0x48,0x42,0x00,0x00,0x00,0x36,0x01,0x02,0x00,0x01,0x00,0x00,0x00,0x00,0x00,0x01,0x02,0x00,0x00,0x00,0x00,0x00,0x0A,0xD7,0xA3,0x3B,0x66,0x66,0x66,0x40,0x00,0x00,0x48,0x42,0x70,0xCB,0x59,0x00,0x3A,0x26,0x82,0x00,0x3A,0x26,0x82,0x00,0x3A,0x26,0x82,0x00,0x3A,0x26,0x82,0x00,0x50,0xCD,0x59,0x00,0x70,0xCC,0x59,0x00,0xC0,0xCC,0x59,0x00,0xE0,0xCC,0x59,0x00,0x10,0xCD,0x59,0x00,0x57,0x49,0x4E,0x53,0x4F,0x43,0x4B,0x2E,0x44,0x4C,0x4C,0x20,0x64};
+    alignas(16) static const unsigned char T866D94[96] = {0x0A,0xD7,0xA3,0x3B,0x66,0x66,0x66,0x40,0x00,0x00,0x48,0x42,0x00,0x00,0x00,0x36,0x01,0x02,0x00,0x01,0x00,0x00,0x00,0x00,0x00,0x01,0x02,0x00,0x00,0x00,0x00,0x00,0x0A,0xD7,0xA3,0x3B,0x66,0x66,0x66,0x40,0x00,0x00,0x48,0x42,0x70,0xCB,0x59,0x00,0x3A,0x26,0x82,0x00,0x3A,0x26,0x82,0x00,0x3A,0x26,0x82,0x00,0x3A,0x26,0x82,0x00,0x50,0xCD,0x59,0x00,0x70,0xCC,0x59,0x00,0xC0,0xCC,0x59,0x00,0xE0,0xCC,0x59,0x00,0x10,0xCD,0x59,0x00,0x57,0x49,0x4E,0x53,0x4F,0x43,0x4B,0x2E,0x44,0x4C,0x4C,0x20};
+    static const uint32 K866D90 = 0x36000000u;
+    const float* a_pX = pX;
+    const float* a_pY = pY;
+    const float* a_pZ = pZ;
+    const uint32 a_uiFlags = uiFlags;
+    CMatrix* self_ = this;
+    __asm {
+        push dword ptr [a_uiFlags]
+        push dword ptr [a_pZ]
+        push dword ptr [a_pY]
+        push dword ptr [a_pX]
+        mov ecx, self_
+        call L_BODY
+        jmp L_END
+    L_BODY:
+        sub esp, 0x28
+        mov eax, dword ptr [ecx]
+        mov edx, dword ptr [ecx + 4]
+        mov dword ptr [esp + 4], eax
+        mov eax, dword ptr [ecx + 8]
+        mov dword ptr [esp + 0xc], eax
+        mov eax, dword ptr [ecx + 0x14]
+        mov dword ptr [esp + 0x14], eax
+        mov eax, dword ptr [ecx + 0x20]
+        mov dword ptr [esp + 8], edx
+        mov edx, dword ptr [ecx + 0x10]
+        mov dword ptr [esp + 0x1c], eax
+        mov eax, dword ptr [ecx + 0x28]
+        push ebx
+        mov dword ptr [esp + 0x14], edx
+        mov edx, dword ptr [ecx + 0x18]
+        mov dword ptr [esp + 0x28], eax
+        mov eax, dword ptr [esp + 0x3c]
+        push ebp
+        mov dword ptr [esp + 0x20], edx
+        mov edx, dword ptr [ecx + 0x24]
+        mov ecx, eax
+        shr eax, 1
+        push esi
+        push edi
+        mov edi, eax
+        shr eax, 1
+        mov ebx, eax
+        shr eax, 1
+        and ecx, 1
+        and eax, 3
+        movzx esi, byte ptr [eax + T866D9C + 16]
+        mov dword ptr [esp + 0x10], ecx
+        and ebx, 1
+        mov ecx, esi
+        and edi, 1
+        sub ecx, ebx
+        cmp edi, 1
+        movzx ecx, byte ptr [ecx + T866D95 + 16]
+        mov dword ptr [esp + 0x30], edx
+        movzx edx, byte ptr [esi + ebx + T866D94 + 16]
+        jne L_59A965
+        lea eax, [esi + esi*2]
+        lea edi, [eax + ecx]
+        fld dword ptr [esp + edi*4 + 0x14]
+        lea ebp, [eax + edx]
+        fld dword ptr [esp + ebp*4 + 0x14]
+        lea edi, [esp + edi*4 + 0x14]
+        fld st(0)
+        lea ebp, [esp + ebp*4 + 0x14]
+        fmul st(0), st(1)
+        fld st(2)
+        fmul st(0), st(3)
+        faddp st(1), st(0)
+        fsqrt
+        fstp st(2)
+        fstp st(0)
+        fcom dword ptr [K866D90]
+        fnstsw ax
+        test ah, 0x41
+        jne L_59A93D
+        fld dword ptr [ebp]
+        mov eax, dword ptr [esp + 0x3c]
+        fld dword ptr [edi]
+        mov edi, esi
+        fpatan
+        shl edi, 4
+        lea ebp, [esi + edx*2]
+        add edx, ebp
+        fstp dword ptr [eax]
+        fld dword ptr [esp + edi + 0x14]
+        mov edi, dword ptr [esp + 0x40]
+        fpatan
+        fstp dword ptr [edi]
+        fld dword ptr [esp + edx*4 + 0x14]
+        lea edx, [esi + ecx*2]
+        add ecx, edx
+        fld dword ptr [esp + ecx*4 + 0x14]
+        fchs
+        mov ecx, dword ptr [esp + 0x44]
+        fpatan
+        fstp dword ptr [ecx]
+        jmp L_59AA0E
+    L_59A93D:
+        lea eax, [ecx + edx*2]
+        mov ecx, edx
+        add ecx, eax
+        fld dword ptr [esp + ecx*4 + 0x14]
+        shl edx, 4
+        fchs
+        mov eax, dword ptr [esp + 0x3c]
+        fld dword ptr [esp + edx + 0x14]
+        fpatan
+        shl esi, 4
+        fstp dword ptr [eax]
+        fld dword ptr [esp + esi + 0x14]
+        jmp L_59A9FC
+    L_59A965:
+        lea edi, [edx + edx*2]
+        mov eax, esi
+        shl eax, 4
+        lea ebp, [edi + esi]
+        fld dword ptr [esp + ebp*4 + 0x14]
+        lea eax, [esp + eax + 0x14]
+        fld dword ptr [eax]
+        lea ebp, [esp + ebp*4 + 0x14]
+        fld st(1)
+        mov dword ptr [esp + 0x48], eax
+        fmulp st(2), st(0)
+        fld st(0)
+        fmul st(0), st(1)
+        faddp st(2), st(0)
+        fxch st(1)
+        fsqrt
+        fstp st(1)
+        fcom dword ptr [K866D90]
+        fnstsw ax
+        test ah, 0x41
+        mov eax, dword ptr [esp + 0x3c]
+        jne L_59A9DC
+        lea edi, [ecx + ecx*2]
+        add edx, edi
+        fld dword ptr [esp + edx*4 + 0x14]
+        shl ecx, 4
+        fld dword ptr [esp + ecx + 0x14]
+        fpatan
+        add edi, esi
+        mov ecx, dword ptr [esp + 0x48]
+        fstp dword ptr [eax]
+        fld dword ptr [esp + edi*4 + 0x14]
+        mov edi, dword ptr [esp + 0x40]
+        fchs
+        fxch st(1)
+        fpatan
+        fstp dword ptr [edi]
+        fld dword ptr [ebp]
+        fld dword ptr [ecx]
+        mov ecx, dword ptr [esp + 0x44]
+        fpatan
+        fstp dword ptr [ecx]
+        jmp L_59AA0E
+    L_59A9DC:
+        add edi, ecx
+        fld dword ptr [esp + edi*4 + 0x14]
+        shl edx, 4
+        fchs
+        fld dword ptr [esp + edx + 0x14]
+        fpatan
+        lea edx, [esi + ecx*2]
+        add ecx, edx
+        fstp dword ptr [eax]
+        fld dword ptr [esp + ecx*4 + 0x14]
+        fchs
+        fxch st(1)
+    L_59A9FC:
+        fpatan
+        mov edi, dword ptr [esp + 0x40]
+        mov ecx, dword ptr [esp + 0x44]
+        fstp dword ptr [edi]
+        mov dword ptr [ecx], 0
+    L_59AA0E:
+        cmp ebx, 1
+        jne L_59AA25
+        fld dword ptr [eax]
+        fchs
+        fstp dword ptr [eax]
+        fld dword ptr [edi]
+        fchs
+        fstp dword ptr [edi]
+        fld dword ptr [ecx]
+        fchs
+        fstp dword ptr [ecx]
+    L_59AA25:
+        cmp dword ptr [esp + 0x10], 1
+        pop edi
+        pop esi
+        pop ebp
+        pop ebx
+        jne L_59AA38
+        mov edx, dword ptr [ecx]
+        fld dword ptr [eax]
+        mov dword ptr [eax], edx
+        fstp dword ptr [ecx]
+    L_59AA38:
+        add esp, 0x28
+        ret 16
+    L_END:
     }
 }
 
-void CMatrix::ConvertFromEulerAngles(float x, float y, float z, uint32 uiFlags)
-{
-    /* Original indices deciding logic, i replaced it with clearer one
-    auto iInd1 = CMatrix::EulerIndices1[(uiFlags >> 3) & 0x3];
-    auto iInd2 = CMatrix::EulerIndices2[iInd1 + ((uiFlags & 0x4) != 0)];
-    auto iInd3 = CMatrix::EulerIndices2[iInd1 - ((uiFlags & 0x4) != 0) + 1]; */
-    int8 iInd1 = 0, iInd2 = 1, iInd3 = 2;
-    switch (uiFlags & eMatrixEulerFlags::_ORDER_MASK) {
-    case ORDER_XYZ:
-        iInd1 = 0, iInd2 = 1, iInd3 = 2;
-        break;
-    case ORDER_XZY:
-        iInd1 = 0, iInd2 = 2, iInd3 = 1;
-        break;
-    case ORDER_YZX:
-        iInd1 = 1, iInd2 = 2, iInd3 = 0;
-        break;
-    case ORDER_YXZ:
-        iInd1 = 1, iInd2 = 0, iInd3 = 2;
-        break;
-    case ORDER_ZXY:
-        iInd1 = 2, iInd2 = 0, iInd3 = 1;
-        break;
-    case ORDER_ZYX:
-        iInd1 = 2, iInd2 = 1, iInd3 = 0;
-        break;
+void CMatrix::ConvertFromEulerAngles(float x, float y, float z, uint32 uiFlags) {
+    // 0x59AA40: // The exe's x87 code VERBATIM (generated from the asm, called inside the __asm block with the original stack frame): every product / sum is rounded at the current
+    // precision control and the sine / cosine / arctangent results stay unrounded on the FPU stack exactly like the original.
+    alignas(16) static const unsigned char T866D9C[96] = {0x00,0x00,0x48,0x42,0x00,0x00,0x00,0x36,0x01,0x02,0x00,0x01,0x00,0x00,0x00,0x00,0x00,0x01,0x02,0x00,0x00,0x00,0x00,0x00,0x0A,0xD7,0xA3,0x3B,0x66,0x66,0x66,0x40,0x00,0x00,0x48,0x42,0x70,0xCB,0x59,0x00,0x3A,0x26,0x82,0x00,0x3A,0x26,0x82,0x00,0x3A,0x26,0x82,0x00,0x3A,0x26,0x82,0x00,0x50,0xCD,0x59,0x00,0x70,0xCC,0x59,0x00,0xC0,0xCC,0x59,0x00,0xE0,0xCC,0x59,0x00,0x10,0xCD,0x59,0x00,0x57,0x49,0x4E,0x53,0x4F,0x43,0x4B,0x2E,0x44,0x4C,0x4C,0x20,0x64,0x6F,0x65,0x73,0x20,0x6E,0x6F,0x74};
+    alignas(16) static const unsigned char T866D94[96] = {0x0A,0xD7,0xA3,0x3B,0x66,0x66,0x66,0x40,0x00,0x00,0x48,0x42,0x00,0x00,0x00,0x36,0x01,0x02,0x00,0x01,0x00,0x00,0x00,0x00,0x00,0x01,0x02,0x00,0x00,0x00,0x00,0x00,0x0A,0xD7,0xA3,0x3B,0x66,0x66,0x66,0x40,0x00,0x00,0x48,0x42,0x70,0xCB,0x59,0x00,0x3A,0x26,0x82,0x00,0x3A,0x26,0x82,0x00,0x3A,0x26,0x82,0x00,0x3A,0x26,0x82,0x00,0x50,0xCD,0x59,0x00,0x70,0xCC,0x59,0x00,0xC0,0xCC,0x59,0x00,0xE0,0xCC,0x59,0x00,0x10,0xCD,0x59,0x00,0x57,0x49,0x4E,0x53,0x4F,0x43,0x4B,0x2E,0x44,0x4C,0x4C,0x20};
+    alignas(16) static const unsigned char T866D95[96] = {0xD7,0xA3,0x3B,0x66,0x66,0x66,0x40,0x00,0x00,0x48,0x42,0x00,0x00,0x00,0x36,0x01,0x02,0x00,0x01,0x00,0x00,0x00,0x00,0x00,0x01,0x02,0x00,0x00,0x00,0x00,0x00,0x0A,0xD7,0xA3,0x3B,0x66,0x66,0x66,0x40,0x00,0x00,0x48,0x42,0x70,0xCB,0x59,0x00,0x3A,0x26,0x82,0x00,0x3A,0x26,0x82,0x00,0x3A,0x26,0x82,0x00,0x3A,0x26,0x82,0x00,0x50,0xCD,0x59,0x00,0x70,0xCC,0x59,0x00,0xC0,0xCC,0x59,0x00,0xE0,0xCC,0x59,0x00,0x10,0xCD,0x59,0x00,0x57,0x49,0x4E,0x53,0x4F,0x43,0x4B,0x2E,0x44,0x4C,0x4C,0x20,0x64};
+    const float a_x = x;
+    const float a_y = y;
+    const float a_z = z;
+    const uint32 a_uiFlags = uiFlags;
+    CMatrix* self_ = this;
+    __asm {
+        push dword ptr [a_uiFlags]
+        push dword ptr [a_z]
+        push dword ptr [a_y]
+        push dword ptr [a_x]
+        mov ecx, self_
+        call L_BODY
+        jmp L_END
+    L_BODY:
+        mov eax, dword ptr [esp + 0x10]
+        sub esp, 0x38
+        push ebx
+        mov ebx, eax
+        shr eax, 1
+        push ebp
+        mov ebp, eax
+        shr eax, 1
+        push esi
+        push edi
+        mov edi, eax
+        shr eax, 1
+        and eax, 3
+        movzx edx, byte ptr [eax + T866D9C + 16]
+        and edi, 1
+        movzx esi, byte ptr [edx + edi + T866D94 + 16]
+        mov eax, edx
+        and ebx, 1
+        sub eax, edi
+        movzx eax, byte ptr [eax + T866D95 + 16]
+        and ebp, 1
+        cmp ebx, 1
+        jne L_59AA94
+        mov ebx, dword ptr [esp + 0x4c]
+        fld dword ptr [esp + 0x54]
+        mov dword ptr [esp + 0x4c], ebx
+        mov dword ptr [esp + 0x54], ebx
+        jmp L_59AA98
+    L_59AA94:
+        fld dword ptr [esp + 0x4c]
+    L_59AA98:
+        cmp edi, 1
+        jne L_59AAB1
+        fchs
+        fld dword ptr [esp + 0x50]
+        fchs
+        fld dword ptr [esp + 0x54]
+        fchs
+        fstp dword ptr [esp + 0x54]
+        jmp L_59AAB5
+    L_59AAB1:
+        fld dword ptr [esp + 0x50]
+    L_59AAB5:
+        fld st(1)
+        mov edi, edx
+        fcos
+        shl edi, 4
+        cmp ebp, 1
+        fstp dword ptr [esp + 0x20]
+        fld st(0)
+        fcos
+        fstp dword ptr [esp + 0x50]
+        fld dword ptr [esp + 0x54]
+        fcos
+        fstp dword ptr [esp + 0x58]
+        fxch st(1)
+        fsin
+        fstp dword ptr [esp + 0x1c]
+        fsin
+        fstp dword ptr [esp + 0x4c]
+        fld dword ptr [esp + 0x54]
+        fsin
+        fld dword ptr [esp + 0x58]
+        fmul dword ptr [esp + 0x20]
+        fstp dword ptr [esp + 0x10]
+        fld dword ptr [esp + 0x20]
+        fmul st(0), st(1)
+        fstp dword ptr [esp + 0x14]
+        fld dword ptr [esp + 0x1c]
+        fmul dword ptr [esp + 0x58]
+        fstp dword ptr [esp + 0x18]
+        fld dword ptr [esp + 0x1c]
+        fmul st(0), st(1)
+        fstp dword ptr [esp + 0x54]
+        jne L_59ABB2
+        fld dword ptr [esp + 0x50]
+        fstp dword ptr [esp + edi + 0x24]
+        lea edi, [edx + edx*2]
+        fld dword ptr [esp + 0x4c]
+        lea ebx, [edi + esi]
+        fmul dword ptr [esp + 0x1c]
+        add edi, eax
+        fstp dword ptr [esp + ebx*4 + 0x24]
+        fld dword ptr [esp + 0x4c]
+        fmul dword ptr [esp + 0x20]
+        fstp dword ptr [esp + edi*4 + 0x24]
+        lea edi, [esi + esi*2]
+        lea ebx, [edi + edx]
+        fmul dword ptr [esp + 0x4c]
+        add edi, eax
+        fstp dword ptr [esp + ebx*4 + 0x24]
+        mov ebx, esi
+        fld dword ptr [esp + 0x54]
+        shl ebx, 4
+        fmul dword ptr [esp + 0x50]
+        fsubr dword ptr [esp + 0x10]
+        fstp dword ptr [esp + ebx + 0x24]
+        fld dword ptr [esp + 0x14]
+        fmul dword ptr [esp + 0x50]
+        fchs
+        fsub dword ptr [esp + 0x18]
+        fstp dword ptr [esp + edi*4 + 0x24]
+        lea edi, [eax + eax*2]
+        fld dword ptr [esp + 0x4c]
+        add edx, edi
+        fmul dword ptr [esp + 0x58]
+        add edi, esi
+        fchs
+        fstp dword ptr [esp + edx*4 + 0x24]
+        fld dword ptr [esp + 0x18]
+        fmul dword ptr [esp + 0x50]
+        fadd dword ptr [esp + 0x14]
+        fstp dword ptr [esp + edi*4 + 0x24]
+        fld dword ptr [esp + 0x10]
+        fmul dword ptr [esp + 0x50]
+        fsub dword ptr [esp + 0x54]
+        jmp L_59AC40
+    L_59ABB2:
+        fld dword ptr [esp + 0x58]
+        fmul dword ptr [esp + 0x50]
+        fstp dword ptr [esp + edi + 0x24]
+        lea edi, [edx + edx*2]
+        fld dword ptr [esp + 0x18]
+        lea ebx, [edi + esi]
+        fmul dword ptr [esp + 0x4c]
+        add edi, eax
+        fsub dword ptr [esp + 0x14]
+        fstp dword ptr [esp + ebx*4 + 0x24]
+        fld dword ptr [esp + 0x10]
+        fmul dword ptr [esp + 0x4c]
+        fadd dword ptr [esp + 0x54]
+        fstp dword ptr [esp + edi*4 + 0x24]
+        lea edi, [esi + esi*2]
+        lea ebx, [edi + edx]
+        fmul dword ptr [esp + 0x50]
+        add edi, eax
+        fstp dword ptr [esp + ebx*4 + 0x24]
+        mov ebx, esi
+        fld dword ptr [esp + 0x54]
+        shl ebx, 4
+        fmul dword ptr [esp + 0x4c]
+        fadd dword ptr [esp + 0x10]
+        fstp dword ptr [esp + ebx + 0x24]
+        fld dword ptr [esp + 0x14]
+        fmul dword ptr [esp + 0x4c]
+        fsub dword ptr [esp + 0x18]
+        fstp dword ptr [esp + edi*4 + 0x24]
+        lea edi, [eax + eax*2]
+        fld dword ptr [esp + 0x4c]
+        add edx, edi
+        fchs
+        add edi, esi
+        fstp dword ptr [esp + edx*4 + 0x24]
+        fld dword ptr [esp + 0x1c]
+        fmul dword ptr [esp + 0x50]
+        fstp dword ptr [esp + edi*4 + 0x24]
+        fld dword ptr [esp + 0x50]
+        fmul dword ptr [esp + 0x20]
+    L_59AC40:
+        shl eax, 4
+        fstp dword ptr [esp + eax + 0x24]
+        mov eax, dword ptr [esp + 0x24]
+        mov edx, dword ptr [esp + 0x28]
+        mov dword ptr [ecx], eax
+        mov eax, dword ptr [esp + 0x2c]
+        mov dword ptr [ecx + 4], edx
+        mov edx, dword ptr [esp + 0x30]
+        mov dword ptr [ecx + 8], eax
+        mov eax, dword ptr [esp + 0x34]
+        pop edi
+        mov dword ptr [ecx + 0x10], edx
+        mov edx, dword ptr [esp + 0x34]
+        mov dword ptr [ecx + 0x14], eax
+        mov eax, dword ptr [esp + 0x38]
+        pop esi
+        mov dword ptr [ecx + 0x18], edx
+        mov edx, dword ptr [esp + 0x38]
+        mov dword ptr [ecx + 0x20], eax
+        mov eax, dword ptr [esp + 0x3c]
+        pop ebp
+        mov dword ptr [ecx + 0x24], edx
+        mov dword ptr [ecx + 0x28], eax
+        pop ebx
+        add esp, 0x38
+        ret 16
+    L_END:
     }
-
-    float fArr[3][3];
-
-    if (uiFlags & eMatrixEulerFlags::SWAP_XZ)
-        std::swap(x, z);
-
-    if (uiFlags & eMatrixEulerFlags::_ORDER_NEEDS_SWAP) {
-        x = -x;
-        y = -y;
-        z = -z;
-    }
-
-    auto fSinX = sin(x);
-    auto fCosX = cos(x);
-    auto fSinY = sin(y);
-    auto fCosY = cos(y);
-    auto fSinZ = sin(z);
-    auto fCosZ = cos(z);
-
-    if (uiFlags & eMatrixEulerFlags::EULER_ANGLES) {
-        fArr[iInd1][iInd1] = fCosY;
-        fArr[iInd1][iInd2] = fSinX*fSinY;
-        fArr[iInd1][iInd3] = fCosX*fSinY;
-
-        fArr[iInd2][iInd1] =   fSinY*fSinZ;
-        fArr[iInd2][iInd2] =   fCosX*fCosY  - fCosY*fSinX*fSinZ;
-        fArr[iInd2][iInd3] = -(fSinX*fCosZ) -(fCosX*fCosY*fSinZ);
-
-        fArr[iInd3][iInd1] = -(fCosZ*fSinY);
-        fArr[iInd3][iInd2] =   fCosX*fSinZ  + fCosY*fCosZ*fSinX;
-        fArr[iInd3][iInd3] = -(fSinX*fSinZ) + fCosX*fCosY*fCosZ;
-    } else { // Use Tait-Bryan angles
-        fArr[iInd1][iInd1] =   fCosY*fCosZ;
-        fArr[iInd1][iInd2] = -(fCosX*fSinZ) + fCosZ*fSinX*fSinY;
-        fArr[iInd1][iInd3] =   fSinX*fSinZ  + fCosX*fCosZ*fSinY;
-
-        fArr[iInd2][iInd1] =   fCosY*fSinZ;
-        fArr[iInd2][iInd2] =   fCosX*fCosZ  + fSinX*fSinY*fSinZ;
-        fArr[iInd2][iInd3] = -(fCosZ*fSinX) + fCosX*fSinY*fSinZ;
-
-        fArr[iInd3][iInd1] = -fSinY;
-        fArr[iInd3][iInd2] =  fCosY*fSinX;
-        fArr[iInd3][iInd3] =  fCosX*fCosY;
-    }
-
-    m_right.Set  (fArr[0][0], fArr[0][1], fArr[0][2]);
-    m_forward.Set(fArr[1][0], fArr[1][1], fArr[1][2]);
-    m_up.Set     (fArr[2][0], fArr[2][1], fArr[2][2]);
 }
 
 void CMatrix::operator=(const CMatrix& other) {

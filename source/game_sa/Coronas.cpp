@@ -1,4 +1,5 @@
 #include "StdInc.h"
+#include "Fx/FxFtol.h"
 #include <reversiblebugfixes/Bugs.hpp>
 #include "Coronas.h"
 
@@ -578,33 +579,42 @@ void CCoronas::RegisterCorona(
         ? attachTo->GetMatrix().TransformPoint(pos)
         : pos;
 
+    // Exact x87 form of the exe (0x6FC180): the squared 2D distance is (y delta)^2 + (x delta)^2 in extended precision and a NaN does NOT reject
     const auto& camPos = TheCamera.GetPosition();
-    if (sq(range) < (camPos - worldPos).SquaredMagnitude2D()) {
-        return; // Corona is beyond far clip distance
+    {
+        const double dy = (double)camPos.y - (double)worldPos.y, dx = (double)camPos.x - (double)worldPos.x;
+        if ((double)range * (double)range < dy * dy + dx * dx) {
+            return; // Corona is beyond far clip distance
+        }
     }
 
     // 0x6FC24A
     // Adjust intensity for neon fade effect if enabled
     uint8 adjustedAlpha = intensity;
     if (neonFade) {
-        float distance3d = (camPos - worldPos).Magnitude();
+        const double dz = (double)camPos.z - (double)worldPos.z, dy = (double)camPos.y - (double)worldPos.y, dx = (double)camPos.x - (double)worldPos.x;
+        const float distance3d = (float)x87::sqrt(dz * dz + dy * dy + dx * dx);
         if (distance3d < 35.0f) {
             return;
         }
         if (distance3d < 50.0f) {
-            adjustedAlpha *= uint8((distance3d + -35.0f) * ExeRecip(15.0f));
+            // alpha = ftol((dist - 35) * intensity * (1/15)) (the old port multiplied the alpha by the truncated factor)
+            adjustedAlpha = (uint8)notsa::detail::Ftol(((double)distance3d - 35.0) * (double)intensity * (double)ExeRecip(15.0f));
         }
     }
 
     // Find or allocate a corona slot
     CRegisteredCorona* corona = GetCoronaByID(id);
     if (corona) {
-        if (!corona->m_Color.a && !adjustedAlpha) {
+        if (!corona->m_FadedIntensity && !adjustedAlpha) { // 0x6FC470: the FADED intensity (+0x30), not the colour alpha
             corona->SetInactive();
             --NumCoronas;
             return;
         }
     } else { /* allocate new */
+        if (!adjustedAlpha) { // 0x6FC301: a new corona is only created for a non-zero intensity
+            return;
+        }
         corona = GetFree();
         if (!corona) {
             return;
@@ -659,7 +669,10 @@ void CCoronas::RegisterCorona(uint32 id, CEntity* attachTo, uint8 red, uint8 gre
 
 // 0x6FC4D0
 void CCoronas::UpdateCoronaCoors(uint32 id, const CVector& pos, float range, float normalAngle) {
-    if (sq(range) >= (TheCamera.GetPosition() - pos).SquaredMagnitude2D()) {
+    // 0x6FC4D0: (y delta)^2 + (x delta)^2 in extended precision, NaN does not reject
+    const auto& cam = TheCamera.GetPosition();
+    const double dy = (double)cam.y - (double)pos.y, dx = (double)cam.x - (double)pos.x;
+    if (!((double)range * (double)range < dy * dy + dx * dx)) {
         if (auto* corona = GetCoronaByID(id)) {
             corona->m_vPosn = pos;
             corona->m_fAngle = normalAngle;

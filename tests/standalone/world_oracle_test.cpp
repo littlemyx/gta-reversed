@@ -199,6 +199,9 @@ struct Snap {   // snapshot / restore of a range of exe globals (both implementa
 
 #include "world_oracle_inits.inc"
 #include "world_oracle_audio.inc"
+#include "world_oracle_hud.inc"
+#include "world_oracle_env.inc"
+#include "world_oracle_veh.inc"
 
 static int __cdecl AssertHook(int, char* msg, int*) {   // prints the call stack of a failed assert (map the addresses with the linker .map)
     void* fr[16]; const USHORT n = RtlCaptureStackBackTrace(0, 16, fr, nullptr);
@@ -234,6 +237,9 @@ int main(int argc, char** argv) {
     CreateThread(nullptr, 0, WatchdogProc, nullptr, 0, nullptr);
     std::printf("world_oracle_test: %d cases per function and precision mode; PC24 = game mode (D3D CreateDevice), PC53 = CRT default\n", g_cases);
     TestAudio();
+    TestHud();
+    TestEnv();
+    TestVeh();
     int bad24 = 0, bad53 = 0, hard24 = 0, hard53 = 0;
     for (auto& r : g_rows) { bad24 += r.bad24; bad53 += r.bad53; hard24 += r.hardReg24 + r.hardSpec24; hard53 += r.hardReg53 + r.hardSpec53; }
     std::printf("\n%zu functions, mismatches (strict / excluding NaN-payload-only): PC24 %d / %d, PC53 %d / %d\n", g_rows.size(), bad24, hard24, bad53, hard53);

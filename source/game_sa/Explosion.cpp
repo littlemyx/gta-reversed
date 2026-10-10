@@ -60,12 +60,12 @@ void CExplosion::ClearAllExplosions() {
 }
 
 uint8 CExplosion::GetExplosionActiveCounter(uint8 id) {
-    return aExplosions[id].m_nActiveCounter;
+    return aExplosions[id].m_nScriptCounter;
 }
 
 // 0x736910
 void CExplosion::ResetExplosionActiveCounter(uint8 id) {
-    aExplosions[id].m_nActiveCounter = 0;
+    aExplosions[id].m_nScriptCounter = 0;
 }
 
 // 0x736920
@@ -105,7 +105,9 @@ void CExplosion::RemoveAllExplosionsInArea(CVector pos, float radius) {
         if (!exp.m_nActiveCounter)
             continue;
 
-        if (DistanceBetweenPointsSquared(exp.m_vecPosition, pos) < sq(radius)) {
+        // 0x7369E0: the squared distance (summed x, z, y) and the squared radius stay in extended precision (a huge delta does not overflow)
+        const double dx = (double)exp.m_vecPosition.x - pos.x, dy = (double)exp.m_vecPosition.y - pos.y, dz = (double)exp.m_vecPosition.z - pos.z;
+        if ((dx * dx + dz * dz) + dy * dy < (double)radius * radius) {
             exp.m_nActiveCounter = 0;
         }
     }
@@ -165,6 +167,7 @@ void CExplosion::AddExplosion(CEntity* victim, CEntity* creator, eExplosionType 
     exp->m_fGroundZ = 0.0f;
     exp->m_fDamagePercentage = 1.0f;
     exp->m_nActiveCounter = 1;
+    exp->m_nScriptCounter = 1;
     exp->m_bMakeSound = usesSound;
     exp->m_nFuelTimer = 0;
 

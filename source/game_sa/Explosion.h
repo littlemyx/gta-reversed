@@ -42,7 +42,8 @@ public:
     float          m_nExpireTime;
     float          m_fDamagePercentage;
     uint8          m_nActiveCounter;
-    bool           m_bMakeSound;
+    uint8          m_nScriptCounter; // +0x29: set to 1 by AddExplosion (0x736B3F), read by GetExplosionActiveCounter 0x736900, cleared by ResetExplosionActiveCounter 0x736910
+    bool           m_bMakeSound;     // +0x2A
     float          m_nCreatedTime;
     uint32         m_nParticlesExpireTime;
     float          m_fVisibleDistance;

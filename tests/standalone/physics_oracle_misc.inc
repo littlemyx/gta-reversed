@@ -8,7 +8,27 @@ struct Snap {   // snapshot / restore of a range of exe globals (both implementa
     void FillRandom(Rng& r) { for (size_t i = 0; i + 4 <= b.size(); i += 4) { const uint32_t v = r.u32() * 2654435761u; std::memcpy(&b[i], &v, 4); } }
 };
 
+static double ExePow(double x, double y) {   // the exe's _CIpow (0x822130): x in ST1, y in ST0
+    double r;
+    __asm {
+        fld x
+        fld y
+        mov eax, 0x822130
+        call eax
+        fstp r
+    }
+    return r;
+}
 static void TestMisc() {
+    Run("pow(double,double) host CRT vs exe _CIpow 0x822130", [](Rng& r, std::string& d) {
+        const double x = r.below(4) ? (double)r.f01() * 1.2 : (double)GenF(r, 50.f), y = r.below(3) ? (double)r.f01() * 4.0 : (double)GenF(r, 20.f);
+        const double a = std::pow(x, y), b = ExePow(x, y);
+        uint64_t ba, bb; std::memcpy(&ba, &a, 8); std::memcpy(&bb, &b, 8);
+        if (ba == bb || (std::isnan(a) && std::isnan(b))) return true;
+        char t[160]; std::snprintf(t, sizeof t, "x %.17g y %.17g got %.17g (%016llX) exe %.17g (%016llX)", x, y, a, (unsigned long long)ba, b, (unsigned long long)bb); d = t;
+        g_hardDiff = true;
+        return false;
+    });
     Run("CGeneral::SolveQuadratic 0x53CE30", [](Rng& r, std::string& d) {
         const float s = PickScale(r), a = GenF(r, s), b = GenF(r, s), c = GenF(r, s);
         float x1a = 7, x2a = 8, x1e = 7, x2e = 8;

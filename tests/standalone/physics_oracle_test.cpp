@@ -371,7 +371,7 @@ static void TestCurves2() {
 // ---------------------------------------------------------------------------------------------------------------------------------
 // (b) CPhysical on a fake entity: raw buffer with the real layout; both sides get a private copy and the whole entity + matrix is compared afterwards
 struct PhysFx {
-    alignas(16) uint8 e[(sizeof(CPhysical) + 15) & ~15] {};
+    alignas(16) uint8 e[0x600] {};   // CPhysical + room for the CVehicle fields some helpers read (sub type at 0x594)
     alignas(16) uint8 m[0x80] {};
     CPhysical& p() { return *reinterpret_cast<CPhysical*>(e); }
     void Rewire() { reinterpret_cast<CPlaceable*>(e)->m_matrix = reinterpret_cast<CMatrixLink*>(m); }
@@ -393,6 +393,9 @@ static void BuildPhys(Rng& r, PhysFx& f) {
     *fl = r.u32() & r.u32() & r.u32();   // sparse random flag bits (each ~1/8)
     if (r.below(4)) *fl &= ~(0x1000u | 0x8u);   // bInfiniteMass / bDisableMoveForce mostly off, so the usual path is covered too
     p.m_nFlags = r.u32();
+    f.e[0x36] = (uint8)((f.e[0x36] & ~7) | (r.below(3) ? 2 : r.below(8)));   // entity type: vehicle most of the time
+    *reinterpret_cast<uint32_t*>(f.e + 0x594) = r.below(3) == 0 ? 0 : r.below(2) ? 9 : r.below(12);   // vehicle sub type
+    p.m_fAirResistance = r.below(2) ? r.f01() * 0.3f : GenF(r, 1.f);
     p.m_pDamageEntity = nullptr; p.m_pAttachedTo = nullptr; p.m_pEntityIgnoredCollision = nullptr;
     CTimer::ms_fTimeStep = r.below(8) ? r.f01() * 3.f : GenF(r, 4.f);
     f.Rewire();

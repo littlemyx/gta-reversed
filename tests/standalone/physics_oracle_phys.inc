@@ -1,4 +1,5 @@
 // (b) CPhysical helpers on a fake entity (see PhysFx in physics_oracle_test.cpp)
+#include "Entity/Vehicle/Vehicle.h"
 template<class Body>
 static void PhysRun(const char* name, Body body, int cases = 0) {
     Run(name, [=](Rng& r, std::string& d) {
@@ -105,6 +106,13 @@ static void TestPhysical() {
         const bool ra = a.ApplySpringDampeningOld(damp, unused, dir, pt, pos);
         const bool re = oracle::Fn<bool __fastcall(P*, int, float, float, CVector*, CVector*, CVector*)>(0x544100)(&e, 0, damp, unused, &dir2, &pt2, &pos2);
         return ra == re;
+    });
+    PhysRun("CPhysical::ApplyAirResistance 0x544C40", [&](Rng& r, P& a, P& e, std::string& x) {
+        if (std::isnan(CTimer::ms_fTimeStep)) return true;   // pow(1, NaN): the exe's SSE2 pow gives NaN, the host CRT (C99) gives 1; a NaN time step never occurs in game
+        CVehicle::m_fAirResistanceMult = r.below(2) ? 2.5f : GenF(r, 5.f);
+        a.ApplyAirResistance();
+        oracle::Fn<void __fastcall(P*, int)>(0x544C40)(&e, 0);
+        return true;
     });
     (void)vs;
 }

@@ -686,13 +686,14 @@ if (${RE_PROJECT}_RW_LIBRW)
         game_sa/Animation/AnimBlendNode.cpp
         game_sa/Curves.cpp
         game_sa/Entity/Physical.cpp
+        game_sa/Entity/Placeable.cpp
+        game_sa/CullZones.cpp
         game_sa/CarCtrl.cpp
         game_sa/PathFind.cpp
         game_sa/Weather.cpp
         game_sa/TimeCycle.cpp
         game_sa/Clock.cpp
         game_sa/Timer.cpp
-        game_sa/Maths.cpp
         standalone/FtolExe.cpp
     )
     target_compile_features(physics_oracle_test PRIVATE cxx_std_23)

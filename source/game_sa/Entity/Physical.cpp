@@ -1522,9 +1522,11 @@ bool CPhysical::CanPhysicalBeDamaged(eWeaponType weapon, bool* bDamagedDueToFire
 // 0x544C40
 void CPhysical::ApplyAirResistance()
 {
-    if (m_fAirResistance <= 0.1f || GetIsTypeVehicle())
+    // `!(airResistance > 0.1f)` (fcomp / `jne`: NaN goes to the speed-dependent branch)
+    if (!(m_fAirResistance > 0.1f) || GetIsTypeVehicle())
     {
-        float fSpeedMagnitude = m_vecMoveSpeed.Magnitude() * m_fAirResistance;
+        // |moveSpeed| in extended precision ((x*x + y*y) + z*z), spilled after `* airResistance`
+        float fSpeedMagnitude = (float)(std::sqrt(((double)m_vecMoveSpeed.x * m_vecMoveSpeed.x + (double)m_vecMoveSpeed.y * m_vecMoveSpeed.y) + (double)m_vecMoveSpeed.z * m_vecMoveSpeed.z) * m_fAirResistance);
         if (CCullZones::DoExtraAirResistanceForPlayer())
         {
             if (GetIsTypeVehicle())
@@ -1535,14 +1537,22 @@ void CPhysical::ApplyAirResistance()
             }
         }
 
-        m_vecMoveSpeed *= pow(1.0f - fSpeedMagnitude, CTimer::GetTimeStep());
+        // pow() (the exe's _CIpow, 0x822130) returns its result on the x87 stack: each component is rounded once
+        const double p = pow(1.0 - (double)fSpeedMagnitude, (double)CTimer::GetTimeStep());
+        m_vecMoveSpeed.x = (float)(m_vecMoveSpeed.x * p);
+        m_vecMoveSpeed.y = (float)(m_vecMoveSpeed.y * p);
+        m_vecMoveSpeed.z = (float)(m_vecMoveSpeed.z * p);
         m_vecTurnSpeed *= 0.99f;
     }
     else
     {
-        float fAirResistanceTimeStep = pow(m_fAirResistance, CTimer::GetTimeStep());
-        m_vecMoveSpeed *= fAirResistanceTimeStep;
-        m_vecTurnSpeed *= fAirResistanceTimeStep;
+        const double p = pow((double)m_fAirResistance, (double)CTimer::GetTimeStep());
+        m_vecMoveSpeed.x = (float)(m_vecMoveSpeed.x * p);
+        m_vecMoveSpeed.y = (float)(m_vecMoveSpeed.y * p);
+        m_vecMoveSpeed.z = (float)(m_vecMoveSpeed.z * p);
+        m_vecTurnSpeed.x = (float)(m_vecTurnSpeed.x * p);
+        m_vecTurnSpeed.y = (float)(m_vecTurnSpeed.y * p);
+        m_vecTurnSpeed.z = (float)(m_vecTurnSpeed.z * p);
     }
 }
 

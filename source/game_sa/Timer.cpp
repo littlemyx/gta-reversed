@@ -185,20 +185,26 @@ void CTimer::UpdateVariables(float timeElapsed)
     }
     */
 
-    // Pirulax: Shorter code, same functionality.
-    const float frameDelta = (float)timeElapsed / (float)m_snTimerDivider;
-    m_snTimeInMillisecondsNonClipped += (uint32)frameDelta;
-    ms_fTimeStepNonClipped = frameDelta / TIMESTEP_LEN_IN_MS;
+    // 0x5618D0, the exe's x87 form: frameDelta stays on the stack (extended); the non-clipped clock is `_ftol(clock + frameDelta)` (NOT clock + (uint32)frameDelta),
+    // the step is `frameDelta * 0.05f` (not `/ 20`), the clipped clock adds `min_unsigned((uint32)_ftol(frameDelta), 300)`
+    // uint32 -> x87: `fild` (signed) and, for values >= 2^31, `fadd 2^32` (rounded to the current precision control, which is what the exe does at PC=24)
+    const auto u32ToX87 = [](uint32 v) { double d = (double)(int32)v; if ((int32)v < 0) d += 4294967296.0f; return d; };
+    const double frameDelta = (double)timeElapsed / u32ToX87(m_snTimerDivider);
+    m_snTimeInMillisecondsNonClipped = (uint32)(int32)(u32ToX87(m_snTimeInMillisecondsNonClipped) + frameDelta);
+    ms_fTimeStepNonClipped = (float)(frameDelta * 0.05f);
 
-    m_snTimeInMilliseconds += (uint32)std::min<float>(frameDelta, 300.0f);
+    const uint32 clipped = (uint32)(int32)frameDelta;
+    m_snTimeInMilliseconds += clipped > 300u ? 300u : clipped;
 
-    if (!m_UserPause && !m_CodePause && !CSpecialFX::bSnapShotActive) {
+    if (ms_fTimeStepNonClipped < 0.01f && !m_UserPause && !m_CodePause && !CSpecialFX::bSnapShotActive) {
         // Make it be something at least, to avoid division by 0
-        ms_fTimeStepNonClipped = std::max(ms_fTimeStepNonClipped, 0.01f); 
+        ms_fTimeStepNonClipped = 0.01f;
     }
 
     ms_fOldTimeStep = ms_fTimeStep;
-    SetTimeStep(std::clamp(ms_fTimeStepNonClipped, 0.00001f, 3.0f));
+    // `step < 3 ? step : 3` (NaN -> 3), then `step > 1e-5 ? step : 1e-5`
+    const float step = ms_fTimeStepNonClipped < 3.0f ? ms_fTimeStepNonClipped : 3.0f;
+    SetTimeStep(step > 0.00001f ? step : 0.00001f);
 }
 
 // 0x561B10

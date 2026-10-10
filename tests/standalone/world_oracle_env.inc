@@ -5,6 +5,7 @@
 #include "Timer.h"
 #include "CullZones.h"
 #include "Clock.h"
+#include "Pickups.h"
 #include "Game.h"
 #include "Audio/Entities/AEWeatherAudioEntity.h"
 
@@ -468,4 +469,77 @@ static void TestEnv() {
         if (SameV(a, e)) return true;
         d = "got " + V(a) + " exe " + V(e); return false;
     });
+
+    // ---- CWeather leftovers / CPickups bookkeeping
+    Run("CWeather::IsRainy 0x4ABF50", [](Rng& r, std::string& d) {
+        CWeather::Rain = r.below(3) ? 0.2f + GenF(r, 0.05f, S_ZERO) : GenF(r, 2.f);
+        if (r.below(8) == 0) CWeather::Rain = 0.2f;
+        const bool a = CWeather::IsRainy(), e = oracle::Fn<int __cdecl()>(0x4ABF50)() & 0xFF;
+        Hit(a);
+        if (a == e) return true;
+        d = "rain " + F(CWeather::Rain) + " got " + std::to_string(a) + " exe " + std::to_string(e); return false;
+    });
+    Run("CWeather::ForecastWeather 0x72A590", [](Rng& r, std::string& d) {
+        wxfx::Setup(r);
+        const auto wt = (eWeatherType)r.below(23); const int32 steps = r.below(4) ? r.below(24) : (int32)r.u32() % 80 - 5;
+        const bool a = CWeather::ForecastWeather(wt, steps), e = oracle::Fn<int __cdecl(int, int)>(0x72A590)(wt, steps) & 0xFF;
+        Hit(a);
+        if (a == e) return true;
+        d = "wt " + std::to_string(wt) + " steps " + std::to_string(steps) + " region " + std::to_string(CWeather::WeatherRegion) + " idx " + std::to_string(CWeather::WeatherTypeInList) + " got " + std::to_string(a) + " exe " + std::to_string(e); return false;
+    });
+    {   // pickup bookkeeping on the static pickup table / collected ring
+        struct PkFx {
+            static void Setup(Rng& r) {
+                for (auto& p : CPickups::aPickUps) { p = {}; p.m_nReferenceIndex = r.below(4) ? (int16)r.below(30) : (int16)(r.u32() & 0xFFFF); p.m_nRegenerationTime = r.below(3) ? r.u32() % 100000 : r.u32(); p.m_nPickupType = (ePickupType)(r.below(3) ? r.below(4) : r.below(30)); }
+                CPickups::CollectedPickUpIndex = r.below(20); for (auto& c : CPickups::aPickUpsCollected) c = r.below(3) ? (int32)(r.u32() % 40) : (int32)r.u32();
+            }
+        };
+        static constexpr uintptr_t PK = 0x978624, PKE = 0x9788C0 + 620 * 0x20;
+        Run("CPickups::GetUniquePickupIndex 0x455280", [](Rng& r, std::string& d) {
+            PkFx::Setup(r); const int i = r.below(620);
+            const auto a = CPickups::GetUniquePickupIndex(i); const int32 e = oracle::Fn<int32 __cdecl(int)>(0x455280)(i);
+            if (a.num == e) return true;
+            d = "i " + std::to_string(i) + " got " + std::to_string(a.num) + " exe " + std::to_string(e); return false;
+        });
+        Run("CPickups::GetActualPickupIndex 0x4552A0", [](Rng& r, std::string& d) {
+            PkFx::Setup(r); tPickupReference ref{}; ref.index = (int16)r.below(620); ref.refIndex = r.below(3) ? CPickups::aPickUps[ref.index].m_nReferenceIndex : (int16)r.u32(); if (r.below(8) == 0) ref.num = -1;
+            const int32 a = CPickups::GetActualPickupIndex(ref), e = oracle::Fn<int32 __cdecl(int32)>(0x4552A0)(ref.num);
+            Hit(a != -1);
+            if (a == e) return true;
+            d = "ref " + std::to_string(ref.num) + " got " + std::to_string(a) + " exe " + std::to_string(e); return false;
+        });
+        Run("CPickups::GetNewUniquePickupIndex 0x456A30", [](Rng& r, std::string& d) {
+            PkFx::Setup(r); const int i = r.below(620);
+            Snap init(PK, PKE - PK), ga(PK, PKE - PK), ge(PK, PKE - PK); init.Save();
+            const auto a = CPickups::GetNewUniquePickupIndex(i); ga.Save(); init.Restore();
+            const int32 e = oracle::Fn<int32 __cdecl(int)>(0x456A30)(i); ge.Save();
+            if (a.num == e && ga.SameAs(ge)) return true;
+            d = "i " + std::to_string(i) + " got " + std::to_string(a.num) + " exe " + std::to_string(e); return false;
+        });
+        Run("CPickups::AddToCollectedPickupsArray 0x455240", [](Rng& r, std::string& d) {
+            PkFx::Setup(r); const int i = r.below(620);
+            Snap init(PK, PKE - PK), ga(PK, PKE - PK), ge(PK, PKE - PK); init.Save();
+            CPickups::AddToCollectedPickupsArray(i); ga.Save(); init.Restore();
+            oracle::Fn<void __cdecl(int)>(0x455240)(i); ge.Save();
+            if (ga.SameAs(ge)) return true;
+            d = "i " + std::to_string(i) + " idx " + std::to_string(CPickups::CollectedPickUpIndex) + DiffDesc(ga.b.data(), ge.b.data(), ga.b.size(), "p"); return false;
+        });
+        Run("CPickups::IsPickUpPickedUp 0x454B40", [](Rng& r, std::string& d) {
+            PkFx::Setup(r); tPickupReference ref{}; ref.num = r.below(2) ? CPickups::aPickUpsCollected[r.below(20)] : (int32)(r.u32() % 40);
+            Snap init(PK, PKE - PK), ga(PK, PKE - PK), ge(PK, PKE - PK); init.Save();
+            const bool a = CPickups::IsPickUpPickedUp(ref); ga.Save(); init.Restore();
+            const bool e = oracle::Fn<int __cdecl(int32)>(0x454B40)(ref.num) & 0xFF; ge.Save();
+            Hit(a);
+            if (a == e && ga.SameAs(ge)) return true;
+            d = "num " + std::to_string(ref.num) + " got " + std::to_string(a) + " exe " + std::to_string(e); return false;
+        });
+        Run("CPickups::PassTime 0x455200", [](Rng& r, std::string& d) {
+            PkFx::Setup(r); const uint32 tm = r.below(3) ? r.u32() % 100000 : r.u32();
+            Snap init(PK, PKE - PK), ga(PK, PKE - PK), ge(PK, PKE - PK); init.Save();
+            CPickups::PassTime(tm); ga.Save(); init.Restore();
+            oracle::Fn<void __cdecl(uint32)>(0x455200)(tm); ge.Save();
+            if (ga.SameAs(ge)) return true;
+            d = "time " + std::to_string(tm) + DiffDesc(ga.b.data(), ge.b.data(), ga.b.size(), "p"); return false;
+        });
+    }
 }

@@ -734,6 +734,7 @@ if (${RE_PROJECT}_RW_LIBRW)
         game_sa/WaterLevel.cpp
         game_sa/CullZones.cpp
         game_sa/Weather.cpp
+        game_sa/Pickups.cpp
         game_sa/Collision/Collision.cpp
         game_sa/Radar.cpp
         game_sa/MenuManager.cpp

@@ -17,7 +17,7 @@ enum eSkipState {
     SKIP_WAITING_SCRIPT
 };
 
-enum eGameLogicState {
+enum eGameLogicState : uint8 { // a BYTE in the exe (0x96A8B0), the next bytes are other variables
     GAMELOGIC_STATE_PLAYING,
     GAMELOGIC_STATE_WASTED,
     GAMELOGIC_STATE_BUSTED,
@@ -60,8 +60,9 @@ public:
 
     static inline auto& bScriptCoopGameGoingOn = StaticRef<bool>(0x96A8A8);
     static inline auto& TimeOfLastEvent = StaticRef<int32>(0x96A8AC);
+    // 0x96A8B0..0x96A8B3 are four separate BYTES in the exe (GameState, ActivePlayers, bPlayersCannotTargetEachOther, bPlayersCanBeInSeparateCars), then `nPrintFocusHelpTimer` (dword at 0x96A8B4)
     static inline auto& GameState = StaticRef<eGameLogicState>(0x96A8B0);
-    static inline auto& ActivePlayers = StaticRef<int32>(0x96A8B1);
+    static inline auto& ActivePlayers = StaticRef<uint8>(0x96A8B1);
 
     static inline auto& bPenaltyForDeathApplies = StaticRef<bool>(0x8A5E48);
     static inline auto& bPenaltyForArrestApplies = StaticRef<bool>(0x8A5E49);

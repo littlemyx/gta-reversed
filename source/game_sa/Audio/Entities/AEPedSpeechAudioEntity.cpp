@@ -1246,7 +1246,7 @@ int16 CAEPedSpeechAudioEntity::I_AddSayEvent(CVector pos, eAudioEvents audioEven
         }
     }
 
-    if (CGameLogic::GameState == eGameState::GAME_STATE_PLAYING_LOGO) {
+    if (CGameLogic::GameState == GAMELOGIC_STATE_BUSTED) { // 0x4E6139, 0x4E65AD: `cmp byte [0x96A8B0], 2` (was compared to eGameState::GAME_STATE_PLAYING_LOGO, which is also 2)
         return -1;
     }
 

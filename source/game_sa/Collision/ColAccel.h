@@ -58,17 +58,17 @@ VALIDATE_SIZE(PackedModelStartEnd, 0x4);
 
 class CColAccel {
 public:
-    static inline auto& m_colBounds = StaticRef<CColAccelColBound*>(0xBC4090);
-    static inline auto& m_iplDefs = StaticRef<IplDef*>(0xBC4094);
-    static inline auto& m_iSectionSize = StaticRef<int32*>(0xBC4098);
-    static inline auto& m_iCachingColSize = StaticRef<int32>(0xBC409C);
-    static inline auto& m_iCacheState = StaticRef<eColAccelState>(0xBC40A0);
-    static inline auto& mp_caccColItems = StaticRef<CColAccelColEntry*>(0xBC40A4);
-    static inline auto& m_iNumColItems = StaticRef<int32>(0xBC40A8);
-    static inline auto& mp_caccIPLItems = StaticRef<CColAccelIPLEntry*>(0xBC40AC);
-    static inline auto& m_iNumIPLItems = StaticRef<int32>(0xBC40B0);
-    static inline auto& m_iNumSections = StaticRef<int32>(0xBC40B4);
-    static inline auto& m_iNumColBounds = StaticRef<int32>(0xBC40B8);
+    static inline NOTSA_GLOBAL(m_colBounds, 0xBC4090, (CColAccelColBound*), {});
+    static inline NOTSA_GLOBAL(m_iplDefs, 0xBC4094, (IplDef*), {});
+    static inline NOTSA_GLOBAL(m_iSectionSize, 0xBC4098, (int32*), {});
+    static inline NOTSA_GLOBAL(m_iCachingColSize, 0xBC409C, (int32), {});
+    static inline NOTSA_GLOBAL(m_iCacheState, 0xBC40A0, (eColAccelState), {});
+    static inline NOTSA_GLOBAL(mp_caccColItems, 0xBC40A4, (CColAccelColEntry*), {});
+    static inline NOTSA_GLOBAL(m_iNumColItems, 0xBC40A8, (int32), {});
+    static inline NOTSA_GLOBAL(mp_caccIPLItems, 0xBC40AC, (CColAccelIPLEntry*), {});
+    static inline NOTSA_GLOBAL(m_iNumIPLItems, 0xBC40B0, (int32), {});
+    static inline NOTSA_GLOBAL(m_iNumSections, 0xBC40B4, (int32), {});
+    static inline NOTSA_GLOBAL(m_iNumColBounds, 0xBC40B8, (int32), {});
     static const char*         mp_cCacheName;
 
 public:

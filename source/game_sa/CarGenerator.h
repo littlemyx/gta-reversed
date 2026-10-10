@@ -61,8 +61,8 @@ public:
     // char             _pad1E[2];
 
 public:
-    static inline auto& m_bHotdogVendorPositionOffsetInitialized = StaticRef<bool>(0xC2B974);
-    static inline auto& m_HotdogVendorPositionOffset = StaticRef<CVector>(0xC2B968);
+    static inline NOTSA_GLOBAL(m_bHotdogVendorPositionOffsetInitialized, 0xC2B974, (bool), {});
+    static inline NOTSA_GLOBAL(m_HotdogVendorPositionOffset, 0xC2B968, (CVector), {});
 
 public:
     static void InjectHooks();

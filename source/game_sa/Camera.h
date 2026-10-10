@@ -331,12 +331,12 @@ public:
     int32           field_D70{};
     int32           field_D74{};
 
-    static inline auto& m_f3rdPersonCHairMultY = StaticRef<float>(0xB6EC10);
-    static inline auto& m_f3rdPersonCHairMultX = StaticRef<float>(0xB6EC14);
-    static inline auto& m_fMouseAccelVertical = StaticRef<float>(0xB6EC18);
-    static inline auto& m_fMouseAccelHorzntl = StaticRef<float>(0xB6EC1C);
-    static inline auto& m_bUseMouse3rdPerson = StaticRef<bool>(0xB6EC2E);
-    static inline auto& bDidWeProcessAnyCinemaCam = StaticRef<bool>(0xB6EC2D);
+    static inline NOTSA_GLOBAL(m_f3rdPersonCHairMultY, 0xB6EC10, (float), {});
+    static inline NOTSA_GLOBAL(m_f3rdPersonCHairMultX, 0xB6EC14, (float), {});
+    static inline NOTSA_GLOBAL(m_fMouseAccelVertical, 0xB6EC18, (float), {});
+    static inline NOTSA_GLOBAL(m_fMouseAccelHorzntl, 0xB6EC1C, (float), { 0.0025f });
+    static inline NOTSA_GLOBAL(m_bUseMouse3rdPerson, 0xB6EC2E, (bool), { true });
+    static inline NOTSA_GLOBAL(bDidWeProcessAnyCinemaCam, 0xB6EC2D, (bool), {});
 
 public:
     static void InjectHooks();
@@ -521,17 +521,22 @@ public:
 VALIDATE_SIZE(CCamera, 0xD78);
 
 extern CCamera& TheCamera;
-extern bool& gbModelViewer;
-extern int8& gbCineyCamMessageDisplayed;
-extern bool& gPlayerPedVisible;
-extern uint8& gCurCamColVars;
-extern int32& gCameraDirection;
-extern eCamMode& gCameraMode;
-extern uint32& gLastTime2PlayerCameraWasOK;
-extern uint32& gLastTime2PlayerCameraCollided;
+NOTSA_GLOBAL_EXTERN(gbModelViewer, (bool));
+NOTSA_GLOBAL_EXTERN(gbCineyCamMessageDisplayed, (int8));
+NOTSA_GLOBAL_EXTERN(gPlayerPedVisible, (bool));
+NOTSA_GLOBAL_EXTERN(gCurCamColVars, (uint8));
+NOTSA_GLOBAL_EXTERN(gCameraDirection, (int32));
+NOTSA_GLOBAL_EXTERN(gCameraMode, (eCamMode));
+NOTSA_GLOBAL_EXTERN(gLastTime2PlayerCameraWasOK, (uint32));
+NOTSA_GLOBAL_EXTERN(gLastTime2PlayerCameraCollided, (uint32));
 extern float*& gpCamColVars;
+#ifdef NOTSA_GLOBALS_DETACHED
+extern float gCamColVars[28][6];
+#else
 extern float (&gCamColVars)[28][6];
-static inline auto& gpMadeInvisibleEntities = StaticRef<std::array<CEntity*, 10>>(0x9655A0);
-static inline auto& gNumEntitiesSetInvisible = StaticRef<uint32>(0x9655DC);
+#endif
+#line 534
+NOTSA_GLOBAL_HDR(gpMadeInvisibleEntities, 0x9655A0, (std::array<CEntity*, 10>), {});
+NOTSA_GLOBAL_HDR(gNumEntitiesSetInvisible, 0x9655DC, (uint32), {});
 
 void CamShakeNoPos(CCamera* camera, float strength);

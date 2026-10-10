@@ -22,26 +22,26 @@ constexpr auto TIME_COPS_WAIT_TO_EXIT_AFTER_STOPPING = 2500;
 
 class CCarCtrl {
 public:
-    static inline auto& bCarIsBeingCreated = StaticRef<bool>(0x9690CC);
-    static inline auto& NumLawEnforcerCars = StaticRef<uint32>(0x969098);
-    static inline auto& NumParkedCars = StaticRef<uint32>(0x9690A0);
-    static inline auto& NumAmbulancesOnDuty = StaticRef<uint32>(0x9690A8);
-    static inline auto& NumFireTrucksOnDuty = StaticRef<uint32>(0x9690AC);
-    static inline auto& MaxNumberOfCarsInUse = StaticRef<uint32>(0x8A5B24);
-    static inline auto& CarDensityMultiplier = StaticRef<float>(0x8A5B20);
-    static inline auto& NumRandomCars = StaticRef<int32>(0x969094);
-    static inline auto& NumMissionCars = StaticRef<int32>(0x96909C);
-    static inline auto& NumPermanentVehicles = StaticRef<int32>(0x9690A4);
-    static inline auto& LastTimeAmbulanceCreated = StaticRef<int32>(0x9690B0);
-    static inline auto& LastTimeFireTruckCreated = StaticRef<int32>(0x9690B4);
-    static inline auto& bAllowEmergencyServicesToBeCreated = StaticRef<bool>(0x8A5B28);
-    static inline auto& bCarsGeneratedAroundCamera = StaticRef<bool>(0x9690C1);
-    static inline auto& CountDownToCarsAtStart = StaticRef<int8>(0x9690C0);
-    static inline auto& TimeNextMadDriverChaseCreated = StaticRef<float>(0x9690BC);
-    static inline auto& SequenceElements = StaticRef<int32>(0x969078);
-    static inline auto& SequenceRandomOffset = StaticRef<int32>(0x969074);
-    static inline auto& bSequenceOtherWay = StaticRef<bool>(0x969070);
-    static inline auto& LastTimeLawEnforcerCreated = StaticRef<int32>(0x9690B8);
+    static inline NOTSA_GLOBAL(bCarIsBeingCreated, 0x9690CC, (bool), {});
+    static inline NOTSA_GLOBAL(NumLawEnforcerCars, 0x969098, (uint32), {});
+    static inline NOTSA_GLOBAL(NumParkedCars, 0x9690A0, (uint32), {});
+    static inline NOTSA_GLOBAL(NumAmbulancesOnDuty, 0x9690A8, (uint32), {});
+    static inline NOTSA_GLOBAL(NumFireTrucksOnDuty, 0x9690AC, (uint32), {});
+    static inline NOTSA_GLOBAL(MaxNumberOfCarsInUse, 0x8A5B24, (uint32), { 12 });
+    static inline NOTSA_GLOBAL(CarDensityMultiplier, 0x8A5B20, (float), { 1.0f });
+    static inline NOTSA_GLOBAL(NumRandomCars, 0x969094, (int32), {});
+    static inline NOTSA_GLOBAL(NumMissionCars, 0x96909C, (int32), {});
+    static inline NOTSA_GLOBAL(NumPermanentVehicles, 0x9690A4, (int32), {});
+    static inline NOTSA_GLOBAL(LastTimeAmbulanceCreated, 0x9690B0, (int32), {});
+    static inline NOTSA_GLOBAL(LastTimeFireTruckCreated, 0x9690B4, (int32), {});
+    static inline NOTSA_GLOBAL(bAllowEmergencyServicesToBeCreated, 0x8A5B28, (bool), { true });
+    static inline NOTSA_GLOBAL(bCarsGeneratedAroundCamera, 0x9690C1, (bool), {});
+    static inline NOTSA_GLOBAL(CountDownToCarsAtStart, 0x9690C0, (int8), {});
+    static inline NOTSA_GLOBAL(TimeNextMadDriverChaseCreated, 0x9690BC, (float), {});
+    static inline NOTSA_GLOBAL(SequenceElements, 0x969078, (int32), {});
+    static inline NOTSA_GLOBAL(SequenceRandomOffset, 0x969074, (int32), {});
+    static inline NOTSA_GLOBAL(bSequenceOtherWay, 0x969070, (bool), {});
+    static inline NOTSA_GLOBAL(LastTimeLawEnforcerCreated, 0x9690B8, (int32), {});
 
 public:
     static void InjectHooks();

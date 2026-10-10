@@ -70,19 +70,25 @@ VALIDATE_SIZE(CdStream, 0x30);
 const int32 MAX_CD_STREAM_HANDLES = 32;
 const int32 MAX_CD_STREAM_IMAGE_NAME_SIZE = 64;
 
+#ifdef NOTSA_GLOBALS_DETACHED
+extern HANDLE gStreamFileHandles[MAX_CD_STREAM_HANDLES];
+extern char gCdImageNames[MAX_CD_STREAM_HANDLES][MAX_CD_STREAM_IMAGE_NAME_SIZE];
+#else
 extern HANDLE(&gStreamFileHandles)[MAX_CD_STREAM_HANDLES];
 extern char(&gCdImageNames)[MAX_CD_STREAM_HANDLES][MAX_CD_STREAM_IMAGE_NAME_SIZE];
-extern uint32& gStreamFileCreateFlags;
-extern CdStream*& gCdStreams;
-extern int32& gStreamCount;
-extern int32& gOpenStreamCount;
-extern int32& gStreamingInitialized;
-extern int32& gOverlappedIO;
-extern Queue& gStreamQueue;
-extern HANDLE& gStreamSemaphore;
-extern HANDLE& gStreamingThread;
-extern DWORD& gStreamingThreadId;
-extern uint32& gLastCdStreamPosn;
+#endif
+#line 75
+NOTSA_GLOBAL_EXTERN(gStreamFileCreateFlags, (uint32));
+NOTSA_GLOBAL_EXTERN(gCdStreams, (CdStream*));
+NOTSA_GLOBAL_EXTERN(gStreamCount, (int32));
+NOTSA_GLOBAL_EXTERN(gOpenStreamCount, (int32));
+NOTSA_GLOBAL_EXTERN(gStreamingInitialized, (int32));
+NOTSA_GLOBAL_EXTERN(gOverlappedIO, (int32));
+NOTSA_GLOBAL_EXTERN(gStreamQueue, (Queue));
+NOTSA_GLOBAL_EXTERN(gStreamSemaphore, (HANDLE));
+NOTSA_GLOBAL_EXTERN(gStreamingThread, (HANDLE));
+NOTSA_GLOBAL_EXTERN(gStreamingThreadId, (DWORD));
+NOTSA_GLOBAL_EXTERN(gLastCdStreamPosn, (uint32));
 
 
 uint32 CdStreamHandleToFileID(CdStreamHandle h);

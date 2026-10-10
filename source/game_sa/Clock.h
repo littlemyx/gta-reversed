@@ -11,20 +11,20 @@
 class CClock {
 public:
     static uint8 daysInMonth[12];
-    static inline auto& bClockHasBeenStored = StaticRef<bool>(0xB70144);
-    static inline auto& ms_Stored_nGameClockSeconds = StaticRef<uint16>(0xB70148);
-    static inline auto& ms_Stored_nGameClockMinutes = StaticRef<uint8>(0xB7014A);
-    static inline auto& ms_Stored_nGameClockHours = StaticRef<uint8>(0xB7014B);
-    static inline auto& ms_Stored_nGameClockDays = StaticRef<uint8>(0xB7014C);
-    static inline auto& ms_Stored_nGameClockMonths = StaticRef<uint8>(0xB7014D);
-    static inline auto& CurrentDay = StaticRef<uint8>(0xB7014E);
-    static inline auto& ms_nGameClockSeconds = StaticRef<uint16>(0xB70150);
-    static inline auto& ms_nGameClockMinutes = StaticRef<uint8>(0xB70152);
-    static inline auto& ms_nGameClockHours = StaticRef<uint8>(0xB70153);
-    static inline auto& ms_nGameClockDays = StaticRef<uint8>(0xB70154);
-    static inline auto& ms_nGameClockMonth = StaticRef<uint8>(0xB70155);
-    static inline auto& ms_nLastClockTick = StaticRef<uint32>(0xB70158);
-    static inline auto& ms_nMillisecondsPerGameMinute = StaticRef<uint32>(0xB7015C);
+    static inline NOTSA_GLOBAL(bClockHasBeenStored, 0xB70144, (bool), {});
+    static inline NOTSA_GLOBAL(ms_Stored_nGameClockSeconds, 0xB70148, (uint16), {});
+    static inline NOTSA_GLOBAL(ms_Stored_nGameClockMinutes, 0xB7014A, (uint8), {});
+    static inline NOTSA_GLOBAL(ms_Stored_nGameClockHours, 0xB7014B, (uint8), {});
+    static inline NOTSA_GLOBAL(ms_Stored_nGameClockDays, 0xB7014C, (uint8), {});
+    static inline NOTSA_GLOBAL(ms_Stored_nGameClockMonths, 0xB7014D, (uint8), {});
+    static inline NOTSA_GLOBAL(CurrentDay, 0xB7014E, (uint8), {});
+    static inline NOTSA_GLOBAL(ms_nGameClockSeconds, 0xB70150, (uint16), {});
+    static inline NOTSA_GLOBAL(ms_nGameClockMinutes, 0xB70152, (uint8), {});
+    static inline NOTSA_GLOBAL(ms_nGameClockHours, 0xB70153, (uint8), {});
+    static inline NOTSA_GLOBAL(ms_nGameClockDays, 0xB70154, (uint8), {});
+    static inline NOTSA_GLOBAL(ms_nGameClockMonth, 0xB70155, (uint8), {});
+    static inline NOTSA_GLOBAL(ms_nLastClockTick, 0xB70158, (uint32), {});
+    static inline NOTSA_GLOBAL(ms_nMillisecondsPerGameMinute, 0xB7015C, (uint32), {});
 
     static inline bool gbFreezeTime;
 

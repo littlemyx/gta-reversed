@@ -21,4 +21,4 @@ public:
 VALIDATE_SIZE(CBoundingBox, 0x18);
 
 // in entity.cpp
-static auto& numBBFailed = StaticRef<int32>(0xB71808); // 0xB71808
+NOTSA_GLOBAL_HDR(numBBFailed, 0xB71808, (int32), {}); // 0xB71808

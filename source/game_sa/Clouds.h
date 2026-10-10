@@ -55,18 +55,18 @@ struct tVolumetricClouds {
 
 class CClouds {
 public:
-    static inline auto& m_fVolumetricCloudDensity = StaticRef<float>(0x8D5388);
-    static inline auto& m_bVolumetricCloudHeightSwitch = StaticRef<int8>(0x8D538C);
-    static inline auto& m_fVolumetricCloudWindMoveFactor = StaticRef<float>(0x8D5390);
-    static inline auto& m_fVolumetricCloudMaxDistance = StaticRef<float>(0xC6AA58);
-    static inline auto& m_VolumetricCloudsUsedNum = StaticRef<uint32>(0xC6AA5C);
-    static inline auto& ms_cameraRoll = StaticRef<float>(0xC6AA64);
-    static inline auto& IndividualRotation = StaticRef<int32>(0xC6AA6C);
-    static inline auto& CloudRotation = StaticRef<float>(0xC6AA70);
-    static inline auto& ms_vc = StaticRef<tVolumetricClouds>(0xC6AAB0);
-    static inline auto& ms_mf = StaticRef<tMovingFog>(0xC6C158);
-    static inline auto& PlayerCoords = StaticRef<CVector>(0xC6E958); // gVecPlayerCoors
-    static inline auto& CameraCoors = StaticRef<CVector>(0xC6E964);  // gVecCameraCoors
+    static inline NOTSA_GLOBAL(m_fVolumetricCloudDensity, 0x8D5388, (float), { 1.0f });
+    static inline NOTSA_GLOBAL(m_bVolumetricCloudHeightSwitch, 0x8D538C, (int8), { 1 });
+    static inline NOTSA_GLOBAL(m_fVolumetricCloudWindMoveFactor, 0x8D5390, (float), { 0.1f });
+    static inline NOTSA_GLOBAL(m_fVolumetricCloudMaxDistance, 0xC6AA58, (float), {});
+    static inline NOTSA_GLOBAL(m_VolumetricCloudsUsedNum, 0xC6AA5C, (uint32), {});
+    static inline NOTSA_GLOBAL(ms_cameraRoll, 0xC6AA64, (float), {});
+    static inline NOTSA_GLOBAL(IndividualRotation, 0xC6AA6C, (int32), {});
+    static inline NOTSA_GLOBAL(CloudRotation, 0xC6AA70, (float), {});
+    static inline NOTSA_GLOBAL(ms_vc, 0xC6AAB0, (tVolumetricClouds), {});
+    static inline NOTSA_GLOBAL(ms_mf, 0xC6C158, (tMovingFog), {});
+    static inline NOTSA_GLOBAL(PlayerCoords, 0xC6E958, (CVector), {}); // gVecPlayerCoors
+    static inline NOTSA_GLOBAL(CameraCoors, 0xC6E964, (CVector), {});  // gVecCameraCoors
 
     static inline struct DebugSettings {
         struct RenderSettingPair {
@@ -109,10 +109,10 @@ public:
     static void RenderBottomFromHeight();
 };
 
-extern float& CurrentFogIntensity;               // default 1.0f
-extern RwTexture*& gpMoonMask;
-extern RwTexture*& gpCloudTex;
-extern RwTexture*& gpCloudMaskTex;
+NOTSA_GLOBAL_EXTERN(CurrentFogIntensity, (float));               // default 1.0f
+NOTSA_GLOBAL_EXTERN(gpMoonMask, (RwTexture*));
+NOTSA_GLOBAL_EXTERN(gpCloudTex, (RwTexture*));
+NOTSA_GLOBAL_EXTERN(gpCloudMaskTex, (RwTexture*));
 extern float& flt_C6E954;
 extern float& flt_C6E970;
 

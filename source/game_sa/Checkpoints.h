@@ -3,13 +3,18 @@
 #include "Checkpoint.h"
 
 class CCheckpoint;
+namespace checkpoints_detail { // all-zero CCheckpoint (CVector has a user-provided operator=: std::bit_cast of zero bytes is not available)
+inline constexpr CCheckpoint kZeroCheckpoint{ eCheckpointType::TUBE, false, false, 0, CRGBA{ 0, 0, 0, 0 }, 0, 0, CVector{}, CVector{}, 0.f, 0.f, 0.f, 0.f };
+template<size_t... I> constexpr std::array<CCheckpoint, sizeof...(I)> MakeZeroCheckpoints(std::index_sequence<I...>) { return { { (static_cast<void>(I), kZeroCheckpoint)... } }; }
+}
+#line 6
 
 constexpr auto MAX_NUM_CHECKPOINTS{ 32u };
 
 class CCheckpoints {
 public:
-    static inline auto& NumActiveCPts = StaticRef<uint32>(0xC7C6D4); // not used, only initialised (0)
-    static inline auto& m_aCheckPtArray = StaticRef<std::array<CCheckpoint, 32>>(0xC7F158);
+    static inline NOTSA_GLOBAL(NumActiveCPts, 0xC7C6D4, (uint32), {}); // not used, only initialised (0)
+    static inline NOTSA_GLOBAL(m_aCheckPtArray, 0xC7F158, (std::array<CCheckpoint, 32>), = checkpoints_detail::MakeZeroCheckpoints(std::make_index_sequence<32>{})); // all-zero like the exe's .bss (NOT the NSDMI defaults of CCheckpoint)
 
 public:
     static void InjectHooks();

@@ -15,9 +15,9 @@ class CPlayerPed;
 
 class CClothes {
 public:
-    static inline auto& ms_clothesImageId = StaticRef<int32>(0xBC12F8);
-    static inline auto& ms_numRuleTags = StaticRef<uint32>(0xBC12FC);
-    static inline auto& ms_clothesRules = StaticRef<std::array<uint32, 600>>(0xBC1300);
+    static inline NOTSA_GLOBAL(ms_clothesImageId, 0xBC12F8, (int32), {});
+    static inline NOTSA_GLOBAL(ms_numRuleTags, 0xBC12FC, (uint32), {});
+    static inline NOTSA_GLOBAL(ms_clothesRules, 0xBC1300, (std::array<uint32, 600>), {});
 
 public:
     static void InjectHooks();

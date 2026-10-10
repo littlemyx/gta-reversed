@@ -14,16 +14,16 @@ class CTask;
 
 class CCarEnterExit {
 public:
-    static inline auto& ms_fMaxSpeed_CanDragPedOut = StaticRef<float>(0x86F104); // 0.1
-    static inline auto& ms_fMaxSpeed_PlayerCanDragPedOut = StaticRef<float>(0x86F108); // 0.2
+    static inline NOTSA_GLOBAL(ms_fMaxSpeed_CanDragPedOut, 0x86F104, (float), { 0.1f }); // 0.1
+    static inline NOTSA_GLOBAL(ms_fMaxSpeed_PlayerCanDragPedOut, 0x86F108, (float), { 0.2f }); // 0.2
 
-    static inline auto& ms_bPedOffsetsCalculated = StaticRef<bool>(0xC18C20);
-    static inline auto& ms_vecPedGetUpAnimOffset = StaticRef<CVector>(0xC18C3C);
-    static inline auto& ms_vecPedBedLAnimOffset = StaticRef<CVector>(0xC18C54);
-    static inline auto& ms_vecPedBedRAnimOffset = StaticRef<CVector>(0xC18C60);
-    static inline auto& ms_vecPedDeskAnimOffset = StaticRef<CVector>(0xC18C6C);
-    static inline auto& ms_vecPedChairAnimOffset = StaticRef<CVector>(0xC18C78);
-    static inline auto& ms_vecPedQuickDraggedOutCarAnimOffset = StaticRef<CVector>(0xC18C48);
+    static inline NOTSA_GLOBAL(ms_bPedOffsetsCalculated, 0xC18C20, (bool), {});
+    static inline NOTSA_GLOBAL(ms_vecPedGetUpAnimOffset, 0xC18C3C, (CVector), {});
+    static inline NOTSA_GLOBAL(ms_vecPedBedLAnimOffset, 0xC18C54, (CVector), {});
+    static inline NOTSA_GLOBAL(ms_vecPedBedRAnimOffset, 0xC18C60, (CVector), {});
+    static inline NOTSA_GLOBAL(ms_vecPedDeskAnimOffset, 0xC18C6C, (CVector), {});
+    static inline NOTSA_GLOBAL(ms_vecPedChairAnimOffset, 0xC18C78, (CVector), {});
+    static inline NOTSA_GLOBAL(ms_vecPedQuickDraggedOutCarAnimOffset, 0xC18C48, (CVector), {});
 
 public:
     static void InjectHooks();

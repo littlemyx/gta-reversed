@@ -350,7 +350,8 @@ void CWeapon::Reload(CPed* owner) {
         return;
     }
 
-    uint32 ammo = GetWeaponInfo(owner).m_nAmmoClip;
+    // 0x73B430 / 0x73B4A0: the exe loads the clip size with `movsx` (sign-extended 16 bit) and compares it unsigned
+    const uint32 ammo = (uint32)(int32)(int16)GetWeaponInfo(owner).m_nAmmoClip;
     m_AmmoInClip = std::min(ammo, m_TotalAmmo);
 }
 

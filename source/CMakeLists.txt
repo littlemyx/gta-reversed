@@ -1034,6 +1034,40 @@ if (${RE_PROJECT}_RW_LIBRW)
     set_property(TARGET review_oracle_test PROPERTY SOURCES "${STANDALONE_PAD_OBJ}" ${_ro_sources})
     target_link_options(review_oracle_test PRIVATE "$<$<CXX_COMPILER_ID:MSVC>:/BASE:0x400000;/DYNAMICBASE:NO;/FIXED;/MERGE:_TEXT=.text;/INCREMENTAL:NO;/SUBSYSTEM:CONSOLE;/FORCE:UNRESOLVED>")
     set_target_properties(review_oracle_test PROPERTIES COMPILE_WARNING_AS_ERROR OFF CXX_SCAN_FOR_MODULES OFF)
+    # FixedFloat/FixedVector/FixedQuat decompress (fmul by the exe's float reciprocal vs fdiv) and compress (_ftol2) per site against the exe machine code (same machinery as review_oracle_test)
+    add_executable(fixed_oracle_test EXCLUDE_FROM_ALL
+        "${PROJECT_SOURCE_DIR}/tests/standalone/fixed_oracle_test.cpp"
+        game_sa/General.cpp
+        game_sa/Core/Vector.cpp
+        game_sa/Core/Matrix.cpp
+        game_sa/Core/Quaternion.cpp
+        game_sa/Core/Vector2D.cpp
+        game_sa/Maths.cpp
+        game_sa/CoverPoint.cpp
+        game_sa/Cover.cpp
+        game_sa/Occlusion.cpp
+        game_sa/Occluder.cpp
+        game_sa/ActiveOccluder.cpp
+        game_sa/Animation/AnimBlendSequence.cpp
+        game_sa/CompressedMatrixNotAligned.cpp
+        game_sa/Fx/FxPrimBP.cpp
+        game_sa/Audio/Entities/AEVehicleAudioEntity.cpp
+        game_sa/common.cpp
+        standalone/FtolExe.cpp
+    )
+    target_compile_features(fixed_oracle_test PRIVATE cxx_std_23)
+    target_compile_definitions(fixed_oracle_test PRIVATE $<TARGET_PROPERTY:${RE_PROJECT_LIB_NAME},COMPILE_DEFINITIONS>)   # the run build's own definitions (USE_DSOUND ...): the audio headers need them
+    target_compile_definitions(fixed_oracle_test PRIVATE NOTSA_RW_LIBRW RW_D3D9)
+    target_include_directories(fixed_oracle_test PRIVATE $<TARGET_PROPERTY:${RE_PROJECT_LIB_NAME},INCLUDE_DIRECTORIES>)
+    target_compile_options(fixed_oracle_test PRIVATE $<TARGET_PROPERTY:${RE_PROJECT_LIB_NAME},COMPILE_OPTIONS>)
+    target_precompile_headers(fixed_oracle_test PRIVATE StdInc.cpp)
+    target_link_libraries(fixed_oracle_test PRIVATE librw spdlog::spdlog Tracy::TracyClient user32)
+    target_sources(fixed_oracle_test PRIVATE "${STANDALONE_PAD_OBJ}")
+    get_target_property(_fo_sources fixed_oracle_test SOURCES)
+    list(REMOVE_ITEM _fo_sources "${STANDALONE_PAD_OBJ}")
+    set_property(TARGET fixed_oracle_test PROPERTY SOURCES "${STANDALONE_PAD_OBJ}" ${_fo_sources})
+    target_link_options(fixed_oracle_test PRIVATE "$<$<CXX_COMPILER_ID:MSVC>:/BASE:0x400000;/DYNAMICBASE:NO;/FIXED;/MERGE:_TEXT=.text;/INCREMENTAL:NO;/SUBSYSTEM:CONSOLE;/FORCE:UNRESOLVED>")
+    set_target_properties(fixed_oracle_test PROPERTIES COMPILE_WARNING_AS_ERROR OFF CXX_SCAN_FOR_MODULES OFF)
     # S6-B differential test of script command handlers (g9..g12) against the exe's group processors (same exe-oracle machinery as game_oracle_test; the handler TUs are #included by the test)
     add_executable(script_oracle_test EXCLUDE_FROM_ALL
         "${PROJECT_SOURCE_DIR}/tests/standalone/script_oracle_test.cpp"

@@ -235,13 +235,15 @@ wait:3000
 mark:idle_start
 wait:@IDLE_MS@
 mark:idle_end
-# quit, ESC opens the pause menu, UP wraps to the last entry (QUIT GAME), RETURN, RETURN confirms
+# quit, ESC opens the pause menu, UP wraps to QUIT GAME, RETURN opens the confirmation (NO is preselected), DOWN selects YES, RETURN
 key:escape
 wait:2500
 key:up
 wait:700
 key:return
 wait:2500
+key:down
+wait:700
 key:return
 wait:2500
 mark:quit_sent

@@ -7,7 +7,8 @@
 # env: GAME_SRC=<install dir>   the original game install (default: the Steam macOS copy, see docs/STANDALONE.md "Run")
 #      PREFIX=<dir>             private Wine prefix (default /tmp/d3s-prefix, cloned from $WINE_PREFIX_SRC = ~/.wine-msvc on first use)
 #      WINE_BIN=<dir>           directory with the wine binary (default: Wine Staging.app in ~/tools)
-#      SHOT_EVERY=<frames>      screenshot cadence (default 300 frames, NOTSA_STANDALONE_SCREENSHOT_MAX=40)
+#      SHOT_EVERY=<frames>      screenshot cadence (default 500 frames, NOTSA_STANDALONE_SCREENSHOT_MAX=40)
+#      SHOT_MAX=<n>             screenshot cap (default 40)
 #      OUT=<dir>                output dir (default /tmp/d3s-out/<timestamp>): logs, frame_*.png, report.txt
 #      ROUTE=<file>             input route (default tools/standalone/soak_route.txt)
 set -u
@@ -20,7 +21,7 @@ PREFIX="${PREFIX:-/tmp/d3s-prefix}"; WINE_PREFIX_SRC="${WINE_PREFIX_SRC:-$HOME/.
 WINE_BIN="${WINE_BIN:-$HOME/tools/Wine Staging.app/Contents/Resources/wine/bin}"
 OUT="${OUT:-/tmp/d3s-out/$(date +%Y%m%d-%H%M%S)}"
 ROUTE="${ROUTE:-$REPO/tools/standalone/soak_route.txt}"
-SHOT_EVERY="${SHOT_EVERY:-300}"
+SHOT_EVERY="${SHOT_EVERY:-500}"
 export PATH="$WINE_BIN:$HOME/.local/bin:/opt/homebrew/bin:$PATH" WINEPREFIX="$PREFIX" WINEDEBUG=-all
 mkdir -p "$OUT"
 
@@ -49,7 +50,7 @@ sed "s/@IDLE_MS@/$IDLE_MS/" "$ROUTE" > "$OUT/route.txt"
 ROUTE_MS=$(( FIXED_MS + IDLE_MS ))
 LIMIT_S=$(( ROUTE_MS / 1000 + 90 ))   # route + slack for the quit sequence
 
-export NOTSA_STANDALONE_SKIP_VIDEOS=1 NOTSA_STANDALONE_SCREENSHOT="$SHOT_EVERY" NOTSA_STANDALONE_SCREENSHOT_MAX=40
+export NOTSA_STANDALONE_SKIP_VIDEOS=1 NOTSA_STANDALONE_SCREENSHOT="$SHOT_EVERY" NOTSA_STANDALONE_SCREENSHOT_MAX="${SHOT_MAX:-40}"
 export NOTSA_STANDALONE_MEMLOG=1 NOTSA_STANDALONE_SAMPLER=1 NOTSA_STANDALONE_INPUT="$OUT/route.txt"
 
 kill_exe() { pkill -f "$(basename "$DATA").gta_reversed" 2>/dev/null; WINEPREFIX="$PREFIX" wineserver -k 2>/dev/null; sleep 1; }
@@ -134,7 +135,7 @@ print("errors: %d" % len(errs))
 for e in errs[:14]: print("  " + e)
 print("game [error] log lines (grouped): %d kinds" % len(softerr))
 for k, n in sorted(softerr.items(), key=lambda kv: -kv[1])[:6]: print("  %5dx %s" % (n, k))
-crash = bool(errs) or (not clean_exit and not any(n == "quit_sent" for n in order)) or not marks
+crash = bool(errs) or timeout or (not clean_exit and not any(n == "quit_sent" for n in order)) or not marks
 print("RESULT:", "FAIL" if crash else "OK")
 print("=" * 78)
 sys.exit(1 if crash else 0)

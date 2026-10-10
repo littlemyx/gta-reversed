@@ -13,8 +13,11 @@ void CCompressedMatrixNotAligned::InjectHooks()
 
 void CCompressedMatrixNotAligned::DecompressIntoFullMatrix(CMatrix& matrix) const
 {
-    matrix.GetRight() = m_vecRight;
-    matrix.GetForward() = m_vecForward;
+    // 0x59BA0C: the exe multiplies the signed bytes by the float constant 0x859BCC (= 0.0078740157f), `FixedFloat` divides by 127 (different last bit)
+    const auto* const comp = reinterpret_cast<const int8*>(this) + sizeof(CVector);
+    const auto Dec = [](int8 v) { return (float)v * std::bit_cast<float>(0x3C010204u); };
+    matrix.GetRight()   = CVector{ Dec(comp[0]), Dec(comp[1]), Dec(comp[2]) };
+    matrix.GetForward() = CVector{ Dec(comp[3]), Dec(comp[4]), Dec(comp[5]) };
     matrix.GetUp() = CrossProduct(matrix.GetRight(), matrix.GetForward());
     matrix.GetPosition() = m_vecPos;
     matrix.Reorthogonalise();

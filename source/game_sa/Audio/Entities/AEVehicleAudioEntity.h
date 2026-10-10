@@ -470,7 +470,7 @@ protected: // Config:
                 float LoopMaxPlayTimePercentage{ 80.f };                               // 0x8CBCC8
                 int32 LoopInterval{ 120 };                                             // 0x8CBCBC
                 int32 LoopFrameCnt{ 10 };                                              // 0x8CBCC0
-                float WheelSpinThreshold{ 150.f / 255.f };                             // 0x8CBC54
+                int16 WheelSpinThreshold{ 150 };                                       // 0x8CBC54 (compared with the RAW compressed vp.ThisAccel: `cmp dx, word ptr [0x8CBC54]`)
                 float SpeedOffset{ 0.0015f };                                          // 0x8CBD30
                 float InhibitForLowSpeedLimit{ 0.1f };                                 // 0x8CBCD0
             } AC; // PLAYER_AC

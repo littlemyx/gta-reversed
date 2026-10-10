@@ -48,7 +48,9 @@ void CHudColours::SetRGBAValue(eHudColours colorIndex, uint8 red, uint8 green, u
 // Get color from color table as integer value. "color" parameter - index of color in the table.
 // 0x58FD50
 uint32 CHudColours::GetIntColour(eHudColours colorIndex) const {
-    return m_aColours[colorIndex].ToInt();
+    // the exe (0x58FD50) builds the value with three `| 0xFF` terms that are ADDED: (r << 24) + (g << 16) + (b << 8) + 0x2FD (the alpha byte is 0xFD plus a carry of 2 into blue)
+    const auto& c = m_aColours[colorIndex];
+    return ((uint32)c.r << 24) + ((uint32)c.g << 16) + ((uint32)c.b << 8) + 0x2FDu;
 }
 
 // Get color RGB and set alpha manually. "color" parameter - index of color in the table.

@@ -740,7 +740,7 @@ void CPed::SetMoveAnimSpeed(CAnimBlendAssociation* association) {
     if (IsCreatedByMission()) {
         association->m_Speed = pitchFactor + 1.f;
     } else {
-        association->m_Speed = pitchFactor + 1.2f - (float)m_nRandomSeed * RAND_MAX_FLOAT_RECIPROCAL * 0.4f; // todo: use GetRandom from CGeneral::
+        association->m_Speed = pitchFactor + 1.2f - (float)m_nRandomSeed * 0.4f * RAND_MAX_FLOAT_RECIPROCAL; // 0x5DECF4: the exe multiplies by 0.4 (0x858EE8) first, then by the reciprocal (0x858C7C)
     }
 }
 
@@ -2490,25 +2490,26 @@ bool CPed::TurnBody() {
         m_fLookDirection = CGeneral::GetRadianAngleBetweenPoints(m_pLookTarget->GetPosition2D(), GetPosition2D());
     }
 
-    m_fLookDirection = CGeneral::LimitRadianAngle(m_fLookDirection);
-
-    // Some logic to make sure `m_fCurrentRotation` is always in the range [-PI, PI] or [0, 2PI] ? Not sure.. TODO.
-    if (m_fCurrentRotation + PI >= m_fLookDirection) {
-        if (m_fCurrentRotation - PI > m_fLookDirection) {
-            m_fCurrentRotation += PI;
-        }
-    } else {
-        m_fCurrentRotation -= PI;
+    // 0x5E406F: the limited angle stays on the x87 stack (unrounded) while it is compared with the current rotation. It is the LOOK direction that is moved by a full
+    // turn (not the current rotation) so that both are less than half a turn apart.
+    constexpr double ExePi    = (double)std::numbers::pi_v<float>;     // 0x858CB8
+    constexpr double ExeTwoPi = (double)(2.f * std::numbers::pi_v<float>); // 0x858CBC
+    double look = CGeneral::LimitRadianAngleExt(m_fLookDirection);
+    if (ExePi + (double)m_fCurrentRotation < look) {
+        look -= ExeTwoPi;
+    } else if ((double)m_fCurrentRotation - ExePi > look) {
+        look += ExeTwoPi;
     }
 
-    m_fAimingRotation = m_fLookDirection;
+    m_fAimingRotation = (float)look;
 
-    if (std::abs(m_fCurrentRotation - m_fLookDirection) <= 0.05f) {
+    const double diff = (double)m_fCurrentRotation - look;
+    m_fLookDirection  = (float)look;
+    if (!(std::abs(diff) > 0.05f)) { // 0x858C28; a NaN difference takes this branch, too
         return true;
-    } else {
-        m_fCurrentRotation -= (m_fCurrentRotation - m_fLookDirection) * ExeRecip(5.f);
-        return false;
     }
+    m_fCurrentRotation = (float)((double)m_fCurrentRotation - diff * (double)std::bit_cast<float>(0x3E4CCCCDu)); // 0x858CC4 (0.2f)
+    return false;
 }
 
 /*!
@@ -2641,48 +2642,51 @@ void CPed::CalculateNewVelocity() {
     if (!bIsInTheAir && !bIsLanding
         && m_nPedState != PEDSTATE_DIE && m_nPedState != PEDSTATE_DEAD && m_nPedState != PEDSTATE_ARRESTED
     ) {
-        const float turnRate = m_fHeadingChangeRate * 0.017453292f /* 0x8595EC */ * timeStep;
+        // 0x5E4C89: the x87 stack keeps intermediates unrounded (exponent range) - hence the doubles
+        const float turnRate = (float)((double)m_fHeadingChangeRate * (double)0.017453292f /* 0x8595EC */ * (double)timeStep);
 
         m_fCurrentRotation = CGeneral::LimitRadianAngle(m_fCurrentRotation);
 
-        float targetRot = CGeneral::LimitRadianAngle(m_fAimingRotation);
-        if (targetRot > m_fCurrentRotation + PI) {
-            targetRot -= TWO_PI;
-        } else if (targetRot < m_fCurrentRotation - PI) {
-            targetRot += TWO_PI;
+        constexpr double ExePi    = (double)std::numbers::pi_v<float>;         // 0x858CB8
+        constexpr double ExeTwoPi = (double)(2.f * std::numbers::pi_v<float>); // 0x858CBC
+        double targetRot = CGeneral::LimitRadianAngleExt(m_fAimingRotation);
+        if ((double)m_fCurrentRotation + ExePi < targetRot) {
+            targetRot -= ExeTwoPi;
+        } else if ((double)m_fCurrentRotation - ExePi > targetRot) {
+            targetRot += ExeTwoPi;
         }
-        diff = targetRot - m_fCurrentRotation;
+        diff = (float)(targetRot - (double)m_fCurrentRotation);
 
         const auto isPlayer = IsPlayer();
         if (isPlayer) {
             m_fMoveAnim = 1.0f;
-        } else if (diff >= 0.0f && m_fMoveAnim < 0.0f) {
+        } else if (!(diff < 0.0f) && m_fMoveAnim < 0.0f) { // 0x5E4D25: a NaN `diff` takes the first branch
             m_fMoveAnim = 0.1f;
         } else if (diff < 0.0f && m_fMoveAnim > 0.0f) {
             m_fMoveAnim = -0.1f;
         }
 
         bool turned{};
-        const float maxTurn = std::abs(m_fMoveAnim) * turnRate;
+        const double maxTurn = (double)std::abs(m_fMoveAnim) * (double)turnRate;
         if (diff > maxTurn) {
-            m_fCurrentRotation += maxTurn;
-            m_fMoveAnim        += timeStep * 0.1f;
+            m_fCurrentRotation = (float)((double)m_fCurrentRotation + maxTurn);
+            m_fMoveAnim        = (float)((double)timeStep * 0.1f + m_fMoveAnim);
             if (m_fMoveAnim > 1.0f) {
                 m_fMoveAnim = 1.0f;
             }
             turned = true;
-        } else if (-1.0f * maxTurn > diff) {
-            m_fCurrentRotation -= maxTurn;
-            m_fMoveAnim        -= timeStep * 0.1f;
+        } else if (-1.0 * maxTurn > diff) {
+            m_fCurrentRotation = (float)((double)m_fCurrentRotation - maxTurn);
+            m_fMoveAnim        = (float)((double)m_fMoveAnim - (double)timeStep * 0.1f);
             if (m_fMoveAnim < -1.0f) {
                 m_fMoveAnim = -1.0f;
             }
             turned = true;
         } else {
-            if (isPlayer || std::abs(diff) <= 0.1f * turnRate) {
+            if (isPlayer || !(0.1f * (double)turnRate < (double)std::abs(diff))) { // 0x5E4E56 (fcompp): NaN -> this branch
                 m_fCurrentRotation += diff;
-                float anim = std::abs(diff) / turnRate;
-                if (anim < 0.1f) {
+                float anim = (float)((double)std::abs(diff) / turnRate);
+                if (0.1f > anim) {
                     anim = 0.1f;
                 }
                 m_fMoveAnim = anim;
@@ -2702,7 +2706,7 @@ void CPed::CalculateNewVelocity() {
                 m_nMoveState = PEDMOVE_STILL;
             }
         } else {
-            m_nMoveState = diff <= 0.0f ? PEDMOVE_TURN_R : PEDMOVE_TURN_L;
+            m_nMoveState = diff > 0.0f ? PEDMOVE_TURN_L : PEDMOVE_TURN_R; // 0x5E4EF4 (a NaN -> TURN_R)
         }
 
         m_pedIK.m_fBodyRoll = 0.0f;
@@ -2761,26 +2765,33 @@ void CPed::CalculateNewVelocity() {
     }
 
     // Anim moving shift
-    const float fwdScale   = std::sqrt(std::max(0.0f, 1.0f - fwdDot * fwdDot));
-    const float rightScale = std::sqrt(std::max(0.0f, 1.0f - rightDot * rightDot));
+    // 0x5E51A5: `0.0 > x ? 0.0 : x` (a NaN stays a NaN, unlike std::max)
+    const auto ClampNeg = [](float x) { return 0.0f > x ? 0.0f : x; };
+    const float fwdScale = std::sqrt(ClampNeg(1.0f - fwdDot * fwdDot)); // stored to a float (0x5E51CC)
+    const double rightScale = std::sqrt((double)ClampNeg(1.0f - rightDot * rightDot)); // stays on the x87 stack (0x5E523D)
 
+    // The products live on the x87 stack (no denormal rounding) until they are added to the shift; the y terms are stored as floats first
     m_vecAnimMovingShift = CVector2D{};
-
-    const float fwdShift = fwdScale * m_vecAnimMovingShiftLocal.y;
-    m_vecAnimMovingShift.x += fwdShift * mat.GetForward().x;
-    m_vecAnimMovingShift.y += fwdShift * mat.GetForward().y;
-
-    const float rightShift = rightScale * m_vecAnimMovingShiftLocal.x;
-    m_vecAnimMovingShift.x += rightShift * mat.GetRight().x;
-    m_vecAnimMovingShift.y += rightShift * mat.GetRight().y;
+    {
+        const double fwdShift = (double)fwdScale * m_vecAnimMovingShiftLocal.y;
+        const float  yTerm    = (float)(fwdShift * mat.GetForward().y);
+        m_vecAnimMovingShift.x = (float)(fwdShift * mat.GetForward().x + m_vecAnimMovingShift.x);
+        m_vecAnimMovingShift.y = (float)((double)yTerm + m_vecAnimMovingShift.y);
+    }
+    {
+        const double rightShift = rightScale * m_vecAnimMovingShiftLocal.x;
+        const float  yTerm      = (float)(rightShift * mat.GetRight().y);
+        m_vecAnimMovingShift.x = (float)(rightShift * mat.GetRight().x + m_vecAnimMovingShift.x);
+        m_vecAnimMovingShift.y = (float)((double)yTerm + m_vecAnimMovingShift.y);
+    }
 
     if (timeStep < 0.01f && !CTimer::bSlowMotionActive) {
         m_vecAnimMovingShift.x *= 0.01f;
         m_vecAnimMovingShift.y *= 0.01f;
     } else {
-        const float invTimeStep = 1.0f / timeStep;
-        m_vecAnimMovingShift.x *= invTimeStep;
-        m_vecAnimMovingShift.y *= invTimeStep;
+        const double invTimeStep = 1.0 / (double)timeStep;
+        m_vecAnimMovingShift.x = (float)(invTimeStep * m_vecAnimMovingShift.x);
+        m_vecAnimMovingShift.y = (float)(invTimeStep * m_vecAnimMovingShift.y);
     }
 }
 

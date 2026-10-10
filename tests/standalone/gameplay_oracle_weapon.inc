@@ -344,8 +344,59 @@ static void TestBulletInfoUpdate() {
     });
 }
 
+
+// CWeapon::Update / Reload / Shutdown / Initialise with a null owner (no ped, no audio) and no fx system; the CWeaponInfo table is randomised (models -1)
+static void TestWeaponState() {
+    using namespace wfx;
+    auto fillInfos = [](Rng& rr) {
+        FillU(rr, (uint8*)0xC8AAB8, 0x70 * 80);
+        for (int i = 0; i < 80; ++i) {
+            uint8* wi = (uint8*)0xC8AAB8 + i * 0x70;
+            Put<int32_t>(wi, 0, rr.below(7)); Put<int32_t>(wi, 0xC, -1); Put<int32_t>(wi, 0x10, -1);
+            Put<int16_t>(wi, 0x20, (int16_t)(rr.below(4) ? rr.below(100) : (int)rr.u32()));
+            Put<int16_t>(wi, 0x6C, (int16_t)rr.below(18));                                      // aim offset index (std::array bounds)
+        }
+    };
+    auto initW = [&](Rng& rr, uint8* b) {
+        fillInfos(rr);
+        FillU(rr, b, 0x1C);
+        Put<int32_t>(b, 0, rr.below(47)); Put<int32_t>(b, 4, rr.below(7));
+        Put<uint32_t>(b, 8, rr.below(3) ? rr.below(100) : rr.u32() & 0xFFFF); Put<uint32_t>(b, 0xC, rr.below(4) ? rr.below(200) : 0);
+        Put<uint32_t>(b, 0x18, 0);                                                               // no fx system
+        CTimer::m_snTimeInMilliseconds = rr.u32() & 0xFFFFFF; CTimer::m_snPreviousTimeInMilliseconds = CTimer::m_snTimeInMilliseconds - rr.below(100);
+        Put<uint32_t>(b, 0x10, rr.below(2) ? CTimer::m_snTimeInMilliseconds + (int)rr.below(2000) - 1000 : rr.u32() & 0xFFFFFF);   // time for next shot
+    };
+    Snap wiSave(0xC8AAB8, 0x70 * 80);
+    Run("CWeapon::Update(null owner) 0x73DB40", [&](Rng& r, std::string& d) {
+        wiSave.Save();
+        const bool ok = Obj<0x1C>(r, d, initW, [&](uint8* b) { reinterpret_cast<CWeapon*>(b)->Update(nullptr); return 0u; }, [&](uint8* b) { oracle::Fn<void __fastcall(void*, int, void*)>(0x73DB40)(b, 0, nullptr); return 0u; }, 2);
+        wiSave.Restore(); return ok;
+    });
+    Run("CWeapon::Reload(null owner) 0x73AEB0", [&](Rng& r, std::string& d) {
+        wiSave.Save();
+        const bool ok = Obj<0x1C>(r, d, initW, [&](uint8* b) { reinterpret_cast<CWeapon*>(b)->Reload(nullptr); return 0u; }, [&](uint8* b) { oracle::Fn<void __fastcall(void*, int, void*)>(0x73AEB0)(b, 0, nullptr); return 0u; }, 2);
+        wiSave.Restore(); return ok;
+    });
+    Run("CWeapon::Shutdown 0x73A380", [&](Rng& r, std::string& d) {
+        wiSave.Save();
+        const bool ok = Obj<0x1C>(r, d, initW, [&](uint8* b) { reinterpret_cast<CWeapon*>(b)->Shutdown(); return 0u; }, [&](uint8* b) { oracle::Fn<void __fastcall(void*, int)>(0x73A380)(b, 0); return 0u; }, 2);
+        wiSave.Restore(); return ok;
+    });
+    Run("CWeapon::Initialise(null owner) 0x73B4A0", [&](Rng& r, std::string& d) {
+        wiSave.Save();
+        const int ammo = r.below(4) == 0 ? (int)(r.u32() % 200000) - 1000 : r.below(200); const int type = r.below(47);
+        const bool ok = Obj<0x1C>(r, d, initW, [&](uint8* b) { reinterpret_cast<CWeapon*>(b)->Initialise((eWeaponType)type, ammo, nullptr); return 0u; },
+            [&](uint8* b) { oracle::Fn<void __fastcall(void*, int, int, int, void*)>(0x73B4A0)(b, 0, type, ammo, nullptr); return 0u; }, 2);
+        wiSave.Restore(); return ok;
+    });
+    Run("CWeapon::StopWeaponEffect 0x73B360", [&](Rng& r, std::string& d) {
+        return Obj<0x1C>(r, d, initW, [&](uint8* b) { reinterpret_cast<CWeapon*>(b)->StopWeaponEffect(); return 0u; }, [&](uint8* b) { oracle::Fn<void __fastcall(void*, int)>(0x73B360)(b, 0); return 0u; }, 2);
+    });
+}
+
 static void TestWeapons() {
     TestWeaponMisc();
+    TestWeaponState();
     TestHeatSeeking();
     TestShotInfoUpdate();
     TestBulletInfoUpdate();

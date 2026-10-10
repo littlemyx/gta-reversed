@@ -86,7 +86,7 @@ bool CDamageManager::ApplyDamage(CAutomobile* vehicle, tComponent compId, float 
     if (compId == tComponent::COMPONENT_WINDSCREEN)
         fIntensity *= 0.6f;
 
-    if (fIntensity <= 150.0f)
+    if (!(fIntensity > 150.0f)) // 0x6C24FA: FCOMP + JNE, also taken for a NaN
         return false;
 
     switch (group) {

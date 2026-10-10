@@ -510,6 +510,75 @@ if (${RE_PROJECT}_RW_LIBRW)
     target_include_directories(rw_matfx_pipeline_test BEFORE PRIVATE fakerw)
     target_link_libraries(rw_matfx_pipeline_test PRIVATE librw d3d9 user32)
     set_target_properties(rw_matfx_pipeline_test PROPERTIES COMPILE_WARNING_AS_ERROR OFF)
+    # P2B-24 unit test of the skin pipeline on the façade (peds: vs_1_1 path / CPU skinning); needs a D3D9 HAL device
+    add_executable(rw_skin_pipeline_test EXCLUDE_FROM_ALL
+        "${PROJECT_SOURCE_DIR}/tests/standalone/rw_skin_pipeline_test.cpp"
+        standalone/rw/pipeline.cpp
+        standalone/rw/pipeline_skin.cpp
+        standalone/rw/skin_vs.cpp
+        standalone/rw/skin.cpp
+        standalone/rw/hanim.cpp
+        standalone/rw/renderstate.cpp
+        standalone/rw/rwd3d_ff.cpp
+        standalone/rw/rwglobals.cpp
+        standalone/rw/atomic.cpp
+        standalone/rw/clump.cpp
+        standalone/rw/plugins.cpp
+        standalone/rw/math.cpp
+        standalone/rw/rwmath_tables.cpp
+        standalone/rw/stream.cpp
+        standalone/rw/frame.cpp
+        standalone/rw/camera.cpp
+        standalone/rw/light.cpp
+        standalone/rw/world.cpp
+        standalone/rw/material.cpp
+        standalone/rw/geometry.cpp
+        standalone/rw/geometry_strip.cpp
+        standalone/rw/raster.cpp
+        standalone/rw/image.cpp
+        standalone/rw/texture.cpp
+        standalone/rw/texdict.cpp
+    )
+    target_compile_features(rw_skin_pipeline_test PRIVATE cxx_std_23)
+    target_compile_definitions(rw_skin_pipeline_test PRIVATE NOTSA_RW_LIBRW NOTSA_RW_UNIT_TEST RW_D3D9)
+    target_include_directories(rw_skin_pipeline_test BEFORE PRIVATE fakerw)
+    target_include_directories(rw_skin_pipeline_test PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}")
+    target_link_libraries(rw_skin_pipeline_test PRIVATE librw d3d9 user32)
+    set_target_properties(rw_skin_pipeline_test PROPERTIES COMPILE_WARNING_AS_ERROR OFF)
+    # P2B-24a differential test of the skin vertex-shader composer (skin_vs.cpp) against the exe's own composer (exe-oracle machinery of game_oracle_test: placeholder image + env RW_EXE_ORACLE);
+    # the device part needs a D3D9 HAL device (Wine/wined3d is fine) and d3dcompiler_47.dll
+    add_executable(rw_skin_vs_test EXCLUDE_FROM_ALL
+        "${PROJECT_SOURCE_DIR}/tests/standalone/rw_skin_vs_test.cpp"
+        standalone/rw/skin_vs.cpp
+    )
+    target_compile_features(rw_skin_vs_test PRIVATE cxx_std_23)
+    target_compile_definitions(rw_skin_vs_test PRIVATE NOTSA_RW_LIBRW NOTSA_RW_UNIT_TEST RW_D3D9)
+    target_include_directories(rw_skin_vs_test BEFORE PRIVATE fakerw)
+    target_include_directories(rw_skin_vs_test PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}")
+    target_link_libraries(rw_skin_vs_test PRIVATE librw d3d9 user32)
+    target_sources(rw_skin_vs_test PRIVATE "${STANDALONE_PAD_OBJ}")
+    get_target_property(_rsv_sources rw_skin_vs_test SOURCES)
+    list(REMOVE_ITEM _rsv_sources "${STANDALONE_PAD_OBJ}")
+    set_property(TARGET rw_skin_vs_test PROPERTY SOURCES "${STANDALONE_PAD_OBJ}" ${_rsv_sources})
+    target_link_options(rw_skin_vs_test PRIVATE "$<$<CXX_COMPILER_ID:MSVC>:/BASE:0x400000;/DYNAMICBASE:NO;/FIXED;/MERGE:_TEXT=.text;/INCREMENTAL:NO;/SUBSYSTEM:CONSOLE;/FORCE:UNRESOLVED>")
+    set_target_properties(rw_skin_vs_test PROPERTIES COMPILE_WARNING_AS_ERROR OFF CXX_SCAN_FOR_MODULES OFF)
+
+    # P2B-24b differential test of the skin HW render path (pipeline_skin_core.h: bone matrices, world-matrix module, lights, the whole 0x7C8060) against the exe's own machine
+    # code (exe-oracle machinery of game_oracle_test: placeholder image + env RW_EXE_ORACLE); needs no D3D device (the device is a fake COM object)
+    add_executable(rw_skin_hw_oracle_test EXCLUDE_FROM_ALL
+        "${PROJECT_SOURCE_DIR}/tests/standalone/rw_skin_hw_oracle_test.cpp"
+    )
+    target_compile_features(rw_skin_hw_oracle_test PRIVATE cxx_std_23)
+    target_compile_definitions(rw_skin_hw_oracle_test PRIVATE NOTSA_RW_LIBRW NOTSA_RW_UNIT_TEST RW_D3D9)
+    target_include_directories(rw_skin_hw_oracle_test BEFORE PRIVATE fakerw)
+    target_include_directories(rw_skin_hw_oracle_test PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}" "${CMAKE_CURRENT_SOURCE_DIR}/standalone/rw")
+    target_link_libraries(rw_skin_hw_oracle_test PRIVATE librw d3d9 user32)
+    target_sources(rw_skin_hw_oracle_test PRIVATE "${STANDALONE_PAD_OBJ}")
+    get_target_property(_rsh_sources rw_skin_hw_oracle_test SOURCES)
+    list(REMOVE_ITEM _rsh_sources "${STANDALONE_PAD_OBJ}")
+    set_property(TARGET rw_skin_hw_oracle_test PROPERTY SOURCES "${STANDALONE_PAD_OBJ}" ${_rsh_sources})
+    target_link_options(rw_skin_hw_oracle_test PRIVATE "$<$<CXX_COMPILER_ID:MSVC>:/BASE:0x400000;/DYNAMICBASE:NO;/FIXED;/MERGE:_TEXT=.text;/INCREMENTAL:NO;/SUBSYSTEM:CONSOLE;/FORCE:UNRESOLVED>")
+    set_target_properties(rw_skin_hw_oracle_test PROPERTIES COMPILE_WARNING_AS_ERROR OFF CXX_SCAN_FOR_MODULES OFF)
     # P2B-08 unit test of the game's four custom pipelines (CCustomBuildingPipeline / DNPipeline / CCustomCarEnvMapPipeline + plugins) on the façade: the REAL game
     # TUs are compiled into the test with the game's compile settings and PCH (StdInc.h), the few game-side symbols they call (CMemoryMgr, g_fx, ...) and the data
     # image globals they read (StaticRef at fixed addresses) are stubbed by the test. Needs a D3D9 HAL device (Wine/wined3d is fine); optional SA DFF paths on the command line.
@@ -954,7 +1023,7 @@ if (${RE_PROJECT}_RW_LIBRW)
     # P2B-06: Im2D/Im3D over the D3D9 device, same standalone style
     set_source_files_properties(standalone/rw/im2d_im3d.cpp PROPERTIES SKIP_UNITY_BUILD_INCLUSION ON)
     # P2B-07: pipeline.cpp includes the private d3d9 header and has anonymous-namespace helpers
-    set_source_files_properties(standalone/rw/pipeline.cpp standalone/rw/pipeline_matfx.cpp PROPERTIES SKIP_UNITY_BUILD_INCLUSION ON)
+    set_source_files_properties(standalone/rw/pipeline.cpp standalone/rw/pipeline_matfx.cpp standalone/rw/pipeline_skin.cpp PROPERTIES SKIP_UNITY_BUILD_INCLUSION ON)
     # P2B-05b: anonymous-namespace helpers in matfx.cpp / uvanim.cpp
     set_source_files_properties(standalone/rw/matfx.cpp standalone/rw/uvanim.cpp PROPERTIES SKIP_UNITY_BUILD_INCLUSION ON)
 endif()

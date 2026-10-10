@@ -941,6 +941,12 @@ void RwShimMatFXPipelineShutdown();
 void NotsaPipelineNoMatFX() {}
 #pragma comment(linker, "/alternatename:?RwShimMatFXPipelineEnsure@@YAXXZ=?NotsaPipelineNoMatFX@@YAXXZ")
 #pragma comment(linker, "/alternatename:?RwShimMatFXPipelineShutdown@@YAXXZ=?NotsaPipelineNoMatFX@@YAXXZ")
+// P2B-24b: the skin HW render path (pipeline_skin.cpp), same mechanism
+void RwShimSkinPipelineEnsure();
+void RwShimSkinPipelineShutdown();
+void NotsaPipelineNoSkin() {}
+#pragma comment(linker, "/alternatename:?RwShimSkinPipelineEnsure@@YAXXZ=?NotsaPipelineNoSkin@@YAXXZ")
+#pragma comment(linker, "/alternatename:?RwShimSkinPipelineShutdown@@YAXXZ=?NotsaPipelineNoSkin@@YAXXZ")
 
 void RwShimPipelineEnsure() {
     HookNativeDataPlugin();
@@ -952,9 +958,11 @@ void RwShimPipelineEnsure() {
         rw::engine->driver[rw::PLATFORM_D3D9]->defaultPipeline = g_defaultPipe;
     }
     RwShimMatFXPipelineEnsure(); // atomics with the MatFX flag render through the exe's fixed-function MatFX AllInOne
+    RwShimSkinPipelineEnsure();  // skinned atomics render through the exe's HW skin path (vs_1_1)
 }
 
 void RwShimPipelineShutdown() {
+    RwShimSkinPipelineShutdown();
     RwShimMatFXPipelineShutdown();
     if (rw::engine && rw::engine->driver[rw::PLATFORM_D3D9] && rw::engine->driver[rw::PLATFORM_D3D9]->defaultPipeline == g_defaultPipe) {
         rw::engine->driver[rw::PLATFORM_D3D9]->defaultPipeline = rw::engine->dummyDefaultPipeline;

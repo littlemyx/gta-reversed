@@ -96,22 +96,23 @@ struct CZoneDef {
         m_maxZ = int16(maxZ);
     }
 
-    // 0x72D850
+    // 0x72D850 (oracle-proven NaN / overflow forms): z must satisfy `minZ < z < maxZ` (NaN fails), the dot products must satisfy `0 <= d <= limit` (NaN fails) where the limit is the
+    // int32 `vec.x^2 + vec.y^2` loaded exactly (fild) and compared in extended precision (a float conversion rounds it above 2^24)
     [[nodiscard]] bool IsPointWithin(const CVector& point) const {
-        if ((float)m_minZ >= point.z || (float)m_maxZ <= point.z) {
+        if (!((float)m_minZ < point.z) || !((float)m_maxZ > point.z)) {
             return false;
         }
 
-        float dx = point.x - (float)m_cornerX;
-        float dy = point.y - (float)m_cornerY;
+        const float dx = point.x - (float)m_cornerX;
+        const float dy = point.y - (float)m_cornerY;
 
-        float sqMag0 = (float)m_vec1X * dx + (float)m_vec1Y * dy;
-        if (sqMag0 < 0.0f || sqMag0 > (sq(m_vec1Y) + sq(m_vec1X))) {
+        const float sqMag0 = (float)m_vec1X * dx + (float)m_vec1Y * dy;
+        if (!(sqMag0 >= 0.0f) || !((double)sqMag0 <= (double)(int32)((uint32)((int32)m_vec1X * m_vec1X) + (uint32)((int32)m_vec1Y * m_vec1Y)))) {
             return false;
         }
 
-        float sqMag1 = (float)m_vec2X * dx + (float)m_vec2Y * dy;
-        if (sqMag1 < 0.0f || sqMag1 > (sq(m_vec2Y) + sq(m_vec2X))) {
+        const float sqMag1 = (float)m_vec2X * dx + (float)m_vec2Y * dy;
+        if (!(sqMag1 >= 0.0f) || !((double)sqMag1 <= (double)(int32)((uint32)((int32)m_vec2X * m_vec2X) + (uint32)((int32)m_vec2Y * m_vec2Y)))) {
             return false;
         }
 

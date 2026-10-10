@@ -2167,6 +2167,7 @@ void CAEVehicleAudioEntity::ProcessVehicleSkidding(tVehicleParams& vp) {
     }
     default:
         NOTSA_UNREACHABLE();
+        return; // 0x4F8F52 -> 0x4F92A9: other vehicle types leave without touching the skid sound
     }
 
     const auto StopSkidSound = [&] {
@@ -2236,6 +2237,7 @@ float CAEVehicleAudioEntity::GetVehicleDriveWheelSkidValue(CVehicle* veh, tWheel
     }
     }
     NOTSA_UNREACHABLE();
+    return 0.f; // 0x4F5FFB: out of range wheel state returns the 0.0 left on the x87 stack
 }
 
 // 0x4F6000
@@ -2266,6 +2268,7 @@ float CAEVehicleAudioEntity::GetVehicleNonDriveWheelSkidValue(CVehicle* vehicle,
     }
     }
     NOTSA_UNREACHABLE();
+    return 0.f; // 0x4F60A4: out of range wheel state returns the 0.0 left on the x87 stack
 }
 #pragma endregion
 
@@ -2768,6 +2771,7 @@ void CAEVehicleAudioEntity::ProcessPlayerVehicleEngine(tVehicleParams& vp) {
         vp.PrevSpeed                       = a->m_PrevSpeed;
     } else {
         NOTSA_UNREACHABLE();
+        return; // 0x4FBC8B: any vehicle type other than automobile (0) / bike (9) leaves the function
     }
 
     if (m_IsSingleGear) { // 0x4FBCEA

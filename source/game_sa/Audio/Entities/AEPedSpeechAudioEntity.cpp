@@ -426,7 +426,7 @@ ePedSpeechVoiceS16 CAEPedSpeechAudioEntity::GetVoice(const char* name, eAudioPed
     case PED_TYPE_GANG:  return DoLookUpIn(gGngSpeechVoiceLookup);
     case PED_TYPE_GFD:   return DoLookUpIn(gGfdSpeechVoiceLookup);
     case PED_TYPE_SPC:   return VOICE_UNK;
-    default:             NOTSA_UNREACHABLE();
+    default:             NOTSA_UNREACHABLE(); return VOICE_UNK; // 0x4E3E92: types above 4 => -1
     }
 }
 
@@ -582,7 +582,7 @@ ePedSpeechVoiceS16 __stdcall CAEPedSpeechAudioEntity::GetVoiceForMood(eCJMood mo
     case MOOD_PR: return b ? VOICE_PLY_PR : VOICE_PLY_PR2;
     case MOOD_WG: return b ? VOICE_PLY_WG : VOICE_PLY_WG2;
     case MOOD_WR: return b ? VOICE_PLY_WR : VOICE_PLY_WR2;
-    default:      NOTSA_UNREACHABLE();
+    default:      NOTSA_UNREACHABLE(); return b ? VOICE_PLY_CR : VOICE_PLY_CR2; // 0x4E47AD: default shares the MOOD_CR entry
     }
 }
 

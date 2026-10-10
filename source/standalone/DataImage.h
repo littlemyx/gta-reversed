@@ -24,5 +24,8 @@ struct Info {
 void Load();
 bool IsLoaded();
 const Info& GetInfo();
+//! A3 (.notes/DETACH_DATA_PLAN.md): env-driven image diagnostics, called from WinMain after Fixups::ApplyToDataImage: NOTSA_POISON_CONVERTED=<file> (0xDD over
+//! converted globals) and NOTSA_IMAGE_CENSUS=1 (page-wise first-touch log). Nothing happens unless one of them is set. See ImageDiag.cpp.
+void ArmDiagnostics();
 } // namespace notsa::standalone::DataImage
 #endif

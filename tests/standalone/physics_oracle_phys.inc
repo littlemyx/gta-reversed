@@ -173,5 +173,16 @@ static void TestPhysical() {
             return ok;
         }, 0);
     }
+    Run("CVehicle::ProcessWheelRotation 0x6D1230", [](Rng& r, std::string& d) {
+        const tWheelState st = (tWheelState)r.below(4);
+        CVector a = GenV(r, PickScale(r)), b = GenV(r, PickScale(r));
+        const float rad = r.below(4) ? 0.2f + r.f01() : GenF(r, 5.f);
+        alignas(16) static uint8 vbuf[0x600]; auto* veh = reinterpret_cast<CVehicle*>(vbuf);   // `this` is unused
+        const float pa = veh->ProcessWheelRotation(st, a, b, rad);
+        const float pe = oracle::Fn<float __fastcall(CVehicle*, int, int, const CVector*, const CVector*, float)>(0x6D1230)(veh, 0, (int)st, &a, &b, rad);
+        if (SameF(pa, pe)) return true;
+        d = "st " + std::to_string((int)st) + " a " + V(a) + " b " + V(b) + " r " + F(rad) + " got " + F(pa) + " exe " + F(pe);
+        return false;
+    });
     (void)vs;
 }

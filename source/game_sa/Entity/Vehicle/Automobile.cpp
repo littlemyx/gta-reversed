@@ -4785,10 +4785,11 @@ void CAutomobile::ProcessCarWheelPair(eCarWheel leftWheel, eCarWheel rightWheel,
 */
 float CAutomobile::GetCarRoll() {
     const auto& right = m_matrix->GetRight();
-    const auto rightMag2D = right.Magnitude2D();
+    // 0x6A6010: the magnitude and the fpatan result stay on the x87 stack (no float spill), only the final *(180/PI) result is returned
+    const double rightMag2D = std::sqrt((double)right.x * right.x + (double)right.y * right.y);
 
     // If up.z < 0.f we're flipped, in which case `right` is more like `left` so we have to negate it.
-    return RadiansToDegrees(x87::atan2(right.z, m_matrix->GetUp().z < 0.f ? -rightMag2D : rightMag2D));
+    return (float)(x87::atan2(right.z, m_matrix->GetUp().z < 0.f ? -rightMag2D : rightMag2D) * (double)RAD_TO_DEG);
 }
 
 /*!

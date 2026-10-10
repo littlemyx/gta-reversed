@@ -213,10 +213,27 @@ static std::string DiffDesc(const void* a, const void* b, size_t n, const char* 
 }
 
 #include "world_oracle_inits.inc"
+// WORLD_ORACLE_SKIP_<AREA> (compile definition) leaves an area out, so that agents working on different areas do not block each other's builds
+#ifndef WORLD_ORACLE_SKIP_AUDIO
 #include "world_oracle_audio.inc"
+#else
+static void TestAudio() {}
+#endif
+#ifndef WORLD_ORACLE_SKIP_HUD
 #include "world_oracle_hud.inc"
+#else
+static void TestHud() {}
+#endif
+#ifndef WORLD_ORACLE_SKIP_ENV
 #include "world_oracle_env.inc"
+#else
+static void TestEnv() {}
+#endif
+#ifndef WORLD_ORACLE_SKIP_VEH
 #include "world_oracle_veh.inc"
+#else
+static void TestVeh() {}
+#endif
 
 static int __cdecl AssertHook(int, char* msg, int*) {   // prints the call stack of a failed assert (map the addresses with the linker .map)
     void* fr[16]; const USHORT n = RtlCaptureStackBackTrace(0, 16, fr, nullptr);

@@ -728,6 +728,7 @@ if (${RE_PROJECT}_RW_LIBRW)
         game_sa/Audio/Entities/AEVehicleAudioEntity.cpp
         game_sa/Maths.cpp
         game_sa/WaterLevel.cpp
+        game_sa/CullZones.cpp
         game_sa/Radar.cpp
         game_sa/MenuManager.cpp
         game_sa/Camera.cpp
@@ -735,6 +736,15 @@ if (${RE_PROJECT}_RW_LIBRW)
         game_sa/HudColours.cpp
         game_sa/Font.cpp
         game_sa/Entity/Placeable.cpp
+        game_sa/Sprite.cpp
+        game_sa/Sprite2d.cpp
+        game_sa/PointLights.cpp
+        game_sa/Scene.cpp
+        game_sa/Skidmark.cpp
+        game_sa/Skidmarks.cpp
+        game_sa/Coronas.cpp
+        game_sa/RegisteredCorona.cpp
+        game_sa/Clouds.cpp
         standalone/FtolExe.cpp
     )
     target_compile_features(world_oracle_test PRIVATE cxx_std_23)

@@ -1311,8 +1311,9 @@ float CVehicle::ProcessWheelRotation(tWheelState wheelState, const CVector& arg1
     if (wheelState == WHEEL_STATE_FIXED)
         return 0.0f;
 
-    const auto angle = DotProduct(arg1, arg2) / arg3;
-    return -angle;
+    // 0x6D123C: the dot product accumulates (z + y) + x, the quotient stays on the x87 stack until the negation
+    const double dot = ((double)arg1.z * arg2.z + (double)arg1.y * arg2.y) + (double)arg1.x * arg2.x;
+    return (float)-(dot / arg3);
 }
 
 // 0x6D1280

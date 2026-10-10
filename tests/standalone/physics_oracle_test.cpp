@@ -447,6 +447,7 @@ static std::string PhysDesc(PhysFx& f) { return "ts " + F(CTimer::ms_fTimeStep) 
 
 #include "physics_oracle_phys.inc"
 #include "physics_oracle_cd.inc"
+#include "physics_oracle_carc.inc"
 #include "physics_oracle_misc.inc"
 #include "physics_oracle_weapon.inc"
 
@@ -486,6 +487,7 @@ int main(int argc, char** argv) {
     TestCurves2();
     TestPhysical();
     TestCD();
+    TestCarc();
     TestMisc();
     TestWeapon();
     int bad24 = 0, bad53 = 0, hard24 = 0, hard53 = 0;

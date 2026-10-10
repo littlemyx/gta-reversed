@@ -3466,7 +3466,7 @@ void CAutomobile::HydraulicControl() {
     if (GetStatus() == STATUS_PLAYER) {
         if (m_pDriver && m_pDriver->IsPlayer())
             driver = m_pDriver->AsPlayer();
-        if (CGameLogic::GameState != GAME_STATE_INITIAL)
+        if (CGameLogic::GameState != GAMELOGIC_STATE_PLAYING)
             return;
     }
     if (!CVehicle::GetSpecialColModel()) {
@@ -3709,7 +3709,7 @@ bool CAutomobile::UpdateMovingCollision(float angle) {
     CPad* pad = nullptr;
     if (GetStatus() == STATUS_PLAYER) {
         CPlayerPed* driver = m_pDriver->AsPlayer();
-        if (!driver || !driver->IsPlayer() || CGameLogic::GameState)
+        if (!driver || !driver->IsPlayer() || CGameLogic::GameState != GAMELOGIC_STATE_PLAYING)
             return false;
 
         pad = driver->GetPadFromPlayer();
@@ -5861,7 +5861,7 @@ void CAutomobile::TankControl()
     if (GetStatus() != STATUS_PLAYER || m_nModelIndex != MODEL_RHINO)
         return;
 
-    if (CGameLogic::GameState != GAME_STATE_INITIAL || !m_pDriver || !m_pDriver->IsPlayer())
+    if (CGameLogic::GameState != GAMELOGIC_STATE_PLAYING || !m_pDriver || !m_pDriver->IsPlayer())
         return;
 
     CPad* pad = m_pDriver->AsPlayer()->GetPadFromPlayer();

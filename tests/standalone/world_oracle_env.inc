@@ -99,6 +99,7 @@ static constexpr uintptr_t WBEG = 0xC214D0, WEND = 0xC22900;
 
 // ------------------------------------------------------------------------------------------------------------------------------
 // CCullZones: random zone tables (valid-looking zones also BEYOND the counts: the exe's loops stop at the counts)
+bool IsPointWithinArbitraryArea(CVector2D p, CVector2D p1, CVector2D p2, CVector2D p3, CVector2D p4);   // CullZones.cpp (unused in the game, not hooked, not in a header)
 namespace czfx {
 static constexpr uintptr_t BEG = 0xC815C0, END = 0xC87AD0;   // mirror / tunnel / attribute zone tables, counts, current flags
 static void InitDef(CZoneDef& z, Rng& r, const CVector& centre, bool wide) {
@@ -338,6 +339,40 @@ static void TestEnv() {
         if (a == e) return true;
         d = "p " + V(p) + " zone " + Hex(&z, sizeof z) + " got " + std::to_string(a) + " exe " + std::to_string(e); return false;
     });
+    // NaN / inf / -0 in every coordinate of the point (and in the 4 corner points of the unused arbitrary-area test 0x72DDE0): every compare in the exe is a FCOMP + JP/JNP chain
+    {
+        const auto Odd = [](Rng& r, float fin) {
+            switch (r.below(8)) {
+            case 0: return BitsF(0x7FC00000u);
+            case 1: return BitsF(0x7F800000u);
+            case 2: return BitsF(0xFF800000u);
+            case 3: return -0.0f;
+            case 4: return BitsF(0x7F800001u + (r.u32() & 0x3FFFFF));
+            default: return fin;
+            }
+        };
+        Run("CZoneDef::IsPointWithin 0x72D850 (NaN / inf points)", [Odd](Rng& r, std::string& d) {
+            const CVector q = czfx::Setup(r);
+            CZoneDef z{}; czfx::InitDef(z, r, q, r.below(4) == 0);
+            const CVector c{ (float)z.m_cornerX + (float)(z.m_vec1X + z.m_vec2X) * 0.5f, (float)z.m_cornerY + (float)(z.m_vec1Y + z.m_vec2Y) * 0.5f, (float)(z.m_minZ + z.m_maxZ) * 0.5f };   // inside the zone
+            const CVector p{ Odd(r, c.x + r.f01() - 0.5f), Odd(r, c.y + r.f01() - 0.5f), Odd(r, c.z + r.f01() - 0.5f) };
+            const bool a = z.IsPointWithin(p);
+            const bool e = oracle::Fn<int __fastcall(const CZoneDef*, int, float, float, float)>(0x72D850)(&z, 0, p.x, p.y, p.z) & 0xFF;
+            Hit(a);
+            if (a == e) return true;
+            d = "p " + V(p) + " zone " + Hex(&z, sizeof z) + " got " + std::to_string(a) + " exe " + std::to_string(e); return false;
+        });
+        Run("IsPointWithinArbitraryArea 0x72DDE0", [Odd](Rng& r, std::string& d) {
+            CVector2D v[5];
+            for (auto& e : v) { e = { Odd(r, GenF(r, 50.f, S_ZERO)), Odd(r, GenF(r, 50.f, S_ZERO)) }; if (r.below(3)) { e.x = GenF(r, 50.f, S_ZERO); e.y = GenF(r, 50.f, S_ZERO); } }
+            if (r.below(2)) { v[1] = { 20.f, -20.f }; v[2] = { 20.f, 20.f }; v[3] = { -20.f, 20.f }; v[4] = { -20.f, -20.f }; v[0] = { Odd(r, r.f01() * 10.f - 5.f), Odd(r, r.f01() * 10.f - 5.f) }; }   // a box around the origin, the point (v[0]) inside or odd
+            const bool a = IsPointWithinArbitraryArea(v[0], v[1], v[2], v[3], v[4]);
+            const bool e = oracle::Fn<char __cdecl(float, float, float, float, float, float, float, float, float, float)>(0x72DDE0)(v[0].x, v[0].y, v[1].x, v[1].y, v[2].x, v[2].y, v[3].x, v[3].y, v[4].x, v[4].y) & 0xFF;
+            Hit(a);
+            if (a == e) return true;
+            d = "p " + F(v[0].x) + "," + F(v[0].y) + " 1 " + F(v[1].x) + "," + F(v[1].y) + " 2 " + F(v[2].x) + "," + F(v[2].y) + " 3 " + F(v[3].x) + "," + F(v[3].y) + " 4 " + F(v[4].x) + "," + F(v[4].y) + " got " + std::to_string(a) + " exe " + std::to_string(e); return false;
+        });
+    }
     Run("CCullZones::FindAttributesForCoors 0x72D970", [](Rng& r, std::string& d) {
         const CVector q = czfx::Setup(r);
         const auto a = CCullZones::FindAttributesForCoors(q);

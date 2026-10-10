@@ -2180,18 +2180,19 @@ void CCarCtrl::FlyAIPlaneInCertainDirection(CPlane* plane) {
     // Once a second (at a different time for each plane) pick a new altitude/heading to avoid obstacles
     const uint32 seed = plane->m_nRandomSeed;
     if ((seed + CTimer::m_snTimeInMilliseconds) % 1000 < (CTimer::m_snPreviousTimeInMilliseconds + seed) % 1000) {
-        const auto curHeading = CGeneral::GetATanOfXY(fwd.x, fwd.y);
+        // 0x423045: `GetATanOfXY` returns its `st0` unrounded; it stays on the x87 stack until the heading difference below
+        const auto curHeadingExt = CGeneral::GetATanOfXYExt(fwd.x, fwd.y);
 
         auto targetHeading = plane->m_planeHeading;
         switch (plane->m_autoPilot.m_nTempAction) {
         case TEMPACT_PLANE_FLY_STRAIGHT:
-            targetHeading = curHeading;
+            targetHeading = (float)curHeadingExt;
             break;
         case TEMPACT_PLANE_SHARP_LEFT:
-            targetHeading = (float)((double)curHeading - 2.0f);
+            targetHeading = (float)(curHeadingExt - 2.0f);
             break;
         case TEMPACT_PLANE_SHARP_RIGHT:
-            targetHeading = (float)(2.0f + (double)curHeading);
+            targetHeading = (float)(2.0f + curHeadingExt);
             break;
         }
 
@@ -2199,7 +2200,7 @@ void CCarCtrl::FlyAIPlaneInCertainDirection(CPlane* plane) {
         plane->m_planeHeadingPrev = plane->m_planeHeading + PI;
 
         // x87: the heading difference is kept in extended precision
-        auto headingDiff = (double)curHeading - targetHeading;
+        auto headingDiff = curHeadingExt - (double)targetHeading;
         if (headingDiff > PI) {
             do { headingDiff -= 2.0f * PI; } while (headingDiff > PI);
         }
@@ -5940,10 +5941,10 @@ void CCarCtrl::SteerAICarWithPhysicsFollowPath(CVehicle* vehicle, float* pSteer,
     const auto curK2 = (curLink.OneWayLaneOffsetExtended() + (double)ap.m_nCurrentLane) * (double)5.4f; // 0x44DB00, 0x858C50
     const auto bendStartX = (float)(((double)curRaw16[0] * (double)0.125f + curK2 * curDirY) - pos.x);
     const auto bendStartY = (float)(((double)curRaw16[1] * (double)0.125f - curK2 * curDirX) - pos.y);
-    const auto angleToBend = CGeneral::GetATanOfXY(bendStartX, bendStartY); // 0x53CC70
-    const float turnFactor1 = FindSpeedMultiplier((float)((double)angleToBend - heading), 0.4f, 1.2f, 0.4f); // 0x4224E0
+    const auto angleToBend = CGeneral::GetATanOfXYExt(bendStartX, bendStartY); // 0x435452 (unrounded, `fsub [heading]`)
+    const float turnFactor1 = FindSpeedMultiplier((float)(angleToBend - (double)heading), 0.4f, 1.2f, 0.4f); // 0x4224E0
     const auto curDirAngle  = CGeneral::GetATanOfXY(curDirX, curDirY); // 0x53CC70
-    const auto nextDirAngle = CGeneral::GetATanOfXY(nextDirX, nextDirY); // 0x53CC70
+    const auto nextDirAngle = CGeneral::GetATanOfXYExt(nextDirX, nextDirY); // 0x435499 (unrounded, `fsubr [curDirAngle]`)
     const float turnFactor2 = FindSpeedMultiplier((float)((double)curDirAngle - nextDirAngle), 0.1f, 1.2f, 0.4f); // 0x4224E0
 
     double limit = 1.0;
@@ -6397,8 +6398,8 @@ void CCarCtrl::SteerAICarWithPhysicsHeadingForTarget(CVehicle* vehicle, CPhysica
     steer = ClampSteerToMax(vehicle, steer); // 0x427FE0
 
     const auto& pos2 = vehicle->GetPosition();
-    const auto  targetAngle2 = CGeneral::GetATanOfXY((float)((double)x - pos2.x), (float)((double)y - pos2.y)); // 0x53CC70
-    const auto  speedMult = FindSpeedMultiplier((float)((double)targetAngle2 - heading), 0.4f, 1.2f, 0.4f); // 0x4224E0
+    const auto  targetAngle2 = CGeneral::GetATanOfXYExt((float)((double)x - pos2.x), (float)((double)y - pos2.y)); // 0x433479 (the unrounded atan goes straight into `fsub [heading]`)
+    const auto  speedMult = FindSpeedMultiplier((float)(targetAngle2 - (double)heading), 0.4f, 1.2f, 0.4f); // 0x4224E0
 
     const auto& ms = vehicle->m_vecMoveSpeed;
     *pBrake = 0.0f;
@@ -6953,11 +6954,12 @@ void CCarCtrl::SteerAIHeliFlyingAwayFromPlayer(CAutomobile* automobile) {
     const auto& pos = heli->GetPosition();
 
     // Face away from the player
-    const auto heading = CGeneral::GetATanOfXY(
+    // 0x42ACF9: the unrounded atan result gets `fadd [pi]` before the float store
+    const auto headingExt = CGeneral::GetATanOfXYExt(
         (float)((double)FindPlayerCoors(-1).x - pos.x),
         (float)((double)FindPlayerCoors(-1).y - pos.y)
     );
-    FlyAIHeliInCertainDirection(heli, (float)((double)heading + std::numbers::pi_v<float>), 1000.0f, false);
+    FlyAIHeliInCertainDirection(heli, (float)(headingExt + std::numbers::pi_v<float>), 1000.0f, false);
 }
 
 // 0x4238E0
@@ -7063,7 +7065,8 @@ void CCarCtrl::SteerAIHeliToKeepEntityInView(CAutomobile* automobile) {
 
     const auto& targetPos = target->GetPosition();
     const auto& pos       = heli->GetPosition();
-    const auto  heading   = CGeneral::GetATanOfXY(
+    // 0x42AF08: the atan result stays unrounded on the x87 stack until `fadd [pi/2]` at 0x42AFED
+    const auto  headingExt = CGeneral::GetATanOfXYExt(
         (float)((double)targetPos.x - pos.x),
         (float)((double)targetPos.y - pos.y)
     );
@@ -7081,7 +7084,7 @@ void CCarCtrl::SteerAIHeliToKeepEntityInView(CAutomobile* automobile) {
 
     // Rotate to look at the target
     {
-        const auto wantedHeading = (float)((double)heading + PI / 2.0f);
+        const auto wantedHeading = (float)(headingExt + PI / 2.0f); // 0x858FE4
         auto       diff          = (double)wantedHeading - CGeneral::GetATanOfXYExt(heli->m_matrix->GetForward().x, heli->m_matrix->GetForward().y); // (unrounded, 0x42B004)
         while (diff > PI) {
             diff -= 2.0f * PI;

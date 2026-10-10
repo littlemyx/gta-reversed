@@ -53,4 +53,4 @@ public:
 
 VALIDATE_SIZE(CAECutsceneTrackManager, 0x30);
 
-extern CAECutsceneTrackManager& AECutsceneTrackManager;
+NOTSA_GLOBAL_EXTERN(AECutsceneTrackManager, (CAECutsceneTrackManager));

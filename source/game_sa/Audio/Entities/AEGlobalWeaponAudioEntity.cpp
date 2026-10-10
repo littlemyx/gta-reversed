@@ -4,8 +4,8 @@
 #include "AEGlobalWeaponAudioEntity.h"
 #include "AEAudioHardware.h"
 
-auto& pWaterfall = StaticRef<CAESound*[3]>(0xB612F0);
-auto& pFogHorn = StaticRef<CAESound*>(0xB612FC);
+NOTSA_GLOBAL(pWaterfall, 0xB612F0, (CAESound*[3]), {});
+NOTSA_GLOBAL(pFogHorn, 0xB612FC, (CAESound*), {});
 
 // 0x5075B0
 CAEGlobalWeaponAudioEntity::CAEGlobalWeaponAudioEntity() : CAEWeaponAudioEntity() {
@@ -116,12 +116,12 @@ void CAEGlobalWeaponAudioEntity::ServiceAmbientGunFire() {
         FOGHORN_1,
         WATERFALL_LV, // Only in LV
     };
-    static auto& s_State = StaticRef<eState>(0xB61324);
+    NOTSA_GLOBAL_LOCAL(s_State, 0xB61324, (eState), {});
 
-    static auto& s_GunShots   = StaticRef<int32>(0xB61318);
-    static auto& s_WeaponType = StaticRef<eWeaponType>(0xB6131C);
-    static auto& s_Delay      = StaticRef<uint32>(0xB61320);
-    static auto& s_LastTime   = ScopedStaticRef<uint32>(0xB61364, 0xB61368, 0x1, CTimer::GetTimeInMS());
+    NOTSA_GLOBAL_LOCAL(s_GunShots, 0xB61318, (int32), {});
+    NOTSA_GLOBAL_LOCAL(s_WeaponType, 0xB6131C, (eWeaponType), {});
+    NOTSA_GLOBAL_LOCAL(s_Delay, 0xB61320, (uint32), {});
+    NOTSA_SCOPED_GLOBAL(s_LastTime, 0xB61364, 0xB61368, 0x1, (uint32), CTimer::GetTimeInMS());
 
     switch (s_State) {
     case eState::INITIAL: {

@@ -3,7 +3,7 @@
 #include "AEFireAudioEntity.h"
 #include "AEAudioHardware.h"
 
-auto& gfFireFrequencyVariations = StaticRef<std::array<float, 5>>(0x8AE598);
+NOTSA_GLOBAL(gfFireFrequencyVariations, 0x8AE598, (std::array<float, 5>), { 1.16f, 1.08f, 1.0f, 0.92f, 0.84f });
 
 // 0x4DCF20
 void CAEFireAudioEntity::Initialise(FxSystem_c* system) {

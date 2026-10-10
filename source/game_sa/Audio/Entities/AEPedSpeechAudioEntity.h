@@ -114,62 +114,62 @@ VALIDATE_SIZE(tSpecificSpeechContextInfo, sizeof(int16) * 2);
 class NOTSA_EXPORT_VTABLE CAEPedSpeechAudioEntity : public CAEAudioEntity {
 public:
     //!< Until when the override is active in [TimeMS]
-    static inline auto& s_nCJMoodOverrideTime = StaticRef<uint32>(0xB613E0);
+    static inline NOTSA_GLOBAL(s_nCJMoodOverrideTime, 0xB613E0, (uint32), {});
 
     //!< Override as CJ being well dressed (-1 => ignore, 0/1 => false/true) [Used for mood calculation]
-    static inline auto& s_nCJWellDressed = StaticRef<int16>(0xB613D0);
+    static inline NOTSA_GLOBAL(s_nCJWellDressed, 0xB613D0, (int16), {});
 
     //!< Override as CJ being fat (-1 => ignore, 0/1 => false/true) [Used for mood calculation]
-    static inline auto& s_nCJFat = StaticRef<int16>(0xB613D4);
+    static inline NOTSA_GLOBAL(s_nCJFat, 0xB613D4, (int16), {});
 
     //!< Override as CJ being with his group (gang) (-1 => ignore, 0/1 => false/true) [Used for mood calculation]
-    static inline auto& s_nCJGangBanging = StaticRef<int16>(0xB613D8);
+    static inline NOTSA_GLOBAL(s_nCJGangBanging, 0xB613D8, (int16), {});
 
     //!< Override the basic mood that is used to calculate the current mood (-1 => ignore, 0/1 => false/true) [Used for mood calculation]
-    static inline auto& s_nCJBasicMood = StaticRef<eCJMood>(0xB613DC);
+    static inline NOTSA_GLOBAL(s_nCJBasicMood, 0xB613DC, (eCJMood), {});
 
     //!< If any currently active speech is "ForceAudible" (Must be heard (?))
-    static inline auto& s_bForceAudible = StaticRef<bool>(0xB613E4);
+    static inline NOTSA_GLOBAL(s_bForceAudible, 0xB613E4, (bool), {});
 
     //!< No speeches should be played
-    static inline auto& s_bAllSpeechDisabled = StaticRef<bool>(0xB613E6);
+    static inline NOTSA_GLOBAL(s_bAllSpeechDisabled, 0xB613E6, (bool), {});
 
     //!< Is the player speaking
-    static inline auto& s_bAPlayerSpeaking = StaticRef<bool>(0xB613E5);
+    static inline NOTSA_GLOBAL(s_bAPlayerSpeaking, 0xB613E5, (bool), {});
 
     //!< Current conversation length (Not array size!)
-    static inline auto& s_ConversationLength = StaticRef<int16>(0xB613E8);
+    static inline NOTSA_GLOBAL(s_ConversationLength, 0xB613E8, (int16), {});
 
     //!< Current conversation contexts
-    static inline auto& s_Conversation = StaticRef<std::array<eGlobalSpeechContextS16, 8>>(0xB613EC);
+    static inline NOTSA_GLOBAL(s_Conversation, 0xB613EC, (std::array<eGlobalSpeechContextS16, 8>), {});
 
     //!< Is the player having a conversation with another ped? (With `s_pPlayerConversationPed`)
-    static inline auto& s_bPlayerConversationHappening = StaticRef<bool>(0xB613FC);
+    static inline NOTSA_GLOBAL(s_bPlayerConversationHappening, 0xB613FC, (bool), {});
 
     //!< The ped the player is having a conversation with (If any)
-    static inline auto& s_pPlayerConversationPed = StaticRef<CPed*>(0xB61400);
+    static inline NOTSA_GLOBAL(s_pPlayerConversationPed, 0xB61400, (CPed*), {});
 
     //!< Are 2 peds having a conversation (`s_pConversationPed1` and `s_pConversationPed2`)
-    static inline auto& s_bPedConversationHappening = StaticRef<bool>(0xB613FD);
+    static inline NOTSA_GLOBAL(s_bPedConversationHappening, 0xB613FD, (bool), {});
 
     //!< Conversation peds/slots (Valid if `s_bPedConversationHappening`)
-    static inline auto& s_pConversationPed1     = StaticRef<CPed*>(0xB61410);
-    static inline auto& s_pConversationPedSlot1 = StaticRef<tPedSpeechSlotID>(0xB61408);
-    static inline auto& s_pConversationPed2     = StaticRef<CPed*>(0xB6140C);
-    static inline auto& s_pConversationPedSlot2 = StaticRef<tPedSpeechSlotID>(0xB61404);
+    static inline NOTSA_GLOBAL(s_pConversationPed1, 0xB61410, (CPed*), {});
+    static inline NOTSA_GLOBAL(s_pConversationPedSlot1, 0xB61408, (tPedSpeechSlotID), {});
+    static inline NOTSA_GLOBAL(s_pConversationPed2, 0xB6140C, (CPed*), {});
+    static inline NOTSA_GLOBAL(s_pConversationPedSlot2, 0xB61404, (tPedSpeechSlotID), {});
 
     //!< Next speech-slot to use. This is merrily a hint, rather than an obligation
-    static inline auto& s_NextSpeechSlot = StaticRef<tPedSpeechSlotID>(0xB61414);
+    static inline NOTSA_GLOBAL(s_NextSpeechSlot, 0xB61414, (tPedSpeechSlotID), {});
 
     //!< A least-recently-used (FILO) cache of phrases used
-    static inline auto& s_PhraseMemory = StaticRef<std::array<tPhraseMemory, 150>>(0xB61418);
+    static inline NOTSA_GLOBAL(s_PhraseMemory, 0xB61418, (std::array<tPhraseMemory, 150>), = std::bit_cast<std::array<tPhraseMemory, 150>>(std::array<std::byte, 150 * sizeof(tPhraseMemory)>{})); // all-zero like the exe's .bss (NOT the NSDMI -1 of tPhraseMemory)
 
     //!< Speech slots (Last one is always reserved for the player!)
     static inline auto&      s_PedSpeechSlots   = StaticRef<std::array<CAEPedSpeechSlot, SND_BANK_SLOT_SPEECH6 - SND_BANK_SLOT_SPEECH1 + 1>>(0xB61C38);
     static inline const auto PLAYER_SPEECH_SLOT = (tPedSpeechSlotID)(s_PedSpeechSlots.size() - 1);
 
     //!< Time when a global context can be played again
-    static inline auto& gGlobalSpeechContextNextPlayTime = StaticRef<std::array<uint32, CTX_GLOBAL_NUM>>(0xB61670); // PAIN (CTX_GLOBAL_PAIN_START -> CTX_GLOBAL_PAIN_END) is ignored, and `m_NextTimeCanSayPain` is used instead
+    static inline NOTSA_GLOBAL(gGlobalSpeechContextNextPlayTime, 0xB61670, (std::array<uint32, CTX_GLOBAL_NUM>), {}); // PAIN (CTX_GLOBAL_PAIN_START -> CTX_GLOBAL_PAIN_END) is ignored, and `m_NextTimeCanSayPain` is used instead
 
     //!< Default sound volume of speeches
     static inline const auto SPEECH_SOUND_DEFAULT_VOLUME = 3.f; // 0x8C80EC

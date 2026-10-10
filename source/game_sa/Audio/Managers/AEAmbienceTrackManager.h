@@ -60,4 +60,4 @@ private:
 
 VALIDATE_SIZE(CAEAmbienceTrackManager, 0x2C);
 
-extern CAEAmbienceTrackManager& AEAmbienceTrackManager;
+NOTSA_GLOBAL_EXTERN(AEAmbienceTrackManager, (CAEAmbienceTrackManager));

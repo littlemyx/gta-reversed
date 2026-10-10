@@ -4468,10 +4468,10 @@ float CAEVehicleAudioEntity::GetBaseVolumeForBicycleTyre(float ratio) const noex
 }
 
 // 0xB6BAC8, 0xB6BAC9, 0xB6BACC, 0xB6BAD0 - Names are made up
-static auto& s_DummyBicycleWasFreewheeling  = StaticRef<bool>(0xB6BAC8);
-static auto& s_PlayerBicycleWasFreewheeling = StaticRef<bool>(0xB6BAC9);
-static auto& s_PlayerBicyclePedalTimer      = StaticRef<float>(0xB6BACC);
-static auto& s_PlayerBicyclePrevCrankAngle  = StaticRef<float>(0xB6BAD0);
+static NOTSA_GLOBAL(s_DummyBicycleWasFreewheeling, 0xB6BAC8, (bool), {});
+static NOTSA_GLOBAL(s_PlayerBicycleWasFreewheeling, 0xB6BAC9, (bool), {});
+static NOTSA_GLOBAL(s_PlayerBicyclePedalTimer, 0xB6BACC, (float), {});
+static NOTSA_GLOBAL(s_PlayerBicyclePrevCrankAngle, 0xB6BAD0, (float), {});
 
 //! Common part of `ProcessDummyBicycle` and `ProcessPlayerBicycle` (Plays the tyre, sprocket and chain sounds)
 static void ProcessBicycleSounds(CAEVehicleAudioEntity& ae, CAEVehicleAudioEntity::tVehicleParams& params, bool& wasFreewheeling) {

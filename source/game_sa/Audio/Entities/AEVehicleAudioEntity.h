@@ -615,12 +615,12 @@ public: // Structs:
     VALIDATE_SIZE(tVehicleParams, 0x4C);
 
 public:
-    static inline auto& s_pPlayerAttachedForRadio       = StaticRef<CPed*>(0xB6B98C); // The driver (CVehicle::m_pDriver), set together with `s_pVehicleAudioSettingsForRadio`
-    static inline auto& s_pPlayerDriver                 = StaticRef<CPed*>(0xB6B990);
-    static inline auto& s_HelicoptorsDisabled           = StaticRef<bool>(0xB6B994);
-    static inline auto& s_NextDummyEngineSlot           = StaticRef<int16>(0xB6B998);
-    static inline auto& s_pVehicleAudioSettingsForRadio = StaticRef<tVehicleAudioSettings*>(0xB6B99C); // NOT 0xB6B98C (that is `s_pPlayerAttachedForRadio`), see 0x4F5B20
-    static inline auto& s_DummyEngineSlots              = StaticRef<std::array<tDummyEngineSlot, SND_BANK_SLOT_DUMMY_END - SND_BANK_SLOT_DUMMY_FIRST>>(0xB6B9A0);
+    static inline NOTSA_GLOBAL(s_pPlayerAttachedForRadio, 0xB6B98C, (CPed*), {}); // The driver (CVehicle::m_pDriver), set together with `s_pVehicleAudioSettingsForRadio`
+    static inline NOTSA_GLOBAL(s_pPlayerDriver, 0xB6B990, (CPed*), {});
+    static inline NOTSA_GLOBAL(s_HelicoptorsDisabled, 0xB6B994, (bool), {});
+    static inline NOTSA_GLOBAL(s_NextDummyEngineSlot, 0xB6B998, (int16), {});
+    static inline NOTSA_GLOBAL(s_pVehicleAudioSettingsForRadio, 0xB6B99C, (tVehicleAudioSettings*), {}); // NOT 0xB6B98C (that is `s_pPlayerAttachedForRadio`), see 0x4F5B20
+    static inline NOTSA_GLOBAL(s_DummyEngineSlots, 0xB6B9A0, (std::array<tDummyEngineSlot, SND_BANK_SLOT_DUMMY_END - SND_BANK_SLOT_DUMMY_FIRST>), = std::bit_cast<std::array<tDummyEngineSlot, SND_BANK_SLOT_DUMMY_END - SND_BANK_SLOT_DUMMY_FIRST>>(std::array<std::byte, (SND_BANK_SLOT_DUMMY_END - SND_BANK_SLOT_DUMMY_FIRST) * sizeof(tDummyEngineSlot)>{})); // all-zero like the exe's .bss (NOT the NSDMI BankID -1)
 
 public:
     CAEVehicleAudioEntity();

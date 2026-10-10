@@ -16,7 +16,7 @@ public:
     CAESound*   m_SoundRight;
     FxSystem_c* m_FxSystem;
 
-    static inline auto& m_snLastFireFrequencyIndex = StaticRef<uint8>(0xB612EC);
+    static inline NOTSA_GLOBAL(m_snLastFireFrequencyIndex, 0xB612EC, (uint8), {});
 
 public:
     static void InjectHooks();

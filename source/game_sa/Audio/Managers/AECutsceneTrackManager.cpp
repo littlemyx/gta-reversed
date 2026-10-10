@@ -4,7 +4,7 @@
 #include "AEAudioHardware.h"
 #include "CutSceneStreamsPC.h"
 
-auto& AECutsceneTrackManager = StaticRef<CAECutsceneTrackManager>(0x8AE554);
+NOTSA_GLOBAL(AECutsceneTrackManager, 0x8AE554, (CAECutsceneTrackManager), { false, false, -1 }); // m_nAudioChannel = -1, the rest zero
 
 void CAECutsceneTrackManager::InjectHooks() {
     RH_ScopedClass(CAECutsceneTrackManager);
@@ -154,7 +154,7 @@ void CAECutsceneTrackManager::PreloadCutsceneTrack(int16 trackId, bool wait) {
 
 // 0x4DC130
 void CAECutsceneTrackManager::PreloadBeatTrack(int16 trackId, bool wait) {
-    static auto& gBeatTrackLookup = StaticRef<std::array<int16, 14>>(0x8AE538);
+    NOTSA_GLOBAL_LOCAL(gBeatTrackLookup, 0x8AE538, (std::array<int16, 14>), { 180, 175, 178, 179, 177, 175, 175, 175, 175, 176, 184, 183, 182, 181 });
 
     PreloadCutsceneTrack(gBeatTrackLookup[trackId], wait);
 }

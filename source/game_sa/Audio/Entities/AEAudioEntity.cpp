@@ -10,7 +10,7 @@
 
 constexpr auto EVENT_VOLUMES_BUFFER_SIZE = 45401;
 
-auto& m_pAudioEventVolumes = StaticRef<int8*>(0xBD00F8); // Use `GetDefaultVolume` to access!
+NOTSA_GLOBAL(m_pAudioEventVolumes, 0xBD00F8, (int8*), {}); // Use `GetDefaultVolume` to access!
 
 // The exe's destructors (e.g. 0x6D0A10 `mov [esi], 0x859988` = CAEAudioEntity vftable) reset the vptr down the chain, so a stale `CAESound::m_AudioEntity`
 // of a destroyed owner dispatches to `CAEAudioEntity::UpdateParameters` (empty) instead of the derived override. With the trivial inline destructor MSVC /O2

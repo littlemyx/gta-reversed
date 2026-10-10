@@ -87,4 +87,4 @@ VALIDATE_OFFSET(CAEAudioChannel, m_nChannelId, 0x3A);
 //VALIDATE_OFFSET(CAEAudioChannel, m_nBufferFrequency, 0x4B);
 //VALIDATE_OFFSET(CAEAudioChannel, m_wFrequencyMult, 0x49);
 
-extern uint32& g_numSoundChannelsUsed;
+NOTSA_GLOBAL_EXTERN(g_numSoundChannelsUsed, (uint32));

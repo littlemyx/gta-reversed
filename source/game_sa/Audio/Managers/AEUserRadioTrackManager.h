@@ -64,4 +64,4 @@ private:
 
 VALIDATE_SIZE(CAEUserRadioTrackManager, 0x1c);
 
-extern CAEUserRadioTrackManager& AEUserRadioTrackManager;
+NOTSA_GLOBAL_EXTERN(AEUserRadioTrackManager, (CAEUserRadioTrackManager));

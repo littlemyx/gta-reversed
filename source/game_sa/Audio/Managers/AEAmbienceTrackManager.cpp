@@ -5,7 +5,7 @@
 #include "AEAudioHardware.h"
 #include "AEAudioUtility.h"
 
-auto& AEAmbienceTrackManager = StaticRef<CAEAmbienceTrackManager>(0x8AC15C);
+NOTSA_GLOBAL(AEAmbienceTrackManager, 0x8AC15C, (CAEAmbienceTrackManager), { false, false, false, RADIO_INVALID, -1, CAEAmbienceTrackManager::STARTING, -1, -1, 0, 0.0f, 0.0f }); // m_RequestedSettings: zero
 
 void CAEAmbienceTrackManager::InjectHooks() {
     RH_ScopedClass(CAEAmbienceTrackManager);

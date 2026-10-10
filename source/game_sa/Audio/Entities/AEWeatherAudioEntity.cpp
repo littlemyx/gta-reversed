@@ -18,7 +18,7 @@ enum class eWeatherEvent {
 // NOTE: (x, y, z) = (-0.906, 0.423, 0), as built on the stack at 0x505A00 (compared against `sound->m_CurrPos`); `Service` (0x5052F0) builds its own 4 variants
 constexpr CVector DEFAULT_POS = { -0.906f, 0.423f, 0.f };
 
-auto& m_snLastRainDropSoundID = StaticRef<int16>(0x8CC310); // TODO: Use `eSoundID`. NOTE: The original loads 32 bits (high half is always 0) but stores only 16 (`mov word ptr [0x8CC310], di`)
+NOTSA_GLOBAL(m_snLastRainDropSoundID, 0x8CC310, (int16), { 2 }); // TODO: Use `eSoundID`. NOTE: The original loads 32 bits (high half is always 0) but stores only 16 (`mov word ptr [0x8CC310], di`)
 auto& m_sRainSoundL = StaticRef<CAETwinLoopSoundEntity>(0xB6BB18);  // dunno about names
 auto& m_sRainSoundR = StaticRef<CAETwinLoopSoundEntity>(0xB6BBC0);
 
@@ -232,8 +232,8 @@ void CAEWeatherAudioEntity::UpdateParameters(CAESound* sound, int16 curPlayPos) 
 
         // NOTE: The original has 2 copies of this code (right: 0x505CC1, left: 0x5060D8)
         if (sound->m_CurrPos == DEFAULT_POS) {
-            static auto& s_ResidueRight   = StaticRef<float>(0xB6BC70);
-            static auto& s_LastEntityRight = StaticRef<CEntity*>(0xB6BC74);
+            NOTSA_GLOBAL_LOCAL(s_ResidueRight, 0xB6BC70, (float), {});
+            NOTSA_GLOBAL_LOCAL(s_LastEntityRight, 0xB6BC74, (CEntity*), {});
             Process(
                 CVector{ right.x + pov.x, pov.y + right.y, right.z + pov.z },
                 CVector{ right4.x + pov.x, pov.y + right4.y, right4.z + pov.z },
@@ -241,8 +241,8 @@ void CAEWeatherAudioEntity::UpdateParameters(CAESound* sound, int16 curPlayPos) 
                 s_LastEntityRight
             );
         } else {
-            static auto& s_ResidueLeft    = StaticRef<float>(0xB6BC68);
-            static auto& s_LastEntityLeft = StaticRef<CEntity*>(0xB6BC6C);
+            NOTSA_GLOBAL_LOCAL(s_ResidueLeft, 0xB6BC68, (float), {});
+            NOTSA_GLOBAL_LOCAL(s_LastEntityLeft, 0xB6BC6C, (CEntity*), {});
             Process(
                 CVector{ -right.x + pov.x, pov.y + -right.y, -right.z + pov.z },
                 CVector{ -right4.x + pov.x, pov.y + -right4.y, -right4.z + pov.z },
@@ -254,12 +254,12 @@ void CAEWeatherAudioEntity::UpdateParameters(CAESound* sound, int16 curPlayPos) 
     }
     case +eWeatherEvent::UNK_4:
     case +eWeatherEvent::UNK_5: { // 0x506527
-        static auto& sbWindOffset  = StaticRef<bool>(0x8CC2C0);
-        static auto& sfWindOffset  = StaticRef<float>(0xB6BAFC);
-        static auto& sfWindFreq    = StaticRef<float>(0xB6BAF8);
-        static auto& sfOldFreqLeft = StaticRef<float>(0x8CC2C4);
-        static auto& sWindTableA   = StaticRef<float[3][2]>(0x8CC2D0);
-        static auto& sWindTableB   = StaticRef<float[3][2]>(0x8CC2E8);
+        NOTSA_GLOBAL_LOCAL(sbWindOffset, 0x8CC2C0, (bool), { true });
+        NOTSA_GLOBAL_LOCAL(sfWindOffset, 0xB6BAFC, (float), {});
+        NOTSA_GLOBAL_LOCAL(sfWindFreq, 0xB6BAF8, (float), {});
+        NOTSA_GLOBAL_LOCAL(sfOldFreqLeft, 0x8CC2C4, (float), { 1.0f });
+        NOTSA_GLOBAL_LOCAL(sWindTableA, 0x8CC2D0, (float[3][2]), { {}, { 0.3f, 0.4f }, { 1.0001f, 0.5f } });
+        NOTSA_GLOBAL_LOCAL(sWindTableB, 0x8CC2E8, (float[3][2]), { { 0.0f, 0.5f }, { 0.3f, 1.0f }, { 1.0001f, 1.0f } });
 
         const double zFactor = (double)TheCamera.GetPosition().z * (double)0.002f;
         const float  t       = zFactor > 1.0 ? 1.f : (zFactor < 0.0 ? 0.f : (float)zFactor);

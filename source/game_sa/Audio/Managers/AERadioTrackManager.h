@@ -116,7 +116,7 @@ struct tRadioIndexHistory {
     }
 };
 static_assert(sizeof(tRadioIndexHistory<int32, 1>) == sizeof(int32)); // No VALIDATE_SIZE because the preprocessor is dumb
-
+template<typename T> inline constexpr T kRadioIndexHistoryZero = std::bit_cast<T>(std::array<std::byte, sizeof(T)>{}); // an all-zero object: the exe's .bss value; the NSDMI -1 defaults must not run for these globals in detached mode
 enum class eRadioTrackMode {
     RADIO_STARTING,
     RADIO_WAITING_TO_PLAY,
@@ -172,39 +172,39 @@ public:
     using IdentIndexHistory    = tRadioIndexHistory<int32, IDENT_INDEX_HISTORY_COUNT>;
     using MusicTrackHistory    = tRadioIndexHistory<int8, MUSIC_TRACK_HISTORY_COUNT>;
 
-    static inline auto& m_nDJBanterIndexHistory = StaticRef<DJBanterIndexHistory[RADIO_COUNT]>(0xB61D78); // 210
-    static inline auto& m_nAdvertIndexHistory = StaticRef<AdvertIndexHistory[RADIO_COUNT]>(0xB620C0);       // 560
-    static inline auto& m_nIdentIndexHistory = StaticRef<IdentIndexHistory[RADIO_COUNT]>(0xB62980);          // 112
-    static inline auto& m_nMusicTrackIndexHistory = StaticRef<MusicTrackHistory[RADIO_COUNT]>(0xB62B40);   // 280
+    static inline NOTSA_GLOBAL(m_nDJBanterIndexHistory, 0xB61D78, (DJBanterIndexHistory[RADIO_COUNT]), { kRadioIndexHistoryZero<DJBanterIndexHistory>, kRadioIndexHistoryZero<DJBanterIndexHistory>, kRadioIndexHistoryZero<DJBanterIndexHistory>, kRadioIndexHistoryZero<DJBanterIndexHistory>, kRadioIndexHistoryZero<DJBanterIndexHistory>, kRadioIndexHistoryZero<DJBanterIndexHistory>, kRadioIndexHistoryZero<DJBanterIndexHistory>, kRadioIndexHistoryZero<DJBanterIndexHistory>, kRadioIndexHistoryZero<DJBanterIndexHistory>, kRadioIndexHistoryZero<DJBanterIndexHistory>, kRadioIndexHistoryZero<DJBanterIndexHistory>, kRadioIndexHistoryZero<DJBanterIndexHistory>, kRadioIndexHistoryZero<DJBanterIndexHistory>, kRadioIndexHistoryZero<DJBanterIndexHistory> }); // 210
+    static inline NOTSA_GLOBAL(m_nAdvertIndexHistory, 0xB620C0, (AdvertIndexHistory[RADIO_COUNT]), { kRadioIndexHistoryZero<AdvertIndexHistory>, kRadioIndexHistoryZero<AdvertIndexHistory>, kRadioIndexHistoryZero<AdvertIndexHistory>, kRadioIndexHistoryZero<AdvertIndexHistory>, kRadioIndexHistoryZero<AdvertIndexHistory>, kRadioIndexHistoryZero<AdvertIndexHistory>, kRadioIndexHistoryZero<AdvertIndexHistory>, kRadioIndexHistoryZero<AdvertIndexHistory>, kRadioIndexHistoryZero<AdvertIndexHistory>, kRadioIndexHistoryZero<AdvertIndexHistory>, kRadioIndexHistoryZero<AdvertIndexHistory>, kRadioIndexHistoryZero<AdvertIndexHistory>, kRadioIndexHistoryZero<AdvertIndexHistory>, kRadioIndexHistoryZero<AdvertIndexHistory> }); // 560
+    static inline NOTSA_GLOBAL(m_nIdentIndexHistory, 0xB62980, (IdentIndexHistory[RADIO_COUNT]), { kRadioIndexHistoryZero<IdentIndexHistory>, kRadioIndexHistoryZero<IdentIndexHistory>, kRadioIndexHistoryZero<IdentIndexHistory>, kRadioIndexHistoryZero<IdentIndexHistory>, kRadioIndexHistoryZero<IdentIndexHistory>, kRadioIndexHistoryZero<IdentIndexHistory>, kRadioIndexHistoryZero<IdentIndexHistory>, kRadioIndexHistoryZero<IdentIndexHistory>, kRadioIndexHistoryZero<IdentIndexHistory>, kRadioIndexHistoryZero<IdentIndexHistory>, kRadioIndexHistoryZero<IdentIndexHistory>, kRadioIndexHistoryZero<IdentIndexHistory>, kRadioIndexHistoryZero<IdentIndexHistory>, kRadioIndexHistoryZero<IdentIndexHistory> }); // 112
+    static inline NOTSA_GLOBAL(m_nMusicTrackIndexHistory, 0xB62B40, (MusicTrackHistory[RADIO_COUNT]), { kRadioIndexHistoryZero<MusicTrackHistory>, kRadioIndexHistoryZero<MusicTrackHistory>, kRadioIndexHistoryZero<MusicTrackHistory>, kRadioIndexHistoryZero<MusicTrackHistory>, kRadioIndexHistoryZero<MusicTrackHistory>, kRadioIndexHistoryZero<MusicTrackHistory>, kRadioIndexHistoryZero<MusicTrackHistory>, kRadioIndexHistoryZero<MusicTrackHistory>, kRadioIndexHistoryZero<MusicTrackHistory>, kRadioIndexHistoryZero<MusicTrackHistory>, kRadioIndexHistoryZero<MusicTrackHistory>, kRadioIndexHistoryZero<MusicTrackHistory>, kRadioIndexHistoryZero<MusicTrackHistory>, kRadioIndexHistoryZero<MusicTrackHistory> }); // 280
 
-    static inline auto& m_nStatsLastHitTimeOutHours = StaticRef<uint8>(0xB62C58); // = -1;
-    static inline auto& m_nStatsLastHitGameClockHours = StaticRef<uint8>(0xB62C59); // = -1;
-    static inline auto& m_nStatsLastHitGameClockDays = StaticRef<uint8>(0xB62C5A); // = -1;
-    static inline auto& m_nStatsStartedCrash1 = StaticRef<uint8>(0xB62C5B); // = 0;
-    static inline auto& m_nStatsStartedCat2 = StaticRef<uint8>(0xB62C5C); // = 0;
-    static inline auto& m_nStatsStartedBadlands = StaticRef<uint8>(0xB62C5D); // = 0;
-    static inline auto& m_nStatsPassedVCrash2 = StaticRef<uint8>(0xB62C5E); // = 0;
-    static inline auto& m_nStatsPassedTruth2 = StaticRef<uint8>(0xB62C5F); // = 0;
-    static inline auto& m_nStatsPassedSweet2 = StaticRef<uint8>(0xB62C60); // = 0;
-    static inline auto& m_nStatsPassedStrap4 = StaticRef<uint8>(0xB62C61); // = 0;
-    static inline auto& m_nStatsPassedSCrash1 = StaticRef<uint8>(0xB62C62); // = 0;
-    static inline auto& m_nStatsPassedRiot1 = StaticRef<uint8>(0xB62C63); // = 0;
-    static inline auto& m_nStatsPassedRyder2 = StaticRef<uint8>(0xB62C64); // = 0;
-    static inline auto& m_nStatsPassedMansion2 = StaticRef<uint8>(0xB62C65); // = 0;
-    static inline auto& m_nStatsPassedLAFin2 = StaticRef<uint8>(0xB62C66); // = 0;
-    static inline auto& m_nStatsPassedFarlie3 = StaticRef<uint8>(0xB62C67); // = 0;
-    static inline auto& m_nStatsPassedDesert10 = StaticRef<uint8>(0xB62C68); // = 0;
-    static inline auto& m_nStatsPassedDesert8 = StaticRef<uint8>(0xB62C69); // = 0;
-    static inline auto& m_nStatsPassedDesert5 = StaticRef<uint8>(0xB62C6A); // = 0;
-    static inline auto& m_nStatsPassedDesert3 = StaticRef<uint8>(0xB62C6B); // = 0;
-    static inline auto& m_nStatsPassedDesert1 = StaticRef<uint8>(0xB62C6C); // = 0;
-    static inline auto& m_nStatsPassedCat1 = StaticRef<uint8>(0xB62C6D); // = 0;
-    static inline auto& m_nStatsPassedCasino10 = StaticRef<uint8>(0xB62C6E); // = 0;
-    static inline auto& m_nStatsPassedCasino6 = StaticRef<uint8>(0xB62C6F); // = 0;
-    static inline auto& m_nStatsPassedCasino3 = StaticRef<uint8>(0xB62C70); // = 0;
-    static inline auto& m_nStatsCitiesPassed = StaticRef<uint8>(0xB62C71); // = 0;
-    static inline auto& m_nSpecialDJBanterIndex = StaticRef<uint8>(0xB62C72); // = -1;
-    static inline auto& m_nSpecialDJBanterPending = StaticRef<uint8>(0xB62C73); // = 3; // ?
+    static inline NOTSA_GLOBAL(m_nStatsLastHitTimeOutHours, 0xB62C58, (uint8), {}); // = -1;
+    static inline NOTSA_GLOBAL(m_nStatsLastHitGameClockHours, 0xB62C59, (uint8), {}); // = -1;
+    static inline NOTSA_GLOBAL(m_nStatsLastHitGameClockDays, 0xB62C5A, (uint8), {}); // = -1;
+    static inline NOTSA_GLOBAL(m_nStatsStartedCrash1, 0xB62C5B, (uint8), {}); // = 0;
+    static inline NOTSA_GLOBAL(m_nStatsStartedCat2, 0xB62C5C, (uint8), {}); // = 0;
+    static inline NOTSA_GLOBAL(m_nStatsStartedBadlands, 0xB62C5D, (uint8), {}); // = 0;
+    static inline NOTSA_GLOBAL(m_nStatsPassedVCrash2, 0xB62C5E, (uint8), {}); // = 0;
+    static inline NOTSA_GLOBAL(m_nStatsPassedTruth2, 0xB62C5F, (uint8), {}); // = 0;
+    static inline NOTSA_GLOBAL(m_nStatsPassedSweet2, 0xB62C60, (uint8), {}); // = 0;
+    static inline NOTSA_GLOBAL(m_nStatsPassedStrap4, 0xB62C61, (uint8), {}); // = 0;
+    static inline NOTSA_GLOBAL(m_nStatsPassedSCrash1, 0xB62C62, (uint8), {}); // = 0;
+    static inline NOTSA_GLOBAL(m_nStatsPassedRiot1, 0xB62C63, (uint8), {}); // = 0;
+    static inline NOTSA_GLOBAL(m_nStatsPassedRyder2, 0xB62C64, (uint8), {}); // = 0;
+    static inline NOTSA_GLOBAL(m_nStatsPassedMansion2, 0xB62C65, (uint8), {}); // = 0;
+    static inline NOTSA_GLOBAL(m_nStatsPassedLAFin2, 0xB62C66, (uint8), {}); // = 0;
+    static inline NOTSA_GLOBAL(m_nStatsPassedFarlie3, 0xB62C67, (uint8), {}); // = 0;
+    static inline NOTSA_GLOBAL(m_nStatsPassedDesert10, 0xB62C68, (uint8), {}); // = 0;
+    static inline NOTSA_GLOBAL(m_nStatsPassedDesert8, 0xB62C69, (uint8), {}); // = 0;
+    static inline NOTSA_GLOBAL(m_nStatsPassedDesert5, 0xB62C6A, (uint8), {}); // = 0;
+    static inline NOTSA_GLOBAL(m_nStatsPassedDesert3, 0xB62C6B, (uint8), {}); // = 0;
+    static inline NOTSA_GLOBAL(m_nStatsPassedDesert1, 0xB62C6C, (uint8), {}); // = 0;
+    static inline NOTSA_GLOBAL(m_nStatsPassedCat1, 0xB62C6D, (uint8), {}); // = 0;
+    static inline NOTSA_GLOBAL(m_nStatsPassedCasino10, 0xB62C6E, (uint8), {}); // = 0;
+    static inline NOTSA_GLOBAL(m_nStatsPassedCasino6, 0xB62C6F, (uint8), {}); // = 0;
+    static inline NOTSA_GLOBAL(m_nStatsPassedCasino3, 0xB62C70, (uint8), {}); // = 0;
+    static inline NOTSA_GLOBAL(m_nStatsCitiesPassed, 0xB62C71, (uint8), {}); // = 0;
+    static inline NOTSA_GLOBAL(m_nSpecialDJBanterIndex, 0xB62C72, (uint8), {}); // = -1;
+    static inline NOTSA_GLOBAL(m_nSpecialDJBanterPending, 0xB62C73, (uint8), {}); // = 3; // ?
 
 public:
     static void InjectHooks();

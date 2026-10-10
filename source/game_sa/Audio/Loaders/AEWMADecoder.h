@@ -25,7 +25,7 @@ private:
     HRESULT SelectStreamIndex(IWMProfile* profile);
 
     static HRESULT(__stdcall*& WMCreateSyncReader)(IUnknown*, DWORD, IWMSyncReader**);
-    static inline auto& wmvCoreModule = StaticRef<HMODULE>(0xb6bad4);
+    static inline NOTSA_GLOBAL(wmvCoreModule, 0xb6bad4, (HMODULE), {});
 
 public:
     CAEWMADecoder(CAEDataStream* dataStream);

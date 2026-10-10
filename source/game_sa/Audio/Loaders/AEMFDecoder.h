@@ -8,7 +8,7 @@
 class CAEMFDecoder : public CAEStreamingDecoder {
 private:
     static constexpr size_t TEMPBUFFRAME = 65536;
-    static inline auto& quickTimeInitialized = StaticRef<bool>(0xb61d70); // QuickTime is replaced with MediaFoundation
+    static inline NOTSA_GLOBAL(quickTimeInitialized, 0xb61d70, (bool), {}); // QuickTime is replaced with MediaFoundation
     static HMODULE mfPlatModule, mfReadWriteModule;
     static HRESULT(__stdcall* MFCreateSourceReaderFromURL)(LPCWSTR pwszURL, IMFAttributes* pAttributes, IMFSourceReader** ppSourceReader);
     static HRESULT(__stdcall* MFCreateMediaType)(IMFMediaType** ppMFType);

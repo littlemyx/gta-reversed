@@ -357,6 +357,10 @@ def process(path, rows_by_addr, hazards, em, al, args, report):
         if not g and qname.split("::")[-1] != name:
             skip("name mismatch (%s vs %s)" % (qname, name))
             continue
+        if in_class and re.search(r"template\s*<[^;{}]*>\s*(?:class|struct)\s+%s\b" % re.escape(qname.rsplit("::", 1)[0].split("::")[-1]), stripped[:start]):
+            # B06 finding: a `static inline` member of a CLASS TEMPLATE is one variable PER INSTANTIATION (QuadTreeNode.h: only <void*>::InitPool ran, the other node types saw a null pool)
+            skip("static member of a class template: one variable per instantiation; use a shared synthetic (NOTSA_GLOBAL_SYNTH at namespace scope) + NOTSA_GLOBAL_ALIAS in the class")
+            continue
         use_def = False
         # a static member whose type mentions the enclosing class (`static std::array<CBulletInfo, 8> aBulletInfos` inside CBulletInfo): in detached mode the
         # in-class `static inline T x{}` needs a complete T, so declare it in the class and define it after the class (DECL + DEF in <stem>.cpp)

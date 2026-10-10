@@ -18,7 +18,7 @@ Cross checks: every dumped address must be a row of .notes/DETACH_GLOBALS.tsv wi
 matching a substring that are NOT in the dump (not converted yet / skipped by the codemod: reasons are in the codemod's table).
 Exit code 0 only with 0 unexplained mismatches and 0 cross-check failures.
 
-usage: python3 -I tools/standalone/verify_globals.py DUMP [--image-dir build/StandaloneRelease/bin] [--tsv ..] [--deviations ..] [--allow-rdata-ptr] [--cover Timer.h,Hud.h]
+usage: python3 -I tools/standalone/verify_globals.py DUMP [--image-dir build/StandaloneDetached/bin] [--tsv ..] [--deviations ..] [--allow-rdata-ptr] [--cover Timer.h,Hud.h]
 """
 import argparse
 import json
@@ -97,7 +97,7 @@ def code_ptr_ok(orig_word, our_word):
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("dump")
-    ap.add_argument("--image-dir", default=str(REPO / "build" / "StandaloneRelease" / "bin"))
+    ap.add_argument("--image-dir", default=str(REPO / "build" / "StandaloneDetached" / "bin"))
     ap.add_argument("--tsv", default=str(REPO / ".notes" / "DETACH_GLOBALS.tsv"))
     ap.add_argument("--deviations", default=str(REPO / "tools" / "standalone" / "standalone_deviations.tsv"))
     ap.add_argument("--map", default=None, help="linker map of the exe (default <image-dir>/gta_reversed.map)")

@@ -1,4 +1,5 @@
 # addr	offset	length	reason   (length 0 = the whole global). Intended differences between a detached run and the exe data image.
 # Nothing needed for the A2 pilot. Known later candidates (plan 3.3 step 6 / R8): rand()-derived bytes of gHandShaker / FrontEndMenuManager; the 9 known header-default fixes.
 0x8D6228	0	0	RwMemoryFunctions (psGetMemoryFunctions): the exe holds 4 exe code pointers in the ORIGINAL RW layout (+ "Unkn" garbage); the detached table is zero and never read (RwEngineInit in standalone/rw/engine.cpp ignores it)
+0x8D0F68	0	24	CCutsceneObject::ms_sCutsceneVehNames: 6 `char*` string pointers; the exe points at its own .rdata literals, the detached table points at the repo's own copies of the SAME strings (cscopcarla92, cscopcarsf, csbravura, CsFireLa, csmothership, CsVoodoo; read from the exe image by hand, B06)
 # (code deviation, not a data row - run build only, env NOTSA_STANDALONE_MUTE=1) DirectSound secondary buffers: SetVolume only ever sets DSBVOLUME_MIN on the real buffer, GetVolume returns the logical volume; source/game_sa/Audio/Hardware/AEDirectSoundMute.h; the data image is unaffected

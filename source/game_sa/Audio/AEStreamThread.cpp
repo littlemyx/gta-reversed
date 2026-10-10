@@ -209,7 +209,10 @@ void CAEStreamThread::Service() {
             ptr = new CAEVorbisDecoder(m_pMp3TrackLoader->GetDataStream(trackId), 0);
         }
 
-        if (ptr && !ptr->Initialise()) {
+        // NOTSA: a stream that opens but holds zero samples is not a playable track. The shipped data of some installs (the Steam macOS copy) replaces removed
+        //        songs with 4429-byte silent Ogg stubs (valid headers, granulepos 0): the original would then execute `div` by GetStreamLengthMs() == 0 below (0x4F1464)
+        //        and die with a #DE the first time the radio picks such a song. Treat it like a track that failed to load.
+        if (ptr && (!ptr->Initialise() || ptr->GetStreamLengthMs() == 0)) {
             delete std::exchange(ptr, nullptr);
         }
         return ptr;

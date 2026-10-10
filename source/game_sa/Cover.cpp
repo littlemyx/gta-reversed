@@ -222,20 +222,22 @@ CCoverPoint* CCover::AddCoverPoint(CCoverPoint::eType type, CEntity* coverEntity
         const CVector atPos = coverEntity
             ? coverEntity->GetPosition()
             : *pos;
-        const auto distToCptSq = (atPos - cpt.GetPointOnMap()).SquaredMagnitude();
+        // 0x698FDD: dx, dy, dz = cpt - at (x87, the sum is dz*dz + dy*dy + dx*dx) and the exe compares the SQUARE ROOT (fsqrt) with 0.8 / 2.0
+        const double dx = (double)cpt.GetPointOnMap().x - (double)atPos.x;
+        const double dy = (double)cpt.GetPointOnMap().y - (double)atPos.y;
+        const double dz = (double)cpt.GetPointOnMap().z - (double)atPos.z;
+        const double distToCpt = x87::sqrt(dz * dz + dy * dy + dx * dx);
 
         // 0x69901E
-        if (distToCptSq < sq(0.8f)) {
+        if (distToCpt < (double)0.8f) {
             return &cpt;
         }
 
         // 0x69903C
-        if (distToCptSq < sq(2.f)) {
-            const auto d = cpt.GetDir() - dir;
-            //if (d < 32 || d > 223) { // 45=32/255*360, 315=223/255*360
-            //    return;
-            //}
-            if (d < DegreesToRadians(45.f) || DegreesToRadians(315.f) > d) {
+        if (distToCpt < (double)2.f) {
+            // 0x699051: byte arithmetic (`sub al, [dir]; cmp al, 0x20; jb; cmp al, 0xDF; ja`): within 32 / 256 of a full turn on either side
+            const uint8 d = (uint8)(cpt.GetDir().Raw() - dir.Raw());
+            if (d < 0x20 || d > 0xDF) {
                 return &cpt;
             }
         }

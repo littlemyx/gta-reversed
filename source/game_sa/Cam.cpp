@@ -4846,7 +4846,7 @@ void CCam::Process_Fixed(const CVector& target, float orientation, float speedVa
         a,
         m_vecFront
     );
-    m_fFOV = 70.0f;
+    m_fFOV = TheCamera.m_bUseSpecialFovTrain ? TheCamera.m_fFovForTrain : 70.0f; // 0x51D5B5 (byte at 0xB6F05E == 1 -> the float at 0xB6F158)
 
     if (float wl{}; CWaterLevel::GetWaterLevel(m_vecSource, wl, true) && m_vecSource.z < wl) {
         ApplyUnderwaterMotionBlur();
@@ -4859,8 +4859,7 @@ void CCam::Process_Fixed(const CVector& target, float orientation, float speedVa
         CVector out{};
         float   outDist{1.0f};
         if (TheCamera.ConeCastCollisionResolve(m_vecSource, target, out, 2.0f, 0.1f, outDist)) {
-            m_vecSource.y = out.y;
-            m_vecSource.z = out.z;
+            m_vecSource = out; // 0x51D73E: all three components
         }
 
         CWorld::pIgnoreEntity = savedIgnoreEntity;
@@ -7324,18 +7323,15 @@ void CCam::ApplyUnderwaterMotionBlur() {
     static constexpr uint32 UNDERWATER_CAM_BLUR      = 20;    // 0x8CC7A4
     static constexpr float  UNDERWATER_CAM_MAG_LIMIT = 10.0f; // 0x8CC7A8
 
-    const auto colorMag = std::sqrt(
-        sq(CTimeCycle::GetWaterRed()) +
-        sq(CTimeCycle::GetWaterGreen()) +
-        sq(CTimeCycle::GetWaterBlue())
-    );
-
-    const auto factor = (colorMag <= UNDERWATER_CAM_MAG_LIMIT) ? 1.0f : UNDERWATER_CAM_MAG_LIMIT / colorMag;
+    // 0x51D610: blue, green, red order; everything stays on the x87 stack. A NaN magnitude takes the unscaled path (FCOM + JNE 0x41)
+    const double red = CTimeCycle::GetWaterRed(), green = CTimeCycle::GetWaterGreen(), blue = CTimeCycle::GetWaterBlue();
+    const double colorMag = std::sqrt(blue * blue + green * green + red * red);
+    const double factor = colorMag > (double)UNDERWATER_CAM_MAG_LIMIT ? (double)UNDERWATER_CAM_MAG_LIMIT / colorMag : 1.0;
 
     TheCamera.SetMotionBlur(
-        static_cast<uint32>(factor * CTimeCycle::GetWaterRed()),
-        static_cast<uint32>(factor * CTimeCycle::GetWaterGreen()),
-        static_cast<uint32>(factor * CTimeCycle::GetWaterBlue()),
+        static_cast<uint32>(factor * red),
+        static_cast<uint32>(factor * green),
+        static_cast<uint32>(factor * blue),
         UNDERWATER_CAM_BLUR,
         eMotionBlurType::LIGHT_SCENE
     );

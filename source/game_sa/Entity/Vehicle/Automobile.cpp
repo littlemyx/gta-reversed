@@ -1699,7 +1699,7 @@ int32 CAutomobile::ProcessEntityCollision(CEntity* entity, CColPoint* outColPoin
     const auto tcd = GetColData(),
                ocd = entity->GetColData();
 
-#ifdef FIX_BUGS
+#if defined(FIX_BUGS) || defined(NOTSA_STANDALONE_RUN) // the run build must not dereference the missing colmodel data below either (null ocd, e.g. a building whose COL is not streamed in)
     // FIX_BUGS@CAutomobile::ProcessEntityCollision:1
     // The original code handled this properly, because `ProcessColModels` returned `0` 
     // if either colmodel's data was missing
@@ -2820,7 +2820,7 @@ void CAutomobile::VehicleDamage(float damageIntensity, eVehicleCollisionComponen
     assert(m_matrix);
 
     float minDmgIntensity{ 25.f };
-    float collForceMult{ 1.f / 3.f };
+    float collForceMult{ 0.333f }; // 0x864E30 (0x3EAA7EFA, NOT 1/3)
     float calcDmgIntensity{ damageIntensity };
 
     if (damageIntensity == 0.f) {

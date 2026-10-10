@@ -12,6 +12,10 @@
 #include "Entity/Vehicle/QuadBike.h"
 #include "Entity/Vehicle/Trailer.h"
 #include "Entity/Vehicle/Train.h"
+#include "Entity/Physical.h"
+#include "Models/ModelInfo.h"
+#include "Collision/ColModel.h"
+#include "Weather.h"
 #include "Entity/Vehicle/Automobile.h"
 
 static void TestDamageManager() {
@@ -175,7 +179,7 @@ static void TestTransmission() {
 // ---- fake vehicle: raw buffer with the real CVehicle / CAutomobile layout (0x988 bytes), a CMatrix at +0xA00 and a tHandlingData at +0xA50 (wired by VehWire), shared fake peds
 namespace vfx {
 inline uint8 g_ped[10][0x600];
-constexpr size_t SZ = 0x5A0, MAT = 0xA00, HND = 0xA50, ALL = 0xB40;   // CAutomobile is 0x988 bytes
+constexpr size_t SZ = 0x5A0, MAT = 0xA00, HND = 0xA50, ALL = 0xC00;   // CAutomobile is 0x988 bytes
 inline void Wire(uint8* b, bool on) {
     using namespace wfx;
     Put<uint32_t>(b, 0x14, on ? (uint32_t)(uintptr_t)(b + MAT) : 0u);        // CPlaceable::m_matrix
@@ -653,6 +657,92 @@ static void TestVehicleTypes() {
     });
 }
 
+// CEntity::GetColModel (Entity.cpp is not linked; same logic as the port / 0x535300 - the fixtures keep m_vehicleSpecialColIndex = -1)
+CColModel* CEntity::GetColModel() const {
+    if (GetIsTypeVehicle()) {
+        const auto veh = AsVehicle();
+        if (veh->m_vehicleSpecialColIndex > -1) return &CVehicle::m_aSpecialColModel[veh->m_vehicleSpecialColIndex];
+    }
+    return GetModelInfo()->GetColModel();
+}
+
+// ---- CVehicle::FlyingControl: ApplyMoveForce / ApplyTurnForce are recorded on both sides (CPhysical's own code is covered by the physics test)
+namespace fcx {
+struct Call { int kind; CVector a, b; };
+inline std::vector<Call> g_calls;
+inline std::string Dump(const std::vector<Call>& c) { std::string s = std::to_string(c.size()) + " calls"; for (auto& x : c) s += (x.kind ? " T" : " M") + V(x.a) + (x.kind ? V(x.b) : std::string()); return s; }
+static void __fastcall StubMove(void*, int, CVector f) { g_calls.push_back({ 0, f, {} }); }
+static void __fastcall StubTurn(void*, int, CVector f, CVector p) { g_calls.push_back({ 1, f, p }); }
+alignas(16) inline uint8 g_info[0x40];
+alignas(16) inline uint8 g_col[0x30];
+inline void Wire(uint8* b, bool on) {
+    vfx::Wire(b, on);
+    wfx::Put<uint32_t>(b, 0x388, on ? (uint32_t)(uintptr_t)(b + vfx::HND + 0xE0) : 0u);   // m_pFlyingHandlingData
+}
+}
+
+static void TestFlyingControl() {
+    using namespace wfx;
+    if (!Wanted("FlyingControl")) return;
+    static const int models[] = { 0x21B, 0x1CC, 0x208, 0x1F0, 0x1D7, 0x1E5, 0x1B7, 0x200, 0x1A6 };
+    *reinterpret_cast<void**>(fcx::g_info + 0x14) = fcx::g_col;
+    for (int m : models) CModelInfo::ms_modelInfoPtrs[m] = reinterpret_cast<CBaseModelInfo*>(fcx::g_info);
+    PatchFn(PmAddr(static_cast<void (CPhysical::*)(CVector)>(&CPhysical::ApplyMoveForce)), (void*)&fcx::StubMove);
+    PatchFn(PmAddr(&CPhysical::ApplyTurnForce), (void*)&fcx::StubTurn);
+    oracle::Patch(0x5429F0, (void*)&fcx::StubMove);
+    oracle::Patch(0x542A50, (void*)&fcx::StubTurn);
+    Run("CVehicle::FlyingControl 0x6D85F0", [&](Rng& r, std::string& d) {
+        const int model = r.below(10);
+        auto in = [&]() { return r.below(3) == 0 ? -9999.99f : (r.below(6) ? r.f01() * 2.f - 1.f : GenF(r, 2.f)); };
+        const float skid = in(), upDown = in(), leftRight = in(), accel = in();
+        std::vector<fcx::Call> ca, ce;
+        std::string da, de;
+        const bool ok = Obj<vfx::ALL>(r, d, [&](Rng& rr, uint8* b) {
+                vfx::Gen(rr, b);
+                auto& v = *reinterpret_cast<CVehicle*>(b);
+                auto& au = *reinterpret_cast<CAutomobile*>(b);
+                const float sc = rr.below(2) ? 0.6f : 3.f;
+                v.m_vecMoveSpeed = GenV(rr, sc); v.m_vecTurnSpeed = GenV(rr, 0.2f);
+                v.m_fMass = rr.below(8) ? 300.f + rr.f01() * 5000.f : GenF(rr, 5000.f); v.m_fTurnMass = rr.below(8) ? 500.f + rr.f01() * 30000.f : GenF(rr, 30000.f);
+                v.m_vecCentreOfMass = GenV(rr, 0.7f);
+                v.m_fSteerAngle = GenF(rr, 0.6f);
+                v.SetStatus((eEntityStatus)(1 + rr.below(7)));
+                v.SetType(ENTITY_TYPE_VEHICLE); v.m_vehicleSpecialColIndex = -1;
+                v.m_nCreatedBy = (eVehicleCreatedBy)(1 + rr.below(4));
+                v.m_nModelIndex = (int16)models[rr.below(9)];
+                v.m_nVehicleType = (eVehicleType)(rr.below(3) == 0 ? rr.below(10) : (rr.below(2) ? 0 : 3 + rr.below(2)));
+                v.m_nVehicleSubType = (eVehicleType)(rr.below(3) ? 4 : (int)rr.below(10));
+                v.physicalFlags.bSubmergedInWater = rr.below(2);
+                v.vehicleFlags.bHeliMinimumTilt = rr.below(3) == 0;
+                for (int i = 0; i < 4; ++i) au.m_fWheelsSuspensionCompression[i] = rr.below(2) ? 1.f : rr.f01();
+                au.m_wMiscComponentAngle = (uint16)(rr.below(2) ? rr.below(300) : rr.u32());
+                au.m_fHeliRotorSpeed = rr.f01() * 0.5f;
+                Put<float>(b, 0x9CC, rr.below(2) ? 1.f : rr.f01());                       // CPlane::m_fLandingGearStatus
+                Put<int32_t>(b, 0x9A0, (int32_t)rr.u32());                                 // CPlane::field_9A0
+                auto* fh = reinterpret_cast<tFlyingHandlingData*>(b + vfx::HND + 0xE0);
+                float* f = reinterpret_cast<float*>(fh);
+                for (int i = 1; i < 22; ++i) f[i] = rr.below(10) ? (rr.below(2) ? rr.f01() * 2.f : rr.f01() * 0.1f) : GenF(rr, 2.f);
+                for (int i = 0; i < 3; ++i) { (&fh->m_vecTurnRes.x)[i] = rr.below(10) ? 0.95f + rr.f01() * 0.05f : GenF(rr, 1.5f); (&fh->m_vecSpeedRes.x)[i] = rr.below(3) ? 0.f : rr.f01(); }
+                CTimer::ms_fTimeStep = rr.below(12) ? 0.3f + rr.f01() * 2.5f : GenF(rr, 3.f);
+                CWeather::WindDir = GenV(rr, 0.8f);
+                CHeli::bHeliControlsCheat = rr.below(3) == 0;
+                // fake col model: bounding box
+                std::memset(fcx::g_col, 0, sizeof fcx::g_col);
+                auto& cm = *reinterpret_cast<CColModel*>(fcx::g_col);
+                cm.m_boundBox.m_vecMin = CVector{ -1.f - rr.f01(), -2.f - rr.f01() * 4.f, -1.f }; cm.m_boundBox.m_vecMax = CVector{ 1.f + rr.f01(), 2.f + rr.f01() * 4.f, 1.5f };
+                if (rr.below(10) == 0) { cm.m_boundBox.m_vecMin = GenV(rr, 4.f); }
+            },
+            [&](uint8* b) { fcx::g_calls.clear(); reinterpret_cast<CVehicle*>(b)->CVehicle::FlyingControl((eFlightModel)model, skid, upDown, leftRight, accel); ca = fcx::g_calls; return 0u; },
+            [&](uint8* b) { fcx::g_calls.clear(); oracle::Fn<void __fastcall(void*, int, int, float, float, float, float)>(0x6D85F0)(b, 0, model, skid, upDown, leftRight, accel); ce = fcx::g_calls; return 0u; },
+            2, 0, 0, 0, fcx::Wire);
+        bool same = ca.size() == ce.size();
+        for (size_t i = 0; same && i < ca.size(); ++i) same = ca[i].kind == ce[i].kind && SameV(ca[i].a, ce[i].a) && SameV(ca[i].b, ce[i].b);
+        if (ok && same) return true;
+        d += " model " + std::to_string(model) + " in " + F(skid) + F(upDown) + F(leftRight) + F(accel) + " port " + fcx::Dump(ca) + " exe " + fcx::Dump(ce);
+        return false;
+    });
+}
+
 static void TestVehicles() {
     TestDamageManager();
     TestTransmission();
@@ -663,4 +753,5 @@ static void TestVehicles() {
     TestVehicleMisc();
     TestHandlingMgr();
     TestVehicleTypes();
+    TestFlyingControl();
 }

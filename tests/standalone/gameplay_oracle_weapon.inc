@@ -60,6 +60,13 @@ static void FillU(Rng& r, uint8* p, size_t n) { for (size_t i = 0; i + 4 <= n; i
 template<class T> static void Put(uint8* b, size_t off, T v) { std::memcpy(b + off, &v, sizeof v); }
 template<class T> static T Get(const uint8* b, size_t off) { T v; std::memcpy(&v, b + off, sizeof v); return v; }
 static uint32_t FB(float f) { return FBits(f); }
+// overwrites a port function's entry with a JMP to a host function (same calling convention)
+static void PatchFn(void* fn, void* host) {
+    DWORD old = 0; VirtualProtect(fn, 16, PAGE_EXECUTE_READWRITE, &old);
+    auto* p = reinterpret_cast<uint8_t*>(fn); p[0] = 0xE9; *reinterpret_cast<int32_t*>(p + 1) = (int32_t)((uintptr_t)host - ((uintptr_t)fn + 5));
+    FlushInstructionCache(GetCurrentProcess(), fn, 16);
+}
+template<class PM> static void* PmAddr(PM pm) { void* p; static_assert(sizeof(pm) == sizeof(p)); std::memcpy(&p, &pm, sizeof p); return p; }
 }
 
 static void TestWeaponMisc() {
@@ -220,6 +227,33 @@ static void TestWeaponMisc() {
     });
 }
 
+// CWeapon::EvaluateTargetForHeatSeekingMissile: the potential target is a raw entity buffer (type / sub type / position / matrix pointer read), CCollision::DistToLine runs on both sides
+static void TestHeatSeeking() {
+    using namespace wfx;
+    Run("CWeapon::EvaluateTargetForHeatSeekingMissile 0x73E560", [](Rng& r, std::string& d) {
+        const float sc = r.below(2) ? 100.f : PickScale(r);
+        const CVector origin = GenV(r, sc), aim = r.below(2) ? GenDir(r) : GenV(r, 2.f);
+        const float tol = r.below(4) ? 0.5f + r.f01() * 3.f : GenF(r, 5.f);
+        const bool planes = r.below(2);
+        const int prefMode = r.below(3);
+        alignas(16) static uint8 other[0x40];
+        return Obj<0x700>(r, d, [&](Rng& rr, uint8* b) {
+                FillU(rr, b, 0x600);
+                Put<uint8>(b, 0x36, (uint8)((rr.u32() & ~7u) | (rr.below(3) ? 2 : rr.below(8))));            // entity type bits (2 = vehicle)
+                Put<uint32_t>(b, 0x594, rr.below(3) ? 3 + rr.below(2) : rr.below(10));                       // vehicle sub type
+                const CVector p = GenV(rr, sc);
+                std::memcpy(b + 4, &p, 12);                                                                   // placement
+                float m[16]; FillF(rr, (uint8*)m, 64, 1.f); const CVector mp = rr.below(4) ? p + GenV(rr, 1.f) : GenV(rr, sc); std::memcpy(m + 12, &mp, 12);
+                std::memcpy(b + 0x640, m, 64);                                                                 // (matrix lives inside the buffer, wired in fix)
+                Put<uint8>(b, 0x6F8, (uint8)rr.below(2));
+            },
+            [&](uint8* b) { return FB(CWeapon::EvaluateTargetForHeatSeekingMissile(reinterpret_cast<CEntity*>(b), origin, aim, tol, planes, prefMode == 0 ? nullptr : prefMode == 1 ? reinterpret_cast<CEntity*>(b) : reinterpret_cast<CEntity*>(other))); },
+            [&](uint8* b) { return FB(oracle::Fn<float __cdecl(void*, const CVector*, const CVector*, float, bool, void*)>(0x73E560)(b, &origin, &aim, tol, planes, prefMode == 0 ? nullptr : prefMode == 1 ? (void*)b : (void*)other)); },
+            1, 0, 0, 0, [](uint8* b, bool on) { Put<uint32_t>(b, 0x14, on && Get<uint8>(b, 0x6F8) ? (uint32_t)(uintptr_t)(b + 0x640) : 0u); });
+    });
+}
+
 static void TestWeapons() {
     TestWeaponMisc();
+    TestHeatSeeking();
 }

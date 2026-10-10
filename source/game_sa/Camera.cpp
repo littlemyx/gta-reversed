@@ -437,10 +437,11 @@ float CCamera::Find3rdPersonQuickAimPitch() const {
     const auto& cam = m_aCams[m_nActiveCam];
 
     // https://mathworld.wolfram.com/images/eps-svg/SOHCAHTOA_500.svg
-    const auto adjacent = (0.5f - m_f3rdPersonCHairMultY) * 2.f;
-    const auto opposite = x87::tan(DegreesToRadians(cam.m_fFOV / 2.0f)) * adjacent;
-    const auto relAngle = cam.m_fVerticalAngle + x87::atan(opposite / CDraw::ms_fAspectRatio);
-    return -relAngle; // Flip it
+    // 0x50AD40: everything stays on the x87 stack; the exe multiplies by the reciprocal of the aspect ratio (fld1; fdiv; fmulp) instead of dividing
+    const double adjacent = ((double)0.5f - (double)m_f3rdPersonCHairMultY) * 2.0;
+    const double opposite = (double)x87::tan(DegreesToRadians(cam.m_fFOV * 0.5f)) * adjacent;
+    const double relAngle = (double)cam.m_fVerticalAngle + (double)x87::atan(opposite * (1.0 / (double)CDraw::ms_fAspectRatio));
+    return (float)-relAngle; // Flip it
 }
 
 // 0x50AD90
@@ -2849,37 +2850,54 @@ void CCamera::FinishCutscene() {
 
 // 0x514970
 void CCamera::Find3rdPersonCamTargetVector(float range, CVector gunMuzzle, CVector& outSource, CVector& outTarget) {
-    const auto pActiveCam = &m_aCams[m_nActiveCam];
-    const float tanHalfFOV = x87::tan(DegreesToRadians(pActiveCam->m_fFOV * 0.5f));
-    const float aspectRatio = CDraw::ms_fAspectRatio;
-    
-    // Calculate aim target direction (This will be a unit vector)
-    CVector dir = m_aCams[m_nActiveCam].m_vecFront;
-    
-    if (pActiveCam->m_nMode == eCamMode::MODE_TWOPLAYER_IN_CAR_AND_SHOOTING) {
-        pActiveCam->Get_TwoPlayer_AimVector(dir);
+    // 0x514970: the evaluation order of the original (x87): tan of half the FOV stays on the stack; the horizontal factor is spilled to a float; the vertical one multiplies
+    // by the RECIPROCAL of the aspect ratio first; `outTarget` doubles as the direction until the end
+    auto& cam = m_aCams[m_nActiveCam];
+    const double tanHalfFOV = (double)x87::tan(DegreesToRadians(cam.m_fFOV * 0.5f));
+    const float  horizontal = (float)((((double)m_f3rdPersonCHairMultX - (double)0.5f) * 2.0) * tanHalfFOV);
+    const double vertical   = (((double)0.5f - (double)m_f3rdPersonCHairMultY) * 2.0) * (1.0 / (double)CDraw::ms_fAspectRatio) * tanHalfFOV;
+
+    outSource = cam.m_vecSource;
+    outTarget = cam.m_vecFront;
+
+    if (cam.m_nMode == eCamMode::MODE_TWOPLAYER_IN_CAR_AND_SHOOTING) {
+        cam.Get_TwoPlayer_AimVector(outTarget);
     } else {
-        // Vertical offset
-        dir += pActiveCam->m_vecUp * (tanHalfFOV * ((0.5f - m_f3rdPersonCHairMultY) * 2.0f) / aspectRatio);
+        CVector& dir = outTarget;
+        // dir += up * vertical (the z product is stored as a float before the addition)
+        const float vz = (float)(vertical * (double)cam.m_vecUp.z);
+        dir.x = (float)(vertical * (double)cam.m_vecUp.x + (double)dir.x);
+        dir.y = (float)(vertical * (double)cam.m_vecUp.y + (double)dir.y);
+        dir.z = vz + dir.z;
 
-        // Horizontal offset
-        const auto right = pActiveCam->m_vecFront.Cross(pActiveCam->m_vecUp);
-        dir += right * (tanHalfFOV * ((m_f3rdPersonCHairMultX - 0.5f) * 2.0f));
-        
-        // Handle zero magnitude case
-        if (dir.Magnitude() <= 0.0f) {
-            dir = CVector(1.0f, 0.0f, 0.0f);
-        } else {
-            dir.Normalise();
-        }
+        // dir += right * horizontal
+        const CVector right = CrossProduct(cam.m_vecFront, cam.m_vecUp);
+        const float   hz    = horizontal * right.z;
+        dir.x = horizontal * right.x + dir.x;
+        dir.y = horizontal * right.y + dir.y;
+        dir.z = hz + dir.z;
+
+        dir.Normalise();
     }
-    
-    // Calculate intersection point with muzzle
-    outSource = pActiveCam->m_vecSource;
-    outSource += (gunMuzzle - outSource).ProjectOnToNormal(dir);
 
-    // Apply final range to target 
-    outTarget = outSource + dir * range;
+    // Project the gun muzzle onto the aim line through the camera source: dot summed x, z, y
+    const double dx  = (double)gunMuzzle.x - (double)outSource.x;
+    const double dy  = (double)gunMuzzle.y - (double)outSource.y;
+    const double dz  = (double)gunMuzzle.z - (double)outSource.z;
+    const double dot = (dx * (double)outTarget.x + dz * (double)outTarget.z) + dy * (double)outTarget.y;
+    const float  py  = (float)(dot * (double)outTarget.y);
+    const float  pz  = (float)(dot * (double)outTarget.z);
+    outSource.x = (float)(dot * (double)outTarget.x + (double)outSource.x);
+    outSource.y = py + outSource.y;
+    outSource.z = pz + outSource.z;
+
+    // target = source + dir * range (the y / z products are stored as floats)
+    const float ty = (float)((double)range * (double)outTarget.y);
+    const float tz = (float)((double)range * (double)outTarget.z);
+    const double tx = (double)range * (double)outTarget.x;
+    outTarget.x = (float)((double)outSource.x + tx);
+    outTarget.y = outSource.y + ty;
+    outTarget.z = outSource.z + tz;
 }
 
 // 0x514B80

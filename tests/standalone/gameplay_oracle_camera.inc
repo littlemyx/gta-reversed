@@ -171,7 +171,7 @@ static void TestCamCam() {
         TheCamera.m_f3rdPersonCHairMultY = r.below(4) ? r.f01() : GenF(r, 2.f);
         TheCamera.m_f3rdPersonCHairMultX = r.below(4) ? r.f01() : GenF(r, 2.f);
         auto& cam = TheCamera.m_aCams[TheCamera.m_nActiveCam];
-        cam.m_nMode = (eCamMode)(r.below(8) ? 4 : 56);   // not MODE_TWOPLAYER_IN_CAR_AND_SHOOTING (reads the players' pads)
+        cam.m_nMode = (eCamMode)(r.below(2) ? 4 : (int)r.below(49));   // not 49 (MODE_TWOPLAYER_IN_CAR_AND_SHOOTING: Get_TwoPlayer_AimVector reads both players)
         cam.m_fFOV = r.below(4) ? 20.f + r.f01() * 80.f : GenF(r, 200.f);
         cam.m_vecFront = r.below(2) ? GenDir(r) : GenV(r, 2.f); cam.m_vecUp = r.below(2) ? GenV(r, 1.f) : CVector{ 0, 0, 1 };
         const float range = GenF(r, 100.f); const CVector muzzle = GenV(r, 100.f);

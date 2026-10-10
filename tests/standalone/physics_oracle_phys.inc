@@ -1,5 +1,7 @@
 // (b) CPhysical helpers on a fake entity (see PhysFx in physics_oracle_test.cpp)
 #include "Entity/Vehicle/Vehicle.h"
+#include "tHandlingData.h"
+#include "cHandlingDataMgr.h"
 template<class Body>
 static void PhysRun(const char* name, Body body, int cases = 0) {
     Run(name, [=](Rng& r, std::string& d) {
@@ -114,5 +116,62 @@ static void TestPhysical() {
         oracle::Fn<void __fastcall(P*, int)>(0x544C40)(&e, 0);
         return true;
     });
+    // CVehicle wheel processing: fake vehicle (CPhysical fixture + handling data + a few CVehicle fields), rand() seeded identically on both sides
+    auto wheelFix = [](Rng& r, P& a, P& e, uint8* hd) {
+        for (size_t i = 0; i + 4 <= sizeof(tHandlingData); i += 4) { const float v = r.below(2) ? r.f01() * 4.f : GenF(r, 2000.f); std::memcpy(hd + i, &v, 4); }
+        auto* h = reinterpret_cast<tHandlingData*>(hd);
+        h->m_fMass = r.below(8) ? 500.f + r.f01() * 4000.f : 1.f + r.f01() * 100.f;   // > 0: the port's std::clamp(-brake, brake) asserts on a negative bound
+        h->m_fTractionLoss = r.f01() * 1.5f;   // >= 0: the port's std::clamp(-adhesion, adhesion) asserts on a negative adhesion
+        h->m_fSuspensionAntiDiveMultiplier = r.below(3) ? r.f01() : GenF(r, 2.f);
+        const auto vtype = (eVehicleType)(r.below(3) == 0 ? VEHICLE_TYPE_BIKE : r.below(10));
+        const int16 model = r.below(6) == 0 ? MODEL_RCBANDIT : (int16)r.below(600);
+        const float gas = r.below(3) ? r.f01() : GenF(r, 1.5f);
+        const auto status = (eEntityStatus)r.below(8);
+        for (P* p : { &a, &e }) {
+            auto* v = reinterpret_cast<CVehicle*>(p);
+            v->m_pHandlingData = h;
+            v->m_nVehicleType = vtype;
+            v->m_nModelIndex = model;
+            v->m_GasPedal = gas;
+            v->SetStatus(status);
+        }
+        gHandlingDataMgr.fWheelFriction = r.below(3) ? 0.9f + r.f01() * 0.2f : r.f01() * 5.f;
+    };
+    for (int bike = 0; bike < 2; ++bike) {
+        PhysRun(bike ? "CVehicle::ProcessBikeWheel 0x6D73B0" : "CVehicle::ProcessWheel 0x6D6C00", [=](Rng& r, P& a, P& e, std::string& x) {
+            alignas(16) uint8 hd[sizeof(tHandlingData)];
+            wheelFix(r, a, e, hd);
+            CTimer::ms_fTimeStep = std::fabs(CTimer::ms_fTimeStep);   // negative / NaN steps make the clamp bounds invalid in the port (assert)
+            if (!(CTimer::ms_fTimeStep >= 0.f)) CTimer::ms_fTimeStep = 1.f;
+            const float sc = r.below(3) ? 2.f : PickScale(r);
+            CVector fwd = GenDir(r), right = GenDir(r), cs = GenV(r, sc), cp = GenV(r, 3.f), fwd2 = fwd, right2 = right, cs2 = cs, cp2 = cp;
+            const int32 onGround = 1 + r.below(4);
+            const float thrust = r.below(3) ? GenF(r, 1.f) : 0.f, brake = r.below(3) ? 0.f : r.f01() * 2.f, adh = r.below(8) ? r.f01() * 2.f : std::fabs(GenF(r, 3.f)), destab = r.f01();
+            for (float c : { fwd.x, fwd.y, fwd.z, right.x, right.y, right.z, cs.x, cs.y, cs.z, cp.x, cp.y, cp.z, thrust, brake, adh }) if (!std::isfinite(c)) return true;   // NaN / inf wheel geometry: NaN compare chains differ (not reachable in game)
+            const int8 wid = (int8)r.below(4);
+            float ws = 0.f, ws2 = 0.f;
+            tWheelState st = (tWheelState)r.below(4), st2 = st;
+            const uint16 stat = (uint16)r.below(4);
+            const int special = r.below(5);
+            const unsigned seed = r.u32();
+            for (uint32_t va = 0xC1CDA8; va < 0xC1CDB8; ++va) *(uint8*)va = (uint8)(r.u32() & 1);   // the function's static flags
+            uint8 statics0[16]; std::memcpy(statics0, (void*)0xC1CDA8, 16);
+            x = "fwd " + V(fwd) + " right " + V(right) + " cs " + V(cs) + " cp " + V(cp) + " og " + std::to_string(onGround) + " thr " + F(thrust) + " br " + F(brake) + " adh " + F(adh) + " st " + std::to_string((int)st) + " stat " + std::to_string(stat) + " sp " + std::to_string(special);
+            SeedBoth(seed);
+            auto* va_ = reinterpret_cast<CVehicle*>(&a);
+            auto* ve_ = reinterpret_cast<CVehicle*>(&e);
+            if (bike) va_->ProcessBikeWheel(fwd, right, cs, cp, onGround, thrust, brake, adh, destab, wid, &ws, &st, (eBikeWheelSpecial)special, stat);
+            else      va_->ProcessWheel(fwd, right, cs, cp, onGround, thrust, brake, adh, wid, &ws, &st, stat);
+            uint8 statics1[16]; std::memcpy(statics1, (void*)0xC1CDA8, 16);
+            std::memcpy((void*)0xC1CDA8, statics0, 16);
+            SeedBoth(seed);
+            if (bike) oracle::Fn<void __fastcall(CVehicle*, int, CVector&, CVector&, CVector&, CVector&, int32, float, float, float, float, int8, float*, tWheelState*, int, uint16)>(0x6D73B0)(ve_, 0, fwd2, right2, cs2, cp2, onGround, thrust, brake, adh, destab, wid, &ws2, &st2, special, stat);
+            else      oracle::Fn<void __fastcall(CVehicle*, int, CVector&, CVector&, CVector&, CVector&, int32, float, float, float, int8, float*, tWheelState*, uint16)>(0x6D6C00)(ve_, 0, fwd2, right2, cs2, cp2, onGround, thrust, brake, adh, wid, &ws2, &st2, stat);
+            uint8 statics2[16]; std::memcpy(statics2, (void*)0xC1CDA8, 16);
+            const bool ok = st == st2 && SameBlob(&ws, &ws2, 4) && !std::memcmp(statics1, statics2, 16) && SameV(fwd, fwd2) && SameV(cs, cs2);
+            if (!ok) x += " state " + std::to_string((int)st) + "/" + std::to_string((int)st2) + " statics " + Hex(statics1, 16) + "/" + Hex(statics2, 16);
+            return ok;
+        }, 0);
+    }
     (void)vs;
 }

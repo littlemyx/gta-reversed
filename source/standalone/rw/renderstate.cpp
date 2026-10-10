@@ -118,6 +118,17 @@ void ApplyFogType(u32 rwFogType) {
         rw::d3d::setRenderState(D3DRS_FOGTABLEMODE, D3DFOG_NONE);
         rw::d3d::setRenderState(140 /* D3DRS_FOGVERTEXMODE */, mode);
     }
+    // exe 0x7FE5F1..0x7FE676 (also reached when the type did not change): for linear fog inside a camera update the fixed-function fog range is
+    // D3DRS_FOGSTART = camera->fogPlane (+0x88), D3DRS_FOGEND = camera->farPlane (+0x84). Without it the range stays at the device default (0..1) and
+    // the whole world is drawn in fog colour (the game sets FOGTYPE linear every frame in CWeather).
+    if (rwFogType == rwFOGTYPELINEAR && RwEngineInstance->curCamera) {
+        const auto* cam = reinterpret_cast<const rw::Camera*>(RwEngineInstance->curCamera);
+        u32 start, end;
+        std::memcpy(&start, &cam->fogPlane, 4);
+        std::memcpy(&end, &cam->farPlane, 4);
+        rw::d3d::setRenderState(D3DRS_FOGSTART, start);
+        rw::d3d::setRenderState(D3DRS_FOGEND, end);
+    }
 }
 
 // RW 0xAARRGGBB <-> librw 0xAABBGGRR

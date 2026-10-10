@@ -212,7 +212,7 @@ eCarMission CCarAI::FindPoliceCarMissionForWantedLevel() {
     case eWantedLevel::WANTED_LEVEL_4:
     case eWantedLevel::WANTED_LEVEL_5:
     case eWantedLevel::WANTED_LEVEL_6: chance = 25.f; break; // rand() % 4 == 0
-    default: NOTSA_UNREACHABLE();
+    default: NOTSA_UNREACHABLE(); return MISSION_BLOCKPLAYER_FARAWAY; // 0x41CA1C: out of range wanted level => mission 4
     }
     return CGeneral::RandomBool(chance)
         ? MISSION_BLOCKPLAYER_FARAWAY
@@ -230,7 +230,7 @@ int32 CCarAI::FindPoliceCarSpeedForWantedLevel(CVehicle* vehicle) {
     case eWantedLevel::WANTED_LEVEL_4:  return (int32)(maxVelocity * GAME_SPEED_TO_CAR_AI_SPEED * 1.20f);
     case eWantedLevel::WANTED_LEVEL_5:  return (int32)(maxVelocity * GAME_SPEED_TO_CAR_AI_SPEED * 1.25f);
     case eWantedLevel::WANTED_LEVEL_6:  return (int32)(maxVelocity * GAME_SPEED_TO_CAR_AI_SPEED * 1.30f);
-    default: NOTSA_UNREACHABLE();
+    default: NOTSA_UNREACHABLE(); return 0; // 0x41CB4C: out of range wanted level => 0
     }
 }
 
@@ -516,7 +516,7 @@ void CCarAI::MellowOutChaseSpeed(CVehicle* vehicle) {
 // 0x41CB70
 void CCarAI::MellowOutChaseSpeedBoat(CVehicle* vehicle) {
     assert(vehicle->IsBoat());
-    vehicle->m_autoPilot.m_nCruiseSpeed = []{
+    vehicle->m_autoPilot.m_nCruiseSpeed = [&]() -> int32 {
         switch (FindPlayerWanted()->GetWantedLevel()) {
         case eWantedLevel::WANTED_CLEAN:    return 8;
         case eWantedLevel::WANTED_LEVEL_1:  return 10;
@@ -525,7 +525,7 @@ void CCarAI::MellowOutChaseSpeedBoat(CVehicle* vehicle) {
         case eWantedLevel::WANTED_LEVEL_4:  return 25;
         case eWantedLevel::WANTED_LEVEL_5:  return 30;
         case eWantedLevel::WANTED_LEVEL_6:  return 40;
-        default: NOTSA_UNREACHABLE();
+        default: NOTSA_UNREACHABLE(); return vehicle->m_autoPilot.m_nCruiseSpeed; // 0x41CBDC: out of range wanted level => nothing is stored
         }
     }();
 }

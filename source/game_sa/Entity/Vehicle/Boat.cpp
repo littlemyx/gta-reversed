@@ -23,8 +23,8 @@ const float fShapeTime = 0.05f; // 0x8D3948
 auto& fRangeMult = StaticRef<float>(0x8D394C); // 0.6f
 auto& fTimeMult = StaticRef<float>(0xC279CC); // 1.2f / CBoat::WAKE_LIFETIME
 
-int16 nWakeSkipCounters[4]; // 0xC279A4
-int16 nWakeSkipCounterVertex[4]; // 0xC279AC
+auto& nWakeSkipCounters = StaticRef<int16[4]>(0xC279A4);
+auto& nWakeSkipCounterVertex = StaticRef<int16[4]>(0xC279AC);
 
 void CBoat::InjectHooks() {
     RH_ScopedVirtualClass(CBoat, 0x8721a0, 66);
@@ -195,21 +195,20 @@ void CBoat::ModifyHandlingValue(const bool& plus) {
 
 // 0x6F0E20
 void CBoat::PruneWakeTrail() {
-    int16 count = 0;
-    for (; count < (int16)std::size(m_WakePtCounters); count++) {
-        float& lifetime = m_WakePtCounters[count];
-        if (lifetime <= 0.0F) {
-            break;
+    // 0x6F0E20 (oracle-proven): the tests are `!(lifetime > 0)` / `!(lifetime > step)` (NaN stops / zeroes), and the count is only stored when the scan stops early (all 32 alive: untouched)
+    for (uint16 i = 0; i < (uint16)std::size(m_WakePtCounters); i++) {
+        float& lifetime = m_WakePtCounters[i];
+        if (!(lifetime > 0.0F)) {
+            m_NumWakeCoords = i;
+            return;
         }
-
-        if (lifetime <= CTimer::GetTimeStep()) {
-            lifetime = 0.0F;
-            break;
+        if (!(lifetime > CTimer::GetTimeStep())) {
+            lifetime        = 0.0F;
+            m_NumWakeCoords = i;
+            return;
         }
-
         lifetime -= CTimer::GetTimeStep();
     }
-    m_NumWakeCoords = count;
 }
 
 // 0x6F2550
@@ -226,7 +225,7 @@ void CBoat::AddWakePoint(CVector pos) {
     }
 
     // Too close to last wake point
-    if (DistanceBetweenPointsSquared2D(m_WakeCoords[0], GetPosition()) <= sq(MIN_WAKE_INTERVAL)) {
+    if (!(sq(MIN_WAKE_INTERVAL) < DistanceBetweenPointsSquared2D(m_WakeCoords[0], GetPosition()))) { // 0x6F260F: `4 < dist` (a NaN distance returns)
         return;
     }
 
@@ -363,19 +362,16 @@ bool CBoat::IsSectorAffectedByWake(CVector2D centreCoords, float semiSize, CBoat
         return false;
     }
 
+    // 0x6F0E80 (oracle-proven): a NULL boat ends the scan (it is not skipped), the distance tests are `|d| < dist` (NaN fails), `ppBoats` is filled at 0, 1, 1, ...
     bool bWakeFound = false;
-    for (auto& boat : apFrameWakeGeneratingBoats) {
+    for (auto* boat : apFrameWakeGeneratingBoats) {
         if (!boat) {
-            continue;
+            break;
         }
 
-        if (!boat->m_NumWakeCoords) {
-            continue;
-        }
-
-        for (int32 iTrail = 0; iTrail < boat->m_NumWakeCoords; ++iTrail) {
+        for (int32 iTrail = 0; iTrail < (int32)boat->m_NumWakeCoords; ++iTrail) {
             auto fDist = (WAKE_LIFETIME - boat->m_WakePtCounters[iTrail]) * fShapeTime + static_cast<float>(iTrail) * fShapeLength + semiSize;
-            if (std::fabs(boat->m_WakeCoords[iTrail].x - centreCoords.x) >= fDist || std::fabs(boat->m_WakeCoords[iTrail].y - centreCoords.y) >= fDist) {
+            if (!(std::fabs(boat->m_WakeCoords[iTrail].x - centreCoords.x) < fDist) || !(std::fabs(boat->m_WakeCoords[iTrail].y - centreCoords.y) < fDist)) {
                 continue;
             }
 
@@ -401,22 +397,28 @@ float CBoat::IsVertexAffectedByWake(CVector coords, CBoat* boat, int16 wakeQuadr
         return 0.0F;
     }
 
+    // 0x6F0F50 (oracle-proven): the squared radius is a plain product (not powf), everything stays on the x87 stack (=> `double`: a huge coordinate squares past FLT_MAX),
+    // the contribution is clamped with a compare-and-select (NaN passes)
     for (uint16 iTrail = 0; iTrail < boat->m_NumWakeCoords; ++iTrail) {
-        auto fWakeDistSquared = powf((WAKE_LIFETIME - boat->m_WakePtCounters[iTrail]) * fShapeTime + static_cast<float>(iTrail) * fShapeLength, 2);
-        auto fTrailDistSquared = (boat->m_WakeCoords[iTrail] - coords).SquaredMagnitude();
+        const double fWakeRadius = ((double)WAKE_LIFETIME - (double)boat->m_WakePtCounters[iTrail]) * (double)fShapeTime + (double)iTrail * (double)fShapeLength;
+        const double fWakeDistSquared = fWakeRadius * fWakeRadius;
+        const double fDX = (double)boat->m_WakeCoords[iTrail].x - (double)coords.x, fDY = (double)boat->m_WakeCoords[iTrail].y - (double)coords.y;
+        const double fTrailDistSquared = fDY * fDY + fDX * fDX;
         if (fTrailDistSquared < fWakeDistSquared) {
             nWakeSkipCounterVertex[wakeQuadrant] = 0;
-            float fContrib = sqrtf(fTrailDistSquared / fWakeDistSquared) * fRangeMult + (WAKE_LIFETIME - boat->m_WakePtCounters[iTrail]) * fTimeMult;
-            fContrib = std::min(1.0F, fContrib);
-            return 1.0F - fContrib;
+            double fContrib = std::sqrt(fTrailDistSquared / fWakeDistSquared) * (double)fRangeMult + ((double)WAKE_LIFETIME - (double)boat->m_WakePtCounters[iTrail]) * (double)fTimeMult;
+            if (1.0 < fContrib) {
+                fContrib = 1.0;
+            }
+            return (float)(1.0 - fContrib);
         }
 
-        auto fDistDiff = fTrailDistSquared - fWakeDistSquared;
-        if (fDistDiff > 20.0F) {
+        const double fDistDiff = fTrailDistSquared - fWakeDistSquared;
+        if (fDistDiff > 20.0) {
             if (nWakeSkipCounterVertex[wakeQuadrant] > 3) {
                 nWakeSkipCounterVertex[wakeQuadrant] = 3;
             }
-        } else if (fDistDiff > 10.0F) {
+        } else if (fDistDiff > 10.0) {
             if (nWakeSkipCounterVertex[wakeQuadrant] > 2) {
                 nWakeSkipCounterVertex[wakeQuadrant] = 2;
             }
@@ -428,18 +430,17 @@ float CBoat::IsVertexAffectedByWake(CVector coords, CBoat* boat, int16 wakeQuadr
 
 // 0x6F10C0
 void CBoat::CheckForSkippingCalculations() {
+    // 0x6F10C0 (oracle-proven): vertex counter outside (0, 8): the skip counter counts down; inside: skip = max(vertex counter, skip - 1)
     for (size_t ind = 0; ind < 4; ++ind) {
-        auto iVal = nWakeSkipCounterVertex[ind];
-        if (iVal <= 0 || iVal >= 8) {
-            if (nWakeSkipCounters[ind] <= 0) {
-                nWakeSkipCounterVertex[ind] = 8;
-                continue;
+        const int16 vtx  = nWakeSkipCounterVertex[ind];
+        const int16 skip = nWakeSkipCounters[ind];
+        if (vtx <= 0 || vtx >= 8) {
+            if (skip > 0) {
+                nWakeSkipCounters[ind] = skip - 1;
             }
-            nWakeSkipCounters[ind] = iVal - 1;
-        } else if (iVal <= nWakeSkipCounters[ind] - 1) {
-            --nWakeSkipCounters[ind];
+        } else {
+            nWakeSkipCounters[ind] = std::max<int16>(vtx, (int16)(skip - 1));
         }
-
         nWakeSkipCounterVertex[ind] = 8;
     }
 }

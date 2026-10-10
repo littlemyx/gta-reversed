@@ -39,8 +39,8 @@ constexpr auto MAX_NUM_BRIGHTLIGHTS{32u};
 
 class CBrightLights {
 public:
-    static inline auto& NumBrightLights = StaticRef<uint32>(0xC7C6FC);
-    static inline auto& aBrightLights = StaticRef<tBrightLight[MAX_NUM_BRIGHTLIGHTS]>(0xC7CB58);
+    static inline NOTSA_GLOBAL(NumBrightLights, 0xC7C6FC, (uint32), {});
+    static inline NOTSA_GLOBAL(aBrightLights, 0xC7CB58, (tBrightLight[MAX_NUM_BRIGHTLIGHTS]), {});
 
 public:
     static void InjectHooks();

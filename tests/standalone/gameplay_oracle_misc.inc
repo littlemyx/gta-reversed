@@ -8,6 +8,7 @@
 #include "CompressedMatrixNotAligned.h"
 #include "FireManager.h"
 #include "Fire.h"
+#include "VehicleRecording.h"
 
 namespace mfx {
 // key curves: up to 6 keys, up to 4 attributes; the layout is that of FxInterpInfo_c (+ m_Keys at +0xC) for all four key types
@@ -180,6 +181,50 @@ static void TestMisc() {
             oracle::Fn<void __fastcall(CMatrix*, int, float, float, float, uint32)>(0x59AA40)(reinterpret_cast<CMatrix*>(me), 0, x, y, z, flags);
             if (SameBlob(ma, me, 0x40)) return true;
             d = "angles " + F(x) + F(y) + F(z) + " flags " + std::to_string(flags) + " got " + Hex(ma, 0x40) + " exe " + Hex(me, 0x40);
+            return false;
+        });
+    }
+    // ---- vehicle recordings (replay paths)
+    {
+        auto genFrame = [](Rng& r, CVehicleStateEachFrame& f) {
+            auto* b = reinterpret_cast<uint8_t*>(&f);
+            for (size_t i = 0; i < sizeof f; ++i) b[i] = (uint8_t)r.u32();
+            const CVector p = GenV(r, 500.f); std::memcpy(b + 0x14, &p, 12);   // m_vecPosn
+            b[0x13] = (uint8_t)r.below(2);                                      // m_bHandbrakeUsed
+            if (r.below(2)) { for (int i = 0; i < 6; ++i) b[10 + i] = (uint8_t)(int8_t)(int)(r.below(255) - 127); }
+        };
+        Run("CVehicleRecording::RestoreInfoForMatrix 0x459960", [=](Rng& r, std::string& d) {
+            CVehicleStateEachFrame f; genFrame(r, f);
+            alignas(16) uint8 ma[0x48] {}, me[0x48] {}; GenMatrix(r, ma, 0.f); std::memcpy(me, ma, sizeof ma);
+            CVehicleRecording::RestoreInfoForMatrix(*reinterpret_cast<CMatrix*>(ma), f);
+            oracle::Fn<void __cdecl(CMatrix*, const CVehicleStateEachFrame*)>(0x459960)(reinterpret_cast<CMatrix*>(me), &f);
+            if (SameBlob(ma, me, 0x40)) return true;
+            d = "frame " + Hex(&f, 0x20) + " got " + Hex(ma, 0x40) + " exe " + Hex(me, 0x40);
+            return false;
+        });
+        Run("CVehicleRecording::RestoreInfoForCar 0x459A30", [=](Rng& r, std::string& d) {
+            CVehicleStateEachFrame f; genFrame(r, f);
+            PedFx a; BuildPedFx(r, a, 50.f); a.Rewire(true); PedFx e(a);
+            const bool pause = r.below(3) == 0;
+            CVehicleRecording::RestoreInfoForCar(reinterpret_cast<CVehicle*>(a.e), f, pause);
+            oracle::Fn<void __cdecl(CVehicle*, const CVehicleStateEachFrame*, bool)>(0x459A30)(reinterpret_cast<CVehicle*>(e.e), &f, pause);
+            if (SamePedFx(a, e)) return true;
+            d = "frame " + Hex(&f, 0x20) + " pause " + std::to_string(pause) + PedDiff(a, e);
+            return false;
+        });
+        Run("CVehicleRecording::SmoothRecording 0x45A0F0", [=](Rng& r, std::string& d) {
+            const int id = r.below(8);
+            constexpr int N = 12;
+            static CVehicleStateEachFrame fa[N], fe[N];
+            const int n = 1 + r.below(N);   // n = 0 would wrap the unsigned size - 0x20 test (in the exe, too)
+            for (int i = 0; i < n; ++i) { genFrame(r, fa[i]); fa[i].m_nTime = r.below(3) ? r.below(100000) : r.u32(); fe[i] = fa[i]; }
+            auto& slot = CVehicleRecording::StreamingArray[id];
+            slot.m_pData = fa; slot.m_nSize = n * (int)sizeof(CVehicleStateEachFrame);
+            CVehicleRecording::SmoothRecording(id);
+            slot.m_pData = fe;
+            oracle::Fn<void __cdecl(int)>(0x45A0F0)(id);
+            if (SameBlob(fa, fe, n * sizeof(CVehicleStateEachFrame))) return true;
+            d = "n " + std::to_string(n) + DiffDesc(fa, fe, n * sizeof(CVehicleStateEachFrame), "frm");
             return false;
         });
     }

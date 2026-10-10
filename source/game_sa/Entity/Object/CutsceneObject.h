@@ -20,7 +20,7 @@ public:
 
 public:
     static constexpr int32 NUM_CUTSCENE_VEHS = 6;
-    static inline auto& ms_sCutsceneVehNames = StaticRef<char*[NUM_CUTSCENE_VEHS]>(0x8D0F68);
+    static inline NOTSA_GLOBAL(ms_sCutsceneVehNames, 0x8D0F68, (char*[NUM_CUTSCENE_VEHS]), { const_cast<char*>("cscopcarla92"), const_cast<char*>("cscopcarsf"), const_cast<char*>("csbravura"), const_cast<char*>("CsFireLa"), const_cast<char*>("csmothership"), const_cast<char*>("CsVoodoo") });
 
 public:
     static void InjectHooks();

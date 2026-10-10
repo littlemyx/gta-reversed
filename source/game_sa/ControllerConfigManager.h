@@ -167,7 +167,7 @@ struct CJoySticks {
 
 VALIDATE_SIZE(CJoySticks, 0x20);
 
-static inline auto& AllValidWinJoys = StaticRef<CJoySticks>(0xC92144);
+NOTSA_GLOBAL_HDR(AllValidWinJoys, 0xC92144, (CJoySticks), {});
 
 using ControlName = GxtChar[40];
 

@@ -22,8 +22,11 @@ void CShotInfo::InjectHooks() {
 // 0x739B60
 void CShotInfo::Initialise() {
     rng::fill(aShotInfos, CShotInfo{});
-    for (auto&& [i, rd] : rngv::enumerate(RandTable)) {
-        rd = -0.05f + 0.005f * i;
+    // 0x739BF5: the table is filled by repeatedly adding 0.005 (0x858B4C) to the running value, starting at -0.05 (0x85901C)
+    float v = -0.05f;
+    for (auto& rd : RandTable) {
+        rd = v;
+        v += 0.005f;
     }
 }
 

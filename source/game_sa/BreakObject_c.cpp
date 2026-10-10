@@ -172,9 +172,9 @@ void BreakObject_c::SetGroupData(const RwMatrix* matrix, const CVector* vecVeloc
 
 // 0x59D7F0
 void BreakObject_c::SetBreakInfo(BreakInfo_t* info, int32 bJustFaces) {
-    static auto& ambientRed = StaticRef<float>(0x8D0A0C); // 32.0f
-    static auto& ambientGreen = StaticRef<float>(0x8D0A08); // 32.0f
-    static auto& ambientBlue = StaticRef<float>(0x8D0A04); // 32.0f
+    NOTSA_GLOBAL_LOCAL(ambientRed, 0x8D0A0C, (float), { 32.0f }); // 32.0f
+    NOTSA_GLOBAL_LOCAL(ambientGreen, 0x8D0A08, (float), { 32.0f }); // 32.0f
+    NOTSA_GLOBAL_LOCAL(ambientBlue, 0x8D0A04, (float), { 32.0f }); // 32.0f
 
     m_NumBreakGroups = bJustFaces ? info->m_usNumTriangles : info->m_usNumMaterials;
     m_BreakGroups = new BreakGroup_t[m_NumBreakGroups];
@@ -246,9 +246,9 @@ void BreakObject_c::SetBreakInfo(BreakInfo_t* info, int32 bJustFaces) {
 
 // 0x59DE40
 void BreakObject_c::DoCollisionResponse(BreakGroup_t* group, float timeStep, const CVector* vecNormal, float groundZ) const {
-    static auto& dotMultiplier = StaticRef<float>(0x8D0A18);   // 0.85f
-    static auto& timestepScaling = StaticRef<float>(0x8D0A14); // 0.05f
-    static auto& velocityScaling = StaticRef<float>(0x8D0A10); // 0.8f
+    NOTSA_GLOBAL_LOCAL(dotMultiplier, 0x8D0A18, (float), { 0.85f });   // 0.85f
+    NOTSA_GLOBAL_LOCAL(timestepScaling, 0x8D0A14, (float), { 0.05f }); // 0.05f
+    NOTSA_GLOBAL_LOCAL(velocityScaling, 0x8D0A10, (float), { 0.8f }); // 0.8f
 
     auto dotProd = DotProduct(group->m_Velocity, *vecNormal) * dotMultiplier;
     CVector velocityChange = *vecNormal;

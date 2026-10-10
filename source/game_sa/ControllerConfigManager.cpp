@@ -1101,7 +1101,12 @@ const GxtChar* CControllerConfigManager::GetControllerSettingTextMouse(eControll
 
 // 0x52F450
 const GxtChar* CControllerConfigManager::GetControllerSettingTextJoystick(eControllerAction action) {
+#ifdef NOTSA_GLOBALS_DETACHED
+    static GxtChar NewStringWithNumber[32]{};
+#else
     auto& NewStringWithNumber = StaticRef<GxtChar[32]>(0xB7147C);
+#endif
+#line 1105
 
     const auto key = GetControllerKeyAssociatedWithAction(action, eControllerType::JOY_STICK);
     if (!GetIsKeyBlank(key, eControllerType::JOY_STICK)) {
@@ -1229,7 +1234,12 @@ void CControllerConfigManager::DeleteMatchingActionInitiators(eControllerAction 
 
 // 0x52FE10
 const GxtChar* CControllerConfigManager::GetControllerSettingTextKeyBoard(eControllerAction action, eControllerType type) {
+#ifdef NOTSA_GLOBALS_DETACHED
+    static GxtChar s_KeyName[50]{}; // temp value
+#else
     auto& s_KeyName = StaticRef<GxtChar[50]>(0xB714BC); // temp value
+#endif
+#line 1233
     rng::fill(s_KeyName, 0);
 
     const auto key = GetControllerKeyAssociatedWithAction(action, type);

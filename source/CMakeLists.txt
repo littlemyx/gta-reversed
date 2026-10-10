@@ -874,6 +874,83 @@ if (${RE_PROJECT}_RW_LIBRW)
     set_property(TARGET pool_oracle_test PROPERTY SOURCES "${STANDALONE_PAD_OBJ}" ${_po_sources})
     target_link_options(pool_oracle_test PRIVATE "$<$<CXX_COMPILER_ID:MSVC>:/BASE:0x400000;/DYNAMICBASE:NO;/FIXED;/MERGE:_TEXT=.text;/INCREMENTAL:NO;/SUBSYSTEM:CONSOLE;/FORCE:UNRESOLVED>")
     set_target_properties(pool_oracle_test PROPERTIES COMPILE_WARNING_AS_ERROR OFF CXX_SCAN_FOR_MODULES OFF)
+    # P2E-3 gameplay differential test: peds / IK / tasks, camera, weapons, vehicles against the exe machine code (same machinery as physics_oracle_test)
+    add_executable(gameplay_oracle_test EXCLUDE_FROM_ALL
+        "${PROJECT_SOURCE_DIR}/tests/standalone/gameplay_oracle_test.cpp"
+        game_sa/Collision/Collision.cpp
+        game_sa/General.cpp
+        game_sa/Core/Vector.cpp
+        game_sa/Core/Vector2D.cpp
+        game_sa/Core/Matrix.cpp
+        game_sa/Core/Quaternion.cpp
+        game_sa/Entity/Placeable.cpp
+        game_sa/Timer.cpp
+        standalone/FtolExe.cpp
+        # --- peds
+        game_sa/PedGeometryAnalyser.cpp
+        game_sa/PedIK.cpp
+        game_sa/Entity/Ped/Ped.cpp
+        game_sa/Collision/ColSphere.cpp
+        game_sa/SurfaceInfos_c.cpp
+        game_sa/PedIntelligence.cpp
+        game_sa/Entity/Entity.cpp
+        game_sa/Entity/Physical.cpp
+        game_sa/Buoyancy.cpp
+        game_sa/Radar.cpp
+        game_sa/Pad.cpp
+        game_sa/VehicleRecording.cpp
+        game_sa/Collision/BoundingBox.cpp
+        game_sa/Garage.cpp
+        game_sa/CompressedMatrixNotAligned.cpp
+        game_sa/FireManager.cpp
+        game_sa/Fx/Blueprints/Interp/FxInterpInfoFloat.cpp
+        game_sa/Fx/Blueprints/Interp/FxInterpInfo32.cpp
+        game_sa/Fx/Blueprints/Interp/FxInterpInfo255.cpp
+        game_sa/Fx/Blueprints/Interp/FxInterpInfoU255.cpp
+        game_sa/Fx/Blueprints/Interp/FxInterpInfo.cpp
+        # --- camera
+        game_sa/Camera.cpp
+        game_sa/Cam.cpp
+        # --- weapons
+        game_sa/Weapon.cpp
+        game_sa/WeaponInfo.cpp
+        game_sa/Explosion.cpp
+        game_sa/ShotInfo.cpp
+        game_sa/BulletInfo.cpp
+        game_sa/ProjectileInfo.cpp
+        game_sa/Collision/BoundingBox.cpp
+        game_sa/World_Helper.cpp
+        # --- vehicles
+        game_sa/DamageManager.cpp
+        game_sa/cTransmission.cpp
+        game_sa/Entity/Vehicle/Vehicle.cpp
+        game_sa/Entity/Vehicle/Automobile.cpp
+        game_sa/Door.cpp
+        game_sa/CarEnterExit.cpp
+        game_sa/cHandlingDataMgr.cpp
+        game_sa/Entity/Vehicle/Plane.cpp
+        game_sa/Entity/Vehicle/Heli.cpp
+        game_sa/Entity/Vehicle/Boat.cpp
+        game_sa/Entity/Vehicle/Bike.cpp
+        game_sa/Entity/Vehicle/Bmx.cpp
+        game_sa/Entity/Vehicle/MonsterTruck.cpp
+        game_sa/Entity/Vehicle/QuadBike.cpp
+        game_sa/Entity/Vehicle/Trailer.cpp
+        game_sa/Entity/Vehicle/Train.cpp
+        game_sa/Entity/Physical.cpp
+    )
+    target_compile_features(gameplay_oracle_test PRIVATE cxx_std_23)
+    target_compile_definitions(gameplay_oracle_test PRIVATE NOTSA_RW_LIBRW RW_D3D9)
+    target_include_directories(gameplay_oracle_test PRIVATE $<TARGET_PROPERTY:${RE_PROJECT_LIB_NAME},INCLUDE_DIRECTORIES>)
+    target_compile_options(gameplay_oracle_test PRIVATE $<TARGET_PROPERTY:${RE_PROJECT_LIB_NAME},COMPILE_OPTIONS>)
+    target_precompile_headers(gameplay_oracle_test PRIVATE StdInc.cpp)
+    target_link_libraries(gameplay_oracle_test PRIVATE librw spdlog::spdlog Tracy::TracyClient user32)
+    target_sources(gameplay_oracle_test PRIVATE "${STANDALONE_PAD_OBJ}")
+    get_target_property(_gp_sources gameplay_oracle_test SOURCES)
+    list(REMOVE_ITEM _gp_sources "${STANDALONE_PAD_OBJ}")
+    set_property(TARGET gameplay_oracle_test PROPERTY SOURCES "${STANDALONE_PAD_OBJ}" ${_gp_sources})
+    target_link_options(gameplay_oracle_test PRIVATE "$<$<CXX_COMPILER_ID:MSVC>:/BASE:0x400000;/DYNAMICBASE:NO;/FIXED;/MERGE:_TEXT=.text;/INCREMENTAL:NO;/SUBSYSTEM:CONSOLE;/FORCE:UNRESOLVED>")
+    set_target_properties(gameplay_oracle_test PROPERTIES COMPILE_WARNING_AS_ERROR OFF CXX_SCAN_FOR_MODULES OFF)
     # Review oracle (3e73083e hooks): CHud / CMaths / CTaskTimer / CTaskSequences / CIdleCam / CCoverPoint / CConversations / CCredits / CVehicleSaveStructure /
     # CPathFind::FindNodePairClosestToCoors against the exe machine code (same machinery as game_oracle_test)
     add_executable(review_oracle_test EXCLUDE_FROM_ALL

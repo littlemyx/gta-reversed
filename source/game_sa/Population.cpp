@@ -290,12 +290,20 @@ eModelID CPopulation::ChoosePolicePedOccupation() {
 
 // 0x610F50
 bool CPopulation::ArePedStatsCompatible(ePedStats st1, ePedStats st2) {
-    for (auto stype : { st1, st2 }) {
+    // 0x610F50: BOTH stats are checked against the "never paired" set (a stat of that set makes the answer false whichever argument it is) before the old guy/girl rule
+    const auto IsNeverPaired = [](ePedStats stype) {
         switch (stype) {
         case ePedStats::PLAYER:
         case ePedStats::COP:
         case ePedStats::MEDIC:
         case ePedStats::FIREMAN:
+        case ePedStats::GANG1:
+        case ePedStats::GANG2:
+        case ePedStats::GANG3:
+        case ePedStats::GANG4:
+        case ePedStats::GANG5:
+        case ePedStats::GANG6:
+        case ePedStats::GANG7:
         case ePedStats::TRAMP_MALE:
         case ePedStats::TRAMP_FEMALE:
         case ePedStats::TOURIST:
@@ -313,16 +321,12 @@ bool CPopulation::ArePedStatsCompatible(ePedStats st1, ePedStats st2) {
         case ePedStats::SKATER:
         case ePedStats::STD_MISSION:
         case ePedStats::COWARD:
-        case ePedStats::GANG1:
-        case ePedStats::GANG2:
-        case ePedStats::GANG3:
-        case ePedStats::GANG4:
-        case ePedStats::GANG5:
-        case ePedStats::GANG6:
-        case ePedStats::GANG7:
-            return false;
+            return true;
         }
-        return true;
+        return false;
+    };
+    if (IsNeverPaired(st1) || IsNeverPaired(st2)) {
+        return false;
     }
     const auto IsOldGuyOrGirl = [](ePedStats st) {
         switch (st) {
@@ -433,10 +437,11 @@ bool CPopulation::PedMICanBeCreatedAtThisAttractor(eModelID modelId, const char*
     }
 
     if (NameIsAnyOf("STRIPM")) {
-        return pedType == PED_TYPE_CIVFEMALE;
+        return pedType != PED_TYPE_CIVFEMALE; // 0x611213: `setne`
     }
 
-    return false;
+    // 0x6111F0: every other script name (the `jne 0x611174` after the STRIPM compare) accepts the model
+    return true;
 }
 
 // 0x611450
@@ -663,17 +668,15 @@ eModelID CPopulation::FindSpecificDriverModelForCar_ToUse(eModelID carModelIndex
 
 // 0x611B20
 bool CPopulation::IsCorrectTimeOfDayForEffect(const C2dEffectPedAttractor& fx) {
-    switch (fx.m_nAttractorType) {
-    case PED_ATTRACTOR_PIZZA:
-    case PED_ATTRACTOR_SHELTER:
-    case PED_ATTRACTOR_TRIGGER_SCRIPT:
-    case PED_ATTRACTOR_LOOK_AT:
-    case PED_ATTRACTOR_SCRIPTED:
+    // Exe: only ATM(0), SEAT(1), STOP(2) and PARK(8) are daytime-only; every other value (incl. PIZZA..SCRIPTED, STEP and out-of-range bytes) is always fine
+    switch ((uint8)fx.m_nAttractorType) {
+    case PED_ATTRACTOR_ATM:
+    case PED_ATTRACTOR_SEAT:
+    case PED_ATTRACTOR_STOP:
     case PED_ATTRACTOR_PARK:
-    case PED_ATTRACTOR_STEP:
-        return true;
+        return CClock::GetIsTimeInRange(9, 20); // 9 is correct, because the function uses `>=` not `>`
     }
-    return CClock::GetIsTimeInRange(9, 20); // 9 is correct, because the function uses `>=` not `>`
+    return true;
 }
 
 // 0x611B60
@@ -985,63 +988,72 @@ eModelID CPopulation::ChooseCivilianOccupation(
     bool         isAtAttractor,
     const char*  attractorScriptName
 ) {
-    UNUSED(attractorScriptName);
+    // 0x612F90: number of passes. Pass `p` only accepts models with exactly `p` references, i.e. the least used loaded ped models come first
+    // (3 passes (5 inside with many peds) when testing for used occupations, 7 otherwise)
+    size_t numPasses = 3;
+    if (!CGame::CanSeeOutSideFromCurrArea() && NumberOfPedsInUseInterior > 20) {
+        numPasses = 5;
+    }
+    if (!doTestForUsedOccupations) {
+        numPasses = 7;
+    }
 
-    const size_t maxModelsToCheck = [&] {
-        // We do some extra math here, so in case the size of the array is ever changed, it scales automagically!
-        const auto nMaxModels = CStreaming::ms_pedsLoaded.size();
-        if (doTestForUsedOccupations) {
-            return nMaxModels * 7 / 8; // 7
+    for (size_t pass{}; pass < numPasses; pass++) {
+        for (const auto modelId : CStreaming::ms_pedsLoaded) {
+            if (modelId < 0) { // 0x612FF4: signed test
+                continue;
+            }
+            if (!CStreaming::IsModelLoaded(modelId)) { // So why the fuck is it in the `ms_pedsLoaded` array if it's not loaded?
+                continue;
+            }
+            const auto mi = CModelInfo::GetPedModelInfo(modelId);
+            if ((int16)mi->m_nRefCount != (int32)pass) { // 0x613012: signed word compare against the pass counter
+                continue;
+            }
+            if (mustNotBeThisModel == modelId) {
+                continue;
+            }
+            if (!CPopCycle::PedIsAcceptableInCurrentZone(modelId) && CGame::CanSeeOutSideFromCurrArea()) {
+                continue;
+            }
+            if (bOnlyOnFoots && (mi->m_nCarsCanDriveMask & 0x1000) == 0) {
+                continue;
+            }
+            if (mustBeMale && mi->GetPedType() != PED_TYPE_CIVMALE) {
+                continue;
+            }
+            if (mustBeFemale && mi->GetPedType() != PED_TYPE_CIVFEMALE) {
+                continue;
+            }
+            if (mustUseThisAnimGroup >= 0 && mi->m_nAnimType != mustUseThisAnimGroup) {
+                continue;
+            }
+            if (isAtAttractor) {
+                // 0x6130AB: the type check of `PedMICanBeCreatedAtAttractor` (0x6110C0, DEALER..PROSTITUTE) is inlined, then the attractor script name decides
+                switch (mi->GetPedType()) {
+                case PED_TYPE_DEALER:
+                case PED_TYPE_MEDIC:
+                case PED_TYPE_FIREMAN:
+                case PED_TYPE_CRIMINAL:
+                case PED_TYPE_BUM:
+                case PED_TYPE_PROSTITUTE:
+                    continue;
+                }
+                if (!PedMICanBeCreatedAtThisAttractor(modelId, attractorScriptName)) { // 0x6130C5
+                    continue;
+                }
+            }
+            if (!CGame::CanSeeOutSideFromCurrArea() && !PedMICanBeCreatedInInterior(modelId)) {
+                continue;
+            }
+            if (mustBeCompatibleWithThisPedStat != ePedStats::NONE && !ArePedStatsCompatible(mi->GetPedStatType(), mustBeCompatibleWithThisPedStat)) {
+                continue;
+            }
+            if (CWeather::Rain >= 0.1f && IsSunbather(modelId)) {
+                continue;
+            }
+            return modelId;
         }
-        if (!CGame::CanSeeOutSideFromCurrArea() && NumberOfPedsInUseInterior > 20) {
-            return nMaxModels * 5 / 8; // 5
-        }
-        return nMaxModels * 3 / 8; // 3
-    }();
-
-    for (size_t i{}; i < maxModelsToCheck; i++) {
-        const auto modelId = CStreaming::ms_pedsLoaded[i];
-        if (modelId == MODEL_INVALID) {
-            continue;
-        }
-        if (!CStreaming::IsModelLoaded(modelId)) { // So why the fuck is it in the `ms_pedsLoaded` array if it's not loaded?
-            continue;
-        }
-        const auto mi = CModelInfo::GetPedModelInfo(modelId);
-        if (mi->m_nRefCount != i) { // TODO/BUG: Why?
-            continue;
-        }
-        if (mustNotBeThisModel == modelId) {
-            continue;
-        }
-        if (CGame::CanSeeOutSideFromCurrArea() && !CPopCycle::PedIsAcceptableInCurrentZone(modelId)) {
-            continue;
-        }
-        if (bOnlyOnFoots && (mi->m_nCarsCanDriveMask & 0x1000) == 0) {
-            continue;
-        }
-        if (mustBeMale && mi->GetPedType() != PED_TYPE_CIVMALE) {
-            continue;
-        }
-        if (mustBeFemale && mi->GetPedType() != PED_TYPE_CIVFEMALE) {
-            continue;
-        }
-        if (mustUseThisAnimGroup != ANIM_GROUP_NONE && mi->m_nAnimType != mustUseThisAnimGroup) {
-            continue;
-        }
-        if (isAtAttractor && !PedMICanBeCreatedAtAttractor(modelId)) {
-            continue;
-        }
-        if (!CGame::CanSeeOutSideFromCurrArea() && !PedMICanBeCreatedInInterior(modelId)) {
-            continue;
-        }
-        if (mustBeCompatibleWithThisPedStat != ePedStats::NONE && !ArePedStatsCompatible(mi->GetPedStatType(), mustBeCompatibleWithThisPedStat)) {
-            continue;
-        }
-        if (CWeather::Rain >= 0.1f && IsSunbather(modelId)) {
-            continue;
-        }
-        return modelId;
     }
     return doTestForUsedOccupations
         ? MODEL_INVALID
@@ -1062,21 +1074,17 @@ void CPopulation::ChooseCivilianCoupleOccupations(eModelID& husbandOccupation, e
         }
     }();
 
-    // TODO: Check this out... I'm not sure what to do here
-    // You see, `ChooseCivilianOccupation` breaks if both `mustBeMale` and `mustBeFemale` are `true`... So I'm quite sure they just did an oopsie here.
-//#ifdef FIX_BUGS
-  //  if ((husbandOccupation = ChooseCivilianOccupation(husbandMustBeMale, false)) != MODEL_INVALID) {
-  //      if ((wifeyOccupation = ChooseCivilianOccupation(false, wifeMustBeFemale)) != MODEL_INVALID) {
-//#else
-    if ((husbandOccupation = ChooseCivilianOccupation(husbandMustBeMale, wifeMustBeFemale)) != MODEL_INVALID) {
-        if ((wifeyOccupation = ChooseCivilianOccupation(wifeMustBeFemale, husbandMustBeMale)) != MODEL_INVALID) {
-//#endif // FIX_BUGS
+    // 0x6131C7: both calls ask for `doTestForUsedOccupations` (the least used models only); the wife must differ from the husband and be compatible with his ped stats.
+    // (The parameters are (mustBeMale, mustBeFemale): the husband gets {husbandMustBeMale, wifeMustBeFemale}, the wife the swapped pair)
+    if ((husbandOccupation = ChooseCivilianOccupation(husbandMustBeMale, wifeMustBeFemale, ANIM_GROUP_NONE, MODEL_INVALID, ePedStats::NONE, false, true, false, nullptr)) != MODEL_INVALID) {
+        const auto husbandStat = CModelInfo::GetPedModelInfo(husbandOccupation)->GetPedStatType();
+        if ((wifeyOccupation = ChooseCivilianOccupation(wifeMustBeFemale, husbandMustBeMale, ANIM_GROUP_NONE, husbandOccupation, husbandStat, false, true, false, nullptr)) != MODEL_INVALID) {
             const auto IsSkater = [](eModelID model) {
                 return CModelInfo::GetPedModelInfo(model)->GetPedStatType() == ePedStats::SKATER;
             };
             if (IsSkater(husbandOccupation) == IsSkater(wifeyOccupation)) { // Either they are both skaters, or they both aren't
                 return; // All good
-            }       
+            }
         }
     }
 
@@ -1086,18 +1094,23 @@ void CPopulation::ChooseCivilianCoupleOccupations(eModelID& husbandOccupation, e
 
 // 0x613260
 eModelID CPopulation::ChooseCivilianOccupationForVehicle(bool mustBeMale, CVehicle* vehicle) {
-    const auto vehClass = vehicle->GetVehicleModelInfo()->m_nVehicleClass;
+    const auto vehClass = (eVehicleClass)(int8)vehicle->GetVehicleModelInfo()->m_nVehicleClass;
+    // 0x61335D: only the driver and the first 3 passenger seats are looked at (not all 8)
+    const auto IsPedOfModelInside = [&](eModelID model) {
+        const auto Is = [&](const CPed* ped) { return ped && ped->m_nModelIndex == model; };
+        return Is(vehicle->m_pDriver) || Is(vehicle->m_apPassengers[0]) || Is(vehicle->m_apPassengers[1]) || Is(vehicle->m_apPassengers[2]);
+    };
     for (size_t i{}; i < 2; i++) { // In 0th iteration we check if the model is inside the vehicle already, in the second we dont
-        for (size_t k{}; k < 4; k++) {
+        for (size_t k{}; k <= 4; k++) { // 0x6133BB: `jle` => 5 rounds, the last one (k == 4) takes any ref count
             for (auto pedModelId : CStreaming::ms_pedsLoaded) {
-                if (pedModelId == MODEL_INVALID) {
+                if (pedModelId < 0) { // 0x613295: signed test
                     continue;
                 }
                 if (!CStreaming::IsModelLoaded(pedModelId)) {
                     continue;
                 }
                 const auto mi = CModelInfo::GetPedModelInfo(pedModelId);
-                if (k != 4 && mi->m_nRefCount != k) {
+                if (k != 4 && (int16)mi->m_nRefCount != (int32)k) {
                     continue;
                 }
                 if (!CCheat::IsAnyActive({
@@ -1117,7 +1130,10 @@ eModelID CPopulation::ChooseCivilianOccupationForVehicle(bool mustBeMale, CVehic
                         continue;
                     }
                 }
-                if (i != 0 || !vehicle->IsPedOfModelInside(pedModelId)) {
+                if (mustBeMale && mi->GetPedType() != PED_TYPE_CIVMALE) { // 0x61333F (the parameter was ignored before)
+                    continue;
+                }
+                if (i != 0 || !IsPedOfModelInside(pedModelId)) {
                     return pedModelId;
                 }
             }
@@ -1510,29 +1526,26 @@ eModelID CPopulation::PickGangCar(eGangID forGang) {
 
 // 0x6144B0
 eModelID CPopulation::PickRiotRoadBlockCar() {
-    // First try gang cars
+    // First try gang cars: start at a random gang and walk all of them (wrapping around)
     const auto baseIdx = CGeneral::GetRandomNumberInRange(0u, (size_t)TOTAL_GANGS);
     for (size_t i{}; i < TOTAL_GANGS; i++) {
-        const auto model = PickGangCar((eGangID)(baseIdx + i));
+        const auto model = PickGangCar((eGangID)((baseIdx + i) % TOTAL_GANGS)); // 0x6144E0: idiv by 10
         if (model != MODEL_INVALID) {
             return model;
         }
     }
 
-    // Try appropriate/inappropriate cars
+    // Try appropriate/inappropriate cars (from the first slot up; BIG, MOPED and MOTORBIKE are skipped)
+    // BUG: after the last member the exe goes on to the unused slots (-1) and reads `ms_modelInfoPtrs[-1]`; we stop at the last member instead
     for (auto grp : { &m_AppropriateLoadedCars, &m_InAppropriateLoadedCars }) {
-        for (auto i{ grp->CountMembers() }; i --> 0;) { // TODO: Use `grp->GetAllModels()`
-            const auto model = (eModelID)grp->GetMember(i);
-            if (model == MODEL_INVALID) {
-                continue;
-            }
+        for (const auto model : grp->GetAllModels()) {
             switch (CModelInfo::GetVehicleModelInfo(model)->m_nVehicleClass) {
             case VEHICLE_CLASS_BIG:
             case VEHICLE_CLASS_MOPED:
             case VEHICLE_CLASS_MOTORBIKE:
                 continue;
             }
-            return model;
+            return (eModelID)model;
         }
     }
 

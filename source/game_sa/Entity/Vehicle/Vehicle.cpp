@@ -1714,13 +1714,14 @@ bool CVehicle::CanDoorsBeDamaged() const {
 
 // 0x6D1E80
 bool CVehicle::CanPedEnterCar() {
+    // 0x6D1E80: only a bike or a car that is not lying on its side (|up.z| > 0.1, a NaN counts) can be entered, and only while it is (almost) at rest;
+    // the squared speeds are summed x, y, z in extended precision and compared with 0.04 (FCOMP + JE: a NaN passes)
     const auto upZ = GetUp().z;
-    if (IsBike() || upZ > 0.1f || upZ < -0.1f) {
-        return true;
+    if (!(IsBike() || !(upZ <= 0.1f) || upZ < -0.1f)) {
+        return false;
     }
-
-    return m_vecTurnSpeed.SquaredMagnitude() <= sq(0.2f) &&
-           m_vecMoveSpeed.SquaredMagnitude() <= sq(0.2f);
+    const auto SqMag = [](const CVector& v) { return ((double)v.x * v.x + (double)v.y * v.y) + (double)v.z * v.z; };
+    return !(SqMag(m_vecMoveSpeed) > (double)sq(0.2f)) && !(SqMag(m_vecTurnSpeed) > (double)sq(0.2f));
 }
 
 // 0x6D21F0
@@ -1880,12 +1881,13 @@ float CVehicle::HeightAboveCeiling(float height, eFlightModel flightModel) {
     switch (flightModel) {
     case eFlightModel::FLIGHT_MODEL_BARON:
     case eFlightModel::FLIGHT_MODEL_RC: { // 0x6D2604 & 0x6D2609: models 1 AND 2 take this path
-        if (height >= 500.f) {
+        // 0x6D2630: FCOMP + JP / JNP, a NaN height takes the last branch
+        if (!(height < 500.f)) {
             if (height < 950.f) {
                 return height - 500.f;
             }
 
-            if (height >= 1500.f) {
+            if (!(height < 1500.f)) {
                 return (height - 1000.f) + 500.f;
             }
         }
@@ -3724,12 +3726,19 @@ void CVehicle::ProcessBikeWheel(CVector& wheelFwd, CVector& wheelRight, CVector&
 
 // 0x6D7BC0
 auto CVehicle::FindTyreNearestPoint(CVector2D point) -> eNearestCarWheel {
-    const auto relativePt = point - GetPosition2D();
-    const bool isFront = relativePt.Dot(GetForward()) > 0.f;
+    // 0x6D7BC0: the relative position is spilled to floats; both dot products are 3D ones with a `* 0.0` z term (so a non-finite z of the axis poisons them)
+    // and are summed y, x, z in extended precision; the right one is stored as a float, the forward one is compared straight from the FPU
+    const auto& mat = *m_matrix; // the original dereferences the matrix unconditionally
+    const auto  pos = GetPosition();
+    const float relX = point.x - pos.x, relY = point.y - pos.y;
+    const auto  fwd = mat.GetForward(), right = mat.GetRight();
+    const double dotFwd = ((double)relY * fwd.y + (double)relX * fwd.x) + (double)fwd.z * 0.0f;
+    const float  dotRight = (float)(((double)relY * right.y + (double)relX * right.x) + (double)right.z * 0.0f);
+    const bool isFront = dotFwd > 0.0;
     if (IsBike()) { // only distinguishes front vs rear
         return isFront ? eNearestCarWheel::FRONT_LEFT : eNearestCarWheel::REAR_LEFT;
     }
-    const bool isRight = relativePt.Dot(GetRight()) > 0.f;
+    const bool isRight = dotRight > 0.0f;
     return isFront
         ? isRight ? eNearestCarWheel::FRONT_RIGHT : eNearestCarWheel::FRONT_LEFT
         : isRight ? eNearestCarWheel::REAR_RIGHT : eNearestCarWheel::REAR_LEFT;

@@ -245,7 +245,13 @@ RwCamera* RwCameraShowRaster(RwCamera* camera, void* /*pDev*/, RwUInt32 flags) {
             for (char* a = nullptr; VirtualQuery(a, &mbi, sizeof(mbi)) && (uintptr_t)a < 0x7FFE0000; a += mbi.RegionSize) {
                 if (mbi.State == MEM_COMMIT) priv += mbi.RegionSize;
             }
-            notsa::standalone::Fixups::Log("memlog t=%lu ms frame %d: crt heap %lu bytes in %lu blocks, committed %lu KB", (unsigned long)GetTickCount(), n, (unsigned long)(st.lSizes[1] + st.lSizes[2]), (unsigned long)(st.lCounts[1] + st.lCounts[2]), (unsigned long)(priv / 1024));
+            if (FindPlayerPed(0) && CWorld::Players[0].m_pPed) {
+                auto* const pv = FindPlayerVehicle(0, false);
+                auto* const pp = FindPlayerPed(0);
+                const auto* pad = CPad::GetPad(0);
+                notsa::standalone::Fixups::Log("playerlog veh=%p ped=%p inVeh=%d speed=%d cross=%d stickY=%d stickX=%d", (void*)pv, (void*)pp, pp ? (int)pp->bInVehicle : -1, pv ? (int)(pv->m_vecMoveSpeed.Magnitude() * 100.f) : -1, (int)pad->NewState.ButtonCross, (int)pad->NewState.LeftStickY, (int)pad->NewState.LeftStickX);
+            }
+            notsa::standalone::Fixups::Log("memlog t=%lu ms frame %d pools task=%u route=%u event=%u ped=%u veh=%u: crt heap %lu bytes in %lu blocks, committed %lu KB", (unsigned long)GetTickCount(), n, GetTaskPool() ? (unsigned)GetTaskPool()->GetNoOfUsedSpaces() : 0u, GetPointRoutePool() ? (unsigned)GetPointRoutePool()->GetNoOfUsedSpaces() : 0u, GetEventPool() ? (unsigned)GetEventPool()->GetNoOfUsedSpaces() : 0u, GetPedPool() ? (unsigned)GetPedPool()->GetNoOfUsedSpaces() : 0u, GetVehiclePool() ? (unsigned)GetVehiclePool()->GetNoOfUsedSpaces() : 0u, (unsigned long)(st.lSizes[1] + st.lSizes[2]), (unsigned long)(st.lCounts[1] + st.lCounts[2]), (unsigned long)(priv / 1024));
         }
     }
     if (std::getenv("NOTSA_STANDALONE_NOPRESENT")) { // S5 diagnostics: skip Present (leak hunting)

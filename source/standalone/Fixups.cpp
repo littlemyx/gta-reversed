@@ -519,7 +519,7 @@ static void __cdecl OnTerminate() { RaiseNamed("std::terminate", 0xE0AB0005u); }
 static void SamplerThread(HANDLE mainThread) {
     std::map<uint32_t, uint32_t> hist;       // innermost 'interesting' frame (first address in the exe image)
     std::map<uint32_t, uint32_t> inclusive;  // every frame of the chain (inclusive time)
-    int samples = 0;
+    int samples = 0, sysSamples = 0;
     Sleep(35000); // not during device creation: suspending the main thread inside wined3d init deadlocks it
     ULONGLONG last = GetTickCount64();
     for (;;) {
@@ -547,6 +547,7 @@ static void SamplerThread(HANDLE mainThread) {
         ResumeThread(mainThread);
         if (n) {
             hist[frames[0]]++;
+            if (frames[0] < 0x401000 || frames[0] >= 0x3400000) sysSamples++; // EIP in a system DLL (wined3d / ntdll / ...)
             for (int i = 0; i < n; i++) inclusive[frames[i]]++;
             samples++;
         }
@@ -554,13 +555,13 @@ static void SamplerThread(HANDLE mainThread) {
             last = GetTickCount64();
             std::multimap<uint32_t, uint32_t, std::greater<>> top;
             for (auto& [a, k] : inclusive) { if (a >= 0x401000 && a < 0x3400000) top.insert({ k, a }); }
-            Fixups::Log("profile: %d samples; top inclusive return addresses:", samples);
+            Fixups::Log("profile: %d samples (%d with EIP outside the exe image = system DLLs / wined3d); top inclusive return addresses:", samples, sysSamples);
             int shown = 0;
             for (auto& [k, a] : top) {
                 if (shown++ >= 25) break;
                 Fixups::Log("  profile %5u/%u %08X", (unsigned)k, (unsigned)samples, a);
             }
-            hist.clear(); inclusive.clear(); samples = 0;
+            hist.clear(); inclusive.clear(); samples = 0; sysSamples = 0;
         }
     }
 }

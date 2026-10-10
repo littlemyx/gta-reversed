@@ -97,7 +97,7 @@ void InjPump() {
             e.motion.x = (float)ev.mx;
             e.motion.y = (float)ev.my;
             SDL_PushEvent(&e);
-            notsa::standalone::Fixups::Log("injected mouse %d,%d at %u ms", ev.mx, ev.my, (unsigned)now);
+            NOTSA_INJ_LOG("injected mouse %d,%d at %u ms", ev.mx, ev.my, (unsigned)now);
             continue;
         }
         e.type         = ev.down ? SDL_EVENT_KEY_DOWN : SDL_EVENT_KEY_UP;

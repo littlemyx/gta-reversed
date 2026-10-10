@@ -103,6 +103,7 @@ def main():
     ap.add_argument("--map", default=None, help="linker map of the exe (default <image-dir>/gta_reversed.map)")
     ap.add_argument("--allow-rdata-ptr", action="store_true")
     ap.add_argument("--cover", default="")
+    ap.add_argument("--not-verified", action="store_true", help="list the rows this dump cannot verify (function-local statics, members)")
     ap.add_argument("-v", "--verbose", action="store_true")
     a = ap.parse_args()
 
@@ -127,12 +128,16 @@ def main():
                 raw_casts.add(int(f[2], 16))
     # .notes/aliases.json decisions: `new_globals` (addresses that are not rows of the table: re-addressed sites, lazy-init variables, tables found by the A4 review)
     # are legitimate converted globals with their own size; `extents` (grow/extend/shrink) give the true byte size of a row whose declaration is under-/over-sized.
-    new_globals, extent_size = {}, {}
+    new_globals, extent_size, views, extent_members = {}, {}, {}, set()
     ap = REPO / ".notes" / "aliases.json"
     if ap.exists():
         aj = json.loads(ap.read_text())
         for n in aj.get("new_globals", []):
             new_globals[int(n["addr"], 16)] = int(n["size"])
+        for m in aj.get("members", []):
+            extent_members.add(int(m["addr"], 16))
+        for v in aj.get("views", []):     # repo-shifted index: own storage, only [verify_offset, +verify_size) is compared with the image at verify_addr
+            views[int(v["addr"], 16)] = (v["site"]["name"].split("::")[-1], int(v["verify_addr"], 16), int(v["verify_offset"]), int(v["verify_size"]))
         for k, v in aj.get("extents", {}).items():
             if v.get("kind") in ("grow", "extend", "shrink") and "true_size" in v:
                 extent_size[int(k, 16)] = int(v["true_size"])
@@ -153,8 +158,21 @@ def main():
     tot_bytes = ident = codeok = masked = devs = 0
     bad, xfail = [], []
     seen = set()
+    views_seen = []
     for g in dump:
         addr, size = g["addr"], g["size"]
+        isview = addr in views and g["name"].split("::")[-1] == views[addr][0]
+        if isview:      # compare the decided sub-range with the image at verify_addr (the dumped address is the table row of the shifted base)
+            _, vaddr, voff, vsize = views[addr]
+            if len(g["ours"]) != size or not (base <= vaddr and vaddr + vsize <= end):
+                xfail.append("%s 0x%X: view dump/range invalid" % (g["name"], addr))
+            elif g["ours"][voff:voff + vsize] != img[vaddr - base:vaddr - base + vsize]:
+                bad.append((dict(g, size=vsize, ours=g["ours"][voff:voff + vsize], addr=vaddr), [0], img[vaddr - base:vaddr - base + vsize]))
+            else:
+                ident += 1
+                tot_bytes += vsize
+            views_seen.append(g["name"])
+            continue
         if addr in seen:
             xfail.append("%s 0x%X: dumped twice" % (g["name"], addr))
         seen.add(addr)
@@ -169,6 +187,8 @@ def main():
                 xfail.append("%s 0x%X: sizeof %d != aliases.json new_globals size %d" % (g["name"], addr, size, new_globals[addr]))
         elif rows and row is None:
             xfail.append("%s 0x%X: address is not a row of the table (a base+offset or unlisted address?)" % (g["name"], addr))
+        elif row is not None and addr in views:
+            pass     # the table row describes the repo-shifted view base, the real object here is smaller (aliases.json views)
         elif row is not None and addr in extent_size and extent_size[addr] == size:
             pass     # aliases.json extents: the declared type was wrong, the decided true size is what the global has now
         elif row is not None and int(row["size"]) != size:
@@ -217,6 +237,23 @@ def main():
             sum(1 for r in rows.values() if any(s in r["owner"] for s in subs)), "/".join(subs), sum(1 for ad in seen if ad in rows and any(s in rows[ad]["owner"] for s in subs)), len(miss)))
         for r in miss:
             print("   not converted: %s %s cat %s (%s B)" % (r["addr"], r["name"], r["cat"], r["size"]))
+    # rows that this dump cannot verify: function-local statics / lazy-init locals (registered at first call, not at static init), MEMBER aliases (storage inside
+    # another global), views / virtual bases; listed for the reader, they never fail the run
+    nv = []
+    if rows:
+        owners_in_dump = set(seen)
+        for ad, r in rows.items():
+            if ad in seen or r.get("cat") == "d":
+                continue
+            if r.get("local_fn"):
+                nv.append((r["addr"], r["name"], "function-local static"))
+            elif ad in extent_members:
+                nv.append((r["addr"], r["name"], "member of another global"))
+    if a.not_verified:
+        print("NOT VERIFIED (%d rows: function-local statics / members; not in the boot dump): " % len(nv) + ", ".join("%s %s" % (x[0], x[1].split("::")[-1]) for x in nv[:400]))
+    else:
+        print("not verified by this dump: %d rows (function-local statics %d, members %d); --not-verified lists them" % (
+            len(nv), sum(1 for x in nv if x[2].startswith("function")), sum(1 for x in nv if x[2].startswith("member"))))
     ok = not bad and not xfail
     print("RESULT: %s (%d mismatching globals, %d cross-check failures)" % ("PASS" if ok else "FAIL", len(bad), len(xfail)))
     return 0 if ok else 1

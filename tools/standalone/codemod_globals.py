@@ -13,7 +13,7 @@ Forms (scope from the row of DETACH_GLOBALS.tsv, header/.cpp from the file name)
   header namespace scope               `NOTSA_GLOBAL_HDR(n, a, (T), init);`                  (`static`/`inline` dropped: ONE definition, `inline`)
                                        `NOTSA_GLOBAL_HDR_EXT(...)` when the old text was `inline auto&` without `static` (address mode keeps `inline`)
   function scope                       `NOTSA_GLOBAL_LOCAL(n, a, (T), init);`
-  class member, category c or initialiser > --inline-max chars and a sibling <stem>.cpp:
+  class member, category c, initialiser > --inline-max chars or a type that mentions the enclosing class, with a sibling <stem>.cpp:
                                         header `static NOTSA_GLOBAL_DECL(Cls, n, a, (T));` + `NOTSA_GLOBAL_DEF(Cls, n, a, (T), init);` appended at the END of the .cpp
   ScopedStaticRef variable             `NOTSA_SCOPED_GLOBAL(v, varA, flagsA, mask, (T), initVal);`   (the macro says `static` itself in both modes; the call-site `static` is dropped; detached: `static T v = initVal;`, the flag word is dropped)
   aliases.json alias declaration       `NOTSA_GLOBAL_ALIAS(n, a, (T), Owner);` ; cast alias `reinterpret_cast<T&>(Owner)`; member `*reinterpret_cast<T*>(reinterpret_cast<uint8*>(&Owner) + off)`
@@ -197,6 +197,12 @@ def apply_edits(text, edits):
         delta = n.count("\n") - old.count("\n")
         if delta:
             endline = text.count("\n", 0, e) + 1
+            eol = text.find("\n", e)
+            rest = text[e:eol] if eol >= 0 else ""
+            if not n.endswith("\n") and eol >= 0 and (not rest.strip() or rest.strip().startswith("//")) and "\n" not in rest:
+                # keep the original trailing comment on the last line of the replacement; the `#line` goes after that line (no lone comment line)
+                out = out[:s] + n + rest + "\n#line %d\n" % (endline + 1) + out[eol + 1:]
+                continue
             n += "\n#line %d\n" % endline if not n.endswith("\n") else "#line %d\n" % endline
         out = out[:s] + n + out[e:]
     return out
@@ -352,7 +358,10 @@ def process(path, rows_by_addr, hazards, em, al, args, report):
             skip("name mismatch (%s vs %s)" % (qname, name))
             continue
         use_def = False
-        if in_class and ("static" in pre) and (len(init) > args.inline_max or row["cat"] == "c"):
+        # a static member whose type mentions the enclosing class (`static std::array<CBulletInfo, 8> aBulletInfos` inside CBulletInfo): in detached mode the
+        # in-class `static inline T x{}` needs a complete T, so declare it in the class and define it after the class (DECL + DEF in <stem>.cpp)
+        self_typed = in_class and re.search(r"\b%s\b" % re.escape(qname.rsplit("::", 1)[0].split("::")[-1]), ttext) is not None
+        if in_class and ("static" in pre) and (len(init) > args.inline_max or row["cat"] == "c" or self_typed):
             cpp = path.with_suffix(".cpp")
             if is_header and cpp.exists():
                 use_def = True

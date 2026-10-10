@@ -326,7 +326,12 @@ class Emit:
             if it is None:
                 it = zero or self.zero_of(e)
             out.append(it)
-        return "{ " + ", ".join(out) + " }"
+        body = "{ " + ", ".join(out) + " }"
+        if t.kind == "stdarr" and any(o.startswith("{") for o in out):
+            # std::array<Aggregate, N>: the elements are braced, so the std::array's own member (the C array) needs its brace level, otherwise MSVC
+            # reports 'too many initializers' (`std::array<std::array<int,2>,3> a{ {1,2},{3,4},{5,6} }` is ill-formed, `{{ {1,2},{3,4},{5,6} }}` is not)
+            return "{ " + body + " }"
+        return body
 
     def zero_of(self, e):
         if e.kind == "ptr":

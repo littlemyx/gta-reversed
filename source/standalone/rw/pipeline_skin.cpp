@@ -38,6 +38,8 @@
 #include "skin_vs.h"
 
 #include <cstdint>
+#include <cstdlib>
+#include <cstdio>
 #include <cstring>
 #include <vector>
 
@@ -72,10 +74,8 @@ void (*g_origInstance)(rw::Geometry*, rw::d3d9::InstanceDataHeader*, rw::bool32)
 void (*g_origRender)(rw::Atomic*, rw::d3d9::InstanceDataHeader*) = nullptr;
 bool g_installed = false;
 bool g_forceCpu  = false; // test hook (RwShimSkinForceCpu)
-// The exe's predicate sends a ped like male01 (no split data, 28 bones) to the vertex-shader path. That path renders broken geometry here (see the P2B-24c notes in the
-// report: wined3d draws a few vertices of the skinned mesh at infinity although the vertex data, indices and bone constants checked on the CPU are right), so until
-// it is fixed HW geometry is rendered by the CPU route; RwShimSkinEnableHardware(true) restores the exe's choice (tests / debugging).
-bool g_hardwareEnabled = false;
+// The exe's predicate (HW T&L, VS/PS >= 1.1, skin+0x1C <= max bones, hierarchy present) decides per geometry; RwShimSkinEnableHardware(false) forces the CPU route (tests).
+bool g_hardwareEnabled = true;
 
 // 0x7CB2B0 (caps block)
 void ProbeCaps() {
@@ -154,7 +154,9 @@ void SkinInstanceCB(rw::Geometry* geo, rw::d3d9::InstanceDataHeader* header, rw:
 struct LibrwDev {
     const rw::d3d9::InstanceDataHeader* header = nullptr;
 
-    void SetConst(unsigned start, const float* data, unsigned count) { rw::d3d::d3ddevice->SetVertexShaderConstantF(start, data, count); } // vtable +0x178
+    void SetConst(unsigned start, const float* data, unsigned count) {
+        rw::d3d::d3ddevice->SetVertexShaderConstantF(start, data, count);
+    } // vtable +0x178
     void SetRenderState(unsigned state, unsigned value) { RwD3D9SetRenderState(state, value); }                                              // 0x7FC2D0
     void VertexAlpha(bool on) { _rwD3D9RenderStateVertexAlphaEnable(on ? TRUE : FALSE); }                                                  // 0x7FE0A0
     void SetIndices(void* ib) { RwD3D9SetIndices(ib); }
@@ -333,6 +335,10 @@ void SkinRenderCB(rw::Atomic* atomic, rw::d3d9::InstanceDataHeader* header) {
     notsa::skinvs::SetFrameStamp(static_cast<std::uint16_t>(RwEngineInstance ? RwEngineInstance->renderFrame : 0));
     LibrwDev dev;
     dev.header = header;
+    // librw's flushCache uploads ITS fog constant to vertex-shader c14 (VSLOC_fogData) whenever fog is dirty, which would overwrite the bone matrix registers of the exe's
+    // layout in the middle of the render (the exe has no such write: its constants are only the ones 0x7C8060 sets). Flush the pending state (and with it the fog
+    // constant) before any constant of the exe's layout is uploaded; nothing in the render marks fog dirty again.
+    rw::d3d::flushCache();
     rwskin::RenderHW(dev, e);
     for (u32 i = 0; i < header->numMeshes; i++) {
         header->inst[i].vertexShader = nullptr; // the exe clears it after the draw
@@ -390,7 +396,7 @@ void RwShimSkinForceCpu(bool force) {
     g_forceCpu = force;
 }
 
-// test hook: let geometry that satisfies the exe's HW predicate use the vertex-shader path (off by default, see g_hardwareEnabled)
+// test hook: false = every skin renders through the CPU route; true (default) = the exe's predicate
 void RwShimSkinEnableHardware(bool enable) {
     g_hardwareEnabled = enable;
 }

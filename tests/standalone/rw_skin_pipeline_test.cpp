@@ -22,6 +22,8 @@
 #include <cstdlib>
 #include <cstring>
 #include <vector>
+#include <string>
+struct ID3DBlob : IUnknown { virtual void* STDMETHODCALLTYPE GetBufferPointer() = 0; virtual SIZE_T STDMETHODCALLTYPE GetBufferSize() = 0; };
 
 namespace notsa::standalone::Fixups { void Log(const char*, ...) {} }
 void NotsaRwRenderState_OnEngineStarted();
@@ -293,6 +295,13 @@ static void RunScene(const std::vector<uint8_t>& bytes, bool hardware, rw::ObjPi
                 std::fclose(f);
             }
         }
+        if (pi == 0 && g_verbose && !RwShimIsFacadeInstance(g_geo->instData)) {
+            for (int r : { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 99, 100, 101 }) {
+                float c[4] = {};
+                g_dev->GetVertexShaderConstantF(r, c, 1);
+                std::printf("  c%-3d % .5f % .5f % .5f % .5f\n", r, c[0], c[1], c[2], c[3]);
+            }
+        }
         if (pi == 0 && g_verbose && !RwShimIsFacadeInstance(g_geo->instData)) { // HW route: what the vertex buffer holds
             auto* h = static_cast<rw::d3d9::InstanceDataHeader*>(g_geo->instData);
             rw::d3d9::VertexElement el[20] = {};
@@ -315,6 +324,44 @@ static void RunScene(const std::vector<uint8_t>& bytes, bool hardware, rw::ObjPi
                     for (int k = 0; k < 4; k++) if (ix[k] > 96 || ix[k] % 3) badIdx++;
                     if (std::fabs(w[0] + w[1] + w[2] + w[3] - 1.0f) > 0.01f) badW++;
                     if (std::fabs(pp[0]) > 5 || std::fabs(pp[1]) > 5 || std::fabs(pp[2]) > 5) farPos++;
+                }
+                { // emulate the composed shader (4 x m4x3 + weights) on the CPU with the constants the device holds
+                    std::vector<float> cst(256 * 4);
+                    for (int r = 0; r < 256; r++) g_dev->GetVertexShaderConstantF(r, &cst[r * 4], 1);
+                    RpSkin* sk = RpSkinGeometryGetSkin(g_geo);
+                    const RwMatrix* inv = RpSkinGetSkinToBoneMatrices(sk);
+                    RwMatrix* mats = RpHAnimHierarchyGetMatrixArray(g_hier);
+                    std::vector<RwMatrix> bone(g_hier->numNodes);
+                    for (int i = 0; i < g_hier->numNodes; i++) rw::Matrix::mult(&bone[i], const_cast<RwMatrix*>(&inv[i]), &mats[i]);
+                    const V3* src = (const V3*)RpMorphTargetGetVertices(RpGeometryGetMorphTarget(g_geo, 0));
+                    const RwUInt32* bi = RpSkinGetVertexBoneIndices(sk);
+                    RwMatrixWeights* bw = RpSkinGetVertexBoneWeights(sk);
+                    for (int i = 0; i < g_hier->numNodes; i++) {
+                        const RwMatrix& m = bone[i];
+                        const float want[12] = { m.right.x, m.up.x, m.at.x, m.pos.x, m.right.y, m.up.y, m.at.y, m.pos.y, m.right.z, m.up.z, m.at.z, m.pos.z };
+                        float d = 0; for (int q = 0; q < 12; q++) d = std::max(d, std::fabs(want[q] - cst[(5 + 3 * i) * 4 + q]));
+                        if (d > 1e-4f) { std::printf("  bone %d: register block differs by %g (want pos %g %g %g)\n", i, d, m.pos.x, m.pos.y, m.pos.z); for (int q = 0; q < 3; q++) std::printf("     c%d %g %g %g %g\n", 5 + 3 * i + q, cst[(5 + 3 * i + q) * 4], cst[(5 + 3 * i + q) * 4 + 1], cst[(5 + 3 * i + q) * 4 + 2], cst[(5 + 3 * i + q) * 4 + 3]); }
+                    }
+                    int badVsEmu = 0, badVsRef = 0, firstBad = -1;
+                    for (int v = 0; v < g_geo->numVertices; v++) {
+                        const uint8_t* base = vb + size_t(v) * h->vertexStream[0].stride;
+                        const float* w = reinterpret_cast<const float*>(base + ew->offset);
+                        const uint8_t* ix = base + ei->offset;
+                        const float* pp = reinterpret_cast<const float*>(base + ep->offset);
+                        float e[3] = {};
+                        for (int c = 0; c < 4; c++)
+                            for (int r = 0; r < 3; r++) {
+                                const float* row = &cst[(5 + ix[c] + r) * 4];
+                                e[r] += w[c] * (pp[0] * row[0] + pp[1] * row[1] + pp[2] * row[2] + row[3]);
+                            }
+                        const float* rw_ = &bw[v].w0; const uint8_t* ri = reinterpret_cast<const uint8_t*>(&bi[v]);
+                        V3 acc{ 0, 0, 0 };
+                        for (int c = 0; c < 4; c++) { if (rw_[c] == 0.0f) continue; V3 q = XformRow(bone[ri[c]], src[v]); acc.x += rw_[c] * q.x; acc.y += rw_[c] * q.y; acc.z += rw_[c] * q.z; }
+                        const bool bad = std::fabs(e[0] - acc.x) > 1e-3f || std::fabs(e[1] - acc.y) > 1e-3f || std::fabs(e[2] - acc.z) > 1e-3f;
+                        if (bad) { badVsRef++; if (firstBad < 0) { firstBad = v; std::printf("  first bad vertex %d: emu (%g %g %g) ref (%g %g %g) w %g %g %g %g idx %u %u %u %u (ref idx %u %u %u %u)\n", v, e[0], e[1], e[2], acc.x, acc.y, acc.z, w[0], w[1], w[2], w[3], ix[0], ix[1], ix[2], ix[3], ri[0], ri[1], ri[2], ri[3]); } }
+                        (void)badVsEmu;
+                    }
+                    std::printf("  shader emulation vs reference: %d of %d vertices differ\n", badVsRef, g_geo->numVertices);
                 }
                 std::printf("  HW vertex data: %d bad indices (>96 or not a multiple of 3), %d bad weight sums, %d positions beyond 5 units\n", badIdx, badW, farPos);
                 rw::d3d::unlockVertices(h->vertexStream[0].vertexBuffer);
@@ -360,7 +407,7 @@ static void RunScene(const std::vector<uint8_t>& bytes, bool hardware, rw::ObjPi
     RpWorldRemoveLight(world, amb);
     RpLightDestroy(amb);
     RpWorldDestroy(world);
-    RwShimSkinEnableHardware(false);
+    RwShimSkinEnableHardware(true);
 }
 
 int main(int argc, char** argv) {
@@ -368,9 +415,9 @@ int main(int argc, char** argv) {
     _set_error_mode(_OUT_TO_STDERR);
     _set_abort_behavior(0, _WRITE_ABORT_MSG | _CALL_REPORTFAULT);
     const char* dffPath = nullptr;
-    bool dumpText = false, runHw = false;
+    bool dumpText = false, runHw = true;
     for (int i = 1; i < argc; i++) {
-        if (!std::strcmp(argv[i], "-v")) g_verbose = true; else if (!std::strcmp(argv[i], "-t")) dumpText = true; else if (!std::strcmp(argv[i], "-hw")) runHw = true; else if (!std::strcmp(argv[i], "-d") && i + 1 < argc) g_dumpPrefix = argv[++i]; else dffPath = argv[i];
+        if (!std::strcmp(argv[i], "-v")) g_verbose = true; else if (!std::strcmp(argv[i], "-t")) dumpText = true; else if (!std::strcmp(argv[i], "-hw")) runHw = true; else if (!std::strcmp(argv[i], "-nohw")) runHw = false; else if (!std::strcmp(argv[i], "-d") && i + 1 < argc) g_dumpPrefix = argv[++i]; else dffPath = argv[i];
     }
     HWND wnd = CreateWindowA("STATIC", "rw_skin_pipeline_test", WS_OVERLAPPEDWINDOW, 0, 0, 320, 240, nullptr, nullptr, GetModuleHandleA(nullptr), nullptr);
     rw::MemoryFunctions mf{};
@@ -406,6 +453,20 @@ int main(int argc, char** argv) {
         notsa::skinvs::Layout lay{};
         CHECK(notsa::skinvs::GetVertexShader(k, lay) != nullptr);
         if (dumpText) std::printf("---- vs text:\n%s\n----\n", notsa::skinvs::ComposeText(k, lay).c_str());
+        if (dumpText) { // bytecode of the assembled text (Wine's D3DAssemble): what m4x3 with relative addressing expands to
+            const std::string txt = notsa::skinvs::ComposeText(k, lay);
+            HMODULE dll = LoadLibraryA("d3dcompiler_47.dll");
+            using Fn = HRESULT(WINAPI*)(LPCVOID, SIZE_T, LPCSTR, const void*, void*, UINT, ID3DBlob**, ID3DBlob**);
+            Fn f = dll ? (Fn)GetProcAddress(dll, "D3DAssemble") : nullptr;
+            ID3DBlob *code = nullptr, *err = nullptr;
+            if (f && SUCCEEDED(f(txt.data(), txt.size(), "vs", nullptr, nullptr, 0, &code, &err)) && code) {
+                const DWORD* t = (const DWORD*)code->GetBufferPointer();
+                const size_t n = code->GetBufferSize() / 4;
+                std::printf("bytecode (%zu dwords):", n);
+                for (size_t q = 0; q < n && q < 160; q++) std::printf("%s%08X", q % 8 ? " " : "\n  ", t[q]);
+                std::printf("\n");
+            }
+        }
     }
 
     if (dffPath) {
@@ -416,7 +477,7 @@ int main(int argc, char** argv) {
         std::printf("---- CPU skinning route (default)\n");
         RunScene(bytes, false, slot, res[0]);
         if (runHw) {
-            std::printf("---- HW vertex-shader route (enabled by -hw; the exe's own choice for this ped, currently renders broken geometry)\n");
+            std::printf("---- HW vertex-shader route (the exe's own choice for this ped; -nohw skips it)\n");
             RunScene(bytes, true, slot, res[1]);
             // both routes cover the same pixels (the lighting model of the two differs: shader vs fixed function)
             for (int pi = 0; pi < 3; pi++) {
@@ -431,6 +492,6 @@ int main(int argc, char** argv) {
             }
         }
     }
-    std::printf("%s: %d passed, %d failed\n", g_fail ? "FAILED" : "PASSED", g_pass, g_fail);
+    std::printf("%d checks passed, %d failed\n%s (%d failed)\n", g_pass, g_fail, g_fail ? "FAILED" : "PASSED", g_fail);
     return g_fail ? 1 : 0;
 }

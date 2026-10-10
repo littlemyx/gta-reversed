@@ -10,7 +10,7 @@ class CBulletTrace;
 
 class CBulletTraces {
 public:
-    static inline auto& aTraces = StaticRef<std::array<CBulletTrace, 16>>(0xC7C748);
+    static inline NOTSA_GLOBAL(aTraces, 0xC7C748, (std::array<CBulletTrace, 16>), {});
 
 public:
     static void InjectHooks();

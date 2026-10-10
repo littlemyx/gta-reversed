@@ -771,6 +771,45 @@ if (${RE_PROJECT}_RW_LIBRW)
     set_property(TARGET world_oracle_test PROPERTY SOURCES "${STANDALONE_PAD_OBJ}" ${_wo_sources})
     target_link_options(world_oracle_test PRIVATE "$<$<CXX_COMPILER_ID:MSVC>:/BASE:0x400000;/DYNAMICBASE:NO;/FIXED;/MERGE:_TEXT=.text;/INCREMENTAL:NO;/SUBSYSTEM:CONSOLE;/FORCE:UNRESOLVED>")
     set_target_properties(world_oracle_test PROPERTIES COMPILE_WARNING_AS_ERROR OFF CXX_SCAN_FOR_MODULES OFF)
+    # P2E-5 game-logic differential test (wanted/crime, decision makers, population/car choice, scanners, zones/cheats/stats); same machinery as world_oracle_test
+    add_executable(logic_oracle_test EXCLUDE_FROM_ALL
+        "${PROJECT_SOURCE_DIR}/tests/standalone/logic_oracle_test.cpp"
+        game_sa/General.cpp
+        game_sa/Core/Vector.cpp
+        game_sa/Core/Vector2D.cpp
+        game_sa/Core/Matrix.cpp
+        game_sa/Core/Quaternion.cpp
+        game_sa/Wanted.cpp
+        game_sa/Stats.cpp
+        game_sa/GameLogic.cpp
+        game_sa/Pools.cpp
+        game_sa/World_Helper.cpp
+        game_sa/Entity/Ped/Ped.cpp
+        game_sa/Entity/Ped/PlayerPed.cpp
+        game_sa/Entity/Vehicle/Vehicle.cpp
+        game_sa/GangWars.cpp
+        game_sa/Darkel.cpp
+        game_sa/Game.cpp
+        game_sa/Collision/Collision.cpp
+        game_sa/Collision/ColPoint.cpp
+        game_sa/PedType.cpp
+        game_sa/PedIntelligence.cpp
+        game_sa/Tasks/TaskManager.cpp
+        game_sa/Tasks/Task.cpp
+        standalone/FtolExe.cpp
+    )
+    target_compile_features(logic_oracle_test PRIVATE cxx_std_23)
+    target_compile_definitions(logic_oracle_test PRIVATE $<TARGET_PROPERTY:${RE_PROJECT_LIB_NAME},COMPILE_DEFINITIONS>)   # the run build's own definitions (NOTSA_STANDALONE_RUN, USE_DSOUND, ...): the audio / HUD headers need them
+    target_include_directories(logic_oracle_test PRIVATE $<TARGET_PROPERTY:${RE_PROJECT_LIB_NAME},INCLUDE_DIRECTORIES>)
+    target_compile_options(logic_oracle_test PRIVATE $<TARGET_PROPERTY:${RE_PROJECT_LIB_NAME},COMPILE_OPTIONS>)
+    target_precompile_headers(logic_oracle_test PRIVATE StdInc.cpp)
+    target_link_libraries(logic_oracle_test PRIVATE librw spdlog::spdlog Tracy::TracyClient user32)
+    target_sources(logic_oracle_test PRIVATE "${STANDALONE_PAD_OBJ}")
+    get_target_property(_lo_sources logic_oracle_test SOURCES)
+    list(REMOVE_ITEM _lo_sources "${STANDALONE_PAD_OBJ}")
+    set_property(TARGET logic_oracle_test PROPERTY SOURCES "${STANDALONE_PAD_OBJ}" ${_lo_sources})
+    target_link_options(logic_oracle_test PRIVATE "$<$<CXX_COMPILER_ID:MSVC>:/BASE:0x400000;/DYNAMICBASE:NO;/FIXED;/MERGE:_TEXT=.text;/INCREMENTAL:NO;/SUBSYSTEM:CONSOLE;/FORCE:UNRESOLVED;/MAP>")
+    set_target_properties(logic_oracle_test PROPERTIES COMPILE_WARNING_AS_ERROR OFF CXX_SCAN_FOR_MODULES OFF)
     # x87 intrinsic fidelity oracle: inline fsin/fcos/fpatan/fptan/fsqrt/fyl2x of the exe vs the ports' math, and the CRT entry points the exe calls (pow, asin, acos, tan, floor, ceil, modf)
     add_executable(x87_oracle_test EXCLUDE_FROM_ALL
         "${PROJECT_SOURCE_DIR}/tests/standalone/x87_oracle_test.cpp"

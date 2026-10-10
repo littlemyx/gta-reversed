@@ -1606,6 +1606,8 @@ void CWaterLevel::RenderWaterFog() {
 }
 
 // 0x6E6EF0
+// Oracle-proven rewrite (world_oracle_test): the exe uses the sine LUT, its own phase constants (0x872008..0x872020) and keeps every intermediate on the x87 stack (=> `double`s);
+// the normal starts as (-d, -d, 1) (NOT 0 + d: the sign of a zero matters), the colour multiplier sums the normal as (z + y) + x and the glare as (z*k + y*k) + k*x
 void CWaterLevel::CalculateWavesOnlyForCoordinate(
     int32 x, int32 y,
     float bigWavesAmplitude,
@@ -1616,55 +1618,59 @@ void CWaterLevel::CalculateWavesOnlyForCoordinate(
     CVector& vecNormal
 )
 {
-    x = std::abs(x);
-    y = std::abs(y);
-    vecNormal = CVector(0.f, 0.f, 1.f);
+    static auto& SIN_LUT = StaticRef<std::array<float, 256>>(0xBB3E00);
 
-    const float waveMult = faWaveMultipliersX[(x / 2) % 8] * faWaveMultipliersY[(y / 2) % 8] * CWeather::Wavyness;
-    float fX = (float)x, fY = (float)y;
+    // `neg` for negative values (INT_MIN stays negative), then (v - (v >> 31)) >> 1 & 7
+    const auto Abs = [](int32 v) { return v < 0 ? (int32)(0u - (uint32)v) : v; };
+    const int32 ax = Abs(x), ay = Abs(y);
+    const double waveMult = (double)faWaveMultipliersX[(((ax - (ax >> 31)) >> 1) & 7)] * (double)faWaveMultipliersY[(((ay - (ay >> 31)) >> 1) & 7)] * (double)CWeather::Wavyness;
+    const double fX = (double)ax, fY = (double)ay;
 
-    // literal AIDS code
-    const auto CalculateWave = [&](int32 offset, float angularFreqX, float angularFreqY, float amplitude) {
-        const float freqOffsetMult = TWO_PI / static_cast<float>(offset);
-        const CVector2D waveVector{ TWO_PI * angularFreqX, TWO_PI * angularFreqY }; // w = angular frequency
+    constexpr float PHASE_TO_LUT = 40.7436638f; // 0x85A778
+    const auto TimeStep = [](uint32 period) { return (CTimer::m_snTimeInMilliseconds - m_nWaterTimeOffset) % period; };
+    const auto LutAt    = [&](double v) { return (double)SIN_LUT[(int32)v & 0xFF]; };
 
-        const auto step  = (CTimer::GetTimeInMS() - m_nWaterTimeOffset) % offset;
-        const auto wavePhase = step * freqOffsetMult + fX * waveVector.x + fY * waveVector.y;
-
-        const auto sinPhase = CMaths::GetSinFast(wavePhase);
-        const auto cosPhase = CMaths::GetCosFast(wavePhase);
-        outWave += sinPhase * waveMult * amplitude;
-
-        // Wave normal calculation - seems broken but maybe R* just knows something that we don't :D
-        // Normal generation is completely skipped on later releases of the game (android / definitive)
-        switch (offset) {
-        case 5000: {
-            const auto normalDerivative = -cosPhase * waveMult * amplitude * waveVector.x;
-            vecNormal += { normalDerivative, normalDerivative, 0.0f };
-            break;
-        }
-        case 3500: {
-            const auto normalDerivative = cosPhase * waveMult * amplitude * waveVector.x;
-            vecNormal += { normalDerivative, normalDerivative, 0.0f };
-            break;
-        }
-        case 3000: {
-            const auto normalDerivative = cosPhase * waveMult * amplitude * (PI / 10.0f);
-            vecNormal += { normalDerivative, 0.0f, 0.0f };
-            break;
-        }
-        }
-    };
-
-    CalculateWave(5000, 1.f / 64.0f, 1.f / 64.0f, 2.0f * bigWavesAmplitude);
-    CalculateWave(3500, 1.f / 26.0f, 1.f / 52.0f, 1.0f * smallWavesAmplitude);
-    CalculateWave(3000, 0.0f,        1.f / 20.0f, 0.5f * smallWavesAmplitude);
+    // Wave 1
+    {
+        const double phase = (double)TimeStep(5000) * (double)0.00125663704f /* 0x872020 */ + (fY + fX) * (double)0.0981747732f /* 0x87201C */;
+        const double scaled = phase * (double)PHASE_TO_LUT;
+        outWave = (float)(LutAt(scaled) * (double)2.0f * waveMult * (double)bigWavesAmplitude + (double)outWave);
+        const double d = LutAt(scaled + 64.0) * (double)2.0f * waveMult * (double)bigWavesAmplitude * (double)0.0981747732f;
+        const float  n = (float)-d;
+        vecNormal.x = n;
+        vecNormal.y = n;
+        vecNormal.z = 1.0f;
+    }
+    // Wave 2
+    {
+        const double phase = ((double)TimeStep(3500) * (double)0.00179519586f /* 0x872018 */ + fY * (double)0.120830491f /* 0x872014 */) + fX * (double)0.241660982f /* 0x872010 */;
+        const double scaled = phase * (double)PHASE_TO_LUT;
+        outWave = (float)(LutAt(scaled) * (double)1.0f * waveMult * (double)smallWavesAmplitude + (double)outWave);
+        const double d = LutAt(scaled + 64.0) * (double)1.0f * waveMult * (double)smallWavesAmplitude * (double)0.241660982f;
+        vecNormal.x = (float)(d + (double)vecNormal.x);
+        vecNormal.y = (float)(d + (double)vecNormal.y);
+    }
+    // Wave 3
+    {
+        const double phase = (double)TimeStep(3000) * (double)0.00209439523f /* 0x87200C */ + fY * (double)0.314159274f /* 0x872008 */;
+        const double scaled = phase * (double)PHASE_TO_LUT;
+        outWave = (float)(LutAt(scaled) * (double)0.5f * waveMult * (double)smallWavesAmplitude + (double)outWave);
+        const double d = LutAt(scaled + 64.0) * (double)0.5f * waveMult * (double)smallWavesAmplitude * (double)0.314159274f;
+        vecNormal.x = (float)(d + (double)vecNormal.x);
+    }
 
     vecNormal.Normalise();
-    const auto glareLevel = (vecNormal.x + vecNormal.y + vecNormal.z) * E_CONST;
 
-    colorMult = std::max(glareLevel, 0.0f) * 0.65f + 0.27f;
-    glare = std::clamp(8.0f * glareLevel - 5.0f, 0.0f, 0.99f) * CWeather::SunGlare;
+    constexpr float K = 0.577f; // 0x872004
+    // colour multiplier: ((z + y) + x) * K, max(., 0) (NaN passes), * 0.65f (0x8D3924) + 0.27f (0x8D3920)
+    const double g1 = (((double)vecNormal.z + (double)vecNormal.y) + (double)vecNormal.x) * (double)K;
+    colorMult = (float)((g1 < 0.0 ? 0.0 : g1) * (double)0.65f + (double)0.27f);
+
+    // glare: (z*K + y*K) + K*x, 8*g - 5 (0x859000 / 0x858C80), clamped to [0, 0.99f] (0x862CD0), * SunGlare
+    const double g2 = (((double)vecNormal.z * (double)K + (double)vecNormal.y * (double)K) + (double)K * (double)vecNormal.x);
+    const double v  = g2 * 8.0 - 5.0;
+    const double c  = (double)0.99f < v ? (double)0.99f : (v < 0.0 ? 0.0 : v);
+    glare = (float)(c * (double)CWeather::SunGlare);
 }
 
 // 0x6E5810

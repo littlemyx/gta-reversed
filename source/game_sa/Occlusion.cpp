@@ -30,10 +30,17 @@ void COcclusion::Init() {
 // 0x71DCD0
 // Yes, rotation is z, y, x
 void COcclusion::AddOne(float centerX, float centerY, float centerZ, float width, float length, float height, float rotZ, float rotY, float rotX, uint32 flags, bool isInterior) {
-    const auto l = std::floorf(std::fabsf(length));
-    const auto w = std::floorf(std::fabsf(width));
-    const auto h = std::floorf(std::fabsf(height));
-    if (l == 0.f && w == 0.f && h == 0.f) {
+    // 0x71DCD0: `_ftol(fabs(x))` (an INTEGER; the exe's _ftol keeps the low dword for huge values), later `fild; fmul 4.0; _ftol`
+    const int32 l = (int32)std::fabsf(length);
+    const int32 w = (int32)std::fabsf(width);
+    const int32 h = (int32)std::fabsf(height);
+    // 0x71DD02..0x71DD1C: the exe counts the zero extents and rejects the occluder when MORE THAN ONE of them is zero (a flat occluder has exactly one)
+    if ((int)(l == 0) + (int)(w == 0) + (int)(h == 0) > 1) {
+        return;
+    }
+
+    // 0x71DE43 / 0x71DF65: the exe refuses to overflow the arrays (1000 map / 40 interior occluders)
+    if (isInterior ? NumInteriorOccludersOnMap >= InteriorOccluders.size() : NumOccludersOnMap >= Occluders.size()) {
         return;
     }
 
@@ -42,12 +49,25 @@ void COcclusion::AddOne(float centerX, float centerY, float centerZ, float width
         : &Occluders[NumOccludersOnMap++];
 
     occl->m_Center   = CVector{ centerX, centerY, centerZ };
-    occl->m_Length   = l;
-    occl->m_Width    = w;
-    occl->m_Height   = h;
-    occl->m_RotZ     = DegreesToRadians(CGeneral::LimitAngle(rotZ) + 180.f);
-    occl->m_RotY     = DegreesToRadians(CGeneral::LimitAngle(rotY) + 180.f);
-    occl->m_RotX     = DegreesToRadians(CGeneral::LimitAngle(rotX) + 180.f);
+    const auto CompressExtent = [](int32 v) { return (int16)(int32)((double)v * (double)4.f); };
+    occl->m_Length   = decltype(occl->m_Length){ CompressExtent(l) }; // pre-compressed
+    occl->m_Width    = decltype(occl->m_Width){ CompressExtent(w) };
+    occl->m_Height   = decltype(occl->m_Height){ CompressExtent(h) };
+    // 0x71DD22..0x71DE37: each angle is brought into [0, 360] by repeated +-360 (no `+ 180`, no CGeneral::LimitAngle), multiplied by 0x8595EC (pi/180 as float) and stored as a float
+    const auto AngleToRad = [](float deg) {
+        double a = deg;
+        if (a < 0.0) {
+            do { a += (double)360.f; } while (a < 0.0);
+        }
+        if (a > (double)360.f) {
+            do { a -= (double)360.f; } while (a > (double)360.f);
+        }
+        return (float)(a * (double)std::bit_cast<float>(0x3C8EFA35u));
+    };
+    // 0x71DE13..0x71DF0C: the angle arguments are stored in the order +0xC (m_RotZ) = 1st, +0xD (m_RotY) = 2nd, +0xE (m_RotX) = 3rd
+    occl->m_RotZ     = AngleToRad(rotZ);
+    occl->m_RotY     = AngleToRad(rotY);
+    occl->m_RotX     = AngleToRad(rotX);
 
     if (!isInterior) {
         occl->m_DontStream = flags != 0;

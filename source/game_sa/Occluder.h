@@ -42,9 +42,10 @@ public:
     FixedFloat<int16, 4.f> m_Height;
 
     // As usual, some R* dev from 2003 decided to swap the order of rotations as well :D
-    FixedFloat<int8, 256.f / TWO_PI> m_RotZ;
-    FixedFloat<int8, 256.f / TWO_PI> m_RotY;
-    FixedFloat<int8, 256.f / TWO_PI> m_RotX;
+    // UNSIGNED bytes: the exe decodes them with `movzx; fild; fmul 2pi/256 (0x859BBC)` (0x71E743), so [0, 2pi); a signed type gave negative angles for raw >= 128
+    FixedFloat<uint8, 256.f / TWO_PI> m_RotZ;
+    FixedFloat<uint8, 256.f / TWO_PI> m_RotY;
+    FixedFloat<uint8, 256.f / TWO_PI> m_RotX;
 
     struct {
         int16 m_NextIndex : 15;

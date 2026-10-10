@@ -233,7 +233,14 @@ bool COccluder::ProcessLineSegment(int32 idxFrom, int32 idxTo, CActiveOccluder* 
 
 // 0x71F960
 bool COccluder::NearCamera() const {
-    return CVector::Dist(m_Center, TheCamera.GetPosition()) - (std::max(m_Length, m_Width) / 2.0F) < 250.f;
+    // 0x71F960: x87 throughout: the extents are the raw halves * 0.25 (exact), the distance is sqrt(dz^2 + dy^2 + dx^2) kept in extended precision, minus half the larger extent
+    const double len = (float)m_Length, wid = (float)m_Width;
+    const double ext = len > wid ? len : wid;
+    const CVector c   = m_Center;
+    const CVector cam = TheCamera.GetPosition();
+    const double dx = (double)cam.x - (double)c.x, dy = (double)cam.y - (double)c.y, dz = (double)cam.z - (double)c.z;
+    const double dist = x87::sqrt(dz * dz + dy * dy + dx * dx);
+    return dist - ext * (double)0.5f < (double)250.f;
 }
 
 int16 COccluder::SetNext(int16 next) {

@@ -664,7 +664,7 @@ int16 CPad::GetCarGunFired() const {
         break;
     }
     case 3:
-        return NewState.RightShoulder1;
+        return NewState.RightShoulder1 ? 1 : 0; // 0x53FFB6: `mov ax, 1`
     }
     return false;
 }
@@ -795,7 +795,7 @@ bool CPad::GetLookRight() const {
     if (IsRightShoulder2Pressed())
         return false;
 
-    if (IsRightShoulder2JustUp())
+    if (IsLeftShoulder2JustUp()) // 0x53FE2A: the LEFT shoulder (the port tested the right one)
         return false;
 
     return NewState.RightShoulder2 && !NewState.LeftShoulder2;
@@ -870,8 +870,8 @@ int16 CPad::GetBrake() const {
     case 2:
         return NewState.ButtonSquare;
     case 3:
-        int16 axis = 2 * GetRightStickY();
-        return axis < 0 ? 0 : axis;
+        const int32 axis = 2 * (int32)GetRightStickY(); // 32 bit, the low word is returned
+        return axis < 0 ? 0 : (int16)axis;
     }
     return 0;
 }
@@ -916,7 +916,7 @@ uint8 CPad::GetMeleeAttack(bool bCheckButtonCircleStateOnly) const {
     if (NewState.ButtonCircle)
         return 1;
 
-    if (!bCheckButtonCircleStateOnly) {
+    if (bCheckButtonCircleStateOnly) { // 0x54035A: the other buttons are only checked when the flag is SET (despite the name)
         if (NewState.ButtonCross)
             return 2;
 
@@ -964,8 +964,8 @@ int16 CPad::GetAccelerate() const {
     case 2:
         return NewState.ButtonCross;
     case 3: {
-        int16 axis = -2 * GetRightStickY();
-        return axis < 0 ? 0 : axis;
+        const int32 axis = -2 * (int32)GetRightStickY(); // 32 bit, the low word is returned
+        return axis < 0 ? 0 : (int16)axis;
     }
     }
     return 0;
@@ -1129,7 +1129,7 @@ bool CPad::SniperZoomOut() const {
 // todo: Describe our modification
 // 0x540250
 bool CPad::WeaponJustDown(CPed* ped) const {
-    if (DisablePlayerControls || bDisablePlayerDisplayVitalStats)
+    if (DisablePlayerControls || bDisablePlayerFireWeapon) // 0x54025D: byte +0x11B (the port tested bDisablePlayerDisplayVitalStats)
         return false;
 
     switch (Mode) {

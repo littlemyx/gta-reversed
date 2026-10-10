@@ -85,6 +85,9 @@ Wine quirks: about half of the starts die in wined3d `Direct3DCreate9` (`nested 
 `tools/standalone/run_all_tests.sh [build-dir] [regex]` configures (if needed) a Debug librw build, builds every `*_test` target, runs them under Wine
 with a retry loop for the wined3d flake and prints a table; exit code is non-zero on any failure/mismatch. Set `ASSETS=<dir>` (infernus.dff, male01.dff,
 vgsnbuild07.dff) or `GAME_DIR=<game install>` (the script then extracts them from `models/gta3.img`) for the model-reading tests and `RW_EXE_ORACLE=<path to the original exe>` (done by the script, Windows path form).
+Known non-green rows on a clean clone (2026-10-10, verified by a from-scratch build): `review_oracle_test` (8 PC24 / 5191 PC53 strict mismatches, see PHASE2_STATUS),
+`rw_skin_pipeline_test` (page fault, pixel-test skeleton in progress); `rw_skin_hw_oracle_test` and `rw_skin_vs_test` print `0 mismatches` lines the script's parser does not
+recognise (shown as NORESULT; `rw_skin_vs_test` also needs `TIMEOUT=1500`, it runs several minutes). `ATTEMPTS`/`TIMEOUT` env vars override the retry count / per-test seconds.
 Environment for the script: `GTASA_PYTHON` (python with unicorn+capstone), `MSVC_WINE_ROOT`, `WINE_BIN` (dir of `wine`), `WINEPREFIX` (default `~/.wine-msvc`), `SCRATCH` (build mutex dir, default `$TMPDIR/gta-standalone-scratch`).
 
 The **oracle idea**: `tests/standalone/game_oracle.h` maps the original exe's code over the address pad at its original VAs, so a test can call the

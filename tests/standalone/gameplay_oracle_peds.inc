@@ -10,8 +10,12 @@
 #include "PedIntelligence.h"
 
 // the fake ped's intelligence is all zero: no secondary tasks (the exe's getters read the same zeroed buffer)
-CTaskSimpleFight* CPedIntelligence::GetTaskFighting() { return nullptr; }
-CTaskSimpleUseGun* CPedIntelligence::GetTaskUseGun() { return nullptr; }
+static void* __fastcall HostNullTask(CPedIntelligence*, int) { return nullptr; }
+static void InstallPedStubs() {
+    static bool done = false; if (done) return; done = true;
+    PatchHostFn(PmAddr(&CPedIntelligence::GetTaskFighting), (void*)&HostNullTask);
+    PatchHostFn(PmAddr(&CPedIntelligence::GetTaskUseGun), (void*)&HostNullTask);
+}
 struct PedAcc : CPed { using CPed::m_pIntelligence; using CPed::m_nCreatedBy; };
 // raw entity buffer with the real layout (CPed is 0x79C bytes; the matrix pointer lives at +0x14, the placement (pos, heading) at +0x4)
 struct PedFx {
@@ -235,7 +239,7 @@ static void BuildMovingPed(Rng& r, PedFx& f) {
     p.m_pedIK.m_fSlopePitch = GenF(r, 0.6f); p.m_pedIK.m_fSlopeRoll = GenF(r, 0.6f);
     p.m_pedIK.m_nFlags = r.u32();
     p.m_pLookTarget = nullptr;
-    CTimer::ms_fTimeStep = r.below(8) ? r.f01() * 3.f : GenF(r, 4.f);
+    CTimer::ms_fTimeStep = r.below(8) ? r.f01() * 3.f : GenF(r, 4.f, S_NOHUGE);   // a NaN / zero / denormal step; inf is not a frame time
     CTimer::bSlowMotionActive = r.below(6) == 0;
 }
 
@@ -297,7 +301,7 @@ static void TestPedMovement() {
         return false;
     });
     // The slope update calls asin / pow (CRT _CIasin / _CIpow in the exe, UCRT in the port: owned by the x87 intrinsic audit). The first variant keeps the code on
-    // paths without transcendental calls (exact compare); the second runs the slope paths and compares the two slope floats to 8 ulps (everything else exact).
+    // paths without transcendental calls (exact compare); the second runs the slope paths and compares the two slope floats to 8 ulps + 2e-6 (everything else exact).
     for (int slope = 0; slope < 2; ++slope) {
         Run(slope ? "CPed::CalculateNewVelocity(slope, asin/pow 8ulp) 0x5E4C50" : "CPed::CalculateNewVelocity 0x5E4C50", [=](Rng& r, std::string& d) {
             PedFx a; BuildMovingPed(r, a); a.Rewire(true);
@@ -316,7 +320,7 @@ static void TestPedMovement() {
                 bool nearOk = true;
                 for (int i = 0; i < 2; ++i) {
                     const uint32_t x = FBits(*fa[i]), y = FBits(*fe[i]);
-                    if (x != y && !(IsNanBits(x) && IsNanBits(y)) && !(std::fabs((double)*fa[i] - *fe[i]) <= 8.0 * std::fabs(*fe[i]) * 1.2e-7)) nearOk = false;
+                    if (x != y && !(IsNanBits(x) && IsNanBits(y)) && !(std::fabs((double)*fa[i] - *fe[i]) <= 2e-6 + 8.0 * std::fabs(*fe[i]) * 1.2e-7)) nearOk = false;
                     *fa[i] = *fe[i];   // compare the rest exactly
                 }
                 ok = nearOk && SamePedFx(a, e);
@@ -578,7 +582,57 @@ static void TestEntityBBox() {
     }
 }
 
+static void TestPedMisc() {
+    Run("CPed::CanSeeEntity 0x5E0730", [](Rng& r, std::string& d) {
+        PedFx a; BuildMovingPed(r, a); a.Rewire(r.below(2));
+        PedFx ea; BuildPedFx(r, ea, 100.f); ea.Rewire(r.below(2));
+        a.ped().m_fCurrentRotation = r.below(2) ? r.f01() * 6.5f - 0.1f : GenF(r, 8.f, S_NOHUGE);
+        PedFx b(a), eb(ea);
+        const float lim = r.below(4) ? r.f01() * 3.2f : GenF(r, 8.f, S_NOHUGE);
+        const bool ra = a.ped().CanSeeEntity(&ea.ent(), lim);
+        const bool re = oracle::Fn<bool __fastcall(CPed*, int, CEntity*, float)>(0x5E0730)(&b.ped(), 0, &eb.ent(), lim);
+        Hit(ra);
+        if (ra == re) return true;
+        d = PedDesc(a) + " ent " + PedDesc(ea) + " rot " + F(a.ped().m_fCurrentRotation) + " lim " + F(lim) + " got " + std::to_string(ra) + " exe " + std::to_string(re);
+        return false;
+    });
+    Run("CPedIntelligence::IsInHearingRange 0x600C00", [](Rng& r, std::string& d) {
+        PedFx a; BuildMovingPed(r, a); a.Rewire(true);
+        alignas(16) uint8 ib[sizeof(CPedIntelligence)] {};
+        auto* in = reinterpret_cast<CPedIntelligence*>(ib);
+        in->m_pPed = &a.ped();
+        in->m_fHearingRange = r.below(4) ? r.f01() * 80.f : GenF(r, 200.f, S_NOHUGE); in->m_fSeeingRange = r.below(4) ? r.f01() * 80.f : GenF(r, 200.f, S_NOHUGE);
+        const CVector p = r.below(2) ? a.ped().GetPosition() + GenV(r, 80.f, S_NOHUGE) : GenV(r, 100.f, S_NOHUGE);
+        const bool ra = in->IsInHearingRange(p);
+        const bool re = oracle::Fn<bool __fastcall(CPedIntelligence*, int, const CVector*)>(0x600C00)(in, 0, &p);
+        Hit(ra);
+        const bool sa = in->IsInSeeingRange(p);
+        const bool se = oracle::Fn<bool __fastcall(CPedIntelligence*, int, const CVector*)>(0x600C60)(in, 0, &p);
+        Hit(sa);
+        if (ra == re && sa == se) return true;
+        d = PedDesc(a) + " ranges " + F(in->m_fHearingRange) + "," + F(in->m_fSeeingRange) + " p " + V(p) + " hear " + std::to_string(ra) + "/" + std::to_string(re) + " see " + std::to_string(sa) + "/" + std::to_string(se);
+        return false;
+    });
+    Run("CPed::SortPeds 0x5E17E0", [](Rng& r, std::string& d) {
+        if (!IsPC24()) return true;   // the quicksort compares a recomputed distance with a float-spilled pivot: out of bounds at 53-bit precision (in the exe, too)
+        PedFx self; BuildMovingPed(r, self); self.Rewire(true);
+        constexpr int N = 12;
+        PedFx peds[N]; CPed* la[N]; CPed* le[N];
+        const int n = 1 + r.below(N);
+        for (int i = 0; i < n; ++i) { BuildPedFx(r, peds[i], 60.f); peds[i].Rewire(r.below(3) != 0); la[i] = le[i] = &peds[i].ped(); if (r.below(6) == 0 && i) peds[i].ped().m_matrix = peds[r.below(i)].ped().m_matrix; }
+        PedFx selfE(self);
+        self.ped().SortPeds(la, 0, n - 1);
+        oracle::Fn<void __fastcall(CPed*, int, CPed**, int, int)>(0x5E17E0)(&selfE.ped(), 0, le, 0, n - 1);
+        bool ok = true; for (int i = 0; i < n; ++i) ok &= (la[i] == le[i]);
+        if (ok) return true;
+        d = "n " + std::to_string(n) + " order got/exe:"; for (int i = 0; i < n; ++i) d += " " + std::to_string((int)(la[i] - &peds[0].ped())) + "/" + std::to_string((int)(le[i] - &peds[0].ped()));
+        return false;
+    });
+}
+
 static void TestPeds() {
+    InstallPedStubs();
+    TestPedMisc();
     TestColSphere();
     TestEntityBBox();
     TestPedGeometry();

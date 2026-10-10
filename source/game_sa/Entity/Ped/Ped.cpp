@@ -1638,24 +1638,25 @@ void CPed::SetPedDefaultDecisionMaker() {
 * @returns If entity is a given range angle relative to our current rotation given by limitAngle [-limitAngle, limitAngle]
 */
 bool CPed::CanSeeEntity(CEntity* entity, float limitAngle) {
-
-    // TODO: Inlined? 0x5E0780, 0x5E07BB
-    const auto FixRadianAngle = [](float angle) {
-        if (angle < TWO_PI) {
-            if (angle < 0.f) {
-                return angle + TWO_PI;
-            }
-        } else {
-            return angle - TWO_PI;
+    // 0x5E0730: R* used the degree returning function and converted to radians (0x8595EC); both the point angle and the ped's own rotation are wrapped into [0, 2PI]
+    // once, everything stays on the x87 stack
+    constexpr double ExeTwoPi = (double)(2.f * std::numbers::pi_v<float>); // 0x858CBC
+    const auto Wrap = [](double angle) {
+        if (angle > ExeTwoPi) {
+            return angle - ExeTwoPi;
         }
-        return angle;
+        return angle < 0.0 ? angle + ExeTwoPi : angle;
     };
 
-    // R* used the degree returning function, and converted to radians, we just use the radian version directly
-    const auto pointAngle = FixRadianAngle(CGeneral::GetRadianAngleBetweenPoints(entity->GetPosition2D(), GetPosition2D()));
+    const double deg        = CGeneral::GetAngleBetweenPointsExt(entity->GetPosition2D().x, entity->GetPosition2D().y, GetPosition2D().x, GetPosition2D().y);
+    const double pointAngle = Wrap(deg * (double)0.017453292f);
+    const double ownAngle   = Wrap(m_fCurrentRotation);
 
-    const auto delta = std::abs(m_fCurrentRotation - pointAngle);
-    return delta < limitAngle || delta > TWO_PI - limitAngle;
+    double delta = pointAngle - ownAngle;
+    if (delta < 0.0) {
+        delta = -delta;
+    }
+    return delta < (double)limitAngle || delta > ExeTwoPi - (double)limitAngle;
 }
 
 /*!

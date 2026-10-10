@@ -137,6 +137,7 @@ static DWORD WINAPI WatchdogProc(LPVOID) {
         }
     }
 }
+static bool IsPC24() { unsigned cw = 0; _controlfp_s(&cw, 0, 0); return (cw & _MCW_PC) == _PC_24; }   // for tests whose algorithm is only well defined at the game's precision
 static void SetPC(int bits) { unsigned cw; _controlfp_s(&cw, bits == 24 ? _PC_24 : _PC_53, _MCW_PC); }
 
 // fn(rng, desc) -> true when port and exe agree; on mismatch it describes the inputs/outputs in `desc`

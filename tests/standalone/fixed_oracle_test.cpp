@@ -9,6 +9,7 @@
 #include "CoverPoint.h"
 #include "Occlusion.h"
 #include "Occluder.h"
+#include "IdleCam.h"
 #include "ActiveOccluder.h"
 #include "Camera.h"
 #include "Animation/AnimBlendSequence.h"
@@ -320,6 +321,21 @@ static void TestAnim() {
 }
 
 // ---------------------------------------------------------------------------------------------------------------------------------
+// CGeneral::GetATanOfXY (0x53CC70) callers whose result stays unrounded on the x87 stack (fpatan ignores the precision control)
+static void TestAtan() {
+    // 0x50A360 (inlined CIdleCam::ProcessSlerp part): out1 = atan(x, y) + pi (unrounded + fadd, one fstp), out2 = atan(|xy|, z) (stored as float); no `this`
+    Run("CIdleCam::VectorToAnglesRotXRotZ 0x50A360", [](Rng& r, std::string& d) {
+        const CVector p = GenV(r, r.below(2) ? 100.f : 3000.f, S_ZERO | S_TINY);
+        alignas(16) uint8 buf[sizeof(CIdleCam)]{};
+        const auto [a, b] = reinterpret_cast<CIdleCam*>(buf)->VectorToAnglesRotXRotZ(p);
+        float e1 = -1.f, e2 = -1.f;
+        oracle::Fn<void __stdcall(const CVector*, float*, float*)>(0x50A360)(&p, &e2, &e1);   // (pos, out atan(|xy|, z), out atan(x, y) + pi)
+        if (SameF(a, e1) && SameF(b, e2)) return true;
+        d = "p " + V(p) + " got " + F(a) + "," + F(b) + " exe " + F(e1) + "," + F(e2); return false;
+    });
+}
+
+// ---------------------------------------------------------------------------------------------------------------------------------
 static void TestMatrixCover() {
     Run("CCompressedMatrixNotAligned::CompressFromFullMatrix 0x59BAD0", [](Rng& r, std::string& d) {
         CMatrix m{};
@@ -440,6 +456,7 @@ int main(int argc, char** argv) {
     TestOccluders();
     TestAnim();
     TestMatrixCover();
+    TestAtan();
     int bad24 = 0, bad53 = 0, hard24 = 0, hard53 = 0;
     for (auto& r : g_rows) { bad24 += r.bad24; bad53 += r.bad53; hard24 += r.hardReg24 + r.hardSpec24; hard53 += r.hardReg53 + r.hardSpec53; }
     std::printf("\n%zu functions, mismatches (strict / excluding NaN-payload-only): PC24 %d / %d, PC53 %d / %d\n", g_rows.size(), bad24, hard24, bad53, hard53);

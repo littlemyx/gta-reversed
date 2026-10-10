@@ -372,13 +372,12 @@ int32 CCarCtrl::ChooseBoatModel() {
 
 // 0x421900
 int32 CCarCtrl::ChooseCarModelToLoad(int32 groupID) {
+    // Exe: no `numCarsInGroup > 0` guard (an empty group simply yields slot 0 every try; the model is read as an unsigned word)
     const auto numCarsInGroup = CPopulation::m_nNumCarsInGroup[groupID];
-    if (numCarsInGroup > 0) {
-        for (auto i = 0; i < 16; i++) { // 16 tries
-            const auto model = CPopulation::m_CarGroups[groupID][CGeneral::GetRandomNumberInRange(numCarsInGroup)];
-            if (!CStreaming::IsModelLoaded(model)) {
-                return model;
-            }
+    for (auto i = 0; i < 16; i++) { // 16 tries
+        const auto model = (uint16)CPopulation::m_CarGroups[groupID][CGeneral::GetRandomNumberInRange(numCarsInGroup)];
+        if (!CStreaming::IsModelLoaded(model)) {
+            return model;
         }
     }
     return -1;

@@ -142,7 +142,7 @@ protected:
 
 public:
     CBaseModelInfo();
-    virtual ~CBaseModelInfo() { assert(0); }
+    virtual ~CBaseModelInfo(); // out of line on purpose (restores the vftable like the exe's 0x4C4AF0, see BaseModelInfo.cpp)
 
     virtual CAtomicModelInfo* AsAtomicModelInfoPtr();
     virtual CDamageAtomicModelInfo* AsDamageAtomicModelInfoPtr();

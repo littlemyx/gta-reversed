@@ -8,6 +8,11 @@
 
 #include "Task.h"
 
+// 0x61A660 (body; scalar deleting dtor is the virtual slot 0)
+// The exe's destructors store the vftable (`mov [ecx], 0x86D48C`), so a stale pointer to a deleted task dispatches to the CTask base virtuals.
+// MSVC /O2 elides the dead vptr store in an inline `= default` dtor, so this one must stay out of line.
+CTask::~CTask() { }
+
 // 0x61A5A0
 void* CTask::operator new(size_t size) {
     return GetTaskPool()->New();

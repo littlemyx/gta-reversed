@@ -2,6 +2,9 @@
 
 #include "TaskAllocator.h"
 
+// 0x69DAC0 (scalar deleting dtor stores the CTaskAllocator vftable 0x870E30). Out of line so MSVC /O2 keeps the vptr store.
+CTaskAllocator::~CTaskAllocator() { }
+
 // 0x69D980
 void* CTaskAllocator::operator new(size_t size) {
     return GetTaskAllocatorPool()->New();

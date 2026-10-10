@@ -12,7 +12,7 @@ public:
 
 public:
     FxInterpInfo_c();
-    virtual ~FxInterpInfo_c() = default; // 0x4A8430
+    virtual ~FxInterpInfo_c(); // 0x4A8430 (out of line on purpose: the exe's dtor restores the vftable)
 
     virtual void Load(FILESTREAM file) = 0;
 };

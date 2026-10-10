@@ -9,6 +9,9 @@ void FxInterpInfo_c::InjectHooks() {
     RH_ScopedVMTDestructorInstall(0x4A8D10);
 }
 
+// 0x4A8430 (the exe's dtor 0x4A8D10 restores the vftable; out of line so MSVC /O2 keeps the store)
+FxInterpInfo_c::~FxInterpInfo_c() { }
+
 // 0x4A8410
 FxInterpInfo_c::FxInterpInfo_c() {
     m_bLooped = false;

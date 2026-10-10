@@ -33,7 +33,7 @@ public:
 
 public:
     CTaskAllocator() = default;
-    virtual ~CTaskAllocator() = default;
+    virtual ~CTaskAllocator(); // out of line on purpose (restores the vftable like the exe, see TaskAllocator.cpp)
 
     virtual void               AllocateTasks(CPedGroupIntelligence* intel) = 0;
     virtual CTaskAllocator*    ProcessGroup(CPedGroupIntelligence* intel) { return nullptr; } // 0x69BB50

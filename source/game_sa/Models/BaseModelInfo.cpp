@@ -58,6 +58,9 @@ void CBaseModelInfo::InjectHooks() {
 }
 
 
+// The exe's scalar deleting dtor (0x4C4AF0) stores the CBaseModelInfo vftable; keep the store (out of line, MSVC /O2 would drop it from an inline dtor).
+CBaseModelInfo::~CBaseModelInfo() { assert(0); }
+
 CBaseModelInfo::CBaseModelInfo() {
     m_nRefCount = 0;
     ClearTexDictionary();

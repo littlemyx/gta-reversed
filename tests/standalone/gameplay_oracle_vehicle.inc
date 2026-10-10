@@ -8,6 +8,7 @@
 #include "Entity/Vehicle/Heli.h"
 #include "Entity/Vehicle/Boat.h"
 #include "Entity/Vehicle/Bike.h"
+#include "Entity/Vehicle/Bmx.h"
 #include "Entity/Vehicle/MonsterTruck.h"
 #include "Entity/Vehicle/QuadBike.h"
 #include "Entity/Vehicle/Trailer.h"
@@ -761,6 +762,58 @@ static void TestAircraftOrders() {
     });
 }
 
+static void TestBikeBmxBoat() {
+    using namespace wfx;
+    auto bike = [](uint8* b) -> CBike& { return *reinterpret_cast<CBike*>(b); };
+    auto init = [](Rng& rr, uint8* b) { vfx::Gen(rr, b); };
+    Run("CBike::GetAllWheelsOffGround 0x6B6790", [&](Rng& r, std::string& d) {
+        return Obj<vfx::ALL>(r, d, [&](Rng& rr, uint8* b) { vfx::Gen(rr, b); Put<uint8>(b, 0x804, (uint8)rr.below(3)); Put<uint8>(b, 0x805, (uint8)rr.below(3)); },
+            [&](uint8* b) { return (uint32_t)bike(b).CBike::GetAllWheelsOffGround(); }, [&](uint8* b) { return (uint32_t)oracle::Fn<bool __fastcall(void*, int)>(0x6B6790)(b, 0); }, 0, 0xFF, 0, 0, vfx::Fix);
+    });
+    Run("CBike::GetNumContactWheels 0x6B58A0", [&](Rng& r, std::string& d) {
+        return Obj<vfx::ALL>(r, d, init, [&](uint8* b) { return (uint32_t)bike(b).CBike::GetNumContactWheels(); }, [&](uint8* b) { return oracle::Fn<uint32_t __fastcall(void*, int)>(0x6B58A0)(b, 0) & 0xFF; }, 0, 0xFF, 0, 0, vfx::Fix);
+    });
+    Run("CBike::GetHeightAboveRoad 0x6B58B0", [&](Rng& r, std::string& d) {
+        return Obj<vfx::ALL>(r, d, init, [&](uint8* b) { return FB(bike(b).CBike::GetHeightAboveRoad()); }, [&](uint8* b) { return FB(oracle::Fn<float __fastcall(void*, int)>(0x6B58B0)(b, 0)); }, 1, 0, 0, 0, vfx::Fix);
+    });
+    Run("CBike::IsComponentPresent 0x6B59E0", [&](Rng& r, std::string& d) {
+        const int c = r.below(BIKE_NUM_NODES);
+        return Obj<vfx::ALL>(r, d, [&](Rng& rr, uint8* b) { vfx::Gen(rr, b); for (int i = 0; i < BIKE_NUM_NODES; ++i) if (rr.below(2)) Put<uint32_t>(b, 0x5A0 + 4 * i, 0); },
+            [&](uint8* b) { return (uint32_t)bike(b).CBike::IsComponentPresent(c); }, [&](uint8* b) { return (uint32_t)oracle::Fn<bool __fastcall(void*, int, int)>(0x6B59E0)(b, 0, c); }, 0, 0xFF, 0, 0, vfx::Fix);
+    });
+    Run("CBike::Fix 0x6B7050", [&](Rng& r, std::string& d) {
+        return Obj<vfx::ALL>(r, d, init, [&](uint8* b) { bike(b).CBike::Fix(); return 0u; }, [&](uint8* b) { oracle::Fn<void __fastcall(void*, int)>(0x6B7050)(b, 0); return 0u; }, 2, 0, 0, 0, vfx::Fix);
+    });
+    Run("CBike::ReduceHornCounter 0x6B5F90", [&](Rng& r, std::string& d) {
+        return Obj<vfx::ALL>(r, d, [&](Rng& rr, uint8* b) { vfx::Gen(rr, b); if (rr.below(2)) Put<uint32_t>(b, 0x514, rr.below(4) ? rr.below(4) : rr.u32()); },
+            [&](uint8* b) { bike(b).CBike::ReduceHornCounter(); return 0u; }, [&](uint8* b) { oracle::Fn<void __fastcall(void*, int)>(0x6B5F90)(b, 0); return 0u; }, 2, 0, 0, 0, vfx::Fix);
+    });
+    Run("CBike::RemoveRefsToVehicle 0x6B67B0", [&](Rng& r, std::string& d) {
+        const uint32_t ent = 0x1000 + 4 * r.below(3);
+        return Obj<vfx::ALL>(r, d, [&](Rng& rr, uint8* b) { vfx::Gen(rr, b); for (int i = 0; i < 4; ++i) Put<uint32_t>(b, 0x7C0 + 4 * i, 0x1000 + 4 * rr.below(3)); },
+            [&](uint8* b) { bike(b).CBike::RemoveRefsToVehicle((CEntity*)(uintptr_t)ent); return 0u; }, [&](uint8* b) { oracle::Fn<void __fastcall(void*, int, uint32_t)>(0x6B67B0)(b, 0, ent); return 0u; }, 2, 0, 0, 0, vfx::Fix);
+    });
+    Run("CBike::FindWheelWidth 0x6B8940", [&](Rng& r, std::string& d) {
+        const bool rear = r.below(2);
+        return Obj<0x40>(r, d, [](Rng&, uint8*) {}, [&](uint8* b) { return FB(bike(b).CBike::FindWheelWidth(rear)); }, [&](uint8* b) { return FB(oracle::Fn<float __fastcall(void*, int, bool)>(0x6B8940)(b, 0, rear)); }, 1);
+    });
+    Run("CBmx::FindWheelWidth 0x6C0550", [&](Rng& r, std::string& d) {
+        const bool rear = r.below(2);
+        return Obj<0x40>(r, d, [](Rng&, uint8*) {}, [&](uint8* b) { return FB(reinterpret_cast<CBmx*>(b)->CBmx::FindWheelWidth(rear)); }, [&](uint8* b) { return FB(oracle::Fn<float __fastcall(void*, int, bool)>(0x6C0550)(b, 0, rear)); }, 1);
+    });
+    Run("CBmx::BurstTyre 0x6BF9C0", [&](Rng& r, std::string& d) {
+        const int c = r.below(20); const bool ph = r.below(2);
+        return Obj<0x40>(r, d, [](Rng&, uint8*) {}, [&](uint8* b) { return (uint32_t)reinterpret_cast<CBmx*>(b)->CBmx::BurstTyre((uint8)c, ph); }, [&](uint8* b) { return (uint32_t)oracle::Fn<bool __fastcall(void*, int, int, bool)>(0x6BF9C0)(b, 0, c, ph); }, 0, 0xFF);
+    });
+    Run("CBmx::SetUpWheelColModel 0x6BF9B0", [&](Rng& r, std::string& d) {
+        return Obj<0x40>(r, d, [](Rng&, uint8*) {}, [&](uint8* b) { return (uint32_t)reinterpret_cast<CBmx*>(b)->CBmx::SetUpWheelColModel(nullptr); }, [&](uint8* b) { return (uint32_t)oracle::Fn<bool __fastcall(void*, int, void*)>(0x6BF9B0)(b, 0, nullptr); }, 0, 0xFF);
+    });
+    Run("CBoat::IsComponentPresent 0x6F0200", [&](Rng& r, std::string& d) {
+        const int c = r.below(30);
+        return Obj<0x40>(r, d, [](Rng&, uint8*) {}, [&](uint8* b) { return (uint32_t)reinterpret_cast<CBoat*>(b)->CBoat::IsComponentPresent(c); }, [&](uint8* b) { return (uint32_t)oracle::Fn<bool __fastcall(void*, int, int)>(0x6F0200)(b, 0, c); }, 0, 0xFF);
+    });
+}
+
 static void TestVehicles() {
     TestDamageManager();
     TestTransmission();
@@ -773,4 +826,5 @@ static void TestVehicles() {
     TestVehicleTypes();
     TestFlyingControl();
     TestAircraftOrders();
+    TestBikeBmxBoat();
 }

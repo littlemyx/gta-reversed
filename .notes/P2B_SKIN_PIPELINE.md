@@ -12,16 +12,20 @@ librw's `d3d9::makeSkinPipeline` match? All addresses are from `gta_sa_compact.e
   `0xC978EC` = MaxVertexShaderConst, `0xC978E8` = (MaxVertexShaderConst - 12) / 3 (= max bones in constants). Then it creates ONE RxPipeline (pluginID 0x116 =
   skin, pluginData 1) and stores it in `0xC978C4`; `RpSkinAtomicSetType` 0x7C7830 -> 0x7C89B0 just writes that pipeline into `atomic+0x6C` for every type
   (types MatFX 2 / Toon 3 collapse to generic 1 when the plugin is missing).
-* Per geometry the instance/render callbacks pick the path with the predicates 0x7C89C0 / 0x7C8A00 (HW T&L && VS/PS >= 1.1 && skin->numUsedBones <= 0xC978E8):
+* Per geometry the skin node body 0x7C7B90 picks the path. 0x7C8D60 (resentry creation) stores `skin+0x20 = hierarchy != NULL && 0x7C8A00(atomic)`, with
+  0x7C8A00 = HW T&L (0xC978E0) && VS/PS >= 1.1 (0xC978E4) && `skin+0x1C <= (MaxVertexShaderConst-12)/3` (0xC978E8); `skin+0x1C` = `boneLimit` when the DFF carries split
+  skin data (`numMeshes != 0`), else `numUsedBones` (0x7C8FEF..0x7C9001). So on any VS 1.1+ device a ped like male01 (28 used bones) takes the HW path; CPU skinning is only
+  the fallback (no HW T&L / old VS / more bones than constants; also a skin without hierarchy -> 0x7C85B0 plain draw).
   * HW path (0x7C8060, bone matrices from 0x7C78A0): the bone matrices (3 float4 per bone, 12 floats, transposed) go to the vertex-shader constants through
-    `SetVertexShaderConstantF` (device vtable +0x178) -- constants c0.. = transforms/material, light constants, then 3 per bone; meshes with a bone split
-    (`rleCount`/`remapIndices`) upload only the bones of the mesh. The vertex shader is NOT precompiled: 0x7609xx..0x760Cxx concatenates vs_1_1 text
-    (`dp3 ...`, `mad oD0.xyz, r1, c[5].z, c[5].z`, `mov oT%u.xy, v%u` strings at .rdata 0x8D641C..0x8D67EC), runs D3DXAssembleShader (0x7652AE) and
-    `CreateVertexShader` (0x7FAC60, the only CreateVertexShader call in the exe). Lights are evaluated IN the shader from the RW light list; a budget loop
-    (0x7C8221..0x7C8295) drops lights while `lightConsts(0x75EDD0) + 3 * numBones > MaxVertexShaderConst`.
-  * Fallback (no HW T&L / old VS): CPU skinning (0x7CAAD0 / 0x7CAB80 / 0x7CAC60 / 0x7CAF50 SSE, 0x7CA330 / 0x7CA410 / 0x7C9DA0 x87; chosen by `[0xC980A4]`, SSE
-    available) into a dynamic VB, then the normal fixed-function draw. Dispatch by `skin->numWeights` (>2: 4 weights, 2: 2 weights, 1 with 1 used bone: rigid copy
-    with one matrix, 1 with several bones: one weight per vertex).
+    `SetVertexShaderConstantF` (device vtable +0x178): c0..c3 transform, c4 ambient/lights, then material colour / fog / bones at the register layout the composer returns
+    (bones = `a0.x + base`, vertex stream BLENDINDICES = 3 * register index); split skins upload only the bones of the mesh (rle runs). The vertex shader is NOT precompiled:
+    0x75F240 concatenates vs_1_1/2_0/2_x text (strings .rdata 0x8D641C..) and assembles it (statically linked D3DXAssembleShader 0x7652AE, CreateVertexShader 0x7FAC60), cached in a
+    256-entry LRU keyed by the 4-byte light key (0x75EED0). Lights are evaluated IN the shader; the budget loop (0x7C8221..0x7C8295) drops lights while
+    `0x75EDD0(lightKey) + 3 * numBones > MaxVertexShaderConst`.
+  * Fallback: CPU skinning (SSE 0x7CAAD0 / 0x7CAB80 / 0x7CAC60 / 0x7CAF50, x87 0x7CA330 / 0x7CA410 / 0x7CA240 / 0x7C9DA0, chosen by `[0xC980A4]`) into a dynamic VB, then the
+    stock fixed-function draw (0x756DF0).
+  Port status: standalone/rw/skin_vs.* (composer, exe-oracle exact), pipeline_skin*.h/.cpp (HW route + CPU route + dispatcher), tests rw_skin_vs_test, rw_skin_hw_oracle_test,
+  rw_skin_cpu_oracle_test, rw_skin_pipeline_test (pixel test, both routes).
 * Bone matrix convention (0x7C78A0 = 0x7CB390 SW twin): `LOCALSPACEMATRICES`: bone = skinToBone[i] x hierMatrix[i]; else bone = skinToBone[i] x (hierMatrix[i] x
   inverse(atomic LTM)). Same as librw `uploadSkinMatrices`.
 

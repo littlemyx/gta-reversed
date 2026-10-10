@@ -75,14 +75,14 @@ if c is not None: print(c,f or 0,m or 0)
 PY
 }
 
-MODEL_TESTS=" rw_custom_pipelines_test rw_matfx_pipeline_test rw_matfx_uvanim_test rw_atomic_clump_test rw_skin_hanim_test rw_pipeline_test rw_rtanim_rtquat_test rw_math_stream_test "
+MODEL_TESTS=" rw_custom_pipelines_test rw_matfx_pipeline_test rw_matfx_uvanim_test rw_atomic_clump_test rw_skin_hanim_test rw_skin_pipeline_test rw_pipeline_test rw_rtanim_rtquat_test rw_math_stream_test "
 ROWS=""; RC=0
 for t in $TESTS; do
   exe="$BDIR/source/$t.exe"
   if [ ! -f "$exe" ]; then ROWS+="$t - - - 0 0 NOBUILD"$'\n'; RC=1; continue; fi
   args=()
   if [[ "$MODEL_TESTS" == *" $t "* ]]; then
-    case "$t" in rw_skin_hanim_test|rw_rtanim_rtquat_test) models="male01";; *) models="infernus male01 vgsnbuild07";; esac   # these two need skinned models
+    case "$t" in rw_skin_hanim_test|rw_skin_pipeline_test|rw_rtanim_rtquat_test) models="male01";; *) models="infernus male01 vgsnbuild07";; esac   # these two need skinned models
     for f in $models; do [ -f "$ASSETS/$f.dff" ] && args+=("Z:${ASSETS//\//\\}\\$f.dff"); done; fi
   case "$t" in *oracle*) TMO=${TIMEOUT:-900};; *) TMO=${TIMEOUT:-180};; esac
   start=$SECONDS; status=NORESULT; res=""; n=0

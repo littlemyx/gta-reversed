@@ -19,15 +19,15 @@ class  CColBox;
 
 class CCollision {
 public:
-    static inline auto& ms_colModelCache = StaticRef<CLinkList<CCollisionData*>>(0x96592C);
-    static inline auto& ms_iProcessLineNumCrossings = StaticRef<uint32>(0x9655D0);
-    static inline auto& ms_collisionInMemory = StaticRef<uint32>(0x9655D4);
+    static inline NOTSA_GLOBAL(ms_colModelCache, 0x96592C, (CLinkList<CCollisionData*>), {});
+    static inline NOTSA_GLOBAL(ms_iProcessLineNumCrossings, 0x9655D0, (uint32), {});
+    static inline NOTSA_GLOBAL(ms_collisionInMemory, 0x9655D4, (uint32), {});
 
-    static inline auto& bCamCollideWithVehicles = StaticRef<bool>(0x8A5B14);         // = true
-    static inline auto& bCamCollideWithObjects = StaticRef<bool>(0x8A5B15);          // = true
-    static inline auto& bCamCollideWithPeds = StaticRef<bool>(0x8A5B17);             // = true
-    static inline auto& bCamCollideWithBuildings = StaticRef<bool>(0x8A5B16);        // = true
-    static inline auto& relVelCamCollisionVehiclesSqr = StaticRef<float>(0x8A5B18); // = 0.01f
+    static inline NOTSA_GLOBAL(bCamCollideWithVehicles, 0x8A5B14, (bool), { true });         // = true
+    static inline NOTSA_GLOBAL(bCamCollideWithObjects, 0x8A5B15, (bool), { true });          // = true
+    static inline NOTSA_GLOBAL(bCamCollideWithPeds, 0x8A5B17, (bool), { true });             // = true
+    static inline NOTSA_GLOBAL(bCamCollideWithBuildings, 0x8A5B16, (bool), { true });        // = true
+    static inline NOTSA_GLOBAL(relVelCamCollisionVehiclesSqr, 0x8A5B18, (float), { 0.010000001f }); // = 0.01f
 
     static inline struct DebugSettings {
         struct ShapeShapeCollision {

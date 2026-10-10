@@ -18,11 +18,10 @@ static constexpr CornerCoords1D s_SpriteVs{ 0.0f, 1.0f, 1.0f, 0.0f };
 // NOTSA
 // Perspective-corrected screen Z. FP op order matches the original binary - do not re-associate.
 static float CalcSpriteScreenZ(float z, float nearZ, float farZ) {
-    return (z - CDraw::ms_fNearClipZ)
-        * (farZ - nearZ)
-        * CDraw::ms_fFarClipZ
-        / ((CDraw::ms_fFarClipZ - CDraw::ms_fNearClipZ) * z)
-        + nearZ;
+    // evaluated in extended range in the exe (a float intermediate overflows for huge z)
+    return (float)((((double)z - CDraw::ms_fNearClipZ) * ((double)farZ - nearZ) * CDraw::ms_fFarClipZ)
+        / (((double)CDraw::ms_fFarClipZ - CDraw::ms_fNearClipZ) * z)
+        + nearZ);
 }
 
 // NOTSA
@@ -57,11 +56,12 @@ struct SpriteQuadCoeffs {
 
 // NOTSA
 static SpriteQuadCoeffs CalcSpriteQuadCoeffs(float rotation) {
-    const float fSin = x87::sin(rotation);
-    const float fCos = x87::cos(rotation);
+    // The exe keeps fsin / fcos unrounded on the FPU stack: each coefficient is rounded ONCE (by the add / sub), not sin and cos separately to float
+    const double fSin = x87::sin(rotation);
+    const double fCos = x87::cos(rotation);
     return {
-        .xs = { -fCos - fSin, fSin - fCos, fCos + fSin, fCos - fSin },
-        .ys = { fSin - fCos, fCos + fSin, fCos - fSin, -fCos - fSin },
+        .xs = { (float)(-fCos - fSin), (float)(fSin - fCos), (float)(fCos + fSin), (float)(fCos - fSin) },
+        .ys = { (float)(fSin - fCos), (float)(fCos + fSin), (float)(fCos - fSin), (float)(-fCos - fSin) },
     };
 }
 
@@ -474,12 +474,13 @@ void CSprite::RenderBufferedOneXLUSprite_Rotate_Aspect(float x, float y, float z
 void CSprite::RenderBufferedOneXLUSprite_Rotate_Dimension(CVector pos, CVector2D size, uint8 r, uint8 g, uint8 b, int16 intensity, float rz, float rotation, uint8 a) {
     m_bFlushSpriteBufferSwitchZTest = false;
 
-    const float fSin = x87::sin(rotation);
-    const float fCos = x87::cos(rotation);
-    const float wCos = size.x * fCos;
-    const float hSin = fSin * size.y;
-    const float hCos = size.y * fCos;
-    const float wSin = fSin * size.x;
+    // sin / cos stay unrounded (extended) in the exe (0x70EAB0); the products are rounded by the PC24 multiplications
+    const double fSin = x87::sin(rotation);
+    const double fCos = x87::cos(rotation);
+    const float wCos = (float)((double)size.x * fCos);
+    const float hSin = (float)(fSin * (double)size.y);
+    const float hCos = (float)((double)size.y * fCos);
+    const double wSin = fSin * (double)size.x;
 
     const CornerCoords1D xs{
         (pos.x - wCos) - hSin,
@@ -519,7 +520,9 @@ void CSprite::RenderBufferedOneXLUSprite_Rotate_2Colours(float x, float y, float
         xs[i] = cx * w + x;
         ys[i] = coeffs.ys[i] * h + y;
 
-        const auto t = std::clamp((coeffs.ys[i] * rotFactorY + cx * rotFactorX + 1.0f) * 0.5f, 0.0f, 1.0f);
+        // 0x70EDE0: !(t > 0) (also NaN) -> 0, t > 1 -> 1 (std::clamp lets NaN through)
+        float t = (coeffs.ys[i] * rotFactorY + cx * rotFactorX + 1.0f) * 0.5f;
+        t = !(t > 0.0f) ? 0.0f : (t > 1.0f ? 1.0f : t);
         colors[i] = CRGBA{
             static_cast<uint8>(r2 * (1.0f - t) + r1 * t),
             static_cast<uint8>(g2 * (1.0f - t) + g1 * t),
@@ -547,7 +550,12 @@ void CSprite::RenderBufferedOneXLUSprite_Rotate_2Colours(float x, float y, float
 // 0x70F440
 void CSprite::RenderBufferedOneXLUSprite2D(CVector2D pos, CVector2D size, const RwRGBA& color, int16 intensity, uint8 alpha) {
     m_bFlushSpriteBufferSwitchZTest = true;
-    const CRect rect(pos, size.x);
+    // 0x70F440 uses size.x AND size.y (the old port built a square from size.x); the rect may be "flipped", so no asserting constructor
+    CRect rect;
+    rect.left   = pos.x - size.x;
+    rect.bottom = pos.y + size.y;
+    rect.right  = pos.x + size.x;
+    rect.top    = pos.y - size.y;
     const CRGBA scaledColor(
         (color.red * intensity) >> 8,
         (color.green * intensity) >> 8,

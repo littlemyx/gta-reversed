@@ -239,6 +239,16 @@ T& ScopedStaticRef(uintptr varAddr, uintptr flagsAddr, uint32 flagsMask, T&& ini
  *      (address mode: DECL = the old `static inline auto&`, DEF = nothing)
  *
  * With `NOTSA_VERIFY_GLOBALS` every detached global registers itself for `tools/standalone/verify_globals.py` (source/standalone/GlobalsVerify.h).
+ *
+ * Aliases / synthetics decided by .notes/aliases.json (codemod_globals.py): the address-mode text never mentions the owner, so the default build is unchanged:
+ *    owner that no site can host (shared header / TU-local):   `NOTSA_GLOBAL_SYNTH(k_name, 0xADDR, (T), init);`       (address mode: nothing)
+ *    declaration that aliases the owner:                      `NOTSA_GLOBAL_ALIAS(n, 0xADDR, (T), Owner);`          (detached: `auto& n = Owner`)
+ *    expression use of the address:                           `NOTSA_GLOBAL_EXPR(0xADDR, (T), Owner)`               (detached: `(Owner)`)
+ *    lazy `ScopedStaticRef` variable (flag word dropped):      `NOTSA_SCOPED_GLOBAL(v, 0xVAR, 0xFLAGS, mask, (T), initVal);`  (detached: `static T v = initVal`)
+ *
+ * Read-only tables that are plain C++ data in both modes (not touched by the default build: an unused internal `constexpr` array costs nothing):
+ *    `constexpr T kTable[N] = {...};  NOTSA_GLOBAL_VERIFY(0xADDR, kTable);`  (verify_globals.py checks it against the image in detached+verify builds)
+ *    in the function that reads it:  `NOTSA_GLOBAL_LOCAL_REF(t, 0xADDR, (const T[N]), kTable);`  (`t` is a POINTER to the first element: address `reinterpret_cast<const T*>(addr)`, exactly the old raw cast; detached `&kTable[0]`)
  */
 #if defined(NOTSA_DETACHED_GLOBALS) && !defined(NOTSA_ORACLE_ADDRESS_GLOBALS)
 #define NOTSA_GLOBALS_DETACHED 1
@@ -262,6 +272,16 @@ namespace notsa { inline constexpr bool kGlobalsDetached = true; }
 #define NOTSA_GLOBAL(name, addr, type, ...)       std::type_identity_t<NOTSA_UNPAREN type> name __VA_ARGS__ NOTSA_GLOBAL_REG_(static inline const, NOTSA_GLOBAL_CAT(name, _gReg_), name, name, addr)
 #define NOTSA_GLOBAL_HDR(name, addr, type, ...)   inline std::type_identity_t<NOTSA_UNPAREN type> name __VA_ARGS__ NOTSA_GLOBAL_REG_(inline const, NOTSA_GLOBAL_CAT(name, _gReg_), name, name, addr)
 #define NOTSA_GLOBAL_LOCAL(name, addr, type, ...) static std::type_identity_t<NOTSA_UNPAREN type> name __VA_ARGS__
+#define NOTSA_GLOBAL_LOCAL_REF(name, addr, type, obj) const auto* name = &(obj)[0]
+#define NOTSA_GLOBAL_ALIAS(name, addr, type, ...) auto& name = __VA_ARGS__
+#define NOTSA_GLOBAL_EXPR(addr, type, ...) (__VA_ARGS__)
+#define NOTSA_SCOPED_GLOBAL(name, varAddr, flagsAddr, mask, type, ...) static std::type_identity_t<NOTSA_UNPAREN type> name = __VA_ARGS__
+#define NOTSA_GLOBAL_SYNTH(name, addr, type, ...) inline std::type_identity_t<NOTSA_UNPAREN type> name __VA_ARGS__ NOTSA_GLOBAL_REG_(inline const, NOTSA_GLOBAL_CAT(name, _gReg_), name, name, addr)
+#ifdef NOTSA_VERIFY_GLOBALS
+#define NOTSA_GLOBAL_VERIFY(addr, obj) static inline const ::notsa::globals::Reg NOTSA_GLOBAL_CAT(obj, _gVer_) { #obj, __FILE__, __LINE__, (addr), sizeof(obj), &(obj) }
+#else
+#define NOTSA_GLOBAL_VERIFY(addr, obj) static_assert(true)
+#endif
 #define NOTSA_GLOBAL_DECL(cls, name, addr, type)  std::type_identity_t<NOTSA_UNPAREN type> name
 #define NOTSA_GLOBAL_DEF(cls, name, addr, type, ...) \
     std::type_identity_t<NOTSA_UNPAREN type> cls::name __VA_ARGS__ NOTSA_GLOBAL_REG_(static inline const, NOTSA_GLOBAL_CAT(NOTSA_GLOBAL_CAT(name, _gRegDef_), __COUNTER__), cls::name, name, addr)
@@ -270,6 +290,12 @@ namespace notsa { inline constexpr bool kGlobalsDetached = false; }
 #define NOTSA_GLOBAL(name, addr, type, ...)       auto& name = StaticRef<NOTSA_UNPAREN type>(addr)
 #define NOTSA_GLOBAL_HDR(name, addr, type, ...)   static inline auto& name = StaticRef<NOTSA_UNPAREN type>(addr)
 #define NOTSA_GLOBAL_LOCAL(name, addr, type, ...) auto& name = StaticRef<NOTSA_UNPAREN type>(addr)
+#define NOTSA_GLOBAL_LOCAL_REF(name, addr, type, obj) auto* name = reinterpret_cast<std::remove_extent_t<NOTSA_UNPAREN type>*>(addr)
+#define NOTSA_GLOBAL_ALIAS(name, addr, type, ...) auto& name = StaticRef<NOTSA_UNPAREN type>(addr)
+#define NOTSA_GLOBAL_EXPR(addr, type, ...) StaticRef<NOTSA_UNPAREN type>(addr)
+#define NOTSA_SCOPED_GLOBAL(name, varAddr, flagsAddr, mask, type, ...) auto& name = ScopedStaticRef<NOTSA_UNPAREN type>(varAddr, flagsAddr, mask, __VA_ARGS__)
+#define NOTSA_GLOBAL_SYNTH(name, addr, type, ...) static_assert(true)
+#define NOTSA_GLOBAL_VERIFY(addr, obj) static_assert(true)
 #define NOTSA_GLOBAL_DECL(cls, name, addr, type)  inline auto& name = StaticRef<NOTSA_UNPAREN type>(addr)
 #define NOTSA_GLOBAL_DEF(cls, name, addr, type, ...) static_assert(true)
 #endif

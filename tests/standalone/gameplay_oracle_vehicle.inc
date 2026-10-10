@@ -743,6 +743,24 @@ static void TestFlyingControl() {
     });
 }
 
+static void TestAircraftOrders() {
+    using namespace wfx;
+    auto au = [](uint8* b) -> CAutomobile& { return *reinterpret_cast<CAutomobile*>(b); };
+    auto init = [](Rng& rr, uint8* b) { vfx::Gen(rr, b); if (rr.below(2)) Put<float>(b, 0x8A8, 0.f); else if (rr.below(3) == 0) Put<float>(b, 0x8A8, GenF(rr, 10.f)); };
+    Run("CAutomobile::TellHeliToGoToCoors 0x6A2390", [&](Rng& r, std::string& d) {
+        const float sc = r.below(2) ? 100.f : PickScale(r);
+        const float x = GenF(r, sc), y = GenF(r, sc), z = GenF(r, sc), lo = GenF(r, sc), hi = GenF(r, sc);
+        return Obj<vfx::ALL>(r, d, init, [&](uint8* b) { au(b).CAutomobile::TellHeliToGoToCoors(x, y, z, lo, hi); return 0u; },
+            [&](uint8* b) { oracle::Fn<void __fastcall(void*, int, float, float, float, float, float)>(0x6A2390)(b, 0, x, y, z, lo, hi); return 0u; }, 2, 0, 0, 0, vfx::Fix);
+    });
+    Run("CAutomobile::TellPlaneToGoToCoors 0x6A2470", [&](Rng& r, std::string& d) {
+        const float sc = r.below(2) ? 100.f : PickScale(r);
+        const float x = GenF(r, sc), y = GenF(r, sc), z = GenF(r, sc), lo = GenF(r, sc), hi = GenF(r, sc);
+        return Obj<vfx::ALL>(r, d, init, [&](uint8* b) { au(b).CAutomobile::TellPlaneToGoToCoors(x, y, z, lo, hi); return 0u; },
+            [&](uint8* b) { oracle::Fn<void __fastcall(void*, int, float, float, float, float, float)>(0x6A2470)(b, 0, x, y, z, lo, hi); return 0u; }, 2, 0, 0, 0, vfx::Fix);
+    });
+}
+
 static void TestVehicles() {
     TestDamageManager();
     TestTransmission();
@@ -754,4 +772,5 @@ static void TestVehicles() {
     TestHandlingMgr();
     TestVehicleTypes();
     TestFlyingControl();
+    TestAircraftOrders();
 }

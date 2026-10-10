@@ -85,11 +85,23 @@ float CAEAudioUtility::GetPiecewiseLinear(float x, int16 dataCount, const float 
     return t * (data[i][1] - data[i - 1][1]) + data[i - 1][1];
 }
 
-// 0x4d9e50
-float CAEAudioUtility::AudioLog10(float p) {
-    return p >= 0.00001f
-        ? std::log10f(p)
-        : -5.0f;
+// 0x4d9e50 - the exe's code verbatim: the unrounded extended result of `fldlg2; fld p; fyl2x` stays in ST0 (callers multiply it by 10 / 20 and round ONCE; a float return would round twice)
+static const float kAudioLog10Min = 0.00001f, kAudioLog10Floor = -5.0f;   // 0x858C14 and the -5.0f the exe loads; `p < 1e-5f` or NaN (fcomp unordered sets C0) -> -5
+__declspec(naked) float CAEAudioUtility::AudioLog10(float p) {
+    __asm {
+        fld   dword ptr [esp + 4]
+        fcomp dword ptr [kAudioLog10Min]
+        fnstsw ax
+        test  ah, 1
+        jne   below
+        fldlg2
+        fld   dword ptr [esp + 4]
+        fyl2x
+        ret
+    below:
+        fld   dword ptr [kAudioLog10Floor]
+        ret
+    }
 }
 
 // REFACTORED

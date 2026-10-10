@@ -22,7 +22,6 @@ Design details (committed snapshots, `git add -f`-ed because `.notes/` is a loca
 * CMake >= 4.2, Ninja, conan 2 (e.g. `pipx install conan`), git (with submodules: `git submodule update --init vendor/librw`).
 * Python 3 with `unicorn` and `capstone` (`pip install unicorn capstone`); passed as `-DGTASA_PYTHON=<python>`. The extractor replays the
   exe's 1667 static initialisers under Unicorn and classifies code pointers.
-* `ml.exe` (MASM, x86) for the 9 MB address-space pad object: `-DGTASA_ML=<...>/bin/x86/ml` (found automatically on Windows).
 * The game's data directory (a legitimate install).
 * `gta_sa_compact.exe` (v1.0 US compact) in the repository root.
 
@@ -40,21 +39,24 @@ Known msvc-wine profile tweaks (already in those profiles; see `tools/standalone
 `CMAKE_PROJECT_INCLUDE=tools/standalone/msvc-wine/no-wx.cmake`. For **Release** additionally: `CMAKE_TRY_COMPILE_TARGET_TYPE=STATIC_LIBRARY`,
 `libjpeg-turbo/*` extra variables `HAVE_BUILTIN_CTZL=0`, and no response files for nasm. Outputs: `build/Debug/generators`, `build/Release/generators`.
 
-Common flags used below (shown with the msvc-wine paths; adapt):
+Common flags used below (bash; shown with the msvc-wine paths - adapt `MSVC`/`PY`; run from the repo root, after `export MSVC_WINE_ROOT=...` as above):
 ```
-COMMON="-G Ninja -DCMAKE_MAKE_PROGRAM=$(which ninja) -DGTASA_STANDALONE=ON -DGTASA_USE_SDL3=ON -DGTASA_UNITY_BUILD=OFF -DGTASA_WITH_LTO=OFF \
-  -DGTASA_WITH_OPENAL=OFF -DGTASA_WITH_CLEO_COMMANDS=OFF -DGTASA_WITH_SCRIPT_COMMAND_HOOKS=OFF \
-  -DGTASA_ORIGINAL_EXE=$PWD/gta_sa_compact.exe -DGTASA_PYTHON=<python with unicorn+capstone> -DGTASA_ML=<msvc>/bin/x86/ml \
-  -DCMAKE_C_COMPILER=<msvc>/bin/x86/cl -DCMAKE_CXX_COMPILER=<msvc>/bin/x86/cl \
-  -DCMAKE_C_FLAGS=\"/DWIN32 /D_WINDOWS /Zm1000\" -DCMAKE_CXX_FLAGS=\"/WX- /wd4005 /DWIN32 /D_WINDOWS /Zm1000 /GX\""
+MSVC=$MSVC_WINE_ROOT                 # msvc-wine install (Windows: omit the compiler/flags lines, cl is found by CMake)
+PY=<python with unicorn+capstone>    # e.g. a venv: python3 -m venv ~/gta-venv && ~/gta-venv/bin/pip install unicorn capstone
+COMMON=(-G Ninja -DCMAKE_MAKE_PROGRAM="$(command -v ninja)" -DGTASA_STANDALONE=ON -DGTASA_USE_SDL3=ON -DGTASA_UNITY_BUILD=OFF -DGTASA_WITH_LTO=OFF
+  -DGTASA_WITH_OPENAL=OFF -DGTASA_WITH_CLEO_COMMANDS=OFF -DGTASA_WITH_SCRIPT_COMMAND_HOOKS=OFF
+  -DGTASA_ORIGINAL_EXE="$PWD/gta_sa_compact.exe" -DGTASA_PYTHON="$PY"
+  -DCMAKE_C_COMPILER="$MSVC/bin/x86/cl" -DCMAKE_CXX_COMPILER="$MSVC/bin/x86/cl"
+  "-DCMAKE_C_FLAGS=/DWIN32 /D_WINDOWS /Zm1000" "-DCMAKE_CXX_FLAGS=/WX- /wd4005 /DWIN32 /D_WINDOWS /Zm1000 /GX")
 ```
+(Use the array exactly as `"${COMMON[@]}"` below - the flags contain spaces.)
 1. **`build/Standalone`** - original RenderWare (opt-out of librw), Debug:
-   `cmake -S . -B build/Standalone -DCMAKE_BUILD_TYPE=Debug -DCMAKE_TOOLCHAIN_FILE=$PWD/build/Debug/generators/conan_toolchain.cmake $COMMON -DGTASA_RW_LIBRW=OFF -DGTASA_RW_LIBRW_OPT_OUT=ON`
+   `cmake -S . -B build/Standalone -DCMAKE_BUILD_TYPE=Debug -DCMAKE_TOOLCHAIN_FILE=$PWD/build/Debug/generators/conan_toolchain.cmake "${COMMON[@]}" -DGTASA_RW_LIBRW=OFF -DGTASA_RW_LIBRW_OPT_OUT=ON`
    (RW functions are reached by exe address and trap; kept for comparison, it stops at the first RW call.)
 2. **`build/StandaloneRW`** - librw, Debug (the main development build):
-   `cmake -S . -B build/StandaloneRW -DCMAKE_BUILD_TYPE=Debug -DCMAKE_TOOLCHAIN_FILE=$PWD/build/Debug/generators/conan_toolchain.cmake $COMMON -DGTASA_RW_LIBRW=ON -DGTASA_RW_LIBRW_OPT_OUT=OFF`
+   `cmake -S . -B build/StandaloneRW -DCMAKE_BUILD_TYPE=Debug -DCMAKE_TOOLCHAIN_FILE=$PWD/build/Debug/generators/conan_toolchain.cmake "${COMMON[@]}" -DGTASA_RW_LIBRW=ON -DGTASA_RW_LIBRW_OPT_OUT=OFF`
 3. **`StandaloneRelease`** preset - librw, `/O2 /Ob2 /DNDEBUG -MT /Z7 /arch:IA32 /fp:precise`, ~32 MB exe (Debug 61 MB), bit-exact with Debug:
-   `cmake --preset StandaloneRelease -DGTASA_PYTHON=<python>` (+ the compiler/ml/`CMAKE_CXX_FLAGS` cache entries above under msvc-wine)
+   `cmake --preset StandaloneRelease -DGTASA_PYTHON="$PY"` (+ under msvc-wine `-DCMAKE_C_COMPILER=... -DCMAKE_CXX_COMPILER=...` and the two `CMAKE_*_FLAGS` entries above, as separate quoted arguments)
 
 Build: `ninja -C build/StandaloneRW gta_reversed.exe`. The extractor runs as a build step and writes `original_data.bin`, `original_data.json`
 and `data_pointers.bin` next to the exe in `<build>/bin` (they are tied to the 1.0 US compact exe). New `.cpp` files need a CMake re-glob (re-run cmake).

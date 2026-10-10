@@ -79,3 +79,4 @@ standalone_unknown_pointers.txt
 __pycache__/
 data_pointers.bin
 standalone_unverified_hooks.txt
+/gta_sa_compact.exe

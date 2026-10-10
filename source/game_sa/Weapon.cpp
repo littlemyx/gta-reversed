@@ -2451,7 +2451,12 @@ bool CWeapon::FireM16_1stPerson(CPed* owner) {
 
     //> 0x741DC4 - Check if hit entity is within range
     if (shotHitEntity) {
-        if (TargetWeaponRangeMultiplier(shotHitEntity, owner) * wi->m_fWeaponRange >= (camOriginPos - shotCP.m_vecPoint).SquaredMagnitude2D()) {
+        // 0x741DC6: the 2D DISTANCE (sqrt, spilled to float) is compared with `rangeMultiplier * range`; a hit beyond the weapon range is dropped
+        // (the old port compared the squared distance with `>=` and dropped hits WITHIN the range)
+        const double dx   = (double)camOriginPos.x - shotCP.m_vecPoint.x;
+        const double dy   = (double)camOriginPos.y - shotCP.m_vecPoint.y;
+        const float  dist = (float)std::sqrt(dy * dy + dx * dx);
+        if ((double)TargetWeaponRangeMultiplier(shotHitEntity, owner) * wi->m_fWeaponRange < (double)dist) {
             shotHitEntity = nullptr;
         }
     }
@@ -2474,14 +2479,17 @@ bool CWeapon::FireM16_1stPerson(CPed* owner) {
             intensity *= 0.3f;
         }
 
-        // Move the camera around a little
-        cam->m_fHorizontalAngle += (float)CGeneral::GetRandomNumberInRange(-64, 64) * intensity;
-        cam->m_fVerticalAngle += (float)CGeneral::GetRandomNumberInRange(-64, 64) * intensity;
+        // Move the camera around a little (0x741EA9): `fild((rand() & 0x7F) - 0x40) * intensity + angle`, the product is not rounded to float
+        cam->m_fHorizontalAngle = (float)((double)((int32)(CGeneral::GetRandomNumber() & 0x7F) - 0x40) * intensity + cam->m_fHorizontalAngle);
+        cam->m_fVerticalAngle   = (float)((double)((int32)(CGeneral::GetRandomNumber() & 0x7F) - 0x40) * intensity + cam->m_fVerticalAngle);
 
-        // Do pad shaking
-        const auto shakeFreq = (uint8)lerp(130.f, 210.f, std::clamp((20.f - (wi->m_fAnimLoopEnd - wi->m_fAnimLoopStart) * 900.f) / 80.f, 0.f, 1.f));
+        // Do pad shaking (0x741F05..0x741F99): everything in extended precision, `_ftol` at each int conversion
+        const int32  loopFrames = (int32)(((double)wi->m_fAnimLoopEnd - (double)wi->m_fAnimLoopStart) * 900.0f);
+        const double x          = (20.0 - (double)loopFrames) * 0.0125; // 0x872C88 (double 0.0125, not `/ 80.f`)
+        const double t          = (0.0 > x) ? 0.0 : ((1.0 < x) ? 1.0 : x); // NaN passes through
+        const uint8  shakeFreq  = (uint8)(int32)(t * 80.0 + 130.0); // 130 + 80t, low byte of the _ftol result
         CPad::GetPad(owner->GetPadNumber())->StartShake(
-            (int16)(CTimer::GetTimeStep() * 20'000.f / (float)shakeFreq),
+            (int16)(int32)((double)CTimer::GetTimeStep() * 20000.0f / (double)(int32)shakeFreq), // fidiv
             shakeFreq,
             0
         );

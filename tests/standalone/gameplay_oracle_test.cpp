@@ -259,6 +259,7 @@ static bool __cdecl ExeProcessLineOfSight(const CVector& a, const CVector& b, CC
 #include "gameplay_oracle_weapon.inc"
 #include "gameplay_oracle_vehicle.inc"
 #include "gameplay_oracle_buoy.inc"
+#include "gameplay_oracle_misc.inc"
 
 static int __cdecl AssertHook(int, char* msg, int*) {   // prints the call stack of a failed assert (map the addresses with the linker .map)
     void* fr[16]; const USHORT n = RtlCaptureStackBackTrace(0, 16, fr, nullptr);
@@ -298,6 +299,7 @@ int main(int argc, char** argv) {
     TestWeapons();
     TestVehicles();
     TestBuoyancy();
+    TestMisc();
     int bad24 = 0, bad53 = 0, hard24 = 0, hard53 = 0;
     for (auto& r : g_rows) { bad24 += r.bad24; bad53 += r.bad53; hard24 += r.hardReg24 + r.hardSpec24; hard53 += r.hardReg53 + r.hardSpec53; }
     std::printf("\n%zu functions, mismatches (strict / excluding NaN-payload-only): PC24 %d / %d, PC53 %d / %d\n", g_rows.size(), bad24, hard24, bad53, hard53);

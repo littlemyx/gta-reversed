@@ -1,0 +1,189 @@
+// (e) closed gameplay helpers outside the big areas: particle key-curve interpolation (Fx), radar polygon clipping, garage containment, compressed matrices, fire queries
+#include "Fx/Blueprints/Interp/FxInterpInfoFloat.h"
+#include "Fx/Blueprints/Interp/FxInterpInfo32.h"
+#include "Fx/Blueprints/Interp/FxInterpInfo255.h"
+#include "Fx/Blueprints/Interp/FxInterpInfoU255.h"
+#include "Radar.h"
+#include "Garage.h"
+#include "CompressedMatrixNotAligned.h"
+#include "FireManager.h"
+#include "Fire.h"
+
+namespace mfx {
+// key curves: up to 6 keys, up to 4 attributes; the layout is that of FxInterpInfo_c (+ m_Keys at +0xC) for all four key types
+struct Curve {
+    alignas(16) uint8 obj[0x20] {};
+    uint16 times[8] {};
+    alignas(16) uint8 keys[4][8 * 4] {};   // per attribute: up to 8 keys of float / int16 / uint16 (sized for float)
+    void* keyPtrs[4] {};
+};
+inline FxInterpInfo_c& Base(Curve& c) { return *reinterpret_cast<FxInterpInfo_c*>(c.obj); }
+inline void Build(Rng& r, Curve& c, int keyType /*0 float, 1 int16 (32 / 255), 2 uint16 (U255)*/) {
+    auto& b = Base(c);
+    std::memset(c.obj, 0, sizeof c.obj);
+    b.m_bLooped = r.below(3) == 0; b.m_nNumKeys = (int8)(1 + r.below(6)); b.m_nCount = (int16)(1 + r.below(4));
+    uint16 t = 0;
+    for (int i = 0; i < 8; ++i) { t = (uint16)(t + (r.below(4) ? 1 + r.below(300) : r.below(2000))); c.times[i] = i == 0 && r.below(3) ? 0 : t; }
+    if (r.below(10) == 0) c.times[r.below(8)] = (uint16)r.u32();
+    b.m_pTimes = c.times;
+    for (int a = 0; a < 4; ++a) {
+        c.keyPtrs[a] = c.keys[a];
+        for (int k = 0; k < 8; ++k) {
+            if (keyType == 0) reinterpret_cast<float*>(c.keys[a])[k] = r.below(8) ? GenF(r, 2.f, S_NOHUGE) : GenF(r, 1e5f, S_NOHUGE);
+            else if (keyType == 1) reinterpret_cast<int16_t*>(c.keys[a])[k] = (int16_t)r.u32();
+            else reinterpret_cast<uint16_t*>(c.keys[a])[k] = (uint16_t)r.u32();
+        }
+    }
+    *reinterpret_cast<void**>(c.obj + 0xC) = c.keyPtrs;
+}
+}
+
+static_assert(sizeof(CFire) == 0x28);
+static void TestMisc() {
+    // ---- Fx interpolation
+    struct FxVar { const char* n; unsigned va; int type; };
+    static const FxVar vs[] = { { "FxInterpInfoFloat_c::GetVal(out) 0x4A8470", 0x4A8470, 0 }, { "FxInterpInfo32_c::GetVal(out) 0x4A89C0", 0x4A89C0, 1 }, { "FxInterpInfo255_c::GetVal(out) 0x4A8B80", 0x4A8B80, 1 }, { "FxInterpInfoU255_c::GetVal(out) 0x4A8800", 0x4A8800, 2 } };
+    for (const auto& v : vs) {
+        Run(v.n, [=](Rng& r, std::string& d) {
+            mfx::Curve c; mfx::Build(r, c, v.type);
+            const float delta = r.below(4) ? r.f01() * 4.f : GenF(r, 40.f, S_NOHUGE);
+            float oa[4] = { 11, 12, 13, 14 }, oe[4] = { 11, 12, 13, 14 };
+            switch (v.va) {
+            case 0x4A8470: reinterpret_cast<FxInterpInfoFloat_c*>(c.obj)->GetVal(oa, delta); break;
+            case 0x4A89C0: reinterpret_cast<FxInterpInfo32_c*>(c.obj)->GetVal(oa, delta); break;
+            case 0x4A8B80: reinterpret_cast<FxInterpInfo255_c*>(c.obj)->GetVal(oa, delta); break;
+            default:       reinterpret_cast<FxInterpInfoU255_c*>(c.obj)->GetVal(oa, delta); break;
+            }
+            oracle::Fn<void __fastcall(void*, int, float*, float)>(v.va)(c.obj, 0, oe, delta);
+            if (SameBlob(oa, oe, 16)) return true;
+            d = "keys " + std::to_string(mfx::Base(c).m_nNumKeys) + " attrs " + std::to_string(mfx::Base(c).m_nCount) + " loop " + std::to_string(mfx::Base(c).m_bLooped) + " delta " + F(delta) + " got " + F(oa[0]) + F(oa[1]) + F(oa[2]) + F(oa[3]) + " exe " + F(oe[0]) + F(oe[1]) + F(oe[2]) + F(oe[3]) + " times " + Hex(c.times, 16);
+            return false;
+        });
+    }
+    Run("FxInterpInfoFloat_c::GetVal(attrib) 0x4A85C0", [](Rng& r, std::string& d) {
+        mfx::Curve c; mfx::Build(r, c, 0);
+        const int attrib = r.below(4);
+        const float time = r.below(4) ? r.f01() * 4.f : GenF(r, 40.f, S_NOHUGE), delta = r.below(4) ? r.f01() * 2.f : GenF(r, 5.f, S_NOHUGE);
+        const float ra = reinterpret_cast<FxInterpInfoFloat_c*>(c.obj)->GetVal(attrib, time, delta);
+        const float re = oracle::Fn<float __fastcall(void*, int, int, float, float)>(0x4A85C0)(c.obj, 0, attrib, time, delta);
+        if (SameF(ra, re)) return true;
+        d = "keys " + std::to_string(mfx::Base(c).m_nNumKeys) + " attrib " + std::to_string(attrib) + " time " + F(time) + " delta " + F(delta) + " got " + F(ra) + " exe " + F(re) + " times " + Hex(c.times, 16);
+        return false;
+    });
+    // ---- radar
+    Run("LineRadarBoxCollision 0x584E00", [](Rng& r, std::string& d) {
+        const CVector2D a{ GenF(r, 3.f), GenF(r, 3.f) }, b{ GenF(r, 3.f), GenF(r, 3.f) };
+        CVector2D oa{ 7, 8 }, oe{ 7, 8 };
+        const int ra = LineRadarBoxCollision(oa, a, b);
+        const int re = oracle::Fn<int __cdecl(CVector2D*, const CVector2D*, const CVector2D*)>(0x584E00)(&oe, &a, &b);
+        Hit(ra != -1);
+        if (ra == re && SameF(oa.x, oe.x) && SameF(oa.y, oe.y)) return true;
+        d = "a " + F(a.x) + F(a.y) + " b " + F(b.x) + F(b.y) + " got " + std::to_string(ra) + F(oa.x) + F(oa.y) + " exe " + std::to_string(re) + F(oe.x) + F(oe.y);
+        return false;
+    });
+    Run("CRadar::ClipRadarPoly 0x585040", [](Rng& r, std::string& d) {
+        CVector2D in[4];
+        const float sc = r.below(3) ? 2.f : 6.f;
+        for (auto& p : in) p = { GenF(r, sc), GenF(r, sc) };
+        if (r.below(3) == 0) { const float h = r.f01() * 6.28f, w = r.f01() * 3.f + 0.1f, l = r.f01() * 3.f + 0.1f; const CVector2D c{ GenF(r, 1.5f), GenF(r, 1.5f) }; in[0] = { c.x + std::cos(h) * w, c.y + std::sin(h) * w }; in[1] = { c.x - std::sin(h) * l, c.y + std::cos(h) * l }; in[2] = { c.x - std::cos(h) * w, c.y - std::sin(h) * w }; in[3] = { c.x + std::sin(h) * l, c.y - std::cos(h) * l }; }
+        CVector2D oa[16], oe[16]; for (int i = 0; i < 16; ++i) oa[i] = oe[i] = { 7, 8 };
+        const int ra = CRadar::ClipRadarPoly(oa, in);
+        const int re = oracle::Fn<int __cdecl(CVector2D*, const CVector2D*)>(0x585040)(oe, in);
+        Hit(ra > 0);
+        if (ra == re && SameBlob(oa, oe, sizeof oa)) return true;
+        d = "in " + F(in[0].x) + F(in[0].y) + F(in[1].x) + F(in[1].y) + F(in[2].x) + F(in[2].y) + F(in[3].x) + F(in[3].y) + " got " + std::to_string(ra) + " exe " + std::to_string(re) + DiffDesc(oa, oe, sizeof oa, "out");
+        return false;
+    });
+    // ---- garage containment
+    for (int rad = 0; rad < 2; ++rad) {
+        Run(rad ? "CGarage::IsPointInsideGarage(radius) 0x4487D0" : "CGarage::IsPointInsideGarage 0x448740", [=](Rng& r, std::string& d) {
+            alignas(16) uint8 gb[sizeof(CGarage)] {};
+            auto& g = *reinterpret_cast<CGarage*>(gb);
+            g.m_vPosn = GenV(r, 100.f); g.m_fTopZ = g.m_vPosn.z + (r.below(4) ? r.f01() * 10.f : GenF(r, 10.f));
+            const float h = r.f01() * 6.2831853f;
+            g.m_vDirectionA = { std::cos(h), std::sin(h) }; g.m_vDirectionB = { -std::sin(h), std::cos(h) };
+            if (r.below(8) == 0) { g.m_vDirectionA = { GenF(r, 1.f), GenF(r, 1.f) }; g.m_vDirectionB = { GenF(r, 1.f), GenF(r, 1.f) }; }
+            g.m_fWidth = r.below(4) ? r.f01() * 20.f : GenF(r, 40.f); g.m_fHeight = r.below(4) ? r.f01() * 20.f : GenF(r, 40.f);
+            const CVector p = r.below(2) ? g.m_vPosn + CVector{ GenF(r, 15.f), GenF(r, 15.f), GenF(r, 8.f) } : GenV(r, 100.f);
+            const float radius = r.below(4) ? r.f01() * 4.f : GenF(r, 8.f);
+            bool ra, re;
+            if (rad) { ra = g.IsPointInsideGarage(p, radius); re = oracle::Fn<bool __fastcall(CGarage*, int, CVector, float)>(0x4487D0)(&g, 0, p, radius); }
+            else     { ra = g.IsPointInsideGarage(p);         re = oracle::Fn<bool __fastcall(CGarage*, int, CVector)>(0x448740)(&g, 0, p); }
+            Hit(ra);
+            if (ra == re) return true;
+            d = "garage " + V(g.m_vPosn) + " topz " + F(g.m_fTopZ) + " A " + F(g.m_vDirectionA.x) + F(g.m_vDirectionA.y) + " B " + F(g.m_vDirectionB.x) + F(g.m_vDirectionB.y) + " w/h " + F(g.m_fWidth) + F(g.m_fHeight) + " p " + V(p) + " r " + F(radius) + " got " + std::to_string(ra) + " exe " + std::to_string(re);
+            return false;
+        });
+    }
+    Run("CMatrix::Reorthogonalise 0x59B6A0", [](Rng& r, std::string& d) {
+        alignas(16) uint8 ma[0x48] {}, me[0x48] {};
+        GenMatrix(r, ma, 10.f);
+        float* f = reinterpret_cast<float*>(ma);   // perturb a clean rotation slightly (the usual input) or keep the random one
+        if (r.below(3)) for (int i : { 0, 1, 2, 4, 5, 6, 8, 9, 10 }) f[i] += GenF(r, 0.05f, S_ZERO | S_TINY | S_DEN);
+        std::memcpy(me, ma, sizeof ma);
+        reinterpret_cast<CMatrix*>(ma)->Reorthogonalise();
+        oracle::Fn<void __fastcall(CMatrix*, int)>(0x59B6A0)(reinterpret_cast<CMatrix*>(me), 0);
+        if (SameBlob(ma, me, 0x40)) return true;
+        d = "got " + Hex(ma, 0x40) + " exe " + Hex(me, 0x40);
+        return false;
+    });
+    // ---- compressed matrix
+    Run("CCompressedMatrixNotAligned::DecompressIntoFullMatrix 0x59B9F0", [](Rng& r, std::string& d) {
+        CCompressedMatrixNotAligned cm{};
+        std::memset(&cm, 0, sizeof cm);
+        for (int i = 0; i < 3; ++i) reinterpret_cast<float*>(&cm)[i] = GenF(r, 100.f);
+        for (int i = 0; i < 6; ++i) reinterpret_cast<int8_t*>(&cm)[12 + i] = (int8_t)(r.below(3) ? (int)r.below(255) - 127 : (int)r.u32());
+        alignas(16) uint8 ma[0x48] {}, me[0x48] {};
+        CMatrix& A = *reinterpret_cast<CMatrix*>(ma);
+        CPedGeometryAnalyser* unused = nullptr; (void)unused;
+        cm.DecompressIntoFullMatrix(A);
+        oracle::Fn<void __fastcall(CCompressedMatrixNotAligned*, int, CMatrix*)>(0x59B9F0)(&cm, 0, reinterpret_cast<CMatrix*>(me));
+        if (SameBlob(ma, me, 0x40)) return true;
+        d = "cm " + Hex(&cm, 18) + " got " + Hex(ma, 0x40) + " exe " + Hex(me, 0x40);
+        return false;
+    });
+    // ---- fires (gFireManager lives in the exe's .bss; both implementations read it)
+    {
+        struct FS { Snap in{ 0, 0 }, pa{ 0, 0 }, pe{ 0, 0 }; };
+        auto fillFires = [](Rng& r) {
+            auto& fm = gFireManager;
+            auto* bytes = reinterpret_cast<uint8_t*>(&fm);
+            for (size_t i = 0; i < sizeof fm; ++i) bytes[i] = (uint8_t)r.u32();
+            for (auto& f : fm.m_aFires) {
+                auto* fb = reinterpret_cast<uint8_t*>(&f);
+                const CVector pos = GenV(r, 100.f); std::memcpy(fb + 4, &pos, 12);   // m_Position
+                std::memset(fb + 0x10, 0, 8); std::memset(fb + 0x24, 0, 4);          // m_EntityOnFire, m_EntityStartedFire, m_FxSystem
+            }
+        };
+        Run("CFireManager::FindNearestFire 0x538F40", [=](Rng& r, std::string& d) {
+            fillFires(r);
+            const CVector p = GenV(r, 100.f); const bool c1 = r.below(2), c2 = r.below(2);
+            CFire* ra = gFireManager.FindNearestFire(p, c1, c2);
+            CFire* re = oracle::Fn<CFire* __fastcall(CFireManager*, int, const CVector*, bool, bool)>(0x538F40)(&gFireManager, 0, &p, c1, c2);
+            Hit(ra != nullptr);
+            if (ra == re) return true;
+            d = "p " + V(p) + " flags " + std::to_string(c1) + std::to_string(c2) + " got " + std::to_string((int)(ra ? ra - gFireManager.m_aFires.data() : -1)) + " exe " + std::to_string((int)(re ? re - gFireManager.m_aFires.data() : -1));
+            return false;
+        });
+        Run("CFireManager::GetNumFiresInRange 0x5397F0", [=](Rng& r, std::string& d) {
+            fillFires(r);
+            const CVector p = GenV(r, 100.f); const float rad = r.below(4) ? r.f01() * 80.f : GenF(r, 200.f);
+            const uint32 ra = gFireManager.GetNumFiresInRange(p, rad);
+            const uint32 re = oracle::Fn<uint32 __fastcall(CFireManager*, int, const CVector*, float)>(0x5397F0)(&gFireManager, 0, &p, rad);
+            Hit(ra != 0);
+            if (ra == re) return true;
+            d = "p " + V(p) + " r " + F(rad) + " got " + std::to_string(ra) + " exe " + std::to_string(re);
+            return false;
+        });
+        Run("CFireManager::GetNumFiresInArea 0x539860", [=](Rng& r, std::string& d) {
+            fillFires(r);
+            const float v[6] = { GenF(r, 120.f), GenF(r, 120.f), GenF(r, 120.f), GenF(r, 120.f), GenF(r, 120.f), GenF(r, 120.f) };
+            const uint32 ra = gFireManager.GetNumFiresInArea(v[0], v[1], v[2], v[3], v[4], v[5]);
+            const uint32 re = oracle::Fn<uint32 __fastcall(CFireManager*, int, float, float, float, float, float, float)>(0x539860)(&gFireManager, 0, v[0], v[1], v[2], v[3], v[4], v[5]);
+            Hit(ra != 0);
+            if (ra == re) return true;
+            d = "box " + F(v[0]) + F(v[1]) + F(v[2]) + F(v[3]) + F(v[4]) + F(v[5]) + " got " + std::to_string(ra) + " exe " + std::to_string(re);
+            return false;
+        });
+    }
+}

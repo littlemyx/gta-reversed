@@ -71,10 +71,13 @@ bool cBuoyancy::ProcessBuoyancyBoat(CVehicle* vehicle, float fBuoyancy, CVector*
     float fBoundingHeight = m_vecBoundingMax.z - m_vecBoundingMin.z;
     auto fBoatHeightRatio = 1.0F / (fBoundingHeight * 9.0F);
 
-    for (int32 iXMult = 0; iXMult < 3; ++iXMult) {
-        for (int32 iYMult = 0; iYMult < 3; ++iYMult) {
-            auto fCurrentX = m_vecBoundingMin.x + m_vecCenterOffset.x * iXMult;
-            auto fCurrentY = m_vecBoundingMin.y + m_vecCenterOffset.y * iYMult;
+    // 0x6C30D0: the exe accumulates the sample coordinates (x += offset.x per outer step, y += offset.y per inner step)
+    float fAccX = m_vecBoundingMin.x;
+    for (int32 iXMult = 0; iXMult < 3; ++iXMult, fAccX = fAccX + m_vecCenterOffset.x) {
+        float fAccY = m_vecBoundingMin.y;
+        for (int32 iYMult = 0; iYMult < 3; ++iYMult, fAccY = fAccY + m_vecCenterOffset.y) {
+            auto fCurrentX = fAccX;
+            auto fCurrentY = fAccY;
             CVector vecCurPoint(fCurrentX, fCurrentY, 0.0F);
 
             auto vecWaveNormal = CVector(0.0F, 0.0F, 1.0F);
@@ -148,10 +151,13 @@ bool cBuoyancy::CalcBuoyancyForce(CPhysical* entity, CVector* vecBuoyancyTurnPoi
     vecBuoyancyForce->Set(0.0F, 0.0F, fCurrentBuoyancy);
 
     float fMoveForceZ = entity->m_fMass * entity->m_vecMoveSpeed.z;
-    if (fMoveForceZ <= fCurrentBuoyancy * 4.0F)
+    if (!(fMoveForceZ > fCurrentBuoyancy * 4.0F)) // 0x6C27CA (FCOMPP + JNE: a NaN takes the early return)
         return true;
 
-    float fBuoyancy = std::max(0.0F, fCurrentBuoyancy - fMoveForceZ);
+    // 0x6C27D5: `0.0 > x ? 0.0 : x` (a NaN stays a NaN)
+    float fBuoyancy = fCurrentBuoyancy - fMoveForceZ;
+    if (0.0F > fBuoyancy)
+        fBuoyancy = 0.0F;
     vecBuoyancyForce->z = fBuoyancy;
     return true;
 }
@@ -235,16 +241,27 @@ void cBuoyancy::PreCalcSetup(CPhysical* entity, float fBuoyancy)
     // Calculate center offset and "normalized" version of it
     // (it's not normalized vector, just the offset scaled by multiplicative inverse of it's longest component
     //  so the longest component is equal to 1.0F)
-    m_vecCenterOffset = (m_vecBoundingMax - m_vecBoundingMin) * 0.5F;
-    float fScale;
-    if ((m_vecCenterOffset.z > m_vecCenterOffset.x) && (m_vecCenterOffset.z > m_vecCenterOffset.y))
-        fScale = 1.0F / m_vecCenterOffset.z;
-    else if ((m_vecCenterOffset.y > m_vecCenterOffset.x) && (m_vecCenterOffset.y > m_vecCenterOffset.z))
-        fScale = 1.0F / m_vecCenterOffset.y;
-    else
-        fScale = 1.0F / m_vecCenterOffset.x;
-
-    m_vecNormalizedCenterOffset = m_vecCenterOffset * fScale;
+    // 0x6C2DE1: (max - min) * 0.5 per component; the longest one (first of z, y, x that is strictly greater than the others) becomes exactly 1.0, the others are
+    // multiplied by the reciprocal that stays on the x87 stack
+    m_vecCenterOffset.x = (m_vecBoundingMax.x - m_vecBoundingMin.x) * 0.5F;
+    m_vecCenterOffset.y = (m_vecBoundingMax.y - m_vecBoundingMin.y) * 0.5F;
+    m_vecCenterOffset.z = (m_vecBoundingMax.z - m_vecBoundingMin.z) * 0.5F;
+    if (m_vecCenterOffset.z > m_vecCenterOffset.x && m_vecCenterOffset.z > m_vecCenterOffset.y) {
+        const double recip = 1.0 / (double)m_vecCenterOffset.z;
+        m_vecNormalizedCenterOffset.z = 1.0F;
+        m_vecNormalizedCenterOffset.x = (float)((double)m_vecCenterOffset.x * recip);
+        m_vecNormalizedCenterOffset.y = (float)((double)m_vecCenterOffset.y * recip);
+    } else if (m_vecCenterOffset.y > m_vecCenterOffset.x && m_vecCenterOffset.y > m_vecCenterOffset.z) {
+        const double recip = 1.0 / (double)m_vecCenterOffset.y;
+        m_vecNormalizedCenterOffset.y = 1.0F;
+        m_vecNormalizedCenterOffset.x = (float)((double)m_vecCenterOffset.x * recip);
+        m_vecNormalizedCenterOffset.z = (float)(recip * (double)m_vecCenterOffset.z);
+    } else {
+        const double recip = 1.0 / (double)m_vecCenterOffset.x;
+        m_vecNormalizedCenterOffset.x = 1.0F;
+        m_vecNormalizedCenterOffset.y = (float)(recip * (double)m_vecCenterOffset.y);
+        m_vecNormalizedCenterOffset.z = (float)(recip * (double)m_vecCenterOffset.z);
+    }
     m_fNumCheckedPoints = 1.0F;
     m_vecTurnPoint.Set(0.0F, 0.0F, 0.0F);
     m_bInWater = false;
@@ -324,14 +341,17 @@ void cBuoyancy::SimpleCalcBuoyancy(CPhysical* entity)
 {
     CVector vecAllPoints[3][3];
 
-    for (int32 iXMult = 0; iXMult < 3; ++iXMult) {
-        for (int32 iYMult = 0; iYMult < 3; ++iYMult) {
+    // 0x6C3B30: the exe ACCUMULATES the sample coordinates (x += offset.x per outer step, y += offset.y per inner step), it does not multiply
+    float fCurX = m_vecBoundingMin.x;
+    for (int32 iXMult = 0; iXMult < 3; ++iXMult, fCurX = fCurX + m_vecCenterOffset.x) {
+        float fCurY = m_vecBoundingMin.y;
+        for (int32 iYMult = 0; iYMult < 3; ++iYMult, fCurY = fCurY + m_vecCenterOffset.y) {
             auto& pCurVec = vecAllPoints[iXMult][iYMult];
             pCurVec.Set(0.0F, 0.0F, 0.0F);
 
             auto vecCurPoint = CVector();
-            vecCurPoint.x = m_vecBoundingMin.x + (m_vecCenterOffset.x * iXMult);
-            vecCurPoint.y = m_vecBoundingMin.y + (m_vecCenterOffset.y * iYMult);
+            vecCurPoint.x = fCurX;
+            vecCurPoint.y = fCurY;
             vecCurPoint.z = 0.0F;
             tWaterLevel eState;
             FindWaterLevel(m_vecInitialZPos, &vecCurPoint, &eState);
@@ -394,7 +414,7 @@ void cBuoyancy::SimpleCalcBuoyancy(CPhysical* entity)
             && fMaxXHeight2 < m_vecBoundingMax.z) {
 
             CVector vecDir(1.0F, 0.0F, 0.0F);
-            AddSplashParticles(entity, vecAllPoints[i][2], vecAllPoints[i + 1][2], vecDir, false);
+            AddSplashParticles(entity, vecAllPoints[2][i], vecAllPoints[2][i + 1], vecDir, false); // BUG: used [i][2] / [i + 1][2] (the max Y row) here
         }
     }
 }

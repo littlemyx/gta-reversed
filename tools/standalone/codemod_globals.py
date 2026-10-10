@@ -110,12 +110,34 @@ class Aliases:
             self.site_manual[(v["site"]["file"], int(v["addr"], 16), short(v["site"]["name"]))] = "view (own zeroed storage + verifier extent): manual"
         for v in d["virtual"]:
             self.addr_manual[int(v["addr"], 16)] = "virtual base address (rewrite the accessor): manual"
+        # retype / readdress decisions are only open while the repo still has the OLD declaration (agent FIXADDR fixed several in source): obsolete ones are ignored
+        def txt(f):
+            try:
+                return (REPO / f).read_text(errors="replace")
+            except OSError:
+                return ""
+
+        def still_old(f, addr_hex, old_type=None):
+            for m in re.finditer(r"StaticRef\s*<([^;]*?)>\s*\(\s*%s\s*\)" % re.escape(addr_hex), txt(f), re.I):
+                if old_type is None or re.sub(r"\s+", "", old_type) in re.sub(r"\s+", "", m.group(1)):
+                    return True
+            return False
+
+        FIXED = {0x96A8B0, 0x96A8B1, 0xBAB378, 0xBAB37C, 0xC17824, 0xB6B98C}   # fixed in source by agent FIXADDR (commits 59803c65 6e9e56a6 37577efa ae300f56)
+        obsolete = set()
         for r in d["retype"]:
-            self.addr_manual.setdefault(int(r["addr"], 16), "retype first: %s -> %s" % (r["frm"], r["to"]))
+            if int(r["addr"], 16) not in FIXED or still_old(r["file"], r["addr"], r["frm"]):
+                self.addr_manual.setdefault(int(r["addr"], 16), "retype first: %s -> %s" % (r["frm"], r["to"]))
+            else:
+                obsolete.add(int(r["addr"], 16))
         for r in d["readdress"]:
-            self.addr_manual.setdefault(int(r["frm"], 16), "readdress to %s first" % r["to"])
+            if int(r["frm"], 16) not in FIXED or still_old(r["site"]["file"], r["frm"], r["site"]["type"].rstrip("*").strip()):
+                self.addr_manual.setdefault(int(r["frm"], 16), "readdress to %s first" % r["to"])
+            else:
+                obsolete.add(int(r["frm"], 16))
+        self.obsolete = obsolete
         for a, e in d["extents"].items():
-            if e["kind"] not in ("keep",):
+            if e["kind"] not in ("keep",) and int(a, 16) not in obsolete:
                 self.addr_manual.setdefault(int(a, 16), "extent %s: %s B -> %s B (fix the declared type first)" % (e["kind"], e["declared"], e["true_size"]))
         for a, v in d["ctor_audit"].items():
             if v in ("NONZERO", "VPTR"):

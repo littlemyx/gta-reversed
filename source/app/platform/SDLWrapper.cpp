@@ -51,6 +51,7 @@ static bool IsInFullscreen()
 #include <string>
 #include <vector>
 #include <sstream>
+#include <map>
 #include <fstream>
 #ifdef NOTSA_STANDALONE_RUN
 void RequestMarkScreenshot(const char* name); // standalone/rw/camera.cpp
@@ -63,6 +64,7 @@ bool               s_InjInit = false;
 uint64_t           s_InjStart = 0;
 int64_t            s_InjShift = 0;     // total ms the script clock was held by `until:` barriers (minus the waits skipped by `skipif:`)
 bool               s_InjHolding = false;
+std::map<SDL_Keycode, std::pair<uint64_t, uint64_t>> s_InjKeyDown; // key -> (real ms, CTimer frame) of its last injected down; first == UINT64_MAX once released
 uint64_t           s_InjHoldBegin = 0; // real clock (GetTickCount64 - start) when the current hold began
 
 bool InjCond(const std::string& c) {
@@ -175,6 +177,18 @@ void InjPump() {
             continue;
         }
         if (!ev.label.empty()) { s_InjNext++; continue; }
+        if (ev.mark.empty() && ev.mx < 0 && ev.key != 0) {
+            // A key must stay down for at least 150 ms of wall clock AND two game frames (CTimer frame counter; 1 s cap in case it does not advance) after it was really injected: when a hitch/low fps makes the pump run late,
+            // the scheduled down and up (150 ms apart) would otherwise be pushed in the same pump, the game sees no press at all (soak: ESC lost, quit never opened).
+            auto& st = s_InjKeyDown[ev.key];
+            if (ev.down) {
+                st = { real, (uint64_t)CTimer::GetFrameCounter() };
+            } else if (st.first != UINT64_MAX && (real - st.first < 150 || ((uint64_t)CTimer::GetFrameCounter() < st.second + 2 && real - st.first < 1000))) {
+                break; // retry on a later pump
+            } else {
+                st.first = UINT64_MAX;
+            }
+        }
         s_InjNext++;
         const uint64_t now = clock();
         SDL_Event e{};

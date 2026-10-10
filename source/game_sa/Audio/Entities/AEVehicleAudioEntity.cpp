@@ -454,11 +454,34 @@ eAEVehicleAudioType CAEVehicleAudioEntity::GetVehicleTypeForAudio() const noexce
         return eAEVehicleAudioType::GENERIC;
     }
 }
+//! Piecewise-linear lookup as the exe inlines it in 0x4F5C60 / 0x4F60B0 (5 points): the segment is the first point with x > ratio; ratio > 1.0 (a DOUBLE compare, the table ends at 1.0001),
+//! ratio < 0 or NaN (the scan runs off the end) -> last / first y; the interpolation is `t * (y1 - y0) + y0` at the stack precision
+static float ExeLinearTable5(float ratio, const float (&tab)[5][2]) {
+    int16 i = 0;
+    do {
+        if (tab[i][0] > ratio) {
+            break;
+        }
+    } while (++i < 5);
+    if (ratio > 1.0 || i == 5) {
+        return tab[4][1];
+    }
+    if (ratio < 0.0f || i == 0) {
+        return tab[0][1];
+    }
+    const float t = (ratio - tab[i - 1][0]) / (tab[i][0] - tab[i - 1][0]);
+    return t * (tab[i][1] - tab[i - 1][1]) + tab[i - 1][1];
+}
+
 
 // 0x4F6150
 float CAEVehicleAudioEntity::GetFlyingMetalVolume(CPhysical* physical) const noexcept {
-    const auto volume = std::min(physical->m_vecTurnSpeed.SquaredMagnitude(), sq(0.75f)) / sq(0.75f);
-    return volume >= 1.0e-10f
+    // 0x4F6150 (oracle-proven): (x*x + y*y) + z*z on the x87 stack; `fcomp` + `jp` = !(sum < 0.5625f) (NaN takes the constant); then `* 1.7777778f` (0x862CE4, a multiply, not
+    // a division by 0.5625); `jp` after the compare with 1e-10 = !(v < 1e-10f) (NaN takes the log path, whose AudioLog10 returns -5)
+    const auto& ts = physical->m_vecTurnSpeed;
+    const float sumSq = ts.x * ts.x + ts.y * ts.y + ts.z * ts.z;
+    const float volume = (sumSq < sq(0.75f) ? sumSq : sq(0.75f)) * ExeRecip(sq(0.75f));
+    return !(volume < 1.0e-10f)
         ? CAEAudioUtility::AudioLog10(volume) * 10.f
         : -100.f;
 }
@@ -1252,8 +1275,12 @@ void CAEVehicleAudioEntity::ProcessDummyStateTransition(eAEState newState, float
 }
 
 // @notsa
+//! The exe's inline clamp of the dummy-engine progress (0x4F51F0 ...): `t < 1 ? (t < 0 ? 0 : t) : 1`, so NaN -> 1 (std::clamp would return NaN)
+static constexpr float ExeUnitClamp(float t) {
+    return t < 1.0f ? (0.0f > t ? 0.0f : t) : 1.0f;
+}
 constexpr float CAEVehicleAudioEntity::GetDummyIdleRatioProgress(float ratio) {
-    return std::clamp(ratio / s_Config.DummyEngine.ID.Ratio, 0.0f, 1.0f);
+    return ExeUnitClamp(ratio / s_Config.DummyEngine.ID.Ratio);
 }
 
 // 0x4F51F0
@@ -1262,7 +1289,9 @@ float CAEVehicleAudioEntity::GetVolumeForDummyIdle(float ratio, float fadeRatio)
         return s_Config.DummyEngine.ID.VolumeBase - 30.0f;
     }
 
+    // exe: the lerp is `progress * (max - base) + base` (the delta is a start-up constant), stored as a float; the fade term is added to the engine offset FIRST, then to the volume
     float volume = lerp(s_Config.DummyEngine.ID.VolumeBase, s_Config.DummyEngine.ID.VolumeMax, GetDummyIdleRatioProgress(ratio));
+    float fadeTerm;
     if (m_State == eAEState::DUMMY_CRZ) {
         constexpr float points[5][2] = { // 0x8CC0C4
             { 0.0000f, 1.000f},
@@ -1271,9 +1300,11 @@ float CAEVehicleAudioEntity::GetVolumeForDummyIdle(float ratio, float fadeRatio)
             { 0.7000f, 0.707f},
             { 1.0001f, 0.000f}
         };
-        volume += CAEAudioUtility::AudioLog10(CAEAudioUtility::GetPiecewiseLinearT(fadeRatio, points)) * 20.0f;
-    } else if (fadeRatio <= 0.99f) {
-        volume += CAEAudioUtility::AudioLog10(fadeRatio) * 10.0f;
+        fadeTerm = CAEAudioUtility::AudioLog10(CAEAudioUtility::GetPiecewiseLinearT(fadeRatio, points)) * 20.0f;
+    } else if (fadeRatio > 0.99f) {
+        fadeTerm = 0.0f;
+    } else {
+        fadeTerm = CAEAudioUtility::AudioLog10(fadeRatio) * 10.0f;
     }
     if (GetVehicle()->vehicleFlags.bIsDrowning) {
         volume -= s_Config.DummyEngine.VolumeUnderwaterOffset;
@@ -1281,7 +1312,7 @@ float CAEVehicleAudioEntity::GetVolumeForDummyIdle(float ratio, float fadeRatio)
     if (GetVehicle()->m_pVehicleBeingTowed) {
         volume += s_Config.DummyEngine.VolumeTrailerOffset;
     }
-    return volume + m_AuSettings.EngineVolumeOffset;
+    return (fadeTerm + m_AuSettings.EngineVolumeOffset) + volume;
 }
 
 // 0x4F5310
@@ -1291,6 +1322,7 @@ float CAEVehicleAudioEntity::GetFrequencyForDummyIdle(float ratio, float fadeRat
     }
 
     float freq = lerp(s_Config.DummyEngine.ID.FreqBase, s_Config.DummyEngine.ID.FreqMax, GetDummyIdleRatioProgress(ratio));
+    float fadeMult = 1.0f;
     if (m_State == eAEState::DUMMY_CRZ) {
         constexpr float points[5][2] = { // 0x8CC0EC
             { 0.0000f, 1.00f },
@@ -1299,25 +1331,28 @@ float CAEVehicleAudioEntity::GetFrequencyForDummyIdle(float ratio, float fadeRat
             { 0.7000f, 0.85f },
             { 1.0001f, 0.85f },
         };
-        freq *= CAEAudioUtility::GetPiecewiseLinearT(fadeRatio, points);
+        fadeMult = CAEAudioUtility::GetPiecewiseLinearT(fadeRatio, points);
     }
     if (GetVehicle()->vehicleFlags.bIsDrowning) {
-        freq *= s_Config.FreqUnderwaterFactor;
+        freq = s_Config.FreqUnderwaterFactor * freq;   // exe: the underwater factor multiplies the stored frequency first, the fade multiplier last
     }
-    return freq;
+    return fadeMult * freq;
 }
 
 // @notsa
 constexpr float CAEVehicleAudioEntity::GetDummyRevRatioProgress(float ratio) {
-    return std::clamp(invLerp(s_Config.DummyEngine.Rev.Ratio, 1.f, ratio), 0.f, 1.f);
+    return ExeUnitClamp((ratio - s_Config.DummyEngine.Rev.Ratio) / (1.0f - s_Config.DummyEngine.Rev.Ratio));
 }
 
 // 0x4F53D0
 float CAEVehicleAudioEntity::GetVolumeForDummyRev(float ratio, float fadeRatio) const {
     float volume = lerp(s_Config.DummyEngine.Rev.VolumeBase, s_Config.DummyEngine.Rev.VolumeMax, GetDummyRevRatioProgress(ratio));
+    float fadeTerm;
     if (m_State != eAEState::DUMMY_CRZ) {
-        volume += CAEAudioUtility::AudioLog10(1.0f - fadeRatio) * 10.0f;
-    } else if (fadeRatio <= 0.99f) {
+        fadeTerm = CAEAudioUtility::AudioLog10(1.0f - fadeRatio) * 10.0f;
+    } else if (fadeRatio > 0.99) { // the exe compares with the DOUBLE 0.99 (0x862CD8), not 0.99f
+        fadeTerm = 0.0f;
+    } else {
         constexpr float points[][2] = { // 0x8CC114
             { 0.0000f, 0.000f},
             { 0.3000f, 0.000f},
@@ -1325,9 +1360,7 @@ float CAEVehicleAudioEntity::GetVolumeForDummyRev(float ratio, float fadeRatio) 
             { 0.7000f, 1.000f},
             { 1.0001f, 1.000f},
         };
-        volume += CAEAudioUtility::AudioLog10(CAEAudioUtility::GetPiecewiseLinearT(fadeRatio, points)) * 20.0f;
-    } else {
-        volume += 0.0f;
+        fadeTerm = CAEAudioUtility::AudioLog10(CAEAudioUtility::GetPiecewiseLinearT(fadeRatio, points)) * 20.0f;
     }
     if (GetVehicle()->vehicleFlags.bIsDrowning) {
         volume -= s_Config.DummyEngine.VolumeUnderwaterOffset;
@@ -1335,14 +1368,15 @@ float CAEVehicleAudioEntity::GetVolumeForDummyRev(float ratio, float fadeRatio) 
     if (GetVehicle()->m_pVehicleBeingTowed) {
         volume += s_Config.DummyEngine.VolumeTrailerOffset;
     }
-    return volume + m_AuSettings.EngineVolumeOffset;
+    return (fadeTerm + m_AuSettings.EngineVolumeOffset) + volume;
 }
 
 // 0x4F54F0
 float CAEVehicleAudioEntity::GetFrequencyForDummyRev(float ratio, float fadeRatio) const {
     float freq = lerp(s_Config.DummyEngine.Rev.FreqBase, s_Config.DummyEngine.Rev.FreqMax, GetDummyRevRatioProgress(ratio));
-    if (m_State == eAEState::DUMMY_CRZ && fadeRatio < 0.99f) {
-        freq *= CGeneral::GetPiecewiseLinear({
+    float fadeMult = 1.0f;
+    if (m_State == eAEState::DUMMY_CRZ && !(fadeRatio > 0.99)) { // DOUBLE 0.99 (0x862CD8); NaN takes the table
+        fadeMult = CGeneral::GetPiecewiseLinear({
             { 0.0000f, 1.0f },
             { 0.5000f, 1.0f },
             { 0.7000f, 1.2f },
@@ -1351,9 +1385,9 @@ float CAEVehicleAudioEntity::GetFrequencyForDummyRev(float ratio, float fadeRati
         }, fadeRatio);
     }
     if (GetVehicle()->vehicleFlags.bIsDrowning) {
-        freq *= s_Config.FreqUnderwaterFactor;
+        freq = s_Config.FreqUnderwaterFactor * freq;
     }
-    return freq;
+    return fadeMult * freq;
 }
 #pragma endregion
 
@@ -2600,13 +2634,14 @@ float CAEVehicleAudioEntity::GetVolForPlayerEngineSound(tVehicleParams& vp, eVeh
 
 // 0x4F5C60
 float CAEVehicleAudioEntity::GetFreqForIdle(float ratio) const noexcept {
-    return CGeneral::GetPiecewiseLinear({ // 0x8CC164:
+    constexpr float points[5][2] = { // 0x8CC164
         { 0.000f, 0.000f },
         { 0.075f, 0.700f },
         { 0.150f, 1.100f },
         { 0.250f, 1.250f },
-        { 1.000f, 1.700f },
-    }, ratio);
+        { 1.0001f, 1.700f },
+    };
+    return ExeLinearTable5(ratio, points);
 }
 
 // 0x4F8070
@@ -4417,13 +4452,14 @@ void CAEVehicleAudioEntity::PlayBicycleSound(eBicycleSoundType st, eSoundBankSlo
 
 // 0x4F60B0
 float CAEVehicleAudioEntity::GetBaseVolumeForBicycleTyre(float ratio) const noexcept {
-    return CGeneral::GetPiecewiseLinear({ // 0x8CC18C:
+    constexpr float points[5][2] = { // 0x8CC18C
         { 0.00f, 0.00f },
         { 0.10f, 0.30f },
         { 0.20f, 0.45f },
         { 0.50f, 0.85f },
-        { 1.00f, 1.00f },
-        }, ratio);
+        { 1.0001f, 1.00f },
+    };
+    return ExeLinearTable5(ratio, points);
 }
 
 // 0xB6BAC8, 0xB6BAC9, 0xB6BACC, 0xB6BAD0 - Names are made up

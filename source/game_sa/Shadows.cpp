@@ -598,7 +598,7 @@ void CShadows::StoreRealTimeShadow(CPhysical* physical, float displacementX, flo
     }
 
     const auto strength = (float)CalculateShadowStrength(std::sqrt(shdwToCamDist2DSq), MAX_DISTANCE_PED_SHADOWS, CTimeCycle::m_CurrentColours.m_nShadowStrength);
-    const auto cc       = (uint8)((float)rtshdw->m_nIntensity / 100.f * strength);
+    const auto cc       = (uint8)((float)rtshdw->m_nIntensity * ExeRecip(100.f) * strength);
 
     const auto& vecToSun = CTimeCycle::m_VectorToSun[CTimeCycle::m_CurrentStoredValue];
     const auto lightFrame = rtshdw->SetLightProperties(
@@ -789,8 +789,8 @@ void CShadows::RenderStaticShadows() {
                     const auto& pos = poly->m_avecPosn[i];
                     RwIm3DVertexSetPos(vtxIt, pos.x, pos.y, pos.z + 0.06f);
                     RwIm3DVertexSetRGBA(vtxIt, r, g, b, a);
-                    RwIm3DVertexSetU(vtxIt, (float)poly->m_aU[i] / 200.f);
-                    RwIm3DVertexSetV(vtxIt, (float)poly->m_aV[i] / 200.f);
+                    RwIm3DVertexSetU(vtxIt, (float)poly->m_aU[i] * ExeRecip(200.f));
+                    RwIm3DVertexSetV(vtxIt, (float)poly->m_aV[i] * ExeRecip(200.f));
                 }
 
                 // 0x7085BC: Write indices  (`if` not necessary, it's part of the loop condition)

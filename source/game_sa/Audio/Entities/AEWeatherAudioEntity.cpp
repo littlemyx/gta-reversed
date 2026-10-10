@@ -194,7 +194,7 @@ void CAEWeatherAudioEntity::UpdateParameters(CAESound* sound, int16 curPlayPos) 
                         (float)((double)(float)((double)right.z + (double)pov.z) - (double)hitCP.m_vecPoint.z) // The Z sum is rounded to float first
                     };
                     const double dist = MagnitudeX87(toHit);
-                    dopplerVol = (float)(std::log10((1.0 - dist * (double)(1.f / 6.f)) * (double)speed) * 20.0 + 30.0);
+                    dopplerVol = (float)(std::log10((1.0 - dist * (double)ExeRecip(6.f)) * (double)speed) * 20.0 + 30.0);
                     outSpeed   = (double)speed * (double)1.75f + (double)1.75f;
                 }
             }

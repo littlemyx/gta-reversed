@@ -1708,7 +1708,7 @@ CPed* CPlayerPed::FindPedToAttack() {
         float dist = CCollision::DistToLine(origin, end, point);
         float pointDist = (point - origin).Magnitude2D();
         if (pointDist > 20.0f)
-            dist += (pointDist - 20.0f) / 5.0f;
+            dist += (pointDist - 20.0f) * ExeRecip(5.0f);
 
         if (IsPedTypeGang(ped->m_nPedType))
             dist = std::max(0.0f, dist / 2.0f - 2.0f);
@@ -2571,7 +2571,7 @@ void CPlayerPed::ProcessControl() {
         }
     }
     if (GetPlayerData()->m_nDrunkenness) 
-        CMBlur::SetDrunkBlur(GetPlayerData()->m_nDrunkenness / 255.0f);
+        CMBlur::SetDrunkBlur(GetPlayerData()->m_nDrunkenness * ExeRecip(255.0f));
     if (GetPlayerData()->m_bRequireHandleBreath) {
         if (CStats::GetFatAndMuscleModifier(STAT_MOD_AIR_IN_LUNG) > GetPlayerData()->m_fBreath)
             GetPlayerData()->m_fBreath += CTimer::GetTimeStep() + CTimer::GetTimeStep();

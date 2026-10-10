@@ -230,7 +230,7 @@ void CWeaponInfo::LoadWeaponData() {
             wi.m_nReqStatLevel = reqStatLevelForSkill;
             wi.m_fAccuracy = accuracy;
             wi.m_fMoveSpeed = moveSpeed;
-            wi.m_fBreakoutTime = (float)breakoutTime / 30.f;
+            wi.m_fBreakoutTime = (float)breakoutTime * ExeRecip(30.f);
             wi.m_nFlags = flags;
             wi.m_Speed = speed;
             wi.m_fLifespan = lifespan;
@@ -241,11 +241,11 @@ void CWeaponInfo::LoadWeaponData() {
                 assert(start <= end);
 
                 const auto info = animLoopInfo[idx];
-                start = (float)info.start / 30.f;
-                end = (float)info.end / 30.f;
-                fire = (float)info.fire / 30.f;
+                start = (float)info.start * ExeRecip(30.f);
+                end = (float)info.end * ExeRecip(30.f);
+                fire = (float)info.fire * ExeRecip(30.f);
 
-                end = start + std::floor(0.1f + (end - start) * 50.f) / 50.f - 0.006f;
+                end = start + std::floor(0.1f + (end - start) * 50.f) * ExeRecip(50.f) - 0.006f;
             };
             SetAnimLoopInfos(wi.m_fAnimLoopStart, wi.m_fAnimLoopEnd, wi.m_fAnimLoopFire, 0);
             SetAnimLoopInfos(wi.m_fAnimLoop2Start, wi.m_fAnimLoop2End, wi.m_fAnimLoop2Fire, 1);

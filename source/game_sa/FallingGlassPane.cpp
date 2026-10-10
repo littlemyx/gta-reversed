@@ -20,10 +20,10 @@ void CFallingGlassPane::Update() {
 
     if (m_f6F) {
         pos += CTimer::GetTimeStep() * 0.35f * m_Velocity;
-        m_Velocity.z -= CTimer::GetTimeStep() / 100.f;
+        m_Velocity.z -= CTimer::GetTimeStep() * ExeRecip(100.f);
     } else {
         pos += CTimer::GetTimeStep() * m_Velocity;
-        m_Velocity.z -= CTimer::GetTimeStep() / 50.f;
+        m_Velocity.z -= CTimer::GetTimeStep() * ExeRecip(50.f);
     }
 
     m_Matrix.GetRight()   += CrossProduct(m_RandomNumbers, m_Matrix.GetRight());

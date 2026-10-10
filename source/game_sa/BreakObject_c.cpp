@@ -327,7 +327,7 @@ void BreakObject_c::Update(float timeStep) {
     auto bToBeRemoved = true;
     for (auto& group : GetBreakGroups()) {
         if (!group.m_bStoppedMoving) {
-            group.m_Velocity.z -= timeStep / 125.0f;
+            group.m_Velocity.z -= timeStep * ExeRecip(125.0f);
             CVector vecVelocity = group.m_Velocity;
             vecVelocity *= timeStep;
 
@@ -349,7 +349,7 @@ void BreakObject_c::Update(float timeStep) {
                     CVector axis = CrossProduct(*vecFacing, m_VecNormal);
                     axis.Normalise();
 
-                    auto fAngleDeg = RadiansToDegrees(fAngleRad) * timeStep / 20.0f;
+                    auto fAngleDeg = RadiansToDegrees(fAngleRad) * timeStep * ExeRecip(20.0f);
                     CVector savedPos = *pos;
                     RwMatrixRotate(&group.m_Matrix, &axis, fAngleDeg, RwOpCombineType::rwCOMBINEPOSTCONCAT);
                     *pos = savedPos;

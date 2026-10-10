@@ -534,7 +534,7 @@ void C3dMarkers::PlaceMarkerSet(uint32 id, e3dMarkerType type, CVector& posn, fl
         type,
         posn,
         size,
-        red, green, blue, static_cast<uint8>((float)alpha * 1.0f / 3.0f),
+        red, green, blue, static_cast<uint8>((float)alpha * ExeRecip(3.0f)),
         pulsePeriod,
         pulseFraction,
         1,

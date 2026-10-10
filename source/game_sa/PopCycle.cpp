@@ -370,7 +370,7 @@ void CPopCycle::Update() {
 
 // 0x610560
 void CPopCycle::UpdateAreaDodgyness() {
-    m_fCurrentZoneDodgyness = std::min((float)m_pCurrZoneInfo->DealerStrength * 0.07f + (float)m_pCurrZoneInfo->GetSumOfGangDensity() / 100.f, 1.0f);
+    m_fCurrentZoneDodgyness = std::min((float)m_pCurrZoneInfo->DealerStrength * 0.07f + (float)m_pCurrZoneInfo->GetSumOfGangDensity() * ExeRecip(100.f), 1.0f);
 }
 
 // 0x6104B0
@@ -408,9 +408,9 @@ void CPopCycle::UpdateDealerStrengths() {
 
 // 0x610770
 void CPopCycle::UpdatePercentages() {
-    m_fPercDealers = std::max(0.1f, (float)m_pCurrZoneInfo->DealerStrength / 100.f);
+    m_fPercDealers = std::max(0.1f, (float)m_pCurrZoneInfo->DealerStrength * ExeRecip(100.f));
 
-    m_fPercGangs = std::min(0.5f, (float)m_pCurrZoneInfo->GetSumOfGangDensity() / 100.f);
+    m_fPercGangs = std::min(0.5f, (float)m_pCurrZoneInfo->GetSumOfGangDensity() * ExeRecip(100.f));
     m_fPercCops = m_fPercGangs >= 0.15f
         ? std::max(0.03f, 0.3f - m_fPercGangs)
         : std::max(0.02f, m_fPercGangs);
@@ -458,7 +458,7 @@ void CPopCycle::UpdatePercentages() {
         maxNumPeds,
         maxNumCars = GetMaxCarsCurrently()
     ](PercDataArray& maxPercLUT, float percPeds, float percCars, float& nOutPeds, float& nOutCars) {
-        const auto maxPercOfType = (float)maxPercLUT[m_nCurrentTimeIndex][m_nCurrentTimeOfWeek][m_nCurrentZoneType] / 100.f;
+        const auto maxPercOfType = (float)maxPercLUT[m_nCurrentTimeIndex][m_nCurrentTimeOfWeek][m_nCurrentZoneType] * ExeRecip(100.f);
 
         nOutPeds = maxNumPeds * (maxPercOfType * percPeds);
         nOutCars = maxNumCars * (maxPercOfType * percCars);
@@ -470,7 +470,7 @@ void CPopCycle::UpdatePercentages() {
     Process(m_nPercDealers, m_fPercDealers,                                    m_fPercDealers, m_NumDealers_Peds, m_NumDealers_Cars);
     Process(m_nPercGang,    m_fPercGangs,                                      m_fPercGangs,   m_NumGangs_Peds,   m_NumGangs_Cars  );
     Process(m_nPercCops,    m_fPercCops,                                       m_fPercCops,    m_NumCops_Peds,    m_NumCops_Cars   );
-    Process(m_nPercOther,   m_fPercOther * GetCurrentPercOther_Peds() / 100.f, m_fPercOther,   m_NumOther_Peds,   m_NumOther_Cars  );
+    Process(m_nPercOther,   m_fPercOther * GetCurrentPercOther_Peds() * ExeRecip(100.f), m_fPercOther,   m_NumOther_Peds,   m_NumOther_Cars  );
 }
 
 // 0x60F8D0

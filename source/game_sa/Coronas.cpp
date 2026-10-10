@@ -252,7 +252,7 @@ void CCoronas::Render() {
             RwRenderStateSet(rwRENDERSTATETEXTURERASTER, RWRSTATE(RwTextureGetRaster(c.m_pTexture)));
 
             //< 0x6FB122
-            const auto scale = std::min(40.f, onScrPos.z) * CWeather::Foggyness / 40.f + 1.f;
+            const auto scale = std::min(40.f, onScrPos.z) * CWeather::Foggyness * ExeRecip(40.f) + 1.f;
 
             // NOP - The coordinates are later overwritten
             //if (c.m_dwId == 1) {
@@ -592,7 +592,7 @@ void CCoronas::RegisterCorona(
             return;
         }
         if (distance3d < 50.0f) {
-            adjustedAlpha *= uint8((distance3d + -35.0f) / 15.0f);
+            adjustedAlpha *= uint8((distance3d + -35.0f) * ExeRecip(15.0f));
         }
     }
 

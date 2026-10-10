@@ -166,7 +166,7 @@ void CTaskSimpleCarDrive::StartBopping(CPed* ped) {
         // `rand() & 0xFFFF` * 2^-15 * -60 [truncated]
         const auto rnd = (int32)((float)(CGeneral::GetRandomNumber() & 0xFFFF) * (1.f / 32768.f) * -60.f);
         // 60..119 BPM => ms/beat
-        m_nBoppingEndTime       = (int32)(1.f / ((float)(60 - rnd) * (1.f / 60.f)) * 1000.f);
+        m_nBoppingEndTime       = (int32)(1.f / ((float)(60 - rnd) * ExeRecip(60.f)) * 1000.f);
         m_fBoppingProgress      = 0.f;
         return;
     }

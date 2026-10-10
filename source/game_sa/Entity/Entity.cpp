@@ -1785,9 +1785,9 @@ void CEntity::ProcessLightsForEntity() {
                 CCoronas::RegisterCorona(
                     m_nRandomSeed + C + 1,
                     nullptr,
-                    static_cast<uint8>((CTimeCycle::m_CurrentColours.m_nSunCoreRed + 510) * glare / 3.0f),
-                    static_cast<uint8>((CTimeCycle::m_CurrentColours.m_nSunCoreGreen + 510) * glare / 3.0f),
-                    static_cast<uint8>((CTimeCycle::m_CurrentColours.m_nSunCoreBlue + 510) * glare / 3.0f),
+                    static_cast<uint8>((CTimeCycle::m_CurrentColours.m_nSunCoreRed + 510) * glare * ExeRecip(3.0f)),
+                    static_cast<uint8>((CTimeCycle::m_CurrentColours.m_nSunCoreGreen + 510) * glare * ExeRecip(3.0f)),
+                    static_cast<uint8>((CTimeCycle::m_CurrentColours.m_nSunCoreBlue + 510) * glare * ExeRecip(3.0f)),
                     255,
                     effectPos,
                     radius,
@@ -2008,7 +2008,7 @@ void CEntity::ProcessLightsForEntity() {
                     sizeMult = 2.0f;
                 }
 
-                TimeFade = CTimeCycle::m_CurrentColours.m_fSpriteBrightness * brightness / 10.0f;
+                TimeFade = CTimeCycle::m_CurrentColours.m_fSpriteBrightness * brightness * ExeRecip(10.0f);
                 const auto coronaSize = effect->light.m_fCoronaSize * sizeMult;
 
                 CCoronas::RegisterCorona(

@@ -2005,7 +2005,7 @@ void CWorld::TriggerExplosionSectorList(PtrListType& ptrList, const CVector& poi
         auto impactVelocity = entityToPointDir / std::max(0.01f, entityToPointDist);
         impactVelocity.z = std::max(impactVelocity.z, 0.f);
 
-        float impactVelocityFactor = entity->m_fMass / 1400.f * entityRelDistToRadiusEnd_Doubled * visibleDistance;
+        float impactVelocityFactor = entity->m_fMass * ExeRecip(1400.f) * entityRelDistToRadiusEnd_Doubled * visibleDistance;
 
         switch (entity->GetType()) {
         case ENTITY_TYPE_VEHICLE: {
@@ -2112,7 +2112,7 @@ void CWorld::TriggerExplosionSectorList(PtrListType& ptrList, const CVector& poi
                         ped->bIsStanding = false;
                         impactVelocity.z += 4.f;
                     } else {
-                        impactVelocity.z += CTimer::GetTimeStepInMS() * ped->m_fMass / 125.f;
+                        impactVelocity.z += CTimer::GetTimeStepInMS() * ped->m_fMass * ExeRecip(125.f);
                     }
 
                     ped->ApplyMoveForce(impactVelocity);
@@ -2730,7 +2730,7 @@ void CWorld::RepositionOneObject(CEntity* object) {
 
         auto& pos = object->GetPosition();
         auto height = colModel->GetBoundingBox().GetHeight();
-        pos.z = 6.f - height / 2.f + height / 5.f;
+        pos.z = 6.f - height / 2.f + height * ExeRecip(5.f);
     }
 }
 

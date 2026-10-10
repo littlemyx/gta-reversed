@@ -63,11 +63,11 @@ bool CCustomBuildingRenderer::IsCBPCPipelineAttached(RpAtomic* atomic) {
 
 // 0x5D7F80
 void CCustomBuildingRenderer::UpdateDayNightBalanceParam() {
-    const auto minutes = (float)(CClock::ms_nGameClockHours * 60u + CClock::ms_nGameClockMinutes) + (float)CClock::ms_nGameClockSeconds * (1.0f / 60.0f);
+    const auto minutes = (float)(CClock::ms_nGameClockHours * 60u + CClock::ms_nGameClockMinutes) + (float)CClock::ms_nGameClockSeconds * ExeRecip(60.0f);
 
     if (minutes >= 360.0f) {
         if (minutes < 420.0f) {
-            CCustomBuildingDNPipeline::m_fDNBalanceParam = (420.0f - minutes) * (1.0f / 60.0f);
+            CCustomBuildingDNPipeline::m_fDNBalanceParam = (420.0f - minutes) * ExeRecip(60.0f);
             return;
         }
         if (minutes < 1200.0f) {
@@ -75,7 +75,7 @@ void CCustomBuildingRenderer::UpdateDayNightBalanceParam() {
             return;
         }
         if (minutes < 1260.0f) {
-            CCustomBuildingDNPipeline::m_fDNBalanceParam = 1.0f - (1260.0f - minutes) * (1.0f / 60.0f);
+            CCustomBuildingDNPipeline::m_fDNBalanceParam = 1.0f - (1260.0f - minutes) * ExeRecip(60.0f);
             return;
         }
     }

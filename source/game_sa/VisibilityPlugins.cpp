@@ -288,7 +288,7 @@ int32 CVisibilityPlugins::CalculateFadingAtomicAlpha(CBaseModelInfo* modelInfo, 
     if (!entity->GetLod()) {
         const float fDrawDistance = std::min(modelInfo->m_fDrawDistance, fDrawDistanceRadius);
         if (fDrawDistance > MAX_LOWLOD_DISTANCE) {
-            fFadingDistance = fDrawDistance / 15.0f + 10.0f;
+            fFadingDistance = fDrawDistance * ExeRecip(15.0f) + 10.0f;
         }
         if (entity->m_bIsBIGBuilding) {
             fDrawDistanceRadius *= CRenderer::ms_lowLodDistScale;

@@ -107,7 +107,7 @@ long CAEVorbisDecoder::GetStreamPlayTimeMs() {
 // 0x502670
 void CAEVorbisDecoder::SetCursor(unsigned long pos) {
     if (m_bInitialized)
-        ov_time_seek(m_pVorbisFileHandle, static_cast<float>(pos) / 1000.0f);
+        ov_time_seek(m_pVorbisFileHandle, static_cast<float>(pos) * ExeRecip(1000.0f));
 }
 
 // 0x502560

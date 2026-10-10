@@ -322,7 +322,7 @@ void CCustomCarEnvMapPipeline::CustomPipeRenderCB(RwResEntry* resEntry, void* ob
 
             // 0x5D9C04
             // The whole expression is evaluated in extended precision, then truncated (_ftol): raw (unsigned) * (1/255) * specIntensity * 254
-            const auto c = (uint32)std::min<int64>(0xFF, (int64)(((double)std::bit_cast<uint8>(EnvMapPlGetData(mat)->Shininess) * (double)(1.f / 255.f) * (double)specIntensity) * 254.0)); // 0x859A3C, 0x86BE90
+            const auto c = (uint32)std::min<int64>(0xFF, (int64)(((double)std::bit_cast<uint8>(EnvMapPlGetData(mat)->Shininess) * (double)ExeRecip(255.f) * (double)specIntensity) * 254.0)); // 0x859A3C, 0x86BE90
             RwD3D9SetRenderState(D3DRS_TEXTUREFACTOR, D3DCOLOR_ARGB(0xFF, c, c, c));
 
             // 0x5D9C38
@@ -481,12 +481,12 @@ void CCustomCarEnvMapPipeline::CustomPipeRenderCB(RwResEntry* resEntry, void* ob
                         m.Ambient.g = AmbientSaturated.green * mat->surfaceProps.ambient;
                         m.Ambient.b = AmbientSaturated.blue * mat->surfaceProps.ambient;
                     } else { // 0x5DA7E2
-                        const double d255 = (double)d * (double)(1.f / 255.f);
+                        const double d255 = (double)d * (double)ExeRecip(255.f);
                         m.Diffuse = {
                             (float)((double)color.r * d255),
                             (float)((double)color.g * d255),
                             (float)((double)color.b * d255),
-                            (float)((double)color.a * (double)(1.f / 255.f))
+                            (float)((double)color.a * (double)ExeRecip(255.f))
                         };
 
                         RwD3D9SetRenderState(D3DRS_AMBIENT, isPrelit ? color.ToIntARGB() : 0xFFFFFFFF);
@@ -495,7 +495,7 @@ void CCustomCarEnvMapPipeline::CustomPipeRenderCB(RwResEntry* resEntry, void* ob
                         RwD3D9SetRenderState(D3DRS_COLORVERTEX, isPrelit);
                         RwD3D9SetRenderState(D3DRS_EMISSIVEMATERIALSOURCE, D3DMCS_MATERIAL);
 
-                        const float amb255 = (float)((double)mat->surfaceProps.ambient * (double)(1.f / 255.f)); // stored as float by the exe
+                        const float amb255 = (float)((double)mat->surfaceProps.ambient * (double)ExeRecip(255.f)); // stored as float by the exe
                         auto& dst = isPrelit ? m.Emissive : m.Ambient; // the other one stays 0
                         dst.r = (float)(((double)color.r * (double)AmbientSaturated.red) * (double)amb255);
                         dst.g = (float)(((double)color.g * (double)AmbientSaturated.green) * (double)amb255);

@@ -28,7 +28,7 @@ void CTaskComplexOnFire::ComputeFireDamage(CPed* ped, CPedDamageResponse& outRes
 
     CPedDamageResponseCalculator calc{
         ped->m_pFire ? ped->m_pFire->GetEntityStartedFire() : nullptr,
-        CTimer::GetTimeStep() * ped->m_fireDmgMult * 500.f / 1000.f, // TODO: Magic numberz
+        CTimer::GetTimeStep() * ped->m_fireDmgMult * 500.f * ExeRecip(1000.f), // TODO: Magic numberz
         WEAPON_FLAMETHROWER,
         PED_PIECE_TORSO,
         false

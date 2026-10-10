@@ -633,10 +633,10 @@ void Fx_c::AddDebris(const CVector& pos, const RwRGBA& color, float scale, int32
     }
 
     FxPrtMult_c fxMults{}; // 0x4AB270
-    fxMults.m_Color.red   = (float)((double)color.red   * (double)(1.0f / 255.0f)); // 0x859A3C
-    fxMults.m_Color.green = (float)((double)color.green * (double)(1.0f / 255.0f));
-    fxMults.m_Color.blue  = (float)((double)color.blue  * (double)(1.0f / 255.0f));
-    fxMults.m_Color.alpha = (float)((double)color.alpha * (double)(1.0f / 255.0f));
+    fxMults.m_Color.red   = (float)((double)color.red   * (double)ExeRecip(255.0f)); // 0x859A3C
+    fxMults.m_Color.green = (float)((double)color.green * (double)ExeRecip(255.0f));
+    fxMults.m_Color.blue  = (float)((double)color.blue  * (double)ExeRecip(255.0f));
+    fxMults.m_Color.alpha = (float)((double)color.alpha * (double)ExeRecip(255.0f));
     fxMults.m_fSize = scale;
     fxMults.m_fLife = 0.2f;
     fxMults.m_Rot   = (float)((RandFrac10000() + 1.0) * (double)0.5f); // 0x858624, 0x858B8C
@@ -667,10 +667,10 @@ void Fx_c::AddGlass(const CVector& pos, const RwRGBA& color, float scale, int32 
     }
 
     FxPrtMult_c fxMults{}; // 0x4AB270
-    fxMults.m_Color.red   = (float)((double)color.red   * (double)(1.0f / 255.0f)); // 0x859A3C
-    fxMults.m_Color.green = (float)((double)color.green * (double)(1.0f / 255.0f));
-    fxMults.m_Color.blue  = (float)((double)color.blue  * (double)(1.0f / 255.0f));
-    fxMults.m_Color.alpha = (float)((double)color.alpha * (double)(1.0f / 255.0f));
+    fxMults.m_Color.red   = (float)((double)color.red   * (double)ExeRecip(255.0f)); // 0x859A3C
+    fxMults.m_Color.green = (float)((double)color.green * (double)ExeRecip(255.0f));
+    fxMults.m_Color.blue  = (float)((double)color.blue  * (double)ExeRecip(255.0f));
+    fxMults.m_Color.alpha = (float)((double)color.alpha * (double)ExeRecip(255.0f));
     fxMults.m_fSize = scale;
     fxMults.m_fLife = 0.2f;
     fxMults.m_Rot   = (float)((RandFrac10000() + 1.0) * (double)0.5f); // 0x858624, 0x858B8C

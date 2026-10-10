@@ -55,8 +55,8 @@ char* CGridRef::GetArtistBugstarID(uint8 x, uint8 y) {
 
 // 0x71D5A0
 void CGridRef::GetGridRefPositions(CVector pos, uint8* x, uint8* y) {
-    *x =     (uint32)((pos.x + 3000.0) / 600.0f);
-    *y = 9 - (uint32)((pos.y + 3000.0) / 600.0f);
+    *x =     (uint32)((pos.x + 3000.0) * ExeRecip(600.0f));
+    *y = 9 - (uint32)((pos.y + 3000.0) * ExeRecip(600.0f));
 }
 
 // 0x71D5E0

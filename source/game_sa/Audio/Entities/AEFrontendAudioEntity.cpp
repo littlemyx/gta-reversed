@@ -394,7 +394,7 @@ void CAEFrontendAudioEntity::UpdateParameters(CAESound* sound, int16 curPlayPos)
         if (curPlayPos < 0 || curPlayPos > 350) {
             return;
         }
-        const float t = (float)curPlayPos * (1.0f / 350.0f);
+        const float t = (float)curPlayPos * ExeRecip(350.0f);
         const float z = isRear
             ? (t + t) - 1.0f
             : 1.0f - (t + t);

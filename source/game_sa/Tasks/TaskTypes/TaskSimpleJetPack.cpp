@@ -328,7 +328,7 @@ void CTaskSimpleJetPack::ProcessControlInput(CPlayerPed* player) {
 
     const auto walkUpDown = (float)pad->GetPedWalkUpDown();
     const auto walkLeftRight = (float)pad->GetPedWalkLeftRight();
-    const auto padMoveMag = std::sqrt(sq(walkUpDown) + sq(walkLeftRight)) / 60.f;
+    const auto padMoveMag = std::sqrt(sq(walkUpDown) + sq(walkLeftRight)) * ExeRecip(60.f);
 
     const auto InterpolateThrustAngle = [&, this]{
         // exe (0x67E938): `p = pow(0.9, timestep)` stays on the x87 stack; result = (1 - p) * (walkUpDown * (1/128)) * 75deg + thrustAngle * p

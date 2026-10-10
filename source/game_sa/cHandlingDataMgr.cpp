@@ -291,7 +291,7 @@ void cHandlingDataMgr::ConvertDataToWorldUnits(tHandlingData* h) {
     t->m_MaxVelocity /= VELOCITY_CONST;
     h->m_fBrakeDeceleration /= ACCEL_CONST;
     t->m_EngineAcceleration *= (t->m_nDriveType == '4' ? 4.f : 2.f) / ACCEL_CONST;
-    h->m_fCollisionDamageMultiplier *= h->m_fMass / 2000.f;
+    h->m_fCollisionDamageMultiplier *= h->m_fMass * ExeRecip(2000.f);
 }
 
 // update some handling variables with some game-specific multipliers
@@ -327,7 +327,7 @@ void cHandlingDataMgr::ConvertDataToGameUnits(tHandlingData* h) {
         t->m_MaxFlatVelocity    = maxVelocity;
         t->m_MaxReverseVelocity = -maxVelocity;
     } else if (h->m_bUseMaxspLimit) {
-        t->m_MaxFlatVelocity    = maxVelocity / 1.2f;
+        t->m_MaxFlatVelocity    = maxVelocity * ExeRecip(1.2f);
         t->m_MaxReverseVelocity = std::min(-t->m_MaxFlatVelocity / 4.f, -0.2f);
     } else {
         t->m_MaxVelocity     = maxVelocity * 1.2f;

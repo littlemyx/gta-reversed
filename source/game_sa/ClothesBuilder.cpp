@@ -618,7 +618,7 @@ void CClothesBuilder::BlendTextures(RwTexture* dst, RwTexture* src1, RwTexture* 
     auto dstIt  = RwRasterLock(dstRaster, 0, rwRASTERLOCKREADWRITE);
 
     for (auto i = RwRasterGetHeight(dstRaster) * RwRasterGetWidth(dstRaster); i-- > 0; dstIt++, src1It++, src2It++, tatIt++) {
-        const auto tatAlphaT = (float)tatIt[3] / 255.f;
+        const auto tatAlphaT = (float)tatIt[3] * ExeRecip(255.f);
         for (auto c = 3; i-- > 0; dstIt++, src1It++, src2It++, tatIt++) { // Copy RGB, alpha doesn't change
             *dstIt = (RwUInt8)lerp(multiply_weighted<RwUInt8>({ { *dstIt, r1 }, { *src1It, r2 }, { *src2It, r3 } }), *tatIt, tatAlphaT);
         }

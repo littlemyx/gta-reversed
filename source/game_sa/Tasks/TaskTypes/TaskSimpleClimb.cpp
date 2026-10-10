@@ -185,7 +185,7 @@ bool CTaskSimpleClimb::ProcessPed(CPed* ped) {
             ped->bIsLanding  = false;
 
             if (m_HeightForPos == CLIMB_FINISHED_V) {
-                ped->m_vecMoveSpeed = ped->GetForward() / 50.0f + CVector(0.0f, 0.0f, -0.05f);
+                ped->m_vecMoveSpeed = ped->GetForward() * ExeRecip(50.0f) + CVector(0.0f, 0.0f, -0.05f);
                 ped->bIsStanding    = false;
                 ped->bWasStanding   = true;
             } else {

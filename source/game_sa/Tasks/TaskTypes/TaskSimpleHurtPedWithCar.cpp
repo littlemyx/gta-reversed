@@ -56,7 +56,7 @@ bool CTaskSimpleHurtPedWithCar::ProcessPed(CPed* ped) {
     ped->bIsStanding       = false;
     ped->m_vecMoveSpeed    = CVector{ CVector2D{ m_Car->GetMoveSpeed() } * 0.75f };
 
-    m_Car->ApplyMoveForce((ped->GetPosition() - m_Car->GetPosition()).Normalized() * (std::min(m_Car->m_fMass / 1400.f, 1.f) * -60.f)); // TODO: 1400.f? I've seen it used a few times...
+    m_Car->ApplyMoveForce((ped->GetPosition() - m_Car->GetPosition()).Normalized() * (std::min(m_Car->m_fMass * ExeRecip(1400.f), 1.f) * -60.f)); // TODO: 1400.f? I've seen it used a few times...
 
     return true;
 }

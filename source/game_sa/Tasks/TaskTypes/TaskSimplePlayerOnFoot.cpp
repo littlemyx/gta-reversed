@@ -1095,7 +1095,7 @@ int32 CTaskSimplePlayerOnFoot::PlayerControlZelda(CPlayerPed* player, bool bAvoi
     CPad* pad = player->GetPadFromPlayer();
     float pedWalkLeftRight = pad->GetPedWalkLeftRight();
     float pedWalkUpDown = pad->GetPedWalkUpDown();
-    float pedMoveBlendRatio = sqrt(pedWalkUpDown * pedWalkUpDown + pedWalkLeftRight * pedWalkLeftRight) * (1.0f / 60.0f);
+    float pedMoveBlendRatio = sqrt(pedWalkUpDown * pedWalkUpDown + pedWalkLeftRight * pedWalkLeftRight) * ExeRecip(60.0f);
     if (player->m_pAttachedTo) 
         pedMoveBlendRatio = 0.0f;
 

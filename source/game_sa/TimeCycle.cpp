@@ -250,7 +250,7 @@ void CTimeCycle::AddOne(CBox& box, int16 farClip, int32 m_ExtraColor, float stre
     m_aBoxes[m_NumBoxes].Box = box;
     m_aBoxes[m_NumBoxes].FarClip = farClip;
     m_aBoxes[m_NumBoxes].ExtraColor = m_ExtraColor;
-    m_aBoxes[m_NumBoxes].Strength = strength / 100.0f;
+    m_aBoxes[m_NumBoxes].Strength = strength * ExeRecip(100.0f);
     m_aBoxes[m_NumBoxes].Falloff = falloff;
     m_aBoxes[m_NumBoxes].LodDistMult = (uint8)(std::min(lodDistMult, 4.0f) * 32.0f);
     m_NumBoxes++;
@@ -308,7 +308,7 @@ void CTimeCycle::CalcColoursForPoint(CVector point, CColourSet* set) {
     }
     
     const auto& camPos = TheCamera.GetPosition();
-    float f = std::clamp((camPos.z - 20.0f) / 200.0f, 0.0f, 1.0f);
+    float f = std::clamp((camPos.z - 20.0f) * ExeRecip(200.0f), 0.0f, 1.0f);
 
     { // 0x5606B7
         CColourSet currentOld(currSampleIdx, CWeather::OldWeatherType);
@@ -445,7 +445,7 @@ void CTimeCycle::CalcColoursForPoint(CVector point, CColourSet* set) {
         set->m_fFarClip = lerp(set->m_fFarClip, std::min(set->m_fFarClip, (float)farBoxB->FarClip), farBoxB_T);
     }
 
-    float inc = CTimer::GetTimeStep() / 120.0f;
+    float inc = CTimer::GetTimeStep() * ExeRecip(120.0f);
     m_ExtraColourInter = std::clamp(m_ExtraColourInter + (m_bExtraColourOn ? inc : -inc), 0.0f, 1.0f);
 
     if (m_ExtraColourInter > 0.0f) {
@@ -496,7 +496,7 @@ void CTimeCycle::CalcColoursForPoint(CVector point, CColourSet* set) {
     if (camPos.z > 200.0f) {
         if (set->m_fFarClip > 1000.0f) {
             if (camPos.z <= 500.0f) {
-                float t_alt = (camPos.z - 200.0f) / 300.0f;
+                float t_alt = (camPos.z - 200.0f) * ExeRecip(300.0f);
                 set->m_fFarClip = lerp(set->m_fFarClip, 1000.0f, t_alt);
             } else {
                 set->m_fFarClip = 1000.0f;
@@ -570,7 +570,7 @@ void CTimeCycle::CalcColoursForPoint(CVector point, CColourSet* set) {
     if (f >= 1000.0f) {
         set->m_fLodDistMult *= 2.0f;
     } else if (f > 0.0f) {
-        set->m_fLodDistMult *= (f / 1000.0f + 1.0f);
+        set->m_fLodDistMult *= (f * ExeRecip(1000.0f) + 1.0f);
     }
 
     SetConstantParametersForPostFX();
@@ -616,7 +616,7 @@ void CTimeCycle::FindTimeCycleBox(
         const auto CheckPointWithin = [&](int32 i, float tolerance) {
             return v.Box.m_vecMin[i] - tolerance > pos[i] || v.Box.m_vecMax[i] + tolerance < pos[i];
         };
-        if (CheckPointWithin(0, v.Falloff) || CheckPointWithin(1, v.Falloff) || CheckPointWithin(2, v.Falloff / 3.f)) {
+        if (CheckPointWithin(0, v.Falloff) || CheckPointWithin(1, v.Falloff) || CheckPointWithin(2, v.Falloff * ExeRecip(3.f))) {
             continue;
         }
 

@@ -50,7 +50,7 @@ uint8* CAEMP3BankLoader::GetBankSlotBuffer(eSoundBankSlot bankSlot, uint32& outL
 // 0x4E01E0
 float CAEMP3BankLoader::GetSoundHeadroom(eSoundID soundId, eSoundBankSlot bankSlot) {
     return m_IsInitialised
-        ? (float)(GetBankSlot(bankSlot).Sounds[soundId].Headroom) / 100.0f
+        ? (float)(GetBankSlot(bankSlot).Sounds[soundId].Headroom) * ExeRecip(100.0f)
         : 0.f;
 }
 

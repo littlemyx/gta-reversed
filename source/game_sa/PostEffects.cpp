@@ -963,7 +963,7 @@ void CPostEffects::Fog() {
         );
     }
 
-    s_FogAngle += CTimer::GetTimeStep() / 6.0f;
+    s_FogAngle += CTimer::GetTimeStep() * ExeRecip(6.0f);
     ImmediateModeRenderStatesReStore();
 }
 
@@ -1516,7 +1516,7 @@ void CPostEffects::Render() {
 
         UnderWaterRipple(
             color,
-            SCREEN_STRETCH_X(s_WaterGreen / 24.0f * m_xoffset),
+            SCREEN_STRETCH_X(s_WaterGreen * ExeRecip(24.0f) * m_xoffset),
             SCREEN_STRETCH_Y(m_yoffset),
             m_waterStrength,
             m_waterSpeed,

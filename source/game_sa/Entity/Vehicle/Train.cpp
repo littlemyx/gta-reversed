@@ -190,7 +190,7 @@ void CTrain::InitTrains() {
     for (auto i = 0u; i < std::size(aStationCoors); ++i) {
         int32 trackId;
         const auto nodeIdx = FindClosestTrackNode(aStationCoors[i], &trackId);
-        StationDist[i] = (float)trackNodes[nodeIdx].m_nDistanceFromStart * (1.0f / 3.0f);
+        StationDist[i] = (float)trackNodes[nodeIdx].m_nDistanceFromStart * ExeRecip(3.0f);
     }
 }
 
@@ -298,8 +298,8 @@ void CTrain::FindCoorsFromPositionOnTrack(float railDistance, int32 trackId, CVe
         const auto& node     = nodes[i];
         const auto& nextNode = nodes[(i + 1) % numNodes];
 
-        const float distToNode     = railDistance - (float)node.m_nDistanceFromStart * (1.0f / 3.0f);
-        const float distToNextNode = (float)nextNode.m_nDistanceFromStart * (1.0f / 3.0f) - railDistance;
+        const float distToNode     = railDistance - (float)node.m_nDistanceFromStart * ExeRecip(3.0f);
+        const float distToNextNode = (float)nextNode.m_nDistanceFromStart * ExeRecip(3.0f) - railDistance;
         if (!(0.0f <= distToNode && 0.0f <= distToNextNode)) {
             continue;
         }
@@ -411,7 +411,7 @@ void CTrain::ReleaseOneMissionTrain(CTrain* train) {
 
 // 0x6F5E20
 void CTrain::SetTrainSpeed(CTrain* train, float speed) {
-    train->m_fTrainSpeed = speed / 50.0f;
+    train->m_fTrainSpeed = speed * ExeRecip(50.0f);
     if (!train->trainFlags.bClockwiseDirection) {
         train->m_fTrainSpeed = -train->m_fTrainSpeed;
     }
@@ -704,8 +704,8 @@ void CTrain::FindPositionOnTrackFromCoors() {
 
         if (dist < 3.0f) {
             // We're on the track
-            const float nodeDist     = (float)node.m_nDistanceFromStart * (1.0f / 3.0f);
-            const float nextNodeDist = (float)nextNode.m_nDistanceFromStart * (1.0f / 3.0f);
+            const float nodeDist     = (float)node.m_nDistanceFromStart * ExeRecip(3.0f);
+            const float nextNodeDist = (float)nextNode.m_nDistanceFromStart * ExeRecip(3.0f);
             m_fCurrentRailDistance = (nextNodeDist - nodeDist) * t + nodeDist;
 
             // The position is at the center of the carriage, but the rail distance is at the front
@@ -813,7 +813,7 @@ void CTrain::CreateMissionTrain(CVector posn, bool clockwiseDirection, uint32 tr
         nodeIndex = FindClosestTrackNode(posn, &trackId);
     }
 
-    float railDistance = (float)pTrackNodes[trackId][nodeIndex].m_nDistanceFromStart * (1.0f / 3.0f);
+    float railDistance = (float)pTrackNodes[trackId][nodeIndex].m_nDistanceFromStart * ExeRecip(3.0f);
 
     CTrain* prev = nullptr;
     for (const int32* modelId = TrainConfigs[trainType]; *modelId; modelId++) {
@@ -1378,7 +1378,7 @@ void CTrain::ProcessControl() {
                     }
                 }
 
-                fStopAtStationSpeed = fStopAtStationSpeed / 50.0f - m_fTrainSpeed;
+                fStopAtStationSpeed = fStopAtStationSpeed * ExeRecip(50.0f) - m_fTrainSpeed;
                 if (fStopAtStationSpeed > 0.0f) {
                     m_fTrainGas = fStopAtStationSpeed * 30.0f;
                     if (m_fTrainGas >= 1.0f) {

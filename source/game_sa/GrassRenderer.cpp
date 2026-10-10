@@ -81,7 +81,7 @@ void CGrassRenderer::DrawTriPlants(PPTriPlant* triPlants, int32 numTriPlants, Rp
 
         RwRGBA newColorIntensity{};
         if (camDist >= farDist) {
-            const auto alpha = std::floor((farDist + 20.0f - camDist) * (float)plant.color.a / 20.0f);
+            const auto alpha = std::floor((farDist + 20.0f - camDist) * (float)plant.color.a * ExeRecip(20.0f));
             newColorIntensity.alpha = (uint8)std::clamp(alpha, 0.0f, 255.0f);
         } else {
             newColorIntensity.alpha = plant.color.a;

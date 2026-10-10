@@ -874,7 +874,7 @@ void CGameLogic::UpdateSkip() {
         SkipTimer = CTimer::GetTimeInMS() + 1500;
         CHud::SetMessage(nullptr);
         CTimer::Resume();
-        PassTime((uint32)(playerDistToSkipPos / 20.0f + 23.0f));
+        PassTime((uint32)(playerDistToSkipPos * ExeRecip(20.0f) + 23.0f));
 
         if (SkipToBeFinishedByScript) {
             SkipState = SKIP_WAITING_SCRIPT;

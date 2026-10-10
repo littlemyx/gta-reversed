@@ -215,7 +215,7 @@ int32 CEventKnockOffBike::CalcForcesAndAnims(CPed* ped)
         float randomNum = 5.0f;
         if (m_vehicle->IsSubBMX())
             randomNum = 6.0f;
-        ped->m_vecMoveSpeed.z += CGeneral::GetRandomNumberInRange(3.0f, randomNum) / 70.0f;
+        ped->m_vecMoveSpeed.z += CGeneral::GetRandomNumberInRange(3.0f, randomNum) * ExeRecip(70.0f);
         ped->m_pEntityIgnoredCollision = m_vehicle;
         int32 animId = ANIM_ID_KO_SKID_BACK;
         switch (m_knockOffDirection)

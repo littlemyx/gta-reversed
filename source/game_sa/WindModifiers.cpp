@@ -47,7 +47,7 @@ bool CWindModifiers::FindWindModifier(CVector vecPos, float* outX, float* outY) 
 
         const float distProg = dist >= 20.f ? 1.f - invLerp(20.f, 50.f, dist) : 1.f;
         const float distZProg = 1.f - invLerp(0.f, 40.f, absZDist);
-        const float power = distZProg * (distProg * wm.m_fPower) / 5.f;
+        const float power = distZProg * (distProg * wm.m_fPower) * ExeRecip(5.f);
 
         // NOTE: Possible bug? They don't seem to re-use the last value, but rather overwrite it..
         //       shouldn't they add up all the values or something?
@@ -60,7 +60,7 @@ bool CWindModifiers::FindWindModifier(CVector vecPos, float* outX, float* outY) 
     if (!appliedAny)
         return false;
 
-    const float rnd = 1.0f + (float)(CGeneral::GetRandomNumber() % 32 - 16) / 2000.f;
+    const float rnd = 1.0f + (float)(CGeneral::GetRandomNumber() % 32 - 16) * ExeRecip(2000.f);
     *outX += posX * rnd;
     *outY += posY * rnd;
 

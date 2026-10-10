@@ -132,7 +132,7 @@ void CAESoundManager::Service() {
         }
 
         //sound.m_PlayTime *= uint16(static_cast<float>(m_aSoundLengths[i]) / 100.0F);
-        sound.m_PlayTime = static_cast<uint16>((float)(sound.m_PlayTime * m_VirtualChannelSoundLengths[i]) / 100.0f);
+        sound.m_PlayTime = static_cast<uint16>((float)(sound.m_PlayTime * m_VirtualChannelSoundLengths[i]) * ExeRecip(100.0f));
     }
 
     // 0x4F016D - Stop sounds that turned inactive

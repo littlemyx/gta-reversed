@@ -790,10 +790,10 @@ void CMenuManager::DrawStandardMenus(bool drawTitle) {
 
         // 0x57A7D4 - Handle sliders
         switch (item.m_nActionType) {
-        case MENU_ACTION_BRIGHTNESS: processSlider(m_PrefsBrightness / 384.f, eMouseInBounds::SLIDER_LEFT, eMouseInBounds::SLIDER_RIGHT); break;
+        case MENU_ACTION_BRIGHTNESS: processSlider(m_PrefsBrightness * ExeRecip(384.f), eMouseInBounds::SLIDER_LEFT, eMouseInBounds::SLIDER_RIGHT); break;
         case MENU_ACTION_RADIO_VOL:  processSlider(m_nRadioVolume / 64.f, eMouseInBounds::RADIO_VOL_LEFT, eMouseInBounds::RADIO_VOL_RIGHT, true); break;
         case MENU_ACTION_SFX_VOL:    processSlider(m_nSfxVolume / 64.f, eMouseInBounds::SFX_VOL_LEFT, eMouseInBounds::SFX_VOL_RIGHT); break;
-        case MENU_ACTION_DRAW_DIST:  processSlider((m_fDrawDistance - 0.925f) / 0.875f, eMouseInBounds::DRAW_DIST_LEFT, eMouseInBounds::DRAW_DIST_RIGHT); break;
+        case MENU_ACTION_DRAW_DIST:  processSlider((m_fDrawDistance - 0.925f) * ExeRecip(0.875f), eMouseInBounds::DRAW_DIST_LEFT, eMouseInBounds::DRAW_DIST_RIGHT); break;
         case MENU_ACTION_MOUSE_SENS: processSlider(CCamera::m_fMouseAccelHorzntl / 0.005f, eMouseInBounds::MOUSE_SENS_LEFT, eMouseInBounds::MOUSE_SENS_RIGHT); break;
         default:                     break;
         }

@@ -959,14 +959,14 @@ void CBoat::ProcessControlInputs(uint8 padNum) {
     m_PadNum = std::min<uint8>(padNum, 3);
     CPad* pad = CPad::GetPad(padNum);
 
-    float newBrake = lerp(m_BrakePedal, pad->GetBrake() / 255.0f, 0.1f);
+    float newBrake = lerp(m_BrakePedal, pad->GetBrake() * ExeRecip(255.0f), 0.1f);
     m_BrakePedal = std::clamp(newBrake, 0.0f, 1.0f);
 
     if (m_BrakePedal >= 0.05f) {
         m_GasPedal = m_BrakePedal * -0.3f;
     } else {
         m_BrakePedal = 0.0f;
-        m_GasPedal = pad->GetAccelerate() / 255.0f;
+        m_GasPedal = pad->GetAccelerate() * ExeRecip(255.0f);
     }
 
     const auto steerInput = pad->GetSteeringLeftRight();

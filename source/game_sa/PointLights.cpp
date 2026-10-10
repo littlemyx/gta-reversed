@@ -53,9 +53,9 @@ float CPointLights::GenerateLightsAffectingObject(const CVector* point, float* t
         }
 
         if (totalLighting) {
-            *totalLighting += (1.0f - ratio) * light.m_fColorRed   * (1.0f / 3.0f);
-            *totalLighting += (1.0f - ratio) * light.m_fColorGreen * (1.0f / 3.0f);
-            *totalLighting += (1.0f - ratio) * light.m_fColorBlue  * (1.0f / 3.0f);
+            *totalLighting += (1.0f - ratio) * light.m_fColorRed   * ExeRecip(3.0f);
+            *totalLighting += (1.0f - ratio) * light.m_fColorGreen * ExeRecip(3.0f);
+            *totalLighting += (1.0f - ratio) * light.m_fColorBlue  * ExeRecip(3.0f);
         }
 
         float intensity = ratio >= 0.5f ? 1.0f - ((ratio - 0.5f) + (ratio - 0.5f)) : 1.0f;
@@ -100,7 +100,7 @@ float CPointLights::GetLightMultiplier(const CVector* point) {
         } else {
             lightSum += (1.0f - ratio)
                       * (light.m_fColorRed + light.m_fColorGreen + light.m_fColorBlue)
-                      / 3.0f;
+                      * ExeRecip(3.0f);
         }
     }
     return antilightMult + lightSum;
@@ -313,7 +313,7 @@ void CPointLights::RenderFogEffect() {
                     if (camDist >= 15.0f) {
                         continue;
                     }
-                    const float camFade = camDist < 7.5f ? 1.0f : 1.0f - (camDist - 7.5f) / 7.5f;
+                    const float camFade = camDist < 7.5f ? 1.0f : 1.0f - (camDist - 7.5f) * ExeRecip(7.5f);
 
                     const float intensity = (1.0f - distSq / sq(fogSize)) * camFade * fogAmount * 37.0f;
                     const auto puffIndex = hash >> 1;

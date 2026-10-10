@@ -1109,7 +1109,7 @@ void CEventHandler::ComputeDamageResponse(CEventDamage* e, CTask* tactive, CTask
                 m_PhysicalResponseTask = new CTaskComplexFallAndGetUp{
                     e->GetAnimId(),
                     e->GetAnimGroup(),
-                    (int32)(1000.f / ((float)m_Ped->m_nWeaponShootingRate / 40.f))
+                    (int32)(1000.f / ((float)m_Ped->m_nWeaponShootingRate * ExeRecip(40.f)))
                 };
             }
 

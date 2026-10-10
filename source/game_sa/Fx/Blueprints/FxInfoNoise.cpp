@@ -30,7 +30,7 @@ void FxInfoNoise_c::GetValue(float currentTime, float mult, float totalTime, flo
     float value;
     m_InterpInfo.GetVal(&value, mult);
 
-    CVector in((float)(CGeneral::GetRandomNumber() % 10'000) / 5000.0f - 1.0f);
+    CVector in((float)(CGeneral::GetRandomNumber() % 10'000) * ExeRecip(5000.0f) - 1.0f);
     in.Normalise();
     in *= value * totalTime;
 

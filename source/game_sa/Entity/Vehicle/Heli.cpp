@@ -1007,7 +1007,7 @@ bool CHeli::SetUpWheelColModel(CColModel* wheelCol) {
 void CHeli::ProcessControlInputs(uint8 playerNum) {
     const auto pad = CPad::GetPad(playerNum);
 
-    m_fAccelerationBreakStatus = (float)((int32)pad->GetAccelerate() - (int32)pad->GetBrake()) * (1.0f / 255.0f); // 0x859A3C
+    m_fAccelerationBreakStatus = (float)((int32)pad->GetAccelerate() - (int32)pad->GetBrake()) * ExeRecip(255.0f); // 0x859A3C
 
     // 0x6C4A4E / 0x6C4952
     const auto SteerWithPad = [&] {

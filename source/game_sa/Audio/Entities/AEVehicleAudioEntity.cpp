@@ -2645,7 +2645,7 @@ float CAEVehicleAudioEntity::GetFreqForPlayerEngineSound(tVehicleParams& vp, eVe
         switch (st) {
         case AE_SOUND_CAR_REV: { // 0x4F81BB
             f = vp.WheelSpin <= 5.f
-                ? cfg->Rev.FrqOffset + vp.WheelSpin / 5.f * cfg->Rev.FrqWheelSpinFactor
+                ? cfg->Rev.FrqOffset + vp.WheelSpin * ExeRecip(5.f) * cfg->Rev.FrqWheelSpinFactor
                 : cfg->Rev.FrqOffset + lerp(cfg->Rev.FrqMin, cfg->Rev.FrqMax, invLerp(5.f, 10.f, vp.WheelSpin));
             break;
         }
@@ -2654,7 +2654,7 @@ float CAEVehicleAudioEntity::GetFreqForPlayerEngineSound(tVehicleParams& vp, eVe
             break;
         }
         case AE_SOUND_PLAYER_CRZ: { // 0x4F826D
-            f  = vp.WheelSpin / 5.f * cfg->FrqWheelSpinFactor; 
+            f  = vp.WheelSpin * ExeRecip(5.f) * cfg->FrqWheelSpinFactor; 
             f += (cfg->Crz.FrqMax - cfg->Crz.FrqMin) * m_CrzCount / (float)(cfg->CrzMaxCnt); // NB: Not sure if this was intended to be a lerp or not...
             f += m_IsSingleGear
                 ? cfg->Crz.FrqSingleGear
@@ -2662,7 +2662,7 @@ float CAEVehicleAudioEntity::GetFreqForPlayerEngineSound(tVehicleParams& vp, eVe
             break;
         }
         case AE_SOUND_PLAYER_AC: { // 0x4F8281
-            f  = vp.WheelSpin / 5.f * cfg->FrqWheelSpinFactor;
+            f  = vp.WheelSpin * ExeRecip(5.f) * cfg->FrqWheelSpinFactor;
             f += m_IsSingleGear
                 ? cfg->AC.FrqSingleGear
                 : cfg->AC.FrqPerGearFactor[m_AuGear] + cfg->AC.FrqMultiGearOffset;
@@ -3703,7 +3703,7 @@ void CAEVehicleAudioEntity::ProcessPlayerSeaPlane(tVehicleParams& vp) {
     // 0x4FF5F1
     CalculatePlanePropFreq(vp, GetAircraftAcceleration(vp));
     
-    const auto propSpeed    = veh->m_EngineSpeed / 0.22f;
+    const auto propSpeed    = veh->m_EngineSpeed * ExeRecip(0.22f);
     const auto camPoVFactor = GetAircraftCameraPoVFactor(veh);
     const auto sf           = GetDummyRCRotorSpeedFactor(propSpeed);
     PlayAircraftSound( // 0x4FF74A
@@ -3811,8 +3811,8 @@ void CAEVehicleAudioEntity::ProcessDummyJet(tVehicleParams& vp) {
         plane->vehicleFlags.bEngineOn || plane->m_autoPilot.m_vehicleRecordingId >= 0,
         vp,
         (std::clamp(CalculatePropSpeed(plane, plane->m_GasPedal, plane->m_BrakePedal), 0.2f, 1.f) - 0.2f) * 1.25f,
-        plane->m_GasPedal / 255.f,
-        plane->m_BrakePedal / 255.f,
+        plane->m_GasPedal * ExeRecip(255.f),
+        plane->m_BrakePedal * ExeRecip(255.f),
         0.f,
         1.f
     );
@@ -3959,7 +3959,7 @@ void CAEVehicleAudioEntity::ProcessDummyRCPlane(tVehicleParams& vp) {
     }
 
     // 0x4FA8A2 - Propeller speed factor
-    const auto sf = GetDummyRCRotorSpeedFactor(plane->m_fPropSpeed / 0.34f);
+    const auto sf = GetDummyRCRotorSpeedFactor(plane->m_fPropSpeed * ExeRecip(0.34f));
 
     // 0x4FA8B9 - Calculate accel/brake
     UpdateDummyRCAcAndBrake(vp);
@@ -4281,7 +4281,7 @@ void CAEVehicleAudioEntity::ProcessBoatMovingOverWater(tVehicleParams& vp) {
     const auto* const cfg = &s_Config.Boat.MovingOverWaterSound;
     const auto* const boat = vp.Vehicle->AsBoat();
 
-    const auto sf = std::min(0.75f, std::abs(vp.Speed)) / 0.75f;
+    const auto sf = std::min(0.75f, std::abs(vp.Speed)) * ExeRecip(0.75f);
 
     auto volume = boat->m_nBoatFlags.bBoatInWater && sf >= 0.00001f
         ? (m_AuSettings.IsSeaplane() ? cfg->VolBaseOfSeaplane : cfg->VolBase) + CAEAudioUtility::AudioLog10(sf) * 20.f
@@ -4736,7 +4736,7 @@ void CAEVehicleAudioEntity::ProcessVehicle(CPhysical* physical) {
         ? &vehicle->m_pHandlingData->m_transmissionData
         : nullptr;
     vp.Speed                 = isStatusSimple
-        ? vehicle->m_autoPilot.m_speed / 50.0f
+        ? vehicle->m_autoPilot.m_speed * ExeRecip(50.0f)
         : DotProduct(physical->m_vecMoveSpeed, physical->m_matrix->GetForward());
 
     switch (m_AuSettings.VehicleAudioType) {

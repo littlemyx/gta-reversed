@@ -546,7 +546,7 @@ void CAEAudioHardware::RescaleChannelVolumes() {
             if (gain == 0.0f) {
                 ch->SetVolume(-100.0f);
             } else {
-                ch->SetVolume(20.0f * CAEAudioUtility::AudioLog10(gain * (1.0f / 16383.0f)));
+                ch->SetVolume(20.0f * CAEAudioUtility::AudioLog10(gain * ExeRecip(16383.0f)));
             }
             ch->SetFrequencyScalingFactor(m_afChannelsFrqScalingFactor[i]);
         }

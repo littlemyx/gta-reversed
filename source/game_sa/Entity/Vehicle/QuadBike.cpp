@@ -274,7 +274,7 @@ bool CQuadBike::ProcessAI(uint32& extraHandlingFlags) {
             if (IsAnyWheelNotMakingContactWithGround() && pad) {
                 float steeringLeftRightProgress = (float)pad->GetSteeringLeftRight() / 128.0f;
                 if (CCamera::m_bUseMouse3rdPerson && fabs(steeringLeftRightProgress) < 0.05f) {
-                    steeringLeftRightProgress = std::clamp(CPad::NewMouseControllerState.m_AmountMoved.x / 100.0f, -1.5f, 1.5f);
+                    steeringLeftRightProgress = std::clamp(CPad::NewMouseControllerState.m_AmountMoved.x * ExeRecip(100.0f), -1.5f, 1.5f);
                 }
                 if (vehicleFlags.bIsHandbrakeOn) {
                     const float fTurnSpeed_Dot_MatUp = DotProduct(m_vecTurnSpeed, m_matrix->GetUp());
@@ -314,14 +314,14 @@ void CQuadBike::ProcessControlInputs(uint8 playerNum) {
 
     CPad* pad = CPad::GetPad(playerNum);
     if (!CCamera::m_bUseMouse3rdPerson || !m_bEnableMouseSteering) {
-        m_sRideAnimData.LeanFwd += (float(-pad->GetSteeringUpDown()) / 128.0f - m_sRideAnimData.LeanFwd) * CTimer::GetTimeStep() / 5.0f;
+        m_sRideAnimData.LeanFwd += (float(-pad->GetSteeringUpDown()) / 128.0f - m_sRideAnimData.LeanFwd) * CTimer::GetTimeStep() * ExeRecip(5.0f);
     } else {
         if (CPad::NewMouseControllerState.m_AmountMoved.IsZero() &&
             (std::fabs(m_fRawSteerAngle) <= 0.0f || m_nLastControlInput != eControllerType::MOUSE || pad->IsSteeringInAnyDirection())
         ) {
             if (pad->GetSteeringUpDown() || m_nLastControlInput != eControllerType::MOUSE) {
                 m_nLastControlInput = eControllerType::KEYBOARD;
-                m_sRideAnimData.LeanFwd += (float(-pad->GetSteeringUpDown()) / 128.0f - m_sRideAnimData.LeanFwd) * CTimer::GetTimeStep() / 5.0f;
+                m_sRideAnimData.LeanFwd += (float(-pad->GetSteeringUpDown()) / 128.0f - m_sRideAnimData.LeanFwd) * CTimer::GetTimeStep() * ExeRecip(5.0f);
             }
         } else {
             m_nLastControlInput = eControllerType::MOUSE;

@@ -315,7 +315,7 @@ int32 CAEStreamingChannel::UpdatePlayTime() {
 
     DWORD currentPlayCursor;
     m_pDirectSoundBuffer->GetCurrentPosition(&currentPlayCursor, nullptr);
-    auto freqFactor = m_nFrequency / 250.f;
+    auto freqFactor = m_nFrequency * ExeRecip(250.f);
     auto upperLimit = 393216.f / freqFactor; //TODO: Magic number (393.216 khz can be found often with oscilators / clock generators, also that's 0x60000 in hex)
     auto curStep    = currentPlayCursor / freqFactor;
     if ((uint32(freqFactor) / 0x60000) > 0) {

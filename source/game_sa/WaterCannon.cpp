@@ -36,7 +36,7 @@ void CWaterCannon::Update_OncePerFrame(int16 index) {
     for (auto i = 0; i < SECTIONS_COUNT; i++) {
         if (m_abUsed[i]) {
             CVector& speed = m_sectionMoveSpeed[i];
-            speed.z -= CTimer::GetTimeStep() / 250.0f;
+            speed.z -= CTimer::GetTimeStep() * ExeRecip(250.0f);
 
             CVector& point = m_sectionPoint[i];
             point += speed * CTimer::GetTimeStep();
@@ -116,7 +116,7 @@ void CWaterCannon::PushPeds() {
 
             {
                 // TODO: Refactor... Ugly code
-                const CVector2D applyableMoveSpeed = (secMoveSpeed / 10.0f - ped.m_vecMoveSpeed) / 10.0f;
+                const CVector2D applyableMoveSpeed = (secMoveSpeed * ExeRecip(10.0f) - ped.m_vecMoveSpeed) * ExeRecip(10.0f);
 
                 // Check if directions are the same (eg, + / +, - / -),
                 // differing sign bits will always yield a negative result
@@ -172,9 +172,9 @@ void CWaterCannon::Render() {
                 if (!hasCalculatedMatrix) {
                     hasCalculatedMatrix = true;
 
-                    up = Normalized(CrossProduct(prevPosn - currPosn, TheCamera.GetForward())) / 20.0f;
-                    right = Normalized(CVector::Random(0.0f, 1.0f)) / 20.0f;
-                    fwd = Normalized(CVector::Random(0.0f, 1.0f)) / 20.0f;
+                    up = Normalized(CrossProduct(prevPosn - currPosn, TheCamera.GetForward())) * ExeRecip(20.0f);
+                    right = Normalized(CVector::Random(0.0f, 1.0f)) * ExeRecip(20.0f);
+                    fwd = Normalized(CVector::Random(0.0f, 1.0f)) * ExeRecip(20.0f);
                 }
 
                 const float size = (float)(i * i) / (float)SECTIONS_COUNT + 3.0f;

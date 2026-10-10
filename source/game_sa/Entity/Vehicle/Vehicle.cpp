@@ -2060,7 +2060,7 @@ void CVehicle::AddDamagedVehicleParticles() {
     }
 
     if (m_pOverheatParticle) {
-        m_pOverheatParticle->SetConstTime(1u, 1.0f - (m_fHealth - 250.0f) / 400.0f);
+        m_pOverheatParticle->SetConstTime(1u, 1.0f - (m_fHealth - 250.0f) * ExeRecip(400.0f));
         CVector velocity = m_vecMoveSpeed * 50.0f;
         m_pOverheatParticle->SetVelAdd(velocity);
     }
@@ -4770,7 +4770,7 @@ bool CVehicle::BladeColSectorList(PtrListType& ptrList, CColModel& colModel, CMa
                 if (ped.GetIsOnScreen()) {
                     g_fx.AddBlood(
                         GetPosition() + CVector{ CVector2D{ dirToPed } * 0.35f, 0.6f}, // TODO: Magic 0.6f
-                        dirToPed / 100.f,
+                        dirToPed * ExeRecip(100.f),
                         16,
                         ped.m_fContactSurfaceBrightness
                     );
@@ -4823,7 +4823,7 @@ bool CVehicle::BladeColSectorList(PtrListType& ptrList, CColModel& colModel, CMa
                 }
 
                 SetDamagedPieceRecord(
-                    std::max(automobileCollisionDmgIntensity, 100.f * m_fMass / 3000.f),
+                    std::max(automobileCollisionDmgIntensity, 100.f * m_fMass * ExeRecip(3000.f)),
                     entity,
                     cp,
                     1.f

@@ -107,7 +107,7 @@ void tReplayVehicleBlock::ExtractVehicleUpdateData(CVehicle& veh, float interpol
     veh.GetMatrix() = Lerp(veh.GetMatrix(), CCompressedMatrixNotAligned::Decompress(matrix), interpolation);
     veh.GetTurnSpeed() = CVector{0.0f};
     veh.m_fHealth = (float)(health * 4);
-    veh.m_GasPedal = (float)gasPedal / 100.0f;
+    veh.m_GasPedal = (float)gasPedal * ExeRecip(100.0f);
     if (veh.IsAutomobile()) {
         // inlined ApplyPanelDamageToCar() @ 0x59CA10
         auto automobile = veh.AsAutomobile();
@@ -126,9 +126,9 @@ void tReplayVehicleBlock::ExtractVehicleUpdateData(CVehicle& veh, float interpol
         }
     }
 
-    veh.GetMoveSpeed().x = (float)vecMoveSpeed.x / 8000.0f;
-    veh.GetMoveSpeed().y = (float)vecMoveSpeed.y / 8000.0f;
-    veh.GetMoveSpeed().z = (float)vecMoveSpeed.z / 8000.0f;
+    veh.GetMoveSpeed().x = (float)vecMoveSpeed.x * ExeRecip(8000.0f);
+    veh.GetMoveSpeed().y = (float)vecMoveSpeed.y * ExeRecip(8000.0f);
+    veh.GetMoveSpeed().z = (float)vecMoveSpeed.z * ExeRecip(8000.0f);
 
     auto v5 = ((uint8)veh.m_nFlags ^ (uint8)(physicalFlags << 6)) & 0x80 ^ veh.m_nFlags;
     auto v6 = v5 ^ (v5 ^ (physicalFlags << 28)) & 0x40000000;
@@ -139,7 +139,7 @@ void tReplayVehicleBlock::ExtractVehicleUpdateData(CVehicle& veh, float interpol
             veh.AsAutomobile()->m_fDoomVerticalRotation = (float)steerAngle_or_doomVerticalRot / HEADING_COMPRESS_VALUE;
             return 0.0f;
         } else {
-            return (float)steerAngle_or_doomVerticalRot / 50.0f;
+            return (float)steerAngle_or_doomVerticalRot * ExeRecip(50.0f);
         }
     }();
 
@@ -147,14 +147,14 @@ void tReplayVehicleBlock::ExtractVehicleUpdateData(CVehicle& veh, float interpol
         auto automobile = veh.AsAutomobile();
 
         for (auto i = 0; i < 4; i++) { // for each wheel
-            automobile->m_fWheelsSuspensionCompression[i] = (float)wheelsSuspensionCompression[i] / 50.0f;
+            automobile->m_fWheelsSuspensionCompression[i] = (float)wheelsSuspensionCompression[i] * ExeRecip(50.0f);
             automobile->m_wheelRotation[i] = (float)wheelRotation[i] / HEADING_COMPRESS_VALUE;
 
         }
-        automobile->m_doors[DOOR_LEFT_FRONT].m_angle = (float)angleDoorLF / 20.222929f;
+        automobile->m_doors[DOOR_LEFT_FRONT].m_angle = (float)angleDoorLF * ExeRecip(20.222929f);
         automobile->m_doors[DOOR_LEFT_FRONT].m_prevAngle = automobile->m_doors[DOOR_LEFT_FRONT].m_angle;
 
-        automobile->m_doors[DOOR_RIGHT_FRONT].m_angle = (float)angleDoorRF / 20.222929f;
+        automobile->m_doors[DOOR_RIGHT_FRONT].m_angle = (float)angleDoorRF * ExeRecip(20.222929f);
         automobile->m_doors[DOOR_RIGHT_FRONT].m_prevAngle = automobile->m_doors[DOOR_RIGHT_FRONT].m_angle;
 
         auto& damageManager = automobile->m_damageManager;
@@ -190,8 +190,8 @@ void tReplayVehicleBlock::ExtractVehicleUpdateData(CVehicle& veh, float interpol
 void tReplayBikeBlock::ExtractBikeUpdateData(CBike& bike, float interpolation) {
     As<tReplayVehicleBlock>()->ExtractVehicleUpdateData(*bike.AsVehicle(), interpolation);
 
-    bike.GetRideAnimData()->BarSteerAngle = (float)steerAngle / 50.0f;
-    bike.GetRideAnimData()->LeanAngle   = (float)animLean / 50.0f;
+    bike.GetRideAnimData()->BarSteerAngle = (float)steerAngle * ExeRecip(50.0f);
+    bike.GetRideAnimData()->LeanAngle   = (float)animLean * ExeRecip(50.0f);
     bike.m_bLeanMatrixCalculated = false;
     bike.CalculateLeanMatrix();
 }
@@ -200,8 +200,8 @@ void tReplayBikeBlock::ExtractBikeUpdateData(CBike& bike, float interpolation) {
 void tReplayBmxBlock::ExtractBmxUpdateData(CBmx& bmx, float interpolation) {
     As<tReplayVehicleBlock>()->ExtractVehicleUpdateData(*bmx.AsVehicle(), interpolation);
 
-    bmx.GetRideAnimData()->BarSteerAngle = (float)steerAngle / 50.0f;
-    bmx.GetRideAnimData()->LeanAngle = (float)animLean / 50.0f;
+    bmx.GetRideAnimData()->BarSteerAngle = (float)steerAngle * ExeRecip(50.0f);
+    bmx.GetRideAnimData()->LeanAngle = (float)animLean * ExeRecip(50.0f);
     bmx.m_bLeanMatrixCalculated = false;
     bmx.CalculateLeanMatrix();
 }

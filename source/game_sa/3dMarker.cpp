@@ -179,7 +179,7 @@ void C3dMarker::UpdateZCoordinate(CVector point, float zDistance) {
     bool found{};
     auto height = CWorld::FindGroundZFor3DCoord({ pos.x, pos.y, pos.z + 1.0f }, &found, nullptr);
     if (found) {
-        pos.z = height - zDistance / 20.0f;
+        pos.z = height - zDistance * ExeRecip(20.0f);
     }
 
     m_LastMapReadX = static_cast<uint16>(pos.x);

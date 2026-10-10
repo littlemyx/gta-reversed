@@ -753,7 +753,7 @@ int32 CRenderer::SetupMapEntityVisibility(CEntity* entity, CBaseModelInfo* baseM
     if (!entity->GetLod()) {
         float fDrawDistance = std::min(baseModelInfo->m_fDrawDistance, fDrawDistanceRadius);
         if (fDrawDistance > MAX_LOWLOD_DISTANCE)
-            fFadingDistance = fDrawDistance / 15.0f + 10.0f;
+            fFadingDistance = fDrawDistance * ExeRecip(15.0f) + 10.0f;
         if (entity->m_bIsBIGBuilding)
             fDrawDistanceRadius *= ms_lowLodDistScale;
     }

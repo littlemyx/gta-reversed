@@ -205,7 +205,7 @@ void CClouds::MovingFogRender() {
 
     // Adjust fog intensity
     {
-        const float step = CTimer::GetTimeStep() / 300.f;
+        const float step = CTimer::GetTimeStep() * ExeRecip(300.f);
         if (CCullZones::CamNoRain() && CCullZones::PlayerNoRain())
             CurrentFogIntensity = std::max(CurrentFogIntensity - step, 0.f); // Decreasing [towards 0]
         else
@@ -366,7 +366,7 @@ void CClouds::Render_MaybeRenderMoon(float colorBalance) {
     const auto moonMaskSz     = moonSz * MOON_TO_MASK_SIZE_MULT;
     const auto moonMaskPosScr = moonPosScr + moonMaskSz * CVector2D{
         0.7f,
-        5.4f * (((float)CClock::GetGameClockDays() / 31.f - 0.5f)) // Slowly glide on the X axis according to current game day
+        5.4f * (((float)CClock::GetGameClockDays() * ExeRecip(31.f) - 0.5f)) // Slowly glide on the X axis according to current game day
     };
     CSprite::RenderOneXLUSprite(
         { moonMaskPosScr.x, moonMaskPosScr.y, z },
@@ -721,7 +721,7 @@ void CClouds::RenderSkyPolys() {
     norm.Normalise();
 
     CVector invNorm = -norm;
-    float fBlendFactor = (pos.z - 25.0f) * (1.0f / 80.0f);
+    float fBlendFactor = (pos.z - 25.0f) * ExeRecip(80.0f);
     fBlendFactor = std::clamp(fBlendFactor, 0.f, 1.f);
     fBlendFactor = std::max(fBlendFactor, CWeather::Foggyness);
 

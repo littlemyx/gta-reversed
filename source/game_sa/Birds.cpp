@@ -94,14 +94,14 @@ void CBirds::CreateNumberOfBirds(CVector vecStartPos, CVector vecTargetPos, int3
         float fSpeedMult;
         switch (biome) {
         case eBirdsBiome::BIOME_WATER:
-            fSpeedMult = (float)(iSpeedRandFactor) / 50.0f + 4.0f;          // [4.0 : 4.6]
+            fSpeedMult = (float)(iSpeedRandFactor) * ExeRecip(50.0f) + 4.0f;          // [4.0 : 4.6]
             bird.m_BodyColor.Set(CGeneral::GetRandomNumber() % 64 + 80);    // [80 : 143]
             bird.m_WingsColor.Set(CGeneral::GetRandomNumber() % 64 - 76);   // [166 : 242]
             bird.m_fSize = CGeneral::GetRandomNumberInRange(0.8F, 1.2F);
             bird.m_nWingStillness = 1000 - 12 * iSpeedRandFactor;           // [640 : 1000]
             break;
         case eBirdsBiome::BIOME_DESERT:
-            fSpeedMult = (float)(iSpeedRandFactor) / 50.0f + 3.0f; // [3.0 : 3.6]
+            fSpeedMult = (float)(iSpeedRandFactor) * ExeRecip(50.0f) + 3.0f; // [3.0 : 3.6]
             bird.m_BodyColor.Set(30, 15, 10);
             bird.m_WingsColor.Set(80, 15, 10);
             bird.m_fSize = CGeneral::GetRandomNumberInRange(2.0F, 2.5F);
@@ -115,7 +115,7 @@ void CBirds::CreateNumberOfBirds(CVector vecStartPos, CVector vecTargetPos, int3
             break;
         case eBirdsBiome::BIOME_NORMAL:
         default:
-            fSpeedMult = (float)(iSpeedRandFactor) / 50.0f + 5.0F; // [5.0 : 5.6]
+            fSpeedMult = (float)(iSpeedRandFactor) * ExeRecip(50.0f) + 5.0F; // [5.0 : 5.6]
             bird.m_BodyColor.Set(CGeneral::GetRandomNumberInRange(128, 256));
             bird.m_WingsColor.Set(CGeneral::GetRandomNumberInRange(128, 256));
             bird.m_fSize = CGeneral::GetRandomNumberInRange(0.5F, 0.6F);

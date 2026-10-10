@@ -131,7 +131,7 @@ bool CTaskSimpleCarGetIn::ProcessPed(CPed* ped) {
         case ANIM_ID_CAR_GETIN_LHS_1:
         case ANIM_ID_CAR_GETIN_RHS_1: {
             const auto& flt_8D2ED4 = StaticRef<float>(0x8D2ED4); // 30.f
-            if (flt_8D2ED4 / 30.f < m_anim->m_CurrentTime) { 
+            if (flt_8D2ED4 * ExeRecip(30.f) < m_anim->m_CurrentTime) { 
                 const auto& flt_8D2ED0 = StaticRef<float>(0x8D2ED0); // 0.001f
                 m_veh->ApplyMoveForce(m_veh->GetForward() * CTimer::GetTimeStep() * m_veh->m_fMass * flt_8D2ED0);
             }

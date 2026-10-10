@@ -252,7 +252,7 @@ void CCutsceneMgr::DeleteCutsceneData_overlay() {
 // 0x5B04D0
 void CCutsceneMgr::FinishCutscene() {
     if (dataFileLoaded) {
-        ms_cutsceneTimerS = TheCamera.GetCutSceneFinishTime() / 1000.f;
+        ms_cutsceneTimerS = TheCamera.GetCutSceneFinishTime() * ExeRecip(1000.f);
         TheCamera.FinishCutscene();
     }
     FindPlayerPed()->SetIsVisible(true);

@@ -891,7 +891,7 @@ void CMenuManager::CheckSliderMovement(int32 LeftRight) {
 
     switch (item.m_nActionType) {
     case MENU_ACTION_BRIGHTNESS:
-        m_PrefsBrightness = std::clamp<int32>(LeftRight * int32(363.0f / 15.0f) + m_PrefsBrightness, 0, 384);
+        m_PrefsBrightness = std::clamp<int32>(LeftRight * int32(363.0f * ExeRecip(15.0f)) + m_PrefsBrightness, 0, 384);
         SetBrightness((float)m_PrefsBrightness, false);
         break;
     case MENU_ACTION_RADIO_VOL: {
@@ -914,7 +914,7 @@ void CMenuManager::CheckSliderMovement(int32 LeftRight) {
     case MENU_ACTION_MOUSE_SENS: {
         // 0xBA672C = minimum mouse sensitivity = 1.0f/3200.0f
         // BUG: when selecting on the 8 or 9 element, it randomly switches to the 9 or 8 element
-        TheCamera.m_fMouseAccelHorzntl = std::fminf(std::fmaxf(((LeftRight * (1.0f / 200.0f)) / 15.0f) + TheCamera.m_fMouseAccelHorzntl, 1.0f/3200.0f), (1.0f / 200.0f));
+        TheCamera.m_fMouseAccelHorzntl = std::fminf(std::fmaxf(((LeftRight * ExeRecip(200.0f)) * ExeRecip(15.0f)) + TheCamera.m_fMouseAccelHorzntl, 1.0f/3200.0f), ExeRecip(200.0f));
 #ifdef FIX_BUGS
         TheCamera.m_fMouseAccelVertical = TheCamera.m_fMouseAccelHorzntl * 0.6f;
 #endif

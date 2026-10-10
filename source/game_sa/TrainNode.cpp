@@ -55,7 +55,7 @@ void CTrainNode::SetDistanceFromStart(float dist) {
 
 // 0x6F54B0
 float CTrainNode::GetDistanceFromStart() const {
-    return (float)m_nDistanceFromStart / 3.0f;
+    return (float)m_nDistanceFromStart * ExeRecip(3.0f);
 }
 
 // 0x6F5F80

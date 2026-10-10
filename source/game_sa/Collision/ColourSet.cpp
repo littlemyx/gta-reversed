@@ -75,7 +75,7 @@ CColourSet::CColourSet(int32 timeId, int32 weatherId) {
     m_nHighLightMinIntensity    = CTimeCycle::m_nHighLightMinIntensity[timeId][weatherId];
     m_nWaterFogAlpha            = CTimeCycle::m_nWaterFogAlpha[timeId][weatherId];
     m_fLodDistMult              = 1.0f;
-    m_fIllumination             = CTimeCycle::m_nDirectionalMult[timeId][weatherId] / 100.0f;
+    m_fIllumination             = CTimeCycle::m_nDirectionalMult[timeId][weatherId] * ExeRecip(100.0f);
 }
 
 /*!

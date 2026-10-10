@@ -175,7 +175,7 @@ long CAEWMADecoder::GetStreamLengthMs() {
 // 0x502af0
 long CAEWMADecoder::GetStreamPlayTimeMs() {
     if (m_bInitialized)
-        return (long)((m_nSampleTime + m_nSampleDuration) / 10000.0f);
+        return (long)((m_nSampleTime + m_nSampleDuration) * ExeRecip(10000.0f));
 
     return -1;
 }

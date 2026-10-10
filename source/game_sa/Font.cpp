@@ -600,7 +600,7 @@ void CFont::SetColor(CRGBA color) {
     m_Color = color;
 
     if (m_fFontAlpha < 255.0f) {
-        m_Color.a = (uint8)(float(color.a) * m_fFontAlpha / 255.0f);
+        m_Color.a = (uint8)(float(color.a) * m_fFontAlpha * ExeRecip(255.0f));
     }
 }
 

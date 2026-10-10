@@ -312,7 +312,7 @@ void CCustomBuildingDNPipeline::CustomPipeRenderCB(RwResEntry* resEntry, void* o
             RwD3D9SetTexture(envMapData->Texture, 1);
 
             // 0x5D65E9 - The whole expression is evaluated in extended precision, then truncated (_ftol)
-            auto c = (int32)(int64)(((double)std::bit_cast<uint8>(envMapData->Shininess) /* raw, unsigned */ * (double)(1.f / 255.f)) * 254.0); // 0x859A3C, 0x86BE90
+            auto c = (int32)(int64)(((double)std::bit_cast<uint8>(envMapData->Shininess) /* raw, unsigned */ * (double)ExeRecip(255.f)) * 254.0); // 0x859A3C, 0x86BE90
             if (c > 0xFF) {
                 c = 0xFF;
             }

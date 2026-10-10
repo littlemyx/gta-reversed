@@ -1078,7 +1078,7 @@ void CTheScripts::UndoBuildingSwaps() {
 // 0x486110
 bool CTheScripts::IsPedStopped(CPed* ped) {
     if (ped->IsInVehicle()) {
-        return CTimer::GetTimeStep() / 100.f >= ped->m_pVehicle->m_fMovingSpeed;
+        return CTimer::GetTimeStep() * ExeRecip(100.f) >= ped->m_pVehicle->m_fMovingSpeed;
     }
     if (!ped->IsPedStandingInPlace()) {
         return false;

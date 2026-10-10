@@ -247,7 +247,7 @@ void CMirrors::BuildCameraMatrixForScreens(CMatrix & mat) {
     case 3: {
         BuildCamMatrix(
             mat,
-            { ((float)timeMsLeftInSecond / 1000.0f + (float)timeSeconds) * 6.0f - 1249.3f, -224.5f, 1064.2f },
+            { ((float)timeMsLeftInSecond * ExeRecip(1000.0f) + (float)timeSeconds) * 6.0f - 1249.3f, -224.5f, 1064.2f },
             { -1265.4f, -207.5f, 1053.2f }
         );
         break;
@@ -268,7 +268,7 @@ void CMirrors::BuildCameraMatrixForScreens(CMatrix & mat) {
     case 25: {
         BuildCamMatrix(mat,
             { -1479.0f, -290.5f, 1099.54f },
-            { -1428.0f, -256.7f, ((float)timeMsLeftInSecond / 1000.0f + (float)(timeSeconds - 22)) * 3.0f + 1057.3f }
+            { -1428.0f, -256.7f, ((float)timeMsLeftInSecond * ExeRecip(1000.0f) + (float)(timeSeconds - 22)) * 3.0f + 1057.3f }
         );
         break;
     }
@@ -323,7 +323,7 @@ void CMirrors::BeforeConstructRenderList() {
         assert(mirrorAttrs);
 
         MirrorV = mirrorAttrs->mirrorV;
-        MirrorNormal = CVector{ (float)mirrorAttrs->mirrorNormalX, (float)mirrorAttrs->mirrorNormalY, (float)mirrorAttrs->mirrorNormalZ } / 100.0f;
+        MirrorNormal = CVector{ (float)mirrorAttrs->mirrorNormalX, (float)mirrorAttrs->mirrorNormalY, (float)mirrorAttrs->mirrorNormalZ } * ExeRecip(100.0f);
         MirrorFlags = mirrorAttrs->flags;
 
         TypeOfMirror = std::fabs(MirrorNormal.z) <= 0.7f ? MIRROR_TYPE_WALL : MIRROR_TYPE_FLOOR;

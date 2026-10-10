@@ -94,8 +94,8 @@ void CEscalator::Update() {
     }
 
     const auto posStep = m_MoveDown
-        ? m_CurrentPosition - CTimer::GetTimeStep() / 25.0f + 1.0f
-        : m_CurrentPosition + CTimer::GetTimeStep() / 25.0f;
+        ? m_CurrentPosition - CTimer::GetTimeStep() * ExeRecip(25.0f) + 1.0f
+        : m_CurrentPosition + CTimer::GetTimeStep() * ExeRecip(25.0f);
 
     m_CurrentPosition = posStep - std::floor(posStep);
 
@@ -108,13 +108,13 @@ void CEscalator::Update() {
         const auto [t, dir, beg] = [&] {
             if (i < m_NumIntermediatePlanes) {
                 // intermediate
-                return std::make_tuple(((float)i - m_CurrentPosition + 1.0f) / 2.5f, (m_Bottom - m_Top).Normalized(), m_Top);
+                return std::make_tuple(((float)i - m_CurrentPosition + 1.0f) * ExeRecip(2.5f), (m_Bottom - m_Top).Normalized(), m_Top);
             } else if (i < m_NumIntermediatePlanes + m_NumBottomPlanes) {
                 // bottom
-                return std::make_tuple(((float)(8 * (i - m_NumIntermediatePlanes) + 4) + m_CurrentPosition) / 2.5f, (m_Bottom - m_Start).Normalized(), m_Start);
+                return std::make_tuple(((float)(8 * (i - m_NumIntermediatePlanes) + 4) + m_CurrentPosition) * ExeRecip(2.5f), (m_Bottom - m_Start).Normalized(), m_Start);
             } else {
                 // top
-                return std::make_tuple(((float)(8 * (i - m_NumIntermediatePlanes - m_NumBottomPlanes) + 4) + m_CurrentPosition) / 2.5f, (m_End - m_Top).Normalized(), m_Top);
+                return std::make_tuple(((float)(8 * (i - m_NumIntermediatePlanes - m_NumBottomPlanes) + 4) + m_CurrentPosition) * ExeRecip(2.5f), (m_End - m_Top).Normalized(), m_Top);
             }
         }();
 

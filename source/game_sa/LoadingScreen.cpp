@@ -180,7 +180,7 @@ void CLoadingScreen::SetLoadingBarMsg(const char* msg1, const char* msg2) {
 
 // 0x590280
 float CLoadingScreen::GetClockTime(bool isRealTime) {
-    const auto secs = (float)(GetMillisecondTime()) / 1000.0f;
+    const auto secs = (float)(GetMillisecondTime()) * ExeRecip(1000.0f);
     return isRealTime ? secs : secs - m_PauseTime;
 }
 
@@ -474,9 +474,9 @@ void CLoadingScreen::Update() {
     if (!m_bLegalScreen) {
         float volume = 1.0f;
         if (m_bFadeInNextSplashFromBlack) {
-            volume = (float)m_FadeAlpha / 255.0f;
+            volume = (float)m_FadeAlpha * ExeRecip(255.0f);
         } else if (m_bFadeOutCurrSplashToBlack) {
-            volume = (255.0f - (float)m_FadeAlpha) / 255.0f;
+            volume = (255.0f - (float)m_FadeAlpha) * ExeRecip(255.0f);
         }
         AudioEngine.ServiceLoadingTune(volume);
     }

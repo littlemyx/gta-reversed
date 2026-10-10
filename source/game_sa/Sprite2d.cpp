@@ -515,7 +515,7 @@ void CSprite2d::DrawBarChart(float x, float y, uint16 width, uint8 height, float
     progress = std::clamp(progress, 0.0f, 100.0f);
 
     const float endX = x + (float)width;
-    const float unclampedCurrX = x + (float)width * progress / 100.0f;
+    const float unclampedCurrX = x + (float)width * progress * ExeRecip(100.0f);
     const float currX = std::min(unclampedCurrX, endX);
     const auto fheight = (float)height;
 

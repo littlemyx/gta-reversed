@@ -1226,7 +1226,7 @@ bool CAutomobile::ProcessAI(uint32& extraHandlingFlags) {
         m_nNumContactWheels = 4;
         m_NumDriveWheelsOnGroundLastFrame = m_NumDriveWheelsOnGround;
         m_NumDriveWheelsOnGround = 4;
-        float speed = m_autoPilot.m_speed / 50.0f;
+        float speed = m_autoPilot.m_speed * ExeRecip(50.0f);
         m_pHandlingData->GetTransmission().CalculateGearForSimpleCar(speed, m_nCurrentGear);
         float wheelRot = CVehicle::ProcessWheelRotation(WHEEL_STATE_NORMAL, GetForward(), m_vecMoveSpeed, 0.35f);
         for (float& rotation : m_wheelRotation) {
@@ -1419,8 +1419,8 @@ bool CAutomobile::ProcessAI(uint32& extraHandlingFlags) {
     float steerLeftRight = (float)pad->GetSteeringLeftRight() / 128.0f;
     float steerUpDown    = (float)pad->GetSteeringUpDown() / 128.0f;
     if (CCamera::m_bUseMouse3rdPerson && std::fabs(steerLeftRight) < 0.05f && std::fabs(steerUpDown) < 0.05f) {
-        steerLeftRight = std::clamp<float>(CPad::NewMouseControllerState.m_AmountMoved.x / 50.0f, -1.5f, 1.5f);
-        steerUpDown    = std::clamp<float>(CPad::NewMouseControllerState.m_AmountMoved.y / 50.0f, -1.5f, 1.5f);
+        steerLeftRight = std::clamp<float>(CPad::NewMouseControllerState.m_AmountMoved.x * ExeRecip(50.0f), -1.5f, 1.5f);
+        steerUpDown    = std::clamp<float>(CPad::NewMouseControllerState.m_AmountMoved.y * ExeRecip(50.0f), -1.5f, 1.5f);
     }
 
     // 0x6B4F69
@@ -1874,7 +1874,7 @@ int32 CAutomobile::ProcessEntityCollision(CEntity* entity, CColPoint* outColPoin
                 * std::min(std::abs(GetMoveSpeed().Dot(GetForward())), 0.3f) // Forward speedsq
                 * std::min(0.2f, suspComprDelta)
                 * m_pHandlingData->m_fSuspensionHighSpdComDamp
-            ) / 0.3f;
+            ) * ExeRecip(0.3f);
             outcp.m_nPieceTypeA = CarWheelToCarPiece((eCarWheel)i);
             outcp.m_nSurfaceTypeA = outcp.m_nSurfaceTypeB = SURFACE_WHEELBASE;
             if (numColPts + 1 < 32) { // TODO/NOTE: `32` is ProcessColModels output array size
@@ -1951,7 +1951,7 @@ void CAutomobile::ProcessControlInputs(uint8 playerNum) {
     std::tie(m_fRawSteerAngle, m_nLastControlInput) = [&, this]() -> std::pair<float, eControllerType> {
         // Calculates steering delta for this frame
         const auto GetSteeringDeltaForFrame = [&, this] {
-            return (-(float)plyrpad->GetSteeringLeftRight() / 128.f - m_fRawSteerAngle) / 5.f * CTimer::GetTimeStep();
+            return (-(float)plyrpad->GetSteeringLeftRight() / 128.f - m_fRawSteerAngle) * ExeRecip(5.f) * CTimer::GetTimeStep();
         };
     
         if (!CCamera::m_bUseMouse3rdPerson || !m_bEnableMouseSteering) {
@@ -2001,15 +2001,15 @@ void CAutomobile::ProcessControlInputs(uint8 playerNum) {
             return (value < 0 && m_nModelIndex == (uint16)eModelID::UNLOAD_MODEL
                 ? (float)(value * 0.3f)
                 : (float)(value)
-            ) / 255.f;
+            ) * ExeRecip(255.f);
         }();
 
         if (std::abs(fwdvel) < 0.01f) { // 0x6ADAC6
             if (plyrpad->GetAccelerate() > 150 && plyrpad->GetBrake() > 150) {
                 m_bDoingBurnout = true;
                 return {
-                    (float)plyrpad->GetAccelerate() / 255.f,
-                    (float)plyrpad->GetBrake() / 255.f
+                    (float)plyrpad->GetAccelerate() * ExeRecip(255.f),
+                    (float)plyrpad->GetBrake() * ExeRecip(255.f)
                 };
             } else {
                 return { gasPedalInput, 0.f };
@@ -2831,7 +2831,7 @@ void CAutomobile::VehicleDamage(float damageIntensity, eVehicleCollisionComponen
         collisionComponent    = (eVehicleCollisionComponent)m_nPieceType;
 
         collForceMult = 1.f;
-        minDmgIntensity  = m_fMass / 1500.f * 25.f;
+        minDmgIntensity  = m_fMass * ExeRecip(1500.f) * 25.f;
         calcDmgIntensity = m_fDamageIntensity;
 
         // 0x6A7705
@@ -3172,12 +3172,12 @@ void CAutomobile::VehicleDamage(float damageIntensity, eVehicleCollisionComponen
 
             // 0x6A82CB
             if (this == FindPlayerVehicle()->AsAutomobile()) {
-                m_fHealth -= vehicleFlags.bTakeLessDamage ? calcCollHealthLoss / 6.f : calcCollHealthLoss / 2.f;
+                m_fHealth -= vehicleFlags.bTakeLessDamage ? calcCollHealthLoss * ExeRecip(6.f) : calcCollHealthLoss / 2.f;
             } else if (vehicleFlags.bTakeLessDamage) {
-                m_fHealth -= calcCollHealthLoss / 12.f;
+                m_fHealth -= calcCollHealthLoss * ExeRecip(12.f);
             } else {
                 if (m_pDamageEntity && m_pDamageEntity == FindPlayerVehicle()) {
-                    m_fHealth -= calcCollHealthLoss / 1.5f;
+                    m_fHealth -= calcCollHealthLoss * ExeRecip(1.5f);
                 }
                 else {
                     m_fHealth -= calcCollHealthLoss / 4.f;
@@ -3411,7 +3411,7 @@ float CAutomobile::FindWheelWidth(bool bRear) {
 
     const auto& mi = *GetVehicleModelInfo();
 
-    auto wheelWidth = (bRear ? mi.m_fWheelSizeRear : mi.m_fWheelSizeFront) / 2.8f;
+    auto wheelWidth = (bRear ? mi.m_fWheelSizeRear : mi.m_fWheelSizeFront) * ExeRecip(2.8f);
     if (m_nModelIndex == eModelID::MODEL_KART) {
         wheelWidth *= 1.5f;
     }
@@ -3872,7 +3872,7 @@ float CAutomobile::GetMovingCollisionOffset() {
             return (float)m_wMiscComponentAngle / -10000.f;
 
         case eModelID::MODEL_DOZER:
-            return m_aCarNodes[CAR_MISC_A] ? (float)m_wMiscComponentAngle / 5000.f : 0.0f;
+            return m_aCarNodes[CAR_MISC_A] ? (float)m_wMiscComponentAngle * ExeRecip(5000.f) : 0.0f;
 
         case eModelID::MODEL_ANDROM:
             return m_aCarNodes[CAR_MISC_E] ? (float)m_wMiscComponentAngle * CPlane::ANDROM_COL_ANGLE_MULT : 0.0f;
@@ -4233,7 +4233,7 @@ void CAutomobile::ProcessAutoBusDoors() {
                 m_nBusDoorTimerStart = 0;
                 OpenThisDoor(0.f);
             } else {
-                OpenThisDoor(1.f - (float)(CTimer::GetTimeInMS() - m_nBusDoorTimerEnd + 500) / 500.f);
+                OpenThisDoor(1.f - (float)(CTimer::GetTimeInMS() - m_nBusDoorTimerEnd + 500) * ExeRecip(500.f));
             }
         }
 
@@ -4252,7 +4252,7 @@ void CAutomobile::BoostJumpControl() {
         if (const auto playerPad = m_pDriver->AsPlayer()->GetPadFromPlayer()) {
             if (playerPad->HornJustDown() && m_fWheelsSuspensionCompression[0] < 1.f) {
                 ApplyMoveForce(CVector{ 0.f, 0.f, 1.f } * (m_fMass * 0.15f));
-                ApplyTurnForce(m_matrix->GetUp() * (m_fTurnMass / 100.f), m_matrix->GetForward());
+                ApplyTurnForce(m_matrix->GetUp() * (m_fTurnMass * ExeRecip(100.f)), m_matrix->GetForward());
             }
         }
     }
@@ -4389,7 +4389,7 @@ void CAutomobile::NitrousControl(int8 boost) {
         return;
     }
 
-    m_fTireTemperature -= CTimer ::GetTimeStep() / 1000.f;
+    m_fTireTemperature -= CTimer ::GetTimeStep() * ExeRecip(1000.f);
     if (m_fTireTemperature < -1.f) {
         m_fTireTemperature = 0.000001f; // Just set some small positive value.
         if (!m_nNitroBoosts) {
@@ -4729,7 +4729,7 @@ void CAutomobile::ProcessCarWheelPair(eCarWheel leftWheel, eCarWheel rightWheel,
             (m_WheelStates[CAR_WHEEL_REAR_LEFT] == WHEEL_STATE_SPINNING ||
             m_WheelStates[CAR_WHEEL_REAR_RIGHT] == WHEEL_STATE_SPINNING))
         {
-            m_fTireTemperature += CTimer::GetTimeStep() / 1000.0f;
+            m_fTireTemperature += CTimer::GetTimeStep() * ExeRecip(1000.0f);
             m_fTireTemperature = std::min(m_fTireTemperature, 3.0f);
         }
         else if (m_fTireTemperature > 1.0f) {
@@ -4919,7 +4919,7 @@ void CAutomobile::ProcessCarOnFireAndExplode(bool bExplodeImmediately) {
 
                 m_fBurnTimer += m_fireParticleCounter || isRcShit
                     ? floorTsMS
-                    : floorTsMS / 5.f;
+                    : floorTsMS * ExeRecip(5.f);
                 if (m_fBurnTimer > 5000.f) { // 0x6A72A4
                     BlowUpCar(m_pExplosionVictim, false);
                 } else { //> 0x6A72D9 - Create smoke particle fx
@@ -6543,7 +6543,7 @@ void CAutomobile::FireTruckControl(CFire* fire) {
             doomVerticalRotation += TWO_PI;
 
         float doomVerticalRotDiff = doomVerticalRotation - m_fDoomVerticalRotation;
-        float timeStep = CTimer::GetTimeStep() / 100.0f;
+        float timeStep = CTimer::GetTimeStep() * ExeRecip(100.0f);
         if (std::fabs(doomVerticalRotDiff) >= timeStep) {
             if (doomVerticalRotDiff <= 0.0f)
                 m_fDoomVerticalRotation -= timeStep;
@@ -6557,7 +6557,7 @@ void CAutomobile::FireTruckControl(CFire* fire) {
         if (activeCam.m_nMode != MODE_CAM_ON_A_STRING)
         {
             CPad* pad = CPad::GetPad();
-            m_fDoomVerticalRotation   -= ((float)pad->GetCarGunLeftRight() * CTimer::GetTimeStep() / 20.0f) / 128.0f;
+            m_fDoomVerticalRotation   -= ((float)pad->GetCarGunLeftRight() * CTimer::GetTimeStep() * ExeRecip(20.0f)) / 128.0f;
             m_fDoomHorizontalRotation += ((float)pad->GetCarGunUpDown()    * CTimer::GetTimeStepInSeconds()) / 128.0f;
         }
         else {
@@ -6576,7 +6576,7 @@ void CAutomobile::FireTruckControl(CFire* fire) {
                 doomVerticalRotation += TWO_PI;
 
             float doomVerticalRotDiff = doomVerticalRotation - m_fDoomVerticalRotation;
-            float timeStep = CTimer::GetTimeStep() / 20.0f;
+            float timeStep = CTimer::GetTimeStep() * ExeRecip(20.0f);
             if (doomVerticalRotDiff > timeStep)
                 m_fDoomVerticalRotation += timeStep;
             else if (doomVerticalRotDiff < -timeStep)
@@ -6628,7 +6628,7 @@ void CAutomobile::FireTruckControl(CFire* fire) {
         newTurretPosition += GetSpeed(newTurretPosition - GetPosition()) * CTimer::GetTimeStep();
     }
 
-    point.z += float(CGeneral::GetRandomNumber() % 16) / 1000.0f;
+    point.z += float(CGeneral::GetRandomNumber() % 16) * ExeRecip(1000.0f);
     CVector endPoint = m_vecMoveSpeed * CVector(1.0f, 1.0f, 0.3f);
     if (ModelIndices::IsSwatVan(m_nModelIndex))
         endPoint += point * 0.4f;

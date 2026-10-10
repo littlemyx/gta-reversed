@@ -423,7 +423,7 @@ void CWeather::Update() {
     if (CReplay::Mode != MODE_PLAYBACK) {
         const auto prevInterpolationValue = std::exchange(
             InterpolationValue,
-            ((float)CClock::GetGameClockSeconds() / 60.f + (float)CClock::GetGameClockMinutes()) / 60.f
+            ((float)CClock::GetGameClockSeconds() * ExeRecip(60.f) + (float)CClock::GetGameClockMinutes()) * ExeRecip(60.f)
         );
         if (InterpolationValue < prevInterpolationValue) {
             UpdateWeatherRegion(nullptr);
@@ -639,11 +639,11 @@ void CWeather::Update() {
     if (hours > 20) { // [21, 23]
         TrafficLightsBrightness = 1.0f;
     } else if (hours > 19) { // 20
-        TrafficLightsBrightness = (float)CClock::GetGameClockMinutes() / 60.f;
+        TrafficLightsBrightness = (float)CClock::GetGameClockMinutes() * ExeRecip(60.f);
     } else if (hours > 6) { // [7, 19]
         TrafficLightsBrightness = 0.0f;
     } else if (hours > 5) { // 6
-        TrafficLightsBrightness = 1.0f - (float)CClock::GetGameClockMinutes() / 60.f;
+        TrafficLightsBrightness = 1.0f - (float)CClock::GetGameClockMinutes() * ExeRecip(60.f);
     } else { // [0, 5]
         TrafficLightsBrightness = 1.0f;
     }
@@ -677,7 +677,7 @@ void CWeather::UpdateInTunnelness() {
             CCollision::DistToLine(from, to, s_TunnelPoint2),
             100.0f,
         });
-        target = std::min(1.0f, dist / 100.0f);
+        target = std::min(1.0f, dist * ExeRecip(100.0f));
     }
 
     InTunnelness = notsa::step_to(InTunnelness, target, CTimer::GetTimeStep() * 0.01f);

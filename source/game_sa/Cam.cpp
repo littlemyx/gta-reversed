@@ -3827,7 +3827,7 @@ void CCam::Process_Cam_TwoPlayer_Separate_Cars_TopDown() {
         return FindPlayerVehicle(PED_TYPE_PLAYER2) ? 0.75f : 0.45f;
     }() - m_fCameraHeightMultiplier);
 
-    if (const auto s = CTimer::GetTimeStep() / 200.0f; camHeightMult >= s) {
+    if (const auto s = CTimer::GetTimeStep() * ExeRecip(200.0f); camHeightMult >= s) {
         camHeightMult = (camHeightMult >= 0.0f ? s : -s) + m_fCameraHeightMultiplier;
     }
     m_fCameraHeightMultiplier = camHeightMult;
@@ -4762,8 +4762,8 @@ void CCam::Process_Editor(const CVector& target, float orientation, float speedV
 
     static constexpr float _90DEG_PER_HOUR_IN_RAD_PER_MIN = 0.02617994f;
     const auto* pad = CPad::GetPad(1);
-    m_fHorizontalAngle += pad->GetLeftStickX() * _90DEG_PER_HOUR_IN_RAD_PER_MIN / 19.0f;
-    m_fVerticalAngle   += DegreesToRadians(static_cast<float>(pad->GetLeftStickY())) / 50.0f;
+    m_fHorizontalAngle += pad->GetLeftStickX() * _90DEG_PER_HOUR_IN_RAD_PER_MIN * ExeRecip(19.0f);
+    m_fVerticalAngle   += DegreesToRadians(static_cast<float>(pad->GetLeftStickY())) * ExeRecip(50.0f);
 
     m_fVerticalAngle = std::max(m_fVerticalAngle, DegreesToRadians(85.0f));
     if (m_fVerticalAngle >= DegreesToRadians(-85.0f)) {
@@ -7082,7 +7082,7 @@ void CCam::Process_Rocket(const CVector& target, float orientation, float speedV
     m_vecSource = headPosition + CVector{0.0f, 0.0f, 0.1f};
 
     auto*      pad1   = CPad::GetPad(0);
-    const auto fov    = m_fFOV / 80.0f;
+    const auto fov    = m_fFOV * ExeRecip(80.0f);
     const auto amountMouseMoved = pad1->NewMouseControllerState.GetAmountMouseMoved();
     
     if (!amountMouseMoved.IsZero()) {
@@ -7092,8 +7092,8 @@ void CCam::Process_Rocket(const CVector& target, float orientation, float speedV
         const auto hv  = (float)-pad1->LookAroundLeftRight(targetPed);
         const auto vv  = (float)pad1->LookAroundUpDown(targetPed);
 
-        m_fHorizontalAngle += sq(hv) / 10000.0f * fov / 17.5f * CTimer::GetTimeStep() * (hv < 0.0f ? -1.0f : 1.0f);
-        m_fVerticalAngle   += sq(vv) / 22500.0f * fov / 14.0f * CTimer::GetTimeStep() * (vv < 0.0f ? -1.0f : 1.0f);
+        m_fHorizontalAngle += sq(hv) * ExeRecip(10000.0f) * fov * ExeRecip(17.5f) * CTimer::GetTimeStep() * (hv < 0.0f ? -1.0f : 1.0f);
+        m_fVerticalAngle   += sq(vv) * ExeRecip(22500.0f) * fov * ExeRecip(14.0f) * CTimer::GetTimeStep() * (vv < 0.0f ? -1.0f : 1.0f);
     }
     ClipBeta();
     ClipAlpha();

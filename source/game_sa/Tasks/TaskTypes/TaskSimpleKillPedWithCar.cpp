@@ -160,7 +160,7 @@ bool CTaskSimpleKillPedWithCar::ProcessPed(CPed* ped) {
     ped->bIsStanding       = false;
     ped->bKnockedUpIntoAir = carDir == FROM_BACK;
 
-    m_Car->ApplyMoveForce(pedToCar.Normalized() * std::min(1.f, m_Car->GetMass() / 1400.f) * -100.f);
+    m_Car->ApplyMoveForce(pedToCar.Normalized() * std::min(1.f, m_Car->GetMass() * ExeRecip(1400.f)) * -100.f);
 
     return true;
 }

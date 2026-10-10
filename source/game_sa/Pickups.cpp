@@ -188,7 +188,7 @@ void CPickups::DoCollectableEffects(CEntity* entity) {
 
     if (const auto d = DistanceBetweenPoints(TheCamera.GetPosition(), entityPos); d < 14.0f) {
         // shade of gray
-        const auto t = (uint8)((std::sinf((float)(((uint16)std::bit_cast<uintptr_t>(entity) + (uint16)CTimer::GetTimeInMS()) % 2048) * 0.0030664064f) + 1.0f) / 2.0f * ((14.0f - d) / 14.0f) * 255.0f);
+        const auto t = (uint8)((std::sinf((float)(((uint16)std::bit_cast<uintptr_t>(entity) + (uint16)CTimer::GetTimeInMS()) % 2048) * 0.0030664064f) + 1.0f) / 2.0f * ((14.0f - d) * ExeRecip(14.0f)) * 255.0f);
 
         CShadows::StoreStaticShadow(
             (uint32)entity,
@@ -243,7 +243,7 @@ void CPickups::DoMineEffects(CEntity* entity) {
 
     if (const auto d = DistanceBetweenPoints(TheCamera.GetPosition(), entityPos); d < 20.0f) {
         // shade of red
-        const auto t = (uint8)((std::sinf((float)(((uint16)std::bit_cast<uintptr_t>(entity) + (uint16)CTimer::GetTimeInMS()) % 512) * 0.012265625f) + 1.0f) / 2.0f * ((20.0f - d) / 20.0f) * 64.0f);
+        const auto t = (uint8)((std::sinf((float)(((uint16)std::bit_cast<uintptr_t>(entity) + (uint16)CTimer::GetTimeInMS()) % 512) * 0.012265625f) + 1.0f) / 2.0f * ((20.0f - d) * ExeRecip(20.0f)) * 64.0f);
 
         CShadows::StoreStaticShadow(
             (uint32)entity,
@@ -396,7 +396,7 @@ void CPickups::DoPickUpEffects(CEntity* entity) {
                 msg.color.r = color.r;
                 msg.color.g = color.g;
                 msg.color.b = color.b;
-                msg.color.a = (uint8)(int32)((1.0f - dist * (1.0f / 14.0f)) * 255.0f);
+                msg.color.a = (uint8)(int32)((1.0f - dist * ExeRecip(14.0f)) * 255.0f);
 
                 if (obj->objectFlags.bPickupInShopOutOfStock) {
                     msg.flags |= 1;
@@ -887,8 +887,8 @@ void CPickups::RenderPickUpText() {
         }
 
         // TODO: scaled wrong in windowed mode, but it's fine in fullscreen.
-        auto scaleX = std::min(SCREEN_STRETCH_X(1.0f), message.width / 30.0f);
-        auto scaleY = std::min(SCREEN_STRETCH_X(1.0f), message.height / 30.0f);
+        auto scaleX = std::min(SCREEN_STRETCH_X(1.0f), message.width * ExeRecip(30.0f));
+        auto scaleY = std::min(SCREEN_STRETCH_X(1.0f), message.height * ExeRecip(30.0f));
 
         CFont::SetProportional(true);
         CFont::SetBackground(false, false);

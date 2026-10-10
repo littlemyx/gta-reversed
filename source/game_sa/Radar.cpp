@@ -411,7 +411,7 @@ uint8 CRadar::CalculateBlipAlpha(float distance) {
         return 255;
     }
 
-    const auto alpha = 255 - (uint32)(distance / 6.0f * 255.0f);
+    const auto alpha = 255 - (uint32)(distance * ExeRecip(6.0f) * 255.0f);
     return (uint8)std::max((float)alpha, 70.0f);
 }
 
@@ -1299,8 +1299,8 @@ void CRadar::DrawRadarMask() {
 void CRadar::StreamRadarSections(const CVector& worldPosn) {
     if (!CStreaming::ms_disableStreaming) {
         StreamRadarSections(
-            (int32)std::floor((worldPosn.x + 3000.0f) / 500.0f),
-            (int32)std::ceil(11.0f - (worldPosn.y + 3000.0f) / 500.0f)
+            (int32)std::floor((worldPosn.x + 3000.0f) * ExeRecip(500.0f)),
+            (int32)std::ceil(11.0f - (worldPosn.y + 3000.0f) * ExeRecip(500.0f))
         );
     }
 }
@@ -1631,8 +1631,8 @@ void CRadar::DrawRadarGangOverlay(bool inMenu) {
 void CRadar::DrawRadarMap() {
     DrawRadarMask();
 
-    auto x = (int32)std::floor((vec2DRadarOrigin.x + 3000.0f) / 500.0f);  // todo: inlined
-    auto y = (int32)std::ceil(11.0f - (vec2DRadarOrigin.y + 3000.0f) / 500.0f);
+    auto x = (int32)std::floor((vec2DRadarOrigin.x + 3000.0f) * ExeRecip(500.0f));  // todo: inlined
+    auto y = (int32)std::ceil(11.0f - (vec2DRadarOrigin.y + 3000.0f) * ExeRecip(500.0f));
 
     SetupRadarRect(x, y);
     StreamRadarSections(x, y);
@@ -1709,7 +1709,7 @@ void CRadar::DrawMap() {
             m_radarRange = RADAR_MIN_RANGE;
     } else {
         if (vehicle && vehicle->IsSubPlane() && !ModelIndices::IsVortex(vehicle->m_nModelIndex)) {
-            const auto speedZ = vehicle->GetPosition().z * 1.0f / 200.0f;
+            const auto speedZ = vehicle->GetPosition().z * ExeRecip(200.0f);
 
             if (speedZ < RADAR_MIN_SPEED)
                 m_radarRange = RADAR_MAX_RANGE - 10.0f;

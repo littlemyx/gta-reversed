@@ -509,7 +509,7 @@ void CReplay::ProcessPedUpdate(CPed* ped, float interpValue, CAddressInReplayBuf
     ped->bIsTalking = packet.flags.isTalking;
     ped->bStillOnValidPoly = packet.flags.stillOnValidPoly;
     ped->SetUsesCollision(packet.flags.usesCollision);
-    ped->m_fContactSurfaceBrightness = static_cast<float>(packet.contactSurfaceBrightness) / 100.0f;
+    ped->m_fContactSurfaceBrightness = static_cast<float>(packet.contactSurfaceBrightness) * ExeRecip(100.0f);
     RetrievePedAnimation(ped, packet.animState);
 
     ped->RemoveWeaponModel();
@@ -575,7 +575,7 @@ void CReplay::ProcessLookAroundCam() {
         static auto& viewAngle = StaticRef<float>(0x97FAD8);
 
         const auto& pad = CPad::GetPad();
-        auto steer = pad->NewMouseControllerState.m_AmountMoved / 200.0f;
+        auto steer = pad->NewMouseControllerState.m_AmountMoved * ExeRecip(200.0f);
         // steerX2 = steer.x;
         // steerY2 = steer.y;
         // if (v2 | v2)

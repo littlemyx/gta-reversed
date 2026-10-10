@@ -131,7 +131,7 @@ void CAECollisionAudioEntity::PlayOneShotCollisionSound(CEntity* entityA, CEntit
         if (soundID == -1) {
             return true;
         }
-        auto offset = ((float)(gCollisionLookup[sA].ParamD) * impulseMagnitude) / 100.f;
+        auto offset = ((float)(gCollisionLookup[sA].ParamD) * impulseMagnitude) * ExeRecip(100.f);
         if (sB == AE_SURFACE_TYPE_BMX && sA == SURFACE_PED) { // 0x4DB2A6
             offset *= 10.f;
         }
@@ -320,7 +320,7 @@ void CAECollisionAudioEntity::PlayBulletHitCollisionSound(eSurfaceType surface, 
     } else if (g_surfaceInfos.IsAudioWood(surface)) {
         PlayRandomSound(19, 21);
     } else if (g_surfaceInfos.IsAudioMetal(surface)) {
-        if (CAEAudioUtility::ResolveProbability((90.0f - angleWithColPointNorm) / 180.0f)) { // see BoneNode_c::EulerToQuat
+        if (CAEAudioUtility::ResolveProbability((90.0f - angleWithColPointNorm) * ExeRecip(180.0f))) { // see BoneNode_c::EulerToQuat
             PlayRandomSound(10, 12);
         } else {
             PlayRandomSound(4, 6);

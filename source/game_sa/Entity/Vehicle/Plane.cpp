@@ -1518,7 +1518,7 @@ clampSteering:
     }
 
     //> 0x6CB2E4 - Acceleration
-    m_fAccelerationBreakStatus = (float)(pad->GetAccelerate() - pad->GetBrake()) * (1.0f / 255.0f);
+    m_fAccelerationBreakStatus = (float)(pad->GetAccelerate() - pad->GetBrake()) * ExeRecip(255.0f);
 
     //> 0x6CB329 - Landing gear
     if (pad->IsRightShockPressed()
@@ -1577,9 +1577,9 @@ clampSteering:
 
     if (forwardSpeed > 0.0f && pad->GetBrake() != 0) {
         if (forwardSpeed > 0.35f) {
-            m_BrakePedal = (float)pad->GetBrake() * (1.0f / 510.0f);
+            m_BrakePedal = (float)pad->GetBrake() * ExeRecip(510.0f);
         } else {
-            m_BrakePedal = (float)pad->GetBrake() * (1.0f / 255.0f);
+            m_BrakePedal = (float)pad->GetBrake() * ExeRecip(255.0f);
         }
     } else if (m_vecMoveSpeed.Magnitude() < 0.1f && pad->GetBrake() < 10 && pad->GetAccelerate() < 10) {
         m_BrakePedal = 0.5f;

@@ -798,7 +798,7 @@ bool CBmx::ProcessAI(uint32& extraHandlingFlags) {
             bikeFlags.bPlayerBoost = true;
             m_fControlPedaling     = driver->GetPlayerData()->m_fMoveSpeed;
         } else {
-            driver->HandleSprintEnergy(false, std::max(0.5f, 1.0f - (float)pad->GetAccelerate() * (1.0f / 255.0f) * 0.5f)); // 0x859A3C - 1/255
+            driver->HandleSprintEnergy(false, std::max(0.5f, 1.0f - (float)pad->GetAccelerate() * ExeRecip(255.0f) * 0.5f)); // 0x859A3C - 1/255
 
             if (driver->GetButtonSprintResults(SPRINT_BMX) <= 0.0f) {
                 if (driver->GetPlayerData()->m_fTimeCanRun >= 0.0f) {

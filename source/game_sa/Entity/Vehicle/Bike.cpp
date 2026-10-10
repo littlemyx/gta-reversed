@@ -1085,13 +1085,13 @@ void CBike::ProcessControlInputs(uint8 playerNum) {
     //> Gas/Brake
     const auto accelerate = CPad::GetPad(playerNum)->GetAccelerate();
     const auto brake      = CPad::GetPad(playerNum)->GetBrake();
-    const auto gasInput   = (float)(accelerate - brake) * (1.0f / 255.0f);
+    const auto gasInput   = (float)(accelerate - brake) * ExeRecip(255.0f);
 
     const auto absFwdSpeed = fwdSpeed < 0.0f ? -fwdSpeed : fwdSpeed;
     if (absFwdSpeed < 0.01f) {
         if (CPad::GetPad(playerNum)->GetAccelerate() > 150 && CPad::GetPad(playerNum)->GetBrake() > 150 && m_nVehicleSubType != VEHICLE_TYPE_BMX) {
-            m_GasPedal   = (float)CPad::GetPad(playerNum)->GetAccelerate() * (1.0f / 255.0f);
-            m_BrakePedal = (float)CPad::GetPad(playerNum)->GetBrake() * (1.0f / 255.0f);
+            m_GasPedal   = (float)CPad::GetPad(playerNum)->GetAccelerate() * ExeRecip(255.0f);
+            m_BrakePedal = (float)CPad::GetPad(playerNum)->GetBrake() * ExeRecip(255.0f);
             m_nBrakesOn  = 1; // Burnout
         } else {
             m_GasPedal   = gasInput;
@@ -3015,9 +3015,9 @@ void CBike::VehicleDamage(float damageIntensity, eVehicleCollisionComponent comp
 
             const auto prevHealth = m_fHealth;
             if (FindPlayerVehicle() == this) {
-                healthDmg *= vehicleFlags.bTakeLessDamage ? 1.0f / 6.0f : 0.5f;
+                healthDmg *= vehicleFlags.bTakeLessDamage ? ExeRecip(6.0f) : 0.5f;
             } else if (vehicleFlags.bTakeLessDamage) {
-                healthDmg *= 1.0f / 12.0f;
+                healthDmg *= ExeRecip(12.0f);
             } else if (m_pDamageEntity && m_pDamageEntity == FindPlayerVehicle()) {
                 healthDmg *= 2.0f / 3.0f;
             } else {

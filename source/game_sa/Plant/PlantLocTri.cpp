@@ -33,7 +33,7 @@ CPlantLocTri* CPlantLocTri::Add(const CVector& p1, const CVector& p2, const CVec
     m_createsPlants = createsPlants;
     m_createdObjects = false;
 
-    m_Center = (p1 + p2 + p3) / 3.0f;
+    m_Center = (p1 + p2 + p3) * ExeRecip(3.0f);
 
     m_SphereRadius = DistanceBetweenPoints(m_Center, m_V1) * 1.75f;
     if (m_createsObjects && !m_createsPlants) {

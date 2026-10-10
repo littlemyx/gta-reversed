@@ -247,7 +247,7 @@ void CFire::Extinguish() {
 // 0x53A570
 void CFire::ProcessFire() {
     {
-        const float newStrength = std::min(3.0f, m_Strength + CTimer::GetTimeStep() / 500.0f);
+        const float newStrength = std::min(3.0f, m_Strength + CTimer::GetTimeStep() * ExeRecip(500.0f));
         if ((uint32)(m_Strength) != (uint32)(newStrength)) {
             m_Strength = newStrength; // Not sure why they do this, probably just some hack
         }
@@ -371,7 +371,7 @@ void CFire::ProcessFire() {
     if (m_FxSystem) {
         float unused;
         const float fFractPart = std::modf(m_Strength, &unused); // R* way: m_fStrength - (float)(int)m_fStrength
-        m_FxSystem->SetConstTime(true, std::min((float)CTimer::GetTimeInMS() / 3500.0f, fFractPart));
+        m_FxSystem->SetConstTime(true, std::min((float)CTimer::GetTimeInMS() * ExeRecip(3500.0f), fFractPart));
     }
 
     if (m_IsCreatedByScript || (HasTimeToBurn() && IsNotInRemovalDistance())) {

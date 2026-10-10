@@ -543,7 +543,7 @@ void CTaskSimpleSwim::ProcessSwimmingResistance(CPed* ped) {
                     m_fStateChanger *= 0.95f;
                 }
                 if (m_fStateChanger < fMinimumSpeed) {
-                    m_fStateChanger += CTimer::GetTimeStepInSeconds() / 10.0f;
+                    m_fStateChanger += CTimer::GetTimeStepInSeconds() * ExeRecip(10.0f);
                     m_fStateChanger = std::min(fMinimumSpeed, m_fStateChanger);
                 }
                 m_fRotationX += CTimer::GetTimeStep() * m_fStateChanger;
@@ -556,7 +556,7 @@ void CTaskSimpleSwim::ProcessSwimmingResistance(CPed* ped) {
                 else
                     m_fStateChanger = 0.0f;
             } else {
-                m_fStateChanger += CTimer::GetTimeStepInSeconds() / 10.0f;
+                m_fStateChanger += CTimer::GetTimeStepInSeconds() * ExeRecip(10.0f);
                 m_fStateChanger = std::min(m_fStateChanger, 0.05f);
             }
             m_fRotationX += CTimer::GetTimeStep() * m_fStateChanger;
@@ -658,7 +658,7 @@ void CTaskSimpleSwim::ProcessEffects(CPed* ped) {
         uint32 oxygen = 5;
         if (ped->IsPlayer()) {
             assert(ped->GetPlayerData());
-            oxygen = static_cast<uint32>(((100.0f - ped->GetPlayerData()->m_fBreath / CStats::GetFatAndMuscleModifier(STAT_MOD_AIR_IN_LUNG) * 100.0f) / 3.0f));
+            oxygen = static_cast<uint32>(((100.0f - ped->GetPlayerData()->m_fBreath / CStats::GetFatAndMuscleModifier(STAT_MOD_AIR_IN_LUNG) * 100.0f) * ExeRecip(3.0f)));
         }
         if ((unsigned)CGeneral::GetRandomNumberInRange(0, 100) < oxygen) {
             RpHAnimHierarchy* hier = GetAnimHierarchyFromSkinClump(ped->GetRpClump()); // todo: almost CPed::GetBoneMatrix
@@ -971,7 +971,7 @@ void CTaskSimpleSwim::ProcessControlInput(CPlayerPed* ped) {
             rotX = pedWalkY + rotX * -0.08f * vecPedWalk.x;
         }
         m_fUpperTorsoRotationX += CTimer::GetTimeStep() * -0.08f * std::clamp(rotX, -1.0f, 1.0f);
-        m_fRotationX += CTimer::GetTimeStep() / 1000.0f;
+        m_fRotationX += CTimer::GetTimeStep() * ExeRecip(1000.0f);
         m_fRotationX = std::clamp(m_fRotationX, -DegreesToRadians(80.0f), DegreesToRadians(80.0f));
         // BUG: it should be m_fTimeCanRun <= 0.1f
         if (playerData->m_fTimeCanRun <= 0.0f) {

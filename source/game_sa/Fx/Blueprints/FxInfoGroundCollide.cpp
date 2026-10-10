@@ -43,7 +43,7 @@ void FxInfoGroundCollide_c::GetValue(float currentTime, float mult, float totalT
     float values[16];
     m_InterpInfo.GetVal(values, mult);
 
-    CVector in((float)(CGeneral::GetRandomNumber() % 10'000) / 5000.0f - 1.0f);
+    CVector in((float)(CGeneral::GetRandomNumber() % 10'000) * ExeRecip(5000.0f) - 1.0f);
     in.Normalise();
     in *= values[2] * totalTime * 5.0f;
 

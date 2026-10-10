@@ -50,7 +50,7 @@ float CEvent::GetSoundLevel(const CEntity* entity, CVector& position) {
         CVector& sourcePos = GetSourceEntity()->GetPosition();
         level = std::min((position - sourcePos).Magnitude(), 1.0f);
     }
-    return (GetLocalSoundLevel() - (std::log10f(level * level) * 10.0f)) - (level / 100.0f);
+    return (GetLocalSoundLevel() - (std::log10f(level * level) * 10.0f)) - (level * ExeRecip(100.0f));
 }
 
 // 0x4AC050

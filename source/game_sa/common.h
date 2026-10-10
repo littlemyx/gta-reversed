@@ -80,8 +80,8 @@ static inline auto& g_nNumIm3dDrawCalls = StaticRef<int32>(0xB73708);
 
 static inline auto& PC_Scratch = StaticRef<char[16384]>(0xC8E0C8);
 
-extern RwRGBAReal& AmbientLightColour;
-extern RwRGBAReal& AmbientLightColourForFrame;
+NOTSA_GLOBAL_EXTERN(AmbientLightColour, (RwRGBAReal));
+NOTSA_GLOBAL_EXTERN(AmbientLightColourForFrame, (RwRGBAReal));
 
 // taken from rpplugin.h
 #define rwVENDORID_DEVELOPER 0x0253F2

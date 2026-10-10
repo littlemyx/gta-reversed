@@ -128,6 +128,16 @@ CTask* CTaskComplexSequence::CreateNextSubTask(CPed* ped, int32& taskIndex, int3
         // If this is ever reached, that means that `m_RepeatMode` is not **just** a simple enum
         // but rather the number of times to repeat the sequence [for values > 1]
         NOTSA_UNREACHABLE();
+
+        // 0x632C9D: the exe handles any non-zero `m_RepeatMode` (the number of repeats for values > 1) - same as above, but ends when the repeat count is reached
+        if (bSeqEnd) {
+            taskIndex = 0;
+            repeatCount++;
+        }
+        if (repeatCount == (int32)m_RepeatMode) { // 0x632CBF
+            return nullptr;
+        }
+        return m_Tasks[taskIndex]->Clone();
     }
     }
 }

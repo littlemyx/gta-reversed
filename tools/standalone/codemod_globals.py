@@ -17,6 +17,8 @@ Forms (scope from the row of DETACH_GLOBALS.tsv, header/.cpp from the file name)
   ScopedStaticRef variable             `NOTSA_SCOPED_GLOBAL(v, varA, flagsA, mask, (T), initVal);`   (detached: `static T v = initVal;`, the flag word is dropped)
   aliases.json alias declaration       `NOTSA_GLOBAL_ALIAS(n, a, (T), Owner);` ; cast alias `reinterpret_cast<T&>(Owner)`; member `*reinterpret_cast<T*>(reinterpret_cast<uint8*>(&Owner) + off)`
   aliases.json expression alias        `NOTSA_GLOBAL_EXPR(a, (T), Owner)` replaces `StaticRef<T>(a)`
+  extern declaration in the sibling header (`extern T& name;` of a namespace-scope .cpp definition)
+                                        `NOTSA_GLOBAL_EXTERN(name, (T));`  (address: the old `extern T& name;`, detached: `extern T name;`)
   synthetic owners                     scope "tu": `namespace { NOTSA_GLOBAL_SYNTH(k, a, (T), init); }` after the last #include of the home .cpp; scope "shared": DetachedShared.h
 Everything that inserts or removes lines is followed by a `#line N` directive, so __LINE__ (baked into RH_Scoped* / NOTSA_UNREACHABLE sites) never moves.
 Skipped (reported, the line stays): category d (objects with constructors: phase C), ctor_audit NONZERO/VPTR, views / virtual / retype / readdress / extents
@@ -199,12 +201,48 @@ def apply_edits(text, edits):
     return out
 
 
+RE_EXTERN_REF = r"^([ \t]*)extern\s+([^;()\[\]]+?)\s*&\s*%s\s*;"
+
+
+def rewrite_externs(cpp, externs, args, report):
+    """A namespace-scope definition `T& name = StaticRef<T>(A)` is usually declared in the sibling header as `extern T& name;`. In a detached build the definition
+    is a real object, so the declaration must not be a reference: `NOTSA_GLOBAL_EXTERN(name, (T));` (Base.h) is `extern T& name` in address mode (same text as before) and
+    `extern T name` in detached mode. Single-line, line-count preserving. Looked up in <stem>.h / .hpp next to the .cpp; not found -> reported (the user must find the header)."""
+    cands = [cpp.with_suffix(x) for x in (".h", ".hpp")]
+    cands = [c for c in cands if c.exists()]
+    htexts = {c: c.read_text() for c in cands}
+    for name, addr in externs:
+        done = False
+        for c in cands:
+            rx = re.compile(RE_EXTERN_REF % re.escape(name), re.M)
+            ms = list(rx.finditer(htexts[c]))
+            if len(ms) != 1:
+                continue
+            m = ms[0]
+            htexts[c] = htexts[c][:m.start()] + "%sNOTSA_GLOBAL_EXTERN(%s, (%s));" % (m.group(1), name, m.group(2).strip()) + htexts[c][m.end():]
+            report.append((str(c.relative_to(REPO)), name, addr, "EXTERN", "extern decl rewritten"))
+            done = True
+            break
+        if not done:
+            has = any(re.search(r"\bextern\b[^;\n]*\b%s\b" % re.escape(name), t) for t in htexts.values())
+            if has:
+                report.append((str(cpp.relative_to(REPO)), name, addr, "warn", "header declares it `extern` in a form the codemod does not rewrite (array / pointer-to-array / several): fix by hand to NOTSA_GLOBAL_EXTERN"))
+    for c, t in htexts.items():
+        if args.apply:
+            c.write_text(t)
+        else:
+            old = c.read_text()
+            rel = str(c.relative_to(REPO))
+            sys.stdout.writelines(difflib.unified_diff(old.splitlines(True), t.splitlines(True), "a/" + rel, "b/" + rel, n=0))
+
+
 def process(path, rows_by_addr, hazards, em, al, args, report):
     rel = str(path.relative_to(REPO))
     text = path.read_text()
     stripped = gg.strip_source(text)
     is_header = path.suffix in (".h", ".hpp", ".inl")
     edits, defs = [], []
+    externs = []     # (unqualified name, addr) of namespace-scope .cpp definitions that a header may declare `extern T& name;`
     claimed = []     # spans handled as declarations (expression scan skips them)
     shared_used = False
     need_hdr = set()
@@ -331,6 +369,8 @@ def process(path, rows_by_addr, hazards, em, al, args, report):
         else:
             new = "%sNOTSA_GLOBAL(%s, %s, (%s), %s);" % (pre, name, mt.group("addr"), ttext, wrap_init(init, indent))
             kind = "GLOBAL"
+            if not is_header and not in_class and "static" not in pre and not local:
+                externs.append((name, "0x%X" % addr))
         edits.append((start, end, new))
         report.append((rel, qname, "0x%X" % addr, kind, "cat %s %s B  %s" % (row["cat"], row["size"], init[:60].replace("\n", " "))))
     # expression aliases: StaticRef<T>(A) -> NOTSA_GLOBAL_EXPR(A, (T), Owner)
@@ -390,6 +430,8 @@ def process(path, rows_by_addr, hazards, em, al, args, report):
         path.write_text(out)
     else:
         sys.stdout.writelines(difflib.unified_diff(text.splitlines(True), out.splitlines(True), "a/" + rel, "b/" + rel, n=0))
+    if externs:
+        rewrite_externs(path, externs, args, report)
     if defs:
         cpp = path.with_suffix(".cpp")
         ctext = cpp.read_text()

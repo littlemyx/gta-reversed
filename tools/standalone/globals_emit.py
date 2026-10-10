@@ -156,6 +156,9 @@ def parse_type(canon, total):
     m = re.match(r"^enum\s+(.*)$", canon.strip().replace("class ", "").replace("struct ", ""))
     if canon.strip().startswith("enum "):
         return T("enum", total, name=canon.strip()[5:].strip().replace("class ", ""))
+    m = re.match(r"^(?:notsa::)?WEnum<\s*(?:enum\s+)?([\w:]+)\s*,\s*([\w ]+?)\s*>$", c)
+    if m and m.group(2) in SCALARS and SCALARS[m.group(2)][1] == total:
+        return T("wenum", total, name=m.group(1), signed=SCALARS[m.group(2)][2])
     return T("opaque", total, name=c)
 
 
@@ -255,6 +258,9 @@ class Emit:
         v = int.from_bytes(raw, "little")
         if t.kind == "enum":
             return "static_cast<%s>(%s)" % (t.name, fmt_int(v, t.size, False))
+        if t.kind == "wenum":
+            # notsa::WEnum<E, Store> (ModelIndex = WEnumU16<eModelID>): implicit from E, stored as `Store`; the value is the stored integer
+            return "static_cast<%s>(%s)" % (t.name, fmt_int(v, t.size, t.signed))
         if t.name == "bool":
             return "false" if v == 0 else "true" if v == 1 else "std::bit_cast<bool>((uint8)%d)" % v
         if t.name == "float":
@@ -280,7 +286,7 @@ class Emit:
 
     def value(self, t, addr, notes):
         raw = self.img.bytes(addr, t.size)
-        if t.kind in ("scalar", "enum"):
+        if t.kind in ("scalar", "enum", "wenum"):
             return self.scalar(t, raw, notes)
         if t.kind == "ptr":
             return self.ptr(t, raw, addr, notes)
@@ -325,7 +331,7 @@ class Emit:
     def zero_of(self, e):
         if e.kind == "ptr":
             return "nullptr"
-        if e.kind == "enum":
+        if e.kind in ("enum", "wenum"):
             return "static_cast<%s>(0)" % e.name
         if e.kind == "scalar":
             return "false" if e.name == "bool" else "0.0f" if e.name == "float" else "0.0" if e.name == "double" else "0"

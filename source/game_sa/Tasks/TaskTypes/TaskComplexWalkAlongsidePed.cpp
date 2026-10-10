@@ -144,18 +144,33 @@ CTask* CTaskComplexWalkAlongsidePed::ControlSubTask(CPed* ped) {
                         walkAnim->SetSpeed(std::max(0.85f, walkAnim->m_Speed - 0.0125f));
                     };
 
-                    if (pedToTargetPtDist2DSq >= sq(0.25f)) {
-                        if (pedToTargetPtDist2DSq <= sq(0.25f)) {
-                            NOTSA_UNREACHABLE("Never say never"); // 0x6854BF - I'm quite sure they fucked something up, cause this only runs if `pedToTargetPtDist2DSq == sq(0.25f)`
+                    // Exe order of tests: `<` => ped slows down, `>` => ped speeds up, anything else (exactly == sq(0.25f) OR NaN) => 0x6854BC
+                    if (pedToTargetPtDist2DSq < sq(0.25f)) { // 0x685400
+                        DecreaseWalkAnimSpeed(pedWalkAnim);
+                        if (targetPedWalkAnim) {
+                            IncreaseWalkAnimSpeed(targetPedWalkAnim);
                         }
+                    } else if (pedToTargetPtDist2DSq > sq(0.25f)) { // 0x68545E
                         IncreaseWalkAnimSpeed(pedWalkAnim);
                         if (targetPedWalkAnim) {
                             DecreaseWalkAnimSpeed(targetPedWalkAnim);
                         }
-                    } else {
-                        DecreaseWalkAnimSpeed(pedWalkAnim);
+                    } else { // 0x6854BC: re-derive the speed from the move state, keep it if (nearly) unchanged, else nudge it by 0.0125 towards the new value's side
+                        const auto RecalcWalkAnimSpeed = [](CPed* p, CAnimBlendAssociation* walkAnim) {
+                            const auto oldSpeed = walkAnim->m_Speed;
+                            p->SetMoveAnimSpeed(walkAnim);
+                            const auto newSpeed = walkAnim->m_Speed;
+                            if (approxEqual(oldSpeed, newSpeed, 0.013f)) {
+                                walkAnim->m_Speed = oldSpeed;
+                            } else if (!(oldSpeed > newSpeed)) { // jne after fcomp (0x41) => old <= new or unordered
+                                walkAnim->m_Speed = oldSpeed + 0.0125f;
+                            } else {
+                                walkAnim->m_Speed = oldSpeed - 0.0125f;
+                            }
+                        };
+                        RecalcWalkAnimSpeed(ped, pedWalkAnim);
                         if (targetPedWalkAnim) {
-                            IncreaseWalkAnimSpeed(targetPedWalkAnim);
+                            RecalcWalkAnimSpeed(m_TargetPed, targetPedWalkAnim);
                         }
                     }
 

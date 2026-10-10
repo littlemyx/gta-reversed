@@ -70,10 +70,10 @@ VALIDATE_SIZE(CBird, 0x44);
 
 class CBirds {
 public:
-    static inline auto& bHasBirdBeenShot = StaticRef<bool>(0xC6A8A0);
-    static inline auto& uiNumberOfBirds = StaticRef<uint32>(0xC6A8A4);
-    static inline auto& aBirds = StaticRef<std::array<CBird, 6>>(0xC6A8B0);
-    static inline auto& vecBirdShotAt = StaticRef<CVector>(0xC6AA48);
+    static inline NOTSA_GLOBAL(bHasBirdBeenShot, 0xC6A8A0, (bool), {});
+    static inline NOTSA_GLOBAL(uiNumberOfBirds, 0xC6A8A4, (uint32), {});
+    static inline NOTSA_GLOBAL(aBirds, 0xC6A8B0, (std::array<CBird, 6>), {});
+    static inline NOTSA_GLOBAL(vecBirdShotAt, 0xC6AA48, (CVector), {});
 
     static std::array<float, 6>  faCreationCoorsX;
     static std::array<float, 6>  faCreationCoorsY;

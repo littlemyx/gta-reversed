@@ -69,7 +69,7 @@ cwd into a 128-char buffer. The log is `standalone.log` (plus `logs/log.log`); a
 
 Environment variables (all optional, run build only):
 * `NOTSA_STANDALONE_SKIP_VIDEOS=1` - skip the intro videos (the original also waits for a key in PLAYING_LOGO when DirectShow fails).
-* `NOTSA_STANDALONE_INPUT=<file|script>` - key injector: `wait:<ms>;key:return;down:w;up:w` (newline = `;`); `until:control[:maxms]` / `until:invehicle[:maxms]` hold the script clock until the player has control (ped exists, no menu/cutscene/fade) / is in a vehicle (default max 60000 ms, logs `[until] ... ok|TIMEOUT after N ms`), so later steps are relative to the game being ready; e.g. `wait:16000;key:return;wait:2500;key:return;wait:2500;key:return` starts a new game.
+* `NOTSA_STANDALONE_INPUT=<file|script>` - key injector: `wait:<ms>;key:return;down:w;up:w` (newline = `;`); `until:control[:maxms]` / `until:invehicle[:maxms]` hold the script clock until the player has control (ped exists, no menu/cutscene/fade) / is in a vehicle (default max 60000 ms, logs `[until] ... ok|TIMEOUT after N ms`), so later steps are relative to the game being ready (`label:NAME` + `skipif:COND:NAME` jump forward to the label when COND holds, e.g. skip a retry); e.g. `wait:16000;key:return;wait:2500;key:return;wait:2500;key:return` starts a new game.
 * `NOTSA_STANDALONE_SCREENSHOT=<k>` - write `frame_N.bmp` (back buffer) every k-th frame; `..._SCREENSHOT_MAX=<n>` caps the count (default 30).
 * `NOTSA_STANDALONE_VIDEOMODE=<index>` - force a video-mode index (default: first mode with width >= 800; the list is logged).
 * `NOTSA_STANDALONE_MEMLOG=1` - log CRT heap / committed memory every 100 frames (leak hunting).
@@ -94,6 +94,16 @@ The **oracle idea**: `tests/standalone/game_oracle.h` maps the original exe's co
 original function and our port with the same randomised inputs (incl. NaN/0/denormals, under PC=24 and PC=53) and compare the results bit by bit.
 `rw_*_test` (shim vs exe, with a real D3D9 device and pixel read-back), `game_oracle_test`, `review_oracle_test`, `script_oracle_*_test` (script
 opcode handlers vs the exe group processors) all use it. Unicorn-generated case lists (`rw_quat_cases.inc`, `rw_strip_cases.inc`) cover RW maths and the tristrip generator.
+
+## Detached globals (work in progress, `.notes/DETACH_DATA_PLAN.md`)
+Goal: run without the original exe's data image. Globals the original keeps at fixed addresses are declared with the `NOTSA_GLOBAL*` macros (`source/Base.h`):
+by default (and in the ASI/DLL build and the oracle tests) they expand to the old `auto& x = StaticRef<T>(0xADDR)`; with `-DGTASA_DETACHED_GLOBALS=ON`
+(preset `StandaloneDetached`, run build only) they are real C++ variables initialised with the exe's values. `NOTSA_ORACLE_ADDRESS_GLOBALS` forces address mode
+(the oracle tests that copy the exe target's definitions set it). Tools (dev-time, they need the exe and its extracted image once, the build never runs them):
+`tools/standalone/gen_globals.py` (inventory `.notes/DETACH_GLOBALS.tsv`), `globals_emit.py` (initialiser literals from the image), `codemod_globals.py` (rewrites
+the declarations; dry run by default, `--check` lists what is left), `obj_code_sig.py` (fingerprint .obj code to prove that the default build did not change).
+Verification: build with `-DGTASA_VERIFY_GLOBALS=ON` (set by the preset), run `NOTSA_VERIFY_GLOBALS=<dump> NOTSA_VERIFY_GLOBALS_EXIT=1 gta_reversed.exe` (or without
+`_EXIT` to keep playing; `NOTSA_VERIFY_GLOBALS_AFTER=<s>` adds a late snapshot `<dump>.late`) and compare with `python3 -I tools/standalone/verify_globals.py <dump>`.
 
 ## Fidelity rules (behaviour, not byte, identity)
 * **x87**: the game and shim are compiled `/arch:IA32 /fp:precise` (no SSE in game objects; verified with `dumpbin /disasm`); WinMain calls

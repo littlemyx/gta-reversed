@@ -63,6 +63,7 @@ CTask* CTaskComplexExtinguishFires::CreateNextSubTask(CPed* ped) {
     }
     default:
         NOTSA_UNREACHABLE();
+        return nullptr; // 0x69814F: default => edi = 0
     }
 }
 
@@ -99,7 +100,7 @@ CTask* CTaskComplexExtinguishFires::ControlSubTask(CPed* ped) {
     case TASK_SIMPLE_STAND_STILL:
         break;
     default:
-        NOTSA_UNREACHABLE();
+        NOTSA_UNREACHABLE(); // 0x698372..0x6983B8: default => return m_pSubTask (falls out of the switch)
     }
     return m_pSubTask;
 }

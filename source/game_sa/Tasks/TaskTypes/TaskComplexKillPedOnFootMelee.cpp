@@ -97,6 +97,7 @@ CTask* CTaskComplexKillPedOnFootMelee::CreateSubTask(eTaskType taskType, CPed* p
         return nullptr;
     default:
         NOTSA_UNREACHABLE();
+        return nullptr; // 0x626D2D: default => xor eax,eax
     }
 }
 
@@ -147,6 +148,7 @@ CTask* CTaskComplexKillPedOnFootMelee::CreateNextSubTask(CPed* ped) {
     }
     default:
         NOTSA_UNREACHABLE();
+        return nullptr; // 0x62BE21: default => edi = 0
     }
 }
 

@@ -71,6 +71,7 @@ CTask* CTaskComplexStuckInAir::ControlSubTask(CPed* ped) {
     }
     }
     NOTSA_UNREACHABLE("sub-task type was {}", m_pSubTask->GetTaskType());
+    return m_pSubTask; // 0x67C0A0: default => returns the unchanged sub-task
 }
 
 // 0x67BE20
@@ -117,6 +118,7 @@ CTask* CTaskComplexStuckInAir::CreateNextSubTask(CPed* ped) {
     }
     }
     NOTSA_UNREACHABLE("sub-task type was {}", m_pSubTask->GetTaskType());
+    return nullptr; // 0x67BE0B: default => esi = 0
 }
 
 // 0x67BA80
@@ -154,6 +156,7 @@ CTask* CTaskComplexStuckInAir::CreateSubTask(eTaskType taskType, CPed* ped) {
     }
     }
     NOTSA_UNREACHABLE("task type was {}", taskType);
+    return nullptr; // 0x67BBE9: default => eax = 0
 }
 
 void CTaskComplexStuckInAir::InjectHooks() {

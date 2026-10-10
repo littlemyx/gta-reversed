@@ -66,6 +66,7 @@ CTask* CTaskComplexStealCar::CreateSubTask(eTaskType taskType, CPed* ped) {
     }
     default:
         NOTSA_UNREACHABLE();
+        return nullptr; // 0x6410C6: default => eax = 0
     }
 }
 
@@ -107,6 +108,7 @@ CTask* CTaskComplexStealCar::CreateNextSubTask(CPed* ped) {
             return TASK_FINISHED;
         default:
             NOTSA_UNREACHABLE();
+            return TASK_NONE; // 0x644203: returns nullptr without CreateSubTask; CreateSubTask(TASK_NONE) => nullptr
         }
     }(), ped);
 }

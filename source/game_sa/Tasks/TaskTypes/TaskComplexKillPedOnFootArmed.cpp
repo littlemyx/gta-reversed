@@ -770,7 +770,7 @@ CTask* CTaskComplexKillPedOnFootArmed::ControlSubTask(CPed* ped) {
                         case eStrafeDir::RIGHT:   return eStrafeDir::LEFT;
                         case eStrafeDir::FORWARD: return eStrafeDir::BACK;
                         case eStrafeDir::BACK:    return eStrafeDir::FORWARD;
-                        default:                  NOTSA_UNREACHABLE();
+                        default:                  NOTSA_UNREACHABLE(); return m_strafeDir; // 0x62D048: ja => m_strafeDir unchanged
                         }
                     }();
                 }
@@ -782,7 +782,7 @@ CTask* CTaskComplexKillPedOnFootArmed::ControlSubTask(CPed* ped) {
                 case eStrafeDir::RIGHT:   return {  1.f,  0.f };
                 case eStrafeDir::FORWARD: return {  0.f, -1.f };
                 case eStrafeDir::BACK:    return {  0.f,  1.f };
-                default:                  NOTSA_UNREACHABLE();
+                default:                  NOTSA_UNREACHABLE(); return { 0.f, 0.f }; // 0x62CFC9: ja => actionDir stays {0,0}
                 }
             }
         }();

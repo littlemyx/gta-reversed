@@ -100,6 +100,7 @@ CTask* CTaskComplexUseAttractor::CreateFirstSubTask(CPed* ped) {
             return new CTaskComplexSunbathe{ nullptr, true };
         default:
             NOTSA_UNREACHABLE();
+            return nullptr; // 0x638894: default => esi = 0, then the common tail (same as a null task)
         }
     }();
 

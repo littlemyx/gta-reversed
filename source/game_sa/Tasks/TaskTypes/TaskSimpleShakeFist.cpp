@@ -66,6 +66,10 @@ bool CTaskSimpleShakeFist::MakeAbortable(CPed* ped, eAbortPriority priority, CEv
     }
     default:
         NOTSA_UNREACHABLE();
+        if (m_anim) {
+            m_anim->m_BlendDelta = -4.f;
+        }
+        return false; // 0x690C10: default => same as LEISURE
     }
 }
 

@@ -39,6 +39,7 @@ CTask* CTaskComplexGoToBoatSteeringWheel::CreateNextSubTask(CPed* ped) {
         return CreateSubTask(TASK_FINISHED);
     default:
         NOTSA_UNREACHABLE();
+        return nullptr; // 0x64E381: default => edi = 0
     }
 }
 
@@ -59,6 +60,7 @@ CTask* CTaskComplexGoToBoatSteeringWheel::CreateSubTask(eTaskType taskType) {
         return nullptr;
     default:
         NOTSA_UNREACHABLE();
+        return nullptr; // 0x64CDD8: default => eax = 0
     }
 }
 

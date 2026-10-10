@@ -56,6 +56,7 @@ CTask* CTaskComplexSitDownThenIdleThenStandUp::CreateSubTask(eTaskType taskType)
         return new CTaskSimpleStandUp{ m_sitOnStep };
     default:
         NOTSA_UNREACHABLE();
+        return nullptr; // 0x631685: default => eax = 0
     }
 }
 
@@ -92,6 +93,7 @@ CTask* CTaskComplexSitDownThenIdleThenStandUp::CreateNextSubTask(CPed* ped) {
         return nullptr;
     default:
         NOTSA_UNREACHABLE();
+        return nullptr; // 0x637F20: default => edi = 0
     }
 }
 

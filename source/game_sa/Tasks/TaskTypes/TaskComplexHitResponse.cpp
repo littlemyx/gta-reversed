@@ -38,6 +38,6 @@ CTask* CTaskComplexHitResponse::CreateFirstSubTask(CPed* ped) {
     case eDirection::LEFT:     return new CTaskSimpleHitFromLeft{};
     case eDirection::BACKWARD: return new CTaskSimpleHitFromBack{};
     case eDirection::RIGHT:    return new CTaskSimpleHitFromRight{};
-    default:                   NOTSA_UNREACHABLE();
+    default:                   NOTSA_UNREACHABLE(); return nullptr; // 0x638139: ja => eax = 0
     }
 }

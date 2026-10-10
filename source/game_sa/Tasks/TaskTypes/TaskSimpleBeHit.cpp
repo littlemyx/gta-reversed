@@ -132,6 +132,9 @@ void CTaskSimpleBeHit::StartAnim(CPed* ped) {
 */
 bool CTaskSimpleBeHit::MakeAbortable(CPed* ped, eAbortPriority priority, const CEvent* event) {
     switch (priority) {
+    default:
+        NOTSA_UNREACHABLE(); // 0x6208A1: out-of-range priority takes the LEISURE branch
+        [[fallthrough]];
     case ABORT_PRIORITY_LEISURE: {
         if (m_Anim) {
             if ((m_Anim->m_Flags & ANIMATION_IS_PLAYING) == 0) {
@@ -156,9 +159,6 @@ bool CTaskSimpleBeHit::MakeAbortable(CPed* ped, eAbortPriority priority, const C
 
         return true;
     }
-    default:
-        NOTSA_UNREACHABLE();
-        return false;
     }
 }
 

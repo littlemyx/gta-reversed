@@ -62,6 +62,7 @@ CTask* CTaskComplexKillPedGroupOnFoot::CreateSubTask(eTaskType taskType, CPed* p
         return new CTaskSimpleLookAbout{ CGeneral::GetRandomNumberInRange(3000u, 4000u) };
     default:
         NOTSA_UNREACHABLE();
+        return nullptr; // 0x622438: default => eax = 0
     }
 }
 
@@ -118,6 +119,7 @@ CTask* CTaskComplexKillPedGroupOnFoot::CreateNextSubTask(CPed* ped) {
             return ComputeNewTargetAndTaskType(ped); // Kill next or finish
         default:
             NOTSA_UNREACHABLE();
+            return TASK_FINISHED; // 0x629619: returns nullptr without CreateSubTask; CreateSubTask(TASK_FINISHED) => nullptr
         }
     }(), ped);
 }

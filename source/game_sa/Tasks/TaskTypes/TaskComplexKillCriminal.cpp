@@ -147,6 +147,7 @@ CTask* CTaskComplexKillCriminal::CreateSubTask(eTaskType tt, CPed* ped, bool for
     }
     default:
         NOTSA_UNREACHABLE();
+        return nullptr; // 0x68C37F: default => edi = 0
     }
 }
 
@@ -335,6 +336,7 @@ CTask* CTaskComplexKillCriminal::CreateNextSubTask(CPed* ped) {
         );
     default:
         NOTSA_UNREACHABLE();
+        return nullptr; // 0x68E936: default => edi = 0
     }
 }
 

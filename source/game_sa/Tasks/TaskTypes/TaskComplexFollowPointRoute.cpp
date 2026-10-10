@@ -162,6 +162,7 @@ CTask* CTaskComplexFollowPointRoute::CreateTask(eTaskType taskType, CPed* ped) {
         return nullptr;
     default:
         NOTSA_UNREACHABLE();
+        return nullptr; // 0x669322: default => edi = 0
     }
 }
 

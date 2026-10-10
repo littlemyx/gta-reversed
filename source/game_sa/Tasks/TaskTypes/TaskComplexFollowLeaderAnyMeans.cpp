@@ -58,6 +58,7 @@ CTask* CTaskComplexFollowLeaderAnyMeans::CreateSubTask(eTaskType taskType, CPed 
         return nullptr;
     default:
         NOTSA_UNREACHABLE();
+        return nullptr; // 0x69680D: default => eax = 0
     }
 }
 
@@ -79,6 +80,7 @@ CTask* CTaskComplexFollowLeaderAnyMeans::CreateNextSubTask(CPed* ped) {
                 : TASK_COMPLEX_FOLLOW_LEADER_IN_FORMATION;
         default:
             NOTSA_UNREACHABLE();
+            return TASK_FINISHED; // 0x696D6E: returns nullptr without CreateSubTask; CreateSubTask(TASK_FINISHED) => nullptr
         }
     }(), ped);
 }

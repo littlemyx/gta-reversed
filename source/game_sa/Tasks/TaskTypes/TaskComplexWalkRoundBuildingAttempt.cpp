@@ -125,6 +125,7 @@ CTask* CTaskComplexWalkRoundBuildingAttempt::CreateSubTask(eTaskType taskType, C
         return nullptr;
     default:
         NOTSA_UNREACHABLE();
+        return nullptr; // 0x654E20: default => eax = 0
     }
 }
 
@@ -255,6 +256,7 @@ CTask* CTaskComplexWalkRoundBuildingAttempt::CreateNextSubTask(CPed* ped) {
         return TaskFinished();
     default:
         NOTSA_UNREACHABLE();
+        return TaskFinished(); // 0x656F35: default => clears bIgnoreHeightCheckOnGotoPointTask, returns nullptr
     }
 }
 

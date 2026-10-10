@@ -168,7 +168,11 @@ bool CTaskSimpleFightingControl::MakeAbortable(CPed* ped, eAbortPriority priorit
         return true;
     }
     default:
-        NOTSA_UNREACHABLE();
+        NOTSA_UNREACHABLE(); // 0x61DE16: default => skips the event checks, runs the tail of URGENT/IMMEDIATE
+        if (ped->GetIntelligence()->GetTaskFighting()) {
+            return ped->GetTaskManager().GetTaskSecondary(TASK_SECONDARY_ATTACK)->MakeAbortable(ped, priority, event);
+        }
+        return true;
     }
 }
 

@@ -80,6 +80,7 @@ CTask* CTaskComplexGoToPointAiming::CreateNextSubTask(CPed* ped) {
         return CreateSubTask(TASK_FINISHED);
     default:
         NOTSA_UNREACHABLE();
+        return nullptr; // 0x66DD9B: default => edi = 0
     }
 }
 

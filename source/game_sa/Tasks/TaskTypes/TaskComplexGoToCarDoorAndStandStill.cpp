@@ -97,6 +97,7 @@ CTask* CTaskComplexGoToCarDoorAndStandStill::CreateSubTask(eTaskType taskType, C
         return nullptr;
     default:
         NOTSA_UNREACHABLE();
+        return nullptr; // 0x64A759: default => eax = 0
     }
 }
 
@@ -125,6 +126,7 @@ CTask* CTaskComplexGoToCarDoorAndStandStill::CreateNextSubTask(CPed* ped) {
     }
     default:
         NOTSA_UNREACHABLE("SubTaskType: {}", (int)tt);
+        return nullptr; // 0x64D42D: default => edi = 0
     }
 }
 
@@ -229,6 +231,7 @@ CTask* CTaskComplexGoToCarDoorAndStandStill::ControlSubTask(CPed* ped) {
     }
     default:
         NOTSA_UNREACHABLE("SubTaskType: {}", (int)tt);
+        return nullptr; // 0x64ABD4: default => edi = 0
     }
 }
 

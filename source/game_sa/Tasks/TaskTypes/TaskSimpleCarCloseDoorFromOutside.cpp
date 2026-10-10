@@ -55,13 +55,13 @@ void CTaskSimpleCarCloseDoorFromOutside::FinishAnimCarCloseDoorFromOutsideCB(CAn
 
 // 0x646600
 void CTaskSimpleCarCloseDoorFromOutside::ComputeAnimID(AssocGroupId& outGroup, AnimationId& outAnimId) {
-    outAnimId = [this] {
+    outAnimId = [this, &outAnimId] {
         switch (m_door) {
         case 8u:  return ANIM_ID_CAR_CLOSE_RHS_0;
         case 9u:  return ANIM_ID_CAR_CLOSE_RHS_1;
         case 10u: return ANIM_ID_CAR_CLOSE_LHS_0;
         case 11u: return ANIM_ID_CAR_CLOSE_LHS_1;
-        default:  NOTSA_UNREACHABLE();
+        default:  NOTSA_UNREACHABLE(); return outAnimId; // 0x64660D: ja => *outAnimId left unchanged
         }
     }();
     outGroup = m_veh->GetAnimGroup().GetGroup(outAnimId);

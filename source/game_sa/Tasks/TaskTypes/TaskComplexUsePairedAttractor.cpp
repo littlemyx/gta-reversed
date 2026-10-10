@@ -58,6 +58,7 @@ CTask* CTaskComplexUsePairedAttractor::CreateSubTask(eTaskType taskType, CPed* p
     }
     default:
         NOTSA_UNREACHABLE("Unhandled task type ({})", taskType);
+        return nullptr; // 0x638EE9: eax = 0
     }
 }
 
@@ -72,7 +73,7 @@ CTask* CTaskComplexUsePairedAttractor::CreateNextSubTask(CPed* ped) {
         switch (m_CurrentFxPair->Effects[m_IsLeader ? 0 : 1].PartnerUseMode) {
         case CScriptedEffectPair::eMode::USE_PARTNER_ONCE:         ret = CreateSubTask(TASK_FINISHED, ped); break;                       // 0x639F24
         case CScriptedEffectPair::eMode::LOOK_FOR_ANOTHER_PARTNER: ret = CreateSubTask(TASK_COMPLEX_USE_SCRIPTED_ATTRACTOR, ped); break; // 0x639F37
-        default: NOTSA_UNREACHABLE();
+        default: NOTSA_UNREACHABLE(); ret = nullptr; break; // 0x639E40: ebp = 0, then ClearPartnership()
         }
         ClearPartnership();
         return ret;
@@ -99,6 +100,7 @@ CTask* CTaskComplexUsePairedAttractor::CreateNextSubTask(CPed* ped) {
     }
     default:
         NOTSA_UNREACHABLE("Unhandled task type ({})", tt);
+        return nullptr; // 0x639F61: ebp = 0
     }
 }
 
@@ -136,6 +138,7 @@ CTask* CTaskComplexUsePairedAttractor::ControlSubTask(CPed* ped) {
     }
     }
     NOTSA_UNREACHABLE();
+    return m_pSubTask; // 0x638D1B: default => returns the current sub-task
 }
 
 // 0x6331F0

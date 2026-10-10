@@ -61,6 +61,7 @@ CTask* CTaskComplexScreamInCarThenLeave::CreateSubTask(eTaskType taskType, CPed*
     }
     default: {
         NOTSA_UNREACHABLE();
+        return nullptr; // 0x642569: default => eax = 0
     }
     }
 }
@@ -80,6 +81,7 @@ CTask* CTaskComplexScreamInCarThenLeave::CreateNextSubTask(CPed* ped) {
             return TASK_COMPLEX_LEAVE_CAR_AND_FLEE;
         default:
             NOTSA_UNREACHABLE();
+            return TASK_NONE; // 0x644316: returns nullptr without CreateSubTask; CreateSubTask(TASK_NONE) => nullptr
         }
     }(), ped);
 }

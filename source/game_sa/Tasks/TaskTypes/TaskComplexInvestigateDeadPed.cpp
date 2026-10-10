@@ -65,6 +65,7 @@ CTask* CTaskComplexInvestigateDeadPed::CreateSubTask(eTaskType taskType, CPed* p
         return new CTaskSimpleGoToPoint{ PEDMOVE_WALK, m_pedInitalPos, 0.5f, false, false };
     default:
         NOTSA_UNREACHABLE();
+        return nullptr; // 0x69718D: default => esi = 0
     }
 }
 
@@ -89,6 +90,7 @@ CTask* CTaskComplexInvestigateDeadPed::CreateNextSubTask(CPed* ped) {
     }
     default:
         NOTSA_UNREACHABLE();
+        return nullptr; // 0x697985: default => edi = 0
     }
 }
 

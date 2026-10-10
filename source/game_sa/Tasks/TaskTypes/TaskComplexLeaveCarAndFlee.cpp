@@ -71,6 +71,7 @@ CTask* CTaskComplexLeaveCarAndFlee::CreateSubTask(eTaskType taskType) {
         return nullptr;
     default:
         NOTSA_UNREACHABLE();
+        return nullptr; // 0x63C227: default => eax = 0
     }
 }
 
@@ -93,6 +94,7 @@ CTask* CTaskComplexLeaveCarAndFlee::CreateNextSubTask(CPed* ped) {
         }
         default:
             NOTSA_UNREACHABLE();
+            return TASK_NONE; // 0x6424AC: returns nullptr without CreateSubTask; CreateSubTask(TASK_NONE) => nullptr
         }
     }());
 }

@@ -62,6 +62,7 @@ CTask* CTaskComplexWalkAlongsidePed::CreateSubTask(eTaskType tt, CPed* ped) {
     }
     default:
         NOTSA_UNREACHABLE("Invalid TaskType {}", tt);
+        return nullptr; // 0x685150: default => eax = 0
     }
 }
 

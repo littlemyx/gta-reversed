@@ -63,6 +63,7 @@ CTask* CTaskComplexShuffleSeats::CreateSubTask(eTaskType taskType, CPed* ped) {
     }
     default:
         NOTSA_UNREACHABLE();
+        return nullptr; // 0x63D404: default => eax = 0
     }
 }
 
@@ -108,6 +109,7 @@ CTask* CTaskComplexShuffleSeats::CreateNextSubTask(CPed* ped) {
                 return TASK_FINISHED;
             default:
                 NOTSA_UNREACHABLE();
+                return TASK_NONE; // 0x63D5A5: returns nullptr; CreateSubTask(TASK_NONE) => nullptr
             }
         }
 
@@ -126,7 +128,7 @@ CTask* CTaskComplexShuffleSeats::CreateNextSubTask(CPed* ped) {
                 // Rear seats
                 case TARGET_DOOR_REAR_RIGHT:  return TARGET_DOOR_REAR_LEFT;
                 case TARGET_DOOR_REAR_LEFT:   return TARGET_DOOR_REAR_RIGHT;
-                default:                      NOTSA_UNREACHABLE();
+                default:                      NOTSA_UNREACHABLE(); return (eTargetDoor)m_TargetDoor; // 0x63D4DA: ja => m_TargetDoor unchanged
                 }
             }();
             //NOTSA_LOG_DEBUG("seat {} -> {}", m_OriginDoor, m_TargetDoor);
@@ -143,6 +145,7 @@ CTask* CTaskComplexShuffleSeats::CreateNextSubTask(CPed* ped) {
         }
         default:
             NOTSA_UNREACHABLE();
+            return TASK_NONE; // 0x63D5A5: returns nullptr without CreateSubTask; CreateSubTask(TASK_NONE) => nullptr
         }
     }(), ped);
 }

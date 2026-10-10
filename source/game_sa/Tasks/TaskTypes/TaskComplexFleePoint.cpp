@@ -61,6 +61,7 @@ CTask * CTaskComplexFleePoint::CreateSubTask(eTaskType taskType) {
         return nullptr;
     default:
         NOTSA_UNREACHABLE("Invalid taskType: {}", (int)taskType);
+        return nullptr; // 0x65B5F7: default => eax = 0
     }
 }
 

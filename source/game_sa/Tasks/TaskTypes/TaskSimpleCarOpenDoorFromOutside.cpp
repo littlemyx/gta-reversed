@@ -28,6 +28,7 @@ CTaskSimpleCarOpenDoorFromOutside::CTaskSimpleCarOpenDoorFromOutside(CVehicle* v
     m_lineUpTask{lineUpTask}
 {
     CEntity::SafeRegisterRef(veh);
+    { FILE* f = fopen("dbglu.txt", "a"); if (f) { fprintf(f, "[%u] OpenDoor ctor this=%p lineUp=%p veh=%p\n", (unsigned)GetTickCount(), (void*)this, (void*)lineUpTask, (void*)veh); fclose(f); } }
 }
 
 // NOTSA

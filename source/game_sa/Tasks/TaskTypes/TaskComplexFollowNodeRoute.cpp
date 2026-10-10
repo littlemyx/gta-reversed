@@ -210,6 +210,7 @@ CTask* CTaskComplexFollowNodeRoute::CreateSubTask(eTaskType taskType, CPed* ped)
         return nullptr;
     default:
         NOTSA_UNREACHABLE();
+        return nullptr; // 0x66985C: default => eax = 0
     }
 }
 

@@ -59,6 +59,7 @@ CTask* CTaskComplexWaitForBackup::CreateSubTask(eTaskType taskType, CPed* ped) {
         return nullptr;
     default:
         NOTSA_UNREACHABLE();
+        return nullptr; // 0x697562: default => eax = 0
     }
 }
 
@@ -93,6 +94,7 @@ CTask* CTaskComplexWaitForBackup::CreateNextSubTask(CPed* ped) {
         );
     default:
         NOTSA_UNREACHABLE();
+        return nullptr; // 0x6980AE: default => edi = 0
     }
 }
 

@@ -73,6 +73,7 @@ CTask* CTaskComplexReactToGunAimedAt::CreateSubTask(eTaskType taskType, CPed* pe
         return nullptr;
     default:
         NOTSA_UNREACHABLE();
+        return nullptr; // 0x697DCE: default => eax = 0
     }
 }
 
@@ -105,6 +106,7 @@ CTask* CTaskComplexReactToGunAimedAt::CreateNextSubTask(CPed* ped) {
             return TASK_FINISHED;
         default:
             NOTSA_UNREACHABLE();
+            return TASK_FINISHED; // 0x69851C: returns nullptr without CreateSubTask; CreateSubTask(TASK_FINISHED) => nullptr
         }
     }(), ped);
 }

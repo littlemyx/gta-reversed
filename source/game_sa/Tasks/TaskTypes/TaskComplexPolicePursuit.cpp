@@ -156,6 +156,7 @@ CTask* CTaskComplexPolicePursuit::CreateSubTask(eTaskType taskType, CPed* ped) {
         return nullptr;
     default:
         NOTSA_UNREACHABLE("Invalid TaskType({})", taskType);
+        return nullptr; // 0x68DA54: default => eax = 0
     }
 }
 

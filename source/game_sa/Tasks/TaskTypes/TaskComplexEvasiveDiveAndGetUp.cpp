@@ -51,6 +51,7 @@ CTask* CTaskComplexEvasiveDiveAndGetUp::CreateSubTask(eTaskType taskType) {
         return nullptr;
     default:
         NOTSA_UNREACHABLE("Invalid TaskType: {}", taskType);
+        return nullptr; // 0x65398A: default => eax = 0
     }
 }
 
@@ -80,6 +81,7 @@ CTask* CTaskComplexEvasiveDiveAndGetUp::CreateNextSubTask(CPed* ped) {
         return CreateSubTask(TASK_FINISHED);
     default:
         NOTSA_UNREACHABLE("Invalid SubTask: {}", subtt);
+        return nullptr; // 0x656093: default => edi = 0
     }
 }
 

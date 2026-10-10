@@ -73,6 +73,7 @@ CTask* CTaskComplexRoadRage::CreateSubTask(eTaskType taskType, CPed* ped) {
         return nullptr;
     default:
         NOTSA_UNREACHABLE();
+        return nullptr; // 0x6292AC: default => xor eax,eax
     }
 }
 
@@ -117,6 +118,7 @@ CTask* CTaskComplexRoadRage::CreateNextSubTask(CPed* ped) {
         );
     default:
         NOTSA_UNREACHABLE_CASE(tt);
+        return nullptr; // 0x62E3E8: default => edi = 0
     }
 }
 

@@ -168,6 +168,7 @@ public:
             return new CTaskSimpleTired{ 1000u };
         default:
             NOTSA_UNREACHABLE();
+            return nullptr; // 0x46F551 (Standard): default => edi = 0
         }
     }
 
@@ -228,6 +229,7 @@ public:
         }
         default:
             NOTSA_UNREACHABLE();
+            return nullptr; // 0x46F1C6 (Standard): default => edi = 0
         }
     }
 

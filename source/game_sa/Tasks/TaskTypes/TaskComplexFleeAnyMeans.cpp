@@ -108,6 +108,7 @@ CTask* CTaskComplexFleeAnyMeans::CreateSubTask(eTaskType taskType, CPed* ped) {
         return nullptr;
     default:
         NOTSA_UNREACHABLE();
+        return nullptr; // 0x65D4CF: default => eax = 0
     }
 }
 
@@ -131,6 +132,7 @@ CTask* CTaskComplexFleeAnyMeans::CreateNextSubTask(CPed* ped) {
         return CreateSubTask(TASK_FINISHED, ped);
     default:
         NOTSA_UNREACHABLE();
+        return nullptr; // 0x65D62B: default => edi = 0
     }
 }
 

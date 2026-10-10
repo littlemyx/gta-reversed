@@ -57,7 +57,7 @@ CTask* CTaskComplexCarSlowBeDraggedOut::CreateSubTask(eTaskType taskType) {
     case TASK_SIMPLE_CAR_SLOW_BE_DRAGGED_OUT: { // 0x64C6E3
         return new CTaskSimpleCarSlowBeDraggedOut{ m_Vehicle, m_Door, m_LineUpUtility.get(), m_IsDraggedBySelf };
     }
-    default: NOTSA_UNREACHABLE();
+    default: NOTSA_UNREACHABLE(); return nullptr; // 0x64C7BB: default => eax = 0
     }
 }
 
@@ -82,7 +82,7 @@ CTask* CTaskComplexCarSlowBeDraggedOut::CreateNextSubTask(CPed* ped) {
         case TASK_SIMPLE_CAR_SET_PED_OUT:
         case TASK_SIMPLE_CAR_SLOW_BE_DRAGGED_OUT:      return TASK_SIMPLE_CAR_SET_PED_SLOW_DRAGGED_OUT;
         case TASK_SIMPLE_CAR_SET_PED_SLOW_DRAGGED_OUT: return TASK_FINISHED;
-        default:                                       NOTSA_UNREACHABLE();
+        default:                                       NOTSA_UNREACHABLE(); return TASK_FINISHED; // 0x64C883: returns nullptr without CreateSubTask; CreateSubTask(TASK_FINISHED) => nullptr
         }
     }());
 }

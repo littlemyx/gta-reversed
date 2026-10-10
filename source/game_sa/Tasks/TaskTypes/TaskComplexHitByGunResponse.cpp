@@ -40,7 +40,7 @@ CTask* CTaskComplexHitByGunResponse::CreateFirstSubTask(CPed* ped) {
     case eDirection::LEFT:     return new CTaskSimpleHitByGunFromLeft{};
     case eDirection::BACKWARD: return new CTaskSimpleHitByGunFromRear{};
     case eDirection::RIGHT:    return new CTaskSimpleHitByGunFromRight{};
-    default:                   NOTSA_UNREACHABLE();
+    default:                   NOTSA_UNREACHABLE(); return nullptr; // 0x631F49: ja => eax = 0
     }
 }
 

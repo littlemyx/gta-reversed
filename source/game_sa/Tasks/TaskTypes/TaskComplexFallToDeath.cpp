@@ -100,7 +100,7 @@ CTask* CTaskComplexFallToDeath::CreateFirstSubTask(CPed* ped) {
         case eDirection::RIGHT:    return ANIM_ID_KO_SPIN_R;
         default:
             NOTSA_UNREACHABLE("");
-            return ANIM_ID_UNDEFINED;
+            return m_nAnimId; // 0x6791C6: ja => m_nAnimId left unchanged
         }
     }();
 

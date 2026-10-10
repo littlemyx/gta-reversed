@@ -80,7 +80,12 @@ bool CTaskSimpleStandUp::MakeAbortable(CPed*, eAbortPriority priority, CEvent co
         return false;
     }
     default:
-        NOTSA_UNREACHABLE();
+        NOTSA_UNREACHABLE(); // 0x6313DB: default => same as LEISURE
+        if (m_anim) {
+            m_anim->m_Flags |= ANIMATION_IS_BLEND_AUTO_REMOVE;
+            m_anim->m_BlendDelta = -4.f;
+        }
+        return false;
     }
 }
 

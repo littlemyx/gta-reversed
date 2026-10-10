@@ -30,6 +30,7 @@ CTask* CTaskComplexMoveBackAndJump::CreateSubTask(eTaskType taskType) {
         return nullptr;
     default:
         NOTSA_UNREACHABLE();
+        return nullptr; // 0x6553C6: default => eax = 0
     }
 }
 
@@ -43,6 +44,7 @@ CTask* CTaskComplexMoveBackAndJump::CreateNextSubTask(CPed* ped) {
             return TASK_FINISHED;
         default:
             NOTSA_UNREACHABLE();
+            return TASK_FINISHED; // 0x6577AE: returns nullptr without CreateSubTask; CreateSubTask(TASK_FINISHED) => nullptr
         }
     }());
 }

@@ -81,6 +81,8 @@ bool CTaskComplexDestroyCarMelee::MakeAbortable(CPed* ped, eAbortPriority priori
     }
     default:
         NOTSA_UNREACHABLE("Invalid priority: {}", (int)priority);
+        m_AbortAtLeisure = true; // 0x621F41: default => same as LEISURE
+        return false;
     }
 }
 
@@ -114,6 +116,7 @@ CTask* CTaskComplexDestroyCarMelee::CreateNextSubTask(CPed* ped) {
         }
         default:
             NOTSA_UNREACHABLE();
+            return TASK_NONE; // 0x62DD99: returns nullptr without CreateSubTask; CreateSubTask(TASK_NONE) => nullptr, no side effects
         }
     }(), ped);
 }
@@ -216,5 +219,6 @@ CTask* CTaskComplexDestroyCarMelee::CreateSubTask(eTaskType taskType, CPed* ped)
     }
     default:
         NOTSA_UNREACHABLE();
+        return nullptr; // 0x628BFD: default => xor eax,eax
     }
 }

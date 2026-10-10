@@ -53,6 +53,7 @@ CTask* CTaskComplexEnterBoatAsDriver::CreateSubTask(eTaskType tt) {
         return nullptr;
     default:
         NOTSA_UNREACHABLE();
+        return nullptr; // 0x63B7B6: default => eax = 0
     }
 }
 
@@ -71,6 +72,7 @@ CTask* CTaskComplexEnterBoatAsDriver::CreateNextSubTask(CPed* ped) {
             return TASK_FINISHED;
         default:
             NOTSA_UNREACHABLE();
+            return TASK_FINISHED; // 0x640EC9: returns nullptr without CreateSubTask; CreateSubTask(TASK_FINISHED) => nullptr
     }
     }());
 }

@@ -69,6 +69,7 @@ CTask* CTaskComplexSmartFleeEntity::CreateNextSubTask(CPed* ped) {
              return TASK_FINISHED;
          default:
              NOTSA_UNREACHABLE();
+             return TASK_NONE; // 0x65C6DF: returns nullptr without CreateSubTask; CreateSubTask(TASK_NONE) => nullptr
          }
     }());   
 }
@@ -155,5 +156,6 @@ CTask* CTaskComplexSmartFleeEntity::CreateSubTask(eTaskType taskType) {
         return nullptr;
     default:
         NOTSA_UNREACHABLE();
+        return nullptr; // 0x65C56D: default => eax = 0
     }
 }

@@ -58,6 +58,7 @@ CTask* CTaskComplexOnFire::CreateSubTask(eTaskType taskType) {
         return nullptr;
     default:
         NOTSA_UNREACHABLE();
+        return nullptr; // 0x6334A4: default => xor eax,eax
     }
 }
 

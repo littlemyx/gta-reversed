@@ -69,6 +69,7 @@ CTask* CTaskComplexFleeEntity::CreateSubTask(eTaskType taskType) {
         return nullptr;
     default:
         NOTSA_UNREACHABLE();
+        return nullptr; // 0x65BA30: default => xor eax,eax
     }
 }
 

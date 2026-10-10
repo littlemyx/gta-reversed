@@ -106,6 +106,7 @@ CTask* CTaskComplexCarDrive::CreateNextSubTask(CPed* ped) {
     }
     default:
         NOTSA_UNREACHABLE();
+        return nullptr; // 0x644FFB: default => edi = 0
     }
 }
 
@@ -185,5 +186,6 @@ CTask* CTaskComplexCarDrive::CreateSubTask(eTaskType taskType, CPed* ped) {
         return nullptr;
     default:
         NOTSA_UNREACHABLE();
+        return nullptr; // 0x643140: default => eax = 0
     }
 }

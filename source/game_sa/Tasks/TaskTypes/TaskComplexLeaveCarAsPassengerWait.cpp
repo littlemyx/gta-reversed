@@ -87,6 +87,7 @@ CTask* CTaskComplexLeaveCarAsPassengerWait::CreateSubTask(eTaskType taskType, CP
         return nullptr;
     default:
         NOTSA_UNREACHABLE();
+        return nullptr; // 0x640E2B: default => eax = 0
     }
 }
 
@@ -103,6 +104,7 @@ CTask* CTaskComplexLeaveCarAsPassengerWait::CreateNextSubTask(CPed* ped) {
             return TASK_FINISHED;
         default:
             NOTSA_UNREACHABLE();
+            return TASK_FINISHED; // 0x643FFA: returns nullptr without CreateSubTask; CreateSubTask(TASK_FINISHED) => nullptr
         }
     }(), ped);
 }

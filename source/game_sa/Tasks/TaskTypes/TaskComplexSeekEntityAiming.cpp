@@ -60,6 +60,7 @@ CTask* CTaskComplexSeekEntityAiming::CreateNextSubTask(CPed* ped) {
         return new CTaskSimpleStandStill{2'000};
     default:
         NOTSA_UNREACHABLE();
+        return nullptr; // 0x695D11: default => xor eax,eax
     }
 }
 
@@ -114,7 +115,7 @@ CTask* CTaskComplexSeekEntityAiming::ControlSubTask(CPed* ped) {
         break;
     }
     default:
-        NOTSA_UNREACHABLE();
+        NOTSA_UNREACHABLE(); // 0x694E02: default => falls to `return m_pSubTask`
     }
     return m_pSubTask;
 }

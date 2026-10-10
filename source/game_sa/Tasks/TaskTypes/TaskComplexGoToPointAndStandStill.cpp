@@ -69,6 +69,7 @@ CTask* CTaskComplexGoToPointAndStandStill::CreateNextSubTask(CPed* ped) {
     }
     default:
         NOTSA_UNREACHABLE("Invalid Sub-Task Type ({})", subtt);
+        return nullptr; // 0x66DC35: default => edi = 0
     }
 }
 
@@ -153,5 +154,6 @@ CTask* CTaskComplexGoToPointAndStandStill::CreateSubTask(eTaskType taskType, CPe
     }
     default:
         NOTSA_UNREACHABLE("Invalid TaskType ({})", taskType);
+        return nullptr; // 0x6684C6: default => xor edx,edx
     }
 }

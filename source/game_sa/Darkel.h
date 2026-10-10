@@ -20,22 +20,22 @@ enum class eDarkelStatus : uint16 {
 
 class CDarkel {
 public:
-    static inline auto& RegisteredKills = StaticRef<std::array<int16[2], 800>>(0x969A50);
-    static inline auto& pStartMessage = StaticRef<const GxtChar*>(0x96A6D0);
-    static inline auto& AmmoInterruptedWeapon = StaticRef<uint32>(0x96A6D4);
-    static inline auto& InterruptedWeaponType = StaticRef<eWeaponType>(0x96A6D8);
-    static inline auto& InterruptedWeaponTypeSelected = StaticRef<eWeaponType>(0x96A6DC);
-    static inline auto& TimeOfFrenzyStart = StaticRef<uint32>(0x96A6E0);
-    static inline auto& PreviousTime = StaticRef<int32>(0x96A6E4);
-    static inline auto& TimeLimit = StaticRef<int32>(0x96A6E8);
-    static inline auto& KillsNeeded = StaticRef<int32>(0x96A6EC);
-    static inline auto& ModelToKill = StaticRef<std::array<int32, 4>>(0x96A6F0);
-    static inline auto& WeaponType = StaticRef<eWeaponType>(0x96A700);
-    static inline auto& Status = StaticRef<eDarkelStatus>(0x96A704);
+    static inline NOTSA_GLOBAL(RegisteredKills, 0x969A50, (std::array<int16[2], 800>), {});
+    static inline NOTSA_GLOBAL(pStartMessage, 0x96A6D0, (const GxtChar*), {});
+    static inline NOTSA_GLOBAL(AmmoInterruptedWeapon, 0x96A6D4, (uint32), {});
+    static inline NOTSA_GLOBAL(InterruptedWeaponType, 0x96A6D8, (eWeaponType), {});
+    static inline NOTSA_GLOBAL(InterruptedWeaponTypeSelected, 0x96A6DC, (eWeaponType), {});
+    static inline NOTSA_GLOBAL(TimeOfFrenzyStart, 0x96A6E0, (uint32), {});
+    static inline NOTSA_GLOBAL(PreviousTime, 0x96A6E4, (int32), {});
+    static inline NOTSA_GLOBAL(TimeLimit, 0x96A6E8, (int32), {});
+    static inline NOTSA_GLOBAL(KillsNeeded, 0x96A6EC, (int32), {});
+    static inline NOTSA_GLOBAL(ModelToKill, 0x96A6F0, (std::array<int32, 4>), {});
+    static inline NOTSA_GLOBAL(WeaponType, 0x96A700, (eWeaponType), {});
+    static inline NOTSA_GLOBAL(Status, 0x96A704, (eDarkelStatus), {});
 
-    static inline auto& bHeadShotRequired = StaticRef<bool>(0x969A49);
-    static inline auto& bStandardSoundAndMessages = StaticRef<bool>(0x969A4A);
-    static inline auto& bProperKillFrenzy = StaticRef<bool>(0x969A48);
+    static inline NOTSA_GLOBAL(bHeadShotRequired, 0x969A49, (bool), {});
+    static inline NOTSA_GLOBAL(bStandardSoundAndMessages, 0x969A4A, (bool), {});
+    static inline NOTSA_GLOBAL(bProperKillFrenzy, 0x969A48, (bool), {});
 
 public:
     static void InjectHooks();

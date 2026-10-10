@@ -324,10 +324,10 @@ void CalculateAngledAreaCorners(float x1, float y1, float x2, float y2, float wi
     while (angle > TWO_PI_F) {
         angle -= TWO_PI_F;
     }
-    const auto s = std::sin(angle);
-    const auto co = std::cos(angle);
-    c = CVector2D{ x2 + s * width, -(co * width) + y2 };
-    d = CVector2D{ s * width + x1, -(co * width) + y1 };
+    const auto s = x87::sin(angle);
+    const auto co = x87::cos(angle);
+    c = CVector2D{ (float)(x2 + s * width), (float)(-(co * width) + y2) };
+    d = CVector2D{ (float)(s * width + x1), (float)(-(co * width) + y1) };
 }
 
 //! Checks if the point is within the angled area (ignoring Z)

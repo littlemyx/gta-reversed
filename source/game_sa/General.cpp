@@ -40,7 +40,7 @@ constexpr double K_ONE_HALF_PI = (double)4.71238899230957f;   // 0x863AC4 (0x409
 
 // `fpatan` with ST0 = 1: atan2(v, 1)
 inline double AtanExt(double v) {
-    return std::atan2(v, 1.0);
+    return x87::atan2(v, 1.0);
 }
 }
 

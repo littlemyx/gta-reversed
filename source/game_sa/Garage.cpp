@@ -52,8 +52,8 @@ void CGarage::InjectHooks() {
 // 0x4479F0
 void CGarage::BuildRotatedDoorMatrix(CEntity* entity, float fDoorPosition) {
     const auto fAngle = fDoorPosition * -HALF_PI;
-    const auto fSin = sin(fAngle);
-    const auto fCos = cos(fAngle);
+    const auto fSin = x87::sin(fAngle);
+    const auto fCos = x87::cos(fAngle);
     CMatrix& matrix = entity->GetMatrix();
 
     const auto& vecForward = matrix.GetForward();

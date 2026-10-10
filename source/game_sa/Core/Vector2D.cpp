@@ -42,10 +42,10 @@ uint32 CVector2D::NodeHeading() const {
 }
 
 CVector2D CVector2D::RotatedBy(float rad) const {
-    const auto s = std::sin(rad), c = std::cos(rad);
+    const auto s = x87::sin(rad), c = x87::cos(rad);
     return {
-        x * c - y * s,
-        x * s - y * c,
+        (float)(x * c - y * s),
+        (float)(x * s - y * c),
     };
 }
 

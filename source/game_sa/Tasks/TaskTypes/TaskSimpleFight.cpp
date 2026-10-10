@@ -472,7 +472,7 @@ bool CTaskSimpleFight::IsTargetInRange(CPed* ped) {
             continue;
         }
 
-        const float ang  = (float)std::atan2(-(double)dx, (double)dy);
+        const float ang  = (float)x87::atan2(-(double)dx, (double)dy);
         double      diff = (double)ang - (double)ped->m_fCurrentRotation;
         if (diff < -(double)std::numbers::pi_v<float>) { // 0x858CC0
             diff += (double)(2.f * std::numbers::pi_v<float>); // 0x858CBC
@@ -677,7 +677,7 @@ int16 CTaskSimpleFight::ChooseAttackPlayer(CPed* ped) {
                 continue;
             }
 
-            const double angle = std::atan2(-dx, dy);
+            const double angle = x87::atan2(-dx, dy);
             double       diff  = angle - (double)ped->m_fCurrentRotation;
             if (diff > (double)std::numbers::pi_v<float>) { // 0x858CB8
                 diff -= (double)(2.f * std::numbers::pi_v<float>); // 0x858CBC
@@ -1276,10 +1276,10 @@ tail:
         const auto& tgtPos = m_pTargetEntity->GetPosition();
         const double dx = (double)tgtPos.x - (double)pedPos.x;
         const double dy = (double)tgtPos.y - (double)pedPos.y;
-        ped->m_fAimingRotation = (float)std::atan2(-dx, dy); // +0x55C
+        ped->m_fAimingRotation = (float)x87::atan2(-dx, dy); // +0x55C
     } else if (ped->IsPlayer() && CCamera::m_bUseMouse3rdPerson && static_cast<CPlayerPed*>(ped)->GetPadFromPlayer()->GetTarget()) {
         const auto& v = StaticRef<CVector>(0xB6F32C);
-        ped->m_fAimingRotation = (float)std::atan2(-(double)v.x, (double)v.y);
+        ped->m_fAimingRotation = (float)x87::atan2(-(double)v.x, (double)v.y);
     }
 
     m_bIsInControl = false;

@@ -232,8 +232,8 @@ void CCheckpoint::MarkAsDeleted() {
 // Based on 0x722970
 void CCheckpoint::SetHeading(float heading) {
     m_Fwd = CVector{
-        std::cos(DegreesToRadians(heading)),
-        std::sin(DegreesToRadians(heading)),
+        (float)(x87::cos(DegreesToRadians(heading))),
+        (float)(x87::sin(DegreesToRadians(heading))),
         m_Fwd.z
     }.Normalized();
 }

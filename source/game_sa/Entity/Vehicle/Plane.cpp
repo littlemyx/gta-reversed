@@ -604,8 +604,8 @@ void CPlane::FindPlaneCreationCoors(CVector* outCoors, CVector* outTargetCoors, 
 
         *outCoors = FindPlayerCoors();
         *outFlightHeight = (float)((CGeneral::GetRandomNumber() & 0xF) + i) + baseHeight;
-        outCoors->x = std::cos(angle) * distFromPlayer + outCoors->x;
-        outCoors->y = std::sin(angle) * distFromPlayer + outCoors->y;
+        outCoors->x = x87::cos(angle) * distFromPlayer + outCoors->x;
+        outCoors->y = x87::sin(angle) * distFromPlayer + outCoors->y;
         outCoors->z += *outFlightHeight;
 
         *outTargetCoors = FindPlayerCoors();
@@ -655,8 +655,8 @@ void CPlane::DoPlaneGenerationAndRemoval() {
     // Sets the vehicle's orientation like the code at 0x6C4130 (the same code is shared with another function by the compiler)
     const auto SetHeadingFast = [](CVehicle* veh, float heading) {
         auto& mat = *veh->m_matrix;
-        mat.GetRight()   = CVector{ std::sin(heading), -std::cos(heading), 0.0f };
-        mat.GetForward() = CVector{ std::cos(heading),  std::sin(heading), 0.0f };
+        mat.GetRight()   = CVector{ (float)(x87::sin(heading)), (float)(-x87::cos(heading)), 0.0f };
+        mat.GetForward() = CVector{ (float)(x87::cos(heading)),  (float)(x87::sin(heading)), 0.0f };
         mat.GetUp()      = CVector{ 0.0f, 0.0f, 1.0f };
     };
 
@@ -698,7 +698,7 @@ void CPlane::DoPlaneGenerationAndRemoval() {
             heli->m_autoPilot.m_nCarMission = MISSION_HELI_FLYINDIRECTION;
             heli->field_9B4 = heading;
             heli->m_fMaxAltitude = height;
-            heli->SetVelocity(CVector{ std::cos(heading) * 0.6666667f, std::sin(heading) * 0.6666667f, 0.0f });
+            heli->SetVelocity(CVector{ (float)(x87::cos(heading) * 0.6666667f), (float)(x87::sin(heading) * 0.6666667f), 0.0f });
             heli->vehicleFlags.bNeverUseSmallerRemovalRange = true;
             heli->m_nExtendedRemovalRange = 255;
             heli->m_autoPilot.m_nCruiseSpeed = 50;
@@ -760,7 +760,7 @@ void CPlane::DoPlaneGenerationAndRemoval() {
             plane->m_autoPilot.m_nCarMission = MISSION_PLANE_FLYINDIRECTION;
             plane->m_planeHeadingPrev = heading;
             plane->m_maxAltitude      = height;
-            plane->SetVelocity(CVector{ std::cos(heading) * 0.6666667f, std::sin(heading) * 0.6666667f, 0.0f });
+            plane->SetVelocity(CVector{ (float)(x87::cos(heading) * 0.6666667f), (float)(x87::sin(heading) * 0.6666667f), 0.0f });
             plane->vehicleFlags.bNeverUseSmallerRemovalRange = true;
 
             if (!isBigPlane && GenPlane_ModelIndex != MODEL_HYDRA) {
@@ -950,7 +950,7 @@ void CPlane::PreRender() {
                     } else {
                         arg = (float)dot;
                     }
-                    m_wheelRotation[i] = (float)-std::asin((double)arg);
+                    m_wheelRotation[i] = (float)-x87::asin((double)arg);
                 }
             }
         }
@@ -1673,7 +1673,7 @@ void CPlane::ProcessFlyingCarStuff() {
                     const float rnd    = Rand01();
                     float wave = (float)(uint32)m_planeDamageWave;
                     float period = (float)(uint32)PLANE_PROP_DAMAGE_WAVE_PERIOD;
-                    const float sine   = std::sin(wave * TWO_PI / period);
+                    const float sine   = x87::sin(wave * TWO_PI / period);
                     m_fAccelerationBreakStatus = ((((maxVal - minVal) * rnd + minVal) * (sine - 1.0f)) * (float)status * (float)status) * timeStep * PLANE_PROP_DAMAGE_MULT + m_fAccelerationBreakStatus;
                 }
                 particleSize = (float)status * 0.5f;

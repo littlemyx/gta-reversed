@@ -207,8 +207,8 @@ void tBrightLight::Render() const {
             const float angle = segAngleStep * (float)(i);
             SetVertexPosition(i,
                   m_vecPosition
-                + m_vecRight * std::cos(angle) * segSize
-                + m_vecTop * std::sin(angle) * segSize
+                + m_vecRight * x87::cos(angle) * segSize
+                + m_vecTop * x87::sin(angle) * segSize
             );
         }
 

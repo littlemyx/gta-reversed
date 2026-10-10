@@ -12,8 +12,8 @@
 // 0x54EF40
 void CSimpleTransform::UpdateRwMatrix(RwMatrix* out)
 {
-    const float sinHeading = std::sin(m_fHeading);
-    const float cosHeading = std::cos(m_fHeading);
+    const float sinHeading = x87::sin(m_fHeading);
+    const float cosHeading = x87::cos(m_fHeading);
 
     out->right = { cosHeading, sinHeading, 0.0f };
     out->up = { -sinHeading, cosHeading, 0.0f };
@@ -27,8 +27,8 @@ void CSimpleTransform::UpdateRwMatrix(RwMatrix* out)
 // 0x54EF90
 void CSimpleTransform::Invert(const CSimpleTransform& base)
 {
-    const float cosHeading = cosf(base.m_fHeading);
-    const float sinHeading = sinf(base.m_fHeading);
+    const float cosHeading = x87::cos(base.m_fHeading);
+    const float sinHeading = x87::sin(base.m_fHeading);
 
     m_vPosn.x = -(cosHeading * base.m_vPosn.x) - (sinHeading * base.m_vPosn.y);
     m_vPosn.y = (sinHeading * base.m_vPosn.x) - (cosHeading * base.m_vPosn.y);

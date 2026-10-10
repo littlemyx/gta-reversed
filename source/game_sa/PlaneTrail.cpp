@@ -84,7 +84,7 @@ void CPlaneTrail::RegisterPoint(CVector pos) {
 // From `CPlaneTrails::Update`
 void CPlaneTrail::Update(CVector pos, const CRGBA& color, uint32 coronaIdx, uint32 timeModifierMs, uint8 afterHour, uint8 beforeHour) {
     const float fTimeProg = (float)(CTimer::GetTimeInMS() % 131072) / 20860.0f; // or * 0.000047936901.. Not sure where this comes from..
-    const CVector currPos = pos * CVector(std::sin(fTimeProg), std::cos(fTimeProg), 1.0f);
+    const CVector currPos = pos * CVector(x87::sin(fTimeProg), x87::cos(fTimeProg), 1.0f);
 
     RegisterPoint(currPos);
 

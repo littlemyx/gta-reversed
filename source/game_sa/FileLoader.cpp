@@ -1242,7 +1242,7 @@ CEntity* CFileLoader::LoadObjectInstance(CFileObjectInstance* objInstance, const
     else
     {
         const auto fMult = rot.z < 0.0f ? 2.0f : -2.0f;
-        const auto fHeading = std::acos(objInstance->m_qRotation.real) * fMult;
+        const auto fHeading = x87::acos(objInstance->m_qRotation.real) * fMult;
         newEntity->SetHeading(fHeading);
     }
 

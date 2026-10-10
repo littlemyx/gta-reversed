@@ -377,8 +377,8 @@ void CFireManager::Update() {
         const float fRandomAngleRad = CGeneral::GetRandomNumberInRange(0.0f, TWO_PI);
         const float fRandomDir = CGeneral::GetRandomNumberInRange(35.0f, 60.0f);
         CVector point = TheCamera.GetPosition() + CVector{
-            std::sin(fRandomAngleRad) * fRandomDir,
-            std::cos(fRandomAngleRad) * fRandomDir,
+            (float)(x87::sin(fRandomAngleRad) * fRandomDir),
+            (float)(x87::cos(fRandomAngleRad) * fRandomDir),
             10.0f
         };
 

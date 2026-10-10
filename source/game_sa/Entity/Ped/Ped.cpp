@@ -863,7 +863,7 @@ void CPed::ClearAimFlag() {
 int32 CPed::GetLocalDirection(const CVector2D& point) const {
     // Exact x87 form of the exe (0x5DEF60): everything stays in extended precision (doubles), the angle is truncated by _ftol2 after `* (2/PI)` (0x858FB8)
     // and then reduced with `(dir - 4) & 3` for dir > 3 (== dir & 3).
-    double angle = std::atan2(-(double)point.x, (double)point.y) - (double)m_fCurrentRotation + (double)std::bit_cast<float>(0x3F490FDBu); // 0x859AB0 (PI / 4)
+    double angle = x87::atan2(-(double)point.x, (double)point.y) - (double)m_fCurrentRotation + (double)std::bit_cast<float>(0x3F490FDBu); // 0x859AB0 (PI / 4)
     while (angle < 0.0) {
         angle += (double)TWO_PI; // 0x858CBC
     }
@@ -1412,7 +1412,7 @@ void CPed::PositionAttachedPed()
 
     attachedMat.GetPosition() += attachedMat.TransformVector(offset);
 
-    const float heading = std::atan2(-attachedMat.GetForward().x, attachedMat.GetForward().y);
+    const float heading = x87::atan2(-attachedMat.GetForward().x, attachedMat.GetForward().y);
 
     if (!IsPlayer()) {
         float desiredHeading = heading;
@@ -1848,7 +1848,7 @@ bool CPed::PositionPedOutOfCollision(int32 exitDoor, CVehicle* vehicle, bool fin
 
     // Face the same direction as the vehicle
     const float heading = vehicle->m_matrix
-        ? std::atan2(-vehicle->m_matrix->GetForward().x, vehicle->m_matrix->GetForward().y)
+        ? x87::atan2(-vehicle->m_matrix->GetForward().x, vehicle->m_matrix->GetForward().y)
         : vehicle->m_placement.m_fHeading;
     if (m_matrix) {
         m_matrix->SetRotateZOnly(heading);
@@ -2714,7 +2714,7 @@ void CPed::CalculateNewVelocity() {
     const float rightDot = field_578.z * mat.GetRight().z   + field_578.y * mat.GetRight().y   + field_578.x * mat.GetRight().x;
 
     const auto AsinClamped = [](float v) {
-        return std::asin(std::clamp(v, -1.0f, 1.0f));
+        return x87::asin(std::clamp(v, -1.0f, 1.0f));
     };
 
     const auto UpdateSlopeRollFromRight = [&] { m_pedIK.m_fSlopeRoll = AsinClamped(rightDot); };
@@ -3697,7 +3697,7 @@ void CPed::PreRenderAfterTest()
     if (m_Wobble > 0.0f) {
         static constexpr float WOBBLE_FACTOR = 5.0f; // 0x8D21F0
 
-        const auto angle = std::sin(m_Wobble) * -WOBBLE_FACTOR;
+        const auto angle = x87::sin(m_Wobble) * -WOBBLE_FACTOR;
         m_Wobble -= CTimer::GetTimeStep() * m_WobbleSpeed;
 
         if (IsPlayer()) {
@@ -5544,7 +5544,7 @@ int32 CPed::ProcessEntityCollision(CEntity* entity, CColPoint* colPoint) {
                 if (gun && gun->m_WeaponInfo && gun->m_WeaponInfo->flags.bAimWithArm) {
                     savedHeading = GetHeading(); // 0x441DB0
                     const auto& camFront = TheCamera.m_aCams[TheCamera.m_nActiveCam].m_vecFront;
-                    SetHeading((float)std::atan2((double)-camFront.x, (double)camFront.y)); // 0x43E0C0
+                    SetHeading((float)x87::atan2((double)-camFront.x, (double)camFront.y)); // 0x43E0C0
                 }
             }
             colModel = &CTempColModels::ms_colModelPed2; // 0x968E20

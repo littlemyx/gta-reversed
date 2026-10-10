@@ -795,7 +795,7 @@ void CAutomobile::ProcessControl()
             float adhesive = g_surfaceInfos.GetAdhesiveLimit(&colPoint);
             steerAngle = adhesive * traction * 4.0f * 4.0f / (speedForward * speedForward);
             steerAngle = std::min(steerAngle, 1.0f);
-            steerAngle = std::asin(steerAngle) / DegreesToRadians(m_pHandlingData->m_fSteeringLock);
+            steerAngle = x87::asin(steerAngle) / DegreesToRadians(m_pHandlingData->m_fSteeringLock);
             if (m_fSteerAngle < 0.0f && speedRight > 0.05f
                 || m_fSteerAngle > 0.0f && speedRight < -0.05f
                 || vehicleFlags.bIsHandbrakeOn
@@ -3600,9 +3600,9 @@ void CAutomobile::HydraulicControl() {
                 float gunLeftRight = driver->GetPadFromPlayer()->GetCarGunLeftRight();
                 float gunUpDown = driver->GetPadFromPlayer()->GetCarGunUpDown();
                 float jumpFactor = (std::sqrt(gunUpDown * gunUpDown + gunLeftRight * gunLeftRight) * 1.5f) / 128.0f;
-                float angle = std::atan2(gunLeftRight, gunUpDown) - DegreesToRadians(45.0f);
-                float change_rear_right = std::cos(angle) * jumpFactor;
-                float change_front_right = std::sin(angle) * jumpFactor;
+                float angle = x87::atan2(gunLeftRight, gunUpDown) - DegreesToRadians(45.0f);
+                float change_rear_right = x87::cos(angle) * jumpFactor;
+                float change_front_right = x87::sin(angle) * jumpFactor;
                 suspensionChange[CAR_WHEEL_FRONT_LEFT]  = std::max(0.0f, -change_rear_right);
                 suspensionChange[CAR_WHEEL_REAR_LEFT]   = std::max(0.0f, -change_front_right);
                 suspensionChange[CAR_WHEEL_FRONT_RIGHT] = std::max(0.0f, +change_front_right);
@@ -4598,8 +4598,8 @@ void CAutomobile::ProcessCarWheelPair(eCarWheel leftWheel, eCarWheel rightWheel,
         float cosSteerAngle = 0.0f;
         bool canSteer = steerAngle > -100.0f;
         if (canSteer) {
-            sinSteerAngle = std::sin(steerAngle);
-            cosSteerAngle = std::cos(steerAngle);
+            sinSteerAngle = x87::sin(steerAngle);
+            cosSteerAngle = x87::cos(steerAngle);
         }
 
         const auto neutralHandling = GetStatus() != STATUS_PLAYER && GetStatus() != STATUS_REMOTE_CONTROLLED && handlingFlags.bNpcNeutralHandl;
@@ -4787,7 +4787,7 @@ float CAutomobile::GetCarRoll() {
     const auto rightMag2D = right.Magnitude2D();
 
     // If up.z < 0.f we're flipped, in which case `right` is more like `left` so we have to negate it.
-    return RadiansToDegrees(std::atan2(right.z, m_matrix->GetUp().z < 0.f ? -rightMag2D : rightMag2D));
+    return RadiansToDegrees(x87::atan2(right.z, m_matrix->GetUp().z < 0.f ? -rightMag2D : rightMag2D));
 }
 
 /*!
@@ -4799,7 +4799,7 @@ float CAutomobile::GetCarPitch() {
     const auto  fwdMag2D = fwd.Magnitude2D();
 
     // `up.z` < 0 means we're flipped on the roof, which also means `forward` is more like `backward`, so we have to negate it.
-    return std::atan2(fwd.z, m_matrix->GetUp().z < 0.f ? -fwdMag2D : fwdMag2D);
+    return x87::atan2(fwd.z, m_matrix->GetUp().z < 0.f ? -fwdMag2D : fwdMag2D);
 }
 
 // 0x6A6140
@@ -5467,7 +5467,7 @@ void CAutomobile::ProcessSwingingDoor(eCarNodes nodeIdx, eDoors doorIdx)
     if (doorIdx == eDoors::DOOR_BONNET) {
         auto& bonnet = m_doors[eDoors::DOOR_BONNET];
         if ((bonnet.m_dirn & DOOR_EXTRA_DIRN_MASK) == DOOR_AXIS_Y) {
-            bonnet.m_angVel += ((std::sin(bonnet.m_angle + 0.1f) * BONNET_SWING_RADIUS) * m_matrix->GetForward() * m_vecMoveSpeed).ComponentwiseSum();
+            bonnet.m_angVel += ((x87::sin(bonnet.m_angle + 0.1f) * BONNET_SWING_RADIUS) * m_matrix->GetForward() * m_vecMoveSpeed).ComponentwiseSum();
         }
     }
 
@@ -5706,7 +5706,7 @@ void CAutomobile::UpdateWheelMatrix(int32 nodeIndex, int32 flags) {
         const auto   status = m_damageManager.GetWheelStatus((eCarWheel)wheel); // 0x6AA690
         const double rot    = (double)dir * (double)m_wheelRotation[wheel];
         if (status == WHEEL_STATUS_BURST) {
-            mat.Rotate({ (float)rot, 0.0f, (float)(std::sin(rot) * (double)0.3f + (double)steer) });
+            mat.Rotate({ (float)rot, 0.0f, (float)(x87::sin(rot) * (double)0.3f + (double)steer) });
         } else {
             mat.Rotate({ (float)rot, 0.0f, steer });
         }
@@ -5762,7 +5762,7 @@ void CAutomobile::UpdateWheelMatrix(int32 nodeIndex, int32 flags) {
             } else {
                 a = (float)v;
             }
-            const double angle = std::asin((double)a);
+            const double angle = x87::asin((double)a);
             mat.RotateY((float)(flipped ? -angle : angle));
         }
     } else {
@@ -5770,7 +5770,7 @@ void CAutomobile::UpdateWheelMatrix(int32 nodeIndex, int32 flags) {
         const int32 opposite = wheel > 1 ? wheel - 2 : wheel + 2;
         const double y       = std::abs((double)savedPos.y) * 2.0;
         const double x       = (((double)m_wheelPosition[wheel] - (double)m_wheelPosition[opposite]) * (double)dir) * -1.0;
-        mat.RotateY((float)std::atan2(x, y));
+        mat.RotateY((float)x87::atan2(x, y));
     }
 
     // 0x6AAAD0
@@ -5871,8 +5871,8 @@ void CAutomobile::TankControl()
         m_fDoomHorizontalRotation += ((float)pad->GetCarGunUpDown() * CTimer::GetTimeStep() * 0.005f) / 128.0f;
     } else {
         CVector frontDot = GetMatrix().InverseTransformVector(activeCam.m_vecFront);
-        float doomVerticalRotation   = std::atan2(-frontDot.x, frontDot.y);
-        float doomHorizontalRotation = std::atan2(frontDot.z, frontDot.Magnitude2D()) + DegreesToRadians(15);
+        float doomVerticalRotation   = x87::atan2(-frontDot.x, frontDot.y);
+        float doomHorizontalRotation = x87::atan2(frontDot.z, frontDot.Magnitude2D()) + DegreesToRadians(15);
 
         if (doomVerticalRotation < m_fDoomVerticalRotation - PI)
             doomVerticalRotation = doomVerticalRotation + TWO_PI;
@@ -5908,7 +5908,7 @@ void CAutomobile::TankControl()
         m_fDoomHorizontalRotation = DOOM_HORIZONTAL_ROT_MAX;
     }
     else if (m_fDoomVerticalRotation > DegreesToRadians(90) || m_fDoomVerticalRotation < -DegreesToRadians(90)) {
-        float cosDoomVerticalRot = cosf(m_fDoomVerticalRotation) * 1.3f;
+        float cosDoomVerticalRot = x87::cos(m_fDoomVerticalRotation) * 1.3f;
         float doomHorizontalRot = -DegreesToRadians(3);
         if (cosDoomVerticalRot >= -1.0f)
             doomHorizontalRot = DOOM_HORIZONTAL_ROT_MIN - cosDoomVerticalRot * (doomHorizontalRot - DOOM_HORIZONTAL_ROT_MIN);
@@ -5924,9 +5924,9 @@ void CAutomobile::TankControl()
         if (CTimer::GetTimeInMS() > playerInfo.m_nLastTimeBigGunFired + 800) {
             playerInfo.m_nLastTimeBigGunFired = CTimer::GetTimeInMS();
             CVector point;
-            point.x = std::sin(-m_fDoomVerticalRotation);
-            point.y = std::cos(m_fDoomVerticalRotation);
-            point.z = std::sin(m_fDoomHorizontalRotation);
+            point.x = x87::sin(-m_fDoomVerticalRotation);
+            point.y = x87::cos(m_fDoomVerticalRotation);
+            point.z = x87::sin(m_fDoomHorizontalRotation);
             point = GetMatrix().TransformVector(point);
 
             CVector newTurretPosition;
@@ -5936,8 +5936,8 @@ void CAutomobile::TankControl()
                 newTurretPosition += GetSpeed(newTurretPosition - GetPosition()) * CTimer::GetTimeStep();
             }
             else {
-                float sinVerticalDoomRot = std::sin(m_fDoomVerticalRotation);
-                float cosVerticalDoomRot = std::cos(m_fDoomVerticalRotation);
+                float sinVerticalDoomRot = x87::sin(m_fDoomVerticalRotation);
+                float cosVerticalDoomRot = x87::cos(m_fDoomVerticalRotation);
 
                 CVector doomOffset;
 
@@ -6529,7 +6529,7 @@ void CAutomobile::FireTruckControl(CFire* fire) {
             return;
 
         CVector2D distance = fire->GetPosition() - GetPosition();
-        float shootDir = std::atan2(-distance.x, distance.y);
+        float shootDir = x87::atan2(-distance.x, distance.y);
         float heading = GetHeading();
         if (shootDir > heading + PI)
             shootDir -= TWO_PI;
@@ -6550,7 +6550,7 @@ void CAutomobile::FireTruckControl(CFire* fire) {
             else
                 m_fDoomVerticalRotation += timeStep;
         }
-        m_fDoomHorizontalRotation = std::sin(float(CTimer::GetTimeInMS() % 4096) * TWO_PI * 1.f / 4096.f) * 0.15f;
+        m_fDoomHorizontalRotation = x87::sin(float(CTimer::GetTimeInMS() % 4096) * TWO_PI * 1.f / 4096.f) * 0.15f;
     }
     else {
         CCam& activeCam = CCamera::GetActiveCamera();
@@ -6562,8 +6562,8 @@ void CAutomobile::FireTruckControl(CFire* fire) {
         }
         else {
             CVector frontDot = GetMatrix().InverseTransformVector(activeCam.m_vecFront);
-            float doomVerticalRotation   = std::atan2(-frontDot.x, frontDot.y);
-            float doomHorizontalRotation = std::atan2(+frontDot.z, frontDot.Magnitude2D());
+            float doomVerticalRotation   = x87::atan2(-frontDot.x, frontDot.y);
+            float doomHorizontalRotation = x87::atan2(+frontDot.z, frontDot.Magnitude2D());
 
             if (ModelIndices::IsSwatVan(m_nModelIndex))
                 doomHorizontalRotation += DegreesToRadians(22);
@@ -6613,9 +6613,9 @@ void CAutomobile::FireTruckControl(CFire* fire) {
     }
 
     CVector point{
-        -(std::sin(m_fDoomVerticalRotation) * std::cos(m_fDoomHorizontalRotation)),
-        std::cos(m_fDoomVerticalRotation)   * std::cos(m_fDoomHorizontalRotation),
-        std::sin(m_fDoomHorizontalRotation),
+        (float)(-(x87::sin(m_fDoomVerticalRotation) * x87::cos(m_fDoomHorizontalRotation))),
+        (float)(x87::cos(m_fDoomVerticalRotation)   * x87::cos(m_fDoomHorizontalRotation)),
+        (float)(x87::sin(m_fDoomHorizontalRotation)),
     };
     point = GetMatrix().TransformVector(point); // 0x72A062
 
@@ -7131,8 +7131,8 @@ void CAutomobile::PreRender() {
         return TransformVectorOriginal(
             *m_matrix,
             CVector{
-                -(float)std::sin((double)m_fSteerAngle),
-                (float)std::cos((double)m_fSteerAngle),
+                -(float)x87::sin((double)m_fSteerAngle),
+                (float)x87::cos((double)m_fSteerAngle),
                 0.0f
             }
         );
@@ -7146,8 +7146,8 @@ void CAutomobile::PreRender() {
         rearWheelDir  = TransformVectorOriginal(
             *m_matrix,
             CVector{
-                (float)std::sin((double)m_fSteerAngle),
-                (float)std::cos((double)m_fSteerAngle),
+                (float)x87::sin((double)m_fSteerAngle),
+                (float)x87::cos((double)m_fSteerAngle),
                 0.0f
             }
         );
@@ -7155,8 +7155,8 @@ void CAutomobile::PreRender() {
         rearWheelDir = TransformVectorOriginal(
             *m_matrix,
             CVector{
-                -(float)std::sin((double)m_f2ndSteerAngle),
-                (float)std::cos((double)m_f2ndSteerAngle),
+                -(float)x87::sin((double)m_f2ndSteerAngle),
+                (float)x87::cos((double)m_f2ndSteerAngle),
                 0.0f
             }
         );
@@ -7319,11 +7319,11 @@ void CAutomobile::PreRender() {
 
         const auto& fwd = GetForward();
         const float fwdDot = (float)((((double)dir.z * fwd.z + (double)dir.y * fwd.y) + (double)dir.x * fwd.x) / 1.0); // 0x8D3148
-        SetComponentRotation(m_aCarNodes[CAR_MISC_B], AXIS_X, (float)(std::acos((double)fwdDot) + (double)-hoist), true);
+        SetComponentRotation(m_aCarNodes[CAR_MISC_B], AXIS_X, (float)(x87::acos((double)fwdDot) + (double)-hoist), true);
 
         const auto& right = GetRight();
         const float rightDot = (float)(-1.0 / 1.0 * (((double)dir.z * right.z + (double)dir.y * right.y) + (double)dir.x * right.x)); // 0x858C1C, 0x8D3148
-        SetComponentRotation(m_aCarNodes[CAR_MISC_B], AXIS_Y, (float)std::acos((double)rightDot), false);
+        SetComponentRotation(m_aCarNodes[CAR_MISC_B], AXIS_Y, (float)x87::acos((double)rightDot), false);
         break;
     }
     case MODEL_TRACTOR: // 0x6AC6D9
@@ -7371,14 +7371,14 @@ void CAutomobile::PreRender() {
         mat.Attach(RwFrameGetMatrix(m_aCarNodes[CAR_MISC_A]), false);
         const double wheelsMid = ((double)m_wheelPosition[0] + (double)m_wheelPosition[2]) * 0.5; // 0x858B8C
         const double wheelsDif = (double)m_wheelPosition[0] - (double)m_wheelPosition[2];
-        const float  angleX    = (float)-std::atan2(wheelsMid - (double)wheelPos.z, (double)mat.GetPosition().y - (double)wheelPos.y);
-        const float  angleY    = (float)std::atan2(wheelsDif, std::fabs((double)wheelPos.x) * 2.0);
+        const float  angleX    = (float)-x87::atan2(wheelsMid - (double)wheelPos.z, (double)mat.GetPosition().y - (double)wheelPos.y);
+        const float  angleY    = (float)x87::atan2(wheelsDif, std::fabs((double)wheelPos.x) * 2.0);
         SetComponentRotation(m_aCarNodes[CAR_MISC_A], AXIS_X, (float)((double)angleX + (double)std::numbers::pi_v<float>), true);
         SetComponentRotation(m_aCarNodes[CAR_MISC_A], AXIS_Y, angleY, false);
 
         float tilt = 0.0f;
         if (GetUp().z > 0.0f && m_nGettingInFlags == 0 && m_nGettingOutFlags == 0) {
-            const double tiltD = std::acos((double)GetRight().z);
+            const double tiltD = x87::acos((double)GetRight().z);
             tilt               = (float)tiltD;
             if (tiltD > (double)PRERENDER_COMBINE_TILT_MAX) { // NOTE: Compares the extended value, not the float
                 tilt = PRERENDER_COMBINE_TILT_MAX;

@@ -408,7 +408,7 @@ void CWaterLevel::RenderWakeSegment(
                 p /= 32.f;   // TODO: Magic number (maybe meaningful this time) 
                 return p - std::floor(p); // Extract fractional part
             };
-            const auto  z   = wakeZ + std::sin((CalcAngleOfPos(corners[i].x) + CalcAngleOfPos(corners[i].y)) * PI * 2.f + angle) * windRadius;
+            const float  z   = wakeZ + x87::sin((CalcAngleOfPos(corners[i].x) + CalcAngleOfPos(corners[i].y)) * PI * 2.f + angle) * windRadius;
             const auto& rgb = WakeSegmentPartColors[i];
             RenderBuffer::PushVertex(
                 CVector{ corners[i], z },
@@ -1980,12 +1980,12 @@ void CWaterLevel::RenderWater() {
     constexpr auto PI_F = std::numbers::pi_v<float>;
 
     const double angle1 = (double)(float)(CTimer::GetTimeInMS() & 0xFFF) * (2.f * PI_F / 4096.f);
-    TextureShiftSecondU = (float)(std::sin(angle1) * (double)CWeather::Wavyness * 0.08f + (double)TextureScrollSecondU);
-    TextureShiftSecondV = (float)(std::cos(angle1) * (double)CWeather::Wavyness * 0.08f + (double)TextureScrollSecondV);
+    TextureShiftSecondU = (float)(x87::sin(angle1) * (double)CWeather::Wavyness * 0.08f + (double)TextureScrollSecondU);
+    TextureShiftSecondV = (float)(x87::cos(angle1) * (double)CWeather::Wavyness * 0.08f + (double)TextureScrollSecondV);
 
     const float angle2 = (float)(CTimer::GetTimeInMS() & 0x1FFF) * (PI_F / 4096.f);
     TextureShiftFirstU = TextureScrollFirstU;
-    const double cosAngle2d = std::cos((double)angle2);
+    const double cosAngle2d = x87::cos((double)angle2);
     const float  cosAngle2  = (float)cosAngle2d; // Original stores it as float too
     TextureShiftFirstV = (float)(cosAngle2d * 0.024f + (double)TextureScrollFirstV);
 
@@ -1994,7 +1994,7 @@ void CWaterLevel::RenderWater() {
     const int32 rand1 = rand();
     TextureShiftThirdU = (float)((double)(float)rand1 * RAND_NORM * (double)TextureRandomShiftMult);
     const int32 rand2 = rand();
-    TextureShiftThirdU = (float)(std::sin((double)angle2) * (double)TextureJitterMult + (double)TextureShiftThirdU);
+    TextureShiftThirdU = (float)(x87::sin((double)angle2) * (double)TextureJitterMult + (double)TextureShiftThirdU);
     TextureShiftThirdV = (float)((double)(float)rand2 * RAND_NORM * (double)TextureRandomShiftMult + (double)cosAngle2 * (double)TextureJitterMult);
 
     // Water colors

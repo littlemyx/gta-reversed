@@ -101,12 +101,12 @@ bool CPedIK::PointGunInDirection(float zAngle, float distance, bool flag, float 
     }
 
     const auto head = &RpHAnimHierarchyGetMatrixArray(hier)[PED_NODE_HEAD];
-    const auto headAngle = -CGeneral::LimitRadianAngle(atan2(-head->at.y, -head->at.x) - m_pPed->m_fCurrentRotation);
+    const auto headAngle = -CGeneral::LimitRadianAngle(x87::atan2(-head->at.y, -head->at.x) - m_pPed->m_fCurrentRotation);
 
     const auto axis = CVector{
         0.0f,
-        flag ? std::cos(headAngle) : -std::sin(headAngle),
-        flag ? std::sin(headAngle) :  std::cos(headAngle)
+        (float)(flag ? x87::cos(headAngle) : -x87::sin(headAngle)),
+        (float)(flag ? x87::sin(headAngle) :  x87::cos(headAngle))
     };
 
     const auto torsoQ = &m_pPed->m_apBones[PED_NODE_UPPER_TORSO]->KeyFrame->q;
@@ -173,12 +173,12 @@ void CPedIK::PitchForSlope() {
                 RotateBone(BONE_SPINE, RadiansToDegrees(-m_fSlopePitch) * 0.75f);
                 m_pPed->bUpdateMatricesRequired = true;
 
-                RotateBone(BONE_R_THIGH, std::asin(GetAnimHierarchyMatrix(BONE_R_THIGH)->up.z) * 30.0f * m_fSlopePitch);
-                RotateBone(BONE_R_CALF, std::max(-std::asin(GetAnimHierarchyMatrix(BONE_R_THIGH)->up.z), 0.0f) * -30.0f * m_fSlopePitch);
-                RotateBone(BONE_R_FOOT, std::max(std::asin(GetAnimHierarchyMatrix(BONE_R_FOOT)->up.z), 0.0f) * -30.0f * m_fSlopePitch);
-                RotateBone(BONE_L_THIGH, std::asin(GetAnimHierarchyMatrix(BONE_L_THIGH)->up.z) * 30.0f * m_fSlopePitch);
-                RotateBone(BONE_L_CALF, std::max(-std::asin(GetAnimHierarchyMatrix(BONE_L_THIGH)->up.z), 0.0f) * -30.0f * m_fSlopePitch);
-                RotateBone(BONE_L_FOOT, std::max(-std::asin(GetAnimHierarchyMatrix(BONE_L_FOOT)->up.z), 0.0f) * -30.0f * m_fSlopePitch);
+                RotateBone(BONE_R_THIGH, x87::asin(GetAnimHierarchyMatrix(BONE_R_THIGH)->up.z) * 30.0f * m_fSlopePitch);
+                RotateBone(BONE_R_CALF, std::max((float)-x87::asin(GetAnimHierarchyMatrix(BONE_R_THIGH)->up.z), 0.0f) * -30.0f * m_fSlopePitch);
+                RotateBone(BONE_R_FOOT, std::max((float)x87::asin(GetAnimHierarchyMatrix(BONE_R_FOOT)->up.z), 0.0f) * -30.0f * m_fSlopePitch);
+                RotateBone(BONE_L_THIGH, x87::asin(GetAnimHierarchyMatrix(BONE_L_THIGH)->up.z) * 30.0f * m_fSlopePitch);
+                RotateBone(BONE_L_CALF, std::max((float)-x87::asin(GetAnimHierarchyMatrix(BONE_L_THIGH)->up.z), 0.0f) * -30.0f * m_fSlopePitch);
+                RotateBone(BONE_L_FOOT, std::max((float)-x87::asin(GetAnimHierarchyMatrix(BONE_L_FOOT)->up.z), 0.0f) * -30.0f * m_fSlopePitch);
 
                 CMatrix result(m_pPed->GetModellingMatrix(), false);
                 CMatrix translate;
@@ -186,8 +186,8 @@ void CPedIK::PitchForSlope() {
                 translate.RotateX(-m_fSlopePitch / 2.0f);
                 result *= translate;
 
-                result.GetPosition() += m_pPed->GetForward() * 0.75f * std::sin(m_fSlopePitch);
-                result.GetPosition().z += 0.3f / std::cos(m_fSlopeRoll) - 0.3f;
+                result.GetPosition() += m_pPed->GetForward() * 0.75f * x87::sin(m_fSlopePitch);
+                result.GetPosition().z += 0.3f / x87::cos(m_fSlopeRoll) - 0.3f;
                 result.UpdateRW();
                 m_pPed->UpdateRwFrame();
             }
@@ -198,9 +198,9 @@ void CPedIK::PitchForSlope() {
         if (std::abs(m_fSlopeRoll) > 0.01f) {
             const auto RotateFoot = [&](eBoneTag bone) {
                 const auto hierMatrix = GetAnimHierarchyMatrix(bone);
-                const auto angle = CGeneral::LimitRadianAngle(atan2(hierMatrix->at.y, hierMatrix->at.x) - m_pPed->m_fCurrentRotation);
+                const auto angle = CGeneral::LimitRadianAngle(x87::atan2(hierMatrix->at.y, hierMatrix->at.x) - m_pPed->m_fCurrentRotation);
 
-                RotateBone(bone, RadiansToDegrees(m_fSlopeRoll), CVector{0.0f, std::cos(angle), std::sin(angle)});
+                RotateBone(bone, RadiansToDegrees(m_fSlopeRoll), CVector{0.0f, (float)(x87::cos(angle)), (float)(x87::sin(angle))});
             };
 
             RotateFoot(BONE_L_FOOT);

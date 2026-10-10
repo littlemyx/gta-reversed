@@ -43,7 +43,7 @@ void CTaskSimpleCarSetPedOut::PositionPedOutOfCollision(CPed* ped, CVehicle* veh
 
     // Face the same way as the vehicle
     const float heading = veh->m_matrix
-        ? (float)std::atan2((double)-veh->m_matrix->GetForward().x, (double)veh->m_matrix->GetForward().y) // FPATAN
+        ? (float)x87::atan2((double)-veh->m_matrix->GetForward().x, (double)veh->m_matrix->GetForward().y) // FPATAN
         : veh->m_placement.m_fHeading;
     ped->m_fAimingRotation  = heading;
     ped->m_fCurrentRotation = heading;

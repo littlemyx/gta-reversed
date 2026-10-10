@@ -135,7 +135,7 @@ void CWeather::AddRain() {
             : lerp(-0.8f, 0.8f, (float)(rnd % 256) / 256.f) + TheCamera.m_fOrientation; // <Camera Rotation> + [-0.8, 0.8) rad (0.8 rad ~ 45.8 deg)
 
         // 0x72AC11
-        const CVector2D spot = CVector2D{ TheCamera.GetPosition() } + CVector2D{ std::sin(rads), std::cos(rads) } * radius;
+        const CVector2D spot = CVector2D{ TheCamera.GetPosition() } + CVector2D{ (float)(x87::sin(rads)), (float)(x87::cos(rads)) } * radius;
         CColPoint colPoint{};
         CEntity*  colEntity{};
         if (!CWorld::ProcessVerticalLine(CVector{ spot, 40.0f }, -40.0f, colPoint, colEntity, true, false, false, false, true)) {
@@ -608,7 +608,7 @@ void CWeather::Update() {
     };
 
     const auto slowIdx = (timeMs / 1024) % std::size(WIND_DIR_OFFSETS);
-    const auto slowT   = 0.5f - std::cos((float)(timeMs % 1024) / 1024.0f * PI) * 0.5f;
+    const auto slowT   = 0.5f - x87::cos((float)(timeMs % 1024) / 1024.0f * PI) * 0.5f;
     auto windX = LerpWindDirOffset(slowIdx, slowT) * WindClipped * 0.4f + WindDir.x;
     auto windY = LerpWindDirOffset(slowIdx + 3, slowT) * WindClipped * 0.4f + WindDir.y;
     WindDir.z  = LerpWindDirOffset(slowIdx + 6, slowT) * WindClipped * 0.2f;
@@ -624,7 +624,7 @@ void CWeather::Update() {
 
     // 0x72C5B6
     const auto scaleIdx = (timeMs / 2048) % std::size(WIND_DIR_SCALES);
-    const auto scaleT   = 0.5f - std::cos((float)(timeMs % 2048) / 2048.0f * PI) * 0.5f;
+    const auto scaleT   = 0.5f - x87::cos((float)(timeMs % 2048) / 2048.0f * PI) * 0.5f;
     const auto scale    = lerp(WIND_DIR_SCALES[scaleIdx], WIND_DIR_SCALES[(scaleIdx + 1) % std::size(WIND_DIR_SCALES)], scaleT);
     WindDir.x  = scale * windX;
     WindDir.y  = scale * windY;

@@ -4000,8 +4000,8 @@ static CVector Multiply3x3Ext(const CMatrix& m, const CVector& v) {
 static CVector FlyingControlHydraDirection(const CVehicle& v) {
     const auto&  mat   = *v.m_matrix;
     const double angle = ((double)v.AsAutomobile()->m_wMiscComponentAngle * 1.5707964f) / (double)(int16)CPlane::HARRIER_NOZZLE_ROTATE_LIMIT;
-    const float  cosA  = (float)std::cos(angle);
-    const float  sinA  = (float)std::sin(angle);
+    const float  cosA  = (float)x87::cos(angle);
+    const float  sinA  = (float)x87::sin(angle);
     return (mat.GetForward() * cosA) + (mat.GetUp() * sinA);
 }
 
@@ -4103,21 +4103,21 @@ static void FlyingControlModel1345(FlyingControlCtx& c) {
     }
 
     // Scale the inputs by 1 / cos(angle to the nearest axis)
-    const float inputAngle = (float)std::atan2((double)upDown, (double)skid);
+    const float inputAngle = (float)x87::atan2((double)upDown, (double)skid);
     constexpr double PI = std::numbers::pi_v<float>, HALF_PI = 1.5707964f;
     double angleFac = 1.0;
     {
         const double a = inputAngle;
         if (inputAngle > -0.7853981852531433f && inputAngle <= 0.7853981852531433f) {
-            angleFac = 1.0 / std::cos(a);
+            angleFac = 1.0 / x87::cos(a);
         } else if (inputAngle > 0.7853981852531433f && inputAngle <= 2.356194496154785f) {
-            angleFac = 1.0 / std::cos(a - HALF_PI);
+            angleFac = 1.0 / x87::cos(a - HALF_PI);
         } else if (inputAngle > 2.356194496154785f) {
-            angleFac = 1.0 / std::cos(a - PI);
+            angleFac = 1.0 / x87::cos(a - PI);
         } else if (inputAngle <= -2.356194496154785f) {
-            angleFac = 1.0 / std::cos(a + PI);
+            angleFac = 1.0 / x87::cos(a + PI);
         } else if (inputAngle < -0.7853981852531433f) {
-            angleFac = 1.0 / std::cos(a + HALF_PI);
+            angleFac = 1.0 / x87::cos(a + HALF_PI);
         }
     }
     skid   = (float)((double)skid * angleFac);
@@ -4298,7 +4298,7 @@ static void FlyingControlModel1345(FlyingControlCtx& c) {
         const float  r1     = (float)((double)upDotF / den);
         const float  r2     = (1.0f < r1) ? 1.0f : r1;               // 0x404330
         const float  r3     = (-1.0f > r2) ? -1.0f : r2;             // 0x420800
-        const double pitch  = std::asin((double)r3) * -1.0f;         // 0x821E70
+        const double pitch  = x87::asin((double)r3) * -1.0f;         // 0x821E70
         if (v.m_nVehicleSubType == VEHICLE_TYPE_PLANE && pitch > 0.3490658700466156f) {
             v.AsPlane()->field_9A0 += (int32)(((double)ts * 0.02f) * 1000.0f);
         }
@@ -4415,9 +4415,9 @@ static void FlyingControlModel268(FlyingControlCtx& c) {
     } else {
         CVector dir = mat.GetUp();
         if (v.vehicleFlags.bHeliMinimumTilt) { // +0x42B & 0x10
-            dir.x = (float)std::sin(std::asin((double)dir.x) * 4.0f);
-            dir.y = (float)std::sin(std::asin((double)dir.y) * 4.0f);
-            dir.z = (float)std::cos(std::acos((double)dir.z) * 4.0f);
+            dir.x = (float)x87::sin(x87::asin((double)dir.x) * 4.0f);
+            dir.y = (float)x87::sin(x87::asin((double)dir.y) * 4.0f);
+            dir.z = (float)x87::cos(x87::acos((double)dir.z) * 4.0f);
         } else if (v.m_nModelIndex == 0x208) {
             dir = FlyingControlHydraDirection(v);
         }
@@ -4540,7 +4540,7 @@ static void FlyingControlModel268(FlyingControlCtx& c) {
     }
 
     if (v.vehicleFlags.bHeliMinimumTilt) {
-        const double s = (std::sin(std::asin((double)fh->m_fPitch / (double)fh->m_fAttackLift) * 0.25f) / fh->m_fPitch) * fh->m_fAttackLift;
+        const double s = (x87::sin(x87::asin((double)fh->m_fPitch / (double)fh->m_fAttackLift) * 0.25f) / fh->m_fPitch) * fh->m_fAttackLift;
         upDown    = (float)(upDown * s);
         leftRight = (float)(s * leftRight);
     }
@@ -4943,7 +4943,7 @@ void CVehicle::SetTransmissionRotation(RwFrame* component, float angleL, float a
     if (component) {
         CMatrix mat(RwFrameGetMatrix(component));
         CVector savedPos = mat.GetPosition();
-        float angleX = -std::atan2(
+        float angleX = -x87::atan2(
             (angleL + angleR) / 2.0f - wheelPos.z,
             mat.GetPosition().y - wheelPos.y
         );
@@ -4951,7 +4951,7 @@ void CVehicle::SetTransmissionRotation(RwFrame* component, float angleL, float a
             angleX += PI;
         }
         mat.SetRotateX(angleX);
-        mat.RotateY(std::atan2(angleL - angleR, std::fabs(wheelPos.x) + std::fabs(wheelPos.x)));
+        mat.RotateY(x87::atan2(angleL - angleR, std::fabs(wheelPos.x) + std::fabs(wheelPos.x)));
         mat.GetPosition() += savedPos;
         mat.UpdateRW();
     }
@@ -5095,8 +5095,8 @@ void CVehicle::ProcessBoatControl(tBoatHandlingData* boatHandling, float* fLastW
             }
 
             auto fSteerAngleChange = -(fTraction * m_fSteerAngle);
-            auto fSteerAngleSin = std::sin(fSteerAngleChange);
-            auto fSteerAngleCos = std::cos(fSteerAngleChange);
+            auto fSteerAngleSin = x87::sin(fSteerAngleChange);
+            auto fSteerAngleCos = x87::cos(fSteerAngleChange);
 
             const auto& vecBoundingMin = CEntity::GetColModel()->m_boundBox.m_vecMin;
             CVector vecThrustPoint(0.0F, vecBoundingMin.y * boatHandling->m_fThrustY, vecBoundingMin.z * boatHandling->m_fThrustZ);

@@ -123,9 +123,9 @@ float CCurves::CalcCorrectedDist(float current, float total, float speedVariatio
     // 0x43C880: everything stays on the x87 stack (extended precision) except `*outT`; the constants are the exe's float literals
     // (0x40490FDB = pi, 0x40C90FDB = 2pi, 0x3E22F983 = the reciprocal of 2pi folded by the compiler: NOT `1.0f / TWO_PI` evaluated in extended)
     const double t = (double)current / (double)total;
-    *outT = (float)(0.5 - std::cos((double)std::numbers::pi_v<float> * t) * 0.5);
+    *outT = (float)(0.5 - x87::cos((double)std::numbers::pi_v<float> * t) * 0.5);
 
-    const double averageSpeed = std::sin(t * (double)std::bit_cast<float>(0x40C90FDBu));
+    const double averageSpeed = x87::sin(t * (double)std::bit_cast<float>(0x40C90FDBu));
     const double sv = speedVariation;
     const double corrected = averageSpeed * ((double)total * (double)std::bit_cast<float>(0x3E22F983u)) * sv
                            + ((1.0 - (sv + sv) + 1.0) * 0.5) * (double)current;

@@ -61,8 +61,8 @@ bool CDoor::Process(CVehicle* vehicle, Const CVector& oldMoveSpeed, Const CVecto
     }
 
     // 0x6F41B2
-    float sin = std::sin(m_angle);
-    float cos = std::cos(m_angle);
+    float sin = x87::sin(m_angle);
+    float cos = x87::cos(m_angle);
 
     assert(m_axis != DOOR_AXIS_Y); // Test
 

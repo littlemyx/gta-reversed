@@ -413,7 +413,7 @@ bool CTaskUtilityLineUpPedWithCar::ProcessPed(CPed* ped, CVehicle* vehicle, CAni
     const auto GetVehicleHeading = [&]() -> double {
         if (vehicle->m_matrix) {
             const auto& fwd = vehicle->m_matrix->GetForward();
-            return std::atan2(-(double)fwd.x, (double)fwd.y);
+            return x87::atan2(-(double)fwd.x, (double)fwd.y);
         }
         return vehicle->m_placement.m_fHeading;
     };
@@ -464,8 +464,8 @@ bool CTaskUtilityLineUpPedWithCar::ProcessPed(CPed* ped, CVehicle* vehicle, CAni
             rightZ = right.z;
         } else {
             const float heading = vehicle->m_placement.m_fHeading;
-            rightX = (float)std::cos((double)heading);
-            rightY = std::sin((double)heading);
+            rightX = (float)x87::cos((double)heading);
+            rightY = x87::sin((double)heading);
             rightZ = 0.f;
         }
 

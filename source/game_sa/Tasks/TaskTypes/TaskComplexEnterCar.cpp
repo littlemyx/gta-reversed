@@ -871,7 +871,7 @@ void CTaskComplexEnterCar::GetCameraStickModifier(CPed* ped, float zoomDist, flo
 
     const auto& carMat = *m_Car->m_matrix; // BUG: Used w/o checking for null (below it is checked, though)
     const auto  carHeading = m_Car->m_matrix
-        ? std::atan2((double)-carMat.GetForward().x, (double)carMat.GetForward().y)
+        ? x87::atan2((double)-carMat.GetForward().x, (double)carMat.GetForward().y)
         : (double)m_Car->m_placement.m_fHeading;
     const float heading = (float)(carHeading - HALF_PI); // Rounded to float
 
@@ -881,7 +881,7 @@ void CTaskComplexEnterCar::GetCameraStickModifier(CPed* ped, float zoomDist, flo
     const double sideDist = (((double)pedPos.z - carPos.z) * right.z + ((double)pedPos.y - carPos.y) * right.y) + ((double)pedPos.x - carPos.x) * right.x;
     const float  sideDistF = (float)sideDist;
 
-    float angle = (float)(std::atan2(sideDist, (double)zoomDist) * (double)0.7f); // 0x86E690 - Rounded to float
+    float angle = (float)(x87::atan2(sideDist, (double)zoomDist) * (double)0.7f); // 0x86E690 - Rounded to float
     if (-m_Car->GetColModel()->m_boundBox.m_vecMin.y > zoomDist) {
         angle = angle > 0.f ? -0.13962634f : 0.13962634f; // 0x86E694
     }

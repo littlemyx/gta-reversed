@@ -254,7 +254,7 @@ void IKChain_c::MoveBonesToTarget() {
         CVector cross = CrossProduct(dirBoneToRoot, dirBoneToOffset);
         CVector axis;
         RtQuatTransformVectors(&axis, &cross, 1, &quat);
-        RtQuatRotate(reinterpret_cast<RtQuat*>(&bone->GetOrientation()), &axis, RadiansToDegrees(bone->GetSpeed() * std::acos(dot) * m_Speed), rwCOMBINEPOSTCONCAT);
+        RtQuatRotate(reinterpret_cast<RtQuat*>(&bone->GetOrientation()), &axis, RadiansToDegrees(bone->GetSpeed() * x87::acos(dot) * m_Speed), rwCOMBINEPOSTCONCAT);
 
         bone->Limit(m_Blend); // Originally this was in an `if`, but the variable that was checked was always `true`
         bone->CalcWldMat(boneParentMat);

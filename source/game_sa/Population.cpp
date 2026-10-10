@@ -1190,7 +1190,7 @@ void CPopulation::CreateWaitingCoppers(CVector createAt, float createaWithHeadin
     if (auto numOfCopPeds = NUM_COPS_FOR_WANTED_LEVEL[+plyrWantedLvl]) {
         for (int32 i{}; i < 20; i++) { // int32 angleOffset = 0; angleOffset > -20; angleOffset--
             const auto heading   = CGeneral::GetRandomNumberInRange(0.f, (float)(i) * 0.4f) - (float)(i) * 0.2f + createaWithHeading;
-            auto       copPedPos = CVector{ CVector2D{createAt} + CVector2D{sin(heading), cos(heading)} *CGeneral::GetRandomNumberInRange(8.f, 10.f), createAt.z };
+            auto       copPedPos = CVector{ CVector2D{createAt} + CVector2D{(float)x87::sin(heading), (float)x87::cos(heading)} *CGeneral::GetRandomNumberInRange(8.f, 10.f), createAt.z };
 
             if (!CWorld::GetIsLineOfSightClear(createAt, copPedPos, true, true, false, true)) {
                 continue;

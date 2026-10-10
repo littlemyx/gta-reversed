@@ -601,8 +601,8 @@ CVector* CPedGeometryAnalyser::ComputeEntityDirs(const CEntity& entity, CVector*
         right = mat->GetRight();
     } else {
         const auto heading = entity.m_placement.m_fHeading;
-        fwd   = CVector{ -std::sin(heading), std::cos(heading), 0.f };
-        right = CVector{ std::cos(heading), std::sin(heading), 0.f };
+        fwd   = CVector{ (float)(-x87::sin(heading)), (float)(x87::cos(heading)), 0.f };
+        right = CVector{ (float)(x87::cos(heading)), (float)(x87::sin(heading)), 0.f };
     }
 
     outDirs[0] = fwd;                    // eDirection::FORWARD
@@ -685,7 +685,7 @@ int32 CPedGeometryAnalyser::ComputePedShotSide(const CPed& ped, const CVector& p
 
     const auto& pedPos = ped.GetPosition();
 
-    double angle = std::atan2(-((double)posn.x - (double)pedPos.x), (double)posn.y - (double)pedPos.y); // Heading from the ped to `posn`
+    double angle = x87::atan2(-((double)posn.x - (double)pedPos.x), (double)posn.y - (double)pedPos.y); // Heading from the ped to `posn`
     angle = angle - (double)ped.m_fCurrentRotation + QUARTER_PI;
     if (angle < 0.0) {
         angle += TWO_PI_F;

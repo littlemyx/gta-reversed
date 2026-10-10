@@ -218,7 +218,7 @@ void CIdleCam::ProcessFOVZoom(float time) {
     // Interpolates the FOV between `m_ZoomFrom` and `m_ZoomTo`
     const auto InterpolateFOV = [&] {
         const float t = (270.0f - ((curTimeMs - m_TimeZoomStarted) / m_DurationFOVZoom) * 180.0f) * 0.017453292f;
-        m_CurFOV = (float)((double)(m_ZoomTo - m_ZoomFrom) * ((std::sin((double)t) + 1.0) * 0.5) + (double)m_ZoomFrom); // fsin result stays unrounded on the x87 stack
+        m_CurFOV = (float)((double)(m_ZoomTo - m_ZoomFrom) * ((x87::sin((double)t) + 1.0) * 0.5) + (double)m_ZoomFrom); // fsin result stays unrounded on the x87 stack
     };
 
     switch (m_ZoomState) {
@@ -389,7 +389,7 @@ static double X87SinP1Half(double x) {
     return x;
 }
 #else
-static double X87SinP1Half(double x) { return (std::sin(x) + 1.0) * 0.5; }
+static double X87SinP1Half(double x) { return (x87::sin(x) + 1.0) * 0.5; }
 #endif
 
 // 0x5179E0
@@ -449,9 +449,9 @@ void CIdleCam::FinaliseIdleCamera(float curAngleX, float curAngleY, float shakeD
 
     // x87: the products stay unrounded until the float store
     vecFwd = CVector{
-        (float)-(std::cos((double)curAngleY) * std::cos((double)curAngleX)),
-        (float)-(std::sin((double)curAngleY) * std::cos((double)curAngleX)),
-        (float)std::sin((double)curAngleX)
+        (float)-(x87::cos((double)curAngleY) * x87::cos((double)curAngleX)),
+        (float)-(x87::sin((double)curAngleY) * x87::cos((double)curAngleX)),
+        (float)x87::sin((double)curAngleX)
     };
     vecFwd.Normalise();
     m_LastIdlePos = vecFwd + m_Cam->m_vecSource;
@@ -461,7 +461,7 @@ void CIdleCam::FinaliseIdleCamera(float curAngleX, float curAngleY, float shakeD
     const float angle = (hs.m_ang.z * m_DegreeShakeIdleCam) * shakeDegree;
     vecFwd = hs.m_resultMat.InverseTransformVector(vecFwd); // 0x59C810 `Multiply3x3(out, v, m)` (NOT TransformPoint)
 
-    vecUp.Set((float)std::sin((double)angle), 0.0f, (float)std::cos((double)angle));
+    vecUp.Set((float)x87::sin((double)angle), 0.0f, (float)x87::cos((double)angle));
 
     // The exe orthonormalises the 3 times: (a) with the shaken up vector, (b) after resetting `up` to (0, 0, 1)
     const auto Orthonormalise = [&] {

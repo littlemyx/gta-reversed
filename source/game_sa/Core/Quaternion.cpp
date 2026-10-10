@@ -69,20 +69,20 @@ void CQuaternion::Get(float* x, float* y, float* z) { // 0x59C160
     const double ux = m.up.x, uy = m.up.y, uz = m.up.z;
     const double ay = m.at.y;
 
-    StoreWrapped(z, std::atan2(ry, uy));
-    const double sz = std::sin((double)*z), cz = std::cos((double)*z); // Re-read from memory (float)
+    StoreWrapped(z, x87::atan2(ry, uy));
+    const double sz = x87::sin((double)*z), cz = x87::cos((double)*z); // Re-read from memory (float)
 
-    StoreWrapped(x, std::atan2(-ay, sz * ry + cz * uy));
+    StoreWrapped(x, x87::atan2(-ay, sz * ry + cz * uy));
 
     // = -(rz * cz - uz * sz), = rx * cz - ux * sz
-    StoreWrapped(y, std::atan2(-(rz * cz - uz * sz), rx * cz - ux * sz));
+    StoreWrapped(y, x87::atan2(-(rz * cz - uz * sz), rx * cz - ux * sz));
 }
 
 // Quat to axis & angle
 void CQuaternion::Get(RwV3d* axis, float* angle) { // 0x59C230
-    const double theta = std::acos((double)w + (double)w);
+    const double theta = x87::acos((double)w + (double)w);
     *angle = (float)theta;
-    const double k = 1.0 / std::sin(theta);
+    const double k = 1.0 / x87::sin(theta);
     axis->x = (float)(k * x);
     axis->y = (float)(k * y);
     axis->z = (float)(k * z);
@@ -222,11 +222,11 @@ void CQuaternion::Set(const RwMatrix& m) { // 0x59C3E0
 // Quat from euler angles
 void CQuaternion::Set(float ex, float ey, float ez) { // 0x59C530
     const double a1 = (double)ex * 0.5f, a2 = (double)ey * 0.5f, a3 = (double)ez * 0.5f;
-    const double ca1 = std::cos(a1), ca2 = std::cos(a2);
-    const float  c3 = (float)std::cos(a3);
-    const float  s1 = (float)std::sin(a1);
-    const float  s2 = (float)std::sin(a2);
-    const float  s3 = (float)std::sin(a3);
+    const double ca1 = x87::cos(a1), ca2 = x87::cos(a2);
+    const float  c3 = (float)x87::cos(a3);
+    const float  s1 = (float)x87::sin(a1);
+    const float  s2 = (float)x87::sin(a2);
+    const float  s3 = (float)x87::sin(a3);
 
     const float P = (float)(ca2 * ca1);
     const float Q = s2 * s1; // product of two floats, spilled to float
@@ -242,11 +242,11 @@ void CQuaternion::Set(float ex, float ey, float ez) { // 0x59C530
 // Quat from axis & angle
 void CQuaternion::Set(RwV3d* axis, float angle) { // 0x59C600
     const double half = (double)angle * 0.5f;
-    const double s = std::sin(half);
+    const double s = x87::sin(half);
     x = (float)(s * axis->x);
     y = (float)(s * axis->y);
     z = (float)(s * axis->z);
-    w = (float)std::cos(half);
+    w = (float)x87::cos(half);
 }
 
 // Spherical linear interpolation

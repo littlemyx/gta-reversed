@@ -186,7 +186,7 @@ void CVector::FromMultiply3x3(const CMatrix& matrix, const CVector& vector) {
 }
 
 float CVector::Heading(bool limitAngle) const {
-    const auto radians = std::atan2(-x, y);
+    const auto radians = x87::atan2(-x, y);
     if (limitAngle) {
         return CGeneral::LimitRadianAngle(radians);
     }

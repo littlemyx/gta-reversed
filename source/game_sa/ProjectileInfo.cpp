@@ -91,9 +91,9 @@ bool CProjectileInfo::AddProjectile(CEntity* creator, eWeaponType projectileType
     uint32   destroyTime{};
 
     // Heading of the creator, used by thrown projectiles
-    const auto GetCreatorHeading = [&] {
+    const auto GetCreatorHeading = [&]() -> float {
         if (creator->m_matrix) {
-            return std::atan2(-creator->m_matrix->GetForward().x, creator->m_matrix->GetForward().y);
+            return x87::atan2(-creator->m_matrix->GetForward().x, creator->m_matrix->GetForward().y);
         }
         return creator->m_placement.m_fHeading;
     };
@@ -119,8 +119,8 @@ bool CProjectileInfo::AddProjectile(CEntity* creator, eWeaponType projectileType
         matrix.GetPosition().y += origin.y;
         matrix.GetPosition().z += origin.z;
 
-        velocity.x = std::sin(angle) * speed * -1.0f;
-        velocity.y = std::cos(angle) * speed;
+        velocity.x = x87::sin(angle) * speed * -1.0f;
+        velocity.y = x87::cos(angle) * speed;
         velocity.z = (force + 1.0f) * 0.4f * speed;
         if (creator->m_nModelIndex == MODEL_SENTINEL) { // Weird, but the original code checks for this model specifically
             velocity += creator->AsPhysical()->m_vecMoveSpeed;
@@ -145,8 +145,8 @@ bool CProjectileInfo::AddProjectile(CEntity* creator, eWeaponType projectileType
         objInfoFlag = 5;
         elasticity  = 0.5f;
 
-        velocity.x = std::sin(angle) * speed * -1.0f;
-        velocity.y = std::cos(angle) * speed;
+        velocity.x = x87::sin(angle) * speed * -1.0f;
+        velocity.y = x87::cos(angle) * speed;
         velocity.z = (force + 1.0f) * 0.4f * speed;
         break;
     }
@@ -165,8 +165,8 @@ bool CProjectileInfo::AddProjectile(CEntity* creator, eWeaponType projectileType
         matrix.GetPosition().y += origin.y;
         matrix.GetPosition().z += origin.z;
 
-        velocity.x = std::sin(angle) * speed * -1.0f;
-        velocity.y = std::cos(angle) * speed;
+        velocity.x = x87::sin(angle) * speed * -1.0f;
+        velocity.y = x87::cos(angle) * speed;
         velocity.z = (force * 0.2f + 0.4f) * speed;
         break;
     }

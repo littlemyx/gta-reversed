@@ -71,7 +71,7 @@ bool CTaskSimpleChoking::ProcessPed(CPed* ped) {
         const double dz = (double)attackerPos.z - (double)pedPos.z;
         const double dot = dz * (double)fwd.z + dy * (double)fwd.y + dx * (double)fwd.x;
         if (dot > 0.0) {
-            ped->m_fAimingRotation = (float)std::atan2(-dx, dy);
+            ped->m_fAimingRotation = (float)x87::atan2(-dx, dy);
         }
     }
 

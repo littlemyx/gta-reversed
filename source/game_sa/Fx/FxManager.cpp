@@ -220,10 +220,10 @@ void FxManager_c::CalcFrustumInfo(RwCamera* camera) {
     constexpr double kRadToDeg = (double)std::bit_cast<float>(0x42652EEDu); // 0x85A998
     constexpr double kDegToRad = (double)std::bit_cast<float>(0x3C8EFA2Eu); // 0x85A7BC
     const double dist  = std::sqrt((double)viewWindow->x * (double)viewWindow->x + (double)viewWindow->y * (double)viewWindow->y);
-    const float  angle = (float)(std::atan2(dist, 1.0) * kRadToDeg);
+    const float  angle = (float)(x87::atan2(dist, 1.0) * kRadToDeg);
     const double radius0 = std::sqrt(dist * dist + (double)1.0f) * (double)farClip;
-    const double sinB    = std::sin(((double)180.0f - (double)angle * 2.0) * kDegToRad);
-    const double sinA    = (double)(float)std::sin((double)angle * kDegToRad);
+    const double sinB    = x87::sin(((double)180.0f - (double)angle * 2.0) * kDegToRad);
+    const double sinA    = (double)(float)x87::sin((double)angle * kDegToRad);
     const double radius  = radius0 / sinB * sinA;
     const float  atZ     = (float)((double)matrix->at.z * radius);
 

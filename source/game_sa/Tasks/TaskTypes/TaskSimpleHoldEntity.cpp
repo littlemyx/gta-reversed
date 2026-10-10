@@ -258,7 +258,7 @@ bool CTaskSimpleHoldEntity::ProcessPed(CPed* ped) {
                     ped->m_vecAnimMovingShiftLocal.x += DotProduct(&outPoint, &ped->GetRight()) / CTimer::GetTimeStep() * 0.1f;
                     ped->m_vecAnimMovingShiftLocal.y += DotProduct(&outPoint, &ped->GetForward()) / CTimer::GetTimeStep() * 0.1f ;
                     CVector direction = entityToHold->GetPosition() - ped->GetPosition();
-                    ped->m_fAimingRotation = atan2(-direction.x, direction.y);
+                    ped->m_fAimingRotation = x87::atan2(-direction.x, direction.y);
                 }
             }
         }

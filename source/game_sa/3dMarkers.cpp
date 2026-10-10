@@ -369,7 +369,7 @@ C3dMarker* C3dMarkers::PlaceMarker(
         switch (type) {
         case MARKER3D_CONE:
         case MARKER3D_CONE_NO_COLLISION: {
-            pos.z += std::sin(DegreesToRadians(m_angleDiamondDeg)) * (m->m_RoofHeight < 65535.f ? 0.15f : 0.3f);
+            pos.z += x87::sin(DegreesToRadians(m_angleDiamondDeg)) * (m->m_RoofHeight < 65535.f ? 0.15f : 0.3f);
         }
         }
 
@@ -386,7 +386,7 @@ C3dMarker* C3dMarkers::PlaceMarker(
         //> 0x7256D1 -> Moved after the `if` branch
 
         //> 0x72577E
-        m->m_Size = m->m_StdSize - std::sin(0.f) * m->m_StdSize * pulseFraction;
+        m->m_Size = m->m_StdSize - x87::sin(0.f) * m->m_StdSize * pulseFraction;
         if (m->m_RotateRate) {
             const auto lastPos = m->m_Mat.GetPosition();
             m->m_Mat.RotateZ(DegreesToRadians((float)(m->m_RotateRate) * CTimer::GetTimeStep()));
@@ -455,7 +455,7 @@ C3dMarker* C3dMarkers::PlaceMarker(
         switch (type) {
         case MARKER3D_CONE:
         case MARKER3D_CONE_NO_COLLISION: {
-            pos.z += std::sin(DegreesToRadians(m_angleDiamondDeg) * 0.3f); // NOTE/BUG: See code from the branch below, they aren't the same for some reason.
+            pos.z += x87::sin(DegreesToRadians(m_angleDiamondDeg) * 0.3f); // NOTE/BUG: See code from the branch below, they aren't the same for some reason.
         }
         }
 
@@ -684,7 +684,7 @@ void tUser3dMarker::Render(RpClump* clump) const {
 
     // Update position
     CVector pos = m_vecPosition;
-    pos.z += std::sin(DegreesToRadians(C3dMarkers::m_angleDiamondDeg)) * 0.25f;
+    pos.z += x87::sin(DegreesToRadians(C3dMarkers::m_angleDiamondDeg)) * 0.25f;
     RwFrameTranslate(frame, &pos, rwCOMBINEREPLACE);
 
     // Apply color to material of clump

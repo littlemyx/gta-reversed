@@ -164,7 +164,7 @@ CVector CTaskGoToVehicleAndLean::CalcTargetPos(CPed* ped) {
     const auto  diff  = ped->GetPosition() - m_Vehicle->GetPosition();
     const auto  right = m_Vehicle->m_matrix
         ? m_Vehicle->GetRight()
-        : CVector{ std::cos(m_Vehicle->m_placement.m_fHeading), std::sin(m_Vehicle->m_placement.m_fHeading), 0.f };
+        : CVector{ (float)(x87::cos(m_Vehicle->m_placement.m_fHeading)), (float)(x87::sin(m_Vehicle->m_placement.m_fHeading)), 0.f };
 
     // Which side of the vehicle is the ped on?
     float localX;

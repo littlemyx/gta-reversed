@@ -472,16 +472,16 @@ CVector2D CRadar::TransformRealWorldToTexCoordSpace(const CVector2D& in, int32 x
 // 0x583670
 void CRadar::CalculateCachedSinCos() {
     if (FrontEndMenuManager.m_bDrawingMap) {
-        cachedSin = std::sin(0.0f);
-        cachedCos = std::cos(0.0f);
+        cachedSin = x87::sin(0.0f);
+        cachedCos = x87::cos(0.0f);
 
         return;
     }
 
     const auto SaveAngle = [](float angle) {
         m_fRadarOrientation = angle;
-        cachedSin = std::sin(angle);
-        cachedCos = std::cos(angle);
+        cachedSin = x87::sin(angle);
+        cachedCos = x87::cos(angle);
     };
 
     if (TheCamera.GetLookDirection() == LOOKING_DIRECTION_FORWARD) {
@@ -981,8 +981,8 @@ void CRadar::DrawRotatingRadarSprite(CSprite2d& sprite, float x, float y, float 
     for (auto i = 0u; i < std::size(verts); i++) {
         const auto theta = (float)i * HALF_PI + (angle - FRAC_PI_4);
 
-        verts[i].x = std::sin(theta) * (float)width + x;
-        verts[i].y = std::cos(theta) * (float)height + y;
+        verts[i].x = x87::sin(theta) * (float)width + x;
+        verts[i].y = x87::cos(theta) * (float)height + y;
     }
 
     sprite.Draw(verts[3].x, verts[3].y, verts[2].x, verts[2].y, verts[0].x, verts[0].y, verts[1].x, verts[1].y, color);
@@ -1004,8 +1004,8 @@ void CRadar::DrawYouAreHereSprite(float x, float y) {
 
         DrawRotatingRadarSprite(
             RadarBlipSprites[RADAR_SPRITE_MAP_HERE],
-            x + 17.0f * std::cos(circleAngle),
-            y - 17.0f * std::sin(circleAngle),
+            x + 17.0f * x87::cos(circleAngle),
+            y - 17.0f * x87::sin(circleAngle),
             angle,
             (uint32)(SCREEN_STRETCH_X(25.0f)),
             (uint32)(SCREEN_STRETCH_Y(25.0f)),
@@ -1283,8 +1283,8 @@ void CRadar::DrawRadarMask() {
 
         // Then generate a quarter of the circle
         for (auto j = 0; j < 7; j++) {
-            in.x = corner.x * std::cos(float(j) * (FRAC_PI_2 / 6.0f));
-            in.y = corner.y * std::sin(float(j) * (FRAC_PI_2 / 6.0f));
+            in.x = corner.x * x87::cos(float(j) * (FRAC_PI_2 / 6.0f));
+            in.y = corner.y * x87::sin(float(j) * (FRAC_PI_2 / 6.0f));
             out[j + 1] = TransformRadarPointToScreenSpace(in);
         };
 
@@ -1614,7 +1614,7 @@ void CRadar::DrawRadarGangOverlay(bool inMenu) {
                 const auto timeInMS = FrontEndMenuManager.m_bDrawingMap ? CTimer::GetTimeInMSPauseMode() : CTimer::GetTimeInMS();
 
                 auto zoneColor = info->ZoneColor;
-                zoneColor.a = (uint8)((std::sin((float)(timeInMS % 1024) * (1024.f / TWO_PI)) + 1.0f) / 2.0f * (float)zoneColor.a);
+                zoneColor.a = (uint8)((x87::sin((float)(timeInMS % 1024) * (1024.f / TWO_PI)) + 1.0f) / 2.0f * (float)zoneColor.a);
 
                 return zoneColor;
             }();
@@ -1668,11 +1668,11 @@ void CRadar::DrawRadarMap() {
 
         const auto cSin = cachedSin;
         const auto cCos = cachedCos;
-        cachedSin = std::sin(PI);
-        cachedCos = std::cos(PI);
+        cachedSin = x87::sin(PI);
+        cachedCos = x87::cos(PI);
 
         // Pitch and roll combined
-        const float angle = std::atan2(-vehicle->m_matrix->GetForward().z, vehicle->m_matrix->GetUp().z);
+        const float angle = x87::atan2(-vehicle->m_matrix->GetForward().z, vehicle->m_matrix->GetUp().z);
 
         DrawAreaOnRadar(
             {
@@ -1926,8 +1926,8 @@ void CRadar::DrawEntityBlip(int32 blipIndex, uint8 arg1) {
             (void)TransformRealWorldPointToRadarSpace(pos); // NOTE: Result is overwritten below
 
             const double theta = (double)strip.direction * (double)kDegToRad; // 0x8595EC
-            pos.x = (float)(std::cos(theta) * (double)range + (double)pos.x);
-            pos.y = (float)((double)pos.y - std::sin(theta) * (double)range);
+            pos.x = (float)(x87::cos(theta) * (double)range + (double)pos.x);
+            pos.y = (float)((double)pos.y - x87::sin(theta) * (double)range);
 
             auto radarPos = TransformRealWorldPointToRadarSpace(pos);
 

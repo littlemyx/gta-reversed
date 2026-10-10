@@ -59,7 +59,7 @@ void CClouds::Init() {
 void CClouds::Update() {
     ZoneScoped;
 
-    CloudRotation = std::sin(TheCamera.m_fOrientation - 0.85f) * CWeather::Wind * 0.001f + CloudRotation;
+    CloudRotation = x87::sin(TheCamera.m_fOrientation - 0.85f) * CWeather::Wind * 0.001f + CloudRotation;
     IndividualRotation += (int32)((CTimer::GetTimeStep() * CWeather::Wind * 0.5f + 0.3f) * 60.0f);
 }
 
@@ -714,8 +714,8 @@ void CClouds::RenderSkyPolys() {
     } else {
         pos = TheCamera.m_placement.m_vPosn;
         float fHeading = TheCamera.m_placement.m_fHeading;
-        norm.x = -sin(fHeading);
-        norm.y = cos(fHeading);
+        norm.x = -x87::sin(fHeading);
+        norm.y = x87::cos(fHeading);
     }
     norm.z = 0.f;
     norm.Normalise();

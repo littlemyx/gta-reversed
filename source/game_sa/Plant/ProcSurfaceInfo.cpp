@@ -118,7 +118,7 @@ ProcObjectListItem* ProcSurfaceInfo_c::AddObject(CVector pos, CVector normal, tC
 
     if (m_Align && normal.z < 0.95f) {
         CMatrix tempMatrix{};
-        CVector rotVec = { cos(rotation), sin(rotation), 0.f };
+        CVector rotVec = { (float)(x87::cos(rotation)), (float)(x87::sin(rotation)), 0.f };
 
         CVector forwardVec = normal.Cross(rotVec).Normalized();
         auto    rightVec   = forwardVec.Cross(normal).Normalized();

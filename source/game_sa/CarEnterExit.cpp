@@ -259,7 +259,7 @@ bool CCarEnterExit::GetNearestCarDoor(const CPed* ped, const CVehicle* vehicle, 
                 // Check if ped is 30 degrees to the left of the vehicle
                 // Original code used atan and whatnot, but this achieves the same result
                 if (DotProduct2D(vehicle->GetRight(), ped->GetForward()) > 0 // On the left
-                 && DotProduct2D(vehicle->GetForward(), ped->GetForward()) > std::cos(PI / 6.f)
+                 && DotProduct2D(vehicle->GetForward(), ped->GetForward()) > x87::cos(PI / 6.f)
                 ) {
                     if ((ped->IsPlayer() && ped->GetPlayerData()->m_fMoveBlendRatio > 1.5f && doorId == 0) 
                     || (!ped->IsPlayer() && ped->m_nPedType != PED_TYPE_COP && ped->m_nMoveState == PEDMOVE_RUN && ped->m_pStats->m_nTemper > 65 && doorId == 0)

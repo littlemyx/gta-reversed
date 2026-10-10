@@ -144,8 +144,8 @@ void CTaskSimpleJump::Launch(CPed* ped) {
         ped->m_vecMoveSpeed.x = 0.0F;
         ped->m_vecMoveSpeed.y = 0.0F;
     } else if (!m_pClimbEntity && (ped->m_standingOnEntity || ped->m_vecMoveSpeed.SquaredMagnitude2D() < fHorizontalJumpSpeed)) {
-        ped->m_vecMoveSpeed.x = -fHorizontalJumpSpeed * sin(ped->m_fCurrentRotation);
-        ped->m_vecMoveSpeed.y = fHorizontalJumpSpeed * cos(ped->m_fCurrentRotation);
+        ped->m_vecMoveSpeed.x = -fHorizontalJumpSpeed * x87::sin(ped->m_fCurrentRotation);
+        ped->m_vecMoveSpeed.y = fHorizontalJumpSpeed * x87::cos(ped->m_fCurrentRotation);
 
         if (ped->m_standingOnEntity) {
             ped->m_vecMoveSpeed.x += ped->m_standingOnEntity->AsPhysical()->m_vecMoveSpeed.x;

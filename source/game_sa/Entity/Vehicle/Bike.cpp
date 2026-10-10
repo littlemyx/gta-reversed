@@ -176,7 +176,7 @@ CBike::CBike(int32 modelIndex, eVehicleCreatedBy createdBy) : CVehicle(createdBy
     m_fForkZOffset = 0.0f;
     m_nFixLeftHand = false;
     m_nFixRightHand = false;
-    m_fSteerAngleTan = std::tan(DegreesToRadians(mi->m_fBikeSteerAngle));
+    m_fSteerAngleTan = x87::tan(DegreesToRadians(mi->m_fBikeSteerAngle));
     m_fMass = m_pHandlingData->m_fMass;
     m_fTurnMass = m_pHandlingData->m_fTurnMass;
     m_vecCentreOfMass = m_pHandlingData->m_vecCentreOfMass;
@@ -1496,7 +1496,7 @@ void CBike::ProcessControl() {
             } else if (rightZ < -1.0f) {
                 rollSin = -1.0f;
             }
-            const auto lean = decay * m_RideAnimData.DesiredLeanAngle - (1.0f - decay) * (std::asin(rollSin) + 0.2617994f);
+            const auto lean = decay * m_RideAnimData.DesiredLeanAngle - (1.0f - decay) * (x87::asin(rollSin) + 0.2617994f);
             m_RideAnimData.DesiredLeanAngle = lean;
             m_RideAnimData.LeanAngle        = lean;
         }
@@ -1769,7 +1769,7 @@ void CBike::ProcessControl() {
                     gripRatio = 1.0f;
                 }
 
-                steerFactor = std::asin(static_cast<double>(gripRatio)) / (static_cast<double>(m_pHandlingData->m_fSteeringLock) * static_cast<double>(0.017453292f));
+                steerFactor = x87::asin(static_cast<double>(gripRatio)) / (static_cast<double>(m_pHandlingData->m_fSteeringLock) * static_cast<double>(0.017453292f));
                 if ((m_fSteerAngle < 0.0f && m_RideAnimData.LeanAngle < 0.0f) || (m_fSteerAngle > 0.0f && m_RideAnimData.LeanAngle > 0.0f)) {
                     steerFactor += steerFactor;
                 }
@@ -1798,8 +1798,8 @@ void CBike::ProcessControl() {
                 return;
             }
 
-            const auto steerSin = std::sin(m_RideAnimData.BarSteerAngle);
-            const auto steerCos = std::cos(m_RideAnimData.BarSteerAngle);
+            const float steerSin = x87::sin(m_RideAnimData.BarSteerAngle);
+            const float steerCos = x87::cos(m_RideAnimData.BarSteerAngle);
 
             CVector wheelFwd = TransformVectorOriginal(GetMatrix(), CVector{ -steerSin, steerCos, 0.0f });
             auto&   colPoint = m_aWheelColPoints[frontWheel];
@@ -2030,7 +2030,7 @@ void CBike::ProcessControl() {
         if (!(extraHandlingFlags & BIKE_EXTRA_PLAYER_CONTROLLED) && !bikeFlags.bGettingPickedUp) {
             if (bikeFlags.bOnSideStand) {
                 const auto decay = static_cast<float>(std::pow(static_cast<double>(0.97f), static_cast<double>(CTimer::GetTimeStep()))); // 0x866FD0 (double)
-                lean = decay * m_RideAnimData.DesiredLeanAngle - (1.0f - decay) * ((std::asin(GetRight().z) + stillAnimLean) + 0.2617994f);
+                lean = decay * m_RideAnimData.DesiredLeanAngle - (1.0f - decay) * ((x87::asin(GetRight().z) + stillAnimLean) + 0.2617994f);
             } else {
                 lean = static_cast<float>(std::pow(static_cast<double>(0.95f), static_cast<double>(CTimer::GetTimeStep())) * m_RideAnimData.DesiredLeanAngle); // 0x86C3C8 (double)
             }
@@ -2071,7 +2071,7 @@ void CBike::ProcessControl() {
             }
 
             const auto desLeanPow = std::pow(m_BikeHandling->m_fDesLean, CTimer::GetTimeStep());
-            lean = (std::asin(static_cast<float>(lateral)) - stillAnimLean) * (1.0f - desLeanPow) + desLeanPow * m_RideAnimData.DesiredLeanAngle;
+            lean = (x87::asin(static_cast<float>(lateral)) - stillAnimLean) * (1.0f - desLeanPow) + desLeanPow * m_RideAnimData.DesiredLeanAngle;
         }
         m_RideAnimData.DesiredLeanAngle = lean;
         m_RideAnimData.LeanAngle        = lean;
@@ -2405,7 +2405,7 @@ void CBike::CalculateLeanMatrix() {
     m_mLeanMatrix = GetMatrix();
     m_mLeanMatrix = m_mLeanMatrix * mat;
     // place wheel back on ground
-    m_mLeanMatrix.GetPosition() += GetUp() * (1.0f - cos(m_RideAnimData.LeanAngle)) * GetColModel()->GetBoundingBox().m_vecMin.z;
+    m_mLeanMatrix.GetPosition() += GetUp() * (1.0f - x87::cos(m_RideAnimData.LeanAngle)) * GetColModel()->GetBoundingBox().m_vecMin.z;
     m_bLeanMatrixCalculated = true;
 }
 
@@ -2542,15 +2542,15 @@ void CBike::PlaceOnRoadProperly() {
     }
 
     const float length = rear + front;
-    const float pitch  = std::atan2((zFront - zRear) / length, 1.0f);
-    const float cosP   = std::cos(pitch);
+    const float pitch  = x87::atan2((zFront - zRear) / length, 1.0f);
+    const float cosP   = x87::cos(pitch);
 
     auto& right = GetRight();
     right.x = (frontY - rearY) / length;
     right.y = -((frontX - rearX) / length);
     right.z = 0.0f;
 
-    GetForward() = CVector{ -(cosP * right.y), cosP * right.x, std::sin(pitch) };
+    GetForward() = CVector{ -(cosP * right.y), cosP * right.x, (float)(x87::sin(pitch)) };
     GetUp()      = CrossProduct(GetRight(), GetForward());
 
     const float midX = (frontX + rearX) * 0.5f;
@@ -2688,7 +2688,7 @@ void CBike::PreRender() {
             }
 
             auto&      colPt   = m_aWheelColPoints[colPtIdx];
-            const auto offsetX = std::sin(m_RideAnimData.LeanAngle) * GetColModel()->m_boundBox.m_vecMin.z * 0.8f;
+            const auto offsetX = x87::sin(m_RideAnimData.LeanAngle) * GetColModel()->m_boundBox.m_vecMin.z * 0.8f;
             CVector    pos     = colPt.m_vecPoint + GetRight() * offsetX;
 
             if (m_bWheelBloody[wheel]) {
@@ -2789,7 +2789,7 @@ void CBike::PreRender() {
     CShadows::StoreShadowForVehicle(this, VEH_SHD_BIKE);
 
     //> Wheel rotation
-    const auto steerDir = TransformVectorOriginal(GetMatrix(), CVector{ -std::sin(m_fSteerAngle), std::cos(m_fSteerAngle), 0.0f });
+    const auto steerDir = TransformVectorOriginal(GetMatrix(), CVector{ (float)(-x87::sin(m_fSteerAngle)), (float)(x87::cos(m_fSteerAngle)), 0.0f });
     const CVector fwd   = GetForward();
 
     if (m_WheelCounts[0] > 0.0f || m_WheelCounts[1] > 0.0f) {
@@ -2827,7 +2827,7 @@ void CBike::PreRender() {
         steerMat.UpdateRW();
 
         const auto steerAngleRad = mi->m_fBikeSteerAngle * 0.017453292f;
-        CVector    steerAxis{ 0.0f, std::sin(steerAngleRad), -std::cos(steerAngleRad) };
+        CVector    steerAxis{ 0.0f, (float)(x87::sin(steerAngleRad)), (float)(-x87::cos(steerAngleRad)) };
         steerAxis.Normalise();
 
         CQuaternion steerQuat{};
@@ -2860,7 +2860,7 @@ void CBike::PreRender() {
 
     // Rear forks (swing arm)
     if (const auto forkRear = m_aBikeNodes[BIKE_FORKS_REAR]) {
-        const auto angle = std::asin((m_aWheelSuspensionHeights[1] - m_aWheelOrigHeights[1]) / m_fSwingArmLength) * -1.0f;
+        const auto angle = x87::asin((m_aWheelSuspensionHeights[1] - m_aWheelOrigHeights[1]) / m_fSwingArmLength) * -1.0f;
         mat.Attach(RwFrameGetMatrix(forkRear), false);
         const CVector savedPos = mat.GetPosition();
         mat.SetRotate(angle, 0.0f, 0.0f);
@@ -2878,7 +2878,7 @@ void CBike::PreRender() {
     wheelOffset.y = ((cd->m_pLines[1].m_vecStart.y + cd->m_pLines[0].m_vecStart.y) * 0.5f - m_fForkYOffset)
                   - (m_aWheelSuspensionHeights[0] - m_aWheelOrigHeights[0]) * m_fSteerAngleTan;
     if (m_nWheelStatus[0] == 1) {
-        mat.SetRotate(m_aWheelPitchAngles[0], 0.0f, std::sin(m_aWheelPitchAngles[0]) * 0.05f);
+        mat.SetRotate(m_aWheelPitchAngles[0], 0.0f, x87::sin(m_aWheelPitchAngles[0]) * 0.05f);
     } else {
         mat.SetRotateX(m_aWheelPitchAngles[0]);
     }
@@ -2896,7 +2896,7 @@ void CBike::PreRender() {
     {
         const CVector savedPos = mat.GetPosition();
         if (m_nWheelStatus[1] == 1) {
-            mat.SetRotate(m_aWheelPitchAngles[1], 0.0f, std::sin(m_aWheelPitchAngles[1]) * 0.07f);
+            mat.SetRotate(m_aWheelPitchAngles[1], 0.0f, x87::sin(m_aWheelPitchAngles[1]) * 0.07f);
         } else {
             mat.SetRotateX(m_aWheelPitchAngles[1]);
         }
@@ -2910,7 +2910,7 @@ void CBike::PreRender() {
     if (const auto chassis = m_aBikeNodes[BIKE_CHASSIS]) {
         mat.Attach(RwFrameGetMatrix(chassis), false);
         CVector offset = mat.GetPosition();
-        offset.z = (1.0f - std::cos(m_RideAnimData.LeanAngle)) * cm->m_boundBox.m_vecMin.z * 0.9f;
+        offset.z = (1.0f - x87::cos(m_RideAnimData.LeanAngle)) * cm->m_boundBox.m_vecMin.z * 0.9f;
         mat.SetRotateX(std::abs(m_RideAnimData.LeanAngle) * -0.05f);
         mat.RotateY(m_RideAnimData.LeanAngle);
         mat.GetPosition().x = mat.GetPosition().x + offset.x;

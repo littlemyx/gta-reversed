@@ -482,8 +482,8 @@ void CTaskSimpleSwim::ProcessSwimmingResistance(CPed* ped) {
     }
     case SWIM_UNDERWATER_SPRINTING: {
         vecPedMoveSpeed   =  ped->m_vecAnimMovingShiftLocal.x * ped->GetRight();
-        vecPedMoveSpeed   += std::cos(m_fRotationX) * ped->m_vecAnimMovingShiftLocal.y * ped->GetForward();
-        vecPedMoveSpeed.z += std::sin(m_fRotationX) * ped->m_vecAnimMovingShiftLocal.y + 0.01f;
+        vecPedMoveSpeed   += x87::cos(m_fRotationX) * ped->m_vecAnimMovingShiftLocal.y * ped->GetForward();
+        vecPedMoveSpeed.z += x87::sin(m_fRotationX) * ped->m_vecAnimMovingShiftLocal.y + 0.01f;
         break;
     }
     case SWIM_BACK_TO_SURFACE: {
@@ -550,7 +550,7 @@ void CTaskSimpleSwim::ProcessSwimmingResistance(CPed* ped) {
                 fSubmergeZ = (0.55f - 0.2f) * (m_fRotationX * 4.0f / PI) * 0.75f + 0.2f;
             }
         } else {
-            if (pedPos.z - sin(m_fRotationX) + 0.65f <= fWaterLevel) {
+            if (pedPos.z - x87::sin(m_fRotationX) + 0.65f <= fWaterLevel) {
                 if (m_fStateChanger > 0.001f)
                     m_fStateChanger *= 0.95f;
                 else
@@ -692,7 +692,7 @@ void CTaskSimpleSwim::ProcessControlAI(CPed* ped) {
     CVector vecPosition(m_vecPos - pedPos);
     auto dist2d = vecPosition.Magnitude2D();
     if (m_vecPos != 0.0f) {
-        ped->m_fAimingRotation = std::atan2(-vecPosition.x, vecPosition.y);
+        ped->m_fAimingRotation = x87::atan2(-vecPosition.x, vecPosition.y);
 
         float fMinimum2DDistanceBetweenPeds = 1.0f;
         if (ped->IsPlayer()) {
@@ -773,7 +773,7 @@ void CTaskSimpleSwim::ProcessControlInput(CPlayerPed* ped) {
                 float fRadianAngle = CGeneral::GetRadianAngleBetweenPoints(0.0f, 0.0f, negativePedWalkX, vecPedWalk.y) - TheCamera.m_fOrientation;
                 float angle = CGeneral::LimitRadianAngle(fRadianAngle);
 
-                CVector vecPedWalkDirection(0.0f, -std::sin(angle), std::cos(angle));
+                CVector vecPedWalkDirection(0.0f, -x87::sin(angle), x87::cos(angle));
                 if (angle <= ped->m_fCurrentRotation + DegreesToRadians(180.0f)) {
                     if (angle < ped->m_fCurrentRotation - DegreesToRadians(180.0f)) {
                         angle += DegreesToRadians(360.0f);
@@ -857,7 +857,7 @@ void CTaskSimpleSwim::ProcessControlInput(CPlayerPed* ped) {
             }
         } else {
             const auto& camFront = CCamera::GetActiveCamera().m_vecFront;
-            ped->m_fAimingRotation = std::atan2(-camFront.x, camFront.y); // heading
+            ped->m_fAimingRotation = x87::atan2(-camFront.x, camFront.y); // heading
             if (TheCamera.GetLookDirection() != LOOKING_DIRECTION_FORWARD) {
                 ped->m_fAimingRotation += DegreesToRadians(180.0f);
                 if (ped->m_fAimingRotation > DegreesToRadians(180.0f)) {
@@ -899,7 +899,7 @@ void CTaskSimpleSwim::ProcessControlInput(CPlayerPed* ped) {
             CVector distance = pedPos - ped->GetForward();
             CVector position = pedPos + ped->GetForward();
             if (CWaterLevel::GetWaterLevel(position, fWaterLevel1, true) && CWaterLevel::GetWaterLevel(distance, fWaterLevel2, true)) {
-                m_fRotationX = std::atan2(fWaterLevel1 - fWaterLevel2, 2.0f) * 1.0f;
+                m_fRotationX = x87::atan2(fWaterLevel1 - fWaterLevel2, 2.0f) * 1.0f;
             }
         }
 
@@ -926,7 +926,7 @@ void CTaskSimpleSwim::ProcessControlInput(CPlayerPed* ped) {
                 vecActiveCamFront.z = 0.0f;
             }
 
-            ped->m_fAimingRotation = std::atan2(-vecActiveCamFront.x, vecActiveCamFront.y);
+            ped->m_fAimingRotation = x87::atan2(-vecActiveCamFront.x, vecActiveCamFront.y);
             float fRotation = -(ped->m_fAimingRotation - ped->m_fCurrentRotation);
             if (fRotation <= DegreesToRadians(180.0f)) {
                 if (fRotation < -DegreesToRadians(180.0f))
@@ -939,7 +939,7 @@ void CTaskSimpleSwim::ProcessControlInput(CPlayerPed* ped) {
             m_fTurningRotationY += CTimer::GetTimeStep() * 0.04f * fRotation;
             m_fAimingRotation   += CTimer::GetTimeStep() * 0.08f * fRotation;
 
-            float fRotationX = (std::asin(vecActiveCamFront.z) - m_fRotationX) * 10.0f;
+            float fRotationX = (x87::asin(vecActiveCamFront.z) - m_fRotationX) * 10.0f;
             fRotationX = std::clamp(fRotationX, -1.0f, 1.0f); // originally min/max used
             if (m_fStateChanger == 0.0f || fRotationX > 0.0f) {
                 m_fRotationX += CTimer::GetTimeStepInSeconds() * fRotationX;

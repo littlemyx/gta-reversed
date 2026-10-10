@@ -2634,7 +2634,7 @@ float CAEVehicleAudioEntity::GetFreqForPlayerEngineSound(tVehicleParams& vp, eVe
         if (m_AuSettings.VehicleAudioType == AE_BIKE) {
             auto* const bike = vp.Vehicle->AsBike();
 
-            bf = std::sin(bike->GetRideAnimData()->LeanAngle) * cfg->FrqBikeLeanFactor;
+            bf = x87::sin(bike->GetRideAnimData()->LeanAngle) * cfg->FrqBikeLeanFactor;
             if (bike->bikeFlags.bPlayerBoost) {
                 bf += cfg->FrqPlayerBikeBoostOffset;
             }
@@ -4454,7 +4454,7 @@ static void ProcessBicycleSounds(CAEVehicleAudioEntity& ae, CAEVehicleAudioEntit
     const auto tyreVolume       = CAEAudioUtility::AudioLog10(numContactWheels * 0.25f * speedRatio) * 20.f + ae.m_EventVolume + -8.f; // 0x8CBEBC
 
     // 0x4FFF17
-    const auto tyreFrq = (std::abs(std::sin(bmx->m_RideAnimData.LeanAngle)) * 0.2f + 1.f) // 0x8CBD60
+    const auto tyreFrq = (std::abs(x87::sin(bmx->m_RideAnimData.LeanAngle)) * 0.2f + 1.f) // 0x8CBD60
         * (((numContactWheels * FRQ_TYRE_RANGE) * 0.125f + FRQ_TYRE_RANGE * speedRatio) + 1.05f); // 0x8CBD5C
 
     // 0x4FFF6C

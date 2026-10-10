@@ -607,8 +607,8 @@ void CShadows::StoreRealTimeShadow(CPhysical* physical, float displacementX, flo
 
     const auto& vecToSun = CTimeCycle::m_VectorToSun[CTimeCycle::m_CurrentStoredValue];
     const auto lightFrame = rtshdw->SetLightProperties(
-        RadiansToDegrees(+std::atan2(-vecToSun.x, -vecToSun.y)),
-        RadiansToDegrees(-std::atan2(+vecToSun.x, -vecToSun.z)),
+        RadiansToDegrees(+x87::atan2(-vecToSun.x, -vecToSun.y)),
+        RadiansToDegrees(-x87::atan2(+vecToSun.x, -vecToSun.z)),
         true
     );
     CalcPedShadowValues(

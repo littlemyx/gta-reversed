@@ -467,8 +467,8 @@ bool CGangWars::CreateDefendingGroup(int32 unused) {
         auto angle = (float)i * TWO_PI / (float)pedCount;
 
         auto pedPos = CVector{
-            nodePos.x + std::sin(angle) * CGeneral::GetRandomNumberInRange(0.0f, 3.0f) + 2.0f,
-            nodePos.y + std::cos(angle) * CGeneral::GetRandomNumberInRange(0.0f, 3.0f) + 2.0f,
+            (float)(nodePos.x + x87::sin(angle) * CGeneral::GetRandomNumberInRange(0.0f, 3.0f) + 2.0f),
+            (float)(nodePos.y + x87::cos(angle) * CGeneral::GetRandomNumberInRange(0.0f, 3.0f) + 2.0f),
             nodePos.z + 2.0f
         };
         pedPos.z = CWorld::FindGroundZFor3DCoord(pedPos, nullptr, nullptr);

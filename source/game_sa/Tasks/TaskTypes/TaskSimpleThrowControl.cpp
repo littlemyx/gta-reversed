@@ -76,7 +76,7 @@ bool CTaskSimpleThrowControl::ProcessPed(CPed* ped) {
         const auto& pedPos = ped->GetPosition();
         const float dx     = target.x - pedPos.x;
         const float dy     = target.y - pedPos.y;
-        ped->m_fAimingRotation = (float)std::atan2(-(double)dx, (double)dy); // +0x55C
+        ped->m_fAimingRotation = (float)x87::atan2(-(double)dx, (double)dy); // +0x55C
     };
     if (m_entity) {
         SetRotation(m_entity->GetPosition());

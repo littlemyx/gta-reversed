@@ -36,7 +36,7 @@ void InjectCommonHooks() {
 
 // 0x54ECE0
 void TransformPoint(RwV3d& point, const CSimpleTransform& placement, const RwV3d& vecPos) {
-    const auto cos = std::cos(placement.m_fHeading), sin = std::sin(placement.m_fHeading);
+    const auto cos = x87::cos(placement.m_fHeading), sin = x87::sin(placement.m_fHeading);
 
     point.x = cos * vecPos.x - sin * vecPos.y + placement.m_vPosn.x;
     point.y = sin * vecPos.x + cos * vecPos.y + placement.m_vPosn.y;

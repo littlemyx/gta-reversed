@@ -145,10 +145,10 @@ void CCollisionEventScanner::ScanForCollisionEvents(CPed* victim, CEventGroup* e
 
                     const CVector pedPos = ped.GetPosition();
                     const CVector pedToCenter = bbCenterWS - pedPos; // 0x40FE60 (0x604791)
-                    const auto    centerAngle = std::atan2((double)-pedToCenter.x, (double)pedToCenter.y); // fpatan, 0x6047AD
+                    const auto    centerAngle = x87::atan2((double)-pedToCenter.x, (double)pedToCenter.y); // fpatan, 0x6047AD
                     const float   angleDiff   = CGeneral::LimitRadianAngle((float)((double)heading - centerAngle)); // 0x6047BF
 
-                    const float halfAngle = (float)std::atan2((double)bbMax.x - (double)bbMin.x, (double)bbMax.y - (double)bbMin.y); // 0x6047EA
+                    const float halfAngle = (float)x87::atan2((double)bbMax.x - (double)bbMin.x, (double)bbMax.y - (double)bbMin.y); // 0x6047EA
 
                     CVector dir = pedPos - veh->GetPosition(); // 0x60480E
                     dir.Normalise(); // 0x60481D

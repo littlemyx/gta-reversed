@@ -139,7 +139,7 @@ bool CTaskSimpleJetPack::ProcessPed(CPed* ped) {
             m_ThrustStrafe = std::clamp(m_ThrustStrafe + CGeneral::DoCoinFlip() ? -1.f : 1.f, -3.f, 3.f);
 
             ped->m_fAimingRotation +=
-                std::sin((float)CTimer::m_snTimeInMilliseconds * 0.0015707964f) * CTimer::GetTimeStep() * JETPACK_TURN_RATE * CGeneral::GetRandomNumberInRange(0.f, 1.f); // TODO: Magic number
+                x87::sin((float)CTimer::m_snTimeInMilliseconds * 0.0015707964f) * CTimer::GetTimeStep() * JETPACK_TURN_RATE * CGeneral::GetRandomNumberInRange(0.f, 1.f); // TODO: Magic number
 
             if (ped->GetPlayerData()) {
                 ped->GetPlayerData()->m_fMoveBlendRatio = 0.f;
@@ -191,8 +191,8 @@ void CTaskSimpleJetPack::RenderJetPack(CPed* ped) {
             if (m_ThrustStop) {
                 const auto t = (float)CTimer::GetTimeInMS() / 79.577469f; // TODO: Magic number
                 RotateJB(
-                    std::sin(t) * (bLeftSide ? 45.f : -45.f),
-                    std::cos(t) * 45.f
+                    x87::sin(t) * (bLeftSide ? 45.f : -45.f),
+                    x87::cos(t) * 45.f
                 );
             } else {
                 const auto rotY = m_ThrustStrafe * 45.f;
@@ -240,9 +240,9 @@ void CTaskSimpleJetPack::ProcessThrust(CPed* ped) {
         ApplyThrust(ped->GetUp(), m_ThrustFwd >= 0 ? THRUST_NOMINAL : THRUST_NOMINAL * 0.5f);
 
         if (m_ThrustFwd > 0) { // 0x67F1B7
-            const auto thrustUp = ped->GetUp() * std::cos(m_ThrustAngle);
+            const auto thrustUp = ped->GetUp() * x87::cos(m_ThrustAngle);
 
-            auto thrustFwd = ped->GetForward() * -std::sin(m_ThrustAngle);
+            auto thrustFwd = ped->GetForward() * -x87::sin(m_ThrustAngle);
             thrustFwd.z    = std::min(0.75f, thrustFwd.z);
 
             const auto heightMult = std::clamp(1.f - (ped->GetPosition().z - (TheCamera.CalculateGroundHeight(eGroundHeightType::ENTITY_BB_TOP) + 100.f)) / 100.f, 0.f, 1.f);
@@ -261,7 +261,7 @@ void CTaskSimpleJetPack::ProcessThrust(CPed* ped) {
             const auto sumAppliedVelocity = ped->GetMoveSpeed() - prevPedVel;       // Total velocity applied this frame
             speed -= (deltaVelocity + sumAppliedVelocity).Dot(dir) * LEG_SWING_DELTA_V_MULT;
         }
-        speed -= std::sin(angle) * CTimer::GetTimeStep() * LEG_SWING_GRAVITY_MULT;
+        speed -= x87::sin(angle) * CTimer::GetTimeStep() * LEG_SWING_GRAVITY_MULT;
         speed *= swingDampingFactor;
 
         angle = std::clamp(angle + speed * CTimer::GetTimeStep(), -LEG_SWING_MAX_ANGLE, LEG_SWING_MAX_ANGLE);
@@ -347,7 +347,7 @@ void CTaskSimpleJetPack::ProcessControlInput(CPlayerPed* player) {
     if (!CCamera::m_bUseMouse3rdPerson || player->bIsStanding) {
         if (player->m_pTargetedObject || player->bIsStanding || pad->GetTarget()) { // 0x67EA51
             if (padMoveMag > 0.f) { // Inverted
-                player->m_fAimingRotation = std::atan2(walkLeftRight, walkUpDown);
+                player->m_fAimingRotation = x87::atan2(walkLeftRight, walkUpDown);
                 m_ThrustAngle = THRUST_MAX_ANGLE * padMoveMag * -0.3515625f; // TODO: Magic
             } else {
                 player->GetPlayerData()->m_fMoveBlendRatio = 0.f;

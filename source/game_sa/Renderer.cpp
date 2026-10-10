@@ -1062,7 +1062,7 @@ void CRenderer::ScanSectorList(int32 sectorX, int32 sectorY) {
     bool bRequestModel = false;
     float fDistanceX = CWorld::GetSectorPosX(sectorX) - ms_vecCameraPosition.x;
     float fDistanceY = CWorld::GetSectorPosY(sectorY) - ms_vecCameraPosition.y;
-    float fAngleInRadians = std::atan2(-fDistanceX, fDistanceY) - ms_fCameraHeading;
+    float fAngleInRadians = x87::atan2(-fDistanceX, fDistanceY) - ms_fCameraHeading;
     if (CVector2D(fDistanceX, fDistanceY).SquaredMagnitude() < MAX_STREAMING_RADIUS_SQUARED ||
         std::fabs(CGeneral::LimitRadianAngleExt(fAngleInRadians)) < (double)STREAMING_ANGLE_THRESHOLD_RAD // x87: 0x53CB50 leaves the result unrounded in ST0
     ) {
@@ -1154,7 +1154,7 @@ void CRenderer::ScanBigBuildingList(int32 sectorX, int32 sectorY) {
     bool bRequestModel = false;
     float fDistanceX = CWorld::GetLodSectorPosX(sectorX) - ms_vecCameraPosition.x;
     float fDistanceY = CWorld::GetLodSectorPosY(sectorY) - ms_vecCameraPosition.y;
-    float fAngleInRadians = std::atan2(-fDistanceX, fDistanceY) - ms_fCameraHeading;
+    float fAngleInRadians = x87::atan2(-fDistanceX, fDistanceY) - ms_fCameraHeading;
     if (CVector2D(fDistanceX, fDistanceY).SquaredMagnitude() < MAX_BIGBUILDING_STREAMING_RADIUS_SQUARED ||
         std::fabs(CGeneral::LimitRadianAngleExt(fAngleInRadians)) <= (double)BIGBUILDING_STREAMING_ANGLE_THRESHOLD_RAD // x87: 0x53CB50 leaves the result unrounded in ST0
     ) {

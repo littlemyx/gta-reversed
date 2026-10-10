@@ -107,8 +107,8 @@ void CPickups::CreatePickupCoorsCloseToCoors(float inX, float inY, float inZ, fl
     for (int32 i = 0; i < 32; i++) {
         const auto angle = (float)(CGeneral::GetRandomNumber() & 0xFF) * (TWO_PI / 256.0f); // 0x859BBC
         CVector    cand{
-            std::sinf(angle) * 1.5f + inX,
-            std::cosf(angle) * 1.5f + inY,
+            (float)(x87::sin(angle) * 1.5f + inX),
+            (float)(x87::cos(angle) * 1.5f + inY),
             0.0f
         };
 
@@ -163,8 +163,8 @@ void CPickups::CreateSomeMoney(CVector coors, int32 amount) {
 
     for (auto i = 0; i < wads; i++) {
         bool result;
-        coors.x += std::sinf(CGeneral::GetRandomNumberInRange(0.f, TWO_PI)) * 1.5f;
-        coors.y += std::cosf(CGeneral::GetRandomNumberInRange(0.f, TWO_PI)) * 1.5f;
+        coors.x += x87::sin(CGeneral::GetRandomNumberInRange(0.f, TWO_PI)) * 1.5f;
+        coors.y += x87::cos(CGeneral::GetRandomNumberInRange(0.f, TWO_PI)) * 1.5f;
         coors.z = CWorld::FindGroundZFor3DCoord(coors, &result, nullptr) + 0.5f;
 
         if (result) {
@@ -188,7 +188,7 @@ void CPickups::DoCollectableEffects(CEntity* entity) {
 
     if (const auto d = DistanceBetweenPoints(TheCamera.GetPosition(), entityPos); d < 14.0f) {
         // shade of gray
-        const auto t = (uint8)((std::sinf((float)(((uint16)std::bit_cast<uintptr_t>(entity) + (uint16)CTimer::GetTimeInMS()) % 2048) * 0.0030664064f) + 1.0f) / 2.0f * ((14.0f - d) * ExeRecip(14.0f)) * 255.0f);
+        const auto t = (uint8)((x87::sin((float)(((uint16)std::bit_cast<uintptr_t>(entity) + (uint16)CTimer::GetTimeInMS()) % 2048) * 0.0030664064f) + 1.0f) / 2.0f * ((14.0f - d) * ExeRecip(14.0f)) * 255.0f);
 
         CShadows::StoreStaticShadow(
             (uint32)entity,
@@ -243,7 +243,7 @@ void CPickups::DoMineEffects(CEntity* entity) {
 
     if (const auto d = DistanceBetweenPoints(TheCamera.GetPosition(), entityPos); d < 20.0f) {
         // shade of red
-        const auto t = (uint8)((std::sinf((float)(((uint16)std::bit_cast<uintptr_t>(entity) + (uint16)CTimer::GetTimeInMS()) % 512) * 0.012265625f) + 1.0f) / 2.0f * ((20.0f - d) * ExeRecip(20.0f)) * 64.0f);
+        const auto t = (uint8)((x87::sin((float)(((uint16)std::bit_cast<uintptr_t>(entity) + (uint16)CTimer::GetTimeInMS()) % 512) * 0.012265625f) + 1.0f) / 2.0f * ((20.0f - d) * ExeRecip(20.0f)) * 64.0f);
 
         CShadows::StoreStaticShadow(
             (uint32)entity,
@@ -310,7 +310,7 @@ void CPickups::DoPickUpEffects(CEntity* entity) {
             if (CClock::GetGameClockHours() < 5 || CPostEffects::IsVisionFXActive()) {
                 // 0x859B60 = -50.0f
                 const auto alphaRoll = 100 - (int32)((float)(CGeneral::GetRandomNumber() & 0xFFFF) * (1.0f / 32768.0f) * -50.0f);
-                const auto size      = (std::sinf((float)(CTimer::GetTimeInMS() & 0x1FFF) * 0.00076660159f) + 1.7f) * 3.7f;
+                const auto size      = (x87::sin((float)(CTimer::GetTimeInMS() & 0x1FFF) * 0.00076660159f) + 1.7f) * 3.7f;
                 CCoronas::RegisterCorona(
                     (uint32)(uintptr_t)obj + 1, // NOTSA: original passed the address of a stack slot of this function here
                     nullptr,
@@ -439,8 +439,8 @@ void CPickups::DoPickUpEffects(CEntity* entity) {
     }
 
     const auto angle = (float)(CTimer::GetTimeInMS() & 0x7FF) * 0.0030566407f;
-    const auto cs    = std::cosf(angle) * scale;
-    const auto sn    = std::sinf(angle) * scale;
+    const float cs    = x87::cos(angle) * scale;
+    const float sn    = x87::sin(angle) * scale;
 
     auto& mat = obj->GetMatrix();
     mat.GetRight() = CVector{ cs, sn, 0.0f };

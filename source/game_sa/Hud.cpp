@@ -1430,7 +1430,7 @@ void CHud::DrawRadar() {
         const auto& mat = *vehicle->m_matrix;
         const float a   = -mat.GetRight().z;
         const float b   = mat.GetUp().z;
-        const double ang0 = -std::atan2((double)a, (double)b) - (double)0.7853982f; // 0x859AB0 = pi/4
+        const double ang0 = -x87::atan2((double)a, (double)b) - (double)0.7853982f; // 0x859AB0 = pi/4
 
         const float X0 = 94.0f * ws;
         const float cx = X0 - 18.0f * ws; // radius X (spilled)
@@ -1444,8 +1444,8 @@ void CHud::DrawRadar() {
         float vx[4], vy[4];
         for (auto i = 0; i < 4; i++) {
             const double th = (double)i * (double)1.5707964f + ang0; // 0x858FE4 = pi/2
-            const double s  = std::sin(th);
-            const double c  = std::cos(th);
+            const double s  = x87::sin(th);
+            const double c  = x87::cos(th);
             vx[i] = (float)((((0.0 * c + s) * (double)cx) + (double)ex) + (double)hx);
             vy[i] = (float)((((c - s * 0.0) * (double)cy) + (double)hy) + (double)by);
         }

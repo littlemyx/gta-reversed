@@ -257,7 +257,7 @@ void CAEPedAudioEntity::UpdateJetPack(float thrustFwd, float thrustAngle) {
         m_JetPackSoundSpeedMult = std::min(m_JetPackSoundSpeedMult + 0.031f, 0.71f);
     }
 
-    const auto angle = std::sin(thrustAngle);
+    const auto angle = x87::sin(thrustAngle);
     const float speed = angle < 0.0f ? -angle : angle; // maybe wrong
 
     // 0.0f == 0xB61384 (uninitialized)

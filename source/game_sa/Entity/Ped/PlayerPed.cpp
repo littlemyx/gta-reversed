@@ -1477,8 +1477,8 @@ void CPlayerPed::DrawTriangleForMouseRecruitPed() {
         right_z = right.z;
     } else {
         const auto heading = TheCamera.m_placement.m_fHeading;
-        right_x = std::cos((double)heading);
-        right_y = std::sin((double)heading);
+        right_x = x87::cos((double)heading);
+        right_y = x87::sin((double)heading);
         right_z = 0.f;
     }
     const float rx = (float)(right_x * scale);
@@ -2303,7 +2303,7 @@ bool CPlayerPed::FindWeaponLockOnTarget() {
     if (GetActiveWeapon().m_Type == WEAPON_SPRAYCAN) {
         // NOTE: The original has a `m_matrix == nullptr` path for the heading (m_placement.m_fHeading),
         // but dereferences the matrix unconditionally right afterwards.
-        const float heading = (float)std::atan2((double)-fwd.x, (double)fwd.y);
+        const float heading = (float)x87::atan2((double)-fwd.x, (double)fwd.y);
         float       bestDelta = PI;
 
         const auto& selfPos = GetPosition();
@@ -2332,7 +2332,7 @@ bool CPlayerPed::FindWeaponLockOnTarget() {
                 continue;
             }
 
-            double delta = std::atan2(-dx, dy) - (double)heading;
+            double delta = x87::atan2(-dx, dy) - (double)heading;
             if (delta < (double)-PI) {
                 delta += (double)TWO_PI;
             } else if (delta > (double)PI) {
@@ -2719,7 +2719,7 @@ void CPlayerPed::ProcessControl() {
     if (pad && TheCamera.GetActiveCamera().m_nMode == MODE_FOLLOWPED && !TheCamera.GetActiveCamera().m_nDirectionWasLooking) {
         auto& activeCam = TheCamera.GetActiveCamera();
         m_nLookTime = 0;
-        float lookDir = CGeneral::LimitRadianAngle(atan2(-activeCam.m_vecFront.x, activeCam.m_vecFront.y));
+        float lookDir = CGeneral::LimitRadianAngle(x87::atan2(-activeCam.m_vecFront.x, activeCam.m_vecFront.y));
         float angle = fabs(lookDir - m_fCurrentRotation);
         if (m_nPedState != PEDSTATE_ATTACK && angle > DegreesToRadians(30.0f) && angle < DegreesToRadians(330.0f)) {
             if (angle > DegreesToRadians(150.0f) && angle < DegreesToRadians(210.0f)) {

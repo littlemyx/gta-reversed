@@ -605,7 +605,7 @@ bool CTaskSimpleUseGun::ProcessPed(CPed* ped) {
                 // 0x62A771
                 if (m_TargetEntity) {
                     const auto toTarget = m_TargetEntity->GetPosition() - ped->GetPosition();
-                    ped->m_fAimingRotation = (float)std::atan2((double)-toTarget.x, (double)toTarget.y);
+                    ped->m_fAimingRotation = (float)x87::atan2((double)-toTarget.x, (double)toTarget.y);
                 }
                 break;
             }
@@ -819,7 +819,7 @@ bool CTaskSimpleUseGun::ProcessPed(CPed* ped) {
                     aimPos.Normalise();
 
                     // 0x62ADFE - Angle between ped's heading, and the aim direction (limited to [-PI, PI])
-                    double aimAngle = std::atan2((double)-aimPos.x, (double)aimPos.y) - (double)ped->m_fCurrentRotation;
+                    double aimAngle = x87::atan2((double)-aimPos.x, (double)aimPos.y) - (double)ped->m_fCurrentRotation;
                     if (aimAngle > (double)PI) {
                         aimAngle -= (double)TWO_PI;
                     } else if (aimAngle < (double)-PI) {

@@ -79,14 +79,14 @@ static bool ProbePlaneObstacle(CPlane* plane, float pitch, float heading, float*
         (float)(stepZ + pos.z)
     };
 
-    CVector dir{ (float)std::cos((double)heading), (float)std::sin((double)heading), 0.0f };
+    CVector dir{ (float)x87::cos((double)heading), (float)x87::sin((double)heading), 0.0f };
     dir.Normalise();
 
     // x87: some of the intermediate values are rounded to float, others aren't
-    const auto sinPitch  = std::sin((double)pitch);
+    const auto sinPitch  = x87::sin((double)pitch);
     const auto zero      = (float)(0.0f * sinPitch);
     const auto sinPitchF = (float)sinPitch;
-    const auto cosPitch  = std::cos((double)pitch);
+    const auto cosPitch  = x87::cos((double)pitch);
     const auto xc        = (double)dir.x * cosPitch;
     const auto yc        = (float)((double)dir.y * cosPitch);
     const auto zc        = (float)(cosPitch * dir.z);
@@ -1226,8 +1226,8 @@ void CCarCtrl::DragCarToPoint(CVehicle* vehicle, CVector* pos) {
 
     // Orientation. x87: kept in extended precision
     const auto invLen   = 1.0f / (double)len;
-    const auto pitch    = std::atan2(((double)frontGroundZ - rearGroundZ) * invLen, 1.0);
-    const auto cosPitch = std::cos(pitch);
+    const auto pitch    = x87::atan2(((double)frontGroundZ - rearGroundZ) * invLen, 1.0);
+    const auto cosPitch = x87::cos(pitch);
     auto&      mat      = *vehicle->m_matrix;
 
     mat.GetRight().x = (float)(((double)targetY - rearY) * invLen);
@@ -1236,7 +1236,7 @@ void CCarCtrl::DragCarToPoint(CVehicle* vehicle, CVector* pos) {
 
     mat.GetForward().x = (float)-(cosPitch * mat.GetRight().y);
     mat.GetForward().y = (float)(cosPitch * mat.GetRight().x);
-    mat.GetForward().z = (float)std::sin(pitch);
+    mat.GetForward().z = (float)x87::sin(pitch);
 
     mat.GetUp() = CrossProductOriginal(mat.GetRight(), mat.GetForward()); // 0x59C730
 
@@ -1841,8 +1841,8 @@ void CCarCtrl::FlyAIHeliInCertainDirection(CHeli* heli, float angle, float targe
         };
 
         // Probe ahead (and downwards)
-        const auto cosF = (float)std::cos((double)angle);
-        const auto sinF = (float)std::sin((double)angle);
+        const auto cosF = (float)x87::cos((double)angle);
+        const auto sinF = (float)x87::sin((double)angle);
         CVector    dir{ cosF, sinF, -1.0f };
         NormaliseOriginal(dir); // 0x59C910
         const CVector probeTarget{
@@ -2073,7 +2073,7 @@ void CCarCtrl::FlyAIHeliToTarget_FixedOrientation(CHeli* heli, float orientation
             (float)(stepZ + pos.z)
         };
 
-        CVector dir{ (float)std::cos((double)orientation), (float)std::sin((double)orientation), -1.0f };
+        CVector dir{ (float)x87::cos((double)orientation), (float)x87::sin((double)orientation), -1.0f };
         dir.Normalise();
 
         const auto offsetZ = (float)((double)dir.z * 60.0f);
@@ -2266,7 +2266,7 @@ void CCarCtrl::FlyAIPlaneInCertainDirection(CPlane* plane) {
         const auto predictedZ = (float)((double)moveSpeed.z * 100.0f + plane->GetPosition().z);
 
         // 0x821E70 is the CRT's asin
-        const auto pitch     = std::asin((double)fwd.z);
+        const auto pitch     = x87::asin((double)fwd.z);
         const auto prevPitch = plane->m_forwardZ;
         const auto timeStep  = (double)CTimer::ms_fTimeStep;
         plane->m_forwardZ    = (float)pitch;
@@ -2350,7 +2350,7 @@ void CCarCtrl::FlyAIPlaneInCertainDirection(CPlane* plane) {
         if (mat.GetUp().z < 0.0f) {
             len *= -1.0f;
         }
-        const auto roll = (float)std::atan2((double)mat.GetRight().z, len);
+        const auto roll = (float)x87::atan2((double)mat.GetRight().z, len);
 
         const auto timeStep = CTimer::ms_fTimeStep < 1.0f ? 1.0 : (double)CTimer::ms_fTimeStep;
         auto rollError = yaw - (((double)roll - plane->m_fSteeringFactor) * (s_PlaneAIRollRatePredictionFactor / timeStep) + roll);
@@ -7793,8 +7793,8 @@ static bool WouldBoxesCollide(
     bool aIsSmaller
 ) {
     // x87: cos/sin and the differences are kept in extended precision
-    const auto relSpeedX = (float)(((double)bSpeedX - std::cos((double)heading) * aSpeed) * 100.0f);
-    const auto relSpeedY = (float)(((double)bSpeedY - std::sin((double)heading) * aSpeed) * 100.0f);
+    const auto relSpeedX = (float)(((double)bSpeedX - x87::cos((double)heading) * aSpeed) * 100.0f);
+    const auto relSpeedY = (float)(((double)bSpeedY - x87::sin((double)heading) * aSpeed) * 100.0f);
 
     // The relative motion applied to the moving box (swapped if the roles are)
     const auto relX = aIsSmaller ? -relSpeedX : relSpeedX;

@@ -437,8 +437,8 @@ float CCamera::Find3rdPersonQuickAimPitch() const {
 
     // https://mathworld.wolfram.com/images/eps-svg/SOHCAHTOA_500.svg
     const auto adjacent = (0.5f - m_f3rdPersonCHairMultY) * 2.f;
-    const auto opposite = std::tan(DegreesToRadians(cam.m_fFOV / 2.0f)) * adjacent;
-    const auto relAngle = cam.m_fVerticalAngle + std::atan(opposite / CDraw::ms_fAspectRatio);
+    const auto opposite = x87::tan(DegreesToRadians(cam.m_fFOV / 2.0f)) * adjacent;
+    const auto relAngle = cam.m_fVerticalAngle + x87::atan(opposite / CDraw::ms_fAspectRatio);
     return -relAngle; // Flip it
 }
 
@@ -2097,7 +2097,7 @@ void CCamera::ProcessVectorTrackLinear(float ratio) {
     const CVector& a = m_vecTrackLinearStartPoint;
     const CVector& b = m_vecTrackLinearEndPoint;
     const float t = m_bTrackLinearWithEase
-        ? (std::sin((270.0f - ratio * 180.0f) * 0.017453292f) + 1.0f) * 0.5f
+        ? (x87::sin((270.0f - ratio * 180.0f) * 0.017453292f) + 1.0f) * 0.5f
         : ratio;
     m_vecTrackLinear.x = (b.x - a.x) * t + a.x;
     m_vecTrackLinear.y = (b.y - a.y) * t + a.y;
@@ -2191,7 +2191,7 @@ void CCamera::ProcessVectorMoveLinear(float ratio) {
     const CVector& a = m_vecMoveLinearPosnStart;
     const CVector& b = m_vecMoveLinearPosnEnd;
     const float t = m_bMoveLinearWithEase
-        ? (std::sin((270.0f - ratio * 180.0f) * 0.017453292f) + 1.0f) * 0.5f
+        ? (x87::sin((270.0f - ratio * 180.0f) * 0.017453292f) + 1.0f) * 0.5f
         : ratio;
     m_vecMoveLinear.x = (b.x - a.x) * t + a.x;
     m_vecMoveLinear.y = (b.y - a.y) * t + a.y;
@@ -2211,7 +2211,7 @@ void CCamera::ProcessFOVLerp() {
 void CCamera::ProcessFOVLerp(float ratio) {
     m_bFOVLerpProcessed = true;
     if (m_nZoomMode) {
-        m_fFOVNew = (m_fZoomOutFactor - m_fZoomInFactor) * (std::sin((270.0f - ratio * 180.0f) * 0.017453292f) + 1.0f) * 0.5f + m_fZoomInFactor;
+        m_fFOVNew = (m_fZoomOutFactor - m_fZoomInFactor) * (x87::sin((270.0f - ratio * 180.0f) * 0.017453292f) + 1.0f) * 0.5f + m_fZoomInFactor;
     } else {
         m_fFOVNew = (m_fZoomOutFactor - m_fZoomInFactor) * ratio + m_fZoomInFactor;
     }
@@ -2308,7 +2308,7 @@ void CCamera::ProcessJiggle(float) {
     cam.m_vecFront = Multiply3x3VMExt(cam.m_vecFront, hs.m_resultMat); // 0x59C810
     NormaliseExt(cam.m_vecFront);
 
-    cam.m_vecUp = CVector{ (float)std::sin((double)angle), 0.0f, (float)std::cos((double)angle) };
+    cam.m_vecUp = CVector{ (float)x87::sin((double)angle), 0.0f, (float)x87::cos((double)angle) };
 
     auto side = CrossProductExt(cam.m_vecFront, cam.m_vecUp);
     NormaliseExt(side);
@@ -2340,7 +2340,7 @@ void CCamera::Process() {
     constexpr float TWO_PI = 2.f * PI;                  // 0x858CBC
 
     // 0.5 - cos(x * pi) * 0.5 - NOTE: x87 extended precision is kept by the original, so callers decide when to round to float
-    const auto EaseInOut = [](double x) { return 0.5 - std::cos(x * (double)PI) * 0.5; };
+    const auto EaseInOut = [](double x) { return 0.5 - x87::cos(x * (double)PI) * 0.5; };
 
     // Keeps the camera at least 1.3 units (2D) away from the target (pushes it out along the same direction)
     const auto KeepAwayFromTarget = [](CVector& pos, const CVector& target) {
@@ -2349,8 +2349,8 @@ void CCamera::Process() {
         const float dy = pos.y - target.y;
         if (std::sqrt((double)dy * dy + (double)dx * dx) < MIN_DIST) {
             const float angle = CGeneral::GetATanOfXY(dx, dy);
-            pos.x = (float)(std::cos((double)angle) * MIN_DIST + target.x);
-            pos.y = (float)(std::sin((double)angle) * MIN_DIST + target.y);
+            pos.x = (float)(x87::cos((double)angle) * MIN_DIST + target.x);
+            pos.y = (float)(x87::sin((double)angle) * MIN_DIST + target.y);
         }
     };
 
@@ -2621,8 +2621,8 @@ void CCamera::Process() {
     // Drunk camera
     if (CMBlur::Drunkness > 0.f) {
         const double angle = (double)gDrunkCamAngle * (double)0.017453292f; // 0x8595EC
-        const double cosA  = std::cos(angle);
-        const double sinA  = std::sin(angle);
+        const double cosA  = x87::cos(angle);
+        const double sinA  = x87::sin(angle);
         const float  cosF  = (float)cosA;
         const float  sinF  = (float)sinA;
 
@@ -2778,8 +2778,8 @@ void CCamera::Process() {
             dirY = fwd.y;
             dirZ = fwd.z;
         } else {
-            dirX = -std::sin((double)m_placement.m_fHeading);
-            dirY = (float)std::cos((double)m_placement.m_fHeading);
+            dirX = -x87::sin((double)m_placement.m_fHeading);
+            dirY = (float)x87::cos((double)m_placement.m_fHeading);
             dirZ = 0.f;
         }
 
@@ -2841,7 +2841,7 @@ void CCamera::FinishCutscene() {
 // 0x514970
 void CCamera::Find3rdPersonCamTargetVector(float range, CVector gunMuzzle, CVector& outSource, CVector& outTarget) {
     const auto pActiveCam = &m_aCams[m_nActiveCam];
-    const float tanHalfFOV = std::tan(DegreesToRadians(pActiveCam->m_fFOV * 0.5f));
+    const float tanHalfFOV = x87::tan(DegreesToRadians(pActiveCam->m_fFOV * 0.5f));
     const float aspectRatio = CDraw::ms_fAspectRatio;
     
     // Calculate aim target direction (This will be a unit vector)
@@ -2917,8 +2917,8 @@ float CCamera::CalculateGroundHeight(eGroundHeightType type) {
 // 0x514D60
 void CCamera::CalculateFrustumPlanes(bool bForMirror) {
     const float halfFov = CDraw::GetFOV() * 0.008726389f; // degrees to radians, halved
-    const float c = std::cos(halfFov);
-    const float s = std::sin(halfFov);
+    const float c = x87::cos(halfFov);
+    const float s = x87::sin(halfFov);
 
     m_avecFrustumNormals[0] = CVector{ c, -s, 0.f };
     m_avecFrustumNormals[1] = CVector{ -c, -s, 0.f };
@@ -2955,7 +2955,7 @@ void CCamera::CalculateDerivedValues(bool bForMirror, bool bOriented) {
     if (fwd.x == 0.f && fwd.y == 0.f) {
         fwd.x = 0.0001f;
     } else if (bOriented) {
-        m_fOrientation = std::atan2(fwd.x, fwd.y);
+        m_fOrientation = x87::atan2(fwd.x, fwd.y);
     }
 
     m_fCamFrontXNorm = fwd.x;
@@ -3017,7 +3017,7 @@ void CCamera::ImproveNearClip(CVehicle* vehicle, CPed* ped, CVector* source, CVe
                 }
             } else {
                 // Standing ped => near clip based on the closest hit-col sphere along the camera's front vector
-                const float maxDist = (float)(std::sin((90.0 - (double)cam.m_fFOV * 0.5) * (double)0.017453292f) * (double)gCamColLastRadius);
+                const float maxDist = (float)(x87::sin((90.0 - (double)cam.m_fFOV * 0.5) * (double)0.017453292f) * (double)gCamColLastRadius);
 
                 auto* const pedMI = CModelInfo::GetPedModelInfo(ped->m_nModelIndex);
                 pedMI->AnimatePedColModelSkinnedWorld(ped->GetRpClump());
@@ -3161,8 +3161,8 @@ void SnapToGroundOrRoof(CVector& pos, float heightOffset) {
 // Rotate (the XY of) the velocity by `angleOffset` around the heading (the original keeps `cos` in extended precision)
 void RotateHeading(CVector& vel, float angleOffset) {
     const double angle = static_cast<double>(CGeneral::GetATanOfXY(vel.x, vel.y)) + static_cast<double>(angleOffset);
-    const double cosA  = std::cos(angle);
-    const float  sinA  = static_cast<float>(std::sin(angle));
+    const double cosA  = x87::cos(angle);
+    const float  sinA  = static_cast<float>(x87::sin(angle));
     vel.x = static_cast<float>(cosA + static_cast<double>(vel.x));
     vel.y = sinA + vel.y;
 }
@@ -4385,8 +4385,8 @@ void CCamera::CamControl() {
 
                 if (!gSpecialAimCamPosSet) {
                     CVector camPos{
-                        static_cast<float>(std::cos(static_cast<double>(angleToCam)) * static_cast<double>(camDist) + static_cast<double>(targetPos.x)),
-                        static_cast<float>(std::sin(static_cast<double>(angleToCam)) * static_cast<double>(camDist) + static_cast<double>(targetPos.y)),
+                        static_cast<float>(x87::cos(static_cast<double>(angleToCam)) * static_cast<double>(camDist) + static_cast<double>(targetPos.x)),
+                        static_cast<float>(x87::sin(static_cast<double>(angleToCam)) * static_cast<double>(camDist) + static_cast<double>(targetPos.y)),
                         targetPos.z + 1.15f
                     };
 
@@ -4627,7 +4627,7 @@ void CCamera::CamControl() {
                         double aimHeading;
                         if (auto* const targeted = targetPed->m_pTargetedObject) {
                             const CVector dir = targeted->GetPosition() - targetPed->GetPosition();
-                            aimHeading        = std::atan2(-static_cast<double>(dir.x), static_cast<double>(dir.y));
+                            aimHeading        = x87::atan2(-static_cast<double>(dir.x), static_cast<double>(dir.y));
                         } else {
                             aimHeading = targetPed->GetHeading();
                         }

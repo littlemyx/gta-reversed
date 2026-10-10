@@ -505,7 +505,7 @@ void CTaskSimplePlayerOnFoot::ProcessPlayerWeapon(CPlayerPed* player) {
 
                 CCam* camera = &CCamera::GetActiveCamera();
                 if (!weaponInfo->flags.bAimWithArm && camera->m_nMode == MODE_FOLLOWPED) {
-                    player->m_fAimingRotation = atan2(-camera->m_vecFront.x, camera->m_vecFront.y);
+                    player->m_fAimingRotation = x87::atan2(-camera->m_vecFront.x, camera->m_vecFront.y);
                 }
                 if (player->m_pTargetedObject || playerData->m_bFreeAiming) {
                     CTaskSimpleUseGun* taskUseGun = intelligence->GetTaskUseGun();
@@ -631,7 +631,7 @@ void CTaskSimplePlayerOnFoot::ProcessPlayerWeapon(CPlayerPed* player) {
 
                 firingPoint.x = firingPoint.x * 5.0f;
                 firingPoint.y = firingPoint.y * 5.0f;
-                firingPoint.z = (std::sin(player->GetPlayerData()->m_fLookPitch) + firingPoint.z) * 5.0f;
+                firingPoint.z = (x87::sin(player->GetPlayerData()->m_fLookPitch) + firingPoint.z) * 5.0f;
 
                 firingPoint += player->GetPosition();
                 TheCamera.UpdateAimingCoors(firingPoint);
@@ -786,8 +786,8 @@ void CTaskSimplePlayerOnFoot::PlayerControlFighter(CPlayerPed* player) {
         len = std::sqrt(x * x + y * y);
         if (len > 0.f) {
             const auto angle = CGeneral::LimitRadianAngle(CGeneral::GetRadianAngleBetweenPoints(0.f, 0.f, -x, y) - TheCamera.m_fOrientation);
-            const float negSin = (float)-std::sin((double)angle); // Stored as float in the original
-            const float cos    = (float)std::cos((double)angle);
+            const float negSin = (float)-x87::sin((double)angle); // Stored as float in the original
+            const float cos    = (float)x87::cos((double)angle);
             if (CGameLogic::IsPlayerAllowedToGoInThisDirection(player, CVector{ negSin, cos, 0.f }, 0.f)) {
                 const auto& mat = player->GetMatrix();
                 const auto& r   = mat.GetRight();
@@ -807,8 +807,8 @@ void CTaskSimplePlayerOnFoot::PlayerControlFighter(CPlayerPed* player) {
                 len = 1.f;
             }
             const auto angle  = CGeneral::LimitRadianAngle(CGeneral::GetRadianAngleBetweenPoints(0.f, 0.f, -x, y) - TheCamera.m_fOrientation);
-            const double negSin = -std::sin((double)angle);
-            const double cos    = std::cos((double)angle);
+            const double negSin = -x87::sin((double)angle);
+            const double cos    = x87::cos((double)angle);
             const auto& mat = player->GetMatrix();
             const auto& r   = mat.GetRight();
             const auto& f   = mat.GetForward();
@@ -953,8 +953,8 @@ void CTaskSimplePlayerOnFoot::PlayerControlZeldaWeapon(CPlayerPed* player) {
         if (moveBlendRatio > 0.0f) {
             float radianAngle = CGeneral::GetRadianAngleBetweenPoints(0.0f, 0.0f, -moveSpeed.x, moveSpeed.y) - TheCamera.m_fOrientation;
             float limitedRadianAngle = CGeneral::LimitRadianAngle(radianAngle);
-            float negativeSinRadian = -std::sin(limitedRadianAngle);
-            float cosRadian = std::cos(limitedRadianAngle);
+            float negativeSinRadian = -x87::sin(limitedRadianAngle);
+            float cosRadian = x87::cos(limitedRadianAngle);
             if (targetedObject) {
                 if (!CGameLogic::IsPlayerAllowedToGoInThisDirection(player, {negativeSinRadian, cosRadian, 0.0f}, 0.0f)) {
                     moveBlendRatio = 0.0f;
@@ -975,7 +975,7 @@ void CTaskSimplePlayerOnFoot::PlayerControlZeldaWeapon(CPlayerPed* player) {
 
         if (targetedObject) {
             CVector2D distance = targetedObject->GetPosition() - player->GetPosition();
-            player->m_fAimingRotation = atan2(-distance.x, distance.y);
+            player->m_fAimingRotation = x87::atan2(-distance.x, distance.y);
         }
     }
 
@@ -1054,7 +1054,7 @@ void CTaskSimplePlayerOnFoot::PlayerControlDucked(CPlayerPed* player) {
             float radianAngle = CGeneral::GetRadianAngleBetweenPoints(0.0f, 0.0f, -moveSpeed.x, moveSpeed.y) - TheCamera.m_fOrientation;
             float limitedRadianAngle = CGeneral::LimitRadianAngle(radianAngle);
             player->m_fAimingRotation = limitedRadianAngle;
-            if (!CGameLogic::IsPlayerAllowedToGoInThisDirection(player, {0.0f, -std::sin(limitedRadianAngle), 0.0f}, 0.0f)) {
+            if (!CGameLogic::IsPlayerAllowedToGoInThisDirection(player, {0.0f, (float)(-x87::sin(limitedRadianAngle)), 0.0f}, 0.0f)) {
                 pedMoveBlendRatio = 0.0f;
             }
         }
@@ -1067,8 +1067,8 @@ void CTaskSimplePlayerOnFoot::PlayerControlDucked(CPlayerPed* player) {
         if (CGameLogic::IsPlayerUse2PlayerControls(player)) {
             float radianAngle = CGeneral::GetRadianAngleBetweenPoints(0.0f, 0.0f, -moveSpeed.x, moveSpeed.y) - TheCamera.m_fOrientation;
             float limitedRadianAngle = CGeneral::LimitRadianAngle(radianAngle);
-            CVector moveDirection(0.0f, -std::sin(limitedRadianAngle), std::cos(limitedRadianAngle));
-            if (!CGameLogic::IsPlayerAllowedToGoInThisDirection(player, {0.0f, -std::sin(limitedRadianAngle), 0.0f}, 0.0f)) {
+            CVector moveDirection(0.0f, -x87::sin(limitedRadianAngle), x87::cos(limitedRadianAngle));
+            if (!CGameLogic::IsPlayerAllowedToGoInThisDirection(player, {0.0f, (float)(-x87::sin(limitedRadianAngle)), 0.0f}, 0.0f)) {
                 pedMoveBlendRatio = 0.0f;
             }
             CMatrix* matrix = player->m_matrix;
@@ -1077,7 +1077,7 @@ void CTaskSimplePlayerOnFoot::PlayerControlDucked(CPlayerPed* player) {
             moveSpeed.y = -((moveDirection.y * matrix->GetForward().y + matrix->GetForward().z * 0.0f + moveDirection.x * matrix->GetForward().x) * pedMoveBlendRatio);
             if (targetedObject) {
                 CVector distance = targetedObject->GetPosition() - player->GetPosition();
-                player->m_fAimingRotation = atan2(-distance.x, distance.y);
+                player->m_fAimingRotation = x87::atan2(-distance.x, distance.y);
             } else {
                 player->m_fAimingRotation = limitedRadianAngle;
             }
@@ -1111,7 +1111,7 @@ int32 CTaskSimplePlayerOnFoot::PlayerControlZelda(CPlayerPed* player, bool bAvoi
     }
     if (updateMoveBlendRatio) {
         player->m_fAimingRotation = limitedRadianAngle;
-        if (CGameLogic::IsPlayerAllowedToGoInThisDirection(player, {-std::sin(limitedRadianAngle), std::cos(limitedRadianAngle), 0.0f}, 0.0f)) {
+        if (CGameLogic::IsPlayerAllowedToGoInThisDirection(player, {(float)(-x87::sin(limitedRadianAngle)), (float)(x87::cos(limitedRadianAngle)), 0.0f}, 0.0f)) {
             float fMaximumMoveBlendRatio = CTimer::GetTimeStep() * 0.07f;
             if (pedMoveBlendRatio - playerData->m_fMoveBlendRatio <= fMaximumMoveBlendRatio) {
                 if (-fMaximumMoveBlendRatio <= pedMoveBlendRatio - playerData->m_fMoveBlendRatio)

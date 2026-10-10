@@ -390,8 +390,8 @@ void CPad::ProcessPad(ePadID padID) {
         // Handle POV
         if (LOWORD(joyState.rgdwPOV[0]) != 0xFFFF) {
             float angle = DegreesToRadians((float)joyState.rgdwPOV[0] * ExeRecip(100.0f));
-            leftStickPos.x = sin(angle);
-            leftStickPos.y = -cos(angle);
+            leftStickPos.x = x87::sin(angle);
+            leftStickPos.y = -x87::cos(angle);
         }
         
         // Calculate right stick position

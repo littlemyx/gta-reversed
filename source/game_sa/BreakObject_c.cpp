@@ -344,7 +344,7 @@ void BreakObject_c::Update(float timeStep) {
                     }
                 }();
 
-                auto fAngleRad = std::acos(DotProduct(m_VecNormal, *vecFacing));
+                auto fAngleRad = x87::acos(DotProduct(m_VecNormal, *vecFacing));
                 if (std::fabs(fAngleRad) > 0.01f) {
                     CVector axis = CrossProduct(*vecFacing, m_VecNormal);
                     axis.Normalise();

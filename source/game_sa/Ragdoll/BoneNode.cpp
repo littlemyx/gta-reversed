@@ -74,12 +74,12 @@ void BoneNode_c::EulerToQuat(const CVector& angles, RtQuat& outQuat) {
     const double ex = HalfRad(angles.x);
     const double ey = HalfRad(angles.y);
     const float  ez = (float)HalfRad(angles.z); // spilled
-    const float  cx = (float)std::cos(ex);
-    const float  cy = (float)std::cos(ey);
-    const float  cz = (float)std::cos((double)ez);
-    const float  sx = (float)std::sin(ex);
-    const double sy = std::sin(ey);
-    const double sz = std::sin((double)ez);
+    const float  cx = (float)x87::cos(ex);
+    const float  cy = (float)x87::cos(ey);
+    const float  cz = (float)x87::cos((double)ez);
+    const float  sx = (float)x87::sin(ex);
+    const double sy = x87::sin(ey);
+    const double sz = x87::sin((double)ez);
 
     const float  cc = (float)((double)cz * (double)cx);
     const double cs = (double)cx * sz;
@@ -119,7 +119,7 @@ static float AtanDeg(double y, double x) {
     return r;
 }
 #else
-static float AtanDeg(double y, double x) { return (float)(std::atan2(y, x) * 180.0 * (double)std::bit_cast<float>(0x3EA2F983u)); }
+static float AtanDeg(double y, double x) { return (float)(x87::atan2(y, x) * 180.0 * (double)std::bit_cast<float>(0x3EA2F983u)); }
 #endif
 
 // 0x617080

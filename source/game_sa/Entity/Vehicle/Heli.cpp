@@ -344,8 +344,8 @@ void CHeli::SearchLightCone(int32 coronaIndex,
         NormaliseOriginal(up);
 
         const double angle = (double)i * (double)std::bit_cast<float>(0x3E20D97Cu); // 0x8717B4 (pi / 20)
-        const float  sinA  = (float)std::sin(angle);
-        const float  cosA  = (float)std::cos(angle);
+        const float  sinA  = (float)x87::sin(angle);
+        const float  cosA  = (float)x87::cos(angle);
 
         // 0x6C5BCD
         const double rightXs  = (double)right.x * sinA;
@@ -575,8 +575,8 @@ CHeli* CHeli::GenerateHeli(CPed* target, bool newsHeli) {
     float         angle     = (float)angle0;
 
     CVector pos{
-        (float)(std::cos(angle0) * 250.0f + targetPos.x), // 0x859F80
-        (float)(std::sin((double)angle) * 250.0f + targetPos.y),
+        (float)(x87::cos(angle0) * 250.0f + targetPos.x), // 0x859F80
+        (float)(x87::sin((double)angle) * 250.0f + targetPos.y),
         targetPos.z
     };
 
@@ -586,8 +586,8 @@ CHeli* CHeli::GenerateHeli(CPed* target, bool newsHeli) {
 
         const CVector targetPos2 = target->GetPosition();
         pos = CVector{
-            (float)(std::cos((double)angle) * 250.0f + targetPos2.x),
-            (float)(std::sin((double)angle) * 250.0f + targetPos2.y),
+            (float)(x87::cos((double)angle) * 250.0f + targetPos2.x),
+            (float)(x87::sin((double)angle) * 250.0f + targetPos2.y),
             targetPos2.z
         };
     }
@@ -644,9 +644,9 @@ CHeli* CHeli::GenerateHeli(CPed* target, bool newsHeli) {
     mat.GetUp().x      = 0.0f;
     mat.GetUp().y      = 0.0f;
     mat.GetUp().z      = 1.0f;
-    const double sinH = std::sin((double)heading);
+    const double sinH = x87::sin((double)heading);
     mat.GetRight().x   = (float)sinH;
-    const double cosH = std::cos((double)heading);
+    const double cosH = x87::cos((double)heading);
     mat.GetRight().y   = (float)-cosH;
     mat.GetForward().x = (float)cosH;
     mat.GetForward().y = (float)sinH;

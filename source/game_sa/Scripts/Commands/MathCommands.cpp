@@ -28,12 +28,12 @@ auto GenerateRandomFloatInRange(float a, float b) {
     return CGeneral::GetRandomNumberInRange(a, b);
 }
 
-auto Sin(float deg) {
-    return std::sinf(DegreesToRadians(deg));
+float Sin(float deg) {
+    return x87::sin(DegreesToRadians(deg));
 }
 
-auto Cos(float deg) {
-    return std::cosf(DegreesToRadians(deg));
+float Cos(float deg) {
+    return x87::cos(DegreesToRadians(deg));
 }
 };
 

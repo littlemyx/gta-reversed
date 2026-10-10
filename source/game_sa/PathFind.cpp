@@ -567,8 +567,8 @@ void CPathFind::FindNextNodeWandering(uint8 nodeType, CVector vecPos, CNodeAddre
         targetAddress->m_wAreaId = (uint16)-1;
 
         const double angle = (double)dir * (double)0.7853982f; // 0x859AB0 (pi / 4)
-        const float  sinA  = (float)std::sin(angle);
-        const float  cosA  = (float)std::cos(angle);
+        const float  sinA  = (float)x87::sin(angle);
+        const float  cosA  = (float)x87::cos(angle);
 
         float best = -999999.0f;
         for (int16 i = 0; i < (int32)node.m_nNumLinks; i++) {
@@ -2188,7 +2188,7 @@ float CPathFind::FindNodeOrientationForCarPlacement(CNodeAddress nodeInfo) {
     };
     NormaliseExt(dir); // 0x59C910
 
-    return (float)(std::atan2(-(double)dir.x, (double)dir.y) * (double)57.2957763671875f); // 0x859878 - 180/pi
+    return (float)(x87::atan2(-(double)dir.x, (double)dir.y) * (double)57.2957763671875f); // 0x859878 - 180/pi
 }
 
 // 0x452160

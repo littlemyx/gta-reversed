@@ -200,10 +200,10 @@ void CTimeCycle::Initialise(bool padFile) {
     // exe (0x5BC026): x87 `fcos`/`fsin` of the doubles at 0x86A6C8 (-3PI/4 as widened float) and 0x86A6D0 (PI/4 as widened float), products stored as floats
     constexpr double ANGLE_XY = -2.356194496154785;  // 0x86A6C8 (float 0xC016CBE4)
     constexpr double ANGLE_Z  = 0.7853981852531433;  // 0x86A6D0 (float 0x3F490FDB)
-    const double     cosZ     = std::cos(ANGLE_Z);
-    m_vecDirnLightToSun.x = (float)(std::cos(ANGLE_XY) * cosZ); // -0.5f
-    m_vecDirnLightToSun.y = (float)(std::sin(ANGLE_XY) * cosZ); // -0.5f
-    m_vecDirnLightToSun.z = (float)std::sin(ANGLE_Z);
+    const double     cosZ     = x87::cos(ANGLE_Z);
+    m_vecDirnLightToSun.x = (float)(x87::cos(ANGLE_XY) * cosZ); // -0.5f
+    m_vecDirnLightToSun.y = (float)(x87::sin(ANGLE_XY) * cosZ); // -0.5f
+    m_vecDirnLightToSun.z = (float)x87::sin(ANGLE_Z);
     m_vecDirnLightToSun.Normalise();
     m_FogReduction = 0;
     m_bExtraColourOn = false;
@@ -391,9 +391,9 @@ void CTimeCycle::CalcColoursForPoint(CVector point, CColourSet* set) {
         const double minutes  = (double)((int32)CClock::GetGameClockHours() * 60 + (int32)CClock::GetGameClockMinutes()) + (double)CClock::GetGameClockSeconds() * (double)std::bit_cast<float>(0x3C888889u);
         const double sunAngle = minutes * (double)std::bit_cast<float>(0x3B8EFA35u);
         auto& sun = m_VectorToSun[m_CurrentStoredValue];
-        sun.x = (float)(std::sin(sunAngle) + 0.7f);
+        sun.x = (float)(x87::sin(sunAngle) + 0.7f);
         sun.y = -0.7f;
-        sun.z = (float)(0.2f - std::cos(sunAngle));
+        sun.z = (float)(0.2f - x87::cos(sunAngle));
         sun.Normalise(); // 0x59C910
     }
 

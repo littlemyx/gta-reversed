@@ -192,7 +192,7 @@ static const CMatrix& EnsureEntityMatrix(CEntity* e) {
 // Heading of a vehicle (the original reads the matrix's forward vector, or the placement's heading if there's no matrix)
 static double GetVehicleHeading(CVehicle* veh) {
     if (const auto* const mat = veh->m_matrix) {
-        return std::atan2(-(double)mat->GetForward().x, (double)mat->GetForward().y);
+        return x87::atan2(-(double)mat->GetForward().x, (double)mat->GetForward().y);
     }
     return (double)veh->m_placement.m_fHeading;
 }
@@ -225,7 +225,7 @@ void CTaskSimpleGangDriveBy::ProcessPlayerPed(CPed* ped) {
         }
 
         // x87: Everything stays in extended precision until the sector is truncated
-        const double aimHeading = std::atan2(-(double)aimDir.x, (double)aimDir.y);
+        const double aimHeading = x87::atan2(-(double)aimDir.x, (double)aimDir.y);
         double       rel        = aimHeading - GetVehicleHeading(ped->m_pVehicle);
         if (rel > (double)std::numbers::pi_v<float>) { // 0x858CB8
             rel -= (double)(2.f * std::numbers::pi_v<float>); // 0x858CBC
@@ -283,7 +283,7 @@ void CTaskSimpleGangDriveBy::ProcessAIPed(CPed* ped) {
 
     // x87: The sum of squares stays in extended precision
     const float  dist       = (float)std::sqrt(((double)toTgt.z * toTgt.z + (double)toTgt.x * toTgt.x) + (double)toTgt.y * toTgt.y);
-    const double aimHeading = std::atan2(-(double)toTgt.x, (double)toTgt.y);
+    const double aimHeading = x87::atan2(-(double)toTgt.x, (double)toTgt.y);
 
     // Heading of the target relative to the vehicle's
     float rel = (float)(aimHeading - GetVehicleHeading(ped->m_pVehicle));
@@ -499,9 +499,9 @@ void CTaskSimpleGangDriveBy::ProcessAimIK(CPed* ped) {
         const double pitch = CGeneral::GetRadianAngleBetweenPointsExt(target.z, (float)std::sqrt(dy * dy + dx * dx), from.z, 0.f); // Not rounded to float (stays in the FPU)
 
         const auto* const bike = static_cast<CBike*>(veh);
-        tilt = (float)(std::sin((double)aim - GetVehicleHeading(veh)) * (double)bike->m_RideAnimData.LeanAngle + pitch);
+        tilt = (float)(x87::sin((double)aim - GetVehicleHeading(veh)) * (double)bike->m_RideAnimData.LeanAngle + pitch);
 
-        const float cosHeading = (float)std::cos((double)aim - GetVehicleHeading(veh));
+        const float cosHeading = (float)x87::cos((double)aim - GetVehicleHeading(veh));
 
         // BUG: The original doesn't check for the vehicle's matrix here
         const float fwdZ = veh->m_matrix->GetForward().z;
@@ -513,7 +513,7 @@ void CTaskSimpleGangDriveBy::ProcessAimIK(CPed* ped) {
         } else {
             clampedFwdZ = fwdZ;
         }
-        tilt = (float)(std::asin((double)clampedFwdZ) * (double)cosHeading + (double)tilt); // 0x821E70
+        tilt = (float)(x87::asin((double)clampedFwdZ) * (double)cosHeading + (double)tilt); // 0x821E70
     }
 
     // Flip it if we're shooting from the other side

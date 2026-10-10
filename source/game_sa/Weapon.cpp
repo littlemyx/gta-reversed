@@ -514,7 +514,7 @@ void CWeapon::DoBulletImpact(CEntity* firedBy, CEntity* victim, const CVector& s
                         victim,
                         hitCP.m_nSurfaceTypeB,
                         hitCP.m_vecPoint,
-                        RadiansToDegrees(std::asin(-angle))
+                        RadiansToDegrees(x87::asin(-angle))
                     );
                 }
             }
@@ -880,8 +880,8 @@ void CWeapon::SetUpPelletCol(int32 numPellets, CEntity* owner, CEntity* victim, 
         const auto angle  = CGeneral::GetRandomNumberInRange(-PI, PI);
         const auto spread = CGeneral::GetRandomNumberInRange(0.f, depth * 0.8f);
 
-        const auto oX = std::cos(angle) * spread;
-        const auto oZ = std::sin(angle) * spread;
+        const float oX = x87::cos(angle) * spread;
+        const float oZ = x87::sin(angle) * spread;
 
         lines[i].Set(
             { oX, -depth * 2.f, oZ },
@@ -1121,7 +1121,7 @@ void CWeapon::DoDriveByAutoAiming(CEntity* owner, CVehicle* vehicle, CVector* st
 
     const auto autoAimAngle = vehicle->GetPlaneGunsAutoAimAngle();
     const auto maxScore     = autoAimAngle > 0.5f
-        ? std::tan(autoAimAngle * 0.017453292f)
+        ? x87::tan(autoAimAngle * 0.017453292f)
         : 2.5f;
     if (closestScore < maxScore) {
         const auto target = inRange[closestIdx]->GetPosition();
@@ -1405,13 +1405,13 @@ bool CWeapon::FireAreaEffect(CEntity* firingEntity, const CVector& origin, CEnti
                     return firingEntity->GetHeading();
                 }();
                 CVector dir{
-                    -std::sin(heading),
-                    std::cos(heading),
+                    (float)(-x87::sin(heading)),
+                    (float)(x87::cos(heading)),
                     0.f
                 };
                 if (firingEntity->GetIsTypePed()) {
                     if (const auto pd = firingEntity->AsPed()->GetPlayerData()) {
-                        dir.z = -std::tan(pd->m_fLookPitch);
+                        dir.z = -x87::tan(pd->m_fLookPitch);
                     }
                 }
                 return { dir, origin + dir };
@@ -1710,7 +1710,7 @@ static void FireInstantHit_ApplyAimSway(CVector& pt, const CVector& sinDir, cons
     const auto sinZ = (double)sinDir.z * spread; // Not rounded to float
     const auto sinY = (float)((double)sinDir.y * spread);
     const auto sinX = (float)((double)sinDir.x * spread);
-    const auto s    = (float)std::sin(angle);
+    const auto s    = (float)x87::sin(angle);
     pt.x = (float)((double)sinX * s + pt.x);
     pt.y = (float)(pt.y + (double)sinY * s);
     const auto z = sinZ * s + pt.z; // Not rounded to float
@@ -1719,7 +1719,7 @@ static void FireInstantHit_ApplyAimSway(CVector& pt, const CVector& sinDir, cons
     const auto cosZ = (double)cosDir.z * spread; // Not rounded to float
     const auto cosY = (float)((double)cosDir.y * spread);
     const auto cosX = (float)((double)cosDir.x * spread);
-    const auto c    = (float)std::cos(angle);
+    const auto c    = (float)x87::cos(angle);
     pt.x = (float)((double)cosX * c + pt.x);
     pt.y = (float)(pt.y + (double)cosY * c);
     pt.z = (float)(cosZ * c + z);
@@ -2522,8 +2522,8 @@ bool CWeapon::Fire(CEntity* firedBy, CVector* startPosn, CVector* barrelPosn, CE
         const auto r = 0.15f;
 
         const auto h = firedBy->GetHeading();
-        fxPos->x -= std::sin(h) * r;
-        fxPos->y += std::cos(h) * r;
+        fxPos->x -= x87::sin(h) * r;
+        fxPos->y += x87::cos(h) * r;
     }
 
     switch (m_State) {
@@ -2887,7 +2887,7 @@ void FireOneInstantHitRound(const CVector& startPoint, const CVector& endPoint, 
                 hitEntity,
                 hitCP.m_nSurfaceTypeB,
                 hitCP.m_vecPoint,
-                RadiansToDegrees(std::asin(-angleOfIncidenceCos)) // Really should've used `acos + PI / 2` here to make this cleaner
+                RadiansToDegrees(x87::asin(-angleOfIncidenceCos)) // Really should've used `acos + PI / 2` here to make this cleaner
             );
         }
     } else { // no hit entity

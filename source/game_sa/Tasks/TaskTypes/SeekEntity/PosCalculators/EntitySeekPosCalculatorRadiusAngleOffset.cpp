@@ -24,8 +24,8 @@ void CEntitySeekPosCalculatorRadiusAngleOffset::ComputeEntitySeekPos(const CPed&
     CPedGeometryAnalyser::ComputeClearTarget(
         seeker, 
         target.GetPosition() + CVector{
-            -std::sin(angle) * m_radius,
-            std::cos(angle) * m_radius,
+            (float)(-x87::sin(angle) * m_radius),
+            (float)(x87::cos(angle) * m_radius),
             0.0f
         }, 
         outPos

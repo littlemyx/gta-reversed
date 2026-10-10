@@ -403,7 +403,7 @@ CEntity* CTaskSimpleClimb::ScanToGrabSectorList(PtrListType* sectorList, CPed* p
 
                     if (DotProduct(vecNormal, ped->GetForward()) > 0.3F) {
                         outTargetPos      = CWorld::m_aTempColPts[0].m_vecPoint;
-                        outAngle         = std::atan2f(-vecNormal.x, vecNormal.y);
+                        outAngle         = x87::atan2(-vecNormal.x, vecNormal.y);
                         outSurfaceType   = CWorld::m_aTempColPts[0].m_nSurfaceTypeB;
                         collidedEntity = entity;
                     }
@@ -424,7 +424,7 @@ CEntity* CTaskSimpleClimb::ScanToGrabSectorList(PtrListType* sectorList, CPed* p
 
                         if (DotProduct(vecNormal, ped->GetForward()) > 0.3F) {
                             outTargetPos      = CWorld::m_aTempColPts[0].m_vecPoint;
-                            outAngle         = std::atan2f(-vecNormal.x, vecNormal.y);
+                            outAngle         = x87::atan2(-vecNormal.x, vecNormal.y);
                             outSurfaceType   = CWorld::m_aTempColPts[0].m_nSurfaceTypeB;
                             collidedEntity = entity;
                         }
@@ -725,7 +725,7 @@ void CTaskSimpleClimb::GetCameraTargetPos(CPed* ped, CVector& outTargetPt) {
 
 CVector CTaskSimpleClimb::GetClimbOffset3D(CVector2D offset2D, float angle) {
     return CVector{
-        (CVector2D{ std::cos(angle), std::sin(angle) } * offset2D.x).GetPerpLeft(),
+        (CVector2D{ (float)(x87::cos(angle)), (float)(x87::sin(angle)) } * offset2D.x).GetPerpLeft(),
         offset2D.y
     };
 }

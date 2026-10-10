@@ -108,8 +108,8 @@ void CFormation::GenerateGatherDestinations(CPedList& pedList, CPed* ped) {
             ? ped->m_fCurrentRotation + HALF_PI
             : PI / (float)count + (float)i / (float)count * TWO_PI - ped->m_fCurrentRotation;
         m_Destinations.AddPoint({
-            std::sin(angle) * radius + pos.x,
-            std::cos(angle) * radius + pos.y,
+            (float)(x87::sin(angle) * radius + pos.x),
+            (float)(x87::cos(angle) * radius + pos.y),
             pos.z,
         });
     }

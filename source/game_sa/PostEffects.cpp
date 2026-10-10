@@ -448,12 +448,12 @@ void CPostEffects::UnderWaterRipple(CRGBA color, float xoffset, float yoffset, f
     if (rasterHeight > 0) {
         auto y = 0;
         for (; y < rasterHeight; y = int32((float)y + yoffset)) {
-            EmitVertex(std::sin(freq * (float)y + speed * (float)CTimer::GetTimeInMS()) * xoffset, y);
+            EmitVertex(x87::sin(freq * (float)y + speed * (float)CTimer::GetTimeInMS()) * xoffset, y);
         }
-        EmitVertex(std::sin(freq * (float)y + speed * (float)CTimer::GetTimeInMS()) * xoffset, y);
+        EmitVertex(x87::sin(freq * (float)y + speed * (float)CTimer::GetTimeInMS()) * xoffset, y);
     } else {
         // unexpected path?
-        EmitVertex(std::sin(speed * (float)CTimer::GetTimeInMS()) * xoffset, 0);
+        EmitVertex(x87::sin(speed * (float)CTimer::GetTimeInMS()) * xoffset, 0);
     }
 
     if (uiTempBufferVerticesStored > 2) {
@@ -935,8 +935,8 @@ void CPostEffects::Fog() {
         const auto angle = DegreesToRadians(36.0f * static_cast<float>(i) + s_FogAngle);
 
         DrawQuad(
-            std::cos(angle) * (SCREEN_WIDTH / 4.0f + s_FogRadius) + SCREEN_WIDTH / 2.0f - SCREEN_WIDTH / 3.0f,
-            std::sin(angle) * (SCREEN_HEIGHT / 4.0f + s_FogRadius) + SCREEN_HEIGHT / 2.0f - SCREEN_HEIGHT / 3.0f,
+            x87::cos(angle) * (SCREEN_WIDTH / 4.0f + s_FogRadius) + SCREEN_WIDTH / 2.0f - SCREEN_WIDTH / 3.0f,
+            x87::sin(angle) * (SCREEN_HEIGHT / 4.0f + s_FogRadius) + SCREEN_HEIGHT / 2.0f - SCREEN_HEIGHT / 3.0f,
             2.0f * SCREEN_WIDTH / 3.0f,
             2.0f * SCREEN_HEIGHT / 3.0f,
             skyBottom.r,
@@ -951,8 +951,8 @@ void CPostEffects::Fog() {
         const auto angle = -DegreesToRadians(36.0f * static_cast<float>(i) + s_FogAngle);
 
         DrawQuad(
-            std::cos(angle) * (SCREEN_WIDTH * 0.35f + s_FogRadius) + SCREEN_WIDTH / 2.0f - SCREEN_WIDTH / 3.0f,
-            std::sin(angle) * (SCREEN_HEIGHT * 0.35f + s_FogRadius) + SCREEN_HEIGHT / 2.0f - SCREEN_HEIGHT / 3.0f,
+            x87::cos(angle) * (SCREEN_WIDTH * 0.35f + s_FogRadius) + SCREEN_WIDTH / 2.0f - SCREEN_WIDTH / 3.0f,
+            x87::sin(angle) * (SCREEN_HEIGHT * 0.35f + s_FogRadius) + SCREEN_HEIGHT / 2.0f - SCREEN_HEIGHT / 3.0f,
             2.0f * SCREEN_WIDTH / 3.0f,
             2.0f * SCREEN_HEIGHT / 3.0f,
             skyBottom.r,

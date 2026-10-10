@@ -592,7 +592,7 @@ void CReplay::ProcessLookAroundCam() {
                 const auto& camPos    = TheCamera.GetPosition();
                 const auto& playerPos = FindPlayerCoors();
                 playerCameraDistance = std::clamp(DistanceBetweenPoints(playerPos, camPos), 3.0f, 15.0f);
-                playerCameraDirAngle = std::atan2(camPos.x - playerPos.x, camPos.y - playerPos.y);
+                playerCameraDirAngle = x87::atan2(camPos.x - playerPos.x, camPos.y - playerPos.y);
             }
             FramesActiveLookAroundCam = 60;
         }
@@ -611,9 +611,9 @@ void CReplay::ProcessLookAroundCam() {
             }
 
             auto target = CVector{
-                    std::sinf(playerCameraDirAngle) * std::cosf(viewAngle) * playerCameraDistance,
-                    std::cosf(playerCameraDirAngle) * std::cosf(viewAngle) * playerCameraDistance,
-                    std::sinf(viewAngle) * playerCameraDistance
+                    (float)(x87::sin(playerCameraDirAngle) * x87::cos(viewAngle) * playerCameraDistance),
+                    (float)(x87::cos(playerCameraDirAngle) * x87::cos(viewAngle) * playerCameraDistance),
+                    (float)(x87::sin(viewAngle) * playerCameraDistance)
             } + CameraFocus;
 
             CColPoint colPoint;

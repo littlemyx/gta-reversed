@@ -133,7 +133,7 @@ void CAEGlobalWeaponAudioEntity::ServiceAmbientGunFire() {
 
             const auto a = CGeneral::GetRandomNumberInRange(0.f, TWO_PI);
             const auto r = CGeneral::GetRandomNumberInRange(40.f, 80.f);
-            CVector pos = TheCamera.GetPosition() + CVector{ std::cos(a) * r, std::sin(a) * r, 0.f };
+            CVector pos = TheCamera.GetPosition() + CVector{ (float)(x87::cos(a) * r), (float)(x87::sin(a) * r), 0.f };
             pos.z = std::min(pos.z, 20.f);
             m_Physical->SetPosn(pos);
 

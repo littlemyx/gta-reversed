@@ -980,7 +980,7 @@ void CObject::ProcessTrainCrossingBehaviour() {
     if (m_nModelIndex == ModelIndices::MI_TRAINCROSSING1)
         return;
 
-    const auto fAngle = std::acos(m_matrix->GetUp().z);
+    const float fAngle = x87::acos(m_matrix->GetUp().z);
     const auto fTimeStep = CTimer::GetTimeStep() / 200.0F;
     if (objectFlags.bTrainCrossEnabled)
         SetMatrixForTrainCrossing(m_matrix, std::max(0.0F, fAngle - fTimeStep));
@@ -1354,8 +1354,8 @@ CObject* CObject::Create(CDummyObject* dummyObject) {
 // 0x59F200
 void CObject::SetMatrixForTrainCrossing(CMatrix* matrix, float fAngle) {
     auto vecForward = CrossProduct(CVector(0.0F, 0.0F, 1.0F), matrix->GetRight());
-    const auto fCos = std::cos(fAngle);
-    const auto fSin = std::sin(fAngle);
+    const auto fCos = x87::cos(fAngle);
+    const auto fSin = x87::sin(fAngle);
     vecForward *= fCos;
     vecForward.z += fSin;
 

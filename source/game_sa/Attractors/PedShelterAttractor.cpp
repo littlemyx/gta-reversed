@@ -25,8 +25,8 @@ CVector& CPedShelterAttractor::GetDisplacement(int32 pedId) {
             const float angle  = (float)((double)CGeneral::GetRandomNumber() * (double)RAND_MAX_FLOAT_RECIPROCAL * (double)EXACT_TWO_PI);
             const double radius = ((double)CGeneral::GetRandomNumber() * (double)RAND_MAX_FLOAT_RECIPROCAL) * 2.0;
             const CVector disp{
-                (float)(std::cos((double)angle) * radius),
-                (float)(std::sin((double)angle) * radius),
+                (float)(x87::cos((double)angle) * radius),
+                (float)(x87::sin((double)angle) * radius),
                 0.f
             };
 

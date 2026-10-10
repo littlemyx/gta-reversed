@@ -1502,7 +1502,7 @@ void CTheScripts::ProcessAllSearchLights() {
         const auto tgtBulbDir = (sl.m_Target - bulb->GetPosition()).Normalized();
 
         const auto Transform = [&](CEntity* entity) {
-            const auto rotX = std::atan2(tgtBulbDir.z, tgtBulbDir.Magnitude2D());
+            const auto rotX = x87::atan2(tgtBulbDir.z, tgtBulbDir.Magnitude2D());
             const auto rotZ = tgtBulbDir.Heading();
 
             entity->m_matrix->RotateX(rotX);
@@ -1774,8 +1774,8 @@ void CTheScripts::DrawScriptSpritesAndRectangles(bool drawBeforeFade) {
             // vAM: A to mid.
             const auto mid = (rt.cornerA + rt.cornerB) / 2.0f;
             const auto vAM = mid - rt.cornerA;
-            const auto cos = std::cos(rt.m_nAngle);
-            const auto sin = std::sin(rt.m_nAngle);
+            const auto cos = x87::cos(rt.m_nAngle);
+            const auto sin = x87::sin(rt.m_nAngle);
 
             // This is 2D rotation, couldn't find a better function aside from
             // using matricies or quaternions.
@@ -1818,8 +1818,8 @@ void CTheScripts::ScriptDebugCircle2D(float x, float y, float width, float heigh
     const auto Point = [&](int32 i) { // x87: everything kept in extended precision until the float store
         const double angle = (double)i * (double)(std::numbers::pi_v<float> / 8.f); // 0x859F50 (float)
         return CVector2D{
-            (float)(std::sin(angle) * (double)width  + (double)x),
-            (float)(std::cos(angle) * (double)height + (double)y)
+            (float)(x87::sin(angle) * (double)width  + (double)x),
+            (float)(x87::cos(angle) * (double)height + (double)y)
         };
     };
 

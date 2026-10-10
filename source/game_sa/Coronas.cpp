@@ -520,7 +520,7 @@ void CCoronas::RenderSunReflection() {
         RenderBuffer::PushIndices({ 0, -1, -2, 0, 1, -1 }, true); // Same as the above indices, but with 2 subtracted from each
 
         const auto forward = vecToSun2D * (
-              std::sin((float)((time + 900 * i) % REFLECTION_PERIOD) / (float)REFLECTION_PERIOD * TWO_PI) * 10.f
+              x87::sin((float)((time + 900 * i) % REFLECTION_PERIOD) / (float)REFLECTION_PERIOD * TWO_PI) * 10.f
             + (float)(i * 970 / 20 + 30)
         );
         const auto offset = vecToSun2D * (float)(i * 1'440 / 20 + 60);

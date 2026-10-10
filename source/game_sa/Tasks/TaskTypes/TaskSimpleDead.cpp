@@ -118,7 +118,7 @@ bool CTaskSimpleDead::ProcessPed(CPed* ped) {
             } else if (v > 1.f) { // NOTE: NaN is passed through both checks unchanged, same as the original
                 v = 1.f;
             }
-            return (float)std::acos((double)v);
+            return (float)x87::acos((double)v);
         };
         ped->m_pedIK.m_fSlopeRoll  = ClampAcos(dotRight);
         ped->m_pedIK.m_fSlopePitch = ClampAcos(dotFwd);

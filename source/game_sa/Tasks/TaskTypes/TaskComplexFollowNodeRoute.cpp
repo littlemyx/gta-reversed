@@ -148,7 +148,7 @@ float CTaskComplexFollowNodeRoute::CalcBlendRatio(CPed* ped, bool slowing) const
         return -1.f;
     }
     const auto spdChangeAmt   = slowing ? m_SpeedDecreaseAmt : m_SpeedIncreaseAmt;
-    const auto spdChangeRatio = std::cos(std::clamp(distToPtSq / spdChangeDistSq, 0.f, 1.f) * PI) * 0.5f + 0.5f; // NOTE/BUG: Not sure how well diving squared values will work out :D
+    const float spdChangeRatio = x87::cos(std::clamp(distToPtSq / spdChangeDistSq, 0.f, 1.f) * PI) * 0.5f + 0.5f; // NOTE/BUG: Not sure how well diving squared values will work out :D
     return std::max(
         CTaskSimpleGoToPointFine::BaseRatio(PEDMOVE_WALK) + 0.75f,
         CTaskSimpleGoToPointFine::BaseRatio(m_MoveState) - spdChangeRatio * spdChangeAmt

@@ -28,7 +28,7 @@ static CVector TransformPointExt(const CMatrix& m, const CVector& v) {
 
 // FPATAN(st1 = y, st0 = x) of two floats, rounded to float on the store
 static float AtanF(float y, float x) {
-    return (float)std::atan2((double)y, (double)x);
+    return (float)x87::atan2((double)y, (double)x);
 }
 
 void CTaskComplexGoPickUpEntity::InjectHooks() {
@@ -151,7 +151,7 @@ CTask* CTaskComplexGoPickUpEntity::CreateFirstSubTask(CPed* ped) {
         entity->SetHeading(AtanF(-dx, dy));
     } else if (2.0 * bb.m_vecMax.x < bb.m_vecMax.y) {
         // The FPATAN result stays in the FPU (not rounded to float) until after the subtraction
-        entity->SetHeading((float)(std::atan2((double)-dx, (double)dy) - (double)(std::numbers::pi_v<float> / 2.f))); // 0x858FE4: pi/2 as float
+        entity->SetHeading((float)(x87::atan2((double)-dx, (double)dy) - (double)(std::numbers::pi_v<float> / 2.f))); // 0x858FE4: pi/2 as float
     } else {
         if (entity->GetMatrix().GetUp().z < 0.9f) { // 0x858C20
             const auto& fwd = entity->GetMatrix().GetForward();
@@ -248,7 +248,7 @@ CTask* CTaskComplexGoPickUpEntity::ControlSubTask(CPed* ped) {
         // Heading from the ped to the go-to point
         const auto& pedPos = ped->GetPosition();
         // The differences are not rounded to float before FPATAN in the original
-        const float heading = (float)std::atan2(-((double)goTo->m_vecTargetPoint.x - pedPos.x), (double)goTo->m_vecTargetPoint.y - pedPos.y);
+        const float heading = (float)x87::atan2(-((double)goTo->m_vecTargetPoint.x - pedPos.x), (double)goTo->m_vecTargetPoint.y - pedPos.y);
 
         // Heading of the stick relative to the camera
         float stickAngle = (float)(CGeneral::GetRadianAngleBetweenPointsExt(0.f, 0.f, -(float)walkLeftRight, walkUpDown) - (double)TheCamera.m_fOrientation);

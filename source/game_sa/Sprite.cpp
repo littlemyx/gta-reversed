@@ -57,8 +57,8 @@ struct SpriteQuadCoeffs {
 
 // NOTSA
 static SpriteQuadCoeffs CalcSpriteQuadCoeffs(float rotation) {
-    const float fSin = std::sin(rotation);
-    const float fCos = std::cos(rotation);
+    const float fSin = x87::sin(rotation);
+    const float fCos = x87::cos(rotation);
     return {
         .xs = { -fCos - fSin, fSin - fCos, fCos + fSin, fCos - fSin },
         .ys = { fSin - fCos, fCos + fSin, fCos - fSin, -fCos - fSin },
@@ -473,8 +473,8 @@ void CSprite::RenderBufferedOneXLUSprite_Rotate_Aspect(float x, float y, float z
 void CSprite::RenderBufferedOneXLUSprite_Rotate_Dimension(CVector pos, CVector2D size, uint8 r, uint8 g, uint8 b, int16 intensity, float rz, float rotation, uint8 a) {
     m_bFlushSpriteBufferSwitchZTest = false;
 
-    const float fSin = std::sin(rotation);
-    const float fCos = std::cos(rotation);
+    const float fSin = x87::sin(rotation);
+    const float fCos = x87::cos(rotation);
     const float wCos = size.x * fCos;
     const float hSin = fSin * size.y;
     const float hCos = size.y * fCos;

@@ -120,7 +120,7 @@ void CWeaponEffects::Render() {
         const float dz = to.z - from.z;
         const float up    = (cam.GetUp().x * dx + cam.GetUp().z * dz) + cam.GetUp().y * dy;
         const float right = (cam.GetRight().x * dx + cam.GetRight().z * dz) + cam.GetRight().y * dy;
-        return std::atan2(up, right);
+        return x87::atan2(up, right);
     };
 
     for (auto i = 0u; i < gCrossHair.size(); i++) {
@@ -191,8 +191,8 @@ void CWeaponEffects::Render() {
                     ch.m_fLockOnFade = 0.0f;
                 }
                 ch.m_fRotation = ch.m_fLockOnFade == 0.0f ? 1.0f : 0.0f;
-                gCrossHairLockOffsetSin = std::sin(rot) * ch.m_fLockOnFade;
-                gCrossHairLockOffsetCos = std::cos(rot) * ch.m_fLockOnFade;
+                gCrossHairLockOffsetSin = x87::sin(rot) * ch.m_fLockOnFade;
+                gCrossHairLockOffsetCos = x87::cos(rot) * ch.m_fLockOnFade;
 
                 for (const float scale : scales) {
                     CSprite::RenderOneXLUSprite_Rotate_Aspect(
@@ -231,12 +231,12 @@ void CWeaponEffects::Render() {
                 // Off-screen: draw arrows on the screen edge (co-op only)
                 if (CGameLogic::IsCoopGameGoingOn()) {
                     const float angle1 = GetAngleToCamera(ch.m_vecPosn, TheCamera.m_mCameraMatrix.GetPosition());
-                    const float sin1   = std::sin(angle1);
-                    const float cos1   = std::cos(angle1);
+                    const float sin1   = x87::sin(angle1);
+                    const float cos1   = x87::cos(angle1);
 
                     const float angle2 = GetAngleToCamera(ch.m_vecPosn, player->GetPosition());
-                    const float sin2   = std::sin(angle2);
-                    const float cos2   = std::cos(angle2);
+                    const float sin2   = x87::sin(angle2);
+                    const float cos2   = x87::cos(angle2);
 
                     CVector2D v1, v2, v3;
                     v1.x = (1.0f - cos1) * SCREEN_WIDTH * 0.5f;
@@ -291,17 +291,17 @@ void CWeaponEffects::Render() {
 
                     const float angle0 = DEG_TO_RAD * a + ch.m_fRingAngle;
                     const float r0     = innerRadius + ring;
-                    const float x0     = -(std::sin(angle0) * r0);
-                    const float y0     = -(std::cos(angle0) * r0);
+                    const float x0     = -(x87::sin(angle0) * r0);
+                    const float y0     = -(x87::cos(angle0) * r0);
 
                     const float angle1 = (a + 15.0f) * DEG_TO_RAD + ch.m_fRingAngle;
                     const float r1     = outerRadius + ring;
-                    const float x1     = -(std::sin(angle1) * r1);
-                    const float y1     = -(std::cos(angle1) * r1);
+                    const float x1     = -(x87::sin(angle1) * r1);
+                    const float y1     = -(x87::cos(angle1) * r1);
 
                     const float angle2 = (a - 15.0f) * DEG_TO_RAD + ch.m_fRingAngle;
-                    const float x2     = -(std::sin(angle2) * r1);
-                    const float y2     = -(std::cos(angle2) * r1);
+                    const float x2     = -(x87::sin(angle2) * r1);
+                    const float y2     = -(x87::cos(angle2) * r1);
 
                     CVector2D v1{ x0 + out.x, y0 + out.y };
                     CVector2D v2{ x1 + out.x, y1 + out.y };

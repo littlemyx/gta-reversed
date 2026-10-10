@@ -346,18 +346,18 @@ void cHandlingDataMgr::ConvertDataToGameUnits(tHandlingData* h) {
 
 // 0x6F5240
 void cHandlingDataMgr::ConvertBikeDataToWorldUnits(tBikeHandlingData* bikeHandling) {
-    bikeHandling->m_fMaxLean = RadiansToDegrees(asin(bikeHandling->m_fMaxLean));
+    bikeHandling->m_fMaxLean = RadiansToDegrees(x87::asin(bikeHandling->m_fMaxLean));
     bikeHandling->m_fFullAnimLean = RadiansToDegrees(bikeHandling->m_fFullAnimLean);
-    bikeHandling->m_fWheelieAng = RadiansToDegrees(asin(bikeHandling->m_fWheelieAng));
-    bikeHandling->m_fStoppieAng = RadiansToDegrees(asin(bikeHandling->m_fStoppieAng));
+    bikeHandling->m_fWheelieAng = RadiansToDegrees(x87::asin(bikeHandling->m_fWheelieAng));
+    bikeHandling->m_fStoppieAng = RadiansToDegrees(x87::asin(bikeHandling->m_fStoppieAng));
 }
 
 // 0x6F5290
 void cHandlingDataMgr::ConvertBikeDataToGameUnits(tBikeHandlingData* bikeHandling) {
-    bikeHandling->m_fMaxLean = sin(DegreesToRadians(bikeHandling->m_fMaxLean));
+    bikeHandling->m_fMaxLean = x87::sin(DegreesToRadians(bikeHandling->m_fMaxLean));
     bikeHandling->m_fFullAnimLean = DegreesToRadians(bikeHandling->m_fFullAnimLean);
-    bikeHandling->m_fWheelieAng = sin(DegreesToRadians(bikeHandling->m_fWheelieAng));
-    bikeHandling->m_fStoppieAng = sin(DegreesToRadians(bikeHandling->m_fStoppieAng));
+    bikeHandling->m_fWheelieAng = x87::sin(DegreesToRadians(bikeHandling->m_fWheelieAng));
+    bikeHandling->m_fStoppieAng = x87::sin(DegreesToRadians(bikeHandling->m_fStoppieAng));
 }
 
 // 0x006F4F30

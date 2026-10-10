@@ -200,7 +200,7 @@ void CTaskSimpleCarDrive::ProcessHeadBopping(CPed* ped, bool a3, float a4) {
                 a3 = false;
             }
         } else {
-            boppingSin = std::sin(m_fBoppingProgress * std::numbers::pi_v<float>);
+            boppingSin = x87::sin(m_fBoppingProgress * std::numbers::pi_v<float>);
             if (CTimer::GetTimeInMS() - (uint32)m_nHeadBoppingStartTime > 5000u && CGeneral::GetRandomNumberInRange(0, 1000) > 995) { // Stop head bopping
                 a3 = false;
             }

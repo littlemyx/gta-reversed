@@ -275,7 +275,7 @@ float CTaskComplexFollowPointRoute::CalcBlendRatio(CPed* ped, bool slowing) {
             return -1.f;
         }
         const auto distProg  = std::clamp(currDistSq / sq(requiredDist), 0.f, 1.f);
-        const auto mult      = std::cos(distProg * PI) / 2.f + 0.5f;
+        const float mult      = x87::cos(distProg * PI) / 2.f + 0.5f;
         return std::max(
             CTaskSimpleGoToPointFine::BaseRatio(m_moveState) - (amount * mult),
             CTaskSimpleGoToPointFine::BaseRatio(PEDMOVE_WALK)

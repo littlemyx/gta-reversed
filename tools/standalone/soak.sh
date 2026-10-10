@@ -12,6 +12,9 @@
 #      SHOT_MAX=<n>             screenshot cap (default 40)
 #      OUT=<dir>                output dir (default /tmp/d3s-out/<timestamp>): logs, frame_*.png, report.txt
 #      ROUTE=<file>             input route (default tools/standalone/soak_route.txt)
+#      SOAK_WINEDEBUG=<chan>    WINEDEBUG for the run (default -all; e.g. 'err+all,+dsound' to check the DirectSound volumes in $OUT/wine.out - big output)
+#      NOTSA_STANDALONE_MUTE=0  opt out of the silent run (default 1: the whole audio pipeline runs, DirectSound buffer volumes stay at the minimum)
+#                               (do NOT disable the Wine audio driver instead: without a driver DirectSoundCreate fails and the game hangs before the menu, see docs/STANDALONE.md)
 set -u
 REPO="$(cd "$(dirname "$0")/../.." && pwd)"
 BDIR="${1:-build/StandaloneRelease}"; MIN="${2:-10}"; DATA="${3:-/tmp/d3s}"
@@ -23,7 +26,7 @@ WINE_BIN="${WINE_BIN:-$HOME/tools/Wine Staging.app/Contents/Resources/wine/bin}"
 OUT="${OUT:-/tmp/d3s-out/$(date +%Y%m%d-%H%M%S)}"
 ROUTE="${ROUTE:-$REPO/tools/standalone/soak_route.txt}"
 SHOT_EVERY="${SHOT_EVERY:-500}"
-export PATH="$WINE_BIN:$HOME/.local/bin:/opt/homebrew/bin:$PATH" WINEPREFIX="$PREFIX" WINEDEBUG=-all
+export PATH="$WINE_BIN:$HOME/.local/bin:/opt/homebrew/bin:$PATH" WINEPREFIX="$PREFIX" WINEDEBUG="${SOAK_WINEDEBUG:--all}"
 mkdir -p "$OUT"
 
 for f in gta_reversed.exe data_pointers.bin original_data.bin original_data.json; do
@@ -54,6 +57,7 @@ UNTIL_MS=$(sed 's/#.*//' "$ROUTE" | awk -F: '/^until:/ {t+=($3 ? $3 : 60000)} EN
 LIMIT_S=$(( (ROUTE_MS + UNTIL_MS) / 1000 + 90 ))   # route + barrier holds + slack for the quit sequence
 
 export NOTSA_STANDALONE_SKIP_VIDEOS=1 NOTSA_STANDALONE_SCREENSHOT="$SHOT_EVERY" NOTSA_STANDALONE_SCREENSHOT_MAX="${SHOT_MAX:-40}"
+export NOTSA_STANDALONE_MUTE="${NOTSA_STANDALONE_MUTE:-1}"
 export NOTSA_STANDALONE_MEMLOG=1 NOTSA_STANDALONE_INPUT="$OUT/route.txt"
 # The in-process sampler (SuspendThread/GetThreadContext/ResumeThread of the main thread every ~10 ms, from 35 s on) CORRUPTS THE x87 STACK of the
 # game thread under Wine on Apple silicon (the FPU TOP drifts, later pushes/pops hit empty registers => -nan positions, wanted level 5 from the

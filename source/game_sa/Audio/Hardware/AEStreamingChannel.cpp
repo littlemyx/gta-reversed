@@ -1,4 +1,5 @@
 #include "StdInc.h"
+#include "AEDirectSoundMute.h"
 
 #include <extensions/utility.hpp>
 
@@ -65,6 +66,7 @@ void CAEStreamingChannel::Initialise() {
         &m_pDirectSoundBuffer,
         0
     ))) {
+        NOTSA_AUDIO_MUTE_ATTACH(m_pDirectSoundBuffer); // NOTSA: NOTSA_STANDALONE_MUTE (run build only)
         m_bInitialized = true;
         SetOriginalFrequency(m_WaveFormat.nSamplesPerSec);
         m_pBuffer = m_aBuffer;

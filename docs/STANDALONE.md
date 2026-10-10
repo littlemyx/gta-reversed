@@ -76,6 +76,16 @@ Environment variables (all optional, run build only):
 * `NOTSA_STANDALONE_ALLOCTRACE=<min bytes>` - log the caller of every 200th allocation >= min bytes.
 * `NOTSA_STANDALONE_NOPRESENT=1` - skip `Present` (diagnostics).
 * `NOTSA_STANDALONE_NO_ABORT_TRACE=1` - do not turn `abort()` into a traced exception.
+* `NOTSA_STANDALONE_MUTE=1` - silent run: the whole audio pipeline (DirectSound init, sound banks, streaming, channels, fades) runs unchanged, but every DirectSound
+  secondary buffer the hardware layer creates is attached to a patched COM vtable (`source/game_sa/Audio/Hardware/AEDirectSoundMute.h`): `SetVolume` records the volume
+  the game asked for and sets `DSBVOLUME_MIN` on the real buffer, `GetVolume` returns the recorded value, so the fade/volume logic that reads volumes back behaves as in the
+  original and the menu volume sliders cannot undo the mute. `standalone.log` gets `[mute]` lines (first attach, the count of swallowed `SetVolume` calls at 1 / 1000 / 100000 / 1000000, and each +5 dB step of the loudest volume the game requested).
+  `soak.sh` and `census.py` set it by default (`NOTSA_STANDALONE_MUTE=0` opts out). Run-build-only deviation, listed in `tools/standalone/standalone_deviations.tsv` and `STANDALONE_FIDELITY.md`.
+
+Silent runs: never let a test/soak/measurement run play audio on the host. Use `NOTSA_STANDALONE_MUTE=1` (above; the default in `soak.sh`/`census.py`).
+Do NOT disable the Wine audio driver (`HKCU\Software\Wine\Drivers` `Audio` = empty) as a second net: with no driver `DirectSoundCreate` fails (`GetDefaultAudioEndpoint` 80070490,
+"User explicitly chose no driver") and the game then hangs at 0% CPU right after `CPU vendor:` in `logs/log.log` and never reaches the menu (verified under Wine Staging 11.18, 2026-10-10).
+A run of an exe WITHOUT the mute (an older build, or the original `gta_sa.exe`) has to be made silent by other means (e.g. the host volume).
 
 Wine quirks: about half of the starts die in wined3d `Direct3DCreate9` (`nested exception on signal stack`) - simply retry; there is no
 800x600 mode (the list starts at 960x600, hence the fallback above); no DirectShow, so videos cannot play; set the registry value

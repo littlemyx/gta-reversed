@@ -1,4 +1,5 @@
 #include "StdInc.h"
+#include "AEDirectSoundMute.h"
 
 #include "AEStaticChannel.h"
 
@@ -218,6 +219,7 @@ bool CAEStaticChannel::SetAudioBuffer(void* buffer, uint16 size, int16 f88, int1
     if (FAILED(m_pDirectSound->CreateSoundBuffer(&bufferDesc, &m_pDirectSoundBuffer, nullptr))) {
         return false;
     }
+    NOTSA_AUDIO_MUTE_ATTACH(m_pDirectSoundBuffer); // NOTSA: NOTSA_STANDALONE_MUTE (run build only)
     ++g_numSoundChannelsUsed;
 
     uint32 setCurrentPos = 0;

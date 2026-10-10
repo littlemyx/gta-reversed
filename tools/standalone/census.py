@@ -172,6 +172,8 @@ def run(a):
     out.mkdir(parents=True, exist_ok=True)
     env = dict(os.environ, PREFIX=str(prefix), OUT=str(out),
                NOTSA_VERIFY_GLOBALS="verify_dump.tsv", NOTSA_IMAGE_CENSUS="1", NOTSA_IMAGE_CENSUS_REARM_MS=str(a.rearm_ms), NOTSA_IMAGE_CENSUS_FILE="image_census.tsv")
+    # silent runs (user order 2026-10-10): NOTSA_STANDALONE_MUTE=1 by default (opt out: set NOTSA_STANDALONE_MUTE=0 in the environment)
+    env.setdefault("NOTSA_STANDALONE_MUTE", "1")
     if a.poison:
         env["NOTSA_POISON_CONVERTED"] = a.poison
     for f in ("image_census.tsv", "verify_dump.tsv"):

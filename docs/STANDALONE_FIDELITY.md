@@ -34,6 +34,7 @@ Collected from `.notes/PHASE2_STATUS.md` (row in brackets). "Unobservable" = no 
 
 ## Platform
 * No DirectShow: videos are skipped (`NOTSA_STANDALONE_SKIP_VIDEOS`); no 800x600 mode on Wine, first mode with width >= 800 is used [S5-librw].
+* `NOTSA_STANDALONE_MUTE=1` (env, off by default): DirectSound secondary buffers get a patched vtable whose `SetVolume` only ever sets `DSBVOLUME_MIN` on the real buffer while `GetVolume` returns the volume the game set (audio logic unchanged, output silent); no effect without the env var [MUTE].
 * `TRACY_ENABLE` undefined in the run build (events were queued with no server -> OOM) [S5].
 * The pad/code range is `PAGE_NOACCESS`; unported code pointers are trap stubs that log and terminate [P2A].
 * Hooks not ported or unverifiable: `CTaskSimpleChat` dtor 0x5F7FD0 is the base dtor jump; residual float oracle diffs: NaN payload/sNaN quieting only, `acos(-1)` is environment dependent [P2E, S2].

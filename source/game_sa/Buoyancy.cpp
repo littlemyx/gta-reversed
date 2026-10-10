@@ -33,7 +33,7 @@ bool cBuoyancy::ProcessBuoyancy(CPhysical* entity, float fBuoyancy, CVector* vec
         entity->GetColModel(); // for some reason, this is here?
 
         m_bInWater = true;
-        m_fEntityWaterImmersion = (m_fWaterLevel - entityPosition.z + 1.0F) / 1.9F;
+        m_fEntityWaterImmersion = (m_fWaterLevel - entityPosition.z + 1.0F) * std::bit_cast<float>(0x3F06BCA2u); // 0x6C3F8D: a multiplication by the float 1 / 1.9 (0x871664), not a division
         if (m_fEntityWaterImmersion > 1.0F) { // clamp
             m_fEntityWaterImmersion = 1.0F;
         } else if (m_fEntityWaterImmersion < 0.0F) {

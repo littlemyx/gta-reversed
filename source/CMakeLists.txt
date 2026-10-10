@@ -807,6 +807,15 @@ if (${RE_PROJECT}_RW_LIBRW)
         # --- sources needed by logic_oracle_pop.inc
         # --- sources needed by logic_oracle_scan.inc
         # --- sources needed by logic_oracle_misc.inc
+        game_sa/Collision/Box.cpp
+        game_sa/Core/KeyGen.cpp
+        game_sa/Cheat.cpp
+        game_sa/TheZones.cpp
+        game_sa/Zone.cpp
+        game_sa/Gangs.cpp
+        game_sa/Acquaintance.cpp
+        game_sa/Weather.cpp
+        game_sa/Timer.cpp
         standalone/FtolExe.cpp
     )
     target_compile_features(logic_oracle_test PRIVATE cxx_std_23)

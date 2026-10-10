@@ -34,6 +34,7 @@ CTaskSimpleCarSetPedInAsPassenger::CTaskSimpleCarSetPedInAsPassenger(const CTask
         o.m_pUtility
     }
 {
+    m_nDoorFlagsToClear    = o.m_nDoorFlagsToClear; // 0x649DE0: the exe's Clone copies +0x1C, +0x1D and +0x1E
     m_nNumGettingInToClear = o.m_nNumGettingInToClear;
 }
 

@@ -530,7 +530,7 @@ CPed* CreateCharAsPassenger(CRunningScript& S, CVehicle& veh, ePedType pedType, 
     }
     const int32 door = seat >= 0 ? CCarEnterExit::ComputeTargetDoorToEnterAsPassenger(&veh, seat) : 0;
     {
-        CTaskSimpleCarSetPedInAsPassenger task{ &veh, (eTargetDoor)door };
+        CTaskSimpleCarSetPedInAsPassenger task{ &veh, (eTargetDoor)door, true }; // 0x47D98E: the exe sets the warping flag (+0x1C) before ProcessPed; without it ProcessPed calls m_pUtility->ProcessPed on a null utility
         task.ProcessPed(ped);
     }
     CPopulation::ms_nTotalMissionPeds++;

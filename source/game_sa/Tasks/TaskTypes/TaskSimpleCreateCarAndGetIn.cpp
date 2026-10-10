@@ -94,7 +94,7 @@ bool CTaskSimpleCreateCarAndGetIn::ProcessPed(CPed* ped) {
     if (!m_CreatedVeh) {
         m_CreatedVeh = CCarCtrl::CreateCarForScript(m_nModel, m_VehCreationPos, true);
 
-        CTaskSimpleCarSetPedInAsDriver task{ m_CreatedVeh, nullptr };
+        CTaskSimpleCarSetPedInAsDriver task{ m_CreatedVeh, true, nullptr }; // 0x64D153: the exe sets the warping flag (+0x18) before ProcessPed
         task.ProcessPed(ped);
     }
  

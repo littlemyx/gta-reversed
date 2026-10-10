@@ -48,7 +48,9 @@ FIXED_MS=$(sed 's/#.*//' "$ROUTE" | awk -F: '/^wait:[0-9]+/ {t+=$2} /^key:/ {t+=
 IDLE_MS=$(( MIN * 60000 - FIXED_MS )); [ "$IDLE_MS" -lt 60000 ] && IDLE_MS=60000
 sed "s/@IDLE_MS@/$IDLE_MS/" "$ROUTE" > "$OUT/route.txt"
 ROUTE_MS=$(( FIXED_MS + IDLE_MS ))
-LIMIT_S=$(( ROUTE_MS / 1000 + 90 ))   # route + slack for the quit sequence
+# `until:COND[:MAXMS]` barriers (default max 60000) may hold the script clock for up to MAXMS each
+UNTIL_MS=$(sed 's/#.*//' "$ROUTE" | awk -F: '/^until:/ {t+=($3 ? $3 : 60000)} END {print t+0}')
+LIMIT_S=$(( (ROUTE_MS + UNTIL_MS) / 1000 + 90 ))   # route + barrier holds + slack for the quit sequence
 
 export NOTSA_STANDALONE_SKIP_VIDEOS=1 NOTSA_STANDALONE_SCREENSHOT="$SHOT_EVERY" NOTSA_STANDALONE_SCREENSHOT_MAX="${SHOT_MAX:-40}"
 export NOTSA_STANDALONE_MEMLOG=1 NOTSA_STANDALONE_SAMPLER=1 NOTSA_STANDALONE_INPUT="$OUT/route.txt"

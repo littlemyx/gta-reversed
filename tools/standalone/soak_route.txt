@@ -20,6 +20,8 @@ key:escape
 wait:3000
 key:return
 wait:12000
+# deterministic gate: wait (max 60 s) until the player has control (no cutscene / fade / menu), the rest of the script is relative to that moment
+until:control:60000
 mark:walk_start
 mark:walk_0
 down:w
@@ -184,7 +186,8 @@ wait:1000
 key:space
 wait:1500
 mark:walk_end
-# normal car cheat (JQNTDMH), step back from the spawn, F = enter, drive W 20 s, F = exit
+# normal car cheat (JQNTDMH), step back from the spawn, F = enter (gated: wait until CJ is really in the car), drive W 20 s, F = exit
+until:control:30000
 mark:cheat_car
 key:j
 key:q
@@ -200,7 +203,8 @@ up:s
 wait:1500
 mark:car_enter
 key:f
-wait:8000
+until:invehicle:10000
+wait:500
 mark:drive
 down:w
 wait:12000
@@ -213,6 +217,7 @@ wait:1000
 mark:car_exit
 key:f
 wait:4000
+until:control:30000
 # Rhino cheat (AIWPRTON) - the tank spawns in front of CJ
 mark:cheat_rhino
 key:a
@@ -235,13 +240,18 @@ wait:3000
 mark:idle_start
 wait:@IDLE_MS@
 mark:idle_end
-# quit, ESC opens the pause menu, UP wraps to QUIT GAME, RETURN opens the confirmation (NO is preselected), DOWN selects YES, RETURN
+# quit: ESC opens the pause menu; the menu follows the pointer, so hover QUIT GAME (window 960x600: 480,440) instead of relying on the initial
+# keyboard selection (a stray real mouse movement over the window once left the selection on another item and the sequence ended in LOAD GAME);
+# RETURN opens the confirmation (NO is preselected), DOWN selects YES, RETURN
 key:escape
 wait:2500
-key:up
-wait:700
+mark:quit_esc
+mouse:480,440
+wait:1500
+mark:quit_hover
 key:return
 wait:2500
+mark:quit_ask
 key:down
 wait:700
 key:return

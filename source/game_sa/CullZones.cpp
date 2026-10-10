@@ -147,11 +147,10 @@ bool CCullZones::DoINeedToLoadCollision() {
 // 0x72D9F0
 eZoneAttributes CCullZones::FindTunnelAttributesForCoors(CVector pos) {
     int32 flags = eZoneAttributes::ZA_NONE;
-    if (NumTunnelAttributeZones > 0) {
-        for (auto& zone : aTunnelAttributeZones) {
-            if (zone.IsPointWithin(pos)) {
-                flags |= zone.flags;
-            }
+    for (int32 i = 0; i < NumTunnelAttributeZones; i++) { // the exe stops at the count (stale zones beyond it are ignored)
+        const auto& zone = aTunnelAttributeZones[i];
+        if (zone.IsPointWithin(pos)) {
+            flags |= zone.flags;
         }
     }
 
@@ -160,11 +159,10 @@ eZoneAttributes CCullZones::FindTunnelAttributesForCoors(CVector pos) {
 
 // 0x72DA70
 CMirrorAttributeZone* CCullZones::FindMirrorAttributesForCoors(CVector pos) {
-    if (NumMirrorAttributeZones > 0) {
-        for (auto& zone : aMirrorAttributeZones) {
-            if (zone.IsPointWithin(pos)) {
-                return &zone;
-            }
+    for (int32 i = 0; i < NumMirrorAttributeZones; i++) {
+        auto& zone = aMirrorAttributeZones[i];
+        if (zone.IsPointWithin(pos)) {
+            return &zone;
         }
     }
 
@@ -173,12 +171,11 @@ CMirrorAttributeZone* CCullZones::FindMirrorAttributesForCoors(CVector pos) {
 
 // 0x72DAD0
 CAttributeZone* CCullZones::FindZoneWithStairsAttributeForPlayer() {
-    if (NumAttributeZones > 0) {
-        for (auto& zone : aAttributeZones) {
-            if (zone.flags & eZoneAttributes::STAIRS) {
-                if (zone.IsPointWithin(FindPlayerCoors())) {
-                    return &zone;
-                }
+    for (int32 i = 0; i < NumAttributeZones; i++) {
+        auto& zone = aAttributeZones[i];
+        if (zone.flags & eZoneAttributes::STAIRS) {
+            if (zone.IsPointWithin(FindPlayerCoors())) {
+                return &zone;
             }
         }
     }
@@ -189,7 +186,8 @@ CAttributeZone* CCullZones::FindZoneWithStairsAttributeForPlayer() {
 // 0x72D970
 eZoneAttributes CCullZones::FindAttributesForCoors(CVector pos) {
     int32 flags = eZoneAttributes::ZA_NONE;
-    for (auto& zone : aAttributeZones) {
+    for (int32 i = 0; i < NumAttributeZones; i++) {
+        const auto& zone = aAttributeZones[i];
         if (zone.IsPointWithin(pos)) {
             flags |= zone.flags;
         }

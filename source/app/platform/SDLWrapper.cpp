@@ -7,6 +7,10 @@
 #include <WindowedMode.hpp>
 #include "PostEffects.h"
 #include "UIRenderer.h"
+// One injector implementation for both builds: the standalone run build (NOTSA_STANDALONE_RUN) and the ASI/DLL build with -DGTASA_INPUT_INJECT=ON (NOTSA_INPUT_INJECT)
+#if defined(NOTSA_STANDALONE_RUN) || defined(NOTSA_INPUT_INJECT)
+#define NOTSA_HAS_INPUT_INJECTOR 1
+#endif
 #ifdef NOTSA_STANDALONE_RUN
 #include "standalone/Fixups.h"
 #endif
@@ -34,7 +38,7 @@ static bool IsInFullscreen()
 }
 
 
-#if defined(NOTSA_STANDALONE_RUN) || defined(NOTSA_INPUT_INJECT)
+#ifdef NOTSA_HAS_INPUT_INJECTOR
 // Test-only input injector: NOTSA_STANDALONE_INPUT="wait:3000;key:return;wait:500;down:w;wait:2000;up:w;..." (also a path to a file with the same text).
 // Times are ms of wall clock; `wait:N` advances the script clock by N after the previous action; `key:K` = down now + up 150 ms later;
 // NOTSA_INPUT_INJECT (cmake -DGTASA_INPUT_INJECT=ON) enables it in the ASI/DLL build too (logs through spdlog instead of Fixups).
@@ -192,7 +196,7 @@ void Terminate() {
 
 void ProcessEvents() {
     ZoneScoped;
-#if defined(NOTSA_STANDALONE_RUN) || defined(NOTSA_INPUT_INJECT)
+#ifdef NOTSA_HAS_INPUT_INJECTOR
     InjPump();
 #ifndef NOTSA_STANDALONE_RUN
     InjDumpBackBuffer();

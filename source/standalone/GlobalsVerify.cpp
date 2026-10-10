@@ -41,14 +41,11 @@ void Dump(const char* path, const char* tag) {
         notsa::standalone::Fixups::Log("NOTSA_VERIFY_GLOBALS: cannot open '%s'", path);
         return;
     }
-    // Name/file:line contain no tab. `img` = the data image at the ORIGINAL address (after Fixups::ApplyToDataImage: code pointers replaced by ours / trap stubs):
-    // detached globals no longer read it, so it is still the state the original code would have found there.
-    fprintf(f, "# NOTSA_VERIFY_GLOBALS %s: addr\tsize\tname\tfile:line\tours\timage\n", tag);
+    // Name/file:line contain no tab. Columns: addr, size, name, file:line, our bytes (function pointers are our own addresses: verify_globals.py names them through the linker .map)
+    fprintf(f, "# NOTSA_VERIFY_GLOBALS %s: addr\tsize\tname\tfile:line\tours\n", tag);
     for (const auto& e : Registry()) {
         fprintf(f, "0x%08X\t%u\t%s\t%s:%d\t", e.Addr, (unsigned)e.Size, e.Name, e.File, e.Line);
         Hex(f, static_cast<const uint8_t*>(e.Storage), e.Size);
-        fputc('\t', f);
-        Hex(f, reinterpret_cast<const uint8_t*>((uintptr_t)e.Addr), e.Size);
         fputc('\n', f);
     }
     fclose(f);

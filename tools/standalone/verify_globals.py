@@ -3,13 +3,14 @@
 
 The exe (built with -DGTASA_DETACHED_GLOBALS=ON -DGTASA_VERIFY_GLOBALS=ON) writes, right before the game starts (source/standalone/GlobalsVerify.cpp):
     NOTSA_VERIFY_GLOBALS=<dump> [NOTSA_VERIFY_GLOBALS_EXIT=1] gta_reversed.exe
-one line per converted global:   addr \t size \t name \t file:line \t <our bytes, hex> \t <bytes of the loaded data image at addr, hex (after Fixups::ApplyToDataImage)>
+one line per converted global:   addr \t size \t name \t file:line \t <our bytes, hex>
 and this script compares "our bytes" with  original_data.bin  (the post-_initterm image the build extracted from the user's exe).
 
 Rules per differing 32-bit word (everything else must be bit-identical):
-  * code pointer: the image word is a code address (in [code_lo, code_hi)) and our word equals the word the loaded image holds after the fixups, i.e. the
-    detached table points at the very function the image-based run would have called (ours, or the trap stub of an unported function - then ours must be
-    the same stub, which a C++ initialiser cannot produce, so an unported function shows up as a mismatch). Counted as "code ptr ok".
+  * code pointer: the image word is a code address (in [code_lo, code_hi)) and our word is the address of a function that the linker map (--map, default
+    <image-dir>/gta_reversed.map) names exactly like the repo's own hook for that original address (`RH_Scoped*Install(Fn, 0xADDR)` under `RH_ScopedClass(Cls)`, or a
+    `0xADDR, Cls::Fn` table: the same resolver the emitter uses, globals_emit.FnResolver): `Cls::Fn` <-> `?Fn@Cls@@...`. An unported function has no such name and
+    shows up as a mismatch. Counted as "code ptr ok".
   * `--allow-rdata-ptr`: the image word points into .rdata (vtable / string table pointers of objects): masked, counted separately (phase C checks them by class).
   * documented deviations: --deviations FILE (default tools/standalone/standalone_deviations.tsv): lines `addr<TAB>offset<TAB>length<TAB>reason`
     (length 0 = the whole global), e.g. rand()-derived bytes.
@@ -34,9 +35,9 @@ def load_dump(path):
         if not line or line.startswith("#"):
             continue
         f = line.split("\t")
-        if len(f) != 6:
-            raise SystemExit("%s:%d: expected 6 tab separated fields, got %d" % (path, n, len(f)))
-        out.append(dict(addr=int(f[0], 16), size=int(f[1]), name=f[2], loc=f[3], ours=bytes.fromhex(f[4]), img=bytes.fromhex(f[5])))
+        if len(f) != 5:
+            raise SystemExit("%s:%d: expected 5 tab separated fields, got %d" % (path, n, len(f)))
+        out.append(dict(addr=int(f[0], 16), size=int(f[1]), name=f[2], loc=f[3], ours=bytes.fromhex(f[4])))
     return out
 
 
@@ -53,12 +54,53 @@ def load_deviations(path):
     return dev
 
 
+_resolver = None
+_fnames = {}
+
+
+def load_map_names(map_path, words):
+    """address -> mangled symbol for the given addresses (one pass over the linker map; function symbols only)"""
+    import re
+    want = {"%08x" % w for w in words}
+    if not want or not Path(map_path).exists():
+        return {}
+    pat = re.compile(r"^\s*[0-9a-f]{4}:[0-9a-f]{8}\s+(\S+)\s+([0-9a-f]{8}) f")
+    out = {}
+    with open(map_path, errors="replace") as f:
+        for line in f:
+            m = pat.match(line)
+            if m and m.group(2) in want:
+                out.setdefault(int(m.group(2), 16), m.group(1))
+    return out
+
+
+def expected_prefix(orig_addr):
+    """`?Fn@Cls@@` for the function the repo hooks at orig_addr (None if the repo names none)"""
+    global _resolver
+    if _resolver is None:
+        sys.path.insert(0, str(Path(__file__).resolve().parent))
+        import globals_emit
+        _resolver = globals_emit.FnResolver()
+    r, _ = _resolver.resolve(orig_addr)
+    if not r:
+        return None
+    parts = r.lstrip("&").split("::")
+    return "?" + "@".join(reversed(parts)) + "@@"
+
+
+def code_ptr_ok(orig_word, our_word):
+    pre = expected_prefix(orig_word)
+    name = _fnames.get(our_word)
+    return bool(pre and name and name.startswith(pre))
+
+
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("dump")
     ap.add_argument("--image-dir", default=str(REPO / "build" / "StandaloneRelease" / "bin"))
     ap.add_argument("--tsv", default=str(REPO / ".notes" / "DETACH_GLOBALS.tsv"))
     ap.add_argument("--deviations", default=str(REPO / "tools" / "standalone" / "standalone_deviations.tsv"))
+    ap.add_argument("--map", default=None, help="linker map of the exe (default <image-dir>/gta_reversed.map)")
     ap.add_argument("--allow-rdata-ptr", action="store_true")
     ap.add_argument("--cover", default="")
     ap.add_argument("-v", "--verbose", action="store_true")
@@ -76,8 +118,26 @@ def main():
         for l in lines[1:]:
             f = l.split("\t")
             rows[int(f[0], 16)] = dict(zip(hdr, f))
+    raw_casts = set()
+    rc = REPO / ".notes" / "DETACH_raw_casts.tsv"      # raw `(T*)0xADDR` data casts: not rows of the table, but legitimate converted globals
+    if rc.exists():
+        for l in rc.read_text().splitlines()[1:]:
+            f = l.split("\t")
+            if len(f) > 3 and f[3] == "data" and f[2].startswith("0x"):
+                raw_casts.add(int(f[2], 16))
     dev = load_deviations(a.deviations)
     dump = load_dump(a.dump)
+    # our words that are candidates for code pointers: named through the linker map in one pass
+    cand = set()
+    for g in dump:
+        if g["addr"] % 4 == 0 and len(g["ours"]) == g["size"] and g["addr"] >= base and g["addr"] + g["size"] <= end:
+            o = img[g["addr"] - base:g["addr"] - base + g["size"]]
+            for off in range(0, g["size"] - g["size"] % 4, 4):
+                ow = struct.unpack_from("<I", o, off)[0]
+                nw = struct.unpack_from("<I", g["ours"], off)[0]
+                if nw != ow and code_lo <= ow < code_hi:
+                    cand.add(nw)
+    _fnames.update(load_map_names(a.map or str(Path(a.image_dir) / "gta_reversed.map"), cand))
 
     tot_bytes = ident = codeok = masked = devs = 0
     bad, xfail = [], []
@@ -87,11 +147,13 @@ def main():
         if addr in seen:
             xfail.append("%s 0x%X: dumped twice" % (g["name"], addr))
         seen.add(addr)
-        if len(g["ours"]) != size or len(g["img"]) != size:
-            xfail.append("%s 0x%X: dump line has %d/%d bytes for size %d" % (g["name"], addr, len(g["ours"]), len(g["img"]), size))
+        if len(g["ours"]) != size:
+            xfail.append("%s 0x%X: dump line has %d/%d bytes for size %d" % (g["name"], addr, len(g["ours"]), len(g["ours"]), size))
             continue
         row = rows.get(addr)
-        if rows and row is None:
+        if rows and row is None and addr in raw_casts:
+            pass
+        elif rows and row is None:
             xfail.append("%s 0x%X: address is not a row of the table (a base+offset or unlisted address?)" % (g["name"], addr))
         elif row is not None and int(row["size"]) != size:
             xfail.append("%s 0x%X: sizeof %d != table size %s" % (g["name"], addr, size, row["size"]))
@@ -109,8 +171,8 @@ def main():
         for off in range(0, size - size % 4, 4):
             if addr % 4 or ours[off:off + 4] == orig[off:off + 4]:
                 continue
-            ow, nw, iw = (struct.unpack_from("<I", x, off)[0] for x in (orig, ours, g["img"]))
-            if code_lo <= ow < code_hi and nw == iw:
+            ow, nw = (struct.unpack_from("<I", x, off)[0] for x in (orig, ours))
+            if code_lo <= ow < code_hi and code_ptr_ok(ow, nw):
                 codeok += 1
                 explained_dwords.add(off)
             elif a.allow_rdata_ptr and rd_lo <= ow < rd_hi:
@@ -125,7 +187,7 @@ def main():
             diffs.append(off)
         if diffs:
             bad.append((g, diffs, orig))
-    print("%d globals, %d bytes: %d identical, %d code-pointer dwords equal to the fixed-up image, %d masked (rdata ptr), %d deviation bytes, %d globals with unexplained differences"
+    print("%d globals, %d bytes: %d identical, %d code-pointer dwords naming the repo's replacement function, %d masked (rdata ptr), %d deviation bytes, %d globals with unexplained differences"
           % (len(dump), tot_bytes, ident, codeok, masked, devs, len(bad)))
     for g, diffs, orig in bad:
         print("MISMATCH %s 0x%X (%s) size %d: %d bytes differ, first at +0x%X: ours %s image %s" % (

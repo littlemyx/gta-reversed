@@ -3,8 +3,9 @@
 // The test maps gta_sa_compact.exe (env RW_EXE_ORACLE=<path>) at its original VAs and runs the exe's machine code next to the port:
 //   * text: the exe's 0x75F0B0 with D3DXAssembleShader (0x7652AE) patched to capture the text (buffer 0xC93AF8) and fail, the sprintf pointer ([[0xC97B24]+0xF0]) = a host vsprintf
 //   * NumLightConstants 0x75EDD0, the init 0x760CF0 (model / constant table), cache 0x75EED0 with fake assemble/CreateVertexShader (0x7652AE / 0x7FAC60) and fake COM objects
+//   * assembler: the exe's statically linked D3DXAssembleShader (0x7652AE, run in the oracle with the IAT bound to the host) vs d3dcompiler_47 D3DAssemble on the composed texts, bytecode compared
 //   * device test (D3D9 HAL; Wine/wined3d is fine): the port's GetVertexShader over a representative key set for the three shader models (assembler: d3dcompiler_47 D3DAssemble)
-// usage: rw_skin_vs_test.exe [-n randomKeys] [-q] [--no-device] [--dump key32hex]   (exit 0 = no mismatch / no device failure; 77 = oracle not available)
+// usage: rw_skin_vs_test.exe [-n randomKeys] [-q] [--no-device] [--only-device] [--only-asm] [--dump key32hex]   (exit 0 = no mismatch / no device failure; 77 = oracle not available)
 #include "game_oracle.h"
 
 #include <d3d9.h>
@@ -244,6 +245,105 @@ static void CacheSection(int distinct, int calls, bool assembleFails, uint64_t s
     SetAssembleHook(nullptr); g_cacheMode = false;
 }
 
+// representative keys: the shapes of the game's peds and vehicles (skinned peds with 1-4 bones, lights, prelit, fog, env mapping, morph, tangent space), within the constant budget
+static std::vector<uint32_t> RealisticKeys(size_t count, uint64_t seed, unsigned maxc) {
+    Rng r(seed);
+    std::vector<uint32_t> keys;
+    static const uint32_t kFixed[] = { 0x00000000, 0x0000102A & 0xFFFFFFFF, 0x20003011 & 0, 0x00002A01 };   // N=1 skin + normals + lights; plain
+    for (uint32_t k : kFixed) keys.push_back(k);
+    while (keys.size() < count) {
+        uint32_t k = RandomKey(r, false);
+        const Key kk = MakeKey(k);
+        const unsigned N = (kk.b[2] >> 1) & 7;
+        if (N > 4 || (kk.b[1] >> 4) > 4) continue;
+        { Layout l0; if (ComposeText(kk, l0, kModelVS2x, 0x100).find("(null)") != std::string::npos) continue; }   // normal-dependent code without normals: the exe emits garbage too
+        if ((unsigned)NumLightConstants(kk) + 3 * N > maxc) continue;                              // the exe's light budget loop (0x7C8221) guarantees this
+        keys.push_back(k);
+    }
+    return keys;
+}
+
+// ---------------------------------------------------------------------------------------------------------------- assembler differential
+// The exe assembles the composed text with its statically linked D3DX (D3DXAssembleShader 0x7652AE, flags 4); we use d3dcompiler_47's D3DAssemble.
+// Here the EXE's assembler runs in the oracle (IAT bound to the host kernel32, CRT heap = process heap) on the same text and the bytecode is compared.
+static void __cdecl HostMathErr(int, int, int, int) {}
+static uint32_t g_fakePtd[0x100];
+static void* __cdecl HostGetPtd() { return g_fakePtd; }
+using ExeAsmFn = HRESULT(__stdcall*)(const char*, UINT, const void*, const void*, DWORD, void**, void**);
+struct ExeBlobVt { void* qi; void* addref; ULONG(__stdcall* release)(void*); void*(__stdcall* ptr)(void*); SIZE_T(__stdcall* size)(void*); };
+
+static bool ExeAssemble(const std::string& text, std::vector<uint8_t>& out, std::string* err) {
+    void* shader = nullptr; void* errors = nullptr;
+    const HRESULT hr = reinterpret_cast<ExeAsmFn>(0x7652AE)(text.data(), (UINT)text.size(), nullptr, nullptr, 4, &shader, nullptr);
+    (void)errors;
+    if (hr < 0 || !shader) { if (err) *err = "exe D3DXAssembleShader hr=" + std::to_string((unsigned)hr); return false; }
+    const ExeBlobVt* vt = *reinterpret_cast<ExeBlobVt**>(shader);
+    const uint8_t* p = static_cast<const uint8_t*>(vt->ptr(shader)); const SIZE_T n = vt->size(shader);
+    out.assign(p, p + n);
+    vt->release(shader);
+    return true;
+}
+
+
+static void AssemblerSection(const char* exePath, const uint8_t origAsm[5]) {
+    std::printf("[assembler bytecode: exe D3DX vs d3dcompiler_47]\n");
+    std::memcpy(reinterpret_cast<void*>(0x7652AE), origAsm, 5);                    // undo the text-capture patch: the real exe assembler
+    oracle::g_where = "exe D3DXAssembleShader";
+    std::printf("  IAT slots bound to the host: %d\n", oracle::BindImports(exePath));
+    { static CRITICAL_SECTION lockTabLock; InitializeCriticalSection(&lockTabLock); W(0x8E31C0 + 8 * 0xA) = (uint32_t)(uintptr_t)&lockTabLock; }   // _mtinitlocks: lock 0xA (_LOCKTAB_LOCK) exists before any lazily created lock
+    W(0xC9C2F8) = 1;                                                                 // CRT heap type 1 = plain HeapAlloc/HeapFree on the heap handle at 0xC9C2F4 (what the startup code set up)
+    W(0xC9C2F4) = (uint32_t)(uintptr_t)GetProcessHeap();
+    oracle::Patch(0x82872C, reinterpret_cast<void*>(&HostMathErr));                  // as in the other oracle tests: errno / _getptd need TLS state
+    oracle::Patch(0x827B3D, reinterpret_cast<void*>(&HostGetPtd));
+    // sanity: a hand-written shader assembles in both and decodes to the same bytes
+    {
+        std::vector<uint8_t> a, b; std::string e;
+        const std::string t = "vs_1_1\ndcl_position v0\nm4x4 oPos, v0, c0\nmov oD0, c4\n";
+        const std::string t11 = "vs_1_1\nm4x4 oPos, v0, c0\nmov oD0, c4\n";
+        const bool okE = ExeAssemble(t11, a, &e), okP = AssembleToBytes(t11, b);
+        std::printf("  smoke: exe %s (%zu bytes), d3dcompiler %s (%zu bytes), %s\n", okE ? "ok" : e.c_str(), a.size(), okP ? "ok" : "FAILED", b.size(), a == b ? "identical" : "DIFFERENT");
+        (void)t;
+        CHECK(okE, "exe assembler failed on the smoke text: %s", e.c_str());
+        if (!okE) return;
+    }
+    struct { int model; const char* name; } models[3] = { { kModelVS2x, "vs_2_x" }, { kModelVS20, "vs_2_0" }, { kModelVS11, "vs_1_1" } };
+    long total = 0, identical = 0, differ = 0, bothFail = 0, onlyOne = 0, shown = 0;
+    long sizeDiff = 0, instrDiff = 0;
+    Rng r(9001);
+    std::vector<uint32_t> keys = RealisticKeys(400, 4242, 0x100);                    // the 400 keys of the device section ...
+    { std::vector<uint32_t> more = RealisticKeys(3000, 777, 0x100); keys.insert(keys.end(), more.begin() + 400, more.end()); }   // ... plus 2600 more
+    for (auto& m : models) {
+        long mi = 0, md = 0;
+        for (uint32_t kv : keys) {
+            const Key k = MakeKey(kv);
+            Layout lay;
+            const std::string text = ComposeText(k, lay, m.model, 0x100);
+            if (text.empty() || text.size() > 0xF00) continue;
+            ++total;
+            std::vector<uint8_t> ex, po; std::string err;
+            const bool oe = ExeAssemble(text, ex, &err), op = AssembleToBytes(text, po);
+            if (!oe && !op) { ++bothFail; continue; }
+            if (oe != op) { ++onlyOne; ++md; if (shown++ < 4) std::printf("  key %08X %s: exe %s, d3dcompiler %s\n", kv, m.name, oe ? "ok" : "FAILS", op ? "ok" : "FAILS"); continue; }
+            if (ex == po) { ++identical; ++mi; continue; }
+            ++differ; ++md;
+            if (ex.size() != po.size()) ++sizeDiff; else ++instrDiff;
+            if (shown++ < 4) {
+                size_t i = 0; while (i < ex.size() && i < po.size() && ex[i] == po[i]) ++i;
+                std::printf("  DIFF key %08X %s: exe %zu bytes, d3dcompiler %zu bytes, first difference at byte %zu\n    exe  :", kv, m.name, ex.size(), po.size(), i);
+                for (size_t j = i & ~3u; j < ex.size() && j < (i & ~3u) + 24; ++j) std::printf(" %02X", ex[j]);
+                std::printf("\n    d3dc :");
+                for (size_t j = i & ~3u; j < po.size() && j < (i & ~3u) + 24; ++j) std::printf(" %02X", po[j]);
+                std::printf("\n");
+            }
+        }
+        std::printf("  %s: %ld identical, %ld different\n", m.name, mi, md);
+    }
+    (void)r;
+    std::printf("  assembler: %ld texts, %ld byte-identical, %ld different (%ld size, %ld same size), %ld accepted by only one, %ld rejected by both\n", total, identical, differ, sizeDiff, instrDiff, onlyOne, bothFail);
+    std::printf("TOTAL: %ld texts, %ld mismatches\n", total, differ + onlyOne);
+    CHECK(differ + onlyOne == 0, "assembler bytecode mismatches: %ld different + %ld accepted by one only", differ, onlyOne);
+}
+
 // ---------------------------------------------------------------------------------------------------------------- device test
 static bool CreateDevice(IDirect3DDevice9** out, IDirect3D9** d3dOut, HWND* wndOut) {
     HWND wnd = CreateWindowA("STATIC", "rw_skin_vs_test", WS_OVERLAPPEDWINDOW, 0, 0, 320, 240, nullptr, nullptr, GetModuleHandleA(nullptr), nullptr);
@@ -269,20 +369,7 @@ static void DeviceSection() {
     Init();
     std::printf("  Init(): model 0x%X, maxConst %u\n", Model(), MaxConstants());
     CHECK(Model() != 0, "no shader model from the device caps");
-    // representative keys: the shapes of the game's peds and vehicles (skinned peds with 1-4 bones, lights, prelit, fog, env mapping, morph, tangent space), within the constant budget
-    Rng r(4242);
-    std::vector<uint32_t> keys;
-    static const uint32_t kFixed[] = { 0x00000000, 0x0000102A & 0xFFFFFFFF, 0x20003011 & 0, 0x00002A01 };   // N=1 skin + normals + lights; plain
-    for (uint32_t k : kFixed) keys.push_back(k);
-    while (keys.size() < 400) {
-        uint32_t k = RandomKey(r, false);
-        const Key kk = MakeKey(k);
-        const unsigned N = (kk.b[2] >> 1) & 7;
-        if (N > 4 || (kk.b[1] >> 4) > 4) continue;
-        { Layout l0; if (ComposeText(kk, l0, kModelVS2x, 0x100).find("(null)") != std::string::npos) continue; }   // normal-dependent code without normals: the exe emits garbage too
-        if ((unsigned)NumLightConstants(kk) + 3 * N > MaxConstants()) continue;                   // the exe's light budget loop (0x7C8221) guarantees this
-        keys.push_back(k);
-    }
+    const std::vector<uint32_t> keys = RealisticKeys(400, 4242, MaxConstants());
     const int models[3] = { kModelVS2x, kModelVS20, kModelVS11 };
     for (int model : models) {
         Shutdown();
@@ -305,16 +392,19 @@ static void DeviceSection() {
     dev->Release(); d3d->Release(); DestroyWindow(wnd);
 }
 
+static uint8_t g_origAsm[5];
+
 int main(int argc, char** argv) {
     std::setvbuf(stdout, nullptr, _IONBF, 0);
     int randomKeys = 200000;
-    bool device = true, onlyDevice = false;
+    bool device = true, onlyDevice = false, onlyAsm = false;
     unsigned dumpKey = 0; bool dump = false;
     for (int i = 1; i < argc; ++i) {
         if (!std::strcmp(argv[i], "-n") && i + 1 < argc) randomKeys = std::atoi(argv[++i]);
         else if (!std::strcmp(argv[i], "-q")) g_quiet = true;
         else if (!std::strcmp(argv[i], "--no-device")) device = false;
         else if (!std::strcmp(argv[i], "--only-device")) onlyDevice = true;
+        else if (!std::strcmp(argv[i], "--only-asm")) { onlyAsm = true; device = false; }
         else if (!std::strcmp(argv[i], "--dump") && i + 1 < argc) { dump = true; dumpKey = (unsigned)std::strtoul(argv[++i], nullptr, 16); }
     }
     const char* exePath = std::getenv("RW_EXE_ORACLE");
@@ -323,6 +413,7 @@ int main(int argc, char** argv) {
     if (haveOracle) {
         W(0xC97B24) = (uint32_t)(uintptr_t)g_engine;
         *reinterpret_cast<void**>(g_engine + 0xF0) = reinterpret_cast<void*>(&HostSprintf);
+        std::memcpy(g_origAsm, reinterpret_cast<void*>(0x7652AE), 5);
         oracle::Patch(0x7652AE, reinterpret_cast<void*>(&FakeAssemble));
         oracle::Patch(0x7FAC60, reinterpret_cast<void*>(&FakeCreateVS));
         oracle::g_where = "composer";
@@ -337,6 +428,7 @@ int main(int argc, char** argv) {
             std::printf("\nport equal: %d\n", pt == g_capText);
             return 0;
         }
+        if (!onlyAsm) {
         std::printf("[text differential]\n");
         g_asmFail = true;
         TextSection(kModelVS2x, 0x100, randomKeys, true);
@@ -351,11 +443,13 @@ int main(int argc, char** argv) {
         CacheSection(300, 60000, false, 2);
         CacheSection(700, 60000, false, 3);
         CacheSection(300, 20000, true, 4);
+        }
     }
     if (device) {
         std::printf("[device]\n");
         DeviceSection();
     }
+    if (haveOracle && !dump) AssemblerSection(exePath, g_origAsm);
     std::printf("rw_skin_vs_test: %s (%d failure%s)\n", g_fail ? "FAILED" : "OK", g_fail, g_fail == 1 ? "" : "s");
     return g_fail ? 1 : 0;
 }

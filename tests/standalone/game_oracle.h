@@ -26,7 +26,10 @@ inline bool        g_active = false;
 
 inline LONG CALLBACK FaultHandler(EXCEPTION_POINTERS* ep) {
     const DWORD c = ep->ExceptionRecord->ExceptionCode;
+    static bool inHandler = false;                  // a fault while reporting (stack overflow, broken host CRT state) must not recurse
+    if (inHandler) return EXCEPTION_CONTINUE_SEARCH;
     if (c == EXCEPTION_ACCESS_VIOLATION || c == EXCEPTION_ILLEGAL_INSTRUCTION || c == EXCEPTION_PRIV_INSTRUCTION || c == EXCEPTION_STACK_OVERFLOW || c == EXCEPTION_INT_DIVIDE_BY_ZERO) {
+        inHandler = true;
         std::printf("\n  NOT ORACLE-ABLE: fault 0x%08lX at EIP=%p (access address %p) while running '%s'\n", c, ep->ExceptionRecord->ExceptionAddress,
                     c == EXCEPTION_ACCESS_VIOLATION ? (void*)ep->ExceptionRecord->ExceptionInformation[1] : nullptr, g_where);
         const CONTEXT* cx = ep->ContextRecord;
@@ -72,6 +75,44 @@ inline void Patch(unsigned va, void* host) {
     auto* p = reinterpret_cast<uint8_t*>(va);
     p[0] = 0xE9;
     *reinterpret_cast<int32_t*>(p + 1) = static_cast<int32_t>(reinterpret_cast<uintptr_t>(host) - (va + 5));
+}
+
+// Fills the exe's import address table (IAT, inside the mapped range) with the HOST addresses of the same DLL exports, so exe code that calls
+// kernel32/user32/... (the statically linked CRT heap and locks, MultiByteToWideChar, lstrcmpi, D3DX's helpers) runs in the test process.
+// Opt-in per test (the plain oracle leaves the IAT as read from the file = unusable). Imports whose DLL / export is missing stay untouched.
+// Returns the number of slots bound. The caller still has to initialise the CRT globals the exe's startup would have (heap handle ...).
+inline int BindImports(const char* path) {
+    FILE* fh = std::fopen(path, "rb");
+    if (!fh) return 0;
+    std::vector<uint8_t> exe(0x600000);
+    exe.resize(std::fread(exe.data(), 1, exe.size(), fh));
+    std::fclose(fh);
+    if (exe.size() < 0x1000) return 0;
+    const auto* nt = reinterpret_cast<const IMAGE_NT_HEADERS32*>(exe.data() + reinterpret_cast<const IMAGE_DOS_HEADER*>(exe.data())->e_lfanew);
+    const auto* sec = IMAGE_FIRST_SECTION(nt);
+    auto off = [&](DWORD rva) -> const uint8_t* {
+        for (unsigned i = 0; i < nt->FileHeader.NumberOfSections; ++i)
+            if (rva >= sec[i].VirtualAddress && rva < sec[i].VirtualAddress + (sec[i].Misc.VirtualSize > sec[i].SizeOfRawData ? sec[i].Misc.VirtualSize : sec[i].SizeOfRawData))
+                return exe.data() + sec[i].PointerToRawData + (rva - sec[i].VirtualAddress);
+        return nullptr;
+    };
+    const DWORD dirRva = nt->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_IMPORT].VirtualAddress;
+    const auto* d = dirRva ? reinterpret_cast<const IMAGE_IMPORT_DESCRIPTOR*>(off(dirRva)) : nullptr;
+    int bound = 0;
+    for (; d && d->Name; ++d) {
+        const char* dllName = reinterpret_cast<const char*>(off(d->Name));
+        HMODULE mod = dllName ? LoadLibraryA(dllName) : nullptr;
+        if (!mod) continue;
+        const auto* thunk = reinterpret_cast<const DWORD*>(off(d->OriginalFirstThunk ? d->OriginalFirstThunk : d->FirstThunk));
+        for (unsigned k = 0; thunk && thunk[k]; ++k) {
+            FARPROC fn = (thunk[k] & 0x80000000u) ? GetProcAddress(mod, MAKEINTRESOURCEA(thunk[k] & 0xFFFF))
+                                                  : GetProcAddress(mod, reinterpret_cast<const char*>(off(thunk[k])) + 2);
+            if (!fn) continue;
+            *reinterpret_cast<uintptr_t*>(0x400000 + d->FirstThunk + 4 * k) = reinterpret_cast<uintptr_t>(fn);
+            ++bound;
+        }
+    }
+    return bound;
 }
 
 struct Addr {

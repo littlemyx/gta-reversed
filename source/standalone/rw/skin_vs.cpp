@@ -548,6 +548,9 @@ struct IBlob : IUnknown {                                                       
 };
 using D3DAssembleFn = HRESULT(WINAPI*)(const void*, SIZE_T, const char*, const void*, void*, UINT, IBlob**, IBlob**);
 
+// the exe's call at 0x760C4D: D3DXAssembleShader(buf, len, defines 0, include 0, Flags 4 = D3DXSHADER_SKIPOPTIMIZATION, &shader, errors 0); D3DAssemble takes the same flag bits
+constexpr UINT kAssembleFlags = 4;
+
 D3DAssembleFn LoadAssembler() {
     static D3DAssembleFn fn = []() -> D3DAssembleFn {
         HMODULE h = LoadLibraryA("d3dcompiler_47.dll");
@@ -567,7 +570,7 @@ IDirect3DVertexShader9* Assemble(const std::string& text) {
     IDirect3DVertexShader9* shader = nullptr;
     IBlob* code = nullptr;
     IBlob* errors = nullptr;
-    const HRESULT hr = assemble(text.data(), text.size(), nullptr, nullptr, nullptr, 0, &code, &errors);
+    const HRESULT hr = assemble(text.data(), text.size(), nullptr, nullptr, nullptr, kAssembleFlags, &code, &errors);
     if (hr >= 0 && code) {
         if (rw::d3d::d3ddevice)
             rw::d3d::d3ddevice->CreateVertexShader(static_cast<const DWORD*>(code->GetBufferPointer()), &shader);
@@ -672,6 +675,19 @@ bool CacheEntryAt(int idx, std::uint32_t& key, std::uint32_t& stamp, IDirect3DVe
     return true;
 }
 void SetAssembleHook(IDirect3DVertexShader9* (*hook)(const std::string&)) { g.hook = hook; }
+
+bool AssembleToBytes(const std::string& text, std::vector<std::uint8_t>& out) {
+    out.clear();
+    D3DAssembleFn assemble = LoadAssembler();
+    if (!assemble) return false;
+    IBlob* code = nullptr; IBlob* errors = nullptr;
+    const HRESULT hr = assemble(text.data(), text.size(), nullptr, nullptr, nullptr, kAssembleFlags, &code, &errors);
+    const bool ok = hr >= 0 && code;
+    if (ok) { const auto* b = static_cast<const std::uint8_t*>(code->GetBufferPointer()); out.assign(b, b + code->GetBufferSize()); }
+    if (code) code->Release();
+    if (errors) errors->Release();
+    return ok;
+}
 
 // 0x75EE60
 void Shutdown() {

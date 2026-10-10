@@ -69,6 +69,11 @@ x=re.findall(r'(\d+) functions, mismatches \(strict / excluding NaN-payload-only
 if x: c,m=int(x[-1][0]),int(x[-1][2])+int(x[-1][4]); f=f or 0
 x=re.findall(r'(\d+) commands, PC24 mismatches \(excluding NaN-payload-only\): (\d+)',t)
 if x: c,m=int(x[-1][0]),int(x[-1][1]); f=f or 0
+x=re.findall(r'(?m)^TOTAL: (\d+) \w+, (\d+) mismatches',t)               # skin oracle tests (cpu / hw)
+if x: c,m=int(x[-1][0]),int(x[-1][1]); f=f or 0
+x=re.findall(r'(?m)^[A-Za-z0-9_]+: (OK|FAILED) \((\d+) failures?\)',t)    # rw_skin_vs_test
+if x: f=int(x[-1][1]); c=c or 1; m=m or 0
+if re.search(r'(?m)^FAILED \(no device\)',t): c=c or 0; f=(f or 0)+1; m=m or 0   # rw_platform_test without a D3D device
 x=re.findall(r'(?m)^(PASSED|FAILED) \((\d+) failed\)',t)
 if x and c is None: c=len(re.findall(r'(?m)^(?:ok|FAIL)\s',t)); f=int(x[-1][1]); m=0
 if c is not None: print(c,f or 0,m or 0)
@@ -84,7 +89,8 @@ for t in $TESTS; do
   if [[ "$MODEL_TESTS" == *" $t "* ]]; then
     case "$t" in rw_skin_hanim_test|rw_skin_pipeline_test|rw_rtanim_rtquat_test) models="male01";; *) models="infernus male01 vgsnbuild07";; esac   # these two need skinned models
     for f in $models; do [ -f "$ASSETS/$f.dff" ] && args+=("Z:${ASSETS//\//\\}\\$f.dff"); done; fi
-  case "$t" in *oracle*) TMO=${TIMEOUT:-900};; *) TMO=${TIMEOUT:-180};; esac
+  case "$t" in *oracle*) TMO=${TIMEOUT:-900};; rw_skin_vs_test) TMO=${TIMEOUT:-900};; *) TMO=${TIMEOUT:-180};; esac   # vs_test: ~2.2M exe-composer keys (> 180 s under Wine)
+  tv="TIMEOUT_$t"; [ -n "${!tv:-}" ] && TMO=${!tv}                                                              # per-test override: TIMEOUT_<test>=<seconds>
   start=$SECONDS; status=NORESULT; res=""; n=0
   while [ $n -lt "$ATTEMPTS" ]; do
     n=$((n+1)); log="$OUT/$t.$n.log"
@@ -99,7 +105,9 @@ for t in $TESTS; do
   done
   if [ -z "$res" ]; then ROWS+="$t - - - $n $((SECONDS-start)) NORESULT"$'\n'; RC=1; continue; fi
   set -- $res
-  if [ "$2" -gt 0 ] || [ "$3" -gt 0 ]; then status=FAIL; RC=1; else status=ok; fi
+  if [ "$2" -gt 0 ] || [ "$3" -gt 0 ]; then status=FAIL; RC=1
+  elif [ "$code" != 0 ]; then status="EXIT$code"; RC=1      # a result line with no failures but a non-zero exit code (77 = exe oracle not available)
+  else status=ok; fi
   ROWS+="$t $1 $2 $3 $n $((SECONDS-start)) $status"$'\n'
 done
 echo; printf '%-30s %8s %9s %10s %8s %7s  %s\n' test checks failures mismatches attempts seconds status

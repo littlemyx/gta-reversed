@@ -4,6 +4,7 @@
 #ifdef NOTSA_RW_LIBRW
 #include <cstdint>
 #include <string>
+#include <vector>
 
 struct IDirect3DVertexShader9;
 
@@ -58,6 +59,7 @@ void Shutdown();    // 0x75EE60: release the cached shaders, reset the cache
 int  CacheCount();                                                               // [0xC94BF8]
 bool CacheEntryAt(int idx, std::uint32_t& key, std::uint32_t& stamp, IDirect3DVertexShader9*& shader, std::uint8_t layout[8]);   // raw entry idx of the cache array
 void SetAssembleHook(IDirect3DVertexShader9* (*hook)(const std::string&));      // replaces D3DAssemble + CreateVertexShader (nullptr = real)
+bool AssembleToBytes(const std::string& text, std::vector<std::uint8_t>& out);  // the run-time assembler (D3DAssemble, the exe's flags) -> bytecode; false on failure
 
 } // namespace notsa::skinvs
 #endif

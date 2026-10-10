@@ -346,6 +346,8 @@ static void TestCurves2() {
     });
     Run("CCurves::CalcCorrectedDist 0x43C880", [](Rng& r, std::string& d) {
         const float total = r.below(10) ? r.f01() * 200.f : GenF(r, 50.f), cur = r.below(4) ? r.f01() * total : GenF(r, 100.f), sv = r.below(3) ? r.f01() : GenF(r, 2.f);
+        // |current / total| >= 2^63/pi is outside the x87 fsin/fcos domain (the instruction returns its operand with C2 set); the port's CRT sin/cos reduce properly. Never reached in game (t in 0..1)
+        if (!(std::fabs(cur / total) < 1e15f)) return true;
         float oa = -1, ob = -1;
         const float a = CCurves::CalcCorrectedDist(cur, total, sv, &oa);
         const float b = oracle::Fn<float __cdecl(float, float, float, float*)>(0x43C880)(cur, total, sv, &ob);

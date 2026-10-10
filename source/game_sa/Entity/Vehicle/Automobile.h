@@ -308,7 +308,7 @@ public:
     }
 
     [[nodiscard]] bool AreAllWheelsNotTouchingGround() const {
-        return std::ranges::all_of(m_fWheelsSuspensionCompression, [](float v) {return v >= 1.f; });
+        return std::ranges::all_of(m_fWheelsSuspensionCompression, [](float v) { return !(v < 1.f); }); // 0x6A6140: FCOMP+JNP, a NaN compression counts as 'not touching'
     }
 
     bool IsAnyWheelMakingContactWithGround() {

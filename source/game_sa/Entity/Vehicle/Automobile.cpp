@@ -4495,15 +4495,15 @@ CPed* CAutomobile::KnockPedOutCar(eWeaponType type, uint16 a2, CPed* ped) {
 // 0x6A44D0
 // UNUSED - Likely inlined?
 void CAutomobile::PopBootUsingPhysics() {
+    // 0x6A44D0: OK -> OPENED, then falls through; OK / DAMAGED -> OPENED_DAMAGED; every other state (opened, opened+damaged, missing) keeps its status
     switch (m_damageManager.GetDoorStatus(eDoors::DOOR_BOOT)) {
-    case DAMSTATE_DAMAGED:
-        return;
     case DAMSTATE_OK:
-        // Original code:
-        // m_damageManager.SetDoorStatus(eDoors::DOOR_BOOT, DAMSTATE_OPENED);
-        // [[fallthrough]]; Probably a mistake from their part. (TODO: Use break here, and uncomment code and see what happens)
-    default:
+        m_damageManager.SetDoorStatus(eDoors::DOOR_BOOT, DAMSTATE_OPENED);
+        [[fallthrough]];
+    case DAMSTATE_DAMAGED:
         m_damageManager.SetDoorStatus(eDoors::DOOR_BOOT, DAMSTATE_OPENED_DAMAGED);
+        break;
+    default:
         break;
     }
     m_doors[eDoors::DOOR_BOOT].m_angVel = -2.f;

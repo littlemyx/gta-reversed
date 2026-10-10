@@ -102,7 +102,7 @@ void InjPump() {
         const auto& ev = s_InjEvents[s_InjNext++];
         SDL_Event e{};
         if (!ev.mark.empty()) {
-            NOTSA_INJ_LOG("[mark] %s at %u ms", ev.mark.c_str(), (unsigned)now);
+            NOTSA_INJ_LOG("[mark] %s at %u ms t=%lu", ev.mark.c_str(), (unsigned)now, (unsigned long)GetTickCount()); // t= is the same clock as the standalone memlog lines
             continue;
         }
         if (ev.mx >= 0) {

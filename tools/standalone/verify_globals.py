@@ -125,6 +125,17 @@ def main():
             f = l.split("\t")
             if len(f) > 3 and f[3] == "data" and f[2].startswith("0x"):
                 raw_casts.add(int(f[2], 16))
+    # .notes/aliases.json decisions: `new_globals` (addresses that are not rows of the table: re-addressed sites, lazy-init variables, tables found by the A4 review)
+    # are legitimate converted globals with their own size; `extents` (grow/extend/shrink) give the true byte size of a row whose declaration is under-/over-sized.
+    new_globals, extent_size = {}, {}
+    ap = REPO / ".notes" / "aliases.json"
+    if ap.exists():
+        aj = json.loads(ap.read_text())
+        for n in aj.get("new_globals", []):
+            new_globals[int(n["addr"], 16)] = int(n["size"])
+        for k, v in aj.get("extents", {}).items():
+            if v.get("kind") in ("grow", "extend", "shrink") and "true_size" in v:
+                extent_size[int(k, 16)] = int(v["true_size"])
     dev = load_deviations(a.deviations)
     dump = load_dump(a.dump)
     # our words that are candidates for code pointers: named through the linker map in one pass
@@ -153,8 +164,13 @@ def main():
         row = rows.get(addr)
         if rows and row is None and addr in raw_casts:
             pass
+        elif rows and row is None and addr in new_globals:
+            if new_globals[addr] != size:
+                xfail.append("%s 0x%X: sizeof %d != aliases.json new_globals size %d" % (g["name"], addr, size, new_globals[addr]))
         elif rows and row is None:
             xfail.append("%s 0x%X: address is not a row of the table (a base+offset or unlisted address?)" % (g["name"], addr))
+        elif row is not None and addr in extent_size and extent_size[addr] == size:
+            pass     # aliases.json extents: the declared type was wrong, the decided true size is what the global has now
         elif row is not None and int(row["size"]) != size:
             xfail.append("%s 0x%X: sizeof %d != table size %s" % (g["name"], addr, size, row["size"]))
         if not (base <= addr and addr + size <= end):

@@ -15,7 +15,7 @@ Forms (scope from the row of DETACH_GLOBALS.tsv, header/.cpp from the file name)
   function scope                       `NOTSA_GLOBAL_LOCAL(n, a, (T), init);`
   class member, category c or initialiser > --inline-max chars and a sibling <stem>.cpp:
                                         header `static NOTSA_GLOBAL_DECL(Cls, n, a, (T));` + `NOTSA_GLOBAL_DEF(Cls, n, a, (T), init);` appended at the END of the .cpp
-  ScopedStaticRef variable             `NOTSA_SCOPED_GLOBAL(v, varA, flagsA, mask, (T), initVal);`   (detached: `static T v = initVal;`, the flag word is dropped)
+  ScopedStaticRef variable             `NOTSA_SCOPED_GLOBAL(v, varA, flagsA, mask, (T), initVal);`   (the macro says `static` itself in both modes; the call-site `static` is dropped; detached: `static T v = initVal;`, the flag word is dropped)
   aliases.json alias declaration       `NOTSA_GLOBAL_ALIAS(n, a, (T), Owner);` ; cast alias `reinterpret_cast<T&>(Owner)`; member `*reinterpret_cast<T*>(reinterpret_cast<uint8*>(&Owner) + off)`
   aliases.json expression alias        `NOTSA_GLOBAL_EXPR(a, (T), Owner)` replaces `StaticRef<T>(a)`
   extern declaration in the sibling header (`extern T& name;` of a namespace-scope .cpp definition)
@@ -273,7 +273,7 @@ def process(path, rows_by_addr, hazards, em, al, args, report):
                 continue
             end = k + 1 + mt.end()
             claimed.append((start, end))
-            new = "%sNOTSA_SCOPED_GLOBAL(%s, %s, %s, %s, (%s), %s);" % (pre, name, args_[0], args_[1], args_[2], ttext, ",".join(text[j + 1:k].split(",")[3:]).strip() if False else ", ".join(args_[3:]))
+            new = "%sNOTSA_SCOPED_GLOBAL(%s, %s, %s, %s, (%s), %s);" % (re.sub(r"\bstatic\s+", "", pre), name, args_[0], args_[1], args_[2], ttext, ",".join(text[j + 1:k].split(",")[3:]).strip() if False else ", ".join(args_[3:]))
             edits.append((start, end, new))
             report.append((rel, name, args_[0], "SCOPED", "static %s, flag word %s dropped" % (ttext, args_[1])))
             continue

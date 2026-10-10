@@ -253,7 +253,69 @@ static void TestHeatSeeking() {
     });
 }
 
+// CShotInfo::Update with creator-less shots (no ped loop): the world effects it triggers are recorded on both sides. The port-side symbols of the (unlinked) World / FireManager TUs are defined here.
+#include "World.h"
+#include "FireManager.h"
+namespace sfx {
+struct Rec { int kind; CVector pos; float a; const void* ent; };
+inline std::vector<Rec> g_rec;
+inline int      g_spray = 0;
+inline CVector  g_sprayDir{};
+inline bool     g_extinguish = false;
+}
+void CWorld::SetCarsOnFire(CVector pos, float radius, CEntity* c) { sfx::g_rec.push_back({ 0, pos, radius, c }); }
+void CWorld::SetWorldOnFire(CVector pos, float radius, CEntity* c) { sfx::g_rec.push_back({ 1, pos, radius, c }); }
+eSprayPaintState CWorld::SprayPaintWorld(CVector& posn, CVector& outDir, float radius, bool f) { sfx::g_rec.push_back({ 2 + (int)f * 10, posn, radius, nullptr }); outDir = sfx::g_sprayDir; return (eSprayPaintState)sfx::g_spray; }
+bool CFireManager::ExtinguishPointWithWater(CVector point, float r, float sz) { sfx::g_rec.push_back({ 3, point, r + sz * 1000.f, nullptr }); return sfx::g_extinguish; }
+namespace sfx {
+static void __cdecl ExeCarsOnFire(CVector pos, float radius, CEntity* c) { g_rec.push_back({ 0, pos, radius, c }); }
+static void __cdecl ExeWorldOnFire(CVector pos, float radius, CEntity* c) { g_rec.push_back({ 1, pos, radius, c }); }
+static int  __cdecl ExeSpray(CVector* posn, CVector* outDir, float radius, bool f) { g_rec.push_back({ 2 + (int)f * 10, *posn, radius, nullptr }); *outDir = g_sprayDir; return g_spray; }
+static bool __fastcall ExeExtinguish(void*, int, CVector point, float r, float sz) { g_rec.push_back({ 3, point, r + sz * 1000.f, nullptr }); return g_extinguish; }
+inline std::string Dump(const std::vector<Rec>& v) { std::string s = std::to_string(v.size()) + " effects"; for (size_t i = 0; i < v.size() && i < 4; ++i) s += " [" + std::to_string(v[i].kind) + V(v[i].pos) + F(v[i].a) + "]"; return s; }
+}
+
+static void TestShotInfoUpdate() {
+    using namespace wfx;
+    if (!Wanted("CShotInfo::Update")) return;
+    oracle::Patch(0x5659F0, (void*)&sfx::ExeCarsOnFire);
+    oracle::Patch(0x56B910, (void*)&sfx::ExeWorldOnFire);
+    oracle::Patch(0x565B70, (void*)&sfx::ExeSpray);
+    oracle::Patch(0x5394C0, (void*)&sfx::ExeExtinguish);
+    Run("CShotInfo::Update (no creators) 0x739E60", [&](Rng& r, std::string& d) {
+        constexpr size_t N = 100 * 0x2c;
+        std::vector<sfx::Rec> ra, re;
+        sfx::g_spray = r.below(3) == 0 ? 1 : 0; sfx::g_sprayDir = GenDir(r); sfx::g_extinguish = r.below(2);
+        Snap wiSave(0xC8AAB8, 0x70 * 80); wiSave.Save();
+        const bool ok = Glob(r, d, 0xC89690, N, [&](Rng& rr, uint8* g) {
+                FillU(rr, g, N);
+                for (int i = 0; i < 100; ++i) {
+                    uint8* e = g + i * 0x2c;
+                    static const int types[] = { 37, 37, 41, 42, 16, 22, 0, 38 };
+                    Put<int32_t>(e, 0, rr.below(4) ? types[rr.below(8)] : rr.below(60));
+                    for (int k = 0; k < 3; ++k) { Put<float>(e, 4 + 4 * k, GenF(rr, 50.f)); Put<float>(e, 0x10 + 4 * k, GenF(rr, 0.5f, S_NAN | S_ZERO | S_TINY)); }
+                    Put<float>(e, 0x1c, rr.below(4) ? rr.f01() * 10.f : GenF(rr, 20.f));
+                    Put<uint32_t>(e, 0x20, 0);                                                     // creator
+                    Put<float>(e, 0x24, rr.below(2) ? (float)(CTimer::GetTimeInMS()) + GenF(rr, 5000.f) : GenF(rr, 1e6f));
+                    Put<uint8>(e, 0x28, rr.below(3) != 0); Put<uint8>(e, 0x29, rr.below(2));
+                }
+                FillU(rr, (uint8*)0xC8AAB8, 0x70 * 80);                                          // weapon info flags (bSlowdown / bRangeIncreasesOverTime ...)
+                CTimer::m_snTimeInMilliseconds = rr.u32() & 0xFFFFF; CTimer::m_FrameCounter = rr.u32() & 0xFFFF;
+                CTimer::ms_fTimeStep = rr.below(6) ? 0.2f + rr.f01() * 2.f : GenF(rr, 3.f, S_NAN | S_ZERO | S_TINY);   // (no denormals / huge values: the pow underflow and the denormal float stores of the extended product are not what is tested)
+            },
+            [&] { sfx::g_rec.clear(); CShotInfo::Update(); ra = sfx::g_rec; return 0u; },
+            [&] { sfx::g_rec.clear(); oracle::Fn<void __cdecl()>(0x739E60)(); re = sfx::g_rec; return 0u; }, 2);
+        wiSave.Restore();
+        bool same = ra.size() == re.size();
+        for (size_t i = 0; same && i < ra.size(); ++i) same = ra[i].kind == re[i].kind && SameV(ra[i].pos, re[i].pos) && SameF(ra[i].a, re[i].a) && ra[i].ent == re[i].ent;
+        Hit(!ra.empty());
+        if (ok && same) return true;
+        d += " port " + sfx::Dump(ra) + " exe " + sfx::Dump(re); return false;
+    });
+}
+
 static void TestWeapons() {
     TestWeaponMisc();
     TestHeatSeeking();
+    TestShotInfoUpdate();
 }

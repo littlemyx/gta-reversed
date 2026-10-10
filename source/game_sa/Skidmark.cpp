@@ -32,8 +32,8 @@ void CSkidmark::Update() {
             break;
 
         const auto UpdateTime = [this, timeMS](uint32 low, uint32 high) {
-            m_fadeBeginMs += timeMS + low;
-            m_disappearAtMs += timeMS + high;
+            m_fadeBeginMs = timeMS + low;     // 0x7205C0: plain assignment (the old port accumulated with +=)
+            m_disappearAtMs = timeMS + high;
         };
 
         m_nState = eSkidmarkState::DISAPPEARING;

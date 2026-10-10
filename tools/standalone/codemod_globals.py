@@ -12,7 +12,7 @@ Forms (scope from the row of DETACH_GLOBALS.tsv, header/.cpp from the file name)
   class member / .cpp namespace scope  `static inline NOTSA_GLOBAL(n, a, (T), init);`           (specifiers stay as written)
   header namespace scope               `NOTSA_GLOBAL_HDR(n, a, (T), init);`                  (`static`/`inline` dropped: ONE definition, `inline`)
                                        `NOTSA_GLOBAL_HDR_EXT(...)` when the old text was `inline auto&` without `static` (address mode keeps `inline`)
-  function scope                       `NOTSA_GLOBAL_LOCAL(n, a, (T), init);`
+  function scope                       `NOTSA_GLOBAL_LOCAL(n, a, (T), init);`   (`NOTSA_GLOBAL_LOCAL_NS` when the old local `auto&` had no `static`)
   class member, category c, initialiser > --inline-max chars or a type that mentions the enclosing class, with a sibling <stem>.cpp:
                                         header `static NOTSA_GLOBAL_DECL(Cls, n, a, (T));` + `NOTSA_GLOBAL_DEF(Cls, n, a, (T), init);` appended at the END of the .cpp
   ScopedStaticRef variable             `NOTSA_SCOPED_GLOBAL(v, varA, flagsA, mask, (T), initVal);`   (the macro says `static` itself in both modes; the call-site `static` is dropped; detached: `static T v = initVal;`, the flag word is dropped)
@@ -371,7 +371,8 @@ def process(path, rows_by_addr, hazards, em, al, args, report):
             defs.append((cls, name, "NOTSA_GLOBAL_DEF(%s, %s, %s, (%s), %s);\n" % (cls, name, mt.group("addr"), ttext, wrap_init(init, 0))))
             kind = "DECL+DEF"
         elif local:
-            new = "NOTSA_GLOBAL_LOCAL(%s, %s, (%s), %s);" % (name, mt.group("addr"), ttext, wrap_init(init, indent))
+            # `static auto&` -> LOCAL; a local `auto&` WITHOUT `static` -> LOCAL_NS (address mode keeps the non-static reference: identical object code)
+            new = "%s(%s, %s, (%s), %s);" % ("NOTSA_GLOBAL_LOCAL" if "static" in pre else "NOTSA_GLOBAL_LOCAL_NS", name, mt.group("addr"), ttext, wrap_init(init, indent))
             kind = "LOCAL"
         elif is_header and not in_class:
             # `static inline auto&` -> HDR (internal linkage, address mode keeps `static inline`); `inline auto&` without `static` -> HDR_EXT (external linkage: the

@@ -114,6 +114,11 @@ bool CTaskComplexGangLeader::ShouldLoadGangAnims() {
 
 // 0x65E860
 void CTaskComplexGangLeader::DoGangAbuseSpeech(CPed* talker, CPed* sayTo) {
+#ifdef NOTSA_STANDALONE_RUN
+    if (!talker || !sayTo) { // the exe dereferences both unconditionally (0x65E865/0x65E882); CTaskComplexStareAtPed passes its ref-cleared target when that ped died
+        return;
+    }
+#endif
     if (!talker->IsGangster()) {
         return;
     }

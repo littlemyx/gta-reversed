@@ -101,12 +101,33 @@ void BoneNode_c::EulerToQuat(const CVector& angles, RtQuat& outQuat) {
     outQuat.real   = (float)((double)r * (double)D);
 }
 
+// atan2(y, x) * 180 * (1/pi) on the x87 stack: `fpatan` and both multiplications round at the CURRENT precision control (PC=24 in game); a CRT atan2 returning a double
+// followed by separate multiplications double-rounds differently
+#if defined(_MSC_VER) && !defined(__clang__) && defined(_M_IX86)
+static float AtanDeg(double y, double x) {
+    const float c180 = 180.0f;                              // 0x85A994
+    const float cInvPi = std::bit_cast<float>(0x3EA2F983u); // 0x86D2B4
+    float r;
+    __asm {
+        fld qword ptr [y]
+        fld qword ptr [x]
+        fpatan
+        fmul dword ptr [c180]
+        fmul dword ptr [cInvPi]
+        fstp dword ptr [r]
+    }
+    return r;
+}
+#else
+static float AtanDeg(double y, double x) { return (float)(std::atan2(y, x) * 180.0 * (double)std::bit_cast<float>(0x3EA2F983u)); }
+#endif
+
 // 0x617080
 void BoneNode_c::QuatToEuler(const RtQuat& quat, CVector& outAngles) {
     // Exact x87 form of the exe (0x617080): intermediates stay in extended precision (doubles here), only A..D, V and the results are spilled to floats.
     // Degrees = atan2(..) * 180 * (1/PI as float 0x86D2B4) (two separate multiplications), NOT common.h's RadiansToDegrees.
-    constexpr double kInvPi = (double)std::bit_cast<float>(0x3EA2F983u); // 0x86D2B4
-    const auto ToDeg = [](double a) { return (float)(a * 180.0 * kInvPi); };
+    // atan2(y, x) * 180 * (1/pi) on the x87 stack: `fpatan` and both multiplications round at the CURRENT precision control (PC=24 in game); a CRT atan2 returning a double
+    // followed by separate multiplications double-rounds differently
 
     const double x = quat.imag.x;
     const double y = quat.imag.y;
@@ -120,16 +141,16 @@ void BoneNode_c::QuatToEuler(const RtQuat& quat, CVector& outAngles) {
     const double s = -(2.0 * (z * x) - 2.0 * (w * y));
     const float  V = (float)std::sqrt(1.0 - s * s);
 
-    outAngles.y = ToDeg(std::atan2(s, (double)V));
+    outAngles.y = AtanDeg(s, (double)V);
     if (s == 1.0 || s == -1.0) { // Gimbal lock case: Yaw and Roll collapse into a single degree of freedom
         const double E = (1.0 - 2.0 * (x * x)) - 2.0 * (z * z);
         const double G = -(2.0 * (z * y) - 2.0 * (w * x));
-        outAngles.x = ToDeg(std::atan2(G, E));
-        outAngles.z = ToDeg(std::atan2(0.0, 1.0));
+        outAngles.x = AtanDeg(G, E);
+        outAngles.z = AtanDeg(0.0, 1.0);
     } else { // General case
         const double r = 1.0 / (double)V;
-        outAngles.x = ToDeg(std::atan2((double)C * r, (double)D * r));
-        outAngles.z = ToDeg(std::atan2((double)B * r, (double)A * r));
+        outAngles.x = AtanDeg((double)C * r, (double)D * r);
+        outAngles.z = AtanDeg((double)B * r, (double)A * r);
     }
 }
 

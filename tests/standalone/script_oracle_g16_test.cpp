@@ -232,6 +232,7 @@ CTaskComplexPartnerChat::CTaskComplexPartnerChat(const char* name, CPed* partner
 static void* __fastcall H_cLeave(void* self, int, int delay, int a, int b) { LogU(57, { TaskOrd(self), (uint32_t)delay, (uint8_t)a, (uint8_t)b }); return self; }
 CTaskComplexLeaveAnyCar::CTaskComplexLeaveAnyCar(int32 delay, bool a, bool b) { LogU(57, { TaskOrd(this), (uint32_t)delay, (uint8_t)a, (uint8_t)b }); }
 static void* __fastcall H_cThreat(void* self, int, int a, int b, int c) { LogU(58, { TaskOrd(self), (uint8_t)a, (uint8_t)b, (uint8_t)c }); return self; }
+CTask::~CTask() {}   // Task.cpp is not linked; the dtor is out of line since f0896a29, and the stack task of TASK_TOGGLE_PED_THREAT_SCANNER destroys through it (unresolved -> /FORCE jump to 0x400000)
 CTaskSimpleTogglePedThreatScanner::CTaskSimpleTogglePedThreatScanner(bool a, bool b, bool c) { LogU(58, { TaskOrd(this), (uint8_t)a, (uint8_t)b, (uint8_t)c }); }
 static int __fastcall H_threatProc(void* self, int, void* ped) { LogU(59, { TaskOrd(self), Tag(ped) }); return 1; }
 bool CTaskSimpleTogglePedThreatScanner::ProcessPed(CPed* ped) { LogU(59, { TaskOrd(this), Tag(ped) }); return true; }

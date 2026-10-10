@@ -686,6 +686,9 @@ if (${RE_PROJECT}_RW_LIBRW)
         game_sa/Animation/AnimBlendNode.cpp
         game_sa/Curves.cpp
         game_sa/Entity/Physical.cpp
+        game_sa/Collision/ColourSet.cpp
+        game_sa/Collision/Box.cpp
+        game_sa/Shadows.cpp
         game_sa/Entity/Placeable.cpp
         game_sa/CullZones.cpp
         game_sa/CarCtrl.cpp

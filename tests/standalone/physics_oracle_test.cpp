@@ -1,7 +1,7 @@
 // P2E-2: differential test of numerically sensitive GAME subsystems against the original machine code (exe oracle, see game_oracle.h; harness as in game_oracle_test.cpp).
 // Covered: CAnimBlendNode key-frame state machine, CCurves, CPhysical force/speed helpers on a fake entity (raw zeroed buffer with the real layout), plus whatever
 // physics_oracle_cd.inc (CCarCtrl / CPathFind / CTimeCycle ... helpers) and physics_oracle_misc.inc add. Bit-exact compare at PC=24 (game) and PC=53 (info).
-// usage: physics_oracle_test.exe [-v] [-v53] [-vn] [-n cases] [name-substring ...]     (exit code 0 = no real mismatch at PC=24)
+// usage: physics_oracle_test.exe [-v] [-v53] [-vn] [-trace (print every case index)] [-n cases] [name-substring ...]     (exit code 0 = no real mismatch at PC=24)
 #include "game_oracle.h"
 
 #include "Collision.h"
@@ -23,6 +23,7 @@
 #include <cstdlib>
 #include <cstring>
 #include <float.h>
+#include <crtdbg.h>
 #include <string>
 #include <vector>
 
@@ -107,6 +108,7 @@ static bool SameQ(const CQuaternion& a, const CQuaternion& b) { return SameF(a.x
 
 // ---------------------------------------------------------------------------------------------------------------------------------
 static int  g_cases = 4000;
+static bool g_trace = false;
 static bool g_verbose = false, g_verbose53 = false, g_verboseNan = false;
 static std::vector<std::string> g_filters;
 static int g_hits = 0;
@@ -118,6 +120,24 @@ static bool Wanted(const std::string& name) {
     if (g_filters.empty()) return true;
     for (auto& f : g_filters) if (name.find(f) != std::string::npos) return true;
     return false;
+}
+// watchdog: a case that runs longer than 8 s is reported with the main thread's EIP / stack (map the address with the linker .map) and the test exits
+static volatile DWORD g_caseTick = 0;
+static HANDLE g_mainThread = nullptr;
+static DWORD WINAPI WatchdogProc(LPVOID) {
+    for (;;) {
+        Sleep(1000);
+        const DWORD t = g_caseTick;
+        if (t && GetTickCount() - t > 8000) {
+            SuspendThread(g_mainThread);
+            CONTEXT cx{}; cx.ContextFlags = CONTEXT_CONTROL | CONTEXT_INTEGER;
+            GetThreadContext(g_mainThread, &cx);
+            std::printf("\n  HANG in '%s': EIP=%08lX ESP=%08lX EBP=%08lX stack:", oracle::g_where, cx.Eip, cx.Esp, cx.Ebp);
+            for (int i = 0; i < 12; ++i) std::printf(" %08lX", ((const unsigned long*)cx.Esp)[i]);
+            std::printf("\n"); std::fflush(stdout);
+            std::exit(4);
+        }
+    }
 }
 static void SetPC(int bits) { unsigned cw; _controlfp_s(&cw, bits == 24 ? _PC_24 : _PC_53, _MCW_PC); }
 
@@ -138,6 +158,8 @@ static void Run(const std::string& name, Fn&& fn, int cases = 0) {
             r.sp = spTab[i % 6];
             std::string d;
             g_nanDiff = g_hardDiff = g_special = false;
+            if (g_trace) std::printf("[%s PC%d case %d]\n", name.c_str(), pc, i);
+            g_caseTick = GetTickCount();
             if (!fn(r, d)) {
                 const bool payloadOnly = g_nanDiff && !g_hardDiff;
                 (pc == 24 ? row.bad24 : row.bad53)++;
@@ -147,6 +169,7 @@ static void Run(const std::string& name, Fn&& fn, int cases = 0) {
             }
         }
     }
+    g_caseTick = 0;
     SetPC(53);
     row.hits = g_hits;
     std::printf("%-58s %5d%s  PC24 %4d [reg %d spec %d nanpayload %d]  PC53 %4d [reg %d spec %d nanpayload %d]\n", name.c_str(), N, row.hits ? (" true:" + std::to_string(row.hits)).c_str() : "", row.bad24, row.hardReg24, row.hardSpec24, row.nan24,
@@ -420,21 +443,36 @@ static std::string PhysDesc(PhysFx& f) { return "ts " + F(CTimer::ms_fTimeStep) 
 #include "physics_oracle_misc.inc"
 
 // ---------------------------------------------------------------------------------------------------------------------------------
+static int __cdecl AssertHook(int, char* msg, int*) {   // prints the call stack of a failed assert (map the addresses with the linker .map)
+    void* fr[16]; const USHORT n = RtlCaptureStackBackTrace(0, 16, fr, nullptr);
+    std::fprintf(stderr, "ASSERT: %s\n  frames:", msg);
+    for (USHORT i = 0; i < n; ++i) std::fprintf(stderr, " %p", fr[i]);
+    std::fprintf(stderr, "\n"); std::fflush(stderr);
+    return 0;
+}
 int main(int argc, char** argv) {
     std::setvbuf(stdout, nullptr, _IONBF, 0);
     for (int i = 1; i < argc; ++i) {
         if (!std::strcmp(argv[i], "-v")) g_verbose = true;
         else if (!std::strcmp(argv[i], "-v53")) g_verbose53 = true;
         else if (!std::strcmp(argv[i], "-vn")) g_verboseNan = true;
+        else if (!std::strcmp(argv[i], "-trace")) g_trace = true;
         else if (!std::strcmp(argv[i], "-n") && i + 1 < argc) g_cases = std::atoi(argv[++i]);
         else g_filters.push_back(argv[i]);
     }
+    _CrtSetReportHook(AssertHook);
+    _set_error_mode(_OUT_TO_STDERR);   // CRT assert()/abort: text on stderr instead of a MessageBox (which blocks forever)
+    _set_abort_behavior(0, _WRITE_ABORT_MSG | _CALL_REPORTFAULT);
+    _CrtSetReportMode(_CRT_ASSERT, _CRTDBG_MODE_FILE); _CrtSetReportFile(_CRT_ASSERT, _CRTDBG_FILE_STDERR);
+    _CrtSetReportMode(_CRT_ERROR, _CRTDBG_MODE_FILE); _CrtSetReportFile(_CRT_ERROR, _CRTDBG_FILE_STDERR);
     const char* exe = std::getenv("RW_EXE_ORACLE");
     if (!exe) { std::printf("physics_oracle_test: set RW_EXE_ORACLE=<path of gta_sa_compact.exe>; skipped\n"); return 0; }
     if (!oracle::Map(exe)) { std::printf("FATAL: cannot map the exe\n"); return 2; }
     *reinterpret_cast<int*>(0xC9C400) = 1;
     oracle::Patch(0x82872C, (void*)&HostMathErr);
     oracle::Patch(0x827B3D, (void*)&HostGetPtd);
+    DuplicateHandle(GetCurrentProcess(), GetCurrentThread(), GetCurrentProcess(), &g_mainThread, 0, FALSE, DUPLICATE_SAME_ACCESS);
+    CreateThread(nullptr, 0, WatchdogProc, nullptr, 0, nullptr);
     std::printf("physics_oracle_test: %d cases per function and precision mode; PC24 = game mode (D3D CreateDevice), PC53 = CRT default\n", g_cases);
     TestAnimNode2();
     TestCurves2();

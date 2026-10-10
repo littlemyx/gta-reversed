@@ -62,13 +62,21 @@ void CBulletInfo::AddBullet(CEntity* creator, eWeaponType weaponType, CVector po
 // 0x7360D0
 void CBulletInfo::Update() {
     for (auto& info : aBulletInfos) {
-        if (info.IsTimeToBeDestroyed())
-            info.m_bExists = false; /* next line checks */
+        // 0x736105 / 0x736126: a bullet that does not exist is skipped, then an expired one is switched off but STILL processed this last frame
         if (!info.m_bExists)
             continue;
+        if (info.IsTimeToBeDestroyed())
+            info.m_bExists = false;
 
-        CVector newPosition = info.m_vecPosition + info.m_vecVelocity * (CTimer::GetTimeStep() / 2.0f);
-        if (!CWorld::IsInWorldBounds(newPosition)) {
+        // 0x736143: half = timeStep * 0.5; the x product stays on the x87 stack, the y / z products are spilled to floats
+        const double half = (double)CTimer::GetTimeStep() * 0.5f;
+        CVector newPosition;
+        newPosition.x = (float)(half * info.m_vecVelocity.x + info.m_vecPosition.x);
+        newPosition.y = (float)((double)(float)(half * info.m_vecVelocity.y) + info.m_vecPosition.y);
+        newPosition.z = (float)((double)(float)(half * info.m_vecVelocity.z) + info.m_vecPosition.z);
+        // 0x7361B0: FCOMP + JNP / JE forms, a NaN coordinate counts as inside the (-3000, 3000) bounds
+        const auto InsideAxis = [](float v) { return !(v <= -3000.0f) && !(v >= 3000.0f); };
+        if (!(InsideAxis(newPosition.x) && InsideAxis(newPosition.y))) {
             info.m_bExists = false;
             continue;
         }

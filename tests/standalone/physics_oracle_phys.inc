@@ -6,7 +6,7 @@ static void PhysRun(const char* name, Body body, int cases = 0) {
         std::string extra;
         const bool ok = body(r, a.p(), e.p(), extra);
         if (ok && SamePhys(a, e)) return true;
-        d = PhysDesc(e) + " " + extra + " | got " + Hex(a.e, sizeof a.e) + " exe " + Hex(e.e, sizeof e.e);
+        d = PhysDesc(e) + " " + extra + DiffDesc(a.e, e.e, sizeof a.e, "ent") + DiffDesc(a.m, e.m, sizeof a.m, "mat");
         return false;
     }, cases);
 }

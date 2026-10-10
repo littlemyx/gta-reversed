@@ -397,8 +397,20 @@ static void BuildPhys(Rng& r, PhysFx& f) {
     CTimer::ms_fTimeStep = r.below(8) ? r.f01() * 3.f : GenF(r, 4.f);
     f.Rewire();
 }
-static bool SamePhys(PhysFx& a, PhysFx& b) { return SameBlob(a.e, b.e, sizeof a.e) & SameBlob(a.m, b.m, sizeof a.m); }
-static std::string PhysDesc(PhysFx& f) { return "ent " + Hex(f.e, sizeof f.e) + " mat " + Hex(f.m, sizeof f.m) + " ts " + F(CTimer::ms_fTimeStep); }
+static bool SamePhys(PhysFx& a, PhysFx& b) {
+    PhysFx x(a), y(b);   // the m_matrix pointers differ by construction
+    reinterpret_cast<CPlaceable*>(x.e)->m_matrix = nullptr; reinterpret_cast<CPlaceable*>(y.e)->m_matrix = nullptr;
+    return SameBlob(x.e, y.e, sizeof x.e) & SameBlob(x.m, y.m, sizeof x.m);
+}
+static std::string DiffDesc(const void* a, const void* b, size_t n, const char* tag) {   // differing dwords only
+    std::string s; int shown = 0;
+    for (size_t i = 0; i + 4 <= n && shown < 8; i += 4) {
+        uint32_t x, y; std::memcpy(&x, (const uint8*)a + i, 4); std::memcpy(&y, (const uint8*)b + i, 4);
+        if (x != y) { char t[80]; std::snprintf(t, sizeof t, " %s+%02zX got %08X exe %08X", tag, i, x, y); s += t; ++shown; }
+    }
+    return s;
+}
+static std::string PhysDesc(PhysFx& f) { return "ts " + F(CTimer::ms_fTimeStep) + " flags " + std::to_string(*reinterpret_cast<uint32_t*>(&f.p().m_nPhysicalFlags)) + " mass " + F(f.p().m_fMass) + " tmass " + F(f.p().m_fTurnMass) + " com " + V(f.p().m_vecCentreOfMass) + " ms " + V(f.p().m_vecMoveSpeed) + " ts " + V(f.p().m_vecTurnSpeed); }
 
 #include "physics_oracle_phys.inc"
 #include "physics_oracle_cd.inc"

@@ -314,8 +314,39 @@ static void TestShotInfoUpdate() {
     });
 }
 
+// CBulletInfo::Update, no hits (the scripted line of sight never hits) and no creators
+static void TestBulletInfoUpdate() {
+    using namespace wfx;
+    Run("CBulletInfo::Update (no hits) 0x7360D0", [&](Rng& r, std::string& d) {
+        constexpr size_t N = 0xC888B8 - 0xC88740;
+        los::script.clear();
+        std::vector<los::Call> ca, ce;
+        const bool ok = Glob(r, d, 0xC88740, N, [&](Rng& rr, uint8* g) {
+                FillU(rr, g, N);
+                for (int i = 0; i < 8; ++i) {
+                    uint8* e = g + i * 0x2c;
+                    static const int types[] = { 22, 34, 34, 30, 31, 25, 38, 0 };
+                    Put<int32_t>(e, 0, rr.below(3) ? types[rr.below(8)] : rr.below(60));
+                    Put<uint32_t>(e, 4, 0);                                                           // creator
+                    Put<float>(e, 8, rr.below(2) ? (float)CTimer::GetTimeInMS() + GenF(rr, 3000.f) : GenF(rr, 1e6f));
+                    Put<uint8>(e, 0xC, rr.below(4) != 0);
+                    const float sc = rr.below(4) ? 100.f : 21000.f;
+                    for (int k = 0; k < 3; ++k) { Put<float>(e, 0x10 + 4 * k, GenF(rr, sc)); Put<float>(e, 0x1c + 4 * k, GenF(rr, rr.below(2) ? 3.f : 300.f)); }
+                }
+                CTimer::m_snTimeInMilliseconds = rr.u32() & 0xFFFFF;
+                CTimer::ms_fTimeStep = rr.below(6) ? 0.2f + rr.f01() * 2.f : GenF(rr, 3.f);
+            },
+            [&] { los::Reset(); CBulletInfo::Update(); ca = los::calls; return 0u; },
+            [&] { los::Reset(); oracle::Fn<void __cdecl()>(0x7360D0)(); ce = los::calls; return 0u; }, 2);
+        Hit(!ca.empty());
+        if (ok && los::SameCalls(ca, ce)) return true;
+        d += " port " + los::Describe(ca) + " exe " + los::Describe(ce); return false;
+    });
+}
+
 static void TestWeapons() {
     TestWeaponMisc();
     TestHeatSeeking();
     TestShotInfoUpdate();
+    TestBulletInfoUpdate();
 }

@@ -3342,6 +3342,9 @@ void CVehicle::SetupRender() {
 }
 
 // 0x6D6C00
+// Rewritten from the asm (oracle bit-exact): the x87 stack keeps `right`, the clamp bounds and the force magnitudes unrounded (double here), the spill points are
+// the float temporaries. The old port differed in: dot product order, the coast-brake test (`mass < 500` not `brake > 500`), the burst-tyre random term,
+// the traction-limit flags, the force vector assembly (spilled products) and the move/turn force magnitudes (inlined GetMass in extended precision).
 void CVehicle::ProcessWheel(CVector& wheelFwd, CVector& wheelRight,
                             CVector& wheelContactSpeed, CVector& wheelContactPoint,
                             int32 wheelsOnGround,
@@ -3353,122 +3356,175 @@ void CVehicle::ProcessWheel(CVector& wheelFwd, CVector& wheelRight,
     static auto& bDriving = StaticRef<bool>(0xC1CDAD); // false
     static auto& bAlreadySkidding = StaticRef<bool>(0xC1CDAC); // false
 
-    float right = 0.0f;
-    float fwd = 0.0f;
-    float contactSpeedFwd = DotProduct(wheelFwd, wheelContactSpeed);
-    float contactSpeedRight = DotProduct(wheelRight, wheelContactSpeed);
+    const auto  statusIsPlayerLike = [&] { const auto st = (int)GetStatus(); return st == 0 || st == 8; }; // `shr al, 3; test al, al; je / cmp al, 8`
+    const auto& cs = wheelContactSpeed;
 
-    bBraking = brake != 0.0f;
-    bDriving = !bBraking;
-    if (bDriving && thrust == 0.0f)
-        bDriving = false;
+    // 0x6D6C10 - ((y + x) + z), spilled to float
+    const float contactSpeedFwd = (float)(((double)wheelFwd.y * cs.y + (double)wheelFwd.x * cs.x) + (double)cs.z * wheelFwd.z);
 
-    adhesion *= CTimer::GetTimeStep();
+    bBraking = !(brake == 0.0f); // `fcom; test ah, 0x44; jnp`: NaN counts as braking
+    bDriving = !bBraking && !(thrust == 0.0f);
+
+    adhesion = (float)((double)CTimer::GetTimeStep() * adhesion); // spilled
     if (*wheelState != WHEEL_STATE_NORMAL) {
+        adhesion = (float)((double)adhesion * m_pHandlingData->m_fTractionLoss);
         bAlreadySkidding = true;
-        adhesion *= m_pHandlingData->m_fTractionLoss;
-        if (*wheelState == WHEEL_STATE_SPINNING) {
-            if (GetStatus() == STATUS_PLAYER || GetStatus() == STATUS_REMOTE_CONTROLLED)
-                adhesion *= (1.0f - fabs(m_GasPedal) * WS_ALREADY_SPINNING_LOSS);
+        if (*wheelState == WHEEL_STATE_SPINNING && statusIsPlayerLike()) {
+            adhesion = (float)((1.0 - std::fabs((double)m_GasPedal) * WS_ALREADY_SPINNING_LOSS) * adhesion);
         }
     }
-
     *wheelState = WHEEL_STATE_NORMAL;
 
-    if (contactSpeedRight != 0.0f) {
-        right = -(contactSpeedRight / wheelsOnGround);
+    // 0x6D6CEC - ((y + z) + x), spilled to float
+    const float contactSpeedRight = (float)(((double)wheelRight.y * cs.y + (double)wheelRight.z * cs.z) + (double)wheelRight.x * cs.x);
+
+    double right = 0.0;   // the x87 stack value
+    float  fwd   = 0.0f;  // [esp + 0x10]
+    if (!(contactSpeedRight == 0.0f)) {
+        const float rightF = (float)(-((double)contactSpeedRight / wheelsOnGround)); // fild; fdivr; fchs; fst
+        right = rightF;
         if (wheelStatus == WHEEL_STATUS_BURST) {
-            float fwdspeed = std::min(contactSpeedFwd, fBurstSpeedMax);
-            right += fwdspeed * CGeneral::GetRandomNumberInRange(-fBurstTyreMod, fBurstTyreMod) ;
+            const float speed = (contactSpeedFwd < fBurstSpeedMax) ? contactSpeedFwd : fBurstSpeedMax;
+            const float hi    = fBurstTyreMod;
+            const float lo    = (float)((double)fBurstTyreMod * -1.0f);
+            const double rnd  = (double)rand() * (double)RAND_MAX_FLOAT_RECIPROCAL; // 0x6D6D76: rnd * (hi - lo) + lo
+            right = ((rnd * ((double)hi - lo) + lo) * speed) + rightF;
         }
     }
 
     if (bDriving) {
         fwd = thrust;
-        right = std::clamp(right, -adhesion, adhesion);
-    }
-    else if (contactSpeedFwd != 0.0f) {
-        fwd = -contactSpeedFwd / wheelsOnGround;
-        if (!bBraking && std::fabs(m_GasPedal) < 0.01f) {
-            if (IsBike())
-                brake = gHandlingDataMgr.fWheelFriction * 0.6f / (m_pHandlingData->m_fMass + 200.0f);
-            else if (IsSubPlane())
-                brake = 0.0f;
-            else {
-                brake = gHandlingDataMgr.fWheelFriction / m_pHandlingData->m_fMass;
-
-                if (brake > 500.0f)
-                    brake *= 0.1f;
-                else if (m_nModelIndex == MODEL_RCBANDIT)
-                    brake *= 0.2f;
+        if (right > 0.0) {
+            if (!(right <= adhesion)) {
+                right = adhesion;
+            }
+        } else {
+            const float negAdh = -adhesion;
+            if (right < negAdh) {
+                right = negAdh;
             }
         }
-        if (brake > adhesion) {
+    } else if (!(contactSpeedFwd == 0.0f)) {
+        fwd = (float)(-((double)contactSpeedFwd / wheelsOnGround));
+        double brakeV = brake;
+        if (!bBraking && std::fabs(m_GasPedal) < 0.01f) { // `fcomp 0.01; test ah, 5; jp` => NaN keeps the passed brake
+            const double fric = gHandlingDataMgr.fWheelFriction;
+            if (m_nVehicleType == VEHICLE_TYPE_BIKE) {
+                brakeV = (fric * 0.6f) / ((double)m_pHandlingData->m_fMass + 200.0f);
+            } else if (IsSubPlane()) {
+                brakeV = 0.0;
+            } else {
+                brakeV = fric / m_pHandlingData->m_fMass;
+                if (m_pHandlingData->m_fMass < 500.0f) {
+                    brakeV *= 0.1f;
+                } else if (m_nModelIndex == MODEL_RCBANDIT) {
+                    brakeV *= 0.2f;
+                }
+            }
+        }
+        if (!(brakeV <= adhesion)) {
             if (std::fabs(contactSpeedFwd) > 0.005f) {
                 *wheelState = WHEEL_STATE_FIXED;
             }
+        } else if (fwd > 0.0f) {
+            if (fwd > brakeV) {
+                fwd = (float)brakeV;
+            }
         } else {
-            fwd = std::clamp(fwd, -brake, brake);
+            const double negBrake = -brakeV;
+            if (fwd < negBrake) {
+                fwd = (float)negBrake;
+            }
         }
     }
 
-    float speedSq = right * right + fwd * fwd;
-    if (speedSq > adhesion * adhesion) {
+    // 0x6D6F32
+    const double sumSq  = right * right + (double)fwd * fwd;
+    const float  sumSqF = (float)sumSq;
+    if (sumSq > (double)adhesion * adhesion) {
         if (*wheelState != WHEEL_STATE_FIXED) {
-            float tractionLimit = WS_TRAC_FRAC_LIMIT;
-            if (contactSpeedFwd > 0.15f && (!wheelId || wheelId == CAR_WHEEL_FRONT_RIGHT)) {
+            double tractionLimit = WS_TRAC_FRAC_LIMIT;
+            if (contactSpeedFwd > 0.15f && (wheelId == 0 || wheelId == 2)) { // `test al, al; je / cmp al, 2`
                 tractionLimit += tractionLimit;
             }
-            if (bDriving && tractionLimit * adhesion < std::fabs(fwd))
-                *wheelState = WHEEL_STATE_SPINNING;
-            else
-                *wheelState = WHEEL_STATE_SKIDDING;
+            *wheelState = (bDriving && tractionLimit * adhesion < std::fabs((double)fwd)) ? WHEEL_STATE_SPINNING : WHEEL_STATE_SKIDDING;
         }
-        float tractionLoss = m_pHandlingData->m_fTractionLoss;
+        double tractionLoss = m_pHandlingData->m_fTractionLoss;
         if (bAlreadySkidding) {
-            tractionLoss = 1.0f;
-        } else if (*wheelState == WHEEL_STATE_SPINNING) {
-            if (GetStatus() == STATUS_PLAYER || GetStatus() == STATUS_REMOTE_CONTROLLED) {
-                tractionLoss = tractionLoss * (1.0f - std::fabs(m_GasPedal) * WS_ALREADY_SPINNING_LOSS);
-            }
+            tractionLoss = 1.0;
+        } else if (*wheelState == WHEEL_STATE_SPINNING && statusIsPlayerLike()) {
+            tractionLoss = (1.0 - std::fabs((double)m_GasPedal) * WS_ALREADY_SPINNING_LOSS) * tractionLoss;
         }
-        float l = sqrt(speedSq);
-        fwd *= adhesion * tractionLoss / l;
-        right *= adhesion * tractionLoss / l;
+        const double scale = (tractionLoss / std::sqrt((double)sumSqF)) * adhesion;
+        fwd   = (float)((double)fwd * scale);
+        right = right * scale;
     }
 
-    if (fwd != 0.0f || right != 0.0f) {
-        bool separateTurnForce = false;
-        CVector totalSpeed = fwd * wheelFwd + right * wheelRight;
-        CVector turnDirection  = totalSpeed;
-
-        if (m_pHandlingData->m_fSuspensionAntiDiveMultiplier > 0.0f) {
-            if (bBraking) {
-                separateTurnForce = true;
-                turnDirection -= (m_pHandlingData->m_fSuspensionAntiDiveMultiplier * wheelFwd * fwd);
-            }
-            else if (bDriving) {
-                separateTurnForce = true;
-                turnDirection -= (0.5f * m_pHandlingData->m_fSuspensionAntiDiveMultiplier * wheelFwd * fwd);
-            }
-        }
-
-        CVector direction = totalSpeed;
-        float speed = totalSpeed.Magnitude();
-        float turnSpeed = speed;
-        if (separateTurnForce)
-            turnSpeed = turnDirection.Magnitude();
-        direction.Normalise();
-        if (separateTurnForce)
-            turnDirection.Normalise();
-        else
-            turnDirection = direction;
-
-        float force = speed * m_fMass;
-        float turnForce = turnSpeed * GetMass(wheelContactPoint, turnDirection);
-        ApplyMoveForce(force * direction);
-        ApplyTurnForce(turnForce * turnDirection, wheelContactPoint);
+    if (!(fwd != 0.0f) && right == 0.0) { // 0x6D701A: `jp` on !=, `jnp` on == 0
+        return;
     }
+
+    // 0x6D703C - total force direction: spilled products, y/z sums rounded to float, z of the right product unrounded
+    const float fx = (float)((double)fwd * wheelFwd.x), fy = (float)((double)fwd * wheelFwd.y), fz = (float)((double)fwd * wheelFwd.z);
+    const float rx = (float)(right * wheelRight.x), ry = (float)(right * wheelRight.y);
+    const double rzExt = right * wheelRight.z;
+    const CVector total{ (float)((double)rx + fx), (float)((double)ry + fy), (float)(rzExt + fz) };
+
+    CVector turnDir = total;
+    bool    separateTurnForce = false;
+    const float antiDive = m_pHandlingData->m_fSuspensionAntiDiveMultiplier;
+    if (antiDive > 0.0f && (bBraking || bDriving)) { // 0x6D70AC
+        const double m = bBraking ? (double)antiDive : (double)antiDive * 0.5f;
+        separateTurnForce = true;
+        const double mfx = m * wheelFwd.x;
+        const float  mfy = (float)(m * wheelFwd.y), mfz = (float)(m * wheelFwd.z);
+        const double ax  = mfx * fwd;
+        const double ay  = (double)mfy * fwd;
+        const float  az  = (float)((double)mfz * fwd);
+        turnDir.x = (float)((double)total.x - ax);
+        turnDir.y = (float)((double)total.y - ay);
+        turnDir.z = (float)((double)total.z - az);
+    }
+
+    // 0x6D7141 - magnitudes ((z^2 + y^2) + x^2), spilled to float
+    const float speed = (float)std::sqrt(((double)total.z * total.z + (double)total.y * total.y) + (double)total.x * total.x);
+    float turnSpeed   = speed;
+    if (separateTurnForce) {
+        turnSpeed = (float)std::sqrt(((double)turnDir.z * turnDir.z + (double)turnDir.y * turnDir.y) + (double)turnDir.x * turnDir.x);
+    }
+
+    CVector direction = total; // 0x6D71BF: normalise (reciprocal in extended precision, x = 1 for a zero length)
+    if (!(speed > 0.0f) && !std::isnan(speed)) {
+        direction.x = 1.0f;
+    } else {
+        const double recip = 1.0 / (double)speed;
+        direction.x = (float)(total.x * recip);
+        direction.y = (float)(total.y * recip);
+        direction.z = (float)(total.z * recip);
+    }
+    if (!separateTurnForce) {
+        turnDir = direction;
+    } else if (!(turnSpeed > 0.0f) && !std::isnan(turnSpeed)) {
+        turnDir.x = 1.0f;
+    } else {
+        const double recip = 1.0 / (double)turnSpeed;
+        turnDir.x = (float)(turnDir.x * recip);
+        turnDir.y = (float)(turnDir.y * recip);
+        turnDir.z = (float)(turnDir.z * recip);
+    }
+
+    // 0x6D7291 - 0x59C730 cross product (extended), then 1 / (|cross|^2 / turnMass + 1 / mass) * turnSpeed
+    const CVector cross{
+        (float)((double)turnDir.z * wheelContactPoint.y - (double)wheelContactPoint.z * turnDir.y),
+        (float)((double)turnDir.x * wheelContactPoint.z - (double)wheelContactPoint.x * turnDir.z),
+        (float)((double)turnDir.y * wheelContactPoint.x - (double)wheelContactPoint.y * turnDir.x)
+    };
+    const double force = (double)m_fMass * speed;
+    const double cpSq  = ((double)cross.x * cross.x + (double)cross.y * cross.y) + (double)cross.z * cross.z;
+    const double turnForce = (1.0 / (cpSq / m_fTurnMass + 1.0 / m_fMass)) * turnSpeed;
+
+    ApplyMoveForce(CVector{ (float)(force * direction.x), (float)(force * direction.y), (float)(force * direction.z) }); // 0x5429F0
+    ApplyTurnForce(CVector{ (float)(turnForce * turnDir.x), (float)(turnForce * turnDir.y), (float)(turnForce * turnDir.z) }, wheelContactPoint); // 0x542A50
 }
 
 // 0x6D73B0

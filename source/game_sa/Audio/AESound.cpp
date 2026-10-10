@@ -256,6 +256,11 @@ void CAESound::UpdateParameters(int16 curPlayPos) {
     }
     if (GetRequestUpdates()) {
         if (m_AudioEntity) { // NB: References are clearable, so must check!
+#ifdef NOTSA_INPUT_INJECT // Wine run diagnostics: a freed owner (debug heap 0xDD fill) would crash on the vtable read below
+            if (*(const uint32*)m_AudioEntity == 0xDDDDDDDDu) {
+                NOTSA_LOG_ERR("CAESound::UpdateParameters: owner {} is freed (event={}, bank={}, sound={}, pos=({}, {}, {}), vol={}, flags={:#x})", (void*)m_AudioEntity, m_Event, (int)m_BankSlot, (int)m_SoundID, m_CurrPos.x, m_CurrPos.y, m_CurrPos.z, m_Volume, m_Flags);
+            }
+#endif
             m_AudioEntity->UpdateParameters(this, curPlayPos);
             if (m_SpeedVariance == 0.0F) {
                 m_ListenerSpeed = m_Speed;

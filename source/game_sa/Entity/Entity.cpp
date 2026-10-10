@@ -1721,6 +1721,19 @@ void CEntity::RegisterReference(CEntity** entity) {
         }
     }
 
+#ifdef NOTSA_INPUT_INJECT // Wine run diagnostics: the exe silently drops the registration when all 3000 refs are live (-> dangling pointers later)
+    if (!CReferences::pEmptyList) {
+        static int s_Reports = 0;
+        if (s_Reports++ < 3) {
+            uint32 peds = 0, vehs = 0, objs = 0;
+            for (auto& e : GetPedPool()->GetAllValid())     { peds += CReferences::ListSize(e.m_pReferences); }
+            for (auto& e : GetVehiclePool()->GetAllValid()) { vehs += CReferences::ListSize(e.m_pReferences); }
+            for (auto& e : GetObjectPool()->GetAllValid())  { objs += CReferences::ListSize(e.m_pReferences); }
+            NOTSA_LOG_ERR("RegisterReference: out of CReferences (3000) registering {} (type={}, model={}, refs on it={}) from pointer {}; refs held by peds={} vehicles={} objects={}, rest elsewhere={}",
+                (void*)this, (int)GetType(), (int)m_nModelIndex, CReferences::ListSize(m_pReferences), (void*)entity, peds, vehs, objs, 3000 - (int)(peds + vehs + objs));
+        }
+    }
+#endif
     if (CReferences::pEmptyList) {
         auto pEmptyRef = CReferences::pEmptyList;
         CReferences::pEmptyList = pEmptyRef->m_pNext;

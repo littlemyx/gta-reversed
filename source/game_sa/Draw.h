@@ -6,21 +6,21 @@
 */
 #pragma once
 
-static inline auto& JustLoadedDontFadeInYet = StaticRef<bool>(0xC16EDC);
-static inline auto& StillToFadeOut = StaticRef<bool>(0xC16EDD);
+NOTSA_GLOBAL_HDR(JustLoadedDontFadeInYet, 0xC16EDC, (bool), {});
+NOTSA_GLOBAL_HDR(StillToFadeOut, 0xC16EDD, (bool), {});
 
 class CDraw {
 public:
-    static inline auto& ms_fFOV = StaticRef<float>(0x8D5038); // 45.0
-    static inline auto& ms_fLODDistance = StaticRef<float>(0xC3EF98);
-    static inline auto& ms_fNearClipZ = StaticRef<float>(0xC3EFA0);
-    static inline auto& ms_fFarClipZ = StaticRef<float>(0xC3EF9C);
-    static inline auto& ms_fAspectRatio = StaticRef<float>(0xC3EFA4);
+    static inline NOTSA_GLOBAL(ms_fFOV, 0x8D5038, (float), { 45.0f }); // 45.0
+    static inline NOTSA_GLOBAL(ms_fLODDistance, 0xC3EF98, (float), {});
+    static inline NOTSA_GLOBAL(ms_fNearClipZ, 0xC3EFA0, (float), {});
+    static inline NOTSA_GLOBAL(ms_fFarClipZ, 0xC3EF9C, (float), {});
+    static inline NOTSA_GLOBAL(ms_fAspectRatio, 0xC3EFA4, (float), {});
 
-    static inline auto& FadeRed = StaticRef<uint8>(0xC3EFA8);
-    static inline auto& FadeGreen = StaticRef<uint8>(0xC3EFA9);
-    static inline auto& FadeBlue = StaticRef<uint8>(0xC3EFAA);
-    static inline auto& FadeValue = StaticRef<uint8>(0xC3EFAB);
+    static inline NOTSA_GLOBAL(FadeRed, 0xC3EFA8, (uint8), {});
+    static inline NOTSA_GLOBAL(FadeGreen, 0xC3EFA9, (uint8), {});
+    static inline NOTSA_GLOBAL(FadeBlue, 0xC3EFAA, (uint8), {});
+    static inline NOTSA_GLOBAL(FadeValue, 0xC3EFAB, (uint8), {});
 
 public:
     static void InjectHooks();

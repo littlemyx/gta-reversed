@@ -307,7 +307,7 @@ static void TestAnimNode2() {
         float t = r.below(4) ? r.f01() * 3.f : GenF(r, 8.f, S_NAN | S_ZERO | S_DEN | S_TINY);
         if (a.assoc().m_Flags & 2) {   // looped: make sure the sum over frames 1..n-1 + frame 0 is >= 0.05 so the loop terminates (frame 0 is part of the wrap)
             auto* f0 = reinterpret_cast<KeyFrameTrans*>(a.frames); if (!(f0->DeltaTime >= 0.05f)) f0->DeltaTime = 0.05f + r.f01();
-            for (int i = 1; i < a.seq().m_FramesNum; ++i) { auto* f = a.seq().GetUKeyFrame(i); if (f->DeltaTime < 0.f) f->DeltaTime = -f->DeltaTime; }
+            for (int i = 1; i < a.seq().m_FramesNum; ++i) { auto* f = a.seq().GetUKeyFrame(i); if (f->DeltaTime < 0.05f) f->DeltaTime = 0.05f + r.f01(); }   // the search starts at frame 1 and skips frame 0 on wrap: frames 1.. must have positive deltas or it never ends
         }
         NodeFx e(a);
         const bool ra = a.node().FindKeyFrame(t);

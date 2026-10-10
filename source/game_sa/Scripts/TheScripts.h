@@ -344,7 +344,7 @@ enum class ScriptSavedObjectType : uint32 {
 static constexpr uint32 SCRIPT_VAR_TIMERA = 32, SCRIPT_VAR_TIMERB = 33;
 static constexpr uint32 MISSION_SCRIPT_SIZE = 69000;
 
-static inline bool gAllowScriptedFixedCameraCollision = false;
+static inline auto& gAllowScriptedFixedCameraCollision = StaticRef<bool>(0xB6EC2C); // The original keeps it in .bss (read by CCam::Process_Fixed 0x51D6D9, reset by CMissionCleanup, set by ALLOW_FIXED_CAMERA_COLLISION)
 
 class CTheScripts {
 public:

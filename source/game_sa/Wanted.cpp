@@ -157,6 +157,7 @@ void CWanted::UpdateWantedLevel() {
 void CWanted::SetMaximumWantedLevel(eWantedLevel level) {
     assert(level <= eWantedLevel::WANTED_LEVEL_6);
 
+    const auto prevMaximumWantedLevel = MaximumWantedLevel;
     MaximumWantedLevel = level;
     switch (level) {
     case eWantedLevel::WANTED_CLEAN:   MaximumChaosLevel = 0; break;
@@ -166,7 +167,7 @@ void CWanted::SetMaximumWantedLevel(eWantedLevel level) {
     case eWantedLevel::WANTED_LEVEL_4: MaximumChaosLevel = 1800; break;
     case eWantedLevel::WANTED_LEVEL_5: MaximumChaosLevel = 3500; break;
     case eWantedLevel::WANTED_LEVEL_6: MaximumChaosLevel = 6900; break;
-    default:                           NOTSA_UNREACHABLE(); break;
+    default:                           NOTSA_UNREACHABLE(); MaximumWantedLevel = prevMaximumWantedLevel; break; // 0x561F0E: the exe stores nothing for levels above 6
     }
 }
 

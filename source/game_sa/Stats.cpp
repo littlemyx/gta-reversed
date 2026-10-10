@@ -683,11 +683,18 @@ void CStats::DecrementStat(eStats stat, float value) {
 
 // 0x55C410
 void CStats::SetNewRecordStat(eStats stat, float value) {
-    float currentValue = GetStatValue(stat);
-
-    if (currentValue < value)
-        SetStatValue(stat, value);
-
+    // 0x55C415: the stat id is a uint16 here, `cmp cx, 0x52` selects the float / int table; the int slot is addressed without any range check
+    const auto idx = static_cast<uint16>(stat);
+    if (idx < FIRST_UNUSED_STAT) {
+        // `fcom`: the current value is kept only if it is STRICTLY greater than the new one (equal and unordered/NaN current => the new value is stored)
+        const float current = StatTypesFloat[idx];
+        StatTypesFloat[idx] = current > value ? current : value;
+    } else {
+        auto&        slot    = StaticRef<int32>(0xB78E20 + 4u * idx); // == StatTypesInt[idx - FIRST_INT_STAT]
+        const double current = slot;
+        const double best    = current > (double)value ? current : (double)value;
+        slot = (int32)(int16)(int32)best; // _ftol + `movsx eax, ax`: the record is truncated to 16 bits
+    }
     CheckForStatsMessage();
 }
 

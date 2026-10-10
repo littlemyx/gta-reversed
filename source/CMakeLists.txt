@@ -819,6 +819,14 @@ if (${RE_PROJECT}_RW_LIBRW)
         game_sa/StreamingInfo.cpp
         game_sa/Scripts/TheScripts.cpp
         # --- sources needed by logic_oracle_scan.inc
+        game_sa/PedGeometryAnalyser.cpp
+        game_sa/Collision/ColSphere.cpp
+        game_sa/Entity/Placeable.cpp
+        game_sa/Entity/Entity.cpp
+        game_sa/EntityScanner.cpp
+        game_sa/PedScanner.cpp
+        game_sa/VehicleScanner.cpp
+        game_sa/References.cpp
         # --- sources needed by logic_oracle_misc.inc
         game_sa/Collision/Box.cpp
         game_sa/Core/KeyGen.cpp

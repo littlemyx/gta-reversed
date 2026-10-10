@@ -43,7 +43,15 @@ void CTheZones::InjectHooks() {
 
 // 0x5720D0
 void CTheZones::InitZonesPopulationSettings() {
-    rng::fill(ZoneInfoArray, CZoneInfo{});
+    // 0x5720D0: only these fields are written (the zone colour and the unused high bits of PopRaces' byte are left alone)
+    for (auto& zi : ZoneInfoArray) {
+        zi.PopType        = +eZonePopulationType::RESIDENTIAL_AVERAGE;
+        zi.RadarMode      = 0;
+        zi.IsNoCops       = 0;
+        zi.PopRaces       |= 0b1111;
+        zi.DealerStrength = 0;
+        rng::fill(zi.GangStrength, 0);
+    }
 }
 
 // 0x572110
@@ -141,7 +149,7 @@ CZone* CTheZones::FindSmallestZoneForPosition(const CVector& point, bool checkIs
             continue;
         }
         const auto zsize = GetZoneSize(&z);
-        if (zsize < smallestZoneSize) {
+        if ((uint32)zsize < (uint32)smallestZoneSize) { // 0x5723DD: `jae` => UNSIGNED compare of the (possibly negative) sizes
             smallestZone     = &z;
             smallestZoneSize = zsize;
         }
@@ -175,11 +183,13 @@ void CTheZones::FillZonesWithGangColours(bool disableRadarGangColors) {
             ? 1
             : 0;
 
+        // 0x57251A: alpha = min(gdSum * 3, 120), raised to at least 55 only when there is any gang strength at all (0 otherwise); computed as int, not narrowed first
+        const int32 alpha = std::min<int32>((int32)gdSum * 3, 120);
         z.ZoneColor = {
             color[0],
             color[1],
             color[2],
-            std::clamp<uint8>(gdSum * 3, 55, 120)
+            (uint8)(gdSum ? std::max<int32>(alpha, 55) : alpha)
         };
     }
 }
@@ -262,8 +272,10 @@ void CTheZones::SetCurrentZoneAsUnlocked() {
     if (visited) {
         return;
     }
-    ZonesRevealed++;
+    // 0x572889: the byte is stored BEFORE the counter (a 32 bit store), so an out-of-grid index that hits the counter's bytes loses the flag
+    const auto revealed = ZonesRevealed + 1;
     visited = true;
+    ZonesRevealed = revealed;
 }
 
 // Creates a zone
@@ -276,54 +288,64 @@ void CTheZones::CreateZone(
     eLevelName  level,
     const char* textLabel
 ) {
-    // 0x5728A0: the exe orders pos1/pos2 per axis on the float args (swap when pos1 > pos2, ordered compare)
-    // before anything else, then uppercases BOTH caller strings in place (ASCII a-z only), then copies
-    // them with strncpy(.., 7) into 8-byte locals (terminator forced at [7]), and only then looks at `type`.
-    if (pos1.x > pos2.x) { std::swap(pos1.x, pos2.x); }
-    if (pos1.y > pos2.y) { std::swap(pos1.y, pos2.y); }
-    if (pos1.z > pos2.z) { std::swap(pos1.z, pos2.z); }
+    // The corners are put in order per axis on the FLOATS (swap iff a > b)
+    if (pos1.x > pos2.x) std::swap(pos1.x, pos2.x);
+    if (pos1.y > pos2.y) std::swap(pos1.y, pos2.y);
+    if (pos1.z > pos2.z) std::swap(pos1.z, pos2.z);
 
-    const auto StrCpyUpper = [](char (&dst)[8], const char* src) {
-        for (auto* p = const_cast<char*>(src); *p; p++) { // in place, like the exe
-            if (*p >= 'a' && *p <= 'z') {
-                *p -= 0x20;
+    // The exe upper-cases the CALLER's strings in place (only writes lowercase letters), then strncpy's 7 chars into an 8 byte temporary
+    const auto Prepare = [](const char* src, char (&tmp)[8]) {
+        for (auto* c = const_cast<char*>(src); *c; ++c) {
+            if (*c >= 'a' && *c <= 'z') {
+                *c -= 0x20;
             }
         }
-        char tmp[8]{};
-        strncpy_s(tmp, 8, src, 7);
-        std::memcpy(dst, tmp, 8);
+        std::memset(tmp, 0, sizeof(tmp));
+        strncpy(tmp, src, 7);
     };
     char infoTmp[8], textTmp[8];
-    StrCpyUpper(infoTmp, infoLabel);
-    StrCpyUpper(textTmp, textLabel);
+    Prepare(infoLabel, infoTmp);
+    Prepare(textLabel, textTmp);
 
-    const auto Fill = [&](CZone& z) {
-        std::memcpy(z.m_InfoLabel, infoTmp, 8);
-        std::memcpy(z.m_TextLabel, textTmp, 8);
-        z.m_fX1 = (int16)pos1.x; z.m_fY1 = (int16)pos1.y; z.m_fZ1 = (int16)pos1.z;
-        z.m_fX2 = (int16)pos2.x; z.m_fY2 = (int16)pos2.y; z.m_fZ2 = (int16)pos2.z;
+    // The zone gets the temporaries copied up to and including the first NUL; the bytes behind it are NOT cleared
+    const auto CopyLabel = [](char (&dst)[8], const char (&src)[8]) {
+        for (auto i = 0; i < 8; i++) {
+            dst[i] = src[i];
+            if (!src[i]) {
+                break;
+            }
+        }
+    };
+    const auto FillZone = [&](CZone& z, eZoneType ztype) {
+        CopyLabel(z.m_InfoLabel, infoTmp);
+        CopyLabel(z.m_TextLabel, textTmp);
+        // _ftol, low word stored
+        z.m_fX1 = (int16)(int32)pos1.x;
+        z.m_fY1 = (int16)(int32)pos1.y;
+        z.m_fZ1 = (int16)(int32)pos1.z;
+        z.m_fX2 = (int16)(int32)pos2.x;
+        z.m_fY2 = (int16)(int32)pos2.y;
+        z.m_fZ2 = (int16)(int32)pos2.z;
+        z.m_nType  = ztype;
         z.m_nLevel = level;
     };
 
-    switch ((int32)type) {
+    switch (type) {
     case ZONE_TYPE_NAVI:
-    case ZONE_TYPE_LOCAL_NAVI: { // 0x572A79
+    case ZONE_TYPE_LOCAL_NAVI: {
         const auto idx = TotalNumberOfNavigationZones;
-        auto& z = NavigationZoneArray[idx];
-        Fill(z);
-        z.m_nType = type;
-        AssignZoneInfoForThisZone(idx); // called BEFORE the counter is incremented
-        TotalNumberOfNavigationZones = idx + 1;
+        FillZone(NavigationZoneArray[idx], type);
+        AssignZoneInfoForThisZone(idx); // before the counter is bumped (0x572B40), the new zone is not part of its search
+        TotalNumberOfNavigationZones++;
         break;
     }
-    case ZONE_TYPE_MAP: { // 0x5729AC
-        auto& z = MapZoneArray[TotalNumberOfMapZones];
-        Fill(z);
-        z.m_nType = ZONE_TYPE_MAP;
+    case ZONE_TYPE_MAP: {
+        const auto idx = TotalNumberOfMapZones;
+        FillZone(MapZoneArray[idx], ZONE_TYPE_MAP);
         TotalNumberOfMapZones++;
         break;
     }
-    default: // ZONE_TYPE_INFO (and out-of-range): nothing is created
+    default: // INFO and anything else: nothing is created
         break;
     }
 }
@@ -375,7 +397,9 @@ int16 CTheZones::FindZoneByLabel(const char* name, eZoneType type) {
 void CTheZones::SetZoneRadarColours(int16 index, char radarMode, uint8 red, uint8 green, uint8 blue) {
     const auto zone = &ZoneInfoArray[NavigationZoneArray[index].m_ZoneInfoIndex];
     zone->RadarMode = radarMode;
-    zone->ZoneColor = { red, green, blue, 255 };
+    zone->ZoneColor.r = red; // 0x572CF3..: the exe writes r, g, b only, the alpha is left alone
+    zone->ZoneColor.g = green;
+    zone->ZoneColor.b = blue;
 }
 
 // Updates CTheZones info

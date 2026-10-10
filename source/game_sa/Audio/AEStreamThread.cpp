@@ -225,7 +225,7 @@ void CAEStreamThread::Service() {
     if (m_iNextTrackId == -1 || m_pStreamingChannel->GetPlayingTrackID() != m_iTrackId) {
         auto* currDecoder = LoadDecoder(m_bIsUserTrack, m_iTrackId);
         if (currDecoder) {
-            currDecoder->SetCursor(m_iNextTrackId % currDecoder->GetStreamLengthMs());
+            currDecoder->SetCursor(field_1C % currDecoder->GetStreamLengthMs()); // 0x4F1464: unsigned `div` of +0x1C (start offset), NOT m_iNextTrackId
 
             m_pStreamingChannel->SetNextStream(nextDecoder);
             m_pStreamingChannel->PrepareStream(currDecoder, m_TrackFlags, 1u);

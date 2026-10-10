@@ -253,7 +253,8 @@ void FxManager_c::Update(RwCamera* camera, float timeDelta) {
         it->Update(timeDelta);
     }
 
-    for (FxSystem_c* it = m_FxSystems.GetHead(); it; it = m_FxSystems.GetNext(it)) {
+    for (FxSystem_c *it = m_FxSystems.GetHead(), *next{}; it; it = next) {
+        next = m_FxSystems.GetNext(it); // the exe reads the next link before the node can be destroyed (0x4A9ABB)
         if (it->Update(camera, timeDelta)) {
             DestroyFxSystem(it);
         }

@@ -6,6 +6,7 @@
 #include "PedStats.h"
 
 #include "Tasks/TaskTypes/TaskComplexFacial.h"
+#include "Tasks/TaskTypes/TaskComplexPolicePursuit.h"
 #include "Tasks/TaskTypes/TaskSimpleUseGun.h"
 #include "Tasks/TaskTypes/TaskSimpleStandStill.h"
 #include "Tasks/TaskTypes/TaskSimpleOnEscalator.h"
@@ -1442,6 +1443,7 @@ void CEventHandler::ComputeGunAimedAtResponse(CEventGunAimedAt* e, CTask* tactiv
         }
         }
         NOTSA_UNREACHABLE();
+        return m_EventResponseTask; // 0x4C2E97: default leaves the response task untouched
     }();
 }
 
@@ -1459,6 +1461,7 @@ void CEventHandler::ComputeHighAngerAtPlayerResponse(CEventHighAngerAtPlayer* e,
             return new CTaskSimpleDuck{DUCK_STANDALONE, 0xE0FFu, -1};
         default:
             NOTSA_UNREACHABLE();
+            return m_EventResponseTask; // 0x4BABF0: default leaves the response task untouched
         }
     }();
 }
@@ -1687,6 +1690,7 @@ void CEventHandler::ComputeLowAngerAtPlayerResponse(CEventLowAngerAtPlayer* e, C
             return new CTaskSimpleDuck{DUCK_STANDALONE, 0xE0FFu, -1};
         default:
             NOTSA_UNREACHABLE();
+            return m_EventResponseTask; // 0x4BABF0: default leaves the response task untouched
         }
     }();
 }
@@ -1701,6 +1705,7 @@ void CEventHandler::ComputeLowHealthResponse(CEventHealthLow* e, CTask* tactive,
             return nullptr;
         default:
             NOTSA_UNREACHABLE();
+            return m_EventResponseTask; // 0x4BAA14: default leaves the response task untouched
         }
     }();
 }
@@ -2234,7 +2239,8 @@ void CEventHandler::ComputePedEnteredVehicleResponse(CEventPedEnteredMyVehicle* 
         case TASK_NONE: // 0x4C16F1
             return nullptr;
         default:
-            NOTSA_UNREACHABLE(); // Not sure
+            NOTSA_UNREACHABLE();
+            return m_EventResponseTask; // 0x4C18F1: default leaves the response task untouched
         }
     }();
 }
@@ -2262,6 +2268,7 @@ void CEventHandler::ComputePedFriendResponse(CEventAcquaintancePed* e, CTask* ta
             return nullptr;
         default:
             NOTSA_UNREACHABLE();
+            return m_EventResponseTask; // 0x4B9F6D: default leaves the response task untouched
         }
     }();
 }
@@ -2279,6 +2286,7 @@ void CEventHandler::ComputePedSoundQuietResponse(CEventSoundQuiet* e, CTask* tac
             return new CTaskComplexInvestigateDisturbance{e->m_position, e->GetSourceEntity()};
         default:
             NOTSA_UNREACHABLE();
+            return m_EventResponseTask; // 0x4B9DB5: default leaves the response task untouched
         }
     }();
 }
@@ -2296,6 +2304,7 @@ void CEventHandler::ComputePedThreatBadlyLitResponse(CEventAcquaintancePedHateBa
             return new CTaskComplexInvestigateDisturbance{e->m_point, e->m_AcquaintancePed};
         default:
             NOTSA_UNREACHABLE();
+            return m_EventResponseTask; // 0x4B9D24: default leaves the response task untouched
         }
     }();
 }
@@ -2436,6 +2445,7 @@ void CEventHandler::ComputePedThreatResponse(CEventAcquaintancePedHate* e, CTask
             return nullptr;
         default:
             NOTSA_UNREACHABLE();
+            return m_EventResponseTask; // 0x4C241D: default leaves the response task untouched
         }
     }();
 }
@@ -2542,6 +2552,7 @@ void CEventHandler::ComputePersonalityResponseToDamage(CEventDamage* e, CPed* sr
             return nullptr;
         default:
             NOTSA_UNREACHABLE();
+            return m_EventResponseTask; // 0x4C0100: default leaves the response task untouched
         }
     }();
 }
@@ -2633,7 +2644,8 @@ void CEventHandler::ComputePlayerCollisionWithPedResponse(CEventPlayerCollisionW
 
 // 0x4BB280
 void CEventHandler::ComputePlayerWantedLevelResponse(CEvent* e, CTask* tactive, CTask* tsimplest) {
-    NOTSA_UNREACHABLE(); // This event doesn't seem to exist
+    // 0x4BB2A0: the exe does create the task (new CTaskComplexPolicePursuit) and stores it as the response, no event type check
+    m_EventResponseTask = new CTaskComplexPolicePursuit{};
 }
 
 // 0x4C2610
@@ -2691,6 +2703,7 @@ void CEventHandler::ComputePotentialPedCollideResponse(CEventPotentialWalkIntoPe
             };
         default:
             NOTSA_UNREACHABLE();
+            return m_EventResponseTask; // 0x4C281E: default leaves the response task untouched
         }
     }();  
 }
@@ -2717,6 +2730,7 @@ void CEventHandler::ComputePotentialWalkIntoFireResponse(CEventPotentialWalkInto
             return nullptr;
         default:
             NOTSA_UNREACHABLE();
+            return m_EventResponseTask; // 0x4BBE0E: default leaves the response task untouched
         }
     }();
 }
@@ -2731,6 +2745,7 @@ void CEventHandler::ComputeReallyLowHealthResponse(CEventHealthReallyLow* e, CTa
             return nullptr;
         default:
             NOTSA_UNREACHABLE();
+            return m_EventResponseTask; // 0x4BAAB4: default leaves the response task untouched
         }
     }();    
 }
@@ -2800,7 +2815,8 @@ void CEventHandler::ComputeSeenCopResponse(CEventSeenCop* e, CTask* tactive, CTa
         case TASK_COMPLEX_KILL_PED_ON_FOOT:
             return new CTaskComplexKillPedOnFoot{ e->m_AcquaintancePed };
         default:
-            NOTSA_UNREACHABLE(); // Not sure
+            NOTSA_UNREACHABLE();
+            return m_EventResponseTask; // 0x4BC13C: default leaves the response task untouched
         }
     }();
 }
@@ -2828,7 +2844,8 @@ void CEventHandler::ComputeSeenPanickedPedResponse(CEventSeenPanickedPed* e, CTa
         case TASK_COMPLEX_SMART_FLEE_ENTITY:
             return new CTaskComplexSmartFleeEntity{ currEvntSrc, false, 45.f };
         default:
-            NOTSA_UNREACHABLE(); // Not sure
+            NOTSA_UNREACHABLE();
+            return m_EventResponseTask; // 0x4C3722: default leaves the response task untouched
         }
     }();
 }
@@ -2845,7 +2862,8 @@ void CEventHandler::ComputeSexyPedResponse(CEventSexyPed* e, CTask* tactive, CTa
         case TASK_COMPLEX_GANG_HASSLE_PED:
             return new CTaskGangHasslePed{ e->m_SexyPed, 0, 10'000, 30'000 };
         default:
-            NOTSA_UNREACHABLE(); // Not sure
+            NOTSA_UNREACHABLE();
+            return m_EventResponseTask; // 0x4B9A89: default leaves the response task untouched
         }
     }();
 }
@@ -2922,7 +2940,8 @@ void CEventHandler::ComputeShotFiredResponse(CEventGunShot* e, CTask* tactive, C
             return nullptr;
         }
         default:
-            NOTSA_UNREACHABLE(); // not sure
+            NOTSA_UNREACHABLE();
+            return m_EventResponseTask; // 0x4BCB3D: default leaves the response task untouched
         }
     }();
 }
@@ -2960,6 +2979,7 @@ void CEventHandler::ComputeShotFiredWhizzedByResponse(CEventGunShotWhizzedBy* e,
         }
         default:
             NOTSA_UNREACHABLE();
+            return m_EventResponseTask; // 0x4BBE94: default leaves the response task untouched
         }
     }();
 }
@@ -3010,7 +3030,8 @@ void CEventHandler::ComputeSpecialResponse(CEventSpecial* e, CTask* tactive, CTa
             return nullptr;
         }
         default:
-            NOTSA_UNREACHABLE(); // not sure
+            NOTSA_UNREACHABLE();
+            return m_EventResponseTask; // 0x4BBB71: default leaves the response task untouched
         }
     }();
 }
@@ -3280,6 +3301,7 @@ void CEventHandler::ComputeVehicleOnFireResponse(CEventVehicleOnFire* e, CTask* 
             return new CTaskComplexSmartFleeEntity{ m_Ped->m_pVehicle, false, 15.f };
         default:
             NOTSA_UNREACHABLE();
+            return m_EventResponseTask; // 0x4BB63E: default leaves the response task untouched
         }
         }
     }();

@@ -149,7 +149,8 @@ eSecondaryTask CPedGroupIntelligence::GetTaskSecondarySlot(CPed* ped) {
     if (const auto tp = GetPedsTaskPair(ped, m_SecondaryPedTaskPairs)) {
         return tp->Slot;
     }
-    NOTSA_UNREACHABLE(); // Otherwise returned `0`, which is a valid slot...
+    // 0x5F8650: the exe returns -1 (`or eax, 0xFFFFFFFF`) when the ped has no pair. Must stay defined in the run build (NDEBUG makes NOTSA_UNREACHABLE UB)
+    return TASK_SECONDARY_INVALID;
 }
 
 // 0x5FC4A0

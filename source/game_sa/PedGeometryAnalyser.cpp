@@ -1324,5 +1324,8 @@ void* CPointRoute::operator new(uint32 size) {
 
 // 0x41B7D0
 void CPointRoute::operator delete(void* ptr, size_t sz) {
+    if (!ptr) { // NOTSA: `delete nullptr` must be a no-op. MSVC calls a class operator delete even for null when the destructor is trivial, the exe's call sites test for null first (e.g. 0x64A5BE in ~CTaskComplexGoToCarDoorAndStandStill) while the pool's Delete(0) would flip a wild slot
+        return;
+    }
     GetPointRoutePool()->Delete(reinterpret_cast<CPointRoute*>(ptr));
 }

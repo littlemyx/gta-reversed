@@ -35,6 +35,7 @@ if (${RE_PROJECT}_STANDALONE AND NOT ${RE_PROJECT}_STANDALONE_DUMP_HOOKS_ONLY)
     # in this directory (game code, shim, librw, shim unit tests) uses x87 + strict FP: no SSE/SSE2 codegen, no /fp:fast, no FMA contraction.
     if (MSVC)
         add_compile_options(/arch:IA32 /fp:precise)
+        add_compile_options(/wd4716) # NOTSA_UNREACHABLE is a logging fall-through in the run build (Base.h): stub functions that consist only of it would otherwise be 'must return a value' errors
     endif()
     # StandaloneRelease (CMakePresets.json): optimised config of the same exe. /O2 /Ob2 /DNDEBUG come from CMAKE_CXX_FLAGS_RELEASE, -MT from CMAKE_MSVC_RUNTIME_LIBRARY (top CMakeLists.txt).
     # /fp:precise forbids reassociation/contraction and /arch:IA32 keeps x87, so under PC=24 every op still rounds to 24 bits whether it lives in a register or a spill slot.

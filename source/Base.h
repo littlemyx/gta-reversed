@@ -118,6 +118,12 @@ template<typename... Ts>
 // still complain that, for example, the function doesn't return on all code paths, etc
 #define IMPL_NOTSA_UNREACHABLE_FMT_ARGS(...) std::format(__VA_ARGS__)
 #define NOTSA_UNREACHABLE(...) do { ::notsa::unreachable(__FUNCTION__, __FILE__, __LINE__ __VA_OPT__(,IMPL_NOTSA_UNREACHABLE_FMT_ARGS(__VA_ARGS__))); } while (false)
+#elif defined(NOTSA_STANDALONE_RUN)
+// Standalone run build (NDEBUG): NO undefined behaviour where the exe is defined. `__assume(false)` lets the compiler drop the epilogue of the function
+// (execution then runs into the NEXT function) and everything after the site; the exe simply continues with whatever its code does next. So this logs
+// the site once (standalone.log: "UNREACHABLE hit: ...", the reachable ones need an explicit exe-semantics fix) and falls through.
+namespace notsa::standalone::Fixups { void UnreachableHit(const char* fn, const char* file, int line); }
+#define NOTSA_UNREACHABLE(...) do { ::notsa::standalone::Fixups::UnreachableHit(__FUNCTION__, __FILE__, __LINE__); } while (false)
 #else 
 #define NOTSA_UNREACHABLE(...) UNREACHABLE_INTRINSIC()
 #endif

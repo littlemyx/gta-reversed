@@ -250,6 +250,30 @@ void PoolBadDelete(const void* pool, const void* obj, const void* storage, unsig
         (unsigned)(uintptr_t)storage, capacity, objSize, (unsigned)(uintptr_t)caller, (unsigned)((uintptr_t)caller - (uintptr_t)GetModuleHandleA(nullptr)));
 }
 
+// NOTSA_UNREACHABLE in the run build: log each site once (first 512 distinct sites) and continue (see Base.h)
+void UnreachableHit(const char* fn, const char* file, int line) {
+    struct Site { const char* File; int Line; };
+    static Site s_seen[512];
+    static int  s_n;
+    static long s_lock;
+    while (InterlockedExchange(&s_lock, 1)) {
+        Sleep(0);
+    }
+    bool known = false;
+    for (int i = 0; i < s_n && !known; i++) {
+        known = s_seen[i].File == file && s_seen[i].Line == line;
+    }
+    if (!known && s_n < 512) {
+        s_seen[s_n++] = { file, line };
+    } else {
+        known = true; // table full: stay silent
+    }
+    InterlockedExchange(&s_lock, 0);
+    if (!known) {
+        Log("UNREACHABLE hit: %s (%s:%d)", fn, file, line);
+    }
+}
+
 [[noreturn]] void Fatal(const char* fmt, ...) {
     char msg[1024];
     va_list va;

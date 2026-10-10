@@ -11,6 +11,7 @@ globals_emit.py from the post-_initterm data image; the alias / owner / member d
 Forms (scope from the row of DETACH_GLOBALS.tsv, header/.cpp from the file name):
   class member / .cpp namespace scope  `static inline NOTSA_GLOBAL(n, a, (T), init);`           (specifiers stay as written)
   header namespace scope               `NOTSA_GLOBAL_HDR(n, a, (T), init);`                  (`static`/`inline` dropped: ONE definition, `inline`)
+                                       `NOTSA_GLOBAL_HDR_EXT(...)` when the old text was `inline auto&` without `static` (address mode keeps `inline`)
   function scope                       `NOTSA_GLOBAL_LOCAL(n, a, (T), init);`
   class member, category c or initialiser > --inline-max chars and a sibling <stem>.cpp:
                                         header `static NOTSA_GLOBAL_DECL(Cls, n, a, (T));` + `NOTSA_GLOBAL_DEF(Cls, n, a, (T), init);` appended at the END of the .cpp
@@ -364,7 +365,9 @@ def process(path, rows_by_addr, hazards, em, al, args, report):
             new = "NOTSA_GLOBAL_LOCAL(%s, %s, (%s), %s);" % (name, mt.group("addr"), ttext, wrap_init(init, indent))
             kind = "LOCAL"
         elif is_header and not in_class:
-            new = "NOTSA_GLOBAL_HDR(%s, %s, (%s), %s);" % (name, mt.group("addr"), ttext, wrap_init(init, indent))
+            # `static inline auto&` -> HDR (internal linkage, address mode keeps `static inline`); `inline auto&` without `static` -> HDR_EXT (external linkage: the
+            # compiler treats the reference differently, so address mode must keep the exact specifiers for identical object code)
+            new = "%s(%s, %s, (%s), %s);" % ("NOTSA_GLOBAL_HDR" if "static" in pre else "NOTSA_GLOBAL_HDR_EXT", name, mt.group("addr"), ttext, wrap_init(init, indent))
             kind = "HDR"
         else:
             new = "%sNOTSA_GLOBAL(%s, %s, (%s), %s);" % (pre, name, mt.group("addr"), ttext, wrap_init(init, indent))

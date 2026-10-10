@@ -42,6 +42,9 @@ static bool IsInFullscreen()
 // Test-only input injector: NOTSA_STANDALONE_INPUT="wait:3000;key:return;wait:500;down:w;wait:2000;up:w;..." (also a path to a file with the same text).
 // Times are ms of wall clock; `wait:N` advances the script clock by N after the previous action; `key:K` = down now + up 150 ms later;
 // NOTSA_INPUT_INJECT (cmake -DGTASA_INPUT_INJECT=ON) enables it in the ASI/DLL build too (logs through spdlog instead of Fixups).
+// `until:COND[:MAXMS]` is a barrier: the script clock stops until COND holds (or MAXMS, default 60000, elapsed), then continues from there, so everything after it is
+// relative to the moment the game was actually ready (deterministic car entry etc.). COND = control (player ped exists, no menu / cutscene / fade, pad not disabled)
+// | invehicle (the player ped is in a vehicle). Logs "[until] COND ok|TIMEOUT after N ms".
 // `mark:NAME` logs a progress marker; newlines also separate items. K = return|escape|up|down|left|right|space|tab|lshift|lctrl|f1..f12|<single char>.
 #include <string>
 #include <vector>
@@ -51,11 +54,27 @@ static bool IsInFullscreen()
 void RequestMarkScreenshot(const char* name); // standalone/rw/camera.cpp
 #endif
 namespace {
-struct InjEv { uint64_t t; bool down; SDL_Keycode key; int mx = -1, my = -1; std::string mark; };
+struct InjEv { uint64_t t; bool down; SDL_Keycode key; int mx = -1, my = -1; std::string mark; std::string until; uint64_t maxMs = 0; };
 std::vector<InjEv> s_InjEvents;
 size_t             s_InjNext = 0;
 bool               s_InjInit = false;
 uint64_t           s_InjStart = 0;
+uint64_t           s_InjShift = 0;     // total ms the script clock was held by `until:` barriers
+bool               s_InjHolding = false;
+uint64_t           s_InjHoldBegin = 0; // real clock (GetTickCount64 - start) when the current hold began
+
+bool InjCond(const std::string& c) {
+    if (c == "control") {
+        auto* ped = FindPlayerPed();
+        auto* pad = CPad::GetPad(0);
+        return ped && pad && !FrontEndMenuManager.m_bMenuActive && !CCutsceneMgr::IsRunning() && !pad->bPlayerSafe && !pad->ArePlayerControlsDisabled() && !TheCamera.GetFading();
+    }
+    if (c == "invehicle") {
+        auto* ped = FindPlayerPed();
+        return ped && ped->bInVehicle && ped->m_pVehicle;
+    }
+    return true; // unknown condition: do not block
+}
 
 SDL_Keycode InjKey(const std::string& n) {
     static const std::pair<const char*, SDL_Keycode> k[] = { { "return", SDLK_RETURN }, { "escape", SDLK_ESCAPE }, { "up", SDLK_UP }, { "down", SDLK_DOWN },
@@ -87,6 +106,13 @@ void InjInit() {
             ev.mx = x; ev.my = y;
             s_InjEvents.push_back(ev);
         }
+        else if (cmd == "until") { // until:COND[:MAXMS]
+            InjEv ev{ t, true, 0 };
+            const auto c2 = arg.find(':');
+            ev.until = arg.substr(0, c2);
+            ev.maxMs = c2 == std::string::npos ? 60000 : (uint64_t)std::atoll(arg.c_str() + c2 + 1);
+            s_InjEvents.push_back(ev);
+        }
         else if (cmd == "mark") { // mark:NAME  logs "[mark] NAME" when the script clock reaches it (progress markers for tools/standalone/soak.sh)
             InjEv ev{ t, true, 0 };
             ev.mark = arg;
@@ -100,9 +126,23 @@ void InjInit() {
 }
 void InjPump() {
     if (!s_InjInit) InjInit();
-    const uint64_t now = GetTickCount64() - s_InjStart;
-    while (s_InjNext < s_InjEvents.size() && s_InjEvents[s_InjNext].t <= now) {
-        const auto& ev = s_InjEvents[s_InjNext++];
+    const uint64_t real = GetTickCount64() - s_InjStart;
+    // script clock: frozen at the barrier's time while it holds, shifted by the total hold time afterwards
+    const auto clock = [&] { return s_InjHolding ? s_InjEvents[s_InjNext].t : real - s_InjShift; };
+    while (s_InjNext < s_InjEvents.size() && s_InjEvents[s_InjNext].t <= clock()) {
+        const auto& ev = s_InjEvents[s_InjNext];
+        if (!ev.until.empty()) {
+            if (!s_InjHolding) { s_InjHolding = true; s_InjHoldBegin = real; }
+            const bool ok = InjCond(ev.until), timeout = !ok && real - s_InjHoldBegin >= ev.maxMs;
+            if (!ok && !timeout) break; // keep holding, retry next pump
+            NOTSA_INJ_LOG("[until] %s %s after %u ms (script %u ms)", ev.until.c_str(), ok ? "ok" : "TIMEOUT", (unsigned)(real - s_InjHoldBegin), (unsigned)ev.t);
+            s_InjShift += real - s_InjHoldBegin;
+            s_InjHolding = false;
+            s_InjNext++;
+            continue;
+        }
+        s_InjNext++;
+        const uint64_t now = clock();
         SDL_Event e{};
         if (!ev.mark.empty()) {
             NOTSA_INJ_LOG("[mark] %s at %u ms t=%lu", ev.mark.c_str(), (unsigned)now, (unsigned long)GetTickCount()); // t= is the same clock as the standalone memlog lines

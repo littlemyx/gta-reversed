@@ -805,6 +805,19 @@ if (${RE_PROJECT}_RW_LIBRW)
         game_sa/DecisionMakers/DecisionMakerTypesFileLoader.cpp
         game_sa/DecisionMakers/DecisionSimple.cpp
         # --- sources needed by logic_oracle_pop.inc
+        game_sa/Population.cpp
+        game_sa/Gangs.cpp
+        game_sa/CarCtrl.cpp
+        game_sa/Core/Rect.cpp
+        game_sa/PopCycle.cpp
+        game_sa/LoadedCarGroup.cpp
+        game_sa/Clock.cpp
+        game_sa/Cheat.cpp
+        game_sa/CullZones.cpp
+        game_sa/ModelIndices.cpp
+        game_sa/Streaming.cpp
+        game_sa/StreamingInfo.cpp
+        game_sa/Scripts/TheScripts.cpp
         # --- sources needed by logic_oracle_scan.inc
         # --- sources needed by logic_oracle_misc.inc
         game_sa/Collision/Box.cpp

@@ -10,7 +10,7 @@
 
 class CCreepingFire {
 public:
-    static inline auto& m_aFireStatus = StaticRef<uint8[32][32]>(0xB71B68);
+    static inline NOTSA_GLOBAL(m_aFireStatus, 0xB71B68, (uint8[32][32]), {});
 
 public:
     static void InjectHooks();

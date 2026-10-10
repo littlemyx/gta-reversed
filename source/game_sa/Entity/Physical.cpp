@@ -35,6 +35,44 @@ CVector PhysicalCrossProductOriginal(const CVector& a, const CVector& b) {
     };
 }
 
+// `dst += v * r` as the exe does it (0x5429F0, 0x542A50, 0x542B50, 0x5430A0, 0x543100, 0x543220): r = 1.0 / divisor stays on the x87 stack (extended), the x product is
+// added unrounded, the y and z products are spilled to float first
+void PhysicalAddScaledByRecip(CVector& dst, const CVector& v, double r) {
+    dst.x = (float)((double)v.x * r + dst.x);
+    const float ty = (float)((double)v.y * r);
+    const float tz = (float)((double)v.z * r);
+    dst.y = ty + dst.y;
+    dst.z = tz + dst.z;
+}
+
+// Shared body of CPhysical::ApplyForce (0x542B50) and ApplyFrictionForce (0x543220): `moveSpeed`/`turnSpeed` are the accumulators (move/turn speed or their friction variants)
+void PhysicalApplyForceImpl(CPhysical& p, const CVector& force, CVector point, CVector& moveSpeed, CVector& turnSpeed, bool updateTurn) {
+    CVector moveForce = force;
+    CVector turnForce = force;
+    if (p.physicalFlags.bDisableZ) {
+        moveForce.z = 0.0f;
+    }
+    if (!p.physicalFlags.bInfiniteMass && !p.physicalFlags.bDisableMoveForce) {
+        PhysicalAddScaledByRecip(moveSpeed, moveForce, 1.0 / (double)p.m_fMass);
+    }
+    if (!p.physicalFlags.bDisableTurnForce && updateTurn) {
+        float   turnMass = p.m_fTurnMass;
+        CVector com{};
+        if (p.physicalFlags.bInfiniteMass) {
+            turnMass = (float)((((double)p.m_vecCentreOfMass.z * p.m_fMass) * p.m_vecCentreOfMass.z) * 0.5f + turnMass);
+        } else {
+            com = PhysicalTransformVectorOriginal(p.GetMatrix(), p.m_vecCentreOfMass); // 0x59C790
+        }
+        if (p.physicalFlags.bDisableMoveForce) {
+            point.z     = 0.0f;
+            turnForce.z = 0.0f;
+        }
+        const CVector diff{ point.x - com.x, point.y - com.y, point.z - com.z };
+        const auto    cross = PhysicalCrossProductOriginal(diff, turnForce); // 0x59C730
+        PhysicalAddScaledByRecip(turnSpeed, cross, 1.0 / (double)turnMass);
+    }
+}
+
 // Sector index calculation as done by `Add`/`RemoveAndAdd` (`floor(v * 0.02f + 60.0f)`, constants at 0x858B38 and 0x858B34)
 int32 PhysicalGetSectorIdx(float v) {
     return static_cast<int32>(std::floor(v * 0.02f + 60.0f));
@@ -739,7 +777,7 @@ void CPhysical::ApplyMoveForce(CVector force)
     if (!physicalFlags.bInfiniteMass && !physicalFlags.bDisableMoveForce) {
         if (physicalFlags.bDisableZ)
             force.z = 0.0f;
-        m_vecMoveSpeed += force / m_fMass;
+        PhysicalAddScaledByRecip(m_vecMoveSpeed, force, 1.0 / (double)m_fMass); // reciprocal multiply, not a division
     }
 }
 
@@ -749,68 +787,60 @@ void CPhysical::ApplyTurnForce(CVector force, CVector point) {
         return;
     }
 
+    CVector com{};
+    if (!physicalFlags.bInfiniteMass) {
+        com = PhysicalTransformVectorOriginal(GetMatrix(), m_vecCentreOfMass); // 0x59C790
+    }
+
     if (physicalFlags.bDisableMoveForce) {
         point.z = 0.0f;
         force.z = 0.0f;
     }
 
-    // Adjust point to be relative to the centre-of-mass
-    if (!physicalFlags.bInfiniteMass)  {
-        point -= GetMatrix().TransformVector(m_vecCentreOfMass);
-    }
-    
-    // Apply angular velocity around this point now
-    m_vecTurnSpeed += CrossProduct(point, force) / m_fTurnMass;
+    const CVector diff{ point.x - com.x, point.y - com.y, point.z - com.z };
+    const auto    cross = PhysicalCrossProductOriginal(diff, force); // 0x59C730
+    PhysicalAddScaledByRecip(m_vecTurnSpeed, cross, 1.0 / (double)m_fTurnMass);
 }
 
 // 0x542B50
 void CPhysical::ApplyForce(CVector vecForce, CVector point, bool bUpdateTurnSpeed)
 {
-    CVector vecMoveSpeedForce = vecForce;
-    if (physicalFlags.bDisableZ)
-        vecMoveSpeedForce.z = 0.0f;
-
-    if (!physicalFlags.bInfiniteMass && !physicalFlags.bDisableMoveForce)
-        m_vecMoveSpeed += vecMoveSpeedForce / m_fMass;
-
-    if (!physicalFlags.bDisableTurnForce && bUpdateTurnSpeed) {
-        CVector vecCentreOfMassMultiplied{};
-        float fTurnMass = m_fTurnMass;
-        if (physicalFlags.bInfiniteMass)
-            fTurnMass += m_vecCentreOfMass.z * m_fMass * m_vecCentreOfMass.z * 0.5f;
-        else
-            vecCentreOfMassMultiplied = GetMatrix().TransformVector(m_vecCentreOfMass);
-
-        if (physicalFlags.bDisableMoveForce) {
-            point.z = 0.0f;
-            vecForce.z = 0.0f;
-        }
-
-        CVector distance = point - vecCentreOfMassMultiplied;
-        m_vecTurnSpeed += CrossProduct(distance, vecForce) / fTurnMass;
-    }
+    PhysicalApplyForceImpl(*this, vecForce, point, m_vecMoveSpeed, m_vecTurnSpeed, bUpdateTurnSpeed);
 }
 
 // 0x542CE0
 CVector CPhysical::GetSpeed(CVector point)
 {
-    CVector vecCentreOfMassMultiplied{};
+    CVector com{};
     if (!physicalFlags.bInfiniteMass)
-        vecCentreOfMassMultiplied = GetMatrix().TransformVector(m_vecCentreOfMass);
+        com = PhysicalTransformVectorOriginal(GetMatrix(), m_vecCentreOfMass); // 0x59C790
 
-    CVector distance = point - vecCentreOfMassMultiplied;
-    CVector vecTurnSpeed = m_vecTurnSpeed + m_vecFrictionTurnSpeed;
-    CVector speed = CrossProduct(vecTurnSpeed, distance);
-    speed += m_vecMoveSpeed + m_vecFrictionMoveSpeed;
-    return speed;
+    const CVector diff{ point.x - com.x, point.y - com.y, point.z - com.z };
+    const CVector turn{ m_vecTurnSpeed.x + m_vecFrictionTurnSpeed.x, m_vecTurnSpeed.y + m_vecFrictionTurnSpeed.y, m_vecTurnSpeed.z + m_vecFrictionTurnSpeed.z };
+    const auto    cross = PhysicalCrossProductOriginal(turn, diff); // 0x59C730
+
+    // (cross + moveSpeed) + frictionMoveSpeed; x and y are spilled after the first add, z stays on the x87 stack
+    const float x1 = m_vecMoveSpeed.x + cross.x;
+    const float y1 = cross.y + m_vecMoveSpeed.y;
+    return {
+        x1 + m_vecFrictionMoveSpeed.x,
+        y1 + m_vecFrictionMoveSpeed.y,
+        (float)(((double)cross.z + m_vecMoveSpeed.z) + m_vecFrictionMoveSpeed.z)
+    };
 }
 
 void CPhysical::ApplyMoveSpeed()
 {
     if (physicalFlags.bDontApplySpeed || physicalFlags.bDisableMoveForce)
         ResetMoveSpeed();
-    else
-        GetPosition() += CTimer::GetTimeStep() * m_vecMoveSpeed;
+    else {
+        // `fld timeStep; fmul speed; fadd pos; fstp pos`: the product is not rounded to float before the add (0x542DE5)
+        auto& pos = GetPosition();
+        const double ts = CTimer::GetTimeStep();
+        pos.x = (float)(ts * m_vecMoveSpeed.x + pos.x);
+        pos.y = (float)(ts * m_vecMoveSpeed.y + pos.y);
+        pos.z = (float)(ts * m_vecMoveSpeed.z + pos.z);
+    }
 }
 
 // 0x542E20
@@ -842,13 +872,14 @@ void CPhysical::ApplyGravity()
 {
     if (physicalFlags.bApplyGravity && !physicalFlags.bDisableMoveForce) {
         if (physicalFlags.bInfiniteMass) {
-            float fMassTimeStep = CTimer::GetTimeStep() * m_fMass;
-            CVector point = GetMatrix().TransformVector(m_vecCentreOfMass);
-            CVector force (0.0f, 0.0f, fMassTimeStep * -0.008f);
+            // timeStep * mass * -0.008f stays on the x87 stack until the float store
+            const double fMassTimeStep = (double)CTimer::GetTimeStep() * m_fMass;
+            CVector point = PhysicalTransformVectorOriginal(GetMatrix(), m_vecCentreOfMass); // 0x59C790
+            CVector force (0.0f, 0.0f, (float)(fMassTimeStep * -0.008f));
             ApplyForce(force, point, true);
         }
         else if (GetUsesCollision()) {
-            m_vecMoveSpeed.z -= CTimer::GetTimeStep() * 0.008f;
+            m_vecMoveSpeed.z = (float)((double)m_vecMoveSpeed.z - (double)CTimer::GetTimeStep() * 0.008f); // `fmul 0.008f; fsubr speed.z` (0x54308D)
         }
     }
 }
@@ -862,7 +893,7 @@ void CPhysical::ApplyFrictionMoveForce(CVector moveForce)
         {
             moveForce.z = 0.0f;
         }
-        m_vecFrictionMoveSpeed += moveForce / m_fMass;
+        PhysicalAddScaledByRecip(m_vecFrictionMoveSpeed, moveForce, 1.0 / (double)m_fMass);
     }
 }
 
@@ -904,38 +935,7 @@ void CPhysical::ApplyFrictionTurnForce(CVector force, CVector point) { // NOTE: 
 // 0x543220
 void CPhysical::ApplyFrictionForce(CVector vecMoveForce, CVector point)
 {
-    CVector vecTheMoveForce = vecMoveForce;
-
-    if (physicalFlags.bDisableZ)
-    {
-        vecTheMoveForce.z = 0.0f;
-    }
-
-    if (!physicalFlags.bInfiniteMass && !physicalFlags.bDisableMoveForce)
-    {
-        m_vecFrictionMoveSpeed += vecTheMoveForce / m_fMass;
-    }
-
-    CVector vecCentreOfMassMultiplied{};
-    if (!physicalFlags.bDisableTurnForce)
-    {
-        float fTurnMass = m_fTurnMass;
-        if (physicalFlags.bInfiniteMass)
-            fTurnMass += m_vecCentreOfMass.z * m_fMass * m_vecCentreOfMass.z * 0.5f;
-        else
-            vecCentreOfMassMultiplied = GetMatrix().TransformVector(m_vecCentreOfMass);
-
-        if (physicalFlags.bDisableMoveForce)
-        {
-            point.z = 0.0f;
-            vecMoveForce.z = 0.0f;
-        }
-
-        CVector vecDifference = point - vecCentreOfMassMultiplied;
-        CVector vecMoveForceCrossProduct = CrossProduct(vecDifference, vecMoveForce);
-
-        m_vecFrictionTurnSpeed += vecMoveForceCrossProduct / fTurnMass;
-    }
+    PhysicalApplyForceImpl(*this, vecMoveForce, point, m_vecFrictionMoveSpeed, m_vecFrictionTurnSpeed, true);
 }
 
 // 0x5433B0
@@ -1165,75 +1165,85 @@ bool CPhysical::ApplySoftCollision(CEntity* entity, const CColPoint& colPoint, f
 
 // 0x543C90
 bool CPhysical::ApplySpringCollision(float fSuspensionForceLevel, CVector& direction, CVector& collisionPoint, float fSpringLength, float fSuspensionBias, float& fSpringForceDampingLimit) {
-    float fSpringStress = 1.0f - fSpringLength;
-    if (fSpringStress <= 0.0f)
+    const double fSpringStress = 1.0 - (double)fSpringLength; // x87 stack, unrounded
+    if (fSpringStress <= 0.0)
         return true;
 
-    float fTimeStep = CTimer::GetTimeStep();
-    if (CTimer::GetTimeStep() >= 3.0f)
-        fTimeStep = 3.0f;
+    // `ts < 3 ? ts : 3` (NaN -> 3)
+    const float fTimeStep = CTimer::GetTimeStep() < 3.0f ? CTimer::GetTimeStep() : 3.0f;
 
-    fSpringForceDampingLimit = fSpringStress * m_fMass * fSuspensionForceLevel * 0.016f * fTimeStep * fSuspensionBias;
-    ApplyForce((-1.0f * fSpringForceDampingLimit) * direction, collisionPoint, true);
+    // ((((stress * mass) * level) * 0.016f) * timeStep) * bias; the float store is a copy, the force uses the unrounded value
+    const double limit = ((((fSpringStress * m_fMass) * fSuspensionForceLevel) * 0.016f) * fTimeStep) * fSuspensionBias;
+    fSpringForceDampingLimit = (float)limit;
+    const double neg = -limit;
+    ApplyForce(CVector{ (float)(neg * direction.x), (float)(neg * direction.y), (float)(neg * direction.z) }, collisionPoint, true);
     return true;
 }
 
 // 0x543D60
 bool CPhysical::ApplySpringCollisionAlt(float fSuspensionForceLevel, CVector& direction, CVector& collisionPoint, float fSpringLength, float fSuspensionBias, CVector& normal, float& fSpringForceDampingLimit) {
-    float fSpringStress = 1.0f - fSpringLength;
-    if (fSpringStress <= 0.0f)
+    const double fSpringStress = 1.0 - (double)fSpringLength;
+    if (fSpringStress <= 0.0)
         return true;
 
-    if (DotProduct(direction, normal) > 0.0f)
+    // dot product accumulates (y + z) + x in extended precision
+    if (((double)direction.y * normal.y + (double)direction.z * normal.z) + (double)direction.x * normal.x > 0.0)
         normal *= -1.0f;
 
-    float fTimeStep = CTimer::GetTimeStep();
-    if (CTimer::GetTimeStep() >= 3.0f)
-        fTimeStep = 3.0f;
+    const float fTimeStep = CTimer::GetTimeStep() < 3.0f ? CTimer::GetTimeStep() : 3.0f;
 
-    fSpringForceDampingLimit = fSpringStress * (fTimeStep * m_fMass) * fSuspensionForceLevel * fSuspensionBias * 0.016f;
+    // stress * (timeStep * mass) * level * bias * 0.016f, then `* 0.75f` from the unrounded value
+    double limit = ((fSpringStress * ((double)fTimeStep * m_fMass)) * fSuspensionForceLevel * fSuspensionBias) * 0.016f;
     if (physicalFlags.bMakeMassTwiceAsBig)
-        fSpringForceDampingLimit *= 0.75f;
+        limit *= 0.75f;
+    fSpringForceDampingLimit = (float)limit;
 
-    ApplyForce(fSpringForceDampingLimit * normal, collisionPoint, true);
+    const float l = fSpringForceDampingLimit; // reloaded from memory
+    ApplyForce(CVector{ (float)((double)l * normal.x), (float)((double)l * normal.y), (float)((double)l * normal.z) }, collisionPoint, true);
     return true;
 }
 
 // 0x543E90
 bool CPhysical::ApplySpringDampening(float fDampingForce, float fSpringForceDampingLimit, CVector& direction, CVector& collisionPoint, CVector& collisionPos) {
-    float fCollisionPosDotProduct = DotProduct(collisionPos, direction);
-    CVector vecCollisionPointSpeed = GetSpeed(collisionPoint);
-    float fCollisionPointSpeedDotProduct = DotProduct(vecCollisionPointSpeed, direction);
-    float fTimeStep = CTimer::GetTimeStep();
-    if (CTimer::GetTimeStep() >= 3.0f)
-        fTimeStep = 3.0f;
+    // dot products accumulate (y + z) + x in extended precision, then are spilled to float
+    const float fCollisionPosDotProduct = (float)(((double)collisionPos.y * direction.y + (double)collisionPos.z * direction.z) + (double)direction.x * collisionPos.x);
+    const CVector vecCollisionPointSpeed = GetSpeed(collisionPoint);
+    const float fCollisionPointSpeedDotProduct = (float)(((double)vecCollisionPointSpeed.y * direction.y + (double)vecCollisionPointSpeed.z * direction.z) + (double)direction.x * vecCollisionPointSpeed.x);
 
-    float fDampingForceTimeStep = fTimeStep * fDampingForce;
+    // `ts < 3 ? ts : 3` (NaN -> 3)
+    const float fTimeStep = CTimer::GetTimeStep() < 3.0f ? CTimer::GetTimeStep() : 3.0f;
+
+    double fDampingForceTimeStep = (double)fTimeStep * fDampingForce;
     if (physicalFlags.bMakeMassTwiceAsBig)
-        fDampingForceTimeStep *= 2.0f;
+        fDampingForceTimeStep += fDampingForceTimeStep;
 
-    fDampingForceTimeStep = std::clamp(fDampingForceTimeStep, -DAMPING_LIMIT_IN_FRAME, DAMPING_LIMIT_IN_FRAME);
-    float fDampingSpeed = -(fDampingForceTimeStep * fCollisionPosDotProduct);
-    if (fDampingSpeed > 0.0f && fDampingSpeed + fCollisionPointSpeedDotProduct > 0.0f) {
-        if (fCollisionPointSpeedDotProduct >= 0.0f)
-            fDampingSpeed = 0.0f;
-        else
-            fDampingSpeed = -fCollisionPointSpeedDotProduct;
+    // clamp to +-DAMPING_LIMIT_IN_FRAME (0x8CD7A0 = 0.25f), NaN passes through
+    if (fDampingForceTimeStep > (double)DAMPING_LIMIT_IN_FRAME)
+        fDampingForceTimeStep = DAMPING_LIMIT_IN_FRAME;
+    else if (fDampingForceTimeStep < -(double)DAMPING_LIMIT_IN_FRAME)
+        fDampingForceTimeStep = -DAMPING_LIMIT_IN_FRAME;
+
+    const double dampingSpeedExt = -(fDampingForceTimeStep * fCollisionPosDotProduct);
+    float fDampingSpeed = (float)dampingSpeedExt; // [0x40]; the sign test uses the unrounded value, the sum the spilled one
+    if (dampingSpeedExt > 0.0 && (double)fDampingSpeed + fCollisionPointSpeedDotProduct > 0.0) {
+        fDampingSpeed = (fCollisionPointSpeedDotProduct < 0.0f) ? -fCollisionPointSpeedDotProduct : 0.0f;
     }
-    else if (fDampingSpeed < 0.0f && fDampingSpeed + fCollisionPointSpeedDotProduct < 0.0f) {
-        if (fCollisionPointSpeedDotProduct <= 0.0f)
-            fDampingSpeed = 0.0f;
-        else
-            fDampingSpeed = -fCollisionPointSpeedDotProduct;
+    else if (fDampingSpeed < 0.0f && (double)fDampingSpeed + fCollisionPointSpeedDotProduct < 0.0) {
+        fDampingSpeed = (fCollisionPointSpeedDotProduct > 0.0f) ? -fCollisionPointSpeedDotProduct : 0.0f;
     }
 
-    CVector center = GetMatrix().TransformVector(m_vecCentreOfMass);
-    CVector distance = collisionPoint - center;
-    float fSpringForceDamping = GetMass(distance, direction) * fDampingSpeed;
-    fSpringForceDampingLimit = fabs(fSpringForceDampingLimit) * DAMPING_LIMIT_OF_SPRING_FORCE;
-    if (fSpringForceDamping > fSpringForceDampingLimit)
-        fSpringForceDamping = fSpringForceDampingLimit;
-    ApplyForce(fSpringForceDamping * direction, collisionPoint, true);
+    const CVector center   = PhysicalTransformVectorOriginal(GetMatrix(), m_vecCentreOfMass); // 0x59C790
+    const CVector distance = { collisionPoint.x - center.x, collisionPoint.y - center.y, collisionPoint.z - center.z };
+    const auto    cross    = PhysicalCrossProductOriginal(distance, direction); // 0x59C730
+    // inlined GetMass(distance, direction): 1 / (|cross|^2 / turnMass + 1 / mass), unrounded
+    const double  sqMag    = ((double)cross.x * cross.x + (double)cross.y * cross.y) + (double)cross.z * cross.z;
+    const double  massAt   = 1.0 / (sqMag / (double)m_fTurnMass + 1.0 / (double)m_fMass);
+    double fSpringForceDamping = massAt * fDampingSpeed;
+
+    const float limit = (float)((double)fabsf(fSpringForceDampingLimit) * DAMPING_LIMIT_OF_SPRING_FORCE); // spilled
+    if (fSpringForceDamping > limit)
+        fSpringForceDamping = limit;
+    ApplyForce(CVector{ (float)(fSpringForceDamping * direction.x), (float)(fSpringForceDamping * direction.y), (float)(fSpringForceDamping * direction.z) }, collisionPoint, true);
     return true;
 }
 

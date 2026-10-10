@@ -12,15 +12,15 @@ public:
         WAITINGTOFINISH,
     };
 
-    static inline auto& m_State                        = StaticRef<eP2pState>(0x969A20);
-    static inline auto& m_pPed                         = StaticRef<CPed*>(0x9691C0);
-    static inline auto& m_Topic                        = StaticRef<int32>(0x9691BC);
-    static inline auto& m_TimeOfLastPlayerConversation = StaticRef<uint32>(0x9691B4);
-    static inline auto& m_StartTime                    = StaticRef<uint32>(0x9691B8);
-    static inline auto& m_bPositiveReply               = StaticRef<bool>(0x9691B0); // unused
-    static inline auto& m_bPositiveOpening             = StaticRef<bool>(0x9691B1);
-    static inline auto& m_NextPedIndexToCheck          = StaticRef<int32>(0x969A3C);     // NOTSA name: index into the ped pool of the ped that is checked next for starting a conversation
-    static inline auto& m_pPlayerVehicle               = StaticRef<CVehicle*>(0x969A40); // NOTSA name: last known vehicle of the player (referenced)
+    static inline NOTSA_GLOBAL(m_State, 0x969A20, (eP2pState), {});
+    static inline NOTSA_GLOBAL(m_pPed, 0x9691C0, (CPed*), {});
+    static inline NOTSA_GLOBAL(m_Topic, 0x9691BC, (int32), {});
+    static inline NOTSA_GLOBAL(m_TimeOfLastPlayerConversation, 0x9691B4, (uint32), {});
+    static inline NOTSA_GLOBAL(m_StartTime, 0x9691B8, (uint32), {});
+    static inline NOTSA_GLOBAL(m_bPositiveReply, 0x9691B0, (bool), {}); // unused
+    static inline NOTSA_GLOBAL(m_bPositiveOpening, 0x9691B1, (bool), {});
+    static inline NOTSA_GLOBAL(m_NextPedIndexToCheck, 0x969A3C, (int32), {});     // NOTSA name: index into the ped pool of the ped that is checked next for starting a conversation
+    static inline NOTSA_GLOBAL(m_pPlayerVehicle, 0x969A40, (CVehicle*), {}); // NOTSA name: last known vehicle of the player (referenced)
 
     static void InjectHooks();
     static void Clear();

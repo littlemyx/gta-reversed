@@ -36,13 +36,13 @@ public:
         PLAYING  = 2,
     };
 
-    static inline auto& m_AwkwardSayStatus              = StaticRef<eAwkwardSayStatus>(0x9691C4);
-    static inline auto& m_SettingUpConversation         = StaticRef<bool>(0x9691D0);
-    static inline auto& m_Conversations                 = StaticRef<std::array<CConversationForPed, MAX_NUM_CONVERSATIONS>>(0x9691D8);
-    static inline auto& m_Nodes                         = StaticRef<std::array<CConversationNode, MAX_NUM_CONVERSATION_NODES>>(0x969570);
-    static inline auto& m_aTempNodes                    = StaticRef<std::array<CTempConversationNode, MAX_NUM_TEMP_CONVERSATION_NODES>>(0x969360);
-    static inline auto& m_SettingUpConversationNumNodes = StaticRef<int32>(0x9691C8);
-    static inline auto& m_SettingUpConversationPed      = StaticRef<CPed*>(0x9691CC);
+    static inline NOTSA_GLOBAL(m_AwkwardSayStatus, 0x9691C4, (eAwkwardSayStatus), {});
+    static inline NOTSA_GLOBAL(m_SettingUpConversation, 0x9691D0, (bool), {});
+    static inline NOTSA_GLOBAL(m_Conversations, 0x9691D8, (std::array<CConversationForPed, MAX_NUM_CONVERSATIONS>), {});
+    static inline NOTSA_GLOBAL(m_Nodes, 0x969570, (std::array<CConversationNode, MAX_NUM_CONVERSATION_NODES>), {});
+    static inline NOTSA_GLOBAL(m_aTempNodes, 0x969360, (std::array<CTempConversationNode, MAX_NUM_TEMP_CONVERSATION_NODES>), {});
+    static inline NOTSA_GLOBAL(m_SettingUpConversationNumNodes, 0x9691C8, (int32), {});
+    static inline NOTSA_GLOBAL(m_SettingUpConversationPed, 0x9691CC, (CPed*), {});
 
     static void InjectHooks();
     static void Clear();

@@ -33,19 +33,19 @@ More information at: https://docs.microsoft.com/en-us/visualstudio/debugger/crea
         </Expand>
     </Type>
 
-    <Type Name="FixedFloat&lt;*, *, *&gt;">
+    <Type Name="FixedFloat&lt;*, *, *, *&gt;">
         <DisplayString>{(float)value / $T2, g}</DisplayString>
         <Expand>
             <Item Name="[Stored]" ExcludeView="simple">value</Item>
         </Expand>
     </Type>
-    <Type Name="FixedVector&lt;*, *&gt;">
+    <Type Name="FixedVector&lt;*, *, *&gt;">
         <DisplayString>({x}, {y}, {z})</DisplayString>
     </Type>
     <Type Name="FixedRect&lt;*, *, *&gt;">
         <DisplayString>(left: {x1}, right: {x2}, top: {y1}, bottom: {y2})</DisplayString>
     </Type>
-    <Type Name="FixedQuat&lt;*, *&gt;">
+    <Type Name="FixedQuat&lt;*, *, *&gt;">
         <DisplayString>{w} + {x}x + {y}y + {z}z</DisplayString>
     </Type>
 

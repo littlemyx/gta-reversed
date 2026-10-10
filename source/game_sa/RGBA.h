@@ -203,7 +203,8 @@ public:
         };
     }
 
-    constexpr operator RwRGBAReal() { return { (RwReal)r / 255.f, (RwReal)g / 255.f, (RwReal)b / 255.f, (RwReal)a / 255.f }; }
+    // RwRGBAReal-from-RwRGBA in the exe is `(float)c * (float)(1.0/255.0)` (0x859A3C), not a division
+    constexpr operator RwRGBAReal() { return { (RwReal)r * ExeRecip(255.f), (RwReal)g * ExeRecip(255.f), (RwReal)b * ExeRecip(255.f), (RwReal)a * ExeRecip(255.f) }; }
     constexpr operator RwRGBA()     { return { r, g, b, a }; }
 
     constexpr uint8 operator[](size_t i) const {

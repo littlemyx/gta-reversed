@@ -973,6 +973,11 @@ void RwShimPipelineShutdown() {
     g_prevLights.clear();
 }
 
+// P2B-24c: does `instData` (geometry->instData) hold a resentry created by this façade (as opposed to librw's own native instance block)? Used by the skin dispatcher.
+bool RwShimIsFacadeInstance(const void* instData) {
+    return instData && Entries().count(instData) != 0;
+}
+
 RxNodeDefinition* RxNodeDefinitionGetD3D9AtomicAllInOne() {
     return &g_nodeDef;
 }

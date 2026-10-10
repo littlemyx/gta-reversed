@@ -15,9 +15,14 @@
 //     of the exe's instance function 0x7C90D0); librw stores the raw bone id.
 //   * RwShimSkinPipelineEnsure / Shutdown, called from RwShimPipelineEnsure / Shutdown (pipeline.cpp) like the MatFX pipeline.
 //
+// P2B-24c: the route is chosen per geometry like the exe does (resentry creation 0x7C8D60 stores `skin+0x20 = hierarchy && 0x7C8A00(atomic)`, i.e. HW T&L && VS/PS >= 1.1 &&
+// the skin's bone budget `skin+0x1C` (boneLimit with split data, else numUsedBones) fits MaxVertexShaderConst): the librw pipeline's `impl.render` is replaced by a dispatcher;
+// HW geometry goes on as described here (split skin data is NOT required: without it the exe uploads every bone, see 0x7C9374..0x7C942E / 0x7C8418), every other geometry
+// renders through the CPU skinning route of pipeline_skin_cpu.cpp (the exe's 0x7C7B90 branch for `skin+0x20 == 0`; that route also draws a hierarchy-less skin unskinned).
+//
 // Deliberate differences / things left out:
-//  * geometry that does not take the HW path (no split skin data, caps predicate false, no VS/PS 1.1, bone limit above the constant budget) renders through
-//    librw's own skinRenderCB (a CPU-skinning port of 0x7CAAD0.. is a later task). The instance wrapper only rewrites the indices of HW geometry.
+//  * a geometry never changes route after its first render (its instance data is either librw's native block or the façade's resentry); the exe re-evaluates the flag
+//    whenever it re-creates the resentry.
 //  * a HW geometry without a hierarchy draws with identity bone matrices (the exe's node would take the non-skinned path 0x7C85B0).
 //  * the bone-matrix cache of 0x7C78A0 (hierarchy, ~frame stamp, atomic frame -> skip the rebuild) is not kept: its stamp is RwEngineInstance->renderFrame, which
 //    the shim never advances (see camera.cpp), so the cache would freeze the pose; rebuilding gives the same bits whenever the cache would hit.
@@ -42,6 +47,12 @@ void _rwD3D9RenderStateVertexAlphaEnable(RwBool enable);
 void RwShimSkinPipelineEnsure();
 void RwShimSkinPipelineShutdown();
 
+// P2B-24c: the CPU skinning route (pipeline_skin_cpu.cpp) and the façade's instance-data registry (pipeline.cpp)
+void RwShimSkinCpuEnsure();
+void RwShimSkinCpuShutdown();
+void RwShimSkinCpuRender(rw::Atomic* atomic);
+bool RwShimIsFacadeInstance(const void* instData);
+
 namespace {
 
 using u8  = std::uint8_t;
@@ -56,9 +67,15 @@ struct Caps {
 } g_caps;
 
 rw::d3d9::ObjPipeline* g_pipe = nullptr;
+void (*g_origImplRender)(rw::ObjPipeline*, rw::Atomic*) = nullptr;
 void (*g_origInstance)(rw::Geometry*, rw::d3d9::InstanceDataHeader*, rw::bool32) = nullptr;
 void (*g_origRender)(rw::Atomic*, rw::d3d9::InstanceDataHeader*) = nullptr;
 bool g_installed = false;
+bool g_forceCpu  = false; // test hook (RwShimSkinForceCpu)
+// The exe's predicate sends a ped like male01 (no split data, 28 bones) to the vertex-shader path. That path renders broken geometry here (see the P2B-24c notes in the
+// report: wined3d draws a few vertices of the skinned mesh at infinity although the vertex data, indices and bone constants checked on the CPU are right), so until
+// it is fixed HW geometry is rendered by the CPU route; RwShimSkinEnableHardware(true) restores the exe's choice (tests / debugging).
+bool g_hardwareEnabled = false;
 
 // 0x7CB2B0 (caps block)
 void ProbeCaps() {
@@ -75,10 +92,19 @@ void ProbeCaps() {
     }
 }
 
-// 0x7C8A00 + the node's `skin->numMeshes != 0` test: does this geometry render through the HW path?
-bool IsHardwareSkin(const rw::Skin* skin) {
-    return skin && g_caps.hwtl && g_caps.vs11ps11 && skin->numMeshes != 0 && skin->remapIndices && skin->rleCount && skin->rle &&
-           static_cast<u32>(skin->boneLimit) <= g_caps.maxBones;
+// does the skin carry the split data (bone remap + per-mesh run-length lists)? The exe tests the remap pointer (skin+0x34) at 0x7C8FEF / 0x7C9374
+bool HasSplitData(const rw::Skin* skin) {
+    return skin->numMeshes != 0 && skin->remapIndices && skin->rleCount && skin->rle;
+}
+
+// the exe's skin+0x1C (0x7C8FEF..0x7C9001): boneLimit with split data, numUsedBones without
+int EffectiveBoneLimit(const rw::Skin* skin) {
+    return HasSplitData(skin) ? skin->boneLimit : skin->numUsedBones;
+}
+
+// 0x7C8A00 (+ the hierarchy test of 0x7C9004): does this skin render through the HW path?
+bool IsHardwareSkin(const rw::Skin* skin, bool hasHierarchy) {
+    return skin && hasHierarchy && g_caps.hwtl && g_caps.vs11ps11 && static_cast<u32>(EffectiveBoneLimit(skin)) <= g_caps.maxBones;
 }
 
 //--------------------------------------------------------------------------------------------------
@@ -86,19 +112,29 @@ bool IsHardwareSkin(const rw::Skin* skin) {
 //--------------------------------------------------------------------------------------------------
 void SkinInstanceCB(rw::Geometry* geo, rw::d3d9::InstanceDataHeader* header, rw::bool32 reinstance) {
     rw::Skin* skin = rw::Skin::get(geo);
-    if (reinstance || !IsHardwareSkin(skin) || !skin->indices) {
+    if (reinstance || !skin || !skin->indices) { // (only HW geometry gets here: the dispatcher sends everything else to the CPU route)
         g_origInstance(geo, header, reinstance);
         return;
     }
-    // 0x7C90D0 (0x7C9374..0x7C93C8): a 256-byte table bone id -> 3 * remap[id] (0 for the unused 0xFF entries), applied to the four indices of every vertex
-    if (static_cast<u32>(static_cast<u8>(skin->remapIndices[0])) >= static_cast<u32>(skin->numBones)) {
-        skin->remapIndices[0] = 0; // 0x7C9385..: the exe clamps remap[0] to 0 when it is not a valid index (writes into the skin data)
-    }
+    // 0x7C90D0 (0x7C9374..0x7C9430): a 256-byte table bone id -> constant register offset, applied to the four indices of every vertex
     u8 table[256] = {};
-    for (int i = 0; i < skin->numBones && i < 256; i++) {
-        const u8 slot = static_cast<u8>(skin->remapIndices[i]);
-        if (slot < 0xFF) {
-            table[i] = static_cast<u8>(slot * 3);
+    if (HasSplitData(skin)) {
+        if (static_cast<u32>(static_cast<u8>(skin->remapIndices[0])) >= static_cast<u32>(skin->numBones)) {
+            skin->remapIndices[0] = 0; // 0x7C9385..: the exe clamps remap[0] to 0 when it is not a valid index (writes into the skin data)
+        }
+        for (int i = 0; i < skin->numBones && i < 256; i++) {
+            const u8 slot = static_cast<u8>(skin->remapIndices[i]);
+            if (slot < 0xFF) {
+                table[i] = static_cast<u8>(slot * 3);
+            }
+        }
+    } else if (static_cast<u32>(skin->numBones) <= g_caps.maxBones) { // 0x7C93CA: no split data, the whole hierarchy fits: register = 3 * id (the exe counts hierarchy +4 nodes)
+        for (int i = 0; i < skin->numBones && i < 256; i++) {
+            table[i] = static_cast<u8>(i * 3);
+        }
+    } else { // 0x7C93F8: packed by position in the used-bone list
+        for (int i = 0; i < skin->numUsedBones; i++) {
+            table[skin->usedBones[i]] = static_cast<u8>(i * 3);
         }
     }
     const u32 n = static_cast<u32>(geo->numVertices) * 4;
@@ -164,11 +200,11 @@ void FillLight(rwskin::LightRef& out, rw::Light* l) {
 void SkinRenderCB(rw::Atomic* atomic, rw::d3d9::InstanceDataHeader* header) {
     rw::Geometry* geo  = atomic->geometry;
     rw::Skin*     skin = rw::Skin::get(geo);
-    if (!IsHardwareSkin(skin)) {
+    rw::HAnimHierarchy* hier = rw::Skin::getHierarchy(atomic);
+    if (!IsHardwareSkin(skin, hier != nullptr)) {
         g_origRender(atomic, header);
         return;
     }
-    rw::HAnimHierarchy* hier = rw::Skin::getHierarchy(atomic);
 
     // ---- bones
     static std::vector<float> boneBuf;
@@ -252,13 +288,14 @@ void SkinRenderCB(rw::Atomic* atomic, rw::d3d9::InstanceDataHeader* header) {
     if (const RwSphere* s = RpAtomicGetWorldBoundingSphere(atomic)) {
         e.lights.sphere[0] = s->center.x; e.lights.sphere[1] = s->center.y; e.lights.sphere[2] = s->center.z; e.lights.sphere[3] = s->radius;
     }
-    e.skin.boneLimit    = skin->boneLimit;
+    e.skin.boneLimit    = EffectiveBoneLimit(skin);
     e.skin.numUsedBones = skin->numUsedBones;
     e.skin.usedBones    = skin->usedBones;
     e.skin.numWeights   = skin->numWeights;
-    e.skin.remap        = reinterpret_cast<const u8*>(skin->remapIndices);
-    e.skin.rleCount     = reinterpret_cast<const u8*>(skin->rleCount);
-    e.skin.rle          = reinterpret_cast<const u8*>(skin->rle);
+    const bool split    = HasSplitData(skin);
+    e.skin.remap        = split ? reinterpret_cast<const u8*>(skin->remapIndices) : nullptr;
+    e.skin.rleCount     = split ? reinterpret_cast<const u8*>(skin->rleCount) : nullptr;
+    e.skin.rle          = split ? reinterpret_cast<const u8*>(skin->rle) : nullptr;
     e.bones             = bones;
     e.indexBuffer       = header->indexBuffer;
     e.primType          = header->primType;
@@ -302,6 +339,24 @@ void SkinRenderCB(rw::Atomic* atomic, rw::d3d9::InstanceDataHeader* header) {
     }
 }
 
+//--------------------------------------------------------------------------------------------------
+// the dispatcher (replaces librw's `impl.render` of the skin pipeline): HW geometry -> librw's instance + our render callback, the rest -> the CPU route
+//--------------------------------------------------------------------------------------------------
+void SkinPipeRender(rw::ObjPipeline* p, rw::Atomic* atomic) {
+    rw::Geometry* geo = atomic->geometry;
+    bool cpu;
+    if (geo && geo->instData) {
+        cpu = RwShimIsFacadeInstance(geo->instData); // a geometry keeps the route of its first render
+    } else {
+        cpu = !geo || g_forceCpu || !g_hardwareEnabled || !IsHardwareSkin(rw::Skin::get(geo), rw::Skin::getHierarchy(atomic) != nullptr);
+    }
+    if (cpu) {
+        RwShimSkinCpuRender(atomic);
+    } else {
+        g_origImplRender(p, atomic);
+    }
+}
+
 } // namespace
 
 //--------------------------------------------------------------------------------------------------
@@ -322,17 +377,32 @@ void RwShimSkinPipelineEnsure() {
     g_pipe           = static_cast<rw::d3d9::ObjPipeline*>(pipe); // (a re-opened engine has a new pipeline object: librw's skinOpen)
     g_origInstance   = g_pipe->instanceCB;
     g_origRender     = g_pipe->renderCB;
-    g_pipe->instanceCB = SkinInstanceCB;
-    g_pipe->renderCB   = SkinRenderCB;
-    g_installed        = true;
+    g_origImplRender = g_pipe->impl.render;
+    g_pipe->instanceCB   = SkinInstanceCB;
+    g_pipe->renderCB     = SkinRenderCB;
+    g_pipe->impl.render  = SkinPipeRender;
+    g_installed          = true;
+    RwShimSkinCpuEnsure();
+}
+
+// test hook: new geometries rendered while this is set take the CPU skinning route even where the exe's predicate would choose the vertex-shader path
+void RwShimSkinForceCpu(bool force) {
+    g_forceCpu = force;
+}
+
+// test hook: let geometry that satisfies the exe's HW predicate use the vertex-shader path (off by default, see g_hardwareEnabled)
+void RwShimSkinEnableHardware(bool enable) {
+    g_hardwareEnabled = enable;
 }
 
 // restores librw's callbacks (its skinClose destroys the pipeline object) and releases the cached shaders; call before RwEngineStop / Close
 void RwShimSkinPipelineShutdown() {
     if (g_installed && g_pipe) {
-        g_pipe->instanceCB = g_origInstance;
-        g_pipe->renderCB   = g_origRender;
+        g_pipe->instanceCB  = g_origInstance;
+        g_pipe->renderCB    = g_origRender;
+        g_pipe->impl.render = g_origImplRender;
     }
+    RwShimSkinCpuShutdown();
     g_installed = false;
     g_pipe      = nullptr;
     notsa::skinvs::Shutdown();

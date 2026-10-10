@@ -5,9 +5,14 @@
 #include "Entity/Vehicle/Vehicle.h"
 
 static constexpr uintptr_t CAM_VA = 0xB6F028;
+static_assert(offsetof(CCamera, m_bUseSpecialFovTrain) == 0x36 && offsetof(CCamera, m_fFovForTrain) == 0x130);
 struct CamRun {
     Snap in{ CAM_VA, sizeof(CCamera) }, pa{ CAM_VA, sizeof(CCamera) }, pe{ CAM_VA, sizeof(CCamera) };
+    Snap xin, xpa, xpe;   // optional extra exe globals (e.g. the function-local statics of CCam::KeepTrackOfTheSpeed)
     uint32_t ts = 0;
+    CamRun() : xin(0, 0), xpa(0, 0), xpe(0, 0) {}
+    CamRun(uintptr_t va, size_t n) : xin(va, n), xpa(va, n), xpe(va, n) {}
+    void FillExtra(Rng& r) { if (xin.b.empty()) return; auto* w = reinterpret_cast<uint32_t*>(xin.va); for (size_t i = 0; i < xin.b.size() / 4; ++i) { const float v = GenF(r, 100.f, S_NOHUGE); std::memcpy(&w[i], &v, 4); } }
     void Begin(Rng& r, float scale = 0.f) {   // random floats everywhere (pointers become garbage: only call helpers that do not dereference them)
         if (scale == 0.f) scale = r.below(3) ? 100.f : PickScale(r);
         auto* w = reinterpret_cast<uint32_t*>(CAM_VA);
@@ -15,14 +20,162 @@ struct CamRun {
         TheCamera.m_nActiveCam = (uint8)r.below(2);
         ts = CTimer::m_snTimeInMilliseconds = r.below(4) ? r.u32() % 2000000 : r.u32();
     }
-    void Mark()     { in.Save(); }
-    void PortDone() { pa.Save(); in.Restore(); }
-    void ExeDone()  { pe.Save(); in.Restore(); }
-    bool Same()     { return pa.SameAs(pe); }
-    std::string Diff() { return DiffDesc(pa.b.data(), pe.b.data(), pa.b.size(), "cam"); }
+    void Mark()     { in.Save(); if (!xin.b.empty()) xin.Save(); }
+    void PortDone() { pa.Save(); in.Restore(); if (!xin.b.empty()) { xpa.Save(); xin.Restore(); } }
+    void ExeDone()  { pe.Save(); in.Restore(); if (!xin.b.empty()) { xpe.Save(); xin.Restore(); } }
+    bool Same()     { return pa.SameAs(pe) && (xin.b.empty() || xpa.SameAs(xpe)); }
+    std::string Diff() { return DiffDesc(pa.b.data(), pe.b.data(), pa.b.size(), "cam") + (xin.b.empty() ? "" : DiffDesc(xpa.b.data(), xpe.b.data(), xpa.b.size(), "xtra")); }
 };
 
+// ---- stubs for the world-facing callees of the camera modes: scripted + recorded, installed on BOTH sides
+#include "WaterLevel.h"
+#include "TimeCycle.h"
+namespace cwf {
+struct Rec {
+    int cone = 0; CVector conePos{}, coneLook{}; float coneRad = 0, coneMin = 0; CEntity* coneIgnore = nullptr;
+    int blur = 0; int blurR = 0, blurG = 0, blurB = 0, blurV = 0, blurType = 0;
+    int water = 0; float wx = 0, wy = 0, wz = 0;
+    int playerVeh = 0;
+};
+inline Rec g_rec;
+inline bool coneRet = false; inline CVector coneOut{}; inline float coneDist = 0;
+inline bool waterRet = false; inline float waterLevel = 0;
+inline void* playerVeh = nullptr;
+inline bool Cone(const CVector& pos, const CVector& look, CVector& out, float rad, float mn, float& dist) {
+    ++g_rec.cone; g_rec.conePos = pos; g_rec.coneLook = look; g_rec.coneRad = rad; g_rec.coneMin = mn; g_rec.coneIgnore = CWorld::pIgnoreEntity;
+    if (coneRet) { out = coneOut; dist = coneDist; }
+    return coneRet;
+}
+inline void Blur(int r, int g, int b, int v, int type) { ++g_rec.blur; g_rec.blurR = r; g_rec.blurG = g; g_rec.blurB = b; g_rec.blurV = v; g_rec.blurType = type; }
+inline bool Water(float x, float y, float z, float& out) { ++g_rec.water; g_rec.wx = x; g_rec.wy = y; g_rec.wz = z; if (waterRet) out = waterLevel; return waterRet; }
+inline bool SameRec(const Rec& a, const Rec& b) {
+    return a.cone == b.cone && SameV(a.conePos, b.conePos) && SameV(a.coneLook, b.coneLook) && SameF(a.coneRad, b.coneRad) && SameF(a.coneMin, b.coneMin) && a.coneIgnore == b.coneIgnore
+        && a.blur == b.blur && a.blurR == b.blurR && a.blurG == b.blurG && a.blurB == b.blurB && a.blurV == b.blurV && a.blurType == b.blurType
+        && a.water == b.water && (a.water == 0 || (SameF(a.wx, b.wx) && SameF(a.wy, b.wy) && SameF(a.wz, b.wz))) && a.playerVeh == b.playerVeh;
+}
+inline std::string Desc(const Rec& a) {
+    return "cone " + std::to_string(a.cone) + " blur " + std::to_string(a.blur) + "(" + std::to_string(a.blurR) + "," + std::to_string(a.blurG) + "," + std::to_string(a.blurB) + "," + std::to_string(a.blurV) + "," + std::to_string(a.blurType) + ") water " + std::to_string(a.water) + " pveh " + std::to_string(a.playerVeh);
+}
+}
+bool CWaterLevel::GetWaterLevel(float x, float y, float z, float& out, uint8, CVector*) { return cwf::Water(x, y, z, out); }
+bool CWaterLevel::GetWaterLevel(const CVector& pos, float& out, bool, CVector*) { return cwf::Water(pos.x, pos.y, pos.z, out); }
+CVehicle* FindPlayerVehicle(int32, bool) { ++cwf::g_rec.playerVeh; return reinterpret_cast<CVehicle*>(cwf::playerVeh); }
+static bool __fastcall HostCone(CCamera*, int, const CVector& pos, const CVector& look, CVector& out, float rad, float mn, float& dist) { return cwf::Cone(pos, look, out, rad, mn, dist); }
+static void* __cdecl ExeFindPlayerVehicle(int, bool) { ++cwf::g_rec.playerVeh; return cwf::playerVeh; }
+static bool __cdecl ExeWater(float x, float y, float z, float* out, bool, CVector*) { return cwf::Water(x, y, z, *out); }
+static bool g_camStubsInstalled = false;
+static void InstallCamStubs() {
+    if (g_camStubsInstalled) return;
+    g_camStubsInstalled = true;
+    PatchHostFn(PmAddr(&CCamera::ConeCastCollisionResolve), (void*)&HostCone);
+    oracle::Patch(0x51A5D0, (void*)&HostCone);
+    oracle::Patch(0x56E0D0, (void*)&ExeFindPlayerVehicle);
+    oracle::Patch(0x6EB690, (void*)&ExeWater);
+}
+struct CamWorldScript {   // random script for the stubs of one case + the camera-related exe globals (water colours, allow-collision flag)
+    static void Roll(Rng& r) {
+        cwf::coneRet = r.below(2); cwf::coneOut = GenV(r, 100.f); cwf::coneDist = GenF(r, 5.f);
+        cwf::waterRet = r.below(2); cwf::waterLevel = GenF(r, 100.f);
+        static alignas(16) uint8 veh[16]; cwf::playerVeh = r.below(2) ? veh : nullptr;
+        auto* w = reinterpret_cast<uint32_t*>(0xB7C500);   // CTimeCycle current colours: water rgb at 0xB7C508..0xB7C510
+        for (int i = 0; i < 8; ++i) { const float v = r.below(3) ? r.f01() * 300.f : std::fabs(GenF(r, 300.f, S_NOHUGE)); std::memcpy(&w[i], &v, 4); /* water colours >= 0 (the exe inlines SetMotionBlur and stores the raw int) */ }
+        *reinterpret_cast<uint8_t*>(0xB6EC2C) = r.below(2);    // gAllowScriptedFixedCameraCollision (exe global)
+        cwf::g_rec = cwf::Rec{};
+    }
+};
+
+static void TestCamCam() {
+    // CCam helpers: `this` is one of TheCamera's two active cams
+    InstallCamStubs();
+    Run("CCam::Process_Fixed 0x51D470", [](Rng& r, std::string& d) {
+        CamRun c(0xB7CD68, 4); c.Begin(r); c.FillExtra(r);   // extra: CWorld::pIgnoreEntity
+        auto& cam = TheCamera.m_aCams[r.below(2)];
+        cam.m_vecCamFixedModeSource = GenV(r, 100.f); cam.m_vecCamFixedModeUpOffSet = r.below(3) ? GenV(r, 1.f) : GenV(r, 5.f);
+        cam.m_nDirectionWasLooking = (uint8)r.below(5);
+        TheCamera.m_bUseSpecialFovTrain = r.below(2); TheCamera.m_fFovForTrain = r.below(2) ? 50.f + r.f01() * 40.f : GenF(r, 120.f);
+        CamWorldScript::Roll(r);
+        const CVector target = GenV(r, 100.f); const float ori = GenF(r, 6.f), sv = GenF(r, 1.f), svw = GenF(r, 1.f);
+        c.Mark();
+        cwf::g_rec = cwf::Rec{};
+        cam.Process_Fixed(target, ori, sv, svw); const auto recA = cwf::g_rec; c.PortDone();
+        cwf::g_rec = cwf::Rec{};
+        oracle::Fn<void __fastcall(CCam*, int, const CVector*, float, float, float)>(0x51D470)(&cam, 0, &target, ori, sv, svw); const auto recE = cwf::g_rec; c.ExeDone();
+        if (c.Same() && cwf::SameRec(recA, recE)) return true;
+        d = "target " + V(target) + " fixedsrc " + V(cam.m_vecCamFixedModeSource) + " " + cwf::Desc(recA) + " / exe " + cwf::Desc(recE) + c.Diff();
+        return false;
+    });
+    Run("CCam::GetVectorsReadyForRW 0x509CE0", [](Rng& r, std::string& d) {
+        CamRun c; c.Begin(r);
+        auto& cam = TheCamera.m_aCams[r.below(2)];
+        cam.m_vecFront = r.below(4) ? GenDir(r) : GenV(r, 2.f);
+        if (r.below(8) == 0) { cam.m_vecFront.x = r.below(2) ? 0.f : -0.f; cam.m_vecFront.y = r.below(2) ? 0.f : -0.f; }
+        c.Mark();
+        cam.GetVectorsReadyForRW(); c.PortDone();
+        oracle::Fn<void __fastcall(CCam*, int)>(0x509CE0)(&cam, 0); c.ExeDone();
+        if (c.Same()) return true;
+        d = "front " + V(cam.m_vecFront) + c.Diff();
+        return false;
+    });
+    Run("CCam::ClipBeta 0x509C50", [](Rng& r, std::string& d) {
+        CamRun c; c.Begin(r);
+        auto& cam = TheCamera.m_aCams[r.below(2)];
+        cam.m_fHorizontalAngle = r.below(3) ? (r.f01() - 0.5f) * 14.f : GenF(r, 20.f, S_NOHUGE);
+        c.Mark();
+        cam.ClipBeta(); c.PortDone();
+        oracle::Fn<void __fastcall(CCam*, int)>(0x509C50)(&cam, 0); c.ExeDone();
+        if (c.Same()) return true;
+        d = "beta " + F(cam.m_fHorizontalAngle) + c.Diff();
+        return false;
+    });
+    Run("CCam::Using3rdPersonMouseCam 0x50A850", [](Rng& r, std::string& d) {
+        CamRun c; c.Begin(r);
+        auto& cam = TheCamera.m_aCams[r.below(2)];
+        cam.m_nMode = (eCamMode)(r.below(2) ? 4 : r.below(60));   // 4 = MODE_FOLLOWPED
+        CCamera::m_bUseMouse3rdPerson = r.below(2);
+        c.Mark();
+        const bool ra = cam.Using3rdPersonMouseCam(); c.PortDone();
+        const bool re = oracle::Fn<bool __fastcall(CCam*, int)>(0x50A850)(&cam, 0); c.ExeDone();
+        Hit(ra);
+        if (ra == re && c.Same()) return true;
+        d = "mode " + std::to_string((int)cam.m_nMode) + " got " + std::to_string(ra) + " exe " + std::to_string(re);
+        return false;
+    });
+    Run("CCam::KeepTrackOfTheSpeed 0x509DF0", [](Rng& r, std::string& d) {
+        CamRun c(0xB6FF5C, 0x34); c.Begin(r); c.FillExtra(r);
+        *reinterpret_cast<uint32_t*>(0xB6FF8C) = r.u32() & 0x3F;   // init guard bits
+        auto& cam = TheCamera.m_aCams[r.below(2)];
+        TheCamera.m_bJust_Switched = r.below(4) == 0;
+        const CVector s = GenV(r, 100.f), tg = GenV(r, 100.f), up = GenV(r, 1.f);
+        const float al = r.below(3) ? (r.f01() - 0.5f) * 3.f : GenF(r, 8.f, S_NOHUGE), be = r.below(3) ? (r.f01() - 0.5f) * 14.f : GenF(r, 20.f, S_NOHUGE), fov = GenF(r, 100.f);
+        c.Mark();
+        cam.KeepTrackOfTheSpeed(s, tg, up, al, be, fov); c.PortDone();
+        oracle::Fn<void __fastcall(CCam*, int, const CVector*, const CVector*, const CVector*, const float*, const float*, const float*)>(0x509DF0)(&cam, 0, &s, &tg, &up, &al, &be, &fov); c.ExeDone();
+        if (c.Same()) return true;
+        d = "al " + F(al) + " be " + F(be) + " fov " + F(fov) + c.Diff();
+        return false;
+    });
+    Run("CCamera::Find3rdPersonCamTargetVector 0x514970", [](Rng& r, std::string& d) {
+        CamRun c; c.Begin(r);
+        CDraw::ms_fAspectRatio = r.below(4) ? 1.f + r.f01() * 1.5f : GenF(r, 3.f);
+        TheCamera.m_f3rdPersonCHairMultY = r.below(4) ? r.f01() : GenF(r, 2.f);
+        TheCamera.m_f3rdPersonCHairMultX = r.below(4) ? r.f01() : GenF(r, 2.f);
+        auto& cam = TheCamera.m_aCams[TheCamera.m_nActiveCam];
+        cam.m_nMode = (eCamMode)(r.below(8) ? 4 : 56);   // not MODE_TWOPLAYER_IN_CAR_AND_SHOOTING (reads the players' pads)
+        cam.m_fFOV = r.below(4) ? 20.f + r.f01() * 80.f : GenF(r, 200.f);
+        cam.m_vecFront = r.below(2) ? GenDir(r) : GenV(r, 2.f); cam.m_vecUp = r.below(2) ? GenV(r, 1.f) : CVector{ 0, 0, 1 };
+        const float range = GenF(r, 100.f); const CVector muzzle = GenV(r, 100.f);
+        CVector sa{ 7, 8, 9 }, ta{ 7, 8, 9 }, se{ 7, 8, 9 }, te{ 7, 8, 9 };
+        c.Mark();
+        TheCamera.Find3rdPersonCamTargetVector(range, muzzle, sa, ta); c.PortDone();
+        oracle::Fn<void __fastcall(CCamera*, int, float, CVector, CVector*, CVector*)>(0x514970)(&TheCamera, 0, range, muzzle, &se, &te); c.ExeDone();
+        if (c.Same() && SameV(sa, se) && SameV(ta, te)) return true;
+        d = "range " + F(range) + " muzzle " + V(muzzle) + " front " + V(cam.m_vecFront) + " up " + V(cam.m_vecUp) + " fov " + F(cam.m_fFOV) + " got " + V(sa) + V(ta) + " exe " + V(se) + V(te) + c.Diff();
+        return false;
+    });
+}
+
 static void TestCamera() {
+    TestCamCam();
     Run("CCamera::StoreValuesDuringInterPol 0x50C290", [](Rng& r, std::string& d) {
         CamRun c; c.Begin(r);
         CVector s = GenV(r, 100.f), t = GenV(r, 100.f), u = GenV(r, 1.f); float fov = GenF(r, 90.f);
@@ -77,7 +230,7 @@ static void TestCamera() {
     });
     Run("CCamera::SetPercentAlongCutScene 0x50C070", [](Rng& r, std::string& d) {
         CamRun c; c.Begin(r);
-        for (auto& cam : TheCamera.m_aCams) { cam.m_nMode = (eCamMode)(r.below(3) ? 29 : r.below(60)); cam.m_nFinishTime = r.u32() % 100000; }   // 29 = MODE_FLYBY
+        for (auto& cam : TheCamera.m_aCams) { cam.m_nMode = (eCamMode)(r.below(3) ? 17 : r.below(60)); cam.m_nFinishTime = r.below(4) ? r.u32() % 100000 : r.u32(); }   // 17 = MODE_FLYBY
         const float pc = r.below(4) ? r.f01() * 100.f : GenF(r, 300.f);
         c.Mark();
         TheCamera.SetPercentAlongCutScene(pc); c.PortDone();
@@ -88,7 +241,7 @@ static void TestCamera() {
     });
     Run("CCamera::FinishCutscene 0x514950", [](Rng& r, std::string& d) {
         CamRun c; c.Begin(r);
-        for (auto& cam : TheCamera.m_aCams) { cam.m_nMode = (eCamMode)(r.below(3) ? 29 : r.below(60)); cam.m_nFinishTime = r.u32() % 100000; }
+        for (auto& cam : TheCamera.m_aCams) { cam.m_nMode = (eCamMode)(r.below(3) ? 17 : r.below(60)); cam.m_nFinishTime = r.below(4) ? r.u32() % 100000 : r.u32(); }
         c.Mark();
         TheCamera.FinishCutscene(); c.PortDone();
         oracle::Fn<void __fastcall(CCamera*, int)>(0x514950)(&TheCamera, 0); c.ExeDone();

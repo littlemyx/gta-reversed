@@ -218,6 +218,15 @@ static std::string DiffDesc(const void* a, const void* b, size_t n, const char* 
 #include "Collision/ColPoint.h"
 CBaseModelInfo* CEntity::GetModelInfo() const { return CModelInfo::GetModelInfo(m_nModelIndex); }
 
+
+// redirects a port function (member or free) to a host function with the same calling convention by overwriting its entry with a JMP (as physics_oracle_weapon.inc does)
+static void PatchHostFn(void* fn, void* host) {
+    DWORD old = 0; VirtualProtect(fn, 16, PAGE_EXECUTE_READWRITE, &old);
+    auto* p = reinterpret_cast<uint8_t*>(fn); p[0] = 0xE9; *reinterpret_cast<int32_t*>(p + 1) = (int32_t)((uintptr_t)host - ((uintptr_t)fn + 5));
+    FlushInstructionCache(GetCurrentProcess(), fn, 16);
+}
+template<class PM> static void* PmAddr(PM pm) { void* p; static_assert(sizeof(pm) == sizeof(p)); std::memcpy(&p, &pm, sizeof p); return p; }
+
 // Scripted CWorld::ProcessLineOfSight (port: the symbol below, exe: 0x56BA00 patched in main()). `script` is consumed in call order; the entity of an entry is a ROLE
 // (the port and the exe work on separate copies of the fixture, so each side maps the roles to its own copies), every call's endpoints are recorded for comparison.
 namespace los {

@@ -110,6 +110,11 @@ CTask* CTaskManager::GetTaskSecondary(eSecondaryTask taskIndex) {
     if (notsa::IsFixBugs() && taskIndex == eSecondaryTask::TASK_SECONDARY_INVALID) {
         return nullptr;
     }
+    if (taskIndex == eSecondaryTask::TASK_SECONDARY_INVALID) {
+        // The exe indexes [-1] (CTaskComplexBeInGroup::MonitorSecondaryGroupTask, slot -1) and reads the field in front of the array, the last primary task;
+        // the debug STL's bounds check would terminate the process (no hook can continue after _STL_VERIFY)
+        return m_aPrimaryTasks.back();
+    }
     return m_aSecondaryTasks[taskIndex];
 }
 

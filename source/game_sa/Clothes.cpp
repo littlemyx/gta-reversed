@@ -11,7 +11,7 @@
 #include "ClothesBuilder.h"
 #include "PedClothesDesc.h"
 
-auto& PlayerClothes = StaticRef<CPedClothesDesc>(0xBC1C78);
+NOTSA_GLOBAL(PlayerClothes, 0xBC1C78, (CPedClothesDesc), {});
 
 void CClothes::InjectHooks() {
     RH_ScopedClass(CClothes);

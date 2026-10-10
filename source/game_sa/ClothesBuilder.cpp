@@ -4,15 +4,23 @@
 
 #include "ClothesBuilder.h"
 #include "PedClothesDesc.h"
+#ifndef NOTSA_GLOBAL_LOCAL_NS // B04: function-local 'auto& v = StaticRef<T>(addr)' WITHOUT 'static' in address mode (NOTSA_GLOBAL_LOCAL says 'static': changes the object code)
+#ifdef NOTSA_GLOBALS_DETACHED
+#define NOTSA_GLOBAL_LOCAL_NS(name, addr, type, ...) static std::type_identity_t<NOTSA_UNPAREN type> name __VA_ARGS__
+#else
+#define NOTSA_GLOBAL_LOCAL_NS(name, addr, type, ...) auto& name = StaticRef<NOTSA_UNPAREN type>(addr)
+#endif
+#endif
+#line 7
 
 auto& playerImg = StaticRef<CDirectory>(0xBC12C0);
-auto& playerImgEntries = StaticRef<CDirectory::DirectoryInfo>(0xBBCDC8);
+NOTSA_GLOBAL(playerImgEntries, 0xBBCDC8, (CDirectory::DirectoryInfo), {});
 
-auto& gBoneIndices = StaticRef<notsa::mdarray<int16, 10, 64>>(0xBBC8C8);
+NOTSA_GLOBAL(gBoneIndices, 0xBBC8C8, (notsa::mdarray<int16, 10, 64>), {});
 
-auto& ms_ratiosHaveChanged  = StaticRef<bool>(0x8D0AA4);
-auto& ms_geometryHasChanged = StaticRef<bool>(0x8D0AA5);
-auto& ms_textureHasChanged  = StaticRef<bool>(0x8D0AA6);
+NOTSA_GLOBAL(ms_ratiosHaveChanged, 0x8D0AA4, (bool), { true });
+NOTSA_GLOBAL(ms_geometryHasChanged, 0x8D0AA5, (bool), { true });
+NOTSA_GLOBAL(ms_textureHasChanged, 0x8D0AA6, (bool), { true });
 
 void CClothesBuilder::InjectHooks() {
     RH_ScopedClass(CClothesBuilder);
@@ -70,7 +78,7 @@ int32 CClothesBuilder::RequestTexture(uint32 txdNameKey) {
         return -1;
     }
 
-    auto& defaultTxdIdx = StaticRef<uint32>(0xBC12D0);
+    NOTSA_GLOBAL_LOCAL_NS(defaultTxdIdx, 0xBC12D0, (uint32), {});
     const auto defaultTxd = CTxdStore::defaultTxds[defaultTxdIdx];
     defaultTxdIdx = (defaultTxdIdx + 1) % 4;
 

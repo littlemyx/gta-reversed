@@ -3,12 +3,20 @@
 
 #include "Clouds.h"
 #include "PostEffects.h"
+#ifndef NOTSA_GLOBAL_LOCAL_NS // B04: function-local 'auto& v = StaticRef<T>(addr)' WITHOUT 'static' in address mode (NOTSA_GLOBAL_LOCAL says 'static': changes the object code)
+#ifdef NOTSA_GLOBALS_DETACHED
+#define NOTSA_GLOBAL_LOCAL_NS(name, addr, type, ...) static std::type_identity_t<NOTSA_UNPAREN type> name __VA_ARGS__
+#else
+#define NOTSA_GLOBAL_LOCAL_NS(name, addr, type, ...) auto& name = StaticRef<NOTSA_UNPAREN type>(addr)
+#endif
+#endif
+#line 6
 
-auto& CurrentFogIntensity = StaticRef<float>(0x8D5798);
+NOTSA_GLOBAL(CurrentFogIntensity, 0x8D5798, (float), { 1.0f });
 
-auto& gpMoonMask = StaticRef<RwTexture*>(0xC6AA74);
-auto& gpCloudTex = StaticRef<RwTexture*>(0xC6AA78);
-auto& gpCloudMaskTex = StaticRef<RwTexture*>(0xC6AA7C);
+NOTSA_GLOBAL(gpMoonMask, 0xC6AA74, (RwTexture*), {});
+NOTSA_GLOBAL(gpCloudTex, 0xC6AA78, (RwTexture*), {});
+NOTSA_GLOBAL(gpCloudMaskTex, 0xC6AA7C, (RwTexture*), {});
 
 void CClouds::InjectHooks() {
     RH_ScopedClass(CClouds);
@@ -870,9 +878,24 @@ void CClouds::RenderBottomFromHeight() {
     ZoneScoped;
 
     // NOTSA names for the tables used by this function
-    auto& randTable  = StaticRef<std::array<float, 80>>(0x8D5658); // Pseudo random numbers in [0, 1]
-    auto& offsetYTbl = StaticRef<std::array<float, 30>>(0x8D57A0);
-    auto& offsetXTbl = StaticRef<std::array<float, 30>>(0x8D5818);
+    NOTSA_GLOBAL_LOCAL_NS(randTable, 0x8D5658, (std::array<float, 80>), {
+        0.36f, 0.12f, 0.94f, 0.34f, 0.83f, 0.75f, 0.28f, 0.1f, 0.03f, 0.85f, 0.52f, 0.92f, 0.36f, 0.83f, 0.09f, 0.26f,
+        0.43f, 0.27f, 0.95f, 0.02f, 0.64f, 0.23f, 0.49f, 0.55f, 0.3f, 0.88f, 0.37f, 0.94f, 0.58f, 0.67f, 0.21f, 0.47f,
+        0.38f, 0.03f, 0.26f, 0.96f, 0.74f, 0.66f, 0.99f, 0.11f, 0.85f, 0.29f, 0.58f, 0.3f, 0.3f, 0.36f, 0.39f, 0.08f,
+        0.58f, 0.33f, 0.16f, 0.76f, 0.34f, 0.96f, 0.69f, 0.71f, 0.75f, 0.39f, 0.48f, 0.9f, 0.8f, 0.76f, 0.69f, 0.28f,
+        0.23f, 0.29f, 0.75f, 0.72f, 0.14f, 0.73f, 0.59f, 0.35f, 0.9f, 0.18f, 0.77f, 0.04f, 0.48f, 0.37f, 0.81f, 0.67f
+    }); // Pseudo random numbers in [0, 1]
+#line 874
+    NOTSA_GLOBAL_LOCAL_NS(offsetYTbl, 0x8D57A0, (std::array<float, 30>), {
+        54.0f, 105.0f, 203.0f, 65.0f, 213.0f, 154.0f, 169.0f, 54.0f, 76.0f, 10.0f, 119.0f, 204.0f, 176.0f, 154.0f, 132.0f,
+        190.0f, 200.0f, 37.0f, 193.0f, 154.0f, 71.0f, 111.0f, 234.0f, 12.0f, 195.0f, 165.0f, 104.0f, 94.0f, 23.0f, 222.0f
+    });
+#line 875
+    NOTSA_GLOBAL_LOCAL_NS(offsetXTbl, 0x8D5818, (std::array<float, 30>), {
+        100.0f, 50.0f, 156.0f, 123.0f, 232.0f, 12.0f, 76.0f, 203.0f, 164.0f, 120.0f, 64.0f, 164.0f, 94.0f, 195.0f, 125.0f,
+        71.0f, 243.0f, 123.0f, 176.0f, 65.0f, 132.0f, 54.0f, 94.0f, 12.0f, 234.0f, 167.0f, 165.0f, 200.0f, 100.0f, 40.0f
+    });
+#line 876
 
     const auto& cc = CTimeCycle::m_CurrentColours;
 
@@ -900,7 +923,7 @@ void CClouds::RenderBottomFromHeight() {
         }
     }
 
-    auto& windShift = StaticRef<float>(0xC6E954);
+    NOTSA_GLOBAL_LOCAL_NS(windShift, 0xC6E954, (float), {});
     windShift = CTimer::ms_fTimeStep * CWeather::Wind * 0.25f + windShift;
 
     RwRenderStateSet(rwRENDERSTATEZWRITEENABLE,      RWRSTATE(FALSE));
@@ -1321,7 +1344,7 @@ void CClouds::VolumetricCloudsRender() {
 
     const auto camPos = TheCamera.GetPosition();
 
-    auto& gfVolumetricCloudFader = StaticRef<float>(0xC6E970);
+    NOTSA_GLOBAL_LOCAL_NS(gfVolumetricCloudFader, 0xC6E970, (float), {});
     if (m_bVolumetricCloudHeightSwitch) {
         const auto delta = CTimer::GetTimeStep() * 4.f;
         if (camPos.z < 220.f) {
@@ -1351,8 +1374,8 @@ void CClouds::VolumetricCloudsRender() {
 
 
     //> 0x71653F
-    auto& gVecCameraCoors = StaticRef<CVector>(0xC6E964);
-    auto& gVecPlayerCoors = StaticRef<CVector>(0xC6E958);
+    NOTSA_GLOBAL_ALIAS(gVecCameraCoors, 0xC6E964, (CVector), CClouds::CameraCoors);
+    NOTSA_GLOBAL_ALIAS(gVecPlayerCoors, 0xC6E958, (CVector), CClouds::PlayerCoords);
 
     const auto bIsCameraOrPlayerPosNotStatic = (camPos != gVecCameraCoors) || (plyrPos != gVecPlayerCoors);
 

@@ -3,10 +3,10 @@
 #include "ColStore.h"
 #include "TheScripts.h"
 
-auto& ms_pColPool = StaticRef<CColPool*>(0x965560);
+NOTSA_GLOBAL(ms_pColPool, 0x965560, (CColPool*), {});
 
 using ColTreeNode  = CQuadTreeNode<ColDef*>;
-auto& ms_pQuadTree = StaticRef<ColTreeNode*>(0x96555C);
+NOTSA_GLOBAL(ms_pQuadTree, 0x96555C, (ColTreeNode*), {});
 
 void* ColDef::operator new(unsigned size) {
     return ms_pColPool->New();

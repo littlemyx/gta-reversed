@@ -15,44 +15,59 @@
 #include "TaskSimpleArrestPed.h"
 
 #include <numbers>
+#include "game_sa/DetachedShared.h"
+#line 18
 
 auto& TheCamera = StaticRef<CCamera>(0xB6F028);
-auto& gbModelViewer = StaticRef<bool>(0xBA6728);
-auto& gbCineyCamMessageDisplayed = StaticRef<int8>(0x8CC381); // 2
-auto& gCameraDirection = StaticRef<int32>(0x8CC384);         // 3
-auto& gCameraMode = StaticRef<eCamMode>(0x8CC388);        // -1
-auto& gLastTime2PlayerCameraWasOK = StaticRef<uint32>(0xB6EC24);    // 0
-auto& gLastTime2PlayerCameraCollided = StaticRef<uint32>(0xB6EC28); // 0
-auto& gPlayerPedVisible = StaticRef<bool>(0x8CC380); // true
-auto& gCurCamColVars = StaticRef<uint8>(0x8CCB80);
-auto& gCurDistForCam = StaticRef<float>(0x8CCB84);
+NOTSA_GLOBAL(gbModelViewer, 0xBA6728, (bool), {});
+NOTSA_GLOBAL(gbCineyCamMessageDisplayed, 0x8CC381, (int8), { 2 }); // 2
+NOTSA_GLOBAL(gCameraDirection, 0x8CC384, (int32), { 3 });         // 3
+NOTSA_GLOBAL(gCameraMode, 0x8CC388, (eCamMode), { static_cast<eCamMode>(0xFFFF) }); // -1 (the exe accesses 4 bytes, 0xFFFFFFFF; the repo's eCamMode is 16 bit)
+NOTSA_GLOBAL(gLastTime2PlayerCameraWasOK, 0xB6EC24, (uint32), {});    // 0
+NOTSA_GLOBAL(gLastTime2PlayerCameraCollided, 0xB6EC28, (uint32), {}); // 0
+NOTSA_GLOBAL(gPlayerPedVisible, 0x8CC380, (bool), { true }); // true
+NOTSA_GLOBAL(gCurCamColVars, 0x8CCB80, (uint8), { 5 });
+NOTSA_GLOBAL_ALIAS(gCurDistForCam, 0x8CCB84, (float), notsa::shared::CurDistForCam);
 auto& gpCamColVars = StaticRef<float*>(0xB6FE88);
 // 0x509AE0 - defined (and hooked) in Cam.cpp
 void WellBufferMe(float target, float& valueToChange, float& speedSoFar, float topSpeed, float speedStep, bool isAnAngle);
-static auto& gCamColLastRadius = StaticRef<float>(0xB6EC6C);
-auto& gCamColVars = StaticRef<float[28][6]>(0x8CC8E0);
+static NOTSA_GLOBAL_ALIAS(gCamColLastRadius, 0xB6EC6C, (float), notsa::shared::CamColLastRadius);
+NOTSA_GLOBAL(gCamColVars, 0x8CC8E0, (float[28][6]), {
+    { 1.0f, 3.0f, 0.1f, 0.75f, 0.04f, 0.2f }, { 0.65f, 3.0f, 0.1f, 0.3f, 0.05f, 0.2f }, { 0.65f, 3.0f, 0.1f, 0.3f, 0.05f,
+    0.2f }, { 0.65f, 3.0f, 0.1f, 0.3f, 0.05f, 0.2f }, { 0.65f, 3.0f, 0.1f, 0.5f, 0.05f, 0.2f }, { 0.65f, 3.0f, 0.1f, 0.3f,
+    0.05f, 0.2f }, { 0.65f, 3.0f, 0.05f, 0.3f, 0.05f, 0.2f }, { 0.65f, 3.0f, 0.1f, 0.5f, 0.05f, 0.2f }, { 0.65f, 3.0f,
+    0.1f, 0.3f, 0.05f, 0.2f }, { 0.65f, 3.0f, 0.05f, 0.3f, 0.05f, 0.2f }, { 0.65f, 0.65f, 0.1f, 0.1f, 0.05f, 0.1f },
+    { 0.65f, 0.65f, 0.1f, 0.1f, 0.05f, 0.1f }, { 0.65f, 0.65f, 0.1f, 0.1f, 0.05f, 0.1f }, { 0.65f, 0.65f, 0.07f, 0.3f,
+    0.05f, 0.1f }, { 0.65f, 0.65f, 0.05f, 0.3f, 0.05f, 0.1f }, { 0.65f, 0.65f, 0.02f, 0.3f, 0.05f, 0.1f }, { 0.65f, 3.0f,
+    0.1f, 0.1f, 0.05f, 0.1f }, { 0.65f, 3.0f, 0.1f, 0.1f, 0.05f, 0.1f }, { 0.65f, 3.0f, 0.1f, 0.1f, 0.05f, 0.1f },
+    { 0.65f, 3.0f, 0.1f, 0.1f, 0.05f, 0.1f }, { 0.65f, 3.0f, 0.1f, 0.1f, 0.05f, 0.1f }, { 0.65f, 3.0f, 0.1f, 0.1f, 0.05f,
+    0.1f }, { 0.65f, 0.25f, 0.1f, 0.1f, 0.05f, 0.1f }, { 0.65f, 0.65f, 0.1f, 0.1f, 0.05f, 0.1f }, { 0.65f, 0.65f, 0.1f,
+    0.1f, 0.05f, 0.1f }, { 0.65f, 0.65f, 0.1f, 0.1f, 0.05f, 0.1f }, { 0.65f, 0.65f, 0.1f, 0.1f, 0.05f, 0.1f }, { 0.65f,
+    0.65f, 0.1f, 0.1f, 0.05f, 0.1f }
+});
+#line 34
 // Set if the cam mode was changed by the player (read at the end of CamControl, set by the cinematic cams (`ProcessObbeCinemaCamera*`) and someone else)
-static auto& gCamModeChangedByPlayer = StaticRef<bool>(0xB6EC34); // NOTSA name
-static auto& gNearClipPedDistDivisor = StaticRef<float>(0xB6EC68); // NOTSA name: unidentified global
-static auto& gNearClipPedScale = StaticRef<float>(0x8CCC84);       // NOTSA name: unidentified global, 0.25
+static NOTSA_GLOBAL(gCamModeChangedByPlayer, 0xB6EC34, (bool), {}); // NOTSA name
+static NOTSA_GLOBAL(gNearClipPedDistDivisor, 0xB6EC68, (float), {}); // NOTSA name: unidentified global
+static NOTSA_GLOBAL(gNearClipPedScale, 0x8CCC84, (float), { 0.25f });       // NOTSA name: unidentified global, 0.25
 
 // Process: NOTSA names, unidentified globals
-static auto& gDrunkCamAngle              = StaticRef<float>(0xB6EC30); // Drunk camera wobble phase in degrees (+5 each frame while drunk)
-static auto& gbFirstPersonUpsideDownBlur = StaticRef<bool>(0xB70142);  // Set while the blur for the 1st person cam in an (almost) upside down vehicle is active
-static auto& gbCamUnkB70143              = StaticRef<bool>(0xB70143);  // Only ever cleared (in `Process`)
+static NOTSA_GLOBAL(gDrunkCamAngle, 0xB6EC30, (float), {}); // Drunk camera wobble phase in degrees (+5 each frame while drunk)
+static NOTSA_GLOBAL(gbFirstPersonUpsideDownBlur, 0xB70142, (bool), {});  // Set while the blur for the 1st person cam in an (almost) upside down vehicle is active
+static NOTSA_GLOBAL(gbCamUnkB70143, 0xB70143, (bool), {});  // Only ever cleared (in `Process`)
 
 // CopyCameraMatrixToRWCam: previous RW frame vectors (+ MSVC static-init guard bits at 0xB6FFC0)
-static auto& gPrevRwCamRight    = StaticRef<CVector>(0xB6FF90);
-static auto& gPrevRwCamUp       = StaticRef<CVector>(0xB6FF9C);
-static auto& gPrevRwCamAt       = StaticRef<CVector>(0xB6FFA8);
-static auto& gPrevRwCamPos      = StaticRef<CVector>(0xB6FFB4);
-static auto& gPrevRwCamInitMask = StaticRef<uint32>(0xB6FFC0);
+static NOTSA_GLOBAL(gPrevRwCamRight, 0xB6FF90, (CVector), {});
+static NOTSA_GLOBAL(gPrevRwCamUp, 0xB6FF9C, (CVector), {});
+static NOTSA_GLOBAL(gPrevRwCamAt, 0xB6FFA8, (CVector), {});
+static NOTSA_GLOBAL(gPrevRwCamPos, 0xB6FFB4, (CVector), {});
+static NOTSA_GLOBAL(gPrevRwCamInitMask, 0xB6FFC0, (uint32), {});
 
 // CameraColDetAndReact: NOTSA names
-static auto& gCamColLowestSphereZ  = StaticRef<float>(0xB700EC);
-static auto& gCamColLastModelIdx   = StaticRef<int32>(0xB700F0);
-static auto& gCamColLastSource     = StaticRef<CVector>(0xB700DC);
-static auto& gCamColLastSourceInit = StaticRef<uint32>(0xB700E8); // MSVC static-init guard of `gCamColLastSource`
+static NOTSA_GLOBAL(gCamColLowestSphereZ, 0xB700EC, (float), {});
+static NOTSA_GLOBAL(gCamColLastModelIdx, 0xB700F0, (int32), {});
+static NOTSA_GLOBAL(gCamColLastSource, 0xB700DC, (CVector), {});
+static NOTSA_GLOBAL(gCamColLastSourceInit, 0xB700E8, (uint32), {}); // MSVC static-init guard of `gCamColLastSource`
 
 CCam& CCamera::GetActiveCamera() {
     return TheCamera.m_aCams[TheCamera.m_nActiveCam];
@@ -1666,27 +1681,27 @@ bool IsActiveCamUnderWater(); // defined further down (0x50B830)
 
 // Cinematic cam sequences (`ProcessObbeCinemaCamera*`): NOTSA names, unidentified globals
 // The direction in which the sequences are stepped (1 or -1)
-auto& gCineyCamDirection = StaticRef<int8>(0x8CC471);
+NOTSA_GLOBAL(gCineyCamDirection, 0x8CC471, (int8), { 1 });
 // Car
-auto& gCineyCamCarIdx    = StaticRef<int32>(0x8CCEEC);
-auto& gCineyCamCarTable  = StaticRef<int32[12]>(0x8CC828); // last one is the fallback
-auto& gCineyCamCarTime   = StaticRef<uint32>(0xB70120);
+NOTSA_GLOBAL(gCineyCamCarIdx, 0x8CCEEC, (int32), { -1 });
+NOTSA_GLOBAL(gCineyCamCarTable, 0x8CC828, (int32[12]), { 20, 22, 7, 3, 22, 1, 21, 8, 2, 22, 5, 6 }); // last one is the fallback
+NOTSA_GLOBAL(gCineyCamCarTime, 0xB70120, (uint32), {});
 // Train
-auto& gCineyCamTrainIdx   = StaticRef<int32>(0x8CCEF0);
-auto& gCineyCamTrainTable = StaticRef<int32[7]>(0x8CC858);
-auto& gCineyCamTrainTime  = StaticRef<uint32>(0xB70124);
+NOTSA_GLOBAL(gCineyCamTrainIdx, 0x8CCEF0, (int32), { -1 });
+NOTSA_GLOBAL(gCineyCamTrainTable, 0x8CC858, (int32[7]), { 20, 22, 2, 21, 3 });
+NOTSA_GLOBAL(gCineyCamTrainTime, 0xB70124, (uint32), {});
 // Heli
-auto& gCineyCamHeliIdx   = StaticRef<int32>(0x8CCEF4);
-auto& gCineyCamHeliTable = StaticRef<int32[8]>(0x8CC874);
-auto& gCineyCamHeliTime  = StaticRef<uint32>(0xB70128);
+NOTSA_GLOBAL(gCineyCamHeliIdx, 0x8CCEF4, (int32), { 14 });
+NOTSA_GLOBAL(gCineyCamHeliTable, 0x8CC874, (int32[8]), { 26, 27, 23, 20, 22, 28, 23 });
+NOTSA_GLOBAL(gCineyCamHeliTime, 0xB70128, (uint32), {});
 // Plane
-auto& gCineyCamPlaneIdx   = StaticRef<int32>(0x8CCEF8);
-auto& gCineyCamPlaneTable = StaticRef<int32[7]>(0x8CC894);
-auto& gCineyCamPlaneTime  = StaticRef<uint32>(0xB7012C);
+NOTSA_GLOBAL(gCineyCamPlaneIdx, 0x8CCEF8, (int32), { -1 });
+NOTSA_GLOBAL(gCineyCamPlaneTable, 0x8CC894, (int32[7]), { 26, 27, 20, 22, 28, 23 });
+NOTSA_GLOBAL(gCineyCamPlaneTime, 0xB7012C, (uint32), {});
 // Boat
-auto& gCineyCamBoatIdx   = StaticRef<int32>(0x8CCEFC);
-auto& gCineyCamBoatTable = StaticRef<int32[4]>(0x8CC8B0);
-auto& gCineyCamBoatTime  = StaticRef<uint32>(0xB70130);
+NOTSA_GLOBAL(gCineyCamBoatIdx, 0x8CCEFC, (int32), { 14 });
+NOTSA_GLOBAL(gCineyCamBoatTable, 0x8CC8B0, (int32[4]), { 20, 3, 18 });
+NOTSA_GLOBAL(gCineyCamBoatTime, 0xB70130, (uint32), {});
 
 // Shown the first time a cinematic cam is started
 void ShowCineyCamHelpMessage(const CCamera& cam) {
@@ -1729,9 +1744,9 @@ bool StartNextCineyCam(CCamera& cam, int32& seqIdx, const int32* table, int32 co
 // 0x51D770
 bool CCamera::IsItTimeForNewCamera(int32 camSequence, int32 startTime) {
     // NOTSA names, unidentified globals
-    static auto& s_MaxTimeSinceStartAbs  = StaticRef<float>(0x8CCDF8); // 20000.0 - Above this (ms) the cam is always changed
-    static auto& s_MaxTimeSinceStart     = StaticRef<float>(0x8CCDF0); // 15000.0 - Above this (ms) most of the cams are changed
-    static auto& s_bStickWasCentered     = StaticRef<bool>(0x8CCDF4);  // Initially true, the right stick has to be centered to change the cam by it again
+    NOTSA_GLOBAL_LOCAL(s_MaxTimeSinceStartAbs, 0x8CCDF8, (float), { 20000.0f }); // 20000.0 - Above this (ms) the cam is always changed
+    NOTSA_GLOBAL_LOCAL(s_MaxTimeSinceStart, 0x8CCDF0, (float), { 15000.0f }); // 15000.0 - Above this (ms) most of the cams are changed
+    NOTSA_GLOBAL_LOCAL(s_bStickWasCentered, 0x8CCDF4, (bool), { true });  // Initially true, the right stick has to be centered to change the cam by it again
 
     // NOTE: x87 extended precision in the original: the intermediates are `double`, the vectors are floats
     const auto MagExt = [](const CVector& v) { // 0x4082C0 - `CVector::Magnitude`
@@ -2289,7 +2304,7 @@ void CCamera::ProcessJiggle(float) {
     auto& cam = GetActiveCam();
 
     // 0x516586 - Sets up the hand shakers (1 - 5) the first time it's called. NOTE: The original is not using `CHandShaker::SetDefaults` for this
-    static auto& s_HandShakersInitialised = StaticRef<bool>(0xB70048);
+    NOTSA_GLOBAL_LOCAL(s_HandShakersInitialised, 0xB70048, (bool), {});
     if (!s_HandShakersInitialised) {
         const auto Init = [](size_t idx, CVector lim, CVector motion, CVector slow, int32 twitchFreq, float twitchVel) {
             auto& hs = gHandShaker[idx];
@@ -2902,10 +2917,10 @@ void CCamera::Find3rdPersonCamTargetVector(float range, CVector gunMuzzle, CVect
 
 // 0x514B80
 float CCamera::CalculateGroundHeight(eGroundHeightType type) {
-    static auto& lastCalcCamPos    = StaticRef<CVector>(0xB70034);
-    static auto& exactGroundHeight = StaticRef<float>(0xB70030);
-    static auto& bbTopZ            = StaticRef<float>(0xB7002C);
-    static auto& bbBottomZ         = StaticRef<float>(0xB70028);
+    NOTSA_GLOBAL_LOCAL(lastCalcCamPos, 0xB70034, (CVector), {});
+    NOTSA_GLOBAL_LOCAL(exactGroundHeight, 0xB70030, (float), {});
+    NOTSA_GLOBAL_LOCAL(bbTopZ, 0xB7002C, (float), {});
+    NOTSA_GLOBAL_LOCAL(bbBottomZ, 0xB70028, (float), {});
 
     const auto& camPos = GetPosition();
 
@@ -3107,7 +3122,7 @@ void CCamera::ImproveNearClip(CVehicle* vehicle, CPed* ped, CVector* source, CVe
     CCollision::CheckPeds(*source, cam.m_vecFront, nearest);
 }
 
-static auto& preMirrorMat = StaticRef<CMatrix>(0xB6FE40);
+static NOTSA_GLOBAL(preMirrorMat, 0xB6FE40, (CMatrix), {});
 
 // 0x51A560
 void CCamera::SetCameraUpForMirror() {
@@ -3141,8 +3156,8 @@ bool CCamera::ConeCastCollisionResolve(const CVector& pos, const CVector& lookAt
 }
 
 // Minimum height above the water level for the fixed cameras of `TryToStartNewCamMode`
-static auto& gFixedCamMinHeightAboveWater     = StaticRef<float>(0x8CC8C0); // NOTSA name: 1.0
-static auto& gFixedCamMinHeightAboveWaterBoat = StaticRef<float>(0x8CC8C4); // NOTSA name: -2.0
+static NOTSA_GLOBAL(gFixedCamMinHeightAboveWater, 0x8CC8C0, (float), { 1.0f }); // NOTSA name: 1.0
+static NOTSA_GLOBAL(gFixedCamMinHeightAboveWaterBoat, 0x8CC8C4, (float), { -2.0f }); // NOTSA name: -2.0
 
 namespace {
 // 0x50B830 (unnamed in the original) - Is the active cam's source at or below the water level?
@@ -3772,27 +3787,27 @@ bool CCamera::CameraColDetAndReact(CVector* source, CVector* target) {
 }
 
 // CamControl: the mode the camera is going to switch to (decided over the course of `CamControl`)
-static auto& gNewCamMode = StaticRef<eCamMode>(0xB70140); // NOTSA name
+static NOTSA_GLOBAL(gNewCamMode, 0xB70140, (eCamMode), {}); // NOTSA name
 // CamControl: > 0 if a mode was requested (used if the target is a vehicle, then reset to -1)
-static auto& gRequestedCamMode = StaticRef<int32>(0x8CC824); // NOTSA name
+static NOTSA_GLOBAL(gRequestedCamMode, 0x8CC824, (int32), { -1 }); // NOTSA name
 // CamControl: special aim cam (`MODE_SPECIAL_FIXED_FOR_SYPHON`): set if the fixed cam position was already set up
-static auto& gSpecialAimCamPosSet = StaticRef<bool>(0xB7013D); // NOTSA name
+static NOTSA_GLOBAL(gSpecialAimCamPosSet, 0xB7013D, (bool), {}); // NOTSA name
 // CamControl: arrest cam
-static auto& gWasPlayerArrested  = StaticRef<bool>(0xB7013C);   // NOTSA name
-static auto& gLastPlayerPedState = StaticRef<int32>(0xB70138);  // NOTSA name
-static auto& gArrestCamMode      = StaticRef<int32>(0xB70134);    // NOTSA name (an eCamMode)
+static NOTSA_GLOBAL(gWasPlayerArrested, 0xB7013C, (bool), {});   // NOTSA name
+static NOTSA_GLOBAL(gLastPlayerPedState, 0xB70138, (int32), {});  // NOTSA name
+static NOTSA_GLOBAL(gArrestCamMode, 0xB70134, (int32), {});    // NOTSA name (an eCamMode)
 // CamControl: the (3 sets of 5) values for `m_fCarZoomBase` (see `SetZoomValueCamStringScript`)
-static auto& gCarZoomBaseValues = StaticRef<float[3][5]>(0x8CC3E0); // NOTSA name
+static NOTSA_GLOBAL(gCarZoomBaseValues, 0x8CC3E0, (float[3][5]), { { -1.0f, -0.2f, -3.2f, 0.05f, -2.41f }, { 1.0f, 1.4f, 0.65f, 1.9f, 6.49f }, { 6.0f, 6.0f, 15.9f, 15.9f, 15.0f } }); // NOTSA name
 // CamControl: zoom of the ped cam when in a cull zone that closes in the camera
-static auto& gPedCloseInZoom = StaticRef<float>(0x8CCF14); // NOTSA name: 0.5
+static NOTSA_GLOBAL(gPedCloseInZoom, 0x8CCF14, (float), { 0.5f }); // NOTSA name: 0.5
 // CamControl: tweakable values
-static auto& gGarageCamDistVeh   = StaticRef<float>(0x8CCF1C); // NOTSA name: -10.0
-static auto& gGarageCamHeightVeh = StaticRef<float>(0x8CCF18); // NOTSA name: 2.0
-static auto& gGarageCamDistPed   = StaticRef<float>(0x8CCF10); // NOTSA name: -10.0
-static auto& gGarageCamHeightPed = StaticRef<float>(0x8CCF0C); // NOTSA name: 2.0
-static auto& gAimCamDistThreshold            = StaticRef<float>(0x8CCF08); // NOTSA name: 3.0 (when the target is a dead ped)
-static auto& gAimCamDistThresholdStay        = StaticRef<float>(0x8CCF04); // NOTSA name: 4.0
-static auto& gAimCamTargetMaxAngleDeg        = StaticRef<float>(0x8CC46C); // NOTSA name: 30.0
+static NOTSA_GLOBAL(gGarageCamDistVeh, 0x8CCF1C, (float), { -10.0f }); // NOTSA name: -10.0
+static NOTSA_GLOBAL(gGarageCamHeightVeh, 0x8CCF18, (float), { 2.0f }); // NOTSA name: 2.0
+static NOTSA_GLOBAL(gGarageCamDistPed, 0x8CCF10, (float), { -10.0f }); // NOTSA name: -10.0
+static NOTSA_GLOBAL(gGarageCamHeightPed, 0x8CCF0C, (float), { 2.0f }); // NOTSA name: 2.0
+static NOTSA_GLOBAL(gAimCamDistThreshold, 0x8CCF08, (float), { 3.0f }); // NOTSA name: 3.0 (when the target is a dead ped)
+static NOTSA_GLOBAL(gAimCamDistThresholdStay, 0x8CCF04, (float), { 4.0f }); // NOTSA name: 4.0
+static NOTSA_GLOBAL(gAimCamTargetMaxAngleDeg, 0x8CC46C, (float), { 30.0f }); // NOTSA name: 30.0
 
 namespace {
 // 0x5404A0 - Select (or D-Pad up) just pressed (`CPad` doesn't have this)

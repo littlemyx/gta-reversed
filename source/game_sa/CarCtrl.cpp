@@ -34,23 +34,33 @@
 #include <reversiblebugfixes/Bugs.hpp>
 #include <numbers>
 #include <bit>
+#include "game_sa/DetachedShared.h"
+#line 37
+#ifndef NOTSA_GLOBAL_LOCAL_NS // B04: function-local 'auto& v = StaticRef<T>(addr)' WITHOUT 'static' in address mode (NOTSA_GLOBAL_LOCAL says 'static': changes the object code)
+#ifdef NOTSA_GLOBALS_DETACHED
+#define NOTSA_GLOBAL_LOCAL_NS(name, addr, type, ...) static std::type_identity_t<NOTSA_UNPAREN type> name __VA_ARGS__
+#else
+#define NOTSA_GLOBAL_LOCAL_NS(name, addr, type, ...) auto& name = StaticRef<NOTSA_UNPAREN type>(addr)
+#endif
+#endif
+#line 37
 
-auto& apCarsToKeep = StaticRef<CVehicle*[2]>(0x969084);
-auto& aCarsToKeepTime = StaticRef<std::array<uint32, 2>>(0x96907C);
+NOTSA_GLOBAL(apCarsToKeep, 0x969084, (CVehicle*[2]), {});
+NOTSA_GLOBAL(aCarsToKeepTime, 0x96907C, (std::array<uint32, 2>), {});
 
 // Tunables of the AI plane flight code (all in .data, names are NOTSA)
 //! 0x8A5B2C - Pitch angles tested (from `FindPlaneObstacleAltitude`) when looking for obstacles ahead of an AI plane
-auto& s_PlaneAIObstacleProbePitches = StaticRef<std::array<float, 6>>(0x8A5B2C);
+NOTSA_GLOBAL(s_PlaneAIObstacleProbePitches, 0x8A5B2C, (std::array<float, 6>), { 0.10471976f, 0.05235988f, 0.0f, -0.34906587f, -0.69813174f, -1.0471976f });
 //! 0x8A5B44 - Factor of the plane's roll that is added to the elevator
-auto& s_PlaneAIRollToElevatorFactor = StaticRef<float>(0x8A5B44);
+NOTSA_GLOBAL(s_PlaneAIRollToElevatorFactor, 0x8A5B44, (float), { 0.23f });
 //! 0x8A5B48 - Factor applied to the roll-rate corrected aileron (rudder) input
-auto& s_PlaneAIAileronFactor = StaticRef<float>(0x8A5B48);
+NOTSA_GLOBAL(s_PlaneAIAileronFactor, 0x8A5B48, (float), { -1.0f });
 //! 0x8A5B4C - Numerator of the roll-rate prediction (30 / timestep)
-auto& s_PlaneAIRollRatePredictionFactor = StaticRef<float>(0x8A5B4C);
+NOTSA_GLOBAL(s_PlaneAIRollRatePredictionFactor, 0x8A5B4C, (float), { 30.0f });
 //! 0x8A5B50 - Elevator gain
-auto& s_PlaneAIElevatorGain = StaticRef<float>(0x8A5B50);
+NOTSA_GLOBAL(s_PlaneAIElevatorGain, 0x8A5B50, (float), { 0.5f });
 //! 0x8A5B54 - Cruise speed of remote controlled planes
-auto& s_PlaneAIRCCruiseSpeed = StaticRef<float>(0x8A5B54);
+NOTSA_GLOBAL(s_PlaneAIRCCruiseSpeed, 0x8A5B54, (float), { 7.0f });
 
 //! 0x59C910 - `CVector::Normalise`. The sum of squares and the reciprocal stay in the FPU registers (extended precision), the shared `CVector::Normalise` rounds them to float
 static void NormaliseOriginal(CVector& v) {
@@ -2407,13 +2417,13 @@ void CCarCtrl::FlyAIPlaneInCertainDirection(CPlane* plane) {
 // Returns the position (`pOrigin`), the 2 nodes it's between (`pNodeAddress1`, `pNodeAddress12`) and where (`arg11`: fraction) between them.
 bool CCarCtrl::GenerateCarCreationCoors2(CVector posn, float radius, float arg3, float arg4, bool arg5, float arg6, float arg7, CVector* pOrigin, CNodeAddress* pNodeAddress1, CNodeAddress* pNodeAddress12, float* arg11, bool arg12, bool arg13) {
     // Function-local statics of the original (the flags @ 0x969108 are the "initialized" flags of them)
-    auto& staticInitFlags = StaticRef<uint32>(0x969108);
-    auto& nextUpdateTime  = StaticRef<uint32>(0x9690E8);
-    auto& lastUpdatePos   = StaticRef<CVector>(0x9690EC);
-    auto& nodeLow1        = StaticRef<CNodeAddress>(0x969104); // Nodes found for low traffic
-    auto& nodeLow2        = StaticRef<CNodeAddress>(0x969100);
-    auto& nodeNormal1     = StaticRef<CNodeAddress>(0x9690FC); // Nodes found for normal traffic
-    auto& nodeNormal2     = StaticRef<CNodeAddress>(0x9690F8);
+    NOTSA_GLOBAL_LOCAL_NS(staticInitFlags, 0x969108, (uint32), {});
+    NOTSA_GLOBAL_LOCAL_NS(nextUpdateTime, 0x9690E8, (uint32), {});
+    NOTSA_GLOBAL_LOCAL_NS(lastUpdatePos, 0x9690EC, (CVector), {});
+    NOTSA_GLOBAL_LOCAL_NS(nodeLow1, 0x969104, (CNodeAddress), { 0, 0 }); // zero like the exe's .bss (NOT the NSDMI 0xFFFF) // Nodes found for low traffic
+    NOTSA_GLOBAL_LOCAL_NS(nodeLow2, 0x969100, (CNodeAddress), { 0, 0 }); // zero like the exe's .bss (NOT the NSDMI 0xFFFF)
+    NOTSA_GLOBAL_LOCAL_NS(nodeNormal1, 0x9690FC, (CNodeAddress), { 0, 0 }); // zero like the exe's .bss (NOT the NSDMI 0xFFFF) // Nodes found for normal traffic
+    NOTSA_GLOBAL_LOCAL_NS(nodeNormal2, 0x9690F8, (CNodeAddress), { 0, 0 }); // zero like the exe's .bss (NOT the NSDMI 0xFFFF)
 
     float accumDist = 0.0f; // Distance travelled along the nodes
 
@@ -3356,7 +3366,7 @@ bool CCarCtrl::JoinCarWithRoadSystemGotoCoors(CVehicle* vehicle, const CVector& 
     ThePaths.DoPathSearch(
         PATH_TYPE_VEH,
         vehicle->GetPosition(),
-        StaticRef<CNodeAddress>(0x8A5F44), // (area = -1, node = 0), effectively none: the closest node is used
+        NOTSA_GLOBAL_EXPR(0x8A5F44, (CNodeAddress), notsa::shared::NoNode), // (area = -1, node = 0), effectively none: the closest node is used
         posn,
         ap.m_aPathFindNodesInfo.data(),
         numPathNodes,
@@ -3366,7 +3376,7 @@ bool CCarCtrl::JoinCarWithRoadSystemGotoCoors(CVehicle* vehicle, const CVector& 
         nullptr,
         MAX_DIST,
         ap.carCtrlFlags.bCantGoAgainstTraffic,
-        StaticRef<CNodeAddress>(0x8A5F44),
+        NOTSA_GLOBAL_EXPR(0x8A5F44, (CNodeAddress), notsa::shared::NoNode),
         vehicle->m_nModelIndex == MODEL_VORTEX,
         bIsBoat
     ); // 0x4515D0
@@ -3770,7 +3780,7 @@ bool CCarCtrl::PickNextNodeToChaseCar(CVehicle* vehicle, float destX, float dest
         nullptr,
         MAX_DIST,
         false,
-        StaticRef<CNodeAddress>(0x8A5F44), // (area = -1, node = 0), effectively none
+        NOTSA_GLOBAL_EXPR(0x8A5F44, (CNodeAddress), notsa::shared::NoNode), // (area = -1, node = 0), effectively none
         vehicle->m_nModelIndex == MODEL_VORTEX,
         false
     ); // 0x4515D0
@@ -3962,7 +3972,7 @@ bool CCarCtrl::PickNextNodeToFollowPath(CVehicle* vehicle) {
             nullptr,
             MAX_DIST,
             ap.carCtrlFlags.bCantGoAgainstTraffic,
-            StaticRef<CNodeAddress>(0x8A5F44), // (area = -1, node = 0), effectively none
+            NOTSA_GLOBAL_EXPR(0x8A5F44, (CNodeAddress), notsa::shared::NoNode), // (area = -1, node = 0), effectively none
             vehicle->m_nModelIndex == MODEL_VORTEX,
             false
         ); // 0x4515D0
@@ -6069,7 +6079,7 @@ void CCarCtrl::SteerAICarWithPhysicsFollowPath_Racing(CVehicle* vehicle, float* 
         if ((int16)ap.m_nPathFindNodesCount < 4) {
             // Find the next nodes of the route
             constexpr auto MAX_DIST = std::bit_cast<float>(0x497423FEu); // ~999999.9
-            const auto     forbiddenNode = StaticRef<CNodeAddress>(0x8A5F44); // (area = -1, node = 0), effectively none
+            const auto     forbiddenNode = NOTSA_GLOBAL_EXPR(0x8A5F44, (CNodeAddress), notsa::shared::NoNode); // (area = -1, node = 0), effectively none
             const auto     oneSide       = (bool)ap.carCtrlFlags.bCantGoAgainstTraffic;
             const auto     forVortex     = vehicle->m_nModelIndex == MODEL_VORTEX;
             auto&          numNodes      = reinterpret_cast<int16&>(ap.m_nPathFindNodesCount);

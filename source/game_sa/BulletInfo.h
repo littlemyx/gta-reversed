@@ -25,9 +25,9 @@ public:
 
     static constexpr auto MAX_BULLET_INFOS{8u};
 
-    static inline auto& aBulletInfos = StaticRef<std::array<CBulletInfo, 8>>(0xC88740);
-    static inline auto& PlayerSniperBulletStart = StaticRef<CVector>(0xC888A0);
-    static inline auto& PlayerSniperBulletEnd = StaticRef<CVector>(0xC888AC);
+    static NOTSA_GLOBAL_DECL(CBulletInfo, aBulletInfos, 0xC88740, (std::array<CBulletInfo, 8>)); // detached: defined at the end of BulletInfo.cpp (the element type is incomplete inside the class)
+    static inline NOTSA_GLOBAL(PlayerSniperBulletStart, 0xC888A0, (CVector), {});
+    static inline NOTSA_GLOBAL(PlayerSniperBulletEnd, 0xC888AC, (CVector), {});
 
 public:
     static void InjectHooks();

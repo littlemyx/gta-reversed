@@ -246,3 +246,5 @@ void CBulletInfo::Update() {
         info.m_vecPosition = newPosition;
     }
 }
+
+NOTSA_GLOBAL_DEF(CBulletInfo, aBulletInfos, 0xC88740, (std::array<CBulletInfo, 8>), {});

@@ -8,9 +8,9 @@
 
 class CCustomRoadsignMgr {
 public:
-    static inline auto& pCharsetTex = StaticRef<RwTexture*>(0xC3EF84);
-    static inline auto& pCharsetLockedRaster = StaticRef<RwUInt8*>(0xC3EF88);
-    static inline auto& pCharsetLockedPallete = StaticRef<RwUInt8*>(0xC3EF8C); // unused, never really locked
+    static inline NOTSA_GLOBAL(pCharsetTex, 0xC3EF84, (RwTexture*), {});
+    static inline NOTSA_GLOBAL(pCharsetLockedRaster, 0xC3EF88, (RwUInt8*), {});
+    static inline NOTSA_GLOBAL(pCharsetLockedPallete, 0xC3EF8C, (RwUInt8*), {}); // unused, never really locked
 public:
     static void InjectHooks();
 

@@ -1420,6 +1420,7 @@ tScriptParam* CRunningScript::GetPointerToScriptVariable(eScriptVariableType) {
 
     default:
         NOTSA_UNREACHABLE();
+        return nullptr; // 0x4648A7: `xor eax, eax`
     }
 }
 
@@ -1439,6 +1440,7 @@ uint16 CRunningScript::GetIndexOfGlobalVariable() {
     }
     default:
         NOTSA_UNREACHABLE();
+        return (uint16)(uintptr_t)this; // 0x464785: `mov ax, [esp]` - the exe returns the low word of the pushed `this`
     }
 }
 

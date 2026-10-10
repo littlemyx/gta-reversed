@@ -251,6 +251,7 @@ void CText::LoadMissionText(const char* mission) {
     }
     if (!missionIdxFound) {
         NOTSA_UNREACHABLE("Index of the mission {} is not defined.", mission);
+        return; // 0x69FCDB -> 0x69FF02: the exe just leaves (the mission text stays unloaded)
     }
 
     CFileMgr::SetDir("TEXT");

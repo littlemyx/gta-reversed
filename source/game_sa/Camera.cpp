@@ -981,7 +981,7 @@ void CCamera::SetZoomValueCamStringScript(int16 zoomMode) {
     if (entity->GetStatus() == STATUS_SIMPLE) {
         int32 arrPos{};
         VERIFY(GetArrPosForVehicleType(static_cast<eVehicleType>(entity->AsVehicle()->GetVehicleAppearance()), arrPos));
-        m_fCarZoomValueScript = [zoomMode]{
+        m_fCarZoomValueScript = [this, zoomMode]{
             switch (zoomMode) {
             case 0:
                 return std::array{ -1.0f, -0.2f, -3.20f, 0.05f, -2.41f }; // 0x8CC3E0
@@ -991,6 +991,7 @@ void CCamera::SetZoomValueCamStringScript(int16 zoomMode) {
                 return std::array{ +6.0f, +6.0f, +15.9f, 15.9f, +15.0f }; // 0x8CC408
             default:
                 NOTSA_UNREACHABLE("Unexpected zoom mode: {}", zoomMode);
+                return std::array{ m_fCarZoomValueScript, m_fCarZoomValueScript, m_fCarZoomValueScript, m_fCarZoomValueScript, m_fCarZoomValueScript }; // 0x50C248: the value stays untouched
             }
         }()[arrPos];
     
@@ -2910,7 +2911,7 @@ float CCamera::CalculateGroundHeight(eGroundHeightType type) {
     case eGroundHeightType::ENTITY_BB_TOP:       return bbTopZ;
     case eGroundHeightType::EXACT_GROUND_HEIGHT: return exactGroundHeight;
     case eGroundHeightType::ENTITY_BB_BOTTOM:    return bbBottomZ;
-    default:                                     NOTSA_UNREACHABLE();
+    default:                                     NOTSA_UNREACHABLE(); return bbBottomZ; // 0x514D4A: every other type falls to the last load
     }
 }
 

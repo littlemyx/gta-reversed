@@ -6,6 +6,10 @@ globals_emit.py from the post-_initterm data image; the alias / owner / member d
 
   python3 -I tools/standalone/codemod_globals.py [--apply] [--image-dir DIR] [--tsv FILE] [--aliases FILE] FILE...    (dry run unless --apply; prints a status table)
   python3 -I tools/standalone/codemod_globals.py --check FILE...      list the `StaticRef` sites that are still address-mode and why
+  python3 -I tools/standalone/codemod_globals.py --check-converted [--boot-dump FILE] [--out FILE] [--fix [--apply]]
+        D-FIX1 gate: every address-mode use (StaticRef / ScopedStaticRef / raw cast / any hex literal) of a CONVERTED global's address OR of any address inside its
+        extent, anywhere in source/ (all batches, headers, standalone/), is a STRAY (a detached build reads the old image address -> poisoned/stale data).
+        Exit status 1 when strays exist. --fix converts alias sites listed in aliases.json (decl / expr) of the stray's file via the normal path.
   python3 -I tools/standalone/codemod_globals.py --gen-shared [--apply]   (re)generate source/game_sa/DetachedShared.h (aliases.json: globals with owner.scope "shared")
 
 Forms (scope from the row of DETACH_GLOBALS.tsv, header/.cpp from the file name):
@@ -505,12 +509,266 @@ def check(path, rows_by_addr, hazards, al, report):
         report.append((rel, "line %d" % line, "0x%X" % addr if addr else "?", "left", why))
 
 
+# ---------------------------------------------------------------------------------------------------------------------------------
+# --check-converted (D-FIX1)
+# ---------------------------------------------------------------------------------------------------------------------------------
+DATA_LO, DATA_HI = 0x858000, 0xCB0000
+RE_NOTSA_MACRO = re.compile(r"\bNOTSA_(?:SCOPED_)?GLOBAL(?:_[A-Z_]+)?\s*\(")
+RE_HEXLIT = re.compile(r"(?<![\w.])0[xX]0*([0-9A-Fa-f]{6})[uUlL]*(?![\w.])")
+# macro -> argument positions holding addresses ; owners define a converted global
+MACRO_ADDR_ARGS = {"NOTSA_GLOBAL": (1,), "NOTSA_GLOBAL_HDR": (1,), "NOTSA_GLOBAL_HDR_EXT": (1,), "NOTSA_GLOBAL_LOCAL": (1,), "NOTSA_GLOBAL_LOCAL_NS": (1,),
+                   "NOTSA_GLOBAL_SYNTH": (1,), "NOTSA_GLOBAL_ALIAS": (1,), "NOTSA_GLOBAL_LOCAL_REF": (1,), "NOTSA_GLOBAL_EXPR": (0,), "NOTSA_GLOBAL_DECL": (2,),
+                   "NOTSA_GLOBAL_DEF": (2,), "NOTSA_GLOBAL_VERIFY": (0,), "NOTSA_SCOPED_GLOBAL": (1, 2)}
+OWNER_MACROS = {"NOTSA_GLOBAL", "NOTSA_GLOBAL_HDR", "NOTSA_GLOBAL_HDR_EXT", "NOTSA_GLOBAL_LOCAL", "NOTSA_GLOBAL_LOCAL_NS", "NOTSA_GLOBAL_SYNTH", "NOTSA_GLOBAL_DECL",
+                "NOTSA_GLOBAL_DEF", "NOTSA_GLOBAL_VERIFY", "NOTSA_SCOPED_GLOBAL"}
+LOCAL_MACROS = {"NOTSA_GLOBAL_LOCAL", "NOTSA_GLOBAL_LOCAL_NS", "NOTSA_SCOPED_GLOBAL"}
+SKIP_DIRS_INFRA = ("source/standalone/",)
+
+
+def _macro_spans(stripped, text):
+    """-> list of (start, end, macro name, [arg texts]) of every NOTSA_GLOBAL* invocation"""
+    out = []
+    for m in RE_NOTSA_MACRO.finditer(stripped):
+        name = re.match(r"\w+", m.group(0)).group(0)
+        if name not in MACRO_ADDR_ARGS and name != "NOTSA_GLOBAL_EXTERN":
+            continue
+        k, depth = m.end() - 1, 0
+        while k < len(stripped):
+            if stripped[k] == "(":
+                depth += 1
+            elif stripped[k] == ")":
+                depth -= 1
+                if depth == 0:
+                    break
+            k += 1
+        out.append((m.start(), k + 1, name, split_args(text[m.end():k])))
+    return out
+
+
+def _site_kind(stripped, pos):
+    pre = stripped[max(0, pos - 90):pos]
+    if re.search(r"ScopedStaticRef\s*<[^;]*\(\s*$", pre):
+        return "ScopedStaticRef"
+    if re.search(r"StaticRef\s*<[^;]*\(\s*$", pre) or re.search(r"StaticRef\s*<[^;]*\(\s*0[xX]\w+\s*[+\-]\s*$", pre):
+        return "StaticRef"
+    if re.search(r"(reinterpret_cast\s*<[^;]*>\s*\(\s*$)|(\(\s*[\w:\s\*&<>\[\]]+\*\s*\)\s*$)|(\*\s*\(\s*[\w:\s\*&<>,\[\]]+\*\s*\)\s*$)", pre):
+        return "raw-cast"
+    return "literal"
+
+
+def _address_only_lines(text):
+    """set of 1-based line numbers that exist only in ADDRESS mode: the #else of `#ifdef NOTSA_GLOBALS_DETACHED` / the body of `#ifndef NOTSA_GLOBALS_DETACHED`
+    (those keep their StaticRef on purpose: the detached build never compiles them)"""
+    out, stack = set(), []      # stack entries: 'det' (branch active only when detached), 'addr' (only when not detached), None (unrelated)
+    for n, line in enumerate(text.splitlines(), 1):
+        m = re.match(r"\s*#\s*(if|ifdef|ifndef|elif|else|endif)\b(.*)", line)
+        if m:
+            d, rest = m.group(1), m.group(2)
+            rel = "NOTSA_GLOBALS_DETACHED" in rest
+            if d in ("if", "ifdef", "ifndef"):
+                neg = d == "ifndef" or re.search(r"!\s*defined|!\s*NOTSA_GLOBALS_DETACHED", rest) is not None
+                stack.append((("addr" if neg else "det") if rel else None))
+            elif d == "else" and stack:
+                stack[-1] = {"det": "addr", "addr": "det", None: None}[stack[-1]]
+            elif d == "elif" and stack:
+                stack[-1] = None
+            elif d == "endif" and stack:
+                stack.pop()
+        if "addr" in stack:
+            out.add(n)
+    return out
+
+
+def _enclosing_headers(stripped, pos):
+    """texts of the `{`-headers of every block that encloses pos (outermost first); a header is what stands between the previous `; { }` and the `{`"""
+    stack, last = [], 0
+    for i in range(pos):
+        c = stripped[i]
+        if c == "{":
+            stack.append(stripped[last:i])
+            last = i + 1
+        elif c == "}":
+            if stack:
+                stack.pop()
+            last = i + 1
+        elif c == ";":
+            last = i + 1
+    return stack
+
+
+RE_TMPL = re.compile(r"\btemplate\s*<|\(\s*[^()]*\bauto\b[^()]*\)\s*(?:->[^{]*)?$")
+
+
+def template_scope_owners(scanned):
+    """NOTSA_GLOBAL owner definitions (class members, function-local statics) that sit inside a class/function template: ONE variable PER INSTANTIATION (D-B06 finding,
+    QuadTreeNode.h). Aliases / externs do not define storage; a template owner must be a namespace-scope NOTSA_GLOBAL_SYNTH + aliases instead."""
+    out = []
+    for p, (text, stripped, spans) in scanned.items():
+        for s, e, name, a in spans:
+            if name not in OWNER_MACROS or name in ("NOTSA_GLOBAL_VERIFY",):
+                continue
+            hs = _enclosing_headers(stripped, s)
+            if any(RE_TMPL.search(h) for h in hs):
+                out.append((str(p.relative_to(REPO)), stripped.count("\n", 0, s) + 1, name, a[0] if a else "?"))
+    return out
+
+
+def check_converted(args):
+    rows = ge.load_rows(args.tsv)
+    by = {r["a"]: r for r in rows}
+    al_json = json.loads(Path(args.aliases).read_text()) if Path(args.aliases).exists() else {"globals": {}, "extents": {}}
+    size_of, owner_of = {}, {}
+    for r in rows:
+        size_of[r["a"]] = r["sz"]
+        owner_of[r["a"]] = r["name"]
+    for a, g in al_json["globals"].items():
+        size_of[int(a, 16)] = max(size_of.get(int(a, 16), 0), g["size"])
+        o = g["owner"]
+        owner_of.setdefault(int(a, 16), o.get("name") or o.get("synthetic"))
+    for a, e in al_json["extents"].items():
+        size_of[int(a, 16)] = max(size_of.get(int(a, 16), 0), e["true_size"])
+    for n in al_json.get("new_globals", []):
+        size_of.setdefault(int(n["addr"], 16), n["size"])
+        owner_of.setdefault(int(n["addr"], 16), n.get("file", "new_global"))
+    boot = {}
+    if args.boot_dump and Path(args.boot_dump).exists():
+        for line in Path(args.boot_dump).read_text().splitlines():
+            f = line.split()
+            if len(f) >= 2 and f[0].startswith("0x"):
+                try:
+                    boot[int(f[0], 16)] = int(f[1], 0)
+                except ValueError:
+                    pass
+    files = sorted(p for p in (REPO / "source").rglob("*") if p.suffix in gg.SRC_SUFFIXES)
+    files = [p for p in files if p.name != "DetachedShared.h" or True]
+    converted = {}       # addr -> dict(size, kinds, files)
+    scanned = {}
+    for p in files:
+        try:
+            text = p.read_text(errors="replace")
+        except OSError:
+            continue
+        if "NOTSA_" not in text and "StaticRef" not in text and "0x" not in text and "0X" not in text:
+            continue
+        stripped = gg.strip_source(text)
+        spans = _macro_spans(stripped, text)
+        scanned[p] = (text, stripped, spans)
+        rel = str(p.relative_to(REPO))
+        for s, e, name, a in spans:
+            for idx in MACRO_ADDR_ARGS.get(name, ()):
+                if idx >= len(a):
+                    continue
+                m = re.fullmatch(r"0[xX]([0-9A-Fa-f]+)", a[idx].strip())
+                if not m:
+                    continue
+                A = int(m.group(1), 16)
+                if not (DATA_LO <= A < DATA_HI):
+                    continue
+                c = converted.setdefault(A, dict(macros=set(), files=set(), local_only=True, defs=[]))
+                if name in OWNER_MACROS and name not in ("NOTSA_GLOBAL_DECL", "NOTSA_GLOBAL_VERIFY") and idx == MACRO_ADDR_ARGS[name][0] and A not in al_json.get("_noop", []):
+                    c["defs"].append("%s:%d" % (rel, stripped.count("\n", 0, s) + 1))
+                c["macros"].add(name)
+                c["files"].add(rel)
+                if name not in LOCAL_MACROS and name not in ("NOTSA_GLOBAL_ALIAS", "NOTSA_GLOBAL_EXPR", "NOTSA_GLOBAL_LOCAL_REF"):
+                    c["local_only"] = False
+    # extents
+    ext = []
+    for A, c in sorted(converted.items()):
+        sz = max(size_of.get(A, 0), boot.get(A, 0)) or 1
+        c["size"] = sz
+        c["known"] = A in size_of or A in boot
+        c["name"] = owner_of.get(A, "?")
+        ext.append((A, A + sz, A))
+    starts = [e[0] for e in ext]
+    import bisect
+
+    def containing(v):
+        i = bisect.bisect_right(starts, v) - 1
+        res = []
+        while i >= 0 and i > bisect.bisect_right(starts, v) - 40:
+            if ext[i][0] <= v < ext[i][1]:
+                res.append(ext[i][2])
+            i -= 1
+        return res
+
+    strays, addr_only = [], {}
+    for p, (text, stripped, spans) in scanned.items():
+        rel = str(p.relative_to(REPO))
+        for m in RE_HEXLIT.finditer(stripped):
+            v = int(m.group(1), 16)
+            if not (DATA_LO <= v < DATA_HI):
+                continue
+            owners = containing(v)
+            if not owners:
+                continue
+            if any(s <= m.start() < e for s, e, _, _ in spans):
+                continue
+            line = stripped.count("\n", 0, m.start()) + 1
+            if line in addr_only.setdefault(rel, _address_only_lines(text)):
+                continue
+            kind = _site_kind(stripped, m.start())
+            dead = rel.startswith(gg.DEAD_PREFIXES) or rel in gg.DEAD_FILES
+            infra = rel.startswith(SKIP_DIRS_INFRA)
+            ctx = text.splitlines()[line - 1].strip()[:110]
+            O = max(owners)
+            strays.append(dict(file=rel, line=line, addr=v, owner=O, off=v - O, kind=kind, dead=dead, infra=infra, ctx=ctx))
+    out = ["file\tline\taddr\towner_addr\toffset\towner\tkind\tclass\tcontext"]
+    for s in sorted(strays, key=lambda x: (x["infra"], x["dead"], x["file"], x["line"])):
+        cls = "dead" if s["dead"] else "infra" if s["infra"] else "STRAY"
+        out.append("%s\t%d\t0x%X\t0x%X\t%d\t%s\t%s\t%s\t%s" % (s["file"], s["line"], s["addr"], s["owner"], s["off"], converted[s["owner"]]["name"], s["kind"], cls, s["ctx"]))
+    text_out = "\n".join(out) + "\n"
+    if args.out:
+        Path(args.out).write_text(text_out)
+    real = [s for s in strays if not s["dead"] and not s["infra"]]
+    infra = [s for s in strays if s["infra"] and not s["dead"]]
+    sys.stdout.write(text_out if (real or infra) else "")
+    view_addrs = {int(v["addr"], 16) for v in al_json.get("views", [])}   # a "view" deliberately keeps its own storage next to the real owner
+    dup = [(A, c["defs"]) for A, c in sorted(converted.items()) if len(c["defs"]) > 1 and A not in view_addrs]
+    for A, d in dup:
+        print("MULTI-OWNER\t0x%X\t%s\tmore than one defining macro for one address: two objects" % (A, " ".join(d)))
+    # an extent that runs into a NOT converted global of the table (under-declared neighbour / over-sized owner): its poison/own storage would overlay live image data
+    ovl = []
+    for r in rows:
+        a0 = r["a"]
+        if a0 in converted or r["sz"] <= 0 or r["kind"] != "decl":
+            continue
+        for O in containing(a0) + containing(a0 + r["sz"] - 1):
+            if O in view_addrs or O in converted and converted[O].get("local_only"):
+                continue
+            ovl.append((a0, r["name"], O, converted[O]["name"], converted[O]["size"]))
+    for a0, n0, O, nO, szO in sorted(set(ovl)):
+        print("OVERLAP\t0x%X %s\tlies in/crosses the extent of the converted 0x%X %s (%d B)\tconvert both or fix the extent" % (a0, n0, O, nO, szO))
+    tmpl = template_scope_owners(scanned)
+    for f, ln, mac, nm in tmpl:
+        print("TEMPLATE-OWNER\t%s:%d\t%s(%s)\tone variable per instantiation: use a namespace-scope NOTSA_GLOBAL_SYNTH + NOTSA_GLOBAL_ALIAS" % (f, ln, mac, nm))
+    unk = [A for A, c in converted.items() if not c["known"]]
+    for A in unk:
+        print("UNKNOWN-SIZE\t0x%X\t%s\tno row in DETACH_GLOBALS.tsv / aliases.json / boot dump: extent assumed 1 byte (pass --boot-dump)" % (A, " ".join(sorted(converted[A]["files"]))))
+    print("\ncheck-converted: %d converted addresses (%d owners that are function-local only), %d strays (+%d in source/standalone, %d dead), %d without a known size"
+          % (len(converted), sum(1 for c in converted.values() if c["local_only"]), len(real), len(infra), len(strays) - len(real) - len(infra), len(unk)), file=sys.stderr)
+    if args.fix and real:
+        import subprocess
+        byfile = {}
+        for r in real:
+            if r.get("addr"):
+                byfile.setdefault(r["file"], set()).add(r["addr"])
+        for f, addrs in sorted(byfile.items()):
+            cmd = [sys.executable, "-I", str(Path(__file__).resolve()), "--only-addr", ",".join("0x%X" % a for a in sorted(addrs)), f] + (["--apply"] if args.apply else [])
+            print("fix:", " ".join(cmd[2:]), file=sys.stderr)
+            subprocess.run(cmd, check=False)
+    return real + [dict(file=f, line=ln) for f, ln, _, _ in tmpl] + [dict(file="?", line=0)] * (len(dup) + len(set(ovl))), infra, converted
+
+
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("files", nargs="*")
     ap.add_argument("--apply", action="store_true")
     ap.add_argument("--check", action="store_true")
     ap.add_argument("--gen-shared", action="store_true")
+    ap.add_argument("--check-converted", action="store_true", help="list address-mode uses of converted globals (strays); exit 1 if any")
+    ap.add_argument("--boot-dump", default=None, help="--check-converted: NOTSA_VERIFY_GLOBALS boot dump (`0xADDR size` lines) to take extents from")
+    ap.add_argument("--out", default=None, help="--check-converted: write the TSV here")
+    ap.add_argument("--fix", action="store_true", help="--check-converted: run the normal conversion (--only-addr <stray>) over the files with strays (dry run unless --apply); sites that are not alias rows of aliases.json are reported 'skip' and need a hand edit")
     ap.add_argument("--tsv", default=None)
     ap.add_argument("--aliases", default=str(REPO / ".notes" / "aliases.json"))
     ap.add_argument("--image-dir", default=None)
@@ -526,6 +784,9 @@ def main():
     al = Aliases(args.aliases, by)
     if not al.ok:
         print("warning: %s not found: duplicates / conflicts / overlaps stay undecided" % args.aliases, file=sys.stderr)
+    if args.check_converted:
+        real, infra, _ = check_converted(args)
+        sys.exit(1 if real else 0)
     report = []
     em = None if args.check else ge.Emit(ge.Img(args.image_dir), ge.FnResolver())
     if args.gen_shared:

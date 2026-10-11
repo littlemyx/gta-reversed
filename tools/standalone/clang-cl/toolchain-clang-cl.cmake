@@ -1,0 +1,67 @@
+# CMake toolchain file: build the game with clang-cl (LLVM) targeting i686-pc-windows-msvc, i.e. the SAME ABI, the same MSVC STL and the
+# same Windows SDK headers/libs as the msvc-wine (cl.exe) build - only the compiler and linker differ. Slice C1 of .notes/STREAM_C_PLAN.md.
+#
+# Needs:  brew install llvm lld      (clang-cl, lld-link, llvm-lib, llvm-rc; override with env LLVM_ROOT)
+#         the msvc-wine install for the headers/libs (env MSVC_WINE_ROOT, default ~/tools/msvc); wine is NOT needed to COMPILE.
+# Use with the conan profile tools/standalone/clang-cl/conanprofile-clangcl-release.txt and the CMake preset `StandaloneClangCL`.
+
+set(CMAKE_SYSTEM_NAME Windows)
+set(CMAKE_SYSTEM_PROCESSOR x86)
+
+if(DEFINED ENV{LLVM_ROOT})
+    set(_llvm_default "$ENV{LLVM_ROOT}")
+elseif(EXISTS "/opt/homebrew/opt/llvm/bin/clang-cl")
+    set(_llvm_default "/opt/homebrew/opt/llvm")
+else()
+    set(_llvm_default "/usr/local/opt/llvm")
+endif()
+set(LLVM_ROOT "${_llvm_default}" CACHE PATH "LLVM install with clang-cl (env LLVM_ROOT, default brew)")
+if(DEFINED ENV{MSVC_WINE_ROOT})
+    set(_msvc_wine_default "$ENV{MSVC_WINE_ROOT}")
+else()
+    set(_msvc_wine_default "$ENV{HOME}/tools/msvc")
+endif()
+set(MSVC_WINE_ROOT "${_msvc_wine_default}" CACHE PATH "msvc-wine installation root (headers + libs only)")
+
+file(GLOB _msvc_versions "${MSVC_WINE_ROOT}/vc/tools/msvc/*")
+list(SORT _msvc_versions ORDER DESCENDING)
+list(GET _msvc_versions 0 _msvc_ver_path)
+get_filename_component(MSVC_VERSION_DIR "${_msvc_ver_path}" NAME)
+file(GLOB _sdk_versions "${MSVC_WINE_ROOT}/kits/10/include/*")
+list(SORT _sdk_versions ORDER DESCENDING)
+list(GET _sdk_versions 0 _sdk_ver_path)
+get_filename_component(SDK_VERSION "${_sdk_ver_path}" NAME)
+set(MSVC_TOOLS "${MSVC_WINE_ROOT}/vc/tools/msvc/${MSVC_VERSION_DIR}")
+set(SDK_ROOT "${MSVC_WINE_ROOT}/kits/10")
+message(STATUS "clang-cl toolchain: LLVM ${LLVM_ROOT}, MSVC ${MSVC_VERSION_DIR}, SDK ${SDK_VERSION}")
+
+set(CMAKE_C_COMPILER   "${LLVM_ROOT}/bin/clang-cl")
+set(CMAKE_CXX_COMPILER "${LLVM_ROOT}/bin/clang-cl")
+find_program(_lld_link NAMES lld-link PATHS "${LLVM_ROOT}/bin" /opt/homebrew/opt/lld/bin /usr/local/opt/lld/bin NO_DEFAULT_PATH)
+if(_lld_link)
+    set(CMAKE_LINKER "${_lld_link}")
+endif()
+set(CMAKE_AR       "${LLVM_ROOT}/bin/llvm-lib")
+set(CMAKE_RC_COMPILER "${LLVM_ROOT}/bin/llvm-rc")
+set(CMAKE_MT       "${LLVM_ROOT}/bin/llvm-mt")
+
+# Target + ABI. clang-cl reads headers through /imsvc (system dirs, like the INCLUDE env of cl.exe).
+set(CMAKE_C_COMPILER_TARGET   i686-pc-windows-msvc)
+set(CMAKE_CXX_COMPILER_TARGET i686-pc-windows-msvc)
+# -Wno-error=c++11-narrowing: vendor/librw (d3d/xbox.cpp) narrows constants; the game sources are kept clean by tools/standalone/clang_census.py (strict)
+set(_cc_flags "--target=i686-pc-windows-msvc -fms-compatibility-version=19.44 -Wno-error=c++11-narrowing /imsvc${MSVC_TOOLS}/include /imsvc${SDK_ROOT}/include/${SDK_VERSION}/ucrt /imsvc${SDK_ROOT}/include/${SDK_VERSION}/shared /imsvc${SDK_ROOT}/include/${SDK_VERSION}/um /imsvc${SDK_ROOT}/include/${SDK_VERSION}/winrt")
+set(CMAKE_C_FLAGS_INIT   "${_cc_flags}")
+set(CMAKE_CXX_FLAGS_INIT "${_cc_flags}")
+set(_ld_flags "/libpath:${MSVC_TOOLS}/lib/x86 /libpath:${SDK_ROOT}/lib/${SDK_VERSION}/ucrt/x86 /libpath:${SDK_ROOT}/lib/${SDK_VERSION}/um/x86")
+set(CMAKE_EXE_LINKER_FLAGS_INIT    "${_ld_flags}")
+set(CMAKE_SHARED_LINKER_FLAGS_INIT "${_ld_flags}")
+set(CMAKE_MODULE_LINKER_FLAGS_INIT "${_ld_flags}")
+set(CMAKE_STATIC_LINKER_FLAGS_INIT "")
+
+# Compiler checks must not link/run (no wine needed to configure)
+set(CMAKE_TRY_COMPILE_TARGET_TYPE STATIC_LIBRARY)
+set(CMAKE_SIZEOF_VOID_P 4 CACHE STRING "" FORCE)
+set(CMAKE_FIND_ROOT_PATH_MODE_PROGRAM BOTH)
+set(CMAKE_FIND_ROOT_PATH_MODE_LIBRARY BOTH)
+set(CMAKE_FIND_ROOT_PATH_MODE_INCLUDE BOTH)
+set(CMAKE_FIND_ROOT_PATH_MODE_PACKAGE BOTH)

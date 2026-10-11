@@ -26,6 +26,14 @@
             }
         },
         {
+            "name": "StandaloneClangCL",
+            "displayName": "StandaloneRelease compiled with clang-cl (--target=i686-pc-windows-msvc, MSVC STL + SDK headers): stream C compiler-portability check",
+            "description": "Slice C1 of .notes/STREAM_C_PLAN.md. Run tools/standalone/clang-cl/make_generators.sh once (derives build/ClangCL/generators from build/Release/generators), then `cmake --preset StandaloneClangCL -DGTASA_PYTHON=<python>`. Needs `brew install llvm lld`. Compile-only target: `ninja -C build/StandaloneClangCL source/CMakeFiles/gta_reversed.dir/game_sa/<File>.cpp.obj`.",
+            "inherits": "StandaloneRelease",
+            "binaryDir": "${sourceDir}/build/StandaloneClangCL",
+            "toolchainFile": "${sourceDir}/build/ClangCL/generators/conan_toolchain.cmake"
+        },
+        {
             "name": "StandaloneDetached",
             "displayName": "StandaloneRelease + detached globals (NOTSA_GLOBAL are real C++ variables) + boot dump for tools/standalone/verify_globals.py",
             "description": "Slice A2 of .notes/DETACH_DATA_PLAN.md. Same flags as StandaloneRelease, separate build dir, GTASA_DETACHED_GLOBALS=ON and GTASA_VERIFY_GLOBALS=ON (run with NOTSA_VERIFY_GLOBALS=<file>).",

@@ -1,0 +1,7 @@
+{# Release conan profile for the clang-cl (C1) configuration: identical settings to the msvc-wine profile (so the SAME prebuilt MSVC-ABI packages are reused), only the CMake toolchain and the compiler executables differ. #}
+{% set msvc = os.getenv("MSVC_WINE_ROOT") or os.path.expanduser("~/tools/msvc") %}
+include({{ profile_dir }}/../msvc-wine/conanprofile-wine-release.txt)
+
+[conf]
+tools.cmake.cmaketoolchain:user_toolchain=["{{ profile_dir }}/toolchain-clang-cl.cmake"]
+tools.build:compiler_executables={"c": "{{ os.getenv('LLVM_ROOT') or '/opt/homebrew/opt/llvm' }}/bin/clang-cl", "cpp": "{{ os.getenv('LLVM_ROOT') or '/opt/homebrew/opt/llvm' }}/bin/clang-cl"}

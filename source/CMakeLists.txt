@@ -53,6 +53,13 @@ if (${RE_PROJECT}_STANDALONE AND NOT ${RE_PROJECT}_STANDALONE_DUMP_HOOKS_ONLY)
     endif()
 endif()
 
+# Stream F (.notes/STREAM_F_PLAN.md): float-only translation units of the run build are compiled for SSE2 instead of the x87. They are written with
+# notsa::fp (Core/Fp.h): plain float arithmetic, bit-identical to the x87 at PC=24 unless an intermediate leaves the float exponent range, in which case the
+# F24 model takes over. No PCH (the PCH is built with /arch:IA32; /arch must match), no unity build.
+if (MSVC AND ${RE_PROJECT}_STANDALONE_RUN_BUILD)
+    set_source_files_properties(game_sa/Collision/CollisionPrimitives.cpp PROPERTIES COMPILE_OPTIONS "/arch:SSE2" SKIP_UNITY_BUILD_INCLUSION ON)
+endif()
+
 # RenderWare backend. OFF: the game's own RW headers/wrappers (they forward to the original exe's RW by address).
 # ON: the RW C API is provided by source/fakerw over vendor/librw (git submodule, pinned). Implied ON by the runnable standalone build
 # (STANDALONE=ON, not DUMP_HOOKS_ONLY); the hook-dump build and the ASI build keep the real RW headers. See .notes/P2B_SHIM_PLAN.md.
@@ -678,6 +685,7 @@ if (${RE_PROJECT}_RW_LIBRW)
     add_executable(game_oracle_test EXCLUDE_FROM_ALL
         "${PROJECT_SOURCE_DIR}/tests/standalone/game_oracle_test.cpp"
         game_sa/Collision/Collision.cpp
+        game_sa/Collision/CollisionPrimitives.cpp
         game_sa/General.cpp
         game_sa/Core/Vector.cpp
         game_sa/Core/Matrix.cpp
@@ -700,6 +708,7 @@ if (${RE_PROJECT}_RW_LIBRW)
     add_executable(physics_oracle_test EXCLUDE_FROM_ALL
         "${PROJECT_SOURCE_DIR}/tests/standalone/physics_oracle_test.cpp"
         game_sa/Collision/Collision.cpp
+        game_sa/Collision/CollisionPrimitives.cpp
         game_sa/General.cpp
         game_sa/Core/Vector.cpp
         game_sa/Core/Vector2D.cpp
@@ -761,6 +770,7 @@ if (${RE_PROJECT}_RW_LIBRW)
         game_sa/Entity/Vehicle/Train.cpp
         game_sa/Entity/Vehicle/Boat.cpp
         game_sa/Collision/Collision.cpp
+        game_sa/Collision/CollisionPrimitives.cpp
         game_sa/Radar.cpp
         game_sa/MenuManager.cpp
         game_sa/Camera.cpp
@@ -813,6 +823,7 @@ if (${RE_PROJECT}_RW_LIBRW)
         game_sa/Darkel.cpp
         game_sa/Game.cpp
         game_sa/Collision/Collision.cpp
+        game_sa/Collision/CollisionPrimitives.cpp
         game_sa/Collision/ColPoint.cpp
         game_sa/PedType.cpp
         game_sa/PedIntelligence.cpp
@@ -949,6 +960,7 @@ if (${RE_PROJECT}_RW_LIBRW)
     add_executable(gameplay_oracle_test EXCLUDE_FROM_ALL
         "${PROJECT_SOURCE_DIR}/tests/standalone/gameplay_oracle_test.cpp"
         game_sa/Collision/Collision.cpp
+        game_sa/Collision/CollisionPrimitives.cpp
         game_sa/General.cpp
         game_sa/Core/Vector.cpp
         game_sa/Core/Vector2D.cpp
@@ -1050,6 +1062,7 @@ if (${RE_PROJECT}_RW_LIBRW)
         game_sa/Attractors/PedShelterAttractor.cpp
         # reciprocal-constant fidelity cases (TestRecip)
         game_sa/Collision/Collision.cpp
+        game_sa/Collision/CollisionPrimitives.cpp
         game_sa/Curves.cpp
         game_sa/TrainNode.cpp
         game_sa/GridRef.cpp

@@ -8,6 +8,19 @@
 // the Intel x87 including its 66-bit pi in the fsin/fcos/fptan argument reduction) - see .notes/reports/F1_soft.md for the measured
 // behaviour, the envelope of what is bit-exact and what is not.
 //
+// API (namespace notsa::fp::soft)
+//   F80                            80-bit register value {mant, exp, sign}; Classify / IsNaN / IsInf / IsZero, Zero / Inf / One / Indefinite, FromBytes / ToBytes (10 bytes)
+//   FromFloat / FromDouble / FromFloatBits / FromDoubleBits / FromInt64            exact (fld m32 / m64 / fild; an SNaN is quieted like fld does)
+//   ToFloat / ToDouble / ToFloatBits / ToDoubleBits / ToInt64                      fstp m32 / m64 / fistp m64 (nearest-even)
+//   ToDoubleRoundToOdd             53-bit round-to-odd: double -> float of it == ToFloat() of the F80 (a double rounding through it is innocuous for <= 51 bits)
+//   Add / Sub / Mul / Div / Sqrt (a, b, pc)           x87 arithmetic at precision control pc = 24 / 53 / 64 (round to nearest even, extended exponent range)
+//   Sin / Cos (x, &c2)  SinCos(x)  Tan(x, &c2) / TanPush(x)                         fsin / fcos / fsincos / fptan; c2 = |x| >= 2^63, operand returned unchanged
+//   Atan2(y, x) / Atan(x)                                                          fpatan (ST1 = y, ST0 = x) / fld x; fld1; fpatan
+//   Yl2x(y, x)  Yl2xp1(y, x)                                                       fyl2x / fyl2xp1 (log2 = Yl2x(One(), x), log10 = Yl2x(kLg2, x), ln = Yl2x(kLn2, x))
+//   kPi kHalfPi kLg2 kLn2 kL2e kL2t                                                the constants fldpi / fldlg2 / fldln2 / fldl2e / fldl2t load
+// Typical use, the CRT's asin (fld x; fld1; fadd st, st(1); fld1; fsub st, st(2); fmulp; fsqrt; fpatan) at PC24:
+//   F80 x = FromDouble(v), one = One();  F80 a = Add(one, x, 24), b = Sub(one, x, 24);  F80 r = Atan2(x, Sqrt(Mul(a, b, 24), 24));  double d = ToDouble(r);
+//
 // Conventions
 //  * F80 is the 80-bit register format: full 64-bit significand with the explicit integer bit, biased 15-bit exponent
 //    (0 = zero / denormal, 0x7FFF = inf / NaN), sign. Operations never produce unnormals / pseudo-infinities; such INPUTS are an invalid
@@ -15,11 +28,21 @@
 //  * Exceptions are masked (the game's CW): results follow the masked-response tables. Exception flags are not tracked, except the
 //    C2 "operand out of range" outcome of fsin/fcos/fptan/fsincos (|x| >= 2^63) which is reported through a bool.
 //  * Rounding is to nearest-even. The precision control only affects add/sub/mul/div/sqrt (as on the FPU). The exponent range is
-//    always the extended one; masked overflow gives inf, underflow gives a denormal rounded at the coarser of (PC bits, denormal grid).
+//    always the extended one; masked overflow gives inf; a denormal result is rounded at the FIXED bit position of the PC (2^(-16445+64-pc)).
 //  * fsin / fcos / fptan / fsincos / fpatan / fyl2x / fyl2xp1 return the result rounded to 64 bits whatever the PC is (like the
 //    FPU: the caller's NEXT arithmetic op or the store rounds it).
-//  * NaNs: a NaN operand is propagated (SNaN is quieted), two NaNs -> the one with the larger significand; an invalid operation
-//    produces the "real indefinite" = negative quiet NaN with a zero payload (sign 1, exp 0x7FFF, mant 0xC000000000000000).
+//  * NaNs: an unsupported encoding (unnormal, pseudo-NaN / pseudo-inf) in either operand -> real indefinite; otherwise a QNaN operand wins over an
+//    SNaN one, two NaNs of the same kind -> the larger significand (equal: the positive one), an SNaN is quieted (set bit 62), the payload and the
+//    sign are kept; an invalid operation produces the "real indefinite" = negative quiet NaN with a zero payload (sign 1, exp 0x7FFF, mant 0xC000000000000000).
+//    fptan / fsincos push the same NaN as second result. (All of this was verified against the host x87 on the cross product of ~90 special values.)
+//  * Implementation: 128-bit significand "W" numbers (relative error ~2^-124) with Q128 fixed-point Taylor tails; fsin / fcos / fptan reduce with the FPU's
+//    own 66-bit pi (0x3243F6A8885A308D3 / 2^64), i.e. reproduce the "error near multiples of pi/2" of the instruction; fpatan uses a table atan(k/16) and
+//    a short series; fyl2x a table ln(1 + k/32) and an atanh series. All tables are generated with exact Python integer arithmetic at 200 bits:
+//    kSinC[k] = 1/(2k+1)!, kCosC[k] = 1/(2k)!, kAtanC[n] = 1/(2n+1), kAtanTab[k] = atan(k/16), kLnTab[k+9] = ln(1+k/32), kLog2e = 1/ln 2, kPiW = pi (all to nearest).
+//  * Accuracy vs the reference FPU (see .notes/reports/F1_soft.md): results are the correctly rounded value of the exact function of the reduced argument;
+//    the FPU is within ~1 extended ulp of that (not correctly rounded), so 88-100% of the 80-bit results are bit-identical and the rest differ by 1 ulp
+//    (2 for fptan), which disappears after rounding to double (99.99%) or float (100%).
+//  * Speed (clang arm64 -O2, per call): add 15 ns, mul 10 ns, div 30 ns, sqrt 170 ns, sin/cos 125 ns, sincos 210 ns, tan 255 ns, atan2 210 ns, fyl2x 175 ns.
 #include <bit>
 #include <cstdint>
 

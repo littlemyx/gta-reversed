@@ -1,9 +1,14 @@
 // x87_soft_test.cpp - compares notsa::fp::soft (source/game_sa/Core/X87Soft.h) with the HOST x87 (inline asm, MSVC x86 only).
 // The host FPU is the oracle: every case is run through the real instruction at precision control 24 / 53 / 64 and the full 80-bit
-// result (fstp tbyte) is compared with the software one. No game headers, no CMake target; build by hand:
-//   cl /nologo /O2 /arch:IA32 /EHsc /std:c++20 x87_soft_test.cpp        then run under Wine (Rosetta's x87) or on a real x86 machine:
-//   x87_soft_test.exe [cases-per-op-and-precision (default 200000)] [seed] [ops filter: add,sqrt,sin,...]
-// The exit code is non-zero if any case gives a different FLOAT (binary32) rounding of the result than the host, i.e. the practical criterion.
+// result (fstp tbyte) is compared with the software one. No game headers, no CMake target; build by hand (run it under Wine on Apple silicon,
+// where Rosetta 2 provides the x87, or on a real x86 machine):
+//   cl /nologo /O2 /arch:IA32 /EHsc /std:c++20 x87_soft_test.cpp
+//   x87_soft_test.exe [cases per op/distribution/precision (default 200000)] [seed] [comma separated ops: conv,add,sub,mul,div,sqrt,asin,acos,sin,cos,tan,sincos,patan,yl2x,yl2xp1]
+//   env X87T_VERBOSE=1 prints the first float-level mismatches, =2 also double-level ones and special-value diffs, =3 everything, =4 traces inputs.
+// Per op and input distribution it reports: cases, bit-exact 80-bit matches, matches after rounding to float / double, NaN-payload-only differences,
+// the number of 1-ulp and >= 2-ulp differences and the maximum distance in extended ulps. A "info:" row is informational (documented undefined behaviour of
+// the reference). The exit code is non-zero if any case gives a different binary32 rounding of the result than the host (the practical criterion), or a
+// different C2 flag. The generators use host FP (rndUnit); the code under test never does.
 #include "../../source/game_sa/Core/X87Soft.h"
 
 #include <float.h>
@@ -27,7 +32,7 @@ using namespace notsa::fp::soft;
 namespace host {
 struct Out { u8 a[10]; u8 b[10]; unsigned short sw; };
 
-enum Op { ADD, SUB, MUL, DIV, SQRT, SIN, COS, TAN, SINCOS, PATAN, YL2X, YL2XP1, NOPS };
+enum Op { ADD, SUB, MUL, DIV, SQRT, SIN, COS, TAN, SINCOS, PATAN, YL2X, YL2XP1, ASINC, ACOSC, NOPS };
 
 static void run(Op op, const u8* x, const u8* y, Out* out) {
     Out* o = out;
@@ -137,6 +142,33 @@ static void run(Op op, const u8* x, const u8* y, Out* out) {
                        fld tbyte ptr [eax]
                        fld tbyte ptr [ecx]
                        fyl2xp1
+                       fnstsw sw
+                       mov edx, o
+                       fstp tbyte ptr [edx] } break;
+    case ASINC: __asm { mov eax, x                       // the CRT's asin for |x| < 1 (X87Intrinsics.h): atan2(x, sqrt((1 + x) * (1 - x)))
+                       fnclex
+                       fld tbyte ptr [eax]
+                       fld1
+                       fadd st(0), st(1)
+                       fld1
+                       fsub st(0), st(2)
+                       fmulp st(1), st(0)
+                       fsqrt
+                       fpatan
+                       fnstsw sw
+                       mov edx, o
+                       fstp tbyte ptr [edx] } break;
+    case ACOSC: __asm { mov eax, x                       // acos: atan2(sqrt((1 + x) * (1 - x)), x)
+                       fnclex
+                       fld tbyte ptr [eax]
+                       fld1
+                       fadd st(0), st(1)
+                       fld1
+                       fsub st(0), st(2)
+                       fmulp st(1), st(0)
+                       fsqrt
+                       fxch st(1)
+                       fpatan
                        fnstsw sw
                        mov edx, o
                        fstp tbyte ptr [edx] } break;
@@ -404,6 +436,7 @@ static void testConversions(u64 N) {
         record(s1, mine, viaHost, "fld m64");
         // narrowing from an arbitrary 80-bit value
         F80 v = (i & 1) ? genWide() : gen80E(-1100, 1100);
+        if ((i & 63) == 5) { const std::vector<F80> spv = specials(); v = spv[rnd() % spv.size()]; }
         u8 vb[10]; ToBytes(v, vb);
         __asm { lea eax, vb
                 fld tbyte ptr [eax]
@@ -411,8 +444,8 @@ static void testConversions(u64 N) {
                 fld tbyte ptr [eax]
                 fstp dword ptr [fl] }
         u64 hb; memcpy(&hb, &back, 8); u32 hf; memcpy(&hf, &fl, 4);
-        ++s1.n; if (ToDoubleBits(v) == hb || (IsNaN(v))) ++s1.exact; else { ++s1.fatal; if (s1.firstBad++ < 5) { char a[24]; hex(v, a); printf("  MISMATCH fstp m64 v=%s soft=%016llx host=%016llx\n", a, (unsigned long long)ToDoubleBits(v), (unsigned long long)hb); } }
-        ++s2.n; if (ToFloatBits(v) == hf || (IsNaN(v))) ++s2.exact; else { ++s2.fatal; if (s2.firstBad++ < 5) { char a[24]; hex(v, a); printf("  MISMATCH fstp m32 v=%s soft=%08x host=%08x\n", a, ToFloatBits(v), hf); } }
+        ++s1.n; if (ToDoubleBits(v) == hb) ++s1.exact; else { ++s1.fatal; if (s1.firstBad++ < 5) { char a[24]; hex(v, a); printf("  MISMATCH fstp m64 v=%s soft=%016llx host=%016llx\n", a, (unsigned long long)ToDoubleBits(v), (unsigned long long)hb); } }
+        ++s2.n; if (ToFloatBits(v) == hf) ++s2.exact; else { ++s2.fatal; if (s2.firstBad++ < 5) { char a[24]; hex(v, a); printf("  MISMATCH fstp m32 v=%s soft=%08x host=%08x\n", a, ToFloatBits(v), hf); } }
         // round-to-odd property: rounding the odd double to float == rounding the 80-bit value to float
         if (!IsNaN(v) && !IsInf(v)) {
             const double od = ToDoubleRoundToOdd(v);
@@ -420,6 +453,24 @@ static void testConversions(u64 N) {
             ++s2.n; if (ToFloatBits(odF) == hf) ++s2.exact; else { ++s2.fatal; if (s2.firstBad++ < 5) { char a[24]; hex(v, a); printf("  MISMATCH round-to-odd v=%s\n", a); } }
         }
         (void)dummy;
+        // fistp m64 (round to nearest even; out of range / NaN -> 0x8000000000000000) and fild m64
+        {
+            const F80 iv = (i & 3) == 0 ? gen80E(-3, 64) : (i & 3) == 1 ? genFloatE(-3, 64) : (i & 3) == 2 ? genWide() : gen80E(-70, 70);
+            u8 ib[10]; ToBytes(iv, ib);
+            long long hi64 = 0;
+            __asm { lea eax, ib
+                    fld tbyte ptr [eax]
+                    fistp qword ptr [hi64] }
+            Stat& s3 = stat("fistp m64", 64);
+            ++s3.n; if (ToInt64(iv) == hi64) ++s3.exact; else { ++s3.fatal; if (s3.firstBad++ < 5) { char a[24]; hex(iv, a); printf("  MISMATCH fistp v=%s soft=%lld host=%lld\n", a, (long long)ToInt64(iv), hi64); } }
+            s3.f_ok = s3.d_ok = s3.exact;
+            const long long iq = (long long)rnd() >> (rnd() % 64);
+            u8 fb[10];
+            __asm { lea edx, fb
+                    fild qword ptr [iq]
+                    fstp tbyte ptr [edx] }
+            record(stat("fild m64", 64), FromInt64(iq), FromBytes(fb), "fild");
+        }
     }
     s1.f_ok = s1.d_ok = s1.exact; s2.f_ok = s2.d_ok = s2.exact;
 }
@@ -515,6 +566,36 @@ static void runTrigSpecials(host::Op op, const char* name, SoftT soft, const cha
     }
 }
 
+// the CRT asin / acos chain at the current PC: every step rounded at PC, only fpatan (64-bit) in the end
+static F80 asinChain(const F80& x, int pc, bool acos) {
+    const F80 a = Add(One(), x, pc), b = Sub(One(), x, pc);
+    const F80 r = Sqrt(Mul(a, b, pc), pc);
+    return acos ? Atan2(r, x) : Atan2(x, r);
+}
+static F80 gAsinF() { return FromFloat(float(rndUnit() * 2 - 1)); }
+static F80 gAsinD() { return FromDouble(rndUnit() * 2 - 1); }
+static F80 gAsinNear1() { F80 v = One(); v.exp = 0x3FFE; v.mant = ~u64(0) - (rnd() % 4096); if (rnd() & 1) v.sign = true; return v; }
+static F80 gAsinSmall() { return genK(K_DOUBLE, -40, -1); }
+static F80 gAsinE80() { return gen80E(-30, -1); }
+static void runAsin(host::Op op, const char* name, bool acos, u64 N, const char* filter) {
+    if (!wanted(filter, name)) return;
+    static F80 (*gens[])() = { gAsinF, gAsinD, gAsinNear1, gAsinSmall, gAsinE80 };
+    static const char* gn[] = { "float", "double", "near1", "small", "e80" };
+    host::Out o;
+    for (int pc : { 24, 53, 64 }) {
+        host::setPC(pc);
+        for (int g = 0; g < 5; ++g) {
+            Stat& st = stat(std::string(name) + "/" + gn[g], pc);
+            for (u64 i = 0; i < N; ++i) {
+                const F80 x = gens[g]();
+                const F80 ref = hostRes(op, x, x, o);
+                char hx[24], what[64]; hex(x, hx); sprintf(what, "x=%s", hx);
+                record(st, asinChain(x, pc, acos), ref, what);
+            }
+        }
+    }
+}
+
 static SoftOut tSin(const F80& x, const F80&) { SoftOut r{}; r.a = Sin(x, &r.c2); return r; }
 static SoftOut tCos(const F80& x, const F80&) { SoftOut r{}; r.a = Cos(x, &r.c2); return r; }
 
@@ -591,6 +672,8 @@ int main(int argc, char** argv) {
     testBinary(host::MUL, "mul", sMul, N, filter);
     testBinary(host::DIV, "div", sDiv, N, filter);
     testUnary(host::SQRT, "sqrt", sSqrt, N, filter);
+    runAsin(host::ASINC, "asin", false, N, filter);
+    runAsin(host::ACOSC, "acos", true, N, filter);
     runTrigSpecials(host::SIN, "sin", tSin, filter, false);
     runTrig(host::SIN, "sin", tSin, N, filter, kTrigDists, sizeof kTrigDists / sizeof *kTrigDists);
     runTrigSpecials(host::COS, "cos", tCos, filter, false);

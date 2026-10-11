@@ -17,9 +17,9 @@
 #pragma once
 #include "fakerw.h"
 #include "rwmath_exact.h"
-
 #include <emmintrin.h>
 #include <xmmintrin.h>
+NOTSA_CLANG_SSE2_BEGIN
 
 #include <cstdint>
 #include <cstring>
@@ -325,3 +325,4 @@ inline void SkinVertices(bool sse, const SkinInput& in, const float* mats, u8* d
 }
 
 } // namespace rwskincpu
+NOTSA_CLANG_SSE2_END

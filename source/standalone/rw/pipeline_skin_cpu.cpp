@@ -54,7 +54,7 @@ RwBool CpuInstanceCallback(void* object, RxD3D9ResEntryHeader* header, RwBool re
     caps.DeclTypes = saved;
     return r;
 }
-
+NOTSA_CLANG_SSE2_BEGIN
 // the CPU skinning of 0x7C7C49..0x7C7FC3 for one atomic
 void SkinIntoBuffer(RwResEntry* entry, rw::Atomic* atomic) {
     rw::Geometry*       geo  = atomic->geometry;
@@ -135,7 +135,7 @@ void SkinIntoBuffer(RwResEntry* entry, rw::Atomic* atomic) {
     rwskincpu::SkinVertices(g_sse, in, matBuf, base + pos->offset, srcNrm ? base + nrm->offset : nullptr, stream.stride);
     rw::d3d::unlockVertices(stream.vertexBuffer);
 }
-
+NOTSA_CLANG_SSE2_END
 // the node's render callback: skin, then the stock draw (0x7C85B0: D3DRS_NORMALIZENORMALS is forced on with hardware T&L while lighting is enabled)
 void CpuRenderCallback(RwResEntry* entry, void* object, RwUInt8 type, RwUInt32 flags) {
     SkinIntoBuffer(entry, static_cast<rw::Atomic*>(object));

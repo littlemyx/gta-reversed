@@ -481,3 +481,13 @@ inline void MorphTargetSphere(const RwV3d* v, int32_t n, RwV3d* centre, float* r
 }
 
 } // namespace rwx
+
+// NOTSA (stream C, clang-cl): clang refuses SSE intrinsics in functions compiled without the sse2 target feature (the game is built /arch:IA32); MSVC does not care.
+// pipeline_skin_core.h / pipeline_skin_cpu_core.h wrap their kernels in these (no-ops for MSVC, so the object code is unchanged).
+#ifdef __clang__
+#define NOTSA_CLANG_SSE2_BEGIN _Pragma("clang attribute push(__attribute__((target(\"sse2\"))), apply_to=function)")
+#define NOTSA_CLANG_SSE2_END   _Pragma("clang attribute pop")
+#else
+#define NOTSA_CLANG_SSE2_BEGIN
+#define NOTSA_CLANG_SSE2_END
+#endif

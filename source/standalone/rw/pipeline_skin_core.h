@@ -24,9 +24,9 @@
 */
 #include "fakerw.h"
 #include "rwmath_exact.h"
-
 #include <emmintrin.h>
 #include <xmmintrin.h>
+NOTSA_CLANG_SSE2_BEGIN
 
 #include <cmath>
 #include <cstdint>
@@ -772,3 +772,4 @@ void RenderHW(Dev& dev, Env& e) {
 }
 
 } // namespace rwskin
+NOTSA_CLANG_SSE2_END

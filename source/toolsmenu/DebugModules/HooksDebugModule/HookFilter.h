@@ -5,6 +5,15 @@
 #include <string_view>
 
 namespace RHDebugModule {
+struct HookFilterCutoffs { // NOTSA: namespace scope (clang rejects default arguments / member initialisers of a nested type with default member initializers inside the enclosing class)
+    float CategoryInPath{ 0.35f }; //!< Used when filtering by category path to match segments
+    float CategoryGlobal{ 0.5f };  //!< Used for by-name global category search
+    float ItemGlobal{ 0.5f };      //!< Used for global item search (Eg.: When no category is specified)
+    float ItemLocal{ 0.1f };       //!< Used when a category is specified
+    float ItemAddress{ 0.1f };     //!< Used for matching hex address to filter string
+
+    NLOHMANN_DEFINE_TYPE_INTRUSIVE(HookFilterCutoffs, CategoryInPath, CategoryGlobal, ItemGlobal, ItemLocal, ItemAddress)
+};
 class HookFilter {
     static constexpr const char*      WILDCARD_CHAR = "*";
 
@@ -18,15 +27,7 @@ class HookFilter {
 public:
     using CategoryPath = std::vector<std::string_view>;
 
-    struct Cutoffs {
-        float CategoryInPath{ 0.35f }; //!< Used when filtering by category path to match segments
-        float CategoryGlobal{ 0.5f };  //!< Used for by-name global category search
-        float ItemGlobal{ 0.5f };      //!< Used for global item search (Eg.: When no category is specified)
-        float ItemLocal{ 0.1f };       //!< Used when a category is specified
-        float ItemAddress{ 0.1f };     //!< Used for matching hex address to filter string
-
-        NLOHMANN_DEFINE_TYPE_INTRUSIVE(Cutoffs, CategoryInPath, CategoryGlobal, ItemGlobal, ItemLocal, ItemAddress)
-    };
+    using Cutoffs = HookFilterCutoffs;
 
 public:
     HookFilter() = default;

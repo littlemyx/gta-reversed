@@ -43,7 +43,7 @@ class NOTSA_EXPORT_VTABLE CAEVehicleAudioEntity final : public CAEAudioEntity {
 
 protected: // Config:
     // Config struct - Obviously this is notsa, but it's necessary for the debug module
-    static inline struct Config {
+    struct Config {
         float      FreqUnderwaterFactor = 0.7f;              // 0x8CBC48
         tComponent HeliAudioComponent   = COMPONENT_WING_RR; //!< 0x8CBD4C - Where audio is placed for helis
 
@@ -480,8 +480,8 @@ protected: // Config:
                 float RollOffFactor{ 2.f };             // 0x8CBC3C
             } Off; // PLAYER_OFF
         } PlayerEngine{};
-    } s_Config{};
-    static inline Config s_DefaultConfig{};
+    }; static Config s_Config; // NOTSA: defined at the end of the header (clang rejects `static inline` members whose nested type has default member initializers inside the class)
+    static Config s_DefaultConfig;
 
 public: // Enums:
     //
@@ -943,3 +943,7 @@ inline std::optional<const char*> EnumToString(eAEVehicleSoundType v) {
     default:                        return std::nullopt;
     }
 }
+
+// NOTSA: out-of-class definitions of the debug config (see the declarations)
+inline CAEVehicleAudioEntity::Config CAEVehicleAudioEntity::s_Config{};
+inline CAEVehicleAudioEntity::Config CAEVehicleAudioEntity::s_DefaultConfig{};

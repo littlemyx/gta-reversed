@@ -68,11 +68,11 @@ public:
     static inline NOTSA_GLOBAL(PlayerCoords, 0xC6E958, (CVector), {}); // gVecPlayerCoors
     static inline NOTSA_GLOBAL(CameraCoors, 0xC6E964, (CVector), {});  // gVecCameraCoors
 
-    static inline struct DebugSettings {
+    struct DebugSettings {
         struct RenderSettingPair {
             bool Enabled = true, Force = false;
         } Moon, Rockstar, LowClouds, Rainbow, Streaks, VolumetricClouds;
-    } s_DebugSettings;
+    }; static DebugSettings s_DebugSettings; // NOTSA: defined at the end of the header (clang: default member initializers of nested types inside the enclosing class)
 
 public:
     static void InjectHooks();
@@ -117,3 +117,5 @@ extern float& flt_C6E954;
 extern float& flt_C6E970;
 
 extern int32& dword_C6E974;
+
+inline CClouds::DebugSettings CClouds::s_DebugSettings{};

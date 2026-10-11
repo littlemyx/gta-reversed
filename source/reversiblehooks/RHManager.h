@@ -33,6 +33,43 @@
 #endif
 
 namespace ReversibleHooks {
+struct HookInstallOptions {
+    using HS = ReversibleHook::TwoWayHookState;
+
+    //! Has this function been reversed?
+    bool Reversed{ true };
+
+    //! Unhooked by default?
+    //! Mostly just a shortcut for `State` to be set to `HS::Unhooked` by default
+    //! (Unless `Reversed` is false, in which case it will be set to `HS::RedirectToGTA`)
+    bool Unhooked{ false };
+
+    //! Initial state of the hook
+    HS State{ Reversed ? Unhooked ? HS::Unhooked : HS::RedirectToOurs : HS::RedirectToGTA };
+
+    //! If this hook shouldn't be switchable from the GUI
+    bool Locked{ !Reversed };
+
+    //! [Virtual Only]
+    //! 
+    //! Does hook overrides the virtual method of the base class?
+    //! 
+    //! Must be correctly specified because classes not overriding
+    //! will (in our code) inherit the address of the base class's method
+    //! causing the same function being hooked from different places
+    //! In GTA each class gets it's own function, regardless 
+    //! of whether it overrides the base class's method or not.
+    bool Overrides{ true };
+
+    //! Number of stack arguments to preserve
+    std::optional<size_t> StackArgumentsToPreserve{};
+
+    //! If enabled registers will be saved accross the call, but it requires `StackArgumentsToPreserve` to be set as well
+    bool PreserveRegisters{ false };
+
+    //! Where this hook was installed from (used for debugging)
+    std::source_location InstallSrcLoc{ std::source_location::current() };          
+};
 class RHManager : public notsa::Singleton<RHManager> {
     using HooksCheckClock = std::chrono::steady_clock;
 
@@ -60,43 +97,7 @@ public:
     void WriteHooksToFile(const std::filesystem::path&);
 
 public: // Script hooking functions //
-    struct HookInstallOptions {
-        using HS = ReversibleHook::TwoWayHookState;
-
-        //! Has this function been reversed?
-        bool Reversed{ true };
-
-        //! Unhooked by default?
-        //! Mostly just a shortcut for `State` to be set to `HS::Unhooked` by default
-        //! (Unless `Reversed` is false, in which case it will be set to `HS::RedirectToGTA`)
-        bool Unhooked{ false };
-
-        //! Initial state of the hook
-        HS State{ Reversed ? Unhooked ? HS::Unhooked : HS::RedirectToOurs : HS::RedirectToGTA };
-
-        //! If this hook shouldn't be switchable from the GUI
-        bool Locked{ !Reversed };
-
-        //! [Virtual Only]
-        //! 
-        //! Does hook overrides the virtual method of the base class?
-        //! 
-        //! Must be correctly specified because classes not overriding
-        //! will (in our code) inherit the address of the base class's method
-        //! causing the same function being hooked from different places
-        //! In GTA each class gets it's own function, regardless 
-        //! of whether it overrides the base class's method or not.
-        bool Overrides{ true };
-
-        //! Number of stack arguments to preserve
-        std::optional<size_t> StackArgumentsToPreserve{};
-
-        //! If enabled registers will be saved accross the call, but it requires `StackArgumentsToPreserve` to be set as well
-        bool PreserveRegisters{ false };
-
-        //! Where this hook was installed from (used for debugging)
-        std::source_location InstallSrcLoc{ std::source_location::current() };          
-    };
+    using HookInstallOptions = ::ReversibleHooks::HookInstallOptions; // NOTSA: namespace scope (clang rejects `HookInstallOptions opt = {}` default arguments of a nested type with default member initializers inside the enclosing class)
 
     /*!
      * @brief Adds a hook to a category

@@ -29,7 +29,7 @@ public:
     static inline NOTSA_GLOBAL(bCamCollideWithBuildings, 0x8A5B16, (bool), { true });        // = true
     static inline NOTSA_GLOBAL(relVelCamCollisionVehiclesSqr, 0x8A5B18, (float), { 0.010000001f }); // = 0.01f
 
-    static inline struct DebugSettings {
+    struct DebugSettings {
         struct ShapeShapeCollision {
             enum Shape { // I don't like casting, sorry
                 SBOX,
@@ -60,7 +60,7 @@ public:
 
         // OG code considered lines that begin and end within the sphere as not intersecting it
         bool AllowLineOriginInsideSphere{false};
-    } s_DebugSettings{};
+    }; static DebugSettings s_DebugSettings; // NOTSA: defined at the end of the header (clang: default member initializers of nested types inside the enclosing class)
 
 public:
     static void InjectHooks();
@@ -225,3 +225,5 @@ void CalculateColPointInsideBox(const CBox& box, const CVector& point, CColPoint
 bool ProcessDiscCollision(CColPoint& colPoint1, const CMatrix& mat, const CColDisk& disk, CColPoint& colPoint2, bool& arg4, float& arg5, CColPoint& colPoint3);
 void ResetMadeInvisibleObjects();
 float ClosestSquaredDistanceBetweenFiniteLines(const CVector& line1Start, const CVector& line1End, const CVector& line2Start, const CVector& line2End, float arg4);
+
+inline CCollision::DebugSettings CCollision::s_DebugSettings{};

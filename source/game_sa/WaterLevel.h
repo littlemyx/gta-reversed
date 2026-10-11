@@ -178,9 +178,9 @@ class CWaterLevel {
     static inline    auto& m_BlocksToBeRenderedOutsideWorldY = StaticRef<std::array<int16, 70>>(0xC214D0);
 
     // NOTSA: Color of wake segment parts (So we can make rainbows)
-    static inline struct {
+    struct WakeSegmentPartColor {
         float r{ 1.f }, g{ 1.f }, b{ 1.f };
-    } WakeSegmentPartColors[4]{};
+    }; static WakeSegmentPartColor WakeSegmentPartColors[4]; // NOTSA: defined at the end of the header (clang: default member initializers of a nested type inside the enclosing class)
 
     //! Used to describe a block/combo's content
     struct PolyInfo {
@@ -223,7 +223,7 @@ class CWaterLevel {
     //! Stop `SetCameraRange()` from running
     static inline bool DontUpdateCameraRange = false;
 
-    static inline struct DebugWaterColor {
+    struct DebugWaterColor {
         enum {
             TRI,
             RECT
@@ -231,7 +231,7 @@ class CWaterLevel {
 
         bool  active{};
         CRGBA color{};
-    } DebugWaterColors[2];
+    }; static DebugWaterColor DebugWaterColors[2];
 
     static inline bool DontRenderYSplitTri = false;
 
@@ -410,3 +410,7 @@ public:
     TestTriangleToGetWaterLevel(CWaterTriangle*, float, float, float, float*, float*, float*)
     */
 };
+
+// NOTSA: out-of-class definitions of the debug statics
+inline CWaterLevel::WakeSegmentPartColor CWaterLevel::WakeSegmentPartColors[4]{};
+inline CWaterLevel::DebugWaterColor CWaterLevel::DebugWaterColors[2]{};

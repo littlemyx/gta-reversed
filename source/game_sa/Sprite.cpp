@@ -489,10 +489,10 @@ void CSprite::RenderBufferedOneXLUSprite_Rotate_Dimension(CVector pos, CVector2D
         (pos.x + wCos) - hSin,
     };
     const CornerCoords1D ys{
-        (pos.y - hCos) + wSin,
-        hCos + wSin + pos.y,
-        (hCos + pos.y) - wSin,
-        (pos.y - hCos) - wSin,
+        static_cast<float>((pos.y - hCos) + wSin),
+        static_cast<float>(hCos + wSin + pos.y),
+        static_cast<float>((hCos + pos.y) - wSin),
+        static_cast<float>((pos.y - hCos) - wSin),
     };
     if (IsSpriteOffScreen(xs, ys)) {
         return;

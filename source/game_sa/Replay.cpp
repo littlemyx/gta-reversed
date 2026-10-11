@@ -543,7 +543,7 @@ void CReplay::ProcessReplayCamera() {
         modelling->up    = TheCamera.GetUp();
         modelling->right = TheCamera.GetRight();
         break;
-    case REPLAY_CAM_MODE_FIXED:
+    case REPLAY_CAM_MODE_FIXED: {
         const auto direction = (CameraFocus - CameraFixed).Normalized();
         const auto right = direction.Cross({0.0f, 0.0f, 1.0f}).Normalized();
 
@@ -556,7 +556,7 @@ void CReplay::ProcessReplayCamera() {
         modelling->at    = TheCamera.GetForward();
         modelling->up    = TheCamera.GetUp();
         modelling->right = TheCamera.GetRight();
-        break;
+        break; }
     default:
         break;
     }

@@ -48,7 +48,7 @@ void CTaskAllocatorKillOnFoot::AllocateTasks(CPedGroupIntelligence* intel) {
             }
 
             if (m_GroupTargetID == -1) { // 0x69BEC9 and 0x69C185
-                tseq.AddTask(new CTaskComplexKillPedOnFoot{ m_Target, -1, 0, 0, 0, withGuns ? 2u : 1u });
+                tseq.AddTask(new CTaskComplexKillPedOnFoot{ m_Target, -1, 0, 0, 0, static_cast<uint8>(withGuns ? 2u : 1u) });
                 if (withGuns) {
                     tseq.AddTask(new CTaskSimpleLookAbout{ CGeneral::GetRandomNumberInRange(0u, 1000u) });
                 }

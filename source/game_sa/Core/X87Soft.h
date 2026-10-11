@@ -535,4 +535,464 @@ inline F80 Sqrt(F80 a, int pc = 64) {
     return RoundToF80(Unr{ false, eRes, U128{ res.lo, halfUp ? (u64(1) << 63) : 0 }, !IsZero(rem) }, pc);
 }
 
+// ----------------------------------------------------------------------------------------------------------------------------
+// Wide numbers for the transcendental functions: sign, exponent, 128-bit normalized significand (relative accuracy ~2^-124)
+// ----------------------------------------------------------------------------------------------------------------------------
+namespace detail {
+
+struct W { bool neg; i32 e; U128 m; };           // value = (-1)^neg * m * 2^(e-127), m bit 127 set; m == 0 is zero
+
+constexpr W WZero() { return W{ false, 0, U128{ 0, 0 } }; }
+constexpr bool WIsZero(const W& a) { return IsZero(a.m); }
+constexpr W WOne() { return W{ false, 0, U128{ u64(1) << 63, 0 } }; }
+inline W WFromFin(const Fin& f) { return W{ f.sign, f.e, U128{ f.m, 0 } }; }
+inline W WNormalize(bool neg, i32 e, U128 m) {
+    if (IsZero(m)) return WZero();
+    const int c = Clz(m);
+    return W{ neg, e - c, Shl(m, unsigned(c)) };
+}
+inline W WNeg(W a) { a.neg = !a.neg; return a; }
+inline W WAbs(W a) { a.neg = false; return a; }
+inline W WMul(const W& a, const W& b) {
+    if (WIsZero(a) || WIsZero(b)) return WZero();
+    U128 p = MulHi(a.m, b.m);
+    i32 e = a.e + b.e + 1;
+    if (!(p.hi >> 63)) { p = Shl(p, 1); --e; }
+    return W{ a.neg != b.neg, e, p };
+}
+inline W WAdd(const W& a, const W& b) {
+    if (WIsZero(a)) return b;
+    if (WIsZero(b)) return a;
+    const bool aBig = a.e > b.e || (a.e == b.e && Ge(a.m, b.m));
+    const W& x = aBig ? a : b;
+    const W& y = aBig ? b : a;
+    const unsigned d = unsigned(x.e - y.e);
+    const U128 ym = Shr(y.m, d);
+    if (x.neg == y.neg) {
+        U128 s = Add(x.m, ym);
+        i32 e = x.e;
+        if (Lt(s, x.m)) { s = Shr(s, 1); s.hi |= u64(1) << 63; ++e; }
+        return W{ x.neg, e, s };
+    }
+    return WNormalize(x.neg, x.e, Sub(x.m, ym));
+}
+inline W WSub(const W& a, const W& b) { return WAdd(a, WNeg(b)); }
+inline W WDiv(const W& a, const W& b) {          // b != 0
+    if (WIsZero(a)) return WZero();
+    u32 num[8] = { 0, 0, 0, 0, u32(a.m.lo), u32(a.m.lo >> 32), u32(a.m.hi), u32(a.m.hi >> 32) };
+    const u32 den[4] = { u32(b.m.lo), u32(b.m.lo >> 32), u32(b.m.hi), u32(b.m.hi >> 32) };
+    u32 q[5] = {};
+    DivModWords(num, 8, den, 4, q, nullptr);
+    U128 Q{ (u64(q[3]) << 32) | q[2], (u64(q[1]) << 32) | q[0] };
+    i32 e = a.e - b.e;
+    if (q[4]) { Q = Shr(Q, 1); Q.hi |= u64(1) << 63; } else { --e; }
+    return W{ a.neg != b.neg, e, Q };
+}
+inline W WFromQ(U128 q, bool neg = false) {      // fixed point value q * 2^-128
+    if (IsZero(q)) return WZero();
+    const int c = Clz(q);
+    return W{ neg, -c - 1, Shl(q, unsigned(c)) };
+}
+inline U128 WToQ(const W& w) {                   // |w| < 1 as q * 2^-128
+    if (WIsZero(w)) return U128{ 0, 0 };
+    return Shr(w.m, unsigned(-(w.e + 1)));
+}
+inline F80 WToF80(const W& w) {                  // round to the 64-bit extended significand
+    if (WIsZero(w)) return Zero(false);
+    return RoundToF80(Unr{ w.neg, w.e, w.m, true }, 64);
+}
+// W from a F80 operand that is finite and non-zero
+inline W WFromF80(const F80& a) { return WFromFin(Unpack(a)); }
+
+// ---- Taylor tails in Q128 -----------------------------------------------------------------------------------------------------
+// SIN_C[k-1] = 1/(2k+1)!, k = 1..16
+inline constexpr U128 kSinC[16] = {
+    { 0x2aaaaaaaaaaaaaaaull, 0xaaaaaaaaaaaaaaabull },
+    { 0x0222222222222222ull, 0x2222222222222222ull },
+    { 0x000d00d00d00d00dull, 0x00d00d00d00d00d0ull },
+    { 0x00002e3bc74aad8eull, 0x671f5583911ca003ull },
+    { 0x0000006b99159fd5ull, 0x138e3f9d1f92e0dfull },
+    { 0x00000000b092309dull, 0x43684be51c198e92ull },
+    { 0x0000000000d73f9full, 0x399dc0f88ec32b58ull },
+    { 0x000000000000ca96ull, 0x3b81856a53593029ull },
+    { 0x0000000000000097ull, 0xa4da340a0ab92651ull },
+    { 0x0000000000000000ull, 0x5c6e3bdb73d5c630ull },
+    { 0x0000000000000000ull, 0x002ec368262c7034ull },
+    { 0x0000000000000000ull, 0x000013f3ccdd1660ull },
+    { 0x0000000000000000ull, 0x0000000746ac70b7ull },
+    { 0x0000000000000000ull, 0x00000000024b3f31ull },
+    { 0x0000000000000000ull, 0x000000000000a1a7ull },
+    { 0x0000000000000000ull, 0x0000000000000027ull } };
+// COS_C[k-1] = 1/(2k)!, k = 1..17
+inline constexpr U128 kCosC[17] = {
+    { 0x8000000000000000ull, 0x0000000000000000ull },
+    { 0x0aaaaaaaaaaaaaaaull, 0xaaaaaaaaaaaaaaabull },
+    { 0x005b05b05b05b05bull, 0x05b05b05b05b05b0ull },
+    { 0x0001a01a01a01a01ull, 0xa01a01a01a01a01aull },
+    { 0x0000049f93edde27ull, 0xd71cbbc05b4fa99aull },
+    { 0x00000008f76c77fcull, 0x6c4bdaa26d4c3d68ull },
+    { 0x000000000c9cba54ull, 0x603e4e905d6f8a2full },
+    { 0x00000000000d73f9ull, 0xf399dc0f88ec32b6ull },
+    { 0x0000000000000b41ull, 0x3c31dcbecbbdd802ull },
+    { 0x0000000000000007ull, 0x950ae900808941eaull },
+    { 0x0000000000000000ull, 0x04338e5b6dfe14a5ull },
+    { 0x0000000000000000ull, 0x0001f2cf01972f57ull },
+    { 0x0000000000000000ull, 0x000000c4742fe352ull },
+    { 0x0000000000000000ull, 0x0000000042862899ull },
+    { 0x0000000000000000ull, 0x000000000013932cull },
+    { 0x0000000000000000ull, 0x000000000000050dull },
+    { 0x0000000000000000ull, 0x0000000000000001ull } };
+
+// sin(r) = r * (1 - D(r^2)),  D = u*(1/3! - u*(1/5! - u*(1/7! - ...)))        (u = r^2 in Q128, u < 0.62)
+inline U128 SinDeficit(U128 u) {
+    U128 acc = kSinC[15];
+    for (int k = 14; k >= 0; --k) acc = Sub(kSinC[k], MulHi(u, acc));
+    return MulHi(u, acc);
+}
+// cos(r) = 1 - D(r^2),  D = u*(1/2! - u*(1/4! - u*(1/6! - ...)))
+inline U128 CosDeficit(U128 u) {
+    U128 acc = kCosC[16];
+    for (int k = 15; k >= 0; --k) acc = Sub(kCosC[k], MulHi(u, acc));
+    return MulHi(u, acc);
+}
+// |r| <= ~0.8 (r may be zero)
+inline W SinW(const W& r) {
+    if (WIsZero(r)) return r;
+    const U128 rq = WToQ(WAbs(r));
+    const U128 D = SinDeficit(MulHi(rq, rq));
+    if (IsZero(D)) return r;
+    return WSub(r, WMul(r, WFromQ(D)));
+}
+inline W CosW(const W& r) {
+    if (WIsZero(r)) return WOne();
+    const U128 rq = WToQ(WAbs(r));
+    const U128 D = CosDeficit(MulHi(rq, rq));
+    if (IsZero(D)) return WOne();
+    return W{ false, -1, Neg(D) };               // 1 - D with D < 1/2
+}
+
+// ---- fsin / fcos / fptan argument reduction: x = q * (pi66 / 2) + r with the Intel 66-bit pi ------------------------------------
+// pi66 = 3.243F6A8885A308D3 (hex) * 2^0 ... = 0x3243F6A8885A308D3 / 2^64: pi truncated to a 66-bit significand. The FPU reduces with this constant,
+// so for x near a multiple of pi/2 the result carries the (famous) error of ~2^-66 * q relative to the true value.
+constexpr u32 kPi66[3] = { 0x85A308D3u, 0x243F6A88u, 3u };            // P66m = pi66 * 2^64 (little-endian words); H = P66m / 2^65 = pi66 / 2
+
+// x finite, non-zero, |x| < 2^63. Gives quadrant q & 3 and the reduced argument r (|r| <= pi66/4) of |x|.
+inline void ReduceTrig(const Fin& f, int& quad, W& r) {
+    if (f.e < -1) { quad = 0; r = W{ false, f.e, U128{ f.m, 0 } }; return; }          // |x| < 0.5: nothing to reduce
+    const U128 X = Shl(U128{ 0, f.m }, unsigned(f.e + 2));                                // |x| * 2^65, exact (f.e <= 62)
+    const u32 u[4] = { u32(X.lo), u32(X.lo >> 32), u32(X.hi), u32(X.hi >> 32) };
+    u32 q[2] = {}, rem[3] = {};
+    DivModWords(u, 4, kPi66, 3, q, rem);
+    U128 R{ u64(rem[2]), (u64(rem[1]) << 32) | rem[0] };
+    const U128 P{ 3, 0x243F6A8885A308D3ull };
+    u64 qlo = (u64(q[1]) << 32) | q[0];
+    bool neg = false;
+    if (Ge(Shl(R, 1), P)) { R = Sub(P, R); neg = true; ++qlo; }                          // round to the nearest multiple: r = rem - P < 0
+    quad = int(qlo & 3);
+    // r = R * 2^-65
+    if (IsZero(R)) { r = WZero(); return; }
+    const int c = Clz(R);
+    r = W{ neg, 62 - c, Shl(R, unsigned(c)) };
+}
+
+} // namespace detail
+
+struct SinCosResult { F80 sin, cos; bool c2; };
+
+// fsin (c2 != nullptr: set when |x| >= 2^63 and the operand is returned unchanged)
+inline F80 Sin(const F80& x, bool* c2 = nullptr) {
+    using namespace detail;
+    if (c2) *c2 = false;
+    const Class cl = Classify(x);
+    if (cl == Class::QNaN || cl == Class::SNaN || cl == Class::Unsupported) return PropagateNaN(x, x);
+    if (cl == Class::Inf) return Indefinite();
+    if (cl == Class::Zero) return x;
+    const Fin f = Unpack(x);
+    if (f.e >= 63) { if (c2) *c2 = true; return x; }
+    int quad; W r;
+    ReduceTrig(f, quad, r);
+    W res = (quad & 1) ? CosW(r) : SinW(r);
+    if (quad & 2) res = WNeg(res);
+    if (x.sign) res = WNeg(res);
+    return WToF80(res);
+}
+inline F80 Cos(const F80& x, bool* c2 = nullptr) {
+    using namespace detail;
+    if (c2) *c2 = false;
+    const Class cl = Classify(x);
+    if (cl == Class::QNaN || cl == Class::SNaN || cl == Class::Unsupported) return PropagateNaN(x, x);
+    if (cl == Class::Inf) return Indefinite();
+    if (cl == Class::Zero) return One();
+    const Fin f = Unpack(x);
+    if (f.e >= 63) { if (c2) *c2 = true; return x; }
+    int quad; W r;
+    ReduceTrig(f, quad, r);
+    W res = (quad & 1) ? SinW(r) : CosW(r);
+    if (((quad + 1) & 2)) res = WNeg(res);                      // cos: + - - +
+    return WToF80(res);
+}
+
+namespace detail {
+
+// ---- constants for atan / log -----------------------------------------------------------------------------------------------
+// kAtanC[n-1] = 1/(2n+1), n = 1..13
+inline constexpr U128 kAtanC[13] = {
+    { 0x5555555555555555ull, 0x5555555555555555ull },
+    { 0x3333333333333333ull, 0x3333333333333333ull },
+    { 0x2492492492492492ull, 0x4924924924924925ull },
+    { 0x1c71c71c71c71c71ull, 0xc71c71c71c71c71cull },
+    { 0x1745d1745d1745d1ull, 0x745d1745d1745d17ull },
+    { 0x13b13b13b13b13b1ull, 0x3b13b13b13b13b14ull },
+    { 0x1111111111111111ull, 0x1111111111111111ull },
+    { 0x0f0f0f0f0f0f0f0full, 0x0f0f0f0f0f0f0f0full },
+    { 0x0d79435e50d79435ull, 0xe50d79435e50d794ull },
+    { 0x0c30c30c30c30c30ull, 0xc30c30c30c30c30cull },
+    { 0x0b21642c8590b216ull, 0x42c8590b21642c86ull },
+    { 0x0a3d70a3d70a3d70ull, 0xa3d70a3d70a3d70aull },
+    { 0x097b425ed097b425ull, 0xed097b425ed097b4ull } };
+struct WConst { i32 e; U128 m; };      // positive value m * 2^(e-127)
+// kAtanTab[k] = atan(k/16), k = 0..16 (k = 0 unused)
+inline constexpr WConst kAtanTab[17] = {
+    { 0, { 0, 0 } },
+    { -5, { 0xffaaddb967ef4e36ull, 0xcb2792dc0e2e0d51ull } },
+    { -4, { 0xfeadd4d5617b6e32ull, 0xc897989f3e888ef8ull } },
+    { -3, { 0xbdcbda5e72d81134ull, 0x7b0b4f881c9c7488ull } },
+    { -3, { 0xfadbafc96406eb15ull, 0x6dc79ef5f7a217e6ull } },
+    { -2, { 0x9b13b9b83f5e5e69ull, 0xc5abb498d27af328ull } },
+    { -2, { 0xb7b0ca0f26f78473ull, 0x8aa32122dcfe4483ull } },
+    { -2, { 0xd327761e611fe5b6ull, 0x427c95e9001e7136ull } },
+    { -2, { 0xed63382b0dda7b45ull, 0x6fe445ecbc3a8d03ull } },
+    { -1, { 0x832bf4a6d9867e2aull, 0x4b6a09cb61a515c1ull } },
+    { -1, { 0x8f005d5ef7f59f9bull, 0x5c835e1665c43748ull } },
+    { -1, { 0x9a2f80e671bdda20ull, 0x4226f8e2204ff3bdull } },
+    { -1, { 0xa4bc7d1934f70924ull, 0x19a87f2a457dac9full } },
+    { -1, { 0xaeac4c38b4d8c080ull, 0x14725e2f3e52070aull } },
+    { -1, { 0xb8053e2bc2319e73ull, 0xcb2da55210a4443dull } },
+    { -1, { 0xc0ce85b8ac526640ull, 0x89dd62c46e92fa25ull } },
+    { -1, { 0xc90fdaa22168c234ull, 0xc4c6628b80dc1cd1ull } } };
+// kLnTab[k+9] = ln(1 + k/32), k = -9..13
+inline constexpr WConst kLnTab[23] = {
+    { -2, { 0xa9157039c51ebe70ull, 0x8164c759686a2209ull } } /* negative */,
+    { -2, { 0x934b1089a6dc93c1ull, 0xdf5bb3b60554e152ull } } /* negative */,
+    { -3, { 0xfcc8e3659d9bcbecull, 0xca0cdf301431b60full } } /* negative */,
+    { -3, { 0xd49f69e456cf1b79ull, 0x5f53bd2e406e66e7ull } } /* negative */,
+    { -3, { 0xadfa035aa1ed8fdcull, 0x149767e410316d2cull } } /* negative */,
+    { -3, { 0x88bc74113f23def1ull, 0x9c5a0fe396f40f1eull } } /* negative */,
+    { -4, { 0xc99af2eaca4c4570ull, 0xeaf51f66692844baull } } /* negative */,
+    { -4, { 0x842cc5acf1d03445ull, 0x1fecdfa819b96098ull } } /* negative */,
+    { -5, { 0x820aec4f3a222380ull, 0xb9e3aea6c444ef07ull } } /* negative */,
+    { 0, { 0, 0 } },
+    { -6, { 0xfc14d873c1980267ull, 0xc7e09e3de453f5d6ull } },
+    { -5, { 0xf85186008b15330bull, 0xe64b8b775997898dull } },
+    { -4, { 0xb78694572b5a5cdfull, 0x24cdcf68cdb20673ull } },
+    { -4, { 0xf1383b7157972f4full, 0x543fff0ff4f0aaeeull } },
+    { -3, { 0x94aa97c0ffa91a60ull, 0x2ee3880fb7d34428ull } },
+    { -3, { 0xaff983853c9e9e43ull, 0x9f105039091dd7f3ull } },
+    { -3, { 0xca92d4e7a2b5a3b2ull, 0x0983a9c5c4b3b133ull } },
+    { -3, { 0xe47fbe3cd4d10d61ull, 0x2ec0f797fdcd1257ull } },
+    { -3, { 0xfdc8c36af1f1546aull, 0xaa3361bca6965049ull } },
+    { -2, { 0x8b3ae55d5d30701cull, 0xe63eab883717047eull } },
+    { -2, { 0x974715d708e984e1ull, 0x6648d42840d9e6f7ull } },
+    { -2, { 0xa30c5e10e2f613e8ull, 0x5bd9bd99e39a20afull } },
+    { -2, { 0xae8dedfac04e5284ull, 0x6c707b8ffc22b3e7ull } } };
+inline constexpr WConst kLog2e = { 0, { 0xb8aa3b295c17f0bbull, 0xbe87fed0691d3e89ull } };          // 1/ln 2
+inline constexpr WConst kLn2W = { -1, { 0xb17217f7d1cf79abull, 0xc9e3b39803f2f6afull } };
+inline constexpr WConst kPiW = { 1, { 0xc90fdaa22168c234ull, 0xc4c6628b80dc1cd1ull } };          // pi
+
+inline W WFromConst(const WConst& c, bool neg = false) { return W{ neg, c.e, c.m }; }
+inline W WFromInt(i64 v) {                               // small integers
+    if (v == 0) return WZero();
+    const bool neg = v < 0;
+    return WNormalize(neg, 127, U128{ 0, neg ? (~u64(v) + 1) : u64(v) });
+}
+// nearest integer of |w| (w small), ties up: only used where ties cannot matter
+inline int WRoundAbs(const W& w) {
+    if (WIsZero(w) || w.e < -1) return 0;
+    if (w.e > 24) return 1 << 24;
+    const u64 t2 = Shr(w.m, unsigned(127 - w.e - 1)).lo;       // floor(2|w|)
+    return int((t2 + 1) >> 1);
+}
+inline bool WLess(const W& a, const W& b) {                    // |a| < |b|
+    if (WIsZero(a)) return !WIsZero(b);
+    if (WIsZero(b)) return false;
+    return a.e < b.e || (a.e == b.e && Lt(a.m, b.m));
+}
+
+// atan(t) = t * (1 - D),  D = u*(1/3 - u*(1/5 - u*(1/7 - ...))),  u = t^2 <= 2^-10
+inline U128 AtanDeficit(U128 u) {
+    U128 acc = kAtanC[12];
+    for (int k = 11; k >= 0; --k) acc = Sub(kAtanC[k], MulHi(u, acc));
+    return MulHi(u, acc);
+}
+// atan of 0 <= z <= 1 (W, z may be exactly 1)
+inline W AtanUnit(const W& z) {
+    if (WIsZero(z)) return z;
+    const unsigned sh = z.e >= -6 ? unsigned(122 - z.e) : 128u;
+    const int k = int((((sh >= 128) ? u64(0) : Shr(z.m, sh).lo) + 1) >> 1);        // round(16 z)
+    W t = z;
+    if (k != 0) {
+        const W c = WNormalize(false, 123, U128{ 0, u64(k) });                       // k/16
+        t = WDiv(WSub(z, c), WAdd(WOne(), WMul(z, c)));
+    }
+    W at = t;
+    if (!WIsZero(t)) {
+        const U128 tq = WToQ(WAbs(t));
+        const U128 D = AtanDeficit(MulHi(tq, tq));
+        if (!IsZero(D)) at = WSub(t, WMul(t, WFromQ(D)));
+    }
+    return k ? WAdd(WFromConst(kAtanTab[k]), at) : at;
+}
+inline W PiW(int pow2 = 0) { return W{ false, kPiW.e + pow2, kPiW.m }; }
+
+// |y| / |x| atan2 for finite non-zero operands (W magnitudes), x's sign selects the half plane, result carries y's sign
+inline W Atan2W(const W& ay, const W& ax, bool xNeg, bool yNeg) {
+    W a;
+    if (WLess(ax, ay)) a = WSub(PiW(-1), AtanUnit(WDiv(ax, ay)));
+    else               a = AtanUnit(WDiv(ay, ax));
+    if (xNeg) a = WSub(PiW(0), a);
+    a.neg = yNeg;
+    return a;
+}
+
+// ln of 1 + small / table reduction: returns log2(mw) for a positive W (any exponent)
+inline W Log2W(const W& mw0) {
+    i32 e = mw0.e;
+    W mw{ false, 0, mw0.m };                                                      // significand in [1, 2)
+    if (mw.m.hi > 0xB504F333F9DE6484ull || (mw.m.hi == 0xB504F333F9DE6484ull && mw.m.lo > 0xE00000000000000ull)) { mw.e = -1; ++e; }   // > sqrt(2): halve
+    const W d = WSub(mw, WOne());
+    const int kAbs = WRoundAbs(WMul(d, W{ false, 5, U128{ u64(1) << 63, 0 } }));  // d * 32
+    const int k = d.neg ? -kAbs : kAbs;
+    W lnm = WZero();
+    W s;
+    if (k == 0) {
+        s = WDiv(d, WAdd(mw, WOne()));
+    } else {
+        const W c = WNormalize(false, 122, U128{ 0, u64(32 + k) });                // 1 + k/32
+        s = WDiv(WSub(mw, c), WAdd(mw, c));
+        lnm = WFromConst(kLnTab[k + 9], k < 0);
+    }
+    if (!WIsZero(s)) {
+        const U128 sq = WToQ(WAbs(s));
+        const U128 u = MulHi(sq, sq);
+        U128 acc = kAtanC[9];
+        for (int j = 8; j >= 0; --j) acc = Add(kAtanC[j], MulHi(u, acc));          // all positive: 1/3 + u(1/5 + u(...))
+        const W series = WMul(s, WAdd(WOne(), WFromQ(MulHi(u, acc))));            // atanh(s)
+        W twice = series; ++twice.e;
+        lnm = WAdd(lnm, twice);
+    }
+    return WAdd(WFromInt(e), WMul(lnm, WFromConst(kLog2e)));
+}
+// log2(1 + x) for |x| < 2^-5 (or any x > -1 with small error growth): s = x / (2 + x), ln(1+x) = 2 atanh(s)
+inline W Log2OnePlusSmall(const W& x) {
+    const W s = WDiv(x, WAdd(WFromInt(2), x));
+    const U128 sq = WToQ(WAbs(s));
+    const U128 u = MulHi(sq, sq);
+    U128 acc = kAtanC[9];
+    for (int j = 8; j >= 0; --j) acc = Add(kAtanC[j], MulHi(u, acc));
+    W ln = WMul(s, WAdd(WOne(), WFromQ(MulHi(u, acc))));
+    ++ln.e;
+    return WMul(ln, WFromConst(kLog2e));
+}
+
+} // namespace detail
+
+// fpatan: atan2(y, x), ST(1) = y, ST(0) = x. Rounded to 64 bits whatever the PC.
+inline F80 Atan2(const F80& y, const F80& x) {
+    using namespace detail;
+    const Class cy = Classify(y), cx = Classify(x);
+    if (IsNaNOrBad(y) || IsNaNOrBad(x)) return PropagateNaN(y, x);
+    const F80 pi = WToF80(PiW(0)), pi2 = WToF80(PiW(-1)), pi4 = WToF80(PiW(-2));
+    const F80 pi34 = WToF80(WSub(PiW(0), PiW(-2)));
+    const bool ys = y.sign;
+    auto signed_ = [&](F80 v) { v.sign = ys; return v; };
+    if (cy == Class::Inf) {
+        if (cx == Class::Inf) return signed_(x.sign ? pi34 : pi4);
+        return signed_(pi2);
+    }
+    if (cx == Class::Inf) return x.sign ? signed_(pi) : Zero(ys);
+    if (cy == Class::Zero) return x.sign ? signed_(pi) : Zero(ys);      // x = +-0 or finite: -0 counts as negative
+    if (cx == Class::Zero) return signed_(pi2);
+    return WToF80(Atan2W(WAbs(WFromF80(y)), WAbs(WFromF80(x)), x.sign, ys));
+}
+inline F80 Atan(const F80& x) { return Atan2(x, One()); }
+
+// fptan: tan(x), then 1.0 is pushed. pushed == the value of the new ST(0) (1.0, or the same NaN / indefinite for invalid operands);
+// c2 set (|x| >= 2^63): the operand is returned unchanged in `tan` and NOTHING is pushed.
+struct TanResult { F80 tan, pushed; bool c2; };
+inline TanResult TanPush(const F80& x) {
+    using namespace detail;
+    TanResult res{ Zero(), One(), false };
+    const Class cl = Classify(x);
+    if (cl == Class::QNaN || cl == Class::SNaN || cl == Class::Unsupported) { res.tan = res.pushed = PropagateNaN(x, x); return res; }
+    if (cl == Class::Inf) { res.tan = res.pushed = Indefinite(); return res; }
+    if (cl == Class::Zero) { res.tan = x; return res; }
+    const Fin f = Unpack(x);
+    if (f.e >= 63) { res.tan = x; res.c2 = true; return res; }
+    int quad; W r;
+    ReduceTrig(f, quad, r);
+    const W sr = SinW(r), cr = CosW(r);
+    W t = (quad & 1) ? WNeg(WDiv(cr, sr)) : WDiv(sr, cr);
+    if (x.sign) t = WNeg(t);
+    res.tan = WToF80(t);
+    return res;
+}
+inline F80 Tan(const F80& x, bool* c2 = nullptr) { const TanResult r = TanPush(x); if (c2) *c2 = r.c2; return r.tan; }
+// fsincos
+inline SinCosResult SinCos(const F80& x) {
+    using namespace detail;
+    SinCosResult res{ Zero(), Zero(), false };
+    const Class cl = Classify(x);
+    if (cl == Class::QNaN || cl == Class::SNaN || cl == Class::Unsupported) { res.sin = res.cos = PropagateNaN(x, x); return res; }
+    if (cl == Class::Inf) { res.sin = res.cos = Indefinite(); return res; }
+    if (cl == Class::Zero) { res.sin = x; res.cos = One(); return res; }
+    const Fin f = Unpack(x);
+    if (f.e >= 63) { res.sin = x; res.cos = x; res.c2 = true; return res; }
+    int quad; W r;
+    ReduceTrig(f, quad, r);
+    const W sr = SinW(r), cr = CosW(r);
+    W s = (quad & 1) ? cr : sr, c = (quad & 1) ? sr : cr;
+    if (quad & 2) s = WNeg(s);
+    if (((quad + 1) & 2)) c = WNeg(c);
+    if (x.sign) s = WNeg(s);
+    res.sin = WToF80(s); res.cos = WToF80(c);
+    return res;
+}
+
+// fyl2x: ST(1) * log2(ST(0)) with ST(1) = y, ST(0) = x. (log2 = fld1 first, log10 = fldlg2, ln = fldln2)
+inline F80 Yl2x(const F80& y, const F80& x) {
+    using namespace detail;
+    const Class cy = Classify(y), cx = Classify(x);
+    if (IsNaNOrBad(y) || IsNaNOrBad(x)) return PropagateNaN(y, x);
+    if (cx == Class::Zero) {                                           // log2(+-0) = -inf
+        if (cy == Class::Zero) return Indefinite();
+        return Inf(!y.sign);
+    }
+    if (x.sign) return Indefinite();                                   // log of a negative number (incl. -inf)
+    if (cx == Class::Inf) {
+        if (cy == Class::Zero) return Indefinite();
+        return Inf(y.sign);
+    }
+    // x finite > 0
+    const bool isOne = x.exp == 0x3FFF && x.mant == (u64(1) << 63);
+    if (cy == Class::Inf) return isOne ? Indefinite() : Inf(y.sign != (x.exp < 0x3FFF));
+    if (cy == Class::Zero) return Zero(y.sign != (!isOne && x.exp < 0x3FFF && x.mant != 0));    // sign of log2(x) * sign(y)
+    if (isOne) return Zero(y.sign);
+    const W l = Log2W(WFromF80(x));
+    return WToF80(WMul(WFromF80(y), l));
+}
+// fyl2xp1: ST(1) * log2(ST(0) + 1).  The reference FPU forms 1 + x ROUNDED TO 64 BITS first and then takes the logarithm (measured: for |x| < 2^-64 the
+// result is +-0, for small x the result has only the precision of 1 + x), so this is done here too. x <= -1 is outside the instruction's
+// domain (architecturally undefined; the reference returns meaningless values such as -2^31) and gives -inf*sign here.
+inline F80 Yl2xp1(const F80& y, const F80& x) {
+    using namespace detail;
+    const Class cy = Classify(y), cx = Classify(x);
+    if (IsNaNOrBad(y) || IsNaNOrBad(x)) return PropagateNaN(y, x);
+    if (cx == Class::Inf) return (cy == Class::Zero || (cy == Class::Inf && x.sign)) ? Indefinite() : Inf(y.sign != x.sign);
+    if (cx == Class::Zero) return cy == Class::Inf ? Indefinite() : Zero(y.sign != x.sign);
+    const F80 m = Add(One(), x, 64);
+    if (m.sign || IsZero(m)) return cy == Class::Zero ? Zero(!y.sign) : Inf(!y.sign);
+    if (m.exp == 0x3FFF && m.mant == (u64(1) << 63) && cy != Class::Inf) return Zero(y.sign != x.sign);       // 1 + x rounded to 1: a zero with the sign of y*x (the reference leaves +-2^-135 noise for some y)
+    return Yl2x(y, m);
+}
+
 } // namespace notsa::fp::soft

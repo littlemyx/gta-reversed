@@ -97,16 +97,22 @@ static void run(Op op, const u8* x, const u8* y, Out* out) {
                        fptan
                        fnstsw sw
                        mov edx, o
-                       fstp tbyte ptr [edx + 10]       // the pushed 1.0 (or the unchanged operand when C2 is set)
-                       fstp tbyte ptr [edx] } break;
+                       test sw, 0x400
+                       jnz tan_c2
+                       fstp tbyte ptr [edx + 10]       // the pushed 1.0
+                       tan_c2:
+                       fstp tbyte ptr [edx] } break;    // tan (or the unchanged operand when C2 is set: nothing was pushed)
     case SINCOS: __asm { mov eax, x
                        fnclex
                        fld tbyte ptr [eax]
                        fsincos
                        fnstsw sw
                        mov edx, o
+                       test sw, 0x400
+                       jnz sc_c2
                        fstp tbyte ptr [edx + 10]       // cos
-                       fstp tbyte ptr [edx] } break;   // sin
+                       sc_c2:
+                       fstp tbyte ptr [edx] } break;   // sin (or the unchanged operand)
     case PATAN: __asm { mov eax, x
                        mov ecx, y
                        fnclex
@@ -207,7 +213,7 @@ static void report() {
         printf("%-14s %3d %10llu %9.4f %9.5f %9.5f %9llu %9llu %8llu %8.1f%s\n", s.name.c_str(), s.pc, (unsigned long long)s.n,
                100.0 * s.exact / s.n, 100.0 * s.f_ok / s.n, 100.0 * s.d_ok / s.n, (unsigned long long)s.nanDiff,
                (unsigned long long)s.ulp1, (unsigned long long)s.ulp2p, s.maxUlp, s.fatal ? "  <-- FLOAT MISMATCHES" : "");
-        g_fatalTotal += s.fatal;
+        if (s.name.find("info:") == std::string::npos) g_fatalTotal += s.fatal;
     }
 }
 
@@ -287,7 +293,16 @@ static F80 hostRes(host::Op op, const F80& a, const F80& b, host::Out& out) {
     return B(out.a);
 }
 
-static bool wanted(const char* filter, const char* op) { return !filter || !*filter || strstr(filter, op) != nullptr; }
+static bool wanted(const char* filter, const char* op) {          // filter: comma separated exact op names (empty = all)
+    if (!filter || !*filter) return true;
+    const size_t n = strlen(op);
+    for (const char* p = filter; *p; ) {
+        const char* e = p; while (*e && *e != ',') ++e;
+        if (size_t(e - p) == n && !strncmp(p, op, n)) return true;
+        p = *e ? e + 1 : e;
+    }
+    return false;
+}
 
 static void testBinary(host::Op op, const char* name, Soft2 soft, u64 N, const char* filter) {
     if (!wanted(filter, name)) return;
@@ -409,9 +424,163 @@ static void testConversions(u64 N) {
     s1.f_ok = s1.d_ok = s1.exact; s2.f_ok = s2.d_ok = s2.exact;
 }
 
+// ---------------------------------------------------------------------------------------------------------------------------
+// Transcendentals
+// ---------------------------------------------------------------------------------------------------------------------------
+struct SoftOut { F80 a, b; bool c2; bool two; };
+typedef SoftOut (*SoftT)(const F80& x, const F80& y);     // y unused for unary functions
+
+static F80 fromDoubleHost(double d) { return FromDouble(d); }
+
+// a value generator per distribution; returns false for the unary 'second operand'
+struct Dist { const char* name; F80 (*gen)(); };
+
+static F80 gAng4piF()  { return FromFloat(float((rndUnit() * 2 - 1) * 12.566370614359172)); }
+static F80 gAng4piD()  { return fromDoubleHost((rndUnit() * 2 - 1) * 12.566370614359172); }
+static F80 gAng4piP()  { return genDoubleE(-4, 3); }                      // product of two floats
+static F80 gR1e3F()    { return FromFloat(float((rndUnit() * 2 - 1) * 1000.0)); }
+static F80 gR1e6F()    { return FromFloat(float((rndUnit() * 2 - 1) * 1.0e6)); }
+static F80 gR1e6D()    { return fromDoubleHost((rndUnit() * 2 - 1) * 1.0e6); }
+static F80 gSmall()    { return fromDoubleHost((rndUnit() * 2 - 1) * 1.0); }
+static F80 gTiny()     { return gen80E(-80, -1); }
+static F80 gE80()      { return gen80E(-70, 70); }
+static F80 gHuge()     { return gen80E(50, 70); }
+static F80 gNearPi2F() {                                                  // float / double nearest to k*pi/2 (+- few ulps)
+    const int k = 1 + int(rnd() % 1000);
+    const F80 v = Mul(FromInt64(k), kHalfPi, 64);
+    if (rnd() & 1) { u32 b = ToFloatBits(v); b += u32(int(rnd() % 7) - 3); F80 r = FromFloatBits(b); r.sign = (rnd() & 1) != 0; return r; }
+    u64 b = ToDoubleBits(v); b += u64(i64(int(rnd() % 7) - 3)); F80 r = FromDoubleBits(b); r.sign = (rnd() & 1) != 0; return r;
+}
+static F80 gNearPi2E() {                                                  // 80-bit values near k*pi/2 (k * the 80-bit constant, +- ulps)
+    const int k = 1 + int(rnd() % 100000);
+    F80 v = Mul(FromInt64(k), kHalfPi, 64);
+    v.mant += u64(i64(int(rnd() % 9) - 4)); if (!(v.mant >> 63)) v.mant |= u64(1) << 63;
+    v.sign = (rnd() & 1) != 0;
+    return v;
+}
+
+static void runTrig(host::Op op, const char* name, SoftT soft, u64 N, const char* filter, const Dist* dists, int nd, bool needY = false) {
+    if (!wanted(filter, name)) return;
+    host::setPC(64);                                         // transcendental results ignore PC; the oracle runs at PC64 and PC24 (checked separately)
+    for (int pass = 0; pass < 2; ++pass) {
+        const int pc = pass == 0 ? 64 : 24;
+        host::setPC(pc);
+        host::Out o;
+        for (int d = 0; d < nd; ++d) {
+            Stat& st = stat(std::string(name) + "/" + dists[d].name, pc);
+            Stat& st2 = stat(std::string(name) + "#2/" + dists[d].name, pc);
+            const u64 n = pass == 0 ? N : N / 8;
+            for (u64 i = 0; i < n; ++i) {
+                const F80 x = dists[d].gen();
+                const F80 y = needY ? dists[d].gen() : x;
+                const F80 ref = hostRes(op, x, y, o);
+                const SoftOut got = soft(x, y);
+                char what[64], hx[24]; hex(x, hx); sprintf(what, "x=%s", hx);
+                if (needY) { char hy[24]; hex(y, hy); sprintf(what, "y=%s x=%s", hx, hy); }
+                if (g_verbose >= 4 && i < 4) { char h3[24], h4[24]; hex(got.a, h3); hex(ref, h4); printf("  dbg %s %s soft=%s host=%s\n", name, what, h3, h4); }
+                record(st, got.a, ref, what);
+                const bool hostC2 = (o.sw & 0x400) != 0;
+                if (hostC2 != got.c2) { ++st.fatal; ++st.c2diff; if (st.firstBad++ < 5) printf("  C2 MISMATCH %s %s host=%d soft=%d\n", name, what, hostC2, got.c2); }
+                if (got.two) { const F80 ref2 = B(o.b); record(st2, got.b, ref2, what); }
+            }
+        }
+    }
+}
+
+static void runTrigSpecials(host::Op op, const char* name, SoftT soft, const char* filter, bool two) {
+    if (!wanted(filter, name)) return;
+    const std::vector<F80> sp = specials();
+    host::Out o;
+    for (int pc : { 64, 24 }) {
+        host::setPC(pc);
+        Stat& st = stat(std::string(name) + "/spec", pc);
+        Stat& st2 = stat(std::string(name) + "#2/spec", pc);
+        for (const F80& x : sp) for (const F80& y : sp) {
+            if (!two && &y != &sp[0]) continue;
+            if (op == host::YL2XP1 && y.sign && !IsNaN(y) && !IsZero(y) && y.exp >= 0x3FFF) continue;     // x <= -1: outside the instruction's domain (undefined; Rosetta returns garbage)
+            const F80 ref = hostRes(op, x, y, o);
+            const SoftOut got = soft(x, y);
+            if (g_verbose > 1 && !(ref == got.a) && (g_verbose > 2 || !(IsNaN(ref) && IsNaN(got.a))) && st.firstBad < 40) {
+                char h1[24], h2[24], h3[24], h4[24]; hex(x, h1); hex(y, h2); hex(got.a, h3); hex(ref, h4);
+                printf("  spec %s pc%d x=%s y=%s soft=%s host=%s\n", name, pc, h1, h2, h3, h4); ++st.firstBad;
+            }
+            // fyl2xp1 with 1 + x == 1 (x != 0): the reference returns +-2^-135 noise or a zero of arbitrary sign -> informational statistic
+            Stat* target = &st;
+            if (op == host::YL2XP1 && !IsNaN(y) && !IsInf(y) && !IsZero(y) && Add(One(), y, 64) == One()) target = &stat(std::string(name) + "/info:1px==1 spec", pc);
+            record(*target, got.a, ref, "spec");
+            const bool hostC2 = (o.sw & 0x400) != 0;
+            if (hostC2 != got.c2) { ++st.fatal; ++st.c2diff; if (st.firstBad++ < 5) printf("  C2 MISMATCH %s spec\n", name); }
+            if (got.two) record(st2, got.b, B(o.b), "spec#2");
+        }
+    }
+}
+
+static SoftOut tSin(const F80& x, const F80&) { SoftOut r{}; r.a = Sin(x, &r.c2); return r; }
+static SoftOut tCos(const F80& x, const F80&) { SoftOut r{}; r.a = Cos(x, &r.c2); return r; }
+
+static SoftOut tTan(const F80& x, const F80&) { SoftOut r{}; const TanResult t = TanPush(x); r.a = t.tan; r.b = t.pushed; r.c2 = t.c2; r.two = !t.c2; return r; }
+static SoftOut tSinCos(const F80& x, const F80&) { SoftOut r{}; const SinCosResult s = SinCos(x); r.a = s.sin; r.b = s.cos; r.c2 = s.c2; r.two = !s.c2; return r; }
+static SoftOut tPatan(const F80& y, const F80& x) { SoftOut r{}; r.a = Atan2(y, x); return r; }
+static SoftOut tYl2x(const F80& y, const F80& x) { SoftOut r{}; r.a = Yl2x(y, x); return r; }
+static SoftOut tYl2xp1(const F80& y, const F80& x) { SoftOut r{}; r.a = Yl2xp1(y, x); return r; }
+
+static const Dist kTrigDists[] = {
+    { "ang4pi_f", gAng4piF }, { "ang4pi_d", gAng4piD }, { "ang4pi_p", gAng4piP }, { "r1e3_f", gR1e3F }, { "r1e6_f", gR1e6F }, { "r1e6_d", gR1e6D },
+    { "small_d", gSmall }, { "tiny80", gTiny }, { "e80", gE80 }, { "huge80", gHuge }, { "nearpi2_fd", gNearPi2F }, { "nearpi2_80", gNearPi2E },
+};
+
+
+// two-operand distributions (y, x)
+struct DistP { const char* name; void (*gen)(F80& y, F80& x); };
+static F80 fl(double lo, double hi) { return FromFloat(float(lo + (hi - lo) * rndUnit())); }
+static void pPairF(F80& y, F80& x)    { y = fl(-100, 100); x = fl(-100, 100); }
+static void pPairMag(F80& y, F80& x)  { y = genFloatE(-14, 14); x = genFloatE(-14, 14); }
+static void pPairD(F80& y, F80& x)    { y = genDoubleE(-10, 10); x = genDoubleE(-10, 10); }
+static void pPairE(F80& y, F80& x)    { y = gen80E(-30, 30); x = gen80E(-30, 30); }
+static void pClose(F80& y, F80& x)    { x = genFloatE(-6, 6); y = x; if (rnd() & 1) y.sign = !y.sign; y.mant += u64(rnd() % 5); if (rnd() & 1) x.sign = !x.sign; }
+static void pFar(F80& y, F80& x)      { y = genK(K_F80, -60, 60); x = genK(K_F80, -60, 60); if (rnd() & 1) y = genK(K_F80, -6000, 6000); }
+static void pAtan1(F80& y, F80& x)    { y = genK(rnd() & 1 ? K_FLOAT : K_DOUBLE, -12, 12); x = One(); }
+static void pAxis(F80& y, F80& x)     { y = genFloatE(-8, 8); x = Mul(y, FromFloat(float(0.0009765625 * int(rnd() % 2000)) - 1.0f), 24); if (rnd() & 1) { F80 t = x; x = y; y = t; } }
+static void pSmallX(F80& y, F80& x)   { y = genK(K_F80, -80, -1); x = genK(K_F80, -1, 20); }
+static F80 yconst() { switch (rnd() % 4) { case 0: return One(); case 1: return kLg2; case 2: return kLn2; default: return genFloatE(-4, 4); } }
+static void pLogF(F80& y, F80& x)     { y = yconst(); x = fl(0.0, 1.0e6); }
+static void pLogDec(F80& y, F80& x)   { y = yconst(); x = genFloatE(-30, 30); x.sign = false; }
+static void pLogD(F80& y, F80& x)     { y = yconst(); x = genDoubleE(-20, 20); x.sign = false; }
+static void pLogE(F80& y, F80& x)     { y = yconst(); x = gen80E(-40, 40); x.sign = false; }
+static void pLogNear1(F80& y, F80& x) { y = yconst(); x = One(); x.mant += u64(i64(int(rnd() % 4001)) - 2000) << (rnd() % 40); if (!(x.mant >> 63)) { x.exp = 0x3FFE; x.mant = ~(rnd() >> 20); x.mant |= u64(1) << 63; } }
+static void pLogHuge(F80& y, F80& x)  { y = yconst(); x = genK(K_WIDE, 0, 0); x.sign = false; }
+static void pLogP1(F80& y, F80& x)    { y = yconst(); x = fl(-0.29, 0.41); }
+static void pLogP1S(F80& y, F80& x)   { y = yconst(); x = genK(K_F80, -64, -4); }
+static void pLogP1T(F80& y, F80& x)   { y = yconst(); x = genK(K_F80, -100, -65); }      // 1 + x == 1: the reference returns +-2^-135 style noise instead of 0
+
+static void runPair(host::Op op, const char* name, SoftT soft, u64 N, const char* filter, const DistP* dists, int nd) {
+    if (!wanted(filter, name)) return;
+    for (int pass = 0; pass < 2; ++pass) {
+        const int pc = pass == 0 ? 64 : 24;
+        host::setPC(pc);
+        host::Out o;
+        for (int d = 0; d < nd; ++d) {
+            Stat& st = stat(std::string(name) + "/" + dists[d].name, pc);
+            const u64 n = pass == 0 ? N : N / 8;
+            for (u64 i = 0; i < n; ++i) {
+                F80 y, x; dists[d].gen(y, x);
+                const F80 ref = hostRes(op, y, x, o);
+                const SoftOut got = soft(y, x);
+                char what[96], hx[24], hy[24]; hex(x, hx); hex(y, hy); sprintf(what, "y=%s x=%s", hy, hx);
+                record(st, got.a, ref, what);
+            }
+        }
+    }
+}
+
+static const DistP kPatanDists[] = { { "pair_f", pPairF }, { "mag_f", pPairMag }, { "pair_d", pPairD }, { "pair_e80", pPairE }, { "close", pClose }, { "far", pFar }, { "atan1", pAtan1 }, { "axis", pAxis }, { "smallx", pSmallX } };
+static const DistP kYl2xDists[] = { { "x_f", pLogF }, { "x_dec", pLogDec }, { "x_d", pLogD }, { "x_e80", pLogE }, { "near1", pLogNear1 }, { "wide", pLogHuge } };
+static const DistP kYl2xp1Dists[] = { { "x_f", pLogP1 }, { "small", pLogP1S }, { "info:1px==1", pLogP1T } };
+
 int main(int argc, char** argv) {
     const u64 N = argc > 1 ? strtoull(argv[1], 0, 10) : 200000;
-    if (argc > 2) g_rng ^= strtoull(argv[2], 0, 10) * 0x9E3779B97F4A7C15ull;
+    if (argc > 2) g_rng += strtoull(argv[2], 0, 10) * 0x9E3779B97F4A7C15ull;
+    if (!g_rng) g_rng = 1;
     const char* filter = argc > 3 ? argv[3] : "";
     g_verbose = getenv("X87T_VERBOSE") ? atoi(getenv("X87T_VERBOSE")) : 0;
     const auto t0 = std::chrono::steady_clock::now();
@@ -422,6 +591,20 @@ int main(int argc, char** argv) {
     testBinary(host::MUL, "mul", sMul, N, filter);
     testBinary(host::DIV, "div", sDiv, N, filter);
     testUnary(host::SQRT, "sqrt", sSqrt, N, filter);
+    runTrigSpecials(host::SIN, "sin", tSin, filter, false);
+    runTrig(host::SIN, "sin", tSin, N, filter, kTrigDists, sizeof kTrigDists / sizeof *kTrigDists);
+    runTrigSpecials(host::COS, "cos", tCos, filter, false);
+    runTrig(host::COS, "cos", tCos, N, filter, kTrigDists, sizeof kTrigDists / sizeof *kTrigDists);
+    runTrigSpecials(host::TAN, "tan", tTan, filter, false);
+    runTrig(host::TAN, "tan", tTan, N, filter, kTrigDists, sizeof kTrigDists / sizeof *kTrigDists);
+    runTrigSpecials(host::SINCOS, "sincos", tSinCos, filter, false);
+    runTrig(host::SINCOS, "sincos", tSinCos, N / 4, filter, kTrigDists, sizeof kTrigDists / sizeof *kTrigDists);
+    runTrigSpecials(host::PATAN, "patan", tPatan, filter, true);
+    runPair(host::PATAN, "patan", tPatan, N, filter, kPatanDists, sizeof kPatanDists / sizeof *kPatanDists);
+    runTrigSpecials(host::YL2X, "yl2x", tYl2x, filter, true);
+    runPair(host::YL2X, "yl2x", tYl2x, N, filter, kYl2xDists, sizeof kYl2xDists / sizeof *kYl2xDists);
+    runTrigSpecials(host::YL2XP1, "yl2xp1", tYl2xp1, filter, true);
+    runPair(host::YL2XP1, "yl2xp1", tYl2xp1, N, filter, kYl2xp1Dists, sizeof kYl2xp1Dists / sizeof *kYl2xp1Dists);
 
     report();
     printf("\nelapsed %.1f s, fatal float mismatches: %llu\n", std::chrono::duration<double>(std::chrono::steady_clock::now() - t0).count(), (unsigned long long)g_fatalTotal);

@@ -144,20 +144,23 @@ void CCheat::AddToCheatString(char LastPressedKey) {
         return;
     }
 
-    int32 hashIndex;
-    int32 cheatStringSize = CHEAT_MIN_HASH_SIZE;
-    for (auto i = CHEAT_MIN_HASH_SIZE; i < CHEAT_STRING_SIZE; i++) {
-        uint32 hash = CKeyGen::GetKey(m_CheatString, cheatStringSize);
-        cheatStringSize++;
+    // 0x4384F6: the exe hashes the string from its full length DOWN to CHEAT_MIN_HASH_SIZE characters
+    // and takes the FIRST table slot whose key matches. Several slots hold key 0 (the Rancher cheat
+    // JQNTDMH hashes to 0, as do unused slots), so scan order decides which cheat fires.
+    char hashBuf[CHEAT_STRING_SIZE];
+    strcpy_s(hashBuf, m_CheatString);
+    for (auto len = (int32)strLen; len >= (int32)CHEAT_MIN_HASH_SIZE; --len) {
+        const uint32 hash = CKeyGen::GetKey(hashBuf);
 
-        hashIndex = -1;
+        int32 hashIndex = -1;
         for (int32 j = 0; j < TOTAL_CHEATS; ++j) {
-            if (m_aCheatHashKeys[j] != hash) {
-                continue;
+            if ((uint32)m_aCheatHashKeys[j] == hash) {
+                hashIndex = j;
+                break;
             }
-            hashIndex = j;
         }
         if (hashIndex == -1) {
+            hashBuf[len - 1] = '\0';
             continue;
         }
 
@@ -171,8 +174,8 @@ void CCheat::AddToCheatString(char LastPressedKey) {
 
         CStats::IncrementStat(STAT_TIMES_CHEATED, 1.0f);
 
-        ApplyCheat(static_cast<eCheats>(hashIndex));
         m_bHasPlayerCheated = true;
+        ApplyCheat(static_cast<eCheats>(hashIndex));
         m_CheatString[0] = '\0';
         return;
     }
@@ -705,10 +708,10 @@ CVehicle* CCheat::VehicleCheat(eModelID modelId) {
         return nullptr;
     }
 
-    //    for (auto i = 0; i < 50; ++i) {
-    //        auto vehicle = CPools::GetVehiclePool()->GetAtRef(i);
-    //        if (vehicle)
-    //    }
+    // 0x43A0E2: the exe counts the used slots of the vehicle pool and spawns nothing when there are more than 50 vehicles
+    if (GetVehiclePool()->GetNoOfUsedSpaces() > 50) {
+        return nullptr;
+    }
 
     CStreaming::RequestModel(modelId, STREAMING_GAME_REQUIRED);
     CStreaming::LoadAllRequestedModels(false);

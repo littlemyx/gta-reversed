@@ -46,6 +46,11 @@ if [ ! -d "$PREFIX" ]; then
   [ -d "$WINE_PREFIX_SRC" ] || { echo "soak: $WINE_PREFIX_SRC missing, cannot clone a prefix"; exit 2; }
   echo "soak: cloning Wine prefix $WINE_PREFIX_SRC -> $PREFIX"; cp -cR "$WINE_PREFIX_SRC" "$PREFIX"
 fi
+# a cloned prefix has drive_c/users/<user>/Documents -> the user's REAL Documents: the game would read/write their real
+# "GTA San Andreas User Files/gta_sa.set" and saves. Replace that symlink by a real empty directory (every run, so old prefixes are fixed too).
+for d in "$PREFIX"/drive_c/users/*/Documents; do
+  [ -L "$d" ] && { rm "$d" && mkdir "$d"; }
+done
 
 # route: stretch the idle phase to the requested length
 FIXED_MS=$(sed 's/#.*//' "$ROUTE" | awk -F: '/^wait:[0-9]+/ {t+=$2} /^key:/ {t+=150} END {print t+0}')

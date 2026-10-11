@@ -1,0 +1,30 @@
+category	file	line	msg
+C: two-phase lookup / template / incomplete type	source/extensions/File.hpp	16	function 'CloseFile' with deduced return type cannot be used before it is defined
+F/C: inline asm / naked	source/game_sa/Audio/AEAudioUtility.cpp	90	'naked' attribute only applies to non-member functions
+other	source/game_sa/Audio/Entities/AEWeaponAudioEntity.cpp	969	qualified reference to 'CAEWeaponAudioEntity' is a constructor name rather than a type in this context
+C: nested DMI inside enclosing class	source/game_sa/Clouds.h	72	default member initializer for 'Enabled' needed within definition of enclosing class 'CClouds' outside of member functions
+C: nested DMI inside enclosing class	source/game_sa/Clouds.h	72	default member initializer for 'Force' needed within definition of enclosing class 'CClouds' outside of member functions
+other	source/game_sa/Door.cpp	32	must explicitly qualify name of member function when taking its address
+other	source/game_sa/Door.cpp	33	must explicitly qualify name of member function when taking its address
+other	source/game_sa/Door.cpp	34	must explicitly qualify name of member function when taking its address
+other	source/game_sa/Door.cpp	35	must explicitly qualify name of member function when taking its address
+other	source/game_sa/Door.cpp	36	must explicitly qualify name of member function when taking its address
+other	source/game_sa/Door.cpp	37	must explicitly qualify name of member function when taking its address
+other	source/game_sa/Entity/Object/Object.cpp	73	must explicitly qualify name of member function when taking its address
+other	source/game_sa/Entity/Object/Object.cpp	74	must explicitly qualify name of member function when taking its address
+other	source/game_sa/Replay.cpp	560	cannot jump from switch statement to this case label
+P: pointer/int width (cast/narrowing)	source/game_sa/Sprite.cpp	492	non-constant-expression cannot be narrowed from type 'double' to 'float' in initializer list [-Wc++11-narrowing]
+P: pointer/int width (cast/narrowing)	source/game_sa/Sprite.cpp	493	non-constant-expression cannot be narrowed from type 'double' to 'float' in initializer list [-Wc++11-narrowing]
+P: pointer/int width (cast/narrowing)	source/game_sa/Sprite.cpp	494	non-constant-expression cannot be narrowed from type 'double' to 'float' in initializer list [-Wc++11-narrowing]
+P: pointer/int width (cast/narrowing)	source/game_sa/Sprite.cpp	495	non-constant-expression cannot be narrowed from type 'double' to 'float' in initializer list [-Wc++11-narrowing]
+P: pointer/int width (cast/narrowing)	source/game_sa/Tasks/Allocators/TaskAllocatorKillOnFoot.cpp	51	non-constant-expression cannot be narrowed from type 'unsigned int' to 'uint8' (aka 'unsigned char') in initializer list [-Wc++11-narrowing]
+other: undeclared/unknown identifier	source/game_sa/Tasks/TaskTypes/SeekEntity/TaskComplexSeekEntity.h	441	no member named 'CTaskComplexSeekEntity<T_PosCalc>::CTaskComplexSeekEntity' in 'CTaskComplexSeekEntity<T_PosCalc>'
+other	source/game_sa/Tasks/TaskTypes/TaskComplexStuckInAir.cpp	166	must explicitly qualify name of member function when taking its address
+other: conversion/overload	source/toolsmenu/DebugModules/CloudsDebugModule.cpp	40	no matching function for call to object of type 'const (lambda at /Users/Andrei.Mukhin/github/recomp/gta-reversed/source/toolsmenu/DebugModules/CloudsDebugModule.cpp:20:38)'
+other: conversion/overload	source/toolsmenu/DebugModules/CloudsDebugModule.cpp	41	no matching function for call to object of type 'const (lambda at /Users/Andrei.Mukhin/github/recomp/gta-reversed/source/toolsmenu/DebugModules/CloudsDebugModule.cpp:20:38)'
+other: conversion/overload	source/toolsmenu/DebugModules/CloudsDebugModule.cpp	42	no matching function for call to object of type 'const (lambda at /Users/Andrei.Mukhin/github/recomp/gta-reversed/source/toolsmenu/DebugModules/CloudsDebugModule.cpp:20:38)'
+other: conversion/overload	source/toolsmenu/DebugModules/CloudsDebugModule.cpp	43	no matching function for call to object of type 'const (lambda at /Users/Andrei.Mukhin/github/recomp/gta-reversed/source/toolsmenu/DebugModules/CloudsDebugModule.cpp:20:38)'
+other: conversion/overload	source/toolsmenu/DebugModules/CloudsDebugModule.cpp	44	no matching function for call to object of type 'const (lambda at /Users/Andrei.Mukhin/github/recomp/gta-reversed/source/toolsmenu/DebugModules/CloudsDebugModule.cpp:20:38)'
+C: nested DMI inside enclosing class	source/toolsmenu/DebugModules/HooksDebugModule/HookFilter.h	33	default member initializer for 'CategoryInPath' needed within definition of enclosing class 'HookFilter' outside of member functions
+C: nested DMI inside enclosing class	source/toolsmenu/DebugModules/HooksDebugModule/HookFilter.h	164	default member initializer for 'CategoryInPath' needed within definition of enclosing class 'HookFilter' outside of member functions
+C: nested DMI inside enclosing class	source/toolsmenu/DebugModules/HooksDebugModule/HooksDebugModule.h	101	default member initializer for 'CategoryInPath' needed within definition of enclosing class 'HookFilter' outside of member functions

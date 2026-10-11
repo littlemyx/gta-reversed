@@ -86,7 +86,7 @@ def native_flags(llvm, defs, incs, sysincs, extra):
     incs = [i for i in incs if not any(s in i for s in skip_sys)]
     sysincs = [i for i in sysincs if not any(s in i for s in skip_sys)]
     return ([cxx, '-target', 'arm64-apple-macos15', '-std=c++23', '-fsyntax-only', '-x', 'c++', '-Wno-everything', '-fno-color-diagnostics',
-             '-fno-caret-diagnostics', '-ferror-limit=0', '-fms-extensions', '-fno-delayed-template-parsing',
+             '-fno-caret-diagnostics', '-ferror-limit=0', '-fms-extensions', '-mms-bitfields', '-fno-delayed-template-parsing',
              # the width bugs the census is about: warnings by default, made errors so that they are counted (-w hides everything else)
              '-Werror=pointer-to-int-cast', '-Werror=int-to-pointer-cast', '-Werror=pointer-integer-compare', '-Werror=int-conversion',
              '-isystem', STUB, '-include', os.path.join(STUB, 'winstub_prefix.h'), '-I/opt/homebrew/include']

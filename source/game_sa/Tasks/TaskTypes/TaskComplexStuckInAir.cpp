@@ -163,7 +163,7 @@ void CTaskComplexStuckInAir::InjectHooks() {
     RH_ScopedVirtualClass(CTaskComplexStuckInAir, 0x870608, 11);
     RH_ScopedCategory("Tasks/TaskTypes");
 
-    RH_ScopedGlobalInstall(CreateSubTask, 0x67BA80);
+    RH_ScopedInstall(CreateSubTask, 0x67BA80);
     RH_ScopedVMTInstall(Clone, 0x67C700);
     RH_ScopedVMTInstall(GetTaskType, 0x67BA60);
     RH_ScopedVMTInstall(CreateFirstSubTask, 0x67BE20);

@@ -29,12 +29,12 @@ void CDoor::InjectHooks() {
     RH_ScopedClass(CDoor);
     RH_ScopedCategoryGlobal();
 
-    RH_ScopedGlobalInstall(Process, 0x6F4040);
-    RH_ScopedGlobalInstall(ProcessImpact, 0x6F4540);
-    RH_ScopedGlobalInstall(Open, 0x6F4790);
-    RH_ScopedGlobalInstall(GetAngleOpenRatio, 0x6F47E0);
-    RH_ScopedGlobalInstall(IsClosed, 0x6F4800);
-    RH_ScopedGlobalInstall(IsFullyOpen, 0x6F4820);
+    RH_ScopedInstall(Process, 0x6F4040);
+    RH_ScopedInstall(ProcessImpact, 0x6F4540);
+    RH_ScopedInstall(Open, 0x6F4790);
+    RH_ScopedInstall(GetAngleOpenRatio, 0x6F47E0);
+    RH_ScopedInstall(IsClosed, 0x6F4800);
+    RH_ScopedInstall(IsFullyOpen, 0x6F4820);
 }
 
 // 0x6F4040

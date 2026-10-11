@@ -1,0 +1,98 @@
+fp_theory_test: 2000000 cases per row/class; x87 reference at PC24 (game mode); portable side = SSE2 float/double + notsa::fp
+T1 add                                         regular(2^-20..2^20)           float (SSE2) vs x87 PC24           n=2000000   hard=0        denormal-range=0        nan-payload=0        ok
+T1 add                                         regular(2^-20..2^20)           F24 model vs x87 PC24              n=2000000   hard=0        denormal-range=0        nan-payload=0        ok
+T1 add                                         mid(2^-60..2^60)               float (SSE2) vs x87 PC24           n=2000000   hard=0        denormal-range=0        nan-payload=0        ok
+T1 add                                         mid(2^-60..2^60)               F24 model vs x87 PC24              n=2000000   hard=0        denormal-range=0        nan-payload=0        ok
+T1 add                                         wide(any exponent)             float (SSE2) vs x87 PC24           n=2000000   hard=0        denormal-range=0        nan-payload=0        (none seen)
+T1 add                                         wide(any exponent)             F24 model vs x87 PC24              n=2000000   hard=0        denormal-range=0        nan-payload=0        ok
+T1 add                                         special(0/inf/NaN/denormal/max) float (SSE2) vs x87 PC24           n=2000000   hard=0        denormal-range=0        nan-payload=0        (none seen)
+T1 add                                         special(0/inf/NaN/denormal/max) F24 model vs x87 PC24              n=2000000   hard=0        denormal-range=0        nan-payload=4539     ok
+T1 sub                                         regular(2^-20..2^20)           float (SSE2) vs x87 PC24           n=2000000   hard=0        denormal-range=0        nan-payload=0        ok
+T1 sub                                         regular(2^-20..2^20)           F24 model vs x87 PC24              n=2000000   hard=0        denormal-range=0        nan-payload=0        ok
+T1 sub                                         mid(2^-60..2^60)               float (SSE2) vs x87 PC24           n=2000000   hard=0        denormal-range=0        nan-payload=0        ok
+T1 sub                                         mid(2^-60..2^60)               F24 model vs x87 PC24              n=2000000   hard=0        denormal-range=0        nan-payload=0        ok
+T1 sub                                         wide(any exponent)             float (SSE2) vs x87 PC24           n=2000000   hard=0        denormal-range=0        nan-payload=0        (none seen)
+T1 sub                                         wide(any exponent)             F24 model vs x87 PC24              n=2000000   hard=0        denormal-range=0        nan-payload=0        ok
+T1 sub                                         special(0/inf/NaN/denormal/max) float (SSE2) vs x87 PC24           n=2000000   hard=0        denormal-range=0        nan-payload=0        (none seen)
+T1 sub                                         special(0/inf/NaN/denormal/max) F24 model vs x87 PC24              n=2000000   hard=0        denormal-range=0        nan-payload=4406     ok
+T1 mul                                         regular(2^-20..2^20)           float (SSE2) vs x87 PC24           n=2000000   hard=0        denormal-range=0        nan-payload=0        ok
+T1 mul                                         regular(2^-20..2^20)           F24 model vs x87 PC24              n=2000000   hard=0        denormal-range=0        nan-payload=0        ok
+T1 mul                                         mid(2^-60..2^60)               float (SSE2) vs x87 PC24           n=2000000   hard=0        denormal-range=0        nan-payload=0        ok
+T1 mul                                         mid(2^-60..2^60)               F24 model vs x87 PC24              n=2000000   hard=0        denormal-range=0        nan-payload=0        ok
+T1 mul                                         wide(any exponent)             float (SSE2) vs x87 PC24           n=2000000   hard=0        denormal-range=1931     nan-payload=0        (expected difference)
+T1 mul                                         wide(any exponent)             F24 model vs x87 PC24              n=2000000   hard=0        denormal-range=0        nan-payload=0        ok
+T1 mul                                         special(0/inf/NaN/denormal/max) float (SSE2) vs x87 PC24           n=2000000   hard=0        denormal-range=1100     nan-payload=0        (expected difference)
+T1 mul                                         special(0/inf/NaN/denormal/max) F24 model vs x87 PC24              n=2000000   hard=0        denormal-range=0        nan-payload=4539     ok
+T1 div                                         regular(2^-20..2^20)           float (SSE2) vs x87 PC24           n=2000000   hard=0        denormal-range=0        nan-payload=0        ok
+T1 div                                         regular(2^-20..2^20)           F24 model vs x87 PC24              n=2000000   hard=0        denormal-range=0        nan-payload=0        ok
+T1 div                                         mid(2^-60..2^60)               float (SSE2) vs x87 PC24           n=2000000   hard=0        denormal-range=0        nan-payload=0        ok
+T1 div                                         mid(2^-60..2^60)               F24 model vs x87 PC24              n=2000000   hard=0        denormal-range=0        nan-payload=0        ok
+T1 div                                         wide(any exponent)             float (SSE2) vs x87 PC24           n=2000000   hard=0        denormal-range=1948     nan-payload=0        (expected difference)
+T1 div                                         wide(any exponent)             F24 model vs x87 PC24              n=2000000   hard=0        denormal-range=0        nan-payload=0        ok
+T1 div                                         special(0/inf/NaN/denormal/max) float (SSE2) vs x87 PC24           n=2000000   hard=0        denormal-range=1235     nan-payload=0        (expected difference)
+T1 div                                         special(0/inf/NaN/denormal/max) F24 model vs x87 PC24              n=2000000   hard=0        denormal-range=0        nan-payload=4406     ok
+T1 sqrt                                        regular(2^-20..2^20)           float (SSE2) vs x87 PC24           n=2000000   hard=0        denormal-range=0        nan-payload=0        ok
+T1 sqrt                                        regular(2^-20..2^20)           F24 model vs x87 PC24              n=2000000   hard=0        denormal-range=0        nan-payload=0        ok
+T1 sqrt                                        mid(2^-60..2^60)               float (SSE2) vs x87 PC24           n=2000000   hard=0        denormal-range=0        nan-payload=0        ok
+T1 sqrt                                        mid(2^-60..2^60)               F24 model vs x87 PC24              n=2000000   hard=0        denormal-range=0        nan-payload=0        ok
+T1 sqrt                                        wide(any exponent)             float (SSE2) vs x87 PC24           n=2000000   hard=0        denormal-range=0        nan-payload=0        ok
+T1 sqrt                                        wide(any exponent)             F24 model vs x87 PC24              n=2000000   hard=0        denormal-range=0        nan-payload=0        ok
+T1 sqrt                                        special(0/inf/NaN/denormal/max) float (SSE2) vs x87 PC24           n=2000000   hard=0        denormal-range=0        nan-payload=0        ok
+T1 sqrt                                        special(0/inf/NaN/denormal/max) F24 model vs x87 PC24              n=2000000   hard=0        denormal-range=0        nan-payload=0        ok
+T2 chain a*b/c                                 regular(2^-20..2^20)           float vs x87 (chain on FPU stack)  n=2000000   hard=0        denormal-range=0        nan-payload=0        ok
+T2 chain a*b/c                                 regular(2^-20..2^20)           F24 vs x87                         n=2000000   hard=0        denormal-range=0        nan-payload=0        ok
+T2 chain a*b*c                                 regular(2^-20..2^20)           float vs x87                       n=2000000   hard=0        denormal-range=0        nan-payload=0        ok
+T2 chain a*b*c                                 regular(2^-20..2^20)           F24 vs x87                         n=2000000   hard=0        denormal-range=0        nan-payload=0        ok
+T2 chain a*b+c*d                               regular(2^-20..2^20)           float vs x87                       n=2000000   hard=0        denormal-range=0        nan-payload=0        ok
+T2 chain a*b+c*d                               regular(2^-20..2^20)           F24 vs x87                         n=2000000   hard=0        denormal-range=0        nan-payload=0        ok
+T2 chain sqrt(a*a+b*b)                         regular(2^-20..2^20)           float vs x87                       n=2000000   hard=0        denormal-range=0        nan-payload=0        ok
+T2 chain sqrt(a*a+b*b)                         regular(2^-20..2^20)           F24 vs x87                         n=2000000   hard=0        denormal-range=0        nan-payload=0        ok
+T2 chain (a-b)*(a+b)/c                         regular(2^-20..2^20)           float vs x87                       n=2000000   hard=0        denormal-range=0        nan-payload=0        ok
+T2 chain (a-b)*(a+b)/c                         regular(2^-20..2^20)           F24 vs x87                         n=2000000   hard=0        denormal-range=0        nan-payload=0        ok
+T2 chain a*b/c                                 mid(2^-60..2^60)               float vs x87 (chain on FPU stack)  n=2000000   hard=0        denormal-range=798      nan-payload=0        (expected difference)
+T2 chain a*b/c                                 mid(2^-60..2^60)               F24 vs x87                         n=2000000   hard=0        denormal-range=0        nan-payload=0        ok
+T2 chain a*b*c                                 mid(2^-60..2^60)               float vs x87                       n=2000000   hard=0        denormal-range=770      nan-payload=0        (expected difference)
+T2 chain a*b*c                                 mid(2^-60..2^60)               F24 vs x87                         n=2000000   hard=0        denormal-range=0        nan-payload=0        ok
+T2 chain a*b+c*d                               mid(2^-60..2^60)               float vs x87                       n=2000000   hard=0        denormal-range=0        nan-payload=0        (none seen)
+T2 chain a*b+c*d                               mid(2^-60..2^60)               F24 vs x87                         n=2000000   hard=0        denormal-range=0        nan-payload=0        ok
+T2 chain sqrt(a*a+b*b)                         mid(2^-60..2^60)               float vs x87                       n=2000000   hard=0        denormal-range=0        nan-payload=0        (none seen)
+T2 chain sqrt(a*a+b*b)                         mid(2^-60..2^60)               F24 vs x87                         n=2000000   hard=0        denormal-range=0        nan-payload=0        ok
+T2 chain (a-b)*(a+b)/c                         mid(2^-60..2^60)               float vs x87                       n=2000000   hard=0        denormal-range=404      nan-payload=0        (expected difference)
+T2 chain (a-b)*(a+b)/c                         mid(2^-60..2^60)               F24 vs x87                         n=2000000   hard=0        denormal-range=0        nan-payload=0        ok
+T2 chain a*b/c                                 wide(any exponent)             float vs x87 (chain on FPU stack)  n=2000000   hard=121821   denormal-range=63256    nan-payload=0        (expected difference)
+T2 chain a*b/c                                 wide(any exponent)             F24 vs x87                         n=2000000   hard=0        denormal-range=0        nan-payload=0        ok
+T2 chain a*b*c                                 wide(any exponent)             float vs x87                       n=2000000   hard=120475   denormal-range=64784    nan-payload=0        (expected difference)
+T2 chain a*b*c                                 wide(any exponent)             F24 vs x87                         n=2000000   hard=0        denormal-range=0        nan-payload=0        ok
+T2 chain a*b+c*d                               wide(any exponent)             float vs x87                       n=2000000   hard=16194    denormal-range=4652     nan-payload=0        (expected difference)
+T2 chain a*b+c*d                               wide(any exponent)             F24 vs x87                         n=2000000   hard=0        denormal-range=0        nan-payload=0        ok
+T2 chain sqrt(a*a+b*b)                         wide(any exponent)             float vs x87                       n=2000000   hard=919747   denormal-range=80748    nan-payload=0        (expected difference)
+T2 chain sqrt(a*a+b*b)                         wide(any exponent)             F24 vs x87                         n=2000000   hard=0        denormal-range=0        nan-payload=0        ok
+T2 chain (a-b)*(a+b)/c                         wide(any exponent)             float vs x87                       n=2000000   hard=229006   denormal-range=31911    nan-payload=0        (expected difference)
+T2 chain (a-b)*(a+b)/c                         wide(any exponent)             F24 vs x87                         n=2000000   hard=0        denormal-range=0        nan-payload=0        ok
+T3 float*double-constant                       random + adversarial           (float)((double)a*c) vs x87        n=2000000   hard=157396   denormal-range=0        nan-payload=0        (expected difference)
+T3 float*double-constant                       random + adversarial           MulD (single rounding) vs x87      n=2000000   hard=0        denormal-range=0        nan-payload=0        ok
+T3 float+double-constant                       random + adversarial           (float)((double)a+c) vs x87        n=2000000   hard=0        denormal-range=0        nan-payload=0        (none seen)
+T3 float+double-constant                       random + adversarial           AddD vs x87                        n=2000000   hard=0        denormal-range=0        nan-payload=0        ok
+    (668435 adversarial inputs: double-rounded and exactly rounded results differ in 157396, the x87 sides with the double-rounded form in 0 of them)
+T4 int*float                                   |i| < 2^31                     (float)i * f vs fild+fmul          n=2000000   hard=96939    denormal-range=0        nan-payload=0        (expected difference)
+T4 int*float                                   |i| <= 2^24 only               (float)i * f vs fild+fmul          n=1611282   hard=0        denormal-range=0        nan-payload=0        ok
+T4 int*float                                   |i| < 2^31                     (float)((double)i * f) vs x87      n=2000000   hard=0        denormal-range=0        nan-payload=0        (none seen)
+T4 int*float                                   |i| < 2^31                     Round24Mul(i, f) vs x87            n=2000000   hard=0        denormal-range=0        nan-payload=0        ok
+T5 _ftol2 low dword                            random + edge                  fp::Ftol vs fistp-trunc            n=2000029   hard=0        denormal-range=0        nan-payload=0        ok
+T5 _ftol2 64 bit                               random + edge                  fp::Ftol64 vs fistp-trunc          n=2000029   hard=0        denormal-range=0        nan-payload=0        ok
+    (a plain C++ (int) cast disagrees with the exe's _ftol2 in 1011265 of 2000029 cases: NaN/inf/out of range)
+T6 compare fcom status vs C++ operators        random + specials              <,>,==,<=,>=,!= incl. NaN, +-0, inf n=500000    hard=0        denormal-range=0        nan-payload=0        ok
+T7 a*b+c                                       regular                        two roundings (fp-contract=off) vs x87 n=2000000   hard=0        denormal-range=0        nan-payload=0        ok
+T7 a*b+c                                       regular                        std::fmaf (clang -ffp-contract=on) vs x87 n=2000000   hard=331562   denormal-range=0        nan-payload=0        (expected difference)
+T8 double t = (double)a*b                      regular                        SSE2 double arithmetic vs x87 PC24 n=2000000   hard=2000000  denormal-range=0        nan-payload=0        (expected difference)
+T8 double t = (double)a*b                      regular                        (double)(float)(a*b) vs x87 PC24   n=2000000   hard=0        denormal-range=0        nan-payload=0        ok
+T8 double t = (double)a*b                      regular                        F24 vs x87 PC24                    n=2000000   hard=0        denormal-range=0        nan-payload=0        ok
+T8 double t = a*b + c*d                        regular                        SSE2 double arithmetic vs x87 PC24 n=2000000   hard=1999999  denormal-range=0        nan-payload=0        (expected difference)
+T8 double t = a*b + c*d                        regular                        float rewrite vs x87 PC24          n=2000000   hard=0        denormal-range=0        nan-payload=0        ok
+T8 double t = a*b + c*d                        regular                        F24 vs x87 PC24                    n=2000000   hard=0        denormal-range=0        nan-payload=0        ok
+T9 guard InSafeRange<16>, chains of depth <= 3 2^-16..2^16 inputs             float vs x87 (guarded fast path)   n=4194210   hard=0        denormal-range=0        nan-payload=0        ok
+    (838842 of 2000000 cases passed the guard)
+T10 mul with float-denormal results            exp(a)+exp(b) in -150..-70     float (SSE2) vs x87 PC24           n=2000000   hard=0        denormal-range=14210    nan-payload=0        (expected difference)
+T10 mul with float-denormal results            exp(a)+exp(b) in -150..-70     F24 model vs x87 PC24              n=2000000   hard=0        denormal-range=0        nan-payload=0        ok
+
+fp_theory_test: 0 unexpected mismatches

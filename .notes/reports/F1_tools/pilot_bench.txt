@@ -1,0 +1,25 @@
+# BENCH=1 game_oracle_test, Release (/O2 /Ob2), Wine on Rosetta 2, host load ~10, 2 runs each, 4000 inputs x 9 reps (min), port vs the exe's own machine code in the same process at PC24
+## old x87 port (HEAD before the pilot)
+CCollision::TestSphereTriangle     port   1951.7 ns/call   exe   1498.5 ns/call   port/exe 1.30
+CCollision::TestLineTriangle       port   1197.1 ns/call   exe    841.2 ns/call   port/exe 1.42
+CCollision::TestSphereSphere       port    264.7 ns/call   exe    288.4 ns/call   port/exe 0.92
+CCollision::ProcessLineSphere      port    961.8 ns/call   exe    791.7 ns/call   port/exe 1.21
+CCollision::TestLineSphere         port   1443.7 ns/call   exe   1239.0 ns/call   port/exe 1.17
+CCollision::ProcessSphereSphere    port    686.0 ns/call   exe    550.4 ns/call   port/exe 1.25
+CCollision::ProcessSphereTriangle  port   1641.8 ns/call   exe   1241.5 ns/call   port/exe 1.32
+CCollision::ProcessLineTriangle    port   1257.4 ns/call   exe    881.3 ns/call   port/exe 1.43
+CCollision::TestLineBox_DW         port    692.3 ns/call   exe    525.9 ns/call   port/exe 1.32
+CVector::Normalise                 port    596.5 ns/call   exe    538.0 ns/call   port/exe 1.11
+CVector::Magnitude                 port    362.2 ns/call   exe    335.9 ns/call   port/exe 1.08
+## new SSE2 port (float fast path + RangeGuard)
+CCollision::TestSphereTriangle     port     25.2 ns/call   exe   1510.8 ns/call   port/exe 0.02
+CCollision::TestLineTriangle       port     17.6 ns/call   exe    817.2 ns/call   port/exe 0.02
+CCollision::TestSphereSphere       port      9.6 ns/call   exe    280.7 ns/call   port/exe 0.03
+CCollision::ProcessLineSphere      port     22.5 ns/call   exe    791.1 ns/call   port/exe 0.03
+CCollision::TestLineSphere         port     12.8 ns/call   exe   1227.0 ns/call   port/exe 0.01
+CCollision::ProcessSphereSphere    port     22.4 ns/call   exe    549.7 ns/call   port/exe 0.04
+CCollision::ProcessSphereTriangle  port     42.3 ns/call   exe   1239.6 ns/call   port/exe 0.03
+CCollision::ProcessLineTriangle    port     33.0 ns/call   exe    879.3 ns/call   port/exe 0.04
+CCollision::TestLineBox_DW         port    687.1 ns/call   exe    533.1 ns/call   port/exe 1.29
+CVector::Normalise                 port    583.9 ns/call   exe    537.6 ns/call   port/exe 1.09
+CVector::Magnitude                 port    370.1 ns/call   exe    336.3 ns/call   port/exe 1.10

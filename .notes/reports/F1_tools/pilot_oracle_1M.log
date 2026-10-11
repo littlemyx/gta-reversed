@@ -1,0 +1,22 @@
+game_oracle_test: 1000000 cases per function and precision mode; PC24 = game mode (D3D CreateDevice), PC53 = CRT default
+CCollision::TestSphereSphere 0x411E70                      1000000 true:352211  PC24    0 [reg 0 spec 0 nanpayload 0]  PC53    0 [reg 0 spec 0 nanpayload 0]
+CCollision::TestLineSphere 0x417470                        1000000 true:255090  PC24    0 [reg 0 spec 0 nanpayload 0]  PC53    1 [reg 0 spec 1 nanpayload 0]
+CCollision::TestLineTriangle 0x413AC0                      1000000 true:82514  PC24    0 [reg 0 spec 0 nanpayload 0]  PC53  304 [reg 0 spec 304 nanpayload 0]
+CCollision::TestSphereTriangle 0x4165B0                    1000000 true:246410  PC24    0 [reg 0 spec 0 nanpayload 0]  PC53  726 [reg 638 spec 88 nanpayload 0]
+CCollision::ProcessSphereSphere 0x416450                   1000000 true:204095  PC24 14647 [reg 0 spec 0 nanpayload 14647]  PC53 179163 [reg 136756 spec 28392 nanpayload 14015]
+CCollision::ProcessLineSphere 0x412AA0                     1000000 true:42177  PC24 17045 [reg 0 spec 0 nanpayload 17045]  PC53 57698 [reg 32057 spec 8854 nanpayload 16787]
+CCollision::ProcessLineTriangle 0x4140F0                   1000000 true:50541  PC24 16861 [reg 0 spec 0 nanpayload 16861]  PC53 39915 [reg 18018 spec 5145 nanpayload 16752]
+CCollision::ProcessVerticalLineTriangle 0x4147E0           1000000 true:15641  PC24 17326 [reg 0 spec 0 nanpayload 17326]  PC53 25969 [reg 6266 spec 2427 nanpayload 17276]
+CCollision::ProcessSphereTriangle 0x416BA0                 1000000 true:112971  PC24 14643 [reg 0 spec 0 nanpayload 14643]  PC53 116176 [reg 88148 spec 13777 nanpayload 14251]
+CCollision::TestSphereSphere 0x411E70 [wide range]         1000000 true:352044  PC24    0 [reg 0 spec 0 nanpayload 0]  PC53    0 [reg 0 spec 0 nanpayload 0]
+CCollision::TestLineSphere 0x417470 [wide range]           1000000 true:420376  PC24    0 [reg 0 spec 0 nanpayload 0]  PC53    1 [reg 0 spec 1 nanpayload 0]
+CCollision::TestLineTriangle 0x413AC0 [wide range]         1000000 true:37746  PC24    0 [reg 0 spec 0 nanpayload 0]  PC53  230 [reg 0 spec 230 nanpayload 0]
+CCollision::TestSphereTriangle 0x4165B0 [wide range]       1000000 true:152887  PC24    0 [reg 0 spec 0 nanpayload 0]  PC53  463 [reg 420 spec 43 nanpayload 0]
+CCollision::ProcessSphereSphere 0x416450 [wide range]      1000000 true:164225  PC24 15220 [reg 0 spec 0 nanpayload 15220]  PC53 143754 [reg 106054 spec 22986 nanpayload 14714]
+CCollision::ProcessLineSphere 0x412AA0 [wide range]        1000000 true:31100  PC24 17178 [reg 0 spec 0 nanpayload 17178]  PC53 47283 [reg 23678 spec 6616 nanpayload 16989]
+CCollision::ProcessLineTriangle 0x4140F0 [wide range]      1000000 true:18354  PC24 17230 [reg 0 spec 0 nanpayload 17230]  PC53 22373 [reg 3864 spec 1301 nanpayload 17208]
+CCollision::ProcessVerticalLineTriangle 0x4147E0 [wide range] 1000000 true:4672  PC24 17454 [reg 0 spec 0 nanpayload 17454]  PC53 19869 [reg 1671 spec 754 nanpayload 17444]
+CCollision::ProcessSphereTriangle 0x416BA0 [wide range]    1000000 true:24069  PC24 15852 [reg 0 spec 0 nanpayload 15852]  PC53 37374 [reg 18561 spec 3038 nanpayload 15775]
+
+18 functions, mismatches (strict / excluding NaN-payload-only): PC24 163456 / 0, PC53 691299 / 530088
+notsa::fp slow-path (F24) calls: 8904567

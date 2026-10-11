@@ -928,6 +928,23 @@ if (${RE_PROJECT}_RW_LIBRW)
     set_property(TARGET pool_oracle_test PROPERTY SOURCES "${STANDALONE_PAD_OBJ}" ${_po_sources})
     target_link_options(pool_oracle_test PRIVATE "$<$<CXX_COMPILER_ID:MSVC>:/BASE:0x400000;/DYNAMICBASE:NO;/FIXED;/MERGE:_TEXT=.text;/INCREMENTAL:NO;/SUBSYSTEM:CONSOLE;/FORCE:UNRESOLVED>")
     set_target_properties(pool_oracle_test PROPERTIES COMPILE_WARNING_AS_ERROR OFF CXX_SCAN_FOR_MODULES OFF)
+    # Audio fade oracle: CAESmoothFadeThread::Service (0x4EED10) machine code vs the port on random entry tables with fake IDirectSoundBuffer objects
+    add_executable(audio_fade_oracle_test EXCLUDE_FROM_ALL
+        "${PROJECT_SOURCE_DIR}/tests/standalone/audio_fade_oracle_test.cpp"
+        game_sa/Audio/AESmoothFadeThread.cpp
+    )
+    target_compile_features(audio_fade_oracle_test PRIVATE cxx_std_23)
+    target_compile_definitions(audio_fade_oracle_test PRIVATE $<TARGET_PROPERTY:${RE_PROJECT_LIB_NAME},COMPILE_DEFINITIONS> NOTSA_ORACLE_ADDRESS_GLOBALS)   # the run build's own definitions (USE_DSOUND, NOTSA_STANDALONE_RUN ...): the audio headers need them
+    target_include_directories(audio_fade_oracle_test PRIVATE $<TARGET_PROPERTY:${RE_PROJECT_LIB_NAME},INCLUDE_DIRECTORIES>)
+    target_compile_options(audio_fade_oracle_test PRIVATE $<TARGET_PROPERTY:${RE_PROJECT_LIB_NAME},COMPILE_OPTIONS>)
+    target_precompile_headers(audio_fade_oracle_test PRIVATE StdInc.cpp)
+    target_link_libraries(audio_fade_oracle_test PRIVATE librw spdlog::spdlog Tracy::TracyClient user32)
+    target_sources(audio_fade_oracle_test PRIVATE "${STANDALONE_PAD_OBJ}")
+    get_target_property(_af_sources audio_fade_oracle_test SOURCES)
+    list(REMOVE_ITEM _af_sources "${STANDALONE_PAD_OBJ}")
+    set_property(TARGET audio_fade_oracle_test PROPERTY SOURCES "${STANDALONE_PAD_OBJ}" ${_af_sources})
+    target_link_options(audio_fade_oracle_test PRIVATE "$<$<CXX_COMPILER_ID:MSVC>:/BASE:0x400000;/DYNAMICBASE:NO;/FIXED;/MERGE:_TEXT=.text;/INCREMENTAL:NO;/SUBSYSTEM:CONSOLE;/FORCE:UNRESOLVED>")
+    set_target_properties(audio_fade_oracle_test PROPERTIES COMPILE_WARNING_AS_ERROR OFF CXX_SCAN_FOR_MODULES OFF)
     # P2E-3 gameplay differential test: peds / IK / tasks, camera, weapons, vehicles against the exe machine code (same machinery as physics_oracle_test)
     add_executable(gameplay_oracle_test EXCLUDE_FROM_ALL
         "${PROJECT_SOURCE_DIR}/tests/standalone/gameplay_oracle_test.cpp"

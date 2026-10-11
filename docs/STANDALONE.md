@@ -82,6 +82,11 @@ Environment variables (all optional, run build only):
   original and the menu volume sliders cannot undo the mute. `standalone.log` gets `[mute]` lines (first attach, the count of swallowed `SetVolume` calls at 1 / 1000 / 100000 / 1000000, and each +5 dB step of the loudest volume the game requested).
   `soak.sh` and `census.py` set it by default (`NOTSA_STANDALONE_MUTE=0` opts out). Run-build-only deviation, listed in `tools/standalone/standalone_deviations.tsv` and `STANDALONE_FIDELITY.md`.
 
+* `NOTSA_AUDIO_TAP=<file>` - silent audio diagnostics (`source/game_sa/Audio/Hardware/AEAudioTap.h`, usable together with the mute): every DirectSound secondary buffer is attached to a copy of its vtable that logs
+  Lock/Unlock (offsets, cursors at the write, hash, first/last frames), GetCurrentPosition slot tracking, Play/Stop, SetVolume (thread, fade-entry range), SetFrequency, plus the main-loop frame time and the stream-thread
+  iteration time. `!KIND` lines are anomalies (stale half replayed = underrun, write under the play cursor, seam jump, click, fade value out of range, rejected SetVolume/SetFrequency, stream-thread stall), each tagged with the
+  time since the last >50 ms frame; `[tap-summary]` blocks every 30 s and at exit. `NOTSA_AUDIO_TAP_RAW=1` logs every call. Use a Windows path under Wine (`Z:\tmp\tap.log`).
+
 Silent runs: never let a test/soak/measurement run play audio on the host. Use `NOTSA_STANDALONE_MUTE=1` (above; the default in `soak.sh`/`census.py`).
 Do NOT disable the Wine audio driver (`HKCU\Software\Wine\Drivers` `Audio` = empty) as a second net: with no driver `DirectSoundCreate` fails (`GetDefaultAudioEndpoint` 80070490,
 "User explicitly chose no driver") and the game then hangs at 0% CPU right after `CPU vendor:` in `logs/log.log` and never reaches the menu (verified under Wine Staging 11.18, 2026-10-10).

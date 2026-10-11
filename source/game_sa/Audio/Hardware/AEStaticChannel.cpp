@@ -1,5 +1,6 @@
 #include "StdInc.h"
 #include "AEDirectSoundMute.h"
+#include "AEAudioTap.h"
 
 #include "AEStaticChannel.h"
 
@@ -35,7 +36,7 @@ void CAEStaticChannel::Service() {
         return;
     }
 
-    if (m_bNeedData && (int32)(CTimer::GetTimeInMS() - m_nSyncTime) > field_74) {
+    if (m_bNeedData && (uint32)(CTimer::GetTimeInMS() - m_nSyncTime) > (uint32)field_74 /* 0x4F10F9: unsigned compare (jbe) */) {
         uint8* ppvAudioPtr1{};
         DWORD pdwAudioBytes{};
 
@@ -104,7 +105,9 @@ void CAEStaticChannel::Play(int16 timeInMs, int8 unused, float scalingFactor) {
         m_bUnkn2 = true;
     }
     m_bNeedsSynch = true;
-    m_bPaused = scalingFactor == 0.0f;
+    if (scalingFactor == 0.0f) { // 0x4F0C18: the exe only ever SETS the flag here
+        m_bPaused = true;
+    }
 }
 
     
@@ -151,7 +154,9 @@ void CAEStaticChannel::Stop() {
 }
 
 // 0x4F0C40
-bool CAEStaticChannel::SetAudioBuffer(void* buffer, uint16 size, int16 f88, int16 f8c, int16 loopOffset, uint16 frequency) {
+// BUG (port): `size` was declared uint16 - 0x4F0C40 takes the full 32-bit byte count (`cmp edi, esi` / `mov [ebp+0x2c], edi`; PlaySound pushes its dword local). Every sound longer than
+//             65535 bytes (loops, engines, speech, ambience: > 1.5 s at 22 kHz) was cut to `size % 65536` bytes, i.e. played as a short garbage burst that loops with a click.
+bool CAEStaticChannel::SetAudioBuffer(void* buffer, uint32 size, int16 f88, int16 f8c, int16 loopOffset, uint16 frequency) {
     if (!size || !frequency) {
         return false;
     }
@@ -220,6 +225,7 @@ bool CAEStaticChannel::SetAudioBuffer(void* buffer, uint16 size, int16 f88, int1
         return false;
     }
     NOTSA_AUDIO_MUTE_ATTACH(m_pDirectSoundBuffer); // NOTSA: NOTSA_STANDALONE_MUTE (run build only)
+    NOTSA_AUDIO_TAP_ATTACH(m_pDirectSoundBuffer);  // NOTSA: NOTSA_AUDIO_TAP diagnostics (run build only)
     ++g_numSoundChannelsUsed;
 
     uint32 setCurrentPos = 0;

@@ -7,6 +7,8 @@
 #include "AEAudioUtility.h"
 #include "AEStaticChannel.h"
 #include "AEUserRadioTrackManager.h"
+#include "AESmoothFadeThread.h"
+#include "AEAudioTap.h"
 
 auto& AEAudioHardware = StaticRef<CAEAudioHardware>(0xB5F8B8);
 
@@ -254,6 +256,9 @@ void CAEAudioHardware::PlaySound(int16 channel, uint16 channelSlot, uint16 sound
         return;
     }
 
+#ifdef NOTSA_STANDALONE_RUN
+    notsa::audio_tap::NotePlaySound(bufferSize); // NOTSA: NOTSA_AUDIO_TAP
+#endif
     const auto loopOffset = m_pMP3BankLoader->GetLoopOffset((eSoundID)soundIdInSlot, (eSoundBankSlot)bankSlot);
 
     // BUG: Off by one, `m_aChannels` has `MAX_NUM_AUDIO_CHANNELS` entries, but index == MAX_NUM_AUDIO_CHANNELS passes this check
@@ -263,7 +268,7 @@ void CAEAudioHardware::PlaySound(int16 channel, uint16 channelSlot, uint16 sound
     }
 
     auto* const ch = static_cast<CAEStaticChannel*>(m_aChannels[chIdx]);
-    if (!ch->SetAudioBuffer(buffer, (uint16)bufferSize, (int16)soundIdInSlot, (int16)bankSlot, (int16)loopOffset, sampleRate)) {
+    if (!ch->SetAudioBuffer(buffer, bufferSize, (int16)soundIdInSlot, (int16)bankSlot, (int16)loopOffset, sampleRate)) {
         return;
     }
 
@@ -850,6 +855,7 @@ void CAEAudioHardware::Query3DSoundEffects() {
 
 // 0x4D9870
 void CAEAudioHardware::Service() {
+    NOTSA_AUDIO_TAP_FRAME(); // NOTSA: NOTSA_AUDIO_TAP frame time (run build only)
     VERIFY(SUCCEEDED(m_pDirectSound3dListener->CommitDeferredSettings()));
     RescaleChannelVolumes();
     if (m_n3dEffectsQueryResult) {

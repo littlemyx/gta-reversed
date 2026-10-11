@@ -1,5 +1,6 @@
 #include "StdInc.h"
 #include "AEDirectSoundMute.h"
+#include "AEAudioTap.h"
 
 #include <extensions/utility.hpp>
 
@@ -67,6 +68,7 @@ void CAEStreamingChannel::Initialise() {
         0
     ))) {
         NOTSA_AUDIO_MUTE_ATTACH(m_pDirectSoundBuffer); // NOTSA: NOTSA_STANDALONE_MUTE (run build only)
+        NOTSA_AUDIO_TAP_ATTACH(m_pDirectSoundBuffer);  // NOTSA: NOTSA_AUDIO_TAP diagnostics (run build only)
         m_bInitialized = true;
         SetOriginalFrequency(m_WaveFormat.nSamplesPerSec);
         m_pBuffer = m_aBuffer;
@@ -153,7 +155,7 @@ void CAEStreamingChannel::SetFrequencyScalingFactor(float factor) {
         DirectSoundBufferFadeToSilence();
         m_nState = StreamingChannelState::Paused;
     } else {
-        SetFrequency(static_cast<uint32>((float)m_nOriginalFrequency * factor));
+        SetFrequency(static_cast<uint32>(double(float(m_nOriginalFrequency)) * double(factor))); // 0x4F20D4: fild; fmul dword; _ftol
 
         if (m_nState != StreamingChannelState::Paused)
             return;
@@ -164,7 +166,8 @@ void CAEStreamingChannel::SetFrequencyScalingFactor(float factor) {
         m_pDirectSoundBuffer->SetVolume(-10'000);
         m_pDirectSoundBuffer->Play(0, 0, m_bLooped ? DSBPLAY_LOOPING : 0);
 
-        if (!AESmoothFadeThread.RequestFade(m_pDirectSoundBuffer, m_Volume, 35, true))
+        // 0x4F2132: the exe passes bStopBufferAfterFade = 0 here (the port passed true: the fade-in ended with Stop() on the radio buffer)
+        if (!AESmoothFadeThread.RequestFade(m_pDirectSoundBuffer, m_Volume, 35, false))
             m_pDirectSoundBuffer->SetVolume(static_cast<int32>(m_Volume * 100.0f));
 
         m_nState = StreamingChannelState::Started;
@@ -206,7 +209,10 @@ uint32 CAEStreamingChannel::FillBuffer(void* buffer, uint32 size) {
         }
     }
 
-    m_nStreamPlayTimeMs = m_pStreamingDecoder->GetStreamLengthMs();
+    // 0x4F1F17: `call [eax+0xC]` is vtable slot 3 = GetStreamPlayTimeMs (the port called slot 2, GetStreamLengthMs, so the radio track position was the track LENGTH)
+    if (m_pStreamingDecoder) {
+        m_nStreamPlayTimeMs = m_pStreamingDecoder->GetStreamPlayTimeMs();
+    }
     return filled;
 }
 

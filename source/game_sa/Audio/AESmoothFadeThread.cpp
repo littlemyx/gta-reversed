@@ -3,6 +3,12 @@
 
 #include "AEAudioChannel.h"
 #include "AEAudioUtility.h"
+#include "AEAudioTap.h"
+#ifdef NOTSA_STANDALONE_RUN
+#define NOTSA_TAP_FADE(k) ::notsa::audio_tap::FadeEvent(k)
+#else
+#define NOTSA_TAP_FADE(k) ((void)0)
+#endif
 
 auto& AESmoothFadeThread = StaticRef<CAESmoothFadeThread>(0xB608D0);
 
@@ -72,6 +78,7 @@ void CAESmoothFadeThread::Service() {
             continue;
 
         if (entry.m_nStatus == eSmoothFadeEntryStatus::STATE_CANCELLED) {
+            NOTSA_TAP_FADE(9);
             --g_numSoundChannelsUsed;
             if (entry.m_pSoundBuffer)
                 entry.m_pSoundBuffer->Release();
@@ -84,20 +91,34 @@ void CAESmoothFadeThread::Service() {
         if (!entry.m_pSoundBuffer)
             continue;
 
-        if (m_currentTime < entry.m_nStartTime)
+        if (m_currentTime < entry.m_nStartTime) {
+            NOTSA_TAP_FADE(10);
             continue;
+        }
 
         const auto elapsed = m_currentTime - entry.m_nStartTime;
         if (elapsed < entry.m_wFadeTime) {
-            const auto fStep = pow(10.0F, entry.m_fVolumeDiff / 20.0F) - 1.0F;
-            const auto fProgress = static_cast<float>(elapsed) / static_cast<float>(entry.m_wFadeTime);
-            entry.m_fCurVolume = entry.m_fStartVolume + LOG10_2 * log2(fStep * fProgress) * 20.0F;
+            // 0x4EEDF0: volume(dB) = start + 20 * log10(1 + (10^(diff/20) - 1) * progress), i.e. a LINEAR amplitude ramp. The x87 stack keeps every
+            //           intermediate (and the value that goes to SetVolume) in extended precision; only m_fCurVolume is a float store.
+            // BUG (port): this used `log2(fStep * fProgress)` (no `1 +`): NaN for fade-outs (-> SetVolume(0) = FULL volume for the 20-30 ms of the fade) and a
+            //        huge negative number at the start of fade-ins -> audible clicks/crackle on every fade.
+            const double fStep     = std::pow(10.0, (double)entry.m_fVolumeDiff * (double)0.05f) - 1.0;
+            const double fProgress = (double)elapsed / (double)entry.m_wFadeTime;
+            const double fVolume   = x87::log10(fStep * fProgress + 1.0) * 20.0 + (double)entry.m_fStartVolume;
+            entry.m_fCurVolume = (float)fVolume;
+            NOTSA_TAP_FADE(7);
+#ifdef NOTSA_STANDALONE_RUN
+            if (notsa::audio_tap::Enabled()) { // NOTSA: NOTSA_AUDIO_TAP counts how often the pre-fix formula (no `1 +` inside the log) disagrees with the exe's by > 1 dB
+                notsa::audio_tap::NoteFadeStep(fVolume, (double)entry.m_fStartVolume + 0.301029 * std::log2(fStep * fProgress) * 20.0);
+            }
+#endif
 
-            const auto dwVolume = static_cast<LONG>(entry.m_fCurVolume * 100.0F);
+            const auto dwVolume = static_cast<LONG>(fVolume * 100.0);
             entry.m_pSoundBuffer->SetVolume(dwVolume);
             continue;
         }
 
+        NOTSA_TAP_FADE(8);
         int32 curVolume;
         entry.m_pSoundBuffer->GetVolume((LPLONG)&curVolume);
         const auto fCurVolume = static_cast<float>(curVolume) / 100.0F;
@@ -127,19 +148,25 @@ void CAESmoothFadeThread::CancelFade(IDirectSoundBuffer* buffer) {
 }
 
 bool CAESmoothFadeThread::RequestFade(IDirectSoundBuffer* buffer, float fTargetVolume, int16 fadeTime, bool bStopBufferAfterFade) {
-    if (!m_bInitialized || m_bSmoothFadesDisabled)
+    NOTSA_TAP_FADE(0);
+    if (!m_bInitialized || m_bSmoothFadesDisabled) {
+        NOTSA_TAP_FADE(4);
         return false;
+    }
 
     uint32 status;
     buffer->GetStatus((LPDWORD)&status);
-    if (!(status & DSBSTATUS_PLAYING))
+    if (!(status & DSBSTATUS_PLAYING)) {
+        NOTSA_TAP_FADE(3);
         return false;
+    }
 
     int32 curVolume;
     buffer->GetVolume((LPLONG)&curVolume);
     const auto fCurVolume = static_cast<float>(curVolume) / 100.0F;
 
     if (approxEqual2(fCurVolume, fTargetVolume, 0.01F)) {
+        NOTSA_TAP_FADE(5);
         if (bStopBufferAfterFade)
             buffer->Stop();
 
@@ -170,8 +197,10 @@ bool CAESmoothFadeThread::RequestFade(IDirectSoundBuffer* buffer, float fTargetV
         break;
     }
 
-    if (!bFound)
+    if (!bFound) {
+        NOTSA_TAP_FADE(6);
         return false;
+    }
 
     auto& sound = m_aEntries[iFreeInd];
     if (sound.m_nStatus == eSmoothFadeEntryStatus::STATE_ACTIVE) {
@@ -183,6 +212,7 @@ bool CAESmoothFadeThread::RequestFade(IDirectSoundBuffer* buffer, float fTargetV
         sound.m_pSoundBuffer = buffer;
     }
 
+    NOTSA_TAP_FADE(sound.m_nStatus == eSmoothFadeEntryStatus::STATE_ACTIVE ? 2 : 1);
     sound.m_fTargetVolume        = fTargetVolume;
     sound.m_fCurVolume           = fCurVolume;
     sound.m_fStartVolume         = fCurVolume;

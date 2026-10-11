@@ -5,6 +5,8 @@
 #include "AEMP3TrackLoader.h"
 #include "AEUserRadioTrackManager.h"
 #include "AEVorbisDecoder.h"
+#include "AESmoothFadeThread.h"
+#include "AEAudioTap.h"
 
 void CAEStreamThread::InjectHooks() {
     RH_ScopedClass(CAEStreamThread);
@@ -157,6 +159,9 @@ DWORD WINAPI CAEStreamThread::MainLoop(LPVOID data) {
             self->Service();
             self->m_pStreamingChannel->Service();
             auto end = CAEAudioUtility::GetCurrentTimeInMS();
+#ifdef NOTSA_STANDALONE_RUN
+            notsa::audio_tap::StreamIter((double)(end - start)); // NOTSA: NOTSA_AUDIO_TAP
+#endif
             if (end - start < 5) {
                 OS_ThreadSleep(uint32(start - end + 5));
             }

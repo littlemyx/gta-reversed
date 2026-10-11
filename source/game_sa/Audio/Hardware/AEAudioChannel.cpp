@@ -97,7 +97,7 @@ void CAEAudioChannel::SetFrequencyScalingFactor(float factor) {
         return;
     }
 
-    const auto newFreq = static_cast<uint32>(float(m_nOriginalFrequency) * factor);
+    const auto newFreq = static_cast<uint32>(double(float(m_nOriginalFrequency)) * double(factor)); // 0x4D7D67: fild; fmul dword; _ftol (product stays extended)
     SetFrequency(newFreq);
 
     if (m_bPaused) {
@@ -136,7 +136,8 @@ void CAEAudioChannel::SetVolume(float volume) {
     if (!m_pDirectSoundBuffer)
         return;
 
-    if (IsBufferPlaying() && fabs(volume - m_Volume) > 60.0F) {
+    // 0x4D7C7B: the difference is truncated to an int first (_ftol), then abs() - a 60.5 dB step does NOT start a fade
+    if (IsBufferPlaying() && std::abs(static_cast<int32>(volume - m_Volume)) > 60) {
         if (volume <= m_Volume) {
             if (AESmoothFadeThread.RequestFade(m_pDirectSoundBuffer, volume, -1, false)) {
                 m_Volume = volume;
@@ -174,6 +175,7 @@ uint32 CAEAudioChannel::ConvertFromMsToBytes(uint32 ms) const {
 
 // 0x4D7A50
 void CAEAudioChannel::SetFrequency(uint32 freq) {
+    freq = static_cast<uint16>(freq); // 0x4D7A50: `movzx edx, word ptr [esp+4]` - the original takes a uint16, so e.g. 72000 Hz wraps to 6464
     if (m_nFrequency == freq)
         return;
 
@@ -188,6 +190,7 @@ void CAEAudioChannel::SetFrequency(uint32 freq) {
 
 // 0x4D7A70
 void CAEAudioChannel::SetOriginalFrequency(uint32 freq) {
+    freq = static_cast<uint16>(freq); // 0x4D7A70: movzx edi, word ptr [esp+0xC]
     SetFrequency(freq);
     m_nOriginalFrequency = freq;
 }

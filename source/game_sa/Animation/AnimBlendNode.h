@@ -294,3 +294,5 @@ public:
     CAnimBlendAssociation* m_BlendAssoc{};      //!< Parent anim to which this node belongs to
 };
 VALIDATE_SIZE(CAnimBlendNode, 0x18);
+
+inline CAnimBlendNode* CAnimBlendAssociation::GetNode(int32 nodeIndex) { return &GetNodes()[nodeIndex]; } // 0x4CEB60

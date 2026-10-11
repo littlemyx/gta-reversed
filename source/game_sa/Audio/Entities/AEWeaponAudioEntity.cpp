@@ -966,7 +966,7 @@ void CAEWeaponAudioEntity::Clear() {
 }
 
 CAEWeaponAudioEntity* CAEWeaponAudioEntity::Constructor() {
-    CAEWeaponAudioEntity::CAEWeaponAudioEntity();
+    CAEWeaponAudioEntity{}; // BUG: constructs and destroys a TEMPORARY (MSVC reads `T::T();` that way), *this is left untouched; kept as is (stream C is behaviour-neutral)
     return this;
 }
 

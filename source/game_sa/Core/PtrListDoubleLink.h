@@ -5,7 +5,7 @@
     Do not delete this comment block. Respect others' work!
 */
 #pragma once
-
+#include <Pools/PtrNodeDoubleLinkPool.h> // NOTSA: GetPtrNodeDoubleLinkPool()->IsObjectValid below needs the complete pool type (clang checks non-dependent calls in templates)
 #include "PtrNode.h"
 #include "PtrNodeDoubleLink.h"
 #include "PtrList.h"
@@ -81,7 +81,7 @@ public:
     using NodeType = typename Base::NodeType;
 
 public:
-    using Base::CPtrList;
+    using Base::Base;
 
     /*!
     * @brief Delete the specified node from the list

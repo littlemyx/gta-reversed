@@ -438,7 +438,7 @@ protected: // Wrappers for hooks
         bool     flag0,
         bool     flag1
     ) {
-        this->CTaskComplexSeekEntity::CTaskComplexSeekEntity(entity, seekInterval, scanInterval, maxEntityDist2D, unk1, unk2, flag0, flag1);
+        std::construct_at(this, entity, seekInterval, scanInterval, maxEntityDist2D, unk1, unk2, flag0, flag1); // NOTSA: clang rejects the qualified constructor call `this->T::T(...)` inside a class template
         return this;
     }
 

@@ -70,7 +70,7 @@ public:
         friend bool operator==(const BaseIterator<Y>& lhs, const BaseIterator<Y>& rhs) { return lhs.m_Link == rhs.m_Link; }
         friend bool operator!=(const BaseIterator<Y>& lhs, const BaseIterator<Y>& rhs) { return !(lhs == rhs); }
     private:
-        auto DeRefLink() const { return CAnimBlendAssociation::FromLink(m_Link); }
+        auto DeRefLink() const { return std::remove_const_t<Y>::FromLink(m_Link); } // NOTSA: dependent name (CAnimBlendAssociation is incomplete here)
     private:
         CAnimBlendLink* m_Link;
     };
@@ -217,7 +217,7 @@ public:
     void SetSpeed(float speed) { m_Speed = speed; }
 
     std::span<CAnimBlendNode> GetNodes();
-    CAnimBlendNode*           GetNode(int32 nodeIndex) { return &GetNodes()[nodeIndex]; } // 0x4CEB60
+    CAnimBlendNode*           GetNode(int32 nodeIndex); // 0x4CEB60 (defined inline at the end of AnimBlendNode.h: needs the complete CAnimBlendNode)
     CAnimBlendNode*           GetNodesPtr() { return m_BlendNodes; }
 
     auto& GetLink() { return m_Link; }

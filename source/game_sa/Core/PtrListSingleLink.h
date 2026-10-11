@@ -5,7 +5,7 @@
     Do not delete this comment block. Respect others' work!
 */
 #pragma once
-
+#include <Pools/PtrNodeSingleLinkPool.h> // NOTSA: GetPtrNodeSingleLinkPool()->IsObjectValid below needs the complete pool type (clang checks non-dependent calls in templates)
 #include "PtrNodeSingleLink.h"
 #include "PtrList.h"
 #include <Pools/Pools.h>

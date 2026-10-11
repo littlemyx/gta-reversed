@@ -371,11 +371,23 @@ void CAnimManager::RemoveAnimBlock(int32 index) {
 
 // 0x4D3FB0
 void CAnimManager::AddAnimBlockRef(int32 index) {
+#ifdef NOTSA_GLOBALS_DETACHED
+    // D-FIX1: a hierarchy without a block has m_nAnimBlockId == -1. The exe then writes the RefCnt of "block -1" into the unused tail of ms_aAnimations
+    // (harmless); the detached ms_aAnimBlocks is preceded by LIVE globals (RefCnt of [-1] == the low half of ms_aAnimAssocGroups -> AV in BlendAnimation).
+    if ((uint32)index >= (uint32)NUM_ANIM_BLOCKS) { return; }
+#endif
+#line 374
     GetAnimBlocks()[index].RefCnt++;
 }
 
 // 0x4D3FD0
 void CAnimManager::RemoveAnimBlockRef(int32 index) {
+#ifdef NOTSA_GLOBALS_DETACHED
+    // D-FIX1 (see AddAnimBlockRef): a hierarchy without a block has m_nAnimBlockId == -1. The exe then writes the RefCnt of "block -1" into the unused tail of ms_aAnimations
+    // (harmless); the detached ms_aAnimBlocks is preceded by LIVE globals (RefCnt of [-1] == the low half of ms_aAnimAssocGroups -> AV in BlendAnimation).
+    if ((uint32)index >= (uint32)NUM_ANIM_BLOCKS) { return; }
+#endif
+#line 379
     GetAnimBlocks()[index].RefCnt--;
     /* see RemoveAnimBlockRefWithoutDelete, logically here should be called RemoveModel or something
     if (--ms_aAnimBlocks[index].usRefs == 0) {
@@ -386,6 +398,10 @@ void CAnimManager::RemoveAnimBlockRef(int32 index) {
 
 // 0x4D3FF0
 void CAnimManager::RemoveAnimBlockRefWithoutDelete(int32 index) {
+#ifdef NOTSA_GLOBALS_DETACHED
+    if ((uint32)index >= (uint32)NUM_ANIM_BLOCKS) { return; } // D-FIX1, see AddAnimBlockRef
+#endif
+#line 389
     ms_aAnimBlocks[index].RefCnt--;
 }
 

@@ -114,25 +114,27 @@ static std::string TriS(const TriIn& t) {
     return "verts " + Hex(t.v, sizeof t.v) + " tri " + Hex(&t.tri, sizeof t.tri) + " A=" + V(t.Vert(t.tri.vA)) + " B=" + V(t.Vert(t.tri.vB)) + " C=" + V(t.Vert(t.tri.vC)) + b + " plane " + Hex(t.plane, sizeof t.plane);
 }
 
-static void TestCollision() {
+// triangles are int16 / 128 meshes: a scale below ~1 collapses them to the origin (the exe then runs on uninitialised locals), above 250 they saturate
+static float TriScale(float S) { return std::fmax(std::fmin(S, 250.f), 2.f); }
+static void TestCollisionImpl(const std::string& sfx, float (*pick)(Rng&), float cap) {
     // ---- tests without output ----
-    Run("CCollision::TestSphereSphere 0x411E70", [](Rng& r, std::string& d) {
-        const float S = PickGeoScale(r); const CColSphere a = GenSphere(r, S), b = r.below(2) ? GenSphere(r, S, &a.m_vecCenter) : GenSphere(r, S);
+    Run(std::string("CCollision::TestSphereSphere 0x411E70") + sfx, [pick, cap](Rng& r, std::string& d) {
+        const float S = pick(r); const CColSphere a = GenSphere(r, S), b = r.below(2) ? GenSphere(r, S, &a.m_vecCenter) : GenSphere(r, S);
         const bool x = CCollision::TestSphereSphere(a, b), y = oracle::Fn<bool __cdecl(const CColSphere*, const CColSphere*)>(0x411E70)(&a, &b);
         Hit(x); if (x == y) return true;
         d = "a " + Hex(&a, sizeof a) + " b " + Hex(&b, sizeof b) + " got " + (x ? "1" : "0");
         return false;
     });
-    Run("CCollision::TestSphereBox 0x4120C0", [](Rng& r, std::string& d) {
-        const float S = PickGeoScale(r); const CColSphere a = GenSphere(r, S); const CBox b = GenBox(r, S);
+    Run(std::string("CCollision::TestSphereBox 0x4120C0") + sfx, [pick, cap](Rng& r, std::string& d) {
+        const float S = pick(r); const CColSphere a = GenSphere(r, S); const CBox b = GenBox(r, S);
         const CSphere& sp = a;
         const bool x = CCollision::TestSphereBox(sp, b), y = oracle::Fn<bool __cdecl(const CSphere*, const CBox*)>(0x4120C0)(&sp, &b);
         Hit(x); if (x == y) return true;
         d = "sph " + Hex(&sp, sizeof sp) + " box " + Hex(&b, sizeof b) + " got " + (x ? "1" : "0");
         return false;
     });
-    Run("CCollision::PointInTriangle 0x412700", [](Rng& r, std::string& d) {
-        const float S = PickGeoScale(r); CVector tri[3] = { GenV(r, S), GenV(r, S), GenV(r, S) };
+    Run(std::string("CCollision::PointInTriangle 0x412700") + sfx, [pick, cap](Rng& r, std::string& d) {
+        const float S = pick(r); CVector tri[3] = { GenV(r, S), GenV(r, S), GenV(r, S) };
         if (r.below(8) == 0) tri[2] = tri[0];
         CVector p = r.below(3) ? CVector{ (tri[0].x + tri[1].x + tri[2].x) / 3 + GenF(r, S * 0.3f), (tri[0].y + tri[1].y + tri[2].y) / 3 + GenF(r, S * 0.3f), (tri[0].z + tri[1].z + tri[2].z) / 3 + GenF(r, S * 0.3f) } : GenV(r, S);
         if (r.below(5) == 0) p.z = tri[0].z;
@@ -141,9 +143,9 @@ static void TestCollision() {
         d = "p " + V(p) + " tri " + V(tri[0]) + V(tri[1]) + V(tri[2]) + " got " + (x ? "1" : "0");
         return false;
     });
-    auto distTest = [](const char* name, float (*port)(const CVector&, const CVector&, const CVector&), unsigned va) {
-        Run(name, [=](Rng& r, std::string& d) {
-            const float S = PickGeoScale(r); const CVector a = GenV(r, S), b = r.below(10) ? GenV(r, S) : a, p = GenV(r, S);
+    auto distTest = [&](const char* name, float (*port)(const CVector&, const CVector&, const CVector&), unsigned va) {
+        Run(std::string(name) + sfx, [=](Rng& r, std::string& d) {
+            const float S = pick(r); const CVector a = GenV(r, S), b = r.below(10) ? GenV(r, S) : a, p = GenV(r, S);
             const float x = port(a, b, p), y = oracle::Fn<float __cdecl(const CVector*, const CVector*, const CVector*)>(va)(&a, &b, &p);
             if (SameF(x, y)) return true;
             d = "a " + V(a) + " b " + V(b) + " p " + V(p) + " got " + F(x) + " exe " + F(y);
@@ -152,15 +154,15 @@ static void TestCollision() {
     };
     distTest("CCollision::DistToLineSqr 0x412850", &CCollision::DistToLineSqr, 0x412850);
     distTest("CCollision::DistToLine 0x417610", &CCollision::DistToLine, 0x417610);
-    Run("CCollision::DistToMathematicalLine 0x412970", [](Rng& r, std::string& d) {
-        const float S = PickGeoScale(r); const CVector a = GenV(r, S), b = r.below(10) ? GenV(r, S) : a, p = GenV(r, S);
+    Run(std::string("CCollision::DistToMathematicalLine 0x412970") + sfx, [pick, cap](Rng& r, std::string& d) {
+        const float S = pick(r); const CVector a = GenV(r, S), b = r.below(10) ? GenV(r, S) : a, p = GenV(r, S);
         const float x = CCollision::DistToMathematicalLine(&a, &b, &p), y = oracle::Fn<float __cdecl(const CVector*, const CVector*, const CVector*)>(0x412970)(&a, &b, &p);
         if (SameF(x, y)) return true;
         d = "a " + V(a) + " b " + V(b) + " p " + V(p) + " got " + F(x) + " exe " + F(y);
         return false;
     });
-    Run("CCollision::ClosestPointOnLine 0x417FD0", [](Rng& r, std::string& d) {
-        const float S = PickGeoScale(r); const CVector a = GenV(r, S), b = r.below(10) ? GenV(r, S) : a, p = GenV(r, S);
+    Run(std::string("CCollision::ClosestPointOnLine 0x417FD0") + sfx, [pick, cap](Rng& r, std::string& d) {
+        const float S = pick(r); const CVector a = GenV(r, S), b = r.below(10) ? GenV(r, S) : a, p = GenV(r, S);
         CVector x{ 7, 8, 9 }, y{ 7, 8, 9 };
         CCollision::ClosestPointOnLine(a, b, p, x);
         oracle::Fn<void __cdecl(const CVector*, const CVector*, const CVector*, CVector*)>(0x417FD0)(&a, &b, &p, &y);
@@ -168,30 +170,30 @@ static void TestCollision() {
         d = "a " + V(a) + " b " + V(b) + " p " + V(p) + " got " + V(x) + " exe " + V(y);
         return false;
     });
-    Run("CCollision::TestLineSphere 0x417470", [](Rng& r, std::string& d) {
-        const float S = PickGeoScale(r); const CColLine l = GenLine(r, S); const CColSphere s = GenSphere(r, S, r.below(2) ? &l.m_vecStart : nullptr);
+    Run(std::string("CCollision::TestLineSphere 0x417470") + sfx, [pick, cap](Rng& r, std::string& d) {
+        const float S = pick(r); const CColLine l = GenLine(r, S); const CColSphere s = GenSphere(r, S, r.below(2) ? &l.m_vecStart : nullptr);
         const bool x = CCollision::TestLineSphere(l, s), y = oracle::Fn<bool __cdecl(const CColLine*, const CColSphere*)>(0x417470)(&l, &s);
         Hit(x); if (x == y) return true;
         d = "line " + Hex(&l, sizeof l) + " sph " + Hex(&s, sizeof s) + " got " + (x ? "1" : "0");
         return false;
     });
-    Run("CCollision::TestLineBox_DW 0x412C70", [](Rng& r, std::string& d) {
-        const float S = PickGeoScale(r); const CColLine l = GenLine(r, S); const CBox b = GenBox(r, S);
+    Run(std::string("CCollision::TestLineBox_DW 0x412C70") + sfx, [pick, cap](Rng& r, std::string& d) {
+        const float S = pick(r); const CColLine l = GenLine(r, S); const CBox b = GenBox(r, S);
         const bool x = CCollision::TestLineBox_DW(l, b), y = oracle::Fn<bool __cdecl(const CColLine*, const CBox*)>(0x412C70)(&l, &b);
         Hit(x); if (x == y) return true;
         d = "line " + Hex(&l, sizeof l) + " box " + Hex(&b, sizeof b) + " got " + (x ? "1" : "0");
         return false;
     });
-    Run("CCollision::TestLineTriangle 0x413AC0", [](Rng& r, std::string& d) {
-        const float S = PickGeoScale(r); const CColLine l = GenLine(r, std::fmin(S, 250.f)); const TriIn t = GenTri(r, std::fmin(S, 250.f));
+    Run(std::string("CCollision::TestLineTriangle 0x413AC0") + sfx, [pick, cap](Rng& r, std::string& d) {
+        const float S = pick(r); const CColLine l = GenLine(r, std::fmin(S, cap)); const TriIn t = GenTri(r, TriScale(S));
         const bool x = CCollision::TestLineTriangle(l, t.verts(), t.tri, t.pl());
         const bool y = oracle::Fn<bool __cdecl(const CColLine*, const CompressedVector*, const CColTriangle*, const CColTrianglePlane*)>(0x413AC0)(&l, t.verts(), &t.tri, &t.pl());
         Hit(x); if (x == y) return true;
         d = "line " + Hex(&l, sizeof l) + " " + TriS(t) + " got " + (x ? "1" : "0");
         return false;
     });
-    Run("CCollision::TestSphereTriangle 0x4165B0", [](Rng& r, std::string& d) {
-        const float S = std::fmin(PickGeoScale(r), 250.f); const TriIn t = GenTri(r, S); const CVector c = t.Vert(t.tri.vA); const CColSphere s = GenSphere(r, S, r.below(3) ? &c : nullptr);
+    Run(std::string("CCollision::TestSphereTriangle 0x4165B0") + sfx, [pick, cap](Rng& r, std::string& d) {
+        const float S = std::fmin(pick(r), cap); const TriIn t = GenTri(r, TriScale(S)); const CVector c = t.Vert(t.tri.vA); const CColSphere s = GenSphere(r, S, r.below(3) ? &c : nullptr);
         const bool x = CCollision::TestSphereTriangle(s, t.verts(), t.tri, t.pl());
         const bool y = oracle::Fn<bool __cdecl(const CColSphere*, const CompressedVector*, const CColTriangle*, const CColTrianglePlane*)>(0x4165B0)(&s, t.verts(), &t.tri, &t.pl());
         Hit(x); if (x == y) return true;
@@ -200,41 +202,41 @@ static void TestCollision() {
     });
 
     // ---- Process*: ret + colpoint + float in/out (+ poly) ----
-    Run("CCollision::ProcessSphereBox 0x412130", [](Rng& r, std::string& d) {
-        const float S = PickGeoScale(r); const CColSphere s = GenSphere(r, S); const CColBox b = GenColBox(r, S);
+    Run(std::string("CCollision::ProcessSphereBox 0x412130") + sfx, [pick, cap](Rng& r, std::string& d) {
+        const float S = pick(r); const CColSphere s = GenSphere(r, S); const CColBox b = GenColBox(r, S);
         const uint32_t seed = r.u32(); COut a, e; FillOut(a, seed); e = a;
         a.t = r.below(3) ? r.f01() * S * S : GenF(r, S); e.t = a.t;
         const bool ra = CCollision::ProcessSphereBox(s, b, a.cp, a.t);
         const bool rb = oracle::Fn<bool __cdecl(const CColSphere*, const CColBox*, CColPoint*, float*)>(0x412130)(&s, &b, &e.cp, &e.t);
         return CmpProc(ra, a, rb, e, false, d, ("sph " + Hex(&s, sizeof s) + " box " + Hex(&b, sizeof b) + " t0 " + F(e.t)).c_str());
     });
-    Run("CCollision::ProcessSphereSphere 0x416450", [](Rng& r, std::string& d) {
-        const float S = PickGeoScale(r); const CColSphere s1 = GenSphere(r, S), s2 = GenSphere(r, S, r.below(2) ? &s1.m_vecCenter : nullptr);
+    Run(std::string("CCollision::ProcessSphereSphere 0x416450") + sfx, [pick, cap](Rng& r, std::string& d) {
+        const float S = pick(r); const CColSphere s1 = GenSphere(r, S), s2 = GenSphere(r, S, r.below(2) ? &s1.m_vecCenter : nullptr);
         COut a, e; FillOut(a, r.u32()); e = a; a.t = e.t = r.below(3) ? r.f01() * S : GenF(r, S);
         const float t0 = a.t;
         const bool ra = CCollision::ProcessSphereSphere(s1, s2, a.cp, a.t);
         const bool rb = oracle::Fn<bool __cdecl(const CColSphere*, const CColSphere*, CColPoint*, float*)>(0x416450)(&s1, &s2, &e.cp, &e.t);
         return CmpProc(ra, a, rb, e, false, d, ("s1 " + Hex(&s1, sizeof s1) + " s2 " + Hex(&s2, sizeof s2) + " t0 " + F(t0)).c_str());
     });
-    Run("CCollision::ProcessLineSphere 0x412AA0", [](Rng& r, std::string& d) {
-        const float S = PickGeoScale(r); const CColLine l = GenLine(r, S); const CColSphere s = GenSphere(r, S, r.below(2) ? &l.m_vecStart : nullptr);
+    Run(std::string("CCollision::ProcessLineSphere 0x412AA0") + sfx, [pick, cap](Rng& r, std::string& d) {
+        const float S = pick(r); const CColLine l = GenLine(r, S); const CColSphere s = GenSphere(r, S, r.below(2) ? &l.m_vecStart : nullptr);
         COut a, e; FillOut(a, r.u32()); e = a; a.t = e.t = GenLineT0(r);
         const float t0 = a.t;
         const bool ra = CCollision::ProcessLineSphere(l, s, a.cp, a.t);
         const bool rb = oracle::Fn<bool __cdecl(const CColLine*, const CColSphere*, CColPoint*, float*)>(0x412AA0)(&l, &s, &e.cp, &e.t);
         return CmpProc(ra, a, rb, e, false, d, ("line " + Hex(&l, sizeof l) + " sph " + Hex(&s, sizeof s) + " t0 " + F(t0)).c_str());
     });
-    Run("CCollision::ProcessLineBox 0x413100", [](Rng& r, std::string& d) {
-        const float S = PickGeoScale(r); const CColLine l = GenLine(r, S); const CColBox b = GenColBox(r, S);
+    Run(std::string("CCollision::ProcessLineBox 0x413100") + sfx, [pick, cap](Rng& r, std::string& d) {
+        const float S = pick(r); const CColLine l = GenLine(r, S); const CColBox b = GenColBox(r, S);
         COut a, e; FillOut(a, r.u32()); e = a; a.t = e.t = GenLineT0(r);
         const float t0 = a.t;
         const bool ra = CCollision::ProcessLineBox(l, b, a.cp, a.t);
         const bool rb = oracle::Fn<bool __cdecl(const CColLine*, const CColBox*, CColPoint*, float*)>(0x413100)(&l, &b, &e.cp, &e.t);
         return CmpProc(ra, a, rb, e, false, d, ("line " + Hex(&l, sizeof l) + " box " + Hex(&b, sizeof b) + " t0 " + F(t0)).c_str());
     });
-    auto lineTri = [](const char* name, unsigned va, bool vertical, bool (*port)(const CColLine&, const CompressedVector*, const CColTriangle&, const CColTrianglePlane&, CColPoint&, float&, CStoredCollPoly*)) {
-        Run(name, [=](Rng& r, std::string& d) {
-            const float S = std::fmin(PickGeoScale(r), 250.f); const CColLine l = GenLine(r, S, vertical && r.below(10)); const TriIn t = GenTri(r, S);
+    auto lineTri = [&](const char* name, unsigned va, bool vertical, bool (*port)(const CColLine&, const CompressedVector*, const CColTriangle&, const CColTrianglePlane&, CColPoint&, float&, CStoredCollPoly*)) {
+        Run(std::string(name) + sfx, [=](Rng& r, std::string& d) {
+            const float S = std::fmin(pick(r), cap); const CColLine l = GenLine(r, S, vertical && r.below(10)); const TriIn t = GenTri(r, TriScale(S));
             const bool withPoly = r.below(2);
             COut a, e; FillOut(a, r.u32()); e = a; a.t = e.t = GenLineT0(r);
             const float t0 = a.t;
@@ -247,14 +249,22 @@ static void TestCollision() {
     };
     lineTri("CCollision::ProcessLineTriangle 0x4140F0", 0x4140F0, false, &CCollision::ProcessLineTriangle);
     lineTri("CCollision::ProcessVerticalLineTriangle 0x4147E0", 0x4147E0, true, &CCollision::ProcessVerticalLineTriangle);
-    Run("CCollision::ProcessSphereTriangle 0x416BA0", [](Rng& r, std::string& d) {
-        const float S = std::fmin(PickGeoScale(r), 250.f); const TriIn t = GenTri(r, S, true); const CVector c = t.Vert(t.tri.vB); CColSphere s = GenSphere(r, S, r.below(3) ? &c : nullptr);
-        // a NaN sphere makes all three edge tests fail (numPassed == 0): the exe then continues with uninitialised locals (UB, not reproducible)
-        if (std::isnan(s.m_vecCenter.x) || std::isnan(s.m_vecCenter.y) || std::isnan(s.m_vecCenter.z) || std::isnan(s.m_fRadius)) return true;
+    Run(std::string("CCollision::ProcessSphereTriangle 0x416BA0") + sfx, [pick, cap](Rng& r, std::string& d) {
+        const float S = std::fmin(pick(r), cap); const TriIn t = GenTri(r, TriScale(S), true); const CVector c = t.Vert(t.tri.vB); CColSphere s = GenSphere(r, S, r.below(3) ? &c : nullptr);
+        // a NaN sphere makes all three edge tests fail (numPassed == 0): the exe then continues with uninitialised locals (UB, not reproducible). An INFINITE centre does the same
+        // (inf - inf = NaN in the edge tests: found by the stream F pilot, the old x87 port has the same 4 'mismatches' in 100,000 cases); an infinite RADIUS is a valid input
+        if (!std::isfinite(s.m_vecCenter.x) || !std::isfinite(s.m_vecCenter.y) || !std::isfinite(s.m_vecCenter.z) || std::isnan(s.m_fRadius)) return true;
         COut a, e; FillOut(a, r.u32()); e = a; a.t = e.t = r.below(3) ? 1.0f + r.f01() * S : GenF(r, 2.f);
         const float t0 = a.t;
         const bool ra = CCollision::ProcessSphereTriangle(s, t.verts(), t.tri, t.pl(), a.cp, a.t);
         const bool rb = oracle::Fn<bool __cdecl(const CColSphere*, const CompressedVector*, const CColTriangle*, const CColTrianglePlane*, CColPoint*, float*)>(0x416BA0)(&s, t.verts(), &t.tri, &t.pl(), &e.cp, &e.t);
         return CmpProc(ra, a, rb, e, false, d, ("sph " + Hex(&s, sizeof s) + " " + TriS(t) + " t0 " + F(t0)).c_str());
     });
+}
+
+// scales for the stream F wide-range rows: squares of 1e19+ overflow a float but not the x87's extended exponent, squares of 1e-20 underflow into denormals (triangles stay in their int16/128 range)
+static float PickGeoScaleWide(Rng& r) { static const float sc[] = { 1e-18f, 1e-10f, 1e-3f, 1.f, 100.f, 3000.f, 1e10f, 1e18f, 1e19f, 3e19f, 1e25f, 1e30f }; return sc[r.below(12)]; }
+static void TestCollision() {
+    TestCollisionImpl("", PickGeoScale, 250.f);
+    TestCollisionImpl(" [wide range]", PickGeoScaleWide, 1e30f);
 }

@@ -466,6 +466,70 @@ static void TestAnimNode() {
 #include "game_oracle_collision.inc"
 
 // ---------------------------------------------------------------------------------------------------------------------------------
+
+// ---- micro benchmark (env BENCH=1): ns per call of the port vs the exe's own machine code on identical inputs, both at PC=24. Stream F: the port is x87 or SSE2 depending on the TU ----
+#include <intrin.h>
+#include "Core/Fp.h"
+static long long NowT() { LARGE_INTEGER q; QueryPerformanceCounter(&q); return q.QuadPart; }
+template<class P, class E>
+static void Bench(const char* name, int n, P&& port, E&& exe) {
+    long long bp = 1LL << 60, be = 1LL << 60;
+    for (int rep = 0; rep < 9; ++rep) {
+        long long t0 = NowT(); port(); long long t1 = NowT(); exe(); long long t2 = NowT();
+        if (t1 - t0 < bp) bp = t1 - t0; if (t2 - t1 < be) be = t2 - t1;
+    }
+    SetPC(53);
+    LARGE_INTEGER f; QueryPerformanceFrequency(&f);
+    const double ps = (double)bp * 1e9 / (double)f.QuadPart / n, es = (double)be * 1e9 / (double)f.QuadPart / n;
+    std::printf("[fp slow-path calls so far: %u] ", notsa::fp::SlowPathCount());
+    std::printf("%-34s port %8.1f ns/call   exe %8.1f ns/call   port/exe %.2f\n", name, ps, es, ps / es);
+    SetPC(24);
+}
+static void TestBench() {
+    SetPC(24);
+    const int N = 3000;
+    {
+        std::vector<TriIn> tris; std::vector<CColSphere> sph; std::vector<CColLine> lines; std::vector<CColBox> boxes; std::vector<CVector> vecs;
+        for (int i = 0; i < N; ++i) { Rng r(0xC0FFEEull + (uint64_t)i * 7919); r.sp = 0; const float S = 10.f; tris.push_back(GenTri(r, S, true)); sph.push_back(GenSphere(r, S, nullptr)); lines.push_back(GenLine(r, S)); boxes.push_back(GenColBox(r, S)); vecs.push_back(GenV(r, S)); }
+        // make some spheres touch the triangles
+        for (int i = 0; i < N; i += 2) { Rng r(77 + i); const CVector c = tris[i].Vert(tris[i].tri.vA); sph[i] = GenSphere(r, 10.f, &c); }
+        volatile int sink = 0;
+        Bench("CCollision::TestSphereTriangle", N,
+            [&] { int a = 0; for (int i = 0; i < N; ++i) a += CCollision::TestSphereTriangle(sph[i], tris[i].verts(), tris[i].tri, tris[i].pl()); sink = a; },
+            [&] { int a = 0; auto f = oracle::Fn<bool __cdecl(const CColSphere*, const CompressedVector*, const CColTriangle*, const CColTrianglePlane*)>(0x4165B0); for (int i = 0; i < N; ++i) a += f(&sph[i], tris[i].verts(), &tris[i].tri, &tris[i].pl()); sink = a; });
+        Bench("CCollision::TestLineTriangle", N,
+            [&] { int a = 0; for (int i = 0; i < N; ++i) a += CCollision::TestLineTriangle(lines[i], tris[i].verts(), tris[i].tri, tris[i].pl()); sink = a; },
+            [&] { int a = 0; auto f = oracle::Fn<bool __cdecl(const CColLine*, const CompressedVector*, const CColTriangle*, const CColTrianglePlane*)>(0x413AC0); for (int i = 0; i < N; ++i) a += f(&lines[i], tris[i].verts(), &tris[i].tri, &tris[i].pl()); sink = a; });
+        Bench("CCollision::TestSphereSphere", N,
+            [&] { int a = 0; for (int i = 0; i < N; ++i) a += CCollision::TestSphereSphere(sph[i], sph[(i + 1) % N]); sink = a; },
+            [&] { int a = 0; auto f = oracle::Fn<bool __cdecl(const CColSphere*, const CColSphere*)>(0x411E70); for (int i = 0; i < N; ++i) a += f(&sph[i], &sph[(i + 1) % N]); sink = a; });
+        Bench("CCollision::ProcessLineSphere", N,
+            [&] { int a = 0; CColPoint cp; float t; for (int i = 0; i < N; ++i) { t = 1.f; a += CCollision::ProcessLineSphere(lines[i], sph[i], cp, t); } sink = a; },
+            [&] { int a = 0; CColPoint cp; float t; auto f = oracle::Fn<bool __cdecl(const CColLine*, const CColSphere*, CColPoint*, float*)>(0x412AA0); for (int i = 0; i < N; ++i) { t = 1.f; a += f(&lines[i], &sph[i], &cp, &t); } sink = a; });
+        Bench("CCollision::TestLineSphere", N,
+            [&] { int a = 0; for (int i = 0; i < N; ++i) a += CCollision::TestLineSphere(lines[i], sph[i]); sink = a; },
+            [&] { int a = 0; auto f = oracle::Fn<bool __cdecl(const CColLine*, const CColSphere*)>(0x417470); for (int i = 0; i < N; ++i) a += f(&lines[i], &sph[i]); sink = a; });
+        Bench("CCollision::ProcessSphereSphere", N,
+            [&] { int a = 0; CColPoint cp; float t; for (int i = 0; i < N; ++i) { t = 5.f; a += CCollision::ProcessSphereSphere(sph[i], sph[(i + 1) % N], cp, t); } sink = a; },
+            [&] { int a = 0; CColPoint cp; float t; auto f = oracle::Fn<bool __cdecl(const CColSphere*, const CColSphere*, CColPoint*, float*)>(0x416450); for (int i = 0; i < N; ++i) { t = 5.f; a += f(&sph[i], &sph[(i + 1) % N], &cp, &t); } sink = a; });
+        Bench("CCollision::ProcessSphereTriangle", N,
+            [&] { int a = 0; CColPoint cp; float t; for (int i = 0; i < N; ++i) { t = 5.f; a += CCollision::ProcessSphereTriangle(sph[i], tris[i].verts(), tris[i].tri, tris[i].pl(), cp, t); } sink = a; },
+            [&] { int a = 0; CColPoint cp; float t; auto f = oracle::Fn<bool __cdecl(const CColSphere*, const CompressedVector*, const CColTriangle*, const CColTrianglePlane*, CColPoint*, float*)>(0x416BA0); for (int i = 0; i < N; ++i) { t = 5.f; a += f(&sph[i], tris[i].verts(), &tris[i].tri, &tris[i].pl(), &cp, &t); } sink = a; });
+        Bench("CCollision::ProcessLineTriangle", N,
+            [&] { int a = 0; CColPoint cp; float t; for (int i = 0; i < N; ++i) { t = 1.f; a += CCollision::ProcessLineTriangle(lines[i], tris[i].verts(), tris[i].tri, tris[i].pl(), cp, t, nullptr); } sink = a; },
+            [&] { int a = 0; CColPoint cp; float t; auto f = oracle::Fn<bool __cdecl(const CColLine*, const CompressedVector*, const CColTriangle*, const CColTrianglePlane*, CColPoint*, float*, CStoredCollPoly*)>(0x4140F0); for (int i = 0; i < N; ++i) { t = 1.f; a += f(&lines[i], tris[i].verts(), &tris[i].tri, &tris[i].pl(), &cp, &t, nullptr); } sink = a; });
+        Bench("CCollision::TestLineBox_DW", N,
+            [&] { int a = 0; for (int i = 0; i < N; ++i) a += CCollision::TestLineBox_DW(lines[i], boxes[i]); sink = a; },
+            [&] { int a = 0; auto f = oracle::Fn<bool __cdecl(const CColLine*, const CBox*)>(0x412C70); for (int i = 0; i < N; ++i) a += f(&lines[i], &boxes[i]); sink = a; });
+        Bench("CVector::Normalise", N,
+            [&] { CVector v; float s = 0; for (int i = 0; i < N; ++i) { v = vecs[i]; v.Normalise(); s += v.x; } sink = (int)s; },
+            [&] { CVector v; float s = 0; auto f = oracle::Fn<void __fastcall(CVector*, int)>(0x59C910); for (int i = 0; i < N; ++i) { v = vecs[i]; f(&v, 0); s += v.x; } sink = (int)s; });
+        Bench("CVector::Magnitude", N,
+            [&] { float s = 0; for (int i = 0; i < N; ++i) s += vecs[i].Magnitude(); sink = (int)s; },
+            [&] { float s = 0; auto f = oracle::Fn<float __fastcall(const CVector*, int)>(0x4082C0); for (int i = 0; i < N; ++i) s += f(&vecs[i], 0); sink = (int)s; });
+    }
+}
+
 int main(int argc, char** argv) {
     std::setvbuf(stdout, nullptr, _IONBF, 0);
     for (int i = 1; i < argc; ++i) {
@@ -483,6 +547,7 @@ int main(int argc, char** argv) {
     oracle::Patch(0x82872C, (void*)&HostMathErr);
     oracle::Patch(0x827B3D, (void*)&HostGetPtd);
     std::printf("game_oracle_test: %d cases per function and precision mode; PC24 = game mode (D3D CreateDevice), PC53 = CRT default\n", g_cases);
+    if (std::getenv("BENCH")) { TestBench(); return 0; }
     TestVectorGeneral();
     TestMatrixQuat();
     TestAnimNode();
@@ -490,5 +555,6 @@ int main(int argc, char** argv) {
     int bad24 = 0, bad53 = 0, hard24 = 0, hard53 = 0;
     for (auto& r : g_rows) { bad24 += r.bad24; bad53 += r.bad53; hard24 += r.hardReg24 + r.hardSpec24; hard53 += r.hardReg53 + r.hardSpec53; }
     std::printf("\n%zu functions, mismatches (strict / excluding NaN-payload-only): PC24 %d / %d, PC53 %d / %d\n", g_rows.size(), bad24, hard24, bad53, hard53);
+    std::printf("notsa::fp slow-path (F24) calls: %u\n", notsa::fp::SlowPathCount());
     return hard24 ? 1 : 0;
 }

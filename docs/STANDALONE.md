@@ -71,7 +71,10 @@ Environment variables (all optional, run build only):
 * `NOTSA_STANDALONE_SKIP_VIDEOS=1` - skip the intro videos (the original also waits for a key in PLAYING_LOGO when DirectShow fails).
 * `NOTSA_STANDALONE_INPUT=<file|script>` - key injector: `wait:<ms>;key:return;down:w;up:w` (newline = `;`); `until:control[:maxms]` / `until:invehicle[:maxms]` hold the script clock until the player has control (ped exists, no menu/cutscene/fade) / is in a vehicle (default max 60000 ms, logs `[until] ... ok|TIMEOUT after N ms`), so later steps are relative to the game being ready (`label:NAME` + `skipif:COND:NAME` jump forward to the label when COND holds, e.g. skip a retry); e.g. `wait:16000;key:return;wait:2500;key:return;wait:2500;key:return` starts a new game.
 * `NOTSA_STANDALONE_SCREENSHOT=<k>` - write `frame_N.bmp` (back buffer) every k-th frame; `..._SCREENSHOT_MAX=<n>` caps the count (default 30).
-* `NOTSA_STANDALONE_VIDEOMODE=<index>` - force a video-mode index (default: first mode with width >= 800; the list is logged).
+  `..._SCREENSHOT_ARM=<mark>` starts the every-k-th-frame cadence only after the input script's `mark:<mark>` (frame-exact bursts without burning `_MAX` in the menu/loading);
+  `..._SCREENSHOT_BURST=<n>` makes a script line `mark:burst_<x>` save the NEXT n Presents as `burst_<x>_00.bmp` .. (consecutive frames, outside the cadence and `_MAX`); every other `mark:<x>` writes one `mark_<x>.bmp`
+  (all of these need `NOTSA_STANDALONE_SCREENSHOT` to be set, a huge k such as 100000 turns the cadence off).
+* `NOTSA_STANDALONE_VIDEOMODE=<index>` - force a video-mode index (default: first mode with width >= 800; the list is logged). NOTE: it is only used when the settings file has no valid mode; a saved `gta_sa.set` (`m_nDisplayVideoMode`, dword at byte 0xB36 of the 2900-byte file in `<Documents>/GTA San Andreas User Files/`) wins (mode 1 = 960x600 R5G6B5, 16 bit, no stencil shadows, is what the settings of a normal run contain; 35 = 1920x1200 X8R8G8B8 on this Mac).
 * `NOTSA_STANDALONE_MEMLOG=1` - log CRT heap / committed memory every 100 frames (leak hunting).
 * `NOTSA_STANDALONE_ALLOCTRACE=<min bytes>` - log the caller of every 200th allocation >= min bytes.
 * `NOTSA_STANDALONE_NOPRESENT=1` - skip `Present` (diagnostics).

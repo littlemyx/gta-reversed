@@ -281,8 +281,54 @@ static void CameraTests(bool device) {
             CHECK(DrawQuadStencilEqual(dev, 0x00, 0xFF0000FFu));   // ...but a test against 0 passes
             CHECK(ReadPixel(dev, 8, 8) == 0xFF0000FFu);
         }
+        // exe 0x7F7F03..0x7F7F3B (main camera = frame buffer raster type != CAMERATEXTURE): the D3D clear flags are TARGET (mode & 1) | ZBUFFER (mode & 2) and STENCIL
+        // whenever Z *or* STENCIL was requested and the device has a stencil buffer: a Z-only clear (Idle()'s `rwCAMERACLEARZ`) clears the stencil to the stencil clear value too
+        if (hasStencil) {
+            RwRGBA black{0, 0, 0, 255};
+            RwD3D9SetStencilClear(0x5A);
+            CHECK(RwCameraClear(cam, &black, rwCAMERACLEARIMAGE | rwCAMERACLEARZ | rwCAMERACLEARSTENCIL) == cam);
+            RwD3D9SetStencilClear(0x07);
+            CHECK(RwCameraClear(cam, &black, rwCAMERACLEARIMAGE | rwCAMERACLEARZ) == cam);       // no STENCIL bit: the exe still clears it
+            CHECK(DrawQuadStencilEqual(dev, 0x5A, 0xFF0000FFu));                                   // old value gone: blue must NOT appear
+            CHECK(ReadPixel(dev, 8, 8) == 0xFF000000u);
+            CHECK(DrawQuadStencilEqual(dev, 0x07, 0xFF00FF00u));                                   // new clear value: green appears
+            CHECK(ReadPixel(dev, 8, 8) == 0xFF00FF00u);
+            RwD3D9SetStencilClear(0x09);
+            RwRGBA red2{255, 0, 0, 255};
+            CHECK(RwCameraClear(cam, &red2, rwCAMERACLEARSTENCIL) == cam);                         // stencil only: no TARGET bit, colour keeps the green
+            CHECK(ReadPixel(dev, 8, 8) == 0xFF00FF00u);
+            CHECK(DrawQuadStencilEqual(dev, 0x09, 0xFFFF00FFu));
+            CHECK(ReadPixel(dev, 8, 8) == 0xFFFF00FFu);
+            RwD3D9SetStencilClear(0);
+            CHECK(RwCameraClear(cam, &black, rwCAMERACLEARIMAGE | rwCAMERACLEARZ) == cam);         // leave the stencil at 0
+        }
         RwCameraEndUpdate(cam);
         CHECK(RwEngineInstance->curCamera == nullptr);
+
+        // camera-texture camera WITHOUT a z raster (the real-time shadow cameras): exe 0x7F7DC8 drops Z and STENCIL (`test al, 6 / ... and al, 0xF9`); without that
+        // IDirect3DDevice9::Clear(TARGET | ZBUFFER) fails as a whole against a NULL depth surface and the colour clear is lost (shadow flicker, .notes/reports/SHADOW.md)
+        {
+            RwRaster* ct = rw::Raster::create(64, 64, 0, rw::Raster::CAMERATEXTURE);
+            RwCamera* tcam = RwCameraCreate();
+            RwFrame*  tf   = RwFrameCreate();
+            CHECK(ct && tcam && tf);
+            RwCameraSetFrame(tcam, tf);
+            RwCameraSetRaster(tcam, ct);
+            CHECK(RwCameraBeginUpdate(tcam) == tcam);
+            RwRGBA blue{0, 0, 255, 255};
+            CHECK(RwCameraClear(tcam, &blue, rwCAMERACLEARIMAGE | rwCAMERACLEARZ) == tcam);
+            std::printf("camera texture pixel after blue clear (Z requested, no z raster): %08X\n", ReadPixel(dev, 8, 8));
+            CHECK(ReadPixel(dev, 8, 8) == 0xFF0000FFu);
+            RwRGBA green{0, 255, 0, 255};
+            CHECK(RwCameraClear(tcam, &green, rwCAMERACLEARIMAGE | rwCAMERACLEARZ | rwCAMERACLEARSTENCIL) == tcam);
+            CHECK(ReadPixel(dev, 8, 8) == 0xFF00FF00u);
+            RwCameraEndUpdate(tcam);
+            RwCameraSetRaster(tcam, nullptr);
+            RwCameraSetFrame(tcam, nullptr);
+            CHECK(RwCameraDestroy(tcam) == TRUE);
+            RwFrameDestroy(tf);
+            ct->destroy();
+        }
         CHECK(RwCameraShowRaster(cam, nullptr, 0) == cam);
         CHECK(RwCameraClear(cam, &red, rwCAMERACLEARIMAGE) == cam);   // outside Begin/EndUpdate is allowed too
         CHECK(RwD3D9CameraAttachWindow(cam, nullptr) == TRUE);

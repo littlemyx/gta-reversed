@@ -143,6 +143,16 @@ void BuildExeModeList() {
     for (int i = 0; i < g.numModes && i < 64; i++) {
         notsa::standalone::Fixups::Log("  mode %d: %ux%u fmt %d rr %u flags %d", i, g.modes[i].mode.Width, g.modes[i].mode.Height, (int)g.modes[i].mode.Format, g.modes[i].mode.RefreshRate, (int)g.modes[i].flags);
     }
+    // depth/stencil formats the device accepts per display format (the exe tries D15S1 -> D16 in 16 bit, D24S8 -> D24X4S4 -> D32 -> D24X8 in 32 bit, 0x7F6DF1..0x7F6FED)
+    for (const D3DFORMAT disp : { D3DFMT_R5G6B5, D3DFMT_X8R8G8B8 }) {
+        notsa::standalone::Fixups::Log("  depth formats for display fmt %d: D16=%d D15S1=%d D24S8=%d D24X4S4=%d D24X8=%d D32=%d", (int)disp,
+            g.d3d9->CheckDeviceFormat((UINT)g.adapter, D3DDEVTYPE_HAL, disp, D3DUSAGE_DEPTHSTENCIL, D3DRTYPE_SURFACE, D3DFMT_D16) == D3D_OK,
+            g.d3d9->CheckDeviceFormat((UINT)g.adapter, D3DDEVTYPE_HAL, disp, D3DUSAGE_DEPTHSTENCIL, D3DRTYPE_SURFACE, D3DFMT_D15S1) == D3D_OK,
+            g.d3d9->CheckDeviceFormat((UINT)g.adapter, D3DDEVTYPE_HAL, disp, D3DUSAGE_DEPTHSTENCIL, D3DRTYPE_SURFACE, D3DFMT_D24S8) == D3D_OK,
+            g.d3d9->CheckDeviceFormat((UINT)g.adapter, D3DDEVTYPE_HAL, disp, D3DUSAGE_DEPTHSTENCIL, D3DRTYPE_SURFACE, D3DFMT_D24X4S4) == D3D_OK,
+            g.d3d9->CheckDeviceFormat((UINT)g.adapter, D3DDEVTYPE_HAL, disp, D3DUSAGE_DEPTHSTENCIL, D3DRTYPE_SURFACE, D3DFMT_D24X8) == D3D_OK,
+            g.d3d9->CheckDeviceFormat((UINT)g.adapter, D3DDEVTYPE_HAL, disp, D3DUSAGE_DEPTHSTENCIL, D3DRTYPE_SURFACE, D3DFMT_D32) == D3D_OK);
+    }
 #endif
 }
 

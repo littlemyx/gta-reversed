@@ -172,6 +172,13 @@ RwCamera* RwCameraClear(RwCamera* camera, RwRGBA* colour, RwInt32 clearMode) {
     if (!camera->zBuffer) {
         mode &= ~static_cast<RwUInt32>(rwCAMERACLEARZ | rwCAMERACLEARSTENCIL);
     }
+    // The exe's main-camera path (frame buffer raster type != CAMERATEXTURE, `cmp byte [raster + 0x20], 5` at 0x7F7C48 -> 0x7F7F03..0x7F7F3B) builds the D3D clear flags as
+    // TARGET (mode & 1) | ZBUFFER (mode & 2) and ORs STENCIL whenever Z *or* STENCIL was requested and the device has a stencil buffer (`_RwHasStencilBuffer`, 0xC97C3C):
+    // a Z-only clear of the main camera (Idle()'s `rwCAMERACLEARZ` clear, WinMain, PostEffects) clears the stencil buffer too. Camera-texture rasters (path 1,
+    // 0x7F7D79..0x7F7DF8) use the requested bits unchanged (minus Z/STENCIL without a z raster, handled above).
+    if (camera->frameBuffer->type != rw::Raster::CAMERATEXTURE && (mode & (rwCAMERACLEARZ | rwCAMERACLEARSTENCIL)) && DepthFormatHasStencil(d3d9Globals.present.AutoDepthStencilFormat)) {
+        mode |= rwCAMERACLEARSTENCIL;
+    }
     RwRGBA black{0, 0, 0, 0};
     camera->clear(colour ? colour : &black, mode); // sets the render surfaces + viewport, clears with stencil value 0
     if ((mode & rwCAMERACLEARSTENCIL) && s_StencilClear != 0) {
@@ -185,8 +192,15 @@ RwCamera* RwCameraClear(RwCamera* camera, RwRGBA* colour, RwInt32 clearMode) {
 #ifdef NOTSA_STANDALONE_RUN
 // S5: NOTSA_STANDALONE_SCREENSHOT=<k> writes frame_<n>.bmp (back buffer, 24 bit) into the current directory before every k-th Present (k>=1, first 30 files)
 static char s_MarkShot[48];   // pending "mark_<name>.bmp" request from the input script's `mark:` lines (outside the cadence and the cap)
+static int  s_BurstLeft = 0, s_BurstTotal = 0;   // NOTSA_STANDALONE_SCREENSHOT_BURST=<n>: a script `mark:burst_<x>` saves the next n Presents as burst_<x>_<k>.bmp (consecutive frames)
+static char s_BurstName[48];
 static bool s_ShotArmed = false;   // NOTSA_STANDALONE_SCREENSHOT_ARM=<mark>: the every-k-th-frame cadence only starts once the input script reached `mark:<mark>` (frame-exact bursts)
 void RequestMarkScreenshot(const char* name) {
+    if (const char* b = std::getenv("NOTSA_STANDALONE_SCREENSHOT_BURST"); b && std::strncmp(name, "burst", 5) == 0 && std::atoi(b) > 0) {
+        s_BurstLeft = s_BurstTotal = std::atoi(b);
+        std::snprintf(s_BurstName, sizeof(s_BurstName), "%s", name);
+        return;
+    }
     if (const char* arm = std::getenv("NOTSA_STANDALONE_SCREENSHOT_ARM"); arm && std::strcmp(arm, name) == 0) {
         s_ShotArmed = true;
         return;
@@ -203,7 +217,10 @@ static void ShimDumpBackBuffer() {
         s_Every = e ? (std::atoi(e) > 0 ? std::atoi(e) : 1) : -1;
     }
     char markName[48]{};
-    if (s_MarkShot[0]) {
+    if (s_BurstLeft > 0) {
+        std::snprintf(markName, sizeof(markName), "%s_%02d.bmp", s_BurstName, s_BurstTotal - s_BurstLeft);
+        s_BurstLeft--;
+    } else if (s_MarkShot[0]) {
         std::memcpy(markName, s_MarkShot, sizeof(markName));
         s_MarkShot[0] = 0;
     } else if ((std::getenv("NOTSA_STANDALONE_SCREENSHOT_ARM") && !s_ShotArmed) || s_Every < 0 || s_Written >= (std::getenv("NOTSA_STANDALONE_SCREENSHOT_MAX") ? std::atoi(std::getenv("NOTSA_STANDALONE_SCREENSHOT_MAX")) : 30) || (s_Frame++ % s_Every) != 0) {

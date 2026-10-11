@@ -147,6 +147,16 @@ print("errors: %d" % len(errs))
 for e in errs[:14]: print("  " + e)
 print("game [error] log lines (grouped): %d kinds" % len(softerr))
 for k, n in sorted(softerr.items(), key=lambda kv: -kv[1])[:6]: print("  %5dx %s" % (n, k))
+gate_to = [l.strip()[:90] for l in sl if "[until]" in l and "TIMEOUT" in l]
+if gate_to:
+    print("gate timeouts: %d (a route step never saw its condition, e.g. the START GAME click missed and the game sits in OPTIONS/menu, or CJ never got control): first: %s" % (len(gate_to), gate_to[0]))
+qs = [m for m in marks if m[0] == "quit_sent"]
+if qs and not clean_exit:
+    after = [p for p in mem if p[0] > qs[0][2]]
+    if after:
+        print("QUIT NOT EFFECTIVE: the game kept running after quit_sent (%d frames in %.0f s): the pause menu did not take QUIT (CJ wasted/busted/in a scene?), NOT a shutdown hang - see shots/mark_quit_*.png" % (after[-1][1] - after[0][1], (after[-1][0] - qs[0][2]) / 1000))
+    else:
+        print("SHUTDOWN HANG: no frame logged after quit_sent and no atexit (the game thread is stuck in or before the shutdown path)")
 crash = bool(errs) or timeout or (not clean_exit and not any(n == "quit_sent" for n in order)) or not marks
 print("RESULT:", "FAIL" if crash else "OK")
 print("=" * 78)

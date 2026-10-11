@@ -262,6 +262,9 @@ wait:3000
 mark:idle_start
 wait:@IDLE_MS@
 mark:idle_end
+# the pause menu does not open while CJ is wasted/busted (hospital/police respawn scene, e.g. killed during the idle phase): wait for control first, otherwise
+# the whole quit sequence is swallowed and the game keeps running after quit_sent (soak.sh reports this as 'QUIT NOT EFFECTIVE', not as a shutdown hang)
+until:control:90000
 # quit: ESC opens the pause menu; the menu follows the pointer, so hover QUIT GAME (window 960x600: 480,440) instead of relying on the initial
 # keyboard selection (a stray real mouse movement over the window once left the selection on another item and the sequence ended in LOAD GAME);
 # RETURN opens the confirmation (NO is preselected), DOWN selects YES, RETURN

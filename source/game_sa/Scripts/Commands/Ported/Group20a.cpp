@@ -31,6 +31,8 @@
 #include "Entity/Object/Object.h"
 #include "TaskSimpleSwim.h"
 #include "TaskComplexDrivePointRoute.h"
+#include "game_sa/DetachedShared.h"
+#line 34
 
 using namespace notsa::script;
 using namespace notsa::script::commands::ported::g09_12;
@@ -65,7 +67,7 @@ static_assert(MISSION_CLEANUP_ENTITY_TYPE_DECISION_MAKER == 9 && SCRIPT_THING_DE
 
 namespace {
 //! 0xC18D50: the route that FLUSH_ROUTE / EXTEND_ROUTE build and the point-route tasks consume
-CPointRoute& ScriptRoute() { return StaticRef<CPointRoute>(0xC18D50); }
+CPointRoute& ScriptRoute() { return NOTSA_GLOBAL_EXPR(0xC18D50, (CPointRoute), notsa::shared::ScriptRoute); }
 
 //! 0x59C910 (`CVector::Normalise`): the squared length and the inverse length stay in extended precision.
 //! A non-positive squared length only sets `x = 1.0f` (y and z are left as they are); NaN goes the regular (sqrt) way.

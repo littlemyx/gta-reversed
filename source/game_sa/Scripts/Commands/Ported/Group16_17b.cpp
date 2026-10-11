@@ -36,6 +36,8 @@
 #include "TaskComplexArrestPed.h"
 #include "SeekEntity/TaskComplexSeekEntityStandard.h"
 #include "SeekEntity/TaskComplexSeekEntityRadiusAngleOffset.h"
+#include "game_sa/DetachedShared.h"
+#line 39
 
 // Registered by the central registration (Commands.hpp / RunningScript.cpp, orchestrator)
 namespace notsa::script::commands::ported::g17b {
@@ -65,10 +67,10 @@ namespace {
 constexpr float DEG_TO_RAD_F = std::bit_cast<float>(0x3C8EFA35u);
 
 //! 0xC18D50: the route that FLUSH_ROUTE / EXTEND_ROUTE build and TASK_FOLLOW_POINT_ROUTE / TASK_DRIVE_POINT_ROUTE consume
-CPointRoute& ScriptRoute() { return StaticRef<CPointRoute>(0xC18D50); }
+CPointRoute& ScriptRoute() { return NOTSA_GLOBAL_EXPR(0xC18D50, (CPointRoute), notsa::shared::ScriptRoute); }
 
 //! 0x8D237C: set by SET_NEXT_DESIRED_MOVE_STATE, consumed (and reset to PEDMOVE_RUN = 6) by the TASK_GOTO_CHAR_OFFSET family
-eMoveState& NextDesiredMoveState() { return StaticRef<eMoveState>(0x8D237C); }
+eMoveState& NextDesiredMoveState() { return NOTSA_GLOBAL_EXPR(0x8D237C, (eMoveState), notsa::shared::NextDesiredMoveState); }
 
 //! 1701 TASK_DIVE_FROM_ATTACHMENT_AND_GET_UP (case @0x496E61): ped, timeOnGround
 //! CollectParameters(2); CTaskComplexDiveFromAttachedEntityAndGetUp(time) [0x492E20]

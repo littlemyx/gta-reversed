@@ -9,6 +9,8 @@
 #include "PedGeometryAnalyser.h"
 #include "CarEnterExit.h"
 #include "General.h"
+#include "game_sa/DetachedShared.h"
+#line 12
 
 void CTaskComplexWalkRoundCar::InjectHooks() {
     RH_ScopedVirtualClass(CTaskComplexWalkRoundCar, 0x86f308, 11);
@@ -146,7 +148,7 @@ float CTaskComplexWalkRoundCar::ComputeRouteRoundSmallCar(CPed* ped) {
 // 0x656BB0
 float CTaskComplexWalkRoundCar::ComputeRouteRoundBigCar(CPed* ped) {
     // Margin by which the bounding boxes are inflated by (`CPedGeometryAnalyser`, 0x8D22B0, normally 0.35f)
-    static auto& s_BoundingBoxMargin = StaticRef<float>(0x8D22B0);
+    static NOTSA_GLOBAL_ALIAS(s_BoundingBoxMargin, 0x8D22B0, (float), notsa::shared::BoundingBoxMargin);
 
     const auto pedSide    = CPedGeometryAnalyser::ComputeEntityHitSide(*ped, *m_Veh);
     const auto targetSide = CPedGeometryAnalyser::ComputeEntityHitSide(m_TargetPt, *m_Veh);

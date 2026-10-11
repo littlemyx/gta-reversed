@@ -8,6 +8,8 @@
 #include "TaskSimpleStandStill.h"
 #include "TaskSimpleAchieveHeading.h"
 #include "General.h"
+#include "game_sa/DetachedShared.h"
+#line 11
 
 void CTaskComplexWalkRoundObject::InjectHooks() {
     RH_ScopedVirtualClass(CTaskComplexWalkRoundObject, 0x86F364, 11);
@@ -68,7 +70,7 @@ static float NormaliseAndMagOriginal(CVector& v) {
 // 0x6551D0
 float CTaskComplexWalkRoundObject::ComputeRoute(CPed* ped) {
     //! Margin by which the bounding boxes are inflated by (`CPedGeometryAnalyser`, 0x8D22B0, normally 0.35f)
-    static auto& s_BoundingBoxMargin = StaticRef<float>(0x8D22B0);
+    static NOTSA_GLOBAL_ALIAS(s_BoundingBoxMargin, 0x8D22B0, (float), notsa::shared::BoundingBoxMargin);
 
     const auto oldMargin = std::exchange(s_BoundingBoxMargin, 0.7f);
     CPedGeometryAnalyser::ComputeRouteRoundEntityBoundingBox(*ped, *m_object, m_targetPoint, *m_pointRoute, 0);

@@ -52,6 +52,8 @@
 #include "TaskComplexGoToPointShooting.h"
 #include "TaskSimpleGunControl.h"
 #include "TaskSimpleSetStayInSamePlace.h"
+#include "game_sa/DetachedShared.h"
+#line 55
 
 // Registered by Group13_15.cpp (owner of the central registration)
 namespace notsa::script::commands::ported::g13_15 {
@@ -77,13 +79,13 @@ using namespace notsa::script;
 
 namespace {
 //! 0xC18D50: the route that FLUSH_ROUTE / EXTEND_ROUTE build and TASK_FOLLOW_POINT_ROUTE consumes
-CPointRoute& ScriptRoute() { return StaticRef<CPointRoute>(0xC18D50); }
+CPointRoute& ScriptRoute() { return NOTSA_GLOBAL_EXPR(0xC18D50, (CPointRoute), notsa::shared::ScriptRoute); }
 
 //! 0x8D237C: set by SET_NEXT_DESIRED_MOVE_STATE, consumed (and reset to PEDMOVE_RUN = 6) by TASK_ENTER_CAR_AS_DRIVER/PASSENGER
-eMoveState& NextDesiredMoveState() { return StaticRef<eMoveState>(0x8D237C); }
+eMoveState& NextDesiredMoveState() { return NOTSA_GLOBAL_EXPR(0x8D237C, (eMoveState), notsa::shared::NextDesiredMoveState); }
 
 //! 0xC18CF0: `fEntityPosChangeThreshold`, 0xC18DB4: radius used by TASK_GO_TO_COORD_ANY_MEANS (both read as plain floats)
-float& EntityPosChangeThreshold() { return StaticRef<float>(0xC18CF0); }
+float& EntityPosChangeThreshold() { return NOTSA_GLOBAL_EXPR(0xC18CF0, (float), notsa::shared::EntityPosChangeThreshold); }
 float& GoToAnyMeansRadius() { return StaticRef<float>(0xC18DB4); }
 
 //! x87-compare idiom `fcom -100.0f; test ah, 0x41; jp skip`: the ground Z is looked up only when `z <= -100.0f` (ordered).

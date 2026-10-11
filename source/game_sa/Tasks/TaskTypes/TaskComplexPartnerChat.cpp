@@ -72,8 +72,19 @@ CTaskComplexSequence* CTaskComplexPartnerChat::GetPartnerSequence() {
 
     if (m_conversationEnabled) {
         // NOTSA: raw reads, the exe indexes `s_Conversation` with `6 - 2 * count` (can reach before the array)
+#ifdef NOTSA_GLOBALS_DETACHED
+        // detached: the exe reads the data image around s_Conversation (0xB613EC): offset 0xB613E8 = s_ConversationLength, 0xB613EA = padding (0), then the 8 contexts
+        const auto convAt = [](int32 off) -> int16 {   // off = exe address - 0xB613E8
+            if (off < 0 || off >= 4 + 2 * (int32)CAEPedSpeechAudioEntity::s_Conversation.size()) { return 0; }
+            return off == 0 ? CAEPedSpeechAudioEntity::s_ConversationLength : off < 4 ? int16(0) : (int16)CAEPedSpeechAudioEntity::s_Conversation[(off - 4) / 2];
+        };
+        const auto first  = convAt(0x10 - m_updateDirectionCount * 4);
+        const auto second = convAt(0x12 - m_updateDirectionCount * 4);
+#else
         const auto first  = StaticRef<int16>(0xB613F8 - m_updateDirectionCount * 4);
         const auto second = StaticRef<int16>(0xB613FA - m_updateDirectionCount * 4);
+#endif
+#line 77
         if (3 - m_updateDirectionCount == (int32)CAEPedSpeechAudioEntity::s_ConversationLength) {
             m_updateDirectionCount = 0;
         }

@@ -5,6 +5,8 @@
 #include "CustomBuildingDNPipeline.h"
 #include "CustomBuildingPipeline.h"
 #include "Clock.h"
+#include "game_sa/DetachedShared.h"
+#line 8
 
 constexpr auto CUSTOM_BUILDING_PIPELINE_ID = rpPDS_MAKEPIPEID(rwVENDORID_DEVELOPER, 0x9C); // see CustomBuildingPipeline.cpp
 
@@ -89,8 +91,8 @@ void CCustomBuildingRenderer::Update() {
     UpdateDayNightBalanceParam();
 
     // 0x5D6830 [`sub_5D6830(0)`]: advance the per-frame atomic update slot (see s_Magic1/s_Magic2 in CustomBuildingDNPipeline.cpp)
-    static auto& s_Magic1 = StaticRef<uint32>(0xC02C14);
-    static auto& s_Magic2 = StaticRef<uint32>(0xC02C18);
+    static NOTSA_GLOBAL_ALIAS(s_Magic1, 0xC02C14, (uint32), notsa::shared::CustomBuildingMagic1);
+    static NOTSA_GLOBAL_ALIAS(s_Magic2, 0xC02C18, (uint32), notsa::shared::CustomBuildingMagic2);
     s_Magic1 = (s_Magic1 + 1) & 15;
     s_Magic2 = 0;
 }

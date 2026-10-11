@@ -10,6 +10,8 @@
 #include "Fx/FxFtol.h"
 
 #include <reversiblebugfixes/Bugs.hpp>
+#include "game_sa/DetachedShared.h"
+#line 13
 
 // TODO: Move into the class itself
 auto& s_pathsNeededPosn = StaticRef<CVector>(0x977B70);
@@ -853,7 +855,7 @@ void CPathFind::ComputeRoute(uint8 nodeType, const CVector& vecStart, const CVec
     int16        numNodes{};
 
     // [0x8A5F44] - An (area = -1, node = 0) address, used as the "forbidden node" (effectively none)
-    const auto forbiddenNode = StaticRef<CNodeAddress>(0x8A5F44);
+    const auto forbiddenNode = NOTSA_GLOBAL_EXPR(0x8A5F44, (CNodeAddress), notsa::shared::NoNode);
 
     DoPathSearch(
         (ePathType)nodeType,

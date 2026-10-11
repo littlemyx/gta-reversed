@@ -26,6 +26,8 @@
 #include "TaskSimpleSlideToCoord.h"
 #include "TaskComplexFollowPatrolRoute.h"
 #include "TaskComplexPartnerGreet.h"
+#include "game_sa/DetachedShared.h"
+#line 29
 
 using namespace notsa::script;
 using namespace notsa::script::commands::ported::g09_12;
@@ -69,7 +71,7 @@ CVector DivideOriginal(const CVector& v, float s) {
 }
 
 //! 0xC18DB8: the patrol route the script commands (EXTEND_PATROL_ROUTE, ...) build, consumed by TASK_FOLLOW_PATROL_ROUTE
-CPatrolRoute& ScriptPatrolRoute() { return StaticRef<CPatrolRoute>(0xC18DB8); }
+CPatrolRoute& ScriptPatrolRoute() { return NOTSA_GLOBAL_EXPR(0xC18DB8, (CPatrolRoute), notsa::shared::ScriptPatrolRoute); }
 
 //! 2045 DOES_GROUP_EXIST (case @0x4731CE): group => compare flag
 //! `CTheScripts::GetActualScriptThingIndex(handle, 8 [SCRIPT_THING_PED_GROUP])` in [0, 8) (signed)

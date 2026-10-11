@@ -4,10 +4,12 @@
 
 #include "PedGeometryAnalyser.h"
 #include "InteriorManager_c.h"
+#include "game_sa/DetachedShared.h"
+#line 7
 
 //! Margin by which the bounding boxes are inflated by (0x8D22B0, 0.35f)
 //! NOTE: `ComputeRouteRoundEntityBoundingBox` temporarily overrides this global
-static auto& s_BoundingBoxMargin = StaticRef<float>(0x8D22B0);
+static NOTSA_GLOBAL_ALIAS(s_BoundingBoxMargin, 0x8D22B0, (float), notsa::shared::BoundingBoxMargin);
 
 void CPedGeometryAnalyser::InjectHooks() {
     RH_ScopedClass(CPedGeometryAnalyser);

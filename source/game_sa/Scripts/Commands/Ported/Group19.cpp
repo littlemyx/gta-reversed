@@ -45,6 +45,8 @@
 #include "TaskTypes/TaskComplexGoToPointAndStandStill.h"
 #include "TaskTypes/TaskSimpleSlideToCoord.h"
 #include "TaskTypes/SeekEntity/TaskComplexSeekEntityStandard.h"
+#include "game_sa/DetachedShared.h"
+#line 48
 
 namespace notsa::script::commands::ported::g19 { void RegisterHandlers(); }
 
@@ -96,7 +98,7 @@ int32 Ftol(double v) {
 }
 
 //! 0xA43C78.. -> not used; 0x8D237C: set by SET_NEXT_DESIRED_MOVE_STATE, consumed (and reset to PEDMOVE_RUN) by TASK_ENTER_CAR_AS_*
-eMoveState& NextDesiredMoveState() { return StaticRef<eMoveState>(0x8D237C); }
+eMoveState& NextDesiredMoveState() { return NOTSA_GLOBAL_EXPR(0x8D237C, (eMoveState), notsa::shared::NextDesiredMoveState); }
 
 //! `abs` as the exe computes it (`cdq; xor; sub`): wraps for INT_MIN
 int32 AbsWrap(int32 v) {

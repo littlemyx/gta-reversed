@@ -3,9 +3,11 @@
 #include "CustomBuildingDNPipeline.h"
 #include "CustomCarEnvMapPipeline.h"
 #include "PipelinesCommon.hpp"
+#include "game_sa/DetachedShared.h"
+#line 6
 
-auto& s_Magic1 = StaticRef<uint32>(0xC02C14);
-auto& s_Magic2 = StaticRef<uint32>(0xC02C18);
+NOTSA_GLOBAL_ALIAS(s_Magic1, 0xC02C14, (uint32), notsa::shared::CustomBuildingMagic1);
+NOTSA_GLOBAL_ALIAS(s_Magic2, 0xC02C18, (uint32), notsa::shared::CustomBuildingMagic2);
 
 // 0x5D72E0
 bool CCustomBuildingDNPipeline::ExtraVertColourPluginAttach() {

@@ -45,6 +45,8 @@
 #include "TaskTypes/TaskComplexFleeAnyMeans.h"
 #include "TaskTypes/TaskComplexDie.h"
 #include "Scripted2dEffects.h"
+#include "game_sa/DetachedShared.h"
+#line 48
 
 namespace notsa::script::commands::ported::g18 { void RegisterHandlers(); }
 
@@ -179,7 +181,7 @@ void DontSuppressVehicleModel(int32 model) {
 
 //! The script patrol route (CPatrolRoute @0xC18DB8, the one EXTEND/FLUSH_PATROL_ROUTE edit)
 CPatrolRoute& ScriptPatrolRoute() {
-    return StaticRef<CPatrolRoute>(0xC18DB8);
+    return NOTSA_GLOBAL_EXPR(0xC18DB8, (CPatrolRoute), notsa::shared::ScriptPatrolRoute);
 }
 
 //! 0x46A340 + 0x46AE80 (`CPatrolRoute::AddNode`): appends a point + anim (strings copied up to and including their NUL, the
@@ -647,7 +649,7 @@ void TaskFleeCharAnyMeans(CRunningScript& S, eScriptCommands cmd, int32 pedH, in
     CPed* const target = GetPedPool()->GetAtRef(targetH);
     S.GivePedScriptedTask(pedH, new CTaskComplexFleeAnyMeans{
         target, attack != 0, safeDist, fleeTime, shootTime, shootRecover, stealCarDist,
-        StaticRef<int32>(0x86F678), StaticRef<float>(0xC18CF0)
+        StaticRef<int32>(0x86F678), NOTSA_GLOBAL_EXPR(0xC18CF0, (float), notsa::shared::EntityPosChangeThreshold)
     }, (int32)cmd);
 }
 

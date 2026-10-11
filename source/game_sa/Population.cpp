@@ -1622,10 +1622,10 @@ void CPopulation::ConvertToDummyObject(CObject* object) {
 //! Helpers of `CPopulation::AddToPopulation` (most of them are inlined in the original)
 namespace AddToPopulationDetail {
 //! 0x8A5B20 (named by hand) - Scale of the "car density" of the player's zone used when deciding if the player should be given more cops (always 1.0)
-static auto& s_CopsNeededCarDensityScale = StaticRef<float>(0x8A5B20);
+static NOTSA_GLOBAL_ALIAS(s_CopsNeededCarDensityScale, 0x8A5B20, (float), CCarCtrl::CarDensityMultiplier);
 
 //! 0x8A5B24 (named by hand) - If the total number of cars is at least this (12), the player is given more cops
-static auto& s_CopsNeededTotalCarsThreshold = StaticRef<int32>(0x8A5B24);
+static NOTSA_GLOBAL_ALIAS(s_CopsNeededTotalCarsThreshold, 0x8A5B24, (int32), reinterpret_cast<int32&>(CCarCtrl::MaxNumberOfCarsInUse));
 
 //! 0x610DB0 (not hooked, it's inlined here) - How many members a gang group has
 int32 GetNumGangMembersToPlace() {

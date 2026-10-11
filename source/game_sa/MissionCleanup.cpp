@@ -18,10 +18,13 @@
 #include "DecisionMakers/DecisionMakerTypesFileLoader.h"
 #include "LoadMonitor.h"
 #include "Fx/FxSystem.h"
+#include "game_sa/DetachedShared.h"
+#include "game_sa/CarCtrl.h"
+#line 21
 
 // Globals that have no declaration anywhere else in the code base (names are NOTSA)
-static auto& s_CopsNeededCarDensityScale = StaticRef<float>(0x8A5B20); // Same global as the one in Population.cpp
-static auto& s_CurDistForCam             = StaticRef<float>(0x8CCB84); // Same global as `gCurDistForCam` in Camera.cpp
+static NOTSA_GLOBAL_ALIAS(s_CopsNeededCarDensityScale, 0x8A5B20, (float), CCarCtrl::CarDensityMultiplier); // Same global as the one in Population.cpp
+static NOTSA_GLOBAL_ALIAS(s_CurDistForCam, 0x8CCB84, (float), notsa::shared::CurDistForCam); // Same global as `gCurDistForCam` in Camera.cpp
 static auto& s_Unk_B6EC2C                = StaticRef<bool>(0xB6EC2C);
 static auto& s_Unk_B728E0                = StaticRef<int32>(0xB728E0);
 static auto& s_Unk_BA18D9                = StaticRef<bool>(0xBA18D9);

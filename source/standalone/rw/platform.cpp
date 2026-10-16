@@ -34,18 +34,25 @@ rwD3D9DeviceRestoreCallBack s_RestoreCallback = nullptr;
 
 // ---- Reset watch -------------------------------------------------------------------------------------------------------------------
 constexpr int kResetVtblSlot = 16;  // IDirect3DDevice9::Reset (IUnknown 0-2, TestCooperativeLevel 3 ... Reset 16)
-constexpr int kVtblSlots     = 119; // IDirect3DDevice9 (non-Ex)
 
 using ResetFn = HRESULT(__stdcall*)(IDirect3DDevice9*, D3DPRESENT_PARAMETERS*);
 
 unsigned s_ResetCount = 0;
-void**   s_OrigVtbl   = nullptr;          // the device's own vtable (restored on stop)
-void**   s_ProxyVtbl  = nullptr;          // heap copy with the Reset slot replaced
+void**   s_OrigVtbl   = nullptr;          // the device's own vtable (its Reset slot is patched in place, restored on stop)
 IDirect3DDevice9* s_WatchedDevice = nullptr;
 ResetFn  s_OrigReset  = nullptr;
 
 void (*s_OrigBeginUpdate)(rw::Camera*)              = nullptr;
 void (*s_OrigShowRaster)(rw::Raster*, rw::uint32)   = nullptr;
+
+// Writes one slot of the device's (read-only) vtable
+void SetVtblSlot(int slot, void* fn) {
+    DWORD oldProt = 0;
+    if (VirtualProtect(&s_OrigVtbl[slot], sizeof(void*), PAGE_READWRITE, &oldProt)) {
+        s_OrigVtbl[slot] = fn;
+        VirtualProtect(&s_OrigVtbl[slot], sizeof(void*), oldProt, &oldProt);
+    }
+}
 
 HRESULT __stdcall ProxyReset(IDirect3DDevice9* self, D3DPRESENT_PARAMETERS* pp) {
     const HRESULT hr = s_OrigReset(self, pp);
@@ -94,11 +101,11 @@ void NotsaRwPlatform_OnEngineStarted() {
     s_ResetCount    = 0; // "since RwEngineStart"
     s_WatchedDevice = dev;
     s_OrigVtbl      = *reinterpret_cast<void***>(dev);
-    s_ProxyVtbl     = new void*[kVtblSlots];
-    std::memcpy(s_ProxyVtbl, s_OrigVtbl, sizeof(void*) * kVtblSlots);
-    s_OrigReset                 = reinterpret_cast<ResetFn>(s_OrigVtbl[kResetVtblSlot]);
-    s_ProxyVtbl[kResetVtblSlot] = reinterpret_cast<void*>(&ProxyReset);
-    *reinterpret_cast<void***>(dev) = s_ProxyVtbl;
+    s_OrigReset     = reinterpret_cast<ResetFn>(s_OrigVtbl[kResetVtblSlot]);
+    // Patch the Reset slot IN PLACE (the class vtable is read-only memory) instead of pointing the device at a heap copy of IDirect3DDevice9's
+    // 119 slots: the native d3d9.dll device class has more virtual methods than the interface (Reset itself calls them through the object's
+    // vptr), so a 119-slot copy sent Reset into garbage on a real Windows PC (call to 0 inside Reset). Wine's device is a plain C struct, which hid it.
+    SetVtblSlot(kResetVtblSlot, reinterpret_cast<void*>(&ProxyReset));
 
     s_OrigBeginUpdate = rw::engine->device.beginUpdate;
     s_OrigShowRaster  = rw::engine->device.showRaster;
@@ -115,9 +122,8 @@ void NotsaRwPlatform_OnEngineStopping() {
         rw::engine->device.beginUpdate = s_OrigBeginUpdate;
         rw::engine->device.showRaster  = s_OrigShowRaster;
     }
-    *reinterpret_cast<void***>(s_WatchedDevice) = s_OrigVtbl;
-    delete[] s_ProxyVtbl;
-    s_ProxyVtbl = nullptr; s_OrigVtbl = nullptr; s_WatchedDevice = nullptr; s_OrigReset = nullptr;
+    SetVtblSlot(kResetVtblSlot, reinterpret_cast<void*>(s_OrigReset));
+    s_OrigVtbl = nullptr; s_WatchedDevice = nullptr; s_OrigReset = nullptr;
     s_OrigBeginUpdate = nullptr; s_OrigShowRaster = nullptr;
 }
 

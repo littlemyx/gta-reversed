@@ -1,11 +1,11 @@
 #pragma once
 
-static inline auto& gSpecIntensity = StaticRef<float>(0x8D12D0); // 1.0f
+NOTSA_GLOBAL_HDR(gSpecIntensity, 0x8D12D0, (float), { 1.0f }); // 1.0f
 
 class CCarFXRenderer {
 public:
     static constexpr int32 NUM_DIRT_TEXTURES = 16;
-    static inline auto& ms_aDirtTextures = StaticRef<RwTexture*[NUM_DIRT_TEXTURES]>(0xC02BD0);
+    static inline NOTSA_GLOBAL(ms_aDirtTextures, 0xC02BD0, (RwTexture*[NUM_DIRT_TEXTURES]), {});
 
 public:
     static void InjectHooks();

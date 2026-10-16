@@ -14,10 +14,10 @@ class CObject;
 
 class CPedAcquaintanceScanner {
 public:
-    static inline auto& ms_fThresholdDotProduct = StaticRef<float>(0xC0B034);
-    static inline auto& ms_nScanInterval        = StaticRef<int32>(0x8D2358); // 500
-    static inline auto& ms_nLongInterval        = StaticRef<int32>(0x8D235C); // 3000
-    static inline auto& ms_nShortInterval       = StaticRef<int32>(0x8D2360); // 200
+    static inline NOTSA_GLOBAL(ms_fThresholdDotProduct, 0xC0B034, (float), {});
+    static inline NOTSA_GLOBAL(ms_nScanInterval, 0x8D2358, (int32), { 500 }); // 500
+    static inline NOTSA_GLOBAL(ms_nLongInterval, 0x8D235C, (int32), { 3000 }); // 3000
+    static inline NOTSA_GLOBAL(ms_nShortInterval, 0x8D2360, (int32), { 200 }); // 200
 
     CTaskTimer m_timer;
     bool m_bScanAllowedScriptPed;
@@ -94,7 +94,7 @@ public:
     CSexyPedScanner                   m_sexyPedScanner;
     CNearbyFireScanner                m_nearbyFireScanner;
 
-    static inline auto& m_sDeadPedWalkingTimer = StaticRef<uint32>(0xC0B038);
+    static inline NOTSA_GLOBAL(m_sDeadPedWalkingTimer, 0xC0B038, (uint32), {});
 
 public:
     static void InjectHooks();

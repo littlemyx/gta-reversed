@@ -1,0 +1,7 @@
+# Native Windows host profile for the standalone presets (CMakePresets.json: StandaloneRelease / StandaloneRW / StandaloneDetached): windows-msvc.txt + the Ninja generator.
+# Use from the MSVC x86 shell (tools/standalone/windows/gtash.cmd):  conan install . --build=missing --profile conan/profiles/windows-msvc-ninja.txt -s build_type=Release
+# (CI keeps using windows-msvc.txt with the default generator.)
+include(windows-msvc.txt)
+
+[conf]
+tools.cmake.cmaketoolchain:generator=Ninja

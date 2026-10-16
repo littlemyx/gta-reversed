@@ -20,7 +20,32 @@
                 "GTASA_STANDALONE_DUMP_HOOKS_ONLY": "OFF",
                 "GTASA_STANDALONE_RELEASE": "ON",
                 "GTASA_ORIGINAL_EXE": "${sourceDir}/gta_sa_compact.exe",
+                "GTASA_NO_EDIT_AND_CONTINUE": "ON",
                 "GTASA_WITH_SCRIPT_COMMAND_HOOKS": "OFF",
+                "GTASA_USE_SDL3": "ON",
+                "GTASA_UNITY_BUILD": "OFF"
+            }
+        },
+        {
+            "name": "StandaloneRW",
+            "displayName": "Standalone (librw) Debug: the main development build and the base of the *_test targets",
+            "description": "Debug twin of StandaloneRelease (build/StandaloneRW). Needs `conan install . -s build_type=Debug` (deps in build/Debug/generators) first, and -DGTASA_PYTHON=<python>. Windows: configure from the MSVC x86 shell (tools/standalone/windows/gtash.cmd). See docs/WINDOWS_SETUP.md.",
+            "generator": "Ninja",
+            "binaryDir": "${sourceDir}/build/StandaloneRW",
+            "toolchainFile": "${sourceDir}/build/Debug/generators/conan_toolchain.cmake",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "Debug",
+                "CMAKE_POLICY_DEFAULT_CMP0091": "NEW",
+                "GTASA_STANDALONE": "ON",
+                "GTASA_STANDALONE_DUMP_HOOKS_ONLY": "OFF",
+                "GTASA_RW_LIBRW": "ON",
+                "GTASA_RW_LIBRW_OPT_OUT": "OFF",
+                "GTASA_ORIGINAL_EXE": "${sourceDir}/gta_sa_compact.exe",
+                "GTASA_NO_EDIT_AND_CONTINUE": "ON",
+                "GTASA_WITH_OPENAL": "OFF",
+                "GTASA_WITH_CLEO_COMMANDS": "OFF",
+                "GTASA_WITH_SCRIPT_COMMAND_HOOKS": "OFF",
+                "GTASA_WITH_LTO": "OFF",
                 "GTASA_USE_SDL3": "ON",
                 "GTASA_UNITY_BUILD": "OFF"
             }

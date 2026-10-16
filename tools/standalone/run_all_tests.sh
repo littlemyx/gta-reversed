@@ -9,6 +9,7 @@
 #        WINE_BIN      dir of the wine binary to prepend to PATH (optional) [Mac/Linux]   NINJA  ninja path (default: ninja from PATH)
 #        Windows host: run it from a shell with the MSVC x86 environment (tools/standalone/windows/gtash.cmd or vcvarsall x86): `cl` must be on PATH. No Wine/WINEPREFIX;
 #        SCRATCH defaults to C:/gta-scratch; RW_EXE_ORACLE is the native Windows path of the exe. See docs/WINDOWS_SETUP.md.
+#        GTA_JOBS=4    Windows only: ninja -j for the test build (default 4; the PC is shared with the user, a higher value freezes the desktop)
 # Exit code: non-zero if any test reports failures/mismatches, never produced a result, or failed to build.
 # A fresh build dir is configured exactly like build/StandaloneRW (librw ON, SDL3, Debug via the conan toolchain).
 set -u
@@ -64,7 +65,12 @@ TESTS=$(ninja -C "$BDIR" -t targets all 2>/dev/null | sed -n 's/^\([A-Za-z0-9_]*
 BUILD_FAIL=""
 if [ "${SKIP_BUILD:-0}" != 1 ]; then
   # shellcheck disable=SC2086
-  ninja -C "$BDIR" -k 0 $TESTS > "$OUT/ninja.log" 2>&1 || BUILD_FAIL=1
+  if [ "$HOST" = windows ]; then
+    # shared interactive PC: never an unbounded ninja (default = cores+2 jobs froze the desktop); -j${GTA_JOBS:-4} at BelowNormal ("start /low"; cl/link children inherit it)
+    cmd //c start "" //low //b //wait ninja -C "$BDIR" -j "${GTA_JOBS:-4}" -k 0 $TESTS > "$OUT/ninja.log" 2>&1 || BUILD_FAIL=1
+  else
+    ninja -C "$BDIR" -k 0 $TESTS > "$OUT/ninja.log" 2>&1 || BUILD_FAIL=1
+  fi
   unlock; HELD=0
   [ -n "$BUILD_FAIL" ] && echo "ninja reported errors (see $OUT/ninja.log); tests whose exe is missing are marked NOBUILD"
 fi

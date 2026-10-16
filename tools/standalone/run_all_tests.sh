@@ -21,7 +21,7 @@ MSVC_WINE_ROOT="${MSVC_WINE_ROOT:-$TOOLS_DIR/msvc}"; GTASA_PYTHON="$PY"; NINJA="
 if [ "$HOST" = windows ]; then
   REPO="$(hp "$REPO")"; BDIR="$(hp "$BDIR")"; NINJA="$(hp "$NINJA")"
   if [ "${SKIP_BUILD:-0}" != 1 ] && ! command -v cl >/dev/null 2>&1; then
-    echo "run_all_tests: cl.exe not on PATH - start this from the MSVC x86 environment (tools/standalone/windows/gtash.cmd), see docs/WINDOWS_SETUP.md"; exit 2
+    echo "run_all_tests: cl.exe not on PATH - start this from the MSVC x86 environment (tools/standalone/windows/gtash.cmd, or: source tools/standalone/windows/msvcenv.sh), see docs/WINDOWS_SETUP.md"; exit 2
   fi
 fi
 ATTEMPTS="${ATTEMPTS:-6}"
@@ -49,7 +49,7 @@ if [ "${SKIP_BUILD:-0}" != 1 ]; then
   lock; HELD=1
   if [ ! -f "$BDIR/build.ninja" ]; then
     mkdir -p "$BDIR"
-    if [ "$HOST" = windows ]; then HOSTARGS=(-DGTASA_NO_EDIT_AND_CONTINUE=ON)   # /Z7 + /MAP like the Wine toolchain (the /ZI default breaks the optimised presets and gives no map)
+    if [ "$HOST" = windows ]; then HOSTARGS=(-DGTASA_NO_EDIT_AND_CONTINUE=ON --compile-no-warning-as-error)   # /Z7 + /MAP like the Wine toolchain (the /ZI default breaks the optimised presets and gives no map); no -WX: the Wine flow builds with /WX- and the native cl reports warnings (C4018/C4715) the port does not fix
     else HOSTARGS=("-DCMAKE_CXX_FLAGS=/WX- /wd4005 /DWIN32 /D_WINDOWS /Zm1000 /GX" "-DGTASA_ML=$MSVC_WINE_ROOT/bin/x86/ml"); fi
     cmake -S "$REPO" -B "$BDIR" -G Ninja -DCMAKE_BUILD_TYPE=Debug \
       -DCMAKE_TOOLCHAIN_FILE="$(hp "$TOOLCHAIN")" -DCMAKE_MAKE_PROGRAM="$NINJA" "${HOSTARGS[@]}" \

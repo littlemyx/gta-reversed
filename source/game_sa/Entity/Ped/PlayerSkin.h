@@ -4,7 +4,7 @@
 
 class CPlayerSkin {
 public:
-    static inline auto& m_txdSlot = StaticRef<int32>(0xC3F03C);
+    static inline NOTSA_GLOBAL(m_txdSlot, 0xC3F03C, (int32), {});
 
 public:
     static void InjectHooks();

@@ -41,7 +41,7 @@ public:
     std::array<float, 4>   field_988{}; // unused
     float m_fSuspensionRadius;
 
-    static inline auto& DUMPER_COL_ANGLEMULT = StaticRef<float>(0x8D33A8); // 0.0002f
+    static inline NOTSA_GLOBAL(DUMPER_COL_ANGLEMULT, 0x8D33A8, (float), { 0.0002f }); // 0.0002f
 
     static constexpr auto Type = VEHICLE_TYPE_MTRUCK;
 
@@ -71,4 +71,4 @@ private:
 
 VALIDATE_SIZE(CMonsterTruck, 0x99C);
 
-extern float& fWheelExtensionRate; // 0.1
+NOTSA_GLOBAL_EXTERN(fWheelExtensionRate, (float)); // 0.1

@@ -192,6 +192,12 @@ FxEmitterPrt_c* FxEmitter_c::CreateParticle(const EmissionInfo_t& emissionInfo, 
         return reinterpret_cast<FxEmitterPrt_c*>(prt);
     }();
 
+    // 0x4A2599..0x4A25BF: no free particle and the system need not create one, or none left after FreeUpParticle -> the exe returns null
+    // (the lambda above only left the lambda: the old code went on to write through the null pointer)
+    if (!particle) {
+        return nullptr;
+    }
+
     particle->m_fCurrentLife = 0.0f;
     particle->m_fTotalLife = (((float)(CGeneral::GetRandomNumber() % 10'000) / 5'000.0f - 1.0f) * emissionInfo.m_fLifeBias + emissionInfo.m_fLife) * fxMults.m_fLife;
     particle->m_System = m_System;

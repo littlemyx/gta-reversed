@@ -67,7 +67,7 @@ def write_pch_hxx(out, mode):
 
 
 def msvc_flags(llvm, defs, incs, sysincs, extra):
-    msvc = '/Users/Andrei.Mukhin/tools/msvc'
+    msvc = os.environ.get('MSVC_WINE_ROOT') or os.path.join(os.path.expanduser('~'), 'tools', 'msvc')   # msvc-wine install (docs/STANDALONE.md)
     # MSVC STL + SDK dirs exactly as the cl.exe command uses them
     return ([os.path.join(llvm, 'bin', 'clang-cl'), '--target=i686-pc-windows-msvc', '/nologo', '/TP', '/EHsc',
              '/std:c++20', '/clang:-std=c++23', '/Zc:__cplusplus', '/utf-8', '-fms-compatibility-version=19.44', '-w',

@@ -1,1 +1,3 @@
 * text=auto eol=lf
+# Windows batch launchers need CRLF (labels/goto break on LF-only files)
+tools/standalone/windows/*.cmd text eol=crlf

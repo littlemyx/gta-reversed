@@ -2,8 +2,9 @@
 """Image census (slice A3 of .notes/DETACH_DATA_PLAN.md): which pages of the ORIGINAL data image (0x858000..0xCB0000, 1,112 pages) does the detached
 standalone exe still touch, and which function touches them?
 
-  census.py run    [--build build/StandaloneDetached] [--minutes 10] [--rearm-ms 15000] [--data /tmp/d3c] [--keep]
-        one tools/standalone/soak.sh run (own data dir + Wine prefix, deleted afterwards) with NOTSA_VERIFY_GLOBALS (the list of converted globals),
+  census.py run    [--build build/StandaloneDetached] [--minutes 10] [--rearm-ms 15000] [--data /tmp/d3c (Windows: C:/gta-census)] [--keep]
+        one tools/standalone/soak.sh run (own data dir + Wine prefix [Mac/Linux only], deleted afterwards; on Windows the data dir is NTFS hard links/junctions
+        of the install, removed link-by-link, never through a junction) with NOTSA_VERIFY_GLOBALS (the list of converted globals),
         NOTSA_IMAGE_CENSUS=1 and NOTSA_IMAGE_CENSUS_REARM_MS (ImageDiag.cpp), then `report`. The build must be a detached + verify build (preset StandaloneDetached).
   census.py report --raw image_census.tsv --converted verify_dump.tsv [--map gta_reversed.map] [--out .notes/DETACH_census.tsv]
 
@@ -20,6 +21,7 @@ from collections import defaultdict
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parents[2]
+IS_WIN = os.name == "nt"
 IMG_LO, IMG_HI = 0x858000, 0xCB0000
 
 
@@ -165,6 +167,22 @@ def report(a):
         print("  %-16s %4d pages" % (c, len(pages_by_class[c])))
 
 
+def _is_reparse(p):
+    """Windows: junction or symlink (FILE_ATTRIBUTE_REPARSE_POINT)."""
+    try:
+        return bool(os.lstat(p).st_file_attributes & 0x400)
+    except (AttributeError, OSError):
+        return False
+
+
+def _unlink(p):
+    try:
+        p.unlink()
+    except PermissionError:     # Windows: a hard link of a read-only game file
+        os.chmod(p, 0o666)
+        p.unlink()
+
+
 def run(a):
     build = Path(a.build) if os.path.isabs(a.build) else REPO / a.build
     data, prefix = Path(a.data), Path(a.data + "-prefix")
@@ -182,7 +200,7 @@ def run(a):
     snap = REPO / "tools/standalone" / (".census_soak_%d.sh" % os.getpid())
     shutil.copy(REPO / "tools/standalone/soak.sh", snap)
     try:
-        rc = subprocess.call(["bash", str(snap), str(build), str(a.minutes), str(data)], env=env)
+        rc = subprocess.call([shutil.which("bash") or "bash", str(snap), str(build), str(a.minutes), str(data)], env=env)
     finally:
         snap.unlink(missing_ok=True)
     print("census: soak exit %d" % rc)
@@ -195,11 +213,13 @@ def run(a):
                                 globals=a.globals, pointers=str(build / "bin/data_pointers.bin"), out=a.out)
         report(ns)
     if not a.keep:
-        # the data dir only holds symlinks into the game install: unlink them, never recurse through them
+        # the data dir only holds symlinks (Windows: hard links + junctions) into the game install: unlink them, never recurse through them
         if data.exists():
             for e in data.iterdir():
-                if e.is_symlink() or e.is_file():
-                    e.unlink()
+                if IS_WIN and _is_reparse(e):
+                    os.rmdir(e)     # junction / directory symlink: removes the link only, never the target
+                elif e.is_symlink() or e.is_file():
+                    _unlink(e)
                 else:
                     shutil.rmtree(e, ignore_errors=True)
             data.rmdir()
@@ -215,7 +235,7 @@ def main():
     r.add_argument("--build", default="build/StandaloneDetached")
     r.add_argument("--minutes", type=int, default=10)
     r.add_argument("--rearm-ms", type=int, default=15000)
-    r.add_argument("--data", default="/tmp/d3c")
+    r.add_argument("--data", default="C:/gta-census" if IS_WIN else "/tmp/d3c")
     r.add_argument("--poison", default=None, help="also NOTSA_POISON_CONVERTED=<file> (usually not: the census should not change behaviour)")
     r.add_argument("--keep", action="store_true")
     r.add_argument("--globals", default=str(REPO / ".notes/DETACH_GLOBALS.tsv"))

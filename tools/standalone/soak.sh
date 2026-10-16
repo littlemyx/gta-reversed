@@ -1,32 +1,43 @@
 #!/bin/bash
-# Regression soak of the STANDALONE exe under Wine: boots to the menu, starts a new game, skips the cutscene, walks, spawns two cars (cheats), drives,
+# Regression soak of the STANDALONE exe (under Wine on macOS/Linux, directly on a native Windows PC from Git Bash): boots to the menu, starts a new game, skips the cutscene, walks, spawns two cars (cheats), drives,
 # idles (idle camera), quits through the pause menu; then prints a one-screen report. Exit code: 0 = clean, 1 = crash/trap/assert/abort/early death,
 # 2 = could not start at all.
-# usage: tools/standalone/soak.sh [build-dir (default build/StandaloneRelease)] [minutes (default 10)] [game-data-dir (default /tmp/d3s)]
+# usage: tools/standalone/soak.sh [build-dir (default build/StandaloneRelease)] [minutes (default 10)] [game-data-dir (default /tmp/d3s; Windows: /c/gta-soak)]
 #   minutes = total length of the run: the idle phase is stretched/shrunk to fit (the fixed part of tools/standalone/soak_route.txt is ~6 min; minimum idle 60 s)
-# env: GAME_SRC=<install dir>   the original game install (default: the Steam macOS copy, see docs/STANDALONE.md "Run")
-#      PREFIX=<dir>             private Wine prefix (default /tmp/d3s-prefix, cloned from $WINE_PREFIX_SRC = ~/.wine-msvc on first use)
-#      WINE_BIN=<dir>           directory with the wine binary (default: Wine Staging.app in ~/tools)
+# env: GAME_SRC=<install dir>   the original game install (default: the Steam macOS copy, see docs/STANDALONE.md "Run"; Windows: /c/gta, else the Steam folder)
+#      TOOLS_DIR=<dir>          Mac: where Wine Staging.app lives (default ~/tools)          GTASA_PYTHON=<python>  python for the report (default: python3/python)
+#      PREFIX=<dir>             private Wine prefix (default /tmp/d3s-prefix, cloned from $WINE_PREFIX_SRC = ~/.wine-msvc on first use)   [Mac/Linux only]
+#      WINE_BIN=<dir>           directory with the wine binary (default: Wine Staging.app in $TOOLS_DIR)                                 [Mac/Linux only]
+#      Windows host (Git Bash, see docs/WINDOWS_SETUP.md): no Wine/prefix/WINEDEBUG; the data dir is built from NTFS hard links (files) and junctions (dirs)
+#      of $GAME_SRC (same volume; falls back to a copy), so the run never writes into the install. NOTE: the game still reads/writes the user's REAL
+#      Documents\GTA San Andreas User Files (gta_sa.set, saves) - back it up once. Screenshots are converted to PNG with PowerShell/System.Drawing.
 #      SHOT_EVERY=<frames>      screenshot cadence (default 500 frames, NOTSA_STANDALONE_SCREENSHOT_MAX=40)
 #      SAMPLER=1                enable the in-process profiler (CORRUPTS the x87 state of the game thread, see below: profiling runs only)
 #      SHOT_MAX=<n>             screenshot cap (default 40)
 #      OUT=<dir>                output dir (default /tmp/d3s-out/<timestamp>): logs, frame_*.png, report.txt
 #      ROUTE=<file>             input route (default tools/standalone/soak_route.txt)
-#      SOAK_WINEDEBUG=<chan>    WINEDEBUG for the run (default -all; e.g. 'err+all,+dsound' to check the DirectSound volumes in $OUT/wine.out - big output)
+#      SOAK_WINEDEBUG=<chan>    WINEDEBUG for the run (default -all; e.g. 'err+all,+dsound' to check the DirectSound volumes in $OUT/wine.out - big output)   [Wine only]
 #      NOTSA_STANDALONE_MUTE=0  opt out of the silent run (default 1: the whole audio pipeline runs, DirectSound buffer volumes stay at the minimum)
 #                               (do NOT disable the Wine audio driver instead: without a driver DirectSoundCreate fails and the game hangs before the menu, see docs/STANDALONE.md)
 set -u
+. "$(dirname "$0")/hostenv.sh"
 REPO="$(cd "$(dirname "$0")/../.." && pwd)"
-BDIR="${1:-build/StandaloneRelease}"; MIN="${2:-10}"; DATA="${3:-/tmp/d3s}"
-case "$BDIR" in /*) ;; *) BDIR="$REPO/$BDIR";; esac
+BDIR="$(hp "${1:-build/StandaloneRelease}")"; MIN="${2:-10}"; DATA="$(hp "${3:-$DEF_DATA}")"
+case "$BDIR" in /*|[A-Za-z]:*) ;; *) BDIR="$REPO/$BDIR";; esac
 BIN="$BDIR/bin"
-GAME_SRC="${GAME_SRC:-$HOME/Library/Application Support/Steam/steamapps/common/grand theft auto - san andreas/Grand Theft Auto - San Andreas.app/Contents/Resources/transgaming/c_drive/Program Files/Rockstar Games/GTA San Andreas}"
+GAME_SRC="${GAME_SRC:-$DEF_GAME_SRC}"
 PREFIX="${PREFIX:-/tmp/d3s-prefix}"; WINE_PREFIX_SRC="${WINE_PREFIX_SRC:-$HOME/.wine-msvc}"
-WINE_BIN="${WINE_BIN:-$HOME/tools/Wine Staging.app/Contents/Resources/wine/bin}"
-OUT="${OUT:-/tmp/d3s-out/$(date +%Y%m%d-%H%M%S)}"
+WINE_BIN="${WINE_BIN:-$TOOLS_DIR/Wine Staging.app/Contents/Resources/wine/bin}"
+OUT="${OUT:-$DEF_OUTROOT/$(date +%Y%m%d-%H%M%S)}"
 ROUTE="${ROUTE:-$REPO/tools/standalone/soak_route.txt}"
 SHOT_EVERY="${SHOT_EVERY:-500}"
-export PATH="$WINE_BIN:$HOME/.local/bin:/opt/homebrew/bin:$PATH" WINEPREFIX="$PREFIX" WINEDEBUG="${SOAK_WINEDEBUG:--all}"
+if [ "$HOST" = windows ]; then
+  REPO="$(hp "$REPO")"; BIN="$(hp "$BIN")"; GAME_SRC="$(hp "$GAME_SRC")"; OUT="$(hp "$OUT")"; ROUTE="$(hp "$ROUTE")"
+  RUNOUT="$OUT/run.out"; CPX="cp"
+else
+  export PATH="$WINE_BIN:$HOME/.local/bin:/opt/homebrew/bin:$PATH" WINEPREFIX="$PREFIX" WINEDEBUG="${SOAK_WINEDEBUG:--all}"
+  RUNOUT="$OUT/wine.out"; CPX="cp -c"
+fi
 mkdir -p "$OUT"
 
 for f in gta_reversed.exe data_pointers.bin original_data.bin original_data.json; do
@@ -36,21 +47,35 @@ done
 
 # game data dir: symlinks to the install (except the exe), refreshed copies of our exe + data image files
 mkdir -p "$DATA"
-for e in "$GAME_SRC"/*; do
-  n="$(basename "$e")"
-  case "$n" in gta_sa.exe|gta_reversed.exe) continue;; esac
-  [ -e "$DATA/$n" ] || [ -L "$DATA/$n" ] || ln -s "$e" "$DATA/$n"
-done
-# private Wine prefix (so this run never clashes with another instance / wineserver)
-if [ ! -d "$PREFIX" ]; then
-  [ -d "$WINE_PREFIX_SRC" ] || { echo "soak: $WINE_PREFIX_SRC missing, cannot clone a prefix"; exit 2; }
-  echo "soak: cloning Wine prefix $WINE_PREFIX_SRC -> $PREFIX"; cp -cR "$WINE_PREFIX_SRC" "$PREFIX"
+if [ "$HOST" = windows ]; then
+  # Windows: NTFS hard links for files, junctions for directories (neither needs admin rights; same volume), copy as the fallback
+  for e in "$GAME_SRC"/*; do
+    n="$(basename "$e")"
+    case "$n" in gta_sa.exe|gta_reversed.exe|logs|standalone*) continue;; esac
+    [ -e "$DATA/$n" ] && continue
+    if [ -d "$e" ]; then
+      cmd //c mklink //J "$(cygpath -w "$DATA/$n")" "$(cygpath -w "$e")" >/dev/null 2>&1 || cp -R "$e" "$DATA/$n"
+    else
+      cmd //c mklink //H "$(cygpath -w "$DATA/$n")" "$(cygpath -w "$e")" >/dev/null 2>&1 || cp "$e" "$DATA/$n"
+    fi
+  done
+else
+  for e in "$GAME_SRC"/*; do
+    n="$(basename "$e")"
+    case "$n" in gta_sa.exe|gta_reversed.exe) continue;; esac
+    [ -e "$DATA/$n" ] || [ -L "$DATA/$n" ] || ln -s "$e" "$DATA/$n"
+  done
+  # private Wine prefix (so this run never clashes with another instance / wineserver)
+  if [ ! -d "$PREFIX" ]; then
+    [ -d "$WINE_PREFIX_SRC" ] || { echo "soak: $WINE_PREFIX_SRC missing, cannot clone a prefix"; exit 2; }
+    echo "soak: cloning Wine prefix $WINE_PREFIX_SRC -> $PREFIX"; cp -cR "$WINE_PREFIX_SRC" "$PREFIX"
+  fi
+  # a cloned prefix has drive_c/users/<user>/Documents -> the user's REAL Documents: the game would read/write their real
+  # "GTA San Andreas User Files/gta_sa.set" and saves. Replace that symlink by a real empty directory (every run, so old prefixes are fixed too).
+  for d in "$PREFIX"/drive_c/users/*/Documents; do
+    [ -L "$d" ] && { rm "$d" && mkdir "$d"; }
+  done
 fi
-# a cloned prefix has drive_c/users/<user>/Documents -> the user's REAL Documents: the game would read/write their real
-# "GTA San Andreas User Files/gta_sa.set" and saves. Replace that symlink by a real empty directory (every run, so old prefixes are fixed too).
-for d in "$PREFIX"/drive_c/users/*/Documents; do
-  [ -L "$d" ] && { rm "$d" && mkdir "$d"; }
-done
 
 # route: stretch the idle phase to the requested length
 FIXED_MS=$(sed 's/#.*//' "$ROUTE" | awk -F: '/^wait:[0-9]+/ {t+=$2} /^key:/ {t+=150} END {print t+0}')
@@ -70,14 +95,22 @@ export NOTSA_STANDALONE_MEMLOG=1 NOTSA_STANDALONE_INPUT="$OUT/route.txt"
 # (profiling only; never for a regression soak).
 [ "${SAMPLER:-0}" = 1 ] && export NOTSA_STANDALONE_SAMPLER=1
 
-kill_exe() { pkill -f "$(basename "$DATA").gta_reversed" 2>/dev/null; WINEPREFIX="$PREFIX" wineserver -k 2>/dev/null; sleep 1; }
+if [ "$HOST" = windows ]; then
+  # kill our exe (by pid, and by image path under $DATA so a stray child of an earlier attempt dies too); alive = the background pid still exists
+  KILL_PS='Get-Process gta_reversed -ErrorAction SilentlyContinue | Where-Object { $_.Path -and (($_.Path -replace "\\","/") -like ($env:SOAK_DATA + "/*")) } | Stop-Process -Force'
+  kill_exe() { [ -n "${WPID:-}" ] && kill -9 "$WPID" 2>/dev/null; SOAK_DATA="$DATA" powershell.exe -NoProfile -Command "$KILL_PS" >/dev/null 2>&1; sleep 1; }
+  exe_alive() { kill -0 "$WPID" 2>/dev/null; }
+else
+  kill_exe() { pkill -f "$(basename "$DATA").gta_reversed" 2>/dev/null; WINEPREFIX="$PREFIX" wineserver -k 2>/dev/null; sleep 1; }
+  exe_alive() { pgrep -f "$(basename "$DATA").gta_reversed" >/dev/null; }
+fi
 started=0; STATUS_START=0
 cd "$DATA" || exit 2
 for a in 1 2 3 4 5 6; do
   kill_exe
   rm -f gta_reversed.exe data_pointers.bin original_data.* standalone*.log frame_*.bmp mark_*.bmp; rm -rf logs
-  cp -c "$BIN/gta_reversed.exe" "$BIN/original_data.bin" "$BIN/original_data.json" "$BIN/data_pointers.bin" .
-  wine gta_reversed.exe > "$OUT/wine.out" 2>&1 &
+  $CPX "$BIN/gta_reversed.exe" "$BIN/original_data.bin" "$BIN/original_data.json" "$BIN/data_pointers.bin" .
+  if [ "$HOST" = windows ]; then ./gta_reversed.exe > "$RUNOUT" 2>&1 & else wine gta_reversed.exe > "$RUNOUT" 2>&1 & fi
   WPID=$!
   for i in $(seq 1 15); do   # 30 s for the window / video mode
     sleep 2
@@ -87,23 +120,28 @@ for a in 1 2 3 4 5 6; do
   [ $started = 1 ] && break
   echo "soak: attempt $a: window did not appear within 30 s, retrying"
 done
-[ $started = 1 ] || { echo "soak: exe never started in 6 attempts (see $OUT/wine.out)"; cp -f logs/log.log standalone.log "$OUT/" 2>/dev/null; kill_exe; exit 2; }
+[ $started = 1 ] || { echo "soak: exe never started in 6 attempts (see $RUNOUT)"; cp -f logs/log.log standalone.log "$OUT/" 2>/dev/null; kill_exe; exit 2; }
 echo "soak: started on attempt $a, route $((ROUTE_MS/1000)) s (idle $((IDLE_MS/1000)) s), outputs in $OUT"
 
 # wait for the route to finish or the process to die
 T0=$(date +%s)
 while :; do
   sleep 5
-  pgrep -f "$(basename "$DATA").gta_reversed" >/dev/null || break
+  exe_alive || break
   [ $(( $(date +%s) - T0 )) -gt "$LIMIT_S" ] && { echo "soak: time limit, killing"; TIMEOUT=1; break; }
 done
 kill_exe
 cp -f standalone.log logs/log.log "$OUT/" 2>/dev/null; cp -f standalone_unknown_pointers.txt "$OUT/" 2>/dev/null
 mkdir -p "$OUT/shots"
-for b in frame_*.bmp mark_*.bmp; do [ -f "$b" ] && sips -s format png "$b" --out "$OUT/shots/${b%.bmp}.png" >/dev/null 2>&1; done
+if [ "$HOST" = windows ]; then
+  for b in frame_*.bmp mark_*.bmp; do [ -f "$b" ] && cp "$b" "$OUT/shots/"; done
+  SOAK_SHOTS="$(cygpath -w "$OUT/shots")" powershell.exe -NoProfile -Command 'Add-Type -AssemblyName System.Drawing; Get-ChildItem $env:SOAK_SHOTS -Filter *.bmp | ForEach-Object { $i = [System.Drawing.Image]::FromFile($_.FullName); $i.Save(($_.FullName -replace "\.bmp$",".png"), [System.Drawing.Imaging.ImageFormat]::Png); $i.Dispose(); Remove-Item $_.FullName }' >/dev/null 2>&1
+else
+  for b in frame_*.bmp mark_*.bmp; do [ -f "$b" ] && sips -s format png "$b" --out "$OUT/shots/${b%.bmp}.png" >/dev/null 2>&1; done
+fi
 rm -f frame_*.bmp mark_*.bmp
 
-python3 -I - "$OUT" "${TIMEOUT:-0}" 2>&1 <<'PY' | tee "$OUT/report.txt"
+"$PY" -I - "$OUT" "${TIMEOUT:-0}" 2>&1 <<'PY' | tee "$OUT/report.txt"
 import sys, re, os, glob
 out, timeout = sys.argv[1], sys.argv[2] == "1"
 def rd(p):

@@ -1,29 +1,40 @@
 #!/bin/bash
-# Build and run every *_test target (rw_*_test, game/review/script oracle tests) under Wine; print a summary table.
+# Build and run every *_test target (rw_*_test, game/review/script oracle tests) under Wine (macOS/Linux) or directly (native Windows, Git Bash); print a summary table.
 # usage: tools/standalone/run_all_tests.sh [build-dir (default build/StandaloneRW)] [test-name-filter-regex]
 # env:   SCRATCH   scratchpad holding the shared build mutex (build.lock)
 #        SKIP_BUILD=1  run only, do not build     ATTEMPTS=6   retries on hang/crash (known wined3d flake)
 #        ASSETS=<dir>  dir with infernus.dff/male01.dff/vgsnbuild07.dff (passed to the model-reading rw tests); if it does not exist and
 #                      GAME_DIR=<game install dir> is set, the three DFFs are extracted from $GAME_DIR/models/gta3.img (tools/standalone/extract_img.py)
-#        GTASA_PYTHON  python with unicorn+capstone (default: python3)   MSVC_WINE_ROOT  msvc-wine dir (default ~/tools/msvc)
-#        WINE_BIN      dir of the wine binary to prepend to PATH (optional)   NINJA  ninja path (default: ninja from PATH)
+#        GTASA_PYTHON  python with unicorn+capstone (default: python3, or python)   MSVC_WINE_ROOT  msvc-wine dir (default $TOOLS_DIR/msvc, TOOLS_DIR default ~/tools)  [Mac/Linux]
+#        WINE_BIN      dir of the wine binary to prepend to PATH (optional) [Mac/Linux]   NINJA  ninja path (default: ninja from PATH)
+#        Windows host: run it from a shell with the MSVC x86 environment (tools/standalone/windows/gtash.cmd or vcvarsall x86): `cl` must be on PATH. No Wine/WINEPREFIX;
+#        SCRATCH defaults to C:/gta-scratch; RW_EXE_ORACLE is the native Windows path of the exe. See docs/WINDOWS_SETUP.md.
 # Exit code: non-zero if any test reports failures/mismatches, never produced a result, or failed to build.
 # A fresh build dir is configured exactly like build/StandaloneRW (librw ON, SDL3, Debug via the conan toolchain).
 set -u
+. "$(dirname "$0")/hostenv.sh"
 REPO="$(cd "$(dirname "$0")/../.." && pwd)"
-BDIR="${1:-build/StandaloneRW}"; FILTER="${2:-.}"
-case "$BDIR" in /*) ;; *) BDIR="$REPO/$BDIR";; esac
-SCRATCH="${SCRATCH:-${TMPDIR:-/tmp}/gta-standalone-scratch}"; mkdir -p "$SCRATCH"
-MSVC_WINE_ROOT="${MSVC_WINE_ROOT:-$HOME/tools/msvc}"; GTASA_PYTHON="${GTASA_PYTHON:-python3}"; NINJA="${NINJA:-$(command -v ninja)}"
+BDIR="$(hp "${1:-build/StandaloneRW}")"; FILTER="${2:-.}"
+case "$BDIR" in /*|[A-Za-z]:*) ;; *) BDIR="$REPO/$BDIR";; esac
+SCRATCH="$(hp "${SCRATCH:-$DEF_SCRATCH}")"; mkdir -p "$SCRATCH"
+MSVC_WINE_ROOT="${MSVC_WINE_ROOT:-$TOOLS_DIR/msvc}"; GTASA_PYTHON="$PY"; NINJA="${NINJA:-$(command -v ninja)}"
+if [ "$HOST" = windows ]; then
+  REPO="$(hp "$REPO")"; BDIR="$(hp "$BDIR")"; NINJA="$(hp "$NINJA")"
+  if [ "${SKIP_BUILD:-0}" != 1 ] && ! command -v cl >/dev/null 2>&1; then
+    echo "run_all_tests: cl.exe not on PATH - start this from the MSVC x86 environment (tools/standalone/windows/gtash.cmd), see docs/WINDOWS_SETUP.md"; exit 2
+  fi
+fi
 ATTEMPTS="${ATTEMPTS:-6}"
 ASSETS="${ASSETS:-$SCRATCH/assets}"
 if [ ! -f "$ASSETS/infernus.dff" ] && [ -f "${GAME_DIR:-/nonexistent}/models/gta3.img" ]; then
-  python3 "$REPO/tools/standalone/extract_img.py" "$GAME_DIR/models/gta3.img" "$ASSETS" infernus.dff male01.dff vgsnbuild07.dff
+  "$PY" "$REPO/tools/standalone/extract_img.py" "$GAME_DIR/models/gta3.img" "$ASSETS" infernus.dff male01.dff vgsnbuild07.dff
 fi
-[ -n "${WINE_BIN:-}" ] && PATH="$WINE_BIN:$PATH"
-export PATH WINEPREFIX="${WINEPREFIX:-$HOME/.wine-msvc}" WINEDEBUG=-all
-EXE="${GTA_EXE:-$REPO/gta_sa_compact.exe}"
-export RW_EXE_ORACLE="Z:${EXE//\//\\}"
+if [ "$HOST" != windows ]; then
+  [ -n "${WINE_BIN:-}" ] && PATH="$WINE_BIN:$PATH"
+  export PATH WINEPREFIX="${WINEPREFIX:-$HOME/.wine-msvc}" WINEDEBUG=-all
+fi
+EXE="$(hp "${GTA_EXE:-$REPO/gta_sa_compact.exe}")"
+export RW_EXE_ORACLE="$(wp "$EXE")"
 OUT="$SCRATCH/run_all_tests.$$"; mkdir -p "$OUT"
 
 # conan toolchain: from this checkout, else from the main worktree (a linked worktree has no build/Debug)
@@ -38,11 +49,12 @@ if [ "${SKIP_BUILD:-0}" != 1 ]; then
   lock; HELD=1
   if [ ! -f "$BDIR/build.ninja" ]; then
     mkdir -p "$BDIR"
+    if [ "$HOST" = windows ]; then HOSTARGS=(-DGTASA_NO_EDIT_AND_CONTINUE=ON)   # /Z7 + /MAP like the Wine toolchain (the /ZI default breaks the optimised presets and gives no map)
+    else HOSTARGS=("-DCMAKE_CXX_FLAGS=/WX- /wd4005 /DWIN32 /D_WINDOWS /Zm1000 /GX" "-DGTASA_ML=$MSVC_WINE_ROOT/bin/x86/ml"); fi
     cmake -S "$REPO" -B "$BDIR" -G Ninja -DCMAKE_BUILD_TYPE=Debug \
-      -DCMAKE_TOOLCHAIN_FILE="$TOOLCHAIN" -DCMAKE_MAKE_PROGRAM="$NINJA" \
-      "-DCMAKE_CXX_FLAGS=/WX- /wd4005 /DWIN32 /D_WINDOWS /Zm1000 /GX" \
+      -DCMAKE_TOOLCHAIN_FILE="$(hp "$TOOLCHAIN")" -DCMAKE_MAKE_PROGRAM="$NINJA" "${HOSTARGS[@]}" \
       -DGTASA_STANDALONE=ON -DGTASA_RW_LIBRW=ON -DGTASA_RW_LIBRW_OPT_OUT=OFF -DGTASA_USE_SDL3=ON \
-      -DGTASA_ORIGINAL_EXE="$EXE" -DGTASA_PYTHON="$GTASA_PYTHON" -DGTASA_ML="$MSVC_WINE_ROOT/bin/x86/ml" \
+      -DGTASA_ORIGINAL_EXE="$EXE" -DGTASA_PYTHON="$(hp "$GTASA_PYTHON")" \
       -DGTASA_WITH_OPENAL=OFF -DGTASA_WITH_CLEO_COMMANDS=OFF -DGTASA_WITH_SCRIPT_COMMAND_HOOKS=OFF -DGTASA_WITH_LTO=OFF -DGTASA_UNITY_BUILD=OFF \
       > "$OUT/configure.log" 2>&1 || { echo "configure failed, see $OUT/configure.log"; exit 2; }
   fi
@@ -58,7 +70,7 @@ if [ "${SKIP_BUILD:-0}" != 1 ]; then
 fi
 
 # parse: prints "checks fails mismatches" or nothing when no result line exists in the output
-parse() { python3 - "$1" <<'PY'
+parse() { "$PY" - "$1" <<'PY'
 import re,sys
 t=open(sys.argv[1],errors='replace').read()
 c=f=m=None
@@ -90,18 +102,22 @@ for t in $TESTS; do
   args=()
   if [[ "$MODEL_TESTS" == *" $t "* ]]; then
     case "$t" in rw_skin_hanim_test|rw_skin_pipeline_test|rw_rtanim_rtquat_test) models="male01";; *) models="infernus male01 vgsnbuild07";; esac   # these two need skinned models
-    for f in $models; do [ -f "$ASSETS/$f.dff" ] && args+=("Z:${ASSETS//\//\\}\\$f.dff"); done; fi
+    for f in $models; do [ -f "$ASSETS/$f.dff" ] && args+=("$(wp "$ASSETS")\\$f.dff"); done; fi
   case "$t" in logic_oracle_test) TMO=${TIMEOUT:-3000};; *oracle*) TMO=${TIMEOUT:-900};; rw_skin_vs_test) TMO=${TIMEOUT:-900};; *) TMO=${TIMEOUT:-180};; esac   # vs_test: ~2.2M exe-composer keys (> 180 s under Wine); logic_oracle_test: ~224 functions x >=1000 cases, ~20 min under Wine
   tv="TIMEOUT_$t"; [ -n "${!tv:-}" ] && TMO=${!tv}                                                              # per-test override: TIMEOUT_<test>=<seconds>
   start=$SECONDS; status=NORESULT; res=""; n=0
   while [ $n -lt "$ATTEMPTS" ]; do
     n=$((n+1)); log="$OUT/$t.$n.log"
-    ( cd "$BDIR/source" && exec wine "$t.exe" "${args[@]+"${args[@]}"}" ) > "$log" 2>&1 &
+    if [ "$HOST" = windows ]; then ( cd "$BDIR/source" && exec "./$t.exe" "${args[@]+"${args[@]}"}" ) > "$log" 2>&1 &
+    else ( cd "$BDIR/source" && exec wine "$t.exe" "${args[@]+"${args[@]}"}" ) > "$log" 2>&1 & fi
     pid=$!; code=""
     for ((s=0; s<TMO; s++)); do sleep 1; kill -0 $pid 2>/dev/null || { wait $pid; code=$?; break; }; done
     if [ -z "$code" ]; then kill -9 $pid 2>/dev/null; echo "  $t attempt $n: hang >${TMO}s"; code=hang; fi
     res=$(parse "$log")
-    if [ -z "$res" ] || [ "$code" = hang ]; then pkill -9 -f "$t.exe" 2>/dev/null; pkill -9 winedbg 2>/dev/null; sleep 1; fi
+    if [ -z "$res" ] || [ "$code" = hang ]; then
+      if [ "$HOST" = windows ]; then taskkill //F //IM "$t.exe" >/dev/null 2>&1; else pkill -9 -f "$t.exe" 2>/dev/null; pkill -9 winedbg 2>/dev/null; fi
+      sleep 1
+    fi
     if [ -n "$res" ] && [ "$code" != hang ]; then break; fi
     res=""; [ "$code" != hang ] && echo "  $t attempt $n: crash/no result (exit $code)"
   done

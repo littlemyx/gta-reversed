@@ -69,10 +69,10 @@ constexpr float BIKE_SHAKE_MIN_SPEED_SQ                 = std::bit_cast<float>(0
 } // namespace
 
 // 0xC1C26C - Wheel states (front, rear) passed to `ProcessBikeWheel` and copied to `m_WheelStates` at the end of `ProcessControl` (named by hand)
-static auto& s_BikeWheelStates = StaticRef<std::array<tWheelState, 2>>(0xC1C26C);
+static NOTSA_GLOBAL(s_BikeWheelStates, 0xC1C26C, (std::array<tWheelState, 2>), {});
 
 // 0xC1C27C - Thrust passed to `ProcessBikeWheel` (named by hand, a global in the original)
-static auto& s_BikeWheelThrust = StaticRef<float>(0xC1C27C);
+static NOTSA_GLOBAL(s_BikeWheelThrust, 0xC1C27C, (float), {});
 
 // 0xC1C818 - Traction scale used by `ProcessControl`, initialised by the CRT static initializer at 0x853600 to `(1 / 50^2) * 10` ~= 0.004 (0x3B83126E) (named by hand)
 static auto& s_BikeTractionScale = StaticRef<float>(0xC1C818);
@@ -84,7 +84,7 @@ static NOTSA_GLOBAL_ALIAS(s_BikeHandlingCheat, 0x96914C, (uint8), *reinterpret_c
 static auto& s_BikeExhaustSpeedDivisor = StaticRef<float>(0xC1C81C);
 
 // 0xC1C804 - Squared (sign preserved) steering input, written by `ProcessControlInputs` (named by hand, no known readers)
-static auto& s_BikeSteerAngleSq = StaticRef<float>(0xC1C804);
+static NOTSA_GLOBAL(s_BikeSteerAngleSq, 0xC1C804, (float), {});
 
 void CBike::InjectHooks() {
     RH_ScopedVirtualClass(CBike, 0x871360, 67);

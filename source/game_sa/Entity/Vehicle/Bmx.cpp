@@ -458,7 +458,7 @@ void CBmx::ProcessBunnyHop() {
 // 0x6C0810
 void CBmx::PreRender() {
     // 0xC1C83C - Unknown flag (it's in BSS, read only by this function [0x6C1060, 0x6C113D, 0x6C11DB] and there's no writer in the whole `.text` - so it's always false)
-    static auto& s_UnkFlag = StaticRef<bool>(0xC1C83C);
+    NOTSA_GLOBAL_LOCAL(s_UnkFlag, 0xC1C83C, (bool), {});
 
     CVehicle::PreRender();
 

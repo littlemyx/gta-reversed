@@ -32,7 +32,7 @@ constexpr size_t NUM_AUTOMOBILE_SUSP_LINES  = (size_t)MAX_CARWHEELS;
 constexpr size_t NUM_RHINO_EXTRA_SUSP_LINES = (size_t)MAX_CARWHEELS * 2u; // 8
 constexpr size_t NUM_RHINO_SUSP_LINES       = NUM_AUTOMOBILE_SUSP_LINES + NUM_RHINO_EXTRA_SUSP_LINES; // 8
 constexpr size_t MAX_NUM_SUSP_LINES         = std::max(NUM_AUTOMOBILE_SUSP_LINES, NUM_RHINO_SUSP_LINES); // 12
-auto& aAutomobileColPoints = StaticRef<std::array<CColPoint, MAX_NUM_SUSP_LINES>>(0xC1BFF8);
+NOTSA_GLOBAL(aAutomobileColPoints, 0xC1BFF8, (std::array<CColPoint, MAX_NUM_SUSP_LINES>), {});
 
 static constexpr CVector PACKER_COL_PIVOT = CVector(0.0f, 0.0f, 2.0f);
 static constexpr float CAR_BALANCE_MULT = 0.08f;
@@ -5656,8 +5656,8 @@ void CAutomobile::UpdateWheelMatrix(int32 nodeIndex, int32 flags) {
         f     = 1.0;
     }
 
-    const auto& s_CombineWheelSize = StaticRef<float>(0x8D31D4); // 1.7f
-    const auto& s_CombineWheelZ    = StaticRef<float>(0x8D31D0); // 0.45f
+    const NOTSA_GLOBAL_LOCAL_NS(s_CombineWheelSize, 0x8D31D4, (float), { 1.7f }); // 1.7f
+    const NOTSA_GLOBAL_LOCAL_NS(s_CombineWheelZ, 0x8D31D0, (float), { 0.45f }); // 0.45f
     if (m_nModelIndex == MODEL_COMBINE && (nodeIndex == CAR_WHEEL_LM || nodeIndex == CAR_WHEEL_RM)) {
         scale      = (float)((double)s_CombineWheelSize / (double)mi->m_fWheelSizeFront);
         savedPos.z = (float)((((double)s_CombineWheelSize - (double)mi->m_fWheelSizeRear) * (double)s_CombineWheelZ) + (double)savedPos.z);

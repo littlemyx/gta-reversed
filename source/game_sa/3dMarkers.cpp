@@ -4,7 +4,10 @@
 #include "PostEffects.h"
 
 // RwIm3DVertex StreakVertices[4];
+#ifndef NOTSA_GLOBALS_DETACHED // unused pointer view of Boat.cpp's KeepWaterOutVertices (0xC278F8); gone in detached mode (kept in address mode: object code unchanged)
 auto& aRenderVertices = StaticRef<RxObjSpace3DVertex*>(0xC278F8);
+#endif
+#line 8
 
 void C3dMarkers::InjectHooks() {
     RH_ScopedClass(C3dMarkers);

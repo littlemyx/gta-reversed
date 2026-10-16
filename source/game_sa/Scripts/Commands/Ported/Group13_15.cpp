@@ -51,6 +51,8 @@
 #include "Events/EventGroupEvent.h"
 #include "Events/EventLeaderEnteredCarAsDriver.h"
 #include "PedGroupIntelligence.h"
+#include "game_sa/Entity/Vehicle/Automobile.h"
+#line 54
 
 using namespace notsa::script;
 
@@ -245,7 +247,7 @@ void FireHunterGun(CVehicle& veh) {
         return;
     }
     CWeapon       weapon{ WEAPON_MINIGUN, 5000 };
-    const CVector muzzleLocal = StaticRef<CVector>(0x8D3394);
+    const CVector muzzleLocal = NOTSA_GLOBAL_EXPR(0x8D3394, (CVector), CAutomobile::vecHunterGunPos);
     const CVector step        = veh.m_vecMoveSpeed * CTimer::ms_fTimeStep; // 0x40FEC0
     const CVector t           = TransformPointOriginal(veh.GetMatrix(), muzzleLocal); // 0x59C890
     CVector       origin      = t + step;                                   // 0x40FE30

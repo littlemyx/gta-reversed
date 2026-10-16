@@ -4,9 +4,9 @@
 #include "VehicleRecording.h"
 #include "ControllerConfigManager.h"
 
-auto& bDoQuadDamping = StaticRef<bool>(0x8D3450); // true
-auto& QUAD_HBSTEER_ANIM_MULT = StaticRef<float>(0x8D3454); // -0.4f
-auto& vecQuadResistance = StaticRef<CVector>(0x8D3458); // { 0.995f, 0.995f, 1.0f }
+NOTSA_GLOBAL(bDoQuadDamping, 0x8D3450, (bool), { true }); // true
+NOTSA_GLOBAL(QUAD_HBSTEER_ANIM_MULT, 0x8D3454, (float), { -0.4f }); // -0.4f
+NOTSA_GLOBAL(vecQuadResistance, 0x8D3458, (CVector), { 0.995f, 0.995f, 1.0f }); // { 0.995f, 0.995f, 1.0f }
 
 namespace {
 // Same as in `Bike.cpp` - replicates the operation order of the original (inlined `CMatrix::Multiply3x3`)

@@ -40,12 +40,17 @@ CVector CTrain::aStationCoors[6] = { // 0x8D48F8
     CVector{ 2865.0f,  1281.0f, 12.0  }
 };
 
-auto& pTrackNodes = StaticRef<CTrainNode*[4]>(0xC38024);
-auto& NumTrackNodes = StaticRef<std::array<int32, 4>>(0xC38014);
-auto& arrTotalTrackLength = StaticRef<std::array<float, 4>>(0xC37FEC);
-auto& StationDist = StaticRef<std::array<float, 6>>(0xC38034);
+NOTSA_GLOBAL(pTrackNodes, 0xC38024, (CTrainNode*[4]), {});
+NOTSA_GLOBAL(NumTrackNodes, 0xC38014, (std::array<int32, 4>), {});
+NOTSA_GLOBAL(arrTotalTrackLength, 0xC37FEC, (std::array<float, 4>), {});
+NOTSA_GLOBAL(StationDist, 0xC38034, (std::array<float, 6>), {});
 // Train configurations: 16 configs, each is a list of up to 15 model IDs terminated by 0
-auto& TrainConfigs = StaticRef<int32[16][16]>(0x8D44F8);
+NOTSA_GLOBAL(TrainConfigs, 0x8D44F8, (int32[16][16]), {
+    { 537, 569, 569, 569, 569 }, { 538, 570, 570 }, { 538, 570, 570 }, { 537, 569, 569, 569 }, { 538, 570, 570 }, { 538,
+    570, 570, 570 }, { 537, 569, 569 }, { 538, 570, 570 }, { 449, 449 }, { 449 }, { 537, 569 }, { 538, 570, 570 }, { 537,
+    569, 569, 569, 537 }, { 537, 569, 569, 569, 569, 569 }, { 449 }, { 538 }
+});
+#line 49
 
 void CTrain::InjectHooks() {
     RH_ScopedVirtualClass(CTrain, 0x872370, 66);

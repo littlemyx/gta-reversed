@@ -2,8 +2,8 @@
 
 #include "MonsterTruck.h"
 
-auto& fWheelExtensionRate = StaticRef<float>(0x8D33AC);
-auto& bClampSuspensionCompressionToZero = StaticRef<bool>(0x8D33B0); // Always `true`, originally at 0x8D33B0
+NOTSA_GLOBAL(fWheelExtensionRate, 0x8D33AC, (float), { 0.1f });
+NOTSA_GLOBAL(bClampSuspensionCompressionToZero, 0x8D33B0, (bool), { true }); // Always `true`, originally at 0x8D33B0
 
 void CMonsterTruck::InjectHooks() {
     RH_ScopedVirtualClass(CMonsterTruck, 0x8717d8, 71);

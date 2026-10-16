@@ -29,35 +29,35 @@
 #include "Matrix.h"
 #include "Quaternion.h"
 
-auto& HARRIER_NOZZLE_ROTATERATE = StaticRef<float>(0x8D33DC);       // 25.0f
-auto& PLANE_DAMAGE_WAVE_COUNTER_VAR = StaticRef<float>(0x8D33E0);   // 0.75f
-auto& PLANE_DAMAGE_THRESHHOLD = StaticRef<float>(0x8D33E4);         // 500.0f
-auto& PLANE_DAMAGE_SCALE_MASS = StaticRef<float>(0x8D33E8);         // 10000.0f
-auto& PLANE_DAMAGE_DESTROY_THRESHHOLD = StaticRef<float>(0x8D33EC); // 5000.0f
-auto& vecRCBaronGunPos = StaticRef<CVector>(0x8D33F0);            // <0.0f, 0.45f, 0.0f>
-auto& PLANE_HYDRA_NOZZLE_ACCEL_MULT = StaticRef<float>(0x8D341C);   // 0.25f
-auto& PLANE_AILERON_PANEL_MULT = StaticRef<float>(0x8D3420);        // 10.0f
-auto& PLANE_AILERON_PANEL_AMPL = StaticRef<float>(0x8D3424);        // 0.002f
-auto& PLANE_AILERON_DAMAGE_AMPL = StaticRef<float>(0x8D3428);       // 0.05f
-auto& PLANE_ELEVATOR_PANEL_MULT = StaticRef<float>(0x8D342C);       // 10.0f
-auto& PLANE_ELEVATOR_PANEL_AMPL = StaticRef<float>(0x8D3430);       // 0.002f
-auto& PLANE_ELEVATOR_DAMAGE_AMPL = StaticRef<float>(0x8D3434);      // 0.05f
-auto& PLANE_RUDDER_PANEL_MULT = StaticRef<float>(0x8D3438);         // 10.0f
-auto& PLANE_RUDDER_PANEL_AMPL = StaticRef<float>(0x8D343C);         // 0.002f
-auto& PLANE_RUDDER_DAMAGE_AMPL = StaticRef<float>(0x8D3440);        // 0.05f
-auto& PLANE_PROP_DAMAGE_MULT = StaticRef<float>(0x8D3444);          // 0.2f
-auto& PLANE_PROP_DAMAGE_WAVE_PERIOD = StaticRef<int32>(0x8D3448);   // 2500
-auto& PLANE_PROP_DAMAGE_BASE = StaticRef<float>(0x8D344C);          // 0.8f
+NOTSA_GLOBAL(HARRIER_NOZZLE_ROTATERATE, 0x8D33DC, (float), { 25.0f });       // 25.0f
+NOTSA_GLOBAL(PLANE_DAMAGE_WAVE_COUNTER_VAR, 0x8D33E0, (float), { 0.75f });   // 0.75f
+NOTSA_GLOBAL(PLANE_DAMAGE_THRESHHOLD, 0x8D33E4, (float), { 500.0f });         // 500.0f
+NOTSA_GLOBAL(PLANE_DAMAGE_SCALE_MASS, 0x8D33E8, (float), { 10000.0f });         // 10000.0f
+NOTSA_GLOBAL(PLANE_DAMAGE_DESTROY_THRESHHOLD, 0x8D33EC, (float), { 5000.0f }); // 5000.0f
+NOTSA_GLOBAL(vecRCBaronGunPos, 0x8D33F0, (CVector), { 0.0f, 0.45f, 0.0f });            // <0.0f, 0.45f, 0.0f>
+NOTSA_GLOBAL(PLANE_HYDRA_NOZZLE_ACCEL_MULT, 0x8D341C, (float), { 0.25f });   // 0.25f
+NOTSA_GLOBAL(PLANE_AILERON_PANEL_MULT, 0x8D3420, (float), { 10.0f });        // 10.0f
+NOTSA_GLOBAL(PLANE_AILERON_PANEL_AMPL, 0x8D3424, (float), { 0.002f });        // 0.002f
+NOTSA_GLOBAL(PLANE_AILERON_DAMAGE_AMPL, 0x8D3428, (float), { 0.05f });       // 0.05f
+NOTSA_GLOBAL(PLANE_ELEVATOR_PANEL_MULT, 0x8D342C, (float), { 10.0f });       // 10.0f
+NOTSA_GLOBAL(PLANE_ELEVATOR_PANEL_AMPL, 0x8D3430, (float), { 0.002f });       // 0.002f
+NOTSA_GLOBAL(PLANE_ELEVATOR_DAMAGE_AMPL, 0x8D3434, (float), { 0.05f });      // 0.05f
+NOTSA_GLOBAL(PLANE_RUDDER_PANEL_MULT, 0x8D3438, (float), { 10.0f });         // 10.0f
+NOTSA_GLOBAL(PLANE_RUDDER_PANEL_AMPL, 0x8D343C, (float), { 0.002f });         // 0.002f
+NOTSA_GLOBAL(PLANE_RUDDER_DAMAGE_AMPL, 0x8D3440, (float), { 0.05f });        // 0.05f
+NOTSA_GLOBAL(PLANE_PROP_DAMAGE_MULT, 0x8D3444, (float), { 0.2f });          // 0.2f
+NOTSA_GLOBAL(PLANE_PROP_DAMAGE_WAVE_PERIOD, 0x8D3448, (int32), { 2500 });   // 2500
+NOTSA_GLOBAL(PLANE_PROP_DAMAGE_BASE, 0x8D344C, (float), { 0.8f });          // 0.8f
 
 // NOTSA: Unnamed globals used by `PreRender`, named by hand
-auto& PLANE_PANEL_RETURN_MULT = StaticRef<float>(0x8D33FC);         // 0.03f - `CBouncingPanel::ProcessPanel` return multiplier
-auto& PLANE_PANEL_DAMP_MULT = StaticRef<float>(0x8D3400);           // 0.98f - `CBouncingPanel::ProcessPanel` damp multiplier
-auto& VORTEX_HOVER_MAX_COMPRESSION = StaticRef<float>(0x8D3404);    // 1.3f
-auto& VORTEX_HOVER_ROLL_LIMIT = StaticRef<float>(0x8D3408);         // 0.1f
-auto& VORTEX_HOVER_PITCH_LIMIT = StaticRef<float>(0x8D340C);        // 0.1f
-auto& VORTEX_HOVER_BLEND_BASE = StaticRef<float>(0x8D3410);         // 0.9f - blend = pow(this, timestep)
-auto& VORTEX_HOVER_SPEED_LIMIT = StaticRef<float>(0x8D3414);        // 0.3f
-auto& VORTEX_HOVER_SPEED_MULT = StaticRef<float>(0x8D3418);         // 2.0f
+NOTSA_GLOBAL(PLANE_PANEL_RETURN_MULT, 0x8D33FC, (float), { 0.03f });         // 0.03f - `CBouncingPanel::ProcessPanel` return multiplier
+NOTSA_GLOBAL(PLANE_PANEL_DAMP_MULT, 0x8D3400, (float), { 0.98f });           // 0.98f - `CBouncingPanel::ProcessPanel` damp multiplier
+NOTSA_GLOBAL(VORTEX_HOVER_MAX_COMPRESSION, 0x8D3404, (float), { 1.3f });    // 1.3f
+NOTSA_GLOBAL(VORTEX_HOVER_ROLL_LIMIT, 0x8D3408, (float), { 0.1f });         // 0.1f
+NOTSA_GLOBAL(VORTEX_HOVER_PITCH_LIMIT, 0x8D340C, (float), { 0.1f });        // 0.1f
+NOTSA_GLOBAL(VORTEX_HOVER_BLEND_BASE, 0x8D3410, (float), { 0.9f });         // 0.9f - blend = pow(this, timestep)
+NOTSA_GLOBAL(VORTEX_HOVER_SPEED_LIMIT, 0x8D3414, (float), { 0.3f });        // 0.3f
+NOTSA_GLOBAL(VORTEX_HOVER_SPEED_MULT, 0x8D3418, (float), { 2.0f });         // 2.0f
 
 namespace {
 // Read-only data (.rdata), so no need to reference those by their addresses

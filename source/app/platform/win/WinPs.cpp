@@ -420,6 +420,19 @@ static auto GetNativeResolutionOfCurrentSubsystem() {
 }
 
 static BOOL CheckDefaultVideoModeSupported() {
+#ifdef NOTSA_STANDALONE_RUN
+    // NOTSA: explicit override of the default mode (only reached when the settings file holds no usable mode): NOTSA_STANDALONE_VIDEOMODE=<index>
+    if (const char* ov = std::getenv("NOTSA_STANDALONE_VIDEOMODE")) {
+        const auto vm = std::atoi(ov);
+        if (vm >= 0 && vm < RwEngineGetNumVideoModes()) {
+            NOTSA_LOG_DEBUG("NOTSA_STANDALONE_VIDEOMODE: using mode {}", vm);
+            GcurSelVM = vm;
+            return TRUE;
+        }
+        NOTSA_LOG_DEBUG("NOTSA_STANDALONE_VIDEOMODE={} is not a valid video mode index (0..{}): ignored", ov, RwEngineGetNumVideoModes() - 1);
+    }
+#endif
+
     // IMPROVEMENT/FIX_BUGS: The game will now default to native adapter
     // resolution instead of 800x600.
 
@@ -450,11 +463,7 @@ static BOOL CheckDefaultVideoModeSupported() {
 
 #ifdef NOTSA_STANDALONE_RUN
     // Standalone on hosts without a 800x600 display mode (Wine on macOS lists only the scaled native modes): take the smallest 32 bit exclusive
-    // mode with width >= 800 (override: NOTSA_STANDALONE_VIDEOMODE=<index>)
-    if (const char* ov = std::getenv("NOTSA_STANDALONE_VIDEOMODE")) {
-        GcurSelVM = std::atoi(ov);
-        return TRUE;
-    }
+    // mode with width >= 800 (override: NOTSA_STANDALONE_VIDEOMODE=<index>, checked first, see the top of this function)
     {
         int32 best = -1;
         RwUInt32 bestArea = ~0u;
@@ -527,8 +536,8 @@ static RwUInt32 GetBestRefreshRate(RwUInt32 width, RwUInt32 height, RwUInt32 dep
 
 // 0x746190
 bool psSelectDevice() {
-    const auto wnd  = PSGLOBAL(window);
-    const auto inst = PSGLOBAL(instance);
+    [[maybe_unused]] const auto wnd  = PSGLOBAL(window);
+    [[maybe_unused]] const auto inst = PSGLOBAL(instance);
 
     if (!UseDefaultVM) {
         GnumSubSystems = RwEngineGetNumSubSystems();
@@ -553,9 +562,17 @@ bool psSelectDevice() {
 
     // Select video mode to use
     if (MultipleSubSystems && !UseDefaultVM) {
+#ifdef NOTSA_STANDALONE_RUN
+        // NOTSA: the standalone exe has no IDD_DIALOG1 resource (the original exe's one is not part of our image), so DialogBoxParam fails with -1,
+        // which is non-zero and used to leave GcurSelVM = -1 -> "Failed: RwEngineSetVideoMode(-1)" on every host that reports more than one
+        // display adapter (e.g. Wine on macOS with an external monitor, a PC with two monitors). Skip the dialog: keep the default sub system
+        // (adapter 0, the primary display) and pick the video mode with the same default search the single sub system case uses (below).
+        NOTSA_LOG_DEBUG("{} sub systems: no video mode dialog in the standalone exe, using sub system {}", GnumSubSystems, GcurSelSS);
+#else
         if (!CreateVidModeSelectDialog(inst, wnd)) {
             return FALSE; // User failed to select video mode
         }
+#endif
     }
 
     // Set selected subsystem
@@ -565,8 +582,13 @@ bool psSelectDevice() {
     }
 
     NOTSA_LOG_DEBUG("GcurSelSS={}", GcurSelSS);
+    NOTSA_LOG_DEBUG("UseDefaultVM={} MultipleSubSystems={} IsVMNotSelected={} DisplayVideoMode={} PrefsVideoMode={}", (int)UseDefaultVM, (int)MultipleSubSystems, (int)IsVMNotSelected, FrontEndMenuManager.m_nDisplayVideoMode, FrontEndMenuManager.m_nPrefsVideoMode);
 
+#ifdef NOTSA_STANDALONE_RUN
+    if (!UseDefaultVM) { // NOTSA: also with several sub systems (no dialog selected a mode), see above
+#else
     if (!UseDefaultVM && !MultipleSubSystems) {
+#endif
         const auto vmDisplay = FrontEndMenuManager.m_nDisplayVideoMode;
         if (!vmDisplay || !GetVideoModeList()[vmDisplay]) {
             if (IsVMNotSelected && !CheckDefaultVideoModeSupported()) {

@@ -89,36 +89,36 @@ public:
     static constexpr size_t MAX_FONT_SPRITES = 2;
     static constexpr size_t MAX_FONT_BUTTON_SPRITES = 15;
 
-    static inline auto& RenderState = StaticRef<CFontChar>(0xC71AA0);
+    static inline NOTSA_GLOBAL(RenderState, 0xC71AA0, (CFontChar), {});
     // font textures array
     static inline auto& Sprite = StaticRef<CSprite2d[MAX_FONT_SPRITES]>(0xC71AD0);
     // button textures array
     static inline auto& ButtonSprite = StaticRef<CSprite2d[MAX_FONT_BUTTON_SPRITES]>(0xC71AD8);
-    static inline auto& PS2Symbol = StaticRef<eExtraFontSymbol>(0xC71A54);
-    static inline auto& m_bNewLine = StaticRef<bool>(0xC71A55);
-    static inline auto& m_Color = StaticRef<CRGBA>(0xC71A60);
-    static inline auto& m_Scale = StaticRef<CVector2D>(0xC71A64);
-    static inline auto& m_fSlant = StaticRef<float>(0xC71A6C);
-    static inline auto& m_fSlantRefPoint = StaticRef<CVector2D>(0xC71A70);
-    static inline auto& m_bFontJustify = StaticRef<bool>(0xC71A78);
-    static inline auto& m_bFontCentreAlign = StaticRef<bool>(0xC71A79);
-    static inline auto& m_bFontRightAlign = StaticRef<bool>(0xC71A7A);
-    static inline auto& m_bFontBackground = StaticRef<bool>(0xC71A7B);
-    static inline auto& m_bEnlargeBackgroundBox = StaticRef<bool>(0xC71A7C);
-    static inline auto& m_bFontPropOn = StaticRef<bool>(0xC71A7D);
-    static inline auto& m_bFontIsBlip = StaticRef<bool>(0xC71A7E);
-    static inline auto& m_fFontAlpha = StaticRef<float>(0xC71A80);
-    static inline auto& m_FontBackgroundColor = StaticRef<CRGBA>(0xC71A84);
-    static inline auto& m_fWrapx = StaticRef<float>(0xC71A88);
-    static inline auto& m_fFontCentreSize = StaticRef<float>(0xC71A8C);
-    static inline auto& m_fRightJustifyWrap = StaticRef<float>(0xC71A90);
-    static inline auto& m_FontTextureId = StaticRef<uint8>(0xC71A94);
-    static inline auto& m_FontStyle = StaticRef<uint8>(0xC71A95);
-    static inline auto& m_nFontShadow = StaticRef<uint8>(0xC71A96);
-    static inline auto& m_FontDropColor = StaticRef<CRGBA>(0xC71A97);
-    static inline auto& m_nFontOutlineSize = StaticRef<uint8>(0xC71A9B);
-    static inline auto& m_nFontOutline = StaticRef<uint8>(0xC71A9C);
-    static inline auto& m_nFontOutlineOrShadow = StaticRef<uint8>(0xC71A9C);
+    static inline NOTSA_GLOBAL(PS2Symbol, 0xC71A54, (eExtraFontSymbol), {});
+    static inline NOTSA_GLOBAL(m_bNewLine, 0xC71A55, (bool), {});
+    static inline NOTSA_GLOBAL(m_Color, 0xC71A60, (CRGBA), {});
+    static inline NOTSA_GLOBAL(m_Scale, 0xC71A64, (CVector2D), {});
+    static inline NOTSA_GLOBAL(m_fSlant, 0xC71A6C, (float), {});
+    static inline NOTSA_GLOBAL(m_fSlantRefPoint, 0xC71A70, (CVector2D), {});
+    static inline NOTSA_GLOBAL(m_bFontJustify, 0xC71A78, (bool), {});
+    static inline NOTSA_GLOBAL(m_bFontCentreAlign, 0xC71A79, (bool), {});
+    static inline NOTSA_GLOBAL(m_bFontRightAlign, 0xC71A7A, (bool), {});
+    static inline NOTSA_GLOBAL(m_bFontBackground, 0xC71A7B, (bool), {});
+    static inline NOTSA_GLOBAL(m_bEnlargeBackgroundBox, 0xC71A7C, (bool), {});
+    static inline NOTSA_GLOBAL(m_bFontPropOn, 0xC71A7D, (bool), {});
+    static inline NOTSA_GLOBAL(m_bFontIsBlip, 0xC71A7E, (bool), {});
+    static inline NOTSA_GLOBAL(m_fFontAlpha, 0xC71A80, (float), {});
+    static inline NOTSA_GLOBAL(m_FontBackgroundColor, 0xC71A84, (CRGBA), {});
+    static inline NOTSA_GLOBAL(m_fWrapx, 0xC71A88, (float), {});
+    static inline NOTSA_GLOBAL(m_fFontCentreSize, 0xC71A8C, (float), {});
+    static inline NOTSA_GLOBAL(m_fRightJustifyWrap, 0xC71A90, (float), {});
+    static inline NOTSA_GLOBAL(m_FontTextureId, 0xC71A94, (uint8), {});
+    static inline NOTSA_GLOBAL(m_FontStyle, 0xC71A95, (uint8), {});
+    static inline NOTSA_GLOBAL(m_nFontShadow, 0xC71A96, (uint8), {});
+    static inline NOTSA_GLOBAL(m_FontDropColor, 0xC71A97, (CRGBA), {});
+    static inline NOTSA_GLOBAL(m_nFontOutlineSize, 0xC71A9B, (uint8), {});
+    static inline NOTSA_GLOBAL(m_nFontOutline, 0xC71A9C, (uint8), {});
+    static inline NOTSA_GLOBAL_ALIAS(m_nFontOutlineOrShadow, 0xC71A9C, (uint8), CFont::m_nFontOutline);
 
 public:
     static void InjectHooks();

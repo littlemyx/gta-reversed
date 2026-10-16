@@ -11,10 +11,10 @@
 
 #include "eLanguage.h"
 
-auto& FontRenderStateBuf = StaticRef<std::array<CFontChar, 9>>(0xC716B0);
-auto& pEmptyChar = StaticRef<CFontChar*>(0xC716A8);
+NOTSA_GLOBAL(FontRenderStateBuf, 0xC716B0, (std::array<CFontChar, 9>), {});
+NOTSA_GLOBAL(pEmptyChar, 0xC716A8, (CFontChar*), {});
 
-auto& gFontData = StaticRef<std::array<tFontData, 2>>(0xC718B0);
+NOTSA_GLOBAL(gFontData, 0xC718B0, (std::array<tFontData, 2>), {});
 
 void CFont::InjectHooks() {
     RH_ScopedClass(CFont);

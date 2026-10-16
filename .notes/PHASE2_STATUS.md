@@ -143,3 +143,6 @@
 - 2026-10-16 WINPREP done (bb29e20b, ee3e4a48, b23df719, pushed): docs/WINDOWS_SETUP.md (MSVC 14.51.36231, SDK 10.0.26100.0), hostenv.sh/build_locked.sh/gtash.cmd, scripts detect Git Bash. Found: fresh-prefix soak fails RwEngineSetVideoMode(-1) (no gta_sa.set) -> agent VMODE.
 - 2026-10-16 VMODE done (05cebf4e): Wine reports 2 adapters -> device dialog (no resource in standalone) returned -1 -> GcurSelVM -1; standalone skips dialog, adapter 0, normal mode selection; fresh prefix soak OK x2. hostenv SCRATCH default -> session scratchpad lock.
 - 2026-10-16 D-B08 done (79b8b935..f5374cdb, tools 8ad20ae0, 3a8deaad): 143 globals; verify 1098 0 mismatch; check-converted 0; full-poison soak OK. Open: B20 leftovers (TempVertexBuffer arena, gfSpeedMult raw cast, 0x8D3674/78), unexplained reloc-name diffs in shared StandaloneRelease.
+- 2026-10-16 DECISION (user): no Windows move — finish everything on this Mac (no cross-host sync). docs/WINDOWS_* kept for reference only.
+- 2026-10-16 CORRECTION (user): misread — plan is: finish the agents running now on the Mac (D-B07, D-B09, F2), push, then the user moves to Windows (docs/WINDOWS_AGENT_PROMPT.md). No new agents on the Mac.
+- 2026-10-16 HAND-OVER to Windows: D-B07 stopped after converting+committing (unverified, see WINDOWS_AGENT_PROMPT step 6); D-B09/F2 stopped before any edits. Mac idle.

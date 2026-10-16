@@ -54,9 +54,12 @@ runs on the user's Mac. Both work on the same private repo and share ONE Claude 
    help — record the native numbers in `.notes/reports/WIN_FPS.md`.
 5. Ask the user to play `build/StandaloneRelease` with sound and report crackle / shadow / stutter (fixed on the Mac:
    f9b8b892, 50a8a180, 170085d9 — needs confirmation by ear).
-6. Then continue stream D: next batches B09, B10, B12..B20 per `.notes/DETACH_B_BRIEF.md` (incl. point 9
-   `codemod_globals.py --check-converted` = 0 and the full-poison soak gate). Before you start a batch, check
-   `.notes/ZONES.md` and the last D reports — the Mac may have just finished B07/B08.
+6. Then continue stream D. State at hand-over (2026-10-16): batches A1-A4, B01-B06, B08, B11 done and verified (1098
+   globals detached, full-poison soak green). **B07 (Ped.cpp..Train.h) is converted and committed (17 commits, last
+   eedcada2) but NOT verified** — the agent was stopped before its gates: first run `codemod_globals.py --check-converted`,
+   verify_globals, option-OFF obj identity, Debug compile and the full-poison soak for B07 and fix what fails. Then B09
+   (GameLogic.cpp..FurnitureManager_c.h), B10, B12..B20 per `.notes/DETACH_B_BRIEF.md`.
+   Stream F (x87-free float) is NOT a priority on Windows (x87 is native there); it is needed later for 64-bit/ARM builds.
 
 ## Known open items (details in PHASE2_STATUS.md)
 - CJ sometimes dies during the idle phase of the soak route — check whether the original does too.

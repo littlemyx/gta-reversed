@@ -21,7 +21,7 @@ public:
     int32 field_7A0;
 
     // did we display "JCK_HLP" message
-    static inline auto& bHasDisplayedPlayerQuitEnterCarHelpText = StaticRef<bool>(0xC0BC15);
+    static inline NOTSA_GLOBAL(bHasDisplayedPlayerQuitEnterCarHelpText, 0xC0BC15, (bool), {});
 
     // Android
     static bool bDebugPlayerInvincible;
@@ -118,7 +118,7 @@ public:
 
 VALIDATE_SIZE(CPlayerPed, 0x7A4);
 
-static inline auto& abTempNeverLeavesGroup = StaticRef<std::array<bool, 7>>(0xC0BC08);
-static inline auto& gPlayIdlesAnimBlockIndex = StaticRef<int32>(0xC0BC10);
+NOTSA_GLOBAL_HDR(abTempNeverLeavesGroup, 0xC0BC08, (std::array<bool, 7>), {});
+NOTSA_GLOBAL_HDR(gPlayIdlesAnimBlockIndex, 0xC0BC10, (int32), {});
 
 bool LOSBlockedBetweenPeds(CEntity* entity1, CEntity* entity2);

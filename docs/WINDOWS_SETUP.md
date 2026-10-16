@@ -1,0 +1,155 @@
+# Windows PC setup (reference work: x86 MSVC build, exe-oracle tests, game soaks, debugging)
+
+Since 2026-10-16 the *reference* work of the standalone port runs on a native x86-64 Windows PC with a GPU (Claude Code runs there, in Git Bash). The Mac keeps
+the portability streams (clang-cl / arm64 syntax checks, codemods, porting). Everything below was prepared on the Mac and **not yet executed on Windows** - the
+"First session checklist" at the end is how you find out what still needs a fix. Where this file and `docs/STANDALONE.md` disagree about Wine details, this
+file wins on Windows (no Wine, no prefixes, no `taskpolicy`).
+
+## 0. Facts to keep (the toolchain is part of the fidelity contract)
+| What | Value |
+|---|---|
+| MSVC toolset | **14.51.36231** (VS 2026 / v145, conan `compiler.version=195`; x87 codegen of the game objects depends on it - do not "just use the newest") |
+| Windows SDK | **10.0.26100.0** |
+| CMake / Ninja / conan | CMake >= 4.2 (Mac uses 4.4.3), any recent Ninja, conan **2.x** (Mac: 2.33.0) |
+| Python | 3.12+ x64 with `unicorn` and `capstone` (the data-image extractor replays the exe's static initialisers) |
+| Target | **Win32 (x86)** only. CI uses `windows-2025-vs2026`, `arch=x86` |
+| Original exe | `gta_sa_compact.exe` (1.0 US compact, 5 189 632 bytes, sha256 `72ae59e44c761389e354a50dc6215e964fe771121e2f4b1877273a493ceecc9b`) |
+
+## 1. Prerequisites (install once)
+1. **Visual Studio 2026 (18.x) Community, or Build Tools 2026**, workload *Desktop development with C++* **plus** the individual components
+   *MSVC Build Tools for x64/x86 (v14.51 ...)* (the exact toolset **14.51**; if the default workload installs a newer 14.5x, tick 14.51 explicitly - both can coexist)
+   and *Windows 11 SDK (10.0.26100.0)*. Also tick *C++ CMake tools for Windows* only if you want VS's cmake/ninja instead of installing them separately.
+2. **Git for Windows** (provides Git Bash; Claude Code on Windows uses it as its shell). Then, once:
+   `git config --global core.autocrlf false` and `git config --global core.longpaths true` (shell scripts must stay LF; `.gitattributes` already forces `eol=lf`).
+3. **CMake >= 4.2**, **Ninja** (`winget install Kitware.CMake Ninja-build.Ninja`, or take both from VS; whichever, they must be on PATH in the build shell).
+4. **Python 3.12+ (64-bit)** from python.org / `winget install Python.Python.3.12`; turn off the Microsoft Store "python" app-execution alias (Settings > Apps > Advanced app settings),
+   then `python -m pip install unicorn capstone conan` (conan can also come from `pipx install conan`).
+5. Optional but wanted for debugging: **WinDbg** (Microsoft Store "WinDbg" or *Debugging Tools for Windows* from the SDK installer). Visual Studio's own debugger is already installed.
+6. A GPU with a normal D3D9-capable driver (any current GeForce/Radeon/Intel driver). Disk: ~40 GB free (Release 6.4 GB + Debug 3.9 GB + StandaloneRW 6.9 GB on the Mac, plus the conan cache).
+7. Short directory names, everything on **one NTFS volume (C:)**: repo `C:\src\gta-reversed`, game data `C:\gta`, soak output `C:\gta-soak-out`. The game copies its cwd into a 128-char
+   buffer and the soak builds its data dir from hard links, which cannot cross volumes.
+
+## 2. Clone (private fork) with the librw submodule
+```bash
+mkdir -p /c/src && cd /c/src
+# first clone prompts Git Credential Manager (ships with Git for Windows) - sign in as an account with access to the private repo littlemyx/gta-reversed; `gh auth login` also works
+git clone --recurse-submodules -b reverse/interior_c https://github.com/littlemyx/gta-reversed.git
+cd gta-reversed
+git submodule status      # vendor/librw must be at 6f80bf3... (littlemyx/librw, branch notsa); `git submodule update --init vendor/librw` if it shows a '-'
+```
+On the Mac the fork is the remote called `fork`; on the clone it is `origin`, so the Windows push is `git push origin reverse/interior_c`. Pull Mac work with `git pull --ff-only`.
+`.notes/` is a local scratch dir on the Mac (only `git add -f`-ed files are in the clone: `.notes/symbols.txt`, `PORT_BRIEF.md`, `PHASE2_STATUS.md`, `reports/`, the plans).
+`.notes/decomp`, `.notes/asm`, `UNHOOKED*`, `DETACH_GLOBALS.tsv`, ... are NOT in git; porting and `census.py` need them - copy by hand if you ever want them on the PC.
+
+## 3. Files that are never committed (check `.gitignore`: `/gta_sa_compact.exe`, `original_data.*`, `data_pointers.bin`, `standalone*.log`)
+* **`gta_sa_compact.exe` -> repo root** (`C:\src\gta-reversed\gta_sa_compact.exe`). Copy it from the Mac (`~/github/recomp/gta-reversed/gta_sa_compact.exe`); verify:
+  `sha256sum gta_sa_compact.exe` must print the hash from section 0. It is only an *input* (data-image extraction at build time, oracle tests).
+* **Game data -> `C:\gta`**: a copy of your own GTA San Andreas install folder (Steam: `...\steamapps\common\Grand Theft Auto San Andreas`; copy it, the folder only has to contain `models\gta3.img`,
+  `data\`, `anim\`, `audio\`, `txd\`, `text\`, `movies\` ...; its `gta_sa.exe` is never used). `soak.sh` looks for `GAME_SRC` -> `C:\gta` -> the default Steam folder, in this order.
+* The game still reads/writes your real `Documents\GTA San Andreas User Files\` (`gta_sa.set` incl. the video mode, saves) - there is no private prefix on Windows. Back that folder up once.
+
+## 4. The build shell (do this every time)
+Open the MSVC x86 environment with Git Bash: double-click / run **`tools\standalone\windows\gtash.cmd`** (it finds VS with `vswhere`, runs
+`vcvarsall.bat x86 -vcvars_ver=14.51`, `cd`s into the repo and starts Git Bash). **Start Claude Code from that shell** so every child process (cmake, ninja, cl, the scripts) inherits the environment.
+Check once:
+```bash
+cl 2>&1 | head -1        # ...Version 19.51.36231... for x86
+cmake --version; ninja --version; conan --version
+python -c "import unicorn, capstone; print('ok')"      # the python that cmake will get as -DGTASA_PYTHON
+```
+`GTA_MSVC_VER`, `GTA_GIT_BASH`, `GTA_VSINSTALL` override the launcher's defaults (per-user Git install, other VS edition).
+
+## 5. Dependencies (conan; Debug and Release are separate installs)
+```bash
+conan profile detect --force
+conan install . --build=missing --profile conan/profiles/windows-msvc-ninja.txt -s build_type=Debug
+conan install . --build=missing --profile conan/profiles/windows-msvc-ninja.txt -s build_type=Release
+```
+`windows-msvc-ninja.txt` = the committed `windows-msvc.txt` (x86, msvc 195, static runtime) + the Ninja generator. Do not pass `-c tools.cmake.cmaketoolchain:user_presets=`: `conanfile.py` writes
+`ConanPresets.json`, which `CMakePresets.json` includes (without it every `cmake --preset` fails). Outputs: `build/Debug/generators`, `build/Release/generators`. Expect 10-30 min per install the first time
+(sdl3, tracy, imgui, boost headers ... are built from source if there is no binary for msvc 195/x86).
+The first install also generates `source/libs/imgui/*` (not committed). Under Wine the profiles add `sdl/*:libusb=False` and compiler paths; **not needed here**.
+
+## 6. Configure and build
+Always from the build shell (section 4). Use `tools/standalone/build_locked.sh <command...>` for every build: it takes the shared mutex `C:/gta-scratch/build.lock` (the same `mkdir`/`rmdir` lock the
+Mac uses, so parallel agents never run two builds at once), applies a hard timeout (`TIMEOUT_S`, default 2400 s, `timeout` from Git Bash; a timeout also kills leftover `cl.exe`/`link.exe`) and releases the lock on exit.
+No background priority on Windows (the PC is not shared with a game being played); lower it in Task Manager if you need to.
+
+| Preset / build | Configure | Build |
+|---|---|---|
+| **StandaloneRelease** (`build/StandaloneRelease`, optimised, the soak/perf exe) | `cmake --preset StandaloneRelease -DGTASA_PYTHON=$(command -v python)` | `tools/standalone/build_locked.sh ninja -C build/StandaloneRelease gta_reversed.exe` |
+| **StandaloneRW** (`build/StandaloneRW`, Debug, main development build + all `*_test` targets) | `cmake --preset StandaloneRW -DGTASA_PYTHON=$(command -v python)` | `tools/standalone/build_locked.sh ninja -C build/StandaloneRW gta_reversed.exe` (tests: `ninja -C build/StandaloneRW <name>_test` or `run_all_tests.sh`) |
+| **StandaloneDetached** (`build/StandaloneDetached`, Release + detached globals + `GTASA_VERIFY_GLOBALS`) | `cmake --preset StandaloneDetached -DGTASA_PYTHON=...` | `tools/standalone/build_locked.sh ninja -C build/StandaloneDetached gta_reversed.exe` |
+| **Debug (DLL / ASI, the classic gta-reversed build)** | `cmake --preset conan-debug` | `cmake --build --preset conan-debug` (or `conan build . --profile conan/profiles/windows-msvc-ninja.txt -s build_type=Debug`); needs a real 1.0 US `gta_sa.exe` + an ASI loader to run, not required for the standalone work |
+
+* `GTASA_PYTHON` must be a *native* python path with unicorn+capstone (`$(command -v python)` in Git Bash gives `/c/...`, which CMake accepts; if you get "No module named unicorn" at the extract step, pass `-DGTASA_PYTHON=C:/Python312/python.exe`).
+* The presets set `GTASA_NO_EDIT_AND_CONTINUE=ON` (Wine passes it through the conan profile; without it MSVC would use `/ZI`, which conflicts with `/O2` and produces no linker map). Result: `/Z7`, `/DEBUG`, **`gta_reversed.pdb` and `gta_reversed.map`** next to the exe.
+* New `.cpp` files need a re-glob: re-run the configure command. The extractor (`extract_exe_data.py`) runs as a build step and writes `original_data.bin/.json` and `data_pointers.bin` into `<build>/bin`.
+* One configure+full build of StandaloneRelease takes ~10-20 min on a normal desktop (the Mac needed ~30 min through Wine).
+* Hung build: if `build.lock` is older than 20 min and no `cl.exe`/`link.exe` burns CPU, `taskkill //F //IM cl.exe //IM link.exe` and `rmdir C:/gta-scratch/build.lock`.
+
+## 7. Running the exe natively (no Wine)
+Manual run: the exe expects its data-image files next to it and the game data as the cwd.
+```bash
+# /c/gta-run = a data dir; soak.sh builds one by itself (hard links of the files + junctions of the folders of C:\gta), or make it by hand (copy the folder, minus gta_sa.exe)
+cd /c/gta-run
+cp /c/src/gta-reversed/build/StandaloneRelease/bin/{gta_reversed.exe,original_data.bin,original_data.json,data_pointers.bin} .
+NOTSA_STANDALONE_MUTE=1 NOTSA_STANDALONE_SKIP_VIDEOS=1 ./gta_reversed.exe      # log: standalone.log + logs/log.log
+```
+A crash/abort raises exception 0xE0AB0001 and prints a symbolised stack into `standalone.log`. Always run **silent** (`NOTSA_STANDALONE_MUTE=1`; verify `[mute]` lines in `standalone.log` on the first run:
+the mute patches DirectSound buffers and has only been validated under Wine's DirectSound). Real DirectShow exists on Windows, so videos *could* play; scripts keep skipping them.
+
+### Environment variables (all optional, run build only; details in `docs/STANDALONE.md`)
+| Variable | Effect |
+|---|---|
+| `NOTSA_STANDALONE_MUTE=1` | silent run (DirectSound buffers keep `DSBVOLUME_MIN`); default in `soak.sh`/`census.py`, `=0` opts out |
+| `NOTSA_STANDALONE_SKIP_VIDEOS=1` | skip intro videos |
+| `NOTSA_STANDALONE_INPUT=<file\|script>` | key injector (`wait:<ms>;key:return;down:w;up:w`, `until:control[:maxms]`, `until:invehicle`, `label:`/`skipif:`, `mark:<name>`) |
+| `NOTSA_STANDALONE_SCREENSHOT=<k>`, `_SCREENSHOT_MAX`, `_SCREENSHOT_MS`, `_SCREENSHOT_ARM`, `_SCREENSHOT_BURST` | back-buffer BMP every k-th frame / every N ms / bursts after script marks |
+| `NOTSA_STANDALONE_VIDEOMODE=<index>` | force a video-mode index (only if `gta_sa.set` has no valid mode - on Windows the real settings file wins) |
+| `NOTSA_STANDALONE_MEMLOG=1` | log CRT heap / committed memory every 100 frames (`soak.sh` sets it; this is where the fps-per-phase numbers come from) |
+| `NOTSA_STANDALONE_ALLOCTRACE=<min bytes>` | caller of every 200th allocation >= min |
+| `NOTSA_STANDALONE_NOPRESENT=1` | skip `Present` |
+| `NOTSA_STANDALONE_NO_ABORT_TRACE=1` | do not turn `abort()` into a traced exception |
+| `NOTSA_STANDALONE_SAMPLER=1` | in-process profiler (SuspendThread of the main thread; harmless on native x86, it only corrupted x87 state under Wine/Rosetta) |
+| `NOTSA_AUDIO_TAP=<file>` (`_RAW=1`) | silent DirectSound diagnostics (use a normal `C:\...` path) |
+| `NOTSA_VERIFY_GLOBALS=<dump>` (`_EXIT=1`, `_AFTER=<s>`) | detached-globals boot dump (StandaloneDetached) -> `tools/standalone/verify_globals.py` |
+| `NOTSA_IMAGE_CENSUS=1` (`_FILE`, `_REARM_MS`), `NOTSA_POISON_CONVERTED=<file>` | image census / poisoning of converted globals (`census.py`) |
+| `RW_EXE_ORACLE=<path>` | the original exe for the oracle tests; `run_all_tests.sh` sets it (native Windows path form) |
+| Script env | `soak.sh`: `GAME_SRC OUT ROUTE SHOT_EVERY SHOT_MAX SAMPLER GTASA_PYTHON`; `run_all_tests.sh`: `SCRATCH SKIP_BUILD ATTEMPTS TIMEOUT TIMEOUT_<test> ASSETS GAME_DIR GTASA_PYTHON NINJA GTA_EXE`; `build_locked.sh`: `SCRATCH TIMEOUT_S LOCK_WARN_MIN` |
+
+## 8. Tests and soaks
+```bash
+GAME_DIR=/c/gta ATTEMPTS=2 tools/standalone/run_all_tests.sh build/StandaloneRW          # configures build/StandaloneRW if missing, builds every *_test, runs them natively, prints the table
+tools/standalone/run_all_tests.sh build/StandaloneRW 'oracle'                              # regex filter on the target names
+tools/standalone/soak.sh build/StandaloneRelease 7                                          # smoke = the shortest route (fixed part ~6 min + 60 s idle); report: C:/gta-soak-out/<timestamp>/report.txt
+tools/standalone/soak.sh build/StandaloneRelease 10                                         # regression soak
+python tools/standalone/census.py run --build build/StandaloneDetached --minutes 10         # needs .notes/DETACH_GLOBALS.tsv (copy from the Mac)
+```
+* `run_all_tests.sh` and `soak.sh` detect Git Bash (`uname -s` = MINGW*/MSYS*) via `tools/standalone/hostenv.sh` and run the exes directly. Test exes live in `<build>/source/<name>.exe`; the oracle tests map `gta_sa_compact.exe` from the repo root.
+* The script ends with `RESULT: OK|FAIL` (soak) / a per-test table (tests, non-zero exit on any failure). Known non-green rows measured under Wine (2026-10-10): `review_oracle_test` (PC24/PC53 strict mismatches), `rw_skin_pipeline_test`
+  (page fault), `rw_skin_hw_oracle_test` and `rw_skin_vs_test` (NORESULT parser quirk; vs_test needs `TIMEOUT_rw_skin_vs_test=1500`). On a real GPU/driver these may change in either direction - **record, do not "fix" the numbers away**.
+* Per-phase fps and memory are in `report.txt`; screenshots (BMP converted to PNG by PowerShell/System.Drawing) in `<out>/shots`.
+
+## 9. Debugging
+* **Binaries**: StandaloneRelease/Detached/RW all link with `/DEBUG` (+`/Z7`): `build/<dir>/bin/gta_reversed.pdb` and `gta_reversed.map` (link `/MAP`; `census.py` and the abort tracer symbolise from it). Release objects are `/O2` but with `/OPT:NOREF /OPT:NOICF`, so function addresses stay meaningful.
+* **Visual Studio**: `devenv /debugexe C:\gta-run\gta_reversed.exe` (from the build shell), then *Debug > Properties*: working directory `C:\gta-run`, environment `NOTSA_STANDALONE_MUTE=1`.
+  Symbols are found through the PDB path embedded in the exe (`build\<dir>\bin`); if you copied the exe elsewhere add that folder to *Tools > Options > Debugging > Symbols*.
+* **WinDbg**: `cd /c/gta-run && windbg -y C:\src\gta-reversed\build\StandaloneRelease\bin -srcpath C:\src\gta-reversed gta_reversed.exe` (the debuggee inherits the cwd of the launching shell; the game needs the data dir as cwd).
+  Useful: `sxe -c "k;g" 0xe0ab0001` (the port's abort exception), `bp gta_reversed!<symbol>`, `x gta_reversed!CAutomobile::*`, `.symfix; .reload /f`.
+* **Image layout**: the exe maps the original data image at the original VAs (`.rdata` 0x858000.., `.data` 0x8A4000.. in a pad inside the exe, code range `PAGE_NOACCESS`), so addresses like `0xB6F5F0` are valid; an access violation on a *code* address inside the pad is an
+  unported-function trap (the log names the address; `.notes/symbols.txt` maps it). Expect first-chance exceptions only on real bugs - if the debugger stops at start-up, check which exception before ignoring it.
+* **FPU**: the main thread runs at PC=24 after `CreateDevice` exactly like the original; do not read `st0..st7` after stepping and expect the exe's values - use the logged `FPU[...]` lines. Native x86 has none of the Wine/Rosetta x87 corruption caveats; suspending the game thread (VS break, WinDbg `~*k`, the sampler) is fine.
+* Wine-era workflow remains valid for **comparison**: the same route on the Mac (`soak.sh`) vs Windows is the way to separate port bugs from Wine/host artefacts.
+
+## 10. First session checklist (for the agent; write the result into `.notes/reports/WINSETUP_FIRST.md`)
+1. `git status` clean? `git submodule status` (librw 6f80bf3)? `sha256sum gta_sa_compact.exe`? `cl` = 19.51.36231 x86, SDK 10.0.26100.0 (`echo $WindowsSDKVersion`)? If any differs, stop and report - do not proceed with a different toolchain.
+2. `conan install` Debug + Release (section 5). Note any recipe that had to be built or failed.
+3. `cmake --preset StandaloneRelease ...` + build `gta_reversed.exe` (section 6). Record the wall time; confirm `gta_reversed.pdb`/`.map` exist and `original_data.bin` was produced.
+4. `cmake --preset StandaloneRW ...` + `tools/standalone/run_all_tests.sh build/StandaloneRW` (with `GAME_DIR=/c/gta`). Expected: everything green except the known rows in section 8. Save the table; **any NEW failure is the headline** (host difference or compiler difference vs the Wine-hosted MSVC 14.51 binaries).
+5. One soak: `tools/standalone/soak.sh build/StandaloneRelease 7` (shortest route) then `... 10` -> `RESULT: OK`, 0 errors, all route markers reached, no `QUIT NOT EFFECTIVE`. If the start fails (`exe never started`, or `standalone.log`/`logs/log.log` end with `Failed: RwEngineSetVideoMode(-1)`), read `<out>/run.out` and the logs; likely first-run suspects: **no valid video mode in `Documents\GTA San Andreas User Files\gta_sa.set`** (a missing/empty settings file leaves the mode at -1 - this is what a fresh, empty Wine prefix does on the Mac; start the ORIGINAL game once and leave the menu so it writes the file, or patch the dword at byte 0xB36 of the 2900-byte file; `NOTSA_STANDALONE_VIDEOMODE` is only consulted when no 800x600x32 mode exists),  address-space conflict at 0x400000, a DirectSound/DirectInput device difference, antivirus on the unsigned exe.
+6. Confirm the run is silent (listen; `grep '\[mute\]' standalone.log`).
+7. **Record frame times**: from `report.txt` "fps per phase" (menu / loading / walking / driving / idle) for StandaloneRelease; put them next to the Mac/Wine numbers (menu ~530 fps, gameplay ~29 fps with the limiter) in `.notes/reports/WINSETUP_FIRST.md`. Note whether the in-game frame limiter is on.
+8. `git add -f`/commit only the report; push with `git push origin reverse/interior_c`. Report to the orchestrator in <= 15 lines (commits, test table summary, soak result, open items, report path).
+
+Rules that changed for the Windows host are in `.notes/PORT_BRIEF.md` ("Host: Windows"); everything else in the brief (fidelity rules, report format, silent runs) applies unchanged.

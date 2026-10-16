@@ -14,6 +14,9 @@ Never commit the original exe (it is git-ignored). Legal note: private use only;
 
 Design details (committed snapshots, `git add -f`-ed because `.notes/` is a local scratch dir elsewhere): `.notes/P2A_DESIGN.md` (data image, hooks-as-fixups, traps), `.notes/P2B_SHIM_PLAN.md` (RW shim), `.notes/PHASE2_STATUS.md` (history).
 
+> **Native Windows PC (reference work, no Wine):** see `docs/WINDOWS_SETUP.md` (toolchain pins, clone, presets `StandaloneRelease`/`StandaloneRW`/`StandaloneDetached`, scripts, debugger, first-session checklist).
+> The scripts `tools/standalone/{soak,run_all_tests,build_locked}.sh` and `census.py` detect the host (`tools/standalone/hostenv.sh`); the Wine-specific text below applies to macOS/Linux only.
+
 ## Prerequisites
 * **MSVC x86 toolchain.** Windows: VS 2022/2026 with the x86 C++ tools. macOS/Linux: [msvc-wine](https://github.com/mstorsjo/msvc-wine) plus Wine
   (tested: Wine Staging 11.x on macOS, `WINEPREFIX=~/.wine-msvc`, MSVC 14.51, SDK 10.0.26100, `cl` at `~/tools/msvc/bin/x86/cl`).
@@ -100,7 +103,7 @@ Wine quirks: about half of the starts die in wined3d `Direct3DCreate9` (`nested 
 `HKCU\Software\Wine\WineDbg\ShowCrashDialog=0` (DWORD) to avoid the modal crash dialog. Run each experiment in a fresh copy of the exe.
 
 ## Tests
-`tools/standalone/run_all_tests.sh [build-dir] [regex]` configures (if needed) a Debug librw build, builds every `*_test` target, runs them under Wine
+`tools/standalone/run_all_tests.sh [build-dir] [regex]` (on Windows: natively, no Wine) configures (if needed) a Debug librw build, builds every `*_test` target, runs them under Wine
 with a retry loop for the wined3d flake and prints a table; exit code is non-zero on any failure/mismatch. Set `ASSETS=<dir>` (infernus.dff, male01.dff,
 vgsnbuild07.dff) or `GAME_DIR=<game install>` (the script then extracts them from `models/gta3.img`) for the model-reading tests and `RW_EXE_ORACLE=<path to the original exe>` (done by the script, Windows path form).
 Known non-green rows on a clean clone (2026-10-10, verified by a from-scratch build): `review_oracle_test` (8 PC24 / 5191 PC53 strict mismatches, see PHASE2_STATUS),

@@ -89,6 +89,8 @@ x=re.findall(r'(\d+) commands, PC24 mismatches \(excluding NaN-payload-only\): (
 if x: c,m=int(x[-1][0]),int(x[-1][1]); f=f or 0
 x=re.findall(r'(?m)^pool_oracle_test: .*?(\d+) checks, .*: (\d+) mismatches',t)                  # pool_oracle_test
 if x: c,m=int(x[-1][0]),int(x[-1][1]); f=f or 0
+x=re.findall(r'(\d+) Service calls .*?: (\d+) mismatches at PC=53',t)                           # audio_fade_oracle_test (the PC=24 count is informational)
+if x: c,m=int(x[-1][0]),int(x[-1][1]); f=f or 0
 x=re.findall(r'(?m)^TOTAL: (\d+) \w+, (\d+) mismatches',t)               # skin oracle tests (cpu / hw)
 if x: c,m=int(x[-1][0]),int(x[-1][1]); f=f or 0
 x=re.findall(r'(?m)^[A-Za-z0-9_]+: (OK|FAILED) \((\d+) failures?\)',t)    # rw_skin_vs_test

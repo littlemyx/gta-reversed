@@ -27,7 +27,13 @@ constexpr float kInv128      = 1.0f / 128.0f;   // 0x858B88
 constexpr float kDegToRad    = 0.0174532793f;   // 0x85A7BC (not exactly PI/180, so `DegreesToRadians` can't be used)
 
 // 0x8A6230 - Blend function table: { rwBLENDZERO .. rwBLENDSRCALPHASAT } (values 1..11)
-auto& s_BlendFunctions = StaticRef<std::array<RwBlendFunction, 11>>(0x8A6230);
+NOTSA_GLOBAL(s_BlendFunctions, 0x8A6230, (std::array<RwBlendFunction, 11>), {
+    static_cast<RwBlendFunction>(1), static_cast<RwBlendFunction>(2), static_cast<RwBlendFunction>(3),
+    static_cast<RwBlendFunction>(4), static_cast<RwBlendFunction>(5), static_cast<RwBlendFunction>(6),
+    static_cast<RwBlendFunction>(7), static_cast<RwBlendFunction>(8), static_cast<RwBlendFunction>(9),
+    static_cast<RwBlendFunction>(10), static_cast<RwBlendFunction>(11)
+});
+#line 31
 
 //! Set up the temporary (identity) basis matrix the way the original does it
 void SetupIdentityBasis(RwMatrix& mat) {

@@ -22,7 +22,7 @@ static auto& TempVertexBuffer = StaticRef<std::array<RxObjSpace3DVertex, 4>>(0xC
 auto& g_fx = StaticRef<Fx_c>(0xA9AE00);
 
 // Debris prim rotation counter, lives right before `g_fx`
-static auto& s_DebrisPrimIdx = StaticRef<int32>(0xA9ADE4);
+static NOTSA_GLOBAL(s_DebrisPrimIdx, 0xA9ADE4, (int32), {});
 
 namespace {
 // The original's camera distance checks accumulate the squares in extended precision, the term order differs per function.

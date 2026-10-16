@@ -1106,4 +1106,4 @@ RwObject* GetBoatAtomicObjectCB(RwObject* object, void* data) {
 }
 
 // Initial values of the globals declared with NOTSA_GLOBAL_DECL in Boat.h (detached mode; ignored in address mode)
-NOTSA_GLOBAL_DEF(CBoat, apFrameWakeGeneratingBoats, 0xC27994, (std::array<CBoat*, NUM_WAKE_GEN_BOATS>), {});
+NOTSA_GLOBAL_DEF(CBoat, apFrameWakeGeneratingBoats, 0xC27994, (std::array<CBoat*, CBoat::NUM_WAKE_GEN_BOATS>), {});

@@ -648,3 +648,6 @@ void CEntryExit::ProcessStealableObjects(CPed* ped) {
     }
     heldobj->SetAreaCode(ms_spawnPoint->GetArea());
 }
+
+// Initial values of the globals declared with NOTSA_GLOBAL_DECL in EntryExit.h (detached mode; ignored in address mode)
+NOTSA_GLOBAL_DEF(CEntryExit, ms_spawnPoint, 0x96A7C0, (CEntryExit*), {});

@@ -16,12 +16,12 @@ class CEntity;
 class CGame {
 public:
     //! Current number of area
-    static inline auto& aDatFile = StaticRef<char[32]>(0xB728EC);
-    static inline auto& currLevel = StaticRef<int32>(0xB7290C);
-    static inline auto& bMissionPackGame = StaticRef<uint8>(0xB72910);
-    static inline auto& currArea = StaticRef<eAreaCodesS32>(0xB72914);
-    static inline auto& m_pWorkingMatrix1 = StaticRef<RwMatrix*>(0xB72920);
-    static inline auto& m_pWorkingMatrix2 = StaticRef<RwMatrix*>(0xB72924);
+    static inline NOTSA_GLOBAL(aDatFile, 0xB728EC, (char[32]), {});
+    static inline NOTSA_GLOBAL(currLevel, 0xB7290C, (int32), {});
+    static inline NOTSA_GLOBAL(bMissionPackGame, 0xB72910, (uint8), {});
+    static inline NOTSA_GLOBAL(currArea, 0xB72914, (eAreaCodesS32), {});
+    static inline NOTSA_GLOBAL(m_pWorkingMatrix1, 0xB72920, (RwMatrix*), {});
+    static inline NOTSA_GLOBAL(m_pWorkingMatrix2, 0xB72924, (RwMatrix*), {});
 
 
 public:
@@ -55,9 +55,9 @@ public:
     static eAreaCodes GetPlayerOrCurrentAreaCode();
 };
 
-static inline auto& gameTxdSlot = StaticRef<int32>(0xB728E8);
-static inline auto& gbLARiots = StaticRef<bool>(0xB72958);
-static inline auto& gbLARiots_NoPoliceCars = StaticRef<bool>(0xB72959);
+NOTSA_GLOBAL_HDR(gameTxdSlot, 0xB728E8, (int32), {});
+NOTSA_GLOBAL_HDR(gbLARiots, 0xB72958, (bool), {});
+NOTSA_GLOBAL_HDR(gbLARiots_NoPoliceCars, 0xB72959, (bool), {});
 // The collision model of the fight strike (CTaskSimpleFight::FightSetUpCol) is ONE CColModel (0x30 bytes at 0xC17824, ctor 0x40FB60).
 // The 0x30 bytes behind it (0xC17854) are the CCollisionData it points to (ctor 0x40F030), NOT a second CColModel.
 static inline auto& col1     = StaticRef<CColModel>(0xC17824);

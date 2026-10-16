@@ -65,7 +65,7 @@ enum eIPL : uint8 {
 
 class CFileLoader {
 public:
-    static inline auto& ms_line = StaticRef<char[512]>(0xB71848);
+    static inline NOTSA_GLOBAL(ms_line, 0xB71848, (char[512]), {});
 
 public:
     static void InjectHooks();
@@ -141,7 +141,7 @@ public:
 };
 
 // global variable to be used in a callback
-extern uint32& gAtomicModelId;
+NOTSA_GLOBAL_EXTERN(gAtomicModelId, (uint32));
 
 const char* GetFilename(const char* filepath);
 void LoadingScreenLoadingFile(const char* str);

@@ -27,7 +27,7 @@
             NOTSA_LOG_WARN("Line: {:?}", _l); \
         } \
     } while (0)
-auto& gAtomicModelId = StaticRef<uint32>(0xB71840);
+NOTSA_GLOBAL(gAtomicModelId, 0xB71840, (uint32), {});
 
 void LinkLods(int32 a1);
 
@@ -538,7 +538,7 @@ bool CFileLoader::LoadCollisionFile(uint8* buff, uint32 buffSize, uint8 colId) {
 
 // 0x5B4E60
 void CFileLoader::LoadCollisionFile(const char* filename, uint8 colId) {
-    auto& buffer = StaticRef<uint8[0x8000]>(0xBC40D8); // 32 kB
+    NOTSA_GLOBAL_LOCAL_NS(buffer, 0xBC40D8, (uint8[0x8000]), {}); // 32 kB
 
     using namespace ColHelpers;
 

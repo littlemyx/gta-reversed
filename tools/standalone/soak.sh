@@ -106,8 +106,18 @@ else
 fi
 started=0; STATUS_START=0
 cd "$DATA" || exit 2
+# Windows: the game reads/writes the REAL Documents\GTA San Andreas User Files\gta_sa.set (a normal quit writes it; the next start with DisplayVideoMode from that file
+# crashed in ResetDeviceNow, BUG-QUIT/D-B07V). Every attempt starts WITHOUT the file: a pre-existing one is moved aside once (restored at the end), the one a run wrote is deleted.
+DOCSET=""; DOCSET_SAVED=""
+if [ "$HOST" = windows ]; then
+  DOCSET="$(cygpath -u "$USERPROFILE")/Documents/GTA San Andreas User Files/gta_sa.set"; DOCSET_SAVED="$DOCSET.soak-saved"
+  [ -f "$DOCSET" ] && [ ! -e "$DOCSET_SAVED" ] && mv "$DOCSET" "$DOCSET_SAVED" && echo "soak: moved the user's gta_sa.set aside ($DOCSET_SAVED), restored at the end"
+  restore_docset() { rm -f "$DOCSET"; [ -f "$DOCSET_SAVED" ] && mv "$DOCSET_SAVED" "$DOCSET"; }
+  trap restore_docset EXIT
+fi
 for a in 1 2 3 4 5 6; do
   kill_exe
+  [ -n "$DOCSET" ] && rm -f "$DOCSET"
   rm -f gta_reversed.exe data_pointers.bin original_data.* standalone*.log frame_*.bmp mark_*.bmp; rm -rf logs
   $CPX "$BIN/gta_reversed.exe" "$BIN/original_data.bin" "$BIN/original_data.json" "$BIN/data_pointers.bin" .
   if [ "$HOST" = windows ]; then ./gta_reversed.exe > "$RUNOUT" 2>&1 & else wine gta_reversed.exe > "$RUNOUT" 2>&1 & fi

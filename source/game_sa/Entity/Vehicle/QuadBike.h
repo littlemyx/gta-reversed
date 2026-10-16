@@ -69,6 +69,6 @@ private:
 
 VALIDATE_SIZE(CQuadBike, 0x9BC);
 
-extern bool& bDoQuadDamping; // true 0x8D3450
-extern float& QUAD_HBSTEER_ANIM_MULT; // -0.4f 0x8D3454
-extern CVector& vecQuadResistance; // { 0.995f, 0.995f, 1.0f } // 0x8D3458
+NOTSA_GLOBAL_EXTERN(bDoQuadDamping, (bool)); // true 0x8D3450
+NOTSA_GLOBAL_EXTERN(QUAD_HBSTEER_ANIM_MULT, (float)); // -0.4f 0x8D3454
+NOTSA_GLOBAL_EXTERN(vecQuadResistance, (CVector)); // { 0.995f, 0.995f, 1.0f } // 0x8D3458

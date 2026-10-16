@@ -53,11 +53,16 @@ Open the MSVC x86 environment with Git Bash: double-click / run **`tools\standal
 `vcvarsall.bat x86 -vcvars_ver=14.51`, `cd`s into the repo and starts Git Bash). **Start Claude Code from that shell** so every child process (cmake, ninja, cl, the scripts) inherits the environment.
 Check once:
 ```bash
-cl 2>&1 | head -1        # ...Version 19.51.36231... for x86
+cl 2>&1 | head -1        # ...Version 19.51.xxxxx... for x86 (VS 18.11 Build Tools: 19.51.36260, inside the 14.51.36231 toolset folder; check `echo $VCToolsVersion` = 14.51.36231)
 cmake --version; ninja --version; conan --version
 python -c "import unicorn, capstone; print('ok')"      # the python that cmake will get as -DGTASA_PYTHON
 ```
 `GTA_MSVC_VER`, `GTA_GIT_BASH`, `GTA_VSINSTALL` override the launcher's defaults (per-user Git install, other VS edition).
+
+Agents / shells **not started from `gtash.cmd`**: `source tools/standalone/windows/msvcenv.sh` imports the same `vcvarsall.bat x86 -vcvars_ver=14.51` environment into the current Git Bash
+(honours `GTA_VSINSTALL` / `GTA_MSVC_VER`, idempotent, dump cached in `C:/gta-scratch/msvcenv-<key>.sh`, `GTA_MSVCENV_FORCE=1` rebuilds it) and adds python / cmake / ninja / conan to PATH when winget put them
+somewhere the inherited PATH does not list yet. Source it in every shell that runs cmake/ninja/cl (e.g. at the start of each Bash command: `source tools/standalone/windows/msvcenv.sh && ...`).
+The repo may live anywhere (the scripts derive the repo root from their own location); `C:\src\gta-reversed` in this document is only the suggested path.
 
 ## 5. Dependencies (conan; Debug and Release are separate installs)
 ```bash
@@ -143,7 +148,7 @@ python tools/standalone/census.py run --build build/StandaloneDetached --minutes
 * Wine-era workflow remains valid for **comparison**: the same route on the Mac (`soak.sh`) vs Windows is the way to separate port bugs from Wine/host artefacts.
 
 ## 10. First session checklist (for the agent; write the result into `.notes/reports/WINSETUP_FIRST.md`)
-1. `git status` clean? `git submodule status` (librw 6f80bf3)? `sha256sum gta_sa_compact.exe`? `cl` = 19.51.36231 x86, SDK 10.0.26100.0 (`echo $WindowsSDKVersion`)? If any differs, stop and report - do not proceed with a different toolchain.
+1. `git status` clean? `git submodule status` (librw 6f80bf3)? `sha256sum gta_sa_compact.exe`? `cl` = 19.51.x for x86 with `$VCToolsVersion` = 14.51.36231 (the folder name; the banner build number is the servicing level of VS, 36260 on 18.11), SDK 10.0.26100.0 (`echo $WindowsSDKVersion`)? If any differs, stop and report - do not proceed with a different toolchain.
 2. `conan install` Debug + Release (section 5). Note any recipe that had to be built or failed.
 3. `cmake --preset StandaloneRelease ...` + build `gta_reversed.exe` (section 6). Record the wall time; confirm `gta_reversed.pdb`/`.map` exist and `original_data.bin` was produced.
 4. `cmake --preset StandaloneRW ...` + `tools/standalone/run_all_tests.sh build/StandaloneRW` (with `GAME_DIR=/c/gta`). Expected: everything green except the known rows in section 8. Save the table; **any NEW failure is the headline** (host difference or compiler difference vs the Wine-hosted MSVC 14.51 binaries).

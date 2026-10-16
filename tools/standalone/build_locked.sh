@@ -8,7 +8,7 @@
 #        LOCK_WARN_MIN  warn (once) when the lock we wait for is older than this many minutes (default 20: hung build, see PORT_BRIEF)
 # Mac:     taskpolicy -b nice -n 15 perl -e 'alarm shift; exec @ARGV' <secs> <command>     (no coreutils `timeout` there)
 # Windows: GNU `timeout` from Git Bash; on a timeout cl.exe/link.exe left over by the killed ninja are killed too (we hold the lock, so they are ours).
-#          Run it from the MSVC x86 shell (tools/standalone/windows/gtash.cmd), so that cl is on PATH.
+#          Run it from the MSVC x86 shell (tools/standalone/windows/gtash.cmd, or `source tools/standalone/windows/msvcenv.sh`), so that cl is on PATH.
 # Exit code: that of the command; 124 = timeout; 2 = usage.
 set -u
 . "$(dirname "$0")/hostenv.sh"

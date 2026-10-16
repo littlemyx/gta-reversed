@@ -2606,7 +2606,7 @@ void CPhysical::ApplySpeed()
     }
 
     // The exe reads the 108 degree limit from a .data float (0x8CD7E8 = 0x3FF1463B), which is NOT bit-identical to DegreesToRadians(108.0f) (0x3FF14639)
-    static auto& DOOR_MAX_OPEN_ANGLE = StaticRef<float>(0x8CD7E8);
+    NOTSA_GLOBAL_LOCAL(DOOR_MAX_OPEN_ANGLE, 0x8CD7E8, (float), { 1.8849558f });
     float fNewTimeStep = -1000.0f;
     float fTheDoorAngle  = DOOR_MAX_OPEN_ANGLE + fDoorStartAngle;
     float fHeadingTimeStep = CTimer::GetTimeStep() * m_vecTurnSpeed.z + fHeading;
@@ -4060,7 +4060,7 @@ bool CPhysical::ApplySoftCollision(CPhysical* physical, CColPoint& colPoint, flo
 // 0x54BA60
 bool CPhysical::ProcessCollisionSectorList(int32 sectorX, int32 sectorY)
 {
-    static auto& colPoints = StaticRef<std::array<CColPoint, 32>>(0xB73710);
+    static NOTSA_GLOBAL_ALIAS(colPoints, 0xB73710, (std::array<CColPoint, 32>), CPhysical::s_SectorListColPoints);
 
     bool bResult = false;
 
@@ -4577,7 +4577,7 @@ bool CPhysical::ProcessCollisionSectorList(int32 sectorX, int32 sectorY)
 // 0x54CFF0
 bool CPhysical::ProcessCollisionSectorList_SimpleCar(CRepeatSector* repeatSector)
 {
-    static auto& colPoints = StaticRef<std::array<CColPoint, 32>>(0xB73C98);
+    NOTSA_GLOBAL_LOCAL(colPoints, 0xB73C98, (std::array<CColPoint, 32>), {});
     float fThisDamageIntensity = -1.0f;
     float fEntityDamageIntensity = -1.0f;
 

@@ -146,3 +146,4 @@
 - 2026-10-16 DECISION (user): no Windows move — finish everything on this Mac (no cross-host sync). docs/WINDOWS_* kept for reference only.
 - 2026-10-16 CORRECTION (user): misread — plan is: finish the agents running now on the Mac (D-B07, D-B09, F2), push, then the user moves to Windows (docs/WINDOWS_AGENT_PROMPT.md). No new agents on the Mac.
 - 2026-10-16 HAND-OVER to Windows: D-B07 stopped after converting+committing (unverified, see WINDOWS_AGENT_PROMPT step 6); D-B09/F2 stopped before any edits. Mac idle.
+- 2026-10-16 WIN session 1 aborted by user (new session): toolchain installed (VS BT 18, MSVC dir 14.51.36231 but cl banner 19.51.36260 — verify vs Mac), conan Release+Debug OK, StandaloneRelease build stopped at 365/1121 on cl 0xC0000142 (spawn failure, retry -j8). Hand-over: .notes/reports/WIN_HANDOFF_1.md.

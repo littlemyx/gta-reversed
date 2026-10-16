@@ -71,18 +71,18 @@ public:
     static constexpr auto Type = VEHICLE_TYPE_PLANE;
 
 public:
-    static inline auto& GenPlane_ModelIndex = StaticRef<int32>(0xC1CAD8);
-    static inline auto& GenPlane_Status = StaticRef<uint32>(0xC1CADC);
-    static inline auto& GenPlane_LastTimeGenerated = StaticRef<uint32>(0xC1CAE0);
+    static inline NOTSA_GLOBAL(GenPlane_ModelIndex, 0xC1CAD8, (int32), {});
+    static inline NOTSA_GLOBAL(GenPlane_Status, 0xC1CADC, (uint32), {});
+    static inline NOTSA_GLOBAL(GenPlane_LastTimeGenerated, 0xC1CAE0, (uint32), {});
 
-    static inline auto& GenPlane_Active = StaticRef<bool>(0x8D33BC);
-    static inline auto& ANDROM_COL_ANGLE_MULT = StaticRef<float>(0x8D33C0);
-    static inline auto& HARRIER_NOZZLE_ROTATE_LIMIT = StaticRef<uint16>(0x8D33C4);
-    static inline auto& HARRIER_NOZZLE_SWITCH_LIMIT = StaticRef<uint16>(0x8D33C8);
-    static inline auto& PLANE_MIN_PROP_SPEED = StaticRef<float>(0x8D33CC);
-    static inline auto& PLANE_STD_PROP_SPEED = StaticRef<float>(0x8D33D0);
-    static inline auto& PLANE_MAX_PROP_SPEED = StaticRef<float>(0x8D33D4);
-    static inline auto& PLANE_ROC_PROP_SPEED = StaticRef<float>(0x8D33D8);
+    static inline NOTSA_GLOBAL(GenPlane_Active, 0x8D33BC, (bool), { true });
+    static inline NOTSA_GLOBAL(ANDROM_COL_ANGLE_MULT, 0x8D33C0, (float), { 0.00015f });
+    static inline NOTSA_GLOBAL(HARRIER_NOZZLE_ROTATE_LIMIT, 0x8D33C4, (uint16), { 5000 });
+    static inline NOTSA_GLOBAL(HARRIER_NOZZLE_SWITCH_LIMIT, 0x8D33C8, (uint16), { 3000 });
+    static inline NOTSA_GLOBAL(PLANE_MIN_PROP_SPEED, 0x8D33CC, (float), { 0.05f });
+    static inline NOTSA_GLOBAL(PLANE_STD_PROP_SPEED, 0x8D33D0, (float), { 0.18f });
+    static inline NOTSA_GLOBAL(PLANE_MAX_PROP_SPEED, 0x8D33D4, (float), { 0.34f });
+    static inline NOTSA_GLOBAL(PLANE_ROC_PROP_SPEED, 0x8D33D8, (float), { 0.01f });
 
 public:
     CPlane(int32 modelIndex, eVehicleCreatedBy createdBy);

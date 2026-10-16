@@ -37,7 +37,9 @@ else
   DEF_GAME_SRC="$HOME/Library/Application Support/Steam/steamapps/common/grand theft auto - san andreas/Grand Theft Auto - San Andreas.app/Contents/Resources/transgaming/c_drive/Program Files/Rockstar Games/GTA San Andreas"
   DEF_DATA="/tmp/d3s"
   DEF_OUTROOT="/tmp/d3s-out"
-  DEF_SCRATCH="${TMPDIR:-/tmp}/gta-standalone-scratch"
+  # the orchestrator session and its agents share one build.lock in the session scratchpad: use it when present
+  _sess=/private/tmp/claude-501/-Users-Andrei-Mukhin-github-recomp-gta-reversed/aa4942c3-1b0c-4e82-a9c0-0c095cb1fe07/scratchpad
+  if [ -d "$_sess" ]; then DEF_SCRATCH="$_sess"; else DEF_SCRATCH="${TMPDIR:-/tmp}/gta-standalone-scratch"; fi
 fi
 
 # python: an explicit GTASA_PYTHON wins; otherwise the first candidate that really runs (on Windows `python3` is often the Microsoft Store stub)

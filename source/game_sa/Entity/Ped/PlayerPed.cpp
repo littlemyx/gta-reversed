@@ -1934,7 +1934,7 @@ void CPlayerPed::MakeChangesForNewWeapon(uint32 weaponSlot) {
         MakeChangesForNewWeapon(GetWeaponInSlot(weaponSlot).m_Type);
 }
 
-static auto& PLAYER_MAX_TARGET_VIEW_ANGLE = StaticRef<float>(0x8D243C); // 140.0f
+static NOTSA_GLOBAL(PLAYER_MAX_TARGET_VIEW_ANGLE, 0x8D243C, (float), { 140.0f }); // 140.0f
 
 // 0x60D020
 void CPlayerPed::EvaluateTarget(CEntity* target, CEntity *& outTarget, float & outTargetPriority, float maxDistance, float compensationRotRad, bool arg5) {

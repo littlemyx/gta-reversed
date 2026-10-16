@@ -2822,7 +2822,7 @@ void CPed::ClearAll() {
 namespace {
 // NOTSA: Name by hand, original name unknown.
 // Byte at 0xB72C70: Read only by `SpawnFootDust` (0x5E37C0), never written by any code. If set, no dust particles are created.
-auto& s_bSuppressFootDust = StaticRef<bool>(0xB72C70);
+NOTSA_GLOBAL(s_bSuppressFootDust, 0xB72C70, (bool), {});
 
 // Returns a random number in [0, 1]
 float GetRandomUnitFloat() {
@@ -4934,7 +4934,7 @@ void CPed::ProcessControl()
         && SquaredMagnitudeExt(m_vecMoveSpeed) < (double)0.01f // 0x858C58
     ) {
         if (m_pVehicle) {
-            static auto& colPoints = StaticRef<std::array<CColPoint, 32>>(0xC092A8);
+            NOTSA_GLOBAL_LOCAL(colPoints, 0xC092A8, (std::array<CColPoint, 32>), {});
             if (!CCollision::ProcessColModels(
                 GetMatrix(), *GetModelInfo()->GetColModel(),
                 m_pVehicle->GetMatrix(), *m_pVehicle->GetModelInfo()->GetColModel(),

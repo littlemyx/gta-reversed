@@ -1,6 +1,6 @@
 #include "StdInc.h"
 
-auto& gpPlayerClump = StaticRef<RpClump*>(0xC3F040);
+NOTSA_GLOBAL(gpPlayerClump, 0xC3F040, (RpClump*), {});
 
 void CPlayerSkin::InjectHooks() {
     RH_ScopedClass(CPlayerSkin);
@@ -27,8 +27,8 @@ void CPlayerSkin::Shutdown() {
 // unused
 // 0x6FF900
 void CPlayerSkin::RenderFrontendSkinEdit() {
-    static auto& s_LastFlash = StaticRef<uint32>(0xC3F04C);
-    static auto& s_Angle     = StaticRef<float>(0xC3F048);
+    NOTSA_GLOBAL_LOCAL(s_LastFlash, 0xC3F04C, (uint32), {});
+    NOTSA_GLOBAL_LOCAL(s_Angle, 0xC3F048, (float), {});
 
     RwRGBAReal color{ 0.65f, 0.65f, 0.65f, 1.0f }; // 0x3F266666
     if (CTimer::GetTimeInMSPauseMode() - s_LastFlash > 7) {

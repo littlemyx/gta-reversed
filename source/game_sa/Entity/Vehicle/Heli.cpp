@@ -22,6 +22,10 @@
 #include "TaskComplexUseSwatRope.h"
 #include "TaskComplexWanderCop.h"
 #include "CustomBuildingDNPipeline.h"
+namespace {
+NOTSA_GLOBAL_SYNTH(k_8717B8, 0x8717B8, (float), { 560.0f });
+} // namespace
+#line 25
 
 namespace HeliImpl {
 // The original does its vector maths on the x87 stack: intermediates stay in extended precision and are rounded to float only where the original stores them.
@@ -602,8 +606,8 @@ CHeli* CHeli::GenerateHeli(CPed* target, bool newsHeli) {
         pos.y = targetPos3.y;
 
         double zz = (double)targetPos3.z + 200.0f; // 0x858A48
-        if (!(zz > (double)StaticRef<float>(0x8717B8))) {
-            zz = StaticRef<float>(0x8717B8);
+        if (!(zz > (double)NOTSA_GLOBAL_EXPR(0x8717B8, (float), k_8717B8))) {
+            zz = NOTSA_GLOBAL_EXPR(0x8717B8, (float), k_8717B8);
         }
         z = (float)zz;
     }
@@ -1622,3 +1626,6 @@ void CHeli::ProcessControl() {
         }
     }
 }
+
+// Initial values of the globals declared with NOTSA_GLOBAL_DECL in Heli.h (detached mode; ignored in address mode)
+NOTSA_GLOBAL_DEF(CHeli, pHelis, 0xC1C964, (std::array<CHeli*, 2>), {});

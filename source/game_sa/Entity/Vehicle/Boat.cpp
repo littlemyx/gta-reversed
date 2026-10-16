@@ -7,9 +7,9 @@
 const float SECOND_LOD_DISTANCE = 150.0f; // 0x872188
 
 static const constexpr auto uiNumIndices{ 6u };
-auto& KeepWaterOutIndices = StaticRef<RwImVertexIndex[uiNumIndices]>(0xC27988);
+NOTSA_GLOBAL(KeepWaterOutIndices, 0xC27988, (RwImVertexIndex[uiNumIndices]), {});
 static const constexpr auto uiNumVertices{ 4u };
-auto& KeepWaterOutVertices = StaticRef<RwIm3DVertex[uiNumVertices]>(0xC278F8);
+NOTSA_GLOBAL(KeepWaterOutVertices, 0xC278F8, (RwIm3DVertex[uiNumVertices]), {});
 
 const float BOAT_STEER_SMOOTH_RATE = 0.2f; // 0x87218C
 
@@ -20,11 +20,11 @@ const float BOAT_STEER_DAMP_BASE = 0.985f; // 0x872198
 const float fShapeLength = 0.4f; // 0x8D3944
 const float fShapeTime = 0.05f; // 0x8D3948
 
-auto& fRangeMult = StaticRef<float>(0x8D394C); // 0.6f
+NOTSA_GLOBAL(fRangeMult, 0x8D394C, (float), { 0.6f }); // 0.6f
 auto& fTimeMult = StaticRef<float>(0xC279CC); // 1.2f / CBoat::WAKE_LIFETIME
 
-auto& nWakeSkipCounters = StaticRef<int16[4]>(0xC279A4);
-auto& nWakeSkipCounterVertex = StaticRef<int16[4]>(0xC279AC);
+NOTSA_GLOBAL(nWakeSkipCounters, 0xC279A4, (int16[4]), {});
+NOTSA_GLOBAL(nWakeSkipCounterVertex, 0xC279AC, (int16[4]), {});
 
 void CBoat::InjectHooks() {
     RH_ScopedVirtualClass(CBoat, 0x8721a0, 66);
@@ -1104,3 +1104,6 @@ RwObject* GetBoatAtomicObjectCB(RwObject* object, void* data) {
 
     return object;
 }
+
+// Initial values of the globals declared with NOTSA_GLOBAL_DECL in Boat.h (detached mode; ignored in address mode)
+NOTSA_GLOBAL_DEF(CBoat, apFrameWakeGeneratingBoats, 0xC27994, (std::array<CBoat*, NUM_WAKE_GEN_BOATS>), {});

@@ -26,15 +26,15 @@ enum ExitEnterState : int32 {
 using CEntryExitsPool = CPool<CEntryExit>;
 class CEntryExitManager {
 public:
-    static inline auto& ms_entryExitStack = StaticRef<CEntryExit*[4]>(0x96A720);
-    static inline auto& ms_bBurglaryHousesEnabled = StaticRef<bool>(0x96A730);
-    static inline auto& ms_oldAreaCode = StaticRef<int32>(0x96A734);
-    static inline auto& ms_visibleEntityList = StaticRef<CEntity*[32]>(0x96A738);
-    static inline auto& ms_entryExitStackPosn = StaticRef<uint32>(0x96A7C4); // No. of enex's on the stack
-    static inline auto& ms_bDisabled = StaticRef<int8>(0x96A7C8);
-    static inline auto& ms_exitEnterState = StaticRef<int32>(0x96A7CC); // TODO: Some kind of enum, seems to have values [0, 4]
-    static inline auto& mp_Active = StaticRef<CEntryExit*>(0x96A7D4);
-    static inline auto& ms_numVisibleEntities = StaticRef<int32>(0x96A7DC);
+    static inline NOTSA_GLOBAL(ms_entryExitStack, 0x96A720, (CEntryExit*[4]), {});
+    static inline NOTSA_GLOBAL(ms_bBurglaryHousesEnabled, 0x96A730, (bool), {});
+    static inline NOTSA_GLOBAL(ms_oldAreaCode, 0x96A734, (int32), {});
+    static inline NOTSA_GLOBAL(ms_visibleEntityList, 0x96A738, (CEntity*[32]), {});
+    static inline NOTSA_GLOBAL(ms_entryExitStackPosn, 0x96A7C4, (uint32), {}); // No. of enex's on the stack
+    static inline NOTSA_GLOBAL(ms_bDisabled, 0x96A7C8, (int8), {});
+    static inline NOTSA_GLOBAL(ms_exitEnterState, 0x96A7CC, (int32), {}); // TODO: Some kind of enum, seems to have values [0, 4]
+    static inline NOTSA_GLOBAL(mp_Active, 0x96A7D4, (CEntryExit*), {});
+    static inline NOTSA_GLOBAL(ms_numVisibleEntities, 0x96A7DC, (int32), {});
 
 public:
     static void InjectHooks();

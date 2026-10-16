@@ -33,33 +33,48 @@ static CVector TransformPointExt(const CMatrix& m, const CVector& v); // defined
 static double MagnitudeExt(const CVector& v);  // defined below
 static void NormaliseExt(CVector& v);          // defined below
 
-static auto& fFlyingLiftLimit = StaticRef<float>(0x8D3670); // (BARON) lift limit tweak, 0.5f
+static NOTSA_GLOBAL(fFlyingLiftLimit, 0x8D3670, (float), { 0.5f }); // (BARON) lift limit tweak, 0.5f
 
-auto& planeRotorDmgTimeMS = StaticRef<uint32>(0xC1CC1C);
+NOTSA_GLOBAL(planeRotorDmgTimeMS, 0xC1CC1C, (uint32), {});
 
-auto& fBurstTyreMod = StaticRef<float>(0x8D34B4);                // 0.13f
-auto& fBurstSpeedMax = StaticRef<float>(0x8D34B8);               // 0.3f
-auto& CAR_NOS_EXTRA_SKID_LOSS = StaticRef<float>(0x8D34BC);      // 0.9f
-auto& WS_TRAC_FRAC_LIMIT = StaticRef<float>(0x8D34C0);           // 0.3f
-auto& WS_ALREADY_SPINNING_LOSS = StaticRef<float>(0x8D34C4);     // 0.2f
-auto& fBurstBikeTyreMod = StaticRef<float>(0x8D34C8);            // 0.05f
-auto& fBurstBikeSpeedMax = StaticRef<float>(0x8D34CC);           // 0.12f
-auto& fTweakBikeWheelTurnForce = StaticRef<float>(0x8D34D0);     // 2.0f
-auto& AUTOGYRO_ROTORSPIN_MULT = StaticRef<float>(0x8D34D4);      // 0.006f
-auto& AUTOGYRO_ROTORSPIN_MULTLIMIT = StaticRef<float>(0x8D34D8); // 0.25f
-auto& AUTOGYRO_ROTORSPIN_DAMP = StaticRef<float>(0x8D34DC);      // 0.997f
-auto& AUTOGYRO_ROTORLIFT_MULT = StaticRef<float>(0x8D34E0);      // 4.5f
-auto& AUTOGYRO_ROTORLIFT_FALLOFF = StaticRef<float>(0x8D34E4);   // 0.75f
-auto& AUTOGYRO_ROTORTILT_ANGLE = StaticRef<float>(0x8D34E8);     // 0.25f
-auto& ROTOR_SEMI_THICKNESS = StaticRef<float>(0x8D34EC);         // 0.05f
+NOTSA_GLOBAL(fBurstTyreMod, 0x8D34B4, (float), { 0.13f });                // 0.13f
+NOTSA_GLOBAL(fBurstSpeedMax, 0x8D34B8, (float), { 0.3f });               // 0.3f
+NOTSA_GLOBAL(CAR_NOS_EXTRA_SKID_LOSS, 0x8D34BC, (float), { 0.9f });      // 0.9f
+NOTSA_GLOBAL(WS_TRAC_FRAC_LIMIT, 0x8D34C0, (float), { 0.3f });           // 0.3f
+NOTSA_GLOBAL(WS_ALREADY_SPINNING_LOSS, 0x8D34C4, (float), { 0.2f });     // 0.2f
+NOTSA_GLOBAL(fBurstBikeTyreMod, 0x8D34C8, (float), { 0.05f });            // 0.05f
+NOTSA_GLOBAL(fBurstBikeSpeedMax, 0x8D34CC, (float), { 0.12f });           // 0.12f
+NOTSA_GLOBAL(fTweakBikeWheelTurnForce, 0x8D34D0, (float), { 2.0f });     // 2.0f
+NOTSA_GLOBAL(AUTOGYRO_ROTORSPIN_MULT, 0x8D34D4, (float), { 0.006f });      // 0.006f
+NOTSA_GLOBAL(AUTOGYRO_ROTORSPIN_MULTLIMIT, 0x8D34D8, (float), { 0.25f }); // 0.25f
+NOTSA_GLOBAL(AUTOGYRO_ROTORSPIN_DAMP, 0x8D34DC, (float), { 0.997f });      // 0.997f
+NOTSA_GLOBAL(AUTOGYRO_ROTORLIFT_MULT, 0x8D34E0, (float), { 4.5f });      // 4.5f
+NOTSA_GLOBAL(AUTOGYRO_ROTORLIFT_FALLOFF, 0x8D34E4, (float), { 0.75f });   // 0.75f
+NOTSA_GLOBAL(AUTOGYRO_ROTORTILT_ANGLE, 0x8D34E8, (float), { 0.25f });     // 0.25f
+NOTSA_GLOBAL(ROTOR_SEMI_THICKNESS, 0x8D34EC, (float), { 0.05f });         // 0.05f
 float* gfSpeedMult = (float*)0x8D34F8;                   // float fSpeedMult[5] = { 0.8f, 0.75f, 0.85f, 0.9f, 0.85f, 0.85f }
-auto& fDamagePosSpeedShift = StaticRef<float>(0x8D3510);         // 0.4f
-auto& DIFF_LIMIT = StaticRef<float>(0x8D35B4);                   // 0.8f
-auto& DIFF_SPRING_MULT_X = StaticRef<float>(0x8D35B8);           // 0.05f
-auto& DIFF_SPRING_MULT_Y = StaticRef<float>(0x8D35BC);           // 0.05f
-auto& DIFF_SPRING_MULT_Z = StaticRef<float>(0x8D35C0);           // 0.1f
-auto& DIFF_SPRING_COMPRESS_MULT = StaticRef<float>(0x8D35C4);    // 2.0f
-auto& VehicleGunOffset = StaticRef<std::array<CVector, 14>>(0x8D35D4); // maybe [12]
+NOTSA_GLOBAL(fDamagePosSpeedShift, 0x8D3510, (float), { 0.4f });         // 0.4f
+NOTSA_GLOBAL(DIFF_LIMIT, 0x8D35B4, (float), { 0.8f });                   // 0.8f
+NOTSA_GLOBAL(DIFF_SPRING_MULT_X, 0x8D35B8, (float), { 0.05f });           // 0.05f
+NOTSA_GLOBAL(DIFF_SPRING_MULT_Y, 0x8D35BC, (float), { 0.05f });           // 0.05f
+NOTSA_GLOBAL(DIFF_SPRING_MULT_Z, 0x8D35C0, (float), { 0.1f });           // 0.1f
+NOTSA_GLOBAL(DIFF_SPRING_COMPRESS_MULT, 0x8D35C4, (float), { 2.0f });    // 2.0f
+NOTSA_GLOBAL(VehicleGunOffset, 0x8D35D4, (std::array<CVector, 13>), { {
+    { 0.0f, 4.41f, -1.27f },
+    { 0.0f, 2.85f, -0.5f },
+    { 0.0f, 2.85f, -0.5f },
+    { -0.5f, 2.4f, -0.785f },
+    { 0.0f, 6.87f, -1.65f },
+    { 2.19f, 1.5f, -0.58f },
+    { 0.2f, 0.0f, 0.0f },
+    { 1.48f, 0.44f, -0.52f },
+    { 0.0f, 0.45f, 0.0f },
+    { 2.17f, 1.0f, -0.8f },
+    { 2.19f, 1.5f, -0.58f },
+    { 3.7f, 0.98f, -1.02f },
+    { 3.92f, 0.98f, -1.02f }
+} }); // maybe [12]; 13 elements: a 14th would overlay fFlyingLiftLimit and two more floats (aliases.json retype)
+#line 63
 
 void CVehicle::InjectHooks() {
     RH_ScopedVirtualClass(CVehicle, 0x871e80, 66);
@@ -2367,7 +2382,7 @@ RwFrame* RemoveObjectsCB(RwFrame* frame, void* data) {
 }
 
 // 0x6D3450
-static auto& CopyObjectsCB_TargetClump = StaticRef<RpClump*>(0xC1CB58);
+static NOTSA_GLOBAL(CopyObjectsCB_TargetClump, 0xC1CB58, (RpClump*), {});
 RwObject* CopyObjectsCB(RwObject* object, void* data) {
     const auto frame = (RwFrame*)data;
 
@@ -3365,9 +3380,9 @@ void CVehicle::ProcessWheel(CVector& wheelFwd, CVector& wheelRight,
                             int8 wheelId, float* wheelSpeed,
                             tWheelState* wheelState, uint16 wheelStatus
 ) {
-    static auto& bBraking = StaticRef<bool>(0xC1CDAE); // false
-    static auto& bDriving = StaticRef<bool>(0xC1CDAD); // false
-    static auto& bAlreadySkidding = StaticRef<bool>(0xC1CDAC); // false
+    NOTSA_GLOBAL_LOCAL(bBraking, 0xC1CDAE, (bool), {}); // false
+    NOTSA_GLOBAL_LOCAL(bDriving, 0xC1CDAD, (bool), {}); // false
+    NOTSA_GLOBAL_LOCAL(bAlreadySkidding, 0xC1CDAC, (bool), {}); // false
 
     const auto  statusIsPlayerLike = [&] { const auto st = (int)GetStatus(); return st == 0 || st == 8; }; // `shr al, 3; test al, al; je / cmp al, 8`
     const auto& cs = wheelContactSpeed;
@@ -3544,10 +3559,10 @@ void CVehicle::ProcessWheel(CVector& wheelFwd, CVector& wheelRight,
 void CVehicle::ProcessBikeWheel(CVector& wheelFwd, CVector& wheelRight, CVector& wheelContactSpeed, CVector& wheelContactPoint, int32 wheelsOnGround, float thrust, float brake,
                                 float adhesion, float destabTraction, int8 wheelId, float* wheelSpeed, tWheelState* wheelState, eBikeWheelSpecial special, uint16 wheelStatus) {
     // NOTE: The original keeps float intermediates on the x87 stack (53-bit precision), hence the `double`s below.
-    static auto& bBraking         = StaticRef<bool>(0xC1CDB2);
-    static auto& bDriving         = StaticRef<bool>(0xC1CDB1);
-    static auto& bReversing       = StaticRef<bool>(0xC1CDB0); // thrust < 0 (only set while not braking)
-    static auto& bAlreadySkidding = StaticRef<bool>(0xC1CDAF); // BUG: never reset to false by the original
+    NOTSA_GLOBAL_LOCAL(bBraking, 0xC1CDB2, (bool), {});
+    NOTSA_GLOBAL_LOCAL(bDriving, 0xC1CDB1, (bool), {});
+    NOTSA_GLOBAL_LOCAL(bReversing, 0xC1CDB0, (bool), {}); // thrust < 0 (only set while not braking)
+    NOTSA_GLOBAL_LOCAL(bAlreadySkidding, 0xC1CDAF, (bool), {}); // BUG: never reset to false by the original
 
     const float contactSpeedFwd = (float)((double)wheelFwd.y * wheelContactSpeed.y + (double)wheelFwd.z * wheelContactSpeed.z + (double)wheelFwd.x * wheelContactSpeed.x);
 
@@ -6802,7 +6817,7 @@ void CVehicle::FillVehicleWithPeds(bool setClothesToAfro) {
 bool CVehicle::DoBladeCollision(CVector pos, CMatrix& matrix, int16 rotorType, float radius, float damageMult) {
     static auto& s_TestBladeCol       = StaticRef<CColModel>(0xC1CD38);
     static auto& s_TestBladeColData   = StaticRef<CCollisionData>(0xC1CD68);
-    static auto& s_TestBladeColSphere = StaticRef<CColSphere>(0xC1CD98);
+    NOTSA_GLOBAL_LOCAL(s_TestBladeColSphere, 0xC1CD98, (CColSphere), {});
 
     // Set-up collision model for the blade
     {
@@ -7368,3 +7383,6 @@ auto CVehicle::GetPassengerIndex(const CPed* passenger) const -> std::optional<s
 bool CVehicle::IsDriverAPlayer() const {
     return m_pDriver && m_pDriver->IsPlayer();
 }
+
+// Initial values of the globals declared with NOTSA_GLOBAL_DECL in Vehicle.h (detached mode; ignored in address mode)
+NOTSA_GLOBAL_DEF(CVehicle, m_aSpecialColVehicle, 0xC1CC08, (std::array<CVehicle*, 4>), {});

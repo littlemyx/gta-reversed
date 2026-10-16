@@ -419,23 +419,23 @@ public:
     int16        m_nRemapTxd;
     RwTexture*   m_pRemapTexture;
 
-    static inline auto& WHEELSPIN_TARGET_RATE = StaticRef<float>(0x8D3498);
-    static inline auto& WHEELSPIN_INAIR_TARGET_RATE = StaticRef<float>(0x8D349C);
-    static inline auto& WHEELSPIN_RISE_RATE = StaticRef<float>(0x8D34A0);
-    static inline auto& WHEELSPIN_FALL_RATE = StaticRef<float>(0x8D34A4);
-    static inline auto& m_fAirResistanceMult = StaticRef<float>(0x8D34A8);
-    static inline auto& ms_fRailTrackResistance = StaticRef<float>(0x8D34AC);
-    static inline auto& ms_fRailTrackResistanceDefault = StaticRef<float>(0x8D34B0);
-    static inline auto& bDisableRemoteDetonation = StaticRef<bool>(0xC1CC00);
-    static inline auto& bDisableRemoteDetonationOnContact = StaticRef<bool>(0xC1CC01);
-    static inline auto& m_bEnableMouseSteering = StaticRef<bool>(0xC1CC02);
-    static inline auto& m_bEnableMouseFlying = StaticRef<bool>(0xC1CC03);
-    static inline auto& m_nLastControlInput = StaticRef<eControllerType>(0xC1CC04);
-    static inline auto& m_aSpecialColVehicle = StaticRef<std::array<CVehicle*, 4>>(0xC1CC08);
+    static inline NOTSA_GLOBAL(WHEELSPIN_TARGET_RATE, 0x8D3498, (float), { 1.0f });
+    static inline NOTSA_GLOBAL(WHEELSPIN_INAIR_TARGET_RATE, 0x8D349C, (float), { 10.0f });
+    static inline NOTSA_GLOBAL(WHEELSPIN_RISE_RATE, 0x8D34A0, (float), { 0.95f });
+    static inline NOTSA_GLOBAL(WHEELSPIN_FALL_RATE, 0x8D34A4, (float), { 0.7f });
+    static inline NOTSA_GLOBAL(m_fAirResistanceMult, 0x8D34A8, (float), { 2.5f });
+    static inline NOTSA_GLOBAL(ms_fRailTrackResistance, 0x8D34AC, (float), { 0.003f });
+    static inline NOTSA_GLOBAL(ms_fRailTrackResistanceDefault, 0x8D34B0, (float), { 0.003f });
+    static inline NOTSA_GLOBAL(bDisableRemoteDetonation, 0xC1CC00, (bool), {});
+    static inline NOTSA_GLOBAL(bDisableRemoteDetonationOnContact, 0xC1CC01, (bool), {});
+    static inline NOTSA_GLOBAL(m_bEnableMouseSteering, 0xC1CC02, (bool), {});
+    static inline NOTSA_GLOBAL(m_bEnableMouseFlying, 0xC1CC03, (bool), { true });
+    static inline NOTSA_GLOBAL(m_nLastControlInput, 0xC1CC04, (eControllerType), {});
+    static NOTSA_GLOBAL_DECL(CVehicle, m_aSpecialColVehicle, 0xC1CC08, (std::array<CVehicle*, 4>));
     static inline auto& m_aSpecialColModel = StaticRef<std::array<CColModel, 4>>(0xC1CC78);
-    static inline auto& ms_forceVehicleLightsOff = StaticRef<bool>(0xC1CC18);
-    static inline auto& s_bPlaneGunsEjectShellCasings = StaticRef<bool>(0xC1CC19);
-    static inline auto& m_aSpecialHydraulicData = StaticRef<std::array<tHydraulicData, 4>>(0xC1CB60);
+    static inline NOTSA_GLOBAL(ms_forceVehicleLightsOff, 0xC1CC18, (bool), {});
+    static inline NOTSA_GLOBAL(s_bPlaneGunsEjectShellCasings, 0xC1CC19, (bool), {});
+    static inline NOTSA_GLOBAL(m_aSpecialHydraulicData, 0xC1CB60, (std::array<tHydraulicData, 4>), {});
 
     static constexpr auto Type = VEHICLE_TYPE_IGNORE;
 

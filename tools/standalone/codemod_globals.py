@@ -626,7 +626,8 @@ def check_converted(args):
         o = g["owner"]
         owner_of.setdefault(int(a, 16), o.get("name") or o.get("synthetic"))
     for a, e in al_json["extents"].items():
-        size_of[int(a, 16)] = max(size_of.get(int(a, 16), 0), e["true_size"])
+        # D-B08: "shrink" extents (VehicleGunOffset 168 -> 156, col1 96 -> 48) REPLACE the table size, otherwise the shrunk-away tail is reported as stray
+        size_of[int(a, 16)] = e["true_size"] if e.get("kind") == "shrink" else max(size_of.get(int(a, 16), 0), e["true_size"])
     for n in al_json.get("new_globals", []):
         size_of.setdefault(int(n["addr"], 16), n["size"])
         owner_of.setdefault(int(n["addr"], 16), n.get("file", "new_global"))

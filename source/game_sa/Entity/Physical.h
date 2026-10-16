@@ -139,17 +139,22 @@ public:
     float               m_fDynamicLighting;
     CRealTimeShadow*    m_pShadowData;
 
-    static inline auto& DAMPING_LIMIT_IN_FRAME = StaticRef<float>(0x8CD7A0);
-    static inline auto& DAMPING_LIMIT_OF_SPRING_FORCE = StaticRef<float>(0x8CD7A4);
-    static inline auto& PHYSICAL_SHIFT_SPEED_DAMP = StaticRef<float>(0x8CD788);
-    static inline auto& SOFTCOL_SPEED_MULT = StaticRef<float>(0x8CD794);
-    static inline auto& SOFTCOL_SPEED_MULT2 = StaticRef<float>(0x8CD798);
-    static inline auto& SOFTCOL_DEPTH_MIN = StaticRef<float>(0x8CD78C);
-    static inline auto& SOFTCOL_DEPTH_MULT = StaticRef<float>(0x8CD790);
-    static inline auto& SOFTCOL_CARLINE_SPEED_MULT = StaticRef<float>(0x8CD79C);
-    static inline auto& TEST_ADD_AMBIENT_LIGHT_FRAC = StaticRef<float>(0x8CD7B8);
-    static inline auto& HIGHSPEED_ELASTICITY_MULT_COPCAR = StaticRef<float>(0x8CD784);
-    static inline auto& fxDirection = StaticRef<CVector>(0xB73720);
+    static inline NOTSA_GLOBAL(DAMPING_LIMIT_IN_FRAME, 0x8CD7A0, (float), { 0.25f });
+    static inline NOTSA_GLOBAL(DAMPING_LIMIT_OF_SPRING_FORCE, 0x8CD7A4, (float), { 0.999f });
+    static inline NOTSA_GLOBAL(PHYSICAL_SHIFT_SPEED_DAMP, 0x8CD788, (float), { 0.707f });
+    static inline NOTSA_GLOBAL(SOFTCOL_SPEED_MULT, 0x8CD794, (float), { 0.95f });
+    static inline NOTSA_GLOBAL(SOFTCOL_SPEED_MULT2, 0x8CD798, (float), { 1.05f });
+    static inline NOTSA_GLOBAL(SOFTCOL_DEPTH_MIN, 0x8CD78C, (float), { 0.5f });
+    static inline NOTSA_GLOBAL(SOFTCOL_DEPTH_MULT, 0x8CD790, (float), { 2.0f });
+    static inline NOTSA_GLOBAL(SOFTCOL_CARLINE_SPEED_MULT, 0x8CD79C, (float), { 0.4f });
+    static inline NOTSA_GLOBAL(TEST_ADD_AMBIENT_LIGHT_FRAC, 0x8CD7B8, (float), { 0.5f });
+    static inline NOTSA_GLOBAL(HIGHSPEED_ELASTICITY_MULT_COPCAR, 0x8CD784, (float), { 2.0f });
+#ifdef NOTSA_GLOBALS_DETACHED
+    // Storage of the function-local `colPoints` of ProcessCollisionSectorList (0xB73710): the exe's `fxDirection` (0xB73720) is colPoints[0].m_vecNormal
+    static inline NOTSA_GLOBAL(s_SectorListColPoints, 0xB73710, (std::array<CColPoint, 32>), {});
+#endif
+#line 152
+    static inline NOTSA_GLOBAL_ALIAS(fxDirection, 0xB73720, (CVector), s_SectorListColPoints[0].m_vecNormal);
 
 public:
     CPhysical();

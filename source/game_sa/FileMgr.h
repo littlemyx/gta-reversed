@@ -16,8 +16,8 @@ static constexpr auto TopLineEmptyFile{ "THIS FILE IS NOT VALID YET" };
 
 class CFileMgr {
 public:
-    static inline auto& ms_dirName = StaticRef<char[128]>(0xb71a60);
-    static inline auto& ms_rootDirName = StaticRef<char[128]>(0xb71ae0);
+    static inline NOTSA_GLOBAL(ms_dirName, 0xb71a60, (char[128]), {});
+    static inline NOTSA_GLOBAL(ms_rootDirName, 0xb71ae0, (char[128]), {});
 
     static void Initialise();
     static int32 ChangeDir(const char* path);

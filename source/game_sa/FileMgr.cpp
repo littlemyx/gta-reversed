@@ -11,9 +11,9 @@
 
 #include "extensions/Configs/Miscellaneous.hpp"
 
-auto& user_tracks_dir_path = StaticRef<char[256]>(0xc92168);
-auto& user_gallery_dir_path = StaticRef<char[256]>(0xc92268);
-auto& gta_user_dir_path = StaticRef<char[256]>(0xc92368);
+NOTSA_GLOBAL(user_tracks_dir_path, 0xc92168, (char[256]), {});
+NOTSA_GLOBAL(user_gallery_dir_path, 0xc92268, (char[256]), {});
+NOTSA_GLOBAL(gta_user_dir_path, 0xc92368, (char[256]), {});
 
 constexpr size_t PATH_SIZE = 256;
 

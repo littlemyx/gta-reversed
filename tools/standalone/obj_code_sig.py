@@ -12,11 +12,17 @@ two objects are "bit-identical code" iff the lists are equal. Debug info ($S/$T)
 """
 import hashlib
 import json
+import os
+import re
 import struct
 import sys
 
 IMAGE_SCN_CNT_CODE = 0x20
 IMAGE_SCN_CNT_INIT = 0x40
+# NOTSA_SIG_NORM_STRINGS=1: relocations to string literals (??_C@...) are compared as one name. Needed when the two builds live in different directories
+# (assert / __FILE__ strings and the `?A0x<hash>` names of anonymous-namespace symbols embed/hash the source path, so such TUs differ by a pure symbol name) - e.g. an A/B in a git worktree.
+NORM_STRINGS = os.environ.get("NOTSA_SIG_NORM_STRINGS") == "1"
+ANON_NS_HASH = re.compile(r"\?A0x[0-9a-f]{8}")
 
 
 def parse(path, with_data=False):
@@ -71,7 +77,13 @@ def parse(path, with_data=False):
         for r in range(nrel):
             ro = relptr + r * 10
             vaddr, symidx, typ = struct.unpack_from("<IIH", d, ro)
-            rel.append((vaddr, names[symidx] if symidx < len(names) else "?", typ))
+            tn = names[symidx] if symidx < len(names) else "?"
+            if NORM_STRINGS:
+                if tn.startswith("??_C@"):
+                    tn = "<string-literal>"   # mangled name = hash of the literal's text (+ length): differs between checkouts when it holds a __FILE__ path
+                else:
+                    tn = ANON_NS_HASH.sub("?A0x<path-hash>", tn)   # anonymous-namespace name = hash of the TU's source path
+            rel.append((vaddr, tn, typ))
         sig.append((name, hashlib.sha1(raw).hexdigest(), hashlib.sha1(repr(rel).encode()).hexdigest(), len(raw)))
     sig.sort()
     return sig

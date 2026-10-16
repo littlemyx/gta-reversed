@@ -1,0 +1,89 @@
+--- /Users/Andrei.Mukhin/github/recomp/gta-reversed/source/game_sa/Renderer.cpp	2026-10-10 06:09:34
++++ /tmp/perf/lw4/Renderer.cpp	2026-10-11 02:05:58
+@@ -1079,7 +1079,8 @@
+             entity->m_bOffscreen = false;
+             bool bInvisibleEntity = false;
+             float fDistance = 0.0f;
+-            switch (SetupEntityVisibility(entity, fDistance)) {
++            int32 vis; { ZoneScopedN("CRL:SetupEntityVisibility"); vis = SetupEntityVisibility(entity, fDistance); }
++            switch (vis) {
+             case RENDERER_INVISIBLE: {
+                 if (entity->GetIsTypeObject()) {
+                     auto* atomicModelInfo = CModelInfo::GetModelInfo(entity->m_nModelIndex)->AsAtomicModelInfoPtr();
+@@ -1090,7 +1091,7 @@
+                 break;
+             }
+             case RENDERER_VISIBLE: {
+-                AddEntityToRenderList(entity, fDistance);
++                { ZoneScopedN("CRL:AddEntityToRenderList"); AddEntityToRenderList(entity, fDistance); }
+                 break;
+             }
+             case RENDERER_CULLED: {
+@@ -1098,6 +1099,7 @@
+                 break;
+             }
+             case RENDERER_STREAMME: {
++                ZoneScopedN("CRL:STREAMME");
+                 if (CStreaming::ms_disableStreaming || !entity->GetIsOnScreen() || ms_bInTheSky)
+                     break;
+ 
+@@ -1224,7 +1226,7 @@
+ 
+     const auto& camPos = TheCamera.GetPosition();
+ 
+-    eZoneAttributes zoneAttributes = CCullZones::FindTunnelAttributesForCoors(camPos);
++    eZoneAttributes zoneAttributes; { ZoneScopedN("CRL:FindTunnelAttr"); zoneAttributes = CCullZones::FindTunnelAttributesForCoors(camPos); }
+     ms_bRenderTunnels = (zoneAttributes & (eZoneAttributes::TUNNEL | eZoneAttributes::TUNNEL_TRANSITION)) != 0;
+     if ((zoneAttributes & eZoneAttributes::TUNNEL_TRANSITION) || !(zoneAttributes & eZoneAttributes::TUNNEL))
+         ms_bRenderOutsideTunnels = true;
+@@ -1236,7 +1238,7 @@
+ 
+     CPlayerPed* player = FindPlayerPed();
+     if (player && player->GetAreaCode() == AREA_CODE_NORMAL_WORLD) {
+-        float fGroundHeightZ = TheCamera.CalculateGroundHeight(eGroundHeightType::ENTITY_BB_BOTTOM);
++        float fGroundHeightZ; { ZoneScopedN("CRL:CalcGroundHeight"); fGroundHeightZ = TheCamera.CalculateGroundHeight(eGroundHeightType::ENTITY_BB_BOTTOM); }
+         float fPlayerHeightZ = player->GetPosition().z;
+ 
+         if (fPlayerHeightZ - fGroundHeightZ > 50.0f) {
+@@ -1254,8 +1256,8 @@
+     }
+ 
+     ms_lowLodDistScale *= CTimeCycle::m_CurrentColours.m_fLodDistMult;
+-    CMirrors::BeforeConstructRenderList();
+-    COcclusion::ProcessBeforeRendering();
++    { ZoneScopedN("CRL:Mirrors+Occlusion"); CMirrors::BeforeConstructRenderList();
++    COcclusion::ProcessBeforeRendering(); }
+     ms_nNoOfVisibleEntities = 0;
+     ms_nNoOfVisibleLods = 0;
+     ms_nNoOfInVisibleEntities = 0;
+@@ -1263,9 +1265,9 @@
+     ms_fCameraHeading = TheCamera.GetHeading();
+     ms_fFarClipPlane = TheCamera.m_pRwCamera->farPlane;
+     ResetLodRenderLists();
+-    ScanWorld();
+-    ProcessLodRenderLists();
+-    CStreaming::StartRenderEntities();
++    { ZoneScopedN("CRL:ScanWorld"); ScanWorld(); }
++    { ZoneScopedN("CRL:ProcessLodRenderLists"); ProcessLodRenderLists(); }
++    { ZoneScopedN("CRL:StartRenderEntities"); CStreaming::StartRenderEntities(); }
+ }
+ 
+ // 0x555900
+@@ -1347,7 +1349,7 @@
+         { CWorld::GetSectorfX(frustumPoints[9].x),  CWorld::GetSectorfY(frustumPoints[9].y)  },
+         { CWorld::GetSectorfX(frustumPoints[10].x), CWorld::GetSectorfY(frustumPoints[10].y) },
+     };
+-    CWorldScan::ScanWorld(points, (int)std::size(points), ScanSectorList);
++    { ZoneScopedN("CRL:WorldScan.ScanSectorList"); CWorldScan::ScanWorld(points, (int)std::size(points), ScanSectorList); }
+ 
+     points[0].x = CWorld::GetLodSectorfX(frustumPoints[0].x);
+     points[0].y = CWorld::GetLodSectorfY(frustumPoints[0].y);
+@@ -1364,7 +1366,7 @@
+     points[4].x = CWorld::GetLodSectorfX(frustumPoints[4].x);
+     points[4].y = CWorld::GetLodSectorfY(frustumPoints[4].y );
+ 
+-    CWorldScan::ScanWorld(points, (int)std::size(points), ScanBigBuildingList);
++    { ZoneScopedN("CRL:WorldScan.ScanBigBuildingList"); CWorldScan::ScanWorld(points, (int)std::size(points), ScanBigBuildingList); }
+ }
+ 
+ // returns objects count

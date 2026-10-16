@@ -1,0 +1,3121 @@
+{
+ "_schema": [
+  "aliases.json schema v1 (slice D-A4). Consumer: tools/standalone/codemod_globals.py (slice A2). Verifier: `python3 tools/standalone/gen_globals.py --check` (0 unresolved).",
+  "Addresses are strings \"0x%X\". SITE record = {addr,file,line,kind,name,func,type}. A site is identified by (file, addr, kind, name, func), NOT by line (lines drift).",
+  "  kind: \"decl\" = `[static] [inline] auto& NAME = StaticRef<T>(A);` | \"expr\" = StaticRef<T>(A) inside an expression | \"return\" = `return StaticRef<T>(A);` in a function.",
+  "  name = qualified C++ name of the declared variable (\"\" for expr/return); func = enclosing function (\"\" at namespace/class scope).",
+  "Every address that has exactly ONE site and is not mentioned below is plain: one site -> one global (type/size from DETACH_GLOBALS.tsv). Everything below is the exception list.",
+  "globals[A] = {type, size, owner, aliases[], note}   (A = address of the storage; duplicates, conflicts)",
+  "  type, size: the single type (C++ spelling) and true byte size the storage gets. A site whose own `type` differs carries cast:true.",
+  "  owner: either an existing SITE (+ optional link/init_in_source/retype/grow) that becomes the real global, or {synthetic, home, scope}: no suitable site, create the variable",
+  "         `synthetic` in `home`: scope \"tu\" = file-local (anonymous namespace) in that .cpp; scope \"shared\" = `inline T notsa::shared::NAME` in the file named by the top-level key",
+  "         shared_header (generated, included by every alias file). owner.link=\"extern\": owner keeps its .cpp, needs external linkage + extern declaration in the alias files.",
+  "         owner.init_in_source: the owner statement carries a runtime initialiser that must be kept (image holds zeros).",
+  "  aliases[]: every other site of A. decl -> `auto& NAME = <Owner>;` (cast:true -> `auto& NAME = reinterpret_cast<TYPE&>(<Owner>);`; same static/inline/qualification as before);",
+  "         expr/return -> replace the text `StaticRef<T>(A)` by <Owner> (or by `replace` when present). access:\"private\" -> the owner is a private class static: needs a friend/accessor.",
+  "         unused:true -> nothing uses it, delete the declaration.",
+  "members[] = {addr, owner, offset, type, sites[], note}: the site's storage lies INSIDE the global `owner` (address of another entry) at byte `offset`; emit",
+  "         `auto& NAME = *reinterpret_cast<TYPE*>(reinterpret_cast<uint8*>(&<Owner>) + offset);`. Never a global of its own (no definition, no verifier extent).",
+  "views[] = {addr, site, type, verify_addr, verify_offset, verify_size}: declaration whose base address is NOT the start of the real object (repo-shifted index). Keep its own zeroed",
+  "         storage of `type`; the verifier compares elements/bytes [verify_offset, verify_offset+verify_size) with the image at verify_addr.",
+  "virtual[] = {addr, sites[], real_array, real_name, index_bias}: not a storage address (base of an indexed access); rewrite the accessor to index `real_array`; no global is created.",
+  "retype[] = {addr, file, line, frm, to, why}: the repo declaration has the wrong width/shape against the exe asm; fix the declaration BEFORE converting (do not guess in the codemod).",
+  "readdress[] = {site, frm, to, type, size, why}: the site is declared at the wrong address; change the literal to `to` (a new global, see new_globals).",
+  "new_globals[] = {addr, type, size, cat, value?, file, line, why}: addresses that are not rows of DETACH_GLOBALS.tsv (cat a = zero, b = constant `value`).",
+  "extents{A} = {kind: shrink|grow|extend|keep, declared, true_size, element_type?, why, source}: byte size to use (verifier extent / array bound) instead of the size of the declared type.",
+  "width_notes[] = informational: scalar rows whose exe accesses are wider/narrower than the declared type.",
+  "tail_audit{A} = \"SEPARATE\" | \"EXTEND\" | \"UNKNOWN\" for every row with non-zero bytes between its extent and the next declared global (columns tail_nz in DETACH_GLOBALS.tsv); EXTEND rows have an `extents` entry.",
+  "ctor_audit{A} = \"ZERO\" | \"NONZERO\" | \"VPTR\" for the 120 all-zero rows whose repo type has a non-trivial default ctor (detail: .notes/DETACH_ctor_nonzero.tsv). NONZERO = the ctor writes non-zero bytes (e.g. -1 fills): the global must be zero-initialised (constinit/aggregate zero) instead."
+ ],
+ "version": 1,
+ "shared_header": "source/game_sa/DetachedShared.h",
+ "globals": {
+  "0x858FB8": {
+   "type": "float",
+   "size": 4,
+   "owner": {
+    "synthetic": "k_858FB8_TwoOverPi",
+    "home": "source/game_sa/Tasks/TaskTypes/TaskSimpleGangDriveBy.cpp",
+    "scope": "tu"
+   },
+   "aliases": [
+    {
+     "addr": "0x858FB8",
+     "file": "source/game_sa/Tasks/TaskTypes/TaskSimpleGangDriveBy.cpp",
+     "line": 239,
+     "kind": "expr",
+     "name": "",
+     "func": "CTaskSimpleGangDriveBy::ProcessPlayerPed",
+     "type": "float"
+    },
+    {
+     "addr": "0x858FB8",
+     "file": "source/game_sa/Tasks/TaskTypes/TaskSimpleGangDriveBy.cpp",
+     "line": 341,
+     "kind": "expr",
+     "name": "",
+     "func": "CTaskSimpleGangDriveBy::ProcessAIPed",
+     "type": "float"
+    }
+   ],
+   "note": ".rdata constant 2/pi; expr-only sites in one TU"
+  },
+  "0x8717B8": {
+   "type": "float",
+   "size": 4,
+   "owner": {
+    "synthetic": "k_8717B8",
+    "home": "source/game_sa/Entity/Vehicle/Heli.cpp",
+    "scope": "tu"
+   },
+   "aliases": [
+    {
+     "addr": "0x8717B8",
+     "file": "source/game_sa/Entity/Vehicle/Heli.cpp",
+     "line": 605,
+     "kind": "expr",
+     "name": "",
+     "func": "CHeli::GenerateHeli",
+     "type": "float"
+    },
+    {
+     "addr": "0x8717B8",
+     "file": "source/game_sa/Entity/Vehicle/Heli.cpp",
+     "line": 606,
+     "kind": "expr",
+     "name": "",
+     "func": "CHeli::GenerateHeli",
+     "type": "float"
+    }
+   ],
+   "note": ".rdata constant; expr-only sites in one TU"
+  },
+  "0x8A5B20": {
+   "type": "float",
+   "size": 4,
+   "owner": {
+    "addr": "0x8A5B20",
+    "file": "source/game_sa/CarCtrl.h",
+    "line": 31,
+    "kind": "decl",
+    "name": "CCarCtrl::CarDensityMultiplier",
+    "func": "",
+    "type": "float",
+    "scope": "owner"
+   },
+   "aliases": [
+    {
+     "addr": "0x8A5B20",
+     "file": "source/game_sa/MissionCleanup.cpp",
+     "line": 23,
+     "kind": "decl",
+     "name": "s_CopsNeededCarDensityScale",
+     "func": "",
+     "type": "float"
+    },
+    {
+     "addr": "0x8A5B20",
+     "file": "source/game_sa/Population.cpp",
+     "line": 1625,
+     "kind": "decl",
+     "name": "AddToPopulationDetail::s_CopsNeededCarDensityScale",
+     "func": "",
+     "type": "float"
+    }
+   ],
+   "note": "header owner (class static), two file-static aliases"
+  },
+  "0x8A5B24": {
+   "type": "uint32",
+   "size": 4,
+   "owner": {
+    "addr": "0x8A5B24",
+    "file": "source/game_sa/CarCtrl.h",
+    "line": 30,
+    "kind": "decl",
+    "name": "CCarCtrl::MaxNumberOfCarsInUse",
+    "func": "",
+    "type": "uint32",
+    "scope": "owner"
+   },
+   "aliases": [
+    {
+     "addr": "0x8A5B24",
+     "file": "source/game_sa/Population.cpp",
+     "line": 1628,
+     "kind": "decl",
+     "name": "AddToPopulationDetail::s_CopsNeededTotalCarsThreshold",
+     "func": "",
+     "type": "int32",
+     "cast": true
+    }
+   ],
+   "note": "conflict int32/uint32 (same width): owner's uint32; the int32 alias is a signed view (reinterpret_cast legal: signed/unsigned of the same type)"
+  },
+  "0x8A5F44": {
+   "type": "CNodeAddress",
+   "size": 4,
+   "owner": {
+    "synthetic": "NoNode",
+    "home": "source/game_sa/DetachedShared.h",
+    "scope": "shared"
+   },
+   "aliases": [
+    {
+     "addr": "0x8A5F44",
+     "file": "source/game_sa/CarCtrl.cpp",
+     "line": 3368,
+     "kind": "expr",
+     "name": "",
+     "func": "CCarCtrl::JoinCarWithRoadSystemGotoCoors",
+     "type": "CNodeAddress"
+    },
+    {
+     "addr": "0x8A5F44",
+     "file": "source/game_sa/CarCtrl.cpp",
+     "line": 3378,
+     "kind": "expr",
+     "name": "",
+     "func": "CCarCtrl::JoinCarWithRoadSystemGotoCoors",
+     "type": "CNodeAddress"
+    },
+    {
+     "addr": "0x8A5F44",
+     "file": "source/game_sa/CarCtrl.cpp",
+     "line": 3782,
+     "kind": "expr",
+     "name": "",
+     "func": "CCarCtrl::PickNextNodeToChaseCar",
+     "type": "CNodeAddress"
+    },
+    {
+     "addr": "0x8A5F44",
+     "file": "source/game_sa/CarCtrl.cpp",
+     "line": 3974,
+     "kind": "expr",
+     "name": "",
+     "func": "CCarCtrl::PickNextNodeToFollowPath",
+     "type": "CNodeAddress"
+    },
+    {
+     "addr": "0x8A5F44",
+     "file": "source/game_sa/CarCtrl.cpp",
+     "line": 6081,
+     "kind": "expr",
+     "name": "",
+     "func": "CCarCtrl::SteerAICarWithPhysicsFollowPath_Racing",
+     "type": "CNodeAddress"
+    },
+    {
+     "addr": "0x8A5F44",
+     "file": "source/game_sa/PathFind.cpp",
+     "line": 856,
+     "kind": "expr",
+     "name": "",
+     "func": "CPathFind::ComputeRoute",
+     "type": "CNodeAddress"
+    }
+   ],
+   "note": "expr-only, 2 TUs, all by-value reads"
+  },
+  "0x8CCB84": {
+   "type": "float",
+   "size": 4,
+   "owner": {
+    "synthetic": "CurDistForCam",
+    "home": "source/game_sa/DetachedShared.h",
+    "scope": "shared"
+   },
+   "aliases": [
+    {
+     "addr": "0x8CCB84",
+     "file": "source/game_sa/Camera.cpp",
+     "line": 28,
+     "kind": "decl",
+     "name": "gCurDistForCam",
+     "func": "",
+     "type": "float"
+    },
+    {
+     "addr": "0x8CCB84",
+     "file": "source/game_sa/MissionCleanup.cpp",
+     "line": 24,
+     "kind": "decl",
+     "name": "s_CurDistForCam",
+     "func": "",
+     "type": "float"
+    }
+   ],
+   "note": "two .cpp file-scope refs, no header"
+  },
+  "0x8CDEE4": {
+   "type": "eWantedLevel",
+   "size": 4,
+   "owner": {
+    "addr": "0x8CDEE4",
+    "file": "source/game_sa/Wanted.h",
+    "line": 63,
+    "kind": "decl",
+    "name": "CWanted::MaximumWantedLevel",
+    "func": "",
+    "type": "eWantedLevel",
+    "scope": "owner"
+   },
+   "aliases": [
+    {
+     "addr": "0x8CDEE4",
+     "file": "source/game_sa/Scripts/Commands/Ported/Group12.cpp",
+     "line": 349,
+     "kind": "return",
+     "name": "",
+     "func": "GetMaxWantedLevel",
+     "type": "int32",
+     "cast": true
+    }
+   ],
+   "note": "conflict eWantedLevel(uint32 enum)/int32: owner's enum; the int32& return is a view"
+  },
+  "0x8D22B0": {
+   "type": "float",
+   "size": 4,
+   "owner": {
+    "synthetic": "BoundingBoxMargin",
+    "home": "source/game_sa/DetachedShared.h",
+    "scope": "shared"
+   },
+   "aliases": [
+    {
+     "addr": "0x8D22B0",
+     "file": "source/game_sa/PedGeometryAnalyser.cpp",
+     "line": 10,
+     "kind": "decl",
+     "name": "s_BoundingBoxMargin",
+     "func": "",
+     "type": "float"
+    },
+    {
+     "addr": "0x8D22B0",
+     "file": "source/game_sa/Tasks/TaskTypes/TaskComplexWalkRoundCar.cpp",
+     "line": 149,
+     "kind": "decl",
+     "name": "CTaskComplexWalkRoundCar::ComputeRouteRoundBigCar()::s_BoundingBoxMargin",
+     "func": "CTaskComplexWalkRoundCar::ComputeRouteRoundBigCar",
+     "type": "float"
+    },
+    {
+     "addr": "0x8D22B0",
+     "file": "source/game_sa/Tasks/TaskTypes/TaskComplexWalkRoundObject.cpp",
+     "line": 71,
+     "kind": "decl",
+     "name": "CTaskComplexWalkRoundObject::ComputeRoute()::s_BoundingBoxMargin",
+     "func": "CTaskComplexWalkRoundObject::ComputeRoute",
+     "type": "float"
+    }
+   ],
+   "note": "3 TUs each with its own file/function-local static ref"
+  },
+  "0x8D237C": {
+   "type": "eMoveState",
+   "size": 4,
+   "owner": {
+    "synthetic": "NextDesiredMoveState",
+    "home": "source/game_sa/DetachedShared.h",
+    "scope": "shared"
+   },
+   "aliases": [
+    {
+     "addr": "0x8D237C",
+     "file": "source/game_sa/Scripts/Commands/Ported/Group13_15_task.cpp",
+     "line": 83,
+     "kind": "return",
+     "name": "",
+     "func": "NextDesiredMoveState",
+     "type": "eMoveState"
+    },
+    {
+     "addr": "0x8D237C",
+     "file": "source/game_sa/Scripts/Commands/Ported/Group16_17b.cpp",
+     "line": 71,
+     "kind": "return",
+     "name": "",
+     "func": "NextDesiredMoveState",
+     "type": "eMoveState"
+    },
+    {
+     "addr": "0x8D237C",
+     "file": "source/game_sa/Scripts/Commands/Ported/Group19.cpp",
+     "line": 99,
+     "kind": "return",
+     "name": "",
+     "func": "NextDesiredMoveState",
+     "type": "eMoveState"
+    }
+   ],
+   "note": "3 accessor functions returning the same global"
+  },
+  "0x8D2E7C": {
+   "type": "float",
+   "size": 4,
+   "owner": {
+    "synthetic": "k_8D2E7C",
+    "home": "source/game_sa/Tasks/TaskTypes/TaskSimpleGangDriveBy.cpp",
+    "scope": "tu"
+   },
+   "aliases": [
+    {
+     "addr": "0x8D2E7C",
+     "file": "source/game_sa/Tasks/TaskTypes/TaskSimpleGangDriveBy.cpp",
+     "line": 155,
+     "kind": "expr",
+     "name": "",
+     "func": "CTaskSimpleGangDriveBy::StartDriveByAnim",
+     "type": "float"
+    },
+    {
+     "addr": "0x8D2E7C",
+     "file": "source/game_sa/Tasks/TaskTypes/TaskSimpleGangDriveBy.cpp",
+     "line": 684,
+     "kind": "expr",
+     "name": "",
+     "func": "CTaskSimpleGangDriveBy::ProcessPed",
+     "type": "float"
+    }
+   ],
+   "note": "expr-only sites in one TU"
+  },
+  "0x8D2E84": {
+   "type": "float",
+   "size": 4,
+   "owner": {
+    "synthetic": "k_8D2E84_0p3",
+    "home": "source/game_sa/Tasks/TaskTypes/TaskSimpleGangDriveBy.cpp",
+    "scope": "tu"
+   },
+   "aliases": [
+    {
+     "addr": "0x8D2E84",
+     "file": "source/game_sa/Tasks/TaskTypes/TaskSimpleGangDriveBy.cpp",
+     "line": 674,
+     "kind": "expr",
+     "name": "",
+     "func": "CTaskSimpleGangDriveBy::ProcessPed",
+     "type": "float"
+    },
+    {
+     "addr": "0x8D2E84",
+     "file": "source/game_sa/Tasks/TaskTypes/TaskSimpleGangDriveBy.cpp",
+     "line": 675,
+     "kind": "expr",
+     "name": "",
+     "func": "CTaskSimpleGangDriveBy::ProcessPed",
+     "type": "float"
+    }
+   ],
+   "note": "expr-only sites in one TU"
+  },
+  "0x8D3394": {
+   "type": "CVector",
+   "size": 12,
+   "owner": {
+    "addr": "0x8D3394",
+    "file": "source/game_sa/Entity/Vehicle/Automobile.h",
+    "line": 134,
+    "kind": "decl",
+    "name": "CAutomobile::vecHunterGunPos",
+    "func": "",
+    "type": "CVector",
+    "scope": "owner"
+   },
+   "aliases": [
+    {
+     "addr": "0x8D3394",
+     "file": "source/game_sa/Scripts/Commands/Ported/Group13_15.cpp",
+     "line": 248,
+     "kind": "expr",
+     "name": "",
+     "func": "FireHunterGun",
+     "type": "CVector",
+     "replace": "CAutomobile::vecHunterGunPos"
+    }
+   ],
+   "note": "header owner; expr site replaced by the name"
+  },
+  "0x8D6220": {
+   "type": "int32",
+   "size": 4,
+   "owner": {
+    "addr": "0x8D6220",
+    "file": "source/app/platform/win/VideoMode.h",
+    "line": 32,
+    "kind": "decl",
+    "name": "GcurSelVM",
+    "func": "",
+    "type": "RwInt32",
+    "scope": "owner"
+   },
+   "aliases": [
+    {
+     "addr": "0x8D6220",
+     "file": "source/app/platform/win/VideoMode.h",
+     "line": 48,
+     "kind": "decl",
+     "name": "gCurrentVideoMode",
+     "func": "",
+     "type": "int32"
+    }
+   ],
+   "note": "RwInt32 == int32; both in VideoMode.h"
+  },
+  "0x9654C4": {
+   "type": "bool",
+   "size": 1,
+   "owner": {
+    "addr": "0x9654C4",
+    "file": "source/game_sa/Streaming.h",
+    "line": 257,
+    "kind": "decl",
+    "name": "CStreaming::m_bModelStreamNotLoaded",
+    "func": "",
+    "type": "bool",
+    "scope": "owner"
+   },
+   "aliases": [
+    {
+     "addr": "0x9654C4",
+     "file": "source/game_sa/Streaming.h",
+     "line": 258,
+     "kind": "decl",
+     "name": "CStreaming::ms_bReadLayerForceFully",
+     "func": "",
+     "type": "bool"
+    }
+   ],
+   "note": "two class statics, one byte (aliases inside one class)"
+  },
+  "0x97F66D": {
+   "type": "bool",
+   "size": 1,
+   "owner": {
+    "addr": "0x97F66D",
+    "file": "source/game_sa/Replay.h",
+    "line": 184,
+    "kind": "decl",
+    "name": "CReplay::bIsUsingRemoteCar",
+    "func": "",
+    "type": "bool",
+    "scope": "owner"
+   },
+   "aliases": [
+    {
+     "addr": "0x97F66D",
+     "file": "source/game_sa/Replay.cpp",
+     "line": 600,
+     "kind": "decl",
+     "name": "CReplay::ProcessLookAroundCam()::s_FrameActiveLookAroundCamReset",
+     "func": "CReplay::ProcessLookAroundCam",
+     "type": "bool"
+    }
+   ],
+   "note": ""
+  },
+  "0xA9A318": {
+   "type": "std::array<uint32,NUM_BUYABLE_ITEMS>",
+   "size": 1200,
+   "owner": {
+    "addr": "0xA9A318",
+    "file": "source/game_sa/Shopping.h",
+    "line": 78,
+    "kind": "decl",
+    "name": "CShopping::ms_shopContents",
+    "func": "",
+    "type": "std::array<uint32,NUM_BUYABLE_ITEMS>",
+    "scope": "owner"
+   },
+   "aliases": [
+    {
+     "addr": "0xA9A318",
+     "file": "source/game_sa/Scripts/Commands/Ported/Group18.cpp",
+     "line": 732,
+     "kind": "expr",
+     "name": "",
+     "func": "GetItemInShop",
+     "type": "uint32",
+     "access": "private",
+     "replace": "CShopping::ms_shopContents[0]"
+    }
+   ],
+   "note": "alias site is `(&StaticRef<uint32>(A))[index]` (unchecked): replace the inner expression by element 0; ms_shopContents is private (friend/accessor needed)"
+  },
+  "0xA9A7D8": {
+   "type": "char[24]",
+   "size": 24,
+   "owner": {
+    "addr": "0xA9A7D8",
+    "file": "source/game_sa/Shopping.h",
+    "line": 82,
+    "kind": "decl",
+    "name": "CShopping::ms_shopLoaded",
+    "func": "",
+    "type": "char[24]",
+    "scope": "owner"
+   },
+   "aliases": [
+    {
+     "addr": "0xA9A7D8",
+     "file": "source/game_sa/Scripts/Commands/Ported/Group19.cpp",
+     "line": 488,
+     "kind": "expr",
+     "name": "",
+     "func": "GetLoadedShop",
+     "type": "char[24]",
+     "access": "private",
+     "replace": "CShopping::ms_shopLoaded"
+    }
+   ],
+   "note": "private class static"
+  },
+  "0xA9A7F0": {
+   "type": "int32",
+   "size": 4,
+   "owner": {
+    "addr": "0xA9A7F0",
+    "file": "source/game_sa/Shopping.h",
+    "line": 83,
+    "kind": "decl",
+    "name": "CShopping::ms_numItemsInShop",
+    "func": "",
+    "type": "int32",
+    "scope": "owner"
+   },
+   "aliases": [
+    {
+     "addr": "0xA9A7F0",
+     "file": "source/game_sa/Scripts/Commands/Ported/Group18.cpp",
+     "line": 727,
+     "kind": "return",
+     "name": "",
+     "func": "GetNumberOfItemsInShop",
+     "type": "int32",
+     "access": "private",
+     "replace": "CShopping::ms_numItemsInShop"
+    }
+   ],
+   "note": "private class static"
+  },
+  "0xB6B98C": {
+   "type": "CPed*",
+   "size": 4,
+   "owner": {
+    "addr": "0xB6B98C",
+    "file": "source/game_sa/Audio/Entities/AEVehicleAudioEntity.h",
+    "line": 618,
+    "kind": "decl",
+    "name": "CAEVehicleAudioEntity::s_pPlayerAttachedForRadio",
+    "func": "",
+    "type": "CPed*",
+    "scope": "owner"
+   },
+   "aliases": [],
+   "note": "CONFLICT RESOLVED BY BUG FIX: the exe stores the DRIVER here (0x4F5B20: mov edx,[eax+0x460]; mov [0xB6B98C],edx) and &m_AuSettings at 0xB6B99C (see `readdress`)"
+  },
+  "0xB6EC20": {
+   "type": "bool",
+   "size": 1,
+   "owner": {
+    "addr": "0xB6EC20",
+    "file": "source/game_sa/Cam.cpp",
+    "line": 38,
+    "kind": "decl",
+    "name": "gbFirstPersonRunThisFrame",
+    "func": "",
+    "type": "bool",
+    "scope": "owner"
+   },
+   "aliases": [
+    {
+     "addr": "0xB6EC20",
+     "file": "source/game_sa/Cam.cpp",
+     "line": 1228,
+     "kind": "decl",
+     "name": "CCam::Process()::s_firstPersonFlag",
+     "func": "CCam::Process",
+     "type": "bool"
+    }
+   ],
+   "note": "same file"
+  },
+  "0xB6EC2C": {
+   "type": "bool",
+   "size": 1,
+   "owner": {
+    "addr": "0xB6EC2C",
+    "file": "source/game_sa/Scripts/TheScripts.h",
+    "line": 347,
+    "kind": "decl",
+    "name": "gAllowScriptedFixedCameraCollision",
+    "func": "",
+    "type": "bool",
+    "scope": "owner"
+   },
+   "aliases": [
+    {
+     "addr": "0xB6EC2C",
+     "file": "source/game_sa/MissionCleanup.cpp",
+     "line": 25,
+     "kind": "decl",
+     "name": "s_Unk_B6EC2C",
+     "func": "",
+     "type": "bool"
+    }
+   ],
+   "note": ""
+  },
+  "0xB6EC5C": {
+   "type": "CEntity*",
+   "size": 4,
+   "owner": {
+    "addr": "0xB6EC5C",
+    "file": "source/game_sa/Cam.cpp",
+    "line": 1589,
+    "kind": "decl",
+    "name": "gArrestCamOneCop",
+    "func": "",
+    "type": "CEntity*",
+    "scope": "owner"
+   },
+   "aliases": [],
+   "note": "conflict resolved: gArrestCamOneCop is the real global; gbExitCam is a shifted VIEW (see `views`)"
+  },
+  "0xB6EC6C": {
+   "type": "float",
+   "size": 4,
+   "owner": {
+    "synthetic": "CamColLastRadius",
+    "home": "source/game_sa/DetachedShared.h",
+    "scope": "shared"
+   },
+   "aliases": [
+    {
+     "addr": "0xB6EC6C",
+     "file": "source/game_sa/Camera.cpp",
+     "line": 32,
+     "kind": "decl",
+     "name": "gCamColLastRadius",
+     "func": "",
+     "type": "float"
+    },
+    {
+     "addr": "0xB6EC6C",
+     "file": "source/game_sa/Collision/Collision.cpp",
+     "line": 3643,
+     "kind": "decl",
+     "name": "gLastRadiusUsedInCollisionPreventionOfCamera",
+     "func": "",
+     "type": "float"
+    }
+   ],
+   "note": "two .cpp, no header"
+  },
+  "0xBAB378": {
+   "type": "uint16",
+   "size": 2,
+   "owner": {
+    "addr": "0xBAB378",
+    "file": "source/game_sa/Interior/FurnitureManager_c.h",
+    "line": 14,
+    "kind": "decl",
+    "name": "FurnitureManager_c::g_currFurnitureId",
+    "func": "",
+    "type": "uint32",
+    "scope": "owner"
+   },
+   "aliases": [
+    {
+     "addr": "0xBAB378",
+     "file": "source/game_sa/Interior/FurnitureManager_c.cpp",
+     "line": 5,
+     "kind": "decl",
+     "name": "g_currFurnitureId",
+     "func": "",
+     "type": "uint32",
+     "access": "private"
+    },
+    {
+     "addr": "0xBAB378",
+     "file": "source/game_sa/Interior/FurnitureSubGroup_c.cpp",
+     "line": 7,
+     "kind": "decl",
+     "name": "s_FurnSubGrpFurnitureCount",
+     "func": "",
+     "type": "uint16",
+     "access": "private"
+    }
+   ],
+   "note": "RETYPE uint32 -> uint16: all exe accesses are 16 bit (12 accesses). Class static is private; the .cpp namespace-scope refs are probably shadowed/unused (verify, delete)"
+  },
+  "0xBAB37C": {
+   "type": "uint16",
+   "size": 2,
+   "owner": {
+    "addr": "0xBAB37C",
+    "file": "source/game_sa/Interior/FurnitureManager_c.h",
+    "line": 13,
+    "kind": "decl",
+    "name": "FurnitureManager_c::g_currSubGroupId",
+    "func": "",
+    "type": "uint32",
+    "scope": "owner"
+   },
+   "aliases": [
+    {
+     "addr": "0xBAB37C",
+     "file": "source/game_sa/Interior/FurnitureManager_c.cpp",
+     "line": 4,
+     "kind": "decl",
+     "name": "g_currSubGroupId",
+     "func": "",
+     "type": "uint32",
+     "access": "private"
+    }
+   ],
+   "note": "RETYPE uint32 -> uint16: all exe accesses are 16 bit (8 accesses)"
+  },
+  "0xBB3E00": {
+   "type": "std::array<float,256>",
+   "size": 1024,
+   "owner": {
+    "addr": "0xBB3E00",
+    "file": "source/game_sa/Maths.cpp",
+    "line": 26,
+    "kind": "decl",
+    "name": "SIN_LUT",
+    "func": "",
+    "type": "std::array<float,SIN_LUT_SIZE>",
+    "scope": "owner",
+    "link": "extern",
+    "init_in_source": true
+   },
+   "aliases": [
+    {
+     "addr": "0xBB3E00",
+     "file": "source/game_sa/WaterLevel.cpp",
+     "line": 1621,
+     "kind": "decl",
+     "name": "CWaterLevel::CalculateWavesOnlyForCoordinate()::SIN_LUT",
+     "func": "CWaterLevel::CalculateWavesOnlyForCoordinate",
+     "type": "std::array<float,256>"
+    },
+    {
+     "addr": "0xBB3E00",
+     "file": "source/game_sa/WaterLevel.cpp",
+     "line": 1717,
+     "kind": "decl",
+     "name": "CWaterLevel::CalculateWavesOnlyForCoordinate2()::SIN_LUT",
+     "func": "CWaterLevel::CalculateWavesOnlyForCoordinate2",
+     "type": "std::array<float,256>"
+    }
+   ],
+   "note": "spelling conflict only (SIN_LUT_SIZE == 256). Owner site carries the runtime initialiser (lambda computing the table): the image holds zeros. Needs external linkage / header exposure for WaterLevel.cpp"
+  },
+  "0xC02C14": {
+   "type": "uint32",
+   "size": 4,
+   "owner": {
+    "synthetic": "CustomBuildingMagic1",
+    "home": "source/game_sa/DetachedShared.h",
+    "scope": "shared"
+   },
+   "aliases": [
+    {
+     "addr": "0xC02C14",
+     "file": "source/game_sa/Pipelines/CustomBuilding/CustomBuildingDNPipeline.cpp",
+     "line": 7,
+     "kind": "decl",
+     "name": "s_Magic1",
+     "func": "",
+     "type": "uint32"
+    },
+    {
+     "addr": "0xC02C14",
+     "file": "source/game_sa/Pipelines/CustomBuilding/CustomBuildingRenderer.cpp",
+     "line": 92,
+     "kind": "decl",
+     "name": "CCustomBuildingRenderer::Update()::s_Magic1",
+     "func": "CCustomBuildingRenderer::Update",
+     "type": "uint32"
+    }
+   ],
+   "note": ""
+  },
+  "0xC02C18": {
+   "type": "uint32",
+   "size": 4,
+   "owner": {
+    "synthetic": "CustomBuildingMagic2",
+    "home": "source/game_sa/DetachedShared.h",
+    "scope": "shared"
+   },
+   "aliases": [
+    {
+     "addr": "0xC02C18",
+     "file": "source/game_sa/Pipelines/CustomBuilding/CustomBuildingDNPipeline.cpp",
+     "line": 8,
+     "kind": "decl",
+     "name": "s_Magic2",
+     "func": "",
+     "type": "uint32"
+    },
+    {
+     "addr": "0xC02C18",
+     "file": "source/game_sa/Pipelines/CustomBuilding/CustomBuildingRenderer.cpp",
+     "line": 93,
+     "kind": "decl",
+     "name": "CCustomBuildingRenderer::Update()::s_Magic2",
+     "func": "CCustomBuildingRenderer::Update",
+     "type": "uint32"
+    }
+   ],
+   "note": ""
+  },
+  "0xC177D0": {
+   "type": "std::array<CVector,7>",
+   "size": 84,
+   "owner": {
+    "addr": "0xC177D0",
+    "file": "source/game_sa/Tasks/TaskTypes/TaskSimpleFight.h",
+    "line": 63,
+    "kind": "decl",
+    "name": "CTaskSimpleFight::m_aHitOffsets",
+    "func": "",
+    "type": "std::array<CVector,7>",
+    "scope": "owner"
+   },
+   "aliases": [
+    {
+     "addr": "0xC177D0",
+     "file": "source/game_sa/Tasks/TaskTypes/TaskSimpleUseGun.cpp",
+     "line": 578,
+     "kind": "decl",
+     "name": "CTaskSimpleUseGun::ProcessPed()::pistolWhipHitOffs",
+     "func": "CTaskSimpleUseGun::ProcessPed",
+     "type": "std::array<CVector,7>"
+    }
+   ],
+   "note": ""
+  },
+  "0xC17824": {
+   "type": "CColModel",
+   "size": 48,
+   "owner": {
+    "addr": "0xC17824",
+    "file": "source/game_sa/Game.h",
+    "line": 60,
+    "kind": "decl",
+    "name": "col1",
+    "func": "",
+    "type": "std::array<CColModel,2>",
+    "scope": "owner",
+    "retype": "std::array<CColModel,2> -> CColModel"
+   },
+   "aliases": [
+    {
+     "addr": "0xC17824",
+     "file": "source/game_sa/Tasks/TaskTypes/TaskSimpleFight.cpp",
+     "line": 23,
+     "kind": "decl",
+     "name": "s_FightColModel",
+     "func": "",
+     "type": "CColModel"
+    }
+   ],
+   "note": "CONFLICT RESOLVED: audit row 1154 = ONE CColModel (ctor 0x40FB60) at 0xC17824 and a CCollisionData (ctor 0x40F030, row 0xC17854) behind it; `col1[1]` is that CCollisionData (comment at TaskSimpleFight.cpp:21). Game.cpp:271-272 must use s_FightColData instead of col1[1]"
+  },
+  "0xC18CF0": {
+   "type": "float",
+   "size": 4,
+   "owner": {
+    "synthetic": "EntityPosChangeThreshold",
+    "home": "source/game_sa/DetachedShared.h",
+    "scope": "shared"
+   },
+   "aliases": [
+    {
+     "addr": "0xC18CF0",
+     "file": "source/game_sa/Scripts/Commands/Ported/Group13_15_task.cpp",
+     "line": 86,
+     "kind": "return",
+     "name": "",
+     "func": "EntityPosChangeThreshold",
+     "type": "float"
+    },
+    {
+     "addr": "0xC18CF0",
+     "file": "source/game_sa/Scripts/Commands/Ported/Group18.cpp",
+     "line": 650,
+     "kind": "expr",
+     "name": "",
+     "func": "TaskFleeCharAnyMeans",
+     "type": "float"
+    }
+   ],
+   "note": ""
+  },
+  "0xC18D50": {
+   "type": "CPointRoute",
+   "size": 100,
+   "owner": {
+    "synthetic": "ScriptRoute",
+    "home": "source/game_sa/DetachedShared.h",
+    "scope": "shared"
+   },
+   "aliases": [
+    {
+     "addr": "0xC18D50",
+     "file": "source/game_sa/Scripts/Commands/Ported/Group13_15_task.cpp",
+     "line": 80,
+     "kind": "return",
+     "name": "",
+     "func": "ScriptRoute",
+     "type": "CPointRoute"
+    },
+    {
+     "addr": "0xC18D50",
+     "file": "source/game_sa/Scripts/Commands/Ported/Group16_17b.cpp",
+     "line": 68,
+     "kind": "return",
+     "name": "",
+     "func": "ScriptRoute",
+     "type": "CPointRoute"
+    },
+    {
+     "addr": "0xC18D50",
+     "file": "source/game_sa/Scripts/Commands/Ported/Group20a.cpp",
+     "line": 68,
+     "kind": "return",
+     "name": "",
+     "func": "ScriptRoute",
+     "type": "CPointRoute"
+    }
+   ],
+   "note": "writable state shared by 3 TUs"
+  },
+  "0xC18DB8": {
+   "type": "CPatrolRoute",
+   "size": 420,
+   "owner": {
+    "synthetic": "ScriptPatrolRoute",
+    "home": "source/game_sa/DetachedShared.h",
+    "scope": "shared"
+   },
+   "aliases": [
+    {
+     "addr": "0xC18DB8",
+     "file": "source/game_sa/Scripts/Commands/Ported/Group18.cpp",
+     "line": 182,
+     "kind": "return",
+     "name": "",
+     "func": "ScriptPatrolRoute",
+     "type": "CPatrolRoute"
+    },
+    {
+     "addr": "0xC18DB8",
+     "file": "source/game_sa/Scripts/Commands/Ported/Group20b.cpp",
+     "line": 72,
+     "kind": "return",
+     "name": "",
+     "func": "ScriptPatrolRoute",
+     "type": "CPatrolRoute"
+    }
+   ],
+   "note": "writable state shared by 2 TUs (cat d: ctors in _initterm)"
+  },
+  "0xC278F8": {
+   "type": "RwIm3DVertex[4]",
+   "size": 144,
+   "owner": {
+    "addr": "0xC278F8",
+    "file": "source/game_sa/Entity/Vehicle/Boat.cpp",
+    "line": 12,
+    "kind": "decl",
+    "name": "KeepWaterOutVertices",
+    "func": "",
+    "type": "RwIm3DVertex[uiNumVertices]",
+    "scope": "owner"
+   },
+   "aliases": [
+    {
+     "addr": "0xC278F8",
+     "file": "source/game_sa/3dMarkers.cpp",
+     "line": 7,
+     "kind": "decl",
+     "name": "aRenderVertices",
+     "func": "",
+     "type": "RxObjSpace3DVertex*",
+     "unused": true
+    }
+   ],
+   "note": "CONFLICT: 3dMarkers.cpp declares a pointer-to-first-vertex (`RxObjSpace3DVertex*`, 4 B) that nothing uses (grep: only the declaration) -> delete it; the real object is 4 x Im3DVertex (36 B) = 144 B"
+  },
+  "0xC4D958": {
+   "type": "TempVertexBuffer",
+   "size": 116736,
+   "owner": {
+    "addr": "0xC4D958",
+    "file": "source/game_sa/common.h",
+    "line": 307,
+    "kind": "decl",
+    "name": "TempBufferVertices",
+    "func": "",
+    "type": "TempVertexBuffer",
+    "scope": "owner",
+    "grow": "102400 -> 116736"
+   },
+   "aliases": [
+    {
+     "addr": "0xC4D958",
+     "file": "source/game_sa/Fx/Fx.cpp",
+     "line": 20,
+     "kind": "decl",
+     "name": "TempVertexBuffer",
+     "func": "",
+     "type": "std::array<RxObjSpace3DVertex,4>",
+     "cast": true
+    }
+   ],
+   "note": "CONFLICT RESOLVED: the 0xC4D958..0xC6A158 region is ONE scratch arena shared on purpose (Glass: TempBufferVertices.m_3d[ShatteredVerticesBaseIdx+i] aliases ShatteredPolyVertexBuffer). Owner = arena; Fx.cpp's 4-vertex array is a prefix view; three more rows are members (see `members`). Define the arena as a union/byte block of 0x1C800 bytes with the TempVertexBuffer at its start"
+  },
+  "0xC6E958": {
+   "type": "CVector",
+   "size": 12,
+   "owner": {
+    "addr": "0xC6E958",
+    "file": "source/game_sa/Clouds.h",
+    "line": 68,
+    "kind": "decl",
+    "name": "CClouds::PlayerCoords",
+    "func": "",
+    "type": "CVector",
+    "scope": "owner"
+   },
+   "aliases": [
+    {
+     "addr": "0xC6E958",
+     "file": "source/game_sa/Clouds.cpp",
+     "line": 1355,
+     "kind": "decl",
+     "name": "CClouds::VolumetricCloudsRender()::gVecPlayerCoors",
+     "func": "CClouds::VolumetricCloudsRender",
+     "type": "CVector"
+    }
+   ],
+   "note": ""
+  },
+  "0xC6E964": {
+   "type": "CVector",
+   "size": 12,
+   "owner": {
+    "addr": "0xC6E964",
+    "file": "source/game_sa/Clouds.h",
+    "line": 69,
+    "kind": "decl",
+    "name": "CClouds::CameraCoors",
+    "func": "",
+    "type": "CVector",
+    "scope": "owner"
+   },
+   "aliases": [
+    {
+     "addr": "0xC6E964",
+     "file": "source/game_sa/Clouds.cpp",
+     "line": 1354,
+     "kind": "decl",
+     "name": "CClouds::VolumetricCloudsRender()::gVecCameraCoors",
+     "func": "CClouds::VolumetricCloudsRender",
+     "type": "CVector"
+    }
+   ],
+   "note": ""
+  },
+  "0xC71A9C": {
+   "type": "uint8",
+   "size": 1,
+   "owner": {
+    "addr": "0xC71A9C",
+    "file": "source/game_sa/Font.h",
+    "line": 120,
+    "kind": "decl",
+    "name": "CFont::m_nFontOutline",
+    "func": "",
+    "type": "uint8",
+    "scope": "owner"
+   },
+   "aliases": [
+    {
+     "addr": "0xC71A9C",
+     "file": "source/game_sa/Font.h",
+     "line": 121,
+     "kind": "decl",
+     "name": "CFont::m_nFontOutlineOrShadow",
+     "func": "",
+     "type": "uint8"
+    }
+   ],
+   "note": "two class statics"
+  },
+  "0xC8CF68": {
+   "type": "OSStatus",
+   "size": 32,
+   "owner": {
+    "addr": "0xC8CF68",
+    "file": "source/app/platform/win/WinPlatform.h",
+    "line": 40,
+    "kind": "decl",
+    "name": "s_OSStatus",
+    "func": "",
+    "type": "OSStatus",
+    "scope": "owner"
+   },
+   "aliases": [],
+   "note": "conflict WinVer(4)/OSStatus(32): OSStatus is the object (32 B, next row at +0x20), WinVer is its first member (see `members`)"
+  },
+  "0xC8E0C8": {
+   "type": "char[16384]",
+   "size": 16384,
+   "owner": {
+    "addr": "0xC8E0C8",
+    "file": "source/game_sa/common.h",
+    "line": 81,
+    "kind": "decl",
+    "name": "PC_Scratch",
+    "func": "",
+    "type": "char[16384]",
+    "scope": "owner"
+   },
+   "aliases": [
+    {
+     "addr": "0xC8E0C8",
+     "file": "source/game_sa/MemoryMgr.h",
+     "line": 65,
+     "kind": "decl",
+     "name": "s_MemoryHeapBuffer",
+     "func": "",
+     "type": "char[16384]"
+    }
+   ],
+   "note": "PC_Scratch owner (common.h is always included)"
+  }
+ },
+ "members": [
+  {
+   "addr": "0x8A5A9C",
+   "owner": "0x8A5A8C",
+   "offset": 16,
+   "type": "int32",
+   "sites": [
+    {
+     "addr": "0x8A5A9C",
+     "file": "source/game_sa/Streaming.h",
+     "line": 203,
+     "kind": "decl",
+     "name": "CStreaming::ms_DefaultCopBikeModel",
+     "func": "",
+     "type": "int32"
+    }
+   ],
+   "note": "element [4] of ms_aDefaultCopCarModel (std::array<int32,5>, 'last one is bike cop')"
+  },
+  {
+   "addr": "0x8A5AB0",
+   "owner": "0x8A5AA0",
+   "offset": 16,
+   "type": "int32",
+   "sites": [
+    {
+     "addr": "0x8A5AB0",
+     "file": "source/game_sa/Streaming.h",
+     "line": 204,
+     "kind": "decl",
+     "name": "CStreaming::ms_DefaultCopBikerModel",
+     "func": "",
+     "type": "int32"
+    }
+   ],
+   "note": "element [4] of ms_aDefaultCopModel"
+  },
+  {
+   "addr": "0x96914C",
+   "owner": "0x969130",
+   "offset": 28,
+   "type": "uint8",
+   "sites": [
+    {
+     "addr": "0x96914C",
+     "file": "source/game_sa/Entity/Vehicle/Bike.cpp",
+     "line": 79,
+     "kind": "decl",
+     "name": "s_BikeHandlingCheat",
+     "func": "",
+     "type": "uint8"
+    }
+   ],
+   "note": "element [28] of CCheat::m_aCheatsActive (bool[92])"
+  },
+  {
+   "addr": "0xB6F32C",
+   "owner": "0xB6F028",
+   "offset": 772,
+   "type": "CVector",
+   "sites": [
+    {
+     "addr": "0xB6F32C",
+     "file": "source/game_sa/Tasks/TaskTypes/TaskSimpleFight.cpp",
+     "line": 1281,
+     "kind": "decl",
+     "name": "CTaskSimpleFight::ProcessPed()::v",
+     "func": "CTaskSimpleFight::ProcessPed",
+     "type": "CVector"
+    }
+   ],
+   "note": "field of CCamera TheCamera at +0x304"
+  },
+  {
+   "addr": "0xB6FDC8",
+   "owner": "0xB6FDA0",
+   "offset": 40,
+   "type": "float",
+   "sites": [
+    {
+     "addr": "0xB6FDC8",
+     "file": "source/game_sa/Cam.cpp",
+     "line": 1224,
+     "kind": "decl",
+     "name": "CCam::Process()::s_unk_B6FDC8",
+     "func": "CCam::Process",
+     "type": "float"
+    }
+   ],
+   "note": "field of CIdleCam gIdleCam"
+  },
+  {
+   "addr": "0xB6FE34",
+   "owner": "0xB6FDA0",
+   "offset": 148,
+   "type": "int32",
+   "sites": [
+    {
+     "addr": "0xB6FE34",
+     "file": "source/game_sa/Cam.cpp",
+     "line": 176,
+     "kind": "decl",
+     "name": "gCamUnkB6FE34",
+     "func": "",
+     "type": "int32"
+    }
+   ],
+   "note": "field of CIdleCam gIdleCam"
+  },
+  {
+   "addr": "0xB728E0",
+   "owner": "0xB71F80",
+   "offset": 2400,
+   "type": "int32",
+   "sites": [
+    {
+     "addr": "0xB728E0",
+     "file": "source/game_sa/MissionCleanup.cpp",
+     "line": 26,
+     "kind": "decl",
+     "name": "s_Unk_B728E0",
+     "func": "",
+     "type": "int32"
+    }
+   ],
+   "note": "field of CFireManager gFireManager"
+  },
+  {
+   "addr": "0xB73720",
+   "owner": "0xB73710",
+   "offset": 16,
+   "type": "CVector",
+   "sites": [
+    {
+     "addr": "0xB73720",
+     "file": "source/game_sa/Entity/Physical.h",
+     "line": 152,
+     "kind": "decl",
+     "name": "CPhysical::fxDirection",
+     "func": "",
+     "type": "CVector"
+    }
+   ],
+   "note": "colPoints[0].m_vecNormal (CColPoint: vecPoint+pad = 0x10): CPhysical::fxDirection"
+  },
+  {
+   "addr": "0xBA18D9",
+   "owner": "0xBA1788",
+   "offset": 337,
+   "type": "bool",
+   "sites": [
+    {
+     "addr": "0xBA18D9",
+     "file": "source/game_sa/MissionCleanup.cpp",
+     "line": 27,
+     "kind": "decl",
+     "name": "s_Unk_BA18D9",
+     "func": "",
+     "type": "bool"
+    },
+    {
+     "addr": "0xBA18D9",
+     "file": "source/game_sa/Scripts/Commands/Ported/Group09.cpp",
+     "line": 37,
+     "kind": "decl",
+     "name": "OnscreenTimerFrozen",
+     "func": "",
+     "type": "bool"
+    }
+   ],
+   "note": "field of COnscreenTimer CUserDisplay::OnscnTimer; two names"
+  },
+  {
+   "addr": "0xBAD3EC",
+   "owner": "0xBAB380",
+   "offset": 8300,
+   "type": "TList_c<FurnitureEntity_c>",
+   "sites": [
+    {
+     "addr": "0xBAD3EC",
+     "file": "source/game_sa/Interior/Interior_c.cpp",
+     "line": 73,
+     "kind": "decl",
+     "name": "s_FurnitureEntityPool",
+     "func": "",
+     "type": "TList_c<FurnitureEntity_c>"
+    }
+   ],
+   "note": "field of FurnitureManager_c g_furnitureMan"
+  },
+  {
+   "addr": "0xBB3914",
+   "owner": "0xBAF670",
+   "offset": 17060,
+   "type": "size_t",
+   "sites": [
+    {
+     "addr": "0xBB3914",
+     "file": "source/game_sa/Interior/Interior_c.cpp",
+     "line": 90,
+     "kind": "decl",
+     "name": "s_InteriorCount",
+     "func": "",
+     "type": "size_t"
+    }
+   ],
+   "note": "field of InteriorManager_c g_interiorMan"
+  },
+  {
+   "addr": "0xBB3918",
+   "owner": "0xBAF670",
+   "offset": 17064,
+   "type": "std::array<int32,64>",
+   "sites": [
+    {
+     "addr": "0xBB3918",
+     "file": "source/game_sa/Interior/Interior_c.cpp",
+     "line": 91,
+     "kind": "decl",
+     "name": "s_InteriorIds",
+     "func": "",
+     "type": "std::array<int32,64>"
+    }
+   ],
+   "note": "field of InteriorManager_c g_interiorMan"
+  },
+  {
+   "addr": "0xBB3A18",
+   "owner": "0xBAF670",
+   "offset": 17320,
+   "type": "int32",
+   "sites": [
+    {
+     "addr": "0xBB3A18",
+     "file": "source/game_sa/Interior/Interior_c.cpp",
+     "line": 85,
+     "kind": "decl",
+     "name": "s_StealableObjectCount",
+     "func": "",
+     "type": "int32"
+    }
+   ],
+   "note": "field of InteriorManager_c g_interiorMan"
+  },
+  {
+   "addr": "0xBB3A1C",
+   "owner": "0xBAF670",
+   "offset": 17324,
+   "type": "std::array<InteriorObject,32>",
+   "sites": [
+    {
+     "addr": "0xBB3A1C",
+     "file": "source/game_sa/Interior/Interior_c.cpp",
+     "line": 86,
+     "kind": "decl",
+     "name": "s_StealableObjects",
+     "func": "",
+     "type": "std::array<InteriorObject,32>"
+    }
+   ],
+   "note": "field of InteriorManager_c g_interiorMan"
+  },
+  {
+   "addr": "0xBB3D9C",
+   "owner": "0xBAF670",
+   "offset": 18220,
+   "type": "std::array<bool,16>",
+   "sites": [
+    {
+     "addr": "0xBB3D9C",
+     "file": "source/game_sa/Interior/InteriorGroup_c.cpp",
+     "line": 49,
+     "kind": "decl",
+     "name": "s_InteriorPedsAliveState",
+     "func": "",
+     "type": "std::array<bool,16>"
+    }
+   ],
+   "note": "field of InteriorManager_c g_interiorMan"
+  },
+  {
+   "addr": "0xBB3DAC",
+   "owner": "0xBAF670",
+   "offset": 18236,
+   "type": "CEntryExit*",
+   "sites": [
+    {
+     "addr": "0xBB3DAC",
+     "file": "source/game_sa/Interior/Interior_c.cpp",
+     "line": 92,
+     "kind": "decl",
+     "name": "s_EnEx",
+     "func": "",
+     "type": "CEntryExit*"
+    }
+   ],
+   "note": "field of InteriorManager_c g_interiorMan"
+  },
+  {
+   "addr": "0xBB3DC2",
+   "owner": "0xBAF670",
+   "offset": 18258,
+   "type": "bool",
+   "sites": [
+    {
+     "addr": "0xBB3DC2",
+     "file": "source/game_sa/Interior/InteriorGroup_c.cpp",
+     "line": 48,
+     "kind": "decl",
+     "name": "s_ArePedsEnabled",
+     "func": "",
+     "type": "bool"
+    }
+   ],
+   "note": "field of InteriorManager_c g_interiorMan"
+  },
+  {
+   "addr": "0xBB3DC4",
+   "owner": "0xBAF670",
+   "offset": 18260,
+   "type": "uint32",
+   "sites": [
+    {
+     "addr": "0xBB3DC4",
+     "file": "source/game_sa/Interior/Interior_c.cpp",
+     "line": 89,
+     "kind": "decl",
+     "name": "s_TimeLastPickupsGenerated",
+     "func": "",
+     "type": "uint32"
+    }
+   ],
+   "note": "field of InteriorManager_c g_interiorMan"
+  },
+  {
+   "addr": "0xC0B184",
+   "owner": "0xC0B058",
+   "offset": 300,
+   "type": "uint8",
+   "sites": [
+    {
+     "addr": "0xC0B184",
+     "file": "source/game_sa/Cam.cpp",
+     "line": 1225,
+     "kind": "decl",
+     "name": "CCam::Process()::s_unk_C0B184",
+     "func": "CCam::Process",
+     "type": "uint8"
+    }
+   ],
+   "note": "field of CInterestingEvents g_InterestingEvents"
+  },
+  {
+   "addr": "0xC17738",
+   "owner": "0xC170D0",
+   "offset": 1640,
+   "type": "std::array<float,2>",
+   "sites": [
+    {
+     "addr": "0xC17738",
+     "file": "source/game_sa/Tasks/TaskTypes/TaskSimpleUseGun.cpp",
+     "line": 576,
+     "kind": "decl",
+     "name": "CTaskSimpleUseGun::ProcessPed()::pistolWhipHitTimes",
+     "func": "CTaskSimpleUseGun::ProcessPed",
+     "type": "std::array<float,2>"
+    }
+   ],
+   "note": "inside CMeleeInfo[12] (the 13th combo slot) - the exe overlays it: LoadMeleeData (0x5BEDC0) initialises all 13 slots (loop end 0xC177BC); keep the overlay"
+  },
+  {
+   "addr": "0xC17780",
+   "owner": "0xC170D0",
+   "offset": 1712,
+   "type": "std::array<uint8,2>",
+   "sites": [
+    {
+     "addr": "0xC17780",
+     "file": "source/game_sa/Tasks/TaskTypes/TaskSimpleUseGun.cpp",
+     "line": 577,
+     "kind": "decl",
+     "name": "CTaskSimpleUseGun::ProcessPed()::pistolWhipHitIdx",
+     "func": "CTaskSimpleUseGun::ProcessPed",
+     "type": "std::array<uint8,2>"
+    }
+   ],
+   "note": "inside CMeleeInfo[12], see above"
+  },
+  {
+   "addr": "0xC56958",
+   "owner": "0xC4D958",
+   "offset": 36864,
+   "type": "std::array<RxObjSpace3DLitVertex,512>",
+   "sites": [
+    {
+     "addr": "0xC56958",
+     "file": "source/game_sa/Glass.h",
+     "line": 24,
+     "kind": "decl",
+     "name": "CGlass::ShatteredPolyVertexBuffer",
+     "func": "",
+     "type": "std::array<RxObjSpace3DLitVertex,512>"
+    }
+   ],
+   "note": "TempBufferVertices.m_3d[1024..1535]"
+  },
+  {
+   "addr": "0xC5B158",
+   "owner": "0xC4D958",
+   "offset": 55296,
+   "type": "std::array<RxObjSpace3DLitVertex,1706>",
+   "sites": [
+    {
+     "addr": "0xC5B158",
+     "file": "source/game_sa/Glass.h",
+     "line": 23,
+     "kind": "decl",
+     "name": "CGlass::ReflectionPolyVertexBuffer",
+     "func": "",
+     "type": "std::array<RxObjSpace3DLitVertex,1706>"
+    }
+   ],
+   "note": "TempBufferVertices.m_3d[1536..]; ends at 0xC6A140 (beyond TempVertexBuffer's declared 102400)"
+  },
+  {
+   "addr": "0xC5F958",
+   "owner": "0xC4D958",
+   "offset": 73728,
+   "type": "RwD3D9Vertex[1532]",
+   "sites": [
+    {
+     "addr": "0xC5F958",
+     "file": "source/game_sa/common.h",
+     "line": 308,
+     "kind": "decl",
+     "name": "aRadiosityVertexBuffer",
+     "func": "",
+     "type": "RwD3D9Vertex[TOTAL_RADIOSITY_VERTEX_BUFFER]"
+    }
+   ],
+   "note": "= TempBufferVertices.m_2d (starts at m_3d + 2048*36); the sprite buffer"
+  },
+  {
+   "addr": "0xC8A860",
+   "owner": "0xC8A838",
+   "offset": 40,
+   "type": "uint8",
+   "sites": [
+    {
+     "addr": "0xC8A860",
+     "file": "source/game_sa/Cam.cpp",
+     "line": 1226,
+     "kind": "decl",
+     "name": "CCam::Process()::s_unk_C8A860",
+     "func": "CCam::Process",
+     "type": "uint8"
+    }
+   ],
+   "note": "field of CWeaponEffects gCrossHair[0]"
+  },
+  {
+   "addr": "0xC8CF68",
+   "owner": "0xC8CF68",
+   "offset": 0,
+   "type": "WinVer",
+   "sites": [
+    {
+     "addr": "0xC8CF68",
+     "file": "source/app/platform/win/WinPlatform.h",
+     "line": 24,
+     "kind": "decl",
+     "name": "s_WinVer",
+     "func": "",
+     "type": "WinVer"
+    }
+   ],
+   "note": "OSStatus::OSVer (first member)"
+  },
+  {
+   "addr": "0xB613F8",
+   "owner": "0xB613EC",
+   "offset": 12,
+   "type": "int16",
+   "sites": [
+    {
+     "addr": "0xB613F8",
+     "file": "source/game_sa/Tasks/TaskTypes/TaskComplexPartnerChat.cpp",
+     "line": 75,
+     "kind": "expr",
+     "name": "",
+     "func": "CTaskComplexPartnerChat::GetPartnerSequence",
+     "type": "int16"
+    }
+   ],
+   "note": "RAW VIEW: site reads StaticRef<int16>(0xB613F8 - m_updateDirectionCount*4) = ((int16*)&s_Conversation)[6 - 2*count] (the exe indexes with 6-2*count); rewrite as an element access of the owner array (elements are 16-bit)"
+  },
+  {
+   "addr": "0xB613FA",
+   "owner": "0xB613EC",
+   "offset": 14,
+   "type": "int16",
+   "sites": [
+    {
+     "addr": "0xB613FA",
+     "file": "source/game_sa/Tasks/TaskTypes/TaskComplexPartnerChat.cpp",
+     "line": 76,
+     "kind": "expr",
+     "name": "",
+     "func": "CTaskComplexPartnerChat::GetPartnerSequence",
+     "type": "int16"
+    }
+   ],
+   "note": "RAW VIEW: ((int16*)&s_Conversation)[7 - 2*count]"
+  },
+  {
+   "addr": "0x8AD914",
+   "owner": "0x8AD908",
+   "offset": 12,
+   "type": "int32",
+   "sites": [
+    {
+     "addr": "0x8AD914",
+     "file": "source/game_sa/Audio/Entities/AEPedAudioEntity.cpp",
+     "line": 11,
+     "kind": "expr",
+     "name": "",
+     "func": "GetSurfaceHitVolume",
+     "type": "int32"
+    }
+   ],
+   "note": "field `percent` (+0xC) of entry [0] of the surface table; the repo site computes `0x8AD914 + surfaceId*0x10` -> rewrite as table[surfaceId].percent"
+  },
+  {
+   "addr": "0x8D3810",
+   "owner": "0x8D3808",
+   "offset": 8,
+   "type": "uint32",
+   "sites": [
+    {
+     "addr": "0x8D3810",
+     "file": "source/game_sa/WaterLevel.cpp",
+     "line": 942,
+     "kind": "expr",
+     "name": "",
+     "func": "CWaterLevel::RenderHighDetailWaterTriangle_OneLayer",
+     "type": "int32"
+    }
+   ],
+   "note": "WaterLayerAlpha[2] (third layer, 'never used' case in the repo but read by the exe at 0x6E8BE1)"
+  }
+ ],
+ "views": [
+  {
+   "addr": "0xB6EC5C",
+   "site": {
+    "addr": "0xB6EC5C",
+    "file": "source/game_sa/Cam.cpp",
+    "line": 43,
+    "kind": "decl",
+    "name": "gbExitCam",
+    "func": "",
+    "type": "std::array<bool,29>"
+   },
+   "type": "std::array<bool,29>",
+   "verify_addr": "0xB6EC70",
+   "verify_offset": 20,
+   "verify_size": 9,
+   "note": "repo indexes with the DW cinematic cam id 20..28 (= exe bytes 0xB6EC70..0xB6EC78); elements [0..19] overlay unrelated globals (gArrestCamOneCop, gArrestCamOneStartTime, gbAvoidGeometryDoSecondLOS, gNearClipPedDistDivisor, gCamColLastRadius) and are never used. Detached: own std::array<bool,29> (zero); verifier compares elements [20,29) with the exe image at 0xB6EC70."
+  }
+ ],
+ "virtual": [
+  {
+   "addr": "0xB78E20",
+   "sites": [
+    {
+     "addr": "0xB78E20",
+     "file": "source/game_sa/Stats.cpp",
+     "line": 714,
+     "kind": "decl",
+     "name": "CStats::SetNewRecordStat()::slot",
+     "func": "CStats::SetNewRecordStat",
+     "type": "int32"
+    },
+    {
+     "addr": "0xB78E20",
+     "file": "source/game_sa/Stats.cpp",
+     "line": 58,
+     "kind": "return",
+     "name": "",
+     "func": "IntStatCell",
+     "type": "int32"
+    }
+   ],
+   "real_array": "0xB79000",
+   "real_name": "CStats::StatTypesInt",
+   "index_bias": 120,
+   "note": "0xB78E20 = &StatTypesInt[0] - FIRST_INT_STAT*4 (0xB79000 - 120*4): the exe indexes `[stat*4 + 0xB78E20]`. Replace IntStatCell(stat) by StatTypesInt[stat - FIRST_INT_STAT] (stat >= 120; 82..119 would index the rows before StatTypesInt in the exe layout, all unused). The row 0xB78E20 must NOT become a global (it lies inside TimesMissionAttempted 0xB78CC8+400)."
+  }
+ ],
+ "retype": [
+  {
+   "addr": "0xBAB378",
+   "file": "source/game_sa/Interior/FurnitureManager_c.h",
+   "line": 14,
+   "frm": "uint32",
+   "to": "uint16",
+   "why": "all 12 exe accesses are 16 bit; next global at +4 (0xBAB37C) is also 16 bit"
+  },
+  {
+   "addr": "0xBAB37C",
+   "file": "source/game_sa/Interior/FurnitureManager_c.h",
+   "line": 13,
+   "frm": "uint32",
+   "to": "uint16",
+   "why": "all 8 exe accesses are 16 bit"
+  },
+  {
+   "addr": "0x96A8B0",
+   "file": "source/game_sa/GameLogic.h",
+   "line": 63,
+   "frm": "eGameLogicState (int32)",
+   "to": "1 byte (enum : uint8 or WEnum<eGameLogicState,uint8>)",
+   "why": "22 exe accesses, all byte-wide; the next byte 0x96A8B1 is ActivePlayers"
+  },
+  {
+   "addr": "0x96A8B1",
+   "file": "source/game_sa/GameLogic.h",
+   "line": 64,
+   "frm": "int32",
+   "to": "uint8",
+   "why": "exe accesses it as a byte; as int32 it swallows bPlayersCannotTargetEachOther (+1) and bPlayersCanBeInSeparateCars (+2) (repo bug: a write of ActivePlayers clobbers both flags)"
+  },
+  {
+   "addr": "0x8D35D4",
+   "file": "source/game_sa/Entity/Vehicle/Vehicle.cpp",
+   "line": 62,
+   "frm": "std::array<CVector,14>",
+   "to": "std::array<CVector,13>",
+   "why": "14th element (0x8D3670..0x8D367C) overlays three separate floats (fFlyingLiftLimit 0x8D3670, 0x8D3674, 0x8D3678); repo only reads VehicleGunOffset[0]; the other plane gun constants in the block are ported as literals"
+  },
+  {
+   "addr": "0xC17824",
+   "file": "source/game_sa/Game.h",
+   "line": 60,
+   "frm": "std::array<CColModel,2>",
+   "to": "CColModel",
+   "why": "see globals[0xC17824]"
+  },
+  {
+   "addr": "0xC4D958",
+   "file": "source/game_sa/common.h",
+   "line": 307,
+   "frm": "TempVertexBuffer (102400)",
+   "to": "arena of 116736 bytes starting with TempVertexBuffer",
+   "why": "see globals[0xC4D958]"
+  },
+  {
+   "addr": "0x8CC388",
+   "file": "source/game_sa/Camera.cpp",
+   "line": 23,
+   "frm": "eCamMode (uint16)",
+   "to": "int32-wide storage (WEnum<eCamMode,int32> or int32)",
+   "why": "exe accesses 4 bytes"
+  },
+  {
+   "addr": "0x8D5094",
+   "file": "source/game_sa/PostEffects.h",
+   "line": 139,
+   "frm": "std::array<char,2>",
+   "to": "int32 (grain strength)",
+   "why": "exe passes the dword to Grain(int32); verify the repo's [0]/[1] uses"
+  },
+  {
+   "addr": "0x8D390C",
+   "file": "source/game_sa/WaterLevel.h",
+   "line": 99,
+   "frm": "std::array<float,4>",
+   "to": "std::array<float,5>",
+   "why": "index 4 is read"
+  },
+  {
+   "addr": "0x8CC548",
+   "file": "source/game_sa/Cam.cpp",
+   "line": 165,
+   "frm": "std::array<FollowPedCamTuning,2>",
+   "to": "std::array<FollowPedCamTuning,3>",
+   "why": "third entry read by Process_Cam_TwoPlayer"
+  },
+  {
+   "addr": "0x8D3808",
+   "file": "source/game_sa/WaterLevel.h",
+   "line": 168,
+   "frm": "std::array<uint32,2>",
+   "to": "std::array<uint32,3>",
+   "why": "three layers"
+  },
+  {
+   "addr": "0x8CD8A0",
+   "file": "source/game_sa/Stats.cpp",
+   "line": 870,
+   "frm": "tStatLine",
+   "to": "tStatLine[25]",
+   "why": "`&StaticRef<tStatLine>(A)` is the head of a -99-terminated table"
+  },
+  {
+   "addr": "0x8CD938",
+   "file": "source/game_sa/Stats.cpp",
+   "line": 871,
+   "frm": "tStatLine",
+   "to": "tStatLine[20]",
+   "why": "`&StaticRef<tStatLine>(A)` is the head of a -99-terminated table"
+  },
+  {
+   "addr": "0x8CD9B0",
+   "file": "source/game_sa/Stats.cpp",
+   "line": 872,
+   "frm": "tStatLine",
+   "to": "tStatLine[6]",
+   "why": "`&StaticRef<tStatLine>(A)` is the head of a -99-terminated table"
+  },
+  {
+   "addr": "0x8CD9D8",
+   "file": "source/game_sa/Stats.cpp",
+   "line": 873,
+   "frm": "tStatLine",
+   "to": "tStatLine[25]",
+   "why": "`&StaticRef<tStatLine>(A)` is the head of a -99-terminated table"
+  },
+  {
+   "addr": "0x8CDA70",
+   "file": "source/game_sa/Stats.cpp",
+   "line": 874,
+   "frm": "tStatLine",
+   "to": "tStatLine[14]",
+   "why": "`&StaticRef<tStatLine>(A)` is the head of a -99-terminated table"
+  },
+  {
+   "addr": "0x8CDAC8",
+   "file": "source/game_sa/Stats.cpp",
+   "line": 875,
+   "frm": "tStatLine",
+   "to": "tStatLine[50]",
+   "why": "`&StaticRef<tStatLine>(A)` is the head of a -99-terminated table"
+  },
+  {
+   "addr": "0x8CDBF8",
+   "file": "source/game_sa/Stats.cpp",
+   "line": 876,
+   "frm": "tStatLine",
+   "to": "tStatLine[87]",
+   "why": "`&StaticRef<tStatLine>(A)` is the head of a -99-terminated table"
+  },
+  {
+   "addr": "0x8CDE08",
+   "file": "source/game_sa/Stats.cpp",
+   "line": 877,
+   "frm": "tStatLine",
+   "to": "tStatLine[13]",
+   "why": "`&StaticRef<tStatLine>(A)` is the head of a -99-terminated table"
+  }
+ ],
+ "readdress": [
+  {
+   "site": {
+    "addr": "0xB6B98C",
+    "file": "source/game_sa/Audio/Entities/AEVehicleAudioEntity.h",
+    "line": 622,
+    "kind": "decl",
+    "name": "CAEVehicleAudioEntity::s_pVehicleAudioSettingsForRadio",
+    "func": "",
+    "type": "tVehicleAudioSettings*"
+   },
+   "frm": "0xB6B98C",
+   "to": "0xB6B99C",
+   "type": "tVehicleAudioSettings*",
+   "size": 4,
+   "why": "0x4F5B20 TurnOnRadioForVehicle: [0xB6B98C] = driver (CPed*), [0xB6B99C] = this+0x80 (&m_AuSettings). The repo aliased both onto 0xB6B98C, so the second store overwrote the driver pointer. Image at 0xB6B99C is zero (BSS)"
+  }
+ ],
+ "new_globals": [
+  {
+   "addr": "0xB6B99C",
+   "type": "tVehicleAudioSettings*",
+   "size": 4,
+   "cat": "a",
+   "why": "from READDRESS"
+  },
+  {
+   "addr": "0xB61364",
+   "type": "uint32",
+   "size": 4,
+   "cat": "a",
+   "why": "ScopedStaticRef variable (function-local lazy init `CTimer::GetTimeInMS()`); detached: `static uint32 v = init;` The flag word 0xB61368 is the lazy-init guard and is NOT needed (dropped)",
+   "file": "source/game_sa/Audio/Entities/AEGlobalWeaponAudioEntity.cpp",
+   "line": 124
+  },
+  {
+   "addr": "0xC4032C",
+   "type": "float",
+   "size": 4,
+   "cat": "a",
+   "why": "ScopedStaticRef variable (lazy init 0.35f); flag word 0xC40330 dropped",
+   "file": "source/game_sa/PostEffects.cpp",
+   "line": 1370
+  },
+  {
+   "addr": "0x8D2E78",
+   "type": "uint32",
+   "size": 4,
+   "cat": "b",
+   "why": "decimal literal 9252472 = 0x8D2E78 (DEFAULT_GUN_ATTACK_PERIOD); image value 0x7D0",
+   "value": 2000,
+   "file": "source/game_sa/Tasks/TaskTypes/TaskSimpleGunControl.h",
+   "line": 28
+  },
+  {
+   "addr": "0x8AD908",
+   "type": "struct{int32 a,b,c,percent;}[195]",
+   "size": 3120,
+   "cat": "b",
+   "why": "195-entry table of 16-byte records (TOTAL_NUM_COLLISION_SURFACE_TYPES), indexed with `id<<4` at 0x4DAA5D/0x4DB321/0x4DA518; ends at 0x8AE538 (gBeatTrackLookup). The repo only knew the field at +0xC and its comment says 'table at 0x8AD910, percent at +4' (wrong)"
+  }
+ ],
+ "extents": {
+  "0xBBCDC8": {"kind": "extend", "declared": 32, "true_size": 17600, "element_type": "CDirectory::DirectoryInfo[550]", "why": "player.img directory buffer: CClothesBuilder::Init does playerImg.Init(550, &playerImgEntries); the audit saw one entry (zero image), the 549 others overlay the following globals", "source": "B04 (found by the poisoned soak: overran ms_pColPool)"},
+  "0x8D35D4": {
+   "kind": "shrink",
+   "declared": 168,
+   "true_size": 156,
+   "why": "VehicleGunOffset: std::array<CVector,14> -> 13 (see retype)",
+   "source": "asm/audit"
+  },
+  "0x96A8B0": {
+   "kind": "shrink",
+   "declared": 4,
+   "true_size": 1,
+   "why": "CGameLogic::GameState is a byte in the exe",
+   "source": "asm/audit"
+  },
+  "0x96A8B1": {
+   "kind": "shrink",
+   "declared": 4,
+   "true_size": 1,
+   "why": "CGameLogic::ActivePlayers is a byte in the exe",
+   "source": "asm/audit"
+  },
+  "0xBAB378": {
+   "kind": "shrink",
+   "declared": 4,
+   "true_size": 2,
+   "why": "g_currFurnitureId is 16 bit",
+   "source": "asm/audit"
+  },
+  "0xBAB37C": {
+   "kind": "shrink",
+   "declared": 4,
+   "true_size": 2,
+   "why": "g_currSubGroupId is 16 bit",
+   "source": "asm/audit"
+  },
+  "0xC17824": {
+   "kind": "shrink",
+   "declared": 96,
+   "true_size": 48,
+   "why": "col1: one CColModel, the second half is the CCollisionData row 0xC17854",
+   "source": "asm/audit"
+  },
+  "0xC4D958": {
+   "kind": "grow",
+   "declared": 102400,
+   "true_size": 116736,
+   "why": "scratch arena 0xC4D958..0xC6A158 (TempBufferVertices + Glass buffers + sprite/radiosity buffer overlay)",
+   "source": "asm/audit"
+  },
+  "0xC8CF68": {
+   "kind": "keep",
+   "declared": 32,
+   "true_size": 32,
+   "why": "OSStatus",
+   "source": "asm/audit"
+  },
+  "0x8CC548": {
+   "kind": "extend",
+   "declared": 120,
+   "true_size": 180,
+   "element_type": "FollowPedCamTuning[3]",
+   "why": "third entry (0x8CC5C0) read by Process_Cam_TwoPlayer (+0x20..+0x2C); repo declares std::array<..,2>",
+   "source": "tail audit"
+  },
+  "0x8D390C": {
+   "kind": "extend",
+   "declared": 16,
+   "true_size": 20,
+   "element_type": "float[5]",
+   "why": "RenderWakeSegment reads [partIdx+1] for partIdx 0..3; repo member declares 4, the local copy at WaterLevel.cpp:366 already has 5",
+   "source": "tail audit"
+  },
+  "0x8CC388": {
+   "kind": "extend",
+   "declared": 2,
+   "true_size": 4,
+   "element_type": "int32",
+   "why": "eCamMode is 16 bit in the repo; the exe reads/writes 4 bytes (value -1 = 0xFFFFFFFF)",
+   "source": "tail audit"
+  },
+  "0x8D5094": {
+   "kind": "extend",
+   "declared": 2,
+   "true_size": 4,
+   "element_type": "int32",
+   "why": "exe loads the full dword (0x40) and passes it to Grain(int32); repo has std::array<char,2>",
+   "source": "tail audit"
+  },
+  "0x8D3808": {
+   "kind": "extend",
+   "declared": 8,
+   "true_size": 12,
+   "element_type": "uint32[3]",
+   "why": "WaterLayerAlpha: the exe reads 0x8D3808/0x8D380C/0x8D3810 (3 layers); repo array<uint32,2>",
+   "source": "tail audit"
+  },
+  "0x8CD8A0": {
+   "kind": "extend",
+   "declared": 6,
+   "true_size": 150,
+   "element_type": "tStatLine[25]",
+   "why": "statId -99 terminator at +144",
+   "source": "tail audit"
+  },
+  "0x8CD938": {
+   "kind": "extend",
+   "declared": 6,
+   "true_size": 120,
+   "element_type": "tStatLine[20]",
+   "why": "terminator +114",
+   "source": "tail audit"
+  },
+  "0x8CD9B0": {
+   "kind": "extend",
+   "declared": 6,
+   "true_size": 36,
+   "element_type": "tStatLine[6]",
+   "why": "terminator +30",
+   "source": "tail audit"
+  },
+  "0x8CD9D8": {
+   "kind": "extend",
+   "declared": 6,
+   "true_size": 150,
+   "element_type": "tStatLine[25]",
+   "why": "terminator +144",
+   "source": "tail audit"
+  },
+  "0x8CDA70": {
+   "kind": "extend",
+   "declared": 6,
+   "true_size": 84,
+   "element_type": "tStatLine[14]",
+   "why": "terminator +78",
+   "source": "tail audit"
+  },
+  "0x8CDAC8": {
+   "kind": "extend",
+   "declared": 6,
+   "true_size": 300,
+   "element_type": "tStatLine[50]",
+   "why": "terminator +294",
+   "source": "tail audit"
+  },
+  "0x8CDBF8": {
+   "kind": "extend",
+   "declared": 6,
+   "true_size": 522,
+   "element_type": "tStatLine[87]",
+   "why": "terminator +516",
+   "source": "tail audit"
+  },
+  "0x8CDE08": {
+   "kind": "extend",
+   "declared": 6,
+   "true_size": 78,
+   "element_type": "tStatLine[13]",
+   "why": "terminator +72",
+   "source": "tail audit"
+  },
+  "0x8AD914": {
+   "kind": "owner-moved",
+   "declared": 4,
+   "true_size": 4,
+   "why": "field of the new table 0x8AD908 (new_globals)",
+   "source": "tail audit"
+  }
+ },
+ "width_notes": [
+  {
+   "addr": "0x8A6458",
+   "name": "CVehicleModelInfo::ms_compsToUse",
+   "declared": 2,
+   "exe_access": [
+    1
+   ],
+   "kind": "narrower",
+   "next_row_inside": false,
+   "zero_hi_bytes": null
+  },
+  {
+   "addr": "0x8CC310",
+   "name": "m_snLastRainDropSoundID",
+   "declared": 2,
+   "exe_access": [
+    2,
+    4
+   ],
+   "kind": "wider",
+   "next_row_inside": false,
+   "zero_hi_bytes": true
+  },
+  {
+   "addr": "0x8CC388",
+   "name": "gCameraMode",
+   "declared": 2,
+   "exe_access": [
+    4
+   ],
+   "kind": "wider",
+   "next_row_inside": false,
+   "zero_hi_bytes": false
+  },
+  {
+   "addr": "0x8D5094",
+   "name": "CPostEffects::m_grainStrength",
+   "declared": 2,
+   "exe_access": [
+    4
+   ],
+   "kind": "wider",
+   "next_row_inside": false,
+   "zero_hi_bytes": true
+  },
+  {
+   "addr": "0x8D5104",
+   "name": "CPostEffects::m_SpeedFXAlpha",
+   "declared": 4,
+   "exe_access": [
+    1
+   ],
+   "kind": "narrower",
+   "next_row_inside": false,
+   "zero_hi_bytes": null
+  },
+  {
+   "addr": "0x8D5D6C",
+   "name": "COcclusion::NearbyList",
+   "declared": 2,
+   "exe_access": [
+    2,
+    4
+   ],
+   "kind": "wider",
+   "next_row_inside": false,
+   "zero_hi_bytes": true
+  },
+  {
+   "addr": "0x8D5D70",
+   "name": "COcclusion::ListWalkThroughFA",
+   "declared": 2,
+   "exe_access": [
+    2,
+    4
+   ],
+   "kind": "wider",
+   "next_row_inside": false,
+   "zero_hi_bytes": true
+  },
+  {
+   "addr": "0x8D621C",
+   "name": "ForegroundApp",
+   "declared": 1,
+   "exe_access": [
+    4
+   ],
+   "kind": "wider",
+   "next_row_inside": false,
+   "zero_hi_bytes": true
+  },
+  {
+   "addr": "0x96A8B0",
+   "name": "CGameLogic::GameState",
+   "declared": 4,
+   "exe_access": [
+    1
+   ],
+   "kind": "narrower",
+   "next_row_inside": false,
+   "zero_hi_bytes": null
+  },
+  {
+   "addr": "0x96A8B1",
+   "name": "CGameLogic::ActivePlayers",
+   "declared": 4,
+   "exe_access": [
+    1
+   ],
+   "kind": "narrower",
+   "next_row_inside": false,
+   "zero_hi_bytes": null
+  },
+  {
+   "addr": "0x97FABC",
+   "name": "CReplay::OldRadioStation",
+   "declared": 1,
+   "exe_access": [
+    1,
+    4
+   ],
+   "kind": "wider",
+   "next_row_inside": false,
+   "zero_hi_bytes": true
+  },
+  {
+   "addr": "0xA447F4",
+   "name": "CTheScripts::CommandsExecuted",
+   "declared": 2,
+   "exe_access": [
+    2,
+    4
+   ],
+   "kind": "wider",
+   "next_row_inside": false,
+   "zero_hi_bytes": true
+  },
+  {
+   "addr": "0xA9A898",
+   "name": "CStuntJumpManager::m_jumpState",
+   "declared": 1,
+   "exe_access": [
+    4
+   ],
+   "kind": "wider",
+   "next_row_inside": false,
+   "zero_hi_bytes": true
+  },
+  {
+   "addr": "0xB4E3E8",
+   "name": "CVehicleModelInfo::ms_lightsOn",
+   "declared": 4,
+   "exe_access": [
+    1
+   ],
+   "kind": "narrower",
+   "next_row_inside": false,
+   "zero_hi_bytes": null
+  },
+  {
+   "addr": "0xB4E3F0",
+   "name": "CVehicleModelInfo::ms_currentCol",
+   "declared": 4,
+   "exe_access": [
+    1
+   ],
+   "kind": "narrower",
+   "next_row_inside": false,
+   "zero_hi_bytes": null
+  },
+  {
+   "addr": "0xB4E478",
+   "name": "CVehicleModelInfo::ms_compsUsed",
+   "declared": 2,
+   "exe_access": [
+    1
+   ],
+   "kind": "narrower",
+   "next_row_inside": false,
+   "zero_hi_bytes": null
+  },
+  {
+   "addr": "0xB613DC",
+   "name": "CAEPedSpeechAudioEntity::s_nCJBasicMood",
+   "declared": 2,
+   "exe_access": [
+    2,
+    4
+   ],
+   "kind": "wider",
+   "next_row_inside": false,
+   "zero_hi_bytes": true
+  },
+  {
+   "addr": "0xB61404",
+   "name": "CAEPedSpeechAudioEntity::s_pConversationPedSlot2",
+   "declared": 2,
+   "exe_access": [
+    2,
+    4
+   ],
+   "kind": "wider",
+   "next_row_inside": false,
+   "zero_hi_bytes": true
+  },
+  {
+   "addr": "0xB61408",
+   "name": "CAEPedSpeechAudioEntity::s_pConversationPedSlot1",
+   "declared": 2,
+   "exe_access": [
+    2,
+    4
+   ],
+   "kind": "wider",
+   "next_row_inside": false,
+   "zero_hi_bytes": true
+  },
+  {
+   "addr": "0xB7CD78",
+   "name": "CWorld::ms_nCurrentScanCode",
+   "declared": 2,
+   "exe_access": [
+    2,
+    4
+   ],
+   "kind": "wider",
+   "next_row_inside": false,
+   "zero_hi_bytes": true
+  },
+  {
+   "addr": "0xB9B8F4",
+   "name": "CPlayerInfo::WorkOutEnergyFromHunger()::s_lastTimeHungryStateProcessedInitialized",
+   "declared": 1,
+   "exe_access": [
+    1,
+    4
+   ],
+   "kind": "wider",
+   "next_row_inside": false,
+   "zero_hi_bytes": true
+  },
+  {
+   "addr": "0xBA3794",
+   "name": "CTheZones::TotalNumberOfNavigationZones",
+   "declared": 2,
+   "exe_access": [
+    2,
+    4
+   ],
+   "kind": "wider",
+   "next_row_inside": false,
+   "zero_hi_bytes": true
+  },
+  {
+   "addr": "0xBA6718",
+   "name": "CTheZones::m_CurrLevel",
+   "declared": 1,
+   "exe_access": [
+    4
+   ],
+   "kind": "wider",
+   "next_row_inside": false,
+   "zero_hi_bytes": true
+  },
+  {
+   "addr": "0xBA6744",
+   "name": "CMenuManager::bInvertMouseX",
+   "declared": 1,
+   "exe_access": [
+    4
+   ],
+   "kind": "wider",
+   "next_row_inside": true,
+   "zero_hi_bytes": true
+  },
+  {
+   "addr": "0xBA82E0",
+   "name": "CMenuSystem::MenuInUse",
+   "declared": 2,
+   "exe_access": [
+    1
+   ],
+   "kind": "narrower",
+   "next_row_inside": false,
+   "zero_hi_bytes": null
+  },
+  {
+   "addr": "0xBAA400",
+   "name": "CHud::bDrawClock",
+   "declared": 1,
+   "exe_access": [
+    4
+   ],
+   "kind": "wider",
+   "next_row_inside": false,
+   "zero_hi_bytes": true
+  },
+  {
+   "addr": "0xBAB378",
+   "name": "FurnitureManager_c::g_currFurnitureId",
+   "declared": 4,
+   "exe_access": [
+    2
+   ],
+   "kind": "narrower",
+   "next_row_inside": false,
+   "zero_hi_bytes": null
+  },
+  {
+   "addr": "0xBAB37C",
+   "name": "FurnitureManager_c::g_currSubGroupId",
+   "declared": 4,
+   "exe_access": [
+    2
+   ],
+   "kind": "narrower",
+   "next_row_inside": false,
+   "zero_hi_bytes": null
+  },
+  {
+   "addr": "0xC09168",
+   "name": "CPlantMgr::CalculateWindBending()::RandomSeed",
+   "declared": 2,
+   "exe_access": [
+    4
+   ],
+   "kind": "wider",
+   "next_row_inside": false,
+   "zero_hi_bytes": true
+  },
+  {
+   "addr": "0xC2B974",
+   "name": "CCarGenerator::m_bHotdogVendorPositionOffsetInitialized",
+   "declared": 1,
+   "exe_access": [
+    1,
+    4
+   ],
+   "kind": "wider",
+   "next_row_inside": false,
+   "zero_hi_bytes": true
+  },
+  {
+   "addr": "0xC4B950",
+   "name": "uiTempBufferVerticesStored",
+   "declared": 2,
+   "exe_access": [
+    4
+   ],
+   "kind": "wider",
+   "next_row_inside": false,
+   "zero_hi_bytes": true
+  },
+  {
+   "addr": "0xC4B954",
+   "name": "uiTempBufferIndicesStored",
+   "declared": 2,
+   "exe_access": [
+    4
+   ],
+   "kind": "wider",
+   "next_row_inside": false,
+   "zero_hi_bytes": true
+  },
+  {
+   "addr": "0xC6A15C",
+   "name": "CSprite::m_bFlushSpriteBufferSwitchZTest",
+   "declared": 1,
+   "exe_access": [
+    4
+   ],
+   "kind": "wider",
+   "next_row_inside": false,
+   "zero_hi_bytes": true
+  },
+  {
+   "addr": "0xC7C618",
+   "name": "CMirrors::MirrorFlags",
+   "declared": 1,
+   "exe_access": [
+    1,
+    4
+   ],
+   "kind": "wider",
+   "next_row_inside": false,
+   "zero_hi_bytes": true
+  },
+  {
+   "addr": "0xC7C724",
+   "name": "CMirrors::TypeOfMirror",
+   "declared": 1,
+   "exe_access": [
+    4
+   ],
+   "kind": "wider",
+   "next_row_inside": false,
+   "zero_hi_bytes": true
+  },
+  {
+   "addr": "0xC920CC",
+   "name": "Windowed",
+   "declared": 1,
+   "exe_access": [
+    4
+   ],
+   "kind": "wider",
+   "next_row_inside": false,
+   "zero_hi_bytes": true
+  },
+  {
+   "addr": "0xC920E8",
+   "name": "RwInitialized",
+   "declared": 1,
+   "exe_access": [
+    4
+   ],
+   "kind": "wider",
+   "next_row_inside": false,
+   "zero_hi_bytes": true
+  },
+  {
+   "addr": "0xC920EC",
+   "name": "isForeground",
+   "declared": 1,
+   "exe_access": [
+    4
+   ],
+   "kind": "wider",
+   "next_row_inside": false,
+   "zero_hi_bytes": true
+  }
+ ],
+ "tail_audit": {
+  "0x858FB8": "SEPARATE",
+  "0x859CF8": "SEPARATE",
+  "0x863984": "SEPARATE",
+  "0x866BEC": "SEPARATE",
+  "0x86E684": "SEPARATE",
+  "0x86F108": "SEPARATE",
+  "0x86F678": "SEPARATE",
+  "0x8717C0": "SEPARATE",
+  "0x872BFC": "SEPARATE",
+  "0x8A5AE4": "SEPARATE",
+  "0x8A5CC8": "SEPARATE",
+  "0x8A5E50": "SEPARATE",
+  "0x8A5F48": "SEPARATE",
+  "0x8A6160": "SEPARATE",
+  "0x8A6168": "SEPARATE",
+  "0x8A621C": "SEPARATE",
+  "0x8A6260": "SEPARATE",
+  "0x8A645C": "SEPARATE",
+  "0x8A7784": "SEPARATE",
+  "0x8AA5A8": "SEPARATE",
+  "0x8AC15C": "SEPARATE",
+  "0x8AD670": "SEPARATE",
+  "0x8AD914": "EXTEND",
+  "0x8AE554": "SEPARATE",
+  "0x8AE598": "SEPARATE",
+  "0x8C8B88": "SEPARATE",
+  "0x8C8CB0": "SEPARATE",
+  "0x8CBA68": "SEPARATE",
+  "0x8CC2C4": "SEPARATE",
+  "0x8CC2E8": "SEPARATE",
+  "0x8CC310": "SEPARATE",
+  "0x8CC388": "EXTEND",
+  "0x8CC39C": "SEPARATE",
+  "0x8CC41C": "SEPARATE",
+  "0x8CC46C": "SEPARATE",
+  "0x8CC480": "SEPARATE",
+  "0x8CC488": "SEPARATE",
+  "0x8CC538": "SEPARATE",
+  "0x8CC548": "EXTEND",
+  "0x8CC600": "SEPARATE",
+  "0x8CC7BC": "SEPARATE",
+  "0x8CC8C4": "SEPARATE",
+  "0x8CCB84": "SEPARATE",
+  "0x8CCBA4": "SEPARATE",
+  "0x8CCBF0": "SEPARATE",
+  "0x8CCC3C": "SEPARATE",
+  "0x8CCC54": "SEPARATE",
+  "0x8CCC84": "SEPARATE",
+  "0x8CCC98": "SEPARATE",
+  "0x8CCD14": "SEPARATE",
+  "0x8CCDF8": "SEPARATE",
+  "0x8CCE64": "SEPARATE",
+  "0x8CCE6C": "SEPARATE",
+  "0x8CCE74": "SEPARATE",
+  "0x8CCEA8": "SEPARATE",
+  "0x8CCEB0": "SEPARATE",
+  "0x8CCF1C": "SEPARATE",
+  "0x8CD060": "SEPARATE",
+  "0x8CD7A4": "SEPARATE",
+  "0x8CD7B8": "SEPARATE",
+  "0x8CD7E8": "SEPARATE",
+  "0x8CD804": "SEPARATE",
+  "0x8CD8A0": "EXTEND",
+  "0x8CD938": "EXTEND",
+  "0x8CD9B0": "EXTEND",
+  "0x8CD9D8": "EXTEND",
+  "0x8CDA70": "EXTEND",
+  "0x8CDAC8": "EXTEND",
+  "0x8CDBF8": "EXTEND",
+  "0x8CDE08": "EXTEND",
+  "0x8CDEC8": "SEPARATE",
+  "0x8CDEE8": "SEPARATE",
+  "0x8CDF00": "SEPARATE",
+  "0x8CDF21": "SEPARATE",
+  "0x8CE000": "SEPARATE",
+  "0x8CE005": "SEPARATE",
+  "0x8D0948": "SEPARATE",
+  "0x8D0A18": "SEPARATE",
+  "0x8D0A24": "SEPARATE",
+  "0x8D0AA6": "SEPARATE",
+  "0x8D0F80": "SEPARATE",
+  "0x8D12D0": "SEPARATE",
+  "0x8D1330": "SEPARATE",
+  "0x8D21E4": "SEPARATE",
+  "0x8D22B0": "SEPARATE",
+  "0x8D22E4": "SEPARATE",
+  "0x8D2360": "SEPARATE",
+  "0x8D2388": "SEPARATE",
+  "0x8D2398": "SEPARATE",
+  "0x8D2440": "SEPARATE",
+  "0x8D2BD1": "SEPARATE",
+  "0x8D2BD4": "SEPARATE",
+  "0x8D2BE0": "SEPARATE",
+  "0x8D2D00": "SEPARATE",
+  "0x8D2E48": "SEPARATE",
+  "0x8D2E84": "SEPARATE",
+  "0x8D2ED4": "SEPARATE",
+  "0x8D2EFC": "SEPARATE",
+  "0x8D2F18": "SEPARATE",
+  "0x8D2FF0": "SEPARATE",
+  "0x8D2FFC": "SEPARATE",
+  "0x8D31D4": "SEPARATE",
+  "0x8D335C": "SEPARATE",
+  "0x8D338C": "SEPARATE",
+  "0x8D3394": "SEPARATE",
+  "0x8D33B0": "SEPARATE",
+  "0x8D3458": "SEPARATE",
+  "0x8D34EC": "SEPARATE",
+  "0x8D3510": "SEPARATE",
+  "0x8D35C4": "SEPARATE",
+  "0x8D3678": "SEPARATE",
+  "0x8D37D5": "SEPARATE",
+  "0x8D37F4": "SEPARATE",
+  "0x8D3810": "SEPARATE",
+  "0x8D3834": "SEPARATE",
+  "0x8D38E8": "SEPARATE",
+  "0x8D390C": "EXTEND",
+  "0x8D3934": "SEPARATE",
+  "0x8D394C": "SEPARATE",
+  "0x8D3964": "SEPARATE",
+  "0x8D44F8": "SEPARATE",
+  "0x8D4948": "SEPARATE",
+  "0x8D4B60": "SEPARATE",
+  "0x8D5038": "SEPARATE",
+  "0x8D5094": "EXTEND",
+  "0x8D5120": "SEPARATE",
+  "0x8D5190": "SEPARATE",
+  "0x8D5204": "SEPARATE",
+  "0x8D5244": "SEPARATE",
+  "0x8D5390": "SEPARATE",
+  "0x8D5798": "SEPARATE",
+  "0x8D5818": "SEPARATE",
+  "0x8D5CD8": "SEPARATE",
+  "0x8D5D74": "SEPARATE",
+  "0x8D5D8B": "SEPARATE",
+  "0x8D5E44": "SEPARATE",
+  "0x8D5EAC": "SEPARATE",
+  "0x8D6078": "SEPARATE",
+  "0x8D6084": "SEPARATE",
+  "0x8D6094": "SEPARATE",
+  "0x8D60E0": "SEPARATE",
+  "0x8D610C": "SEPARATE",
+  "0x8D6144": "SEPARATE",
+  "0x8D6220": "SEPARATE",
+  "0x8D6228": "SEPARATE",
+  "0x8D6248": "SEPARATE",
+  "0x8D628C": "SEPARATE",
+  "0x8DED50": "SEPARATE",
+  "0x8E2428": "SEPARATE",
+  "0x8E2430": "SEPARATE",
+  "0x8E2458": "SEPARATE",
+  "0x8E3FB0": "SEPARATE",
+  "0x9654D4": "SEPARATE",
+  "0x965538": "SEPARATE",
+  "0x965560": "SEPARATE",
+  "0x9655E5": "SEPARATE",
+  "0x9689E0": "SEPARATE",
+  "0x968FD0": "SEPARATE",
+  "0x9690CC": "SEPARATE",
+  "0x96918C": "SEPARATE",
+  "0x969A20": "SEPARATE",
+  "0x96A704": "SEPARATE",
+  "0x96A7DC": "SEPARATE",
+  "0x96A8B8": "SEPARATE",
+  "0x96ABA0": "SEPARATE",
+  "0x96C024": "SEPARATE",
+  "0x96EA78": "SEPARATE",
+  "0x96F031": "SEPARATE",
+  "0x972CD0": "SEPARATE",
+  "0x977B9C": "SEPARATE",
+  "0x97D644": "SEPARATE",
+  "0x97F630": "SEPARATE",
+  "0xA43088": "SEPARATE",
+  "0xA432E8": "SEPARATE",
+  "0xA43584": "SEPARATE",
+  "0xA90830": "SEPARATE",
+  "0xA94D68": "SEPARATE",
+  "0xA95190": "SEPARATE",
+  "0xA957FC": "SEPARATE",
+  "0xA9A7F0": "SEPARATE",
+  "0xA9A8A0": "SEPARATE",
+  "0xA9AD78": "SEPARATE",
+  "0xA9AD94": "SEPARATE",
+  "0xA9ADE4": "SEPARATE",
+  "0xA9AE00": "SEPARATE",
+  "0xA9AE80": "SEPARATE",
+  "0xA9AF6C": "SEPARATE",
+  "0xA9B018": "SEPARATE",
+  "0xA9B0B0": "SEPARATE",
+  "0xAAE948": "SEPARATE",
+  "0xB4C2D8": "SEPARATE",
+  "0xB4E6B8": "SEPARATE",
+  "0xB4E6D8": "SEPARATE",
+  "0xB4E9E0": "SEPARATE",
+  "0xB4EA0C": "SEPARATE",
+  "0xB4EA34": "SEPARATE",
+  "0xB5F85C": "SEPARATE",
+  "0xB5F878": "SEPARATE",
+  "0xB5F898": "SEPARATE",
+  "0xB61100": "SEPARATE",
+  "0xB612D8": "SEPARATE",
+  "0xB612FC": "SEPARATE",
+  "0xB61324": "SEPARATE",
+  "0xB61670": "SEPARATE",
+  "0xB61C38": "SEPARATE",
+  "0xB61D50": "SEPARATE",
+  "0xB61D70": "SEPARATE",
+  "0xB62C73": "SEPARATE",
+  "0xB62CB0": "SEPARATE",
+  "0xB6B9A0": "SEPARATE",
+  "0xB6BAD4": "SEPARATE",
+  "0xB6BAFC": "SEPARATE",
+  "0xB6BC74": "SEPARATE",
+  "0xB6DCD0": "SEPARATE",
+  "0xB6EC7C": "SEPARATE",
+  "0xB6F32C": "SEPARATE",
+  "0xB6FDC8": "SEPARATE",
+  "0xB7015C": "SEPARATE",
+  "0xB714BC": "SEPARATE",
+  "0xB71670": "SEPARATE",
+  "0xB71808": "SEPARATE",
+  "0xB71848": "SEPARATE",
+  "0xB71B68": "SEPARATE",
+  "0xB72924": "SEPARATE",
+  "0xB7295A": "SEPARATE",
+  "0xB72C70": "SEPARATE",
+  "0xB72CA4": "SEPARATE",
+  "0xB7342C": "SEPARATE",
+  "0xB73C98": "SEPARATE",
+  "0xB744C4": "SEPARATE",
+  "0xB76854": "SEPARATE",
+  "0xB76898": "SEPARATE",
+  "0xB79514": "SEPARATE",
+  "0xB7C484": "SEPARATE",
+  "0xB7CB8C": "SEPARATE",
+  "0xB7CD7C": "SEPARATE",
+  "0xB9B7D0": "SEPARATE",
+  "0xB9B948": "SEPARATE",
+  "0xBA1768": "SEPARATE",
+  "0xBA18D9": "SEPARATE",
+  "0xBA6718": "SEPARATE",
+  "0xBA6728": "SEPARATE",
+  "0xBA6748": "SEPARATE",
+  "0xBA82E3": "SEPARATE",
+  "0xBA86B8": "SEPARATE",
+  "0xBAB1E0": "SEPARATE",
+  "0xBAB340": "SEPARATE",
+  "0xBAE1F8": "SEPARATE",
+  "0xBB3DAC": "SEPARATE",
+  "0xBB3DC8": "SEPARATE",
+  "0xBB3DE4": "SEPARATE",
+  "0xBB3E00": "SEPARATE",
+  "0xBB4238": "SEPARATE",
+  "0xBB4240": "SEPARATE",
+  "0xBB4A72": "SEPARATE",
+  "0xBB4A90": "SEPARATE",
+  "0xBB7CB0": "SEPARATE",
+  "0xBC1300": "SEPARATE",
+  "0xBC1C78": "SEPARATE",
+  "0xBC4006": "SEPARATE",
+  "0xBC4058": "SEPARATE",
+  "0xBC4088": "SEPARATE",
+  "0xBC40B8": "SEPARATE",
+  "0xBCC0E0": "SEPARATE",
+  "0xBD00F8": "SEPARATE",
+  "0xC02B80": "SEPARATE",
+  "0xC02BD0": "SEPARATE",
+  "0xC02C1C": "SEPARATE",
+  "0xC02D30": "SEPARATE",
+  "0xC02DC0": "SEPARATE",
+  "0xC03A30": "SEPARATE",
+  "0xC09174": "SEPARATE",
+  "0xC091E0": "SEPARATE",
+  "0xC091F0": "SEPARATE",
+  "0xC092A8": "SEPARATE",
+  "0xC0986C": "SEPARATE",
+  "0xC098EC": "SEPARATE",
+  "0xC09920": "SEPARATE",
+  "0xC0B038": "SEPARATE",
+  "0xC0B184": "SEPARATE",
+  "0xC0B1B4": "SEPARATE",
+  "0xC0BBEC": "SEPARATE",
+  "0xC0BC15": "SEPARATE",
+  "0xC0E978": "SEPARATE",
+  "0xC0FCBC": "SEPARATE",
+  "0xC10820": "SEPARATE",
+  "0xC16EFD": "SEPARATE",
+  "0xC16F18": "SEPARATE",
+  "0xC17084": "SEPARATE",
+  "0xC17780": "SEPARATE",
+  "0xC17898": "SEPARATE",
+  "0xC188F0": "SEPARATE",
+  "0xC18C20": "SEPARATE",
+  "0xC18C78": "SEPARATE",
+  "0xC18CF0": "SEPARATE",
+  "0xC18DB8": "SEPARATE",
+  "0xC195A8": "SEPARATE",
+  "0xC19664": "SEPARATE",
+  "0xC196E8": "SEPARATE",
+  "0xC197A4": "SEPARATE",
+  "0xC1A2B8": "SEPARATE",
+  "0xC1A970": "SEPARATE",
+  "0xC1B100": "SEPARATE",
+  "0xC1BFD0": "SEPARATE",
+  "0xC1BFF8": "SEPARATE",
+  "0xC1C804": "SEPARATE",
+  "0xC1C81C": "SEPARATE",
+  "0xC1C83C": "SEPARATE",
+  "0xC1C858": "SEPARATE",
+  "0xC1C970": "SEPARATE",
+  "0xC1C990": "SEPARATE",
+  "0xC1CAE0": "SEPARATE",
+  "0xC1CB40": "SEPARATE",
+  "0xC1CC1C": "SEPARATE",
+  "0xC1CDC0": "SEPARATE",
+  "0xC228F0": "SEPARATE",
+  "0xC279AC": "SEPARATE",
+  "0xC27AD0": "SEPARATE",
+  "0xC2B974": "SEPARATE",
+  "0xC38034": "SEPARATE",
+  "0xC39ED4": "SEPARATE",
+  "0xC3A1E0": "SEPARATE",
+  "0xC3E038": "SEPARATE",
+  "0xC3EFAB": "SEPARATE",
+  "0xC3F040": "SEPARATE",
+  "0xC3F0D4": "SEPARATE",
+  "0xC402E4": "SEPARATE",
+  "0xC40328": "SEPARATE",
+  "0xC40414": "SEPARATE",
+  "0xC4AC30": "SEPARATE",
+  "0xC6A15C": "SEPARATE",
+  "0xC6A178": "SEPARATE",
+  "0xC6A8A4": "SEPARATE",
+  "0xC6AA7C": "SEPARATE",
+  "0xC6E97C": "SEPARATE",
+  "0xC71A55": "SEPARATE",
+  "0xC71BD8": "SEPARATE",
+  "0xC72FB0": "SEPARATE",
+  "0xC73C58": "SEPARATE",
+  "0xC73FA0": "SEPARATE",
+  "0xC79950": "SEPARATE",
+  "0xC79A88": "SEPARATE",
+  "0xC7C72A": "SEPARATE",
+  "0xC80468": "SEPARATE",
+  "0xC80700": "SEPARATE",
+  "0xC81340": "SEPARATE",
+  "0xC81450": "SEPARATE",
+  "0xC815B8": "SEPARATE",
+  "0xC87ACD": "SEPARATE",
+  "0xC87B34": "SEPARATE",
+  "0xC87FFC": "SEPARATE",
+  "0xC88018": "SEPARATE",
+  "0xC88050": "SEPARATE",
+  "0xC88708": "SEPARATE",
+  "0xC888AC": "SEPARATE",
+  "0xC89110": "SEPARATE",
+  "0xC89628": "SEPARATE",
+  "0xC8A7C1": "SEPARATE",
+  "0xC8A818": "SEPARATE",
+  "0xC8A8A8": "SEPARATE",
+  "0xC8AAB8": "SEPARATE",
+  "0xC92118": "SEPARATE",
+  "0x8D3808": "EXTEND"
+ },
+ "ctor_audit": {
+  "0x8E48AC": "VPTR",
+  "0x8E48D8": "NONZERO",
+  "0x8E4C24": "NONZERO",
+  "0x8E4CC0": "NONZERO",
+  "0x9654F0": "ZERO",
+  "0x965554": "ZERO",
+  "0x96592C": "ZERO",
+  "0x9659FC": "ZERO",
+  "0x9690F8": "NONZERO",
+  "0x9690FC": "NONZERO",
+  "0x969100": "NONZERO",
+  "0x969104": "NONZERO",
+  "0x96F050": "NONZERO",
+  "0x978680": "ZERO",
+  "0x9788C0": "ZERO",
+  "0x97F670": "ZERO",
+  "0x97FAC0": "ZERO",
+  "0x97FB24": "ZERO",
+  "0x97FB64": "ZERO",
+  "0x97FB70": "ZERO",
+  "0xA43C78": "ZERO",
+  "0xA43F68": "NONZERO",
+  "0xA44070": "NONZERO",
+  "0xA44110": "NONZERO",
+  "0xA44800": "NONZERO",
+  "0xA44850": "NONZERO",
+  "0xA44A30": "NONZERO",
+  "0xA476B0": "NONZERO",
+  "0xA47B60": "NONZERO",
+  "0xA485A8": "NONZERO",
+  "0xA4892C": "NONZERO",
+  "0xA48960": "ZERO",
+  "0xA8B430": "ZERO",
+  "0xA90850": "ZERO",
+  "0xA91268": "NONZERO",
+  "0xA94D68": "ZERO",
+  "0xA95818": "ZERO",
+  "0xB4C2D8": "ZERO",
+  "0xB4E480": "ZERO",
+  "0xB5EB20": "ZERO",
+  "0xB613EC": "ZERO",
+  "0xB61418": "NONZERO",
+  "0xB61D20": "NONZERO",
+  "0xB61D34": "NONZERO",
+  "0xB61D78": "NONZERO",
+  "0xB620C0": "NONZERO",
+  "0xB62980": "NONZERO",
+  "0xB62B40": "NONZERO",
+  "0xB6B9A0": "NONZERO",
+  "0xB6DCD0": "ZERO",
+  "0xB6EBA8": "ZERO",
+  "0xB6FE40": "ZERO",
+  "0xB72914": "ZERO",
+  "0xB72CB0": "ZERO",
+  "0xB72F20": "ZERO",
+  "0xB73190": "ZERO",
+  "0xB73404": "ZERO",
+  "0xB73418": "ZERO",
+  "0xB7342C": "ZERO",
+  "0xB7C550": "ZERO",
+  "0xB9ACC8": "ZERO",
+  "0xB9ACCC": "ZERO",
+  "0xBA18F4": "ZERO",
+  "0xBA18FC": "ZERO",
+  "0xBA1908": "ZERO",
+  "0xBA1DF0": "NONZERO",
+  "0xBA3798": "ZERO",
+  "0xBAA35C": "NONZERO",
+  "0xBAD3EC": "ZERO",
+  "0xBC12E4": "NONZERO",
+  "0xBC1C78": "ZERO",
+  "0xC02D18": "NONZERO",
+  "0xC02DE8": "ZERO",
+  "0xC0985C": "ZERO",
+  "0xC0986C": "ZERO",
+  "0xC0E998": "NONZERO",
+  "0xC0E9C8": "NONZERO",
+  "0xC0E9F8": "NONZERO",
+  "0xC0EA28": "NONZERO",
+  "0xC17884": "ZERO",
+  "0xC18D50": "ZERO",
+  "0xC197C8": "ZERO",
+  "0xC1A2B8": "ZERO",
+  "0xC1A570": "ZERO",
+  "0xC1A7F0": "ZERO",
+  "0xC1A970": "ZERO",
+  "0xC1C220": "ZERO",
+  "0xC1CD98": "ZERO",
+  "0xC21168": "ZERO",
+  "0xC2116C": "ZERO",
+  "0xC215F8": "ZERO",
+  "0xC21B70": "ZERO",
+  "0xC21C90": "ZERO",
+  "0xC22854": "ZERO",
+  "0xC22910": "ZERO",
+  "0xC27AD0": "ZERO",
+  "0xC2B9C8": "ZERO",
+  "0xC38338": "NONZERO",
+  "0xC3AB00": "ZERO",
+  "0xC3E058": "ZERO",
+  "0xC716B0": "ZERO",
+  "0xC71A60": "ZERO",
+  "0xC71A84": "ZERO",
+  "0xC71A97": "ZERO",
+  "0xC71AA0": "ZERO",
+  "0xC73CC8": "ZERO",
+  "0xC73FA0": "ZERO",
+  "0xC7C620": "ZERO",
+  "0xC7CA08": "ZERO",
+  "0xC7F158": "NONZERO",
+  "0xC87C18": "ZERO",
+  "0xC88070": "ZERO",
+  "0xC880C8": "ZERO",
+  "0xC88120": "ZERO",
+  "0xC88178": "ZERO",
+  "0xC881D0": "ZERO",
+  "0xC88224": "ZERO",
+  "0xC88950": "NONZERO",
+  "0xC89690": "NONZERO",
+  "0xC92144": "ZERO"
+ }
+}

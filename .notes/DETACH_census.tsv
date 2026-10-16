@@ -1,0 +1,920 @@
+# image census (tools/standalone/census.py): raw '/tmp/dfixc-out/census/image_census.tsv', 4058 logged touches (distinct address+IP pairs; a page is logged once per re-arm round)
+# pages touched: 871 of 1112 | by class: STRAY_CONVERTED 0 pages, UNCLAIMED 13 pages, PENDING 858 pages, VTABLE 4 pages | VTABLE touches (explained, not listed): 21 on 4 pages
+# class	owner	function	acc	first_addr	page	touches	first_tick	callers (return-address candidates)
+UNCLAIMED	page 0	CAnimBlendAssocGroup::CreateAssociations	R	0x00858B54	0	1	3062614249	CAnimManager::CreateAnimAssocGroups; CGame::Init2
+UNCLAIMED	page 17	CAnimBlendAssocGroup::CreateAssociations	R	0x00869FEC	17	1	3062614245	CAnimManager::CreateAnimAssocGroups; CGame::Init2
+UNCLAIMED	page 18	CAnimBlendAssocGroup::CreateAssociations	R	0x0086A404	18	1	3062614244	CAnimManager::CreateAnimAssocGroups; CGame::Init2
+UNCLAIMED	page 2	_stricmp	R	0x0085A4C8	2	1	3062614289	CGame::Init2; CShopping::LoadStats
+UNCLAIMED	page 26	CAESound::UpdateParameters	R	0x00872A74	26	1	3062614445	CAESoundManager::Service; CAudioEngine::Service
+UNCLAIMED	page 5	CAnimBlendAssocGroup::CreateAssociations	R	0x0085D374	5	2	3062614244	CAnimManager::CreateAnimAssocGroups; CGame::Init2; CStreaming::ConvertBufferToObject
+UNCLAIMED	page 6	CAnimBlendAssocGroup::CreateAssociations	R	0x0085E8B0	6	2	3062614245	CAnimManager::CreateAnimAssocGroups; CGame::Init2; CStreaming::ConvertBufferToObject
+UNCLAIMED	page 787	CAEWMADecoder::InitLibrary	R	0x00B6BAD8	787	1	3062589721	CAEAudioHardware::Initialise; CAEUserRadioTrackManager::Initialise
+UNCLAIMED	page 80	CAnimManager::CreateAnimAssocGroups	R	0x008A8408	80	2	3062614246	CGame::Init2; CStreaming::ConvertBufferToObject; CStreaming::StreamZoneModels; __free_base
+UNCLAIMED	page 81	CAnimBlendAssocGroup::CreateAssociations	R	0x008A9608	81	2	3062691693	CAnimManager::CreateAnimAssocGroups; CStreaming::ConvertBufferToObject
+UNCLAIMED	page 81	CAnimManager::CreateAnimAssocGroups	R	0x008A9F68	81	1	3062614249	CGame::Init2; __free_base
+UNCLAIMED	page 83	_strcpy_s	W	0x008ABBC8	83	1	3062613421	CAnimManager::AddAnimAssocDefinition; CAnimManager::ReadAnimAssociationDefinitions
+UNCLAIMED	page 859	InteriorManager_c::Init	W	0x00BB3DC0	859	1	3062614397	CGame::Init3; CGame::Initialise
+UNCLAIMED	page 859	InteriorManager_c::Update	R	0x00BB3DC0	859	1	3062617833	
+UNCLAIMED	page 963	CAutomobile::CustomCarPlate_BeforeRenderingStart	W	0x00C1BFD8	963	1	3062692822	CRenderer::RenderOneNonRoad; CVehicle::SetupRender
+PENDING	<Ped.cpp:5665>	CPed::ProcessEntityCollision	R	0x008D21E4	122	1	3062647821	
+PENDING	AEAudioHardware	CAEAudioHardware::Initialise	W	0x00B60650	776	1	3062589704	CAEAudioUtility::StaticInitialise; std::chrono::steady_clock::now
+PENDING	AEAudioHardware	CAEAudioHardware::RescaleChannelVolumes	R	0x00B5F8D6	776	2	3063022957	CAEAudioHardware::Service; CAESoundManager::Service
+PENDING	AEAudioHardware	CAEAudioHardware::SetMusicFaderScalingFactor	W	0x00B5FCD0	775	1	3062602793	CAudioEngine::Service; FrontendIdle
+PENDING	AEAudioHardware	CAEAudioHardware::SetStreamFaderScalingFactor	W	0x00B5FCDC	775	1	3062797866	CAudioEngine::Service; Idle
+PENDING	AERadioTrackManager	CAERadioTrackManager::HasRadioRetuneJustStarted	R	0x008CB6FE	115	1	3062707848	CTaskManager::ManageTasks; CTaskSimpleCarDrive::ProcessPed
+PENDING	AERadioTrackManager	CAERadioTrackManager::Initialise	W	0x008CB6F8	115	1	3062589731	
+PENDING	AERadioTrackManager	CAERadioTrackManager::IsRadioOn	R	0x008CB760	115	1	3062692853	CAEAmbienceTrackManager::Service; CAEAmbienceTrackManager::UpdateAmbienceTrackAndVolume
+PENDING	AERadioTrackManager	CAERadioTrackManager::Service	R	0x008CB7D8	115	1	3062602793	CAudioEngine::Service; FrontendIdle
+PENDING	AESmoothFadeThread	CAEAudioHardware::Initialise	W	0x00B610E8	777	1	3062589720	CAEAudioUtility::StaticInitialise; std::chrono::steady_clock::now
+PENDING	AESmoothFadeThread	CAESmoothFadeThread::SmoothFadeProc	R	0x00B608F0	776	2	3062602790	
+PENDING	AESoundManager	CAESound::SetFlags	R	0x00B62F4E	778	2	3062752846	CAEVehicleAudioEntity::StopNonEngineSounds; CAEVehicleAudioEntity::Terminate; ~CAutomobile
+PENDING	AESoundManager	CAESound::SetPosition	R	0x00B63104	779	1	3062962920	CAEPedAudioEntity::PlayShirtFlap; CAETwinLoopSoundEntity::UpdateTwinLoopSound
+PENDING	AESoundManager	CAESoundManager::AreSoundsOfThisEventPlayingForThisEntity	R	0x00B62D0C	787	10	3062647816	CAEFrontendAudioEntity::IsLoadingTuneActive; CAEWeaponAudioEntity::Initialise; CAEWeatherAudioEntity::Service; CWeather::Update
+PENDING	AESoundManager	CAESoundManager::CancelSoundsOwnedByAudioEntity	R	0x00B64014	786	7	3062947934	CAEWeaponAudioEntity::Terminate; ~CPed
+PENDING	AESoundManager	CAESoundManager::Initialise	W	0x00B62CB0	786	9	3062589731	CAudioEngine::Initialise
+PENDING	AESoundManager	CAESoundManager::Service	R	0x00B62CB0	787	19	3062602793	CAEScriptAudioEntity::Service; CAudioEngine::Service; Idle
+PENDING	AESoundManager	PlayGenericSound	W	0x00B62F88	778	1	3062962924	__startOneArgErrorHandling
+PENDING	AudioEngine	??4CAEPedSpeechAudioEntity@@QAEAAV0@ABV0@@Z	W	0x00B6DACC	789	1	3062589733	??4CAEPedlessSpeechAudioEntity@@QAEAAV0@ABV0@@Z; CAEPedlessSpeechAudioEntity::Initialise
+PENDING	AudioEngine	CAECollisionAudioEntity::GetCollisionSoundStatus	R	0x00B6D010	789	1	3062722874	CAECollisionAudioEntity::ReportCollision; CAudioEngine::ReportCollision
+PENDING	AudioEngine	CAECollisionAudioEntity::ReportCollision	R	0x00B6C350	788	1	3062722874	CAudioEngine::ReportCollision; CPhysical::ApplyCollisionAlt
+PENDING	AudioEngine	CAECollisionAudioEntity::Service	R	0x00B6C364	789	2	3062602793	CAudioEngine::Service
+PENDING	AudioEngine	CAEFrontendAudioEntity::AddAudioEvent	R	0x00B6BDC0	787	1	3062602793	CAudioEngine::Service; CMenuManager::Process
+PENDING	AudioEngine	CAEScriptAudioEntity::Initialise	W	0x00B6C000	788	1	3062589732	CAudioEngine::Initialise; CGame::InitialiseCoreDataAfterRW
+PENDING	AudioEngine	CAudioEngine::Service	R	0x00B6DAC4	789	1	3062617833	AppEventHandler; Idle
+PENDING	BoneNodeManager_c::ms_boneInfos	BoneNodeManager_c::GetBoneInfoFromTag	R	0x008D26D0	122	1	3062962929	BoneNode_c::Limit; IKChain_c::MoveBonesToTarget
+PENDING	C2dEffect::g2dEffectPluginOffset	C2dEffect::PluginAttach	W	0x00C3A1E0	994	1	3062588840	AppEventHandler; PluginAttach
+PENDING	C2dEffect::g2dEffectPluginOffset	RpGeometryGet2dFxCount	R	0x00C3A1E0	994	1	3062617834	CBaseModelInfo::Get2dEffect; CEntity::ProcessLightsForEntity
+PENDING	C2dEffect::g2dEffectPluginOffset	t2dEffectPluginConstructor	R	0x00C3A1E0	994	1	3062613415	rw::Geometry::create; rw::PluginList::construct
+PENDING	C2dEffect::ms_nTxdSlot	Rwt2dEffectPluginDataChunkReadCallBack	R	0x008D4948	124	1	3062639780	rw::findChunk
+PENDING	C3dMarkers::m_aMarkerArray	??4CMatrix@@QAEXABV0@@Z	W	0x00C7DD58	1062	2	3062614286	C3dMarkers::Init
+PENDING	C3dMarkers::m_aMarkerArray	C3dMarkers::Init	W	0x00C7F000	1063	1	3062614286	
+PENDING	C3dMarkers::m_aMarkerArray	C3dMarkers::PlaceMarker	R	0x00C7DDAA	1062	2	3062992942	C3dMarkers::PlaceMarkerSet; CRadar::Draw3dMarkers
+PENDING	C3dMarkers::m_aMarkerArray	C3dMarkers::Render	R	0x00C7DDAB	1063	3	3062692833	CSpecialFX::Render; RenderEffects
+PENDING	C3dMarkers::m_aMarkerArray	C3dMarkers::Update	R	0x00C7DDAA	1063	3	3062617831	CGame::Process; Idle
+PENDING	CAnimManager::ms_aAnimAssocDefinitions	CAnimManager::GetAnimationBlock	R	0x008AA5B8	83	2	3062691692	CAnimManager::CreateAnimAssocGroups; CStreaming::ConvertBufferToObject; RpClumpDestroy
+PENDING	CAnimManager::ms_aAnimAssocDefinitions	CAnimManager::GetFirstAssocGroup	R	0x008AA5B8	83	2	3062613421	CAnimManager::GetOrCreateAnimBlock; CAnimManager::Initialise; CAnimManager::LoadAnimFile_ANPK; CAnimManager::RegisterAnimBlock
+PENDING	CAnimManager::ms_aAnimations	CAnimBlendHierarchy::SetName	W	0x00B50000	761	4	3062614243	??$_Try_emplace@PBX$$V@?$_Hash@V?$_Umap_traits@PBXPAUPersistentSlot@?A0x641b6cf1@@V?$_Uhash_compare@PBXU?$hash@PBX@std@@U?$equal_to@PBX@2@@s; CAnimManager::LoadAnimFile; CAnimManager::LoadAnimFile_ANP23; CAnimManager::LoadAnimFile_ANPK
+PENDING	CAnimManager::ms_aAnimations	CAnimManager::GetAnimation	R	0x00B51110	761	1	3062715209	CRunningScript::PlayAnimScriptCommand; CTaskSimpleRunNamedAnim
+PENDING	CAnimManager::ms_aAnimations	CAnimManager::LoadAnimFile_ANP23	W	0x00B4F002	759	1	3062614242	CAnimManager::LoadAnimFile
+PENDING	CAnimManager::ms_aAnimations	CAnimManager::RemoveFromUncompressedCache	R	0x00B51004	761	1	3063052740	CAnimBlendHierarchy::RemoveAnimSequences; CAnimBlendHierarchy::Shutdown
+PENDING	CAnimManager::ms_aAnimations	CAnimManager::UncompressAnimation	R	0x00B4FC33	759	4	3062647819	CAnimBlendAssocGroup::CopyAnimation; CEntity::UpdateAnim; CPlayerPed::SetRealMoveAnim; CVehicle::ApplyTurnForceToOccupantOnEntry
+PENDING	CAnimManager::ms_aAnimations	RpAnimBlendClumpUpdateAnimations	R	0x00B4F000	760	16	3062617822	CCamera::IsSphereVisible; CEntity::UpdateAnim; CWorld::Process
+PENDING	CAnimManager::ms_aAnimations	~CAnimBlendAssociation	R	0x00B5048C	760	1	3062782887	??_ECAnimBlendAssociation@@UAEPAXI@Z; CAnimBlendAssociation::UpdateBlend
+PENDING	CAutomobile::m_sAllTaxiLights	CAutomobile	R	0x00C1BFD0	963	1	3062857889	CCarCtrl::GenerateOneRandomCar; CCarCtrl::GetNewVehicleDependingOnCarModel
+PENDING	CBoat::apFrameWakeGeneratingBoats	CBoat::FillBoatList	W	0x00C27994	975	1	3062692820	rw::d3d::setRasterStage; rw::d3d::setRwRenderState
+PENDING	CCam::Process()::s_unk_C8A860	CCam::Process	R	0x00C8A860	1074	1	3062797857	CCamera::Process; rw::Camera::setNearPlane
+PENDING	CCollisionPlugin::ms_currentModel	CCollisionPlugin::SetModelInfo	W	0x009689E0	272	1	3062614238	CFileLoader::LoadClumpFile; CStreaming::ConvertBufferToObject
+PENDING	CCustomBuildingDNPipeline::ObjPipeline	CCustomBuildingDNPipeline::PreRenderUpdate	R	0x00C02C1C	938	1	3062752857	CEntity::PreRender; CRenderer::AddEntityToRenderList
+PENDING	CCustomBuildingDNPipeline::m_fDNBalanceParam	CCustomBuildingDNPipeline::PreRenderUpdate	R	0x008D12C0	121	1	3062782858	CEntity::PreRender; CRenderer::AddEntityToRenderList
+PENDING	CCustomBuildingDNPipeline::m_fDNBalanceParam	CCustomBuildingRenderer::UpdateDayNightBalanceParam	W	0x008D12C0	121	1	3062857886	CCustomBuildingRenderer::Update; CGame::Process
+PENDING	CCustomBuildingDNPipeline::m_fDNBalanceParam	CPed::ProcessEntityCollision	R	0x008D12C0	121	1	3062632829	
+PENDING	CCustomBuildingDNPipeline::m_fDNBalanceParam	CPopCycle::UpdatePercentages	R	0x008D12C0	121	1	3062797857	CGame::Process; CPopCycle::Update
+PENDING	CCustomBuildingDNPipeline::m_fDNBalanceParam	FxManager_c::Render	R	0x008D12C0	121	1	3062617792	Idle; RenderEffects
+PENDING	CCustomBuildingDNPipeline::m_fDNBalanceParam	tColLighting::GetCurrentLighting	R	0x008D12C0	121	1	3062767846	CVehicle::CalculateLightingFromCollision; CVehicle::PreRender
+PENDING	CCustomBuildingDNPipeline::ms_extraVertColourPluginOffset	CCustomBuildingDNPipeline::ExtraVertColourPluginAttach	W	0x008D12BC	121	1	3062588839	AppEventHandler; PluginAttach
+PENDING	CCustomBuildingDNPipeline::ms_extraVertColourPluginOffset	CCustomBuildingDNPipeline::pluginExtraVertColourConstructorCB	R	0x008D12BC	121	1	3062613415	rw::Geometry::create; rw::PluginList::construct
+PENDING	CCustomCarEnvMapPipeline::fakeEnvMapPipeMatData	CCustomCarEnvMapPipeline::SetCustomEnvMapPipeMaterialDataDefaults	W	0x00C02D18	938	1	3062588839	CCustomCarEnvMapPipeline::RegisterPlugin; PluginAttach
+PENDING	CCustomCarEnvMapPipeline::fakeEnvMapPipeMatData	CCustomCarEnvMapPipeline::pluginEnvMatStreamReadCB	R	0x00C02D19	938	1	3062613415	_fread; rw::PluginList::streamRead
+PENDING	CCustomCarEnvMapPipeline::g_GameLight	RwD3D9SetLight	R	0x00C02CB0	938	1	3062692822	CCustomCarEnvMapPipeline::CustomPipeRenderCB
+PENDING	CCustomCarEnvMapPipeline::g_GameLight	_memset	W	0x00C02CB0	938	1	3062722834	CCustomCarEnvMapPipeline::PreRenderUpdate; RwRenderStateSet
+PENDING	CCustomCarEnvMapPipeline::m_gEnvMapPipeAtmDataPool	CCustomCarEnvMapPipeline::pluginEnvAtmDestructorCB	R	0x00C02D2C	938	1	3062962930	RpAtomicDestroy; rw::PluginList::destruct
+PENDING	CCustomCarEnvMapPipeline::ms_envMapAtmPluginOffset	CCustomCarEnvMapPipeline::pluginEnvAtmDestructorCB	R	0x008D12C8	121	1	3062752846	RpAtomicDestroy; rw::PluginList::destruct
+PENDING	CCustomCarEnvMapPipeline::ms_envMapPluginOffset	CCustomBuildingDNPipeline::CustomPipeRenderCB	R	0x008D12C4	121	1	3062692817	?A0x11611d9c::RenderGeometry; _rpD3D9AtomicDefaultLightingCallback
+PENDING	CCutsceneMgr::ms_cutsceneAssociations	CAnimBlendAssocGroup::DestroyAssociations	R	0x00BC4024	876	1	3062639621	CCutsceneMgr::DeleteCutsceneData; CCutsceneMgr::DeleteCutsceneData_overlay
+PENDING	CEntryExitManager::ms_bDisabled	CEntryExitManager::Update	R	0x0096A7C8	274	1	3062797856	?A0x8bdb9a4a::UpdateOnlyTargetVeh; CGarage::Update
+PENDING	CEntryExitManager::ms_entryExitStackPosn	CEntryExitManager::GetPositionRelativeToOutsideWorld	R	0x0096A7C4	274	1	3062617821	CPlaceName::CalcPosition; CPlaceName::Process
+PENDING	CEntryExitManager::ms_exitEnterState	CHud::DrawRadar	R	0x0096A7CC	274	1	3062692836	??$sprintf_s@$0BGA@@@YAHAAY0BGA@DPBDZZ; CSprite2d::Draw2DPolygon
+PENDING	CEscalators::aEscalators	CEntity::RemoveEscalatorsForEntity	R	0x00C6EA20	1049	4	3062752846	~CAutomobile; ~CVehicle
+PENDING	CEscalators::aEscalators	CEscalator::SwitchOff	R	0x00C6EA21	1048	3	3062614284	CEscalators::Init; CGame::Init2
+PENDING	CEscalators::aEscalators	CEscalators::Update	R	0x00C6EA20	1048	3	3062617821	CGame::Process; CMovingThings::Update
+PENDING	CExplosion::aExplosions	CExplosion::Update	R	0x00C88978	1072	1	3062617821	CShotInfo::Update; GetOSWPerformanceTime
+PENDING	CFileLoader::LoadCollisionFile()::buffer	_memcpy	W	0x00BC40D8	876	1	3062613453	__fread_nolock_s; _memcpy_s
+PENDING	CFileMgr::ms_rootDirName	_memset	W	0x00B71AE0	793	1	3062587783	CFileMgr::Initialise
+PENDING	CFont::PS2Symbol	CFont::PrintChar	R	0x00C71A54	1049	1	3062602790	CFont::RenderFontBuffer; RwRenderStateSet
+PENDING	CFont::Sprite	CSprite2d::SetTexture	W	0x00C71AD0	1049	1	3062589236	CFont::Initialise; CGame::InitialiseRenderWare
+PENDING	CFont::m_bFontBackground	CFont::SetBackground	W	0x00C71A7B	1049	1	3062737838	CHud::DrawPlayerInfo; RwRenderStateSet
+PENDING	CFont::m_nFontOutline	CFont::InitPerFrame	W	0x00C71A9C	1049	1	3062632820	AppEventHandler; Idle
+PENDING	CGame::currArea	CGame::CanSeeOutSideFromCurrArea	R	0x00B72914	794	1	3062707836	CClouds::MovingFogRender; CClouds::VolumetricCloudsRender
+PENDING	CGame::currArea	CRenderer::SetupBigBuildingVisibility	R	0x00B72914	794	1	3062917900	CRenderer::ScanBigBuildingList
+PENDING	CGame::currArea	CRenderer::SetupEntityVisibility	R	0x00B72914	794	1	3062782852	??$?RV?$CPtrListSingleLink@PAVCBuilding@@@@@<lambda_1>@?1??ScanSectorList@CRenderer@@SAXHH@Z@QBE?A_PAAV?$CPtrListSingleLink@PAVCBuilding@@@@; CRenderer::SetupScanLists
+PENDING	CGame::currArea	CVisibilityPlugins::RenderEntity	R	0x00B72914	794	1	3062692821	CVisibilityPlugins::RenderFadingEntities; RenderScene
+PENDING	CGameLogic::ActivePlayers	CGameLogic::InitAtStartOfGame	W	0x0096A8B1	274	1	3062613411	CGame::Init1; CGame::Initialise
+PENDING	CGameLogic::GameState	??$I_AddSayEvent@$0A@@CAEPedSpeechAudioEntity@@IAEFVCVector@@W4eAudioEvents@@W4eGlobalSpeechContext@@IM_N33@Z	R	0x0096A8B0	274	1	3062962921	CAEPedSpeechAudioEntity::AddSayEvent; CPed::Say
+PENDING	CGameLogic::GameState	CPlayerPed::CanPlayerStartMission	R	0x0096A8B0	274	1	3062842896	??$CommandParser@$0DOO@$MP6A_NAAVCPlayerPed@@@Z1?CanPlayerStartMission@?A0x3113e4d0@@YA_N0@Z@detail@script@notsa@@YA?AW4OpcodeResult@@PAVCRu; CRunningScript::Process
+PENDING	CGameLogic::bLimitPlayerDistance	??R<lambda_1>@?1??Update@CGameLogic@@SAXXZ@QBE@XZ	R	0x008A5E4A	77	1	3062707856	CGameLogic::UpdateSkip
+PENDING	CGamma::ms_GammaTable	CGamma::SetGamma	W	0x00C8DEC8	1078	2	3062589865	CMenuManager::CheckForMenuClosing; CMenuManager::SetBrightness
+PENDING	CGangWars::State	CGangWars::DontCreateCivilians	R	0x0096AB64	274	1	3062752844	CCarCtrl::GenerateRandomCars; CGame::Process
+PENDING	CGangs::Gang	CGangs::ChooseGangPedModel	R	0x00C091F0	945	1	3062857890	??R<lambda_1>@?1??AddPedInCar@CPopulation@@SAPAVCPed@@PAVCVehicle@@_NHH11@Z@QBE?AW4eModelID@@XZ; CPopulation::AddPedInCar
+PENDING	CGarages::MessageIDString	CHud::DrawMissionTimers	R	0x0096C014	276	1	3062692835	___stdio_common_vsprintf_s
+PENDING	CGarages::MessageStartTime	CGarages::PrintMessages	R	0x0096C020	276	1	3062617796	Idle; Render2dStuff
+PENDING	CGarages::NumGarages	CGarages::GetGarageNumberByName	R	0x0096C024	276	1	3062632825	??$CommandParser@$0DLA@$MP6A_NPBD@Z1?IsGarageOpen@?A0xf6deb4d6@@YA_N0@Z@detail@script@notsa@@YA?AW4OpcodeResult@@PAVCRunningScript@@@Z; CRunningScript::Process
+PENDING	CGarages::NumGarages	CGarages::Init	W	0x0096C024	276	1	3062613424	CGame::Init1; CGame::Initialise
+PENDING	CGarages::PoliceCarsCollected	CGarages::Init	W	0x0096BFFC	275	1	3062613424	CGame::Init1; CGame::Initialise
+PENDING	CGarages::aGarages	CGarage::IsHideOut	R	0x0096C094	276	1	3062752845	CCarCtrl::PossiblyRemoveVehicle; CGarages::IsPointWithinHideOutGarage
+PENDING	CGarages::aGarages	CGarage::IsPointInsideGarage	R	0x0096E060	278	1	3062617825	CGarages::FindGarageForObject; CObject::ProcessGarageDoorBehaviour
+PENDING	CGarages::aGarages	CGarage::Update	R	0x0096C094	277	3	3062692847	CGame::Process; CGarages::Update
+PENDING	CGarages::aGarages	CGarages::AddOne	W	0x0096D078	278	2	3062613819	CFileLoader::LoadGarage; __unlock_file
+PENDING	CGarages::aGarages	_stricmp	R	0x0096D094	277	1	3062617820	??$CommandParser@$0DLA@$MP6A_NPBD@Z1?IsGarageOpen@?A0xf6deb4d6@@YA_N0@Z@detail@script@notsa@@YA?AW4OpcodeResult@@PAVCRunningScript@@@Z; CGarages::GetGarageNumberByName
+PENDING	CGarages::bCamShouldBeOutside	CGarages::Update	W	0x0096BFE4	275	1	3062617831	CGame::Process; Idle
+PENDING	CGenericGameStorage::ms_Slots	C_PcSave::PopulateSlotInfo	W	0x00C16EBC	958	1	3062589862	??$set_cwd_environment_variable@_W@@YAHQB_W@Z
+PENDING	CGlass::H1iLightPolyVerticesIdx	CGlass::Render	W	0x00C71B28	1049	1	3062692832	Idle; RenderEffects
+PENDING	CGlass::ReflectionPolyVertexBuffer	?A0xac423690::Im3DDraw	R	0x00C5C010	1031	4	3062872891	RwIm3DRenderIndexedPrimitive
+PENDING	CGlass::ReflectionPolyVertexBuffer	CStencilShadows::Render	W	0x00C5C000	1031	4	3062640457	CStencilShadows::RenderStencilShadows; RenderScene
+PENDING	CGlass::ReflectionPolyVertexBuffer	RenderBuffer::PushVertex	W	0x00C5C000	1030	3	3062662843	CWaterLevel::GetWaterColorForRendering; CWaterLevel::RenderFlatWaterRectangle_OneLayer
+PENDING	CGlass::ShatteredPolyVertexBuffer	?A0xac423690::Im3DDraw	R	0x00C5700C	1027	5	3062872891	RwIm3DRenderIndexedPrimitive
+PENDING	CGlass::ShatteredPolyVertexBuffer	CStencilShadows::Render	W	0x00C5700C	1027	5	3062640456	CStencilShadows::RenderStencilShadows; RenderScene
+PENDING	CGlass::ShatteredPolyVertexBuffer	RenderBuffer::PushVertex	W	0x00C5700C	1027	5	3062662842	CWaterLevel::GetWaterColorForRendering; CWaterLevel::RenderFlatWaterRectangle_OneLayer
+PENDING	CGlass::aGlassPanes	CGlass::Init	W	0x00C72055	1050	1	3062614276	CGame::Init2; __free_base
+PENDING	CGlass::aGlassPanes	CGlass::Render	R	0x00C72055	1050	1	3062692832	Idle; RenderEffects
+PENDING	CGlass::aGlassPanes	CGlass::Update	R	0x00C72055	1050	1	3062617820	CGame::Process; Idle
+PENDING	CGrassRenderer::m_vecCameraPos	CGrassRenderer::SetGlobalCameraPos	W	0x00C02DDC	938	1	3062617832	CGame::Process; CPlantMgr::Update
+PENDING	CHeli::NumberOfSearchLights	CHeli::UpdateHelis	W	0x00C1C96C	964	1	3062617820	CGame::Process; Idle
+PENDING	CHeli::NumberOfSearchLights	RenderEffects	R	0x00C1C96C	964	1	3062692832	AppEventHandler; Idle
+PENDING	CHeli::bPoliceHelisAllowed	CHeli::UpdateHelis	R	0x008D338C	123	1	3062632825	CGame::Process; Idle
+PENDING	CHud::DrawSuccessFailedMessage()::posYGuard	CHud::DrawSuccessFailedMessage	R	0x00BAB21C	851	1	3062617796	CHud::Draw
+PENDING	CHud::Sprites	CSprite2d::Draw	R	0x00BAB208	851	1	3062992941	??R<lambda_1>@?BB@??DrawRadar@CHud@@SAXXZ@QBE@MM@Z; CSprite2d::Draw
+PENDING	CHud::Sprites	CSprite2d::SetTexture	W	0x00BAB1FC	851	1	3062589238	CGame::InitialiseRenderWare; CHud::Initialise
+PENDING	CInformFriendsEventQueue::ms_informFriendsEvents	CInformFriendsEventQueue::Process	R	0x00A9B000	579	1	3062617822	CReplay::Update; CWorld::Process
+PENDING	CLoadingScreen::m_bActive	CLoadingScreen::NewChunkLoaded	R	0x00BAB318	851	1	3062632824	CTheScripts::Process; CWeather::Update
+PENDING	CLoadingScreen::m_currDisplayedSplash	CLoadingScreen::Init	W	0x008D093C	120	1	3062589260	??R<lambda_1>@?O@??ProcessGameLogic@@YA_NH@Z@QBE@W4eLoadingLogo@@@Z; ProcessGameLogic
+PENDING	CLoadingScreen::m_numChunksLoaded	CLoadingScreen::NewChunkLoaded	R	0x008D0940	120	1	3062613442	CFileLoader::LoadLevel
+PENDING	CLocalisation::nastyGame	CLocalisation::Initialise	W	0x00B9B7EC	835	1	3062587783	AppEventHandler; CGame::InitialiseOnceBeforeRW
+PENDING	CMBlur::Drunkness	CCamera::Process	R	0x00C73C58	1051	1	3062617832	CGameLogic::LaRiotsActiveHere
+PENDING	CMemoryMgr::m_idStack	CMemoryMgr::PushMemId	R	0x00C87C58	1071	1	3062632520	CStreaming::ConvertBufferToObject; CStreaming::ProcessLoadingChannel
+PENDING	CMenuManager::GetNumberOfMenuOptions()::s_PrevScreen	CMenuManager::GetNumberOfMenuOptions	R	0x008CDFF0	117	1	3062589859	CMenuManager::Process; CMenuManager::UserInput
+PENDING	CMenuManager::UserInput()::oldOption	CMenuManager::UserInput	W	0x008CE005	118	1	3062589859	CMenuManager::Process; FrontendIdle
+PENDING	CMenuSystem::num_menus_in_use	CHud::Draw	R	0x00BA82E3	848	1	3062617796	Idle; Render2dStuff
+PENDING	CMenuSystem::num_menus_in_use	CPlayerInfo::WorkOutEnergyFromHunger	R	0x00BA82E3	848	1	3062842907	CPlayerInfo::Process; CWorld::Process
+PENDING	CMenuSystem::num_menus_in_use	CStats::CheckForStatsMessage	R	0x00BA82E3	848	1	3062797855	?A0x5b66f2e6::ProcessDistanceStats; CPlayerInfo::Process
+PENDING	CMessages::BIGMessages	CMessages::ClearMessages	W	0x00C1A970	962	1	3062589679	CMessages::ClearAllMessagesDisplayedByGame; CText::Load
+PENDING	CMessages::BIGMessages	CMessages::Display	R	0x00C1A994	962	1	3062617796	
+PENDING	CMessages::BIGMessages	CMessages::Process	R	0x00C1A970	962	1	3062632833	CLoadMonitor::EndTimer; CTimer::GetCurrentTimeInCycles
+PENDING	CMessages::BriefMessages	CMessages::Display	R	0x00C1A814	962	1	3062602792	
+PENDING	CMirrors::MirrorNormal	CMirrors::BeforeConstructRenderList	R	0x00C803D8	1064	1	3062752851	CCamera::CalculateGroundHeight; SetLightsWithTimeOfDayColour
+PENDING	CMirrors::TypeOfMirror	CMirrors::BeforeMainRender	R	0x00C7C724	1060	1	3062722833	AppEventHandler; Idle
+PENDING	CMirrors::bRenderingReflection	RenderScene	R	0x00C7C728	1060	1	3062692824	Idle
+PENDING	CMirrors::d3dRestored	CMirrors::BeforeConstructRenderList	R	0x00C7C729	1060	1	3062752851	CCamera::CalculateGroundHeight; SetLightsWithTimeOfDayColour
+PENDING	CModelInfo::ms_2dFXInfoStore	??$write_floating_point@M@?$input_processor@DV?$string_input_adapter@D@__crt_stdio_input@@@__crt_stdio_input@@AAE_NABM@Z	W	0x00B4D00C	757	1	3062613504	??$process_floating_point_specifier_t@M@?$input_processor@DV?$string_input_adapter@D@__crt_stdio_input@@@__crt_stdio_input@@AAE_NXZ; __crt_stdio_input::D::?$format_string_parser::length
+PENDING	CModelInfo::ms_2dFXInfoStore	CModelInfo::Initialise	W	0x00B4C2D8	756	1	3062613423	CGame::Init1; CGame::Initialise
+PENDING	CModelInfo::ms_atomicModelInfoStore	??$IterateSectors@V<lambda_1>@?1??_ColEntityCache_Update@CPlantMgr@@CAXABVCVector@@_N@Z@@CWorld@@SA_NHHHH$$QAV<lambda_1>@?1??_ColEntityCache	R	0x00ABD3B4	691	7	3062617832	CPlantMgr::Update; CPlantMgr::_ColEntityCache_Update
+PENDING	CModelInfo::ms_atomicModelInfoStore	??$ProcessEntitiesInSectorList@V?$CPtrListDoubleLink@PAVCDummy@@@@@CStreaming@@SAXAAV?$CPtrListDoubleLink@PAVCDummy@@@@MMMMMMMH@Z	R	0x00AB0D74	600	4	3062647814	CStreaming::AddModelsToRequestList
+PENDING	CModelInfo::ms_atomicModelInfoStore	??$ProcessEntitiesInSectorList@V?$CPtrListSingleLink@PAVCBuilding@@@@@CStreaming@@SAXAAV?$CPtrListSingleLink@PAVCBuilding@@@@MMMMMMMH@Z	R	0x00AAEDB4	603	16	3062647813	CStreaming::AddModelsToRequestList
+PENDING	CModelInfo::ms_atomicModelInfoStore	?A0x237d9131::IsEntityBoundSphereCloseTo	R	0x00AAEB28	599	10	3062737859	CCollision::BuildCacheOfCameraCollision; CCollision::CheckCameraCollisionBuildings
+PENDING	CModelInfo::ms_atomicModelInfoStore	CAtomicModelInfo::DeleteRwObject	R	0x00AFC010	676	1	3063052737	CBaseModelInfo::Shutdown; CModelInfo::ShutDown
+PENDING	CModelInfo::ms_atomicModelInfoStore	CAttractorScanner::ScanForAttractorsInPtrList	R	0x00ACB361	627	1	3062619085	CColSphere::IntersectEdge; CVector::Normalise
+PENDING	CModelInfo::ms_atomicModelInfoStore	CBaseModelInfo::Init	W	0x00AAF008	706	108	3062613458	CFileLoader::LoadObject; CModelInfo::AddAtomicModel
+PENDING	CModelInfo::ms_atomicModelInfoStore	CEntity::GetBoundCentre	R	0x00AAEB28	599	10	3062632822	CCover::ShouldThisBuildingHaveItsCoverPointsCreated; CCover::Update; CObjectPotentialCollisionScanner::ScanForObjectPotentialCollisionEvents; cBuoyancy::ProcessBuoyancy
+PENDING	CModelInfo::ms_atomicModelInfoStore	CEntity::GetBoundRect	R	0x00AB4FA8	667	71	3062632836	??R<lambda_2>@?O@??RenderStoredShadows@CShadows@@SAXXZ@QBE_NHH@Z; ??_ECBuilding@@UAEPAXI@Z; ??_ECDummyObject@@UAEPAXI@Z; CEntity::Remove
+PENDING	CModelInfo::ms_atomicModelInfoStore	CEntity::GetColModel	R	0x00AAEB28	600	34	3062617833	??$ProcessLineOfSightSectorList@V?$CPtrListDoubleLink@PAVCObject@@@@@CWorld@@KA_NAAV?$CPtrListDoubleLink@PAVCObject@@@@ABVCColLine@@AAVCColP; ??$ProcessLineOfSightSectorList@V?$CPtrListSingleLink@PAVCBuilding@@@@@CWorld@@KA_NAAV?$CPtrListSingleLink@PAVCBuilding@@@@ABVCColLine@@AAVC; ??R<lambda_1>@?1??GetIsLineOfSightClear@CWorld@@SA_NABVCVector@@0_N111111@Z@QBE@HH@Z; CAEPedSpeechAudioEntity::LoadAndPlaySpeech
+PENDING	CModelInfo::ms_atomicModelInfoStore	CEntity::GetIsTouching	R	0x00AAEE48	697	33	3062617826	??$?RV?$CPtrListDoubleLink@PAVCObject@@@@@<lambda_1>@?1??ProcessCollisionSectorList@CPhysical@@QAE_NHH@Z@QBE?A_PAAV?$CPtrListDoubleLink@PAVC; ??$?RV?$CPtrListSingleLink@PAVCBuilding@@@@@<lambda_1>@?1??ProcessCollisionSectorList@CPhysical@@QAE_NHH@Z@QBE?A_PAAV?$CPtrListSingleLink@PA; __handle_exc
+PENDING	CModelInfo::ms_atomicModelInfoStore	CEntity::GetRandom2dEffect	R	0x00AAEB21	599	8	3062872904	CPopulation::GeneratePedsAtAttractors; CWorld::FindObjectsInRange
+PENDING	CModelInfo::ms_atomicModelInfoStore	CEntity::PreRender	R	0x00AAEA94	599	17	3062767847	CEntity::PreRender; CObject::PreRender; CRenderer::PreRender; Idle
+PENDING	CModelInfo::ms_atomicModelInfoStore	CFileLoader::LoadCollisionFile	R	0x00AC3918	620	2	3062778668	CColStore::LoadCol; CStreaming::ConvertBufferToObject
+PENDING	CModelInfo::ms_atomicModelInfoStore	CGarages::IsModelIndexADoor	R	0x00AB1014	602	6	3062617825	CCollision::CheckCameraCollisionObjects; CObject::ProcessControlLogic; CWorld::CameraToIgnoreThisObject; CWorld::Process
+PENDING	CModelInfo::ms_atomicModelInfoStore	CModelInfo::GetModelInfo	R	0x00AF3018	667	6	3062639803	CCutsceneMgr::LoadCutsceneData_preload
+PENDING	CModelInfo::ms_atomicModelInfoStore	CObject::CanBeUsedToTakeCoverBehind	R	0x00AB1014	626	5	3062647912	CCover::Update; CGame::Process
+PENDING	CModelInfo::ms_atomicModelInfoStore	CObject::ProcessControl	R	0x00AB2534	690	2	3062617824	CReplay::Update; CWorld::Process
+PENDING	CModelInfo::ms_atomicModelInfoStore	CRenderer::RenderRoads	R	0x00AB0A07	616	18	3062722834	Idle; RenderScene
+PENDING	CModelInfo::ms_atomicModelInfoStore	CRenderer::SetupBigBuildingVisibility	R	0x00AB0954	697	47	3062647828	??$?RV?$CPtrListDoubleLink@PAVCDummy@@@@@<lambda_1>@?1??ScanSectorList@CRenderer@@SAXHH@Z@QBE?A_PAAV?$CPtrListDoubleLink@PAVCDummy@@@@@Z; CRenderer::AddEntityToRenderList; CRenderer::ScanBigBuildingList; CStreaming::RequestModel
+PENDING	CModelInfo::ms_atomicModelInfoStore	CRenderer::SetupEntityVisibility	R	0x00AAEB14	616	62	3062624090	??$?RV?$CPtrListDoubleLink@PAVCDummy@@@@@<lambda_1>@?1??ScanSectorList@CRenderer@@SAXHH@Z@QBE?A_PAAV?$CPtrListDoubleLink@PAVCDummy@@@@@Z; ??$?RV?$CPtrListDoubleLink@PAVCObject@@@@@<lambda_1>@?1??ScanSectorList@CRenderer@@SAXHH@Z@QBE?A_PAAV?$CPtrListDoubleLink@PAVCObject@@@@@Z; ??$?RV?$CPtrListSingleLink@PAVCBuilding@@@@@<lambda_1>@?1??ScanSectorList@CRenderer@@SAXHH@Z@QBE?A_PAAV?$CPtrListSingleLink@PAVCBuilding@@@@; CEntity::GetIsOnScreen
+PENDING	CModelInfo::ms_atomicModelInfoStore	CRenderer::SetupMapEntityVisibility	R	0x00AC0008	616	1	3062827872	CRenderer::SetupEntityVisibility; __CIsqrt
+PENDING	CModelInfo::ms_atomicModelInfoStore	CRenderer::ShouldModelBeStreamed	R	0x00AB4F94	634	67	3062639754	CEntity::DeleteRwObject; CStreaming::LoadScene; CStreaming::RequestBigBuildings
+PENDING	CModelInfo::ms_atomicModelInfoStore	CStreaming::AddModelsToRequestList	R	0x00AD23F4	634	2	3062632821	CStreaming::Update
+PENDING	CModelInfo::ms_atomicModelInfoStore	CStreaming::GetNextFileOnCd	R	0x00AC263E	618	1	3062692839	CStreaming::LoadRequestedModels; CStreaming::RequestModelStream
+PENDING	CModelInfo::ms_atomicModelInfoStore	CStreaming::RemoveLeastUsedModel	R	0x00AB99FC	610	4	3062751200	CStreaming::MakeSpaceFor; CStreaming::ProcessLoadingChannel
+PENDING	CModelInfo::ms_atomicModelInfoStore	CStreaming::RequestModel	R	0x00ACAE94	626	1	3062917900	CRenderer::ScanBigBuildingList
+PENDING	CModelInfo::ms_atomicModelInfoStore	CStreaming::RequestModelStream	R	0x00AAFE78	604	6	3062632822	CCheat::VehicleCheat; CStreaming::LoadAllRequestedModels; CStreaming::LoadRequestedModels; CStreaming::Update
+PENDING	CModelInfo::ms_atomicModelInfoStore	CTagManager::IsTag	R	0x00ABE214	627	10	3062722837	CEntity::Render; CRenderer::RenderOneNonRoad
+PENDING	CModelInfo::ms_atomicModelInfoStore	CVehicle::AddVehicleUpgrade	R	0x00B1B707	707	1	3062691651	CAutomobile; CCarGenerator::DoInternalProcessing
+PENDING	CModelInfo::ms_atomicModelInfoStore	CVisibilityPlugins::RenderEntity	R	0x00AAEB26	617	23	3062692820	CVisibilityPlugins::RenderFadingEntities; RenderScene
+PENDING	CModelInfo::ms_clumpModelInfoStore	CEntity::GetBoundCentre	R	0x00B1EB8C	710	1	3062617826	CPhysical::GetBoundRect; CPhysical::RemoveAndAdd
+PENDING	CModelInfo::ms_clumpModelInfoStore	CRenderer::ShouldModelBeStreamed	R	0x00B1F280	711	1	3062639756	CStreaming::LoadScene; CStreaming::RequestBigBuildings
+PENDING	CModelInfo::ms_damageAtomicModelInfoStore	CModelInfo::GetModelInfo	R	0x00B1BF60	707	1	3062639803	CCutsceneMgr::LoadCutsceneData_preload
+PENDING	CModelInfo::ms_damageAtomicModelInfoStore	CModelInfo::Initialise	W	0x00B1BF58	707	1	3062613423	CGame::Init1; CGame::Initialise
+PENDING	CModelInfo::ms_lodAtomicModelInfoStore	CModelInfo::Initialise	W	0x00B1C934	708	1	3062613423	CGame::Init1; CGame::Initialise
+PENDING	CModelInfo::ms_lodTimeModelInfoStore	CModelInfo::Initialise	W	0x00B1E128	710	1	3062613423	CGame::Init1; CGame::Initialise
+PENDING	CModelInfo::ms_modelInfoPtrs	??$FindObjectsKindaCollidingSectorList@V?$CPtrListDoubleLink@PAVCVehicle@@@@@CWorld@@SAXAAV?$CPtrListDoubleLink@PAVCVehicle@@@@ABVCVector@@M	R	0x00A9B84C	579	1	3063007965	__handle_exc
+PENDING	CModelInfo::ms_modelInfoPtrs	??$ProcessEntitiesInSectorList@V?$CPtrListDoubleLink@PAVCDummy@@@@@CStreaming@@SAXAAV?$CPtrListDoubleLink@PAVCDummy@@@@MMMMMMMH@Z	R	0x00A9C500	580	2	3062647814	CStreaming::AddModelsToRequestList
+PENDING	CModelInfo::ms_modelInfoPtrs	??$ProcessEntitiesInSectorList@V?$CPtrListSingleLink@PAVCBuilding@@@@@CStreaming@@SAXAAV?$CPtrListSingleLink@PAVCBuilding@@@@MMMMMMMH@Z	R	0x00A9BACC	596	9	3062647813	CStreaming::AddModelsToRequestList
+PENDING	CModelInfo::ms_modelInfoPtrs	CCarGenerator::CheckIfWithinRangeOfAnyPlayers	R	0x00A9B910	579	1	3062992953	CCarGenerator::Process; CTheCarGenerators::Process
+PENDING	CModelInfo::ms_modelInfoPtrs	CEntity::GetBoundCentre	R	0x00A9BCA8	596	4	3062632822	CCover::ShouldThisBuildingHaveItsCoverPointsCreated; CCover::Update
+PENDING	CModelInfo::ms_modelInfoPtrs	CEntity::GetBoundRect	R	0x00AA3004	593	6	3063052692	??_ECBuilding@@UAEPAXI@Z; CEntity::Remove; details::CPtrNodeSingleLink__operator_delete
+PENDING	CModelInfo::ms_modelInfoPtrs	CEntity::GetColModel	R	0x00A9B0C8	580	14	3062662830	??$ProcessLineOfSightSectorList@V?$CPtrListDoubleLink@PAVCObject@@@@@CWorld@@KA_NAAV?$CPtrListDoubleLink@PAVCObject@@@@ABVCColLine@@AAVCColP; ??$ProcessLineOfSightSectorList@V?$CPtrListSingleLink@PAVCBuilding@@@@@CWorld@@KA_NAAV?$CPtrListSingleLink@PAVCBuilding@@@@ABVCColLine@@AAVC; ??R<lambda_1>@?1??GetIsLineOfSightClear@CWorld@@SA_NABVCVector@@0_N111111@Z@QBE@HH@Z; CAEPedSpeechAudioEntity::LoadAndPlaySpeech
+PENDING	CModelInfo::ms_modelInfoPtrs	CEntity::GetIsOnScreen	R	0x00A9B0E4	579	3	3062737846	CEntity::UpdateAnim; CPopulation::ManagePed; CPopulation::PedCreationDistMultiplier
+PENDING	CModelInfo::ms_modelInfoPtrs	CEntity::GetIsTouching	R	0x00A9F3DC	583	7	3062617830	??$?RV?$CPtrListSingleLink@PAVCBuilding@@@@@<lambda_1>@?1??ProcessCollisionSectorList@CPhysical@@QAE_NHH@Z@QBE?A_PAAV?$CPtrListSingleLink@PA; __handle_exc
+PENDING	CModelInfo::ms_modelInfoPtrs	CEntity::GetModelInfo	R	0x00A9B640	582	12	3062617824	??$IterateSectors@V<lambda_1>@?1??_ColEntityCache_Update@CPlantMgr@@CAXABVCVector@@_N@Z@@CWorld@@SA_NHHHH$$QAV<lambda_1>@?1??_ColEntityCache; ?A0x237d9131::IsEntityBoundSphereCloseTo; CCollision::CheckCameraCollisionBuildings; CCover::Update
+PENDING	CModelInfo::ms_modelInfoPtrs	CEntity::GetRandom2dEffect	R	0x00A9BB4C	582	3	3062872904	CPopulation::GeneratePedsAtAttractors; CWorld::FindObjectsInRange
+PENDING	CModelInfo::ms_modelInfoPtrs	CEntity::PreRender	R	0x00A9BBE0	583	7	3062767847	CObject::PreRender; CRenderer::PreRender; Idle
+PENDING	CModelInfo::ms_modelInfoPtrs	CGarages::IsModelIndexADoor	R	0x00AAAFEC	594	2	3062617825	CObject::ProcessControlLogic; CWorld::Process
+PENDING	CModelInfo::ms_modelInfoPtrs	CLoadedCarGroup::PickRandomCar	R	0x00A9B9A0	579	1	3062857887	CCarCtrl::ChooseModel; CPopulation::PickGangCar
+PENDING	CModelInfo::ms_modelInfoPtrs	CPopulation::ChooseCivilianOccupation	R	0x00A9B178	579	2	3062842897	CPopCycle::FindNewPedType; CPopulation::AddToPopulation
+PENDING	CModelInfo::ms_modelInfoPtrs	CRenderer::RenderRoads	R	0x00A9C490	596	7	3062722834	Idle; RenderScene
+PENDING	CModelInfo::ms_modelInfoPtrs	CRenderer::SetupBigBuildingVisibility	R	0x00A9C47C	583	12	3062617834	??$?RV?$CPtrListDoubleLink@PAVCDummy@@@@@<lambda_1>@?1??ScanSectorList@CRenderer@@SAXHH@Z@QBE?A_PAAV?$CPtrListDoubleLink@PAVCDummy@@@@@Z; CRenderer::ScanBigBuildingList; CStreaming::RequestModel
+PENDING	CModelInfo::ms_modelInfoPtrs	CRenderer::SetupEntityVisibility	R	0x00A9BA78	582	15	3062624090	??$?RV?$CPtrListDoubleLink@PAVCDummy@@@@@<lambda_1>@?1??ScanSectorList@CRenderer@@SAXHH@Z@QBE?A_PAAV?$CPtrListDoubleLink@PAVCDummy@@@@@Z; ??$?RV?$CPtrListDoubleLink@PAVCObject@@@@@<lambda_1>@?1??ScanSectorList@CRenderer@@SAXHH@Z@QBE?A_PAAV?$CPtrListDoubleLink@PAVCObject@@@@@Z; ??$?RV?$CPtrListSingleLink@PAVCBuilding@@@@@<lambda_1>@?1??ScanSectorList@CRenderer@@SAXHH@Z@QBE?A_PAAV?$CPtrListSingleLink@PAVCBuilding@@@@; CEntity::GetIsOnScreen
+PENDING	CModelInfo::ms_modelInfoPtrs	CRenderer::ShouldModelBeStreamed	R	0x00AA0EAC	588	7	3062639754	CStreaming::LoadScene; CStreaming::RequestBigBuildings
+PENDING	CModelInfo::ms_modelInfoPtrs	CStreaming::AddModelsToRequestList	R	0x00AA5A74	589	2	3062632821	CStreaming::Update
+PENDING	CModelInfo::ms_modelInfoPtrs	CStreaming::GetNextFileOnCd	R	0x00A9B8BC	579	1	3062662821	CStreaming::LoadRequestedModels; CStreaming::RequestModelStream
+PENDING	CModelInfo::ms_modelInfoPtrs	CStreaming::RequestModel	R	0x00A9B260	579	2	3062917900	CRenderer::ScanBigBuildingList; CStreaming::StreamVehiclesAndPeds_Always; CStreaming::StreamZoneModels_Gangs
+PENDING	CModelInfo::ms_modelInfoPtrs	CVehicle::AddVehicleUpgrade	R	0x00A9C1C4	580	1	3062857889	CAutomobile; CCarCtrl::GetNewVehicleDependingOnCarModel
+PENDING	CModelInfo::ms_modelInfoPtrs	CVehicle::PreRender	R	0x00A9B718	579	2	3062812861	CAutomobile::PreRender; CEntity::PreRender; GraphicsHighQuality
+PENDING	CModelInfo::ms_modelInfoPtrs	CVisibilityPlugins::RenderEntity	R	0x00A9BBE0	596	9	3062692820	CVisibilityPlugins::RenderFadingEntities; RenderScene
+PENDING	CModelInfo::ms_modelInfoPtrs	_memset	W	0x00A9B0C8	598	20	3062613421	CGame::Init1; CModelInfo::Initialise
+PENDING	CModelInfo::ms_pedModelInfoStore	??R<lambda_1>@?1??AddPedInCar@CPopulation@@SAPAVCPed@@PAVCVehicle@@_NHH11@Z@QBE?AW4eModelID@@XZ	R	0x00B49188	753	1	3062705305	CEntity::TransformFromObjectSpace; CPopulation::AddPedInCar
+PENDING	CModelInfo::ms_pedModelInfoStore	CBaseModelInfo::Init	W	0x00B48000	755	2	3062613450	CClumpModelInfo::Init; CModelInfo::AddPedModel
+PENDING	CModelInfo::ms_pedModelInfoStore	CClumpModelInfo::DeleteRwObject	R	0x00B4C004	756	1	3063052740	CBaseModelInfo::Shutdown; CPedModelInfo::DeleteRwObject
+PENDING	CModelInfo::ms_pedModelInfoStore	CEntity::GetBoundCentre	R	0x00B47910	752	4	3062647821	CCollision::CheckPeds; CPhysical::GetBoundRect; CPhysical::RemoveAndAdd; CTaskManager::GetLastTaskOf
+PENDING	CModelInfo::ms_pedModelInfoStore	CEntity::GetColModel	R	0x00B47910	751	1	3062797856	CGarage::IsEntityEntirelyOutside; CGarage::IsPlayerOutsideGarage
+PENDING	CModelInfo::ms_pedModelInfoStore	CEntity::GetIsOnScreen	R	0x00B47910	753	26	3062617823	CEntity::UpdateAnim; CGeneral::GetRadianAngleBetweenPointsExt; CPopulation::ManagePed; CPopulation::PedCreationDistMultiplier
+PENDING	CModelInfo::ms_pedModelInfoStore	CEntity::GetIsTouching	R	0x00B4B5E4	755	1	3062617827	??$?RV?$CPtrListDoubleLink@PAVCPed@@@@@<lambda_1>@?1??ProcessCollisionSectorList@CPhysical@@QAE_NHH@Z@QBE?A_PAAV?$CPtrListDoubleLink@PAVCPed; __handle_exc
+PENDING	CModelInfo::ms_pedModelInfoStore	CFileLoader::LoadPedObject	W	0x00B49000	754	2	3062613451	
+PENDING	CModelInfo::ms_pedModelInfoStore	CModelInfo::GetModelInfo	R	0x00B4C20C	756	1	3062639804	CCutsceneMgr::LoadCutsceneData_preload
+PENDING	CModelInfo::ms_pedModelInfoStore	CModelInfo::Initialise	W	0x00B478F8	751	1	3062613423	CGame::Init1; CGame::Initialise
+PENDING	CModelInfo::ms_pedModelInfoStore	CModelInfo::ShutDown	R	0x00B4A008	754	1	3063052740	CGame::Shutdown; NOTSA_WinMain
+PENDING	CModelInfo::ms_pedModelInfoStore	CPedModelInfo::AnimatePedColModelSkinned	R	0x00B47D2C	755	2	3062722855	??$ProcessLineOfSightSectorList@V?$CPtrListDoubleLink@PAVCPed@@@@@CWorld@@KA_NAAV?$CPtrListDoubleLink@PAVCPed@@@@ABVCColLine@@AAVCColPoint@@; ??R<lambda_1>@?8???$ProcessLineOfSightSectorList@V?$CPtrListDoubleLink@PAVCPed@@@@@CWorld@@KA_NAAV?$CPtrListDoubleLink@PAVCPed@@@@ABVCColLin; ??R<lambda_1>@?8???$ProcessLineOfSightSectorList@V?$CPtrListDoubleLink@PAVCVehicle@@@@@CWorld@@KA_NAAV?$CPtrListDoubleLink@PAVCVehicle@@@@AB
+PENDING	CModelInfo::ms_pedModelInfoStore	CPopCycle::PickPedMIToStreamInForCurrentZone	R	0x00B4823E	755	6	3062639631	CStreaming::RequestModel; CStreaming::StreamZoneModels
+PENDING	CModelInfo::ms_pedModelInfoStore	CPopulation::ChooseCivilianOccupation	R	0x00B47A58	752	8	3062692842	CPopCycle::FindNewPedType; CPopulation::AddToPopulation
+PENDING	CModelInfo::ms_pedModelInfoStore	CRenderer::SetupEntityVisibility	R	0x00B478FC	752	12	3062752853	??$?RV?$CPtrListDoubleLink@PAVCPed@@@@@<lambda_1>@?1??ScanSectorList@CRenderer@@SAXHH@Z@QBE?A_PAAV?$CPtrListDoubleLink@PAVCPed@@@@@Z; CRenderer::AddEntityToRenderList; CRenderer::ScanSectorList
+PENDING	CModelInfo::ms_pedModelInfoStore	CStreaming::RemoveLeastUsedModel	R	0x00B4AF34	754	1	3062782929	CStreaming::MakeSpaceFor; CStreaming::ProcessLoadingChannel
+PENDING	CModelInfo::ms_pedModelInfoStore	CStreaming::RequestModel	R	0x00B49128	753	1	3062932923	CStreaming::StreamVehiclesAndPeds_Always; CStreaming::StreamZoneModels_Gangs
+PENDING	CModelInfo::ms_pedModelInfoStore	CStreaming::SetMissionDoesntRequireModel	R	0x00B4C036	756	1	3062726685	??$CommandParser@$0NI@$MP6AXAAVCRunningScript@@@Z1?MissionHasFinished@?A0x2fd53a4f@@YAX0@Z@detail@script@notsa@@YA?AW4OpcodeResult@@PAVCRunn; CMissionCleanup::Process
+PENDING	CModelInfo::ms_pedModelInfoStore	CStreaming::SetModelAndItsTxdDeletable	R	0x00B4BE16	755	1	3062693276	CStreaming::StreamCopModels; CStreaming::StreamVehiclesAndPeds
+PENDING	CModelInfo::ms_timeModelInfoStore	??$IterateSectors@V<lambda_1>@?1??_ColEntityCache_Update@CPlantMgr@@CAXABVCVector@@_N@Z@@CWorld@@SA_NHHHH$$QAV<lambda_1>@?1??_ColEntityCache	R	0x00B1CF28	708	1	3062647982	CPlantMgr::Update; CPlantMgr::_ColEntityCache_Update
+PENDING	CModelInfo::ms_timeModelInfoStore	??$ProcessEntitiesInSectorList@V?$CPtrListSingleLink@PAVCBuilding@@@@@CStreaming@@SAXAAV?$CPtrListSingleLink@PAVCBuilding@@@@MMMMMMMH@Z	R	0x00B1CF4C	708	1	3062812882	CStreaming::AddModelsToRequestList
+PENDING	CModelInfo::ms_timeModelInfoStore	CEntity::GetBoundRect	R	0x00B1DB78	709	1	3063052709	CEntity::Remove; details::CPtrNodeSingleLink__operator_delete
+PENDING	CModelInfo::ms_timeModelInfoStore	CFileLoader::LoadObjectInstance	R	0x00B1CF38	708	1	3062639767	CEntity::Add; CIplStore::LoadIpl
+PENDING	CModelInfo::ms_timeModelInfoStore	CModelInfo::AddTimeModel	R	0x00B1D000	709	1	3062613469	CFileLoader::LoadTimeObject; CFileMgr::ReadLine
+PENDING	CModelInfo::ms_timeModelInfoStore	CRenderer::SetupEntityVisibility	R	0x00B1CF4C	708	4	3062631191	??$?RV?$CPtrListSingleLink@PAVCBuilding@@@@@<lambda_1>@?1??ScanSectorList@CRenderer@@SAXHH@Z@QBE?A_PAAV?$CPtrListSingleLink@PAVCBuilding@@@@; CRenderer::SetupScanLists
+PENDING	CModelInfo::ms_timeModelInfoStore	CRenderer::ShouldModelBeStreamed	R	0x00B1DB64	709	1	3062691689	CStreaming::LoadScene; CStreaming::RequestBigBuildings
+PENDING	CModelInfo::ms_vehicleModelInfoStore	??$FindObjectsKindaCollidingSectorList@V?$CPtrListDoubleLink@PAVCVehicle@@@@@CWorld@@SAXAAV?$CPtrListDoubleLink@PAVCVehicle@@@@ABVCVector@@M	R	0x00B23918	738	5	3062857888	??$IterateSectors@V<lambda_1>@?1??FindObjectsKindaColliding@CWorld@@SAXABVCVector@@M_NPAFFPAPAVCEntity@@11111@Z@@CWorld@@SA_NHHHH$$QAV<lambd; CWorld::FindObjectsKindaColliding; __handle_exc
+PENDING	CModelInfo::ms_vehicleModelInfoStore	CBaseModelInfo::Init	W	0x00B23000	733	2	3062613444	CClumpModelInfo::Init; CVehicleModelInfo::Init
+PENDING	CModelInfo::ms_vehicleModelInfoStore	CCarGenerator::CheckIfWithinRangeOfAnyPlayers	R	0x00B1FCA0	723	31	3062691650	CCarGenerator::Process; CTheCarGenerators::Process
+PENDING	CModelInfo::ms_vehicleModelInfoStore	CCollision::CheckCameraCollisionVehicles	R	0x00B44888	748	1	3062797858	CCollision::BuildCacheOfCameraCollision; CCollision::CheckCameraCollisionBuildings
+PENDING	CModelInfo::ms_vehicleModelInfoStore	CEntity::GetBoundCentre	R	0x00B20288	716	9	3062737849	CCarCtrl::FindAngleToWeaveThroughTraffic; CCarCtrl::SlowCarDownForCarsSectorList; CCarCtrl::WeaveThroughCarsSectorList; FindMaximumSpeedForThisCarInTrafficOriginal
+PENDING	CModelInfo::ms_vehicleModelInfoStore	CEntity::GetColModel	R	0x00B20288	729	22	3062707841	CAutomobile::ProcessControl; CBike::ProcessControl; CRadar::Draw3dMarkers; CStencilShadows::Process
+PENDING	CModelInfo::ms_vehicleModelInfoStore	CEntity::GetIsOnScreen	R	0x00B24538	728	7	3062752845	CCarCtrl::PossiblyRemoveVehicle; __CIsqrt
+PENDING	CModelInfo::ms_vehicleModelInfoStore	CLoadedCarGroup::PickRandomCar	R	0x00B202C1	729	26	3062691650	BuildShadowVolume; CCarCtrl::ChooseModel; CCarCtrl::GenerateOneRandomCar; CPopulation::PickGangCar
+PENDING	CModelInfo::ms_vehicleModelInfoStore	CModelInfo::GetModelInfo	R	0x00B20278	750	37	3062639801	CCutsceneMgr::LoadCutsceneData_preload
+PENDING	CModelInfo::ms_vehicleModelInfoStore	CModelInfo::Initialise	W	0x00B1F650	711	1	3062613423	CGame::Init1; CGame::Initialise
+PENDING	CModelInfo::ms_vehicleModelInfoStore	CModelInfo::ShutDown	R	0x00B25144	750	6	3063052739	CGame::Shutdown; NOTSA_WinMain
+PENDING	CModelInfo::ms_vehicleModelInfoStore	CRenderer::SetupEntityVisibility	R	0x00B24524	734	8	3062782854	??$?RV?$CPtrListDoubleLink@PAVCVehicle@@@@@<lambda_1>@?1??ScanSectorList@CRenderer@@SAXHH@Z@QBE?A_PAAV?$CPtrListDoubleLink@PAVCVehicle@@@@@Z; CRenderer::AddEntityToRenderList; CRenderer::ScanSectorList
+PENDING	CModelInfo::ms_vehicleModelInfoStore	CStreaming::GetNextFileOnCd	R	0x00B340C6	732	1	3062647815	CStreaming::LoadRequestedModels; CStreaming::RequestModelStream
+PENDING	CModelInfo::ms_vehicleModelInfoStore	CStreaming::RequestModel	R	0x00B2452E	729	6	3062691713	?A0x49f15004::LoadSceneInDirection; CCheat::VehicleCheat; CStats::IncrementStat; CStreaming::LoadScene
+PENDING	CModelInfo::ms_vehicleModelInfoStore	CStreaming::SetModelAndItsTxdDeletable	R	0x00B4487E	748	3	3062639777	CStreaming::LoadScene; CStreaming::StreamCopModels; CStreaming::StreamVehiclesAndPeds
+PENDING	CModelInfo::ms_vehicleModelInfoStore	CVehicle::PreRender	R	0x00B20281	739	7	3062812861	CAutomobile::PreRender; CShadows::StoreShadowForPole; GraphicsHighQuality
+PENDING	CModelInfo::ms_vehicleModelInfoStore	CVehicleModelInfo::ChooseVehicleColour	R	0x00B2818C	746	4	3062691651	CAutomobile; CCarGenerator::DoInternalProcessing; CTheZones::FindSmallestZoneForPosition
+PENDING	CModelInfo::ms_vehicleModelInfoStore	CVehicleModelInfo::GetAnimFileIndex	R	0x00B281C0	729	4	3062703690	CClumpModelInfo::DeleteRwObject; CStreaming::RequestModel; CStreaming::StreamOneNewCar; CStreaming::StreamZoneModels_Gangs
+PENDING	CModelInfo::ms_vehicleModelInfoStore	CVehicleModelInfo::Init	W	0x00B2E014	744	2	3062613446	CFileLoader::LoadVehicleObject; CModelInfo::AddVehicleModel
+PENDING	CModelInfo::ms_vehicleModelInfoStore	CVehicleModelInfo::SetAnimFile	W	0x00B20270	750	35	3062613444	CFileLoader::LoadVehicleObject
+PENDING	CModelInfo::ms_vehicleModelInfoStore	CVehicleModelInfo::SetVehicleColour	W	0x00B2818F	720	2	3062707880	CRenderer::RenderOneNonRoad; CVehicle::SetupRender
+PENDING	CModelInfo::ms_vehicleModelInfoStore	CVisibilityPlugins::RenderEntity	R	0x00B24536	728	6	3062692822	CVisibilityPlugins::RenderFadingEntities; RenderScene
+PENDING	CModelInfo::ms_weaponModelInfoStore	??$FindObjectsKindaCollidingSectorList@V?$CPtrListDoubleLink@PAVCObject@@@@@CWorld@@SAXAAV?$CPtrListDoubleLink@PAVCObject@@@@ABVCVector@@M_N	R	0x00B1E580	710	1	3062858031	CWorld::ProcessVerticalLine; __handle_exc
+PENDING	CModelInfo::ms_weaponModelInfoStore	CBaseModelInfo::AddRef	R	0x00B1E31E	710	2	3062708907	CPed::GiveWeapon; CWeapon::Initialise
+PENDING	CModelInfo::ms_weaponModelInfoStore	CEntity::GetColModel	R	0x00B1E580	710	1	3062767889	CStencilShadows::RegisterStencilShadows; CVector::NormaliseAndMag
+PENDING	CModelInfo::ms_weaponModelInfoStore	CEntity::GetRandom2dEffect	R	0x00B1E579	710	1	3062842960	CPopulation::GeneratePedsAtAttractors
+PENDING	CModelInfo::ms_weaponModelInfoStore	CGarages::IsModelIndexADoor	R	0x00B1E56C	710	1	3062797859	CCollision::CheckCameraCollisionObjects; CWorld::CameraToIgnoreThisObject
+PENDING	CModelInfo::ms_weaponModelInfoStore	CObject::CanBeUsedToTakeCoverBehind	R	0x00B1E56C	710	2	3062692877	CCover::Update; CGame::Process
+PENDING	CModelInfo::ms_weaponModelInfoStore	CPed::AddWeaponModel	R	0x00B1E364	710	1	3062723368	CPed::ReplaceWeaponWhenExitingVehicle; CWeapon::GetWeaponInfo
+PENDING	CModelInfo::ms_weaponModelInfoStore	CPickup::GiveUsAPickUpObject	R	0x00B1E56C	710	1	3062753313	CPickup::GetPosn2D; __math_exit
+PENDING	CModelInfo::ms_weaponModelInfoStore	CRenderer::SetupEntityVisibility	R	0x00B1E56C	710	1	3062782855	??$?RV?$CPtrListDoubleLink@PAVCObject@@@@@<lambda_1>@?1??ScanSectorList@CRenderer@@SAXHH@Z@QBE?A_PAAV?$CPtrListDoubleLink@PAVCObject@@@@@Z; CRenderer::ScanSectorList
+PENDING	CMotionBlurStreaks::aStreaks	CMotionBlurStreaks::Render	R	0x00C7CA08	1060	1	3062737837	CSpecialFX::Render; RenderEffects
+PENDING	CMotionBlurStreaks::aStreaks	CSpecialFX::Update	R	0x00C7CA08	1060	1	3062797856	CGame::Process; CTimer::UpdateVariables
+PENDING	CObjectData::ms_aObjectInfo	??R<lambda_1>@?1??SpecialEntityPreCollisionStuff@CPed@@UAEXPAVCPhysical@@_NAA_N222@Z@QBE_NXZ	R	0x00BB5B34	861	3	3062617827	??$?RV?$CPtrListDoubleLink@PAVCObject@@@@@<lambda_1>@?1??ProcessCollisionSectorList@CPhysical@@QAE_NHH@Z@QBE?A_PAAV?$CPtrListDoubleLink@PAVC; CPed::SpecialEntityPreCollisionStuff
+PENDING	CObjectData::ms_aObjectInfo	CObject::ProcessControl	R	0x00BB4AAF	863	2	3062617824	CReplay::Update; CWorld::Process
+PENDING	CObjectData::ms_aObjectInfo	CObjectData::SetObjectData	R	0x00BB5F80	861	2	3062843026	CObject; CObject::Init
+PENDING	CObjectData::ms_aObjectInfo	CWorld::CameraToIgnoreThisObject	R	0x00BB4AFE	860	8	3062691661	CCollision::BuildCacheOfCameraCollision; CCollision::CheckCameraCollisionObjects
+PENDING	CObjectData::ms_aObjectInfo	_memset	W	0x00BB5000	863	3	3062613516	??$parse_integer@KV?$c_string_character_source@D@__crt_strtox@@$00@__crt_strtox@@YAKAAV__crt_cached_ptd_host@@V?$c_string_character_source@D; CObjectData::Initialise
+PENDING	COccluder::CenterOnScreen	CalcScreenCoors	W	0x00C79940	1057	1	3062752851	COccluder::ProcessOneOccluder
+PENDING	COcclusion::ActiveOccluders	??$?RVCActiveOccluder@@@<lambda_2>@?1??IsEntityOccluded@CEntity@@QAE_NXZ@QBE_NABVCActiveOccluder@@@Z	R	0x00C78688	1056	1	3062782853	CEntity::IsEntityOccluded
+PENDING	COcclusion::ActiveOccluders	COccluder::ProcessOneOccluder	W	0x00C7868A	1056	1	3062647827	__handle_exc
+PENDING	COcclusion::ListWalkThroughFA	??R<lambda_1>@?4??ProcessBeforeRendering@COcclusion@@SAXXZ@QBE@XZ	R	0x008D5D70	125	1	3062782850	COcclusion::ProcessBeforeRendering; CRenderer::ConstructRenderList
+PENDING	COcclusion::ListWalkThroughFA	COcclusion::ProcessBeforeRendering	R	0x008D5D70	125	1	3063022960	CRenderer::ConstructRenderList; Idle
+PENDING	COcclusion::NumActiveOccluders	CEntity::IsEntityOccluded	R	0x00C73CC0	1051	1	3062782852	__87except
+PENDING	COcclusion::NumActiveOccluders	COcclusion::ProcessBeforeRendering	W	0x00C73CC0	1051	1	3062752851	CRenderer::ConstructRenderList; Idle
+PENDING	COcclusion::NumOccludersOnMap	COcclusion::Init	W	0x00C73F98	1051	1	3062613419	CGame::Init1; CGame::Initialise
+PENDING	COcclusion::Occluders	COccluder::NearCamera	R	0x00C74024	1052	27	3062640410	??R<lambda_1>@?4??ProcessBeforeRendering@COcclusion@@SAXXZ@QBE@XZ; COcclusion::ProcessBeforeRendering
+PENDING	COcclusion::Occluders	COccluder::ProcessOneOccluder	R	0x00C76ACC	1055	12	3062647827	??2@YAPAXI@Z; __free_base; __handle_exc
+PENDING	COcclusion::Occluders	COcclusion::AddOne	W	0x00C74000	1056	4	3062614203	CFileLoader::LoadOcclusionVolume; CFileLoader::LoadScene
+PENDING	COcclusion::Occluders	COcclusion::AddOne	R	0x00C75000	1053	1	3062614204	CFileLoader::LoadOcclusionVolume; CFileLoader::LoadScene
+PENDING	CPad::OldKeyState	CKeyboardState::Clear	W	0x00B72F20	794	1	3062587808	
+PENDING	CPad::Pads	CControllerState::Clear	W	0x00B7345C	795	1	3062587807	AppEventHandler; CPad::Initialise
+PENDING	CPad::Pads	CPad::GetTarget	R	0x00B73566	795	1	3062797855	CPlayerInfo::Process; CWorld::Process
+PENDING	CPad::Pads	CPad::WeaponJustDown	R	0x00B73566	795	1	3062962923	CPlayerPed::ProcessControl
+PENDING	CPad::Pads	RenderEffects	R	0x00B73566	795	1	3062617794	AppEventHandler; Idle
+PENDING	CPad::TempKeyState	CPad::UpdatePads	R	0x00B72CB0	794	1	3062602792	
+PENDING	CPad::TempMouseControllerState	CPad::UpdateMouse	R	0x00B73404	795	1	3062602792	CPad::UpdatePads
+PENDING	CPedAcquaintanceScanner::ms_nScanInterval	CPedAcquaintanceScanner::ScanForPedAcquaintanceEvents	R	0x008D2358	122	2	3062617824	CEventScanner::ScanForEvents; CPed::ProcessBuoyancy
+PENDING	CPedGroups::ms_activeGroups	VCPedGroup::V?$array::V?$ref_view::V?$enumerate_view::?$filter_view::begin	R	0x00C098E0	945	1	3062797855	CPedGroups::Process; CWorld::Process
+PENDING	CPedGroups::ms_groups	CEntity::PruneReferences	R	0x00C09948	945	1	3062647820	CAnimBlendClumpData::ForAllFrames; CPlayerPed::ProcessControl
+PENDING	CPedGroups::ms_groups	CPedGroupIntelligence::GetTaskMain	R	0x00C0A044	946	1	3062707848	CTaskComplexBeInGroup::ControlSubTask; CTaskComplexBeInGroup::MonitorMainGroupTask
+PENDING	CPedGroups::ms_groups	CPedGroupMembership::IsFollower	R	0x00C09948	945	1	3062617821	CPed::CanBeDeleted; CPopulation::ManagePed
+PENDING	CPedGroups::ms_groups	CPedTaskPair::Flush	R	0x00C0A00C	946	1	3062705979	CPedGroupIntelligence::Flush; CPedGroups::AddGroup
+PENDING	CPedModelInfo::m_pColNodeInfos	CPedModelInfo::AnimatePedColModelSkinned	R	0x008A6314	78	1	3062722855	??$ProcessLineOfSightSectorList@V?$CPtrListDoubleLink@PAVCPed@@@@@CWorld@@KA_NAAV?$CPtrListDoubleLink@PAVCPed@@@@ABVCColLine@@AAVCColPoint@@; ??R<lambda_1>@?8???$ProcessLineOfSightSectorList@V?$CPtrListDoubleLink@PAVCVehicle@@@@@CWorld@@KA_NAAV?$CPtrListDoubleLink@PAVCVehicle@@@@AB
+PENDING	CPedModelInfo::m_pColNodeInfos	CPedModelInfo::AnimatePedColModelSkinnedWorld	R	0x008A6314	78	1	3062692848	__CIsqrt; __math_exit
+PENDING	CPedModelInfo::m_pPedIds	CClumpModelInfo::SetFrameIds	R	0x008A6268	78	1	3062614237	CFileLoader::LoadClumpFile; CPedModelInfo::SetClump
+PENDING	CPedScriptedTaskRecord::ms_scriptedTasks	CPedScriptedTaskRecord::Process	R	0x00C0B1EC	947	1	3062797855	CGame::Process; CWorld::Process
+PENDING	CPedStats::ms_apPedStats	CPed::PlayFootSteps	R	0x00C0BBEC	947	1	3062617823	CPed::RequestDelayedWeapon; __startOneArgErrorHandling
+PENDING	CPedStats::ms_apPedStats	CPedStats::GetPedStatType	R	0x00C0BBEC	947	1	3062613450	CFileLoader::LoadPedObject
+PENDING	CPedStats::ms_apPedStats	CPedStats::Initialise	W	0x00C0BBEC	947	1	3062589690	CGame::InitialiseCoreDataAfterRW; cHandlingDataMgr::Initialise
+PENDING	CPickups::NumMessages	CPickups::Init	W	0x00978678	288	1	3062613423	CGame::Init1; CGame::Initialise
+PENDING	CPickups::NumMessages	CPickups::RenderPickUpText	R	0x00978678	288	1	3062617795	
+PENDING	CPickups::aPickUps	CPickups::Init	W	0x0097901C	292	4	3062613423	CGame::Init1; CGame::Initialise
+PENDING	CPickups::aPickUps	CPickups::Update	R	0x0097901C	292	30	3062617831	CGame::Process; CTimer::UpdateVariables; Idle
+PENDING	CPickups::aPickUpsCollected	??$_Find_impl@U_Find_traits_4@_Finding@?A0x8417fefe@@$0A@I@_Finding@?A0x8417fefe@@YGPBXPBXQBXI@Z	R	0x00978628	288	1	3062842896	??$CommandParser@$0CBE@$MP6A_NH@Z1?HasPickupBeenCollected@?A0x05fbab38@@YA_NH@Z@detail@script@notsa@@YA?AW4OpcodeResult@@PAVCRunningScript@@; CPickups::IsPickUpPickedUp
+PENDING	CPlaneTrails::aArray	CPlaneTrail::Render	R	0x00C71468	1049	1	3062722833	?A0xac423690::Im3DDraw
+PENDING	CPlantMgr::m_CloseLocTriListHead	CPlantMgr::ReloadConfig	W	0x00C03988	939	1	3062613413	CPlantMgr::Initialise; __malloc_base
+PENDING	CPlantMgr::m_CloseLocTriListHead	CPlantMgr::Render	R	0x00C03988	939	1	3062692826	Idle; RenderScene
+PENDING	CPlantMgr::m_ColEntCacheTab	CPlantColEntEntry::AddEntry	W	0x00C08E48	944	1	3062640403	??$IterateSectors@V<lambda_1>@?1??_ColEntityCache_Update@CPlantMgr@@CAXABVCVector@@_N@Z@@CWorld@@SA_NHHHH$$QAV<lambda_1>@?1??_ColEntityCache; CPlantMgr::_ColEntityCache_Update
+PENDING	CPlantMgr::m_ColEntCacheTab	CPlantMgr::ReloadConfig	W	0x00C09000	945	1	3062613413	CPlantMgr::Initialise; __malloc_base
+PENDING	CPlantMgr::m_ColEntCacheTab	CPlantMgr::_ColEntityCache_Update	R	0x00C08F94	944	2	3062647825	CPlantMgr::CalculateWindBending; CPlantMgr::Update
+PENDING	CPlantMgr::m_LocTrisTab	CPlantLocTri::Add	W	0x00C04378	941	2	3062640403	RwV3dTransformPoint; TransformPoints
+PENDING	CPlantMgr::m_LocTrisTab	CPlantMgr::MoveLocTriToList	W	0x00C043C8	940	2	3062640403	CPlantLocTri::Add; TransformPoints
+PENDING	CPlantMgr::m_LocTrisTab	CPlantMgr::ReloadConfig	W	0x00C04000	944	5	3062613413	CPlantMgr::Initialise; __malloc_base
+PENDING	CPlantMgr::m_LocTrisTab	CPlantMgr::Render	R	0x00C043C0	941	8	3062692826	Idle; RenderScene; RwRenderStateSet; rw::d3d::setRwRenderState
+PENDING	CPlantMgr::m_LocTrisTab	CPlantMgr::_ProcessEntryCollisionDataSections_RemoveLocTris	R	0x00C04024	941	15	3062647825	CPlantMgr::_ProcessEntryCollisionDataSections; RwV3dTransformPoint
+PENDING	CPlantMgr::m_scanCode	CPlantMgr::Update	R	0x00C03980	939	1	3062617832	CGame::Process; Idle
+PENDING	CPlantSurfPropMgr::m_SurfPropPtrTab	CPlantSurfPropMgr::GetSurfProperties	R	0x00C380A4	992	1	3062640403	CPlantLocTri::Add; RwV3dTransformPoint
+PENDING	CPlantSurfPropMgr::m_SurfPropPtrTab	CPlantSurfPropMgr::Initialise	W	0x00C38070	992	1	3062613412	CPlantMgr::Initialise; CPlantMgr::ReloadConfig
+PENDING	CPlantSurfPropMgr::m_countSurfPropsAllocated	CPlantSurfPropMgr::Initialise	W	0x00C39ED4	993	1	3062613412	CPlantMgr::Initialise; CPlantMgr::ReloadConfig
+PENDING	CPlayerSkin::m_txdSlot	CPlayerSkin::GetSkinTexture	R	0x00C3F03C	999	1	3062614223	CGame::Init2; CLoadingScreen::DisplayPCScreen
+PENDING	CPlayerSkin::m_txdSlot	CPlayerSkin::Initialise	W	0x00C3F03C	999	1	3062589238	CGame::InitialiseRenderWare; RwInitialize
+PENDING	CPointLights::NumLights	CPointLights::GenerateLightsAffectingObject	R	0x00C3F0D0	999	1	3062692822	CRenderer::SetupLightingForEntity; CVehicle::SetupLighting
+PENDING	CPointLights::NumLights	CPointLights::RenderFogEffect	R	0x00C3F0D0	999	1	3062707837	
+PENDING	CPointLights::NumLights	Idle	W	0x00C3F0D0	999	1	3062617817	AppEventHandler; RsEventHandler
+PENDING	CPopCycle::m_NumCops_Cars	CCarCtrl::GenerateOneRandomCar	R	0x00C0BC34	947	1	3062752844	CCarCtrl::GenerateRandomCars; CGameLogic::LaRiotsActiveHere
+PENDING	CPopCycle::m_NumCops_Peds	CPopulation::AddToPopulation	R	0x00C0BC44	947	1	3062842897	CGame::Process; CPopulation::Update
+PENDING	CPopCycle::m_bCurrentZoneIsGangArea	CVehicle::GetVehicleLightsStatus	R	0x00C0BC5C	947	1	3062782859	CVehicle::AddDamagedVehicleParticles; CVehicle::DoVehicleLights
+PENDING	CPopCycle::m_nMaxNumPeds	__crt_stdio_input::D::DV?$string_input_adapter::?$input_processor::write_integer	W	0x00C0E798	950	1	3062589701	__crt_stdio_input::D::DV?$string_input_adapter::?$input_processor::process_conversion_specifier; __crt_stdio_input::D::DV?$string_input_adapter::?$input_processor::process_integer_specifier
+PENDING	CPopCycle::m_nPercDealers	CPopCycle::UpdatePercentages	R	0x00C0E47F	950	2	3062797857	CGame::Process; CPopCycle::Update
+PENDING	CPopCycle::m_nPercOther	CPopCycle::UpdatePercentages	R	0x00C0DEB5	949	7	3062614441	CGame::Process; CPopCycle::Update; CTheZones::GetZoneInfo
+PENDING	CPopCycle::m_nPercOther	__crt_stdio_input::D::DV?$string_input_adapter::?$input_processor::write_integer	W	0x00C0DE38	949	1	3062589701	__crt_stdio_input::D::DV?$string_input_adapter::?$input_processor::process_conversion_specifier; __crt_stdio_input::D::DV?$string_input_adapter::?$input_processor::process_integer_specifier
+PENDING	CPopCycle::m_nPercTypeGroup	CPopCycle::PickARandomGroupOfOtherPeds	R	0x00C0C566	948	2	3062739545	CStreaming::StreamOneNewCar; CStreaming::StreamVehiclesAndPeds
+PENDING	CPopCycle::m_nPercTypeGroup	CPopCycle::PickPedMIToStreamInForCurrentZone	R	0x00C0C542	948	3	3062639630	CCutsceneMgr::DeleteCutsceneData_overlay; CStreaming::StreamZoneModels; CStreaming::StreamZoneModels_Gangs
+PENDING	CPopCycle::m_nPercTypeGroup	CStreaming::IsCarModelNeededInCurrentZone	R	0x00C0C566	948	6	3062614457	CStreaming::ReclassifyLoadedCars; CStreaming::StreamVehiclesAndPeds_Always
+PENDING	CPopCycle::m_nPercTypeGroup	__crt_stdio_input::D::DV?$string_input_adapter::?$input_processor::write_integer	W	0x00C0C218	948	1	3062589701	__crt_stdio_input::D::DV?$string_input_adapter::?$input_processor::process_conversion_specifier; __crt_stdio_input::D::DV?$string_input_adapter::?$input_processor::process_integer_specifier
+PENDING	CPopCycle::m_pCurrZoneInfo	CHud::DrawAreaName	R	0x00C0BC68	947	1	3062827898	CHud::DrawAfterFade
+PENDING	CPopCycle::m_pCurrZoneInfo	CStreaming::StreamZoneModels_Gangs	R	0x00C0BC68	947	1	3062692839	CCamera::CalculateGroundHeight; CStreaming::StreamVehiclesAndPeds_Always
+PENDING	CPopulation::CurrentWorldZone	CPopulation::Update	W	0x00C0FCBC	951	1	3062617821	CGame::Process; GetOSWPerformanceTime
+PENDING	CPopulation::MaxNumberOfPedsInUse	CIniFile::LoadIniFile	W	0x008D2538	122	1	3062613410	CGame::Init1; CGame::Initialise
+PENDING	CPopulation::MaxNumberOfPedsInUse	CPopulation::AddToPopulation	R	0x008D2538	122	1	3062692841	CGame::Process; CPopulation::Update
+PENDING	CPopulation::bInPoliceStation	CPopulation::Initialise	W	0x00C0FCB6	951	1	3062614269	CGame::Init2; __free_base
+PENDING	CPopulation::m_CountDownToPedsAtStart	CPopulation::Update	R	0x00C0EC23	950	1	3062617821	CGame::Process; GetOSWPerformanceTime
+PENDING	CPopulation::m_LoadedGangCars	CLoadedCarGroup::Clear	W	0x00C0EA28	950	1	3062613421	CCarCtrl::Init; CGame::Init1
+PENDING	CPopulation::m_LoadedGangCars	CLoadedCarGroup::PickRandomCar	R	0x00C0EA28	950	1	3062752844	CCarCtrl::ChooseModel; CPopulation::PickGangCar
+PENDING	CPopulation::m_PedGroups	CStreaming::StreamZoneModels_Gangs	R	0x00C0FA3C	951	2	3062932923	CStreaming::StreamVehiclesAndPeds_Always; CStreaming::Update
+PENDING	CPopulation::m_TranslationArray	CGangs::ChooseGangPedModel	R	0x008D2618	122	1	3062857890	??R<lambda_1>@?1??AddPedInCar@CPopulation@@SAPAVCPed@@PAVCVehicle@@_NHH11@Z@QBE?AW4eModelID@@XZ; CPopulation::AddPedInCar
+PENDING	CPopulation::m_TranslationArray	CStreaming::StreamVehiclesAndPeds	R	0x008D2690	122	1	3062752881	CStreaming::Update
+PENDING	CPopulation::m_TranslationArray	CStreaming::StreamZoneModels_Gangs	R	0x008D2618	122	1	3062932923	CStreaming::StreamVehiclesAndPeds_Always; CStreaming::Update
+PENDING	CPopulation::m_bMoreCarsAndFewerPeds	CPopulation::FindCarMultiplierMotorway	R	0x00C0FCB5	951	1	3062752844	CCarCtrl::GenerateOneRandomCar; CGameLogic::LaRiotsActiveHere
+PENDING	CPopulation::m_nNumPedsInGroup	CStreaming::StreamZoneModels_Gangs	R	0x00C0ED14	950	1	3062932923	CStreaming::StreamVehiclesAndPeds_Always; CStreaming::Update
+PENDING	CPostEffects::m_HeatHazeFXHourOfDayStart	CWeather::Update	R	0x008D50D4	125	1	3062842895	CGame::Process; Idle
+PENDING	CPostEffects::m_HeatHazeFXTypeLast	CPostEffects::HeatHazeFXInit	R	0x008D50E4	125	1	3062589239	CPlayerSkin::Initialise; CTxdStore::Create
+PENDING	CPostEffects::m_bDisableAllPostEffect	CPostEffects::Render	R	0x00C402CF	1000	1	3062617794	
+PENDING	CPostEffects::m_bInCutscene	CPostEffects::IsVisionFXActive	R	0x00C402B7	1000	1	3062692821	CRenderer::RenderOneNonRoad; CVisibilityPlugins::RenderEntity
+PENDING	CPostEffects::m_bRainEnable	CPostEffects::Update	W	0x00C402D1	1000	1	3062632834	CGame::Process; Idle
+PENDING	CPostEffects::m_bSpeedFXUserFlagCurrentFrame	CCam::Process	W	0x008D5109	125	1	3062632834	CCamera::Process; rw::Camera::setNearPlane
+PENDING	CPostEffects::m_fWaterFXStartUnderWaterness	CWaterLevel::RenderWaterFog	R	0x008D514C	125	1	3062617793	FxSystemBP_c::Render; RwRenderStateSet
+PENDING	CPostEffects::ms_imf	RwRenderStateGet	W	0x00C4028C	1000	1	3062737837	C3dMarkers::User3dMarkersDraw; rw::d3d::setRwRenderState
+PENDING	CPostEffects::pRasterFrontBuffer	CPostEffects::SetupBackBufferVertex	R	0x00C402D8	1000	1	3062589239	__malloc_base; rw::TexDictionary::create
+PENDING	CRadar::m_fRadarOrientation	?A0x3255f448::SetRadarAngleAtan2	W	0x00BA8310	848	1	3062692836	CRadar::CalculateCachedSinCos; CRadar::DrawMap
+PENDING	CRadar::m_radarRange	CRadar::DrawRadarSection	R	0x00BA8314	848	1	3062992940	CRadar::DrawRadarSection
+PENDING	CRadar::m_radarRect	CRadar::SetupRadarRect	W	0x008D0920	120	1	3062692335	CRadar::CalculateCachedSinCos; CRadar::DrawRadarMap
+PENDING	CRadar::ms_RadarTrace	CRadar::ClearBlipForEntity	R	0x00BA8716	848	3	3062617856	??_ECObject@@UAEPAXI@Z; ~CAutomobile; ~CObject; ~CVehicle
+PENDING	CRadar::ms_RadarTrace	CRadar::DrawBlips	R	0x00BA9025	849	1	3062692838	??R<lambda_1>@?BB@??DrawRadar@CHud@@SAXXZ@QBE@MM@Z; CSprite2d::Draw
+PENDING	CRadar::ms_RadarTrace	CRadar::Initialise	R	0x00BA9025	850	2	3062614267	CGame::Init2
+PENDING	CRadar::vec2DRadarOrigin	CRadar::DrawMap	W	0x00BAA248	850	1	3062692836	CHud::DrawRadar
+PENDING	CRadar::vec2DRadarOrigin	CRadar::DrawRadarSection	R	0x00BAA248	850	1	3062992940	CRadar::DrawRadarSection
+PENDING	CReferences::aRefs	CEntity::CleanUpOldReference	R	0x00B9B9B8	836	21	3062693345	CCamera::Process; CCamera::UpdateTargetEntity; CEntityScanner::Clear; CEntityScanner::ScanForEntitiesInRange
+PENDING	CReferences::aRefs	CEntity::PruneReferences	R	0x00B9B9BC	837	6	3062647820	CAnimBlendClumpData::ForAllFrames; CBmx::ProcessControl; CCivilianPed::ProcessControl; CPed::ProcessControl
+PENDING	CReferences::aRefs	CEntity::RegisterReference	R	0x00B9BAC0	835	29	3062617825	CCamera::Process; CCamera::UpdateTargetEntity; CCarCtrl::SlowCarDownForOtherCar; CEntity::TransformFromObjectSpace
+PENDING	CReferences::aRefs	CReferences::Init	W	0x00B9B9A8	840	6	3062613419	CGame::Init1; CGame::Initialise
+PENDING	CReferences::pEmptyList	CEntity::CleanUpOldReference	R	0x00BA1768	841	1	3062752847	CPed::FlagToDestroyWhenNextProcessed; ~CVehicle
+PENDING	CReferences::pEmptyList	CEntity::RegisterReference	R	0x00BA1768	841	1	3062857891	CEntity::TransformFromObjectSpace
+PENDING	CReferences::pEmptyList	CReferences::Init	W	0x00BA1768	841	1	3062613419	CGame::Init1; CGame::Initialise
+PENDING	CRenderer::m_loadingPriority	CStreaming::Update	R	0x00B76850	798	1	3062617818	CGame::Process; Idle
+PENDING	CRenderer::m_pFirstPersonVehicle	CRenderer::RenderFirstPersonVehicle	R	0x00B745D4	796	1	3062617794	Idle; RenderEffects
+PENDING	CRenderer::ms_aInVisibleEntityPtrs	CRenderer::PreRender	R	0x00B745D8	796	1	3062812860	AppEventHandler; Idle
+PENDING	CRenderer::ms_aVisibleEntityPtrs	CRenderer::AddEntityToRenderList	W	0x00B75898	797	3	3062617199	??$?RV?$CPtrListSingleLink@PAVCBuilding@@@@@<lambda_1>@?1??ScanSectorList@CRenderer@@SAXHH@Z@QBE?A_PAAV?$CPtrListSingleLink@PAVCBuilding@@@@; CRenderer::ScanBigBuildingList; CRenderer::SetupScanLists
+PENDING	CRenderer::ms_aVisibleEntityPtrs	CRenderer::PreRender	R	0x00B758DC	797	1	3062812860	AppEventHandler; Idle
+PENDING	CRenderer::ms_aVisibleEntityPtrs	CRenderer::RenderRoads	R	0x00B75898	797	1	3062722834	Idle; RenderScene
+PENDING	CRenderer::ms_aVisibleLodPtrs	CRenderer::RenderEverythingBarRoads	R	0x00B748F8	796	1	3062722837	Idle; RenderScene
+PENDING	CRenderer::ms_bInTheSky	CRenderer::ConstructRenderList	W	0x00B76851	798	1	3062857893	AppEventHandler; Idle
+PENDING	CRenderer::ms_bRenderOutsideTunnels	CStreaming::Update	R	0x00B745C1	796	1	3062632820	CGame::Process; Idle
+PENDING	CRenderer::ms_bRenderTunnels	CRenderer::ConstructRenderList	W	0x00B745C0	796	1	3063022959	AppEventHandler; Idle
+PENDING	CRenderer::ms_bRenderTunnels	CRenderer::SetupMapEntityVisibility	R	0x00B745C0	796	1	3062782852	CRenderer::SetupEntityVisibility; __CIsqrt
+PENDING	CRenderer::ms_fFarClipPlane	CVisibilityPlugins::CalculateFadingAtomicAlpha	R	0x00B76848	798	1	3062692820	CVisibilityPlugins::RenderEntity; CVisibilityPlugins::RenderFadingEntities
+PENDING	CRenderer::ms_lowLodDistScale	CRenderer::SetupMapEntityVisibility	R	0x008CD804	117	1	3062782856	CRenderer::ScanBigBuildingList; CRenderer::SetupBigBuildingVisibility
+PENDING	CRenderer::ms_lowLodDistScale	CVisibilityPlugins::CalculateFadingAtomicAlpha	R	0x008CD804	117	1	3062692821	CVisibilityPlugins::RenderEntity; CVisibilityPlugins::RenderFadingEntities
+PENDING	CRenderer::ms_nNoOfVisibleEntities	CRenderer::RenderRoads	R	0x00B76844	798	1	3062722834	Idle; RenderScene
+PENDING	CRenderer::ms_nNoOfVisibleSuperLods	CRenderer::PreRender	R	0x00B76838	798	1	3062812860	AppEventHandler; Idle
+PENDING	CRenderer::ms_vecCameraPosition	CRenderer::SetupBigBuildingVisibility	R	0x00B76870	798	1	3062917901	CRenderer::ScanBigBuildingList
+PENDING	CRenderer::ms_vecCameraPosition	CRenderer::SetupEntityVisibility	R	0x00B76870	798	1	3062782852	??$?RV?$CPtrListSingleLink@PAVCBuilding@@@@@<lambda_1>@?1??ScanSectorList@CRenderer@@SAXHH@Z@QBE?A_PAAV?$CPtrListSingleLink@PAVCBuilding@@@@; CRenderer::SetupScanLists
+PENDING	CReplay::Buffers	CReplay::RecordPedDeleted	W	0x00998000	320	1	3063034992	??_ECCivilianPed@@UAEPAXI@Z; ~CPed
+PENDING	CReplay::Buffers	CReplay::RecordThisFrame	W	0x00980000	429	600	3062615759	??$FindObjectsKindaCollidingSectorList@V?$CPtrListDoubleLink@PAVCPed@@@@@CWorld@@SAXAAV?$CPtrListDoubleLink@PAVCPed@@@@ABVCVector@@M_NPAFFPA; ??$IterateSectors@V<lambda_1>@?1??FindObjectsKindaColliding@CWorld@@SAXABVCVector@@M_NPAFFPAPAVCEntity@@11111@Z@@CWorld@@SA_NHHHH$$QAV<lambd; ?A0x374796c5::PlacePedsInCircle; CBaseModelInfo::Get2dEffect
+PENDING	CReplay::Buffers	CReplay::RecordVehicleDeleted	W	0x009D8C10	384	3	3062715857	~CAutomobile; ~CVehicle
+PENDING	CReplay::Buffers	CReplay::StorePedUpdate	W	0x00980000	418	194	3062614693	??$IterateSectors@V<lambda_1>@?1??FindObjectsKindaColliding@CWorld@@SAXABVCVector@@M_NPAFFPAPAVCEntity@@11111@Z@@CWorld@@SA_NHHHH$$QAV<lambd; CCoverPoint; CReplay::RecordThisFrame; CVector::Magnitude
+PENDING	CReplay::Mode	CCover::Update	R	0x00A43088	491	1	3062632822	CalculateBoundingSphereRadiusCB; RwV3dLength
+PENDING	CReplay::Mode	CDarkel::DrawMessages	R	0x00A43088	491	1	3062992942	Idle; Render2dStuff
+PENDING	CReplay::Mode	CGame::Process	R	0x00A43088	491	1	3062752844	CTimer::UpdateVariables; Idle
+PENDING	CReplay::Mode	CHud::DrawAfterFade	R	0x00A43088	491	1	3062613407	AppEventHandler; FrontendIdle
+PENDING	CReplay::Mode	CPed::SetPedPositionInCar	R	0x00A43088	491	1	3062797854	
+PENDING	CReplay::Mode	CPed::UpdatePosition	R	0x00A43088	491	1	3062962922	CPed::ProcessControl; CPlayerPed::ProcessControl
+PENDING	CReplay::Mode	CStreaming::Update	R	0x00A43088	491	1	3062842894	CGame::Process; Idle
+PENDING	CReplay::Mode	RenderEffects	R	0x00A43088	491	1	3062617793	AppEventHandler; Idle
+PENDING	CReplay::Playback	CReplay::Init	W	0x0097FB64	295	1	3062617821	CGame::Process; CReplay::Update
+PENDING	CReplay::Record	CReplay::RecordVehicleDeleted	R	0x0097FB70	295	1	3062752846	~CAutomobile; ~CVehicle
+PENDING	CReplay::Update()::s_FrameRecordCounter	CReplay::Update	R	0x0097FB40	295	1	3062692843	CGame::Process; CTimer::UpdateVariables
+PENDING	CReplay::bReplayEnabled	CReplay::Init	W	0x008A6160	78	1	3062617821	CGame::Process; CReplay::Update
+PENDING	CReplay::bReplayEnabled	CReplay::Update	R	0x008A6160	78	1	3062842899	CGame::Process; Idle
+PENDING	CRopes::aRopes	CRopes::FindRope	R	0x00B76BDD	800	3	3062617826	CObject::ProcessControlLogic; CWorld::Process; ~CAutomobile; ~CVehicle
+PENDING	CRopes::aRopes	CRopes::Init	W	0x00B76BDD	799	2	3062614287	CGame::Init2; __free_base
+PENDING	CRopes::aRopes	CRopes::Render	R	0x00B76BDD	798	3	3062692832	Idle; RenderEffects
+PENDING	CRopes::aRopes	CRopes::Update	R	0x00B76BDD	799	3	3062617831	CGame::Process; CTimer::UpdateVariables; Idle
+PENDING	CScripted2dEffects::ms_effectPairs	CScripted2dEffects::Init	W	0x00C3BB04	997	3	3062614283	CTheScripts::Init
+PENDING	CSetPieces::NumSetPieces	CSetPieces::Init	W	0x00A957FC	573	1	3062613420	CGame::Init1; CGame::Initialise
+PENDING	CSetPieces::aSetPieces	CSetPiece::Update	R	0x00A96002	574	7	3062617820	CGame::Process; CHeli::UpdateHelis; CSetPieces::Update; __CIsqrt
+PENDING	CSetPieces::aSetPieces	CSetPieces::AddOne	W	0x00A96014	574	1	3062614428	??$CommandParser@$0EPI@$MP6AXW4eSetPieceType@@VCVector2D@@11111@Z1?AddOne@CSetPieces@@SAX0111111@Z@detail@script@notsa@@YA?AW4OpcodeResult@@; CRunningScript::Process
+PENDING	CShadows::aPermanentShadows	CShadows::UpdatePermanentShadows	R	0x00C4AC62	1011	2	3062617832	CCoronas::Update; CGame::Process; CGangWars::Update; CPopCycle::UpdatePercentages
+PENDING	CShadows::aPolyBunches	??R<lambda_2>@?1??CastShadowEntityXY@CShadows@@SAXPAVCEntity@@MMMMPAVCVector@@MMMMFEEEMMPAPAVCPolyBunch@@PAEH@Z@QBE@H@Z	R	0x00C4104C	1002	2	3062640424	__87except
+PENDING	CShadows::aPolyBunches	??R<lambda_2>@?1??CastShadowEntityXY@CShadows@@SAXPAVCEntity@@MMMMPAVCVector@@MMMMFEEEMMPAPAVCPolyBunch@@PAEH@Z@QBE@H@Z	W	0x00C43000	1003	1	3062692292	__87except; __startOneArgErrorHandling
+PENDING	CShadows::aPolyBunches	CShadows::Init	W	0x00C4104C	1009	9	3062614275	CGame::Init2; __free_base
+PENDING	CShadows::aPolyBunches	CShadows::RenderStaticShadows	R	0x00C41050	1001	7	3062647838	Idle; RenderScene; RwCameraBeginUpdate
+PENDING	CShadows::aStaticShadows	CShadows::Init	W	0x00C4A030	1010	1	3062614275	CGame::Init2; __free_base
+PENDING	CShadows::aStaticShadows	CShadows::UpdateStaticShadows	R	0x00C4A034	1010	1	3062692824	Idle; RenderScene
+PENDING	CShinyTexts::NumShinyTexts	CShinyTexts::RegisterOne	R	0x00C7C6F8	1060	1	3062782858	__CIsqrt; __math_exit
+PENDING	CShinyTexts::aShinyTexts	CShinyTexts::RegisterOne	W	0x00C7D258	1061	1	3062752858	CEntity::ProcessLightsForEntity; CTrafficLights::DisplayActualLight
+PENDING	CShinyTexts::aShinyTexts	CShinyTexts::Render	R	0x00C7D2AC	1061	1	3062707837	CSpecialFX::Render; RenderEffects
+PENDING	CShopping::ms_keys	CShopping::Init	W	0x00A97D90	576	2	3062614288	CGame::Init2; __free_base
+PENDING	CSkidmarks::m_aSkidmarks	CSkidmark::Render	R	0x00C7A006	1060	3	3062692832	CSkidmarks::Render; RwRenderStateSet
+PENDING	CSkidmarks::m_aSkidmarks	CSkidmark::Update	R	0x00C79BFE	1059	3	3062617820	CGame::Process; CSkidmarks::Update
+PENDING	CSkidmarks::m_aSkidmarks	CSkidmarks::Init	W	0x00C7A006	1060	3	3062614276	CGame::Init2; __free_base
+PENDING	CSkidmarks::m_pTexture	CSkidmarks::Init	W	0x00C79A88	1057	1	3062614276	CGame::Init2; __free_base
+PENDING	CSkidmarks::m_pTexture	CSkidmarks::Render	R	0x00C79A88	1057	1	3062692831	Idle; RenderEffects
+PENDING	CSpecialFX::bSnapShotActive	CWeather::Update	R	0x00C7C714	1060	1	3062632823	CGame::Process; Idle
+PENDING	CSpecialFX::bVideoCam	CSpecialFX::Render2DFXs	R	0x00C7C70C	1060	1	3062617796	
+PENDING	CSprite2d::maVertices	CSprite2d::SetVertices	W	0x00C80468	1064	2	3062617796	CCamera::DrawBordersForWideScreen; CRadar::DrawRadarSection; CSprite2d::DrawRect
+PENDING	CSprite2d::nextBufferVertex	CSprite2d::AddToBuffer	R	0x00C8045C	1064	1	3062602790	CFont::PrintChar; RwRenderStateSet
+PENDING	CSprite2d::nextBufferVertex	CSprite2d::InitPerFrame	W	0x00C8045C	1064	1	3062589261	CLoadingScreen::RenderSplash; RwRenderStateSet
+PENDING	CSprite::m_bFlushSpriteBufferSwitchZTest	CSprite::RenderBufferedOneXLUSprite	W	0x00C6A15C	1042	1	3062692826	CClouds::RenderBottomFromHeight; CSprite::CalcScreenCoors
+PENDING	CSprite::m_bFlushSpriteBufferSwitchZTest	CSprite::RenderBufferedOneXLUSprite_Rotate_Dimension	W	0x00C6A15C	1042	1	3062722834	CSprite::CalcScreenCoors; rw::d3d::setRasterStage
+PENDING	CSprite::m_f2DNearScreenZ	CSprite::InitSpriteBuffer	W	0x00C4B8D8	1011	1	3062589858	AppEventHandler; FrontendIdle
+PENDING	CStats::FavoriteRadioStationList	CMenuManager::DoSettingsBeforeStartingAGame	W	0x00B78E58	800	1	3062613405	CMenuManager::ProcessMenuOptions; CMenuManager::SwitchToNewScreen
+PENDING	CStats::StatMessage	CStats::CheckForStatsMessage	R	0x00B78202	800	1	3062797855	?A0x5b66f2e6::ProcessDistanceStats; CPlayerInfo::Process
+PENDING	CStats::StatTypesFloat	CStats::GetFatAndMuscleModifier	R	0x00B793D4	801	1	3062707838	CHud::RenderHealthBar; CPlayerPed::GetPlayerInfoForThisPlayerPed
+PENDING	CStats::StatTypesFloat	CStats::IncrementStat	R	0x00B7938C	801	1	3062797855	?A0x5b66f2e6::ProcessDistanceStats; CPedIntelligence::GetTaskJetPack
+PENDING	CStats::StatTypesInt	CStats::GetStatValue	R	0x00B790F4	801	1	3062613407	CAERadioTrackManager::CheckForMissionStatsChanges; CAERadioTrackManager::Service
+PENDING	CStencilShadows::m_StencilShadowObjects	CEntity::ResolveReferences	R	0x00C6A5F8	1042	1	3062752847	~CEntity; ~CPhysical
+PENDING	CStencilShadows::m_StencilShadowObjects	CStencilShadows::Render	R	0x00C6A2C4	1042	3	3062707828	CStencilShadows::RenderStencilShadows; RenderScene
+PENDING	CStencilShadows::pFirstActiveStencilShadowObject	CStencilShadows::RegisterStencilShadows	R	0x00C6A16C	1042	2	3062617833	__CIsqrt; __math_exit
+PENDING	CStreaming::ms_DefaultCopBikerModel	CStreaming::StreamCopModels	R	0x008A5AB0	77	1	3062752880	CStreaming::StreamVehiclesAndPeds; CStreaming::Update
+PENDING	CStreaming::ms_aInfoForModel	??$?RV?$CPtrListDoubleLink@PAVCDummy@@@@@<lambda_1>@?1??ScanSectorList@CRenderer@@SAXHH@Z@QBE?A_PAAV?$CPtrListDoubleLink@PAVCDummy@@@@@Z	R	0x008EB224	147	1	3062752853	CRenderer::ScanSectorList
+PENDING	CStreaming::ms_aInfoForModel	??$?RV?$CPtrListDoubleLink@PAVCObject@@@@@<lambda_1>@?1??ScanSectorList@CRenderer@@SAXHH@Z@QBE?A_PAAV?$CPtrListDoubleLink@PAVCObject@@@@@Z	R	0x008E96CC	155	2	3062664627	CRenderer::ScanSectorList; CRenderer::SetupScanLists
+PENDING	CStreaming::ms_aInfoForModel	??$?RV?$CPtrListSingleLink@PAVCBuilding@@@@@<lambda_1>@?1??ScanSectorList@CRenderer@@SAXHH@Z@QBE?A_PAAV?$CPtrListSingleLink@PAVCBuilding@@@@	R	0x008E7D40	144	4	3062617834	CRenderer::ScanSectorList; CRenderer::SetupScanLists
+PENDING	CStreaming::ms_aInfoForModel	??$ProcessEntitiesInSectorList@V?$CPtrListDoubleLink@PAVCDummy@@@@@CStreaming@@SAXAAV?$CPtrListDoubleLink@PAVCDummy@@@@MMMMMMMH@Z	R	0x008EAC98	148	5	3062647814	CStreaming::AddModelsToRequestList
+PENDING	CStreaming::ms_aInfoForModel	??$ProcessEntitiesInSectorList@V?$CPtrListDoubleLink@PAVCPed@@@@@CStreaming@@SAXAAV?$CPtrListDoubleLink@PAVCPed@@@@MMMMMMMH@Z	R	0x008E5040	141	6	3062707843	CStreaming::AddModelsToRequestList
+PENDING	CStreaming::ms_aInfoForModel	??$ProcessEntitiesInSectorList@V?$CPtrListSingleLink@PAVCBuilding@@@@@CStreaming@@SAXAAV?$CPtrListSingleLink@PAVCBuilding@@@@MMMMMMMH@Z	R	0x008E7CF0	227	36	3062632821	CStreaming::AddModelsToRequestList; CStreaming::ConvertBufferToObject
+PENDING	CStreaming::ms_aInfoForModel	CColStore::EnsureCollisionIsInMemory	R	0x0095EEE0	263	2	3062647815	CGame::Process; CStreaming::Update
+PENDING	CStreaming::ms_aInfoForModel	CGangs::ChooseGangPedModel	R	0x008E54C8	141	3	3062705305	??R<lambda_1>@?1??AddPedInCar@CPopulation@@SAPAVCPed@@PAVCVehicle@@_NHH11@Z@QBE?AW4eModelID@@XZ; CPopCycle::FindNewPedType; CPopulation::AddPedInCar; CPopulation::AddToPopulation
+PENDING	CStreaming::ms_aInfoForModel	CHeli::UpdateHelis	R	0x008E73A4	143	1	3062617820	CGame::Process; Idle
+PENDING	CStreaming::ms_aInfoForModel	CIplStore::EnsureIplsAreInMemory	R	0x00960B3C	264	1	3062647815	CGame::Process; CStreaming::Update
+PENDING	CStreaming::ms_aInfoForModel	CPopulation::ChooseCivilianOccupation	R	0x008E5040	141	2	3062842897	CPopCycle::FindNewPedType; CPopulation::AddToPopulation
+PENDING	CStreaming::ms_aInfoForModel	CScriptsForBrains::StartOrRequestNewStreamedScriptBrain	R	0x00964E94	268	1	3062617819	CTheScripts::Process; CTheScripts::ProcessWaitingForScriptBrainArray
+PENDING	CStreaming::ms_aInfoForModel	CStreaming::AddModelsToRequestList	R	0x008E51D0	148	10	3062632821	CStreaming::Update
+PENDING	CStreaming::ms_aInfoForModel	CStreaming::GetNextFileOnCd	R	0x00947560	243	3	3062647815	CStreaming::LoadRequestedModels; CStreaming::RequestModelStream
+PENDING	CStreaming::ms_aInfoForModel	CStreaming::LoadScene	R	0x008E900A	266	93	3062639796	??$CommandParser@$0KAL@$MP6AXVCVector@@M@Z1?LoadSceneInDirection@?A0x49f15004@@YAX0M@Z@detail@script@notsa@@YA?AW4OpcodeResult@@PAVCRunningS; ??$_Visit@U?$_Default_arg_formatter@V?$back_insert_iterator@V?$_Fmt_buffer@D@std@@@std@@D@__p2286@std@@@?$basic_format_arg@V?$basic_format_c; ?A0x49f15004::LoadSceneInDirection; CCutsceneMgr::LoadCutSceneFile
+PENDING	CStreaming::ms_aInfoForModel	CStreaming::ProcessLoadingChannel	R	0x008EAFC8	146	1	3062692839	CStreaming::LoadRequestedModels; CStreaming::Update
+PENDING	CStreaming::ms_aInfoForModel	CStreaming::RemoveLeastUsedModel	R	0x008E96C2	252	28	3062739628	CLoadedCarGroup::CountMembers; CStreaming::MakeSpaceFor; CStreaming::ProcessLoadingChannel
+PENDING	CStreaming::ms_aInfoForModel	CStreaming::RemoveModel	R	0x009511F0	255	7	3062639762	CAtomicModelInfo::DeleteRwObject; CBaseModelInfo::RemoveTexDictionaryRef; CClumpModelInfo::DeleteRwObject; CIplStore::LoadIpls
+PENDING	CStreaming::ms_aInfoForModel	CStreaming::RequestModel	R	0x008E54C8	265	84	3062632457	??$?RV?$CPtrListDoubleLink@PAVCDummy@@@@@<lambda_1>@?1??ScanSectorList@CRenderer@@SAXHH@Z@QBE?A_PAAV?$CPtrListDoubleLink@PAVCDummy@@@@@Z; ??$?RV?$CPtrListDoubleLink@PAVCObject@@@@@<lambda_1>@?1??ScanSectorList@CRenderer@@SAXHH@Z@QBE?A_PAAV?$CPtrListDoubleLink@PAVCObject@@@@@Z; ??$?RV?$CPtrListSingleLink@PAVCBuilding@@@@@<lambda_1>@?1??ScanSectorList@CRenderer@@SAXHH@Z@QBE?A_PAAV?$CPtrListSingleLink@PAVCBuilding@@@@; CCheat::VehicleCheat
+PENDING	CStreaming::ms_aInfoForModel	CStreaming::RequestModelStream	R	0x008F5198	241	7	3062639774	CStreaming::LoadAllRequestedModels; CStreaming::LoadRequestedModels; CStreaming::LoadScene; CStreaming::Update
+PENDING	CStreaming::ms_aInfoForModel	CStreaming::SetMissionDoesntRequireModel	R	0x008E6436	268	9	3062639630	??$CommandParser@$0JAP@$MP6AXH@Z1?MarkStreamedScriptAsNoLongerNeeded@?A0xc0da8699@@YAXH@Z@detail@script@notsa@@YA?AW4OpcodeResult@@PAVCRunni; CCutsceneMgr::DeleteCutsceneData; CCutsceneMgr::DeleteCutsceneData_overlay; CRunningScript::Process
+PENDING	CStreaming::ms_aInfoForModel	CStreaming::SetModelAndItsTxdDeletable	R	0x00947C5E	240	9	3062639777	CStreaming::LoadScene; CStreaming::RequestModel; CStreaming::StreamCopModels; CStreaming::StreamVehiclesAndPeds
+PENDING	CStreaming::ms_aInfoForModel	CStreaming::SetModelIsDeletable	R	0x00961F1E	266	3	3062639642	CClothes::ConstructPedModel; CClothes::RequestMotionGroupAnims; CTaskSimplePlayerOnFoot::PlayIdleAnimations; CTaskSimplePlayerOnFoot::PlayerControlZelda
+PENDING	CStreaming::ms_aInfoForModel	CStreaming::StreamCopModels	R	0x008E62B0	142	2	3062812982	CStreaming::StreamVehiclesAndPeds; CStreaming::Update
+PENDING	CStreaming::ms_aInfoForModel	CStreaming::WeAreTryingToPhaseVehicleOut	R	0x008E6D8C	142	6	3062692916	BuildShadowVolume; CLoadedCarGroup::PickRandomCar; CPopulation::PickGangCar; __startOneArgErrorHandling
+PENDING	CStreaming::ms_aInfoForModel	CStreamingInfo::AddToList	R	0x00965488	269	1	3062692836	CRadar::StreamRadarSections; CStreaming::RequestModel
+PENDING	CStreaming::ms_aInfoForModel	CStreamingInfo::AddToList	W	0x008F62E2	227	6	3062692836	??$?RV?$CPtrListSingleLink@PAVCBuilding@@@@@<lambda_1>@?1??ScanSectorList@CRenderer@@SAXHH@Z@QBE?A_PAAV?$CPtrListSingleLink@PAVCBuilding@@@@; CRadar::StreamRadarSections; CRenderer::ScanBigBuildingList; CStreaming::ConvertBufferToObject
+PENDING	CStreaming::ms_aInfoForModel	CStreamingInfo::GetCdPosn	R	0x0093A4BF	226	1	3062692839	CStreaming::GetNextFileOnCd; CStreaming::RequestModelStream
+PENDING	CStreaming::ms_aInfoForModel	CStreamingInfo::Init	W	0x008E5000	269	129	3062613536	CFileLoader::LoadLevel; CStreaming::Init2
+PENDING	CStreaming::ms_aInfoForModel	CStreamingInfo::RemoveFromList	W	0x008E54B8	248	107	3062617834	??$?RV?$CPtrListDoubleLink@PAVCDummy@@@@@<lambda_1>@?1??ScanSectorList@CRenderer@@SAXHH@Z@QBE?A_PAAV?$CPtrListDoubleLink@PAVCDummy@@@@@Z; ??$?RV?$CPtrListDoubleLink@PAVCObject@@@@@<lambda_1>@?1??ScanSectorList@CRenderer@@SAXHH@Z@QBE?A_PAAV?$CPtrListDoubleLink@PAVCObject@@@@@Z; ??$?RV?$CPtrListSingleLink@PAVCBuilding@@@@@<lambda_1>@?1??ScanSectorList@CRenderer@@SAXHH@Z@QBE?A_PAAV?$CPtrListSingleLink@PAVCBuilding@@@@; CBaseModelInfo::RemoveTexDictionaryRef
+PENDING	CStreaming::ms_disableStreaming	??$?RV?$CPtrListSingleLink@PAVCBuilding@@@@@<lambda_1>@?1??ScanSectorList@CRenderer@@SAXHH@Z@QBE?A_PAAV?$CPtrListSingleLink@PAVCBuilding@@@@	R	0x009654B0	269	1	3062752852	CRenderer::ScanSectorList; CRenderer::SetupScanLists
+PENDING	CStreaming::ms_disableStreaming	CRenderer::ScanBigBuildingList	R	0x009654B0	269	1	3062917899	
+PENDING	CStreaming::ms_disableStreaming	CStreaming::Update	R	0x009654B0	269	1	3062617818	CGame::Process; Idle
+PENDING	CStreaming::ms_memoryAvailable	CStreaming::MakeSpaceFor	R	0x008A5A80	77	1	3062589862	??R<lambda_1>@?1??LoadAllTextures@CMenuManager@@QAEXXZ@QBE@IPBD0II@Z; CMenuManager::LoadAllTextures
+PENDING	CStreaming::ms_memoryUsedBytes	CStreaming::MakeSpaceFor	R	0x008E4CB4	140	1	3062589862	??R<lambda_1>@?1??LoadAllTextures@CMenuManager@@QAEXXZ@QBE@IPBD0II@Z; CMenuManager::LoadAllTextures
+PENDING	CStreaming::ms_numModelsRequested	??$I_AddSayEvent@$0A@@CAEPedSpeechAudioEntity@@IAEFVCVector@@W4eAudioEvents@@W4eGlobalSpeechContext@@IM_N33@Z	R	0x008E4CB8	140	1	3062962921	CAEPedSpeechAudioEntity::AddSayEvent; CPed::Say
+PENDING	CStreaming::ms_numModelsRequested	CStreaming::Update	R	0x008E4CB8	140	1	3062617818	CGame::Process; GetOSWPerformanceTime
+PENDING	CStreaming::ms_pStartRequestedList	CStreaming::RequestModel	R	0x008E4C58	140	1	3062707840	CRadar::DrawRadarMap; CRadar::StreamRadarSections
+PENDING	CStreaming::ms_renderEntityLink	CStreaming::RenderEntity	R	0x008E48A0	140	1	3062692817	CEntity::Render; CRenderer::RenderOneNonRoad
+PENDING	CStreaming::ms_renderEntityLink	CStreaming::StartRenderEntities	W	0x008E48A0	140	1	3062812858	AppEventHandler; Idle
+PENDING	CStreaming::ms_rwObjectInstances	CStreaming::RenderEntity	W	0x009654F8	269	1	3062722834	CEntity::Render; CRenderer::RenderRoads
+PENDING	CStreaming::ms_rwObjectInstances	CStreaming::RenderEntity	R	0x009654F8	269	1	3062812866	CEntity::Render; CRenderer::RenderRoads
+PENDING	CStreaming::ms_startLoadedList	CStreaming::RequestModel	R	0x008E4C60	140	1	3062752852	??$?RV?$CPtrListSingleLink@PAVCBuilding@@@@@<lambda_1>@?1??ScanSectorList@CRenderer@@SAXHH@Z@QBE?A_PAAV?$CPtrListSingleLink@PAVCBuilding@@@@; CRenderer::SetupScanLists
+PENDING	CStreamingInfo::ms_pArrayBase	CStreamingInfo::RemoveFromList	R	0x009654B4	269	1	3062827870	??$?RV?$CPtrListSingleLink@PAVCBuilding@@@@@<lambda_1>@?1??ScanSectorList@CRenderer@@SAXHH@Z@QBE?A_PAAV?$CPtrListSingleLink@PAVCBuilding@@@@; CStreaming::RequestModel
+PENDING	CStuntJumpManager::mp_poolStuntJumps	CStuntJumpManager::Update	R	0x00A9A888	578	1	3062797856	CGame::Process; CTimer::UpdateVariables
+PENDING	CTaskComplexFollowLeaderInFormation::ms_offsets	CPedGroupDefaultTaskAllocatorRandom::AllocateDefaultTasks	R	0x00C196EC	961	1	3062614366	CPedGroupDefaultTaskAllocatorRandom::AllocateDefaultTasks
+PENDING	CTaskComplexFollowLeaderInFormation::ms_offsets	CTaskComplexGangFollower::CalculateOffsetPosition	R	0x00C19730	961	1	3062617824	CTask::IsGoToTask; CTaskManager::GetLastTaskOf
+PENDING	CTaskSequences::ms_taskSequence	CTaskComplexSequence::Flush	R	0x00C18000	960	1	3062614283	CTaskSequences::Init; CTheScripts::Init
+PENDING	CTaskSimpleGoTo::ms_fLookAtThresholdDotProduct	CTaskSimpleGoTo::SetUpIK	R	0x00C18D48	960	1	3062639880	CTaskSimpleGoToPoint::ProcessPed
+PENDING	CTempColModels::ms_colModelCutObj	CCutsceneMgr::Update_overlay	W	0x00968A54	272	1	3062617818	CGame::Process; CTimer::GetCurrentTimeInCycles
+PENDING	CTempColModels::ms_colModelPed1	CEntity::GetIsOnScreen	R	0x00968E14	272	1	3062692843	CEntity::UpdateAnim; CWorld::Process
+PENDING	CTempColModels::ms_colModelPed1	CEntity::TransformFromObjectSpace	R	0x00968E08	272	1	3062857891	CEntity::GetBoundCentre; CPhysical::GetBoundRect
+PENDING	CTempColModels::ms_colModelPed1	CPed::ProcessEntityCollision	W	0x00968E14	272	1	3062797853	CPhysical::ApplyCollision
+PENDING	CTempColModels::ms_colModelWeapon	CObject::CanBeUsedToTakeCoverBehind	R	0x00968FE4	272	1	3062902906	CCover::Update; CGame::Process
+PENDING	CTheCarGenerators::CarGeneratorArray	CTheCarGenerators::Init	W	0x00C2800D	979	4	3062613424	CGame::Init1; CGame::Initialise
+PENDING	CTheCarGenerators::CarGeneratorArray	CTheCarGenerators::Process	R	0x00C2800D	979	16	3062691651	CGame::Process; CTimer::UpdateVariables
+PENDING	CTheCarGenerators::CarGeneratorArray	CTheCarGenerators::RemoveCarGenerators	R	0x00C2800C	979	4	3062639763	CIplStore::LoadIpls; CStreaming::RemoveModel
+PENDING	CTheCarGenerators::NumOfCarGenerators	CTheCarGenerators::Init	W	0x00C279D4	975	1	3062613423	CGame::Init1; CGame::Initialise
+PENDING	CTheCarGenerators::ProcessCounter	CTheCarGenerators::Process	R	0x00C279D1	975	1	3062707845	CGame::Process; CTimer::UpdateVariables
+PENDING	CTheScripts::CommandsExecuted	CTheScripts::Process	W	0x00A447F4	492	1	3062632823	CWeather::Update
+PENDING	CTheScripts::DbgFlag	?A0x487195b3::LocateChar2D	R	0x00859CF8	1	1	3062614626	??$CommandParser@$0OM@$MP6A_NAAVCRunningScript@@AAVCPed@@VCVector2D@@2_N@Z1?LocateCharAnyMeans2D@?A0x487195b3@@YA@01223@Z@detail@script@nots; ?A0x487195b3::LocateCharAnyMeans2D
+PENDING	CTheScripts::DbgFlag	CRadar::DrawEntityBlip	R	0x00859CF8	1	1	3062707841	CRadar::DisplayThisBlip; CRadar::DrawCoordBlip
+PENDING	CTheScripts::EntitiesWaitingForScriptBrain	CTheScripts::ProcessWaitingForScriptBrainArray	R	0x00A476B0	495	1	3062617819	CTheScripts::Process; CWeather::Update
+PENDING	CTheScripts::IntroRectangles	??$?RUtScriptRectangle@@AAV?$array@UtScriptRectangle@@$0IA@@std@@@_Fill_fn@ranges@std@@SA?AV?$_Array_iterator@UtScriptRectangle@@$0IA@@2@AAV	W	0x00A93000	571	1	3062632824	CTheScripts::Process; CWeather::Update
+PENDING	CTheScripts::IntroRectangles	CTheScripts::DrawScriptSpritesAndRectangles	R	0x00A92D6C	572	3	3062613407	CHud::DrawScriptText
+PENDING	CTheScripts::IntroTextLines	??$?RUtScriptText@@AAV?$array@UtScriptText@@$0GA@@std@@@_Fill_fn@ranges@std@@SA?AV?$_Array_iterator@UtScriptText@@$0GA@@2@AAV?$array@UtScrip	W	0x00A92000	570	1	3062632824	CTheScripts::Process; CWeather::Update
+PENDING	CTheScripts::IntroTextLines	CHud::DrawScriptText	R	0x00A9141C	569	1	3062613407	
+PENDING	CTheScripts::MissionCleanUp	CColStore::LoadCollision	R	0x00A90850	568	1	3062632822	CGame::Process; CStreaming::Update
+PENDING	CTheScripts::NumberOfScriptSearchLights	RenderEffects	R	0x00A90830	568	1	3062617793	AppEventHandler; Idle
+PENDING	CTheScripts::OnAMissionFlag	CTheScripts::IsPlayerOnAMission	R	0x00A476AC	495	1	3062692838	CRadar::DrawCoordBlip; CRadar::DrawRadarSprite
+PENDING	CTheScripts::ScriptSearchLightArray	CTheScripts::ProcessAllSearchLights	R	0x00A94D68	572	2	3062617819	CMissionCleanup::CheckIfCollisionHasLoadedForMissionObjects; CStuckCarCheck::Process; CTheScripts::Process; CWeather::Update
+PENDING	CTheScripts::ScriptSpace	??$CommandParser@$03$MP6AXAAHH@Z1??$AssignTo@HH@?A0xb85bb4f1@@YAX0H@Z@detail@script@notsa@@YA?AW4OpcodeResult@@PAVCRunningScript@@@Z	W	0x00A522A8	506	1	3062617819	CRunningScript::Process; CTheScripts::Process
+PENDING	CTheScripts::ScriptSpace	??$CommandParser@$0BLN@$MP6AIXZ1?GetGameTimer@?A0x2fd53a4f@@YAIXZ@detail@script@notsa@@YA?AW4OpcodeResult@@PAVCRunningScript@@@Z	W	0x00A4EBF0	502	1	3062617820	CRunningScript::Process; CTheScripts::Process
+PENDING	CTheScripts::ScriptSpace	??$Read@H@script@notsa@@YAHPAVCRunningScript@@@Z	R	0x00A49968	499	9	3062617819	??$CommandParser@$0BI@$MP6A_NHH@Z1??$IsGreater@H@?A0xb85bb4f1@@YA_NHH@Z@detail@script@notsa@@YA?AW4OpcodeResult@@PAVCRunningScript@@@Z; ??$CommandParser@$0CFG@$MP6A?AUCompareFlagUpdate@script@notsa@@AAVCPlayerInfo@@@Z1?IsPlayerPlaying@?A0x3113e4d0@@YA?AU123@0@Z@detail@script@; ??$CommandParser@$0CI@$MP6A_NHH@Z1??$IsGreaterEqual@H@?A0xb85bb4f1@@YA_NHH@Z@detail@script@notsa@@YA?AW4OpcodeResult@@PAVCRunningScript@@@Z; ??$CommandParser@$0DI@$MP6A_NHH@Z1??$IsEqual@H@?A0xb85bb4f1@@YA_NHH@Z@detail@script@notsa@@YA?AW4OpcodeResult@@PAVCRunningScript@@@Z
+PENDING	CTheScripts::ScriptSpace	??$StoreArg@I@script@notsa@@YAXPAVCRunningScript@@ABI@Z	W	0x00A4ACE8	498	1	3062707844	??$CommandParser@$0JOI@$MP6AIAAVCPed@@@Z1?GetCharAreaVisible@?A0x487195b3@@YAI0@Z@detail@script@notsa@@YA?AW4OpcodeResult@@PAVCRunningScript; CRunningScript::Process
+PENDING	CTheScripts::ScriptSpace	CRunningScript::Process	R	0x00A583E2	512	35	3062617819	CTheScripts::Process; CWeather::Update
+PENDING	CTheScripts::ScriptSpace	CTheScripts::Init	W	0x00A49960	563	67	3062614277	
+PENDING	CTheScripts::ScriptSpace	CTheScripts::IsPlayerOnAMission	R	0x00A49FC4	497	1	3062692838	CRadar::DrawCoordBlip; CRadar::DrawRadarSprite
+PENDING	CTheScripts::ScriptSpace	_memcpy	W	0x00A52D0C	506	1	3062715146	??$CommandParser@$0IPB@$MP6A?AW4OpcodeResult@@AAVCRunningScript@@VCVector@@@Z1?GetNameOfInfoZone@?A0xf4122c6d@@YA?AW41@01@Z@detail@script@no; ?A0xf4122c6d::GetNameOfInfoZone
+PENDING	CTheScripts::ScriptSphereArray	CTheScripts::DrawScriptSpheres	R	0x00A91268	569	1	3062632824	CTheScripts::Process; CWeather::Update
+PENDING	CTheScripts::StreamedScripts	CStreamedScripts::Initialise	W	0x00A47B60	496	2	3062613542	CFileLoader::LoadLevel; CStreaming::Init2
+PENDING	CTheScripts::SuppressedVehicleModels	CTheScripts::HasCarModelBeenSuppressed	R	0x00A44940	492	1	3062752845	CLoadedCarGroup::PickRandomCar; CPopulation::PickGangCar
+PENDING	CTheScripts::UpsideDownCars	CUpsideDownCarCheck::UpdateTimers	R	0x00A4892C	496	1	3062617818	CTheScripts::Process; CWeather::Update
+PENDING	CTheScripts::UsedObjectArray	??$CommandParser@$0CBD@$MP6AHAAVCRunningScript@@U?$StrongAlias@W4eModelID@@$0A@@detail@script@notsa@@HVCVector@@@Z1?CreatePickup@?A0x05fbab3	R	0x00A4503C	493	1	3062726685	??$CommandParser@$0CBF@$MP6AXH@Z1?RemovePickup@?A0x05fbab38@@YAXH@Z@detail@script@notsa@@YA?AW4OpcodeResult@@PAVCRunningScript@@@Z; CRunningScript::Process
+PENDING	CTheScripts::UsedObjectArray	??$CommandParser@$0CEH@$MP6AXPAVCRunningScript@@U?$StrongAlias@W4eModelID@@$0A@@detail@script@notsa@@@Z1?LoadModel@Model@?A0x56543d95@@YAX01	R	0x00A4565C	493	1	3062639879	CRunningScript::Process; CTheScripts::Process
+PENDING	CTheScripts::UsedObjectArray	??$CommandParser@$0CEJ@$MP6AXPAVCRunningScript@@U?$StrongAlias@W4eModelID@@$0A@@detail@script@notsa@@@Z1?MarkModelNotNeeded@Model@?A0x56543d	R	0x00A4565C	493	1	3062691648	CRunningScript::Process; CTheScripts::Process
+PENDING	CTheScripts::UsedObjectArray	CTheScripts::Init	W	0x00A45000	494	2	3062614281	
+PENDING	CTheScripts::bDrawCrossHair	CHud::DrawCrossHairs	R	0x00A44490	492	1	3062692834	RwRenderStateSet; rw::d3d::setRwRenderState
+PENDING	CTheScripts::bDrawSubtitlesBeforeFade	CHud::Draw	R	0x00A44488	492	1	3062617796	Idle; Render2dStuff
+PENDING	CTheScripts::bDrawSubtitlesBeforeFade	CMessages::Display	R	0x00A44488	492	1	3062589870	__free_base; __malloc_base
+PENDING	CTheScripts::bPlayerIsOffTheMap	CRadar::DrawRadarSection	R	0x00A444A4	492	1	3062992939	
+PENDING	CTheScripts::bPlayerIsOffTheMap	CTheZones::Update	R	0x00A444A4	492	1	3062647816	CGame::Process; Idle
+PENDING	CTheScripts::pActiveScripts	CTheScripts::Process	R	0x00A8B42C	563	1	3062692840	CWeather::Update
+PENDING	CTheScripts::pIdleScripts	CTheScripts::StartNewScript	R	0x00A8B428	563	1	3062617819	CScriptsForBrains::StartNewStreamedScriptBrain; CStreamedScripts::StartNewStreamedScript
+PENDING	CTheZones::NavigationZoneArray	CTheZones::FindSmallestZoneForPosition	R	0x00BA37AA	846	4	3062617821	CCarCtrl::GenerateOneRandomCar; CPlaceName::CalcPosition; CPlaceName::Process; CTheZones::GetZoneInfo
+PENDING	CTheZones::NavigationZoneArray	CTheZones::Init	W	0x00BA3798	845	3	3062613420	CGame::Init1; CGame::Initialise
+PENDING	CTheZones::TotalNumberOfMapZones	CTheZones::GetLevelFromPosition	R	0x00BA1900	841	1	3062647816	CTheZones::Update; RpClumpForAllAtomics
+PENDING	CTheZones::ZoneInfoArray	CCarCtrl::ChooseModel	R	0x00BA28A8	842	2	3062752844	CCarCtrl::GenerateOneRandomCar; CGameLogic::LaRiotsActiveHere
+PENDING	CTheZones::ZoneInfoArray	CPopCycle::FindNewPedType	R	0x00BA2382	842	2	3062842897	CPopulation::AddToPopulation
+PENDING	CTheZones::ZoneInfoArray	CPopCycle::Update	R	0x00BA2806	842	2	3062617832	CGame::Process; CTimer::UpdateVariables; Idle
+PENDING	CTheZones::ZoneInfoArray	CStreaming::StreamZoneModels_Gangs	R	0x00BA2373	842	4	3062692839	CCamera::CalculateGroundHeight; CStreaming::StreamVehiclesAndPeds_Always; CStreaming::Update
+PENDING	CTheZones::ZoneInfoArray	CTheZones::InitZonesPopulationSettings	R	0x00BA200E	842	1	3062613420	CGame::Init1; CTheZones::Init
+PENDING	CTheZones::ZonesVisited	CTheZones::Update	R	0x00BA3787	843	2	3062647816	CGame::Process; CTimer::UpdateVariables; Idle
+PENDING	CTimeCycle::m_BrightnessAddedToAmbientRed	SetLightColoursForPedsCarsAndObjects	R	0x00B79E38	801	1	3062692822	CRenderer::SetupLightingForEntity; CVehicle::SetupLighting
+PENDING	CTimeCycle::m_CurrentColours	CPed::PreRenderAfterTest	R	0x00B7C4E8	804	1	3062812859	CEntity::PreRender; CRenderer::PreRender
+PENDING	CTimeCycle::m_CurrentColours	CPostEffects::Render	R	0x00B7C534	804	1	3062617794	
+PENDING	CTimeCycle::m_CurrentColours	CShadows::RenderExtraPlayerShadows	R	0x00B7C4E8	804	1	3062767848	
+PENDING	CTimeCycle::m_CurrentColours	CStencilShadows::RenderStencilShadows	R	0x00B7C4E8	804	1	3062707835	Idle; RenderScene
+PENDING	CTimeCycle::m_CurrentColours	CTimeCycle::GetAmbientRed	R	0x00B7C4A0	804	1	3063022959	Idle; SetLightsWithTimeOfDayColour
+PENDING	CTimeCycle::m_CurrentColours	DefinedState	R	0x00B7C4CA	804	1	3062692820	CWaterLevel::RenderWater; rw::d3d::setRwRenderState
+PENDING	CTimeCycle::m_CurrentStoredValue	??R<lambda_2>@?BM@??PreRenderAfterTest@CPed@@QAEXXZ@QBE@XZ	R	0x00B79FD0	801	1	3062782859	CPed::PreRenderAfterTest; CTaskManager::FindActiveTaskByType
+PENDING	CTimeCycle::m_CurrentStoredValue	CRealTimeShadowManager::Update	R	0x00B79FD0	801	1	3062722832	CRealTimeShadow::Update; CRealTimeShadowManager::Update
+PENDING	CTimeCycle::m_CurrentStoredValue	CWeather::Update	R	0x00B79FD0	801	1	3062617818	CalculateBoundingSphereRadiusCB; __math_exit
+PENDING	CTimeCycle::m_FogReduction	CWeather::RenderRainStreaks	R	0x00B79E48	801	1	3063037966	Idle; RenderScene
+PENDING	CTimeCycle::m_fLightsOnGroundBrightness	CColourSet	R	0x00B7AFE4	802	5	3062614441	CTimeCycle::CalcColoursForPoint
+PENDING	CTimeCycle::m_fLightsOnGroundBrightness	CTimeCycle::Initialise	W	0x00B7AFA8	802	1	3062589699	
+PENDING	CTimeCycle::m_nLowCloudsRed	CColourSet	R	0x00B7AF4E	802	1	3063037989	CTimeCycle::CalcColoursForPoint; __ehhandler$??$InstallStatic@P8CTaskSimpleLand@@AE_NXZ@RHManager@ReversibleHooks@@QAEXV?$basic_string_view@DU?$char_traits@D@std@@@std@@V?$b
+PENDING	CTimeCycle::m_nSkyTopRed	CColourSet	R	0x00B7BFB4	803	6	3062614441	CTimeCycle::CalcColoursForPoint; __ehhandler$??$InstallStatic@P8CTaskSimpleLand@@AE_NXZ@RHManager@ReversibleHooks@@QAEXV?$basic_string_view@DU?$char_traits@D@std@@@std@@V?$b
+PENDING	CTimeCycle::m_nSkyTopRed	CTimeCycle::Initialise	W	0x00B7BF78	803	1	3062589699	
+PENDING	CTrafficLights::aTrafficLightColoursB	CTrafficLights::DisplayActualLight	R	0x00A9AD94	578	1	3062782858	CEntity::ProcessLightsForEntity
+PENDING	CTrafficLights::aTrafficLightColoursG	CTrafficLights::DisplayActualLight	R	0x008A6218	78	3	3062752858	CEntity::ProcessLightsForEntity; GraphicsHighQuality; RpGeometryLock
+PENDING	CTxdStore::ms_pTxdPool	CTxdStore::AddRef	R	0x00C8800C	1072	1	3062857889	CBaseModelInfo::AddRef; CClumpModelInfo::CreateInstance
+PENDING	CTxdStore::ms_pTxdPool	CTxdStore::GetParentTxdSlot	R	0x00C8800C	1072	1	3062632821	CStreaming::RequestModel
+PENDING	CTxdStore::ms_pTxdPool	CTxdStore::GetTxd	R	0x00C8800C	1072	1	3062992940	CRadar::DrawRadarSection
+PENDING	CTxdStore::ms_pTxdPool	CTxdStore::RemoveRef	R	0x00C8800C	1072	1	3062752846	CBaseModelInfo::RemoveRef; CEntity::DeleteRwObject
+PENDING	CUserDisplay::OnscnTimer	CHud::DrawMissionTimers	R	0x00BA17C0	841	1	3062692835	CSprite2d::Draw; CSprite2d::Draw2DPolygon
+PENDING	CUserDisplay::OnscnTimer	COnscreenTimer::ProcessForDisplay	R	0x00BA1788	841	1	3062617796	Idle; Render2dStuff
+PENDING	CUserDisplay::PlaceName	CPlaceName::Process	R	0x00BA18F4	841	1	3062632826	CGame::Process; CUserDisplay::Process
+PENDING	CVehicle::WHEELSPIN_FALL_RATE	CAutomobile::ProcessControl	R	0x008D34A4	123	1	3062962925	CPedIntelligence::GetTaskSwim; CTaskManager::GetLastTaskOf
+PENDING	CVehicle::m_bEnableMouseSteering	_memcpy	R	0x00C1CC02	964	1	3062613406	??R<lambda_26974eb511f701c600fccfa2a97a8e1b>@@QBEIXZ; __fwrite_nolock_internal
+PENDING	CVehicle::ms_forceVehicleLightsOff	CVehicle::DoVehicleLights	R	0x00C1CC18	964	1	3062752858	CAutomobile::PreRender; CVehicle::AddDamagedVehicleParticles
+PENDING	CVehicleAnimGroupData::m_vehicleAnimGroups	CTaskSimpleCarDrive::ProcessArmBopping	R	0x00C1D54C	965	1	3062814936	CTaskSimpleCarDrive::ProcessBopping; CTaskSimpleCarDrive::ProcessPed
+PENDING	CVehicleAnimGroupData::m_vehicleAnimGroups	CVehicleAnimGroup::CopyAnimGroup	W	0x00C1D010	965	1	3062589687	CVehicleAnimGroup::InitFromData
+PENDING	CVehicleModelInfo::ms_compsUsed	CVehicleModelInfo::CreateInstance	W	0x00B4E478	758	1	3062857889	CEntity::CreateRwObject; CEntity::SetModelIndexNoCreate
+PENDING	CVehicleModelInfo::ms_currentCol	CVehicleModelInfo::SetVehicleColour	W	0x00B4E3F0	758	1	3062692822	CRenderer::RenderOneNonRoad; CVehicle::SetupRender
+PENDING	CVehicleModelInfo::ms_vehicleColourTable	CVehicleModelInfo::LoadVehicleColours	W	0x00B4E480	758	1	3062613524	??$parse_integer@_KV?$input_adapter_character_source@V?$string_input_adapter@D@__crt_stdio_input@@@__crt_strtox@@@__crt_strtox@@YA_KQAU__crt
+PENDING	CVehicleModelInfo::ms_vehicleDescs	CVehicleModelInfo::SetClump	R	0x008A7740	79	1	3062614239	CFileLoader::LoadClumpFile; CStreaming::ConvertBufferToObject
+PENDING	CVehicleModelInfo::ms_wheelFrameIDs	CVehicleModelInfo::GetWheelPosn	R	0x008A7770	79	1	3062707870	CAutomobile::PreRender; CShadows::StoreShadowForPole
+PENDING	CVehicleRecording::StreamingArray	CVehicleRecording::Init	W	0x0097E004	295	2	3062613420	CGame::Init1; CGame::Initialise
+PENDING	CVehicleRecording::StreamingArray	CVehicleRecording::InitAtStartOfGame	W	0x0097D884	295	3	3062589704	CGame::InitialiseCoreDataAfterRW; ProcessGameLogic
+PENDING	CVehicleRecording::StreamingArray	CVehicleRecording::RemoveAllRecordingsThatArentUsed	R	0x0097E000	294	1	3062726684	??$CommandParser@$0NI@$MP6AXAAVCRunningScript@@@Z1?MissionHasFinished@?A0x2fd53a4f@@YAX0@Z@detail@script@notsa@@YA?AW4OpcodeResult@@PAVCRunn; CMissionCleanup::Process
+PENDING	CVehicleRecording::StreamingArray	CVehicleRecording::ShutDown	R	0x0097E004	294	1	3063052692	CGame::Shutdown; NOTSA_WinMain
+PENDING	CVehicleRecording::bPlaybackGoingOn	CVehicleRecording::Init	W	0x0097D6F0	293	1	3062613420	CGame::Init1; CGame::Initialise
+PENDING	CVehicleRecording::bPlaybackGoingOn	std::ranges::HH::V?$iota_view::?$filter_view::begin	R	0x0097D6F0	293	1	3062617831	CVehicleRecording::SaveOrRetrieveDataForThisFrame; GetOSWPerformanceTime
+PENDING	CVisibilityPlugins::m_alphaBoatAtomicList	CVisibilityPlugins::RenderBoatAlphaAtomics	R	0x00C880E8	1072	1	3063037964	Idle; RenderScene
+PENDING	CVisibilityPlugins::m_alphaEntityList	CRenderer::PreRender	R	0x00C88130	1072	1	3062812862	AppEventHandler; Idle
+PENDING	CVisibilityPlugins::m_alphaEntityList	CVisibilityPlugins::RenderFadingEntities	R	0x00C88140	1072	1	3062692820	Idle; RenderScene
+PENDING	CVisibilityPlugins::m_alphaEntityList	CVisibilityPlugins::UAlphaObjectInfo::?$CLinkList::Clear	R	0x00C88130	1072	1	3062797868	CRenderer::ScanWorld; CVisibilityPlugins::InitAlphaEntityList
+PENDING	CVisibilityPlugins::m_alphaEntityList	CVisibilityPlugins::UAlphaObjectInfo::?$CLinkList::InsertSorted	R	0x00C88130	1072	1	3062827874	CRenderer::AddEntityToRenderList; CVisibilityPlugins::InsertEntityIntoSortedList
+PENDING	CVisibilityPlugins::m_alphaUnderwaterEntityList	CRenderer::PreRender	R	0x00C88188	1072	1	3062767848	AppEventHandler; Idle
+PENDING	CVisibilityPlugins::ms_atomicPluginOffset	CVisibilityPlugins::GetAtomicId	R	0x008D608C	126	1	3062692822	CVehicleModelInfo::SetEditableMaterialsCB; RpClumpForAllAtomics
+PENDING	CVisibilityPlugins::ms_atomicPluginOffset	CVisibilityPlugins::GetModelInfo	R	0x008D608C	126	1	3062752846	RemoveAllUpgradesCB; RpClumpForAllAtomics
+PENDING	CVisibilityPlugins::ms_atomicPluginOffset	CVisibilityPlugins::PluginAttach	W	0x008D608C	126	1	3062588839	AppEventHandler; PluginAttach
+PENDING	CVisibilityPlugins::ms_clumpPluginOffset	CVisibilityPlugins::ClumpConstructor	R	0x008D6094	126	1	3062857889	rw::Clump::create; rw::PluginList::construct
+PENDING	CVisibilityPlugins::ms_clumpPluginOffset	CVisibilityPlugins::GetClumpAlpha	R	0x008D6094	126	1	3062617823	CCivilianPed::ProcessControl; CPed::ProcessControl
+PENDING	CVisibilityPlugins::ms_framePluginOffset	CVisibilityPlugins::GetFrameHierarchyId	R	0x008D6090	126	1	3062782859	CClumpModelInfo::FindFrameFromIdCB; rw::Frame::forAllChildren
+PENDING	CVisibilityPlugins::ms_pCamera	CVisibilityPlugins::SetRenderWareCamera	W	0x00C8804C	1072	1	3062602794	AppEventHandler; FrontendIdle
+PENDING	CVisibilityPlugins::ms_weaponPedsForPC	CVisibilityPlugins::RenderWeaponPedsForPC	R	0x00C88234	1072	1	3062707835	AppEventHandler; Idle
+PENDING	CWaterCannons::aCannons	CAEWaterCannonAudioEntity::ClearSplashInfo	W	0x00C81284	1065	1	3062872895	CWaterCannon::Render
+PENDING	CWaterLevel::CameraRangeMaxX	CWaterLevel::RenderWaterRectangle	R	0x00C1F958	967	1	3062692818	CWaterLevel::RenderFlatWaterRectangle; CWaterLevel::SplitWaterRectangleAlongYLine
+PENDING	CWaterLevel::CameraRangeMinX	CWaterLevel::SetCameraRange	W	0x00C1F95C	967	1	3062722837	CWaterLevel::RenderWater; rw::d3d::setRwRenderState
+PENDING	CWaterLevel::DETAILEDWATERDIST	CWaterLevel::SetCameraRange	R	0x008D37D0	123	1	3062692817	CWaterLevel::RenderWater; RwRenderStateSet
+PENDING	CWaterLevel::NumWaterTriangles	CWaterLevel::WaterLevelInitialise	W	0x00C22884	970	1	3062614225	CGame::Init2; __free_base
+PENDING	CWaterLevel::NumWaterZonePolys	CWaterLevel::WaterLevelInitialise	W	0x00C215F0	969	1	3062614225	CGame::Init2; __free_base
+PENDING	CWaterLevel::TextureShiftFirstU	CWaterLevel::GetTextureUV	R	0x00C2117C	969	1	3062692818	CWaterLevel::RenderFlatWaterRectangle; CWaterLevel::RenderFlatWaterRectangle_OneLayer
+PENDING	CWaterLevel::WaterQuads	$03::?$CWaterPolygon::GetWaterLevel	R	0x00C2228A	970	4	3062617823	??R<lambda_1>@?1??GetWaterLevelNoWaves@CWaterLevel@@SA_NVCVector@@PAM11@Z@QBE@I@Z; CWaterLevel::GetWaterLevel; CWaterLevel::GetWaterLevelNoWaves
+PENDING	CWaterLevel::WaterQuads	??R<lambda_1>@?1??MarkQuadsAndPolysToBeRendered@CWaterLevel@@SAXHH_N@Z@QBE@UPolyInfo@2@@Z	R	0x00C22292	970	1	3062752848	CWaterLevel::BlockHit; CWaterLevel::MarkQuadsAndPolysToBeRendered
+PENDING	CWaterLevel::gWaterFogIndex	CWaterLevel::RenderWaterFog	W	0x00C228E4	970	1	3062707836	FxSystemBP_c::Render; RwRenderStateSet
+PENDING	CWaterLevel::m_BlockPolyInfo	CWaterLevel::GetWaterLevelNoWaves	R	0x00C21C42	969	4	3062617823	C3dMarkers::PlaceMarker; CWaterLevel::GetWaterLevel
+PENDING	CWaterLevel::m_NumBlocksOutsideWorldToBeRendered	CWaterLevel::RenderWater	R	0x00C215EC	969	1	3062722837	RwRenderStateSet; rw::d3d::setRwRenderState
+PENDING	CWaterLevel::m_NumBlocksOutsideWorldToBeRendered	CWaterLevel::ScanThroughBlocks	W	0x00C215EC	969	1	3062752847	CWaterLevel::PreRenderWater; WaterCreatureManager_c::Update
+PENDING	CWaterLevel::m_aVertices	$03::?$CWaterPolygon::GetWaterLevel	R	0x00C2307C	973	8	3062617823	??R<lambda_1>@?1??GetWaterLevelNoWaves@CWaterLevel@@SA_NVCVector@@PAM11@Z@QBE@I@Z; CWaterLevel::GetWaterLevel; CWaterLevel::GetWaterLevelNoWaves
+PENDING	CWaterLevel::m_aVertices	??R<lambda_1>@?1??MarkQuadsAndPolysToBeRendered@CWaterLevel@@SAXHH_N@Z@QBE@UPolyInfo@2@@Z	R	0x00C24E58	974	6	3062647826	CWaterLevel::BlockHit; CWaterLevel::MarkQuadsAndPolysToBeRendered
+PENDING	CWaterLevel::m_aVertices	CWaterLevel::AddWaterLevelVertex	W	0x00C23000	974	4	3062614228	CWaterLevel::AddWaterLevelQuad; std::D::DU?$char_traits::DV?$istreambuf_iterator::?$num_get::do_get
+PENDING	CWaterLevel::m_aVertices	CWaterLevel::RenderWater	R	0x00C24F58	974	3	3062722838	RwRenderStateSet; rw::d3d::setRwRenderState
+PENDING	CWaterLevel::m_bWaterFog	CWaterLevel::RenderWaterFog	R	0x008D37D4	123	1	3062617793	FxSystemBP_c::Render; RwRenderStateSet
+PENDING	CWaterLevel::seabd32Raster	CWaterLevel::RenderWater	R	0x00C228B0	970	1	3062722837	RwRenderStateSet; rw::d3d::setRwRenderState
+PENDING	CWaterLevel::texWaterwake	CBoat::RenderAllWakePointBoats	R	0x00C228BC	970	1	3062692820	CWaterLevel::RenderWater; rw::d3d::setRwRenderState
+PENDING	CWeapon::ms_bTakePhoto	CHud::DrawAfterFade	R	0x00C8A7C1	1074	1	3062613407	AppEventHandler; FrontendIdle
+PENDING	CWeapon::ms_bTakePhoto	CPostEffects::Render	R	0x00C8A7C1	1074	1	3062617795	
+PENDING	CWeaponInfo::aWeaponInfo	CPed::GiveWeapon	R	0x00C8AACC	1074	1	3062857891	CCivilianPed; CPed
+PENDING	CWeaponInfo::aWeaponInfo	CPed::RequestDelayedWeapon	R	0x00C8B464	1075	2	3062705306	CPedIntelligence::GetTaskHold
+PENDING	CWeaponInfo::aWeaponInfo	CWeapon::Initialise	R	0x00C8C908	1076	1	3062708907	CPed::GiveWeapon; CPed::RequestDelayedWeapon
+PENDING	CWeaponInfo::aWeaponInfo	CWeapon::Shutdown	R	0x00C8B464	1075	1	3062904150	~CCopPed; ~CPed
+PENDING	CWeaponInfo::aWeaponInfo	CWeapon::Update	R	0x00C8AB24	1074	3	3062707848	CCivilianPed::ProcessControl; CPlayerPed::HandleSprintEnergy; CPlayerPed::ProcessControl; CWorld::Process
+PENDING	CWeaponInfo::aWeaponInfo	CWeaponInfo::Initialise	W	0x00C8B000	1076	2	3062614267	CGame::Init2; CWeapon::InitialiseWeapons
+PENDING	CWeather::Foggyness	CCoronas::Render	R	0x00C81300	1065	1	3062707835	RwRenderStateSet; rw::d3d::setRwRenderState
+PENDING	CWeather::Foggyness	CShadows::RenderStaticShadows	R	0x00C81300	1065	1	3062692824	Idle; RenderScene
+PENDING	CWeather::Foggyness_SF	CClouds::MovingFogRender	R	0x00C812FC	1065	1	3062932912	FxSystemBP_c::Render; RwRenderStateSet
+PENDING	CWeather::ForcedWeatherType	CWeather::ReleaseWeather	W	0x00C81318	1065	1	3062613408	CCheat::ResetCheats; NOTSA_WinMain
+PENDING	CWeather::HeatHaze	CPostEffects::Render	R	0x00C812DC	1065	1	3062617795	
+PENDING	CWeather::HeatHazeFXLastMinute	CWeather::Update	R	0x008D6078	126	1	3062842894	CGame::Process; Idle
+PENDING	CWeather::LightningFlash	Idle	R	0x00C812CC	1065	1	3062722833	AppEventHandler; RsEventHandler
+PENDING	CWeather::LightningFlash	SetLightsWithTimeOfDayColour	R	0x00C812CC	1065	1	3063022959	AppEventHandler; Idle
+PENDING	CWeather::Rain	CPostEffects::Update	R	0x00C81324	1065	1	3062797856	CGame::Process; CTimer::UpdateVariables
+PENDING	CWeather::Rain	CTaskSimpleCarDrive::ProcessArmBopping	R	0x00C81324	1065	1	3062962924	CTaskSimpleCarDrive::ProcessBopping; CTaskSimpleCarDrive::ProcessPed
+PENDING	CWeather::StreamAfterRainTimer	CWeather::Init	W	0x008D5EAC	125	1	3062613419	CGame::Init1; CGame::Initialise
+PENDING	CWeather::Wind	CClouds::RenderBottomFromHeight	R	0x00C812F0	1065	1	3063037965	RwRenderStateSet; rw::d3d::setRwRenderState
+PENDING	CWeather::Wind	CEntity::ModifyMatrixForTreeInWind	R	0x00C812F0	1065	1	3062767848	CEntity::PreRender; CObject::PreRender
+PENDING	CWindModifiers::Number	CGame::Process	W	0x00C81450	1065	1	3062632823	AppEventHandler; Idle
+PENDING	CWindModifiers::Number	CWindModifiers::FindWindModifier	R	0x00C81450	1065	1	3062812860	CPed::PreRenderAfterTest
+PENDING	CWorld::PlayerInFocus	FindPlayerCoors	R	0x00B7CD74	804	1	3062752844	CCarCtrl::GenerateRandomCars; CGameLogic::LaRiotsActiveHere
+PENDING	CWorld::PlayerInFocus	FindPlayerEntity	R	0x00B7CD74	804	1	3062589228	CCamera::Init; CGame::InitialiseRenderWare
+PENDING	CWorld::PlayerInFocus	FindPlayerPed	R	0x00B7CD74	804	1	3062722832	CRealTimeShadowManager::Update; CShadows::StoreRealTimeShadow
+PENDING	CWorld::PlayerInFocus	FindPlayerVehicle	R	0x00B7CD74	804	1	3062887898	CControllerConfigManager::AffectControllerStateOn_ButtonDown; CControllerConfigManager::AffectPadFromKeyBoard
+PENDING	CWorld::Players	CPlayerInfo::DrawCrosshair	R	0x00B7D080	805	1	3062692833	CWeaponEffects::Render
+PENDING	CWorld::Players	CPlayerInfo::Process	W	0x00B7CECC	804	1	3062797855	CGame::Process; CWorld::Process
+PENDING	CWorld::Players	CPlayerPed::ProcessControl	R	0x00B7CDBD	804	1	3062962920	
+PENDING	CWorld::Players	FindPlayerPed	R	0x00B7CD98	804	1	3062602793	CAudioEngine::Service; FrontendIdle
+PENDING	CWorld::ms_aLodPtrLists	CEntity::Add	R	0x00B99FF4	833	2	3062613617	CEntity::Add; CWorld::Add
+PENDING	CWorld::ms_aLodPtrLists	CRenderer::ScanBigBuildingList	R	0x00B9A1FC	834	2	3062782856	
+PENDING	CWorld::ms_aRepeatSectors	??$?RV?$CPtrListDoubleLink@PAVCObject@@@@@<lambda_1>@?1??ScanSectorList@CRenderer@@SAXHH@Z@QBE?A_PAAV?$CPtrListDoubleLink@PAVCObject@@@@@Z	R	0x00B99668	833	3	3062782853	CRenderer::ScanSectorList
+PENDING	CWorld::ms_aRepeatSectors	??$FindObjectsInRangeSectorList@V?$CPtrListDoubleLink@PAVCObject@@@@@CWorld@@SAXAAV?$CPtrListDoubleLink@PAVCObject@@@@ABVCVector@@M_NPAFFPAP	R	0x00B993D4	833	1	3062692842	??$IterateSectors@V<lambda_1>@?1??FindObjectsInRange@CWorld@@SAXABVCVector@@M_NPAFFPAPAVCEntity@@11111@Z@@CWorld@@SA_NHHHH$$QAV<lambda_1>@?1; CWorld::FindObjectsInRange
+PENDING	CWorld::ms_aRepeatSectors	??$FindObjectsKindaCollidingSectorList@V?$CPtrListDoubleLink@PAVCVehicle@@@@@CWorld@@SAXAAV?$CPtrListDoubleLink@PAVCVehicle@@@@ABVCVector@@M	R	0x00B99588	833	1	3062857888	??$IterateSectors@V<lambda_1>@?1??FindObjectsKindaColliding@CWorld@@SAXABVCVector@@M_NPAFFPAPAVCEntity@@11111@Z@@CWorld@@SA_NHHHH$$QAV<lambd; CWorld::FindObjectsKindaColliding
+PENDING	CWorld::ms_aRepeatSectors	??$ProcessEntitiesInSectorList@V?$CPtrListDoubleLink@PAVCPed@@@@@CStreaming@@SAXAAV?$CPtrListDoubleLink@PAVCPed@@@@MMMMMMMH@Z	R	0x00B993D0	833	6	3062647814	CStreaming::AddModelsToRequestList
+PENDING	CWorld::ms_aRepeatSectors	??$ProcessLineOfSightSectorList@V?$CPtrListDoubleLink@PAVCVehicle@@@@@CWorld@@KA_NAAV?$CPtrListDoubleLink@PAVCVehicle@@@@ABVCColLine@@AAVCCo	R	0x00B998D0	833	1	3062722855	
+PENDING	CWorld::ms_aRepeatSectors	CCollision::CheckCameraCollisionVehicles	R	0x00B99588	833	1	3062797858	CCollision::BuildCacheOfCameraCollision; CCollision::CheckCameraCollisionBuildings
+PENDING	CWorld::ms_aRepeatSectors	CEntityScanner::ScanForEntitiesInRange	R	0x00B99AD4	833	1	3062617825	CPed::PlayFootSteps; CPed::ProcessBuoyancy
+PENDING	CWorld::ms_aRepeatSectors	CPhysical::Remove	R	0x00B99570	833	1	3062752845	??R<lambda_1>@?1??PossiblyRemoveVehicle@CCarCtrl@@SAXPAVCVehicle@@@Z@QBE@XZ; CWorld::Remove
+PENDING	CWorld::ms_aRepeatSectors	CStreaming::AddModelsToRequestList	R	0x00B99C04	833	1	3062632821	CStreaming::Update
+PENDING	CWorld::ms_aRepeatSectors	CWorld::ProcessVerticalLineSector	R	0x00B99594	833	1	3062962922	CTaskSimpleInAir::ProcessPed; CWorld::ProcessVerticalLine
+PENDING	CWorld::ms_aSectors	??$?RV?$CPtrListDoubleLink@PAVCDummy@@@@@<lambda_1>@?1??ScanSectorList@CRenderer@@SAXHH@Z@QBE?A_PAAV?$CPtrListDoubleLink@PAVCDummy@@@@@Z	R	0x00B8487C	813	2	3062782853	CRenderer::ScanSectorList
+PENDING	CWorld::ms_aSectors	??$?RV?$CPtrListSingleLink@PAVCBuilding@@@@@<lambda_1>@?1??ProcessCollisionSectorList@CPhysical@@QAE_NHH@Z@QBE?A_PAAV?$CPtrListSingleLink@PA	R	0x00B7D0B8	805	6	3062617826	__87except; __handle_exc
+PENDING	CWorld::ms_aSectors	??$?RV?$CPtrListSingleLink@PAVCBuilding@@@@@<lambda_1>@?1??ScanSectorList@CRenderer@@SAXHH@Z@QBE?A_PAAV?$CPtrListSingleLink@PAVCBuilding@@@@	R	0x00B844B8	812	9	3062632836	CRenderer::ScanSectorList; CRenderer::SetupScanLists
+PENDING	CWorld::ms_aSectors	??$FindObjectsInRangeSectorList@V?$CPtrListSingleLink@PAVCBuilding@@@@@CWorld@@SAXAAV?$CPtrListSingleLink@PAVCBuilding@@@@ABVCVector@@M_NPAF	R	0x00B84FB0	812	1	3062692842	??$IterateSectors@V<lambda_1>@?1??FindObjectsInRange@CWorld@@SAXABVCVector@@M_NPAFFPAPAVCEntity@@11111@Z@@CWorld@@SA_NHHHH$$QAV<lambda_1>@?1; CWorld::FindObjectsInRange
+PENDING	CWorld::ms_aSectors	??$IterateSectors@V<lambda_1>@?1??_ColEntityCache_Update@CPlantMgr@@CAXABVCVector@@_N@Z@@CWorld@@SA_NHHHH$$QAV<lambda_1>@?1??_ColEntityCache	R	0x00B83CE0	811	7	3062617832	CPlantMgr::Update; CPlantMgr::_ColEntityCache_Update
+PENDING	CWorld::ms_aSectors	??$IterateSectorsOverlappedByRect@V<lambda_1>@?DK@??Update@CCover@@SAXXZ@@CWorld@@SA_NVCRect@@$$QAV<lambda_1>@?DK@??Update@CCover@@SAXXZ@@Z	R	0x00B835A0	811	1	3062632823	CCover::Update; RwV3dLength
+PENDING	CWorld::ms_aSectors	??$ProcessEntitiesInSectorList@V?$CPtrListSingleLink@PAVCBuilding@@@@@CStreaming@@SAXAAV?$CPtrListSingleLink@PAVCBuilding@@@@MMMMMMMH@Z	R	0x00B82A50	813	11	3062647813	CStreaming::AddModelsToRequestList
+PENDING	CWorld::ms_aSectors	??$ProcessLineOfSightSectorList@V?$CPtrListSingleLink@PAVCBuilding@@@@@CWorld@@KA_NAAV?$CPtrListSingleLink@PAVCBuilding@@@@ABVCColLine@@AAVC	R	0x00B82E10	810	2	3062752849	__handle_exc
+PENDING	CWorld::ms_aSectors	??R<lambda_2>@?BD@??Add@CEntity@@UAEXABVCRect@@@Z@QBE@HH@Z	R	0x00B7D924	810	37	3062613610	CEntity::Add
+PENDING	CWorld::ms_aSectors	??R<lambda_2>@?BD@??Remove@CEntity@@UAEXXZ@QBE@HH@Z	R	0x00B82A48	811	2	3062797895	??_ECBuilding@@UAEPAXI@Z; CEntity::Remove; CWorld::Remove
+PENDING	CWorld::ms_aSectors	??R<lambda_2>@?O@??RenderStoredShadows@CShadows@@SAXXZ@QBE_NHH@Z	R	0x00B85378	813	4	3062692825	rw::d3d::setRasterStage; rw::d3d::setRwRenderState
+PENDING	CWorld::ms_aSectors	CCollision::CheckCameraCollisionBuildings	R	0x00B85758	813	1	3062797858	CCollision::BuildCacheOfCameraCollision; CCollision::CameraConeCastVsWorldCollision
+PENDING	CWorld::ms_aSectors	CRenderer::ScanSectorList_RequestModels	R	0x00B85360	813	1	3062691683	__handle_exc
+PENDING	CWorld::ms_aSectors	CStreaming::AddModelsToRequestList	R	0x00B8B268	819	1	3062632820	CStreaming::Update
+PENDING	CWorld::ms_aSectors	CStreaming::DeleteAllRwObjects	R	0x00B7D0B8	821	23	3062639752	?A0x49f15004::LoadSceneInDirection; CCutsceneMgr::LoadCutSceneFile; CStreaming::LoadScene
+PENDING	CWorld::ms_aSectors	CWorld::ClearScanCodes	R	0x00B7D0B8	811	23	3062660990	?A0xac423690::Im2DDraw; CPhysical::CheckCollision; CPhysical::ProcessCollision; CWorld::ProcessLineOfSight
+PENDING	CWorld::ms_aSectors	CWorld::GetIsLineOfSightSectorClear	R	0x00B808F0	811	13	3062647824	??R<lambda_1>@?1??GetIsLineOfSightClear@CWorld@@SA_NABVCVector@@0_N111111@Z@QBE@HH@Z; CGameLogic::SetPlayerWantedLevelForForbiddenTerritories; CWorld::GetIsLineOfSightClear
+PENDING	CWorld::ms_aSectors	CWorld::ProcessVerticalLineSector	R	0x00B85760	813	2	3062857890	?A0x0a4343aa::SnapRandomCarToGround; CAEPedSpeechAudioEntity::LoadAndPlaySpeech; CWorld::ProcessVerticalLine
+PENDING	CWorld::ms_listMovingEntityPtrs	CPhysical::RemoveFromMovingList	R	0x00B9ACC8	834	1	3062752845	??R<lambda_1>@?1??PossiblyRemoveVehicle@CCarCtrl@@SAXPAVCVehicle@@@Z@QBE@XZ; CCarCtrl::PossiblyRemoveVehicle
+PENDING	CWorld::ms_listMovingEntityPtrs	CWorld::Process	R	0x00B9ACC8	834	2	3062617822	CGame::Process; CReplay::Update
+PENDING	CWorld::ms_listMovingEntityPtrs	CWorld::ProcessPedsAfterPreRender	R	0x00B9ACC8	834	1	3062767849	AppEventHandler; Idle
+PENDING	CWorld::ms_listMovingEntityPtrs	PAVCPhysical::U?$PtrListDoubleLinkTraits::?$CPtrList::AddItem	R	0x00B9ACC8	834	1	3062857890	CCarCtrl::GenerateOneRandomCar; CPhysical::AddToMovingList
+PENDING	CWorld::ms_nCurrentScanCode	CEntity::IsScanCodeCurrent	R	0x00B7CD78	804	1	3062782851	??$?RV?$CPtrListSingleLink@PAVCBuilding@@@@@<lambda_1>@?1??ScanSectorList@CRenderer@@SAXHH@Z@QBE?A_PAAV?$CPtrListSingleLink@PAVCBuilding@@@@; CRenderer::SetupScanLists
+PENDING	CWorld::ms_nCurrentScanCode	CShadows::RenderStoredShadows	R	0x00B7CD78	804	1	3063037965	CShadows::RenderStaticShadows; RwRenderStateSet
+PENDING	CWorld::ms_nCurrentScanCode	CStreaming::AddModelsToRequestList	R	0x00B7CD78	804	1	3062632820	CStreaming::Update
+PENDING	CWorldScan::ms_nExtraRectangleCount	CWorldScan::ScanWorld	R	0x00C815B8	1065	1	3062752848	CCamera::GetFrustumPoints
+PENDING	ClumpOffset	ClumpAnimConstruct	R	0x00B5F878	775	1	3062692839	rw::Clump::create; rw::PluginList::construct
+PENDING	ClumpOffset	ClumpAnimDestruct	R	0x00B5F878	775	1	3062752846	RpClumpDestroy; rw::PluginList::destruct
+PENDING	ClumpOffset	RpAnimBlendClumpGetData	R	0x00B5F878	775	1	3062782859	CMatrix::SetRotateX; CPedIK::PitchForSlope
+PENDING	ClumpOffset	RpAnimBlendClumpGetFirstAssociation	R	0x00B5F878	775	1	3062617822	CEntity::UpdateAnim; CWorld::Process
+PENDING	ClumpOffset	RpAnimBlendClumpGetMainAssociation	R	0x00B5F878	775	1	3062707846	CReplay::StorePedAnimation; CReplay::StorePedUpdate
+PENDING	ClumpOffset	RpAnimBlendClumpUpdateAnimations	R	0x00B5F878	775	1	3062962918	CCamera::IsSphereVisible
+PENDING	ClumpOffset	RpAnimBlendPluginAttach	W	0x00B5F878	775	1	3062588839	AppEventHandler; PluginAttach
+PENDING	ControlsManager	CControllerConfigManager::AffectPadFromKeyBoard	R	0x00B70D08	792	1	3062602792	CPad::UpdatePads
+PENDING	ControlsManager	CControllerConfigManager::ClearSimButtonPressCheckers	W	0x00B7146C	793	1	3062602792	CPad::UpdatePads
+PENDING	ControlsManager	CControllerConfigManager::MakeControllerActionsBlank	W	0x00B70D08	792	1	3062588838	CControllerConfigManager::ReinitControls; NOTSA_WinMain
+PENDING	D3DResourceSystem::LargeIndexDataBuffer	D3DResourceSystem::TidyUpD3DIndexBuffers	R	0x00C87FD8	1071	1	3062602792	CMenuManager::Process; CTimer::UpdateVariables
+PENDING	D3DResourceSystem::NumTextureBuffers	D3DResourceSystem::TidyUpD3DTextures	R	0x00C87C60	1071	1	3062639630	CCutsceneMgr::DeleteCutsceneData_overlay; CGame::DrasticTidyUpMemory
+PENDING	D3DResourceSystem::UseD3DResourceBuffering	D3DResourceSystem::SetUseD3DResourceBuffering	W	0x008D6084	126	1	3062613410	CGame::Init1; CGame::Initialise
+PENDING	FrontEndMenuManager	CAEAmbienceTrackManager::Service	R	0x00BA6831	846	1	3062752848	CAECutsceneTrackManager::Service; CAudioEngine::Service
+PENDING	FrontEndMenuManager	CControllerConfigManager::InitDefaultControlConfiguration	R	0x00BA67C8	846	1	3062588838	CControllerConfigManager::ReinitControls; NOTSA_WinMain
+PENDING	FrontEndMenuManager	CDraw::CalculateAspectRatio	R	0x00BA6793	846	1	3062722833	DoRWStuffStartOfFrame_Horizon; Idle
+PENDING	FrontEndMenuManager	CHud::Draw	R	0x00BA677B	846	1	3062692834	Idle; Render2dStuff
+PENDING	FrontEndMenuManager	CMenuManager::DrawBackground	R	0x00BA8232	848	1	3062602791	rw::d3d::setRasterStage; rw::d3d::setRwRenderState
+PENDING	FrontEndMenuManager	CMenuManager::DrawStandardMenus	R	0x00BA679C	846	1	3062602791	
+PENDING	FrontEndMenuManager	CMenuManager::ProcessMenuOptions	W	0x00BA70D1	847	1	3062613404	
+PENDING	FrontEndMenuManager	CMenuManager::UserInput	R	0x00BA8233	848	1	3062589859	CMenuManager::Process; FrontendIdle
+PENDING	FrontEndMenuManager	CRadar::TransformRadarPointToScreenSpace	R	0x00BA67A1	846	1	3062992940	CRadar::DrawRadarSection
+PENDING	FrontEndMenuManager	CTimeCycle::CalcColoursForPoint	R	0x00BA6784	846	1	3062797857	
+PENDING	FrontEndMenuManager	Idle	R	0x00BA67A4	846	1	3063022959	AppEventHandler; RsEventHandler
+PENDING	FrontEndMenuManager	ProcessGameLogic	R	0x00BA6794	846	1	3062632795	??$InstallStatic@P6A_NABVCPed@@@Z@RHManager@ReversibleHooks@@QAEXV?$basic_string_view@DU?$char_traits@D@std@@@std@@V?$basic_string@DU?$char_; NOTSA_WinMain
+PENDING	FrontEndMenuManager	Render2dStuff	R	0x00BA6793	846	1	3062617795	AppEventHandler; Idle
+PENDING	GetEventGlobalGroup()::globalEvents	GetEventGlobalGroup	R	0x00A9AF6C	578	1	3062632826	CReplay::Update; CWorld::Process
+PENDING	GetPlayerRelationshipRecorder()::g_sPlayerRelationshipRecorder	GetPlayerRelationshipRecorder	R	0x00C17084	959	1	3062962922	CPed::ProcessControl; CPedIntelligence::Process
+PENDING	HudColour	CHudColours::GetRGB	R	0x00BAB23C	851	2	3062602791	CHud::DrawPlayerInfo; CMenuManager::DrawStandardMenus; RwRenderStateSet
+PENDING	IKChainManager_c::CanAccept()::s_MaxRange	IKChainManager_c::CanAccept	R	0x00866BEC	14	1	3062639880	IKChainManager_c::CanAcceptLookAt; IKChainManager_c::LookAt
+PENDING	RsGlobal	CFont::PrintChar	R	0x00C17048	959	1	3062602790	CFont::RenderFontBuffer; RwRenderStateSet
+PENDING	RsGlobal	CRadar::TransformRadarPointToScreenSpace	R	0x00C17044	959	1	3062992940	CRadar::DrawRadarSection
+PENDING	RsGlobal	CalcScreenCoors	R	0x00C17044	959	1	3062782852	CEntity::IsEntityOccluded; CalcScreenCoors
+PENDING	RsGlobal	ProcessGameLogic	R	0x00C17050	959	1	3062632795	??$InstallStatic@P6A_NABVCPed@@@Z@RHManager@ReversibleHooks@@QAEXV?$basic_string_view@DU?$char_traits@D@std@@@std@@V?$basic_string@DU?$char_; NOTSA_WinMain
+PENDING	RsGlobal	RsInitialize	W	0x00C17040	959	1	3062587808	AppEventHandler; RsEventHandler
+PENDING	SIN_LUT	CMaths::GetCosFast	R	0x00BB4044	860	1	3062707836	FxInfoColour_c::GetValue; RotateVecAboutVec
+PENDING	SIN_LUT	CMaths::GetSinFast	R	0x00BB3E10	859	3	3062707836	FxInfoColour_c::GetValue; RotateVecAboutVec
+PENDING	Scene	CCamera::Process	R	0x00C1703C	959	1	3062797857	CGameLogic::LaRiotsActiveHere
+PENDING	Scene	CClouds::VolumetricCloudsGetMaxDistance	R	0x00C1703C	959	1	3062737836	CClouds::MovingFogRender; CClouds::VolumetricCloudsRender
+PENDING	Scene	CPointLights::RemoveLightsAffectingObject	R	0x00C17038	959	1	3062692822	CRenderer::RenderOneNonRoad; CVehicle::RemoveLighting
+PENDING	Scene	CPostEffects::Render	R	0x00C1703C	959	1	3062617794	
+PENDING	Scene	CSprite2d::InitPerFrame	R	0x00C1703C	959	1	3062707834	CStencilShadows::RenderStencilShadows; RenderScene
+PENDING	Scene	DoRWStuffStartOfFrame_Horizon	R	0x00C1703C	959	1	3062722833	AppEventHandler; Idle
+PENDING	Scene	GraphicsHighQuality	R	0x00C1703C	959	1	3062812861	??$?RVCEntity@@@<lambda_1>@?1??PreRender@CEntity@@UAEXXZ@QBE?A_PPAV2@MMM@Z; CShadows::StoreShadowForPole
+PENDING	Scene	Idle	R	0x00C17038	959	1	3062752850	AppEventHandler; RsEventHandler
+PENDING	Scene	RenderScene	R	0x00C1703C	959	1	3063037964	Idle
+PENDING	ScriptsArray	CRunningScript::Init	W	0x00A8C000	568	5	3062614280	CTheScripts::Init
+PENDING	ScriptsArray	CRunningScript::RemoveScriptFromList	R	0x00A8F334	567	1	3062617819	CStreamedScripts::StartNewStreamedScript; CTheScripts::StartNewScript
+PENDING	ScriptsArray	CTheScripts::Process	R	0x00A8EDF0	567	5	3062617819	CWeather::Update
+PENDING	TempBufferVertices	?A0xac423690::Im3DDraw	R	0x00C4D95C	1022	18	3062692819	RwIm3DRenderIndexedPrimitive
+PENDING	TempBufferVertices	CClouds::RenderBottomFromHeight	W	0x00C4D958	1014	2	3063037965	RenderScene; RwRenderStateSet
+PENDING	TempBufferVertices	CClouds::SetUpOneSkyPoly	W	0x00C4D958	1013	1	3062617202	CClouds::RenderSkyPolys
+PENDING	TempBufferVertices	CStencilShadows::Render	W	0x00C4D958	1016	10	3062640456	CStencilShadows::RenderStencilShadows; RenderScene
+PENDING	TempBufferVertices	RenderBuffer::PushVertex	W	0x00C4E00C	1021	10	3062640433	CWaterLevel::GetWaterColorForRendering; CWaterLevel::RenderFlatWaterRectangle_OneLayer
+PENDING	TempBufferVertices	tBrightLight::Render	W	0x00C4D970	1013	1	3062737837	CBrightLights::Render; CSpecialFX::Render
+PENDING	TheCamera	CAEPoliceScannerAudioEntity::Service	R	0x00B6F065	791	1	3063022958	AppEventHandler; Idle
+PENDING	TheCamera	CBoat::FillBoatList	R	0x00B6F03C	791	1	3062692820	rw::d3d::setRasterStage; rw::d3d::setRwRenderState
+PENDING	TheCamera	CCamera::GetActiveCamera	R	0x00B6F081	791	1	3062992941	CHud::DrawRadar; CRadar::DrawBlips
+PENDING	TheCamera	CCamera::InitialiseScriptableComponents	W	0x00B6FC84	791	1	3062589228	CCamera::Init; CGame::InitialiseRenderWare
+PENDING	TheCamera	CCarCtrl::GenerateOneRandomCar	R	0x00B6F9B4	791	1	3062752845	CCarCtrl::GenerateRandomCars; CGameLogic::LaRiotsActiveHere
+PENDING	TheCamera	CClouds::VolumetricCloudsRender	R	0x00B6F03C	791	1	3062737836	CClouds::MovingFogRender; FxSystemBP_c::Render
+PENDING	TheCamera	CControllerConfigManager::AffectControllerStateOn_ButtonDown	R	0x00B6F081	791	1	3062887898	CControllerConfigManager::AffectPadFromKeyBoard; CPad::UpdatePads
+PENDING	TheCamera	CDraw::CalculateAspectRatio	R	0x00B6F065	791	1	3062602792	FrontendIdle; _atoi
+PENDING	TheCamera	CEntity::PreRender	R	0x00B6F03C	791	1	3062767847	CObject::PreRender
+PENDING	TheCamera	CRenderer::SetupMapEntityVisibility	R	0x00B6F118	791	1	3062782852	CRenderer::SetupEntityVisibility; __CIsqrt
+PENDING	TheCamera	CShadows::StoreRealTimeShadow	R	0x00B6F03C	791	1	3062722832	CRealTimeShadowManager::Update; Idle
+PENDING	TheCamera	CShadows::StoreShadowForPedObject	R	0x00B6F03C	791	1	3062812859	??R<lambda_2>@?BM@??PreRenderAfterTest@CPed@@QAEXXZ@QBE@XZ; CPed::PreRenderAfterTest
+PENDING	TheCamera	CSprite::CalcScreenCoors	R	0x00B6FA5C	791	1	3062707835	CBirds::Render
+PENDING	TheCamera	CStats::CheckForStatsMessage	R	0x00B6F065	791	1	3062797855	?A0x5b66f2e6::ProcessDistanceStats; CPlayerInfo::Process
+PENDING	TheCamera	CStreaming::Update	R	0x00B6F03C	791	1	3062632820	CGame::Process; GetOSWPerformanceTime
+PENDING	TheCamera	CVisibilityPlugins::CalculateFadingAtomicAlpha	R	0x00B6F118	791	1	3063037963	CVisibilityPlugins::RenderEntity; CVisibilityPlugins::RenderFadingEntities
+PENDING	TheCamera	CWeaponEffects::Render	R	0x00B6F065	791	1	3062617793	
+PENDING	TheCamera	RwV3dTransformPoints	R	0x00B6FA8C	791	1	3062872895	CCamera::IsSphereVisible
+PENDING	ThePaths	CCarCtrl::GenerateCarCreationCoors2	R	0x0096F8B0	279	1	3062752845	
+PENDING	ThePaths	CPathFind::CalcRoadDensity	R	0x0096F854	279	2	3062617989	CPlayerInfo::Process; CRopes::RegisterRope; CWorld::Process
+PENDING	ThePaths	CPathFind::FindNodeClosestInRegion	R	0x00970170	280	2	3062722945	??R<lambda_1>@?1??FindNodeClosestToCoors@CPathFind@@QAE?AVCNodeAddress@@VCVector@@W4ePathType@@MGHGGH@Z@QBE@IH@Z; __87except
+PENDING	ThePaths	CPathFind::GeneratePedCreationCoors	R	0x0097028C	280	2	3062692842	CPopCycle::FindNewPedType; CPopCycle::PedIsAcceptableInCurrentZone; CPopulation::ChooseCivilianOccupation
+PENDING	ThePaths	CPathFind::Init	W	0x0096F854	280	3	3062613425	CGame::Init1; CGame::Initialise
+PENDING	ThePaths	CPathFind::LoadPathFindData	W	0x00971594	281	1	3062614355	CStreaming::ConvertBufferToObject; CStreaming::RequestModelStream
+PENDING	ThePaths	CPathFind::TakeWidthIntoAccountForWandering	R	0x0096F8B0	279	1	3062962923	CPlayerPed::ProcessGroupBehaviour; CTaskComplexWander::ScanForBlockedNode
+PENDING	ThePaths	CPathFind::UpdateStreaming	R	0x00972CBC	282	1	3062617918	CWeather::Update
+PENDING	TheText	CKeyArray::Search	R	0x00C1B344	963	1	3062602791	??$_Construct@$00PBD@?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@AAEXQBDI@Z; CText::Get
+PENDING	TheText	CText::Load	W	0x00C1B361	963	1	3062589679	CLoadingScreen::RenderSplash; psCameraShowRaster
+PENDING	ToBeStreamed	CPathFind::UpdateStreaming	W	0x0096EFD0	278	1	3062872904	CWeather::Update
+PENDING	VehicleNames	cHandlingDataMgr::FindExactWord	R	0x008D3978	124	2	3062589682	??$?RP8cHandlingDataMgr@@AEPAUtHandlingData@@I@Z@<lambda_2>@?1??LoadHandlingData@cHandlingDataMgr@@QAEXXZ@QBEHPBDP82@AEPAUtHandlingData@@I@Z; ??R<lambda_3>@?3??LoadHandlingData@cHandlingDataMgr@@QAEXXZ@QBE@XZ
+PENDING	VehicleNames	cHandlingDataMgr::GetHandlingId	R	0x008D3978	124	2	3062613444	CFileLoader::LoadVehicleObject; CVehicleModelInfo::SetHandlingId
+PENDING	aRadiosityVertexBuffer	0x7B3FC66E	R	0x00C5F958	1031	1	3062602790	?A0xac423690::SetStage0Ops; RwIm2DRenderIndexedPrimitive
+PENDING	aRadiosityVertexBuffer	0x7B3FC677	R	0x00C60000	1032	1	3062602790	?A0xac423690::SetStage0Ops; RwIm2DRenderIndexedPrimitive
+PENDING	aRadiosityVertexBuffer	CPostEffects::HeatHazeFX	W	0x00C5F958	1031	6	3062782791	CPostEffects::Render; rw::d3d::setRwRenderState
+PENDING	aRadiosityVertexBuffer	CSprite2d::SetVertices	W	0x00C5F958	1036	7	3062589866	CFont::PrintChar; CSprite2d::AddToBuffer
+PENDING	aRadiosityVertexBuffer	CSprite::Set4Vertices2D	W	0x00C60000	1032	1	3062677858	CCoronas::Render; CSprite::RenderBufferedOneXLUSprite2D
+PENDING	aRadiosityVertexBuffer	SetSpriteVertices	W	0x00C5F958	1032	2	3062640427	?A0xac423690::Im2DDraw; CClouds::RenderBottomFromHeight; CSprite::RenderBufferedOneXLUSprite; CSprite::RenderBufferedOneXLUSprite_Rotate_Dimension
+PENDING	aShotInfos	CShotInfo::Initialise	W	0x00C89694	1073	1	3062614269	CGame::Init2; CWeapon::InitialiseWeapons
+PENDING	aShotInfos	CShotInfo::Update	R	0x00C896B0	1074	2	3062617821	CWeapon::UpdateWeapons; GetOSWPerformanceTime
+PENDING	aTempBufferIndices	0x7B3FC65B	R	0x00C4B958	1011	1	3062707827	?A0xac423690::Im3DDraw
+PENDING	aTempBufferIndices	0x7B3FC66E	R	0x00C4B958	1011	1	3063007952	?A0xac423690::Im3DDraw
+PENDING	aTempBufferIndices	0x7B3FC672	R	0x00C4C000	1012	1	3062707828	?A0xac423690::Im3DDraw
+PENDING	aTempBufferIndices	0x7B3FC677	R	0x00C4C000	1012	1	3062872891	?A0xac423690::Im3DDraw
+PENDING	aTempBufferIndices	CPostEffects::HeatHazeFX	W	0x00C4C004	1012	1	3062932918	CPostEffects::Render
+PENDING	aTempBufferIndices	CSprite2d::AddToBuffer	W	0x00C4B95A	1011	2	3062602790	CFont::PrintChar; RwRenderStateSet
+PENDING	aTempBufferIndices	CStencilShadows::Render	W	0x00C4C000	1012	1	3062640456	CStencilShadows::RenderStencilShadows; RenderScene
+PENDING	aTempBufferIndices	RenderBuffer::PushIndices	W	0x00C4C000	1012	2	3062647835	CWaterLevel::RenderFlatWaterRectangle; CWaterLevel::RenderFlatWaterRectangle_OneLayer
+PENDING	arrTotalTrackLength	CTrain::ReadAndInterpretTrackFile	W	0x00C37FEC	991	1	3062614213	CFileLoader::LoadLevel; CTrain::InitTrains
+PENDING	cTransmission::CalculateDriveAcceleration()::currentVelocity	cTransmission::CalculateDriveAcceleration	W	0x00C1CB40	964	1	3062962925	CAutomobile::ProcessControl; CTaskManager::GetLastTaskOf
+PENDING	cTransmission::InitGearRatios()::gear	cTransmission::InitGearRatios	W	0x00C1CB34	964	1	3062589683	??$?RP8cHandlingDataMgr@@AEPAUtHandlingData@@I@Z@<lambda_2>@?1??LoadHandlingData@cHandlingDataMgr@@QAEXXZ@QBEHPBDP82@AEPAUtHandlingData@@I@Z; cHandlingDataMgr::ConvertDataToGameUnits
+PENDING	fEnvMapDefaultCoeff	CVehicleModelInfo::SetEnvironmentMapCB	R	0x008A7780	79	1	3062691651	CVehicleModelInfo::SetEnvironmentMapAtomicCB; RpGeometryForAllMaterials
+PENDING	gAllowScriptedFixedCameraCollision	CTheScripts::Init	W	0x00B6EC2C	790	1	3062614283	
+PENDING	gCollisionPluginOffset	CCollisionPlugin::PluginAttach	W	0x009689DC	272	1	3062588840	AppEventHandler; PluginAttach
+PENDING	gCrossHair	CWeaponEffects::Render	R	0x00C8A83C	1074	1	3062692833	
+PENDING	gFireManager	CFireManager::FindNearestFire	R	0x00B71F80	793	1	3062962921	CEntityScanner::ScanForEntitiesInRange; CNearbyFireScanner::ScanForNearbyFireEvents
+PENDING	gGxtString	_memmove	W	0x00C1B100	963	1	3062707839	AsciiToGxtChar; CHud::DrawAmmo
+PENDING	gHandlingDataMgr	??$?RP8cHandlingDataMgr@@AEPAUtHandlingData@@I@Z@<lambda_2>@?1??LoadHandlingData@cHandlingDataMgr@@QAEXXZ@QBEHPBDP82@AEPAUtHandlingData@@I@Z	W	0x00C2B9DC	979	1	3062589682	??R<lambda_3>@?3??LoadHandlingData@cHandlingDataMgr@@QAEXXZ@QBE@XZ; CFileMgr::ReadLine
+PENDING	gHandlingDataMgr	??$write_floating_point@M@?$input_processor@DV?$string_input_adapter@D@__crt_stdio_input@@@__crt_stdio_input@@AAE_NABM@Z	W	0x00C2C000	991	12	3062589683	??$process_floating_point_specifier_t@M@?$input_processor@DV?$string_input_adapter@D@__crt_stdio_input@@@__crt_stdio_input@@AAE_NXZ; __crt_stdio_input::D::?$format_string_parser::length
+PENDING	gHandlingDataMgr	CAEVehicleAudioEntity::ProcessDummyVehicleEngine	R	0x00C2BDE0	983	20	3062707848	CAEVehicleAudioEntity::ProcessVehicle; CAEVehicleAudioEntity::Service
+PENDING	gHandlingDataMgr	CAEVehicleAudioEntity::ProcessEngineDamage	R	0x00C2CF60	988	4	3062707850	CAEVehicleAudioEntity::ProcessVehicle; CAEVehicleAudioEntity::Service
+PENDING	gHandlingDataMgr	CAutomobile::PreRender	R	0x00C2BE28	983	13	3062752858	??$?RVCEntity@@@<lambda_1>@?1??PreRender@CEntity@@UAEXXZ@QBE?A_PPAV2@MMM@Z; CPed::PreRenderAfterTest; CShadows::StoreShadowForPedObject; CShadows::StoreShadowForPole
+PENDING	gHandlingDataMgr	CBike	R	0x00C34F80	988	2	3062691652	CBmx; CWorld::ProcessVerticalLine
+PENDING	gHandlingDataMgr	CBike::ProcessControl	R	0x00C34F90	988	3	3062692844	CAutomobile::ProcessCarWheelPair; CCarCtrl::ScanForPedDanger; __CIsqrt; __math_exit
+PENDING	gHandlingDataMgr	CBike::ProcessRiderAnims	R	0x00C372F4	991	1	3062902915	__CIsqrt; __startOneArgErrorHandling
+PENDING	gHandlingDataMgr	CTaskComplexWanderStandard::LookForSexyCars	R	0x00C2CA74	985	5	3062842902	CTaskComplexWander::ControlSubTask; CTaskComplexWanderStandard::ScanForStuff
+PENDING	gHandlingDataMgr	CVehicle::GetVehicleAppearance	R	0x00C2CFA8	983	5	3062692822	CAutomobile::Render; CVehicleModelInfo::SetEditableMaterials
+PENDING	gHandlingDataMgr	CVehicleModelInfo::GetMaximumNumberOfPassengersFromNumberOfDoors	R	0x00C2DA28	983	15	3062691651	CAutomobile; CVehicle::SetModelIndex
+PENDING	gHandlingDataMgr	CVehicleModelInfo::PreprocessHierarchy	R	0x00C2C988	983	20	3062614239	CFileLoader::LoadClumpFile; CVehicleModelInfo::SetClump
+PENDING	gHandlingDataMgr	ProcessBicycleSounds	R	0x00C35000	989	2	3062692844	CAEVehicleAudioEntity::PlayHornOrSiren; CAEVehicleAudioEntity::ProcessDummyBicycle
+PENDING	gLastTouchTimeDelta	CTaskSimplePlayerOnFoot::PlayIdleAnimations	W	0x00C19664	961	1	3062632828	CTaskSimplePlayerOnFoot::PlayerControlZelda
+PENDING	gNodeNamePluginOffset	NodeNameConstructor	R	0x00C87C5C	1071	1	3062650987	rw::Frame::create; rw::PluginList::construct
+PENDING	gNodeNamePluginOffset	_NodeNamePluginAttach	W	0x00C87C5C	1071	1	3062588839	AppEventHandler; PluginAttach
+PENDING	gNumLoadedBuildings	CFileLoader::LoadScene	W	0x00BCC0D8	884	1	3062613606	CFileLoader::LoadLevel; CLoadingScreen::DisplayPCScreen
+PENDING	gRestoreEntries	CVehicleModelInfo::SetEditableMaterialsCB	W	0x00B4DBE8	757	1	3062692310	CVehicleModelInfo::SetEditableMaterialsCB; RpGeometryForAllMaterials
+PENDING	gRestoreEntries	RemoveWindowAlphaCB	W	0x00B4DBE8	757	1	3062805872	CVehicleModelInfo::SetEditableMaterialsCB; RpGeometryForAllMaterials
+PENDING	gString	__crt_stdio_output::D::DV?$string_output_adapter::?$output_processor::process	W	0x00B71670	793	1	3062857888	??$common_vsprintf@Vformat_validation_base@__crt_stdio_output@@D@@YAH_KQADIQBDAAV__crt_cached_ptd_host@@1@Z
+PENDING	gString	_memcpy	W	0x00B71670	793	1	3062692835	__crt_stdio_output::D::?$string_output_adapter::write_string; __crt_stdio_output::D::DV?$string_output_adapter::?$output_processor::state_case_type
+PENDING	gTriPlantBuf	CPPTriPlantBuffer::Flush	R	0x00C02DE8	938	1	3063037965	CPlantMgr::Render; RenderScene
+PENDING	g_BreakablePlugin	BreakableConstructor	R	0x00BB4238	860	1	3062613415	rw::Geometry::create; rw::PluginList::construct
+PENDING	g_BreakablePlugin	BreakablePluginAttach	W	0x00BB4238	860	1	3062588840	AppEventHandler; PluginAttach
+PENDING	g_LoadMonitor	CLoadMonitor::EndFrame	W	0x00B729C0	794	1	3062797855	CGame::Process; CTimer::UpdateVariables
+PENDING	g_LoadMonitor	CLoadMonitor::StartTimer	W	0x00B729A4	794	1	3062767849	CPedIntelligence::ProcessAfterPreRender; CWorld::ProcessPedsAfterPreRender
+PENDING	g_boneNodeMan	BoneNodeManager_c::GetBoneNode	W	0x00C14F60	956	2	3062714780	CCamera::IsSphereVisible; CTaskSimpleIKPointArm; IKChain_c::SetupBones
+PENDING	g_boneNodeMan	BoneNodeManager_c::Init	R	0x00C15420	957	1	3062589733	CGame::InitialiseCoreDataAfterRW; ProcessGameLogic
+PENDING	g_boneNodeMan	BoneNodeManager_c::Init	W	0x00C10820	956	5	3062589733	CGame::InitialiseCoreDataAfterRW; ProcessGameLogic
+PENDING	g_boneNodeMan	BoneNode_c::CalcWldMat	R	0x00C14F70	956	1	3062722881	GetAnimHierarchyFromFrameCB; RpHAnimFrameGetHierarchy
+PENDING	g_breakMan	BreakManager_c::Render	R	0x00BB4241	860	1	3062692826	Idle; RenderScene
+PENDING	g_breakMan	BreakManager_c::Update	R	0x00BB4241	860	1	3062647826	CGame::Process; Idle
+PENDING	g_furnitureMan	FurnitureManager_c::Init	W	0x00BAC000	852	1	3062614397	CGame::Init3; InteriorManager_c::Init
+PENDING	g_fx	Fx_c::GetFxQuality	R	0x00A9AE54	578	1	3062589863	?A0xedc72615::TextureGtaStreamRead; RwTexDictionaryGtaStreamRead
+PENDING	g_fx	RenderBegin	W	0x00A9AE68	578	1	3062737835	FxEmitterBP_c::Render
+PENDING	g_fxMan	FxManager_c::CalcFrustumInfo	W	0x00A9AEC4	578	1	3062752847	FxManager_c::Update; Fx_c::Update
+PENDING	g_fxMan	FxManager_c::Render	W	0x00A9AF38	578	1	3062617792	Idle; RenderEffects
+PENDING	g_ikChainMan	IKChainManager_c::Update	R	0x00C15F48	957	1	3062614439	CReplay::Update; CWorld::Process
+PENDING	g_ikChainMan	IKChain_c::SetBlend	W	0x00C15E00	957	4	3062722872	CTaskSimpleIKChain::ProcessPed; CTaskSimpleIKManager::ProcessPed
+PENDING	g_interiorMan	InteriorManager_c::Init	W	0x00BAF670	858	4	3062614397	CGame::Init3; CGame::Initialise
+PENDING	g_nNumIm3dDrawCalls	LittleTest	R	0x00B73708	795	1	3062692819	CWaterLevel::RenderWater; RenderBuffer::RenderAndEmptyRenderBuffer
+PENDING	g_procObjMan	ProcObjectMan_c::Exit	W	0x00BBC8B8	868	1	3063052691	CGame::Shutdown; NOTSA_WinMain
+PENDING	g_procObjMan	ProcObjectMan_c::Init	R	0x00BBC8B8	868	1	3062614399	CGame::Init3; CGame::Initialise
+PENDING	g_procObjMan	ProcObjectMan_c::Init	W	0x00BBA0B8	867	2	3062614399	CGame::Init3; CGame::Initialise
+PENDING	g_procObjMan	ProcSurfaceInfo_c::Exit	R	0x00BB800C	865	2	3063052691	CGame::Shutdown; ProcObjectMan_c::Exit
+PENDING	g_procObjMan	ProcSurfaceInfo_c::Init	W	0x00BB8000	865	2	3062614400	ProcObjectMan_c::LoadDataFile
+PENDING	g_realTimeShadowMan	CRealTimeShadowManager::Update	R	0x00C40350	1000	1	3062752859	AppEventHandler; Idle
+PENDING	g_realTimeShadowMan	CShadowCamera::RasterBlur	R	0x00C40394	1000	1	3062722831	CRealTimeShadow::Update; CRealTimeShadowManager::Update
+PENDING	g_surfaceInfos	SurfaceInfos_c::LoadAdhesiveLimits	W	0x00B79538	801	1	3062589688	??2@YAPAXI@Z; __malloc_base
+PENDING	g_waterCreatureMan	WaterCreatureManager_c::Init	R	0x00C1F930	967	1	3062614400	CGame::Init3; CGame::Initialise
+PENDING	g_waterCreatureMan	WaterCreatureManager_c::Init	W	0x00C1DFCC	965	2	3062614400	CGame::Init3; CGame::Initialise
+PENDING	g_waterCreatureMan	WaterCreatureManager_c::Update	R	0x00C1F93C	967	1	3062617833	FxManager_c::Update; Fx_c::Update
+PENDING	gamma	CGamma::SetGamma	R	0x00C92134	1082	1	3063045015	CMenuManager::CheckForMenuClosing; CMenuManager::SetBrightness
+PENDING	gbCineyCamProcessedOnFrame	CHud::Draw	R	0x00B6EC40	790	1	3062617796	Idle; Render2dStuff
+PENDING	gbIplsNeededAtPosn	CIplStore::Initialise	W	0x008E3FA8	139	1	3062613420	CGame::Init1; CGame::Initialise
+PENDING	gbLARiots	CGameLogic::LaRiotsActiveHere	R	0x00B72958	794	1	3062812861	CBaseModelInfo::Get2dEffect; CEntity::ProcessLightsForEntity
+PENDING	gfLaRiotsLightMult	CPostEffects::Render	R	0x008CD060	117	1	3062617795	
+PENDING	gfLaRiotsLightMult	CTimeCycle::GetAmbientRed	R	0x008CD060	117	1	3062752850	Idle; SetLightsWithTimeOfDayColour
+PENDING	gfLaRiotsLightMult	CTimeCycle::GetAmbientRed_BeforeBrightness	R	0x008CD060	117	1	3062722835	CPhysical::GetLightingFromCol; CRenderer::SetupLightingForEntity
+PENDING	gpAnimBlendClump	RpAnimBlendClumpUpdateAnimations	W	0x00B4EA0C	758	1	3062617822	CEntity::UpdateAnim; CWorld::Process
+PENDING	gpHandManTex	CShinyTexts::Render	R	0x00C40404	1000	1	3062707837	CSpecialFX::Render; RenderEffects
+PENDING	gpLoadedBuildings	CIplStore::LoadIplBoundingBox	W	0x00BCD000	885	1	3062614075	CIplStore::LoadIpl; CStreaming::ConvertBufferToObject
+PENDING	gpShadowCarTex	CShadows::Init	W	0x00C403E0	1000	1	3062614275	CGame::Init2; __free_base
+PENDING	gpShadowPedTex	CShadows::StoreShadowForPedObject	R	0x00C403E4	1000	1	3062782859	??R<lambda_2>@?BM@??PreRenderAfterTest@CPed@@QAEXXZ@QBE@XZ; CPed::PreRenderAfterTest
+PENDING	gta_user_dir_path	InitUserDirectories	R	0x00C92368	1082	1	3062587808	__malloc_base; psInitialize
+PENDING	kMod_FatBase	CStats::GetFatAndMuscleModifier	R	0x008CDEC0	117	1	3062632828	CTaskSimpleGoTo::SetUpIK; __startOneArgErrorHandling
+PENDING	m_sRainSoundL	CAEWeatherAudioEntity::Service	R	0x00B6BBA0	787	1	3062617818	CWeather::Update; CalculateBoundingSphereRadiusCB
+PENDING	ms_ClimbColModel	CColModel::RemoveCollisionVolumes	R	0x00C19544	961	1	3063052746	CGame::Shutdown; CTaskSimpleClimb::Shutdown
+PENDING	ms_currentIPLAreaCode	CIplStore::SetIplsRequired	W	0x008E3EF8	139	1	3062617818	CIplStore::LoadIpls; CStreaming::Update
+PENDING	ms_pPtrNodeSingleLinkPool	GetPtrNodeSingleLinkPool	R	0x00B74484	796	1	3062797856	PAVCEntryExit::?$CQuadTreeNode::GetAllMatching; details::CPtrNodeSingleLink__operator_new
+PENDING	ms_pTaskPool	GetTaskPool	R	0x00B744A8	796	1	3062962923	??2CTask@@SAPAXI@Z; CTaskComplexFacial::ControlSubTask
+PENDING	ms_pVehiclePool	GetVehiclePool	R	0x00B74494	796	1	3062589335	RwCameraShowRaster; notsa::standalone::Fixups::LogGameStateTrace
+PENDING	ms_txdPluginOffset	CTxdStore::PluginAttach	W	0x00C88018	1072	1	3062588839	AppEventHandler; PluginAttach
+PENDING	nSpriteBufferIndex	CSprite::FlushSpriteBuffer	R	0x00C6A158	1042	1	3062589867	CFont::RenderFontBuffer; CFont::RenderString
+PENDING	pEmptyChar	CFont::RenderFontBuffer	R	0x00C716A8	1049	1	3062617797	Idle; Render2dStuff
+PENDING	playerImg	CDirectory::Init	W	0x00BC12C4	873	1	3062614491	CClothesBuilder::CreateSkinnedClump; CEntity::HasPreRenderEffects
+PENDING	s_AutomobileSpeedDivisor	CAutomobile::PreRender	R	0x00C1BFF0	963	1	3062752858	CShadows::StoreShadowForPole; GraphicsHighQuality
+PENDING	s_BlendFunctions	FxEmitterBP_c::Render	R	0x008A6240	78	1	3062707836	
+PENDING	s_FurnSubGrpFurnitureStore	FurnitureSubGroup_c::AddFurniture	W	0x00BAE200	854	1	3062614398	FurnitureManager_c::LoadFurniture
+PENDING	s_FurnitureEntityPool	FurnitureManager_c::Exit	W	0x00BAD3EC	853	1	3063052691	CGame::Shutdown; NOTSA_WinMain
+PENDING	s_FurnitureEntityPool	FurnitureManager_c::Init	R	0x00BAD3EC	853	1	3062614397	CGame::Init3; InteriorManager_c::Init
+PENDING	s_MemoryHeapBuffer	CMemoryHeap::Init	W	0x00C920BC	1082	1	3062640385	CMemoryMgr::InitScratchPad; CVehicleModelInfo::ReduceMaterialsInVehicle
+PENDING	s_MemoryHeapBuffer	CRenderer::ScanSectorList	R	0x00C8E0CC	1078	1	3062782853	
+PENDING	s_MemoryHeapBuffer	CRenderer::SetupBigBuildingVisibility	W	0x00C8E0F8	1078	1	3062917901	CRenderer::ScanBigBuildingList
+PENDING	s_MemoryHeapBuffer	CRenderer::SetupScanLists	W	0x00C8E0C8	1078	1	3062617834	CRenderer::ScanSectorList; __handle_exc
+PENDING	s_MemoryHeapBuffer	_memcpy	W	0x00C8F000	1079	3	3062614239	?A0x641b6cf1::MemoryStream::read8; RwStreamRead
+PENDING	s_SunPosNrm	BuildShadowVolume	R	0x008D5244	125	1	3062752843	
+PENDING	s_SunPosNrm	CStencilShadows::RenderBuffer	W	0x008D5244	125	1	3062857886	CGame::Process; CTimer::UpdateVariables
+PENDING	s_bLoadPathsNeeded	CPathFind::UpdateStreaming	R	0x0096F030	279	1	3062617820	CWeather::Update
+PENDING	uiTempBufferIndicesStored	CClouds::RenderSkyPolys	W	0x00C4B954	1011	1	3062722833	DefinedState; rw::d3d::setRwRenderState
+PENDING	uiTempBufferIndicesStored	RenderBuffer::ClearRenderBuffer	W	0x00C4B954	1011	1	3063037965	CShadows::RenderStaticShadows; RenderScene
+PENDING	uiTempBufferIndicesStored	RenderBuffer::RenderIfDoesntFit	R	0x00C4B954	1011	1	3062692818	CWaterLevel::RenderFlatWaterRectangle; CWaterLevel::RenderFlatWaterRectangle_OneLayer
+PENDING	uiTempBufferVerticesStored	CBrightLights::Render	W	0x00C4B950	1011	1	3062737837	CSpecialFX::Render; RenderEffects
+PENDING	uiTempBufferVerticesStored	CStencilShadows::sub_710CC0	R	0x00C4B950	1011	1	3062872890	CStencilShadows::Render; CStencilShadows::RenderStencilShadows

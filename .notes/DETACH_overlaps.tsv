@@ -1,0 +1,44 @@
+outer_addr	outer_name	outer_size	inner_addr	inner_name	inner_size	offset	relation	outer_type	inner_type
+0x8A5A8C	CStreaming::ms_aDefaultCopCarModel	20	0x8A5A9C	CStreaming::ms_DefaultCopBikeModel	4	0x10	contained	std::array<int32,5>	int32
+0x8A5AA0	CStreaming::ms_aDefaultCopModel	20	0x8A5AB0	CStreaming::ms_DefaultCopBikerModel	4	0x10	contained	std::array<int32,5>	int32
+0x8D35D4	VehicleGunOffset	168	0x8D3670	fFlyingLiftLimit	4	0x9c	contained	std::array<CVector,14>	float
+0x8D35D4	VehicleGunOffset	168	0x8D3674		4	0xa0	contained	std::array<CVector,14>	float
+0x8D35D4	VehicleGunOffset	168	0x8D3678		4	0xa4	contained	std::array<CVector,14>	float
+0x969130	CCheat::m_aCheatsActive	92	0x96914C	s_BikeHandlingCheat	1	0x1c	contained	bool[TOTAL_CHEATS]	uint8
+0x96A8B0	CGameLogic::GameState	4	0x96A8B1	CGameLogic::ActivePlayers	4	0x1	partial	eGameLogicState	int32
+0x96A8B0	CGameLogic::GameState	4	0x96A8B2	CGameLogic::bPlayersCannotTargetEachOther	1	0x2	contained	eGameLogicState	bool
+0x96A8B0	CGameLogic::GameState	4	0x96A8B3	CGameLogic::bPlayersCanBeInSeparateCars	1	0x3	contained	eGameLogicState	bool
+0x96A8B1	CGameLogic::ActivePlayers	4	0x96A8B2	CGameLogic::bPlayersCannotTargetEachOther	1	0x1	contained	int32	bool
+0x96A8B1	CGameLogic::ActivePlayers	4	0x96A8B3	CGameLogic::bPlayersCanBeInSeparateCars	1	0x2	contained	int32	bool
+0x96A8B1	CGameLogic::ActivePlayers	4	0x96A8B4	CGameLogic::nPrintFocusHelpTimer	4	0x3	partial	int32	int32
+0xB613EC	CAEPedSpeechAudioEntity::s_Conversation	16	0xB613F8		2	0xc	contained	std::array<eGlobalSpeechContextS16,8>	int16
+0xB613EC	CAEPedSpeechAudioEntity::s_Conversation	16	0xB613FA		2	0xe	contained	std::array<eGlobalSpeechContextS16,8>	int16
+0xB6EC5C	gbExitCam	29	0xB6EC60	gArrestCamOneStartTime	4	0x4	contained	std::array<bool,29>	float
+0xB6EC5C	gbExitCam	29	0xB6EC65	gbAvoidGeometryDoSecondLOS	1	0x9	contained	std::array<bool,29>	bool
+0xB6EC5C	gbExitCam	29	0xB6EC68	gNearClipPedDistDivisor	4	0xc	contained	std::array<bool,29>	float
+0xB6EC5C	gbExitCam	29	0xB6EC6C	gCamColLastRadius	4	0x10	contained	std::array<bool,29>	float
+0xB6F028	TheCamera	3448	0xB6F32C	CTaskSimpleFight::ProcessPed()::v	12	0x304	contained	CCamera	CVector
+0xB6FDA0	gIdleCam	156	0xB6FDC8	CCam::Process()::s_unk_B6FDC8	4	0x28	contained	CIdleCam	float
+0xB6FDA0	gIdleCam	156	0xB6FE34	gCamUnkB6FE34	4	0x94	contained	CIdleCam	int32
+0xB71F80	gFireManager	2404	0xB728E0	s_Unk_B728E0	4	0x960	contained	CFireManager	int32
+0xB73710	CPhysical::ProcessCollisionSectorList()::colPoints	1408	0xB73720	CPhysical::fxDirection	12	0x10	contained	std::array<CColPoint,32>	CVector
+0xB78CC8	CStats::TimesMissionAttempted	400	0xB78E20	CStats::SetNewRecordStat()::slot	4	0x158	contained	std::array<int32,100>	int32
+0xBA1788	CUserDisplay::OnscnTimer	340	0xBA18D9	s_Unk_BA18D9	1	0x151	contained	COnscreenTimer	bool
+0xBAB380	g_furnitureMan	8312	0xBAD3EC	s_FurnitureEntityPool	12	0x206c	contained	FurnitureManager_c	TList_c<FurnitureEntity_c>
+0xBAF670	g_interiorMan	18264	0xBB3914	s_InteriorCount	4	0x42a4	contained	InteriorManager_c	size_t
+0xBAF670	g_interiorMan	18264	0xBB3918	s_InteriorIds	256	0x42a8	contained	InteriorManager_c	std::array<int32,64>
+0xBAF670	g_interiorMan	18264	0xBB3A18	s_StealableObjectCount	4	0x43a8	contained	InteriorManager_c	int32
+0xBAF670	g_interiorMan	18264	0xBB3A1C	s_StealableObjects	896	0x43ac	contained	InteriorManager_c	std::array<InteriorObject,32>
+0xBAF670	g_interiorMan	18264	0xBB3D9C	s_InteriorPedsAliveState	16	0x472c	contained	InteriorManager_c	std::array<bool,16>
+0xBAF670	g_interiorMan	18264	0xBB3DAC	s_EnEx	4	0x473c	contained	InteriorManager_c	CEntryExit*
+0xBAF670	g_interiorMan	18264	0xBB3DC2	s_ArePedsEnabled	1	0x4752	contained	InteriorManager_c	bool
+0xBAF670	g_interiorMan	18264	0xBB3DC4	s_TimeLastPickupsGenerated	4	0x4754	contained	InteriorManager_c	uint32
+0xC0B058	g_InterestingEvents	344	0xC0B184	CCam::Process()::s_unk_C0B184	1	0x12c	contained	CInterestingEvents	uint8
+0xC170D0	CTaskSimpleFight::m_aComboData	1768	0xC17738	CTaskSimpleUseGun::ProcessPed()::pistolWhipHitTimes	8	0x668	contained	std::array<CMeleeInfo,13>	std::array<float,2>
+0xC170D0	CTaskSimpleFight::m_aComboData	1768	0xC17780	CTaskSimpleUseGun::ProcessPed()::pistolWhipHitIdx	2	0x6b0	contained	std::array<CMeleeInfo,13>	std::array<uint8,2>
+0xC17824	col1	96	0xC17854	s_FightColData	48	0x30	contained	std::array<CColModel,2>	CCollisionData
+0xC4D958	TempBufferVertices	102400	0xC56958	CGlass::ShatteredPolyVertexBuffer	18432	0x9000	contained	TempVertexBuffer	std::array<RxObjSpace3DLitVertex,512>
+0xC4D958	TempBufferVertices	102400	0xC5B158	CGlass::ReflectionPolyVertexBuffer	61416	0xd800	partial	TempVertexBuffer	std::array<RxObjSpace3DLitVertex,1706>
+0xC4D958	TempBufferVertices	102400	0xC5F958	aRadiosityVertexBuffer	42896	0x12000	partial	TempVertexBuffer	RwD3D9Vertex[TOTAL_RADIOSITY_VERTEX_BUFFER]
+0xC5B158	CGlass::ReflectionPolyVertexBuffer	61416	0xC5F958	aRadiosityVertexBuffer	42896	0x4800	contained	std::array<RxObjSpace3DLitVertex,1706>	RwD3D9Vertex[TOTAL_RADIOSITY_VERTEX_BUFFER]
+0xC8A838	gCrossHair	88	0xC8A860	CCam::Process()::s_unk_C8A860	1	0x28	contained	std::array<CWeaponEffects,MAX_NUM_WEAPON_CROSSHAIRS>	uint8

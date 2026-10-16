@@ -1,0 +1,135 @@
+addr	name	type	size	section	ctor_va	ctor_source	repo_ctor	delta_bytes	delta_nz_bytes	nz_bytes	vptr_dwords	ptr_other	initterm_ranges	polymorphic	owner	notes
+0x8CB6F8	AERadioTrackManager	CAERadioTrackManager	880	.data	0x574350	foreign-ctor-write	default ctor non-trivial (trait)	2	2	6	0	0	2	0	source/game_sa/Audio/Managers/AERadioTrackManager.cpp:11	
+0x968A00	CTempColModels::ms_colModelBBox	CColModel	48	.bss	0x40FB60	audit	default ctor non-trivial (trait)	13	13	13	0	0	7	0	source/game_sa/Collision/TempColModels.h:9	
+0x968A30	CTempColModels::ms_colModelCutObj	std::array<CColModel,MAX_NUM_CUTSCENE_COLMODELS>	960	.bss	0x40FB60	audit	default ctor non-trivial (trait)	260	260	260	0	0	140	0	source/game_sa/Collision/TempColModels.h:23	
+0x968DF0	CTempColModels::ms_colModelPed1	CColModel	48	.bss	0x40FB60	audit	default ctor non-trivial (trait)	13	13	13	0	0	7	0	source/game_sa/Collision/TempColModels.h:10	
+0x968E20	CTempColModels::ms_colModelPed2	CColModel	48	.bss	0x40FB60	audit	default ctor non-trivial (trait)	13	13	13	0	0	7	0	source/game_sa/Collision/TempColModels.h:11	
+0x968E50	CTempColModels::ms_colModelDoor1	CColModel	48	.bss	0x40FB60	audit	default ctor non-trivial (trait)	13	13	13	0	0	7	0	source/game_sa/Collision/TempColModels.h:12	
+0x968E80	CTempColModels::ms_colModelBumper1	CColModel	48	.bss	0x40FB60	audit	default ctor non-trivial (trait)	13	13	13	0	0	7	0	source/game_sa/Collision/TempColModels.h:13	
+0x968EB0	CTempColModels::ms_colModelPanel1	CColModel	48	.bss	0x40FB60	audit	default ctor non-trivial (trait)	13	13	13	0	0	7	0	source/game_sa/Collision/TempColModels.h:14	
+0x968EE0	CTempColModels::ms_colModelBonnet1	CColModel	48	.bss	0x40FB60	audit	default ctor non-trivial (trait)	13	13	13	0	0	7	0	source/game_sa/Collision/TempColModels.h:15	
+0x968F10	CTempColModels::ms_colModelBoot1	CColModel	48	.bss	0x40FB60	audit	default ctor non-trivial (trait)	13	13	13	0	0	7	0	source/game_sa/Collision/TempColModels.h:16	
+0x968F40	CTempColModels::ms_colModelWheel1	CColModel	48	.bss	0x40FB60	audit	default ctor non-trivial (trait)	13	13	13	0	0	7	0	source/game_sa/Collision/TempColModels.h:17	
+0x968F70	CTempColModels::ms_colModelBodyPart1	CColModel	48	.bss	0x40FB60	audit	default ctor non-trivial (trait)	13	13	13	0	0	7	0	source/game_sa/Collision/TempColModels.h:18	
+0x968FA0	CTempColModels::ms_colModelBodyPart2	CColModel	48	.bss	0x40FB60	audit	default ctor non-trivial (trait)	13	13	13	0	0	7	0	source/game_sa/Collision/TempColModels.h:19	
+0x968FD0	CTempColModels::ms_colModelWeapon	CColModel	48	.bss	0x40FB60	audit	default ctor non-trivial (trait)	13	13	13	0	0	7	0	source/game_sa/Collision/TempColModels.h:20	
+0x96A9B8	CGameLogic::SavedWeapons	std::array<CWeapon,NUM_WEAPON_SLOTS>	364	.bss	0x441E00	audit	default ctor non-trivial (trait)	0	0	0	0	0	0	0	source/game_sa/GameLogic.h:39	
+0x96C048	CGarages::aGarages	CGarage[MAX_NUM_GARAGES]	10800	.bss	0x4470E0	audit	default ctor non-trivial (trait)	150	150	150	50	0	50	0	source/game_sa/Garages.h:22	
+0x972CD0	aNodesToBeCleared	std::array<CNodeAddress,5000>	20000	.bss	0x84A040	audit-fill-loop	default ctor non-trivial (trait)	10000	10000	10000	0	0	5000	0	source/game_sa/PathFind.cpp:30	
+0x977B7C	aExteriorNodeLinkedTo	std::array<CNodeAddress,NUM_PATH_INTERIOR_AREAS>	32	.bss	0x84A080	audit-fill-loop	default ctor non-trivial (trait)	16	16	16	0	0	8	0	source/game_sa/PathFind.cpp:28	
+0xA430B0	CReplay::PlayerInfo	CPlayerInfo	400	.bss	0x571920	audit	reversed:CPlayerInfo::CPlayerInfo	13	13	13	0	0	7	0	source/game_sa/Replay.h:228	
+0xA435A0	CRoadBlocks::RoadBlockNodes	std::array<CNodeAddress,MAX_ROADBLOCKS>	1300	.bss	0x84A640	audit-fill-loop	default ctor non-trivial (trait)	650	650	650	0	0	325	0	source/game_sa/RoadBlocks.h:39	
+0xA90CF0	CTheScripts::ScriptsForBrains	CScriptsForBrains	1400	.bss	0x46B260	audit	default ctor non-trivial (trait)	490	490	490	0	0	140	0	source/game_sa/Scripts/TheScripts.h:466	
+0xA913E8	CTheScripts::IntroTextLines	std::array<tScriptText,MAX_NUM_INTRO_TEXT_LINES>	6528	.bss	0x463750	audit	default ctor non-trivial (trait)	0	0	0	0	0	0	0	source/game_sa/Scripts/TheScripts.h:386	
+0xA92D68	CTheScripts::IntroRectangles	std::array<tScriptRectangle,MAX_NUM_SCRIPT_RECTANGLES>	7680	.bss	0x463770	audit	default ctor non-trivial (trait)	0	0	0	0	0	0	0	source/game_sa/Scripts/TheScripts.h:389	
+0xA94B68	CTheScripts::ScriptSprites	std::array<CSprite2d,MAX_NUM_SCRIPT_SPRITES>	512	.bss	0x727230	audit	default ctor non-trivial (trait)	0	0	0	0	0	0	0	source/game_sa/Scripts/TheScripts.h:392	
+0xA9A810	gStoredClothesState	CPedClothesDesc	120	.bss	0x5A8020	audit	default ctor non-trivial (trait)	0	0	0	0	0	0	0	source/game_sa/Shopping.h:133	
+0xA9AE00	g_fx	Fx_c	112	.bss	0x49E620	audit	default ctor non-trivial (trait)	1	1	1	0	0	1	0	source/game_sa/Fx/Fx.cpp:22	
+0xA9AE80	g_fxMan	FxManager_c	188	.bss	0x4A9470	audit	default ctor non-trivial (trait)	0	0	0	0	0	0	0	source/game_sa/Fx/FxManager.cpp:18	
+0xA9AFB8	CInformFriendsEventQueue::ms_informFriendsEvents	std::array<CInformFriendsEvent,8>	96	.bss	0x4AC0D0	audit	default ctor non-trivial (trait)	32	32	32	0	0	8	0	source/game_sa/InformFriendsEventQueue.h:15	
+0xA9B018	CInformGroupEventQueue::ms_informGroupEvents	std::array<CInformGroupEvent,8>	128	.bss	0x4AC350	audit	reversed:CInformGroupEvent::CInformGroupEvent	32	32	32	0	0	8	0	source/game_sa/InformGroupEventQueue.h:10	
+0xAAE950	CModelInfo::ms_atomicModelInfoStore	CStore<CAtomicModelInfo,NUM_ATOMIC_MODEL_INFOS>	448004	.bss	0x4C5CB0	audit	default ctor non-trivial (trait)	70000	70000	70000	14000	0	28000	0	source/game_sa/Models/ModelInfo.cpp:13	
+0xB1BF58	CModelInfo::ms_damageAtomicModelInfoStore	CStore<CDamageAtomicModelInfo,NUM_DAMAGE_ATOMIC_MODEL_INFOS>	2524	.bss	0x4C5D10	audit	default ctor non-trivial (trait)	350	350	350	0	70	140	0	source/game_sa/Models/ModelInfo.cpp:14	
+0xB1C934	CModelInfo::ms_lodAtomicModelInfoStore	CStore<CLodAtomicModelInfo,NUM_LOD_ATOMIC_MODEL_INFOS>	40	.bss	0x4C5D70	audit	default ctor non-trivial (trait)	5	5	5	0	1	2	0	source/game_sa/Models/ModelInfo.cpp:15	
+0xB1C960	CModelInfo::ms_timeModelInfoStore	CStore<CTimeModelInfo,NUM_TIME_MODEL_INFOS>	6088	.bss	0x4C5DD0	audit	default ctor non-trivial (trait)	1183	1183	1183	0	169	339	0	source/game_sa/Models/ModelInfo.cpp:16	
+0xB1E128	CModelInfo::ms_lodTimeModelInfoStore	CStore<CLodTimeModelInfo,NUM_LOD_TIME_MODEL_INFOS>	44	.bss	0x4C5E30	audit	default ctor non-trivial (trait)	7	7	7	1	0	3	0	source/game_sa/Models/ModelInfo.cpp:17	
+0xB1E158	CModelInfo::ms_weaponModelInfoStore	CStore<CWeaponModelInfo,NUM_WEAPON_MODEL_INFOS>	2044	.bss	0x4C5E90	audit	default ctor non-trivial (trait)	255	255	255	51	0	102	0	source/game_sa/Models/ModelInfo.cpp:18	
+0xB1E958	CModelInfo::ms_clumpModelInfoStore	CStore<CClumpModelInfo,NUM_CLUMP_MODEL_INFOS>	3316	.bss	0x4C5EF0	audit	default ctor non-trivial (trait)	460	460	460	92	0	184	0	source/game_sa/Models/ModelInfo.cpp:19	
+0xB1F650	CModelInfo::ms_vehicleModelInfoStore	CStore<CVehicleModelInfo,NUM_VEHICLE_MODEL_INFOS>	164516	.bss	0x4C5F50	audit	default ctor non-trivial (trait)	11236	11236	11236	212	0	637	0	source/game_sa/Models/ModelInfo.cpp:20	
+0xB478F8	CModelInfo::ms_pedModelInfoStore	CStore<CPedModelInfo,NUM_PED_MODEL_INFOS>	18908	.bss	0x4C67D0	audit	default ctor non-trivial (trait)	1390	1390	1390	0	278	556	0	source/game_sa/Models/ModelInfo.cpp:21	
+0xB4EA40	CAnimManager::ms_aAnimations	std::array<CAnimBlendHierarchy,2500>	60000	.bss	0x4CF270	audit	reversed:CAnimBlendHierarchy::CAnimBlendHierarchy	10000	10000	10000	0	0	2500	0	source/game_sa/Animation/AnimManager.h:30	
+0xB5F8B8	AEAudioHardware	CAEAudioHardware	4116	.bss	0x4D83E0	audit	reversed:CAEAudioHardware::CAEAudioHardware	1345	1345	1345	0	0	73	0	source/game_sa/Audio/Hardware/AEAudioHardware.cpp:11	
+0xB608D0	AESmoothFadeThread	CAESmoothFadeThread	2076	.bss	0x4EE9A0	audit	default ctor non-trivial (trait)	4	4	4	0	0	1	0	source/game_sa/Audio/AESmoothFadeThread.cpp:7	
+0xB612D8	AEStreamTransformer	CAEStreamTransformer	16	.bss	0x4F1750	audit	reversed:CAEStreamTransformer::Initialise	16	16	16	0	0	1	0	source/game_sa/Audio/Loaders/AEStreamTransformer.cpp:7	
+0xB61C38	CAEPedSpeechAudioEntity::s_PedSpeechSlots	std::array<CAEPedSpeechSlot,SND_BANK_SLOT_SPEECH6 - SND_BANK_SLOT_SPEECH1 + 1>	168	.bss	0x4E3330	audit	default ctor non-trivial (trait)	0	0	0	0	0	0	0	source/game_sa/Audio/Entities/AEPedSpeechAudioEntity.h:168	
+0xB62CB0	AESoundManager	CAESoundManager	36028	.bss	0x4EFD30	audit	default ctor non-trivial (trait)	0	0	0	0	0	0	0	source/game_sa/Audio/Managers/AESoundManager.cpp:12	
+0xB6BB18	m_sRainSoundL	CAETwinLoopSoundEntity	168	.bss	0x4F63B0	audit	default ctor non-trivial (trait)	3	3	3	1	0	1	1	source/game_sa/Audio/Entities/AEWeatherAudioEntity.cpp:22	
+0xB6BBC0	m_sRainSoundR	CAETwinLoopSoundEntity	168	.bss	0x4F63B0	audit	default ctor non-trivial (trait)	3	3	3	1	0	1	1	source/game_sa/Audio/Entities/AEWeatherAudioEntity.cpp:23	
+0xB6BC90	AudioEngine	CAudioEngine	8152	.bss	0x507670	audit	reversed:CAudioEngine::CAudioEngine	39	39	39	9	0	12	0	source/game_sa/Audio/AudioEngine.cpp:13	
+0xB6ECA0	gHandShaker	std::array<CHandShaker,NUM_HANDSHAKERS>	888	.bss	0x517740	audit	default ctor non-trivial (trait)	353	353	353	0	0	25	0	source/game_sa/HandShaker.h:30	
+0xB6F028	TheCamera	CCamera	3448	.bss	0x51A450	audit	reversed:CCamera::CCamera	147	147	147	1	1	74	1	source/game_sa/Camera.cpp:19	
+0xB6FDA0	gIdleCam	CIdleCam	156	.bss	0x50E6D0	audit	reversed:CIdleCam::Init	54	54	54	0	0	25	0	source/game_sa/IdleCam.cpp:8	
+0xB6FE88	gpCamColVars	float*	4	.bss	0x84D750	audit-fill-loop	none (trivial / aggregate)	3	3	3	0	1	1	0	source/game_sa/Camera.cpp:29	scalar written by an _initterm float/int initialiser
+0xB6FEC0	gDWHeliChaseCamSettings	DWHeliChaseCamSettings	156	.bss	0x5173F0	audit	none (trivial / aggregate)	41	41	41	0	0	20	0	source/game_sa/Cam.cpp:137	
+0xB70198	ControlsManager	CControllerConfigManager	4836	.bss	0x531EE0	audit	reversed:CControllerConfigManager::CControllerConfigManager	1254	1254	1254	0	0	248	0	source/game_sa/ControllerConfigManager.cpp:12	
+0xB71F80	gFireManager	CFireManager	2404	.bss	0x539DA0	audit	reversed:CFireManager::CFireManager	363	363	363	0	0	181	0	source/game_sa/FireManager.h:81	
+0xB72978	g_LoadMonitor	CLoadMonitor	688	.bss	0x53CFA0	audit	reversed:CLoadMonitor::CLoadMonitor	10	10	10	0	0	6	0	source/game_sa/LoadMonitor.cpp:3	
+0xB73458	CPad::Pads	CPad[MAX_PADS]	616	.bss	0x541D80	audit	default ctor non-trivial (trait)	0	0	0	0	0	0	0	source/game_sa/Pad.h:111	
+0xB74240	gDummyMatrix	CMatrix	72	.bss	0x59AED0	audit	reversed:CMatrix::SetScale	6	6	6	0	0	3	0	source/game_sa/Core/Matrix.cpp:15	
+0xB74288	gMatrixList	CMatrixLinkList	508	.bss	0x54F440	audit	default ctor non-trivial (trait)	0	0	0	0	0	0	0	source/game_sa/Core/MatrixLinkList.cpp:5	
+0xB7CB10	CTimeCycle::m_BelowHorizonGrey	RwRGBA	4	.bss	0x7170C0	audit	none (trivial / aggregate)	4	4	4	0	0	1	0	source/game_sa/TimeCycle.h:128	scalar written by an _initterm float/int initialiser
+0xB7CD98	CWorld::Players	CPlayerInfo[MAX_PLAYERS]	800	.bss	0x571920	audit	reversed:CPlayerInfo::CPlayerInfo	26	26	26	0	0	14	0	source/game_sa/World.h:54	
+0xB7D0B8	CWorld::ms_aSectors	notsa::mdarray<CSector,MAX_SECTORS_Y,MAX_SECTORS_X>	115200	.bss	0x564040	audit	no default ctor	0	0	0	0	0	0	0	source/game_sa/World.h:75	
+0xB992B8	CWorld::ms_aRepeatSectors	notsa::mdarray<CRepeatSector,MAX_REPEAT_SECTORS_Y,MAX_REPEAT_SECTORS_X>	3072	.bss	0x563190	audit	default ctor non-trivial (trait)	0	0	0	0	0	0	0	source/game_sa/World.h:77	
+0xB99EB8	CWorld::ms_aLodPtrLists	notsa::mdarray<CPtrListSingleLink<CEntity*>,MAX_LOD_PTR_LISTS_Y,MAX_LOD_PTR_LISTS_X>	3600	.bss	0x43E3F0	audit	default ctor non-trivial (trait)	0	0	0	0	0	0	0	source/game_sa/World.h:79	
+0xBA6748	FrontEndMenuManager	CMenuManager	7032	.bss	0x574350	audit	reversed:CMenuManager::CMenuManager	39	39	39	0	0	17	0	source/game_sa/MenuManager.cpp:21	
+0xBA86D4	CRadar::ArrowBlipColour	std::array<CRGBA,6>	24	.bss	0x463360	audit	default ctor non-trivial (trait)	0	0	0	0	0	0	0	source/game_sa/Radar.h:215	
+0xBAA250	CRadar::RadarBlipSprites	std::array<CSprite2d,MAX_RADAR_SPRITES>	256	.bss	0x727230	audit	default ctor non-trivial (trait)	0	0	0	0	0	0	0	source/game_sa/Radar.h:218	
+0xBAB1FC	CHud::Sprites	std::array<CSprite2d,6>	24	.bss	0x727230	audit	default ctor non-trivial (trait)	0	0	0	0	0	0	0	source/game_sa/Hud.h:92	
+0xBAB22C	HudColour	CHudColours	60	.bss	0x58FDA0	audit	reversed:CHudColours::CHudColours	56	56	56	0	0	3	0	source/game_sa/HudColours.cpp:5	
+0xBAB35C	CLoadingScreen::m_aSplashes	std::array<CSprite2d,+eDisplayedSplash::COUNT>	28	.bss	0x727230	audit	default ctor non-trivial (trait)	0	0	0	0	0	0	0	source/game_sa/LoadingScreen.h:37	
+0xBAB380	g_furnitureMan	FurnitureManager_c	8312	.bss	0x591260	audit	default ctor non-trivial (trait)	0	0	0	0	0	0	0	source/game_sa/Interior/FurnitureManager_c.h:40	
+0xBAD3F8	FurnitureManager_c::g_subGroupStore	std::array<FurnitureSubGroup_c,128>	3584	.bss	0x590E20	audit	default ctor non-trivial (trait)	0	0	0	0	0	0	0	source/game_sa/Interior/FurnitureManager_c.h:15	
+0xBAE1F8	s_FurnSubGrpFurnitureStore	std::array<Furniture_c,256>	5120	.bss	0x590EC0	audit	default ctor non-trivial (trait)	0	0	0	0	0	0	0	source/game_sa/Interior/FurnitureSubGroup_c.cpp:9	
+0xBAF670	g_interiorMan	InteriorManager_c	18264	.bss	0x5984C0	audit	default ctor non-trivial (trait)	44	44	44	0	0	20	0	source/game_sa/Interior/InteriorManager_c.h:87	
+0xBB4240	g_breakMan	BreakManager_c	2048	.bss	0x59E620	audit	default ctor non-trivial (trait)	0	0	0	0	0	0	0	source/game_sa/BreakManager_c.cpp:5	
+0xBB7CB0	g_procObjMan	ProcObjectMan_c	19476	.bss	0x5A3E20	audit	default ctor non-trivial (trait)	0	0	0	0	0	0	0	source/game_sa/Plant/ProcObjectMan.h:46	
+0xBC1290	gOctTreeBase	COctTreeBase	48	.bss	0x5A7570	audit	default ctor non-trivial (trait)	19	19	19	1	0	2	1	source/game_sa/Core/OctTreeBase.cpp:13	
+0xBC12C0	playerImg	CDirectory	16	.bss	0x532290	audit	default ctor non-trivial (trait)	0	0	0	0	0	0	0	source/game_sa/ClothesBuilder.cpp:8	
+0xBC4020	CCutsceneMgr::ms_cutsceneAssociations	CAnimBlendAssocGroup	20	.bss	0x4CDE70	audit	reversed:CAnimBlendAssocGroup::CAnimBlendAssocGroup	4	4	4	0	0	1	0	source/game_sa/CutsceneMgr.h:121	
+0xC03A44	CPlantMgr::m_AmbientColor	CRGBA	4	.bss	0x7170C0	audit	default ctor non-trivial (trait)	4	4	4	0	0	1	0	source/game_sa/PlantMgr.h:28	scalar written by an _initterm float/int initialiser
+0xC03A48	CPlantMgr::m_LocTrisTab	CPlantLocTri[MAX_NUM_PLANT_TRIANGLES]	21504	.bss	0x5DB2B0	audit	none (trivial / aggregate)	0	0	0	0	0	0	0	source/game_sa/PlantMgr.h:29	
+0xC08E48	CPlantMgr::m_ColEntCacheTab	CPlantColEntEntry[MAX_NUM_PROC_OBJECTS]	800	.bss	0x5DB290	audit	none (trivial / aggregate)	0	0	0	0	0	0	0	source/game_sa/PlantMgr.h:30	
+0xC091F0	CGangs::Gang	std::array<CGangInfo,10>	160	.bss	0x5DE520	audit	default ctor non-trivial (trait)	10	10	10	0	0	10	0	source/game_sa/Gangs.h:20	
+0xC09908	CPedGroupDefaultTaskAllocators::ms_FollowAnyMeansAllocator	CPedGroupDefaultTaskAllocatorFollowAnyMeans	4	.bss	0x5F6450	audit	default ctor non-trivial (trait)	3	3	3	1	0	1	1	source/game_sa/Tasks/Allocators/PedGroup/PedGroupDefaultTaskAllocators.h:16	
+0xC0990C	CPedGroupDefaultTaskAllocators::ms_FollowLimitedAllocator	CPedGroupDefaultTaskAllocatorFollowLimited	4	.bss	0x5F6480	audit	default ctor non-trivial (trait)	3	3	3	1	0	1	1	source/game_sa/Tasks/Allocators/PedGroup/PedGroupDefaultTaskAllocators.h:17	
+0xC09910	CPedGroupDefaultTaskAllocators::ms_StandStillAllocator	CPedGroupDefaultTaskAllocatorStandStill	4	.bss	0x5F64B0	audit	default ctor non-trivial (trait)	3	3	3	1	0	1	1	source/game_sa/Tasks/Allocators/PedGroup/PedGroupDefaultTaskAllocators.h:18	
+0xC09914	CPedGroupDefaultTaskAllocators::ms_ChatAllocator	CPedGroupDefaultTaskAllocatorChat	4	.bss	0x5F64E0	audit	default ctor non-trivial (trait)	3	3	3	1	0	1	1	source/game_sa/Tasks/Allocators/PedGroup/PedGroupDefaultTaskAllocators.h:19	
+0xC09918	CPedGroupDefaultTaskAllocators::ms_RandomAllocator	CPedGroupDefaultTaskAllocatorRandom	4	.bss	0x5F6510	audit	default ctor non-trivial (trait)	3	3	3	1	0	1	1	source/game_sa/Tasks/Allocators/PedGroup/PedGroupDefaultTaskAllocators.h:21	
+0xC0991C	CPedGroupDefaultTaskAllocators::ms_SitInLeaderCarAllocator	CPedGroupDefaultTaskAllocatorSitInLeaderCar	4	.bss	0x5F6540	audit	default ctor non-trivial (trait)	3	3	3	1	0	1	1	source/game_sa/Tasks/Allocators/PedGroup/PedGroupDefaultTaskAllocators.h:20	
+0xC09920	CPedGroups::ms_groups	std::array<CPedGroup,8>	5792	.bss	0x5FC150	audit	reversed:CPedGroup::CPedGroup	1184	1184	1184	0	24	296	0	source/game_sa/PedGroups.h:20	
+0xC0B058	g_InterestingEvents	CInterestingEvents	344	.bss	0x6023A0	audit	reversed:CInterestingEvents::CInterestingEvents	95	95	95	0	0	6	0	source/game_sa/InterestingEvents.cpp:6	
+0xC0B1E8	CPedScriptedTaskRecord::ms_scriptedTasks	CPedScriptedTaskRecordData[TOTAL_SCRIPTED_TASKS]	2560	.bss	0x608330	audit	reversed:CPedScriptedTaskRecordData::CPedScriptedTaskRecordData	640	640	640	0	0	256	0	source/game_sa/Tasks/PedScriptedTaskRecord.h:49	
+0xC10820	g_boneNodeMan	BoneNodeManager_c	19468	.bss	0x617330	audit	default ctor non-trivial (trait)	0	0	0	0	0	0	0	source/game_sa/Ragdoll/BoneNodeManager.h:51	
+0xC15448	g_ikChainMan	IKChainManager_c	2840	.bss	0x617FC0	audit	default ctor non-trivial (trait)	0	0	0	0	0	0	0	source/game_sa/Ragdoll/IKChainManager.cpp:11	
+0xC17824	col1	std::array<CColModel,2>	96	.bss	0x40F030,0x40FB60	audit	default ctor non-trivial (trait)	13	13	13	0	0	7	0	source/game_sa/Game.h:60	sizes:48/96
+0xC17854	s_FightColData	CCollisionData	48	.bss	0x40F030	audit	default ctor non-trivial (trait)	0	0	0	0	0	0	0	source/game_sa/Tasks/TaskTypes/TaskSimpleFight.cpp:24	
+0xC178F0	CTaskSequences::ms_taskSequence	CTaskComplexSequence[NUM_SEQUENCES]	4096	.bss	0x632BD0	audit	default ctor non-trivial (trait)	128	128	128	64	0	64	0	source/game_sa/Tasks/TaskSequences.h:10	
+0xC188F0	CScriptedBrainTaskStore::ms_entries	CScriptedBrainTaskEntry[TOTAL_SCRIPTED_BRAIN_TASK_ENTRIES]	768	.bss	0x62EC40	audit	default ctor non-trivial (trait)	0	0	0	0	0	0	0	source/game_sa/Tasks/ScriptedBrainTaskStore.h:29	
+0xC18CF0	<Group13_15_task.cpp:86>	float	4	.bss	0x8526A0,0x8526B0	audit-fill-loop	none (trivial / aggregate)	2	2	2	0	0	1	0	source/game_sa/Scripts/Commands/Ported/Group13_15_task.cpp:86	scalar written by an _initterm float/int initialiser
+0xC18D48	CTaskSimpleGoTo::ms_fLookAtThresholdDotProduct	float	4	.bss	0x852840	float-init	none (trivial / aggregate)	4	4	4	0	0	1	0	source/game_sa/Tasks/TaskTypes/TaskSimpleGoTo.h:22	scalar written by an _initterm float/int initialiser
+0xC18DB4	<Group13_15_task.cpp:87>	float	4	.bss	0x852860	audit-fill-loop	none (trivial / aggregate)	1	1	1	0	0	1	0	source/game_sa/Scripts/Commands/Ported/Group13_15_task.cpp:87	scalar written by an _initterm float/int initialiser
+0xC18DB8	<Group18.cpp:182>	CPatrolRoute	420	.bss	0x66D440	audit	default ctor non-trivial (trait)	0	0	0	0	0	0	0	source/game_sa/Scripts/Commands/Ported/Group18.cpp:182	
+0xC19518	ms_ClimbColModel	CColModel	48	.bss	0x40FB60	audit	default ctor non-trivial (trait)	13	13	13	0	0	7	0	source/game_sa/Tasks/TaskTypes/TaskSimpleClimb.cpp:14	
+0xC19548	ms_StandUpColModel	CColModel	48	.bss	0x40FB60	audit	default ctor non-trivial (trait)	13	13	13	0	0	7	0	source/game_sa/Tasks/TaskTypes/TaskSimpleClimb.cpp:15	
+0xC19578	ms_VaultColModel	CColModel	48	.bss	0x40FB60	audit	default ctor non-trivial (trait)	13	13	13	0	0	7	0	source/game_sa/Tasks/TaskTypes/TaskSimpleClimb.cpp:16	
+0xC195A8	ms_FindEdgeColModel	CColModel	48	.bss	0x40FB60	audit	default ctor non-trivial (trait)	13	13	13	0	0	7	0	source/game_sa/Tasks/TaskTypes/TaskSimpleClimb.cpp:17	
+0xC196E8	CTaskComplexFollowLeaderInFormation::ms_offsets	Offsets	132	.bss	0x694850	audit	none (trivial / aggregate)	50	50	50	0	0	25	0	source/game_sa/Tasks/TaskTypes/TaskComplexFollowLeaderInFormation.h:24	
+0xC1B340	TheText	CText	2704	.bss	0x6A00F0	audit	reversed:CText::CText	1	1	1	0	0	1	0	source/game_sa/Text/Text.h:88	
+0xC1BFF0	s_AutomobileSpeedDivisor	float	4	.bss	0x853520	float-init	none (trivial / aggregate)	4	4	4	0	0	1	0	source/game_sa/Entity/Vehicle/Automobile.cpp:6742	scalar written by an _initterm float/int initialiser
+0xC1C818	s_BikeTractionScale	float	4	.bss	0x853600	float-init	none (trivial / aggregate)	4	4	4	0	0	1	0	source/game_sa/Entity/Vehicle/Bike.cpp:76	scalar written by an _initterm float/int initialiser
+0xC1C81C	s_BikeExhaustSpeedDivisor	float	4	.bss	0x853620	float-init	none (trivial / aggregate)	4	4	4	0	0	1	0	source/game_sa/Entity/Vehicle/Bike.cpp:82	scalar written by an _initterm float/int initialiser
+0xC1C890	mod_Buoyancy	cBuoyancy	208	.bss	0x6C2740	audit	default ctor non-trivial (trait)	0	0	0	0	0	0	0	source/game_sa/Buoyancy.cpp:6	
+0xC1CC78	CVehicle::m_aSpecialColModel	std::array<CColModel,4>	192	.bss	0x40FB60	audit	default ctor non-trivial (trait)	52	52	52	0	0	28	0	source/game_sa/Entity/Vehicle/Vehicle.h:435	
+0xC1CD38	CVehicle::DoBladeCollision()::s_TestBladeCol	CColModel	48	.bss	0x40FB60	audit	default ctor non-trivial (trait)	13	13	13	0	0	7	0	source/game_sa/Entity/Vehicle/Vehicle.cpp:6813	
+0xC1CD68	CVehicle::DoBladeCollision()::s_TestBladeColData	CCollisionData	48	.bss	0x40F030	audit	default ctor non-trivial (trait)	0	0	0	0	0	0	0	source/game_sa/Entity/Vehicle/Vehicle.cpp:6814	
+0xC1CDC0	CVehicleAnimGroupData::m_vehicleAnimGroups	CVehicleAnimGroup[NUM_VEH_ANIM_GROUPS]	4440	.bss	0x5BD420	audit	default ctor non-trivial (trait)	0	0	0	0	0	0	0	source/game_sa/VehicleAnimGroupData.h:146	
+0xC1DF30	g_waterCreatureMan	WaterCreatureManager_c	6684	.bss	0x6E3EB0	audit	default ctor non-trivial (trait)	0	0	0	0	0	0	0	source/game_sa/WaterCreatureManager_c.cpp:5	
+0xC279CC	fTimeMult	float	4	.bss	0x8540B0	float-init	none (trivial / aggregate)	4	4	4	0	0	1	0	source/game_sa/Entity/Vehicle/Boat.cpp:24	scalar written by an _initterm float/int initialiser
+0xC3A200	CScripted2dEffects::ms_userLists	std::array<tUserList,NUM_SCRIPTED_2D_EFFECTS>	2304	.bss	0x6FA6D0	audit	default ctor non-trivial (trait)	2048	2048	2048	0	0	64	0	source/game_sa/Scripts/Scripted2dEffects.h:55	
+0xC3BB00	CScripted2dEffects::ms_effectPairs	std::array<CScriptedEffectPairs,NUM_SCRIPTED_2D_EFFECTS>	9472	.bss	0x6FA790	audit	default ctor non-trivial (trait)	7168	7168	7168	0	0	512	0	source/game_sa/Scripts/Scripted2dEffects.h:54	
+0xC40300	CPostEffects::m_fNightVisionSwitchOnFXCount	float	4	.bss	0x854810	audit-fill-loop	none (trivial / aggregate)	2	2	2	0	0	1	0	source/game_sa/PostEffects.h:100	scalar written by an _initterm float/int initialiser
+0xC40350	g_realTimeShadowMan	CRealTimeShadowManager	84	.bss	0x706770	audit	default ctor non-trivial (trait)	0	0	0	0	0	0	0	source/game_sa/RealTimeShadowManager.cpp:6	
+0xC6A198	CStencilShadows::m_StencilShadowObjects	std::array<CStencilShadowObject,64>	1792	.bss	0x70F8D0	audit	none (trivial / aggregate)	0	0	0	0	0	0	0	source/game_sa/StencilShadows.h:7	
+0xC6E9A8	CEscalators::aEscalators	std::array<CEscalator,NUM_ESCALATORS>	10752	.bss	0x717110	audit	default ctor non-trivial (trait)	0	0	0	0	0	0	0	source/game_sa/Escalators.h:20	
+0xC71AD0	CFont::Sprite	CSprite2d[MAX_FONT_SPRITES]	8	.bss	0x727230	audit	default ctor non-trivial (trait)	0	0	0	0	0	0	0	source/game_sa/Font.h:94	
+0xC71AD8	CFont::ButtonSprite	CSprite2d[MAX_FONT_BUTTON_SPRITES]	60	.bss	0x727230	audit	default ctor non-trivial (trait)	0	0	0	0	0	0	0	source/game_sa/Font.h:96	
+0xC71BF8	CGlass::aGlassPanes	std::array<CFallingGlassPane,44>	4928	.bss	0x71A8B0	audit	default ctor non-trivial (trait)	0	0	0	0	0	0	0	source/game_sa/Glass.h:32	
+0xC7DD58	C3dMarkers::m_aMarkerArray	std::array<C3dMarker,32>	5120	.bss	0x720F60	audit	default ctor non-trivial (trait)	0	0	0	0	0	0	0	source/game_sa/3dMarkers.h:62	
+0xC80740	CWaterCannons::aCannons	std::array<CWaterCannon,3>	2916	.bss	0x728B10	audit	default ctor non-trivial (trait)	9	9	9	3	0	3	0	source/game_sa/WaterCannons.h:10	
+0xC81360	CWeather::m_WeatherAudioEntity	CAEWeatherAudioEntity	128	.bss	0x72A620	audit	default ctor non-trivial (trait)	3	3	3	1	0	1	1	source/game_sa/Weather.h:61	
+0xC87B40	g_Heaps	std::array<CMemoryHeap,3>	216	.bss	0x72E860	audit	default ctor non-trivial (trait)	0	0	0	0	0	0	0	source/game_sa/MemoryMgr.h:66	
+0xC888D0	CExplosion::m_ExplosionAudioEntity	CAEExplosionAudioEntity	128	.bss	0x5074B0	audit	default ctor non-trivial (trait)	3	3	3	1	0	1	1	source/game_sa/Explosion.h:56	
+0xC8A7DC	CWeapon::ms_PelletTestCol	CColModel	48	.bss	0x40FB60	audit	default ctor non-trivial (trait)	13	13	13	0	0	7	0	source/game_sa/Weapon.h:54	
+0xC8A838	gCrossHair	std::array<CWeaponEffects,MAX_NUM_WEAPON_CROSSHAIRS>	88	.bss	0x742A90	audit	default ctor non-trivial (trait)	0	0	0	0	0	0	0	source/game_sa/WeaponEffects.h:53	
+0xC8AAB8	CWeaponInfo::aWeaponInfo	CWeaponInfo[NUM_WEAPON_INFOS]	8960	.bss	0x743C30	audit	default ctor non-trivial (trait)	0	0	0	0	0	0	0	source/game_sa/WeaponInfo.h:33	

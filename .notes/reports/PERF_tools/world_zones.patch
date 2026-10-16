@@ -1,0 +1,54 @@
+--- /Users/Andrei.Mukhin/github/recomp/gta-reversed/source/game_sa/World.cpp	2026-10-10 17:10:05
++++ /tmp/perf/lw2/World.cpp	2026-10-11 02:31:08
+@@ -2208,6 +2208,9 @@
+         }
+     });
+ 
++    { int nPed=0,nVeh=0,nObj=0; IterateMovingList([&](CEntity* e){ if(e->GetIsTypePed()) nPed++; else if(e->GetIsTypeVehicle()) nVeh++; else nObj++; });
++      static perfprof::Slot* sp=perfprof::Reg("WPC:list.ped",__FILE__,1); static perfprof::Slot* sv=perfprof::Reg("WPC:list.veh",__FILE__,2); static perfprof::Slot* so=perfprof::Reg("WPC:list.obj",__FILE__,3);
++      sp->calls+=nPed; sv->calls+=nVeh; so->calls+=nObj; }
+     // Process moving entities (And possibly remove them from the world)
+     {
+         ZoneScopedN("Process moving entities");
+@@ -2225,7 +2228,10 @@
+                     delete entity;
+                 }
+             } else {
+-                entity->ProcessControl();
++                if (entity->GetIsTypePed() && entity == (CEntity*)FindPlayerPed()) { ZoneScopedN("CPlayerPed::ProcessControl"); entity->ProcessControl(); }
++                else if (entity->GetIsTypePed()) { ZoneScopedN("CPed::ProcessControl"); entity->ProcessControl(); }
++                else if (entity->GetIsTypeVehicle()) { ZoneScopedN("CAutomobile::ProcessControl"); entity->ProcessControl(); }
++                else { ZoneScopedN("WPCtl:object"); entity->ProcessControl(); }
+                 if (entity->GetIsStatic()) {
+                     entity->AsPhysical()->RemoveFromMovingList();
+                 }
+@@ -2262,7 +2268,10 @@
+ 
+             const auto ProcessMovingEntityCollision = [](CEntity* entity) {
+                 if (!entity->GetIsInSafePosition()) {
+-                    entity->ProcessCollision();
++                    if (entity->GetIsTypePed() && entity == (CEntity*)FindPlayerPed()) { ZoneScopedN("WPC:player"); entity->ProcessCollision(); }
++                    else if (entity->GetIsTypePed()) { ZoneScopedN("WPC:ped"); entity->ProcessCollision(); }
++                    else if (entity->GetIsTypeVehicle()) { ZoneScopedN("WPC:vehicle"); entity->ProcessCollision(); }
++                    else { ZoneScopedN("WPC:object"); entity->ProcessCollision(); }
+                     entity->UpdateRwMatrix();
+                     entity->UpdateRwFrame();
+                 }
+@@ -2273,12 +2282,15 @@
+             };
+ 
+             bNoMoreCollisionTorque = false;
+-            ProcessMovingEntityCollisions();
++            { ZoneScopedN("WPC:pass0"); ProcessMovingEntityCollisions(); }
+             bNoMoreCollisionTorque = true;
+ 
+             // Process entities a few more times..
+             for (auto i = 0; i < 4; i++) {
+-                ProcessMovingEntityCollisions();
++                if (i == 0) { ZoneScopedN("WPC:pass1"); ProcessMovingEntityCollisions(); }
++                else if (i == 1) { ZoneScopedN("WPC:pass2"); ProcessMovingEntityCollisions(); }
++                else if (i == 2) { ZoneScopedN("WPC:pass3"); ProcessMovingEntityCollisions(); }
++                else { ZoneScopedN("WPC:pass4"); ProcessMovingEntityCollisions(); }
+             }
+ 
+             // Mark entities as `stuck` if they're still in unsafe positions

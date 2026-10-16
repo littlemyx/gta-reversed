@@ -1,0 +1,13 @@
+addr	class	sizes	canonical_types	spellings (site list)
+0x8A5B24	type	4	int|unsigned int	uint32 @ source/game_sa/CarCtrl.h:30 || int32 @ source/game_sa/Population.cpp:1628
+0x8CDEE4	type	4	enum eWantedLevel|int	eWantedLevel @ source/game_sa/Wanted.h:63 || int32 @ source/game_sa/Scripts/Commands/Ported/Group12.cpp:349
+0x8D6220	spelling	4	int	RwInt32 @ source/app/platform/win/VideoMode.h:32 || int32 @ source/app/platform/win/VideoMode.h:48
+0xA9A318	size	4/1200	class std::array<unsigned int,300>|unsigned int	std::array<uint32,NUM_BUYABLE_ITEMS> @ source/game_sa/Shopping.h:78 || uint32 @ source/game_sa/Scripts/Commands/Ported/Group18.cpp:732
+0xB6B98C	type	4	class CPed*|struct tVehicleAudioSettings*	CPed* @ source/game_sa/Audio/Entities/AEVehicleAudioEntity.h:618 || tVehicleAudioSettings* @ source/game_sa/Audio/Entities/AEVehicleAudioEntity.h:622
+0xB6EC5C	size	4/29	class CEntity*|class std::array<bool,29>	std::array<bool,29> @ source/game_sa/Cam.cpp:43 || CEntity* @ source/game_sa/Cam.cpp:1589
+0xBAB378	size	2/4	unsigned int|unsigned short	uint32 @ source/game_sa/Interior/FurnitureManager_c.h:14;source/game_sa/Interior/FurnitureManager_c.cpp:5 || uint16 @ source/game_sa/Interior/FurnitureSubGroup_c.cpp:7
+0xBB3E00	spelling	1024	class std::array<float,256>	std::array<float,SIN_LUT_SIZE> @ source/game_sa/Maths.cpp:26 || std::array<float,256> @ source/game_sa/WaterLevel.cpp:1621;source/game_sa/WaterLevel.cpp:1717
+0xC17824	size	48/96	class CColModel|class std::array<class CColModel,2>	std::array<CColModel,2> @ source/game_sa/Game.h:60 || CColModel @ source/game_sa/Tasks/TaskTypes/TaskSimpleFight.cpp:23
+0xC278F8	size	4/144	struct rw::d3d::Im3DVertex*|struct rw::d3d::Im3DVertex[4]	RxObjSpace3DVertex* @ source/game_sa/3dMarkers.cpp:7 || RwIm3DVertex[uiNumVertices] @ source/game_sa/Entity/Vehicle/Boat.cpp:12
+0xC4D958	size	144/102400	class std::array<struct rw::d3d::Im3DVertex,4>|struct TempVertexBuffer	TempVertexBuffer @ source/game_sa/common.h:307 || std::array<RxObjSpace3DVertex,4> @ source/game_sa/Fx/Fx.cpp:20
+0xC8CF68	size	4/32	enum WinVer|struct OSStatus	WinVer @ source/app/platform/win/WinPlatform.h:24 || OSStatus @ source/app/platform/win/WinPlatform.h:40

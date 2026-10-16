@@ -1,0 +1,160 @@
+--- /tmp/perf/lw3/Collision_head.cpp	2026-10-11 04:08:27
++++ /tmp/perf/bench/src/Collision.cpp	2026-10-11 04:01:15
+@@ -1880,7 +1880,7 @@
+ 
+     // The exe calculates the closest distance of the sphere's center to the triangle in a coordinate system `(e, M)` in the triangle's plane
+     // (e = unit vector of A->B, M = e x N), where A is at the origin, B at (|AB|, 0), C at (Ce, Cm), and the center is at (Pe, Pm).
+-    // Mostly extended precision (=> double) with float spills (see comments), the term orders are the exe's.
++    // Mostly extended precision (=> float) with float spills (see comments), the term orders are the exe's.
+ 
+     const auto& c = sphere.m_vecCenter;
+     const float r = sphere.m_fRadius;
+@@ -1889,35 +1889,35 @@
+     const float planeOffset = (float)plane.m_normalOffset;
+ 
+     // Signed distance of the center from the plane
+-    const double planeDistE = (((double)nx * c.x + (double)nz * c.z) + (double)ny * c.y) - planeOffset;
+-    if (std::abs(planeDistE) > r) { // NaN passes
++    const float planeDistE = (((float)nx * c.x + (float)nz * c.z) + (float)ny * c.y) - planeOffset;
++    if (fabsf(planeDistE) > r) { // NaN passes
+         return false;
+     }
+     const float planeDist    = (float)planeDistE;
+-    const float absPlaneDist = (float)std::abs(planeDistE);
++    const float absPlaneDist = (float)fabsf(planeDistE);
+ 
+     CVector A, B, C;
+     UnpackTriangle(verts, tri, A, B, C);
+ 
+     // Unit vector A->B
+-    const double abx = (double)B.x - A.x, aby = (double)B.y - A.y, abz = (double)B.z - A.z;
++    const float abx = (float)B.x - A.x, aby = (float)B.y - A.y, abz = (float)B.z - A.z;
+     const float  abzF = (float)abz;
+-    const float  len  = (float)std::sqrt(abz * abzF + aby * aby + abx * abx);
+-    const float  invLen = (float)(1.0 / len);
++    const float  len  = (float)sqrtf(abz * abzF + aby * aby + abx * abx);
++    const float  invLen = (float)(1.0f / len);
+     const float  ex = (float)(abx * invLen), ey = (float)(aby * invLen), ez = abzF * invLen;
+ 
+     // M = e x N (CrossProduct: 0x59C730)
+-    const float mx = (float)((double)nz * ey - (double)ez * ny);
+-    const float my = (float)((double)ez * nx - (double)nz * ex);
+-    const float mz = (float)((double)ex * ny - (double)nx * ey);
++    const float mx = (float)((float)nz * ey - (float)ez * ny);
++    const float my = (float)((float)ez * nx - (float)nz * ex);
++    const float mz = (float)((float)ex * ny - (float)nx * ey);
+ 
+     // C in the plane's coordinate system
+-    const double cax = (double)C.x - A.x, cay = (double)C.y - A.y, caz = (double)C.z - A.z;
++    const float cax = (float)C.x - A.x, cay = (float)C.y - A.y, caz = (float)C.z - A.z;
+     const float  Ce  = (float)((cay * ey + cax * ex) + caz * ez);
+-    const float  Cm  = (float)((cax * mx + (double)mz * caz) + (double)my * cay);
++    const float  Cm  = (float)((cax * mx + (float)mz * caz) + (float)my * cay);
+ 
+     // The sphere's center in the plane's coordinate system
+-    const double pax = (double)c.x - A.x, pay = (double)c.y - A.y, paz = (double)c.z - A.z;
++    const float pax = (float)c.x - A.x, pay = (float)c.y - A.y, paz = (float)c.z - A.z;
+     const float  Pe  = (float)((pax * ex + paz * ez) + pay * ey);
+     const float  Pm  = (float)((pax * mx + paz * mz) + pay * my);
+ 
+@@ -1925,39 +1925,39 @@
+     int32 numPassed = 0;
+     bool  abPassed = false, acPassed = false;
+ 
+-    const double abSide = (double)Pm * len - (double)Pe * 0.0;
++    const float abSide = (float)Pm * len - (float)Pe * 0.0f;
+     const float  abSideF = (float)abSide; // Spilled
+-    if (abSide >= 0.0) { // NaN fails
++    if (abSide >= 0.0f) { // NaN fails
+         numPassed++;
+         abPassed = true;
+     }
+ 
+-    const float pec = (float)((double)Pe * Cm); // Pe * Cm
+-    const float pmc = (float)((double)Pm * Ce); // Pm * Ce
+-    if ((double)pec - pmc >= 0.0) { // NaN fails
++    const float pec = (float)((float)Pe * Cm); // Pe * Cm
++    const float pmc = (float)((float)Pm * Ce); // Pm * Ce
++    if ((float)pec - pmc >= 0.0f) { // NaN fails
+         numPassed++;
+         acPassed = true;
+     }
+ 
+     const float ceMinusLen = Ce - len;
+     const float peMinusLen = Pe - len;
+-    if ((double)ceMinusLen * Pm - (double)peMinusLen * Cm >= 0.0) { // NaN fails
++    if ((float)ceMinusLen * Pm - (float)peMinusLen * Cm >= 0.0f) { // NaN fails
+         numPassed++;
+     }
+ 
+     // Distance to a vertex (`CVector::Magnitude` of `center - vertex`, order x, y, z)
+     const auto DistToVertex = [&](const CVector& v) {
+         const CVector d{ c.x - v.x, c.y - v.y, c.z - v.z };
+-        return std::sqrt((double)d.x * d.x + (double)d.y * d.y + (double)d.z * d.z);
++        return sqrtf((float)d.x * d.x + (float)d.y * d.y + (float)d.z * d.z);
+     };
+ 
+     // Distance to the infinite edge line + the plane distance
+-    const auto DistToEdgeLine = [&](double perp) {
+-        return std::sqrt(perp * perp + (double)planeDist * planeDist);
++    const auto DistToEdgeLine = [&](float perp) {
++        return sqrtf(perp * perp + (float)planeDist * planeDist);
+     };
+ 
+     // Projection (of the center) onto an edge: <= 0 => start vertex, >= 1 => end vertex (NaN => perpendicular)
+-    double dist;
++    float dist;
+     switch (numPassed) {
+     case 0: // Not possible geometrically
+         return false;
+@@ -1966,35 +1966,35 @@
+         break;
+     case 2: {
+         if (!abPassed) { // Edge AB
+-            const float abLenSq = (float)((double)len * len);
+-            const double s = ((double)Pe * len + (double)Pm * 0.0) / abLenSq;
+-            if (s <= 0.0) {
++            const float abLenSq = (float)((float)len * len);
++            const float s = ((float)Pe * len + (float)Pm * 0.0f) / abLenSq;
++            if (s <= 0.0f) {
+                 dist = DistToVertex(A);
+-            } else if (s >= 1.0) {
++            } else if (s >= 1.0f) {
+                 dist = DistToVertex(B);
+             } else {
+-                dist = DistToEdgeLine((double)abSideF / std::sqrt((double)abLenSq));
++                dist = DistToEdgeLine((float)abSideF / sqrtf((float)abLenSq));
+             }
+         } else if (!acPassed) { // Edge AC
+-            const float acLenSq = (float)((double)Cm * Cm + (double)Ce * Ce);
+-            const double s = ((double)Pm * Cm + (double)Pe * Ce) / acLenSq;
+-            if (s <= 0.0) {
++            const float acLenSq = (float)((float)Cm * Cm + (float)Ce * Ce);
++            const float s = ((float)Pm * Cm + (float)Pe * Ce) / acLenSq;
++            if (s <= 0.0f) {
+                 dist = DistToVertex(A);
+-            } else if (s >= 1.0) {
++            } else if (s >= 1.0f) {
+                 dist = DistToVertex(C);
+             } else {
+-                dist = DistToEdgeLine(((double)pmc - pec) / std::sqrt((double)acLenSq));
++                dist = DistToEdgeLine(((float)pmc - pec) / sqrtf((float)acLenSq));
+             }
+         } else { // Edge BC, from B to C: (Ce - len, Cm)
+             const float bcX = ceMinusLen, bcY = Cm;
+-            const float bcLenSq = (float)((double)bcY * bcY + (double)bcX * bcX);
+-            const double s = ((double)peMinusLen * bcX + (double)Pm * bcY) / bcLenSq;
+-            if (s <= 0.0) {
++            const float bcLenSq = (float)((float)bcY * bcY + (float)bcX * bcX);
++            const float s = ((float)peMinusLen * bcX + (float)Pm * bcY) / bcLenSq;
++            if (s <= 0.0f) {
+                 dist = DistToVertex(B);
+-            } else if (s >= 1.0) {
++            } else if (s >= 1.0f) {
+                 dist = DistToVertex(C);
+             } else {
+-                dist = DistToEdgeLine(((double)Pm * bcX - (double)peMinusLen * bcY) / std::sqrt((double)bcLenSq));
++                dist = DistToEdgeLine(((float)Pm * bcX - (float)peMinusLen * bcY) / sqrtf((float)bcLenSq));
+             }
+         }
+         break;

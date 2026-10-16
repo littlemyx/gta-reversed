@@ -1,0 +1,65 @@
+--- /Users/Andrei.Mukhin/github/recomp/gta-reversed/vendor/librw/src/d3d/d3d.cpp	2026-10-09 16:46:09
++++ /tmp/perf/lw/d3d/d3d.cpp	2026-10-11 00:34:30
+@@ -81,6 +81,8 @@
+ 	}
+ }
+ 
++ResourceHooks resourceHooks;
++
+ int vertFormatMap[] = {
+ 	-1, VERT_FLOAT2, VERT_FLOAT3, VERT_FLOAT4, VERT_ARGB, VERT_RGBA /* blend indices */
+ };
+@@ -90,9 +92,13 @@
+ {
+ #ifdef RW_D3D9
+ 	IDirect3DIndexBuffer9 *ibuf;
++	ibuf = nil;
+ 	if(dynamic)
+ 		d3ddevice->CreateIndexBuffer(length, D3DUSAGE_WRITEONLY|D3DUSAGE_DYNAMIC, D3DFMT_INDEX16, D3DPOOL_DEFAULT, &ibuf, 0);
+-	else
++	else if(resourceHooks.createIndexBuffer){
++		if(resourceHooks.createIndexBuffer(length/2, (void**)&ibuf) < 0)
++			ibuf = nil;
++	}else
+ 		d3ddevice->CreateIndexBuffer(length, D3DUSAGE_WRITEONLY, D3DFMT_INDEX16, D3DPOOL_MANAGED, &ibuf, 0);
+ 	if(ibuf)
+ 		d3d9Globals.numIndexBuffers++;
+@@ -107,7 +113,9 @@
+ {
+ #ifdef RW_D3D9
+ 	if(indexBuffer){
+-		if(((IUnknown*)indexBuffer)->Release() != 0)
++		if(resourceHooks.destroyIndexBuffer)
++			resourceHooks.destroyIndexBuffer(indexBuffer);
++		else if(((IUnknown*)indexBuffer)->Release() != 0)
+ 			printf("indexBuffer wasn't destroyed\n");
+ 		d3d9Globals.numIndexBuffers--;
+ 	}
+@@ -210,9 +218,13 @@
+ createTexture(int32 width, int32 height, int32 numlevels, uint32 usage, uint32 format)
+ {
+ #ifdef RW_D3D9
+-	IDirect3DTexture9 *tex;
+-	d3ddevice->CreateTexture(width, height, numlevels, usage,
+-	                      (D3DFORMAT)format, D3DPOOL_MANAGED, &tex, nil);
++	IDirect3DTexture9 *tex = nil;
++	if(usage == 0 && resourceHooks.createTexture){
++		if(resourceHooks.createTexture(width, height, numlevels, format, (void**)&tex) < 0)
++			tex = nil;
++	}else
++		d3ddevice->CreateTexture(width, height, numlevels, usage,
++		                      (D3DFORMAT)format, D3DPOOL_MANAGED, &tex, nil);
+ 	if(tex)
+ 		d3d9Globals.numTextures++;
+ 	return tex;
+@@ -255,7 +267,9 @@
+ {
+ #ifdef RW_D3D9
+ 	if(texture){
+-		if(((IUnknown*)texture)->Release() != 0)
++		if(resourceHooks.destroyTexture)
++			resourceHooks.destroyTexture(texture);
++		else if(((IUnknown*)texture)->Release() != 0)
+ 			printf("texture wasn't destroyed\n");
+ 		d3d9Globals.numTextures--;
+ 	}

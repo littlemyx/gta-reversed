@@ -1,0 +1,9 @@
+file	line	kind	type	addr_expr	note
+source/game_sa/Audio/Entities/AEGlobalWeaponAudioEntity.cpp	124	ScopedStaticRef	uint32	0xB61364	variable address; the flags word (2nd arg) is a second global
+source/game_sa/Audio/Entities/AEPedAudioEntity.cpp	11	base+expr	int32	0x8AD914+...	address is a base plus computed offset (indexed access); the row is the base only
+source/game_sa/PostEffects.cpp	1370	ScopedStaticRef	float	0xC4032C	variable address; the flags word (2nd arg) is a second global
+source/game_sa/Stats.cpp	58	base+expr	int32	0xB78E20+...	address is a base plus computed offset (indexed access); the row is the base only
+source/game_sa/Stats.cpp	714	base+expr	int32	0xB78E20+...	address is a base plus computed offset (indexed access); the row is the base only
+source/game_sa/Tasks/TaskTypes/TaskComplexPartnerChat.cpp	75	base+expr	int16	0xB613F8-...	address is a base plus computed offset (indexed access); the row is the base only
+source/game_sa/Tasks/TaskTypes/TaskComplexPartnerChat.cpp	76	base+expr	int16	0xB613FA-...	address is a base plus computed offset (indexed access); the row is the base only
+source/game_sa/Tasks/TaskTypes/TaskSimpleGunControl.h	28	decimal/other	uint32	9252472	not a 0x literal (0x8d2e78)

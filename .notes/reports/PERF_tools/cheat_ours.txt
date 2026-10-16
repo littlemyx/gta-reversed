@@ -1,0 +1,17 @@
+until:gstate=7:60000
+wait:3000
+mark:menu
+scene:@RUN@_menu:15
+wait:60000
+until:control:200000
+wait:1000
+vehs:before
+cheat:jqntdmh
+wait:4000
+vehs:after
+down:s
+wait:1500
+up:s
+wait:1500
+vehs:after2
+mark:done

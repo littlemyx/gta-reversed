@@ -1,0 +1,11357 @@
+{
+ "trait_bits": {
+  "poly": 1,
+  "triv_def": 2,
+  "def_ctor": 4,
+  "aggregate": 8,
+  "pointer": 16,
+  "triv_dtor": 32,
+  "triv_copy": 64,
+  "array": 128,
+  "class": 256,
+  "const": 512,
+  "enum": 1024,
+  "ptr_elem": 2048,
+  "float_elem": 4096,
+  "abstract": 8192
+ },
+ "types": {
+  "bool": {
+   "size": 1,
+   "align": 1,
+   "flags": 102,
+   "elem": 1,
+   "spellings": [
+    "bool"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "triv_dtor",
+    "triv_copy"
+   ]
+  },
+  "bool[64]": {
+   "size": 64,
+   "align": 1,
+   "flags": 238,
+   "elem": 1,
+   "spellings": [
+    "bool[NUM_SEQUENCES]"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "triv_copy",
+    "array"
+   ]
+  },
+  "bool[92]": {
+   "size": 92,
+   "align": 1,
+   "flags": 238,
+   "elem": 1,
+   "spellings": [
+    "bool[TOTAL_CHEATS]"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "triv_copy",
+    "array"
+   ]
+  },
+  "char": {
+   "size": 1,
+   "align": 1,
+   "flags": 102,
+   "elem": 1,
+   "spellings": [
+    "char"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "triv_dtor",
+    "triv_copy"
+   ]
+  },
+  "char**": {
+   "size": 4,
+   "align": 4,
+   "flags": 2166,
+   "elem": 4,
+   "spellings": [
+    "char**"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "pointer",
+    "triv_dtor",
+    "triv_copy",
+    "ptr_elem"
+   ]
+  },
+  "char*[6]": {
+   "size": 24,
+   "align": 4,
+   "flags": 2286,
+   "elem": 4,
+   "spellings": [
+    "char*[NUM_CUTSCENE_VEHS]"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "triv_copy",
+    "array",
+    "ptr_elem"
+   ]
+  },
+  "char[104]": {
+   "size": 104,
+   "align": 1,
+   "flags": 238,
+   "elem": 1,
+   "spellings": [
+    "char[104]"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "triv_copy",
+    "array"
+   ]
+  },
+  "char[10][10][32]": {
+   "size": 3200,
+   "align": 1,
+   "flags": 238,
+   "elem": 1,
+   "spellings": [
+    "char[10][10][32]"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "triv_copy",
+    "array"
+   ]
+  },
+  "char[128]": {
+   "size": 128,
+   "align": 1,
+   "flags": 238,
+   "elem": 1,
+   "spellings": [
+    "char[128]"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "triv_copy",
+    "array"
+   ]
+  },
+  "char[16384]": {
+   "size": 16384,
+   "align": 1,
+   "flags": 238,
+   "elem": 1,
+   "spellings": [
+    "char[16384]"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "triv_copy",
+    "array"
+   ]
+  },
+  "char[16]": {
+   "size": 16,
+   "align": 1,
+   "flags": 238,
+   "elem": 1,
+   "spellings": [
+    "char[16]"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "triv_copy",
+    "array"
+   ]
+  },
+  "char[210][14]": {
+   "size": 2940,
+   "align": 1,
+   "flags": 238,
+   "elem": 1,
+   "spellings": [
+    "char[210][14]"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "triv_copy",
+    "array"
+   ]
+  },
+  "char[24]": {
+   "size": 24,
+   "align": 1,
+   "flags": 238,
+   "elem": 1,
+   "spellings": [
+    "char[24]"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "triv_copy",
+    "array"
+   ]
+  },
+  "char[256]": {
+   "size": 256,
+   "align": 1,
+   "flags": 238,
+   "elem": 1,
+   "spellings": [
+    "char[256]"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "triv_copy",
+    "array"
+   ]
+  },
+  "char[260]": {
+   "size": 260,
+   "align": 1,
+   "flags": 238,
+   "elem": 1,
+   "spellings": [
+    "char[MAX_PATH]"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "triv_copy",
+    "array"
+   ]
+  },
+  "char[30]": {
+   "size": 30,
+   "align": 1,
+   "flags": 238,
+   "elem": 1,
+   "spellings": [
+    "char[CHEAT_STRING_SIZE]"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "triv_copy",
+    "array"
+   ]
+  },
+  "char[32]": {
+   "size": 32,
+   "align": 1,
+   "flags": 238,
+   "elem": 1,
+   "spellings": [
+    "char[32]"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "triv_copy",
+    "array"
+   ]
+  },
+  "char[32][64]": {
+   "size": 2048,
+   "align": 1,
+   "flags": 238,
+   "elem": 1,
+   "spellings": [
+    "char[MAX_CD_STREAM_HANDLES][MAX_CD_STREAM_IMAGE_NAME_SIZE]"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "triv_copy",
+    "array"
+   ]
+  },
+  "char[352]": {
+   "size": 352,
+   "align": 1,
+   "flags": 238,
+   "elem": 1,
+   "spellings": [
+    "char[352]"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "triv_copy",
+    "array"
+   ]
+  },
+  "char[512]": {
+   "size": 512,
+   "align": 1,
+   "flags": 238,
+   "elem": 1,
+   "spellings": [
+    "char[512]"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "triv_copy",
+    "array"
+   ]
+  },
+  "char[64]": {
+   "size": 64,
+   "align": 1,
+   "flags": 238,
+   "elem": 1,
+   "spellings": [
+    "char[64]"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "triv_copy",
+    "array"
+   ]
+  },
+  "char[8]": {
+   "size": 8,
+   "align": 1,
+   "flags": 238,
+   "elem": 1,
+   "spellings": [
+    "char[8]"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "triv_copy",
+    "array"
+   ]
+  },
+  "class BoneNodeManager_c": {
+   "size": 19468,
+   "align": 4,
+   "flags": 292,
+   "elem": 19468,
+   "spellings": [
+    "BoneNodeManager_c"
+   ],
+   "traits": [
+    "def_ctor",
+    "triv_dtor",
+    "class"
+   ]
+  },
+  "class BreakManager_c": {
+   "size": 2048,
+   "align": 4,
+   "flags": 300,
+   "elem": 2048,
+   "spellings": [
+    "BreakManager_c"
+   ],
+   "traits": [
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "class"
+   ]
+  },
+  "class CAEAmbienceTrackManager": {
+   "size": 44,
+   "align": 4,
+   "flags": 366,
+   "elem": 44,
+   "spellings": [
+    "CAEAmbienceTrackManager"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "triv_copy",
+    "class"
+   ]
+  },
+  "class CAEAudioHardware": {
+   "size": 4116,
+   "align": 4,
+   "flags": 260,
+   "elem": 4116,
+   "spellings": [
+    "CAEAudioHardware"
+   ],
+   "traits": [
+    "def_ctor",
+    "class"
+   ]
+  },
+  "class CAECutsceneTrackManager": {
+   "size": 48,
+   "align": 4,
+   "flags": 366,
+   "elem": 48,
+   "spellings": [
+    "CAECutsceneTrackManager"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "triv_copy",
+    "class"
+   ]
+  },
+  "class CAEExplosionAudioEntity": {
+   "size": 128,
+   "align": 4,
+   "flags": 261,
+   "elem": 128,
+   "spellings": [
+    "CAEExplosionAudioEntity"
+   ],
+   "traits": [
+    "poly",
+    "def_ctor",
+    "class"
+   ]
+  },
+  "class CAEPoliceScannerAudioEntity*": {
+   "size": 4,
+   "align": 4,
+   "flags": 2166,
+   "elem": 4,
+   "spellings": [
+    "CAEPoliceScannerAudioEntity*"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "pointer",
+    "triv_dtor",
+    "triv_copy",
+    "ptr_elem"
+   ]
+  },
+  "class CAERadioTrackManager": {
+   "size": 880,
+   "align": 4,
+   "flags": 356,
+   "elem": 880,
+   "spellings": [
+    "CAERadioTrackManager"
+   ],
+   "traits": [
+    "def_ctor",
+    "triv_dtor",
+    "triv_copy",
+    "class"
+   ]
+  },
+  "class CAESmoothFadeThread": {
+   "size": 2076,
+   "align": 4,
+   "flags": 356,
+   "elem": 2076,
+   "spellings": [
+    "CAESmoothFadeThread"
+   ],
+   "traits": [
+    "def_ctor",
+    "triv_dtor",
+    "triv_copy",
+    "class"
+   ]
+  },
+  "class CAESound*": {
+   "size": 4,
+   "align": 4,
+   "flags": 2166,
+   "elem": 4,
+   "spellings": [
+    "CAESound*"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "pointer",
+    "triv_dtor",
+    "triv_copy",
+    "ptr_elem"
+   ]
+  },
+  "class CAESound*[3]": {
+   "size": 12,
+   "align": 4,
+   "flags": 2286,
+   "elem": 4,
+   "spellings": [
+    "CAESound*[3]"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "triv_copy",
+    "array",
+    "ptr_elem"
+   ]
+  },
+  "class CAESoundManager": {
+   "size": 36028,
+   "align": 4,
+   "flags": 260,
+   "elem": 36028,
+   "spellings": [
+    "CAESoundManager"
+   ],
+   "traits": [
+    "def_ctor",
+    "class"
+   ]
+  },
+  "class CAEStreamTransformer": {
+   "size": 16,
+   "align": 1,
+   "flags": 358,
+   "elem": 16,
+   "spellings": [
+    "CAEStreamTransformer"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "triv_dtor",
+    "triv_copy",
+    "class"
+   ]
+  },
+  "class CAETwinLoopSoundEntity": {
+   "size": 168,
+   "align": 4,
+   "flags": 261,
+   "elem": 168,
+   "spellings": [
+    "CAETwinLoopSoundEntity"
+   ],
+   "traits": [
+    "poly",
+    "def_ctor",
+    "class"
+   ]
+  },
+  "class CAEUserRadioTrackManager": {
+   "size": 28,
+   "align": 4,
+   "flags": 366,
+   "elem": 28,
+   "spellings": [
+    "CAEUserRadioTrackManager"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "triv_copy",
+    "class"
+   ]
+  },
+  "class CAEWeatherAudioEntity": {
+   "size": 128,
+   "align": 4,
+   "flags": 261,
+   "elem": 128,
+   "spellings": [
+    "CAEWeatherAudioEntity"
+   ],
+   "traits": [
+    "poly",
+    "def_ctor",
+    "class"
+   ]
+  },
+  "class CAccidentManager*": {
+   "size": 4,
+   "align": 4,
+   "flags": 2166,
+   "elem": 4,
+   "spellings": [
+    "CAccidentManager*"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "pointer",
+    "triv_dtor",
+    "triv_copy",
+    "ptr_elem"
+   ]
+  },
+  "class CAcquaintance*": {
+   "size": 4,
+   "align": 4,
+   "flags": 2166,
+   "elem": 4,
+   "spellings": [
+    "CAcquaintance*"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "pointer",
+    "triv_dtor",
+    "triv_copy",
+    "ptr_elem"
+   ]
+  },
+  "class CAnimBlendAssocGroup": {
+   "size": 20,
+   "align": 4,
+   "flags": 260,
+   "elem": 20,
+   "spellings": [
+    "CAnimBlendAssocGroup"
+   ],
+   "traits": [
+    "def_ctor",
+    "class"
+   ]
+  },
+  "class CAnimBlendAssocGroup*": {
+   "size": 4,
+   "align": 4,
+   "flags": 2166,
+   "elem": 4,
+   "spellings": [
+    "CAnimBlendAssocGroup*"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "pointer",
+    "triv_dtor",
+    "triv_copy",
+    "ptr_elem"
+   ]
+  },
+  "class CAnimBlendClumpData*": {
+   "size": 4,
+   "align": 4,
+   "flags": 2166,
+   "elem": 4,
+   "spellings": [
+    "CAnimBlendClumpData*"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "pointer",
+    "triv_dtor",
+    "triv_copy",
+    "ptr_elem"
+   ]
+  },
+  "class CAudioEngine": {
+   "size": 8152,
+   "align": 4,
+   "flags": 260,
+   "elem": 8152,
+   "spellings": [
+    "CAudioEngine"
+   ],
+   "traits": [
+    "def_ctor",
+    "class"
+   ]
+  },
+  "class CBaseModelInfo*[20000]": {
+   "size": 80000,
+   "align": 4,
+   "flags": 2286,
+   "elem": 4,
+   "spellings": [
+    "CBaseModelInfo*[NUM_MODEL_INFOS]"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "triv_copy",
+    "array",
+    "ptr_elem"
+   ]
+  },
+  "class CBuildingPool*": {
+   "size": 4,
+   "align": 4,
+   "flags": 2166,
+   "elem": 4,
+   "spellings": [
+    "CBuildingPool*"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "pointer",
+    "triv_dtor",
+    "triv_copy",
+    "ptr_elem"
+   ]
+  },
+  "class CCamera": {
+   "size": 3448,
+   "align": 4,
+   "flags": 261,
+   "elem": 3448,
+   "spellings": [
+    "CCamera"
+   ],
+   "traits": [
+    "poly",
+    "def_ctor",
+    "class"
+   ]
+  },
+  "class CCamera*": {
+   "size": 4,
+   "align": 4,
+   "flags": 2166,
+   "elem": 4,
+   "spellings": [
+    "CCamera*"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "pointer",
+    "triv_dtor",
+    "triv_copy",
+    "ptr_elem"
+   ]
+  },
+  "class CCarGenerator[500]": {
+   "size": 16000,
+   "align": 4,
+   "flags": 236,
+   "elem": 32,
+   "spellings": [
+    "CCarGenerator[NUM_CAR_GENERATORS]"
+   ],
+   "traits": [
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "triv_copy",
+    "array"
+   ]
+  },
+  "class CClumpModelInfo*": {
+   "size": 4,
+   "align": 4,
+   "flags": 2166,
+   "elem": 4,
+   "spellings": [
+    "CClumpModelInfo*"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "pointer",
+    "triv_dtor",
+    "triv_copy",
+    "ptr_elem"
+   ]
+  },
+  "class CColModel": {
+   "size": 48,
+   "align": 4,
+   "flags": 260,
+   "elem": 48,
+   "spellings": [
+    "CColModel"
+   ],
+   "traits": [
+    "def_ctor",
+    "class"
+   ]
+  },
+  "class CColModelPool*": {
+   "size": 4,
+   "align": 4,
+   "flags": 2166,
+   "elem": 4,
+   "spellings": [
+    "CColModelPool*"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "pointer",
+    "triv_dtor",
+    "triv_copy",
+    "ptr_elem"
+   ]
+  },
+  "class CColSphere": {
+   "size": 20,
+   "align": 4,
+   "flags": 292,
+   "elem": 20,
+   "spellings": [
+    "CColSphere"
+   ],
+   "traits": [
+    "def_ctor",
+    "triv_dtor",
+    "class"
+   ]
+  },
+  "class CCollisionData": {
+   "size": 48,
+   "align": 4,
+   "flags": 356,
+   "elem": 48,
+   "spellings": [
+    "CCollisionData"
+   ],
+   "traits": [
+    "def_ctor",
+    "triv_dtor",
+    "triv_copy",
+    "class"
+   ]
+  },
+  "class CColourSet": {
+   "size": 172,
+   "align": 4,
+   "flags": 358,
+   "elem": 172,
+   "spellings": [
+    "CColourSet"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "triv_dtor",
+    "triv_copy",
+    "class"
+   ]
+  },
+  "class CControllerConfigManager": {
+   "size": 4836,
+   "align": 4,
+   "flags": 356,
+   "elem": 4836,
+   "spellings": [
+    "CControllerConfigManager"
+   ],
+   "traits": [
+    "def_ctor",
+    "triv_dtor",
+    "triv_copy",
+    "class"
+   ]
+  },
+  "class CCurrentVehicle": {
+   "size": 4,
+   "align": 4,
+   "flags": 356,
+   "elem": 4,
+   "spellings": [
+    "CCurrentVehicle"
+   ],
+   "traits": [
+    "def_ctor",
+    "triv_dtor",
+    "triv_copy",
+    "class"
+   ]
+  },
+  "class CDecisionMakerTypes*": {
+   "size": 4,
+   "align": 4,
+   "flags": 2166,
+   "elem": 4,
+   "spellings": [
+    "CDecisionMakerTypes*"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "pointer",
+    "triv_dtor",
+    "triv_copy",
+    "ptr_elem"
+   ]
+  },
+  "class CDirectory": {
+   "size": 16,
+   "align": 4,
+   "flags": 260,
+   "elem": 16,
+   "spellings": [
+    "CDirectory"
+   ],
+   "traits": [
+    "def_ctor",
+    "class"
+   ]
+  },
+  "class CDirectory*": {
+   "size": 4,
+   "align": 4,
+   "flags": 2166,
+   "elem": 4,
+   "spellings": [
+    "CDirectory*"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "pointer",
+    "triv_dtor",
+    "triv_copy",
+    "ptr_elem"
+   ]
+  },
+  "class CDummyPool*": {
+   "size": 4,
+   "align": 4,
+   "flags": 2166,
+   "elem": 4,
+   "spellings": [
+    "CDummyPool*"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "pointer",
+    "triv_dtor",
+    "triv_copy",
+    "ptr_elem"
+   ]
+  },
+  "class CEntity*": {
+   "size": 4,
+   "align": 4,
+   "flags": 2166,
+   "elem": 4,
+   "spellings": [
+    "CEntity*"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "pointer",
+    "triv_dtor",
+    "triv_copy",
+    "ptr_elem"
+   ]
+  },
+  "class CEntity**": {
+   "size": 4,
+   "align": 4,
+   "flags": 2166,
+   "elem": 4,
+   "spellings": [
+    "CEntity**"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "pointer",
+    "triv_dtor",
+    "triv_copy",
+    "ptr_elem"
+   ]
+  },
+  "class CEntity*[1000]": {
+   "size": 4000,
+   "align": 4,
+   "flags": 2286,
+   "elem": 4,
+   "spellings": [
+    "CEntity*[MAX_VISIBLE_ENTITY_PTRS]",
+    "CEntity*[MAX_VISIBLE_LOD_PTRS]"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "triv_copy",
+    "array",
+    "ptr_elem"
+   ]
+  },
+  "class CEntity*[150]": {
+   "size": 600,
+   "align": 4,
+   "flags": 2286,
+   "elem": 4,
+   "spellings": [
+    "CEntity*[MAX_INVISIBLE_ENTITY_PTRS]"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "triv_copy",
+    "array",
+    "ptr_elem"
+   ]
+  },
+  "class CEntity*[32]": {
+   "size": 128,
+   "align": 4,
+   "flags": 2286,
+   "elem": 4,
+   "spellings": [
+    "CEntity*[32]"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "triv_copy",
+    "array",
+    "ptr_elem"
+   ]
+  },
+  "class CEntity*[50]": {
+   "size": 200,
+   "align": 4,
+   "flags": 2286,
+   "elem": 4,
+   "spellings": [
+    "CEntity*[MAX_VISIBLE_SUPERLOD_PTRS]"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "triv_copy",
+    "array",
+    "ptr_elem"
+   ]
+  },
+  "class CEntryExit*": {
+   "size": 4,
+   "align": 4,
+   "flags": 2166,
+   "elem": 4,
+   "spellings": [
+    "CEntryExit*"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "pointer",
+    "triv_dtor",
+    "triv_copy",
+    "ptr_elem"
+   ]
+  },
+  "class CEntryExit*[4]": {
+   "size": 16,
+   "align": 4,
+   "flags": 2286,
+   "elem": 4,
+   "spellings": [
+    "CEntryExit*[4]"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "triv_copy",
+    "array",
+    "ptr_elem"
+   ]
+  },
+  "class CEntryInfoNodePool*": {
+   "size": 4,
+   "align": 4,
+   "flags": 2166,
+   "elem": 4,
+   "spellings": [
+    "CEntryInfoNodePool*"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "pointer",
+    "triv_dtor",
+    "triv_copy",
+    "ptr_elem"
+   ]
+  },
+  "class CEventGlobalGroup*": {
+   "size": 4,
+   "align": 4,
+   "flags": 2166,
+   "elem": 4,
+   "spellings": [
+    "CEventGlobalGroup*"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "pointer",
+    "triv_dtor",
+    "triv_copy",
+    "ptr_elem"
+   ]
+  },
+  "class CEventPool*": {
+   "size": 4,
+   "align": 4,
+   "flags": 2166,
+   "elem": 4,
+   "spellings": [
+    "CEventPool*"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "pointer",
+    "triv_dtor",
+    "triv_copy",
+    "ptr_elem"
+   ]
+  },
+  "class CFireManager": {
+   "size": 2404,
+   "align": 4,
+   "flags": 292,
+   "elem": 2404,
+   "spellings": [
+    "CFireManager"
+   ],
+   "traits": [
+    "def_ctor",
+    "triv_dtor",
+    "class"
+   ]
+  },
+  "class CGamma": {
+   "size": 16,
+   "align": 4,
+   "flags": 366,
+   "elem": 16,
+   "spellings": [
+    "CGamma"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "triv_copy",
+    "class"
+   ]
+  },
+  "class CGarage*": {
+   "size": 4,
+   "align": 4,
+   "flags": 2166,
+   "elem": 4,
+   "spellings": [
+    "CGarage*"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "pointer",
+    "triv_dtor",
+    "triv_copy",
+    "ptr_elem"
+   ]
+  },
+  "class CGarage[50]": {
+   "size": 10800,
+   "align": 4,
+   "flags": 140,
+   "elem": 216,
+   "spellings": [
+    "CGarage[MAX_NUM_GARAGES]"
+   ],
+   "traits": [
+    "def_ctor",
+    "aggregate",
+    "array"
+   ]
+  },
+  "class CHudColours": {
+   "size": 60,
+   "align": 1,
+   "flags": 356,
+   "elem": 60,
+   "spellings": [
+    "CHudColours"
+   ],
+   "traits": [
+    "def_ctor",
+    "triv_dtor",
+    "triv_copy",
+    "class"
+   ]
+  },
+  "class CIdleCam": {
+   "size": 156,
+   "align": 4,
+   "flags": 292,
+   "elem": 156,
+   "spellings": [
+    "CIdleCam"
+   ],
+   "traits": [
+    "def_ctor",
+    "triv_dtor",
+    "class"
+   ]
+  },
+  "class CInterestingEvents": {
+   "size": 344,
+   "align": 4,
+   "flags": 260,
+   "elem": 344,
+   "spellings": [
+    "CInterestingEvents"
+   ],
+   "traits": [
+    "def_ctor",
+    "class"
+   ]
+  },
+  "class CKeyboardState": {
+   "size": 624,
+   "align": 2,
+   "flags": 364,
+   "elem": 624,
+   "spellings": [
+    "CKeyboardState"
+   ],
+   "traits": [
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "triv_copy",
+    "class"
+   ]
+  },
+  "class CLink<class CEntity *>*": {
+   "size": 4,
+   "align": 4,
+   "flags": 2166,
+   "elem": 4,
+   "spellings": [
+    "CLink<CEntity*>*"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "pointer",
+    "triv_dtor",
+    "triv_copy",
+    "ptr_elem"
+   ]
+  },
+  "class CLinkList<class CAnimBlendHierarchy *>": {
+   "size": 52,
+   "align": 4,
+   "flags": 364,
+   "elem": 52,
+   "spellings": [
+    "CLinkList<CAnimBlendHierarchy*>"
+   ],
+   "traits": [
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "triv_copy",
+    "class"
+   ]
+  },
+  "class CLinkList<class CCollisionData *>": {
+   "size": 52,
+   "align": 4,
+   "flags": 364,
+   "elem": 52,
+   "spellings": [
+    "CLinkList<CCollisionData*>"
+   ],
+   "traits": [
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "triv_copy",
+    "class"
+   ]
+  },
+  "class CLinkList<class CEntity *>": {
+   "size": 52,
+   "align": 4,
+   "flags": 364,
+   "elem": 52,
+   "spellings": [
+    "CLinkList<CEntity*>"
+   ],
+   "traits": [
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "triv_copy",
+    "class"
+   ]
+  },
+  "class CLinkList<class CPed *>": {
+   "size": 52,
+   "align": 4,
+   "flags": 364,
+   "elem": 52,
+   "spellings": [
+    "CLinkList<CPed*>"
+   ],
+   "traits": [
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "triv_copy",
+    "class"
+   ]
+  },
+  "class CLinkList<struct CVisibilityPlugins::AlphaObjectInfo>": {
+   "size": 84,
+   "align": 4,
+   "flags": 364,
+   "elem": 84,
+   "spellings": [
+    "CLinkList<AlphaObjectInfo>"
+   ],
+   "traits": [
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "triv_copy",
+    "class"
+   ]
+  },
+  "class CLoadMonitor": {
+   "size": 688,
+   "align": 4,
+   "flags": 356,
+   "elem": 688,
+   "spellings": [
+    "CLoadMonitor"
+   ],
+   "traits": [
+    "def_ctor",
+    "triv_dtor",
+    "triv_copy",
+    "class"
+   ]
+  },
+  "class CLoadedCarGroup": {
+   "size": 46,
+   "align": 2,
+   "flags": 356,
+   "elem": 46,
+   "spellings": [
+    "CLoadedCarGroup"
+   ],
+   "traits": [
+    "def_ctor",
+    "triv_dtor",
+    "triv_copy",
+    "class"
+   ]
+  },
+  "class CMatrix": {
+   "size": 72,
+   "align": 4,
+   "flags": 260,
+   "elem": 72,
+   "spellings": [
+    "CMatrix"
+   ],
+   "traits": [
+    "def_ctor",
+    "class"
+   ]
+  },
+  "class CMatrixLinkList": {
+   "size": 508,
+   "align": 4,
+   "flags": 260,
+   "elem": 508,
+   "spellings": [
+    "CMatrixLinkList"
+   ],
+   "traits": [
+    "def_ctor",
+    "class"
+   ]
+  },
+  "class CMenuManager": {
+   "size": 7032,
+   "align": 4,
+   "flags": 260,
+   "elem": 7032,
+   "spellings": [
+    "CMenuManager"
+   ],
+   "traits": [
+    "def_ctor",
+    "class"
+   ]
+  },
+  "class CMissionCleanup": {
+   "size": 604,
+   "align": 4,
+   "flags": 356,
+   "elem": 604,
+   "spellings": [
+    "CMissionCleanup"
+   ],
+   "traits": [
+    "def_ctor",
+    "triv_dtor",
+    "triv_copy",
+    "class"
+   ]
+  },
+  "class CMouseControllerState": {
+   "size": 20,
+   "align": 4,
+   "flags": 292,
+   "elem": 20,
+   "spellings": [
+    "CMouseControllerState"
+   ],
+   "traits": [
+    "def_ctor",
+    "triv_dtor",
+    "class"
+   ]
+  },
+  "class CNodeAddress": {
+   "size": 4,
+   "align": 2,
+   "flags": 356,
+   "elem": 4,
+   "spellings": [
+    "CNodeAddress"
+   ],
+   "traits": [
+    "def_ctor",
+    "triv_dtor",
+    "triv_copy",
+    "class"
+   ]
+  },
+  "class CNodeRoutePool*": {
+   "size": 4,
+   "align": 4,
+   "flags": 2166,
+   "elem": 4,
+   "spellings": [
+    "CNodeRoutePool*"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "pointer",
+    "triv_dtor",
+    "triv_copy",
+    "ptr_elem"
+   ]
+  },
+  "class CObject*": {
+   "size": 4,
+   "align": 4,
+   "flags": 2166,
+   "elem": 4,
+   "spellings": [
+    "CObject*"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "pointer",
+    "triv_dtor",
+    "triv_copy",
+    "ptr_elem"
+   ]
+  },
+  "class CObjectData[160]": {
+   "size": 12800,
+   "align": 4,
+   "flags": 174,
+   "elem": 80,
+   "spellings": [
+    "CObjectData[NUM_OBJECT_INFOS]"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "array"
+   ]
+  },
+  "class CObjectPool*": {
+   "size": 4,
+   "align": 4,
+   "flags": 2166,
+   "elem": 4,
+   "spellings": [
+    "CObjectPool*"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "pointer",
+    "triv_dtor",
+    "triv_copy",
+    "ptr_elem"
+   ]
+  },
+  "class COctTree*": {
+   "size": 4,
+   "align": 4,
+   "flags": 2166,
+   "elem": 4,
+   "spellings": [
+    "COctTree*"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "pointer",
+    "triv_dtor",
+    "triv_copy",
+    "ptr_elem"
+   ]
+  },
+  "class COctTreeBase": {
+   "size": 48,
+   "align": 4,
+   "flags": 261,
+   "elem": 48,
+   "spellings": [
+    "COctTreeBase"
+   ],
+   "traits": [
+    "poly",
+    "def_ctor",
+    "class"
+   ]
+  },
+  "class COnscreenTimer": {
+   "size": 340,
+   "align": 4,
+   "flags": 366,
+   "elem": 340,
+   "spellings": [
+    "COnscreenTimer"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "triv_copy",
+    "class"
+   ]
+  },
+  "class CPPTriPlantBuffer": {
+   "size": 2968,
+   "align": 4,
+   "flags": 292,
+   "elem": 2968,
+   "spellings": [
+    "CPPTriPlantBuffer"
+   ],
+   "traits": [
+    "def_ctor",
+    "triv_dtor",
+    "class"
+   ]
+  },
+  "class CPad[2]": {
+   "size": 616,
+   "align": 4,
+   "flags": 236,
+   "elem": 308,
+   "spellings": [
+    "CPad[MAX_PADS]"
+   ],
+   "traits": [
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "triv_copy",
+    "array"
+   ]
+  },
+  "class CPathFind": {
+   "size": 15488,
+   "align": 4,
+   "flags": 364,
+   "elem": 15488,
+   "spellings": [
+    "CPathFind"
+   ],
+   "traits": [
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "triv_copy",
+    "class"
+   ]
+  },
+  "class CPatrolRoute": {
+   "size": 420,
+   "align": 4,
+   "flags": 292,
+   "elem": 420,
+   "spellings": [
+    "CPatrolRoute"
+   ],
+   "traits": [
+    "def_ctor",
+    "triv_dtor",
+    "class"
+   ]
+  },
+  "class CPatrolRoutePool*": {
+   "size": 4,
+   "align": 4,
+   "flags": 2166,
+   "elem": 4,
+   "spellings": [
+    "CPatrolRoutePool*"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "pointer",
+    "triv_dtor",
+    "triv_copy",
+    "ptr_elem"
+   ]
+  },
+  "class CPed*": {
+   "size": 4,
+   "align": 4,
+   "flags": 2166,
+   "elem": 4,
+   "spellings": [
+    "CPed*"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "pointer",
+    "triv_dtor",
+    "triv_copy",
+    "ptr_elem"
+   ]
+  },
+  "class CPedAttractorPool*": {
+   "size": 4,
+   "align": 4,
+   "flags": 2166,
+   "elem": 4,
+   "spellings": [
+    "CPedAttractorPool*"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "pointer",
+    "triv_dtor",
+    "triv_copy",
+    "ptr_elem"
+   ]
+  },
+  "class CPedClothesDesc": {
+   "size": 120,
+   "align": 4,
+   "flags": 356,
+   "elem": 120,
+   "spellings": [
+    "CPedClothesDesc"
+   ],
+   "traits": [
+    "def_ctor",
+    "triv_dtor",
+    "triv_copy",
+    "class"
+   ]
+  },
+  "class CPedGroupDefaultTaskAllocatorChat": {
+   "size": 4,
+   "align": 4,
+   "flags": 293,
+   "elem": 4,
+   "spellings": [
+    "CPedGroupDefaultTaskAllocatorChat"
+   ],
+   "traits": [
+    "poly",
+    "def_ctor",
+    "triv_dtor",
+    "class"
+   ]
+  },
+  "class CPedGroupDefaultTaskAllocatorFollowAnyMeans": {
+   "size": 4,
+   "align": 4,
+   "flags": 293,
+   "elem": 4,
+   "spellings": [
+    "CPedGroupDefaultTaskAllocatorFollowAnyMeans"
+   ],
+   "traits": [
+    "poly",
+    "def_ctor",
+    "triv_dtor",
+    "class"
+   ]
+  },
+  "class CPedGroupDefaultTaskAllocatorFollowLimited": {
+   "size": 4,
+   "align": 4,
+   "flags": 293,
+   "elem": 4,
+   "spellings": [
+    "CPedGroupDefaultTaskAllocatorFollowLimited"
+   ],
+   "traits": [
+    "poly",
+    "def_ctor",
+    "triv_dtor",
+    "class"
+   ]
+  },
+  "class CPedGroupDefaultTaskAllocatorRandom": {
+   "size": 4,
+   "align": 4,
+   "flags": 293,
+   "elem": 4,
+   "spellings": [
+    "CPedGroupDefaultTaskAllocatorRandom"
+   ],
+   "traits": [
+    "poly",
+    "def_ctor",
+    "triv_dtor",
+    "class"
+   ]
+  },
+  "class CPedGroupDefaultTaskAllocatorSitInLeaderCar": {
+   "size": 4,
+   "align": 4,
+   "flags": 293,
+   "elem": 4,
+   "spellings": [
+    "CPedGroupDefaultTaskAllocatorSitInLeaderCar"
+   ],
+   "traits": [
+    "poly",
+    "def_ctor",
+    "triv_dtor",
+    "class"
+   ]
+  },
+  "class CPedGroupDefaultTaskAllocatorStandStill": {
+   "size": 4,
+   "align": 4,
+   "flags": 293,
+   "elem": 4,
+   "spellings": [
+    "CPedGroupDefaultTaskAllocatorStandStill"
+   ],
+   "traits": [
+    "poly",
+    "def_ctor",
+    "triv_dtor",
+    "class"
+   ]
+  },
+  "class CPedIntelligencePool*": {
+   "size": 4,
+   "align": 4,
+   "flags": 2166,
+   "elem": 4,
+   "spellings": [
+    "CPedIntelligencePool*"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "pointer",
+    "triv_dtor",
+    "triv_copy",
+    "ptr_elem"
+   ]
+  },
+  "class CPedPool*": {
+   "size": 4,
+   "align": 4,
+   "flags": 2166,
+   "elem": 4,
+   "spellings": [
+    "CPedPool*"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "pointer",
+    "triv_dtor",
+    "triv_copy",
+    "ptr_elem"
+   ]
+  },
+  "class CPedScriptedTaskRecordData[128]": {
+   "size": 2560,
+   "align": 4,
+   "flags": 236,
+   "elem": 20,
+   "spellings": [
+    "CPedScriptedTaskRecordData[TOTAL_SCRIPTED_TASKS]"
+   ],
+   "traits": [
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "triv_copy",
+    "array"
+   ]
+  },
+  "class CPedStat*": {
+   "size": 4,
+   "align": 4,
+   "flags": 2166,
+   "elem": 4,
+   "spellings": [
+    "CPedStat*"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "pointer",
+    "triv_dtor",
+    "triv_copy",
+    "ptr_elem"
+   ]
+  },
+  "class CPlaceName": {
+   "size": 8,
+   "align": 4,
+   "flags": 356,
+   "elem": 8,
+   "spellings": [
+    "CPlaceName"
+   ],
+   "traits": [
+    "def_ctor",
+    "triv_dtor",
+    "triv_copy",
+    "class"
+   ]
+  },
+  "class CPlantColEntEntry*": {
+   "size": 4,
+   "align": 4,
+   "flags": 2166,
+   "elem": 4,
+   "spellings": [
+    "CPlantColEntEntry*"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "pointer",
+    "triv_dtor",
+    "triv_copy",
+    "ptr_elem"
+   ]
+  },
+  "class CPlantColEntEntry[40]": {
+   "size": 800,
+   "align": 4,
+   "flags": 238,
+   "elem": 20,
+   "spellings": [
+    "CPlantColEntEntry[MAX_NUM_PROC_OBJECTS]"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "triv_copy",
+    "array"
+   ]
+  },
+  "class CPlantLocTri*": {
+   "size": 4,
+   "align": 4,
+   "flags": 2166,
+   "elem": 4,
+   "spellings": [
+    "CPlantLocTri*"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "pointer",
+    "triv_dtor",
+    "triv_copy",
+    "ptr_elem"
+   ]
+  },
+  "class CPlantLocTri*[4]": {
+   "size": 16,
+   "align": 4,
+   "flags": 2286,
+   "elem": 4,
+   "spellings": [
+    "CPlantLocTri*[4]"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "triv_copy",
+    "array",
+    "ptr_elem"
+   ]
+  },
+  "class CPlantLocTri[256]": {
+   "size": 21504,
+   "align": 4,
+   "flags": 174,
+   "elem": 84,
+   "spellings": [
+    "CPlantLocTri[MAX_NUM_PLANT_TRIANGLES]"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "array"
+   ]
+  },
+  "class CPlayerInfo": {
+   "size": 400,
+   "align": 4,
+   "flags": 260,
+   "elem": 400,
+   "spellings": [
+    "CPlayerInfo"
+   ],
+   "traits": [
+    "def_ctor",
+    "class"
+   ]
+  },
+  "class CPlayerInfo[2]": {
+   "size": 800,
+   "align": 4,
+   "flags": 140,
+   "elem": 400,
+   "spellings": [
+    "CPlayerInfo[MAX_PLAYERS]"
+   ],
+   "traits": [
+    "def_ctor",
+    "aggregate",
+    "array"
+   ]
+  },
+  "class CPlayerRelationshipRecorder*": {
+   "size": 4,
+   "align": 4,
+   "flags": 2166,
+   "elem": 4,
+   "spellings": [
+    "CPlayerRelationshipRecorder*"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "pointer",
+    "triv_dtor",
+    "triv_copy",
+    "ptr_elem"
+   ]
+  },
+  "class CPointRoute": {
+   "size": 100,
+   "align": 4,
+   "flags": 300,
+   "elem": 100,
+   "spellings": [
+    "CPointRoute"
+   ],
+   "traits": [
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "class"
+   ]
+  },
+  "class CPointRoutePool*": {
+   "size": 4,
+   "align": 4,
+   "flags": 2166,
+   "elem": 4,
+   "spellings": [
+    "CPointRoutePool*"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "pointer",
+    "triv_dtor",
+    "triv_copy",
+    "ptr_elem"
+   ]
+  },
+  "class CPolyBunch*": {
+   "size": 4,
+   "align": 4,
+   "flags": 2166,
+   "elem": 4,
+   "spellings": [
+    "CPolyBunch*"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "pointer",
+    "triv_dtor",
+    "triv_copy",
+    "ptr_elem"
+   ]
+  },
+  "class CPool<class CEntryExit,class CEntryExit>*": {
+   "size": 4,
+   "align": 4,
+   "flags": 2166,
+   "elem": 4,
+   "spellings": [
+    "CEntryExitsPool*"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "pointer",
+    "triv_dtor",
+    "triv_copy",
+    "ptr_elem"
+   ]
+  },
+  "class CPool<class COctTree,class COctTree>": {
+   "size": 20,
+   "align": 4,
+   "flags": 260,
+   "elem": 20,
+   "spellings": [
+    "COctTreePool"
+   ],
+   "traits": [
+    "def_ctor",
+    "class"
+   ]
+  },
+  "class CPool<class CQuadTreeNode<void *>,class CQuadTreeNode<void *> >*": {
+   "size": 4,
+   "align": 4,
+   "flags": 2166,
+   "elem": 4,
+   "spellings": [
+    "CQuadTreeNodePool*"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "pointer",
+    "triv_dtor",
+    "triv_copy",
+    "ptr_elem"
+   ]
+  },
+  "class CPool<class CVehicleModelInfo::CVehicleStructure,class CVehicleModelInfo::CVehicleStructure>*": {
+   "size": 4,
+   "align": 4,
+   "flags": 2166,
+   "elem": 4,
+   "spellings": [
+    "CPool<CVehicleStructure>*"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "pointer",
+    "triv_dtor",
+    "triv_copy",
+    "ptr_elem"
+   ]
+  },
+  "class CPool<class TxdDef,class TxdDef>*": {
+   "size": 4,
+   "align": 4,
+   "flags": 2166,
+   "elem": 4,
+   "spellings": [
+    "CTxdPool*"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "pointer",
+    "triv_dtor",
+    "triv_copy",
+    "ptr_elem"
+   ]
+  },
+  "class CPool<struct CStuntJump,struct CStuntJump>*": {
+   "size": 4,
+   "align": 4,
+   "flags": 2166,
+   "elem": 4,
+   "spellings": [
+    "CStuntJumpsPool*"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "pointer",
+    "triv_dtor",
+    "triv_copy",
+    "ptr_elem"
+   ]
+  },
+  "class CPool<struct ColDef,struct ColDef>*": {
+   "size": 4,
+   "align": 4,
+   "flags": 2166,
+   "elem": 4,
+   "spellings": [
+    "CColPool*"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "pointer",
+    "triv_dtor",
+    "triv_copy",
+    "ptr_elem"
+   ]
+  },
+  "class CPool<struct CustomEnvMapPipeAtomicData,struct CustomEnvMapPipeAtomicData>*": {
+   "size": 4,
+   "align": 4,
+   "flags": 2166,
+   "elem": 4,
+   "spellings": [
+    "CustomEnvMapPipeAtomicDataPool*"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "pointer",
+    "triv_dtor",
+    "triv_copy",
+    "ptr_elem"
+   ]
+  },
+  "class CPool<struct CustomEnvMapPipeMaterialData,struct CustomEnvMapPipeMaterialData>*": {
+   "size": 4,
+   "align": 4,
+   "flags": 2166,
+   "elem": 4,
+   "spellings": [
+    "CustomEnvMapPipeMaterialDataPool*"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "pointer",
+    "triv_dtor",
+    "triv_copy",
+    "ptr_elem"
+   ]
+  },
+  "class CPool<struct CustomSpecMapPipeMaterialData,struct CustomSpecMapPipeMaterialData>*": {
+   "size": 4,
+   "align": 4,
+   "flags": 2166,
+   "elem": 4,
+   "spellings": [
+    "CustomSpecMapPipeMaterialDataPool*"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "pointer",
+    "triv_dtor",
+    "triv_copy",
+    "ptr_elem"
+   ]
+  },
+  "class CPool<struct IplDef,struct IplDef>*": {
+   "size": 4,
+   "align": 4,
+   "flags": 2166,
+   "elem": 4,
+   "spellings": [
+    "CIplPool*"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "pointer",
+    "triv_dtor",
+    "triv_copy",
+    "ptr_elem"
+   ]
+  },
+  "class CPtrListDoubleLink<class CBuilding *>": {
+   "size": 4,
+   "align": 4,
+   "flags": 260,
+   "elem": 4,
+   "spellings": [
+    "CPtrListDoubleLink<CBuilding*>"
+   ],
+   "traits": [
+    "def_ctor",
+    "class"
+   ]
+  },
+  "class CPtrListDoubleLink<class CObject *>": {
+   "size": 4,
+   "align": 4,
+   "flags": 260,
+   "elem": 4,
+   "spellings": [
+    "CPtrListDoubleLink<CObject*>"
+   ],
+   "traits": [
+    "def_ctor",
+    "class"
+   ]
+  },
+  "class CPtrListDoubleLink<class CPhysical *>": {
+   "size": 4,
+   "align": 4,
+   "flags": 260,
+   "elem": 4,
+   "spellings": [
+    "CPtrListDoubleLink<CPhysical*>"
+   ],
+   "traits": [
+    "def_ctor",
+    "class"
+   ]
+  },
+  "class CPtrNodeDoubleLinkPool*": {
+   "size": 4,
+   "align": 4,
+   "flags": 2166,
+   "elem": 4,
+   "spellings": [
+    "CPtrNodeDoubleLinkPool*"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "pointer",
+    "triv_dtor",
+    "triv_copy",
+    "ptr_elem"
+   ]
+  },
+  "class CPtrNodeSingleLinkPool*": {
+   "size": 4,
+   "align": 4,
+   "flags": 2166,
+   "elem": 4,
+   "spellings": [
+    "CPtrNodeSingleLinkPool*"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "pointer",
+    "triv_dtor",
+    "triv_copy",
+    "ptr_elem"
+   ]
+  },
+  "class CQuadTreeNode<class CEntryExit *>*": {
+   "size": 4,
+   "align": 4,
+   "flags": 2166,
+   "elem": 4,
+   "spellings": [
+    "EntryExitTreeNode*"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "pointer",
+    "triv_dtor",
+    "triv_copy",
+    "ptr_elem"
+   ]
+  },
+  "class CQuadTreeNode<struct ColDef *>*": {
+   "size": 4,
+   "align": 4,
+   "flags": 2166,
+   "elem": 4,
+   "spellings": [
+    "ColTreeNode*"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "pointer",
+    "triv_dtor",
+    "triv_copy",
+    "ptr_elem"
+   ]
+  },
+  "class CQuadTreeNode<struct IplDef *>*": {
+   "size": 4,
+   "align": 4,
+   "flags": 2166,
+   "elem": 4,
+   "spellings": [
+    "IplTreeNode*"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "pointer",
+    "triv_dtor",
+    "triv_copy",
+    "ptr_elem"
+   ]
+  },
+  "class CRGBA": {
+   "size": 4,
+   "align": 1,
+   "flags": 356,
+   "elem": 4,
+   "spellings": [
+    "CRGBA"
+   ],
+   "traits": [
+    "def_ctor",
+    "triv_dtor",
+    "triv_copy",
+    "class"
+   ]
+  },
+  "class CRGBA*": {
+   "size": 4,
+   "align": 4,
+   "flags": 2166,
+   "elem": 4,
+   "spellings": [
+    "CRGBA*"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "pointer",
+    "triv_dtor",
+    "triv_copy",
+    "ptr_elem"
+   ]
+  },
+  "class CRGBA[128]": {
+   "size": 512,
+   "align": 1,
+   "flags": 236,
+   "elem": 4,
+   "spellings": [
+    "CRGBA[NUM_VEHICLE_COLORS]"
+   ],
+   "traits": [
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "triv_copy",
+    "array"
+   ]
+  },
+  "class CRealTimeShadowManager": {
+   "size": 84,
+   "align": 4,
+   "flags": 268,
+   "elem": 84,
+   "spellings": [
+    "CRealTimeShadowManager"
+   ],
+   "traits": [
+    "def_ctor",
+    "aggregate",
+    "class"
+   ]
+  },
+  "class CRect": {
+   "size": 16,
+   "align": 4,
+   "flags": 356,
+   "elem": 16,
+   "spellings": [
+    "CRect"
+   ],
+   "traits": [
+    "def_ctor",
+    "triv_dtor",
+    "triv_copy",
+    "class"
+   ]
+  },
+  "class CReference*": {
+   "size": 4,
+   "align": 4,
+   "flags": 2166,
+   "elem": 4,
+   "spellings": [
+    "CReference*"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "pointer",
+    "triv_dtor",
+    "triv_copy",
+    "ptr_elem"
+   ]
+  },
+  "class CReference[3000]": {
+   "size": 24000,
+   "align": 4,
+   "flags": 238,
+   "elem": 8,
+   "spellings": [
+    "CReference[MAX_NUM_REFERENCES]"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "triv_copy",
+    "array"
+   ]
+  },
+  "class CRegisteredMotionBlurStreak[4]": {
+   "size": 336,
+   "align": 4,
+   "flags": 172,
+   "elem": 84,
+   "spellings": [
+    "CRegisteredMotionBlurStreak[MAX_NUM_MOTIONBLUR_STREAKS]"
+   ],
+   "traits": [
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "array"
+   ]
+  },
+  "class CReplay::CAddressInReplayBuffer": {
+   "size": 12,
+   "align": 4,
+   "flags": 356,
+   "elem": 12,
+   "spellings": [
+    "CAddressInReplayBuffer"
+   ],
+   "traits": [
+    "def_ctor",
+    "triv_dtor",
+    "triv_copy",
+    "class"
+   ]
+  },
+  "class CRunningScript*": {
+   "size": 4,
+   "align": 4,
+   "flags": 2166,
+   "elem": 4,
+   "spellings": [
+    "CRunningScript*"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "pointer",
+    "triv_dtor",
+    "triv_copy",
+    "ptr_elem"
+   ]
+  },
+  "class CScene": {
+   "size": 8,
+   "align": 4,
+   "flags": 366,
+   "elem": 8,
+   "spellings": [
+    "CScene"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "triv_copy",
+    "class"
+   ]
+  },
+  "class CScriptResourceManager": {
+   "size": 900,
+   "align": 4,
+   "flags": 352,
+   "elem": 900,
+   "spellings": [
+    "CScriptResourceManager"
+   ],
+   "traits": [
+    "triv_dtor",
+    "triv_copy",
+    "class"
+   ]
+  },
+  "class CScriptedBrainTaskEntry[48]": {
+   "size": 768,
+   "align": 4,
+   "flags": 236,
+   "elem": 16,
+   "spellings": [
+    "CScriptedBrainTaskEntry[TOTAL_SCRIPTED_BRAIN_TASK_ENTRIES]"
+   ],
+   "traits": [
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "triv_copy",
+    "array"
+   ]
+  },
+  "class CScriptsForBrains": {
+   "size": 1400,
+   "align": 4,
+   "flags": 364,
+   "elem": 1400,
+   "spellings": [
+    "CScriptsForBrains"
+   ],
+   "traits": [
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "triv_copy",
+    "class"
+   ]
+  },
+  "class CSpecialPlateHandler": {
+   "size": 244,
+   "align": 4,
+   "flags": 366,
+   "elem": 244,
+   "spellings": [
+    "CSpecialPlateHandler"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "triv_copy",
+    "class"
+   ]
+  },
+  "class CSprite2d[15]": {
+   "size": 60,
+   "align": 4,
+   "flags": 140,
+   "elem": 4,
+   "spellings": [
+    "CSprite2d[MAX_FONT_BUTTON_SPRITES]"
+   ],
+   "traits": [
+    "def_ctor",
+    "aggregate",
+    "array"
+   ]
+  },
+  "class CSprite2d[2]": {
+   "size": 8,
+   "align": 4,
+   "flags": 140,
+   "elem": 4,
+   "spellings": [
+    "CSprite2d[MAX_FONT_SPRITES]"
+   ],
+   "traits": [
+    "def_ctor",
+    "aggregate",
+    "array"
+   ]
+  },
+  "class CStack<int,16>": {
+   "size": 68,
+   "align": 4,
+   "flags": 356,
+   "elem": 68,
+   "spellings": [
+    "CStack<int32,16>"
+   ],
+   "traits": [
+    "def_ctor",
+    "triv_dtor",
+    "triv_copy",
+    "class"
+   ]
+  },
+  "class CStencilShadowObject*": {
+   "size": 4,
+   "align": 4,
+   "flags": 2166,
+   "elem": 4,
+   "spellings": [
+    "CStencilShadowObject*"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "pointer",
+    "triv_dtor",
+    "triv_copy",
+    "ptr_elem"
+   ]
+  },
+  "class CStore<class CAtomicModelInfo,14000>": {
+   "size": 448004,
+   "align": 4,
+   "flags": 260,
+   "elem": 448004,
+   "spellings": [
+    "CStore<CAtomicModelInfo,NUM_ATOMIC_MODEL_INFOS>"
+   ],
+   "traits": [
+    "def_ctor",
+    "class"
+   ]
+  },
+  "class CStore<class CClumpModelInfo,92>": {
+   "size": 3316,
+   "align": 4,
+   "flags": 260,
+   "elem": 3316,
+   "spellings": [
+    "CStore<CClumpModelInfo,NUM_CLUMP_MODEL_INFOS>"
+   ],
+   "traits": [
+    "def_ctor",
+    "class"
+   ]
+  },
+  "class CStore<class CDamageAtomicModelInfo,70>": {
+   "size": 2524,
+   "align": 4,
+   "flags": 260,
+   "elem": 2524,
+   "spellings": [
+    "CStore<CDamageAtomicModelInfo,NUM_DAMAGE_ATOMIC_MODEL_INFOS>"
+   ],
+   "traits": [
+    "def_ctor",
+    "class"
+   ]
+  },
+  "class CStore<class CLodAtomicModelInfo,1>": {
+   "size": 40,
+   "align": 4,
+   "flags": 260,
+   "elem": 40,
+   "spellings": [
+    "CStore<CLodAtomicModelInfo,NUM_LOD_ATOMIC_MODEL_INFOS>"
+   ],
+   "traits": [
+    "def_ctor",
+    "class"
+   ]
+  },
+  "class CStore<class CLodTimeModelInfo,1>": {
+   "size": 44,
+   "align": 4,
+   "flags": 260,
+   "elem": 44,
+   "spellings": [
+    "CStore<CLodTimeModelInfo,NUM_LOD_TIME_MODEL_INFOS>"
+   ],
+   "traits": [
+    "def_ctor",
+    "class"
+   ]
+  },
+  "class CStore<class CPedModelInfo,278>": {
+   "size": 18908,
+   "align": 4,
+   "flags": 260,
+   "elem": 18908,
+   "spellings": [
+    "CStore<CPedModelInfo,NUM_PED_MODEL_INFOS>"
+   ],
+   "traits": [
+    "def_ctor",
+    "class"
+   ]
+  },
+  "class CStore<class CTimeModelInfo,169>": {
+   "size": 6088,
+   "align": 4,
+   "flags": 260,
+   "elem": 6088,
+   "spellings": [
+    "CStore<CTimeModelInfo,NUM_TIME_MODEL_INFOS>"
+   ],
+   "traits": [
+    "def_ctor",
+    "class"
+   ]
+  },
+  "class CStore<class CVehicleModelInfo,212>": {
+   "size": 164516,
+   "align": 4,
+   "flags": 260,
+   "elem": 164516,
+   "spellings": [
+    "CStore<CVehicleModelInfo,NUM_VEHICLE_MODEL_INFOS>"
+   ],
+   "traits": [
+    "def_ctor",
+    "class"
+   ]
+  },
+  "class CStore<class CWeaponModelInfo,51>": {
+   "size": 2044,
+   "align": 4,
+   "flags": 260,
+   "elem": 2044,
+   "spellings": [
+    "CStore<CWeaponModelInfo,NUM_WEAPON_MODEL_INFOS>"
+   ],
+   "traits": [
+    "def_ctor",
+    "class"
+   ]
+  },
+  "class CStore<struct C2dEffect,100>": {
+   "size": 6404,
+   "align": 4,
+   "flags": 292,
+   "elem": 6404,
+   "spellings": [
+    "CStore<C2dEffect,NUM_2DFX_INFOS>"
+   ],
+   "traits": [
+    "def_ctor",
+    "triv_dtor",
+    "class"
+   ]
+  },
+  "class CStreamedScripts": {
+   "size": 2632,
+   "align": 4,
+   "flags": 364,
+   "elem": 2632,
+   "spellings": [
+    "CStreamedScripts"
+   ],
+   "traits": [
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "triv_copy",
+    "class"
+   ]
+  },
+  "class CStreamingInfo*": {
+   "size": 4,
+   "align": 4,
+   "flags": 2166,
+   "elem": 4,
+   "spellings": [
+    "CStreamingInfo*"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "pointer",
+    "triv_dtor",
+    "triv_copy",
+    "ptr_elem"
+   ]
+  },
+  "class CStuckCarCheck": {
+   "size": 576,
+   "align": 4,
+   "flags": 302,
+   "elem": 576,
+   "spellings": [
+    "CStuckCarCheck"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "class"
+   ]
+  },
+  "class CTaskAllocatorPool*": {
+   "size": 4,
+   "align": 4,
+   "flags": 2166,
+   "elem": 4,
+   "spellings": [
+    "CTaskAllocatorPool*"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "pointer",
+    "triv_dtor",
+    "triv_copy",
+    "ptr_elem"
+   ]
+  },
+  "class CTaskComplexSequence[64]": {
+   "size": 4096,
+   "align": 4,
+   "flags": 140,
+   "elem": 64,
+   "spellings": [
+    "CTaskComplexSequence[NUM_SEQUENCES]"
+   ],
+   "traits": [
+    "def_ctor",
+    "aggregate",
+    "array"
+   ]
+  },
+  "class CTaskPool*": {
+   "size": 4,
+   "align": 4,
+   "flags": 2166,
+   "elem": 4,
+   "spellings": [
+    "CTaskPool*"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "pointer",
+    "triv_dtor",
+    "triv_copy",
+    "ptr_elem"
+   ]
+  },
+  "class CText": {
+   "size": 2704,
+   "align": 4,
+   "flags": 260,
+   "elem": 2704,
+   "spellings": [
+    "CText"
+   ],
+   "traits": [
+    "def_ctor",
+    "class"
+   ]
+  },
+  "class CTrainNode*[4]": {
+   "size": 16,
+   "align": 4,
+   "flags": 2286,
+   "elem": 4,
+   "spellings": [
+    "CTrainNode*[4]"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "triv_copy",
+    "array",
+    "ptr_elem"
+   ]
+  },
+  "class CUpsideDownCarCheck": {
+   "size": 48,
+   "align": 4,
+   "flags": 364,
+   "elem": 48,
+   "spellings": [
+    "CUpsideDownCarCheck"
+   ],
+   "traits": [
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "triv_copy",
+    "class"
+   ]
+  },
+  "class CVector": {
+   "size": 12,
+   "align": 4,
+   "flags": 294,
+   "elem": 12,
+   "spellings": [
+    "CVector"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "triv_dtor",
+    "class"
+   ]
+  },
+  "class CVector*": {
+   "size": 4,
+   "align": 4,
+   "flags": 2166,
+   "elem": 4,
+   "spellings": [
+    "CVector*"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "pointer",
+    "triv_dtor",
+    "triv_copy",
+    "ptr_elem"
+   ]
+  },
+  "class CVector2D": {
+   "size": 8,
+   "align": 4,
+   "flags": 294,
+   "elem": 8,
+   "spellings": [
+    "CVector2D"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "triv_dtor",
+    "class"
+   ]
+  },
+  "class CVector2D[4][3]": {
+   "size": 96,
+   "align": 4,
+   "flags": 174,
+   "elem": 8,
+   "spellings": [
+    "CVector2D[4][3]"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "array"
+   ]
+  },
+  "class CVector[10]": {
+   "size": 120,
+   "align": 4,
+   "flags": 174,
+   "elem": 12,
+   "spellings": [
+    "CVector[MAX_RESTART_POINTS]"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "array"
+   ]
+  },
+  "class CVehicle*": {
+   "size": 4,
+   "align": 4,
+   "flags": 2166,
+   "elem": 4,
+   "spellings": [
+    "CVehicle*"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "pointer",
+    "triv_dtor",
+    "triv_copy",
+    "ptr_elem"
+   ]
+  },
+  "class CVehicle*[2]": {
+   "size": 8,
+   "align": 4,
+   "flags": 2286,
+   "elem": 4,
+   "spellings": [
+    "CVehicle*[2]"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "triv_copy",
+    "array",
+    "ptr_elem"
+   ]
+  },
+  "class CVehicleAnimGroup[30]": {
+   "size": 4440,
+   "align": 4,
+   "flags": 172,
+   "elem": 148,
+   "spellings": [
+    "CVehicleAnimGroup[NUM_VEH_ANIM_GROUPS]"
+   ],
+   "traits": [
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "array"
+   ]
+  },
+  "class CVehicleModelInfo::CLinkedUpgradeList": {
+   "size": 124,
+   "align": 4,
+   "flags": 366,
+   "elem": 124,
+   "spellings": [
+    "CLinkedUpgradeList"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "triv_copy",
+    "class"
+   ]
+  },
+  "class CVehiclePool*": {
+   "size": 4,
+   "align": 4,
+   "flags": 2166,
+   "elem": 4,
+   "spellings": [
+    "CVehiclePool*"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "pointer",
+    "triv_dtor",
+    "triv_copy",
+    "ptr_elem"
+   ]
+  },
+  "class CWeaponInfo[80]": {
+   "size": 8960,
+   "align": 4,
+   "flags": 172,
+   "elem": 112,
+   "spellings": [
+    "CWeaponInfo[NUM_WEAPON_INFOS]"
+   ],
+   "traits": [
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "array"
+   ]
+  },
+  "class CZone*": {
+   "size": 4,
+   "align": 4,
+   "flags": 2166,
+   "elem": 4,
+   "spellings": [
+    "CZone*"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "pointer",
+    "triv_dtor",
+    "triv_copy",
+    "ptr_elem"
+   ]
+  },
+  "class CZoneInfo*": {
+   "size": 4,
+   "align": 4,
+   "flags": 2166,
+   "elem": 4,
+   "spellings": [
+    "CZoneInfo*"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "pointer",
+    "triv_dtor",
+    "triv_copy",
+    "ptr_elem"
+   ]
+  },
+  "class C_PcSave": {
+   "size": 4,
+   "align": 4,
+   "flags": 366,
+   "elem": 4,
+   "spellings": [
+    "C_PcSave"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "triv_copy",
+    "class"
+   ]
+  },
+  "class D3DIndexDataBuffer": {
+   "size": 24,
+   "align": 4,
+   "flags": 366,
+   "elem": 24,
+   "spellings": [
+    "D3DIndexDataBuffer"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "triv_copy",
+    "class"
+   ]
+  },
+  "class FurnitureManager_c": {
+   "size": 8312,
+   "align": 4,
+   "flags": 292,
+   "elem": 8312,
+   "spellings": [
+    "FurnitureManager_c"
+   ],
+   "traits": [
+    "def_ctor",
+    "triv_dtor",
+    "class"
+   ]
+  },
+  "class FxManager_c": {
+   "size": 188,
+   "align": 4,
+   "flags": 292,
+   "elem": 188,
+   "spellings": [
+    "FxManager_c"
+   ],
+   "traits": [
+    "def_ctor",
+    "triv_dtor",
+    "class"
+   ]
+  },
+  "class Fx_c": {
+   "size": 112,
+   "align": 4,
+   "flags": 292,
+   "elem": 112,
+   "spellings": [
+    "Fx_c"
+   ],
+   "traits": [
+    "def_ctor",
+    "triv_dtor",
+    "class"
+   ]
+  },
+  "class IKChainManager_c": {
+   "size": 2840,
+   "align": 4,
+   "flags": 260,
+   "elem": 2840,
+   "spellings": [
+    "IKChainManager_c"
+   ],
+   "traits": [
+    "def_ctor",
+    "class"
+   ]
+  },
+  "class InteriorManager_c": {
+   "size": 18264,
+   "align": 4,
+   "flags": 292,
+   "elem": 18264,
+   "spellings": [
+    "InteriorManager_c"
+   ],
+   "traits": [
+    "def_ctor",
+    "triv_dtor",
+    "class"
+   ]
+  },
+  "class ProcObjectMan_c": {
+   "size": 19476,
+   "align": 4,
+   "flags": 292,
+   "elem": 19476,
+   "spellings": [
+    "ProcObjectMan_c"
+   ],
+   "traits": [
+    "def_ctor",
+    "triv_dtor",
+    "class"
+   ]
+  },
+  "class SurfaceInfos_c": {
+   "size": 2292,
+   "align": 4,
+   "flags": 366,
+   "elem": 2292,
+   "spellings": [
+    "SurfaceInfos_c"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "triv_copy",
+    "class"
+   ]
+  },
+  "class TList_c<struct FurnitureEntity_c>": {
+   "size": 12,
+   "align": 4,
+   "flags": 292,
+   "elem": 12,
+   "spellings": [
+    "TList_c<FurnitureEntity_c>"
+   ],
+   "traits": [
+    "def_ctor",
+    "triv_dtor",
+    "class"
+   ]
+  },
+  "class WaterCreatureManager_c": {
+   "size": 6684,
+   "align": 4,
+   "flags": 260,
+   "elem": 6684,
+   "spellings": [
+    "WaterCreatureManager_c"
+   ],
+   "traits": [
+    "def_ctor",
+    "class"
+   ]
+  },
+  "class cBuoyancy": {
+   "size": 208,
+   "align": 4,
+   "flags": 260,
+   "elem": 208,
+   "spellings": [
+    "cBuoyancy"
+   ],
+   "traits": [
+    "def_ctor",
+    "class"
+   ]
+  },
+  "class cHandlingDataMgr": {
+   "size": 50724,
+   "align": 4,
+   "flags": 292,
+   "elem": 50724,
+   "spellings": [
+    "cHandlingDataMgr"
+   ],
+   "traits": [
+    "def_ctor",
+    "triv_dtor",
+    "class"
+   ]
+  },
+  "class rw::ObjPipeline*": {
+   "size": 4,
+   "align": 4,
+   "flags": 2166,
+   "elem": 4,
+   "spellings": [
+    "RxPipeline*"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "pointer",
+    "triv_dtor",
+    "triv_copy",
+    "ptr_elem"
+   ]
+  },
+  "class rw::Stream": {
+   "size": 4,
+   "align": 4,
+   "flags": 8449,
+   "elem": 4,
+   "spellings": [
+    "RwStream"
+   ],
+   "traits": [
+    "poly",
+    "class",
+    "abstract"
+   ]
+  },
+  "class std::array<bool,10>": {
+   "size": 10,
+   "align": 1,
+   "flags": 366,
+   "elem": 10,
+   "spellings": [
+    "std::array<bool,10>"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "triv_copy",
+    "class"
+   ]
+  },
+  "class std::array<bool,16>": {
+   "size": 16,
+   "align": 1,
+   "flags": 366,
+   "elem": 16,
+   "spellings": [
+    "std::array<bool,16>",
+    "std::array<bool,TOTAL_VEHICLE_RECORDS>"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "triv_copy",
+    "class"
+   ]
+  },
+  "class std::array<bool,20>": {
+   "size": 20,
+   "align": 1,
+   "flags": 366,
+   "elem": 20,
+   "spellings": [
+    "std::array<bool,NUM_TYPES>"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "triv_copy",
+    "class"
+   ]
+  },
+  "class std::array<bool,29>": {
+   "size": 29,
+   "align": 1,
+   "flags": 366,
+   "elem": 29,
+   "spellings": [
+    "std::array<bool,29>"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "triv_copy",
+    "class"
+   ]
+  },
+  "class std::array<bool,2>": {
+   "size": 2,
+   "align": 1,
+   "flags": 366,
+   "elem": 2,
+   "spellings": [
+    "std::array<bool,CMenuSystem::MENU_COUNT>",
+    "std::array<bool,MAX_NUM_WEAPON_CROSSHAIRS>"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "triv_copy",
+    "class"
+   ]
+  },
+  "class std::array<bool,325>": {
+   "size": 325,
+   "align": 1,
+   "flags": 366,
+   "elem": 325,
+   "spellings": [
+    "std::array<bool,MAX_ROADBLOCKS>"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "triv_copy",
+    "class"
+   ]
+  },
+  "class std::array<bool,4>": {
+   "size": 4,
+   "align": 1,
+   "flags": 366,
+   "elem": 4,
+   "spellings": [
+    "std::array<bool,4>"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "triv_copy",
+    "class"
+   ]
+  },
+  "class std::array<bool,560>": {
+   "size": 560,
+   "align": 1,
+   "flags": 366,
+   "elem": 560,
+   "spellings": [
+    "std::array<bool,NUM_ITEMS>"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "triv_copy",
+    "class"
+   ]
+  },
+  "class std::array<bool,64>": {
+   "size": 64,
+   "align": 1,
+   "flags": 366,
+   "elem": 64,
+   "spellings": [
+    "std::array<bool,64>",
+    "std::array<bool,NUM_PATH_MAP_AREAS>",
+    "std::array<bool,NUM_SCRIPTED_2D_EFFECTS>"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "triv_copy",
+    "class"
+   ]
+  },
+  "class std::array<bool,7>": {
+   "size": 7,
+   "align": 1,
+   "flags": 366,
+   "elem": 7,
+   "spellings": [
+    "std::array<bool,7>"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "triv_copy",
+    "class"
+   ]
+  },
+  "class std::array<bool,8>": {
+   "size": 8,
+   "align": 1,
+   "flags": 366,
+   "elem": 8,
+   "spellings": [
+    "std::array<bool,8>"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "triv_copy",
+    "class"
+   ]
+  },
+  "class std::array<char [32],50>": {
+   "size": 1600,
+   "align": 1,
+   "flags": 366,
+   "elem": 1600,
+   "spellings": [
+    "std::array<char[32],50>"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "triv_copy",
+    "class"
+   ]
+  },
+  "class std::array<char [32],8>": {
+   "size": 256,
+   "align": 1,
+   "flags": 366,
+   "elem": 256,
+   "spellings": [
+    "std::array<char[32],8>"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "triv_copy",
+    "class"
+   ]
+  },
+  "class std::array<char [8],64>": {
+   "size": 512,
+   "align": 1,
+   "flags": 366,
+   "elem": 512,
+   "spellings": [
+    "std::array<char[8],64>"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "triv_copy",
+    "class"
+   ]
+  },
+  "class std::array<char const *,11>": {
+   "size": 44,
+   "align": 4,
+   "flags": 366,
+   "elem": 44,
+   "spellings": [
+    "std::array<const char*,NUM_SECTION_NAMES>"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "triv_copy",
+    "class"
+   ]
+  },
+  "class std::array<char,2>": {
+   "size": 2,
+   "align": 1,
+   "flags": 366,
+   "elem": 2,
+   "spellings": [
+    "std::array<char,2>"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "triv_copy",
+    "class"
+   ]
+  },
+  "class std::array<char,50>": {
+   "size": 50,
+   "align": 1,
+   "flags": 366,
+   "elem": 50,
+   "spellings": [
+    "std::array<char,50>"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "triv_copy",
+    "class"
+   ]
+  },
+  "class std::array<char,8>": {
+   "size": 8,
+   "align": 1,
+   "flags": 366,
+   "elem": 8,
+   "spellings": [
+    "std::array<char,8>"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "triv_copy",
+    "class"
+   ]
+  },
+  "class std::array<class C3dMarker,32>": {
+   "size": 5120,
+   "align": 4,
+   "flags": 268,
+   "elem": 5120,
+   "spellings": [
+    "std::array<C3dMarker,32>"
+   ],
+   "traits": [
+    "def_ctor",
+    "aggregate",
+    "class"
+   ]
+  },
+  "class std::array<class CActiveOccluder,28>": {
+   "size": 4816,
+   "align": 4,
+   "flags": 302,
+   "elem": 4816,
+   "spellings": [
+    "std::array<CActiveOccluder,MAX_ACTIVE_OCCLUDERS>"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "class"
+   ]
+  },
+  "class std::array<class CAnimBlendHierarchy,2500>": {
+   "size": 60000,
+   "align": 4,
+   "flags": 268,
+   "elem": 60000,
+   "spellings": [
+    "std::array<CAnimBlendHierarchy,2500>"
+   ],
+   "traits": [
+    "def_ctor",
+    "aggregate",
+    "class"
+   ]
+  },
+  "class std::array<class CAnimBlock,180>": {
+   "size": 5760,
+   "align": 4,
+   "flags": 366,
+   "elem": 5760,
+   "spellings": [
+    "std::array<CAnimBlock,NUM_ANIM_BLOCKS>"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "triv_copy",
+    "class"
+   ]
+  },
+  "class std::array<class CBird,6>": {
+   "size": 408,
+   "align": 4,
+   "flags": 302,
+   "elem": 408,
+   "spellings": [
+    "std::array<CBird,6>"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "class"
+   ]
+  },
+  "class std::array<class CBoat *,4>": {
+   "size": 16,
+   "align": 4,
+   "flags": 366,
+   "elem": 16,
+   "spellings": [
+    "std::array<CBoat*,NUM_WAKE_GEN_BOATS>"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "triv_copy",
+    "class"
+   ]
+  },
+  "class std::array<class CBulletInfo,8>": {
+   "size": 352,
+   "align": 4,
+   "flags": 302,
+   "elem": 352,
+   "spellings": [
+    "std::array<CBulletInfo,8>"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "class"
+   ]
+  },
+  "class std::array<class CBulletTrace,16>": {
+   "size": 704,
+   "align": 4,
+   "flags": 302,
+   "elem": 704,
+   "spellings": [
+    "std::array<CBulletTrace,16>"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "class"
+   ]
+  },
+  "class std::array<class CCheckpoint,32>": {
+   "size": 1792,
+   "align": 4,
+   "flags": 300,
+   "elem": 1792,
+   "spellings": [
+    "std::array<CCheckpoint,32>"
+   ],
+   "traits": [
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "class"
+   ]
+  },
+  "class std::array<class CColModel,20>": {
+   "size": 960,
+   "align": 4,
+   "flags": 268,
+   "elem": 960,
+   "spellings": [
+    "std::array<CColModel,MAX_NUM_CUTSCENE_COLMODELS>"
+   ],
+   "traits": [
+    "def_ctor",
+    "aggregate",
+    "class"
+   ]
+  },
+  "class std::array<class CColModel,2>": {
+   "size": 96,
+   "align": 4,
+   "flags": 268,
+   "elem": 96,
+   "spellings": [
+    "std::array<CColModel,2>"
+   ],
+   "traits": [
+    "def_ctor",
+    "aggregate",
+    "class"
+   ]
+  },
+  "class std::array<class CColModel,4>": {
+   "size": 192,
+   "align": 4,
+   "flags": 268,
+   "elem": 192,
+   "spellings": [
+    "std::array<CColModel,4>"
+   ],
+   "traits": [
+    "def_ctor",
+    "aggregate",
+    "class"
+   ]
+  },
+  "class std::array<class CColPoint,12>": {
+   "size": 528,
+   "align": 4,
+   "flags": 302,
+   "elem": 528,
+   "spellings": [
+    "std::array<CColPoint,MAX_NUM_SUSP_LINES>"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "class"
+   ]
+  },
+  "class std::array<class CColPoint,32>": {
+   "size": 1408,
+   "align": 4,
+   "flags": 302,
+   "elem": 1408,
+   "spellings": [
+    "std::array<CColPoint,32>"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "class"
+   ]
+  },
+  "class std::array<class CConversationForPed,14>": {
+   "size": 392,
+   "align": 4,
+   "flags": 366,
+   "elem": 392,
+   "spellings": [
+    "std::array<CConversationForPed,MAX_NUM_CONVERSATIONS>"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "triv_copy",
+    "class"
+   ]
+  },
+  "class std::array<class CConversationNode,50>": {
+   "size": 1200,
+   "align": 4,
+   "flags": 366,
+   "elem": 1200,
+   "spellings": [
+    "std::array<CConversationNode,MAX_NUM_CONVERSATION_NODES>"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "triv_copy",
+    "class"
+   ]
+  },
+  "class std::array<class CCoverPoint,100>": {
+   "size": 2800,
+   "align": 4,
+   "flags": 268,
+   "elem": 2800,
+   "spellings": [
+    "std::array<CCoverPoint,100>"
+   ],
+   "traits": [
+    "def_ctor",
+    "aggregate",
+    "class"
+   ]
+  },
+  "class std::array<class CCutsceneObject *,50>": {
+   "size": 200,
+   "align": 4,
+   "flags": 366,
+   "elem": 200,
+   "spellings": [
+    "std::array<CCutsceneObject*,50>"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "triv_copy",
+    "class"
+   ]
+  },
+  "class std::array<class CEntity * *,40>": {
+   "size": 160,
+   "align": 4,
+   "flags": 366,
+   "elem": 160,
+   "spellings": [
+    "std::array<CEntity**,40>"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "triv_copy",
+    "class"
+   ]
+  },
+  "class std::array<class CEntity *,10>": {
+   "size": 40,
+   "align": 4,
+   "flags": 366,
+   "elem": 40,
+   "spellings": [
+    "std::array<CEntity*,10>"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "triv_copy",
+    "class"
+   ]
+  },
+  "class std::array<class CEntity *,20>": {
+   "size": 80,
+   "align": 4,
+   "flags": 366,
+   "elem": 80,
+   "spellings": [
+    "std::array<CEntity*,MAX_NUM_INVISIBILITY_SETTINGS>"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "triv_copy",
+    "class"
+   ]
+  },
+  "class std::array<class CEntity *,4096>": {
+   "size": 16384,
+   "align": 4,
+   "flags": 366,
+   "elem": 16384,
+   "spellings": [
+    "std::array<CEntity*,4'096>"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "triv_copy",
+    "class"
+   ]
+  },
+  "class std::array<class CEntity *,50>": {
+   "size": 200,
+   "align": 4,
+   "flags": 366,
+   "elem": 200,
+   "spellings": [
+    "std::array<CEntity*,50>"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "triv_copy",
+    "class"
+   ]
+  },
+  "class std::array<class CEscalator,32>": {
+   "size": 10752,
+   "align": 4,
+   "flags": 268,
+   "elem": 10752,
+   "spellings": [
+    "std::array<CEscalator,NUM_ESCALATORS>"
+   ],
+   "traits": [
+    "def_ctor",
+    "aggregate",
+    "class"
+   ]
+  },
+  "class std::array<class CExplosion,16>": {
+   "size": 1984,
+   "align": 4,
+   "flags": 300,
+   "elem": 1984,
+   "spellings": [
+    "std::array<CExplosion,16>"
+   ],
+   "traits": [
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "class"
+   ]
+  },
+  "class std::array<class CFallingGlassPane,44>": {
+   "size": 4928,
+   "align": 4,
+   "flags": 268,
+   "elem": 4928,
+   "spellings": [
+    "std::array<CFallingGlassPane,44>"
+   ],
+   "traits": [
+    "def_ctor",
+    "aggregate",
+    "class"
+   ]
+  },
+  "class std::array<class CGangInfo,10>": {
+   "size": 160,
+   "align": 4,
+   "flags": 364,
+   "elem": 160,
+   "spellings": [
+    "std::array<CGangInfo,10>"
+   ],
+   "traits": [
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "triv_copy",
+    "class"
+   ]
+  },
+  "class std::array<class CHandShaker,6>": {
+   "size": 888,
+   "align": 4,
+   "flags": 268,
+   "elem": 888,
+   "spellings": [
+    "std::array<CHandShaker,NUM_HANDSHAKERS>"
+   ],
+   "traits": [
+    "def_ctor",
+    "aggregate",
+    "class"
+   ]
+  },
+  "class std::array<class CHeli *,2>": {
+   "size": 8,
+   "align": 4,
+   "flags": 366,
+   "elem": 8,
+   "spellings": [
+    "std::array<CHeli*,2>"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "triv_copy",
+    "class"
+   ]
+  },
+  "class std::array<class CInformGroupEvent,8>": {
+   "size": 128,
+   "align": 4,
+   "flags": 268,
+   "elem": 128,
+   "spellings": [
+    "std::array<CInformGroupEvent,8>"
+   ],
+   "traits": [
+    "def_ctor",
+    "aggregate",
+    "class"
+   ]
+  },
+  "class std::array<class CLoadedCarGroup,10>": {
+   "size": 460,
+   "align": 2,
+   "flags": 364,
+   "elem": 460,
+   "spellings": [
+    "std::array<CLoadedCarGroup,10>"
+   ],
+   "traits": [
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "triv_copy",
+    "class"
+   ]
+  },
+  "class std::array<class CMeleeInfo,13>": {
+   "size": 1768,
+   "align": 4,
+   "flags": 366,
+   "elem": 1768,
+   "spellings": [
+    "std::array<CMeleeInfo,13>"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "triv_copy",
+    "class"
+   ]
+  },
+  "class std::array<class CMemoryHeap,3>": {
+   "size": 216,
+   "align": 4,
+   "flags": 364,
+   "elem": 216,
+   "spellings": [
+    "std::array<CMemoryHeap,3>"
+   ],
+   "traits": [
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "triv_copy",
+    "class"
+   ]
+  },
+  "class std::array<class CNodeAddress,325>": {
+   "size": 1300,
+   "align": 2,
+   "flags": 364,
+   "elem": 1300,
+   "spellings": [
+    "std::array<CNodeAddress,MAX_ROADBLOCKS>"
+   ],
+   "traits": [
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "triv_copy",
+    "class"
+   ]
+  },
+  "class std::array<class CNodeAddress,5000>": {
+   "size": 20000,
+   "align": 2,
+   "flags": 364,
+   "elem": 20000,
+   "spellings": [
+    "std::array<CNodeAddress,5000>"
+   ],
+   "traits": [
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "triv_copy",
+    "class"
+   ]
+  },
+  "class std::array<class CNodeAddress,8>": {
+   "size": 32,
+   "align": 2,
+   "flags": 364,
+   "elem": 32,
+   "spellings": [
+    "std::array<CNodeAddress,NUM_PATH_INTERIOR_AREAS>"
+   ],
+   "traits": [
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "triv_copy",
+    "class"
+   ]
+  },
+  "class std::array<class COccluder,1000>": {
+   "size": 18000,
+   "align": 2,
+   "flags": 364,
+   "elem": 18000,
+   "spellings": [
+    "std::array<COccluder,MAX_MAP_OCCLUDERS>"
+   ],
+   "traits": [
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "triv_copy",
+    "class"
+   ]
+  },
+  "class std::array<class COccluder,40>": {
+   "size": 720,
+   "align": 2,
+   "flags": 364,
+   "elem": 720,
+   "spellings": [
+    "std::array<COccluder,MAX_INTERIOR_OCCLUDERS>"
+   ],
+   "traits": [
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "triv_copy",
+    "class"
+   ]
+  },
+  "class std::array<class CPath,475>": {
+   "size": 7600,
+   "align": 4,
+   "flags": 366,
+   "elem": 7600,
+   "spellings": [
+    "std::array<CPath,TOTAL_RRR_MODEL_IDS>"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "triv_copy",
+    "class"
+   ]
+  },
+  "class std::array<class CPedGroup,8>": {
+   "size": 5792,
+   "align": 4,
+   "flags": 268,
+   "elem": 5792,
+   "spellings": [
+    "std::array<CPedGroup,8>"
+   ],
+   "traits": [
+    "def_ctor",
+    "aggregate",
+    "class"
+   ]
+  },
+  "class std::array<class CPermanentShadow,48>": {
+   "size": 2688,
+   "align": 4,
+   "flags": 302,
+   "elem": 2688,
+   "spellings": [
+    "std::array<CPermanentShadow,MAX_PERMANENT_SHADOWS>"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "class"
+   ]
+  },
+  "class std::array<class CPickup,620>": {
+   "size": 19840,
+   "align": 4,
+   "flags": 364,
+   "elem": 19840,
+   "spellings": [
+    "std::array<CPickup,MAX_NUM_PICKUPS>"
+   ],
+   "traits": [
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "triv_copy",
+    "class"
+   ]
+  },
+  "class std::array<class CPlaneTrail,3>": {
+   "size": 768,
+   "align": 4,
+   "flags": 302,
+   "elem": 768,
+   "spellings": [
+    "std::array<CPlaneTrail,3>"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "class"
+   ]
+  },
+  "class std::array<class CPointLight,32>": {
+   "size": 1536,
+   "align": 4,
+   "flags": 302,
+   "elem": 1536,
+   "spellings": [
+    "std::array<CPointLight,MAX_POINT_LIGHTS>"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "class"
+   ]
+  },
+  "class std::array<class CPolyBunch,360>": {
+   "size": 37440,
+   "align": 4,
+   "flags": 302,
+   "elem": 37440,
+   "spellings": [
+    "std::array<CPolyBunch,MAX_SHADOW_POLY_BUNCHES>"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "class"
+   ]
+  },
+  "class std::array<class CProjectile *,32>": {
+   "size": 128,
+   "align": 4,
+   "flags": 366,
+   "elem": 128,
+   "spellings": [
+    "std::array<CProjectile*,MAX_PROJECTILES>"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "triv_copy",
+    "class"
+   ]
+  },
+  "class std::array<class CProjectileInfo,32>": {
+   "size": 1152,
+   "align": 4,
+   "flags": 302,
+   "elem": 1152,
+   "spellings": [
+    "std::array<CProjectileInfo,MAX_PROJECTILE_INFOS>"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "class"
+   ]
+  },
+  "class std::array<class CRGBA,6>": {
+   "size": 24,
+   "align": 1,
+   "flags": 364,
+   "elem": 24,
+   "spellings": [
+    "std::array<CRGBA,6>"
+   ],
+   "traits": [
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "triv_copy",
+    "class"
+   ]
+  },
+  "class std::array<class CRegisteredCorona,64>": {
+   "size": 3840,
+   "align": 4,
+   "flags": 300,
+   "elem": 3840,
+   "spellings": [
+    "std::array<CRegisteredCorona,MAX_NUM_CORONAS>"
+   ],
+   "traits": [
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "class"
+   ]
+  },
+  "class std::array<class CRegisteredShadow,48>": {
+   "size": 2496,
+   "align": 4,
+   "flags": 302,
+   "elem": 2496,
+   "spellings": [
+    "std::array<CRegisteredShadow,MAX_STORED_SHADOWS>"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "class"
+   ]
+  },
+  "class std::array<class CRegisteredShinyText,32>": {
+   "size": 2816,
+   "align": 4,
+   "flags": 302,
+   "elem": 2816,
+   "spellings": [
+    "std::array<CRegisteredShinyText,32>"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "class"
+   ]
+  },
+  "class std::array<class CRope,8>": {
+   "size": 6464,
+   "align": 4,
+   "flags": 302,
+   "elem": 6464,
+   "spellings": [
+    "std::array<CRope,MAX_NUM_ROPES>"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "class"
+   ]
+  },
+  "class std::array<class CRunningScript,96>": {
+   "size": 21504,
+   "align": 4,
+   "flags": 364,
+   "elem": 21504,
+   "spellings": [
+    "std::array<CRunningScript,MAX_NUM_SCRIPTS>"
+   ],
+   "traits": [
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "triv_copy",
+    "class"
+   ]
+  },
+  "class std::array<class CScriptedEffectPairs,64>": {
+   "size": 9472,
+   "align": 4,
+   "flags": 364,
+   "elem": 9472,
+   "spellings": [
+    "std::array<CScriptedEffectPairs,NUM_SCRIPTED_2D_EFFECTS>"
+   ],
+   "traits": [
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "triv_copy",
+    "class"
+   ]
+  },
+  "class std::array<class CSetPiece,210>": {
+   "size": 6720,
+   "align": 4,
+   "flags": 364,
+   "elem": 6720,
+   "spellings": [
+    "std::array<CSetPiece,MAX_SET_PIECES>"
+   ],
+   "traits": [
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "triv_copy",
+    "class"
+   ]
+  },
+  "class std::array<class CShotInfo,100>": {
+   "size": 4400,
+   "align": 4,
+   "flags": 300,
+   "elem": 4400,
+   "spellings": [
+    "std::array<CShotInfo,MAX_SHOT_INFOS>"
+   ],
+   "traits": [
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "class"
+   ]
+  },
+  "class std::array<class CSprite2d,128>": {
+   "size": 512,
+   "align": 4,
+   "flags": 268,
+   "elem": 512,
+   "spellings": [
+    "std::array<CSprite2d,MAX_NUM_SCRIPT_SPRITES>"
+   ],
+   "traits": [
+    "def_ctor",
+    "aggregate",
+    "class"
+   ]
+  },
+  "class std::array<class CSprite2d,64>": {
+   "size": 256,
+   "align": 4,
+   "flags": 268,
+   "elem": 256,
+   "spellings": [
+    "std::array<CSprite2d,MAX_RADAR_SPRITES>"
+   ],
+   "traits": [
+    "def_ctor",
+    "aggregate",
+    "class"
+   ]
+  },
+  "class std::array<class CSprite2d,6>": {
+   "size": 24,
+   "align": 4,
+   "flags": 268,
+   "elem": 24,
+   "spellings": [
+    "std::array<CSprite2d,6>"
+   ],
+   "traits": [
+    "def_ctor",
+    "aggregate",
+    "class"
+   ]
+  },
+  "class std::array<class CSprite2d,7>": {
+   "size": 28,
+   "align": 4,
+   "flags": 268,
+   "elem": 28,
+   "spellings": [
+    "std::array<CSprite2d,+eDisplayedSplash::COUNT>"
+   ],
+   "traits": [
+    "def_ctor",
+    "aggregate",
+    "class"
+   ]
+  },
+  "class std::array<class CStaticShadow,48>": {
+   "size": 3072,
+   "align": 4,
+   "flags": 302,
+   "elem": 3072,
+   "spellings": [
+    "std::array<CStaticShadow,MAX_STATIC_SHADOWS>"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "class"
+   ]
+  },
+  "class std::array<class CStencilShadowObject,64>": {
+   "size": 1792,
+   "align": 4,
+   "flags": 366,
+   "elem": 1792,
+   "spellings": [
+    "std::array<CStencilShadowObject,64>"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "triv_copy",
+    "class"
+   ]
+  },
+  "class std::array<class CStreamingInfo,26316>": {
+   "size": 526320,
+   "align": 4,
+   "flags": 364,
+   "elem": 526320,
+   "spellings": [
+    "std::array<CStreamingInfo,26316>"
+   ],
+   "traits": [
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "triv_copy",
+    "class"
+   ]
+  },
+  "class std::array<class CTempConversationNode,12>": {
+   "size": 528,
+   "align": 4,
+   "flags": 366,
+   "elem": 528,
+   "spellings": [
+    "std::array<CTempConversationNode,MAX_NUM_TEMP_CONVERSATION_NODES>"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "triv_copy",
+    "class"
+   ]
+  },
+  "class std::array<class CTimeCycleBox,20>": {
+   "size": 800,
+   "align": 4,
+   "flags": 300,
+   "elem": 800,
+   "spellings": [
+    "std::array<CTimeCycleBox,20>"
+   ],
+   "traits": [
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "class"
+   ]
+  },
+  "class std::array<class CVector,14>": {
+   "size": 168,
+   "align": 4,
+   "flags": 302,
+   "elem": 168,
+   "spellings": [
+    "std::array<CVector,14>"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "class"
+   ]
+  },
+  "class std::array<class CVector,16>": {
+   "size": 192,
+   "align": 4,
+   "flags": 302,
+   "elem": 192,
+   "spellings": [
+    "std::array<CVector,16>"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "class"
+   ]
+  },
+  "class std::array<class CVector,32>": {
+   "size": 384,
+   "align": 4,
+   "flags": 302,
+   "elem": 384,
+   "spellings": [
+    "std::array<CVector,MAX_POINT_LIGHTS>"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "class"
+   ]
+  },
+  "class std::array<class CVector,7>": {
+   "size": 84,
+   "align": 4,
+   "flags": 302,
+   "elem": 84,
+   "spellings": [
+    "std::array<CVector,7>"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "class"
+   ]
+  },
+  "class std::array<class CVector,8>": {
+   "size": 96,
+   "align": 4,
+   "flags": 302,
+   "elem": 96,
+   "spellings": [
+    "std::array<CVector,8>"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "class"
+   ]
+  },
+  "class std::array<class CVector2D,5>": {
+   "size": 40,
+   "align": 4,
+   "flags": 302,
+   "elem": 40,
+   "spellings": [
+    "std::array<CVector2D,5>"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "class"
+   ]
+  },
+  "class std::array<class CVehicle *,16>": {
+   "size": 64,
+   "align": 4,
+   "flags": 366,
+   "elem": 64,
+   "spellings": [
+    "std::array<CVehicle*,TOTAL_VEHICLE_RECORDS>"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "triv_copy",
+    "class"
+   ]
+  },
+  "class std::array<class CVehicle *,4>": {
+   "size": 16,
+   "align": 4,
+   "flags": 366,
+   "elem": 16,
+   "spellings": [
+    "std::array<CVehicle*,4>"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "triv_copy",
+    "class"
+   ]
+  },
+  "class std::array<class CVehicleStateEachFrame *,16>": {
+   "size": 64,
+   "align": 4,
+   "flags": 366,
+   "elem": 64,
+   "spellings": [
+    "std::array<CVehicleStateEachFrame*,TOTAL_VEHICLE_RECORDS>"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "triv_copy",
+    "class"
+   ]
+  },
+  "class std::array<class CWaterCannon,3>": {
+   "size": 2916,
+   "align": 4,
+   "flags": 268,
+   "elem": 2916,
+   "spellings": [
+    "std::array<CWaterCannon,3>"
+   ],
+   "traits": [
+    "def_ctor",
+    "aggregate",
+    "class"
+   ]
+  },
+  "class std::array<class CWeapon,13>": {
+   "size": 364,
+   "align": 4,
+   "flags": 364,
+   "elem": 364,
+   "spellings": [
+    "std::array<CWeapon,NUM_WEAPON_SLOTS>"
+   ],
+   "traits": [
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "triv_copy",
+    "class"
+   ]
+  },
+  "class std::array<class CWeaponEffects,2>": {
+   "size": 88,
+   "align": 4,
+   "flags": 300,
+   "elem": 88,
+   "spellings": [
+    "std::array<CWeaponEffects,MAX_NUM_WEAPON_CROSSHAIRS>"
+   ],
+   "traits": [
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "class"
+   ]
+  },
+  "class std::array<class CZone,380>": {
+   "size": 12160,
+   "align": 2,
+   "flags": 364,
+   "elem": 12160,
+   "spellings": [
+    "std::array<CZone,380>"
+   ],
+   "traits": [
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "triv_copy",
+    "class"
+   ]
+  },
+  "class std::array<class CZone,39>": {
+   "size": 1248,
+   "align": 2,
+   "flags": 364,
+   "elem": 1248,
+   "spellings": [
+    "std::array<CZone,39>"
+   ],
+   "traits": [
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "triv_copy",
+    "class"
+   ]
+  },
+  "class std::array<class CZoneInfo,380>": {
+   "size": 6460,
+   "align": 1,
+   "flags": 364,
+   "elem": 6460,
+   "spellings": [
+    "std::array<CZoneInfo,380>"
+   ],
+   "traits": [
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "triv_copy",
+    "class"
+   ]
+  },
+  "class std::array<class D3DIndexDataBuffer,16>": {
+   "size": 384,
+   "align": 4,
+   "flags": 366,
+   "elem": 384,
+   "spellings": [
+    "std::array<D3DIndexDataBuffer,NUM_INDEX_DATA_BUFFERS>"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "triv_copy",
+    "class"
+   ]
+  },
+  "class std::array<class D3DTextureBuffer,17>": {
+   "size": 476,
+   "align": 4,
+   "flags": 366,
+   "elem": 476,
+   "spellings": [
+    "std::array<D3DTextureBuffer,MAX_TEXTURE_BUFFERS>"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "triv_copy",
+    "class"
+   ]
+  },
+  "class std::array<class FurnitureSubGroup_c,128>": {
+   "size": 3584,
+   "align": 4,
+   "flags": 300,
+   "elem": 3584,
+   "spellings": [
+    "std::array<FurnitureSubGroup_c,128>"
+   ],
+   "traits": [
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "class"
+   ]
+  },
+  "class std::array<class Furniture_c,256>": {
+   "size": 5120,
+   "align": 4,
+   "flags": 364,
+   "elem": 5120,
+   "spellings": [
+    "std::array<Furniture_c,256>"
+   ],
+   "traits": [
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "triv_copy",
+    "class"
+   ]
+  },
+  "class std::array<class std::array<bool,10>,10>": {
+   "size": 100,
+   "align": 1,
+   "flags": 366,
+   "elem": 100,
+   "spellings": [
+    "notsa::mdarray<bool,10,10>"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "triv_copy",
+    "class"
+   ]
+  },
+  "class std::array<class std::array<class CPtrListSingleLink<class CEntity *>,30>,30>": {
+   "size": 3600,
+   "align": 4,
+   "flags": 268,
+   "elem": 3600,
+   "spellings": [
+    "notsa::mdarray<CPtrListSingleLink<CEntity*>,MAX_LOD_PTR_LISTS_Y,MAX_LOD_PTR_LISTS_X>"
+   ],
+   "traits": [
+    "def_ctor",
+    "aggregate",
+    "class"
+   ]
+  },
+  "class std::array<class std::array<class CRepeatSector,16>,16>": {
+   "size": 3072,
+   "align": 4,
+   "flags": 268,
+   "elem": 3072,
+   "spellings": [
+    "notsa::mdarray<CRepeatSector,MAX_REPEAT_SECTORS_Y,MAX_REPEAT_SECTORS_X>"
+   ],
+   "traits": [
+    "def_ctor",
+    "aggregate",
+    "class"
+   ]
+  },
+  "class std::array<class std::array<class CSector,120>,120>": {
+   "size": 115200,
+   "align": 4,
+   "flags": 264,
+   "elem": 115200,
+   "spellings": [
+    "notsa::mdarray<CSector,MAX_SECTORS_Y,MAX_SECTORS_X>"
+   ],
+   "traits": [
+    "aggregate",
+    "class"
+   ]
+  },
+  "class std::array<class std::array<float,5>,2>": {
+   "size": 40,
+   "align": 4,
+   "flags": 366,
+   "elem": 40,
+   "spellings": [
+    "std::array<std::array<float,5>,2>"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "triv_copy",
+    "class"
+   ]
+  },
+  "class std::array<class std::array<float,5>,3>": {
+   "size": 60,
+   "align": 4,
+   "flags": 366,
+   "elem": 60,
+   "spellings": [
+    "std::array<std::array<float,5>,3>"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "triv_copy",
+    "class"
+   ]
+  },
+  "class std::array<class std::array<int,12>,12>": {
+   "size": 576,
+   "align": 4,
+   "flags": 366,
+   "elem": 576,
+   "spellings": [
+    "std::array<std::array<int32,MAX_RADAR_WIDTH_TILES>,MAX_RADAR_HEIGHT_TILES>"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "triv_copy",
+    "class"
+   ]
+  },
+  "class std::array<class std::array<short,15>,4>": {
+   "size": 120,
+   "align": 2,
+   "flags": 366,
+   "elem": 120,
+   "spellings": [
+    "notsa::mdarray<int16,NUM_WHEELS,NUM_WHEEL_UPGRADES>"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "triv_copy",
+    "class"
+   ]
+  },
+  "class std::array<class std::array<short,21>,57>": {
+   "size": 2394,
+   "align": 2,
+   "flags": 366,
+   "elem": 2394,
+   "spellings": [
+    "notsa::mdarray<int16,(size_t)(POPCYCLE_TOTAL_PEDGROUPS),21>"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "triv_copy",
+    "class"
+   ]
+  },
+  "class std::array<class std::array<short,23>,34>": {
+   "size": 1564,
+   "align": 2,
+   "flags": 366,
+   "elem": 1564,
+   "spellings": [
+    "notsa::mdarray<int16,(size_t)(POPCYCLE_TOTAL_CARGROUPS),23>"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "triv_copy",
+    "class"
+   ]
+  },
+  "class std::array<class std::array<short,23>,8>": {
+   "size": 368,
+   "align": 2,
+   "flags": 366,
+   "elem": 368,
+   "spellings": [
+    "Colors<int16>"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "triv_copy",
+    "class"
+   ]
+  },
+  "class std::array<class std::array<short,64>,10>": {
+   "size": 1280,
+   "align": 2,
+   "flags": 366,
+   "elem": 1280,
+   "spellings": [
+    "notsa::mdarray<int16,10,64>"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "triv_copy",
+    "class"
+   ]
+  },
+  "class std::array<class std::array<signed char,23>,8>": {
+   "size": 184,
+   "align": 1,
+   "flags": 366,
+   "elem": 184,
+   "spellings": [
+    "Colors<int8>"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "triv_copy",
+    "class"
+   ]
+  },
+  "class std::array<class std::array<signed char,6>,64>": {
+   "size": 384,
+   "align": 1,
+   "flags": 366,
+   "elem": 384,
+   "spellings": [
+    "std::array<std::array<int8,6>,64>"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "triv_copy",
+    "class"
+   ]
+  },
+  "class std::array<class std::array<struct CWaterLevel::PolyInfo,12>,12>": {
+   "size": 288,
+   "align": 2,
+   "flags": 364,
+   "elem": 288,
+   "spellings": [
+    "notsa::mdarray<PolyInfo,NUM_WATER_BLOCKS_ROWCOL,NUM_WATER_BLOCKS_ROWCOL>"
+   ],
+   "traits": [
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "triv_copy",
+    "class"
+   ]
+  },
+  "class std::array<class std::array<unsigned char,23>,8>": {
+   "size": 184,
+   "align": 1,
+   "flags": 366,
+   "elem": 184,
+   "spellings": [
+    "Colors<uint8>"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "triv_copy",
+    "class"
+   ]
+  },
+  "class std::array<class std::array<unsigned int,5>,2>": {
+   "size": 40,
+   "align": 4,
+   "flags": 366,
+   "elem": 40,
+   "spellings": [
+    "std::array<std::array<uint32,5>,2>"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "triv_copy",
+    "class"
+   ]
+  },
+  "class std::array<enum AnimationId,12>": {
+   "size": 48,
+   "align": 4,
+   "flags": 366,
+   "elem": 48,
+   "spellings": [
+    "std::array<AnimationId,12>"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "triv_copy",
+    "class"
+   ]
+  },
+  "class std::array<enum OpcodeResult (__thiscall CRunningScript::*)(int),27>": {
+   "size": 108,
+   "align": 4,
+   "flags": 366,
+   "elem": 108,
+   "spellings": [
+    "CommandHandlerTable_t"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "triv_copy",
+    "class"
+   ]
+  },
+  "class std::array<enum RwBlendFunction,11>": {
+   "size": 44,
+   "align": 4,
+   "flags": 366,
+   "elem": 44,
+   "spellings": [
+    "std::array<RwBlendFunction,11>"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "triv_copy",
+    "class"
+   ]
+  },
+  "class std::array<enum eDamageState,20>": {
+   "size": 20,
+   "align": 1,
+   "flags": 366,
+   "elem": 20,
+   "spellings": [
+    "std::array<eDamageState,20u>"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "triv_copy",
+    "class"
+   ]
+  },
+  "class std::array<enum eModelID,20>": {
+   "size": 80,
+   "align": 4,
+   "flags": 366,
+   "elem": 80,
+   "spellings": [
+    "std::array<eModelID,MAX_NUM_VEHICLE_MODELS_BLOCKED_BY_SCRIPT>"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "triv_copy",
+    "class"
+   ]
+  },
+  "class std::array<enum eModelID,40>": {
+   "size": 160,
+   "align": 4,
+   "flags": 366,
+   "elem": 160,
+   "spellings": [
+    "std::array<eModelID,MAX_NUM_SUPPRESSED_VEHICLE_MODELS>"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "triv_copy",
+    "class"
+   ]
+  },
+  "class std::array<enum eModelID,50>": {
+   "size": 200,
+   "align": 4,
+   "flags": 366,
+   "elem": 200,
+   "spellings": [
+    "std::array<eModelID,50>"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "triv_copy",
+    "class"
+   ]
+  },
+  "class std::array<enum eModelID,8>": {
+   "size": 32,
+   "align": 4,
+   "flags": 366,
+   "elem": 32,
+   "spellings": [
+    "std::array<eModelID,8>"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "triv_copy",
+    "class"
+   ]
+  },
+  "class std::array<enum eReplayBufferStatus,8>": {
+   "size": 8,
+   "align": 1,
+   "flags": 366,
+   "elem": 8,
+   "spellings": [
+    "std::array<eReplayBufferStatus,NUM_REPLAY_BUFFERS>"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "triv_copy",
+    "class"
+   ]
+  },
+  "class std::array<enum eSlotState,8>": {
+   "size": 32,
+   "align": 4,
+   "flags": 366,
+   "elem": 32,
+   "spellings": [
+    "std::array<eSlotState,MAX_SAVEGAME_SLOTS>"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "triv_copy",
+    "class"
+   ]
+  },
+  "class std::array<enum tWheelState,2>": {
+   "size": 8,
+   "align": 4,
+   "flags": 366,
+   "elem": 8,
+   "spellings": [
+    "std::array<tWheelState,2>"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "triv_copy",
+    "class"
+   ]
+  },
+  "class std::array<float,16>": {
+   "size": 64,
+   "align": 4,
+   "flags": 366,
+   "elem": 64,
+   "spellings": [
+    "std::array<float,16>",
+    "std::array<float,TOTAL_VEHICLE_RECORDS>"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "triv_copy",
+    "class"
+   ]
+  },
+  "class std::array<float,20>": {
+   "size": 80,
+   "align": 4,
+   "flags": 366,
+   "elem": 80,
+   "spellings": [
+    "std::array<float,20>"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "triv_copy",
+    "class"
+   ]
+  },
+  "class std::array<float,256>": {
+   "size": 1024,
+   "align": 4,
+   "flags": 366,
+   "elem": 1024,
+   "spellings": [
+    "std::array<float,256>",
+    "std::array<float,SIN_LUT_SIZE>"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "triv_copy",
+    "class"
+   ]
+  },
+  "class std::array<float,2>": {
+   "size": 8,
+   "align": 4,
+   "flags": 366,
+   "elem": 8,
+   "spellings": [
+    "std::array<float,2>",
+    "std::array<float,MAX_NUM_WEAPON_CROSSHAIRS>"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "triv_copy",
+    "class"
+   ]
+  },
+  "class std::array<float,30>": {
+   "size": 120,
+   "align": 4,
+   "flags": 366,
+   "elem": 120,
+   "spellings": [
+    "std::array<float,30>"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "triv_copy",
+    "class"
+   ]
+  },
+  "class std::array<float,32>": {
+   "size": 128,
+   "align": 4,
+   "flags": 366,
+   "elem": 128,
+   "spellings": [
+    "std::array<float,MAX_POINT_LIGHTS>"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "triv_copy",
+    "class"
+   ]
+  },
+  "class std::array<float,3>": {
+   "size": 12,
+   "align": 4,
+   "flags": 366,
+   "elem": 12,
+   "spellings": [
+    "std::array<float,3>"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "triv_copy",
+    "class"
+   ]
+  },
+  "class std::array<float,4>": {
+   "size": 16,
+   "align": 4,
+   "flags": 366,
+   "elem": 16,
+   "spellings": [
+    "std::array<float,4>",
+    "std::array<float,NUM_LEVELS>"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "triv_copy",
+    "class"
+   ]
+  },
+  "class std::array<float,59>": {
+   "size": 236,
+   "align": 4,
+   "flags": 366,
+   "elem": 236,
+   "spellings": [
+    "std::array<float,59>"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "triv_copy",
+    "class"
+   ]
+  },
+  "class std::array<float,5>": {
+   "size": 20,
+   "align": 4,
+   "flags": 366,
+   "elem": 20,
+   "spellings": [
+    "std::array<float,5>"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "triv_copy",
+    "class"
+   ]
+  },
+  "class std::array<float,64>": {
+   "size": 256,
+   "align": 4,
+   "flags": 366,
+   "elem": 256,
+   "spellings": [
+    "std::array<float,64>",
+    "std::array<float,NUM_SCRIPTED_2D_EFFECTS>"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "triv_copy",
+    "class"
+   ]
+  },
+  "class std::array<float,6>": {
+   "size": 24,
+   "align": 4,
+   "flags": 366,
+   "elem": 24,
+   "spellings": [
+    "std::array<float,6>"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "triv_copy",
+    "class"
+   ]
+  },
+  "class std::array<float,80>": {
+   "size": 320,
+   "align": 4,
+   "flags": 366,
+   "elem": 320,
+   "spellings": [
+    "std::array<float,80>"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "triv_copy",
+    "class"
+   ]
+  },
+  "class std::array<float,82>": {
+   "size": 328,
+   "align": 4,
+   "flags": 366,
+   "elem": 328,
+   "spellings": [
+    "std::array<float,82>"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "triv_copy",
+    "class"
+   ]
+  },
+  "class std::array<float,8>": {
+   "size": 32,
+   "align": 4,
+   "flags": 366,
+   "elem": 32,
+   "spellings": [
+    "std::array<float,8>"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "triv_copy",
+    "class"
+   ]
+  },
+  "class std::array<float,9>": {
+   "size": 36,
+   "align": 4,
+   "flags": 366,
+   "elem": 36,
+   "spellings": [
+    "std::array<float,9>"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "triv_copy",
+    "class"
+   ]
+  },
+  "class std::array<int,100>": {
+   "size": 400,
+   "align": 4,
+   "flags": 366,
+   "elem": 400,
+   "spellings": [
+    "std::array<int32,100>"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "triv_copy",
+    "class"
+   ]
+  },
+  "class std::array<int,10>": {
+   "size": 40,
+   "align": 4,
+   "flags": 366,
+   "elem": 40,
+   "spellings": [
+    "std::array<int32,10>"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "triv_copy",
+    "class"
+   ]
+  },
+  "class std::array<int,110>": {
+   "size": 440,
+   "align": 4,
+   "flags": 366,
+   "elem": 440,
+   "spellings": [
+    "std::array<int32,110>"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "triv_copy",
+    "class"
+   ]
+  },
+  "class std::array<int,13>": {
+   "size": 52,
+   "align": 4,
+   "flags": 366,
+   "elem": 52,
+   "spellings": [
+    "std::array<int32,13>"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "triv_copy",
+    "class"
+   ]
+  },
+  "class std::array<int,140>": {
+   "size": 560,
+   "align": 4,
+   "flags": 366,
+   "elem": 560,
+   "spellings": [
+    "std::array<int32,140>"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "triv_copy",
+    "class"
+   ]
+  },
+  "class std::array<int,14>": {
+   "size": 56,
+   "align": 4,
+   "flags": 366,
+   "elem": 56,
+   "spellings": [
+    "std::array<int32,14>"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "triv_copy",
+    "class"
+   ]
+  },
+  "class std::array<int,16>": {
+   "size": 64,
+   "align": 4,
+   "flags": 366,
+   "elem": 64,
+   "spellings": [
+    "std::array<int32,TOTAL_VEHICLE_RECORDS>"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "triv_copy",
+    "class"
+   ]
+  },
+  "class std::array<int,180>": {
+   "size": 720,
+   "align": 4,
+   "flags": 366,
+   "elem": 720,
+   "spellings": [
+    "std::array<int32,180>"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "triv_copy",
+    "class"
+   ]
+  },
+  "class std::array<int,18>": {
+   "size": 72,
+   "align": 4,
+   "flags": 366,
+   "elem": 72,
+   "spellings": [
+    "std::array<int32,18>"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "triv_copy",
+    "class"
+   ]
+  },
+  "class std::array<int,200>": {
+   "size": 800,
+   "align": 4,
+   "flags": 366,
+   "elem": 800,
+   "spellings": [
+    "std::array<int32,MAX_NUM_MISSION_SCRIPTS>"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "triv_copy",
+    "class"
+   ]
+  },
+  "class std::array<int,20>": {
+   "size": 80,
+   "align": 4,
+   "flags": 366,
+   "elem": 80,
+   "spellings": [
+    "std::array<int32,MAX_COLLECTED_PICKUPS>"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "triv_copy",
+    "class"
+   ]
+  },
+  "class std::array<int,223>": {
+   "size": 892,
+   "align": 4,
+   "flags": 366,
+   "elem": 892,
+   "spellings": [
+    "std::array<int32,223>"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "triv_copy",
+    "class"
+   ]
+  },
+  "class std::array<int,32>": {
+   "size": 128,
+   "align": 4,
+   "flags": 366,
+   "elem": 128,
+   "spellings": [
+    "std::array<int32,32>"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "triv_copy",
+    "class"
+   ]
+  },
+  "class std::array<int,3>": {
+   "size": 12,
+   "align": 4,
+   "flags": 366,
+   "elem": 12,
+   "spellings": [
+    "std::array<int32,3>"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "triv_copy",
+    "class"
+   ]
+  },
+  "class std::array<int,4>": {
+   "size": 16,
+   "align": 4,
+   "flags": 366,
+   "elem": 16,
+   "spellings": [
+    "std::array<int32,4>"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "triv_copy",
+    "class"
+   ]
+  },
+  "class std::array<int,5>": {
+   "size": 20,
+   "align": 4,
+   "flags": 366,
+   "elem": 20,
+   "spellings": [
+    "std::array<int32,5>"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "triv_copy",
+    "class"
+   ]
+  },
+  "class std::array<int,64>": {
+   "size": 256,
+   "align": 4,
+   "flags": 366,
+   "elem": 256,
+   "spellings": [
+    "std::array<int32,64>",
+    "std::array<int32,NUM_SCRIPTED_2D_EFFECTS>"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "triv_copy",
+    "class"
+   ]
+  },
+  "class std::array<int,6>": {
+   "size": 24,
+   "align": 4,
+   "flags": 366,
+   "elem": 24,
+   "spellings": [
+    "std::array<int32,6>"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "triv_copy",
+    "class"
+   ]
+  },
+  "class std::array<int,8>": {
+   "size": 32,
+   "align": 4,
+   "flags": 366,
+   "elem": 32,
+   "spellings": [
+    "std::array<int32,NUM_PATH_INTERIOR_AREAS>"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "triv_copy",
+    "class"
+   ]
+  },
+  "class std::array<short [2],800>": {
+   "size": 3200,
+   "align": 2,
+   "flags": 366,
+   "elem": 3200,
+   "spellings": [
+    "std::array<int16[2],800>"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "triv_copy",
+    "class"
+   ]
+  },
+  "class std::array<short,14>": {
+   "size": 28,
+   "align": 2,
+   "flags": 366,
+   "elem": 28,
+   "spellings": [
+    "std::array<int16,14>"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "triv_copy",
+    "class"
+   ]
+  },
+  "class std::array<short,15>": {
+   "size": 30,
+   "align": 2,
+   "flags": 366,
+   "elem": 30,
+   "spellings": [
+    "std::array<int16,15u>"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "triv_copy",
+    "class"
+   ]
+  },
+  "class std::array<short,175>": {
+   "size": 350,
+   "align": 2,
+   "flags": 366,
+   "elem": 350,
+   "spellings": [
+    "std::array<int16,MAX_RADAR_TRACES>"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "triv_copy",
+    "class"
+   ]
+  },
+  "class std::array<short,312>": {
+   "size": 624,
+   "align": 2,
+   "flags": 366,
+   "elem": 624,
+   "spellings": [
+    "std::array<int16,MAX_NUM_CARDS>"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "triv_copy",
+    "class"
+   ]
+  },
+  "class std::array<short,4>": {
+   "size": 8,
+   "align": 2,
+   "flags": 366,
+   "elem": 8,
+   "spellings": [
+    "std::array<int16,4>"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "triv_copy",
+    "class"
+   ]
+  },
+  "class std::array<short,70>": {
+   "size": 140,
+   "align": 2,
+   "flags": 366,
+   "elem": 140,
+   "spellings": [
+    "std::array<int16,70>"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "triv_copy",
+    "class"
+   ]
+  },
+  "class std::array<struct BoneInfo_t,32>": {
+   "size": 1280,
+   "align": 4,
+   "flags": 302,
+   "elem": 1280,
+   "spellings": [
+    "std::array<BoneInfo_t,MAX_BONE_NUM>"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "class"
+   ]
+  },
+  "class std::array<struct C2dEffect,64>": {
+   "size": 4096,
+   "align": 4,
+   "flags": 296,
+   "elem": 4096,
+   "spellings": [
+    "std::array<C2dEffect,NUM_SCRIPTED_2D_EFFECTS>"
+   ],
+   "traits": [
+    "aggregate",
+    "triv_dtor",
+    "class"
+   ]
+  },
+  "class std::array<struct CAEPedSpeechSlot,6>": {
+   "size": 168,
+   "align": 4,
+   "flags": 364,
+   "elem": 168,
+   "spellings": [
+    "std::array<CAEPedSpeechSlot,SND_BANK_SLOT_SPEECH6 - SND_BANK_SLOT_SPEECH1 + 1>"
+   ],
+   "traits": [
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "triv_copy",
+    "class"
+   ]
+  },
+  "class std::array<struct CAEVehicleAudioEntity::tDummyEngineSlot,10>": {
+   "size": 40,
+   "align": 2,
+   "flags": 364,
+   "elem": 40,
+   "spellings": [
+    "std::array<tDummyEngineSlot,SND_BANK_SLOT_DUMMY_END - SND_BANK_SLOT_DUMMY_FIRST>"
+   ],
+   "traits": [
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "triv_copy",
+    "class"
+   ]
+  },
+  "class std::array<struct CAttributeZone,40>": {
+   "size": 720,
+   "align": 2,
+   "flags": 366,
+   "elem": 720,
+   "spellings": [
+    "std::array<CAttributeZone,40>"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "triv_copy",
+    "class"
+   ]
+  },
+  "class std::array<struct CColCacheEntry,100>*": {
+   "size": 4,
+   "align": 4,
+   "flags": 2166,
+   "elem": 4,
+   "spellings": [
+    "ColCache*"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "pointer",
+    "triv_dtor",
+    "triv_copy",
+    "ptr_elem"
+   ]
+  },
+  "class std::array<struct CFontChar,9>": {
+   "size": 432,
+   "align": 4,
+   "flags": 300,
+   "elem": 432,
+   "spellings": [
+    "std::array<CFontChar,9>"
+   ],
+   "traits": [
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "class"
+   ]
+  },
+  "class std::array<struct CInformFriendsEvent,8>": {
+   "size": 96,
+   "align": 4,
+   "flags": 364,
+   "elem": 96,
+   "spellings": [
+    "std::array<CInformFriendsEvent,8>"
+   ],
+   "traits": [
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "triv_copy",
+    "class"
+   ]
+  },
+  "class std::array<struct CMenuSystem::Menu *,2>": {
+   "size": 8,
+   "align": 4,
+   "flags": 366,
+   "elem": 8,
+   "spellings": [
+    "std::array<CMenuSystem::Menu*,2>"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "triv_copy",
+    "class"
+   ]
+  },
+  "class std::array<struct CMirrorAttributeZone,72>": {
+   "size": 1728,
+   "align": 4,
+   "flags": 366,
+   "elem": 1728,
+   "spellings": [
+    "std::array<CMirrorAttributeZone,72>"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "triv_copy",
+    "class"
+   ]
+  },
+  "class std::array<struct CPlantSurfProp *,178>": {
+   "size": 712,
+   "align": 4,
+   "flags": 366,
+   "elem": 712,
+   "spellings": [
+    "std::array<CPlantSurfProp*,178>"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "triv_copy",
+    "class"
+   ]
+  },
+  "class std::array<struct CReplay::tReplayBuffer,8>": {
+   "size": 800000,
+   "align": 1,
+   "flags": 366,
+   "elem": 800000,
+   "spellings": [
+    "std::array<tReplayBuffer,NUM_REPLAY_BUFFERS>"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "triv_copy",
+    "class"
+   ]
+  },
+  "class std::array<struct CScriptRoadBlock,16>": {
+   "size": 448,
+   "align": 4,
+   "flags": 302,
+   "elem": 448,
+   "spellings": [
+    "std::array<CScriptRoadBlock,MAX_SCRIPT_ROADBLOCKS>"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "class"
+   ]
+  },
+  "class std::array<struct CShopping::ItemPrice,300>": {
+   "size": 7200,
+   "align": 4,
+   "flags": 366,
+   "elem": 7200,
+   "spellings": [
+    "std::array<ItemPrice,NUM_BUYABLE_ITEMS>"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "triv_copy",
+    "class"
+   ]
+  },
+  "class std::array<struct CShopping::PriceModifier,20>": {
+   "size": 160,
+   "align": 4,
+   "flags": 366,
+   "elem": 160,
+   "spellings": [
+    "std::array<PriceModifier,MAX_PRICE_MODIFIERS>"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "triv_copy",
+    "class"
+   ]
+  },
+  "class std::array<struct CShopping::StatModifiers,560>": {
+   "size": 2240,
+   "align": 1,
+   "flags": 366,
+   "elem": 2240,
+   "spellings": [
+    "std::array<StatModifiers,NUM_ITEMS>"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "triv_copy",
+    "class"
+   ]
+  },
+  "class std::array<struct CWaterLevel::PolyInfo,700>": {
+   "size": 1400,
+   "align": 2,
+   "flags": 364,
+   "elem": 1400,
+   "spellings": [
+    "std::array<PolyInfo,700>"
+   ],
+   "traits": [
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "triv_copy",
+    "class"
+   ]
+  },
+  "class std::array<struct CWaterPolygon<3>,6>": {
+   "size": 48,
+   "align": 2,
+   "flags": 360,
+   "elem": 48,
+   "spellings": [
+    "std::array<CWaterTriangle,6>"
+   ],
+   "traits": [
+    "aggregate",
+    "triv_dtor",
+    "triv_copy",
+    "class"
+   ]
+  },
+  "class std::array<struct CWaterPolygon<4>,301>": {
+   "size": 3010,
+   "align": 2,
+   "flags": 360,
+   "elem": 3010,
+   "spellings": [
+    "std::array<CWaterQuad,301>"
+   ],
+   "traits": [
+    "aggregate",
+    "triv_dtor",
+    "triv_copy",
+    "class"
+   ]
+  },
+  "class std::array<struct CWaterVertex,1021>": {
+   "size": 20420,
+   "align": 4,
+   "flags": 364,
+   "elem": 20420,
+   "spellings": [
+    "std::array<CWaterVertex,1021>"
+   ],
+   "traits": [
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "triv_copy",
+    "class"
+   ]
+  },
+  "class std::array<struct CWeaponInfo::tAnimAimOffsets,21>": {
+   "size": 504,
+   "align": 4,
+   "flags": 366,
+   "elem": 504,
+   "spellings": [
+    "std::array<tAnimAimOffsets,(+ANIM_GROUP_SPRAYCAN + 1)-(+ANIM_GROUP_PYTHON)>"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "triv_copy",
+    "class"
+   ]
+  },
+  "class std::array<struct FollowPedCamTuning,2>": {
+   "size": 120,
+   "align": 4,
+   "flags": 366,
+   "elem": 120,
+   "spellings": [
+    "std::array<FollowPedCamTuning,2>"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "triv_copy",
+    "class"
+   ]
+  },
+  "class std::array<struct InteriorObject,32>": {
+   "size": 896,
+   "align": 4,
+   "flags": 302,
+   "elem": 896,
+   "spellings": [
+    "std::array<InteriorObject,32>"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "class"
+   ]
+  },
+  "class std::array<struct RwD3D9Vertex,4>": {
+   "size": 112,
+   "align": 4,
+   "flags": 366,
+   "elem": 112,
+   "spellings": [
+    "std::array<RwIm2DVertex,4>"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "triv_copy",
+    "class"
+   ]
+  },
+  "class std::array<struct RwD3D9Vertex,8>": {
+   "size": 224,
+   "align": 4,
+   "flags": 366,
+   "elem": 224,
+   "spellings": [
+    "std::array<RwIm2DVertex,8>"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "triv_copy",
+    "class"
+   ]
+  },
+  "class std::array<struct `anonymous namespace'::AimWeaponCamSettings,4>": {
+   "size": 112,
+   "align": 4,
+   "flags": 366,
+   "elem": 112,
+   "spellings": [
+    "std::array<AimWeaponCamSettings,4>"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "triv_copy",
+    "class"
+   ]
+  },
+  "class std::array<struct `anonymous namespace'::FollowCarCamSettings,7>": {
+   "size": 420,
+   "align": 4,
+   "flags": 366,
+   "elem": 420,
+   "spellings": [
+    "std::array<FollowCarCamSettings,7>"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "triv_copy",
+    "class"
+   ]
+  },
+  "class std::array<struct `public: static void __cdecl CPostEffects::SpeedFX(float)'::`2'::tSpeedFXLevel,7>": {
+   "size": 112,
+   "align": 4,
+   "flags": 366,
+   "elem": 112,
+   "spellings": [
+    "std::array<tSpeedFXLevel,7>"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "triv_copy",
+    "class"
+   ]
+  },
+  "class std::array<struct notsa::WEnum<enum eGlobalSpeechContext,short>,8>": {
+   "size": 16,
+   "align": 2,
+   "flags": 364,
+   "elem": 16,
+   "spellings": [
+    "std::array<eGlobalSpeechContextS16,8>"
+   ],
+   "traits": [
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "triv_copy",
+    "class"
+   ]
+  },
+  "class std::array<struct rw::Clump *,7>": {
+   "size": 28,
+   "align": 4,
+   "flags": 366,
+   "elem": 28,
+   "spellings": [
+    "std::array<RpClump*,7>"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "triv_copy",
+    "class"
+   ]
+  },
+  "class std::array<struct rw::Light *,6>": {
+   "size": 24,
+   "align": 4,
+   "flags": 366,
+   "elem": 24,
+   "spellings": [
+    "std::array<RpLight*,6>"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "triv_copy",
+    "class"
+   ]
+  },
+  "class std::array<struct rw::RGBAf,2>": {
+   "size": 32,
+   "align": 4,
+   "flags": 366,
+   "elem": 32,
+   "spellings": [
+    "std::array<RwRGBAReal,2>"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "triv_copy",
+    "class"
+   ]
+  },
+  "class std::array<struct rw::SubSystemInfo,16>": {
+   "size": 1280,
+   "align": 1,
+   "flags": 366,
+   "elem": 1280,
+   "spellings": [
+    "std::array<RwSubSystemInfo,MAX_SUBSYSTEMS>"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "triv_copy",
+    "class"
+   ]
+  },
+  "class std::array<struct rw::Texture *,10>": {
+   "size": 40,
+   "align": 4,
+   "flags": 366,
+   "elem": 40,
+   "spellings": [
+    "std::array<RwTexture*,eCoronaType::CORONATYPE_COUNT>"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "triv_copy",
+    "class"
+   ]
+  },
+  "class std::array<struct rw::d3d::Im3DVertex,1706>": {
+   "size": 61416,
+   "align": 4,
+   "flags": 366,
+   "elem": 61416,
+   "spellings": [
+    "std::array<RxObjSpace3DLitVertex,1706>"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "triv_copy",
+    "class"
+   ]
+  },
+  "class std::array<struct rw::d3d::Im3DVertex,4>": {
+   "size": 144,
+   "align": 4,
+   "flags": 366,
+   "elem": 144,
+   "spellings": [
+    "std::array<RxObjSpace3DVertex,4>"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "triv_copy",
+    "class"
+   ]
+  },
+  "class std::array<struct rw::d3d::Im3DVertex,512>": {
+   "size": 18432,
+   "align": 4,
+   "flags": 366,
+   "elem": 18432,
+   "spellings": [
+    "std::array<RxObjSpace3DLitVertex,512>"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "triv_copy",
+    "class"
+   ]
+  },
+  "class std::array<struct tAudioZoneBox,158>": {
+   "size": 3792,
+   "align": 2,
+   "flags": 364,
+   "elem": 3792,
+   "spellings": [
+    "std::array<tAudioZoneBox,NUM_AUDIO_BOXES>"
+   ],
+   "traits": [
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "triv_copy",
+    "class"
+   ]
+  },
+  "class std::array<struct tAudioZoneSphere,3>": {
+   "size": 84,
+   "align": 4,
+   "flags": 300,
+   "elem": 84,
+   "spellings": [
+    "std::array<tAudioZoneSphere,NUM_AUDIO_SPHERES>"
+   ],
+   "traits": [
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "class"
+   ]
+  },
+  "class std::array<struct tBigMessage,7>": {
+   "size": 1344,
+   "align": 4,
+   "flags": 268,
+   "elem": 1344,
+   "spellings": [
+    "std::array<tBigMessage,7>"
+   ],
+   "traits": [
+    "def_ctor",
+    "aggregate",
+    "class"
+   ]
+  },
+  "class std::array<struct tBuildingSwap,25>": {
+   "size": 300,
+   "align": 4,
+   "flags": 364,
+   "elem": 300,
+   "spellings": [
+    "std::array<tBuildingSwap,MAX_NUM_BUILDING_SWAPS>"
+   ],
+   "traits": [
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "triv_copy",
+    "class"
+   ]
+  },
+  "class std::array<struct tCutsceneAttachment,50>": {
+   "size": 600,
+   "align": 4,
+   "flags": 366,
+   "elem": 600,
+   "spellings": [
+    "std::array<tCutsceneAttachment,50>"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "triv_copy",
+    "class"
+   ]
+  },
+  "class std::array<struct tCutsceneParticleEffect,8>": {
+   "size": 864,
+   "align": 4,
+   "flags": 302,
+   "elem": 864,
+   "spellings": [
+    "std::array<tCutsceneParticleEffect,8>"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "class"
+   ]
+  },
+  "class std::array<struct tCutsceneRemoval,50>": {
+   "size": 2200,
+   "align": 4,
+   "flags": 302,
+   "elem": 2200,
+   "spellings": [
+    "std::array<tCutsceneRemoval,50>"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "class"
+   ]
+  },
+  "class std::array<struct tDirectionArrow,5>": {
+   "size": 240,
+   "align": 4,
+   "flags": 302,
+   "elem": 240,
+   "spellings": [
+    "std::array<tDirectionArrow,5>"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "class"
+   ]
+  },
+  "class std::array<struct tFontData,2>": {
+   "size": 420,
+   "align": 1,
+   "flags": 366,
+   "elem": 420,
+   "spellings": [
+    "std::array<tFontData,2>"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "triv_copy",
+    "class"
+   ]
+  },
+  "class std::array<struct tHeliLight,4>": {
+   "size": 304,
+   "align": 4,
+   "flags": 302,
+   "elem": 304,
+   "spellings": [
+    "std::array<tHeliLight,4>"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "class"
+   ]
+  },
+  "class std::array<struct tHydraulicData,4>": {
+   "size": 160,
+   "align": 4,
+   "flags": 366,
+   "elem": 160,
+   "spellings": [
+    "std::array<tHydraulicData,4>"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "triv_copy",
+    "class"
+   ]
+  },
+  "class std::array<struct tMessage,8>": {
+   "size": 384,
+   "align": 4,
+   "flags": 268,
+   "elem": 384,
+   "spellings": [
+    "std::array<tMessage,8>"
+   ],
+   "traits": [
+    "def_ctor",
+    "aggregate",
+    "class"
+   ]
+  },
+  "class std::array<struct tPhraseMemory,150>": {
+   "size": 600,
+   "align": 2,
+   "flags": 364,
+   "elem": 600,
+   "spellings": [
+    "std::array<tPhraseMemory,150>"
+   ],
+   "traits": [
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "triv_copy",
+    "class"
+   ]
+  },
+  "class std::array<struct tPickupMessage,16>": {
+   "size": 576,
+   "align": 4,
+   "flags": 300,
+   "elem": 576,
+   "spellings": [
+    "std::array<tPickupMessage,MAX_PICKUP_MESSAGES>"
+   ],
+   "traits": [
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "class"
+   ]
+  },
+  "class std::array<struct tPreviousBrief,20>": {
+   "size": 640,
+   "align": 4,
+   "flags": 364,
+   "elem": 640,
+   "spellings": [
+    "std::array<tPreviousBrief,20>"
+   ],
+   "traits": [
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "triv_copy",
+    "class"
+   ]
+  },
+  "class std::array<struct tRadarTrace,175>": {
+   "size": 7000,
+   "align": 4,
+   "flags": 302,
+   "elem": 7000,
+   "spellings": [
+    "std::array<tRadarTrace,MAX_RADAR_TRACES>"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "class"
+   ]
+  },
+  "class std::array<struct tScriptAttachedAnimGroup,8>": {
+   "size": 160,
+   "align": 4,
+   "flags": 364,
+   "elem": 160,
+   "spellings": [
+    "std::array<tScriptAttachedAnimGroup,MAX_NUM_SCRIPT_ATTACHED_ANIM_GROUPS>"
+   ],
+   "traits": [
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "triv_copy",
+    "class"
+   ]
+  },
+  "class std::array<struct tScriptBrainWaitEntity,150>": {
+   "size": 1200,
+   "align": 4,
+   "flags": 268,
+   "elem": 1200,
+   "spellings": [
+    "std::array<tScriptBrainWaitEntity,MAX_NUM_ENTITIES_WAITING_FOR_SCRIPT_BRAIN>"
+   ],
+   "traits": [
+    "def_ctor",
+    "aggregate",
+    "class"
+   ]
+  },
+  "class std::array<struct tScriptCheckpoint,20>": {
+   "size": 160,
+   "align": 4,
+   "flags": 364,
+   "elem": 160,
+   "spellings": [
+    "std::array<tScriptCheckpoint,MAX_NUM_SCRIPT_CHECKPOINTS>"
+   ],
+   "traits": [
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "triv_copy",
+    "class"
+   ]
+  },
+  "class std::array<struct tScriptConnectLodsObject,10>": {
+   "size": 80,
+   "align": 4,
+   "flags": 364,
+   "elem": 80,
+   "spellings": [
+    "std::array<tScriptConnectLodsObject,MAX_NUM_SCRIPT_CONNECT_LODS_OBJECTS>"
+   ],
+   "traits": [
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "triv_copy",
+    "class"
+   ]
+  },
+  "class std::array<struct tScriptEffectSystem,32>": {
+   "size": 256,
+   "align": 4,
+   "flags": 364,
+   "elem": 256,
+   "spellings": [
+    "std::array<tScriptEffectSystem,MAX_NUM_SCRIPT_EFFECT_SYSTEMS>"
+   ],
+   "traits": [
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "triv_copy",
+    "class"
+   ]
+  },
+  "class std::array<struct tScriptRectangle,128>": {
+   "size": 7680,
+   "align": 4,
+   "flags": 300,
+   "elem": 7680,
+   "spellings": [
+    "std::array<tScriptRectangle,MAX_NUM_SCRIPT_RECTANGLES>"
+   ],
+   "traits": [
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "class"
+   ]
+  },
+  "class std::array<struct tScriptSearchlight,8>": {
+   "size": 992,
+   "align": 4,
+   "flags": 268,
+   "elem": 992,
+   "spellings": [
+    "std::array<tScriptSearchlight,MAX_NUM_SCRIPT_SEARCH_LIGHT>"
+   ],
+   "traits": [
+    "def_ctor",
+    "aggregate",
+    "class"
+   ]
+  },
+  "class std::array<struct tScriptSequence,64>": {
+   "size": 256,
+   "align": 2,
+   "flags": 364,
+   "elem": 256,
+   "spellings": [
+    "std::array<tScriptSequence,MAX_NUM_SCRIPT_SEQUENCE_TASKS>"
+   ],
+   "traits": [
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "triv_copy",
+    "class"
+   ]
+  },
+  "class std::array<struct tScriptSphere,16>": {
+   "size": 384,
+   "align": 4,
+   "flags": 300,
+   "elem": 384,
+   "spellings": [
+    "std::array<tScriptSphere,MAX_NUM_SCRIPT_SPHERES>"
+   ],
+   "traits": [
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "class"
+   ]
+  },
+  "class std::array<struct tScriptSwitchCase,75>": {
+   "size": 600,
+   "align": 4,
+   "flags": 366,
+   "elem": 600,
+   "spellings": [
+    "std::array<tScriptSwitchCase,MAX_NUM_SwitchJumpTable>"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "triv_copy",
+    "class"
+   ]
+  },
+  "class std::array<struct tScriptText,96>": {
+   "size": 6528,
+   "align": 4,
+   "flags": 300,
+   "elem": 6528,
+   "spellings": [
+    "std::array<tScriptText,MAX_NUM_INTRO_TEXT_LINES>"
+   ],
+   "traits": [
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "class"
+   ]
+  },
+  "class std::array<struct tSkinBonePos,64>": {
+   "size": 1024,
+   "align": 4,
+   "flags": 366,
+   "elem": 1024,
+   "spellings": [
+    "std::array<tSkinBonePos,64>"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "triv_copy",
+    "class"
+   ]
+  },
+  "class std::array<struct tStatMessage,128>": {
+   "size": 2048,
+   "align": 4,
+   "flags": 366,
+   "elem": 2048,
+   "spellings": [
+    "std::array<tStatMessage,128>"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "triv_copy",
+    "class"
+   ]
+  },
+  "class std::array<struct tStreamingChannel,2>": {
+   "size": 304,
+   "align": 4,
+   "flags": 366,
+   "elem": 304,
+   "spellings": [
+    "std::array<tStreamingChannel,2>"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "triv_copy",
+    "class"
+   ]
+  },
+  "class std::array<struct tTagDesc,150>": {
+   "size": 1200,
+   "align": 4,
+   "flags": 366,
+   "elem": 1200,
+   "spellings": [
+    "std::array<tTagDesc,MAX_TAGS>"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "triv_copy",
+    "class"
+   ]
+  },
+  "class std::array<struct tUsedObject,395>": {
+   "size": 11060,
+   "align": 4,
+   "flags": 366,
+   "elem": 11060,
+   "spellings": [
+    "std::array<tUsedObject,MAX_NUM_USED_OBJECTS>"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "triv_copy",
+    "class"
+   ]
+  },
+  "class std::array<struct tUser3dMarker,5>": {
+   "size": 140,
+   "align": 4,
+   "flags": 302,
+   "elem": 140,
+   "spellings": [
+    "std::array<tUser3dMarker,5>"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "class"
+   ]
+  },
+  "class std::array<struct tUserList,64>": {
+   "size": 2304,
+   "align": 4,
+   "flags": 364,
+   "elem": 2304,
+   "spellings": [
+    "std::array<tUserList,NUM_SCRIPTED_2D_EFFECTS>"
+   ],
+   "traits": [
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "triv_copy",
+    "class"
+   ]
+  },
+  "class std::array<union tScriptParam,1024>": {
+   "size": 4096,
+   "align": 4,
+   "flags": 364,
+   "elem": 4096,
+   "spellings": [
+    "std::array<tScriptParam,MAX_NUM_LOCAL_VARIABLES_FOR_CURRENT_MISSION>"
+   ],
+   "traits": [
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "triv_copy",
+    "class"
+   ]
+  },
+  "class std::array<union tScriptParam,32>": {
+   "size": 128,
+   "align": 4,
+   "flags": 364,
+   "elem": 128,
+   "spellings": [
+    "std::array<tScriptParam,32>"
+   ],
+   "traits": [
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "triv_copy",
+    "class"
+   ]
+  },
+  "class std::array<unsigned char [260],8>": {
+   "size": 2080,
+   "align": 1,
+   "flags": 366,
+   "elem": 2080,
+   "spellings": [
+    "std::array<tSlotFileName,MAX_SAVEGAME_SLOTS>"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "triv_copy",
+    "class"
+   ]
+  },
+  "class std::array<unsigned char [70],8>": {
+   "size": 560,
+   "align": 1,
+   "flags": 366,
+   "elem": 560,
+   "spellings": [
+    "std::array<tSlotSaveDate,MAX_SAVEGAME_SLOTS>"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "triv_copy",
+    "class"
+   ]
+  },
+  "class std::array<unsigned char,204800>": {
+   "size": 204800,
+   "align": 1,
+   "flags": 366,
+   "elem": 204800,
+   "spellings": [
+    "std::array<uint8,204'800>"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "triv_copy",
+    "class"
+   ]
+  },
+  "class std::array<unsigned char,2048>": {
+   "size": 2048,
+   "align": 1,
+   "flags": 366,
+   "elem": 2048,
+   "spellings": [
+    "std::array<uint8,0x800>"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "triv_copy",
+    "class"
+   ]
+  },
+  "class std::array<unsigned char,256>": {
+   "size": 256,
+   "align": 1,
+   "flags": 366,
+   "elem": 256,
+   "spellings": [
+    "std::array<uint8,256>"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "triv_copy",
+    "class"
+   ]
+  },
+  "class std::array<unsigned char,269000>": {
+   "size": 269000,
+   "align": 1,
+   "flags": 366,
+   "elem": 269000,
+   "spellings": [
+    "std::array<uint8,SCRIPT_SPACE_SIZE>"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "triv_copy",
+    "class"
+   ]
+  },
+  "class std::array<unsigned char,2>": {
+   "size": 2,
+   "align": 1,
+   "flags": 366,
+   "elem": 2,
+   "spellings": [
+    "std::array<uint8,2>"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "triv_copy",
+    "class"
+   ]
+  },
+  "class std::array<unsigned char,3>": {
+   "size": 3,
+   "align": 1,
+   "flags": 366,
+   "elem": 3,
+   "spellings": [
+    "std::array<uint8,3>"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "triv_copy",
+    "class"
+   ]
+  },
+  "class std::array<unsigned char,8>": {
+   "size": 8,
+   "align": 1,
+   "flags": 366,
+   "elem": 8,
+   "spellings": [
+    "std::array<uint8,8>"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "triv_copy",
+    "class"
+   ]
+  },
+  "class std::array<unsigned int,10>": {
+   "size": 40,
+   "align": 4,
+   "flags": 366,
+   "elem": 40,
+   "spellings": [
+    "std::array<uint32,TOTAL_GANGS>"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "triv_copy",
+    "class"
+   ]
+  },
+  "class std::array<unsigned int,2>": {
+   "size": 8,
+   "align": 4,
+   "flags": 366,
+   "elem": 8,
+   "spellings": [
+    "std::array<uint32,2>"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "triv_copy",
+    "class"
+   ]
+  },
+  "class std::array<unsigned int,300>": {
+   "size": 1200,
+   "align": 4,
+   "flags": 366,
+   "elem": 1200,
+   "spellings": [
+    "std::array<uint32,NUM_BUYABLE_ITEMS>"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "triv_copy",
+    "class"
+   ]
+  },
+  "class std::array<unsigned int,360>": {
+   "size": 1440,
+   "align": 4,
+   "flags": 366,
+   "elem": 1440,
+   "spellings": [
+    "std::array<uint32,CTX_GLOBAL_NUM>"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "triv_copy",
+    "class"
+   ]
+  },
+  "class std::array<unsigned int,3>": {
+   "size": 12,
+   "align": 4,
+   "flags": 366,
+   "elem": 12,
+   "spellings": [
+    "std::array<uint32,3>"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "triv_copy",
+    "class"
+   ]
+  },
+  "class std::array<unsigned int,560>": {
+   "size": 2240,
+   "align": 4,
+   "flags": 366,
+   "elem": 2240,
+   "spellings": [
+    "std::array<uint32,NUM_ITEMS>"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "triv_copy",
+    "class"
+   ]
+  },
+  "class std::array<unsigned int,600>": {
+   "size": 2400,
+   "align": 4,
+   "flags": 366,
+   "elem": 2400,
+   "spellings": [
+    "std::array<uint32,600>"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "triv_copy",
+    "class"
+   ]
+  },
+  "class std::array<unsigned short,12>": {
+   "size": 24,
+   "align": 2,
+   "flags": 366,
+   "elem": 24,
+   "spellings": [
+    "std::array<RwImVertexIndex,12>"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "triv_copy",
+    "class"
+   ]
+  },
+  "class std::array<unsigned short,18>": {
+   "size": 36,
+   "align": 2,
+   "flags": 366,
+   "elem": 36,
+   "spellings": [
+    "std::array<RxVertexIndex,18>"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "triv_copy",
+    "class"
+   ]
+  },
+  "class std::array<unsigned short,20>": {
+   "size": 40,
+   "align": 2,
+   "flags": 366,
+   "elem": 40,
+   "spellings": [
+    "std::array<uint16,NUM_TYPES>"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "triv_copy",
+    "class"
+   ]
+  },
+  "class std::array<unsigned short,24>": {
+   "size": 48,
+   "align": 2,
+   "flags": 366,
+   "elem": 48,
+   "spellings": [
+    "std::array<RwImVertexIndex,24>"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "triv_copy",
+    "class"
+   ]
+  },
+  "class std::array<unsigned short,34>": {
+   "size": 68,
+   "align": 2,
+   "flags": 366,
+   "elem": 68,
+   "spellings": [
+    "std::array<uint16,(size_t)(POPCYCLE_TOTAL_CARGROUPS)>"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "triv_copy",
+    "class"
+   ]
+  },
+  "class std::array<unsigned short,57>": {
+   "size": 114,
+   "align": 2,
+   "flags": 366,
+   "elem": 114,
+   "spellings": [
+    "std::array<uint16,(size_t)(POPCYCLE_TOTAL_PEDGROUPS)>"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "triv_copy",
+    "class"
+   ]
+  },
+  "class std::array<unsigned short,64>": {
+   "size": 128,
+   "align": 2,
+   "flags": 366,
+   "elem": 128,
+   "spellings": [
+    "std::array<uint16,NUM_SCRIPTED_2D_EFFECTS>"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "triv_copy",
+    "class"
+   ]
+  },
+  "class std::array<unsigned short,8>": {
+   "size": 16,
+   "align": 2,
+   "flags": 366,
+   "elem": 16,
+   "spellings": [
+    "std::array<uint16,8>"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "triv_copy",
+    "class"
+   ]
+  },
+  "class std::array<unsigned short,96>": {
+   "size": 192,
+   "align": 2,
+   "flags": 366,
+   "elem": 192,
+   "spellings": [
+    "std::array<RxVertexIndex,96>"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "triv_copy",
+    "class"
+   ]
+  },
+  "const unsigned char*": {
+   "size": 4,
+   "align": 4,
+   "flags": 2166,
+   "elem": 4,
+   "spellings": [
+    "const GxtChar*"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "pointer",
+    "triv_dtor",
+    "triv_copy",
+    "ptr_elem"
+   ]
+  },
+  "enum CAEGlobalWeaponAudioEntity::ServiceAmbientGunFire::eState": {
+   "size": 4,
+   "align": 4,
+   "flags": 1126,
+   "elem": 4,
+   "spellings": [
+    "eState"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "triv_dtor",
+    "triv_copy",
+    "enum"
+   ]
+  },
+  "enum CAEPoliceScannerAudioEntity::State": {
+   "size": 2,
+   "align": 2,
+   "flags": 1126,
+   "elem": 2,
+   "spellings": [
+    "CAEPoliceScannerAudioEntity::State"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "triv_dtor",
+    "triv_copy",
+    "enum"
+   ]
+  },
+  "enum CConversations::eAwkwardSayStatus": {
+   "size": 4,
+   "align": 4,
+   "flags": 1126,
+   "elem": 4,
+   "spellings": [
+    "eAwkwardSayStatus"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "triv_dtor",
+    "triv_copy",
+    "enum"
+   ]
+  },
+  "enum CCutsceneMgr::LoadStatus": {
+   "size": 4,
+   "align": 4,
+   "flags": 1126,
+   "elem": 4,
+   "spellings": [
+    "LoadStatus"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "triv_dtor",
+    "triv_copy",
+    "enum"
+   ]
+  },
+  "enum CCutsceneMgr::PlayStatus": {
+   "size": 4,
+   "align": 4,
+   "flags": 1126,
+   "elem": 4,
+   "spellings": [
+    "PlayStatus"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "triv_dtor",
+    "triv_copy",
+    "enum"
+   ]
+  },
+  "enum CPedToPlayerConversations::eP2pState": {
+   "size": 4,
+   "align": 4,
+   "flags": 1126,
+   "elem": 4,
+   "spellings": [
+    "eP2pState"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "triv_dtor",
+    "triv_copy",
+    "enum"
+   ]
+  },
+  "enum CTheScripts::eUseTextCommandState": {
+   "size": 1,
+   "align": 1,
+   "flags": 1126,
+   "elem": 1,
+   "spellings": [
+    "eUseTextCommandState"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "triv_dtor",
+    "triv_copy",
+    "enum"
+   ]
+  },
+  "enum WinVer": {
+   "size": 4,
+   "align": 4,
+   "flags": 1126,
+   "elem": 4,
+   "spellings": [
+    "WinVer"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "triv_dtor",
+    "triv_copy",
+    "enum"
+   ]
+  },
+  "enum _D3DDEVTYPE": {
+   "size": 4,
+   "align": 4,
+   "flags": 1126,
+   "elem": 4,
+   "spellings": [
+    "D3DDEVTYPE"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "triv_dtor",
+    "triv_copy",
+    "enum"
+   ]
+  },
+  "enum eAirstripLocation": {
+   "size": 1,
+   "align": 1,
+   "flags": 1126,
+   "elem": 1,
+   "spellings": [
+    "eAirstripLocation"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "triv_dtor",
+    "triv_copy",
+    "enum"
+   ]
+  },
+  "enum eCJMood": {
+   "size": 2,
+   "align": 2,
+   "flags": 1126,
+   "elem": 2,
+   "spellings": [
+    "eCJMood"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "triv_dtor",
+    "triv_copy",
+    "enum"
+   ]
+  },
+  "enum eCamMode": {
+   "size": 2,
+   "align": 2,
+   "flags": 1126,
+   "elem": 2,
+   "spellings": [
+    "eCamMode"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "triv_dtor",
+    "triv_copy",
+    "enum"
+   ]
+  },
+  "enum eColAccelState": {
+   "size": 4,
+   "align": 4,
+   "flags": 1126,
+   "elem": 4,
+   "spellings": [
+    "eColAccelState"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "triv_dtor",
+    "triv_copy",
+    "enum"
+   ]
+  },
+  "enum eControlledCrane": {
+   "size": 4,
+   "align": 4,
+   "flags": 1126,
+   "elem": 4,
+   "spellings": [
+    "eControlledCrane"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "triv_dtor",
+    "triv_copy",
+    "enum"
+   ]
+  },
+  "enum eControllerType": {
+   "size": 4,
+   "align": 4,
+   "flags": 1126,
+   "elem": 4,
+   "spellings": [
+    "eControllerType"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "triv_dtor",
+    "triv_copy",
+    "enum"
+   ]
+  },
+  "enum eCrossHairType": {
+   "size": 4,
+   "align": 4,
+   "flags": 1126,
+   "elem": 4,
+   "spellings": [
+    "eCrossHairType"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "triv_dtor",
+    "triv_copy",
+    "enum"
+   ]
+  },
+  "enum eDarkelStatus": {
+   "size": 2,
+   "align": 2,
+   "flags": 1126,
+   "elem": 2,
+   "spellings": [
+    "eDarkelStatus"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "triv_dtor",
+    "triv_copy",
+    "enum"
+   ]
+  },
+  "enum eDisplayedSplash": {
+   "size": 4,
+   "align": 4,
+   "flags": 1126,
+   "elem": 4,
+   "spellings": [
+    "eDisplayedSplash"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "triv_dtor",
+    "triv_copy",
+    "enum"
+   ]
+  },
+  "enum eExtraFontSymbol": {
+   "size": 1,
+   "align": 1,
+   "flags": 1126,
+   "elem": 1,
+   "spellings": [
+    "eExtraFontSymbol"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "triv_dtor",
+    "triv_copy",
+    "enum"
+   ]
+  },
+  "enum eFocusedPlayer": {
+   "size": 4,
+   "align": 4,
+   "flags": 1126,
+   "elem": 4,
+   "spellings": [
+    "eFocusedPlayer"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "triv_dtor",
+    "triv_copy",
+    "enum"
+   ]
+  },
+  "enum eGameLogicState": {
+   "size": 4,
+   "align": 4,
+   "flags": 1126,
+   "elem": 4,
+   "spellings": [
+    "eGameLogicState"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "triv_dtor",
+    "triv_copy",
+    "enum"
+   ]
+  },
+  "enum eGangAttackState": {
+   "size": 4,
+   "align": 4,
+   "flags": 1126,
+   "elem": 4,
+   "spellings": [
+    "eGangAttackState"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "triv_dtor",
+    "triv_copy",
+    "enum"
+   ]
+  },
+  "enum eGangID": {
+   "size": 4,
+   "align": 4,
+   "flags": 1126,
+   "elem": 4,
+   "spellings": [
+    "eGangID"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "triv_dtor",
+    "triv_copy",
+    "enum"
+   ]
+  },
+  "enum eGangWarState": {
+   "size": 4,
+   "align": 4,
+   "flags": 1126,
+   "elem": 4,
+   "spellings": [
+    "eGangWarState"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "triv_dtor",
+    "triv_copy",
+    "enum"
+   ]
+  },
+  "enum eHudItem": {
+   "size": 2,
+   "align": 2,
+   "flags": 1126,
+   "elem": 2,
+   "spellings": [
+    "eHudItem"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "triv_dtor",
+    "triv_copy",
+    "enum"
+   ]
+  },
+  "enum eJumpState": {
+   "size": 1,
+   "align": 1,
+   "flags": 1126,
+   "elem": 1,
+   "spellings": [
+    "eJumpState"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "triv_dtor",
+    "triv_copy",
+    "enum"
+   ]
+  },
+  "enum eLevelName": {
+   "size": 1,
+   "align": 1,
+   "flags": 1126,
+   "elem": 1,
+   "spellings": [
+    "eLevelName"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "triv_dtor",
+    "triv_copy",
+    "enum"
+   ]
+  },
+  "enum eMirrorType": {
+   "size": 1,
+   "align": 1,
+   "flags": 1126,
+   "elem": 1,
+   "spellings": [
+    "eMirrorType"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "triv_dtor",
+    "triv_copy",
+    "enum"
+   ]
+  },
+  "enum eMoveState": {
+   "size": 4,
+   "align": 4,
+   "flags": 1126,
+   "elem": 4,
+   "spellings": [
+    "eMoveState"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "triv_dtor",
+    "triv_copy",
+    "enum"
+   ]
+  },
+  "enum eNameState": {
+   "size": 4,
+   "align": 4,
+   "flags": 1126,
+   "elem": 4,
+   "spellings": [
+    "eNameState"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "triv_dtor",
+    "triv_copy",
+    "enum"
+   ]
+  },
+  "enum ePriceSection": {
+   "size": 4,
+   "align": 4,
+   "flags": 1126,
+   "elem": 4,
+   "spellings": [
+    "ePriceSection"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "triv_dtor",
+    "triv_copy",
+    "enum"
+   ]
+  },
+  "enum eRadarTraceHeight": {
+   "size": 1,
+   "align": 1,
+   "flags": 1126,
+   "elem": 1,
+   "spellings": [
+    "eRadarTraceHeight"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "triv_dtor",
+    "triv_copy",
+    "enum"
+   ]
+  },
+  "enum eRadioID": {
+   "size": 1,
+   "align": 1,
+   "flags": 1126,
+   "elem": 1,
+   "spellings": [
+    "eRadioID"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "triv_dtor",
+    "triv_copy",
+    "enum"
+   ]
+  },
+  "enum eReplayCamMode": {
+   "size": 1,
+   "align": 1,
+   "flags": 1126,
+   "elem": 1,
+   "spellings": [
+    "eReplayCamMode"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "triv_dtor",
+    "triv_copy",
+    "enum"
+   ]
+  },
+  "enum eReplayMode": {
+   "size": 1,
+   "align": 1,
+   "flags": 1126,
+   "elem": 1,
+   "spellings": [
+    "eReplayMode"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "triv_dtor",
+    "triv_copy",
+    "enum"
+   ]
+  },
+  "enum eSkipState": {
+   "size": 4,
+   "align": 4,
+   "flags": 1126,
+   "elem": 4,
+   "spellings": [
+    "eSkipState"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "triv_dtor",
+    "triv_copy",
+    "enum"
+   ]
+  },
+  "enum eWantedLevel": {
+   "size": 4,
+   "align": 4,
+   "flags": 1126,
+   "elem": 4,
+   "spellings": [
+    "eWantedLevel"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "triv_dtor",
+    "triv_copy",
+    "enum"
+   ]
+  },
+  "enum eWeaponType": {
+   "size": 4,
+   "align": 4,
+   "flags": 1126,
+   "elem": 4,
+   "spellings": [
+    "eWeaponType"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "triv_dtor",
+    "triv_copy",
+    "enum"
+   ]
+  },
+  "enum eWeatherRegion": {
+   "size": 2,
+   "align": 2,
+   "flags": 1126,
+   "elem": 2,
+   "spellings": [
+    "eWeatherRegion"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "triv_dtor",
+    "triv_copy",
+    "enum"
+   ]
+  },
+  "enum eWeatherType": {
+   "size": 2,
+   "align": 2,
+   "flags": 1126,
+   "elem": 2,
+   "spellings": [
+    "eWeatherType"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "triv_dtor",
+    "triv_copy",
+    "enum"
+   ]
+  },
+  "float": {
+   "size": 4,
+   "align": 4,
+   "flags": 4198,
+   "elem": 4,
+   "spellings": [
+    "float"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "triv_dtor",
+    "triv_copy",
+    "float_elem"
+   ]
+  },
+  "float*": {
+   "size": 4,
+   "align": 4,
+   "flags": 2166,
+   "elem": 4,
+   "spellings": [
+    "float*"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "pointer",
+    "triv_dtor",
+    "triv_copy",
+    "ptr_elem"
+   ]
+  },
+  "float[10]": {
+   "size": 40,
+   "align": 4,
+   "flags": 4334,
+   "elem": 4,
+   "spellings": [
+    "float[MAX_RESTART_POINTS]"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "triv_copy",
+    "array",
+    "float_elem"
+   ]
+  },
+  "float[28][6]": {
+   "size": 672,
+   "align": 4,
+   "flags": 4334,
+   "elem": 4,
+   "spellings": [
+    "float[28][6]"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "triv_copy",
+    "array",
+    "float_elem"
+   ]
+  },
+  "float[3][2]": {
+   "size": 24,
+   "align": 4,
+   "flags": 4334,
+   "elem": 4,
+   "spellings": [
+    "float[3][2]"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "triv_copy",
+    "array",
+    "float_elem"
+   ]
+  },
+  "float[3][3]": {
+   "size": 36,
+   "align": 4,
+   "flags": 4334,
+   "elem": 4,
+   "spellings": [
+    "float[3][3]"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "triv_copy",
+    "array",
+    "float_elem"
+   ]
+  },
+  "float[3][5]": {
+   "size": 60,
+   "align": 4,
+   "flags": 4334,
+   "elem": 4,
+   "spellings": [
+    "float[3][5]"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "triv_copy",
+    "array",
+    "float_elem"
+   ]
+  },
+  "float[50][2]": {
+   "size": 400,
+   "align": 4,
+   "flags": 4334,
+   "elem": 4,
+   "spellings": [
+    "float[50][2]"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "triv_copy",
+    "array",
+    "float_elem"
+   ]
+  },
+  "float[7]": {
+   "size": 28,
+   "align": 4,
+   "flags": 4334,
+   "elem": 4,
+   "spellings": [
+    "float[NUM_MESSAGE_STYLES]"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "triv_copy",
+    "array",
+    "float_elem"
+   ]
+  },
+  "int": {
+   "size": 4,
+   "align": 4,
+   "flags": 102,
+   "elem": 4,
+   "spellings": [
+    "RwBool",
+    "RwInt32",
+    "int",
+    "int32"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "triv_dtor",
+    "triv_copy"
+   ]
+  },
+  "int*": {
+   "size": 4,
+   "align": 4,
+   "flags": 2166,
+   "elem": 4,
+   "spellings": [
+    "int32*"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "pointer",
+    "triv_dtor",
+    "triv_copy",
+    "ptr_elem"
+   ]
+  },
+  "int[10]": {
+   "size": 40,
+   "align": 4,
+   "flags": 238,
+   "elem": 4,
+   "spellings": [
+    "int32[MAX_RESTART_POINTS]"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "triv_copy",
+    "array"
+   ]
+  },
+  "int[12]": {
+   "size": 48,
+   "align": 4,
+   "flags": 238,
+   "elem": 4,
+   "spellings": [
+    "int32[12]"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "triv_copy",
+    "array"
+   ]
+  },
+  "int[12][22]": {
+   "size": 1056,
+   "align": 4,
+   "flags": 238,
+   "elem": 4,
+   "spellings": [
+    "int32[12][22]"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "triv_copy",
+    "array"
+   ]
+  },
+  "int[12][31]": {
+   "size": 1488,
+   "align": 4,
+   "flags": 238,
+   "elem": 4,
+   "spellings": [
+    "int32[12][31]"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "triv_copy",
+    "array"
+   ]
+  },
+  "int[13][23]": {
+   "size": 1196,
+   "align": 4,
+   "flags": 238,
+   "elem": 4,
+   "spellings": [
+    "int32[13][23]"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "triv_copy",
+    "array"
+   ]
+  },
+  "int[16][16]": {
+   "size": 1024,
+   "align": 4,
+   "flags": 238,
+   "elem": 4,
+   "spellings": [
+    "int32[16][16]"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "triv_copy",
+    "array"
+   ]
+  },
+  "int[32]": {
+   "size": 128,
+   "align": 4,
+   "flags": 238,
+   "elem": 4,
+   "spellings": [
+    "int32[32]"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "triv_copy",
+    "array"
+   ]
+  },
+  "int[4]": {
+   "size": 16,
+   "align": 4,
+   "flags": 238,
+   "elem": 4,
+   "spellings": [
+    "int32[4]",
+    "int32[MAX_CARS_IN_SAFEHOUSE]",
+    "int32[NUM_WHEELS]"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "triv_copy",
+    "array"
+   ]
+  },
+  "int[7]": {
+   "size": 28,
+   "align": 4,
+   "flags": 238,
+   "elem": 4,
+   "spellings": [
+    "int32[7]"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "triv_copy",
+    "array"
+   ]
+  },
+  "int[8]": {
+   "size": 32,
+   "align": 4,
+   "flags": 238,
+   "elem": 4,
+   "spellings": [
+    "int32[8]"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "triv_copy",
+    "array"
+   ]
+  },
+  "int[92]": {
+   "size": 368,
+   "align": 4,
+   "flags": 238,
+   "elem": 4,
+   "spellings": [
+    "int32[TOTAL_CHEATS]"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "triv_copy",
+    "array"
+   ]
+  },
+  "short": {
+   "size": 2,
+   "align": 2,
+   "flags": 102,
+   "elem": 2,
+   "spellings": [
+    "int16",
+    "tPedSpeechSlotID"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "triv_dtor",
+    "triv_copy"
+   ]
+  },
+  "short[4]": {
+   "size": 8,
+   "align": 2,
+   "flags": 238,
+   "elem": 2,
+   "spellings": [
+    "int16[4]",
+    "int16[NUM_WHEELS]"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "triv_copy",
+    "array"
+   ]
+  },
+  "short[5]": {
+   "size": 10,
+   "align": 2,
+   "flags": 238,
+   "elem": 2,
+   "spellings": [
+    "int16[NUM_POLICE_SCANNER_SLOTS]"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "triv_copy",
+    "array"
+   ]
+  },
+  "signed char": {
+   "size": 1,
+   "align": 1,
+   "flags": 102,
+   "elem": 1,
+   "spellings": [
+    "int8"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "triv_dtor",
+    "triv_copy"
+   ]
+  },
+  "signed char*": {
+   "size": 4,
+   "align": 4,
+   "flags": 2166,
+   "elem": 4,
+   "spellings": [
+    "int8*"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "pointer",
+    "triv_dtor",
+    "triv_copy",
+    "ptr_elem"
+   ]
+  },
+  "signed char[2]": {
+   "size": 2,
+   "align": 1,
+   "flags": 238,
+   "elem": 1,
+   "spellings": [
+    "int8[NUM_COMPS_USAGE]"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "triv_copy",
+    "array"
+   ]
+  },
+  "struct AnimAssocDefinition[118]": {
+   "size": 5664,
+   "align": 4,
+   "flags": 236,
+   "elem": 48,
+   "spellings": [
+    "AnimAssocDefinition[NUM_ANIM_ASSOC_GROUPS]"
+   ],
+   "traits": [
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "triv_copy",
+    "array"
+   ]
+  },
+  "struct CAttributeZone[1300]": {
+   "size": 23400,
+   "align": 2,
+   "flags": 238,
+   "elem": 18,
+   "spellings": [
+    "CAttributeZone[1'300]"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "triv_copy",
+    "array"
+   ]
+  },
+  "struct CBuoyancyCalcStruct": {
+   "size": 28,
+   "align": 4,
+   "flags": 302,
+   "elem": 28,
+   "spellings": [
+    "CBuoyancyCalcStruct"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "class"
+   ]
+  },
+  "struct CColAccelColBound*": {
+   "size": 4,
+   "align": 4,
+   "flags": 2166,
+   "elem": 4,
+   "spellings": [
+    "CColAccelColBound*"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "pointer",
+    "triv_dtor",
+    "triv_copy",
+    "ptr_elem"
+   ]
+  },
+  "struct CColAccelColEntry*": {
+   "size": 4,
+   "align": 4,
+   "flags": 2166,
+   "elem": 4,
+   "spellings": [
+    "CColAccelColEntry*"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "pointer",
+    "triv_dtor",
+    "triv_copy",
+    "ptr_elem"
+   ]
+  },
+  "struct CColAccelIPLEntry*": {
+   "size": 4,
+   "align": 4,
+   "flags": 2166,
+   "elem": 4,
+   "spellings": [
+    "CColAccelIPLEntry*"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "pointer",
+    "triv_dtor",
+    "triv_copy",
+    "ptr_elem"
+   ]
+  },
+  "struct CDirectory::DirectoryInfo": {
+   "size": 32,
+   "align": 4,
+   "flags": 366,
+   "elem": 32,
+   "spellings": [
+    "CDirectory::DirectoryInfo"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "triv_copy",
+    "class"
+   ]
+  },
+  "struct CFontChar": {
+   "size": 48,
+   "align": 4,
+   "flags": 300,
+   "elem": 48,
+   "spellings": [
+    "CFontChar"
+   ],
+   "traits": [
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "class"
+   ]
+  },
+  "struct CFontChar*": {
+   "size": 4,
+   "align": 4,
+   "flags": 2166,
+   "elem": 4,
+   "spellings": [
+    "CFontChar*"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "pointer",
+    "triv_dtor",
+    "triv_copy",
+    "ptr_elem"
+   ]
+  },
+  "struct CJoySticks": {
+   "size": 32,
+   "align": 4,
+   "flags": 356,
+   "elem": 32,
+   "spellings": [
+    "CJoySticks"
+   ],
+   "traits": [
+    "def_ctor",
+    "triv_dtor",
+    "triv_copy",
+    "class"
+   ]
+  },
+  "struct CPlantSurfProp[57]": {
+   "size": 7068,
+   "align": 4,
+   "flags": 236,
+   "elem": 124,
+   "spellings": [
+    "CPlantSurfProp[MAX_SURFACE_PROPERTIES]"
+   ],
+   "traits": [
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "triv_copy",
+    "array"
+   ]
+  },
+  "struct CPostEffects::imf": {
+   "size": 344,
+   "align": 4,
+   "flags": 366,
+   "elem": 344,
+   "spellings": [
+    "imf"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "triv_copy",
+    "class"
+   ]
+  },
+  "struct CReplay::CVector_Reversed": {
+   "size": 12,
+   "align": 4,
+   "flags": 352,
+   "elem": 12,
+   "spellings": [
+    "CVector_Reversed"
+   ],
+   "traits": [
+    "triv_dtor",
+    "triv_copy",
+    "class"
+   ]
+  },
+  "struct CSkidmark[32]": {
+   "size": 11008,
+   "align": 4,
+   "flags": 174,
+   "elem": 344,
+   "spellings": [
+    "CSkidmark[SKIDMARKS_COUNT]"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "array"
+   ]
+  },
+  "struct CStats::ConstructStatLine::tStatLine": {
+   "size": 6,
+   "align": 2,
+   "flags": 366,
+   "elem": 6,
+   "spellings": [
+    "tStatLine"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "triv_copy",
+    "class"
+   ]
+  },
+  "struct CStoredCar[20][4]": {
+   "size": 5120,
+   "align": 4,
+   "flags": 174,
+   "elem": 64,
+   "spellings": [
+    "CStoredCar[MAX_NUM_SAFEHOUSES][MAX_CARS_IN_SAFEHOUSE]"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "array"
+   ]
+  },
+  "struct CStoredCollPoly": {
+   "size": 44,
+   "align": 4,
+   "flags": 300,
+   "elem": 44,
+   "spellings": [
+    "CStoredCollPoly"
+   ],
+   "traits": [
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "class"
+   ]
+  },
+  "struct CStuntJump*": {
+   "size": 4,
+   "align": 4,
+   "flags": 2166,
+   "elem": 4,
+   "spellings": [
+    "CStuntJump*"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "pointer",
+    "triv_dtor",
+    "triv_copy",
+    "ptr_elem"
+   ]
+  },
+  "struct CTaskComplexFollowLeaderInFormation::Offsets": {
+   "size": 132,
+   "align": 4,
+   "flags": 302,
+   "elem": 132,
+   "spellings": [
+    "Offsets"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "class"
+   ]
+  },
+  "struct CWaterLevel::WaterFog": {
+   "size": 840,
+   "align": 4,
+   "flags": 366,
+   "elem": 840,
+   "spellings": [
+    "WaterFog"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "triv_copy",
+    "class"
+   ]
+  },
+  "struct CWindModifier[16]": {
+   "size": 320,
+   "align": 4,
+   "flags": 174,
+   "elem": 20,
+   "spellings": [
+    "CWindModifier[MAX_NUM_MODIFIERS]"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "array"
+   ]
+  },
+  "struct CdStream*": {
+   "size": 4,
+   "align": 4,
+   "flags": 2166,
+   "elem": 4,
+   "spellings": [
+    "CdStream*"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "pointer",
+    "triv_dtor",
+    "triv_copy",
+    "ptr_elem"
+   ]
+  },
+  "struct CustomEnvMapPipeMaterialData": {
+   "size": 12,
+   "align": 4,
+   "flags": 364,
+   "elem": 12,
+   "spellings": [
+    "CustomEnvMapPipeMaterialData"
+   ],
+   "traits": [
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "triv_copy",
+    "class"
+   ]
+  },
+  "struct DWHeliChaseCamSettings": {
+   "size": 156,
+   "align": 4,
+   "flags": 302,
+   "elem": 156,
+   "spellings": [
+    "DWHeliChaseCamSettings"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "class"
+   ]
+  },
+  "struct HINSTANCE__*": {
+   "size": 4,
+   "align": 4,
+   "flags": 2166,
+   "elem": 4,
+   "spellings": [
+    "HMODULE"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "pointer",
+    "triv_dtor",
+    "triv_copy",
+    "ptr_elem"
+   ]
+  },
+  "struct HWND__*": {
+   "size": 4,
+   "align": 4,
+   "flags": 2166,
+   "elem": 4,
+   "spellings": [
+    "HWND"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "pointer",
+    "triv_dtor",
+    "triv_copy",
+    "ptr_elem"
+   ]
+  },
+  "struct IDirect3D9*": {
+   "size": 4,
+   "align": 4,
+   "flags": 2166,
+   "elem": 4,
+   "spellings": [
+    "IDirect3D9*"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "pointer",
+    "triv_dtor",
+    "triv_copy",
+    "ptr_elem"
+   ]
+  },
+  "struct IDirect3DDevice9*": {
+   "size": 4,
+   "align": 4,
+   "flags": 2166,
+   "elem": 4,
+   "spellings": [
+    "LPDIRECT3DDEVICE9"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "pointer",
+    "triv_dtor",
+    "triv_copy",
+    "ptr_elem"
+   ]
+  },
+  "struct IDirect3DSurface9*": {
+   "size": 4,
+   "align": 4,
+   "flags": 2166,
+   "elem": 4,
+   "spellings": [
+    "LPSURFACE"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "pointer",
+    "triv_dtor",
+    "triv_copy",
+    "ptr_elem"
+   ]
+  },
+  "struct IGraphBuilder*": {
+   "size": 4,
+   "align": 4,
+   "flags": 2166,
+   "elem": 4,
+   "spellings": [
+    "IGraphBuilder*"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "pointer",
+    "triv_dtor",
+    "triv_copy",
+    "ptr_elem"
+   ]
+  },
+  "struct IMediaControl*": {
+   "size": 4,
+   "align": 4,
+   "flags": 2166,
+   "elem": 4,
+   "spellings": [
+    "IMediaControl*"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "pointer",
+    "triv_dtor",
+    "triv_copy",
+    "ptr_elem"
+   ]
+  },
+  "struct IMediaEventEx*": {
+   "size": 4,
+   "align": 4,
+   "flags": 2166,
+   "elem": 4,
+   "spellings": [
+    "IMediaEventEx*"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "pointer",
+    "triv_dtor",
+    "triv_copy",
+    "ptr_elem"
+   ]
+  },
+  "struct IMediaSeeking*": {
+   "size": 4,
+   "align": 4,
+   "flags": 2166,
+   "elem": 4,
+   "spellings": [
+    "IMediaSeeking*"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "pointer",
+    "triv_dtor",
+    "triv_copy",
+    "ptr_elem"
+   ]
+  },
+  "struct IVideoWindow*": {
+   "size": 4,
+   "align": 4,
+   "flags": 2166,
+   "elem": 4,
+   "spellings": [
+    "IVideoWindow*"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "pointer",
+    "triv_dtor",
+    "triv_copy",
+    "ptr_elem"
+   ]
+  },
+  "struct IplDef*": {
+   "size": 4,
+   "align": 4,
+   "flags": 2166,
+   "elem": 4,
+   "spellings": [
+    "IplDef*"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "pointer",
+    "triv_dtor",
+    "triv_copy",
+    "ptr_elem"
+   ]
+  },
+  "struct LimbMovementInfo": {
+   "size": 24,
+   "align": 4,
+   "flags": 366,
+   "elem": 24,
+   "spellings": [
+    "LimbMovementInfo"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "triv_copy",
+    "class"
+   ]
+  },
+  "struct OSStatus": {
+   "size": 32,
+   "align": 4,
+   "flags": 366,
+   "elem": 32,
+   "spellings": [
+    "OSStatus"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "triv_copy",
+    "class"
+   ]
+  },
+  "struct PresetView*": {
+   "size": 4,
+   "align": 4,
+   "flags": 2166,
+   "elem": 4,
+   "spellings": [
+    "PresetView*"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "pointer",
+    "triv_dtor",
+    "triv_copy",
+    "ptr_elem"
+   ]
+  },
+  "struct Queue": {
+   "size": 16,
+   "align": 4,
+   "flags": 366,
+   "elem": 16,
+   "spellings": [
+    "Queue"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "triv_copy",
+    "class"
+   ]
+  },
+  "struct RsGlobalType": {
+   "size": 60,
+   "align": 4,
+   "flags": 366,
+   "elem": 60,
+   "spellings": [
+    "RsGlobalType"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "triv_copy",
+    "class"
+   ]
+  },
+  "struct RtDictSchema": {
+   "size": 52,
+   "align": 4,
+   "flags": 366,
+   "elem": 52,
+   "spellings": [
+    "RtDictSchema"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "triv_copy",
+    "class"
+   ]
+  },
+  "struct RwD3D9Vertex[1532]": {
+   "size": 42896,
+   "align": 4,
+   "flags": 238,
+   "elem": 28,
+   "spellings": [
+    "RwD3D9Vertex[TOTAL_RADIOSITY_VERTEX_BUFFER]"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "triv_copy",
+    "array"
+   ]
+  },
+  "struct RwGlobals*": {
+   "size": 4,
+   "align": 4,
+   "flags": 2166,
+   "elem": 4,
+   "spellings": [
+    "RwGlobals*"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "pointer",
+    "triv_dtor",
+    "triv_copy",
+    "ptr_elem"
+   ]
+  },
+  "struct RwObjectNameIdAssocation*[12]": {
+   "size": 48,
+   "align": 4,
+   "flags": 2286,
+   "elem": 4,
+   "spellings": [
+    "RwObjectNameIdAssocation*[NUM_VEHICLE_MODEL_DESCS]"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "triv_copy",
+    "array",
+    "ptr_elem"
+   ]
+  },
+  "struct RwObjectNameIdAssocation[13]": {
+   "size": 156,
+   "align": 4,
+   "flags": 238,
+   "elem": 12,
+   "spellings": [
+    "RwObjectNameIdAssocation[NUM_PED_NAME_ID_ASSOC]"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "triv_copy",
+    "array"
+   ]
+  },
+  "struct RwPluginRegistry": {
+   "size": 24,
+   "align": 4,
+   "flags": 366,
+   "elem": 24,
+   "spellings": [
+    "RwPluginRegistry"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "triv_copy",
+    "class"
+   ]
+  },
+  "struct RwRGBAReal": {
+   "size": 16,
+   "align": 4,
+   "flags": 366,
+   "elem": 16,
+   "spellings": [
+    "RwRGBAReal"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "triv_copy",
+    "class"
+   ]
+  },
+  "struct RwRwDeviceGlobals": {
+   "size": 8,
+   "align": 4,
+   "flags": 366,
+   "elem": 8,
+   "spellings": [
+    "RwRwDeviceGlobals"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "triv_copy",
+    "class"
+   ]
+  },
+  "struct RxD3D9Light*": {
+   "size": 4,
+   "align": 4,
+   "flags": 2166,
+   "elem": 4,
+   "spellings": [
+    "RxD3D9Light*"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "pointer",
+    "triv_dtor",
+    "triv_copy",
+    "ptr_elem"
+   ]
+  },
+  "struct SArray<class CTask *>": {
+   "size": 16,
+   "align": 4,
+   "flags": 260,
+   "elem": 16,
+   "spellings": [
+    "SArray<CTask*>"
+   ],
+   "traits": [
+    "def_ctor",
+    "class"
+   ]
+  },
+  "struct SArray<class CVector>": {
+   "size": 16,
+   "align": 4,
+   "flags": 260,
+   "elem": 16,
+   "spellings": [
+    "SArray<CVector>"
+   ],
+   "traits": [
+    "def_ctor",
+    "class"
+   ]
+  },
+  "struct TempVertexBuffer": {
+   "size": 102400,
+   "align": 4,
+   "flags": 366,
+   "elem": 102400,
+   "spellings": [
+    "TempVertexBuffer"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "triv_copy",
+    "class"
+   ]
+  },
+  "struct _D3DCAPS9": {
+   "size": 304,
+   "align": 4,
+   "flags": 366,
+   "elem": 304,
+   "spellings": [
+    "D3DCAPS9"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "triv_copy",
+    "class"
+   ]
+  },
+  "struct _D3DGAMMARAMP": {
+   "size": 1536,
+   "align": 2,
+   "flags": 366,
+   "elem": 1536,
+   "spellings": [
+    "D3DGAMMARAMP"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "triv_copy",
+    "class"
+   ]
+  },
+  "struct _D3DLIGHT9": {
+   "size": 104,
+   "align": 4,
+   "flags": 366,
+   "elem": 104,
+   "spellings": [
+    "D3DLIGHT9"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "triv_copy",
+    "class"
+   ]
+  },
+  "struct _D3DMATRIX": {
+   "size": 64,
+   "align": 4,
+   "flags": 366,
+   "elem": 64,
+   "spellings": [
+    "D3DMATRIX"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "triv_copy",
+    "class"
+   ]
+  },
+  "struct _D3DMATRIX*": {
+   "size": 4,
+   "align": 4,
+   "flags": 2166,
+   "elem": 4,
+   "spellings": [
+    "D3DMATRIX*"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "pointer",
+    "triv_dtor",
+    "triv_copy",
+    "ptr_elem"
+   ]
+  },
+  "struct _D3DPRESENT_PARAMETERS_": {
+   "size": 56,
+   "align": 4,
+   "flags": 366,
+   "elem": 56,
+   "spellings": [
+    "D3DPRESENT_PARAMETERS"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "triv_copy",
+    "class"
+   ]
+  },
+  "struct _iobuf*": {
+   "size": 4,
+   "align": 4,
+   "flags": 2166,
+   "elem": 4,
+   "spellings": [
+    "FILE*"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "pointer",
+    "triv_dtor",
+    "triv_copy",
+    "ptr_elem"
+   ]
+  },
+  "struct _rwD3D9AdapterInformation": {
+   "size": 540,
+   "align": 4,
+   "flags": 366,
+   "elem": 540,
+   "spellings": [
+    "_rwD3D9AdapterInformation"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "triv_copy",
+    "class"
+   ]
+  },
+  "struct _rxD3D9DisplayMode*": {
+   "size": 4,
+   "align": 4,
+   "flags": 2166,
+   "elem": 4,
+   "spellings": [
+    "_rxD3D9DisplayMode*"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "pointer",
+    "triv_dtor",
+    "triv_copy",
+    "ptr_elem"
+   ]
+  },
+  "struct notsa::WEnum<enum eAreaCodes,int>": {
+   "size": 4,
+   "align": 4,
+   "flags": 356,
+   "elem": 4,
+   "spellings": [
+    "eAreaCodesS32"
+   ],
+   "traits": [
+    "def_ctor",
+    "triv_dtor",
+    "triv_copy",
+    "class"
+   ]
+  },
+  "struct notsa::WEnum<enum eModelID,unsigned short>": {
+   "size": 2,
+   "align": 2,
+   "flags": 356,
+   "elem": 2,
+   "spellings": [
+    "ModelIndex"
+   ],
+   "traits": [
+    "def_ctor",
+    "triv_dtor",
+    "triv_copy",
+    "class"
+   ]
+  },
+  "struct psGlobalType": {
+   "size": 40,
+   "align": 4,
+   "flags": 366,
+   "elem": 40,
+   "spellings": [
+    "psGlobalType"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "triv_copy",
+    "class"
+   ]
+  },
+  "struct rw::Atomic*(__cdecl *)(struct rw::Atomic *)": {
+   "size": 4,
+   "align": 4,
+   "flags": 2166,
+   "elem": 4,
+   "spellings": [
+    "RpAtomicCallBackRender"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "pointer",
+    "triv_dtor",
+    "triv_copy",
+    "ptr_elem"
+   ]
+  },
+  "struct rw::Atomic*[4]": {
+   "size": 16,
+   "align": 4,
+   "flags": 2286,
+   "elem": 4,
+   "spellings": [
+    "RpAtomic*[4]"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "triv_copy",
+    "array",
+    "ptr_elem"
+   ]
+  },
+  "struct rw::Atomic*[4][4]": {
+   "size": 64,
+   "align": 4,
+   "flags": 2286,
+   "elem": 4,
+   "spellings": [
+    "RpAtomic*[4][4]"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "triv_copy",
+    "array",
+    "ptr_elem"
+   ]
+  },
+  "struct rw::Camera*": {
+   "size": 4,
+   "align": 4,
+   "flags": 2166,
+   "elem": 4,
+   "spellings": [
+    "RwCamera*"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "pointer",
+    "triv_dtor",
+    "triv_copy",
+    "ptr_elem"
+   ]
+  },
+  "struct rw::Clump*": {
+   "size": 4,
+   "align": 4,
+   "flags": 2166,
+   "elem": 4,
+   "spellings": [
+    "RpClump*"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "pointer",
+    "triv_dtor",
+    "triv_copy",
+    "ptr_elem"
+   ]
+  },
+  "struct rw::Frame*": {
+   "size": 4,
+   "align": 4,
+   "flags": 2166,
+   "elem": 4,
+   "spellings": [
+    "RwFrame*"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "pointer",
+    "triv_dtor",
+    "triv_copy",
+    "ptr_elem"
+   ]
+  },
+  "struct rw::Light*": {
+   "size": 4,
+   "align": 4,
+   "flags": 2166,
+   "elem": 4,
+   "spellings": [
+    "RpLight*"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "pointer",
+    "triv_dtor",
+    "triv_copy",
+    "ptr_elem"
+   ]
+  },
+  "struct rw::Material*": {
+   "size": 4,
+   "align": 4,
+   "flags": 2166,
+   "elem": 4,
+   "spellings": [
+    "RpMaterial*"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "pointer",
+    "triv_dtor",
+    "triv_copy",
+    "ptr_elem"
+   ]
+  },
+  "struct rw::Matrix*": {
+   "size": 4,
+   "align": 4,
+   "flags": 2166,
+   "elem": 4,
+   "spellings": [
+    "RwMatrix*"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "pointer",
+    "triv_dtor",
+    "triv_copy",
+    "ptr_elem"
+   ]
+  },
+  "struct rw::MemoryFunctions": {
+   "size": 20,
+   "align": 4,
+   "flags": 366,
+   "elem": 20,
+   "spellings": [
+    "RwMemoryFunctions"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "triv_copy",
+    "class"
+   ]
+  },
+  "struct rw::RGBA": {
+   "size": 4,
+   "align": 1,
+   "flags": 366,
+   "elem": 4,
+   "spellings": [
+    "RwRGBA"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "triv_copy",
+    "class"
+   ]
+  },
+  "struct rw::RGBAf": {
+   "size": 16,
+   "align": 4,
+   "flags": 366,
+   "elem": 16,
+   "spellings": [
+    "RwRGBAReal"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "triv_copy",
+    "class"
+   ]
+  },
+  "struct rw::Raster*": {
+   "size": 4,
+   "align": 4,
+   "flags": 2166,
+   "elem": 4,
+   "spellings": [
+    "RwRaster*"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "pointer",
+    "triv_dtor",
+    "triv_copy",
+    "ptr_elem"
+   ]
+  },
+  "struct rw::SurfaceProperties": {
+   "size": 12,
+   "align": 4,
+   "flags": 366,
+   "elem": 12,
+   "spellings": [
+    "RwSurfaceProperties"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "triv_copy",
+    "class"
+   ]
+  },
+  "struct rw::TexDictionary*": {
+   "size": 4,
+   "align": 4,
+   "flags": 2166,
+   "elem": 4,
+   "spellings": [
+    "RwTexDictionary*"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "pointer",
+    "triv_dtor",
+    "triv_copy",
+    "ptr_elem"
+   ]
+  },
+  "struct rw::Texture*": {
+   "size": 4,
+   "align": 4,
+   "flags": 2166,
+   "elem": 4,
+   "spellings": [
+    "RwTexture*"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "pointer",
+    "triv_dtor",
+    "triv_copy",
+    "ptr_elem"
+   ]
+  },
+  "struct rw::Texture*(__cdecl *)(const char *)": {
+   "size": 4,
+   "align": 4,
+   "flags": 2166,
+   "elem": 4,
+   "spellings": [
+    "RwTextureCallBackFind"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "pointer",
+    "triv_dtor",
+    "triv_copy",
+    "ptr_elem"
+   ]
+  },
+  "struct rw::Texture**[4]": {
+   "size": 16,
+   "align": 4,
+   "flags": 2286,
+   "elem": 4,
+   "spellings": [
+    "RwTexture**[4]"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "triv_copy",
+    "array",
+    "ptr_elem"
+   ]
+  },
+  "struct rw::Texture*[16]": {
+   "size": 64,
+   "align": 4,
+   "flags": 2286,
+   "elem": 4,
+   "spellings": [
+    "RwTexture*[NUM_DIRT_TEXTURES]"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "triv_copy",
+    "array",
+    "ptr_elem"
+   ]
+  },
+  "struct rw::Texture*[2]": {
+   "size": 8,
+   "align": 4,
+   "flags": 2286,
+   "elem": 4,
+   "spellings": [
+    "RwTexture*[2]"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "triv_copy",
+    "array",
+    "ptr_elem"
+   ]
+  },
+  "struct rw::Texture*[3]": {
+   "size": 12,
+   "align": 4,
+   "flags": 2286,
+   "elem": 4,
+   "spellings": [
+    "RwTexture*[3]"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "triv_copy",
+    "array",
+    "ptr_elem"
+   ]
+  },
+  "struct rw::Texture*[4][4]": {
+   "size": 64,
+   "align": 4,
+   "flags": 2286,
+   "elem": 4,
+   "spellings": [
+    "RwTexture*[4][4]"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "triv_copy",
+    "array",
+    "ptr_elem"
+   ]
+  },
+  "struct rw::V3d*": {
+   "size": 4,
+   "align": 4,
+   "flags": 2166,
+   "elem": 4,
+   "spellings": [
+    "RwV3d*"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "pointer",
+    "triv_dtor",
+    "triv_copy",
+    "ptr_elem"
+   ]
+  },
+  "struct rw::d3d::Im3DVertex*": {
+   "size": 4,
+   "align": 4,
+   "flags": 2166,
+   "elem": 4,
+   "spellings": [
+    "RxObjSpace3DVertex*"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "pointer",
+    "triv_dtor",
+    "triv_copy",
+    "ptr_elem"
+   ]
+  },
+  "struct rw::d3d::Im3DVertex[4]": {
+   "size": 144,
+   "align": 4,
+   "flags": 238,
+   "elem": 36,
+   "spellings": [
+    "RwIm3DVertex[uiNumVertices]",
+    "RxObjSpace3DVertex[NUM_STREAK_VERTICES]"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "triv_copy",
+    "array"
+   ]
+  },
+  "struct sReverbEnvironment[68]": {
+   "size": 544,
+   "align": 4,
+   "flags": 238,
+   "elem": 8,
+   "spellings": [
+    "sReverbEnvironment[NUM_AUDIO_ENVIRONMENTS]"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "triv_copy",
+    "array"
+   ]
+  },
+  "struct tBrightLight[32]": {
+   "size": 1792,
+   "align": 4,
+   "flags": 174,
+   "elem": 56,
+   "spellings": [
+    "tBrightLight[MAX_NUM_BRIGHTLIGHTS]"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "array"
+   ]
+  },
+  "struct tMovingFog": {
+   "size": 10236,
+   "align": 4,
+   "flags": 302,
+   "elem": 10236,
+   "spellings": [
+    "tMovingFog"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "class"
+   ]
+  },
+  "struct tPedColNodeInfo[12]": {
+   "size": 336,
+   "align": 4,
+   "flags": 174,
+   "elem": 28,
+   "spellings": [
+    "tPedColNodeInfo[NUM_PED_COL_NODE_INFOS]"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "array"
+   ]
+  },
+  "struct tPedGroupTranslationData[33]": {
+   "size": 396,
+   "align": 4,
+   "flags": 236,
+   "elem": 12,
+   "spellings": [
+    "tPedGroupTranslationData[POPCYCLE_TOTAL_GROUPS]"
+   ],
+   "traits": [
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "triv_copy",
+    "array"
+   ]
+  },
+  "struct tRadioIndexHistory<int,15>[14]": {
+   "size": 840,
+   "align": 4,
+   "flags": 236,
+   "elem": 60,
+   "spellings": [
+    "DJBanterIndexHistory[RADIO_COUNT]"
+   ],
+   "traits": [
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "triv_copy",
+    "array"
+   ]
+  },
+  "struct tRadioIndexHistory<int,40>[14]": {
+   "size": 2240,
+   "align": 4,
+   "flags": 236,
+   "elem": 160,
+   "spellings": [
+    "AdvertIndexHistory[RADIO_COUNT]"
+   ],
+   "traits": [
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "triv_copy",
+    "array"
+   ]
+  },
+  "struct tRadioIndexHistory<int,8>[14]": {
+   "size": 448,
+   "align": 4,
+   "flags": 236,
+   "elem": 32,
+   "spellings": [
+    "IdentIndexHistory[RADIO_COUNT]"
+   ],
+   "traits": [
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "triv_copy",
+    "array"
+   ]
+  },
+  "struct tRadioIndexHistory<signed char,20>[14]": {
+   "size": 280,
+   "align": 1,
+   "flags": 236,
+   "elem": 20,
+   "spellings": [
+    "MusicTrackHistory[RADIO_COUNT]"
+   ],
+   "traits": [
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "triv_copy",
+    "array"
+   ]
+  },
+  "struct tRadioSoundRange": {
+   "size": 8,
+   "align": 4,
+   "flags": 366,
+   "elem": 8,
+   "spellings": [
+    "tRadioSoundRange"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "triv_copy",
+    "class"
+   ]
+  },
+  "struct tRadioSoundRange[12]": {
+   "size": 96,
+   "align": 4,
+   "flags": 238,
+   "elem": 8,
+   "spellings": [
+    "tRadioSoundRange[12]"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "triv_copy",
+    "array"
+   ]
+  },
+  "struct tRadioSoundRange[12][31]": {
+   "size": 2976,
+   "align": 4,
+   "flags": 238,
+   "elem": 8,
+   "spellings": [
+    "tRadioSoundRange[12][31]"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "triv_copy",
+    "array"
+   ]
+  },
+  "struct tRenderListEntry*": {
+   "size": 4,
+   "align": 4,
+   "flags": 2166,
+   "elem": 4,
+   "spellings": [
+    "tRenderListEntry*"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "pointer",
+    "triv_dtor",
+    "triv_copy",
+    "ptr_elem"
+   ]
+  },
+  "struct tRestoreEntry[256]": {
+   "size": 2048,
+   "align": 4,
+   "flags": 238,
+   "elem": 8,
+   "spellings": [
+    "tRestoreEntry[NUM_RESTORE_ENTRIES]"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "triv_copy",
+    "array"
+   ]
+  },
+  "struct tScannerSlot*": {
+   "size": 4,
+   "align": 4,
+   "flags": 2166,
+   "elem": 4,
+   "spellings": [
+    "tScannerSlot*"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "pointer",
+    "triv_dtor",
+    "triv_copy",
+    "ptr_elem"
+   ]
+  },
+  "struct tScannerSlot[5]": {
+   "size": 20,
+   "align": 2,
+   "flags": 236,
+   "elem": 4,
+   "spellings": [
+    "tScannerSlot[NUM_POLICE_SCANNER_SLOTS]"
+   ],
+   "traits": [
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "triv_copy",
+    "array"
+   ]
+  },
+  "struct tStreamingFileDesc[8]": {
+   "size": 384,
+   "align": 4,
+   "flags": 236,
+   "elem": 48,
+   "spellings": [
+    "tStreamingFileDesc[TOTAL_IMG_ARCHIVES]"
+   ],
+   "traits": [
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "triv_copy",
+    "array"
+   ]
+  },
+  "struct tTransmissionGear*": {
+   "size": 4,
+   "align": 4,
+   "flags": 2166,
+   "elem": 4,
+   "spellings": [
+    "tTransmissionGear*"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "pointer",
+    "triv_dtor",
+    "triv_copy",
+    "ptr_elem"
+   ]
+  },
+  "struct tVehicleAudioSettings*": {
+   "size": 4,
+   "align": 4,
+   "flags": 2166,
+   "elem": 4,
+   "spellings": [
+    "tVehicleAudioSettings*"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "pointer",
+    "triv_dtor",
+    "triv_copy",
+    "ptr_elem"
+   ]
+  },
+  "struct tVolumetricClouds": {
+   "size": 5800,
+   "align": 4,
+   "flags": 302,
+   "elem": 5800,
+   "spellings": [
+    "tVolumetricClouds"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "class"
+   ]
+  },
+  "struct tWaterCreatureInfo[7]": {
+   "size": 308,
+   "align": 4,
+   "flags": 238,
+   "elem": 44,
+   "spellings": [
+    "tWaterCreatureInfo[NUM_WATER_CREATURE_INFOS]"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "triv_copy",
+    "array"
+   ]
+  },
+  "union _LARGE_INTEGER": {
+   "size": 8,
+   "align": 8,
+   "flags": 366,
+   "elem": 8,
+   "spellings": [
+    "LARGE_INTEGER"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "triv_copy",
+    "class"
+   ]
+  },
+  "unsigned __int64": {
+   "size": 8,
+   "align": 8,
+   "flags": 102,
+   "elem": 8,
+   "spellings": [
+    "uint64"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "triv_dtor",
+    "triv_copy"
+   ]
+  },
+  "unsigned __int64(__cdecl *)(void)": {
+   "size": 4,
+   "align": 4,
+   "flags": 2166,
+   "elem": 4,
+   "spellings": [
+    "TimerFunction_t"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "pointer",
+    "triv_dtor",
+    "triv_copy",
+    "ptr_elem"
+   ]
+  },
+  "unsigned char": {
+   "size": 1,
+   "align": 1,
+   "flags": 102,
+   "elem": 1,
+   "spellings": [
+    "uint8"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "triv_dtor",
+    "triv_copy"
+   ]
+  },
+  "unsigned char*": {
+   "size": 4,
+   "align": 4,
+   "flags": 2166,
+   "elem": 4,
+   "spellings": [
+    "RwUInt8*",
+    "uint8*"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "pointer",
+    "triv_dtor",
+    "triv_copy",
+    "ptr_elem"
+   ]
+  },
+  "unsigned char**": {
+   "size": 4,
+   "align": 4,
+   "flags": 2166,
+   "elem": 4,
+   "spellings": [
+    "uint8**"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "pointer",
+    "triv_dtor",
+    "triv_copy",
+    "ptr_elem"
+   ]
+  },
+  "unsigned char*[2]": {
+   "size": 8,
+   "align": 4,
+   "flags": 2286,
+   "elem": 4,
+   "spellings": [
+    "uint8*[2]"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "triv_copy",
+    "array",
+    "ptr_elem"
+   ]
+  },
+  "unsigned char[12][2][20]": {
+   "size": 480,
+   "align": 1,
+   "flags": 238,
+   "elem": 1,
+   "spellings": [
+    "PercDataArray"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "triv_copy",
+    "array"
+   ]
+  },
+  "unsigned char[12][2][20][18]": {
+   "size": 8640,
+   "align": 1,
+   "flags": 238,
+   "elem": 1,
+   "spellings": [
+    "uint8[24 / PERC_DATA_TIME_RESOLUTION_HR][2][(uint32)(eZonePopulationType::COUNT)][POPCYCLE_TOTAL_GROUP_PERCS]"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "triv_copy",
+    "array"
+   ]
+  },
+  "unsigned char[32768]": {
+   "size": 32768,
+   "align": 1,
+   "flags": 238,
+   "elem": 1,
+   "spellings": [
+    "uint8[0x8000]"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "triv_copy",
+    "array"
+   ]
+  },
+  "unsigned char[32]": {
+   "size": 32,
+   "align": 1,
+   "flags": 238,
+   "elem": 1,
+   "spellings": [
+    "GxtChar[32]"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "triv_copy",
+    "array"
+   ]
+  },
+  "unsigned char[32][32]": {
+   "size": 1024,
+   "align": 1,
+   "flags": 238,
+   "elem": 1,
+   "spellings": [
+    "uint8[32][32]"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "triv_copy",
+    "array"
+   ]
+  },
+  "unsigned char[400]": {
+   "size": 400,
+   "align": 1,
+   "flags": 238,
+   "elem": 1,
+   "spellings": [
+    "GxtChar[400]"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "triv_copy",
+    "array"
+   ]
+  },
+  "unsigned char[4]": {
+   "size": 4,
+   "align": 1,
+   "flags": 238,
+   "elem": 1,
+   "spellings": [
+    "uint8[NUM_CURRENT_COLORS]",
+    "uint8[NUM_LIGHTS]"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "triv_copy",
+    "array"
+   ]
+  },
+  "unsigned char[50]": {
+   "size": 50,
+   "align": 1,
+   "flags": 238,
+   "elem": 1,
+   "spellings": [
+    "GxtChar[50]"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "triv_copy",
+    "array"
+   ]
+  },
+  "unsigned char[552]": {
+   "size": 552,
+   "align": 1,
+   "flags": 238,
+   "elem": 1,
+   "spellings": [
+    "GxtChar[552]"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "triv_copy",
+    "array"
+   ]
+  },
+  "unsigned char[7][128]": {
+   "size": 896,
+   "align": 1,
+   "flags": 238,
+   "elem": 1,
+   "spellings": [
+    "GxtChar[NUM_MESSAGE_STYLES][BIG_MESSAGE_SIZE]"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "triv_copy",
+    "array"
+   ]
+  },
+  "unsigned char[80]": {
+   "size": 80,
+   "align": 1,
+   "flags": 238,
+   "elem": 1,
+   "spellings": [
+    "GxtChar[80]"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "triv_copy",
+    "array"
+   ]
+  },
+  "unsigned int": {
+   "size": 4,
+   "align": 4,
+   "flags": 102,
+   "elem": 4,
+   "spellings": [
+    "RwUInt32",
+    "size_t",
+    "uint32"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "triv_dtor",
+    "triv_copy"
+   ]
+  },
+  "unsigned int[6]": {
+   "size": 24,
+   "align": 4,
+   "flags": 238,
+   "elem": 4,
+   "spellings": [
+    "uint32[NUM_CUTSCENE_VEHS]"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "triv_copy",
+    "array"
+   ]
+  },
+  "unsigned long": {
+   "size": 4,
+   "align": 4,
+   "flags": 102,
+   "elem": 4,
+   "spellings": [
+    "DWORD"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "triv_dtor",
+    "triv_copy"
+   ]
+  },
+  "unsigned short": {
+   "size": 2,
+   "align": 2,
+   "flags": 102,
+   "elem": 2,
+   "spellings": [
+    "uint16"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "triv_dtor",
+    "triv_copy"
+   ]
+  },
+  "unsigned short*": {
+   "size": 4,
+   "align": 4,
+   "flags": 2166,
+   "elem": 4,
+   "spellings": [
+    "RxVertexIndex*"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "pointer",
+    "triv_dtor",
+    "triv_copy",
+    "ptr_elem"
+   ]
+  },
+  "unsigned short[12]": {
+   "size": 24,
+   "align": 2,
+   "flags": 238,
+   "elem": 2,
+   "spellings": [
+    "RxVertexIndex[NUM_STREAK_INDICES]"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "triv_copy",
+    "array"
+   ]
+  },
+  "unsigned short[4096]": {
+   "size": 8192,
+   "align": 2,
+   "flags": 238,
+   "elem": 2,
+   "spellings": [
+    "RxVertexIndex[TOTAL_TEMP_BUFFER_INDICES]"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "triv_copy",
+    "array"
+   ]
+  },
+  "unsigned short[6]": {
+   "size": 12,
+   "align": 2,
+   "flags": 238,
+   "elem": 2,
+   "spellings": [
+    "RwImVertexIndex[uiNumIndices]"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "triv_copy",
+    "array"
+   ]
+  },
+  "void(__cdecl *)(void)": {
+   "size": 4,
+   "align": 4,
+   "flags": 2166,
+   "elem": 4,
+   "spellings": [
+    "rwD3D9DeviceRestoreCallBack"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "pointer",
+    "triv_dtor",
+    "triv_copy",
+    "ptr_elem"
+   ]
+  },
+  "void(__cdecl *[92])(void)": {
+   "size": 368,
+   "align": 4,
+   "flags": 2286,
+   "elem": 4,
+   "spellings": [
+    "void(*[TOTAL_CHEATS])()"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "triv_copy",
+    "array",
+    "ptr_elem"
+   ]
+  },
+  "void*": {
+   "size": 4,
+   "align": 4,
+   "flags": 2166,
+   "elem": 4,
+   "spellings": [
+    "HANDLE",
+    "void*"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "pointer",
+    "triv_dtor",
+    "triv_copy",
+    "ptr_elem"
+   ]
+  },
+  "void*[32]": {
+   "size": 128,
+   "align": 4,
+   "flags": 2286,
+   "elem": 4,
+   "spellings": [
+    "HANDLE[MAX_CD_STREAM_HANDLES]"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "triv_copy",
+    "array",
+    "ptr_elem"
+   ]
+  },
+  "void*[3]": {
+   "size": 12,
+   "align": 4,
+   "flags": 2286,
+   "elem": 4,
+   "spellings": [
+    "void*[3]"
+   ],
+   "traits": [
+    "triv_def",
+    "def_ctor",
+    "aggregate",
+    "triv_dtor",
+    "triv_copy",
+    "array",
+    "ptr_elem"
+   ]
+  }
+ }
+}

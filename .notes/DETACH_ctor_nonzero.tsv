@@ -1,0 +1,121 @@
+addr	type	verdict	evidence	suggested_fix
+0x8E48AC	rw::Stream (RwStream)	VPTR	librw rwbase.h:486 rw::Stream has virtual ~Stream/close (vptr at +0x00 != 0) and is abstract -> cannot be a plain global; exe image is a plain 4-byte struct (standalone/rw/stream.cpp:17 already treats gRwStream storage as opaque)	emit as zero-initialised wrapper
+0x8E48D8	tStreamingFileDesc[8]	NONZERO	Streaming.h:~160 StreamHandle{(uint32)(-1)}: 0xFFFFFFFF at +0x2C of every 0x30-byte element (+0x2C,+0x5C,...,+0x15C); Name/IsNotPlayerImg zero	change member init in header
+0x8E4C24	CLoadedCarGroup	NONZERO	LoadedCarGroup.h:13 ctor -> Clear() (LoadedCarGroup.cpp:156) rng::fill(m_models, SENTINEL_VALUE_OF_UNUSED = (int16)MODEL_INVALID = -1) : all 46 bytes = 0xFF (std::array<int16,23>)	change member init in header (or ctor -> zero fill and treat 0 as empty; changes semantics)
+0x8E4CC0	std::array<CStreamingInfo,26316>	NONZERO	StreamingInfo.h:~97 m_NextIndex/m_PrevIndex/m_NextIndexOnCd{-1}: 0xFFFF at +0,+2,+4 (6 bytes FF) of each 0x14-byte element; other members zero/uninit	change member init in header
+0x9654F0	CLinkList<T*>	ZERO	Core/LinkList.h:11 all members {} (CLink<T> has no ctor; data is a pointer/zero) -> all zero. No dtor	none
+0x965554	WEnum<eAreaCodes,int>	ZERO	extensions/WEnum.hpp:16 WEnum(Enum e = {}) -> m_Value = 0 (AREA_CODE_NORMAL_WORLD, NOT AREA_CODE_NONE=-1); Enums/eAreaCodes.h:8	none
+0x96592C	CLinkList<T*>	ZERO	Core/LinkList.h:11 all members {} -> all zero	none
+0x9659FC	CStoredCollPoly	ZERO	StoredCollPoly.h:11 verts[3]{}, valid{}, ligthing{} all zero; _pad uninit (zero in static storage)	none
+0x9690F8	CNodeAddress	NONZERO	NodeAddress.h:11-12 m_wAreaId{(uint16)-1}, m_wNodeId{(uint16)-1}: FF FF FF FF at +0x00	change member init in header
+0x9690FC	CNodeAddress	NONZERO	NodeAddress.h:11-12 m_wAreaId{(uint16)-1}, m_wNodeId{(uint16)-1}: FF FF FF FF at +0x00	change member init in header
+0x969100	CNodeAddress	NONZERO	NodeAddress.h:11-12 m_wAreaId{(uint16)-1}, m_wNodeId{(uint16)-1}: FF FF FF FF at +0x00	change member init in header
+0x969104	CNodeAddress	NONZERO	NodeAddress.h:11-12 m_wAreaId{(uint16)-1}, m_wNodeId{(uint16)-1}: FF FF FF FF at +0x00	change member init in header
+0x96F050	CPathFind	NONZERO	PathFind.h:191 CNodeAddress m_Info (NodeAddress.h:11-12, both uint16 = 0xFFFF) -> FF FF FF FF at +0x00; all other members (pointer/uint arrays, CNodesSwitchedOnOrOff) initialiser-less	change member init in header
+0x978680	std::array<tPickupMessage,16>	ZERO	tPickupMessage.h:12 CVector pos / CRGBA color (RGBA.h:15 r{},g{},b{},a{}) / scalars: no initialisers; CVector defaulted (RwV3d POD)	none
+0x9788C0	std::array<CPickup,620>	ZERO	Pickup.h:48 no ctor/initialisers; CompressedLargeVector = FixedVector<int16,8> (extensions/FixedVector.hpp:15 x{},y{},z{}; FixedFloat.hpp:51 value{}) -> zero	none
+0x97F670	CReplay::CVector_Reversed	ZERO	Replay.h:30-42 only ctor is CVector_Reversed(const CVector&) -> NO default ctor (cannot declare as a global as is); floats uninit -> zero in static storage	constexpr-zero ctor (add `CVector_Reversed() = default;`)
+0x97FAC0	CReplay::CVector_Reversed	ZERO	Replay.h:30-42 only ctor is CVector_Reversed(const CVector&) -> NO default ctor (cannot declare as a global as is); floats uninit -> zero in static storage	constexpr-zero ctor (add `CVector_Reversed() = default;`)
+0x97FB24	CReplay::CVector_Reversed	ZERO	Replay.h:30-42 only ctor is CVector_Reversed(const CVector&) -> NO default ctor (cannot declare as a global as is); floats uninit -> zero in static storage	constexpr-zero ctor (add `CVector_Reversed() = default;`)
+0x97FB64	CReplay::CAddressInReplayBuffer	ZERO	Replay.h:137-143 m_nOffset{0}, m_pBase{nullptr}, m_bSlot{0}; ctor = default	none
+0x97FB70	CReplay::CAddressInReplayBuffer	ZERO	Replay.h:137-143 m_nOffset{0}, m_pBase{nullptr}, m_bSlot{0}; ctor = default	none
+0xA43C78	std::array<tScriptParam,N>	ZERO	Scripts/ScriptParam.h:14 union member uParam{0u} (only active initialiser) -> zero	none
+0xA43F68	tScriptSequence	NONZERO	Scripts/TheScripts.h:~120 ctor m_bUsed=false, m_nId=1: 0x0001 (int16) at +0x02 of each 4-byte element	change member init in header
+0xA44070	tScriptCheckpoint	NONZERO	Scripts/TheScripts.h:76-82 ctor m_nId = 1: 0x0001 (int16) at +0x02 of each 8-byte element; m_bUsed=false, m_Checkpoint=nullptr	change member init in header
+0xA44110	tScriptEffectSystem	NONZERO	Scripts/TheScripts.h:96-102 ctor m_nId = 1: 0x0001 (int16) at +0x02 of each 8-byte element	change member init in header
+0xA44800	tScriptConnectLodsObject	NONZERO	Scripts/TheScripts.h:~300 ctor a = -1 (+0x00), b = -1 (+0x04): FF bytes in each 8-byte element	change member init in header
+0xA44850	tScriptAttachedAnimGroup	NONZERO	Scripts/TheScripts.h:196-202 ctor m_nModelID = -1 at +0x00 of each 20-byte element (m_IfpName[0]=0)	change member init in header
+0xA44A30	tBuildingSwap	NONZERO	Scripts/TheScripts.h:48-57 ctor->Clear(): m_nNewModelIndex = -1 (+0x04), m_nOldModelIndex = -1 (+0x08) of each 12-byte element	change member init in header
+0xA476B0	tScriptBrainWaitEntity	NONZERO	Scripts/TheScripts.h:285-289 m_ScriptBrainIndex{-1}: 0xFFFF at +0x04 of each 8-byte element; EntityRef<> (extensions/EntityRef.hpp:10) ctor null = 0 but has non-trivial dtor (runs at exit; null -> no-op)	change member init in header
+0xA47B60	CStreamedScripts	NONZERO	StreamedScripts.h:~18 CStreamedScriptInfo.m_IndexUsedByScriptFile{-1}: 0xFFFF at +0x06 of each of the 82 elements (stride 0x20, +0x06,+0x26,...); others {}	change member init in header
+0xA485A8	CScriptResourceManager	NONZERO	ScriptResourceManager.h:~18 tScriptResource ctor m_nModelId = -1 at +0x00 of each 12-byte element x75; ALSO ScriptResourceManager.h:~35 `CScriptResourceManager() = delete;` -> cannot be declared as a global	change member init in header + remove `= delete` (or wrapper)
+0xA4892C	CUpsideDownCarCheck	NONZERO	UpsideDownCarCheck.h:~12-20 UpsideDownCar ctor->Clear(): m_nHandle = -1 at +0x00 of each 8-byte element x6 (+0,+8,...,+0x28)	change member init in header
+0xA48960	std::array<tScriptParam,N>	ZERO	Scripts/ScriptParam.h:14 union member uParam{0u} (only active initialiser) -> zero	none
+0xA8B430	std::array<CRunningScript,96>	ZERO	Scripts/RunningScript.h:188 no ctor/initialisers; tScriptParam arrays zero (ScriptParam.h:14), no vptr	none
+0xA90850	CMissionCleanup	ZERO	MissionCleanup.h / .cpp:38-48 ctor->Init(): m_Count=0, m_Objects.fill(tMissionCleanupEntity{type=0,handle=0}) -> zero (user ctor but only writes zeros)	none
+0xA91268	tScriptSphere	NONZERO	Scripts/TheScripts.h:253-266 ctor m_nUniqueId = 1: 0x0001 (int16) at +0x02 of each 24-byte element (m_nId=0, m_fRadius=0, m_vCoords=0)	change member init in header
+0xA94D68	tScriptSearchlight	ZERO	Scripts/TheScripts.h:214-237 all members {} (bitfield {} , CVector{}, floats{}, notsa::EntityRef<>{} -> null). EntityRef has non-trivial dtor (runs at static destruction, null ptr -> no-op); no vptr	none
+0xA95818	std::array<CSetPiece,210>	ZERO	SetPiece.h:21-31 m_nLastGenerationTime{}, FixedRect/FixedVector2D {} (FixedFloat.hpp:51 value{}), m_nType{SETPIECE_NONE=0}; ctor = default	none
+0xB4C2D8	CStore<C2dEffect,100>	ZERO	Core/Store.h:15 user ctor writes m_nCount = 0 only; m_aObjects default-init: C2dEffect (Plugins/TwoDEffectPlugin/2dEffect.h:245) is initialiser-less POD (CVector m_Pos + union of PODs)	none
+0xB4E480	CRGBA[128]	ZERO	RGBA.h:15 r{},g{},b{},a{} -> zero; ctor = default	none
+0xB5EB20	CLinkList<T*>	ZERO	Core/LinkList.h:11 all members {} -> all zero	none
+0xB613EC	std::array<WEnum<eGlobalSpeechContext,short>,8>	ZERO	extensions/WEnum.hpp:16 WEnum(Enum e = {}) -> m_Value = 0 (NOT the CTX_GLOBAL_UNK sentinel used by tPhraseMemory/GCtx{} elsewhere)	none
+0xB61418	std::array<tPhraseMemory,150>	NONZERO	Audio/Entities/AEPedSpeechAudioEntity.h:77-80 SoundID{-1} (+0x00), BankID{SND_BANK_UNK=-1} (Audio/Enums/eSoundBank.h:7, +0x02): FF FF FF FF for each 4-byte element	change member init in header
+0xB61D20	tScannerSlot[5]	NONZERO	Audio/Entities/AEPoliceScannerAudioEntity.h:5-8 Bank{SND_BANK_UNK=-1}, SoundID{-1}: all bytes 0xFF in each of the 5 elements	change member init in header
+0xB61D34	tScannerSlot[5]	NONZERO	Audio/Entities/AEPoliceScannerAudioEntity.h:5-8 Bank{SND_BANK_UNK=-1}, SoundID{-1}: all bytes 0xFF in each of the 5 elements	change member init in header
+0xB61D78	tRadioIndexHistory<int,15>[14]	NONZERO	Audio/Managers/AERadioTrackManager.h:103-104 `std::array<T,Count> indices{-1};` -> element 0 = -1 (FF FF FF FF at +0x00 of each 0x3C-byte struct); elements 1..14 = 0 (brace-init, rest value-initialised)	change member init in header
+0xB620C0	tRadioIndexHistory<int,40>[14]	NONZERO	AERadioTrackManager.h:103-104 indices{-1}: FF FF FF FF at +0x00 of each 0xA0-byte struct; rest 0	change member init in header
+0xB62980	tRadioIndexHistory<int,8>[14]	NONZERO	AERadioTrackManager.h:103-104 indices{-1}: FF FF FF FF at +0x00 of each 0x20-byte struct; rest 0	change member init in header
+0xB62B40	tRadioIndexHistory<int8,20>[14]	NONZERO	AERadioTrackManager.h:103-104 indices{-1}: 0xFF at +0x00 of each 0x14-byte struct; rest 0	change member init in header
+0xB6B9A0	std::array<tDummyEngineSlot,10>	NONZERO	Audio/Entities/AEVehicleAudioEntity.h:584-587 BankID{SND_BANK_UNK=-1} (int16 FFFF at +0x00 of each 4-byte element), RefCnt{0}	change member init in header
+0xB6DCD0	std::array<tAudioZoneBox,158>	ZERO	Audio/AudioZones.h:6-24 tAudioZoneData POD; CompressedBox (CompressedBox.h:6) = 2x FixedVector<int16> {} -> zero	none
+0xB6EBA8	std::array<tAudioZoneSphere,3>	ZERO	Audio/AudioZones.h:13 tAudioZoneData POD + CSphere (Collision/Sphere.h:13 m_vecCenter{}, m_fRadius{})	none
+0xB6FE40	CMatrix	ZERO	Core/Matrix.h:33 CMatrix() = default; m_pAttachMatrix{}, m_bOwnsAttachedMatrix{}; other members POD. Non-trivial dtor ~CMatrix (Matrix.h:47) detaches only if attached -> no-op when null	none
+0xB72914	WEnum<eAreaCodes,int>	ZERO	extensions/WEnum.hpp:16 WEnum(Enum e = {}) -> m_Value = 0 (AREA_CODE_NORMAL_WORLD, NOT AREA_CODE_NONE=-1); Enums/eAreaCodes.h:8	none
+0xB72CB0	CKeyboardState	ZERO	KeyboardState.h:5-30 every member {} (std::array<int16,N>{}, int16{})	none
+0xB72F20	CKeyboardState	ZERO	KeyboardState.h:5-30 every member {} (std::array<int16,N>{}, int16{})	none
+0xB73190	CKeyboardState	ZERO	KeyboardState.h:5-30 every member {} (std::array<int16,N>{}, int16{})	none
+0xB73404	CMouseControllerState	ZERO	MouseControllerState.h:5-13 members {}; user ctor (MouseControllerState.cpp:15) writes m_fWheelMoved=0, m_AmountMoved.Reset() (=0,0), Clear() (all false) -> zero	none
+0xB73418	CMouseControllerState	ZERO	MouseControllerState.h:5-13 members {}; user ctor (MouseControllerState.cpp:15) writes m_fWheelMoved=0, m_AmountMoved.Reset() (=0,0), Clear() (all false) -> zero	none
+0xB7342C	CMouseControllerState	ZERO	MouseControllerState.h:5-13 members {}; user ctor (MouseControllerState.cpp:15) writes m_fWheelMoved=0, m_AmountMoved.Reset() (=0,0), Clear() (all false) -> zero	none
+0xB7C550	std::array<CTimeCycleBox,20>	ZERO	TimeCycle.h:9-18 CBox Box (Collision/Box.h:14 {} ), other members initialiser-less; no ctor	none
+0xB9ACC8	CPtrListDoubleLink<T*>	ZERO	Core/PtrList.h:66,191 CPtrList() = default; NodeType* m_Head{} -> zero. NOTE ~CPtrList() calls Flush() (PtrList.h:67) at static destruction (no-op while empty)	none
+0xB9ACCC	CPtrListDoubleLink<T*>	ZERO	Core/PtrList.h:66,191 CPtrList() = default; NodeType* m_Head{} -> zero. NOTE ~CPtrList() calls Flush() (PtrList.h:67) at static destruction (no-op while empty)	none
+0xBA18F4	CPlaceName	ZERO	PlaceName.cpp:17-19 ctor sets m_pZone = nullptr only (m_nAdditionalTimer uninit -> 0 in static storage)	none
+0xBA18FC	CCurrentVehicle	ZERO	CurrentVehicle.cpp:14-21 ctor->Init(): m_pVehicle = nullptr	none
+0xBA1908	std::array<CZone,N>	ZERO	Zone.h:27-39 every member {} (labels, int16s, eZoneType{}, eLevelName{}) 	none
+0xBA1DF0	std::array<CZoneInfo,380>	NONZERO	ZoneInfo.h:46-51 anonymous-struct bitfields PopType:5{+RESIDENTIAL_AVERAGE=5} -> byte +0x0F = 0x05; PopRaces:4{0b1111} -> byte +0x10 = 0x0F, in each 0x11-byte element (+0xF/+0x10 of each)	change member init in header
+0xBA3798	std::array<CZone,N>	ZERO	Zone.h:27-39 every member {} (labels, int16s, eZoneType{}, eLevelName{}) 	none
+0xBAA35C	CRect	NONZERO	Core/Rect.h:46-49 left{1000000.0F} (+0x00), top{-1000000.0F} (+0x04), right{-1000000.0F} (+0x08), bottom{1000000.0F} (+0x0C)	change member init in header (or use a wrapper / a CRect-with-explicit-zero local type for this static)
+0xBAD3EC	TList_c<FurnitureEntity_c>	ZERO	Core/List_c.h:~355 TList_c() = default; m_head{}, m_tail{}, m_cnt{} -> zero (copy deleted)	none
+0xBC12E4	CPool<COctTree,COctTree>	NONZERO	Core/Pool.h:433 int32 m_LastFreeSlot{-1}: FF FF FF FF at +0x0C (others {}); also ~CPool() calls Flush() at static destruction (Pool.h:102). Pool has user ctors but default one is `= default`	change member init in header
+0xBC1C78	CPedClothesDesc	ZERO	PedClothesDesc.cpp:23-38 ctor->Initialise(): fills keys with 0, fat/muscle = 0.0f	none
+0xC02D18	CustomEnvMapPipeMaterialData	NONZERO	Pipelines/CustomCarEnvMap/CustomCarEnvMapPipeline.h:27-31 Scale{1.f,1.f} -> FixedVector2D<int8,8> = 08 08 at +0x00,+0x01; TranslationScale{1.f,1.f} = 08 08 at +0x02,+0x03; Shininess{1.f} FixedFloat<uint8,255> = 0xFF at +0x04; RenderFrame{}, Texture{} zero	change member init in header
+0xC02DE8	CPPTriPlantBuffer	ZERO	PPTriPlantBuffer.cpp:22-26 user ctor: m_CurrentIndex=0, m_PlantModelsSet=0, fill(m_pPlantModelsTab, nullptr); m_Buffer = std::array<PPTriPlant,N> where PPTriPlant (PPTriPlantBuffer.h:9) is initialiser-less (CVector/CRGBA zero-default)	none
+0xC0985C	SArray<T>	ZERO	Core/SArray.h:12-16 allocator{}, _First{}, _Last{}, _End{}; SArray() = default. ~SArray() calls clear() at static destruction (SArray.h:38)	none
+0xC0986C	SArray<T>	ZERO	Core/SArray.h:12-16 allocator{}, _First{}, _Last{}, _End{}; SArray() = default. ~SArray() calls clear() at static destruction (SArray.h:38)	none
+0xC0E998	CLoadedCarGroup	NONZERO	LoadedCarGroup.h:13 ctor -> Clear() (LoadedCarGroup.cpp:156) rng::fill(m_models, SENTINEL_VALUE_OF_UNUSED = (int16)MODEL_INVALID = -1) : all 46 bytes = 0xFF (std::array<int16,23>)	change member init in header (or ctor -> zero fill and treat 0 as empty; changes semantics)
+0xC0E9C8	CLoadedCarGroup	NONZERO	LoadedCarGroup.h:13 ctor -> Clear() (LoadedCarGroup.cpp:156) rng::fill(m_models, SENTINEL_VALUE_OF_UNUSED = (int16)MODEL_INVALID = -1) : all 46 bytes = 0xFF (std::array<int16,23>)	change member init in header (or ctor -> zero fill and treat 0 as empty; changes semantics)
+0xC0E9F8	CLoadedCarGroup	NONZERO	LoadedCarGroup.h:13 ctor -> Clear() (LoadedCarGroup.cpp:156) rng::fill(m_models, SENTINEL_VALUE_OF_UNUSED = (int16)MODEL_INVALID = -1) : all 46 bytes = 0xFF (std::array<int16,23>)	change member init in header (or ctor -> zero fill and treat 0 as empty; changes semantics)
+0xC0EA28	std::array<CLoadedCarGroup,10>	NONZERO	LoadedCarGroup.h:13 ctor -> Clear() (LoadedCarGroup.cpp:156) rng::fill(m_models, SENTINEL_VALUE_OF_UNUSED = (int16)MODEL_INVALID = -1) : all 460 bytes (10 x 46) = 0xFF (std::array<int16,23>)	change member init in header (or ctor -> zero fill and treat 0 as empty; changes semantics)
+0xC17884	CColSphere	ZERO	Collision/ColSphere.h:21 = default; CSphere base {} (Sphere.h:13-14) + CColSurface (ColSurface.h:3-7 all {} )	none
+0xC18D50	CPointRoute	ZERO	PedGeometryAnalyser.h:17 -> notsa::Route<CVector,8> (Route.hpp:~53-54 m_NumEntries{}, m_Entries{}) -> zero. operator new/delete overrides irrelevant for a global	none
+0xC197C8	std::array<CCoverPoint,100>	ZERO	CoverPoint.h:39,58-64 CCoverPoint() = default; all members {} (eType NONE=0, eUsage LOWCOVER=0, FixedFloat, CVector, EntityRef<> null). EntityRef has non-trivial dtor (exit-time, null -> no-op)	none
+0xC1A2B8	CPtrListDoubleLink<T*>	ZERO	Core/PtrList.h:66,191 CPtrList() = default; NodeType* m_Head{} -> zero. NOTE ~CPtrList() calls Flush() (PtrList.h:67) at static destruction (no-op while empty)	none
+0xC1A570	std::array<tPreviousBrief,20>	ZERO	Messages.h:~60 all members {} (Text, NumbersToInsert{}, StringToInsert)	none
+0xC1A7F0	std::array<tMessage,8>	ZERO	Messages.h:7-50 tMessage() = default; all members {}. ~tMessage writes Text=nullptr (harmless at exit)	none
+0xC1A970	std::array<tBigMessage,7>	ZERO	Messages.h:~55 Stack{} of tMessage (all {} , default ctor) 	none
+0xC1C220	CMatrix	ZERO	Core/Matrix.h:33 CMatrix() = default; m_pAttachMatrix{}, m_bOwnsAttachedMatrix{}; other members POD. Non-trivial dtor ~CMatrix (Matrix.h:47) detaches only if attached -> no-op when null	none
+0xC1CD98	CColSphere	ZERO	Collision/ColSphere.h:21 = default; CSphere base {} (Sphere.h:13-14) + CColSurface (ColSurface.h:3-7 all {} )	none
+0xC21168	CRGBA	ZERO	RGBA.h:15 r{},g{},b{},a{}; ctor = default	none
+0xC2116C	CRGBA	ZERO	RGBA.h:15 r{},g{},b{},a{}; ctor = default	none
+0xC215F8	std::array<PolyInfo,N>	ZERO	WaterLevel.h:186-205 PolyInfo() = default; m_id:14{}, m_type:2{} -> zero	none
+0xC21B70	std::array<PolyInfo,N>	ZERO	WaterLevel.h:186-205 PolyInfo() = default; m_id:14{}, m_type:2{} -> zero	none
+0xC21C90	std::array<CWaterPolygon<N>,M>	ZERO	WaterLevel.h:34-47 bitfields {}; verts[] uninit (zero in static). BUT only ctor is CWaterPolygon(bool,bool,auto) (WaterLevel.h:35) -> NO default ctor, cannot be declared as a global as is	constexpr-zero ctor (add `CWaterPolygon() = default;`)
+0xC22854	std::array<CWaterPolygon<N>,M>	ZERO	WaterLevel.h:34-47 bitfields {}; verts[] uninit (zero in static). BUT only ctor is CWaterPolygon(bool,bool,auto) (WaterLevel.h:35) -> NO default ctor, cannot be declared as a global as is	constexpr-zero ctor (add `CWaterPolygon() = default;`)
+0xC22910	std::array<CWaterVertex,1021>	ZERO	WaterLevel.h:11-31 CRenPar fields all {}; x,y uninit (zero in static)	none
+0xC27AD0	CCarGenerator[500]	ZERO	TheCarGenerators/CarGenerator.h:32-62 no ctor, no initialisers; CompressedLargeVector m_vecPosn default zero	none
+0xC2B9C8	cHandlingDataMgr	ZERO	cHandlingDataMgr.h:245 `cHandlingDataMgr();` DECLARED BUT NEVER DEFINED in source (grep: no definition) -> link error if it becomes a real global; members have no initialisers (tHandlingData/tBike/tFlying/tBoat are initialiser-less PODs, cTransmission() = default). Initialise() (cpp:231) writes field_0..field_10 floats at runtime only	constexpr-zero ctor (define `cHandlingDataMgr() = default;`)
+0xC38338	CPlantSurfProp[57]	NONZERO	PlantSurfPropMgr.h:29-43 CPlantSurfPropPlantData defaults: model_id=uint16(-1), color{255,255,255,255}, intensity=255, scale_xy=1.0f, scale_z=1.0f (others 0). Layout: m_SlotId +0x00, m_Plants[3] at +0x04 (stride 0x28), prop stride 0x7C: per plant +0 FFFF, +4 FFFFFFFF, +8 FF, +0xC 3F800000, +0x10 3F800000	change member init in header
+0xC3AB00	std::array<C2dEffect,64>	ZERO	Plugins/TwoDEffectPlugin/2dEffect.h:245 initialiser-less POD (CVector m_Pos, e2dEffectType uninit, union of PODs)	none
+0xC3E058	std::array<CRegisteredCorona,64>	ZERO	RegisteredCorona.h:~54-84 every member {} incl. enums (value 0) and bitfields; CRegisteredCorona() = default	none
+0xC716B0	std::array<CFontChar,9>	ZERO	Font.h:17-31 initialiser-less POD (CVector2D/CRGBA default zero)	none
+0xC71A60	CRGBA	ZERO	RGBA.h:15 r{},g{},b{},a{}; ctor = default	none
+0xC71A84	CRGBA	ZERO	RGBA.h:15 r{},g{},b{},a{}; ctor = default	none
+0xC71A97	CRGBA	ZERO	RGBA.h:15 r{},g{},b{},a{}; ctor = default	none
+0xC71AA0	CFontChar	ZERO	Font.h:17-31 initialiser-less POD (CVector2D/CRGBA default zero)	none
+0xC73CC8	std::array<COccluder,N>	ZERO	Occluder.h:~33-52 FixedVector/FixedFloat {} (value{}), bitfield struct uninit; no user ctor	none
+0xC73FA0	std::array<COccluder,N>	ZERO	Occluder.h:~33-52 FixedVector/FixedFloat {} (value{}), bitfield struct uninit; no user ctor	none
+0xC7C620	CRGBA	ZERO	RGBA.h:15 r{},g{},b{},a{}; ctor = default	none
+0xC7CA08	CRegisteredMotionBlurStreak[4]	ZERO	RegisteredMotionBlurStreak.h:12-18 no ctor/initialisers; CRGBA/CVector arrays zero-default	none
+0xC7F158	std::array<CCheckpoint,32>	NONZERO	Checkpoint.h:70-79 m_Type{NA=0x101} (u16 0x0101 at +0x00), m_RotFlag{true} (+0x03 = 1), m_Colour{255,255,255,255} (+0x08), m_PulsePeriod{1024} (+0x0C = 0x0400), m_RotateRate{5} (+0x0E), m_PulseFraction{0.25f} (+0x28 = 0x3E800000), m_Size{1.f} (+0x2C = 0x3F800000); stride 0x38	change member init in header
+0xC87C18	CStack<int,16>	ZERO	MemoryMgr.h:75 CStack() : _nItemCount(0) {}; _aItems uninit (zero in static)	none
+0xC88070	CLinkList<AlphaObjectInfo>	ZERO	Core/LinkList.h:11 members {}; AlphaObjectInfo (VisibilityPlugins.h:84) is an initialiser-less POD -> all zero	none
+0xC880C8	CLinkList<AlphaObjectInfo>	ZERO	Core/LinkList.h:11 members {}; AlphaObjectInfo (VisibilityPlugins.h:84) is an initialiser-less POD -> all zero	none
+0xC88120	CLinkList<AlphaObjectInfo>	ZERO	Core/LinkList.h:11 members {}; AlphaObjectInfo (VisibilityPlugins.h:84) is an initialiser-less POD -> all zero	none
+0xC88178	CLinkList<AlphaObjectInfo>	ZERO	Core/LinkList.h:11 members {}; AlphaObjectInfo (VisibilityPlugins.h:84) is an initialiser-less POD -> all zero	none
+0xC881D0	CLinkList<AlphaObjectInfo>	ZERO	Core/LinkList.h:11 members {}; AlphaObjectInfo (VisibilityPlugins.h:84) is an initialiser-less POD -> all zero	none
+0xC88224	CLinkList<CPed*>	ZERO	Core/LinkList.h:11 all members {} -> all zero	none
+0xC88950	std::array<CExplosion,16>	NONZERO	Explosion.h:38 float m_fRadius{1.0f}: 0x3F800000 at +0x10 of each 0x7C-byte element (m_nType int32 +0x00, m_vecPosition +0x04); rest uninit/zero	change member init in header
+0xC89690	std::array<CShotInfo,100>	NONZERO	ShotInfo.h:25,28 m_nWeaponType{WEAPON_PISTOL=22} (0x16 at +0x00), m_fRange{1.0f} (0x3F800000 at +0x1C) in each 0x2C-byte element	change member init in header
+0xC92144	CJoySticks	ZERO	ControllerConfigManager.h:161-165 / cpp:1358 user ctor -> ClearJoyInfo(0/1): wDeviceID=0, bJoyAttachedToPort/bZAxisPresent/bZRotPresent=false; JoyStickNum{} zero	none

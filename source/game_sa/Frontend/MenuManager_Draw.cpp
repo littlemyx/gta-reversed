@@ -259,9 +259,9 @@ void CMenuManager::DrawBackground() {
 
     // 0x57BC19
     if (m_bScanningUserTracks) {
-        static auto& updateScanningTime = StaticRef<bool>(0x8CDFFA); // true
-        static auto& progressDir = StaticRef<int32>(0x8CDFFC); // -1
-        static auto& progressPos = StaticRef<int32>(0x8CE000); // DEFAULT_SCREEN_WIDTH / 2
+        NOTSA_GLOBAL_LOCAL(updateScanningTime, 0x8CDFFA, (bool), { true }); // true
+        NOTSA_GLOBAL_LOCAL(progressDir, 0x8CDFFC, (int32), { -1 }); // -1
+        NOTSA_GLOBAL_LOCAL(progressPos, 0x8CE000, (int32), { 320 }); // DEFAULT_SCREEN_WIDTH / 2
 
         if (!bScanningUserTracks) {
             bScanningUserTracks = true;

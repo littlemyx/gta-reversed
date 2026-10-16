@@ -396,8 +396,8 @@ void CMenuManager::PrintMap() {
 
 // 0x574900
 void CMenuManager::PrintStats() {
-    static auto& scrollPos      = StaticRef<float>(0x8CDFF4); // -120.0f
-    static auto& prevScreenItem = StaticRef<int8>(0x8CDFF8);  // 15
+    NOTSA_GLOBAL_LOCAL(scrollPos, 0x8CDFF4, (float), { -120.0f }); // -120.0f
+    NOTSA_GLOBAL_LOCAL(prevScreenItem, 0x8CDFF8, (int8), { 15 });  // 15
 
     m_nCurrentScreenItem = std::min(m_nCurrentScreenItem, 8);
     // 0x574933
@@ -530,7 +530,7 @@ void CMenuManager::PrintBriefs() {
     }
     CFont::SetJustify(false); // redundant
 
-    static auto& drawArrows = StaticRef<bool>(0x8CDFF9); // true
+    NOTSA_GLOBAL_LOCAL(drawArrows, 0x8CDFF9, (bool), { true }); // true
 
     if (!m_bMapLoaded)
         return;

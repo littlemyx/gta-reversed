@@ -33,8 +33,11 @@ void ProcObjectDebugModule::RenderWindow() {
             ImGui::InputScalar("CPlantMgr::m_UnusedColEntListHead", ImGuiDataType_U32, &CPlantMgr::m_UnusedColEntListHead, nullptr, nullptr, "%08X");
             ImGui::InputScalar("CPlantMgr::m_CloseColEntListHead", ImGuiDataType_U32, &CPlantMgr::m_CloseColEntListHead, nullptr, nullptr, "%08X");
 
+#ifndef NOTSA_GLOBALS_DETACHED // function-local statics of CPlantMgr::Update(): not nameable from here, only the original image address reaches them
             ImGui::InputScalar("CPlantMgr::Update()::nUpdateEntCache", ImGuiDataType_U8, (int8*)0xC09171);
             ImGui::InputScalar("CPlantMgr::Update()::nLocTriSkipCounter", ImGuiDataType_U8, (int8*)0xC09170);
+#endif
+#line 38
 
             ImGui::Text("CPlantMgr::m_UnusedLocTriListHead Count: %d", ProcObjectDebugModule::IteratePlantLocTriList(CPlantMgr::m_UnusedLocTriListHead));
             for (auto i = 0; i < 4; i++) {

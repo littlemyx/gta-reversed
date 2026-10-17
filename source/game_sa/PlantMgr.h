@@ -17,14 +17,14 @@ constexpr auto PLANTS_ALPHA_MAX_DIST             = 60.0f;
 
 class CPlantMgr {
 public:
-    static inline auto& PC_PlantTextureTab = StaticRef<RwTexture*[4][4]>(0xC039A0);
-    static inline auto& PC_PlantModelsTab = StaticRef<RpAtomic*[4][4]>(0xC039F0);
+    static inline NOTSA_GLOBAL(PC_PlantTextureTab, 0xC039A0, (RwTexture*[4][4]), {});
+    static inline NOTSA_GLOBAL(PC_PlantModelsTab, 0xC039F0, (RpAtomic*[4][4]), {});
 
-    static inline auto& m_scanCode = StaticRef<int16>(0xC03980);
-    static inline auto& m_UnusedLocTriListHead = StaticRef<CPlantLocTri*>(0xC03984);
-    static inline auto& m_CloseLocTriListHead = StaticRef<CPlantLocTri*[4]>(0xC03988);
-    static inline auto& m_UnusedColEntListHead = StaticRef<CPlantColEntEntry*>(0xC03998);
-    static inline auto& m_CloseColEntListHead = StaticRef<CPlantColEntEntry*>(0xC0399C);
+    static inline NOTSA_GLOBAL(m_scanCode, 0xC03980, (int16), {});
+    static inline NOTSA_GLOBAL(m_UnusedLocTriListHead, 0xC03984, (CPlantLocTri*), {});
+    static inline NOTSA_GLOBAL(m_CloseLocTriListHead, 0xC03988, (CPlantLocTri*[4]), {});
+    static inline NOTSA_GLOBAL(m_UnusedColEntListHead, 0xC03998, (CPlantColEntEntry*), {});
+    static inline NOTSA_GLOBAL(m_CloseColEntListHead, 0xC0399C, (CPlantColEntEntry*), {});
     static inline auto& m_AmbientColor = StaticRef<CRGBA>(0xC03A44);
     static inline auto& m_LocTrisTab = StaticRef<CPlantLocTri[MAX_NUM_PLANT_TRIANGLES]>(0xC03A48);
     static inline auto& m_ColEntCacheTab = StaticRef<CPlantColEntEntry[MAX_NUM_PROC_OBJECTS]>(0xC08E48);
@@ -69,6 +69,6 @@ private:
     static void IncrementScanCode() { ++m_scanCode; } // 0x5DB2D0
 };
 
-static inline auto& grassTexturesPtr = StaticRef<RwTexture**[4]>(0xC039E0);
-static inline auto& grassModelsPtr = StaticRef<RpAtomic*[4]>(0xC03A30);
-static inline auto& tex_gras07Si = StaticRef<RwTexture*>(0xC09174);
+NOTSA_GLOBAL_HDR(grassTexturesPtr, 0xC039E0, (RwTexture**[4]), {});
+NOTSA_GLOBAL_HDR(grassModelsPtr, 0xC03A30, (RpAtomic*[4]), {});
+NOTSA_GLOBAL_HDR(tex_gras07Si, 0xC09174, (RwTexture*), {});

@@ -367,8 +367,8 @@ void CPlantMgr::SetPlantFriendlyFlagInAtomicMI(CAtomicModelInfo* ami) {
 void CPlantMgr::Update(const CVector& cameraPosition) {
     ZoneScoped;
 
-    static auto& nUpdateEntCache = StaticRef<int8>(0xC09171);
-    static auto& nLocTriSkipCounter = StaticRef<int8>(0xC09170);
+    NOTSA_GLOBAL_LOCAL(nUpdateEntCache, 0xC09171, (int8), {});
+    NOTSA_GLOBAL_LOCAL(nLocTriSkipCounter, 0xC09170, (int8), {});
 
     IncrementScanCode();
     CGrassRenderer::SetCurrentScanCode(m_scanCode);
@@ -411,8 +411,8 @@ void CPlantMgr::UpdateAmbientColor() {
 
 // 0x5DB3D0
 float CPlantMgr::CalculateWindBending() {
-    static auto& calculateTimer = StaticRef<uint32>(0xC0916C);
-    static auto& RandomSeed = StaticRef<uint16>(0xC09168);
+    NOTSA_GLOBAL_LOCAL(calculateTimer, 0xC0916C, (uint32), {});
+    NOTSA_GLOBAL_LOCAL(RandomSeed, 0xC09168, (uint16), {});
 
     if ((calculateTimer % 2) == 0) {
         calculateTimer++;

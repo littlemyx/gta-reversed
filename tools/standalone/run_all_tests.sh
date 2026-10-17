@@ -2,7 +2,7 @@
 # Build and run every *_test target (rw_*_test, game/review/script oracle tests) under Wine (macOS/Linux) or directly (native Windows, Git Bash); print a summary table.
 # usage: tools/standalone/run_all_tests.sh [build-dir (default build/StandaloneRW)] [test-name-filter-regex]
 # env:   SCRATCH   scratchpad holding the shared build mutex (build.lock)
-#        SKIP_BUILD=1  run only, do not build     ATTEMPTS=6   retries on hang/crash (known wined3d flake)
+#        SKIP_BUILD=1  run only, do not build   BUILD_ONLY=1  build only, do not run     ATTEMPTS=6   retries on hang/crash (known wined3d flake)
 #        ASSETS=<dir>  dir with infernus.dff/male01.dff/vgsnbuild07.dff (passed to the model-reading rw tests); if it does not exist and
 #                      GAME_DIR=<game install dir> is set, the three DFFs are extracted from $GAME_DIR/models/gta3.img (tools/standalone/extract_img.py)
 #        GTASA_PYTHON  python with unicorn+capstone (default: python3, or python)   MSVC_WINE_ROOT  msvc-wine dir (default $TOOLS_DIR/msvc, TOOLS_DIR default ~/tools)  [Mac/Linux]
@@ -78,6 +78,8 @@ if [ "${SKIP_BUILD:-0}" != 1 ]; then
   fi
   unlock; HELD=0
   [ -n "$BUILD_FAIL" ] && echo "ninja reported errors (see $OUT/ninja.log); tests whose exe is missing are marked NOBUILD"
+  # BUILD_ONLY=1: stop after the build (so the run stage can be done later under the GPU lock with SKIP_BUILD=1)
+  [ "${BUILD_ONLY:-0}" = 1 ] && { echo "run_all_tests: build only, $(echo $TESTS | wc -w) test targets, ninja ${BUILD_FAIL:+FAILED}${BUILD_FAIL:-ok}"; [ -n "$BUILD_FAIL" ] && exit 1; exit 0; }
 fi
 
 # parse: prints "checks fails mismatches" or nothing when no result line exists in the output

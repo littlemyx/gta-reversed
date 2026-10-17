@@ -25,23 +25,23 @@
 #include <Pools/TaskAllocatorPool.h>
 #include <Pools/PedAttractorPool.h>
 
-auto& ms_pPedPool               = StaticRef<CPedPool*>(0xB74490);
-auto& ms_pVehiclePool           = StaticRef<CVehiclePool*>(0xB74494);
-auto& ms_pBuildingPool          = StaticRef<CBuildingPool*>(0xB74498);
-auto& ms_pObjectPool            = StaticRef<CObjectPool*>(0xB7449C);
-auto& ms_pDummyPool             = StaticRef<CDummyPool*>(0xB744A0);
-auto& ms_pColModelPool          = StaticRef<CColModelPool*>(0xB744A4);
-auto& ms_pTaskPool              = StaticRef<CTaskPool*>(0xB744A8);
-auto& ms_pPedIntelligencePool   = StaticRef<CPedIntelligencePool*>(0xB744C0);
-auto& ms_pPtrNodeSingleLinkPool = StaticRef<CPtrNodeSingleLinkPool*>(0xB74484);
-auto& ms_pPtrNodeDoubleLinkPool = StaticRef<CPtrNodeDoubleLinkPool*>(0xB74488);
-auto& ms_pEntryInfoNodePool     = StaticRef<CEntryInfoNodePool*>(0xB7448C);
-auto& ms_pPointRoutePool        = StaticRef<CPointRoutePool*>(0xB744B0);
-auto& ms_pPatrolRoutePool       = StaticRef<CPatrolRoutePool*>(0xB744B4);
-auto& ms_pEventPool             = StaticRef<CEventPool*>(0xB744AC);
-auto& ms_pNodeRoutePool         = StaticRef<CNodeRoutePool*>(0xB744B8);
-auto& ms_pTaskAllocatorPool     = StaticRef<CTaskAllocatorPool*>(0xB744BC);
-auto& ms_pPedAttractorPool      = StaticRef<CPedAttractorPool*>(0xB744C4);
+NOTSA_GLOBAL(ms_pPedPool, 0xB74490, (CPedPool*), {});
+NOTSA_GLOBAL(ms_pVehiclePool, 0xB74494, (CVehiclePool*), {});
+NOTSA_GLOBAL(ms_pBuildingPool, 0xB74498, (CBuildingPool*), {});
+NOTSA_GLOBAL(ms_pObjectPool, 0xB7449C, (CObjectPool*), {});
+NOTSA_GLOBAL(ms_pDummyPool, 0xB744A0, (CDummyPool*), {});
+NOTSA_GLOBAL(ms_pColModelPool, 0xB744A4, (CColModelPool*), {});
+NOTSA_GLOBAL(ms_pTaskPool, 0xB744A8, (CTaskPool*), {});
+NOTSA_GLOBAL(ms_pPedIntelligencePool, 0xB744C0, (CPedIntelligencePool*), {});
+NOTSA_GLOBAL(ms_pPtrNodeSingleLinkPool, 0xB74484, (CPtrNodeSingleLinkPool*), {});
+NOTSA_GLOBAL(ms_pPtrNodeDoubleLinkPool, 0xB74488, (CPtrNodeDoubleLinkPool*), {});
+NOTSA_GLOBAL(ms_pEntryInfoNodePool, 0xB7448C, (CEntryInfoNodePool*), {});
+NOTSA_GLOBAL(ms_pPointRoutePool, 0xB744B0, (CPointRoutePool*), {});
+NOTSA_GLOBAL(ms_pPatrolRoutePool, 0xB744B4, (CPatrolRoutePool*), {});
+NOTSA_GLOBAL(ms_pEventPool, 0xB744AC, (CEventPool*), {});
+NOTSA_GLOBAL(ms_pNodeRoutePool, 0xB744B8, (CNodeRoutePool*), {});
+NOTSA_GLOBAL(ms_pTaskAllocatorPool, 0xB744BC, (CTaskAllocatorPool*), {});
+NOTSA_GLOBAL(ms_pPedAttractorPool, 0xB744C4, (CPedAttractorPool*), {});
 
 void CPools::InjectHooks() {
     RH_ScopedClass(CPools);

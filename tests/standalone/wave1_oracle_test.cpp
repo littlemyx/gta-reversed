@@ -226,6 +226,7 @@ static std::string DiffDesc(const void* a, const void* b, size_t n, const char* 
 #include "wave1_oracle_peds.inc"
 #include "wave1_oracle_ai.inc"
 #include "wave1_oracle_entities.inc"
+#include "wave1_oracle_prearray.inc"
 #endif
 
 // first-chance handler: prints every stack word that looks like a return address into the exe image / the test image (resolve with the linker .map / the exe disassembly) before oracle::FaultHandler reports
@@ -283,6 +284,7 @@ int main(int argc, char** argv) {
     TestPeds();
     TestAi();
     TestEntities();
+    TestFightPreArray();
 #endif
     int bad24 = 0, bad53 = 0, hard24 = 0, hard53 = 0;
     for (auto& r : g_rows) { bad24 += r.bad24; bad53 += r.bad53; hard24 += r.hardReg24 + r.hardSpec24; hard53 += r.hardReg53 + r.hardSpec53; }

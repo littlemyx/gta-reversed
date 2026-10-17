@@ -20,6 +20,7 @@
 #ifdef NOTSA_GLOBALS_DETACHED
 #include "GenericGameStorage.h"
 #include "C_PcSave.h"
+#include "TaskSimpleFightPreArray.h"
 #endif
 #line 20
 
@@ -364,33 +365,25 @@ void CTaskSimpleFight::FinishMeleeAnimCB(CAnimBlendAssociation* anim, void* data
 }
 
 #ifdef NOTSA_GLOBALS_DETACHED
-// `m_aComboData` has its own storage when detached, so "whatever precedes the array" (comboSet < 4: index `comboSet - 4` < 0) has to be named.
-// The exe reads the bytes at 0xC170D0 + (comboSet - 4) * 0x88 + offset (0x624A40 `mov bl, [ecx + 0xC17154]`, 0x61D6F0); in the image these are the neighbours below
-// the array. The reachable sets are -1 (ctor), 0 and 1 (`m_nComboSet = 0 / 1`; `GetAvailableComboSet` returns 0 for "no set"), the bytes are:
-//   comboSet -1: flags = ms_SaveFileName[0xF4] (0xC16EAC), float = ms_SaveFileName[0xAC] (0xC16E64)
-//   comboSet  0: flags = DefaultPCSaveFileName[0x1C] (0xC16F34), float = CGenericGameStorage::ms_WorkBufferPos (0xC16EEC)
-//   comboSet  1: flags = DefaultPCSaveFileName[0xA4] (0xC16FBC), float = DefaultPCSaveFileName[0x5C] (0xC16F74)
-// (so the AI's `moves` for set 0 is a character of the user's save-directory path: environment dependent in the original too). Sets 2 and 3 (0xC17044 / 0xC170CC:
-// RsGlobal / CPlayerRelationshipRecorder) are never assigned. Little-endian read of `size` bytes, like the exe.
+// `m_aComboData` has its own storage when detached, so "whatever precedes the array" (comboSet < 4: index `comboSet - 4` < 0) has to be named - and sets >= 4 (the usual case) read the array itself.
+// The exe reads the bytes at 0xC170D0 + (comboSet - 4) * 0x88 + offset (0x624A40 `mov bl, [ecx + 0xC17154]`, 0x61D6F0); the objects below the array and their run-time values: TaskSimpleFightPreArray.h.
+// Reachable sets: -1 (ctor), 0 and 1 (`GetAvailableComboSet` returns 0 for "no set"), 4..15 (fighting styles / weapon base combos), 16 (pistol whip); 2 and 3 are never assigned but are mapped as well.
+// The first version of this helper (D-B18) only knew the sets < 4 and hit NOTSA_UNREACHABLE for every set >= 4, i.e. in every AI fight (user playtest 1, U14).
 static uint32 ReadBeforeComboData(int8 comboSet, size_t offset, size_t size) {
-    // Distance (bytes) of each neighbour below `m_aComboData` (decimal: 0xC170D0 - 0xC16DB8 / 0xC16EEC / 0xC16F18)
-    struct Neighbour { int32 below; const uint8* data; size_t size; };
-    const Neighbour neighbours[]{
+    using notsa::fight_prearray::Segment;
+    const Segment below[]{ // Distance (bytes) below `m_aComboData` (decimal: 0xC170D0 - 0xC16DB8 / 0xC16EEC / 0xC16F18 / 0xC17040 / 0xC170CC)
         { 792, (const uint8*)CGenericGameStorage::ms_SaveFileName,    sizeof(CGenericGameStorage::ms_SaveFileName) },
         { 484, (const uint8*)&CGenericGameStorage::ms_WorkBufferPos,  sizeof(CGenericGameStorage::ms_WorkBufferPos) },
         { 440, (const uint8*)C_PcSave::DefaultPCSaveFileName,         sizeof(C_PcSave::DefaultPCSaveFileName) },
+        { 144, (const uint8*)&RsGlobal,                               sizeof(RsGlobal) },
+        { 4,   (const uint8*)&notsa::fight_prearray::LastFloatBelowBits, sizeof(uint32) },
     };
     const int32 rel = (comboSet - 4) * (int32)sizeof(CMeleeInfo) + (int32)offset; // relative to `m_aComboData`
-    for (const auto& n : neighbours) {
-        const int32 at = rel + n.below; // offset inside the neighbour
-        if (at >= 0 && (size_t)at + size <= n.size) {
-            uint32 value = 0;
-            memcpy(&value, n.data + at, size);
-            return value;
-        }
+    uint32 value;
+    if (!notsa::fight_prearray::Read(below, (const uint8*)CTaskSimpleFight::m_aComboData.data(), sizeof(CTaskSimpleFight::m_aComboData), rel, size, value)) {
+        NOTSA_UNREACHABLE("CTaskSimpleFight: combo set {} reads {} bytes at {} from m_aComboData (not a mapped object)", (int)comboSet, size, rel);
     }
-    NOTSA_UNREACHABLE("CTaskSimpleFight: combo set {} reads {} bytes before m_aComboData", (int)comboSet, rel);
-    return 0;
+    return value;
 }
 #endif
 

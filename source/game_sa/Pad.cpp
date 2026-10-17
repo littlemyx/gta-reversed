@@ -22,9 +22,9 @@
 
 // mouse states 
 
-static auto& byte_B73403 = StaticRef<bool>(0xB73403); // TODO: Find out what modifies this, as it has no value by default..
-static auto& byte_8CD782 = StaticRef<bool>(0x8CD782); // true by default, left here for documentation purposes, as it's used in multiple CPad functions
-static auto& byte_B73401 = StaticRef<char>(0xB73401); // unused, unknown
+static NOTSA_GLOBAL(byte_B73403, 0xB73403, (bool), {}); // TODO: Find out what modifies this, as it has no value by default..
+static NOTSA_GLOBAL(byte_8CD782, 0x8CD782, (bool), { true }); // true by default, left here for documentation purposes, as it's used in multiple CPad functions
+static NOTSA_GLOBAL(byte_B73401, 0xB73401, (char), {}); // unused, unknown
 
 void CPad::InjectHooks() {
     RH_ScopedClass(CPad);
@@ -1346,7 +1346,7 @@ int32 CPad::sub_541290() {
 
 // 0x540A40
 bool CPad::sub_540A40() {
-    static auto& oldfStickX = StaticRef<int16>(0xB73704); // 0
+    NOTSA_GLOBAL_LOCAL(oldfStickX, 0xB73704, (int16), {}); // 0
     auto leftStickX = GetPad()->GetLeftStickX();
 
     if (!leftStickX && oldfStickX > leftStickX) {
@@ -1360,7 +1360,7 @@ bool CPad::sub_540A40() {
 
 // 0x540A10
 bool CPad::sub_540A10() {
-    static auto& oldfStickX = StaticRef<int16>(0xB73700); // 0
+    NOTSA_GLOBAL_LOCAL(oldfStickX, 0xB73700, (int16), {}); // 0
     auto leftStickX = GetPad()->GetLeftStickX();
 
     if (!leftStickX && oldfStickX < leftStickX) {
@@ -1374,7 +1374,7 @@ bool CPad::sub_540A10() {
 
 // 0x540950
 bool CPad::GetAnaloguePadUp() {
-    static auto& oldfStickY = StaticRef<int16>(0xB736F0); // 0
+    NOTSA_GLOBAL_LOCAL(oldfStickY, 0xB736F0, (int16), {}); // 0
     auto leftStickY = GetPad()->GetLeftStickY();
 
     if (leftStickY < -15 && oldfStickY >= -5) {
@@ -1388,7 +1388,7 @@ bool CPad::GetAnaloguePadUp() {
 
 // 0x5409B0
 bool CPad::GetAnaloguePadLeft() {
-    static auto& oldfStickX = StaticRef<int16>(0xB736F8); // 0
+    NOTSA_GLOBAL_LOCAL(oldfStickX, 0xB736F8, (int16), {}); // 0
     auto leftStickX = GetPad()->GetLeftStickX();
 
     if (leftStickX < -15 && oldfStickX >= -5) {
@@ -1402,7 +1402,7 @@ bool CPad::GetAnaloguePadLeft() {
 
 // 0x5409E0
 bool CPad::GetAnaloguePadRight() {
-    static auto& oldfStickX = StaticRef<int16>(0xB736FC); // 0
+    NOTSA_GLOBAL_LOCAL(oldfStickX, 0xB736FC, (int16), {}); // 0
     auto leftStickX = GetPad()->GetLeftStickX();
 
     if (leftStickX > 15 && oldfStickX <= 5) {
@@ -1416,7 +1416,7 @@ bool CPad::GetAnaloguePadRight() {
 
 // 0x540980
 bool CPad::GetAnaloguePadDown() {
-    static auto& oldfStickY = StaticRef<int16>(0xB736F4); // 0
+    NOTSA_GLOBAL_LOCAL(oldfStickY, 0xB736F4, (int16), {}); // 0
     auto leftStickY = GetPad()->GetLeftStickY();
 
     if (leftStickY > 15 && oldfStickY <= 5) {

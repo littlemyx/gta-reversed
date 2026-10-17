@@ -100,18 +100,18 @@ public:
     char    _pad131[3];
 
 public:
-    static inline auto& TempMouseControllerState = StaticRef<CMouseControllerState>(0xB73404);
-    static inline auto& NewMouseControllerState = StaticRef<CMouseControllerState>(0xB73418);
-    static inline auto& OldMouseControllerState = StaticRef<CMouseControllerState>(0xB7342C);
+    static inline NOTSA_GLOBAL(TempMouseControllerState, 0xB73404, (CMouseControllerState), {});
+    static inline NOTSA_GLOBAL(NewMouseControllerState, 0xB73418, (CMouseControllerState), {});
+    static inline NOTSA_GLOBAL(OldMouseControllerState, 0xB7342C, (CMouseControllerState), {});
 
-    static inline auto& TempKeyState = StaticRef<CKeyboardState>(0xB72CB0);
-    static inline auto& OldKeyState = StaticRef<CKeyboardState>(0xB72F20);
-    static inline auto& NewKeyState = StaticRef<CKeyboardState>(0xB73190);
+    static inline NOTSA_GLOBAL(TempKeyState, 0xB72CB0, (CKeyboardState), {});
+    static inline NOTSA_GLOBAL(OldKeyState, 0xB72F20, (CKeyboardState), {});
+    static inline NOTSA_GLOBAL(NewKeyState, 0xB73190, (CKeyboardState), {});
 
     static inline auto& Pads = StaticRef<CPad[MAX_PADS]>(0xB73458);
 
-    static inline auto& bInvertLook4Pad = StaticRef<bool>(0xB73402);
-    static inline auto& padNumber = StaticRef<char>(0xB73400);
+    static inline NOTSA_GLOBAL(bInvertLook4Pad, 0xB73402, (bool), {});
+    static inline NOTSA_GLOBAL(padNumber, 0xB73400, (char), {});
 
 public:
     static void InjectHooks();

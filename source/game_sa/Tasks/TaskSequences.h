@@ -6,9 +6,9 @@ class CTaskSequences {
 public:
     static constexpr auto NUM_SEQUENCES = 64;
 
-    static inline auto& ms_iActiveSequence = StaticRef<int32>(0x8D2E98);
+    static inline NOTSA_GLOBAL(ms_iActiveSequence, 0x8D2E98, (int32), { -1 });
     static inline auto& ms_taskSequence = StaticRef<CTaskComplexSequence[NUM_SEQUENCES]>(0xC178F0);
-    static inline auto& ms_bIsOpened = StaticRef<bool[NUM_SEQUENCES]>(0xC17898);
+    static inline NOTSA_GLOBAL(ms_bIsOpened, 0xC17898, (bool[NUM_SEQUENCES]), {});
 
 public:
     static void InjectHooks();

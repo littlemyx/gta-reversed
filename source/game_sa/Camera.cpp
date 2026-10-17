@@ -1540,10 +1540,12 @@ void CCamera::CameraVehicleModeSpecialCases(CVehicle* vehicle) {
 
 // 0x50CE80
 bool CCamera::IsExtraEntityToIgnore(CEntity* entity) {
-    if (m_nExtraEntitiesCount <= 0) {
-        return false;
+    for (int32 i = 0; i < m_nExtraEntitiesCount; i++) { // exe 0x50CE80 scans the first `count` slots only (the port searched the whole array)
+        if (m_pExtraEntity[i] == entity) {
+            return true;
+        }
     }
-    return notsa::contains(m_pExtraEntity, entity);
+    return false;
 }
 
 // 0x420C40

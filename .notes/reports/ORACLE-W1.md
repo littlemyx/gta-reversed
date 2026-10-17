@@ -5,7 +5,7 @@ Worktree C:/gta-scratch/wto1 (StandaloneRW + StandaloneRelease), scratch C:/gta-
 ## Result
 * **Inventory**: `tools/standalone/oracle_coverage.py` + `.notes/ORACLE_COVERAGE.md` (9240 ported functions = RH_Scoped*Install sites; covered by an address literal in tests/standalone: **1139 -> 1715**; the uncovered rest classified A pure / B globals / C vtable / D imports per subsystem, with the reason for D and a "next candidates" list).
 * **Wave 1**: 577 new exe-oracle rows (141 hand-written in `wave1_oracle_test`, 436 generated in `wave1_consts_oracle_test`), 4000 cases x PC24 + PC53 per hand-written row, 16 per generated row (constants).
-* **11 real port bugs found and fixed** (one commit each, asm addresses in the messages), 0 mismatches left at PC24 in both new tests.
+* **10 real port bugs found and fixed** (one commit each, asm addresses in the messages), 0 mismatches left at PC24 in both new tests.
 
 ## Rows added
 | area (inc) | rows | what |

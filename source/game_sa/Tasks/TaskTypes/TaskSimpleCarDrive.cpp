@@ -666,7 +666,13 @@ bool CTaskSimpleCarDrive::SetPedPosition(CPed* ped) {
     }
 
     // 0x8D2E9C: Anims which are used by the line-up utility
-    static auto& s_lineUpAnims = StaticRef<std::array<AnimationId, 12>>(0x8D2E9C);
+    NOTSA_GLOBAL_LOCAL(s_lineUpAnims, 0x8D2E9C, (std::array<AnimationId, 12>), {
+        static_cast<AnimationId>(359), static_cast<AnimationId>(360), static_cast<AnimationId>(361),
+        static_cast<AnimationId>(362), static_cast<AnimationId>(363), static_cast<AnimationId>(367),
+        static_cast<AnimationId>(368), static_cast<AnimationId>(369), static_cast<AnimationId>(370),
+        static_cast<AnimationId>(371), static_cast<AnimationId>(372), static_cast<AnimationId>(386)
+    });
+#line 670
 
     CAnimBlendAssociation* anim{};
     for (const auto animId : s_lineUpAnims) {

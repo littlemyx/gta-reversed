@@ -13,7 +13,7 @@
 
 class NOTSA_EXPORT_VTABLE CTaskComplexPlayHandSignalAnim : public CTaskComplex {
 public:
-    static inline auto& ms_animBlock = StaticRef<uint32>(0x8D2E38);
+    static inline NOTSA_GLOBAL(ms_animBlock, 0x8D2E38, (uint32), { 0xFFFFFFFFU });
 
 public:
     AnimationId m_animationId{};

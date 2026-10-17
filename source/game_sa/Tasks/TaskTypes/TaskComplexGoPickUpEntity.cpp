@@ -13,8 +13,8 @@
 #include "General.h"
 
 // 0x8D2FF8 / 0x8D2FFC - timeouts [ms] of the GoToPoint (5000) / PickUp (8000) sub-tasks
-static inline auto& s_GoToPointTimeoutMs = StaticRef<uint32>(0x8D2FF8);
-static inline auto& s_PickUpTimeoutMs    = StaticRef<uint32>(0x8D2FFC);
+static inline NOTSA_GLOBAL(s_GoToPointTimeoutMs, 0x8D2FF8, (uint32), { 5000 });
+static inline NOTSA_GLOBAL(s_PickUpTimeoutMs, 0x8D2FFC, (uint32), { 8000 });
 
 // 0x59C890 - the original evaluation order; the sum stays in the FPU registers (extended precision), stored as float
 static CVector TransformPointExt(const CMatrix& m, const CVector& v) {

@@ -130,9 +130,9 @@ bool CTaskSimpleCarGetIn::ProcessPed(CPed* ped) {
         case ANIM_ID_CAR_GETIN_RHS_0:
         case ANIM_ID_CAR_GETIN_LHS_1:
         case ANIM_ID_CAR_GETIN_RHS_1: {
-            const auto& flt_8D2ED4 = StaticRef<float>(0x8D2ED4); // 30.f
+            const NOTSA_GLOBAL_LOCAL_NS(flt_8D2ED4, 0x8D2ED4, (float), { 10.0f }); // 10.f (exe image value)
             if (flt_8D2ED4 * ExeRecip(30.f) < m_anim->m_CurrentTime) { 
-                const auto& flt_8D2ED0 = StaticRef<float>(0x8D2ED0); // 0.001f
+                const NOTSA_GLOBAL_LOCAL_NS(flt_8D2ED0, 0x8D2ED0, (float), { 0.01f }); // 0.01f (exe image value)
                 m_veh->ApplyMoveForce(m_veh->GetForward() * CTimer::GetTimeStep() * m_veh->m_fMass * flt_8D2ED0);
             }
             break;

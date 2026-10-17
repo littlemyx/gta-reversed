@@ -904,8 +904,8 @@ void CTaskComplexEnterCar::GetCameraStickModifier(CPed* ped, float zoomDist, flo
         delta *= -1.0; // 0x858C1C
     }
 
-    const auto& s_Limits  = StaticRef<std::array<float, 3>>(0x86E684);
-    const auto& s_Factors = StaticRef<std::array<float, 3>>(0x86E678);
+    const NOTSA_GLOBAL_LOCAL_NS(s_Limits, 0x86E684, (std::array<float, 3>), { 0.1f, 0.2f, 0.2f });
+    const NOTSA_GLOBAL_LOCAL_NS(s_Factors, 0x86E678, (std::array<float, 3>), { 0.1f, 0.2f, 0.2f });
     const float limit     = s_Limits[m_CamMovementChoice];
     if (delta > limit) {
         delta = limit;

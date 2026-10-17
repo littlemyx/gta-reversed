@@ -779,13 +779,18 @@ static void CarAssetTest(const char* path) {
     // make every material shiny + specular (the textures normally come from vehicle.txd): flags are derived by the game's own material setup
     RwTexture* env = MakeSolidTexture({ 0, 255, 0, 255 });
     RwTexture* specTex = MakeSolidTexture({ 255, 255, 255, 255 });
+    // The DFF is loaded without vehicle.txd, so its materials have no base texture while the geometry is flagged textured: the car pipeline then binds a NULL texture to stage 0
+    // (MODULATE of TEXTURE x DIFFUSE). The native d3d9 (unlike wined3d) ends the texture-blend chain at a stage whose texture is missing, so the env stage 1 never ran and the
+    // env-map check could not see anything. The game always has its textures: give each material a white one (modulate by white = the same lit colour).
+    RwTexture* baseTex = MakeSolidTexture({ 255, 255, 255, 255 });
     // configure the materials through a small struct (captureless lambdas are the RpGeometryForAllMaterials callbacks)
-    struct Cfg { bool shiny, spec; RwTexture *env, *specTex; };
+    struct Cfg { bool shiny, spec; RwTexture *env, *specTex, *baseTex; };
     auto configure = [&](bool shiny, bool specular) {
-        Cfg cfg{ shiny, specular, env, specTex };
+        Cfg cfg{ shiny, specular, env, specTex, baseTex };
         for (RpAtomic* a : atoms) {
             RpGeometryForAllMaterials(RpAtomicGetGeometry(a), [](RpMaterial* mat, void* d) -> RpMaterial* {
                 auto* c = (Cfg*)d;
+                if (!RpMaterialGetTexture(mat)) RpMaterialSetTexture(mat, c->baseTex);
                 auto*& sd = CCustomCarEnvMapPipeline::SpecMapPlGetData(mat);
                 if (!sd) sd = new (CCustomCarEnvMapPipeline::m_gSpecMapPipeMatDataPool->New()) CustomSpecMapPipeMaterialData{ 0.f, nullptr };
                 sd->Specularity = c->spec ? 0.8f : 0.f;
@@ -824,8 +829,8 @@ static void CarAssetTest(const char* path) {
     CHECK(Brightness(both) > Brightness(spec) && Brightness(both) > Brightness(envOnly));
     configure(false, false);
     CHECKV(CountDiff(plain, render(), 1) == 0, "back to plain reproduces the plain frame (%d px differ)", CountDiff(plain, render(), 1));
-    RwTextureDestroy(env); RwTextureDestroy(specTex);
     RpClumpDestroy(clump);
+    RwTextureDestroy(env); RwTextureDestroy(specTex); RwTextureDestroy(baseTex);
 }
 
 // ---------------------------------------------------------------------------------------------------------------------------------

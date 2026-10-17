@@ -2029,6 +2029,15 @@
   }
  ],
  "extents": {
+  "0x8CD8A0": {"kind": "extend", "declared": 6, "true_size": 150, "element_type": "tStatLine[25]", "why": "CStats::ConstructStatLine per-page table: the audit saw the first line only; the table runs to the -99 terminator", "source": "D-DE (slice D2)"},
+  "0x8CD938": {"kind": "extend", "declared": 6, "true_size": 120, "element_type": "tStatLine[20]", "why": "CStats::ConstructStatLine per-page table: the audit saw the first line only; the table runs to the -99 terminator", "source": "D-DE (slice D2)"},
+  "0x8CD9B0": {"kind": "extend", "declared": 6, "true_size": 36, "element_type": "tStatLine[6]", "why": "CStats::ConstructStatLine per-page table: the audit saw the first line only; the table runs to the -99 terminator", "source": "D-DE (slice D2)"},
+  "0x8CD9D8": {"kind": "extend", "declared": 6, "true_size": 150, "element_type": "tStatLine[25]", "why": "CStats::ConstructStatLine per-page table: the audit saw the first line only; the table runs to the -99 terminator", "source": "D-DE (slice D2)"},
+  "0x8CDA70": {"kind": "extend", "declared": 6, "true_size": 84, "element_type": "tStatLine[14]", "why": "CStats::ConstructStatLine per-page table: the audit saw the first line only; the table runs to the -99 terminator", "source": "D-DE (slice D2)"},
+  "0x8CDAC8": {"kind": "extend", "declared": 6, "true_size": 300, "element_type": "tStatLine[50]", "why": "CStats::ConstructStatLine per-page table: the audit saw the first line only; the table runs to the -99 terminator", "source": "D-DE (slice D2)"},
+  "0x8CDBF8": {"kind": "extend", "declared": 6, "true_size": 522, "element_type": "tStatLine[87]", "why": "CStats::ConstructStatLine per-page table: the audit saw the first line only; the table runs to the -99 terminator", "source": "D-DE (slice D2)"},
+  "0x8CDE08": {"kind": "extend", "declared": 6, "true_size": 78, "element_type": "tStatLine[13]", "why": "CStats::ConstructStatLine per-page table: the audit saw the first line only; the table runs to the -99 terminator", "source": "D-DE (slice D2)"},
+  "0x8AA5A8": {"kind": "extend", "declared": 5664, "true_size": 6960, "element_type": "AnimAssocDefinition[145]", "why": "CAnimManager::ms_aAnimAssocDefinitions: 118 built-in groups are initialised, ReadAnimAssociationDefinitions (ANIMGRP.DAT) appends 21 more behind them (ms_numAnimAssocDefinitions++ without a bound); the exe's table has room up to the next global at 0x8AC0DC (145 entries)", "source": "D-DE (slice D2)"},
   "0xBBCDC8": {"kind": "extend", "declared": 32, "true_size": 17600, "element_type": "CDirectory::DirectoryInfo[550]", "why": "player.img directory buffer: CClothesBuilder::Init does playerImg.Init(550, &playerImgEntries); the audit saw one entry (zero image), the 549 others overlay the following globals", "source": "B04 (found by the poisoned soak: overran ms_pColPool)"},
   "0x8D35D4": {
    "kind": "shrink",

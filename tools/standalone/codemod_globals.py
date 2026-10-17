@@ -565,6 +565,11 @@ def _address_only_lines(text):
         if m:
             d, rest = m.group(1), m.group(2)
             rel = "NOTSA_GLOBALS_DETACHED" in rest or re.search(r"\bNOTSA_STANDALONE\b", rest) is not None   # the detached build is always a NOTSA_STANDALONE build
+            if d in ("if", "ifdef") and "NOTSA_TABLE_CHECKS" in rest:
+                stack.append("addr")    # D2 table self-checks (GlobalsVerifyTables.h): they read the pristine image on purpose, by its original addresses
+                if "addr" in stack:
+                    out.add(n)
+                continue
             if d in ("if", "ifdef", "ifndef"):
                 neg = d == "ifndef" or re.search(r"!\s*defined|!\s*NOTSA_GLOBALS_DETACHED|!\s*NOTSA_STANDALONE\b", rest) is not None
                 stack.append((("addr" if neg else "det") if rel else None))

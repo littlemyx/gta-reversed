@@ -7,6 +7,7 @@
 #include <thread>
 #include <vector>
 #include "GlobalsVerify.h"
+#include "GlobalsVerifyTables.h"
 #include "Fixups.h"
 
 namespace notsa::globals {
@@ -19,6 +20,18 @@ struct Entry {
     size_t      Size;
     const void* Storage;
 };
+
+struct TableEntry {
+    const char*  Name;
+    const char*  File;
+    int          Line;
+    TableCheckFn Fn;
+};
+
+std::vector<TableEntry>& TableRegistry() {
+    static std::vector<TableEntry> s_Tables;
+    return s_Tables;
+}
 
 std::vector<Entry>& Registry() {
     static std::vector<Entry> s_Registry; // function-local: the registrars run during other TUs' dynamic initialisation
@@ -53,6 +66,54 @@ void Dump(const char* path, const char* tag) {
 }
 } // namespace
 
+TableCheck::TableCheck(const char* name, const char* file, int line, TableCheckFn fn) noexcept {
+    TableRegistry().push_back({ name, file, line, fn });
+}
+
+const uint8_t* PristineImage(uint32_t va) {
+    static std::vector<uint8_t> s_Image;
+    static bool                 s_Tried = false;
+    if (!s_Tried) {
+        s_Tried = true;
+        char  path[MAX_PATH];
+        DWORD len = GetModuleFileNameA(nullptr, path, MAX_PATH);
+        while (len > 0 && path[len - 1] != '\\') {
+            len--;
+        }
+        lstrcpyA(path + len, "original_data.bin");
+        if (FILE* f = fopen(path, "rb")) {
+            s_Image.resize(0x1000000);
+            s_Image.resize(fread(s_Image.data(), 1, s_Image.size(), f));
+            fclose(f);
+        }
+    }
+    constexpr uint32_t kBase = 0x858000;
+    return (va >= kBase && va - kBase < s_Image.size()) ? s_Image.data() + (va - kBase) : nullptr;
+}
+
+namespace {
+//! Run the D2 table checks and append their results to the dump file (verify_globals.py reads the `# TABLE` lines)
+void RunTableChecks(const char* path) {
+    FILE* f = fopen(path, "ab");
+    size_t ok = 0, bad = 0;
+    for (const auto& t : TableRegistry()) {
+        char why[256] = "";
+        const bool same = t.Fn(why, sizeof(why));
+        (same ? ok : bad) += 1;
+        if (f) {
+            fprintf(f, "# TABLE\t%s\t%s:%d\t%s\t%s\n", t.Name, t.File, t.Line, same ? "OK" : "FAIL", why);
+        }
+        if (!same) {
+            notsa::standalone::Fixups::Log("NOTSA_VERIFY_GLOBALS: table %s DIFFERS from the image: %s", t.Name, why);
+        }
+    }
+    if (f) {
+        fclose(f);
+    }
+    notsa::standalone::Fixups::Log("NOTSA_VERIFY_GLOBALS: %u table checks, %u ok, %u differ", (unsigned)(ok + bad), (unsigned)ok, (unsigned)bad);
+}
+} // namespace
+
 Reg::Reg(const char* name, const char* file, int line, uint32_t exeAddr, size_t size, const void* storage) noexcept {
     Registry().push_back({ name, file, line, exeAddr, size, storage });
 }
@@ -63,6 +124,7 @@ void DumpAtBoot() {
         return;
     }
     Dump(path, "boot");
+    RunTableChecks(path);
     if (const char* after = std::getenv("NOTSA_VERIFY_GLOBALS_AFTER")) {
         const int secs = std::atoi(after);
         if (secs > 0) {

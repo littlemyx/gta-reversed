@@ -41,6 +41,16 @@ def load_dump(path):
     return out
 
 
+def load_table_checks(path):
+    """`# TABLE<TAB>name<TAB>file:line<TAB>OK|FAIL<TAB>detail` lines appended by the exe (D2 string / name tables compared with the mapped image at run time)"""
+    out = []
+    for line in Path(path).read_text().splitlines():
+        if line.startswith("# TABLE\t"):
+            f = line.split("\t")
+            out.append((f[1], f[2], f[3], f[4] if len(f) > 4 else ""))
+    return out
+
+
 def load_deviations(path):
     dev = {}
     p = Path(path)
@@ -254,7 +264,12 @@ def main():
     else:
         print("not verified by this dump: %d rows (function-local statics %d, members %d); --not-verified lists them" % (
             len(nv), sum(1 for x in nv if x[2].startswith("function")), sum(1 for x in nv if x[2].startswith("member"))))
-    ok = not bad and not xfail
+    tables = load_table_checks(a.dump)
+    tfail = [t for t in tables if t[2] != "OK"]
+    print("table checks (strings / name tables against the mapped image): %d, %d ok, %d differ" % (len(tables), len(tables) - len(tfail), len(tfail)))
+    for t in tfail:
+        print("TABLE MISMATCH %s (%s): %s" % (t[0], t[1], t[3]))
+    ok = not bad and not xfail and not tfail
     print("RESULT: %s (%d mismatching globals, %d cross-check failures)" % ("PASS" if ok else "FAIL", len(bad), len(xfail)))
     return 0 if ok else 1
 

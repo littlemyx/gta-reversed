@@ -45,7 +45,7 @@ fi
 # python: an explicit GTASA_PYTHON wins; otherwise the first candidate that really runs (on Windows `python3` is often the Microsoft Store stub)
 PY="${GTASA_PYTHON:-}"
 if [ -z "$PY" ]; then
-  for _c in python3 python; do
+  for _c in python3 python py; do
     if command -v "$_c" >/dev/null 2>&1 && "$_c" -c 'import sys' >/dev/null 2>&1; then PY="$_c"; break; fi
   done
   PY="${PY:-python3}"

@@ -19,6 +19,9 @@
 #      SOAK_WINEDEBUG=<chan>    WINEDEBUG for the run (default -all; e.g. 'err+all,+dsound' to check the DirectSound volumes in $OUT/wine.out - big output)   [Wine only]
 #      NOTSA_STANDALONE_MUTE=0  opt out of the silent run (default 1: the whole audio pipeline runs, DirectSound buffer volumes stay at the minimum)
 #                               (do NOT disable the Wine audio driver instead: without a driver DirectSoundCreate fails and the game hangs before the menu, see docs/STANDALONE.md)
+#      NOTSA_STANDALONE_WINDOWED=<W>x<H>  Windows host: the game runs in a WINDOW of that client size (default 960x600 = the size soak_route.txt's mouse coordinates assume),
+#                               the desktop resolution is never switched and the window is neither topmost nor focus-stealing. Opt out (exclusive fullscreen): set it to 0 or empty.
+#                               Not set on the Wine hosts (their numbers stay comparable). docs/STANDALONE.md
 set -u
 . "$(dirname "$0")/hostenv.sh"
 REPO="$(cd "$(dirname "$0")/../.." && pwd)"
@@ -88,6 +91,8 @@ LIMIT_S=$(( (ROUTE_MS + UNTIL_MS) / 1000 + 90 ))   # route + barrier holds + sla
 
 export NOTSA_STANDALONE_SKIP_VIDEOS=1 NOTSA_STANDALONE_SCREENSHOT="$SHOT_EVERY" NOTSA_STANDALONE_SCREENSHOT_MAX="${SHOT_MAX:-40}"
 export NOTSA_STANDALONE_MUTE="${NOTSA_STANDALONE_MUTE:-1}"
+# Windows host: windowed by default (an exclusive fullscreen run switches the user's desktop resolution while they work on the PC). `-` not `:-`: an empty value opts out.
+[ "$HOST" = windows ] && export NOTSA_STANDALONE_WINDOWED="${NOTSA_STANDALONE_WINDOWED-960x600}"
 export NOTSA_STANDALONE_MEMLOG=1 NOTSA_STANDALONE_INPUT="$OUT/route.txt"
 # The in-process sampler (SuspendThread/GetThreadContext/ResumeThread of the main thread every ~10 ms, from 35 s on) CORRUPTS THE x87 STACK of the
 # game thread under Wine on Apple silicon (the FPU TOP drifts, later pushes/pops hit empty registers => -nan positions, wanted level 5 from the

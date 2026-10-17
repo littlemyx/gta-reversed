@@ -192,6 +192,9 @@ def run(a):
                NOTSA_VERIFY_GLOBALS="verify_dump.tsv", NOTSA_IMAGE_CENSUS="1", NOTSA_IMAGE_CENSUS_REARM_MS=str(a.rearm_ms), NOTSA_IMAGE_CENSUS_FILE="image_census.tsv")
     # silent runs (user order 2026-10-10): NOTSA_STANDALONE_MUTE=1 by default (opt out: set NOTSA_STANDALONE_MUTE=0 in the environment)
     env.setdefault("NOTSA_STANDALONE_MUTE", "1")
+    # Windows host: windowed 960x600 by default, no desktop resolution switch (opt out: NOTSA_STANDALONE_WINDOWED=0 or empty; same default as soak.sh)
+    if IS_WIN:
+        env.setdefault("NOTSA_STANDALONE_WINDOWED", "960x600")
     if a.poison:
         env["NOTSA_POISON_CONVERTED"] = a.poison
     for f in ("image_census.tsv", "verify_dump.tsv"):

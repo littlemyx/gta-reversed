@@ -59,8 +59,8 @@ public:
     uint8                  m_nNextCommand;
     uint8                  m_nLastCommand;
 
-    static inline auto& m_aComboData = StaticRef<std::array<CMeleeInfo, 13>>(0xC170D0); // NOTE: 12 fighting styles (indexed with `m_nComboSet - 4`) + 1 (used by the pistol whip, `m_nComboSet == 16`)
-    static inline auto& m_aHitOffsets = StaticRef<std::array<CVector, 7>>(0xC177D0); // Loaded from the `START_LEVELS` section of `melee.dat`
+    static inline NOTSA_GLOBAL(m_aComboData, 0xC170D0, (std::array<CMeleeInfo, 13>), {}); // NOTE: 12 fighting styles (indexed with `m_nComboSet - 4`) + 1 (used by the pistol whip, `m_nComboSet == 16`)
+    static inline NOTSA_GLOBAL(m_aHitOffsets, 0xC177D0, (std::array<CVector, 7>), {}); // Loaded from the `START_LEVELS` section of `melee.dat`
 
 public:
     static constexpr auto Type = eTaskType::TASK_SIMPLE_FIGHT;

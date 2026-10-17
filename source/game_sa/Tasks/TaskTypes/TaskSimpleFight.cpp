@@ -17,12 +17,17 @@
 #include "EventVehicleDamageWeapon.h"
 #include "Plugins/RpAnimBlendPlugin/RpAnimBlend.h"
 #include "TaskSimpleFall.h"
+#ifdef NOTSA_GLOBALS_DETACHED
+#include "GenericGameStorage.h"
+#include "C_PcSave.h"
+#endif
+#line 20
 
 // Storage used by `FightSetUpCol` (The original keeps the collision model, its data, and the one sphere in .bss)
 // The model and its data are `col1` / `col1Data` (Game.h)
 static inline auto& s_FightColModel  = col1;
 static inline auto& s_FightColData   = col1Data;
-static inline auto& s_FightColSphere = StaticRef<CColSphere>(0xC17884);
+static inline NOTSA_GLOBAL(s_FightColSphere, 0xC17884, (CColSphere), {});
 
 // 0x59C910 - CVector::Normalise as the original evaluates it: the sum of squares and the reciprocal root stay in the FPU
 // (extended precision), every component is stored as float. A length of 0 (or less) yields (1, y, z) - only x is written.
@@ -39,7 +44,13 @@ static void NormaliseExt(CVector& v) {
 }
 
 // Max volume of the melee hit sounds (indexed with `m_nCurrentMove`)
-static inline auto& s_HitSoundMaxVolume = StaticRef<std::array<uint32, 3>>(0x8D2E3C);
+static inline NOTSA_GLOBAL(s_HitSoundMaxVolume, 0x8D2E3C, (std::array<uint32, 3>), { 300, 400, 500 });
+namespace {
+NOTSA_GLOBAL_SYNTH(k_8D2E48_ChainLimit, 0x8D2E48, (int32), { 2 });
+NOTSA_GLOBAL_SYNTH(k_8D2E8C_2p0, 0x8D2E8C, (float), { 2.0f });
+NOTSA_GLOBAL_SYNTH(k_8D2E94_0p4, 0x8D2E94, (float), { 0.4f });
+} // namespace
+#line 43
 
 // 0x59C890 - the original evaluation order; the sum stays in the FPU registers (extended precision), stored as float
 static CVector TransformPointExt(const CMatrix& m, const CVector& v) {
@@ -352,18 +363,58 @@ void CTaskSimpleFight::FinishMeleeAnimCB(CAnimBlendAssociation* anim, void* data
     }
 }
 
+#ifdef NOTSA_GLOBALS_DETACHED
+// `m_aComboData` has its own storage when detached, so "whatever precedes the array" (comboSet < 4: index `comboSet - 4` < 0) has to be named.
+// The exe reads the bytes at 0xC170D0 + (comboSet - 4) * 0x88 + offset (0x624A40 `mov bl, [ecx + 0xC17154]`, 0x61D6F0); in the image these are the neighbours below
+// the array. The reachable sets are -1 (ctor), 0 and 1 (`m_nComboSet = 0 / 1`; `GetAvailableComboSet` returns 0 for "no set"), the bytes are:
+//   comboSet -1: flags = ms_SaveFileName[0xF4] (0xC16EAC), float = ms_SaveFileName[0xAC] (0xC16E64)
+//   comboSet  0: flags = DefaultPCSaveFileName[0x1C] (0xC16F34), float = CGenericGameStorage::ms_WorkBufferPos (0xC16EEC)
+//   comboSet  1: flags = DefaultPCSaveFileName[0xA4] (0xC16FBC), float = DefaultPCSaveFileName[0x5C] (0xC16F74)
+// (so the AI's `moves` for set 0 is a character of the user's save-directory path: environment dependent in the original too). Sets 2 and 3 (0xC17044 / 0xC170CC:
+// RsGlobal / CPlayerRelationshipRecorder) are never assigned. Little-endian read of `size` bytes, like the exe.
+static uint32 ReadBeforeComboData(int8 comboSet, size_t offset, size_t size) {
+    // Distance (bytes) of each neighbour below `m_aComboData` (decimal: 0xC170D0 - 0xC16DB8 / 0xC16EEC / 0xC16F18)
+    struct Neighbour { int32 below; const uint8* data; size_t size; };
+    const Neighbour neighbours[]{
+        { 792, (const uint8*)CGenericGameStorage::ms_SaveFileName,    sizeof(CGenericGameStorage::ms_SaveFileName) },
+        { 484, (const uint8*)&CGenericGameStorage::ms_WorkBufferPos,  sizeof(CGenericGameStorage::ms_WorkBufferPos) },
+        { 440, (const uint8*)C_PcSave::DefaultPCSaveFileName,         sizeof(C_PcSave::DefaultPCSaveFileName) },
+    };
+    const int32 rel = (comboSet - 4) * (int32)sizeof(CMeleeInfo) + (int32)offset; // relative to `m_aComboData`
+    for (const auto& n : neighbours) {
+        const int32 at = rel + n.below; // offset inside the neighbour
+        if (at >= 0 && (size_t)at + size <= n.size) {
+            uint32 value = 0;
+            memcpy(&value, n.data + at, size);
+            return value;
+        }
+    }
+    NOTSA_UNREACHABLE("CTaskSimpleFight: combo set {} reads {} bytes before m_aComboData", (int)comboSet, rel);
+    return 0;
+}
+#endif
+
 // Low byte of the flags of the combo set `comboSet`
 // NOTE: The original doesn't care that `comboSet` can be < 4 here (no set picked), and reads whatever precedes the array
 static uint8 GetComboFlagsLo(int8 comboSet) {
+#ifdef NOTSA_GLOBALS_DETACHED
+    return (uint8)ReadBeforeComboData(comboSet, offsetof(CMeleeInfo, m_wFlags), sizeof(uint8));
+#else
     return *(reinterpret_cast<const uint8*>(&CTaskSimpleFight::m_aComboData[0]) + (comboSet - 4) * (int32)sizeof(CMeleeInfo) + offsetof(CMeleeInfo, m_wFlags));
+#endif
 }
 
 // Float member (at `offset` in `CMeleeInfo`) of the combo set `comboSet`
 // NOTE: Like `GetComboFlagsLo`, doesn't care that `comboSet` can be < 4 (the original reads whatever precedes the array)
 static float GetComboFloatRaw(int8 comboSet, size_t offset) {
+#ifdef NOTSA_GLOBALS_DETACHED
+    return std::bit_cast<float>(ReadBeforeComboData(comboSet, offset, sizeof(float)));
+#else
     return *reinterpret_cast<const float*>(reinterpret_cast<const uint8*>(&CTaskSimpleFight::m_aComboData[0]) + (comboSet - 4) * (int32)sizeof(CMeleeInfo) + offset);
+#endif
 }
 
+#line 367
 // 0x61D6F0 (name guessed) - Is the target within reach of the current hit? Called by `ChooseAttack{Player,AI}`
 // Without a target it picks the best ped from the scanner (and turns the ped towards it), when the player is the one fighting
 bool CTaskSimpleFight::IsTargetInRange(CPed* ped) {
@@ -610,7 +661,7 @@ int16 CTaskSimpleFight::ChooseAttackPlayer(CPed* ped) {
                 move = -1;
             } else {
                 bool bFallback = true;
-                if (m_nNextCommand != m_nLastCommand && (int32)m_nChainCounter <= StaticRef<int32>(0x8D2E48)) {
+                if (m_nNextCommand != m_nLastCommand && (int32)m_nChainCounter <= NOTSA_GLOBAL_EXPR(0x8D2E48, (int32), k_8D2E48_ChainLimit)) {
                     m_nChainCounter++;
                     const int32 v = (int8)m_nCurrentMove - (int8)m_nLastCommand + (int8)m_nNextCommand;
                     if (v & 1) {
@@ -657,7 +708,7 @@ int16 CTaskSimpleFight::ChooseAttackPlayer(CPed* ped) {
     if (bNoTarget) {
         float bestAngle = -1000.f;
         float bestDiff  = 1000.f;
-        const float range = StaticRef<float>(0x8D2E8C); // 2.0
+        const float range = NOTSA_GLOBAL_EXPR(0x8D2E8C, (float), k_8D2E8C_2p0); // 2.0
 
         auto* const intel = ped->GetIntelligence();
         for (auto i = 0; i < 16; i++) {
@@ -1172,7 +1223,7 @@ bool CTaskSimpleFight::ProcessPed(CPed* ped) {
             auto* const anim = m_pAnim;
             if (m_nLastCommand == 8 || m_nLastCommand == 10) {
                 // x87: Division is done in extended precision
-                if ((double)anim->m_CurrentTime / (double)anim->m_BlendHier->m_fTotalTime > (double)StaticRef<float>(0x8D2E94) // 0.4f
+                if ((double)anim->m_CurrentTime / (double)anim->m_BlendHier->m_fTotalTime > (double)NOTSA_GLOBAL_EXPR(0x8D2E94, (float), k_8D2E94_0p4) // 0.4f
                  && anim->m_BlendDelta > -4.f // 0x859C3C
                 ) {
                     anim->m_BlendDelta = -4.f; // 0xC0800000
@@ -1278,7 +1329,7 @@ tail:
         const double dy = (double)tgtPos.y - (double)pedPos.y;
         ped->m_fAimingRotation = (float)x87::atan2(-dx, dy); // +0x55C
     } else if (ped->IsPlayer() && CCamera::m_bUseMouse3rdPerson && static_cast<CPlayerPed*>(ped)->GetPadFromPlayer()->GetTarget()) {
-        const auto& v = StaticRef<CVector>(0xB6F32C);
+        const NOTSA_GLOBAL_ALIAS(v, 0xB6F32C, (CVector), *reinterpret_cast<CVector*>(reinterpret_cast<uint8*>(&TheCamera) + 772));
         ped->m_fAimingRotation = (float)x87::atan2(-(double)v.x, (double)v.y);
     }
 

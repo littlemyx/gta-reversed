@@ -53,7 +53,7 @@ public:
     float          m_fFuelOffsetDistance[NUM_FUEL];
     float          m_fFuelSpeed[NUM_FUEL];
 
-    static inline auto& m_ExplosionAudioEntity = StaticRef<CAEExplosionAudioEntity>(0xC888D0);
+    static NOTSA_GLOBAL_DECL(CExplosion, m_ExplosionAudioEntity, 0xC888D0, (CAEExplosionAudioEntity)); // detached: defined at the end of Explosion.cpp
     static inline auto& aExplosions = StaticRef<std::array<CExplosion, 16>>(0xC88950);
 
 public:

@@ -92,4 +92,4 @@ public:
 };
 VALIDATE_SIZE(CAESoundManager, 0x8CBC);
 
-extern CAESoundManager& AESoundManager;
+NOTSA_GLOBAL_EXTERN(AESoundManager, (CAESoundManager));

@@ -1,6 +1,7 @@
 #pragma once
 
 #include "AEPedSpeechAudioEntity.h"
+#include "ExeZero.h"
 
 class NOTSA_EXPORT_VTABLE CAEPedlessSpeechAudioEntity final : public CAEPedSpeechAudioEntity {
 public:
@@ -9,7 +10,16 @@ public:
 
 public:
     using CAEPedSpeechAudioEntity::CAEPedSpeechAudioEntity;
+#ifdef NOTSA_GLOBALS_DETACHED
+    CAEPedlessSpeechAudioEntity() { // 0x4E6070: the exe's ctor only stores the vptr (+ the base's few fields): as a global, `m_PedAudioType` / `m_VoiceID` stay 0, not the NSDMI PED_TYPE_UNK / VOICE_UNK (-1)
+        if (notsa::IsInExeImage(this)) {
+            m_PedAudioType = {};
+            m_VoiceID      = {};
+        }
+    }
+#else
     CAEPedlessSpeechAudioEntity() = default; // 0x4E6070
+#endif
     ~CAEPedlessSpeechAudioEntity() = default;
 
     void Initialise();

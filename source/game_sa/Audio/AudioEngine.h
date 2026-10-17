@@ -169,4 +169,4 @@ VALIDATE_OFFSET(CAudioEngine, m_GlobalWeaponAE, 0x1E34);
 VALIDATE_OFFSET(CAudioEngine, m_PedlessSpeechAE, 0x1E38);
 VALIDATE_OFFSET(CAudioEngine, m_DoorAE, 0x1F50);
 
-extern CAudioEngine& AudioEngine;
+NOTSA_GLOBAL_EXTERN(AudioEngine, (CAudioEngine));

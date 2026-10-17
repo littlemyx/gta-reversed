@@ -8,6 +8,7 @@
 #include "StdInc.h"
 #include <reversiblebugfixes/Bugs.hpp>
 #include "AESound.h"
+#include "ExeZero.h"
 
 #include "AEAudioEnvironment.h"
 #include "AEAudioHardware.h"
@@ -15,6 +16,30 @@
 #include "DbgDangling.h"
 #include "Managers/AESoundManager.h"
 
+#ifdef NOTSA_GLOBALS_DETACHED
+// The exe's default CAESound ctor (0x446FE0, the element ctor of `CAESoundManager`'s 300 sounds and of every `CAEAudioEntity::m_tempSound`) is empty: a sound that lives in
+// static storage (an audio entity / manager that is a global) keeps its zero .bss bytes until `Initialise` fills it. The repo's default member initialisers (`-1` event, `true`
+// in-use flag, `-100` listener volume, ...) are for sounds on the stack / heap; in static storage they must not run, or the boot state would differ from the exe's data image.
+namespace notsa {
+bool IsInExeImage(const void* p) {
+    static const auto range = [] {
+        const auto base = reinterpret_cast<uintptr_t>(GetModuleHandleW(nullptr));
+        const auto nt   = reinterpret_cast<const IMAGE_NT_HEADERS*>(base + reinterpret_cast<const IMAGE_DOS_HEADER*>(base)->e_lfanew);
+        return std::pair{ base, base + nt->OptionalHeader.SizeOfImage };
+    }();
+    const auto a = reinterpret_cast<uintptr_t>(p);
+    return a >= range.first && a < range.second;
+}
+}; // namespace notsa
+
+CAESound::CAESound() {
+    if (notsa::IsInExeImage(this)) {
+        std::memset(static_cast<void*>(this), 0, sizeof(*this));
+    }
+}
+#endif
+
+#line 18
 void CAESound::InjectHooks() {
     RH_ScopedClass(CAESound);
     RH_ScopedCategory("Audio");

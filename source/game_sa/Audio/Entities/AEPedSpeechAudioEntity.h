@@ -165,7 +165,7 @@ public:
     static inline NOTSA_GLOBAL(s_PhraseMemory, 0xB61418, (std::array<tPhraseMemory, 150>), = std::bit_cast<std::array<tPhraseMemory, 150>>(std::array<std::byte, 150 * sizeof(tPhraseMemory)>{})); // all-zero like the exe's .bss (NOT the NSDMI -1 of tPhraseMemory)
 
     //!< Speech slots (Last one is always reserved for the player!)
-    static inline auto&      s_PedSpeechSlots   = StaticRef<std::array<CAEPedSpeechSlot, SND_BANK_SLOT_SPEECH6 - SND_BANK_SLOT_SPEECH1 + 1>>(0xB61C38);
+    static inline NOTSA_GLOBAL(s_PedSpeechSlots, 0xB61C38, (std::array<CAEPedSpeechSlot, SND_BANK_SLOT_SPEECH6 - SND_BANK_SLOT_SPEECH1 + 1>), = std::bit_cast<std::array<CAEPedSpeechSlot, SND_BANK_SLOT_SPEECH6 - SND_BANK_SLOT_SPEECH1 + 1>>(std::array<std::byte, (SND_BANK_SLOT_SPEECH6 - SND_BANK_SLOT_SPEECH1 + 1) * sizeof(CAEPedSpeechSlot)>{})); static_assert(sizeof(s_PedSpeechSlots) == 168); // all-zero like the exe (ctor 0x4E3330 is empty), NOT the NSDMI defaults
     static inline const auto PLAYER_SPEECH_SLOT = (tPedSpeechSlotID)(s_PedSpeechSlots.size() - 1);
 
     //!< Time when a global context can be played again

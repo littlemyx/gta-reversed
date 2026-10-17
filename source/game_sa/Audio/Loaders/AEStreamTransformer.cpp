@@ -4,7 +4,7 @@
 
 #include "AEStreamTransformer.h"
 
-auto& AEStreamTransformer = StaticRef<CAEStreamTransformer>(0xb612d8);
+NOTSA_GLOBAL(AEStreamTransformer, 0xb612d8, (CAEStreamTransformer), {}); static_assert(sizeof(AEStreamTransformer) == 16);
 
 // 0x4f1750
 void CAEStreamTransformer::Initialise() {

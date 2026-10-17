@@ -8,10 +8,10 @@ public:
     void TransformBuffer(void* buffer, size_t size, uint32 position);
 
 private:
-    uint8 table[16]; // EA 3A C4 A1 9A A8 14 F3 48 B0 D7 23 9D E8 FF F1
+    uint8 table[16]{ 0xEA, 0x3A, 0xC4, 0xA1, 0x9A, 0xA8, 0x14, 0xF3, 0x48, 0xB0, 0xD7, 0x23, 0x9D, 0xE8, 0xFF, 0xF1 }; // the exe fills it with `Initialise` (0x4F1750) from its static ctor table
 
     friend class CAEDataStream;
     static void InjectHooks();
 };
 
-extern CAEStreamTransformer& AEStreamTransformer;
+NOTSA_GLOBAL_EXTERN(AEStreamTransformer, (CAEStreamTransformer));

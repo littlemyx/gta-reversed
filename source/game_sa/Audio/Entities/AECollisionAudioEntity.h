@@ -1,6 +1,7 @@
 #pragma once
 
 #include "AEAudioEntity.h"
+#include "ExeZero.h"
 
 enum eCollisionSoundStatus : uint8 {
     COLLISION_SOUND_INACTIVE,
@@ -29,6 +30,15 @@ public:
     std::array<tCollisionSound, NUM_ENTRIES>             m_CollisionSoundList{};
 
 public:
+#ifdef NOTSA_GLOBALS_DETACHED
+    CAECollisionAudioEntity() { // the exe's ctor only stores the vptr: as a global, the history / list stay all-zero (not the NSDMI 255 / -1 / TOTAL_NUM_COLLISION_SURFACE_TYPES)
+        if (notsa::IsInExeImage(this)) {
+            m_CollisionSoundIDHistory.fill(0);
+            m_LastBulletHitSoundID = 0;
+            std::memset(static_cast<void*>(m_CollisionSoundList.data()), 0, sizeof(m_CollisionSoundList));
+        }
+    }
+#endif
     static void InjectHooks();
 
     void Initialise();

@@ -216,4 +216,4 @@ private:
 };
 VALIDATE_SIZE(CAEAudioHardware, 0x1014); // Size might be bigger, but nothing is accessed beyond `0x1014`
 
-extern CAEAudioHardware& AEAudioHardware;
+NOTSA_GLOBAL_EXTERN(AEAudioHardware, (CAEAudioHardware));

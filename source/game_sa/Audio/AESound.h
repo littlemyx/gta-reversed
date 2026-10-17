@@ -37,7 +37,11 @@ class CAESound {
 public:
     static void InjectHooks();
 
+#ifdef NOTSA_GLOBALS_DETACHED
+    CAESound(); // detached: sounds in static storage stay all-zero like the exe's (see AESound.cpp)
+#else
     CAESound() = default;
+#endif
     CAESound(
         eSoundBankSlot  bankSlot,
         eSoundID        sfxId,

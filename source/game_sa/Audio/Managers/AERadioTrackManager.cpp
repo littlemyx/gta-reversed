@@ -2,13 +2,23 @@
 
 #include "AERadioTrackManager.h"
 #include "RadioStreamsPC.h"
+#include "ExeZero.h"
 
 #include "AEAudioHardware.h"
 #include "AEUserRadioTrackManager.h"
 #include "AEAudioUtility.h"
 #include "AEAudioEnvironment.h"
 
-auto& AERadioTrackManager = StaticRef<CAERadioTrackManager>(0x8CB6F8);
+// The exe keeps this object as .data bytes, not as a constructed object: all zero except m_HwClientHandle = -1 (initial data) and the two flags that the static ctor of
+// `FrontEndMenuManager` (0x574350, via SetDefaultPreferences(AUDIO) -> SetBassEnhanceOnOff / SetRadioAutoRetuneOnOff) stores. Those two are part of the initial value so that the
+// result does not depend on which of the two globals is initialised first. The repo's default member initialisers (-1 indices, RADIO_STOPPED, ...) are NOT the image.
+NOTSA_GLOBAL(AERadioTrackManager, 0x8CB6F8, (CAERadioTrackManager), = [] {
+    auto o              = ExeZero<CAERadioTrackManager>();
+    o.m_bBassEnhance    = true;
+    o.m_bRadioAutoSelect = true;
+    o.m_HwClientHandle  = -1;
+    return o;
+}()); static_assert(sizeof(AERadioTrackManager) == 880);
 
 namespace {
 //! Value of `tRadioSoundRange::Start` that means "there are no sounds of this kind for this station"

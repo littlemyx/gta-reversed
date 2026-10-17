@@ -10,7 +10,7 @@
 #include "AESmoothFadeThread.h"
 #include "AEAudioTap.h"
 
-auto& AEAudioHardware = StaticRef<CAEAudioHardware>(0xB5F8B8);
+NOTSA_GLOBAL(AEAudioHardware, 0xB5F8B8, (CAEAudioHardware), {}); static_assert(sizeof(AEAudioHardware) == 4116);
 
 void CAEAudioHardware::InjectHooks() {
     RH_ScopedClass(CAEAudioHardware);

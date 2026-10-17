@@ -75,7 +75,7 @@ public:
 
 public:
     static constexpr int32 NUM_OBJECT_INFOS = 160;
-    static inline auto& ms_aObjectInfo = StaticRef<CObjectData[NUM_OBJECT_INFOS]>(0xBB4A90);
+    static NOTSA_GLOBAL_DECL(CObjectData, ms_aObjectInfo, 0xBB4A90, (CObjectData[NUM_OBJECT_INFOS]));
 
 public:
     static void InjectHooks();

@@ -302,8 +302,8 @@ void CRope::PickUpObject(CEntity* obj) {
 
 namespace {
 // Original globals used by `CRope::Update`
-auto& kBaseBlend       = StaticRef<float>(0x8CD898); // 0.06: Base for the share of the speed change applied to the hanging entity
-auto& kMassBlendFactor = StaticRef<float>(0x8CD89C); // 0.13: Multiplied by the mass of the entity to get the part that depends on it
+NOTSA_GLOBAL(kBaseBlend, 0x8CD898, (float), { 0.06f }); // 0.06: Base for the share of the speed change applied to the hanging entity
+NOTSA_GLOBAL(kMassBlendFactor, 0x8CD89C, (float), { 0.13f }); // 0.13: Multiplied by the mass of the entity to get the part that depends on it
 
 // 0x420800
 float RopeMax(float a, float b) {

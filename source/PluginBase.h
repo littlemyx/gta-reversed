@@ -38,21 +38,34 @@ inline void** GetVMT(const void* self) {
 #define NOTSA_PLUGIN_ADDR(address) (address)
 #endif
 
+// Detached run build (NOTSA_GLOBALS_DETACHED): there is no original code at `address`, so ANY instantiation of the by-address calls below is a compile error
+// (the DLL build and the address-mode oracle tests do not define it and keep working). Convert the call to a direct call of our own function.
+#ifdef NOTSA_GLOBALS_DETACHED
+template <unsigned int> inline constexpr bool kCallByAddressForbidden = false;
+#define NOTSA_PLUGIN_CALL_FORBIDDEN(address) static_assert(::plugin::kCallByAddressForbidden<address>, "plugin::Call*<0xADDR>: call by address of original code is not allowed in the detached run build - call our own function directly")
+#else
+#define NOTSA_PLUGIN_CALL_FORBIDDEN(address)
+#endif
+
 template <unsigned int address, typename... Args> void Call(Args... args) {
+    NOTSA_PLUGIN_CALL_FORBIDDEN(address);
     reinterpret_cast<void(__cdecl*)(Args...)>(NOTSA_PLUGIN_ADDR(address))(args...);
 }
 
 template <typename Ret, unsigned int address, typename... Args>  Ret CallAndReturn(Args... args) {
+    NOTSA_PLUGIN_CALL_FORBIDDEN(address);
     return reinterpret_cast<Ret(__cdecl*)(Args...)>(NOTSA_PLUGIN_ADDR(address))(args...);
 }
 
 template <typename Ret, unsigned int address, typename C, typename... Args>
 Ret CallMethodAndReturn(C _this, Args... args) requires std::is_class_v<std::remove_pointer_t<C>> {
+    NOTSA_PLUGIN_CALL_FORBIDDEN(address);
     return reinterpret_cast<Ret(__thiscall*)(C, Args...)>(NOTSA_PLUGIN_ADDR(address))(_this, args...);
 }
 
 template <unsigned int address, typename C, typename... Args>
 void CallMethod(C _this, Args... args) requires std::is_class_v<std::remove_pointer_t<C>> {
+    NOTSA_PLUGIN_CALL_FORBIDDEN(address);
     return reinterpret_cast<void(__thiscall*)(C, Args...)>(NOTSA_PLUGIN_ADDR(address))(_this, args...);
 }
 

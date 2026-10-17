@@ -322,7 +322,10 @@ uint8* CMemoryMgr::Calloc(uint32 numObj, uint32 sizeObj, uint32 hint) {
 #ifdef NOTSA_STANDALONE_RUN
     return static_cast<uint8*>(::calloc(numObj, sizeObj)); // 0x72F460 => CRT calloc (0x824416)
 #endif
+#ifndef NOTSA_GLOBALS_DETACHED
     return plugin::CallAndReturn<uint8*, 0x72F460, uint32, uint32>(numObj, sizeObj);
+#endif
+#line 326
 
 #ifdef MEMORY_MGR_USE_MEMORY_HEAP
     return Malloc(hint * size, hint);
@@ -404,7 +407,10 @@ void* CMemoryMgr::MallocAlign(uint32 size, uint32 align) {
     // 0x72F4C0: malloc(size + align), result = (base + align) & ~(align - 1), base pointer stored at result[-1] (matches FreeAlign 0x72F4F0)
     return MallocAlign(size, align, 0);
 #endif
+#ifndef NOTSA_GLOBALS_DETACHED
     return plugin::CallAndReturn<void*, 0x72F4C0, uint32, uint32>(size, align);
+#endif
+#line 408
 
     void* memory = MallocAlign(size, align, 0);
 #if defined MEMORY_MGR_USE_HEAP_FLAGS

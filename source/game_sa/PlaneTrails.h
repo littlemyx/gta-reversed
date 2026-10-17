@@ -10,7 +10,7 @@
 
 class CPlaneTrails {
 public:
-    static inline auto& aArray = StaticRef<std::array<CPlaneTrail, 3>>(0xC713A8);
+    static inline NOTSA_GLOBAL(aArray, 0xC713A8, (std::array<CPlaneTrail, 3>), {});
 
 public:
     static void InjectHooks();

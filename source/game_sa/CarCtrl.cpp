@@ -8251,9 +8251,9 @@ static_assert(offsetof(CVehicle, m_nVehicleSubType) == 0x594);
 static_assert(offsetof(CVehicle, m_vecMoveSpeed) == 0x44);
 static_assert(offsetof(CVehicleModelInfo, m_nVehicleType) == 0x3C);
 static_assert(offsetof(CVehicleModelInfo, m_nTimesUsed) == 0x50);
-static_assert(offsetof(CCamera, m_mCameraMatrix) + 0x18 == 0xB6F9B4 - 0xB6F028);   // `m_mCameraMatrix.GetForward().z`
-static_assert(offsetof(CCamera, m_fCamFrontXNorm) == 0xB6F104 - 0xB6F028);
-static_assert(offsetof(CCamera, m_fGenerationDistMultiplier) == 0xB6F11C - 0xB6F028);
+static_assert(offsetof(CCamera, m_mCameraMatrix) + 0x18 == 2444);   // exe 0xB6F9B4 - TheCamera 0xB6F028;   // `m_mCameraMatrix.GetForward().z`
+static_assert(offsetof(CCamera, m_fCamFrontXNorm) == 220);   // exe 0xB6F104 - TheCamera
+static_assert(offsetof(CCamera, m_fGenerationDistMultiplier) == 244);   // exe 0xB6F11C - TheCamera
 
 //! Where (and in what direction) `GenerateCarCreationCoors2` looks for a place for the new car
 struct RandomCarSearch {

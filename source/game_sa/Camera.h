@@ -69,10 +69,10 @@ enum class eMotionBlurType : uint32 {
 };
 
 struct CamTweak {
-    int32 ModelID;
-    float Dist;
-    float Alt;
-    float Angle;
+    int32 ModelID = -1;  // ctor 0x50E470 (run for the 5 elements by CCamera's static initialiser 0x51A450)
+    float Dist    = 1.0f;
+    float Alt     = 1.0f;
+    float Angle   = 0.0f;
 };
 VALIDATE_SIZE(CamTweak, 0x10);
 
@@ -95,9 +95,9 @@ public:
     bool            m_bPlayerIsInGarage{};
     bool            m_bPlayerWasOnBike{};
     bool            m_bJustCameOutOfGarage{};
-    bool            m_bJustInitialized{true};
+    bool            m_bJustInitialized{};
     bool            m_bJust_Switched{};
-    bool            m_bLookingAtPlayer{true};
+    bool            m_bLookingAtPlayer{};
     bool            m_bLookingAtVector{};
     bool            m_bMoveCamToAvoidGeom{};
     bool            m_bObbeCinematicPedCamOn{};
@@ -122,12 +122,12 @@ public:
     bool            m_bEnable1rstPersonCamCntrlsScript{};
     bool            m_bAllow1rstPersonWeaponsCamera{};
     bool            m_bCooperativeCamMode{};
-    bool            m_bAllowShootingWith2PlayersInCar{true};
+    bool            m_bAllowShootingWith2PlayersInCar{};
     bool            m_bDisableFirstPersonInCar{};
-    eCamMode        m_nModeForTwoPlayersSeparateCars{ MODE_TWOPLAYER_SEPARATE_CARS };
-    eCamMode        m_nModeForTwoPlayersSameCarShootingAllowed{ MODE_TWOPLAYER_IN_CAR_AND_SHOOTING };
-    eCamMode        m_nModeForTwoPlayersSameCarShootingNotAllowed{ MODE_BEHINDCAR };
-    eCamMode        m_nModeForTwoPlayersNotBothInCar{ MODE_TWOPLAYER };
+    eCamMode        m_nModeForTwoPlayersSeparateCars{};
+    eCamMode        m_nModeForTwoPlayersSameCarShootingAllowed{};
+    eCamMode        m_nModeForTwoPlayersSameCarShootingNotAllowed{};
+    eCamMode        m_nModeForTwoPlayersNotBothInCar{};
     bool            m_bGarageFixedCamPositionSet{};
     bool            m_bDoingSpecialInterp{};
     bool            m_bScriptParametersSetForInterp{};
@@ -142,7 +142,7 @@ public:
     uint8           m_nActiveCam{};
     uint32          m_nCamShakeStart{};
     uint32          m_nFirstPersonCamLastInputTime{};
-    uint32          m_nLongestTimeInMill{ 5000 };
+    uint32          m_nLongestTimeInMill{};
     uint32          m_nNumberOfTrainCamNodes{};
     uint32          m_nTimeLastChange{};
     uint32          m_nTimeWeLeftIdle_StillNoInput{};
@@ -154,20 +154,20 @@ public:
     uint32          m_nBlurGreen{};
     uint32          m_nBlurRed{};
     eMotionBlurType m_nBlurType{};
-    uint32          m_nWorkOutSpeedThisNumFrames{4};
+    uint32          m_nWorkOutSpeedThisNumFrames{};
     uint32          m_nNumFramesSoFar{};
     uint32          m_nCurrentTrainCamNode{};
     uint32          m_nMotionBlur{};
     uint32          m_nMotionBlurAddAlpha{};
-    uint32          m_nCheckCullZoneThisNumFrames{6};
+    uint32          m_nCheckCullZoneThisNumFrames{};
     uint32          m_nZoneCullFrameNumWereAt{};
     uint32          m_nWhoIsInControlOfTheCamera{};
-    uint32          m_nCarZoom{2};
+    uint32          m_nCarZoom{};
     float           m_fCarZoomBase{};
     float           m_fCarZoomTotal{};
     float           m_fCarZoomSmoothed{};
     float           m_fCarZoomValueScript{};
-    uint32          m_nPedZoom{2};
+    uint32          m_nPedZoom{};
     float           m_fPedZoomBase{};
     float           m_fPedZoomTotal{};
     float           m_fPedZoomSmoothed{};
@@ -177,7 +177,7 @@ public:
     float           m_fDistanceToWater{};
     float           m_fHeightOfNearestWater{};
     float           m_fFOVDuringInter{};
-    float           m_fLODDistMultiplier{1.f};
+    float           m_fLODDistMultiplier{};
     float           m_fGenerationDistMultiplier{};
     float           m_fAlphaSpeedAtStartInter{};
     float           m_fAlphaWhenInterPol{};
@@ -193,16 +193,16 @@ public:
     float           m_fCameraAverageSpeed{};
     float           m_fCameraSpeedSoFar{};
     float           m_fCamShakeForce{};
-    float           m_fFovForTrain{70.f};
+    float           m_fFovForTrain{};
     float           m_fFOV_Wide_Screen{};
-    float           m_fNearClipScript{ 0.9f };
+    float           m_fNearClipScript{};
     float           m_fOldBetaDiff{};
     float           m_fPositionAlongSpline{};
     float           m_fScreenReductionPercentage{};
     float           m_fScreenReductionSpeed{};
     float           m_fAlphaForPlayerAnim1rstPerson{};
     float           m_fOrientation{};
-    float           m_fPlayerExhaustion{1.f};
+    float           m_fPlayerExhaustion{};
     float           m_fSoundDistUp{};
     float           m_fSoundDistUpAsRead{};
     float           m_fSoundDistUpAsReadOld{};
@@ -245,7 +245,7 @@ public:
     std::array<CCamPathSplines, 4> m_aPathArray{};
     bool            m_bMirrorActive{};
     bool            m_bResetOldMatrix{};
-    CMatrix         m_mCameraMatrix{ CMatrix::Identity() };
+    CMatrix         m_mCameraMatrix{};
     CMatrix         m_mCameraMatrixOld{};
     CMatrix         m_mViewMatrix{};
     CMatrix         m_mMatInverse{};
@@ -265,19 +265,19 @@ public:
     float           m_fFadeDuration{};
     float           m_fTimeToFadeMusic{};
     float           m_fTimeToWaitToFadeMusic{};
-    float           m_fFractionInterToStopMoving{0.25f};
-    float           m_fFractionInterToStopCatchUp{0.75f};
+    float           m_fFractionInterToStopMoving{};
+    float           m_fFractionInterToStopCatchUp{};
     float           m_fFractionInterToStopMovingTarget{};
     float           m_fFractionInterToStopCatchUpTarget{};
-    float           m_fGaitSwayBuffer{0.85f};
+    float           m_fGaitSwayBuffer{};
     float           m_fScriptPercentageInterToStopMoving{};
     float           m_fScriptPercentageInterToCatchUp{};
     uint32          m_nScriptTimeForInterpolation{};
     eFadeFlag       m_nFadeInOutFlag{};
-    int32           m_nModeObbeCamIsInForCar{30};
-    eCamMode        m_nModeToGoTo{ MODE_FOLLOWPED };
+    int32           m_nModeObbeCamIsInForCar{};
+    eCamMode        m_nModeToGoTo{};
     eFadeFlag       m_nMusicFadingDirection{};
-    eSwitchType     m_nTypeOfSwitch{ eSwitchType::INTERPOLATION };
+    eSwitchType     m_nTypeOfSwitch{};
     char            _alignC40[2]{};
     uint32          m_nFadeStartTime{};
     uint32          m_nFadeTimeStartedMusic{};
@@ -520,7 +520,7 @@ public:
 };
 VALIDATE_SIZE(CCamera, 0xD78);
 
-extern CCamera& TheCamera;
+NOTSA_GLOBAL_EXTERN(TheCamera, (CCamera));
 NOTSA_GLOBAL_EXTERN(gbModelViewer, (bool));
 NOTSA_GLOBAL_EXTERN(gbCineyCamMessageDisplayed, (int8));
 NOTSA_GLOBAL_EXTERN(gPlayerPedVisible, (bool));
@@ -529,7 +529,7 @@ NOTSA_GLOBAL_EXTERN(gCameraDirection, (int32));
 NOTSA_GLOBAL_EXTERN(gCameraMode, (eCamMode));
 NOTSA_GLOBAL_EXTERN(gLastTime2PlayerCameraWasOK, (uint32));
 NOTSA_GLOBAL_EXTERN(gLastTime2PlayerCameraCollided, (uint32));
-extern float*& gpCamColVars;
+NOTSA_GLOBAL_EXTERN(gpCamColVars, (float*));
 #ifdef NOTSA_GLOBALS_DETACHED
 extern float gCamColVars[28][6];
 #else

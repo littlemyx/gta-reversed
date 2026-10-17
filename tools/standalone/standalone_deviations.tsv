@@ -40,3 +40,5 @@
 0xC09920	5076	4	CPedGroupMembership::m_group = &ms_groups[7]: pointer to a converted global (the exe points at its own image address); checked against the linker map in D-C12.md
 0xC09920	5116	4	CPedGroupIntelligence::m_pPedGroup = &ms_groups[7]: pointer to a converted global (the exe points at its own image address); checked against the linker map in D-C12.md
 0xC09920	5768	4	CPedGroupIntelligence::m_DefaultTaskAllocator = &CPedGroupDefaultTaskAllocators::ms_StandStillAllocator: pointer to a converted global (the exe points at its own image address); checked against the linker map in D-C12.md
+0xB6F028	20	4	CCamera::m_matrix = &m_mCameraMatrix (CPlaceable::m_matrix, ctor 0x51A450 stores this+0x974): a self pointer, the exe holds 0xB6F99C = its own image address of the member (D-C34)
+0xB6FE88	0	4	gpCamColVars = &gCamColVars[5][0]: pointer to a converted global (exe image 0x8CC958 = its own address of row 5); checked against the linker map in D-C34.md

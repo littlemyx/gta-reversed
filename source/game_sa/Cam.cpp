@@ -93,7 +93,7 @@ struct DWHeliChaseCamSettings {
     int32   fovLerpEndTime;        // 0x90
     float   fovLerpStartFraction;  // 0x94
     int32   fovLerpDuration;       // 0x98
-
+    DWHeliChaseCamSettings() { SetDefaults(); } // 0x5173F0 (static initialiser of the exe's global; everything SetDefaults does not write stays zero)
     // 0x50E180
     void SetDefaults() {
         endDistAhead         = 50.0f;
@@ -136,7 +136,7 @@ struct DWHeliChaseCamSettings {
     }
 };
 VALIDATE_SIZE(DWHeliChaseCamSettings, 0x9C);
-static inline auto& gDWHeliChaseCamSettings = StaticRef<DWHeliChaseCamSettings>(0xB6FEC0);
+static inline NOTSA_GLOBAL(gDWHeliChaseCamSettings, 0xB6FEC0, (DWHeliChaseCamSettings), {}); static_assert(sizeof(gDWHeliChaseCamSettings) == 156);
 
 // Defined in other translation units (Camera.cpp, World.cpp)
 extern float&                      gCurDistForCam;
@@ -560,6 +560,7 @@ CCam::CCam() {
 
 // 0x50E490
 void CCam::Init() {
+    gIdleCam.Reset(true); // 0x50E49F: the exe's Init starts with `gIdleCam.Reset(true)` (0x50A160)
     m_vecFront = CVector(0, 0, -1);
     m_vecUp = CVector(0, 0, 1);
     m_nMode = eCamMode::MODE_FOLLOWPED;
@@ -572,7 +573,7 @@ void CCam::Init() {
     m_fBetaSpeed = 0.0f;
     m_fAlphaSpeed = 0.0f;
     m_fCameraHeightMultiplier = 0.75;
-    m_fMaxRoleAngle = DegreesToRadians(20.0f);
+    m_fMaxRoleAngle = std::bit_cast<float>(0x3D0EFA35u); // 0x50E547: 2 degrees (the repo had 20 here; 20 degrees is m_fPlayerInFrontSyphonAngleOffSet)
     m_fDistance = 30.0f;
     m_fDistanceSpeed = 0.0f;
     m_pLastCarEntered = nullptr;
@@ -587,7 +588,7 @@ void CCam::Init() {
     m_bLookingBehind = false;
     m_bLookingLeft = false;
     m_bLookingRight = false;
-    m_fPlayerInFrontSyphonAngleOffSet = DegreesToRadians(20.0f);
+    m_fPlayerInFrontSyphonAngleOffSet = std::bit_cast<float>(0x3EB2B8C3u); // 0x50E597: 20 degrees as the exe computed it (DegreesToRadians(20.0f) is 0x3EB2B8C2)
     m_fSyphonModeTargetZOffSet = 0.5f;
     m_fRadiusForDead = 1.5f;
     m_nDirectionWasLooking = 3; // TODO: enum

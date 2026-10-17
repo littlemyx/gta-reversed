@@ -88,31 +88,31 @@ public:
     };
 
 private:
-    static inline auto& ms_atomicPluginOffset = StaticRef<RwInt32>(0x8D608C); // -1
-    static inline auto& ms_framePluginOffset = StaticRef<RwInt32>(0x8D6090); // -1
-    static inline auto& ms_clumpPluginOffset = StaticRef<RwInt32>(0x8D6094); // -1
-    static inline auto& ms_defaultRenderer = StaticRef<RpAtomicCallBackRender>(0xC88048); // nullptr, unused
-    static inline auto& ms_pCamera = StaticRef<RwCamera*>(0xC8804C); // nullptr
-    static inline auto& ms_pCameraPosn = StaticRef<RwV3d*>(0xC88050); // nullptr
+    static inline NOTSA_GLOBAL(ms_atomicPluginOffset, 0x8D608C, (RwInt32), { -1 }); // -1
+    static inline NOTSA_GLOBAL(ms_framePluginOffset, 0x8D6090, (RwInt32), { -1 }); // -1
+    static inline NOTSA_GLOBAL(ms_clumpPluginOffset, 0x8D6094, (RwInt32), { -1 }); // -1
+    static inline NOTSA_GLOBAL(ms_defaultRenderer, 0xC88048, (RpAtomicCallBackRender), {}); // nullptr, unused
+    static inline NOTSA_GLOBAL(ms_pCamera, 0xC8804C, (RwCamera*), {}); // nullptr
+    static inline NOTSA_GLOBAL(ms_pCameraPosn, 0xC88050, (RwV3d*), {}); // nullptr
 
-    static inline auto& ms_vehicleLod0RenderMultiPassDist = StaticRef<float>(0xC88044);
-    static inline auto& ms_vehicleLod0Dist = StaticRef<float>(0xC88040);
-    static inline auto& ms_vehicleLod1Dist = StaticRef<float>(0xC8803C);
+    static inline NOTSA_GLOBAL(ms_vehicleLod0RenderMultiPassDist, 0xC88044, (float), {});
+    static inline NOTSA_GLOBAL(ms_vehicleLod0Dist, 0xC88040, (float), {});
+    static inline NOTSA_GLOBAL(ms_vehicleLod1Dist, 0xC8803C, (float), {});
     // static float ms_vehicleFadeDist; // unused
-    static inline auto& ms_bigVehicleLod0Dist = StaticRef<float>(0xC88038);
+    static inline NOTSA_GLOBAL(ms_bigVehicleLod0Dist, 0xC88038, (float), {});
     // static float ms_bigVehicleLod1Dist; // unused
-    static inline auto& ms_pedLodDist = StaticRef<float>(0xC88034);
-    static inline auto& ms_pedFadeDist = StaticRef<float>(0xC88030);
-    static inline auto& ms_cullCompsDist = StaticRef<float>(0xC8802C);
-    static inline auto& ms_cullBigCompsDist = StaticRef<float>(0xC88028);
+    static inline NOTSA_GLOBAL(ms_pedLodDist, 0xC88034, (float), {});
+    static inline NOTSA_GLOBAL(ms_pedFadeDist, 0xC88030, (float), {});
+    static inline NOTSA_GLOBAL(ms_cullCompsDist, 0xC8802C, (float), {});
+    static inline NOTSA_GLOBAL(ms_cullBigCompsDist, 0xC88028, (float), {});
 
-    static inline auto& m_alphaList = StaticRef<CLinkList<AlphaObjectInfo>>(0xC88070);
-    static inline auto& m_alphaEntityList = StaticRef<CLinkList<AlphaObjectInfo>>(0xC88120);
-    static inline auto& m_alphaUnderwaterEntityList = StaticRef<CLinkList<AlphaObjectInfo>>(0xC88178);
-    static inline auto& m_alphaBoatAtomicList = StaticRef<CLinkList<AlphaObjectInfo>>(0xC880C8);
-    static inline auto& m_alphaReallyDrawLastList = StaticRef<CLinkList<AlphaObjectInfo>>(0xC881D0);
+    static inline NOTSA_GLOBAL(m_alphaList, 0xC88070, (CLinkList<AlphaObjectInfo>), {});
+    static inline NOTSA_GLOBAL(m_alphaEntityList, 0xC88120, (CLinkList<AlphaObjectInfo>), {});
+    static inline NOTSA_GLOBAL(m_alphaUnderwaterEntityList, 0xC88178, (CLinkList<AlphaObjectInfo>), {});
+    static inline NOTSA_GLOBAL(m_alphaBoatAtomicList, 0xC880C8, (CLinkList<AlphaObjectInfo>), {});
+    static inline NOTSA_GLOBAL(m_alphaReallyDrawLastList, 0xC881D0, (CLinkList<AlphaObjectInfo>), {});
 
-    static inline auto& ms_weaponPedsForPC = StaticRef<CLinkList<CPed*>>(0xC88224);
+    static inline NOTSA_GLOBAL(ms_weaponPedsForPC, 0xC88224, (CLinkList<CPed*>), {});
 
 public:
     static bool PluginAttach();

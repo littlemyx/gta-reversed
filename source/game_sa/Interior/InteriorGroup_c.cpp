@@ -1,6 +1,6 @@
 #include "StdInc.h"
 #include "InteriorGroup_c.h"
-
+#include "InteriorManager_c.h"
 #include "Interior_c.h"
 #include "InteriorManager_c.h"
 #include "PopCycle.h"
@@ -45,8 +45,8 @@ void InteriorGroup_c::InjectHooks() {
 
 namespace {
 // Members of `g_interiorMan` (private)
-auto& s_ArePedsEnabled        = StaticRef<bool>(0xBB3DC2);                    // InteriorManager_c::m_ArePedsEnabled
-auto& s_InteriorPedsAliveState = StaticRef<std::array<bool, 16>>(0xBB3D9C);   // InteriorManager_c::m_InteriorPedsAliveState
+NOTSA_GLOBAL_ALIAS(s_ArePedsEnabled, 0xBB3DC2, (bool), InteriorManagerMembers::ArePedsEnabled(g_interiorMan));                    // InteriorManager_c::m_ArePedsEnabled
+NOTSA_GLOBAL_ALIAS(s_InteriorPedsAliveState, 0xBB3D9C, (std::array<bool, 16>), InteriorManagerMembers::InteriorPedsAliveState(g_interiorMan));   // InteriorManager_c::m_InteriorPedsAliveState
 
 // `(int)(rand() * (1 / 32768.f) * n)` - Same as `RandBelow` in `Interior_c.cpp` (named differently so unity builds don't break)
 int32 GroupRandBelow(int32 n) {

@@ -85,4 +85,4 @@ public:
 
 VALIDATE_SIZE(FxManager_c, 0xBC);
 
-extern FxManager_c& g_fxMan;
+NOTSA_GLOBAL_EXTERN(g_fxMan, (FxManager_c));

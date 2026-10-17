@@ -70,7 +70,7 @@ void Interior_c::InjectHooks() {
 
 namespace {
 // Pool of free `FurnitureEntity_c` items (see `Unfurnish`)
-auto& s_FurnitureEntityPool = StaticRef<TList_c<FurnitureEntity_c>>(0xBAD3EC);
+NOTSA_GLOBAL_ALIAS(s_FurnitureEntityPool, 0xBAD3EC, (TList_c<FurnitureEntity_c>), FurnitureManagerMembers::FurnitureEntityPool(g_furnitureMan)); // = g_furnitureMan.m_FurnitureList (the same 12 bytes, 0x206C)
 
 // Counter used to space out the shelf `InteriorInfo`s (see `Shop_AddShelfInfo`) - Initially 2
 NOTSA_GLOBAL(s_ShelfInfoCounter, 0x8D0948, (int32), { 2 });
@@ -82,14 +82,14 @@ NOTSA_GLOBAL(s_ShopUnitChance, 0xBB3DE4, (int32), {});
 NOTSA_GLOBAL(s_OfficeSpecialInfoPlaced, 0xBB3DC8, (bool), {});
 
 // Members of `g_interiorMan` (private) - Objects that can be stolen (see `PlaceObject`)
-auto& s_StealableObjectCount = StaticRef<int32>(0xBB3A18);                         // InteriorManager_c::m_ObjectCount
-auto& s_StealableObjects     = StaticRef<std::array<InteriorObject, 32>>(0xBB3A1C); // InteriorManager_c::m_Objects
+NOTSA_GLOBAL_ALIAS(s_StealableObjectCount, 0xBB3A18, (int32), InteriorManagerMembers::ObjectCount(g_interiorMan));                          // InteriorManager_c::m_ObjectCount
+NOTSA_GLOBAL_ALIAS(s_StealableObjects, 0xBB3A1C, (std::array<InteriorObject, 32>), InteriorManagerMembers::Objects(g_interiorMan)); // InteriorManager_c::m_Objects
 
 // The following 4 are members of `g_interiorMan`, but they are private, so we can't access them
-auto& s_TimeLastPickupsGenerated = StaticRef<uint32>(0xBB3DC4);     // InteriorManager_c::m_TimeLastPickupsGenerated
-auto& s_InteriorCount            = StaticRef<size_t>(0xBB3914);     // InteriorManager_c::m_InteriorCount
-auto& s_InteriorIds              = StaticRef<std::array<int32, 64>>(0xBB3918); // InteriorManager_c::m_InteriorIds
-auto& s_EnEx                     = StaticRef<CEntryExit*>(0xBB3DAC); // InteriorManager_c::m_EnEx
+NOTSA_GLOBAL_ALIAS(s_TimeLastPickupsGenerated, 0xBB3DC4, (uint32), InteriorManagerMembers::TimeLastPickupsGenerated(g_interiorMan));     // InteriorManager_c::m_TimeLastPickupsGenerated
+NOTSA_GLOBAL_ALIAS(s_InteriorCount, 0xBB3914, (size_t), InteriorManagerMembers::InteriorCount(g_interiorMan));     // InteriorManager_c::m_InteriorCount
+NOTSA_GLOBAL_ALIAS(s_InteriorIds, 0xBB3918, (std::array<int32, 64>), InteriorManagerMembers::InteriorIds(g_interiorMan)); // InteriorManager_c::m_InteriorIds
+NOTSA_GLOBAL_ALIAS(s_EnEx, 0xBB3DAC, (CEntryExit*), InteriorManagerMembers::EnEx(g_interiorMan)); // InteriorManager_c::m_EnEx
 
 // The original code inlined this everywhere: `(int)(rand() * (1 / 32768.f) * n)`
 // Note: Unlike `CGeneral::GetRandomNumberInRange`, the result is uniformly distributed in [0, n)

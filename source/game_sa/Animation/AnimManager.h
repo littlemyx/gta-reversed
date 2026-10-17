@@ -27,7 +27,7 @@ private:
 
     static inline NOTSA_GLOBAL(ms_aAnimAssocGroups, 0xB4EA34, (CAnimBlendAssocGroup*), {});
 
-    static inline auto& ms_aAnimations = StaticRef<std::array<CAnimBlendHierarchy, 2500>>(0xB4EA40);
+    static inline NOTSA_GLOBAL(ms_aAnimations, 0xB4EA40, (std::array<CAnimBlendHierarchy, 2500>), {}); static_assert(sizeof(std::array<CAnimBlendHierarchy, 2500>) == 60000);
     static inline NOTSA_GLOBAL(ms_numAnimations, 0xB4EA2C, (int32), {});
 
     static inline NOTSA_GLOBAL(ms_aAnimBlocks, 0xB5D4A0, (std::array<CAnimBlock, NUM_ANIM_BLOCKS>), {});

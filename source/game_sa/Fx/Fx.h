@@ -135,4 +135,4 @@ void RenderEnd();
 void RotateVecIntoVec(RwV3d& vecRes, const RwV3d& vec, const RwV3d& vecAlign);
 void RotateVecAboutVec(RwV3d& vecRes, const RwV3d& vec, const RwV3d& axis, float angle);
 
-extern Fx_c& g_fx;
+NOTSA_GLOBAL_EXTERN(g_fx, (Fx_c));

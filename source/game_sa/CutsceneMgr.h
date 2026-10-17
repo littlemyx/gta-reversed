@@ -118,7 +118,7 @@ public:
     //! If the anims were loaded (From the cutscene's .IFP file found in CUTS.IMG)
     static inline NOTSA_GLOBAL(ms_animLoaded, 0xB5F850, (bool), {});
 
-    static inline auto& ms_cutsceneAssociations = StaticRef<CAnimBlendAssocGroup>(0xBC4020);
+    static NOTSA_GLOBAL_DECL(CCutsceneMgr, ms_cutsceneAssociations, 0xBC4020, (CAnimBlendAssocGroup)); // detached: defined in CutsceneMgr.cpp (the type is incomplete here)
     static inline NOTSA_GLOBAL(ms_cutsceneOffset, 0xBC4034, (CVector), {});
 
     static void InjectHooks();

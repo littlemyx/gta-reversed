@@ -609,7 +609,7 @@ bool HasObjectBeenUprooted(CObject& obj) {
 //! 2396 ADD_SMOKE_PARTICLE (case @0x4779EC): pos (3), velocity (3), r, g, b, a, size, life (12 floats)
 //! `FxPrtMult_c mults(r, g, b, a, size, 1.0f, life)` (0x4AB290); `g_fx.m_SmokeHuge (0xA9AE20)->AddParticle(pos, vel, 0.0f, mults, -1.0f, 1.2f (0x3F99999A), 0.6f (0x3F19999A), false)` (0x4AA440). No null check on the system.
 void AddSmokeParticle(float px, float py, float pz, float vx, float vy, float vz, float r, float g, float b, float a, float size, float life) {
-    static_assert(offsetof(Fx_c, m_SmokeHuge) == 0xA9AE20 - 0xA9AE00);
+    static_assert(offsetof(Fx_c, m_SmokeHuge) == 32); // exe 0xA9AE20 - g_fx 0xA9AE00
     const CVector     pos{ px, py, pz };
     const CVector     vel{ vx, vy, vz };
     const FxPrtMult_c mults{ r, g, b, a, size, 1.0f, life };

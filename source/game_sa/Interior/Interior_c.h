@@ -45,8 +45,8 @@ public:
     int32             field_58;             // 0x58
     TList_c<FurnitureEntity_c> m_furnitureList; // 0x5C
     uint8             m_tiles[30][30];      // 0x68 - Tile status, indexed as [x][y] (see `GetTileStatus`)
-    CNodeAddress      m_exteriorNodeAddress; // 0x3EC - Exterior path node closest to an exit (see `InteriorGroup_c::SetupPaths`)
-    CNodeAddress      m_nodeAddress;        // 0x3F0
+    CNodeAddress      m_exteriorNodeAddress{ (uint16)-1, 0 }; // 0x3EC - Exterior path node closest to an exit (see `InteriorGroup_c::SetupPaths`) - ctor 0x5921D0 stores ONLY the area id 0xFFFF (word at +0x3EC / +0x3F0)
+    CNodeAddress      m_nodeAddress{ (uint16)-1, 0 };         // 0x3F0
     CVector           m_exteriorNodePos;    // 0x3F4
     CVector           m_position;           // 0x400
     int8              m_gotoPtsCount;       // 0x40C

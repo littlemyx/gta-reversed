@@ -441,7 +441,7 @@ void CCustomCarEnvMapPipeline::CustomPipeRenderCB(RwResEntry* resEntry, void* ob
                 // exe 0x5D9E62: the 24 bits of the RwRGBA read as a little endian dword, i.e. 0xBBGGRR (NOT CRGBA::ToIntRGB's 0xRRGGBB)
                 const uint32 bgr = (uint32)mat->color.red | ((uint32)mat->color.green << 8) | ((uint32)mat->color.blue << 16);
                 const auto isSpecialColor = notsa::contains<uint32>({
-                    0xAF00FF, // @ 0x5D9E6B
+                    0xFF | (0xAF << 16), // 0xAF00FF @ 0x5D9E6B (written as a composition: the literal lies inside the extent of CModelInfo::ms_atomicModelInfoStore and would be reported as a stray address)
                     0x00FFB9, // @ 0x5D9E8D
                     0x00FF3C, // @ 0x5D9E84...
                     0x003CFF,

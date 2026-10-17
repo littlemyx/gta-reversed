@@ -130,7 +130,7 @@ public:
 static constexpr auto NUM_COMPONENTS = 20u; // ?
 
 NOTSA_GLOBAL_HDR(gClothesHaveBeenStored, 0xA97298, (char), {});
-static inline auto& gStoredClothesState = StaticRef<CPedClothesDesc>(0xA9A810);
+// gStoredClothesState (0xA9A810, CPedClothesDesc): defined in Shopping.cpp, its only user (the type is incomplete here)
 NOTSA_GLOBAL_HDR(gComponentDamageState, 0xA97258, (std::array<eDamageState, 20u>), {});
 NOTSA_GLOBAL_HDR(gStoredVehicleMods, 0xA97274, (std::array<int16, 15u>), {});
 static inline CMultiBuilding* gpCurrentProperty = (CMultiBuilding*)0xA97294;

@@ -25,34 +25,34 @@ public:
     static inline NOTSA_GLOBAL(ms_lastPositionSearched, 0xAAE948, (int32), {});
 
     static constexpr int32 NUM_ATOMIC_MODEL_INFOS = 14000;
-    static CStore<CAtomicModelInfo, NUM_ATOMIC_MODEL_INFOS>& ms_atomicModelInfoStore;
+    static NOTSA_GLOBAL_DECL(CModelInfo, ms_atomicModelInfoStore, 0xAAE950, (CStore<CAtomicModelInfo, NUM_ATOMIC_MODEL_INFOS>));
 
     static constexpr int32 NUM_DAMAGE_ATOMIC_MODEL_INFOS = 70;
-    static CStore<CDamageAtomicModelInfo, NUM_DAMAGE_ATOMIC_MODEL_INFOS>& ms_damageAtomicModelInfoStore;
+    static NOTSA_GLOBAL_DECL(CModelInfo, ms_damageAtomicModelInfoStore, 0xB1BF58, (CStore<CDamageAtomicModelInfo, NUM_DAMAGE_ATOMIC_MODEL_INFOS>));
 
     static constexpr int32 NUM_LOD_ATOMIC_MODEL_INFOS = 1;
-    static CStore<CLodAtomicModelInfo, NUM_LOD_ATOMIC_MODEL_INFOS>& ms_lodAtomicModelInfoStore;
+    static NOTSA_GLOBAL_DECL(CModelInfo, ms_lodAtomicModelInfoStore, 0xB1C934, (CStore<CLodAtomicModelInfo, NUM_LOD_ATOMIC_MODEL_INFOS>));
 
     static constexpr int32 NUM_TIME_MODEL_INFOS = 169;
-    static CStore<CTimeModelInfo, NUM_TIME_MODEL_INFOS>& ms_timeModelInfoStore;
+    static NOTSA_GLOBAL_DECL(CModelInfo, ms_timeModelInfoStore, 0xB1C960, (CStore<CTimeModelInfo, NUM_TIME_MODEL_INFOS>));
 
     static constexpr int32 NUM_LOD_TIME_MODEL_INFOS = 1;
-    static CStore<CLodTimeModelInfo, NUM_LOD_TIME_MODEL_INFOS>& ms_lodTimeModelInfoStore;
+    static NOTSA_GLOBAL_DECL(CModelInfo, ms_lodTimeModelInfoStore, 0xB1E128, (CStore<CLodTimeModelInfo, NUM_LOD_TIME_MODEL_INFOS>));
 
     static constexpr int32 NUM_WEAPON_MODEL_INFOS = 51;
-    static CStore<CWeaponModelInfo, NUM_WEAPON_MODEL_INFOS>& ms_weaponModelInfoStore;
+    static NOTSA_GLOBAL_DECL(CModelInfo, ms_weaponModelInfoStore, 0xB1E158, (CStore<CWeaponModelInfo, NUM_WEAPON_MODEL_INFOS>));
 
     static constexpr int32 NUM_CLUMP_MODEL_INFOS = 92;
-    static CStore<CClumpModelInfo, NUM_CLUMP_MODEL_INFOS>& ms_clumpModelInfoStore;
+    static NOTSA_GLOBAL_DECL(CModelInfo, ms_clumpModelInfoStore, 0xB1E958, (CStore<CClumpModelInfo, NUM_CLUMP_MODEL_INFOS>));
 
     static constexpr int32 NUM_VEHICLE_MODEL_INFOS = 212;
-    static CStore<CVehicleModelInfo, NUM_VEHICLE_MODEL_INFOS>& ms_vehicleModelInfoStore;
+    static NOTSA_GLOBAL_DECL(CModelInfo, ms_vehicleModelInfoStore, 0xB1F650, (CStore<CVehicleModelInfo, NUM_VEHICLE_MODEL_INFOS>));
 
     static constexpr int32 NUM_PED_MODEL_INFOS = 278;
-    static CStore<CPedModelInfo, NUM_PED_MODEL_INFOS>& ms_pedModelInfoStore;
+    static NOTSA_GLOBAL_DECL(CModelInfo, ms_pedModelInfoStore, 0xB478F8, (CStore<CPedModelInfo, NUM_PED_MODEL_INFOS>));
 
     static constexpr int32 NUM_2DFX_INFOS = 100;
-    static CStore<C2dEffect, NUM_2DFX_INFOS>& ms_2dFXInfoStore;
+    static NOTSA_GLOBAL_DECL(CModelInfo, ms_2dFXInfoStore, 0xB4C2D8, (CStore<C2dEffect, NUM_2DFX_INFOS>));
 
 public:
     static void InjectHooks();

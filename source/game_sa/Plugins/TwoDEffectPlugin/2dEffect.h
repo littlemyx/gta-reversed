@@ -254,6 +254,8 @@ struct C2dEffect : public C2dEffectBase {
         tEffectEscalator        escalator;
     };
 
+    C2dEffect() {} // the union holds members with default member initialisers (CVector), which deletes the implicit ctor; the exe's CStore<C2dEffect> constructs nothing (all zero), so does this
+
 public:
     static inline NOTSA_GLOBAL(ms_nTxdSlot, 0x8D4948, (int32), { -1 });
     static inline NOTSA_GLOBAL(g2dEffectPluginOffset, 0xC3A1E0, (uint32), {});

@@ -5,7 +5,7 @@
 
 namespace {
 // Storage for all furniture items (256 * 0x14)
-auto& s_FurnSubGrpFurnitureStore = StaticRef<std::array<Furniture_c, 256>>(0xBAE1F8);
+NOTSA_GLOBAL(s_FurnSubGrpFurnitureStore, 0xBAE1F8, (std::array<Furniture_c, 256>), {}); static_assert(sizeof(s_FurnSubGrpFurnitureStore) == 5120);
 } // namespace
 #line 11
 

@@ -1,7 +1,7 @@
 #include "StdInc.h"
 #include "Shopping.h"
 #include "PedClothesDesc.h"
-
+static NOTSA_GLOBAL(gStoredClothesState, 0xA9A810, (CPedClothesDesc), {}); static_assert(sizeof(gStoredClothesState) == 120);
 void CShopping::InjectHooks() {
     RH_ScopedClass(CShopping);
     RH_ScopedCategoryGlobal();

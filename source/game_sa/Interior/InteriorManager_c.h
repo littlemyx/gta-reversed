@@ -7,6 +7,7 @@
 #include "InteriorEffectInfo_t.h"
 
 class InteriorManager_c {
+    friend struct InteriorManagerMembers; // typed access for the exe-address aliases of the private members (see below)
 public:
     static void InjectHooks();
 
@@ -84,4 +85,19 @@ private:
 };
 VALIDATE_SIZE(InteriorManager_c, 0x4758);
 
-static inline auto& g_interiorMan = StaticRef<InteriorManager_c>(0xBAF670);
+NOTSA_GLOBAL_HDR(g_interiorMan, 0xBAF670, (InteriorManager_c), {}); static_assert(sizeof(InteriorManager_c) == 18264);
+
+#ifdef NOTSA_GLOBALS_DETACHED
+// Interior_c.cpp / InteriorGroup_c.cpp name some private members of `g_interiorMan` by their exe address (`NOTSA_GLOBAL_ALIAS(s_X, 0xADDR, (T), InteriorManagerMembers::X(g_interiorMan))`);
+// in the detached build the alias must be the member itself, so these (same bytes, the exe's accesses are 4/1 byte wide) are viewed with the type the .cpp uses.
+struct InteriorManagerMembers {
+    static auto& InteriorCount(InteriorManager_c& m)            { return m.m_InteriorCount; }                                                       // 0x42A4
+    static auto& InteriorIds(InteriorManager_c& m)              { return reinterpret_cast<std::array<int32, 64>&>(m.m_InteriorIds); }              // 0x42A8
+    static auto& ObjectCount(InteriorManager_c& m)              { return m.m_ObjectCount; }                                                         // 0x43A8
+    static auto& Objects(InteriorManager_c& m)                  { return reinterpret_cast<std::array<InteriorObject, 32>&>(m.m_Objects); }         // 0x43AC
+    static auto& InteriorPedsAliveState(InteriorManager_c& m)   { return reinterpret_cast<std::array<bool, 16>&>(m.m_InteriorPedsAliveState); }    // 0x472C
+    static auto& EnEx(InteriorManager_c& m)                     { return m.m_EnEx; }                                                                // 0x473C
+    static auto& ArePedsEnabled(InteriorManager_c& m)           { return m.m_ArePedsEnabled; }                                                      // 0x4752
+    static auto& TimeLastPickupsGenerated(InteriorManager_c& m) { return reinterpret_cast<uint32&>(m.m_TimeLastPickupsGenerated); }                 // 0x4754
+};
+#endif

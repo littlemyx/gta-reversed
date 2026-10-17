@@ -31,7 +31,7 @@ struct CWaterVertex {
 };
 
 template<size_t NumVerts>
-struct CWaterPolygon { // NOTSA - I hate duplicate code
+struct CWaterPolygon { CWaterPolygon() = default; /* detached `WaterQuads` / `WaterTriangles` are value-initialised */ // NOTSA - I hate duplicate code
     CWaterPolygon(bool isInvisible, bool isLimitedDepth, auto vertIdxs) :
         bInvisible{isInvisible},
         bLimitedDepth{isLimitedDepth}
@@ -83,70 +83,70 @@ class CWaterLevel {
     m_nNumOfWaterQuads
     m_nNumOfWaterTriangles
     */
-    static inline auto& m_nWaterConfiguration = StaticRef<uint32>(0xC228A0);
-    static inline auto& m_nWaterTimeOffset = StaticRef<uint32>(0xC228A4);
-    static inline auto& m_bWaterFog = StaticRef<bool>(0x8D37D4);
-    static inline auto& m_bWaterFogScript = StaticRef<bool>(0x8D37D5);
-    static inline auto& m_WaterFogDensity = StaticRef<int32>(0x8D37E0);
-    static inline auto& m_WaterFogCol = StaticRef<CRGBA>(0x8D37E8);                 // Color of the fog layers (outside of it)
-    static inline auto& m_WaterFogInsideCol = StaticRef<CRGBA>(0x8D37EC);           // Color of the full-screen quad when inside the fog
-    static inline auto& m_fWaterFogInsideFadeSpeed = StaticRef<float>(0x8D37F0);    // Default: 0.04
-    static inline auto& m_fWaterFogInsideFade = StaticRef<float>(0xC228EC);         // [0, 1] How much the inside-fog quad is faded in
-    static inline auto& m_fWaterFogInsideTimer = StaticRef<float>(0xC228F0);        // Time (in game ticks) left until the inside fade starts fading out
+    static inline NOTSA_GLOBAL(m_nWaterConfiguration, 0xC228A0, (uint32), {});
+    static inline NOTSA_GLOBAL(m_nWaterTimeOffset, 0xC228A4, (uint32), {});
+    static inline NOTSA_GLOBAL(m_bWaterFog, 0x8D37D4, (bool), { true });
+    static inline NOTSA_GLOBAL(m_bWaterFogScript, 0x8D37D5, (bool), { true });
+    static inline NOTSA_GLOBAL(m_WaterFogDensity, 0x8D37E0, (int32), { 26 });
+    static inline NOTSA_GLOBAL(m_WaterFogCol, 0x8D37E8, (CRGBA), { std::bit_cast<CRGBA>(0x5FFFFFFU) });                 // Color of the fog layers (outside of it)
+    static inline NOTSA_GLOBAL(m_WaterFogInsideCol, 0x8D37EC, (CRGBA), { std::bit_cast<CRGBA>(0x28FFFFFFU) });           // Color of the full-screen quad when inside the fog
+    static inline NOTSA_GLOBAL(m_fWaterFogInsideFadeSpeed, 0x8D37F0, (float), { 0.04f });    // Default: 0.04
+    static inline NOTSA_GLOBAL(m_fWaterFogInsideFade, 0xC228EC, (float), {});         // [0, 1] How much the inside-fog quad is faded in
+    static inline NOTSA_GLOBAL(m_fWaterFogInsideTimer, 0xC228F0, (float), {});        // Time (in game ticks) left until the inside fade starts fading out
 
-    static inline auto& faWaveMultipliersX = StaticRef<std::array<float, 8>>(0x8D38C8);
-    static inline auto& faWaveMultipliersY = StaticRef<std::array<float, 8>>(0x8D38E8);
-    static inline auto& ms_WakePointAlphaMults = StaticRef<std::array<float, 4>>(0x8D390C);
+    static inline NOTSA_GLOBAL(faWaveMultipliersX, 0x8D38C8, (std::array<float, 8>), { 1.0f, 0.85f, 0.73f, 0.77f, 0.75f, 0.8f, 0.73f, 0.8f });
+    static inline NOTSA_GLOBAL(faWaveMultipliersY, 0x8D38E8, (std::array<float, 8>), { 0.75f, 0.9f, 0.95f, 0.82f, 0.7f, 0.75f, 0.9f, 1.0f });
+    static inline NOTSA_GLOBAL(ms_WakePointAlphaMults, 0x8D390C, (std::array<float, 5>), { 0.4f, 1.0f, 0.2f, 1.0f, 0.4f }); // 5 entries: RenderWakeSegment reads [partIdx + 1] for partIdx 0..3 (aliases.json "extend")
 
-    static inline auto& waterclear256Raster = StaticRef<RwRaster*>(0xC228A8);
-    static inline auto& texWaterclear256 = StaticRef<RwTexture*>(0xC228AC);
+    static inline NOTSA_GLOBAL(waterclear256Raster, 0xC228A8, (RwRaster*), {});
+    static inline NOTSA_GLOBAL(texWaterclear256, 0xC228AC, (RwTexture*), {});
 
-    static inline auto& seabd32Raster = StaticRef<RwRaster*>(0xC228B0);
-    static inline auto& texSeabd32 = StaticRef<RwTexture*>(0xC228B4);
+    static inline NOTSA_GLOBAL(seabd32Raster, 0xC228B0, (RwRaster*), {});
+    static inline NOTSA_GLOBAL(texSeabd32, 0xC228B4, (RwTexture*), {});
 
-    static inline auto& waterwakeRaster = StaticRef<RwRaster*>(0xC228B8);
-    static inline auto& texWaterwake = StaticRef<RwTexture*>(0xC228BC);
+    static inline NOTSA_GLOBAL(waterwakeRaster, 0xC228B8, (RwRaster*), {});
+    static inline NOTSA_GLOBAL(texWaterwake, 0xC228BC, (RwTexture*), {});
 
-    static inline auto& NumWaterTriangles = StaticRef<uint32>(0xC22884);
-    static inline auto& NumWaterQuads = StaticRef<uint32>(0xC22888);
-    static inline auto& NumWaterVertices = StaticRef<uint32>(0xC2288C);
-    static inline auto& NumWaterZonePolys = StaticRef<uint32>(0xC215F0);
+    static inline NOTSA_GLOBAL(NumWaterTriangles, 0xC22884, (uint32), {});
+    static inline NOTSA_GLOBAL(NumWaterQuads, 0xC22888, (uint32), {});
+    static inline NOTSA_GLOBAL(NumWaterVertices, 0xC2288C, (uint32), {});
+    static inline NOTSA_GLOBAL(NumWaterZonePolys, 0xC215F0, (uint32), {});
 
-    static inline auto& m_aVertices = StaticRef<std::array<CWaterVertex, 1021>>(0xC22910);
+    static inline NOTSA_GLOBAL(m_aVertices, 0xC22910, (std::array<CWaterVertex, 1021>), {});
 
-    static inline auto& CameraRangeMaxY = StaticRef<int32>(0xC1F950);
-    static inline auto& CameraRangeMinY = StaticRef<int32>(0xC1F954);
+    static inline NOTSA_GLOBAL(CameraRangeMaxY, 0xC1F950, (int32), {});
+    static inline NOTSA_GLOBAL(CameraRangeMinY, 0xC1F954, (int32), {});
 
-    static inline auto& CameraRangeMaxX = StaticRef<int32>(0xC1F958);
-    static inline auto& CameraRangeMinX = StaticRef<int32>(0xC1F95C);
+    static inline NOTSA_GLOBAL(CameraRangeMaxX, 0xC1F958, (int32), {});
+    static inline NOTSA_GLOBAL(CameraRangeMinX, 0xC1F95C, (int32), {});
 
-    static inline auto& DETAILEDWATERDIST = StaticRef<int32>(0x8D37D0); // Default: 48
-    static inline auto& bSplitBigPolys = StaticRef<bool>(0x8D37F4);     // Default: true
+    static inline NOTSA_GLOBAL(DETAILEDWATERDIST, 0x8D37D0, (int32), { 48 }); // Default: 48
+    static inline NOTSA_GLOBAL(bSplitBigPolys, 0x8D37F4, (bool), { true });     // Default: true
     static inline auto  BigPolySize = 168; // NOTSA variable, but value is OG.
 
-    static inline auto& TextureShiftFirstV = StaticRef<float>(0xC21178);
-    static inline auto& TextureShiftFirstU = StaticRef<float>(0xC2117C);
+    static inline NOTSA_GLOBAL(TextureShiftFirstV, 0xC21178, (float), {});
+    static inline NOTSA_GLOBAL(TextureShiftFirstU, 0xC2117C, (float), {});
 
-    static inline auto& TextureShiftSecondV = StaticRef<float>(0xC21180);
-    static inline auto& TextureShiftSecondU = StaticRef<float>(0xC21184);
+    static inline NOTSA_GLOBAL(TextureShiftSecondV, 0xC21180, (float), {});
+    static inline NOTSA_GLOBAL(TextureShiftSecondU, 0xC21184, (float), {});
 
     // Third layer, applied with random jitter every frame by `RenderWater`. Not used by any reversed code (yet) => names are a guess (by analogy with the above)
-    static inline auto& TextureShiftThirdV = StaticRef<float>(0xC21170);
-    static inline auto& TextureShiftThirdU = StaticRef<float>(0xC21174);
+    static inline NOTSA_GLOBAL(TextureShiftThirdV, 0xC21170, (float), {});
+    static inline NOTSA_GLOBAL(TextureShiftThirdU, 0xC21174, (float), {});
 
     // Scrolling accumulators (flow-driven), updated by `RenderWater`. Initial value: 0.5
-    static inline auto& TextureScrollSecondU = StaticRef<float>(0x8D3824);
-    static inline auto& TextureScrollSecondV = StaticRef<float>(0x8D3828);
-    static inline auto& TextureScrollFirstU = StaticRef<float>(0x8D382C);
-    static inline auto& TextureScrollFirstV = StaticRef<float>(0x8D3830);
+    static inline NOTSA_GLOBAL(TextureScrollSecondU, 0x8D3824, (float), { 0.5f });
+    static inline NOTSA_GLOBAL(TextureScrollSecondV, 0x8D3828, (float), { 0.5f });
+    static inline NOTSA_GLOBAL(TextureScrollFirstU, 0x8D382C, (float), { 0.5f });
+    static inline NOTSA_GLOBAL(TextureScrollFirstV, 0x8D3830, (float), { 0.5f });
 
-    static inline auto& TextureJitterMult = StaticRef<float>(0x8D3834);           // Default: 0.1
-    static inline auto& TextureRandomShiftMult = StaticRef<float>(0x8D3928);      // Default: 0.01
-    static inline auto& TextureFlowScrollMult = StaticRef<float>(0x8D392C);       // Default: 0.04
-    static inline auto& WaterTextureAddressing = StaticRef<uint32>(0x8D3930);     // Default: 1 (rwTEXTUREADDRESSWRAP)
-    static inline auto& DETAILEDSEABEDDIST = StaticRef<float>(0x8D3934);          // Default: 600. Sea bed blocks closer than this are drawn using `RenderDetailedSeaBedSegment`
+    static inline NOTSA_GLOBAL(TextureJitterMult, 0x8D3834, (float), { 0.1f });           // Default: 0.1
+    static inline NOTSA_GLOBAL(TextureRandomShiftMult, 0x8D3928, (float), { 0.01f });      // Default: 0.01
+    static inline NOTSA_GLOBAL(TextureFlowScrollMult, 0x8D392C, (float), { 0.04f });       // Default: 0.04
+    static inline NOTSA_GLOBAL(WaterTextureAddressing, 0x8D3930, (uint32), { 1 });     // Default: 1 (rwTEXTUREADDRESSWRAP)
+    static inline NOTSA_GLOBAL(DETAILEDSEABEDDIST, 0x8D3934, (float), { 600.0f });          // Default: 600. Sea bed blocks closer than this are drawn using `RenderDetailedSeaBedSegment`
 
-    static inline auto& bRainbowQuads = StaticRef<bool>(0xC228DC);                // Debug leftover? If set each water quad is colored based on it's index
+    static inline NOTSA_GLOBAL(bRainbowQuads, 0xC228DC, (bool), {});                // Debug leftover? If set each water quad is colored based on it's index
 
     struct WaterFog {
         std::array<int16, 70> minX;
@@ -155,27 +155,27 @@ class CWaterLevel {
         std::array<int16, 70> maxY;
         std::array<float, 70> z;
     };
-    static inline auto& ms_WaterFog = StaticRef<WaterFog>(0xC21188);
-    static inline auto& gWaterFogIndex = StaticRef<uint32>(0xC228E4);
-    static inline auto& m_fWaterFogHeight = StaticRef<float>(0x8D37E4);
-    static inline auto& gbPlayerIsInsideWaterFog = StaticRef<bool>(0xC228E8);
+    static inline NOTSA_GLOBAL(ms_WaterFog, 0xC21188, (WaterFog), {});
+    static inline NOTSA_GLOBAL(gWaterFogIndex, 0xC228E4, (uint32), {});
+    static inline NOTSA_GLOBAL(m_fWaterFogHeight, 0x8D37E4, (float), { 12.0f });
+    static inline NOTSA_GLOBAL(gbPlayerIsInsideWaterFog, 0xC228E8, (bool), {});
 
 
     // In reality the alpha component isn't used and instead `WaterLayerAlpha` is used
-    static inline auto& WaterColorTriangle = StaticRef<CRGBA>(0xC21168);
-    static inline auto& WaterColor = StaticRef<CRGBA>(0xC2116C);
+    static inline NOTSA_GLOBAL(WaterColorTriangle, 0xC21168, (CRGBA), {});
+    static inline NOTSA_GLOBAL(WaterColor, 0xC2116C, (CRGBA), {});
 
-    static inline auto& WaterLayerAlpha = StaticRef<std::array<uint32, 2>>(0x8D3808);
+    static inline NOTSA_GLOBAL(WaterLayerAlpha, 0x8D3808, (std::array<uint32, 3>), { 160, 90, 255 }); // 3 layers: the exe also reads [2] (0x6E8BE1)
 
-    static inline auto& m_CurrentFlow = StaticRef<CVector2D>(0xC22890);
-    static inline auto& m_CurrentDesiredFlow = StaticRef<CVector2D>(0xC22898);
+    static inline NOTSA_GLOBAL(m_CurrentFlow, 0xC22890, (CVector2D), {});
+    static inline NOTSA_GLOBAL(m_CurrentDesiredFlow, 0xC22898, (CVector2D), {});
 
     static constexpr int32 WATER_BLOCK_SIZE                       = 500;
     static constexpr int32 NUM_WATER_BLOCKS_ROWCOL                = 6000 / WATER_BLOCK_SIZE; // 6000 => map size
     static inline    int32  m_MaxNumBlocksOutsideWorldToBeRendered = 70; // NOTSA: We just want a variable for the debug tool. Value may never be higher than the below array's size.
-    static inline    auto& m_NumBlocksOutsideWorldToBeRendered = StaticRef<uint32>(0xC215EC);
-    static inline    auto& m_BlocksToBeRenderedOutsideWorldX = StaticRef<std::array<int16, 70>>(0xC21560);
-    static inline    auto& m_BlocksToBeRenderedOutsideWorldY = StaticRef<std::array<int16, 70>>(0xC214D0);
+    static inline    NOTSA_GLOBAL(m_NumBlocksOutsideWorldToBeRendered, 0xC215EC, (uint32), {});
+    static inline    NOTSA_GLOBAL(m_BlocksToBeRenderedOutsideWorldX, 0xC21560, (std::array<int16, 70>), {});
+    static inline    NOTSA_GLOBAL(m_BlocksToBeRenderedOutsideWorldY, 0xC214D0, (std::array<int16, 70>), {});
 
     // NOTSA: Color of wake segment parts (So we can make rainbows)
     struct WakeSegmentPartColor {
@@ -206,17 +206,17 @@ class CWaterLevel {
 
     //! A block might have a simple shape (tri/quad) or a combo (That is just a combination of quads and triangles)
     //! AKA `m_QuadsAndTrianglesInEachBlock`
-    static inline auto& m_BlockPolyInfo = StaticRef<notsa::mdarray<PolyInfo, NUM_WATER_BLOCKS_ROWCOL, NUM_WATER_BLOCKS_ROWCOL>>(0xC21B70);
+    static inline NOTSA_GLOBAL(m_BlockPolyInfo, 0xC21B70, (notsa::mdarray<PolyInfo, NUM_WATER_BLOCKS_ROWCOL, NUM_WATER_BLOCKS_ROWCOL>), {});
 
     //! Triangles used for blocks (Or poly combos)
-    static inline auto& WaterTriangles = StaticRef<std::array<CWaterTriangle, 6>>(0xC22854);
+    static inline NOTSA_GLOBAL(WaterTriangles, 0xC22854, (std::array<CWaterTriangle, 6>), {});
 
     //! Quads used for blocks (Or poly combos)
-    static inline auto& WaterQuads = StaticRef<std::array<CWaterQuad, 301>>(0xC21C90);
+    static inline NOTSA_GLOBAL(WaterQuads, 0xC21C90, (std::array<CWaterQuad, 301>), {});
 
     //! Contains sequences of poly's, each seq. is used for a block. The end of a sequence is indicated by a `PolyInfo` with it's type set to `NONE`.
     //! AKA `m_QuadsAndTrianglesList`
-    static inline auto& m_PolyCombos = StaticRef<std::array<PolyInfo, 700>>(0xC215F8);
+    static inline NOTSA_GLOBAL(m_PolyCombos, 0xC215F8, (std::array<PolyInfo, 700>), {});
 
     // NOTSA Section - Used for debugging //
     

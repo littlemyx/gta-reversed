@@ -634,18 +634,18 @@ void CWaterLevel::RenderHighDetailWaterRectangle(int32 minX, int32 maxX, int32 Y
 
 namespace {
 // 0xC1F960 - Index of the vertex being generated (indexes the color caches below)
-auto& s_VtxColorCacheIdx = StaticRef<int32>(0xC1F960);
+NOTSA_GLOBAL(s_VtxColorCacheIdx, 0xC1F960, (int32), {});
 
 // Per-vertex color (the first layer's) cache, so the second layer can reuse the exact same colors
-auto& s_VtxColorCacheB = StaticRef<std::array<uint8, 0x800>>(0xC1F968);
-auto& s_VtxColorCacheG = StaticRef<std::array<uint8, 0x800>>(0xC20168);
-auto& s_VtxColorCacheR = StaticRef<std::array<uint8, 0x800>>(0xC20968);
+NOTSA_GLOBAL(s_VtxColorCacheB, 0xC1F968, (std::array<uint8, 0x800>), {});
+NOTSA_GLOBAL(s_VtxColorCacheG, 0xC20168, (std::array<uint8, 0x800>), {});
+NOTSA_GLOBAL(s_VtxColorCacheR, 0xC20968, (std::array<uint8, 0x800>), {});
 
 // 0xC278D4 - Normal output of `CalculateWavesOnlyForCoordinate` (never read)
-auto& s_WaveNormalSink = StaticRef<CVector>(0xC278D4);
+NOTSA_GLOBAL(s_WaveNormalSink, 0xC278D4, (CVector), {});
 
 // 0xC278E0 - If set, no indices are generated (and the vertex counter isn't advanced). Never written by anything known => always false
-auto& s_bDontGenerateIndices = StaticRef<bool>(0xC278E0);
+NOTSA_GLOBAL(s_bDontGenerateIndices, 0xC278E0, (bool), {});
 }
 
 // 0x6E91D0
@@ -939,7 +939,7 @@ void CWaterLevel::RenderHighDetailWaterTriangle_OneLayer(int32 X1, int32 Y1, CRe
                 RwIm3DVertexSetU(vtx, (float)((double)uOff * (double)TextureJitterMult + (double)TextureShiftThirdU));
                 RwIm3DVertexSetV(vtx, (float)((double)vOff * (double)TextureJitterMult + (double)TextureShiftThirdV));
                 RwIm3DVertexSetPos(vtx, fX, fY, (float)((double)z + (double)0.1f)); // 0x858B1C
-                const auto a = (uint8)(int32)((double)StaticRef<int32>(0x8D3810) * (double)glare);
+                const auto a = (uint8)(int32)((double)NOTSA_GLOBAL_EXPR(0x8D3810, (int32), static_cast<int32>(WaterLayerAlpha[2])) * (double)glare);
                 RwIm3DVertexSetRGBA(vtx, a, a, a, 0xFF);
                 break;
             }

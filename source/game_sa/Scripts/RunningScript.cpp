@@ -13,6 +13,10 @@
 #include "TaskSimpleHoldEntity.h"
 #include "spdlog/sinks/stdout_color_sinks.h"
 #include <numbers>
+#ifdef NOTSA_GLOBALS_DETACHED
+#include <standalone/Fixups.h>
+#endif
+#line 16
 
 static notsa::log_ptr logger;
 
@@ -159,6 +163,22 @@ void CRunningScript::InjectCustomCommandHooks() {
     cleo::extensions::intoperations::RegisterHandlers();
 #endif
 
+#ifdef NOTSA_GLOBALS_DETACHED
+    { // NOTSA (detached build): there is no table of the exe's group handlers to fall back to (see ProcessOneCommand), so list the vanilla commands without a ported handler
+        size_t missing = 0;
+        int    first   = -1;
+        for (int id = 0; id <= (int)COMMAND_HIGHEST_VANILLA_ID; id++) {
+            if (!s_CustomCommandHandlerTable[id]) {
+                missing += 1;
+                if (first < 0) {
+                    first = id;
+                }
+            }
+        }
+        notsa::standalone::Fixups::Log("[scm] %u of %d vanilla script commands have no ported handler (first id %d)", (unsigned)missing, (int)COMMAND_HIGHEST_VANILLA_ID + 1, first);
+    }
+#endif
+#line 162
 #ifdef DUMP_CUSTOM_COMMAND_HANDLERS_TO_FILE
     auto reversed{0}, total{0};
     std::ofstream ofsrev{ "reversed_script_command_handlers.txt" }, ofsnotrev{ "NOT_reversed_script_command_handlers.txt" };
@@ -1773,7 +1793,12 @@ OpcodeResult CRunningScript::ProcessOneCommand() {
     if (const auto handler = CustomCommandHandlerOf((eScriptCommands)(op.Command))) {
         return std::invoke(handler, this);
     } else {
+#ifdef NOTSA_GLOBALS_DETACHED // The exe's per-group handlers (ProcessCommands0to99 ...) are not part of the detached build: every command needs a ported handler
+        notsa::standalone::Fixups::Fatal("script command %u (%s) has no ported handler", (unsigned)op.Command, std::string{ notsa::script::GetScriptCommandName((eScriptCommands)(op.Command)) }.c_str());
+#else
         return std::invoke(s_OriginalCommandHandlerTable[(size_t)op.Command / 100], this, (eScriptCommands)(op.Command));
+#endif
+#line 1777
     }
 }
 
@@ -1831,22 +1856,3 @@ void CRunningScript::ResetIP() {
         m_IP = std::exchange(m_IPStack[m_StackDepth--], nullptr); // NOTSA: Also clear the stack, we don't need it anymore
     } while (m_StackDepth);
 }
-
-// Initial values of the globals declared with NOTSA_GLOBAL_DECL in RunningScript.h (detached mode; ignored in address mode)
-#ifdef NOTSA_GLOBALS_DETACHED
-namespace {
-// The 27 handlers of the exe (ProcessCommands0to99 ...) are not ported: the table holds their exe addresses, as in address mode (they run into the trap stubs).
-CRunningScript::CommandHandlerFn_t OrigHandler(uint32 va) { return std::bit_cast<CRunningScript::CommandHandlerFn_t>(va); }
-}
-#endif
-NOTSA_GLOBAL_DEF(CRunningScript, s_OriginalCommandHandlerTable, 0x8A6168, (CRunningScript::CommandHandlerTable_t), {
-    OrigHandler(0x465E60), OrigHandler(0x466DE0), OrigHandler(0x469390),
-    OrigHandler(0x47C100), OrigHandler(0x47D210), OrigHandler(0x47E090),
-    OrigHandler(0x47F370), OrigHandler(0x47FA30), OrigHandler(0x481300),
-    OrigHandler(0x483BD0), OrigHandler(0x489500), OrigHandler(0x48A320),
-    OrigHandler(0x48B590), OrigHandler(0x48CDD0), OrigHandler(0x48EAA0),
-    OrigHandler(0x490DB0), OrigHandler(0x493FE0), OrigHandler(0x496E00),
-    OrigHandler(0x46D050), OrigHandler(0x46B460), OrigHandler(0x472310),
-    OrigHandler(0x470A90), OrigHandler(0x474900), OrigHandler(0x4762D0),
-    OrigHandler(0x478000), OrigHandler(0x47A760), OrigHandler(0x479DA0)
-});

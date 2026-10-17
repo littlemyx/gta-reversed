@@ -254,7 +254,10 @@ public:
     using CommandHandlerFn_t    = OpcodeResult(__thiscall CRunningScript::*)(int32);
     using CommandHandlerTable_t = std::array<CommandHandlerFn_t, 27>;
 
+#ifndef NOTSA_GLOBALS_DETACHED // the exe's table of group handlers (ProcessCommands0to99 ...); the detached build has none (ProcessOneCommand: every command needs a ported handler)
     static NOTSA_GLOBAL_DECL(CRunningScript, s_OriginalCommandHandlerTable, 0x8A6168, (CommandHandlerTable_t));
+#endif
+#line 258
 
     // NOTSA: We need to provide our own string buffer for arguments parser - the initial assumption that we can use string_view pointed at instruction pointer didn't work in the end.
     // it's not always null terminated so we have to provide our own buffer for the text. I'm eyeballing the max size so this needs to be enough for now. I can't find any command

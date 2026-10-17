@@ -52,8 +52,17 @@ CMissionCleanup::CMissionCleanup() {
  */
 void CMissionCleanup::Init() {
     m_Count = 0;
+#ifdef NOTSA_GLOBALS_DETACHED
+    // in place: `fill(tMissionCleanupEntity())` copies a temporary whose 3 padding bytes are uninitialised stack bytes (the end state of the global then depends on the link order)
+    for (auto& e : m_Objects) {
+        e.type   = 0;
+        e.handle = 0;
+    }
+#else
     m_Objects.fill(tMissionCleanupEntity());
+#endif
 }
+#line 49
 
 /* Performs a clean-up
  * @addr 0x468560

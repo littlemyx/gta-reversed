@@ -142,4 +142,62 @@ void DumpAtBoot() {
     }
 }
 } // namespace notsa::globals
+
+// NOTSA_POISON_STACK=1 (init-order / uninitialised-padding probe, .notes/reports/D-B20.md): the C++ dynamic initialisers run on top of whatever the CRT start-up and the
+// PREVIOUS initialisers left on the stack. A constructor that copies an object with uninitialised padding bytes (`m_Objects.fill(tMissionCleanupEntity())`) or reads an
+// uninitialised local picks up that stale content: zero by luck in one link order, garbage in another. With the variable set, this initialiser (placed first among the
+// C++ ones: `.CRT$XCB` < `.CRT$XCU`) takes over the rest of the CRT's `_initterm` table: it calls every remaining entry itself, in the CRT's order, with the 256 KB below
+// the call filled with 0xCD right before each call, and nulls the entry so the CRT's loop (which continues behind us) skips it. An uninitialised read then shows up as
+// 0xCD bytes in the boot dump in ANY link order. Off unless the variable is set (a soak must not run on a poisoned stack).
+#if defined(_MSC_VER) && !defined(__clang__) && defined(_M_IX86)
+extern "C" {
+extern void(__cdecl* __xc_a[])(void);
+extern void(__cdecl* __xc_z[])(void);
+}
+#pragma section(".CRT$XCB", read)
+extern "C" int(__cdecl* const notsa_verify_poison_stack_early)();
+namespace {
+// naked: no frame, fills [esp - 256 KB, esp) with 0xCD (pages touched in descending order so the guard page mechanism commits the stack); clobbers eax, ecx, edx only
+__declspec(naked) void __cdecl PoisonBelow() {
+    __asm {
+        mov  eax, esp
+        mov  ecx, 64
+    probe:
+        sub  eax, 4096
+        mov  dword ptr [eax], 0xCDCDCDCD
+        dec  ecx
+        jnz  probe
+        mov  edx, esp
+    fill:
+        mov  dword ptr [eax], 0xCDCDCDCD
+        add  eax, 4
+        cmp  eax, edx
+        jb   fill
+        ret
+    }
+}
+
+int __cdecl PoisonedInitterm() {
+    char env[8];
+    if (GetEnvironmentVariableA("NOTSA_POISON_STACK", env, sizeof(env)) == 0 || env[0] != '1') {
+        return 0;
+    }
+    // entries after our own (`.CRT$XCB`): the rest of the table up to `__xc_z`
+    auto* const first = reinterpret_cast<void(__cdecl**)(void)>(const_cast<int(__cdecl**)()>(&notsa_verify_poison_stack_early)) + 1;
+    DWORD       oldProt;
+    VirtualProtect(first, static_cast<SIZE_T>(reinterpret_cast<char*>(__xc_z) - reinterpret_cast<char*>(first)), PAGE_READWRITE, &oldProt);
+    for (auto* p = first; p < __xc_z; ++p) {
+        const auto fn = *p;
+        if (!fn) {
+            continue;
+        }
+        *p = nullptr;
+        PoisonBelow();
+        fn();
+    }
+    return 0;
+}
+} // namespace
+extern "C" __declspec(allocate(".CRT$XCB")) int(__cdecl* const notsa_verify_poison_stack_early)() = PoisonedInitterm;
+#endif
 #endif

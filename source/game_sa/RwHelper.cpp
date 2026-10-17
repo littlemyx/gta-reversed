@@ -44,7 +44,7 @@ void RwHelperInjectHooks() {
 
 // 0x4ABA50
 CEventGlobalGroup* GetEventGlobalGroup() {
-    static auto& globalEvents = StaticRef<CEventGlobalGroup*>(0xA9AF6C);
+    NOTSA_GLOBAL_LOCAL(globalEvents, 0xA9AF6C, (CEventGlobalGroup*), {});
 
     if (globalEvents)
         return globalEvents;
@@ -316,7 +316,7 @@ RwTexture* RwTexDictionaryFindHashNamedTexture(RwTexDictionary* txd, uint32 hash
     return nullptr;
 }
 
-static auto& s_bUseLTMForClumpBoundingSphere = StaticRef<bool>(0x8D60BC); // NOTSA name
+static NOTSA_GLOBAL(s_bUseLTMForClumpBoundingSphere, 0x8D60BC, (bool), { true }); // NOTSA name
 
 //! Transforms the center of the atomic's bounding sphere to world space (or clump space if not using the LTM)
 static RwV3d AtomicGetBoundingSphereCenterTransformed(RpAtomic* atomic) {
@@ -410,8 +410,8 @@ struct tSkinBonePos {
     RwV3d pos;
 };
 VALIDATE_SIZE(tSkinBonePos, 0x10);
-static auto& s_SkinBonePositions            = StaticRef<std::array<tSkinBonePos, 64>>(0xC88258); // NOTSA name
-static auto& s_bSkinBonePositionsInitialized = StaticRef<bool>(0xC88658);                          // NOTSA name
+static NOTSA_GLOBAL(s_SkinBonePositions, 0xC88258, (std::array<tSkinBonePos, 64>), {}); // NOTSA name
+static NOTSA_GLOBAL(s_bSkinBonePositionsInitialized, 0xC88658, (bool), {});                          // NOTSA name
 
 // 0x735140
 void SkinGetBonePositions(RpClump* clump) {

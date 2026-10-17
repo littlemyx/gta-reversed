@@ -8,8 +8,8 @@
 
 class CIniFile {
 public:
-    static inline auto& PedNumberMultiplier = StaticRef<float>(0x8CDF14);
-    static inline auto& CarNumberMultiplier = StaticRef<float>(0x8CDF18);
+    static inline NOTSA_GLOBAL(PedNumberMultiplier, 0x8CDF14, (float), { 1.0f });
+    static inline NOTSA_GLOBAL(CarNumberMultiplier, 0x8CDF18, (float), { 1.0f });
 
 public:
     static void InjectHooks();

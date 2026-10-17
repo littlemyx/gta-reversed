@@ -58,6 +58,8 @@
 #include "TaskSimpleUseGun.h"
 #include "TempColModels.h"
 #include "CustomBuildingDNPipeline.h"
+namespace { NOTSA_GLOBAL_SYNTH(k_8D21E4, 0x8D21E4, (float), { 0.1f }); }
+#line 61
 
 void CPed::InjectHooks() {
     RH_ScopedVirtualClass(CPed, 0x86C358, 26);
@@ -5662,7 +5664,7 @@ int32 CPed::ProcessEntityCollision(CEntity* entity, CColPoint* colPoint) {
                 // Update the brightness of the surface the ped is on
                 // The original keeps the intermediate results in extended precision, hence `double`
                 {
-                    const double a = (double)CTimer::GetTimeStep() * (double)StaticRef<float>(0x8D21E4);
+                    const double a = (double)CTimer::GetTimeStep() * (double)NOTSA_GLOBAL_EXPR(0x8D21E4, (float), k_8D21E4);
                     const double d = (double)lineCP0.m_nLightingB.day   * (double)CONTACT_LIGHT_SCALE;
                     const double n = (double)lineCP0.m_nLightingB.night * (double)CONTACT_LIGHT_SCALE;
                     const double w = (double)CCustomBuildingDNPipeline::m_fDNBalanceParam;

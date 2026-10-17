@@ -5,6 +5,8 @@
 #include "Shadows.h"
 
 NOTSA_GLOBAL(TunnelWeather, 0x8CDEE0, (int), { 9 }); // 9 = WEATHER_FOGGY_SF, unchanged
+namespace { NOTSA_GLOBAL_SYNTH(k_B7CB20, 0xB7CB20, (uint16), {}); NOTSA_GLOBAL_SYNTH(k_B7CB24, 0xB7CB24, (uint16), {}); } // old / new weather type words stored by CalcColoursForPoint (write only)
+#line 8
 
 void CTimeCycle::InjectHooks() {
     RH_ScopedClass(CTimeCycle);
@@ -299,8 +301,14 @@ void CTimeCycle::CalcColoursForPoint(CVector point, CColourSet* set) {
     const float invTimeT = (float)(1.0 - (double)timeT);
 
     // 0x5605B3 - the exe stores the (16 bit) old / new weather types in a pair of globals
+#ifdef NOTSA_GLOBALS_DETACHED
+    k_B7CB20 = (uint16)CWeather::OldWeatherType;
+    k_B7CB24 = (uint16)CWeather::NewWeatherType;
+#else
     *reinterpret_cast<uint16*>(0xB7CB20) = (uint16)CWeather::OldWeatherType;
     *reinterpret_cast<uint16*>(0xB7CB24) = (uint16)CWeather::NewWeatherType;
+#endif
+#line 304
 
     const float t = CWeather::InterpolationValue;
 

@@ -52,7 +52,12 @@ NOTSA_GLOBAL(AUTOGYRO_ROTORLIFT_MULT, 0x8D34E0, (float), { 4.5f });      // 4.5f
 NOTSA_GLOBAL(AUTOGYRO_ROTORLIFT_FALLOFF, 0x8D34E4, (float), { 0.75f });   // 0.75f
 NOTSA_GLOBAL(AUTOGYRO_ROTORTILT_ANGLE, 0x8D34E8, (float), { 0.25f });     // 0.25f
 NOTSA_GLOBAL(ROTOR_SEMI_THICKNESS, 0x8D34EC, (float), { 0.05f });         // 0.05f
+#ifdef NOTSA_GLOBALS_DETACHED
+static NOTSA_GLOBAL(s_SpeedMult, 0x8D34F8, (float[6]), { 0.8f, 0.75f, 0.85f, 0.9f, 0.85f, 0.85f });
+float* gfSpeedMult = s_SpeedMult;
+#else
 float* gfSpeedMult = (float*)0x8D34F8;                   // float fSpeedMult[5] = { 0.8f, 0.75f, 0.85f, 0.9f, 0.85f, 0.85f }
+#endif
 NOTSA_GLOBAL(fDamagePosSpeedShift, 0x8D3510, (float), { 0.4f });         // 0.4f
 NOTSA_GLOBAL(DIFF_LIMIT, 0x8D35B4, (float), { 0.8f });                   // 0.8f
 NOTSA_GLOBAL(DIFF_SPRING_MULT_X, 0x8D35B8, (float), { 0.05f });           // 0.05f
@@ -74,6 +79,7 @@ NOTSA_GLOBAL(VehicleGunOffset, 0x8D35D4, (std::array<CVector, 13>), { {
     { 3.7f, 0.98f, -1.02f },
     { 3.92f, 0.98f, -1.02f }
 } }); // maybe [12]; 13 elements: a 14th would overlay fFlyingLiftLimit and two more floats (aliases.json retype)
+namespace { NOTSA_GLOBAL_SYNTH(k_8D3674, 0x8D3674, (float), { 0.85f }); NOTSA_GLOBAL_SYNTH(k_8D3678, 0x8D3678, (float), { 0.25f }); }
 #line 63
 
 void CVehicle::InjectHooks() {
@@ -5398,8 +5404,8 @@ void CVehicle::DoBoatSplashes(float fWaterDamping) {
     float xMult = 0.7f;
     float zMult = 0.0f;
     if (isSkimmer) {
-        xMult = StaticRef<float>(0x8D3678); // 0.25f
-        zMult = StaticRef<float>(0x8D3674); // 0.85f
+        xMult = NOTSA_GLOBAL_EXPR(0x8D3678, (float), k_8D3678); // 0.25f
+        zMult = NOTSA_GLOBAL_EXPR(0x8D3674, (float), k_8D3674); // 0.85f
     }
 
     const float posY = colMax.y * 0.5f;

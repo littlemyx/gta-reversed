@@ -10,6 +10,8 @@
 #include <numbers>
 #include "EntryExitManager.h"
 #include "Fx/FxFtol.h"
+#include "ExeZero.h"
+#line 13
 
 constexpr std::array<airstrip_info, NUM_AIRSTRIPS> airstrip_table = { // 0x8D06E0
     airstrip_info{ { +1750.0f,  -2494.0f }, 180.0f, 1000.0f }, // AIRSTRIP_LS_AIRPORT
@@ -1684,7 +1686,7 @@ void CRadar::DrawRadarSectionMap(int32 x, int32 y, CRect rect) {
 // 0x586650
 void CRadar::DrawRadarGangOverlay(bool inMenu) {
     NOTSA_GLOBAL_LOCAL(g_RadarGangResetOverlay, 0xBAA36C, (uint32), {}); // bool?
-    static auto& g_RadarGangOverlay = StaticRef<CRect>(0xBAA35C);
+    NOTSA_GLOBAL_LOCAL(g_RadarGangOverlay, 0xBAA35C, (CRect), = ExeZero<CRect>()); // zero in the exe image (CRect() would seed the 1e6 bounds)
 
     if ((g_RadarGangResetOverlay & 1) == 0) {
         g_RadarGangResetOverlay |= 1u;

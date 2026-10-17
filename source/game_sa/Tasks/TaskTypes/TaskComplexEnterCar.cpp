@@ -36,6 +36,8 @@
 #include "EventLeaderQuitEnteringCarAsDriver.h"
 #include "EventLeaderExitedCarAsDriver.h"
 #include "EventLeaderEnteredCarAsDriver.h"
+namespace { NOTSA_GLOBAL_SYNTH(k_8D2ECC, 0x8D2ECC, (float), { std::bit_cast<float>(0xBE32B8C3u) }); } // -10 degrees
+#line 39
 
 void CTaskComplexEnterCar::InjectHooks() {
     RH_ScopedVirtualClass(CTaskComplexEnterCar, 0x86e6f0, 12);
@@ -914,7 +916,7 @@ void CTaskComplexEnterCar::GetCameraStickModifier(CPed* ped, float zoomDist, flo
     }
     stickLR = (float)(delta * s_Factors[m_CamMovementChoice] + stickLR);
 
-    if (vertAngle > StaticRef<float>(0x8D2ECC)) { // .data global in the original (-10 degrees, ~-0.17453294)
+    if (vertAngle > NOTSA_GLOBAL_EXPR(0x8D2ECC, (float), k_8D2ECC)) { // .data global in the original (-10 degrees, ~-0.17453294)
         stickUD = (float)((double)stickUD - (double)s_Factors[m_CamMovementChoice] * s_Limits[m_CamMovementChoice]);
     }
 }

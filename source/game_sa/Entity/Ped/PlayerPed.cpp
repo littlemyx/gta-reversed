@@ -42,6 +42,8 @@
 #include "GameLogic.h"
 #include "PedType.h"
 #include <numbers>
+namespace { NOTSA_GLOBAL_SYNTH(k_8D2438, 0x8D2438, (float), { 90.0f }); NOTSA_GLOBAL_SYNTH(k_8D2440, 0x8D2440, (float), { 3.0f }); }
+#line 45
 
 bool CPlayerPed::bDebugPlayerInvincible;
 bool CPlayerPed::bDebugTargeting;
@@ -2407,9 +2409,9 @@ bool CPlayerPed::FindWeaponLockOnTarget() {
         // ...and also from a point behind the player
         CVector fwdNorm = GetForward();
         fwdNorm.Normalise(); // 0x59C910
-        const CVector behindPos = GetPosition() - fwdNorm * StaticRef<float>(0x8D2440); // 3.0f
+        const CVector behindPos = GetPosition() - fwdNorm * NOTSA_GLOBAL_EXPR(0x8D2440, (float), k_8D2440); // 3.0f
         const double angleToPedFromBehind = CGeneral::GetATanOfXYExt(ped->GetPosition().x - behindPos.x, ped->GetPosition().y - behindPos.y); // 0x53CC70
-        if (!(WrapAngleAbs(angleToPedFromBehind - (double)aimAngle) < (double)StaticRef<float>(0x8D2438) * (double)FOV_SCALE)) { // 90.0f
+        if (!(WrapAngleAbs(angleToPedFromBehind - (double)aimAngle) < (double)NOTSA_GLOBAL_EXPR(0x8D2438, (float), k_8D2438) * (double)FOV_SCALE)) { // 90.0f
             continue;
         }
 

@@ -2026,6 +2026,33 @@
    "size": 3120,
    "cat": "b",
    "why": "195-entry table of 16-byte records (TOTAL_NUM_COLLISION_SURFACE_TYPES), indexed with `id<<4` at 0x4DAA5D/0x4DB321/0x4DA518; ends at 0x8AE538 (gBeatTrackLookup). The repo only knew the field at +0xC and its comment says 'table at 0x8AD910, percent at +4' (wrong)"
+  },
+  {
+   "addr": "0x9654C8",
+   "type": "int32",
+   "size": 4,
+   "cat": "a",
+   "why": "written (never read) by CStreaming::ForceLayerToRead 0x407A10 (`*(int32*)0x9654C8 = arg1; // unused`); raw cast in Streaming.cpp",
+   "file": "source/game_sa/Streaming.cpp",
+   "line": 2668
+  },
+  {
+   "addr": "0xB7CB20",
+   "type": "uint16",
+   "size": 2,
+   "cat": "a",
+   "why": "old weather type word stored by CTimeCycle::CalcColoursForPoint at 0x5605B3 (gap between m_vecDirnLightToSun and CTimer::ms_fnTimerFunction); raw cast in TimeCycle.cpp",
+   "file": "source/game_sa/TimeCycle.cpp",
+   "line": 302
+  },
+  {
+   "addr": "0xB7CB24",
+   "type": "uint16",
+   "size": 2,
+   "cat": "a",
+   "why": "new weather type word stored by CTimeCycle::CalcColoursForPoint at 0x5605B3 (see 0xB7CB20); raw cast in TimeCycle.cpp",
+   "file": "source/game_sa/TimeCycle.cpp",
+   "line": 303
   }
  ],
  "extents": {

@@ -69,7 +69,10 @@ uint32 TimeStepInMS() {
 }
 }
 
+#ifndef NOTSA_GLOBALS_DETACHED
 uint16& CStats::m_ThisStatIsABarChart = StaticRef<uint16>(0xB794CC);
+#endif
+#line 67
 
 void CStats::InjectHooks() {
     RH_ScopedClass(CStats);

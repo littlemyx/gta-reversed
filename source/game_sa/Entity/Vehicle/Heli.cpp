@@ -24,6 +24,8 @@
 #include "CustomBuildingDNPipeline.h"
 namespace {
 NOTSA_GLOBAL_SYNTH(k_8717B8, 0x8717B8, (float), { 560.0f });
+NOTSA_GLOBAL_SYNTH(k_8717BC, 0x8717BC, (float), { -1653.0f }); // Mt. Chiliad
+NOTSA_GLOBAL_SYNTH(k_8717C0, 0x8717C0, (float), { -2322.0f });
 } // namespace
 #line 25
 
@@ -598,8 +600,8 @@ CHeli* CHeli::GenerateHeli(CPed* target, bool newsHeli) {
 
     // 0x6C66A8
     float z = (float)((double)pos.z + 50.0f); // 0x858B40
-    const auto toChiliadX = (double)pos.x - StaticRef<float>(0x8717C0);
-    const auto toChiliadY = (double)pos.y - StaticRef<float>(0x8717BC);
+    const auto toChiliadX = (double)pos.x - NOTSA_GLOBAL_EXPR(0x8717C0, (float), k_8717C0);
+    const auto toChiliadY = (double)pos.y - NOTSA_GLOBAL_EXPR(0x8717BC, (float), k_8717BC);
     if (std::sqrt(toChiliadY * toChiliadY + toChiliadX * toChiliadX) < 350.0f) { // Too close to Mt. Chiliad? Spawn right above the target. 0x858A4C
         const CVector targetPos3 = target->GetPosition();
         pos.x = targetPos3.x;

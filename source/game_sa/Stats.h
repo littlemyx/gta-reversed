@@ -50,7 +50,12 @@ public:
     static inline NOTSA_GLOBAL(StatReactionValue, 0xB78F10, (std::array<float, 59>), {});
     static inline NOTSA_GLOBAL(StatTypesInt, 0xB79000, (std::array<int32, 223>), {});
     static inline NOTSA_GLOBAL(StatTypesFloat, 0xB79380, (std::array<float, 82>), {});
+#ifdef NOTSA_GLOBALS_DETACHED
+    static inline NOTSA_GLOBAL(m_ThisStatIsABarChart, 0xB794CC, (uint16), {}); // id of the stat currently being built/printed as a stat line (0 = none)
+#else
     static uint16& m_ThisStatIsABarChart; // 0xB794CC: id of the stat currently being built/printed as a stat line (0 = none)
+#endif
+#line 54
     static inline NOTSA_GLOBAL(bStatUpdateMessageDisplayed, 0xB794D4, (bool), {});
     static inline NOTSA_GLOBAL(m_SprintStaminaCounter, 0xB794D8, (uint32), {});
     static inline NOTSA_GLOBAL(m_CycleStaminaCounter, 0xB794DC, (uint32), {});

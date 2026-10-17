@@ -1104,7 +1104,7 @@ const GxtChar* CControllerConfigManager::GetControllerSettingTextJoystick(eContr
 #ifdef NOTSA_GLOBALS_DETACHED
     static GxtChar NewStringWithNumber[32]{};
 #else
-    auto& NewStringWithNumber = StaticRef<GxtChar[32]>(0xB7147C);
+    NOTSA_GLOBAL_LOCAL_NS(NewStringWithNumber, 0xB7147C, (GxtChar[32]), {});
 #endif
 #line 1105
 
@@ -1237,7 +1237,7 @@ const GxtChar* CControllerConfigManager::GetControllerSettingTextKeyBoard(eContr
 #ifdef NOTSA_GLOBALS_DETACHED
     static GxtChar s_KeyName[50]{}; // temp value
 #else
-    auto& s_KeyName = StaticRef<GxtChar[50]>(0xB714BC); // temp value
+    NOTSA_GLOBAL_LOCAL_NS(s_KeyName, 0xB714BC, (GxtChar[50]), {}); // temp value
 #endif
 #line 1233
     rng::fill(s_KeyName, 0);

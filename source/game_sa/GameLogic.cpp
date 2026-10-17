@@ -785,7 +785,7 @@ void CGameLogic::Update() {
         UpdateSkip();
         Process();
     } else {
-        static float& lastPlayerDistance = StaticRef<float>(0x96AB24);
+        NOTSA_GLOBAL_LOCAL(lastPlayerDistance, 0x96AB24, (float), {});
         const auto dist = DistanceBetweenPoints2D(FindPlayerCoors(PED_TYPE_PLAYER1), FindPlayerCoors(PED_TYPE_PLAYER2));
 
         const auto UpdateTimerAndLastDistance = [&dist] {

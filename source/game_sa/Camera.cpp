@@ -1531,10 +1531,11 @@ void CCamera::CameraPedAimModeSpecialCases(CPed* ped) {
 
 // 0x50CDE0
 void CCamera::CameraVehicleModeSpecialCases(CVehicle* vehicle) {
-    float speed = vehicle->m_vecMoveSpeed.Magnitude();
-
-    const auto slow = speed <= 0.2f;
-    CCollision::relVelCamCollisionVehiclesSqr = slow ? 0.1f : 1.0f;
+    // exe 0x50CDE0: squared speed ((x*x + y*y) + z*z, x87) against 0.2f squared (global 0x8CCC88); unordered / equal counts as slow; slow sets 0.010000001f (0x3C23D70B), the port stored 0.1f
+    const CVector& spd = vehicle->m_vecMoveSpeed;
+    const float speedSq = spd.x * spd.x + spd.y * spd.y + spd.z * spd.z;
+    const auto slow = !(speedSq > 0.2f * 0.2f);
+    CCollision::relVelCamCollisionVehiclesSqr = slow ? 0.010000001f : 1.0f;
     CCollision::bCamCollideWithVehicles = true;
     CCollision::bCamCollideWithPeds     = slow;
     CCollision::bCamCollideWithObjects  = slow;

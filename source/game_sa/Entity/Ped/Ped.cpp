@@ -2813,8 +2813,8 @@ void CPed::CalculateNewOrientation() {
 void CPed::ClearAll() {
     if (IsPedInControl() || IsStateDead()) {
         bRenderPedInCar = true;
-        bHitSteepSlope = false;
-        bCrouchWhenScared = false;
+        bKnockedUpIntoAir = false; // exe 0x5E5320 clears bits 4 and 31 of the second flag dword = bKnockedUpIntoAir / bKnockedOffBike (the port cleared bHitSteepSlope / bCrouchWhenScared)
+        bKnockedOffBike = false;
         m_nPedState = PEDSTATE_NONE;
         m_nMoveState = PEDMOVE_NONE;
         m_pEntityIgnoredCollision = nullptr;

@@ -574,7 +574,7 @@ void CMenuManager::SetDefaultPreferences(eMenuScreen screen) {
 
 // 0x573E70
 uint32 CMenuManager::GetNumberOfMenuOptions() {
-    static auto& s_PrevScreen = StaticRef<int32>(0x8CDFF0);
+    NOTSA_GLOBAL_LOCAL(s_PrevScreen, 0x8CDFF0, (int32), { -99 });
 
     if (m_nCurrentScreen == SCREEN_MAP || m_nCurrentScreen == SCREEN_BRIEF) {
         return 2;

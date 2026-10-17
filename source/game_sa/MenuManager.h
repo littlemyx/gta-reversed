@@ -291,8 +291,8 @@ public:
 
     static int32& nLastMenuPage;
 
-    static inline auto& bInvertMouseX = StaticRef<bool>(0xBA6744);
-    static inline auto& bInvertMouseY = StaticRef<bool>(0xBA6745);
+    static inline NOTSA_GLOBAL(bInvertMouseX, 0xBA6744, (bool), {});
+    static inline NOTSA_GLOBAL(bInvertMouseY, 0xBA6745, (bool), {});
 
     // notsa colors
 

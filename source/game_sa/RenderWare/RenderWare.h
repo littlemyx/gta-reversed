@@ -25,12 +25,12 @@
 #include "d3d9.h"
 #endif
 
-static inline auto& RsGlobal =  StaticRef<RsGlobalType>(0xC17040);
+NOTSA_GLOBAL_HDR(RsGlobal, 0xC17040, (RsGlobalType), {});
 
 #ifdef NOTSA_RW_LIBRW
 // RenderWare internals live in librw (source/fakerw): their exe-address statics/helpers are replaced by shim members (P2B-00c ...)
 #else
-static inline auto& RwInitialized = StaticRef<bool>(0xC920E8);
+static inline auto& RwInitialized = StaticRef<bool>(0xC920E8); // NOT converted: only compiled without NOTSA_RW_LIBRW (the alt config with the exe's own RenderWare); the run build has the shim's storage (standalone/rw/rwglobals.cpp)
 static inline auto& RwEngineInstance =  StaticRef<RwGlobals*>(0xC97B24);
 static inline auto& geometryTKList =  StaticRef<RwPluginRegistry>(0x8D628C);
 static inline auto& RpUVAnimDictSchema =  StaticRef<RtDictSchema>(0x8DED50);

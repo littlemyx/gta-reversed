@@ -6,34 +6,34 @@ class CRestart {
 public:
     static constexpr uint32 MAX_RESTART_POINTS{ 10u };
 
-    static inline auto& bOverrideRespawnBasePointForMission = StaticRef<bool>(0xA43248);
-    static inline auto& OverrideRespawnBasePointForMission = StaticRef<CVector>(0xA4342C);
-    static inline auto& OverrideHeading = StaticRef<float>(0xA43260);
-    static inline auto& bOverrideRestart = StaticRef<bool>(0xA43264);
-    static inline auto& OverridePosition = StaticRef<CVector>(0xA43408);
+    static inline NOTSA_GLOBAL(bOverrideRespawnBasePointForMission, 0xA43248, (bool), {});
+    static inline NOTSA_GLOBAL(OverrideRespawnBasePointForMission, 0xA4342C, (CVector), {});
+    static inline NOTSA_GLOBAL(OverrideHeading, 0xA43260, (float), {});
+    static inline NOTSA_GLOBAL(bOverrideRestart, 0xA43264, (bool), {});
+    static inline NOTSA_GLOBAL(OverridePosition, 0xA43408, (CVector), {});
 
-    static inline auto& bFadeInAfterNextArrest = StaticRef<bool>(0xA4325C);
-    static inline auto& bFadeInAfterNextDeath = StaticRef<bool>(0xA4325D);
+    static inline NOTSA_GLOBAL(bFadeInAfterNextArrest, 0xA4325C, (bool), {});
+    static inline NOTSA_GLOBAL(bFadeInAfterNextDeath, 0xA4325D, (bool), {});
 
-    static inline auto& NumberOfPoliceRestarts = StaticRef<uint16>(0xA43268);
-    static inline auto& PoliceRestartWhenToUse = StaticRef<int32[MAX_RESTART_POINTS]>(0xA43270);
-    static inline auto& PoliceRestartHeadings = StaticRef<float[MAX_RESTART_POINTS]>(0xA43298);
-    static inline auto& PoliceRestartPoints = StaticRef<CVector[MAX_RESTART_POINTS]>(0xA43390);
+    static inline NOTSA_GLOBAL(NumberOfPoliceRestarts, 0xA43268, (uint16), {});
+    static inline NOTSA_GLOBAL(PoliceRestartWhenToUse, 0xA43270, (int32[MAX_RESTART_POINTS]), {});
+    static inline NOTSA_GLOBAL(PoliceRestartHeadings, 0xA43298, (float[MAX_RESTART_POINTS]), {});
+    static inline NOTSA_GLOBAL(PoliceRestartPoints, 0xA43390, (CVector[MAX_RESTART_POINTS]), {});
 
-    static inline auto& NumberOfHospitalRestarts = StaticRef<uint16>(0xA4326C);
-    static inline auto& HospitalRestartWhenToUse = StaticRef<int32[MAX_RESTART_POINTS]>(0xA432C0);
-    static inline auto& HospitalRestartHeadings = StaticRef<float[MAX_RESTART_POINTS]>(0xA432E8);
-    static inline auto& HospitalRestartPoints = StaticRef<CVector[MAX_RESTART_POINTS]>(0xA43318);
+    static inline NOTSA_GLOBAL(NumberOfHospitalRestarts, 0xA4326C, (uint16), {});
+    static inline NOTSA_GLOBAL(HospitalRestartWhenToUse, 0xA432C0, (int32[MAX_RESTART_POINTS]), {});
+    static inline NOTSA_GLOBAL(HospitalRestartHeadings, 0xA432E8, (float[MAX_RESTART_POINTS]), {});
+    static inline NOTSA_GLOBAL(HospitalRestartPoints, 0xA43318, (CVector[MAX_RESTART_POINTS]), {});
 
     // Script command 2271 (COMMAND_SET_EXTRA_HOSPITAL_RESTART_POINT) arguments
-    static inline auto& ExtraHospitalRestartCoors = StaticRef<CVector>(0xA43414);
-    static inline auto& ExtraHospitalRestartRadius = StaticRef<float>(0xA43258);
-    static inline auto& ExtraHospitalRestartHeading = StaticRef<float>(0xA43254);
+    static inline NOTSA_GLOBAL(ExtraHospitalRestartCoors, 0xA43414, (CVector), {});
+    static inline NOTSA_GLOBAL(ExtraHospitalRestartRadius, 0xA43258, (float), {});
+    static inline NOTSA_GLOBAL(ExtraHospitalRestartHeading, 0xA43254, (float), {});
 
     // Script command 2272 (COMMAND_SET_EXTRA_POLICE_RESTART_POINT) arguments
-    static inline auto& ExtraPoliceStationRestartCoors = StaticRef<CVector>(0xA43420);
-    static inline auto& ExtraPoliceStationRestartRadius = StaticRef<float>(0xA43250);
-    static inline auto& ExtraPoliceStationRestartHeading = StaticRef<float>(0xA4324C);
+    static inline NOTSA_GLOBAL(ExtraPoliceStationRestartCoors, 0xA43420, (CVector), {});
+    static inline NOTSA_GLOBAL(ExtraPoliceStationRestartRadius, 0xA43250, (float), {});
+    static inline NOTSA_GLOBAL(ExtraPoliceStationRestartHeading, 0xA4324C, (float), {});
 
 public:
     static void InjectHooks();

@@ -3,7 +3,7 @@
 #include "PPTriPlantBuffer.h"
 #include "GrassRenderer.h"
 
-auto& RenderGrassTexture = StaticRef<RwTexture*>(0xC02DC0);
+NOTSA_GLOBAL(RenderGrassTexture, 0xC02DC0, (RwTexture*), {});
 
 void CPPTriPlantBuffer::InjectHooks() {
     RH_ScopedClass(CPPTriPlantBuffer);

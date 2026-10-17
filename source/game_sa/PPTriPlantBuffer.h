@@ -65,4 +65,4 @@ public:
     }
 };
 
-extern RwTexture*& RenderGrassTexture;
+NOTSA_GLOBAL_EXTERN(RenderGrassTexture, (RwTexture*));

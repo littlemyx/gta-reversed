@@ -95,12 +95,12 @@ public:
 class CMemoryMgr {
 public:
     static int8         m_idCapture;
-    static inline auto& m_pBlockArray   = StaticRef<int32*>(0xC87B14);
-    static inline auto& m_blocksUsed    = StaticRef<int32>(0xC87B30);
-    static inline auto& m_pMemUsedArray = StaticRef<int32*>(0xC87B18);
-    static inline auto& m_id            = StaticRef<int32>(0xC87B1C);
-    static inline auto& m_idStack       = StaticRef<CStack<int32, 16>>(0xC87C18);
-    static inline auto& m_memUsed       = StaticRef<int32>(0xC87B34);
+    static inline NOTSA_GLOBAL(m_pBlockArray, 0xC87B14, (int32*), {});
+    static inline NOTSA_GLOBAL(m_blocksUsed, 0xC87B30, (int32), {});
+    static inline NOTSA_GLOBAL(m_pMemUsedArray, 0xC87B18, (int32*), {});
+    static inline NOTSA_GLOBAL(m_id, 0xC87B1C, (int32), {});
+    static inline NOTSA_GLOBAL(m_idStack, 0xC87C18, (CStack<int32, 16>), {});
+    static inline NOTSA_GLOBAL(m_memUsed, 0xC87B34, (int32), {});
     static int8         m_largeAllocation;
     static int8         m_minLargeAllocation;
     static bool         m_bMallocHintDebugging;

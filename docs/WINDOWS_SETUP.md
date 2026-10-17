@@ -11,9 +11,9 @@ file wins on Windows (no Wine, no prefixes, no `taskpolicy`).
 | MSVC toolset | **14.51.36231** (VS 2026 / v145, conan `compiler.version=195`; x87 codegen of the game objects depends on it - do not "just use the newest") |
 | Windows SDK | **10.0.26100.0** |
 | CMake / Ninja / conan | CMake >= 4.2 (Mac uses 4.4.3), any recent Ninja, conan **2.x** (Mac: 2.33.0) |
-| Python | 3.12+ x64 with `unicorn` and `capstone` (the data-image extractor replays the exe's static initialisers) |
+| Python | 3.12+ x64. `unicorn` and `capstone` only for the dev tools (the `StandaloneDetached` data-image extractor replays the exe's static initialisers); the run exe builds without them |
 | Target | **Win32 (x86)** only. CI uses `windows-2025-vs2026`, `arch=x86` |
-| Original exe | `gta_sa_compact.exe` (1.0 US compact, 5 189 632 bytes, sha256 `72ae59e44c761389e354a50dc6215e964fe771121e2f4b1877273a493ceecc9b`) |
+| Original exe (OPTIONAL, dev only) | `gta_sa_compact.exe` (1.0 US compact, 5 189 632 bytes, sha256 `72ae59e44c761389e354a50dc6215e964fe771121e2f4b1877273a493ceecc9b`): oracle tests and the `StandaloneDetached` config only; `StandaloneRelease` / `StandaloneRW` configure, build and run without it (clean-clone proof: `.notes/reports/D-G.md`) |
 
 ## 1. Prerequisites (install once)
 1. **Visual Studio 2026 (18.x) Community, or Build Tools 2026**, workload *Desktop development with C++* **plus** the individual components
@@ -42,7 +42,7 @@ On the Mac the fork is the remote called `fork`; on the clone it is `origin`, so
 `.notes/decomp`, `.notes/asm`, `UNHOOKED*`, `DETACH_GLOBALS.tsv`, ... are NOT in git; porting and `census.py` need them - copy by hand if you ever want them on the PC.
 
 ## 3. Files that are never committed (check `.gitignore`: `/gta_sa_compact.exe`, `original_data.*`, `data_pointers.bin`, `standalone*.log`; the run exe itself needs none of the first three since slice F3)
-* **`gta_sa_compact.exe` -> repo root** (`C:\src\gta-reversed\gta_sa_compact.exe`). Copy it from the Mac (`~/github/recomp/gta-reversed/gta_sa_compact.exe`); verify:
+* **Optional: `gta_sa_compact.exe` -> repo root** (`C:\src\gta-reversed\gta_sa_compact.exe`). Copy it from the Mac (`~/github/recomp/gta-reversed/gta_sa_compact.exe`); verify:
   `sha256sum gta_sa_compact.exe` must print the hash from section 0. It is only an *input of dev tools* (oracle tests, the `StandaloneDetached` census/verify config); building and running the exe does not need it.
 * **Game data -> `C:\gta`**: a copy of your own GTA San Andreas install folder (Steam: `...\steamapps\common\Grand Theft Auto San Andreas`; copy it, the folder only has to contain `models\gta3.img`,
   `data\`, `anim\`, `audio\`, `txd\`, `text\`, `movies\` ...; its `gta_sa.exe` is never used). `soak.sh` looks for `GAME_SRC` -> `C:\gta` -> the default Steam folder, in this order.
@@ -55,7 +55,7 @@ Check once:
 ```bash
 cl 2>&1 | head -1        # ...Version 19.51.xxxxx... for x86 (VS 18.11 Build Tools: 19.51.36260, inside the 14.51.36231 toolset folder; check `echo $VCToolsVersion` = 14.51.36231)
 cmake --version; ninja --version; conan --version
-python -c "import unicorn, capstone; print('ok')"      # the python that cmake will get as -DGTASA_PYTHON
+python -c "import unicorn, capstone; print('ok')"      # dev tools / StandaloneDetached only; the run build needs just a python 3 for -DGTASA_PYTHON (oracle test targets)
 ```
 `GTA_MSVC_VER`, `GTA_GIT_BASH`, `GTA_VSINSTALL` override the launcher's defaults (per-user Git install, other VS edition).
 
@@ -84,11 +84,11 @@ No background priority on Windows (the PC is not shared with a game being played
 |---|---|---|
 | **StandaloneRelease** (`build/StandaloneRelease`, optimised, the soak/perf exe) | `cmake --preset StandaloneRelease -DGTASA_PYTHON=$(command -v python) --compile-no-warning-as-error` | `tools/standalone/build_locked.sh ninja -C build/StandaloneRelease gta_reversed.exe` |
 | **StandaloneRW** (`build/StandaloneRW`, Debug, main development build + all `*_test` targets) | `cmake --preset StandaloneRW -DGTASA_PYTHON=$(command -v python) --compile-no-warning-as-error` | `tools/standalone/build_locked.sh ninja -C build/StandaloneRW gta_reversed.exe` (tests: `ninja -C build/StandaloneRW <name>_test` or `run_all_tests.sh`) |
-| **StandaloneDetached** (`build/StandaloneDetached`, Release + detached globals + `GTASA_VERIFY_GLOBALS`) | `cmake --preset StandaloneDetached -DGTASA_PYTHON=... --compile-no-warning-as-error` | `tools/standalone/build_locked.sh ninja -C build/StandaloneDetached gta_reversed.exe` |
+| **StandaloneDetached** (`build/StandaloneDetached`, dev only: Release + `GTASA_VERIFY_GLOBALS` + `GTASA_IMAGE_DIAG`; the ONLY preset that needs the original exe: `GTASA_ORACLE_EXE` = `<repo>/gta_sa_compact.exe`, configure fails without it) | `cmake --preset StandaloneDetached -DGTASA_PYTHON=<python with unicorn+capstone> --compile-no-warning-as-error` | `tools/standalone/build_locked.sh ninja -C build/StandaloneDetached gta_reversed.exe` |
 | **Debug (DLL / ASI, the classic gta-reversed build)** | `cmake --preset conan-debug` | `cmake --build --preset conan-debug` (or `conan build . --profile conan/profiles/windows-msvc-ninja.txt -s build_type=Debug`); needs a real 1.0 US `gta_sa.exe` + an ASI loader to run, not required for the standalone work |
 
 * **`--compile-no-warning-as-error`** (configure option): the targets carry `COMPILE_WARNING_AS_ERROR`, the Wine flow neutralises it with `/WX-` in `CMAKE_CXX_FLAGS`. The native MSVC 19.51 reports warnings that flow never showed as errors (first seen: C4018 in `WinPs.cpp:473`, C4715 in `WinMain.cpp:240`), so without this flag the build stops at them. The warnings are real; they are only not fatal.
-* `GTASA_PYTHON` must be a *native* python path with unicorn+capstone (`$(command -v python)` in Git Bash gives `/c/...`, which CMake accepts; if you get "No module named unicorn" at the extract step, pass `-DGTASA_PYTHON=C:/Python312/python.exe`).
+* `GTASA_PYTHON` must be a *native* python path (`$(command -v python)` in Git Bash gives `/c/...`, which CMake accepts). unicorn+capstone are needed in it only for `StandaloneDetached` (if you get "No module named unicorn" at the extract step, pass `-DGTASA_PYTHON=C:/Python312/python.exe`); `StandaloneRelease` / `StandaloneRW` do not run it for the exe.
 * The presets set `GTASA_NO_EDIT_AND_CONTINUE=ON` (Wine passes it through the conan profile; without it MSVC would use `/ZI`, which conflicts with `/O2` and produces no linker map). Result: `/Z7`, `/DEBUG`, **`gta_reversed.pdb` and `gta_reversed.map`** next to the exe.
 * New `.cpp` files need a re-glob: re-run the configure command. The extractor (`extract_exe_data.py`) runs as a build step only for the dev preset `StandaloneDetached` (`GTASA_IMAGE_DIAG`) and writes `original_data.bin/.json` and `data_pointers.bin` into `<build>/bin`.
 * One configure+full build of StandaloneRelease takes ~10-20 min on a normal desktop (the Mac needed ~30 min through Wine).
@@ -121,7 +121,7 @@ the mute patches DirectSound buffers and has only been validated under Wine's Di
 | `NOTSA_AUDIO_TAP=<file>` (`_RAW=1`) | silent DirectSound diagnostics (use a normal `C:\...` path) |
 | `NOTSA_VERIFY_GLOBALS=<dump>` (`_EXIT=1`, `_AFTER=<s>`) | detached-globals boot dump (StandaloneDetached) -> `tools/standalone/verify_globals.py` |
 | `NOTSA_IMAGE_CENSUS=1` (`_FILE`, `_REARM_MS`), `NOTSA_POISON_CONVERTED=<file>` | image census / poisoning of converted globals (`census.py`) |
-| `RW_EXE_ORACLE=<path>` | the original exe for the oracle tests; `run_all_tests.sh` sets it (native Windows path form) |
+| `RW_EXE_ORACLE=<path>` | the original exe for the oracle tests; `run_all_tests.sh` sets it (native Windows path form) only when `GTA_EXE` / `<repo>/gta_sa_compact.exe` exists, otherwise the 23 exe-oracle tests exit 77 and are listed as `SKIP(no_exe)` (not pass, not fail) |
 | Script env | `soak.sh`: `GAME_SRC OUT ROUTE SHOT_EVERY SHOT_MAX SAMPLER GTASA_PYTHON`; `run_all_tests.sh`: `SCRATCH SKIP_BUILD ATTEMPTS TIMEOUT TIMEOUT_<test> ASSETS GAME_DIR GTASA_PYTHON NINJA GTA_EXE`; `build_locked.sh`: `SCRATCH TIMEOUT_S LOCK_WARN_MIN` |
 
 ## 8. Tests and soaks
@@ -132,7 +132,7 @@ tools/standalone/soak.sh build/StandaloneRelease 7                              
 tools/standalone/soak.sh build/StandaloneRelease 10                                         # regression soak
 python tools/standalone/census.py run --build build/StandaloneDetached --minutes 10         # needs .notes/DETACH_GLOBALS.tsv (copy from the Mac)
 ```
-* `run_all_tests.sh` and `soak.sh` detect Git Bash (`uname -s` = MINGW*/MSYS*) via `tools/standalone/hostenv.sh` and run the exes directly. Test exes live in `<build>/source/<name>.exe`; the oracle tests map `gta_sa_compact.exe` from the repo root.
+* `run_all_tests.sh` and `soak.sh` detect Git Bash (`uname -s` = MINGW*/MSYS*) via `tools/standalone/hostenv.sh` and run the exes directly. Test exes live in `<build>/source/<name>.exe`; the oracle tests map `gta_sa_compact.exe` from the repo root when it is there (otherwise `SKIP(no_exe)`).
 * The script ends with `RESULT: OK|FAIL` (soak) / a per-test table (tests, non-zero exit on any failure). Known non-green rows measured under Wine (2026-10-10): `review_oracle_test` (PC24/PC53 strict mismatches), `rw_skin_pipeline_test`
   (page fault), `rw_skin_hw_oracle_test` and `rw_skin_vs_test` (NORESULT parser quirk; vs_test needs `TIMEOUT_rw_skin_vs_test=1500`). On a real GPU/driver these may change in either direction - **record, do not "fix" the numbers away**.
 * Per-phase fps and memory are in `report.txt`; screenshots (BMP converted to PNG by PowerShell/System.Drawing) in `<out>/shots`.

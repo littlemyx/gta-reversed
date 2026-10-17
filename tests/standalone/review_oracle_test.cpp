@@ -808,7 +808,7 @@ int main(int argc, char** argv) {
         else g_filters.push_back(argv[i]);
     }
     const char* exe = std::getenv("RW_EXE_ORACLE");
-    if (!exe) { std::printf("review_oracle_test: set RW_EXE_ORACLE=<path of gta_sa_compact.exe>; skipped\n"); return 0; }
+    if (!exe) { std::printf("review_oracle_test: set RW_EXE_ORACLE=<path of gta_sa_compact.exe>; skipped (exit 77 = SKIP)\n"); return 77; }
     std::memcpy(g_portSinTab, reinterpret_cast<void*>(0xBB3E00), sizeof g_portSinTab);   // the port's table, written by CMaths' static initialiser
     if (!oracle::Map(exe)) { std::printf("FATAL: cannot map the exe\n"); return 2; }
     *reinterpret_cast<int*>(0xC9C400) = 1;

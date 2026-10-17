@@ -19,7 +19,6 @@
                 "GTASA_STANDALONE": "ON",
                 "GTASA_STANDALONE_DUMP_HOOKS_ONLY": "OFF",
                 "GTASA_STANDALONE_RELEASE": "ON",
-                "GTASA_ORIGINAL_EXE": "${sourceDir}/gta_sa_compact.exe",
                 "GTASA_NO_EDIT_AND_CONTINUE": "ON",
                 "GTASA_WITH_SCRIPT_COMMAND_HOOKS": "OFF",
                 "GTASA_USE_SDL3": "ON",
@@ -40,7 +39,6 @@
                 "GTASA_STANDALONE_DUMP_HOOKS_ONLY": "OFF",
                 "GTASA_RW_LIBRW": "ON",
                 "GTASA_RW_LIBRW_OPT_OUT": "OFF",
-                "GTASA_ORIGINAL_EXE": "${sourceDir}/gta_sa_compact.exe",
                 "GTASA_NO_EDIT_AND_CONTINUE": "ON",
                 "GTASA_WITH_OPENAL": "OFF",
                 "GTASA_WITH_CLEO_COMMANDS": "OFF",
@@ -61,10 +59,11 @@
         {
             "name": "StandaloneDetached",
             "displayName": "StandaloneRelease + dev diagnostics: boot dump for tools/standalone/verify_globals.py and the original-image census (the only run config that maps the original data image)",
-            "description": "Slices A2/A3/F3 of .notes/DETACH_DATA_PLAN.md. Same flags as StandaloneRelease (whose exe is image-less and relocatable), separate build dir, GTASA_VERIFY_GLOBALS=ON (run with NOTSA_VERIFY_GLOBALS=<file>) and GTASA_IMAGE_DIAG=ON (fixed base + 9 MB placeholder + original_data.bin/json next to the exe; NOTSA_IMAGE_CENSUS / NOTSA_POISON_CONVERTED). Needs GTASA_ORIGINAL_EXE.",
+            "description": "Slices A2/A3/F3 of .notes/DETACH_DATA_PLAN.md. Same flags as StandaloneRelease (whose exe is image-less and relocatable), separate build dir, GTASA_VERIFY_GLOBALS=ON (run with NOTSA_VERIFY_GLOBALS=<file>) and GTASA_IMAGE_DIAG=ON (fixed base + 9 MB placeholder + original_data.bin/json next to the exe; NOTSA_IMAGE_CENSUS / NOTSA_POISON_CONVERTED). Dev-only: the one preset that needs the original exe (GTASA_ORACLE_EXE, extracts original_data.bin from it); fails to configure without it. StandaloneRelease / StandaloneRW need no exe at all.",
             "inherits": "StandaloneRelease",
             "binaryDir": "${sourceDir}/build/StandaloneDetached",
             "cacheVariables": {
+                "GTASA_ORACLE_EXE": "${sourceDir}/gta_sa_compact.exe",
                 "GTASA_VERIFY_GLOBALS": "ON",
                 "GTASA_IMAGE_DIAG": "ON"
             }

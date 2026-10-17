@@ -107,7 +107,7 @@ int main(int argc, char** argv) {
         else if (!std::strcmp(argv[i], "-ops") && i + 1 < argc) ops = std::atoi(argv[++i]);
     }
     const char* exe = std::getenv("RW_EXE_ORACLE");
-    if (!exe) { std::printf("pool_oracle_test: set RW_EXE_ORACLE=<path of gta_sa_compact.exe>; skipped\n"); return 0; }
+    if (!exe) { std::printf("pool_oracle_test: set RW_EXE_ORACLE=<path of gta_sa_compact.exe>; skipped (exit 77 = SKIP)\n"); return 77; }
     if (!oracle::Map(exe)) { std::printf("FATAL: cannot map the exe\n"); return 2; }
 
     long bad = 0, checks = 0, nNew = 0, nFull = 0, nDel = 0, nDouble = 0, nWrap127 = 0;

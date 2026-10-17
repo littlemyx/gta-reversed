@@ -5,7 +5,7 @@ standalone exe still touch, and which function touches them?
   census.py run    [--build build/StandaloneDetached] [--minutes 10] [--rearm-ms 15000] [--data /tmp/d3c (Windows: C:/gta-census)] [--keep]
         one tools/standalone/soak.sh run (own data dir + Wine prefix [Mac/Linux only], deleted afterwards; on Windows the data dir is NTFS hard links/junctions
         of the install, removed link-by-link, never through a junction) with NOTSA_VERIFY_GLOBALS (the list of converted globals),
-        NOTSA_IMAGE_CENSUS=1 and NOTSA_IMAGE_CENSUS_REARM_MS (ImageDiag.cpp), then `report`. The build must be the dev census build (preset StandaloneDetached: GTASA_IMAGE_DIAG=ON + GTASA_VERIFY_GLOBALS=ON).
+        NOTSA_IMAGE_CENSUS=1 and NOTSA_IMAGE_CENSUS_REARM_MS (ImageDiag.cpp), then `report`. The build must be the dev census build (preset StandaloneDetached: GTASA_IMAGE_DIAG=ON + GTASA_VERIFY_GLOBALS=ON), the ONE config that needs the original exe: it extracts original_data.bin from <repo>/gta_sa_compact.exe at build time (GTASA_ORACLE_EXE); the user-facing presets need no exe (slice G1).
   census.py report --raw image_census.tsv --converted verify_dump.tsv [--map gta_reversed.map] [--out .notes/DETACH_census.tsv]
 
 Every logged touch (address, IP, two return-address candidates) is classified by the address:
@@ -185,6 +185,8 @@ def _unlink(p):
 
 def run(a):
     build = Path(a.build) if os.path.isabs(a.build) else REPO / a.build
+    if not (build / "bin/original_data.bin").exists():
+        sys.exit("census: %s has no bin/original_data.bin - the census needs the dev config (cmake --preset StandaloneDetached; it extracts the data image from gta_sa_compact.exe in the repo root, see docs/STANDALONE.md)" % build)
     data, prefix = Path(a.data), Path(a.data + "-prefix")
     out = Path(a.data + "-out") / "census"
     out.mkdir(parents=True, exist_ok=True)

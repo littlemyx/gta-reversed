@@ -731,7 +731,7 @@ int main(int argc, char** argv) {
         else g_filters.push_back(argv[i]);
     }
     const char* exe = std::getenv("RW_EXE_ORACLE");
-    if (!exe) { std::printf("script_oracle_g22_test: set RW_EXE_ORACLE=<path of gta_sa_compact.exe>; skipped\n"); return 0; }
+    if (!exe) { std::printf("script_oracle_g22_test: set RW_EXE_ORACLE=<path of gta_sa_compact.exe>; skipped (exit 77 = SKIP)\n"); return 77; }
     if (!oracle::Map(exe)) { std::printf("FATAL: cannot map the exe\n"); return 2; }
     *reinterpret_cast<int*>(0xC9C400) = 1;   // __sse2_available
     { unsigned cw; _controlfp_s(&cw, _PC_24, _MCW_PC); }   // the game runs at PC=24 after D3D CreateDevice

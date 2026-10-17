@@ -45,11 +45,13 @@ if (${RE_PROJECT}_STANDALONE AND NOT ${RE_PROJECT}_STANDALONE_DUMP_HOOKS_ONLY)
         # debug info: /Z7 (GTASA_NO_EDIT_AND_CONTINUE=ON from the toolchain) + linker /DEBUG -> gta_reversed.pdb
         add_link_options(/DEBUG /INCREMENTAL:NO /OPT:NOREF /OPT:NOICF)
     endif()
-    # Original gta_sa.exe (1.0 US / compact). NOT needed to build or run the exe any more (slice F3 of .notes/DETACH_DATA_PLAN.md). Only dev tooling uses it: the exe-oracle tests
-    # (run_all_tests.sh passes it to them) and the GTASA_IMAGE_DIAG config below, which extracts original_data.bin from it. The variable disappears with slice G1.
-    set(${RE_PROJECT}_ORIGINAL_EXE "" CACHE FILEPATH "Original gta_sa.exe (1.0 US). Dev only: GTASA_IMAGE_DIAG extracts the data image from it; not needed to build or run the standalone exe")
-    if (${RE_PROJECT}_ORIGINAL_EXE AND NOT EXISTS "${${RE_PROJECT}_ORIGINAL_EXE}")
-        message(FATAL_ERROR "${RE_PROJECT}_ORIGINAL_EXE does not exist: ${${RE_PROJECT}_ORIGINAL_EXE}")
+    # Original gta_sa.exe (1.0 US / compact): a DEV-ONLY input, never needed to configure, build or run the exe (slices F3/G1 of .notes/DETACH_DATA_PLAN.md). It is empty by
+    # default and no user-facing preset sets it. Only two dev configurations look at it: GTASA_IMAGE_DIAG (preset StandaloneDetached) extracts original_data.bin from it, and
+    # the exe-oracle tests read it at TEST run time from the environment (RW_EXE_ORACLE; tools/standalone/run_all_tests.sh sets it when the file exists, otherwise those tests
+    # exit 77 and are reported as SKIP). Without a path nothing here depends on it.
+    set(${RE_PROJECT}_ORACLE_EXE "" CACHE FILEPATH "Dev only: path of the original gta_sa.exe (1.0 US compact). Used by GTASA_IMAGE_DIAG to extract the data image; never needed to build or run the standalone exe")
+    if (${RE_PROJECT}_ORACLE_EXE AND NOT EXISTS "${${RE_PROJECT}_ORACLE_EXE}")
+        message(FATAL_ERROR "${RE_PROJECT}_ORACLE_EXE does not exist: ${${RE_PROJECT}_ORACLE_EXE}")
     endif()
 endif()
 
@@ -196,8 +198,8 @@ if (${RE_PROJECT}_VERIFY_GLOBALS)
     target_compile_definitions(${RE_PROJECT_LIB_NAME} PRIVATE NOTSA_VERIFY_GLOBALS)
 endif()
 if (${RE_PROJECT}_IMAGE_DIAG)
-    if (NOT ${RE_PROJECT}_ORIGINAL_EXE)
-        message(FATAL_ERROR "${RE_PROJECT}_IMAGE_DIAG needs -D${RE_PROJECT}_ORIGINAL_EXE=<gta_sa.exe> (original_data.bin is extracted from it)")
+    if (NOT ${RE_PROJECT}_ORACLE_EXE)
+        message(FATAL_ERROR "${RE_PROJECT}_IMAGE_DIAG is a dev-only configuration and needs -D${RE_PROJECT}_ORACLE_EXE=<gta_sa.exe> (original_data.bin is extracted from it). The run exe (StandaloneRelease / StandaloneRW) does not need any exe")
     endif()
     target_compile_definitions(${RE_PROJECT_LIB_NAME} PRIVATE NOTSA_IMAGE_DIAG)
 endif()
@@ -234,11 +236,15 @@ if (${RE_PROJECT}_STANDALONE AND NOT ${RE_PROJECT}_STANDALONE_DUMP_HOOKS_ONLY)
         PDB_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin"
     )
 
-    # python: the exe-oracle tests need the original-image placeholder object (tools/standalone/make_orig_pad.py) and GTASA_IMAGE_DIAG needs the extractor.
-    # NOTE: the extractor needs `unicorn` (pip install unicorn) to replay the exe's static initialisers; pass -D${RE_PROJECT}_PYTHON=<venv python>
+    # python: only the dev side needs it: make_orig_pad.py writes the placeholder object of the exe-oracle test targets (EXCLUDE_FROM_ALL), extract_exe_data.py (GTASA_IMAGE_DIAG) needs
+    # `unicorn` (pip install unicorn) to replay the exe's static initialisers; pass -D${RE_PROJECT}_PYTHON=<venv python>. The run exe (target ${RE_PROJECT_LIB_NAME}) builds without python.
     find_program(${RE_PROJECT}_PYTHON NAMES python3 python NO_CMAKE_FIND_ROOT_PATH)
     if (NOT ${RE_PROJECT}_PYTHON)
-        message(FATAL_ERROR "python3 not found (needed for the original-image placeholder object of the exe-oracle tests)")
+        if (${RE_PROJECT}_IMAGE_DIAG)
+            message(FATAL_ERROR "python3 not found (needed by GTASA_IMAGE_DIAG to extract the data image)")
+        endif()
+        message(STATUS "python3 not found: the run exe builds, the exe-oracle *_test targets need it (pass -D${RE_PROJECT}_PYTHON=<python>)")
+        set(${RE_PROJECT}_PYTHON python)
     endif()
     # The placeholder object (plain `.text` section, see tools/standalone/make_orig_pad.py) MUST be the first object on the link line of every target that maps the original
     # image at its original VA: the exe-oracle tests (below) and, with GTASA_IMAGE_DIAG, the exe. The default run exe does NOT link it.
@@ -270,9 +276,9 @@ if (${RE_PROJECT}_STANDALONE AND NOT ${RE_PROJECT}_STANDALONE_DUMP_HOOKS_ONLY)
         add_custom_command(
             OUTPUT ${STANDALONE_DATA_OUT}
             COMMAND "${${RE_PROJECT}_PYTHON}" -I "${PROJECT_SOURCE_DIR}/tools/standalone/extract_exe_data.py"
-                    "${${RE_PROJECT}_ORIGINAL_EXE}" "${STANDALONE_DATA_DIR}"
-            DEPENDS "${PROJECT_SOURCE_DIR}/tools/standalone/extract_exe_data.py" "${PROJECT_SOURCE_DIR}/tools/standalone/initterm_delta.py" "${PROJECT_SOURCE_DIR}/.notes/symbols.txt" "${${RE_PROJECT}_ORIGINAL_EXE}"
-            COMMENT "Extracting the original data image from ${${RE_PROJECT}_ORIGINAL_EXE}"
+                    "${${RE_PROJECT}_ORACLE_EXE}" "${STANDALONE_DATA_DIR}"
+            DEPENDS "${PROJECT_SOURCE_DIR}/tools/standalone/extract_exe_data.py" "${PROJECT_SOURCE_DIR}/tools/standalone/initterm_delta.py" "${PROJECT_SOURCE_DIR}/.notes/symbols.txt" "${${RE_PROJECT}_ORACLE_EXE}"
+            COMMENT "Extracting the original data image from ${${RE_PROJECT}_ORACLE_EXE}"
             VERBATIM
         )
         add_custom_target(${RE_PROJECT_LIB_NAME}_exe_data DEPENDS ${STANDALONE_DATA_OUT})

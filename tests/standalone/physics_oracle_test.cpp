@@ -475,7 +475,7 @@ int main(int argc, char** argv) {
     _CrtSetReportMode(_CRT_ASSERT, _CRTDBG_MODE_FILE); _CrtSetReportFile(_CRT_ASSERT, _CRTDBG_FILE_STDERR);
     _CrtSetReportMode(_CRT_ERROR, _CRTDBG_MODE_FILE); _CrtSetReportFile(_CRT_ERROR, _CRTDBG_FILE_STDERR);
     const char* exe = std::getenv("RW_EXE_ORACLE");
-    if (!exe) { std::printf("physics_oracle_test: set RW_EXE_ORACLE=<path of gta_sa_compact.exe>; skipped\n"); return 0; }
+    if (!exe) { std::printf("physics_oracle_test: set RW_EXE_ORACLE=<path of gta_sa_compact.exe>; skipped (exit 77 = SKIP)\n"); return 77; }
     if (!oracle::Map(exe)) { std::printf("FATAL: cannot map the exe\n"); return 2; }
     *reinterpret_cast<int*>(0xC9C400) = 1;
     oracle::Patch(0x82872C, (void*)&HostMathErr);

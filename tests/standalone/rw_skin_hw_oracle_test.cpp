@@ -735,8 +735,8 @@ int main(int argc, char** argv) {
     }
     const char* exe = std::getenv("RW_EXE_ORACLE");
     if (!exe || !SetupExe(exe)) {
-        std::printf("RW_EXE_ORACLE not set or the exe cannot be mapped: nothing to compare\n");
-        return 2;
+        std::printf("RW_EXE_ORACLE not set or the exe cannot be mapped: nothing to compare (exit 77 = SKIP)\n");
+        return 77;
     }
     auto want = [&](const char* s) { return only.empty() || std::find(only.begin(), only.end(), s) != only.end(); };
     struct Sec { const char* name; void (*fn)(int); } secs[] = {

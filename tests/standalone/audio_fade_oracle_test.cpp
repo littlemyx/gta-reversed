@@ -55,7 +55,7 @@ int main(int argc, char** argv) {
         else if (!std::strcmp(argv[i], "-cases") && i + 1 < argc) cases = std::atoi(argv[++i]);
     }
     const char* exe = std::getenv("RW_EXE_ORACLE");
-    if (!exe) { std::printf("audio_fade_oracle_test: set RW_EXE_ORACLE=<path of gta_sa_compact.exe>; skipped\n"); return 0; }
+    if (!exe) { std::printf("audio_fade_oracle_test: set RW_EXE_ORACLE=<path of gta_sa_compact.exe>; skipped (exit 77 = SKIP)\n"); return 77; }
     if (!oracle::Map(exe)) { std::printf("FATAL: cannot map the exe\n"); return 2; }
     oracle::Patch(0x4D9E80, (void*)&FixedTime);
     g_vt[1] = (void*)&F_AddRef; g_vt[2] = (void*)&F_Release; g_vt[6] = (void*)&F_GetVolume; g_vt[15] = (void*)&F_SetVolume; g_vt[18] = (void*)&F_Stop;

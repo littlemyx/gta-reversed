@@ -214,7 +214,7 @@ int main(int argc, char** argv) {
         else g_filters.push_back(argv[i]);
     }
     const char* exe = std::getenv("RW_EXE_ORACLE");
-    if (!exe) { std::printf("x87_oracle_test: set RW_EXE_ORACLE=<path of gta_sa_compact.exe>; skipped\n"); return 0; }
+    if (!exe) { std::printf("x87_oracle_test: set RW_EXE_ORACLE=<path of gta_sa_compact.exe>; skipped (exit 77 = SKIP)\n"); return 77; }
     if (!oracle::Map(exe)) { std::printf("FATAL: cannot map the exe\n"); return 2; }
     *reinterpret_cast<int*>(0xC9C400) = 1;   // __sse2_available: the CRT's pow / floor / ceil / asin take the SSE2 path, as on every real machine
     oracle::Patch(0x82872C, (void*)&HostMathErr);

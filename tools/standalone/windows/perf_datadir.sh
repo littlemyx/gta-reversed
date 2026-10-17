@@ -19,6 +19,7 @@ rm -rf "$DATA/logs" "$DATA"/standalone*.log "$DATA"/frame_*.bmp "$DATA"/mark_*.b
 if [ "$KIND" = ours ]; then
   rm -f "$DATA/gta_sa.exe"; rm -f "$DATA"/original_data.* "$DATA/data_pointers.bin"; cp "$BDIR/bin/gta_reversed.exe" "$DATA/"   # F3: the run exe needs no image files
 else
+  [ -f "$REPO/gta_sa_compact.exe" ] || { echo "perf_datadir: orig needs the original exe $REPO/gta_sa_compact.exe (dev comparison only; our exe needs none)"; exit 2; }
   rm -f "$DATA/gta_reversed.exe" "$DATA"/original_data.* "$DATA/data_pointers.bin"; cp "$REPO/gta_sa_compact.exe" "$DATA/gta_sa.exe"
 fi
 echo "perf_datadir: $DATA ready ($KIND)"

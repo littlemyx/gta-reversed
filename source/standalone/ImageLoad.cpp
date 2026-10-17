@@ -91,7 +91,7 @@ void LoadImpl() {
     Join(path, dir, "original_data.json");
     const int jlen = ReadSmallFile(path, json, sizeof(json));
     if (jlen < 0) {
-        LoadFailed("original_data.json not found next to the exe (GTASA_IMAGE_DIAG build with -DGTASA_ORIGINAL_EXE=<gta_sa.exe>)");
+        LoadFailed("original_data.json not found next to the exe (GTASA_IMAGE_DIAG build with -DGTASA_ORACLE_EXE=<gta_sa.exe>)");
     }
     Info i{};
     uint32_t committed{};

@@ -10,7 +10,10 @@
 #        Windows host: run it from a shell with the MSVC x86 environment (tools/standalone/windows/gtash.cmd or vcvarsall x86): `cl` must be on PATH. No Wine/WINEPREFIX;
 #        SCRATCH defaults to C:/gta-scratch; RW_EXE_ORACLE is the native Windows path of the exe. See docs/WINDOWS_SETUP.md.
 #        GTA_JOBS=4    Windows only: ninja -j for the test build (default 4; the PC is shared with the user, a higher value freezes the desktop)
-# Exit code: non-zero if any test reports failures/mismatches, never produced a result, or failed to build.
+#        GTA_EXE=<path>  the original gta_sa.exe (1.0 US compact) for the exe-oracle tests; default <repo>/gta_sa_compact.exe. It is OPTIONAL (slice G1): the build, the run exe and the
+#                      non-oracle tests never need it. A RW_EXE_ORACLE inherited from the environment is ignored. When the file does not exist the exe-oracle tests (they exit 77
+#                      "oracle not available") are reported as SKIP(no_exe), never as ok, and do not affect the exit code.
+# Exit code: non-zero if any test reports failures/mismatches, never produced a result, or failed to build. SKIP rows (no exe) do not count as failures.
 # A fresh build dir is configured exactly like build/StandaloneRW (librw ON, SDL3, Debug via the conan toolchain).
 set -u
 . "$(dirname "$0")/hostenv.sh"
@@ -35,7 +38,9 @@ if [ "$HOST" != windows ]; then
   export PATH WINEPREFIX="${WINEPREFIX:-$HOME/.wine-msvc}" WINEDEBUG=-all
 fi
 EXE="$(hp "${GTA_EXE:-$REPO/gta_sa_compact.exe}")"
-export RW_EXE_ORACLE="$(wp "$EXE")"
+unset RW_EXE_ORACLE            # only GTA_EXE / <repo>/gta_sa_compact.exe count, never a stray variable of the calling shell
+if [ -f "$EXE" ]; then export RW_EXE_ORACLE="$(wp "$EXE")"; EXE_PRESENT=1; echo "run_all_tests: exe oracle ON  ($EXE)"
+else EXE_PRESENT=0; echo "run_all_tests: exe oracle OFF (no $EXE): the exe-oracle tests are reported as SKIP(no_exe)"; fi
 OUT="$SCRATCH/run_all_tests.$$"; mkdir -p "$OUT"
 
 # conan toolchain: from this checkout, else from the main worktree (a linked worktree has no build/Debug)
@@ -55,7 +60,7 @@ if [ "${SKIP_BUILD:-0}" != 1 ]; then
     cmake -S "$REPO" -B "$BDIR" -G Ninja -DCMAKE_BUILD_TYPE=Debug \
       -DCMAKE_TOOLCHAIN_FILE="$(hp "$TOOLCHAIN")" -DCMAKE_MAKE_PROGRAM="$NINJA" "${HOSTARGS[@]}" \
       -DGTASA_STANDALONE=ON -DGTASA_RW_LIBRW=ON -DGTASA_RW_LIBRW_OPT_OUT=OFF -DGTASA_USE_SDL3=ON \
-      -DGTASA_ORIGINAL_EXE="$EXE" -DGTASA_PYTHON="$(hp "$GTASA_PYTHON")" \
+      -DGTASA_PYTHON="$(hp "$GTASA_PYTHON")" \
       -DGTASA_WITH_OPENAL=OFF -DGTASA_WITH_CLEO_COMMANDS=OFF -DGTASA_WITH_SCRIPT_COMMAND_HOOKS=OFF -DGTASA_WITH_LTO=OFF -DGTASA_UNITY_BUILD=OFF \
       > "$OUT/configure.log" 2>&1 || { echo "configure failed, see $OUT/configure.log"; exit 2; }
   fi
@@ -121,6 +126,7 @@ for t in $TESTS; do
     pid=$!; code=""
     for ((s=0; s<TMO; s++)); do sleep 1; kill -0 $pid 2>/dev/null || { wait $pid; code=$?; break; }; done
     if [ -z "$code" ]; then kill -9 $pid 2>/dev/null; echo "  $t attempt $n: hang >${TMO}s"; code=hang; fi
+    if [ "$code" = 77 ]; then res=SKIP; break; fi          # exit 77 = "exe oracle not available" (RW_EXE_ORACLE unset): not a result, not a failure, no retry
     res=$(parse "$log")
     if [ -z "$res" ] || [ "$code" = hang ]; then
       if [ "$HOST" = windows ]; then taskkill //F //IM "$t.exe" >/dev/null 2>&1; else pkill -9 -f "$t.exe" 2>/dev/null; pkill -9 winedbg 2>/dev/null; fi
@@ -129,6 +135,11 @@ for t in $TESTS; do
     if [ -n "$res" ] && [ "$code" != hang ]; then break; fi
     res=""; [ "$code" != hang ] && echo "  $t attempt $n: crash/no result (exit $code)"
   done
+  if [ "$res" = SKIP ]; then
+    if [ "$EXE_PRESENT" = 1 ]; then ROWS+="$t - - - $n $((SECONDS-start)) EXIT77"$'\n'; RC=1     # the exe was given but the test still reports "not available"
+    else ROWS+="$t - - - $n $((SECONDS-start)) SKIP(no_exe)"$'\n'; fi
+    continue
+  fi
   if [ -z "$res" ]; then ROWS+="$t - - - $n $((SECONDS-start)) NORESULT"$'\n'; RC=1; continue; fi
   set -- $res
   if [ "$2" -gt 0 ] || [ "$3" -gt 0 ]; then status=FAIL; RC=1
@@ -138,5 +149,7 @@ for t in $TESTS; do
 done
 echo; printf '%-30s %8s %9s %10s %8s %7s  %s\n' test checks failures mismatches attempts seconds status
 printf '%s' "$ROWS" | while read -r a b c d e f g; do printf '%-30s %8s %9s %10s %8s %7s  %s\n' "$a" "$b" "$c" "$d" "$e" "$f" "$g"; done
+NOK=$(printf '%s' "$ROWS" | grep -c ' ok$'); NSKIP=$(printf '%s' "$ROWS" | grep -c ' SKIP(no_exe)$'); NALL=$(printf '%s' "$ROWS" | grep -c .)
+echo "summary: $NALL tests: $NOK ok, $NSKIP SKIP(no exe), $((NALL-NOK-NSKIP)) other (fail/nobuild/noresult)"
 echo "logs: $OUT"
 exit $RC

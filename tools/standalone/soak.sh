@@ -11,6 +11,7 @@
 #      Windows host (Git Bash, see docs/WINDOWS_SETUP.md): no Wine/prefix/WINEDEBUG; the data dir is built from NTFS hard links (files) and junctions (dirs)
 #      of $GAME_SRC (same volume; falls back to a copy), so the run never writes into the install. NOTE: the game still reads/writes the user's REAL
 #      Documents\GTA San Andreas User Files (gta_sa.set, saves) - back it up once. Screenshots are converted to PNG with PowerShell/System.Drawing.
+#      (G1) the run needs NO original exe at all: the data dir gets Steam assets + gta_reversed.exe only; $OUT/datadir_inventory.txt lists its exe/dll/bin files with sha256, soak exits 2 if an original-exe file is present.
 #      SOAK_IMAGE=1             copy original_data.bin/json next to the exe too (ONLY for the dev census / verify build, preset StandaloneDetached: NOTSA_IMAGE_CENSUS, NOTSA_VERIFY_GLOBALS
 #                               table checks). Default 0: the run exe starts WITHOUT any file of the original exe (slice F3), a leftover one in the data dir is deleted.
 #      SHOT_EVERY=<frames>      screenshot cadence (default 500 frames, NOTSA_STANDALONE_SCREENSHOT_MAX=40)
@@ -127,9 +128,13 @@ fi
 for a in 1 2 3 4 5 6; do
   kill_exe
   [ -n "$DOCSET" ] && rm -f "$DOCSET"
-  rm -f gta_reversed.exe data_pointers.bin original_data.* standalone*.log frame_*.bmp mark_*.bmp; rm -rf logs   # (also removes the image files of an earlier SOAK_IMAGE=1 run)
+  rm -f gta_reversed.exe gta_sa.exe gta_sa_compact.exe data_pointers.bin original_data.* standalone*.log frame_*.bmp mark_*.bmp; rm -rf logs   # (also removes the image files of an earlier SOAK_IMAGE=1 run)
   $CPX "$BIN/gta_reversed.exe" .
   for f in $IMGF; do $CPX "$BIN/$f" .; done
+  # slice G1/G2 evidence: what executable / binary-data files the run dir holds (the run exe needs none of the ORIGINAL exe's: no gta_sa.exe, original_data.*, data_pointers.*)
+  { echo "# data dir $DATA, $(date '+%F %T'); top-level exe/dll/bin files (sha256, size, name)"; for f in *.exe *.dll *.bin *.json; do [ -f "$f" ] && echo "$(sha256sum "$f" | cut -c1-64) $(stat -c %s "$f") $f"; done
+    ls -1 | grep -iE '^(gta_sa(_compact)?\.exe|original_data\..*|data_pointers\..*)$' | sed 's/^/FORBIDDEN-PRESENT: /'; } > "$OUT/datadir_inventory.txt" 2>/dev/null
+  if [ "${SOAK_IMAGE:-0}" != 1 ] && grep -q '^FORBIDDEN-PRESENT' "$OUT/datadir_inventory.txt"; then echo "soak: the data dir holds original-exe files (see $OUT/datadir_inventory.txt)"; kill_exe; exit 2; fi
   if [ "$HOST" = windows ]; then ./gta_reversed.exe > "$RUNOUT" 2>&1 & else wine gta_reversed.exe > "$RUNOUT" 2>&1 & fi
   WPID=$!
   for i in $(seq 1 15); do   # 30 s for the window / video mode

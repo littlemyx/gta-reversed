@@ -9,12 +9,12 @@ The run exe needs **nothing of the original exe, neither to build nor to start**
 address (`0xB6F5F0` ...) is a real C++ variable in this repository (section "Detached globals"), there is no data image, no `original_data.*` / `data_pointers.bin` next to the exe,
 no placeholder in the image and no fixed base. Only the game's own assets (your Steam copy's data folder) are read at run time.
 
-The original `gta_sa.exe` (v1.0 US, "compact") is still used as an **input of development tools only**:
+The original `gta_sa.exe` (v1.0 US, "compact") is an **optional input of development tools only** (slice G1: no preset of the user-facing build mentions it, a clean clone without it configures, builds and runs; the proof is `.notes/reports/D-G.md`):
 * by the **oracle tests**, which map the original code and data at their original addresses and compare it with our port (they link the 9 MB placeholder object
   `tools/standalone/make_orig_pad.py` into their own test exe, `/BASE:0x400000 /FIXED`);
 * by the dev-only configuration `StandaloneDetached` (`GTASA_IMAGE_DIAG=ON` + `GTASA_VERIFY_GLOBALS=ON`): `extract_exe_data.py` extracts `original_data.bin/json` at build time,
   `verify_globals.py` / `verify_vptrs.py` compare the detached globals with them, and the census (`census.py`) maps the image at the original addresses to PROVE that the
-  run code touches none of it. This config is the only exe that is still linked at `/BASE:0x400000 /FIXED` with the placeholder.
+  run code touches none of it. This config is the only exe that is still linked at `/BASE:0x400000 /FIXED` with the placeholder, and the only CMake configuration that needs the exe path (`-DGTASA_ORACLE_EXE=<gta_sa_compact.exe>`, preset default `<repo>/gta_sa_compact.exe`); it refuses to configure without it. The extract custom command, the `gta_reversed_exe_data` target and the POST_BUILD copy exist only there.
 
 Never commit the original exe (it is git-ignored). Legal note: private use only; you need your own legitimate copy of the game and its data.
 
@@ -29,10 +29,9 @@ Design details (committed snapshots, `git add -f`-ed because `.notes/` is a loca
   Wine toolchain files (committed, portable): `tools/standalone/msvc-wine/{toolchain-msvc-wine.cmake,no-wx.cmake,conanprofile-wine-debug.txt,conanprofile-wine-release.txt}`;
   point them at your msvc-wine install with `export MSVC_WINE_ROOT=<dir>` (default `~/tools/msvc`; `cl` must be `$MSVC_WINE_ROOT/bin/x86/cl`).
 * CMake >= 4.2, Ninja, conan 2 (e.g. `pipx install conan`), git (with submodules: `git submodule update --init vendor/librw`).
-* Python 3 with `unicorn` and `capstone` (`pip install unicorn capstone`); passed as `-DGTASA_PYTHON=<python>`. The extractor replays the
-  exe's 1667 static initialisers under Unicorn and classifies code pointers.
+* Python 3 (any; passed as `-DGTASA_PYTHON=<python>`): the run exe itself builds without it, the oracle `*_test` targets use it for the placeholder object. `unicorn` and `capstone` (`pip install unicorn capstone`) are needed only by dev tools: the `StandaloneDetached` extractor (replays the exe's 1667 static initialisers under Unicorn), `lift_x87.py`, the case generators.
 * The game's data directory (a legitimate install).
-* `gta_sa_compact.exe` (v1.0 US compact) in the repository root.
+* **Optional, dev only:** `gta_sa_compact.exe` (v1.0 US compact) in the repository root, for the exe-oracle tests and the `StandaloneDetached` config. Not needed to build, run or test the non-oracle part.
 
 ## Build
 Dependencies (Debug and Release are separate installs). On Windows use the repo's `conan/profiles/windows-msvc.txt` as is. Under msvc-wine
@@ -51,10 +50,10 @@ Known msvc-wine profile tweaks (already in those profiles; see `tools/standalone
 Common flags used below (bash; shown with the msvc-wine paths - adapt `MSVC`/`PY`; run from the repo root, after `export MSVC_WINE_ROOT=...` as above):
 ```
 MSVC=$MSVC_WINE_ROOT                 # msvc-wine install (Windows: omit the compiler/flags lines, cl is found by CMake)
-PY=<python with unicorn+capstone>    # e.g. a venv: python3 -m venv ~/gta-venv && ~/gta-venv/bin/pip install unicorn capstone
+PY=<python 3>                        # unicorn+capstone only for the dev tools (venv: python3 -m venv ~/gta-venv && ~/gta-venv/bin/pip install unicorn capstone)
 COMMON=(-G Ninja -DCMAKE_MAKE_PROGRAM="$(command -v ninja)" -DGTASA_STANDALONE=ON -DGTASA_USE_SDL3=ON -DGTASA_UNITY_BUILD=OFF -DGTASA_WITH_LTO=OFF
   -DGTASA_WITH_OPENAL=OFF -DGTASA_WITH_CLEO_COMMANDS=OFF -DGTASA_WITH_SCRIPT_COMMAND_HOOKS=OFF
-  -DGTASA_ORIGINAL_EXE="$PWD/gta_sa_compact.exe" -DGTASA_PYTHON="$PY"
+  -DGTASA_PYTHON="$PY"
   -DCMAKE_C_COMPILER="$MSVC/bin/x86/cl" -DCMAKE_CXX_COMPILER="$MSVC/bin/x86/cl"
   "-DCMAKE_C_FLAGS=/DWIN32 /D_WINDOWS /Zm1000" "-DCMAKE_CXX_FLAGS=/WX- /wd4005 /DWIN32 /D_WINDOWS /Zm1000 /GX")
 ```
@@ -67,7 +66,7 @@ COMMON=(-G Ninja -DCMAKE_MAKE_PROGRAM="$(command -v ninja)" -DGTASA_STANDALONE=O
 3. **`StandaloneRelease`** preset - librw, `/O2 /Ob2 /DNDEBUG -MT /Z7 /arch:IA32 /fp:precise`, ~17 MB exe (Debug ~50 MB; was 33 MB before the 9.1 MB placeholder and the hook/fixup machinery went), bit-exact with Debug:
    `cmake --preset StandaloneRelease -DGTASA_PYTHON="$PY"` (+ under msvc-wine `-DCMAKE_C_COMPILER=... -DCMAKE_CXX_COMPILER=...` and the two `CMAKE_*_FLAGS` entries above, as separate quoted arguments)
 
-Build: `ninja -C build/StandaloneRW gta_reversed.exe`. No extraction step runs for these presets any more (only `StandaloneDetached`, `GTASA_IMAGE_DIAG=ON`, runs the extractor and
+Build: `ninja -C build/StandaloneRW gta_reversed.exe`. No exe is needed and no extraction step runs for these presets (only `StandaloneDetached`, `GTASA_IMAGE_DIAG=ON` + `GTASA_ORACLE_EXE`, runs the extractor and
 writes `original_data.bin/json` and `data_pointers.bin` next to its exe in `<build>/bin`; they are tied to the 1.0 US compact exe). New `.cpp` files need a CMake re-glob (re-run cmake).
 Under Wine, one build at a time (cl via Wine is memory hungry); `ninja` may be interrupted by Wine (exit 130) - just re-run.
 
@@ -125,8 +124,8 @@ Wine quirks: about half of the starts die in wined3d `Direct3DCreate9` (`nested 
 
 ## Tests
 `tools/standalone/run_all_tests.sh [build-dir] [regex]` (on Windows: natively, no Wine) configures (if needed) a Debug librw build, builds every `*_test` target, runs them under Wine
-with a retry loop for the wined3d flake and prints a table; exit code is non-zero on any failure/mismatch. Set `ASSETS=<dir>` (infernus.dff, male01.dff,
-vgsnbuild07.dff) or `GAME_DIR=<game install>` (the script then extracts them from `models/gta3.img`) for the model-reading tests and `RW_EXE_ORACLE=<path to the original exe>` (done by the script, Windows path form).
+with a retry loop for the wined3d flake and prints a table; exit code is non-zero on any failure/mismatch. The original exe is optional (`GTA_EXE=<path>`, default `<repo>/gta_sa_compact.exe`): when the file is absent the exe-oracle tests (23 targets that exit 77 without `RW_EXE_ORACLE`) are listed as `SKIP(no_exe)`, are not counted as passes and do not affect the exit code (the last line says `N tests: X ok, Y SKIP(no exe), Z other`). Set `ASSETS=<dir>` (infernus.dff, male01.dff,
+vgsnbuild07.dff) or `GAME_DIR=<game install>` (the script then extracts them from `models/gta3.img`) for the model-reading tests and `RW_EXE_ORACLE=<path to the original exe>` (set by the script from `GTA_EXE` / the repo-root exe when the file exists, Windows path form; an inherited value is ignored).
 Known non-green rows on a clean clone (2026-10-10, verified by a from-scratch build): `review_oracle_test` (8 PC24 / 5191 PC53 strict mismatches, see PHASE2_STATUS),
 `rw_skin_pipeline_test` (page fault, pixel-test skeleton in progress); `rw_skin_hw_oracle_test` and `rw_skin_vs_test` print `0 mismatches` lines the script's parser does not
 recognise (shown as NORESULT; `rw_skin_vs_test` also needs `TIMEOUT=1500`, it runs several minutes). `ATTEMPTS`/`TIMEOUT` env vars override the retry count / per-test seconds.
@@ -146,7 +145,7 @@ in the ASI/DLL build and in the oracle tests they expand to the old `auto& x = S
 The exe is a **normal relocatable image** (default base, `/DYNAMICBASE`, ASLR on); `standalone.log` starts with `image base 0x... (ASLR on, ...)`. Tools (dev-time, they need the exe and its extracted image once, the build never runs them):
 `tools/standalone/gen_globals.py` (inventory `.notes/DETACH_GLOBALS.tsv`), `globals_emit.py` (initialiser literals from the image), `codemod_globals.py` (rewrites
 the declarations; dry run by default, `--check` lists what is left), `obj_code_sig.py` (fingerprint .obj code to prove that the default build did not change).
-Verification: build the dev preset `StandaloneDetached` (`-DGTASA_VERIFY_GLOBALS=ON -DGTASA_IMAGE_DIAG=ON`, needs `-DGTASA_ORIGINAL_EXE`; `original_data.bin` next to the exe), run `NOTSA_VERIFY_GLOBALS=<dump> NOTSA_VERIFY_GLOBALS_EXIT=1 gta_reversed.exe` (or without
+Verification: build the dev preset `StandaloneDetached` (`-DGTASA_VERIFY_GLOBALS=ON -DGTASA_IMAGE_DIAG=ON`, needs `-DGTASA_ORACLE_EXE=<gta_sa_compact.exe>`, preset default `<repo>/gta_sa_compact.exe`; `original_data.bin` next to the exe), run `NOTSA_VERIFY_GLOBALS=<dump> NOTSA_VERIFY_GLOBALS_EXIT=1 gta_reversed.exe` (or without
 `_EXIT` to keep playing; `NOTSA_VERIFY_GLOBALS_AFTER=<s>` adds a late snapshot `<dump>.late`) and compare with `python3 -I tools/standalone/verify_globals.py <dump>`.
 
 ## Fidelity rules (behaviour, not byte, identity)

@@ -3,6 +3,7 @@ chcp 65001 >nul
 setlocal EnableExtensions
 title GTA SA (standalone)
 rem Launcher for a real play session of the standalone build (sound ON, normal user settings).
+rem Needs NOTHING of the original gta_sa.exe (no original_data.*, no data_pointers.bin, no gta_sa.exe): the play dir = gta_reversed.exe + the Steam assets (slice G1).
 rem Lives in the play data dir C:\gta-play next to gta_reversed.exe (a snapshot of the build + links to the Steam data).
 rem   play.cmd              exclusive fullscreen, like the original
 rem   play.cmd windowed     window 1280x720 (desktop resolution is not switched)

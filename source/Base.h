@@ -191,6 +191,11 @@ extern bool g_DataImageLoaded;
 
 template<typename T>
 T& StaticRef(uintptr addr) {
+#if defined(NOTSA_DETACHED_GLOBALS) && !defined(NOTSA_ORACLE_ADDRESS_GLOBALS)
+    // F1 (.notes/DETACH_DATA_PLAN.md): the detached run build has no original data image, so ANY instantiation is a compile error: declare the global with NOTSA_GLOBAL* (named storage)
+    static_assert(sizeof(T) == 0, "StaticRef<T>(0xADDR) reads the original exe's data image: not allowed in the detached run build, use a NOTSA_GLOBAL* macro");
+#endif
+#line 194
 #ifdef NOTSA_STANDALONE_RUN
     // Standalone run: the original data image lives at the ORIGINAL addresses, so this is a plain dereference (like the DLL build)
     // Debug builds verify that nobody touches a global before the image is mapped.

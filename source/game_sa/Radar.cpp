@@ -20,7 +20,7 @@ constexpr std::array<airstrip_info, NUM_AIRSTRIPS> airstrip_table = { // 0x8D06E
 
 // Array of TXD slot indices for each radar section's texture
 // Index using y, x (In that order)
-static auto& gRadarTextures = StaticRef<std::array<std::array<int32, MAX_RADAR_WIDTH_TILES>, MAX_RADAR_HEIGHT_TILES>>(0xBA8478);
+static NOTSA_GLOBAL(gRadarTextures, 0xBA8478, (std::array<std::array<int32, MAX_RADAR_WIDTH_TILES>, MAX_RADAR_HEIGHT_TILES>), {});
 
 // 0x8D0720
 SpriteFileName CRadar::RadarBlipFileNames[] = {
@@ -260,8 +260,8 @@ void CRadar::DrawLegend(int32 x, int32 y, eRadarSprite blipType) {
         return;
     }
 
-    static auto& legendTraceHeight = StaticRef<eRadarTraceHeight>(0xBAA350); // = eRadarTraceHeight::RADAR_TRACE_LOW;
-    static auto& legendTraceTimer  = StaticRef<uint32>(0xBAA354); // = CTimer::GetTimeInMS();
+    NOTSA_GLOBAL_LOCAL(legendTraceHeight, 0xBAA350, (eRadarTraceHeight), {}); // = eRadarTraceHeight::RADAR_TRACE_LOW;
+    NOTSA_GLOBAL_LOCAL(legendTraceTimer, 0xBAA354, (uint32), {}); // = CTimer::GetTimeInMS();
 
     if (CTimer::GetTimeInMSPauseMode() - legendTraceTimer > 600) {
         legendTraceTimer = CTimer::GetTimeInMSPauseMode();
@@ -499,6 +499,44 @@ CVector2D CRadar::TransformRealWorldToTexCoordSpace(const CVector2D& in, int32 x
 // 0x583670
 namespace {
 // atan2(y, x) via fpatan (the extended result stays on the FPU stack), stored as the radar orientation, and its sin / cos computed from the UNROUNDED angle (0x5837B5 / 0x5837E9)
+#ifdef NOTSA_GLOBALS_DETACHED
+// detached: the asm stores through pointers to the globals (same fld/fst/fsin/fstp sequence; eax is scratch in cdecl)
+float* const s_pRadarOrientation = &CRadar::m_fRadarOrientation;
+float* const s_pRadarSin         = &CRadar::cachedSin;
+float* const s_pRadarCos         = &CRadar::cachedCos;
+__declspec(naked) void __cdecl SetRadarAngleAtan2(float y, float x) {
+    __asm {
+        fld  dword ptr [esp + 4]
+        fld  dword ptr [esp + 8]
+        fpatan
+        mov  eax, s_pRadarOrientation
+        fst  dword ptr [eax]
+        fld  st(0)
+        fsin
+        mov  eax, s_pRadarSin
+        fstp dword ptr [eax]
+        fcos
+        mov  eax, s_pRadarCos
+        fstp dword ptr [eax]
+        ret
+    }
+}
+__declspec(naked) void __cdecl SetRadarAngle(float a) {
+    __asm {
+        fld  dword ptr [esp + 4]
+        mov  eax, s_pRadarOrientation
+        fst  dword ptr [eax]
+        fld  st(0)
+        fsin
+        mov  eax, s_pRadarSin
+        fstp dword ptr [eax]
+        fcos
+        mov  eax, s_pRadarCos
+        fstp dword ptr [eax]
+        ret
+    }
+}
+#else
 __declspec(naked) void __cdecl SetRadarAngleAtan2(float y, float x) {
     __asm {
         fld  dword ptr [esp + 4]
@@ -526,6 +564,8 @@ __declspec(naked) void __cdecl SetRadarAngle(float a) {
         ret
     }
 }
+#endif
+#line 529
 }
 
 // 0x583670
@@ -1046,8 +1086,8 @@ void CRadar::DrawRotatingRadarSprite(CSprite2d& sprite, float x, float y, float 
 
 // 0x584960
 void CRadar::DrawYouAreHereSprite(float x, float y) {
-    static auto& mapYouAreHereTimer = StaticRef<uint32>(0xBAA358);
-    static auto& mapYouAreHereDisplay = StaticRef<bool>(0x8D0930);
+    NOTSA_GLOBAL_LOCAL(mapYouAreHereTimer, 0xBAA358, (uint32), {});
+    NOTSA_GLOBAL_LOCAL(mapYouAreHereDisplay, 0x8D0930, (bool), { true });
 
     if (CTimer::GetTimeInMSPauseMode() - mapYouAreHereTimer > 700) {
         mapYouAreHereTimer = CTimer::GetTimeInMSPauseMode();
@@ -1643,7 +1683,7 @@ void CRadar::DrawRadarSectionMap(int32 x, int32 y, CRect rect) {
 
 // 0x586650
 void CRadar::DrawRadarGangOverlay(bool inMenu) {
-    static auto& g_RadarGangResetOverlay = StaticRef<uint32>(0xBAA36C); // bool?
+    NOTSA_GLOBAL_LOCAL(g_RadarGangResetOverlay, 0xBAA36C, (uint32), {}); // bool?
     static auto& g_RadarGangOverlay = StaticRef<CRect>(0xBAA35C);
 
     if ((g_RadarGangResetOverlay & 1) == 0) {
@@ -1890,11 +1930,11 @@ void CRadar::DrawEntityBlip(int32 blipIndex, uint8 arg1) {
     static_assert(offsetof(CMenuManager, m_ShowMissionBlips) == 0xBA678F - 0xBA6748);
 
     // Function-local statics of the original (the guard bits live in `s_initFlags`)
-    static auto& s_initFlags   = StaticRef<uint32>(0xBAA380);
-    static auto& s_currRange   = StaticRef<int16>(0xBAA37C);
-    static auto& s_prevRange   = StaticRef<int16>(0xBAA378);
-    static auto& s_lastTime    = StaticRef<uint32>(0xBAA374);
-    static auto& s_airstripSeen = StaticRef<bool>(0xBAA370);
+    NOTSA_GLOBAL_LOCAL(s_initFlags, 0xBAA380, (uint32), {});
+    NOTSA_GLOBAL_LOCAL(s_currRange, 0xBAA37C, (int16), {});
+    NOTSA_GLOBAL_LOCAL(s_prevRange, 0xBAA378, (int16), {});
+    NOTSA_GLOBAL_LOCAL(s_lastTime, 0xBAA374, (uint32), {});
+    NOTSA_GLOBAL_LOCAL(s_airstripSeen, 0xBAA370, (bool), {});
 
     auto& trace = ms_RadarTrace[blipIndex];
 

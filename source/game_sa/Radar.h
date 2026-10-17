@@ -203,23 +203,23 @@ public:
     static constexpr uint32 MAX_RADAR_SPRITES = 64;
     static constexpr uint32 MAX_RADAR_TRACES = 175;
 
-    static inline auto& m_fRadarOrientation = StaticRef<float>(0xBA8310);
-    static inline auto& cachedCos = StaticRef<float>(0xBA8308);
-    static inline auto& cachedSin = StaticRef<float>(0xBA830C);
+    static inline NOTSA_GLOBAL(m_fRadarOrientation, 0xBA8310, (float), {});
+    static inline NOTSA_GLOBAL(cachedCos, 0xBA8308, (float), {});
+    static inline NOTSA_GLOBAL(cachedSin, 0xBA830C, (float), {});
 
     static SpriteFileName RadarBlipFileNames[];
 
-    static inline auto& m_radarRange = StaticRef<float>(0xBA8314); // 2990.0 by default
-    static inline auto& MapLegendList = StaticRef<std::array<int16, MAX_RADAR_TRACES>>(0xBA8318); // do not convert int16 to eRadarSprite, they have different sizes.
-    static inline auto& MapLegendCounter = StaticRef<uint16>(0xBA86B8); // num icons in legend
+    static inline NOTSA_GLOBAL(m_radarRange, 0xBA8314, (float), {}); // 2990.0 by default
+    static inline NOTSA_GLOBAL(MapLegendList, 0xBA8318, (std::array<int16, MAX_RADAR_TRACES>), {}); // do not convert int16 to eRadarSprite, they have different sizes.
+    static inline NOTSA_GLOBAL(MapLegendCounter, 0xBA86B8, (uint16), {}); // num icons in legend
     static inline auto& ArrowBlipColour = StaticRef<std::array<CRGBA, 6>>(0xBA86D4);
-    static inline auto& ms_RadarTrace = StaticRef<std::array<tRadarTrace, MAX_RADAR_TRACES>>(0xBA86F0);
-    static inline auto& vec2DRadarOrigin = StaticRef<CVector2D>(0xBAA248);
+    static inline NOTSA_GLOBAL(ms_RadarTrace, 0xBA86F0, (std::array<tRadarTrace, MAX_RADAR_TRACES>), {});
+    static inline NOTSA_GLOBAL(vec2DRadarOrigin, 0xBAA248, (CVector2D), {});
     static inline auto& RadarBlipSprites = StaticRef<std::array<CSprite2d, MAX_RADAR_SPRITES>>(0xBAA250);
-    static inline auto& m_radarRect = StaticRef<CRect>(0x8D0920); // { 1000000.0f, -1000000.0f, -1000000.0f, 1000000.0f }
+    static inline NOTSA_GLOBAL(m_radarRect, 0x8D0920, (CRect), {}); // { 1000000.0f, -1000000.0f, -1000000.0f, 1000000.0f }
 
-    static inline auto& airstrip_location = StaticRef<eAirstripLocation>(0xBA8300); // current airstrip index in airstrip_table
-    static inline auto& airstrip_blip = StaticRef<int32>(0xBA8304);     // blip handle
+    static inline NOTSA_GLOBAL(airstrip_location, 0xBA8300, (eAirstripLocation), {}); // current airstrip index in airstrip_table
+    static inline NOTSA_GLOBAL(airstrip_blip, 0xBA8304, (int32), {});     // blip handle
 
 public:
     static void InjectHooks();

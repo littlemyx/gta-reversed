@@ -21,6 +21,8 @@
 #include "game_sa/DetachedShared.h"
 #include "game_sa/CarCtrl.h"
 #include "game_sa/Scripts/TheScripts.h"
+#include "game_sa/UserDisplay.h"
+#line 24
 #line 23
 #line 21
 
@@ -29,7 +31,7 @@ static NOTSA_GLOBAL_ALIAS(s_CopsNeededCarDensityScale, 0x8A5B20, (float), CCarCt
 static NOTSA_GLOBAL_ALIAS(s_CurDistForCam, 0x8CCB84, (float), notsa::shared::CurDistForCam); // Same global as `gCurDistForCam` in Camera.cpp
 static NOTSA_GLOBAL_ALIAS(s_Unk_B6EC2C, 0xB6EC2C, (bool), gAllowScriptedFixedCameraCollision);
 static auto& s_Unk_B728E0                = StaticRef<int32>(0xB728E0);
-static auto& s_Unk_BA18D9                = StaticRef<bool>(0xBA18D9);
+static NOTSA_GLOBAL_ALIAS(s_Unk_BA18D9, 0xBA18D9, (bool), *reinterpret_cast<bool*>(reinterpret_cast<uint8*>(&CUserDisplay::OnscnTimer) + 337));
 
 void CMissionCleanup::InjectHooks() {
     RH_ScopedClass(CMissionCleanup);

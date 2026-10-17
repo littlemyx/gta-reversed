@@ -10,6 +10,8 @@
 #include "Garages.h"
 #include "OnscreenTimer.h"
 #include "Radar.h"
+#include "UserDisplay.h"
+#line 13
 #include "Population.h"
 #include "UserDisplay.h"
 #include "MenuManager.h"
@@ -34,7 +36,7 @@ using namespace notsa::script::commands::ported::g09_12;
 
 namespace {
 //! 0xBA18D9 (set by FREEZE_ONSCREEN_TIMER, cleared by `CMissionCleanup::Init`)
-auto& OnscreenTimerFrozen = StaticRef<bool>(0xBA18D9);
+NOTSA_GLOBAL_ALIAS(OnscreenTimerFrozen, 0xBA18D9, (bool), *reinterpret_cast<bool*>(reinterpret_cast<uint8*>(&CUserDisplay::OnscnTimer) + 337));
 
 //! Inlined `CAutoPilot::SetCarMission` (0x463490, 1 arg): doesn't touch the mission of a crashing plane / heli
 void AutoPilotSetCarMissionUnlessCrashing(CAutoPilot& ap, eCarMission mission) {

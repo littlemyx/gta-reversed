@@ -51,6 +51,6 @@ this early in the game, `OSRBLHH` has no effect, the car cheat does not work fro
 |---|---|
 | Release build (`build/StandaloneRelease`, the user's configuration) | ok |
 | oracle row `CAECollisionAudioEntity::UpdateParameters 0x4DA370` (`world_oracle_audio.inc`, fake entity + fake sound, whole-object byte compare, event / pos / timer / ClientVariable random incl. out of range) | 4000 / 4000 at PC24 and PC53; mutant (override disabled) -> 913 mismatches. `source/CMakeLists.txt`: `AECollisionAudioEntity.cpp` added to `world_oracle_test` |
-| `run_all_tests.sh` (StandaloneRW, `GTA_EXE` = the oracle exe) | see the status line / final message (oracle + fp / fade tests 25 / 25 ok; rw_* device tests under the GPU lock) |
+| `run_all_tests.sh` (StandaloneRW, `GTA_EXE` = the oracle exe) | **44 / 44 targets ok** (25 oracle + fp + fade tests, then the 21 rw_* tests under the GPU lock; `world_oracle_test` 117 rows incl. the new one, 0 mismatches) |
 | dense scene vs original | collision list = original (above); no refusals, no starvation in both |
-| soak 3 min (`soak.sh build/StandaloneRelease 3`, stats + tap on) | see `pta_out/soak3` |
+| soak 3 min (`soak.sh build/StandaloneRelease 3`, stats + tap on) | `RESULT: OK`, 9800 frames (6.5 min, the default route: new game, walk, car, Rhino, idle), 0 errors, exit via atexit, 25 fps like before. The three scripted dense runs (`fix`, `nofix2`, `orig`) ran 5-6.5 min each, tap: 0 anomalies of every kind (STALE_SLOT, WRITE_IN_PLAY, SETVOL_REJECTED ...) |

@@ -33,14 +33,18 @@ static void RestoreCb() {
 static void OtherCb() {}
 
 // test doubles for two device vtable slots (the test patches the proxy vtable the Reset watch installed, restores it afterwards)
+// The D3D9 contract being modelled: after Present reported DEVICELOST, the next TestCooperativeLevel reports DEVICENOTRESET. The NOTRESET therefore only becomes
+// available once a faked Present has returned LOST (g_lostPending): the native d3d9.dll's Reset calls TestCooperativeLevel itself through the object's vtable
+// (Wine's does not), and such an internal call must not consume the armed answer, or the second Reset of one showRaster is never reached.
 static int   g_fakeLost = 0, g_fakeNotReset = 0;
+static bool  g_lostPending = false;
 static void* g_origPresent = nullptr; static void* g_origTest = nullptr;
 static HRESULT __stdcall FakePresent(IDirect3DDevice9* d, const RECT* a, const RECT* b, HWND c, const RGNDATA* e) {
-    if (g_fakeLost > 0) { g_fakeLost--; return D3DERR_DEVICELOST; }
+    if (g_fakeLost > 0) { g_fakeLost--; g_lostPending = true; return D3DERR_DEVICELOST; }
     return reinterpret_cast<HRESULT(__stdcall*)(IDirect3DDevice9*, const RECT*, const RECT*, HWND, const RGNDATA*)>(g_origPresent)(d, a, b, c, e);
 }
 static HRESULT __stdcall FakeTestCoop(IDirect3DDevice9* d) {
-    if (g_fakeNotReset > 0) { g_fakeNotReset--; return D3DERR_DEVICENOTRESET; }
+    if (g_lostPending && g_fakeNotReset > 0) { g_lostPending = false; g_fakeNotReset--; return D3DERR_DEVICENOTRESET; }
     return reinterpret_cast<HRESULT(__stdcall*)(IDirect3DDevice9*)>(g_origTest)(d);
 }
 

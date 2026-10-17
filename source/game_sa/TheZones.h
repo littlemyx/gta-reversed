@@ -23,7 +23,7 @@ public:
     static inline NOTSA_GLOBAL(MapZoneArray, 0xBA1908, (std::array<CZone, 39>), {});
     static inline NOTSA_GLOBAL(TotalNumberOfZoneInfos, 0xBA1DE8, (int16), {});
     
-    static inline auto& ZoneInfoArray = StaticRef<std::array<CZoneInfo, 380>>(0xBA1DF0);
+    NOTSA_GLOBAL_ZERO(ZoneInfoArray, 0xBA1DF0, (std::array<CZoneInfo, 380>)); static_assert(sizeof(ZoneInfoArray) == 6460); // zero .bss in the exe (not the repo default ctor values)
 
 public:
     static void InjectHooks();

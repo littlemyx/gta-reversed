@@ -15,7 +15,7 @@
 #include <CdStreamInfo.h>
 
 class CEntity;
-class CLoadedCarGroup;
+#include "LoadedCarGroup.h"
 class CDirectory;
 
 enum class eChannelState
@@ -204,7 +204,7 @@ public:
     static inline NOTSA_GLOBAL_ALIAS(ms_DefaultCopBikerModel, 0x8A5AB0, (int32), *reinterpret_cast<int32*>(reinterpret_cast<uint8*>(&CStreaming::ms_aDefaultCopModel) + 16));
 
     static inline NOTSA_GLOBAL(ms_pExtraObjectsDir, 0x8E48D0, (CDirectory*), {});
-    static inline auto& ms_files = StaticRef<tStreamingFileDesc[TOTAL_IMG_ARCHIVES]>(0x8E48D8);
+    NOTSA_GLOBAL_ZERO(ms_files, 0x8E48D8, (tStreamingFileDesc[TOTAL_IMG_ARCHIVES])); static_assert(sizeof(ms_files) == 384); // zero .bss in the exe (not the repo default ctor values)
     static inline NOTSA_GLOBAL(ms_bLoadingBigModel, 0x8E4A58, (bool), {});
     // There are only two channels within CStreaming::ms_channel
     static inline NOTSA_GLOBAL(ms_channel, 0x8E4A60, (std::array<tStreamingChannel, 2>), {});
@@ -230,7 +230,7 @@ public:
     static inline NOTSA_GLOBAL(ms_NextPedToLoadFromGroup, 0x8E4BB8, (std::array<int32, 18>), {});
 
     static inline NOTSA_GLOBAL(ms_currentZoneType, 0x8E4C20, (int32), {});
-    static inline auto& ms_vehiclesLoaded = StaticRef<CLoadedCarGroup>(0x8E4C24);
+    NOTSA_GLOBAL_ZERO(ms_vehiclesLoaded, 0x8E4C24, (CLoadedCarGroup)); static_assert(sizeof(ms_vehiclesLoaded) == 46); // zero .bss in the exe (not the repo default ctor values)
     static inline NOTSA_GLOBAL(ms_pEndRequestedList, 0x8E4C54, (CStreamingInfo*), {});
     static inline NOTSA_GLOBAL(ms_pStartRequestedList, 0x8E4C58, (CStreamingInfo*), {});
     static inline NOTSA_GLOBAL(ms_pEndLoadedList, 0x8E4C5C, (CStreamingInfo*), {});
@@ -244,7 +244,7 @@ public:
     static inline NOTSA_GLOBAL(ms_pStreamingBuffer, 0x8E4CAC, (uint8*[2]), {});
     static inline NOTSA_GLOBAL(ms_memoryUsedBytes, 0x8E4CB4, (uint32), {});
     static inline NOTSA_GLOBAL(ms_numModelsRequested, 0x8E4CB8, (int32), {});
-    static inline auto& ms_aInfoForModel = StaticRef<std::array<CStreamingInfo, 26316>>(0x8E4CC0);
+    NOTSA_GLOBAL_ZERO(ms_aInfoForModel, 0x8E4CC0, (std::array<CStreamingInfo, 26316>)); static_assert(sizeof(ms_aInfoForModel) == 526320); // zero .bss in the exe (not the repo default ctor values)
     static inline NOTSA_GLOBAL(ms_disableStreaming, 0x9654B0, (bool), {});
     static inline NOTSA_GLOBAL(ms_bIsInitialised, 0x9654B8, (int32), {});
     static inline NOTSA_GLOBAL(m_bBoatsNeeded, 0x9654BC, (bool), {});

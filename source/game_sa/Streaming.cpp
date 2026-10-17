@@ -10,7 +10,15 @@
 
 static NOTSA_GLOBAL(CurrentGangMemberToLoad, 0x9654D4, (int32), {});
 
+#ifdef NOTSA_GLOBALS_DETACHED
+// The exe's 4-byte `RwStream` slot is only an identity key here: _rwStreamInitialize (standalone/rw/stream.cpp) never uses the caller storage as the object (rw::Stream is polymorphic)
+static NOTSA_GLOBAL(gRwStreamKey, 0x8E48AC, (uint32), {});
+static auto& gRwStream = reinterpret_cast<RwStream&>(gRwStreamKey);
+#else
 auto& gRwStream = StaticRef<RwStream>(0x8E48AC);
+#endif
+namespace { NOTSA_GLOBAL_SYNTH(k_9654C8, 0x9654C8, (int32), {}); } // written, never read (CStreaming::ForceLayerToRead)
+#line 14
 
 void CStreaming::InjectHooks() {
     RH_ScopedClass(CStreaming);
@@ -2658,7 +2666,7 @@ void CStreaming::FlushRequestList() {
 // 0x407A10
 void CStreaming::ForceLayerToRead(int32 arg1) {
     ms_bReadLayerForceFully = true;
-    *(int32*)0x9654C8 = arg1; // unused
+    NOTSA_GLOBAL_EXPR(0x9654C8, (int32), k_9654C8) = arg1; // unused
 }
 
 // 0x408000

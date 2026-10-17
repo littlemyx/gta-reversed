@@ -51,7 +51,7 @@ class CPlantSurfPropMgr {
 public:
     static inline NOTSA_GLOBAL(m_SurfPropPtrTab, 0xC38070, (std::array<CPlantSurfProp*, 178>), {});
     static inline NOTSA_GLOBAL(m_countSurfPropsAllocated, 0xC39ED4, (uint32), {});
-    static inline auto& m_SurfPropTab = StaticRef<CPlantSurfProp[MAX_SURFACE_PROPERTIES]>(0xC38338);
+    NOTSA_GLOBAL_ZERO(m_SurfPropTab, 0xC38338, (CPlantSurfProp[MAX_SURFACE_PROPERTIES])); static_assert(sizeof(m_SurfPropTab) == 7068); // zero .bss in the exe (not the repo default ctor values)
 
 public:
     static void InjectHooks();

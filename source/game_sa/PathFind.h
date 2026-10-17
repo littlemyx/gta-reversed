@@ -625,4 +625,4 @@ public:
 
 VALIDATE_SIZE(CPathFind, 0x3C80);
 
-static inline auto& ThePaths = StaticRef<CPathFind>(0x96F050);
+NOTSA_GLOBAL_ZERO_HDR(ThePaths, 0x96F050, (CPathFind)); static_assert(sizeof(ThePaths) == 15488); // zero .bss in the exe (not the repo default ctor values)

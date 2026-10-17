@@ -3,7 +3,7 @@
 #include <algorithm>
 
 constexpr auto      MAX_SHOT_INFOS = 100u;
-static inline auto& aShotInfos = StaticRef<std::array<CShotInfo, MAX_SHOT_INFOS>>(0xC89690);
+NOTSA_GLOBAL_ZERO(aShotInfos, 0xC89690, (std::array<CShotInfo, MAX_SHOT_INFOS>)); static_assert(sizeof(aShotInfos) == 4400); // zero .bss in the exe (not the repo default ctor values)
 
 // Originally CShotInfo::ms_afRandTable
 static inline NOTSA_GLOBAL(RandTable, 0xC89628, (std::array<float, 20>), {});

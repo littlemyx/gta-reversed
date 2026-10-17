@@ -37,10 +37,10 @@ public:
     static inline NOTSA_GLOBAL(MaxNumberOfPedsInUse, 0x8D2538, (uint32), { 25 });
     static inline NOTSA_GLOBAL(NumberOfPedsInUseInterior, 0x8D253C, (uint32), { 40 });
     static NOTSA_GLOBAL_DECL(CPopulation, m_TranslationArray, 0x8D2540, (tPedGroupTranslationData[POPCYCLE_TOTAL_GROUPS]));
-    static inline auto& m_LoadedBoats = StaticRef<CLoadedCarGroup>(0xC0E998);
-    static inline auto& m_InAppropriateLoadedCars = StaticRef<CLoadedCarGroup>(0xC0E9C8);
-    static inline auto& m_AppropriateLoadedCars = StaticRef<CLoadedCarGroup>(0xC0E9F8);
-    static inline auto& m_LoadedGangCars = StaticRef<std::array<CLoadedCarGroup, 10>>(0xC0EA28);
+    NOTSA_GLOBAL_ZERO(m_LoadedBoats, 0xC0E998, (CLoadedCarGroup)); static_assert(sizeof(m_LoadedBoats) == 46); // zero .bss in the exe (not the repo default ctor values)
+    NOTSA_GLOBAL_ZERO(m_InAppropriateLoadedCars, 0xC0E9C8, (CLoadedCarGroup)); static_assert(sizeof(m_InAppropriateLoadedCars) == 46); // zero .bss in the exe (not the repo default ctor values)
+    NOTSA_GLOBAL_ZERO(m_AppropriateLoadedCars, 0xC0E9F8, (CLoadedCarGroup)); static_assert(sizeof(m_AppropriateLoadedCars) == 46); // zero .bss in the exe (not the repo default ctor values)
+    NOTSA_GLOBAL_ZERO(m_LoadedGangCars, 0xC0EA28, (std::array<CLoadedCarGroup, 10>)); static_assert(sizeof(m_LoadedGangCars) == 460); // zero .bss in the exe (not the repo default ctor values)
     static inline NOTSA_GLOBAL(bZoneChangeHasHappened, 0xC0EC22, (bool), {});
     static inline NOTSA_GLOBAL(m_CountDownToPedsAtStart, 0xC0EC23, (uint8), {});
     static inline NOTSA_GLOBAL(ms_nTotalMissionPeds, 0xC0EC24, (uint32), {});

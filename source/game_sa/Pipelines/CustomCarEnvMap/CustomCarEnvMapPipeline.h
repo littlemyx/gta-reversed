@@ -102,7 +102,7 @@ public:
 
     static inline NOTSA_GLOBAL(ObjPipeline, 0xC02D24, (RxPipeline*), {});
 
-    static inline auto& fakeEnvMapPipeMatData = StaticRef<CustomEnvMapPipeMaterialData>(0xC02D18);
+    NOTSA_GLOBAL_ZERO(fakeEnvMapPipeMatData, 0xC02D18, (CustomEnvMapPipeMaterialData)); static_assert(sizeof(fakeEnvMapPipeMatData) == 12); // zero .bss in the exe (not the repo default ctor values)
     static inline NOTSA_GLOBAL(m_gEnvMapPipeMatDataPool, 0xC02D28, (CustomEnvMapPipeMaterialDataPool*), {});
     static inline NOTSA_GLOBAL(m_gEnvMapPipeAtmDataPool, 0xC02D2C, (CustomEnvMapPipeAtomicDataPool*), {});
     static inline NOTSA_GLOBAL(m_gSpecMapPipeMatDataPool, 0xC02D30, (CustomSpecMapPipeMaterialDataPool*), {});

@@ -54,7 +54,7 @@ public:
     float          m_fFuelSpeed[NUM_FUEL];
 
     static NOTSA_GLOBAL_DECL(CExplosion, m_ExplosionAudioEntity, 0xC888D0, (CAEExplosionAudioEntity)); // detached: defined at the end of Explosion.cpp
-    static inline auto& aExplosions = StaticRef<std::array<CExplosion, 16>>(0xC88950);
+    static NOTSA_GLOBAL_ZERO_DECL(CExplosion, aExplosions, 0xC88950, (std::array<CExplosion, 16>)); // detached: defined at the end of Explosion.cpp (CExplosion is incomplete here)
 
 public:
     static void InjectHooks();

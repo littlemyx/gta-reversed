@@ -1,6 +1,7 @@
 # Soak route for tools/standalone/soak.sh (NOTSA_STANDALONE_INPUT format, one item per line, mark,NAME lines are the progress markers the report reads)
 # Window 960x600 assumed (mouse coordinates). @IDLE_MS@ is replaced by soak.sh from its minutes argument.
-wait:20000
+until:menu:240000
+wait:1500
 mark:menu
 mouse:472,248
 wait:500

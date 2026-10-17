@@ -44,7 +44,7 @@ static bool IsInFullscreen()
 // NOTSA_INPUT_INJECT (cmake -DGTASA_INPUT_INJECT=ON) enables it in the ASI/DLL build too (logs through spdlog instead of Fixups).
 // `until:COND[:MAXMS]` is a barrier: the script clock stops until COND holds (or MAXMS, default 60000, elapsed), then continues from there, so everything after it is
 // relative to the moment the game was actually ready (deterministic car entry etc.). COND = control (player ped exists, no menu / cutscene / fade, pad not disabled)
-// | invehicle (the player ped is in a vehicle). Logs "[until] COND ok|TIMEOUT after N ms".
+// | invehicle (the player ped is in a vehicle) | menu (main menu idle and rendering). Logs "[until] COND ok|TIMEOUT after N ms".
 // `label:NAME` / `skipif:COND:NAME` (COND as above, evaluated once, no waiting): when COND holds the script jumps forward to `label:NAME` (the clock jumps with it, i.e.
 // the skipped waits are not waited), e.g. a second car-entry attempt that is skipped when the first one worked.
 // `mark:NAME` logs a progress marker; newlines also separate items. K = return|escape|up|down|left|right|space|tab|lshift|lctrl|f1..f12|<single char>.
@@ -76,6 +76,9 @@ bool InjCond(const std::string& c) {
     if (c == "invehicle") {
         auto* ped = FindPlayerPed();
         return ped && ped->bInVehicle && ped->m_pVehicle;
+    }
+    if (c == "menu") { // the main menu is up and drawing frames (start-up takes ~75 s on a display whose vsync-locked Present is slow: the splash/loading screens are frame-count loops)
+        return gGameState == GAME_STATE_FRONTEND_IDLE && FrontEndMenuManager.m_bMenuActive && CTimer::GetFrameCounter() > 3;
     }
     return true; // unknown condition: do not block
 }

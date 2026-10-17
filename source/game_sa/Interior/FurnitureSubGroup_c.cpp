@@ -1,10 +1,9 @@
 #include "StdInc.h"
 #include "FurnitureSubGroup_c.h"
 #include "Furniture_c.h"
+#include "FurnitureManager_c.h"
 
 namespace {
-// FurnitureManager_c::g_currFurnitureId (only the low word is used here)
-auto& s_FurnSubGrpFurnitureCount = StaticRef<uint16>(0xBAB378);
 // Storage for all furniture items (256 * 0x14)
 auto& s_FurnSubGrpFurnitureStore = StaticRef<std::array<Furniture_c, 256>>(0xBAE1F8);
 } // namespace
@@ -20,11 +19,11 @@ void FurnitureSubGroup_c::InjectHooks() {
 
 // 0x5C00C0
 bool FurnitureSubGroup_c::AddFurniture(uint16 modelId, int16 id, uint8 wealthMin, uint8 wealthMax, uint8 maxAng) {
-    if (s_FurnSubGrpFurnitureCount >= s_FurnSubGrpFurnitureStore.size()) {
+    if (FurnitureManager_c::g_currFurnitureId >= s_FurnSubGrpFurnitureStore.size()) {
         return false;
     }
 
-    auto& f = s_FurnSubGrpFurnitureStore[s_FurnSubGrpFurnitureCount++];
+    auto& f = s_FurnSubGrpFurnitureStore[FurnitureManager_c::g_currFurnitureId++];
     f.m_nModelId = modelId;
     f.m_nId      = id;
 

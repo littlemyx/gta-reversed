@@ -11,8 +11,9 @@ class Furniture_c;
 class FurnitureManager_c {
 private:
     // Both are 16 bit in the exe (e.g. `mov word [0xBAB37C], ax` at 0x5C04A8); the repo had them as uint32 (the upper halves 0xBAB37A/0xBAB37E are padding in front of the manager at 0xBAB380)
-    static inline auto& g_currSubGroupId  = StaticRef<uint16>(0xBAB37C);
-    static inline auto& g_currFurnitureId = StaticRef<uint16>(0xBAB378);
+    static inline NOTSA_GLOBAL(g_currSubGroupId, 0xBAB37C, (uint16), {});
+    static inline NOTSA_GLOBAL(g_currFurnitureId, 0xBAB378, (uint16), {});
+    friend class FurnitureSubGroup_c; // FurnitureSubGroup_c::AddFurniture reads/increments g_currFurnitureId (exe 0x5C00C0)
     static inline auto& g_subGroupStore   = StaticRef<std::array<FurnitureSubGroup_c, 128>>(0xBAD3F8);
 
 public:

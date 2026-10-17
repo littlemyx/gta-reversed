@@ -289,7 +289,9 @@ static void Im3DTests(IDirect3DDevice9* dev, int W, int H) {
     s = Capture(dev);
     s.bbox(kBlack, x0, y0, x1, y1);
     std::printf("tri LTM scale 5: bbox %d,%d..%d,%d, %d px\n", x0, y0, x1, y1, s.countNot(kBlack));
-    CHECK(std::abs((x1 - x0) - 5 * baseW) <= 4 && std::abs((y1 - y0) - 5 * baseH) <= 4);
+    // analytic size (5 * W/10 = W/2, H/2), not 5 * the measured base size: the small triangle's bbox is quantised by the rasteriser's fill rule (the RTX 4080 gave 28 px
+    // for 30.4), and x5 multiplied that rounding (140 vs the true 152); a wrong LTM scale still misses by tens of pixels
+    CHECK(std::abs((x1 - x0) - W / 2) <= 4 && std::abs((y1 - y0) - H / 2) <= 4);
     CHECK(std::abs(s.countNot(kBlack) - 25 * basePx) < 25 * basePx / 8);
     // LTM: translate by (+4, 0, 0): moves along the (mirrored) screen x axis; the centre pixel is no longer covered
     RwMatrix* tm = RwMatrixCreate();

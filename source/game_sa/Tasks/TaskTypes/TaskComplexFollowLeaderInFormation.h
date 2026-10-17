@@ -21,7 +21,7 @@ public:
         std::array<CVector2D, TOTAL_PED_GROUP_MEMBERS> MovingOffsets;
         float                                          Scale;
     };
-    static inline NOTSA_GLOBAL(ms_offsets, 0xC196E8, (Offsets), { {{ CVector2D{-1.0f, 1.0f}, CVector2D{1.0f, 1.0f}, CVector2D{0.0f, 1.0f}, CVector2D{-1.0f, 0.0f}, CVector2D{1.0f, 0.0f}, CVector2D{-1.0f, -1.0f}, CVector2D{0.0f, -1.0f}, CVector2D{1.0f, -1.0f} }}, {{ CVector2D{-1.0f, 0.0f}, CVector2D{1.0f, 0.0f}, CVector2D{0.0f, -1.25f}, CVector2D{-1.25f, -1.25f}, CVector2D{1.25f, -1.25f}, CVector2D{0.0f, -2.5f}, CVector2D{-1.0f, -2.5f}, CVector2D{1.0f, -2.5f} }}, 1.0f }); // image bytes of the exe's static initialiser 0x694850
+    static inline NOTSA_GLOBAL(ms_offsets, 0xC196E8, (Offsets), { {{ CVector2D{-1.0f, 1.0f}, CVector2D{1.0f, 1.0f}, CVector2D{0.0f, 1.0f}, CVector2D{-1.0f, 0.0f}, CVector2D{1.0f, 0.0f}, CVector2D{-1.0f, -1.0f}, CVector2D{0.0f, -1.0f}, CVector2D{1.0f, -1.0f} }}, {{ CVector2D{-1.0f, 0.0f}, CVector2D{1.0f, 0.0f}, CVector2D{0.0f, -1.25f}, CVector2D{-1.25f, -1.25f}, CVector2D{1.25f, -1.25f}, CVector2D{0.0f, -2.5f}, CVector2D{-1.0f, -2.5f}, CVector2D{1.0f, -2.5f} }}, 1.0f }); static_assert(sizeof(ms_offsets) == 132); // image bytes of the exe's static initialiser 0x694850
 
     CTaskComplexFollowLeaderInFormation(CPedGroup* pedGroup, CPed* ped, const CVector& posn, float dist = -1.f);
     CTaskComplexFollowLeaderInFormation(const CTaskComplexFollowLeaderInFormation&);

@@ -928,6 +928,6 @@ void CGame::ReloadIPLs() {
 
 #ifdef NOTSA_GLOBALS_DETACHED
 // The fight strike model (CTaskSimpleFight::FightSetUpCol): col1 (ctor 0x40FB60) and the CCollisionData behind it (ctor 0x40F030); declared extern in Game.h
-NOTSA_GLOBAL(col1, 0xC17824, (CColModel), {});
-NOTSA_GLOBAL(col1Data, 0xC17854, (CCollisionData), {});
+NOTSA_GLOBAL(col1, 0xC17824, (CColModel), {}); static_assert(sizeof(col1) == 48);
+NOTSA_GLOBAL(col1Data, 0xC17854, (CCollisionData), {}); static_assert(sizeof(col1Data) == 48);
 #endif

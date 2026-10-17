@@ -11,10 +11,10 @@
 
 #include <reversiblebugfixes/Bugs.hpp>
 
-NOTSA_GLOBAL(ms_ClimbColModel,    0xC19518, (CColModel), {});
-NOTSA_GLOBAL(ms_StandUpColModel,  0xC19548, (CColModel), {});
-NOTSA_GLOBAL(ms_VaultColModel,    0xC19578, (CColModel), {});
-NOTSA_GLOBAL(ms_FindEdgeColModel, 0xC195A8, (CColModel), {});
+NOTSA_GLOBAL(ms_ClimbColModel,    0xC19518, (CColModel), {}); static_assert(sizeof(ms_ClimbColModel) == 48);
+NOTSA_GLOBAL(ms_StandUpColModel,  0xC19548, (CColModel), {}); static_assert(sizeof(ms_StandUpColModel) == 48);
+NOTSA_GLOBAL(ms_VaultColModel,    0xC19578, (CColModel), {}); static_assert(sizeof(ms_VaultColModel) == 48);
+NOTSA_GLOBAL(ms_FindEdgeColModel, 0xC195A8, (CColModel), {}); static_assert(sizeof(ms_FindEdgeColModel) == 48);
 
 const float ms_fHangingOffsetHorz = -0.40f; // 0x8D2F1C
 const float ms_fHangingOffsetVert = -1.10f; // 0x8D2F20

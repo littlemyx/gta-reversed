@@ -90,4 +90,4 @@ void CGangs::SetGangPedModelOverride(int16 gangId, int8 pedModelOverride) {
 }
 
 // Defined here because CGangInfo is incomplete in Gangs.h
-NOTSA_GLOBAL_DEF(CGangs, Gang, 0xC091F0, (std::array<CGangInfo, 10>), {});
+NOTSA_GLOBAL_DEF(CGangs, Gang, 0xC091F0, (std::array<CGangInfo, 10>), {}); static_assert(sizeof(CGangs::Gang) == 160);

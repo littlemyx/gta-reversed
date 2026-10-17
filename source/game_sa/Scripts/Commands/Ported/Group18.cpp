@@ -180,7 +180,7 @@ void DontSuppressVehicleModel(int32 model) {
 }
 
 //! The script patrol route (CPatrolRoute @0xC18DB8, the one EXTEND/FLUSH_PATROL_ROUTE edit)
-CPatrolRoute& ScriptPatrolRoute() {
+static_assert(sizeof(CPatrolRoute) == 420); CPatrolRoute& ScriptPatrolRoute() {
     return NOTSA_GLOBAL_EXPR(0xC18DB8, (CPatrolRoute), notsa::shared::ScriptPatrolRoute);
 }
 

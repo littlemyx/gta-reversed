@@ -46,7 +46,7 @@ class CPedScriptedTaskRecord {
 public:
     static void InjectHooks();
 
-    static inline NOTSA_GLOBAL(ms_scriptedTasks, 0xC0B1E8, (CPedScriptedTaskRecordData[TOTAL_SCRIPTED_TASKS]), {});
+    static inline NOTSA_GLOBAL(ms_scriptedTasks, 0xC0B1E8, (CPedScriptedTaskRecordData[TOTAL_SCRIPTED_TASKS]), {}); static_assert(sizeof(ms_scriptedTasks) == 2560);
 
     static CPedScriptedTaskRecordData* GetRecordAssociatedWithEvent(CEvent* event);
     static eScriptedTaskStatus GetStatus(CPed* ped);

@@ -23,7 +23,7 @@ uint8* CMatrix::EulerIndices2 = (uint8*)0x866D94;
 #endif
 #line 14
 NOTSA_GLOBAL(numMatrices, 0xB74238, (int32), {});
-NOTSA_GLOBAL(gDummyMatrix, 0xB74240, (CMatrix), { CMatrix::Identity() }); // ctor 0x59AED0 = SetScale(1.0f)
+NOTSA_GLOBAL(gDummyMatrix, 0xB74240, (CMatrix), { CMatrix::Identity() }); static_assert(sizeof(gDummyMatrix) == 72); // ctor 0x59AED0 = SetScale(1.0f)
 
 
 void CMatrix::InjectHooks()

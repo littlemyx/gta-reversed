@@ -7,7 +7,7 @@ class CPedGroup;
 
 class CInformGroupEventQueue {
 public:
-    static inline NOTSA_GLOBAL(ms_informGroupEvents, 0xA9B018, (std::array<CInformGroupEvent, 8>), {});
+    static inline NOTSA_GLOBAL(ms_informGroupEvents, 0xA9B018, (std::array<CInformGroupEvent, 8>), {}); static_assert(sizeof(ms_informGroupEvents) == 128);
 
 public:
     static void InjectHooks();

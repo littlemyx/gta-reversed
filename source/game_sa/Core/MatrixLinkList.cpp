@@ -2,7 +2,7 @@
 
 #include "MatrixLinkList.h"
 
-NOTSA_GLOBAL(gMatrixList, 0xB74288, (CMatrixLinkList), {});
+NOTSA_GLOBAL(gMatrixList, 0xB74288, (CMatrixLinkList), {}); static_assert(sizeof(gMatrixList) == 508);
 
 void CMatrixLinkList::InjectHooks()
 {

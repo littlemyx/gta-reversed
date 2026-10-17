@@ -26,7 +26,7 @@ VALIDATE_SIZE(CScriptedBrainTaskEntry, 0x10);
 
 class CScriptedBrainTaskStore {
 public:
-    static inline NOTSA_GLOBAL(ms_entries, 0xC188F0, (CScriptedBrainTaskEntry[TOTAL_SCRIPTED_BRAIN_TASK_ENTRIES]), {});
+    static inline NOTSA_GLOBAL(ms_entries, 0xC188F0, (CScriptedBrainTaskEntry[TOTAL_SCRIPTED_BRAIN_TASK_ENTRIES]), {}); static_assert(sizeof(ms_entries) == 768);
 
     static void InjectHooks();
 

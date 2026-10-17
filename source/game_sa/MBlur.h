@@ -9,7 +9,7 @@ public:
     static bool ms_bJustInitialised;
     static bool ms_bScaledBlur;
     static bool BlurOn;
-    static inline auto& Drunkness = StaticRef<float>(0xC73C58);
+    static inline NOTSA_GLOBAL(Drunkness, 0xC73C58, (float), {});
 
     static int32 pBufVertCount;
 

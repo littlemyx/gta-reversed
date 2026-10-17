@@ -1,0 +1,213 @@
+== CAEAudioChannel (base None, 9 slots): 1 unmentioned real overrides
+   slot 0 -> 0x4d7c00 : push esi; mov esi, ecx; mov eax, dword ptr [esi + 8]; test eax, eax
+== CAutomobile (base CVehicle, 71 slots): 1 unmentioned real overrides
+   slot 5 -> 0x6a6590 : mov eax, dword ptr [esp + 4]; push esi; push edi; push eax
+== CBuilding (base CEntity, 22 slots): 1 unmentioned real overrides
+   slot 0 -> 0x404130 : push esi; push edi; mov edi, ecx; call 0x404180
+== CDummy (base CEntity, 22 slots): 1 unmentioned real overrides
+   slot 0 -> 0x532770 : push esi; push edi; mov edi, ecx; call 0x532560
+== CEvent (base None, 16 slots): 2 unmentioned real overrides
+   slot 11 -> 0x4abc30 : push esi; mov esi, ecx; mov ecx, dword ptr [esp + 8]; mov eax, dword ptr [ecx]
+   slot 14 -> 0x4ac020 : push esi; mov esi, ecx; mov al, byte ptr [esi + 8]; test al, al
+== CEventAcquaintancePed (base CEventEditableResponse, 17 slots): 1 unmentioned real overrides
+   slot 0 -> 0x4b6300 : push esi; push edi; mov edi, ecx; call 0x4af890
+== CEventAcquaintancePedHate (base CEventAcquaintancePed, 17 slots): 1 unmentioned real overrides
+   slot 16 -> 0x420f50 : push -1; push 0x83737b; mov eax, dword ptr fs:[0]; push eax
+== CEventAcquaintancePedHateBadlyLit (base CEventAcquaintancePed, 17 slots): 1 unmentioned real overrides
+   slot 16 -> 0x5ff2e0 : push -1; push 0x83e62b; mov eax, dword ptr fs:[0]; push eax
+== CEventAreaCodes (base CEvent, 16 slots): 2 unmentioned real overrides
+   slot 0 -> 0x4b6a30 : push esi; push edi; mov edi, ecx; call 0x4b2210
+   slot 4 -> 0x4b7ba0 : push -1; push 0x83a79b; mov eax, dword ptr fs:[0]; push eax
+== CEventAttractor (base CEventEditableResponse, 17 slots): 1 unmentioned real overrides
+   slot 0 -> 0x4b6260 : push esi; push edi; mov edi, ecx; call 0x4af400
+== CEventCarUpsideDown (base CEvent, 16 slots): 2 unmentioned real overrides
+   slot 0 -> 0x4b67f0 : push esi; push edi; mov edi, ecx; call 0x4b1d50
+   slot 4 -> 0x4b79d0 : push -1; push 0x83a73b; mov eax, dword ptr fs:[0]; push eax
+== CEventCopCarBeingStolen (base CEvent, 16 slots): 2 unmentioned real overrides
+   slot 0 -> 0x4b66b0 : push esi; push edi; mov edi, ecx; call 0x4b17f0
+   slot 4 -> 0x4b78b0 : push -1; push 0x83a6fb; mov eax, dword ptr fs:[0]; push eax
+== CEventDamage (base CEventEditableResponse, 17 slots): 1 unmentioned real overrides
+   slot 0 -> 0x4b5cf0 : push esi; push edi; mov edi, ecx; call 0x4ad960
+== CEventDanger (base CEventEditableResponse, 17 slots): 2 unmentioned real overrides
+   slot 0 -> 0x4b6ad0 : push esi; push edi; mov edi, ecx; call 0x4b26a0
+   slot 16 -> 0x4b7c10 : push -1; push 0x83a7bb; mov eax, dword ptr fs:[0]; push eax
+== CEventEscalator (base CEvent, 16 slots): 2 unmentioned real overrides
+   slot 4 -> 0x602b90 : push -1; push 0x83e83b; mov eax, dword ptr fs:[0]; push eax
+   slot 11 -> 0x4b25e0 : push esi; mov esi, ecx; mov ecx, dword ptr [esp + 8]; mov eax, dword ptr [ecx]
+== CEventGroup (base None, 1 slots): 1 unmentioned real overrides
+   slot 0 -> 0x4aba20 : push esi; mov esi, ecx; push 0; mov dword ptr [esi], 0x85aab0
+== CEventGunShot (base CEventEditableResponse, 17 slots): 2 unmentioned real overrides
+   slot 0 -> 0x4b58e0 : push esi; push edi; mov edi, ecx; call 0x4ac720
+   slot 12 -> 0x4ac6e0 : mov al, byte ptr [ecx + 0x30]; test al, al; je 0x4ac6ee; fld dword ptr [0x858b50]
+== CEventGunShotWhizzedBy (base CEventGunShot, 17 slots): 2 unmentioned real overrides
+   slot 0 -> 0x4b6990 : push esi; push edi; mov edi, ecx; call 0x4b2070
+   slot 16 -> 0x4b7ac0 : push -1; push 0x83a75b; mov eax, dword ptr fs:[0]; push eax
+== CEventHitByWaterCannon (base CEvent, 16 slots): 1 unmentioned real overrides
+   slot 4 -> 0x4b77b0 : push esi; mov esi, ecx; mov ecx, dword ptr [0xb744ac]; call 0x4b5570
+== CEventInAir (base CEvent, 16 slots): 1 unmentioned real overrides
+   slot 4 -> 0x4b76a0 : mov ecx, dword ptr [0xb744ac]; call 0x4b5570; xor ecx, ecx; cmp eax, ecx
+== CEventKnockOffBike (base CEvent, 16 slots): 2 unmentioned real overrides
+   slot 0 -> 0x4b63a0 : push esi; push edi; mov edi, ecx; call 0x4afe70
+   slot 4 -> 0x4b7590 : push -1; push 0x83a65b; mov eax, dword ptr fs:[0]; push eax
+== CEventLeaderEnteredCarAsDriver (base CEventEditableResponse, 17 slots): 1 unmentioned real overrides
+   slot 16 -> 0x48e2a0 : push -1; push 0x83859b; mov eax, dword ptr fs:[0]; push eax
+== CEventLeaderExitedCarAsDriver (base CEventEditableResponse, 17 slots): 1 unmentioned real overrides
+   slot 16 -> 0x4b8340 : push -1; push 0x83a7db; mov eax, dword ptr fs:[0]; push eax
+== CEventLeaderQuitEnteringCarAsDriver (base CEvent, 16 slots): 1 unmentioned real overrides
+   slot 4 -> 0x63a150 : push -1; push 0x84134b; mov eax, dword ptr fs:[0]; push eax
+== CEventLeanOnVehicle (base CEvent, 16 slots): 1 unmentioned real overrides
+   slot 4 -> 0x65db70 : push -1; push 0x8442bb; mov eax, dword ptr fs:[0]; push eax
+== CEventOnFire (base CEvent, 16 slots): 1 unmentioned real overrides
+   slot 4 -> 0x5ff790 : push -1; push 0x83e6eb; mov eax, dword ptr fs:[0]; push eax
+== CEventPassObject (base CEvent, 16 slots): 1 unmentioned real overrides
+   slot 4 -> 0x65dd70 : push -1; push 0x84433b; mov eax, dword ptr fs:[0]; push eax
+== CEventPedCollisionWithPed (base CEvent, 16 slots): 2 unmentioned real overrides
+   slot 0 -> 0x4b5980 : push esi; push edi; mov edi, ecx; call 0x4aca70
+   slot 4 -> 0x4b6c40 : push -1; push 0x83a3db; mov eax, dword ptr fs:[0]; push eax
+== CEventPedCollisionWithPlayer (base CEventPedCollisionWithPed, 16 slots): 1 unmentioned real overrides
+   slot 4 -> 0x5feda0 : push -1; push 0x83e56b; mov eax, dword ptr fs:[0]; push eax
+== CEventPlayerCollisionWithPed (base CEventPedCollisionWithPed, 16 slots): 1 unmentioned real overrides
+   slot 4 -> 0x5feea0 : push -1; push 0x83e58b; mov eax, dword ptr fs:[0]; push eax
+== CEventPlayerCommandToGroup (base CEventEditableResponse, 17 slots): 1 unmentioned real overrides
+   slot 0 -> 0x4b6a80 : push esi; push edi; mov edi, ecx; call 0x4b2470
+== CEventPlayerCommandToGroupAttack (base CEventPlayerCommandToGroup, 19 slots): 1 unmentioned real overrides
+   slot 16 -> 0x5f6370 : push -1; push 0x83de7b; mov eax, dword ptr fs:[0]; push eax
+== CEventPlayerCommandToGroupGather (base CEventPlayerCommandToGroup, 17 slots): 1 unmentioned real overrides
+   slot 16 -> 0x609280 : push -1; push 0x83ebfb; mov eax, dword ptr fs:[0]; push eax
+== CEventPotentialWalkIntoFire (base CEventEditableResponse, 17 slots): 1 unmentioned real overrides
+   slot 16 -> 0x4b7a40 : push esi; mov esi, ecx; mov ecx, dword ptr [0xb744ac]; call 0x4b5570
+== CEventPotentialWalkIntoObject (base CEventEditableResponse, 17 slots): 2 unmentioned real overrides
+   slot 0 -> 0x4b5f40 : push esi; push edi; mov edi, ecx; call 0x4ae670
+   slot 16 -> 0x4b7020 : push -1; push 0x83a4db; mov eax, dword ptr fs:[0]; push eax
+== CEventPotentialWalkIntoPed (base CEventEditableResponse, 17 slots): 2 unmentioned real overrides
+   slot 0 -> 0x4b5f90 : push esi; push edi; mov edi, ecx; call 0x4ae7a0
+   slot 16 -> 0x4b7090 : push -1; push 0x83a4fb; mov eax, dword ptr fs:[0]; push eax
+== CEventPotentialWalkIntoVehicle (base CEventEditableResponse, 17 slots): 2 unmentioned real overrides
+   slot 0 -> 0x4b5ef0 : push esi; push edi; mov edi, ecx; call 0x4ae3c0
+   slot 16 -> 0x4b6fb0 : push -1; push 0x83a4bb; mov eax, dword ptr fs:[0]; push eax
+== CEventScriptCommand (base CEvent, 17 slots): 1 unmentioned real overrides
+   slot 0 -> 0x4b6440 : push esi; push edi; mov edi, ecx; call 0x4b0a50
+== CEventScriptedAttractor (base CEventAttractor, 17 slots): 1 unmentioned real overrides
+   slot 16 -> 0x5fef90 : push -1; push 0x83e5ab; mov eax, dword ptr fs:[0]; push eax
+== CEventSeenCop (base CEventAcquaintancePed, 17 slots): 2 unmentioned real overrides
+   slot 5 -> 0x4afb40 : jmp 0x4afa30; nop ; nop ; nop 
+   slot 16 -> 0x5ff3c0 : push -1; push 0x83e64b; mov eax, dword ptr fs:[0]; push eax
+== CEventSeenPanickedPed (base CEventEditableResponse, 17 slots): 2 unmentioned real overrides
+   slot 0 -> 0x4b69e0 : push esi; push edi; mov edi, ecx; call 0x4b2130
+   slot 16 -> 0x4b7b30 : push -1; push 0x83a77b; mov eax, dword ptr fs:[0]; push eax
+== CEventSoundQuiet (base CEventEditableResponse, 17 slots): 1 unmentioned real overrides
+   slot 12 -> 0x5dea90 : fld dword ptr [ecx + 0x18]; ret ; nop ; nop 
+== CEventStuckInAir (base CEvent, 16 slots): 2 unmentioned real overrides
+   slot 0 -> 0x4b6660 : push esi; push edi; mov edi, ecx; call 0x4b1520
+   slot 4 -> 0x4b7840 : push -1; push 0x83a6db; mov eax, dword ptr fs:[0]; push eax
+== CEventVehicleCollision (base CEvent, 16 slots): 1 unmentioned real overrides
+   slot 0 -> 0x4b5930 : push esi; push edi; mov edi, ecx; call 0x4ac920
+== CEventVehicleDamage (base CEventEditableResponse, 17 slots): 1 unmentioned real overrides
+   slot 0 -> 0x4b6700 : push esi; push edi; mov edi, ecx; call 0x4b1990
+== CEventVehicleDied (base CEvent, 16 slots): 1 unmentioned real overrides
+   slot 0 -> 0x4b6520 : push esi; push edi; mov edi, ecx; call 0x4b0da0
+== CEventVehicleHitAndRun (base CEvent, 16 slots): 3 unmentioned real overrides
+   slot 0 -> 0x4b5fe0 : push esi; push edi; mov edi, ecx; call 0x4aea50
+   slot 5 -> 0x4aea20 : mov ecx, dword ptr [esp + 4]; call 0x5e0170; ret 4; nop 
+   slot 7 -> 0x4b27b0 : mov eax, dword ptr [ecx + 0x10]; mov ecx, dword ptr [eax + 0x460]; test ecx, ecx; je 0x4b2
+== CEventVehicleOnFire (base CEventEditableResponse, 17 slots): 1 unmentioned real overrides
+   slot 0 -> 0x4b6570 : push esi; push edi; mov edi, ecx; call 0x4b1170
+== CObject (base CPhysical, 23 slots): 1 unmentioned real overrides
+   slot 0 -> 0x5a2bd0 : push esi; push edi; mov edi, ecx; call 0x59f660
+== CPed (base CPhysical, 26 slots): 1 unmentioned real overrides
+   slot 0 -> 0x5e8c80 : push esi; push edi; mov edi, ecx; call 0x5e8620
+== CPedATMAttractor (base CPedAttractor, 6 slots): 1 unmentioned real overrides
+   slot 1 -> 0x5ee4e0 : push esi; push edi; mov edi, ecx; call 0x5ee530
+== CPedAttractor (base None, 6 slots): 1 unmentioned real overrides
+   slot 1 -> 0x5ec4b0 : push esi; push edi; mov edi, ecx; call 0x5ec410
+== CPedLookAtAttractor (base CPedAttractor, 6 slots): 1 unmentioned real overrides
+   slot 1 -> 0x5ee9d0 : push esi; push edi; mov edi, ecx; call 0x5eea20
+== CPedParkAttractor (base CPedAttractor, 6 slots): 1 unmentioned real overrides
+   slot 1 -> 0x5eeb70 : push esi; push edi; mov edi, ecx; call 0x5eebc0
+== CPedPizzaAttractor (base CPedAttractor, 7 slots): 1 unmentioned real overrides
+   slot 1 -> 0x5ee760 : push esi; push edi; mov edi, ecx; call 0x5ee7b0
+== CPedScriptedAttractor (base CPedAttractor, 6 slots): 1 unmentioned real overrides
+   slot 1 -> 0x5eeaa0 : push esi; push edi; mov edi, ecx; call 0x5eeaf0
+== CPedSeatAttractor (base CPedAttractor, 6 slots): 1 unmentioned real overrides
+   slot 1 -> 0x5ee5b0 : push esi; push edi; mov edi, ecx; call 0x5ee600
+== CPedShelterAttractor (base CPedAttractor, 6 slots): 1 unmentioned real overrides
+   slot 1 -> 0x5ee830 : push esi; push edi; mov edi, ecx; call 0x5ee880
+== CPedStepAttractor (base CPedAttractor, 6 slots): 1 unmentioned real overrides
+   slot 1 -> 0x5eec40 : push esi; push edi; mov edi, ecx; call 0x5eec90
+== CPedStopAttractor (base CPedAttractor, 6 slots): 1 unmentioned real overrides
+   slot 1 -> 0x5ee680 : push esi; push edi; mov edi, ecx; call 0x5ee6d0
+== CPedTriggerScriptAttractor (base CPedAttractor, 6 slots): 1 unmentioned real overrides
+   slot 1 -> 0x5ee900 : push esi; push edi; mov edi, ecx; call 0x5ee950
+== CPlaceable (base None, 1 slots): 1 unmentioned real overrides
+   slot 0 -> 0x54f5d0 : push esi; mov esi, ecx; mov eax, dword ptr [esi + 0x14]; test eax, eax
+== CProjectile (base CObject, 24 slots): 1 unmentioned real overrides
+   slot 23 -> 0x746168 : pop ebx; add esp, 0x10; ret ; nop 
+== CTaskComplexArrestPed (base CTaskComplex, 11 slots): 1 unmentioned real overrides
+   slot 1 -> 0x68cd70 : push -1; push 0x846eeb; mov eax, dword ptr fs:[0]; push eax
+== CTaskComplexDriveToPoint (base CTaskComplexCarDrive, 14 slots): 1 unmentioned real overrides
+   slot 1 -> 0x63dde0 : push -1; push 0x841bfb; mov eax, dword ptr fs:[0]; push eax
+== CTaskComplexEvasiveCower (base CTaskComplex, 11 slots): 3 unmentioned real overrides
+   slot 1 -> 0x655cd0 : push -1; push 0x84396b; mov eax, dword ptr fs:[0]; push eax
+   slot 9 -> 0x6556f0 : mov dword ptr [esp + 4], 0x386; jmp 0x655570; nop ; nop 
+   slot 10 -> 0x655700 : mov eax, dword ptr [ecx + 8]; ret 4; nop ; nop 
+== CTaskComplexEvasiveStep (base CTaskComplex, 11 slots): 1 unmentioned real overrides
+   slot 1 -> 0x655870 : push -1; push 0x84382b; mov eax, dword ptr fs:[0]; push eax
+== CTaskComplexFallAndGetUp (base CTaskComplex, 11 slots): 1 unmentioned real overrides
+   slot 1 -> 0x67c200 : push -1; push 0x8461cb; mov eax, dword ptr fs:[0]; push eax
+== CTaskComplexFollowPedFootsteps (base CTaskComplex, 12 slots): 1 unmentioned real overrides
+   slot 1 -> 0x695890 : push -1; push 0x8476bb; mov eax, dword ptr fs:[0]; push eax
+== CTaskComplexGetUpAndStandStill (base CTaskComplex, 11 slots): 1 unmentioned real overrides
+   slot 1 -> 0x67c130 : push -1; push 0x84618b; mov eax, dword ptr fs:[0]; push eax
+== CTaskComplexInAirAndLand (base CTaskComplex, 11 slots): 1 unmentioned real overrides
+   slot 1 -> 0x67c2e0 : push -1; push 0x84620b; mov eax, dword ptr fs:[0]; push eax
+== CTaskComplexJump (base CTaskComplex, 11 slots): 1 unmentioned real overrides
+   slot 10 -> 0x67a100 : mov eax, dword ptr [ecx + 8]; ret 4; nop ; nop 
+== CTaskComplexKillPedOnFoot (base CTaskComplex, 11 slots): 1 unmentioned real overrides
+   slot 1 -> 0x623370 : push -1; push 0x83fb3b; mov eax, dword ptr fs:[0]; push eax
+== CTaskComplexPartnerChat (base CTaskComplexPartner, 14 slots): 1 unmentioned real overrides
+   slot 1 -> 0x684e30 : push -1; push 0x846aab; mov eax, dword ptr fs:[0]; push eax
+== CTaskComplexPartnerDeal (base CTaskComplexPartner, 14 slots): 1 unmentioned real overrides
+   slot 1 -> 0x684d10 : push -1; push 0x846a6b; mov eax, dword ptr fs:[0]; push eax
+== CTaskComplexPartnerShove (base CTaskComplexPartner, 14 slots): 1 unmentioned real overrides
+   slot 1 -> 0x684ed0 : push -1; push 0x846acb; mov eax, dword ptr fs:[0]; push eax
+== CTaskComplexUseGoggles (base CTaskComplex, 11 slots): 1 unmentioned real overrides
+   slot 6 -> 0x634f30 : mov ecx, dword ptr [ecx + 8]; mov eax, dword ptr [ecx]; jmp dword ptr [eax + 0x18]; nop 
+== CTaskComplexWalkRoundObject (base CTaskComplex, 11 slots): 1 unmentioned real overrides
+   slot 1 -> 0x655c10 : push -1; push 0x84392b; mov eax, dword ptr fs:[0]; push eax
+== CTaskSimpleCarDriveTimed (base CTaskSimpleCarDrive, 9 slots): 1 unmentioned real overrides
+   slot 1 -> 0x46f570 : push -1; push 0x8380ab; mov eax, dword ptr fs:[0]; push eax
+== CTaskSimpleClimb (base CTaskSimple, 9 slots): 1 unmentioned real overrides
+   slot 1 -> 0x67c610 : push -1; push 0x8462cb; mov eax, dword ptr fs:[0]; push eax
+== CTaskSimpleFall (base CTaskSimple, 9 slots): 1 unmentioned real overrides
+   slot 1 -> 0x67c180 : push -1; push 0x8461ab; mov eax, dword ptr fs:[0]; push eax
+== CTaskSimpleFight (base CTaskSimple, 9 slots): 1 unmentioned real overrides
+   slot 1 -> 0x622e40 : push -1; push 0x83f9db; mov eax, dword ptr fs:[0]; push eax
+== CTaskSimpleGetUp (base CTaskSimple, 9 slots): 1 unmentioned real overrides
+   slot 1 -> 0x67c0c0 : push -1; push 0x84616b; mov eax, dword ptr fs:[0]; push eax
+== CTaskSimpleHitHead (base CTaskSimple, 9 slots): 1 unmentioned real overrides
+   slot 1 -> 0x6557a0 : push -1; push 0x8437eb; mov eax, dword ptr fs:[0]; push eax
+== CTaskSimpleInAir (base CTaskSimple, 9 slots): 1 unmentioned real overrides
+   slot 1 -> 0x67c360 : push -1; push 0x84622b; mov eax, dword ptr fs:[0]; push eax
+== CTaskSimpleLand (base CTaskSimple, 9 slots): 1 unmentioned real overrides
+   slot 1 -> 0x67c3f0 : push -1; push 0x84624b; mov eax, dword ptr fs:[0]; push eax
+== CTaskSimplePlayHandSignalAnim (base CTaskSimpleAnim, 9 slots): 2 unmentioned real overrides
+   slot 1 -> 0x61b980 : push -1; push 0x83f29b; mov eax, dword ptr fs:[0]; push eax
+   slot 6 -> 0x61af50 : jmp 0x61a790; nop ; nop ; nop 
+== CTaskSimpleRunAnim (base CTaskSimpleAnim, 9 slots): 1 unmentioned real overrides
+   slot 4 -> 0x48dea0 : movzx eax, word ptr [ecx + 0x1c]; ret ; nop ; nop 
+== CTaskSimpleUninterruptable (base CTaskSimple, 9 slots): 2 unmentioned real overrides
+   slot 1 -> 0x43e330 : push -1; push 0x8376fb; mov eax, dword ptr fs:[0]; push eax
+   slot 6 -> 0x43e390 : cmp dword ptr [esp + 8], 2; sete al; ret 0xc; nop 
+== CTrain (base CVehicle, 66 slots): 7 unmentioned real overrides
+   slot 5 -> 0x6f5530 : mov eax, dword ptr [esp + 4]; push esi; push edi; push eax
+   slot 14 -> 0x6f7190 : push esi; mov esi, ecx; push esi; call 0x563280
+   slot 17 -> 0x6f5570 : push esi; mov esi, ecx; call 0x6d6480; mov al, byte ptr [esi + 0x5b8]
+   slot 18 -> 0x6f55c0 : jmp 0x6d0e60; nop ; nop ; nop 
+   slot 27 -> 0x6f6370 : mov eax, dword ptr fs:[0]; push -1; push 0x848af8; push eax
+   slot 29 -> 0x6f5930 : mov eax, dword ptr [esp + 4]; fld dword ptr [0x858b50]; add eax, -8; cmp eax, 0xa
+== CVehicle (base CPhysical, 66 slots): 2 unmentioned real overrides
+   slot 0 -> 0x6e38a0 : push esi; push edi; mov edi, ecx; call 0x6e2b40
+   slot 49 -> 0x6b5860 : mov eax, dword ptr [esp + 4]; xor ecx, ecx; mov dword ptr [eax], ecx; mov dword ptr [eax +
+== CVehicleModelInfo (base CClumpModelInfo, 18 slots): 1 unmentioned real overrides
+   slot 17 -> 0x6b6f5f : push es; add byte ptr [eax], al; je 0x6b6fa2; fld dword ptr [esi + 0x718]
+classes 92 total 121

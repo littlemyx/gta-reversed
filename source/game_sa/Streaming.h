@@ -183,81 +183,81 @@ VALIDATE_SIZE(tStreamingChannel, 0x98);
 
 class CStreaming {
 public:
-    static inline auto& ms_memoryAvailable = StaticRef<size_t>(0x8A5A80); // 25'600'000 == 25.6 MB
-    static inline auto& desiredNumVehiclesLoaded = StaticRef<uint32>(0x8A5A84);
-    static inline auto& ms_bLoadVehiclesInLoadScene = StaticRef<bool>(0x8A5A88);
+    static inline NOTSA_GLOBAL(ms_memoryAvailable, 0x8A5A80, (size_t), { 0x0186A000U }); // 25'600'000 == 25.6 MB
+    static inline NOTSA_GLOBAL(desiredNumVehiclesLoaded, 0x8A5A84, (uint32), { 12 });
+    static inline NOTSA_GLOBAL(ms_bLoadVehiclesInLoadScene, 0x8A5A88, (bool), { true });
 
     // Default models for each level (see eLevelNames):
 
-    static inline auto& ms_aDefaultCopCarModel = StaticRef<std::array<int32, 5>>(0x8A5A8C); // Last one is bike cop, not matching any level name
-    static inline auto& ms_aDefaultCopModel = StaticRef<std::array<int32, 5>>(0x8A5AA0); // Last one is bike cop, not matching any level name
+    static inline NOTSA_GLOBAL(ms_aDefaultCopCarModel, 0x8A5A8C, (std::array<int32, 5>), { 599, 596, 597, 598, 523 }); // Last one is bike cop, not matching any level name
+    static inline NOTSA_GLOBAL(ms_aDefaultCopModel, 0x8A5AA0, (std::array<int32, 5>), { 283, 280, 281, 282, 284 }); // Last one is bike cop, not matching any level name
 
-    static inline auto& ms_nTimePassedSinceLastCopBikeStreamedIn = StaticRef<uint32>(0x9654C0);
+    static inline NOTSA_GLOBAL(ms_nTimePassedSinceLastCopBikeStreamedIn, 0x9654C0, (uint32), {});
 
-    static inline auto& ms_aDefaultAmbulanceModel = StaticRef<std::array<int32, 4>>(0x8A5AB4);
-    static inline auto& ms_aDefaultMedicModel = StaticRef<std::array<int32, 4>>(0x8A5AC4);
-    static inline auto& ms_aDefaultFireEngineModel = StaticRef<std::array<int32, 4>>(0x8A5AD4);
-    static inline auto& ms_aDefaultFiremanModel = StaticRef<std::array<int32, 4>>(0x8A5AE4);
+    static inline NOTSA_GLOBAL(ms_aDefaultAmbulanceModel, 0x8A5AB4, (std::array<int32, 4>), { -1, 416, 416, 416 });
+    static inline NOTSA_GLOBAL(ms_aDefaultMedicModel, 0x8A5AC4, (std::array<int32, 4>), { -1, 274, 276, 275 });
+    static inline NOTSA_GLOBAL(ms_aDefaultFireEngineModel, 0x8A5AD4, (std::array<int32, 4>), { -1, 407, 407, 407 });
+    static inline NOTSA_GLOBAL(ms_aDefaultFiremanModel, 0x8A5AE4, (std::array<int32, 4>), { -1, 277, 279, 278 });
 
     // Default models for current level
-    static inline auto& ms_DefaultCopBikeModel = StaticRef<int32>(0x8A5A9C);
-    static inline auto& ms_DefaultCopBikerModel = StaticRef<int32>(0x8A5AB0);
+    static inline NOTSA_GLOBAL_ALIAS(ms_DefaultCopBikeModel, 0x8A5A9C, (int32), *reinterpret_cast<int32*>(reinterpret_cast<uint8*>(&CStreaming::ms_aDefaultCopCarModel) + 16));
+    static inline NOTSA_GLOBAL_ALIAS(ms_DefaultCopBikerModel, 0x8A5AB0, (int32), *reinterpret_cast<int32*>(reinterpret_cast<uint8*>(&CStreaming::ms_aDefaultCopModel) + 16));
 
-    static inline auto& ms_pExtraObjectsDir = StaticRef<CDirectory*>(0x8E48D0);
+    static inline NOTSA_GLOBAL(ms_pExtraObjectsDir, 0x8E48D0, (CDirectory*), {});
     static inline auto& ms_files = StaticRef<tStreamingFileDesc[TOTAL_IMG_ARCHIVES]>(0x8E48D8);
-    static inline auto& ms_bLoadingBigModel = StaticRef<bool>(0x8E4A58);
+    static inline NOTSA_GLOBAL(ms_bLoadingBigModel, 0x8E4A58, (bool), {});
     // There are only two channels within CStreaming::ms_channel
-    static inline auto& ms_channel = StaticRef<std::array<tStreamingChannel, 2>>(0x8E4A60);
-    static inline auto& ms_channelError = StaticRef<int32>(0x8E4B90);
-    static inline auto& m_bHarvesterModelsRequested = StaticRef<bool>(0x8E4B9C);
-    static inline auto& m_bStreamHarvesterModelsThisFrame = StaticRef<bool>(0x8E4B9D);
-    static inline auto& ms_numPriorityRequests = StaticRef<uint32>(0x8E4BA0);
+    static inline NOTSA_GLOBAL(ms_channel, 0x8E4A60, (std::array<tStreamingChannel, 2>), {});
+    static inline NOTSA_GLOBAL(ms_channelError, 0x8E4B90, (int32), {});
+    static inline NOTSA_GLOBAL(m_bHarvesterModelsRequested, 0x8E4B9C, (bool), {});
+    static inline NOTSA_GLOBAL(m_bStreamHarvesterModelsThisFrame, 0x8E4B9D, (bool), {});
+    static inline NOTSA_GLOBAL(ms_numPriorityRequests, 0x8E4BA0, (uint32), {});
     //! Initialized to -1 and never used
-    static inline auto& ms_lastCullZone = StaticRef<int32>(0x8E4BA4);
-    static inline auto& ms_loadedGangCars = StaticRef<uint16>(0x8E4BA8);
+    static inline NOTSA_GLOBAL(ms_lastCullZone, 0x8E4BA4, (int32), {});
+    static inline NOTSA_GLOBAL(ms_loadedGangCars, 0x8E4BA8, (uint16), {});
     // Bitfield of gangs loaded. Each gang is a bit. (0th bit being BALLAS, following the ordering in POPCYCLE_GROUP_BALLAS)
-    static inline auto& ms_loadedGangs = StaticRef<uint16>(0x8E4BAC);
+    static inline NOTSA_GLOBAL(ms_loadedGangs, 0x8E4BAC, (uint16), {});
 
     //! Currently loaded peds (For/from ped groups) - Prefer using `GetLoadedPeds()` to access.
-    static inline auto& ms_pedsLoaded = StaticRef<std::array<eModelID, 8>>(0x8E4C00);
+    static inline NOTSA_GLOBAL(ms_pedsLoaded, 0x8E4C00, (std::array<eModelID, 8>), {});
 
     //! Number of active values in `ms_pedsLoaded`
-    static inline auto& ms_numPedsLoaded = StaticRef<uint32>(0x8E4BB0);
+    static inline NOTSA_GLOBAL(ms_numPedsLoaded, 0x8E4BB0, (uint32), {});
 
     //! Contains the next slot, that is, index at which the next model to load of a group is.
     //! This is used by `PickPedMIToStreamInForCurrentZone`
     //! And the modelId to load can be accessed by `CPopulation::GetPedGroupModelId` for a given 
-    static inline auto& ms_NextPedToLoadFromGroup = StaticRef<std::array<int32, 18>>(0x8E4BB8);
+    static inline NOTSA_GLOBAL(ms_NextPedToLoadFromGroup, 0x8E4BB8, (std::array<int32, 18>), {});
 
-    static inline auto& ms_currentZoneType = StaticRef<int32>(0x8E4C20);
+    static inline NOTSA_GLOBAL(ms_currentZoneType, 0x8E4C20, (int32), {});
     static inline auto& ms_vehiclesLoaded = StaticRef<CLoadedCarGroup>(0x8E4C24);
-    static inline auto& ms_pEndRequestedList = StaticRef<CStreamingInfo*>(0x8E4C54);
-    static inline auto& ms_pStartRequestedList = StaticRef<CStreamingInfo*>(0x8E4C58);
-    static inline auto& ms_pEndLoadedList = StaticRef<CStreamingInfo*>(0x8E4C5C);
-    static inline auto& ms_startLoadedList = StaticRef<CStreamingInfo*>(0x8E4C60);
+    static inline NOTSA_GLOBAL(ms_pEndRequestedList, 0x8E4C54, (CStreamingInfo*), {});
+    static inline NOTSA_GLOBAL(ms_pStartRequestedList, 0x8E4C58, (CStreamingInfo*), {});
+    static inline NOTSA_GLOBAL(ms_pEndLoadedList, 0x8E4C5C, (CStreamingInfo*), {});
+    static inline NOTSA_GLOBAL(ms_startLoadedList, 0x8E4C60, (CStreamingInfo*), {});
 
-    static inline auto& ms_lastImageRead = StaticRef<int32>(0x8E4C64); // initialized but not used?
-    static inline auto& ms_imageOffsets = StaticRef<std::array<int32, 6>>(0x8E4C8C); // initialized but never used?
+    static inline NOTSA_GLOBAL(ms_lastImageRead, 0x8E4C64, (int32), {}); // initialized but not used?
+    static inline NOTSA_GLOBAL(ms_imageOffsets, 0x8E4C8C, (std::array<int32, 6>), {}); // initialized but never used?
 
-    static inline auto& ms_bEnableRequestListPurge = StaticRef<bool>(0x8E4CA4);
-    static inline auto& ms_streamingBufferSize = StaticRef<uint32>(0x8E4CA8);
-    static inline auto& ms_pStreamingBuffer = StaticRef<uint8*[2]>(0x8E4CAC);
-    static inline auto& ms_memoryUsedBytes = StaticRef<uint32>(0x8E4CB4);
-    static inline auto& ms_numModelsRequested = StaticRef<int32>(0x8E4CB8);
+    static inline NOTSA_GLOBAL(ms_bEnableRequestListPurge, 0x8E4CA4, (bool), {});
+    static inline NOTSA_GLOBAL(ms_streamingBufferSize, 0x8E4CA8, (uint32), {});
+    static inline NOTSA_GLOBAL(ms_pStreamingBuffer, 0x8E4CAC, (uint8*[2]), {});
+    static inline NOTSA_GLOBAL(ms_memoryUsedBytes, 0x8E4CB4, (uint32), {});
+    static inline NOTSA_GLOBAL(ms_numModelsRequested, 0x8E4CB8, (int32), {});
     static inline auto& ms_aInfoForModel = StaticRef<std::array<CStreamingInfo, 26316>>(0x8E4CC0);
-    static inline auto& ms_disableStreaming = StaticRef<bool>(0x9654B0);
-    static inline auto& ms_bIsInitialised = StaticRef<int32>(0x9654B8);
-    static inline auto& m_bBoatsNeeded = StaticRef<bool>(0x9654BC);
-    static inline auto& ms_bLoadingScene = StaticRef<bool>(0x9654BD);
-    static inline auto& m_bCopBikeLoaded = StaticRef<bool>(0x9654BE);
-    static inline auto& m_bDisableCopBikes = StaticRef<bool>(0x9654BF);
-    static inline auto& ms_rwObjectInstances = StaticRef<CLinkList<CEntity*>>(0x9654F0);
-    static inline auto& ms_renderEntityLink = StaticRef<CLink<CEntity*>*>(0x8E48A0);
-    static inline auto& m_bLoadingAllRequestedModels = StaticRef<bool>(0x965538);
-    static inline auto& m_bModelStreamNotLoaded = StaticRef<bool>(0x9654C4);
-    static inline auto& ms_bReadLayerForceFully = StaticRef<bool>(0x9654C4);
-    static inline auto& ms_oldSectorX = StaticRef<int32>(0x8E4B98);
-    static inline auto& ms_oldSectorY = StaticRef<int32>(0x8E4B94);
+    static inline NOTSA_GLOBAL(ms_disableStreaming, 0x9654B0, (bool), {});
+    static inline NOTSA_GLOBAL(ms_bIsInitialised, 0x9654B8, (int32), {});
+    static inline NOTSA_GLOBAL(m_bBoatsNeeded, 0x9654BC, (bool), {});
+    static inline NOTSA_GLOBAL(ms_bLoadingScene, 0x9654BD, (bool), {});
+    static inline NOTSA_GLOBAL(m_bCopBikeLoaded, 0x9654BE, (bool), {});
+    static inline NOTSA_GLOBAL(m_bDisableCopBikes, 0x9654BF, (bool), {});
+    static inline NOTSA_GLOBAL(ms_rwObjectInstances, 0x9654F0, (CLinkList<CEntity*>), {});
+    static inline NOTSA_GLOBAL(ms_renderEntityLink, 0x8E48A0, (CLink<CEntity*>*), {});
+    static inline NOTSA_GLOBAL(m_bLoadingAllRequestedModels, 0x965538, (bool), {});
+    static inline NOTSA_GLOBAL(m_bModelStreamNotLoaded, 0x9654C4, (bool), {});
+    static inline NOTSA_GLOBAL_ALIAS(ms_bReadLayerForceFully, 0x9654C4, (bool), CStreaming::m_bModelStreamNotLoaded);
+    static inline NOTSA_GLOBAL(ms_oldSectorX, 0x8E4B98, (int32), {});
+    static inline NOTSA_GLOBAL(ms_oldSectorY, 0x8E4B94, (int32), {});
 
 public:
     static void InjectHooks();

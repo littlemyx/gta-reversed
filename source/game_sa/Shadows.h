@@ -172,12 +172,12 @@ constexpr uint32 MAX_SHADOW_POLY_BUNCHES = 360;
 
 class CShadows {
 public:
-    static inline auto& ShadowsStoredToBeRendered = StaticRef<uint16>(0xC403DC);
-    static inline auto& pEmptyBunchList = StaticRef<CPolyBunch*>(0xC403D8);
-    static inline auto& aPolyBunches = StaticRef<std::array<CPolyBunch, MAX_SHADOW_POLY_BUNCHES>>(0xC40DF0);
-    static inline auto& aStaticShadows = StaticRef<std::array<CStaticShadow, MAX_STATIC_SHADOWS>>(0xC4A030);
-    static inline auto& aPermanentShadows = StaticRef<std::array<CPermanentShadow, MAX_PERMANENT_SHADOWS>>(0xC4AC30);
-    static inline auto& asShadowsStored = StaticRef<std::array<CRegisteredShadow, MAX_STORED_SHADOWS>>(0xC40430);
+    static inline NOTSA_GLOBAL(ShadowsStoredToBeRendered, 0xC403DC, (uint16), {});
+    static inline NOTSA_GLOBAL(pEmptyBunchList, 0xC403D8, (CPolyBunch*), {});
+    static inline NOTSA_GLOBAL(aPolyBunches, 0xC40DF0, (std::array<CPolyBunch, MAX_SHADOW_POLY_BUNCHES>), {});
+    static inline NOTSA_GLOBAL(aStaticShadows, 0xC4A030, (std::array<CStaticShadow, MAX_STATIC_SHADOWS>), {});
+    static inline NOTSA_GLOBAL(aPermanentShadows, 0xC4AC30, (std::array<CPermanentShadow, MAX_PERMANENT_SHADOWS>), {});
+    static inline NOTSA_GLOBAL(asShadowsStored, 0xC40430, (std::array<CRegisteredShadow, MAX_STORED_SHADOWS>), {});
 
 public:
     static void InjectHooks();
@@ -249,17 +249,17 @@ CVector* ShadowRenderTriangleCB(CVector* normal, CVector* trianglePos, _Projecti
 constexpr float MAX_DISTANCE_PED_SHADOWS = 15.0f; // 0x8D5240 - TODO: Rename to `MAX_DISTANCE_SHADOWS`
 constexpr float MAX_DISTANCE_PED_SHADOWS_SQR = MAX_DISTANCE_PED_SHADOWS * MAX_DISTANCE_PED_SHADOWS; // 0xC4B6B0 - TODO: Rename to `MAX_DISTANCE_PED_SHADOWS_SQ`
 
-static inline auto& gpShadowCarTex = StaticRef<RwTexture*>(0xC403E0);
-static inline auto& gpShadowPedTex = StaticRef<RwTexture*>(0xC403E4);
-static inline auto& gpShadowHeliTex = StaticRef<RwTexture*>(0xC403E8);
-static inline auto& gpShadowBikeTex = StaticRef<RwTexture*>(0xC403EC);
-static inline auto& gpShadowBaronTex = StaticRef<RwTexture*>(0xC403F0);
-static inline auto& gpShadowExplosionTex = StaticRef<RwTexture*>(0xC403F4);
-static inline auto& gpShadowHeadLightsTex = StaticRef<RwTexture*>(0xC403F8);
-static inline auto& gpShadowHeadLightsTex2 = StaticRef<RwTexture*>(0xC403FC);
-static inline auto& gpBloodPoolTex = StaticRef<RwTexture*>(0xC40400);
-static inline auto& gpHandManTex = StaticRef<RwTexture*>(0xC40404);
-static inline auto& gpCrackedGlassTex = StaticRef<RwTexture*>(0xC40408);
-static inline auto& gpPostShadowTex = StaticRef<RwTexture*>(0xC4040C);
+NOTSA_GLOBAL_HDR(gpShadowCarTex, 0xC403E0, (RwTexture*), {});
+NOTSA_GLOBAL_HDR(gpShadowPedTex, 0xC403E4, (RwTexture*), {});
+NOTSA_GLOBAL_HDR(gpShadowHeliTex, 0xC403E8, (RwTexture*), {});
+NOTSA_GLOBAL_HDR(gpShadowBikeTex, 0xC403EC, (RwTexture*), {});
+NOTSA_GLOBAL_HDR(gpShadowBaronTex, 0xC403F0, (RwTexture*), {});
+NOTSA_GLOBAL_HDR(gpShadowExplosionTex, 0xC403F4, (RwTexture*), {});
+NOTSA_GLOBAL_HDR(gpShadowHeadLightsTex, 0xC403F8, (RwTexture*), {});
+NOTSA_GLOBAL_HDR(gpShadowHeadLightsTex2, 0xC403FC, (RwTexture*), {});
+NOTSA_GLOBAL_HDR(gpBloodPoolTex, 0xC40400, (RwTexture*), {});
+NOTSA_GLOBAL_HDR(gpHandManTex, 0xC40404, (RwTexture*), {});
+NOTSA_GLOBAL_HDR(gpCrackedGlassTex, 0xC40408, (RwTexture*), {});
+NOTSA_GLOBAL_HDR(gpPostShadowTex, 0xC4040C, (RwTexture*), {});
 
-static inline auto& g_ShadowVertices = StaticRef<std::array<RwImVertexIndex, 24>>(0xC403A8);
+NOTSA_GLOBAL_HDR(g_ShadowVertices, 0xC403A8, (std::array<RwImVertexIndex, 24>), {});

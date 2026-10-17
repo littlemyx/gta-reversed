@@ -65,9 +65,9 @@ struct tPreviousBrief {
 
 class CMessages {
 public:
-    static inline auto& PreviousBriefs = StaticRef<std::array<tPreviousBrief, 20>>(0xC1A570);
-    static inline auto& BriefMessages = StaticRef<std::array<tMessage, 8>>(0xC1A7F0);
-    static inline auto& BIGMessages = StaticRef<std::array<tBigMessage, 7>>(0xC1A970); // (for each text style)
+    static inline NOTSA_GLOBAL(PreviousBriefs, 0xC1A570, (std::array<tPreviousBrief, 20>), {});
+    static inline NOTSA_GLOBAL(BriefMessages, 0xC1A7F0, (std::array<tMessage, 8>), {});
+    static inline NOTSA_GLOBAL(BIGMessages, 0xC1A970, (std::array<tBigMessage, 7>), {}); // (for each text style)
 
 public:
     static void InjectHooks();

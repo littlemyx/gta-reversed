@@ -109,7 +109,8 @@ int32 CPedGroupMembership::GetMemberId(const CPed* ped) const {
 
 // 0x5F69E0
 bool CPedGroupMembership::IsFollower(const CPed* ped) const {
-    return !IsLeader(ped) && IsMember(ped);
+    // exe 0x5F69E0: scans the follower slots 0..6 only (a ped that is leader AND in a follower slot - not a reachable state - is a follower)
+    return ped && notsa::contains(std::span{ m_members }.first(LEADER_MEM_ID), ped);
 }
 
 // 0x5F69C0

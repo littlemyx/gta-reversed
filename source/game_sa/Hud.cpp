@@ -592,8 +592,8 @@ void CHud::DrawBustedWastedMessage() {
     }
 
     // Function-local `static float posY` (0xBAB220) with its init guard (bit 0 of 0xBAB224). Computed on the first call and every time the message (re)starts.
-    static auto& posY      = StaticRef<float>(0xBAB220);
-    static auto& posYGuard = StaticRef<uint32>(0xBAB224);
+    NOTSA_GLOBAL_LOCAL(posY, 0xBAB220, (float), {});
+    NOTSA_GLOBAL_LOCAL(posYGuard, 0xBAB224, (uint32), {});
     const auto ComputePosY = [] { return (float)(RsGlobal.maximumHeight / 2) - SCREEN_STRETCH_Y(30.0f); };
     if (!(posYGuard & 1)) {
         posYGuard |= 1;
@@ -1566,7 +1566,7 @@ void CHud::DrawScriptText(bool isBeforeFade) {
 
 // 0x58C250
 void CHud::DrawSubtitles() {
-    static auto& bWasWidescreen = StaticRef<bool>(0xBAB214); // OG: function local static
+    NOTSA_GLOBAL_LOCAL(bWasWidescreen, 0xBAB214, (bool), {}); // OG: function local static
 
     if (!m_Message[0]) {
         return;
@@ -1642,8 +1642,8 @@ void CHud::DrawSubtitles() {
 // 0x58C6A0
 void CHud::DrawSuccessFailedMessage() {
     // OG: function local static `posY`, together with its init-guard flag (bit 0)
-    static auto& posY      = StaticRef<float>(0xBAB218);
-    static auto& posYGuard = StaticRef<uint32>(0xBAB21C);
+    NOTSA_GLOBAL_LOCAL(posY, 0xBAB218, (float), {});
+    NOTSA_GLOBAL_LOCAL(posYGuard, 0xBAB21C, (uint32), {});
     if (!(posYGuard & 1)) {
         posYGuard |= 1;
         posY = (float)(RsGlobal.maximumHeight / 2) - SCREEN_STRETCH_Y(10.0f);
@@ -2299,7 +2299,7 @@ void CHud::DrawTripSkip() {
 // 0x58D9A0
 void CHud::DrawWanted() {
     // OG: function local static, set when the wanted level didn't change since the last frame
-    static auto& bWantedLevelUnchanged = StaticRef<bool>(0xBAB228);
+    NOTSA_GLOBAL_LOCAL(bWantedLevelUnchanged, 0xBAB228, (bool), {});
 
     const auto* const wanted         = FindPlayerWanted();
     const auto        wantedLevel    = (int32)wanted->m_WantedLevel;

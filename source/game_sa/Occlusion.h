@@ -13,19 +13,19 @@ public:
     static constexpr int32 MAX_ACTIVE_OCCLUDERS              = 28;
     static constexpr int32 NUM_OCCLUDERS_PROCESSED_PER_FRAME = 16;
 
-    static inline auto&    InteriorOccluders                 = StaticRef<std::array<COccluder, MAX_INTERIOR_OCCLUDERS>>(0xC73CC8);
-    static inline auto&    Occluders                         = StaticRef<std::array<COccluder, MAX_MAP_OCCLUDERS>>(0xC73FA0);
-    static inline auto&    ActiveOccluders                   = StaticRef<std::array<CActiveOccluder, MAX_ACTIVE_OCCLUDERS>>(0xC78610);
+    static inline NOTSA_GLOBAL(InteriorOccluders, 0xC73CC8, (std::array<COccluder, MAX_INTERIOR_OCCLUDERS>), {});
+    static inline NOTSA_GLOBAL(Occluders, 0xC73FA0, (std::array<COccluder, MAX_MAP_OCCLUDERS>), {});
+    static inline NOTSA_GLOBAL(ActiveOccluders, 0xC78610, (std::array<CActiveOccluder, MAX_ACTIVE_OCCLUDERS>), {});
 
-    static inline auto&    NumInteriorOccludersOnMap         = StaticRef<size_t>(0xC73CC4);
-    static inline auto&    NumOccludersOnMap                 = StaticRef<size_t>(0xC73F98);
-    static inline auto&    NumActiveOccluders                = StaticRef<size_t>(0xC73CC0);
+    static inline NOTSA_GLOBAL(NumInteriorOccludersOnMap, 0xC73CC4, (size_t), {});
+    static inline NOTSA_GLOBAL(NumOccludersOnMap, 0xC73F98, (size_t), {});
+    static inline NOTSA_GLOBAL(NumActiveOccluders, 0xC73CC0, (size_t), {});
 
-    static inline auto&    NearbyList                        = StaticRef<int16>(0x8D5D6C);
+    static inline NOTSA_GLOBAL(NearbyList, 0x8D5D6C, (int16), { -1 });
 
-    static inline auto&    FarAwayList                       = StaticRef<int16>(0x8D5D68);
-    static inline auto&    ListWalkThroughFA                 = StaticRef<int16>(0x8D5D70);
-    static inline auto&    PreviousListWalkThroughFA         = StaticRef<int16>(0x8D5D74);
+    static inline NOTSA_GLOBAL(FarAwayList, 0x8D5D68, (int16), { -1 });
+    static inline NOTSA_GLOBAL(ListWalkThroughFA, 0x8D5D70, (int16), { -1 });
+    static inline NOTSA_GLOBAL(PreviousListWalkThroughFA, 0x8D5D74, (int16), { -1 });
 
 public:
     static void InjectHooks();

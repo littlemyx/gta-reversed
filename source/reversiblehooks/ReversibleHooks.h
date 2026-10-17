@@ -2,6 +2,7 @@
 
 #include <string>
 
+#include "NoHookRegistry.h"
 #include "VMTInfo.h"
 #include "HooksUtility.hpp"
 #include "RHManager.h"
@@ -13,6 +14,33 @@
 // The root folder (source/game_sa) can be referred to by `RH_ScopedCategoryGlobal()` - Thus any source files in it should use this category.
 //
 
+#ifdef NOTSA_NO_HOOK_REGISTRY
+// F2 (see NoHookRegistry.h): the detached run build registers nothing. The prologue macros (scope, class, category) expand to nothing - `HS` stays declared because a few
+// InjectHooks bodies name `HS::` in the option expressions that are now dropped - and every install macro is a statement with no effect and no reference to the function,
+// so no exe address, no function pointer and no string reaches the object code.
+#define RH_InstallProlouge(_scopeName) using HS = ReversibleHooks::HookInstallOptions::HS;
+#define RH_ScopedNamespaceName(ns) RH_InstallProlouge(ns)
+#define RH_ScopedClass(cls) RH_InstallProlouge(#cls)
+#define RH_ScopedNamedClass(cls, name) RH_InstallProlouge(name)
+#define RH_ScopedVirtualClass(cls, addrGTAVtbl, nVirtFns_) RH_InstallProlouge(#cls)
+#define RH_ScopedNamespace(name) RH_InstallProlouge(#name)
+#define RH_ScopedCategory(name)
+#define RH_GlobalCategoryName "Global"
+#define RH_ScopedCategoryGlobal()
+#define RH_ScopedInstall(...)                    ((void)0)
+#define RH_ScopedGlobalInstall(...)              ((void)0)
+#define RH_ScopedOverloadedInstall(...)          ((void)0)
+#define RH_ScopedGlobalOverloadedInstall(...)    ((void)0)
+#define RH_ScopedNamedGlobalInstall(...)         ((void)0)
+#define RH_ScopedNamedInstall(...)               ((void)0)
+#define RH_ScopedVMTOverloadedInstall(...)       ((void)0)
+#define RH_ScopedNamedVMTInstall(...)            ((void)0)
+#define RH_ScopedVMTInstall(...)                 ((void)0)
+#define RH_ScopedInstallScriptCommand(cmd)       ((void)(cmd))
+#define RH_ScopedConstructorInstall(...)         ((void)0)
+#define RH_ScopedVMTDestructorInstall(...)       ((void)0)
+#define RH_ScopedDestructorInstall(...)          ((void)0)
+#else // !NOTSA_NO_HOOK_REGISTRY
 // Private, dont use this
 #define RH_InstallProlouge(_scopeName) \
     ReversibleHooks::ScopeName RHCurrentScopeName {_scopeName}; \
@@ -127,6 +155,8 @@
 
 //#define RH_ScopedVMTAddressChange(fn, fnGTAAddr, ...) \
 //    rh->InstallVirtual(RHCurrentCat.name + "/" + RHCurrentScopeName.name, #fn, pGTAVTbl, pOurVTbl, FunctionPointerToVoidP(fnGTAAddr), nVirtFns __VA_OPT__(,) __VA_ARGS__)
+
+#endif // NOTSA_NO_HOOK_REGISTRY
 
 namespace ReversibleHooks {
 struct ScopeName {

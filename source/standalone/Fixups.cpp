@@ -17,6 +17,7 @@
 
 namespace notsa::standalone {
 namespace {
+#ifndef NOTSA_NO_HOOK_REGISTRY // F2: the registry (everything between here and the matching #endif) is compiled out of the detached run build
 struct FnEntry {
     void*       Ours;
     std::string Name;
@@ -56,12 +57,15 @@ std::unordered_set<uint32_t>& NoCopySlots() { // exe vtable slots of unverified 
     static std::unordered_set<uint32_t> s;
     return s;
 }
-FixupStats g_Stats{};
 char       g_LastHook[160]; // last hook name handed to us: a CRT assertion during hook installation (e.g. duplicate item in a category) names it
 
 void NoteHook(uint32_t exeAddr, const char* name) {
     wsprintfA(g_LastHook, "0x%08X %.100s", exeAddr, name ? name : "?");
 }
+#else
+const char g_LastHook[] = "(none: no hook registry in this build)";
+#endif // !NOTSA_NO_HOOK_REGISTRY
+FixupStats g_Stats{};
 
 void __cdecl AbortHandler(int) {
     // Standalone S5: make the symbolising unhandled-exception filter (app_debug.cpp) print the call stack of the failing assert()/terminate() into logs/log.log
@@ -299,6 +303,7 @@ void UnreachableHit(const char* fn, const char* file, int line) {
     for (;;) {}
 }
 
+#ifndef NOTSA_NO_HOOK_REGISTRY
 void RegisterFunction(uint32_t exeAddr, void* ours, const char* name) {
     if (!ours || !exeAddr) {
         return; // `0x0` placeholders / hooks without a body
@@ -357,6 +362,9 @@ void* FindKnown(uint32_t exeAddr) {
     const auto it = FnMap().find(exeAddr);
     return it != FnMap().end() ? it->second.Ours : nullptr;
 }
+#else
+void* FindKnown(uint32_t) { return nullptr; } // nothing is registered: every exe address the code touches is a bug and traps
+#endif // !NOTSA_NO_HOOK_REGISTRY
 
 void* GetTrapStub(uint32_t exeAddr) { return MakeStub(exeAddr); }
 
@@ -403,6 +411,7 @@ FixupStats ApplyToDataImage() {
 
     // Whole-vtable copy: for every class with an exported vtable all N slots of OUR vtable replace the exe vtable (our slot layout mirrors the exe's)
     std::vector<bool> covered(n, false);
+#ifndef NOTSA_NO_HOOK_REGISTRY
     {
         std::unordered_set<uint32_t> listed;
         for (const auto& [a, k] : ptrs) {
@@ -428,6 +437,7 @@ FixupStats ApplyToDataImage() {
             }
         }
     }
+#endif // !NOTSA_NO_HOOK_REGISTRY
     // Pass 2 replace
     char dir[MAX_PATH];
     GetModuleFileNameA(nullptr, dir, MAX_PATH);
@@ -448,13 +458,16 @@ FixupStats ApplyToDataImage() {
             continue;
         }
         (klass == 1 ? g_Stats.CodePointersV : g_Stats.CodePointersC)++;
+#ifndef NOTSA_NO_HOOK_REGISTRY
         if (const auto it = SlotMap().find(slotAddr); it != SlotMap().end()) {
             words[i] = (uint32_t)it->second.Ours;
             g_Stats.FixedBySlot++;
         } else if (void* ours = FindKnown(orig)) {
             words[i] = (uint32_t)ours;
             g_Stats.FixedByFunction++;
-        } else {
+        } else
+#endif
+        {
             words[i] = (uint32_t)GetTrapStub(orig);
             (klass == 1 ? g_Stats.TrappedV : g_Stats.TrappedC)++;
             if (unk) {
@@ -468,6 +481,7 @@ FixupStats ApplyToDataImage() {
     for (size_t i = 0; i < n; i++) {
         g_Stats.ChangedDwords += words[i] != original[i];
     }
+#ifndef NOTSA_NO_HOOK_REGISTRY
     {   // the porting TODO list: hooks the authors disabled / never reversed. They are not ours and trap with the exe address.
         char up[MAX_PATH];
         GetModuleFileNameA(nullptr, up, MAX_PATH);
@@ -487,6 +501,10 @@ FixupStats ApplyToDataImage() {
             fclose(uf);
         }
     }
+#endif // !NOTSA_NO_HOOK_REGISTRY
+#ifdef NOTSA_NO_HOOK_REGISTRY
+    Log("fixups: detached run build, no hook registry: every code pointer of the image (V=%u C=%u) is a trap stub (nothing reads them: census)", (unsigned)g_Stats.TrappedV, (unsigned)g_Stats.TrappedC);
+#endif
     const auto& s = g_Stats;
     Log("fixups: unverified hooks excluded from the maps: %u (list in standalone_unverified_hooks.txt)", (unsigned)s.UnverifiedHooks);
     Log("fixups: registered %u functions + %u vtable slots (%u conflicts). Data image code pointers: V=%u C=%u (skipped, NOT rewritten: text-like %u, unaligned/u16-pair %u). "

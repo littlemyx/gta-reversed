@@ -16,6 +16,7 @@
 #include <extensions/Singleton.hpp>
 #include <Enums/eScriptCommands.h>
 
+#include "NoHookRegistry.h"
 #include "HooksUtility.hpp"
 #include "RootHookCategory.h"
 #include "ReversibleHook/TwoWayHook.h"
@@ -136,7 +137,7 @@ public: // Script hooking functions //
                    ptrAddressGTA = std::bit_cast<void*>(addressGTA);
 
     #ifdef NOTSA_STANDALONE
-    #ifdef NOTSA_STANDALONE_RUN
+    #if defined(NOTSA_STANDALONE_RUN) && !defined(NOTSA_NO_HOOK_REGISTRY)
         // No code is patched: the (exe address -> our function) pair becomes a fixup applied to the data image
         // ... but only for hooks that are enabled AND reversed. `RedirectToGTA` / `Reversed = false` / `Unhooked` hooks ran the exe code in the
         // DLL build; here they are "unverified": not registered (they trap with the exe address) and listed in standalone_unverified_hooks.txt
@@ -229,7 +230,7 @@ public: // Script hooking functions //
         HookInstallOptions opt = {}
     ) {
     #ifdef NOTSA_STANDALONE
-    #ifdef NOTSA_STANDALONE_RUN
+    #if defined(NOTSA_STANDALONE_RUN) && !defined(NOTSA_NO_HOOK_REGISTRY)
         // Slot 0 of our class's vtable is the scalar deleting destructor, exactly what slot 0 of the exe vtable holds
         void* const dtorOur = vmtInfoOur.GetAddress() ? vmtInfoOur.GetFunctionAt(Utility::VMTInfo::DESTRUCTOR_VMT_INDEX) : nullptr; // null: vtable not exported
         if (opt.State == HookInstallOptions::HS::RedirectToOurs && opt.Reversed) {

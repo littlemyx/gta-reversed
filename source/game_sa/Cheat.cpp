@@ -1202,6 +1202,7 @@ void CCheat::InjectHooks() {
     RH_ScopedInstall(ApplyCheat, 0x438370);
     RH_ScopedInstall(VehicleCheat, 0x43A0B0);
 
+#ifndef NOTSA_NO_HOOK_REGISTRY // F2: detached run build: m_aCheatFunctions already holds our functions (NOTSA_GLOBAL_DEF below), no exe address is left to match
     for (auto& cheat: cheats) {
         if (cheat.installAddress == 0x0) {
             continue;
@@ -1215,6 +1216,7 @@ void CCheat::InjectHooks() {
             }
         }
     }
+#endif
 }
 
 // Initial values of the globals declared with NOTSA_GLOBAL_DECL in Cheat.h (detached mode; ignored in address mode)

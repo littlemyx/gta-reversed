@@ -53,7 +53,7 @@ void RHManager::InstallVirtual(
     void*              fnAddressGTA,
     HookInstallOptions opt
 ) {
-#ifdef NOTSA_STANDALONE_RUN
+#if defined(NOTSA_STANDALONE_RUN) && !defined(NOTSA_NO_HOOK_REGISTRY)
     // The exe vtable (in the data image, not yet fixed up) holds `fnAddressGTA` in the slot we override; our class's own vtable
     // (exported `??_7cls@@6B@`) holds the real implementation in the same slot. Register (exe vtable slot -> our implementation).
     if (opt.State != HookInstallOptions::HS::RedirectToOurs || !opt.Reversed) { // unverified hook (see InstallStatic): neither the slot nor the whole-vtable copy may use ours
@@ -74,7 +74,7 @@ void RHManager::InstallVirtual(
         fnOurImpl,
         fnAddressGTA
     ));
-#elif defined(NOTSA_STANDALONE_DUMP_HOOKS_ONLY)
+#elif defined(NOTSA_STANDALONE_DUMP_HOOKS_ONLY) || defined(NOTSA_NO_HOOK_REGISTRY) // (the latter is never called: the RH_Scoped* macros are no-ops there)
     AddHookToCategory(category, opt, std::make_shared<ReversibleHook::NullHook>(
         std::move(fnName),
         fnAddressOur,

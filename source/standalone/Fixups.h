@@ -10,6 +10,7 @@
 #ifdef NOTSA_STANDALONE_RUN
 #include <cstddef>
 #include <cstdint>
+#include <reversiblehooks/NoHookRegistry.h>
 
 #ifdef NOTSA_VERIFY_GLOBALS
 namespace notsa::globals { void DumpAtBoot(); } // source/standalone/GlobalsVerify.cpp
@@ -37,6 +38,7 @@ struct FixupStats {
 };
 
 namespace Fixups {
+#ifndef NOTSA_NO_HOOK_REGISTRY // F2: the detached run build registers nothing (reversiblehooks/NoHookRegistry.h): this whole API does not exist there
 //! Register a replacement for the exe function at `exeAddr`
 void RegisterFunction(uint32_t exeAddr, void* ours, const char* name);
 
@@ -52,8 +54,9 @@ void RegisterUnverified(uint32_t exeAddr, const char* name, int state, bool reve
 //! A class with `RH_ScopedVirtualClass(cls, exeVtbl, n)`: `ourVtbl` (null if the class does not export its vtable) has the same slot layout as the
 //! exe vtable at `exeVtbl`, so `ApplyToDataImage` copies all `n` slots over it.
 void RegisterVMTClass(uint32_t exeVtbl, size_t n, void* const* ourVtbl, const char* cls);
+#endif // !NOTSA_NO_HOOK_REGISTRY
 
-//! Replacement for `exeAddr` or nullptr
+//! Replacement for `exeAddr` or nullptr (always nullptr in the detached run build: nothing is registered)
 void* FindKnown(uint32_t exeAddr);
 
 //! Executable stub `push exeAddr; call TrapHandler` for `exeAddr` (created on demand, never null)

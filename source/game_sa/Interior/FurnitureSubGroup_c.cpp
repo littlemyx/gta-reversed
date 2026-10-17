@@ -7,6 +7,7 @@ namespace {
 // Storage for all furniture items (256 * 0x14)
 auto& s_FurnSubGrpFurnitureStore = StaticRef<std::array<Furniture_c, 256>>(0xBAE1F8);
 } // namespace
+#line 11
 
 void FurnitureSubGroup_c::InjectHooks() {
     RH_ScopedClass(FurnitureSubGroup_c);

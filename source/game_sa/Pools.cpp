@@ -95,8 +95,9 @@ void CPools::Initialise() {
 void CPools::ShutDown() {
     NOTSA_LOG_DEBUG("Shutdown pool started");
 #ifdef NOTSA_STANDALONE_RUN
-    // Pool storage is freed without running the entity destructors (no ResolveReferences), and unlike the exe's heap the freed memory is not left intact:
-    // forget the entities of CInterestingEvents (the idle camera read a 0xDDDD-filled ped from the previous session)
+    // Like the exe's CPools::ShutDown (17 x free(storage) + delete, no element destructor; notsa::detail::PoolDestructOnClear() is false in the run build) the pool storage
+    // is freed without running the entity destructors (no ResolveReferences: the dummies still held references into the already freed object pool, BUG-REFS), and unlike the
+    // exe's heap the freed memory is not left intact: forget the entities of CInterestingEvents (the idle camera read a 0xDDDD-filled ped from the previous session)
     for (auto& event : g_InterestingEvents.m_Events) {
         event.entity = nullptr;
         event.type   = 0;

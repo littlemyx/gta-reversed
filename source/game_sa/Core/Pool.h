@@ -29,6 +29,19 @@ namespace notsa::standalone::Fixups { void PoolBadDelete(const void* pool, const
     Size                Capacity
 */
 
+namespace notsa::detail {
+// The exe's pool shutdown (CPools::ShutDown 0x5519F0, and every other pool owner) only frees the element storage and the slot-state array: no element
+// destructor ever runs there. In the run build the NOTSA CPool_DestructOnClear "fix" would run ~CEntity (ResolveReferences, LOD child counts) for every
+// entity left in the pools AFTER the systems those destructors write into were shut down and after the earlier pools were freed: dangling reads/writes.
+inline bool PoolDestructOnClear() {
+#ifdef NOTSA_STANDALONE_RUN
+    return false;
+#else
+    return notsa::bugfixes::CPool_DestructOnClear;
+#endif
+}
+} // namespace notsa::detail
+
 template<class T, class S = T>
 class CPool {
     using ReturnType  = T;               //!< Common base of all these objects, this is the value returned from/expected to all functions
@@ -121,7 +134,7 @@ public:
     */
     void Flush() {
         // Perhaps properly destruct all objects in the pool
-        if (notsa::bugfixes::CPool_DestructOnClear) {
+        if (notsa::detail::PoolDestructOnClear()) {
             Clear();
         }
 
@@ -142,7 +155,7 @@ public:
 
     // Clears pool
     void Clear() {
-        if (notsa::bugfixes::CPool_DestructOnClear) {
+        if (notsa::detail::PoolDestructOnClear()) {
             for (auto& v : GetAllValid()) {
                 std::destroy_at(&v);
             }

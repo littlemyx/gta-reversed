@@ -40,7 +40,20 @@ public:
     static constexpr int32 NUM_PED_COL_NODE_INFOS = 12;
 
     static inline auto& m_pPedIds = StaticRef<RwObjectNameIdAssocation[NUM_PED_NAME_ID_ASSOC]>(0x8A6268);
-    static inline auto& m_pColNodeInfos = StaticRef<tPedColNodeInfo[NUM_PED_COL_NODE_INFOS]>(0x8A6308);
+    static inline NOTSA_GLOBAL(m_pColNodeInfos, 0x8A6308, (tPedColNodeInfo[NUM_PED_COL_NODE_INFOS]), {
+        tPedColNodeInfo{ {}, 5, 9, CVector{ 0.05f, 0.0f, 0.0f }, 0.15f },
+        tPedColNodeInfo{ {}, 3, 3, CVector{ 0.2f, 0.0f, 0.0f }, 0.2f },
+        tPedColNodeInfo{ {}, 3, 3, CVector{ 0.0f, 0.0f, 0.0f }, 0.2f },
+        tPedColNodeInfo{ {}, 2, 4, CVector{ -0.1f, 0.0f, 0.0f }, 0.2f },
+        tPedColNodeInfo{ {}, 32, 5, CVector{ 0.06f, 0.0f, 0.0f }, 0.14f },
+        tPedColNodeInfo{ {}, 22, 6, CVector{ 0.06f, 0.0f, 0.0f }, 0.14f },
+        tPedColNodeInfo{ {}, 33, 5, CVector{ 0.05f, 0.0f, 0.0f }, 0.14f },
+        tPedColNodeInfo{ {}, 23, 6, CVector{ 0.05f, 0.0f, 0.0f }, 0.14f },
+        tPedColNodeInfo{ {}, 42, 7, CVector{ -0.1f, 0.0f, 0.0f }, 0.18f },
+        tPedColNodeInfo{ {}, 52, 8, CVector{ -0.1f, 0.0f, 0.0f }, 0.18f },
+        tPedColNodeInfo{ {}, 43, 7, CVector{ -0.18f, 0.0f, 0.0f }, 0.16f },
+        tPedColNodeInfo{ {}, 53, 8, CVector{ -0.18f, 0.0f, 0.0f }, 0.16f }
+    });
 
 public:
     static void InjectHooks();

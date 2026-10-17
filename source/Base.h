@@ -183,8 +183,8 @@ namespace notsa::standalone::Fixups { void UnreachableHit(const char* fn, const 
 */
 #ifdef NOTSA_STANDALONE_RUN
 namespace notsa::standalone::detail {
-// Set by source/standalone/DataImage.cpp once the original data image (.rdata/.data/BSS) is mapped at its original VA.
-// It is loaded from a `.CRT$XIB` initializer, i.e. before any C++ dynamic initializer, see .notes/P2A_DESIGN.md
+// Address mode only (the exe-oracle test TUs, NOTSA_ORACLE_ADDRESS_GLOBALS; the run build has no data image and StaticRef is a compile error there): the test defines it,
+// true once the original data image is mapped at its original VA (tests/standalone/game_oracle.h). The dev-only GTASA_IMAGE_DIAG exe defines it in ImageLoad.cpp.
 extern bool g_DataImageLoaded;
 }
 #endif

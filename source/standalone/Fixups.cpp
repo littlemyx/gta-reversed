@@ -1,8 +1,6 @@
 #include "StdInc.h"
 
 #ifdef NOTSA_STANDALONE_RUN
-#include <unordered_map>
-#include <mutex>
 #include <atomic>
 #include <crtdbg.h>
 #include <float.h>
@@ -10,62 +8,12 @@
 #include <cstdlib>
 #include <exception>
 #include <cstring>
-#include <unordered_set>
 #include <vector>
 #include "Fixups.h"
-#include "DataImage.h"
 
 namespace notsa::standalone {
 namespace {
-#ifndef NOTSA_NO_HOOK_REGISTRY // F2: the registry (everything between here and the matching #endif) is compiled out of the detached run build
-struct FnEntry {
-    void*       Ours;
-    std::string Name;
-};
-
-// Maps are written only during hook registration (single threaded, before ApplyToDataImage) and are read-only afterwards.
-std::unordered_map<uint32_t, FnEntry>& FnMap() {
-    static std::unordered_map<uint32_t, FnEntry> m = [] { decltype(m) r; r.reserve(16384); return r; }();
-    return m;
-}
-std::unordered_map<uint32_t, FnEntry>& SlotMap() { // key = address of the vtable slot in the data image
-    static std::unordered_map<uint32_t, FnEntry> m = [] { decltype(m) r; r.reserve(8192); return r; }();
-    return m;
-}
-struct VtableClass {
-    uint32_t           ExeVtbl;
-    size_t             N;
-    void* const*       Ours;
-    std::string        Name;
-};
-std::vector<VtableClass>& VtableClasses() {
-    static std::vector<VtableClass> v;
-    return v;
-}
-struct UnverifiedHook {
-    uint32_t    ExeAddr;
-    uint32_t    VtblSlot;
-    int         State;
-    bool        Reversed;
-    std::string Name;
-};
-std::vector<UnverifiedHook>& Unverified() {
-    static std::vector<UnverifiedHook> v;
-    return v;
-}
-std::unordered_set<uint32_t>& NoCopySlots() { // exe vtable slots of unverified virtual hooks: the whole-vtable copy leaves them alone
-    static std::unordered_set<uint32_t> s;
-    return s;
-}
-char       g_LastHook[160]; // last hook name handed to us: a CRT assertion during hook installation (e.g. duplicate item in a category) names it
-
-void NoteHook(uint32_t exeAddr, const char* name) {
-    wsprintfA(g_LastHook, "0x%08X %.100s", exeAddr, name ? name : "?");
-}
-#else
-const char g_LastHook[] = "(none: no hook registry in this build)";
-#endif // !NOTSA_NO_HOOK_REGISTRY
-FixupStats g_Stats{};
+// (slice F3 of .notes/DETACH_DATA_PLAN.md: no hook registry, no image fixups, no trap stubs: the run build has nothing of the original exe to patch)
 
 void __cdecl AbortHandler(int) {
     // Standalone S5: make the symbolising unhandled-exception filter (app_debug.cpp) print the call stack of the failing assert()/terminate() into logs/log.log
@@ -73,11 +21,11 @@ void __cdecl AbortHandler(int) {
         static bool s_Raised = false;
         if (!s_Raised) {
             s_Raised = true;
-            Fixups::Log("abort(): raising exception 0xE0AB0001 for a stack trace (last hook %s)", g_LastHook);
+            Fixups::Log("abort(): raising exception 0xE0AB0001 for a stack trace");
             RaiseException(0xE0AB0001u, EXCEPTION_NONCONTINUABLE, 0, nullptr);
         }
     }
-    Fixups::Fatal("abort() called (failed assert()/terminate). Last hook registered: %s", g_LastHook);
+    Fixups::Fatal("abort() called (failed assert()/terminate). ");
 }
 
 #ifdef _DEBUG
@@ -101,7 +49,7 @@ int __cdecl CrtReportHook(int type, char* message, int* returnValue) {
             Fixups::Log("CRT assertion/error: %.500s", message ? message : "?");
             RaiseException(0xE0AB0002u, EXCEPTION_NONCONTINUABLE, 0, nullptr);
         }
-        Fixups::Fatal("CRT assertion/error: %.700s (last hook registered: %s)", message ? message : "?", g_LastHook);
+        Fixups::Fatal("CRT assertion/error: %.700s", message ? message : "?");
     }
     if (returnValue) {
         *returnValue = 0;
@@ -119,100 +67,10 @@ int __cdecl CrtReportHookW(int type, wchar_t* message, int* returnValue) {
 }
 #endif
 
-// ---------------------------------------------------------------- trap stubs
-// stub:  68 <exeAddr>        push exeAddr
-//        E8 <rel32>          call TrapHandler           (never returns)
-// At TrapHandler entry: [esp] = return into stub, [esp+4] = exeAddr, [esp+8] = return address of whoever called the stub.
-constexpr size_t STUB_SIZE   = 16;
-constexpr size_t CHUNK_BYTES = 64 * 1024;
-
-extern "C" [[noreturn]] void __cdecl NotsaStandaloneTrapHandler(uint32_t exeAddr, uint32_t callerRet) {
-    const auto base = (uint32_t)GetModuleHandleA(nullptr);
-    Fixups::Fatal("TRAP: original function/pointer 0x%08X was used but has no reimplementation. Caller return address: 0x%08X (exe base 0x%08X => +0x%X, resolve with the .map file).",
-        exeAddr, callerRet, base, callerRet - base);
-}
-
-std::mutex                              g_StubMutex;
-std::unordered_map<uint32_t, void*>     g_Stubs;
-uint8_t*                                g_Chunk{};
-size_t                                  g_ChunkUsed{CHUNK_BYTES};
-
-void* MakeStub(uint32_t exeAddr) {
-    std::scoped_lock lk{ g_StubMutex };
-    if (const auto it = g_Stubs.find(exeAddr); it != g_Stubs.end()) {
-        return it->second;
-    }
-    if (g_ChunkUsed + STUB_SIZE > CHUNK_BYTES) {
-        g_Chunk = (uint8_t*)VirtualAlloc(nullptr, CHUNK_BYTES, MEM_RESERVE | MEM_COMMIT, PAGE_EXECUTE_READWRITE);
-        if (!g_Chunk) {
-            Fixups::Fatal("cannot allocate the trap stub page");
-        }
-        g_ChunkUsed = 0;
-    }
-    uint8_t* const stub = g_Chunk + g_ChunkUsed;
-    g_ChunkUsed += STUB_SIZE;
-    stub[0] = 0x68;
-    memcpy(stub + 1, &exeAddr, 4);
-    stub[5] = 0xE8;
-    const int32_t rel = (int32_t)((uint32_t)&NotsaStandaloneTrapHandler - ((uint32_t)stub + 10));
-    memcpy(stub + 6, &rel, 4);
-    memset(stub + 10, 0xCC, STUB_SIZE - 10);
-    FlushInstructionCache(GetCurrentProcess(), stub, STUB_SIZE);
-    g_Stubs.emplace(exeAddr, stub);
-    return stub;
-}
-
-// ---------------------------------------------------------------- redirect handler
-// SEH-guarded read: a trap taken on a stack overflow path must not double fault silently
-bool SafeReadU32(uint32_t addr, uint32_t& out) {
-    __try {
-        out = *(volatile uint32_t*)addr;
-        return true;
-    } __except (EXCEPTION_EXECUTE_HANDLER) {
-        return false;
-    }
-}
-
-LONG CALLBACK RedirectVEH(EXCEPTION_POINTERS* ep) {
-    const auto* r = ep->ExceptionRecord;
-    if (r->ExceptionCode != EXCEPTION_ACCESS_VIOLATION || !DataImage::IsLoaded()) {
-        return EXCEPTION_CONTINUE_SEARCH;
-    }
-    const auto  pc = (uint32_t)ep->ContextRecord->Eip;
-    const auto& info = DataImage::GetInfo();
-    const auto  kind = (uint32_t)r->ExceptionInformation[0]; // 0 read, 1 write, 8 execute (DEP)
-    const auto  addr = (uint32_t)r->ExceptionInformation[1];
-    if (pc < info.CodeLo || pc >= info.CodeHi || addr != pc) { // not an instruction fetch from the original code range
-        if (kind != 8 && addr >= info.CodeLo && addr < info.DataBase) {
-            Fixups::Fatal("TRAP: data %s access to the original code range at 0x%08X from 0x%08X (exe +0x%X). The original code bytes are not part of the standalone image.",
-                kind ? "write" : "read", addr, pc, pc - (uint32_t)GetModuleHandleA(nullptr));
-        }
-        if (kind == 1 && info.RdataLo && addr >= info.RdataLo && addr < info.RdataHi) {
-            Fixups::Fatal("TRAP: write into the read-only original .rdata at 0x%08X from 0x%08X (exe +0x%X): a vtable/constant/string table is being modified.",
-                addr, pc, pc - (uint32_t)GetModuleHandleA(nullptr));
-        }
-        return EXCEPTION_CONTINUE_SEARCH;
-    }
-    uint32_t retAddr = 0;
-    if (!SafeReadU32(ep->ContextRecord->Esp, retAddr)) {
-        retAddr = 0xDEADDEAD; // unreadable stack
-    }
-    if (void* ours = Fixups::FindKnown(pc)) {
-        static std::atomic<uint32_t> s_logged{};
-        if (s_logged++ < 64) {
-            Fixups::Log("redirect: raw call to original 0x%08X -> ours %p (caller 0x%08X)", pc, ours, retAddr);
-        }
-        ep->ContextRecord->Eip = (DWORD)ours;
-        return EXCEPTION_CONTINUE_EXECUTION;
-    }
-    Fixups::Fatal("TRAP: raw jump/call into the original code at 0x%08X which has no reimplementation. Return address on stack: 0x%08X (exe +0x%X).",
-        pc, retAddr, retAddr - (uint32_t)GetModuleHandleA(nullptr));
-}
-
 } // namespace
 
 namespace Fixups {
-// CRT free (wvsprintfA: user32, 1024 byte limit, no %z/%f) because `Log` is also used by the pre-CRT-init data image loader
+// CRT free (wvsprintfA: user32, 1024 byte limit, no %z/%f) because `Log` is also used by the pre-CRT-init image loader of the dev-only GTASA_IMAGE_DIAG config
 void Log(const char* fmt, ...) {
     char line[1100];
     va_list va;
@@ -308,239 +166,6 @@ void UnreachableHit(const char* fn, const char* file, int line) {
     for (;;) {}
 }
 
-#ifndef NOTSA_NO_HOOK_REGISTRY
-void RegisterFunction(uint32_t exeAddr, void* ours, const char* name) {
-    if (!ours || !exeAddr) {
-        return; // `0x0` placeholders / hooks without a body
-    }
-    NoteHook(exeAddr, name);
-    auto [it, inserted] = FnMap().try_emplace(exeAddr, FnEntry{ ours, name });
-    if (inserted) {
-        g_Stats.RegisteredFunctions++;
-    } else if (it->second.Ours != ours) {
-        g_Stats.Conflicts++;
-        Log("fixup conflict: 0x%08X already -> %s, ignoring %s", exeAddr, it->second.Name.c_str(), name);
-    }
-}
-
-void RegisterVMTSlot(uint32_t vtblAddr, size_t slot, uint32_t exeFn, void* ours, const char* name) {
-    if (!ours) {
-        return;
-    }
-    const auto slotAddr = vtblAddr + (uint32_t)(slot * sizeof(uint32_t));
-    NoteHook(exeFn, name);
-    if (SlotMap().try_emplace(slotAddr, FnEntry{ ours, name }).second) {
-        g_Stats.RegisteredVMTSlots++;
-    } else if (SlotMap()[slotAddr].Ours != ours) {
-        g_Stats.Conflicts++;
-        Log("fixup conflict: vtable slot 0x%08X already registered, ignoring %s", slotAddr, name);
-    }
-    // Fallback for the same (inherited) exe function sitting in vtables of derived classes that did not install it themselves
-    if (exeFn && !FnMap().contains(exeFn)) {
-        FnMap().emplace(exeFn, FnEntry{ ours, name });
-        g_Stats.RegisteredFunctions++;
-    }
-}
-
-void RegisterUnverified(uint32_t exeAddr, const char* name, int state, bool reversed, uint32_t vtblSlot) {
-    if (!exeAddr) {
-        return;
-    }
-    NoteHook(exeAddr, name);
-    Unverified().push_back({ exeAddr, vtblSlot, state, reversed, name });
-    if (vtblSlot) {
-        NoCopySlots().insert(vtblSlot);
-    }
-    g_Stats.UnverifiedHooks++;
-}
-
-void RegisterVMTClass(uint32_t exeVtbl, size_t n, void* const* ourVtbl, const char* cls) {
-    if (!ourVtbl) {
-        g_Stats.VtableClassesNoExport++;
-        Log("vtable copy: class %s has no exported vtable (add NOTSA_EXPORT_VTABLE), its virtuals stay trapped", cls);
-        return;
-    }
-    VtableClasses().push_back({ exeVtbl, n, ourVtbl, cls });
-}
-
-void* FindKnown(uint32_t exeAddr) {
-    const auto it = FnMap().find(exeAddr);
-    return it != FnMap().end() ? it->second.Ours : nullptr;
-}
-#else
-void* FindKnown(uint32_t) { return nullptr; } // nothing is registered: every exe address the code touches is a bug and traps
-#endif // !NOTSA_NO_HOOK_REGISTRY
-
-void* GetTrapStub(uint32_t exeAddr) { return MakeStub(exeAddr); }
-
-void* Resolve(uint32_t exeAddr) {
-    if (void* p = FindKnown(exeAddr)) {
-        return p;
-    }
-    return GetTrapStub(exeAddr);
-}
-
-FixupStats ApplyToDataImage() {
-    if (!DataImage::IsLoaded()) {
-        Fatal("ApplyToDataImage: data image not loaded");
-    }
-    const auto& info = DataImage::GetInfo();
-    auto* const words = reinterpret_cast<uint32_t*>(info.DataBase);
-    const size_t n = info.InitializedSize / 4;
-
-    // The classification (which dwords are code pointers, V = run / C = isolated) is done ONCE, by tools/standalone/extract_exe_data.py
-    // (function-start set + alignment + text filter, see its docstring) and shipped as data_pointers.bin: {u32 addr, u32 class(1=V,2=C)}.
-    std::vector<std::pair<uint32_t, uint8_t>> ptrs;
-    {
-        char listPath[MAX_PATH];
-        GetModuleFileNameA(nullptr, listPath, MAX_PATH);
-        if (char* slash = strrchr(listPath, '\\')) {
-            strcpy_s(slash + 1, listPath + MAX_PATH - slash - 1, "data_pointers.bin");
-        }
-        FILE* lf = nullptr;
-        if (fopen_s(&lf, listPath, "rb") || !lf) {
-            Fatal("ApplyToDataImage: cannot open data_pointers.bin next to the exe (re-run the extractor / build)");
-        }
-        uint32_t rec[2];
-        while (fread(rec, sizeof(rec), 1, lf) == 1) {
-            if (rec[0] < info.DataBase || rec[0] + 4 > info.DataBase + info.InitializedSize || (rec[0] & 3) || rec[1] < 1 || rec[1] > 2) {
-                Fatal("ApplyToDataImage: data_pointers.bin record 0x%08X/%u out of range", rec[0], rec[1]);
-            }
-            ptrs.emplace_back(rec[0], (uint8_t)rec[1]);
-        }
-        fclose(lf);
-    }
-    g_Stats.TextLikeIgnored = info.SkippedTextLike;
-    g_Stats.UnalignedIgnored = info.SkippedUnaligned;
-    const std::vector<uint32_t> original(words, words + n); // for the self-check
-
-    // Whole-vtable copy: for every class with an exported vtable all N slots of OUR vtable replace the exe vtable (our slot layout mirrors the exe's)
-    std::vector<bool> covered(n, false);
-#ifndef NOTSA_NO_HOOK_REGISTRY
-    {
-        std::unordered_set<uint32_t> listed;
-        for (const auto& [a, k] : ptrs) {
-            listed.insert(a);
-        }
-        for (const auto& c : VtableClasses()) {
-            if (c.ExeVtbl < info.DataBase || c.ExeVtbl + c.N * 4 > info.DataBase + info.InitializedSize) {
-                Log("vtable copy: %s vtable 0x%08X+%u slots outside the data image, skipped", c.Name.c_str(), c.ExeVtbl, (unsigned)c.N);
-                continue;
-            }
-            g_Stats.VtableClasses++;
-            for (size_t k = 0; k < c.N; k++) {
-                const uint32_t slotAddr = c.ExeVtbl + (uint32_t)(k * 4);
-                void* const ours = c.Ours[k];
-                const size_t i = (slotAddr - info.DataBase) / 4;
-                if (!ours || covered[i] || NoCopySlots().contains(slotAddr)) {
-                    continue;
-                }
-                words[i] = (uint32_t)ours;
-                covered[i] = true;
-                g_Stats.FixedByVtableCopy++;
-                g_Stats.VtableCopyOverlap += listed.contains(slotAddr);
-            }
-        }
-    }
-#endif // !NOTSA_NO_HOOK_REGISTRY
-    // Pass 2 replace
-    char dir[MAX_PATH];
-    GetModuleFileNameA(nullptr, dir, MAX_PATH);
-    if (char* slash = strrchr(dir, '\\')) {
-        strcpy_s(slash + 1, dir + MAX_PATH - slash - 1, "standalone_unknown_pointers.txt");
-    }
-    size_t skippedNotExeCode = 0;
-    FILE* unk = nullptr;
-    fopen_s(&unk, dir, "w");
-    for (const auto& [slotAddr, klass] : ptrs) {
-        const size_t i = (slotAddr - info.DataBase) / 4;
-        if (covered[i]) {
-            continue; // already written by the whole-vtable copy
-        }
-        const uint32_t orig = words[i];
-        if (orig < info.CodeLo || orig >= info.CodeHi) { // already rewritten by C++ (e.g. CCheat::m_aCheatFunctions filled by Cheat.cpp InjectHooks): not an exe code pointer any more
-            skippedNotExeCode++;
-            continue;
-        }
-        (klass == 1 ? g_Stats.CodePointersV : g_Stats.CodePointersC)++;
-#ifndef NOTSA_NO_HOOK_REGISTRY
-        if (const auto it = SlotMap().find(slotAddr); it != SlotMap().end()) {
-            words[i] = (uint32_t)it->second.Ours;
-            g_Stats.FixedBySlot++;
-        } else if (void* ours = FindKnown(orig)) {
-            words[i] = (uint32_t)ours;
-            g_Stats.FixedByFunction++;
-        } else
-#endif
-        {
-            words[i] = (uint32_t)GetTrapStub(orig);
-            (klass == 1 ? g_Stats.TrappedV : g_Stats.TrappedC)++;
-            if (unk) {
-                fprintf(unk, "0x%08X 0x%08X %c\n", slotAddr, orig, klass == 1 ? 'V' : 'C');
-            }
-        }
-    }
-    if (unk) {
-        fclose(unk);
-    }
-    for (size_t i = 0; i < n; i++) {
-        g_Stats.ChangedDwords += words[i] != original[i];
-    }
-#ifndef NOTSA_NO_HOOK_REGISTRY
-    {   // the porting TODO list: hooks the authors disabled / never reversed. They are not ours and trap with the exe address.
-        char up[MAX_PATH];
-        GetModuleFileNameA(nullptr, up, MAX_PATH);
-        if (char* slash = strrchr(up, '\\')) {
-            strcpy_s(slash + 1, up + MAX_PATH - slash - 1, "standalone_unverified_hooks.txt");
-        }
-        FILE* uf = nullptr;
-        fopen_s(&uf, up, "w");
-        for (const auto& h : Unverified()) {
-            const char* why = !h.Reversed ? "Reversed=false" : h.State == 1 ? "RedirectToGTA" : "Unhooked";
-            Log("unverified hook (not ours, traps): 0x%08X %s [%s]%s", h.ExeAddr, h.Name.c_str(), why, h.VtblSlot ? " (virtual)" : "");
-            if (uf) {
-                fprintf(uf, "0x%08X %s %s%s\n", h.ExeAddr, h.Name.c_str(), why, h.VtblSlot ? " virtual" : "");
-            }
-        }
-        if (uf) {
-            fclose(uf);
-        }
-    }
-#endif // !NOTSA_NO_HOOK_REGISTRY
-#ifdef NOTSA_NO_HOOK_REGISTRY
-    Log("fixups: detached run build, no hook registry: every code pointer of the image (V=%u C=%u) is a trap stub (nothing reads them: census)", (unsigned)g_Stats.TrappedV, (unsigned)g_Stats.TrappedC);
-#endif
-    const auto& s = g_Stats;
-    Log("fixups: unverified hooks excluded from the maps: %u (list in standalone_unverified_hooks.txt)", (unsigned)s.UnverifiedHooks);
-    Log("fixups: registered %u functions + %u vtable slots (%u conflicts). Data image code pointers: V=%u C=%u (skipped, NOT rewritten: text-like %u, unaligned/u16-pair %u). "
-        "Fixed: by slot %u, by function %u; trapped (unknown): V=%u C=%u (V/C exclude the %u listed slots covered by the vtable copy)",
-        (unsigned)s.RegisteredFunctions, (unsigned)s.RegisteredVMTSlots, (unsigned)s.Conflicts, (unsigned)s.CodePointersV, (unsigned)s.CodePointersC,
-        (unsigned)s.TextLikeIgnored, (unsigned)s.UnalignedIgnored, (unsigned)s.FixedBySlot, (unsigned)s.FixedByFunction, (unsigned)s.TrappedV, (unsigned)s.TrappedC, (unsigned)s.VtableCopyOverlap);
-    Log("fixups: skipped %u listed dwords whose current value is no longer an exe code pointer (already rewritten by C++ code)", (unsigned)skippedNotExeCode);
-    Log("fixups vtable copy: %u classes copied whole (%u slots written, %u of them listed pointers), %u classes without exported vtable",
-        (unsigned)s.VtableClasses, (unsigned)s.FixedByVtableCopy, (unsigned)s.VtableCopyOverlap, (unsigned)s.VtableClassesNoExport);
-    if (info.DataBase <= 0x860E2C && info.DataBase + info.InitializedSize > 0x8A2A18) { // regression probes of the S1 classifier (1.0 US compact)
-        Log("fixups probes: 0x860E2C=0x%08X (data, must stay 0x004F0000) 0x8A2A18=0x%08X (data, must stay 0x004D0000) 0x85DA64=0x%08X (pointer to 0x425F70, must be rewritten)",
-            *(uint32_t*)0x860E2C, *(uint32_t*)0x8A2A18, *(uint32_t*)0x85DA64);
-    }
-    const size_t expectedChanged = s.FixedBySlot + s.FixedByFunction + s.FixedByVtableCopy + s.TrappedV + s.TrappedC;
-    Log("fixups self-check: changed dwords %u, fixed+trapped %u: %s", (unsigned)s.ChangedDwords, (unsigned)expectedChanged, s.ChangedDwords == expectedChanged ? "OK" : "MISMATCH");
-    if (s.ChangedDwords != expectedChanged) {
-        Fatal("ApplyToDataImage self-check failed: %u dwords changed but %u were fixed/trapped (something else wrote into the image)", (unsigned)s.ChangedDwords, (unsigned)expectedChanged);
-    }
-    // .rdata (vtables, constants, string tables) is read-only in the original exe: everything above was the last legitimate write.
-    // A write from a port now raises an AV that RedirectVEH reports with the address (see "write into the read-only original .rdata").
-    if (info.RdataLo && info.RdataHi > info.RdataLo) {
-        DWORD old;
-        if (VirtualProtect((void*)info.RdataLo, info.RdataHi - info.RdataLo, PAGE_READONLY, &old)) {
-            Log("fixups: .rdata 0x%08X..0x%08X is now PAGE_READONLY", info.RdataLo, info.RdataHi);
-        } else {
-            Log("fixups: WARNING VirtualProtect(READONLY) on .rdata failed (error %u)", GetLastError());
-        }
-    }
-    return s;
-}
-
 #ifdef _DEBUG
 // S5 diagnostics: NOTSA_STANDALONE_ALLOCTRACE=<min bytes> logs (module-relative return addresses) every 200th allocation >= min bytes (find per-frame leaks)
 static int s_AllocMin = 0;
@@ -579,13 +204,16 @@ static void __cdecl OnTerminate() { RaiseNamed("std::terminate", 0xE0AB0005u); }
 // WARNING: suspending the game thread (SuspendThread/GetThreadContext/ResumeThread) under Wine on Apple silicon corrupts its x87 register stack (TOP drifts; the
 // next fcomp/fld/fstp then hit empty registers => NaN positions/speeds, junk comparisons, wanted level 5 via the military zone). Use for profiling only.
 // S5 diagnostics: NOTSA_STANDALONE_SAMPLER=1 samples the main thread's EIP / caller chain (EBP walk, 12 frames) every ~10 ms and logs the hottest
-// return addresses every 15 s (resolve against the .map: "profile" lines, address = absolute VA)
+// return addresses every 15 s (resolve against the .map: "profile" lines, address = absolute VA; subtract the base logged by the "image base" line at start-up)
 #include <map>
 #include <thread>
 static void SamplerThread(HANDLE mainThread) {
     std::map<uint32_t, uint32_t> hist;       // innermost 'interesting' frame (first address in the exe image)
     std::map<uint32_t, uint32_t> inclusive;  // every frame of the chain (inclusive time)
     int samples = 0, sysSamples = 0;
+    // the exe image (ASLR: the base is wherever the loader put it)
+    const auto imgLo = (uint32_t)GetModuleHandleA(nullptr);
+    const auto imgHi = imgLo + ((const IMAGE_NT_HEADERS32*)((const uint8_t*)imgLo + ((const IMAGE_DOS_HEADER*)imgLo)->e_lfanew))->OptionalHeader.SizeOfImage;
     Sleep(35000); // not during device creation: suspending the main thread inside wined3d init deadlocks it
     ULONGLONG last = GetTickCount64();
     for (;;) {
@@ -613,14 +241,14 @@ static void SamplerThread(HANDLE mainThread) {
         ResumeThread(mainThread);
         if (n) {
             hist[frames[0]]++;
-            if (frames[0] < 0x401000 || frames[0] >= 0x3400000) sysSamples++; // EIP in a system DLL (wined3d / ntdll / ...)
+            if (frames[0] < imgLo || frames[0] >= imgHi) sysSamples++; // EIP in a system DLL (wined3d / ntdll / ...)
             for (int i = 0; i < n; i++) inclusive[frames[i]]++;
             samples++;
         }
         if (GetTickCount64() - last > 15000 && samples) {
             last = GetTickCount64();
             std::multimap<uint32_t, uint32_t, std::greater<>> top;
-            for (auto& [a, k] : inclusive) { if (a >= 0x401000 && a < 0x3400000) top.insert({ k, a }); }
+            for (auto& [a, k] : inclusive) { if (a >= imgLo && a < imgHi) top.insert({ k, a }); }
             Fixups::Log("profile: %d samples (%d with EIP outside the exe image = system DLLs / wined3d); top inclusive return addresses:", samples, sysSamples);
             int shown = 0;
             for (auto& [k, a] : top) {
@@ -632,7 +260,13 @@ static void SamplerThread(HANDLE mainThread) {
     }
 }
 
-void InstallRedirectHandler() {
+void InstallDiagnostics() {
+    {   // F3: the exe is a normal relocatable image (no /FIXED, no placeholder): record where the loader put it (ASLR) so a profile/crash address can be resolved against the .map
+        const auto base = (const uint8_t*)GetModuleHandleA(nullptr);
+        const auto* nt  = (const IMAGE_NT_HEADERS32*)(base + ((const IMAGE_DOS_HEADER*)base)->e_lfanew);
+        Log("image base 0x%08X (preferred 0x%08X, ASLR %s, size 0x%X)", (unsigned)(uintptr_t)base, (unsigned)nt->OptionalHeader.ImageBase,
+            (nt->OptionalHeader.DllCharacteristics & IMAGE_DLLCHARACTERISTICS_DYNAMIC_BASE) ? "on" : "off", (unsigned)nt->OptionalHeader.SizeOfImage);
+    }
     if (std::getenv("NOTSA_STANDALONE_SAMPLER")) {
         HANDLE h = nullptr;
         DuplicateHandle(GetCurrentProcess(), GetCurrentThread(), GetCurrentProcess(), &h, 0, FALSE, DUPLICATE_SAME_ACCESS);
@@ -656,7 +290,6 @@ void InstallRedirectHandler() {
     _CrtSetReportHook(CrtReportHook);
     _CrtSetReportHookW2(_CRT_RPTHOOK_INSTALL, CrtReportHookW);
 #endif
-    AddVectoredExceptionHandler(1, RedirectVEH);
 }
 } // namespace Fixups
 } // namespace notsa::standalone

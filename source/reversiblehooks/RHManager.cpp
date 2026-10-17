@@ -2,9 +2,6 @@
 
 #ifdef NOTSA_STANDALONE
 #include "ReversibleHook/NullHook.h"
-#ifdef NOTSA_STANDALONE_RUN
-#include "standalone/Fixups.h"
-#endif
 #else
 #include "ReversibleHook/VirtualHook.h"
 #endif
@@ -53,28 +50,7 @@ void RHManager::InstallVirtual(
     void*              fnAddressGTA,
     HookInstallOptions opt
 ) {
-#if defined(NOTSA_STANDALONE_RUN) && !defined(NOTSA_NO_HOOK_REGISTRY)
-    // The exe vtable (in the data image, not yet fixed up) holds `fnAddressGTA` in the slot we override; our class's own vtable
-    // (exported `??_7cls@@6B@`) holds the real implementation in the same slot. Register (exe vtable slot -> our implementation).
-    if (opt.State != HookInstallOptions::HS::RedirectToOurs || !opt.Reversed) { // unverified hook (see InstallStatic): neither the slot nor the whole-vtable copy may use ours
-        notsa::standalone::Fixups::RegisterUnverified((uint32_t)fnAddressGTA, fnName.c_str(), (int)opt.State, opt.Reversed,
-            (uint32_t)vmtInfoGTA.GetAddress() + (uint32_t)vmtInfoGTA.FindIndexOf(fnAddressGTA) * 4);
-        AddHookToCategory(category, opt, std::make_shared<ReversibleHook::NullHook>(std::move(fnName), fnAddressOur, fnAddressGTA));
-        return;
-    }
-    if (!vmtInfoOur.GetAddress()) { // class vtable not exported (see VMTInfo::FindByClassName)
-        AddHookToCategory(category, opt, std::make_shared<ReversibleHook::NullHook>(std::move(fnName), fnAddressOur, fnAddressGTA));
-        return;
-    }
-    const auto idx = vmtInfoGTA.FindIndexOf(fnAddressGTA);
-    void* const fnOurImpl = vmtInfoOur.GetFunctionAt(idx);
-    notsa::standalone::Fixups::RegisterVMTSlot((uint32_t)vmtInfoGTA.GetAddress(), idx, (uint32_t)fnAddressGTA, fnOurImpl, fnName.c_str());
-    AddHookToCategory(category, opt, std::make_shared<ReversibleHook::NullHook>(
-        std::move(fnName),
-        fnOurImpl,
-        fnAddressGTA
-    ));
-#elif defined(NOTSA_STANDALONE_DUMP_HOOKS_ONLY) || defined(NOTSA_NO_HOOK_REGISTRY) // (the latter is never called: the RH_Scoped* macros are no-ops there)
+#ifdef NOTSA_STANDALONE // (dump-only: the run build never calls this, the RH_Scoped* macros are no-ops there)
     AddHookToCategory(category, opt, std::make_shared<ReversibleHook::NullHook>(
         std::move(fnName),
         fnAddressOur,

@@ -29,7 +29,7 @@
 #include <extensions/CommandLine.h>
 #include <extensions/debug.hpp>
 #ifdef NOTSA_STANDALONE_RUN
-#include <standalone/DataImage.h>
+#include <standalone/ImageDiag.h>
 #include <standalone/Fixups.h>
 #endif
 #endif
@@ -581,27 +581,24 @@ INT WINAPI WinMain(HINSTANCE instance, HINSTANCE hPrevInstance, LPSTR cmdLine, I
     InjectHooksMain(); // This will also end up calling the CLI to dump the hooks
 
     return 0;
-#else // NOTSA_STANDALONE_RUN (P2a, see .notes/P2A_DESIGN.md)
-    // The data image was already mapped by the `.CRT$XIB` initializer (before any static constructor); this is a no-op safety net.
-    notsa::standalone::DataImage::Load();
-    notsa::standalone::Fixups::InstallRedirectHandler();
+#else // NOTSA_STANDALONE_RUN (P2a, see .notes/P2A_DESIGN.md; F3: image-less)
+    // F3: the run build has no original data image and no original code to patch (nothing is mapped at the original addresses, no original_data.* is read).
+    notsa::standalone::Fixups::InstallDiagnostics();
 
     // D7: the original's CRT runs x87 libm (VS2005); the 32-bit UCRT would otherwise route sin/cos/pow/... to its SSE2 implementations on any SSE2 CPU
     _set_SSE2_enable(0);
     notsa::standalone::Fixups::LogFpuState("WinMain");
     _clearfp(); // the CRT's _FPinit ends with fnclex: start without sticky exception flags
 
-    // Hooks do not patch code here: each RH_Scoped*Install registers (exe address -> our function) in notsa::standalone::Fixups
+    // The hook macros are no-ops here (reversiblehooks/NoHookRegistry.h): InjectHooksMain only runs the non-hook part (script command handlers, logger, CLI)
     ReversibleHooks::RHManager::CreateInstance();
     notsa::ScopeGuard cleanupRH{ [] {
         ReversibleHooks::RHManager::DestroyInstance();
     }};
     InjectHooksMain();
 
-    // Replace code pointers in the data image (vtables, callback tables) with ours / trap stubs. Must come after ALL registrations.
-    notsa::standalone::Fixups::ApplyToDataImage();
     NOTSA_VERIFY_GLOBALS_BOOT(); // A2: boot dump for tools/standalone/verify_globals.py (nothing unless NOTSA_VERIFY_GLOBALS)
-    notsa::standalone::DataImage::ArmDiagnostics(); // A3: NOTSA_POISON_CONVERTED / NOTSA_IMAGE_CENSUS (nothing unless the env variable is set)
+    NOTSA_IMAGE_DIAG_ARM();      // A3: dev-only stray-access census / poison over the mapped original image (nothing unless GTASA_IMAGE_DIAG and the env variable is set)
     return NOTSA_WinMain(instance, hPrevInstance, cmdLine, nCmdShow);
 #endif
 }

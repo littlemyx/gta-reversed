@@ -26,8 +26,8 @@ struct TableCheck {
     TableCheck(const char* name, const char* file, int line, TableCheckFn fn) noexcept; // GlobalsVerify.cpp
 };
 
-//! The pristine data image: `original_data.bin` read from the exe's directory (VA 0x858000 = file offset 0). NOT the mapped image: Fixups::ApplyToDataImage
-//! patches dwords that look like code pointers, which also hits ASCII text ("strip_B" contains the dword 0x425F70). nullptr if the VA is outside the image.
+//! The pristine data image: `original_data.bin` read from the exe's directory (VA 0x858000 = file offset 0). NOT a mapped image (the run build maps none; the
+//! GTASA_IMAGE_DIAG census image is a separate, dev-only mapping). nullptr if the VA is outside the image or the file is missing.
 const uint8_t* PristineImage(uint32_t va); // GlobalsVerify.cpp
 
 //! A struct / array of the image at its original address

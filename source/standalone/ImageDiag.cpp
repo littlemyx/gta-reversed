@@ -1,7 +1,7 @@
 #include "StdInc.h"
 
-// A3 of .notes/DETACH_DATA_PLAN.md: diagnostics on the original data image of the standalone run build. Armed once from WinMain (after
-// Fixups::ApplyToDataImage), both are off unless their env variable is set:
+// DEV-ONLY (GTASA_IMAGE_DIAG, slice A3 of .notes/DETACH_DATA_PLAN.md): diagnostics on the original data image mapped by ImageLoad.cpp. Armed once from WinMain, the first two
+// are off unless their env variable is set (the exe-access trap below is always armed):
 //   NOTSA_POISON_CONVERTED=<file>   fills the image bytes of already-converted globals with 0xDD. The file is a list of `0xADDR<ws>SIZE...` lines
 //                                   (`#` lines skipped); the NOTSA_VERIFY_GLOBALS boot dump of the detached build is exactly that format. Only useful in a
 //                                   detached build: a converted global no longer lives in the image, so any code still reading the old address now sees 0xDD.
@@ -10,13 +10,14 @@
 //                                   page gets its original protection back. NOTSA_IMAGE_CENSUS_REARM_MS=<ms> protects all pages again every <ms> (new
 //                                   (address, IP) pairs only are logged), tools/standalone/census.py turns the file into .notes/DETACH_census.tsv.
 // Caveat of the census: a kernel-side access to a protected page (ReadFile/GetKeyboardState into a global buffer) fails with an error code instead of faulting.
-#ifdef NOTSA_STANDALONE_RUN
+#ifdef NOTSA_IMAGE_DIAG
 #include <cstdlib>
 #include <thread>
-#include "DataImage.h"
+#include <atomic>
+#include "ImageDiag.h"
 #include "Fixups.h"
 
-namespace notsa::standalone::DataImage {
+namespace notsa::standalone::ImageDiag {
 namespace {
 constexpr uint32_t PAGE = 0x1000;
 
@@ -227,12 +228,58 @@ void StartCensus() {
     }
     Fixups::Log("census: %u pages of 0x%08X..0x%08X protected, log '%s', re-arm %u ms, own code 0x%08X..0x%08X", g_C.NumPages, g_C.Lo, g_C.Hi, path, rearmMs, g_C.TextLo, g_C.TextHi);
 }
+
+// ---- exe-access trap ----------------------------------------------------------------------------------------------------------------------------------
+// Nothing patches the image (no code-pointer rewrite, no trap stubs): a stray call/jump through a leftover exe pointer, or a data access to the original code bytes, faults on
+// the NOACCESS placeholder with the exact exe address; a write into the (read-only) original .rdata is a modified vtable / constant table.
+bool SafeReadU32(uint32_t addr, uint32_t& out) {
+    __try {
+        out = *(volatile uint32_t*)addr;
+        return true;
+    } __except (EXCEPTION_EXECUTE_HANDLER) {
+        return false;
+    }
+}
+
+LONG CALLBACK ExeAccessVEH(EXCEPTION_POINTERS* ep) {
+    const auto* r = ep->ExceptionRecord;
+    if (r->ExceptionCode != EXCEPTION_ACCESS_VIOLATION || r->NumberParameters < 2) {
+        return EXCEPTION_CONTINUE_SEARCH;
+    }
+    const auto  pc   = (uint32_t)ep->ContextRecord->Eip;
+    const auto& info = GetInfo();
+    const auto  kind = (uint32_t)r->ExceptionInformation[0]; // 0 read, 1 write, 8 execute (DEP)
+    const auto  addr = (uint32_t)r->ExceptionInformation[1];
+    const auto  base = (uint32_t)GetModuleHandleA(nullptr);
+    if (pc >= info.CodeLo && pc < info.CodeHi && addr == pc) { // instruction fetch from the original code range
+        uint32_t retAddr = 0;
+        if (!SafeReadU32(ep->ContextRecord->Esp, retAddr)) {
+            retAddr = 0xDEADDEAD; // unreadable stack
+        }
+        Fixups::Fatal("TRAP: raw jump/call into the original code at 0x%08X (original code is not part of the standalone exe). Return address on stack: 0x%08X (exe +0x%X).", pc, retAddr, retAddr - base);
+    }
+    if (kind != 8 && addr >= info.CodeLo && addr < info.DataBase) {
+        Fixups::Fatal("TRAP: data %s access to the original code range at 0x%08X from 0x%08X (exe +0x%X). The original code bytes are not part of the standalone image.", kind ? "write" : "read", addr, pc, pc - base);
+    }
+    if (kind == 1 && info.RdataLo && addr >= info.RdataLo && addr < info.RdataHi) {
+        Fixups::Fatal("TRAP: write into the read-only original .rdata at 0x%08X from 0x%08X (exe +0x%X): a vtable/constant/string table is being modified.", addr, pc, pc - base);
+    }
+    return EXCEPTION_CONTINUE_SEARCH;
+}
 } // namespace
 
 void ArmDiagnostics() {
     if (!IsLoaded()) {
         return;
     }
+    const auto& info = GetInfo();
+    if (info.RdataLo && info.RdataHi > info.RdataLo) { // .rdata is read-only in the original exe; nothing writes into it any more (no fixup pass)
+        DWORD old;
+        if (VirtualProtect((void*)info.RdataLo, info.RdataHi - info.RdataLo, PAGE_READONLY, &old)) {
+            Fixups::Log("image: .rdata 0x%08X..0x%08X is now PAGE_READONLY", info.RdataLo, info.RdataHi);
+        }
+    }
+    AddVectoredExceptionHandler(1, ExeAccessVEH);
     if (const char* f = std::getenv("NOTSA_POISON_CONVERTED"); f && *f) {
         PoisonConverted(f);
     }
@@ -240,5 +287,5 @@ void ArmDiagnostics() {
         StartCensus();
     }
 }
-} // namespace notsa::standalone::DataImage
+} // namespace notsa::standalone::ImageDiag
 #endif

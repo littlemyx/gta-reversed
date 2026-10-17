@@ -31,12 +31,9 @@ inline void** GetVMT(const void* self) {
     return *(void***)(self);
 }
 
-// In the standalone build there is no original code at `address`: resolve to our reimplementation (hook table) or to a trap
-#ifdef NOTSA_STANDALONE_RUN
-#define NOTSA_PLUGIN_ADDR(address) (notsa::standalone::ResolveCallTarget(address))
-#else
+// (F3: the run build has no hook table to resolve `address` through; the by-address calls below are a compile error there (NOTSA_GLOBALS_DETACHED), and in the DLL build /
+// the address-mode oracle tests `address` is real original code)
 #define NOTSA_PLUGIN_ADDR(address) (address)
-#endif
 
 // Detached run build (NOTSA_GLOBALS_DETACHED): there is no original code at `address`, so ANY instantiation of the by-address calls below is a compile error
 // (the DLL build and the address-mode oracle tests do not define it and keep working). Convert the call to a direct call of our own function.

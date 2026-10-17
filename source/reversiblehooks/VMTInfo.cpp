@@ -1,10 +1,8 @@
 #include "StdInc.h"
+#ifndef NOTSA_STANDALONE_RUN // F3: the standalone run build reads no vtable (no hook registry, no exported vtables, no original exe): nothing to compile here
 #include "VMTInfo.h"
 #include "dllmain.h"
 #include "HooksUtility.hpp"
-#ifdef NOTSA_STANDALONE_RUN
-#include "standalone/Fixups.h"
-#endif
 
 namespace {
 // Really fucking simple name mangling for msvc
@@ -21,11 +19,7 @@ void MangleClassNameMSVC(CHAR* out, std::string_view name) {
 }
 
 HMODULE GetVtableModule() {
-#ifdef NOTSA_STANDALONE_RUN
-    return GetModuleHandleA(nullptr); // the exe itself exports the vtables (NOTSA_EXPORT_VTABLE = dllexport)
-#else
     return notsa::GetDLLHandle();
-#endif
 }
 
 void** FindVMTAddressByClassName(std::string_view className) {
@@ -41,17 +35,7 @@ void** FindVMTAddressByClassName(std::string_view className) {
 };
 
 auto ReversibleHooks::Utility::VMTInfo::FindByClassName(const char* name, size_t size) -> VMTInfo {
-#ifdef NOTSA_STANDALONE_RUN
-    // A class without `NOTSA_EXPORT_VTABLE` must not abort the whole startup: its virtual hooks are skipped (the exe vtable slots stay trapped)
-    try {
-        return VMTInfo{ FindVMTAddressByClassName(name), size };
-    } catch (const std::exception& e) {
-        notsa::standalone::Fixups::Log("VMT export missing, virtual hooks of this class are skipped: %s", e.what());
-        return VMTInfo{};
-    }
-#else
     return VMTInfo{ FindVMTAddressByClassName(name), size };
-#endif
 }
 
 size_t ReversibleHooks::Utility::VMTInfo::FindIndexOf(void* fn) {
@@ -63,3 +47,4 @@ size_t ReversibleHooks::Utility::VMTInfo::FindIndexOf(void* fn) {
     }
     throw std::runtime_error{ std::format("Failed to find function `{}` in VMT", fn) };
 }
+#endif // !NOTSA_STANDALONE_RUN

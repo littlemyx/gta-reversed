@@ -60,13 +60,13 @@
         },
         {
             "name": "StandaloneDetached",
-            "displayName": "StandaloneRelease + detached globals (NOTSA_GLOBAL are real C++ variables) + boot dump for tools/standalone/verify_globals.py",
-            "description": "Slice A2 of .notes/DETACH_DATA_PLAN.md. Same flags as StandaloneRelease, separate build dir, GTASA_DETACHED_GLOBALS=ON and GTASA_VERIFY_GLOBALS=ON (run with NOTSA_VERIFY_GLOBALS=<file>).",
+            "displayName": "StandaloneRelease + dev diagnostics: boot dump for tools/standalone/verify_globals.py and the original-image census (the only run config that maps the original data image)",
+            "description": "Slices A2/A3/F3 of .notes/DETACH_DATA_PLAN.md. Same flags as StandaloneRelease (whose exe is image-less and relocatable), separate build dir, GTASA_VERIFY_GLOBALS=ON (run with NOTSA_VERIFY_GLOBALS=<file>) and GTASA_IMAGE_DIAG=ON (fixed base + 9 MB placeholder + original_data.bin/json next to the exe; NOTSA_IMAGE_CENSUS / NOTSA_POISON_CONVERTED). Needs GTASA_ORIGINAL_EXE.",
             "inherits": "StandaloneRelease",
             "binaryDir": "${sourceDir}/build/StandaloneDetached",
             "cacheVariables": {
-                "GTASA_DETACHED_GLOBALS": "ON",
-                "GTASA_VERIFY_GLOBALS": "ON"
+                "GTASA_VERIFY_GLOBALS": "ON",
+                "GTASA_IMAGE_DIAG": "ON"
             }
         }
     ],

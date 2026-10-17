@@ -1,7 +1,7 @@
 #pragma once
 
 // NOTSA_VERIFY_GLOBALS (slice A2 of .notes/DETACH_DATA_PLAN.md): every `NOTSA_GLOBAL*` global converted to a real C++ variable (detached mode) registers
-// {name, file:line, original VA, size, address of its storage} here at static-init time. `DumpAtBoot()` (WinMain, after Fixups::ApplyToDataImage and
+// {name, file:line, original VA, size, address of its storage} here at static-init time. `DumpAtBoot()` (WinMain, after InjectHooksMain and
 // before any game code ran) writes one line per global to the file named by the environment variable NOTSA_VERIFY_GLOBALS:
 //     <VA hex>\t<size>\t<name>\t<file:line>\t<our bytes hex>
 // `tools/standalone/verify_globals.py` compares these against `original_data.bin`.

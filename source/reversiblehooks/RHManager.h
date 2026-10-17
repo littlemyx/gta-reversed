@@ -25,9 +25,6 @@
 
 #ifdef NOTSA_STANDALONE
 #include "ReversibleHook/NullHook.h"
-#ifdef NOTSA_STANDALONE_RUN
-#include "standalone/Fixups.h"
-#endif
 #else
 #include "ReversibleHook/VirtualDestructorHook.h"
 #include "ReversibleHook/StaticTwoWayHook.h"
@@ -137,16 +134,6 @@ public: // Script hooking functions //
                    ptrAddressGTA = std::bit_cast<void*>(addressGTA);
 
     #ifdef NOTSA_STANDALONE
-    #if defined(NOTSA_STANDALONE_RUN) && !defined(NOTSA_NO_HOOK_REGISTRY)
-        // No code is patched: the (exe address -> our function) pair becomes a fixup applied to the data image
-        // ... but only for hooks that are enabled AND reversed. `RedirectToGTA` / `Reversed = false` / `Unhooked` hooks ran the exe code in the
-        // DLL build; here they are "unverified": not registered (they trap with the exe address) and listed in standalone_unverified_hooks.txt
-        if (opt.State == HookInstallOptions::HS::RedirectToOurs && opt.Reversed) {
-            notsa::standalone::Fixups::RegisterFunction((uint32_t)addressGTA, ptrAddressOur, fnName.c_str());
-        } else {
-            notsa::standalone::Fixups::RegisterUnverified((uint32_t)addressGTA, fnName.c_str(), (int)opt.State, opt.Reversed, 0);
-        }
-    #endif
         AddHookToCategory(path, std::move(opt), std::make_shared<ReversibleHook::NullHook>(
             std::move(fnName),
             ptrAddressOur,
@@ -230,22 +217,11 @@ public: // Script hooking functions //
         HookInstallOptions opt = {}
     ) {
     #ifdef NOTSA_STANDALONE
-    #if defined(NOTSA_STANDALONE_RUN) && !defined(NOTSA_NO_HOOK_REGISTRY)
-        // Slot 0 of our class's vtable is the scalar deleting destructor, exactly what slot 0 of the exe vtable holds
-        void* const dtorOur = vmtInfoOur.GetAddress() ? vmtInfoOur.GetFunctionAt(Utility::VMTInfo::DESTRUCTOR_VMT_INDEX) : nullptr; // null: vtable not exported
-        if (opt.State == HookInstallOptions::HS::RedirectToOurs && opt.Reversed) {
-            notsa::standalone::Fixups::RegisterVMTSlot((uint32_t)vmtInfoGTA.GetAddress(), Utility::VMTInfo::DESTRUCTOR_VMT_INDEX, (uint32_t)addressGTA, dtorOur, "Destructor");
-        } else { // unverified: see InstallStatic
-            notsa::standalone::Fixups::RegisterUnverified((uint32_t)addressGTA, "Destructor", (int)opt.State, opt.Reversed, (uint32_t)vmtInfoGTA.GetAddress() + Utility::VMTInfo::DESTRUCTOR_VMT_INDEX * 4);
-        }
-        AddHookToCategory(path, std::move(opt), std::make_shared<ReversibleHook::NullHook>("Destructor", dtorOur, (void*)(addressGTA)));
-    #else
         AddHookToCategory(path, std::move(opt), std::make_shared<ReversibleHook::NullHook>(
             "Destructor",
             nullptr, // We don't have a VMT to get the actual scalar destructor address, and making a wrapper isn't any more meaningful in this case
             (void*)(addressGTA)
         ));
-    #endif
     #else
         AddHookToCategory(path, std::move(opt), std::make_shared<ReversibleHook::VirtualDestructorHook<T>>(
             vmtInfoOur,

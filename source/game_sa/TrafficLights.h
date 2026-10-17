@@ -17,16 +17,16 @@ enum eTrafficLightsDirection {
 
 class CTrafficLights {
 private:
-    static inline auto& aTrafficLightColoursR = StaticRef<std::array<uint8, 3>>(0x8A6214);
-    static inline auto& aTrafficLightColoursG = StaticRef<std::array<uint8, 3>>(0x8A6218);
-    static inline auto& aTrafficLightColoursB = StaticRef<std::array<uint8, 3>>(0xA9AD94);
-    static inline auto& fLightMult = StaticRef<float>(0x8A621C);
+    static inline NOTSA_GLOBAL(aTrafficLightColoursR, 0x8A6214, (std::array<uint8, 3>), { 0, 255, 255 });
+    static inline NOTSA_GLOBAL(aTrafficLightColoursG, 0x8A6218, (std::array<uint8, 3>), { 255, 128 });
+    static inline NOTSA_GLOBAL(aTrafficLightColoursB, 0xA9AD94, (std::array<uint8, 3>), {});
+    static inline NOTSA_GLOBAL(fLightMult, 0x8A621C, (float), { 0.0015686274f });
 
-    static inline auto& vecTrafficLights5_1 = StaticRef<CVector>(0xA9ADD4);
-    static inline auto& vecTrafficLights5_2 = StaticRef<CVector>(0xA9ADC8);
-    static inline auto& vecTrafficLights_1 = StaticRef<CVector>(0xA9ADBC);
-    static inline auto& vecTrafficLights_2 = StaticRef<CVector>(0xA9ADB0);
-    static inline auto& uiPedLightFlags = StaticRef<uint32>(0xA9ADE0);
+    static inline NOTSA_GLOBAL(vecTrafficLights5_1, 0xA9ADD4, (CVector), {});
+    static inline NOTSA_GLOBAL(vecTrafficLights5_2, 0xA9ADC8, (CVector), {});
+    static inline NOTSA_GLOBAL(vecTrafficLights_1, 0xA9ADBC, (CVector), {});
+    static inline NOTSA_GLOBAL(vecTrafficLights_2, 0xA9ADB0, (CVector), {});
+    static inline NOTSA_GLOBAL(uiPedLightFlags, 0xA9ADE0, (uint32), {});
 
 public:
     static void InjectHooks();

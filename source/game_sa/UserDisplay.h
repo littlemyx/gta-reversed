@@ -12,9 +12,9 @@
 
 class CUserDisplay {
 public:
-    static inline auto& PlaceName      = StaticRef<CPlaceName>(0xBA18F4);
-    static inline auto& OnscnTimer     = StaticRef<COnscreenTimer>(0xBA1788);
-    static inline auto& CurrentVehicle = StaticRef<CCurrentVehicle>(0xBA18FC);
+    static inline NOTSA_GLOBAL(PlaceName, 0xBA18F4, (CPlaceName), {});
+    static inline NOTSA_GLOBAL(OnscnTimer, 0xBA1788, (COnscreenTimer), {});
+    static inline NOTSA_GLOBAL(CurrentVehicle, 0xBA18FC, (CCurrentVehicle), {});
 
 public:
     static void InjectHooks();

@@ -13,15 +13,15 @@
 
 class CTheZones {
 public:
-    static inline auto&       ZonesVisited = StaticRef<notsa::mdarray<bool, 10, 10>>(0xBA3730); // Explored territories. Count: 100
+    static inline NOTSA_GLOBAL(ZonesVisited, 0xBA3730, (notsa::mdarray<bool, 10, 10>), {}); // Explored territories. Count: 100
 
-    static inline auto& m_CurrLevel = StaticRef<eLevelName>(0xBA6718);
-    static inline auto& ZonesRevealed = StaticRef<int32>(0xBA372C); // Number of explored territories
-    static inline auto& TotalNumberOfNavigationZones = StaticRef<int16>(0xBA3794); // Info zones
-    static inline auto& NavigationZoneArray = StaticRef<std::array<CZone, 380>>(0xBA3798);
-    static inline auto& TotalNumberOfMapZones = StaticRef<int16>(0xBA1900); // Map zones
-    static inline auto& MapZoneArray = StaticRef<std::array<CZone, 39>>(0xBA1908);
-    static inline auto& TotalNumberOfZoneInfos = StaticRef<int16>(0xBA1DE8);
+    static inline NOTSA_GLOBAL(m_CurrLevel, 0xBA6718, (eLevelName), {});
+    static inline NOTSA_GLOBAL(ZonesRevealed, 0xBA372C, (int32), {}); // Number of explored territories
+    static inline NOTSA_GLOBAL(TotalNumberOfNavigationZones, 0xBA3794, (int16), {}); // Info zones
+    static inline NOTSA_GLOBAL(NavigationZoneArray, 0xBA3798, (std::array<CZone, 380>), {});
+    static inline NOTSA_GLOBAL(TotalNumberOfMapZones, 0xBA1900, (int16), {}); // Map zones
+    static inline NOTSA_GLOBAL(MapZoneArray, 0xBA1908, (std::array<CZone, 39>), {});
+    static inline NOTSA_GLOBAL(TotalNumberOfZoneInfos, 0xBA1DE8, (int16), {});
     
     static inline auto& ZoneInfoArray = StaticRef<std::array<CZoneInfo, 380>>(0xBA1DF0);
 

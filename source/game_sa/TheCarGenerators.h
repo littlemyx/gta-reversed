@@ -13,11 +13,11 @@ static constexpr int32 NUM_CAR_GENERATORS = 500;
 
 class CTheCarGenerators {
 public:
-    static inline auto& GenerateEvenIfPlayerIsCloseCounter = StaticRef<uint8>(0xC279D0);
-    static inline auto& ProcessCounter = StaticRef<uint8>(0xC279D1);
-    static inline auto& NumOfCarGenerators = StaticRef<uint32>(0xC279D4);
-    static inline auto& m_SpecialPlateHandler = StaticRef<CSpecialPlateHandler>(0xC279D8);
-    static inline auto& CarGeneratorArray = StaticRef<CCarGenerator[NUM_CAR_GENERATORS]>(0xC27AD0);
+    static inline NOTSA_GLOBAL(GenerateEvenIfPlayerIsCloseCounter, 0xC279D0, (uint8), {});
+    static inline NOTSA_GLOBAL(ProcessCounter, 0xC279D1, (uint8), {});
+    static inline NOTSA_GLOBAL(NumOfCarGenerators, 0xC279D4, (uint32), {});
+    static inline NOTSA_GLOBAL(m_SpecialPlateHandler, 0xC279D8, (CSpecialPlateHandler), {});
+    static inline NOTSA_GLOBAL(CarGeneratorArray, 0xC27AD0, (CCarGenerator[NUM_CAR_GENERATORS]), {});
 
 public:
     static void InjectHooks();

@@ -225,7 +225,7 @@ public:
     static inline NOTSA_GLOBAL(ms_nTotalMissionPeds_Stored, 0x97FA68, (uint32), {});
     static inline NOTSA_GLOBAL(ms_nNumGang_Stored, 0x97FA80, (std::array<uint32, TOTAL_GANGS>), {});
 
-    static inline auto& PlayerInfo = StaticRef<CPlayerInfo>(0xA430B0);
+    static inline NOTSA_GLOBAL(PlayerInfo, 0xA430B0, (CPlayerInfo), {}); static_assert(sizeof(PlayerInfo) == 400);
 
     static inline NOTSA_GLOBAL(m_PedPoolConversion, 0x97F838, (std::array<int32, 140>), {});
     static inline NOTSA_GLOBAL(m_VehiclePoolConversion, 0x97F680, (std::array<int32, 110>), {});

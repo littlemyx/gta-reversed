@@ -454,3 +454,5 @@ uint32 CWeaponInfo::GetWeaponReloadTime() const {
     }
     return 400u;
 }
+
+NOTSA_GLOBAL_DEF(CWeaponInfo, aWeaponInfo, 0xC8AAB8, (CWeaponInfo[80]), {}); static_assert(sizeof(CWeaponInfo::aWeaponInfo) == 8960);

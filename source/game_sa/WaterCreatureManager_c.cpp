@@ -2,7 +2,7 @@
 
 #include "WaterCreatureManager_c.h"
 
-auto& g_waterCreatureMan = StaticRef<WaterCreatureManager_c>(0xC1DF30);
+NOTSA_GLOBAL(g_waterCreatureMan, 0xC1DF30, (WaterCreatureManager_c), {}); static_assert(sizeof(g_waterCreatureMan) == 6684);
 
 void WaterCreatureManager_c::InjectHooks() {
     RH_ScopedClass(WaterCreatureManager_c);
@@ -19,6 +19,9 @@ void WaterCreatureManager_c::InjectHooks() {
 
 WaterCreatureManager_c::WaterCreatureManager_c() : m_waterCreatureItems(), m_waterCreaturePool(), m_waterCreatureList()
 {}
+
+// 0x6E3F20 (the exe's atexit wrapper 0x856A80 only runs member dtors: the pool / list / creature array have trivial ones)
+WaterCreatureManager_c::~WaterCreatureManager_c() = default;
 
 // 0x6E3F90
 bool WaterCreatureManager_c::Init() {

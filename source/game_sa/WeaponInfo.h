@@ -30,7 +30,9 @@ class CWeaponInfo {
     static_assert(NUM_WEAPON_INFOS == 80);
 
     //! Memory Layout(Assuming vanilla settings): [STD 0 - 47][POOR 47 - 57][PRO 58 - 68][COP 69 - 79]
-    static inline auto& aWeaponInfo = StaticRef<CWeaponInfo[NUM_WEAPON_INFOS]>(0xC8AAB8);
+public: // (was private) the detached definition in WeaponInfo.cpp registers it for verify_globals from namespace scope
+    static NOTSA_GLOBAL_DECL(CWeaponInfo, aWeaponInfo, 0xC8AAB8, (CWeaponInfo[NUM_WEAPON_INFOS])); // detached: defined at the end of WeaponInfo.cpp (CWeaponInfo is incomplete here)
+private:
 
     struct tAnimAimOffsets {
         float AimX;

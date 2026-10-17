@@ -26,3 +26,12 @@ public:
     operator bool() const { return IsValid(); }
 };
 VALIDATE_SIZE(CNodeAddress, 0x4);
+
+// The exe fills its global CNodeAddress arrays with static ctors that store ONLY the area id (0xFFFF); the node id stays 0 (ctors 0x84A040 / 0x84A080 / 0x84A640).
+// The NSDMI above is {-1, -1}: the detached globals use this to reproduce the exe image byte for byte.
+template<size_t N>
+constexpr std::array<CNodeAddress, N> MakeExeNodeAddressArray() {
+    std::array<CNodeAddress, N> a{};
+    for (auto& e : a) { e = CNodeAddress{ (uint16)-1, 0 }; }
+    return a;
+}

@@ -14,6 +14,7 @@ public: // Original used protected and accessor to use them
     CPtrListDoubleLink<CDummy*>    Dummies{};   //!< Dummies in this sector
 
 public: // NOTSA:
+    CSector()                          = default; // (the deleted copy / move members below suppress the implicit one) real sector arrays in the detached build
     CSector(const CSector&)            = delete;
     CSector& operator=(const CSector&) = delete;
     CSector(CSector&&)                 = delete;

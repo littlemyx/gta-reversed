@@ -9,6 +9,7 @@
 #include "RenderWare.h"
 #include "Vector.h"
 #include "PtrListDoubleLink.h"
+#include "PlayerPedData.h" // CPlayerInfo is a by-value member of real globals in the detached build
 
 class CPed;
 class CVehicle;

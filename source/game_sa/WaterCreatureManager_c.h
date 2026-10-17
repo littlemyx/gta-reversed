@@ -67,4 +67,4 @@ private:
     static void InjectHooks();
 };
 
-extern WaterCreatureManager_c& g_waterCreatureMan;
+NOTSA_GLOBAL_EXTERN(g_waterCreatureMan, (WaterCreatureManager_c));

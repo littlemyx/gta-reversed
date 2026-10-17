@@ -1371,7 +1371,12 @@ void CPostEffects::Render() {
     RwRasterPopContext();
     RsCameraBeginUpdate(Scene.m_pRwCamera);
 
+#ifdef NOTSA_GLOBALS_DETACHED
     NOTSA_SCOPED_GLOBAL(s_ExtraMult, 0xC4032C, 0xC40330, 1, (float), 0.35f);
+#else
+    auto& s_ExtraMult = ScopedStaticRef<float>(0xC4032C, 0xC40330, 1, 0.35f); // no `static` here (the macro would add one: different object code)
+#endif
+#line 1371
 
     if (m_bFog) {
         Fog();

@@ -56,7 +56,7 @@ public:
     static inline const CVector XaxisIK = CVector(1.0f, 0.0f, 0.0f); // 0x8D232C
     static inline const CVector YaxisIK = CVector(0.0f, 1.0f, 0.0f); // 0x8D2338
     static inline const CVector ZaxisIK = CVector(0.0f, 0.0f, 1.0f); // 0x8D2344
-    static inline auto& ms_torsoInfo = StaticRef<LimbMovementInfo>(0x8D22E4);
+    static inline NOTSA_GLOBAL(ms_torsoInfo, 0x8D22E4, (LimbMovementInfo), { 0.87266463f, -0.87266463f, 0.05235988f, 1.0471976f, -0.95993114f, 0.08726647f }); // maxYaw, minYaw, yawD, maxPitch, minPitch, pitchD
 
 public:
     static void InjectHooks();

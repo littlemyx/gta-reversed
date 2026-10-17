@@ -7,7 +7,7 @@
 
 #include "StdInc.h"
 
-static inline auto& bRotateWithNeck = StaticRef<bool>(0x8D2354);
+static inline NOTSA_GLOBAL(bRotateWithNeck, 0x8D2354, (bool), { true });
 
 namespace {
 // The exe tests `v > max` first, then `v < min` (0x5FDAB5..): unlike std::clamp this is well defined (and asserts nothing) when min > max

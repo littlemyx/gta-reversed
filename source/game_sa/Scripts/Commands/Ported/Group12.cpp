@@ -346,7 +346,7 @@ void SortOutObjectCollisionWithCar(CObject& obj, CVehicle* car) {
 
 //! 1295 GET_MAX_WANTED_LEVEL (case @0x48CB51) => max wanted level (0x8CDEE4)
 int32 GetMaxWantedLevel() {
-    return StaticRef<int32>(0x8CDEE4);
+    return NOTSA_GLOBAL_EXPR(0x8CDEE4, (int32), static_cast<int32>(CWanted::MaximumWantedLevel));
 }
 }; // namespace
 

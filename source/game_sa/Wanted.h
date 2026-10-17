@@ -60,9 +60,9 @@ private:
     bool                        m_StoredPoliceBackOff;
 
 public:
-    static inline auto& MaximumWantedLevel = StaticRef<eWantedLevel>(0x8CDEE4); // 6
-    static inline auto& MaximumChaosLevel = StaticRef<int32>(0x8CDEE8); // 9200; nMaximumWantedLevel
-    static inline auto& UseNewsHeliInAdditionToPolice = StaticRef<bool>(0xB7CB8C);
+    static inline NOTSA_GLOBAL(MaximumWantedLevel, 0x8CDEE4, (eWantedLevel), { std::bit_cast<eWantedLevel>(0x6U) }); // 6
+    static inline NOTSA_GLOBAL(MaximumChaosLevel, 0x8CDEE8, (int32), { 9200 }); // 9200; nMaximumWantedLevel
+    static inline NOTSA_GLOBAL(UseNewsHeliInAdditionToPolice, 0xB7CB8C, (bool), {});
 
 public:
     void Initialise();

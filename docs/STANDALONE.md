@@ -155,7 +155,7 @@ Verification: build the dev preset `StandaloneDetached` (`-DGTASA_VERIFY_GLOBALS
   semantics (low dword of `fistp qword`; NaN -> 0).
 * **`ExeRecip(N)`** (`ExeRecip.h`, consteval): the exe multiplies by a float reciprocal constant; the compiler would fold `x / N` or `1.f/N` differently.
   `common.h` (SCREEN_STRETCH, lerp, deg/rad) follows the exe's constants.
-* **`FIX_BUGS` off** in the run build (`notsa::IsFixBugs()` false) and `NDEBUG` (no asserts; the original has none); `NOTSA_DEBUG` and the ImGui UI are off.
+* **All bugfixes off**: `FIX_BUGS` is not defined in the run build (`notsa::IsFixBugs()` false; `#error` if both `NOTSA_STANDALONE_RUN` and `FIX_BUGS` are set) and every `notsa::bugfixes::*` switch defaults to OFF (`reversiblebugfixes/ReversibleBugFix.hpp`; the two kept exceptions are listed in `docs/STANDALONE_FIDELITY.md`). Also `NDEBUG` (no asserts; the original has none); `NOTSA_DEBUG` and the ImGui UI are off.
 * RW parts are checked against the exe asm (table-based `RwSqrt`, minimax `RwSin`, `acos` polynomial, matrix kernel 0x7F12F0 order, tristrip generator 1:1).
 Deliberate deviations are listed in `docs/STANDALONE_FIDELITY.md`.
 

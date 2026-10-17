@@ -6,9 +6,9 @@ rem Launcher for a real play session of the standalone build (sound ON, normal u
 rem Lives in the play data dir C:\gta-play next to gta_reversed.exe (a snapshot of the build + links to the Steam data).
 rem   play.cmd              exclusive fullscreen, like the original
 rem   play.cmd windowed     window 1280x720 (desktop resolution is not switched)
-rem   play.cmd videos       play the intro videos (DirectShow movies are untested on this host: the first test hung on a black screen, so they are skipped by default)
-rem   (arguments can be combined, e.g. play.cmd windowed videos)
-rem Env overrides (for tests only): PLAY_MUTE=1 (silent run), PLAY_NOPAUSE=1 (no "press any key" at the end), PLAY_WINDOW=WxH, PLAY_VIDEOS=1.
+rem   play.cmd novideos    skip the intro videos (they play by default, like the original: Logo.mpg + GTAtitles.mpg, ~105 s, any key skips; `videos` is accepted and does nothing)
+rem   (arguments can be combined, e.g. play.cmd windowed novideos)
+rem Env overrides (for tests only): PLAY_MUTE=1 (silent run), PLAY_NOPAUSE=1 (no "press any key" at the end), PLAY_WINDOW=WxH, PLAY_VIDEOS=0 (skip the videos).
 
 set "PLAYDIR=%~dp0"
 if "%PLAYDIR:~-1%"=="\" set "PLAYDIR=%PLAYDIR:~0,-1%"
@@ -50,11 +50,12 @@ set "WMODE=полный экран"
 for %%A in (%*) do (
   if /i "%%~A"=="windowed" if not defined PLAY_WINDOW set "PLAY_WINDOW=1280x720"
   if /i "%%~A"=="videos" set "PLAY_VIDEOS=1"
+  if /i "%%~A"=="novideos" set "PLAY_VIDEOS=0"
 )
-set "VMODE=видеозаставки пропускаются"
-if "%PLAY_VIDEOS%"=="1" (
-  set "VMODE=видеозаставки включены"
-) else (
+rem videos are ON by default (BUG-VIDEO: the WM_GRAPHNOTIFY of the DirectShow graph now reaches the game, the intro ends by itself); only an explicit 0 / novideos skips them
+set "VMODE=видеозаставки включены (любая клавиша - пропустить)"
+if "%PLAY_VIDEOS%"=="0" (
+  set "VMODE=видеозаставки пропускаются"
   set "NOTSA_STANDALONE_SKIP_VIDEOS=1"
 )
 if defined PLAY_WINDOW (

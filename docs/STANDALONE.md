@@ -71,7 +71,8 @@ Copy `gta_reversed.exe`, `original_data.bin`, `original_data.json`, `data_pointe
 cwd into a 128-char buffer. The log is `standalone.log` (plus `logs/log.log`); a crash/abort raises exception 0xE0AB0001 and prints a symbolised stack.
 
 Environment variables (all optional, run build only):
-* `NOTSA_STANDALONE_SKIP_VIDEOS=1` - skip the intro videos (the original also waits for a key in PLAYING_LOGO when DirectShow fails).
+* `NOTSA_STANDALONE_SKIP_VIDEOS=1` - skip the intro videos (the original also waits for a key in PLAYING_LOGO when DirectShow fails). Native Windows plays them (DirectShow, Logo.mpg 15 s + GTAtitles.mpg 88 s, then the menu, same timeline as the original exe);
+  the end-of-movie notification reaches the game through an SDL message hook (`VideoPlayer.cpp`), `.notes/reports/BUG-VIDEO.md`. Under `NOTSA_STANDALONE_MUTE=1` the graph's audio renderer is muted too (`IBasicAudio`, -100 dB, logged as `[mute] ... DirectShow`).
 * `NOTSA_STANDALONE_INPUT=<file|script>` - key injector: `wait:<ms>;key:return;down:w;up:w` (newline = `;`); `until:control[:maxms]` / `until:invehicle[:maxms]` hold the script clock until the player has control (ped exists, no menu/cutscene/fade) / is in a vehicle (default max 60000 ms, logs `[until] ... ok|TIMEOUT after N ms`), so later steps are relative to the game being ready (`label:NAME` + `skipif:COND:NAME` jump forward to the label when COND holds, e.g. skip a retry); e.g. `wait:16000;key:return;wait:2500;key:return;wait:2500;key:return` starts a new game.
 * `NOTSA_STANDALONE_SCREENSHOT=<k>` - write `frame_N.bmp` (back buffer) every k-th frame; `..._SCREENSHOT_MAX=<n>` caps the count (default 30).
   `..._SCREENSHOT_ARM=<mark>` starts the every-k-th-frame cadence only after the input script's `mark:<mark>` (frame-exact bursts without burning `_MAX` in the menu/loading);

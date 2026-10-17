@@ -1,8 +1,8 @@
 #include "StdInc.h"
 #include "jpeglib.h"
 
-static auto& g_ScreenshotFileBuf    = StaticRef<std::array<uint8, 204'800>>(0xBD0B78);
-static auto& g_JpegDecodingToRaster = StaticRef<CRGBA*>(0xBD0160);
+static NOTSA_GLOBAL(g_ScreenshotFileBuf, 0xBD0B78, (std::array<uint8, 204'800>), {});
+static NOTSA_GLOBAL(g_JpegDecodingToRaster, 0xBD0160, (CRGBA*), {});
 
 // NOTSA. For debugging purposes, without using this callback,
 // game terminates without notice in case of any libjpeg failure.
@@ -96,9 +96,9 @@ void JPegCompressScreenToFile(RwCamera* camera, const char* path) {
 
 // 0x5D0740 -- unused
 void JPegCompressScreenToBuffer(RwCamera* cam, uint8** buffer, size_t& bufferSizeInOut) {
-    static auto& Buffer         = StaticRef<uint8**>(0xC02B78);
-    static auto& BufferSize     = StaticRef<size_t>(0xC02B7C);
-    static auto& TotalProcessed = StaticRef<size_t>(0xC02B80);
+    NOTSA_GLOBAL_LOCAL(Buffer, 0xC02B78, (uint8**), {});
+    NOTSA_GLOBAL_LOCAL(BufferSize, 0xC02B7C, (size_t), {});
+    NOTSA_GLOBAL_LOCAL(TotalProcessed, 0xC02B80, (size_t), {});
 
     Buffer         = buffer;
     BufferSize     = bufferSizeInOut;
@@ -145,7 +145,7 @@ void JPegCompressScreenToBuffer(RwCamera* cam, uint8** buffer, size_t& bufferSiz
 
 // 0x5D05F0 -- PS2 leftover
 void JPegDecompressToRaster(RwRaster* raster, jpeg_source_mgr& src) {
-    static auto& g_JpegScan = StaticRef<uint8*>(0xBD0170);
+    NOTSA_GLOBAL_LOCAL(g_JpegScan, 0xBD0170, (uint8*), {});
 
     jpeg_error_mgr         jerr{};
     jpeg_decompress_struct cinfo{
@@ -186,7 +186,7 @@ void JPegDecompressToRaster(RwRaster* raster, jpeg_source_mgr& src) {
 
 // 0x5D0320 -- PS2 leftover
 void JPegDecompressToVramFromBuffer(RwRaster* raster, bool enable) {
-    static auto& g_ScreenshotFilePointer = StaticRef<size_t>(0xBD0B70);
+    NOTSA_GLOBAL_LOCAL(g_ScreenshotFilePointer, 0xBD0B70, (size_t), {});
 
     if (!enable) {
         return;

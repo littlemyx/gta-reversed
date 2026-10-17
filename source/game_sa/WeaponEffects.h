@@ -51,13 +51,13 @@ VALIDATE_SIZE(CWeaponEffects, 0x2C);
 
 constexpr auto MAX_NUM_WEAPON_CROSSHAIRS{ 2u };
 static inline auto& gCrossHair = StaticRef<std::array<CWeaponEffects, MAX_NUM_WEAPON_CROSSHAIRS>>(0xC8A838);
-static inline auto& gpCrossHairTex = StaticRef<RwTexture*>(0xC8A818);
-static inline auto& gpCrossHairTexFlight = StaticRef<RwTexture*[2]>(0xC8A810);
+NOTSA_GLOBAL_HDR(gpCrossHairTex, 0xC8A818, (RwTexture*), {});
+NOTSA_GLOBAL_HDR(gpCrossHairTexFlight, 0xC8A810, (RwTexture*[2]), {});
 
 // NOTSA names for the globals used by `CWeaponEffects::Render`
-static inline auto& gLastCrossHairTargetTime   = StaticRef<uint32>(0xC8A890);      // Time when `gpLastCrossHairTarget` has changed
-static inline auto& gpLastCrossHairTarget      = StaticRef<CEntity*>(0xC8A894);    // Last target found by the 2nd player's lock-on
-static inline auto& gCrossHairLockOffsetCos    = StaticRef<float>(0xC8A898);       // cos(angle) * m_fLockOnFade, used as Y offset
-static inline auto& gCrossHairLockOffsetSin    = StaticRef<float>(0xC8A89C);       // sin(angle) * m_fLockOnFade, used as X offset
-static inline auto& gCrossHairRingOffset       = StaticRef<std::array<float, MAX_NUM_WEAPON_CROSSHAIRS>>(0xC8A8A0); // Radius offset of the pulsing ring
-static inline auto& gCrossHairRingGrowing      = StaticRef<std::array<bool, MAX_NUM_WEAPON_CROSSHAIRS>>(0x8D6144);  // Is the pulsing ring currently growing
+NOTSA_GLOBAL_HDR(gLastCrossHairTargetTime, 0xC8A890, (uint32), {});      // Time when `gpLastCrossHairTarget` has changed
+NOTSA_GLOBAL_HDR(gpLastCrossHairTarget, 0xC8A894, (CEntity*), {});    // Last target found by the 2nd player's lock-on
+NOTSA_GLOBAL_HDR(gCrossHairLockOffsetCos, 0xC8A898, (float), {});       // cos(angle) * m_fLockOnFade, used as Y offset
+NOTSA_GLOBAL_HDR(gCrossHairLockOffsetSin, 0xC8A89C, (float), {});       // sin(angle) * m_fLockOnFade, used as X offset
+NOTSA_GLOBAL_HDR(gCrossHairRingOffset, 0xC8A8A0, (std::array<float, MAX_NUM_WEAPON_CROSSHAIRS>), {}); // Radius offset of the pulsing ring
+NOTSA_GLOBAL_HDR(gCrossHairRingGrowing, 0x8D6144, (std::array<bool, MAX_NUM_WEAPON_CROSSHAIRS>), { true, true });  // Is the pulsing ring currently growing

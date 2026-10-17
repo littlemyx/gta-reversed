@@ -42,7 +42,7 @@ class CWeaponInfo {
         uint16 CrouchRLoadA;
         uint16 CrouchRLoadB;
     };
-    static inline auto& ms_WeaponAimOffsets = StaticRef<std::array<tAnimAimOffsets, (+ANIM_GROUP_SPRAYCAN + 1) - (+ANIM_GROUP_PYTHON)>>(0xC8A8A8);
+    static inline NOTSA_GLOBAL(ms_WeaponAimOffsets, 0xC8A8A8, (std::array<tAnimAimOffsets, (+ANIM_GROUP_SPRAYCAN + 1) - (+ANIM_GROUP_PYTHON)>), {});
 
 public:
     eWeaponFire m_nWeaponFire;

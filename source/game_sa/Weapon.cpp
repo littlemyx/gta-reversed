@@ -2105,7 +2105,7 @@ bool CWeapon::FireInstantHit(CEntity* firingEntity, CVector* origin, CVector* mu
         case WEAPON_M4:
         case WEAPON_MINIGUN: { // 0x740C8C
             // Weapons that fire too fast only get the effects every second shot
-            static auto& s_RapidFireCounter = StaticRef<uint8>(0xC8A80C);
+            NOTSA_GLOBAL_LOCAL(s_RapidFireCounter, 0xC8A80C, (uint8), {});
             const auto   animLoopLen        = (int32)(((double)wi->m_fAnimLoopEnd - wi->m_fAnimLoopStart) * 900.0);
             if (animLoopLen < 50) {
                 s_RapidFireCounter++;

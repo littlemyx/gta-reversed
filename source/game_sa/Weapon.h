@@ -48,9 +48,9 @@ class CWeaponInfo;
 
 class CWeapon {
 public:
-    static inline auto& ms_fExtinguisherAimAngle = StaticRef<float>(0x8D610C); // default -0.34907 rad. (-pi/8)
-    static inline auto& bPhotographHasBeenTaken  = StaticRef<bool>(0xC8A7C0);
-    static inline auto& ms_bTakePhoto            = StaticRef<bool>(0xC8A7C1);
+    static inline NOTSA_GLOBAL(ms_fExtinguisherAimAngle, 0x8D610C, (float), { -0.34906587f }); // default -0.34907 rad. (-pi/8)
+    static inline NOTSA_GLOBAL(bPhotographHasBeenTaken, 0xC8A7C0, (bool), {});
+    static inline NOTSA_GLOBAL(ms_bTakePhoto, 0xC8A7C1, (bool), {});
     static inline auto& ms_PelletTestCol         = StaticRef<CColModel>(0xC8A7DC);
 
     static inline struct DebugSettings {

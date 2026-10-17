@@ -46,6 +46,7 @@
 #include "TaskTypes/TaskComplexDie.h"
 #include "Scripted2dEffects.h"
 #include "game_sa/DetachedShared.h"
+namespace { NOTSA_GLOBAL_SYNTH(k_86F678, 0x86F678, (int32), { 1000 }); } // TASK_FLEE_CHAR_ANY_MEANS posChangePeriod (.rdata constant)
 #line 48
 
 namespace notsa::script::commands::ported::g18 { void RegisterHandlers(); }
@@ -649,7 +650,7 @@ void TaskFleeCharAnyMeans(CRunningScript& S, eScriptCommands cmd, int32 pedH, in
     CPed* const target = GetPedPool()->GetAtRef(targetH);
     S.GivePedScriptedTask(pedH, new CTaskComplexFleeAnyMeans{
         target, attack != 0, safeDist, fleeTime, shootTime, shootRecover, stealCarDist,
-        StaticRef<int32>(0x86F678), NOTSA_GLOBAL_EXPR(0xC18CF0, (float), notsa::shared::EntityPosChangeThreshold)
+        NOTSA_GLOBAL_EXPR(0x86F678, (int32), k_86F678), NOTSA_GLOBAL_EXPR(0xC18CF0, (float), notsa::shared::EntityPosChangeThreshold)
     }, (int32)cmd);
 }
 

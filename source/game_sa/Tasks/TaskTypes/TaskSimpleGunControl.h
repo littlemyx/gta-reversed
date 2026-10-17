@@ -25,7 +25,7 @@ enum class eGunCommand : int8 {
 
 class NOTSA_EXPORT_VTABLE CTaskSimpleGunControl : public CTaskSimple {
 public:
-    static inline auto& DEFAULT_GUN_ATTACK_PERIOD = StaticRef<uint32>(9252472);
+    static inline NOTSA_GLOBAL(DEFAULT_GUN_ATTACK_PERIOD, 0x8D2E78, (uint32), { 2000 });
 
 public:
     bool        m_isFinished{};

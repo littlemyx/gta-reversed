@@ -4,7 +4,7 @@
 #include "PostEffects.h"
 #include "Shadows.h"
 
-auto& TunnelWeather = StaticRef<int>(0x8CDEE0); // 9 = WEATHER_FOGGY_SF, unchanged
+NOTSA_GLOBAL(TunnelWeather, 0x8CDEE0, (int), { 9 }); // 9 = WEATHER_FOGGY_SF, unchanged
 
 void CTimeCycle::InjectHooks() {
     RH_ScopedClass(CTimeCycle);

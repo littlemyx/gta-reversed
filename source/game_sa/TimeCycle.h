@@ -17,7 +17,7 @@ public:
 };
 VALIDATE_SIZE(CTimeCycleBox, 0x28);
 
-static inline auto& gfLaRiotsLightMult = StaticRef<float>(0x8CD060); // 1.0f
+NOTSA_GLOBAL_HDR(gfLaRiotsLightMult, 0x8CD060, (float), { 1.0f }); // 1.0f
 
 enum eTimeType {
     TIME_MIDNIGHT,
@@ -37,101 +37,101 @@ public:
     template<typename T>
     using Colors = notsa::mdarray<T, NUM_HOURS, NUM_WEATHERS>;
 
-    static inline auto& m_nAmbientRed = StaticRef<Colors<uint8>>(0xB7C3C8);
-    static inline auto& m_nAmbientGreen = StaticRef<Colors<uint8>>(0xB7C310);
-    static inline auto& m_nAmbientBlue = StaticRef<Colors<uint8>>(0xB7C258);
+    static inline NOTSA_GLOBAL(m_nAmbientRed, 0xB7C3C8, (Colors<uint8>), {});
+    static inline NOTSA_GLOBAL(m_nAmbientGreen, 0xB7C310, (Colors<uint8>), {});
+    static inline NOTSA_GLOBAL(m_nAmbientBlue, 0xB7C258, (Colors<uint8>), {});
 
-    static inline auto& m_nAmbientRed_Obj = StaticRef<Colors<uint8>>(0xB7C1A0);
-    static inline auto& m_nAmbientGreen_Obj = StaticRef<Colors<uint8>>(0xB7C0E8);
-    static inline auto& m_nAmbientBlue_Obj = StaticRef<Colors<uint8>>(0xB7C030);
+    static inline NOTSA_GLOBAL(m_nAmbientRed_Obj, 0xB7C1A0, (Colors<uint8>), {});
+    static inline NOTSA_GLOBAL(m_nAmbientGreen_Obj, 0xB7C0E8, (Colors<uint8>), {});
+    static inline NOTSA_GLOBAL(m_nAmbientBlue_Obj, 0xB7C030, (Colors<uint8>), {});
 
-    static inline auto& m_nSkyTopRed = StaticRef<Colors<uint8>>(0xB7BF78);
-    static inline auto& m_nSkyTopGreen = StaticRef<Colors<uint8>>(0xB7BEC0);
-    static inline auto& m_nSkyTopBlue = StaticRef<Colors<uint8>>(0xB7BE08);
+    static inline NOTSA_GLOBAL(m_nSkyTopRed, 0xB7BF78, (Colors<uint8>), {});
+    static inline NOTSA_GLOBAL(m_nSkyTopGreen, 0xB7BEC0, (Colors<uint8>), {});
+    static inline NOTSA_GLOBAL(m_nSkyTopBlue, 0xB7BE08, (Colors<uint8>), {});
 
-    static inline auto& m_nSkyBottomRed = StaticRef<Colors<uint8>>(0xB7BD50);
-    static inline auto& m_nSkyBottomGreen = StaticRef<Colors<uint8>>(0xB7BC98);
-    static inline auto& m_nSkyBottomBlue = StaticRef<Colors<uint8>>(0xB7BBE0);
+    static inline NOTSA_GLOBAL(m_nSkyBottomRed, 0xB7BD50, (Colors<uint8>), {});
+    static inline NOTSA_GLOBAL(m_nSkyBottomGreen, 0xB7BC98, (Colors<uint8>), {});
+    static inline NOTSA_GLOBAL(m_nSkyBottomBlue, 0xB7BBE0, (Colors<uint8>), {});
 
-    static inline auto& m_nSunCoreRed = StaticRef<Colors<uint8>>(0xB7BB28);
-    static inline auto& m_nSunCoreGreen = StaticRef<Colors<uint8>>(0xB7BA70);
-    static inline auto& m_nSunCoreBlue = StaticRef<Colors<uint8>>(0xB7B9B8);
+    static inline NOTSA_GLOBAL(m_nSunCoreRed, 0xB7BB28, (Colors<uint8>), {});
+    static inline NOTSA_GLOBAL(m_nSunCoreGreen, 0xB7BA70, (Colors<uint8>), {});
+    static inline NOTSA_GLOBAL(m_nSunCoreBlue, 0xB7B9B8, (Colors<uint8>), {});
 
-    static inline auto& m_nSunCoronaRed = StaticRef<Colors<uint8>>(0xB7B900);
-    static inline auto& m_nSunCoronaGreen = StaticRef<Colors<uint8>>(0xB7B848);
-    static inline auto& m_nSunCoronaBlue = StaticRef<Colors<uint8>>(0xB7B790);
+    static inline NOTSA_GLOBAL(m_nSunCoronaRed, 0xB7B900, (Colors<uint8>), {});
+    static inline NOTSA_GLOBAL(m_nSunCoronaGreen, 0xB7B848, (Colors<uint8>), {});
+    static inline NOTSA_GLOBAL(m_nSunCoronaBlue, 0xB7B790, (Colors<uint8>), {});
 
-    static inline auto& m_fSunSize = StaticRef<Colors<int8>>(0xB7B6D8);
+    static inline NOTSA_GLOBAL(m_fSunSize, 0xB7B6D8, (Colors<int8>), {});
 
-    static inline auto& m_fSpriteSize = StaticRef<Colors<int8>>(0xB7B620);
-    static inline auto& m_fSpriteBrightness = StaticRef<Colors<int8>>(0xB7B568);
+    static inline NOTSA_GLOBAL(m_fSpriteSize, 0xB7B620, (Colors<int8>), {});
+    static inline NOTSA_GLOBAL(m_fSpriteBrightness, 0xB7B568, (Colors<int8>), {});
 
-    static inline auto& m_nShadowStrength = StaticRef<Colors<uint8>>(0xB7B4B0);
-    static inline auto& m_nLightShadowStrength = StaticRef<Colors<uint8>>(0xB7B3F8);
-    static inline auto& m_nPoleShadowStrength = StaticRef<Colors<uint8>>(0xB7B340);
+    static inline NOTSA_GLOBAL(m_nShadowStrength, 0xB7B4B0, (Colors<uint8>), {});
+    static inline NOTSA_GLOBAL(m_nLightShadowStrength, 0xB7B3F8, (Colors<uint8>), {});
+    static inline NOTSA_GLOBAL(m_nPoleShadowStrength, 0xB7B340, (Colors<uint8>), {});
 
-    static inline auto& m_fFarClip = StaticRef<Colors<int16>>(0xB7B1D0);
-    static inline auto& m_fFogStart = StaticRef<Colors<int16>>(0xB7B060);
-    static inline auto& m_fLightsOnGroundBrightness = StaticRef<Colors<uint8>>(0xB7AFA8);
+    static inline NOTSA_GLOBAL(m_fFarClip, 0xB7B1D0, (Colors<int16>), {});
+    static inline NOTSA_GLOBAL(m_fFogStart, 0xB7B060, (Colors<int16>), {});
+    static inline NOTSA_GLOBAL(m_fLightsOnGroundBrightness, 0xB7AFA8, (Colors<uint8>), {});
 
-    static inline auto& m_nLowCloudsRed = StaticRef<Colors<uint8>>(0xB7AEF0);
-    static inline auto& m_nLowCloudsGreen = StaticRef<Colors<uint8>>(0xB7AE38);
-    static inline auto& m_nLowCloudsBlue = StaticRef<Colors<uint8>>(0xB7AD80);
+    static inline NOTSA_GLOBAL(m_nLowCloudsRed, 0xB7AEF0, (Colors<uint8>), {});
+    static inline NOTSA_GLOBAL(m_nLowCloudsGreen, 0xB7AE38, (Colors<uint8>), {});
+    static inline NOTSA_GLOBAL(m_nLowCloudsBlue, 0xB7AD80, (Colors<uint8>), {});
 
-    static inline auto& m_nFluffyCloudsBottomRed = StaticRef<Colors<uint8>>(0xB7ACC8);
-    static inline auto& m_nFluffyCloudsBottomGreen = StaticRef<Colors<uint8>>(0xB7AC10);
-    static inline auto& m_nFluffyCloudsBottomBlue = StaticRef<Colors<uint8>>(0xB7AB58);
+    static inline NOTSA_GLOBAL(m_nFluffyCloudsBottomRed, 0xB7ACC8, (Colors<uint8>), {});
+    static inline NOTSA_GLOBAL(m_nFluffyCloudsBottomGreen, 0xB7AC10, (Colors<uint8>), {});
+    static inline NOTSA_GLOBAL(m_nFluffyCloudsBottomBlue, 0xB7AB58, (Colors<uint8>), {});
 
-    static inline auto& m_fWaterRed = StaticRef<Colors<uint8>>(0xB7AAA0);
-    static inline auto& m_fWaterGreen = StaticRef<Colors<uint8>>(0xB7A9E8);
-    static inline auto& m_fWaterBlue = StaticRef<Colors<uint8>>(0xB7A930);
-    static inline auto& m_fWaterAlpha = StaticRef<Colors<uint8>>(0xB7A878);
+    static inline NOTSA_GLOBAL(m_fWaterRed, 0xB7AAA0, (Colors<uint8>), {});
+    static inline NOTSA_GLOBAL(m_fWaterGreen, 0xB7A9E8, (Colors<uint8>), {});
+    static inline NOTSA_GLOBAL(m_fWaterBlue, 0xB7A930, (Colors<uint8>), {});
+    static inline NOTSA_GLOBAL(m_fWaterAlpha, 0xB7A878, (Colors<uint8>), {});
 
-    static inline auto& m_fPostFx1Red = StaticRef<Colors<uint8>>(0xB7A7C0);
-    static inline auto& m_fPostFx1Green = StaticRef<Colors<uint8>>(0xB7A708);
-    static inline auto& m_fPostFx1Blue = StaticRef<Colors<uint8>>(0xB7A650);
-    static inline auto& m_fPostFx1Alpha = StaticRef<Colors<uint8>>(0xB7A598);
+    static inline NOTSA_GLOBAL(m_fPostFx1Red, 0xB7A7C0, (Colors<uint8>), {});
+    static inline NOTSA_GLOBAL(m_fPostFx1Green, 0xB7A708, (Colors<uint8>), {});
+    static inline NOTSA_GLOBAL(m_fPostFx1Blue, 0xB7A650, (Colors<uint8>), {});
+    static inline NOTSA_GLOBAL(m_fPostFx1Alpha, 0xB7A598, (Colors<uint8>), {});
 
-    static inline auto& m_fPostFx2Red = StaticRef<Colors<uint8>>(0xB7A4E0);
-    static inline auto& m_fPostFx2Green = StaticRef<Colors<uint8>>(0xB7A428);
-    static inline auto& m_fPostFx2Blue = StaticRef<Colors<uint8>>(0xB7A370);
-    static inline auto& m_fPostFx2Alpha = StaticRef<Colors<uint8>>(0xB7A2B8);
+    static inline NOTSA_GLOBAL(m_fPostFx2Red, 0xB7A4E0, (Colors<uint8>), {});
+    static inline NOTSA_GLOBAL(m_fPostFx2Green, 0xB7A428, (Colors<uint8>), {});
+    static inline NOTSA_GLOBAL(m_fPostFx2Blue, 0xB7A370, (Colors<uint8>), {});
+    static inline NOTSA_GLOBAL(m_fPostFx2Alpha, 0xB7A2B8, (Colors<uint8>), {});
 
-    static inline auto& m_fCloudAlpha = StaticRef<Colors<uint8>>(0xB7A200);
-    static inline auto& m_nHighLightMinIntensity = StaticRef<Colors<uint8>>(0xB7A148);
-    static inline auto& m_nWaterFogAlpha = StaticRef<Colors<uint8>>(0xB7A090);
-    static inline auto& m_nDirectionalMult = StaticRef<Colors<uint8>>(0xB79FD8);
+    static inline NOTSA_GLOBAL(m_fCloudAlpha, 0xB7A200, (Colors<uint8>), {});
+    static inline NOTSA_GLOBAL(m_nHighLightMinIntensity, 0xB7A148, (Colors<uint8>), {});
+    static inline NOTSA_GLOBAL(m_nWaterFogAlpha, 0xB7A090, (Colors<uint8>), {});
+    static inline NOTSA_GLOBAL(m_nDirectionalMult, 0xB79FD8, (Colors<uint8>), {});
 
-    static inline auto& m_CurrentColours = StaticRef<CColourSet>(0xB7C4A0);
+    static inline NOTSA_GLOBAL(m_CurrentColours, 0xB7C4A0, (CColourSet), {});
 
-    static inline auto& m_aBoxes = StaticRef<std::array<CTimeCycleBox, 20>>(0xB7C550);
-    static inline auto& m_NumBoxes = StaticRef<uint32>(0xB7C480);
+    static inline NOTSA_GLOBAL(m_aBoxes, 0xB7C550, (std::array<CTimeCycleBox, 20>), {});
+    static inline NOTSA_GLOBAL(m_NumBoxes, 0xB7C480, (uint32), {});
 
-    static inline auto& m_CurrentStoredValue = StaticRef<uint32>(0xB79FD0);
-    static inline auto& m_VectorToSun = StaticRef<std::array<CVector, 16>>(0xB7CA50);
+    static inline NOTSA_GLOBAL(m_CurrentStoredValue, 0xB79FD0, (uint32), {});
+    static inline NOTSA_GLOBAL(m_VectorToSun, 0xB7CA50, (std::array<CVector, 16>), {});
 
     // TODO: CVector2D?
-    static inline auto& m_fShadowFrontX = StaticRef<std::array<float, 16>>(0xB79F90);
-    static inline auto& m_fShadowFrontY = StaticRef<std::array<float, 16>>(0xB79F50);
-    static inline auto& m_fShadowSideX = StaticRef<std::array<float, 16>>(0xB79F10);
-    static inline auto& m_fShadowSideY = StaticRef<std::array<float, 16>>(0xB79ED0);
-    static inline auto& m_fShadowDisplacementX = StaticRef<std::array<float, 16>>(0xB79E90);
-    static inline auto& m_fShadowDisplacementY = StaticRef<std::array<float, 16>>(0xB79E50);
+    static inline NOTSA_GLOBAL(m_fShadowFrontX, 0xB79F90, (std::array<float, 16>), {});
+    static inline NOTSA_GLOBAL(m_fShadowFrontY, 0xB79F50, (std::array<float, 16>), {});
+    static inline NOTSA_GLOBAL(m_fShadowSideX, 0xB79F10, (std::array<float, 16>), {});
+    static inline NOTSA_GLOBAL(m_fShadowSideY, 0xB79ED0, (std::array<float, 16>), {});
+    static inline NOTSA_GLOBAL(m_fShadowDisplacementX, 0xB79E90, (std::array<float, 16>), {});
+    static inline NOTSA_GLOBAL(m_fShadowDisplacementY, 0xB79E50, (std::array<float, 16>), {});
 
-    static inline auto& m_FogReduction = StaticRef<int32>(0xB79E48);
+    static inline NOTSA_GLOBAL(m_FogReduction, 0xB79E48, (int32), {});
 
-    static inline auto& m_ExtraColour = StaticRef<int32>(0xB79E44);
-    static inline auto& m_ExtraColourWeatherType = StaticRef<int32>(0xB79E40);
-    static inline auto& m_bExtraColourOn = StaticRef<uint32>(0xB7C484);
-    static inline auto& m_ExtraColourInter = StaticRef<float>(0xB79E3C);
+    static inline NOTSA_GLOBAL(m_ExtraColour, 0xB79E44, (int32), {});
+    static inline NOTSA_GLOBAL(m_ExtraColourWeatherType, 0xB79E40, (int32), {});
+    static inline NOTSA_GLOBAL(m_bExtraColourOn, 0xB7C484, (uint32), {});
+    static inline NOTSA_GLOBAL(m_ExtraColourInter, 0xB79E3C, (float), {});
 
     static inline auto& m_BelowHorizonGrey = StaticRef<RwRGBA>(0xB7CB10);
 
-    static inline auto& m_BrightnessAddedToAmbientRed = StaticRef<float>(0xB79E38);
-    static inline auto& m_BrightnessAddedToAmbientGreen = StaticRef<float>(0xB79E34);
-    static inline auto& m_BrightnessAddedToAmbientBlue = StaticRef<float>(0xB79E30);
+    static inline NOTSA_GLOBAL(m_BrightnessAddedToAmbientRed, 0xB79E38, (float), {});
+    static inline NOTSA_GLOBAL(m_BrightnessAddedToAmbientGreen, 0xB79E34, (float), {});
+    static inline NOTSA_GLOBAL(m_BrightnessAddedToAmbientBlue, 0xB79E30, (float), {});
 
-    static inline auto& m_vecDirnLightToSun = StaticRef<CVector>(0xB7CB14);
+    static inline NOTSA_GLOBAL(m_vecDirnLightToSun, 0xB7CB14, (CVector), {});
 
 public:
     static void InjectHooks();

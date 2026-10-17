@@ -6,7 +6,7 @@ constexpr auto      MAX_SHOT_INFOS = 100u;
 static inline auto& aShotInfos = StaticRef<std::array<CShotInfo, MAX_SHOT_INFOS>>(0xC89690);
 
 // Originally CShotInfo::ms_afRandTable
-static inline auto& RandTable = StaticRef<std::array<float, 20>>(0xC89628);
+static inline NOTSA_GLOBAL(RandTable, 0xC89628, (std::array<float, 20>), {});
 
 void CShotInfo::InjectHooks() {
     RH_ScopedClass(CShotInfo);

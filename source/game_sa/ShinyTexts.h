@@ -33,8 +33,8 @@ VALIDATE_SIZE(CRegisteredShinyText, 0x58);
 
 class CShinyTexts {
 public:
-    static inline auto& NumShinyTexts = StaticRef<uint32>(0xC7C6F8);
-    static inline auto& aShinyTexts = StaticRef<std::array<CRegisteredShinyText, 32>>(0xC7D258);
+    static inline NOTSA_GLOBAL(NumShinyTexts, 0xC7C6F8, (uint32), {});
+    static inline NOTSA_GLOBAL(aShinyTexts, 0xC7D258, (std::array<CRegisteredShinyText, 32>), {});
 
 public:
     static void InjectHooks();

@@ -10,7 +10,7 @@ void COctTreeBase::InjectHooks() {
     RH_ScopedVMTInstall(FillPalette, 0x5A7280);
 }
 
-auto& gOctTreeBase = StaticRef<COctTreeBase>(0xBC1290);
+NOTSA_GLOBAL(gOctTreeBase, 0xBC1290, (COctTreeBase), {});
 
 // 0x5A7710
 bool COctTreeBase::InsertTree(uint8 red, uint8 green, uint8 blue) {

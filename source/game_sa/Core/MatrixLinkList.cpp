@@ -2,7 +2,7 @@
 
 #include "MatrixLinkList.h"
 
-auto& gMatrixList = StaticRef<CMatrixLinkList>(0xB74288);
+NOTSA_GLOBAL(gMatrixList, 0xB74288, (CMatrixLinkList), {});
 
 void CMatrixLinkList::InjectHooks()
 {

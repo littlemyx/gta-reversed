@@ -37,4 +37,4 @@ public:
 
 VALIDATE_SIZE(CMatrixLinkList, 0x1FC);
 
-extern CMatrixLinkList& gMatrixList;
+NOTSA_GLOBAL_EXTERN(gMatrixList, (CMatrixLinkList));

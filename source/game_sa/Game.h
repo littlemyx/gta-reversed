@@ -60,8 +60,14 @@ NOTSA_GLOBAL_HDR(gbLARiots, 0xB72958, (bool), {});
 NOTSA_GLOBAL_HDR(gbLARiots_NoPoliceCars, 0xB72959, (bool), {});
 // The collision model of the fight strike (CTaskSimpleFight::FightSetUpCol) is ONE CColModel (0x30 bytes at 0xC17824, ctor 0x40FB60).
 // The 0x30 bytes behind it (0xC17854) are the CCollisionData it points to (ctor 0x40F030), NOT a second CColModel.
+#ifdef NOTSA_GLOBALS_DETACHED
+extern CColModel col1;         // defined at the end of Game.cpp (both types are incomplete here)
+extern CCollisionData col1Data;
+#else
 static inline auto& col1     = StaticRef<CColModel>(0xC17824);
 static inline auto& col1Data = StaticRef<CCollisionData>(0xC17854);
+#endif
+#line 65
 
 bool MoveMem(void **pMem);
 bool MoveColModelMemory(CColModel &colModel, bool a2);

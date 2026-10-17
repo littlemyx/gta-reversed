@@ -9,10 +9,21 @@
 
 #include "Matrix.h"
 
+#ifdef NOTSA_GLOBALS_DETACHED
+// .rdata Euler index tables (nothing reads them; the header declares them as `uint8*`)
+static uint8 s_EulerIndices1[4] = { 0, 1, 2, 0 }; // 0x866D9C
+static uint8 s_EulerIndices2[4] = { 1, 2, 0, 1 }; // 0x866D94
+NOTSA_GLOBAL_VERIFY(0x866D9C, s_EulerIndices1);
+NOTSA_GLOBAL_VERIFY(0x866D94, s_EulerIndices2);
+uint8* CMatrix::EulerIndices1 = s_EulerIndices1;
+uint8* CMatrix::EulerIndices2 = s_EulerIndices2;
+#else
 uint8* CMatrix::EulerIndices1 = (uint8*)0x866D9C;
 uint8* CMatrix::EulerIndices2 = (uint8*)0x866D94;
+#endif
+#line 14
 NOTSA_GLOBAL(numMatrices, 0xB74238, (int32), {});
-auto& gDummyMatrix = StaticRef<CMatrix>(0xB74240);
+NOTSA_GLOBAL(gDummyMatrix, 0xB74240, (CMatrix), { CMatrix::Identity() }); // ctor 0x59AED0 = SetScale(1.0f)
 
 
 void CMatrix::InjectHooks()

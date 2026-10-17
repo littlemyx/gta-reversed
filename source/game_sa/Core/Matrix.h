@@ -271,4 +271,4 @@ CMatrix  Invert(const CMatrix& in);
 CMatrix  Lerp(CMatrix from, CMatrix to, float t);
 
 NOTSA_GLOBAL_EXTERN(numMatrices, (int32));
-extern CMatrix& gDummyMatrix;
+NOTSA_GLOBAL_EXTERN(gDummyMatrix, (CMatrix));

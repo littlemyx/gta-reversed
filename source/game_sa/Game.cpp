@@ -925,3 +925,9 @@ void CGame::ReInitGameObjectVariables() {
 void CGame::ReloadIPLs() {
     // NOP
 }
+
+#ifdef NOTSA_GLOBALS_DETACHED
+// The fight strike model (CTaskSimpleFight::FightSetUpCol): col1 (ctor 0x40FB60) and the CCollisionData behind it (ctor 0x40F030); declared extern in Game.h
+NOTSA_GLOBAL(col1, 0xC17824, (CColModel), {});
+NOTSA_GLOBAL(col1Data, 0xC17854, (CCollisionData), {});
+#endif

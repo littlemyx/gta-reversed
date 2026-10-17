@@ -51,7 +51,7 @@ public:
     static inline NOTSA_GLOBAL(ms_fExtinguisherAimAngle, 0x8D610C, (float), { -0.34906587f }); // default -0.34907 rad. (-pi/8)
     static inline NOTSA_GLOBAL(bPhotographHasBeenTaken, 0xC8A7C0, (bool), {});
     static inline NOTSA_GLOBAL(ms_bTakePhoto, 0xC8A7C1, (bool), {});
-    static inline auto& ms_PelletTestCol         = StaticRef<CColModel>(0xC8A7DC);
+    static inline NOTSA_GLOBAL(ms_PelletTestCol, 0xC8A7DC, (CColModel), {});
 
     static inline struct DebugSettings {
         bool NoShotDelay;

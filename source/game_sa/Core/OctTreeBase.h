@@ -27,6 +27,6 @@ public:
     void Reduce();
 };
 
-extern COctTreeBase& gOctTreeBase;
+NOTSA_GLOBAL_EXTERN(gOctTreeBase, (COctTreeBase));
 
 VALIDATE_SIZE(COctTreeBase, 0x30);

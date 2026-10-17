@@ -17,20 +17,20 @@ enum class ePaneType : uint32 {
 
 class CGlass {
 public:
-    static inline auto& PanePolyPositions = StaticRef<CVector2D[4][3]>(0x8D5CD8);
-    static inline auto& ReflectionPolyVertexBaseIdx = StaticRef<int32>(0xC71B18);
-    static inline auto& ReflectionPolyIndexBaseIdx = StaticRef<int32>(0xC71B1C);
+    static NOTSA_GLOBAL_DECL(CGlass, PanePolyPositions, 0x8D5CD8, (CVector2D[4][3]));
+    static inline NOTSA_GLOBAL(ReflectionPolyVertexBaseIdx, 0xC71B18, (int32), {});
+    static inline NOTSA_GLOBAL(ReflectionPolyIndexBaseIdx, 0xC71B1C, (int32), {});
     static inline auto& ReflectionPolyVertexBuffer = StaticRef<std::array<RxObjSpace3DLitVertex, 1706>>(0xC5B158);
     static inline auto& ShatteredPolyVertexBuffer = StaticRef<std::array<RxObjSpace3DLitVertex, 512>>(0xC56958);
-    static inline auto& ShatteredVerticesBaseIdx = StaticRef<int32>(0xC71B20);
-    static inline auto& ShatteredIndicesBaseIdx = StaticRef<int32>(0xC71B24);
-    static inline auto& H1iLightPolyVerticesIdx = StaticRef<uint32>(0xC71B28);
-    static inline auto& HiLightPolyIndicesIdx = StaticRef<int32>(0xC71B2C);
-    static inline auto& PanePolyCenterPositions = StaticRef<std::array<CVector2D, 5>>(0xC71B30);
-    static inline auto& apEntitiesToBeRendered = StaticRef<CEntity*[32]>(0xC71B58);
-    static inline auto& NumGlassEntities = StaticRef<uint32>(0xC71BD8);
+    static inline NOTSA_GLOBAL(ShatteredVerticesBaseIdx, 0xC71B20, (int32), {});
+    static inline NOTSA_GLOBAL(ShatteredIndicesBaseIdx, 0xC71B24, (int32), {});
+    static inline NOTSA_GLOBAL(H1iLightPolyVerticesIdx, 0xC71B28, (uint32), {});
+    static inline NOTSA_GLOBAL(HiLightPolyIndicesIdx, 0xC71B2C, (int32), {});
+    static inline NOTSA_GLOBAL(PanePolyCenterPositions, 0xC71B30, (std::array<CVector2D, 5>), {});
+    static inline NOTSA_GLOBAL(apEntitiesToBeRendered, 0xC71B58, (CEntity*[32]), {});
+    static inline NOTSA_GLOBAL(NumGlassEntities, 0xC71BD8, (uint32), {});
     static inline auto& aGlassPanes = StaticRef<std::array<CFallingGlassPane, 44>>(0xC71BF8);
-    static inline auto& LastColCheckMS = StaticRef<uint32>(0xC72FA8);
+    static inline NOTSA_GLOBAL(LastColCheckMS, 0xC72FA8, (uint32), {});
 
 public:
     static void InjectHooks();

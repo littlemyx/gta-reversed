@@ -636,3 +636,11 @@ bool CGlass::IsObjectGlass(CEntity* entity) {
 
     return mi->IsGlass();
 }
+
+// Initial values of the globals declared with NOTSA_GLOBAL_DECL in Glass.h (detached mode; ignored in address mode)
+NOTSA_GLOBAL_DEF(CGlass, PanePolyPositions, 0x8D5CD8, (CVector2D[4][3]), {
+    { { 0.0f, 0.0f }, { 0.0f, 1.0f }, { 0.4f, 0.5f } },
+    { { 0.0f, 1.0f }, { 1.0f, 1.0f }, { 0.4f, 0.5f } },
+    { { 0.0f, 0.0f }, { 0.4f, 0.5f }, { 0.7f, 0.0f } },
+    { { 0.7f, 0.0f }, { 0.4f, 0.5f }, { 1.0f, 1.0f } }
+});

@@ -168,7 +168,7 @@ inline int32 BoneNode_c::GetIdFromBoneTag(eBoneTag32 tag) {
 // Empty in Android
 // 0x6175D0
 void BoneNode_c::ClampLimitsCurrent(bool limitX, bool limitY, bool limitZ) {
-    static auto& s_TestSkipClampCurrent = StaticRef<bool>(0x8D2BD1); // true
+    NOTSA_GLOBAL_LOCAL(s_TestSkipClampCurrent, 0x8D2BD1, (bool), { true }); // true
 
     if (!s_TestSkipClampCurrent) {
         CVector current;
@@ -188,7 +188,7 @@ void BoneNode_c::ClampLimitsCurrent(bool limitX, bool limitY, bool limitZ) {
 // Empty in Android
 // 0x617530
 void BoneNode_c::ClampLimitsDefault(bool limitX, bool limitY, bool limitZ) {
-    static auto& s_TestSkipClampDefault = StaticRef<bool>(0x8D2BD0); // true
+    NOTSA_GLOBAL_LOCAL(s_TestSkipClampDefault, 0x8D2BD0, (bool), { true }); // true
 
     if (!s_TestSkipClampDefault) {
         if (const auto* info = GetBoneInfo()) { // BUGFIX: Check if info is available

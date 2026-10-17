@@ -111,7 +111,7 @@ void IKChainManager_c::RemoveIKChain(IKChain_c* chain) {
 
 // 0x618800
 inline bool IKChainManager_c::CanAccept(CPed* ped, float range) const {
-    static auto& s_MaxRange = StaticRef<float>(0x866BEC); // 999.0f
+    NOTSA_GLOBAL_LOCAL(s_MaxRange, 0x866BEC, (float), { 999.0f }); // 999.0f
 
     if (!ped->GetRwMatrix()) {
         return false;

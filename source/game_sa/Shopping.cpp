@@ -830,3 +830,21 @@ void CShopping::Save() {
     CGenericGameStorage::SaveDataToWorkBuffer(ms_numBuyableItems);
     CGenericGameStorage::SaveDataToWorkBuffer(&ms_bHasBought, ms_numBuyableItems); // TODO: This looks funky, check if we don't have a bug on our hands
 }
+
+// NOTSA_VERIFY_GLOBALS (detached build): ms_sectionNames is a table of literals now - compare the strings with the ones of the data image (slice D2)
+#include <standalone/GlobalsVerifyTables.h>
+#ifdef NOTSA_TABLE_CHECKS
+struct CShoppingTableChecks {
+    static bool SectionNames(char* why, size_t n) {
+        for (size_t i = 0; i < CShopping::ms_sectionNames.size(); i++) {
+            const char* img = ::notsa::globals::Image<const char*>(0x8A61D8 + 4 * (uint32)i);
+            if (!::notsa::globals::SameCStr(CShopping::ms_sectionNames[i], img)) {
+                snprintf(why, n, "[%u] ours '%s' image '%s'", (unsigned)i, CShopping::ms_sectionNames[i], ::notsa::globals::ImageStr(img));
+                return false;
+            }
+        }
+        return CShopping::ms_sectionNames.size() == 11;
+    }
+};
+static const ::notsa::globals::TableCheck s_SectionNamesCheck{ "CShopping::ms_sectionNames", __FILE__, __LINE__, &CShoppingTableChecks::SectionNames };
+#endif

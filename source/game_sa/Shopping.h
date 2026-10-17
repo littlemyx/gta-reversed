@@ -67,7 +67,7 @@ class CShopping {
     static constexpr auto NUM_BUYABLE_ITEMS = 300u; // ?
     static constexpr auto NUM_SECTION_NAMES = 11u;
 
-    static inline auto& ms_sectionNames = StaticRef<std::array<const char*, NUM_SECTION_NAMES>>(0x8A61D8);
+    static inline NOTSA_GLOBAL(ms_sectionNames, 0x8A61D8, (std::array<const char*, NUM_SECTION_NAMES>), {{ "None", "CarMods", "CarPaintJobs", "Furniture", "Clothes", "Haircuts", "Tattoos", "Gifts", "Food", "Weapons", "Property" }}); friend struct CShoppingTableChecks;
 
     static inline NOTSA_GLOBAL(ms_bHasBought, 0xA972A0, (std::array<bool, NUM_ITEMS>), {});
     static inline NOTSA_GLOBAL(ms_statModifiers, 0xA974D0, (std::array<StatModifiers, NUM_ITEMS>), {});

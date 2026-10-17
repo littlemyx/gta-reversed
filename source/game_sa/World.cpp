@@ -23,8 +23,8 @@
 // CWorld::SnookerTableMax = CVector{ 2495.8525f, -1671.41f, 12.9f };
 // CWorld::SnookerTableMin = CVector{ 497.7925f, -1670.4f, 13.19f };
 
-auto& FilledColPointIndex = StaticRef<uint32>(0xB7CD7C);
-auto& gaTempSphereColPoints = StaticRef<std::array<CColPoint, 32>>(0xB9B250);
+NOTSA_GLOBAL(FilledColPointIndex, 0xB7CD7C, (uint32), {});
+NOTSA_GLOBAL(gaTempSphereColPoints, 0xB9B250, (std::array<CColPoint, 32>), {});
 
 void CWorld::InjectHooks() {
     RH_ScopedClass(CWorld);

@@ -53,23 +53,23 @@ class CWorld {
 public:
     inline static auto& Players = StaticRef<CPlayerInfo[MAX_PLAYERS]>(0xB7CD98);
     // Current player
-    inline static auto& PlayerInFocus = StaticRef<uint8>(0xB7CD74);
-    inline static auto& bDoingCarCollisions = StaticRef<bool>(0xB7CD73);
-    inline static auto& bNoMoreCollisionTorque = StaticRef<bool>(0xB7CD72);
-    inline static auto& bForceProcessControl = StaticRef<bool>(0xB7CD6E);
-    inline static auto& bProcessCutsceneOnly = StaticRef<bool>(0xB7CD6D);
-    inline static auto& bSecondShift = StaticRef<bool>(0xB7CD6C);
+    inline static NOTSA_GLOBAL(PlayerInFocus, 0xB7CD74, (uint8), {});
+    inline static NOTSA_GLOBAL(bDoingCarCollisions, 0xB7CD73, (bool), {});
+    inline static NOTSA_GLOBAL(bNoMoreCollisionTorque, 0xB7CD72, (bool), {});
+    inline static NOTSA_GLOBAL(bForceProcessControl, 0xB7CD6E, (bool), {});
+    inline static NOTSA_GLOBAL(bProcessCutsceneOnly, 0xB7CD6D, (bool), {});
+    inline static NOTSA_GLOBAL(bSecondShift, 0xB7CD6C, (bool), {});
 
-    inline static auto& bIncludeDeadPeds = StaticRef<bool>(0xB7CD71);
-    inline static auto& bIncludeCarTyres = StaticRef<bool>(0xB7CD70);
-    inline static auto& bIncludeBikers = StaticRef<bool>(0xB7CD6F);
+    inline static NOTSA_GLOBAL(bIncludeDeadPeds, 0xB7CD71, (bool), {});
+    inline static NOTSA_GLOBAL(bIncludeCarTyres, 0xB7CD70, (bool), {});
+    inline static NOTSA_GLOBAL(bIncludeBikers, 0xB7CD6F, (bool), {});
     // entity to ignore
-    inline static auto& pIgnoreEntity = StaticRef<CEntity*>(0xB7CD68);
-    inline static auto& fWeaponSpreadRate = StaticRef<float>(0xB7CD64);
-    inline static auto& ms_iProcessLineNumCrossings = StaticRef<int32>(0xB7CD60);
+    inline static NOTSA_GLOBAL(pIgnoreEntity, 0xB7CD68, (CEntity*), {});
+    inline static NOTSA_GLOBAL(fWeaponSpreadRate, 0xB7CD64, (float), {});
+    inline static NOTSA_GLOBAL(ms_iProcessLineNumCrossings, 0xB7CD60, (int32), {});
 
-    inline static auto& SnookerTableMax = StaticRef<CVector>(0x8CDEF4);
-    inline static auto& SnookerTableMin = StaticRef<CVector>(0x8CDF00);
+    inline static NOTSA_GLOBAL(SnookerTableMax, 0x8CDEF4, (CVector), { 2497.7925f, std::bit_cast<float>(0xC4D0CCCCU) /* -1670.4f - 1 ulp */, 13.19f });
+    inline static NOTSA_GLOBAL(SnookerTableMin, 0x8CDF00, (CVector), { 2495.8525f, std::bit_cast<float>(0xC4D0ED1EU) /* -1671.41f - 1 ulp */, 12.9f });
 
     // Use GetSector() to access this array
     inline static auto& ms_aSectors = StaticRef<notsa::mdarray<CSector, MAX_SECTORS_Y, MAX_SECTORS_X>>(0xB7D0B8);
@@ -77,11 +77,11 @@ public:
     inline static auto& ms_aRepeatSectors = StaticRef<notsa::mdarray<CRepeatSector, MAX_REPEAT_SECTORS_Y, MAX_REPEAT_SECTORS_X>>(0xB992B8);
     // Use GetLodPtrList() to access this array
     inline static auto& ms_aLodPtrLists = StaticRef<notsa::mdarray<CPtrListSingleLink<CEntity*>, MAX_LOD_PTR_LISTS_Y, MAX_LOD_PTR_LISTS_X>>(0xB99EB8);
-    inline static auto& ms_listMovingEntityPtrs = StaticRef<CPtrListDoubleLink<CPhysical*>>(0xB9ACC8);
-    inline static auto& ms_listObjectsWithControlCode = StaticRef<CPtrListDoubleLink<CObject*>>(0xB9ACCC);
-    inline static auto& ms_nCurrentScanCode = StaticRef<uint16>(0xB7CD78);
+    inline static NOTSA_GLOBAL(ms_listMovingEntityPtrs, 0xB9ACC8, (CPtrListDoubleLink<CPhysical*>), {});
+    inline static NOTSA_GLOBAL(ms_listObjectsWithControlCode, 0xB9ACCC, (CPtrListDoubleLink<CObject*>), {});
+    inline static NOTSA_GLOBAL(ms_nCurrentScanCode, 0xB7CD78, (uint16), {});
 
-    inline static auto& m_aTempColPts = StaticRef<std::array<CColPoint, 32>>(0xB9ACD0);
+    inline static NOTSA_GLOBAL(m_aTempColPts, 0xB9ACD0, (std::array<CColPoint, 32>), {});
 
     static void ResetLineTestOptions();
 

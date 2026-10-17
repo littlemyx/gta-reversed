@@ -140,7 +140,7 @@ static inline auto& gDWHeliChaseCamSettings = StaticRef<DWHeliChaseCamSettings>(
 
 // Defined in other translation units (Camera.cpp, World.cpp)
 extern float&                      gCurDistForCam;
-extern std::array<CColPoint, 32>& gaTempSphereColPoints;
+NOTSA_GLOBAL_EXTERN(gaTempSphereColPoints, (std::array<CColPoint, 32>));
 
 //! Written by `Process_FollowCar_SA`, read by `LookBehind` (name made up)
 static inline NOTSA_GLOBAL(gCamFollowCarLookAt, 0xB6F018, (CVector), {});

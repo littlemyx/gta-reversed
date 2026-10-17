@@ -14,19 +14,19 @@
 #line 13
 
 // TODO: Move into the class itself
-auto& s_pathsNeededPosn = StaticRef<CVector>(0x977B70);
-auto& s_bLoadPathsNeeded = StaticRef<bool>(0x96F030);
+NOTSA_GLOBAL(s_pathsNeededPosn, 0x977B70, (CVector), {});
+NOTSA_GLOBAL(s_bLoadPathsNeeded, 0x96F030, (bool), {});
 
 // TODO: Remove this and use a stack array or smth..
-auto& ToBeStreamed = StaticRef<std::array<bool, NUM_PATH_MAP_AREAS>>(0x96EFD0);
+NOTSA_GLOBAL(ToBeStreamed, 0x96EFD0, (std::array<bool, NUM_PATH_MAP_AREAS>), {});
 
-auto& XCoorGiven = StaticRef<std::array<float, 64>>(0x96EE80);
-auto& YCoorGiven = StaticRef<std::array<float, 64>>(0x96ED80);
-auto& ZCoorGiven = StaticRef<std::array<float, 64>>(0x96EC80);
-auto& ConnectsToGiven = StaticRef<std::array<std::array<int8, 6>, 64>>(0x96EAC0); // Stride is 6 in the original (0x450E90, 0x44DED0)
-auto& DontWanderGiven = StaticRef<std::array<bool, 64>>(0x96EC40); // `bDontWander` of `AddNodeToNewInterior`
+NOTSA_GLOBAL(XCoorGiven, 0x96EE80, (std::array<float, 64>), {});
+NOTSA_GLOBAL(YCoorGiven, 0x96ED80, (std::array<float, 64>), {});
+NOTSA_GLOBAL(ZCoorGiven, 0x96EC80, (std::array<float, 64>), {});
+NOTSA_GLOBAL(ConnectsToGiven, 0x96EAC0, (std::array<std::array<int8, 6>, 64>), {}); // Stride is 6 in the original (0x450E90, 0x44DED0)
+NOTSA_GLOBAL(DontWanderGiven, 0x96EC40, (std::array<bool, 64>), {}); // `bDontWander` of `AddNodeToNewInterior`
 
-auto& aInteriorNodeLinkedToExterior = StaticRef<std::array<int32, NUM_PATH_INTERIOR_AREAS>>(0x96EA98);
+NOTSA_GLOBAL(aInteriorNodeLinkedToExterior, 0x96EA98, (std::array<int32, NUM_PATH_INTERIOR_AREAS>), {});
 auto& aExteriorNodeLinkedTo = StaticRef<std::array<CNodeAddress, NUM_PATH_INTERIOR_AREAS>>(0x977B7C);
 
 auto& aNodesToBeCleared = StaticRef<std::array<CNodeAddress, 5000>>(0x972CD0);
@@ -1703,7 +1703,7 @@ void CPathFind::FindPedCreationPosBetweenNodes(CNodeAddress addr1, CNodeAddress 
 
 // 0x4513F0
 CVector CPathFind::FindParkingNodeInArea(float minX, float maxX, float minY, float maxY, float minZ, float maxZ) {
-    static auto& s_ParkingNodeIdx = StaticRef<int32>(0x977B9C); // Round-robin index of the parking node to return
+    NOTSA_GLOBAL_LOCAL(s_ParkingNodeIdx, 0x977B9C, (int32), {}); // Round-robin index of the parking node to return
 
     int32   numFound = 0;
     bool    haveFirst{}, haveSelected{};

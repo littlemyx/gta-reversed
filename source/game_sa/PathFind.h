@@ -226,11 +226,11 @@ public:
     float                  m_loadAreaRequestMaxY;
 
 public:
-    static inline auto& InteriorIDBeingBuilt = StaticRef<int32>(0x96EF88);
-    static inline auto& bInteriorBeingBuilt = StaticRef<bool>(0x96F031);
-    static inline auto& NumNodesGiven = StaticRef<uint32>(0x96EF80);
-    static inline auto& NumLinksToExteriorNodes = StaticRef<int32>(0x96EAB8);
-    static inline auto& NewInteriorSlot = StaticRef<int32>(0x96EF84);
+    static inline NOTSA_GLOBAL(InteriorIDBeingBuilt, 0x96EF88, (int32), {});
+    static inline NOTSA_GLOBAL(bInteriorBeingBuilt, 0x96F031, (bool), {});
+    static inline NOTSA_GLOBAL(NumNodesGiven, 0x96EF80, (uint32), {});
+    static inline NOTSA_GLOBAL(NumLinksToExteriorNodes, 0x96EAB8, (int32), {});
+    static inline NOTSA_GLOBAL(NewInteriorSlot, 0x96EF84, (int32), {});
 
 public:
     static void InjectHooks();

@@ -41,9 +41,9 @@ On the Mac the fork is the remote called `fork`; on the clone it is `origin`, so
 `.notes/` is a local scratch dir on the Mac (only `git add -f`-ed files are in the clone: `.notes/symbols.txt`, `PORT_BRIEF.md`, `PHASE2_STATUS.md`, `reports/`, the plans).
 `.notes/decomp`, `.notes/asm`, `UNHOOKED*`, `DETACH_GLOBALS.tsv`, ... are NOT in git; porting and `census.py` need them - copy by hand if you ever want them on the PC.
 
-## 3. Files that are never committed (check `.gitignore`: `/gta_sa_compact.exe`, `original_data.*`, `data_pointers.bin`, `standalone*.log`)
+## 3. Files that are never committed (check `.gitignore`: `/gta_sa_compact.exe`, `original_data.*`, `data_pointers.bin`, `standalone*.log`; the run exe itself needs none of the first three since slice F3)
 * **`gta_sa_compact.exe` -> repo root** (`C:\src\gta-reversed\gta_sa_compact.exe`). Copy it from the Mac (`~/github/recomp/gta-reversed/gta_sa_compact.exe`); verify:
-  `sha256sum gta_sa_compact.exe` must print the hash from section 0. It is only an *input* (data-image extraction at build time, oracle tests).
+  `sha256sum gta_sa_compact.exe` must print the hash from section 0. It is only an *input of dev tools* (oracle tests, the `StandaloneDetached` census/verify config); building and running the exe does not need it.
 * **Game data -> `C:\gta`**: a copy of your own GTA San Andreas install folder (Steam: `...\steamapps\common\Grand Theft Auto San Andreas`; copy it, the folder only has to contain `models\gta3.img`,
   `data\`, `anim\`, `audio\`, `txd\`, `text\`, `movies\` ...; its `gta_sa.exe` is never used). `soak.sh` looks for `GAME_SRC` -> `C:\gta` -> the default Steam folder, in this order.
 * The game still reads/writes your real `Documents\GTA San Andreas User Files\` (`gta_sa.set` incl. the video mode, saves) - there is no private prefix on Windows. Back that folder up once.
@@ -90,16 +90,16 @@ No background priority on Windows (the PC is not shared with a game being played
 * **`--compile-no-warning-as-error`** (configure option): the targets carry `COMPILE_WARNING_AS_ERROR`, the Wine flow neutralises it with `/WX-` in `CMAKE_CXX_FLAGS`. The native MSVC 19.51 reports warnings that flow never showed as errors (first seen: C4018 in `WinPs.cpp:473`, C4715 in `WinMain.cpp:240`), so without this flag the build stops at them. The warnings are real; they are only not fatal.
 * `GTASA_PYTHON` must be a *native* python path with unicorn+capstone (`$(command -v python)` in Git Bash gives `/c/...`, which CMake accepts; if you get "No module named unicorn" at the extract step, pass `-DGTASA_PYTHON=C:/Python312/python.exe`).
 * The presets set `GTASA_NO_EDIT_AND_CONTINUE=ON` (Wine passes it through the conan profile; without it MSVC would use `/ZI`, which conflicts with `/O2` and produces no linker map). Result: `/Z7`, `/DEBUG`, **`gta_reversed.pdb` and `gta_reversed.map`** next to the exe.
-* New `.cpp` files need a re-glob: re-run the configure command. The extractor (`extract_exe_data.py`) runs as a build step and writes `original_data.bin/.json` and `data_pointers.bin` into `<build>/bin`.
+* New `.cpp` files need a re-glob: re-run the configure command. The extractor (`extract_exe_data.py`) runs as a build step only for the dev preset `StandaloneDetached` (`GTASA_IMAGE_DIAG`) and writes `original_data.bin/.json` and `data_pointers.bin` into `<build>/bin`.
 * One configure+full build of StandaloneRelease takes ~10-20 min on a normal desktop (the Mac needed ~30 min through Wine).
 * Hung build: if `build.lock` is older than 20 min and no `cl.exe`/`link.exe` burns CPU, `taskkill //F //IM cl.exe //IM link.exe` and `rmdir C:/gta-scratch/build.lock`.
 
 ## 7. Running the exe natively (no Wine)
-Manual run: the exe expects its data-image files next to it and the game data as the cwd.
+Manual run: the exe expects only the game data as the cwd (no image files since slice F3).
 ```bash
 # /c/gta-run = a data dir; soak.sh builds one by itself (hard links of the files + junctions of the folders of C:\gta), or make it by hand (copy the folder, minus gta_sa.exe)
 cd /c/gta-run
-cp /c/src/gta-reversed/build/StandaloneRelease/bin/{gta_reversed.exe,original_data.bin,original_data.json,data_pointers.bin} .
+cp /c/src/gta-reversed/build/StandaloneRelease/bin/gta_reversed.exe .
 NOTSA_STANDALONE_MUTE=1 NOTSA_STANDALONE_SKIP_VIDEOS=1 ./gta_reversed.exe      # log: standalone.log + logs/log.log
 ```
 A crash/abort raises exception 0xE0AB0001 and prints a symbolised stack into `standalone.log`. Always run **silent** (`NOTSA_STANDALONE_MUTE=1`; verify `[mute]` lines in `standalone.log` on the first run:
@@ -143,15 +143,16 @@ python tools/standalone/census.py run --build build/StandaloneDetached --minutes
   Symbols are found through the PDB path embedded in the exe (`build\<dir>\bin`); if you copied the exe elsewhere add that folder to *Tools > Options > Debugging > Symbols*.
 * **WinDbg**: `cd /c/gta-run && windbg -y C:\src\gta-reversed\build\StandaloneRelease\bin -srcpath C:\src\gta-reversed gta_reversed.exe` (the debuggee inherits the cwd of the launching shell; the game needs the data dir as cwd).
   Useful: `sxe -c "k;g" 0xe0ab0001` (the port's abort exception), `bp gta_reversed!<symbol>`, `x gta_reversed!CAutomobile::*`, `.symfix; .reload /f`.
-* **Image layout**: the exe maps the original data image at the original VAs (`.rdata` 0x858000.., `.data` 0x8A4000.. in a pad inside the exe, code range `PAGE_NOACCESS`), so addresses like `0xB6F5F0` are valid; an access violation on a *code* address inside the pad is an
-  unported-function trap (the log names the address; `.notes/symbols.txt` maps it). Expect first-chance exceptions only on real bugs - if the debugger stops at start-up, check which exception before ignoring it.
+* **Image layout**: since slice F3 the exe is an ordinary relocatable image (ASLR on, no data image, no placeholder): a global such as the old `0xB6F5F0` is a named C++ variable (`x gta_reversed!<name>`); nothing is mapped at the original addresses. Only the dev preset
+  `StandaloneDetached` (`GTASA_IMAGE_DIAG=ON`) still maps the original image there (`/BASE:0x400000 /FIXED`, placeholder, code range `PAGE_NOACCESS`: an access violation there is a stray original address, the log names it).
+  Expect first-chance exceptions only on real bugs - if the debugger stops at start-up, check which exception before ignoring it.
 * **FPU**: the main thread runs at PC=24 after `CreateDevice` exactly like the original; do not read `st0..st7` after stepping and expect the exe's values - use the logged `FPU[...]` lines. Native x86 has none of the Wine/Rosetta x87 corruption caveats; suspending the game thread (VS break, WinDbg `~*k`, the sampler) is fine.
 * Wine-era workflow remains valid for **comparison**: the same route on the Mac (`soak.sh`) vs Windows is the way to separate port bugs from Wine/host artefacts.
 
 ## 10. First session checklist (for the agent; write the result into `.notes/reports/WINSETUP_FIRST.md`)
 1. `git status` clean? `git submodule status` (librw 6f80bf3)? `sha256sum gta_sa_compact.exe`? `cl` = 19.51.x for x86 with `$VCToolsVersion` = 14.51.36231 (the folder name; the banner build number is the servicing level of VS, 36260 on 18.11), SDK 10.0.26100.0 (`echo $WindowsSDKVersion`)? If any differs, stop and report - do not proceed with a different toolchain.
 2. `conan install` Debug + Release (section 5). Note any recipe that had to be built or failed.
-3. `cmake --preset StandaloneRelease ...` + build `gta_reversed.exe` (section 6). Record the wall time; confirm `gta_reversed.pdb`/`.map` exist and `original_data.bin` was produced.
+3. `cmake --preset StandaloneRelease ...` + build `gta_reversed.exe` (section 6). Record the wall time; confirm `gta_reversed.pdb`/`.map` exist (no `original_data.bin` is produced by this preset any more).
 4. `cmake --preset StandaloneRW ...` + `tools/standalone/run_all_tests.sh build/StandaloneRW` (with `GAME_DIR=/c/gta`). Expected: everything green except the known rows in section 8. Save the table; **any NEW failure is the headline** (host difference or compiler difference vs the Wine-hosted MSVC 14.51 binaries).
 5. One soak: `tools/standalone/soak.sh build/StandaloneRelease 7` (shortest route) then `... 10` -> `RESULT: OK`, 0 errors, all route markers reached, no `QUIT NOT EFFECTIVE`. If the start fails (`exe never started`, or `standalone.log`/`logs/log.log` end with `Failed: RwEngineSetVideoMode(-1)`), read `<out>/run.out` and the logs; likely first-run suspects: **more than one monitor/adapter** (fixed 2026-10-16: the original shows a device/mode dialog the standalone exe does not have; it now uses adapter 0 and the default mode search - see the regression note in `docs/STANDALONE.md`; the log shows `N sub systems: no video mode dialog`). A missing `gta_sa.set` is NOT a cause (the default mode search runs; `NOTSA_STANDALONE_VIDEOMODE=<index>` overrides it),  address-space conflict at 0x400000, a DirectSound/DirectInput device difference, antivirus on the unsigned exe.
 6. Confirm the run is silent (listen; `grep '\[mute\]' standalone.log`).

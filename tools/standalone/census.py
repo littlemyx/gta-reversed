@@ -5,7 +5,7 @@ standalone exe still touch, and which function touches them?
   census.py run    [--build build/StandaloneDetached] [--minutes 10] [--rearm-ms 15000] [--data /tmp/d3c (Windows: C:/gta-census)] [--keep]
         one tools/standalone/soak.sh run (own data dir + Wine prefix [Mac/Linux only], deleted afterwards; on Windows the data dir is NTFS hard links/junctions
         of the install, removed link-by-link, never through a junction) with NOTSA_VERIFY_GLOBALS (the list of converted globals),
-        NOTSA_IMAGE_CENSUS=1 and NOTSA_IMAGE_CENSUS_REARM_MS (ImageDiag.cpp), then `report`. The build must be a detached + verify build (preset StandaloneDetached).
+        NOTSA_IMAGE_CENSUS=1 and NOTSA_IMAGE_CENSUS_REARM_MS (ImageDiag.cpp), then `report`. The build must be the dev census build (preset StandaloneDetached: GTASA_IMAGE_DIAG=ON + GTASA_VERIFY_GLOBALS=ON).
   census.py report --raw image_census.tsv --converted verify_dump.tsv [--map gta_reversed.map] [--out .notes/DETACH_census.tsv]
 
 Every logged touch (address, IP, two return-address candidates) is classified by the address:
@@ -195,6 +195,7 @@ def run(a):
     # Windows host: windowed 960x600 by default, no desktop resolution switch (opt out: NOTSA_STANDALONE_WINDOWED=0 or empty; same default as soak.sh)
     if IS_WIN:
         env.setdefault("NOTSA_STANDALONE_WINDOWED", "960x600")
+    env["SOAK_IMAGE"] = "1"   # the dev census exe maps original_data.bin/json (ImageLoad.cpp) and the verify dump reads original_data.bin: soak.sh copies them only on request
     if a.poison:
         env["NOTSA_POISON_CONVERTED"] = a.poison
     for f in ("image_census.tsv", "verify_dump.tsv"):

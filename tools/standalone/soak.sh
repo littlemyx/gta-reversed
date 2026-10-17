@@ -11,6 +11,8 @@
 #      Windows host (Git Bash, see docs/WINDOWS_SETUP.md): no Wine/prefix/WINEDEBUG; the data dir is built from NTFS hard links (files) and junctions (dirs)
 #      of $GAME_SRC (same volume; falls back to a copy), so the run never writes into the install. NOTE: the game still reads/writes the user's REAL
 #      Documents\GTA San Andreas User Files (gta_sa.set, saves) - back it up once. Screenshots are converted to PNG with PowerShell/System.Drawing.
+#      SOAK_IMAGE=1             copy original_data.bin/json next to the exe too (ONLY for the dev census / verify build, preset StandaloneDetached: NOTSA_IMAGE_CENSUS, NOTSA_VERIFY_GLOBALS
+#                               table checks). Default 0: the run exe starts WITHOUT any file of the original exe (slice F3), a leftover one in the data dir is deleted.
 #      SHOT_EVERY=<frames>      screenshot cadence (default 500 frames, NOTSA_STANDALONE_SCREENSHOT_MAX=40)
 #      SAMPLER=1                enable the in-process profiler (CORRUPTS the x87 state of the game thread, see below: profiling runs only)
 #      SHOT_MAX=<n>             screenshot cap (default 40)
@@ -43,7 +45,9 @@ else
 fi
 mkdir -p "$OUT"
 
-for f in gta_reversed.exe data_pointers.bin original_data.bin original_data.json; do
+# F3: the run exe needs NOTHING of the original exe (no original_data.*, no data_pointers.bin): only the dev census build (preset StandaloneDetached, SOAK_IMAGE=1) gets them
+IMGF=""; [ "${SOAK_IMAGE:-0}" = 1 ] && IMGF="original_data.bin original_data.json"
+for f in gta_reversed.exe $IMGF; do
   [ -f "$BIN/$f" ] || { echo "soak: missing $BIN/$f (build gta_reversed.exe first)"; exit 2; }
 done
 [ -d "$GAME_SRC" ] || { echo "soak: game install not found: $GAME_SRC (set GAME_SRC)"; exit 2; }
@@ -123,8 +127,9 @@ fi
 for a in 1 2 3 4 5 6; do
   kill_exe
   [ -n "$DOCSET" ] && rm -f "$DOCSET"
-  rm -f gta_reversed.exe data_pointers.bin original_data.* standalone*.log frame_*.bmp mark_*.bmp; rm -rf logs
-  $CPX "$BIN/gta_reversed.exe" "$BIN/original_data.bin" "$BIN/original_data.json" "$BIN/data_pointers.bin" .
+  rm -f gta_reversed.exe data_pointers.bin original_data.* standalone*.log frame_*.bmp mark_*.bmp; rm -rf logs   # (also removes the image files of an earlier SOAK_IMAGE=1 run)
+  $CPX "$BIN/gta_reversed.exe" .
+  for f in $IMGF; do $CPX "$BIN/$f" .; done
   if [ "$HOST" = windows ]; then ./gta_reversed.exe > "$RUNOUT" 2>&1 & else wine gta_reversed.exe > "$RUNOUT" 2>&1 & fi
   WPID=$!
   for i in $(seq 1 15); do   # 30 s for the window / video mode
@@ -146,7 +151,7 @@ while :; do
   [ $(( $(date +%s) - T0 )) -gt "$LIMIT_S" ] && { echo "soak: time limit, killing"; TIMEOUT=1; break; }
 done
 kill_exe
-cp -f standalone.log logs/log.log "$OUT/" 2>/dev/null; cp -f standalone_unknown_pointers.txt "$OUT/" 2>/dev/null
+cp -f standalone.log logs/log.log "$OUT/" 2>/dev/null
 mkdir -p "$OUT/shots"
 if [ "$HOST" = windows ]; then
   for b in frame_*.bmp mark_*.bmp; do [ -f "$b" ] && cp "$b" "$OUT/shots/"; done

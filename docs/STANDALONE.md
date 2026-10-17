@@ -5,14 +5,20 @@
 It contains no code of the original game executable. Rendering goes through [librw](https://github.com/aap/librw) (fork:
 `vendor/librw`) behind a RenderWare-compatible shim (`source/fakerw`, `source/standalone/rw`), not through the original RenderWare.
 
-The original `gta_sa.exe` (v1.0 US, "compact") is used only as an **input**:
-* once at build time, to extract the initial `.rdata/.data` image (`original_data.bin/json`, `data_pointers.bin`), which the new exe maps at
-  the original virtual addresses so that reversed code reading `0xB6F5F0`-style globals keeps working;
-* by the **oracle tests**, which map the original code and compare it with our port.
+The run exe needs **nothing of the original exe, neither to build nor to start** (slice F3 of `.notes/DETACH_DATA_PLAN.md`): every global the original keeps at a fixed
+address (`0xB6F5F0` ...) is a real C++ variable in this repository (section "Detached globals"), there is no data image, no `original_data.*` / `data_pointers.bin` next to the exe,
+no placeholder in the image and no fixed base. Only the game's own assets (your Steam copy's data folder) are read at run time.
+
+The original `gta_sa.exe` (v1.0 US, "compact") is still used as an **input of development tools only**:
+* by the **oracle tests**, which map the original code and data at their original addresses and compare it with our port (they link the 9 MB placeholder object
+  `tools/standalone/make_orig_pad.py` into their own test exe, `/BASE:0x400000 /FIXED`);
+* by the dev-only configuration `StandaloneDetached` (`GTASA_IMAGE_DIAG=ON` + `GTASA_VERIFY_GLOBALS=ON`): `extract_exe_data.py` extracts `original_data.bin/json` at build time,
+  `verify_globals.py` / `verify_vptrs.py` compare the detached globals with them, and the census (`census.py`) maps the image at the original addresses to PROVE that the
+  run code touches none of it. This config is the only exe that is still linked at `/BASE:0x400000 /FIXED` with the placeholder.
 
 Never commit the original exe (it is git-ignored). Legal note: private use only; you need your own legitimate copy of the game and its data.
 
-Design details (committed snapshots, `git add -f`-ed because `.notes/` is a local scratch dir elsewhere): `.notes/P2A_DESIGN.md` (data image, hooks-as-fixups, traps), `.notes/P2B_SHIM_PLAN.md` (RW shim), `.notes/PHASE2_STATUS.md` (history).
+Design details (committed snapshots, `git add -f`-ed because `.notes/` is a local scratch dir elsewhere): `.notes/P2A_DESIGN.md` (historic: data image, hooks-as-fixups, traps; removed by slice F3), `.notes/P2B_SHIM_PLAN.md` (RW shim), `.notes/PHASE2_STATUS.md` (history).
 
 > **Native Windows PC (reference work, no Wine):** see `docs/WINDOWS_SETUP.md` (toolchain pins, clone, presets `StandaloneRelease`/`StandaloneRW`/`StandaloneDetached`, scripts, debugger, first-session checklist).
 > The scripts `tools/standalone/{soak,run_all_tests,build_locked}.sh` and `census.py` detect the host (`tools/standalone/hostenv.sh`); the Wine-specific text below applies to macOS/Linux only.
@@ -58,15 +64,15 @@ COMMON=(-G Ninja -DCMAKE_MAKE_PROGRAM="$(command -v ninja)" -DGTASA_STANDALONE=O
    (RW functions are reached by exe address and trap; kept for comparison, it stops at the first RW call.)
 2. **`build/StandaloneRW`** - librw, Debug (the main development build):
    `cmake -S . -B build/StandaloneRW -DCMAKE_BUILD_TYPE=Debug -DCMAKE_TOOLCHAIN_FILE=$PWD/build/Debug/generators/conan_toolchain.cmake "${COMMON[@]}" -DGTASA_RW_LIBRW=ON -DGTASA_RW_LIBRW_OPT_OUT=OFF`
-3. **`StandaloneRelease`** preset - librw, `/O2 /Ob2 /DNDEBUG -MT /Z7 /arch:IA32 /fp:precise`, ~32 MB exe (Debug 61 MB), bit-exact with Debug:
+3. **`StandaloneRelease`** preset - librw, `/O2 /Ob2 /DNDEBUG -MT /Z7 /arch:IA32 /fp:precise`, ~17 MB exe (Debug ~50 MB; was 33 MB before the 9.1 MB placeholder and the hook/fixup machinery went), bit-exact with Debug:
    `cmake --preset StandaloneRelease -DGTASA_PYTHON="$PY"` (+ under msvc-wine `-DCMAKE_C_COMPILER=... -DCMAKE_CXX_COMPILER=...` and the two `CMAKE_*_FLAGS` entries above, as separate quoted arguments)
 
-Build: `ninja -C build/StandaloneRW gta_reversed.exe`. The extractor runs as a build step and writes `original_data.bin`, `original_data.json`
-and `data_pointers.bin` next to the exe in `<build>/bin` (they are tied to the 1.0 US compact exe). New `.cpp` files need a CMake re-glob (re-run cmake).
+Build: `ninja -C build/StandaloneRW gta_reversed.exe`. No extraction step runs for these presets any more (only `StandaloneDetached`, `GTASA_IMAGE_DIAG=ON`, runs the extractor and
+writes `original_data.bin/json` and `data_pointers.bin` next to its exe in `<build>/bin`; they are tied to the 1.0 US compact exe). New `.cpp` files need a CMake re-glob (re-run cmake).
 Under Wine, one build at a time (cl via Wine is memory hungry); `ninja` may be interrupted by Wine (exit 130) - just re-run.
 
 ## Run
-Copy `gta_reversed.exe`, `original_data.bin`, `original_data.json`, `data_pointers.bin` into the **game data directory** and run it from there
+Copy `gta_reversed.exe` (alone: no image files) into the **game data directory** and run it from there
 (`wine gta_reversed.exe` on macOS/Linux). Use a **short path** (e.g. `C:\gta` or `/tmp/d3h`): the original `CFileMgr::Initialise` copies the
 cwd into a 128-char buffer. The log is `standalone.log` (plus `logs/log.log`); a crash/abort raises exception 0xE0AB0001 and prints a symbolised stack.
 
@@ -131,14 +137,16 @@ original function and our port with the same randomised inputs (incl. NaN/0/deno
 `rw_*_test` (shim vs exe, with a real D3D9 device and pixel read-back), `game_oracle_test`, `review_oracle_test`, `script_oracle_*_test` (script
 opcode handlers vs the exe group processors) all use it. Unicorn-generated case lists (`rw_quat_cases.inc`, `rw_strip_cases.inc`) cover RW maths and the tristrip generator.
 
-## Detached globals (work in progress, `.notes/DETACH_DATA_PLAN.md`)
-Goal: run without the original exe's data image. Globals the original keeps at fixed addresses are declared with the `NOTSA_GLOBAL*` macros (`source/Base.h`):
-by default (and in the ASI/DLL build and the oracle tests) they expand to the old `auto& x = StaticRef<T>(0xADDR)`; with `-DGTASA_DETACHED_GLOBALS=ON`
-(preset `StandaloneDetached`, run build only) they are real C++ variables initialised with the exe's values. `NOTSA_ORACLE_ADDRESS_GLOBALS` forces address mode
-(the oracle tests that copy the exe target's definitions set it). Tools (dev-time, they need the exe and its extracted image once, the build never runs them):
+## Detached globals (`.notes/DETACH_DATA_PLAN.md`; the run build is always detached since F3)
+The run exe runs without the original exe's data image. Globals the original keeps at fixed addresses are declared with the `NOTSA_GLOBAL*` macros (`source/Base.h`):
+in the run exe (every `GTASA_STANDALONE=ON` preset) they are real C++ variables initialised with the exe's values (`NOTSA_DETACHED_GLOBALS`, always defined for the exe target);
+in the ASI/DLL build and in the oracle tests they expand to the old `auto& x = StaticRef<T>(0xADDR)`. `NOTSA_ORACLE_ADDRESS_GLOBALS` forces address mode
+(the oracle tests that copy the exe target's definitions set it). In the run exe `StaticRef<T>()`, `plugin::Call*<addr>` and every `RH_Scoped*` hook macro are compile errors / no-ops
+(`NOTSA_NO_HOOK_REGISTRY`, `reversiblehooks/NoHookRegistry.h`): there is no hook registry, no exported vtable, no exe address anywhere in its object code.
+The exe is a **normal relocatable image** (default base, `/DYNAMICBASE`, ASLR on); `standalone.log` starts with `image base 0x... (ASLR on, ...)`. Tools (dev-time, they need the exe and its extracted image once, the build never runs them):
 `tools/standalone/gen_globals.py` (inventory `.notes/DETACH_GLOBALS.tsv`), `globals_emit.py` (initialiser literals from the image), `codemod_globals.py` (rewrites
 the declarations; dry run by default, `--check` lists what is left), `obj_code_sig.py` (fingerprint .obj code to prove that the default build did not change).
-Verification: build with `-DGTASA_VERIFY_GLOBALS=ON` (set by the preset), run `NOTSA_VERIFY_GLOBALS=<dump> NOTSA_VERIFY_GLOBALS_EXIT=1 gta_reversed.exe` (or without
+Verification: build the dev preset `StandaloneDetached` (`-DGTASA_VERIFY_GLOBALS=ON -DGTASA_IMAGE_DIAG=ON`, needs `-DGTASA_ORIGINAL_EXE`; `original_data.bin` next to the exe), run `NOTSA_VERIFY_GLOBALS=<dump> NOTSA_VERIFY_GLOBALS_EXIT=1 gta_reversed.exe` (or without
 `_EXIT` to keep playing; `NOTSA_VERIFY_GLOBALS_AFTER=<s>` adds a late snapshot `<dump>.late`) and compare with `python3 -I tools/standalone/verify_globals.py <dump>`.
 
 ## Fidelity rules (behaviour, not byte, identity)
@@ -153,8 +161,9 @@ Verification: build with `-DGTASA_VERIFY_GLOBALS=ON` (set by the preset), run `N
 Deliberate deviations are listed in `docs/STANDALONE_FIDELITY.md`.
 
 ## Source layout
-* `source/standalone/` - `DataImage.*` (maps the data image at the original VAs via the in-exe pad), `Fixups.*` (hooks become pointer fixups in the data image;
-  trap stubs for unported addresses; CRT replacement, diagnostics), `FtolExe.cpp`, `GameRand.h` (the game's MSVC LCG `rand`).
+* `source/standalone/` - `Fixups.*` (name is historic: `standalone.log` `Log`/`Fatal`, process diagnostics: atexit/purecall/terminate/abort/CRT report hooks, sampler; F3 removed the
+  hook-fixups, the trap stubs and the redirect handler), `ImageLoad.cpp` + `ImageDiag.*` (DEV ONLY, `GTASA_IMAGE_DIAG`: maps the original data image for the census / poison),
+  `GlobalsVerify*` (dev only, `GTASA_VERIFY_GLOBALS`), `FtolExe.cpp`, `GameRand.h` (the game's MSVC LCG `rand`).
 * `source/fakerw/` - RenderWare-compatible headers over librw (`rwapi.h` generated by `tools/standalone/gen_fakerw_api.py`, `rwenums.h`, `rwaccessors.h`,
   `rwextra.h`, and one header per RW module the game includes; empty stubs for the unused ones).
 * `source/standalone/rw/` - the shim implementation:
@@ -163,7 +172,7 @@ Deliberate deviations are listed in `docs/STANDALONE_FIDELITY.md`.
   `raster/image/texture/texdict/rwtexdict` (rasters, BMP/PNG, TXD streaming, PAL8 expansion),
   `pipeline.cpp` + `pipeline_matfx.cpp` + `matfx/uvanim` (the exe's fixed-function pipelines on librw), `skin/hanim/rtanim/rtquat` (animation),
   `im2d_im3d.cpp` (the exe's 2D/3D immediate driver), `math/rwmath_*/rwtrig/rwpixel/camera_sync*` (bit-exact RW maths), `stream.cpp`, `plugins.cpp`, `rwglobals.cpp`.
-* `tools/standalone/` - `extract_exe_data.py`, `initterm_delta.py`, `make_orig_pad.py`, `gen_fakerw_*.py`, `lift_x87.py` (x87 -> C), `quat_unicorn.py`/`strip_unicorn.py` (case generators), `run_all_tests.sh`.
+* `tools/standalone/` - `extract_exe_data.py`, `initterm_delta.py` (dev: image for the census / verifiers), `make_orig_pad.py` (placeholder of the oracle tests and of the census exe), `gen_fakerw_*.py`, `lift_x87.py` (x87 -> C), `quat_unicorn.py`/`strip_unicorn.py` (case generators), `run_all_tests.sh`.
 * `tests/standalone/` - all `*_test` targets and the oracle header.
 
 ## librw fork

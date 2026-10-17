@@ -1,7 +1,7 @@
 #!/bin/bash
 # WIN-PERF: build/refresh a private game data dir (NTFS hard links / junctions of the install, like soak.sh) holding either OUR exe or the ORIGINAL oracle exe.
 # usage: perf_datadir.sh <datadir> ours|orig [build-dir (default build/StandaloneRelease)]
-# ours -> <datadir>/gta_reversed.exe (+ data image files); orig -> <datadir>/gta_sa.exe = repo-root gta_sa_compact.exe (v1.0 compact; the Steam gta-sa.exe is v3.0, never used)
+# ours -> <datadir>/gta_reversed.exe (nothing else of ours since slice F3); orig -> <datadir>/gta_sa.exe = repo-root gta_sa_compact.exe (v1.0 compact; the Steam gta-sa.exe is v3.0, never used)
 . "$(dirname "$0")/../hostenv.sh"
 REPO="$(cd "$(dirname "$0")/../../.." && pwd)"
 DATA="$1"; KIND="$2"; BDIR="${3:-$REPO/build/StandaloneRelease}"
@@ -17,7 +17,7 @@ for e in "$GAME_SRC"/*; do
 done
 rm -rf "$DATA/logs" "$DATA"/standalone*.log "$DATA"/frame_*.bmp "$DATA"/mark_*.bmp
 if [ "$KIND" = ours ]; then
-  rm -f "$DATA/gta_sa.exe"; cp "$BDIR/bin/"{gta_reversed.exe,original_data.bin,original_data.json,data_pointers.bin} "$DATA/"
+  rm -f "$DATA/gta_sa.exe"; rm -f "$DATA"/original_data.* "$DATA/data_pointers.bin"; cp "$BDIR/bin/gta_reversed.exe" "$DATA/"   # F3: the run exe needs no image files
 else
   rm -f "$DATA/gta_reversed.exe" "$DATA"/original_data.* "$DATA/data_pointers.bin"; cp "$REPO/gta_sa_compact.exe" "$DATA/gta_sa.exe"
 fi

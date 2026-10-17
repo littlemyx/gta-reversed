@@ -22,7 +22,7 @@
 bool CCheat::m_bShowMappings;
 uint32 CCheat::m_nLastScriptBypassTime;
 
-// NOTSA
+#ifndef NOTSA_NO_HOOK_REGISTRY // NOTSA (F2: only InjectHooks reads this table of exe addresses; absent from the detached run build)
 struct Cheat {
     DWORD   installAddress;
     void*   method;
@@ -125,7 +125,7 @@ const auto cheats = std::to_array<Cheat>({
         { 0x0, nullptr, "", 0x86988dae, CHEAT_PROSTITUTES_PAY_YOU },
         { 0x0, nullptr, "", 0x2bdd2fa1, CHEAT_ALL_TAXIS_NITRO },
 });
-
+#endif
 // 0x438480
 void CCheat::AddToCheatString(char LastPressedKey) {
     if (CCutsceneMgr::ms_running) {

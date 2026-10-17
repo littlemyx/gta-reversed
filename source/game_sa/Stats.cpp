@@ -864,28 +864,137 @@ const GxtChar* CStats::FindCriminalRatingString() {
     return TheText.Get("RATNG51");
 }
 
+namespace {
+// One line of the per-page stat tables of ConstructStatLine (.data 0x8CD8A0 etc., committed as literals: slice D2 of .notes/DETACH_DATA_PLAN.md)
+struct tStatLine {
+    int16 statId; // -99 terminates the table
+    uint8 type;   // Value format (see below)
+    uint8 alwaysShow; // Show even if the stat is 0
+    uint8 special;    // Stat is processed by the "special" (non-generic) code
+    uint8 pad;
+};
+VALIDATE_SIZE(tStatLine, 6);
+
+// 0x8CD8A0, 24 lines + terminator
+constexpr tStatLine kStatLines0[] = {
+    { 21, 10, 1, 0, 0 }, { 22, 10, 1, 0, 0 }, { 64, 10, 1, 0, 0 }, { 225, 10, 1, 0, 0 },
+    { 25, 10, 1, 0, 0 }, { 23, 10, 1, 0, 0 }, { 160, 10, 1, 0, 0 }, { 223, 10, 1, 0, 0 },
+    { 229, 10, 1, 0, 0 }, { 230, 10, 1, 0, 0 }, { 164, 0, 1, 1, 0 }, { 81, 10, 0, 0, 0 },
+    { 330, 0, 1, 1, 0 }, { 170, 0, 1, 0, 0 }, { 135, 0, 1, 0, 0 }, { 184, 0, 0, 0, 0 },
+    { 186, 0, 0, 0, 0 }, { 188, 0, 0, 0, 0 }, { 185, 0, 0, 0, 0 }, { 187, 0, 0, 0, 0 },
+    { 189, 0, 0, 0, 0 }, { 190, 0, 0, 0, 0 }, { 200, 0, 1, 0, 0 }, { 233, 0, 1, 0, 0 },
+    { -99, 0, 0, 0, 0 },
+};
+NOTSA_GLOBAL_VERIFY(0x8CD8A0, kStatLines0);
+
+// 0x8CD938, 19 lines + terminator
+constexpr tStatLine kStatLines1[] = {
+    { 53, 3, 0, 0, 0 }, { 13, 3, 1, 0, 0 }, { 14, 3, 1, 0, 0 }, { 15, 3, 1, 0, 0 },
+    { 16, 3, 1, 0, 0 }, { 30, 3, 1, 0, 0 }, { 31, 3, 1, 0, 0 }, { 33, 3, 1, 0, 0 },
+    { 54, 3, 1, 0, 0 }, { 55, 3, 1, 0, 0 }, { 20, 3, 1, 0, 0 }, { 62, 3, 1, 0, 0 },
+    { 35, 3, 0, 0, 0 }, { 37, 3, 0, 0, 0 }, { 334, 3, 0, 1, 0 }, { 38, 3, 0, 0, 0 },
+    { 39, 3, 0, 0, 0 }, { 41, 3, 0, 0, 0 }, { 40, 3, 0, 0, 0 }, { -99, 0, 0, 0, 0 },
+};
+NOTSA_GLOBAL_VERIFY(0x8CD938, kStatLines1);
+
+// 0x8CD9B0, 5 lines + terminator
+constexpr tStatLine kStatLines2[] = {
+    { 328, 0, 1, 1, 0 }, { 329, 0, 1, 1, 0 }, { 126, 0, 1, 0, 0 }, { 127, 0, 1, 0, 0 },
+    { 128, 0, 1, 0, 0 }, { -99, 0, 0, 0, 0 },
+};
+NOTSA_GLOBAL_VERIFY(0x8CD9B0, kStatLines2);
+
+// 0x8CD9D8, 24 lines + terminator
+constexpr tStatLine kStatLines3[] = {
+    { 191, 0, 0, 0, 0 }, { 192, 0, 0, 0, 0 }, { 182, 0, 0, 0, 0 }, { 183, 0, 0, 0, 0 },
+    { 194, 0, 0, 0, 0 }, { 131, 0, 1, 0, 0 }, { 132, 0, 1, 0, 0 }, { 133, 0, 1, 0, 0 },
+    { 155, 0, 0, 0, 0 }, { 217, 0, 0, 0, 0 }, { 218, 0, 0, 0, 0 }, { 325, 0, 1, 1, 0 },
+    { 324, 0, 1, 1, 0 }, { 120, 0, 1, 0, 0 }, { 121, 0, 1, 0, 0 }, { 122, 0, 1, 0, 0 },
+    { 123, 0, 1, 0, 0 }, { 124, 0, 1, 0, 0 }, { 125, 3, 1, 0, 0 }, { 129, 0, 1, 0, 0 },
+    { 130, 0, 1, 0, 0 }, { 216, 0, 1, 0, 0 }, { 176, 0, 0, 0, 0 }, { 177, 0, 1, 0, 0 },
+    { -99, 0, 0, 0, 0 },
+};
+NOTSA_GLOBAL_VERIFY(0x8CD9D8, kStatLines3);
+
+// 0x8CDA70, 13 lines + terminator
+constexpr tStatLine kStatLines4[] = {
+    { 323, 0, 1, 1, 0 }, { 234, 0, 0, 0, 0 }, { 235, 0, 0, 0, 0 }, { 337, 0, 0, 1, 0 },
+    { 236, 0, 0, 0, 0 }, { 237, 0, 0, 0, 0 }, { 238, 0, 0, 0, 0 }, { 163, 0, 0, 0, 0 },
+    { 239, 0, 0, 0, 0 }, { 240, 0, 0, 0, 0 }, { 331, 0, 1, 1, 0 }, { 332, 0, 1, 1, 0 },
+    { 333, 0, 1, 1, 0 }, { -99, 0, 0, 0, 0 },
+};
+NOTSA_GLOBAL_VERIFY(0x8CDA70, kStatLines4);
+
+// 0x8CDAC8, 49 lines + terminator
+constexpr tStatLine kStatLines5[] = {
+    { 252, 0, 0, 1, 0 }, { 253, 0, 0, 1, 0 }, { 254, 0, 0, 1, 0 }, { 255, 0, 0, 1, 0 },
+    { 256, 0, 0, 1, 0 }, { 257, 0, 0, 1, 0 }, { 3, 7, 0, 0, 0 }, { 26, 7, 0, 0, 0 },
+    { 4, 7, 0, 0, 0 }, { 27, 7, 0, 0, 0 }, { 5, 7, 0, 0, 0 }, { 6, 7, 0, 0, 0 },
+    { 7, 7, 0, 0, 0 }, { 8, 7, 0, 0, 0 }, { 9, 7, 0, 0, 0 }, { 28, 7, 0, 0, 0 },
+    { 169, 0, 1, 1, 0 }, { 173, 0, 1, 1, 0 }, { 44, 9, 0, 0, 0 }, { 29, 7, 0, 0, 0 },
+    { 45, 9, 0, 0, 0 }, { 143, 0, 1, 1, 0 }, { 144, 0, 1, 1, 0 }, { 145, 0, 1, 1, 0 },
+    { 10, 7, 1, 0, 0 }, { 17, 9, 1, 0, 0 }, { 11, 7, 1, 0, 0 }, { 18, 9, 1, 0, 0 },
+    { 12, 7, 1, 0, 0 }, { 19, 9, 1, 0, 0 }, { 139, 7, 1, 0, 0 }, { 140, 0, 1, 0, 0 },
+    { 141, 4, 1, 0, 0 }, { 142, 4, 1, 0, 0 }, { 52, 9, 1, 0, 0 }, { 51, 9, 1, 0, 0 },
+    { 156, 0, 0, 0, 0 }, { 2, 7, 0, 0, 0 }, { 46, 5, 0, 0, 0 }, { 47, 5, 0, 0, 0 },
+    { 205, 0, 0, 0, 0 }, { 206, 0, 0, 0, 0 }, { 207, 0, 0, 0, 0 }, { 208, 0, 0, 0, 0 },
+    { 209, 0, 0, 0, 0 }, { 322, 0, 1, 1, 0 }, { 231, 0, 1, 1, 0 }, { 243, 0, 1, 1, 0 },
+    { 241, 0, 1, 1, 0 }, { -99, 0, 0, 0, 0 },
+};
+NOTSA_GLOBAL_VERIFY(0x8CDAC8, kStatLines5);
+
+// 0x8CDBF8, 86 lines + terminator
+constexpr tStatLine kStatLines6[] = {
+    { 146, 0, 1, 0, 0 }, { 147, 0, 1, 0, 0 }, { 157, 0, 0, 0, 0 }, { 152, 0, 0, 0, 0 },
+    { 159, 0, 0, 0, 0 }, { 153, 0, 0, 0, 0 }, { 158, 0, 0, 0, 0 }, { 151, 0, 0, 0, 0 },
+    { 149, 3, 0, 0, 0 }, { 150, 0, 0, 0, 0 }, { 161, 0, 0, 0, 0 }, { 162, 3, 0, 0, 0 },
+    { 210, 0, 0, 0, 0 }, { 171, 0, 0, 0, 0 }, { 36, 3, 0, 0, 0 }, { 213, 0, 0, 1, 0 },
+    { 214, 0, 0, 0, 0 }, { 201, 3, 0, 0, 0 }, { 202, 9, 0, 0, 0 }, { 154, 0, 0, 0, 0 },
+    { 166, 0, 0, 0, 0 }, { 167, 0, 0, 1, 0 }, { 168, 0, 0, 1, 0 }, { 246, 9, 0, 0, 0 },
+    { 247, 9, 0, 0, 0 }, { 248, 9, 0, 0, 0 }, { 249, 9, 0, 0, 0 }, { 250, 9, 0, 0, 0 },
+    { 172, 0, 0, 0, 0 }, { 48, 9, 0, 0, 0 }, { 212, 9, 0, 0, 0 }, { 221, 0, 0, 0, 0 },
+    { 220, 9, 0, 0, 0 }, { 219, 9, 0, 0, 0 }, { 49, 9, 0, 0, 0 }, { 222, 9, 0, 0, 0 },
+    { 174, 0, 0, 1, 0 }, { 175, 0, 0, 1, 0 }, { 179, 9, 0, 0, 0 }, { 178, 0, 0, 0, 0 },
+    { 211, 0, 0, 0, 0 }, { 215, 0, 0, 0, 0 }, { 258, 0, 0, 0, 0 }, { 259, 9, 0, 0, 0 },
+    { 260, 0, 0, 0, 0 }, { 261, 9, 0, 0, 0 }, { 262, 0, 0, 0, 0 }, { 263, 9, 0, 0, 0 },
+    { 264, 0, 0, 0, 0 }, { 265, 9, 0, 0, 0 }, { 266, 0, 0, 0, 0 }, { 267, 9, 0, 0, 0 },
+    { 268, 0, 0, 0, 0 }, { 269, 9, 0, 0, 0 }, { 270, 0, 0, 0, 0 }, { 271, 9, 0, 0, 0 },
+    { 272, 0, 0, 0, 0 }, { 273, 9, 0, 0, 0 }, { 274, 0, 0, 0, 0 }, { 275, 9, 0, 0, 0 },
+    { 276, 0, 0, 0, 0 }, { 277, 9, 0, 0, 0 }, { 278, 0, 0, 0, 0 }, { 279, 9, 0, 0, 0 },
+    { 280, 0, 0, 0, 0 }, { 281, 9, 0, 0, 0 }, { 282, 0, 0, 0, 0 }, { 283, 9, 0, 0, 0 },
+    { 284, 0, 0, 0, 0 }, { 285, 9, 0, 0, 0 }, { 286, 0, 0, 0, 0 }, { 287, 9, 0, 0, 0 },
+    { 288, 0, 0, 0, 0 }, { 289, 9, 0, 0, 0 }, { 290, 0, 0, 0, 0 }, { 291, 9, 0, 0, 0 },
+    { 292, 0, 0, 0, 0 }, { 293, 9, 0, 0, 0 }, { 294, 0, 0, 0, 0 }, { 295, 9, 0, 0, 0 },
+    { 296, 9, 0, 0, 0 }, { 297, 9, 0, 0, 0 }, { 298, 9, 0, 0, 0 }, { 299, 9, 0, 0, 0 },
+    { 300, 9, 0, 0, 0 }, { 301, 9, 0, 0, 0 }, { -99, 0, 0, 0, 0 },
+};
+NOTSA_GLOBAL_VERIFY(0x8CDBF8, kStatLines6);
+
+// 0x8CDE08, 12 lines + terminator
+constexpr tStatLine kStatLines7[] = {
+    { 0, 0, 1, 1, 0 }, { 320, 0, 1, 1, 0 }, { 134, 0, 1, 0, 0 }, { 136, 0, 1, 0, 0 },
+    { 137, 0, 0, 0, 0 }, { 138, 0, 1, 0, 0 }, { 326, 0, 1, 1, 0 }, { 327, 0, 1, 1, 0 },
+    { 195, 0, 0, 0, 0 }, { 196, 0, 0, 0, 0 }, { 197, 0, 0, 0, 0 }, { 198, 0, 0, 0, 0 },
+    { -99, 0, 0, 0, 0 },
+};
+NOTSA_GLOBAL_VERIFY(0x8CDE08, kStatLines7);
+} // namespace
+#line 867
 // 0x55A780
 int32 CStats::ConstructStatLine(int32 arg0, uint8 arg1) {
-    // One line of the per-page stat tables in .data (0x8CD8A0 etc.)
-    struct tStatLine {
-        int16 statId; // -99 terminates the table
-        uint8 type;   // Value format (see below)
-        uint8 alwaysShow; // Show even if the stat is 0
-        uint8 special;    // Stat is processed by the "special" (non-generic) code
-        uint8 pad;
-    };
-    VALIDATE_SIZE(tStatLine, 6);
+    // (the per-page tables are kStatLines0..7 above)
+#line 878
 
     const tStatLine* const table = [&]() -> const tStatLine* {
         switch (arg1) {
-        case 0:  return &StaticRef<tStatLine>(0x8CD8A0);
-        case 1:  return &StaticRef<tStatLine>(0x8CD938);
-        case 2:  return &StaticRef<tStatLine>(0x8CD9B0);
-        case 3:  return &StaticRef<tStatLine>(0x8CD9D8);
-        case 4:  return &StaticRef<tStatLine>(0x8CDA70);
-        case 5:  return &StaticRef<tStatLine>(0x8CDAC8);
-        case 6:  return &StaticRef<tStatLine>(0x8CDBF8);
-        default: return &StaticRef<tStatLine>(0x8CDE08);
+        case 0:  return &NOTSA_GLOBAL_EXPR(0x8CD8A0, (tStatLine), kStatLines0[0]);
+        case 1:  return &NOTSA_GLOBAL_EXPR(0x8CD938, (tStatLine), kStatLines1[0]);
+        case 2:  return &NOTSA_GLOBAL_EXPR(0x8CD9B0, (tStatLine), kStatLines2[0]);
+        case 3:  return &NOTSA_GLOBAL_EXPR(0x8CD9D8, (tStatLine), kStatLines3[0]);
+        case 4:  return &NOTSA_GLOBAL_EXPR(0x8CDA70, (tStatLine), kStatLines4[0]);
+        case 5:  return &NOTSA_GLOBAL_EXPR(0x8CDAC8, (tStatLine), kStatLines5[0]);
+        case 6:  return &NOTSA_GLOBAL_EXPR(0x8CDBF8, (tStatLine), kStatLines6[0]);
+        default: return &NOTSA_GLOBAL_EXPR(0x8CDE08, (tStatLine), kStatLines7[0]);
         }
     }();
 

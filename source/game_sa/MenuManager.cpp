@@ -18,7 +18,7 @@
 #include "Hud.h"
 #include "ControllerConfigManager.h"
 
-auto& FrontEndMenuManager = StaticRef<CMenuManager>(0xBA6748);
+NOTSA_GLOBAL(FrontEndMenuManager, 0xBA6748, (CMenuManager), {}); static_assert(sizeof(FrontEndMenuManager) == 7032);
 
 CMenuManager& GetMenu() {
     return FrontEndMenuManager;
@@ -127,7 +127,14 @@ CMenuManager::CMenuManager() {
     m_bMenuAccessWidescreen       = false;
     SetDefaultPreferences(SCREEN_AUDIO_SETTINGS);
     SetDefaultPreferences(SCREEN_DISPLAY_SETTINGS);
+#ifdef NOTSA_GLOBALS_DETACHED
+    // The exe's static ctor draws this with its CRT in the seed-1 state, right after the 18 draws of `gHandShaker`: always radio station 2 (the data image holds 2).
+    // The detached run build keeps its own static-init order, so the value is pinned. (`Game.cpp` hands it to `AudioEngine.InitialiseRadioStationID` at start.)
+    m_nRadioStation            = static_cast<eRadioID>(2);
+#else
     m_nRadioStation            = CAEAudioUtility::GetRandomRadioStation();
+#endif
+#line 131
     m_bStreamingDisabled       = false;
     m_bAllStreamingStuffLoaded = false;
 
@@ -149,8 +156,8 @@ CMenuManager::CMenuManager() {
     m_KeyPressedCode          = (RsKeyCodes)-1;
     m_PrefsUseVibration       = true;
     m_fMapZoom                = 300.0f;
-    m_vMapOrigin.x            = APP_MINIMAL_WIDTH / 2;
-    m_vMapOrigin.y            = APP_MINIMAL_HEIGHT / 2;
+    m_vMapOrigin.x            = DEFAULT_SCREEN_WIDTH / 2.0f;  // 0x43A00000 (exe 0x5744AE)
+    m_vMapOrigin.y            = DEFAULT_SCREEN_HEIGHT / 2.0f; // 0x43600000 = 224 (exe 0x5744B5; the repo had APP_MINIMAL_HEIGHT / 2 = 240)
 }
 
 CMenuManager* CMenuManager::Constructor() {
@@ -551,7 +558,7 @@ void CMenuManager::SetDefaultPreferences(eMenuScreen screen) {
         m_ShowMissionBlips               = true;
         m_ShowOtherBlips                 = true;
         m_ShowGangAreaBlips              = true;
-        m_bShowSubtitles                 = true;
+        m_bShowSubtitles                 = false; // exe 0x573BF1: `mov [esi+0x44], al` with al = 0 (the repo had `true`)
         break;
     case SCREEN_CONTROLLER_SETUP:
         m_ControlMethod                  = eController::MOUSE_PLUS_KEYS;

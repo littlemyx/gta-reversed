@@ -428,4 +428,4 @@ private:
 
 VALIDATE_SIZE(CMenuManager, 0x1B78);
 
-extern CMenuManager& FrontEndMenuManager;
+NOTSA_GLOBAL_EXTERN(FrontEndMenuManager, (CMenuManager));

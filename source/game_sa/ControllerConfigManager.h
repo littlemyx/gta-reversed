@@ -295,4 +295,4 @@ private:
 
 VALIDATE_SIZE(CControllerConfigManager, 0x12E4);
 
-extern CControllerConfigManager& ControlsManager;
+NOTSA_GLOBAL_EXTERN(ControlsManager, (CControllerConfigManager));

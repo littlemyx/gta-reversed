@@ -48,4 +48,4 @@ public:
 
 VALIDATE_SIZE(CHudColours, 0x3C);
 
-extern CHudColours& HudColour;
+NOTSA_GLOBAL_EXTERN(HudColour, (CHudColours));

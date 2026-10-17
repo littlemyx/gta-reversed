@@ -1546,3 +1546,5 @@ void InitialiseMouse(bool exclusive) {
     WinInput::diMouseInit(exclusive);
 }
 #endif
+
+NOTSA_GLOBAL_DEF(CPad, Pads, 0xB73458, (CPad[MAX_PADS]), {}); static_assert(sizeof(CPad::Pads) == 616);

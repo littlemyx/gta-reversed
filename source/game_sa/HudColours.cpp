@@ -2,7 +2,7 @@
 
 #include "HudColours.h"
 
-auto& HudColour = StaticRef<CHudColours>(0xBAB22C);
+NOTSA_GLOBAL(HudColour, 0xBAB22C, (CHudColours), {}); static_assert(sizeof(HudColour) == 60);
 
 void CHudColours::InjectHooks() {
     RH_ScopedClass(CHudColours);

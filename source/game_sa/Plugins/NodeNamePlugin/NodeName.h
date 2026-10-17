@@ -29,7 +29,7 @@ void InjectHooks();
 /*
 * NodeName plugin static offset
 */
-extern RwInt32& gNodeNamePluginOffset;
+NOTSA_GLOBAL_EXTERN(gNodeNamePluginOffset, (RwInt32));
 
 /**
  * Attach NodeName plugin

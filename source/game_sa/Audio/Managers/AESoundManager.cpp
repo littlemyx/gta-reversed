@@ -5,6 +5,10 @@
 
 #include "AEAudioEnvironment.h"
 #include "AEAudioHardware.h"
+#include "AEAudioStats.h"
+#include "AudioEngine.h"
+#include "Camera.h"
+#include "AERadioTrackManager.h"
 
 #include <DebugModules/Audio/SoundManagerDebugModule.hpp>
 #include <UIRenderer.h>
@@ -329,12 +333,18 @@ void CAESoundManager::Service() {
             --sound.m_FrameDelay;
         }
     }
+
+#ifdef NOTSA_STANDALONE_RUN
+    notsa::audio_stats::Service(); // NOTSA: NOTSA_AUDIO_STATS
+#endif
 }
 
 // 0x4EFB10
 CAESound* CAESoundManager::RequestNewSound(CAESound* pSound) {
     size_t sidx;
     auto   s = GetFreeSound(&sidx);
+    NOTSA_AUDIO_STAT(reqOk); // NOTSA: NOTSA_AUDIO_STATS (reqOk counts all requests, reqRefused those that found the table full)
+    if (!s) { NOTSA_AUDIO_STAT(reqRefused); }
     if (s) {
         *s = *pSound;
         pSound->UnregisterWithPhysicalEntity();
@@ -497,3 +507,118 @@ CAESound* CAESoundManager::GetFreeSound(size_t* outIdx) {
     }
     return nullptr;
 }
+
+#ifdef NOTSA_STANDALONE_RUN
+// NOTSA: NOTSA_AUDIO_STATS - see Hardware/AEAudioStats.h
+namespace {
+uint32 SafeVptrRva(const void* obj) {
+    if (!obj) {
+        return 0;
+    }
+    uint32 v = 0;
+    __try {
+        v = *reinterpret_cast<const uint32*>(obj);
+    } __except (EXCEPTION_EXECUTE_HANDLER) {
+        return 0xDEAD;
+    }
+    const auto base = reinterpret_cast<uint32>(GetModuleHandleW(nullptr));
+    return v - base;
+}
+} // namespace
+
+void notsa::audio_stats::Service() {
+    if (!Enabled()) {
+        return;
+    }
+    auto&       sm   = AESoundManager;
+    auto&       hw   = AEAudioHardware;
+    auto&       cn   = C();
+    static uint32 s_calls = 0, s_peakAct = 0, s_peakPhys = 0, s_peakWant = 0, s_lastRefused = 0, s_lastDump = 0;
+    static uint32 s_birth[MAX_NUM_SOUNDS]{};
+    const uint32 now = CTimer::GetTimeInMS();
+    ++s_calls;
+
+    uint32 act = 0, phys = 0, stopReq = 0, want = 0, looped = 0, unanc = 0, oldest = 0, over30 = 0, virtOnlyLoop = 0;
+    for (auto&& [i, snd] : rngv::enumerate(sm.m_VirtuallyPlayingSoundList)) {
+        if (!snd.IsActive()) {
+            s_birth[i] = 0;
+            continue;
+        }
+        if (!s_birth[i]) {
+            s_birth[i] = now ? now : 1;
+        }
+        const uint32 age = now - s_birth[i];
+        oldest = std::max(oldest, age);
+        over30 += age > 30000;
+        ++act;
+        phys += snd.m_IsPhysicallyPlaying != 0;
+        stopReq += snd.m_HasRequestedStopped != 0;
+        unanc += snd.IsUnancellable();
+        const bool isLoop = sm.m_VirtualChannelSoundLoopStartTimes[i] != -1;
+        looped += isLoop;
+        if (isLoop && !snd.m_IsPhysicallyPlaying) {
+            ++virtOnlyLoop;
+        }
+        if (!snd.m_IsPhysicallyPlaying && !snd.m_HasRequestedStopped && snd.m_FrameDelay == 0 && snd.m_ListenerVolume > -60.f) {
+            ++want; // audible, but without a hardware channel
+        }
+    }
+    uint32 collUsed = 0, collOne = 0, collLoop = 0;
+    for (const auto& e : AudioEngine.m_CollisionAE.m_CollisionSoundList) {
+        collUsed += e.Sound != nullptr;
+        collOne += e.Status == COLLISION_SOUND_ONE_SHOT;
+        collLoop += e.Status == COLLISION_SOUND_LOOPING;
+    }
+    uint32 chUsed = 0;
+    for (const auto ref : sm.GetPhysicallyPlayingSoundList()) {
+        chUsed += ref != -1;
+    }
+    s_peakAct  = std::max(s_peakAct, act);
+    s_peakPhys = std::max(s_peakPhys, phys);
+    s_peakWant = std::max(s_peakWant, want);
+
+    auto& st = S();
+    const bool refusedNow = cn.reqRefused > s_lastRefused;
+    if (s_calls % st.Every == 0 || (refusedNow && now - s_lastDump > 2000)) {
+        const auto& cam = TheCamera;
+        Log("t=%u f=%u coll=%u(one %u loop %u n=%d add=%u) act=%u(pk %u) phys=%u(pk %u) chUsed=%u/%u want=%u(pk %u) stopReq=%u loop=%u(virt %u) unanc=%u oldest=%ums >30s=%u dsBufs=%u | req=%u refused=%u collFull=%u | hwCalls=%u ok=%u badCh=%u noBuf=%u setBufFail=%u createFail=%u(%08x) lockFail=%u(%08x) | dsPlayFail=%u(%08x) | "
+            "paused=%d man=%d timerPause=%d loadTune=%d | effM=%.3f effF=%.3f musM=%.3f musF=%.3f nonStrF=%.3f strF=%.3f camFade=%d/%d camF=%.3f radio=%d lastChPos=%d",
+            now, CTimer::GetFrameCounter(), collUsed, collOne, collLoop, AudioEngine.m_CollisionAE.m_NumActiveCollisionSounds, (uint32)cn.collAdd, act, s_peakAct, phys, s_peakPhys, chUsed, (uint32)sm.m_NumAllocatedPhysicalChannels, want, s_peakWant, stopReq, looped, virtOnlyLoop, unanc, oldest, over30, (uint32)g_numSoundChannelsUsed,
+            (uint32)cn.reqOk, (uint32)cn.reqRefused, (uint32)cn.collFull,
+            (uint32)cn.hwPlayCalls, (uint32)cn.hwPlayOk, (uint32)cn.hwBadChannel, (uint32)cn.hwNoBuffer, (uint32)cn.hwSetBufFail, (uint32)cn.hwCreateFail, (uint32)cn.createHr.load(), (uint32)cn.hwLockFail, (uint32)cn.lockHr.load(), (uint32)cn.dsPlayFail, (uint32)cn.playHr.load(),
+            (int)sm.IsPaused(), (int)sm.m_IsManuallyPaused, (int)CTimer::GetIsPaused(), (int)AudioEngine.IsLoadingTuneActive(),
+            hw.m_fEffectMasterScalingFactor, hw.m_fEffectsFaderScalingFactor, hw.m_fMusicMasterScalingFactor, hw.m_fMusicFaderScalingFactor, hw.m_fNonStreamFaderScalingFactor, hw.m_fStreamFaderScalingFactor,
+            (int)cam.m_bMusicFading, (int)cam.m_bMusicFadedOut, cam.m_fEffectsFaderScalingFactor, (int)AERadioTrackManager.IsRadioOn(), sm.m_NumAllocatedPhysicalChannels ? (int)sm.m_ChannelPosition[sm.m_NumAllocatedPhysicalChannels - 1] : 0);
+        s_peakAct = s_peakPhys = s_peakWant = 0;
+    }
+
+    if (refusedNow && now - s_lastDump > 2000) {
+        s_lastDump = now;
+        // breakdown of the active sounds: (bank slot, sound id, event, owner vtable rva) -> count, oldest age
+        struct Key { int bank, snd, ev; uint32 owner; bool operator==(const Key&) const = default; };
+        struct Row { Key k; uint32 n; uint32 oldest; int phys; };
+        std::vector<Row> rows;
+        for (auto&& [i, snd] : rngv::enumerate(sm.m_VirtuallyPlayingSoundList)) {
+            if (!snd.IsActive()) {
+                continue;
+            }
+            const Key k{ (int)snd.m_BankSlot, (int)snd.m_SoundID, (int)snd.m_Event, SafeVptrRva(snd.m_AudioEntity) };
+            const uint32 age = now - s_birth[i];
+            auto it = std::find_if(rows.begin(), rows.end(), [&](const Row& r) { return r.k == k; });
+            if (it == rows.end()) {
+                rows.push_back({ k, 1, age, snd.m_IsPhysicallyPlaying != 0 });
+            } else {
+                ++it->n;
+                it->oldest = std::max(it->oldest, age);
+                it->phys += snd.m_IsPhysicallyPlaying != 0;
+            }
+        }
+        std::sort(rows.begin(), rows.end(), [](const Row& a, const Row& b) { return a.n > b.n; });
+        Log("  [table full] %zu distinct (bank,sound,event,ownerVtblRva): ", rows.size());
+        for (size_t r = 0; r < rows.size() && r < 14; r++) {
+            Log("    bank=%d snd=%d ev=%d owner=%#x  n=%u phys=%d oldest=%ums", rows[r].k.bank, rows[r].k.snd, rows[r].k.ev, rows[r].k.owner, rows[r].n, rows[r].phys, rows[r].oldest);
+        }
+    }
+    s_lastRefused = cn.reqRefused;
+}
+#endif

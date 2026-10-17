@@ -41,6 +41,8 @@ public:
 #endif
     static void InjectHooks();
 
+    void UpdateParameters(CAESound* sound, int16 curPlayPos) override;
+
     void Initialise();
     static void InitialisePostLoading();
     void Reset();

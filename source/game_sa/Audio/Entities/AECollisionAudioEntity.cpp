@@ -6,12 +6,15 @@
 #include "AECollisionAudioEntity.h"
 #include "AEAudioHardware.h"
 #include "AEAudioUtility.h"
+#include "AEAudioStats.h"
 
 #include "AECollisionAudioEntity.CollisionLookup.h"
 
 void CAECollisionAudioEntity::InjectHooks() {
     RH_ScopedVirtualClass(CAECollisionAudioEntity, 0x862E64, 1);
     RH_ScopedCategory("Audio/Entities");
+
+    RH_ScopedVMTInstall(UpdateParameters, 0x4DA370);
 
     RH_ScopedInstall(Initialise, 0x5B9BD0);
     RH_ScopedInstall(InitialisePostLoading, 0x4DA050);
@@ -32,9 +35,66 @@ void CAECollisionAudioEntity::InjectHooks() {
     RH_ScopedOverloadedInstall(ReportWaterSplash, "for-physical", 0x4DAE40, void(CAECollisionAudioEntity::*)(CPhysical*, float, bool));
 }
 
+namespace {
+//! The exe releases an entry by resetting everything except `LoopStopTimeMs` (0x4DA2FB.., 0x4DA345.., 0x4DA440..).
+void ReleaseEntry(tCollisionSound& entry) {
+    entry.EntityA  = nullptr;
+    entry.EntityB  = nullptr;
+    entry.Sound    = nullptr;
+    entry.Status   = COLLISION_SOUND_INACTIVE;
+    entry.SurfaceA = (eSurfaceType)TOTAL_NUM_COLLISION_SURFACE_TYPES;
+    entry.SurfaceB = (eSurfaceType)TOTAL_NUM_COLLISION_SURFACE_TYPES;
+}
+}; // namespace
+
+// 0x4DA370
+// BUG (port): this virtual override was never ported (the DLL build kept the exe's through the vtable), so in the standalone build the base `CAEAudioEntity::UpdateParameters`
+//             (empty) ran: one-shot entries of `m_CollisionSoundList` were never released -> "Collision sound list is full" after 300 collisions, no collision sound afterwards.
+void CAECollisionAudioEntity::UpdateParameters(CAESound* sound, int16 curPlayPos) {
+    // Jump table 0x4DA47C (byte table 0x4DA490, index = event - 1): events 2 / 3 / 128 retarget the speed of their sound once its delay has elapsed, event 1 does nothing,
+    // every other event (and anything outside 1..128) only handles the end of the sound.
+    const auto SetSpeedAfterDelay = [&](float speed) {
+        if (curPlayPos < 0) {
+            return;
+        }
+        if (CTimer::GetTimeInMS() < (uint32)(int32)sound->m_ClientVariable) { // 0x4DA39F: `_ftol`, then unsigned `jb`
+            return;
+        }
+        sound->m_Speed = speed;
+    };
+    switch (sound->m_Event) {
+    case 1:   return;
+    case 2:   return SetSpeedAfterDelay(1.26f);           // 0x4DA3BB: 0x3FA147AE
+    case 3:   return SetSpeedAfterDelay(0.94f);           // 0x4DA3E6: 0x3F70A3D7
+    case 128: return SetSpeedAfterDelay(0.56f);           // 0x4DA390: 0x3F0F5C29 (AE_GLASS_HIT_GROUND_SLOW)
+    default:  break;
+    }
+
+    // 0x4DA40D - The sound ended: release its list entry. The exe does not touch `LoopStopTimeMs` (the other fields are reset).
+    if (curPlayPos != -1) {
+        return;
+    }
+    for (auto& entry : m_CollisionSoundList) {
+        if (entry.Sound != sound) {
+            continue;
+        }
+        ReleaseEntry(entry);
+        m_NumActiveCollisionSounds--;
+        return;
+    }
+}
+
 // 0x5B9BD0
 void CAECollisionAudioEntity::Initialise() {
-    *this = {};
+    // The exe only touches these fields (the loop over the list stores 0 / 0 / 0 / 0 / 0 / 0xC3 / 0xC3, the history is filled with -1 (0xFF bytes), the base class is left alone). `*this = {}`
+    // used the repo's member defaults instead (history = {255, 0, 0 ...}) and reset the base class members.
+    m_NumActiveCollisionSounds = 0;
+    for (auto& entry : m_CollisionSoundList) {
+        ReleaseEntry(entry);
+        entry.LoopStopTimeMs = 0;
+    }
+    m_CollisionSoundIDHistory.fill(-1);
+    m_LastBulletHitSoundID = -1;
 }
 
 // 0x4DA050
@@ -54,7 +114,8 @@ void CAECollisionAudioEntity::Reset() {
             entry.Sound->StopSoundAndForget();
         }
 
-        entry = {};
+        ReleaseEntry(entry);
+        --m_NumActiveCollisionSounds; // 0x4DA358
     }
 }
 
@@ -70,10 +131,12 @@ void CAECollisionAudioEntity::AddCollisionSoundToList(
     // Find an entry with no sound.
     const auto e = rng::find_if_not(m_CollisionSoundList, &tCollisionSound::Sound);
     if (e == m_CollisionSoundList.end()) {
+        NOTSA_AUDIO_STAT(collFull); // NOTSA: NOTSA_AUDIO_STATS
         NOTSA_LOG_WARN("Collision sound list is full");
         return;
     }
 
+    NOTSA_AUDIO_STAT(collAdd); // NOTSA: NOTSA_AUDIO_STATS
     e->EntityA  = entityA;
     e->EntityB  = entityB;
 
@@ -655,7 +718,7 @@ void CAECollisionAudioEntity::Service() {
             entry.Sound->StopSoundAndForget();
         }
 
-        entry = {};
+        ReleaseEntry(entry);
         --m_NumActiveCollisionSounds;
     }
 }

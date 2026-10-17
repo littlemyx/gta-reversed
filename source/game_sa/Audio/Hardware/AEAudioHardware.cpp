@@ -9,6 +9,7 @@
 #include "AEUserRadioTrackManager.h"
 #include "AESmoothFadeThread.h"
 #include "AEAudioTap.h"
+#include "AEAudioStats.h"
 
 NOTSA_GLOBAL(AEAudioHardware, 0xB5F8B8, (CAEAudioHardware), {}); static_assert(sizeof(AEAudioHardware) == 4116);
 
@@ -245,7 +246,9 @@ void CAEAudioHardware::Terminate() {
 
 // 0x4D86B0
 void CAEAudioHardware::PlaySound(int16 channel, uint16 channelSlot, uint16 soundIdInSlot, uint16 bankSlot, int16 playPosition, int16 flags, float speed) {
+    NOTSA_AUDIO_STAT(hwPlayCalls); // NOTSA: NOTSA_AUDIO_STATS
     if (channel < 0 || channelSlot >= m_anNumChannelsInSlot[channel]) {
+        NOTSA_AUDIO_STAT(hwBadChannel);
         return;
     }
 
@@ -253,6 +256,7 @@ void CAEAudioHardware::PlaySound(int16 channel, uint16 channelSlot, uint16 sound
     uint16 sampleRate{};
     const auto buffer = m_pMP3BankLoader->GetSoundBuffer((eSoundID)soundIdInSlot, (eSoundBankSlot)bankSlot, bufferSize, sampleRate);
     if (!buffer) {
+        NOTSA_AUDIO_STAT(hwNoBuffer);
         return;
     }
 
@@ -264,11 +268,13 @@ void CAEAudioHardware::PlaySound(int16 channel, uint16 channelSlot, uint16 sound
     // BUG: Off by one, `m_aChannels` has `MAX_NUM_AUDIO_CHANNELS` entries, but index == MAX_NUM_AUDIO_CHANNELS passes this check
     const auto chIdx = (uint16)(channelSlot + channel);
     if (notsa::IsFixBugs() ? chIdx >= MAX_NUM_AUDIO_CHANNELS : chIdx > MAX_NUM_AUDIO_CHANNELS) {
+        NOTSA_AUDIO_STAT(hwBadChannel);
         return;
     }
 
     auto* const ch = static_cast<CAEStaticChannel*>(m_aChannels[chIdx]);
     if (!ch->SetAudioBuffer(buffer, bufferSize, (int16)soundIdInSlot, (int16)bankSlot, (int16)loopOffset, sampleRate)) {
+        NOTSA_AUDIO_STAT(hwSetBufFail);
         return;
     }
 
@@ -287,6 +293,7 @@ void CAEAudioHardware::PlaySound(int16 channel, uint16 channelSlot, uint16 sound
         ch->SetNotInRoom((flags & 0x200) == 0);
     }
 
+    NOTSA_AUDIO_STAT(hwPlayOk);
     ch->Play((int16)startPos, (int8)flags, speed);
 
     m_awChannelFlags[(int32)channelSlot + channel] = flags;

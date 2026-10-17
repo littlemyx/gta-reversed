@@ -1,6 +1,7 @@
 #include "StdInc.h"
 #include "AEDirectSoundMute.h"
 #include "AEAudioTap.h"
+#include "AEAudioStats.h"
 
 #include "AEStaticChannel.h"
 
@@ -221,7 +222,8 @@ bool CAEStaticChannel::SetAudioBuffer(void* buffer, uint32 size, int16 f88, int1
     m_WaveFormat.nBlockAlign       = 2;
     m_WaveFormat.wFormatTag        = WAVE_FORMAT_PCM;
 
-    if (FAILED(m_pDirectSound->CreateSoundBuffer(&bufferDesc, &m_pDirectSoundBuffer, nullptr))) {
+    if (const auto hrCreate = m_pDirectSound->CreateSoundBuffer(&bufferDesc, &m_pDirectSoundBuffer, nullptr); FAILED(hrCreate)) {
+        NOTSA_AUDIO_STAT_HR(hwCreateFail, createHr, hrCreate); // NOTSA: NOTSA_AUDIO_STATS
         return false;
     }
     NOTSA_AUDIO_MUTE_ATTACH(m_pDirectSoundBuffer); // NOTSA: NOTSA_STANDALONE_MUTE (run build only)
@@ -231,7 +233,8 @@ bool CAEStaticChannel::SetAudioBuffer(void* buffer, uint32 size, int16 f88, int1
     uint32 setCurrentPos = 0;
     void*  audioPtr1{};
     DWORD  audioBytes1{};
-    if (FAILED(m_pDirectSoundBuffer->Lock(0, m_nLengthInBytes, &audioPtr1, &audioBytes1, nullptr, nullptr, DSBLOCK_ENTIREBUFFER))) {
+    if (const auto hrLock = m_pDirectSoundBuffer->Lock(0, m_nLengthInBytes, &audioPtr1, &audioBytes1, nullptr, nullptr, DSBLOCK_ENTIREBUFFER); FAILED(hrLock)) {
+        NOTSA_AUDIO_STAT_HR(hwLockFail, lockHr, hrLock); // NOTSA: NOTSA_AUDIO_STATS
         if (m_pDirectSoundBuffer) {
             m_pDirectSoundBuffer->Release();
         }

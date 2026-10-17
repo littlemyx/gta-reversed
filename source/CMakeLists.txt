@@ -787,6 +787,7 @@ if (${RE_PROJECT}_RW_LIBRW)
         game_sa/Core/Quaternion.cpp
         game_sa/Audio/AEAudioUtility.cpp
         game_sa/Audio/Entities/AEVehicleAudioEntity.cpp
+        game_sa/Audio/Entities/AECollisionAudioEntity.cpp
         game_sa/Maths.cpp
         game_sa/WaterLevel.cpp
         game_sa/CullZones.cpp

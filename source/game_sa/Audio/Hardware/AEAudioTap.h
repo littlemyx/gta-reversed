@@ -2,6 +2,7 @@
 
 #include "dsound.h"
 #include "AESmoothFadeThread.h"
+#include "AEAudioStats.h"
 #include <cmath>
 #include <cstdarg>
 #include <cstdint>
@@ -389,6 +390,7 @@ inline HRESULT STDMETHODCALLTYPE W_Unlock(IDirectSoundBuffer* self, LPVOID p1, D
 inline HRESULT STDMETHODCALLTYPE W_Play(IDirectSoundBuffer* self, DWORD r1, DWORD prio, DWORD flags) {
     auto& s = S();
     const auto hr = ((PlayFn)s.Orig[SLOT_PLAY])(self, r1, prio, flags);
+    if (FAILED(hr)) { NOTSA_AUDIO_STAT_HR(dsPlayFail, playHr, hr); }
     std::lock_guard g{ s.M };
     if (auto* r = Find(self)) {
         r->playing = true; r->looping = (flags & DSBPLAY_LOOPING) != 0;

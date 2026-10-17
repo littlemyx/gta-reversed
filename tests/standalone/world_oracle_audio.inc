@@ -1,6 +1,7 @@
 // (a) audio math: CAEAudioUtility, CAEVehicleAudioEntity pure helpers (fake audio entity + fake vehicle), see world_oracle_test.cpp
 #include "Audio/AEAudioUtility.h"
 #include "Audio/Entities/AEVehicleAudioEntity.h"
+#include "Audio/Entities/AECollisionAudioEntity.h"
 #include "Entity/Vehicle/Vehicle.h"
 #include "Entity/Physical.h"
 
@@ -117,5 +118,31 @@ static void TestAudio() {
         const float e = oracle::Fn<float __fastcall(void*, int, float)>(0x4F60B0)(f.ae.get(), 0, x);
         if (CmpF(d, "v", a, e)) return true;
         d += "x " + F(x); return false;
+    });
+    // PT-AUDIO: the virtual override that the port had never ported (the one-shot entries of the collision list were never released): fake entity + fake sound, whole-object byte compare
+    Run("CAECollisionAudioEntity::UpdateParameters 0x4DA370", [](Rng& r, std::string& d) {
+        Raw<CAECollisionAudioEntity> ea, eb; ea.Fill(r);
+        std::memcpy(eb.get(), ea.get(), sizeof(CAECollisionAudioEntity));
+        Raw<CAESound> sa, sb; sa.Fill(r);
+        static const int16 kEv[] = { 1, 2, 3, 128, 0, -1, 4, 127, 129, 125, 64 };
+        sa->m_Event = r.below(4) ? kEv[r.below(11)] : (int32)r.u32();
+        sa->m_ClientVariable = r.below(3) ? (float)(CTimer::m_snTimeInMilliseconds + (int)r.below(2000) - 1000) : GenF(r, 4e9f);
+        std::memcpy(sb.get(), sa.get(), sizeof(CAESound));
+        // make the sound the owner of a random list entry (also of two) most of the time
+        if (r.below(4)) {
+            const auto k = r.below(CAECollisionAudioEntity::NUM_ENTRIES);
+            ea->m_CollisionSoundList[k].Sound = sa.get(); eb->m_CollisionSoundList[k].Sound = sa.get();
+            if (r.below(3)) { const auto k2 = r.below(CAECollisionAudioEntity::NUM_ENTRIES); ea->m_CollisionSoundList[k2].Sound = sa.get(); eb->m_CollisionSoundList[k2].Sound = sa.get(); }
+        }
+        const int16 pos = (int16)(r.below(3) == 0 ? -1 : r.below(3) == 0 ? (int)(r.u32() & 0xFFFF) - 0x8000 : (int)r.below(5000));
+        CTimer::m_snTimeInMilliseconds = r.below(5) ? CTimer::m_snTimeInMilliseconds : r.u32();
+        // both runs use the SAME sound object (the list entries hold its address): port first, remember its result, restore the sound, then the exe
+        ea->CAECollisionAudioEntity::UpdateParameters(sa.get(), pos); // qualified: no virtual dispatch through the random vptr
+        Raw<CAESound> sr; std::memcpy(sr.get(), sa.get(), sizeof(CAESound));
+        std::memcpy(sa.get(), sb.get(), sizeof(CAESound));
+        oracle::Fn<void __fastcall(void*, int, void*, int16)>(0x4DA370)(eb.get(), 0, sa.get(), pos);
+        if (!std::memcmp(ea.get(), eb.get(), sizeof(CAECollisionAudioEntity)) && !std::memcmp(sa.get(), sr.get(), sizeof(CAESound))) return true;
+        size_t firstDiff = 0; while (firstDiff < sizeof(CAECollisionAudioEntity) && ea.b[firstDiff] == eb.b[firstDiff]) ++firstDiff;
+        d = "event " + std::to_string(sa->m_Event) + " pos " + std::to_string(pos) + (std::memcmp(ea.get(), eb.get(), sizeof(CAECollisionAudioEntity)) ? " entity bytes differ at +0x" + HexVA((unsigned)firstDiff) + " got " + std::to_string(ea.b[firstDiff]) + " exe " + std::to_string(eb.b[firstDiff]) : "") + (std::memcmp(sa.get(), sr.get(), sizeof(CAESound)) ? " sound bytes differ" : ""); return false;
     });
 }

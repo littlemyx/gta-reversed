@@ -36,3 +36,7 @@ Our exe, windowed 960x600 (`NOTSA_STANDALONE_WINDOWED`), `NOTSA_STANDALONE_MUTE=
 * worktree commits 1438666c (VideoPlayer.cpp), 16f9ee40 (play.cmd, docs/STANDALONE.md, standalone_deviations.tsv), cherry-picked onto reverse/interior_c.
 * play.cmd: videos ON by default, `novideos` (or `PLAY_VIDEOS=0`) skips, `videos` accepted and ignored. `C:\gta-play`: play.cmd, README-ru.txt and the exe snapshot (+ original_data.bin/.json, data_pointers.bin from the same build) refreshed, GPU lock was free (not USER-PLAY) while copying; the old snapshot exe is `C:/gta-scratch/bv_play_old_gta_reversed.exe`.
 * Tools (scratch, not committed): `C:/gta-scratch/bv_run.sh|bv_run2.sh|bv_run_orig2.sh|bv_poll2.ps1|bv_shot.ps1`.
+
+## run_all_tests
+`SKIP_BUILD=1 tools/standalone/run_all_tests.sh build/StandaloneRW` (private worktree build at HEAD + fix, Debug, `gta_reversed.exe` + all `*_test` targets built, `ninja -j4`, GPU lock held for the run): 41 tests, 0 failures, 0 mismatches, rc 0 (incl. all rw_* device tests on the RTX 4080).
+The private worktree C:/gta-scratch/wtv was removed afterwards. Data dirs left for re-runs (hard links/junctions of the Steam folder, never rm -rf them): C:/gta-bv (our exe), C:/gta-bv-orig (original exe), C:/gta-bv-soak; outputs in C:/gta-bv-out.

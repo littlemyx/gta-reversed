@@ -3,7 +3,7 @@
 #include "MenuSystem.h"
 #include "VehicleModelInfo.h"
 
-auto& MenuNumber = StaticRef<std::array<CMenuSystem::Menu*, 2>>(0xBA82D8);
+NOTSA_GLOBAL(MenuNumber, 0xBA82D8, (std::array<CMenuSystem::Menu*, 2>), {});
 
 void CMenuSystem::InjectHooks() {
     RH_ScopedClass(CMenuSystem);
@@ -696,3 +696,6 @@ void CMenuSystem::CalcNonEmptyRows(MenuId id) {
         }
     }
 }
+
+// Initial values of the globals declared with NOTSA_GLOBAL_DECL in MenuSystem.h (detached mode; ignored in address mode)
+NOTSA_GLOBAL_DEF(CMenuSystem, MenuInUse, 0xBA82E0, (std::array<bool, CMenuSystem::MENU_COUNT>), {});

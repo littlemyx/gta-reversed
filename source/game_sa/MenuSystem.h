@@ -55,9 +55,9 @@ public:
         int8           m_nAcceptedRow;
     };
 
-    static inline auto& MenuInUse = StaticRef<std::array<bool, CMenuSystem::MENU_COUNT>>(0xBA82E0);
-    static inline auto& CurrentMenuInUse = StaticRef<int8>(0xBA82E2);
-    static inline auto& num_menus_in_use = StaticRef<uint8>(0xBA82E3); // OG name
+    static NOTSA_GLOBAL_DECL(CMenuSystem, MenuInUse, 0xBA82E0, (std::array<bool, CMenuSystem::MENU_COUNT>));
+    static inline NOTSA_GLOBAL(CurrentMenuInUse, 0xBA82E2, (int8), {});
+    static inline NOTSA_GLOBAL(num_menus_in_use, 0xBA82E3, (uint8), {}); // OG name
 
 public:
     static void InjectHooks();

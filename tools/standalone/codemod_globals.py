@@ -231,24 +231,24 @@ def rewrite_externs(cpp, externs, args, report):
                 continue
             m = ms[0]
             htexts[c] = htexts[c][:m.start()] + "%sNOTSA_GLOBAL_EXTERN(%s, (%s));" % (m.group(1), name, m.group(2).strip()) + htexts[c][m.end():]
-            report.append((str(c.relative_to(REPO)), name, addr, "EXTERN", "extern decl rewritten"))
+            report.append((c.relative_to(REPO).as_posix(), name, addr, "EXTERN", "extern decl rewritten"))
             done = True
             break
         if not done:
             has = any(re.search(r"\bextern\b[^;\n]*\b%s\b" % re.escape(name), t) for t in htexts.values())
             if has:
-                report.append((str(cpp.relative_to(REPO)), name, addr, "warn", "header declares it `extern` in a form the codemod does not rewrite (array / pointer-to-array / several): fix by hand to NOTSA_GLOBAL_EXTERN"))
+                report.append((cpp.relative_to(REPO).as_posix(), name, addr, "warn", "header declares it `extern` in a form the codemod does not rewrite (array / pointer-to-array / several): fix by hand to NOTSA_GLOBAL_EXTERN"))
     for c, t in htexts.items():
         if args.apply:
             c.write_text(t)
         else:
             old = c.read_text()
-            rel = str(c.relative_to(REPO))
+            rel = c.relative_to(REPO).as_posix()
             sys.stdout.writelines(difflib.unified_diff(old.splitlines(True), t.splitlines(True), "a/" + rel, "b/" + rel, n=0))
 
 
 def process(path, rows_by_addr, hazards, em, al, args, report):
-    rel = str(path.relative_to(REPO))
+    rel = path.relative_to(REPO).as_posix()
     text = path.read_text()
     stripped = gg.strip_source(text)
     is_header = path.suffix in (".h", ".hpp", ".inl")
@@ -464,7 +464,7 @@ def process(path, rows_by_addr, hazards, em, al, args, report):
         if add:
             # appended at the END of the file: no line of existing code moves
             new = ctext.rstrip("\n") + "\n\n// Initial values of the globals declared with NOTSA_GLOBAL_DECL in %s (detached mode; ignored in address mode)\n%s" % (path.name, add)
-            crel = str(cpp.relative_to(REPO))
+            crel = cpp.relative_to(REPO).as_posix()
             if args.apply:
                 cpp.write_text(new)
             else:
@@ -494,7 +494,7 @@ def gen_shared(al, em, args):
 
 
 def check(path, rows_by_addr, hazards, al, report):
-    rel = str(path.relative_to(REPO))
+    rel = path.relative_to(REPO).as_posix()
     text = path.read_text()
     stripped = gg.strip_source(text)
     for m in re.finditer(r"\b(?:Scoped)?StaticRef\s*<", stripped):
@@ -609,7 +609,7 @@ def template_scope_owners(scanned):
                 continue
             hs = _enclosing_headers(stripped, s)
             if any(RE_TMPL.search(h) for h in hs):
-                out.append((str(p.relative_to(REPO)), stripped.count("\n", 0, s) + 1, name, a[0] if a else "?"))
+                out.append((p.relative_to(REPO).as_posix(), stripped.count("\n", 0, s) + 1, name, a[0] if a else "?"))
     return out
 
 
@@ -654,7 +654,7 @@ def check_converted(args):
         stripped = gg.strip_source(text)
         spans = _macro_spans(stripped, text)
         scanned[p] = (text, stripped, spans)
-        rel = str(p.relative_to(REPO))
+        rel = p.relative_to(REPO).as_posix()
         for s, e, name, a in spans:
             for idx in MACRO_ADDR_ARGS.get(name, ()):
                 if idx >= len(a):
@@ -694,7 +694,7 @@ def check_converted(args):
 
     strays, addr_only = [], {}
     for p, (text, stripped, spans) in scanned.items():
-        rel = str(p.relative_to(REPO))
+        rel = p.relative_to(REPO).as_posix()
         for m in RE_HEXLIT.finditer(stripped):
             v = int(m.group(1), 16)
             if not (DATA_LO <= v < DATA_HI):

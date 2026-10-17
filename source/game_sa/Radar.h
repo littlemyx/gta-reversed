@@ -212,10 +212,10 @@ public:
     static inline NOTSA_GLOBAL(m_radarRange, 0xBA8314, (float), {}); // 2990.0 by default
     static inline NOTSA_GLOBAL(MapLegendList, 0xBA8318, (std::array<int16, MAX_RADAR_TRACES>), {}); // do not convert int16 to eRadarSprite, they have different sizes.
     static inline NOTSA_GLOBAL(MapLegendCounter, 0xBA86B8, (uint16), {}); // num icons in legend
-    static inline auto& ArrowBlipColour = StaticRef<std::array<CRGBA, 6>>(0xBA86D4);
+    static inline NOTSA_GLOBAL(ArrowBlipColour, 0xBA86D4, (std::array<CRGBA, 6>), {}); static_assert(sizeof(ArrowBlipColour) == 24);
     static inline NOTSA_GLOBAL(ms_RadarTrace, 0xBA86F0, (std::array<tRadarTrace, MAX_RADAR_TRACES>), {});
     static inline NOTSA_GLOBAL(vec2DRadarOrigin, 0xBAA248, (CVector2D), {});
-    static inline auto& RadarBlipSprites = StaticRef<std::array<CSprite2d, MAX_RADAR_SPRITES>>(0xBAA250);
+    static inline NOTSA_GLOBAL(RadarBlipSprites, 0xBAA250, (std::array<CSprite2d, MAX_RADAR_SPRITES>), {}); static_assert(sizeof(RadarBlipSprites) == 256);
     static inline NOTSA_GLOBAL(m_radarRect, 0x8D0920, (CRect), {}); // { 1000000.0f, -1000000.0f, -1000000.0f, 1000000.0f }
 
     static inline NOTSA_GLOBAL(airstrip_location, 0xBA8300, (eAirstripLocation), {}); // current airstrip index in airstrip_table

@@ -125,7 +125,7 @@ public:
     static inline NOTSA_GLOBAL(m_bExtraColourOn, 0xB7C484, (uint32), {});
     static inline NOTSA_GLOBAL(m_ExtraColourInter, 0xB79E3C, (float), {});
 
-    static inline auto& m_BelowHorizonGrey = StaticRef<RwRGBA>(0xB7CB10);
+    static inline NOTSA_GLOBAL(m_BelowHorizonGrey, 0xB7CB10, (RwRGBA), { 70, 70, 70, 255 }); // ctor 0x7170C0
 
     static inline NOTSA_GLOBAL(m_BrightnessAddedToAmbientRed, 0xB79E38, (float), {});
     static inline NOTSA_GLOBAL(m_BrightnessAddedToAmbientGreen, 0xB79E34, (float), {});

@@ -85,4 +85,4 @@ private:
 };
 VALIDATE_SIZE(CText, 0xA90);
 
-static inline auto& TheText = StaticRef<CText>(0xC1B340);
+NOTSA_GLOBAL_HDR(TheText, 0xC1B340, (CText), {}); static_assert(sizeof(TheText) == 2704);

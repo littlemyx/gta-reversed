@@ -62,8 +62,8 @@ enum eMemoryId {
     MEM_32                   = 32,
 };
 
-static inline auto& s_MemoryHeapBuffer = StaticRef<char[16384]>(0xC8E0C8);
-static inline auto& g_Heaps = StaticRef<std::array<CMemoryHeap, 3>>(0xC87B40);
+static inline auto& s_MemoryHeapBuffer = StaticRef<char[16384]>(0xC8E0C8); // NOT converted here: common.h (B20, off limits for stream C) aliases the same address as `PC_Scratch`
+NOTSA_GLOBAL_HDR(g_Heaps, 0xC87B40, (std::array<CMemoryHeap, 3>), {}); static_assert(sizeof(g_Heaps) == 216);
 
 // todo fixed stack
 template <typename _Type, uint32 _nSize> class CStack {

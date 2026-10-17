@@ -29,7 +29,7 @@ public:
     static inline NOTSA_GLOBAL(PanePolyCenterPositions, 0xC71B30, (std::array<CVector2D, 5>), {});
     static inline NOTSA_GLOBAL(apEntitiesToBeRendered, 0xC71B58, (CEntity*[32]), {});
     static inline NOTSA_GLOBAL(NumGlassEntities, 0xC71BD8, (uint32), {});
-    static inline auto& aGlassPanes = StaticRef<std::array<CFallingGlassPane, 44>>(0xC71BF8);
+    static inline NOTSA_GLOBAL(aGlassPanes, 0xC71BF8, (std::array<CFallingGlassPane, 44>), {}); static_assert(sizeof(aGlassPanes) == 4928);
     static inline NOTSA_GLOBAL(LastColCheckMS, 0xC72FA8, (uint32), {});
 
 public:

@@ -4,7 +4,7 @@ class CStencilShadowObject;
 
 class CStencilShadows {
 public:
-    static inline auto& m_StencilShadowObjects = StaticRef<std::array<CStencilShadowObject, 64>>(0xC6A198);
+    static inline NOTSA_GLOBAL(m_StencilShadowObjects, 0xC6A198, (std::array<CStencilShadowObject, 64>), {}); static_assert(sizeof(m_StencilShadowObjects) == 1792);
 
     static inline NOTSA_GLOBAL(pFirstAvailableStencilShadowObject, 0xC6A168, (CStencilShadowObject*), {});
     static inline NOTSA_GLOBAL(pFirstActiveStencilShadowObject, 0xC6A16C, (CStencilShadowObject*), {});

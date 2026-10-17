@@ -91,9 +91,9 @@ public:
 
     static inline NOTSA_GLOBAL(RenderState, 0xC71AA0, (CFontChar), {});
     // font textures array
-    static inline auto& Sprite = StaticRef<CSprite2d[MAX_FONT_SPRITES]>(0xC71AD0);
+    static inline NOTSA_GLOBAL(Sprite, 0xC71AD0, (CSprite2d[MAX_FONT_SPRITES]), {}); static_assert(sizeof(Sprite) == 8);
     // button textures array
-    static inline auto& ButtonSprite = StaticRef<CSprite2d[MAX_FONT_BUTTON_SPRITES]>(0xC71AD8);
+    static inline NOTSA_GLOBAL(ButtonSprite, 0xC71AD8, (CSprite2d[MAX_FONT_BUTTON_SPRITES]), {}); static_assert(sizeof(ButtonSprite) == 60);
     static inline NOTSA_GLOBAL(PS2Symbol, 0xC71A54, (eExtraFontSymbol), {});
     static inline NOTSA_GLOBAL(m_bNewLine, 0xC71A55, (bool), {});
     static inline NOTSA_GLOBAL(m_Color, 0xC71A60, (CRGBA), {});

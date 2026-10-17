@@ -25,4 +25,4 @@ public:
 
 VALIDATE_SIZE(BreakManager_c, 0x800);
 
-extern BreakManager_c& g_breakMan;
+NOTSA_GLOBAL_EXTERN(g_breakMan, (BreakManager_c));

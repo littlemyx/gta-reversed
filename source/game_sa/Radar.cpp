@@ -1926,8 +1926,8 @@ void CRadar::DrawEntityBlip(int32 blipIndex, uint8 arg1) {
     constexpr float kInv640   = 1.f / 640.f;                       // 0x859520
     constexpr float kInv448   = 1.f / 448.f;                       // 0x859524
     constexpr float kDegToRad = std::bit_cast<float>(0x3C8EFA35u); // 0x8595EC
-    static_assert(offsetof(CMenuManager, m_bDrawingMap) == 0xBA67A1 - 0xBA6748);
-    static_assert(offsetof(CMenuManager, m_ShowMissionBlips) == 0xBA678F - 0xBA6748);
+    static_assert(offsetof(CMenuManager, m_bDrawingMap) == 89); // 0xBA67A1 - FrontEndMenuManager (0xBA6748)
+    static_assert(offsetof(CMenuManager, m_ShowMissionBlips) == 71); // 0xBA678F - FrontEndMenuManager (0xBA6748)
 
     // Function-local statics of the original (the guard bits live in `s_initFlags`)
     NOTSA_GLOBAL_LOCAL(s_initFlags, 0xBAA380, (uint32), {});

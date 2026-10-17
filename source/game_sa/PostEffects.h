@@ -97,7 +97,7 @@ public:
     static inline NOTSA_GLOBAL(m_colourBottomVOffset, 0x8D515C, (float), { std::bit_cast<float>(0x00000008u) }); // 8
 
     static inline NOTSA_GLOBAL(m_bNightVision, 0xC402B8, (bool), {});
-    static inline auto& m_fNightVisionSwitchOnFXCount = StaticRef<float>(0xC40300); // = CPostEffects::m_fNightVisionSwitchOnFXTime
+    static inline NOTSA_GLOBAL(m_fNightVisionSwitchOnFXCount, 0xC40300, (float), { 50.0f }); // = CPostEffects::m_fNightVisionSwitchOnFXTime (initterm 0x854810 stores 50.0f)
     static inline NOTSA_GLOBAL(m_fNightVisionSwitchOnFXTime, 0x8D50B0, (float), { 50.0f }); // 50.0f
     static inline NOTSA_GLOBAL(m_NightVisionGrainStrength, 0x8D50A8, (int32), { 48 }); // 48
     static inline NOTSA_GLOBAL(m_NightVisionMainCol, 0x8D50AC, (CRGBA), { std::bit_cast<CRGBA>(0xFF008200U) }); // { 255, 0, 130, 0};

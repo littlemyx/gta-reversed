@@ -144,4 +144,4 @@ private:
 };
 VALIDATE_SIZE(IKChainManager_c, 0xB18);
 
-extern IKChainManager_c& g_ikChainMan;
+NOTSA_GLOBAL_EXTERN(g_ikChainMan, (IKChainManager_c));

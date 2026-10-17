@@ -2,7 +2,7 @@
 
 #include "BreakManager_c.h"
 
-auto& g_breakMan = StaticRef<BreakManager_c>(0xBB4240);
+NOTSA_GLOBAL(g_breakMan, 0xBB4240, (BreakManager_c), {}); static_assert(sizeof(g_breakMan) == 2048);
 
 void BreakManager_c::InjectHooks() {
     RH_ScopedClass(BreakManager_c);

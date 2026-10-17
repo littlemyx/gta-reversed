@@ -117,7 +117,7 @@ void CMemoryMgr::SetHint(void* memory, const char* hint) {
 
 // 0x72F480
 void CMemoryMgr::InitScratchPad() {
-    static_assert(sizeof(CMemoryHeap) * HEAP_SCRATCH == 0xC87BD0 - 0xC87B40); // OG passes ECX = 0xC87BD0
+    static_assert(sizeof(CMemoryHeap) * HEAP_SCRATCH == 0x90); // OG passes ECX = 0xC87BD0 = g_Heaps (0xC87B40) + 0x90
     g_Heaps[HEAP_SCRATCH].Init(s_MemoryHeapBuffer, sizeof(s_MemoryHeapBuffer), false);
 }
 

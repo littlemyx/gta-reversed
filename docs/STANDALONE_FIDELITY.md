@@ -12,6 +12,7 @@ Collected from `.notes/PHASE2_STATUS.md` (row in brackets). "Unobservable" = no 
 * Debug-only extras kept as is, inert for valid data: `_DEBUG` bounds check in `Population.cpp`, `Pool.h` `NOTSA_DEBUG_BREAK`, memory logging [D7/D8].
 * `Population.h` fields behind commands 2435/2462 look swapped (byte semantics kept) [S6-I]; open TODO: 2463 `-1` path allocates with plain `new` instead of the task pool [S6-I].
 * Script commands: `GET_HASH_KEY` in the exe reads an uninitialised stack label (oracle zeroes the stack) [D-REL].
+* `Idle()` (0x53E920) frame lock: the exe busy-waits until >= 14 ms (unsigned ms from `CTimer::GetCurrentTimeInCycles()/GetCyclesPerMillisecond()` vs `g_LastTickTime` 0xB72CA8) have passed since the previous `Idle`, regardless of the frame limiter. Upstream NOTSA had it commented out; it is now ported verbatim and always on, in the standalone AND the DLL build (the DLL build's `Idle` replaces the exe's, which has the lock). Without it the port ran at 270-2000 fps and the new-game intro stalled. Not a deviation any more; recorded because the old behaviour differed [IDLE-LOCK, `.notes/reports/IDLE-LOCK.md`].
 
 ## RenderWare shim (librw-based)
 * **MANAGED vertex buffers** instead of the exe's shared pools (behaviour-neutral); no morph-target interpolation, no LRU instance arena, no NATIVE geometry [P2B-07].

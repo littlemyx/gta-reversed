@@ -290,15 +290,16 @@ void RenderDebugShit() {
 void Idle(void* param) {
     ZoneScoped;
 
-    /* FPS lock. Limits to 26 frames per second.
-    CTimer::GetCurrentTimeInCycles();
-    CTimer::GetCyclesPerMillisecond();
-    do
-        CurrentTimeInCycles = CTimer::GetCurrentTimeInCycles();
-    while ( CurrentTimeInCycles / CTimer::GetCyclesPerMillisecond() - g_LastTickTime < 14 );
-    v2 = CTimer::GetCurrentTimeInCycles();
-    g_LastTickTime = v2 / CTimer::GetCyclesPerMillisecond();
-    */
+    // Unconditional frame lock of the original `Idle` (0x53E930..0x53E94D busy-wait, 0x53E94F..0x53E963 store): spin until at least
+    // 14 ms (= 71 fps at most) have passed since the previous `Idle`, whatever the frame limiter setting is. Game logic relies on that
+    // minimum frame time (at >1000 fps the new-game intro never progresses). All values are unsigned 32-bit (`div`, `sub`, `cmp`/`jb`),
+    // so a wrap-around behaves exactly like the exe's. The two discarded calls at 0x53E923/0x53E928 have no side effects and are omitted.
+    NOTSA_GLOBAL_LOCAL(g_LastTickTime, 0xB72CA8, (uint32), {});
+    uint32 nowMs;
+    do {
+        nowMs = CTimer::GetCurrentTimeInCycles() / CTimer::GetCyclesPerMillisecond();
+    } while (nowMs - g_LastTickTime < 14);
+    g_LastTickTime = CTimer::GetCurrentTimeInCycles() / CTimer::GetCyclesPerMillisecond();
 
     CTimer::Update();
     CSprite2d::InitPerFrame();

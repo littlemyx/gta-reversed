@@ -256,6 +256,11 @@ void LogGameStateTrace(int n, unsigned long crtHeapBytes, unsigned long crtHeapB
         Log("playerlog veh=%p ped=%p inVeh=%d speed=%d cross=%d stickY=%d stickX=%d", (void*)pv, (void*)pp, pp ? (int)pp->bInVehicle : -1, pv ? (int)(pv->m_vecMoveSpeed.Magnitude() * 100.f) : -1, (int)pad->NewState.ButtonCross, (int)pad->NewState.LeftStickY, (int)pad->NewState.LeftStickX);
     }
     Log("clocklog %02d:%02d:%02d day=%d month=%d timerMs=%u lastTick=%u msPerMin=%u", (int)CClock::ms_nGameClockHours, (int)CClock::ms_nGameClockMinutes, (int)CClock::ms_nGameClockSeconds, (int)CClock::ms_nGameClockDays, (int)CClock::ms_nGameClockMonth, (unsigned)CTimer::GetTimeInMS(), (unsigned)CClock::ms_nLastClockTick, (unsigned)CClock::ms_nMillisecondsPerGameMinute);
+    {   // world-entity pools (dummy pool = 2500 in the exe, a full pool makes `new CDummyObject` return null: the exe has no check either) + loaded IPL count
+        unsigned loadedIpls = 0;
+        if (CIplStore::GetPool()) { for (auto&& def : CIplStore::GetPool()->GetAllValid()) { loadedIpls += def.loaded ? 1u : 0u; } }
+        Log("poollog frame %d building=%u dummy=%u object=%u ipls_loaded=%u", n, GetBuildingPool() ? (unsigned)GetBuildingPool()->GetNoOfUsedSpaces() : 0u, GetDummyPool() ? (unsigned)GetDummyPool()->GetNoOfUsedSpaces() : 0u, GetObjectPool() ? (unsigned)GetObjectPool()->GetNoOfUsedSpaces() : 0u, loadedIpls);
+    }
     Log("memlog t=%lu ms frame %d pools task=%u route=%u event=%u ped=%u veh=%u: crt heap %lu bytes in %lu blocks, committed %lu KB", (unsigned long)GetTickCount(), n, GetTaskPool() ? (unsigned)GetTaskPool()->GetNoOfUsedSpaces() : 0u, GetPointRoutePool() ? (unsigned)GetPointRoutePool()->GetNoOfUsedSpaces() : 0u, GetEventPool() ? (unsigned)GetEventPool()->GetNoOfUsedSpaces() : 0u, GetPedPool() ? (unsigned)GetPedPool()->GetNoOfUsedSpaces() : 0u, GetVehiclePool() ? (unsigned)GetVehiclePool()->GetNoOfUsedSpaces() : 0u, crtHeapBytes, crtHeapBlocks, committedKB);
 }
 

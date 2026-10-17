@@ -268,7 +268,7 @@ void CIplStore::IncludeEntity(int32 iplSlotIndex, CEntity* entity) {
     case ENTITY_TYPE_BUILDING: {
         const auto buildingId = GetBuildingPool()->GetIndex(entity->AsBuilding());
         ipldef->firstBuilding = std::min(ipldef->firstBuilding, (int16)buildingId);
-        ipldef->lastBuilding = std::max(ipldef->firstBuilding, (int16)buildingId);
+        ipldef->lastBuilding = std::max(ipldef->lastBuilding, (int16)buildingId); // 0x404CF4: compared with the def's `last` (+0x24), the port used `first`
         break;
     }
     case ENTITY_TYPE_DUMMY: {
@@ -585,8 +585,9 @@ void CIplStore::RemoveIpl(int32 iplSlotIndex) {
     auto def = ms_pPool->GetAt(iplSlotIndex);
     def->loaded = false;
 
+    // NOTE: [minId, maxId] is INCLUSIVE (exe 0x404B71/0x404C1B: `jle` back-edge on first..last). The port had `i < maxId`, so the highest-index building and dummy of every unloaded IPL stayed alive.
     const auto ProcessPool = [iplSlotIndex]<typename PoolT>(PoolT& pool, int32 minId, int32 maxId) {
-        for (auto i = minId; i < maxId; i++) {
+        for (auto i = minId; i <= maxId; i++) {
             const auto entity = pool.GetAt(i);
             if (!entity)
                 continue;
@@ -606,7 +607,7 @@ void CIplStore::RemoveIpl(int32 iplSlotIndex) {
 
     // In same order as originally
     ProcessPool(*GetBuildingPool(), def->firstBuilding, def->lastBuilding);
-    ProcessPool(*GetObjectPool(),   0,                     GetObjectPool()->GetSize());
+    ProcessPool(*GetObjectPool(),   0,                     GetObjectPool()->GetSize() - 1); // exe 0x404BB4: `for (i = 0; i < size; i++)`
     ProcessPool(*GetDummyPool(),    def->firstDummy,    def->lastDummy);
 
     CTheCarGenerators::RemoveCarGenerators((uint8)iplSlotIndex);

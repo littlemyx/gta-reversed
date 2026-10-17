@@ -9,6 +9,7 @@
 #include "MissionCleanup.h"
 
 #include "Garages.h"
+#include "FireManager.h"
 #include "VehicleRecording.h"
 #include "PostEffects.h"
 #include "EntryExitManager.h"
@@ -30,7 +31,7 @@
 static NOTSA_GLOBAL_ALIAS(s_CopsNeededCarDensityScale, 0x8A5B20, (float), CCarCtrl::CarDensityMultiplier); // Same global as the one in Population.cpp
 static NOTSA_GLOBAL_ALIAS(s_CurDistForCam, 0x8CCB84, (float), notsa::shared::CurDistForCam); // Same global as `gCurDistForCam` in Camera.cpp
 static NOTSA_GLOBAL_ALIAS(s_Unk_B6EC2C, 0xB6EC2C, (bool), gAllowScriptedFixedCameraCollision);
-static auto& s_Unk_B728E0                = StaticRef<int32>(0xB728E0);
+static NOTSA_GLOBAL_ALIAS(s_Unk_B728E0, 0xB728E0, (int32), reinterpret_cast<int32&>(gFireManager.m_nMaxFireGenerationsAllowed)); // 0xB71F80 (gFireManager) + 2400 = its last member
 static NOTSA_GLOBAL_ALIAS(s_Unk_BA18D9, 0xBA18D9, (bool), *reinterpret_cast<bool*>(reinterpret_cast<uint8*>(&CUserDisplay::OnscnTimer) + 337));
 
 void CMissionCleanup::InjectHooks() {

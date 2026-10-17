@@ -86,7 +86,7 @@ eMoveState& NextDesiredMoveState() { return NOTSA_GLOBAL_EXPR(0x8D237C, (eMoveSt
 
 //! 0xC18CF0: `fEntityPosChangeThreshold`, 0xC18DB4: radius used by TASK_GO_TO_COORD_ANY_MEANS (both read as plain floats)
 float& EntityPosChangeThreshold() { return NOTSA_GLOBAL_EXPR(0xC18CF0, (float), notsa::shared::EntityPosChangeThreshold); }
-float& GoToAnyMeansRadius() { return StaticRef<float>(0xC18DB4); }
+NOTSA_GLOBAL_SYNTH(k_C18DB4_GoToAnyMeansRadius, 0xC18DB4, (float), { 0.5f }); float& GoToAnyMeansRadius() { return NOTSA_GLOBAL_EXPR(0xC18DB4, (float), k_C18DB4_GoToAnyMeansRadius); } // initterm 0x852860 stores 0.5f
 
 //! x87-compare idiom `fcom -100.0f; test ah, 0x41; jp skip`: the ground Z is looked up only when `z <= -100.0f` (ordered).
 float GroundZIfAuto(float x, float y, float z) {

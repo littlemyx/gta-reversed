@@ -95,7 +95,7 @@ void CPlayerRelationshipRecorder::ClearRelationshipWithPlayer(const CPed* ped) {
 
 // 0x61A2E0
 CPlayerRelationshipRecorder& GetPlayerRelationshipRecorder() {
-    static auto& g_sPlayerRelationshipRecorder = StaticRef<CPlayerRelationshipRecorder*>(0xC17084);
+    NOTSA_GLOBAL_LOCAL(g_sPlayerRelationshipRecorder, 0xC17084, (CPlayerRelationshipRecorder*), {});
 
     if (!g_sPlayerRelationshipRecorder) {
         // The original allocates via 0x82119A and on failure stores null (and returns it); mirror that with a nothrow new.

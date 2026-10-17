@@ -487,7 +487,7 @@ void DetachTrailerFromCab(CVehicle* trailer, CVehicle* cab) {
 //! `GetPointerToScriptVariable(VAR_GLOBAL)` AFTER the upper-casing (no parameters are collected).
 void GetLoadedShop(CRunningScript& S) {
     char tmp[9]{}; // the exe's buffer has no terminator slot (an 8 character shop name would run past it)
-    Strncpy8(tmp, StaticRef<char[24]>(0xA9A7D8)); // CShopping::ms_shopLoaded (private)
+    Strncpy8(tmp, CShopping::ms_shopLoaded);
     MakeUpperCase(tmp);
     char* const dst = (char*)S.GetPointerToScriptVariable(VAR_GLOBAL);
     Strncpy8(dst, tmp);

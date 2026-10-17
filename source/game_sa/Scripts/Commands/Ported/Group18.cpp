@@ -726,12 +726,12 @@ void LoadShop(CRunningScript& S) {
 
 //! 1887 GET_NUMBER_OF_ITEMS_IN_SHOP (case @0x46EB7B) => 1 int (CShopping::ms_numItemsInShop @0xA9A7F0)
 int32 GetNumberOfItemsInShop() {
-    return StaticRef<int32>(0xA9A7F0); // CShopping::ms_numItemsInShop (private)
+    return CShopping::ms_numItemsInShop;
 }
 
 //! 1888 GET_ITEM_IN_SHOP (case @0x46EB97): index (no bounds check) => 1 int (ms_shopContents[index] @0xA9A318)
 int32 GetItemInShop(int32 index) {
-    return (int32)(&StaticRef<uint32>(0xA9A318))[index]; // CShopping::ms_shopContents (private), no bounds check
+    return (int32)CShopping::ms_shopContents.data()[index]; // no bounds check
 }
 
 //! 1889 GET_PRICE_OF_ITEM (case @0x46EBAF): item => 1 int (CShopping::GetPrice)

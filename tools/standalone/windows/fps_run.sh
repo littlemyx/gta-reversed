@@ -24,7 +24,8 @@ lim, vm, sfx, out = sys.argv[1:5]
 b = bytearray(open('C:/gta-scratch/bugquit/gta_sa.set.good', 'rb').read())
 b[0xB35] = 1 if lim == 'on' else 0
 if vm: b[0xB36:0xB3A] = int(vm).to_bytes(4, 'little')
-b[0xB1B] = int(sfx); b[0xB1C] = int(sfx)      # SFX / radio volume (0 for the original: belt and braces next to the dsound mute proxy)
+b[0xB1B] = int(sfx); b[0xB1C] = int(sfx)
+b[0xB1E] = 0                                  # radio auto-select OFF: the Steam install ships silent stub radio tracks, the ORIGINAL divides by zero (0x4F1464, stream thread) when a car enter starts one      # SFX / radio volume (0 for the original: belt and braces next to the dsound mute proxy)
 open(out, 'wb').write(b)
 EOPY
 cd "$DIR" || exit 2

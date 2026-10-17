@@ -71,15 +71,15 @@ static void logpp(const char* what, const D3DPRESENT_PARAMETERS* pp){
   char fn[600]; const char* p=getenv("D3D9PX_OUT"); wsprintfA(fn,"%s.txt",p?p:"d3d9px.bin"); FILE* f=fopen(fn,"a");
   if(f){ fprintf(f,"%.1f ms %s: %ux%u fmt=%d backbuffers=%u windowed=%d swap=%d hz=%u interval=0x%x depth=%d\n",Now(),what,pp->BackBufferWidth,pp->BackBufferHeight,(int)pp->BackBufferFormat,pp->BackBufferCount,pp->Windowed,(int)pp->SwapEffect,pp->FullScreen_RefreshRateInHz,pp->PresentationInterval,(int)pp->AutoDepthStencilFormat); fclose(f); }
 }
-/* env D3D9PX_NOVSYNC=1: the real CreateDevice/Reset get a COPY of the parameters with PresentationInterval = IMMEDIATE (the caller's struct, and so its own bookkeeping, stays untouched;
+/* env D3D9PX_NOVSYNC=1: the real CreateDevice/Reset get a COPY of the parameters with PresentationInterval = IMMEDIATE and SwapEffect = DISCARD (the original exe asks for D3DSWAPEFFECT_FLIP, whose back-buffer queue pairs the frames at 16.4 ms even with IMMEDIATE; librw uses DISCARD) (the caller's struct, and so its own bookkeeping, stays untouched;
  * the driver's output fields are copied back). Measurement tool only: removes the display's vsync pacing (12.7 Hz in exclusive mode on the Windows host) from both exes alike. */
 static int novsync(void){ static int v=-1; if(v<0) v=getenv("D3D9PX_NOVSYNC")?1:0; return v; }
 static HRESULT STDMETHODCALLTYPE hReset(IDirect3DDevice9* d,D3DPRESENT_PARAMETERS* pp){
   logpp("Reset",pp); if(!novsync()) return oReset(d,pp);
-  D3DPRESENT_PARAMETERS c=*pp; c.PresentationInterval=D3DPRESENT_INTERVAL_IMMEDIATE; HRESULT hr=oReset(d,&c); return hr; }
+  D3DPRESENT_PARAMETERS c=*pp; c.PresentationInterval=D3DPRESENT_INTERVAL_IMMEDIATE; c.SwapEffect=D3DSWAPEFFECT_DISCARD; HRESULT hr=oReset(d,&c); return hr; }
 static HRESULT STDMETHODCALLTYPE hCreateDevice(IDirect3D9* t,UINT ad,D3DDEVTYPE ty,HWND w,DWORD fl,D3DPRESENT_PARAMETERS* pp,IDirect3DDevice9** out){
   logpp("CreateDevice",pp);
-  HRESULT hr; if(novsync()){ D3DPRESENT_PARAMETERS c=*pp; c.PresentationInterval=D3DPRESENT_INTERVAL_IMMEDIATE; hr=oCreateDevice(t,ad,ty,w,fl,&c,out); pp->BackBufferWidth=c.BackBufferWidth; pp->BackBufferHeight=c.BackBufferHeight; pp->BackBufferFormat=c.BackBufferFormat; pp->BackBufferCount=c.BackBufferCount; }
+  HRESULT hr; if(novsync()){ D3DPRESENT_PARAMETERS c=*pp; c.PresentationInterval=D3DPRESENT_INTERVAL_IMMEDIATE; c.SwapEffect=D3DSWAPEFFECT_DISCARD; hr=oCreateDevice(t,ad,ty,w,fl,&c,out); pp->BackBufferWidth=c.BackBufferWidth; pp->BackBufferHeight=c.BackBufferHeight; pp->BackBufferFormat=c.BackBufferFormat; pp->BackBufferCount=c.BackBufferCount; }
   else hr=oCreateDevice(t,ad,ty,w,fl,pp,out);
   if(SUCCEEDED(hr)&&out&&*out&&!oPresent){ void** vt=*(void***)*out;
     oPresent=hook(vt,17,hPresent); oReset=hook(vt,16,hReset); oDP=hook(vt,81,hDP); oDIP=hook(vt,82,hDIP); oDPUP=hook(vt,83,hDPUP); oDIPUP=hook(vt,84,hDIPUP); }

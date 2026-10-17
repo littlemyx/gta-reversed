@@ -548,8 +548,17 @@ struct IBlob : IUnknown {                                                       
 };
 using D3DAssembleFn = HRESULT(WINAPI*)(const void*, SIZE_T, const char*, const void*, void*, UINT, IBlob**, IBlob**);
 
-// the exe's call at 0x760C4D: D3DXAssembleShader(buf, len, defines 0, include 0, Flags 4 = D3DXSHADER_SKIPOPTIMIZATION, &shader, errors 0); D3DAssemble takes the same flag bits
-constexpr UINT kAssembleFlags = 4;
+// the exe's call at 0x760C4D: D3DXAssembleShader(buf, len, defines 0, include 0, Flags 4 = D3DXSHADER_SKIPOPTIMIZATION, &shader, errors 0).
+// D3DAssemble must NOT get that bit: the native d3dcompiler_47 accepts only D3DCOMPILE_DEBUG (1) / D3DCOMPILE_SKIP_VALIDATION (2) for the assembler and fails 4 with
+// D3DERR_INVALIDCALL (0x8876086C) and no error blob (Wine's vkd3d ignores it, which hid this on the Mac). An assembler has no optimiser, so flags 0 = the exe's
+// behaviour: validation stays on (the exe validates), the bytes are those of flags 2 (rw_skin_vs_test compares them with the exe's own D3DX, 2.2 M keys).
+constexpr UINT kAssembleFlags = 2;
+
+// a failed assemble is never silent (an unreported null shader kept every skin vertex shader dead on native Windows)
+void ReportAssembleFailure(const char* who, HRESULT hr, IBlob* errors) {
+    std::fprintf(stderr, "skinvs: %s: D3DAssemble failed (0x%08lX): %s\n", who, static_cast<unsigned long>(hr),
+                 errors ? static_cast<const char*>(errors->GetBufferPointer()) : "(no error text)");
+}
 
 D3DAssembleFn LoadAssembler() {
     static D3DAssembleFn fn = []() -> D3DAssembleFn {
@@ -572,10 +581,14 @@ IDirect3DVertexShader9* Assemble(const std::string& text) {
     IBlob* errors = nullptr;
     const HRESULT hr = assemble(text.data(), text.size(), nullptr, nullptr, nullptr, kAssembleFlags, &code, &errors);
     if (hr >= 0 && code) {
-        if (rw::d3d::d3ddevice)
-            rw::d3d::d3ddevice->CreateVertexShader(static_cast<const DWORD*>(code->GetBufferPointer()), &shader);
-    } else if (errors) {
-        std::fprintf(stderr, "skinvs: D3DAssemble failed (0x%08lX): %s\n", static_cast<unsigned long>(hr), static_cast<const char*>(errors->GetBufferPointer()));
+        if (rw::d3d::d3ddevice) {
+            const HRESULT chr = rw::d3d::d3ddevice->CreateVertexShader(static_cast<const DWORD*>(code->GetBufferPointer()), &shader);
+            if (FAILED(chr)) std::fprintf(stderr, "skinvs: CreateVertexShader rejected the assembled bytecode (0x%08lX)\n", static_cast<unsigned long>(chr));
+        } else {
+            std::fprintf(stderr, "skinvs: no d3ddevice, skin vertex shader not created\n");
+        }
+    } else {
+        ReportAssembleFailure("Assemble", hr, errors);
     }
     if (code) code->Release();
     if (errors) errors->Release();
@@ -683,6 +696,7 @@ bool AssembleToBytes(const std::string& text, std::vector<std::uint8_t>& out) {
     IBlob* code = nullptr; IBlob* errors = nullptr;
     const HRESULT hr = assemble(text.data(), text.size(), nullptr, nullptr, nullptr, kAssembleFlags, &code, &errors);
     const bool ok = hr >= 0 && code;
+    if (!ok) ReportAssembleFailure("AssembleToBytes", hr, errors);
     if (ok) { const auto* b = static_cast<const std::uint8_t*>(code->GetBufferPointer()); out.assign(b, b + code->GetBufferSize()); }
     if (code) code->Release();
     if (errors) errors->Release();

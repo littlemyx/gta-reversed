@@ -16,7 +16,7 @@ public:
     bool                      m_abUsed[SECTIONS_COUNT];
     CAEWaterCannonAudioEntity m_Audio;
 
-    static inline auto& m_auRenderIndices = StaticRef<std::array<RxVertexIndex, 18>>(0xC80700);
+    static inline NOTSA_GLOBAL(m_auRenderIndices, 0xC80700, (std::array<RxVertexIndex, 18>), {});
 
 public:
     static void InjectHooks();

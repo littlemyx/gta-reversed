@@ -34,7 +34,7 @@ public:
     static constexpr float ms_fMaxWaterCreaturesDrawDistanceSquared = sq(ms_fMaxWaterCreaturesDrawDistance);
 
 private:
-    static inline auto& ms_waterCreatureInfos = StaticRef<tWaterCreatureInfo[NUM_WATER_CREATURE_INFOS]>(0x8D3698); // Access using GetCreatureInfo()
+    static inline NOTSA_GLOBAL(ms_waterCreatureInfos, 0x8D3698, (tWaterCreatureInfo[NUM_WATER_CREATURE_INFOS]), { { reinterpret_cast<uint16*>(&ModelIndices::MI_FISH1SINGLE), 1, 20, 4.0f, 10.0f, 0.5f, 3.0f, 1.0f, 3.5f, 0.1f, 0.005f, 8.0f }, { reinterpret_cast<uint16*>(&ModelIndices::MI_FISH2SINGLE), 1, 20, 4.0f, 10.0f, 0.5f, 3.0f, 1.0f, 3.5f, 0.1f, 0.005f, 8.0f }, { reinterpret_cast<uint16*>(&ModelIndices::MI_FISH3SINGLE), 1, 20, 4.0f, 10.0f, 0.5f, 3.0f, 1.0f, 3.5f, 0.1f, 0.005f, 8.0f }, { reinterpret_cast<uint16*>(&ModelIndices::MI_JELLYFISH), 10, 25, 0.0f, 20.0f, 0.5f, 5.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f }, { reinterpret_cast<uint16*>(&ModelIndices::MI_JELLYFISH01), 10, 25, 0.0f, 20.0f, 0.5f, 5.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f }, { reinterpret_cast<uint16*>(&ModelIndices::MI_TURTLE), 1, 2, 6.0f, 20.0f, 3.0f, 6.0f, 2.0f, 5.0f, 0.07f, 0.005f, 12.0f }, { reinterpret_cast<uint16*>(&ModelIndices::MI_DOLPHIN), 1, 1, 8.0f, 30.0f, 8.0f, 10.0f, 4.0f, 7.0f, 0.05f, 0.005f, 20.0f } }); // Access using GetCreatureInfo()
 
     WaterCreature_c m_waterCreatureItems[NUM_WATER_CREATURES];
     TList_c<WaterCreature_c> m_waterCreaturePool;

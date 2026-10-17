@@ -35,9 +35,9 @@ private:
     static bool ClearSpaceForRoadBlockObject(CVector cornerA, CVector cornerB);
 
 private:
-    static inline auto& InOrOut                   = StaticRef<std::array<bool, MAX_ROADBLOCKS>>(0xA43438);
+    static inline NOTSA_GLOBAL(InOrOut, 0xA43438, (std::array<bool, MAX_ROADBLOCKS>), {});
     static inline auto& RoadBlockNodes            = StaticRef<std::array<CNodeAddress, MAX_ROADBLOCKS>>(0xA435A0);
-    static inline auto& aScriptRoadBlocks         = StaticRef<std::array<CScriptRoadBlock, MAX_SCRIPT_ROADBLOCKS>>(0xA43AB8);
-    static inline auto& GenerateDynamicRoadBlocks = StaticRef<bool>(0xA43584);
-    static inline auto& NumRoadBlocks             = StaticRef<int32>(0xA43580);
+    static inline NOTSA_GLOBAL(aScriptRoadBlocks, 0xA43AB8, (std::array<CScriptRoadBlock, MAX_SCRIPT_ROADBLOCKS>), {});
+    static inline NOTSA_GLOBAL(GenerateDynamicRoadBlocks, 0xA43584, (bool), {});
+    static inline NOTSA_GLOBAL(NumRoadBlocks, 0xA43580, (int32), {});
 };

@@ -220,7 +220,12 @@ target_link_options(${RE_PROJECT_LIB_NAME} PRIVATE "/SUBSYSTEM:WINDOWS")
 if (${RE_PROJECT}_STANDALONE AND NOT ${RE_PROJECT}_STANDALONE_DUMP_HOOKS_ONLY)
     # F3: a normal exe image. Default image base, ASLR (/DYNAMICBASE) and a relocation table: nothing in the run code depends on a fixed address any more (the census proves it
     # touches no original address; there is no /FIXED, no 9 MB placeholder, no /BASE:0x400000). /INCREMENTAL:NO is kept (reproducible link, no ILT thunks).
-    target_link_options(${RE_PROJECT_LIB_NAME} PRIVATE "$<$<CXX_COMPILER_ID:MSVC>:/INCREMENTAL:NO;/DYNAMICBASE>")
+    option(${RE_PROJECT}_ASLR "Run exe: link with /DYNAMICBASE (ASLR). OFF: /DYNAMICBASE:NO, the exe always loads at the MSVC default base 0x400000 like the original (bit-reproducible addresses for debugging)" ON)
+    if (${RE_PROJECT}_ASLR)
+        target_link_options(${RE_PROJECT_LIB_NAME} PRIVATE "$<$<CXX_COMPILER_ID:MSVC>:/INCREMENTAL:NO;/DYNAMICBASE>")
+    else()
+        target_link_options(${RE_PROJECT_LIB_NAME} PRIVATE "$<$<CXX_COMPILER_ID:MSVC>:/INCREMENTAL:NO;/DYNAMICBASE:NO>")
+    endif()
     # Keep the exe/pdb/map out of <repo>/bin/<config>, where the DLL build puts gta_reversed.asi/.pdb
     set_target_properties(${RE_PROJECT_LIB_NAME} PROPERTIES
         ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin"

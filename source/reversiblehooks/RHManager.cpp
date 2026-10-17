@@ -2,6 +2,9 @@
 
 #ifdef NOTSA_STANDALONE
 #include "ReversibleHook/NullHook.h"
+// (F3: the standalone-run Fixups.h include stood here; lines kept: __LINE__ of the code below is part of the DLL build's object code)
+//
+//
 #else
 #include "ReversibleHook/VirtualHook.h"
 #endif
@@ -50,6 +53,27 @@ void RHManager::InstallVirtual(
     void*              fnAddressGTA,
     HookInstallOptions opt
 ) {
+/* F3 (.notes/DETACH_DATA_PLAN.md): the standalone-run fixup registration (RegisterVMTSlot / RegisterUnverified) that stood here was removed. The block is kept as
+   a comment of the same height because HookInstallOptions::InstallSrcLoc embeds __LINE__: the DLL build's object code must stay identical (obj_code_sig.py).
+   .
+   .
+   .
+   .
+   .
+   .
+   .
+   .
+   .
+   .
+   .
+   .
+   .
+   .
+   .
+   .
+   .
+   .
+*/
 #ifdef NOTSA_STANDALONE // (dump-only: the run build never calls this, the RH_Scoped* macros are no-ops there)
     AddHookToCategory(category, opt, std::make_shared<ReversibleHook::NullHook>(
         std::move(fnName),

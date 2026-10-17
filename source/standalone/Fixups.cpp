@@ -264,7 +264,7 @@ void InstallDiagnostics() {
     {   // F3: the exe is a normal relocatable image (no /FIXED, no placeholder): record where the loader put it (ASLR) so a profile/crash address can be resolved against the .map
         const auto base = (const uint8_t*)GetModuleHandleA(nullptr);
         const auto* nt  = (const IMAGE_NT_HEADERS32*)(base + ((const IMAGE_DOS_HEADER*)base)->e_lfanew);
-        Log("image base 0x%08X (preferred 0x%08X, ASLR %s, size 0x%X)", (unsigned)(uintptr_t)base, (unsigned)nt->OptionalHeader.ImageBase,
+        Log("image base 0x%08X (ASLR %s, size 0x%X)", (unsigned)(uintptr_t)base,
             (nt->OptionalHeader.DllCharacteristics & IMAGE_DLLCHARACTERISTICS_DYNAMIC_BASE) ? "on" : "off", (unsigned)nt->OptionalHeader.SizeOfImage);
     }
     if (std::getenv("NOTSA_STANDALONE_SAMPLER")) {

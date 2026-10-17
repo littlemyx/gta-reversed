@@ -597,6 +597,9 @@ INT WINAPI WinMain(HINSTANCE instance, HINSTANCE hPrevInstance, LPSTR cmdLine, I
     }};
     InjectHooksMain();
 
+    // (3 lines of the removed image fixup pass, kept so the __LINE__ of the hooks below stay identical in the DLL build)
+    //
+    //
     NOTSA_VERIFY_GLOBALS_BOOT(); // A2: boot dump for tools/standalone/verify_globals.py (nothing unless NOTSA_VERIFY_GLOBALS)
     NOTSA_IMAGE_DIAG_ARM();      // A3: dev-only stray-access census / poison over the mapped original image (nothing unless GTASA_IMAGE_DIAG and the env variable is set)
     return NOTSA_WinMain(instance, hPrevInstance, cmdLine, nCmdShow);

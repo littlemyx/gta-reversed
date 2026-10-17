@@ -7,7 +7,7 @@ class CPedGroup;
 
 class CInformGroupEventQueue {
 public:
-    static inline auto& ms_informGroupEvents = StaticRef<std::array<CInformGroupEvent, 8>>(0xA9B018);
+    static inline NOTSA_GLOBAL(ms_informGroupEvents, 0xA9B018, (std::array<CInformGroupEvent, 8>), {});
 
 public:
     static void InjectHooks();

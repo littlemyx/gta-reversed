@@ -82,4 +82,4 @@ public:
     void InvalidateNonVisibleEvents();
 };
 
-extern CInterestingEvents& g_InterestingEvents;
+NOTSA_GLOBAL_EXTERN(g_InterestingEvents, (CInterestingEvents));

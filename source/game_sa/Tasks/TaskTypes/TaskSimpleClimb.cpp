@@ -11,10 +11,10 @@
 
 #include <reversiblebugfixes/Bugs.hpp>
 
-auto& ms_ClimbColModel    = StaticRef<CColModel>(0xC19518);
-auto& ms_StandUpColModel  = StaticRef<CColModel>(0xC19548);
-auto& ms_VaultColModel    = StaticRef<CColModel>(0xC19578);
-auto& ms_FindEdgeColModel = StaticRef<CColModel>(0xC195A8);
+NOTSA_GLOBAL(ms_ClimbColModel,    0xC19518, (CColModel), {});
+NOTSA_GLOBAL(ms_StandUpColModel,  0xC19548, (CColModel), {});
+NOTSA_GLOBAL(ms_VaultColModel,    0xC19578, (CColModel), {});
+NOTSA_GLOBAL(ms_FindEdgeColModel, 0xC195A8, (CColModel), {});
 
 const float ms_fHangingOffsetHorz = -0.40f; // 0x8D2F1C
 const float ms_fHangingOffsetVert = -1.10f; // 0x8D2F20

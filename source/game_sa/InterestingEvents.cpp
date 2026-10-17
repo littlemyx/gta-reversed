@@ -3,7 +3,7 @@
 #include "InterestingEvents.h"
 #include "DbgDangling.h"
 
-auto& g_InterestingEvents = StaticRef<CInterestingEvents>(0xC0B058);
+NOTSA_GLOBAL(g_InterestingEvents, 0xC0B058, (CInterestingEvents), {});
 
 /*
  * Commented hooks aren't tested.

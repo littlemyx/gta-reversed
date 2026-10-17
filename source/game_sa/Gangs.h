@@ -17,7 +17,7 @@ class CGangInfo;
 class CGangs {
 public:
     static inline NOTSA_GLOBAL(GangAttackWithCops, 0xC091E0, (std::array<bool, 10>), {});
-    static inline auto& Gang               = StaticRef<std::array<CGangInfo, 10>>(0xC091F0);
+    static NOTSA_GLOBAL_DECL(CGangs, Gang, 0xC091F0, (std::array<CGangInfo, 10>)); // detached: defined at the end of Gangs.cpp (CGangInfo is incomplete here)
 
 public:
     static void InjectHooks();

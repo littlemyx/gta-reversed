@@ -1483,9 +1483,12 @@ void CCamera::SetColVarsPed(ePedType pedType, int32 nCamPedZoom) {
         case PED_TYPE_PLAYER2:
             return nCamPedZoom + 6;
         default:
-            return 0;
+            return -1; // exe 0x50CC50: any other ped type returns without touching the collision set (the port used to switch to set 0)
         }
     }();
+    if (camColVars < 0) {
+        return;
+    }
 
     if (camColVars != gCurCamColVars) {
         gCurCamColVars = camColVars;

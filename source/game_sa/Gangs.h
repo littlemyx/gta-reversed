@@ -16,7 +16,7 @@ class CGangInfo;
 
 class CGangs {
 public:
-    static inline auto& GangAttackWithCops = StaticRef<std::array<bool, 10>>(0xC091E0);
+    static inline NOTSA_GLOBAL(GangAttackWithCops, 0xC091E0, (std::array<bool, 10>), {});
     static inline auto& Gang               = StaticRef<std::array<CGangInfo, 10>>(0xC091F0);
 
 public:

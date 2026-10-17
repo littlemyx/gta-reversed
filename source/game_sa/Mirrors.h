@@ -18,14 +18,14 @@ enum eMirrorType : uint8 {
 
 class CMirrors {
 public:
-    static inline auto& pBuffer = StaticRef<RwRaster*>(0xC7C71C);
-    static inline auto& pZBuffer = StaticRef<RwRaster*>(0xC7C720);
-    static inline auto& bRenderingReflection = StaticRef<bool>(0xC7C728);
-    static inline auto& d3dRestored = StaticRef<bool>(0xC7C729);
-    static inline auto& TypeOfMirror = StaticRef<eMirrorType>(0xC7C724);
-    static inline auto& MirrorFlags = StaticRef<uint8>(0xC7C618);
-    static inline auto& MirrorV = StaticRef<float>(0xC7C61C);
-    static inline auto& MirrorNormal = StaticRef<CVector>(0xC803D8);
+    static inline NOTSA_GLOBAL(pBuffer, 0xC7C71C, (RwRaster*), {});
+    static inline NOTSA_GLOBAL(pZBuffer, 0xC7C720, (RwRaster*), {});
+    static inline NOTSA_GLOBAL(bRenderingReflection, 0xC7C728, (bool), {});
+    static inline NOTSA_GLOBAL(d3dRestored, 0xC7C729, (bool), {});
+    static inline NOTSA_GLOBAL(TypeOfMirror, 0xC7C724, (eMirrorType), {});
+    static inline NOTSA_GLOBAL(MirrorFlags, 0xC7C618, (uint8), {});
+    static inline NOTSA_GLOBAL(MirrorV, 0xC7C61C, (float), {});
+    static inline NOTSA_GLOBAL(MirrorNormal, 0xC803D8, (CVector), {});
 
 public:
     static void InjectHooks();

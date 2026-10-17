@@ -32,48 +32,48 @@ VALIDATE_SIZE(tPedGroupTranslationData, 0xC);
 
 class CPopulation {
 public:
-    static inline auto& PedDensityMultiplier = StaticRef<float>(0x8D2530);
-    static inline auto& m_AllRandomPedsThisType = StaticRef<int32>(0x8D2534);
-    static inline auto& MaxNumberOfPedsInUse = StaticRef<uint32>(0x8D2538);
-    static inline auto& NumberOfPedsInUseInterior = StaticRef<uint32>(0x8D253C);
-    static inline auto& m_TranslationArray = StaticRef<tPedGroupTranslationData[POPCYCLE_TOTAL_GROUPS]>(0x8D2540);
+    static inline NOTSA_GLOBAL(PedDensityMultiplier, 0x8D2530, (float), { 1.0f });
+    static inline NOTSA_GLOBAL(m_AllRandomPedsThisType, 0x8D2534, (int32), { -1 });
+    static inline NOTSA_GLOBAL(MaxNumberOfPedsInUse, 0x8D2538, (uint32), { 25 });
+    static inline NOTSA_GLOBAL(NumberOfPedsInUseInterior, 0x8D253C, (uint32), { 40 });
+    static NOTSA_GLOBAL_DECL(CPopulation, m_TranslationArray, 0x8D2540, (tPedGroupTranslationData[POPCYCLE_TOTAL_GROUPS]));
     static inline auto& m_LoadedBoats = StaticRef<CLoadedCarGroup>(0xC0E998);
     static inline auto& m_InAppropriateLoadedCars = StaticRef<CLoadedCarGroup>(0xC0E9C8);
     static inline auto& m_AppropriateLoadedCars = StaticRef<CLoadedCarGroup>(0xC0E9F8);
     static inline auto& m_LoadedGangCars = StaticRef<std::array<CLoadedCarGroup, 10>>(0xC0EA28);
-    static inline auto& bZoneChangeHasHappened = StaticRef<bool>(0xC0EC22);
-    static inline auto& m_CountDownToPedsAtStart = StaticRef<uint8>(0xC0EC23);
-    static inline auto& ms_nTotalMissionPeds = StaticRef<uint32>(0xC0EC24);
-    static inline auto& ms_nTotalPeds = StaticRef<uint32>(0xC0EC28);
-    static inline auto& ms_nTotalGangPeds = StaticRef<uint32>(0xC0EC2C);
-    static inline auto& ms_nTotalCivPeds = StaticRef<uint32>(0xC0EC30);
-    static inline auto& ms_nTotalCarPassengerPeds = StaticRef<uint32>(0xC0EC34);
-    static inline auto& ms_nNumDealers = StaticRef<uint32>(0xC0EC38);
-    static inline auto& ms_nNumGang = StaticRef<std::array<uint32, TOTAL_GANGS>>(0xC0EC3C);
-    static inline auto& ms_nNumEmergency = StaticRef<uint32>(0xC0EC64);
-    static inline auto& ms_nNumCop = StaticRef<uint32>(0xC0EC68);
-    static inline auto& ms_nNumCivFemale = StaticRef<uint32>(0xC0EC6C);
-    static inline auto& ms_nNumCivMale = StaticRef<uint32>(0xC0EC70);
+    static inline NOTSA_GLOBAL(bZoneChangeHasHappened, 0xC0EC22, (bool), {});
+    static inline NOTSA_GLOBAL(m_CountDownToPedsAtStart, 0xC0EC23, (uint8), {});
+    static inline NOTSA_GLOBAL(ms_nTotalMissionPeds, 0xC0EC24, (uint32), {});
+    static inline NOTSA_GLOBAL(ms_nTotalPeds, 0xC0EC28, (uint32), {});
+    static inline NOTSA_GLOBAL(ms_nTotalGangPeds, 0xC0EC2C, (uint32), {});
+    static inline NOTSA_GLOBAL(ms_nTotalCivPeds, 0xC0EC30, (uint32), {});
+    static inline NOTSA_GLOBAL(ms_nTotalCarPassengerPeds, 0xC0EC34, (uint32), {});
+    static inline NOTSA_GLOBAL(ms_nNumDealers, 0xC0EC38, (uint32), {});
+    static inline NOTSA_GLOBAL(ms_nNumGang, 0xC0EC3C, (std::array<uint32, TOTAL_GANGS>), {});
+    static inline NOTSA_GLOBAL(ms_nNumEmergency, 0xC0EC64, (uint32), {});
+    static inline NOTSA_GLOBAL(ms_nNumCop, 0xC0EC68, (uint32), {});
+    static inline NOTSA_GLOBAL(ms_nNumCivFemale, 0xC0EC6C, (uint32), {});
+    static inline NOTSA_GLOBAL(ms_nNumCivMale, 0xC0EC70, (uint32), {});
     static const uint16 m_DefaultModelIDForUnusedSlot = 2000; // means not loaded
-    static inline auto& m_bDontCreateRandomGangMembers = StaticRef<bool>(0xC0FCB2);
-    static inline auto& m_bOnlyCreateRandomGangMembers = StaticRef<bool>(0xC0FCB3);
-    static inline auto& m_bDontCreateRandomCops = StaticRef<bool>(0xC0FCB4);
-    static inline auto& m_bMoreCarsAndFewerPeds = StaticRef<bool>(0xC0FCB5);
-    static inline auto& bInPoliceStation = StaticRef<bool>(0xC0FCB6);
-    static inline auto& NumMiamiViceCops = StaticRef<uint32>(0xC0FCB8);
-    static inline auto& CurrentWorldZone = StaticRef<uint32>(0xC0FCBC);
+    static inline NOTSA_GLOBAL(m_bDontCreateRandomGangMembers, 0xC0FCB2, (bool), {});
+    static inline NOTSA_GLOBAL(m_bOnlyCreateRandomGangMembers, 0xC0FCB3, (bool), {});
+    static inline NOTSA_GLOBAL(m_bDontCreateRandomCops, 0xC0FCB4, (bool), {});
+    static inline NOTSA_GLOBAL(m_bMoreCarsAndFewerPeds, 0xC0FCB5, (bool), {});
+    static inline NOTSA_GLOBAL(bInPoliceStation, 0xC0FCB6, (bool), {});
+    static inline NOTSA_GLOBAL(NumMiamiViceCops, 0xC0FCB8, (uint32), {});
+    static inline NOTSA_GLOBAL(CurrentWorldZone, 0xC0FCBC, (uint32), {});
 
     //! Number of model IDs in each corresponding car group
-    static inline auto& m_nNumCarsInGroup = StaticRef<std::array<uint16, (size_t)(POPCYCLE_TOTAL_CARGROUPS)>>(0xC0EC78);
+    static inline NOTSA_GLOBAL(m_nNumCarsInGroup, 0xC0EC78, (std::array<uint16, (size_t)(POPCYCLE_TOTAL_CARGROUPS)>), {});
 
     //! Car model IDs in each corresponding car group
-    static inline auto& m_CarGroups       = StaticRef<notsa::mdarray<int16, (size_t)(POPCYCLE_TOTAL_CARGROUPS), 23>>(0xC0ED38);
+    static inline NOTSA_GLOBAL(m_CarGroups, 0xC0ED38, (notsa::mdarray<int16, (size_t)(POPCYCLE_TOTAL_CARGROUPS), 23>), {});
 
     //! Number of model IDs in each corresponding ped group
-    static inline auto& m_nNumPedsInGroup = StaticRef<std::array<uint16, (size_t)(POPCYCLE_TOTAL_PEDGROUPS)>>(0xC0ECC0);
+    static inline NOTSA_GLOBAL(m_nNumPedsInGroup, 0xC0ECC0, (std::array<uint16, (size_t)(POPCYCLE_TOTAL_PEDGROUPS)>), {});
 
     //! Ped model IDs in each corresponding ped group
-    static inline auto& m_PedGroups       = StaticRef<notsa::mdarray<int16, (size_t)(POPCYCLE_TOTAL_PEDGROUPS), 21>>(0xC0F358);
+    static inline NOTSA_GLOBAL(m_PedGroups, 0xC0F358, (notsa::mdarray<int16, (size_t)(POPCYCLE_TOTAL_PEDGROUPS), 21>), {});
 
 public:
     static void InjectHooks();

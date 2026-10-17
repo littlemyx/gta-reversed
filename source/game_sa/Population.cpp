@@ -2612,3 +2612,29 @@ void CPopulation::UpdatePedCounts() {
     ms_nTotalCivPeds = ms_nNumCivMale + ms_nNumCivFemale;
     ms_nTotalPeds = ms_nTotalCivPeds + ms_nTotalGangPeds + ms_nNumCop + ms_nNumEmergency;
 }
+
+// Initial values of the globals declared with NOTSA_GLOBAL_DECL in Population.h (detached mode; ignored in address mode)
+namespace {
+constexpr tPedGroupTranslationData PGT(int32 a, int32 b, int32 c) {
+    return { { static_cast<ePopcyclePedGroup>(a), static_cast<ePopcyclePedGroup>(b), static_cast<ePopcyclePedGroup>(c) } };
+}
+}
+NOTSA_GLOBAL_DEF(CPopulation, m_TranslationArray, 0x8D2540, (tPedGroupTranslationData[POPCYCLE_TOTAL_GROUPS]), {
+    PGT(0, 1, 2), PGT(3, 4, 5),
+    PGT(6, 7, 8), PGT(9, 9, 9),
+    PGT(10, 10, 10), PGT(11, 12, 13),
+    PGT(14, 15, 16), PGT(17, 18, 19),
+    PGT(20, 21, 22), PGT(23, 24, 25),
+    PGT(26, 27, 28), PGT(29, 29, 29),
+    PGT(30, 31, 32), PGT(33, 34, 35),
+    PGT(36, 37, 38), PGT(39, 39, 39),
+    PGT(40, 40, 40), PGT(41, 41, 41),
+    PGT(42, 42, 42), PGT(43, 43, 43),
+    PGT(44, 44, 44), PGT(45, 45, 45),
+    PGT(46, 46, 46), PGT(47, 47, 47),
+    PGT(48, 48, 48), PGT(49, 49, 49),
+    PGT(50, 50, 50), PGT(51, 51, 51),
+    PGT(52, 52, 52), PGT(53, 53, 53),
+    PGT(54, 54, 54), PGT(55, 55, 55),
+    PGT(56, 56, 56)
+});

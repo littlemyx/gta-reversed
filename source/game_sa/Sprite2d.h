@@ -17,11 +17,11 @@ class CSprite2d {
 public:
     RwTexture* m_pTexture;
 
-    static inline auto& nextBufferIndex = StaticRef<int32>(0xC80458);
-    static inline auto& nextBufferVertex = StaticRef<int32>(0xC8045C);
-    static inline auto& NearScreenZ = StaticRef<float>(0xC80460);
-    static inline auto& RecipNearClip = StaticRef<float>(0xC80464);
-    static inline auto& maVertices = StaticRef<std::array<RwIm2DVertex, 8>>(0xC80468);
+    static inline NOTSA_GLOBAL(nextBufferIndex, 0xC80458, (int32), {});
+    static inline NOTSA_GLOBAL(nextBufferVertex, 0xC8045C, (int32), {});
+    static inline NOTSA_GLOBAL(NearScreenZ, 0xC80460, (float), {});
+    static inline NOTSA_GLOBAL(RecipNearClip, 0xC80464, (float), {});
+    static inline NOTSA_GLOBAL(maVertices, 0xC80468, (std::array<RwIm2DVertex, 8>), {});
 
 public:
     static void InjectHooks();

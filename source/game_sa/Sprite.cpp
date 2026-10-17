@@ -1,7 +1,7 @@
 #include "StdInc.h"
 #include "Sprite.h"
 
-static inline auto& nSpriteBufferIndex = StaticRef<int32>(0xC6A158);
+static inline NOTSA_GLOBAL(nSpriteBufferIndex, 0xC6A158, (int32), {});
 
 // NOTSA
 constexpr int32 TOTAL_BUFFERED_SPRITES = 384; // The game's sprite buffer fits exactly this many quads

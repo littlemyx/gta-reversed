@@ -26,36 +26,42 @@
 
 namespace {
 // Original (modifiable, in .data) constants of `GetFatAndMuscleModifier`
-auto& kMod_Fat1000Min2    = StaticRef<float>(0x8CDE58); // 0.5
-auto& kMod_F_Muscle       = StaticRef<float>(0x8CDE5C); // -0.25
-auto& kMod_F_Fat          = StaticRef<float>(0x8CDE60); // -0.5
-auto& kMod_E_Driving      = StaticRef<float>(0x8CDE64); // 0.5
-auto& kMod_E_Fat          = StaticRef<float>(0x8CDE68); // 0.5
-auto& kMod_D_Bike         = StaticRef<float>(0x8CDE6C); // 0.25
-auto& kMod_C_Bike         = StaticRef<float>(0x8CDE70); // 0.3
-auto& kMod_B_Bike         = StaticRef<float>(0x8CDE74); // 0.5
-auto& kMod_MaxHealth      = StaticRef<float>(0x8CDE78); // 176.0
-auto& kMod_Air            = StaticRef<float>(0x8CDE7C); // 3000.0
-auto& kMod_TimeCanRun     = StaticRef<float>(0x8CDE80); // 3000.0
-auto& kMod_6_Cycling      = StaticRef<float>(0x8CDE84); // 1.0
-auto& kMod_6_Fat          = StaticRef<float>(0x8CDE88); // -0.5
-auto& kMod_5_Cycling      = StaticRef<float>(0x8CDE8C); // 1.0
-auto& kMod_5_Stamina      = StaticRef<float>(0x8CDE90); // 0.5
-auto& kMod_5_Muscle       = StaticRef<float>(0x8CDE94); // 0.5
-auto& kMod_5_Fat          = StaticRef<float>(0x8CDE98); // -1.0
-auto& kMod_4_Muscle       = StaticRef<float>(0x8CDE9C); // 1.0
-auto& kMod_4_Fat          = StaticRef<float>(0x8CDEA0); // 0.5
-auto& kMod_3_Muscle       = StaticRef<float>(0x8CDEA4); // -0.1
-auto& kMod_3_Fat          = StaticRef<float>(0x8CDEA8); // -0.2
-auto& kMod_2_Muscle       = StaticRef<float>(0x8CDEAC); // -0.1
-auto& kMod_2_Fat          = StaticRef<float>(0x8CDEB0); // -0.2
-auto& kMod_1_Muscle       = StaticRef<float>(0x8CDEB4); // 0.2
-auto& kMod_MuscleBase     = StaticRef<float>(0x8CDEB8); // 50.0
-auto& kMod_1_Fat          = StaticRef<float>(0x8CDEBC); // -0.4
-auto& kMod_FatBase        = StaticRef<float>(0x8CDEC0); // 200.0
+NOTSA_GLOBAL(kMod_Fat1000Min2, 0x8CDE58, (float), { 0.5f }); // 0.5
+NOTSA_GLOBAL(kMod_F_Muscle, 0x8CDE5C, (float), { -0.25f }); // -0.25
+NOTSA_GLOBAL(kMod_F_Fat, 0x8CDE60, (float), { -0.5f }); // -0.5
+NOTSA_GLOBAL(kMod_E_Driving, 0x8CDE64, (float), { 0.5f }); // 0.5
+NOTSA_GLOBAL(kMod_E_Fat, 0x8CDE68, (float), { 0.5f }); // 0.5
+NOTSA_GLOBAL(kMod_D_Bike, 0x8CDE6C, (float), { 0.25f }); // 0.25
+NOTSA_GLOBAL(kMod_C_Bike, 0x8CDE70, (float), { 0.3f }); // 0.3
+NOTSA_GLOBAL(kMod_B_Bike, 0x8CDE74, (float), { 0.5f }); // 0.5
+NOTSA_GLOBAL(kMod_MaxHealth, 0x8CDE78, (float), { 176.0f }); // 176.0
+NOTSA_GLOBAL(kMod_Air, 0x8CDE7C, (float), { 3000.0f }); // 3000.0
+NOTSA_GLOBAL(kMod_TimeCanRun, 0x8CDE80, (float), { 3000.0f }); // 3000.0
+NOTSA_GLOBAL(kMod_6_Cycling, 0x8CDE84, (float), { 1.0f }); // 1.0
+NOTSA_GLOBAL(kMod_6_Fat, 0x8CDE88, (float), { -0.5f }); // -0.5
+NOTSA_GLOBAL(kMod_5_Cycling, 0x8CDE8C, (float), { 1.0f }); // 1.0
+NOTSA_GLOBAL(kMod_5_Stamina, 0x8CDE90, (float), { 0.5f }); // 0.5
+NOTSA_GLOBAL(kMod_5_Muscle, 0x8CDE94, (float), { 0.5f }); // 0.5
+NOTSA_GLOBAL(kMod_5_Fat, 0x8CDE98, (float), { -1.0f }); // -1.0
+NOTSA_GLOBAL(kMod_4_Muscle, 0x8CDE9C, (float), { 1.0f }); // 1.0
+NOTSA_GLOBAL(kMod_4_Fat, 0x8CDEA0, (float), { 0.5f }); // 0.5
+NOTSA_GLOBAL(kMod_3_Muscle, 0x8CDEA4, (float), { -0.1f }); // -0.1
+NOTSA_GLOBAL(kMod_3_Fat, 0x8CDEA8, (float), { -0.2f }); // -0.2
+NOTSA_GLOBAL(kMod_2_Muscle, 0x8CDEAC, (float), { -0.1f }); // -0.1
+NOTSA_GLOBAL(kMod_2_Fat, 0x8CDEB0, (float), { -0.2f }); // -0.2
+NOTSA_GLOBAL(kMod_1_Muscle, 0x8CDEB4, (float), { 0.2f }); // 0.2
+NOTSA_GLOBAL(kMod_MuscleBase, 0x8CDEB8, (float), { 50.0f }); // 50.0
+NOTSA_GLOBAL(kMod_1_Fat, 0x8CDEBC, (float), { -0.4f }); // -0.4
+NOTSA_GLOBAL(kMod_FatBase, 0x8CDEC0, (float), { 200.0f }); // 200.0
 
 //! The exe addresses the int stats as `[stat * 4 + 0xB78E20]` for EVERY stat id >= 0x52 (no range check, 16 bit stat ids)
+#ifdef NOTSA_GLOBALS_DETACHED
+// 0xB78E20 == &StatTypesInt[0] - FIRST_INT_STAT * 4: ids >= FIRST_INT_STAT + 223 (and 82..119) address the neighbours of the array, as in the exe
+int32& IntStatCell(uint32 stat) { return *(CStats::StatTypesInt.data() + ((ptrdiff_t)(int32)stat - (ptrdiff_t)CStats::FIRST_INT_STAT)); }
+#else
 int32& IntStatCell(uint32 stat) { return StaticRef<int32>(0xB78E20 + 4u * stat); }
+#endif
+#line 59
 
 //! x87: `CTimer::ms_fTimeStep * 0.02f * 1000.0f` kept in extended precision, then truncated by _ftol (0x821B40)
 uint32 TimeStepInMS() {
@@ -711,7 +717,12 @@ void CStats::SetNewRecordStat(eStats stat, float value) {
         const float current = StatTypesFloat[idx];
         StatTypesFloat[idx] = current > value ? current : value;
     } else {
+#ifdef NOTSA_GLOBALS_DETACHED
+        auto&        slot    = IntStatCell(idx); // == StatTypesInt[idx - FIRST_INT_STAT]
+#else
         auto&        slot    = StaticRef<int32>(0xB78E20 + 4u * idx); // == StatTypesInt[idx - FIRST_INT_STAT]
+#endif
+#line 715
         const double current = slot;
         const double best    = current > (double)value ? current : (double)value;
         slot = (int32)(int16)(int32)best; // _ftol + `movsx eax, ax`: the record is truncated to 16 bits

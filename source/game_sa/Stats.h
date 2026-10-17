@@ -41,40 +41,40 @@ public:
     static constexpr size_t FIRST_INT_STAT = 120;
     static constexpr size_t FIRST_UNUSED_STAT = 82;
 
-    static inline auto& StatMessage = StaticRef<std::array<tStatMessage, 128>>(0xB78200);
-    static inline auto& TotalNumStatMessages = StaticRef<uint32>(0xB794D0);
-    static inline auto& LastMissionPassedName = StaticRef<char[8]>(0xB78A00);
-    static inline auto& TimesMissionAttempted = StaticRef<std::array<int32, 100>>(0xB78CC8);
-    static inline auto& FavoriteRadioStationList = StaticRef<std::array<int32, 14>>(0xB78E58);
-    static inline auto& PedsKilledOfThisType = StaticRef<std::array<int32, 32>>(0xB78E90);
-    static inline auto& StatReactionValue = StaticRef<std::array<float, 59>>(0xB78F10);
-    static inline auto& StatTypesInt = StaticRef<std::array<int32, 223>>(0xB79000);
-    static inline auto& StatTypesFloat = StaticRef<std::array<float, 82>>(0xB79380);
+    static inline NOTSA_GLOBAL(StatMessage, 0xB78200, (std::array<tStatMessage, 128>), {});
+    static inline NOTSA_GLOBAL(TotalNumStatMessages, 0xB794D0, (uint32), {});
+    static inline NOTSA_GLOBAL(LastMissionPassedName, 0xB78A00, (char[8]), {});
+    static inline NOTSA_GLOBAL(TimesMissionAttempted, 0xB78CC8, (std::array<int32, 100>), {});
+    static inline NOTSA_GLOBAL(FavoriteRadioStationList, 0xB78E58, (std::array<int32, 14>), {});
+    static inline NOTSA_GLOBAL(PedsKilledOfThisType, 0xB78E90, (std::array<int32, 32>), {});
+    static inline NOTSA_GLOBAL(StatReactionValue, 0xB78F10, (std::array<float, 59>), {});
+    static inline NOTSA_GLOBAL(StatTypesInt, 0xB79000, (std::array<int32, 223>), {});
+    static inline NOTSA_GLOBAL(StatTypesFloat, 0xB79380, (std::array<float, 82>), {});
     static uint16& m_ThisStatIsABarChart; // 0xB794CC: id of the stat currently being built/printed as a stat line (0 = none)
-    static inline auto& bStatUpdateMessageDisplayed = StaticRef<bool>(0xB794D4);
-    static inline auto& m_SprintStaminaCounter = StaticRef<uint32>(0xB794D8);
-    static inline auto& m_CycleStaminaCounter = StaticRef<uint32>(0xB794DC);
-    static inline auto& m_CycleSkillCounter = StaticRef<uint32>(0xB794E0);
-    static inline auto& m_SwimStaminaCounter = StaticRef<uint32>(0xB794E4);
-    static inline auto& m_SwimUnderWaterCounter = StaticRef<uint32>(0xB794E8);
-    static inline auto& m_DrivingCounter = StaticRef<uint32>(0xB794EC);
-    static inline auto& m_FlyingCounter = StaticRef<uint32>(0xB794F0);
-    static inline auto& m_BoatCounter = StaticRef<uint32>(0xB794F4);
-    static inline auto& m_BikeCounter = StaticRef<uint32>(0xB794F8);
-    static inline auto& m_FatCounter = StaticRef<uint32>(0xB794FC);
-    static inline auto& m_RunningCounter = StaticRef<uint32>(0xB79500);
-    static inline auto& m_WeaponCounter = StaticRef<uint32>(0xB79504);
-    static inline auto& m_DeathCounter = StaticRef<uint32>(0xB79508);
-    static inline auto& m_MaxHealthCounter = StaticRef<uint32>(0xB7950C);
-    static inline auto& m_AddToHealthCounter = StaticRef<uint32>(0xB79510);
-    static inline auto& m_LastWeaponTypeFired = StaticRef<uint32>(0xB79514);
-    static inline auto& bShowUpdateStats = StaticRef<bool>(0x8CDE56);
+    static inline NOTSA_GLOBAL(bStatUpdateMessageDisplayed, 0xB794D4, (bool), {});
+    static inline NOTSA_GLOBAL(m_SprintStaminaCounter, 0xB794D8, (uint32), {});
+    static inline NOTSA_GLOBAL(m_CycleStaminaCounter, 0xB794DC, (uint32), {});
+    static inline NOTSA_GLOBAL(m_CycleSkillCounter, 0xB794E0, (uint32), {});
+    static inline NOTSA_GLOBAL(m_SwimStaminaCounter, 0xB794E4, (uint32), {});
+    static inline NOTSA_GLOBAL(m_SwimUnderWaterCounter, 0xB794E8, (uint32), {});
+    static inline NOTSA_GLOBAL(m_DrivingCounter, 0xB794EC, (uint32), {});
+    static inline NOTSA_GLOBAL(m_FlyingCounter, 0xB794F0, (uint32), {});
+    static inline NOTSA_GLOBAL(m_BoatCounter, 0xB794F4, (uint32), {});
+    static inline NOTSA_GLOBAL(m_BikeCounter, 0xB794F8, (uint32), {});
+    static inline NOTSA_GLOBAL(m_FatCounter, 0xB794FC, (uint32), {});
+    static inline NOTSA_GLOBAL(m_RunningCounter, 0xB79500, (uint32), {});
+    static inline NOTSA_GLOBAL(m_WeaponCounter, 0xB79504, (uint32), {});
+    static inline NOTSA_GLOBAL(m_DeathCounter, 0xB79508, (uint32), {});
+    static inline NOTSA_GLOBAL(m_MaxHealthCounter, 0xB7950C, (uint32), {});
+    static inline NOTSA_GLOBAL(m_AddToHealthCounter, 0xB79510, (uint32), {});
+    static inline NOTSA_GLOBAL(m_LastWeaponTypeFired, 0xB79514, (uint32), {});
+    static inline NOTSA_GLOBAL(bShowUpdateStats, 0x8CDE56, (bool), { true });
 
     // NOTSA names (originals unknown)
-    static inline auto& m_FatMuscleMessageState = StaticRef<uint8>(0xB79534);   // 1/2/3: which fat/muscle update message was shown last
-    static inline auto& m_pSexAppealVehicle     = StaticRef<CVehicle*>(0xB79530); // last vehicle used for sex appeal
-    static inline auto& m_RespectThreshold      = StaticRef<float>(0x8CDEC4);   // -99.0f if not initialised
-    static inline auto& m_RespectLastValue      = StaticRef<float>(0x8CDEC8);   // -99.0f if not initialised
+    static inline NOTSA_GLOBAL(m_FatMuscleMessageState, 0xB79534, (uint8), {});   // 1/2/3: which fat/muscle update message was shown last
+    static inline NOTSA_GLOBAL(m_pSexAppealVehicle, 0xB79530, (CVehicle*), {}); // last vehicle used for sex appeal
+    static inline NOTSA_GLOBAL(m_RespectThreshold, 0x8CDEC4, (float), { -99.0f });   // -99.0f if not initialised
+    static inline NOTSA_GLOBAL(m_RespectLastValue, 0x8CDEC8, (float), { -99.0f });   // -99.0f if not initialised
 
     static void InjectHooks();
 

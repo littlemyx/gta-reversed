@@ -59,19 +59,19 @@ struct RwStream;
 
 class CVehicleRecording {
 public:
-    static inline auto& NumPlayBackFiles = StaticRef<int32>(0x97F630);
-    static inline auto& StreamingArray = StaticRef<std::array<CPath, TOTAL_RRR_MODEL_IDS>>(0x97D880);
-    static inline auto& pVehicleForPlayback = StaticRef<std::array<CVehicle*, TOTAL_VEHICLE_RECORDS>>(0x97D840);
-    static inline auto& pPlaybackBuffer = StaticRef<std::array<CVehicleStateEachFrame*, TOTAL_VEHICLE_RECORDS>>(0x97D800);
-    static inline auto& PlaybackIndex = StaticRef<std::array<int32, TOTAL_VEHICLE_RECORDS>>(0x97D7C0);
-    static inline auto& PlaybackBufferSize = StaticRef<std::array<int32, TOTAL_VEHICLE_RECORDS>>(0x97D780);
-    static inline auto& PlaybackRunningTime = StaticRef<std::array<float, TOTAL_VEHICLE_RECORDS>>(0x97D740);
-    static inline auto& PlaybackSpeed = StaticRef<std::array<float, TOTAL_VEHICLE_RECORDS>>(0x97D700);
-    static inline auto& bPlaybackGoingOn = StaticRef<std::array<bool, TOTAL_VEHICLE_RECORDS>>(0x97D6F0);
-    static inline auto& bPlaybackLooped = StaticRef<std::array<bool, TOTAL_VEHICLE_RECORDS>>(0x97D6E0);
-    static inline auto& bPlaybackPaused = StaticRef<std::array<bool, TOTAL_VEHICLE_RECORDS>>(0x97D6D0);
-    static inline auto& bUseCarAI = StaticRef<std::array<bool, TOTAL_VEHICLE_RECORDS>>(0x97D6C0);
-    static inline auto& PlayBackStreamingIndex = StaticRef<std::array<uint32, 3>>(0x97D670);
+    static inline NOTSA_GLOBAL(NumPlayBackFiles, 0x97F630, (int32), {});
+    static inline NOTSA_GLOBAL(StreamingArray, 0x97D880, (std::array<CPath, TOTAL_RRR_MODEL_IDS>), {});
+    static inline NOTSA_GLOBAL(pVehicleForPlayback, 0x97D840, (std::array<CVehicle*, TOTAL_VEHICLE_RECORDS>), {});
+    static inline NOTSA_GLOBAL(pPlaybackBuffer, 0x97D800, (std::array<CVehicleStateEachFrame*, TOTAL_VEHICLE_RECORDS>), {});
+    static inline NOTSA_GLOBAL(PlaybackIndex, 0x97D7C0, (std::array<int32, TOTAL_VEHICLE_RECORDS>), {});
+    static inline NOTSA_GLOBAL(PlaybackBufferSize, 0x97D780, (std::array<int32, TOTAL_VEHICLE_RECORDS>), {});
+    static inline NOTSA_GLOBAL(PlaybackRunningTime, 0x97D740, (std::array<float, TOTAL_VEHICLE_RECORDS>), {});
+    static inline NOTSA_GLOBAL(PlaybackSpeed, 0x97D700, (std::array<float, TOTAL_VEHICLE_RECORDS>), {});
+    static inline NOTSA_GLOBAL(bPlaybackGoingOn, 0x97D6F0, (std::array<bool, TOTAL_VEHICLE_RECORDS>), {});
+    static inline NOTSA_GLOBAL(bPlaybackLooped, 0x97D6E0, (std::array<bool, TOTAL_VEHICLE_RECORDS>), {});
+    static inline NOTSA_GLOBAL(bPlaybackPaused, 0x97D6D0, (std::array<bool, TOTAL_VEHICLE_RECORDS>), {});
+    static inline NOTSA_GLOBAL(bUseCarAI, 0x97D6C0, (std::array<bool, TOTAL_VEHICLE_RECORDS>), {});
+    static inline NOTSA_GLOBAL(PlayBackStreamingIndex, 0x97D670, (std::array<uint32, 3>), {});
     // DisplayMode
 
 public:

@@ -52,7 +52,15 @@ void CReferences::RemoveReferencesToPlayer() {
 }
 
 void CReferences::PruneAllReferencesInWorld() {
-    rng::for_each(GetPedPool()->GetAllValid(), &CEntity::PruneReferences);
-    rng::for_each(GetVehiclePool()->GetAllValid(), &CEntity::PruneReferences);
-    rng::for_each(GetObjectPool()->GetAllValid(), &CEntity::PruneReferences);
+    // 0x571CC0: every pool from its LAST slot down to the first (peds, vehicles, objects); the order decides the order of the nodes on the free list
+    const auto PruneAll = [](auto* pool) {
+        for (auto i = (int32)pool->GetSize(); i-- > 0;) {
+            if (auto* const e = pool->GetAt(i)) {
+                e->PruneReferences();
+            }
+        }
+    };
+    PruneAll(GetPedPool());
+    PruneAll(GetVehiclePool());
+    PruneAll(GetObjectPool());
 }

@@ -1638,7 +1638,7 @@ void CEntity::ResolveReferences() {
     dbg3::NoteResolved(this);
 #endif
     for (auto ref = m_pReferences; ref; ref = ref->m_pNext) {
-        if (ref->m_ppEntity && *ref->m_ppEntity == this) {
+        if (*ref->m_ppEntity == this) { // 0x571A53: no null check of ppEntity in the exe either (a node on an entity's list always holds a pointer)
             *ref->m_ppEntity = nullptr;
         }
     }
@@ -1705,29 +1705,23 @@ void CEntity::RegisterReference(CEntity** entity) {
     }
 
     if (!CReferences::pEmptyList) {
-        for (auto& ped : GetPedPool()->GetAllValid()) {
-            ped.PruneReferences();
-            if (CReferences::pEmptyList) {
-                break;
-            }
-        }
-
-        if (!CReferences::pEmptyList) {
-            for (auto& vehicle : GetVehiclePool()->GetAllValid()) {
-                vehicle.PruneReferences();
-                if (CReferences::pEmptyList) {
-                    break;
+        // 0x571BC0..0x571C90: the exe walks each pool from its LAST slot down to the first (peds, then vehicles, then objects) and stops at the first entity whose pruning freed a node
+        const auto PruneUntilFree = [](auto* pool) {
+            for (auto i = (int32)pool->GetSize(); i-- > 0;) {
+                if (auto* const e = pool->GetAt(i)) {
+                    e->PruneReferences();
+                    if (CReferences::pEmptyList) {
+                        return;
+                    }
                 }
             }
-        }
-
+        };
+        PruneUntilFree(GetPedPool());
         if (!CReferences::pEmptyList) {
-            for (auto& obj : GetObjectPool()->GetAllValid()) {
-                obj.PruneReferences();
-                if (CReferences::pEmptyList) {
-                    break;
-                }
-            }
+            PruneUntilFree(GetVehiclePool());
+        }
+        if (!CReferences::pEmptyList) {
+            PruneUntilFree(GetObjectPool());
         }
     }
 

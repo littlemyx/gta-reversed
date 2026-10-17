@@ -31,7 +31,7 @@ void InjectHooks();
 /*
 * Pipeline plugin static offset
 */
-extern RwInt32& gPipelinePluginOffset;
+NOTSA_GLOBAL_EXTERN(gPipelinePluginOffset, (RwInt32));
 
 /**
  * Attach pipeline plugin

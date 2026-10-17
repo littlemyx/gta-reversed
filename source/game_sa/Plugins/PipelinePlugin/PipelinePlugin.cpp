@@ -4,7 +4,7 @@
 
 #include <rpworld.h>
 
-auto& gPipelinePluginOffset = StaticRef<RwInt32>(0x8D6080);
+NOTSA_GLOBAL(gPipelinePluginOffset, 0x8D6080, (RwInt32), { -1 });
 
 
 void PipelinePlugin::InjectHooks() {

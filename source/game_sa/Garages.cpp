@@ -2,7 +2,7 @@
 
 #include "Garages.h"
 
-static auto& LastUpdatedGarageId = StaticRef<uint32>(0x96EA78);
+static NOTSA_GLOBAL(LastUpdatedGarageId, 0x96EA78, (uint32), {});
 
 void CGarages::InjectHooks() {
     RH_ScopedClass(CGarages);

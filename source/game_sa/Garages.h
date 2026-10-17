@@ -18,27 +18,27 @@ public:
     static constexpr auto MAX_CARS_IN_SAFEHOUSE{ 4 };
     static constexpr auto MAX_NUM_GARAGES{ 50 };
 
-    static inline auto& aCarsInSafeHouse = StaticRef<CStoredCar[MAX_NUM_SAFEHOUSES][MAX_CARS_IN_SAFEHOUSE]>(0x96ABD8);
+    static inline NOTSA_GLOBAL(aCarsInSafeHouse, 0x96ABD8, (CStoredCar[MAX_NUM_SAFEHOUSES][MAX_CARS_IN_SAFEHOUSE]), {});
     static inline auto& aGarages = StaticRef<CGarage[MAX_NUM_GARAGES]>(0x96C048);
-    static inline auto& MessageIDString = StaticRef<char[8]>(0x96C014);
-    static inline auto& LastGaragePlayerWasIn = StaticRef<int32>(0x96BFDC);
-    static inline auto& LastTimeHelpMessage = StaticRef<int32>(0x96BFE0);
-    static inline auto& bCamShouldBeOutside = StaticRef<bool>(0x96BFE4);
-    static inline auto& CrushedCarId = StaticRef<int32>(0x96BFE8);
-    static inline auto& CarTypesCollected = StaticRef<int32[MAX_CARS_IN_SAFEHOUSE]>(0x96BFEC);
-    static inline auto& PoliceCarsCollected = StaticRef<int32>(0x96BFFC);
-    static inline auto& BankVansCollected = StaticRef<int32>(0x96C000);
-    static inline auto& CarsCollected = StaticRef<int32>(0x96C004);
-    static inline auto& NoResprays = StaticRef<bool>(0x96C008);
-    static inline auto& RespraysAreFree = StaticRef<int8>(0x96C009);
-    static inline auto& BombsAreFree = StaticRef<int8>(0x96C00A);
-    static inline auto& PlayerInGarage = StaticRef<int8>(0x96C00B);
-    static inline auto& MessageNumberInString = StaticRef<int32>(0x96C00C);
-    static inline auto& MessageNumberInString2 = StaticRef<int32>(0x96C010);
-    static inline auto& MessageEndTime = StaticRef<uint32>(0x96C01C);
-    static inline auto& MessageStartTime = StaticRef<uint32>(0x96C020);
-    static inline auto& NumGarages = StaticRef<int32>(0x96C024);
-    static inline auto& pOldToGarageWeAreIn = StaticRef<CGarage*>(0x96BFD8);
+    static inline NOTSA_GLOBAL(MessageIDString, 0x96C014, (char[8]), {});
+    static inline NOTSA_GLOBAL(LastGaragePlayerWasIn, 0x96BFDC, (int32), {});
+    static inline NOTSA_GLOBAL(LastTimeHelpMessage, 0x96BFE0, (int32), {});
+    static inline NOTSA_GLOBAL(bCamShouldBeOutside, 0x96BFE4, (bool), {});
+    static inline NOTSA_GLOBAL(CrushedCarId, 0x96BFE8, (int32), {});
+    static inline NOTSA_GLOBAL(CarTypesCollected, 0x96BFEC, (int32[MAX_CARS_IN_SAFEHOUSE]), {});
+    static inline NOTSA_GLOBAL(PoliceCarsCollected, 0x96BFFC, (int32), {});
+    static inline NOTSA_GLOBAL(BankVansCollected, 0x96C000, (int32), {});
+    static inline NOTSA_GLOBAL(CarsCollected, 0x96C004, (int32), {});
+    static inline NOTSA_GLOBAL(NoResprays, 0x96C008, (bool), {});
+    static inline NOTSA_GLOBAL(RespraysAreFree, 0x96C009, (int8), {});
+    static inline NOTSA_GLOBAL(BombsAreFree, 0x96C00A, (int8), {});
+    static inline NOTSA_GLOBAL(PlayerInGarage, 0x96C00B, (int8), {});
+    static inline NOTSA_GLOBAL(MessageNumberInString, 0x96C00C, (int32), {});
+    static inline NOTSA_GLOBAL(MessageNumberInString2, 0x96C010, (int32), {});
+    static inline NOTSA_GLOBAL(MessageEndTime, 0x96C01C, (uint32), {});
+    static inline NOTSA_GLOBAL(MessageStartTime, 0x96C020, (uint32), {});
+    static inline NOTSA_GLOBAL(NumGarages, 0x96C024, (int32), {});
+    static inline NOTSA_GLOBAL(pOldToGarageWeAreIn, 0x96BFD8, (CGarage*), {});
 
 public:
     static void InjectHooks();

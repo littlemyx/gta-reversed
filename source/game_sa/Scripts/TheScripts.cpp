@@ -17,7 +17,7 @@
 
 #include "extensions/File.hpp"
 
-static inline auto& ScriptsArray = StaticRef<std::array<CRunningScript, MAX_NUM_SCRIPTS>>(0xA8B430);
+static inline NOTSA_GLOBAL(ScriptsArray, 0xA8B430, (std::array<CRunningScript, MAX_NUM_SCRIPTS>), {});
 
 void CTheScripts::InjectHooks() {
 #ifndef NOTSA_STANDALONE

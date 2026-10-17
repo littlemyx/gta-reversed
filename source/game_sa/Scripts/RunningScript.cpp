@@ -1831,3 +1831,22 @@ void CRunningScript::ResetIP() {
         m_IP = std::exchange(m_IPStack[m_StackDepth--], nullptr); // NOTSA: Also clear the stack, we don't need it anymore
     } while (m_StackDepth);
 }
+
+// Initial values of the globals declared with NOTSA_GLOBAL_DECL in RunningScript.h (detached mode; ignored in address mode)
+#ifdef NOTSA_GLOBALS_DETACHED
+namespace {
+// The 27 handlers of the exe (ProcessCommands0to99 ...) are not ported: the table holds their exe addresses, as in address mode (they run into the trap stubs).
+CRunningScript::CommandHandlerFn_t OrigHandler(uint32 va) { return std::bit_cast<CRunningScript::CommandHandlerFn_t>(va); }
+}
+#endif
+NOTSA_GLOBAL_DEF(CRunningScript, s_OriginalCommandHandlerTable, 0x8A6168, (CRunningScript::CommandHandlerTable_t), {
+    OrigHandler(0x465E60), OrigHandler(0x466DE0), OrigHandler(0x469390),
+    OrigHandler(0x47C100), OrigHandler(0x47D210), OrigHandler(0x47E090),
+    OrigHandler(0x47F370), OrigHandler(0x47FA30), OrigHandler(0x481300),
+    OrigHandler(0x483BD0), OrigHandler(0x489500), OrigHandler(0x48A320),
+    OrigHandler(0x48B590), OrigHandler(0x48CDD0), OrigHandler(0x48EAA0),
+    OrigHandler(0x490DB0), OrigHandler(0x493FE0), OrigHandler(0x496E00),
+    OrigHandler(0x46D050), OrigHandler(0x46B460), OrigHandler(0x472310),
+    OrigHandler(0x470A90), OrigHandler(0x474900), OrigHandler(0x4762D0),
+    OrigHandler(0x478000), OrigHandler(0x47A760), OrigHandler(0x479DA0)
+});

@@ -50,14 +50,14 @@ constexpr auto NUM_SCRIPTED_2D_EFFECTS = 64;
 
 class CScripted2dEffects {
 public:
-    static inline auto& ms_effects               = StaticRef<std::array<C2dEffect, NUM_SCRIPTED_2D_EFFECTS>>(0xC3AB00); // actual type is `C2dEffectPedAttractor`
+    static inline NOTSA_GLOBAL(ms_effects, 0xC3AB00, (std::array<C2dEffect, NUM_SCRIPTED_2D_EFFECTS>), {}); // actual type is `C2dEffectPedAttractor`
     static inline auto& ms_effectPairs           = StaticRef<std::array<CScriptedEffectPairs, NUM_SCRIPTED_2D_EFFECTS>>(0xC3BB00);
     static inline auto& ms_userLists             = StaticRef<std::array<tUserList, NUM_SCRIPTED_2D_EFFECTS>>(0xC3A200); // class maybe
-    static inline auto& ms_activated             = StaticRef<std::array<bool, NUM_SCRIPTED_2D_EFFECTS>>(0xC3A1A0);
-    static inline auto& ScriptReferenceIndex     = StaticRef<std::array<uint16, NUM_SCRIPTED_2D_EFFECTS>>(0xC3A120);
-    static inline auto& ms_effectSequenceTaskIDs = StaticRef<std::array<int32, NUM_SCRIPTED_2D_EFFECTS>>(0xC3A020);
-    static inline auto& ms_useAgainFlags         = StaticRef<std::array<bool, NUM_SCRIPTED_2D_EFFECTS>>(0xC39FE0);
-    static inline auto& ms_radii                 = StaticRef<std::array<float, NUM_SCRIPTED_2D_EFFECTS>>(0xC39EE0);
+    static inline NOTSA_GLOBAL(ms_activated, 0xC3A1A0, (std::array<bool, NUM_SCRIPTED_2D_EFFECTS>), {});
+    static inline NOTSA_GLOBAL(ScriptReferenceIndex, 0xC3A120, (std::array<uint16, NUM_SCRIPTED_2D_EFFECTS>), {});
+    static inline NOTSA_GLOBAL(ms_effectSequenceTaskIDs, 0xC3A020, (std::array<int32, NUM_SCRIPTED_2D_EFFECTS>), {});
+    static inline NOTSA_GLOBAL(ms_useAgainFlags, 0xC39FE0, (std::array<bool, NUM_SCRIPTED_2D_EFFECTS>), {});
+    static inline NOTSA_GLOBAL(ms_radii, 0xC39EE0, (std::array<float, NUM_SCRIPTED_2D_EFFECTS>), {});
 
 public:
     static void InjectHooks();

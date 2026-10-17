@@ -47,7 +47,7 @@ constexpr auto STREAMING_SECTOR_SIZE = 2048u; // OR `<< 11`
 
 class CStreamingInfo {
 public:
-    static inline auto& ms_pArrayBase = StaticRef<CStreamingInfo*>(0x9654B4); // Just a pointer to `CStreaming::ms_aInfoForModel`
+    static NOTSA_GLOBAL_DECL(CStreamingInfo, ms_pArrayBase, 0x9654B4, (CStreamingInfo*)); // Just a pointer to `CStreaming::ms_aInfoForModel`
 
 public:
     static void InjectHooks();

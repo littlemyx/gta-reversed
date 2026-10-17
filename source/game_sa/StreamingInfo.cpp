@@ -68,3 +68,6 @@ void CStreamingInfo::RemoveFromList() {
     m_NextIndex = -1;
     m_PrevIndex = -1;
 }
+
+// Initial values of the globals declared with NOTSA_GLOBAL_DECL in StreamingInfo.h (detached mode; ignored in address mode)
+NOTSA_GLOBAL_DEF(CStreamingInfo, ms_pArrayBase, 0x9654B4, (CStreamingInfo*), {});

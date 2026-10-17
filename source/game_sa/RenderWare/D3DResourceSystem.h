@@ -17,13 +17,13 @@ public:
     static constexpr int32 MAX_TEXTURE_BUFFERS    = 17;
     static constexpr int32 NUM_INDEX_DATA_BUFFERS = 16;
 
-    static inline auto& UseD3DResourceBuffering = StaticRef<bool>(0x8D6084);
-    static inline auto& NumTextureBuffers       = StaticRef<int32>(0xC87C60);
-    static inline auto& TextureBuffers          = StaticRef<std::array<D3DTextureBuffer, MAX_TEXTURE_BUFFERS>>(0xC87C68); // [0] is the buffer for small textures of any format
-    static inline auto& IndexDataBuffers        = StaticRef<std::array<D3DIndexDataBuffer, NUM_INDEX_DATA_BUFFERS>>(0xC87E48);
-    static inline auto& LargeIndexDataBuffer    = StaticRef<D3DIndexDataBuffer>(0xC87FC8); // For buffers that don't fit into the ones above
-    static inline auto& FreeTextureBufferIndex  = StaticRef<int32>(0xC87FE0);
-    static inline auto& FreeIndexBufferIndex    = StaticRef<int32>(0xC87FE4);
+    static inline NOTSA_GLOBAL(UseD3DResourceBuffering, 0x8D6084, (bool), { true });
+    static inline NOTSA_GLOBAL(NumTextureBuffers, 0xC87C60, (int32), {});
+    static inline NOTSA_GLOBAL(TextureBuffers, 0xC87C68, (std::array<D3DTextureBuffer, MAX_TEXTURE_BUFFERS>), {}); // [0] is the buffer for small textures of any format
+    static inline NOTSA_GLOBAL(IndexDataBuffers, 0xC87E48, (std::array<D3DIndexDataBuffer, NUM_INDEX_DATA_BUFFERS>), {});
+    static inline NOTSA_GLOBAL(LargeIndexDataBuffer, 0xC87FC8, (D3DIndexDataBuffer), {}); // For buffers that don't fit into the ones above
+    static inline NOTSA_GLOBAL(FreeTextureBufferIndex, 0xC87FE0, (int32), {});
+    static inline NOTSA_GLOBAL(FreeIndexBufferIndex, 0xC87FE4, (int32), {});
 
     static void InjectHooks();
 

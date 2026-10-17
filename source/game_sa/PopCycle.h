@@ -193,42 +193,42 @@ class CPopCycle {
 public:
     
 public:
-    static inline auto& m_NumOther_Cars = StaticRef<float>(0xC0BC30);
-    static inline auto& m_NumCops_Cars = StaticRef<float>(0xC0BC34);
-    static inline auto& m_NumGangs_Cars = StaticRef<float>(0xC0BC38);
-    static inline auto& m_NumDealers_Cars = StaticRef<float>(0xC0BC3C);
-    static inline auto& m_NumOther_Peds = StaticRef<float>(0xC0BC40);
-    static inline auto& m_NumCops_Peds = StaticRef<float>(0xC0BC44);
-    static inline auto& m_NumGangs_Peds = StaticRef<float>(0xC0BC48);
-    static inline auto& m_fPercOther = StaticRef<float>(0xC0BC4C);
-    static inline auto& m_fPercCops = StaticRef<float>(0xC0BC50);
-    static inline auto& m_fPercGangs = StaticRef<float>(0xC0BC54);
-    static inline auto& m_fPercDealers = StaticRef<float>(0xC0BC58);
-    static inline auto& m_bCurrentZoneIsGangArea = StaticRef<bool>(0xC0BC5C);
-    static inline auto& m_fCurrentZoneDodgyness = StaticRef<float>(0xC0BC60);
-    static inline auto& m_pCurrZone = StaticRef<CZone*>(0xC0BC64);
-    static inline auto& m_pCurrZoneInfo = StaticRef<CZoneInfo*>(0xC0BC68);
+    static inline NOTSA_GLOBAL(m_NumOther_Cars, 0xC0BC30, (float), {});
+    static inline NOTSA_GLOBAL(m_NumCops_Cars, 0xC0BC34, (float), {});
+    static inline NOTSA_GLOBAL(m_NumGangs_Cars, 0xC0BC38, (float), {});
+    static inline NOTSA_GLOBAL(m_NumDealers_Cars, 0xC0BC3C, (float), {});
+    static inline NOTSA_GLOBAL(m_NumOther_Peds, 0xC0BC40, (float), {});
+    static inline NOTSA_GLOBAL(m_NumCops_Peds, 0xC0BC44, (float), {});
+    static inline NOTSA_GLOBAL(m_NumGangs_Peds, 0xC0BC48, (float), {});
+    static inline NOTSA_GLOBAL(m_fPercOther, 0xC0BC4C, (float), {});
+    static inline NOTSA_GLOBAL(m_fPercCops, 0xC0BC50, (float), {});
+    static inline NOTSA_GLOBAL(m_fPercGangs, 0xC0BC54, (float), {});
+    static inline NOTSA_GLOBAL(m_fPercDealers, 0xC0BC58, (float), {});
+    static inline NOTSA_GLOBAL(m_bCurrentZoneIsGangArea, 0xC0BC5C, (bool), {});
+    static inline NOTSA_GLOBAL(m_fCurrentZoneDodgyness, 0xC0BC60, (float), {});
+    static inline NOTSA_GLOBAL(m_pCurrZone, 0xC0BC64, (CZone*), {});
+    static inline NOTSA_GLOBAL(m_pCurrZoneInfo, 0xC0BC68, (CZoneInfo*), {});
 
     //! Same as `m_pCurrZoneInfo->zonePopulationType`
-    static inline auto& m_nCurrentZoneType = StaticRef<int32>(0xC0BC6C);
+    static inline NOTSA_GLOBAL(m_nCurrentZoneType, 0xC0BC6C, (int32), {});
 
-    static inline auto& m_nCurrentTimeOfWeek = StaticRef<int32>(0xC0BC70);
-    static inline auto& m_nCurrentTimeIndex = StaticRef<int32>(0xC0BC74);
-    static inline auto& m_NumDealers_Peds = StaticRef<float>(0xC0E978);
+    static inline NOTSA_GLOBAL(m_nCurrentTimeOfWeek, 0xC0BC70, (int32), {});
+    static inline NOTSA_GLOBAL(m_nCurrentTimeIndex, 0xC0BC74, (int32), {});
+    static inline NOTSA_GLOBAL(m_NumDealers_Peds, 0xC0E978, (float), {});
 
     static constexpr auto PERC_DATA_TIME_RESOLUTION_HR = 2;
 
     // TODO: Eventually use an array of structs instead of 7x 4 dimensional arrays....
     using PercDataArray = uint8[24 / PERC_DATA_TIME_RESOLUTION_HR /*time resolution (hr)*/][2 /*weekday and weekend*/][(uint32)(eZonePopulationType::COUNT)];
-    static inline auto& m_nPercOther = StaticRef<PercDataArray>(0xC0DE38);
-    static inline auto& m_nPercCops = StaticRef<PercDataArray>(0xC0E018);
-    static inline auto& m_nPercGang = StaticRef<PercDataArray>(0xC0E1F8);
-    static inline auto& m_nPercDealers = StaticRef<PercDataArray>(0xC0E3D8);
-    static inline auto& m_nMaxNumCars = StaticRef<PercDataArray>(0xC0E5B8);
-    static inline auto& m_nMaxNumPeds = StaticRef<PercDataArray>(0xC0E798);
+    static inline NOTSA_GLOBAL(m_nPercOther, 0xC0DE38, (PercDataArray), {});
+    static inline NOTSA_GLOBAL(m_nPercCops, 0xC0E018, (PercDataArray), {});
+    static inline NOTSA_GLOBAL(m_nPercGang, 0xC0E1F8, (PercDataArray), {});
+    static inline NOTSA_GLOBAL(m_nPercDealers, 0xC0E3D8, (PercDataArray), {});
+    static inline NOTSA_GLOBAL(m_nMaxNumCars, 0xC0E5B8, (PercDataArray), {});
+    static inline NOTSA_GLOBAL(m_nMaxNumPeds, 0xC0E798, (PercDataArray), {});
 
     //! See `Initialise` for more info about this array.
-    static inline auto& m_nPercTypeGroup = StaticRef<uint8[24 / PERC_DATA_TIME_RESOLUTION_HR][2 /*weekday or weekend*/][(uint32)(eZonePopulationType::COUNT)][POPCYCLE_TOTAL_GROUP_PERCS]>(0xC0BC78);
+    static inline NOTSA_GLOBAL(m_nPercTypeGroup, 0xC0BC78, (uint8[24 / PERC_DATA_TIME_RESOLUTION_HR][2 /*weekday or weekend*/][(uint32)(eZonePopulationType::COUNT)][POPCYCLE_TOTAL_GROUP_PERCS]), {});
 
     static void InjectHooks();
 

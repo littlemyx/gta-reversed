@@ -240,6 +240,9 @@ T& ScopedStaticRef(uintptr varAddr, uintptr flagsAddr, uint32 flagsMask, T&& ini
  *    big/pointer-table initialisers: header `static NOTSA_GLOBAL_DECL(CCheat, name, 0xA, (T));` + the .cpp `NOTSA_GLOBAL_DEF(CCheat, name, 0xA, (T), { &f, ... });`
  *      (address mode: DECL = the old `static inline auto&`, DEF = nothing)
  *    header declaration of a namespace-scope .cpp global:   `NOTSA_GLOBAL_EXTERN(name, (T));`   (address: `extern T& name;`, detached: `extern T name;`)
+ *    global whose source INITIALISER must run in both modes (the image holds zeros, the exe fills it later; Maths.cpp SIN_LUT):
+ *                                                 `NOTSA_GLOBAL_INIT(name, 0xA, (T), expr);`   (address: `const auto& name = StaticRef<T>(0xA) = expr;` (internal linkage, as the old text), detached: `T name = expr;` (external linkage:
+ *                                                 other TUs name it with `NOTSA_GLOBAL_EXTERN` + `static NOTSA_GLOBAL_ALIAS(name, 0xA, (T), ::name);` - the alias text in address mode is the old StaticRef)
  *
  * With `NOTSA_VERIFY_GLOBALS` every detached global registers itself for `tools/standalone/verify_globals.py` (source/standalone/GlobalsVerify.h).
  *
@@ -288,6 +291,7 @@ namespace notsa { inline constexpr bool kGlobalsDetached = true; }
 #define NOTSA_GLOBAL_VERIFY(addr, obj) static_assert(true)
 #endif
 #define NOTSA_GLOBAL_DECL(cls, name, addr, type)  std::type_identity_t<NOTSA_UNPAREN type> name
+#define NOTSA_GLOBAL_INIT(name, addr, type, ...)  std::type_identity_t<NOTSA_UNPAREN type> name = __VA_ARGS__ NOTSA_GLOBAL_REG_(static inline const, NOTSA_GLOBAL_CAT(name, _gReg_), name, name, addr)
 #define NOTSA_GLOBAL_EXTERN(name, type)           extern std::type_identity_t<NOTSA_UNPAREN type> name
 #define NOTSA_GLOBAL_DEF(cls, name, addr, type, ...) \
     std::type_identity_t<NOTSA_UNPAREN type> cls::name __VA_ARGS__ NOTSA_GLOBAL_REG_(static inline const, NOTSA_GLOBAL_CAT(NOTSA_GLOBAL_CAT(name, _gRegDef_), __COUNTER__), cls::name, name, addr)
@@ -305,6 +309,7 @@ namespace notsa { inline constexpr bool kGlobalsDetached = false; }
 #define NOTSA_GLOBAL_SYNTH(name, addr, type, ...) static_assert(true)
 #define NOTSA_GLOBAL_VERIFY(addr, obj) static_assert(true)
 #define NOTSA_GLOBAL_DECL(cls, name, addr, type)  inline auto& name = StaticRef<NOTSA_UNPAREN type>(addr)
+#define NOTSA_GLOBAL_INIT(name, addr, type, ...)  const auto& name = StaticRef<NOTSA_UNPAREN type>(addr) = __VA_ARGS__
 #define NOTSA_GLOBAL_EXTERN(name, type)           extern NOTSA_UNPAREN type& name
 #define NOTSA_GLOBAL_DEF(cls, name, addr, type, ...) static_assert(true)
 #endif

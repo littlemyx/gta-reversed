@@ -82,11 +82,14 @@ void C3dMarkers::Shutdown() {
         marker.DeleteIfHasAtomic();
     }
 
-    // Original code is retarded, this does the same, but better.
+    // MARKER3D_ARROW / MARKER3D_CONE_NO_COLLISION / MARKER3D_CONE share one clump (see Init). The exe (0x722763..0x7227A4) destroys each distinct clump once and
+    // clears EVERY slot that holds it; clearing only the current slot made the port destroy the shared clump up to three times (use-after-free in
+    // RpClumpForAllAtomics, heap corruption fast fail 0xC0000374 at the end of a normal quit).
     for (auto& v : m_pRpClumpArray) {
-        if (auto* const clump = std::exchange(v, nullptr)) {
+        if (auto* const clump = v) {
             RpClumpForAllAtomics(clump, RemoveRefsCB, nullptr);
             RpClumpDestroy(clump);
+            rng::replace(m_pRpClumpArray, clump, (RpClump*)nullptr);
         }
     }
 }

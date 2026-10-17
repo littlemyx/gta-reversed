@@ -98,6 +98,42 @@ static long TestShutdown() {
     return bad;
 }
 
+// The exe's backward pool loops (`for (i = size - 1; i >= 0; i--) if (!(flags[i] & 0x80)) body(obj[i])`) vs the port's GetAllValidReverse / GetAllValidWithIndexReverse, including a body that DELETES the
+// current object and one that deletes a LOWER one (not yet visited): the visited sequence must be the exe loop's. (`GetAllValid() | rngv::reverse` ran off the storage start in the first case.)
+static long TestReverseIteration() {
+    long bad = 0, loops = 0;
+    for (int sq = 0; sq < 300; ++sq) {
+        Rng r(1000 + sq);
+        const int cap = 1 + r.below(70);
+        for (int mode = 0; mode < 3; ++mode) {            // 0: read only, 1: delete the current object, 2: delete the next lower live object
+            std::vector<Obj> mem(cap);
+            std::vector<uint8_t> fl(cap);
+            using PortPool = CPool<Obj>;
+            alignas(PortPool) unsigned char poolBuf[sizeof(PortPool)];
+            auto* pp = new (poolBuf) PortPool(cap, mem.data(), fl.data());
+            for (int i = 0; i < cap; ++i) { if (r.below(100) < 60) pp->New(); }
+            std::vector<uint8_t> sim(fl);                 // the exe loop on a copy of the byte map
+            std::vector<int> expect, got;
+            for (int i = cap - 1; i >= 0; --i) {
+                if (sim[i] & 0x80) continue;
+                expect.push_back(i);
+                if (mode == 1) sim[i] |= 0x80;
+                else if (mode == 2) { for (int j = i - 1; j >= 0; --j) { if (!(sim[j] & 0x80)) { sim[j] |= 0x80; break; } } }
+            }
+            for (auto&& [i, o] : pp->GetAllValidWithIndexReverse()) {
+                got.push_back(i);
+                if (mode == 1) pp->Delete(&o);
+                else if (mode == 2) { for (int j = i - 1; j >= 0; --j) { if (!pp->IsFreeSlotAtIndex(j)) { pp->Delete(pp->GetAt(j)); break; } } }
+            }
+            ++loops;
+            if (got != expect) { ++bad; if (bad < 10) std::printf("  MISMATCH reverse iteration seq %d cap %d mode %d: %zu slots visited, exe loop %zu\n", sq, cap, mode, got.size(), expect.size()); }
+            pp->~PortPool();
+        }
+    }
+    std::printf("pool reverse iteration: %ld loops (read-only / delete current / delete lower), exe backward loop order reproduced: %s\n", loops, bad ? "FAIL" : "ok");
+    return bad;
+}
+
 int main(int argc, char** argv) {
     std::setvbuf(stdout, nullptr, _IONBF, 0);
     int seqs = 200, ops = 10000; bool verbose = false;
@@ -172,6 +208,7 @@ int main(int argc, char** argv) {
         pp->~PortPool();
     }
     bad += TestShutdown();
+    bad += TestReverseIteration();
     std::printf("pool_oracle_test: %d sequences x %d ops, %ld checks, New %ld (full %ld, ref wrap to 0: %ld), deletes %ld live + %ld arbitrary: %ld mismatches\n",
                 seqs, ops, checks, nNew, nFull, nWrap127, nDel, nDouble, bad);
     std::printf("%s\n", bad ? "FAIL" : "PASS");

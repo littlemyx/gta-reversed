@@ -71,7 +71,7 @@ static_assert(offsetof(CPad, DisablePlayerControls) == 0x10E);
 static_assert(offsetof(CPickup, m_nPickupType) == 0x1C && sizeof(CPickup) == 0x20);
 static_assert(MAX_NUM_PICKUPS == 620); // 0x4D80 / 0x20
 static_assert(offsetof(CVehicleModelInfo, m_nHandlingId) == 0x4A);
-static_assert(0xC2B9C8 + offsetof(cHandlingDataMgr, m_aVehicleHandling) + offsetof(tHandlingData, m_nMonetaryValue) == 0xC2BAB4);
+static_assert(offsetof(cHandlingDataMgr, m_aVehicleHandling) + offsetof(tHandlingData, m_nMonetaryValue) == 236); // 0xC2BAB4 - 0xC2B9C8 (gHandlingDataMgr @0xC2B9C8)
 static_assert(sizeof(tHandlingData) == 0xE0);
 static_assert(sizeof(CPlayerInfo) == 0x190);
 

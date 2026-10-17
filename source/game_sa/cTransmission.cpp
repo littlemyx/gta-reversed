@@ -51,8 +51,8 @@ void cTransmission::InitGearRatios()
     float maxGearVelocity = m_MaxVelocity - averageHalfGearVelocity;
     for (uint8 i = 1; i <= m_nNumberOfGears; i++)
     {
-        static auto& gear = StaticRef<tTransmissionGear*>(0xC1CB34); // nullptr
-        static auto& previousGear = StaticRef<tTransmissionGear*>(0xC1CB30); // nullptr
+        NOTSA_GLOBAL_LOCAL(gear, 0xC1CB34, (tTransmissionGear*), {}); // nullptr
+        NOTSA_GLOBAL_LOCAL(previousGear, 0xC1CB30, (tTransmissionGear*), {}); // nullptr
         gear = &m_aGears[i];
         previousGear = &m_aGears[i - 1];
         const double gearMax = ((double)i * maxGearVelocity * recipGears) + averageHalfGearVelocity; // stays on the x87 stack (extended exponent range): `fst` stores it, the subtraction uses the register
@@ -94,9 +94,9 @@ void cTransmission::CalculateGearForSimpleCar(float speed, uint8& currentGear)
 // 0x6D05E0
 float cTransmission::CalculateDriveAcceleration(const float& gasPedal, uint8& currentGear, float& gearChangeCount, float& velocity, float* a6, float* a7, uint8 allWheelsOnGround, uint8 handlingCheat)
 {
-    static auto& cheatMultiplier = StaticRef<float>(0xC1CB3C); // 0.0f
-    static auto& driveAcceleration = StaticRef<float>(0xC1CB38); // 0.0f
-    static auto& currentVelocity = StaticRef<float>(0xC1CB40); // 0.0f
+    NOTSA_GLOBAL_LOCAL(cheatMultiplier, 0xC1CB3C, (float), {}); // 0.0f
+    NOTSA_GLOBAL_LOCAL(driveAcceleration, 0xC1CB38, (float), {}); // 0.0f
+    NOTSA_GLOBAL_LOCAL(currentVelocity, 0xC1CB40, (float), {}); // 0.0f
     currentVelocity = velocity;
     if (currentVelocity < m_MaxReverseVelocity)
         return 0.0f;

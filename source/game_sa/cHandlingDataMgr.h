@@ -242,7 +242,7 @@ public:
 public:
     static void InjectHooks();
 
-    cHandlingDataMgr();
+    cHandlingDataMgr() = default; // was declared but never defined (DETACH_ctor_nonzero.tsv: members have no initialisers, the global is zero)
 
     void Initialise();
 
@@ -271,4 +271,4 @@ public:
 VALIDATE_SIZE(cHandlingDataMgr, 0xC624);
 
 // If you're searching for `mod_HandlingManager`, you can use this:
-static inline auto& gHandlingDataMgr = StaticRef<cHandlingDataMgr>(0xC2B9C8);
+NOTSA_GLOBAL_HDR(gHandlingDataMgr, 0xC2B9C8, (cHandlingDataMgr), {});

@@ -240,6 +240,9 @@ T& ScopedStaticRef(uintptr varAddr, uintptr flagsAddr, uint32 flagsMask, T&& ini
  *    big/pointer-table initialisers: header `static NOTSA_GLOBAL_DECL(CCheat, name, 0xA, (T));` + the .cpp `NOTSA_GLOBAL_DEF(CCheat, name, 0xA, (T), { &f, ... });`
  *      (address mode: DECL = the old `static inline auto&`, DEF = nothing)
  *    header declaration of a namespace-scope .cpp global:   `NOTSA_GLOBAL_EXTERN(name, (T));`   (address: `extern T& name;`, detached: `extern T name;`)
+ *    zero-image object whose repo ctor would seed non-zero defaults (the exe's static init leaves it all-zero), `ExeZero<T>()` without the temporaries:
+ *                                                 `NOTSA_GLOBAL_ZERO(name, 0xA, (T));` (class scope / .cpp; NO specifiers) or `NOTSA_GLOBAL_ZERO_HDR(...)` (header namespace scope).
+ *                                                 address: `static inline auto& name = StaticRef<T>(0xA)`; detached: constant-initialised zero storage + `T& name` (no dynamic initialiser, no ctor/dtor, usable for 500 KB arrays)
  *    global whose source INITIALISER must run in both modes (the image holds zeros, the exe fills it later; Maths.cpp SIN_LUT):
  *                                                 `NOTSA_GLOBAL_INIT(name, 0xA, (T), expr);`   (address: `const auto& name = StaticRef<T>(0xA) = expr;` (internal linkage, as the old text), detached: `T name = expr;` (external linkage:
  *                                                 other TUs name it with `NOTSA_GLOBAL_EXTERN` + `static NOTSA_GLOBAL_ALIAS(name, 0xA, (T), ::name);` - the alias text in address mode is the old StaticRef)
@@ -295,6 +298,22 @@ namespace notsa { inline constexpr bool kGlobalsDetached = true; }
 #define NOTSA_GLOBAL_EXTERN(name, type)           extern std::type_identity_t<NOTSA_UNPAREN type> name
 #define NOTSA_GLOBAL_DEF(cls, name, addr, type, ...) \
     std::type_identity_t<NOTSA_UNPAREN type> cls::name __VA_ARGS__ NOTSA_GLOBAL_REG_(static inline const, NOTSA_GLOBAL_CAT(NOTSA_GLOBAL_CAT(name, _gRegDef_), __COUNTER__), cls::name, name, addr)
+// Zero-image object: raw zero storage (constant-initialised, no dynamic initialiser, no ctor/dtor, no stack temporaries) viewed as T. For objects the exe leaves all-zero
+// whose repo ctor / default member initialisers would seed non-zero ids (CStreamingInfo, CZoneInfo ...). The call site gives no specifiers (the macro says `static inline` / `inline`).
+namespace notsa { template<typename T> struct alignas(T) ExeZeroStorage { unsigned char bytes[sizeof(T)]; }; }
+#define NOTSA_GLOBAL_ZERO(name, addr, type) \
+    static inline ::notsa::ExeZeroStorage<NOTSA_UNPAREN type> NOTSA_GLOBAL_CAT(name, _Zero_); \
+    static inline std::type_identity_t<NOTSA_UNPAREN type>& name = reinterpret_cast<std::type_identity_t<NOTSA_UNPAREN type>&>(NOTSA_GLOBAL_CAT(name, _Zero_)) \
+    NOTSA_GLOBAL_REG_(static inline const, NOTSA_GLOBAL_CAT(name, _gReg_), name, name, addr)
+#define NOTSA_GLOBAL_ZERO_DECL(cls, name, addr, type) std::type_identity_t<NOTSA_UNPAREN type>& name
+#define NOTSA_GLOBAL_ZERO_DEF(cls, name, addr, type) \
+    static ::notsa::ExeZeroStorage<NOTSA_UNPAREN type> NOTSA_GLOBAL_CAT(name, _Zero_); \
+    std::type_identity_t<NOTSA_UNPAREN type>& cls::name = reinterpret_cast<std::type_identity_t<NOTSA_UNPAREN type>&>(NOTSA_GLOBAL_CAT(name, _Zero_)); \
+    NOTSA_GLOBAL_REG_(static inline const, NOTSA_GLOBAL_CAT(NOTSA_GLOBAL_CAT(name, _gRegDef_), __COUNTER__), cls::name, name, addr)
+#define NOTSA_GLOBAL_ZERO_HDR(name, addr, type) \
+    inline ::notsa::ExeZeroStorage<NOTSA_UNPAREN type> NOTSA_GLOBAL_CAT(name, _Zero_); \
+    inline std::type_identity_t<NOTSA_UNPAREN type>& name = reinterpret_cast<std::type_identity_t<NOTSA_UNPAREN type>&>(NOTSA_GLOBAL_CAT(name, _Zero_)) \
+    NOTSA_GLOBAL_REG_(inline const, NOTSA_GLOBAL_CAT(name, _gReg_), name, name, addr)
 #else
 namespace notsa { inline constexpr bool kGlobalsDetached = false; }
 #define NOTSA_GLOBAL(name, addr, type, ...)       auto& name = StaticRef<NOTSA_UNPAREN type>(addr)
@@ -312,6 +331,10 @@ namespace notsa { inline constexpr bool kGlobalsDetached = false; }
 #define NOTSA_GLOBAL_INIT(name, addr, type, ...)  const auto& name = StaticRef<NOTSA_UNPAREN type>(addr) = __VA_ARGS__
 #define NOTSA_GLOBAL_EXTERN(name, type)           extern NOTSA_UNPAREN type& name
 #define NOTSA_GLOBAL_DEF(cls, name, addr, type, ...) static_assert(true)
+#define NOTSA_GLOBAL_ZERO(name, addr, type)       static inline auto& name = StaticRef<NOTSA_UNPAREN type>(addr)
+#define NOTSA_GLOBAL_ZERO_DECL(cls, name, addr, type) inline auto& name = StaticRef<NOTSA_UNPAREN type>(addr)
+#define NOTSA_GLOBAL_ZERO_DEF(cls, name, addr, type) static_assert(true)
+#define NOTSA_GLOBAL_ZERO_HDR(name, addr, type)   static inline auto& name = StaticRef<NOTSA_UNPAREN type>(addr)
 #endif
 
 template<typename T>

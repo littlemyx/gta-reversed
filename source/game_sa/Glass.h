@@ -4,6 +4,8 @@
 #include <FallingGlassPane.h>
 #include "Vector2D.h"
 #include "Vector.h"
+#include "game_sa/common.h"
+#line 7
 
 class CVehicle;
 class CEntity;
@@ -20,8 +22,8 @@ public:
     static NOTSA_GLOBAL_DECL(CGlass, PanePolyPositions, 0x8D5CD8, (CVector2D[4][3]));
     static inline NOTSA_GLOBAL(ReflectionPolyVertexBaseIdx, 0xC71B18, (int32), {});
     static inline NOTSA_GLOBAL(ReflectionPolyIndexBaseIdx, 0xC71B1C, (int32), {});
-    static inline auto& ReflectionPolyVertexBuffer = StaticRef<std::array<RxObjSpace3DLitVertex, 1706>>(0xC5B158);
-    static inline auto& ShatteredPolyVertexBuffer = StaticRef<std::array<RxObjSpace3DLitVertex, 512>>(0xC56958);
+    static inline NOTSA_GLOBAL_ALIAS(ReflectionPolyVertexBuffer, 0xC5B158, (std::array<RxObjSpace3DLitVertex, 1706>), *reinterpret_cast<std::array<RxObjSpace3DLitVertex, 1706>*>(reinterpret_cast<uint8*>(&TempBufferVertices) + 55296));
+    static inline NOTSA_GLOBAL_ALIAS(ShatteredPolyVertexBuffer, 0xC56958, (std::array<RxObjSpace3DLitVertex, 512>), *reinterpret_cast<std::array<RxObjSpace3DLitVertex, 512>*>(reinterpret_cast<uint8*>(&TempBufferVertices) + 36864));
     static inline NOTSA_GLOBAL(ShatteredVerticesBaseIdx, 0xC71B20, (int32), {});
     static inline NOTSA_GLOBAL(ShatteredIndicesBaseIdx, 0xC71B24, (int32), {});
     static inline NOTSA_GLOBAL(H1iLightPolyVerticesIdx, 0xC71B28, (uint32), {});

@@ -17,7 +17,7 @@
 
 #include <bit>
 
-static auto& TempVertexBuffer = StaticRef<std::array<RxObjSpace3DVertex, 4>>(0xC4D958);
+static NOTSA_GLOBAL_ALIAS(TempVertexBuffer, 0xC4D958, (std::array<RxObjSpace3DVertex, 4>), reinterpret_cast<std::array<RxObjSpace3DVertex, 4>&>(TempBufferVertices)); // prefix view of the scratch arena
 
 NOTSA_GLOBAL(g_fx, 0xA9AE00, (Fx_c), {}); static_assert(sizeof(g_fx) == 112);
 

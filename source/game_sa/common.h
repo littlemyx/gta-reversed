@@ -69,16 +69,16 @@ constexpr auto BUILD_NAME_FULL = "TEST"; // NOTSA
 
 static inline int32 gDefaultTaskTime = 9'999'999; // or 0x98967F a.k.a (ten million - 1)
 
-static inline auto& gString = StaticRef<char[352]>(0xB71670);
-static inline auto& gString2 = StaticRef<char[352]>(0xB71510);
+NOTSA_GLOBAL_HDR(gString, 0xB71670, (char[352]), {});
+NOTSA_GLOBAL_HDR(gString2, 0xB71510, (char[352]), {});
 
-static inline auto& gGxtString = StaticRef<GxtChar[552]>(0xC1B100);
-static inline auto& gGxtString2 = StaticRef<GxtChar[552]>(0xC1AED8);
-static inline auto& GxtErrorString = StaticRef<GxtChar[32]>(0xC1AEB8);
+NOTSA_GLOBAL_HDR(gGxtString, 0xC1B100, (GxtChar[552]), {});
+NOTSA_GLOBAL_HDR(gGxtString2, 0xC1AED8, (GxtChar[552]), {});
+NOTSA_GLOBAL_HDR(GxtErrorString, 0xC1AEB8, (GxtChar[32]), {});
 
-static inline auto& g_nNumIm3dDrawCalls = StaticRef<int32>(0xB73708);
+NOTSA_GLOBAL_HDR(g_nNumIm3dDrawCalls, 0xB73708, (int32), {});
 
-static inline auto& PC_Scratch = StaticRef<char[16384]>(0xC8E0C8);
+NOTSA_GLOBAL_HDR(PC_Scratch, 0xC8E0C8, (char[16384]), {});
 
 NOTSA_GLOBAL_EXTERN(AmbientLightColour, (RwRGBAReal));
 NOTSA_GLOBAL_EXTERN(AmbientLightColourForFrame, (RwRGBAReal));
@@ -299,10 +299,17 @@ static inline int32 WindowsCharset = static_cast<int32>(GetACP());
 struct TempVertexBuffer {
     RwIm3DVertex m_3d[TOTAL_TEMP_BUFFER_3DVERTICES]; // For Im3D rendering
     RwIm2DVertex m_2d[TOTAL_TEMP_BUFFER_2DVERTICES]; // For Im2D rendering
+#ifdef NOTSA_GLOBALS_DETACHED
+    // NOTSA: the exe's scratch arena at 0xC4D958 is 0x1C800 bytes: TempBufferVertices is its first 102400 bytes, CGlass::ShatteredPolyVertexBuffer (+0x9000),
+    // CGlass::ReflectionPolyVertexBuffer (+0xD800) and aRadiosityVertexBuffer (+0x12000, ends at +0x1C790) are views into it, shared on purpose
+    // (aliases.json, 0xC4D958). The detached owner is the whole arena; the tail exists only there, address mode keeps sizeof == 102400.
+    uint8 m_arenaTail[0x1C800 - (TOTAL_TEMP_BUFFER_3DVERTICES * sizeof(RwIm3DVertex) + TOTAL_TEMP_BUFFER_2DVERTICES * sizeof(RwIm2DVertex))];
+#endif
 };
+#line 303
 
-static inline auto& uiTempBufferIndicesStored = StaticRef<uint16>(0xC4B954);
-static inline auto& uiTempBufferVerticesStored = StaticRef<uint16>(0xC4B950);
-static inline auto& aTempBufferIndices = StaticRef<RxVertexIndex[TOTAL_TEMP_BUFFER_INDICES]>(0xC4B958);
-static inline auto& TempBufferVertices = StaticRef<TempVertexBuffer>(0xC4D958);
-static inline auto& aRadiosityVertexBuffer = StaticRef<RwD3D9Vertex[TOTAL_RADIOSITY_VERTEX_BUFFER]>(0xC5F958);
+NOTSA_GLOBAL_HDR(uiTempBufferIndicesStored, 0xC4B954, (uint16), {});
+NOTSA_GLOBAL_HDR(uiTempBufferVerticesStored, 0xC4B950, (uint16), {});
+NOTSA_GLOBAL_HDR(aTempBufferIndices, 0xC4B958, (RxVertexIndex[TOTAL_TEMP_BUFFER_INDICES]), {});
+NOTSA_GLOBAL_HDR(TempBufferVertices, 0xC4D958, (TempVertexBuffer), {}); static_assert(sizeof(TempBufferVertices) >= 102400); // detached: the whole 0x1C800-byte arena (see TempVertexBuffer)
+static inline NOTSA_GLOBAL_ALIAS(aRadiosityVertexBuffer, 0xC5F958, (RwD3D9Vertex[TOTAL_RADIOSITY_VERTEX_BUFFER]), *reinterpret_cast<RwD3D9Vertex(*)[TOTAL_RADIOSITY_VERTEX_BUFFER]>(reinterpret_cast<uint8*>(&TempBufferVertices) + 73728));

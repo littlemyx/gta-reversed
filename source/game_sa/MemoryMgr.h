@@ -2,6 +2,8 @@
 
 #include <cstddef>
 #include "MemoryHeap.h"
+#include "game_sa/common.h"
+#line 5
 
 #define MEMORY_MGR_XBOX_HEAP_SIZE       20656640 // from XBOX
 #define MEMORY_MGR_PC_HEAP_SIZE         64 << 20
@@ -62,7 +64,7 @@ enum eMemoryId {
     MEM_32                   = 32,
 };
 
-static inline auto& s_MemoryHeapBuffer = StaticRef<char[16384]>(0xC8E0C8); // NOT converted here: common.h (B20, off limits for stream C) aliases the same address as `PC_Scratch`
+static inline NOTSA_GLOBAL_ALIAS(s_MemoryHeapBuffer, 0xC8E0C8, (char[16384]), PC_Scratch); // same storage as `PC_Scratch` (common.h owns the 16 KB scratch buffer)
 NOTSA_GLOBAL_HDR(g_Heaps, 0xC87B40, (std::array<CMemoryHeap, 3>), {}); static_assert(sizeof(g_Heaps) == 216);
 
 // todo fixed stack

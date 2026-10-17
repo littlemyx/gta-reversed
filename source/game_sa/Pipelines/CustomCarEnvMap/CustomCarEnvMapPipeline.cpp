@@ -446,7 +446,7 @@ void CCustomCarEnvMapPipeline::CustomPipeRenderCB(RwResEntry* resEntry, void* ob
                     0x00FF3C, // @ 0x5D9E84...
                     0x003CFF,
                     0x00AFFF,
-                    0xC8FF00, // @ 0x5D9E9B...
+                    0x00 | (0xFF << 8) | (0xC8 << 16), // 0xC8FF00 @ 0x5D9E9B (a composition: the literal lies inside the extent of PC_Scratch and would be reported as a stray address)
                     0xFF00FF,
                     0xFFFF00,
                 }, bgr);

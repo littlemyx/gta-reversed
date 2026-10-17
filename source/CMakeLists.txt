@@ -910,6 +910,67 @@ if (${RE_PROJECT}_RW_LIBRW)
     set_property(TARGET logic_oracle_test PROPERTY SOURCES "${STANDALONE_PAD_OBJ}" ${_lo_sources})
     target_link_options(logic_oracle_test PRIVATE "$<$<CXX_COMPILER_ID:MSVC>:/BASE:0x400000;/DYNAMICBASE:NO;/FIXED;/MERGE:_TEXT=.text;/INCREMENTAL:NO;/SUBSYSTEM:CONSOLE;/FORCE:UNRESOLVED;/MAP>")
     set_target_properties(logic_oracle_test PROPERTIES COMPILE_WARNING_AS_ERROR OFF CXX_SCAN_FOR_MODULES OFF)
+    # ORACLE-W1 wave 1: ported functions without an exe-oracle row so far (surface table, camera, AI decisions, events, path nodes ...); harness = logic_oracle_test's, TUs listed per area below
+    add_executable(wave1_oracle_test EXCLUDE_FROM_ALL
+        "${PROJECT_SOURCE_DIR}/tests/standalone/wave1_oracle_test.cpp"
+        game_sa/General.cpp
+        game_sa/Core/Vector.cpp
+        game_sa/Core/Vector2D.cpp
+        game_sa/Core/Matrix.cpp
+        game_sa/Core/Quaternion.cpp
+        game_sa/Timer.cpp
+        game_sa/Weather.cpp
+        standalone/FtolExe.cpp
+        # --- wave1_oracle_surface.inc
+        game_sa/SurfaceInfos_c.cpp
+        # --- wave1_oracle_camera.inc
+        game_sa/Camera.cpp
+        # --- wave1_oracle_peds.inc
+        game_sa/Entity/Ped/Ped.cpp
+        # --- wave1_oracle_ai.inc
+        game_sa/PlayerRelationshipRecorder.cpp
+        game_sa/StuckCarCheck.cpp
+        game_sa/PedGroupMembership.cpp
+        game_sa/CarAI.cpp
+        # --- wave1_oracle_entities.inc
+        game_sa/Entity/Placeable.cpp
+        game_sa/Events/EventDanger.cpp
+        game_sa/Events/EventCarUpsideDown.cpp
+        game_sa/Events/EventChatPartner.cpp
+        game_sa/Events/EventDraggedOutCar.cpp
+        game_sa/Events/EventGotKnockedOverByCar.cpp
+        game_sa/Events/EventCopCarBeingStolen.cpp
+        game_sa/Events/EventBuildingCollision.cpp
+    )
+    # tiny constant-returning overrides (GetTaskType / GetEventPriority / ... ~440 rows, ~280 TUs) live in their own executable: tests/standalone/tools/gen_const_rows.py regenerates the rows and the source list
+    include("${PROJECT_SOURCE_DIR}/tests/standalone/wave1_oracle_consts_sources.cmake")
+    add_executable(wave1_consts_oracle_test EXCLUDE_FROM_ALL
+        "${PROJECT_SOURCE_DIR}/tests/standalone/wave1_oracle_test.cpp"
+        game_sa/General.cpp
+        game_sa/Core/Vector.cpp
+        game_sa/Core/Vector2D.cpp
+        game_sa/Core/Matrix.cpp
+        game_sa/Core/Quaternion.cpp
+        game_sa/Timer.cpp
+        game_sa/Weather.cpp
+        standalone/FtolExe.cpp
+        ${W1_CONST_SOURCES}
+    )
+    target_compile_definitions(wave1_consts_oracle_test PRIVATE W1_CONSTS_ONLY)
+    foreach(_w1t wave1_oracle_test wave1_consts_oracle_test)
+        target_compile_features(${_w1t} PRIVATE cxx_std_23)
+        target_compile_definitions(${_w1t} PRIVATE $<TARGET_PROPERTY:${RE_PROJECT_LIB_NAME},COMPILE_DEFINITIONS> NOTSA_ORACLE_ADDRESS_GLOBALS)
+        target_include_directories(${_w1t} PRIVATE $<TARGET_PROPERTY:${RE_PROJECT_LIB_NAME},INCLUDE_DIRECTORIES>)
+        target_compile_options(${_w1t} PRIVATE $<TARGET_PROPERTY:${RE_PROJECT_LIB_NAME},COMPILE_OPTIONS>)
+        target_precompile_headers(${_w1t} PRIVATE StdInc.cpp)
+        target_link_libraries(${_w1t} PRIVATE librw spdlog::spdlog Tracy::TracyClient user32)
+        target_sources(${_w1t} PRIVATE "${STANDALONE_PAD_OBJ}")
+        get_target_property(_w1_sources_${_w1t} ${_w1t} SOURCES)
+        list(REMOVE_ITEM _w1_sources_${_w1t} "${STANDALONE_PAD_OBJ}")
+        set_property(TARGET ${_w1t} PROPERTY SOURCES "${STANDALONE_PAD_OBJ}" ${_w1_sources_${_w1t}})
+        target_link_options(${_w1t} PRIVATE "$<$<CXX_COMPILER_ID:MSVC>:/BASE:0x400000;/DYNAMICBASE:NO;/FIXED;/MERGE:_TEXT=.text;/INCREMENTAL:NO;/SUBSYSTEM:CONSOLE;/FORCE:UNRESOLVED;/MAP>")
+        set_target_properties(${_w1t} PROPERTIES COMPILE_WARNING_AS_ERROR OFF CXX_SCAN_FOR_MODULES OFF)
+    endforeach()
     # x87 intrinsic fidelity oracle: inline fsin/fcos/fpatan/fptan/fsqrt/fyl2x of the exe vs the ports' math, and the CRT entry points the exe calls (pow, asin, acos, tan, floor, ceil, modf)
     add_executable(x87_oracle_test EXCLUDE_FROM_ALL
         "${PROJECT_SOURCE_DIR}/tests/standalone/x87_oracle_test.cpp"

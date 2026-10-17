@@ -994,6 +994,7 @@ if (${RE_PROJECT}_RW_LIBRW)
         # --- camera
         game_sa/Camera.cpp
         game_sa/Cam.cpp
+        game_sa/IdleCam.cpp            # CCamera::Init test: CCam::Init calls gIdleCam.Reset(true)
         # --- weapons
         game_sa/Weapon.cpp
         game_sa/WeaponInfo.cpp

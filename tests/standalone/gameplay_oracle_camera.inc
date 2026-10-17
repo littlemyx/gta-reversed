@@ -3,6 +3,8 @@
 #include "Cam.h"
 #include "Draw.h"
 #include "Entity/Vehicle/Vehicle.h"
+#include "MenuManager.h"
+#include "Pad.h"
 
 static constexpr uintptr_t CAM_VA = 0xB6F028;
 static_assert(offsetof(CCamera, m_bUseSpecialFovTrain) == 0x36 && offsetof(CCamera, m_fFovForTrain) == 0x130);
@@ -186,6 +188,11 @@ static void TestCamCam() {
     });
 }
 
+// CCamera::Init test: RegisterReference recorder (the token entity pointers are never dereferenced)
+auto& FrontEndMenuManager = StaticRef<CMenuManager>(0xBA6748);   // the test does not link MenuManager.cpp
+static std::vector<std::pair<void*, void*>> g_regs;
+static void __fastcall HostRegisterReference(void* self, int, void* ref) { g_regs.emplace_back(self, ref); }
+
 static void TestCamera() {
     TestCamCam();
     Run("CCamera::StoreValuesDuringInterPol 0x50C290", [](Rng& r, std::string& d) {
@@ -308,6 +315,48 @@ static void TestCamera() {
         const float re = oracle::Fn<float __fastcall(CCamera*, int)>(0x50AD40)(&TheCamera, 0); c.ExeDone();
         if (SameF(ra, re) && c.Same()) return true;
         d = "aspect " + F(CDraw::ms_fAspectRatio) + " chair " + F(TheCamera.m_f3rdPersonCHairMultY) + " got " + F(ra) + " exe " + F(re);
+        return false;
+    });
+    // CCamera::Init: the whole object (memset 0x18..0xD78 + ~150 stores + the 3 CCam::Init + SetScale / ClearPlayerWeaponMode / SetMotionBlur) plus every global the function (and CCam::Init / CIdleCam::Reset) writes.
+    // FindPlayerVehicle (both sides, scripted by cwf::playerVeh) and RegisterReference are replaced by recorders, so the player / vehicle paths run with token pointers.
+    Run("CCamera::Init 0x5BC520", [](Rng& r, std::string& d) {
+        static const std::pair<uintptr_t, size_t> kRanges[] = { { 0x8CC380, 0x10 }, { 0xB6EC10, 0x20 }, { 0xC3EFA8, 8 }, { 0xB6FDA0, 156 }, { 0xB73458, sizeof(CPad) } };
+        std::vector<Snap> xin, xpa, xpe;
+        for (auto& [va, n] : kRanges) { xin.emplace_back(va, n); xpa.emplace_back(va, n); xpe.emplace_back(va, n); }
+        void* const portRR = PmAddr(static_cast<void (CEntity::*)(CEntity**)>(&CEntity::RegisterReference));
+        uint8_t savedP[16], savedE[16]; std::memcpy(savedP, portRR, 16); std::memcpy(savedE, (void*)0x571B70, 16);
+        PatchHostFn(portRR, (void*)&HostRegisterReference); oracle::Patch(0x571B70, (void*)&HostRegisterReference);
+        CamRun c; c.Begin(r);
+        for (auto& s : xin) { s.FillRandom(r); s.Restore(); }
+        static Snap sfw(0xBA6748, 0x400), swp(0xB7CD74, 1), spl(0xB7CD98, 2 * 0x190);   // FrontEndMenuManager (m_bStartGameLoading is +0x5D), PlayerInFocus, CWorld::Players[2]
+        sfw.Save(); swp.Save(); spl.Save();
+        const bool loading = r.below(2); FrontEndMenuManager.m_bStartGameLoading = loading;
+        CWorld::PlayerInFocus = (uint8)r.below(2);
+        const uintptr_t tokPed = r.below(3) ? 0 : (0x10000u + (r.u32() & 0xFFF0u)), tokVeh = r.below(2) ? 0 : (0x20000u + (r.u32() & 0xFFF0u));
+        CWorld::Players[CWorld::PlayerInFocus].m_pPed = reinterpret_cast<CPlayerPed*>(tokPed);
+        cwf::Reset(); cwf::playerVeh = reinterpret_cast<void*>(tokVeh);
+        g_regs.clear();
+        for (auto& s : xin) s.Save();
+        c.Mark();
+        TheCamera.Init(); const auto regA = g_regs; const auto recA = cwf::g_rec; c.PortDone();
+        for (size_t i = 0; i < xin.size(); ++i) { xpa[i].Save(); xin[i].Restore(); }
+        g_regs.clear(); cwf::Reset();
+        oracle::Fn<void __fastcall(CCamera*, int)>(0x5BC520)(&TheCamera, 0); const auto regE = g_regs; const auto recE = cwf::g_rec; c.ExeDone();
+        for (size_t i = 0; i < xin.size(); ++i) { xpe[i].Save(); xin[i].Restore(); }
+        std::memcpy(portRR, savedP, 16); std::memcpy((void*)0x571B70, savedE, 16);
+        sfw.Restore(); swp.Restore(); spl.Restore(); cwf::playerVeh = nullptr; cwf::Reset();
+        // masked: 0x8CC38A..B = upper half of the dword the exe stores into gCameraMode (-1; the port's eCamMode is 16 bit, the half is never read); 0xB6EC18 = m_fMouseAccelVertical when this test build has FIX_BUGS (port: Horzntl * 0.6f; the standalone run build stores the exe's 0.0015f)
+        for (auto* x : { &xpa, &xpe }) {
+            std::memset(&(*x)[0].b[0x0A], 0, 2);
+#ifdef FIX_BUGS
+            std::memset(&(*x)[1].b[0x08], 0, 4);
+#endif
+        }
+        bool same = c.Same() && regA == regE && cwf::SameRec(recA, recE);
+        std::string xd;
+        for (size_t i = 0; i < xin.size(); ++i) if (!xpa[i].SameAs(xpe[i])) { same = false; xd += DiffDesc(xpa[i].b.data(), xpe[i].b.data(), xpa[i].b.size(), ("x" + std::to_string(i)).c_str()); }
+        if (same) return true;
+        d = "loading " + std::to_string(loading) + " ped " + std::to_string(tokPed) + " veh " + std::to_string(tokVeh) + " regs " + std::to_string(regA.size()) + "/" + std::to_string(regE.size()) + " " + cwf::Desc(recA) + " / exe " + cwf::Desc(recE) + c.Diff() + xd;
         return false;
     });
 }

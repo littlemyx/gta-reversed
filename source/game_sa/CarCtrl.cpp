@@ -3069,7 +3069,7 @@ CVehicle* CCarCtrl::GetNewVehicleDependingOnCarModel(int32 modelId, uint8 create
 
 // 0x42C250
 bool CCarCtrl::IsAnyoneParking() {
-    for (auto& veh : GetVehiclePool()->GetAllValid()) {
+    for (auto& veh : NOTSA_EXE_OR(GetVehiclePool()->GetAllValid() | rngv::reverse, GetVehiclePool()->GetAllValid())) {
         switch (veh.m_autoPilot.m_nCarMission) {
         case eCarMission::MISSION_PARK_PARALLEL:
         case eCarMission::MISSION_PARK_PARALLEL_2:
@@ -4418,7 +4418,7 @@ void CCarCtrl::RemoveCarsIfThePoolGetsFull() {
     const CVector camPos = TheCamera.GetPosition();
     float fClosestDist = std::numeric_limits<float>::max();
     CVehicle* closestVeh = nullptr;
-    for (auto& veh : GetVehiclePool()->GetAllValid()) {
+    for (auto& veh : NOTSA_EXE_OR(GetVehiclePool()->GetAllValid() | rngv::reverse, GetVehiclePool()->GetAllValid())) {
         if (IsThisVehicleInteresting(&veh)) {
             continue;
         }
@@ -4458,7 +4458,7 @@ void CCarCtrl::RemoveDistantCars() {
     //... only then process them, this way we don't do use-after-free
     // only other solution would be `PossiblyRemoveVehicle` returning a `bool`
     // to indicate whenever the vehicle was deleted or not.
-    for (auto& veh : GetVehiclePool()->GetAllValid()) {
+    for (auto& veh : NOTSA_EXE_OR(GetVehiclePool()->GetAllValid() | rngv::reverse, GetVehiclePool()->GetAllValid())) {
         if (!notsa::bugfixes::CCarCtrl_RemoveDistantCars_UseAfterFree) {
             PossiblyRemoveVehicle(&veh); // This may or may not invalidate `veh`
         }

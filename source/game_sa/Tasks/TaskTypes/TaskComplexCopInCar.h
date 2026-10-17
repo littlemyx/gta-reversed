@@ -30,7 +30,7 @@ public:
 
 
 
-CTask* Clone() const override { return new CTaskComplexCopInCar{ *this }; }
+CTask* Clone() const override { return NOTSA_EXE_OR(new CTaskComplexCopInCar(m_Vehicle, m_Cop, m_Suspect, (bool)m_IsDriver), new CTaskComplexCopInCar{ *this }); } // 0x68CEC0; NOTSA-AUDIT: the run build clones like the exe (fresh task from the 4 ctor arguments, no memberwise copy of sub task / timers)
 
 
 

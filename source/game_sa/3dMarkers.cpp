@@ -35,9 +35,57 @@ void C3dMarkers::InjectHooks() {
     RH_ScopedInstall(SaveUser3dMarkers, 0x5D4300);
 }
 
+#ifdef NOTSA_STANDALONE_RUN
+namespace notsa::audit {
+// NOTSA-AUDIT: the marker reset of `C3dMarkers::Init` (0x724E40: 32x the inlined C3dMarker::C3dMarker, stores at marker+0x48..+0x98), a free function so that the exe oracle
+// (tests/standalone/logic_oracle_notsa.inc) can run it on a poisoned copy of the array and compare it byte for byte with the exe's own loop.
+// The exe resets the markers FIELD BY FIELD and never touches
+//   * `m_Mat` (+0x00..+0x47: a marker keeps its matrix, including `m_pAttachMatrix`, which is stale after `DeleteMarkerObject` destroyed the frame - nothing
+//     reads it before `AddMarker` re-attaches),
+//   * `m_LastMapReadY` (+0x86), `m_LastMapReadResultZ` (+0x88), `m_OnScreenTestTime` (+0x9C).
+// `rng::fill(.., C3dMarker{})` (the DLL build) is a `CMatrix::operator=` per marker: it wrote through the stale attach pointer into the freed RwFrame (heap corruption at
+// every game restart after a marker existed) - the reason the run build used to keep a `m_Mat.Detach()` in `DeleteMarkerObject` (removed: the exe has none).
+// Note `m_Normal` is (0, 0, 1) here (+0x80 = 1.0f), not zero as in the DLL build.
+void ResetMarkers3dLikeExe(C3dMarker* markers, size_t count) {
+    static_assert(offsetof(C3dMarker, m_Atomic) == 0x48 && offsetof(C3dMarker, m_Type) == 0x50 && offsetof(C3dMarker, m_IsInUse) == 0x52 && offsetof(C3dMarker, m_IsActive) == 0x53
+               && offsetof(C3dMarker, m_ID) == 0x54 && offsetof(C3dMarker, m_Color) == 0x58 && offsetof(C3dMarker, m_PulsePeriod) == 0x5C && offsetof(C3dMarker, m_RotateRate) == 0x5E
+               && offsetof(C3dMarker, m_StartTime) == 0x60 && offsetof(C3dMarker, m_PulseFraction) == 0x64 && offsetof(C3dMarker, m_StdSize) == 0x68 && offsetof(C3dMarker, m_Size) == 0x6C
+               && offsetof(C3dMarker, m_Brightness) == 0x70 && offsetof(C3dMarker, m_DistToCam2D) == 0x74 && offsetof(C3dMarker, m_Normal) == 0x78 && offsetof(C3dMarker, m_LastMapReadX) == 0x84
+               && offsetof(C3dMarker, m_RoofHeight) == 0x8C && offsetof(C3dMarker, m_LastPosition) == 0x90 && sizeof(C3dMarker) == 0xA0);
+    for (auto& m : std::span{ markers, count }) {
+        m.m_Atomic        = nullptr;                    // +0x48
+        m.m_Type          = MARKER3D_NA;                // word 0x101 at +0x50
+        m.m_IsInUse       = false;
+        m.m_IsActive      = false;
+        m.m_ID            = 0;
+        m.m_Color         = CRGBA{ 255, 255, 255, 255 };
+        m.m_PulsePeriod   = 1'024;
+        m.m_RotateRate    = 5;
+        m.m_StartTime     = 0;
+        m.m_PulseFraction = 0.25f;
+        m.m_StdSize       = 1.0f;
+        m.m_Size          = 1.0f;
+        m.m_Brightness    = 1.0f;
+        m.m_DistToCam2D   = 0.0f;
+        m.m_Normal        = CVector{ 0.0f, 0.0f, 1.0f };
+        m.m_LastMapReadX  = 30'000;
+        m.m_RoofHeight    = 65535.0f;                   // 0x477FFF00
+        m.m_LastPosition  = CVector{ 0.0f, 0.0f, 0.0f };
+    }
+}
+} // namespace notsa::audit
+#endif
+
+#line 35
 //> 0x724E40
 void C3dMarkers::Init() {
+#ifdef NOTSA_STANDALONE_RUN
+    notsa::audit::ResetMarkers3dLikeExe(m_aMarkerArray.data(), m_aMarkerArray.size());
+#else
+#line 37
     rng::fill(m_aMarkerArray, C3dMarker{});
+#endif
+#line 38
 
     NumActiveMarkers = 0;
     m_angleDiamondDeg = 0.0f;

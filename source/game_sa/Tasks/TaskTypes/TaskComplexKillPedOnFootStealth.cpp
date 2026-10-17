@@ -28,7 +28,13 @@ CTaskComplexKillPedOnFootStealth::CTaskComplexKillPedOnFootStealth(CPed* target)
 
 // NOTSA (For 0x623400)
 CTaskComplexKillPedOnFootStealth::CTaskComplexKillPedOnFootStealth(const CTaskComplexKillPedOnFootStealth& o) :
+#ifdef NOTSA_STANDALONE_RUN
+    CTaskComplexKillPedOnFootStealth{o.m_target} // NOTSA-AUDIT: the exe's Clone (0x623400) passes THIS task's target; upstream read the uninitialised member of the new object
+#else
+#line 31
     CTaskComplexKillPedOnFootStealth{m_target}
+#endif
+#line 32
 {
 }
 

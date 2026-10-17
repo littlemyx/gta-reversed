@@ -210,7 +210,13 @@ void CMenuManager::DrawBackground() {
     }
 
 #ifdef USE_BUILD_INFORMATION
+#ifdef NOTSA_STANDALONE_RUN
+    // NOTSA-AUDIT: the exe draws no build info text on the front end
+#else
+#line 213
     DrawBuildInfo();
+#endif
+#line 214
 #endif
 
     // 0x57BA42

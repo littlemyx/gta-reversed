@@ -18,7 +18,7 @@ public:
     CTaskSimpleWaitUntilPedIsInCar(CPed* pedToWaitFor);
     ~CTaskSimpleWaitUntilPedIsInCar();
 
-    CTask*    Clone() const override { return new CTaskSimpleWaitUntilPedIsInCar{ *this }; }
+    CTask*    Clone() const override { return NOTSA_EXE_OR(new CTaskSimpleWaitUntilPedIsInCar(m_pedToWaitFor), new CTaskSimpleWaitUntilPedIsInCar{ *this }); } // 0x64A520; NOTSA-AUDIT: fresh task like the exe
     eTaskType GetTaskType() const override { return Type; }
     bool      MakeAbortable(CPed* ped, eAbortPriority priority = ABORT_PRIORITY_URGENT, const CEvent* event = nullptr) override { return true; }
     bool      ProcessPed(CPed* ped) override;

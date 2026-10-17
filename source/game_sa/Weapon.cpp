@@ -776,9 +776,20 @@ bool CWeapon::TakePhotograph(CEntity* owner, const CVector* point) {
     const auto& camMat = TheCamera.GetMatrix();
     const auto& camPos = camMat.GetPosition();
 
+#ifdef NOTSA_STANDALONE_RUN
+    // NOTSA-AUDIT (0x73C2B5 / 0x73C521): the exe skips a ped / object when `!(sqrt((z*z + y*y) + x*x) < 125)` (fsqrt + fcomp + `jp`), not on the squared distance. Despite the name this is TRUE when
+    // the position is OUT of range (upstream's object loop below used it inverted: objects were only photographed when farther than 125 m).
+    const auto IsPosInRange = [&](const CVector& worldPos) {
+        const float dx = worldPos.x - camPos.x, dy = worldPos.y - camPos.y, dz = worldPos.z - camPos.z;
+        return !(x87::sqrt((double)((dz * dz + dy * dy) + dx * dx)) < 125.0);
+    };
+#else
+#line 779
     const auto IsPosInRange = [&](const CVector& worldPos) {
         return (camPos - worldPos).SquaredMagnitude() >= sq(125.f); // NOTSA: Using squared mag.
     };
+#endif
+#line 782
 
     // Check is in position in camera's frame
     const auto IsPosInCamFrame = [](const CVector& worldPos) {
@@ -841,7 +852,13 @@ bool CWeapon::TakePhotograph(CEntity* owner, const CVector* point) {
     for (auto& obj : GetObjectPool()->GetAllValid()) {
         const auto& objPos = obj.GetPosition();
 
+#ifdef NOTSA_STANDALONE_RUN
+        if (IsPosInRange(objPos) || !IsPosInCamFrame(objPos)) { // NOTSA-AUDIT: the exe skips OUT-of-range objects, like the peds
+#else
+#line 844
         if (!IsPosInRange(objPos) || !IsPosInCamFrame(objPos)) {
+#endif
+#line 845
             continue;
         }
 
@@ -1624,7 +1641,7 @@ CEntity* CWeapon::PickTargetForHeatSeekingMissile(CVector origin, CVector direct
     float minRating  = FLT_MAX;
     CEntity* minRated{};
     const auto point = origin + direction * 5.f;
-    for (auto& veh : GetVehiclePool()->GetAllValid()) {
+    for (auto& veh : NOTSA_EXE_OR(GetVehiclePool()->GetAllValid() | rngv::reverse, GetVehiclePool()->GetAllValid())) {
         if (&veh == ignoreEntity) {
             continue;
         }

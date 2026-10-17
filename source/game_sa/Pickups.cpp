@@ -339,7 +339,7 @@ void CPickups::DoPickUpEffects(CEntity* entity) {
                 const auto alphaRoll = 100 - (int32)((float)(CGeneral::GetRandomNumber() & 0xFFFF) * (1.0f / 32768.0f) * -50.0f);
                 const auto size      = (x87::sin((float)(CTimer::GetTimeInMS() & 0x1FFF) * 0.00076660159f) + 1.7f) * 3.7f;
                 CCoronas::RegisterCorona(
-                    (uint32)(uintptr_t)obj + 1, // NOTSA: original passed the address of a stack slot of this function here
+                    NOTSA_EXE_OR([] { static char s_SharedCoronaId; return (uint32)(uintptr_t)&s_SharedCoronaId; }(), (uint32)(uintptr_t)obj + 1), // NOTSA: original passed the address of a stack slot of this function here (0x45584B `lea eax, [esp+0x85]`: the SAME id for every pickup, so they share one corona; the run build shares one id as well; NOTSA-AUDIT)
                     nullptr,
                     (uint8)alphaRoll,
                     (uint8)(int32)((float)alphaRoll * 0.7f),

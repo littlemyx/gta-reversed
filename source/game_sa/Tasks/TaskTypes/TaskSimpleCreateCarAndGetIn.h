@@ -19,7 +19,7 @@ public:
     CTaskSimpleCreateCarAndGetIn(CVector const& pos, int32 model);
     ~CTaskSimpleCreateCarAndGetIn() override;
 
-    CTask* Clone() const override { return new CTaskSimpleCreateCarAndGetIn{ *this }; }
+    CTask* Clone() const override { return NOTSA_EXE_OR(new CTaskSimpleCreateCarAndGetIn(m_Pos, m_nModel), new CTaskSimpleCreateCarAndGetIn{ *this }); } // 0x64A410; NOTSA-AUDIT: fresh task like the exe (the memberwise copy also copied the created vehicle / timers)
     eTaskType GetTaskType() const override { return Type; }
     bool MakeAbortable(CPed* ped, eAbortPriority priority = ABORT_PRIORITY_URGENT, const CEvent* event = nullptr) override;
     bool ProcessPed(CPed* ped) override;

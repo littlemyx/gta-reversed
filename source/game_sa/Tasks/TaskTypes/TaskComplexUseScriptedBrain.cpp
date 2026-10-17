@@ -25,7 +25,13 @@ CTaskComplexUseScriptedBrain::CTaskComplexUseScriptedBrain(char const* name) {
 
 // NOTSA
 CTaskComplexUseScriptedBrain::CTaskComplexUseScriptedBrain(const CTaskComplexUseScriptedBrain& o) :
+#ifdef NOTSA_STANDALONE_RUN
+    CTaskComplexUseScriptedBrain{ o.m_Name } // NOTSA-AUDIT: the exe's Clone (0x6371F0) passes THIS task's name (+0xD); upstream read the uninitialised member of the new object
+#else
+#line 28
     CTaskComplexUseScriptedBrain{ m_Name }
+#endif
+#line 29
 {
 }
 

@@ -391,7 +391,7 @@ void CCoronas::RenderReflections() {
     const auto camPos = TheCamera.GetPosition();
     for (auto&& [i, c] : rngv::enumerate(aCoronas)) {
         const auto covidPos = c.GetPosition();
-        if (!c.m_bHasValidHeightAboveGround || ((i & 0xFF) + (CTimer::GetFrameCounter() & 0xFF) % 16) == 0) { //< Simplified code
+        if (!c.m_bHasValidHeightAboveGround || NOTSA_EXE_OR((((uint32)i + CTimer::GetFrameCounter()) & 0xF) == 0 /* 0x6FB763: `(frame + i) & 0xF` - upstream's "simplified" form was `(i & 0xFF) + (frame & 0xFF) % 16 == 0`, i.e. only coronas 0, 256.. every 16th frame */, ((i & 0xFF) + (CTimer::GetFrameCounter() & 0xFF) % 16) == 0)) { //< Simplified code
             bool bGroundFound;
             const auto groundZ = CWorld::FindGroundZFor3DCoord(covidPos, &bGroundFound);
             if (bGroundFound) { // NOTE/BUG: Weird.. Why not set it according to `bGroundFound` directly?

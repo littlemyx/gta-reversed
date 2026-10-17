@@ -302,7 +302,7 @@ void CFormation::FindCoverPoints(CVector pos, float radius) {
     m_Destinations.m_Count = 0;
     rng::fill(m_Destinations.m_PointHasBeenClaimed, false);
 
-    for (auto& vehicle : GetVehiclePool()->GetAllValid()) {
+    for (auto& vehicle : NOTSA_EXE_OR(GetVehiclePool()->GetAllValid() | rngv::reverse, GetVehiclePool()->GetAllValid())) {
         if (!vehicle.IsAutomobile() || vehicle.GetMoveSpeed().Magnitude() >= 0.005f) {
             continue;
         }
@@ -326,7 +326,7 @@ void CFormation::FindCoverPoints(CVector pos, float radius) {
         }
     }
 
-    for (auto& object : GetObjectPool()->GetAllValid()) {
+    for (auto& object : NOTSA_EXE_OR(GetObjectPool()->GetAllValid() | rngv::reverse, GetObjectPool()->GetAllValid())) {
         if (object.m_matrix->GetUp().z <= 0.95f || !object.CanBeUsedToTakeCoverBehind()) {
             continue;
         }

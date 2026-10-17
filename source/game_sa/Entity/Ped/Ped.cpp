@@ -1930,9 +1930,18 @@ bool CPed::PositionAnyPedOutOfCollision() {
 bool CPed::OurPedCanSeeThisEntity(CEntity* entity, bool isSpotted) {
     if (!isSpotted) {
         const auto dir2D{ entity->GetPosition2D() - GetPosition2D() };
+#ifdef NOTSA_STANDALONE_RUN
+        // NOTSA-AUDIT (0x5E1660): `fcomp 0; test ah, 1; jne` = !(dot >= 0) (NaN too); then `fsqrt (dy*dy + dx*dx); fcomp 40; test ah, 5; jp` = !(dist < 40); upstream compared the squared distance
+        if (   !(DotProduct2D(dir2D, m_matrix->GetForward()) >= 0.f) // Is behind us
+            || !(x87::sqrt((double)(dir2D.y * dir2D.y + dir2D.x * dir2D.x)) < 40.0)
+        ) {
+#else
+#line 1931
         if (   DotProduct2D(dir2D, m_matrix->GetForward()) < 0.f // Is behind us
             || dir2D.SquaredMagnitude() >= 40.f * 40.f           // NOTSA: Using SqMag instead of Mag
         ) {
+#endif
+#line 1934
             return false;
         }
     }

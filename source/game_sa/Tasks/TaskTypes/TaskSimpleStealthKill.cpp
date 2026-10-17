@@ -28,7 +28,13 @@ CTaskSimpleStealthKill::CTaskSimpleStealthKill(bool keepTargetAlive, CPed* targe
 
 // NOTSA (For 0x623830)
 CTaskSimpleStealthKill::CTaskSimpleStealthKill(const CTaskSimpleStealthKill& o) :
+#ifdef NOTSA_STANDALONE_RUN
+    CTaskSimpleStealthKill{ o.m_bKeepTargetAlive, o.m_target, o.m_animGrpId } // NOTSA-AUDIT: the exe's Clone (0x623830) passes THIS task's flag / target / anim group; upstream read the uninitialised members of the new object
+#else
+#line 31
     CTaskSimpleStealthKill{ m_bKeepTargetAlive, m_target, m_animGrpId }
+#endif
+#line 32
 {
 }
 

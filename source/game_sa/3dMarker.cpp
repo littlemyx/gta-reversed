@@ -80,12 +80,16 @@ void C3dMarker::DeleteMarkerObject() {
     const auto frame = RpAtomicGetFrame(m_Atomic);
     RpAtomicDestroy(m_Atomic);
 #ifdef NOTSA_STANDALONE_RUN
-    { // KEPT ON in the run build (FIX-AUDIT, standalone_deviations.tsv): the exe's inlined Init zeroes the attach pointer, the port's `rng::fill(.., C3dMarker{})` writes through it into the freed frame
+    // NOTSA-AUDIT: no `m_Mat.Detach()` in the run build, like the exe (0x722390): the matrix stays attached to the destroyed frame. The exe's `C3dMarkers::Init` does not
+    // touch the matrix (it resets the other fields one by one), and `AddMarker` re-attaches before the next use; the port's Init is ported from the asm now
+    // (it used to `rng::fill(.., C3dMarker{})` = CMatrix::operator= through the stale pointer into the freed frame, which this Detach worked around).
 #else
+#line 85
     if (notsa::bugfixes::GenericCrashing) {
-#endif
+        // (the exe has no such call)
         m_Mat.Detach(); // FIX(#1514): Otherwise `C3dMarkers::Init` writes into the destroyed frame's matrix
     }
+#endif
 #line 85
     RwFrameDestroy(frame);
     m_Atomic = nullptr;

@@ -116,7 +116,7 @@ void CGangWars::AddKillToProvocation(ePedType pedType) {
 bool CGangWars::AttackWaveOvercome() {
     auto pedsNearPlayer = 0u, pedsLiving = 0u;
 
-    for (auto& ped : GetPedPool()->GetAllValid()) {
+    for (auto& ped : NOTSA_EXE_OR(GetPedPool()->GetAllValid() | rngv::reverse, GetPedPool()->GetAllValid())) {
         if (!ped.bPartOfAttackWave)
             continue;
 
@@ -193,7 +193,7 @@ void CGangWars::ClearSpecificZonesToTriggerGangWar() {
 
 // 0x4444B0
 void CGangWars::ClearTheStreets() {
-    for (auto& ped : GetPedPool()->GetAllValid()) {
+    for (auto& ped : NOTSA_EXE_OR(GetPedPool()->GetAllValid() | rngv::reverse, GetPedPool()->GetAllValid())) {
         if (ped.IsPlayer() || !ped.IsCivilian())
             continue;
 
@@ -740,7 +740,7 @@ bool CGangWars::PickZoneToAttack() {
 
 // 0x445E20
 void CGangWars::ReleaseCarsInAttackWave() {
-    for (auto& vehicle : GetVehiclePool()->GetAllValid()) {
+    for (auto& vehicle : NOTSA_EXE_OR(GetVehiclePool()->GetAllValid() | rngv::reverse, GetVehiclePool()->GetAllValid())) {
         if (vehicle.vehicleFlags.bPartOfAttackWave) {
             vehicle.vehicleFlags.bPartOfAttackWave = false;
             vehicle.SetVehicleCreatedBy(eVehicleCreatedBy::RANDOM_VEHICLE);
@@ -1192,6 +1192,22 @@ void CGangWars::UpdateTerritoryUnderControlPercentage() {
                  groveDensity = zoneInfo->GangStrength[GANG_GROVE],
                  vagosDensity = zoneInfo->GangStrength[GANG_VAGOS];
 
+#ifdef NOTSA_STANDALONE_RUN
+            // NOTSA-AUDIT (0x443E10..0x443E53): the exe classifies with `ballas + vagos == 0 && grove == 0` -> skip; `ballas + vagos <= grove` -> grove (>=, not >);
+            // else `ballas > vagos` -> ballas, else (ballas <= vagos, ties too) -> vagos. Upstream's chain dropped the ties (grove == ballas + vagos, ballas == vagos), which changes
+            // the zone counts, the territory percentage and the ranking.
+            const int32 ballasPlusVagos = (int32)ballasDensity + (int32)vagosDensity;
+            if (ballasPlusVagos == 0 && groveDensity == 0) {
+                // not a gang zone
+            } else if (ballasPlusVagos <= (int32)groveDensity) {
+                groveZones++;
+            } else if (ballasDensity > vagosDensity) {
+                ballasZones++;
+            } else {
+                vagosZones++;
+            }
+#else
+#line 1195
             // there should be one liner solution for this, no?
             if (groveDensity > ballasDensity + vagosDensity) {
                 groveZones++;
@@ -1200,6 +1216,8 @@ void CGangWars::UpdateTerritoryUnderControlPercentage() {
             } else if (vagosDensity > ballasDensity) {
                 vagosZones++;
             }
+#endif
+#line 1203
         }
     }
 
@@ -1218,6 +1236,35 @@ void CGangWars::UpdateTerritoryUnderControlPercentage() {
 
         TerritoryUnderControlPercentage = static_cast<float>(groveZones) / static_cast<float>(allGangZones);
 
+#ifdef NOTSA_STANDALONE_RUN
+        // NOTSA-AUDIT (0x443F28..0x443F78): the exe bubble-sorts the three (zone count, gang) slots, initially (grove, ballas, vagos), descending; it swaps only on `<`, so ties keep
+        // that initial order (upstream started from ballas, grove, vagos). `GangRatings[rank]` is the GANG at that rank (the stats screen, Stats.cpp 0x14B..0x14D, prints
+        // "ST_GNG<GangRatings[rank]>" for row `rank`), upstream stored the inverse mapping (`GangRatings[gang] = rank`).
+        struct GangRanking {
+            eGangID gang;
+            int32 controlled;
+        } ranking[3] = {
+            { GANG_GROVE,  groveZones  },
+            { GANG_BALLAS, ballasZones },
+            { GANG_VAGOS,  vagosZones  }
+        };
+        for (bool swapped = true; swapped;) {
+            swapped = false;
+            if (ranking[0].controlled < ranking[1].controlled) {
+                std::swap(ranking[0], ranking[1]);
+                swapped = true;
+            }
+            if (ranking[1].controlled < ranking[2].controlled) {
+                std::swap(ranking[1], ranking[2]);
+                swapped = true;
+            }
+        }
+        for (auto&& [i, e] : rngv::enumerate(ranking)) {
+            GangRatings[i] = e.gang;
+            GangRatingStrength[i] = e.controlled;
+        }
+#else
+#line 1221
         // NOTSA code
         struct GangRanking {
             eGangID gang;
@@ -1233,6 +1280,8 @@ void CGangWars::UpdateTerritoryUnderControlPercentage() {
             GangRatings[e.gang] = i;
             GangRatingStrength[i] = e.controlled;
         }
+#endif
+#line 1236
     } else {
         TerritoryUnderControlPercentage = 0.0f;
     }

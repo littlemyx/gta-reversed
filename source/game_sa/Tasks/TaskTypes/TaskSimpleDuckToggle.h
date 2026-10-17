@@ -22,7 +22,7 @@ public:
     CTaskSimpleDuckToggle(eMode mode);
     ~CTaskSimpleDuckToggle() override = default; // 0x62F6D0
 
-    CTask*    Clone() const override { return new CTaskSimpleDuckToggle{ *this }; } // 0x635C90
+    CTask*    Clone() const override { return NOTSA_EXE_OR(new CTaskSimpleDuckToggle(m_ToggleMode), new CTaskSimpleDuckToggle{ *this }); } // 0x635C90; NOTSA-AUDIT: fresh task like the exe
     eTaskType GetTaskType() const override { return Type; } // 0x62F6B0
     bool      MakeAbortable(CPed* ped, eAbortPriority priority = ABORT_PRIORITY_URGENT, CEvent const* event = nullptr) override { return true; } // 0x62F6C0
     bool      ProcessPed(CPed* ped) override;

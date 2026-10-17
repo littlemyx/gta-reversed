@@ -280,7 +280,7 @@ void CCheat::BlackCarsCheat() {
 
 // 0x439d80
 void CCheat::BlowUpCarsCheat() {
-    for (auto& veh : GetVehiclePool()->GetAllValid()) {
+    for (auto& veh : NOTSA_EXE_OR(GetVehiclePool()->GetAllValid() | rngv::reverse, GetVehiclePool()->GetAllValid())) {
         veh.BlowUpCar(nullptr, false);
     }
 }
@@ -358,7 +358,7 @@ void CCheat::EverybodyAttacksPlayerCheat() {
     Toggle(CHEAT_HAVE_ABOUNTY_ON_YOUR_HEAD);
     if (IsActive(CHEAT_HAVE_ABOUNTY_ON_YOUR_HEAD)) {
         auto* const player = FindPlayerPed();
-        for (auto& ped : GetPedPool()->GetAllValid()) {
+        for (auto& ped : NOTSA_EXE_OR(GetPedPool()->GetAllValid() | rngv::reverse, GetPedPool()->GetAllValid())) {
             if (ped.IsPlayer())
                 continue;
 
@@ -517,13 +517,19 @@ void CCheat::LoveConquersAllCheat() {
 void CCheat::MayhemCheat() {
     Toggle(CHEAT_PEDS_ATTACK_OTHER_WITH_GOLFCLUB);
     if (IsActive(CHEAT_PEDS_ATTACK_OTHER_WITH_GOLFCLUB)) {
+#ifdef NOTSA_STANDALONE_RUN
+        // NOTSA-AUDIT: no swap with the (empty) `ms_apPedTypesOld`: it replaced the whole ped-type acquaintance table by zeros; the exe (0x439B20) only adds the HATE bits
+#else
+#line 520
         std::swap(CPedType::ms_apPedTypesOld, CPedType::ms_apPedTypes); // NOTSA
+#endif
+#line 521
 
         for (uint32 pedType = PED_TYPE_CIVMALE; pedType <= PED_TYPE_PROSTITUTE; pedType++) {
             CPedType::SetPedTypeAsAcquaintance(ACQUAINTANCE_HATE, static_cast<ePedType>(pedType), 0xFFFFF);
         }
 
-        for (auto& ped : GetPedPool()->GetAllValid()) {
+        for (auto& ped : NOTSA_EXE_OR(GetPedPool()->GetAllValid() | rngv::reverse, GetPedPool()->GetAllValid())) {
             if (ped.IsPlayer())
                 continue;
 
@@ -536,12 +542,17 @@ void CCheat::MayhemCheat() {
                 ped.GetEventGroup().Add(&event, false);
             }
         }
+#ifdef NOTSA_STANDALONE_RUN
+    }
+    // NOTSA-AUDIT: turning the cheat OFF does nothing in the exe (0x439B20: `Toggle; if (active) {..}`): upstream swapped the acquaintance table back and removed the hate events
+#else
+#line 539
     } else {
         // FIX_BUGS https://youtu.be/L97xXbFnFWM?t=90
         // todo: currently fixes only save game
         std::swap(CPedType::ms_apPedTypes, CPedType::ms_apPedTypesOld); // straightforward solution
 
-        for (auto& ped : GetPedPool()->GetAllValid()) {
+        for (auto& ped : NOTSA_EXE_OR(GetPedPool()->GetAllValid() | rngv::reverse, GetPedPool()->GetAllValid())) {
             if (ped.IsPlayer())
                 continue;
 
@@ -552,6 +563,8 @@ void CCheat::MayhemCheat() {
             }
         }
     }
+#endif
+#line 555
 }
 
 // 0x439510

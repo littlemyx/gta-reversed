@@ -47,7 +47,13 @@ CTaskComplexAvoidOtherPedWhileWandering::CTaskComplexAvoidOtherPedWhileWandering
 }
 
 CTaskComplexAvoidOtherPedWhileWandering::CTaskComplexAvoidOtherPedWhileWandering(const CTaskComplexAvoidOtherPedWhileWandering& o) :
+#ifdef NOTSA_STANDALONE_RUN
+    CTaskComplexAvoidOtherPedWhileWandering{o.m_PedToAvoid, o.m_TargetPt, o.m_MoveState, o.m_IsMovingTarget} // NOTSA-AUDIT: the exe's Clone (0x66D050) passes THIS task's ped / point / move state; upstream read the (uninitialised) members of the new object
+#else
+#line 50
     CTaskComplexAvoidOtherPedWhileWandering{m_PedToAvoid, m_TargetPt, m_MoveState, o.m_IsMovingTarget}
+#endif
+#line 51
 {
 }
 

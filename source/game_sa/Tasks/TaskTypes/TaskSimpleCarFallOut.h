@@ -20,7 +20,7 @@ public:
     auto ComputeAnimID();
     void StartAnim(const CPed* pPed);
 
-    CTask*    Clone() const override { return new CTaskSimpleCarFallOut{ *this }; }
+    CTask*    Clone() const override { return NOTSA_EXE_OR(new CTaskSimpleCarFallOut(m_Vehicle, m_Door, m_LineUpUtility), new CTaskSimpleCarFallOut{ *this }); } // 0x64A280; NOTSA-AUDIT: fresh task like the exe (the memberwise copy also copied m_HasFinished / m_Anim)
     eTaskType GetTaskType() const override { return Type; }
     bool      MakeAbortable(CPed* ped, eAbortPriority priority = ABORT_PRIORITY_URGENT, CEvent const* event = nullptr) override;
     bool      ProcessPed(CPed* ped) override;

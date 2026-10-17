@@ -1442,7 +1442,7 @@ void CTheScripts::Process() {
 
     CLoadingScreen::NewChunkLoaded();
 
-    for (auto& ped : GetPedPool()->GetAllValid()) {
+    for (auto& ped : NOTSA_EXE_OR(GetPedPool()->GetAllValid() | rngv::reverse, GetPedPool()->GetAllValid())) {
         if (ped.IsCreatedByMission()) {
             ped.GetIntelligence()->RecordEventForScript(0, 0);
         }

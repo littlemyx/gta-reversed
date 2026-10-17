@@ -249,6 +249,14 @@ void CReplay::Display() {
     if (ShouldStandardCameraBeProcessed())
         return;
 
+#ifdef NOTSA_STANDALONE_RUN
+    // NOTSA-AUDIT: the exe (0x45C21E) blinks the text with a FRAME counter (0xA43240, 16 bit): shown while bit 5 is set = 32 frames on / 32 frames off
+    NOTSA_GLOBAL_LOCAL(s_FrameCounter, 0xA43240, (uint32), {});
+    s_FrameCounter = (s_FrameCounter + 1) & 0xFFFF;
+    if (!(s_FrameCounter & 0x20))
+        return;
+#else
+#line 252
     // NOTSA: FPS-independent 'REPLAY' text counter.
     static uint32 s_ReplayTextCounter = CTimer::GetTimeInMS();
     static bool s_ShowReplayText = true;
@@ -259,6 +267,8 @@ void CReplay::Display() {
 
     if (!s_ShowReplayText)
         return;
+#endif
+#line 262
 
     CFont::SetScale(SCREEN_SCALE_X(1.5f), SCREEN_SCALE_Y(1.5f));
     CFont::SetOrientation(eFontAlignment::ALIGN_LEFT);
@@ -272,11 +282,11 @@ void CReplay::Display() {
 
 // 0x45D430
 void CReplay::MarkEverythingAsNew() {
-    for (auto& ped : GetPedPool()->GetAllValid()) {
+    for (auto& ped : NOTSA_EXE_OR(GetPedPool()->GetAllValid() | rngv::reverse, GetPedPool()->GetAllValid())) {
         ped.bHasAlreadyBeenRecorded = false;
     }
 
-    for (auto& veh : GetVehiclePool()->GetAllValid()) {
+    for (auto& veh : NOTSA_EXE_OR(GetVehiclePool()->GetAllValid() | rngv::reverse, GetVehiclePool()->GetAllValid())) {
         veh.vehicleFlags.bHasAlreadyBeenRecorded = false;
     }
 }
@@ -295,11 +305,11 @@ void CReplay::EmptyReplayBuffer() {
 
 // 0x45D390
 void CReplay::EmptyPedsAndVehiclePools_NoDestructors() {
-    for (auto& veh : GetVehiclePool()->GetAllValid()) {
+    for (auto& veh : NOTSA_EXE_OR(GetVehiclePool()->GetAllValid() | rngv::reverse, GetVehiclePool()->GetAllValid())) {
         CWorld::Remove(&veh);
     }
 
-    for (auto& ped : GetPedPool()->GetAllValid()) {
+    for (auto& ped : NOTSA_EXE_OR(GetPedPool()->GetAllValid() | rngv::reverse, GetPedPool()->GetAllValid())) {
         CWorld::Remove(&ped);
 
         if (auto* const shadow = ped.m_pShadowData) {

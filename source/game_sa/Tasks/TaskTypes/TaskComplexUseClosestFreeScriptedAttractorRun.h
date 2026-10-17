@@ -11,7 +11,7 @@ public:
     CTaskComplexUseClosestFreeScriptedAttractorRun();
     ~CTaskComplexUseClosestFreeScriptedAttractorRun() override = default;
 
-    CTask*    Clone()       const override { return new CTaskComplexUseClosestFreeScriptedAttractorRun{ *this }; }
+    CTask*    Clone()       const override { return NOTSA_EXE_OR(new CTaskComplexUseClosestFreeScriptedAttractorRun(), new CTaskComplexUseClosestFreeScriptedAttractorRun{ *this }); } // 0x4B87B0; NOTSA-AUDIT: the memberwise copy lost the RUN move state (the base copy constructor resets it to WALK)
     eTaskType GetTaskType() const override { return Type; }
 
 private: // Wrappers for hooks

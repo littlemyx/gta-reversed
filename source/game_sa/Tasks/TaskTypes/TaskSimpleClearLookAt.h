@@ -15,7 +15,7 @@ public:
     CTaskSimpleClearLookAt() = default;
     ~CTaskSimpleClearLookAt() = default;
 
-    CTask*    Clone() const override { return new CTaskSimpleClearLookAt(*this); }
+    CTask*    Clone() const override { return NOTSA_EXE_OR(new CTaskSimpleClearLookAt(), new CTaskSimpleClearLookAt(*this)); } // 0x636F20; NOTSA-AUDIT: fresh task like the exe
     eTaskType GetTaskType() const override { return Type; }
     bool      MakeAbortable(CPed* ped, eAbortPriority priority = ABORT_PRIORITY_URGENT, const CEvent* event = nullptr) override { return true; }
     bool      ProcessPed(CPed* ped) override;

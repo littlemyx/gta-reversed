@@ -17,7 +17,7 @@ public:
     CTaskSimpleCarSlowBeDraggedOut(CVehicle* target, eTargetDoor door, CTaskUtilityLineUpPedWithCar* lineUpUtility, bool isDraggedBySelf);
     ~CTaskSimpleCarSlowBeDraggedOut();
 
-    CTask*    Clone() const override { return new CTaskSimpleCarSlowBeDraggedOut{ *this }; }
+    CTask*    Clone() const override { return NOTSA_EXE_OR(new CTaskSimpleCarSlowBeDraggedOut(m_Vehicle, m_Door, m_LineUpUtility, false), new CTaskSimpleCarSlowBeDraggedOut{ *this }); } // 0x64A040; NOTSA-AUDIT: fresh task like the exe (isDraggedBySelf = 0)
     eTaskType GetTaskType() const override { return Type; }
     bool      MakeAbortable(CPed* ped, eAbortPriority priority = ABORT_PRIORITY_URGENT, CEvent const* event = nullptr) override;
     bool      ProcessPed(CPed* ped) override;

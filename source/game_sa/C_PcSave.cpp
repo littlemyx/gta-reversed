@@ -84,7 +84,13 @@ void C_PcSave::PopulateSlotInfo() {
             AsciiToGxtChar(date, CGenericGameStorage::ms_SlotSaveDate[i]);
         } else {
             CMessages::InsertNumberInString(TheText.Get("FEC_SLC"), i, -1, -1, -1, -1, -1, CGenericGameStorage::ms_SlotFileName[i]);
+#ifdef NOTSA_STANDALONE_RUN
+            // NOTSA-AUDIT: the exe (0x619140, 0x619268..0x61928C) does not set SLOT_CORRUPTED for a slot whose data fails CheckDataNotCorrupt: it only formats the "corrupted" text
+#else
+#line 87
             CGenericGameStorage::ms_Slots[i] = eSlotState::SLOT_CORRUPTED; // NOTSA: Missing corrupted slot
+#endif
+#line 88
         }
     }
 }

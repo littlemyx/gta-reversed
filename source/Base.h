@@ -130,6 +130,15 @@ namespace notsa::standalone::Fixups { void UnreachableHit(const char* fn, const 
 #define NOTSA_UNUSED_FUNCTION() NOTSA_UNREACHABLE("Unused Function")
 #define NOTSA_UNREACHABLE_CASE(val) NOTSA_UNREACHABLE("Unreachable switch case with value: {}", val)
 
+// NOTSA-AUDIT (.notes/reports/NOTSA-AUDIT.md): an upstream NOTSA change that makes the game behave differently from the exe. The standalone run build
+// (NOTSA_STANDALONE_RUN) must behave like the exe, so it takes `exeExpr`; the DLL build keeps upstream's `upstreamExpr` (the macro expands to exactly that
+// expression there, the object code of the DLL build does not change). For statements use `#ifdef NOTSA_STANDALONE_RUN` and keep the line numbers (`#line`).
+#ifdef NOTSA_STANDALONE_RUN
+#define NOTSA_EXE_OR(exeExpr, upstreamExpr) (exeExpr)
+#else
+#define NOTSA_EXE_OR(exeExpr, upstreamExpr) (upstreamExpr)
+#endif
+
 #ifdef _DEBUG
 #define NOTSA_DEBUG_BREAK() __debugbreak()
 #else

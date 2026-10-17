@@ -222,7 +222,13 @@ void RenderMenus() {
 void Render2dStuff() {
     ZoneScoped;
 
+#ifdef NOTSA_STANDALONE_RUN
+    // NOTSA-AUDIT: no RenderDebugShit() here - the exe's Render2dStuff (0x53E230) starts with its first RwRenderStateSet; the call ran RenderTheScriptDebugLines + DefinedState every frame
+#else
+#line 225
     RenderDebugShit(); // NOTSA, temp
+#endif
+#line 226
 
     const auto DrawOuterZoomBox = []() {
         CPed* player = FindPlayerPed();

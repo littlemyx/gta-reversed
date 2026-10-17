@@ -847,6 +847,7 @@ if (${RE_PROJECT}_RW_LIBRW)
         game_sa/Entity/Ped/PlayerPed.cpp
         game_sa/Entity/Vehicle/Vehicle.cpp
         game_sa/GangWars.cpp
+        game_sa/3dMarkers.cpp   # logic_oracle_notsa.inc: the marker reset of C3dMarkers::Init
         game_sa/Darkel.cpp
         game_sa/Game.cpp
         game_sa/Collision/Collision.cpp

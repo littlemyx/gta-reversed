@@ -574,7 +574,7 @@ void CShadows::StoreShadowForPedObject(CPed* ped, float displacementX, float dis
         false,
         1.f,
         nullptr,
-        isPlayerPed || g_fx.GetFxQuality() >= FX_QUALITY_VERY_HIGH // NOTSA: At higher FX quality draw all ped's shadows
+        NOTSA_EXE_OR(isPlayerPed, isPlayerPed || g_fx.GetFxQuality() >= FX_QUALITY_VERY_HIGH) // NOTSA: At higher FX quality draw all ped's shadows (the exe passes `isPlayerPed`, 0x707C84; NOTSA-AUDIT)
     );
 }
 
@@ -629,7 +629,7 @@ void CShadows::StoreRealTimeShadow(CPhysical* physical, float displacementX, flo
         false,
         1.f,
         rtshdw,
-        g_fx.GetFxQuality() >= FX_QUALITY_VERY_HIGH // NOTSA: At higher FX quality draw all shadows on buildings too
+        NOTSA_EXE_OR(false, g_fx.GetFxQuality() >= FX_QUALITY_VERY_HIGH) // NOTSA: At higher FX quality draw all shadows on buildings too (the exe passes 0, 0x707EBD; NOTSA-AUDIT)
     );
 }
 
@@ -1982,7 +1982,7 @@ void CShadows::StoreCarLightShadow(CVehicle* vehicle, int32 id, RwTexture* textu
     }
 
     const auto isPlyrVeh = FindPlayerVehicle() == vehicle;
-    if (isPlyrVeh || vehicle->GetMoveSpeed().Magnitude() * CTimer::GetTimeStep() >= 0.4f) {
+    if (isPlyrVeh || NOTSA_EXE_OR(vehicle->GetMoveSpeed().Magnitude() * CTimer::GetTimeStep() > 0.4f /* 0x70C685: `fcomp; test ah, 0x41; je` = strictly greater */, vehicle->GetMoveSpeed().Magnitude() * CTimer::GetTimeStep() >= 0.4f)) {
         StoreShadowToBeRendered(
             SHADOW_ADDITIVE,
             texture,
@@ -1995,7 +1995,7 @@ void CShadows::StoreCarLightShadow(CVehicle* vehicle, int32 id, RwTexture* textu
             false,
             1.f,
             nullptr,
-            isPlyrVeh || g_fx.GetFxQuality() >= FX_QUALITY_VERY_HIGH // NOTSA: At higher FX quality draw all vehicles's shadows on buildings too
+            NOTSA_EXE_OR(isPlyrVeh, isPlyrVeh || g_fx.GetFxQuality() >= FX_QUALITY_VERY_HIGH) // NOTSA: At higher FX quality draw all vehicles's shadows on buildings too (the exe passes `vehicle == FindPlayerVehicle()`, 0x70C705; NOTSA-AUDIT)
         );
     } else {
         StoreStaticShadow(

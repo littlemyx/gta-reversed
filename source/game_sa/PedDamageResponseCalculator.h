@@ -14,7 +14,7 @@ public:
     eWeaponType    m_weaponType;
     bool           m_bSpeak;     // refers to a CPed::Say call (the dying scream?)
 
-    static inline auto& ms_damageFactor = StaticRef<float>(0x8A6260);
+    static inline NOTSA_GLOBAL(ms_damageFactor, 0x8A6260, (float), { 5555.55f });
 
 public:
     CPedDamageResponseCalculator(const CEntity* entity, float fDamage, eWeaponType weaponType, ePedPieceTypes bodyPart, bool bSpeak);

@@ -93,7 +93,7 @@ struct DWHeliChaseCamSettings {
     int32   fovLerpEndTime;        // 0x90
     float   fovLerpStartFraction;  // 0x94
     int32   fovLerpDuration;       // 0x98
-
+    DWHeliChaseCamSettings() { SetDefaults(); } // 0x5173F0 (static initialiser of the exe's global; everything SetDefaults does not write stays zero)
     // 0x50E180
     void SetDefaults() {
         endDistAhead         = 50.0f;
@@ -136,7 +136,7 @@ struct DWHeliChaseCamSettings {
     }
 };
 VALIDATE_SIZE(DWHeliChaseCamSettings, 0x9C);
-static inline auto& gDWHeliChaseCamSettings = StaticRef<DWHeliChaseCamSettings>(0xB6FEC0);
+static inline NOTSA_GLOBAL(gDWHeliChaseCamSettings, 0xB6FEC0, (DWHeliChaseCamSettings), {});
 
 // Defined in other translation units (Camera.cpp, World.cpp)
 extern float&                      gCurDistForCam;

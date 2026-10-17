@@ -78,4 +78,4 @@ private:
 
 VALIDATE_SIZE(CFireManager, 0x964);
 
-static inline auto& gFireManager = StaticRef<CFireManager>(0xB71F80);
+NOTSA_GLOBAL_HDR(gFireManager, 0xB71F80, (CFireManager), {});

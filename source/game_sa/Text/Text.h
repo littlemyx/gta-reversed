@@ -85,4 +85,4 @@ private:
 };
 VALIDATE_SIZE(CText, 0xA90);
 
-static inline auto& TheText = StaticRef<CText>(0xC1B340);
+static inline NOTSA_GLOBAL(TheText, 0xC1B340, (CText), {});

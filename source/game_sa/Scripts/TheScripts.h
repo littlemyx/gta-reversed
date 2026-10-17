@@ -368,8 +368,8 @@ public:
 
     static inline NOTSA_GLOBAL(CardStack, 0xA44218, (std::array<int16, MAX_NUM_CARDS>), {});
     static inline NOTSA_GLOBAL(MultiScriptArray, 0xA444C8, (std::array<int32, MAX_NUM_MISSION_SCRIPTS>), {});
-    static inline auto& ScriptConnectLodsObjects = StaticRef<std::array<tScriptConnectLodsObject, MAX_NUM_SCRIPT_CONNECT_LODS_OBJECTS>>(0xA44800);
-    static inline auto& ScriptAttachedAnimGroups = StaticRef<std::array<tScriptAttachedAnimGroup, MAX_NUM_SCRIPT_ATTACHED_ANIM_GROUPS>>(0xA44850);
+    static inline NOTSA_GLOBAL(ScriptConnectLodsObjects, 0xA44800, (std::array<tScriptConnectLodsObject, MAX_NUM_SCRIPT_CONNECT_LODS_OBJECTS>), {});
+    static inline NOTSA_GLOBAL(ScriptAttachedAnimGroups, 0xA44850, (std::array<tScriptAttachedAnimGroup, MAX_NUM_SCRIPT_ATTACHED_ANIM_GROUPS>), {});
     static inline NOTSA_GLOBAL(VehicleModelsBlockedByScript, 0xA448F0, (std::array<eModelID, MAX_NUM_VEHICLE_MODELS_BLOCKED_BY_SCRIPT>), {});
     static inline NOTSA_GLOBAL(SuppressedVehicleModels, 0xA44940, (std::array<eModelID, MAX_NUM_SUPPRESSED_VEHICLE_MODELS>), {});
     static inline NOTSA_GLOBAL(InvisibilitySettingArray, 0xA449E0, (std::array<CEntity*, MAX_NUM_INVISIBILITY_SETTINGS>), {});
@@ -377,19 +377,19 @@ public:
     static inline NOTSA_GLOBAL(LocalVariablesForCurrentMission, 0xA48960, (std::array<tScriptParam, MAX_NUM_LOCAL_VARIABLES_FOR_CURRENT_MISSION>), {});
     static inline NOTSA_GLOBAL(LargestNumberOfMissionScriptLocalVariables, 0xA444B4, (uint32), {});
 
-    static inline auto& BuildingSwapArray = StaticRef<std::array<tBuildingSwap, MAX_NUM_BUILDING_SWAPS>>(0xA44A30);
+    static inline NOTSA_GLOBAL(BuildingSwapArray, 0xA44A30, (std::array<tBuildingSwap, MAX_NUM_BUILDING_SWAPS>), {});
 
     static inline NOTSA_GLOBAL(UsedObjectArray, 0xA44B70, (std::array<tUsedObject, MAX_NUM_USED_OBJECTS>), {});
     static inline NOTSA_GLOBAL(NumberOfUsedObjects, 0xA44B6C, (uint16), {});
 
-    static inline auto& EntitiesWaitingForScriptBrain = StaticRef<std::array<tScriptBrainWaitEntity, MAX_NUM_ENTITIES_WAITING_FOR_SCRIPT_BRAIN>>(0xA476B0);
-    static inline auto& IntroTextLines = StaticRef<std::array<tScriptText, MAX_NUM_INTRO_TEXT_LINES>>(0xA913E8);
+    static inline NOTSA_GLOBAL(EntitiesWaitingForScriptBrain, 0xA476B0, (std::array<tScriptBrainWaitEntity, MAX_NUM_ENTITIES_WAITING_FOR_SCRIPT_BRAIN>), {});
+    static inline NOTSA_GLOBAL(IntroTextLines, 0xA913E8, (std::array<tScriptText, MAX_NUM_INTRO_TEXT_LINES>), {});
     static inline NOTSA_GLOBAL(NumberOfIntroTextLinesThisFrame, 0xA44B68, (uint16), {});
 
-    static inline auto& IntroRectangles = StaticRef<std::array<tScriptRectangle, MAX_NUM_SCRIPT_RECTANGLES>>(0xA92D68);
+    static inline NOTSA_GLOBAL(IntroRectangles, 0xA92D68, (std::array<tScriptRectangle, MAX_NUM_SCRIPT_RECTANGLES>), {});
     static inline NOTSA_GLOBAL(NumberOfIntroRectanglesThisFrame, 0xA44B5C, (uint16), {});
 
-    static inline auto& ScriptSprites = StaticRef<std::array<CSprite2d, MAX_NUM_SCRIPT_SPRITES>>(0xA94B68);
+    static inline NOTSA_GLOBAL(ScriptSprites, 0xA94B68, (std::array<CSprite2d, MAX_NUM_SCRIPT_SPRITES>), {});
 
     static inline NOTSA_GLOBAL(NumberOfExclusiveMissionScripts, 0xA444B8, (uint16), {});
     static inline NOTSA_GLOBAL(NumberOfMissionScripts, 0xA444BC, (uint16), {});
@@ -398,14 +398,14 @@ public:
     // Script things
     //
 
-    static inline auto& ScriptSphereArray = StaticRef<std::array<tScriptSphere, MAX_NUM_SCRIPT_SPHERES>>(0xA91268);
-    static inline auto& ScriptEffectSystemArray = StaticRef<std::array<tScriptEffectSystem, MAX_NUM_SCRIPT_EFFECT_SYSTEMS>>(0xA44110);
+    static inline NOTSA_GLOBAL(ScriptSphereArray, 0xA91268, (std::array<tScriptSphere, MAX_NUM_SCRIPT_SPHERES>), {});
+    static inline NOTSA_GLOBAL(ScriptEffectSystemArray, 0xA44110, (std::array<tScriptEffectSystem, MAX_NUM_SCRIPT_EFFECT_SYSTEMS>), {});
     static inline NOTSA_GLOBAL(ScriptSearchLightArray, 0xA94D68, (std::array<tScriptSearchlight, MAX_NUM_SCRIPT_SEARCH_LIGHT>), {});
 
-    static inline auto& ScriptSequenceTaskArray = StaticRef<std::array<tScriptSequence, MAX_NUM_SCRIPT_SEQUENCE_TASKS>>(0xA43F68);
+    static inline NOTSA_GLOBAL(ScriptSequenceTaskArray, 0xA43F68, (std::array<tScriptSequence, MAX_NUM_SCRIPT_SEQUENCE_TASKS>), {});
     static inline NOTSA_GLOBAL(NumberOfScriptSearchLights, 0xA90830, (uint16), {});
 
-    static inline auto& ScriptCheckpointArray = StaticRef<std::array<tScriptCheckpoint, MAX_NUM_SCRIPT_CHECKPOINTS>>(0xA44070);
+    static inline NOTSA_GLOBAL(ScriptCheckpointArray, 0xA44070, (std::array<tScriptCheckpoint, MAX_NUM_SCRIPT_CHECKPOINTS>), {});
     static inline NOTSA_GLOBAL(NumberOfScriptCheckpoints, 0xA44068, (uint16), {});
     static inline NOTSA_GLOBAL(UnknownDebugStuff, 0xA95190, (uint32), {}); // used in DO_DEBUG_STUFF command
 
@@ -456,14 +456,14 @@ public:
     static inline NOTSA_GLOBAL(LastRandomPedId, 0xA476A4, (int32), {});
     static inline NOTSA_GLOBAL(LastMissionPassedTime, 0xA476A8, (uint32), {});
     static inline NOTSA_GLOBAL(OnAMissionFlag, 0xA476AC, (int32), {}); // Refers to the offset of OM flag in script space.
-    static inline auto& StreamedScripts = StaticRef<CStreamedScripts>(0xA47B60);
-    static inline auto& ScriptResourceManager = StaticRef<CScriptResourceManager>(0xA485A8);
-    static inline auto& UpsideDownCars = StaticRef<CUpsideDownCarCheck>(0xA4892C);
+    static inline NOTSA_GLOBAL(StreamedScripts, 0xA47B60, (CStreamedScripts), {});
+    static inline NOTSA_GLOBAL(ScriptResourceManager, 0xA485A8, (CScriptResourceManager), {});
+    static inline NOTSA_GLOBAL(UpsideDownCars, 0xA4892C, (CUpsideDownCarCheck), {});
     static inline NOTSA_GLOBAL(pIdleScripts, 0xA8B428, (CRunningScript*), {});
     static inline NOTSA_GLOBAL(pActiveScripts, 0xA8B42C, (CRunningScript*), {});
     static inline NOTSA_GLOBAL(MissionCleanUp, 0xA90850, (CMissionCleanup), {});
     static inline NOTSA_GLOBAL(StuckCars, 0xA90AB0, (CStuckCarCheck), {});
-    static inline auto& ScriptsForBrains = StaticRef<CScriptsForBrains>(0xA90CF0);
+    static inline NOTSA_GLOBAL(ScriptsForBrains, 0xA90CF0, (CScriptsForBrains), {});
 
 public:
     static void InjectHooks();

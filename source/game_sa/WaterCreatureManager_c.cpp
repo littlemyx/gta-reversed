@@ -2,7 +2,7 @@
 
 #include "WaterCreatureManager_c.h"
 
-auto& g_waterCreatureMan = StaticRef<WaterCreatureManager_c>(0xC1DF30);
+NOTSA_GLOBAL(g_waterCreatureMan, 0xC1DF30, (WaterCreatureManager_c), {});
 
 void WaterCreatureManager_c::InjectHooks() {
     RH_ScopedClass(WaterCreatureManager_c);

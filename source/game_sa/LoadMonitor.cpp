@@ -1,6 +1,6 @@
 #include "StdInc.h"
 
-auto& g_LoadMonitor = StaticRef<CLoadMonitor>(0xB72978);
+NOTSA_GLOBAL(g_LoadMonitor, 0xB72978, (CLoadMonitor), {});
 
 void CLoadMonitor::InjectHooks() {
     RH_ScopedClass(CLoadMonitor);

@@ -58,7 +58,7 @@ public:
     static inline NOTSA_GLOBAL(ForcedWeatherType, 0xC81318, (eWeatherType), {});
     static inline NOTSA_GLOBAL(NewWeatherType, 0xC8131C, (eWeatherType), {});
     static inline NOTSA_GLOBAL(OldWeatherType, 0xC81320, (eWeatherType), {});
-    static inline auto& m_WeatherAudioEntity = StaticRef<CAEWeatherAudioEntity>(0xC81360);
+    static NOTSA_GLOBAL_DECL(CWeather, m_WeatherAudioEntity, 0xC81360, (CAEWeatherAudioEntity)); // detached: defined at the end of Weather.cpp
     static inline NOTSA_GLOBAL(StreamAfterRainTimer, 0x8D5EAC, (int32), { 800 });
     static inline NOTSA_GLOBAL(HeatHazeFXFade, 0xC81448, (float), {});
     static inline NOTSA_GLOBAL(HeatHazeFXLastMinute, 0x8D6078, (int32), { -1 });

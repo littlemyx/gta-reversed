@@ -271,4 +271,4 @@ protected:
 };
 VALIDATE_SIZE(CAERadioTrackManager, 0x370);
 
-extern CAERadioTrackManager& AERadioTrackManager;
+NOTSA_GLOBAL_EXTERN(AERadioTrackManager, (CAERadioTrackManager));

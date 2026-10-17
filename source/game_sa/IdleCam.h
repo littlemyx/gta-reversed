@@ -83,5 +83,5 @@ public:
 
 VALIDATE_SIZE(CIdleCam, 0x9C);
 
-extern CIdleCam& gIdleCam;
+NOTSA_GLOBAL_EXTERN(gIdleCam, (CIdleCam));
 NOTSA_GLOBAL_EXTERN(gbCineyCamProcessedOnFrame, (uint32));

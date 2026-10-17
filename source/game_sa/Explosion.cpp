@@ -535,3 +535,5 @@ void CExplosion::Update() {
         }
     }
 }
+
+NOTSA_GLOBAL_DEF(CExplosion, m_ExplosionAudioEntity, 0xC888D0, (CAEExplosionAudioEntity), {});

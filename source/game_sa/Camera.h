@@ -520,7 +520,7 @@ public:
 };
 VALIDATE_SIZE(CCamera, 0xD78);
 
-extern CCamera& TheCamera;
+NOTSA_GLOBAL_EXTERN(TheCamera, (CCamera));
 NOTSA_GLOBAL_EXTERN(gbModelViewer, (bool));
 NOTSA_GLOBAL_EXTERN(gbCineyCamMessageDisplayed, (int8));
 NOTSA_GLOBAL_EXTERN(gPlayerPedVisible, (bool));
@@ -529,7 +529,7 @@ NOTSA_GLOBAL_EXTERN(gCameraDirection, (int32));
 NOTSA_GLOBAL_EXTERN(gCameraMode, (eCamMode));
 NOTSA_GLOBAL_EXTERN(gLastTime2PlayerCameraWasOK, (uint32));
 NOTSA_GLOBAL_EXTERN(gLastTime2PlayerCameraCollided, (uint32));
-extern float*& gpCamColVars;
+NOTSA_GLOBAL_EXTERN(gpCamColVars, (float*));
 #ifdef NOTSA_GLOBALS_DETACHED
 extern float gCamColVars[28][6];
 #else

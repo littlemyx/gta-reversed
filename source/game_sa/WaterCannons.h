@@ -7,7 +7,7 @@ class CVector;
 class CWaterCannons {
 public:
     static constexpr uint32 MAX_WATER_CANNONS = 3;
-    static inline auto& aCannons = StaticRef<std::array<CWaterCannon, 3>>(0xC80740);
+    static inline NOTSA_GLOBAL(aCannons, 0xC80740, (std::array<CWaterCannon, 3>), {});
 
 public:
     static void InjectHooks();

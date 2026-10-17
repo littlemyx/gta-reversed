@@ -36,7 +36,7 @@ class CPed;
 
 class CGameLogic {
 public:
-    static inline auto& SavedWeapons = StaticRef<std::array<CWeapon, NUM_WEAPON_SLOTS>>(0x96A9B8);
+    static inline NOTSA_GLOBAL(SavedWeapons, 0x96A9B8, (std::array<CWeapon, NUM_WEAPON_SLOTS>), {});
 
     static inline NOTSA_GLOBAL(AfterDeathStartPointOrientations, 0x96A850, (std::array<float, 16>), {});
     static inline NOTSA_GLOBAL(AfterDeathStartPoints, 0x96A8E0, (std::array<CVector, 16>), {});

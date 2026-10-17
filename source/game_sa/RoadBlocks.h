@@ -36,7 +36,7 @@ private:
 
 private:
     static inline NOTSA_GLOBAL(InOrOut, 0xA43438, (std::array<bool, MAX_ROADBLOCKS>), {});
-    static inline auto& RoadBlockNodes            = StaticRef<std::array<CNodeAddress, MAX_ROADBLOCKS>>(0xA435A0);
+    static inline NOTSA_GLOBAL(RoadBlockNodes, 0xA435A0, (std::array<CNodeAddress, MAX_ROADBLOCKS>), = MakeExeNodeAddressArray<MAX_ROADBLOCKS>()); // ctor 0x84A640
     static inline NOTSA_GLOBAL(aScriptRoadBlocks, 0xA43AB8, (std::array<CScriptRoadBlock, MAX_SCRIPT_ROADBLOCKS>), {});
     static inline NOTSA_GLOBAL(GenerateDynamicRoadBlocks, 0xA43584, (bool), {});
     static inline NOTSA_GLOBAL(NumRoadBlocks, 0xA43580, (int32), {});

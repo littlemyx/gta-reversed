@@ -27,4 +27,4 @@ public:
 
 VALIDATE_SIZE(CHandShaker, 0x94);
 
-static inline auto& gHandShaker = StaticRef<std::array<CHandShaker, NUM_HANDSHAKERS>>(0xB6ECA0);
+NOTSA_GLOBAL_HDR(gHandShaker, 0xB6ECA0, (std::array<CHandShaker, NUM_HANDSHAKERS>), {});

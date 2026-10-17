@@ -3,7 +3,7 @@
 #include "RealTimeShadowManager.h"
 #include "Shadows.h"
 
-auto& g_realTimeShadowMan = StaticRef<CRealTimeShadowManager>(0xC40350);
+NOTSA_GLOBAL(g_realTimeShadowMan, 0xC40350, (CRealTimeShadowManager), {});
 
 void CRealTimeShadowManager::InjectHooks() {
     RH_ScopedClass(CRealTimeShadowManager);

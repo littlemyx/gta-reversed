@@ -14,4 +14,4 @@ private:
     static void InjectHooks();
 };
 
-extern CAEStreamTransformer& AEStreamTransformer;
+NOTSA_GLOBAL_EXTERN(AEStreamTransformer, (CAEStreamTransformer));

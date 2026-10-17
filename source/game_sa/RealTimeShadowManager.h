@@ -29,4 +29,4 @@ public:
 };
 VALIDATE_SIZE(CRealTimeShadowManager, 0x54);
 
-extern CRealTimeShadowManager& g_realTimeShadowMan;
+NOTSA_GLOBAL_EXTERN(g_realTimeShadowMan, (CRealTimeShadowManager));

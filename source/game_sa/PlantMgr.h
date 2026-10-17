@@ -25,9 +25,9 @@ public:
     static inline NOTSA_GLOBAL(m_CloseLocTriListHead, 0xC03988, (CPlantLocTri*[4]), {});
     static inline NOTSA_GLOBAL(m_UnusedColEntListHead, 0xC03998, (CPlantColEntEntry*), {});
     static inline NOTSA_GLOBAL(m_CloseColEntListHead, 0xC0399C, (CPlantColEntEntry*), {});
-    static inline auto& m_AmbientColor = StaticRef<CRGBA>(0xC03A44);
-    static inline auto& m_LocTrisTab = StaticRef<CPlantLocTri[MAX_NUM_PLANT_TRIANGLES]>(0xC03A48);
-    static inline auto& m_ColEntCacheTab = StaticRef<CPlantColEntEntry[MAX_NUM_PROC_OBJECTS]>(0xC08E48);
+    static inline NOTSA_GLOBAL(m_AmbientColor, 0xC03A44, (CRGBA), { 255, 255, 255, 255 }); // ctor 0x7170C0
+    static inline NOTSA_GLOBAL(m_LocTrisTab, 0xC03A48, (CPlantLocTri[MAX_NUM_PLANT_TRIANGLES]), {});
+    static inline NOTSA_GLOBAL(m_ColEntCacheTab, 0xC08E48, (CPlantColEntEntry[MAX_NUM_PROC_OBJECTS]), {});
 
 public:
     static void InjectHooks();

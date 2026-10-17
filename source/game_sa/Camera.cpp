@@ -18,7 +18,7 @@
 #include "game_sa/DetachedShared.h"
 #line 18
 
-auto& TheCamera = StaticRef<CCamera>(0xB6F028);
+NOTSA_GLOBAL(TheCamera, 0xB6F028, (CCamera), {});
 NOTSA_GLOBAL(gbModelViewer, 0xBA6728, (bool), {});
 NOTSA_GLOBAL(gbCineyCamMessageDisplayed, 0x8CC381, (int8), { 2 }); // 2
 NOTSA_GLOBAL(gCameraDirection, 0x8CC384, (int32), { 3 });         // 3
@@ -28,7 +28,7 @@ NOTSA_GLOBAL(gLastTime2PlayerCameraCollided, 0xB6EC28, (uint32), {}); // 0
 NOTSA_GLOBAL(gPlayerPedVisible, 0x8CC380, (bool), { true }); // true
 NOTSA_GLOBAL(gCurCamColVars, 0x8CCB80, (uint8), { 5 });
 NOTSA_GLOBAL_ALIAS(gCurDistForCam, 0x8CCB84, (float), notsa::shared::CurDistForCam);
-auto& gpCamColVars = StaticRef<float*>(0xB6FE88);
+NOTSA_GLOBAL(gpCamColVars, 0xB6FE88, (float*), { &gCamColVars[5][0] }); // row 5 = the initial gCurCamColVars (exe image: 0x8CC958 = 0x8CC8E0 + 5 * 24)
 // 0x509AE0 - defined (and hooked) in Cam.cpp
 void WellBufferMe(float target, float& valueToChange, float& speedSoFar, float topSpeed, float speedStep, bool isAnAngle);
 static NOTSA_GLOBAL_ALIAS(gCamColLastRadius, 0xB6EC6C, (float), notsa::shared::CamColLastRadius);

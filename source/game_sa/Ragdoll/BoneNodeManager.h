@@ -82,4 +82,4 @@ private: // notsa section
 };
 VALIDATE_SIZE(BoneNodeManager_c, 0x4C0C);
 
-static inline auto& g_boneNodeMan = StaticRef<BoneNodeManager_c>(0xC10820);
+static inline NOTSA_GLOBAL(g_boneNodeMan, 0xC10820, (BoneNodeManager_c), {});

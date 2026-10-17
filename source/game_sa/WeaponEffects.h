@@ -50,7 +50,7 @@ public:
 VALIDATE_SIZE(CWeaponEffects, 0x2C);
 
 constexpr auto MAX_NUM_WEAPON_CROSSHAIRS{ 2u };
-static inline auto& gCrossHair = StaticRef<std::array<CWeaponEffects, MAX_NUM_WEAPON_CROSSHAIRS>>(0xC8A838);
+static inline NOTSA_GLOBAL(gCrossHair, 0xC8A838, (std::array<CWeaponEffects, MAX_NUM_WEAPON_CROSSHAIRS>), {});
 NOTSA_GLOBAL_HDR(gpCrossHairTex, 0xC8A818, (RwTexture*), {});
 NOTSA_GLOBAL_HDR(gpCrossHairTexFlight, 0xC8A810, (RwTexture*[2]), {});
 

@@ -10,7 +10,7 @@
 #define NOTSA_TAP_FADE(k) ((void)0)
 #endif
 
-auto& AESmoothFadeThread = StaticRef<CAESmoothFadeThread>(0xB608D0);
+NOTSA_GLOBAL(AESmoothFadeThread, 0xB608D0, (CAESmoothFadeThread), {});
 
 void CAESmoothFadeThread::InjectHooks() {
     RH_ScopedClass(CAESmoothFadeThread);

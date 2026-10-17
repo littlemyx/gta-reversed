@@ -17,7 +17,7 @@ public:
     }
 
 private:
-    static inline auto& aEscalators = StaticRef<std::array<CEscalator, NUM_ESCALATORS>>(0xC6E9A8);
+    static inline NOTSA_GLOBAL(aEscalators, 0xC6E9A8, (std::array<CEscalator, NUM_ESCALATORS>), {});
 
 private:
     friend void InjectHooksMain();

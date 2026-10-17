@@ -18,7 +18,7 @@
 #include "Hud.h"
 #include "ControllerConfigManager.h"
 
-auto& FrontEndMenuManager = StaticRef<CMenuManager>(0xBA6748);
+NOTSA_GLOBAL(FrontEndMenuManager, 0xBA6748, (CMenuManager), {});
 
 CMenuManager& GetMenu() {
     return FrontEndMenuManager;

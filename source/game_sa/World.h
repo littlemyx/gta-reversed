@@ -51,7 +51,7 @@ constexpr float MAP_Z_LOW_LIMIT = -100.0f;
 
 class CWorld {
 public:
-    inline static auto& Players = StaticRef<CPlayerInfo[MAX_PLAYERS]>(0xB7CD98);
+    inline static NOTSA_GLOBAL(Players, 0xB7CD98, (CPlayerInfo[MAX_PLAYERS]), {});
     // Current player
     inline static NOTSA_GLOBAL(PlayerInFocus, 0xB7CD74, (uint8), {});
     inline static NOTSA_GLOBAL(bDoingCarCollisions, 0xB7CD73, (bool), {});
@@ -72,11 +72,11 @@ public:
     inline static NOTSA_GLOBAL(SnookerTableMin, 0x8CDF00, (CVector), { 2495.8525f, std::bit_cast<float>(0xC4D0ED1EU) /* -1671.41f - 1 ulp */, 12.9f });
 
     // Use GetSector() to access this array
-    inline static auto& ms_aSectors = StaticRef<notsa::mdarray<CSector, MAX_SECTORS_Y, MAX_SECTORS_X>>(0xB7D0B8);
+    inline static NOTSA_GLOBAL(ms_aSectors, 0xB7D0B8, (notsa::mdarray<CSector, MAX_SECTORS_Y, MAX_SECTORS_X>), {});
     // Use GetRepeatSector() to access this array
-    inline static auto& ms_aRepeatSectors = StaticRef<notsa::mdarray<CRepeatSector, MAX_REPEAT_SECTORS_Y, MAX_REPEAT_SECTORS_X>>(0xB992B8);
+    inline static NOTSA_GLOBAL(ms_aRepeatSectors, 0xB992B8, (notsa::mdarray<CRepeatSector, MAX_REPEAT_SECTORS_Y, MAX_REPEAT_SECTORS_X>), {});
     // Use GetLodPtrList() to access this array
-    inline static auto& ms_aLodPtrLists = StaticRef<notsa::mdarray<CPtrListSingleLink<CEntity*>, MAX_LOD_PTR_LISTS_Y, MAX_LOD_PTR_LISTS_X>>(0xB99EB8);
+    inline static NOTSA_GLOBAL(ms_aLodPtrLists, 0xB99EB8, (notsa::mdarray<CPtrListSingleLink<CEntity*>, MAX_LOD_PTR_LISTS_Y, MAX_LOD_PTR_LISTS_X>), {});
     inline static NOTSA_GLOBAL(ms_listMovingEntityPtrs, 0xB9ACC8, (CPtrListDoubleLink<CPhysical*>), {});
     inline static NOTSA_GLOBAL(ms_listObjectsWithControlCode, 0xB9ACCC, (CPtrListDoubleLink<CObject*>), {});
     inline static NOTSA_GLOBAL(ms_nCurrentScanCode, 0xB7CD78, (uint16), {});

@@ -143,7 +143,7 @@ VALIDATE_SIZE(CVehicleAnimGroup, 0x94);
 class CVehicleAnimGroupData {
 public:
     static constexpr int32 NUM_VEH_ANIM_GROUPS = 30;
-    static inline auto& m_vehicleAnimGroups = StaticRef<CVehicleAnimGroup[NUM_VEH_ANIM_GROUPS]>(0xC1CDC0); // Access using GetVehicleAnimGroup()
+    static inline NOTSA_GLOBAL(m_vehicleAnimGroups, 0xC1CDC0, (CVehicleAnimGroup[NUM_VEH_ANIM_GROUPS]), {}); // Access using GetVehicleAnimGroup()
 
 public:
     static void InjectHooks();

@@ -9,7 +9,7 @@
 
 using enum eControllerAction;
 
-auto& ControlsManager = StaticRef<CControllerConfigManager>(0xB70198);
+NOTSA_GLOBAL(ControlsManager, 0xB70198, (CControllerConfigManager), {});
 
 void CControllerConfigManager::InjectHooks() {
     RH_ScopedClass(CControllerConfigManager);

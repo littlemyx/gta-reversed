@@ -30,7 +30,7 @@ class CWeaponInfo {
     static_assert(NUM_WEAPON_INFOS == 80);
 
     //! Memory Layout(Assuming vanilla settings): [STD 0 - 47][POOR 47 - 57][PRO 58 - 68][COP 69 - 79]
-    static inline auto& aWeaponInfo = StaticRef<CWeaponInfo[NUM_WEAPON_INFOS]>(0xC8AAB8);
+    static inline NOTSA_GLOBAL(aWeaponInfo, 0xC8AAB8, (CWeaponInfo[NUM_WEAPON_INFOS]), {});
 
     struct tAnimAimOffsets {
         float AimX;

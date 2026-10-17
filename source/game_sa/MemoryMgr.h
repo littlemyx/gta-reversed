@@ -63,7 +63,7 @@ enum eMemoryId {
 };
 
 static inline auto& s_MemoryHeapBuffer = StaticRef<char[16384]>(0xC8E0C8);
-static inline auto& g_Heaps = StaticRef<std::array<CMemoryHeap, 3>>(0xC87B40);
+static inline NOTSA_GLOBAL(g_Heaps, 0xC87B40, (std::array<CMemoryHeap, 3>), {});
 
 // todo fixed stack
 template <typename _Type, uint32 _nSize> class CStack {

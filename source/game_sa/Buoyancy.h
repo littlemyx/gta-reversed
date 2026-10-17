@@ -83,4 +83,4 @@ public:
 
 VALIDATE_SIZE(cBuoyancy, 0xD0);
 
-extern cBuoyancy& mod_Buoyancy;
+NOTSA_GLOBAL_EXTERN(mod_Buoyancy, (cBuoyancy));

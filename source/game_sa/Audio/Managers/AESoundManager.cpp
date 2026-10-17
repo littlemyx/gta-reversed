@@ -9,7 +9,7 @@
 #include <DebugModules/Audio/SoundManagerDebugModule.hpp>
 #include <UIRenderer.h>
 
-auto& AESoundManager = StaticRef<CAESoundManager>(0xB62CB0);
+NOTSA_GLOBAL(AESoundManager, 0xB62CB0, (CAESoundManager), {});
 
 void CAESoundManager::InjectHooks() {
     RH_ScopedClass(CAESoundManager);

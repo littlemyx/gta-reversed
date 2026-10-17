@@ -89,7 +89,7 @@ public:
     static inline NOTSA_GLOBAL(BigMessageInUse, 0xBAA3C0, (float[NUM_MESSAGE_STYLES]), {});
     static inline NOTSA_GLOBAL(BigMessageX, 0xBAA3DC, (float[NUM_MESSAGE_STYLES]), {});
 
-    static inline auto& Sprites = StaticRef<std::array<CSprite2d, 6>>(0xBAB1FC);
+    static inline NOTSA_GLOBAL(Sprites, 0xBAB1FC, (std::array<CSprite2d, 6>), {});
 
     static inline NOTSA_GLOBAL(TimerMainCounterHideState, 0xBAA388, (int16), {});
     static inline NOTSA_GLOBAL(TimerMainCounterWasDisplayed, 0xBAA38A, (bool), {});

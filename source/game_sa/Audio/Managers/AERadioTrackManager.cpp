@@ -8,7 +8,7 @@
 #include "AEAudioUtility.h"
 #include "AEAudioEnvironment.h"
 
-auto& AERadioTrackManager = StaticRef<CAERadioTrackManager>(0x8CB6F8);
+NOTSA_GLOBAL(AERadioTrackManager, 0x8CB6F8, (CAERadioTrackManager), {});
 
 namespace {
 //! Value of `tRadioSoundRange::Start` that means "there are no sounds of this kind for this station"

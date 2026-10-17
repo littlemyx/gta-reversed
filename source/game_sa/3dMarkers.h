@@ -59,7 +59,7 @@ public:
     static inline NOTSA_GLOBAL(m_pRpClumpArray, 0xC7C6DC, (std::array<RpClump*, 7>), {});
     static inline NOTSA_GLOBAL(ms_directionArrows, 0xC802E8, (std::array<tDirectionArrow, 5>), {});
     static inline NOTSA_GLOBAL(ms_user3dMarkers, 0xC80258, (std::array<tUser3dMarker, 5>), {});
-    static inline auto& m_aMarkerArray = StaticRef<std::array<C3dMarker, 32>>(0xC7DD58);
+    static inline NOTSA_GLOBAL(m_aMarkerArray, 0xC7DD58, (std::array<C3dMarker, 32>), {});
 
 public:
     static void InjectHooks();

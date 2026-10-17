@@ -8,7 +8,7 @@
 #include "TaskSimpleIKLookAt.h"
 #include "TaskSimpleIKPointArm.h"
 
-auto& g_ikChainMan = StaticRef<IKChainManager_c>(0xC15448);
+NOTSA_GLOBAL(g_ikChainMan, 0xC15448, (IKChainManager_c), {});
 
 void IKChainManager_c::InjectHooks() {
     RH_ScopedClass(IKChainManager_c);

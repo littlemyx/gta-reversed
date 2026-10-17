@@ -58,4 +58,4 @@ public:
 };
 VALIDATE_SIZE(CAESmoothFadeThread, 0x81C);
 
-extern CAESmoothFadeThread& AESmoothFadeThread;
+NOTSA_GLOBAL_EXTERN(AESmoothFadeThread, (CAESmoothFadeThread));

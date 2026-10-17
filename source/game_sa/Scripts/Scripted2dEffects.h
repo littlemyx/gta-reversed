@@ -51,8 +51,8 @@ constexpr auto NUM_SCRIPTED_2D_EFFECTS = 64;
 class CScripted2dEffects {
 public:
     static inline NOTSA_GLOBAL(ms_effects, 0xC3AB00, (std::array<C2dEffect, NUM_SCRIPTED_2D_EFFECTS>), {}); // actual type is `C2dEffectPedAttractor`
-    static inline auto& ms_effectPairs           = StaticRef<std::array<CScriptedEffectPairs, NUM_SCRIPTED_2D_EFFECTS>>(0xC3BB00);
-    static inline auto& ms_userLists             = StaticRef<std::array<tUserList, NUM_SCRIPTED_2D_EFFECTS>>(0xC3A200); // class maybe
+    static inline NOTSA_GLOBAL(ms_effectPairs, 0xC3BB00, (std::array<CScriptedEffectPairs, NUM_SCRIPTED_2D_EFFECTS>), {});
+    static inline NOTSA_GLOBAL(ms_userLists, 0xC3A200, (std::array<tUserList, NUM_SCRIPTED_2D_EFFECTS>), {}); // class maybe
     static inline NOTSA_GLOBAL(ms_activated, 0xC3A1A0, (std::array<bool, NUM_SCRIPTED_2D_EFFECTS>), {});
     static inline NOTSA_GLOBAL(ScriptReferenceIndex, 0xC3A120, (std::array<uint16, NUM_SCRIPTED_2D_EFFECTS>), {});
     static inline NOTSA_GLOBAL(ms_effectSequenceTaskIDs, 0xC3A020, (std::array<int32, NUM_SCRIPTED_2D_EFFECTS>), {});

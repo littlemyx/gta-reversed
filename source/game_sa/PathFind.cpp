@@ -27,9 +27,9 @@ NOTSA_GLOBAL(ConnectsToGiven, 0x96EAC0, (std::array<std::array<int8, 6>, 64>), {
 NOTSA_GLOBAL(DontWanderGiven, 0x96EC40, (std::array<bool, 64>), {}); // `bDontWander` of `AddNodeToNewInterior`
 
 NOTSA_GLOBAL(aInteriorNodeLinkedToExterior, 0x96EA98, (std::array<int32, NUM_PATH_INTERIOR_AREAS>), {});
-auto& aExteriorNodeLinkedTo = StaticRef<std::array<CNodeAddress, NUM_PATH_INTERIOR_AREAS>>(0x977B7C);
+NOTSA_GLOBAL(aExteriorNodeLinkedTo, 0x977B7C, (std::array<CNodeAddress, NUM_PATH_INTERIOR_AREAS>), = MakeExeNodeAddressArray<NUM_PATH_INTERIOR_AREAS>()); // ctor 0x84A080
 
-auto& aNodesToBeCleared = StaticRef<std::array<CNodeAddress, 5000>>(0x972CD0);
+NOTSA_GLOBAL(aNodesToBeCleared, 0x972CD0, (std::array<CNodeAddress, 5000>), = MakeExeNodeAddressArray<5000>()); // ctor 0x84A040
 
 namespace {
 // 0x59C910 - `CVector::Normalise` as the original evaluates it: the sum of squares and the reciprocal root stay in the FPU

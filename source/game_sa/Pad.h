@@ -108,7 +108,7 @@ public:
     static inline NOTSA_GLOBAL(OldKeyState, 0xB72F20, (CKeyboardState), {});
     static inline NOTSA_GLOBAL(NewKeyState, 0xB73190, (CKeyboardState), {});
 
-    static inline auto& Pads = StaticRef<CPad[MAX_PADS]>(0xB73458);
+    static NOTSA_GLOBAL_DECL(CPad, Pads, 0xB73458, (CPad[MAX_PADS])); // detached: defined at the end of Pad.cpp
 
     static inline NOTSA_GLOBAL(bInvertLook4Pad, 0xB73402, (bool), {});
     static inline NOTSA_GLOBAL(padNumber, 0xB73400, (char), {});

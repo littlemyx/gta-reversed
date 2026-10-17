@@ -2,7 +2,7 @@
 
 #include "HudColours.h"
 
-auto& HudColour = StaticRef<CHudColours>(0xBAB22C);
+NOTSA_GLOBAL(HudColour, 0xBAB22C, (CHudColours), {});
 
 void CHudColours::InjectHooks() {
     RH_ScopedClass(CHudColours);

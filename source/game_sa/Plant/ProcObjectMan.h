@@ -43,4 +43,4 @@ public:
 };
 VALIDATE_SIZE(ProcObjectMan_c, 0x4C14);
 
-static inline auto& g_procObjMan = StaticRef<ProcObjectMan_c>(0xBB7CB0);
+static inline NOTSA_GLOBAL(g_procObjMan, 0xBB7CB0, (ProcObjectMan_c), {});

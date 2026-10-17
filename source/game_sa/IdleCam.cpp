@@ -5,7 +5,7 @@
 #include "HandShaker.h"
 #include "Fx/FxFtol.h"
 
-auto& gIdleCam = StaticRef<CIdleCam>(0xB6FDA0);
+NOTSA_GLOBAL(gIdleCam, 0xB6FDA0, (CIdleCam), {});
 NOTSA_GLOBAL(gbCineyCamProcessedOnFrame, 0xB6EC40, (uint32), {});
 
 void CIdleCam::InjectHooks() {

@@ -742,3 +742,6 @@ void CWeather::UpdateWeatherRegion(CVector* posn) {
 bool CWeather::IsRainy() {
     return Rain >= 0.2f;
 }
+
+// Defined here: detached build only (Weather.h declares it, the address-mode text is the old inline reference)
+NOTSA_GLOBAL_DEF(CWeather, m_WeatherAudioEntity, 0xC81360, (CAEWeatherAudioEntity), {});

@@ -133,4 +133,4 @@ public:
 
 VALIDATE_SIZE(CLoadMonitor, 0x2B0);
 
-extern CLoadMonitor& g_LoadMonitor;
+NOTSA_GLOBAL_EXTERN(g_LoadMonitor, (CLoadMonitor));

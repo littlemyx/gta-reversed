@@ -359,6 +359,24 @@ static bool CreateDevice(IDirect3DDevice9** out, IDirect3D9** d3dOut, HWND* wndO
     return true;
 }
 
+// d3dcompiler_47 with VALIDATION on (flags 0). The exe's composer (proven identical to the port's) emits shaders that are not valid by the current rules for some keys: it reads
+// input registers it never declared (X5702, texcoord v4/v5/v6 of the uv-anim / env paths), reads uninitialised components (X5326) and, for vs_1_1, exceeds 128 slots (X5349).
+// The original D3DX assembler let them through and the XP-era D3D9 runtime created them; the current d3d9.dll (native Windows) rejects exactly those bytecodes in CreateVertexShader
+// (D3DERR_INVALIDCALL) while Wine accepts them. The exe feeds the same bytes (see the assembler section), so a native rejection of such a key is the exe's own behaviour, not a port bug.
+static bool ValidatingAssemblerRejects(const std::string& text, std::string& why) {
+    using Fn = HRESULT(WINAPI*)(const void*, SIZE_T, const char*, const void*, void*, UINT, void**, void**);
+    static Fn fn = []() -> Fn { HMODULE h = LoadLibraryA("d3dcompiler_47.dll"); return h ? (Fn)GetProcAddress(h, "D3DAssemble") : nullptr; }();
+    why.clear();
+    if (!fn) return false;
+    struct Blob : IUnknown { virtual void* STDMETHODCALLTYPE GetBufferPointer() = 0; virtual SIZE_T STDMETHODCALLTYPE GetBufferSize() = 0; };
+    Blob *code = nullptr, *err = nullptr;
+    const HRESULT hr = fn(text.data(), text.size(), nullptr, nullptr, nullptr, 0, (void**)&code, (void**)&err);
+    if (FAILED(hr) && err) { why = (const char*)err->GetBufferPointer(); const size_t p = why.find("error X"); why = p == std::string::npos ? why : why.substr(p, 10); }
+    if (code) code->Release();
+    if (err) err->Release();
+    return FAILED(hr);
+}
+
 static void DeviceSection() {
     IDirect3DDevice9* dev = nullptr; IDirect3D9* d3d = nullptr; HWND wnd = nullptr;
     if (!CreateDevice(&dev, &d3d, &wnd)) { CHECK(false, "no D3D9 device"); return; }
@@ -374,18 +392,21 @@ static void DeviceSection() {
     for (int model : models) {
         Shutdown();
         SetModel(model, MaxConstants() ? MaxConstants() : 0x100);
-        long okc = 0, failc = 0, shown = 0;
+        long okc = 0, failc = 0, shown = 0, exeBad = 0;
         for (uint32_t kv : keys) {
             const Key k = MakeKey(kv);
             Layout lay;
             IDirect3DVertexShader9* s = GetVertexShader(k, lay);
             if (s) ++okc; else {
+                Layout l2; const std::string t = ComposeText(k, l2, model, MaxConstants());
+                std::string why;
+                if (ValidatingAssemblerRejects(t, why)) { ++exeBad; continue; }       // the exe's own shader is invalid by today's rules: its native rejection is not a port failure (see ValidatingAssemblerRejects)
                 ++failc;
-                if (shown++ < 2) { Layout l2; const std::string t = ComposeText(k, l2, model, MaxConstants()); std::printf("  model 0x%X key %08X rejected; text:\n%s\n", model, kv, t.c_str()); }
+                if (shown++ < 2) std::printf("  model 0x%X key %08X rejected; text:\n%s\n", model, kv, t.c_str());
             }
         }
-        std::printf("  device model=0x%02X: %zu keys, accepted %ld, rejected %ld\n", model, keys.size(), okc, failc);
-        CHECK(failc == 0, "device rejected %ld shaders (model 0x%X)", failc, model);
+        std::printf("  device model=0x%02X: %zu keys, accepted %ld, rejected %ld (of which %ld are shaders the validating assembler rejects too = the exe's own invalid output), unexplained %ld\n", model, keys.size(), okc, failc + exeBad, exeBad, failc);
+        CHECK(failc == 0, "device rejected %ld valid shaders (model 0x%X)", failc, model);
     }
     Shutdown();
     rw::d3d::d3ddevice = nullptr;

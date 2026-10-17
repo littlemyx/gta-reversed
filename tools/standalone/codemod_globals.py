@@ -564,9 +564,9 @@ def _address_only_lines(text):
         m = re.match(r"\s*#\s*(if|ifdef|ifndef|elif|else|endif)\b(.*)", line)
         if m:
             d, rest = m.group(1), m.group(2)
-            rel = "NOTSA_GLOBALS_DETACHED" in rest
+            rel = "NOTSA_GLOBALS_DETACHED" in rest or re.search(r"\bNOTSA_STANDALONE\b", rest) is not None   # the detached build is always a NOTSA_STANDALONE build
             if d in ("if", "ifdef", "ifndef"):
-                neg = d == "ifndef" or re.search(r"!\s*defined|!\s*NOTSA_GLOBALS_DETACHED", rest) is not None
+                neg = d == "ifndef" or re.search(r"!\s*defined|!\s*NOTSA_GLOBALS_DETACHED|!\s*NOTSA_STANDALONE\b", rest) is not None
                 stack.append((("addr" if neg else "det") if rel else None))
             elif d == "else" and stack:
                 stack[-1] = {"det": "addr", "addr": "det", None: None}[stack[-1]]
@@ -729,9 +729,10 @@ def check_converted(args):
         print("MULTI-OWNER\t0x%X\t%s\tmore than one defining macro for one address: two objects" % (A, " ".join(d)))
     # an extent that runs into a NOT converted global of the table (under-declared neighbour / over-sized owner): its poison/own storage would overlay live image data
     ovl = []
+    virtual_addrs = {int(v["addr"], 16) for v in al_json.get("virtual", [])}   # virtual base addresses (aliases.json "virtual") never become globals
     for r in rows:
         a0 = r["a"]
-        if a0 in converted or r["sz"] <= 0 or r["kind"] != "decl":
+        if a0 in converted or a0 in virtual_addrs or r["sz"] <= 0 or r["kind"] != "decl":
             continue
         for O in containing(a0) + containing(a0 + r["sz"] - 1):
             if O in view_addrs or O in converted and converted[O].get("local_only"):

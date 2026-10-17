@@ -391,25 +391,6 @@ public:
             | rngv::transform([](auto&& p) -> std::tuple<int32, R&> { return { std::get<0>(p), *std::get<1>(p) }; }); // Convert obj pointer to ref 
     }
 
-    // NOTSA - Same as GetAllValidWithIndex, but from the last slot down to slot 0 (the exe's backward pool loops: `for (i = size - 1; i >= 0; i--) if (!free[i]) ...`).
-    // Do NOT write `GetAllValidWithIndex() | rngv::reverse` for this: a reversed filter_view re-scans backwards from the CURRENT element on the next step, so a body that deletes the
-    // current object (RemoveDistantCars -> PossiblyRemoveVehicle, ...) makes it run off the start of the storage. Here the reversal is over the slot indices (iota), whose reverse
-    // iterator does not look at the pool, and the free-slot filter runs forward on the reversed indices (lazily, after the body, like the exe's per-slot byte-map test).
-    template<typename R = T>
-    auto GetAllValidWithIndexReverse() {
-        return rngv::iota(0, (int32)m_Capacity)
-            | rngv::reverse
-            | rngv::filter([this](int32 i) { return !IsFreeSlotAtIndex(i); })
-            | rngv::transform([this](int32 i) -> std::tuple<int32, R&> { return { i, *(R*)(void*)(&reinterpret_cast<StorageType*>(m_Storage)[i]) }; });
-    }
-
-    // NOTSA - Same as GetAllValid, backwards (see GetAllValidWithIndexReverse)
-    template<typename R = T>
-    auto GetAllValidReverse() {
-        return GetAllValidWithIndexReverse<R>()
-            | rngv::transform([](auto&& p) -> R& { return std::get<1>(p); });
-    }
-
     // NOTSA - Get all valid objects - Useful for iteration
     template<typename R = T>
     auto GetAllValid() {

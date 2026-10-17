@@ -38,37 +38,37 @@ class CGameLogic {
 public:
     static inline auto& SavedWeapons = StaticRef<std::array<CWeapon, NUM_WEAPON_SLOTS>>(0x96A9B8);
 
-    static inline auto& AfterDeathStartPointOrientations = StaticRef<std::array<float, 16>>(0x96A850);
-    static inline auto& AfterDeathStartPoints = StaticRef<std::array<CVector, 16>>(0x96A8E0);
+    static inline NOTSA_GLOBAL(AfterDeathStartPointOrientations, 0x96A850, (std::array<float, 16>), {});
+    static inline NOTSA_GLOBAL(AfterDeathStartPoints, 0x96A8E0, (std::array<CVector, 16>), {});
 
-    static inline auto& SkipPosition = StaticRef<CVector>(0x96A8D4);
-    static inline auto& SkipHeading = StaticRef<float>(0x96A8A4);
+    static inline NOTSA_GLOBAL(SkipPosition, 0x96A8D4, (CVector), {});
+    static inline NOTSA_GLOBAL(SkipHeading, 0x96A8A4, (float), {});
 
-    static inline auto& nPrintFocusHelpCounter = StaticRef<int32>(0x96A8B8);
-    static inline auto& nPrintFocusHelpTimer = StaticRef<int32>(0x96A8B4);
-    static inline auto& f2PlayerStartHeading = StaticRef<float>(0x96A840);
-    static inline auto& vec2PlayerStartLocation = StaticRef<CVector>(0x96A9AC);
-    static inline auto& bPlayersCanBeInSeparateCars = StaticRef<bool>(0x96A8B3);
-    static inline auto& bPlayersCannotTargetEachOther = StaticRef<bool>(0x96A8B2);
+    static inline NOTSA_GLOBAL(nPrintFocusHelpCounter, 0x96A8B8, (int32), {});
+    static inline NOTSA_GLOBAL(nPrintFocusHelpTimer, 0x96A8B4, (int32), {});
+    static inline NOTSA_GLOBAL(f2PlayerStartHeading, 0x96A840, (float), {});
+    static inline NOTSA_GLOBAL(vec2PlayerStartLocation, 0x96A9AC, (CVector), {});
+    static inline NOTSA_GLOBAL(bPlayersCanBeInSeparateCars, 0x96A8B3, (bool), {});
+    static inline NOTSA_GLOBAL(bPlayersCannotTargetEachOther, 0x96A8B2, (bool), {});
 
-    static inline auto& NumAfterDeathStartPoints = StaticRef<int32>(0x96A890);
+    static inline NOTSA_GLOBAL(NumAfterDeathStartPoints, 0x96A890, (int32), {});
 
-    static inline auto& SkipToBeFinishedByScript = StaticRef<bool>(0x96A894);
-    static inline auto& SkipVehicle = StaticRef<CVehicle*>(0x96A898);
-    static inline auto& SkipTimer = StaticRef<uint32>(0x96A89C);
-    static inline auto& SkipState = StaticRef<eSkipState>(0x96A8A0);
+    static inline NOTSA_GLOBAL(SkipToBeFinishedByScript, 0x96A894, (bool), {});
+    static inline NOTSA_GLOBAL(SkipVehicle, 0x96A898, (CVehicle*), {});
+    static inline NOTSA_GLOBAL(SkipTimer, 0x96A89C, (uint32), {});
+    static inline NOTSA_GLOBAL(SkipState, 0x96A8A0, (eSkipState), {});
 
-    static inline auto& bScriptCoopGameGoingOn = StaticRef<bool>(0x96A8A8);
-    static inline auto& TimeOfLastEvent = StaticRef<int32>(0x96A8AC);
+    static inline NOTSA_GLOBAL(bScriptCoopGameGoingOn, 0x96A8A8, (bool), {});
+    static inline NOTSA_GLOBAL(TimeOfLastEvent, 0x96A8AC, (int32), {});
     // 0x96A8B0..0x96A8B3 are four separate BYTES in the exe (GameState, ActivePlayers, bPlayersCannotTargetEachOther, bPlayersCanBeInSeparateCars), then `nPrintFocusHelpTimer` (dword at 0x96A8B4)
-    static inline auto& GameState = StaticRef<eGameLogicState>(0x96A8B0);
-    static inline auto& ActivePlayers = StaticRef<uint8>(0x96A8B1);
+    static inline NOTSA_GLOBAL(GameState, 0x96A8B0, (eGameLogicState), {});
+    static inline NOTSA_GLOBAL(ActivePlayers, 0x96A8B1, (uint8), {});
 
-    static inline auto& bPenaltyForDeathApplies = StaticRef<bool>(0x8A5E48);
-    static inline auto& bPenaltyForArrestApplies = StaticRef<bool>(0x8A5E49);
-    static inline auto& bLimitPlayerDistance = StaticRef<bool>(0x8A5E4A);
-    static inline auto& MaxPlayerDistance = StaticRef<float>(0x8A5E4C);  // default 20.0
-    static inline auto& n2PlayerPedInFocus = StaticRef<eFocusedPlayer>(0x8A5E50); // default eFocusedPlayer::NONE
+    static inline NOTSA_GLOBAL(bPenaltyForDeathApplies, 0x8A5E48, (bool), { true });
+    static inline NOTSA_GLOBAL(bPenaltyForArrestApplies, 0x8A5E49, (bool), { true });
+    static inline NOTSA_GLOBAL(bLimitPlayerDistance, 0x8A5E4A, (bool), { true });
+    static inline NOTSA_GLOBAL(MaxPlayerDistance, 0x8A5E4C, (float), { 20.0f });  // default 20.0
+    static inline NOTSA_GLOBAL(n2PlayerPedInFocus, 0x8A5E50, (eFocusedPlayer), { eFocusedPlayer::NONE }); // default eFocusedPlayer::NONE
 
 public:
     static void InjectHooks();

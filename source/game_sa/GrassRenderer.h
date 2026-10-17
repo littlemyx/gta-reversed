@@ -6,10 +6,10 @@ class CVector;
 
 class CGrassRenderer {
 public:
-    static inline auto& m_windBending = StaticRef<float>(0xC02DB8);
-    static inline auto& m_closeDist = StaticRef<float>(0xC02DBC);
-    static inline auto& m_vecCameraPos = StaticRef<CVector>(0xC02DDC);
-    static inline auto& m_farDist = StaticRef<float>(0x8D132C); // 10.0f
+    static inline NOTSA_GLOBAL(m_windBending, 0xC02DB8, (float), {});
+    static inline NOTSA_GLOBAL(m_closeDist, 0xC02DBC, (float), {});
+    static inline NOTSA_GLOBAL(m_vecCameraPos, 0xC02DDC, (CVector), {});
+    static inline NOTSA_GLOBAL(m_farDist, 0x8D132C, (float), { 10.0f }); // 10.0f
 
 public:
     static void InjectHooks();
@@ -35,5 +35,5 @@ public:
     static CVector& GenPointInTriangle(CVector& outPosn, const CVector& v1, const CVector& v2, const CVector& v3, float randA, float randB);
 };
 
-extern uint16& g_GrassCurrentScanCode;
-extern CPPTriPlantBuffer& gTriPlantBuf;
+NOTSA_GLOBAL_EXTERN(g_GrassCurrentScanCode, (uint16));
+NOTSA_GLOBAL_EXTERN(gTriPlantBuf, (CPPTriPlantBuffer));

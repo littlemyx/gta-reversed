@@ -1097,6 +1097,9 @@ void CCamera::SetWideScreenOff() {
 // 0x50C160
 void CCamera::SetZoomValueFollowPedScript(int16 zoomMode) {
     switch (zoomMode) {
+    case 0:
+        m_fPedZoomValueScript = 0.25f;
+        break;
     case 1:
         m_fPedZoomValueScript = 1.50f;
         break;
@@ -1104,7 +1107,7 @@ void CCamera::SetZoomValueFollowPedScript(int16 zoomMode) {
         m_fPedZoomValueScript = 2.90f;
         break;
     default:
-        m_fPedZoomValueScript = 0.25f;
+        break; // exe 0x50C160: any other value only sets the flag, the zoom value stays (the port used to store 0.25)
     }
     m_bUseScriptZoomValuePed = true;
 }

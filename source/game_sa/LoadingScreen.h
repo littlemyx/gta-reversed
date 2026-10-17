@@ -30,38 +30,38 @@ class CSprite2d;
 
 class CLoadingScreen {
 private:
-    static inline auto& m_bActive = StaticRef<bool>(0xBAB318);
-    static inline auto& m_bWantToPause = StaticRef<bool>(0xBAB319); // unused
-    static inline auto& m_bPaused = StaticRef<bool>(0xBAB31A); // unused
+    static inline NOTSA_GLOBAL(m_bActive, 0xBAB318, (bool), {});
+    static inline NOTSA_GLOBAL(m_bWantToPause, 0xBAB319, (bool), {}); // unused
+    static inline NOTSA_GLOBAL(m_bPaused, 0xBAB31A, (bool), {}); // unused
     static bool m_bForceShutdown; // unknown, unused
     static inline auto& m_aSplashes = StaticRef<std::array<CSprite2d, +eDisplayedSplash::COUNT>>(0xBAB35C);
-    static inline auto& m_currDisplayedSplash = StaticRef<eDisplayedSplash>(0x8D093C);
+    static inline NOTSA_GLOBAL(m_currDisplayedSplash, 0x8D093C, (eDisplayedSplash), { eDisplayedSplash::NONE });
 
-    static inline auto& m_bFading = StaticRef<bool>(0xBAB31C);
-    static inline auto& m_bLegalScreen = StaticRef<bool>(0xBAB31D);
-    static inline auto& m_bFadeInNextSplashFromBlack = StaticRef<bool>(0xBAB31E);
-    static inline auto& m_bFadeOutCurrSplashToBlack = StaticRef<bool>(0xBAB31F);
-    static inline auto& m_FadeAlpha = StaticRef<uint8>(0xBAB320);
-    static inline auto& m_StartFadeTime = StaticRef<float>(0xBAB324);
-    static inline auto& m_ClockTimeOnPause = StaticRef<float>(0xBAB328); // unused
-    static inline auto& m_PauseTime = StaticRef<float>(0xBAB32C); // second
+    static inline NOTSA_GLOBAL(m_bFading, 0xBAB31C, (bool), {});
+    static inline NOTSA_GLOBAL(m_bLegalScreen, 0xBAB31D, (bool), {});
+    static inline NOTSA_GLOBAL(m_bFadeInNextSplashFromBlack, 0xBAB31E, (bool), {});
+    static inline NOTSA_GLOBAL(m_bFadeOutCurrSplashToBlack, 0xBAB31F, (bool), {});
+    static inline NOTSA_GLOBAL(m_FadeAlpha, 0xBAB320, (uint8), {});
+    static inline NOTSA_GLOBAL(m_StartFadeTime, 0xBAB324, (float), {});
+    static inline NOTSA_GLOBAL(m_ClockTimeOnPause, 0xBAB328, (float), {}); // unused
+    static inline NOTSA_GLOBAL(m_PauseTime, 0xBAB32C, (float), {}); // second
 
-    static inline auto& m_PercentLoaded = StaticRef<float>(0xBAB330);
-    static inline auto& m_TimeStartedLoading = StaticRef<float>(0xBAB334); // unused
-    static inline auto& m_TimeBarAppeared = StaticRef<float>(0xBAB338);
+    static inline NOTSA_GLOBAL(m_PercentLoaded, 0xBAB330, (float), {});
+    static inline NOTSA_GLOBAL(m_TimeStartedLoading, 0xBAB334, (float), {}); // unused
+    static inline NOTSA_GLOBAL(m_TimeBarAppeared, 0xBAB338, (float), {});
 
-    static inline auto& m_LoadingGxtMsg1 = StaticRef<GxtChar[80]>(0xBAB2C8);
-    static inline auto& m_LoadingGxtMsg2 = StaticRef<GxtChar[80]>(0xBAB278);
+    static inline NOTSA_GLOBAL(m_LoadingGxtMsg1, 0xBAB2C8, (GxtChar[80]), {});
+    static inline NOTSA_GLOBAL(m_LoadingGxtMsg2, 0xBAB278, (GxtChar[80]), {});
 
-    static inline auto& m_PopUpMessage = StaticRef<char[16]>(0xBAB268);
+    static inline NOTSA_GLOBAL(m_PopUpMessage, 0xBAB268, (char[16]), {});
 
-    static inline auto& m_bSignalDelete = StaticRef<bool>(0xBAB33C); // unused
-    static inline auto& m_bReadyToDelete = StaticRef<bool>(0xBAB33D);
+    static inline NOTSA_GLOBAL(m_bSignalDelete, 0xBAB33C, (bool), {}); // unused
+    static inline NOTSA_GLOBAL(m_bReadyToDelete, 0xBAB33D, (bool), {});
 
-    static inline auto& m_numChunksLoaded = StaticRef<int32>(0x8D0940); // -1
+    static inline NOTSA_GLOBAL(m_numChunksLoaded, 0x8D0940, (int32), { -1 }); // -1
     // static int32 m_nChunksToLoad; // Added in Mobile
-    static inline auto& m_chunkBarAppeared = StaticRef<int32>(0x8D0944); // -1
-    static inline auto& m_timeSinceLastScreen = StaticRef<float>(0xBAB340);
+    static inline NOTSA_GLOBAL(m_chunkBarAppeared, 0x8D0944, (int32), { -1 }); // -1
+    static inline NOTSA_GLOBAL(m_timeSinceLastScreen, 0xBAB340, (float), {});
 
 public:
     static void LoadSplashes(bool useSplashId, eLoadingLogo id);

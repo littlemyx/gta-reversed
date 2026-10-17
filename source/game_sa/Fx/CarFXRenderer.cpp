@@ -70,8 +70,12 @@ void CCarFXRenderer::InitialiseDirtTexture() {
 
 // 0x5D5AD0
 void CCarFXRenderer::Shutdown() {
+    // exe 0x5D5AD0: destroy only non-null entries and clear them - CGame::Shutdown calls this twice (0x53CA61, 0x53CA75), the second call must be a no-op
     for (auto& texture : ms_aDirtTextures) {
-        RwTextureDestroy(texture);
+        if (texture) {
+            RwTextureDestroy(texture);
+            texture = nullptr;
+        }
     }
     CCustomCarEnvMapPipeline::DestroyPipe();
 }

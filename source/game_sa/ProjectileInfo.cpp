@@ -11,10 +11,10 @@
 
 namespace {
 // Used by heat seeking missiles (WEAPON_ROCKET_HS) that are homing in on a plane (by the player)
-inline auto& HOMING_PLANE_DAMPING = StaticRef<float>(0x8D6104); // 0.95 - velocity multiplier (per time step, exponent)
-inline auto& HOMING_PLANE_ACCEL   = StaticRef<float>(0x8D6108); // 0.15 - acceleration towards the target
+inline NOTSA_GLOBAL(HOMING_PLANE_DAMPING, 0x8D6104, (float), { 0.95f }); // 0.95 - velocity multiplier (per time step, exponent)
+inline NOTSA_GLOBAL(HOMING_PLANE_ACCEL, 0x8D6108, (float), { 0.15f }); // 0.15 - acceleration towards the target
 // Not exactly `0.0117f` (it's 1 ULP lower), so read it from the exe
-inline auto& HOMING_PLAYER_ACCEL  = StaticRef<float>(0x872BFC); // Acceleration towards the target of the missiles fired by the player
+inline NOTSA_GLOBAL(HOMING_PLAYER_ACCEL, 0x872BFC, (float), { 0.011699999f }); // Acceleration towards the target of the missiles fired by the player
 }
 
 void CProjectileInfo::InjectHooks() {

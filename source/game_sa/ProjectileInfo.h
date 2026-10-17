@@ -26,7 +26,7 @@ public:
     FxSystem_c* m_pFxSystem;
 
 public:
-    static inline auto& ms_apProjectile = StaticRef<std::array<CProjectile*, MAX_PROJECTILES>>(0xC89110);
+    static inline NOTSA_GLOBAL(ms_apProjectile, 0xC89110, (std::array<CProjectile*, MAX_PROJECTILES>), {});
 
     static void Initialise();
     static void Shutdown();
@@ -48,4 +48,4 @@ private:
 VALIDATE_SIZE(CProjectileInfo, 0x24);
 
 constexpr uint32 MAX_PROJECTILE_INFOS = 32;
-inline auto& gaProjectileInfo = StaticRef<std::array<CProjectileInfo, MAX_PROJECTILE_INFOS>>(0xC891A8);
+NOTSA_GLOBAL_HDR_EXT(gaProjectileInfo, 0xC891A8, (std::array<CProjectileInfo, MAX_PROJECTILE_INFOS>), {});

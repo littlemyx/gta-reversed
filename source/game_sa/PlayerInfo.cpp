@@ -768,10 +768,10 @@ void ProcessDistanceStats(CPlayerInfo& s) {
 // Updates `m_fCurrentChaseValue`: how "ill" the chase is, based on the wanted level
 void ProcessChaseValue(CPlayerInfo& s) {
     // Original static locals: A `static CVector` + its init guard
-    static auto& s_LastPlayerPosGuard  = StaticRef<uint32>(0xB9B9A0);
-    static auto& s_LastPlayerPos       = StaticRef<CVector>(0xB9B994);
-    static auto& s_bMovedFarFromLast   = StaticRef<bool>(0x8CDF21); // Player moved at least 10 units since the last check
-    static auto& s_bIsNearVehicleNode  = StaticRef<bool>(0x8CDF20); // There's a vehicle path node within 60 units of the player
+    NOTSA_GLOBAL_LOCAL(s_LastPlayerPosGuard, 0xB9B9A0, (uint32), {});
+    NOTSA_GLOBAL_LOCAL(s_LastPlayerPos, 0xB9B994, (CVector), {});
+    NOTSA_GLOBAL_LOCAL(s_bMovedFarFromLast, 0x8CDF21, (bool), { true }); // Player moved at least 10 units since the last check
+    NOTSA_GLOBAL_LOCAL(s_bIsNearVehicleNode, 0x8CDF20, (bool), { true }); // There's a vehicle path node within 60 units of the player
 
     const auto* const wanted = s.m_pPed->GetWanted();
     if (wanted->m_WantedLevel == eWantedLevel::WANTED_CLEAN || CTheScripts::IsPlayerOnAMission()) {
@@ -980,10 +980,10 @@ void CPlayerInfo::DrawCrosshair(int32 playerIndex) {
     }
 
     // Per-player (2 players) history of the last 5 crosshair positions (index 0 is the newest)
-    static auto& s_TrailTime = StaticRef<std::array<std::array<uint32, 5>, 2>>(0xB9B8F8); // Only [i][0] is ever read (see the BUG note below)
-    static auto& s_TrailY    = StaticRef<std::array<std::array<float, 5>, 2>>(0xB9B920);
-    static auto& s_TrailX    = StaticRef<std::array<std::array<float, 5>, 2>>(0xB9B948);
-    static auto& s_CoronaTex = StaticRef<int32>(0x8CDF1C); // NOTSA name: index into `gpCoronaTexture` (value is 8 = CORONATYPE_STREAK)
+    NOTSA_GLOBAL_LOCAL(s_TrailTime, 0xB9B8F8, (std::array<std::array<uint32, 5>, 2>), {}); // Only [i][0] is ever read (see the BUG note below)
+    NOTSA_GLOBAL_LOCAL(s_TrailY, 0xB9B920, (std::array<std::array<float, 5>, 2>), {});
+    NOTSA_GLOBAL_LOCAL(s_TrailX, 0xB9B948, (std::array<std::array<float, 5>, 2>), {});
+    NOTSA_GLOBAL_LOCAL(s_CoronaTex, 0x8CDF1C, (int32), { 8 }); // NOTSA name: index into `gpCoronaTexture` (value is 8 = CORONATYPE_STREAK)
 
     RwRenderStateSet(rwRENDERSTATEZWRITEENABLE,      RWRSTATE(FALSE));
     RwRenderStateSet(rwRENDERSTATEZTESTENABLE,       RWRSTATE(FALSE));
@@ -1319,10 +1319,10 @@ void CPlayerInfo::PlayerFailedCriticalMission() {
 // 0x56E610
 void CPlayerInfo::WorkOutEnergyFromHunger() {
 
-    static auto& s_lastTimeHungryStateProcessedInitialized = StaticRef<bool>(0xB9B8F4); // false
-    static auto& s_lastTimeHungryStateProcessed = StaticRef<uint8>(0xB9B8F2);
-    static auto& s_LastHungryState = StaticRef<int8>(0xB9B8F1);
-    static auto& s_bHungryMessageShown = StaticRef<bool>(0xB9B8F0);
+    NOTSA_GLOBAL_LOCAL(s_lastTimeHungryStateProcessedInitialized, 0xB9B8F4, (bool), {}); // false
+    NOTSA_GLOBAL_LOCAL(s_lastTimeHungryStateProcessed, 0xB9B8F2, (uint8), {});
+    NOTSA_GLOBAL_LOCAL(s_LastHungryState, 0xB9B8F1, (int8), {});
+    NOTSA_GLOBAL_LOCAL(s_bHungryMessageShown, 0xB9B8F0, (bool), {});
 
     if (CCheat::IsActive(CHEAT_NEVER_GET_HUNGRY)) {
         return;

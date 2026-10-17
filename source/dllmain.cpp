@@ -30,7 +30,7 @@ BOOL APIENTRY DllMain(HMODULE hModule, DWORD ul_reason_for_call, LPVOID lpReserv
         s_HandleOfDLL = hModule;
 
         // Fail if RenderWare has already been started
-        if (*(RwCamera**)0xC1703C) {
+        if (NOTSA_GLOBAL_EXPR(0xC1703C, (RwCamera*), Scene.m_pRwCamera)) {
             MessageBox(NULL, "gta_reversed failed to load (RenderWare has already been started)", "Error", MB_ICONERROR | MB_OK);
             return FALSE;
         }

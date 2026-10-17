@@ -1,3 +1,3 @@
 #include "StdInc.h"
 
-auto& Scene = StaticRef<CScene>(0xC17038);
+NOTSA_GLOBAL(Scene, 0xC17038, (CScene), {});

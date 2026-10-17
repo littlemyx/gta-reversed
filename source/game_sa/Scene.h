@@ -16,4 +16,4 @@ public:
 
 VALIDATE_SIZE(CScene, 0x8);
 
-extern CScene& Scene;
+NOTSA_GLOBAL_EXTERN(Scene, (CScene));

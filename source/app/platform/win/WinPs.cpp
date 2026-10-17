@@ -585,7 +585,11 @@ bool psSelectDevice() {
     NOTSA_LOG_DEBUG("UseDefaultVM={} MultipleSubSystems={} IsVMNotSelected={} DisplayVideoMode={} PrefsVideoMode={}", (int)UseDefaultVM, (int)MultipleSubSystems, (int)IsVMNotSelected, FrontEndMenuManager.m_nDisplayVideoMode, FrontEndMenuManager.m_nPrefsVideoMode);
 
 #ifdef NOTSA_STANDALONE_RUN
-    if (!UseDefaultVM) { // NOTSA: also with several sub systems (no dialog selected a mode), see above
+    // NOTSA: NOTSA_STANDALONE_WINDOWED=<W>x<H> (engine.cpp): the synthetic WxH mode (a window, no desktop mode change) wins over the saved / default / searched mode
+    if (const auto wvm = NotsaRwWindowedVideoMode(); wvm >= 0) {
+        GcurSelVM = wvm;
+        NOTSA_LOG_DEBUG("NOTSA_STANDALONE_WINDOWED: using video mode {}", wvm);
+    } else if (!UseDefaultVM) { // NOTSA: also with several sub systems (no dialog selected a mode), see above
 #else
     if (!UseDefaultVM && !MultipleSubSystems) {
 #endif

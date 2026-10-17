@@ -474,7 +474,12 @@ INT WINAPI NOTSA_WinMain(HINSTANCE instance, HINSTANCE hPrevInstance, LPSTR cmdL
     }
 
 #ifndef NOTSA_USE_SDL3
+#ifdef NOTSA_STANDALONE_RUN
+    // NOTSA_STANDALONE_WINDOWED: keep the captioned window the video mode set up (engine.cpp WindowedEmuPlaceWindow), the client area is the back buffer
+    if (!NotsaRwWindowedRun() && (MultipleSubSystems || PSGLOBAL(fullScreen))) {
+#else
     if (MultipleSubSystems || PSGLOBAL(fullScreen)) {
+#endif
         SetWindowLongPtr(PSGLOBAL(window), GWL_STYLE, (LONG_PTR)WS_POPUP);
         SetWindowPos(PSGLOBAL(window), nullptr, 0, 0, 0, 0, SWP_NOSIZE | SWP_NOMOVE | SWP_NOZORDER | SWP_FRAMECHANGED);
     }
@@ -498,7 +503,13 @@ INT WINAPI NOTSA_WinMain(HINSTANCE instance, HINSTANCE hPrevInstance, LPSTR cmdL
     SDL_SetWindowPosition(sdlWnd, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED);
     SDL_RaiseWindow(sdlWnd);
 #else
+#ifdef NOTSA_STANDALONE_RUN
+    // NOTSA_STANDALONE_WINDOWED: the user works on this PC - do not steal the focus (NOTSA_STANDALONE_WINDOWED_FOCUS=1: activate as usual, e.g. for SendInput drivers)
+    static const bool s_WindowedFocus = std::getenv("NOTSA_STANDALONE_WINDOWED_FOCUS") != nullptr && std::getenv("NOTSA_STANDALONE_WINDOWED_FOCUS")[0] == '1';
+    ShowWindow(PSGLOBAL(window), NotsaRwWindowedRun() && !s_WindowedFocus ? SW_SHOWNOACTIVATE : nCmdShow);
+#else
     ShowWindow(PSGLOBAL(window), nCmdShow);
+#endif
 #endif
 
     // 0x748995

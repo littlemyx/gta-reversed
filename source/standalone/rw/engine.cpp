@@ -21,6 +21,8 @@
 #include <cstring>
 #include <cctype>
 #include <cstdarg>
+#include <algorithm>
+#include <vector>
 #include <initializer_list>
 
 #pragma warning(disable : 4996)
@@ -89,6 +91,103 @@ RwInt32 RasterFormatOf(D3DFORMAT f) {
     }
 }
 
+#ifdef NOTSA_STANDALONE_RUN
+//--------------------------------------------------------------------------------------------------
+// NOTSA_STANDALONE_WINDOWED=<W>x<H> (run build only; off by default): windowed run for test/soak/measurement tooling. NO desktop mode change, no topmost window.
+// Every exclusive video mode of the list is turned INTO a windowed one inside the device layer (the librw mode flags lose rwVIDEOMODEEXCLUSIVE, so startD3D creates
+// a windowed device sized to the window client area and ApplyModeToDevice sizes the window to the mode), while RwEngineGetVideoModeInfo keeps REPORTING them as exclusive:
+// the game's own logic (fullScreen, RsGlobal.maximumWidth/Height, HUD scale, the mode list) sees an ordinary exclusive WxH x 32 mode. One synthetic WxH mode is
+// appended at the END of the list (indices of the real modes, which gta_sa.set stores, are untouched); psSelectDevice selects it. "0", "off" or an empty value opt out
+// (soak.sh / census.py set 960x600 by default), "1"/"on" = 960x600.
+//--------------------------------------------------------------------------------------------------
+struct WindowedEmu {
+    bool inited = false;
+    int  w = 0, h = 0;
+    int  synthIdx = -1;                     // index of the appended WxH mode in the current list (-1 = none: unsupported desktop format)
+    std::vector<unsigned char> reported;    // per mode index: reported to the game as rwVIDEOMODEEXCLUSIVE
+    bool Active() const { return w > 0 && h > 0; }
+    bool Excl(int i) const { return i >= 0 && i < (int)reported.size() && reported[i]; }
+};
+WindowedEmu s_Emu;
+
+void WindowedEmuInit() {
+    if (s_Emu.inited) {
+        return;
+    }
+    s_Emu.inited = true;
+    const char* v = std::getenv("NOTSA_STANDALONE_WINDOWED");
+    if (!v || !*v || !std::strcmp(v, "0") || !_stricmp(v, "off") || !_stricmp(v, "no") || !_stricmp(v, "false")) {
+        return;
+    }
+    int w = 0, h = 0;
+    if (!std::strcmp(v, "1") || !_stricmp(v, "on") || !_stricmp(v, "yes") || !_stricmp(v, "true")) {
+        w = 960; h = 600;
+    } else if (std::sscanf(v, "%d%*1[xX*]%d", &w, &h) != 2 || w < 320 || h < 240 || w > 16384 || h > 16384) {
+        notsa::standalone::Fixups::Log("NOTSA_STANDALONE_WINDOWED=\"%s\" is not <W>x<H> (320x240 .. 16384x16384): ignored", v);
+        return;
+    }
+    s_Emu.w = w;
+    s_Emu.h = h;
+    notsa::standalone::Fixups::Log("NOTSA_STANDALONE_WINDOWED: windowed device %dx%d, no desktop mode change", w, h);
+}
+
+// Sizes the game window so its CLIENT area is w x h (caption, no sizing border: the back buffer size is fixed), centred on the primary monitor's work area,
+// not topmost, not activated. Called before the device exists (RwEngineSetVideoMode) and on every live mode change (ApplyModeToDevice).
+void WindowedEmuPlaceWindow(int w, int h) {
+    HWND wnd = d3d9Globals.window;
+    if (!wnd) {
+        return;
+    }
+    const DWORD style = WS_CAPTION | WS_SYSMENU | WS_MINIMIZEBOX | (IsWindowVisible(wnd) ? WS_VISIBLE : 0);
+    RECT r{ 0, 0, w, h };
+    AdjustWindowRect(&r, style & ~WS_VISIBLE, FALSE);
+    int ow = r.right - r.left, oh = r.bottom - r.top;
+    for (int pass = 0; pass < 2; pass++) {
+        MONITORINFO mi{ sizeof(mi) };
+        GetMonitorInfo(MonitorFromPoint(POINT{ 0, 0 }, MONITOR_DEFAULTTOPRIMARY), &mi);
+        const int x = (int)mi.rcWork.left + (int)(std::max)(0L, (mi.rcWork.right - mi.rcWork.left - ow) / 2);
+        const int y = (int)mi.rcWork.top + (int)(std::max)(0L, (mi.rcWork.bottom - mi.rcWork.top - oh) / 2);
+        SetWindowLong(wnd, GWL_STYLE, (LONG)style);
+        SetWindowPos(wnd, HWND_NOTOPMOST, x, y, ow, oh, SWP_FRAMECHANGED | SWP_NOACTIVATE);
+        RECT c{};
+        GetClientRect(wnd, &c);
+        if (c.right == w && c.bottom == h) {
+            break;
+        }
+        ow += w - c.right; // per-monitor DPI differences in the frame size: correct once
+        oh += h - c.bottom;
+    }
+    RECT c{};
+    GetClientRect(wnd, &c);
+    notsa::standalone::Fixups::Log("windowed: window client %ldx%ld (wanted %dx%d)", c.right, c.bottom, w, h);
+}
+
+// Applies the emulation to the freshly built mode list (mode 0 = desktop windowed mode stays as it is).
+void WindowedEmuAfterModeList() {
+    auto& g = d3d9Globals;
+    WindowedEmuInit();
+    s_Emu.synthIdx = -1;
+    s_Emu.reported.assign((size_t)g.numModes + 1, 0);
+    if (!s_Emu.Active() || g.numModes <= 0) {
+        return;
+    }
+    for (int i = 0; i < g.numModes; i++) {
+        if (g.modes[i].flags & rw::VIDEOMODEEXCLUSIVE) {
+            s_Emu.reported[i] = 1;
+            g.modes[i].flags &= ~rw::VIDEOMODEEXCLUSIVE;
+        }
+    }
+    // the list was allocated with one spare entry (BuildExeModeList)
+    auto& m       = g.modes[g.numModes];
+    m             = g.modes[0];
+    m.mode.Width  = (UINT)s_Emu.w;
+    m.mode.Height = (UINT)s_Emu.h;
+    m.flags       = 0;
+    s_Emu.reported[g.numModes] = 1;
+    s_Emu.synthIdx = g.numModes++;
+}
+#endif
+
 // W: the exe's video mode list (0x7F7540), whose ORDER the game's settings file depends on (VideoMode.cpp picks by index).
 // librw lists X8R8G8B8 then R5G6B5 and skips A2R10G10B10; the exe lists R5G6B5, X8R8G8B8, A2R10G10B10 (formats at 0x884788). Both keep mode 0 =
 // the desktop mode as a windowed mode and merge entries with equal width/height/format keeping the first position and the highest refresh rate.
@@ -99,7 +198,7 @@ void BuildExeModeList() {
         return;
     }
     static const D3DFORMAT kFormats[] = { D3DFMT_R5G6B5, D3DFMT_X8R8G8B8, D3DFMT_A2R10G10B10 };
-    int total = 1;
+    int total = 1 + 1; // +1: spare entry for the windowed-run synthetic mode (WindowedEmuAfterModeList)
     for (const D3DFORMAT f : kFormats) {
         total += (int)g.d3d9->GetAdapterModeCount((UINT)g.adapter, f);
     }
@@ -114,6 +213,10 @@ void BuildExeModeList() {
         break;
     default:
         g.numModes = 0;
+#ifdef NOTSA_STANDALONE_RUN
+        s_Emu.synthIdx = -1;
+        s_Emu.reported.clear();
+#endif
         return;
     }
     for (const D3DFORMAT f : kFormats) {
@@ -139,6 +242,7 @@ void BuildExeModeList() {
         }
     }
 #ifdef NOTSA_STANDALONE_RUN
+    WindowedEmuAfterModeList();
     notsa::standalone::Fixups::Log("rw video modes: %d (desktop %ux%u fmt %d)", g.numModes, g.modes[0].mode.Width, g.modes[0].mode.Height, (int)g.modes[0].mode.Format);
     for (int i = 0; i < g.numModes && i < 64; i++) {
         notsa::standalone::Fixups::Log("  mode %d: %ux%u fmt %d rr %u flags %d", i, g.modes[i].mode.Width, g.modes[i].mode.Height, (int)g.modes[i].mode.Format, g.modes[i].mode.RefreshRate, (int)g.modes[i].flags);
@@ -202,6 +306,11 @@ bool ApplyModeToDevice(int idx) {
     auto&       p    = g.present;
     D3DFORMAT   back, depth;
     ChooseFormats(mode.mode.Format, !excl, back, depth);
+#ifdef NOTSA_STANDALONE_RUN
+    if (s_Emu.Excl(idx)) { // windowed run: the "exclusive" mode is a window of the mode's size (client area == back buffer)
+        WindowedEmuPlaceWindow((int)mode.mode.Width, (int)mode.mode.Height);
+    }
+#endif
 
     if (excl) {
         if (!s_WindowedStyle) {
@@ -403,6 +512,11 @@ RwVideoMode* RwEngineGetVideoModeInfo(RwVideoMode* modeinfo, RwInt32 modeIndex) 
     modeinfo->height  = vm.height;
     modeinfo->depth   = vm.depth;
     modeinfo->flags   = (RwVideoModeFlag)vm.flags;
+#ifdef NOTSA_STANDALONE_RUN
+    if (s_Emu.Excl(modeIndex)) { // windowed run: the game still sees an exclusive mode
+        modeinfo->flags = (RwVideoModeFlag)(modeinfo->flags | rwVIDEOMODEEXCLUSIVE);
+    }
+#endif
     modeinfo->refRate = (RwInt32)dm.RefreshRate;
     modeinfo->format  = RasterFormatOf(dm.Format);
     return modeinfo;
@@ -412,8 +526,27 @@ RwBool RwEngineSetVideoMode(RwInt32 modeIndex) {
     if (!Is(rw::Engine::Opened) || !rw::engine || !ModeIndexValid(modeIndex)) {
         return FALSE;
     }
-    return rw::Engine::setVideoMode(modeIndex) ? TRUE : FALSE;
+    const bool ok = rw::Engine::setVideoMode(modeIndex);
+#ifdef NOTSA_STANDALONE_RUN
+    if (ok && s_Emu.Excl(modeIndex)) { // windowed run: size the window now, the device is created windowed with its client size at RwEngineStart
+        WindowedEmuPlaceWindow((int)d3d9Globals.modes[modeIndex].mode.Width, (int)d3d9Globals.modes[modeIndex].mode.Height);
+    }
+#endif
+    return ok ? TRUE : FALSE;
 }
+
+#ifdef NOTSA_STANDALONE_RUN
+// NOTSA_STANDALONE_WINDOWED (see WindowedEmu above). Index of the synthetic WxH video mode to select, or -1 when the windowed run is off / impossible.
+int NotsaRwWindowedVideoMode(void) {
+    WindowedEmuInit();
+    return s_Emu.Active() ? s_Emu.synthIdx : -1;
+}
+// true when NOTSA_STANDALONE_WINDOWED is active: the window keeps its caption (WinMain) and is shown without stealing the focus
+bool NotsaRwWindowedRun(void) {
+    WindowedEmuInit();
+    return s_Emu.Active();
+}
+#endif
 
 //--------------------------------------------------------------------------------------------------
 // RwD3D9 device-level API

@@ -325,6 +325,11 @@ RwInt32 RpMaterialSetStreamRightsCallBack(RwUInt32 pluginID, RwPluginDataChunkRi
 void     NotsaRwPlatform_OnEngineStarted();
 void     NotsaRwPlatform_OnEngineStopping();
 unsigned NotsaRwPlatform_DeviceResetCount();
+#ifdef NOTSA_STANDALONE_RUN
+// NOTSA_STANDALONE_WINDOWED=<W>x<H> (engine.cpp; run build only): index of the synthetic WxH video mode to select (-1 = off); true = windowed run active
+int  NotsaRwWindowedVideoMode(void);
+bool NotsaRwWindowedRun(void);
+#endif
 
 
 

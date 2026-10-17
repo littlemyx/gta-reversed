@@ -6729,7 +6729,7 @@ CVector TransformPointOriginal(const CMatrix& m, const CVector& v) {
 }
 
 // Used by `PreRender` to calculate the forward speed (to decide whether to add the exhaust/splash particles)
-auto& s_AutomobileSpeedDivisor = StaticRef<float>(0xC1BFF0);
+NOTSA_GLOBAL(s_AutomobileSpeedDivisor, 0xC1BFF0, (float), { std::bit_cast<float>(0x3BB60B6Au) }); // (1 / 3.6) / 50, the exe's CRT static initializer at 0x853520
 
 constexpr auto PRERENDER_ONE_THIRD         = std::bit_cast<float>(0x3EAAAAABu); // 0x859040
 constexpr auto PRERENDER_COMBINE_TILT_MAX  = std::bit_cast<float>(0x3F060A92u); // 0x8D31EC - 30 degrees

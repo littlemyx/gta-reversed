@@ -21,7 +21,7 @@ const float fShapeLength = 0.4f; // 0x8D3944
 const float fShapeTime = 0.05f; // 0x8D3948
 
 NOTSA_GLOBAL(fRangeMult, 0x8D394C, (float), { 0.6f }); // 0.6f
-auto& fTimeMult = StaticRef<float>(0xC279CC); // 1.2f / CBoat::WAKE_LIFETIME
+NOTSA_GLOBAL(fTimeMult, 0xC279CC, (float), { std::bit_cast<float>(0x3C03126Fu) }); // 1.2f / CBoat::WAKE_LIFETIME = 0.008f (the exe's CRT static initializer at 0x8540B0)
 
 NOTSA_GLOBAL(nWakeSkipCounters, 0xC279A4, (int16[4]), {});
 NOTSA_GLOBAL(nWakeSkipCounterVertex, 0xC279AC, (int16[4]), {});

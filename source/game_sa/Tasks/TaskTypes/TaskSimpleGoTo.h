@@ -19,7 +19,7 @@ public:
         uint8 m_GoToFlags;
     };
 
-    static inline auto& ms_fLookAtThresholdDotProduct = StaticRef<float>(0xC18D48);
+    static inline NOTSA_GLOBAL(ms_fLookAtThresholdDotProduct, 0xC18D48, (float), { std::bit_cast<float>(0x3F6C835Eu) }); // cos(22.5 deg), the exe's CRT static initializer at 0x852840
 
 public:
     CTaskSimpleGoTo(eMoveState moveState, const CVector& targetPoint, float fRadius);

@@ -75,13 +75,13 @@ static NOTSA_GLOBAL(s_BikeWheelStates, 0xC1C26C, (std::array<tWheelState, 2>), {
 static NOTSA_GLOBAL(s_BikeWheelThrust, 0xC1C27C, (float), {});
 
 // 0xC1C818 - Traction scale used by `ProcessControl`, initialised by the CRT static initializer at 0x853600 to `(1 / 50^2) * 10` ~= 0.004 (0x3B83126E) (named by hand)
-static auto& s_BikeTractionScale = StaticRef<float>(0xC1C818);
+static NOTSA_GLOBAL(s_BikeTractionScale, 0xC1C818, (float), { std::bit_cast<float>(0x3B83126Eu) });
 
 // 0x96914C - Handling cheat type passed to `CalculateDriveAcceleration` by `ProcessControl` (named by hand, never written => always `CHEAT_HANDLING_NONE`)
 static NOTSA_GLOBAL_ALIAS(s_BikeHandlingCheat, 0x96914C, (uint8), *reinterpret_cast<uint8*>(reinterpret_cast<uint8*>(&CCheat::m_aCheatsActive) + 28));
 
 // 0xC1C81C - Divisor of the forward speed when deciding whether to emit exhaust particles in `PreRender` (named by hand, initialised by the CRT static initializer at 0x853620 to `(1 / 3.6) / 50`, never written to afterwards)
-static auto& s_BikeExhaustSpeedDivisor = StaticRef<float>(0xC1C81C);
+static NOTSA_GLOBAL(s_BikeExhaustSpeedDivisor, 0xC1C81C, (float), { std::bit_cast<float>(0x3BB60B6Au) });
 
 // 0xC1C804 - Squared (sign preserved) steering input, written by `ProcessControlInputs` (named by hand, no known readers)
 static NOTSA_GLOBAL(s_BikeSteerAngleSq, 0xC1C804, (float), {});

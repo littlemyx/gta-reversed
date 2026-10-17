@@ -2,8 +2,8 @@
 
 class CGamma {
 public:
-    inline static auto& ms_SavedGamma = StaticRef<D3DGAMMARAMP>(0xC8D4C8);
-    inline static auto& ms_GammaTable = StaticRef<D3DGAMMARAMP>(0xC8DAC8);
+    inline static NOTSA_GLOBAL(ms_SavedGamma, 0xC8D4C8, (D3DGAMMARAMP), {});
+    inline static NOTSA_GLOBAL(ms_GammaTable, 0xC8DAC8, (D3DGAMMARAMP), {});
 
 public:
     bool  m_IsEnabled;
@@ -20,5 +20,5 @@ public:
 
 VALIDATE_SIZE(CGamma, 0x10);
 
-inline static auto& gbGammaChanged = StaticRef<bool>(0xC920C8);
-inline static auto& gamma          = StaticRef<CGamma>(0xC92134);
+NOTSA_GLOBAL_HDR(gbGammaChanged, 0xC920C8, (bool), {});
+NOTSA_GLOBAL_HDR(gamma, 0xC92134, (CGamma), {});

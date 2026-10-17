@@ -1362,7 +1362,7 @@ void CPathFind::UpdateStreaming(bool bForceStreaming) {
     }
 
     // Mark paths around some specific mission vehicles
-    for (const auto& veh : NOTSA_EXE_OR(GetVehiclePool()->GetAllValid() | rngv::reverse, GetVehiclePool()->GetAllValid())) {
+    for (const auto& veh : NOTSA_EXE_OR(GetVehiclePool()->GetAllValidReverse(), GetVehiclePool()->GetAllValid())) {
         if (!veh.IsMissionVehicle()) {
             continue;
         }

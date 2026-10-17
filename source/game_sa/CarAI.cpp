@@ -389,7 +389,7 @@ float CCarAI::GetCarToParkAtCoors(CVehicle* veh, const CVector& coors) {
 void CCarAI::MakeWayForCarWithSiren(CVehicle* carWithSiren) {
     float      carWithSirenSpeed2D;
     const auto carWithSirenMoveDir2D = CVector2D{ carWithSiren->GetMoveSpeed() }.Normalized(&carWithSirenSpeed2D);
-    for (auto& v : NOTSA_EXE_OR(GetVehiclePool()->GetAllValid() | rngv::reverse, GetVehiclePool()->GetAllValid())) {
+    for (auto& v : NOTSA_EXE_OR(GetVehiclePool()->GetAllValidReverse(), GetVehiclePool()->GetAllValid())) {
         if (!v.IsAutomobile() && !v.IsBike()) {
             continue;
         }
@@ -1329,7 +1329,7 @@ void CCarAI::UpdateCarAI(CVehicle* veh) {
         if (notsa::contains({ STATUS_SIMPLE, STATUS_PHYSICS }, veh->GetStatus()) && ap->m_nCarMission == MISSION_CRUISE && veh->IsSubAutomobile()) {
             if (CPopCycle::m_bCurrentZoneIsGangArea) {
                 ap->SetCruiseSpeed(10); // Start at 10, go down to min 1
-                for (auto& p : NOTSA_EXE_OR(GetPedPool()->GetAllValid() | rngv::reverse, GetPedPool()->GetAllValid())) {
+                for (auto& p : NOTSA_EXE_OR(GetPedPool()->GetAllValidReverse(), GetPedPool()->GetAllValid())) {
                     if (!IsPedTypeGang(p.m_nPedType) && p.m_nPedType != PED_TYPE_DEALER) {
                         continue;
                     }

@@ -280,7 +280,7 @@ void CCheat::BlackCarsCheat() {
 
 // 0x439d80
 void CCheat::BlowUpCarsCheat() {
-    for (auto& veh : NOTSA_EXE_OR(GetVehiclePool()->GetAllValid() | rngv::reverse, GetVehiclePool()->GetAllValid())) {
+    for (auto& veh : NOTSA_EXE_OR(GetVehiclePool()->GetAllValidReverse(), GetVehiclePool()->GetAllValid())) {
         veh.BlowUpCar(nullptr, false);
     }
 }
@@ -358,7 +358,7 @@ void CCheat::EverybodyAttacksPlayerCheat() {
     Toggle(CHEAT_HAVE_ABOUNTY_ON_YOUR_HEAD);
     if (IsActive(CHEAT_HAVE_ABOUNTY_ON_YOUR_HEAD)) {
         auto* const player = FindPlayerPed();
-        for (auto& ped : NOTSA_EXE_OR(GetPedPool()->GetAllValid() | rngv::reverse, GetPedPool()->GetAllValid())) {
+        for (auto& ped : NOTSA_EXE_OR(GetPedPool()->GetAllValidReverse(), GetPedPool()->GetAllValid())) {
             if (ped.IsPlayer())
                 continue;
 
@@ -529,7 +529,7 @@ void CCheat::MayhemCheat() {
             CPedType::SetPedTypeAsAcquaintance(ACQUAINTANCE_HATE, static_cast<ePedType>(pedType), 0xFFFFF);
         }
 
-        for (auto& ped : NOTSA_EXE_OR(GetPedPool()->GetAllValid() | rngv::reverse, GetPedPool()->GetAllValid())) {
+        for (auto& ped : NOTSA_EXE_OR(GetPedPool()->GetAllValidReverse(), GetPedPool()->GetAllValid())) {
             if (ped.IsPlayer())
                 continue;
 
@@ -552,7 +552,7 @@ void CCheat::MayhemCheat() {
         // todo: currently fixes only save game
         std::swap(CPedType::ms_apPedTypes, CPedType::ms_apPedTypesOld); // straightforward solution
 
-        for (auto& ped : NOTSA_EXE_OR(GetPedPool()->GetAllValid() | rngv::reverse, GetPedPool()->GetAllValid())) {
+        for (auto& ped : NOTSA_EXE_OR(GetPedPool()->GetAllValidReverse(), GetPedPool()->GetAllValid())) {
             if (ped.IsPlayer())
                 continue;
 

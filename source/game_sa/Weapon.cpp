@@ -1641,7 +1641,7 @@ CEntity* CWeapon::PickTargetForHeatSeekingMissile(CVector origin, CVector direct
     float minRating  = FLT_MAX;
     CEntity* minRated{};
     const auto point = origin + direction * 5.f;
-    for (auto& veh : NOTSA_EXE_OR(GetVehiclePool()->GetAllValid() | rngv::reverse, GetVehiclePool()->GetAllValid())) {
+    for (auto& veh : NOTSA_EXE_OR(GetVehiclePool()->GetAllValidReverse(), GetVehiclePool()->GetAllValid())) {
         if (&veh == ignoreEntity) {
             continue;
         }

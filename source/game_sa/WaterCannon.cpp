@@ -88,7 +88,7 @@ void CWaterCannon::PushPeds() {
         bbox.m_vecMax.z = std::max(bbox.m_vecMax.z, secPos.z);
     }
 
-    for (auto& ped : NOTSA_EXE_OR(GetPedPool()->GetAllValid() | rngv::reverse, GetPedPool()->GetAllValid())) {
+    for (auto& ped : NOTSA_EXE_OR(GetPedPool()->GetAllValidReverse(), GetPedPool()->GetAllValid())) {
         CVector pedPosn = ped.GetPosition();
         if (!bbox.IsPointWithin(pedPosn))
             continue;

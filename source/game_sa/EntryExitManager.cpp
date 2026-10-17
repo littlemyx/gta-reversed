@@ -49,7 +49,7 @@ void CEntryExitManager::Init() {
 
 // 0x440B90
 void CEntryExitManager::Shutdown() {
-    for (auto& enex : NOTSA_EXE_OR(mp_poolEntryExits->GetAllValid() | rngv::reverse, mp_poolEntryExits->GetAllValid())) {
+    for (auto& enex : NOTSA_EXE_OR(mp_poolEntryExits->GetAllValidReverse(), mp_poolEntryExits->GetAllValid())) {
         mp_QuadTree->DeleteItem(&enex);
     }
 
@@ -64,7 +64,7 @@ void CEntryExitManager::Shutdown() {
 
 // 0x440C40
 void CEntryExitManager::ShutdownForRestart() {
-    for (auto&& [i, enex] : NOTSA_EXE_OR(mp_poolEntryExits->GetAllValidWithIndex() | rngv::reverse, mp_poolEntryExits->GetAllValidWithIndex())) {
+    for (auto&& [i, enex] : NOTSA_EXE_OR(mp_poolEntryExits->GetAllValidWithIndexReverse(), mp_poolEntryExits->GetAllValidWithIndex())) {
         enex.bEnableAccess = true;
         if (enex.bDeleteEnex) {
             DeleteOne(i);
@@ -300,7 +300,7 @@ int32 CEntryExitManager::FindNearestEntryExit(const CVector2D& position, float r
 // 0x43F180
 void CEntryExitManager::EnableBurglaryHouses(bool enable) {
     ms_bBurglaryHousesEnabled = enable;
-    for (auto& enex : NOTSA_EXE_OR(mp_poolEntryExits->GetAllValid() | rngv::reverse, mp_poolEntryExits->GetAllValid())) {
+    for (auto& enex : NOTSA_EXE_OR(mp_poolEntryExits->GetAllValidReverse(), mp_poolEntryExits->GetAllValid())) {
         enex.bBurglaryAccess = enable;
     }
 }
@@ -314,7 +314,7 @@ void CEntryExitManager::GetPositionRelativeToOutsideWorld(CVector& pos) {
 
 // 0x43F0A0
 void CEntryExitManager::PostEntryExitsCreation() {
-    for (auto& enex : NOTSA_EXE_OR(mp_poolEntryExits->GetAllValid() | rngv::reverse, mp_poolEntryExits->GetAllValid())) {
+    for (auto& enex : NOTSA_EXE_OR(mp_poolEntryExits->GetAllValidReverse(), mp_poolEntryExits->GetAllValid())) {
         if (enex.bCreateLinkedPair && !enex.m_pLink) {
             LinkEntryExit(&enex);
         }
@@ -345,7 +345,7 @@ void CEntryExitManager::LinkEntryExit(CEntryExit* enex) {
 
 // 0x43EFD0
 int32 CEntryExitManager::GetEntryExitIndex(const char* name, uint16 enabledFlags, uint16 disabledFlags) {
-    for (auto&& [i, enex] : NOTSA_EXE_OR(mp_poolEntryExits->GetAllValidWithIndex() | rngv::reverse, mp_poolEntryExits->GetAllValidWithIndex())) {
+    for (auto&& [i, enex] : NOTSA_EXE_OR(mp_poolEntryExits->GetAllValidWithIndexReverse(), mp_poolEntryExits->GetAllValidWithIndex())) {
         // Remember: cast to `uint8` == mask by 0xFF
         if ((uint8)(enex.m_nFlags & enabledFlags) == (uint8)enabledFlags
             && (uint8)(enex.m_nFlags & disabledFlags) == 0) {

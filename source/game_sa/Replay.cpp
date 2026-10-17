@@ -282,11 +282,11 @@ void CReplay::Display() {
 
 // 0x45D430
 void CReplay::MarkEverythingAsNew() {
-    for (auto& ped : NOTSA_EXE_OR(GetPedPool()->GetAllValid() | rngv::reverse, GetPedPool()->GetAllValid())) {
+    for (auto& ped : NOTSA_EXE_OR(GetPedPool()->GetAllValidReverse(), GetPedPool()->GetAllValid())) {
         ped.bHasAlreadyBeenRecorded = false;
     }
 
-    for (auto& veh : NOTSA_EXE_OR(GetVehiclePool()->GetAllValid() | rngv::reverse, GetVehiclePool()->GetAllValid())) {
+    for (auto& veh : NOTSA_EXE_OR(GetVehiclePool()->GetAllValidReverse(), GetVehiclePool()->GetAllValid())) {
         veh.vehicleFlags.bHasAlreadyBeenRecorded = false;
     }
 }
@@ -305,11 +305,11 @@ void CReplay::EmptyReplayBuffer() {
 
 // 0x45D390
 void CReplay::EmptyPedsAndVehiclePools_NoDestructors() {
-    for (auto& veh : NOTSA_EXE_OR(GetVehiclePool()->GetAllValid() | rngv::reverse, GetVehiclePool()->GetAllValid())) {
+    for (auto& veh : NOTSA_EXE_OR(GetVehiclePool()->GetAllValidReverse(), GetVehiclePool()->GetAllValid())) {
         CWorld::Remove(&veh);
     }
 
-    for (auto& ped : NOTSA_EXE_OR(GetPedPool()->GetAllValid() | rngv::reverse, GetPedPool()->GetAllValid())) {
+    for (auto& ped : NOTSA_EXE_OR(GetPedPool()->GetAllValidReverse(), GetPedPool()->GetAllValid())) {
         CWorld::Remove(&ped);
 
         if (auto* const shadow = ped.m_pShadowData) {

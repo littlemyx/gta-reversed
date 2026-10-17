@@ -550,7 +550,7 @@ void CPlane::SetGearDown() {
 // 0x6CCA50
 uint32 CPlane::CountPlanesAndHelis() {
     uint32 counter = 0;
-    for (auto& vehicle : NOTSA_EXE_OR(GetVehiclePool()->GetAllValid() | rngv::reverse, GetVehiclePool()->GetAllValid())) {
+    for (auto& vehicle : NOTSA_EXE_OR(GetVehiclePool()->GetAllValidReverse(), GetVehiclePool()->GetAllValid())) {
         if (vehicle.IsSubHeli() || vehicle.IsSubPlane()) {
             counter++;
         }

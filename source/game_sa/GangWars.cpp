@@ -116,7 +116,7 @@ void CGangWars::AddKillToProvocation(ePedType pedType) {
 bool CGangWars::AttackWaveOvercome() {
     auto pedsNearPlayer = 0u, pedsLiving = 0u;
 
-    for (auto& ped : NOTSA_EXE_OR(GetPedPool()->GetAllValid() | rngv::reverse, GetPedPool()->GetAllValid())) {
+    for (auto& ped : NOTSA_EXE_OR(GetPedPool()->GetAllValidReverse(), GetPedPool()->GetAllValid())) {
         if (!ped.bPartOfAttackWave)
             continue;
 
@@ -193,7 +193,7 @@ void CGangWars::ClearSpecificZonesToTriggerGangWar() {
 
 // 0x4444B0
 void CGangWars::ClearTheStreets() {
-    for (auto& ped : NOTSA_EXE_OR(GetPedPool()->GetAllValid() | rngv::reverse, GetPedPool()->GetAllValid())) {
+    for (auto& ped : NOTSA_EXE_OR(GetPedPool()->GetAllValidReverse(), GetPedPool()->GetAllValid())) {
         if (ped.IsPlayer() || !ped.IsCivilian())
             continue;
 
@@ -740,7 +740,7 @@ bool CGangWars::PickZoneToAttack() {
 
 // 0x445E20
 void CGangWars::ReleaseCarsInAttackWave() {
-    for (auto& vehicle : NOTSA_EXE_OR(GetVehiclePool()->GetAllValid() | rngv::reverse, GetVehiclePool()->GetAllValid())) {
+    for (auto& vehicle : NOTSA_EXE_OR(GetVehiclePool()->GetAllValidReverse(), GetVehiclePool()->GetAllValid())) {
         if (vehicle.vehicleFlags.bPartOfAttackWave) {
             vehicle.vehicleFlags.bPartOfAttackWave = false;
             vehicle.SetVehicleCreatedBy(eVehicleCreatedBy::RANDOM_VEHICLE);

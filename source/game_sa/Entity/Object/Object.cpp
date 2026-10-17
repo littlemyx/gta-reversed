@@ -1245,7 +1245,7 @@ void CObject::TryToFreeUpTempObjects(int32 numObjects) {
     if (numObjects <= 0)
         return;
 
-    for (auto& obj : NOTSA_EXE_OR(GetObjectPool()->GetAllValid() | rngv::reverse, GetObjectPool()->GetAllValid())) {
+    for (auto& obj : NOTSA_EXE_OR(GetObjectPool()->GetAllValidReverse(), GetObjectPool()->GetAllValid())) {
         if (obj.IsTemporary() && !obj.IsVisible()) {
             CWorld::Remove(&obj);
             delete &obj;

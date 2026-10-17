@@ -3936,7 +3936,7 @@ void CVehicle::InflictDamage(CEntity* damager, eWeaponType weapon, float intensi
 
 // 0x6D82F0
 void CVehicle::KillPedsGettingInVehicle() {
-    for (auto& ped : NOTSA_EXE_OR(GetPedPool()->GetAllValid() | rngv::reverse, GetPedPool()->GetAllValid())) {
+    for (auto& ped : NOTSA_EXE_OR(GetPedPool()->GetAllValidReverse(), GetPedPool()->GetAllValid())) {
         if (ped.bInVehicle || ped.bIsStanding) {
             continue;
         }

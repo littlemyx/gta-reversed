@@ -398,6 +398,34 @@ public:
             | rngv::transform([](auto&& p) -> R& { return std::get<1>(p); });
     }
 
+    // Backwards walk over the used slots like the exe's pool loops (`for (i = size - 1; i >= 0; i--) if (slot i is used) ...`): the used flag of a slot is read when the walk ARRIVES at it,
+    // so the loop body may delete objects. `GetAllValid() | rngv::reverse` may not: the filter view caches its first valid element, and when the loop deletes it the reverse walk runs
+    // past slot 0 (reads pool memory before the flags: crash in CCarCtrl::RemoveDistantCars on a new game, NOTSA-AUDIT regression found by PT-MISSION)
+    template<typename R, typename Fn>
+    struct ReverseValid {
+        CPool* pool;
+        struct Sentinel {};
+        struct Iterator {
+            CPool*  pool;
+            int32_t idx;
+            Iterator(CPool* p, int32_t i) : pool(p), idx(i) { Settle(); }
+            void Settle() { while (idx >= 0 && pool->IsFreeSlotAtIndex((size_t)idx)) { --idx; } }
+            decltype(auto) operator*() const { return Fn{}(idx, *(R*)(void*)&pool->m_Storage[idx]); }
+            Iterator& operator++() { --idx; Settle(); return *this; }
+            bool operator==(Sentinel) const { return idx < 0; }
+        };
+        Iterator begin() const { return Iterator{ pool, (int32_t)pool->m_Capacity - 1 }; }
+        Sentinel end() const { return {}; }
+    };
+    struct ValidObjFn { template<class U> U& operator()(int32_t, U& o) const { return o; } };
+    struct ValidIdxFn { template<class U> std::tuple<int32, U&> operator()(int32_t i, U& o) const { return { i, o }; } };
+
+    template<typename R = T>
+    auto GetAllValidReverse() { return ReverseValid<R, ValidObjFn>{ this }; }
+
+    template<typename R = T>
+    auto GetAllValidWithIndexReverse() { return ReverseValid<R, ValidIdxFn>{ this }; }
+
 protected:
     // Debug-only poisoning: the exe leaves freed/new object memory untouched, so stale reads (benign there) must stay benign in the run build
     void DoFillDebug(byte fill, StorageType* at = nullptr) {

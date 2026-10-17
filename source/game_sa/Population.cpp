@@ -775,7 +775,7 @@ int32 CPopulation::FindNumberOfPedsWeCanPlaceOnBenches() {
 
 // 0x6122C0
 void CPopulation::RemoveAllRandomPeds() {
-    for (auto& ped : NOTSA_EXE_OR(GetPedPool()->GetAllValid() | rngv::reverse, GetPedPool()->GetAllValid())) {
+    for (auto& ped : NOTSA_EXE_OR(GetPedPool()->GetAllValidReverse(), GetPedPool()->GetAllValid())) {
         if (ped.CanBeDeleted()) {
             RemovePed(&ped);
         }
@@ -1489,7 +1489,7 @@ bool CPopulation::AddPedAtAttractor(eModelID modelIndex, C2dEffectPedAttractor* 
 // NOTSA: Added option to use `ePedType::NONE` as valid value to ignore the ped type (this way you can get the distance of the nearest ped of any type)
 float CPopulation::FindDistanceToNearestPedOfType(ePedType pedType, CVector posn) {
     float closest3DSq = sq(10'000'000.f);
-    for (CPed& ped : NOTSA_EXE_OR(GetPedPool()->GetAllValid() | rngv::reverse, GetPedPool()->GetAllValid())) {
+    for (CPed& ped : NOTSA_EXE_OR(GetPedPool()->GetAllValidReverse(), GetPedPool()->GetAllValid())) {
         if (pedType != PED_TYPE_NONE /*notsa*/ && ped.m_nPedType != pedType) {
             continue;
         }
@@ -2411,7 +2411,7 @@ void CPopulation::ManageAllPopulation() {
 
     const auto& center = FindPlayerCentreOfWorld();
 
-    for (auto& obj : NOTSA_EXE_OR(GetObjectPool()->GetAllValid() | rngv::reverse, GetObjectPool()->GetAllValid())) {
+    for (auto& obj : NOTSA_EXE_OR(GetObjectPool()->GetAllValidReverse(), GetObjectPool()->GetAllValid())) {
         if (&obj != objPlyrIsHolding) {
             ManageObject(&obj, center);
         }
@@ -2458,7 +2458,7 @@ void CPopulation::ManagePopulation() {
     {
         ZoneScopedN("Manage Peds");
         auto* pool = GetPedPool();
-        for (auto& ped : NOTSA_EXE_OR(GetPedPool()->GetAllValid() | rngv::reverse, GetPedPool()->GetAllValid())) {
+        for (auto& ped : NOTSA_EXE_OR(GetPedPool()->GetAllValidReverse(), GetPedPool()->GetAllValid())) {
             ManagePed(&ped, centre);
         }
     }
@@ -2484,7 +2484,7 @@ void CPopulation::RemovePedsIfThePoolGetsFull() {
 
 // 0x616420
 void CPopulation::ConvertAllObjectsToDummyObjects() {
-    for (auto& obj : NOTSA_EXE_OR(GetObjectPool()->GetAllValid() | rngv::reverse, GetObjectPool()->GetAllValid())) {
+    for (auto& obj : NOTSA_EXE_OR(GetObjectPool()->GetAllValidReverse(), GetObjectPool()->GetAllValid())) {
         if (obj.m_nObjectType != OBJECT_GAME) {
             continue;
         }

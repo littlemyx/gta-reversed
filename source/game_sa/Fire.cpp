@@ -324,7 +324,7 @@ void CFire::ProcessFire() {
     }
 
     if (CGeneral::GetRandomNumber() % 32 == 0) {
-        for (auto& veh : NOTSA_EXE_OR(GetVehiclePool()->GetAllValid() | rngv::reverse, GetVehiclePool()->GetAllValid())) { // NOTSA: Original loop was backwards [not that it matters] (it does: the order decides the fire slots / RNG use; the run build iterates backwards like the exe, 0x53A8D2; NOTSA-AUDIT)
+        for (auto& veh : NOTSA_EXE_OR(GetVehiclePool()->GetAllValidReverse(), GetVehiclePool()->GetAllValid())) { // NOTSA: Original loop was backwards [not that it matters] (it does: the order decides the fire slots / RNG use; the run build iterates backwards like the exe, 0x53A8D2; NOTSA-AUDIT)
             if (DistanceBetweenPoints(m_Position, veh.GetPosition()) >= 2.0f)
                 continue;
 
@@ -339,7 +339,7 @@ void CFire::ProcessFire() {
     }
 
     if (CGeneral::GetRandomNumber() % 4 == 0) {
-        for (auto& obj : NOTSA_EXE_OR(GetObjectPool()->GetAllValid() | rngv::reverse, GetObjectPool()->GetAllValid())) { // NOTSA: Original loop was backwards [not that it matters] (run build: backwards like the exe, 0x53AA37; NOTSA-AUDIT)
+        for (auto& obj : NOTSA_EXE_OR(GetObjectPool()->GetAllValidReverse(), GetObjectPool()->GetAllValid())) { // NOTSA: Original loop was backwards [not that it matters] (run build: backwards like the exe, 0x53AA37; NOTSA-AUDIT)
             if (DistanceBetweenPoints(m_Position, obj.GetPosition()) >= 3.0f)
                 continue;
 

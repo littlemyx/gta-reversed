@@ -1399,7 +1399,7 @@ void CWorld::RemoveFallenCars() {
 
 // 0x5660B0
 void CWorld::UseDetonator(CPed* creator) {
-    for (auto& veh : NOTSA_EXE_OR(GetVehiclePool()->GetAllValid() | rngv::reverse, GetVehiclePool()->GetAllValid())) {
+    for (auto& veh : NOTSA_EXE_OR(GetVehiclePool()->GetAllValidReverse(), GetVehiclePool()->GetAllValid())) {
         if (veh.m_nBombOnBoard != 3) {
             continue;
         }
@@ -1628,7 +1628,7 @@ void CWorld::CallOffChaseForArea(float minX, float minY, float maxX, float maxY)
 
 // 0x566C10
 void CWorld::StopAllLawEnforcersInTheirTracks() {
-    for (auto& veh : NOTSA_EXE_OR(GetVehiclePool()->GetAllValid() | rngv::reverse, GetVehiclePool()->GetAllValid())) {
+    for (auto& veh : NOTSA_EXE_OR(GetVehiclePool()->GetAllValidReverse(), GetVehiclePool()->GetAllValid())) {
         if (veh.vehicleFlags.bIsLawEnforcer) {
             veh.m_vecMoveSpeed = CVector{};
         }
@@ -1639,7 +1639,7 @@ void CWorld::StopAllLawEnforcersInTheirTracks() {
 CVehicle* CWorld::FindUnsuspectingTargetCar(CVector point, CVector playerPosn) {
     float nearestDist2D = std::numeric_limits<float>::max();
     CVehicle* nearestVeh{};
-    for (auto& veh : NOTSA_EXE_OR(GetVehiclePool()->GetAllValid() | rngv::reverse, GetVehiclePool()->GetAllValid())) {
+    for (auto& veh : NOTSA_EXE_OR(GetVehiclePool()->GetAllValidReverse(), GetVehiclePool()->GetAllValid())) {
         if (!veh.IsCreatedBy(eVehicleCreatedBy::RANDOM_VEHICLE) || !veh.IsSubAutomobile()) {
             continue;
         }
@@ -1671,7 +1671,7 @@ CVehicle* CWorld::FindUnsuspectingTargetCar(CVector point, CVector playerPosn) {
 CPed* CWorld::FindUnsuspectingTargetPed(CVector point, CVector playerPosn) {
     float nearestDist2D = std::numeric_limits<float>::max();
     CPed* nearestPed{};
-    for (auto& ped : NOTSA_EXE_OR(GetPedPool()->GetAllValid() | rngv::reverse, GetPedPool()->GetAllValid())) {
+    for (auto& ped : NOTSA_EXE_OR(GetPedPool()->GetAllValidReverse(), GetPedPool()->GetAllValid())) {
         if (!ped.IsCreatedBy(ePedCreatedBy::PED_GAME) || !ped.IsAlive()) {
             continue;
         }

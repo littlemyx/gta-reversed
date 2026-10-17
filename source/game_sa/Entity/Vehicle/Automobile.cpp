@@ -4099,7 +4099,13 @@ void CAutomobile::ReduceHornCounter() {
     }
 }
 
+#ifdef NOTSA_GLOBALS_DETACHED
+namespace { NOTSA_GLOBAL_SYNTH(k_C1BFD8, 0xC1BFD8, (RwTexture*), {}); } // the plate material's original texture, between CustomCarPlate_BeforeRenderingStart and _AfterRenderingStop
+static RwTexture*& renderLicensePlateTexture{ k_C1BFD8 };
+#else
 static RwTexture*& renderLicensePlateTexture{ *(RwTexture**)0xC1BFD8 };
+#endif
+#line 4103
 
 // 0x6A2F00
 void CAutomobile::CustomCarPlate_BeforeRenderingStart(const CVehicleModelInfo& mi)

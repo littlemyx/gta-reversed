@@ -8,6 +8,8 @@
 
 NOTSA_GLOBAL_ALIAS(s_Magic1, 0xC02C14, (uint32), notsa::shared::CustomBuildingMagic1);
 NOTSA_GLOBAL_ALIAS(s_Magic2, 0xC02C18, (uint32), notsa::shared::CustomBuildingMagic2);
+namespace { NOTSA_GLOBAL_SYNTH(k_C02C20, 0xC02C20, (int32), {}); } // read only (0 by default)
+#line 9
 
 // 0x5D72E0
 bool CCustomBuildingDNPipeline::ExtraVertColourPluginAttach() {
@@ -186,7 +188,7 @@ RxPipeline* CCustomBuildingDNPipeline::CreateCustomObjPipe() {
     }
 
     auto node = RxPipelineFindNodeByName(pipeline, nodeDef->name, nullptr, nullptr);
-    if (*reinterpret_cast<int32*>(0xC02C20)) { // read only (0 by default)
+    if (NOTSA_GLOBAL_EXPR(0xC02C20, (int32), k_C02C20)) { // read only (0 by default)
         RxD3D9AllInOneSetInstanceCallBack(node, RxD3D9AllInOneGetInstanceCallBack(node));
         RxD3D9AllInOneSetReinstanceCallBack(node, CustomPipeInstanceCB);
     } else {

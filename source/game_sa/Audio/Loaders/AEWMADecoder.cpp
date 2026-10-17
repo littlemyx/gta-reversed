@@ -5,7 +5,13 @@
 #include "MemoryMgr.h"
 
 // WMA functions
+#ifdef NOTSA_GLOBALS_DETACHED
+namespace { NOTSA_GLOBAL_SYNTH(k_B6BAD8, 0xB6BAD8, (HRESULT(__stdcall*)(IUnknown*, DWORD, IWMSyncReader**)), {}); } // 0 in the image, set by InitLibrary (GetProcAddress)
+HRESULT(__stdcall*& CAEWMADecoder::WMCreateSyncReader)(IUnknown*, DWORD, IWMSyncReader**) = k_B6BAD8;
+#else
 HRESULT(__stdcall*& CAEWMADecoder::WMCreateSyncReader)(IUnknown*, DWORD, IWMSyncReader**) = *(HRESULT(__stdcall**)(IUnknown*, DWORD, IWMSyncReader**))0xb6bad8;
+#endif
+#line 9
 
 // 0x502720
 CAEWMADecoder::CAEWMADecoder(CAEDataStream* dataStream) : CAEStreamingDecoder(dataStream) {

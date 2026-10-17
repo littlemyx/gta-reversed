@@ -28,7 +28,12 @@ public:
     static inline NOTSA_GLOBAL(DisplayHelpMessage, 0x8A5F48, (uint8), { 10 });
     static inline NOTSA_GLOBAL(PlayerOnWeaponPickup, 0x97D640, (int32), {});
     static inline NOTSA_GLOBAL(StaticCamStartTime, 0x978618, (int32), {});
+#ifdef NOTSA_GLOBALS_DETACHED
+    static inline NOTSA_GLOBAL(StaticCamCoors, 0x97D660, (CVector*), {}); // a pointer variable (write only: Pickup.cpp); address mode below initialises it to the cell's own address (upstream bug, kept)
+#else
     static inline CVector* StaticCamCoors = (CVector*)0x97D660;
+#endif
+#line 32
     static inline NOTSA_GLOBAL(pPlayerVehicle, 0x97861C, (CVehicle*), {});
     static inline NOTSA_GLOBAL(bPickUpcamActivated, 0x978620, (bool), {});
     static inline NOTSA_GLOBAL(CollectedPickUpIndex, 0x978624, (uint16), {});

@@ -2053,6 +2053,51 @@
    "why": "new weather type word stored by CTimeCycle::CalcColoursForPoint at 0x5605B3 (see 0xB7CB20); raw cast in TimeCycle.cpp",
    "file": "source/game_sa/TimeCycle.cpp",
    "line": 303
+  },
+  {
+   "addr": "0xB6BAD8",
+   "type": "HRESULT(__stdcall*)(IUnknown*, DWORD, IWMSyncReader**)",
+   "size": 4,
+   "cat": "a",
+   "why": "wmvcore!WMCreateSyncReader, loaded with GetProcAddress by CAEWMADecoder::InitLibrary 0x502B80 (0 in the image; next dword after wmvCoreModule 0xB6BAD4); raw cast in AEWMADecoder.cpp",
+   "file": "source/game_sa/Audio/Loaders/AEWMADecoder.cpp",
+   "line": 10
+  },
+  {
+   "addr": "0xC02C20",
+   "type": "int32",
+   "size": 4,
+   "cat": "a",
+   "why": "read only, 0 by default (CCustomBuildingDNPipeline::CreateCustomObjPipe); raw cast in CustomBuildingDNPipeline.cpp",
+   "file": "source/game_sa/Pipelines/CustomBuilding/CustomBuildingDNPipeline.cpp",
+   "line": 9
+  },
+  {
+   "addr": "0xC1BFD8",
+   "type": "RwTexture*",
+   "size": 4,
+   "cat": "a",
+   "why": "renderLicensePlateTexture: the plate material's original texture saved by CAutomobile::CustomCarPlate_BeforeRenderingStart 0x6A2F00, restored by _AfterRenderingStop 0x6A2F30; raw cast in Automobile.cpp",
+   "file": "source/game_sa/Entity/Vehicle/Automobile.cpp",
+   "line": 4103
+  },
+  {
+   "addr": "0x97D660",
+   "type": "CVector*",
+   "size": 4,
+   "cat": "a",
+   "why": "CPickups::StaticCamCoors, a pointer variable written by CPickup::Update (never read); the repo declared it as a pointer initialised to the cell's own address; raw cast in Pickups.h",
+   "file": "source/game_sa/Pickups.h",
+   "line": 31
+  },
+  {
+   "addr": "0xA97294",
+   "type": "CMultiBuilding*",
+   "size": 4,
+   "cat": "a",
+   "why": "gpCurrentProperty, a pointer variable written by CShopping::SetCurrentProperty 0x49B1F0 (never read); the repo declared it as a pointer initialised to the cell's own address; raw cast in Shopping.h",
+   "file": "source/game_sa/Shopping.h",
+   "line": 136
   }
  ],
  "extents": {

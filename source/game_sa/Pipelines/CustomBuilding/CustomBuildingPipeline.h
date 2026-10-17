@@ -2,7 +2,7 @@
 
 class CCustomBuildingPipeline {
 public:
-    static inline auto& ObjPipeline = StaticRef<RxPipeline*>(0xC02C68);
+    static inline NOTSA_GLOBAL(ObjPipeline, 0xC02C68, (RxPipeline*), {});
 
 public:
     static void InjectHooks();

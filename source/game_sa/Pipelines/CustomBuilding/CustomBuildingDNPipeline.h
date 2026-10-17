@@ -21,9 +21,9 @@ VALIDATE_SIZE(ExtraVertColour, 12); // 24 on Android
 
 class CCustomBuildingDNPipeline {
 public:
-    static inline auto& m_fDNBalanceParam = StaticRef<float>(0x8D12C0); // 1.0f
-    static inline auto& ms_extraVertColourPluginOffset = StaticRef<uint32>(0x8D12BC); // -1
-    static inline auto& ObjPipeline = StaticRef<RxPipeline*>(0xC02C1C);
+    static inline NOTSA_GLOBAL(m_fDNBalanceParam, 0x8D12C0, (float), { 1.0f }); // 1.0f
+    static inline NOTSA_GLOBAL(ms_extraVertColourPluginOffset, 0x8D12BC, (uint32), { 0xFFFFFFFFU }); // -1
+    static inline NOTSA_GLOBAL(ObjPipeline, 0xC02C1C, (RxPipeline*), {});
     static bool& m_bCameraChange;
     static uint32& m_AtmDNWorkingIndex;
 

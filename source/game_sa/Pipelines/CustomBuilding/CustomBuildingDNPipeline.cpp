@@ -266,7 +266,7 @@ void CCustomBuildingDNPipeline::CustomPipeRenderCB(RwResEntry* resEntry, void* o
     };
 
     // The texture transform matrix used by the env map stage, only the diagonal is ever set
-    static auto& s_EnvMapTexMatrix = StaticRef<D3DMATRIX>(0xC02C28);
+    NOTSA_GLOBAL_LOCAL(s_EnvMapTexMatrix, 0xC02C28, (D3DMATRIX), {});
 
     _rwD3D9EnableClippingIfNeeded(object, type);
 

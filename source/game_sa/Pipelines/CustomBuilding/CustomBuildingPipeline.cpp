@@ -95,7 +95,7 @@ RpMaterial* CCustomBuildingPipeline::CustomPipeMaterialSetup(RpMaterial* materia
 // (0xC02C70 vs 0xC02C28) and COLORARG2 of the env stage (D3DTA_TFACTOR here, D3DTA_DIFFUSE in the DN version).
 void CCustomBuildingPipeline::CustomPipeRenderCB(RwResEntry* resEntry, void* object, RwUInt8 type, RwUInt32 rxGeoFlags) {
     // The texture transform matrix of the env map stage, only the diagonal is ever set (and it is never applied: D3DTS_TEXTURE1 isn't set here)
-    static auto& s_EnvMapTexMatrix = StaticRef<D3DMATRIX>(0xC02C70);
+    NOTSA_GLOBAL_LOCAL(s_EnvMapTexMatrix, 0xC02C70, (D3DMATRIX), {});
 
     _rwD3D9EnableClippingIfNeeded(object, type);
 

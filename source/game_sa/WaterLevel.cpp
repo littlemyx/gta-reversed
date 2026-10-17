@@ -3,7 +3,7 @@
 #include "PostEffects.h"
 #include <sstream>
 #include <numbers>
-
+NOTSA_GLOBAL_EXTERN(SIN_LUT, (std::array<float, 256>)); // Maths.cpp (owner); only named by the detached alias below, address mode keeps the StaticRef
 #define TRIANGLE_ARGS_OUT X1, Y1, P1, X2, Y2, P2, X3, Y3, P3
 
 namespace {
@@ -1618,7 +1618,7 @@ void CWaterLevel::CalculateWavesOnlyForCoordinate(
     CVector& vecNormal
 )
 {
-    static auto& SIN_LUT = StaticRef<std::array<float, 256>>(0xBB3E00);
+    static NOTSA_GLOBAL_ALIAS(SIN_LUT, 0xBB3E00, (std::array<float, 256>), ::SIN_LUT);
 
     // `neg` for negative values (INT_MIN stays negative), then (v - (v >> 31)) >> 1 & 7
     const auto Abs = [](int32 v) { return v < 0 ? (int32)(0u - (uint32)v) : v; };
@@ -1714,7 +1714,7 @@ void CWaterLevel::CalculateWavesOnlyForCoordinate2( // TODO: Original name didn'
     float smallWavesAmpl,
     float* pResultHeight
 ) {
-    static auto& SIN_LUT = StaticRef<std::array<float, 256>>(0xBB3E00);
+    static NOTSA_GLOBAL_ALIAS(SIN_LUT, 0xBB3E00, (std::array<float, 256>), ::SIN_LUT);
 
     // NOTE: The original keeps everything but the explicitly stored values on the x87 stack (extended precision) => `double`s
     x = std::abs(x);

@@ -23,13 +23,13 @@ static float SinTableEntry(int32 i) {
     return res;
 }
 
-const auto& SIN_LUT = StaticRef<std::array<float, SIN_LUT_SIZE>>(0xBB3E00) = []() {
+NOTSA_GLOBAL_INIT(SIN_LUT, 0xBB3E00, (std::array<float, SIN_LUT_SIZE>), []() {
     std::array<float, SIN_LUT_SIZE> lut{};
     for (int32 i = 0; i < (int32)SIN_LUT_SIZE; ++i) {
         lut[i] = SinTableEntry(i);
     }
     return lut;
-}();
+}());
 
 // 0x4A1340
 float CMaths::GetSinFast(float rad) {

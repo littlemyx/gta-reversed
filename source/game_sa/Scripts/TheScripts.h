@@ -344,7 +344,7 @@ enum class ScriptSavedObjectType : uint32 {
 static constexpr uint32 SCRIPT_VAR_TIMERA = 32, SCRIPT_VAR_TIMERB = 33;
 static constexpr uint32 MISSION_SCRIPT_SIZE = 69000;
 
-static inline auto& gAllowScriptedFixedCameraCollision = StaticRef<bool>(0xB6EC2C); // The original keeps it in .bss (read by CCam::Process_Fixed 0x51D6D9, reset by CMissionCleanup, set by ALLOW_FIXED_CAMERA_COLLISION)
+NOTSA_GLOBAL_HDR(gAllowScriptedFixedCameraCollision, 0xB6EC2C, (bool), {}); // The original keeps it in .bss (read by CCam::Process_Fixed 0x51D6D9, reset by CMissionCleanup, set by ALLOW_FIXED_CAMERA_COLLISION)
 
 class CTheScripts {
 public:
@@ -354,7 +354,7 @@ public:
 
     //! Lower `MAIN_SCRIPT_SIZE` is where MAIN.SCM is, remaining `MISSION_SCRIPT_SIZE` is for other loaded scripts.
     // static inline auto& ScriptSpace = StaticRef<uint8[SCRIPT_SPACE_SIZE]>(0xA49960);
-    static inline auto& ScriptSpace = StaticRef<std::array<uint8, SCRIPT_SPACE_SIZE>>(0xA49960);
+    static inline NOTSA_GLOBAL(ScriptSpace, 0xA49960, (std::array<uint8, SCRIPT_SPACE_SIZE>), {});
 
     //! Reference to ScriptSpace's lower portion for MAIN.SCM - Prefer this over `&ScriptSpace[0]`
     static inline std::span<uint8, MAIN_SCRIPT_SIZE> MainSCMBlock{ ScriptSpace.data() + 0, MAIN_SCRIPT_SIZE };
@@ -362,37 +362,37 @@ public:
     //! Reference to ScriptSpace's upper portion for other scripts - Prefer this over `&ScriptSpace[MAIN_SCRIPT_SIZE]`
     static inline std::span<uint8, MISSION_SCRIPT_SIZE> MissionBlock{ ScriptSpace.data() + MainSCMBlock.size(), MISSION_SCRIPT_SIZE };
 
-    static inline auto& SwitchJumpTable = StaticRef<std::array<tScriptSwitchCase, MAX_NUM_SwitchJumpTable>>(0xA43CF8);
-    static inline auto& NumberOfEntriesInSwitchTable = StaticRef<uint16>(0xA43F50);
-    static inline auto& NumberOfEntriesStillToReadForSwitch = StaticRef<uint16>(0xA43F60);
+    static inline NOTSA_GLOBAL(SwitchJumpTable, 0xA43CF8, (std::array<tScriptSwitchCase, MAX_NUM_SwitchJumpTable>), {});
+    static inline NOTSA_GLOBAL(NumberOfEntriesInSwitchTable, 0xA43F50, (uint16), {});
+    static inline NOTSA_GLOBAL(NumberOfEntriesStillToReadForSwitch, 0xA43F60, (uint16), {});
 
-    static inline auto& CardStack = StaticRef<std::array<int16, MAX_NUM_CARDS>>(0xA44218);
-    static inline auto& MultiScriptArray = StaticRef<std::array<int32, MAX_NUM_MISSION_SCRIPTS>>(0xA444C8);
+    static inline NOTSA_GLOBAL(CardStack, 0xA44218, (std::array<int16, MAX_NUM_CARDS>), {});
+    static inline NOTSA_GLOBAL(MultiScriptArray, 0xA444C8, (std::array<int32, MAX_NUM_MISSION_SCRIPTS>), {});
     static inline auto& ScriptConnectLodsObjects = StaticRef<std::array<tScriptConnectLodsObject, MAX_NUM_SCRIPT_CONNECT_LODS_OBJECTS>>(0xA44800);
     static inline auto& ScriptAttachedAnimGroups = StaticRef<std::array<tScriptAttachedAnimGroup, MAX_NUM_SCRIPT_ATTACHED_ANIM_GROUPS>>(0xA44850);
-    static inline auto& VehicleModelsBlockedByScript = StaticRef<std::array<eModelID, MAX_NUM_VEHICLE_MODELS_BLOCKED_BY_SCRIPT>>(0xA448F0);
-    static inline auto& SuppressedVehicleModels = StaticRef<std::array<eModelID, MAX_NUM_SUPPRESSED_VEHICLE_MODELS>>(0xA44940);
-    static inline auto& InvisibilitySettingArray = StaticRef<std::array<CEntity*, MAX_NUM_INVISIBILITY_SETTINGS>>(0xA449E0);
+    static inline NOTSA_GLOBAL(VehicleModelsBlockedByScript, 0xA448F0, (std::array<eModelID, MAX_NUM_VEHICLE_MODELS_BLOCKED_BY_SCRIPT>), {});
+    static inline NOTSA_GLOBAL(SuppressedVehicleModels, 0xA44940, (std::array<eModelID, MAX_NUM_SUPPRESSED_VEHICLE_MODELS>), {});
+    static inline NOTSA_GLOBAL(InvisibilitySettingArray, 0xA449E0, (std::array<CEntity*, MAX_NUM_INVISIBILITY_SETTINGS>), {});
 
-    static inline auto& LocalVariablesForCurrentMission = StaticRef<std::array<tScriptParam, MAX_NUM_LOCAL_VARIABLES_FOR_CURRENT_MISSION>>(0xA48960);
-    static inline auto& LargestNumberOfMissionScriptLocalVariables = StaticRef<uint32>(0xA444B4);
+    static inline NOTSA_GLOBAL(LocalVariablesForCurrentMission, 0xA48960, (std::array<tScriptParam, MAX_NUM_LOCAL_VARIABLES_FOR_CURRENT_MISSION>), {});
+    static inline NOTSA_GLOBAL(LargestNumberOfMissionScriptLocalVariables, 0xA444B4, (uint32), {});
 
     static inline auto& BuildingSwapArray = StaticRef<std::array<tBuildingSwap, MAX_NUM_BUILDING_SWAPS>>(0xA44A30);
 
-    static inline auto& UsedObjectArray = StaticRef<std::array<tUsedObject, MAX_NUM_USED_OBJECTS>>(0xA44B70);
-    static inline auto& NumberOfUsedObjects = StaticRef<uint16>(0xA44B6C);
+    static inline NOTSA_GLOBAL(UsedObjectArray, 0xA44B70, (std::array<tUsedObject, MAX_NUM_USED_OBJECTS>), {});
+    static inline NOTSA_GLOBAL(NumberOfUsedObjects, 0xA44B6C, (uint16), {});
 
     static inline auto& EntitiesWaitingForScriptBrain = StaticRef<std::array<tScriptBrainWaitEntity, MAX_NUM_ENTITIES_WAITING_FOR_SCRIPT_BRAIN>>(0xA476B0);
     static inline auto& IntroTextLines = StaticRef<std::array<tScriptText, MAX_NUM_INTRO_TEXT_LINES>>(0xA913E8);
-    static inline auto& NumberOfIntroTextLinesThisFrame = StaticRef<uint16>(0xA44B68);
+    static inline NOTSA_GLOBAL(NumberOfIntroTextLinesThisFrame, 0xA44B68, (uint16), {});
 
     static inline auto& IntroRectangles = StaticRef<std::array<tScriptRectangle, MAX_NUM_SCRIPT_RECTANGLES>>(0xA92D68);
-    static inline auto& NumberOfIntroRectanglesThisFrame = StaticRef<uint16>(0xA44B5C);
+    static inline NOTSA_GLOBAL(NumberOfIntroRectanglesThisFrame, 0xA44B5C, (uint16), {});
 
     static inline auto& ScriptSprites = StaticRef<std::array<CSprite2d, MAX_NUM_SCRIPT_SPRITES>>(0xA94B68);
 
-    static inline auto& NumberOfExclusiveMissionScripts = StaticRef<uint16>(0xA444B8);
-    static inline auto& NumberOfMissionScripts = StaticRef<uint16>(0xA444BC);
+    static inline NOTSA_GLOBAL(NumberOfExclusiveMissionScripts, 0xA444B8, (uint16), {});
+    static inline NOTSA_GLOBAL(NumberOfMissionScripts, 0xA444BC, (uint16), {});
 
     //
     // Script things
@@ -400,69 +400,69 @@ public:
 
     static inline auto& ScriptSphereArray = StaticRef<std::array<tScriptSphere, MAX_NUM_SCRIPT_SPHERES>>(0xA91268);
     static inline auto& ScriptEffectSystemArray = StaticRef<std::array<tScriptEffectSystem, MAX_NUM_SCRIPT_EFFECT_SYSTEMS>>(0xA44110);
-    static inline auto& ScriptSearchLightArray = StaticRef<std::array<tScriptSearchlight, MAX_NUM_SCRIPT_SEARCH_LIGHT>>(0xA94D68);
+    static inline NOTSA_GLOBAL(ScriptSearchLightArray, 0xA94D68, (std::array<tScriptSearchlight, MAX_NUM_SCRIPT_SEARCH_LIGHT>), {});
 
     static inline auto& ScriptSequenceTaskArray = StaticRef<std::array<tScriptSequence, MAX_NUM_SCRIPT_SEQUENCE_TASKS>>(0xA43F68);
-    static inline auto& NumberOfScriptSearchLights = StaticRef<uint16>(0xA90830);
+    static inline NOTSA_GLOBAL(NumberOfScriptSearchLights, 0xA90830, (uint16), {});
 
     static inline auto& ScriptCheckpointArray = StaticRef<std::array<tScriptCheckpoint, MAX_NUM_SCRIPT_CHECKPOINTS>>(0xA44070);
-    static inline auto& NumberOfScriptCheckpoints = StaticRef<uint16>(0xA44068);
-    static inline auto&   UnknownDebugStuff         = StaticRef<uint32>(0xA95190); // used in DO_DEBUG_STUFF command
+    static inline NOTSA_GLOBAL(NumberOfScriptCheckpoints, 0xA44068, (uint16), {});
+    static inline NOTSA_GLOBAL(UnknownDebugStuff, 0xA95190, (uint32), {}); // used in DO_DEBUG_STUFF command
 
     enum class eUseTextCommandState : uint8 {
         DISABLED,
         DISABLE_NEXT_FRAME,
         ENABLED_BY_SCRIPT
     };
-    static inline auto& UseTextCommands = StaticRef<eUseTextCommandState>(0xA44B67);
-    static inline auto& DbgFlag = StaticRef<bool>(0x859CF8);
-    static inline auto& SwitchDefaultAddress = StaticRef<int32>(0xA43F54);
-    static inline auto& SwitchDefaultExists = StaticRef<bool>(0xA43F58);
-    static inline auto& ValueToCheckInSwitchStatement = StaticRef<int32>(0xA43F5C);
-    static inline auto& CardStackPosition = StaticRef<int16>(0xA44210);
-    static inline auto& bDrawSubtitlesBeforeFade = StaticRef<bool>(0xA44488);
-    static inline auto& bDrawOddJobTitleBeforeFade = StaticRef<bool>(0xA44489);
-    static inline auto& bScriptHasFadedOut = StaticRef<bool>(0xA4448A);
-    static inline auto& bAddNextMessageToPreviousBriefs = StaticRef<bool>(0xA4448B);
-    static inline auto& ForceRandomCarModel = StaticRef<int32>(0xA4448C);
-    static inline auto& bDrawCrossHair = StaticRef<eCrossHairType>(0xA44490);
-    static inline auto& bEnableCraneRelease = StaticRef<bool>(0xA44494);
-    static inline auto& bEnableCraneLower = StaticRef<bool>(0xA44495);
-    static inline auto& bEnableCraneRaise = StaticRef<bool>(0xA44496);
-    static inline auto& fCameraHeadingStepWhenPlayerIsAttached = StaticRef<float>(0xA44498);
-    static inline auto& fCameraHeadingWhenPlayerIsAttached = StaticRef<float>(0xA4449C);
-    static inline auto& bDisplayHud = StaticRef<bool>(0xA444A0);
-    static inline auto& HideAllFrontEndMapBlips = StaticRef<bool>(0xA444A1);
-    static inline auto& RadarShowBlipOnAllLevels = StaticRef<bool>(0xA444A2);
-    static inline auto& RadarZoomValue = StaticRef<uint8>(0xA444A3);
-    static inline auto& bPlayerIsOffTheMap = StaticRef<bool>(0xA444A4);
-    static inline auto& RiotIntensity = StaticRef<char>(0xA444A5);
-    static inline auto& bPlayerHasMetDebbieHarry = StaticRef<bool>(0xA444A6);
-    static inline auto& bDisplayNonMiniGameHelpMessages = StaticRef<bool>(0xA444A7);
-    static inline auto& bMiniGameInProgress = StaticRef<bool>(0xA444A8);
-    static inline auto& ScriptPickupCycleIndex = StaticRef<int32>(0xA444AC);
-    static inline auto& FailCurrentMission = StaticRef<int8>(0xA444B0);
-    static inline auto& bAlreadyRunningAMissionScript = StaticRef<bool>(0xA444B1);
-    static inline auto& LargestMissionScriptSize = StaticRef<uint32>(0xA444C0);
-    static inline auto& MainScriptSize = StaticRef<uint32>(0xA444C4);
-    static inline auto& bUsingAMultiScriptFile = StaticRef<bool>(0xA447E8);
-    static inline auto& StoreVehicleIndex = StaticRef<int32>(0xA447EC);
-    static inline auto& StoreVehicleWasRandom = StaticRef<bool>(0xA447F0);
-    static inline auto& CommandsExecuted = StaticRef<uint16>(0xA447F4);
-    static inline auto& ScriptsUpdated = StaticRef<uint16>(0xA447F8);
-    static inline auto& MessageWidth = StaticRef<uint16>(0xA44B60);
-    static inline auto& MessageCentre = StaticRef<uint16>(0xA44B64);
-    static inline auto& bUseMessageFormatting = StaticRef<bool>(0xA44B66);
-    static inline auto& LastRandomPedId = StaticRef<int32>(0xA476A4);
-    static inline auto& LastMissionPassedTime = StaticRef<uint32>(0xA476A8);
-    static inline auto& OnAMissionFlag = StaticRef<int32>(0xA476AC); // Refers to the offset of OM flag in script space.
+    static inline NOTSA_GLOBAL(UseTextCommands, 0xA44B67, (eUseTextCommandState), {});
+    static inline NOTSA_GLOBAL(DbgFlag, 0x859CF8, (bool), {});
+    static inline NOTSA_GLOBAL(SwitchDefaultAddress, 0xA43F54, (int32), {});
+    static inline NOTSA_GLOBAL(SwitchDefaultExists, 0xA43F58, (bool), {});
+    static inline NOTSA_GLOBAL(ValueToCheckInSwitchStatement, 0xA43F5C, (int32), {});
+    static inline NOTSA_GLOBAL(CardStackPosition, 0xA44210, (int16), {});
+    static inline NOTSA_GLOBAL(bDrawSubtitlesBeforeFade, 0xA44488, (bool), {});
+    static inline NOTSA_GLOBAL(bDrawOddJobTitleBeforeFade, 0xA44489, (bool), {});
+    static inline NOTSA_GLOBAL(bScriptHasFadedOut, 0xA4448A, (bool), {});
+    static inline NOTSA_GLOBAL(bAddNextMessageToPreviousBriefs, 0xA4448B, (bool), {});
+    static inline NOTSA_GLOBAL(ForceRandomCarModel, 0xA4448C, (int32), {});
+    static inline NOTSA_GLOBAL(bDrawCrossHair, 0xA44490, (eCrossHairType), {});
+    static inline NOTSA_GLOBAL(bEnableCraneRelease, 0xA44494, (bool), {});
+    static inline NOTSA_GLOBAL(bEnableCraneLower, 0xA44495, (bool), {});
+    static inline NOTSA_GLOBAL(bEnableCraneRaise, 0xA44496, (bool), {});
+    static inline NOTSA_GLOBAL(fCameraHeadingStepWhenPlayerIsAttached, 0xA44498, (float), {});
+    static inline NOTSA_GLOBAL(fCameraHeadingWhenPlayerIsAttached, 0xA4449C, (float), {});
+    static inline NOTSA_GLOBAL(bDisplayHud, 0xA444A0, (bool), {});
+    static inline NOTSA_GLOBAL(HideAllFrontEndMapBlips, 0xA444A1, (bool), {});
+    static inline NOTSA_GLOBAL(RadarShowBlipOnAllLevels, 0xA444A2, (bool), {});
+    static inline NOTSA_GLOBAL(RadarZoomValue, 0xA444A3, (uint8), {});
+    static inline NOTSA_GLOBAL(bPlayerIsOffTheMap, 0xA444A4, (bool), {});
+    static inline NOTSA_GLOBAL(RiotIntensity, 0xA444A5, (char), {});
+    static inline NOTSA_GLOBAL(bPlayerHasMetDebbieHarry, 0xA444A6, (bool), {});
+    static inline NOTSA_GLOBAL(bDisplayNonMiniGameHelpMessages, 0xA444A7, (bool), {});
+    static inline NOTSA_GLOBAL(bMiniGameInProgress, 0xA444A8, (bool), {});
+    static inline NOTSA_GLOBAL(ScriptPickupCycleIndex, 0xA444AC, (int32), {});
+    static inline NOTSA_GLOBAL(FailCurrentMission, 0xA444B0, (int8), {});
+    static inline NOTSA_GLOBAL(bAlreadyRunningAMissionScript, 0xA444B1, (bool), {});
+    static inline NOTSA_GLOBAL(LargestMissionScriptSize, 0xA444C0, (uint32), {});
+    static inline NOTSA_GLOBAL(MainScriptSize, 0xA444C4, (uint32), {});
+    static inline NOTSA_GLOBAL(bUsingAMultiScriptFile, 0xA447E8, (bool), {});
+    static inline NOTSA_GLOBAL(StoreVehicleIndex, 0xA447EC, (int32), {});
+    static inline NOTSA_GLOBAL(StoreVehicleWasRandom, 0xA447F0, (bool), {});
+    static inline NOTSA_GLOBAL(CommandsExecuted, 0xA447F4, (uint16), {});
+    static inline NOTSA_GLOBAL(ScriptsUpdated, 0xA447F8, (uint16), {});
+    static inline NOTSA_GLOBAL(MessageWidth, 0xA44B60, (uint16), {});
+    static inline NOTSA_GLOBAL(MessageCentre, 0xA44B64, (uint16), {});
+    static inline NOTSA_GLOBAL(bUseMessageFormatting, 0xA44B66, (bool), {});
+    static inline NOTSA_GLOBAL(LastRandomPedId, 0xA476A4, (int32), {});
+    static inline NOTSA_GLOBAL(LastMissionPassedTime, 0xA476A8, (uint32), {});
+    static inline NOTSA_GLOBAL(OnAMissionFlag, 0xA476AC, (int32), {}); // Refers to the offset of OM flag in script space.
     static inline auto& StreamedScripts = StaticRef<CStreamedScripts>(0xA47B60);
     static inline auto& ScriptResourceManager = StaticRef<CScriptResourceManager>(0xA485A8);
     static inline auto& UpsideDownCars = StaticRef<CUpsideDownCarCheck>(0xA4892C);
-    static inline auto& pIdleScripts = StaticRef<CRunningScript*>(0xA8B428);
-    static inline auto& pActiveScripts = StaticRef<CRunningScript*>(0xA8B42C);
-    static inline auto& MissionCleanUp = StaticRef<CMissionCleanup>(0xA90850);
-    static inline auto& StuckCars = StaticRef<CStuckCarCheck>(0xA90AB0);
+    static inline NOTSA_GLOBAL(pIdleScripts, 0xA8B428, (CRunningScript*), {});
+    static inline NOTSA_GLOBAL(pActiveScripts, 0xA8B42C, (CRunningScript*), {});
+    static inline NOTSA_GLOBAL(MissionCleanUp, 0xA90850, (CMissionCleanup), {});
+    static inline NOTSA_GLOBAL(StuckCars, 0xA90AB0, (CStuckCarCheck), {});
     static inline auto& ScriptsForBrains = StaticRef<CScriptsForBrains>(0xA90CF0);
 
 public:

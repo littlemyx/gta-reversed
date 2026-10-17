@@ -28,7 +28,12 @@ inline struct FastLoaderConfig {
     bool  NoLoadBar        = false; //< Skip load bar in pre-game load screen
     bool  NoLoadingTune    = false; //< Skip GTA theme music
     bool  NoDbgLogScreens  = true;  //< Don't display [notsa] loading screen debug messages to console
+#ifdef NOTSA_STANDALONE_RUN
+    bool  RenderAtAllTimes = false; //< Render even when minimized. Run build: OFF = the exe (0x748CB2: `RsEventHandler(rsFRONTENDIDLE)` is skipped while the window is minimized, FIX-AUDIT)
+#else
     bool  RenderAtAllTimes = true;  //< Render even when minimized
+#endif
+#line 32
     float ScreenChangeTime = 5.f;   //< Time to change splash screens in the loading screen (seconds?)
 
     //! If there's a game to load, but not loaded yet...

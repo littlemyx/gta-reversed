@@ -55,23 +55,23 @@ class CGenericGameStorage {
     };
         
 public:
-    static inline auto& ms_WorkBufferSize = StaticRef<uint32>(0x8D2BE0);
-    static inline auto& ms_SaveFileNameJustSaved = StaticRef<char[MAX_PATH]>(0xC16030);
-    static inline auto& ms_SaveFileName = StaticRef<char[256]>(0xC16DB8);
-    static inline auto& ms_LoadFileName = StaticRef<char[104]>(0xC15FC8);
-    static inline auto& ms_LoadFileNameWithPath = StaticRef<char[104]>(0xC15F60);
-    static inline auto& ms_CheckSum = StaticRef<uint32>(0xC16134);
-    static inline auto& ms_WorkBuffer = StaticRef<uint8*>(0xC16EE8);
-    static inline auto& ms_WorkBufferPos = StaticRef<int32>(0xC16EEC);
-    static inline auto& ms_FileHandle = StaticRef<FILE*>(0xC16EF0);
-    static inline auto& ms_FilePos = StaticRef<uint32>(0xC16EF4);
-    static inline auto& ms_FileSize = StaticRef<uint32>(0xC16EF8);
-    static inline auto& ms_bFailed = StaticRef<bool>(0xC16EFC);
-    static inline auto& ms_bLoading = StaticRef<bool>(0xC16EFD);
+    static inline NOTSA_GLOBAL(ms_WorkBufferSize, 0x8D2BE0, (uint32), { 51200 });
+    static inline NOTSA_GLOBAL(ms_SaveFileNameJustSaved, 0xC16030, (char[MAX_PATH]), {});
+    static inline NOTSA_GLOBAL(ms_SaveFileName, 0xC16DB8, (char[256]), {});
+    static inline NOTSA_GLOBAL(ms_LoadFileName, 0xC15FC8, (char[104]), {});
+    static inline NOTSA_GLOBAL(ms_LoadFileNameWithPath, 0xC15F60, (char[104]), {});
+    static inline NOTSA_GLOBAL(ms_CheckSum, 0xC16134, (uint32), {});
+    static inline NOTSA_GLOBAL(ms_WorkBuffer, 0xC16EE8, (uint8*), {});
+    static inline NOTSA_GLOBAL(ms_WorkBufferPos, 0xC16EEC, (int32), {});
+    static inline NOTSA_GLOBAL(ms_FileHandle, 0xC16EF0, (FILE*), {});
+    static inline NOTSA_GLOBAL(ms_FilePos, 0xC16EF4, (uint32), {});
+    static inline NOTSA_GLOBAL(ms_FileSize, 0xC16EF8, (uint32), {});
+    static inline NOTSA_GLOBAL(ms_bFailed, 0xC16EFC, (bool), {});
+    static inline NOTSA_GLOBAL(ms_bLoading, 0xC16EFD, (bool), {});
     static inline const char ms_BlockTagName[] = "BLOCK";
-    static inline auto& ms_SlotSaveDate = StaticRef<std::array<tSlotSaveDate, MAX_SAVEGAME_SLOTS>>(0xC16138);
-    static inline auto& ms_SlotFileName = StaticRef<std::array<tSlotFileName, MAX_SAVEGAME_SLOTS>>(0xC16368);
-    static inline auto& ms_Slots = StaticRef<std::array<eSlotState, MAX_SAVEGAME_SLOTS>>(0xC16EBC);
+    static inline NOTSA_GLOBAL(ms_SlotSaveDate, 0xC16138, (std::array<tSlotSaveDate, MAX_SAVEGAME_SLOTS>), {});
+    static inline NOTSA_GLOBAL(ms_SlotFileName, 0xC16368, (std::array<tSlotFileName, MAX_SAVEGAME_SLOTS>), {});
+    static inline NOTSA_GLOBAL(ms_Slots, 0xC16EBC, (std::array<eSlotState, MAX_SAVEGAME_SLOTS>), {});
 
 public:
     static void InjectHooks();

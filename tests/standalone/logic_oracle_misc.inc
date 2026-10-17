@@ -225,7 +225,7 @@ static void TestStreamingPure() {
         }, 1500);
     Run("CStreaming::GetDefaultCopCarModel 0x407C50", [&](Rng& r, std::string& d) {
         Gen(r); const bool ign = r.below(2);
-        const long long a = CStreaming::GetDefaultCopCarModel(ign), e = oracle::Fn<int __cdecl(bool)>(0x407C50)(ign);
+        const long long a = CStreaming::GetDefaultCopCarModel(ign), e = oracle::Fn<int __cdecl(int)>(0x407C50)((int)ign);
         Hit(a != -1); if (a == e) return true; d = "ign " + std::to_string(ign) + " got " + std::to_string(a) + " exe " + std::to_string(e); return false;
     }, 3000);
     Run("CStreaming::WeAreTryingToPhaseVehicleOut 0x407F80", [&](Rng& r, std::string& d) {

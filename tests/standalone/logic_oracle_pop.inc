@@ -507,7 +507,7 @@ static void TestPop() {
     }, 2500);
     Run("CStreaming::GetDefaultCopCarModel 0x407C50", [&](Rng& r, std::string& d) {
         Rng a = sub(r); const bool ig = a.below(2);
-        return Case<int>(r, d, [&] { return (int)CStreaming::GetDefaultCopCarModel(ig); }, [&] { return oracle::Fn<int __cdecl(bool)>(0x407C50)(ig); }, "GetDefaultCopCarModel");
+        return Case<int>(r, d, [&] { return (int)CStreaming::GetDefaultCopCarModel(ig); }, [&] { return oracle::Fn<int __cdecl(int)>(0x407C50)((int)ig); }, "GetDefaultCopCarModel");
     }, 3000);
     Run("CStreaming::WeAreTryingToPhaseVehicleOut 0x407F80", [&](Rng& r, std::string& d) {
         Rng a = sub(r); const int m = a.below(kNMI);

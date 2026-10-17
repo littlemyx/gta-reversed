@@ -11,6 +11,9 @@
 // Calling conventions are part of the function type: oracle::Fn<float __cdecl(float)>(0x53CB00), or `float (__cdecl*f)(float) = ORACLE(0x53CB00)`.
 // A thiscall method is declared as __fastcall with a dummy 2nd (EDX) argument: oracle::Fn<void __fastcall(CVector*, int)>(0x59C910)(&v, 0)
 // (MSVC does not accept __thiscall on a free function type). stdcall: oracle::Fn<bool __stdcall(const CVector*, const CVector*)>(0x412700).
+// ARGUMENT WIDTH: a bool/char/short argument is pushed by the compiler with UNDEFINED upper bits (/O2 emits `mov al,[p]; push eax`), the exe's own callers always push a clean dword. If the exe
+// function tests the whole dword (CStreaming::GetDefaultCopCarModel 0x407C50 does `test esi,esi`), declare the parameter `int` and cast the argument, otherwise the Release oracle
+// sees garbage (567 false mismatches in StandaloneDetached before the fix, FIX-AUDIT). Return values are read as al/eax by the exe's own convention and need no care.
 #pragma once
 #include <windows.h>
 #include <cstdint>

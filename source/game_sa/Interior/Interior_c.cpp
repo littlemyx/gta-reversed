@@ -73,13 +73,13 @@ namespace {
 auto& s_FurnitureEntityPool = StaticRef<TList_c<FurnitureEntity_c>>(0xBAD3EC);
 
 // Counter used to space out the shelf `InteriorInfo`s (see `Shop_AddShelfInfo`) - Initially 2
-auto& s_ShelfInfoCounter = StaticRef<int32>(0x8D0948);
+NOTSA_GLOBAL(s_ShelfInfoCounter, 0x8D0948, (int32), { 2 });
 
 // Chance (0-100) used by `Shop_PlaceEdgeUnits` to decide what kind of unit to place - Not written by any function reversed here
-auto& s_ShopUnitChance = StaticRef<int32>(0xBB3DE4);
+NOTSA_GLOBAL(s_ShopUnitChance, 0xBB3DE4, (int32), {});
 
 // Set once the office had its (single) special `InteriorInfo` (type 7) placed (see `Office_PlaceEdgeFillers`)
-auto& s_OfficeSpecialInfoPlaced = StaticRef<bool>(0xBB3DC8);
+NOTSA_GLOBAL(s_OfficeSpecialInfoPlaced, 0xBB3DC8, (bool), {});
 
 // Members of `g_interiorMan` (private) - Objects that can be stolen (see `PlaceObject`)
 auto& s_StealableObjectCount = StaticRef<int32>(0xBB3A18);                         // InteriorManager_c::m_ObjectCount

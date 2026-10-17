@@ -49,8 +49,8 @@ struct CPlantSurfProp {
 
 class CPlantSurfPropMgr {
 public:
-    static inline auto& m_SurfPropPtrTab = StaticRef<std::array<CPlantSurfProp*, 178>>(0xC38070);
-    static inline auto& m_countSurfPropsAllocated = StaticRef<uint32>(0xC39ED4);
+    static inline NOTSA_GLOBAL(m_SurfPropPtrTab, 0xC38070, (std::array<CPlantSurfProp*, 178>), {});
+    static inline NOTSA_GLOBAL(m_countSurfPropsAllocated, 0xC39ED4, (uint32), {});
     static inline auto& m_SurfPropTab = StaticRef<CPlantSurfProp[MAX_SURFACE_PROPERTIES]>(0xC38338);
 
 public:

@@ -11,13 +11,13 @@
 #include "LoadingScreen.h"
 #include "CarFXRenderer.h"
 
-auto& vehicleTxd = StaticRef<RwTexDictionary*>(0xB4E688);
-auto& carFrame = StaticRef<RwFrame*>(0xB4E6B8);
-auto& gLightSurfProps = StaticRef<RwSurfaceProperties>(0x8A645C);
-auto& gRestoreEntries = StaticRef<tRestoreEntry[NUM_RESTORE_ENTRIES]>(0xB4DBE8);
-auto& gpWhiteTexture = StaticRef<RwTexture*>(0xB4E3EC);
-auto& fEnvMapDefaultCoeff = StaticRef<float>(0x8A7780);
-auto& fRearDoubleWheelOffsetFactor = StaticRef<float>(0x8A7784);
+NOTSA_GLOBAL(vehicleTxd, 0xB4E688, (RwTexDictionary*), {});
+NOTSA_GLOBAL(carFrame, 0xB4E6B8, (RwFrame*), {});
+NOTSA_GLOBAL(gLightSurfProps, 0x8A645C, (RwSurfaceProperties), { 16.0f, 0.0f, 0.0f });
+NOTSA_GLOBAL(gRestoreEntries, 0xB4DBE8, (tRestoreEntry[NUM_RESTORE_ENTRIES]), {});
+NOTSA_GLOBAL(gpWhiteTexture, 0xB4E3EC, (RwTexture*), {});
+NOTSA_GLOBAL(fEnvMapDefaultCoeff, 0x8A7780, (float), { 0.25f });
+NOTSA_GLOBAL(fRearDoubleWheelOffsetFactor, 0x8A7784, (float), { 1.15f });
 
 void CVehicleModelInfo::InjectHooks()
 {
@@ -1694,3 +1694,6 @@ RwObject* GetOkAndDamagedAtomicCB(RwObject* object, void* data)
 
     return object;
 }
+
+// Initial values of the globals declared with NOTSA_GLOBAL_DECL in VehicleModelInfo.h (detached mode; ignored in address mode)
+NOTSA_GLOBAL_DEF(CVehicleModelInfo::CVehicleStructure, m_pInfoPool, 0xB4E680, (CPool<CVehicleStructure>*), {});

@@ -170,7 +170,7 @@ public:
         uint32          m_nMaskComponentsDamagable;
 
     public:
-        static inline auto& m_pInfoPool = StaticRef<CPool<CVehicleStructure>*>(0xB4E680);
+        static NOTSA_GLOBAL_DECL(CVehicleModelInfo::CVehicleStructure, m_pInfoPool, 0xB4E680, (CPool<CVehicleStructure>*));
 
     public: // Helpers
         [[nodiscard]] bool IsDummyActive(eVehicleDummy dummy) const {
@@ -217,7 +217,7 @@ public:
         int16 FindOtherUpgrade(int16 upgrade);
     };
 
-    static inline auto& ms_linkedUpgrades = StaticRef<CLinkedUpgradeList>(0xB4E6D8);
+    static inline NOTSA_GLOBAL(ms_linkedUpgrades, 0xB4E6D8, (CLinkedUpgradeList), {});
 
     // vehicle components description tables
     // static RwObjectNameIdAssocation ms_vehicleDescs[12];
@@ -225,44 +225,44 @@ public:
     static inline auto& ms_vehicleDescs = StaticRef<RwObjectNameIdAssocation*[NUM_VEHICLE_MODEL_DESCS]>(0x8A7740); // use eVehicleType to access
 
     // remap texture
-    static inline auto& ms_pRemapTexture = StaticRef<RwTexture*>(0xB4E47C);
+    static inline NOTSA_GLOBAL(ms_pRemapTexture, 0xB4E47C, (RwTexture*), {});
     // vehiclelights128 texture
-    static inline auto& ms_pLightsTexture = StaticRef<RwTexture*>(0xB4E68C);
+    static inline NOTSA_GLOBAL(ms_pLightsTexture, 0xB4E68C, (RwTexture*), {});
     // vehiclelightson128 texture
-    static inline auto& ms_pLightsOnTexture = StaticRef<RwTexture*>(0xB4E690);
+    static inline NOTSA_GLOBAL(ms_pLightsOnTexture, 0xB4E690, (RwTexture*), {});
 
     // color of currently rendered car
     // static uint8 ms_currentCol[4];
     static constexpr int32 NUM_CURRENT_COLORS = 4;
-    static inline auto& ms_currentCol = StaticRef<uint8[NUM_CURRENT_COLORS]>(0xB4E3F0);
+    static inline NOTSA_GLOBAL(ms_currentCol, 0xB4E3F0, (uint8[NUM_CURRENT_COLORS]), {});
 
     // number of wheel upgrades available
     // static int16 ms_numWheelUpgrades[4];
     static constexpr int32 NUM_WHEELS = 4;
-    static inline auto& ms_numWheelUpgrades = StaticRef<int16[NUM_WHEELS]>(0xB4E470);
+    static inline NOTSA_GLOBAL(ms_numWheelUpgrades, 0xB4E470, (int16[NUM_WHEELS]), {});
 
-    static inline auto& ms_wheelFrameIDs = StaticRef<int32[NUM_WHEELS]>(0x8A7770);
+    static inline NOTSA_GLOBAL(ms_wheelFrameIDs, 0x8A7770, (int32[NUM_WHEELS]), { 5, 7, 2, 4 });
 
     // wheels upgrades data
     static constexpr int32 NUM_WHEEL_UPGRADES = 15;
-    static inline auto& ms_upgradeWheels = StaticRef<notsa::mdarray<int16, NUM_WHEELS, NUM_WHEEL_UPGRADES>>(0xB4E3F8);
+    static inline NOTSA_GLOBAL(ms_upgradeWheels, 0xB4E3F8, (notsa::mdarray<int16, NUM_WHEELS, NUM_WHEEL_UPGRADES>), {});
 
     // Light states for currently rendered car
     static constexpr int32 NUM_LIGHTS = 4;
-    static inline auto& ms_lightsOn = StaticRef<uint8[NUM_LIGHTS]>(0xB4E3E8);
+    static inline NOTSA_GLOBAL(ms_lightsOn, 0xB4E3E8, (uint8[NUM_LIGHTS]), {});
 
     // extras ids for next-spawned car
     // static char ms_compsUsed[2];
     static constexpr int32 NUM_COMPS_USAGE = 2;
-    static inline auto& ms_compsUsed = StaticRef<int8[NUM_COMPS_USAGE]>(0xB4E478);
-    static inline auto& ms_compsToUse = StaticRef<int8[NUM_COMPS_USAGE]>(0x8A6458);
+    static inline NOTSA_GLOBAL(ms_compsUsed, 0xB4E478, (int8[NUM_COMPS_USAGE]), {});
+    static inline NOTSA_GLOBAL(ms_compsToUse, 0x8A6458, (int8[NUM_COMPS_USAGE]), { -2, -2 });
 
     // vehicle colours from carcols.dat
     // static CRGBA ms_vehicleColourTable[128];
     static constexpr int32 NUM_VEHICLE_COLORS = 128;
-    static inline auto& ms_vehicleColourTable = StaticRef<CRGBA[NUM_VEHICLE_COLORS]>(0xB4E480);
+    static inline NOTSA_GLOBAL(ms_vehicleColourTable, 0xB4E480, (CRGBA[NUM_VEHICLE_COLORS]), {});
 
-    static inline auto& SavedTextureFindCallback = StaticRef<RwTextureCallBackFind>(0xB4E6A0);
+    static inline NOTSA_GLOBAL(SavedTextureFindCallback, 0xB4E6A0, (RwTextureCallBackFind), {});
 
 public:
     static void InjectHooks();
@@ -473,11 +473,11 @@ static int32 GetListOfComponentsNotUsedByRules(uint32 compRules, int32 numExtras
 static RpMaterial* RemoveWindowAlphaCB(RpMaterial* material, void* data); // data is RpMaterialList**
 static RwObject* GetOkAndDamagedAtomicCB(RwObject* object, void* data);   // data is &RpAtomic[2]
 
-extern RwTexDictionary*& vehicleTxd;
-extern RwFrame*& carFrame;
-extern RwSurfaceProperties& gLightSurfProps;
+NOTSA_GLOBAL_EXTERN(vehicleTxd, (RwTexDictionary*));
+NOTSA_GLOBAL_EXTERN(carFrame, (RwFrame*));
+NOTSA_GLOBAL_EXTERN(gLightSurfProps, (RwSurfaceProperties));
 static constexpr int32 NUM_RESTORE_ENTRIES = 256;
-extern tRestoreEntry (&gRestoreEntries)[NUM_RESTORE_ENTRIES];
-extern RwTexture*& gpWhiteTexture;
-extern float& fEnvMapDefaultCoeff;
-extern float& fRearDoubleWheelOffsetFactor;
+NOTSA_GLOBAL_EXTERN(gRestoreEntries, (tRestoreEntry[NUM_RESTORE_ENTRIES]));
+NOTSA_GLOBAL_EXTERN(gpWhiteTexture, (RwTexture*));
+NOTSA_GLOBAL_EXTERN(fEnvMapDefaultCoeff, (float));
+NOTSA_GLOBAL_EXTERN(fRearDoubleWheelOffsetFactor, (float));

@@ -140,7 +140,22 @@ namespace notsa::standalone::Fixups { void UnreachableHit(const char* fn, const 
 // the whole class must be exported. (Along which the vtable is exported as well)
 // See `ReversibleHooks::detail::GetClassVTableAddress`
 // This should be added to every and all class with a vtable
+// F2 (.notes/DETACH_DATA_PLAN.md): the detached run build has no hook registry and nothing reads the exported vtables any more (VMTInfo::FindByClassName was the only
+// consumer): the attribute is empty there, so the exe no longer exports ~540 classes with all their members.
+#include "reversiblehooks/NoHookRegistry.h"
+#ifdef NOTSA_NO_HOOK_REGISTRY
+#define NOTSA_EXPORT_VTABLE
+#else
 #define NOTSA_EXPORT_VTABLE __declspec(dllexport)
+#endif
+
+// `inline` on a member that is only DEFINED in a .cpp but called from other TUs is an ODR violation (CRect, CMatrixLink[List]): it linked because the exported class / the hook's `&fn`
+// forced an out-of-line copy. Without both (detached run build) that copy must be a plain external function: empty there, `inline` (unchanged code) everywhere else.
+#ifdef NOTSA_NO_HOOK_REGISTRY
+#define NOTSA_INLINE_IN_CPP
+#else
+#define NOTSA_INLINE_IN_CPP inline
+#endif
 
 // Macro for unused function arguments - Use it to avoid compiler warnings of unused arguments
 #define UNUSED(x) (void)(x);

@@ -23,9 +23,9 @@ public:
     void         Shutdown();
     CMatrixLink* AddToList1();
     CMatrixLink* AddToList2();
-    inline void  MoveToList1(CMatrixLink* mat);
-    inline void  MoveToList2(CMatrixLink* mat);
-    inline void  MoveToFreeList(CMatrixLink* mat);
+    NOTSA_INLINE_IN_CPP void  MoveToList1(CMatrixLink* mat);
+    NOTSA_INLINE_IN_CPP void  MoveToList2(CMatrixLink* mat);
+    NOTSA_INLINE_IN_CPP void  MoveToFreeList(CMatrixLink* mat);
     int32        GetNumFree();
     int32        GetNumUsed1();
     int32        GetNumUsed2();

@@ -1207,7 +1207,6 @@ void CCheat::InjectHooks() {
         if (cheat.installAddress == 0x0) {
             continue;
         }
-
         RH_ScopedNamedGlobalInstall(cheat.method, cheat.methodName, cheat.installAddress);
 
         for (auto& cheatFunc: CCheat::m_aCheatFunctions) {
@@ -1218,7 +1217,6 @@ void CCheat::InjectHooks() {
     }
 #endif
 }
-
 // Initial values of the globals declared with NOTSA_GLOBAL_DECL in Cheat.h (detached mode; ignored in address mode)
 NOTSA_GLOBAL_DEF(CCheat, m_aCheatFunctions, 0x8A5B58, (void (*[TOTAL_CHEATS])()), {
     &CCheat::WeaponCheat1, &CCheat::WeaponCheat2, &CCheat::WeaponCheat3, &CCheat::MoneyArmourHealthCheat,

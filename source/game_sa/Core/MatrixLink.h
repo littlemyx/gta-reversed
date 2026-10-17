@@ -23,8 +23,8 @@ public:
 public:
     static void InjectHooks();
 
-    inline void Insert(CMatrixLink* pWhere);
-    inline void Remove();
+    NOTSA_INLINE_IN_CPP void Insert(CMatrixLink* pWhere);
+    NOTSA_INLINE_IN_CPP void Remove();
 };
 
 VALIDATE_SIZE(CMatrixLink, 0x54);

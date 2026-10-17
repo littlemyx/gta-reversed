@@ -12,8 +12,8 @@ class CReference;
 
 class CReferences {
 public:
-    static inline auto& aRefs = StaticRef<CReference[MAX_NUM_REFERENCES]>(0xB9B9A8);
-    static inline auto& pEmptyList = StaticRef<CReference*>(0xBA1768);
+    static inline NOTSA_GLOBAL(aRefs, 0xB9B9A8, (CReference[MAX_NUM_REFERENCES]), {});
+    static inline NOTSA_GLOBAL(pEmptyList, 0xBA1768, (CReference*), {});
 
 public:
     static void InjectHooks();

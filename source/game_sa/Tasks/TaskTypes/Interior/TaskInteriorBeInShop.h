@@ -8,6 +8,8 @@ struct InteriorInfo_t;
 
 class NOTSA_EXPORT_VTABLE CTaskInteriorBeInShop : public CTaskComplexWander {
 public:
+    static constexpr auto Type = eTaskType::TASK_INTERIOR_BE_IN_SHOP; // exe 0x675450 returns 1404; without this the class inherited CTaskComplexWander::Type (912) through GetTaskType
+
     static void InjectHooks();
 
     CTaskInteriorBeInShop(InteriorGroup_c* interiorGroup);

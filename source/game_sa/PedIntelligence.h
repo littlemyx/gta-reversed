@@ -64,10 +64,10 @@ public:
     CVector                m_vecLastPedPosDuringDamageEntity;
     CEntity*               m_apInterestingEntities[3];
 
-    static inline auto& STEALTH_KILL_RANGE = StaticRef<float>(0x8D2398); // 2.5f
-    static inline auto& LIGHT_AI_LEVEL_MAX = StaticRef<float>(0x8D2380); // 0.3f
-    static inline auto& flt_8D2384 = StaticRef<float>(0x8D2384); // 30.0f
-    static inline auto& flt_8D2388 = StaticRef<float>(0x8D2388); // 50.0f
+    static inline NOTSA_GLOBAL(STEALTH_KILL_RANGE, 0x8D2398, (float), { 2.5f }); // 2.5f
+    static inline NOTSA_GLOBAL(LIGHT_AI_LEVEL_MAX, 0x8D2380, (float), { 0.3f }); // 0.3f
+    static inline NOTSA_GLOBAL(flt_8D2384, 0x8D2384, (float), { 30.0f }); // 30.0f
+    static inline NOTSA_GLOBAL(flt_8D2388, 0x8D2388, (float), { 50.0f }); // 50.0f
 
 public:
     static void InjectHooks();

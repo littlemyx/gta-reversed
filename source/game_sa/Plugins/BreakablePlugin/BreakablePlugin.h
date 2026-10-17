@@ -8,7 +8,7 @@
 /*
  * Breakable plugin static offset
  */
-static inline auto& g_BreakablePlugin = StaticRef<int32>(0xBB4238);
+NOTSA_GLOBAL_HDR(g_BreakablePlugin, 0xBB4238, (int32), {});
 
 enum eBreakablePluginPositionRule : uint32 {
     OBJECT_ORIGIN    = 0,

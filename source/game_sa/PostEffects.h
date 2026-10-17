@@ -78,105 +78,105 @@ public:
     static void Render();
 
 public:
-    static inline auto& SCREEN_EXTRA_MULT_CHANGE_RATE = StaticRef<float>(0x8D5168); // 0.0005f;
-    static inline auto& SCREEN_EXTRA_MULT_BASE_CAP = StaticRef<float>(0x8D516C); // 0.35f;
-    static inline auto& SCREEN_EXTRA_MULT_BASE_MULT = StaticRef<float>(0x8D5170); // 1.0f;
+    static inline NOTSA_GLOBAL(SCREEN_EXTRA_MULT_CHANGE_RATE, 0x8D5168, (float), { 0.0005f }); // 0.0005f;
+    static inline NOTSA_GLOBAL(SCREEN_EXTRA_MULT_BASE_CAP, 0x8D516C, (float), { 0.35f }); // 0.35f;
+    static inline NOTSA_GLOBAL(SCREEN_EXTRA_MULT_BASE_MULT, 0x8D5170, (float), { 1.0f }); // 1.0f;
 
-    static inline auto& m_bDisableAllPostEffect = StaticRef<bool>(0xC402CF);
-    static inline auto& m_bSavePhotoFromScript = StaticRef<bool>(0xC402D0);
-    static inline auto& m_bInCutscene = StaticRef<bool>(0xC402B7);
+    static inline NOTSA_GLOBAL(m_bDisableAllPostEffect, 0xC402CF, (bool), {});
+    static inline NOTSA_GLOBAL(m_bSavePhotoFromScript, 0xC402D0, (bool), {});
+    static inline NOTSA_GLOBAL(m_bInCutscene, 0xC402B7, (bool), {});
 
-    static inline auto& m_xoffset = StaticRef<float>(0x8D5130); // 4.0f
-    static inline auto& m_yoffset = StaticRef<float>(0x8D5134); // 24.0f
+    static inline NOTSA_GLOBAL(m_xoffset, 0x8D5130, (float), { 4.0f }); // 4.0f
+    static inline NOTSA_GLOBAL(m_yoffset, 0x8D5134, (float), { 24.0f }); // 24.0f
 
-    static inline auto& m_colour1Multiplier = StaticRef<float>(0x8D5160); // 1.0f;
-    static inline auto& m_colour2Multiplier = StaticRef<float>(0x8D5164); // 1.0f;
-    static inline auto& m_colourLeftUOffset = StaticRef<float>(0x8D5150); // 8
-    static inline auto& m_colourRightUOffset = StaticRef<float>(0x8D5154); // 8
-    static inline auto& m_colourTopVOffset = StaticRef<float>(0x8D5158); // 8
-    static inline auto& m_colourBottomVOffset = StaticRef<float>(0x8D515C); // 8
+    static inline NOTSA_GLOBAL(m_colour1Multiplier, 0x8D5160, (float), { 1.0f }); // 1.0f;
+    static inline NOTSA_GLOBAL(m_colour2Multiplier, 0x8D5164, (float), { 1.0f }); // 1.0f;
+    static inline NOTSA_GLOBAL(m_colourLeftUOffset, 0x8D5150, (float), { std::bit_cast<float>(0x00000008u) }); // 8
+    static inline NOTSA_GLOBAL(m_colourRightUOffset, 0x8D5154, (float), { std::bit_cast<float>(0x00000008u) }); // 8
+    static inline NOTSA_GLOBAL(m_colourTopVOffset, 0x8D5158, (float), { std::bit_cast<float>(0x00000008u) }); // 8
+    static inline NOTSA_GLOBAL(m_colourBottomVOffset, 0x8D515C, (float), { std::bit_cast<float>(0x00000008u) }); // 8
 
-    static inline auto& m_bNightVision = StaticRef<bool>(0xC402B8);
+    static inline NOTSA_GLOBAL(m_bNightVision, 0xC402B8, (bool), {});
     static inline auto& m_fNightVisionSwitchOnFXCount = StaticRef<float>(0xC40300); // = CPostEffects::m_fNightVisionSwitchOnFXTime
-    static inline auto& m_fNightVisionSwitchOnFXTime = StaticRef<float>(0x8D50B0); // 50.0f
-    static inline auto& m_NightVisionGrainStrength = StaticRef<int32>(0x8D50A8); // 48
-    static inline auto& m_NightVisionMainCol = StaticRef<CRGBA>(0x8D50AC); // { 255, 0, 130, 0};
+    static inline NOTSA_GLOBAL(m_fNightVisionSwitchOnFXTime, 0x8D50B0, (float), { 50.0f }); // 50.0f
+    static inline NOTSA_GLOBAL(m_NightVisionGrainStrength, 0x8D50A8, (int32), { 48 }); // 48
+    static inline NOTSA_GLOBAL(m_NightVisionMainCol, 0x8D50AC, (CRGBA), { std::bit_cast<CRGBA>(0xFF008200U) }); // { 255, 0, 130, 0};
 
-    static inline auto& m_bDarknessFilter = StaticRef<bool>(0xC402C4);
-    static inline auto& m_DarknessFilterAlpha = StaticRef<int32>(0x8D5204); // 170
-    static inline auto& m_DarknessFilterAlphaDefault = StaticRef<int32>(0x8D50F4); // 170
-    static inline auto& m_DarknessFilterRadiosityIntensityLimit = StaticRef<int32>(0x8D50F8); // 45
+    static inline NOTSA_GLOBAL(m_bDarknessFilter, 0xC402C4, (bool), {});
+    static inline NOTSA_GLOBAL(m_DarknessFilterAlpha, 0x8D5204, (int32), { 170 }); // 170
+    static inline NOTSA_GLOBAL(m_DarknessFilterAlphaDefault, 0x8D50F4, (int32), { 170 }); // 170
+    static inline NOTSA_GLOBAL(m_DarknessFilterRadiosityIntensityLimit, 0x8D50F8, (int32), { 45 }); // 45
 
-    static inline auto& m_fWaterFXStartUnderWaterness = StaticRef<float>(0x8D514C); // 0.535f;
-    static inline auto& m_fWaterFullDarknessDepth = StaticRef<float>(0x8D5148); // 90.0f
-    static inline auto& m_bWaterDepthDarkness = StaticRef<bool>(0x8D5144);  // true;
+    static inline NOTSA_GLOBAL(m_fWaterFXStartUnderWaterness, 0x8D514C, (float), { 0.535f }); // 0.535f;
+    static inline NOTSA_GLOBAL(m_fWaterFullDarknessDepth, 0x8D5148, (float), { 90.0f }); // 90.0f
+    static inline NOTSA_GLOBAL(m_bWaterDepthDarkness, 0x8D5144, (bool), { true });  // true;
 
-    static inline auto& m_bHeatHazeFX = StaticRef<bool>(0xC402BA);
-    static inline auto& m_HeatHazeFXSpeedMin = StaticRef<int32>(0x8D50EC); // 6
-    static inline auto& m_HeatHazeFXSpeedMax = StaticRef<int32>(0x8D50F0); // 10
-    static inline auto& m_HeatHazeFXIntensity = StaticRef<int32>(0x8D50E8); // 150
-    static inline auto& m_HeatHazeFXType = StaticRef<int32>(0xC402BC); // 0
-    static inline auto& m_HeatHazeFXTypeLast = StaticRef<int32>(0x8D50E4); // -1
-    static inline auto& m_HeatHazeFXRandomShift = StaticRef<int32>(0xC402C0);
-    static inline auto& m_HeatHazeFXScanSizeX = StaticRef<int32>(0xC40304); // int32(SCREEN_WIDTH_UNIT  * 24.0f);
-    static inline auto& m_HeatHazeFXScanSizeY = StaticRef<int32>(0xC40308); // int32(SCREEN_HEIGHT_UNIT * 24.0f);
-    static inline auto& m_HeatHazeFXRenderSizeX = StaticRef<int32>(0xC4030C); // int32(SCREEN_WIDTH_UNIT  * 24.0f);
-    static inline auto& m_HeatHazeFXRenderSizeY = StaticRef<int32>(0xC40310); // int32(SCREEN_HEIGHT_UNIT * 24.0f);
+    static inline NOTSA_GLOBAL(m_bHeatHazeFX, 0xC402BA, (bool), {});
+    static inline NOTSA_GLOBAL(m_HeatHazeFXSpeedMin, 0x8D50EC, (int32), { 6 }); // 6
+    static inline NOTSA_GLOBAL(m_HeatHazeFXSpeedMax, 0x8D50F0, (int32), { 10 }); // 10
+    static inline NOTSA_GLOBAL(m_HeatHazeFXIntensity, 0x8D50E8, (int32), { 150 }); // 150
+    static inline NOTSA_GLOBAL(m_HeatHazeFXType, 0xC402BC, (int32), {}); // 0
+    static inline NOTSA_GLOBAL(m_HeatHazeFXTypeLast, 0x8D50E4, (int32), { -1 }); // -1
+    static inline NOTSA_GLOBAL(m_HeatHazeFXRandomShift, 0xC402C0, (int32), {});
+    static inline NOTSA_GLOBAL(m_HeatHazeFXScanSizeX, 0xC40304, (int32), {}); // int32(SCREEN_WIDTH_UNIT  * 24.0f);
+    static inline NOTSA_GLOBAL(m_HeatHazeFXScanSizeY, 0xC40308, (int32), {}); // int32(SCREEN_HEIGHT_UNIT * 24.0f);
+    static inline NOTSA_GLOBAL(m_HeatHazeFXRenderSizeX, 0xC4030C, (int32), {}); // int32(SCREEN_WIDTH_UNIT  * 24.0f);
+    static inline NOTSA_GLOBAL(m_HeatHazeFXRenderSizeY, 0xC40310, (int32), {}); // int32(SCREEN_HEIGHT_UNIT * 24.0f);
 
-    static inline auto& m_bFog = StaticRef<bool>(0xC402C6);
+    static inline NOTSA_GLOBAL(m_bFog, 0xC402C6, (bool), {});
 
-    static inline auto& m_bSpeedFX = StaticRef<bool>(0x8D5100); // true;
-    static inline auto& m_bSpeedFXTestMode = StaticRef<bool>(0xC402C7);
-    static inline auto& m_bSpeedFXUserFlag = StaticRef<bool>(0x8D5108); // always true;
-    static inline auto& m_bSpeedFXUserFlagCurrentFrame = StaticRef<bool>(0x8D5109); // true
-    static inline auto& m_fSpeedFXManualSpeedCurrentFrame = StaticRef<float>(0xC402C8);
-    static inline auto& m_SpeedFXAlpha = StaticRef<int32>(0x8D5104); // 36
+    static inline NOTSA_GLOBAL(m_bSpeedFX, 0x8D5100, (bool), { true }); // true;
+    static inline NOTSA_GLOBAL(m_bSpeedFXTestMode, 0xC402C7, (bool), {});
+    static inline NOTSA_GLOBAL(m_bSpeedFXUserFlag, 0x8D5108, (bool), { true }); // always true;
+    static inline NOTSA_GLOBAL(m_bSpeedFXUserFlagCurrentFrame, 0x8D5109, (bool), { true }); // true
+    static inline NOTSA_GLOBAL(m_fSpeedFXManualSpeedCurrentFrame, 0xC402C8, (float), {});
+    static inline NOTSA_GLOBAL(m_SpeedFXAlpha, 0x8D5104, (int32), { 36 }); // 36
 
-    static inline auto& pRasterFrontBuffer = StaticRef<RwRaster*>(0xC402D8);
+    static inline NOTSA_GLOBAL(pRasterFrontBuffer, 0xC402D8, (RwRaster*), {});
 
-    static inline auto& m_bGrainEnable = StaticRef<bool>(0xC402B4);
-    static inline auto& m_pGrainRaster = StaticRef<RwRaster*>(0xC402B0);
-    static inline auto& m_grainStrength = StaticRef<std::array<char, 2>>(0x8D5094);
+    static inline NOTSA_GLOBAL(m_bGrainEnable, 0xC402B4, (bool), {});
+    static inline NOTSA_GLOBAL(m_pGrainRaster, 0xC402B0, (RwRaster*), {});
+    static inline NOTSA_GLOBAL(m_grainStrength, 0x8D5094, (std::array<char, 4>), { 64 }); // the exe passes the whole dword to Grain(int32); only [0] is read here
 
-    static inline auto& m_bCCTV = StaticRef<bool>(0xC402C5);
-    static inline auto& m_CCTVcol = StaticRef<CRGBA>(0x8D50FC); // { 64, 0, 0, 0 }
+    static inline NOTSA_GLOBAL(m_bCCTV, 0xC402C5, (bool), {});
+    static inline NOTSA_GLOBAL(m_CCTVcol, 0x8D50FC, (CRGBA), { std::bit_cast<CRGBA>(0x40000000U) }); // { 64, 0, 0, 0 }
 
-    static inline auto& m_bRainEnable = StaticRef<bool>(0xC402D1);
-    static inline auto& m_bColorEnable = StaticRef<bool>(0x8D518C); // true;
+    static inline NOTSA_GLOBAL(m_bRainEnable, 0xC402D1, (bool), {});
+    static inline NOTSA_GLOBAL(m_bColorEnable, 0x8D518C, (bool), { true }); // true;
 
-    static inline auto& m_bRadiosity = StaticRef<bool>(0xC402CC);
-    static inline auto& m_bRadiosityDebug = StaticRef<bool>(0xC402CD);
-    static inline auto& m_bRadiosityLinearFilter = StaticRef<bool>(0x8D510A); // true;
-    static inline auto& m_bRadiosityStripCopyMode = StaticRef<bool>(0x8D510B); // true;
-    static inline auto& m_RadiosityFilterUCorrection = StaticRef<int32>(0x8D511C); // 2;
-    static inline auto& m_RadiosityFilterVCorrection = StaticRef<int32>(0x8D5120); // 2;
-    static inline auto& m_RadiosityIntensity = StaticRef<int32>(0x8D5118); // 35
-    static inline auto& m_RadiosityIntensityLimit = StaticRef<int32>(0x8D5114); // 220
-    static inline auto& m_bRadiosityBypassTimeCycleIntensityLimit = StaticRef<bool>(0xC402CE);
-    static inline auto& m_RadiosityPixelsX = StaticRef<int32>(0xC40314);  // SCREEN_WIDTH
-    static inline auto& m_RadiosityPixelsY = StaticRef<int32>(0xC40318);  // SCREEN_HEIGHT
-    static inline auto& m_RadiosityFilterPasses = StaticRef<uint32>(0x8D5110); // 1
-    static inline auto& m_RadiosityRenderPasses = StaticRef<uint32>(0x8D510C); // 2
+    static inline NOTSA_GLOBAL(m_bRadiosity, 0xC402CC, (bool), {});
+    static inline NOTSA_GLOBAL(m_bRadiosityDebug, 0xC402CD, (bool), {});
+    static inline NOTSA_GLOBAL(m_bRadiosityLinearFilter, 0x8D510A, (bool), { true }); // true;
+    static inline NOTSA_GLOBAL(m_bRadiosityStripCopyMode, 0x8D510B, (bool), { true }); // true;
+    static inline NOTSA_GLOBAL(m_RadiosityFilterUCorrection, 0x8D511C, (int32), { 2 }); // 2;
+    static inline NOTSA_GLOBAL(m_RadiosityFilterVCorrection, 0x8D5120, (int32), { 2 }); // 2;
+    static inline NOTSA_GLOBAL(m_RadiosityIntensity, 0x8D5118, (int32), { 35 }); // 35
+    static inline NOTSA_GLOBAL(m_RadiosityIntensityLimit, 0x8D5114, (int32), { 220 }); // 220
+    static inline NOTSA_GLOBAL(m_bRadiosityBypassTimeCycleIntensityLimit, 0xC402CE, (bool), {});
+    static inline NOTSA_GLOBAL(m_RadiosityPixelsX, 0xC40314, (int32), {});  // SCREEN_WIDTH
+    static inline NOTSA_GLOBAL(m_RadiosityPixelsY, 0xC40318, (int32), {});  // SCREEN_HEIGHT
+    static inline NOTSA_GLOBAL(m_RadiosityFilterPasses, 0x8D5110, (uint32), { 1 }); // 1
+    static inline NOTSA_GLOBAL(m_RadiosityRenderPasses, 0x8D510C, (uint32), { 2 }); // 2
 
-    static inline auto& m_VisionFXDayNightBalance = StaticRef<float>(0x8D50A4); // 1.0f
+    static inline NOTSA_GLOBAL(m_VisionFXDayNightBalance, 0x8D50A4, (float), { 1.0f }); // 1.0f
 
-    static inline auto& m_bInfraredVision = StaticRef<bool>(0xC402B9);
-    static inline auto& m_InfraredVisionGrainStrength = StaticRef<int32>(0x8D50B4); // 64
-    static inline auto& m_fInfraredVisionFilterRadius = StaticRef<float>(0x8D50B8); // 0.003f
+    static inline NOTSA_GLOBAL(m_bInfraredVision, 0xC402B9, (bool), {});
+    static inline NOTSA_GLOBAL(m_InfraredVisionGrainStrength, 0x8D50B4, (int32), { 64 }); // 64
+    static inline NOTSA_GLOBAL(m_fInfraredVisionFilterRadius, 0x8D50B8, (float), { 0.003f }); // 0.003f
     // float& m_fInfraredVisionSwitchOnFXCount;
-    static inline auto& m_InfraredVisionCol = StaticRef<CRGBA>(0x8D50CC);      // { FF, 3C, 28, 6E }
-    static inline auto& m_InfraredVisionMainCol = StaticRef<CRGBA>(0x8D50D0);      // { FF, C8, 00, 64 }
-    static inline auto& m_fInfraredVisionHeatObjectCol = StaticRef<RwRGBAReal>(0x8D50BC); // { 1.0f, 0.0f, 0.0f, 1.0f }
-    static inline auto& m_HeatHazeFXHourOfDayStart = StaticRef<int32>(0x8D50D4); // 10
-    static inline auto& m_HeatHazeFXHourOfDayEnd = StaticRef<int32>(0x8D50D8); // 19
-    static inline auto& m_fHeatHazeFXFadeSpeed = StaticRef<float>(0x8D50DC); // 0.05f
-    static inline auto& m_fHeatHazeFXInsideBuildingFadeSpeed = StaticRef<float>(0x8D50E0); // 0.5f
+    static inline NOTSA_GLOBAL(m_InfraredVisionCol, 0x8D50CC, (CRGBA), { std::bit_cast<CRGBA>(0xFF3C286EU) });      // { FF, 3C, 28, 6E }
+    static inline NOTSA_GLOBAL(m_InfraredVisionMainCol, 0x8D50D0, (CRGBA), { std::bit_cast<CRGBA>(0xFFC80064U) });      // { FF, C8, 00, 64 }
+    static inline NOTSA_GLOBAL(m_fInfraredVisionHeatObjectCol, 0x8D50BC, (RwRGBAReal), { 1.0f, 0.0f, 0.0f, 1.0f }); // { 1.0f, 0.0f, 0.0f, 1.0f }
+    static inline NOTSA_GLOBAL(m_HeatHazeFXHourOfDayStart, 0x8D50D4, (int32), { 10 }); // 10
+    static inline NOTSA_GLOBAL(m_HeatHazeFXHourOfDayEnd, 0x8D50D8, (int32), { 19 }); // 19
+    static inline NOTSA_GLOBAL(m_fHeatHazeFXFadeSpeed, 0x8D50DC, (float), { 0.05f }); // 0.05f
+    static inline NOTSA_GLOBAL(m_fHeatHazeFXInsideBuildingFadeSpeed, 0x8D50E0, (float), { 0.5f }); // 0.5f
 
-    static inline auto& m_waterEnable = StaticRef<bool>(0xC402D3);
-    static inline auto& m_waterStrength = StaticRef<float>(0x8D512C); // 64
-    static inline auto& m_waterSpeed = StaticRef<float>(0x8D5138); // 0.0015f
-    static inline auto& m_waterFreq = StaticRef<float>(0x8D513C); // 0.04f
-    static inline auto& m_waterCol = StaticRef<CRGBA>(0x8D5140); // { 64, 64, 64, 64 }
+    static inline NOTSA_GLOBAL(m_waterEnable, 0xC402D3, (bool), {});
+    static inline NOTSA_GLOBAL(m_waterStrength, 0x8D512C, (float), { std::bit_cast<float>(0x00000040u) }); // 64
+    static inline NOTSA_GLOBAL(m_waterSpeed, 0x8D5138, (float), { 0.0015f }); // 0.0015f
+    static inline NOTSA_GLOBAL(m_waterFreq, 0x8D513C, (float), { 0.04f }); // 0.04f
+    static inline NOTSA_GLOBAL(m_waterCol, 0x8D5140, (CRGBA), { std::bit_cast<CRGBA>(0x40404040U) }); // { 64, 64, 64, 64 }
 
     // Immediate Mode Filter
     struct imf {
@@ -208,5 +208,5 @@ public:
     };
     VALIDATE_SIZE(imf, 0x158);
 
-    static inline auto& ms_imf = StaticRef<imf>(0xC40150);
+    static inline NOTSA_GLOBAL(ms_imf, 0xC40150, (imf), {});
 };

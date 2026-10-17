@@ -4,14 +4,14 @@
 #include "CustomBuildingDNPipeline.h"
 #include "Clouds.h"
 
-auto& cc_vertices = StaticRef<std::array<RwIm2DVertex, 4>>(0xC400D8);
-auto& cc_indices = StaticRef<std::array<RwImVertexIndex, 12>>(0x8D5174); // { 0, 1, 2, 0, 2, 3, 0, 1, 2, 0, 2, 3 };
+NOTSA_GLOBAL(cc_vertices, 0xC400D8, (std::array<RwIm2DVertex, 4>), {});
+NOTSA_GLOBAL(cc_indices, 0x8D5174, (std::array<RwImVertexIndex, 12>), { 0, 1, 2, 0, 2, 3, 0, 1, 2, 0, 2, 3 }); // { 0, 1, 2, 0, 2, 3, 0, 1, 2, 0, 2, 3 };
 
-auto& hpX = StaticRef<std::array<int32, 180>>(0xC3FE08);
-auto& hpY = StaticRef<std::array<int32, 180>>(0xC3FB38);
-auto& hpS = StaticRef<std::array<int32, 180>>(0xC3F868); // speed
+NOTSA_GLOBAL(hpX, 0xC3FE08, (std::array<int32, 180>), {});
+NOTSA_GLOBAL(hpY, 0xC3FB38, (std::array<int32, 180>), {});
+NOTSA_GLOBAL(hpS, 0xC3F868, (std::array<int32, 180>), {}); // speed
 
-static inline auto& s_DayNightBalanceParamOld = StaticRef<float>(0xC3F860);
+static inline NOTSA_GLOBAL(s_DayNightBalanceParamOld, 0xC3F860, (float), {});
 
 static constexpr auto GRAIN_TEXTURE_DIM = 256u; // 256x256
 
@@ -542,7 +542,7 @@ void CPostEffects::HeatHazeFXInit() {
 // 0x701780
 void CPostEffects::HeatHazeFX(float fIntensity, bool bAlphaMaskMode) {
     // Debug flag: if set, a single full screen quad (with only the red channel) is drawn instead of the haze quads
-    static auto& s_DebugDrawMask = StaticRef<bool>(0xC402BB);
+    NOTSA_GLOBAL_LOCAL(s_DebugDrawMask, 0xC402BB, (bool), {});
 
     auto* const camera = Scene.m_pRwCamera;
     auto* const camRaster = RwCameraGetRaster(camera);
@@ -919,8 +919,8 @@ void CPostEffects::InfraredVisionRestoreLightsForHeatObjects() {
 
 // 0x704150
 void CPostEffects::Fog() {
-    static auto& s_FogRadius = StaticRef<float>(0xC402E4);
-    static auto& s_FogAngle  = StaticRef<float>(0xC402DC);
+    NOTSA_GLOBAL_LOCAL(s_FogRadius, 0xC402E4, (float), {});
+    NOTSA_GLOBAL_LOCAL(s_FogAngle, 0xC402DC, (float), {});
 
     ImmediateModeRenderStatesStore();
     ImmediateModeRenderStatesSet();
@@ -1008,7 +1008,7 @@ void CPostEffects::CCTV() {
 
 // 0x7037C0
 void CPostEffects::Grain(int32 strengthMask, bool update) {
-    static auto& s_NumberOfReseeds = StaticRef<uint32>(0xC4031C);
+    NOTSA_GLOBAL_LOCAL(s_NumberOfReseeds, 0xC4031C, (uint32), {});
     if (update) {
         auto* pixels = RwRasterLock(m_pGrainRaster, 0, rwRASTERLOCKWRITE);
 
@@ -1060,7 +1060,11 @@ void CPostEffects::SpeedFX(float speed) {
         int32 size;
         int32 jitter;
     };
-    static auto& s_Levels = StaticRef<std::array<tSpeedFXLevel, 7>>(0x8D5190);
+    NOTSA_GLOBAL_LOCAL(s_Levels, 0x8D5190, (std::array<tSpeedFXLevel, 7>), { {
+        { 0.6f, 1, 4, 0 }, { 0.7f, 2, 4, 0 }, { 0.8f, 3, 4, 0 }, { 0.9f, 3, 4, 0 },
+        { 0.93f, 4, 4, 1 }, { 0.96f, 4, 4, 2 }, { 1.0f, 5, 4, 3 },
+    } });
+#line 1064
 
     const auto lookDir       = TheCamera.GetActiveCam().m_nDirectionWasLooking;
     const bool isLookingLeft = lookDir == 1;
@@ -1351,10 +1355,10 @@ void CPostEffects::SetSpeedFXManualSpeedCurrentFrame(float value) {
 void CPostEffects::Render() {
     ZoneScoped;
 
-    static auto& s_CurrentStrength    = StaticRef<int32>(0xC40328);
-    static auto& s_WaterGreen         = StaticRef<float>(0xC40324);
-    static auto& s_WaitForOneFrame    = StaticRef<bool>(0xC40321);
-    static auto& s_SavePhotoToGallery = StaticRef<bool>(0xC40320);
+    NOTSA_GLOBAL_LOCAL(s_CurrentStrength, 0xC40328, (int32), {});
+    NOTSA_GLOBAL_LOCAL(s_WaterGreen, 0xC40324, (float), {});
+    NOTSA_GLOBAL_LOCAL(s_WaitForOneFrame, 0xC40321, (bool), {});
+    NOTSA_GLOBAL_LOCAL(s_SavePhotoToGallery, 0xC40320, (bool), {});
 
     if (m_bDisableAllPostEffect) {
         return;
@@ -1367,7 +1371,7 @@ void CPostEffects::Render() {
     RwRasterPopContext();
     RsCameraBeginUpdate(Scene.m_pRwCamera);
 
-    auto& s_ExtraMult = ScopedStaticRef<float>(0xC4032C, 0xC40330, 1, 0.35f);
+    NOTSA_SCOPED_GLOBAL(s_ExtraMult, 0xC4032C, 0xC40330, 1, (float), 0.35f);
 
     if (m_bFog) {
         Fog();

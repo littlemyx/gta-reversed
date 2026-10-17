@@ -63,9 +63,9 @@ public:
     using tScanFunction = void(__cdecl*)(int32, int32);
 
     // NOTSA names. The original keeps 4 + 4 ints back to back (Y at 0xC81598, X at 0xC815A8) and a count at 0xC815B8
-    static inline auto& ms_aExtraRectangleY = StaticRef<int32[4]>(0xC81598);
-    static inline auto& ms_aExtraRectangleX = StaticRef<int32[4]>(0xC815A8);
-    static inline auto& ms_nExtraRectangleCount = StaticRef<int32>(0xC815B8);
+    static inline NOTSA_GLOBAL(ms_aExtraRectangleY, 0xC81598, (int32[4]), {});
+    static inline NOTSA_GLOBAL(ms_aExtraRectangleX, 0xC815A8, (int32[4]), {});
+    static inline NOTSA_GLOBAL(ms_nExtraRectangleCount, 0xC815B8, (int32), {});
 
     static void InjectHooks();
     static void ScanWorld(CVector2D* points, int32 pointsCount, tScanFunction scanFunction);
@@ -74,26 +74,26 @@ public:
 
 class CRenderer {
 public:
-    static inline auto& ms_bRenderTunnels = StaticRef<bool>(0xB745C0);
-    static inline auto& ms_bRenderOutsideTunnels = StaticRef<bool>(0xB745C1);
-    static inline auto& ms_pLodDontRenderList = StaticRef<tRenderListEntry*>(0xB745CC);
-    static inline auto& ms_pLodRenderList = StaticRef<tRenderListEntry*>(0xB745D0);
-    static inline auto& m_pFirstPersonVehicle = StaticRef<CVehicle*>(0xB745D4);
-    static inline auto& ms_aInVisibleEntityPtrs = StaticRef<CEntity*[MAX_INVISIBLE_ENTITY_PTRS]>(0xB745D8);
-    static inline auto& ms_aVisibleSuperLodPtrs = StaticRef<CEntity*[MAX_VISIBLE_SUPERLOD_PTRS]>(0xB74830);
-    static inline auto& ms_aVisibleLodPtrs = StaticRef<CEntity*[MAX_VISIBLE_LOD_PTRS]>(0xB748F8);
-    static inline auto& ms_aVisibleEntityPtrs = StaticRef<CEntity*[MAX_VISIBLE_ENTITY_PTRS]>(0xB75898);
-    static inline auto& ms_nNoOfVisibleSuperLods = StaticRef<int32>(0xB76838);
-    static inline auto& ms_nNoOfInVisibleEntities = StaticRef<int32>(0xB7683C);
-    static inline auto& ms_nNoOfVisibleLods = StaticRef<int32>(0xB76840);
-    static inline auto& ms_nNoOfVisibleEntities = StaticRef<int32>(0xB76844);
-    static inline auto& ms_fFarClipPlane = StaticRef<float>(0xB76848);
-    static inline auto& ms_fCameraHeading = StaticRef<float>(0xB7684C);
-    static inline auto& m_loadingPriority = StaticRef<bool>(0xB76850);
-    static inline auto& ms_bInTheSky = StaticRef<bool>(0xB76851);
-    static inline auto& ms_vecCameraPosition = StaticRef<CVector>(0xB76870);
-    static inline auto& ms_lodDistScale = StaticRef<float>(0x8CD800); // default 1.2
-    static inline auto& ms_lowLodDistScale = StaticRef<float>(0x8CD804); // default 1.0
+    static inline NOTSA_GLOBAL(ms_bRenderTunnels, 0xB745C0, (bool), {});
+    static inline NOTSA_GLOBAL(ms_bRenderOutsideTunnels, 0xB745C1, (bool), {});
+    static inline NOTSA_GLOBAL(ms_pLodDontRenderList, 0xB745CC, (tRenderListEntry*), {});
+    static inline NOTSA_GLOBAL(ms_pLodRenderList, 0xB745D0, (tRenderListEntry*), {});
+    static inline NOTSA_GLOBAL(m_pFirstPersonVehicle, 0xB745D4, (CVehicle*), {});
+    static inline NOTSA_GLOBAL(ms_aInVisibleEntityPtrs, 0xB745D8, (CEntity*[MAX_INVISIBLE_ENTITY_PTRS]), {});
+    static inline NOTSA_GLOBAL(ms_aVisibleSuperLodPtrs, 0xB74830, (CEntity*[MAX_VISIBLE_SUPERLOD_PTRS]), {});
+    static inline NOTSA_GLOBAL(ms_aVisibleLodPtrs, 0xB748F8, (CEntity*[MAX_VISIBLE_LOD_PTRS]), {});
+    static inline NOTSA_GLOBAL(ms_aVisibleEntityPtrs, 0xB75898, (CEntity*[MAX_VISIBLE_ENTITY_PTRS]), {});
+    static inline NOTSA_GLOBAL(ms_nNoOfVisibleSuperLods, 0xB76838, (int32), {});
+    static inline NOTSA_GLOBAL(ms_nNoOfInVisibleEntities, 0xB7683C, (int32), {});
+    static inline NOTSA_GLOBAL(ms_nNoOfVisibleLods, 0xB76840, (int32), {});
+    static inline NOTSA_GLOBAL(ms_nNoOfVisibleEntities, 0xB76844, (int32), {});
+    static inline NOTSA_GLOBAL(ms_fFarClipPlane, 0xB76848, (float), {});
+    static inline NOTSA_GLOBAL(ms_fCameraHeading, 0xB7684C, (float), {});
+    static inline NOTSA_GLOBAL(m_loadingPriority, 0xB76850, (bool), {});
+    static inline NOTSA_GLOBAL(ms_bInTheSky, 0xB76851, (bool), {});
+    static inline NOTSA_GLOBAL(ms_vecCameraPosition, 0xB76870, (CVector), {});
+    static inline NOTSA_GLOBAL(ms_lodDistScale, 0x8CD800, (float), { 1.2f }); // default 1.2
+    static inline NOTSA_GLOBAL(ms_lowLodDistScale, 0x8CD804, (float), { 1.0f }); // default 1.0
 
 public:
     static void InjectHooks();
@@ -143,5 +143,5 @@ public:
     static auto GetInVisibleEntityPtrs() { return std::span{ ms_aInVisibleEntityPtrs, (size_t)ms_nNoOfInVisibleEntities }; }
 };
 
-extern uint32& gnRendererModelRequestFlags;
-extern CEntity**& gpOutEntitiesForGetObjectsInFrustum;
+NOTSA_GLOBAL_EXTERN(gnRendererModelRequestFlags, (uint32));
+NOTSA_GLOBAL_EXTERN(gpOutEntitiesForGetObjectsInFrustum, (CEntity**));

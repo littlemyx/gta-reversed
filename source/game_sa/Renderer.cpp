@@ -16,8 +16,8 @@
 #include "CarFXRenderer.h"
 
 #include "toolsmenu/UIRenderer.h"
-auto& gnRendererModelRequestFlags = StaticRef<uint32>(0xB745C4);
-auto& gpOutEntitiesForGetObjectsInFrustum = StaticRef<CEntity**>(0xB76854);
+NOTSA_GLOBAL(gnRendererModelRequestFlags, 0xB745C4, (uint32), {});
+NOTSA_GLOBAL(gpOutEntitiesForGetObjectsInFrustum, 0xB76854, (CEntity**), {});
 
 void CRenderer::InjectHooks()
 {
@@ -1306,8 +1306,8 @@ void CRenderer::ScanWorld() {
 
     CWorld::AdvanceCurrentScanCode();
 
-    static auto& lastCameraPosition = StaticRef<CVector>(0xB76888);
-    static auto& lastCameraForward = StaticRef<CVector>(0xB7687C);
+    NOTSA_GLOBAL_LOCAL(lastCameraPosition, 0xB76888, (CVector), {});
+    NOTSA_GLOBAL_LOCAL(lastCameraForward, 0xB7687C, (CVector), {});
 
     CVector distance = TheCamera.GetPosition() - lastCameraPosition;
     static bool bUnusedBool = false;

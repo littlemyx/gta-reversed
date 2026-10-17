@@ -6,7 +6,10 @@
 
 //             animsCount,   anims
 #define awc(a) std::size(a), a
-std::array<AnimAssocDefinition, NUM_ANIM_ASSOC_GROUPS> CAnimManager::ms_aAnimAssocDefinitionsX{{ // 0x8AA5A8
+// 0x8AA5A8, the 118 built-in groups (ANIMGRP.DAT appends the rest at run time). Detached build only: in address mode the table is the exe's (header: NOTSA_GLOBAL_DECL). The
+// variable is private, so it is registered for NOTSA_VERIFY_GLOBALS by the friend CAnimManagerTableChecks below instead of by NOTSA_GLOBAL_DEF.
+#ifdef NOTSA_GLOBALS_DETACHED
+AnimAssocDefinition CAnimManager::ms_aAnimAssocDefinitions[NUM_ANIM_ASSOC_GROUPS_CAPACITY] = {
     { "default",            "ped",           MODEL_MALE01,  awc(aStdAnimations),                aStdAnimDescs          },
     { "door",               "ped",           MODEL_INVALID, awc(aDoorAnimations),               aDoorDescs             },
     { "bikes",              "bikes",         MODEL_MALE01,  awc(aBikesAnimations),              aBikesDescs            },
@@ -125,5 +128,61 @@ std::array<AnimAssocDefinition, NUM_ANIM_ASSOC_GROUPS> CAnimManager::ms_aAnimAss
     { "harrplaneanims",     "rustler",       MODEL_MALE01,  awc(aHarrPlaneAnimations),          aCarAnimDescs1         },
     { "stdcarupright",      "ped",           MODEL_MALE01,  awc(aStdCarAnimations),             aCarAnimDescs2         },
     { "nvadaplaneanims",    "nevada",        MODEL_MALE01,  awc(aNevadaPlaneAnimations),        aCarAnimDescs1         }
-}};
+};
+#endif
 #undef awc
+
+// NOTSA_VERIFY_GLOBALS (detached build): the built-in definitions are literals now - compare group / block names, model ids, every animation name and every
+// descriptor {AnimId, Flags} with the data image (slice D2). The image's name / descriptor arrays are read through the image's own pointers.
+#include <standalone/GlobalsVerifyTables.h>
+#ifdef NOTSA_TABLE_CHECKS
+struct CAnimManagerTableChecks {
+    static inline const ::notsa::globals::Reg s_Reg{ "ms_aAnimAssocDefinitions", __FILE__, __LINE__, 0x8AA5A8, sizeof(CAnimManager::ms_aAnimAssocDefinitions), &CAnimManager::ms_aAnimAssocDefinitions };
+
+    // Does not stop at the first difference: counts them and keeps the first few descriptions in `why`
+    static bool Definitions(char* why, size_t n) {
+        using namespace ::notsa::globals;
+        size_t bad = 0, names = 0, descs = 0, used = 0;
+        const auto Note = [&](const char* fmt, auto... args) {
+            if (bad++ < 4 && used + 1 < n) {
+                used += (size_t)std::max(0, snprintf(why + used, n - used, fmt, args...));
+            }
+        };
+        for (uint32 g = 0; g < NUM_ANIM_ASSOC_GROUPS; g++) {
+            const auto& ours = CAnimManager::ms_aAnimAssocDefinitions[g];
+            const auto& img  = Image<AnimAssocDefinition>(0x8AA5A8 + (uint32)sizeof(AnimAssocDefinition) * g);
+            const auto  imgNames = ImagePtr(img.AnimNames);
+            const auto  imgDescr = ImagePtr(img.AnimDescr);
+            if (std::memcmp(ours.GroupName, img.GroupName, sizeof(ours.GroupName)) || std::memcmp(ours.BlockName, img.BlockName, sizeof(ours.BlockName))
+                || ours.ModelIndex != img.ModelIndex || ours.NumAnims != img.NumAnims) {
+                Note("group %u header (%s); ", g, ours.GroupName);
+                continue;
+            }
+            for (int32 a = 0; a < ours.NumAnims; a++) {
+                names++;
+                if (!imgNames || !SameCStr(ours.AnimNames[a], imgNames[a])) {
+                    Note("group %u (%s) name %d; ", g, ours.GroupName, a);
+                }
+                descs++;
+                if (!imgDescr || ours.AnimDescr[a].AnimId != imgDescr[a].AnimId || ours.AnimDescr[a].Flags != imgDescr[a].Flags) {
+                    Note("group %u (%s) descr %d {%d,0x%X} vs image {%d,0x%X}; ", g, ours.GroupName, a, (int)ours.AnimDescr[a].AnimId, ours.AnimDescr[a].Flags, imgDescr ? (int)imgDescr[a].AnimId : -1, imgDescr ? imgDescr[a].Flags : 0u);
+                }
+            }
+        }
+        for (uint32 g = NUM_ANIM_ASSOC_GROUPS; g < NUM_ANIM_ASSOC_GROUPS_CAPACITY; g++) { // ANIMGRP.DAT fills these later; at boot they are zero in both
+            if (std::memcmp(&CAnimManager::ms_aAnimAssocDefinitions[g], &Image<AnimAssocDefinition>(0x8AA5A8 + (uint32)sizeof(AnimAssocDefinition) * g), sizeof(AnimAssocDefinition))) {
+                Note("spare definition %u is not zero in both; ", g);
+            }
+        }
+        if (bad == 0) {
+            snprintf(why, n, "%d groups, %zu names, %zu descriptors", (int)NUM_ANIM_ASSOC_GROUPS, names, descs);
+            return true;
+        }
+        if (used + 24 < n) {
+            snprintf(why + used, n - used, "%zu differences", bad);
+        }
+        return false;
+    }
+};
+static const ::notsa::globals::TableCheck s_AnimAssocDefinitionsCheck{ "CAnimManager::ms_aAnimAssocDefinitions", __FILE__, __LINE__, &CAnimManagerTableChecks::Definitions };
+#endif

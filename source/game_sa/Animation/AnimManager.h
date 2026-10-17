@@ -16,13 +16,13 @@
 struct IFPSectionHeader;
 
 constexpr auto MAX_ANIM_BLOCK_NAME = 16;
-constexpr auto NUM_ANIM_ASSOC_GROUPS = 118;
+constexpr auto NUM_ANIM_ASSOC_GROUPS = 118; constexpr auto NUM_ANIM_ASSOC_GROUPS_CAPACITY = 145; // the exe has room for 145 definitions (up to the next global at 0x8AC0DC), ANIMGRP.DAT appends 21
 constexpr auto NUM_ANIM_BLOCKS = 180;
 
 class CAnimManager {
 private:
-    static std::array<AnimAssocDefinition, NUM_ANIM_ASSOC_GROUPS> ms_aAnimAssocDefinitionsX; // replacement
-    static inline auto& ms_aAnimAssocDefinitions = StaticRef<AnimAssocDefinition[NUM_ANIM_ASSOC_GROUPS]>(0x8AA5A8); // std::array - see SurfaceInfos_c
+    friend struct CAnimManagerTableChecks;
+    static NOTSA_GLOBAL_DECL(CAnimManager, ms_aAnimAssocDefinitions, 0x8AA5A8, (AnimAssocDefinition[NUM_ANIM_ASSOC_GROUPS_CAPACITY])); // std::array - see SurfaceInfos_c
     static inline NOTSA_GLOBAL(ms_numAnimAssocDefinitions, 0xB4EA28, (uint32), {});
 
     static inline NOTSA_GLOBAL(ms_aAnimAssocGroups, 0xB4EA34, (CAnimBlendAssocGroup*), {});

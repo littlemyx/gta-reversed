@@ -6,9 +6,9 @@ static constexpr auto MAX_SET_PIECES = 210;
 
 class CSetPieces {
 public:
-    static inline auto& aSetPieces = StaticRef<std::array<CSetPiece, MAX_SET_PIECES>>(0xA95818);
-    static inline auto& NumSetPieces = StaticRef<uint32>(0xA957FC);
-    static inline auto& bDebug = StaticRef<bool>(0xA957F8);
+    static inline NOTSA_GLOBAL(aSetPieces, 0xA95818, (std::array<CSetPiece, MAX_SET_PIECES>), {});
+    static inline NOTSA_GLOBAL(NumSetPieces, 0xA957FC, (uint32), {});
+    static inline NOTSA_GLOBAL(bDebug, 0xA957F8, (bool), {});
 
 public:
     static void InjectHooks();

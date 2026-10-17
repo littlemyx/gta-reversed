@@ -161,3 +161,20 @@ void CPedModelInfo::IncrementVoice() {
         }
     }
 }
+
+// NOTSA_VERIFY_GLOBALS (detached build): m_pPedIds is a table of literals now - compare names, hierarchy ids and flags with the data image (slice D2)
+#include <standalone/GlobalsVerifyTables.h>
+#ifdef NOTSA_TABLE_CHECKS
+static const ::notsa::globals::TableCheck s_PedIdsCheck{ "CPedModelInfo::m_pPedIds", __FILE__, __LINE__, +[](char* why, size_t n) -> bool {
+    for (uint32 i = 0; i < CPedModelInfo::NUM_PED_NAME_ID_ASSOC; i++) {
+        const auto& ours = CPedModelInfo::m_pPedIds[i];
+        const auto& img  = ::notsa::globals::Image<RwObjectNameIdAssocation>(0x8A6268 + 12 * i);
+        if (!::notsa::globals::SameCStr(ours.m_pName, img.m_pName) || ours.m_dwHierarchyId != img.m_dwHierarchyId || ours.m_dwFlags != img.m_dwFlags) {
+            snprintf(why, n, "row %u: ours {%s, %u, 0x%X} image {%s, %u, 0x%X}", i, ours.m_pName ? ours.m_pName : "(null)", ours.m_dwHierarchyId, ours.m_dwFlags,
+                     ::notsa::globals::ImageStr(img.m_pName), img.m_dwHierarchyId, img.m_dwFlags);
+            return false;
+        }
+    }
+    return true;
+} };
+#endif

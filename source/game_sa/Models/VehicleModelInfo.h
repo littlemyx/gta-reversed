@@ -222,7 +222,7 @@ public:
     // vehicle components description tables
     // static RwObjectNameIdAssocation ms_vehicleDescs[12];
     static constexpr int32 NUM_VEHICLE_MODEL_DESCS = 12;
-    static inline auto& ms_vehicleDescs = StaticRef<RwObjectNameIdAssocation*[NUM_VEHICLE_MODEL_DESCS]>(0x8A7740); // use eVehicleType to access
+    static NOTSA_GLOBAL_DECL(CVehicleModelInfo, ms_vehicleDescs, 0x8A7740, (RwObjectNameIdAssocation*[NUM_VEHICLE_MODEL_DESCS])); // use eVehicleType to access
 
     // remap texture
     static inline NOTSA_GLOBAL(ms_pRemapTexture, 0xB4E47C, (RwTexture*), {});

@@ -39,7 +39,7 @@ public:
     static constexpr int32 NUM_PED_NAME_ID_ASSOC = 13;
     static constexpr int32 NUM_PED_COL_NODE_INFOS = 12;
 
-    static inline auto& m_pPedIds = StaticRef<RwObjectNameIdAssocation[NUM_PED_NAME_ID_ASSOC]>(0x8A6268);
+    static inline NOTSA_GLOBAL(m_pPedIds, 0x8A6268, (RwObjectNameIdAssocation[NUM_PED_NAME_ID_ASSOC]), { { const_cast<char*>("Smid"), 1, 0x0 }, { const_cast<char*>("Shead"), 2, 0x0 }, { const_cast<char*>("Supperarml"), 3, 0x0 }, { const_cast<char*>("Supperarmr"), 4, 0x0 }, { const_cast<char*>("SLhand"), 5, 0x0 }, { const_cast<char*>("SRhand"), 6, 0x0 }, { const_cast<char*>("Supperlegl"), 7, 0x0 }, { const_cast<char*>("Supperlegr"), 8, 0x0 }, { const_cast<char*>("Sfootl"), 9, 0x0 }, { const_cast<char*>("Sfootr"), 10, 0x0 }, { const_cast<char*>("Slowerlegl"), 12, 0x0 }, { const_cast<char*>("Slowerlegr"), 11, 0x0 }, { nullptr, 0, 0x0 }, });
     static inline NOTSA_GLOBAL(m_pColNodeInfos, 0x8A6308, (tPedColNodeInfo[NUM_PED_COL_NODE_INFOS]), {
         tPedColNodeInfo{ {}, 5, 9, CVector{ 0.05f, 0.0f, 0.0f }, 0.15f },
         tPedColNodeInfo{ {}, 3, 3, CVector{ 0.2f, 0.0f, 0.0f }, 0.2f },

@@ -1706,7 +1706,7 @@ void CCamera::ProcessFade() {
 
     if (m_nFadeInOutFlag == eFadeFlag::FADE_OUT) {
         m_fFadeDuration == 0.0f
-            ? (m_fFadeAlpha += 0.0f)
+            ? (m_fFadeAlpha = 0.0f) // exe 0x50B5D0: duration 0 SETS the alpha (0 / 255), the port added 0 / 255 to it (a zero-length fade-out never ended)
             : (m_fFadeAlpha -= CTimer::GetTimeStepInSeconds() / m_fFadeDuration * 255.0f);
 
         if (m_fFadeAlpha > 0.0f) {
@@ -1728,7 +1728,7 @@ void CCamera::ProcessFade() {
         fadeAlpha = 255.0f;
 
         m_fFadeDuration == 0.0f
-            ? (m_fFadeAlpha += 255.0f)
+            ? (m_fFadeAlpha = 255.0f)
             : (m_fFadeAlpha += CTimer::GetTimeStepInSeconds() / m_fFadeDuration * 255.0f);
 
         if (m_fFadeAlpha < 255.0f) {

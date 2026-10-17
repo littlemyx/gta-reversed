@@ -176,31 +176,31 @@ public:
         }
     };
 
-    static inline auto& Mode = StaticRef<eReplayMode>(0xA43088);
-    static inline auto& bReplayEnabled = StaticRef<bool>(0x8A6160);
-    static inline auto& bPlayingBackFromFile = StaticRef<bool>(0x97FAE1);
-    static inline auto& bAllowLookAroundCam = StaticRef<bool>(0x97FAE0);
-    static inline auto& bDoLoadSceneWhenDone = StaticRef<bool>(0x97FACC);
-    static inline auto& bIsUsingRemoteCar = StaticRef<bool>(0x97F66D);
+    static inline NOTSA_GLOBAL(Mode, 0xA43088, (eReplayMode), {});
+    static inline NOTSA_GLOBAL(bReplayEnabled, 0x8A6160, (bool), { true });
+    static inline NOTSA_GLOBAL(bPlayingBackFromFile, 0x97FAE1, (bool), {});
+    static inline NOTSA_GLOBAL(bAllowLookAroundCam, 0x97FAE0, (bool), {});
+    static inline NOTSA_GLOBAL(bDoLoadSceneWhenDone, 0x97FACC, (bool), {});
+    static inline NOTSA_GLOBAL(bIsUsingRemoteCar, 0x97F66D, (bool), {});
 
-    static inline auto& pReferences = StaticRef<void*>(0x97FB0C);
-    static inline auto& pPickups = StaticRef<void*>(0x97FB08);
-    static inline auto& pEmptyReferences = StaticRef<void*>(0x97FB04);
-    static inline auto& pWorld1 = StaticRef<void*>(0x97FB00);
-    static inline auto& pStoredCam = StaticRef<CCamera*>(0x97FAF8);
-    static inline auto& pRadarBlips = StaticRef<void*>(0x97FAF4);
+    static inline NOTSA_GLOBAL(pReferences, 0x97FB0C, (void*), {});
+    static inline NOTSA_GLOBAL(pPickups, 0x97FB08, (void*), {});
+    static inline NOTSA_GLOBAL(pEmptyReferences, 0x97FB04, (void*), {});
+    static inline NOTSA_GLOBAL(pWorld1, 0x97FB00, (void*), {});
+    static inline NOTSA_GLOBAL(pStoredCam, 0x97FAF8, (CCamera*), {});
+    static inline NOTSA_GLOBAL(pRadarBlips, 0x97FAF4, (void*), {});
 
-    static inline auto& Time1 = StaticRef<uint32>(0x97FB60);
-    static inline auto& Time2 = StaticRef<uint32>(0x97FB5C);
-    static inline auto& Time3 = StaticRef<uint32>(0x97FB58);
-    static inline auto& Time4 = StaticRef<uint32>(0x97FB54);
-    static inline auto& Time5 = StaticRef<uint32>(0x97FB50);
-    static inline auto& Time6 = StaticRef<uint32>(0x97FB4C);
-    static inline auto& Time7 = StaticRef<uint32>(0x97FB48);
-    static inline auto& Frame = StaticRef<uint32>(0x97FB44);
-    static inline auto& TimeStepNonClipped = StaticRef<float>(0x97FB34);
-    static inline auto& TimeStep = StaticRef<float>(0x97FB38);
-    static inline auto& TimeScale = StaticRef<float>(0x97FB3C);
+    static inline NOTSA_GLOBAL(Time1, 0x97FB60, (uint32), {});
+    static inline NOTSA_GLOBAL(Time2, 0x97FB5C, (uint32), {});
+    static inline NOTSA_GLOBAL(Time3, 0x97FB58, (uint32), {});
+    static inline NOTSA_GLOBAL(Time4, 0x97FB54, (uint32), {});
+    static inline NOTSA_GLOBAL(Time5, 0x97FB50, (uint32), {});
+    static inline NOTSA_GLOBAL(Time6, 0x97FB4C, (uint32), {});
+    static inline NOTSA_GLOBAL(Time7, 0x97FB48, (uint32), {});
+    static inline NOTSA_GLOBAL(Frame, 0x97FB44, (uint32), {});
+    static inline NOTSA_GLOBAL(TimeStepNonClipped, 0x97FB34, (float), {});
+    static inline NOTSA_GLOBAL(TimeStep, 0x97FB38, (float), {});
+    static inline NOTSA_GLOBAL(TimeScale, 0x97FB3C, (float), {});
 
     // these are overwritten when OldWeatherType changes for some reason
     // they have no unreversed xref anyways so it's fine.
@@ -209,40 +209,40 @@ public:
     inline static uint8 ClockHours{};
     inline static uint8 ClockMinutes{};
 
-    static inline auto& OldWeatherType = StaticRef<eWeatherType>(0x97FAEC);
-    static inline auto& NewWeatherType = StaticRef<eWeatherType>(0x97FAE8);
-    static inline auto& WeatherInterpolationValue = StaticRef<float>(0x97FAE4);
+    static inline NOTSA_GLOBAL(OldWeatherType, 0x97FAEC, (eWeatherType), {});
+    static inline NOTSA_GLOBAL(NewWeatherType, 0x97FAE8, (eWeatherType), {});
+    static inline NOTSA_GLOBAL(WeatherInterpolationValue, 0x97FAE4, (float), {});
 
-    static inline auto& ms_nNumCivMale_Stored = StaticRef<uint32>(0x97FAB4);
-    static inline auto& ms_nNumCivFemale_Stored = StaticRef<uint32>(0x97FAB0);
-    static inline auto& ms_nNumCop_Stored = StaticRef<uint32>(0x97FAAC);
-    static inline auto& ms_nNumEmergency_Stored = StaticRef<uint32>(0x97FAA8);
-    static inline auto& ms_nNumDealers_Stored = StaticRef<uint32>(0x97FA7C);
-    static inline auto& ms_nTotalCarPassengerPeds_Stored = StaticRef<uint32>(0x97FA78);
-    static inline auto& ms_nTotalCivPeds_Stored = StaticRef<uint32>(0x97FA74);
-    static inline auto& ms_nTotalGangPeds_Stored = StaticRef<uint32>(0x97FA70);
-    static inline auto& ms_nTotalPeds_Stored = StaticRef<uint32>(0x97FA6C);
-    static inline auto& ms_nTotalMissionPeds_Stored = StaticRef<uint32>(0x97FA68);
-    static inline auto& ms_nNumGang_Stored = StaticRef<std::array<uint32, TOTAL_GANGS>>(0x97FA80);
+    static inline NOTSA_GLOBAL(ms_nNumCivMale_Stored, 0x97FAB4, (uint32), {});
+    static inline NOTSA_GLOBAL(ms_nNumCivFemale_Stored, 0x97FAB0, (uint32), {});
+    static inline NOTSA_GLOBAL(ms_nNumCop_Stored, 0x97FAAC, (uint32), {});
+    static inline NOTSA_GLOBAL(ms_nNumEmergency_Stored, 0x97FAA8, (uint32), {});
+    static inline NOTSA_GLOBAL(ms_nNumDealers_Stored, 0x97FA7C, (uint32), {});
+    static inline NOTSA_GLOBAL(ms_nTotalCarPassengerPeds_Stored, 0x97FA78, (uint32), {});
+    static inline NOTSA_GLOBAL(ms_nTotalCivPeds_Stored, 0x97FA74, (uint32), {});
+    static inline NOTSA_GLOBAL(ms_nTotalGangPeds_Stored, 0x97FA70, (uint32), {});
+    static inline NOTSA_GLOBAL(ms_nTotalPeds_Stored, 0x97FA6C, (uint32), {});
+    static inline NOTSA_GLOBAL(ms_nTotalMissionPeds_Stored, 0x97FA68, (uint32), {});
+    static inline NOTSA_GLOBAL(ms_nNumGang_Stored, 0x97FA80, (std::array<uint32, TOTAL_GANGS>), {});
 
     static inline auto& PlayerInfo = StaticRef<CPlayerInfo>(0xA430B0);
 
-    static inline auto& m_PedPoolConversion = StaticRef<std::array<int32, 140>>(0x97F838);
-    static inline auto& m_VehiclePoolConversion = StaticRef<std::array<int32, 110>>(0x97F680);
+    static inline NOTSA_GLOBAL(m_PedPoolConversion, 0x97F838, (std::array<int32, 140>), {});
+    static inline NOTSA_GLOBAL(m_VehiclePoolConversion, 0x97F680, (std::array<int32, 110>), {});
 
-    static inline auto& CameraFocus = StaticRef<CVector_Reversed>(0x97F670);
-    static inline auto& CameraFixed = StaticRef<CVector_Reversed>(0x97FB24);
-    static inline auto& LoadScene = StaticRef<CVector_Reversed>(0x97FAC0);
-    static inline auto& CameraMode = StaticRef<eReplayCamMode>(0x97FB30);
-    static inline auto& FramesActiveLookAroundCam = StaticRef<int32>(0x97FAD0);
-    static inline auto& OldRadioStation = StaticRef<eRadioID>(0x97FABC);
-    static inline auto& CurrArea = StaticRef<int8>(0x97FAB8);
-    static inline auto& BufferStatus = StaticRef<std::array<eReplayBufferStatus, NUM_REPLAY_BUFFERS>>(0x97FB7C);
+    static inline NOTSA_GLOBAL(CameraFocus, 0x97F670, (CVector_Reversed), { CVector{ 0.0f, 0.0f, 0.0f } }); // no default ctor
+    static inline NOTSA_GLOBAL(CameraFixed, 0x97FB24, (CVector_Reversed), { CVector{ 0.0f, 0.0f, 0.0f } }); // no default ctor
+    static inline NOTSA_GLOBAL(LoadScene, 0x97FAC0, (CVector_Reversed), { CVector{ 0.0f, 0.0f, 0.0f } }); // no default ctor
+    static inline NOTSA_GLOBAL(CameraMode, 0x97FB30, (eReplayCamMode), {});
+    static inline NOTSA_GLOBAL(FramesActiveLookAroundCam, 0x97FAD0, (int32), {});
+    static inline NOTSA_GLOBAL(OldRadioStation, 0x97FABC, (eRadioID), {});
+    static inline NOTSA_GLOBAL(CurrArea, 0x97FAB8, (int8), {});
+    static inline NOTSA_GLOBAL(BufferStatus, 0x97FB7C, (std::array<eReplayBufferStatus, NUM_REPLAY_BUFFERS>), {});
 
-    static inline auto& Buffers = StaticRef<std::array<tReplayBuffer, NUM_REPLAY_BUFFERS>>(0x97FB88);
+    static inline NOTSA_GLOBAL(Buffers, 0x97FB88, (std::array<tReplayBuffer, NUM_REPLAY_BUFFERS>), {});
 
-    static inline auto& Playback = StaticRef<CAddressInReplayBuffer>(0x97FB64);
-    static inline auto& Record = StaticRef<CAddressInReplayBuffer>(0x97FB70);
+    static inline NOTSA_GLOBAL(Playback, 0x97FB64, (CAddressInReplayBuffer), {});
+    static inline NOTSA_GLOBAL(Record, 0x97FB70, (CAddressInReplayBuffer), {});
 
 public:
     static void InjectHooks();

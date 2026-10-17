@@ -94,7 +94,7 @@ void CReplay::Update() {
     if (CTimer::GetIsCodePaused() || CTimer::GetIsUserPaused())
         return;
 
-    static auto& s_FrameRecordCounter = StaticRef<uint32>(0x97FB40);
+    NOTSA_GLOBAL_LOCAL(s_FrameRecordCounter, 0x97FB40, (uint32), {});
     if (Mode == MODE_PLAYBACK) {
         PlayBackThisFrame();
     } else if (CTimer::GetTimeInMS() - s_FrameRecordCounter > 26) {
@@ -570,9 +570,9 @@ void CReplay::ProcessReplayCamera() {
 // 0x45D760
 void CReplay::ProcessLookAroundCam() {
     if (bAllowLookAroundCam) {
-        static auto& playerCameraDistance = StaticRef<float>(0x97FAD4);
-        static auto& playerCameraDirAngle = StaticRef<float>(0x97FADC);
-        static auto& viewAngle = StaticRef<float>(0x97FAD8);
+        NOTSA_GLOBAL_LOCAL(playerCameraDistance, 0x97FAD4, (float), {});
+        NOTSA_GLOBAL_LOCAL(playerCameraDirAngle, 0x97FADC, (float), {});
+        NOTSA_GLOBAL_LOCAL(viewAngle, 0x97FAD8, (float), {});
 
         const auto& pad = CPad::GetPad();
         auto steer = pad->NewMouseControllerState.m_AmountMoved * ExeRecip(200.0f);
@@ -597,7 +597,7 @@ void CReplay::ProcessLookAroundCam() {
             FramesActiveLookAroundCam = 60;
         }
 
-        static auto& s_FrameActiveLookAroundCamReset = StaticRef<bool>(0x97f66d);
+        static NOTSA_GLOBAL_ALIAS(s_FrameActiveLookAroundCamReset, 0x97f66d, (bool), CReplay::bIsUsingRemoteCar);
         if (s_FrameActiveLookAroundCamReset) {
             FramesActiveLookAroundCam = 0;
         } else if (FramesActiveLookAroundCam) {

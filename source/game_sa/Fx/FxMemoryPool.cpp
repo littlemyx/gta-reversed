@@ -25,7 +25,11 @@ void FxMemoryPool_c::Init() {
 
 // 0x4A9C80
 void FxMemoryPool_c::Exit() {
-    CMemoryMgr::Free(this);
+    // The exe frees the data block only (0x4A9C80: `mov eax,[ecx]; test; je; push eax; call Free`, m_pData is not cleared). The port freed `this`, which is the
+    // FxManager_c::m_Pool member inside the g_fx global, not a heap block: heap corruption fast fail 0xC0000374 in CGame::Shutdown (Wine's heap tolerated it).
+    if (m_pData) {
+        CMemoryMgr::Free(m_pData);
+    }
 }
 
 // 0x4A9C90

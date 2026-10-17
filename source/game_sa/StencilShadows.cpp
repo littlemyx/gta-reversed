@@ -4,10 +4,10 @@
 #include "Object.h"
 
 // TODO: Statically allocate after reversing RenderForVehicle&RenderForObject.
-static inline auto& s_ShadowTrianglePointsUnk         = StaticRef<RxVertexIndex*>(0xC6A170);
-static inline auto& s_ShadowTrianglePoints            = StaticRef<CVector*>(0xC6A174);
-static inline auto& s_TransformedShadowTrianglePoints = StaticRef<CVector*>(0xC6A178);
-static inline auto& s_SunPosNrm                       = StaticRef<CVector>(0x8D5244); // CVector(1.0, 1.0, -2.0)
+static inline NOTSA_GLOBAL(s_ShadowTrianglePointsUnk, 0xC6A170, (RxVertexIndex*), {});
+static inline NOTSA_GLOBAL(s_ShadowTrianglePoints, 0xC6A174, (CVector*), {});
+static inline NOTSA_GLOBAL(s_TransformedShadowTrianglePoints, 0xC6A178, (CVector*), {});
+static inline NOTSA_GLOBAL(s_SunPosNrm, 0x8D5244, (CVector), { 1.0f, 1.0f, -2.0f }); // CVector(1.0, 1.0, -2.0)
 
 // Squared distance (in the original: "signed", negative if the camera is inside) from `camPos` to the bounding sphere's surface of `entity`
 // 0x711160 and 0x7111F0 (identical copies, usercall: ebx = entity, esi = camPos)

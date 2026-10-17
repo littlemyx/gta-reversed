@@ -6,8 +6,8 @@ class CStencilShadows {
 public:
     static inline auto& m_StencilShadowObjects = StaticRef<std::array<CStencilShadowObject, 64>>(0xC6A198);
 
-    static inline auto& pFirstAvailableStencilShadowObject = StaticRef<CStencilShadowObject*>(0xC6A168);
-    static inline auto& pFirstActiveStencilShadowObject    = StaticRef<CStencilShadowObject*>(0xC6A16C);
+    static inline NOTSA_GLOBAL(pFirstAvailableStencilShadowObject, 0xC6A168, (CStencilShadowObject*), {});
+    static inline NOTSA_GLOBAL(pFirstActiveStencilShadowObject, 0xC6A16C, (CStencilShadowObject*), {});
 
     static void InjectHooks();
 

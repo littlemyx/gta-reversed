@@ -81,8 +81,8 @@ void CStuckCarCheck::ClearStuckFlagForCar(int32 carHandle) {
 // 0x463C00
 bool CStuckCarCheck::HasCarBeenStuckForAWhile(int32 carHandle) {
     for (auto& car : m_aStuckCars) {
-        if (car.CarHandle == carHandle && car.CarStuck) {
-            return true;
+        if (car.CarHandle == carHandle) {
+            return car.CarStuck; // exe 0x463C00: the FIRST record with this handle decides (the port kept searching for a later stuck duplicate)
         }
     }
     return false;

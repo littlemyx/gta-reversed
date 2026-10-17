@@ -25,17 +25,17 @@ constexpr uint16 AmmoForWeapon_OnStreet[NUM_WEAPONS]{ 0u, 1u, 1u, 1u, 1u, 1u, 1u
 
 class CPickups {
 public:
-    static inline auto& DisplayHelpMessage = StaticRef<uint8>(0x8A5F48);
-    static inline auto& PlayerOnWeaponPickup = StaticRef<int32>(0x97D640);
-    static inline auto& StaticCamStartTime = StaticRef<int32>(0x978618);
+    static inline NOTSA_GLOBAL(DisplayHelpMessage, 0x8A5F48, (uint8), { 10 });
+    static inline NOTSA_GLOBAL(PlayerOnWeaponPickup, 0x97D640, (int32), {});
+    static inline NOTSA_GLOBAL(StaticCamStartTime, 0x978618, (int32), {});
     static inline CVector* StaticCamCoors = (CVector*)0x97D660;
-    static inline auto& pPlayerVehicle = StaticRef<CVehicle*>(0x97861C);
-    static inline auto& bPickUpcamActivated = StaticRef<bool>(0x978620);
-    static inline auto& CollectedPickUpIndex = StaticRef<uint16>(0x978624);
-    static inline auto& aPickUpsCollected = StaticRef<std::array<int32, MAX_COLLECTED_PICKUPS>>(0x978628);
-    static inline auto& NumMessages = StaticRef<uint16>(0x978678);
-    static inline auto& aMessages = StaticRef<std::array<tPickupMessage, MAX_PICKUP_MESSAGES>>(0x978680);
-    static inline auto& aPickUps = StaticRef<std::array<CPickup, MAX_NUM_PICKUPS>>(0x9788C0);
+    static inline NOTSA_GLOBAL(pPlayerVehicle, 0x97861C, (CVehicle*), {});
+    static inline NOTSA_GLOBAL(bPickUpcamActivated, 0x978620, (bool), {});
+    static inline NOTSA_GLOBAL(CollectedPickUpIndex, 0x978624, (uint16), {});
+    static inline NOTSA_GLOBAL(aPickUpsCollected, 0x978628, (std::array<int32, MAX_COLLECTED_PICKUPS>), {});
+    static inline NOTSA_GLOBAL(NumMessages, 0x978678, (uint16), {});
+    static inline NOTSA_GLOBAL(aMessages, 0x978680, (std::array<tPickupMessage, MAX_PICKUP_MESSAGES>), {});
+    static inline NOTSA_GLOBAL(aPickUps, 0x9788C0, (std::array<CPickup, MAX_NUM_PICKUPS>), {});
 
 public:
     static void InjectHooks();
@@ -131,6 +131,6 @@ struct tPickupReference {
 };
 VALIDATE_SIZE(tPickupReference, 0x4);
 
-static inline auto& CollectPickupBuffer = StaticRef<int32>(0x97D644);
+NOTSA_GLOBAL_HDR(CollectPickupBuffer, 0x97D644, (int32), {});
 
 void ModifyStringLabelForControlSetting(char* stringLabel);

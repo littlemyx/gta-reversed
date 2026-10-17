@@ -236,4 +236,4 @@ bool CObjectData::operator==(const CObjectData& right) const
 }
 
 // Initial values of the globals declared with NOTSA_GLOBAL_DECL in ObjectData.h (detached mode; ignored in address mode)
-NOTSA_GLOBAL_DEF(CObjectData, ms_aObjectInfo, 0xBB4A90, (CObjectData[NUM_OBJECT_INFOS]), {});
+NOTSA_GLOBAL_DEF(CObjectData, ms_aObjectInfo, 0xBB4A90, (CObjectData[CObjectData::NUM_OBJECT_INFOS]), {});

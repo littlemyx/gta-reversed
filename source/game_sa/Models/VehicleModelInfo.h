@@ -477,7 +477,12 @@ NOTSA_GLOBAL_EXTERN(vehicleTxd, (RwTexDictionary*));
 NOTSA_GLOBAL_EXTERN(carFrame, (RwFrame*));
 NOTSA_GLOBAL_EXTERN(gLightSurfProps, (RwSurfaceProperties));
 static constexpr int32 NUM_RESTORE_ENTRIES = 256;
-NOTSA_GLOBAL_EXTERN(gRestoreEntries, (tRestoreEntry[NUM_RESTORE_ENTRIES]));
+#ifdef NOTSA_GLOBALS_DETACHED // NOTSA_GLOBAL_EXTERN cannot spell an array reference
+extern tRestoreEntry gRestoreEntries[NUM_RESTORE_ENTRIES];
+#else
+extern tRestoreEntry (&gRestoreEntries)[NUM_RESTORE_ENTRIES];
+#endif
+#line 481
 NOTSA_GLOBAL_EXTERN(gpWhiteTexture, (RwTexture*));
 NOTSA_GLOBAL_EXTERN(fEnvMapDefaultCoeff, (float));
 NOTSA_GLOBAL_EXTERN(fRearDoubleWheelOffsetFactor, (float));

@@ -1696,4 +1696,4 @@ RwObject* GetOkAndDamagedAtomicCB(RwObject* object, void* data)
 }
 
 // Initial values of the globals declared with NOTSA_GLOBAL_DECL in VehicleModelInfo.h (detached mode; ignored in address mode)
-NOTSA_GLOBAL_DEF(CVehicleModelInfo::CVehicleStructure, m_pInfoPool, 0xB4E680, (CPool<CVehicleStructure>*), {});
+NOTSA_GLOBAL_DEF(CVehicleModelInfo::CVehicleStructure, m_pInfoPool, 0xB4E680, (CPool<CVehicleModelInfo::CVehicleStructure>*), {});

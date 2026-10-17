@@ -49,36 +49,36 @@ constexpr union {
 
 class CGangWars {
 public:
-    static inline auto& ZoneInfoForTraining = StaticRef<int32>(0x8A5F40); // -1
-    static inline auto& pDriveByCar = StaticRef<CVehicle*>(0x96AB28);
-    static inline auto& GangRatingStrength = StaticRef<std::array<int32, 3>>(0x96AB2C);
-    static inline auto& GangRatings = StaticRef<std::array<int32, 3>>(0x96AB38);
-    static inline auto& FightTimer = StaticRef<uint32>(0x96AB44);
-    static inline auto& TimeTillNextAttack = StaticRef<float>(0x96AB48);
-    static inline auto& Gang2 = StaticRef<int32>(0x96AB50);
-    static inline auto& LastTimeInArea = StaticRef<uint32>(0x96AB54);
-    static inline auto& WarFerocity = StaticRef<int32>(0x96AB58);
-    static inline auto& Provocation = StaticRef<float>(0x96AB5C);
-    static inline auto& TimeStarted = StaticRef<uint32>(0x96AB60);
+    static inline NOTSA_GLOBAL(ZoneInfoForTraining, 0x8A5F40, (int32), { -1 }); // -1
+    static inline NOTSA_GLOBAL(pDriveByCar, 0x96AB28, (CVehicle*), {});
+    static inline NOTSA_GLOBAL(GangRatingStrength, 0x96AB2C, (std::array<int32, 3>), {});
+    static inline NOTSA_GLOBAL(GangRatings, 0x96AB38, (std::array<int32, 3>), {});
+    static inline NOTSA_GLOBAL(FightTimer, 0x96AB44, (uint32), {});
+    static inline NOTSA_GLOBAL(TimeTillNextAttack, 0x96AB48, (float), {});
+    static inline NOTSA_GLOBAL(Gang2, 0x96AB50, (int32), {});
+    static inline NOTSA_GLOBAL(LastTimeInArea, 0x96AB54, (uint32), {});
+    static inline NOTSA_GLOBAL(WarFerocity, 0x96AB58, (int32), {});
+    static inline NOTSA_GLOBAL(Provocation, 0x96AB5C, (float), {});
+    static inline NOTSA_GLOBAL(TimeStarted, 0x96AB60, (uint32), {});
     // State of defending gang war (i.e. fighting for enemy zone)
-    static inline auto& State = StaticRef<eGangWarState>(0x96AB64);
+    static inline NOTSA_GLOBAL(State, 0x96AB64, (eGangWarState), {});
     // State of attacking gang war (i.e. fighting for own zone)
-    static inline auto& State2 = StaticRef<eGangAttackState>(0x96AB4C);
-    static inline auto& aSpecificZones = StaticRef<std::array<int32, 6>>(0x96AB68);
-    static inline auto& Difficulty = StaticRef<float>(0x96AB80);
-    static inline auto& Gang1 = StaticRef<eGangID>(0x96AB84);
-    static inline auto& pZoneToFightOver = StaticRef<CZone*>(0x96AB88);
-    static inline auto& pZoneInfoToFightOver = StaticRef<CZoneInfo*>(0x96AB8C);
-    static inline auto& bGangWarsActive = StaticRef<bool>(0x96AB90);
-    static inline auto& bTrainingMission = StaticRef<bool>(0x96AB91);
-    static inline auto& bPlayerIsCloseby = StaticRef<bool>(0x96AB92);
-    static inline auto& bCanTriggerGangWarWhenOnAMission = StaticRef<bool>(0x96AB93);
-    static inline auto& NumSpecificZones = StaticRef<int32>(0x96AB94);
-    static inline auto& RadarBlip = StaticRef<int32>(0x96AB98);
-    static inline auto& TerritoryUnderControlPercentage = StaticRef<float>(0x96AB9C);
-    static inline auto& bIsPlayerOnAMission = StaticRef<bool>(0x96ABA0);
-    static inline auto& CoorsOfPlayerAtStartOfWar = StaticRef<CVector>(0x96ABBC);
-    static inline auto& PointOfAttack = StaticRef<CVector>(0x96ABC8);
+    static inline NOTSA_GLOBAL(State2, 0x96AB4C, (eGangAttackState), {});
+    static inline NOTSA_GLOBAL(aSpecificZones, 0x96AB68, (std::array<int32, 6>), {});
+    static inline NOTSA_GLOBAL(Difficulty, 0x96AB80, (float), {});
+    static inline NOTSA_GLOBAL(Gang1, 0x96AB84, (eGangID), {});
+    static inline NOTSA_GLOBAL(pZoneToFightOver, 0x96AB88, (CZone*), {});
+    static inline NOTSA_GLOBAL(pZoneInfoToFightOver, 0x96AB8C, (CZoneInfo*), {});
+    static inline NOTSA_GLOBAL(bGangWarsActive, 0x96AB90, (bool), {});
+    static inline NOTSA_GLOBAL(bTrainingMission, 0x96AB91, (bool), {});
+    static inline NOTSA_GLOBAL(bPlayerIsCloseby, 0x96AB92, (bool), {});
+    static inline NOTSA_GLOBAL(bCanTriggerGangWarWhenOnAMission, 0x96AB93, (bool), {});
+    static inline NOTSA_GLOBAL(NumSpecificZones, 0x96AB94, (int32), {});
+    static inline NOTSA_GLOBAL(RadarBlip, 0x96AB98, (int32), {});
+    static inline NOTSA_GLOBAL(TerritoryUnderControlPercentage, 0x96AB9C, (float), {});
+    static inline NOTSA_GLOBAL(bIsPlayerOnAMission, 0x96ABA0, (bool), {});
+    static inline NOTSA_GLOBAL(CoorsOfPlayerAtStartOfWar, 0x96ABBC, (CVector), {});
+    static inline NOTSA_GLOBAL(PointOfAttack, 0x96ABC8, (CVector), {});
 
 public:
     static void InjectHooks();

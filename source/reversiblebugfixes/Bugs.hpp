@@ -10,6 +10,11 @@
 * Fixes that prevent OOB should use `GenericOOB`.
 * Fixes that prevent crashes (Like additional null ptr checks) can use `GenericCrash`.
 * Feel free to add a new generic bug type if there's nothing that fits your needs.
+*
+* Standalone run build (NOTSA_STANDALONE_RUN): the port must behave like the original exe, bugs included, so every fix here is OFF by default
+* (`detail::kDefaultEnabled`, ReversibleBugFix.hpp). A fix the port needs in order to run at all is kept ON with `.Enabled = true` in its definition AND a row in
+* tools/standalone/standalone_deviations.tsv + docs/STANDALONE_FIDELITY.md. Inventory and decisions: .notes/reports/FIX-AUDIT.md.
+* Every NEW fix must say, in its description, what the exe does (address) and whether it is observable in play.
 */
 namespace notsa::bugfixes {
 //

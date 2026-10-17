@@ -885,6 +885,9 @@ if (${RE_PROJECT}_RW_LIBRW)
         game_sa/PedScanner.cpp
         game_sa/VehicleScanner.cpp
         game_sa/References.cpp
+        # --- sources needed by logic_oracle_fixes.inc (FIX-AUDIT: functions that carry a notsa::bugfixes switch; the run build has the switch OFF = the exe's behaviour)
+        game_sa/CustomCarPlateMgr.cpp
+        game_sa/Animation/AnimBlendSequence.cpp
         # --- sources needed by logic_oracle_misc.inc
         game_sa/Collision/Box.cpp
         game_sa/Core/KeyGen.cpp

@@ -246,6 +246,11 @@ static void TestMisc() {}
 #else
 static void TestRefs() {}
 #endif
+#ifndef LOGIC_ORACLE_SKIP_FIXES
+#include "logic_oracle_fixes.inc"
+#else
+static void TestFixes() {}
+#endif
 
 // first-chance handler: prints every stack word that looks like a return address into the exe image / the test image (resolve with the linker .map / the exe disassembly) before oracle::FaultHandler reports
 static LONG CALLBACK DeepStackHandler(EXCEPTION_POINTERS* ep) {
@@ -300,6 +305,7 @@ int main(int argc, char** argv) {
     TestScan();
     TestMisc();
     TestRefs();
+    TestFixes();
     int bad24 = 0, bad53 = 0, hard24 = 0, hard53 = 0;
     for (auto& r : g_rows) { bad24 += r.bad24; bad53 += r.bad53; hard24 += r.hardReg24 + r.hardSpec24; hard53 += r.hardReg53 + r.hardSpec53; }
     std::printf("\n%zu functions, mismatches (strict / excluding NaN-payload-only): PC24 %d / %d, PC53 %d / %d\n", g_rows.size(), bad24, hard24, bad53, hard53);

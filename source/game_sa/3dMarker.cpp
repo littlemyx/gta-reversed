@@ -79,9 +79,14 @@ void C3dMarker::DeleteMarkerObject() {
     // Destroy RW object
     const auto frame = RpAtomicGetFrame(m_Atomic);
     RpAtomicDestroy(m_Atomic);
+#ifdef NOTSA_STANDALONE_RUN
+    { // KEPT ON in the run build (FIX-AUDIT, standalone_deviations.tsv): the exe's inlined Init zeroes the attach pointer, the port's `rng::fill(.., C3dMarker{})` writes through it into the freed frame
+#else
     if (notsa::bugfixes::GenericCrashing) {
+#endif
         m_Mat.Detach(); // FIX(#1514): Otherwise `C3dMarkers::Init` writes into the destroyed frame's matrix
     }
+#line 85
     RwFrameDestroy(frame);
     m_Atomic = nullptr;
 }

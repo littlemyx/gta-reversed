@@ -2048,7 +2048,7 @@ void CAEVehicleAudioEntity::PlayHornOrSiren(bool isHornOn, bool isSirenOn, bool 
             return;
         }
     } else if (m_AuSettings.HornType == eAEVehicleHornType::BIKE) { 
-        m_HornVolume = std::max(m_HornVolume - std::pow(s_Config.Horn.BikeBellFadeOut, CTimer::GetTimeStep()), -100.0f); // NB: Framerate bugfix with `std::pow`
+        m_HornVolume = notsa::step_down_to(m_HornVolume, -100.0f, s_Config.Horn.BikeBellFadeOut, notsa::bugfixes::GenericFrameRate); // NB: Framerate bugfix with `std::pow` (exe 0x4F9B08: `m_HornVolume -= 1.5f` per frame; now gated like the other audio fades)
         if (m_HornVolume <= -100.0f) {
             StopAndForgetSound(m_HornSound);
         } else if (m_HornSound) {

@@ -18,6 +18,17 @@
 #include "game_sa/DetachedShared.h"
 #line 18
 
+// The exe loads the ms timer with `fild dword` (SIGNED) and adds 2^32 when it is negative (the add rounds to the current precision, PC24 in game mode), then keeps the value unrounded on the FPU
+// stack for the following fst / fadd / fcom (CCamera::VectorMoveLinear, LerpFOV, AddShakeSimple, ProcessVector*Linear, ProcessFOVLerp: 0x50D160 ...).
+static double ExeTimeMS() {
+    const auto ms = static_cast<int32>(CTimer::GetTimeInMS());
+    double t = static_cast<double>(ms);
+    if (ms < 0) {
+        t += 4294967296.0;
+    }
+    return t;
+}
+
 NOTSA_GLOBAL(TheCamera, 0xB6F028, (CCamera), {}); static_assert(sizeof(TheCamera) == 3448);
 NOTSA_GLOBAL(gbModelViewer, 0xBA6728, (bool), {});
 NOTSA_GLOBAL(gbCineyCamMessageDisplayed, 0x8CC381, (int8), { 2 }); // 2
@@ -1662,9 +1673,9 @@ void CCamera::HandleCameraMotionForDuckingDuringAim(CPed* ped, CVector* source, 
 // 0x50D160
 void CCamera::VectorMoveLinear(CVector* to, CVector* from, float duration, bool bMoveLinearWithEase) {
     // NOTE: the original reads the ms timer as signed int and corrects negative values by 2^32
-    const float now = static_cast<float>(CTimer::GetTimeInMS());
-    m_fMoveLinearStartTime = now;
-    m_fMoveLinearEndTime   = now + duration;
+    const double now = ExeTimeMS(); // exe 0x50D160: fild kept unrounded on the FPU stack: start = (float)now, end = (float)(now + duration) (one rounding)
+    m_fMoveLinearStartTime = static_cast<float>(now);
+    m_fMoveLinearEndTime   = static_cast<float>(now + duration);
     m_vecMoveLinearPosnStart = *from;
     m_vecMoveLinearPosnEnd   = *to;
     m_bMoveLinearWithEase    = bMoveLinearWithEase;
@@ -1672,9 +1683,9 @@ void CCamera::VectorMoveLinear(CVector* to, CVector* from, float duration, bool 
 
 // 0x50D1D0
 void CCamera::VectorTrackLinear(CVector* to, CVector* from, float duration, bool bEase) {
-    const float now = static_cast<float>(CTimer::GetTimeInMS());
-    m_fTrackLinearStartTime = now;
-    m_fTrackLinearEndTime   = now + duration;
+    const double now = ExeTimeMS(); // exe 0x50D1D0, same as VectorMoveLinear
+    m_fTrackLinearStartTime = static_cast<float>(now);
+    m_fTrackLinearEndTime   = static_cast<float>(now + duration);
     m_vecTrackLinearStartPoint = *from;
     m_vecTrackLinearEndPoint   = *to;
     m_bTrackLinearWithEase  = bEase;
@@ -1689,14 +1700,16 @@ void CCamera::AddShake(float duration, float a2, float a3, float a4, float a5) {
 void CCamera::AddShakeSimple(float durationMs, int32 type, float intensity) {
     m_fShakeIntensity = intensity;
     m_nShakeType = type;
-    m_fStartShakeTime = static_cast<float>(CTimer::GetTimeInMS());
-    m_fEndShakeTime = m_fStartShakeTime + durationMs;
+    const double now = ExeTimeMS(); // exe 0x50D240: end = (float)(now + duration), one rounding
+    m_fStartShakeTime = static_cast<float>(now);
+    m_fEndShakeTime = static_cast<float>(now + durationMs);
 }
 
 // 0x50D280
 void CCamera::LerpFOV(float zoomInFactor, float zoomOutFactor, float timeLimit, bool bEase) {
-    m_fStartZoomTime = static_cast<float>(CTimer::GetTimeInMS());
-    m_fEndZoomTime = static_cast<float>(CTimer::GetTimeInMS()) + timeLimit;
+    const double now = ExeTimeMS(); // exe 0x50D280: one rounding for the end time (see VectorMoveLinear)
+    m_fStartZoomTime = static_cast<float>(now);
+    m_fEndZoomTime = static_cast<float>(now + timeLimit);
 
     m_nZoomMode = bEase; // TODO: Rename
     m_fZoomInFactor = zoomInFactor;
@@ -2229,9 +2242,9 @@ void CCamera::ProcessWideScreenOn() {
 
 // 0x516440
 void CCamera::ProcessVectorTrackLinear() {
-    const float now = static_cast<float>(CTimer::GetTimeInMS());
+    const double now = ExeTimeMS(); // exe 0x516440: `now` unrounded (fild)
     if (now <= m_fTrackLinearEndTime) {
-        ProcessVectorTrackLinear((now - m_fTrackLinearStartTime) / (m_fTrackLinearEndTime - m_fTrackLinearStartTime));
+        ProcessVectorTrackLinear(static_cast<float>((now - m_fTrackLinearStartTime) / (static_cast<double>(m_fTrackLinearEndTime) - m_fTrackLinearStartTime)));
     } else if (m_bCameraPersistTrack) {
         m_bVecTrackLinearProcessed = true;
     }
@@ -2346,8 +2359,8 @@ void CCamera::ProcessVectorMoveLinear(float ratio) {
 
 // 0x516500
 void CCamera::ProcessFOVLerp() {
-    if (const auto now = static_cast<float>(CTimer::GetTimeInMS()); now <= m_fEndZoomTime) { /* Check if still processing */
-        ProcessFOVLerp(invLerp(m_fStartZoomTime, m_fEndZoomTime, now));
+    if (const auto now = ExeTimeMS(); now <= m_fEndZoomTime) { /* Check if still processing */ // exe 0x516500: `now` stays unrounded (fild), ratio = (now - start) / (end - start) rounded once
+        ProcessFOVLerp(static_cast<float>((now - m_fStartZoomTime) / (static_cast<double>(m_fEndZoomTime) - m_fStartZoomTime)));
     } else if (m_bBlockZoom) { /* Finished */
         m_bFOVLerpProcessed = true;
     }
@@ -2365,9 +2378,9 @@ void CCamera::ProcessFOVLerp(float ratio) {
 
 // 0x5164A0
 void CCamera::ProcessVectorMoveLinear() {
-    const float now = static_cast<float>(CTimer::GetTimeInMS());
+    const double now = ExeTimeMS(); // exe 0x5164A0: `now` unrounded (fild)
     if (now <= m_fMoveLinearEndTime) {
-        ProcessVectorMoveLinear((now - m_fMoveLinearStartTime) / (m_fMoveLinearEndTime - m_fMoveLinearStartTime));
+        ProcessVectorMoveLinear(static_cast<float>((now - m_fMoveLinearStartTime) / (static_cast<double>(m_fMoveLinearEndTime) - m_fMoveLinearStartTime)));
     } else if (m_bCameraPersistPosition) {
         m_bVecMoveLinearProcessed = true;
     }

@@ -20,50 +20,50 @@ enum eWeatherRegion : int16 {
 
 class CWeather {
 public:
-    static inline auto& TrafficLightsBrightness = StaticRef<float>(0xC812A8);
-    static inline auto& bScriptsForceRain = StaticRef<bool>(0xC812AC);
-    static inline auto& Earthquake = StaticRef<float>(0xC81340);
-    static inline auto& CurrentRainParticleStrength = StaticRef<uint32>(0xC812B0);
-    static inline auto& LightningStartY = StaticRef<uint32>(0xC812B4); // only initialized (0), not used
-    static inline auto& LightningStartX = StaticRef<uint32>(0xC812B8); // only initialized (0), not used
-    static inline auto& LightningFlashLastChange = StaticRef<int32>(0xC812BC);
-    static inline auto& WhenToPlayLightningSound = StaticRef<uint32>(0xC812C0);
-    static inline auto& LightningDuration = StaticRef<uint32>(0xC812C4); // Duration as number of frames
-    static inline auto& LightningStart = StaticRef<uint32>(0xC812C8); // frame number
-    static inline auto& LightningFlash = StaticRef<bool>(0xC812CC);
-    static inline auto& LightningBurst = StaticRef<bool>(0xC812CD);
-    static inline auto& HeadLightsSpectrum = StaticRef<float>(0xC812D0);
-    static inline auto& WaterFogFXControl = StaticRef<float>(0xC81338);
-    static inline auto& HeatHazeFXControl = StaticRef<float>(0xC812D8);
-    static inline auto& HeatHaze = StaticRef<float>(0xC812DC);
-    static inline auto& SunGlare = StaticRef<float>(0xC812E0);
-    static inline auto& Rainbow = StaticRef<float>(0xC812E4);
-    static inline auto& Wavyness = StaticRef<float>(0xC812E8);
-    static inline auto& WindClipped = StaticRef<float>(0xC812EC);
-    static inline auto& WindDir = StaticRef<CVector>(0xC813E0);
-    static inline auto& Wind = StaticRef<float>(0xC812F0);
-    static inline auto& Sandstorm = StaticRef<float>(0xC812F4);
-    static inline auto& Rain = StaticRef<float>(0xC81324);
-    static inline auto& InTunnelness = StaticRef<float>(0xC81334);
-    static inline auto& WaterDepth = StaticRef<float>(0xC81330);
-    static inline auto& UnderWaterness = StaticRef<float>(0xC8132C);
-    static inline auto& ExtraSunnyness = StaticRef<float>(0xC812F8);
-    static inline auto& Foggyness_SF = StaticRef<float>(0xC812FC);
-    static inline auto& Foggyness = StaticRef<float>(0xC81300);
-    static inline auto& CloudCoverage = StaticRef<float>(0xC81304);
-    static inline auto& WetRoads = StaticRef<float>(0xC81308);
-    static inline auto& InterpolationValue = StaticRef<float>(0xC8130C);
-    static inline auto& WeatherTypeInList = StaticRef<uint32>(0xC81310);
-    static inline auto& WeatherRegion = StaticRef<eWeatherRegion>(0xC81314);
-    static inline auto& ForcedWeatherType = StaticRef<eWeatherType>(0xC81318);
-    static inline auto& NewWeatherType = StaticRef<eWeatherType>(0xC8131C);
-    static inline auto& OldWeatherType = StaticRef<eWeatherType>(0xC81320);
+    static inline NOTSA_GLOBAL(TrafficLightsBrightness, 0xC812A8, (float), {});
+    static inline NOTSA_GLOBAL(bScriptsForceRain, 0xC812AC, (bool), {});
+    static inline NOTSA_GLOBAL(Earthquake, 0xC81340, (float), {});
+    static inline NOTSA_GLOBAL(CurrentRainParticleStrength, 0xC812B0, (uint32), {});
+    static inline NOTSA_GLOBAL(LightningStartY, 0xC812B4, (uint32), {}); // only initialized (0), not used
+    static inline NOTSA_GLOBAL(LightningStartX, 0xC812B8, (uint32), {}); // only initialized (0), not used
+    static inline NOTSA_GLOBAL(LightningFlashLastChange, 0xC812BC, (int32), {});
+    static inline NOTSA_GLOBAL(WhenToPlayLightningSound, 0xC812C0, (uint32), {});
+    static inline NOTSA_GLOBAL(LightningDuration, 0xC812C4, (uint32), {}); // Duration as number of frames
+    static inline NOTSA_GLOBAL(LightningStart, 0xC812C8, (uint32), {}); // frame number
+    static inline NOTSA_GLOBAL(LightningFlash, 0xC812CC, (bool), {});
+    static inline NOTSA_GLOBAL(LightningBurst, 0xC812CD, (bool), {});
+    static inline NOTSA_GLOBAL(HeadLightsSpectrum, 0xC812D0, (float), {});
+    static inline NOTSA_GLOBAL(WaterFogFXControl, 0xC81338, (float), {});
+    static inline NOTSA_GLOBAL(HeatHazeFXControl, 0xC812D8, (float), {});
+    static inline NOTSA_GLOBAL(HeatHaze, 0xC812DC, (float), {});
+    static inline NOTSA_GLOBAL(SunGlare, 0xC812E0, (float), {});
+    static inline NOTSA_GLOBAL(Rainbow, 0xC812E4, (float), {});
+    static inline NOTSA_GLOBAL(Wavyness, 0xC812E8, (float), {});
+    static inline NOTSA_GLOBAL(WindClipped, 0xC812EC, (float), {});
+    static inline NOTSA_GLOBAL(WindDir, 0xC813E0, (CVector), {});
+    static inline NOTSA_GLOBAL(Wind, 0xC812F0, (float), {});
+    static inline NOTSA_GLOBAL(Sandstorm, 0xC812F4, (float), {});
+    static inline NOTSA_GLOBAL(Rain, 0xC81324, (float), {});
+    static inline NOTSA_GLOBAL(InTunnelness, 0xC81334, (float), {});
+    static inline NOTSA_GLOBAL(WaterDepth, 0xC81330, (float), {});
+    static inline NOTSA_GLOBAL(UnderWaterness, 0xC8132C, (float), {});
+    static inline NOTSA_GLOBAL(ExtraSunnyness, 0xC812F8, (float), {});
+    static inline NOTSA_GLOBAL(Foggyness_SF, 0xC812FC, (float), {});
+    static inline NOTSA_GLOBAL(Foggyness, 0xC81300, (float), {});
+    static inline NOTSA_GLOBAL(CloudCoverage, 0xC81304, (float), {});
+    static inline NOTSA_GLOBAL(WetRoads, 0xC81308, (float), {});
+    static inline NOTSA_GLOBAL(InterpolationValue, 0xC8130C, (float), {});
+    static inline NOTSA_GLOBAL(WeatherTypeInList, 0xC81310, (uint32), {});
+    static inline NOTSA_GLOBAL(WeatherRegion, 0xC81314, (eWeatherRegion), {});
+    static inline NOTSA_GLOBAL(ForcedWeatherType, 0xC81318, (eWeatherType), {});
+    static inline NOTSA_GLOBAL(NewWeatherType, 0xC8131C, (eWeatherType), {});
+    static inline NOTSA_GLOBAL(OldWeatherType, 0xC81320, (eWeatherType), {});
     static inline auto& m_WeatherAudioEntity = StaticRef<CAEWeatherAudioEntity>(0xC81360);
-    static inline auto& StreamAfterRainTimer = StaticRef<int32>(0x8D5EAC);
-    static inline auto& HeatHazeFXFade = StaticRef<float>(0xC81448);
-    static inline auto& HeatHazeFXLastMinute = StaticRef<int32>(0x8D6078);
-    static inline auto& WaterFogFXFade = StaticRef<float>(0xC81444);
-    static inline auto& WaterFogFXFadingOut = StaticRef<bool>(0xC81440);
+    static inline NOTSA_GLOBAL(StreamAfterRainTimer, 0x8D5EAC, (int32), { 800 });
+    static inline NOTSA_GLOBAL(HeatHazeFXFade, 0xC81448, (float), {});
+    static inline NOTSA_GLOBAL(HeatHazeFXLastMinute, 0x8D6078, (int32), { -1 });
+    static inline NOTSA_GLOBAL(WaterFogFXFade, 0xC81444, (float), {});
+    static inline NOTSA_GLOBAL(WaterFogFXFadingOut, 0xC81440, (bool), {});
 
     // in entity.cpp:
 

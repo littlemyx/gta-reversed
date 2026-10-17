@@ -64,8 +64,8 @@ void CWeather::Init() {
 void CWeather::AddRain() {
     constexpr float RAIN_HAZE_ALPHA_MULT = 1.0f; // 0x8D5FF0
 
-    static auto& s_RainedRecently = StaticRef<int32>(0xC81328);
-    static auto& s_RainHazeAlpha  = StaticRef<float>(0xC81410);
+    NOTSA_GLOBAL_LOCAL(s_RainedRecently, 0xC81328, (int32), {});
+    NOTSA_GLOBAL_LOCAL(s_RainHazeAlpha, 0xC81410, (float), {});
 
     if (CCullZones::CamNoRain() || CCullZones::PlayerNoRain()) {
         return;
@@ -272,10 +272,10 @@ void CWeather::RenderRainStreaks() {
     constexpr auto RAIN_STREAK_COUNT{ 32u };
 
     // These are arrays of size `RAIN_STREAK_COUNT`
-    static auto& streakPosX = StaticRef<int32*>(0xC81420);
-    static auto& streakPosY = StaticRef<int32*>(0xC8141C);
-    static auto& streakPosZ = StaticRef<int32*>(0xC81418);
-    static auto& streakStrength = StaticRef<uint8*>(0xC81414);
+    NOTSA_GLOBAL_LOCAL(streakPosX, 0xC81420, (int32*), {});
+    NOTSA_GLOBAL_LOCAL(streakPosY, 0xC8141C, (int32*), {});
+    NOTSA_GLOBAL_LOCAL(streakPosZ, 0xC81418, (int32*), {});
+    NOTSA_GLOBAL_LOCAL(streakStrength, 0xC81414, (uint8*), {});
 
     if (!streakPosX) {
         // This stuff isn't even freed anywhere..

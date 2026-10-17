@@ -10,8 +10,8 @@ class CWindModifiers {
 public:
     static constexpr int32 MAX_NUM_MODIFIERS = 16;
 
-    static inline auto& Number = StaticRef<int32>(0xC81450);
-    static inline auto& Array = StaticRef<CWindModifier[MAX_NUM_MODIFIERS]>(0xC81458);
+    static inline NOTSA_GLOBAL(Number, 0xC81450, (int32), {});
+    static inline NOTSA_GLOBAL(Array, 0xC81458, (CWindModifier[MAX_NUM_MODIFIERS]), {});
 
 public:
     static void InjectHooks();

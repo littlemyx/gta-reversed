@@ -76,4 +76,4 @@ public:
 };
 VALIDATE_SIZE(SurfaceInfos_c, 0x8F4);
 
-static inline auto& g_surfaceInfos = StaticRef<SurfaceInfos_c>(0xB79538);
+NOTSA_GLOBAL_HDR(g_surfaceInfos, 0xB79538, (SurfaceInfos_c), {});

@@ -23,10 +23,10 @@ public:
     static constexpr uint8  ALPHA_TAGGED = 228;
     static constexpr uint32 MAX_TAGS = 150;
 
-    static inline auto& ms_tagDesc = StaticRef<std::array<tTagDesc, MAX_TAGS>>(0xA9A8C0);
-    static inline auto& ms_numTags = StaticRef<int32>(0xA9AD70);
-    static inline auto& ms_numTagged = StaticRef<int32>(0xA9AD74);
-    static inline auto& ms_pPipeline = StaticRef<RxPipeline*>(0xA9AD78);
+    static inline NOTSA_GLOBAL(ms_tagDesc, 0xA9A8C0, (std::array<tTagDesc, MAX_TAGS>), {});
+    static inline NOTSA_GLOBAL(ms_numTags, 0xA9AD70, (int32), {});
+    static inline NOTSA_GLOBAL(ms_numTagged, 0xA9AD74, (int32), {});
+    static inline NOTSA_GLOBAL(ms_pPipeline, 0xA9AD78, (RxPipeline*), {});
 
 public:
     static void InjectHooks();

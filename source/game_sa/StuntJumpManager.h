@@ -25,14 +25,14 @@ typedef CPool<CStuntJump> CStuntJumpsPool;
 
 class CStuntJumpManager {
 public:
-    static inline auto& mp_poolStuntJumps = StaticRef<CStuntJumpsPool*>(0xA9A888);
-    static inline auto& mp_Active = StaticRef<CStuntJump*>(0xA9A88C); // nullptr
-    static inline auto& m_bActive = StaticRef<bool>(0xA9A890);
-    static inline auto& m_bHitReward = StaticRef<bool>(0xA9A891);
-    static inline auto& m_iTimer = StaticRef<uint32>(0xA9A894);
-    static inline auto& m_jumpState = StaticRef<eJumpState>(0xA9A898);
-    static inline auto& m_iNumJumps = StaticRef<int32>(0xA9A89C);
-    static inline auto& m_iNumCompleted = StaticRef<uint32>(0xA9A8A0);
+    static inline NOTSA_GLOBAL(mp_poolStuntJumps, 0xA9A888, (CStuntJumpsPool*), {});
+    static inline NOTSA_GLOBAL(mp_Active, 0xA9A88C, (CStuntJump*), {}); // nullptr
+    static inline NOTSA_GLOBAL(m_bActive, 0xA9A890, (bool), {});
+    static inline NOTSA_GLOBAL(m_bHitReward, 0xA9A891, (bool), {});
+    static inline NOTSA_GLOBAL(m_iTimer, 0xA9A894, (uint32), {});
+    static inline NOTSA_GLOBAL(m_jumpState, 0xA9A898, (eJumpState), {});
+    static inline NOTSA_GLOBAL(m_iNumJumps, 0xA9A89C, (int32), {});
+    static inline NOTSA_GLOBAL(m_iNumCompleted, 0xA9A8A0, (uint32), {});
 
 public:
     static void InjectHooks();

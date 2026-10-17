@@ -9,10 +9,10 @@
 #include "TaskSimple.h"
 #include "AnimBlendAssociation.h"
 
-extern int32& gLastRandomNumberForIdleAnimationID;
-extern uint32& gLastTouchTimeDelta;
-extern float& gDuckAnimBlendData;
-extern bool& gbUnknown_8D2FE8;
+NOTSA_GLOBAL_EXTERN(gLastRandomNumberForIdleAnimationID, (int32));
+NOTSA_GLOBAL_EXTERN(gLastTouchTimeDelta, (uint32));
+NOTSA_GLOBAL_EXTERN(gDuckAnimBlendData, (float));
+NOTSA_GLOBAL_EXTERN(gbUnknown_8D2FE8, (bool));
 
 class CPed;
 

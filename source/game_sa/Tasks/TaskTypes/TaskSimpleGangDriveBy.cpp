@@ -16,6 +16,14 @@
 #include "World.h"
 
 #include <numbers>
+namespace {
+NOTSA_GLOBAL_SYNTH(k_858FB8_TwoOverPi, 0x858FB8, (float), { 0.63661975f });
+NOTSA_GLOBAL_SYNTH(k_8D2E7C, 0x8D2E7C, (float), { 0.2667f });
+NOTSA_GLOBAL_SYNTH(k_8D2E84_0p3, 0x8D2E84, (float), { 0.3f });
+NOTSA_GLOBAL_SYNTH(k_8D2E80, 0x8D2E80, (float), { 0.4333f });
+NOTSA_GLOBAL_SYNTH(k_8D2E90_FlashLifetime, 0x8D2E90, (uint16), { 250 });
+} // namespace
+#line 19
 
 void CTaskSimpleGangDriveBy::InjectHooks() {
     RH_ScopedVirtualClass(CTaskSimpleGangDriveBy, 0x86D944, 9);
@@ -152,7 +160,7 @@ bool CTaskSimpleGangDriveBy::StartDriveByAnim(CPed* ped) {
         }
 
         if (bHadAnim) {
-            m_pAnimAssoc->SetCurrentTime(StaticRef<float>(0x8D2E7C)); // 0x4CEA80
+            m_pAnimAssoc->SetCurrentTime(NOTSA_GLOBAL_EXPR(0x8D2E7C, (float), k_8D2E7C)); // 0x4CEA80
             m_pAnimAssoc->m_Flags &= ~ANIMATION_IS_PLAYING;
             m_nLastCommand = 1;
             m_nNextCommand = 0;
@@ -236,7 +244,7 @@ void CTaskSimpleGangDriveBy::ProcessPlayerPed(CPed* ped) {
         if (rel < 0.0) {
             rel += (double)(2.f * std::numbers::pi_v<float>);
         }
-        rel *= (double)StaticRef<float>(0x858FB8); // 2/pi
+        rel *= (double)NOTSA_GLOBAL_EXPR(0x858FB8, (float), k_858FB8_TwoOverPi); // 2/pi
         const auto sector = (int8)(int32)rel; // 0x821B40 (truncated), only the low byte is used
         if ((uint32)(int32)sector <= 3) {
             m_nRequiredAnimID = GetDrivebyAnimForSector(sector, m_bSeatRHS);
@@ -338,7 +346,7 @@ void CTaskSimpleGangDriveBy::ProcessAIPed(CPed* ped) {
         if (v < 0.0) {
             v += (double)(2.f * PI);
         }
-        sector = (int8)(int32)(v * (double)StaticRef<float>(0x858FB8)); // 2/pi, 0x821B40 (truncated)
+        sector = (int8)(int32)(v * (double)NOTSA_GLOBAL_EXPR(0x858FB8, (float), k_858FB8_TwoOverPi)); // 2/pi, 0x821B40 (truncated)
 
         constexpr float DEG_15  = std::bit_cast<float>(0x3E860A92u); // 0x858F1C
         constexpr float DEG_165 = std::bit_cast<float>(0x40384E89u); // 0x86DB10
@@ -671,8 +679,8 @@ bool CTaskSimpleGangDriveBy::ProcessPed(CPed* ped) {
         auto* a = m_pAnimAssoc;
         if (a->m_Flags & ANIMATION_IS_PLAYING) {
             const double cur = a->m_CurrentTime;
-            if (cur > (double)StaticRef<float>(0x8D2E84) // 0.3f
-                && cur - (double)a->m_TimeStep <= (double)StaticRef<float>(0x8D2E84)
+            if (cur > (double)NOTSA_GLOBAL_EXPR(0x8D2E84, (float), k_8D2E84_0p3) // 0.3f
+                && cur - (double)a->m_TimeStep <= (double)NOTSA_GLOBAL_EXPR(0x8D2E84, (float), k_8D2E84_0p3)
                 && (m_nLastCommand == 2 || m_nLastCommand == 3)
             ) {
                 FireGun(ped);
@@ -681,7 +689,7 @@ bool CTaskSimpleGangDriveBy::ProcessPed(CPed* ped) {
 
         a = m_pAnimAssoc;
         const bool bPlaying = (a->m_Flags & ANIMATION_IS_PLAYING) != 0;
-        const float t26 = StaticRef<float>(0x8D2E7C);
+        const float t26 = NOTSA_GLOBAL_EXPR(0x8D2E7C, (float), k_8D2E7C);
         if (!bPlaying && m_nAttackTimer <= 0 && (m_nNextCommand == 2 || m_nNextCommand == 3)
             && (a->m_BlendHier->m_fTotalTime > a->m_CurrentTime || a->m_BlendDelta >= 0.f)
         ) {
@@ -706,7 +714,7 @@ bool CTaskSimpleGangDriveBy::ProcessPed(CPed* ped) {
         }
 
         a = m_pAnimAssoc;
-        const float t43 = StaticRef<float>(0x8D2E80);
+        const float t43 = NOTSA_GLOBAL_EXPR(0x8D2E80, (float), k_8D2E80);
         if (a->m_AnimId == m_nRequiredAnimID
             && (double)a->m_CurrentTime > (double)t43
             && (double)a->m_CurrentTime - (double)a->m_TimeStep <= (double)t43
@@ -920,5 +928,5 @@ void CTaskSimpleGangDriveBy::FireGun(CPed* ped) {
         }
         weapon.Fire(ped, &muzzle, &muzzle, m_pTargetEntity, &targetPos, &aim);
     }
-    ped->DoGunFlash(StaticRef<uint16>(0x8D2E90), false); // Flash lifetime (a .data global in the original, initialised to 250)
+    ped->DoGunFlash(NOTSA_GLOBAL_EXPR(0x8D2E90, (uint16), k_8D2E90_FlashLifetime), false); // Flash lifetime (a .data global in the original, initialised to 250)
 }

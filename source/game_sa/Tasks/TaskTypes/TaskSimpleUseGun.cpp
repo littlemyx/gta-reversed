@@ -573,9 +573,9 @@ bool CTaskSimpleUseGun::ProcessPed(CPed* ped) {
             case eGunCommand::PISTOLWHIP: { // 0x62A67C
                 const auto isDucking = (size_t)ped->bIsDucking;
 
-                const auto& pistolWhipHitTimes = StaticRef<std::array<float, 2>>(0xC17738);
-                const auto& pistolWhipHitIdx   = StaticRef<std::array<uint8, 2>>(0xC17780);
-                const auto& pistolWhipHitOffs  = StaticRef<std::array<CVector, 7>>(0xC177D0); // Shared hit offsets table (7 entries, 0xC177D0..0xC17824), also used by the fight code
+                const NOTSA_GLOBAL_ALIAS(pistolWhipHitTimes, 0xC17738, (std::array<float, 2>), *reinterpret_cast<std::array<float, 2>*>(reinterpret_cast<uint8*>(&CTaskSimpleFight::m_aComboData) + 1640));
+                const NOTSA_GLOBAL_ALIAS(pistolWhipHitIdx, 0xC17780, (std::array<uint8, 2>), *reinterpret_cast<std::array<uint8, 2>*>(reinterpret_cast<uint8*>(&CTaskSimpleFight::m_aComboData) + 1712));
+                const NOTSA_GLOBAL_ALIAS(pistolWhipHitOffs, 0xC177D0, (std::array<CVector, 7>), CTaskSimpleFight::m_aHitOffsets); // Shared hit offsets table (7 entries, 0xC177D0..0xC17824), also used by the fight code
 
                 if (anim->m_BlendAmount > 0.9f
                     && anim->m_BlendDelta >= 0.f

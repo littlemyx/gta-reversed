@@ -32,8 +32,8 @@ public:
     CTaskTimer m_timer;
     CEntity*   m_pClimbEntity;
 
-    static inline auto& ms_fSlowFallThreshold = StaticRef<float>(0x8D2EFC); // -0.05f
-    static inline auto& ms_nMaxSlowFallFrames = StaticRef<uint32>(0x8D2EF8); // 10
+    static inline NOTSA_GLOBAL(ms_fSlowFallThreshold, 0x8D2EFC, (float), { -0.05f }); // -0.05f
+    static inline NOTSA_GLOBAL(ms_nMaxSlowFallFrames, 0x8D2EF8, (uint32), { 10 }); // 10
 
 public:
     static constexpr auto Type = TASK_SIMPLE_IN_AIR;

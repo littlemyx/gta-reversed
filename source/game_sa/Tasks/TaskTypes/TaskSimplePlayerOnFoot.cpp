@@ -15,10 +15,10 @@
 #include "WeaponInfo.h"
 #include "GameLogic.h"
 
-auto& gLastRandomNumberForIdleAnimationID = StaticRef<int32>(0x8D2FEC);
-auto& gLastTouchTimeDelta = StaticRef<uint32>(0xC19664);
-auto& gDuckAnimBlendData = StaticRef<float>(0x8D2FF0); // 4.0f
-auto& gbUnknown_8D2FE8 = StaticRef<bool>(0x8D2FE8);     // default value true; also always true
+NOTSA_GLOBAL(gLastRandomNumberForIdleAnimationID, 0x8D2FEC, (int32), { -1 });
+NOTSA_GLOBAL(gLastTouchTimeDelta, 0xC19664, (uint32), {});
+NOTSA_GLOBAL(gDuckAnimBlendData, 0x8D2FF0, (float), { 4.0f }); // 4.0f
+NOTSA_GLOBAL(gbUnknown_8D2FE8, 0x8D2FE8, (bool), { true });     // default value true; also always true
 
 void CTaskSimplePlayerOnFoot::InjectHooks() {
     RH_ScopedVirtualClass(CTaskSimplePlayerOnFoot, 0x8708ec, 9);

@@ -104,8 +104,10 @@ static void CameraDestroy(RwCamera* rwCamera) {
         if (!buffer)
             return;
 
+        // exe 0x72FDBA: the parent is read BEFORE the raster is destroyed (reading it afterwards was a use-after-free of `buffer`)
+        auto* const parent = RwRasterGetParent(buffer);
         RwRasterDestroy(buffer);
-        if (auto parent = RwRasterGetParent(buffer); parent && parent != buffer) {
+        if (parent && parent != buffer) {
             RwRasterDestroy(parent);
         }
     };

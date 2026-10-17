@@ -12,11 +12,11 @@ class CClumpModelInfo;
 /*
 * Collision plugin static offset
 */
-extern RwInt32& gCollisionPluginOffset;
+NOTSA_GLOBAL_EXTERN(gCollisionPluginOffset, (RwInt32));
 
 class CCollisionPlugin {
 public:
-    static inline auto& ms_currentModel = StaticRef<CClumpModelInfo*>(0x9689E0);
+    static inline NOTSA_GLOBAL(ms_currentModel, 0x9689E0, (CClumpModelInfo*), {});
 
 public:
     static void InjectHooks();

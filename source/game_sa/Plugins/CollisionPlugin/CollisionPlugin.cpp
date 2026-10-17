@@ -2,7 +2,7 @@
 
 #include "CollisionPlugin.h"
 
-auto& gCollisionPluginOffset = StaticRef<RwInt32>(0x9689DC);
+NOTSA_GLOBAL(gCollisionPluginOffset, 0x9689DC, (RwInt32), {});
 
 static RwStream* ClumpCollisionStreamRead(RwStream* stream, RwInt32 binaryLength, void* object, RwInt32 offsetInObject, RwInt32 sizeInObject);
 

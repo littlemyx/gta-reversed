@@ -27,8 +27,7 @@ CTaskComplexFollowLeaderAnyMeans::CTaskComplexFollowLeaderAnyMeans(CPedGroup* pe
     m_ped{ped},
     m_pos{pos}
 {
-    DebugBreak(); // Pirulax: Let me know if this is ever hit, cause this task is seemingly unused.
-    CEntity::SafeRegisterRef(ped);
+    CEntity::SafeRegisterRef(m_ped); // 0x694AFD: the exe registers the MEMBER (the port registered the by-value parameter: a dangling stack slot in the reference list)
 }
 
 CTaskComplexFollowLeaderAnyMeans::CTaskComplexFollowLeaderAnyMeans(const CTaskComplexFollowLeaderAnyMeans& o) :

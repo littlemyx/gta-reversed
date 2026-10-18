@@ -36,7 +36,7 @@ CTaskSimpleBeHit::CTaskSimpleBeHit(CPed* attacker, ePedPieceTypes pieceType, int
       m_nDirn{ direction },
       m_Anim{ nullptr }
 {
-    CEntity::SafeRegisterRef(attacker);
+    CEntity::SafeRegisterRef(m_Attacker); // 0x6207E4 registers &this->m_Attacker (+8), not the parameter
 }
 
 // 0x620810

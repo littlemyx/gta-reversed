@@ -57,7 +57,15 @@ int16 CTaskSimpleFightingControl::CalcMoveCommand(CPed* ped) {
     const auto segmentPedToTarget = targetPos - pedPos;
 
     // Check if target is outside of the attacking angle
-    if (std::abs(CGeneral::LimitRadianAngle(segmentPedToTarget.Heading()) - ped->m_fCurrentRotation) >= FIGHT_CTRL_MAX_ATTACK_ANGLE_RAD) {
+    // 0x624BB5..0x624BF2: the DIFFERENCE heading - m_fCurrentRotation is wrapped once into [-PI, PI] (x87, unrounded heading), not the heading alone;
+    // |diff| > max attacks, equal / NaN continue
+    double diffAngle = x87::atan2(-(double)segmentPedToTarget.x, (double)segmentPedToTarget.y) - (double)ped->m_fCurrentRotation;
+    if (diffAngle > (double)PI) {
+        diffAngle -= (double)TWO_PI;
+    } else if (diffAngle < (double)-PI) {
+        diffAngle += (double)TWO_PI;
+    }
+    if (std::abs(diffAngle) > (double)FIGHT_CTRL_MAX_ATTACK_ANGLE_RAD) {
         m_nextAttackTime += (uint32)CTimer::GetTimeStepInMS();
         return 0;
     }

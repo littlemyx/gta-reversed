@@ -36,3 +36,4 @@ date	agent	rules	kind	tokens	tool_uses	minutes	outcome	notes
 2026-10-18	PT-COMBAT	v1	playtest bugs	773310	471	425	U5-U7 root cause	
 2026-10-18	PT-MISSION	v1	playtest bugs	504978	371	514	U10/U11/U14	
 2026-10-18	PT2-INTERIOR	v1	playtest bugs	402541	237	211	U15/U16	
+2026-10-18	PT2-CORPSE	v1	playtest bug	428287	273	334	U4 fixed (asin not acos + bFallenDown); ghosting = phone exposure

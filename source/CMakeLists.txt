@@ -899,6 +899,17 @@ if (${RE_PROJECT}_RW_LIBRW)
         game_sa/Weather.cpp
         game_sa/Timer.cpp
         standalone/FtolExe.cpp
+        # --- sources needed by logic_oracle_taskrefs.inc (VT-OVERRIDES: task constructor / destructor reference bookkeeping, CCopPed::RemoveCriminalToKill)
+        game_sa/Animation/AnimBlendAssociation.cpp
+        game_sa/Entity/Ped/CopPed.cpp
+        game_sa/Tasks/TaskTypes/TaskSimpleChoking.cpp
+        game_sa/Tasks/TaskTypes/TaskSimpleStealthKill.cpp
+        game_sa/Tasks/TaskTypes/TaskSimpleCarFallOut.cpp
+        game_sa/Tasks/TaskTypes/TaskSimpleCarGetIn.cpp
+        game_sa/Tasks/TaskTypes/TaskSimpleCarJumpOut.cpp
+        game_sa/Tasks/TaskTypes/TaskSimpleCarCloseDoorFromInside.cpp
+        game_sa/Tasks/TaskTypes/TaskSimpleCarCloseDoorFromOutside.cpp
+        game_sa/Tasks/TaskTypes/TaskComplexEvasiveDiveAndGetUp.cpp
     )
     target_compile_features(logic_oracle_test PRIVATE cxx_std_23)
     target_compile_definitions(logic_oracle_test PRIVATE $<TARGET_PROPERTY:${RE_PROJECT_LIB_NAME},COMPILE_DEFINITIONS> NOTSA_ORACLE_ADDRESS_GLOBALS)   # the run build's own definitions (NOTSA_STANDALONE_RUN, USE_DSOUND, ...): the audio / HUD headers need them

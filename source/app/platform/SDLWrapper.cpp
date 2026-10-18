@@ -52,12 +52,13 @@ static bool IsInFullscreen()
 #include <vector>
 #include <sstream>
 #include <map>
+#include <set>
 #include <fstream>
 #ifdef NOTSA_STANDALONE_RUN
 void RequestMarkScreenshot(const char* name); // standalone/rw/camera.cpp
 #endif
 namespace {
-struct InjEv { uint64_t t; bool down; SDL_Keycode key; int mx = -1, my = -1; std::string mark; std::string until; uint64_t maxMs = 0; std::string skipIf, label; size_t skipTo = 0; };
+struct InjEv { uint64_t t; bool down; SDL_Keycode key; int mx = -1, my = -1; std::string mark; std::string probe; std::string until; uint64_t maxMs = 0; std::string skipIf, label; size_t skipTo = 0; };
 std::vector<InjEv> s_InjEvents;
 size_t             s_InjNext = 0;
 bool               s_InjInit = false;
@@ -66,6 +67,40 @@ int64_t            s_InjShift = 0;     // total ms the script clock was held by 
 bool               s_InjHolding = false;
 std::map<SDL_Keycode, std::pair<uint64_t, uint64_t>> s_InjKeyDown; // key -> (real ms, CTimer frame) of its last injected down; first == UINT64_MAX once released
 uint64_t           s_InjHoldBegin = 0; // real clock (GetTickCount64 - start) when the current hold began
+
+// `probe:NAME` logs one line "[probe] NAME k=v ..." with the game state the cheat / override comparisons read (the same fields tools/standalone/windows/cheat_probe_exe.py reads from the ORIGINAL exe)
+void InjProbe(const std::string& name) {
+    auto* ped = FindPlayerPed();
+    auto* w   = FindPlayerWanted();
+    std::string cheats, weap, veh;
+    static bool s_OffsLogged = false;
+    if (ped && w && !s_OffsLogged) { // the offsets tools/standalone/windows/cheat_probe_exe.py hard-codes for the original exe
+        s_OffsLogged = true;
+        NOTSA_INJ_LOG("[probe-offsets] health=%#x armour=%#x weapons=%#x weaponStride=%#x totalAmmo=%#x vehicle=%#x modelIdx=%#x wanted=%#x chaos=%#x players0=%#x money=%#x vehStride=%#x",
+            (unsigned)((char*)&ped->m_fHealth - (char*)ped), (unsigned)((char*)&ped->m_fArmour - (char*)ped), (unsigned)((char*)&ped->m_aWeapons[0] - (char*)ped),
+            (unsigned)((char*)&ped->m_aWeapons[1] - (char*)&ped->m_aWeapons[0]), (unsigned)((char*)&ped->m_aWeapons[0].m_TotalAmmo - (char*)&ped->m_aWeapons[0]),
+            (unsigned)((char*)&ped->m_pVehicle - (char*)ped), (unsigned)((char*)&ped->m_nModelIndex - (char*)ped), (unsigned)((char*)&w->m_WantedLevel - (char*)w),
+            (unsigned)((char*)&w->m_ChaosLevel - (char*)w), 0xB7CD98u, (unsigned)((char*)&CWorld::Players[0].m_nMoney - (char*)&CWorld::Players[0]), (unsigned)sizeof(CHeli));
+    }
+    for (int i = 0; i < (int)TOTAL_CHEATS; i++) { if (CCheat::m_aCheatsActive[i]) cheats += std::to_string(i) + ","; }
+    if (ped) {
+        for (int i = 0; i < 13; i++) { weap += std::to_string((int)ped->m_aWeapons[i].m_Type) + ":" + std::to_string(ped->m_aWeapons[i].m_TotalAmmo) + ","; }
+    }
+    std::multiset<int> models;
+    for (auto& v : GetVehiclePool()->GetAllValid()) { models.insert((int)v.m_nModelIndex); }
+    for (auto m : models) { veh += std::to_string(m) + ","; }
+    char buf[1500];   // Fixups::Log is wvsprintfA: no floats, 1024 characters at most -> format here, log in pieces
+    std::snprintf(buf, sizeof buf, "wl=%d chaos=%d hp=%.1f armour=%.1f money=%d cheated=%d timesCheated=%.0f cheatsOn=[%s] weap=[%s] pveh=%d nveh=%u veh=[%s] weather=%d/%d ts=%.3f hour=%d",
+        w ? (int)w->m_WantedLevel : -1, w ? (int)w->m_ChaosLevel : -1, ped ? ped->m_fHealth : -1.f, ped ? ped->m_fArmour : -1.f, CWorld::Players[0].m_nMoney,
+        (int)CCheat::m_bHasPlayerCheated, CStats::GetStatValue(STAT_TIMES_CHEATED), cheats.c_str(), weap.c_str(),
+        ped && ped->bInVehicle && ped->m_pVehicle ? (int)ped->m_pVehicle->m_nModelIndex : -1, (unsigned)models.size(), veh.c_str(),
+        (int)CWeather::ForcedWeatherType, (int)CWeather::NewWeatherType, CTimer::GetTimeScale(), (int)CClock::GetGameClockHours());
+    for (size_t off = 0, part = 0; off < std::strlen(buf); off += 800, ++part) {
+        char piece[820];
+        std::snprintf(piece, sizeof piece, "%.800s", buf + off);
+        NOTSA_INJ_LOG("[probe] %s%s %s", name.c_str(), part ? "(cont)" : "", piece);
+    }
+}
 
 bool InjCond(const std::string& c) {
     if (c == "control") {
@@ -138,6 +173,11 @@ void InjInit() {
             ev.mark = arg;
             s_InjEvents.push_back(ev);
         }
+        else if (cmd == "probe") { // probe:NAME  logs the game state (see InjProbe)
+            InjEv ev{ t, true, 0 };
+            ev.probe = arg;
+            s_InjEvents.push_back(ev);
+        }
         else if (cmd == "down" || cmd == "up") { s_InjEvents.push_back({ t, cmd == "down", InjKey(arg) }); }
     }
     std::stable_sort(s_InjEvents.begin(), s_InjEvents.end(), [](auto& a, auto& b) { return a.t < b.t; });
@@ -180,6 +220,7 @@ void InjPump() {
             continue;
         }
         if (!ev.label.empty()) { s_InjNext++; continue; }
+        if (!ev.probe.empty()) { s_InjNext++; InjProbe(ev.probe); continue; }
         if (ev.mark.empty() && ev.mx < 0 && ev.key != 0) {
             // A key must stay down for at least 150 ms of wall clock AND two game frames (CTimer frame counter; 1 s cap in case it does not advance) after it was really injected: when a hitch/low fps makes the pump run late,
             // the scheduled down and up (150 ms apart) would otherwise be pushed in the same pump, the game sees no press at all (soak: ESC lost, quit never opened).

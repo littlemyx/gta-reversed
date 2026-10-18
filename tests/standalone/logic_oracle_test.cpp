@@ -246,6 +246,16 @@ static void TestMisc() {}
 #else
 static void TestRefs() {}
 #endif
+#if !defined(LOGIC_ORACLE_SKIP_REFS) && !defined(LOGIC_ORACLE_SKIP_TASKREFS)
+#include "logic_oracle_taskrefs.inc"
+#else
+static void TestTaskRefs() {}
+#endif
+#ifndef LOGIC_ORACLE_SKIP_CHEATFNS
+#include "logic_oracle_cheatfns.inc"
+#else
+static void TestCheatFns() {}
+#endif
 #ifndef LOGIC_ORACLE_SKIP_FIXES
 #include "logic_oracle_fixes.inc"
 #else
@@ -310,6 +320,8 @@ int main(int argc, char** argv) {
     TestScan();
     TestMisc();
     TestRefs();
+    TestTaskRefs();
+    TestCheatFns();
     TestFixes();
     TestNotsa();
     int bad24 = 0, bad53 = 0, hard24 = 0, hard53 = 0;

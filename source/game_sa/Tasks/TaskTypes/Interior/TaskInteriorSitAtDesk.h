@@ -49,11 +49,11 @@ private:
     int32                  m_Duration;
     InteriorInfo_t*        m_InteriorInfo;
     bool                   m_bDoInstantly;
-    CAnimBlendAssociation* m_Anim;
+    CAnimBlendAssociation* m_Anim{};   // 0x676010 zeroes it (+0x14)
     AnimationId            m_PrevAnimId{ANIM_ID_UNDEFINED};
     CTaskTimer             m_TaskTimer;
     CTaskTimer             m_AnimTimer;
-    bool                   m_bUpdatePedPos;
-    bool                   m_bTaskFinished;
-    bool                   m_bTaskAborting;
+    bool                   m_bUpdatePedPos{};   // 0x676010 clears +0x34 / +0x35 / +0x36
+    bool                   m_bTaskFinished{};
+    bool                   m_bTaskAborting{};
 };

@@ -1,0 +1,25 @@
+0x46F800	template	CTaskComplexSeekEntity<Standard>::ControlSubTask: the port has ONE template body (TaskComplexSeekEntity.h:378, GRABP(pedToBoatDir,{}) + LIM verified at the generic instantiation 0x665760: GRABP(dir.x, dir.y, 0, 0) -> LimitRadianAngle -> (int16) AttachPedToEntity)
+0x496760	template	CTaskComplexSeekEntity<RadiusAngleOffset>::ControlSubTask: same template body as 0x665760
+0x665760	template	CTaskComplexSeekEntity<>::ControlSubTask: template body in TaskComplexSeekEntity.h (the audit cannot find a template definition by name); GRABP(dir.x, dir.y, 0, 0) + LIM verified by hand
+0x4BCC30	inlined-ctor	CreateStealCarBackSeq lambda is inlined 3x in the exe; each copy is the CTaskSimpleAchieveHeading(ped, entity) ctor = LIM(GRABP(target.x, target.y, ped.x, ped.y)); the port has it once (TaskSimpleAchieveHeading.cpp @notsa ctor, fixed in this audit)
+0x4C0BD0	lambda	HeadingToVehicle lambda (4 call sites) = LIM(GRABP(veh.x, veh.y, ped.x, ped.y)), fixed in this audit
+0x621960	helper	GetVehicleHeading() static helper holds the second FPATAN (inline CPlaceable::GetHeading of the vehicle)
+0x627600	helper	same helper
+0x628350	helper	same helper (2 uses in the bike tilt maths)
+0x62E540	paths	the exe duplicates the FPATAN of the m_bKeepTargetAlive branch on its two arms (0x62E63D / 0x62E657); 3 fpatan = 2 source sites + the duplicated arm
+0x64DD60	paths	CPlaceable::GetHeading call on both arms of the `IsTotallyUpsideDown ? LIM(h + PI) : h` ternary
+0x6513A0	helper	GetVehicleHeading lambda (4 uses); the loose scan overran into the next function (strict scan: 4)
+0x67E7B0	inline-wrap	exe wraps the turning-rate sum inline (single +-2pi step at 0x67EAB5..0x67EAE9, not a call); the port calls LimitRadianAngle on the same value: identical for |x| <= 3pi (aiming rotation is within [-pi, pi], the step is tiny)
+0x691AE0	helper	AtanF() helper (FPATAN of two floats rounded to float on store)
+0x693610	helper	AtanF() helper x2 + 1 direct fpatan
+0x4B4AC0	ext	GetHeadingExt() = inline heading (matrix ? fpatan : placement), 2 arms
+0x6CF590	ext	GetHeadingExt() x2 (inline headings)
+0x6CFDF0	ext	vehicle->GetHeading() (inline heading), see report
+0x67A390	helper	GetHandholdPosAndAngleForEntity helper (inlined in the exe: heading + handAngle)
+0x67A5D0	helper	helper + 1 direct GetHeadingExt site
+0x67FD30	ext	GetHeadingExt in `outClimbAngle -= heading`
+0x6803A0	helper	GetHandholdPosAndAngleForEntity helper
+0x680DC0	helper	GetHandholdPosAndAngleForEntity helper
+0x693C40	ext	GetHeadingExt in m_fRotation
+0x64C220	ext	vehicle heading, fixed in this audit
+0x56E450	ext	FindPlayerHeadingExt

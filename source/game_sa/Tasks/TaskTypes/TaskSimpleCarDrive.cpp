@@ -136,7 +136,7 @@ void CTaskSimpleCarDrive::TriggerIK(CPed* ped) const {
 // 0x63C900
 void CTaskSimpleCarDrive::UpdateBopping() {
     const auto timeDelta = (int32)CTimer::GetTimeInMS() - m_nBoppingStartTime;
-    m_fBoppingProgress = (float)(timeDelta % m_nBoppingEndTime) / (float)m_nBoppingEndTime;
+    m_fBoppingProgress = (float)((double)(timeDelta % m_nBoppingEndTime) / (double)m_nBoppingEndTime); // 0x63C91F: fild; fidiv; fstp - one rounding, not two (float conversions first)
     m_nBoppingCompletedTimes = timeDelta / m_nBoppingEndTime % 2;
 }
 

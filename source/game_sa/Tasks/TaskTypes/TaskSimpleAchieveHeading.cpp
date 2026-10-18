@@ -25,7 +25,8 @@ CTaskSimpleAchieveHeading::CTaskSimpleAchieveHeading(float desiredHeading, float
 //! @notsa
 CTaskSimpleAchieveHeading::CTaskSimpleAchieveHeading(CPed* looker, CEntity* lookTowards, float changeRateMult, float tolerance) :
     CTaskSimpleAchieveHeading{
-        (lookTowards->GetPosition2D() - looker->GetPosition2D()).Heading(),
+        // The exe inlines this at its call sites (e.g. 0x4BCE08, 0x4BD2B3, 0x4BD4D4, 0x4C1029): LimitRadianAngle(GetRadianAngleBetweenPoints(target.x, target.y, looker.x, looker.y)) (NOT CVector::Heading)
+        CGeneral::LimitRadianAngle(CGeneral::GetRadianAngleBetweenPoints(lookTowards->GetPosition2D(), looker->GetPosition2D())),
         changeRateMult,
         tolerance
     }

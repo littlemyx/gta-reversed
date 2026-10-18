@@ -44,7 +44,12 @@ CTaskComplexWander::CTaskComplexWander(eMoveState moveState, uint8 dir, bool bWa
     m_nMoveState = moveState;
     m_nDir = dir;
     m_fTargetRadius = fTargetRadius;
+    // 0x66F450: `m_nFlags = (m_nFlags & 0xF0) | bWanderSensibly` - the low nibble (sensibly / new dir / new nodes / all nodes blocked) is rewritten as a whole.
+    // Only the first flag was assigned here, so the other three kept whatever the pool slot held (stale pool memory made fresh wander tasks start with `new dir` / `new nodes` / `all nodes blocked` set).
     m_bWanderSensibly = bWanderSensibly;
+    m_bNewDir = false;
+    m_bNewNodes = false;
+    m_bAllNodesBlocked = false;
     m_nLastUpdateDirFrameCount = 0;
 }
 

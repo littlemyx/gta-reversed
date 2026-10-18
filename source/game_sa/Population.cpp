@@ -2521,9 +2521,10 @@ void CPopulation::PopulateInterior(int32 numPedsToCreate, CVector pos) {
             continue;
         }
 
-        pos.z += 0.9f; // NOTE/BUG: So they just keep adding it up here?
+        // 0x616579: the ped is placed at the generated interior node (z + 0.9), not at the player's position
+        nodePos.z += 0.9f;
 
-        const auto ped = AddPed(ptype, pmodel, pos, true);
+        const auto ped = AddPed(ptype, pmodel, nodePos, true);
 
         numPedsToCreate--;
 

@@ -1054,7 +1054,8 @@ void CTaskSimplePlayerOnFoot::PlayerControlDucked(CPlayerPed* player) {
             float radianAngle = CGeneral::GetRadianAngleBetweenPoints(0.0f, 0.0f, -moveSpeed.x, moveSpeed.y) - TheCamera.m_fOrientation;
             float limitedRadianAngle = CGeneral::LimitRadianAngle(radianAngle);
             player->m_fAimingRotation = limitedRadianAngle;
-            if (!CGameLogic::IsPlayerAllowedToGoInThisDirection(player, {0.0f, (float)(-x87::sin(limitedRadianAngle)), 0.0f}, 0.0f)) {
+            // exe 0x688212..0x68823A: direction = (-sin a, cos a, 0)
+            if (!CGameLogic::IsPlayerAllowedToGoInThisDirection(player, {(float)(-x87::sin(limitedRadianAngle)), (float)x87::cos(limitedRadianAngle), 0.0f}, 0.0f)) {
                 pedMoveBlendRatio = 0.0f;
             }
         }
@@ -1067,8 +1068,9 @@ void CTaskSimplePlayerOnFoot::PlayerControlDucked(CPlayerPed* player) {
         if (CGameLogic::IsPlayerUse2PlayerControls(player)) {
             float radianAngle = CGeneral::GetRadianAngleBetweenPoints(0.0f, 0.0f, -moveSpeed.x, moveSpeed.y) - TheCamera.m_fOrientation;
             float limitedRadianAngle = CGeneral::LimitRadianAngle(radianAngle);
-            CVector moveDirection(0.0f, -x87::sin(limitedRadianAngle), x87::cos(limitedRadianAngle));
-            if (!CGameLogic::IsPlayerAllowedToGoInThisDirection(player, {0.0f, (float)(-x87::sin(limitedRadianAngle)), 0.0f}, 0.0f)) {
+            // exe 0x6880B8..0x6880EC: direction = (-sin a, cos a, 0)
+            CVector moveDirection((float)(-x87::sin(limitedRadianAngle)), (float)x87::cos(limitedRadianAngle), 0.0f);
+            if (!CGameLogic::IsPlayerAllowedToGoInThisDirection(player, moveDirection, 0.0f)) {
                 pedMoveBlendRatio = 0.0f;
             }
             CMatrix* matrix = player->m_matrix;

@@ -112,16 +112,18 @@ bool CTaskSimpleDead::ProcessPed(CPed* ped) {
         const float dotFwd   = (float)((double)n.z * (double)fwd.z   + (double)n.y * (double)fwd.y   + (double)n.x * (double)fwd.x);
         const float dotRight = (float)((double)n.z * (double)right.z + (double)n.y * (double)right.y + (double)n.x * (double)right.x);
 
-        const auto ClampAcos = [](float v) {
+        // 0x6308DA / 0x630927 call 0x821E70 = the CRT's _CIasin (NOT _CIacos 0x822380: a flat ground gives dot = 0 -> 0 rad, the body lies flat;
+        // acos would give pi/2 and PitchForSlope would stand every corpse on its head once the die anim ends)
+        const auto ClampAsin = [](float v) {
             if (-1.f > v) {
                 v = -1.f;
             } else if (v > 1.f) { // NOTE: NaN is passed through both checks unchanged, same as the original
                 v = 1.f;
             }
-            return (float)x87::acos((double)v);
+            return (float)x87::asin((double)v);
         };
-        ped->m_pedIK.m_fSlopeRoll  = ClampAcos(dotRight);
-        ped->m_pedIK.m_fSlopePitch = ClampAcos(dotFwd);
+        ped->m_pedIK.m_fSlopeRoll  = ClampAsin(dotRight);
+        ped->m_pedIK.m_fSlopePitch = ClampAsin(dotFwd);
     }
 
     ped->DeadPedMakesTyresBloody();

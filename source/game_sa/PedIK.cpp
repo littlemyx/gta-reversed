@@ -156,7 +156,10 @@ void CPedIK::PitchForSlope() {
         m_fBodyRoll = std::clamp(m_fBodyRoll, DegreesToRadians(-30.0f), DegreesToRadians(30.0f));
     }
 
-    if (!m_pPed->IsStateDying()) {
+    // 0x5FE0E0: the pitch / roll clamps depend on the ped state alone (0x5FE122 cmp 0x36 / 0x37), but the branch choice below
+    // (register bl, 0x5FE120..0x5FE13A) is "dying OR bFallenDown" (flags dword 0x474 bit 20): a knocked-down ped is tilted like a corpse
+    const bool isDying = m_pPed->IsStateDying();
+    if (!isDying) {
         if (std::abs(m_fSlopePitch) > 0.01f) {
             const auto offset = (m_pPed->m_nMoveState != PEDMOVE_WALK) ? 0.1f : 0.085f;
             m_fSlopePitchLimitMult = (m_fSlopePitchLimitMult * 0.9f) + offset;
@@ -169,7 +172,9 @@ void CPedIK::PitchForSlope() {
         if (std::abs(m_fSlopeRoll) > 0.01f) {
             m_fSlopeRoll = std::clamp(m_fSlopeRoll, DegreesToRadians(-45.0f), DegreesToRadians(45.0f));
         }
+    }
 
+    if (!isDying && !m_pPed->bFallenDown) {
         const auto GetAnimHierarchyMatrix = [&hier](eBoneTag bone) {
             return &RpHAnimHierarchyGetMatrixArray(hier)[RpHAnimIDGetIndex(hier, bone)];
         };

@@ -60,17 +60,19 @@ bool CTaskSimpleGiveCPR::ProcessPed(CPed* ped) {
 
 // 0x6589B0
 bool CTaskSimpleGiveCPR::MakeAbortable(CPed* ped, eAbortPriority priority, const CEvent* event) {
-    eEventType eventType = event->GetEventType();
-
+    // 0x6589B0: the event is only inspected when the priority is not IMMEDIATE (callers pass nullptr then; the port dereferenced it first)
     if (priority == ABORT_PRIORITY_IMMEDIATE
-        || eventType == EVENT_DEATH
-        || eventType == EVENT_HEALTH_REALLY_LOW
-        || eventType == EVENT_ON_FIRE
-        || eventType == EVENT_IN_WATER
-        || eventType == EVENT_WATER_CANNON
-        || eventType == EVENT_VEHICLE_DAMAGE_WEAPON
-        || eventType == EVENT_VEHICLE_DAMAGE_COLLISION
-        || eventType == EVENT_DAMAGE && (ped->m_fHealth <= 10.0F || m_fInitialHealth - ped->m_fHealth >= 40.0F)
+        || [&] {
+            const eEventType eventType = event->GetEventType();
+            return eventType == EVENT_DEATH
+                || eventType == EVENT_HEALTH_REALLY_LOW
+                || eventType == EVENT_ON_FIRE
+                || eventType == EVENT_IN_WATER
+                || eventType == EVENT_WATER_CANNON
+                || eventType == EVENT_VEHICLE_DAMAGE_WEAPON
+                || eventType == EVENT_VEHICLE_DAMAGE_COLLISION
+                || eventType == EVENT_DAMAGE && (ped->m_fHealth <= 10.0F || m_fInitialHealth - ped->m_fHealth >= 40.0F);
+        }()
     ) {
         if (m_pAnim) {
             m_pAnim->SetFinishCallback(CDefaultAnimCallback::DefaultAnimCB, nullptr);

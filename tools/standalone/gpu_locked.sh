@@ -5,6 +5,7 @@
 # usage: tools/standalone/gpu_locked.sh [-o OWNER] [-t SECONDS] <command> [args...]      e.g.  tools/standalone/gpu_locked.sh -o "PT2-AA boot" tools/standalone/soak.sh build/StandaloneRelease 7
 #        tools/standalone/gpu_locked.sh --status        print who holds the lock and whether it looks alive (exit 0 free, 1 held alive, 3 held by USER-PLAY, 4 stale)
 #        tools/standalone/gpu_locked.sh --reap          drop the lock if (and only if) it is stale/dead, never USER-PLAY; exit 0 if it is free afterwards
+#        tools/standalone/gpu_locked.sh --acquire "<owner>" $$   /   --release $$     for a long-lived script that takes the lock around several runs (holder = that script's pid; call --release from its EXIT trap)
 # env:   SCRATCH            dir that holds gpu.lock (default: Windows C:/gta-scratch, same as build_locked.sh)
 #        GPU_OWNER          owner text (default "<script name of the caller> pid <pid>"; -o wins)
 #        TIMEOUT_S          hard timeout of the held command in seconds (default 3600; 124 = timeout). Hold the lock for the run itself only (rules: <= 20 min of game time).
@@ -51,9 +52,34 @@ lock_state() {
 age_s() { local m; m=$(stat -c %Y "$1" 2>/dev/null) && echo $(( $(date +%s) - m )) || echo 0; }
 drop_lock() { rm -f "$LOCK/pid" "$LOCK/winpid" "$LOCK/owner" 2>/dev/null; rm -rf "$LOCK" 2>/dev/null; }
 
+HELD=0; WAITSHOWN=0
+wait_lock() {   # loops until `mkdir` of the lock dir succeeds; drops stale locks on the way
+  local p1 st st2
+  until mkdir "$LOCK" 2>/dev/null; do
+    p1=$(cat "$LOCK/pid" 2>/dev/null); st=$(lock_state)
+    case "$st" in
+      FREE*) sleep 0.2; continue;;   # released between mkdir and the check
+      STALE*) st2=$(lock_state)   # re-check right before dropping: another waiter may have dropped it and a new holder taken it meanwhile
+              case "$st2" in STALE*) if [ "$(cat "$LOCK/pid" 2>/dev/null)" = "$p1" ]; then echo "gpu_locked: removing stale $LOCK - ${st#STALE }" >&2; drop_lock; continue; fi;; esac;;
+      USERPLAY*) [ "$WAITSHOWN" != USERPLAY ] && { echo "gpu_locked: the user is playing ($st) - waiting; do not start builds or heavy work meanwhile" >&2; WAITSHOWN=USERPLAY; };;
+      *) [ "$WAITSHOWN" != "$st" ] && { echo "gpu_locked: waiting for $LOCK: ${st#* }" >&2; WAITSHOWN="$st"; };;
+    esac
+    sleep "$POLL"
+  done
+}
+write_holder() {   # $1 = pid of the holder (liveness is judged by it), $2 = owner text
+  local w=""; [ -r "/proc/$1/winpid" ] && w=$(cat "/proc/$1/winpid")
+  echo "$1" > "$LOCK/pid"; [ -n "$w" ] && echo "$w" > "$LOCK/winpid"
+  echo "$2 $(date)" > "$LOCK/owner"
+}
+
 case "${1:-}" in
   --status) st=$(lock_state); echo "gpu.lock: $st"; case "$st" in FREE*) exit 0;; USERPLAY*) exit 3;; STALE*) exit 4;; *) exit 1;; esac;;
   --reap)   st=$(lock_state); case "$st" in STALE*) echo "gpu_locked: removing $LOCK - ${st#STALE }" >&2; drop_lock;; esac; [ ! -d "$LOCK" ]; exit $?;;
+  # for a long-lived script that takes the lock around SEVERAL runs: `gpu_locked.sh --acquire "<owner>" $$` waits, then records that script's pid as the holder (so a killed script is
+  # detected as a dead holder); `gpu_locked.sh --release $$` drops the lock if that pid still holds it (call it from the script's EXIT trap too)
+  --acquire) [ $# -ge 3 ] || { sed -n '2,25p' "$0"; exit 2; }; wait_lock; write_holder "$3" "$2"; exit 0;;
+  --release) [ $# -ge 2 ] || exit 2; [ "$(cat "$LOCK/pid" 2>/dev/null)" = "$2" ] && drop_lock; exit 0;;
 esac
 
 OWNER="${GPU_OWNER:-}"; TIMEOUT_S="${TIMEOUT_S:-3600}"
@@ -65,24 +91,11 @@ shift $((OPTIND - 1))
 # re-entrant: the outer gpu_locked.sh of this very lock is alive -> just run
 if [ -n "${GPU_LOCK_HELD:-}" ] && [ "$(cat "$LOCK/pid" 2>/dev/null)" = "$GPU_LOCK_HELD" ] && kill -0 "$GPU_LOCK_HELD" 2>/dev/null; then exec "$@"; fi
 
-HELD=0; WARNED=0; WAITSHOWN=0
 release() { if [ "$HELD" = 1 ]; then [ "$(cat "$LOCK/pid" 2>/dev/null)" = "$$" ] && drop_lock; fi; HELD=0; }
 trap release EXIT; trap 'exit 130' INT TERM
-until mkdir "$LOCK" 2>/dev/null; do
-  p1=$(cat "$LOCK/pid" 2>/dev/null); st=$(lock_state)
-  case "$st" in
-    FREE*) sleep 0.2; continue;;   # released between mkdir and the check
-    STALE*) st2=$(lock_state)   # re-check right before dropping: another waiter may have dropped it and a new holder taken it meanwhile
-            case "$st2" in STALE*) if [ "$(cat "$LOCK/pid" 2>/dev/null)" = "$p1" ]; then echo "gpu_locked: removing stale $LOCK - ${st#STALE }" >&2; drop_lock; continue; fi;; esac;;
-    USERPLAY*) [ "$WAITSHOWN" != USERPLAY ] && { echo "gpu_locked: the user is playing ($st) - waiting; do not start builds or heavy work meanwhile" >&2; WAITSHOWN=USERPLAY; };;
-    *) [ "$WAITSHOWN" != "$st" ] && { echo "gpu_locked: waiting for $LOCK: ${st#* }" >&2; WAITSHOWN="$st"; };;
-  esac
-  sleep "$POLL"
-done
+wait_lock
 HELD=1
-WINPID=""; [ -r "/proc/$$/winpid" ] && WINPID=$(cat "/proc/$$/winpid")
-echo $$ > "$LOCK/pid"; [ -n "$WINPID" ] && echo "$WINPID" > "$LOCK/winpid"
-echo "$OWNER $(date)" > "$LOCK/owner"
+write_holder "$$" "$OWNER"
 export GPU_LOCK_HELD=$$
 timeout "$TIMEOUT_S" "$@"; rc=$?
 [ $rc = 124 ] && echo "gpu_locked: timeout ${TIMEOUT_S}s - the command was killed (its own children may need a kill: check tasklist for gta_reversed.exe)" >&2

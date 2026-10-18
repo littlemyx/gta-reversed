@@ -682,7 +682,8 @@ void CPed::CreateDeadPedWeaponPickups() {
         pickupPos.z += 0.3f;
 
         // No. of ammo the pickups will contain
-        const auto pickupAmmo{ std::min(wep.m_TotalAmmo, (uint32)AmmoForWeapon_OnStreet[(size_t)wep.m_Type] * 2) };
+        // 0x45925B..0x45926E: `movzx eax, word ptr [type*2 + 0x8A5F50]; shr eax, 1; cmp total, eax; jge; mov eax, total` = min(total, onStreet / 2) (signed compare). The port multiplied by 2 (a dead ped dropped 4x the exe's ammo).
+        const auto pickupAmmo{ (uint32)std::min((int32)wep.m_TotalAmmo, (int32)(AmmoForWeapon_OnStreet[(size_t)wep.m_Type] >> 1)) };
 
         if (!CPickups::TryToMerge_WeaponType(
             pickupPos,

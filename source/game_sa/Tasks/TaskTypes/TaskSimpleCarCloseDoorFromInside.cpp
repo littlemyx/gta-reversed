@@ -111,7 +111,7 @@ bool CTaskSimpleCarCloseDoorFromInside::MakeAbortable(CPed* ped, eAbortPriority 
         if (m_veh) {
             ProcessDoorOpen(ped);
         }
-        return true;
+        return false; // 0x64AFA1: `xor al, al` on every path (the port returned true for IMMEDIATE)
     }
     default:
         return false;

@@ -285,10 +285,11 @@ bool CEventKnockOffBike::SetPedSafePosition(CPed* ped)
         ped->SetPedPositionInCar();
     }
 
+    // 0x4B4AFB..0x4B4B47: the heading (inline atan2 of the forward vector / placement heading) stays in ST0 as an extended value; `+ PI` [0x858CB8] is added before rounding to float
     if (m_vehicle->GetUp().z >= 0.0f)
-        ped->m_fAimingRotation = m_vehicle->GetHeading();
+        ped->m_fAimingRotation = (float)m_vehicle->GetHeadingExt();
     else
-        ped->m_fAimingRotation = CGeneral::LimitRadianAngle(m_vehicle->GetHeading() + PI);
+        ped->m_fAimingRotation = CGeneral::LimitRadianAngle((float)(m_vehicle->GetHeadingExt() + (double)PI));
 
     ped->m_fCurrentRotation = ped->m_fAimingRotation;
     ped->SetHeading(ped->m_fAimingRotation);

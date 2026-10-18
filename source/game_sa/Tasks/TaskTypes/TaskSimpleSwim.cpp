@@ -719,7 +719,7 @@ void CTaskSimpleSwim::ProcessControlAI(CPed* ped) {
     }
 
     if (m_pPed && m_pPed->bIsStanding && !m_pPed->physicalFlags.bSubmergedInWater ||
-        ped->bIsDyingStuck && !m_pPed->physicalFlags.bSubmergedInWater && dist2d < 1.0f) {
+        ped->bCanClimbOntoBoat && !m_pPed->physicalFlags.bSubmergedInWater && dist2d < 1.0f /* exe 0x689915: test dh,0x20 on ped+0x478 = byte 0x479 bit 5 */) {
         if (!((ped->m_nRandomSeedUpperByte + CTimer::GetFrameCounter() - 4) & 127)) {
             if (CTaskSimpleClimb::TestForClimb(ped, m_pClimbPos, m_fAngle, m_nSurfaceType, true)) {
                 m_nSwimState = SWIM_BACK_TO_SURFACE;

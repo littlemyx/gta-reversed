@@ -26,7 +26,9 @@ void CTaskComplexInvestigateDeadPed::InjectHooks() {
 }
 
 // 0x696DF0
-CTaskComplexInvestigateDeadPed::CTaskComplexInvestigateDeadPed(CPed* deadPed) {
+CTaskComplexInvestigateDeadPed::CTaskComplexInvestigateDeadPed(CPed* deadPed) :
+    m_deadPed{deadPed} // 0x696E18: [esi+0Ch] = deadPed (the member was never assigned: null reference registered, dead ped pointer lost)
+{
     CEntity::SafeRegisterRef(m_deadPed);
 }
 

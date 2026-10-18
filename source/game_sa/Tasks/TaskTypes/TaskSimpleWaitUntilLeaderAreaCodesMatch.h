@@ -20,7 +20,12 @@ public:
     using CTaskSimpleWaitUntilAreaCodesMatch::CTaskSimpleWaitUntilAreaCodesMatch;
     CTaskSimpleWaitUntilLeaderAreaCodesMatch(const CTaskSimpleWaitUntilLeaderAreaCodesMatch& o) = default;
 
-    CTask*    Clone() const override { return new CTaskSimpleWaitUntilLeaderAreaCodesMatch{*this}; }
+    CTask*    Clone() const override { // 0x5F67F0: new task from the area code, then [esi+24h] = [esi+34h] = 0: the runtime state (grabbed start pos / m_b) is NOT cloned
+        auto* const t = new CTaskSimpleWaitUntilLeaderAreaCodesMatch{*this};
+        t->m_bGrabbedStartPos = false;
+        t->m_b = false;
+        return t;
+    }
     eTaskType GetTaskType() const override { return Type; }
     bool      MakeAbortable(CPed* ped, eAbortPriority priority, CEvent const* event) override;
     bool      ProcessPed(CPed* ped) override;

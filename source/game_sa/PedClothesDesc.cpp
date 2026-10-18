@@ -99,10 +99,13 @@ void CPedClothesDesc::SetTextureAndModel(uint32 texture, uint32 model, eClothesT
 void CPedClothesDesc::SetTextureAndModel(const char* textureName, const char* modelName, eClothesTexturePart texturePart) {
     assert(texturePart < CLOTHES_TEXTURE_TOTAL);
 
-    m_anTextureKeys[texturePart] = CKeyGen::GetUppercaseKey(textureName);
+    // 0x5A8080: a null name gives the key 0 (the beach party / funhouse / ... cheats pass a null model name; GetUppercaseKey(nullptr) crashed the run build)
+    const uint32 textureKey = textureName ? CKeyGen::GetUppercaseKey(textureName) : 0;
+    const uint32 modelKey   = modelName ? CKeyGen::GetUppercaseKey(modelName) : 0;
+    m_anTextureKeys[texturePart] = textureKey;
 
     if (const auto modelPart = CClothes::GetTextureDependency(texturePart); modelPart != CLOTHES_MODEL_UNAVAILABLE) {
-        m_anModelKeys[modelPart] = CKeyGen::GetUppercaseKey(modelName);
+        m_anModelKeys[modelPart] = modelKey;
     }
 }
 

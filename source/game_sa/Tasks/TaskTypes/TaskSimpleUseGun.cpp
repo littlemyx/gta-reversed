@@ -57,7 +57,15 @@ CTaskSimpleUseGun::~CTaskSimpleUseGun() {
 bool CTaskSimpleUseGun::ControlGunMove(const CVector2D& moveDir) {
     const auto maxDelta = CTimer::GetTimeStep() * 0.07f;
     for (size_t i = 0; i < 2; i++) {
-        m_MoveCmd[i] = std::clamp(moveDir[i], m_MoveCmd[i] - maxDelta, m_MoveCmd[i] + maxDelta);
+        // 0x61E0D0..0x61E10A: a step towards the target, NOT std::clamp (they differ when `maxDelta` is negative or NaN)
+        const float delta = moveDir[i] - m_MoveCmd[i];
+        if (delta > maxDelta) {
+            m_MoveCmd[i] += maxDelta;
+        } else if (delta < -maxDelta) {
+            m_MoveCmd[i] -= maxDelta;
+        } else {
+            m_MoveCmd[i] = moveDir[i];
+        }
     }
     m_HasMoveControl = true;
     return true;
@@ -235,9 +243,8 @@ bool CTaskSimpleUseGun::RequirePistolWhip(CPed* ped, CEntity* targetEntity) {
 bool CTaskSimpleUseGun::ControlGun(CPed* ped, CEntity* target, eGunCommand cmd) {
     m_IsInControl = true;
     if (target != m_TargetEntity) { // New target?
-        m_TargetEntity  = target;
-        m_IsArmIKInUse  = false;
-        m_IsLookIKInUse = false;
+        m_TargetEntity = target;
+        AbortIK(ped); // 0x61E076: the IK chains are aborted (AbortIK clears both IK flags); the port only cleared the flags and left the chains running
     }
     m_NextCmd = std::max(cmd, m_NextCmd);
     return true;

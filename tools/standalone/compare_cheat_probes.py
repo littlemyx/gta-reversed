@@ -26,11 +26,15 @@ for d in orig:
     last[int(float(d['timesCheated']))] = d            # the last sample of each cheat count
 def models(s):
     return collections.Counter(int(x) for x in s.strip('[]').split(',') if x)
-KEYS = ['wl', 'armour', 'money', 'cheated', 'timesCheated', 'cheatsOn', 'weap', 'pveh', 'weather', 'ts']
+# the n-th cheat of the scene (by the order of tools/standalone/cheats_route.txt) is matched to the original's n-th increment: a port-side typing miss (repeated letters) must not shift the comparison
+import os
+order = [m.group(1) for m in re.finditer(r'^mark:cheat_(\d+_[A-Z]+)$', open(os.path.join(os.path.dirname(__file__), 'cheats_route.txt')).read(), re.M)]
+pos = {'c' + o: i + 1 for i, o in enumerate(order)}
+KEYS = ['wl', 'armour', 'money', 'cheated', 'cheatsOn', 'weap', 'weather', 'ts']   # not pveh / hp / hour (traffic and the AI make them differ run to run)
 prev_o, prev_p = collections.Counter(), collections.Counter()
 bad = 0
 for d in ours:
-    n = int(float(d['timesCheated']))
+    n = pos.get(d['name'], int(float(d['timesCheated'])))
     o = last.get(n)
     if o is None:
         print('%-26s no original sample for timesCheated=%d' % (d['name'], n)); bad += 1; continue
@@ -38,7 +42,7 @@ for d in ours:
     for k in KEYS:
         a, b = d.get(k), o.get(k)
         if k in ('armour',): a, b = '%.0f' % float(a), '%.0f' % float(b)
-        if k == 'weather': a, b = a.split('/')[0], b.split('/')[0]
+        if k == 'weather': a, b = int(a.split('/')[0]) & 0xFFFF, int(b.split('/')[0]) & 0xFFFF
         if a != b: diffs.append('%s ours %s orig %s' % (k, a, b))
     vo, vp = models(d['veh']), models(o['veh'])
     ao, ap = vo - prev_o, vp - prev_p

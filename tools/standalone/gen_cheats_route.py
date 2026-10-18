@@ -22,7 +22,7 @@ orig = open('tools/standalone/windows/audio_scenes.txt', encoding='utf-8').read(
 oo = [orig.rstrip('\n'), 'mark:foot_stand', 'cap:30', 'wait:1500']
 for i in order:
     c = CODES[i]
-    out += ['mark:cheat_%d_%s' % (i, c)] + [x for ch in c for x in ('key:' + ch.lower(), 'wait:60')] + ['wait:3500', 'probe:c%d_%s' % (i, c)]
+    out += ['mark:cheat_%d_%s' % (i, c)] + [x for ch in c for x in ('key:' + ch.lower(), 'wait:200')] + ['wait:3500', 'probe:c%d_%s' % (i, c)]
     oo += ['mark:cheat_%d_%s' % (i, c), 'cheat:' + c.lower(), 'wait:3500']
 out += ['wait:2000', 'mark:quit_esc', 'key:escape', 'wait:3000']
 oo += ['wait:2000']

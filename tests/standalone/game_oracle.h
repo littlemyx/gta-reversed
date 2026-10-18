@@ -26,11 +26,14 @@ namespace oracle {
 
 inline const char* g_where = "";    // what the current test group is doing (for the fault report)
 inline bool        g_active = false;
+// ORACLE-W2: when set, a fault inside an oracle call is NOT fatal here (the vectored handler passes it on): the test wraps the case in __try/__except and reports the row as "NOT ORACLE-ABLE" instead of
+// exiting the whole process (one unsupported function must not hide the other ~400 rows of a generated test)
+inline bool        g_softFault = false;
 
 inline LONG CALLBACK FaultHandler(EXCEPTION_POINTERS* ep) {
     const DWORD c = ep->ExceptionRecord->ExceptionCode;
     static bool inHandler = false;                  // a fault while reporting (stack overflow, broken host CRT state) must not recurse
-    if (inHandler) return EXCEPTION_CONTINUE_SEARCH;
+    if (inHandler || g_softFault) return EXCEPTION_CONTINUE_SEARCH;
     if (c == EXCEPTION_ACCESS_VIOLATION || c == EXCEPTION_ILLEGAL_INSTRUCTION || c == EXCEPTION_PRIV_INSTRUCTION || c == EXCEPTION_STACK_OVERFLOW || c == EXCEPTION_INT_DIVIDE_BY_ZERO) {
         inHandler = true;
         std::printf("\n  NOT ORACLE-ABLE: fault 0x%08lX at EIP=%p (access address %p) while running '%s'\n", c, ep->ExceptionRecord->ExceptionAddress,

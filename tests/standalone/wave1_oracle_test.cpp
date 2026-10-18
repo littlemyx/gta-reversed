@@ -4,6 +4,7 @@
 // with random / poisoned data, copied for the exe side. Bit-exact compare at PC=24 (game) and PC=53 (info).
 // usage: wave1_oracle_test.exe [-v] [-v53] [-vn] [-trace (print every case index)] [-n cases] [name-substring ...]     (exit code 0 = no real mismatch at PC=24)
 #include "game_oracle.h"
+#include "oracle_alloc.h"
 
 #include "General.h"
 #include "Matrix.h"
@@ -36,9 +37,12 @@ void RegisterFunction(uint32_t, void*, const char*) {}
 void RegisterUnverified(uint32_t, const char*, int, bool, uint32_t) {}
 }
 void ReversibleHooks::RHManager::AddHookToCategory(std::string_view, HookInstallOptions, std::shared_ptr<ReversibleHook::TwoWayHook>) {}
-void* CMemoryMgr::Malloc(uint32 size, uint32) { return std::malloc(size); }
-void* CMemoryMgr::Malloc(uint32 size) { return std::malloc(size); }
-void  CMemoryMgr::Free(void* p) { std::free(p); }
+void* CMemoryMgr::Malloc(uint32 size, uint32) { return oracle::alloc::g_route ? oracle::alloc::Alloc(size) : std::malloc(size); }   // ORACLE-W2: the arena while a deterministic window is open
+void* CMemoryMgr::Malloc(uint32 size) { return oracle::alloc::g_route ? oracle::alloc::Alloc(size) : std::malloc(size); }
+void  CMemoryMgr::Free(void* p) { oracle::alloc::Free(p); }
+#ifdef W2_ONLY
+ORACLE_ALLOC_HOST_OPERATORS()   // the port's `new` / `delete` go to the deterministic arena inside an oracle::alloc::Begin()/End() window
+#endif
 
 // ---------------------------------------------------------------------------------------------------------------------------------
 struct Rng {
@@ -114,9 +118,33 @@ static bool g_verbose = false, g_verbose53 = false, g_verboseNan = false;
 static std::vector<std::string> g_filters;
 static int g_hits = 0;
 static void Hit(bool b) { g_hits += b; }   // coverage: number of `true` results of a bool-returning function (per precision mode)
-struct Row { std::string name; int hits = -1; int cases = 0, bad24 = 0, bad53 = 0, hardReg24 = 0, hardSpec24 = 0, nan24 = 0, hardReg53 = 0, hardSpec53 = 0, nan53 = 0; };
+struct Row { std::string name; int hits = -1; int cases = 0, bad24 = 0, bad53 = 0, hardReg24 = 0, hardSpec24 = 0, nan24 = 0, hardReg53 = 0, hardSpec53 = 0, nan53 = 0; bool fault = false; };
 static std::vector<Row> g_rows;
 
+static std::vector<std::string> g_skipRows;   // ORACLE-W2 dev aid: rows listed in the file named by env W2_SKIPFILE (one exact row name per line) are not run - lets a driver script step over rows that crash the process (stack overflow)
+static bool Skipped(const std::string& name) {
+    static bool loaded = false;
+    if (!loaded) {
+        loaded = true;
+        if (const char* f = std::getenv("W2_SKIPFILE")) {
+            if (FILE* fh = std::fopen(f, "r")) {
+                char b[512];
+                while (std::fgets(b, sizeof b, fh)) {
+                    std::string l(b);
+                    while (!l.empty() && (l.back() == '\n' || l.back() == '\r')) l.pop_back();
+                    if (!l.empty()) g_skipRows.push_back(l);
+                }
+                std::fclose(fh);
+            }
+        }
+    }
+    // W2_START=<row name>: skip every row before it (resume after a crash without replaying the earlier rows)
+    static const char* start = std::getenv("W2_START");
+    static bool reached = !start;
+    if (!reached) { if (name == start) reached = true; else return true; }
+    for (auto& x : g_skipRows) if (x == name) return true;
+    return false;
+}
 static bool Wanted(const std::string& name) {
     if (g_filters.empty()) return true;
     for (auto& f : g_filters) if (name.find(f) != std::string::npos) return true;
@@ -142,14 +170,38 @@ static DWORD WINAPI WatchdogProc(LPVOID) {
 }
 static void SetPC(int bits) { unsigned cw; _controlfp_s(&cw, bits == 24 ? _PC_24 : _PC_53, _MCW_PC); }
 
+// ORACLE-W2: soft fault mode. A fault inside a case (the exe function needs state the fixture does not provide, an unresolved port symbol ...) ends the ROW, not the process: the row is listed as
+// "NOT ORACLE-ABLE" with the faulting address and counts as a failure of the test (the committed test has none: such functions are listed in the generator's skip table with the reason).
+static DWORD g_faultCode = 0; static void* g_faultEip = nullptr; static void* g_faultAddr = nullptr; static unsigned g_faultEax = 0, g_faultEcx = 0; static unsigned g_faultStk[4] = {};
+static void (*g_onFault)() = nullptr;
+static bool g_agreedFault = false;   // ORACLE-W2: set by BothA when port AND exe faulted in this case (same behaviour: no information, not a mismatch)
+static int  g_agreedFaults = 0;
+static const char* g_curRow = "";
+static LONG WINAPI LastChance(EXCEPTION_POINTERS* ep) { std::printf("\nUNHANDLED exception 0x%08lX at EIP=%p in row '%s'\n", ep->ExceptionRecord->ExceptionCode, ep->ExceptionRecord->ExceptionAddress, g_curRow); std::fflush(stdout); std::exit(6); }
+static int FaultFilter(EXCEPTION_POINTERS* ep) {
+    const DWORD c = ep->ExceptionRecord->ExceptionCode;
+    if (!oracle::g_softFault) return EXCEPTION_CONTINUE_SEARCH;
+    if (c == EXCEPTION_STACK_OVERFLOW || (((c & 0xF0000000u) != 0xC0000000u) && c != EXCEPTION_BREAKPOINT && c != EXCEPTION_SINGLE_STEP && c != 0xE06D7363u && c != 0xE0000001u)) return EXCEPTION_CONTINUE_SEARCH;   // hardware faults, int3 in garbage code, an uncaught C++ exception (arena overflow)
+    g_faultCode = c; g_faultEip = ep->ExceptionRecord->ExceptionAddress; g_faultAddr = c == EXCEPTION_ACCESS_VIOLATION ? (void*)ep->ExceptionRecord->ExceptionInformation[1] : nullptr;
+    g_faultEax = ep->ContextRecord->Eax; g_faultEcx = ep->ContextRecord->Ecx; for (int i = 0; i < 4; ++i) { __try { g_faultStk[i] = ((const unsigned*)ep->ContextRecord->Esp)[i]; } __except (EXCEPTION_EXECUTE_HANDLER) { g_faultStk[i] = 0; } }
+    return EXCEPTION_EXECUTE_HANDLER;
+}
+template<class Fn> static int SafeInvoke(Fn& fn, Rng& r, std::string& d) {   // 1 = agree, 0 = mismatch, -1 = fault (no C++ objects with destructors in this frame: __try)
+    __try { return fn(r, d) ? 1 : 0; } __except (FaultFilter(GetExceptionInformation())) { return -1; }
+}
+
 // fn(rng, desc) -> true when port and exe agree; on mismatch it describes the inputs/outputs in `desc`
 template<class Fn>
 static void Run(const std::string& name, Fn&& fn, int cases = 0) {
-    if (!Wanted(name)) return;
+    if (!Wanted(name) || Skipped(name)) return;
     const int N = cases ? cases : g_cases;
     Row row{ name, -1, N };
     oracle::g_where = name.c_str();
+    g_curRow = name.c_str();
+    if (std::getenv("W2_PROGRESS")) std::printf(">> %s\n", name.c_str());
+    int agreed = 0;
     for (int pc : { 24, 53 }) {
+        if (row.fault) break;
         SetPC(pc);
         int shown = 0;
         g_hits = 0;
@@ -159,9 +211,18 @@ static void Run(const std::string& name, Fn&& fn, int cases = 0) {
             r.sp = spTab[i % 6];
             std::string d;
             g_nanDiff = g_hardDiff = g_special = false;
+            g_agreedFault = false;
             if (g_trace) std::printf("[%s PC%d case %d]\n", name.c_str(), pc, i);
             g_caseTick = GetTickCount();
-            if (!fn(r, d)) {
+            const int rc = SafeInvoke(fn, r, d);
+            if (rc < 0) {
+                row.fault = true; row.bad24++; row.hardReg24++;
+                std::printf("    NOT ORACLE-ABLE: fault 0x%08lX at EIP=%p (access %p) EAX=%08X ECX=%08X stack %08X %08X %08X, PC=%d case %d: %s\n", g_faultCode, g_faultEip, g_faultAddr, g_faultEax, g_faultEcx, g_faultStk[0], g_faultStk[1], g_faultStk[2], pc, i, name.c_str());
+                if (g_onFault) g_onFault();
+                break;
+            }
+            if (g_agreedFault) ++agreed;
+            if (rc == 0) {
                 const bool payloadOnly = g_nanDiff && !g_hardDiff;
                 (pc == 24 ? row.bad24 : row.bad53)++;
                 int& cat = payloadOnly ? (pc == 24 ? row.nan24 : row.nan53) : g_special ? (pc == 24 ? row.hardSpec24 : row.hardSpec53) : (pc == 24 ? row.hardReg24 : row.hardReg53);
@@ -170,9 +231,12 @@ static void Run(const std::string& name, Fn&& fn, int cases = 0) {
             }
         }
     }
+    if (agreed >= 2 * N) { row.fault = true; row.bad24++; row.hardReg24++; std::printf("    NOT ORACLE-ABLE: every case faulted identically in the port and in the exe (fixture lacks the object they dereference): %s\n", name.c_str()); }
+    else if (agreed) std::printf("    (%d of %d cases faulted identically in port and exe: skipped)\n", agreed, 2 * N);
     g_caseTick = 0;
     SetPC(53);
     row.hits = g_hits;
+    if (row.fault) { g_rows.push_back(row); return; }
     std::printf("%-58s %5d%s  PC24 %4d [reg %d spec %d nanpayload %d]  PC53 %4d [reg %d spec %d nanpayload %d]\n", name.c_str(), N, row.hits ? (" true:" + std::to_string(row.hits)).c_str() : "", row.bad24, row.hardReg24, row.hardSpec24, row.nan24,
                 row.bad53, row.hardReg53, row.hardSpec53, row.nan53);
     std::fflush(stdout);
@@ -218,7 +282,9 @@ static std::string DiffDesc(const void* a, const void* b, size_t n, const char* 
 #include "world_oracle_inits.inc"   // the exe's float C++ start-up initialisers (same list as wave1_oracle_test)
 // ORACLE-W1 wave 1: areas live in wave1_oracle_<area>.inc; W1_SKIP_<AREA> (compile definition) leaves one out
 #include "wave1_oracle_common.inc"
-#ifdef W1_CONSTS_ONLY
+#ifdef W2_ONLY
+#include "wave2_oracle_all.inc"      // ORACLE-W2: allocator-backed rows (task / event constructors, Clone, sub-task factories ...), own executable (wave2_*_oracle_test)
+#elif defined(W1_CONSTS_ONLY)
 #include "wave1_oracle_consts.inc"   // generated: ~440 constant-returning overrides, own executable (wave1_consts_oracle_test)
 #else
 #include "wave1_oracle_surface.inc"
@@ -244,6 +310,7 @@ static LONG CALLBACK DeepStackHandler(EXCEPTION_POINTERS* ep) {
 
 static int __cdecl AssertHook(int, char* msg, int*) {   // prints the call stack of a failed assert (map the addresses with the linker .map)
     void* fr[16]; const USHORT n = RtlCaptureStackBackTrace(0, 16, fr, nullptr);
+    if (oracle::g_softFault) { std::printf("    (assert in the case: %s)\n", msg); RaiseException(0xE0000001u, 0, 0, nullptr); }   // ORACLE-W2: an assert in the port / CRT ends the row like a fault
     std::fprintf(stderr, "ASSERT: %s\n  frames:", msg);
     for (USHORT i = 0; i < n; ++i) std::fprintf(stderr, " %p", fr[i]);
     std::fprintf(stderr, "\n"); std::fflush(stderr);
@@ -269,14 +336,23 @@ int main(int argc, char** argv) {
     if (!exe) { std::printf("wave1_oracle_test: set RW_EXE_ORACLE=<path of gta_sa_compact.exe>; skipped (exit 77 = SKIP)\n"); return 77; }
     if (!oracle::Map(exe)) { std::printf("FATAL: cannot map the exe\n"); return 2; }
     AddVectoredExceptionHandler(1, DeepStackHandler);
+#ifdef W2_ONLY
+    SetUnhandledExceptionFilter(LastChance);
+#endif
     *reinterpret_cast<int*>(0xC9C400) = 1;
     oracle::Patch(0x82872C, (void*)&HostMathErr);
     oracle::Patch(0x827B3D, (void*)&HostGetPtd);
+#ifdef W2_ONLY
+    oracle::g_softFault = true;
+    std::printf("wave2: %d exe CRT-heap / lock / TLS imports redirected to the deterministic arena\n", oracle::alloc::InstallExe(exe));
+#endif
     for (const unsigned a : kExeFloatInits) reinterpret_cast<void (*)()>(static_cast<uintptr_t>(a))();   // the exe's derived float constants (as after its CRT start-up, PC=53)
     DuplicateHandle(GetCurrentProcess(), GetCurrentThread(), GetCurrentProcess(), &g_mainThread, 0, FALSE, DUPLICATE_SAME_ACCESS);
     CreateThread(nullptr, 0, WatchdogProc, nullptr, 0, nullptr);
     std::printf("wave1_oracle_test: %d cases per function and precision mode; PC24 = game mode (D3D CreateDevice), PC53 = CRT default\n", g_cases);
-#ifdef W1_CONSTS_ONLY
+#ifdef W2_ONLY
+    TestW2();
+#elif defined(W1_CONSTS_ONLY)
     TestConsts();
 #else
     TestSurface();
@@ -288,7 +364,9 @@ int main(int argc, char** argv) {
     TestScriptResetIP();
 #endif
     int bad24 = 0, bad53 = 0, hard24 = 0, hard53 = 0;
-    for (auto& r : g_rows) { bad24 += r.bad24; bad53 += r.bad53; hard24 += r.hardReg24 + r.hardSpec24; hard53 += r.hardReg53 + r.hardSpec53; }
+    int faults = 0;
+    for (auto& r : g_rows) { bad24 += r.bad24; bad53 += r.bad53; hard24 += r.hardReg24 + r.hardSpec24; hard53 += r.hardReg53 + r.hardSpec53; faults += r.fault; }
+    if (faults) std::printf("\n%d rows NOT ORACLE-ABLE (fault, see above)\n", faults);
     std::printf("\n%zu functions, mismatches (strict / excluding NaN-payload-only): PC24 %d / %d, PC53 %d / %d\n", g_rows.size(), bad24, hard24, bad53, hard53);
     return hard24 ? 1 : 0;
 }

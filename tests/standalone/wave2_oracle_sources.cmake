@@ -1,0 +1,34 @@
+# translation units of wave2_oracle_test (hand-maintained base + the generated rows' TUs: tools/gen_w2_rows.py writes wave2_oracle_gen_sources.cmake)
+set(W2_BASE_SOURCES
+    game_sa/General.cpp
+    game_sa/Core/Vector.cpp
+    game_sa/Core/Vector2D.cpp
+    game_sa/Core/Matrix.cpp
+    game_sa/Core/Quaternion.cpp
+    game_sa/Timer.cpp
+    game_sa/Weather.cpp
+    standalone/FtolExe.cpp
+    game_sa/Pools.cpp
+    game_sa/Entity/Placeable.cpp
+    game_sa/Entity/Entity.cpp
+    game_sa/References.cpp
+    game_sa/Tasks/Task.cpp
+    game_sa/Tasks/TaskSimple.cpp
+    game_sa/Tasks/TaskComplex.cpp
+    game_sa/Tasks/TaskTimer.cpp
+    game_sa/Tasks/TaskTypes/TaskSimpleStandStill.cpp
+    game_sa/Animation/AnimManager.cpp
+    game_sa/Core/KeyGen.cpp
+    # support TUs: the callees most function rows reach (CPed state helpers, player lookup, anim callbacks, IK manager, groups, streaming requests ...); without them the call is an unresolved symbol
+    game_sa/Entity/Ped/Ped.cpp
+    game_sa/Entity/Ped/PlayerPed.cpp
+    game_sa/Entity/Vehicle/Vehicle.cpp
+    game_sa/World_Helper.cpp
+    game_sa/Animation/AnimBlendAssociation.cpp
+    game_sa/Plugins/RpAnimBlendPlugin/RpAnimBlend.cpp
+    game_sa/Ragdoll/IKChainManager.cpp
+    game_sa/PedGroupMembership.cpp
+    game_sa/PedGroups.cpp
+    game_sa/Streaming.cpp
+    game_sa/Camera.cpp
+)

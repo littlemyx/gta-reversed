@@ -984,6 +984,34 @@ if (${RE_PROJECT}_RW_LIBRW)
         target_link_options(${_w1t} PRIVATE "$<$<CXX_COMPILER_ID:MSVC>:/BASE:0x400000;/DYNAMICBASE:NO;/FIXED;/MERGE:_TEXT=.text;/INCREMENTAL:NO;/SUBSYSTEM:CONSOLE;/FORCE:UNRESOLVED;/MAP>")
         set_target_properties(${_w1t} PROPERTIES COMPILE_WARNING_AS_ERROR OFF CXX_SCAN_FOR_MODULES OFF)
     endforeach()
+    # ORACLE-W2: allocator-backed rows (tasks / events: constructors, Clone, sub-task factories ...): same harness source as wave 1 with W2_ONLY; the exe's CRT heap / lock imports are redirected to a
+    # deterministic arena shared with the port (tests/standalone/oracle_alloc.h); translation units: wave2_oracle_sources.cmake (+ wave2_oracle_gen_sources.cmake written by tools/gen_w2_rows.py)
+    include("${PROJECT_SOURCE_DIR}/tests/standalone/wave2_oracle_sources.cmake")
+    if(EXISTS "${PROJECT_SOURCE_DIR}/tests/standalone/wave2_oracle_gen_sources.cmake")
+        include("${PROJECT_SOURCE_DIR}/tests/standalone/wave2_oracle_gen_sources.cmake")
+    endif()
+    if(EXISTS "${PROJECT_SOURCE_DIR}/tests/standalone/wave2_oracle_gen_func_sources.cmake")
+        include("${PROJECT_SOURCE_DIR}/tests/standalone/wave2_oracle_gen_func_sources.cmake")
+    endif()
+    add_executable(wave2_oracle_test EXCLUDE_FROM_ALL
+        "${PROJECT_SOURCE_DIR}/tests/standalone/wave1_oracle_test.cpp"
+        ${W2_BASE_SOURCES}
+        ${W2_GEN_SOURCES}
+        ${W2_FUNC_SOURCES}
+    )
+    target_compile_definitions(wave2_oracle_test PRIVATE W2_ONLY)
+    target_compile_features(wave2_oracle_test PRIVATE cxx_std_23)
+    target_compile_definitions(wave2_oracle_test PRIVATE $<TARGET_PROPERTY:${RE_PROJECT_LIB_NAME},COMPILE_DEFINITIONS> NOTSA_ORACLE_ADDRESS_GLOBALS)
+    target_include_directories(wave2_oracle_test PRIVATE $<TARGET_PROPERTY:${RE_PROJECT_LIB_NAME},INCLUDE_DIRECTORIES>)
+    target_compile_options(wave2_oracle_test PRIVATE $<TARGET_PROPERTY:${RE_PROJECT_LIB_NAME},COMPILE_OPTIONS>)
+    target_precompile_headers(wave2_oracle_test PRIVATE StdInc.cpp)
+    target_link_libraries(wave2_oracle_test PRIVATE librw spdlog::spdlog Tracy::TracyClient user32)
+    target_sources(wave2_oracle_test PRIVATE "${STANDALONE_PAD_OBJ}")
+    get_target_property(_w2_sources wave2_oracle_test SOURCES)
+    list(REMOVE_ITEM _w2_sources "${STANDALONE_PAD_OBJ}")
+    set_property(TARGET wave2_oracle_test PROPERTY SOURCES "${STANDALONE_PAD_OBJ}" ${_w2_sources})
+    target_link_options(wave2_oracle_test PRIVATE "$<$<CXX_COMPILER_ID:MSVC>:/BASE:0x400000;/DYNAMICBASE:NO;/FIXED;/MERGE:_TEXT=.text;/INCREMENTAL:NO;/SUBSYSTEM:CONSOLE;/FORCE:UNRESOLVED;/MAP>")
+    set_target_properties(wave2_oracle_test PROPERTIES COMPILE_WARNING_AS_ERROR OFF CXX_SCAN_FOR_MODULES OFF)
     # x87 intrinsic fidelity oracle: inline fsin/fcos/fpatan/fptan/fsqrt/fyl2x of the exe vs the ports' math, and the CRT entry points the exe calls (pow, asin, acos, tan, floor, ceil, modf)
     add_executable(x87_oracle_test EXCLUDE_FROM_ALL
         "${PROJECT_SOURCE_DIR}/tests/standalone/x87_oracle_test.cpp"

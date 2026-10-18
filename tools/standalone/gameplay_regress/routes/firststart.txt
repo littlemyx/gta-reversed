@@ -1,0 +1,9 @@
+# GAMEPLAY REGRESSION: first start without gta_sa.set, EXCLUSIVE fullscreen (playtest-1 U1: the game window was a part of the screen; the exe's default is the first 800x600x32 mode)
+# the snapshot reads the window's client size next to the mode size (RsGlobal.maximum*): they must be equal. The runner does NOT set NOTSA_STANDALONE_WINDOWED for this scenario.
+until:menu:240000
+wait:3000
+cmd:snap:fs_menu
+wait:2000
+cmd:snap:fs_menu2
+cmd:quit
+wait:5000

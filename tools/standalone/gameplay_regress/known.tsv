@@ -1,0 +1,2 @@
+# check key	reason (open playtest item; the check still runs and is shown as KNOWN, it does not fail the suite). Remove the line when the item is fixed.
+# (empty: U15 interior_lspd.cops_on_floor was listed here until PT2-INTERIOR fixed it, 2026-10-18; the check failed on the pre-fix exe with cops 1.3-2.5 m above CJ)

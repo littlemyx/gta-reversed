@@ -65,11 +65,13 @@ static bool IsInFullscreen()
 #ifdef NOTSA_STANDALONE_RUN
 void RequestMarkScreenshot(const char* name); // standalone/rw/camera.cpp
 void NotsaRwMsaaState(char* buf, size_t n);   // standalone/rw/engine.cpp: selected/max level + the live swap chain's multisample type
+bool NotsaGrCmd(const char* name, const std::string& args); // GameplayRegress.cpp (gameplay regression suite)
+void NotsaGrTick();
 #endif
 struct NotsaInjectMissionInfo { int32 offset; uint8 bytes[16]; };
 bool NotsaInjectStartMission(int32 missionId, NotsaInjectMissionInfo* info); // toolsmenu/DebugModules/Script/MissionDebugModule.cpp
 namespace {
-struct InjEv { uint64_t t; bool down; SDL_Keycode key; int mx = -1, my = -1; int vmode = -1; int aa = -1; int mission = -1; std::string mark; std::string probe; std::string cmd; std::string until; uint64_t maxMs = 0; std::string skipIf, label; size_t skipTo = 0; };
+struct InjEv { uint64_t t; bool down; SDL_Keycode key; int mx = -1, my = -1; int vmode = -1; int vw = 0, vh = 0; int aa = -1; int mission = -1; std::string mark; std::string probe; std::string cmd; std::string until; uint64_t maxMs = 0; std::string skipIf, label; size_t skipTo = 0; };
 std::vector<InjEv> s_InjEvents;
 size_t             s_InjNext = 0;
 bool               s_InjInit = false;
@@ -123,6 +125,12 @@ bool InjCond(const std::string& c) {
         auto* ped = FindPlayerPed();
         return ped && ped->bInVehicle && ped->m_pVehicle;
     }
+    if (c == "cutscene") { // a cutscene is running (the new-game intro): `until:cutscene` replaces a fixed wait for its loading (gameplay regression suite)
+        return CCutsceneMgr::IsRunning() && !FrontEndMenuManager.m_bMenuActive;
+    }
+    if (c == "nocutscene") {
+        return !CCutsceneMgr::IsRunning() && !FrontEndMenuManager.m_bMenuActive && FindPlayerPed() != nullptr;
+    }
     if (c == "menu") { // the main menu is up and drawing frames (start-up takes ~75 s on a display whose vsync-locked Present is slow: the splash/loading screens are frame-count loops)
         return gGameState == GAME_STATE_FRONTEND_IDLE && FrontEndMenuManager.m_bMenuActive && CTimer::GetFrameCounter() > 3;
     }
@@ -162,6 +170,7 @@ void InjInit() {
         else if (cmd == "vmode") { // vmode:IDX
             InjEv ev{ t, true, 0 };
             ev.vmode = std::atoi(arg.c_str());
+            if (arg.find('x') != std::string::npos) { std::sscanf(arg.c_str(), "%dx%d", &ev.vw, &ev.vh); ev.vmode = 0; } // vmode:WxH = the first video mode of that size (host independent)
             s_InjEvents.push_back(ev);
         }
         else if (cmd == "aa") { // aa:LEVEL (menu value 1 = off, 2.. = "1".. in the Anti Aliasing option)
@@ -356,6 +365,7 @@ static void InjRunCmd(const std::string& c) {
     char name[32] = {}; float a = 0, b = 0, d = 0; int w = 0, n = 0;
     std::sscanf(c.c_str(), "%31[^:]", name);
     const std::string args = c.size() > strlen(name) ? c.substr(strlen(name) + 1) : "";
+    if (NotsaGrCmd(name, args)) { return; } // gameplay regression suite commands (GameplayRegress.cpp: snap, spawncop, spawnveh, shootlast, shootdrv, hitplayer, time, quit)
     NOTSA_INJ_LOG("[cmd] %s", c.c_str());
     if (!pl) return;
     if (!std::strcmp(name, "wanted")) { pl->CheatWantedLevel((eWantedLevel)std::atoi(args.c_str())); }
@@ -509,6 +519,7 @@ void InjPump() {
     if (!s_InjInit) InjInit();
 #ifdef NOTSA_STANDALONE_RUN
     ProbeDump();
+    NotsaGrTick();
 #endif
     const uint64_t real = GetTickCount64() - s_InjStart;
     // script clock: frozen at the barrier's time while it holds, shifted by the total hold time afterwards
@@ -548,12 +559,22 @@ void InjPump() {
         if (!ev.probe.empty()) { s_InjNext++; InjProbe(ev.probe); continue; }
         if (ev.vmode >= 0) {
             s_InjNext++;
-            if (ev.vmode < RwEngineGetNumVideoModes()) {
-                FrontEndMenuManager.m_nPrefsVideoMode = ev.vmode;
-                SetVideoMode(ev.vmode);
+            int vm = ev.vmode;
+            if (ev.vw > 0) { // vmode:WxH -> the first video mode of that size (host independent)
+                vm = -1;
+                for (int i = 0; i < RwEngineGetNumVideoModes(); i++) {
+                    RwVideoMode info{};
+                    RwEngineGetVideoModeInfo(&info, i);
+                    if (info.width == ev.vw && info.height == ev.vh) { vm = i; break; }
+                }
+                if (vm < 0) { NOTSA_INJ_LOG("[vmode] no video mode %dx%d at %u ms", ev.vw, ev.vh, (unsigned)clock()); continue; }
+            }
+            if (vm < RwEngineGetNumVideoModes()) {
+                FrontEndMenuManager.m_nPrefsVideoMode = vm;
+                SetVideoMode(vm);
                 CPostEffects::DoScreenModeDependentInitializations();
             }
-            NOTSA_INJ_LOG("[vmode] %d at %u ms", ev.vmode, (unsigned)clock());
+            NOTSA_INJ_LOG("[vmode] %d at %u ms", vm, (unsigned)clock());
             continue;
         }
         if (ev.aa >= 0) {

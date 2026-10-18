@@ -1,0 +1,16 @@
+# GAMEPLAY REGRESSION: input, relative mouse (playtest-1 U3: the camera stopped turning at the screen edge). tools/standalone/gameplay_regress/mouse_sweep.ps1 (started by the runner next to the game) waits for the
+# `[mark] sweepN` lines in standalone.log and then moves the REAL mouse with mouse_event (raw relative motion); the camera heading is accumulated per frame (`cam10` of the snapshots, 1/10 degree, signed).
+#include header_px
+cmd:snap:ms_0
+wait:1500
+mark:sweep1
+wait:7000
+cmd:snap:ms_1
+mark:sweep2
+wait:7000
+cmd:snap:ms_2
+mark:sweep3
+wait:7000
+cmd:snap:ms_3
+cmd:quit
+wait:5000

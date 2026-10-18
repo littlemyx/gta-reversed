@@ -1,0 +1,328 @@
+{
+ "_doc": "Thresholds of tools/standalone/gameplay_regress/gr_check.py. value = what the check compares with, orig = what the ORIGINAL exe showed (record_baseline.py / -o fills it), why = why the tolerance is what it is. A run with -o compares against the original run of THAT run instead.",
+ "combat": {
+  "foot_pickups_min": {
+   "value": 1,
+   "why": "exe CPed::CreateDeadPedWeaponPickups (0x459xxx): an armed ped that dies on foot drops its weapons as pickups; the LAPD cop carries a pistol and a nightstick (2 pickups seen). Deterministic: >= 1."
+  },
+  "hit_drop_min": {
+   "value": 2,
+   "why": "a pistol damage event of 10 lowered CJ's health+armour by 4 (the exe scales damage to the player); the check only needs 'damage arrives', the 0xFD-fill bug made hits do nothing."
+  },
+  "law_arrive_s": {
+   "value": 40,
+   "orig": "1 s after the wanted level appeared",
+   "why": "cops spawn at once at 2+ stars; the original's first cop car was near within 1 s of the wanted level and parked beside CJ within 6 s; 40 s leaves a wide margin for the randomness of spawning, a build whose cops never appear fails."
+  },
+  "engage_s": {
+   "value": 70,
+   "orig": "13 s after the wanted level appeared (first sign)",
+   "why": "the chase has randomness (PT-COMBAT: in the alley the original's cop cars idle at 25-50 m for 40 s, elsewhere CJ is busted within 25 s), so ANY sign of engagement within the 70 s window counts: cop on foot, pursuit/arrest/kill task, CJ hurt, busted."
+  }
+ },
+ "audio": {
+  "coll_used_max": {
+   "value": 12,
+   "orig": 7,
+   "why": "collision-list entries in use: the original peaked at 7 (one-shot <= 2) in this scene, the fixed port at 2-6; without the UpdateParameters override one-shot entries are never released (mutant: 10 in the 120 s scene, 99 in the 6.5 min one) - the end-of-run checks below are the sharper test, this is the cap."
+  },
+  "coll_used_end_max": {
+   "value": 10,
+   "why": "25 s after the last contact: the original still held 6 LOOPING entries (water / scrape loops); everything one-shot is gone. Cap 10 = original + margin."
+  },
+  "coll_oneshot_end_max": {
+   "value": 3,
+   "orig": 2,
+   "why": "one-shot (not looping) entries still allocated after 25 s of idling: original max 2, fixed port 0-1; the mutant without the override kept 9 for ever."
+  },
+  "coll_loop_end_max": {
+   "value": 8,
+   "orig": 6,
+   "why": "looping collision entries at the end: the original held 6."
+  },
+  "act_max": {
+   "value": 60,
+   "orig": 37,
+   "why": "active sounds of the 300-entry table: original max 37, fixed port 25-33 in the same scene; a leak of endless looped sounds grows without bound; 60 leaves room for the scene's randomness."
+  },
+  "ch_max": {
+   "value": 47,
+   "orig": 37,
+   "why": "hardware channels in use: 47 is the hard limit of the sound manager (original max 37)."
+  },
+  "want_max": {
+   "value": 0,
+   "orig": 0,
+   "why": "audible sounds without a hardware channel: 0 in the original, 0 in the fixed port."
+  },
+  "loop_snd_max": {
+   "value": 40,
+   "orig": 27,
+   "why": "looped sounds (ambient loops + engines): original max 27, fixed port 21-28; stuck collision loops add to it."
+  },
+  "orig_run": {
+   "coll_used_max": 7,
+   "coll_oneshot_max": 2,
+   "coll_loop_end": 6,
+   "act_max": 37,
+   "ch_max": 37,
+   "want_max": 0,
+   "loop_snd_max": 27,
+   "samples": 249
+  }
+ },
+ "input_mouse": {
+  "sweep_min_deg": {
+   "value": 360,
+   "why": "one raw 40 x 100 px sweep turned the camera by 1253 deg in the fixed build (relative mouse mode); with relative mode off (mutant) the same sweep gives 150 deg (the cursor runs into the window edge); 360 separates them with a wide margin."
+  },
+  "sweep_repeat_ratio": {
+   "value": 0.5,
+   "why": "the next sweeps (cursor already at the screen edge in the broken build) must turn the camera at least half as much as the first."
+  }
+ },
+ "interior_lspd": {
+  "cop_dz_max_dm": {
+   "value": 10,
+   "why": "cops inside the station stand on the floor CJ stands on (peds are placed on the floor at spawn): |dz| <= 1 m; the playtest saw them spawn on top of CJ (measured 1.4 m and 2.5 m above him at 4 s after entering, 0 later when they had dropped)."
+  }
+ },
+ "cheats": {
+  "value": {
+   "c3_HESOYAM": {
+    "wl": "0",
+    "armour": "100.0",
+    "money": "250350",
+    "cheated": "1",
+    "cheatsOn": "[]",
+    "weap": "[0:0,0:0,0:0,0:0,0:0,0:0,0:0,0:0,0:0,0:0,0:0,0:0,0:0,]",
+    "weather": "65535/2",
+    "ts": "1.000",
+    "veh_added": [
+     "422",
+     "481",
+     "516",
+     "566",
+     "596"
+    ]
+   },
+   "c0_LXGIWYL": {
+    "wl": "0",
+    "armour": "100.0",
+    "money": "250350",
+    "cheated": "1",
+    "cheatsOn": "[]",
+    "weap": "[1:1,5:1,22:100,25:50,28:150,30:120,33:25,35:200,18:10,41:200,0:0,0:0,0:0,]",
+    "weather": "65535/2",
+    "ts": "1.000",
+    "veh_added": [
+     "436",
+     "566"
+    ]
+   },
+   "c4_OSRBLHH": {
+    "wl": "2",
+    "armour": "100.0",
+    "money": "250350",
+    "cheated": "1",
+    "cheatsOn": "[]",
+    "weap": "[1:1,5:1,22:100,25:50,28:150,30:120,33:25,35:200,18:10,41:200,0:0,0:0,0:0,]",
+    "weather": "65535/2",
+    "ts": "1.000",
+    "veh_added": [
+     "516"
+    ]
+   },
+   "c5_ASNAEB": {
+    "wl": "0",
+    "armour": "100.0",
+    "money": "250350",
+    "cheated": "1",
+    "cheatsOn": "[]",
+    "weap": "[1:1,5:1,22:100,25:50,28:150,30:120,33:25,35:200,18:10,41:200,0:0,0:0,0:0,]",
+    "weather": "65535/2",
+    "ts": "1.000",
+    "veh_added": []
+   },
+   "c6_AFZLLQLL": {
+    "wl": "0",
+    "armour": "100.0",
+    "money": "250350",
+    "cheated": "1",
+    "cheatsOn": "[]",
+    "weap": "[1:1,5:1,22:100,25:50,28:150,30:120,33:25,35:200,18:10,41:200,0:0,0:0,0:0,]",
+    "weather": "1/1",
+    "ts": "1.000",
+    "veh_added": [
+     "496"
+    ]
+   },
+   "c56_OFVIAC": {
+    "wl": "0",
+    "armour": "100.0",
+    "money": "250350",
+    "cheated": "1",
+    "cheatsOn": "[56,]",
+    "weap": "[1:1,5:1,22:100,25:50,28:150,30:120,33:25,35:200,18:10,41:200,0:0,0:0,0:0,]",
+    "weather": "1/1",
+    "ts": "1.000",
+    "veh_added": [
+     "516"
+    ]
+   },
+   "c56_OFVIAC_2": {
+    "wl": "0",
+    "armour": "100.0",
+    "money": "250350",
+    "cheated": "1",
+    "cheatsOn": "[]",
+    "weap": "[1:1,5:1,22:100,25:50,28:150,30:120,33:25,35:200,18:10,41:200,0:0,0:0,0:0,]",
+    "weather": "1/1",
+    "ts": "1.000",
+    "veh_added": []
+   },
+   "c36_BTCDBCB": {
+    "wl": "0",
+    "armour": "100.0",
+    "money": "250350",
+    "cheated": "1",
+    "cheatsOn": "[]",
+    "weap": "[1:1,5:1,22:100,25:50,28:150,30:120,33:25,35:200,18:10,41:200,0:0,0:0,0:0,]",
+    "weather": "1/1",
+    "ts": "1.000",
+    "veh_added": []
+   },
+   "c24_UBHYZHQ": {
+    "wl": "0",
+    "armour": "100.0",
+    "money": "250350",
+    "cheated": "1",
+    "cheatsOn": "[]",
+    "weap": "[1:1,5:1,22:100,25:50,28:150,30:120,33:25,35:200,18:10,41:200,0:0,0:0,0:0,]",
+    "weather": "1/1",
+    "ts": "1.000",
+    "veh_added": [
+     "401",
+     "408",
+     "526"
+    ]
+   },
+   "c17_AIWPRTON": {
+    "wl": "0",
+    "armour": "100.0",
+    "money": "250350",
+    "cheated": "1",
+    "cheatsOn": "[]",
+    "weap": "[1:1,5:1,22:100,25:50,28:150,30:120,33:25,35:200,18:10,41:200,0:0,0:0,0:0,]",
+    "weather": "1/1",
+    "ts": "1.000",
+    "veh_added": [
+     "401",
+     "432",
+     "547"
+    ]
+   },
+   "c44_AFPHULTL": {
+    "wl": "0",
+    "armour": "100.0",
+    "money": "250350",
+    "cheated": "1",
+    "cheatsOn": "[33,44,]",
+    "weap": "[1:1,8:0,22:100,25:50,28:150,30:120,33:25,35:200,18:10,41:200,0:0,0:0,0:0,]",
+    "weather": "1/1",
+    "ts": "1.000",
+    "veh_added": [
+     "461"
+    ]
+   },
+   "c44_AFPHULTL_2": {
+    "wl": "0",
+    "armour": "100.0",
+    "money": "250350",
+    "cheated": "1",
+    "cheatsOn": "[]",
+    "weap": "[1:1,8:0,22:100,25:50,28:150,30:120,33:25,35:200,18:10,41:200,0:0,0:0,0:0,]",
+    "weather": "1/1",
+    "ts": "1.000",
+    "veh_added": [
+     "566"
+    ]
+   },
+   "c70_PRIEBJ": {
+    "wl": "0",
+    "armour": "100.0",
+    "money": "250350",
+    "cheated": "1",
+    "cheatsOn": "[70,]",
+    "weap": "[1:1,8:0,22:100,25:50,28:150,30:120,33:25,35:200,18:10,41:200,0:0,0:0,0:0,]",
+    "weather": "0/0",
+    "ts": "1.000",
+    "veh_added": []
+   },
+   "c70_PRIEBJ_2": {
+    "wl": "0",
+    "armour": "100.0",
+    "money": "250350",
+    "cheated": "1",
+    "cheatsOn": "[]",
+    "weap": "[1:1,8:0,22:100,25:50,28:150,30:120,33:25,35:200,18:10,41:200,0:0,0:0,0:0,]",
+    "weather": "0/0",
+    "ts": "1.000",
+    "veh_added": [
+     "434",
+     "566"
+    ]
+   },
+   "c40_BGLUAWML": {
+    "wl": "0",
+    "armour": "57.1",
+    "money": "250350",
+    "cheated": "1",
+    "cheatsOn": "[15,16,40,]",
+    "weap": "[1:1,8:0,22:100,25:50,28:150,30:120,33:25,35:200,18:10,41:200,0:0,0:0,0:0,]",
+    "weather": "0/0",
+    "ts": "1.000",
+    "veh_added": [
+     "566"
+    ]
+   },
+   "c40_BGLUAWML_2": {
+    "wl": "0",
+    "armour": "48.8",
+    "money": "250350",
+    "cheated": "1",
+    "cheatsOn": "[]",
+    "weap": "[1:1,8:0,22:100,25:50,28:150,30:120,33:25,35:200,18:10,41:200,0:0,0:0,0:0,]",
+    "weather": "0/0",
+    "ts": "1.000",
+    "veh_added": []
+   },
+   "c41_LIFESABEACH": {
+    "wl": "0",
+    "armour": "48.8",
+    "money": "250350",
+    "cheated": "1",
+    "cheatsOn": "[41,]",
+    "weap": "[1:1,8:0,22:100,25:50,28:150,30:120,33:25,35:200,18:10,41:200,0:0,0:0,0:0,]",
+    "weather": "0/0",
+    "ts": "1.000",
+    "veh_added": [
+     "401",
+     "566"
+    ]
+   },
+   "c41_LIFESABEACH_2": {
+    "wl": "0",
+    "armour": "48.8",
+    "money": "250350",
+    "cheated": "1",
+    "cheatsOn": "[]",
+    "weap": "[1:1,8:0,22:100,25:50,28:150,30:120,33:25,35:200,18:10,41:200,0:0,0:0,0:0,]",
+    "weather": "0/0",
+    "ts": "1.000",
+    "veh_added": []
+   }
+  },
+  "why": "state of the ORIGINAL exe after each cheat press of routes/cheats.txt (recorded The system cannot accept the date entered.\nEnter the new date: (mm-dd-yy) from orig_probe.log); traffic is random, so only the SET of vehicle models a press added is compared; hp / hour / pveh are not compared (the AI and the clock move)"
+ }
+}

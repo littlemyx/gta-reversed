@@ -1,0 +1,22 @@
+# GAMEPLAY REGRESSION: render, live video-mode change mid-game (playtest-1 U2: dark squares = heat-haze patches copied from a front buffer one mode step behind)
+# needs Present (screenshots are the back buffer). The invariant is read from the game: the post-effects front buffer raster must cover the camera raster (exe SetupBackBufferVertex: pow2 of the camera raster).
+#include header_px
+# the heat haze post effect runs from game hour 10 on
+cmd:time:10:40
+wait:3000
+cmd:snap:vm_0
+mark:vm_0
+vmode:1600x900
+wait:6000
+cmd:snap:vm_1
+mark:vm_1
+vmode:2560x1440
+wait:6000
+cmd:snap:vm_2
+mark:vm_2
+vmode:960x600
+wait:6000
+cmd:snap:vm_3
+mark:vm_3
+cmd:quit
+wait:5000

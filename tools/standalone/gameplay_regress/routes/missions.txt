@@ -1,0 +1,63 @@
+# GAMEPLAY REGRESSION: missions / vehicles (playtest-1 U8 wanted not cleared, U10 busted mission not reset: ResetIP, U11 hard to get back on the bike: Return key = rsENTER)
+#include header
+cmd:snap:m_start
+wait:2000
+# ---- busted during the FIRST mission (the opening bike tutorial: CJ stands next to the BMX, mission flag 1): CGameLogic runs the busted flow, the script must be reset to its mission-cleanup code
+# (CRunningScript::ResetIP, exe 0x485A50 / 0x469F00) and the game must go on (U10). One star first: arresting a 0-star player is not a state the game produces.
+cmd:wanted:1
+wait:500
+cmd:snap:pre_arrest
+arrest:0
+wait:2000
+cmd:snap:arrested_2
+wait:8000
+cmd:snap:arrested_10
+# the busted flow (police station, tutorial text) hands the controls back and takes them away again: wait until they stay
+wait:15000
+until:control:90000
+wait:5000
+until:control:90000
+wait:1000
+cmd:snap:after_busted
+wait:2000
+cmd:snap:after_busted_15
+mark:busted_done
+cmd:tp:2100:-1790:13.5
+wait:4000
+# ---- a bike next to CJ: the Enter/Exit-vehicle key (Return) mounts it, again dismounts, again mounts (U11)
+cmd:spawnveh:481:0:3
+wait:2000
+cmd:snap:bike_spawned
+key:return
+until:invehicle:8000
+wait:2000
+cmd:snap:bike_in_1
+# (the spawned BMX rolls on the sloping street: brake first, a moving bike is left slowly)
+down:s
+wait:1500
+up:s
+key:return
+wait:3500
+cmd:snap:bike_out
+key:return
+until:invehicle:8000
+wait:2000
+cmd:snap:bike_in_2
+# (the spawned BMX rolls on the sloping street: brake first, a moving bike is left slowly)
+down:s
+wait:1500
+up:s
+key:return
+wait:3500
+# ---- and a car
+cmd:spawnveh:410:0:4
+wait:2000
+key:return
+until:invehicle:8000
+wait:2000
+cmd:snap:car_in
+key:return
+wait:3500
+mark:missions_end
+cmd:quit
+wait:5000

@@ -1,0 +1,20 @@
+# GAMEPLAY REGRESSION: interiors (playtest-2 U15 all policemen spawn on top of CJ when the police station interior is entered, U16 nobody inside reacts to the wanted level)
+# Repro of PT2-INTERIOR (C:/gta-scratch/pti_probe/route_int_w.txt): 3 stars, teleport to the LSPD entrance marker, CJ walks into the interior; the snapshots read the cops around him (vertical offsets, tasks).
+#include header_free
+wait:3000
+cmd:wanted:3
+wait:3000
+cmd:snap:int_pre
+cmd:tp:1554.95:-1675.0:15.8
+wait:1500
+cmd:snap:int_t1
+wait:2500
+cmd:snap:int_t4
+wait:6000
+cmd:snap:int_t10
+wait:10000
+cmd:snap:int_t20
+wait:10000
+cmd:snap:int_t30
+cmd:quit
+wait:5000

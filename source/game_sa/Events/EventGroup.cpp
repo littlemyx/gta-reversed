@@ -99,6 +99,9 @@ bool CEventGroup::HasScriptCommandOfTaskType(eTaskType taskId) {
 
 // 0x4AB5E0
 bool CEventGroup::HasEventOfType(CEvent* eventOfType) const {
+    if (!eventOfType) {
+        return true; // 0x4AB5E7..0x4AB5EE: a null event is answered with `true` (the port dereferenced it)
+    }
     return GetEventOfType(eventOfType->GetEventType()) != nullptr;
 }
 

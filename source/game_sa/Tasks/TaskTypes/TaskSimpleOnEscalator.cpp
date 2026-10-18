@@ -20,7 +20,7 @@ bool CTaskSimpleOnEscalator::ProcessPed(CPed* ped) {
     if (const auto contact = ped->m_pContactEntity) {
         if (contact->m_nModelIndex == ModelIndices::MI_ESCALATORSTEP || contact->m_nModelIndex == ModelIndices::MI_ESCALATORSTEP8) {
             const auto& vel = contact->AsPhysical()->GetMoveSpeed();
-            ped->m_fCurrentRotation = CGeneral::LimitRadianAngle(CGeneral::GetRadianAngleBetweenPoints(vel.x, vel.y, 0.f, 0.f)); // 0x53CBE0, 0x53CB50
+            ped->m_fAimingRotation = CGeneral::LimitRadianAngle(CGeneral::GetRadianAngleBetweenPoints(vel.x, vel.y, 0.f, 0.f)); // 0x53CBE0, 0x53CB50, stored to +0x55C (m_fAimingRotation) at 0x62F571
             return false;
         }
     }

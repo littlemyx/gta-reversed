@@ -54,7 +54,10 @@ CTask* CTaskComplexTurnToFaceEntityOrCoord::Clone() const {
 
 // 0x66B9D0
 float CTaskComplexTurnToFaceEntityOrCoord::ComputeTargetHeading(CPed* ped) const {
-    return (ComputeTargetPos() - ped->GetPosition()).Heading();
+    // 0x66BA19..0x66BA63: the exe normalises the offset and feeds its x/y to GetRadianAngleBetweenPoints(x, y, 0, 0); CVector::Heading() (the port's version) yields different values
+    CVector dir = ComputeTargetPos() - ped->GetPosition();
+    dir.Normalise();
+    return CGeneral::GetRadianAngleBetweenPoints(dir.x, dir.y, 0.f, 0.f);
 }
 
 CVector CTaskComplexTurnToFaceEntityOrCoord::ComputeTargetPos() const {

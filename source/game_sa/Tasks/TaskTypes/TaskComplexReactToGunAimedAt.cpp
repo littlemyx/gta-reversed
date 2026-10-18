@@ -46,8 +46,12 @@ CTaskComplexReactToGunAimedAt::~CTaskComplexReactToGunAimedAt() {
 // 0x697B70
 CTask* CTaskComplexReactToGunAimedAt::CreateSubTask(eTaskType taskType, CPed* ped) {
     switch (taskType) {
-    case TASK_SIMPLE_ACHIEVE_HEADING:
-        return new CTaskSimpleAchieveHeading{ (m_aimedBy->GetPosition() - ped->GetPosition()).Heading() };
+    case TASK_SIMPLE_ACHIEVE_HEADING: {
+        // 0x697D31..0x697D6A: GetRadianAngleBetweenPoints(dx, dy, 0, 0) -> LimitRadianAngle, stored to ped+0x55C (m_fAimingRotation) and used as the heading
+        const auto d = m_aimedBy->GetPosition() - ped->GetPosition();
+        ped->m_fAimingRotation = CGeneral::LimitRadianAngle(CGeneral::GetRadianAngleBetweenPoints(d.x, d.y, 0.f, 0.f)); // 0x53CBE0, 0x53CB50
+        return new CTaskSimpleAchieveHeading{ ped->m_fAimingRotation };
+    }
     case TASK_COMPLEX_LEAVE_CAR:
         return new CTaskComplexLeaveCar{ ped->m_pVehicle, TARGET_DOOR_FRONT_LEFT, 0, true, false };
     case TASK_SIMPLE_HANDS_UP:

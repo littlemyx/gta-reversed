@@ -170,6 +170,9 @@ void CTaskSimpleStealthKill::ManageAnim(CPed* ped) {
 // 0x622790
 void CTaskSimpleStealthKill::FinishAnimStealthKillCB(CAnimBlendAssociation* pAnimAssoc, void* data) {
     const auto self = static_cast<CTaskSimpleStealthKill*>(data);
-    self->m_bIsAborting = notsa::contains<AnimationId>({ ANIM_ID_KILL_KNIFE_PLAYER, ANIM_ID_KILL_KNIFE_PED_DIE }, pAnimAssoc->m_AnimId);
-    self->m_anim        = nullptr;
+    // 0x622794: the flag is only SET for the two knife-kill animations, never cleared (it was assigned the comparison result)
+    if (notsa::contains<AnimationId>({ ANIM_ID_KILL_KNIFE_PLAYER, ANIM_ID_KILL_KNIFE_PED_DIE }, pAnimAssoc->m_AnimId)) {
+        self->m_bIsAborting = true;
+    }
+    self->m_anim = nullptr;
 }

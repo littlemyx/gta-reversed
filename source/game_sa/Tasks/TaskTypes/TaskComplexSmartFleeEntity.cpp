@@ -46,7 +46,7 @@ CTaskComplexSmartFleeEntity::CTaskComplexSmartFleeEntity(
 }
 
 CTaskComplexSmartFleeEntity::CTaskComplexSmartFleeEntity(const CTaskComplexSmartFleeEntity& o) :
-    CTaskComplexSmartFleeEntity{ o.m_fleeFrom, o.m_pedScream, o.m_safeDistance, o.m_time, o.m_posCheckPeriod, o.m_posChangeTolerance }
+    CTaskComplexSmartFleeEntity{ o.m_fleeFrom, o.m_pedScream, o.m_safeDistance, o.m_time, o.m_posCheckPeriod, o.m_posChangeTolerance, o.m_moveState } // 0x65CF98: the exe copies [esi+30h] (move state) after the constructor
 {
 }
 

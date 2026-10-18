@@ -51,7 +51,11 @@ CTask* CTaskComplexFacial::CreateNextSubTask(CPed* ped) {
         }
         return new CTaskSimplePause{ 5'000 };
     }
-    return new CTaskSimpleFacial{ std::exchange(m_RequestB, eFacialExpression::NONE), m_DurationB }; // Play the next facial expression
+    // Play the next facial expression
+    // 0x690E45..0x690E5E: the request is consumed (m_RequestB = NONE) BEFORE the task is allocated, so it is gone even when the task pool is
+    // full and the allocation fails (the new-expression does not evaluate its arguments after a failed allocation, hence the separate statement)
+    const auto request = std::exchange(m_RequestB, eFacialExpression::NONE);
+    return new CTaskSimpleFacial{ request, m_DurationB };
 }
 
 // 0x690F30

@@ -58,7 +58,11 @@ bool CTaskComplexUseScriptedBrain::MakeAbortable(CPed* ped, eAbortPriority prior
 CTask* CTaskComplexUseScriptedBrain::CreateNextSubTask(CPed* ped) {
     ClearCurrentTask();
 
-    if (const auto task = CreateFirstSubTask(ped)) {
+    if (m_pSubTask->GetTaskType() == TASK_SIMPLE_FINISH_BRAIN) { // 0x6359F7: the brain is finished
+        return nullptr;
+    }
+
+    if (const auto task = CTaskComplexUseScriptedBrain::CreateFirstSubTask(ped)) { // 0x6359FE: CreateFirstSubTask is inlined (not a virtual call; there are no subclasses)
         return task;
     }
 
@@ -70,7 +74,7 @@ CTask* CTaskComplexUseScriptedBrain::CreateFirstSubTask(CPed* ped) {
     if (m_currTask = CScriptedBrainTaskStore::GetTask(ped)) {
         return m_currTask->Clone();
     }
-    return nullptr;
+    return new CTaskSimplePause{ 2000 }; // 0x635AD2: no scripted task for this ped => a 2 s pause (null here made the task finish at once)
 }
 
 // 0x635B60

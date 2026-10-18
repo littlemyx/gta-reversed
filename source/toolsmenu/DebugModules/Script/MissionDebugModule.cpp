@@ -163,6 +163,32 @@ void InitializeAndStartNewScript() {
     CGameLogic::ClearSkip(false);
 }
 
+struct NotsaInjectMissionInfo { int32 offset; uint8 bytes[16]; };
+// Test injector (`mission:N` in NOTSA_STANDALONE_INPUT, SDLWrapper.cpp): the "free start" path of `StartMission` without the ImGui window (no mission pack, the player is not on a mission)
+bool NotsaInjectStartMission(int32 missionId, NotsaInjectMissionInfo* info) {
+    CTheScripts::bPlayerIsOffTheMap = false;
+    CGame::currArea                 = AREA_CODE_NORMAL_WORLD;
+    FindPlayerPed()->SetAreaCode(AREA_CODE_NORMAL_WORLD);
+    if (CGame::CanSeeOutSideFromCurrArea()) {
+        FindPlayerPed()->m_pEnex                 = nullptr;
+        CEntryExitManager::ms_entryExitStackPosn = 0;
+        CTimeCycle::StopExtraColour(false);
+    }
+    CTheScripts::MissionCleanUp.Process();
+    CTimer::Suspend();
+    const int32 offsetToMission = CTheScripts::MultiScriptArray[missionId];
+    CFileMgr::ChangeDir("\\");
+    CFileMgr::SetDir("");
+    auto* file = CFileMgr::OpenFile("data\\script\\main.scm", "rb");
+    CFileMgr::Seek(file, offsetToMission, 0);
+    CFileMgr::Read(file, &CTheScripts::MissionBlock[0], MISSION_SCRIPT_SIZE);
+    CFileMgr::CloseFile(file);
+    if (info) { info->offset = offsetToMission; std::memcpy(info->bytes, &CTheScripts::MissionBlock[0], 16); }
+    InitializeAndStartNewScript();
+    CTimer::Resume();
+    return true;
+}
+
 bool MissionDebugModule::StartMission(int32 missionId, bool bDoMissionCleanUp = true) {
     if (!m_ShouldStartMission && CTheScripts::IsPlayerOnAMission()) {
         if (CCutsceneMgr::HasLoaded()) {

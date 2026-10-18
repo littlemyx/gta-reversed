@@ -59,8 +59,10 @@ static bool IsInFullscreen()
 #ifdef NOTSA_STANDALONE_RUN
 void RequestMarkScreenshot(const char* name); // standalone/rw/camera.cpp
 #endif
+struct NotsaInjectMissionInfo { int32 offset; uint8 bytes[16]; };
+bool NotsaInjectStartMission(int32 missionId, NotsaInjectMissionInfo* info); // toolsmenu/DebugModules/Script/MissionDebugModule.cpp
 namespace {
-struct InjEv { uint64_t t; bool down; SDL_Keycode key; int mx = -1, my = -1; int vmode = -1; std::string mark; std::string probe; std::string until; uint64_t maxMs = 0; std::string skipIf, label; size_t skipTo = 0; };
+struct InjEv { uint64_t t; bool down; SDL_Keycode key; int mx = -1, my = -1; int vmode = -1; int mission = -1; std::string mark; std::string probe; std::string until; uint64_t maxMs = 0; std::string skipIf, label; size_t skipTo = 0; };
 std::vector<InjEv> s_InjEvents;
 size_t             s_InjNext = 0;
 bool               s_InjInit = false;
@@ -175,6 +177,16 @@ void InjInit() {
             ev.label = arg.substr(c2 + 1);
             s_InjEvents.push_back(ev);
         }
+        else if (cmd == "mission") { // mission:N  starts main.scm mission N (ids of toolsmenu MissionDebugModule: 2 Intro, 11 Big Smoke, 12 Ryder ...) like its "Missions Starter" window; repro of mission bugs
+            InjEv ev{ t, true, 0 };
+            ev.mission = std::atoi(arg.c_str());
+            s_InjEvents.push_back(ev);
+        }
+        else if (cmd == "kill" || cmd == "arrest") { // kill:0 / arrest:0  the player ped enters PEDSTATE_DEAD / PEDSTATE_ARRESTED: CGameLogic::Update runs the "wasted" / "busted" flow (e.g. a mission must fail and clean up: DoDeathArrestCheck)
+            InjEv ev{ t, true, 0 };
+            ev.mission = cmd == "kill" ? 100000 : 100001;
+            s_InjEvents.push_back(ev);
+        }
         else if (cmd == "mark") { // mark:NAME  logs "[mark] NAME" when the script clock reaches it (progress markers for tools/standalone/soak.sh)
             InjEv ev{ t, true, 0 };
             ev.mark = arg;
@@ -236,6 +248,30 @@ void InjPump() {
                 CPostEffects::DoScreenModeDependentInitializations();
             }
             NOTSA_INJ_LOG("[vmode] %d at %u ms", ev.vmode, (unsigned)clock());
+            continue;
+        }
+        if (ev.mission >= 100000) {
+            s_InjNext++;
+            if (auto* p = FindPlayerPed()) { if (ev.mission == 100000) { p->m_fHealth = 0.f; p->m_nPedState = PEDSTATE_DEAD; } else { p->m_nPedState = PEDSTATE_ARRESTED; } }
+            NOTSA_INJ_LOG("[kill] player %s", ev.mission == 100000 ? "killed" : "arrested");
+            continue;
+        }
+        if (ev.mission >= 0) {
+            // like the "Missions Starter" window: a running mission is failed first (its code lives in the shared MissionBlock), the new one starts once FailCurrentMission is back to 0
+            if (CTheScripts::IsPlayerOnAMission() && CTheScripts::FailCurrentMission == 0) {
+                if (CCutsceneMgr::HasLoaded()) {
+                    CCutsceneMgr::DeleteCutsceneData();
+                }
+                CTheScripts::FailCurrentMission = 2;
+                NOTSA_INJ_LOG("[mission] a mission is running: failing it first");
+            }
+            if (CTheScripts::FailCurrentMission > 0 || CTheScripts::IsPlayerOnAMission()) {
+                break; // retry on a later pump
+            }
+            s_InjNext++;
+            NotsaInjectMissionInfo mi{};
+            const bool ok = NotsaInjectStartMission(ev.mission, &mi);
+            NOTSA_INJ_LOG("[mission] start %d: %s (script offset %d, first bytes %02x %02x %02x %02x %02x %02x %02x %02x)", ev.mission, ok ? "ok" : "failed", mi.offset, mi.bytes[0], mi.bytes[1], mi.bytes[2], mi.bytes[3], mi.bytes[4], mi.bytes[5], mi.bytes[6], mi.bytes[7]);
             continue;
         }
         if (ev.mark.empty() && ev.mx < 0 && ev.vmode < 0 && ev.key != 0) {

@@ -11,3 +11,4 @@ datetime	weekly_pct	parallel_agents	rules	note
 2026-10-18T15:55	47	3	v1->v2	PT2-TRAILER landed, INFRA-FAST (v2) started
 2026-10-18T16:00	47	3	v1->v2	PT2-AA landed, X87-TRIG (v2) started
 2026-10-18T18:21	50	3	v1+v2	47->50 in 2.4h (~1.25 %/h at 3 agents); need <=0.44 %/h to last to reset -> drop to 2 agents
+2026-10-18T20:02	52	2	v2	50->52 in 1.7h (~1.2 %/h at 2 agents + orchestrator); need ~0.43 %/h -> 1 agent at a time

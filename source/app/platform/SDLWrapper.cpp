@@ -297,7 +297,7 @@ static void ProbeDump() {
         const float d = (ped.GetPosition() - pos).Magnitude();
         if (d > 60.f) continue;
         total++;
-        if (shown >= 8) continue;
+        if (shown >= 20) continue;
         shown++;
         auto& mgr = ped.GetIntelligence()->GetTaskManager();
         char chain[160] = {};
@@ -306,6 +306,7 @@ static void ProbeDump() {
             n += std::snprintf(chain + n, sizeof(chain) - n, "%d>", (int)t->GetTaskType());
         }
         auto& pw = ped.GetActiveWeapon();
+        NOTSA_INJ_LOG("[pc]   pedpos %p pos10=(%d,%d,%d) area=%d currArea=%d", (void*)&ped, (int)(ped.GetPosition().x * 10.f), (int)(ped.GetPosition().y * 10.f), (int)(ped.GetPosition().z * 10.f), (int)ped.GetAreaCode(), (int)CGame::currArea);
         NOTSA_INJ_LOG("[pc]   ped %p model=%d type=%d d=%d hp=%d st=%d weap=%d(ammo %d, slot %d) tasks=%s evq=%d evhi=%d cur=%d tmpTask=%d perTask=%d",
             (void*)&ped, (int)ped.m_nModelIndex, (int)ped.m_nPedType, (int)d, (int)ped.m_fHealth, (int)ped.m_nPedState, (int)pw.GetType(), (int)pw.GetTotalAmmo(), (int)ped.m_nActiveWeaponSlot, chain,
             (int)ped.GetEventGroup().GetNumEventsInQueue(), ped.GetEventGroup().GetHighestPriorityEvent() ? (int)ped.GetEventGroup().GetHighestPriorityEvent()->GetEventType() : -1,

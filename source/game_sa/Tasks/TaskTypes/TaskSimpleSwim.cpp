@@ -890,7 +890,7 @@ void CTaskSimpleSwim::ProcessControlInput(CPlayerPed* ped) {
         if (m_nSwimState == SWIM_SPRINTING) {
             m_fTurningRotationY += CTimer::GetTimeStep() * 0.04f * fRotation;
         } else if (m_nSwimState == SWIM_SPRINT) {
-            m_fUpperTorsoRotationX += fabs(pedWalkX) * CTimer::GetTimeStep() * 0.04f;
+            m_fUpperTorsoRotationX += fabs(fRotation) * CTimer::GetTimeStep() * 0.04f; // exe 0x689463: fabs of the turn value left in st0 (== pedWalkX unless mouse-3rd-person, where it is the clamped mouse turn)
         }
 
         if (m_nSwimState == SWIM_SPRINTING) {
@@ -972,7 +972,7 @@ void CTaskSimpleSwim::ProcessControlInput(CPlayerPed* ped) {
         }
         m_fUpperTorsoRotationX += CTimer::GetTimeStep() * -0.08f * std::clamp(rotX, -1.0f, 1.0f);
         m_fRotationX += CTimer::GetTimeStep() * ExeRecip(1000.0f);
-        m_fRotationX = std::clamp(m_fRotationX, -DegreesToRadians(80.0f), DegreesToRadians(80.0f));
+        m_fRotationX = std::clamp(m_fRotationX, -1.3962634801864624f, 1.3962634801864624f); // exe consts 0x870944/0x870948 (80 deg; DegreesToRadians(80.0f) is 1 ulp lower)
         // BUG: it should be m_fTimeCanRun <= 0.1f
         if (playerData->m_fTimeCanRun <= 0.0f) {
             playerData->m_fTimeCanRun = 0.1f;

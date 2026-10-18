@@ -347,7 +347,8 @@ void CTaskSimpleJetPack::ProcessControlInput(CPlayerPed* player) {
     if (!CCamera::m_bUseMouse3rdPerson || player->bIsStanding) {
         if (player->m_pTargetedObject || player->bIsStanding || pad->GetTarget()) { // 0x67EA51
             if (padMoveMag > 0.f) { // Inverted
-                player->m_fAimingRotation = x87::atan2(walkLeftRight, walkUpDown);
+                // 0x67EB33..0x67EB5F: LimitRadianAngle(GetRadianAngleBetweenPoints(0, 0, -x, y) - TheCamera.m_fOrientation [0xB6F178])
+                player->m_fAimingRotation = CGeneral::LimitRadianAngle(CGeneral::GetRadianAngleBetweenPoints(0.f, 0.f, -walkLeftRight, walkUpDown) - TheCamera.m_fOrientation);
                 m_ThrustAngle = THRUST_MAX_ANGLE * padMoveMag * -0.3515625f; // TODO: Magic
             } else {
                 player->GetPlayerData()->m_fMoveBlendRatio = 0.f;
@@ -357,9 +358,12 @@ void CTaskSimpleJetPack::ProcessControlInput(CPlayerPed* player) {
             InterpolateThrustAngle();
         }
     } else { // 0x67E8D1
-        player->m_fAimingRotation = TheCamera.GetActiveCam().m_vecFront.Heading();
-        if (TheCamera.GetLookDirection() != LOOKING_DIRECTION_FORWARD) {
-            player->m_fAimingRotation -= PI;
+        // 0x67E8F5..0x67E932: fpatan(-x', y') of the active cam front, with (x', y') = -(x, y) (fmul by -1.0 [0x858C1C]) unless the camera looks forward
+        // (NOT `Heading() - PI`: that differs in range - it yields -pi where the exe yields +pi - and in rounding)
+        {
+            const auto& front = TheCamera.GetActiveCam().m_vecFront;
+            const bool  fwd   = TheCamera.GetLookDirection() == LOOKING_DIRECTION_FORWARD;
+            player->m_fAimingRotation = (float)x87::atan2((double)(fwd ? -front.x : front.x), (double)(fwd ? front.y : -front.y));
         }
         InterpolateThrustAngle();
 

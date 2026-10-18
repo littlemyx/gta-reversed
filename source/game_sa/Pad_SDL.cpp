@@ -96,11 +96,11 @@ bool CPad::ProcessKeyboardEvent(const SDL_Event& e, CKeyboardState& ks) {
         case SDLK_ASTERISK:     ks.mul = s;                     break;
         case SDLK_MINUS:        ks.sub = s;                     break;
         case SDLK_PLUS:         ks.add = s;                     break;
-        case SDLK_RETURN:       ks.enter = s;                   break;
+        case SDLK_RETURN:       ks.extenter = s;                break; // main Return = rsENTER = `extenter` (ControllerConfigManager `rsENTER`, app_input `HandleKeyDown`); default 'Enter/Exit vehicle' reads it
         case SDLK_PERIOD:       ks.decimal = s;                 break;
         case SDLK_TAB:          ks.tab = s;                     break;
         case SDLK_CAPSLOCK:     ks.capslock = s;                break;
-        case SDLK_KP_ENTER:     ks.extenter = s;                break; // (?)
+        case SDLK_KP_ENTER:     ks.enter = s;                   break; // numpad Enter = rsPADENTER = `enter`
         case SDLK_LSHIFT:       ks.lshift = s;                  break;
         case SDLK_RSHIFT:       ks.rshift = s;                  break;
         case SDLK_LCTRL:        ks.lctrl = s;                   break;

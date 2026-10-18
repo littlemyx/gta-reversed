@@ -71,7 +71,7 @@ bool CTaskSimpleStealthKill::ProcessPed(CPed* ped) {
 
     if (!m_bKeepTargetAlive) {
         if (!m_anim || m_anim->m_AnimId == ANIM_ID_KILL_KNIFE_PED_DAMAGE) {
-            ped->m_fAimingRotation = -pedToTarget.Heading();
+            ped->m_fAimingRotation = (-pedToTarget).Heading(); // 0x62E690: fpatan(-(-x), -y) = Heading of the NEGATED vector (was `-Heading()`, i.e. atan2(x, y))
         }
         return false;
     }

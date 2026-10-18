@@ -49,7 +49,8 @@ CTask* CTaskComplexStuckInAir::ControlSubTask(CPed* ped) {
             auto* const player = ped->AsPlayer();
             auto* const pad = player->GetPadFromPlayer();
             if (std::abs(pad->GetPedWalkLeftRight()) > 0.f || std::abs(pad->GetPedWalkUpDown()) > 0.f) { // 0x67BF3E
-                ped->m_fAimingRotation = CGeneral::GetRadianAngleBetweenPoints({ 0.f, 0.f }, { (float)(-pad->GetPedWalkLeftRight()), (float)(pad->GetPedWalkUpDown()) });
+                // 0x67BF77..0x67BF90: LimitRadianAngle(GetRadianAngleBetweenPoints(0, 0, -x, y) - TheCamera.m_fOrientation [0xB6F178])
+                ped->m_fAimingRotation = CGeneral::LimitRadianAngle(CGeneral::GetRadianAngleBetweenPoints(0.f, 0.f, (float)(-pad->GetPedWalkLeftRight()), (float)(pad->GetPedWalkUpDown())) - TheCamera.m_fOrientation);
             }
             if (pad->JumpJustDown()) { // 0x67BF9B
                 m_pSubTask->MakeAbortable(ped, ABORT_PRIORITY_URGENT);

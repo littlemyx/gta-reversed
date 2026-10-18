@@ -37,6 +37,9 @@ CTaskComplexGoToPointAiming::CTaskComplexGoToPointAiming(
     m_moveTargetRadius{targetRadius},
     m_slowDownDistance{slowDownDist}
 {
+    // 0x6687FC..0x668847: the exe runs the target update inline against the (uninitialised) pool memory; unless the old contents equal the new target it
+    // stores them and sets `m_newTargetSet` (|= 1) - i.e. always for a fresh task
+    m_newTargetSet = true;
     CEntity::SafeRegisterRef(m_aimAtEntity);
 }
 

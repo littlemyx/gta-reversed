@@ -20,3 +20,11 @@ Evidence: C:/gta-scratch/playtest1/ (crash-20261017-230109.log, game log.log ~1 
 | U14 | Crash after a cutscene: `UNREACHABLE hit: ReadBeforeComboData (TaskSimpleFight.cpp:381)` (D-B18's GetComboFlagsLo pre-array mapping, never exercised at run time). | crash |
 Also visible in photo 4: peds with double-image ghosting (motion blur?) — check vs original.
 Many items may be REGRESSIONS of 2026-10-16/17 changes (stream D B/C phases, FIX-AUDIT bugfix switches off, CAM-INIT, D-C56 zero-init of audio objects) — bisect against the original exe and older snapshots (branch standalone-snapshot-2026-10-16, C:/gta-scratch/bv_play_old_gta_reversed.exe, C:/gta-scratch/play_prev_gta_reversed.exe).
+
+# User playtest 2 — 2026-10-18 ~08:30, C:\gta-play = StandaloneRelease @ ac70ea8a
+| # | observation | group |
+|---|---|---|
+| U4 | (still) dead pedestrians' corpses are unnaturally rotated | anim/physics |
+| U15 | entering the police station interior: all policemen spawn above CJ (on top of him) | interiors/population |
+| U16 | inside the police station nobody reacts to the player's wanted level | AI/wanted |
+| U17 | anti-aliasing cannot be enabled in the display settings | render/settings |

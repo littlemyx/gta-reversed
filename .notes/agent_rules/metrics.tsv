@@ -45,3 +45,4 @@ date	agent	rules	kind	tokens	tool_uses	minutes	outcome	notes
 2026-10-18	INFRA-FAST	v2	infra	423906	322	171	NOVSYNC boot 1.5s vs 29s; sccache works but no gain (PCH build 1.5 min) -> off; gpu_locked.sh; no continuation hand-off despite >200k
 2026-10-18	ARREST0	v2	bug fix (small)	185281	83	43	fee fallthrough + 8 asm deviations in CGameLogic::Update; regress scenario arrest0 7/7
 2026-10-18	HEADING-AUDIT	v2	audit+fixes	336319	136	61	90 fns 0 unexplained, 19 gameplay fixes (23 commits); 4 OPEN -> SWIM-DUCK
+2026-10-18	USERDIR	v2	infra (small)	160611	71	38	NOTSA_STANDALONE_USERDIR + per-run dirs in all run scripts; Documents hash unchanged; left a zombie run_all_tests in its worktree

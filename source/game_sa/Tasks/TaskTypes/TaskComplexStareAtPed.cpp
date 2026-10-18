@@ -23,7 +23,7 @@ void CTaskComplexStareAtPed::InjectHooks() {
 // 0x660270
 CTaskComplexStareAtPed::CTaskComplexStareAtPed(CPedGroup* pedGroip, CPed* pedToStareAt, int32 timeout) :
     m_pPedGroup{pedGroip},
-    m_pPed{pedToStareAt},
+    m_pPed{IsEntityPointerValid(pedToStareAt) ? pedToStareAt : nullptr}, // 0x6602B8: `if (IsEntityPointerValid(ped)) { m_pPed = ped; RegisterReference } else m_pPed = nullptr`
     m_timeout{timeout}
 {
     CEntity::SafeRegisterRef(m_pPed);

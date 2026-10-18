@@ -48,7 +48,9 @@ CTask* CTaskComplexWaitForBackup::CreateSubTask(eTaskType taskType, CPed* ped) {
     case TASK_SIMPLE_GUN_CTRL:
         return new CTaskSimpleGunControl{ m_aggressor, {}, {}, eGunCommand::AIM, 100, 2000 };
     case TASK_SIMPLE_ACHIEVE_HEADING: {
-        ped->m_fAimingRotation = (m_aggressor->GetPosition() - ped->GetPosition()).Heading();
+        // 0x6974CC..0x697505: GetRadianAngleBetweenPoints(dx, dy, 0, 0) -> LimitRadianAngle (not CVector::Heading: different axis / range)
+        const auto d = m_aggressor->GetPosition() - ped->GetPosition();
+        ped->m_fAimingRotation = CGeneral::LimitRadianAngle(CGeneral::GetRadianAngleBetweenPoints(d.x, d.y, 0.f, 0.f)); // 0x53CBE0, 0x53CB50
         return new CTaskSimpleAchieveHeading{ ped->m_fAimingRotation, 0.5f, 0.2f };
     }
     case TASK_SIMPLE_PAUSE:

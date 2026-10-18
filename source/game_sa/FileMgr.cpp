@@ -47,6 +47,18 @@ char* InitUserDirectories()
     constexpr const wchar_t*             GALLERY    = L".\\Gallery";
     constexpr const wchar_t*             USERTRACKS = L".\\User Tracks";
 
+#ifdef NOTSA_STANDALONE_RUN
+    // NOTSA_STANDALONE_USERDIR=<path> (run build only; unset = the exe's behaviour, Documents\GTA San Andreas User Files): use <path> as the user-files
+    // directory (gta_sa.set, saves, Gallery, User Tracks) so automated test runs never touch the user's real files. Like SaveDirectoryPath below, but
+    // env-driven and with priority over it; the directory (and Gallery / User Tracks below it) is created if missing.
+    const char* const userDirOverride = std::getenv("NOTSA_STANDALONE_USERDIR");
+    if (userDirOverride && *userDirOverride) {
+        const auto absolutePath = fs::absolute(fs::path(userDirOverride));
+        wcscpy_s(gtaUserDirWide.data(), gtaUserDirWide.size(), UTF8ToUnicode(absolutePath.string()).c_str());
+        std::error_code ec;
+        fs::create_directories(absolutePath, ec); // createDirectory() below makes only the last path component
+    } else
+#endif
     if (g_MiscConfig.SaveDirectoryPath.has_value()) {
         const auto absolutePath = fs::absolute(fs::path(*g_MiscConfig.SaveDirectoryPath));
         wcscpy_s(gtaUserDirWide.data(), gtaUserDirWide.size(), UTF8ToUnicode(absolutePath.string()).c_str());

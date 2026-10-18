@@ -9,8 +9,9 @@
 #      PREFIX=<dir>             private Wine prefix (default /tmp/d3s-prefix, cloned from $WINE_PREFIX_SRC = ~/.wine-msvc on first use)   [Mac/Linux only]
 #      WINE_BIN=<dir>           directory with the wine binary (default: Wine Staging.app in $TOOLS_DIR)                                 [Mac/Linux only]
 #      Windows host (Git Bash, see docs/WINDOWS_SETUP.md): no Wine/prefix/WINEDEBUG; the data dir is built from NTFS hard links (files) and junctions (dirs)
-#      of $GAME_SRC (same volume; falls back to a copy), so the run never writes into the install. NOTE: the game still reads/writes the user's REAL
-#      Documents\GTA San Andreas User Files (gta_sa.set, saves) - back it up once. Screenshots are converted to PNG with PowerShell/System.Drawing.
+#      of $GAME_SRC (same volume; falls back to a copy), so the run never writes into the install. The game's user-files dir (gta_sa.set, saves) is a PRIVATE per-run dir
+#      C:/gta-scratch/userdir/soak-<time>-<pid> (NOTSA_STANDALONE_USERDIR, USERDIR): the user's Documents\GTA San Andreas User Files is never touched. It starts EMPTY (first start) at every
+#      attempt; USERDIR_SEED=playtest1 (or a path to a gta_sa.set) seeds it with that file instead. Screenshots are converted to PNG with PowerShell/System.Drawing.
 #      (G1) the run needs NO original exe at all: the data dir gets Steam assets + gta_reversed.exe only; $OUT/datadir_inventory.txt lists its exe/dll/bin files with sha256, soak exits 2 if an original-exe file is present.
 #      SOAK_IMAGE=1             copy original_data.bin/json next to the exe too (ONLY for the dev census / verify build, preset StandaloneDetached: NOTSA_IMAGE_CENSUS, NOTSA_VERIFY_GLOBALS
 #                               table checks). Default 0: the run exe starts WITHOUT any file of the original exe (slice F3), a leftover one in the data dir is deleted.
@@ -122,18 +123,18 @@ else
 fi
 started=0; STATUS_START=0
 cd "$DATA" || exit 2
-# Windows: the game reads/writes the REAL Documents\GTA San Andreas User Files\gta_sa.set (a normal quit writes it; a start WITH a saved video mode crashed in ResetDeviceNow
-# and can leave the desktop in a fullscreen mode; BUG-QUIT/D-B07V/WIN-TEST). Every attempt starts WITHOUT the file. A pre-existing file is backed up ONCE to gta_sa.set.soak-bak
-# (never restored automatically: restoring a game-written file re-created the crash for other agents' runs) and the live file is deleted before each attempt and after the run.
-DOCSET=""
+# Windows: the game's user-files dir (gta_sa.set, saves) is a PRIVATE per-run dir C:/gta-scratch/userdir/soak-<time>-<pid> (NOTSA_STANDALONE_USERDIR, hostenv.sh userdir_new), never the user's
+# Documents\GTA San Andreas User Files (USERDIR). Every attempt starts with that dir re-created: EMPTY by default (first start, like the soak always ran; a start WITH a saved video mode used to
+# crash in ResetDeviceNow, BUG-QUIT/D-B07V/WIN-TEST) or seeded with USERDIR_SEED=playtest1 (the user's gta_sa.set of playtest 1) / USERDIR_SEED=<file>. The dir stays after the run (logs of it: $OUT).
+UD=""
 if [ "$HOST" = windows ]; then
-  DOCSET="$(cygpath -u "$USERPROFILE")/Documents/GTA San Andreas User Files/gta_sa.set"
-  [ -f "$DOCSET" ] && [ ! -e "$DOCSET.soak-bak" ] && cp -p "$DOCSET" "$DOCSET.soak-bak" && echo "soak: backed up an existing gta_sa.set to $DOCSET.soak-bak"
-  trap 'rm -f "$DOCSET"' EXIT
+  UD="$(userdir_new soak "${USERDIR_SEED:-none}")"
+  export NOTSA_STANDALONE_USERDIR="$UD"
+  echo "soak: user-files dir $UD"
 fi
 for a in 1 2 3 4 5 6; do
   kill_exe
-  [ -n "$DOCSET" ] && rm -f "$DOCSET"
+  [ -n "$UD" ] && userdir_reset "$UD" "${USERDIR_SEED:-none}"
   rm -f gta_reversed.exe gta_sa.exe gta_sa_compact.exe data_pointers.bin original_data.* standalone*.log frame_*.bmp mark_*.bmp; rm -rf logs   # (also removes the image files of an earlier SOAK_IMAGE=1 run)
   $CPX "$BIN/gta_reversed.exe" .
   for f in $IMGF; do $CPX "$BIN/$f" .; done

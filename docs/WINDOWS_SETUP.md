@@ -46,7 +46,7 @@ On the Mac the fork is the remote called `fork`; on the clone it is `origin`, so
   `sha256sum gta_sa_compact.exe` must print the hash from section 0. It is only an *input of dev tools* (oracle tests, the `StandaloneDetached` census/verify config); building and running the exe does not need it.
 * **Game data -> `C:\gta`**: a copy of your own GTA San Andreas install folder (Steam: `...\steamapps\common\Grand Theft Auto San Andreas`; copy it, the folder only has to contain `models\gta3.img`,
   `data\`, `anim\`, `audio\`, `txd\`, `text\`, `movies\` ...; its `gta_sa.exe` is never used). `soak.sh` looks for `GAME_SRC` -> `C:\gta` -> the default Steam folder, in this order.
-* The game still reads/writes your real `Documents\GTA San Andreas User Files\` (`gta_sa.set` incl. the video mode, saves) - there is no private prefix on Windows. Back that folder up once.
+* Your real `DocumentsGTA San Andreas User Files` (`gta_sa.set` incl. the video mode, saves) is used by `play.cmd` and by the original exe only. The agent scripts (`soak.sh`, `gameplay_regress.sh`, `fps_run.sh`, `startup_probe.py`) run OUR exe with `NOTSA_STANDALONE_USERDIR=C:/gta-scratch/userdir/<run>` (a private dir per run, USERDIR) and back up / restore the whole Documents dir around runs of the ORIGINAL exe, which cannot be redirected.
 
 ## 4. The build shell (do this every time)
 Open the MSVC x86 environment with Git Bash: double-click / run **`tools\standalone\windows\gtash.cmd`** (it finds VS with `vswhere`, runs
@@ -149,6 +149,7 @@ the mute patches DirectSound buffers and has only been validated under Wine's Di
 | `NOTSA_STANDALONE_ALLOCTRACE=<min bytes>` | caller of every 200th allocation >= min |
 | `NOTSA_STANDALONE_NOPRESENT=1` | skip `Present` |
 | `NOTSA_STANDALONE_NOVSYNC=1` | Present with sync interval 0 even if the game asks for vsync (menu frame limiter / loading screens): boot to the menu in seconds instead of 30-75 s on this PC; game logic and the software frame limiter unchanged; never for fps measurements. Opt-in, passed through by `soak.sh` |
+| `NOTSA_STANDALONE_USERDIR=<path>` | use <path> as the user-files directory (gta_sa.set, saves, Gallery, User Tracks) instead of `DocumentsGTA San Andreas User Files`; created if missing. Run build only, unset = the exe behaviour. Set by `soak.sh`, `gameplay_regress.sh`, `fps_run.sh`, `startup_probe.py` per run (`C:/gta-scratch/userdir/<run>`), cleared by `play.cmd` |
 | `NOTSA_STANDALONE_NO_ABORT_TRACE=1` | do not turn `abort()` into a traced exception |
 | `NOTSA_STANDALONE_SAMPLER=1` | in-process profiler (SuspendThread of the main thread; harmless on native x86, it only corrupted x87 state under Wine/Rosetta) |
 | `NOTSA_AUDIO_TAP=<file>` (`_RAW=1`) | silent DirectSound diagnostics (use a normal `C:\...` path) |

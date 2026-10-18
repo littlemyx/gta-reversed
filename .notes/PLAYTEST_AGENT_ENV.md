@@ -21,15 +21,20 @@ proven from its asm and with the exe-oracle). Win32 x86 MSVC = reference. Findin
 ## Running the game
 - **GPU lock** around every game run / device test: `tools/standalone/gpu_locked.sh -o "<ID> <what>" <cmd...>` (mirrors build_locked.sh: records the
   holder PID in `C:/gta-scratch/gpu.lock`, a waiter drops a lock whose holder is gone - killed by a tool timeout, ownerless leftovers - and a lock
-  owned by `USER-PLAY` is never auto-removed; `gpu_locked.sh --status` shows who holds it, `--reap` drops a dead one). `soak.sh` and `fps_run.sh`
+  owned by `USER-PLAY` is never auto-removed; `gpu_locked.sh --status` shows who holds it, `--reap` drops a dead one). `soak.sh`, `fps_run.sh` and `gameplay_regress.sh`
   take it themselves (`SOAK_GPU_LOCK=0` if you already hold it). Do not hand-write `mkdir gpu.lock` any more (a hand-written lock has no PID: it is
   only dropped after 30 min without any game/test process). Hold it only for the run itself (≤ 20 min), release between runs; 4–5 agents share it.
   **If the owner is USER-PLAY, the user is playing: wait, and do NOT start builds or heavy work either** (it would cause stutter) until that lock is gone.
 - Data dir: build your own like soak.sh does (links to the Steam folder
   `C:\Program Files (x86)\Steam\steamapps\common\Grand Theft Auto San Andreas` — read-only; its gta-sa.exe is v3.0 and NOT the
-  oracle). Never touch `C:\gta-play` (the user's copy) and never touch the user's `Documents\GTA San Andreas User Files\gta_sa.set`
-  (copy it if you need its settings; soak.sh deletes/backs up the live one — run it with a private user-files dir if possible, or
-  restore the user's file afterwards from `C:/gta-scratch/playtest1/gta_sa.set`).
+  oracle). Never touch `C:\gta-play` (the user's copy) and NEVER touch anything in the user's `Documents\GTA San Andreas User Files\` (gta_sa.set, saves) —
+  **no manual backup/restore step any more (USERDIR)**: the run build honours `NOTSA_STANDALONE_USERDIR=<path>` (user-files dir = `<path>`, created if missing;
+  unset = the exe's behaviour = Documents, which is what `play.cmd` uses and clears the variable for). `soak.sh`, `gameplay_regress.sh`, `fps_run.sh ours` and
+  `startup_probe.py` (for gta_reversed.exe) set it themselves to a fresh per-run dir `C:/gta-scratch/userdir/<run>-<time>-<pid>` (empty = first start, as the scripts always
+  ran; `USERDIR_SEED=playtest1` or `USERDIR_SEED=<gta_sa.set>` seeds it with the user's playtest-1 settings). In your OWN launches (scripted repro, probe, injector wrapper) of
+  gta_reversed.exe do the same: `export NOTSA_STANDALONE_USERDIR="$(userdir_new <tag> [playtest1])"` (`. tools/standalone/hostenv.sh`; `userdir_reset <dir> [seed]` between attempts).
+  Only the ORIGINAL exe cannot be redirected (always Documents): the scripts that run it (`gameplay_regress/orig_run.sh`, `fps_run.sh orig`, `startup_probe.py` on a non-gta_reversed exe) back up
+  the whole Documents dir first and restore it after (`docs_backup` / `docs_restore` in hostenv.sh); if you start gta_sa.exe by hand, do the same. Check: hash of the Documents dir unchanged after your runs.
 - Silent runs: `NOTSA_STANDALONE_MUTE=1` (+ DirectShow mute); `NOTSA_STANDALONE_WINDOWED=960x600` so the desktop isn't switched
   (unless the bug is about fullscreen). Scripted input: `NOTSA_STANDALONE_INPUT` (docs/STANDALONE.md: wait/key/down/up/until:control/
   until:invehicle/until:menu, cheats can be typed as keys), screenshots `NOTSA_STANDALONE_SCREENSHOT`, logs standalone.log + logs/log.log.

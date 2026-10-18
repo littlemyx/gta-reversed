@@ -6,7 +6,7 @@
 #        GR_INPUTDRV  inputdrv.exe to use (default $GR_PX/inputdrv.exe)
 #        GR_PX        directory with d3d9.dll (Present proxy, no vsync pacing) / dsound.dll (mute proxy) / inputdrv.exe (build: tools/standalone/windows/build_tools.sh)
 # The original has NO windowed mode and no injector: it runs exclusive fullscreen (the desktop mode is switched for the run), needs the foreground (inputdrv aborts when another window has it) and is silent through
-# the dsound proxy. gta_sa.set is written from orig/gta_sa.set.good (video mode 800x600, limiter / radio auto-select off) and the user's file is put back afterwards.
+# the dsound proxy. gta_sa.set is written from orig/gta_sa.set.good (video mode 800x600, limiter / radio auto-select off) and the WHOLE Documents\GTA San Andreas User Files dir (the original cannot be redirected) is backed up first and restored afterwards (hostenv.sh docs_backup / docs_restore).
 set -u
 . "$(dirname "$0")/../hostenv.sh"
 SCN="$1"; OUT="$(hp "$2")"
@@ -24,14 +24,14 @@ case "$SCN" in
   *) echo "orig_run: no original-exe leg for $SCN"; exit 2;;
 esac
 awk -v d="$GRD/orig" '/^#include / { f = d "/" $2 ".inc"; while ((getline l < f) > 0) print l; close(f); next } { print }' "$SCRIPT" > "$od/script.txt"
-DOC="$(cygpath -u "$USERPROFILE")/Documents/GTA San Andreas User Files"; SET="$DOC/gta_sa.set"; USERSET="$od/user_gta_sa.set"
-HAD=0; [ -f "$SET" ] && { cp -p "$SET" "$USERSET"; HAD=1; }
+DOC="$DOCS_USERFILES"; SET="$DOC/gta_sa.set"; BK="$od/userfiles_backup"
+docs_backup "$BK"
 LOCK="$DEF_SCRATCH/gpu.lock"; HELD=0
 cleanup() {
   taskkill //F //IM gta_sa.exe >/dev/null 2>&1
   [ -n "${SPID:-}" ] && kill "$SPID" 2>/dev/null
   [ -n "${TPID:-}" ] && kill "$TPID" 2>/dev/null
-  rm -f "$SET"; [ "$HAD" = 1 ] && cp -p "$USERSET" "$SET"
+  docs_restore "$BK"
   [ "$HELD" = 1 ] && "$GRD/../gpu_locked.sh" --release $$; HELD=0
 }
 trap cleanup EXIT

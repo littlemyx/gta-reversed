@@ -13,8 +13,9 @@
 #             GAME_SRC=<install dir> as in soak.sh   GR_ORIG_DIR / GR_PX  original-exe run dir / tool dir (defaults C:/gta-perf/orig, C:/gta-perf/px; only for -o)
 #             GR_NOPRESENT=0  keep Present in the scenarios that do not look at pixels (default 1: NOTSA_STANDALONE_NOPRESENT=1, start-up 3x faster)
 #             GR_SKIP="a b"   scenarios to leave out (e.g. render_firststart: the only one that switches the desktop resolution)
-# Every run holds the GPU lock (C:/gta-scratch/gpu.lock) for that run only; while its owner is USER-PLAY (the user is playing) nothing starts. The user's gta_sa.set is saved before the suite and put
-# back afterwards (every run starts WITHOUT one, like soak.sh). A scenario whose set-up failed (a gate timed out, the game died before the first snapshot) is run once more before it is judged.
+# Every run holds the GPU lock (C:/gta-scratch/gpu.lock) for that run only; while its owner is USER-PLAY (the user is playing) nothing starts. Our exe runs with a PRIVATE user-files dir
+# (NOTSA_STANDALONE_USERDIR=C:/gta-scratch/userdir/gr-<time>-<pid>, hostenv.sh userdir_new; EMPTY at every start = no gta_sa.set, like soak.sh; USERDIR_SEED=playtest1|<file> seeds it), so the user's Documents
+# files are never touched by our runs. Only the ORIGINAL exe (-o, orig_run.sh) cannot be redirected: orig_run.sh backs up and restores the Documents gta_sa.set around its run. A scenario whose set-up failed (a gate timed out, the game died before the first snapshot) is run once more before it is judged.
 set -u
 . "$(dirname "$0")/hostenv.sh"
 [ "$HOST" = windows ] || { echo "gameplay_regress: Windows host only"; exit 2; }
@@ -45,10 +46,7 @@ EXE="$(hp "$EXE")"
 [ -f "$EXE" ] || { echo "gameplay_regress: missing $EXE (build gta_reversed.exe first or pass -x)"; exit 2; }
 [ -d "$GAME_SRC" ] || { echo "gameplay_regress: game install not found: $GAME_SRC (set GAME_SRC)"; exit 2; }
 LOCK="$DEF_SCRATCH/gpu.lock"
-DOCSET="$(cygpath -u "$USERPROFILE")/Documents/GTA San Andreas User Files/gta_sa.set"
-USERSET="$OUT/user_gta_sa.set"
-HAD_SET=0; [ -f "$DOCSET" ] && { cp -p "$DOCSET" "$USERSET"; HAD_SET=1; }
-restore_set() { rm -f "$DOCSET"; [ "$HAD_SET" = 1 ] && cp -p "$USERSET" "$DOCSET"; return 0; }
+UD="$(userdir_new gr "${USERDIR_SEED:-none}")"   # private user-files dir of this suite run (re-created before every scenario start)
 HELD=0; WPID=""
 GPULOCK="$REPO/tools/standalone/gpu_locked.sh"   # INFRA-FAST: pid-recording lock (dead-holder detection), same lock dir
 unlock() { [ "$HELD" = 1 ] && "$GPULOCK" --release $$; HELD=0; return 0; }
@@ -57,7 +55,7 @@ kill_game() { # our exe by image path under $DATA; the bash job too
   GR_DATA="$DATA" powershell.exe -NoProfile -Command 'Get-Process gta_reversed -ErrorAction SilentlyContinue | Where-Object { $_.Path -and (($_.Path -replace "\\","/") -like ($env:GR_DATA + "/*")) } | Stop-Process -Force' >/dev/null 2>&1
   sleep 1
 }
-trap 'kill_game; unlock; restore_set' EXIT
+trap 'kill_game; unlock' EXIT
 trap 'exit 130' INT TERM
 
 gpu_lock() { # $1 = owner tag; waits (forever) while anybody, in particular USER-PLAY, holds the lock (gpu_locked.sh: the holder is this script, a killed script is detected as a dead holder)
@@ -87,10 +85,10 @@ run_ours() { # name route limit env px windowed -> $OUT/<name>/ (logs, route, sc
   rm -rf "$od"; mkdir -p "$od"; expand_route "$GRD/routes/$route" "$od/route.txt" "$od"
   gpu_lock "GAMEPLAY-REGRESS $name"
   prep_data; cd "$DATA" || return 2
-  kill_game; rm -f "$DOCSET" gta_reversed.exe standalone*.log frame_*.bmp mark_*.bmp burst_*.bmp; rm -rf logs
+  kill_game; userdir_reset "$UD" "${USERDIR_SEED:-none}"; rm -f gta_reversed.exe standalone*.log frame_*.bmp mark_*.bmp burst_*.bmp; rm -rf logs
   cp "$EXE" gta_reversed.exe
   (
-    export NOTSA_STANDALONE_SKIP_VIDEOS=1 NOTSA_STANDALONE_MUTE=1 NOTSA_STANDALONE_INPUT="$od/route.txt"
+    export NOTSA_STANDALONE_SKIP_VIDEOS=1 NOTSA_STANDALONE_MUTE=1 NOTSA_STANDALONE_INPUT="$od/route.txt" NOTSA_STANDALONE_USERDIR="$UD"
     [ "$win" = 1 ] && export NOTSA_STANDALONE_WINDOWED=960x600
     [ "$px" = 1 ] && export NOTSA_STANDALONE_SCREENSHOT=100000 NOTSA_STANDALONE_SCREENSHOT_MAX=60
     [ "$px" = 0 ] && [ "${GR_NOPRESENT:-1}" = 1 ] && export NOTSA_STANDALONE_NOPRESENT=1
@@ -114,12 +112,12 @@ run_ours() { # name route limit env px windowed -> $OUT/<name>/ (logs, route, sc
   kill_game
   cp -f standalone.log logs/log.log "$od/" 2>/dev/null
   for b in mark_*.bmp frame_*.bmp burst_*.bmp; do [ -f "$b" ] && mv "$b" "$od/"; done
-  rm -f "$DOCSET"
+  cp -f "$UD/gta_sa.set" "$od/" 2>/dev/null
   unlock
   return 0
 }
 
-echo "gameplay_regress: exe $EXE ($(stat -c %s "$EXE") bytes, $(date -r "$EXE" '+%F %T')), out $OUT"
+echo "gameplay_regress: exe $EXE ($(stat -c %s "$EXE") bytes, $(date -r "$EXE" '+%F %T')), out $OUT, user-files dir $UD"
 : > "$OUT/summary.txt"
 TABLE="$OUT/.table"; echo "$SCENARIOS" > "$TABLE"
 while read -r name route limit xenv px win live <&3; do

@@ -4,8 +4,10 @@ Launches <exe> in <datadir>, polls every 250 ms: wall time since CreateProcess, 
 gstate (0xC8D4C0), CTimer::m_FrameCounter (0xB7CB4C), size of logs/log.log; records the first time each gstate value / first frame / log line shows up.
 Stops N seconds after the frame counter first moves (default 8), or after --timeout; then kills the process (NO graceful quit).
 usage: startup_probe.py <exe> <datadir> [--timeout 240] [--after 8] [--env K=V ...] [--csv out.csv]
+USERDIR: our exe (gta_reversed.exe) runs with NOTSA_STANDALONE_USERDIR=C:/gta-scratch/userdir/probe-<time>-<pid> (empty = first start; --env NOTSA_STANDALONE_USERDIR=... overrides); the ORIGINAL exe
+cannot be redirected: the whole Documents/GTA San Andreas User Files dir is backed up before the run and restored after it.
 Take the GPU lock yourself (see PORT_BRIEF): this starts a fullscreen game."""
-import argparse, ctypes, ctypes.wintypes as W, os, subprocess, sys, time, struct
+import argparse, ctypes, ctypes.wintypes as W, os, shutil, subprocess, sys, time, struct
 k32 = ctypes.WinDLL('kernel32', use_last_error=True); ps = ctypes.WinDLL('psapi')
 k32.OpenProcess.restype = W.HANDLE
 class IOC(ctypes.Structure): _fields_ = [(n, ctypes.c_ulonglong) for n in ('ro', 'wo', 'oo', 'rb', 'wb', 'ob')]
@@ -17,6 +19,12 @@ def main():
     a = ap.parse_args()
     env = dict(os.environ, NOTSA_STANDALONE_MUTE='1', NOTSA_STANDALONE_SKIP_VIDEOS='1')
     for kv in a.env: k, v = kv.split('=', 1); env[k] = v
+    docs = os.path.join(os.path.expanduser('~'), 'Documents', 'GTA San Andreas User Files'); bak = None
+    if os.path.basename(a.exe).lower().startswith('gta_reversed'):
+        ud = 'C:/gta-scratch/userdir/probe-%s-%d' % (time.strftime('%Y%m%d-%H%M%S'), os.getpid()); os.makedirs(ud, exist_ok=True)
+        env.setdefault('NOTSA_STANDALONE_USERDIR', ud)
+    elif os.path.isdir(docs):
+        bak = docs + '.probe-bak-%d' % os.getpid(); shutil.copytree(docs, bak)   # (copy2: keeps the mtimes)
     logp = os.path.join(a.datadir, 'logs', 'log.log')
     if os.path.exists(logp): os.remove(logp)
     t0 = time.perf_counter(); p = subprocess.Popen([os.path.join(a.datadir, a.exe)], cwd=a.datadir, env=env)
@@ -41,6 +49,8 @@ def main():
         if t > a.timeout: print('# timeout'); break
         time.sleep(0.25)
     if p.poll() is None: subprocess.run(['taskkill', '/F', '/PID', str(p.pid)], capture_output=True)
+    if bak:
+        time.sleep(1); shutil.rmtree(docs, ignore_errors=True); shutil.copytree(bak, docs); shutil.rmtree(bak)
     print('# first frame at %s s; cpu(ms)/io(MB)/ws(MB) at end: %s' % (('%.2f' % tfc) if tfc else 'never', rows[-1][1:4] if rows else None))
     if a.csv:
         with open(a.csv, 'w') as f:

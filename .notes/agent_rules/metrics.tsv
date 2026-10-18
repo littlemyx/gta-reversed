@@ -47,3 +47,4 @@ date	agent	rules	kind	tokens	tool_uses	minutes	outcome	notes
 2026-10-18	HEADING-AUDIT	v2	audit+fixes	336319	136	61	90 fns 0 unexplained, 19 gameplay fixes (23 commits); 4 OPEN -> SWIM-DUCK
 2026-10-18	USERDIR	v2	infra (small)	160611	71	38	NOTSA_STANDALONE_USERDIR + per-run dirs in all run scripts; Documents hash unchanged; left a zombie run_all_tests in its worktree
 2026-10-18	SWIM-DUCK	v2	verify+fix (small)	193849	81	36	4/4 claims confirmed+fixed, +3 deviations found in review
+2026-10-19	SKIN-FLAKY	v2	flaky crash hunt	333540	218	165	not reproduced 0/62; premise corrected (INTRO1B cutscene load, not Beach Party); repro kit + diag patch; exceeded 150-call cap

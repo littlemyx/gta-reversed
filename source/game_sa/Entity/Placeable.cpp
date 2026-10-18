@@ -90,9 +90,15 @@ void CPlaceable::SetHeading(float heading) {
 }
 
 float CPlaceable::GetHeading() const {
-    return m_matrix
-        ? m_matrix->GetForward().Heading()
-        : m_placement.m_fHeading;
+    return (float)GetHeadingExt();
+}
+
+double CPlaceable::GetHeadingExt() const {
+    if (m_matrix) {
+        const auto& fwd = m_matrix->GetForward();
+        return x87::atan2(-(double)fwd.x, (double)fwd.y); // FPATAN: stays in ST0, rounded by the caller's next op / store
+    }
+    return (double)m_placement.m_fHeading;
 }
 
 // 0x420B30

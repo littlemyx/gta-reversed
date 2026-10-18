@@ -40,6 +40,8 @@ public:
     void GetOrientation(float& x, float& y, float& z);
     void SetHeading(float heading);
     float GetHeading() const;
+    //! @notsa The heading as the exe's `CPlaceable::GetHeading` (0x441DB0) leaves it in ST0: unrounded extended value (callers that keep computing with it - `+ PI` - must not round it to float first)
+    double GetHeadingExt() const;
     float GetRoll() const;
     bool IsWithinArea(float x1, float y1, float x2, float y2) const;
     bool IsWithinArea(float x1, float y1, float z1, float x2, float y2, float z2) const;

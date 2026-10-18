@@ -76,7 +76,7 @@ CEventDamage* CEventDamage::Constructor(CEntity* source, uint32 startTime, eWeap
 
 // 0x4B35A0
 bool CEventDamage::AffectsPed(CPed* ped) {
-    auto* pedSourceEntity = GetSourceEntity()->AsPed();
+    // NOTE: the exe never calls the virtual GetSourceEntity() up front (0x4B35A0): only the invulnerability test (0x4B36AB) does, everything else reads m_pSourceEntity
     if (m_damageResponse.m_bDamageCalculated && !m_damageResponse.m_bCheckIfAffectsPed)
         return true;
 
@@ -88,8 +88,8 @@ bool CEventDamage::AffectsPed(CPed* ped) {
 
     if (ped == FindPlayerPed()) {
         if (m_pSourceEntity) {
-            if (m_pSourceEntity->GetIsTypePed() && pedSourceEntity->m_nPedType == PED_TYPE_GANG2 && m_weaponType >= WEAPON_GRENADE) {
-                const auto task = pedSourceEntity->GetTaskManager().Find<CTaskComplexKillPedOnFoot>();
+            if (m_pSourceEntity->GetIsTypePed() && m_pSourceEntity->AsPed()->m_nPedType == PED_TYPE_GANG2 && m_weaponType >= WEAPON_GRENADE) {
+                const auto task = m_pSourceEntity->AsPed()->GetTaskManager().Find<CTaskComplexKillPedOnFoot>();
                 if (!task || task->m_target != ped){
                     return false;
                 }
@@ -104,7 +104,7 @@ bool CEventDamage::AffectsPed(CPed* ped) {
         }
     }
     if (ped->physicalFlags.bInvulnerable) {
-        if (pedSourceEntity != FindPlayerPed()) {
+        if (GetSourceEntity() != FindPlayerPed()) {
             if (m_weaponType != WEAPON_DROWNING && m_weaponType != WEAPON_EXPLOSION && ped->m_fHealth > 0.0f)
                 return false;
         }
@@ -129,7 +129,7 @@ bool CEventDamage::AffectsPed(CPed* ped) {
         }
         if (m_pSourceEntity) {
             if (m_pSourceEntity->GetIsTypePed()) {
-                CTask* activeTask = pedSourceEntity->GetTaskManager().GetActiveTask();
+                CTask* activeTask = m_pSourceEntity->AsPed()->GetTaskManager().GetActiveTask();
                 if (activeTask && activeTask->GetTaskType() == TASK_SIMPLE_STEALTH_KILL) {
                     CVector vecDirection = m_pSourceEntity->GetPosition() - ped->GetPosition();
                     vecDirection.Normalise();
@@ -144,8 +144,8 @@ bool CEventDamage::AffectsPed(CPed* ped) {
     }
     if (m_pSourceEntity) {
         if (    m_pSourceEntity->GetIsTypePed()
-            && !pedSourceEntity->IsPlayer()
-            && CPedGroups::AreInSameGroup(ped, pedSourceEntity)
+            && !m_pSourceEntity->AsPed()->IsPlayer()
+            && CPedGroups::AreInSameGroup(ped, m_pSourceEntity->AsPed())
             && m_weaponType != WEAPON_EXPLOSION
         ) {
             return false;

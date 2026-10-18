@@ -12,7 +12,7 @@ CTaskSimpleChoking::CTaskSimpleChoking(CPed* attacker, bool bIsTeargas) :
     CEntity::SafeRegisterRef(m_pAttacker);
     m_pAnim          = nullptr;
     m_bIsFinished    = false;
-    m_nTimeRemaining = CGeneral::GetRandomNumberInRange(0u, 1000u);
+    m_nTimeRemaining = CGeneral::GetRandomNumberInRange(1000, 2000); // 0x620327..0x620339: 1000 - ftol(rand * (1/32768) * -1000.0) = 1000 + [0, 1000), not [0, 1000)
     m_nTimeStarted   = CTimer::GetTimeInMS();
 }
 

@@ -452,6 +452,7 @@ const CVector& FindPlayerCentreOfWorld(int32 playerId = -1);
 const CVector& FindPlayerCentreOfWorld_NoSniperShift(int32 playerId = -1);
 CVector        FindPlayerCentreOfWorldForMap(int32 playerId = -1);
 float          FindPlayerHeading(int32 playerId = -1);
+double         FindPlayerHeadingExt(int32 playerId = -1); //!< @notsa The unrounded ST0 value the exe's FindPlayerHeading (0x56E450) returns
 float          FindPlayerHeight(int32 playerId = -1);
 CWanted*       FindPlayerWanted(int32 playerId = -1);
 CPedGroup&     FindPlayerGroup(int32 playerId = -1);

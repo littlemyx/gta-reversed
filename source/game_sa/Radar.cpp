@@ -1097,7 +1097,7 @@ void CRadar::DrawYouAreHereSprite(float x, float y) {
     }
 
     if (mapYouAreHereDisplay) {
-        const auto angle = FindPlayerHeading(0) + DegreesToRadians(180.0f);
+        const float angle = (float)(FindPlayerHeadingExt(0) + (double)DegreesToRadians(180.0f)); // 0x5849B8..0x5849D0: FindPlayerHeading leaves the heading unrounded in ST0; `+ PI` [0x858CB8], then the store to float
         const auto circleAngle = angle + DegreesToRadians(90.0f);
 
         DrawRotatingRadarSprite(

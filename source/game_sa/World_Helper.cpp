@@ -110,8 +110,12 @@ CVector FindPlayerCentreOfWorldForMap(int32 playerId) {
 // Returns player angle in radians
 // 0x56E450
 float FindPlayerHeading(int32 playerId) {
+    return (float)FindPlayerHeadingExt(playerId);
+}
+
+double FindPlayerHeadingExt(int32 playerId) {
     CVehicle* vehicle = FindPlayerVehicle(playerId, true);
-    return vehicle ? vehicle->GetHeading() : FindPlayerPed(playerId)->GetHeading();
+    return vehicle ? vehicle->GetHeadingExt() : FindPlayerPed(playerId)->GetHeadingExt();
 }
 
 // Returns Z coord for active player

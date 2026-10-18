@@ -306,6 +306,20 @@ RwCamera* RwCameraShowRaster(RwCamera* camera, void* /*pDev*/, RwUInt32 flags) {
     if (std::getenv("NOTSA_STANDALONE_NOPRESENT")) { // S5 diagnostics: skip Present (leak hunting)
         return camera;
     }
+    // NOTSA_STANDALONE_NOVSYNC=1 (off by default): present with sync interval 0 even when the game asks for rwRASTERFLIPWAITVSYNC (menu "frame limiter"
+    // option, loading screens: psCameraShowRaster). Vsync-locked Present costs ~78 ms/frame on the dev PC; the game's software frame limiter and all
+    // game-logic timing are untouched.
+    static const bool s_NoVsync = [] {
+        const char* v  = std::getenv("NOTSA_STANDALONE_NOVSYNC");
+        const bool  on = v && *v && std::strcmp(v, "0") && _stricmp(v, "off") && _stricmp(v, "no") && _stricmp(v, "false");
+        if (on) {
+            notsa::standalone::Fixups::Log("NOTSA_STANDALONE_NOVSYNC: Present with sync interval 0 (the WAITVSYNC flag of RwCameraShowRaster is ignored)");
+        }
+        return on;
+    }();
+    if (s_NoVsync) {
+        flags &= ~static_cast<RwUInt32>(rwRASTERFLIPWAITVSYNC);
+    }
 #endif
     camera->showRaster(flags);
     return camera;

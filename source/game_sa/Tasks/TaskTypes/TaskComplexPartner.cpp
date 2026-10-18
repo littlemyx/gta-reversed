@@ -62,7 +62,7 @@ CTaskComplexPartner::CTaskComplexPartner(const char* commandName, CPed* partner,
     m_firstToTargetFlag        = -1;
     m_requiredAnimsStreamedIn  = false;
     m_animBlockName[0]         = '\0';
-    CEntity::SafeRegisterRef(partner);
+    CEntity::SafeRegisterRef(m_partner); // 0x681EF2 registers &this->m_partner (+0x38); this registered the stack slot of the PARAMETER
 }
 
 /*!

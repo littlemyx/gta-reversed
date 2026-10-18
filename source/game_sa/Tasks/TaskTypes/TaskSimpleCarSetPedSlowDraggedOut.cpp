@@ -82,7 +82,7 @@ bool CTaskSimpleCarSetPedSlowDraggedOut::ProcessPed(CPed* ped) {
     // 0x64C50B - Reset rotation
     ped->m_fCurrentRotation
         = ped->m_fAimingRotation
-        = ped->GetHeading();
+        = m_Vehicle->GetHeading(); // 0x64C4F2..0x64C50B: the heading of the VEHICLE ([task+8]), not the ped's
     ped->CalculateNewOrientation();
 
     // 0x64C52B - Make sure ped's not in a collision

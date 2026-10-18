@@ -42,7 +42,8 @@ CTaskComplexCarDrive::CTaskComplexCarDrive(CVehicle* vehicle, float speed, eMode
     m_CruiseSpeed{speed},
     m_DesiredCarModel{carModelIndexToCreate},
     m_Veh{vehicle},
-    m_CarDrivingStyle{carDrivingStyle}
+    m_CarDrivingStyle{carDrivingStyle},
+    m_bAsDriver{true} // 0x63C98F: `mov byte ptr [esi+1Ch], 1` - this constructor makes the ped the DRIVER (the default of the class member is false)
 {
     CEntity::SafeRegisterRef(m_Veh);
 }

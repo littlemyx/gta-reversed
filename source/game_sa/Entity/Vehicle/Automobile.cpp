@@ -7336,11 +7336,11 @@ void CAutomobile::PreRender() {
 
         const auto& fwd = GetForward();
         const float fwdDot = (float)((((double)dir.z * fwd.z + (double)dir.y * fwd.y) + (double)dir.x * fwd.x) / 1.0); // 0x8D3148
-        SetComponentRotation(m_aCarNodes[CAR_MISC_B], AXIS_X, (float)(x87::acos((double)fwdDot) + (double)-hoist), true);
+        SetComponentRotation(m_aCarNodes[CAR_MISC_B], AXIS_X, (float)(x87::asin((double)fwdDot) + (double)-hoist), true);
 
         const auto& right = GetRight();
         const float rightDot = (float)(-1.0 / 1.0 * (((double)dir.z * right.z + (double)dir.y * right.y) + (double)dir.x * right.x)); // 0x858C1C, 0x8D3148
-        SetComponentRotation(m_aCarNodes[CAR_MISC_B], AXIS_Y, (float)x87::acos((double)rightDot), false);
+        SetComponentRotation(m_aCarNodes[CAR_MISC_B], AXIS_Y, (float)x87::asin((double)rightDot), false);
         break;
     }
     case MODEL_TRACTOR: // 0x6AC6D9
@@ -7395,7 +7395,7 @@ void CAutomobile::PreRender() {
 
         float tilt = 0.0f;
         if (GetUp().z > 0.0f && m_nGettingInFlags == 0 && m_nGettingOutFlags == 0) {
-            const double tiltD = x87::acos((double)GetRight().z);
+            const double tiltD = x87::asin((double)GetRight().z);
             tilt               = (float)tiltD;
             if (tiltD > (double)PRERENDER_COMBINE_TILT_MAX) { // NOTE: Compares the extended value, not the float
                 tilt = PRERENDER_COMBINE_TILT_MAX;

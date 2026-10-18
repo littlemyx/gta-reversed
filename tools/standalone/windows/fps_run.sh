@@ -3,17 +3,19 @@
 # usage: fps_run.sh orig|ours on|off TAG [video-mode-index (default: keep the set file's 4)] [script (default fps_scenes.txt)]
 #   limiter on|off = m_bPrefsFrameLimiter in gta_sa.set (byte 0xB35); the video mode index is the int32 at 0xB36 (index into the exe's own mode list; 4 = 800x600 X8R8G8B8 for ours).
 # prerequisites: tools built (build_tools.sh -> C:/gta-perf/px, dsmute.dll), data dirs C:/gta-perf/ours and C:/gta-perf/orig (perf_datadir.sh), base set file C:/gta-scratch/bugquit/gta_sa.set.good.
-# Takes/releases the GPU lock (C:/gta-scratch/gpu.lock) itself. The original runs SILENT: dsound.dll proxy (dsmute) + SFX/radio volume 0 + empty movies dir. Output: C:/gta-perf/runs/TAG.{bin,log,csv}
+# Takes/releases the GPU lock (C:/gta-scratch/gpu.lock) itself, through tools/standalone/gpu_locked.sh (re-exec). The original runs SILENT: dsound.dll proxy (dsmute) + SFX/radio volume 0 + empty movies dir. Output: C:/gta-perf/runs/TAG.{bin,log,csv}
 # The user's real Documents\GTA San Andreas User Files\gta_sa.set is replaced for the run and DELETED afterwards (soak.sh does the same).
 HERE="$(cd "$(dirname "$0")" && pwd)"; . "$HERE/../hostenv.sh"
 KIND="$1"; LIM="$2"; TAG="$3"; VM="${4:-}"; SCR="${5:-$HERE/fps_scenes.txt}"
 [ -n "$TAG" ] || { sed -n 2,8p "$0"; exit 2; }
+# GPU lock: re-run under gpu_locked.sh (dead-holder detection, USER-PLAY respected); the lock is released by it when this script ends or is killed
+[ -n "${GPU_LOCK_HELD:-}" ] || exec "$HERE/../gpu_locked.sh" -o "WIN-PERF fps_run ${3:-}" "$0" "$@"
 PY="${GTASA_PYTHON:-/c/Users/littl/AppData/Local/Programs/Python/Python312/python.exe}"
 PX=C:/gta-perf/px; RUNS=C:/gta-perf/runs; mkdir -p $RUNS
 if [ "$KIND" = ours ]; then DIR=C:/gta-perf/ours; EXE=gta_reversed.exe; else DIR=C:/gta-perf/orig; EXE=gta_sa.exe; fi
 DOC="$(cygpath -u "$USERPROFILE")/Documents/GTA San Andreas User Files"; SET="$DOC/gta_sa.set"
-cleanup() { taskkill //F //IM $EXE >/dev/null 2>&1; rm -f "$SET"; rm -rf C:/gta-scratch/gpu.lock; }
-until mkdir C:/gta-scratch/gpu.lock 2>/dev/null; do sleep 3; done; echo "WIN-PERF fps_run $TAG $(date)" > C:/gta-scratch/gpu.lock/owner; trap cleanup EXIT
+cleanup() { taskkill //F //IM $EXE >/dev/null 2>&1; rm -f "$SET"; }
+trap cleanup EXIT
 taskkill //F //IM $EXE >/dev/null 2>&1
 # settings file
 [ -f "$SET" ] && [ ! -e "$SET.soak-bak" ] && cp -p "$SET" "$SET.soak-bak"

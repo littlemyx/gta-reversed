@@ -7,9 +7,10 @@ proven from its asm and with the exe-oracle). Win32 x86 MSVC = reference. Findin
 ## Repo, toolchain, builds
 - Repo C:\Users\littl\github\gta-reversed (Git Bash /c/Users/littl/github/gta-reversed), branch `reverse/interior_c`, remote `origin`.
 - In every Bash call that compiles/runs: `source tools/standalone/windows/msvcenv.sh` first. Python: `python -X utf8 -I`.
-- **Work in your own git worktree** with a SHORT path (`git worktree add C:/gta-scratch/<id> HEAD`), configure presets there with
-  `--compile-no-warning-as-error` (conan per docs/WINDOWS_SETUP.md; StandaloneRelease = the user's exe, needs no original exe;
-  StandaloneRW for oracle tests needs `GTASA_ORACLE_EXE`/`RW_EXE_ORACLE` = the main checkout's `gta_sa_compact.exe`). Remove the worktree at the end.
+- **Work in your own git worktree** with a SHORT path: `tools/standalone/windows/new_worktree.sh <id> --cache` (C:/gta-wt/<id>; branch, librw submodule,
+  conan generators + imgui copied from the main checkout, StandaloneRelease configured with the opt-in sccache compile cache - docs/WINDOWS_SETUP.md
+  "Compile cache"; `--preset StandaloneRW` for tests). By hand: `git worktree add C:/gta-wt/<id> HEAD` + `--compile-no-warning-as-error` (conan per docs/WINDOWS_SETUP.md;
+  StandaloneRelease = the user's exe, needs no original exe; StandaloneRW for oracle tests needs `GTASA_ORACLE_EXE`/`RW_EXE_ORACLE` = the main checkout's `gta_sa_compact.exe`). Remove the worktree at the end.
 - Builds only via `tools/standalone/build_locked.sh <cmd>`, **ninja -j4 max, low priority** (the user works on this PC). Never kill all
   cl.exe — only your own process tree. LNK1201 on a pdb: rename it and relink.
 - Land commits in the main checkout: `git commit -- <your files>` (cherry-pick from your worktree branch is fine). Never `git stash`,
@@ -18,10 +19,12 @@ proven from its asm and with the exe-oracle). Win32 x86 MSVC = reference. Findin
   `Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>`. If the Write tool refuses a report file, use a Bash heredoc.
 
 ## Running the game
-- **GPU lock** around every game run / device test: `until mkdir C:/gta-scratch/gpu.lock 2>/dev/null; do sleep 15; done;
-  echo "<ID> $(date)" > C:/gta-scratch/gpu.lock/owner; <run>; rm -rf C:/gta-scratch/gpu.lock`. Hold it only for the run itself
-  (≤ 20 min), release between runs; 4–5 agents share it. **If the owner is USER-PLAY, the user is playing: wait, and do NOT start
-  builds or heavy work either** (it would cause stutter) until that lock is gone.
+- **GPU lock** around every game run / device test: `tools/standalone/gpu_locked.sh -o "<ID> <what>" <cmd...>` (mirrors build_locked.sh: records the
+  holder PID in `C:/gta-scratch/gpu.lock`, a waiter drops a lock whose holder is gone - killed by a tool timeout, ownerless leftovers - and a lock
+  owned by `USER-PLAY` is never auto-removed; `gpu_locked.sh --status` shows who holds it, `--reap` drops a dead one). `soak.sh` and `fps_run.sh`
+  take it themselves (`SOAK_GPU_LOCK=0` if you already hold it). Do not hand-write `mkdir gpu.lock` any more (a hand-written lock has no PID: it is
+  only dropped after 30 min without any game/test process). Hold it only for the run itself (≤ 20 min), release between runs; 4–5 agents share it.
+  **If the owner is USER-PLAY, the user is playing: wait, and do NOT start builds or heavy work either** (it would cause stutter) until that lock is gone.
 - Data dir: build your own like soak.sh does (links to the Steam folder
   `C:\Program Files (x86)\Steam\steamapps\common\Grand Theft Auto San Andreas` — read-only; its gta-sa.exe is v3.0 and NOT the
   oracle). Never touch `C:\gta-play` (the user's copy) and never touch the user's `Documents\GTA San Andreas User Files\gta_sa.set`
@@ -30,6 +33,8 @@ proven from its asm and with the exe-oracle). Win32 x86 MSVC = reference. Findin
 - Silent runs: `NOTSA_STANDALONE_MUTE=1` (+ DirectShow mute); `NOTSA_STANDALONE_WINDOWED=960x600` so the desktop isn't switched
   (unless the bug is about fullscreen). Scripted input: `NOTSA_STANDALONE_INPUT` (docs/STANDALONE.md: wait/key/down/up/until:control/
   until:invehicle/until:menu, cheats can be typed as keys), screenshots `NOTSA_STANDALONE_SCREENSHOT`, logs standalone.log + logs/log.log.
+- **Fast boot**: `NOTSA_STANDALONE_NOVSYNC=1` (run build only, off by default) presents with sync interval 0 — the vsync-locked Present costs ~78 ms/frame on this PC (30–75 s
+  to the menu); game logic and the software frame limiter are unchanged. Use it for scripted repro/probe runs; NOT for frame-time/fps measurements (state the mode if you quote any).
 - **The original exe as reference**: gta_sa_compact.exe (main checkout root, never commit) can be run natively for A/B — see
   `.notes/reports/WIN-PERF.md` / `BUG-VIDEO.md` (private data dir, dsound mute proxy, radio auto-select off; DirectPlay is installed now).
 - **Older builds for bisecting**: branch `standalone-snapshot-2026-10-16` (state before the Windows sessions), exes

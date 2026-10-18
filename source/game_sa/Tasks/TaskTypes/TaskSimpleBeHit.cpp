@@ -173,7 +173,7 @@ bool CTaskSimpleBeHit::ProcessPed(CPed* ped) {
         return true;
     }
 
-    if (m_nDirn == 0 && m_Attacker && !m_Attacker->IsPlayer()) { // todo: m_nDirn == 0
+    if (m_nDirn == 0 && m_Attacker && !ped->IsPlayer()) { // 0x620A43: CPed::IsPlayer of the PED parameter (esi), not of the attacker
         ped->m_fAimingRotation = (m_Attacker->GetPosition() - ped->GetPosition()).Heading();
     }
 

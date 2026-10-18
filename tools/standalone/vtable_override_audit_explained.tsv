@@ -1,0 +1,29 @@
+# VT-OVERRIDES: rows of tools/standalone/vtable_override_audit.py that were triaged and are NOT a missing override. Columns (TAB separated):
+#   kind | class (or *) | slot (or *) | regex over the row's detail text (or .) | reason
+MISSING	CTaskAllocatorKillThreatsDriveby	2	.	the exe has its own copy (0x69CBC0) of CTaskAllocatorKillThreatsBasic::ProcessGroup (0x69C7E0): timer StartIfNotAlready(0) + IsOutOfTime -> Start(5000) + AllocateTasks. The port inherits the Basic one (same logic; the shadowing m_Threat / m_Timer members of the Driveby class, which made AllocateTasks see a null threat, are gone)
+MISSING	CTaskComplexWalkAlongsidePed	6	.	0x683320 = CTaskComplex::MakeAbortable (forward to the sub task) + `setne al` (bool normalisation, invisible to a C++ bool)
+LEAFDIFF	CEvent	12	.	`fldz; ret` is the same value as `fld dword [0.0f]; ret`
+WRONGFN	CEntitySeekPosCalculator.*	0	.	the port adds a virtual destructor in slot 0 (the exe's class has no virtual destructor, ComputeEntitySeekPos is its slot 0); every call is compiled against the port's own layout
+COUNT	CEntitySeekPosCalculator.*	-1	.	same: one extra slot (the virtual destructor)
+COUNT	CProjectile	-1	.	the exe's table extent is over-estimated by one dword (the next object in .rdata is a code pointer)
+COUNT	CVehicleModelInfo	-1	.	same
+EXTRA	.*	*	forward|inherits: (jmp 0x|mov ecx, dword ptr \[ecx \+ 8\])	the exe's slot is a thunk / copy that only forwards to the base implementation; the port spells the forward out (checked: same call)
+DTOR	CAEStaticChannel	*	.	released inline in the port destructor (DirectSound buffer Release + g_numSoundChannelsUsed)
+DTOR	CBaseModelInfo	*	.	delete wrapper
+DTOR	FxInterpInfo_c	*	.	delete wrapper
+DTOR	CEventGroup	*	.	virtual Flush loop inlined
+DTOR	CEventGlobalGroup	*	.	the base destructor flushes (the exe's derived one calls Flush(false) itself and skips the base)
+DTOR	CCopPed	*	.	ClearCriminalsToKill inlined
+DTOR	CEntity	*	.	DeleteRwObject / ResolveReferences inlined (checked)
+DTOR	CHandObject	*	.	0x59F000 is a jmp thunk to CObject's destructor
+DTOR	CTaskComplexFleeAnyMeans	*	.	the cleaned-up reference (+0xC) belongs to CTaskComplexSmartFleeEntity, whose destructor cleans it (a second CleanUpOldReference finds no entry)
+DTOR	CTaskComplexFleeShooting	*	.	same
+DTOR	CTaskSimpleCreateCarAndGetIn	*	.	CleanupCreatedVehicle() = CTheScripts::CleanUpThisVehicle + MissionCleanup.RemoveEntityFromList
+UNREG	.*	*	scalar-deleting-dtor	scalar deleting destructors (the destructor bodies are compared by the DTOR checks)
+UNREG	.*	*	::(Clone|CloneEditable);	Clone / CloneEditable: `new T(fields)` with the exe's constructor arguments (sampled against the asm; CTaskComplexKillPedOnFoot::Clone was wrong and is fixed)
+UNREG	CEvent	11	.	CEvent::TakesPriorityOver: GetEventPriority() >= other.GetEventPriority(), checked against 0x4ABC30
+UNREG	CEvent	14	.	CEvent::IsValid: m_bValid || m_nTimeActive <= GetLifeTime(), checked against 0x4AC020
+UNREG	CEventEscalator	11	.	checked against 0x4B25E0 (event types differ)
+UNREG	CEventGunShot	12	.	checked against 0x4AC6E0 (0 / 160.0f)
+UNREG	CEventVehicleHitAndRun	[57]	.	checked against 0x4AEA20 / 0x4B27B0
+UNREG	CTaskComplexEvasiveCower	9	.	thunk to CreateSubTask(TASK_SIMPLE_ACHIEVE_HEADING)

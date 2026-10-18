@@ -49,7 +49,8 @@ CTask* CTaskComplexStealCar::CreateSubTask(eTaskType taskType, CPed* ped) {
     case TASK_COMPLEX_ENTER_CAR_AS_DRIVER: {
         CEntity::SafeCleanUpRef(m_originalriver);
 
-        if (m_veh) {
+        // 0x640F85..0x640F99: the member is only assigned (and registered) when the vehicle HAS a driver; otherwise it keeps its old value
+        if (m_veh && m_veh->m_pDriver) {
             m_originalriver = m_veh->m_pDriver;
             CEntity::SafeRegisterRef(m_originalriver);
         }
@@ -120,7 +121,7 @@ CTask* CTaskComplexStealCar::CreateFirstSubTask(CPed* ped) {
             m_enterTimer.Start(10'000);
             return TASK_COMPLEX_ENTER_CAR_AS_DRIVER;
         }
-        return TASK_FINISHED;
+        return TASK_SIMPLE_PAUSE; // 0x644219: `push 0CAh` - without a vehicle the first sub task is a pause, not TASK_FINISHED (the port ended the task at once)
     }(), ped);
 }
 

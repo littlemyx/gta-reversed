@@ -8,6 +8,7 @@
 #include "Pad.h"
 #include "AnimBlendAssociation.h"
 #include "PedIntelligence.h"
+#include "Ragdoll/IKChain.h"
 
 // the fake ped's intelligence is all zero: no secondary tasks (the exe's getters read the same zeroed buffer)
 static void* __fastcall HostNullTask(CPedIntelligence*, int) { return nullptr; }
@@ -183,7 +184,53 @@ static void TestPedGeometry() {
     });
 }
 
+// IKChain_c::IsFacingTarget 0x617E60: raw buffers with the exe layout (chain: bone count +0xC, bone array +0x10, blend +0x18, effector pos +0x20,
+// offset pos (world space) +0x48; bone: world matrix at +0x3C, its position at +0x6C). The offset pos is biased to lie along the transformed effector
+// half of the time so that the dot >= 0.95 branch is reached (the first port version subtracted the transformed effector instead of the bone position).
+// RwV3dTransformVector / RwV3dNormalize are not linked into this test (the exe's versions at 0x7EDDC0 / 0x7ED9B0 dispatch through the uninitialised RW engine table):
+// define simple ones here (rotation part of the matrix; plain sqrt) and redirect the exe's to them, so that port and exe run the same maths and only the IK logic is compared
+RwV3d* RwV3dTransformVector(RwV3d* o, const RwV3d* in, const RwMatrix* m) {
+    const float x = in->x * m->right.x + in->y * m->up.x + in->z * m->at.x;
+    const float y = in->x * m->right.y + in->y * m->up.y + in->z * m->at.y;
+    const float z = in->x * m->right.z + in->y * m->up.z + in->z * m->at.z;
+    o->x = x; o->y = y; o->z = z;
+    return o;
+}
+RwReal RwV3dNormalize(RwV3d* o, const RwV3d* in) {
+    const float len = std::sqrt(in->x * in->x + in->y * in->y + in->z * in->z);
+    if (len > 0.f) { const float inv = 1.f / len; o->x = in->x * inv; o->y = in->y * inv; o->z = in->z * inv; } else { o->x = o->y = o->z = 0.f; }
+    return len;
+}
+static void TestIKChainFacing() {
+    static bool patched = false;
+    if (!patched) { patched = true; oracle::Patch(0x7EDDC0, (void*)&RwV3dTransformVector); oracle::Patch(0x7ED9B0, (void*)&RwV3dNormalize); }
+    Run("IKChain_c::IsFacingTarget 0x617E60", [](Rng& r, std::string& d) {
+        alignas(16) uint8 chain[0x58] {};
+        alignas(16) uint8 bone[0x98] {};
+        BoneNode_c* bones[1] = { reinterpret_cast<BoneNode_c*>(bone) };
+        float* m = reinterpret_cast<float*>(bone + 0x3C);
+        GenMatrix(r, reinterpret_cast<uint8*>(m), 5.f);
+        const CVector eff = GenV(r, r.below(4) ? 1.f : 10.f);
+        CVector off = GenV(r, 10.f);
+        if (r.below(2)) {   // aim point along the transformed effector direction, a little off
+            CVector t{ eff.x * m[0] + eff.y * m[4] + eff.z * m[8], eff.x * m[1] + eff.y * m[5] + eff.z * m[9], eff.x * m[2] + eff.y * m[6] + eff.z * m[10] };
+            const float len = std::sqrt(t.x * t.x + t.y * t.y + t.z * t.z);
+            if (len > 1e-6f) { const float k = (r.f01() * 5.f + 0.5f) / len; off = CVector{ m[12] + t.x * k + GenF(r, 0.15f), m[13] + t.y * k + GenF(r, 0.15f), m[14] + t.z * k + GenF(r, 0.15f) }; }
+        }
+        const int32 cnt = 1; void* arr = bones; const float blend = r.below(4) ? 0.97f + r.f01() * 0.03f : r.f01() * 1.2f;
+        std::memcpy(chain + 0xC, &cnt, 4); std::memcpy(chain + 0x10, &arr, 4); std::memcpy(chain + 0x18, &blend, 4);
+        std::memcpy(chain + 0x20, &eff, 12); std::memcpy(chain + 0x48, &off, 12);
+        const bool ra = reinterpret_cast<const IKChain_c*>(chain)->IsFacingTarget();
+        const bool re = oracle::Fn<bool __fastcall(const IKChain_c*, int)>(0x617E60)(reinterpret_cast<const IKChain_c*>(chain), 0);
+        Hit(ra);
+        if (ra == re) return true;
+        d = "chain " + Hex(chain, sizeof chain) + " bone matrix " + Hex(m, 64) + " got " + std::to_string(ra) + " exe " + std::to_string(re);
+        return false;
+    });
+}
+
 static void TestPedIK() {
+    TestIKChainFacing();
     for (int norm = 0; norm < 2; ++norm) {
         Run(norm ? "CPedIK::MoveLimb(normalized) 0x5FDB60" : "CPedIK::MoveLimb 0x5FDA60", [=](Rng& r, std::string& d) {
             alignas(16) uint8 ikb[sizeof(CPedIK)] {};

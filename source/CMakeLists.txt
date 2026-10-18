@@ -1104,6 +1104,8 @@ if (${RE_PROJECT}_RW_LIBRW)
         # --- peds
         game_sa/PedGeometryAnalyser.cpp
         game_sa/PedIK.cpp
+        game_sa/Ragdoll/IKChain.cpp
+        game_sa/Ragdoll/BoneNode.cpp
         game_sa/Entity/Ped/Ped.cpp
         game_sa/Collision/ColSphere.cpp
         game_sa/SurfaceInfos_c.cpp

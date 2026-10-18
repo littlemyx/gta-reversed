@@ -111,17 +111,23 @@ bool IKChain_c::IsAtTarget(float range, float* outDist) const {
 
 // 0x617E60
 bool IKChain_c::IsFacingTarget() const {
-    // Genuine cancer :D
+    const auto root = GetBones().front();
 
+    // targetPos = normalize(effectorPos transformed by the root bone's matrix)
     CVector targetPos;
-    RwV3dTransformVector(&targetPos, &m_EffectorPos, &GetBones().front()->GetMatrix());
+    RwV3dTransformVector(&targetPos, &m_EffectorPos, &root->GetMatrix());
     RwV3dNormalize(&targetPos, &targetPos);
 
-    CVector dir;
-    RwV3dSub(&dir, &m_OffsetPosWS, &targetPos);
+    // 0x617E6B..: dir = normalize(offsetPosWS - rootBonePos) (the vector at root bone + 0x6C = matrix pos),
+    // NOT `offsetPosWS - targetPos` (the port subtracted the transformed effector): with that dir the dot with
+    // targetPos was almost never >= 0.95, so `bGunReachedTarget` stayed false and AI gunmen never hit anything (U7/U16)
+    const auto rootPos = root->GetPosition();
+    CVector    dir     = m_OffsetPosWS - rootPos;
     RwV3dNormalize(&dir, &dir);
 
-    return RwV3dDotProduct(&dir, &targetPos) >= 0.95f && m_Blend > 0.98f;
+    // x87: (ty * dy + tx * dx) + tz * dz in extended precision
+    const auto dot = ((double)targetPos.y * (double)dir.y + (double)targetPos.x * (double)dir.x) + (double)targetPos.z * (double)dir.z;
+    return dot >= 0.95f && m_Blend > 0.98f;
 }
 
 // 0x617E50

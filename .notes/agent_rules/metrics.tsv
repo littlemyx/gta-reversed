@@ -46,3 +46,4 @@ date	agent	rules	kind	tokens	tool_uses	minutes	outcome	notes
 2026-10-18	ARREST0	v2	bug fix (small)	185281	83	43	fee fallthrough + 8 asm deviations in CGameLogic::Update; regress scenario arrest0 7/7
 2026-10-18	HEADING-AUDIT	v2	audit+fixes	336319	136	61	90 fns 0 unexplained, 19 gameplay fixes (23 commits); 4 OPEN -> SWIM-DUCK
 2026-10-18	USERDIR	v2	infra (small)	160611	71	38	NOTSA_STANDALONE_USERDIR + per-run dirs in all run scripts; Documents hash unchanged; left a zombie run_all_tests in its worktree
+2026-10-18	SWIM-DUCK	v2	verify+fix (small)	193849	81	36	4/4 claims confirmed+fixed, +3 deviations found in review

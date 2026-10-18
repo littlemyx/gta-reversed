@@ -159,7 +159,7 @@ static void GetPresetViewParams(RwCamera* camera, CVector& pos, float& elevation
     } else if (cosElevation < -1.0f) {
         cosElevation = -1.0f;
     }
-    elevation = (float)(90.0f - std::acos((double)cosElevation) * 57.2957763671875f); // 0x859878, 0x85991C
+    elevation = (float)(90.0f - x87::acos((double)cosElevation) * 57.2957763671875f); // 0x859878, 0x85991C
 
     // Project `at` onto the XZ plane
     RwV3d at = {
@@ -176,7 +176,7 @@ static void GetPresetViewParams(RwCamera* camera, CVector& pos, float& elevation
     } else if (dotAtZ < -1.0) {
         dotAtZ = -1.0;
     }
-    const double yawAngle = std::acos(dotAtZ) * 57.2957763671875f;
+    const double yawAngle = x87::acos(dotAtZ) * 57.2957763671875f;
     yaw = (float)yawAngle;
 
     const double dotAtX = ((double)PresetViewAxisX.y * at.y + (double)PresetViewAxisX.x * at.x) + (double)PresetViewAxisX.z * at.z;

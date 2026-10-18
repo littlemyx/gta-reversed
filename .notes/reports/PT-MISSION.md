@@ -1,0 +1,21 @@
+# PT-MISSION: playtest-1 U14, U9, U10, U11 (Windows host, 2026-10-17/18)
+
+Worktree C:/gta-scratch/ptm (StandaloneRelease + StandaloneRW), scratch C:/gta-scratch/ptm_out/<label> (screenshots, logs), routes C:/gta-scratch/ptm_route_*.txt, runner C:/gta-scratch/ptm_run*.sh.
+
+| finding | root cause | fix commit | verification |
+|---|---|---|---|
+| U14 crash `UNREACHABLE hit: ReadBeforeComboData` | D-B18's detached helper mapped only comboSet < 4 (neighbour globals); GetComboFlagsLo/GetComboFloatRaw call it for EVERY set, sets 4..16 (rel >= 0, inside m_aComboData) matched no neighbour -> abort in every melee fight (player and AI) | 7c5bedec | exe-oracle row (all int8 sets x offsets 0..0x87 x size 1/2/4 vs the raw memory read at the exe addresses, the exe's own start-up thunk 0x851F10 for the last float below the array; mutation caught); scripted repro: before = exact UNREACHABLE right after the Mayhem cheat, after = 14 route markers, 0 errors |
+| (found on the way) new game crashes in `CCarCtrl::RemoveDistantCars` | NOTSA-AUDIT's `GetAllValid() | rngv::reverse` pool loops: filter_view caches its first valid element, deleting it inside the loop lets the reverse walk run past slot 0 (AV, ECX=0xFDFDFE2D). 2 of 2 runs of HEAD crashed in the new-game cutscene | 6fd95a8e (CPool::GetAllValidReverse / GetAllValidWithIndexReverse, 49 sites) | 3 min route 14/14 markers; (PT-COMBAT's 414cac8a zero-fills pools too, which hides the symptom, the walk itself was still undefined) |
+| U10 mission state not reset after busted | `CRunningScript::ResetIP` popped with `m_IPStack[m_StackDepth--]` (entry above the top, ends on stack[1]); exe 0x485A50 / 0x469F00: clamp depth to 1, `--depth`, IP = stack[0] (the line after the mission's first GOSUB = mission cleanup). Affects busted, wasted and script-failed missions | 5d60eddd (ResetIP header-inline) | exe-oracle row DoDeathArrestCheck (random depth/IPs/state; old code fails it, even asserts out of range for depth 8). Scripted: `arrest:0` in the first mission: old = AV in ProcessOneCommand right after, new = the Busted tutorial plays at the police station; starting mission 12 over the running first mission: old = never torn down ("failing it first" retried 6508 times), new = once, mission 12 starts ("Get in Ryder's car"), `kill:0` there ends in the Wasted flow |
+| U11 hard to get back on the bike | Pad_SDL.cpp filled `CKeyboardState::enter` for the main Return key; the game reads rsENTER (the Enter/Exit vehicle key shown as "RETURN") from `extenter` (ControllerConfigManager rsENTER, app_input.cpp 0x743DF0) and numpad Enter from `enter`. Menus test both, so only vehicle entry was dead on Return | 30873a46 | scripted: next to the tutorial BMX ("Press RETURN to jump on the bike") Return did nothing before (CJ still standing 6 s later), after it mounts and pedals |
+| U9 pedalling animation broken after a cutscene | not reproduced: natural intro (no skip) -> BMX tutorial -> pedalling after the fixes looks normal (mark_pedal1). The earlier 0xFD-filled pool storage (PT-COMBAT) and the broken ResetIP/mission teardown are the candidates; aBikesDescs (bmx PEDAL/SPRINT descriptors) was already fixed by 01bce3c7 and matches the exe table (ids 194..208, flags checked) | - | screenshots (scratch) ptm_out/bmx/shots |
+
+PT-COMBAT's open lead (natural intro ends with CJ dead + frozen letterbox camera): with the current build the natural intro run (nat route, 10 min) shows the BMX tutorial in the alley, no death. Likely ResetIP/pool zero-fill.
+
+## Tooling added
+* Input injector (SDLWrapper.cpp): `mission:N` (free start like the debug menu's Missions Starter, fails a running mission first), `kill:0`, `arrest:0` (player ped state DEAD / ARRESTED). docs/STANDALONE.md.
+* Method note: the first mission (INTRO) lives in the shared MissionBlock; starting another mission over it runs the old mission's thread into garbage ("script command 23809 has no ported handler") - not a bug.
+
+## Not done
+* No A/B against the original exe for U9 (no repro). Original behaviour of the injected-Return case follows from the exe's key mapping (rsENTER -> extenter), not from a native run.
+* wave1_oracle_test: PC24 0 mismatches (143 functions); PC53 410 = pre-existing informational.

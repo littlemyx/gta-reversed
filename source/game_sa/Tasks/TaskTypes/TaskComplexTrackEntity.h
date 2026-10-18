@@ -18,7 +18,7 @@ public:
     uint32 m_expirationInterval{}; // 0x34
     bool gap2{};                   // 0x38
     bool gap3{};                   // 0x39
-    float m_fMoveRatio{};          // 0x3C
+    float m_fMoveRatio{-1.f};      // 0x3C (0x65F438: -1.0f)
     float float40{};               // 0x40
     CVector m_goToPos{};                 // 0x44
     float m_distToTargetSq{};      // 0x50

@@ -47,7 +47,7 @@ private:
     CTaskComplexFacial* Constructor() { this->CTaskComplexFacial::CTaskComplexFacial(); return this; }
 
 private:
-    bool              m_IsChewing{CGeneral::RandomBool(30.f)};
+    bool              m_IsChewing{CGeneral::GetRandomNumberInRange(0, 100) > 70}; // 0x690D38..0x690D5E: ftol(rand * (1/32768) * 100.0) > 70 (RandomBool(30) is the float version: other constant and compare)
     bool              m_TalkingLastFrame{};
     bool              m_IsAborting{};
 

@@ -65,6 +65,9 @@ if [ "${SKIP_BUILD:-0}" != 1 ]; then
       > "$OUT/configure.log" 2>&1 || { echo "configure failed, see $OUT/configure.log"; exit 2; }
   fi
 fi
+# Regenerate build.ninja first: a CMakeLists change (e.g. a new *_test target landed from another worktree) is otherwise only picked up
+# by the first real build below, after the target list was already taken from the stale file.
+[ "${SKIP_BUILD:-0}" = 1 ] || ninja -C "$BDIR" build.ninja >/dev/null 2>&1
 TESTS=$(ninja -C "$BDIR" -t targets all 2>/dev/null | sed -n 's/^\([A-Za-z0-9_]*_test\): phony$/\1/p' | sort -u | grep -v "^cmake_" | grep -E "$FILTER")
 [ -n "$TESTS" ] || { echo "no *_test targets found in $BDIR"; exit 2; }
 BUILD_FAIL=""

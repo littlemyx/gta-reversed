@@ -3314,6 +3314,11 @@ void CEventHandler::ComputeVehiclePotentialCollisionResponse(CEventPotentialGetR
         }
         const CVector pedPos{m_Ped->GetPosition()};
 
+        // The exe's inlined `LimitRadianAngle(GetRadianAngleBetweenPoints(veh.x, veh.y, ped.x, ped.y))` (4 sites: 0x4C1029, 0x4C111D, 0x4C13A5, 0x4C14A1), NOT CVector::Heading
+        const auto HeadingToVehicle = [&] {
+            return CGeneral::LimitRadianAngle(CGeneral::GetRadianAngleBetweenPoints(e->m_Vehicle->GetPosition2D(), m_Ped->GetPosition2D()));
+        };
+
         CVector vehBB[4];
         CPedGeometryAnalyser::ComputeEntityBoundingBoxCorners(pedPos.z, *e->m_Vehicle, vehBB);
 
@@ -3382,11 +3387,11 @@ void CEventHandler::ComputeVehiclePotentialCollisionResponse(CEventPotentialGetR
                     if (rndChance >= chanceToEvadeFront * 0.5f) { // Inverted
                         return { new CTaskComplexEvasiveStep{ e->m_Vehicle, dirToAvoidVehicle }, nullptr };
                     } else { // 0x4C0FD2
-                        m_Ped->m_fAimingRotation = (e->m_Vehicle->GetPosition2D() - m_Ped->GetPosition2D()).Heading();
+                        m_Ped->m_fAimingRotation = HeadingToVehicle(); // 0x4C1029
                         return { new CTaskSimpleShakeFist{}, nullptr };
                     }
                 } else if (rndChance < chanceToEvadeFront) { // 0x4C10DD
-                    const auto pedHeading = (e->m_Vehicle->GetPosition2D() - m_Ped->GetPosition2D()).Heading();
+                    const auto pedHeading = HeadingToVehicle(); // 0x4C111D
                     m_Ped->m_fCurrentRotation = pedHeading;
                     m_Ped->m_fAimingRotation  = pedHeading;
                     m_Ped->SetHeading(pedHeading);
@@ -3412,7 +3417,7 @@ void CEventHandler::ComputeVehiclePotentialCollisionResponse(CEventPotentialGetR
                     if (rndNum < 100) { // 0x4C1335
                         return { // Linus Torvalds would nuke this code with 6 levels of indentation xD
                             new CTaskComplexSequence{
-                                new CTaskSimpleAchieveHeading{ (e->m_Vehicle->GetPosition2D() - m_Ped->GetPosition2D()).Heading() },
+                                new CTaskSimpleAchieveHeading{ HeadingToVehicle() }, // 0x4C13A5
                                 new CTaskSimpleShakeFist{}
                             },
                             nullptr
@@ -3432,7 +3437,7 @@ void CEventHandler::ComputeVehiclePotentialCollisionResponse(CEventPotentialGetR
                             false
                         );
                         if (rndNum < 200) {
-                            return { new CTaskSimpleAchieveHeading{ (e->m_Vehicle->GetPosition2D() - m_Ped->GetPosition2D()).Heading() }, nullptr };
+                            return { new CTaskSimpleAchieveHeading{ HeadingToVehicle() }, nullptr }; // 0x4C14A1
                         }
                     }
                 }

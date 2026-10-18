@@ -388,6 +388,70 @@ static void InjRunCmd(const std::string& c) {
             NOTSA_INJ_LOG("[cmd] shot ped %p type %d hp %d -> GenerateDamageEvent=%d", (void*)&ped, ty, (int)ped.m_fHealth, (int)ok);
         }
     }
+    else if (!std::strcmp(name, "spawnmany")) { // spawnmany:N:RADIUS:ANGLEOFFSET_DEG  N peds on a ring around the player (models cycle through male/female skins), standing
+        int cnt = 8, rad = 5, off = 0;
+        std::sscanf(args.c_str(), "%d:%d:%d", &cnt, &rad, &off);
+        static const int models[] = { 7, 9, 10, 12, 13, 20, 21, 22, 23, 40, 41, 64, 65, 85, 87, 90, 92 };
+        for (int i = 0; i < cnt; i++) {
+            const int mdl = models[i % (int)std::size(models)];
+            CStreaming::RequestModel((eModelID)mdl, STREAMING_GAME_REQUIRED); CStreaming::LoadAllRequestedModels(false);
+            const float ang = DegreesToRadians((float)off) + (float)i * 6.2831853f / (float)cnt;
+            const auto p = pl->GetPosition() + CVector{ std::cos(ang) * (float)rad, std::sin(ang) * (float)rad, 0.f };
+            auto* np = CPopulation::AddPed(PED_TYPE_CIVMALE, (eModelID)mdl, p, false);
+            NOTSA_INJ_LOG("[cmd] spawnmany %d model %d ped %p at (%d,%d,%d)", i, mdl, (void*)np, (int)p.x, (int)p.y, (int)p.z);
+        }
+    }
+    else if (!std::strcmp(name, "killall")) { // killall:WEAPON:PIECE:DIR:RANGE  lethal damage event with the given weapon/piece/direction on every non-player ped within range
+        int wp = WEAPON_AK47, pc = PED_PIECE_TORSO, dir = 0, rg = 15;
+        std::sscanf(args.c_str(), "%d:%d:%d:%d", &wp, &pc, &dir, &rg);
+        for (auto& ped : GetPedPool()->GetAllValid()) {
+            if (&ped == pl || (ped.GetPosition() - pl->GetPosition()).Magnitude() > (float)rg) continue;
+            const auto ok = CWeapon::GenerateDamageEvent(&ped, pl, (eWeaponType)wp, 500, (ePedPieceTypes)pc, (uint8)dir);
+            NOTSA_INJ_LOG("[cmd] killall ped %p model %d weap %d piece %d dir %d -> %d", (void*)&ped, (int)ped.m_nModelIndex, wp, pc, dir, (int)ok);
+        }
+    }
+    else if (!std::strcmp(name, "lift")) { // lift:RANGE:H  raise every non-player ped within range by H metres (they fall; high falls kill)
+        int rg = 15, h = 30;
+        std::sscanf(args.c_str(), "%d:%d", &rg, &h);
+        for (auto& ped : GetPedPool()->GetAllValid()) {
+            if (&ped == pl || (ped.GetPosition() - pl->GetPosition()).Magnitude() > (float)rg) continue;
+            auto p = ped.GetPosition(); p.z += (float)h;
+            ped.SetPosn(p);
+            NOTSA_INJ_LOG("[cmd] lift ped %p model %d to z=%d", (void*)&ped, (int)ped.m_nModelIndex, (int)p.z);
+        }
+    }
+    else if (!std::strcmp(name, "dumpdead")) {
+#define DEADLOG(...) do { char dl_[480]; std::snprintf(dl_, sizeof dl_, __VA_ARGS__); NOTSA_INJ_LOG("%s", dl_); } while (0) // dumpdead:RANGE:FULL  per dead/dying ped: pose, slope IK, anims and skin bone matrices (max axis-length deviation, bone distance from the root)
+        int rg = 30, full = 0;
+        std::sscanf(args.c_str(), "%d:%d", &rg, &full);
+        for (auto& ped : GetPedPool()->GetAllValid()) {
+            if (&ped == pl || (ped.GetPosition() - pl->GetPosition()).Magnitude() > (float)rg) continue;
+            if (ped.m_nPedState != PEDSTATE_DEAD && ped.m_nPedState != PEDSTATE_DIE) continue;
+            const auto& m = ped.GetMatrix();
+            DEADLOG("[dead] ped %p model %d state %d hp %d pos=(%.2f,%.2f,%.2f) fwd=(%.2f,%.2f,%.2f) up=(%.2f,%.2f,%.2f) n578=(%.2f,%.2f,%.2f) slopePitch=%.3f slopeRoll=%.3f bSlope=%d standing=%d wasStanding=%d surf=%d coll=%d",
+                (void*)&ped, (int)ped.m_nModelIndex, (int)ped.m_nPedState, (int)ped.m_fHealth, m.GetPosition().x, m.GetPosition().y, m.GetPosition().z, m.GetForward().x, m.GetForward().y, m.GetForward().z, m.GetUp().x, m.GetUp().y, m.GetUp().z,
+                ped.field_578.x, ped.field_578.y, ped.field_578.z, ped.m_pedIK.m_fSlopePitch, ped.m_pedIK.m_fSlopeRoll, (int)ped.m_pedIK.bSlopePitch, (int)ped.bIsStanding, (int)ped.bWasStanding, (int)ped.m_nContactSurface, (int)ped.GetUsesCollision());
+            for (auto* a = RpAnimBlendClumpGetFirstAssociation(ped.GetRpClump()); a; a = RpAnimBlendGetNextAssociation(a)) {
+                DEADLOG("[dead]   anim grp %d id %d blend %.3f delta %.3f time %.3f speed %.2f flags %04x", (int)a->m_AnimGroupId, (int)a->m_AnimId, a->m_BlendAmount, a->m_BlendDelta, a->m_CurrentTime, a->m_Speed, (unsigned)a->m_Flags);
+            }
+            if (auto* hier = GetAnimHierarchyFromSkinClump(ped.GetRpClump())) {
+                auto* arr = RpHAnimHierarchyGetMatrixArray(hier);
+                const int nn = hier->numNodes;
+                float maxDev = 0.f, maxDist = 0.f; int devBone = -1, distBone = -1;
+                for (int i = 0; i < nn; i++) {
+                    const auto& mm = arr[i];
+                    const auto L = [](const RwV3d& v) { return std::sqrt(v.x * v.x + v.y * v.y + v.z * v.z); };
+                    const float dv = std::max({ std::abs(L(mm.right) - 1.f), std::abs(L(mm.up) - 1.f), std::abs(L(mm.at) - 1.f) });
+                    const float ds = L(mm.pos);
+                    if (!(dv <= maxDev)) { maxDev = dv; devBone = hier->nodeInfo[i].id; }
+                    if (ds > maxDist) { maxDist = ds; distBone = hier->nodeInfo[i].id; }
+                    if (full) DEADLOG("[dead]   bone %d id %d pos=(%.2f,%.2f,%.2f) r=(%.2f,%.2f,%.2f) u=(%.2f,%.2f,%.2f) a=(%.2f,%.2f,%.2f)", i, (int)hier->nodeInfo[i].id, mm.pos.x, mm.pos.y, mm.pos.z, mm.right.x, mm.right.y, mm.right.z, mm.up.x, mm.up.y, mm.up.z, mm.at.x, mm.at.y, mm.at.z);
+                }
+                DEADLOG("[dead]   bones=%d maxAxisDev=%.3f (bone id %d) maxDist=%.2f (bone id %d)", nn, maxDev, devBone, maxDist, distBone);
+            }
+        }
+#undef DEADLOG
+    }
     else if (!std::strcmp(name, "armour")) { pl->m_fArmour = (float)std::atoi(args.c_str()); }
     else if (!std::strcmp(name, "health")) { pl->m_fHealth = (float)std::atoi(args.c_str()); }
 }

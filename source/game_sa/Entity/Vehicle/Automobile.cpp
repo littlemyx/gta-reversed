@@ -1803,7 +1803,7 @@ int32 CAutomobile::ProcessEntityCollision(CEntity* entity, CColPoint* outColPoin
             switch (entity->GetType()) {
             case ENTITY_TYPE_VEHICLE:
             case ENTITY_TYPE_OBJECT: {
-                CEntity::ChangeEntityReference(m_apWheelCollisionEntity[i], entity->AsPhysical());
+                CEntity::SetEntityReference(m_apWheelCollisionEntity[i], entity->AsPhysical()); // 0x6AD147: the exe stores + registers, it does not clean up the old reference
 
                 m_vWheelCollisionPos[i] = cp.m_vecPoint - entity->GetPosition();
                 if (entity->GetIsTypeVehicle()) {

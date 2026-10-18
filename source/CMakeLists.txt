@@ -749,6 +749,14 @@ if (${RE_PROJECT}_RW_LIBRW)
         game_sa/Shadows.cpp
         game_sa/Core/Vector2D.cpp
         game_sa/Entity/Vehicle/Vehicle.cpp
+        game_sa/Entity/Vehicle/Trailer.cpp
+        game_sa/Collision/ColSphere.cpp
+        game_sa/Collision/ColBox.cpp
+        game_sa/Collision/ColLine.cpp
+        game_sa/Collision/ColTriangle.cpp
+        game_sa/Collision/Sphere.cpp
+        game_sa/Collision/BoundingBox.cpp
+        game_sa/Collision/ColPoint.cpp
         game_sa/Weapon.cpp
         game_sa/Entity/Placeable.cpp
         game_sa/CullZones.cpp

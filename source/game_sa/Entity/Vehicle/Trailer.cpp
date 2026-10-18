@@ -307,12 +307,15 @@ int32 CTrailer::ProcessEntityCollision(CEntity* entity, CColPoint* outColPoints)
         tcd->m_nNumLines = 0; // Later reset back to original value
     }
 
-    // Hide triangles in some cases
+    // Hide triangles in some cases (0x6D008B..0x6D00CE: the other entity's col data is touched ONLY in this branch;
+    // reading it unconditionally dereferenced a null `ocd` for a building whose COL has no data - playtest-2 AV at 09:46)
     const auto shouldHideTriangles = m_pTowingVehicle == entity || m_pVehicleBeingTowed == entity;
-    const auto originalTNumTri = tcd->m_nNumTriangles, // Saving my sanity here, and unconditionally assigning
-               originalONumTri = ocd->m_nNumTriangles;
+    uint16 originalTNumTri{}, originalONumTri{};
     if (shouldHideTriangles) {
-        tcd->m_nNumTriangles = ocd->m_nNumTriangles = 0;
+        originalTNumTri = tcd->m_nNumTriangles;
+        originalONumTri = entity->GetColData()->m_nNumTriangles;
+        tcd->m_nNumTriangles = 0;
+        entity->GetColData()->m_nNumTriangles = 0;
     }
 
     std::array<CColPoint, NUM_TRAILER_SUSP_LINES> suspLineCPs{};
@@ -333,12 +336,12 @@ int32 CTrailer::ProcessEntityCollision(CEntity* entity, CColPoint* outColPoints)
     // Restore hidden triangles
     if (shouldHideTriangles) {
         tcd->m_nNumTriangles = originalTNumTri;
-        ocd->m_nNumTriangles = originalONumTri;
+        entity->GetColData()->m_nNumTriangles = originalONumTri;
     }
 
     size_t numProcessedLines{};
     if (tcd->m_nNumLines) {
-        // Process the real wheel's susp lines
+        // Process the real wheel's susp lines (0x6D0190)
         for (auto i = 0; i < NUM_TRAILER_WHEELS; i++) {
             // 0x6AD0D4
             const auto& cp = suspLineCPs[i];
@@ -348,41 +351,40 @@ int32 CTrailer::ProcessEntityCollision(CEntity* entity, CColPoint* outColPoints)
                 m_fWheelsSuspensionCompression[i] = touchDist;
                 m_wheelColPoint[i] = cp;
                 m_anCollisionLighting[i] = cp.m_nLightingB;
-                m_nContactSurface = cp.m_nSurfaceTypeB;
 
                 switch (entity->GetType()) {
                 case ENTITY_TYPE_VEHICLE:
                 case ENTITY_TYPE_OBJECT: {
-                    CEntity::ChangeEntityReference(m_apWheelCollisionEntity[i], entity->AsPhysical());
+                    // 0x6D01F7: the exe stores the pointer and registers the reference; it does NOT clean up the old one
+                    CEntity::SetEntityReference(m_apWheelCollisionEntity[i], entity->AsPhysical());
 
                     m_vWheelCollisionPos[i] = cp.m_vecPoint - entity->GetPosition();
-                    if (entity->GetIsTypeVehicle()) {
-                        m_anCollisionLighting[i] = entity->AsVehicle()->m_anCollisionLighting[i];
-                    }
                     break;
                 }
-                case ENTITY_TYPE_BUILDING: {
+                }
+
+                m_nContactSurface = cp.m_nSurfaceTypeB; // 0x6D0248, for every entity type
+
+                if (entity->GetIsTypeBuilding()) {
                     m_pEntityWeAreOn = entity;
                     m_bTunnel = entity->m_bTunnel;
                     m_bTunnelTransition = entity->m_bTunnelTransition;
-                    break;
-                }
                 }
             }
+        }
 
-            // Process trailer support lines
-            for (auto i = 0; i < NUM_TRAILER_SUPPORTS; i++) {
-                const auto suspLineIdx = NUM_TRAILER_WHEELS + i;
+        // Process trailer support lines (0x6D02BF), a separate loop AFTER the wheels
+        for (auto i = 0; i < NUM_TRAILER_SUPPORTS; i++) {
+            const auto suspLineIdx = NUM_TRAILER_WHEELS + i;
 
-                const auto touchDist = suspLineTouchDists[suspLineIdx];
-                if (touchDist >= BILLS_EXTENSION_LIMIT || touchDist >= m_supportRatios[i]) {
-                    continue;
-                }
-
-                numProcessedLines++;
-                m_supportRatios[i] = touchDist;
-                m_supportCPs[i] = suspLineCPs[suspLineIdx];
+            const auto touchDist = suspLineTouchDists[suspLineIdx];
+            if (touchDist >= BILLS_EXTENSION_LIMIT || touchDist >= m_supportRatios[i]) {
+                continue;
             }
+
+            numProcessedLines++;
+            m_supportRatios[i] = touchDist;
+            m_supportCPs[i] = suspLineCPs[suspLineIdx];
         }
     } else {
         tcd->m_nNumLines = NUM_TRAILER_SUSP_LINES;
@@ -393,8 +395,9 @@ int32 CTrailer::ProcessEntityCollision(CEntity* entity, CColPoint* outColPoints)
         if (!entity->GetIsTypeBuilding()) {
             entity->AsPhysical()->AddCollisionRecord(this);
         }
-        if (numColPts > 0 && entity->GetIsTypeBuilding()
-            || (entity->GetIsTypeObject() && entity->AsPhysical()->physicalFlags.bDisableCollisionForce)) {
+        // 0x6D035F: both terms are gated by numColPts > 0
+        if (numColPts > 0 && (entity->GetIsTypeBuilding()
+            || (entity->GetIsTypeObject() && entity->AsPhysical()->physicalFlags.bDisableCollisionForce))) {
             SetHasHitWall(true);
         }
     }

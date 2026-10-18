@@ -48,6 +48,7 @@ CTaskSimpleRunNamedAnim::CTaskSimpleRunNamedAnim(
     m_bDontInterrupt = bDontInterrupt;
     m_bRunInSequence = bRunInSequence;
     m_bOffsetAtEnd = bOffsetPed;
+    m_bOffsetAvailable = false; // 0x61AA1F: `and al, 8Dh` rewrites the whole flag byte, bit 6 (offset available) is cleared; it kept the stale pool bit
     m_fBlendDelta = blendDelta;
     strcpy_s(m_animName, animName);
     strcpy_s(m_animGroupName, animGroupName);

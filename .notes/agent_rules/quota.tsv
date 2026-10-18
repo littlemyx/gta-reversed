@@ -1,0 +1,8 @@
+# weekly all-models quota checkpoints (get_usage), agents running in parallel at the time
+datetime	weekly_pct	parallel_agents	rules	note
+2026-10-16T21:20	4	2	v1	session start
+2026-10-17T05:00	8	3	v1	
+2026-10-17T09:00	11	3	v1	
+2026-10-17T16:00	16	3	v1	
+2026-10-18T05:40	36	5	v1	playtest-1 wave (5 agents)
+2026-10-18T14:07	44	5	v1	~1 %/h at 5 agents

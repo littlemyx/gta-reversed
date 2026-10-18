@@ -1,0 +1,38 @@
+# per-agent metrics for comparing rule versions; tokens/tool_uses/duration from the harness completion notice (subagent_tokens = tokens reported for the whole run)
+date	agent	rules	kind	tokens	tool_uses	minutes	outcome	notes
+2026-10-16	D-B07V	v1	stream-D verify	243652	170	84	gates pass, 2 port bugs	
+2026-10-16	WIN-TEST	v1	tests+soaks	268785	171	225	38/43, 5 GPU fails found	15-min soak not obtained (GPU contention)
+2026-10-17	BUG-QUIT	v1	bug	257703	154	180	4 UAF fixed	
+2026-10-17	RW-GPU	v1	bug	248181	146	94	5 tests fixed	
+2026-10-17	WINDOWED	v1	feature	211437	80	84	windowed mode	
+2026-10-17	D-B09	v1	stream-D 2 batches	404444	237	180	B09+B10	
+2026-10-17	D-B12	v1	stream-D 2 batches	302084	111	78	B12+B13+SIN_LUT	
+2026-10-17	D-B14	v1	stream-D 2 batches	354330	159	148	B14+B15	
+2026-10-17	WIN-PERF	v1	measurement	443691	268	332	perf report, menu gate	
+2026-10-17	D-B16	v1	stream-D 2 batches	293456	137	81	B16+B17	
+2026-10-17	D-B18	v1	stream-D 2 batches	342383	155	106	B18+B19	
+2026-10-17	IDLE-LOCK	v1	port	129110	48	88	Idle lock ported	
+2026-10-17	PLAY-KIT	v1	tooling	118231	54	21	play kit	
+2026-10-17	D-DE	v1	stream-D 3 slices	429935	220	128	D1/D2/E1, 1 bug	
+2026-10-17	TRIAGE	v1	read-only triage	125235	19	3	file mapping	wrong about compile state
+2026-10-17	D-C12V	v1	stream-D verify	273082	130	85	C1/C2 verified	
+2026-10-17	D-C34	v1	stream-D 2 slices	379046	165	125	C3+C4, ctor fixes	
+2026-10-17	D-C56	v1	stream-D 2 slices	504311	323	130	C5+C6	
+2026-10-17	BUG-VIDEO	v1	bug	258315	145	96	video hang fixed	
+2026-10-17	CAM-INIT	v1	port	245259	94	67	CCamera::Init exact	
+2026-10-17	D-B20	v1	stream-D batch	516149	259	118	B20 + init order	
+2026-10-17	FLAKES	v1	bug hunt	284796	150	145	IplStore bug	
+2026-10-17	D-F1	v1	stream-D slice	276451	160	110	UNCLAIMED 0	
+2026-10-17	D-F2	v1	stream-D slice	333157	144	143	hooks out	
+2026-10-17	BUG-REFS	v1	bug	337043	168	107	pool shutdown	
+2026-10-17	D-F3	v1	stream-D slice	369998	165	119	loader removed	
+2026-10-17	D-G	v1	stream-D 2 slices	236483	100	52	exe-free clean clone	
+2026-10-17	FIX-AUDIT	v1	audit	406597	227	86	17 switches off	
+2026-10-17	NOTSA-AUDIT	v1	audit	751451	358	79	~20 sites gated	stopped early (wrong-ID wrap-up)
+2026-10-18	ORACLE-W1	v1	oracle wave	573375	279	122	+576 rows, 10 bugs	
+2026-10-18	PT-AUDIO	v1	playtest bug	476642	228	127	U12/U13	
+2026-10-18	VT-OVERRIDES	v1	audit+port	93433	410	188	8 overrides, 6 cheats	tokens figure looks compacted
+2026-10-18	PT-RENDER	v1	playtest bugs	553795	361	388	U1-U3	
+2026-10-18	PT-COMBAT	v1	playtest bugs	773310	471	425	U5-U7 root cause	
+2026-10-18	PT-MISSION	v1	playtest bugs	504978	371	514	U10/U11/U14	
+2026-10-18	PT2-INTERIOR	v1	playtest bugs	402541	237	211	U15/U16	

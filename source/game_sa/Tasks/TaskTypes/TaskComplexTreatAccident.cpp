@@ -106,5 +106,7 @@ CTask* CTaskComplexTreatAccident::CreateSubTask(eTaskType taskType, CPed* ped)
 // 0x658AF0
 float CTaskComplexTreatAccident::ComputeHeading(CPed* ped) {
     const auto injuredPedPos = (m_pAccident->m_pPed->GetBonePosition(BONE_HEAD) + m_pAccident->m_pPed->GetBonePosition(BONE_PELVIS)) * 0.5f;
-    return (injuredPedPos - ped->GetPosition()).Heading(true);
+    const auto& pedPos = ped->GetPosition();
+    // 0x658B68, 0x658B76: LimitRadianAngle(GetRadianAngleBetweenPoints(injured.x, injured.y, ped.x, ped.y)), not CVector::Heading(true)
+    return CGeneral::LimitRadianAngle(CGeneral::GetRadianAngleBetweenPoints(injuredPedPos.x, injuredPedPos.y, pedPos.x, pedPos.y));
 }

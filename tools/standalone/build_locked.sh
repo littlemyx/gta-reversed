@@ -16,15 +16,21 @@ set -u
 SCRATCH="$(hp "${SCRATCH:-$DEF_SCRATCH}")"; mkdir -p "$SCRATCH"
 TIMEOUT_S="${TIMEOUT_S:-2400}"; LOCK_WARN_MIN="${LOCK_WARN_MIN:-20}"
 LOCK="$SCRATCH/build.lock"; HELD=0; WARNED=0
-release() { [ "$HELD" = 1 ] && rmdir "$LOCK" 2>/dev/null; HELD=0; }
+release() { [ "$HELD" = 1 ] && { rm -f "$LOCK/pid"; rmdir "$LOCK" 2>/dev/null; }; HELD=0; }
 trap release EXIT; trap 'exit 130' INT TERM
 until mkdir "$LOCK" 2>/dev/null; do
+  # A holder killed hard (e.g. an agent's tool timeout) never runs its EXIT trap: drop a lock whose recorded holder is gone.
+  holder=$(cat "$LOCK/pid" 2>/dev/null)
+  if [ -n "$holder" ] && ! kill -0 "$holder" 2>/dev/null; then
+    echo "build_locked: holder pid $holder of $LOCK is gone - removing the stale lock" >&2
+    rm -f "$LOCK/pid"; rmdir "$LOCK" 2>/dev/null; continue
+  fi
   if [ "$WARNED" = 0 ] && [ -n "$(find "$LOCK" -maxdepth 0 -mmin +"$LOCK_WARN_MIN" 2>/dev/null)" ]; then
     echo "build_locked: $LOCK is older than $LOCK_WARN_MIN min - if no cl.exe/link.exe has CPU the holder hung: kill it and rmdir the lock" >&2; WARNED=1
   fi
   sleep 15
 done
-HELD=1
+HELD=1; echo $$ > "$LOCK/pid"
 if [ "$HOST" = windows ]; then
   timeout "$TIMEOUT_S" "$@"; rc=$?
   [ $rc = 124 ] && taskkill //F //IM cl.exe //IM link.exe >/dev/null 2>&1

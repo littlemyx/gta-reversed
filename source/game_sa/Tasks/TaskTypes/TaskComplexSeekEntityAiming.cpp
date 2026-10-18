@@ -30,7 +30,7 @@ CTaskComplexSeekEntityAiming::CTaskComplexSeekEntityAiming(CEntity* toSeek, floa
 
 // 0x695820
 CTaskComplexSeekEntityAiming::CTaskComplexSeekEntityAiming(const CTaskComplexSeekEntityAiming& o) :
-    CTaskComplexSeekEntityAiming{o.m_ToSeek, o.m_AimRadius, o.m_AimRadius}
+    CTaskComplexSeekEntityAiming{o.m_ToSeek, o.m_SeekRadius, o.m_AimRadius} // 0x695853: the exe passes [esi+10h] (seek radius) and [esi+14h] (aim radius)
 {
 }
 

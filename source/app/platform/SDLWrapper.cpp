@@ -57,12 +57,18 @@ static bool IsInFullscreen()
 #include <set>
 #include <fstream>
 #ifdef NOTSA_STANDALONE_RUN
+#include "Pools/Pools.h"
+#include "Pickups.h"
+#include "Wanted.h"
+#include "PedIntelligence.h"
+#endif
+#ifdef NOTSA_STANDALONE_RUN
 void RequestMarkScreenshot(const char* name); // standalone/rw/camera.cpp
 #endif
 struct NotsaInjectMissionInfo { int32 offset; uint8 bytes[16]; };
 bool NotsaInjectStartMission(int32 missionId, NotsaInjectMissionInfo* info); // toolsmenu/DebugModules/Script/MissionDebugModule.cpp
 namespace {
-struct InjEv { uint64_t t; bool down; SDL_Keycode key; int mx = -1, my = -1; int vmode = -1; int mission = -1; std::string mark; std::string probe; std::string until; uint64_t maxMs = 0; std::string skipIf, label; size_t skipTo = 0; };
+struct InjEv { uint64_t t; bool down; SDL_Keycode key; int mx = -1, my = -1; int vmode = -1; int mission = -1; std::string mark; std::string probe; std::string cmd; std::string until; uint64_t maxMs = 0; std::string skipIf, label; size_t skipTo = 0; };
 std::vector<InjEv> s_InjEvents;
 size_t             s_InjNext = 0;
 bool               s_InjInit = false;
@@ -187,6 +193,11 @@ void InjInit() {
             ev.mission = cmd == "kill" ? 100000 : 100001;
             s_InjEvents.push_back(ev);
         }
+        else if (cmd == "cmd") { // cmd:NAME[:args]  run-build diagnostics actions (probe), see InjRunCmd
+            InjEv ev{ t, true, 0 };
+            ev.cmd = arg;
+            s_InjEvents.push_back(ev);
+        }
         else if (cmd == "mark") { // mark:NAME  logs "[mark] NAME" when the script clock reaches it (progress markers for tools/standalone/soak.sh)
             InjEv ev{ t, true, 0 };
             ev.mark = arg;
@@ -210,8 +221,177 @@ void InjInit() {
     s_InjStart = GetTickCount64();
     NOTSA_INJ_LOG("input injector: %u events", (unsigned)s_InjEvents.size());
 }
+
+#ifdef NOTSA_STANDALONE_RUN
+// NOTSA_STANDALONE_PROBE=1: once a second (wall clock) log the player's vitals / wanted level and the nearest peds (type, health, weapon, active task chain) and the live pickups.
+// Diagnostics for the combat playtest findings (police idle, no damage, no weapon drops); run build only.
+static void ProbeDump() {
+    static const bool on = std::getenv("NOTSA_STANDALONE_PROBE") != nullptr;
+    static uint64_t   last = 0;
+    static float      lastHp = -1.f, lastArm = -1.f;
+    if (!on) return;
+    if (gGameState != GAME_STATE_IDLE || FrontEndMenuManager.m_bMenuActive || CTimer::GetFrameCounter() < 5) return;
+    {
+        static char lastCheat[32] = {};
+        if (std::strncmp(lastCheat, CCheat::m_CheatString, 30) != 0) {
+            std::strncpy(lastCheat, CCheat::m_CheatString, 30);
+            NOTSA_INJ_LOG("[pc-cheatstr] t=%lu '%s'", (unsigned long)GetTickCount(), lastCheat);
+        }
+    }
+    auto* pl = FindPlayerPed();
+    if (!pl) return;
+    if (pl->m_fHealth != lastHp || pl->m_fArmour != lastArm) {
+        NOTSA_INJ_LOG("[pc-dmg] t=%lu player hp %d -> %d armour %d -> %d lastDamager=%p weap=%d", (unsigned long)GetTickCount(), (int)lastHp, (int)pl->m_fHealth, (int)lastArm, (int)pl->m_fArmour, (void*)pl->m_pLastEntityDamage, (int)pl->m_nLastWeaponDamage);
+        lastHp = pl->m_fHealth; lastArm = pl->m_fArmour;
+    }
+    {
+        static int lastChaos = -12345, lastWl = -12345, lastMaxWl = -12345;
+        auto* ww = FindPlayerWanted();
+        const int wl = ww ? (int)ww->GetWantedLevel() : -1, ch = ww ? ww->m_ChaosLevel : -1, mx = (int)CWanted::MaximumWantedLevel;
+        if (wl != lastWl || ch != lastChaos || mx != lastMaxWl) {
+            NOTSA_INJ_LOG("[pc-wanted] t=%lu wanted %d -> %d chaos %d -> %d maxWanted %d -> %d maxChaos %d", (unsigned long)GetTickCount(), lastWl, wl, lastChaos, ch, lastMaxWl, mx, (int)CWanted::MaximumChaosLevel);
+            lastWl = wl; lastChaos = ch; lastMaxWl = mx;
+        }
+    }
+    {
+        static bool once = false;
+        if (!once) {
+            once = true;
+#pragma warning(suppress: 4200 4838)
+            NOTSA_INJ_LOG("[offs] CVehicle: autoPilot=%x gas=%x brake=%x steerAngle=%x driver=%x | autoPilot: mission=%x temp=%x style=%x cruise=%x speed=%x target=%x",
+                (unsigned)offsetof(CVehicle, m_autoPilot), (unsigned)offsetof(CVehicle, m_GasPedal), (unsigned)offsetof(CVehicle, m_BrakePedal), (unsigned)offsetof(CVehicle, m_fSteerAngle), (unsigned)offsetof(CVehicle, m_pDriver),
+                (unsigned)offsetof(CAutoPilot, m_nCarMission), (unsigned)offsetof(CAutoPilot, m_nTempAction), (unsigned)offsetof(CAutoPilot, m_nCarDrivingStyle), (unsigned)offsetof(CAutoPilot, m_nCruiseSpeed), (unsigned)offsetof(CAutoPilot, m_speed), (unsigned)offsetof(CAutoPilot, m_TargetEntity));
+        }
+    }
+    const uint64_t now = GetTickCount64();
+    if (now - last < 1000) return;
+    last = now;
+    auto* w = FindPlayerWanted();
+    auto  pos = pl->GetPosition();
+    auto& aw  = pl->GetActiveWeapon();
+    auto* pt  = pl->GetIntelligence()->GetTaskManager().GetActiveTask();
+    NOTSA_INJ_LOG("[pc] t=%lu frame=%u player pos=(%d,%d,%d) hp=%d arm=%d state=%d wanted=%d chaos=%d backoff=%d/%d/%d weap=%d(ammo %d) task=%d",
+        (unsigned long)GetTickCount(), (unsigned)CTimer::GetFrameCounter(), (int)pos.x, (int)pos.y, (int)pos.z, (int)pl->m_fHealth, (int)pl->m_fArmour, (int)pl->m_nPedState,
+        w ? (int)w->GetWantedLevel() : -1, w ? w->m_ChaosLevel : -1, w ? (int)w->m_bPoliceBackOff : -1, w ? (int)w->m_bPoliceBackOffGarage : -1, w ? (int)w->m_bEverybodyBackOff : -1,
+        (int)aw.GetType(), (int)aw.GetTotalAmmo(), pt ? (int)pt->GetTaskType() : -1);
+    {
+        auto* pd  = pl->GetPlayerData();
+        auto* pad = CPad::GetPad(0);
+        NOTSA_INJ_LOG("[pc]   flags canBeDamaged=%d invuln=%d bulletproof=%d meleeproof=%d collproof=%d | padSafe=%d padSafeCut=%d ctrlDisabled=%d | cutscene=%d fading=%d inVeh=%d mission=%d",
+            pd ? (int)pd->m_bCanBeDamaged : -1, (int)pl->physicalFlags.bInvulnerable, (int)pl->physicalFlags.bBulletProof, (int)pl->physicalFlags.bMeleeProof, (int)pl->physicalFlags.bCollisionProof,
+            (int)pad->bPlayerSafe, (int)pad->bPlayerSafeForCutscene, (int)pad->ArePlayerControlsDisabled(), (int)CCutsceneMgr::IsRunning(), (int)TheCamera.GetFading(), (int)pl->bInVehicle, (int)CTheScripts::IsPlayerOnAMission());
+    }
+    {
+        int nPeds = 0, nVehs = 0;
+        for (auto& pp : GetPedPool()->GetAllValid()) { (void)pp; nPeds++; }
+        for (auto& vv : GetVehiclePool()->GetAllValid()) { (void)vv; nVehs++; }
+        NOTSA_INJ_LOG("[pc]   pop: densMul=%d peds(pool)=%d vehs(pool)=%d totalPeds=%d civ=%d gang=%d cop=%d inUseMax=%d | popcycle other=%d cops=%d gangs=%d zoneType=%d | randCars=%d lawCars=%d missCars=%d carDens=%d | noGang=%d onlyGang=%d noCops=%d moreCars=%d polStation=%d",
+            (int)(CPopulation::PedDensityMultiplier * 100.f), nPeds, nVehs, (int)CPopulation::ms_nTotalPeds, (int)CPopulation::ms_nTotalCivPeds, (int)CPopulation::ms_nTotalGangPeds, (int)CPopulation::ms_nNumCop, (int)CPopulation::MaxNumberOfPedsInUse,
+            (int)(CPopCycle::m_NumOther_Peds * 10.f), (int)(CPopCycle::m_NumCops_Peds * 10.f), (int)(CPopCycle::m_NumGangs_Peds * 10.f), (int)CPopCycle::m_nCurrentZoneType,
+            (int)CCarCtrl::NumRandomCars, (int)CCarCtrl::NumLawEnforcerCars, (int)CCarCtrl::NumMissionCars, (int)(CCarCtrl::CarDensityMultiplier * 100.f),
+            (int)CPopulation::m_bDontCreateRandomGangMembers, (int)CPopulation::m_bOnlyCreateRandomGangMembers, (int)CPopulation::m_bDontCreateRandomCops, (int)CPopulation::m_bMoreCarsAndFewerPeds, (int)CPopulation::bInPoliceStation);
+    }
+    int shown = 0, total = 0;
+    for (auto& ped : GetPedPool()->GetAllValid()) {
+        if (&ped == pl) continue;
+        const float d = (ped.GetPosition() - pos).Magnitude();
+        if (d > 60.f) continue;
+        total++;
+        if (shown >= 8) continue;
+        shown++;
+        auto& mgr = ped.GetIntelligence()->GetTaskManager();
+        char chain[160] = {};
+        int  n = 0;
+        for (auto* t = mgr.GetActiveTask(); t && n < 140; t = t->GetSubTask()) {
+            n += std::snprintf(chain + n, sizeof(chain) - n, "%d>", (int)t->GetTaskType());
+        }
+        auto& pw = ped.GetActiveWeapon();
+        NOTSA_INJ_LOG("[pc]   ped %p model=%d type=%d d=%d hp=%d st=%d weap=%d(ammo %d, slot %d) tasks=%s evq=%d evhi=%d cur=%d tmpTask=%d perTask=%d",
+            (void*)&ped, (int)ped.m_nModelIndex, (int)ped.m_nPedType, (int)d, (int)ped.m_fHealth, (int)ped.m_nPedState, (int)pw.GetType(), (int)pw.GetTotalAmmo(), (int)ped.m_nActiveWeaponSlot, chain,
+            (int)ped.GetEventGroup().GetNumEventsInQueue(), ped.GetEventGroup().GetHighestPriorityEvent() ? (int)ped.GetEventGroup().GetHighestPriorityEvent()->GetEventType() : -1,
+            ped.GetEventHandlerHistory().GetCurrentEvent() ? (int)ped.GetEventHandlerHistory().GetCurrentEvent()->GetEventType() : -1,
+            mgr.GetTemporaryEventResponseTask() ? (int)mgr.GetTemporaryEventResponseTask()->GetTaskType() : -1, mgr.GetPresistentEventResponseTask() ? (int)mgr.GetPresistentEventResponseTask()->GetTaskType() : -1);
+    }
+    {
+        int loaded = 0;
+        for (size_t i = 0; i < 64; i++) { if (ThePaths.IsAreaLoaded(i)) loaded++; }
+        const auto nn = ThePaths.FindNodeClosestToCoors(pos, PATH_TYPE_VEH);
+        NOTSA_INJ_LOG("[pc]   paths: areasLoaded=%d closestVehNode(area=%d node=%d)", loaded, (int)nn.m_wAreaId, (int)nn.m_wNodeId);
+    }
+    {
+        int shownV = 0;
+        for (auto& veh : GetVehiclePool()->GetAllValid()) {
+            const float d = (veh.GetPosition() - pos).Magnitude();
+            if (d > 100.f || shownV >= 6) continue;
+            shownV++;
+            NOTSA_INJ_LOG("[pc]   vehx %p apSpeed=%d maxTraffic=%d style=%d obstruct=%p target=%p gas=%d brake=%d hbrake=%d steer=%d speedScale=%u", (void*)&veh, (int)(veh.m_autoPilot.m_speed * 100.f), (int)(veh.m_autoPilot.m_fMaxTrafficSpeed * 100.f), (int)veh.m_autoPilot.m_nCarDrivingStyle,
+                (void*)veh.m_autoPilot.m_ObstructingEntity, (void*)veh.m_autoPilot.m_TargetEntity, (int)(veh.m_GasPedal * 100.f), (int)(veh.m_BrakePedal * 100.f), (int)veh.vehicleFlags.bIsHandbrakeOn, (int)(veh.m_fSteerAngle * 100.f), (unsigned)veh.m_autoPilot.m_nSpeedScaleFactor);
+            NOTSA_INJ_LOG("[pc]   veh %p model=%d d=%d speed=%d law=%d status=%d mission=%d temp=%d cruise=%d ctrl=%x driver=%d(type %d) dest=(%d,%d) nodes(cur %d/%d next %d/%d)", (void*)&veh, (int)veh.m_nModelIndex, (int)d, (int)(veh.m_vecMoveSpeed.Magnitude() * 100.f),
+                (int)veh.IsLawEnforcementVehicle(), (int)veh.GetStatus(), (int)veh.m_autoPilot.m_nCarMission, (int)veh.m_autoPilot.m_nTempAction, (int)veh.m_autoPilot.m_nCruiseSpeed, (unsigned)veh.m_autoPilot.m_nCarCtrlFlags,
+                veh.m_pDriver ? 1 : 0, veh.m_pDriver ? (int)veh.m_pDriver->m_nPedType : -1, (int)veh.m_autoPilot.m_vecDestinationCoors.x, (int)veh.m_autoPilot.m_vecDestinationCoors.y, (int)veh.m_autoPilot.m_currentAddress.m_wAreaId, (int)veh.m_autoPilot.m_currentAddress.m_wNodeId, (int)veh.m_autoPilot.m_startingRouteNode.m_wAreaId, (int)veh.m_autoPilot.m_startingRouteNode.m_wNodeId);
+        }
+    }
+    int pk = 0;
+    for (auto& p : CPickups::GetAllActivePickups()) { pk++; (void)p; }
+    NOTSA_INJ_LOG("[pc]   peds within 60m: %d (shown %d), active pickups: %d", total, shown, pk);
+}
+#endif
+#ifdef NOTSA_STANDALONE_RUN
+// cmd:wanted:N | cmd:tp:X:Y:Z | cmd:give:WEAPON:AMMO | cmd:armour:N | cmd:health:N | cmd:log:TEXT  (run build diagnostics; the real cheat / script paths are exercised by typed keys instead whenever possible)
+static void InjRunCmd(const std::string& c) {
+    auto* pl = FindPlayerPed();
+    char name[32] = {}; float a = 0, b = 0, d = 0; int w = 0, n = 0;
+    std::sscanf(c.c_str(), "%31[^:]", name);
+    const std::string args = c.size() > strlen(name) ? c.substr(strlen(name) + 1) : "";
+    NOTSA_INJ_LOG("[cmd] %s", c.c_str());
+    if (!pl) return;
+    if (!std::strcmp(name, "wanted")) { pl->CheatWantedLevel((eWantedLevel)std::atoi(args.c_str())); }
+    else if (!std::strcmp(name, "tp")) {
+        std::sscanf(args.c_str(), "%f:%f:%f", &a, &b, &d);
+        const CVector p{ a, b, d };
+        CStreaming::LoadScene(p); CStreaming::LoadSceneCollision(p);
+        pl->Teleport(p, false);
+        CStreaming::LoadScene(p); CStreaming::LoadAllRequestedModels(false);
+    }
+    else if (!std::strcmp(name, "give")) { std::sscanf(args.c_str(), "%d:%d", &w, &n); CStreaming::RequestModel(CWeaponInfo::GetWeaponInfo((eWeaponType)w)->m_nModelId1, STREAMING_GAME_REQUIRED); CStreaming::LoadAllRequestedModels(false); pl->GiveWeapon((eWeaponType)w, n, false); pl->SetCurrentWeapon((eWeaponType)w); }
+    else if (!std::strcmp(name, "cheats")) { // dump the cheat dispatch table
+        for (int i = 0; i < 24; i++) { NOTSA_INJ_LOG("[cheat] %d fn=%p hash=%08x active=%d", i, (void*)CCheat::m_aCheatFunctions[i], (unsigned)CCheat::m_aCheatHashKeys[i], (int)CCheat::m_aCheatsActive[i]); }
+    }
+    else if (!std::strcmp(name, "cheat")) { CCheat::ApplyCheat((eCheats)std::atoi(args.c_str())); }
+    else if (!std::strcmp(name, "spawnped")) { // spawnped:MODEL:PEDTYPE  a ped 6 m in front of the player (standing, no tasks beyond the default)
+        int mdl = 7, ty = 4;
+        std::sscanf(args.c_str(), "%d:%d", &mdl, &ty);
+        CStreaming::RequestModel((eModelID)mdl, STREAMING_GAME_REQUIRED); CStreaming::LoadAllRequestedModels(false);
+        const auto p = pl->GetPosition() + pl->GetForward() * 6.f;
+        auto* np = CPopulation::AddPed((ePedType)ty, (eModelID)mdl, p, false);
+        NOTSA_INJ_LOG("[cmd] spawned ped %p model %d type %d at (%d,%d,%d)", (void*)np, mdl, ty, (int)p.x, (int)p.y, (int)p.z);
+    }
+    else if (!std::strcmp(name, "shootnear")) { // shootnear:RANGE  lethal damage event on every non-player ped within range
+        int rg = 15; std::sscanf(args.c_str(), "%d", &rg);
+        for (auto& ped : GetPedPool()->GetAllValid()) {
+            if (&ped == pl || (ped.GetPosition() - pl->GetPosition()).Magnitude() > (float)rg) continue;
+            const auto ok = CWeapon::GenerateDamageEvent(&ped, pl, WEAPON_AK47, 500, PED_PIECE_TORSO, 0);
+            NOTSA_INJ_LOG("[cmd] shot ped %p type %d -> %d", (void*)&ped, (int)ped.m_nPedType, (int)ok);
+        }
+    }
+    else if (!std::strcmp(name, "shoot")) { // shoot:PEDTYPE:RANGE  lethal weapon damage event (the path bullets take) on every ped of that type within range of the player
+        int ty = 6, rg = 40;
+        std::sscanf(args.c_str(), "%d:%d", &ty, &rg);
+        for (auto& ped : GetPedPool()->GetAllValid()) {
+            if (&ped == pl || (int)ped.m_nPedType != ty || (ped.GetPosition() - pl->GetPosition()).Magnitude() > (float)rg) continue;
+            const auto ok = CWeapon::GenerateDamageEvent(&ped, pl, WEAPON_AK47, 500, PED_PIECE_TORSO, 0);
+            NOTSA_INJ_LOG("[cmd] shot ped %p type %d hp %d -> GenerateDamageEvent=%d", (void*)&ped, ty, (int)ped.m_fHealth, (int)ok);
+        }
+    }
+    else if (!std::strcmp(name, "armour")) { pl->m_fArmour = (float)std::atoi(args.c_str()); }
+    else if (!std::strcmp(name, "health")) { pl->m_fHealth = (float)std::atoi(args.c_str()); }
+}
+#endif
 void InjPump() {
     if (!s_InjInit) InjInit();
+#ifdef NOTSA_STANDALONE_RUN
+    ProbeDump();
+#endif
     const uint64_t real = GetTickCount64() - s_InjStart;
     // script clock: frozen at the barrier's time while it holds, shifted by the total hold time afterwards
     const auto clock = [&]() -> uint64_t { return s_InjHolding ? s_InjEvents[s_InjNext].t : (uint64_t)((int64_t)real - s_InjShift); };
@@ -236,6 +416,14 @@ void InjPump() {
             } else {
                 s_InjNext++;
             }
+            continue;
+        }
+        if (!ev.cmd.empty()) {
+            const std::string c = ev.cmd;
+            s_InjNext++;
+#ifdef NOTSA_STANDALONE_RUN
+            InjRunCmd(c);
+#endif
             continue;
         }
         if (!ev.label.empty()) { s_InjNext++; continue; }

@@ -1,4 +1,5 @@
 #include "StdInc.h"
+#include "game_sa/DetachedShared.h"
 
 #include "TaskGangHassleVehicle.h"
 
@@ -142,7 +143,7 @@ CTask* CTaskGangHassleVehicle::CreateNextSubTask(CPed* ped) {
         30.f,
         1'000'000,
         1'000,
-        1.f // 0xC18CF0 (`fEntityPosChangeThreshold`)
+        NOTSA_GLOBAL_EXPR(0xC18CF0, (float), notsa::shared::EntityPosChangeThreshold) // `fEntityPosChangeThreshold`, read at runtime
     };
 }
 

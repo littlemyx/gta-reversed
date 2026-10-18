@@ -1,4 +1,5 @@
 #include "StdInc.h"
+#include "game_sa/DetachedShared.h"
 #include "TaskComplexOnFire.h"
 #include "TaskComplexDie.h"
 #include "TaskComplexSmartFleeEntity.h"
@@ -52,7 +53,7 @@ CTask* CTaskComplexOnFire::CreateSubTask(eTaskType taskType) {
             1000.0,
             100000,
             1000,
-            1.f
+            NOTSA_GLOBAL_EXPR(0xC18CF0, (float), notsa::shared::EntityPosChangeThreshold) // 0x6334D4: `push [0xC18CF0]` (read at runtime: scripts can change it), not a literal 1.0
         };
     case TASK_FINISHED:
         return nullptr;

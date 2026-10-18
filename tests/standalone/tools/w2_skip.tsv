@@ -138,7 +138,6 @@ CTaskComplexExtinguishFires::CreateFirstSubTask	every case faults identically in
 CTaskComplexExtinguishFires::CreateNextSubTask	the EXE kills the process on the garbage fixture (fastfail / stack overflow / unrecoverable fault); cannot be caught, so the row is skipped
 CTaskComplexExtinguishFires::GetNearestFire	every case faults identically in the port and in the exe (the fixture lacks the object the function dereferences): no information
 CTaskComplexFacial::ControlSubTask	the EXE kills the process on the garbage fixture (fastfail / stack overflow / unrecoverable fault); cannot be caught, so the row is skipped
-CTaskComplexFacial::CreateNextSubTask	OPEN: 1 of 60 cases (special inputs) leaves m_RequestB at 0 in the port and at -1 in the exe; the asm and the port source agree on every path I could read, the sub task of that fixture is the suspect (see ORACLE-W2.md, open items)
 CTaskComplexFleeEntity::CreateSubTask	every case faults identically in the port and in the exe (the fixture lacks the object the function dereferences): no information
 CTaskComplexFleeShooting::MakeAbortable	every case faults identically in the port and in the exe (the fixture lacks the object the function dereferences): no information
 CTaskComplexFollowNodeRoute::CalcBlendRatio	3 of 60 cases: the port faults inside the std::vector / tuple access of m_Route with the garbage route where the exe reads garbage memory that happens to be mapped (fixture)
@@ -360,10 +359,8 @@ CTaskSimpleSwim::ApplyRollAndPitch	the EXE kills the process on the garbage fixt
 CTaskSimpleThrowControl::MakeAbortable	every case faults identically in the port and in the exe (the fixture lacks the object the function dereferences): no information
 CTaskSimpleThrowControl::ProcessPed	the EXE kills the process on the garbage fixture (fastfail / stack overflow / unrecoverable fault); cannot be caught, so the row is skipped
 CTaskSimpleUseGun::Clone	the EXE kills the process on the garbage fixture (fastfail / stack overflow / unrecoverable fault); cannot be caught, so the row is skipped
-CTaskSimpleUseGun::ControlGunMove	OPEN: 1 of 60 cases (special inputs) leaves a different m_MoveCmd.y (port 17.9 / exe -113.0); the rewritten step logic matches the asm on all other cases
 CTaskSimpleUseGun::RequirePistolWhip	every case faults identically in the port and in the exe (the fixture lacks the object the function dereferences): no information
 CTaskSimpleUseGun::Reset	every case faults identically in the port and in the exe (the fixture lacks the object the function dereferences): no information
 CTaskSimpleWaitForBus::ProcessPed	every case faults identically in the port and in the exe (the fixture lacks the object the function dereferences): no information
 refdiff:CTaskComplexDestroyCarArmed::Clone	same exe quirk through the constructor
 refdiff:CTaskComplexDestroyCarArmed::Constructor	the EXE registers the by-value parameter (0x621FD5 lea eax,[esp+18h]; push eax; call RegisterReference) instead of m_VehToDestroy: a stack slot in the vehicle reference list and an unregistered member. The port registers the member (deliberately not replicated: a dangling stack write)
-CTaskSimpleDuck::ControlDuckMove	OPEN: 1 of 60 cases (special inputs) leaves a different m_MoveCmd.y (port -53.2 / exe -113.0), same pattern as CTaskSimpleUseGun::ControlGunMove; the port step logic mirrors the asm for every ordinary input

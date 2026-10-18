@@ -1,4 +1,4 @@
-610 function rows, 304 TUs
+613 function rows, 304 TUs
 SKIP CEvent::GetSoundLevel 0x4B2850: every case faults identically in the port and in the exe (the fixture lacks the object the function dereferences): no information
 NOARG CEventAcquaintancePed::TakesPriorityOver 0x4AF8F0 param "const CEvent& refEvent"
 NOARG CEventAreaCodes::TakesPriorityOver 0x4B2350 param "const CEvent& refEvent"
@@ -191,7 +191,6 @@ SKIP CTaskComplexExtinguishFires::GetNearestFire 0x697600: every case faults ide
 SKIP CTaskComplexExtinguishFires::CreateNextSubTask 0x698110: the EXE kills the process on the garbage fixture (fastfail / stack overflow / unrecoverable fault); cannot be caught, so the row is skipped
 SKIP CTaskComplexExtinguishFires::CreateFirstSubTask 0x698290: every case faults identically in the port and in the exe (the fixture lacks the object the function dereferences): no information
 SKIP CTaskComplexExtinguishFires::ControlSubTask 0x698330: every case faults identically in the port and in the exe (the fixture lacks the object the function dereferences): no information
-SKIP CTaskComplexFacial::CreateNextSubTask 0x690DC0: OPEN: 1 of 60 cases (special inputs) leaves m_RequestB at 0 in the port and at -1 in the exe; the asm and the port source agree on every path I could read, the sub task of that fixture is the suspect (see ORACLE-W2.md, open items)
 SKIP CTaskComplexFacial::ControlSubTask 0x690FC0: the EXE kills the process on the garbage fixture (fastfail / stack overflow / unrecoverable fault); cannot be caught, so the row is skipped
 SKIP CTaskComplexFleeEntity::CreateSubTask 0x65BA30: every case faults identically in the port and in the exe (the fixture lacks the object the function dereferences): no information
 RET CTaskComplexFleePoint::CreateSubTask 0x65B460 "auto"
@@ -347,7 +346,6 @@ SKIP CTaskSimpleCarSlowDragPedOut::SetPedPosition 0x6480E0: the EXE kills the pr
 NOARG CTaskSimpleCarSlowDragPedOut::ComputeAnimID_Wrapper 0x648100 param "AssocGroupId& animGroup"
 SKIP CTaskSimpleClearLookAt::ProcessPed 0x6346C0: every case faults identically in the port and in the exe (the fixture lacks the object the function dereferences): no information
 SKIP CTaskSimpleDoHandSignal::ProcessPed 0x660940: the EXE kills the process on the garbage fixture (fastfail / stack overflow / unrecoverable fault); cannot be caught, so the row is skipped
-SKIP CTaskSimpleDuck::ControlDuckMove 0x6923F0: OPEN: 1 of 60 cases (special inputs) leaves a different m_MoveCmd.y (port -53.2 / exe -113.0), same pattern as CTaskSimpleUseGun::ControlGunMove; the port step logic mirrors the asm for every ordinary input
 SKIP CTaskSimpleDuck::CanPedDuck 0x692610: every case faults identically in the port and in the exe (the fixture lacks the object the function dereferences): no information
 SKIP CTaskSimpleDuckToggle::ProcessPed 0x62F6E0: the EXE kills the process on the garbage fixture (fastfail / stack overflow / unrecoverable fault); cannot be caught, so the row is skipped
 SKIP CTaskSimpleDuckWhileShotsWhizzing::ProcessPed 0x694640: every case faults identically in the port and in the exe (the fixture lacks the object the function dereferences): no information
@@ -381,7 +379,6 @@ SKIP CTaskSimpleSetCharDecisionMaker::ProcessPed 0x635430: every case faults ide
 SKIP CTaskSimpleSwim::ApplyRollAndPitch 0x68A8E0: the EXE kills the process on the garbage fixture (fastfail / stack overflow / unrecoverable fault); cannot be caught, so the row is skipped
 SKIP CTaskSimpleThrowControl::MakeAbortable 0x61F9B0: every case faults identically in the port and in the exe (the fixture lacks the object the function dereferences): no information
 SKIP CTaskSimpleThrowControl::ProcessPed 0x61F9F0: the EXE kills the process on the garbage fixture (fastfail / stack overflow / unrecoverable fault); cannot be caught, so the row is skipped
-SKIP CTaskSimpleUseGun::ControlGunMove 0x61E0C0: OPEN: 1 of 60 cases (special inputs) leaves a different m_MoveCmd.y (port 17.9 / exe -113.0); the rewritten step logic matches the asm on all other cases
 SKIP CTaskSimpleUseGun::RequirePistolWhip 0x61E200: every case faults identically in the port and in the exe (the fixture lacks the object the function dereferences): no information
 SKIP CTaskSimpleUseGun::Reset 0x624DC0: every case faults identically in the port and in the exe (the fixture lacks the object the function dereferences): no information
 SKIP CTaskSimpleWaitForBus::ProcessPed 0x632AA0: every case faults identically in the port and in the exe (the fixture lacks the object the function dereferences): no information

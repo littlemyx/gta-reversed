@@ -13,6 +13,7 @@
 #if __has_include("wave2_oracle_gen_func.inc")
 #include "wave2_oracle_gen_func.inc"      // GENERATED (tools/gen_w2_funcs.py): task / event member and static functions
 #define W2_HAVE_FUNC 1
+#include "wave2_oracle_edge.inc"         // hand-maintained edge-input rows (W2-OPEN)
 #endif
 
 static void TestW2Infra() {
@@ -56,5 +57,6 @@ static void TestW2() {
 #endif
 #ifdef W2_HAVE_FUNC
     TestW2Funcs();
+    TestW2Edge();
 #endif
 }

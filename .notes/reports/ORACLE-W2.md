@@ -81,8 +81,7 @@ FightingControl default (144), Choking time (47), SeekEntityAiming copy ctor (12
 | 161 | the exe kills the process on the garbage fixture (fast-fail / stack overflow); includes many destructors |
 | 26 | the port asserts (MSVC debug check: `std::array` index / `ranges::take` with a garbage negative count) where the exe silently reads / loops; a state the game never produces |
 | 3 | the port copies a garbage unterminated name with `strcpy_s` (the exe copies a bounded number of bytes) |
-| 2 | **OPEN**: `CTaskSimpleUseGun::ControlGunMove`, `CTaskSimpleDuck::ControlDuckMove`: 1 of 60 special-input cases differs (port 17.9 / exe -113.0). The step logic matches the asm for every ordinary input |
-| 1 | **OPEN**: `CTaskComplexFacial::CreateNextSubTask`: 1 of 60 special-input cases leaves `m_RequestB` 0 (port) vs -1 (exe); asm and source agree on every path I read |
+| 0 | (was 3 OPEN rows, `ControlGunMove` / `ControlDuckMove` / `CTaskComplexFacial::CreateNextSubTask`: all fixed or explained, un-skipped in W2-OPEN, `.notes/reports/W2-OPEN.md`) | |
 | 1 | `CTaskComplexTrackEntity::ControlSubTask`: the hook is Locked (the exe version is used in the game) |
 | 1 | `CTaskComplexTrackEntity::CalcMoveRatio`: the exe's lazily-initialised function statics live in the exe data image, the port's in its own storage (compare differs by construction; values checked by hand) |
 | 2 | `CTaskComplexSeekEntityAiming::Create{First,Next}SubTask`: embedded vptr artefact |

@@ -48,8 +48,18 @@ struct Reg { uintptr_t va; size_t n; bool lenient = false; size_t skipOff = ~siz
 // snapshot hooks of the entity reference world (optional)
 struct Ext { void (*save)(rf::Blobs&) = nullptr; void (*restore)(const rf::Blobs&) = nullptr; bool (*same)(const rf::Blobs&, const rf::Blobs&, std::string&) = nullptr; };
 
+// empties the x87 register stack (control word kept): a case that faulted inside an exe function (or any earlier row that left a value behind) leaves entries on the stack, and an exe function
+// that then pushes 3+ values hits a stack overflow (masked: QNaN "indefinite") and takes its unordered compare path - a state no real call has, since the game's functions are balanced
+// (found with CTaskSimpleDuck::ControlDuckMove / CTaskSimpleUseGun::ControlGunMove: 1 case in 60 differed only in the full run, 6 stale entries on the stack, tag word F596)
+static void CleanX87() {
+    unsigned short cw;
+    __asm { fnstcw cw }
+    __asm { fninit }
+    __asm { fldcw cw }
+}
 // runs one side inside __try: 0 = ok, 1 = fault (details in g_fault*). No C++ objects with destructors in this frame.
 static int GuardedCall(const std::function<uint64_t()>& f, uint64_t& out) {
+    CleanX87();
     __try { out = f(); return 0; } __except (FaultFilter(GetExceptionInformation())) { return 1; }
 }
 // Both with the deterministic allocator. Returns true when return value, allocation volume, arena contents and every register agree.

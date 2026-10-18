@@ -331,6 +331,15 @@ void psMouseSetPos(RwV2d* pos) {
     POINT point = { .x = LONG(pos->x), .y = LONG(pos->y) };
     ::ClientToScreen(PSGLOBAL(window), &point);
     ::SetCursorPos(point.x, point.y);
+#ifdef NOTSA_USE_SDL3
+    // The exe's SetCursorPos produces a WM_MOUSEMOVE (__MainWndProc WM_MOUSEMOVE 0x748323: m_nMousePosWinX/Y = lParam), which is how CentreMousePointer centred the menu cursor.
+    // The SDL mouse is in relative mode (UIRenderer.cpp, PLAYTEST-1 U3): it ignores the Windows cursor and queues nothing for the warp, so do both parts by hand.
+    if (PSGLOBAL(sdlWindow)) {
+        SDL_WarpMouseInWindow(PSGLOBAL(sdlWindow), pos->x, pos->y);
+    }
+    FrontEndMenuManager.m_nMousePosWinX = (int32)pos->x;
+    FrontEndMenuManager.m_nMousePosWinY = (int32)pos->y;
+#endif
     PSGLOBAL(lastMousePos) = *pos;
 }
 

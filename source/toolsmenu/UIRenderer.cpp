@@ -42,8 +42,17 @@ UIRenderer::UIRenderer() :
     m_ImIO->DisplaySize = ImVec2(SCREEN_WIDTH, SCREEN_HEIGHT);
 
 #ifdef NOTSA_STANDALONE_RUN
-    // Standalone run build: no debug UI backends (no D3D9 device access, no SDL/Win32 hooks, no relative mouse mode)
+    // Standalone run build: no debug UI backends (no D3D9 device access, no SDL/Win32 hooks)
     m_InputActive = false;
+#ifdef NOTSA_USE_SDL3
+    // ... but the game itself needs the mouse captured, like the original exe's DirectInput mouse (exclusive / relative, unbounded deltas) plus its hidden
+    // cursor (WndProc WM_SETCURSOR -> SetCursor(NULL)) and the per-frame CentreMousePointer: without it the real cursor moves in absolute desktop
+    // coordinates, hits the screen edge and the camera stops turning (PLAYTEST-1 U3). SDL relative mode = raw deltas, cursor hidden and confined to the
+    // window while it has the focus (a focus-less windowed test run is not captured); SDL keeps integrating a window-clamped x/y for the menu cursor.
+    if (PSGLOBAL(sdlWindow)) {
+        SDL_SetWindowRelativeMouseMode(PSGLOBAL(sdlWindow), true);
+    }
+#endif
     return;
 #endif
 #ifdef NOTSA_USE_SDL3

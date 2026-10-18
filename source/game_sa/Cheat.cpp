@@ -254,7 +254,7 @@ void CCheat::BeachPartyCheat() {
         CStreaming::StreamPedsIntoRandomSlots(peds);
 
         CPlayerPed* player = FindPlayerPed();
-        player->GetClothesDesc()->SetTextureAndModel(nullptr, nullptr, CLOTHES_TEXTURE_SPECIAL); // FIX_BUGS
+        // (an upstream FIX_BUGS call SetTextureAndModel(nullptr, nullptr, SPECIAL) used to be here: not in the exe (0x4392A1 / 0x439786: the first call is the torso), and GetUppercaseKey(nullptr) crashed the run build)
         player->GetClothesDesc()->SetTextureAndModel("torso", nullptr, CLOTHES_TEXTURE_TORSO);
         player->GetClothesDesc()->SetTextureAndModel("shortskhaki", "shorts", CLOTHES_TEXTURE_LEGS);
         player->GetClothesDesc()->SetTextureAndModel("flipflop", "flipflop", CLOTHES_TEXTURE_SHOES);
@@ -334,7 +334,7 @@ void CCheat::DrivebyCheat() {
 // 0x439540
 void CCheat::DuskCheat() {
     Toggle(CHEAT_STOP_GAME_CLOCK_ORANGE_SKY);
-    if (!IsActive(CHEAT_STOP_GAME_CLOCK_ORANGE_SKY)) {
+    if (IsActive(CHEAT_STOP_GAME_CLOCK_ORANGE_SKY)) { // 0x43954E: `je 0x439569` (return) when the new value is 0 - the port set the clock only when switching OFF
         CClock::ms_nGameClockHours = 21;
         CClock::ms_nGameClockMinutes = 0;
         CClock::ms_nGameClockSeconds = 0;
@@ -398,7 +398,7 @@ void CCheat::FatCheat() {
 // 0x439720
 void CCheat::FunhouseCheat() {
     Toggle(CHEAT_FUNHOUSE_THEME);
-    if (IsActive(CHEAT_FUNHOUSE_THEME)) {
+    if (!IsActive(CHEAT_FUNHOUSE_THEME)) { // 0x439735: `je 0x439875` when the new value is 0 (the port had the two branches swapped)
         CPostEffects::m_bHeatHazeFX = false;
     } else {
         int32 peds[] = {
@@ -408,7 +408,7 @@ void CCheat::FunhouseCheat() {
         CStreaming::StreamPedsIntoRandomSlots(peds);
 
         CPlayerPed* player = FindPlayerPed();
-        player->GetClothesDesc()->SetTextureAndModel(nullptr, nullptr, CLOTHES_TEXTURE_SPECIAL); // FIX_BUGS
+        // (an upstream FIX_BUGS call SetTextureAndModel(nullptr, nullptr, SPECIAL) used to be here: not in the exe (0x4392A1 / 0x439786: the first call is the torso), and GetUppercaseKey(nullptr) crashed the run build)
         player->GetClothesDesc()->SetTextureAndModel("torso", "torso", CLOTHES_TEXTURE_TORSO);
         player->GetClothesDesc()->SetTextureAndModel("legsheart", "legs", CLOTHES_TEXTURE_LEGS);
         player->GetClothesDesc()->SetTextureAndModel("timberhike", "bask1", CLOTHES_TEXTURE_SHOES);
@@ -600,7 +600,7 @@ void CCheat::MuscleCheat() {
 // 0x439e50
 void CCheat::NinjaCheat() {
     Toggle(CHEAT_NINJA_THEME);
-    if (IsActive(CHEAT_NINJA_THEME)) {
+    if (!IsActive(CHEAT_NINJA_THEME)) { // 0x439E68: `je 0x439F4D` when the new value is 0: only the black traffic is switched off (the port had the two branches swapped)
         if (IsActive(CHEAT_BLACK_TRAFFIC)) {
             Disable(CHEAT_BLACK_TRAFFIC);
         }
@@ -645,8 +645,7 @@ void CCheat::NinjaCheat() {
 void CCheat::NotWantedCheat() {
     CPlayerPed* player = FindPlayerPed();
     player->CheatWantedLevel(eWantedLevel::WANTED_CLEAN);
-    player->bWantedByPolice = false;
-    Toggle(CHEAT_I_DO_AS_I_PLEASE);
+    Toggle(CHEAT_I_DO_AS_I_PLEASE); // 0x4396C0: no `bWantedByPolice = false` (a port-only store)
 }
 
 // 0x4395b0
@@ -726,13 +725,16 @@ CVehicle* CCheat::VehicleCheat(eModelID modelId) {
         return nullptr;
     }
 
+    // 0x43A128: the exe reads the model's streaming flags BEFORE RequestModel(model, GAME_REQUIRED) (`movzx ebx, [info + 0xC6]`) and tests that copy after the model has loaded;
+    // reading them afterwards always saw GAME_REQUIRED (just set by the request), so the spawned model never became deletable again
+    const bool wasGameRequired = CStreaming::GetInfo(modelId).IsGameRequired();
     CStreaming::RequestModel(modelId, STREAMING_GAME_REQUIRED);
     CStreaming::LoadAllRequestedModels(false);
     if (!CStreaming::IsModelLoaded(modelId)) {
         return nullptr;
     }
 
-    if (!CStreaming::GetInfo(modelId).IsGameRequired()) {
+    if (!wasGameRequired) {
         CStreaming::SetModelIsDeletable(modelId);
         CStreaming::SetModelTxdIsDeletable(modelId);
     }
@@ -811,7 +813,7 @@ void CCheat::MonsterTruckCheat() {
 // unused
 // 0x4395a0
 void CCheat::PredatorCheat() {
-    VehicleCheat(MODEL_PREDATOR);
+    // 0x4395A0 is a bare `ret`: the exe's cheat with this hash does nothing (the port spawned a Predator)
 }
 
 // 0x43a560
@@ -866,13 +868,10 @@ void CCheat::VehicleSkillsCheat() {
     CStats::SetStatValue(STAT_CYCLING_SKILL, 1000.0f);
 }
 
-// 0x439c70
+// 0x439DD0 (VT-OVERRIDES: the two branches were swapped. The exe: toggled ON -> stream the peds, EverybodyAttacksPlayerCheat(), EVERYONE_ARMED = 1; toggled OFF -> EVERYONE_ARMED = 0, EverybodyAttacksPlayerCheat())
 void CCheat::VillagePeopleCheat() {
     Toggle(CHEAT_PEDS_ATTACK_YOU_WITH_ROCKETS);
     if (IsActive(CHEAT_PEDS_ATTACK_YOU_WITH_ROCKETS)) {
-        Disable(CHEAT_EVERYONE_ARMED);
-        EverybodyAttacksPlayerCheat();
-    } else {
         int32 peds[] = {
             MODEL_WMYCON, MODEL_CWMYFR, MODEL_ARMY, MODEL_LAPDM1,
             MODEL_BIKERB, UNLOAD_MODEL, UNLOAD_MODEL, UNLOAD_MODEL,
@@ -880,6 +879,9 @@ void CCheat::VillagePeopleCheat() {
         CStreaming::StreamPedsIntoRandomSlots(peds);
         EverybodyAttacksPlayerCheat();
         Enable(CHEAT_EVERYONE_ARMED);
+    } else {
+        Disable(CHEAT_EVERYONE_ARMED);
+        EverybodyAttacksPlayerCheat();
     }
 }
 
@@ -922,7 +924,7 @@ void CCheat::WeaponCheat1() {
 
     CPlayerPed* player1 = FindPlayerPed(1);
     if (player1) {
-        player->GiveWeaponSet1();
+        player1->GiveWeaponSet1(); // 0x43864D: the second player (the port gave player 0 the set twice)
     }
 
     std::ranges::for_each(weapons, [](auto model) { CStreaming::SetModelIsDeletable(model); });

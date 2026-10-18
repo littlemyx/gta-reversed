@@ -179,24 +179,38 @@ void CPedIK::PitchForSlope() {
             return &RpHAnimHierarchyGetMatrixArray(hier)[RpHAnimIDGetIndex(hier, bone)];
         };
 
-        const auto RotateBone = [clumpData, &hier](eBoneTag bone, float angle, const CVector& axis = ZaxisIK) {
-            RtQuatRotate(&clumpData->m_FrameDatas[RpHAnimIDGetIndex(hier, bone)].KeyFrame->q, &axis, angle, rwCOMBINEPRECONCAT);
+        const auto RotateBone = [clumpData, &hier](eBoneTag bone, float angle, const CVector& axis = ZaxisIK, RwOpCombineType combine = rwCOMBINEPRECONCAT) {
+            RtQuatRotate(&clumpData->m_FrameDatas[RpHAnimIDGetIndex(hier, bone)].KeyFrame->q, &axis, angle, combine);
         };
 
         if (std::abs(m_fSlopePitch) > 0.01f) {
-            if (&m_pPed->GetIntelligence()->GetTaskManager() && m_pPed->GetIntelligence()->GetTaskManager().GetActiveTask()->GetTaskType() == TASK_SIMPLE_STEALTH_KILL) {
+            if (const auto* const activeTask = m_pPed->GetIntelligence()->GetTaskManager().GetActiveTask(); activeTask && activeTask->GetTaskType() == TASK_SIMPLE_STEALTH_KILL) { // 0x5FE3A2: GetActiveTask() == null takes the normal branch
                 RotateBone(BONE_SPINE, RadiansToDegrees(m_fSlopePitch));
                 m_pPed->bUpdateMatricesRequired = true;
             } else {
                 RotateBone(BONE_SPINE, RadiansToDegrees(-m_fSlopePitch) * 0.75f);
                 m_pPed->bUpdateMatricesRequired = true;
 
-                RotateBone(BONE_R_THIGH, x87::asin(GetAnimHierarchyMatrix(BONE_R_THIGH)->up.z) * 30.0f * m_fSlopePitch);
-                RotateBone(BONE_R_CALF, std::max((float)-x87::asin(GetAnimHierarchyMatrix(BONE_R_THIGH)->up.z), 0.0f) * -30.0f * m_fSlopePitch);
-                RotateBone(BONE_R_FOOT, std::max((float)x87::asin(GetAnimHierarchyMatrix(BONE_R_FOOT)->up.z), 0.0f) * -30.0f * m_fSlopePitch);
-                RotateBone(BONE_L_THIGH, x87::asin(GetAnimHierarchyMatrix(BONE_L_THIGH)->up.z) * 30.0f * m_fSlopePitch);
-                RotateBone(BONE_L_CALF, std::max((float)-x87::asin(GetAnimHierarchyMatrix(BONE_L_THIGH)->up.z), 0.0f) * -30.0f * m_fSlopePitch);
-                RotateBone(BONE_L_FOOT, std::max((float)-x87::asin(GetAnimHierarchyMatrix(BONE_L_FOOT)->up.z), 0.0f) * -30.0f * m_fSlopePitch);
+                // 0x5FE443..0x5FE670: both legs are driven by the asin of the THIGH's matrix `up.z` alone (stored as a float, [esp+0x10]) and rotated with rwCOMBINEPOSTCONCAT
+                // (`push 2` before every RtQuatRotate of the legs; the spine uses `push 1`). (The old port used the foot's matrix for the foot, negated the left foot and applied
+                // the max() to the wrong factor.) The byte at 0xC0AFC0 that selects the fabs() variant of the thigh angle is never written (always 0).
+                const auto Leg = [&](eBoneTag thigh, eBoneTag calf, eBoneTag foot) {
+                    const float  asinUp = (float)x87::asin((double)GetAnimHierarchyMatrix(thigh)->up.z);
+                    const double pitch  = (double)m_fSlopePitch;
+
+                    RotateBone(thigh, (float)((30.0 * pitch) * (double)asinUp), ZaxisIK, rwCOMBINEPOSTCONCAT); // 0x86C8A0 = 30
+
+                    double calfVal = -((double)asinUp * pitch);
+                    if (0.0 > calfVal) { // fcomp + `test ah, 0x41; jne`: a NaN keeps the value
+                        calfVal = 0.0;
+                    }
+                    RotateBone(calf, (float)(calfVal * -30.0), ZaxisIK, rwCOMBINEPOSTCONCAT); // 0x86C89C = -30
+
+                    const double footVal = (0.0 > (double)asinUp) ? 0.0 : (double)asinUp;
+                    RotateBone(foot, (float)((footVal * pitch) * -30.0), ZaxisIK, rwCOMBINEPOSTCONCAT); // 0x86C8A4 = -30
+                };
+                Leg(BONE_R_THIGH, BONE_R_CALF, BONE_R_FOOT);
+                Leg(BONE_L_THIGH, BONE_L_CALF, BONE_L_FOOT);
 
                 CMatrix result(m_pPed->GetModellingMatrix(), false);
                 CMatrix translate;

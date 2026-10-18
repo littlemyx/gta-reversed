@@ -14,6 +14,9 @@
 #      (G1) the run needs NO original exe at all: the data dir gets Steam assets + gta_reversed.exe only; $OUT/datadir_inventory.txt lists its exe/dll/bin files with sha256, soak exits 2 if an original-exe file is present.
 #      SOAK_IMAGE=1             copy original_data.bin/json next to the exe too (ONLY for the dev census / verify build, preset StandaloneDetached: NOTSA_IMAGE_CENSUS, NOTSA_VERIFY_GLOBALS
 #                               table checks). Default 0: the run exe starts WITHOUT any file of the original exe (slice F3), a leftover one in the data dir is deleted.
+#      NOTSA_STANDALONE_NOVSYNC=1  opt-in, passed through to the exe: Present with sync interval 0 (boot/menu/loading ~2 s instead of 30-75 s on the vsync-locked Present of this PC; game logic and
+#                               the 25 fps frame limiter unchanged; NOT for frame-time measurements - those state their mode). Off by default. docs/STANDALONE.md
+#      SOAK_GPU_LOCK=0          Windows host: do not take the GPU mutex (default: re-exec under tools/standalone/gpu_locked.sh; env GPU_OWNER names the holder)
 #      SHOT_EVERY=<frames>      screenshot cadence (default 500 frames, NOTSA_STANDALONE_SCREENSHOT_MAX=40)
 #      SAMPLER=1                enable the in-process profiler (CORRUPTS the x87 state of the game thread, see below: profiling runs only)
 #      SHOT_MAX=<n>             screenshot cap (default 40)
@@ -27,6 +30,9 @@
 #                               Not set on the Wine hosts (their numbers stay comparable). docs/STANDALONE.md
 set -u
 . "$(dirname "$0")/hostenv.sh"
+# Windows host: the game is single-instance and shares the GPU with the other agents' runs and with the user's play session - run under the GPU mutex (gpu_locked.sh: dead-holder
+# detection, waits while USER-PLAY holds it). SOAK_GPU_LOCK=0 opts out (the caller already holds a hand-written lock). Re-entrant: inside gpu_locked.sh this is a no-op.
+if [ "$HOST" = windows ] && [ "${SOAK_GPU_LOCK:-1}" != 0 ] && [ -z "${GPU_LOCK_HELD:-}" ]; then exec "$(dirname "$0")/gpu_locked.sh" -o "soak ${GPU_OWNER:-${USER:-agent}}" "$0" "$@"; fi
 REPO="$(cd "$(dirname "$0")/../.." && pwd)"
 BDIR="$(hp "${1:-build/StandaloneRelease}")"; MIN="${2:-10}"; DATA="$(hp "${3:-$DEF_DATA}")"
 case "$BDIR" in /*|[A-Za-z]:*) ;; *) BDIR="$REPO/$BDIR";; esac

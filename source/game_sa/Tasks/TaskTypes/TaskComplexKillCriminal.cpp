@@ -153,15 +153,24 @@ CTask* CTaskComplexKillCriminal::CreateSubTask(eTaskType tt, CPed* ped, bool for
 
 // 0x68C3C0
 CPed* CTaskComplexKillCriminal::FindNextCriminalToKill(CPed* ped, bool any) {
-    const auto [closest, distSq] = notsa::SpatialQuery(
-        m_Cop->m_apCriminalsToKill | rng::views::filter(notsa::Not(NoPedOrNoHp)),
-        m_Cop->GetPosition(),
-        m_Criminal.Get(),
-        !any && NoPedOrNoHp(m_Criminal)
-            ? m_Criminal.Get()
-            : nullptr
-    );
-    return closest;
+    // NOTE: 0x68C3C0 is not a nearest-ped search: the reference distance is that of the CURRENT criminal (when `!any` and it is alive) and is never updated,
+    // so the result is the LAST living criminal (other than the current one) closer than the current one - or simply the last living one when there is no reference (0.0).
+    // It returns nullptr when nothing qualifies (the port started with the current criminal as the 'closest' one, and only when it was dead/null).
+    const auto DistSqToPed = [&](const CPed* e) { return (e->GetPosition() - ped->GetPosition()).SquaredMagnitude(); };
+    const auto criminal    = m_Criminal.Get();
+    const float refDistSq  = !any && criminal && criminal->m_fHealth > 0.f
+        ? DistSqToPed(criminal)
+        : 0.f;
+    CPed* result = nullptr;
+    for (CPed* const e : m_Cop->m_apCriminalsToKill) {
+        if (!e || !(e->m_fHealth > 0.f) || e == criminal) {
+            continue;
+        }
+        if (DistSqToPed(e) < refDistSq || refDistSq == 0.f) {
+            result = e;
+        }
+    }
+    return result;
 }
 
 // 0x68C6E0

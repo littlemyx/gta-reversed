@@ -167,9 +167,12 @@ bool CTrailer::SetTowLink(CVehicle* vehicle, bool setMyPosToTowBar) {
         return true;
     }
 
-    m_fTrailerTowedRatio = std::clamp(m_fTrailerTowedRatio, 0.0f, BAGGAGE_TRAILER_TOWED_RATIO);
+    // 0x6CFE6F..0x6CFE82: `if (ratio > -1000.0f [0x859948]) ratio = 0` (the old `std::clamp(ratio, 0, -1000)` with lo > hi turned every normal ratio into -1000)
+    if (m_fTrailerTowedRatio > BAGGAGE_TRAILER_TOWED_RATIO) {
+        m_fTrailerTowedRatio = 0.0f;
+    }
 
-    SetHeading(GetHeading());
+    SetHeading(vehicle->GetHeading()); // 0x6CFE8C..0x6CFEB6: the heading of the TOWING vehicle (edi = the parameter), not our own
 
     CVector towBarPos{}, towHitchPos{};
     if (!GetTowHitchPos(towHitchPos, true, this) || !vehicle->GetTowBarPos(towBarPos, true, this)) {
@@ -454,18 +457,20 @@ bool CTrailer::ProcessAI(uint32& extraHandlingFlags) {
     }
 
     // Wheel turning for luggage trailers
-    float headingTow = m_pTowingVehicle->GetHeading();
-
-    float headingSelf = GetHeading();
+    // 0x6CF5FC..0x6CF67B: both headings stay in the FPU (unrounded); the wrap is decided by `tow > PI + self` / `tow < self - PI` and applied to `tow` BEFORE the subtraction
+    const double headingTow  = m_pTowingVehicle->GetHeadingExt();
+    const double headingSelf = GetHeadingExt();
 
     // Calculation of the shortest angle difference
-    float angleDiff = headingTow - headingSelf;
-    if (angleDiff > PI) {
-        angleDiff -= TWO_PI;
-    } else if (angleDiff < -PI) {
-        angleDiff += TWO_PI;
+    double angleDiff;
+    if (headingTow > (double)PI + headingSelf) {
+        angleDiff = (headingTow - (double)TWO_PI) - headingSelf;
+    } else if (headingTow < headingSelf - (double)PI) {
+        angleDiff = (headingTow + (double)TWO_PI) - headingSelf;
+    } else {
+        angleDiff = headingTow - headingSelf;
     }
-    m_fSteerAngle = angleDiff;
+    m_fSteerAngle = (float)angleDiff;
 
     return returnValue;
 }

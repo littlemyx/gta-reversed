@@ -324,6 +324,11 @@ static void ProbeDump() {
             const float d = (veh.GetPosition() - pos).Magnitude();
             if (d > 100.f || shownV >= 6) continue;
             shownV++;
+            if (veh.IsAutomobile()) {
+                auto& am = static_cast<CAutomobile&>(veh);
+                NOTSA_INJ_LOG("[pc]   vehy %p z=%d up.z=%d contactWheels=%d physFlags=%08x vehFlags=%08x status=%d nCollided=%d c0=%p c1=%p health=%d fire=%p engineOn=%d", (void*)&veh, (int)veh.GetPosition().z, (int)(veh.GetUp().z * 100.f), (int)am.m_nNumContactWheels,
+                    (unsigned)veh.m_nPhysicalFlags, (unsigned)*(const uint32*)&veh.vehicleFlags, (int)veh.GetStatus(), (int)veh.m_nNumEntitiesCollided, (void*)veh.m_apCollidedEntities[0], (void*)veh.m_apCollidedEntities[1], (int)veh.m_fHealth, (void*)veh.m_pFire, (int)veh.vehicleFlags.bEngineOn);
+            }
             NOTSA_INJ_LOG("[pc]   vehx %p apSpeed=%d maxTraffic=%d style=%d obstruct=%p target=%p gas=%d brake=%d hbrake=%d steer=%d speedScale=%u", (void*)&veh, (int)(veh.m_autoPilot.m_speed * 100.f), (int)(veh.m_autoPilot.m_fMaxTrafficSpeed * 100.f), (int)veh.m_autoPilot.m_nCarDrivingStyle,
                 (void*)veh.m_autoPilot.m_ObstructingEntity, (void*)veh.m_autoPilot.m_TargetEntity, (int)(veh.m_GasPedal * 100.f), (int)(veh.m_BrakePedal * 100.f), (int)veh.vehicleFlags.bIsHandbrakeOn, (int)(veh.m_fSteerAngle * 100.f), (unsigned)veh.m_autoPilot.m_nSpeedScaleFactor);
             NOTSA_INJ_LOG("[pc]   veh %p model=%d d=%d speed=%d law=%d status=%d mission=%d temp=%d cruise=%d ctrl=%x driver=%d(type %d) dest=(%d,%d) nodes(cur %d/%d next %d/%d)", (void*)&veh, (int)veh.m_nModelIndex, (int)d, (int)(veh.m_vecMoveSpeed.Magnitude() * 100.f),

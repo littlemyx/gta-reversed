@@ -88,9 +88,10 @@ CPed* CTaskComplexSeekCoverUntilTargetDead::GetTargetPed() const {
 
 // 0x622C90
 CTask* CTaskComplexSeekCoverUntilTargetDead::CreateNextSubTask(CPed* ped) {
+    // 0x622C94: after the stand-still the task is over (null); every other sub task is followed by a new first sub task (the port had the two branches swapped)
     return notsa::isa<CTaskSimpleStandStill>(m_pSubTask) // SimpleStandStill is the last task
-        ? CreateFirstSubTask(ped)
-        : nullptr;
+        ? nullptr
+        : CreateFirstSubTask(ped);
 }
 
 // 0x62E6C0

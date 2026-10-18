@@ -49,8 +49,8 @@ void CTaskComplexGoPickUpEntity::InjectHooks() {
 CTaskComplexGoPickUpEntity::CTaskComplexGoPickUpEntity(CEntity* entity, AssocGroupId animGroup) :
     CTaskComplex{},
     m_pEntity{ entity },
-    m_vecPosition{ -1000.f, 0.f, 0.f },
-    m_vecPickupPosition{ -1000.f, 0.f, 0.f },
+    m_vecPosition{ -999.f, 0.f, 0.f },       // 0x6919F9: mov ecx, 0C479C000h (-999.0f), stored at +10h and +1Ch
+    m_vecPickupPosition{ -999.f, 0.f, 0.f },
     m_nTimePassedSinceLastSubTaskCreatedInMs{ 0 },
     m_nAnimGroupId{ animGroup },
     m_bAnimBlockReferenced{ false }

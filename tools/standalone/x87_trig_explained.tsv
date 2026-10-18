@@ -1,0 +1,33 @@
+0x43eaf0	COUNT-ONLY	same kinds (sin/cos/tan/atan), counts differ: value reused / helper inlined; not a function swap, arguments not individually verified
+0x533790	COUNT-ONLY	same kinds (sin/cos/tan/atan), counts differ: value reused / helper inlined; not a function swap, arguments not individually verified
+0x534e90	COUNT-ONLY	same kinds (sin/cos/tan/atan), counts differ: value reused / helper inlined; not a function swap, arguments not individually verified
+0x53af00	COUNT-ONLY	same kinds (sin/cos/tan/atan), counts differ: value reused / helper inlined; not a function swap, arguments not individually verified
+0x56ec80	COUNT-ONLY	same kinds (sin/cos/tan/atan), counts differ: value reused / helper inlined; not a function swap, arguments not individually verified
+0x56ef90	COUNT-ONLY	same kinds (sin/cos/tan/atan), counts differ: value reused / helper inlined; not a function swap, arguments not individually verified
+0x586650	COUNT-ONLY	same kinds (sin/cos/tan/atan), counts differ: value reused / helper inlined; not a function swap, arguments not individually verified
+0x59ac90	COUNT-ONLY	same kinds (sin/cos/tan/atan), counts differ: value reused / helper inlined; not a function swap, arguments not individually verified
+0x5db3d0	COUNT-ONLY	same kinds (sin/cos/tan/atan), counts differ: value reused / helper inlined; not a function swap, arguments not individually verified
+0x62e540	COUNT-ONLY	same kinds (sin/cos/tan/atan), counts differ: value reused / helper inlined; not a function swap, arguments not individually verified
+0x679b80	COUNT-ONLY	same kinds (sin/cos/tan/atan), counts differ: value reused / helper inlined; not a function swap, arguments not individually verified
+0x687f30	COUNT-ONLY	same kinds (sin/cos/tan/atan), counts differ: value reused / helper inlined; not a function swap, arguments not individually verified
+0x6946f0	COUNT-ONLY	same kinds (sin/cos/tan/atan), counts differ: value reused / helper inlined; not a function swap, arguments not individually verified
+0x6ea260	COUNT-ONLY	same kinds (sin/cos/tan/atan), counts differ: value reused / helper inlined; not a function swap, arguments not individually verified
+0x746a10	COUNT-ONLY	same kinds (sin/cos/tan/atan), counts differ: value reused / helper inlined; not a function swap, arguments not individually verified
+0x538090	DUP-BRANCH	exe duplicates the asin/acos call per clamp/sign branch (checked in the asm: same argument expression per branch), the port has one call
+0x522d40	DUP-BRANCH	exe duplicates the asin/acos call per clamp/sign branch (checked in the asm: same argument expression per branch), the port has one call
+0x6aa290	DUP-BRANCH	exe duplicates the asin/acos call per clamp/sign branch (checked in the asm: same argument expression per branch), the port has one call
+0x4ea010	LOG10-CRT	same function (log10): exe inline fldlg2/fyl2x, port std::log10 (UCRT)
+0x5e57f0	LOG10-CRT	same function (log10): exe inline fldlg2/fyl2x, port std::log10 (UCRT)
+0x723750	LOG10-CRT	same function (log10): exe inline fldlg2/fyl2x, port std::log10 (UCRT)
+0x5d9900	FMOD-CRT	same function (fmod): exe inline fprem / x87 CRT, port UCRT fmodf
+0x6cfac0	FMOD-CRT	same function (fmod): exe inline fprem / x87 CRT, port UCRT fmodf
+0x535040	POW-SQR	exe has no pow call (pow(x,2) = fmul, constant folded or x^n fmul chain); port calls pow: same value for squares, x^6 in CGlass (refactored fn) differs by rounding
+0x6c2970	POW-SQR	exe has no pow call (pow(x,2) = fmul, constant folded or x^n fmul chain); port calls pow: same value for squares, x^6 in CGlass (refactored fn) differs by rounding
+0x6c6890	POW-SQR	exe has no pow call (pow(x,2) = fmul, constant folded or x^n fmul chain); port calls pow: same value for squares, x^6 in CGlass (refactored fn) differs by rounding
+0x7328c0	POW-SQR	exe has no pow call (pow(x,2) = fmul, constant folded or x^n fmul chain); port calls pow: same value for squares, x^6 in CGlass (refactored fn) differs by rounding
+0x71acf0	POW-SQR	exe has no pow call (pow(x,2) = fmul, constant folded or x^n fmul chain); port calls pow: same value for squares, x^6 in CGlass (refactored fn) differs by rounding
+0x5bd830	POW-COUNT	pow call counts differ (port constant-folds / refactors / helper); function identity pow=pow, implementation UCRT vs x87 CRT (see report: pow(10,4) exe 10000.000000000007)
+0x5e4c50	POW-COUNT	pow call counts differ (port constant-folds / refactors / helper); function identity pow=pow, implementation UCRT vs x87 CRT (see report: pow(10,4) exe 10000.000000000007)
+0x6ad690	POW-COUNT	pow call counts differ (port constant-folds / refactors / helper); function identity pow=pow, implementation UCRT vs x87 CRT (see report: pow(10,4) exe 10000.000000000007)
+0x703cc0	LN-REFACTOR	exe rounds the raster size up to 2^n with ln/pow, the port uses std::bit_ceil (refactor; may differ for exact power-of-two sizes)
+0x7043d0	LN-REFACTOR	exe rounds the raster size up to 2^n with ln/pow, the port uses std::bit_ceil (refactor; may differ for exact power-of-two sizes)

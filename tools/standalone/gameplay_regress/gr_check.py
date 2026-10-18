@@ -319,6 +319,23 @@ def chk_missions(run, R, B, orig):
         R.add('arrest.mission_cleaned_up', num(ab15, 'mission') == 0 and num(ab15, 'fail') == 0 and num(ab15, 'pst') != ST['PED_ARRESTED'], 'mission flag %s -> %s, FailCurrentMission=%s, ped state %s' % (pa.get('mission'), ab15.get('mission'), ab15.get('fail'), ab15.get('pst')), 'mission 1 -> 0 (the script resumed at the mission cleanup after the first GOSUB, exe 0x469F00 ResetIP)')
 
 
+def chk_arrest0(run, R, B, orig):
+    if not generic(run, R):
+        return
+    for tag, pre, post, start, want, label in (
+            ('busted_fee_100', 'pre_busted_pos', 'after_busted_pos', 1000, 900, 'arrested at 0 stars: the fee switch falls through to 100 (exe 0x4431CA `mov ecx, 100`)'),
+            ('busted_negative_money_kept', 'pre_busted_neg', 'after_busted_neg', -50, -50, 'busted with money <= 0: the exe skips the subtraction (`cmp [money], 0 ; jle`, 0x4431F1), the money stays'),
+            ('wasted_fee_100', 'pre_wasted_pos', 'after_wasted_pos', 1000, 900, 'wasted: fee 100 (0x442E3A)'),
+            ('wasted_negative_money_kept', 'pre_wasted_neg', 'after_wasted_neg', -50, -50, 'wasted with money <= 0: money stays (0x442E38 `jle`)')):
+        a, b = run.snap(pre), run.snap(post)
+        if not a or not b:
+            R.add(tag, False, 'snapshot %s / %s missing' % (pre, post), label)
+            continue
+        if tag.startswith('busted_fee'):
+            R.add('wanted_level_0', num(a, 'wl') == 0, 'wanted level before the arrest: %s' % a.get('wl'), '0 stars', setup=True)
+        R.add(tag, num(a, 'money') == start and num(b, 'money') == want, 'money %s -> %s' % (a.get('money'), b.get('money')), '%d -> %d: %s' % (start, want, label))
+
+
 def chk_vmode(run, R, B, orig):
     if not generic(run, R):
         return
@@ -393,7 +410,7 @@ def chk_interior(run, R, B, orig):
     R.add('cops_react', bool(eng), 'engaged cops %s, health+armour %s, wanted %s, ped state %s' % ([s.get('copsEngaged') for s in S], [int(hpar(s)) for s in S], [s.get('wl') for s in S], [s.get('pst') for s in S]), 'within 30 s at 3 stars some cop attacks / arrests / the player is hurt or busted')
 
 
-CHECKS = {'combat': chk_combat, 'audio': chk_audio, 'cheats': chk_cheats, 'missions': chk_missions, 'render_vmode': chk_vmode, 'input_mouse': chk_mouse, 'render_firststart': chk_firststart, 'interior_lspd': chk_interior}
+CHECKS = {'combat': chk_combat, 'audio': chk_audio, 'cheats': chk_cheats, 'missions': chk_missions, 'render_vmode': chk_vmode, 'input_mouse': chk_mouse, 'render_firststart': chk_firststart, 'interior_lspd': chk_interior, 'arrest0': chk_arrest0}
 
 
 def live_orig(scn, od):

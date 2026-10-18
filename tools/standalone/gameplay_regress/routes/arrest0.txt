@@ -1,0 +1,61 @@
+# GAMEPLAY REGRESSION: CGameLogic::Update busted / wasted fee (exe 0x442AD0; ARREST0)
+# (1) arrested with 0 stars: the exe's fee switch (jump table 0x4438D4 for levels 2..6) falls through to `mov ecx, 100` for levels 0 and 1 (0x4431CA); the port hit NOTSA_UNREACHABLE there.
+# (2) the fee is taken only from POSITIVE money: `cmp [money], 0 ; jle skip ; money = max(money - fee, 0)` (busted 0x4431EA, wasted 0x442E31): zero or negative money stays as it is.
+#include header
+cmd:snap:g_start
+wait:2000
+# ---- busted at 0 stars, 1000 money -> 900 (and no UNREACHABLE in the log, checked by the generic no_crash)
+cmd:money:1000
+cmd:snap:pre_busted_pos
+arrest:0
+wait:2000
+cmd:snap:busted_pos_2
+wait:8000
+# the busted flow (police station, tutorial text) hands the controls back and takes them away again: wait until they stay
+wait:15000
+until:control:90000
+wait:5000
+until:control:90000
+wait:1000
+cmd:snap:after_busted_pos
+mark:busted_pos_done
+# ---- busted with negative money: untouched (the port clamped it to 0)
+cmd:money:-50
+cmd:snap:pre_busted_neg
+arrest:0
+wait:2000
+wait:8000
+wait:15000
+until:control:90000
+wait:5000
+until:control:90000
+wait:1000
+cmd:snap:after_busted_neg
+mark:busted_neg_done
+# ---- wasted with 1000 money -> 900, then with -50 -> -50 (the wasted fee is always 100)
+cmd:money:1000
+cmd:snap:pre_wasted_pos
+kill:0
+wait:2000
+wait:8000
+wait:15000
+until:control:90000
+wait:5000
+until:control:90000
+wait:1000
+cmd:snap:after_wasted_pos
+mark:wasted_pos_done
+cmd:money:-50
+cmd:snap:pre_wasted_neg
+kill:0
+wait:2000
+wait:8000
+wait:15000
+until:control:90000
+wait:5000
+until:control:90000
+wait:1000
+cmd:snap:after_wasted_neg
+mark:arrest0_end
+cmd:quit
+wait:5000

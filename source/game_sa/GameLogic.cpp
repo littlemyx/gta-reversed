@@ -585,11 +585,18 @@ void CGameLogic::Update() {
 
     const auto Process = [&] {
         const auto PunishPlayer = [&player1, player1Ped](int32 fee) {
-            player1.m_nMoney = std::max(player1.m_nMoney - fee, 0);
+            // 0x442E31 (wasted) / 0x4431EA (busted): `cmp [money], 0 ; jle skip` - zero or negative money is left untouched, only positive money is reduced (clamped at 0)
+            if (player1.m_nMoney > 0) {
+                player1.m_nMoney = std::max(player1.m_nMoney - fee, 0);
+            }
             player1Ped->ClearWeapons();
         };
 
-        const auto ResetForResurrectionAndFadeOut = [&player1, &player1Ped](CVector& restartPoint, float restartAngle, bool fadeOutNow) {
+        // The exe has three inlined copies of this sequence (wasted 0x442E59, busted 0x44316B, mission passed/failed 0x4434AA) that differ in three places:
+        //  * `fadeInAfterNext`: wasted/busted test CRestart::bFadeInAfterNextDeath (0xA4325D) / bFadeInAfterNextArrest (0xA4325C): set => fade out now, else the GLOBAL is set (0x4430B7 / 0x44344E) and no fade; the mission copy always fades (nullptr)
+        //  * `clearHelp`: the mission copy does not call CHud::SetHelpMessage(nullptr, ...)   (0x443534 -> 0x443542)
+        //  * `passTime`: wasted: PassTime(12 * 60) + m_nNumHoursDidntEat = 0 (0x442FCA-0x442FED); busted: PassTime only (0x443375); mission: neither (0x44361B -> 0x443624)
+        const auto ResetForResurrectionAndFadeOut = [&player1, &player1Ped](CVector& restartPoint, float restartAngle, bool* fadeInAfterNext, bool clearHelp, bool passTime, bool resetHoursDidntEat) {
             player1.m_nPlayerState = PLAYERSTATE_PLAYING;
             GameState = GAMELOGIC_STATE_PLAYING;
 
@@ -607,7 +614,9 @@ void CGameLogic::Update() {
             }
 
             CMessages::ClearMessages(false);
-            CHud::SetHelpMessage(nullptr, true, false, false);
+            if (clearHelp) {
+                CHud::SetHelpMessage(nullptr, true, false, false);
+            }
             CCarCtrl::ClearInterestingVehicleList();
             CGarages::CloseHideOutGaragesBeforeSave();
             CWorld::ClearExcitingStuffFromArea(player1.GetPos(), 4000.0f, true);
@@ -618,8 +627,12 @@ void CGameLogic::Update() {
                 RestorePedsWeapons(player1Ped);
             }
             Remove2ndPlayerIfPresent();
-            PassTime(12 * 60);
-            FindPlayerInfo().m_nNumHoursDidntEat = 0;
+            if (passTime) {
+                PassTime(12 * 60);
+            }
+            if (resetHoursDidntEat) {
+                FindPlayerInfo().m_nNumHoursDidntEat = 0;
+            }
             RestorePlayerStuffDuringResurrection(player1Ped, restartPoint, restartAngle);
             SortOutStreamingAndMemory(player1Ped->GetPosition(), player1Ped->GetHeading());
 
@@ -631,11 +644,11 @@ void CGameLogic::Update() {
             CPopulation::m_CountDownToPedsAtStart = 10;
             CPad::GetPad(CWorld::PlayerInFocus)->DisablePlayerControls = false;
 
-            if (fadeOutNow) {
+            if (!fadeInAfterNext || *fadeInAfterNext) {
                 TheCamera.SetFadeColour(0, 0, 0);
                 TheCamera.Fade(3.0f, eFadeFlag::FADE_OUT);
             } else {
-                fadeOutNow = true;
+                *fadeInAfterNext = true;
             }
         };
 
@@ -660,7 +673,7 @@ void CGameLogic::Update() {
             } else if (ped->m_nPedState == PEDSTATE_ARRESTED) {
                 ped->ClearAdrenaline();
                 player.ArrestPlayer();
-                ped->Say(CTX_GLOBAL_ARRESTED, 2300, 1.0f, 1u, 1u);
+                ped->Say(CTX_GLOBAL_ARRESTED, 2300, 1.0f, 1u, 1u, 1u); // 0x442D34: 6 pushed arguments, isFrontEnd = 1
                 GameState = GAMELOGIC_STATE_BUSTED;
                 TimeOfLastEvent = CTimer::GetTimeInMS();
 
@@ -689,7 +702,7 @@ void CGameLogic::Update() {
                 }
             }
 
-            auto posn = player1.GetPos();
+            auto posn = player1Ped->GetPosition(); // the ped's own position (0x442F0D: matrix ? matrix pos : placement pos), NOT CPlayerInfo::GetPos (the vehicle's when driving)
             if (auto enEx = player1Ped->m_pEnex) {
                 enEx->GetPositionRelativeToOutsideWorld(posn);
             }
@@ -698,7 +711,7 @@ void CGameLogic::Update() {
             float restartAngle;
             CRestart::FindClosestHospitalRestartPoint(posn, restartPoint, restartAngle);
 
-            ResetForResurrectionAndFadeOut(restartPoint, restartAngle, CRestart::bFadeInAfterNextDeath);
+            ResetForResurrectionAndFadeOut(restartPoint, restartAngle, &CRestart::bFadeInAfterNextDeath, true, true, true);
             break;
         }
         case GAMELOGIC_STATE_BUSTED: {
@@ -730,7 +743,7 @@ void CGameLogic::Update() {
                         case eWantedLevel::WANTED_LEVEL_4: return 600;
                         case eWantedLevel::WANTED_LEVEL_5: return 900;
                         case eWantedLevel::WANTED_LEVEL_6: return 1500;
-                        default:                           NOTSA_UNREACHABLE(); return 100; // 0x4431CA: `mov ecx, 0x64`
+                        default:                           return 100; // 0x4431CA `mov ecx, 100`: jump table 0x4438D4 covers levels 2..6 only (`add eax, -2 ; cmp eax, 4 ; ja`), so 0 (arrested without stars) and 1 land here
                         }
                     }();
                     PunishPlayer(fee);
@@ -739,7 +752,7 @@ void CGameLogic::Update() {
                 }
             }
 
-            auto posn = player1.GetPos();
+            auto posn = player1Ped->GetPosition(); // the ped's own position (0x442F0D: matrix ? matrix pos : placement pos), NOT CPlayerInfo::GetPos (the vehicle's when driving)
             if (auto enEx = player1Ped->m_pEnex) {
                 enEx->GetPositionRelativeToOutsideWorld(posn);
             }
@@ -747,7 +760,7 @@ void CGameLogic::Update() {
             CVector restartPoint;
             float restartAngle;
             CRestart::FindClosestPoliceRestartPoint(posn, restartPoint, restartAngle);
-            ResetForResurrectionAndFadeOut(restartPoint, restartAngle, CRestart::bFadeInAfterNextArrest);
+            ResetForResurrectionAndFadeOut(restartPoint, restartAngle, &CRestart::bFadeInAfterNextArrest, true, true, false);
             break;
         }
         case GAMELOGIC_STATE_MISSION_FAILED: // really have no idea
@@ -760,7 +773,7 @@ void CGameLogic::Update() {
             if (TheCamera.m_bFading)
                 break;
 
-            auto posn = player1.GetPos();
+            auto posn = player1Ped->GetPosition(); // the ped's own position (0x442F0D: matrix ? matrix pos : placement pos), NOT CPlayerInfo::GetPos (the vehicle's when driving)
             if (auto enEx = player1Ped->m_pEnex) {
                 enEx->GetPositionRelativeToOutsideWorld(posn);
             }
@@ -768,13 +781,13 @@ void CGameLogic::Update() {
             CVector restartPoint;
             float restartAngle;
             CRestart::FindClosestPoliceRestartPoint(posn, restartPoint, restartAngle);
-            ResetForResurrectionAndFadeOut(restartPoint, restartAngle, true);
+            ResetForResurrectionAndFadeOut(restartPoint, restartAngle, nullptr, false, false, false);
             break;
         }
         }
 
         if (bLimitPlayerDistance && IsCoopGameGoingOn()) {
-            if (auto diff = FindPlayerCoors(PED_TYPE_PLAYER2) - FindPlayerCoors(PED_TYPE_PLAYER1); diff.Magnitude2D() > MaxPlayerDistance) {
+            if (auto diff = FindPlayerPed(PED_TYPE_PLAYER2)->GetPosition() - FindPlayerPed(PED_TYPE_PLAYER1)->GetPosition(); diff.Magnitude2D() > MaxPlayerDistance) {
                 StopPlayerMovingFromDirection(PED_TYPE_PLAYER1,  diff.Normalized());
                 StopPlayerMovingFromDirection(PED_TYPE_PLAYER2, -diff.Normalized());
             }
@@ -786,7 +799,7 @@ void CGameLogic::Update() {
         Process();
     } else {
         NOTSA_GLOBAL_LOCAL(lastPlayerDistance, 0x96AB24, (float), {});
-        const auto dist = DistanceBetweenPoints2D(FindPlayerCoors(PED_TYPE_PLAYER1), FindPlayerCoors(PED_TYPE_PLAYER2));
+        const auto dist = DistanceBetweenPoints2D(FindPlayerPed(PED_TYPE_PLAYER1)->GetPosition(), FindPlayerPed(PED_TYPE_PLAYER2)->GetPosition()); // the peds' own positions (0x442B18), not FindPlayerCoors (the vehicle's when driving)
 
         const auto UpdateTimerAndLastDistance = [&dist] {
             if (IsAPlayerInFocusOn2PlayerGame() && nPrintFocusHelpTimer != 0) {
@@ -803,15 +816,19 @@ void CGameLogic::Update() {
         } else if (dist > 85.0f && lastPlayerDistance <= 85.0f) {
             CHud::SetHelpMessage(TheText.Get("WRN_2P"), false, false, false); // any further and 2P game will end.
         } else if (dist > MaxPlayerDistance && nPrintFocusHelpCounter < 5) {
-            if (lastPlayerDistance > MaxPlayerDistance && (uint32)nPrintFocusHelpTimer < CTimer::GetTimeInMS()) {
+            // 0x442BEA: the timer and the counter are updated only when the message is actually shown (now > timer); WRN1_2P re-arms the timer by 15 s, WRN2_2P by 60 s
+            const auto now = CTimer::GetTimeInMS();
+            if (lastPlayerDistance <= MaxPlayerDistance) {
+                if (now > (uint32)nPrintFocusHelpTimer) {
+                    CHud::SetHelpMessage(TheText.Get("WRN1_2P"), false, false, false); // distance limit reached
+                    nPrintFocusHelpTimer = (int32)(now + 15'000);
+                    nPrintFocusHelpCounter++;
+                }
+            } else if (now > (uint32)nPrintFocusHelpTimer) {
                 CHud::SetHelpMessage(TheText.Get("WRN2_2P"), false, false, false); // press SELECT to toggle focus to individual player
+                nPrintFocusHelpTimer = (int32)(now + 60'000);
+                nPrintFocusHelpCounter++;
             }
-            else if ((uint32)nPrintFocusHelpTimer < CTimer::GetTimeInMS()) {
-                CHud::SetHelpMessage(TheText.Get("WRN1_2P"), false, false, false); // distance limit reached
-            }
-
-            nPrintFocusHelpTimer = CTimer::GetTimeInMS() + 60'000;
-            nPrintFocusHelpCounter++;
         }
 
         UpdateTimerAndLastDistance();

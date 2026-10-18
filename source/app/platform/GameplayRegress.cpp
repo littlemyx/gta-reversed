@@ -68,12 +68,12 @@ void Snap(const std::string& name) {
         const auto ch = pl ? Chain(*pl, &hit) : std::string("-");
         auto* pad = CPad::GetPad(0);
         const bool ctl = pl && pad && !FrontEndMenuManager.m_bMenuActive && !CCutsceneMgr::IsRunning() && !pad->bPlayerSafe && !pad->ArePlayerControlsDisabled() && !TheCamera.GetFading();
-        GR_LOG("[gr] %s A t=%lu frame=%u pl=%d x=%d y=%d z=%d head=%d hp=%d arm=%d pst=%d wl=%d chaos=%d mission=%d fail=%d invh=%d vmodel=%d ptasks=%s phit=%d hitevents=%u ctl=%d cut=%d fade=%d menu=%d relmouse=%d cam10=%d camraw10=%d",
+        GR_LOG("[gr] %s A t=%lu frame=%u pl=%d x=%d y=%d z=%d head=%d hp=%d arm=%d pst=%d wl=%d chaos=%d mission=%d fail=%d invh=%d vmodel=%d ptasks=%s phit=%d hitevents=%u ctl=%d cut=%d fade=%d menu=%d relmouse=%d cam10=%d camraw10=%d money=%d",
             id.c_str(), (unsigned long)GetTickCount(), (unsigned)CTimer::GetFrameCounter(), pl ? 1 : 0, (int)pos.x, (int)pos.y, (int)pos.z, pl ? (int)(RadiansToDegrees(pl->GetHeading())) : 0,
             pl ? (int)pl->m_fHealth : -1, pl ? (int)pl->m_fArmour : -1, pl ? (int)pl->m_nPedState : -1, w ? (int)w->GetWantedLevel() : -1, w ? (int)w->m_ChaosLevel : -1,
             (int)CTheScripts::IsPlayerOnAMission(), (int)CTheScripts::FailCurrentMission, pl ? (int)pl->bInVehicle : 0, pl && pl->m_pVehicle ? (int)pl->m_pVehicle->m_nModelIndex : -1,
             ch.c_str(), (int)hit, s_HitEvents, (int)ctl, (int)CCutsceneMgr::IsRunning(), (int)TheCamera.GetFading(), (int)FrontEndMenuManager.m_bMenuActive,
-            PSGLOBAL(sdlWindow) ? (int)SDL_GetWindowRelativeMouseMode(PSGLOBAL(sdlWindow)) : -1, (int)(s_CamAccum * 572.9578), (int)(CamHeading() * 572.9578));
+            PSGLOBAL(sdlWindow) ? (int)SDL_GetWindowRelativeMouseMode(PSGLOBAL(sdlWindow)) : -1, (int)(s_CamAccum * 572.9578), (int)(CamHeading() * 572.9578), (int)FindPlayerInfo().m_nMoney);
     }
     if (pl && GetPedPool() && GetVehiclePool()) { // (the menu / start-up has no pools yet: only the video part D is logged)
         int peds = 0, cops = 0, copsDead = 0, copsDeadAlive = 0, copsCar = 0, copsFoot = 0, copsEngaged = 0, copsFootEngaged = 0, nearCop = 99999, law = 0, lawDrv = 0, nearLaw = 99999, copsHurtInCar = 0;
@@ -169,6 +169,7 @@ bool NotsaGrCmd(const char* name, const std::string& args) {
     if (!std::strcmp(name, "snap")) { Snap(args.empty() ? "snap" : args); return true; }
     if (!std::strcmp(name, "quit")) { GR_LOG("[gr] quit requested"); RsGlobal.quit = true; return true; } // leave the main loop (normal shutdown path), so a finished scenario does not idle until the wall-clock limit
     if (!pl) return std::strcmp(name, "spawncop") == 0 || std::strcmp(name, "spawnveh") == 0 || std::strcmp(name, "shootlast") == 0 || std::strcmp(name, "shootdrv") == 0 || std::strcmp(name, "hitplayer") == 0 || std::strcmp(name, "copattack") == 0 || std::strcmp(name, "time") == 0;
+    if (!std::strcmp(name, "money")) { FindPlayerInfo().m_nMoney = std::atoi(args.c_str()); GR_LOG("[gr-cmd] money %d", FindPlayerInfo().m_nMoney); return true; } // money:N  the player's money (may be negative or 0: CGameLogic fee tests)
     if (!std::strcmp(name, "spawncop")) { // spawncop[:MODEL[:DIST]]  an armed LAPD cop (ped type COP) DIST m in front of the player, standing
         int mdl = 280; float dist = 6.f;
         std::sscanf(args.c_str(), "%d:%f", &mdl, &dist);

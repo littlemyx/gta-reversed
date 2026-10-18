@@ -114,11 +114,11 @@ CTask* CTaskComplexUseAttractor::CreateFirstSubTask(CPed* ped) {
 
 // 0x6327C0
 CTask* CTaskComplexUseAttractor::ControlSubTask(CPed* ped) {
-    if (m_attractor->m_Entity) {
-        if (CEntity* const entity = m_attractor->m_Entity) {
-            if (entity->GetIsTypeObject() || entity->AsObject()->objectFlags.bIsBroken) {
-                m_pSubTask->MakeAbortable(ped, ABORT_PRIORITY_LEISURE, nullptr);
-            }
+    // 0x6327C7..0x6327F5: the sub task is asked (LEISURE) to stop only when the attractor's entity is a BROKEN OBJECT; the port used `||` (every non-object entity and every object aborted it) and dereferenced a null attractor
+    if (m_attractor && m_attractor->m_Entity) {
+        CEntity* const entity = m_attractor->m_Entity;
+        if (entity->GetIsTypeObject() && entity->AsObject()->objectFlags.bIsBroken) {
+            m_pSubTask->MakeAbortable(ped, ABORT_PRIORITY_LEISURE, nullptr);
         }
     }
     return m_pSubTask;

@@ -6,7 +6,7 @@ class NOTSA_EXPORT_VTABLE CTaskSimplePickUpEntity : public CTaskSimpleHoldEntity
 public:
     float m_fMovePedUntilAnimProgress; //< value can be 0.0 to 1.0. Ped Will stop moving when the current `m_fCurrentTime`
                                        //< of `m_pAnimBlendAssociation` is equal or greater than this.
-    CVector m_vecPickuposn;
+    CVector m_vecPickuposn{}; // 0x6917E7: +0x40..0x48 are zeroed
 
 public:
     static constexpr auto Type = TASK_SIMPLE_PICKUP_ENTITY;

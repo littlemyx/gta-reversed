@@ -343,7 +343,8 @@ static void ProbeDump() {
 }
 #endif
 #ifdef NOTSA_STANDALONE_RUN
-// cmd:wanted:N | cmd:tp:X:Y:Z | cmd:give:WEAPON:AMMO | cmd:armour:N | cmd:health:N | cmd:log:TEXT  (run build diagnostics; the real cheat / script paths are exercised by typed keys instead whenever possible)
+// cmd:wanted:N | cmd:tp:X:Y:Z | cmd:rig:DX:DY:HEADING | cmd:rigpush:VX:VY | cmd:nullcol:RANGE:MINHEIGHT | cmd:rigstate | cmd:give:WEAPON:AMMO | cmd:armour:N | cmd:health:N | cmd:log:TEXT  (run build diagnostics; the real cheat / script paths are exercised by typed keys instead whenever possible)
+static CVehicle* s_InjRig[2] = {}; // truck, trailer of cmd:rig
 static void InjRunCmd(const std::string& c) {
     auto* pl = FindPlayerPed();
     char name[32] = {}; float a = 0, b = 0, d = 0; int w = 0, n = 0;
@@ -452,6 +453,46 @@ static void InjRunCmd(const std::string& c) {
             }
         }
 #undef DEADLOG
+    }
+    else if (!std::strcmp(name, "rig")) { // rig:DX:DY:HEADING_DEG  a Linerunner + Articulated trailer attached like ATTACH_TRAILER_TO_CAB, truck at player+(DX,DY), heading in degrees (0 = +Y), trailer 14 m behind
+        float hd = 0.f; std::sscanf(args.c_str(), "%f:%f:%f", &a, &b, &hd);
+        for (const auto m : { MODEL_LINERUN, MODEL_ARTICT1 }) { CStreaming::RequestModel(m, STREAMING_GAME_REQUIRED); }
+        CStreaming::LoadAllRequestedModels(false);
+        const float rad = DegreesToRadians(hd);
+        const CVector fwd{ -std::sin(rad), std::cos(rad), 0.f };
+        const auto tp = pl->GetPosition() + CVector{ a, b, 1.5f };
+        auto* truck = CCarCtrl::CreateCarForScript(MODEL_LINERUN, tp, false);
+        auto* trl = CCarCtrl::CreateCarForScript(MODEL_ARTICT1, tp - fwd * 14.f, false);
+        if (truck && trl) {
+            for (auto* v : { truck, trl }) { v->SetHeading(rad); v->m_vecMoveSpeed = CVector{}; v->m_vecTurnSpeed = CVector{}; }
+            truck->SetPosn(tp); trl->SetPosn(tp - fwd * 14.f);
+            const auto ok = trl->SetTowLink(truck, true);
+            s_InjRig[0] = truck; s_InjRig[1] = trl;
+            NOTSA_INJ_LOG("[cmd] rig truck %p trailer %p SetTowLink=%d tractor=%p towed=%p", (void*)truck, (void*)trl, (int)ok, (void*)truck->m_pVehicleBeingTowed, (void*)trl->m_pTowingVehicle);
+        } else { NOTSA_INJ_LOG("[cmd] rig: spawn failed truck=%p trailer=%p", (void*)truck, (void*)trl); }
+    }
+    else if (!std::strcmp(name, "rigpush")) { // rigpush:VX:VY  set the move speed of the rig vehicles (0.3 = 15 m/s)
+        std::sscanf(args.c_str(), "%f:%f", &a, &b);
+        for (auto* v : s_InjRig) if (v) { v->m_vecMoveSpeed = CVector{ a, b, 0.f }; }
+        NOTSA_INJ_LOG("[cmd] rigpush (%d,%d)/100 truck=%p trailer=%p", (int)(a * 100.f), (int)(b * 100.f), (void*)s_InjRig[0], (void*)s_InjRig[1]);
+    }
+    else if (!std::strcmp(name, "nullcol")) { // nullcol:RANGE:MINHEIGHT  drop the col data (not the col model) of every building model within range of the player that is taller than MINHEIGHT (walls / houses, roads stay): the playtest-2 condition, a building whose col model has no data
+        int rg = 40; float mh = 3.f; std::sscanf(args.c_str(), "%d:%f", &rg, &mh);
+        int nulled = 0, already = 0, seen = 0;
+        for (auto& bld : GetBuildingPool()->GetAllValid()) {
+            if ((bld.GetPosition() - pl->GetPosition()).Magnitude() > (float)rg) continue;
+            auto* mi = CModelInfo::GetModelInfo(bld.m_nModelIndex);
+            auto* cm = mi ? mi->GetColModel() : nullptr;
+            if (!cm) continue;
+            seen++;
+            if (!cm->m_pColData) { already++; continue; }
+            if (cm->GetBoundingBox().m_vecMax.z - cm->GetBoundingBox().m_vecMin.z <= mh) continue;
+            cm->m_pColData = nullptr; nulled++;
+        }
+        NOTSA_INJ_LOG("[cmd] nullcol range %d: %d building models seen, %d already without col data, %d nulled", rg, seen, already, nulled);
+    }
+    else if (!std::strcmp(name, "rigstate")) {
+        for (auto* v : s_InjRig) if (v) NOTSA_INJ_LOG("[cmd] rig veh %p model %d pos=(%d,%d,%d) speed*100=%d status=%d towing=%p towed=%p nColl=%d", (void*)v, (int)v->m_nModelIndex, (int)v->GetPosition().x, (int)v->GetPosition().y, (int)v->GetPosition().z, (int)(v->m_vecMoveSpeed.Magnitude() * 100.f), (int)v->GetStatus(), (void*)v->m_pTowingVehicle, (void*)v->m_pVehicleBeingTowed, (int)v->m_nNumEntitiesCollided);
     }
     else if (!std::strcmp(name, "armour")) { pl->m_fArmour = (float)std::atoi(args.c_str()); }
     else if (!std::strcmp(name, "health")) { pl->m_fHealth = (float)std::atoi(args.c_str()); }

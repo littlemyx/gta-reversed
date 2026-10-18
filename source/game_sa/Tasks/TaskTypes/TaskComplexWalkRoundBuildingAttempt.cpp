@@ -80,20 +80,17 @@ void CTaskComplexWalkRoundBuildingAttempt::ComputeMoveDir(CPed const& ped, CVect
 // 0x654C80
 CTask* CTaskComplexWalkRoundBuildingAttempt::CreateSubTask(eTaskType taskType, CPed* ped) {
     switch (taskType) {
-    case TASK_SIMPLE_ACHIEVE_HEADING:
-        /*
-        * Achieve heading to the first point of the point route
-        */
-        assert(approxEqual(
-            (m_route->m_Entries[0] - ped->GetPosition()).Heading(),
-            CGeneral::LimitRadianAngle(CGeneral::GetRadianAngleBetweenPoints({ m_route->m_Entries[0] - ped->GetPosition() }, {})),
-            0.001f
-        )); // TODO: Remove if doesn't assert
+    case TASK_SIMPLE_ACHIEVE_HEADING: {
+        // Achieve heading to the first point of the point route
+        // 0x654E91..0x654EDE: normalise the 3D offset (CVector::Normalise 0x59C910), then LimitRadianAngle(GetRadianAngleBetweenPoints(x, y, 0, 0)); not CVector::Heading
+        CVector dir = m_route->m_Entries[0] - ped->GetPosition();
+        dir.Normalise();
         return new CTaskSimpleAchieveHeading{
-            (m_route->m_Entries[0] - ped->GetPosition()).Heading(),
+            CGeneral::LimitRadianAngle(CGeneral::GetRadianAngleBetweenPoints(dir.x, dir.y, 0.f, 0.f)),
             1.f,
             0.1f
         };
+    }
     case TASK_COMPLEX_FOLLOW_POINT_ROUTE:
         return new CTaskComplexFollowPointRoute{
             (eMoveState)m_moveState,

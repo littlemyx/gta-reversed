@@ -32,11 +32,11 @@ cleanup() {
   [ -n "${SPID:-}" ] && kill "$SPID" 2>/dev/null
   [ -n "${TPID:-}" ] && kill "$TPID" 2>/dev/null
   rm -f "$SET"; [ "$HAD" = 1 ] && cp -p "$USERSET" "$SET"
-  [ "$HELD" = 1 ] && rm -rf "$LOCK"; HELD=0
+  [ "$HELD" = 1 ] && "$GRD/../gpu_locked.sh" --release $$; HELD=0
 }
 trap cleanup EXIT
-until mkdir "$LOCK" 2>/dev/null; do sleep 2; done
-HELD=1; echo "GAMEPLAY-REGRESS orig $SCN $(date)" > "$LOCK/owner"
+"$GRD/../gpu_locked.sh" --acquire "GAMEPLAY-REGRESS orig $SCN" $$   # INFRA-FAST: pid-recording lock, same lock dir (dead-holder detection)
+HELD=1
 taskkill //F //IM gta_sa.exe >/dev/null 2>&1
 "$PY" -I - "$SET" "$GRD/orig/gta_sa.set.good" <<'EOPY'
 import sys

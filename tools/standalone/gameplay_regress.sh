@@ -49,7 +49,8 @@ USERSET="$OUT/user_gta_sa.set"
 HAD_SET=0; [ -f "$DOCSET" ] && { cp -p "$DOCSET" "$USERSET"; HAD_SET=1; }
 restore_set() { rm -f "$DOCSET"; [ "$HAD_SET" = 1 ] && cp -p "$USERSET" "$DOCSET"; return 0; }
 HELD=0; WPID=""
-unlock() { [ "$HELD" = 1 ] && rm -rf "$LOCK"; HELD=0; return 0; }
+GPULOCK="$REPO/tools/standalone/gpu_locked.sh"   # INFRA-FAST: pid-recording lock (dead-holder detection), same lock dir
+unlock() { [ "$HELD" = 1 ] && "$GPULOCK" --release $$; HELD=0; return 0; }
 kill_game() { # our exe by image path under $DATA; the bash job too
   [ -n "${WPID:-}" ] && kill -9 "$WPID" 2>/dev/null
   GR_DATA="$DATA" powershell.exe -NoProfile -Command 'Get-Process gta_reversed -ErrorAction SilentlyContinue | Where-Object { $_.Path -and (($_.Path -replace "\\","/") -like ($env:GR_DATA + "/*")) } | Stop-Process -Force' >/dev/null 2>&1
@@ -58,14 +59,9 @@ kill_game() { # our exe by image path under $DATA; the bash job too
 trap 'kill_game; unlock; restore_set' EXIT
 trap 'exit 130' INT TERM
 
-gpu_lock() { # $1 = owner tag; waits (forever) while anybody, in particular USER-PLAY, holds the lock
-  local msg=""
-  until mkdir "$LOCK" 2>/dev/null; do
-    local owner; owner="$(cat "$LOCK/owner" 2>/dev/null)"
-    [ "$msg" != "$owner" ] && { echo "  gpu.lock held by: $owner - waiting"; msg="$owner"; }
-    sleep 0.3
-  done
-  HELD=1; echo "$1 $(date)" > "$LOCK/owner"
+gpu_lock() { # $1 = owner tag; waits (forever) while anybody, in particular USER-PLAY, holds the lock (gpu_locked.sh: the holder is this script, a killed script is detected as a dead holder)
+  "$GPULOCK" --acquire "$1" $$ || return 1
+  HELD=1
 }
 
 prep_data() { # Steam assets by NTFS links (read-only use), no original exe in the dir (G1)

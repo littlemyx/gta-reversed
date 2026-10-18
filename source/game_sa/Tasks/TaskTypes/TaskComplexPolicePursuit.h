@@ -11,7 +11,7 @@ public:
     bool                      m_IsRoadBlockCop : 1 {};
     bool                      m_IsPlayerInCullZone : 1 {};
     bool                      m_CouldJoinPursuit : 1 { true };
-    notsa::EntityRef<CCopPed> m_Pursuer{};
+    CCopPed*                  m_Pursuer{};   // NOTE: a plain (unregistered) pointer in the exe: 0x68D880 only cleans up m_Pursued's reference; the port had an EntityRef that was never assigned
     notsa::EntityRef<CPed>    m_Pursued{};
 
 public:

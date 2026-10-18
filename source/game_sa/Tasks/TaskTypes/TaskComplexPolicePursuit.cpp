@@ -162,6 +162,7 @@ CTask* CTaskComplexPolicePursuit::CreateSubTask(eTaskType taskType, CPed* ped) {
 
 // 0x6908E0
 CTask* CTaskComplexPolicePursuit::CreateFirstSubTask(CPed* ped) {
+    m_Pursuer = ped->AsCop(); // 0x6908E9: `mov [esi+10h], edi` (the port never stored the pursuer: the destructor never cleared the pursuit)
     if (SetPursuit(ped->AsCop())) {
         return CreateSubTask(TASK_COMPLEX_ARREST_PED, ped);
     }

@@ -176,7 +176,8 @@ The game is single-instance and the GPU is shared by several agents and by the u
 It records the holder's PID next to the `owner` text; a waiter drops a lock whose holder is gone (killed hard, e.g. by an agent's tool timeout) and a lock directory with neither PID nor owner
 older than 60 s; a hand-written lock (owner file only, from the old `mkdir` snippet) is dropped only after 30 min with no `gta_reversed`/`gta_sa`/`*_test` process running; an owner starting with
 `USER-PLAY` (`play.cmd`: the user is playing) is **never** removed automatically - agents wait, and must not start builds or heavy work meanwhile. `gpu_locked.sh --status` prints the holder and
-whether it looks alive (exit 0 free / 1 held / 3 USER-PLAY / 4 stale), `--reap` drops a stale lock. Nested calls of the same holder (`GPU_LOCK_HELD`) just run.
+whether it looks alive (exit 0 free / 1 held / 3 USER-PLAY / 4 stale), `--reap` drops a stale lock. Nested calls of the same holder (`GPU_LOCK_HELD`) just run. A long-lived script that takes the lock around several runs
+(`gameplay_regress.sh`, `orig_run.sh`) uses `gpu_locked.sh --acquire "<owner>" $$` / `--release $$` (the holder is that script, so a killed script is a dead holder).
 
 ## 9. Debugging
 * **Binaries**: StandaloneRelease/Detached/RW all link with `/DEBUG` (+`/Z7`): `build/<dir>/bin/gta_reversed.pdb` and `gta_reversed.map` (link `/MAP`; `census.py` and the abort tracer symbolise from it). Release objects are `/O2` but with `/OPT:NOREF /OPT:NOICF`, so function addresses stay meaningful.

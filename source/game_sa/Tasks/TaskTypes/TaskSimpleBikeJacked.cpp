@@ -23,6 +23,7 @@ CTaskSimpleBikeJacked::CTaskSimpleBikeJacked(CVehicle* vehicle, uint32 door, uin
     m_vehicle{vehicle},
     m_door{door},
     m_time{time},
+    m_jacker{carJacker}, // 0x648BCE: [esi+20h] = carJacker (never assigned before: the jacker reference was registered as null)
     m_isVictimDriver{isVictimDriver}
 {
     CEntity::SafeRegisterRef(m_vehicle);

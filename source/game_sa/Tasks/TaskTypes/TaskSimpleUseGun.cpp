@@ -108,13 +108,19 @@ void CTaskSimpleUseGun::FireGun(CPed* ped, bool isLeftHand) {
         CVector    origin     = ped->GetBonePosition(handBoneId);
         origin.z += barrelPos.z + 0.15f;
         ped->GetTransformedBonePosition(barrelPos, handBoneId);
-        if (!ped->m_pedIK.bUseArm) {
+        // 0x61EC2F..0x61EC59: only when the IK arm is used (bUseArm, flag bit 2) the arm chain decides `bGunReachedTarget`
+        // (the port had the condition inverted: it overwrote the torso IK's result for torso-aiming peds with the arm chain's `false`)
+        if (ped->m_pedIK.bUseArm) {
             ped->m_pedIK.bGunReachedTarget = g_ikChainMan.IsFacingTarget(ped, isLeftHand ? eIKChainSlot::LEFT_ARM : eIKChainSlot::RIGHT_ARM);
         }
         DoFireGun(origin, barrelPos);
     } else { // Otherwise ped is probably not on screen anyways, so just do something good enough
         CVector origin = ped->GetPosition();
         origin.z += 0.7f;
+        // 0x61EB9B..0x61EBB4: an off-screen arm-aiming ped counts as having reached its target (the port skipped this: no line of sight test = never a hit)
+        if (ped->m_pedIK.bUseArm) {
+            ped->m_pedIK.bGunReachedTarget = true;
+        }
         DoFireGun(origin, origin);
     }
 

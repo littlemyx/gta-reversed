@@ -259,6 +259,7 @@ bool CTaskSimpleDuck::StopFireGun() const {
 // 0x692530
 void CTaskSimpleDuck::SetDuckTimer(uint16 time) {
     if (m_DuckControlType != DUCK_SCRIPT_CONTROLLED) {
+        m_StartTime    = CTimer::GetTimeInMS(); // 0x69253B: [ecx+8] = CTimer::m_snTimeInMilliseconds (the timer was never restarted)
         m_LengthOfDuck = time;
     }
 }

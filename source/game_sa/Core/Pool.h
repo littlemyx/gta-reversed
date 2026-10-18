@@ -73,6 +73,15 @@ private:
     constexpr static auto DEADLAND_FILL   = 0xDD; //!< Delete'd objects are filled with this
     constexpr static auto CLEANLAND_FILL  = 0xCD; //!< New'd objects are filled with this (Expect the constructor to overwrite most of this)
 
+    // Initial fill of a freshly created pool. Upstream: 0xFD (MSVC debug heap "no man's land"). The exe (release, fresh heap pages) hands out ZEROED storage and its constructors leave many members
+    // uninitialised on purpose (e.g. CTaskSimpleCarDrive 0x63C340 only rewrites bits 2..5 of its flag byte, CTask::Clone copy ctors, ...), so the run build starts every pool at zero: with 0xFD such a member read
+    // as "true" (m_bClosingDoor -> car occupants could never be aborted by an event; police stuck in their cars, killed drivers kept driving).
+#ifdef NOTSA_STANDALONE_RUN
+    constexpr static auto INITIAL_FILL = 0x00;
+#else
+    constexpr static auto INITIAL_FILL = NOMANSLAND_FILL;
+#endif
+
 public:
     /*!
     * @brief Default constructor, with no memory allocated
@@ -92,7 +101,7 @@ public:
         assert(m_SlotState);
 
         rng::uninitialized_fill(m_SlotState, m_SlotState + capacity, SlotState{});
-        DoFill(NOMANSLAND_FILL);
+        DoFill(INITIAL_FILL);
     }
 
     /*!
@@ -109,7 +118,7 @@ public:
         assert(m_SlotState);
 
         rng::uninitialized_fill(m_SlotState, m_SlotState + capacity, SlotState{});
-        DoFill(NOMANSLAND_FILL);
+        DoFill(INITIAL_FILL);
     }
 
     ~CPool() {

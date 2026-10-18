@@ -773,7 +773,8 @@ void CTaskSimpleSwim::ProcessControlInput(CPlayerPed* ped) {
                 float fRadianAngle = CGeneral::GetRadianAngleBetweenPoints(0.0f, 0.0f, negativePedWalkX, vecPedWalk.y) - TheCamera.m_fOrientation;
                 float angle = CGeneral::LimitRadianAngle(fRadianAngle);
 
-                CVector vecPedWalkDirection(0.0f, -x87::sin(angle), x87::cos(angle));
+                // exe 0x688FBB..0x688FD4: direction = (-sin a, cos a, 0)
+                CVector vecPedWalkDirection((float)(-x87::sin(angle)), (float)x87::cos(angle), 0.0f);
                 if (angle <= ped->m_fCurrentRotation + DegreesToRadians(180.0f)) {
                     if (angle < ped->m_fCurrentRotation - DegreesToRadians(180.0f)) {
                         angle += DegreesToRadians(360.0f);
@@ -877,7 +878,7 @@ void CTaskSimpleSwim::ProcessControlInput(CPlayerPed* ped) {
             fRotation = -(ped->m_fAimingRotation - ped->m_fCurrentRotation);
             if (fRotation <= DegreesToRadians(180.0f)) {
                 if (fRotation < -DegreesToRadians(180.0f)) {
-                    fRotation = DegreesToRadians(360.0f) - ped->m_fAimingRotation - ped->m_fCurrentRotation;
+                    fRotation += DegreesToRadians(360.0f); // exe 0x6891FC: fadd 2pi
                 }
             } else {
                 fRotation -= DegreesToRadians(360.0f);

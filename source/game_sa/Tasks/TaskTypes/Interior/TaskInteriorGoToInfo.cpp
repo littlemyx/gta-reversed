@@ -48,7 +48,8 @@ CTask* CTaskInteriorGoToInfo::CreateNextSubTask(CPed* ped) {
         if ((m_IntInfo->Pos - ped->GetPosition()).SquaredMagnitude2D() > sq(0.2f)) {
             return new CTaskComplexFollowNodeRoute{ PEDMOVE_WALK, m_IntInfo->Pos, 0.2f };
         }
-        return new CTaskSimpleAchieveHeading{ m_IntInfo->Dir.Heading(true) };
+        // 0x675940: LimitRadianAngle(GetRadianAngleBetweenPoints(Dir.x, Dir.y, 0, 0)), not CVector::Heading
+        return new CTaskSimpleAchieveHeading{ CGeneral::LimitRadianAngle(CGeneral::GetRadianAngleBetweenPoints(m_IntInfo->Dir.x, m_IntInfo->Dir.y, 0.f, 0.f)) };
     }
     default:
         return nullptr;
@@ -64,7 +65,7 @@ CTask* CTaskInteriorGoToInfo::CreateFirstSubTask(CPed* ped) {
     if (m_bDoInstantly) {
         ped->SetPosn(m_IntInfo->Pos);
 
-        const auto rz = m_IntInfo->Dir.Heading(true);
+        const auto rz = CGeneral::LimitRadianAngle(CGeneral::GetRadianAngleBetweenPoints(m_IntInfo->Dir.x, m_IntInfo->Dir.y, 0.f, 0.f)); // 0x6766E7, 0x6766F5 (not CVector::Heading)
         ped->m_fCurrentRotation = rz;
         ped->m_fAimingRotation = rz;
         ped->SetHeading(rz);

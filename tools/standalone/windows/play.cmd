@@ -27,12 +27,21 @@ if not exist "%LOCKROOT%" md "%LOCKROOT%" >nul 2>&1
 set "WAITED=0"
 :acquire
 md "%LOCK%" >nul 2>&1
-if errorlevel 1 (
-  if "%WAITED%"=="0" echo Агенты сейчас запускают игру, жду…
-  set "WAITED=1"
-  ping -n 6 127.0.0.1 >nul
-  goto :acquire
-)
+if not errorlevel 1 goto :locked
+rem An agent killed hard leaves its lock behind: gpu_locked.sh records the holder's Windows pid in winpid - drop the lock if that process is gone.
+set "HOLDER="
+if exist "%LOCK%\winpid" set /p HOLDER=<"%LOCK%\winpid"
+if not defined HOLDER goto :wait
+"%SystemRoot%\System32\tasklist.exe" /FI "PID eq %HOLDER%" /NH 2>nul | "%SystemRoot%\System32\find.exe" " %HOLDER% " >nul
+if not errorlevel 1 goto :wait
+rd /s /q "%LOCK%" >nul 2>&1
+goto :acquire
+:wait
+if "%WAITED%"=="0" echo Агенты сейчас запускают игру, жду…
+set "WAITED=1"
+ping -n 6 127.0.0.1 >nul
+goto :acquire
+:locked
 set "HAVELOCK=1"
 > "%LOCK%\owner" echo USER-PLAY %DATE% %TIME%
 if "%WAITED%"=="1" echo Очередь освободилась, запускаю.

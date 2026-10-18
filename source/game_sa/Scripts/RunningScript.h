@@ -397,8 +397,20 @@ public:
     //! Return the custom command handler of a function (or null) as a reference
     static notsa::script::CommandHandlerFunction& CustomCommandHandlerOf(eScriptCommands command); // Returning a ref here for convenience (instead of having to make a `Set` function too)
 
-private:
-    void ResetIP();
+    // Pops the whole IP stack: continues at the OUTERMOST return address (`m_IPStack[0]`, the line after the mission's first GOSUB) with an empty stack.
+    // Exe: 0x485A50 (CRunningScript::DoDeathArrestCheck) and 0x469F00 (CRunningScript::Process, mission failed): clamp the depth to 1, `--depth`, `m_IP = m_IPStack[depth]`.
+    // (This used to be `m_IP = m_IPStack[m_StackDepth--]` = the entry ABOVE the top, and the loop ended on `m_IPStack[1]`: after a busted / wasted mission the script continued at a stale IP;
+    // user playtest 1, U10: "mission not reset after leaving jail".) The exe leaves the popped entries in the stack (they are saved with the script).
+    void ResetIP() {
+        assert(m_StackDepth > 0); // Original bug... (depth 0 wraps)
+        do {
+#ifdef NOTSA_STANDALONE_RUN
+            m_IP = m_IPStack[--m_StackDepth];
+#else
+            m_IP = std::exchange(m_IPStack[--m_StackDepth], nullptr); // NOTSA: Also clear the stack, we don't need it anymore
+#endif
+        } while (m_StackDepth);
+    }
 };
 
 VALIDATE_SIZE(CRunningScript, 0xE0);

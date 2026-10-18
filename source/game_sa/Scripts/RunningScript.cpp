@@ -1850,15 +1850,3 @@ notsa::script::CommandHandlerFunction& CRunningScript::CustomCommandHandlerOf(eS
     return s_CustomCommandHandlerTable[(size_t)(command)];
 }
 
-void CRunningScript::ResetIP() {
-    assert(m_StackDepth > 0); // Original bug...
-    do {
-#ifdef NOTSA_STANDALONE_RUN
-        m_IP = m_IPStack[m_StackDepth--]; // NOTSA-AUDIT: the exe leaves the popped entries in the stack (they are saved with the script)
-#else
-#line 1831
-        m_IP = std::exchange(m_IPStack[m_StackDepth--], nullptr); // NOTSA: Also clear the stack, we don't need it anymore
-#endif
-#line 1832
-    } while (m_StackDepth);
-}

@@ -285,6 +285,7 @@ int main(int argc, char** argv) {
     TestAi();
     TestEntities();
     TestFightPreArray();
+    TestScriptResetIP();
 #endif
     int bad24 = 0, bad53 = 0, hard24 = 0, hard53 = 0;
     for (auto& r : g_rows) { bad24 += r.bad24; bad53 += r.bad53; hard24 += r.hardReg24 + r.hardSpec24; hard53 += r.hardReg53 + r.hardSpec53; }

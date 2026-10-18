@@ -61,3 +61,25 @@ static void TestFightPreArray() {
         return true;
     }, 1);
 }
+
+// PT-MISSION / U10: after a busted / wasted mission the script must continue at the OUTERMOST return address (exe 0x485A50 DoDeathArrestCheck: clamp the depth to 1, --depth, IP = stack[depth]).
+// The port's ResetIP (header-inline, now shared with this test) read `m_IPStack[m_StackDepth--]` = the entry above the top and ended on stack[1].
+#include "game_sa/Scripts/RunningScript.h"
+static void TestScriptResetIP() {
+    Run("CRunningScript::DoDeathArrestCheck IP stack reset 0x485A50", [&](Rng& r, std::string& d) {
+        alignas(16) static uint8 obj[sizeof(CRunningScript)];
+        FillGarbage(r, obj, sizeof obj);
+        auto* s = reinterpret_cast<CRunningScript*>(obj);
+        s->m_IsDeathArrestCheckEnabled = true;
+        s->m_StackDepth                = (uint16)(1 + r.below(8));
+        for (auto& ip : s->m_IPStack) ip = reinterpret_cast<uint8*>(0x10000u + r.below(0x100000) * 4);
+        const uint32_t flagSlot = 4 * (1 + r.below(100));
+        *reinterpret_cast<uint32_t*>(0xA476AC) = flagSlot;             // CTheScripts::OnAMissionFlag
+        *reinterpret_cast<uint32_t*>(0xA49960 + flagSlot) = 1;         // ScriptSpace[OnAMissionFlag]: on a mission
+        CWorld::PlayerInFocus = 0;
+        CWorld::Players[0].m_nPlayerState = r.below(2) ? PLAYERSTATE_HAS_DIED : PLAYERSTATE_HAS_BEEN_ARRESTED;
+        return Both(d, { Rg{ (uintptr_t)obj, sizeof obj }, Rg{ 0xA49960u + flagSlot, 4 } },
+            [&] { s->ResetIP(); s->m_DoneDeathArrest = true; s->m_WakeTime = 0; *reinterpret_cast<uint32_t*>(0xA49960 + flagSlot) = 0; return 0ull; },
+            [&] { oracle::Fn<void __fastcall(void*, int)>(0x485A50)(obj, 0); return 0ull; });
+    }, 300);
+}

@@ -84,6 +84,20 @@ void SetVideoMode(int32 mode) {
     VIDEO_MODE_LOG("Changing Video Mode to {} ({})", mode, gVideoModes ? gVideoModes[mode] : "unknown");
 
     RwD3D9ChangeVideoMode(mode);
+#ifdef NOTSA_USE_SDL3
+    // exe 0x7F8640 (RwD3D9ChangeVideoMode) resizes the window with SetWindowPos; the resulting WM_SIZE is SENT to the game's window procedure, i.e. it runs
+    // synchronously inside the call: __MainWndProc 0x747F04 -> RsEventHandler(rsCAMERASIZE) -> CameraSize resizes the camera / z rasters to the new client size.
+    // SDL owns the window procedure and only queues SDL_EVENT_WINDOW_RESIZED (nothing consumes it), so the camera raster was still the OLD size here, and
+    // SetupBackBufferVertex below sized the post-effects front buffer for the previous mode (the pow2 of the old size: one mode step behind). The copy
+    // RwRasterRenderFast(camera raster) into it then failed (D3DERR_INVALIDCALL) and the heat haze drew dark squares of an uninitialised texture (PLAYTEST-1 U2).
+    if (RwInitialized) {
+        RECT client{};
+        if (GetClientRect(PSGLOBAL(window), &client) && client.right > 0 && client.bottom > 0) {
+            RwRect wndsz{ .x = 0, .y = 0, .w = client.right, .h = client.bottom };
+            RsEventHandler(rsCAMERASIZE, &wndsz);
+        }
+    }
+#endif
     CPostEffects::SetupBackBufferVertex();
     RsGlobal.maximumWidth  = RwRasterGetWidth(RwCameraGetRaster(Scene.m_pRwCamera));
     RsGlobal.maximumHeight = RwRasterGetHeight(RwCameraGetRaster(Scene.m_pRwCamera));

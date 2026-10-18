@@ -5,6 +5,7 @@
 #include "SDLWrapper.hpp"
 #include <bindings/imgui_impl_sdl3.h>
 #include <WindowedMode.hpp>
+#include "platform/win/VideoMode.h"
 #include "PostEffects.h"
 #include "UIRenderer.h"
 // One injector implementation for both builds: the standalone run build (NOTSA_STANDALONE_RUN) and the ASI/DLL build with -DGTASA_INPUT_INJECT=ON (NOTSA_INPUT_INJECT)
@@ -47,7 +48,8 @@ static bool IsInFullscreen()
 // | invehicle (the player ped is in a vehicle) | menu (main menu idle and rendering). Logs "[until] COND ok|TIMEOUT after N ms".
 // `label:NAME` / `skipif:COND:NAME` (COND as above, evaluated once, no waiting): when COND holds the script jumps forward to `label:NAME` (the clock jumps with it, i.e.
 // the skipped waits are not waited), e.g. a second car-entry attempt that is skipped when the first one worked.
-// `mark:NAME` logs a progress marker; newlines also separate items. K = return|escape|up|down|left|right|space|tab|lshift|lctrl|f1..f12|<single char>.
+// `vmode:IDX` applies video mode IDX the way the menu's resolution screen does (m_nPrefsVideoMode, SetVideoMode, CPostEffects::DoScreenModeDependentInitializations): regression
+// tests of live mode changes (PLAYTEST-1 U2). `mark:NAME` logs a progress marker; newlines also separate items. K = return|escape|up|down|left|right|space|tab|lshift|lctrl|f1..f12|<single char>.
 #include <string>
 #include <vector>
 #include <sstream>
@@ -58,7 +60,7 @@ static bool IsInFullscreen()
 void RequestMarkScreenshot(const char* name); // standalone/rw/camera.cpp
 #endif
 namespace {
-struct InjEv { uint64_t t; bool down; SDL_Keycode key; int mx = -1, my = -1; std::string mark; std::string probe; std::string until; uint64_t maxMs = 0; std::string skipIf, label; size_t skipTo = 0; };
+struct InjEv { uint64_t t; bool down; SDL_Keycode key; int mx = -1, my = -1; int vmode = -1; std::string mark; std::string probe; std::string until; uint64_t maxMs = 0; std::string skipIf, label; size_t skipTo = 0; };
 std::vector<InjEv> s_InjEvents;
 size_t             s_InjNext = 0;
 bool               s_InjInit = false;
@@ -148,6 +150,11 @@ void InjInit() {
             ev.mx = x; ev.my = y;
             s_InjEvents.push_back(ev);
         }
+        else if (cmd == "vmode") { // vmode:IDX
+            InjEv ev{ t, true, 0 };
+            ev.vmode = std::atoi(arg.c_str());
+            s_InjEvents.push_back(ev);
+        }
         else if (cmd == "until") { // until:COND[:MAXMS]
             InjEv ev{ t, true, 0 };
             const auto c2 = arg.find(':');
@@ -221,7 +228,17 @@ void InjPump() {
         }
         if (!ev.label.empty()) { s_InjNext++; continue; }
         if (!ev.probe.empty()) { s_InjNext++; InjProbe(ev.probe); continue; }
-        if (ev.mark.empty() && ev.mx < 0 && ev.key != 0) {
+        if (ev.vmode >= 0) {
+            s_InjNext++;
+            if (ev.vmode < RwEngineGetNumVideoModes()) {
+                FrontEndMenuManager.m_nPrefsVideoMode = ev.vmode;
+                SetVideoMode(ev.vmode);
+                CPostEffects::DoScreenModeDependentInitializations();
+            }
+            NOTSA_INJ_LOG("[vmode] %d at %u ms", ev.vmode, (unsigned)clock());
+            continue;
+        }
+        if (ev.mark.empty() && ev.mx < 0 && ev.vmode < 0 && ev.key != 0) {
             // A key must stay down for at least 150 ms of wall clock AND two game frames (CTimer frame counter; 1 s cap in case it does not advance) after it was really injected: when a hitch/low fps makes the pump run late,
             // the scheduled down and up (150 ms apart) would otherwise be pushed in the same pump, the game sees no press at all (soak: ESC lost, quit never opened).
             auto& st = s_InjKeyDown[ev.key];

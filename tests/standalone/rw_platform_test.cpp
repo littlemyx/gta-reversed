@@ -14,6 +14,9 @@
 static int g_fail = 0;
 #define CHECK(c) do { const bool ok_ = !!(c); std::printf("%-4s %s\n", ok_ ? "ok" : "FAIL", #c); if (!ok_) ++g_fail; } while (0)
 
+// RwD3D9ChangeMultiSamplingLevels does nothing when the level is already the selected one (exe 0x7F8A90), so a test that wants a device Reset has to change it
+static RwUInt32 g_ms = 1;
+static RwBool   ToggleMs() { g_ms = g_ms == 1 ? 2 : 1; return RwD3D9ChangeMultiSamplingLevels(g_ms); }
 static int  g_calls         = 0;
 static bool g_deviceOkInCb  = true;
 static bool g_targetsOkInCb = true;
@@ -93,10 +96,10 @@ int main() {
     _rwD3D9DeviceSetRestoreCallback(RestoreCb);
     const unsigned resets0 = NotsaRwPlatform_DeviceResetCount();
     g_calls = 0;
-    CHECK(RwD3D9ChangeMultiSamplingLevels(1) == TRUE);              // ResetDeviceNow -> showRaster wrapper
+    CHECK(ToggleMs() == TRUE);              // ResetDeviceNow -> showRaster wrapper
     CHECK(g_calls == 1 && NotsaRwPlatform_DeviceResetCount() == resets0 + 1);
     CHECK(g_deviceOkInCb && g_targetsOkInCb);
-    CHECK(RwD3D9ChangeMultiSamplingLevels(1) == TRUE);
+    CHECK(ToggleMs() == TRUE);
     CHECK(g_calls == 2);
 
     CHECK(RwD3D9ChangeVideoMode(RwEngineGetCurrentVideoMode()) == TRUE); // video mode change path
@@ -163,7 +166,7 @@ int main() {
     // callback replaced / cleared
     _rwD3D9DeviceSetRestoreCallback(nullptr);
     const int calls = g_calls;
-    CHECK(RwD3D9ChangeMultiSamplingLevels(1) == TRUE);
+    CHECK(ToggleMs() == TRUE);
     CHECK(g_calls == calls);
 
     // ---- 3. gamma (CGamma::Init / SetGamma use exactly these calls)
@@ -203,6 +206,8 @@ int main() {
     RwCameraSetFrame(cam, nullptr);
     RwCameraDestroy(cam); RwFrameDestroy(frame);
 
+    // multisampling off before the restart: a start with multisampling selected Resets the freshly created device once (RwEngineStart)
+    if (g_ms != 1) { g_ms = 1; RwD3D9ChangeMultiSamplingLevels(1); }
     // Stop / Start again: the Reset watch is installed on the new device and the Reset counter restarts
     CHECK(RwEngineStop() == TRUE);
     CHECK(RwEngineStart() == TRUE);
@@ -210,7 +215,7 @@ int main() {
     CHECK(NotsaRwPlatform_DeviceResetCount() == 0);
     _rwD3D9DeviceSetRestoreCallback(RestoreCb);
     g_calls = 0;
-    CHECK(RwD3D9ChangeMultiSamplingLevels(1) == TRUE);
+    CHECK(ToggleMs() == TRUE);
     CHECK(g_calls == 1 && NotsaRwPlatform_DeviceResetCount() == 1);
     _rwD3D9DeviceSetRestoreCallback(nullptr);
 

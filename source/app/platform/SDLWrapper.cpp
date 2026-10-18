@@ -64,11 +64,12 @@ static bool IsInFullscreen()
 #endif
 #ifdef NOTSA_STANDALONE_RUN
 void RequestMarkScreenshot(const char* name); // standalone/rw/camera.cpp
+void NotsaRwMsaaState(char* buf, size_t n);   // standalone/rw/engine.cpp: selected/max level + the live swap chain's multisample type
 #endif
 struct NotsaInjectMissionInfo { int32 offset; uint8 bytes[16]; };
 bool NotsaInjectStartMission(int32 missionId, NotsaInjectMissionInfo* info); // toolsmenu/DebugModules/Script/MissionDebugModule.cpp
 namespace {
-struct InjEv { uint64_t t; bool down; SDL_Keycode key; int mx = -1, my = -1; int vmode = -1; int mission = -1; std::string mark; std::string probe; std::string cmd; std::string until; uint64_t maxMs = 0; std::string skipIf, label; size_t skipTo = 0; };
+struct InjEv { uint64_t t; bool down; SDL_Keycode key; int mx = -1, my = -1; int vmode = -1; int aa = -1; int mission = -1; std::string mark; std::string probe; std::string cmd; std::string until; uint64_t maxMs = 0; std::string skipIf, label; size_t skipTo = 0; };
 std::vector<InjEv> s_InjEvents;
 size_t             s_InjNext = 0;
 bool               s_InjInit = false;
@@ -161,6 +162,11 @@ void InjInit() {
         else if (cmd == "vmode") { // vmode:IDX
             InjEv ev{ t, true, 0 };
             ev.vmode = std::atoi(arg.c_str());
+            s_InjEvents.push_back(ev);
+        }
+        else if (cmd == "aa") { // aa:LEVEL (menu value 1 = off, 2.. = "1".. in the Anti Aliasing option)
+            InjEv ev{ t, true, 0 };
+            ev.aa = std::atoi(arg.c_str());
             s_InjEvents.push_back(ev);
         }
         else if (cmd == "until") { // until:COND[:MAXMS]
@@ -494,6 +500,7 @@ static void InjRunCmd(const std::string& c) {
     else if (!std::strcmp(name, "rigstate")) {
         for (auto* v : s_InjRig) if (v) NOTSA_INJ_LOG("[cmd] rig veh %p model %d pos=(%d,%d,%d) speed*100=%d status=%d towing=%p towed=%p nColl=%d", (void*)v, (int)v->m_nModelIndex, (int)v->GetPosition().x, (int)v->GetPosition().y, (int)v->GetPosition().z, (int)(v->m_vecMoveSpeed.Magnitude() * 100.f), (int)v->GetStatus(), (void*)v->m_pTowingVehicle, (void*)v->m_pVehicleBeingTowed, (int)v->m_nNumEntitiesCollided);
     }
+    else if (!std::strcmp(name, "hour")) { CClock::SetGameClock((uint8)std::atoi(args.c_str()), 0, 0); } // hour:H  game clock H:00 (heat haze post effect needs >= 10, PLAYTEST-1 U2/U17 checks)
     else if (!std::strcmp(name, "armour")) { pl->m_fArmour = (float)std::atoi(args.c_str()); }
     else if (!std::strcmp(name, "health")) { pl->m_fHealth = (float)std::atoi(args.c_str()); }
 }
@@ -549,6 +556,24 @@ void InjPump() {
             NOTSA_INJ_LOG("[vmode] %d at %u ms", ev.vmode, (unsigned)clock());
             continue;
         }
+        if (ev.aa >= 0) {
+            s_InjNext++;
+            // what the menu's Anti Aliasing option does on accept (CMenuManager::ProcessPCMenuOptions MENU_ACTION_ANTIALIASING)
+            auto& mm = FrontEndMenuManager;
+            mm.m_nDisplayAntialiasing = ev.aa;
+            if (mm.m_nDisplayAntialiasing != mm.m_nPrefsAntialiasing) {
+                mm.m_nPrefsAntialiasing = mm.m_nDisplayAntialiasing;
+                RwD3D9ChangeMultiSamplingLevels(mm.m_nDisplayAntialiasing);
+                SetVideoMode(mm.m_nPrefsVideoMode);
+                mm.SaveSettings();
+            }
+            char st[200]{};
+#ifdef NOTSA_STANDALONE_RUN
+            NotsaRwMsaaState(st, sizeof(st));
+#endif
+            NOTSA_INJ_LOG("[aa] %d at %u ms: %s", ev.aa, (unsigned)clock(), st);
+            continue;
+        }
         if (ev.mission >= 100000) {
             s_InjNext++;
             if (auto* p = FindPlayerPed()) { if (ev.mission == 100000) { p->m_fHealth = 0.f; p->m_nPedState = PEDSTATE_DEAD; } else { p->m_nPedState = PEDSTATE_ARRESTED; } }
@@ -573,7 +598,7 @@ void InjPump() {
             NOTSA_INJ_LOG("[mission] start %d: %s (script offset %d, first bytes %02x %02x %02x %02x %02x %02x %02x %02x)", ev.mission, ok ? "ok" : "failed", mi.offset, mi.bytes[0], mi.bytes[1], mi.bytes[2], mi.bytes[3], mi.bytes[4], mi.bytes[5], mi.bytes[6], mi.bytes[7]);
             continue;
         }
-        if (ev.mark.empty() && ev.mx < 0 && ev.vmode < 0 && ev.key != 0) {
+        if (ev.mark.empty() && ev.mx < 0 && ev.vmode < 0 && ev.aa < 0 && ev.key != 0) {
             // A key must stay down for at least 150 ms of wall clock AND two game frames (CTimer frame counter; 1 s cap in case it does not advance) after it was really injected: when a hitch/low fps makes the pump run late,
             // the scheduled down and up (150 ms apart) would otherwise be pushed in the same pump, the game sees no press at all (soak: ESC lost, quit never opened).
             auto& st = s_InjKeyDown[ev.key];

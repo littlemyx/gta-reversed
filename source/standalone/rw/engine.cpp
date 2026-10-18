@@ -296,6 +296,95 @@ void ChooseFormats(D3DFORMAT displayFmt, bool windowed, D3DFORMAT& backFmt, D3DF
     depthFmt = rw::d3d::findFormatDepth(backFmt) == 32 ? D3DFMT_D24S8 : D3DFMT_D16;
 }
 
+// ---- Multisampling, as in the exe's RW (PLAYTEST-1 U17) ------------------------------------------------------------------------------------
+// The exe keeps four globals: 0x8E242C max level, 0x8E2430 selected level, 0x8E2434 number of NONMASKABLE quality levels (+1), 0x8E2438 the
+// selected NONMASKABLE quality "level". librw only knows `msLevel` and puts it into D3DPRESENT_PARAMETERS verbatim, so a level the adapter does not
+// support (the menu offers 1..min(4, max), i.e. 3 samples on an NVIDIA GPU) made every Reset fail, and the exe's choice of the quality level
+// (highest the runtime reports) was lost. librw's msLevel is therefore never set (stays 0 = no multisampling at startD3D); the exe's logic
+// below fills the present parameters instead.
+struct MsState {
+    uint32_t maxLevel = 1, sel = 1, nmCount = 1, nonMask = 1;
+} s_Ms;
+
+D3DFORMAT ModeDisplayFormat() {
+    return ModeIndexValid(d3d9Globals.currentMode) ? d3d9Globals.modes[d3d9Globals.currentMode].mode.Format : D3DFMT_X8R8G8B8;
+}
+bool ModeIsWindowed() { // exe: !(flags & 1) of the selected mode (flags at 0xC9BEF8)
+    return ModeIndexValid(d3d9Globals.currentMode) ? !(d3d9Globals.modes[d3d9Globals.currentMode].flags & rw::VIDEOMODEEXCLUSIVE) : true;
+}
+
+// exe 0x7F6BF0 (same body inlined at 0x7F5FE0 = video mode setter, 0x7F65DA): all four globals = 1, then every plain level 2..16 that
+// CheckDeviceMultiSampleType accepts becomes the max, then the NONMASKABLE quality count (+1) raises the max if it is larger.
+void MsFindLevels(D3DFORMAT fmt, bool windowed) {
+    s_Ms = {};
+    if (!d3d9Globals.d3d9) {
+        return;
+    }
+    for (UINT lvl = 2; lvl <= 16; lvl++) {
+        if (SUCCEEDED(d3d9Globals.d3d9->CheckDeviceMultiSampleType((UINT)d3d9Globals.adapter, D3DDEVTYPE_HAL, fmt, windowed, (D3DMULTISAMPLE_TYPE)lvl, nullptr))) {
+            s_Ms.maxLevel = lvl;
+        }
+    }
+    DWORD quality = 0;
+    if (SUCCEEDED(d3d9Globals.d3d9->CheckDeviceMultiSampleType((UINT)d3d9Globals.adapter, D3DDEVTYPE_HAL, fmt, windowed, D3DMULTISAMPLE_NONMASKABLE, &quality))) {
+        s_Ms.nmCount = quality + 1;
+        if (s_Ms.nmCount > s_Ms.maxLevel) {
+            s_Ms.maxLevel = s_Ms.nmCount;
+        }
+    }
+}
+
+// exe 0x7F84F0 RwD3D9EngineSetMultiSamplingLevels: selected = min(request, max); below 2 -> off; else step down until the runtime accepts the type
+// (so 3 samples becomes 2 on hardware without 3x); the NONMASKABLE quality "level" scales with the request.
+void MsSetLevels(uint32_t numLevels) {
+    const uint32_t lvl = numLevels > s_Ms.maxLevel ? s_Ms.maxLevel : numLevels;
+    s_Ms.sel = lvl;
+    if (lvl < 2) {
+        s_Ms.sel     = 1;
+        s_Ms.nonMask = 1;
+        return;
+    }
+    const auto fmt      = ModeDisplayFormat();
+    const bool windowed = ModeIsWindowed();
+    while (FAILED(d3d9Globals.d3d9->CheckDeviceMultiSampleType((UINT)d3d9Globals.adapter, D3DDEVTYPE_HAL, fmt, windowed, (D3DMULTISAMPLE_TYPE)s_Ms.sel, nullptr))) {
+        if (--s_Ms.sel < 2) {
+            break;
+        }
+    }
+    s_Ms.nonMask = (uint32_t)(((uint64_t)s_Ms.nmCount * lvl) / s_Ms.maxLevel);
+}
+
+// exe 0x7F6CB0 (the tail, 0x7F6FFD..0x7F70E2): multisample type / quality of the presentation parameters for the back buffer format and windowed flag
+// in `p`. The selected plain type with the HIGHEST quality level the runtime reports; else NONMASKABLE with the quality derived from the NONMASKABLE
+// level; no multisampling when neither is available. Multisampling forces D3DSWAPEFFECT_DISCARD.
+void MsApplyToPresent(D3DPRESENT_PARAMETERS& p) {
+    p.MultiSampleType    = D3DMULTISAMPLE_NONE;
+    p.MultiSampleQuality = 0;
+    if (!(s_Ms.sel > 1 || s_Ms.nonMask > 1) || !d3d9Globals.d3d9) {
+        return;
+    }
+    DWORD   q  = 0;
+    HRESULT hr = d3d9Globals.d3d9->CheckDeviceMultiSampleType((UINT)d3d9Globals.adapter, D3DDEVTYPE_HAL, p.BackBufferFormat, p.Windowed, (D3DMULTISAMPLE_TYPE)s_Ms.sel, &q);
+    if (SUCCEEDED(hr) && q > 0) {
+        p.MultiSampleType    = (D3DMULTISAMPLE_TYPE)s_Ms.sel;
+        p.MultiSampleQuality = q - 1;
+    } else {
+        q  = 0;
+        hr = d3d9Globals.d3d9->CheckDeviceMultiSampleType((UINT)d3d9Globals.adapter, D3DDEVTYPE_HAL, p.BackBufferFormat, p.Windowed, D3DMULTISAMPLE_NONMASKABLE, &q);
+        if (SUCCEEDED(hr) && q > 0) {
+            uint32_t nq = s_Ms.nonMask - 2; // unsigned, as in the exe
+            if (nq > q - 1) {
+                nq = q - 1;
+            }
+            p.MultiSampleType    = D3DMULTISAMPLE_NONMASKABLE;
+            p.MultiSampleQuality = nq;
+        }
+    }
+    if (p.MultiSampleType != D3DMULTISAMPLE_NONE) {
+        p.SwapEffect = D3DSWAPEFFECT_DISCARD;
+    }
+}
+
 DWORD s_WindowedStyle = 0; // window style before the first switch to exclusive mode (restored when going back)
 
 // Applies the video mode `idx` to the live device (W). Returns false if the device could not be reset.
@@ -338,6 +427,7 @@ bool ApplyModeToDevice(int idx) {
     p.AutoDepthStencilFormat = depth;
     g.startMode              = mode;
     g.currentMode            = idx;
+    MsApplyToPresent(p); // exe 0x7F86B5: the present parameters are rebuilt (multisampling included) for the new mode
     return ResetDeviceNow();
 }
 
@@ -388,6 +478,7 @@ RwBool RwEngineOpen(RwEngineOpenParams* initParams) {
     }
     BuildExeModeList();
     PublishDeviceRange();
+    MsFindLevels(ModeDisplayFormat(), ModeIsWindowed()); // exe 0x7F6468
     return TRUE;
 }
 
@@ -413,8 +504,19 @@ RwBool RwEngineStart(void) {
     RwShimPipelineEnsure(); // 08: default pipeline façade, custom pipelines created by the game afterwards (CCustomBuildingRenderer::Initialise ...)
     NotsaRwPlatform_OnEngineStarted(); // 09: Reset watch for the restore callback (platform.cpp)
     // librw requests D3DPRESENT_RATE_DEFAULT in startD3D; honour a rate chosen with RwD3D9EngineSetRefreshRate for exclusive modes
+    bool reset = false;
     if (s_RefreshRate && !d3d9Globals.present.Windowed && d3d9Globals.present.FullScreen_RefreshRateInHz != s_RefreshRate) {
         d3d9Globals.present.FullScreen_RefreshRateInHz = s_RefreshRate;
+        reset = true;
+    }
+    // multisampling selected before the start (psSelectDevice): startD3D creates the device without it, the exe's present parameters carry it
+    const D3DMULTISAMPLE_TYPE oldType = d3d9Globals.present.MultiSampleType;
+    const DWORD               oldQ    = d3d9Globals.present.MultiSampleQuality;
+    MsApplyToPresent(d3d9Globals.present);
+    if (oldType != d3d9Globals.present.MultiSampleType || oldQ != d3d9Globals.present.MultiSampleQuality) {
+        reset = true;
+    }
+    if (reset) {
         ResetDeviceNow();
     }
     return TRUE;
@@ -527,6 +629,9 @@ RwBool RwEngineSetVideoMode(RwInt32 modeIndex) {
         return FALSE;
     }
     const bool ok = rw::Engine::setVideoMode(modeIndex);
+    if (ok) {
+        MsFindLevels(ModeDisplayFormat(), ModeIsWindowed()); // exe 0x7F5FE0: the levels the adapter offers for this mode's format
+    }
 #ifdef NOTSA_STANDALONE_RUN
     if (ok && s_Emu.Excl(modeIndex)) { // windowed run: size the window now, the device is created windowed with its client size at RwEngineStart
         WindowedEmuPlaceWindow((int)d3d9Globals.modes[modeIndex].mode.Width, (int)d3d9Globals.modes[modeIndex].mode.Height);
@@ -540,6 +645,22 @@ RwBool RwEngineSetVideoMode(RwInt32 modeIndex) {
 int NotsaRwWindowedVideoMode(void) {
     WindowedEmuInit();
     return s_Emu.Active() ? s_Emu.synthIdx : -1;
+}
+// Test aid (input injector `aa:N`): the multisampling state of the engine and of the LIVE swap chain, "max=8 msLevel=4 live=4 q=0 ..."
+void NotsaRwMsaaState(char* buf, size_t n) {
+    D3DPRESENT_PARAMETERS live{};
+    bool                  haveLive = false;
+    if (rw::d3d::d3ddevice) {
+        IDirect3DSwapChain9* sc = nullptr;
+        if (SUCCEEDED(rw::d3d::d3ddevice->GetSwapChain(0, &sc)) && sc) {
+            haveLive = SUCCEEDED(sc->GetPresentParameters(&live));
+            sc->Release();
+        }
+    }
+    std::snprintf(buf, n, "max=%u sel=%u nm=%u nonmask=%u live_type=%d live_quality=%u present_type=%d windowed=%d back=%ux%u dev=%s", RwD3D9EngineGetMaxMultiSamplingLevels(), (unsigned)s_Ms.sel, (unsigned)s_Ms.nmCount, (unsigned)s_Ms.nonMask,
+                  haveLive ? (int)live.MultiSampleType : -1, haveLive ? (unsigned)live.MultiSampleQuality : 0u, (int)d3d9Globals.present.MultiSampleType, (int)d3d9Globals.present.Windowed,
+                  haveLive ? live.BackBufferWidth : 0u, haveLive ? live.BackBufferHeight : 0u,
+                  rw::d3d::d3ddevice ? (rw::d3d::d3ddevice->TestCooperativeLevel() == D3D_OK ? "ok" : "LOST") : "none");
 }
 // true when NOTSA_STANDALONE_WINDOWED is active: the window keeps its caption (WinMain) and is shown without stealing the focus
 bool NotsaRwWindowedRun(void) {
@@ -560,40 +681,35 @@ RwBool RwD3D9ChangeVideoMode(RwInt32 modeIndex) {
     return ApplyModeToDevice(modeIndex) ? TRUE : FALSE;
 }
 
-RwUInt32 RwD3D9EngineGetMaxMultiSamplingLevels(void) {
-    if (!IsOpenedOrStarted() || !d3d9Globals.d3d9 || !ModeIndexValid(d3d9Globals.currentMode)) {
-        return 1;
-    }
-    // librw queries the format of `startMode`, which is only filled by Start; use the selected mode so this also works before Start
-    const auto& m    = d3d9Globals.modes[d3d9Globals.currentMode];
-    const bool  wind = !(m.flags & rw::VIDEOMODEEXCLUSIVE);
-    for (UINT lvl = D3DMULTISAMPLE_16_SAMPLES; lvl > D3DMULTISAMPLE_NONMASKABLE; lvl--) {
-        DWORD quality = 0;
-        if (SUCCEEDED(d3d9Globals.d3d9->CheckDeviceMultiSampleType((UINT)d3d9Globals.adapter, D3DDEVTYPE_HAL, m.mode.Format, wind, (D3DMULTISAMPLE_TYPE)lvl, &quality))) {
-            return lvl;
-        }
-    }
-    return 1;
-}
+// exe 0x7F84E0: the value found when the video mode was selected
+RwUInt32 RwD3D9EngineGetMaxMultiSamplingLevels(void) { return s_Ms.maxLevel; }
 
-// A: Engine::setMultiSamplingLevels with RW's clamp to what the adapter supports (applied when the device is created)
+// exe 0x7F84F0 (see MsSetLevels); applied to the presentation parameters at the next device creation / Reset
 void RwD3D9EngineSetMultiSamplingLevels(RwUInt32 numLevels) {
     if (!IsOpenedOrStarted()) {
         return;
     }
-    const auto maxLevels = RwD3D9EngineGetMaxMultiSamplingLevels();
-    rw::Engine::setMultiSamplingLevels(numLevels > maxLevels ? maxLevels : numLevels);
+    MsSetLevels(numLevels);
 }
 
-// A: set + apply to the running device
+// exe 0x7F8A90: nothing when the device does not exist or the level equals the selected one; else select, rebuild the multisampling part of the
+// present parameters, Reset; when that fails, the old selection / parameters are restored and the device is reset again.
 RwBool RwD3D9ChangeMultiSamplingLevels(RwUInt32 numLevels) {
     if (!Is(rw::Engine::Started) || !rw::d3d::d3ddevice) {
-        return FALSE;
+        return TRUE;
     }
-    RwD3D9EngineSetMultiSamplingLevels(numLevels);
-    const auto lvl = d3d9Globals.msLevel;
-    d3d9Globals.present.MultiSampleType    = lvl <= 1 ? D3DMULTISAMPLE_NONE : (D3DMULTISAMPLE_TYPE)lvl;
-    d3d9Globals.present.MultiSampleQuality = 0;
+    if (s_Ms.sel == numLevels) {
+        return TRUE;
+    }
+    const MsState               oldMs      = s_Ms;
+    const D3DPRESENT_PARAMETERS oldPresent = d3d9Globals.present;
+    MsSetLevels(numLevels);
+    MsApplyToPresent(d3d9Globals.present);
+    if (ResetDeviceNow()) {
+        return TRUE;
+    }
+    s_Ms                = oldMs;
+    d3d9Globals.present = oldPresent;
     return ResetDeviceNow() ? TRUE : FALSE;
 }
 

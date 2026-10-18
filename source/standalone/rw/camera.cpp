@@ -233,7 +233,15 @@ static void ShimDumpBackBuffer() {
     }
     D3DSURFACE_DESC d{};
     bb->GetDesc(&d);
-    if (SUCCEEDED(dev->CreateOffscreenPlainSurface(d.Width, d.Height, d.Format, D3DPOOL_SYSTEMMEM, &sys, nullptr)) && SUCCEEDED(dev->GetRenderTargetData(bb, sys))) {
+    // a multisampled back buffer cannot be read back directly (the driver hands out sample 0 only = an un-anti-aliased image): resolve it first
+    IDirect3DSurface9* resolved = nullptr;
+    IDirect3DSurface9* src      = bb;
+    if (d.MultiSampleType != D3DMULTISAMPLE_NONE) {
+        if (SUCCEEDED(dev->CreateRenderTarget(d.Width, d.Height, d.Format, D3DMULTISAMPLE_NONE, 0, FALSE, &resolved, nullptr)) && SUCCEEDED(dev->StretchRect(bb, nullptr, resolved, nullptr, D3DTEXF_NONE))) {
+            src = resolved;
+        }
+    }
+    if (SUCCEEDED(dev->CreateOffscreenPlainSurface(d.Width, d.Height, d.Format, D3DPOOL_SYSTEMMEM, &sys, nullptr)) && SUCCEEDED(dev->GetRenderTargetData(src, sys))) {
         D3DLOCKED_RECT lr{};
         if (SUCCEEDED(sys->LockRect(&lr, nullptr, D3DLOCK_READONLY))) {
             char name[64];
@@ -256,6 +264,9 @@ static void ShimDumpBackBuffer() {
                         if (d.Format == D3DFMT_R5G6B5) {
                             const uint16_t v = ((const uint16_t*)src)[x];
                             row[x * 3 + 0] = (uint8_t)((v & 31) * 255 / 31); row[x * 3 + 1] = (uint8_t)(((v >> 5) & 63) * 255 / 63); row[x * 3 + 2] = (uint8_t)(((v >> 11) & 31) * 255 / 31);
+                        } else if (d.Format == D3DFMT_A2R10G10B10) { // the 4K display mode (format 35): 2:10:10:10, keep the high 8 bits of each channel
+                            const uint32_t v = ((const uint32_t*)src)[x];
+                            row[x * 3 + 0] = (uint8_t)((v & 1023) >> 2); row[x * 3 + 1] = (uint8_t)(((v >> 10) & 1023) >> 2); row[x * 3 + 2] = (uint8_t)(((v >> 20) & 1023) >> 2);
                         } else {
                             row[x * 3 + 0] = src[x * 4 + 0]; row[x * 3 + 1] = src[x * 4 + 1]; row[x * 3 + 2] = src[x * 4 + 2];
                         }
@@ -268,6 +279,7 @@ static void ShimDumpBackBuffer() {
         }
     }
     if (sys) sys->Release();
+    if (resolved) resolved->Release();
     bb->Release();
 }
 #endif

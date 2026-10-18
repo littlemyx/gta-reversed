@@ -2,6 +2,7 @@
 // Needs a D3D9 HAL adapter (works under Wine/wined3d). Exit code 0 = all checks passed.
 #include "fakerw.h"
 #include <cstdio>
+#include <d3d9.h>
 
 // engine.cpp calls these platform.cpp (P2B-09) hooks; this unit test does not link platform.cpp
 void NotsaRwPlatform_OnEngineStarted() {}
@@ -75,16 +76,62 @@ int main() {
     CHECK(RwEngineSetVideoMode(numVM) == FALSE);
     CHECK(RwD3D9GetCaps() != nullptr);
     std::printf("version 0x%X, DXT %d, max MSAA %u\n", RwEngineGetVersion(), RwD3D9DeviceSupportsDXTTexture(), RwD3D9EngineGetMaxMultiSamplingLevels());
-    RwD3D9EngineSetMultiSamplingLevels(1);
+    RwD3D9EngineSetMultiSamplingLevels(4);                          // selected before the start: the device is reset into a 4x back buffer by RwEngineStart (checked below)
 
     CHECK(RwEngineStart() == TRUE);
     CHECK(RwD3D9GetCurrentD3DDevice() != nullptr);
+    {
+        auto* dev0 = static_cast<IDirect3DDevice9*>(RwD3D9GetCurrentD3DDevice());
+        IDirect3DSwapChain9* sc0 = nullptr;
+        D3DPRESENT_PARAMETERS pp0{};
+        if (SUCCEEDED(dev0->GetSwapChain(0, &sc0)) && sc0) { sc0->GetPresentParameters(&pp0); sc0->Release(); }
+        std::printf("live multisample type after start with level 4 selected: %d\n", (int)pp0.MultiSampleType);
+        CHECK(RwD3D9EngineGetMaxMultiSamplingLevels() < 4 || pp0.MultiSampleType == D3DMULTISAMPLE_4_SAMPLES);
+    }
     CHECK(RwEngineInstance->dOpenDevice.zBufferFar > RwEngineInstance->dOpenDevice.zBufferNear);
     CHECK(RwEngineGetNumVideoModes() == numVM);                     // still readable while started
     CHECK(RwEngineSetVideoMode(0) == FALSE);                        // only before Start
     CHECK(RwD3D9ChangeVideoMode(0) == TRUE);                        // in-place device reset
     CHECK(RwD3D9ChangeMultiSamplingLevels(4) == TRUE);              // MSAA on, device reset
     CHECK(RwD3D9ChangeMultiSamplingLevels(1) == TRUE);
+
+    // PLAYTEST-1 U17: the menu offers 1..min(4, max); every value must leave a healthy device and a swap chain whose multisample type is the exe's
+    // choice: min(request, max) stepped down to the first plain type the runtime accepts for the display format (3 samples -> 2 on NVIDIA/AMD)
+    {
+        auto* dev = static_cast<IDirect3DDevice9*>(RwD3D9GetCurrentD3DDevice());
+        IDirect3D9* d3d = nullptr;
+        CHECK(dev && SUCCEEDED(dev->GetDirect3D(&d3d)) && d3d);
+        D3DDISPLAYMODE dm{};
+        D3DDEVICE_CREATION_PARAMETERS cp{};
+        dev->GetCreationParameters(&cp);
+        d3d->GetAdapterDisplayMode(cp.AdapterOrdinal, &dm);
+        const auto maxL = RwD3D9EngineGetMaxMultiSamplingLevels();
+        auto liveType = [&]() {
+            IDirect3DSwapChain9* sc = nullptr;
+            D3DPRESENT_PARAMETERS pp{};
+            if (SUCCEEDED(dev->GetSwapChain(0, &sc)) && sc) { sc->GetPresentParameters(&pp); sc->Release(); }
+            return pp;
+        };
+        const RwUInt32 reqs[] = {2u, 3u, 4u, 5u, 99u, 1u, 0u, 4u};
+        for (RwUInt32 req : reqs) {
+            std::printf("MSAA request %u (max %u)\n", req, maxL);
+            CHECK(RwD3D9ChangeMultiSamplingLevels(req) == TRUE);
+            CHECK(dev->TestCooperativeLevel() == D3D_OK);
+            RwUInt32 want = req > maxL ? maxL : req;
+            while (want >= 2 && FAILED(d3d->CheckDeviceMultiSampleType(cp.AdapterOrdinal, D3DDEVTYPE_HAL, dm.Format, TRUE, (D3DMULTISAMPLE_TYPE)want, nullptr))) { --want; }
+            if (want < 2) { want = 0; }
+            const auto pp = liveType();
+            std::printf("  live multisample type %d quality %u (expected type %u)\n", (int)pp.MultiSampleType, (unsigned)pp.MultiSampleQuality, want);
+            if (want) {
+                CHECK((unsigned)pp.MultiSampleType == want);
+            } else {
+                CHECK(pp.MultiSampleType == D3DMULTISAMPLE_NONE);
+            }
+            CHECK(SUCCEEDED(dev->Clear(0, nullptr, D3DCLEAR_TARGET | D3DCLEAR_ZBUFFER, 0, 1.0f, 0)));
+            CHECK(SUCCEEDED(dev->Present(nullptr, nullptr, nullptr, nullptr)));
+        }
+        d3d->Release();
+    }
 
     CHECK(RwEngineClose() == FALSE);                                // still started
     CHECK(RwEngineStop() == TRUE);

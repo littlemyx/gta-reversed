@@ -57,6 +57,13 @@ CTaskSimpleCarDrive::CTaskSimpleCarDrive(CVehicle* vehicle, CTaskUtilityLineUpPe
 
     m_bUpdateCurrentVehicle = updateCurrentVehicle;
     m_b08 = true;
+    // 0x63C3A0..0x63C3AE: the exe rewrites bits 2 (updateCurrentVehicle) and 3 (m_b08 = 1) and CLEARS bits 4 (m_bPassengerAnimBlended) and 5 (m_bClosingDoor) (`and dl, 0xCB`); bits 0/1/6/7 keep whatever the
+    // pool slot held (zero in the exe's fresh heap). The port left bits 4/5 (and 0/1) uninitialised: on the 0xFD pool fill m_bClosingDoor was set, MakeAbortable() returned false for every non-immediate abort and a car
+    // occupant (cop drivers) never reacted to any event (damage, death, ...): police stuck in their cars, killed drivers kept driving.
+    m_bHeadBopping = false;
+    m_bArmBopping = false;
+    m_bPassengerAnimBlended = false;
+    m_bClosingDoor = false;
 
     CEntity::SafeRegisterRef(m_pVehicle);
 

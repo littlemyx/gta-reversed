@@ -59,6 +59,7 @@ CTask* CTaskInteriorShopKeeper::CreateFirstSubTask(CPed* ped) {
 // 0x675740
 CTask* CTaskInteriorShopKeeper::ControlSubTask(CPed* ped) {
     if (m_bStartServeAnim) {
+        m_bStartServeAnim = false; // 0x67575F: the flag is consumed (it stayed set: the serve anim was restarted on every ControlSubTask)
         return new CTaskSimpleRunAnim{ ANIM_GROUP_INT_SHOP, ANIM_ID_SHOP_CASHIER, 4.f, 0 };
     }
     return m_pSubTask;

@@ -43,9 +43,9 @@ CTaskSimpleCarShuffle::~CTaskSimpleCarShuffle() {
 void CTaskSimpleCarShuffle::FinishAnimCarShuffleCB(CAnimBlendAssociation* anim, void* data) {
     const auto self = notsa::cast<CTaskSimpleCarShuffle>(static_cast<CTask*>(data));
 
-    assert(self->m_Anim == anim);
-
-    self->m_Anim->SetBlendDelta(-1000.f);
+    if (self->m_Anim) { // 0x646977: null-checked in the exe (the port asserted and dereferenced)
+        self->m_Anim->SetBlendDelta(-1000.f);
+    }
     self->m_Anim = nullptr;
 
     self->m_IsFinished = true;

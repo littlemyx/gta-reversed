@@ -67,7 +67,7 @@ bool CTaskComplexSitDownThenIdleThenStandUp::MakeAbortable(CPed* ped, eAbortPrio
     }
 
     m_durationMs = 0;
-    m_pSubTask->MakeAbortable(ped, priority, event);
+    m_pSubTask->MakeAbortable(ped, ABORT_PRIORITY_LEISURE, event); // 0x63153C: `push 0` - the sub task is always asked with LEISURE here, not with `priority`
 
     return false;
 }

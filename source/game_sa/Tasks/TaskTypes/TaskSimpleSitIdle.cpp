@@ -57,6 +57,7 @@ bool CTaskSimpleSitIdle::MakeAbortable(CPed* ped, eAbortPriority priority, CEven
         return true;
     }
     default: {
+        m_durationMs = -1; // 0x631237: [esi+0Ch] = -1 as well
         m_animStartedTimer.SetOutOfTime(); // Eventually leads to `ProcessPed` returning `true` that finishes the task
         return false;
     }

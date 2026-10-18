@@ -37,9 +37,8 @@ bool CTaskSimplePause::MakeAbortable(CPed* ped, eAbortPriority priority, const C
 
 // 0x48E830
 bool CTaskSimplePause::ProcessPed(CPed* ped) {
-    if (!m_Timer.IsStarted() && !m_Timer.Start(m_PauseIntervalMs)) {
-        return false;
-    }
+    // 0x48E830: an unstarted timer is started with m_PauseIntervalMs WITHOUT any interval test (CTaskTimer::Start refuses negative intervals: a pause of -1 never ended)
+    m_Timer.StartIfNotAlready(m_PauseIntervalMs);
     m_Timer.Reset();
     return m_Timer.IsOutOfTime();
 }

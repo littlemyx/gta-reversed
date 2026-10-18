@@ -52,7 +52,7 @@ CTask* CTaskComplexEvasiveDiveAndGetUp::CreateSubTask(eTaskType taskType) {
     case TASK_SIMPLE_GET_UP:
         return new CTaskSimpleGetUp{};
     case TASK_SIMPLE_ACHIEVE_HEADING:
-        return new CTaskSimpleAchieveHeading{ m_DiveDir.Heading(), 2.f };
+        return new CTaskSimpleAchieveHeading{ CGeneral::GetRadianAngleBetweenPoints(m_DiveDir.x, m_DiveDir.y, 0.f, 0.f), 2.f }; // 0x65394A..0x653955: GetRadianAngleBetweenPoints(x, y, 0, 0), not CVector::Heading() (atan2(-x, y): different range / axis handling)
     case TASK_FINISHED:
         return nullptr;
     default:

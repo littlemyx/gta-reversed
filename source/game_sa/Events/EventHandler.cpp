@@ -1729,21 +1729,20 @@ void CEventHandler::ComputeObjectCollisionPassiveResponse(CEventPotentialWalkInt
 }
 
 // 0x4B92B0
-void CEventHandler::ComputeObjectCollisionResponse(CEventObjectCollision* e, CTask* tactive, CTask* tsimplest) { // Same code as `ComputeObjectCollisionPassiveResponse`
-    m_EventResponseTask = [&]() -> CTask* {
-        if (!e->m_object || m_Ped->bInVehicle || e->m_moveState == PEDMOVE_STILL) {
-            return nullptr;
-        }
-        if (!tsimplest || !CTask::IsGoToTask(tsimplest)) {
-            return nullptr;
-        }
-        const auto tGoTo = static_cast<CTaskSimpleGoTo*>(tsimplest);
-        return new CTaskComplexWalkRoundObject{
-            e->m_moveState,
-            tGoTo->m_vecTargetPoint,
-            e->m_object
-        };
-    }();
+void CEventHandler::ComputeObjectCollisionResponse(CEventObjectCollision* e, CTask* tactive, CTask* tsimplest) {
+    // NOTE: unlike `ComputeObjectCollisionPassiveResponse` (0x4BBB90) this version does NOT test `m_Ped->bInVehicle` (the port copied the passive one), and
+    // the response task is only stored on success (nothing is written otherwise). 0x4B92F7 also calls 0x4ACE80(e, ped) and discards the (side-effect free) result.
+    if (!tsimplest || !CTask::IsGoToTask(tsimplest)) {
+        return;
+    }
+    if (e->m_moveState == PEDMOVE_STILL || !e->m_object) {
+        return;
+    }
+    m_EventResponseTask = new CTaskComplexWalkRoundObject{
+        e->m_moveState,
+        static_cast<CTaskSimpleGoTo*>(tsimplest)->m_vecTargetPoint,
+        e->m_object
+    };
 }
 
 // 0x4BC150

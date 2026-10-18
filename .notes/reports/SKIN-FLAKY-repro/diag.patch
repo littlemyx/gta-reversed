@@ -1,0 +1,90 @@
+diff --git a/source/game_sa/ClothesBuilder.cpp b/source/game_sa/ClothesBuilder.cpp
+index 6104cc28..ce9dc7f0 100644
+--- a/source/game_sa/ClothesBuilder.cpp
++++ b/source/game_sa/ClothesBuilder.cpp
+@@ -370,7 +370,7 @@ RpGeometry* BlendGeometryImpl(RpClump* clump, const char* const (&names)[N], con
+         }
+     }
+ 
+-    RpGeometryUnlock(out);
++    if (!RpGeometryUnlock(out)) { fprintf(stderr, "[SKINDBG] BlendGeometry Unlock FAILED%s", "\n"); fflush(stderr); }
+     out->refCount++; // TODO: RpGeometryAddRef [0x74CCB0] missing
+ 
+     return out;
+@@ -424,7 +424,7 @@ RpGeometry* CClothesBuilder::CopyGeometry(RpClump* clump, const char* dstFrameNa
+         d[0].boneWeights[i] = d[1].boneWeights[i];
+     }
+ 
+-    RpGeometryUnlock(d[0].g);
++    if (!RpGeometryUnlock(d[0].g)) { fprintf(stderr, "[SKINDBG] CopyGeometry Unlock FAILED%s", "\n"); fflush(stderr); }
+ 
+     // NOTE: OG then re-fetched all the pointers above, and ran a loop that did nothing [no side effects]
+ 
+@@ -822,6 +822,7 @@ void CClothesBuilder::ConstructGeometryAndSkinArrays(RpHAnimHierarchy* pBoneHier
+                 (RwUInt16)(RwCompatTriangleVert(srcTris[t], 1) + vertexBase),
+                 (RwUInt16)(RwCompatTriangleVert(srcTris[t], 2) + vertexBase)
+             );
++            if (!pMaterial[i]) { fprintf(stderr, "[SKINDBG] ConstructGeometryAndSkinArrays: part %u has geometry but NULL material (tri matId will be 0xFFFF)%s", i, "\n"); fflush(stderr); }
+             RpGeometryTriangleSetMaterial(out, outTri, pMaterial[i]);
+             outTri++;
+         }
+@@ -832,7 +833,7 @@ void CClothesBuilder::ConstructGeometryAndSkinArrays(RpHAnimHierarchy* pBoneHier
+     RpMorphTargetCalcBoundingSphere(outMT, &bounds);
+     outMT->boundingSphere = bounds;
+ 
+-    RpGeometryUnlock(out);
++    if (!RpGeometryUnlock(out)) { fprintf(stderr, "[SKINDBG] ConstructGeometryAndSkinArrays: RpGeometryUnlock FAILED%s", "\n"); fflush(stderr); }
+ 
+     //> Merge skin data
+     // NOTE: These are freed in `DestroySkinArrays`
+diff --git a/source/game_sa/Entity/Entity.cpp b/source/game_sa/Entity/Entity.cpp
+index fcc1f758..42556c47 100644
+--- a/source/game_sa/Entity/Entity.cpp
++++ b/source/game_sa/Entity/Entity.cpp
+@@ -636,7 +636,24 @@ void CEntity::PreRender() {
+ 
+ // Renders the entity's RenderWare object if it exists and is visible
+ // 0x534310
++// SKIN-FLAKY diagnostics (not committed)
++static const CEntity* g_dbgRenderEntity = nullptr;
++void NotsaDbgSkinBad(const void* atomic, const void* geo, const char* why) {
++    const CEntity* e = g_dbgRenderEntity;
++    FILE* f = stderr;
++    fprintf(f, "[SKINBAD] %s atomic=%p geo=%p\n", why, atomic, geo);
++    if (geo) { const unsigned* w = (const unsigned*)geo; fprintf(f, "[SKINBAD] geo words:"); for (int i = 0; i < 24; i++) fprintf(f, " %08x", w[i]); fprintf(f, "\n"); }
++    if (e) {
++        const int midx = e->GetModelIndex();
++        fprintf(f, "[SKINBAD] entity=%p type=%d model=%d entRw=%p status=%d frame=%u\n", (const void*)e, (int)e->GetType(), midx, (void*)e->GetRwObject(), (int)e->GetStatus(), (unsigned)CTimer::GetFrameCounter());
++        if (midx >= 0) { auto& si = CStreaming::GetInfo(midx); fprintf(f, "[SKINBAD] streaming loadstate=%d\n", (int)si.m_LoadState); }
++        if (e->GetIsTypePed()) { auto* p = (const CPed*)e; fprintf(f, "[SKINBAD] ped type=%d state=%d isPlayer=%d\n", (int)p->m_nPedType, (int)p->m_nPedState, (int)p->IsPlayer()); }
++    }
++    fprintf(f, "[SKINBAD] cutscene running=%d frame=%u\n", (int)CCutsceneMgr::ms_running, (unsigned)CTimer::GetFrameCounter());
++    fflush(f);
++}
+ void CEntity::Render() {
++    g_dbgRenderEntity = this;
+     if (!GetRwObject()) {
+         return;
+     }
+diff --git a/source/standalone/rw/pipeline_skin.cpp b/source/standalone/rw/pipeline_skin.cpp
+index c2dbd36d..ed9c3012 100644
+--- a/source/standalone/rw/pipeline_skin.cpp
++++ b/source/standalone/rw/pipeline_skin.cpp
+@@ -55,6 +55,7 @@ void RwShimSkinCpuShutdown();
+ void RwShimSkinCpuRender(rw::Atomic* atomic);
+ bool RwShimIsFacadeInstance(const void* instData);
+ 
++void NotsaDbgSkinBad(const void* atomic, const void* geo, const char* why);
+ namespace {
+ 
+ using u8  = std::uint8_t;
+@@ -350,6 +351,9 @@ void SkinRenderCB(rw::Atomic* atomic, rw::d3d9::InstanceDataHeader* header) {
+ //--------------------------------------------------------------------------------------------------
+ void SkinPipeRender(rw::ObjPipeline* p, rw::Atomic* atomic) {
+     rw::Geometry* geo = atomic->geometry;
++    if (geo && !geo->instData && !geo->meshHeader && !(geo->flags & rw::Geometry::NATIVE)) {
++        NotsaDbgSkinBad(atomic, geo, "geometry without mesh header and instance data");
++    }
+     bool cpu;
+     if (geo && geo->instData) {
+         cpu = RwShimIsFacadeInstance(geo->instData); // a geometry keeps the route of its first render

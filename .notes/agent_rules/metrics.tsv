@@ -42,3 +42,4 @@ date	agent	rules	kind	tokens	tool_uses	minutes	outcome	notes
 2026-10-18	PT2-AA	v1	playtest bug	360603	245	472	U17 fixed: exe multisample level scan/step-down/reset-revert ported; rw_engine rows
 2026-10-18	PROBE-SUITE	v1	infra/test suite	715126	428	552	gameplay_regress.sh: 8 scenarios, 66 checks, 6 mutants caught; GPU lock contention 1-2h/run
 2026-10-18	X87-TRIG	v2	audit+fixes	403477	184	85	204 CRT sites / 736 fns audited, 0 unexplained; 3 port bugs fixed; NOT landed (cherry-pick into main refused by permission classifier)
+2026-10-18	INFRA-FAST	v2	infra	423906	322	171	NOVSYNC boot 1.5s vs 29s; sccache works but no gain (PCH build 1.5 min) -> off; gpu_locked.sh; no continuation hand-off despite >200k

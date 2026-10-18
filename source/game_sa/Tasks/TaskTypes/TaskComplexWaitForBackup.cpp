@@ -27,8 +27,8 @@ CTaskComplexWaitForBackup::CTaskComplexWaitForBackup(CPed* aggressor, CPed* back
     m_aggressor{aggressor},
     m_waitDistance{waitDist}
 {
+    CEntity::SafeRegisterRef(m_aggressor); // 0x6972ED then 0x6972F9: aggressor first, backup second (the reference list order is observable)
     CEntity::SafeRegisterRef(m_backup);
-    CEntity::SafeRegisterRef(m_aggressor);
 }
 
 CTaskComplexWaitForBackup::CTaskComplexWaitForBackup(const CTaskComplexWaitForBackup& o) :

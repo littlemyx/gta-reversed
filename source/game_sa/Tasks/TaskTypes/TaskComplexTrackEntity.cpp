@@ -45,7 +45,7 @@ CTaskComplexTrackEntity::CTaskComplexTrackEntity(const CTaskComplexTrackEntity& 
 
 // 0x65F460
 CTaskComplexTrackEntity::~CTaskComplexTrackEntity() {
-    CEntity::CleanUpOldReference(m_toTrack);
+    CEntity::SafeCleanUpRef(m_toTrack); // 0x65F483: the exe skips the call when there is no tracked entity
 }
 
 // 0x65F760
@@ -201,7 +201,8 @@ CTask* CTaskComplexTrackEntity::ControlSubTask(CPed* ped) {
             m_someStartTimeMs = CTimer::GetTimeInMS();
             gap3 = false;
         }
-        if (CTimer::GetTimeInMS() >= m_someStartTimeMs + m_someStartTimeMs) {
+        // 0x66366D: start + interval (the port added the start time twice)
+        if (CTimer::GetTimeInMS() >= m_someStartTimeMs + m_expirationInterval) {
             return TryAbortGetTask();
         }
     }

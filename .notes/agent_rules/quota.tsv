@@ -8,3 +8,4 @@ datetime	weekly_pct	parallel_agents	rules	note
 2026-10-18T14:07	44	5	v1	~1 %/h at 5 agents
 2026-10-18T15:22	46	4	v1	PT2-CORPSE landed
 2026-10-18T15:45	47	3	v1	ORACLE-W2 landed
+2026-10-18T15:55	47	3	v1->v2	PT2-TRAILER landed, INFRA-FAST (v2) started

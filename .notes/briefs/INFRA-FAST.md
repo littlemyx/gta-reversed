@@ -16,3 +16,9 @@ Every fresh worktree rebuilds ~1200 TUs from scratch.
 ## Acceptance
 Boot-to-first-marker time with NOVSYNC vs without (numbers); warm vs cold worktree build minutes; Release builds; run_all_tests 44/44; soak OK
 without the switch. Report ≤15 lines.
+
+## 3. gpu.lock with dead-holder detection (added after ORACLE-W2: an ownerless gpu.lock blocked agents ~40 min)
+Agents take C:/gta-scratch/gpu.lock with a hand-written `mkdir` + `owner` file (see PLAYTEST_AGENT_ENV.md, fps_run.sh, play.cmd). Add
+`tools/standalone/gpu_locked.sh <cmd>` mirroring build_locked.sh: records holder PID (+ owner text) in the lock, waiters drop a lock whose
+PID is gone; owner `USER-PLAY` (play.cmd) is never auto-removed. Switch fps_run.sh / soak / probe scripts to it; update PLAYTEST_AGENT_ENV.md.
+Test: same-shell and cross-shell dead holder, USER-PLAY untouched.

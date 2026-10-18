@@ -220,7 +220,7 @@ bool CTaskSimpleHoldEntity::ProcessPed(CPed* ped) {
                 objectToHold->m_nFakePhysics = 0;
             }
 
-            m_fRotation = entityToHold->GetHeading() - ped->m_fCurrentRotation;
+            m_fRotation = (float)(entityToHold->GetHeadingExt() - (double)ped->m_fCurrentRotation); // 0x693DA5..0x693DAF: the heading stays unrounded in ST0 for the subtraction
         }
     }
 

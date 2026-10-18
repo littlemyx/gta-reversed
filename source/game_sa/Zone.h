@@ -6,7 +6,7 @@
 */
 #pragma once
 
-#include "rw/rwplcore.h" // for RwRGBA struct
+#include <rw/rwplcore.h> // for RwRGBA struct (angle brackets: resolved through the include path only - a quoted include is looked up in the directory of the compiled .cpp first and would hit game_sa/RenderWare/rw/ instead of fakerw/rw/ in a forced-include (no PCH) build, see GTASA_COMPILE_CACHE)
 #include "eLevelName.h"
 
 enum eZoneType : uint8 {

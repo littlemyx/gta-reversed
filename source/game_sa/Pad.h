@@ -6,7 +6,7 @@
 */
 #pragma once
 
-#include "rw/skeleton.h"
+#include <rw/skeleton.h> // angle brackets: see Zone.h
 
 #include "KeyboardState.h"
 #include "MouseControllerState.h"

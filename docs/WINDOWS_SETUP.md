@@ -91,8 +91,40 @@ No background priority on Windows (the PC is not shared with a game being played
 * `GTASA_PYTHON` must be a *native* python path (`$(command -v python)` in Git Bash gives `/c/...`, which CMake accepts). unicorn+capstone are needed in it only for `StandaloneDetached` (if you get "No module named unicorn" at the extract step, pass `-DGTASA_PYTHON=C:/Python312/python.exe`); `StandaloneRelease` / `StandaloneRW` do not run it for the exe.
 * The presets set `GTASA_NO_EDIT_AND_CONTINUE=ON` (Wine passes it through the conan profile; without it MSVC would use `/ZI`, which conflicts with `/O2` and produces no linker map). Result: `/Z7`, `/DEBUG`, **`gta_reversed.pdb` and `gta_reversed.map`** next to the exe.
 * New `.cpp` files need a re-glob: re-run the configure command. The extractor (`extract_exe_data.py`) runs as a build step only for the dev preset `StandaloneDetached` (`GTASA_IMAGE_DIAG`) and writes `original_data.bin/.json` and `data_pointers.bin` into `<build>/bin`.
-* One configure+full build of StandaloneRelease takes ~10-20 min on a normal desktop (the Mac needed ~30 min through Wine).
+* One configure+full build of StandaloneRelease takes ~10-20 min on a normal desktop (the Mac needed ~30 min through Wine); measured on the dev PC (16 cores, -j4 BelowNormal, PCH): 1.5 min Release `gta_reversed.exe`, 3.3 min StandaloneRW + all test targets.
 * Hung build: if `build.lock` is older than 20 min and no `cl.exe`/`link.exe` burns CPU, `taskkill //F //IM cl.exe //IM link.exe` and `rmdir C:/gta-scratch/build.lock`.
+
+### Compile cache (opt-in) and fresh worktrees
+Agents build in their own git worktrees. `tools/standalone/windows/new_worktree.sh <id> [--cache] [--preset P]` creates `C:/gta-wt/<id>` (branch `<id>`, librw submodule, the untracked conan generators /
+`ConanPresets.json` / `source/libs/imgui` copied from the main checkout) and configures the preset in one go (`git worktree remove --force C:/gta-wt/<id> && git branch -D <id>` when done).
+The **compile cache** is [sccache](https://github.com/mozilla/sccache), **off by default** (`-DGTASA_COMPILE_CACHE=OFF`: the default configure/build is unchanged):
+```bash
+tools/standalone/windows/get_sccache.sh                      # once: user-local C:/gta-tools/sccache/sccache.exe, official GitHub release, sha256 verified, no admin
+cmake --preset StandaloneRelease -DGTASA_PYTHON=... --compile-no-warning-as-error -DGTASA_COMPILE_CACHE=ON      # or: new_worktree.sh <id> --cache
+```
+* One disk cache for all worktrees: `C:/gta-tools/sccache-cache` (`GTA_TOOLS` moves the root, a set `SCCACHE_DIR` wins), cap 8 GB. Every source tree gets its own sccache server (port derived from the path,
+  `SCCACHE_BASEDIRS` = the tree) so that the absolute paths in the preprocessed text do not make every worktree miss; servers exit after 10 idle minutes; `sccache --show-stats` (set `SCCACHE_SERVER_PORT`
+  to the port printed by the configure step) shows hits. A cached object carries the paths of the worktree that compiled it (/Z7 debug info, `__FILE__` in assert strings).
+* **PCH trade-off**: sccache cannot cache a compile that uses a precompiled header, so with the cache on `target_precompile_headers` becomes a forced include (`/FI source/StdInc.cpp`) of the same header. Cache HITS skip the
+  compiler (a warm worktree is mostly link time), but every MISS parses the heavy headers again: 
+
+  | StandaloneRelease `gta_reversed.exe`, -j4 BelowNormal, 16-core PC | wall |
+  |---|---|
+  | default PCH build, fresh worktree (1184 steps) | **1.5 min** (87-89 s; a full rebuild after a header edit is the same) |
+  | default PCH build of StandaloneRW + all 45 `*_test` targets, fresh worktree (1469 steps) | **3.3 min** |
+  | cache ON, empty cache (every TU a miss, 1119 TUs) | **18-36 min** (2 s/TU wall; depends on the load of the PC) |
+  | cache ON, other worktree, all hits (measured on 63 TUs: 18 s vs 124 s cold; 0.29 s/TU) | ~5 min for 1119 TUs + link (extrapolated) |
+
+  On this PC the PCH build is **faster than a fully warm cached build**, so the cache does not pay; it is kept only as an opt-in experiment (cheap hits do not exist for the 600-header TUs: sccache has to hash every include).
+
+  Recommendation: keep the default PCH build.
+* The forced-include build needs ODR-clean headers (the PCH object used to hold the single copy of non-inline header definitions): `inline` was added to the `notsa::PoolOf<>` specialisations and the deprecated
+  `Compress*/Uncompress*Vector` helpers, and `Zone.h`/`Pad.h` include `<rw/...>` with angle brackets (a quoted include is searched in the directory of the compiled .cpp first and found `game_sa/RenderWare/rw/` instead of
+  `fakerw/rw/` for the TUs in `game_sa/RenderWare/`). Object code of the default build is unchanged by these edits (`tools/standalone/obj_code_sig.py`: all 1119 objects identical).
+  **Not equivalent to the default build**: without the PCH object, header-defined inline functions / globals are emitted into every object (4x more code sections) and the dynamic initialisers of header-defined globals
+  come from every TU instead of the PCH object (init order differs); ~1 % of the code sections of the default objects have no byte-identical counterpart (e.g. a `Quaternion` function with a different frame layout).
+  So never use a cache-built exe or test as evidence for fidelity / oracle results; the default build stays the reference.
+* `/ZI` (Edit&Continue) is not cacheable: the option requires `GTASA_NO_EDIT_AND_CONTINUE=ON` (all Standalone presets).
 
 ## 7. Running the exe natively (no Wine)
 Manual run: the exe expects only the game data as the cwd (no image files since slice F3).
@@ -116,13 +148,14 @@ the mute patches DirectSound buffers and has only been validated under Wine's Di
 | `NOTSA_STANDALONE_MEMLOG=1` | log CRT heap / committed memory every 100 frames (`soak.sh` sets it; this is where the fps-per-phase numbers come from) |
 | `NOTSA_STANDALONE_ALLOCTRACE=<min bytes>` | caller of every 200th allocation >= min |
 | `NOTSA_STANDALONE_NOPRESENT=1` | skip `Present` |
+| `NOTSA_STANDALONE_NOVSYNC=1` | Present with sync interval 0 even if the game asks for vsync (menu frame limiter / loading screens): boot to the menu in seconds instead of 30-75 s on this PC; game logic and the software frame limiter unchanged; never for fps measurements. Opt-in, passed through by `soak.sh` |
 | `NOTSA_STANDALONE_NO_ABORT_TRACE=1` | do not turn `abort()` into a traced exception |
 | `NOTSA_STANDALONE_SAMPLER=1` | in-process profiler (SuspendThread of the main thread; harmless on native x86, it only corrupted x87 state under Wine/Rosetta) |
 | `NOTSA_AUDIO_TAP=<file>` (`_RAW=1`) | silent DirectSound diagnostics (use a normal `C:\...` path) |
 | `NOTSA_VERIFY_GLOBALS=<dump>` (`_EXIT=1`, `_AFTER=<s>`) | detached-globals boot dump (StandaloneDetached) -> `tools/standalone/verify_globals.py` |
 | `NOTSA_IMAGE_CENSUS=1` (`_FILE`, `_REARM_MS`), `NOTSA_POISON_CONVERTED=<file>` | image census / poisoning of converted globals (`census.py`) |
 | `RW_EXE_ORACLE=<path>` | the original exe for the oracle tests; `run_all_tests.sh` sets it (native Windows path form) only when `GTA_EXE` / `<repo>/gta_sa_compact.exe` exists, otherwise the 23 exe-oracle tests exit 77 and are listed as `SKIP(no_exe)` (not pass, not fail) |
-| Script env | `soak.sh`: `GAME_SRC OUT ROUTE SHOT_EVERY SHOT_MAX SAMPLER GTASA_PYTHON`; `run_all_tests.sh`: `SCRATCH SKIP_BUILD ATTEMPTS TIMEOUT TIMEOUT_<test> ASSETS GAME_DIR GTASA_PYTHON NINJA GTA_EXE`; `build_locked.sh`: `SCRATCH TIMEOUT_S LOCK_WARN_MIN` |
+| Script env | `soak.sh`: `GAME_SRC OUT ROUTE SHOT_EVERY SHOT_MAX SAMPLER GTASA_PYTHON`; `run_all_tests.sh`: `SCRATCH SKIP_BUILD ATTEMPTS TIMEOUT TIMEOUT_<test> ASSETS GAME_DIR GTASA_PYTHON NINJA GTA_EXE`; `build_locked.sh`: `SCRATCH TIMEOUT_S LOCK_WARN_MIN`; `gpu_locked.sh`: `SCRATCH GPU_OWNER TIMEOUT_S GPU_LOCK_GRACE_S GPU_LEGACY_STALE_MIN`; `soak.sh`: `SOAK_GPU_LOCK=0` |
 
 ## 8. Tests and soaks
 ```bash
@@ -136,6 +169,14 @@ python tools/standalone/census.py run --build build/StandaloneDetached --minutes
 * The script ends with `RESULT: OK|FAIL` (soak) / a per-test table (tests, non-zero exit on any failure). Known non-green rows measured under Wine (2026-10-10): `review_oracle_test` (PC24/PC53 strict mismatches), `rw_skin_pipeline_test`
   (page fault), `rw_skin_hw_oracle_test` and `rw_skin_vs_test` (NORESULT parser quirk; vs_test needs `TIMEOUT_rw_skin_vs_test=1500`). On a real GPU/driver these may change in either direction - **record, do not "fix" the numbers away**.
 * Per-phase fps and memory are in `report.txt`; screenshots (BMP converted to PNG by PowerShell/System.Drawing) in `<out>/shots`.
+
+### GPU mutex (game runs and device tests are exclusive)
+The game is single-instance and the GPU is shared by several agents and by the user's play session, so every game run / device test takes `C:/gta-scratch/gpu.lock`:
+`tools/standalone/gpu_locked.sh [-o OWNER] [-t SECONDS] <command...>` (the sibling of `build_locked.sh`; `soak.sh` and `windows/fps_run.sh` re-exec themselves under it, `SOAK_GPU_LOCK=0` opts out).
+It records the holder's PID next to the `owner` text; a waiter drops a lock whose holder is gone (killed hard, e.g. by an agent's tool timeout) and a lock directory with neither PID nor owner
+older than 60 s; a hand-written lock (owner file only, from the old `mkdir` snippet) is dropped only after 30 min with no `gta_reversed`/`gta_sa`/`*_test` process running; an owner starting with
+`USER-PLAY` (`play.cmd`: the user is playing) is **never** removed automatically - agents wait, and must not start builds or heavy work meanwhile. `gpu_locked.sh --status` prints the holder and
+whether it looks alive (exit 0 free / 1 held / 3 USER-PLAY / 4 stale), `--reap` drops a stale lock. Nested calls of the same holder (`GPU_LOCK_HELD`) just run.
 
 ## 9. Debugging
 * **Binaries**: StandaloneRelease/Detached/RW all link with `/DEBUG` (+`/Z7`): `build/<dir>/bin/gta_reversed.pdb` and `gta_reversed.map` (link `/MAP`; `census.py` and the abort tracer symbolise from it). Release objects are `/O2` but with `/OPT:NOREF /OPT:NOICF`, so function addresses stay meaningful.

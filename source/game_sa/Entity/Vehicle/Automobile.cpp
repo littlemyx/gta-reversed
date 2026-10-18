@@ -53,6 +53,7 @@ void CAutomobile::InjectHooks()
     RH_ScopedInstall(Destructor, 0x6A61E0);
 
     RH_ScopedInstall(SetupModelNodes, 0x6A0770);
+    RH_ScopedVMTInstall(SetModelIndex, 0x6A6590);
     RH_ScopedInstall(HydraulicControl, 0x6A07A0);
     RH_ScopedInstall(UpdateMovingCollision, 0x6A1460);
     RH_ScopedInstall(ProcessBuoyancy, 0x6A8C00);
@@ -156,6 +157,13 @@ void CAutomobile::InjectHooks()
     RH_ScopedVMTInstall(OpenDoor, 0x6A6AE0);
     RH_ScopedVMTInstall(BlowUpCar, 0x6B3780);
     RH_ScopedVMTInstall(BlowUpCarCutSceneNoExtras, 0x6B3BB0);
+}
+
+// 0x6A6590 (vtable slot 5; the constructor calls CVehicle::SetModelIndex + SetupModelNodes itself)
+void CAutomobile::SetModelIndex(uint32 index) {
+    CVehicle::SetModelIndex(index);
+    std::ranges::fill(m_aCarNodes, nullptr); // rep stosd 0x19 dwords at +0x648
+    CClumpModelInfo::FillFrameArray(GetRpClump(), m_aCarNodes.data());
 }
 
 // 0x6B0A90

@@ -25,6 +25,7 @@
 #include "TheZones.h"
 #include "Weather.h"
 
+#include "EventSoundQuiet.h"
 #include "TaskComplexSequence.h"
 #include "TaskComplexEnterCarAsDriver.h"
 #include "TaskComplexEnterCarAsPassenger.h"
@@ -91,7 +92,14 @@ void CTrain::InjectHooks() {
     RH_ScopedInstall(CreateMissionTrain, 0x6F7550);
     RH_ScopedInstall(DoTrainGenerationAndRemoval, 0x6F7900);
     RH_ScopedInstall(AddNearbyPedAsRandomPassenger, 0x6F8170);
+    RH_ScopedVMTInstall(SetModelIndex, 0x6F5530);
+    RH_ScopedVMTInstall(Teleport, 0x6F7190);
     RH_ScopedVMTInstall(ProcessControl, 0x6F86A0);
+    RH_ScopedVMTInstall(PreRender, 0x6F5570);
+    RH_ScopedVMTInstall(OpenDoor, 0x6F6370);
+    RH_ScopedVMTInstall(GetDooorAngleOpenRatioU32, 0x6F5930);
+    RH_ScopedVMTInstall(GetDooorAngleOpenRatio, 0x6F59C0);
+    RH_ScopedVMTInstall(IsRoomForPedToLeaveCar, 0x6F5EE0);
 
     RH_ScopedGlobalInstall(ProcessTrainAnnouncements, 0x6F5910);
     RH_ScopedGlobalInstall(PlayAnnouncement, 0x6F5920);
@@ -170,6 +178,111 @@ CTrain::CTrain(int32 modelIndex, eVehicleCreatedBy createdBy) : CVehicle(created
 void CTrain::SetupModelNodes() {
     std::ranges::fill(m_aTrainNodes, nullptr);
     CClumpModelInfo::FillFrameArray(GetRpClump(), m_aTrainNodes.data());
+}
+
+// 0x6F54D0 (scalar deleting destructor 0x6F6300): the exe terminates the vehicle audio BEFORE CVehicle's destructor body runs (the member's own destructor would do it after)
+CTrain::~CTrain() {
+    m_vehicleAudio.Terminate();
+}
+
+// 0x6F5530 (vtable slot 5)
+void CTrain::SetModelIndex(uint32 index) {
+    CVehicle::SetModelIndex(index);
+    SetupModelNodes(); // rep stosd 0x11 dwords at +0x668, then FillFrameArray
+}
+
+// 0x6F7190 (vtable slot 14; CEntity's is empty)
+void CTrain::Teleport(CVector destination, bool resetRotation) {
+    CWorld::Remove(this);
+    GetPosition() = destination;
+    if (resetRotation) {
+        SetOrientation(0.0f, 0.0f, 0.0f);
+    }
+    ResetMoveSpeed();
+    ResetTurnSpeed();
+    CWorld::Add(this);
+}
+
+// 0x6F5570 (vtable slot 17)
+void CTrain::PreRender() {
+    CVehicle::PreRender();
+    if (trainFlags.bIsFrontCarriage) {
+        if (m_nModelIndex == MODEL_TRAM) { // 0x1C1
+            DoVehicleLights(*m_matrix, eVehicleLightsFlags(VEHICLE_LIGHTS_TWIN | VEHICLE_LIGHTS_IGNORE_DAMAGE));
+        } else {
+            DoVehicleLights(*m_matrix, eVehicleLightsFlags(VEHICLE_LIGHTS_TWIN | VEHICLE_LIGHTS_IGNORE_DAMAGE | VEHICLE_LIGHTS_DISABLE_REAR));
+        }
+    } else if (trainFlags.bIsLastCarriage) {
+        DoVehicleLights(*m_matrix, eVehicleLightsFlags(VEHICLE_LIGHTS_TWIN | VEHICLE_LIGHTS_IGNORE_DAMAGE | VEHICLE_LIGHTS_DISABLE_FRONT));
+    }
+}
+
+// 0x6F6370 (vtable slot 27). NB: `playSound` is not read by the exe; the sound event is added whenever `ped` is set
+void CTrain::OpenDoor(CPed* ped, int32 componentId, eDoors door, float doorOpenRatio, bool playSound) {
+    // only the two front doors (the train's door nodes 1 / 2) move
+    if (door == DOOR_LEFT_FRONT) {
+        componentId = TRAIN_DOOR_LF;
+    } else if (door == DOOR_RIGHT_FRONT) {
+        componentId = TRAIN_DOOR_RF;
+    } else {
+        return;
+    }
+
+    const auto frame = m_aTrainNodes[componentId];
+    if (!frame) {
+        return;
+    }
+
+    CMatrix frameMat{ RwFrameGetMatrix(frame) };
+    const CVector framePos = frameMat.GetPosition();
+    float angles[3]{}; // only the door's axis is set
+
+    auto& d = m_aDoors[door];
+
+    const auto wasClosed = d.IsClosed();
+    if (wasClosed) {
+        RwFrameForAllObjects(m_aTrainNodes[componentId], CVehicleModelInfo::ClearAtomicFlagCB, (void*)eAtomicComponentFlag::ATOMIC_DONT_CULL);
+    }
+
+    d.Open(doorOpenRatio);
+
+    if (wasClosed) {
+        if (d.m_closedAngle != d.m_angle) {
+            RwFrameForAllObjects(m_aTrainNodes[componentId], CVehicleModelInfo::SetAtomicFlagCB, (void*)eAtomicComponentFlag::ATOMIC_DONT_CULL);
+            if (ped) {
+                GetEventGlobalGroup()->Add(CEventSoundQuiet{ ped, 60.0f, (uint32)-1, {} });
+            }
+        }
+    } else if (doorOpenRatio == 0.0f) {
+        if (ped) {
+            GetEventGlobalGroup()->Add(CEventSoundQuiet{ ped, 120.0f, (uint32)-1, {} });
+        }
+    }
+
+    if (m_nModelIndex == MODEL_STREAKC) { // 0x23A: the door of this carriage slides along Y
+        frameMat.SetTranslate(CVector{ framePos.x, d.m_closedAngle + (d.m_openAngle - d.m_closedAngle) * doorOpenRatio, framePos.z });
+    } else {
+        angles[d.m_axis] = d.m_angle;
+        frameMat.SetRotate(angles[0], angles[1], angles[2]);
+        frameMat.GetPosition() += framePos;
+    }
+    frameMat.UpdateRW();
+}
+
+// 0x6F5930 (vtable slot 29)
+float CTrain::GetDooorAngleOpenRatioU32(uint32 door) {
+    switch (door) {
+    case 8:  return GetDooorAngleOpenRatio(DOOR_RIGHT_FRONT);
+    case 9:  return GetDooorAngleOpenRatio(DOOR_RIGHT_REAR);
+    case 10: return GetDooorAngleOpenRatio(DOOR_LEFT_FRONT);
+    case 11: return GetDooorAngleOpenRatio(DOOR_LEFT_REAR);
+    default: return 0.0f; // 12..17 and 18 (and everything else): 0.0f
+    }
+}
+
+// 0x6F59C0 (vtable slot 30)
+float CTrain::GetDooorAngleOpenRatio(eDoors door) {
+    return m_aDoors[door].GetAngleOpenRatio();
 }
 
 // 0x6F7440

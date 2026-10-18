@@ -93,7 +93,15 @@ public:
 public:
     CTrain(int32 modelIndex, eVehicleCreatedBy createdBy);
 
+    ~CTrain() override;
+    void SetModelIndex(uint32 index) override;
+    void Teleport(CVector destination, bool resetRotation) override;
     void ProcessControl() override;
+    void PreRender() override;
+    void OpenDoor(CPed* ped, int32 componentId, eDoors door, float doorOpenRatio, bool playSound) override;
+    float GetDooorAngleOpenRatioU32(uint32 door) override;
+    float GetDooorAngleOpenRatio(eDoors door) override;
+    bool IsRoomForPedToLeaveCar(uint32 doorId, CVector* pvecCarJackOffset) override { return true; } // 0x6F5EE0
     void SetupModelNodes();
 
     bool FindMaximumSpeedToStopAtStations(float* speed);

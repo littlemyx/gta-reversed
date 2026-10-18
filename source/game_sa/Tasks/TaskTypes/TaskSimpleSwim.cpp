@@ -701,17 +701,16 @@ void CTaskSimpleSwim::ProcessControlAI(CPed* ped) {
 
         if (dist2d > fMinimum2DDistanceBetweenPeds) {
             m_nSwimState = SWIM_SPRINT;
-            if (m_pPed) {
-                CPedGroup* pedGroup = CPedGroups::GetPedsGroup(ped);
-                if (pedGroup && pedGroup->GetMembership().GetLeader() == m_pPed) {
-                    bPedGroupSet = true;
-                    auto swimTask = m_pPed->GetIntelligence()->GetTaskSwim();
-                    if (swimTask &&
-                        swimTask->m_nSwimState == SWIM_SPRINTING &&
-                        vecPosition.Magnitude() > 5.0f
-                    ) {
-                        m_nSwimState = SWIM_SPRINTING;
-                    }
+            // exe 0x6897F8..0x6898F1: the group-leader test only decides between the two branches; no target ped, no group or another leader -> 0x6898AD (speed test)
+            CPedGroup* pedGroup = m_pPed ? CPedGroups::GetPedsGroup(ped) : nullptr;
+            if (pedGroup && pedGroup->GetMembership().GetLeader() == m_pPed) {
+                bPedGroupSet = true;
+                auto swimTask = m_pPed->GetIntelligence()->GetTaskSwim();
+                if (swimTask &&
+                    swimTask->m_nSwimState == SWIM_SPRINTING &&
+                    dist2d > 5.0f // exe 0x68987D..0x6898A2: 2D magnitude of (m_vecPos - pedPos) vs [0x858C80]=5.0
+                ) {
+                    m_nSwimState = SWIM_SPRINTING;
                 }
             } else if (m_fAnimSpeed > 1.0f && dist2d > 2.0f) {
                 m_nSwimState = SWIM_SPRINTING;

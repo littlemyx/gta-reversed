@@ -60,16 +60,18 @@ CTask* CTaskComplexUseSwatRope::Clone() const {
 
 // 0x659530
 bool CTaskComplexUseSwatRope::MakeAbortable(CPed* ped, eAbortPriority priority, const CEvent* event) {
-    eEventType eventType = event->GetEventType();
-
+    // 0x659539: the event is only inspected when the priority is not IMMEDIATE (MakeAbortable(ped, IMMEDIATE, nullptr) is the common call: the port dereferenced the null event)
     if ((priority == ABORT_PRIORITY_IMMEDIATE
-        || eventType == EVENT_DEATH
-        || eventType == EVENT_HEALTH_REALLY_LOW
-        || eventType == EVENT_ON_FIRE
-        || eventType == EVENT_IN_WATER
-        || eventType == EVENT_WATER_CANNON
-        || eventType == EVENT_VEHICLE_DAMAGE_WEAPON
-        || eventType == EVENT_VEHICLE_DAMAGE_COLLISION
+        || [&] {
+            const eEventType eventType = event->GetEventType();
+            return eventType == EVENT_DEATH
+                || eventType == EVENT_HEALTH_REALLY_LOW
+                || eventType == EVENT_ON_FIRE
+                || eventType == EVENT_IN_WATER
+                || eventType == EVENT_WATER_CANNON
+                || eventType == EVENT_VEHICLE_DAMAGE_WEAPON
+                || eventType == EVENT_VEHICLE_DAMAGE_COLLISION;
+        }()
         || ped->m_fHealth <= 20.0F
         )
         && m_pSubTask->MakeAbortable(ped, priority, event)

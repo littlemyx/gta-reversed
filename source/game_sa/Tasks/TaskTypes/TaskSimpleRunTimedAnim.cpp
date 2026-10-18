@@ -24,7 +24,8 @@ CTaskSimpleRunTimedAnim::CTaskSimpleRunTimedAnim(AssocGroupId groupId, Animation
     m_unused1{unused1},
     m_durationMs{durationMs},
     m_animId{animId},
-    m_animGrpId{groupId}
+    m_animGrpId{groupId},
+    m_taskId{TASK_SIMPLE_TIMED_ANIM} // 0x61ABC7: word [esi+30h] = 0x192
 {
 }
 

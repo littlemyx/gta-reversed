@@ -53,6 +53,7 @@ void CPlayerPed::InjectHooks() {
     RH_ScopedVirtualClass(CPlayerPed, 0x86D168, 26);
     RH_ScopedCategory("Entity/Ped");
 
+    RH_ScopedVMTDestructorInstall(0x60A9A0);
     RH_ScopedInstall(ResetSprintEnergy, 0x60A530);
     RH_ScopedInstall(ResetPlayerBreath, 0x60A8A0);
     RH_ScopedInstall(RemovePlayerPed, 0x6094A0);
@@ -164,6 +165,23 @@ bool CPlayerPed::Save() {
     CGenericGameStorage::SaveDataToWorkBuffer(saveData);
 
     return true;
+}
+
+// 0x6093B0 (the scalar deleting destructor in the vtable is 0x60A9A0). Missing until VT-OVERRIDES: the standalone ran CPed's only, so deleting a player ped leaked
+// the two melee-anim block references (CAnimManager::RemoveAnimBlockRef) and the player's ped group (CPedGroups::RemoveGroup)
+CPlayerPed::~CPlayerPed() {
+    static_assert(offsetof(CPlayerPedData, m_nMeleeWeaponAnimReferenced) == 0x48 && offsetof(CPlayerPedData, m_nMeleeWeaponAnimReferencedExtra) == 0x4C && offsetof(CPlayerPedData, m_nPlayerGroup) == 0x38);
+    if (const auto ref = m_pPlayerData->m_nMeleeWeaponAnimReferenced) {
+        CAnimManager::RemoveAnimBlockRef(CAnimManager::GetAnimationBlockIndex((AssocGroupId)ref));
+        m_pPlayerData->m_nMeleeWeaponAnimReferenced = 0;
+    }
+    if (const auto ref = m_pPlayerData->m_nMeleeWeaponAnimReferencedExtra) {
+        CAnimManager::RemoveAnimBlockRef(CAnimManager::GetAnimationBlockIndex((AssocGroupId)ref));
+        m_pPlayerData->m_nMeleeWeaponAnimReferencedExtra = 0;
+    }
+    if (!bUsedForReplay) {
+        CPedGroups::RemoveGroup(m_pPlayerData->m_nPlayerGroup);
+    }
 }
 
 // 0x60D5B0

@@ -36,6 +36,9 @@ CTaskSimpleCarGetIn::CTaskSimpleCarGetIn(const CTaskSimpleCarGetIn& o) :
 // 0x646710
 CTaskSimpleCarGetIn::~CTaskSimpleCarGetIn() {
     CEntity::SafeCleanUpRef(m_veh);
+    if (m_anim) {
+        m_anim->SetDefaultFinishCallback(); // 0x646710: SetFinishCallback(DefaultAnimCB, nullptr)
+    }
 }
 
 void CTaskSimpleCarGetIn::FinishAnimCarGetInCB(CAnimBlendAssociation* anim, void* data) {

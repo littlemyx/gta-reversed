@@ -5,6 +5,7 @@
 void CTaskSimpleStealthKill::InjectHooks() {
     RH_ScopedVirtualClass(CTaskSimpleStealthKill, 0x86da74, 9);
     RH_ScopedCategory("Tasks/TaskTypes");
+    RH_ScopedVMTDestructorInstall(0x6296B0); // scalar deleting destructor; the destructor body is ported (VT-OVERRIDES)
 
     RH_ScopedInstall(Constructor, 0x6225F0);
 
@@ -24,6 +25,14 @@ CTaskSimpleStealthKill::CTaskSimpleStealthKill(bool keepTargetAlive, CPed* targe
     m_animGrpId{ groupId }
 {
     CEntity::SafeRegisterRef(m_target);
+}
+
+// 0x622680. The port had no destructor: the target's reference entry and the anim's delete callback (this freed task as data) stayed
+CTaskSimpleStealthKill::~CTaskSimpleStealthKill() {
+    CEntity::SafeCleanUpRef(m_target);
+    if (m_anim) {
+        m_anim->SetDefaultDeleteCallback();
+    }
 }
 
 // NOTSA (For 0x623830)
@@ -79,29 +88,31 @@ bool CTaskSimpleStealthKill::ProcessPed(CPed* ped) {
 
 // 0x6226F0
 bool CTaskSimpleStealthKill::MakeAbortable(class CPed* ped, eAbortPriority priority, const CEvent* event) {
+    // 0x6226F0: the anim's DELETE callback is reset (not the finish callback); IMMEDIATE also fades it out at once (-1000.0f)
     switch (priority) {
     case ABORT_PRIORITY_IMMEDIATE: {
         if (m_anim) {
-            m_anim->SetDefaultFinishCallback();
+            m_anim->SetBlendDelta(-1000.0f);
+            m_anim->SetDefaultDeleteCallback();
             m_anim = nullptr;
         }
         m_bIsAborting = true;
         return true;
     }
     case ABORT_PRIORITY_URGENT: {
-        if (m_bKeepTargetAlive) {
-            return false;
+        if (!m_bKeepTargetAlive && m_anim && m_anim->m_AnimId == ANIM_ID_KILL_KNIFE_PED_DIE) {
+            if (event && event->GetEventType() == EVENT_DAMAGE && static_cast<const CEventDamage*>(event)->m_pSourceEntity == m_target) {
+                m_bIsAborting = true;
+                m_anim->SetDefaultDeleteCallback();
+                m_anim = nullptr;
+                return true;
+            }
         }
-        if (!m_anim || m_anim->m_AnimId != ANIM_ID_KILL_KNIFE_PED_DIE) {
-            return false;
-        }
-        if (event->GetEventType() != EVENT_DAMAGE || static_cast<const CEventDamage*>(event)->m_pSourceEntity != m_target) {
-            return false;
-        }
-        return true;
+        return false;
     }
+    default:
+        return false;
     }
-    return false;
 }
 
 // 0x6296D0

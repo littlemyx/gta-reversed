@@ -28,6 +28,12 @@ CTaskComplexEvasiveDiveAndGetUp::CTaskComplexEvasiveDiveAndGetUp(CVehicle* evade
     m_DiveDir{diveDir},
     m_EvadeVeh{evadeVeh}
 {
+    CEntity::SafeRegisterRef(m_EvadeVeh); // 0x6536B0
+}
+
+// 0x653740
+CTaskComplexEvasiveDiveAndGetUp::~CTaskComplexEvasiveDiveAndGetUp() {
+    CEntity::SafeCleanUpRef(m_EvadeVeh);
 }
 
 // 0x655940

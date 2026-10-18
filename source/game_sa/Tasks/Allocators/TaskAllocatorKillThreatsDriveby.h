@@ -16,9 +16,9 @@ public:
     eTaskAllocatorType GetType() override { return eTaskAllocatorType::KILL_THREATS_DRIVEBY; }; // 0x69CB50
     void               AllocateTasks(CPedGroupIntelligence* intel) override;
 
-public:
-    CPed::Ref  m_Threat{};
-    CTaskTimer m_Timer{};
+// NOTE: no members of its own. A `m_Threat` / `m_Timer` declared here shadowed the base's (which the inherited constructor and the inherited
+// ProcessGroup (0x69CBC0 is byte-for-byte the same logic as Basic's 0x69C7E0: 5 s timer) fill and use): AllocateTasks then always saw a null threat and
+// the driveby response never allocated a single task (VT-OVERRIDES). Same layout as the exe: vptr, threat ref (+4), timer (+8).
 
 private: // Wrappers for hooks
     // 0x69CAF0

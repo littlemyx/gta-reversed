@@ -25,6 +25,7 @@ public:
 
     CTaskSimpleAffectSecondaryBehaviour(bool add, eSecondaryTask secondaryTaskType, CTask* task);
     CTaskSimpleAffectSecondaryBehaviour(const CTaskSimpleAffectSecondaryBehaviour&); // NOTSA
+    ~CTaskSimpleAffectSecondaryBehaviour() override;
 
     CTask*    Clone() const override { return new CTaskSimpleAffectSecondaryBehaviour(*this); }
     eTaskType GetTaskType() const override { return Type; }

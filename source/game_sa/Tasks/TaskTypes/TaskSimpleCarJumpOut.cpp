@@ -29,7 +29,7 @@ CTaskSimpleCarJumpOut::CTaskSimpleCarJumpOut(CVehicle* veh, uint32 door, CTaskUt
     m_lineUpTask{lineUpTask},
     m_initialVehSpeed{ veh ? veh->GetMoveSpeed().Magnitude() : 0.f }
 {
-    CEntity::SafeCleanUpRef(m_veh);
+    CEntity::SafeRegisterRef(m_veh); // 0x64BE40: RegisterReference (the port CLEANED the reference up here: a dead vehicle left a dangling pointer, and the destructor's clean-up found no entry)
 }
 
 CTaskSimpleCarJumpOut::CTaskSimpleCarJumpOut(const CTaskSimpleCarJumpOut& o) :

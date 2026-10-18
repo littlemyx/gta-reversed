@@ -16,6 +16,15 @@ CTaskSimpleChoking::CTaskSimpleChoking(CPed* attacker, bool bIsTeargas) :
     m_nTimeStarted   = CTimer::GetTimeInMS();
 }
 
+// 0x620370. The port had no destructor: the anim kept its finish callback (with this freed task as data) and the attacker's reference entry stayed in the ped's list
+CTaskSimpleChoking::~CTaskSimpleChoking() {
+    if (m_pAnim) {
+        m_pAnim->SetBlendDelta(-4.0f);
+        m_pAnim->SetDefaultFinishCallback();
+    }
+    CEntity::SafeCleanUpRef(m_pAttacker);
+}
+
 // 0x623220
 CTaskSimpleChoking::CTaskSimpleChoking(const CTaskSimpleChoking& o) :
     CTaskSimpleChoking{o.m_pAttacker, o.m_bIsTeargas}

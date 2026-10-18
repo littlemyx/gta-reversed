@@ -32,6 +32,7 @@ public:
     static void InjectHooks();
 
     CPlayerPed(int32 playerId, bool bGroupCreated);
+    ~CPlayerPed() override;
 
 
     void ProcessControl() override;

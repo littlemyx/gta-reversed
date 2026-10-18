@@ -215,9 +215,9 @@ int32 CCopPed::AddCriminalToKill(CPed* criminal) {
 
 // 0x5DE040
 void CCopPed::RemoveCriminalToKill(int32 unk, int32 nCriminalLocalIdx) {
-    CPed*& criminal = m_apCriminalsToKill[nCriminalLocalIdx];
-    assert(criminal);
-    criminal->RegisterReference(reinterpret_cast<CEntity**>(&criminal));
+    // 0x5DE040: `if (slot) { CleanUpOldReference(&slot); slot = 0 }` - the port REGISTERED the slot again (assert instead of the null check), leaving a stale reference entry that
+    // later nulled whatever criminal was stored in the slot next
+    CEntity::SafeCleanUpRef(m_apCriminalsToKill[nCriminalLocalIdx]);
     m_apCriminalsToKill[nCriminalLocalIdx] = nullptr;
 }
 

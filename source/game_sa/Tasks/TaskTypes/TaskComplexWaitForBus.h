@@ -20,7 +20,7 @@ public:
 
     CTask*    Clone() const override { return new CTaskComplexWaitForBus{ *this }; }
     eTaskType GetTaskType() const override { return Type; }
-    bool      MakeAbortable(CPed* ped, eAbortPriority priority = ABORT_PRIORITY_URGENT, const CEvent* event = nullptr) override { return true; }
+    // no MakeAbortable override: the exe's vtable slot 6 is CTaskComplex::MakeAbortable (0x4211B0: forwards to the sub task), `return true` here never asked it (VT-OVERRIDES)
     CTask*    CreateNextSubTask(CPed* ped) override;
     CTask*    CreateFirstSubTask(CPed* ped) override;
     CTask*    ControlSubTask(CPed* ped) override { return m_pSubTask; }

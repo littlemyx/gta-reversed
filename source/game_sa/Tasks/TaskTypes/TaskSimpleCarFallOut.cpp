@@ -6,10 +6,13 @@ CTaskSimpleCarFallOut::CTaskSimpleCarFallOut(CVehicle* target, eTargetDoor door,
     m_Vehicle{ target },
     m_Door{ door },
     m_LineUpUtility{ lineUpUtility }
-{ }
+{
+    CEntity::SafeRegisterRef(m_Vehicle); // 0x648D60
+}
 
 // 0x648DE0
 CTaskSimpleCarFallOut::~CTaskSimpleCarFallOut() {
+    CEntity::SafeCleanUpRef(m_Vehicle);
     if (notsa::IsFixBugs()) {
         if (const auto a = std::exchange(m_Anim, nullptr)) {
             a->SetDefaultFinishCallback();

@@ -37,6 +37,10 @@ CTaskComplexSignalAtPed::CTaskComplexSignalAtPed(const CTaskComplexSignalAtPed& 
 
 // 0x660AB0
 CTaskComplexSignalAtPed::~CTaskComplexSignalAtPed() {
+    if (m_areAnimsReferenced) { // 0x660AB0: give the "gangs" anim block reference back first
+        CAnimManager::RemoveAnimBlockRef(CAnimManager::GetAnimationBlockIndex("gangs"));
+        m_areAnimsReferenced = false;
+    }
     CEntity::SafeCleanUpRef(m_pedToSignalAt);
 }
 

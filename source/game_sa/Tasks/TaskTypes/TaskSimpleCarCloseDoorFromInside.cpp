@@ -39,7 +39,7 @@ CTaskSimpleCarCloseDoorFromInside::CTaskSimpleCarCloseDoorFromInside(const CTask
 CTaskSimpleCarCloseDoorFromInside::~CTaskSimpleCarCloseDoorFromInside() {
     CEntity::SafeCleanUpRef(m_veh);
     if (m_anim) {
-        m_anim->SetDeleteCallback(CDefaultAnimCallback::DefaultAnimCB, nullptr);
+        m_anim->SetDefaultFinishCallback(); // exe: SetFinishCallback(DefaultAnimCB, nullptr) (0x4CEBE0)
     }
 }
 

@@ -181,7 +181,7 @@ void CTaskSimpleGoToPointFine::SetTargetPos(CVector posn) {
     if (m_vecTargetPoint != posn || m_fRadius != 0.5f) {
         m_fRadius = 0.5f;
         m_vecTargetPoint = posn;
-        m_GoToFlags &= 0xD0 | 0x20; // todo: flags
+        m_GoToFlags = (m_GoToFlags & 0xF0) | 0x20; // 0x65F388: and dl,0F0h; or dl,20h (was `&= 0xF0`, the 0x20 flag was not set)
     }
 }
 

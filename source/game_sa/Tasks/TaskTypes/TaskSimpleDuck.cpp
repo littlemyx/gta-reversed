@@ -172,19 +172,19 @@ void CTaskSimpleDuck::ControlDuckMove(CVector2D moveDir) {
     }
 
     // Change direction, but limit maximum change to `maxUnits`
+    // 0x692415..0x692455: a step towards the target, NOT std::clamp and not `<=` chains: with an unordered (NaN) delta the exe takes the
+    // "assign" path (both x87 compares fall through), the port's old `delta <= max ? .. : += max` added `maxUnits` instead.
     const auto maxUnits = CTimer::GetTimeStep() * 0.07f;
-    const auto moveDeltaY = moveDir.y - m_MoveCmd.y; 
-    if (moveDeltaY <= maxUnits) {
-        if (moveDeltaY >= -maxUnits) {
-            m_MoveCmd.y = moveDir.y;
-        } else {
-            m_MoveCmd.y -= maxUnits;
-        }
-    } else {
+    const auto moveDeltaY = moveDir.y - m_MoveCmd.y;
+    if (moveDeltaY > maxUnits) {
         m_MoveCmd.y += maxUnits;
+    } else if (moveDeltaY < -maxUnits) {
+        m_MoveCmd.y -= maxUnits;
+    } else {
+        m_MoveCmd.y = moveDir.y;
     }
 
-    if (std::abs(moveDir.y) < 0.1f && std::abs(moveDir.x) >= 0.9f) {
+    if (std::abs(moveDir.y) < 0.1f && std::abs(moveDir.x) > 0.9f) {
         m_MoveCmd.y = 0.f;
         m_MoveCmd.x = moveDir.x <= 0.f ? -1.f : 1.f;
     }

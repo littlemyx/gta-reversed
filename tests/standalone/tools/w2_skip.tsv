@@ -1,0 +1,369 @@
+# rows that cannot run in wave2_oracle_test (reasons kept); format: Class::fn<TAB>reason
+CEvent::GetSoundLevel	every case faults identically in the port and in the exe (the fixture lacks the object the function dereferences): no information
+CEventAttractor::IsEffectActive	every case faults identically in the port and in the exe (the fixture lacks the object the function dereferences): no information
+CEventBuildingCollision::CanTreatBuildingAsObject	every case faults identically in the port and in the exe (the fixture lacks the object the function dereferences): no information
+CEventDamage::AffectsPed	every case faults identically in the port and in the exe (the fixture lacks the object the function dereferences): no information
+CEventDamage::ComputeDeathAnim	every case faults identically in the port and in the exe (the fixture lacks the object the function dereferences): no information
+CEventDamage::DoInformVehicleOccupants	every case faults identically in the port and in the exe (the fixture lacks the object the function dereferences): no information
+CEventDamage::ReportCriminalEvent	every case faults identically in the port and in the exe (the fixture lacks the object the function dereferences): no information
+CEventDanger::AffectsPedGroup	every case faults identically in the port and in the exe (the fixture lacks the object the function dereferences): no information
+CEventDraggedOutCar::AffectsPedGroup	every case faults identically in the port and in the exe (the fixture lacks the object the function dereferences): no information
+CEventEditableResponse::Clone	every case faults identically in the port and in the exe (the fixture lacks the object the function dereferences): no information
+CEventEditableResponse::TriggerLookAt	every case faults identically in the port and in the exe (the fixture lacks the object the function dereferences): no information
+CEventFireNearby::AffectsPed	every case faults identically in the port and in the exe (the fixture lacks the object the function dereferences): no information
+CEventGlobalGroup::GetSoundLevel	the port asserts (ranges::take with a garbage negative count) where the exe loops zero times; a state the game never produces
+CEventGroup::Flush	the port asserts (MSVC debug check: std::array / ranges::take with a garbage index or negative count) where the exe silently reads/loops with the garbage value; a state the game never produces
+CEventGroup::GetEventOfType	the port asserts (MSVC debug check: std::array / ranges::take with a garbage index or negative count) where the exe silently reads/loops with the garbage value; a state the game never produces
+CEventGroup::GetHighestPriorityEvent	the port asserts (MSVC debug check: std::array / ranges::take with a garbage index or negative count) where the exe silently reads/loops with the garbage value; a state the game never produces
+CEventGroup::HasEvent	the port asserts (MSVC debug check: std::array / ranges::take with a garbage index or negative count) where the exe silently reads/loops with the garbage value; a state the game never produces
+CEventGroup::HasScriptCommandOfTaskType	the port asserts (MSVC debug check: std::array / ranges::take with a garbage index or negative count) where the exe silently reads/loops with the garbage value; a state the game never produces
+CEventGroup::Remove	the port asserts (MSVC debug check: std::array / ranges::take with a garbage index or negative count) where the exe silently reads/loops with the garbage value; a state the game never produces
+CEventGroup::RemoveInvalidEvents	the port asserts (MSVC debug check: std::array / ranges::take with a garbage index or negative count) where the exe silently reads/loops with the garbage value; a state the game never produces
+CEventGroup::Reorganise	the EXE kills the process on the garbage fixture (fastfail / stack overflow / unrecoverable fault); cannot be caught, so the row is skipped
+CEventGroup::TickEvents	the port asserts (MSVC debug check: std::array / ranges::take with a garbage index or negative count) where the exe silently reads/loops with the garbage value; a state the game never produces
+CEventGroupEvent::Clone	the EXE kills the process on the garbage fixture (fastfail / stack overflow / unrecoverable fault); cannot be caught, so the row is skipped
+CEventGunAimedAt::ReportCriminalEvent	every case faults identically in the port and in the exe (the fixture lacks the object the function dereferences): no information
+CEventHandler::ComputeAreaCodesResponse	the EXE kills the process on the garbage fixture (fastfail / stack overflow / unrecoverable fault); cannot be caught, so the row is skipped
+CEventHandler::ComputeCopCarBeingStolenResponse	the EXE kills the process on the garbage fixture (fastfail / stack overflow / unrecoverable fault); cannot be caught, so the row is skipped
+CEventHandler::ComputeCreatePartnerTaskResponse	the EXE kills the process on the garbage fixture (fastfail / stack overflow / unrecoverable fault); cannot be caught, so the row is skipped
+CEventHandler::ComputeDangerResponse	the EXE kills the process on the garbage fixture (fastfail / stack overflow / unrecoverable fault); cannot be caught, so the row is skipped
+CEventHandler::ComputeDeadPedResponse	the EXE kills the process on the garbage fixture (fastfail / stack overflow / unrecoverable fault); cannot be caught, so the row is skipped
+CEventHandler::ComputeDeathResponse	the EXE kills the process on the garbage fixture (fastfail / stack overflow / unrecoverable fault); cannot be caught, so the row is skipped
+CEventHandler::ComputeFireNearbyResponse	the EXE kills the process on the garbage fixture (fastfail / stack overflow / unrecoverable fault); cannot be caught, so the row is skipped
+CEventHandler::ComputeGotKnockedOverByCarResponse	the EXE kills the process on the garbage fixture (fastfail / stack overflow / unrecoverable fault); cannot be caught, so the row is skipped
+CEventHandler::ComputeGunAimedAtResponse	the EXE kills the process on the garbage fixture (fastfail / stack overflow / unrecoverable fault); cannot be caught, so the row is skipped
+CEventHandler::ComputeHighAngerAtPlayerResponse	the EXE kills the process on the garbage fixture (fastfail / stack overflow / unrecoverable fault); cannot be caught, so the row is skipped
+CEventHandler::ComputeInteriorUseInfoResponse	the EXE kills the process on the garbage fixture (fastfail / stack overflow / unrecoverable fault); cannot be caught, so the row is skipped
+CEventHandler::ComputeLowAngerAtPlayerResponse	the EXE kills the process on the garbage fixture (fastfail / stack overflow / unrecoverable fault); cannot be caught, so the row is skipped
+CEventHandler::ComputeLowHealthResponse	the EXE kills the process on the garbage fixture (fastfail / stack overflow / unrecoverable fault); cannot be caught, so the row is skipped
+CEventHandler::ComputeObjectCollisionPassiveResponse	the EXE kills the process on the garbage fixture (fastfail / stack overflow / unrecoverable fault); cannot be caught, so the row is skipped
+CEventHandler::ComputeOnFireResponse	the EXE kills the process on the garbage fixture (fastfail / stack overflow / unrecoverable fault); cannot be caught, so the row is skipped
+CEventHandler::ComputePassObjectResponse	the EXE kills the process on the garbage fixture (fastfail / stack overflow / unrecoverable fault); cannot be caught, so the row is skipped
+CEventHandler::ComputePedFriendResponse	the EXE kills the process on the garbage fixture (fastfail / stack overflow / unrecoverable fault); cannot be caught, so the row is skipped
+CEventHandler::ComputePedSoundQuietResponse	the EXE kills the process on the garbage fixture (fastfail / stack overflow / unrecoverable fault); cannot be caught, so the row is skipped
+CEventHandler::ComputePedThreatBadlyLitResponse	the EXE kills the process on the garbage fixture (fastfail / stack overflow / unrecoverable fault); cannot be caught, so the row is skipped
+CEventHandler::ComputePedThreatResponse	the EXE kills the process on the garbage fixture (fastfail / stack overflow / unrecoverable fault); cannot be caught, so the row is skipped
+CEventHandler::ComputePedToChaseResponse	the EXE kills the process on the garbage fixture (fastfail / stack overflow / unrecoverable fault); cannot be caught, so the row is skipped
+CEventHandler::ComputePlayerCollisionWithPedResponse	the EXE kills the process on the garbage fixture (fastfail / stack overflow / unrecoverable fault); cannot be caught, so the row is skipped
+CEventHandler::ComputePotentialPedCollideResponse	the EXE kills the process on the garbage fixture (fastfail / stack overflow / unrecoverable fault); cannot be caught, so the row is skipped
+CEventHandler::ComputePotentialWalkIntoFireResponse	the EXE kills the process on the garbage fixture (fastfail / stack overflow / unrecoverable fault); cannot be caught, so the row is skipped
+CEventHandler::ComputeReallyLowHealthResponse	the EXE kills the process on the garbage fixture (fastfail / stack overflow / unrecoverable fault); cannot be caught, so the row is skipped
+CEventHandler::ComputeSeenCopResponse	the EXE kills the process on the garbage fixture (fastfail / stack overflow / unrecoverable fault); cannot be caught, so the row is skipped
+CEventHandler::ComputeSeenPanickedPedResponse	the EXE kills the process on the garbage fixture (fastfail / stack overflow / unrecoverable fault); cannot be caught, so the row is skipped
+CEventHandler::ComputeSexyPedResponse	the EXE kills the process on the garbage fixture (fastfail / stack overflow / unrecoverable fault); cannot be caught, so the row is skipped
+CEventHandler::ComputeShotFiredResponse	the EXE kills the process on the garbage fixture (fastfail / stack overflow / unrecoverable fault); cannot be caught, so the row is skipped
+CEventHandler::ComputeSignalAtPedResponse	the EXE kills the process on the garbage fixture (fastfail / stack overflow / unrecoverable fault); cannot be caught, so the row is skipped
+CEventHandler::ComputeSpecialResponse	the EXE kills the process on the garbage fixture (fastfail / stack overflow / unrecoverable fault); cannot be caught, so the row is skipped
+CEventHandler::ComputeVehicleDamageResponse	the EXE kills the process on the garbage fixture (fastfail / stack overflow / unrecoverable fault); cannot be caught, so the row is skipped
+CEventHandler::ComputeVehiclePotentialPassiveCollisionResponse	the EXE kills the process on the garbage fixture (fastfail / stack overflow / unrecoverable fault); cannot be caught, so the row is skipped
+CEventHandler::ComputeVehicleToStealResponse	the EXE kills the process on the garbage fixture (fastfail / stack overflow / unrecoverable fault); cannot be caught, so the row is skipped
+CEventHandler::Destructor	every case faults identically in the port and in the exe (the fixture lacks the object the function dereferences): no information
+CEventHandler::Flush	every case faults identically in the port and in the exe (the fixture lacks the object the function dereferences): no information
+CEventHandler::FlushImmediately	every case faults identically in the port and in the exe (the fixture lacks the object the function dereferences): no information
+CEventHitByWaterCannon::AffectsPed	every case faults identically in the port and in the exe (the fixture lacks the object the function dereferences): no information
+CEventInWater::AffectsPed	every case faults identically in the port and in the exe (the fixture lacks the object the function dereferences): no information
+CEventKnockOffBike::ReportCriminalEvent	every case faults identically in the port and in the exe (the fixture lacks the object the function dereferences): no information
+CEventLeaderExitedCarAsDriver::AffectsPedGroup	every case faults identically in the port and in the exe (the fixture lacks the object the function dereferences): no information
+CEventLeaderQuitEnteringCarAsDriver::AffectsPedGroup	every case faults identically in the port and in the exe (the fixture lacks the object the function dereferences): no information
+CEventPedEnteredMyVehicle::CloneEditable	the EXE kills the process on the garbage fixture (fastfail / stack overflow / unrecoverable fault); cannot be caught, so the row is skipped
+CEventPlayerCommandToGroup::AffectsPedGroup	every case faults identically in the port and in the exe (the fixture lacks the object the function dereferences): no information
+CEventPlayerCommandToGroupAttack::AffectsPedGroup	every case faults identically in the port and in the exe (the fixture lacks the object the function dereferences): no information
+CEventPotentialWalkIntoVehicle::AffectsPed	every case faults identically in the port and in the exe (the fixture lacks the object the function dereferences): no information
+CEventScriptCommand::Clone	every case faults identically in the port and in the exe (the fixture lacks the object the function dereferences): no information
+CEventScriptedAttractor::Constructor	every case faults identically in the port and in the exe (the fixture lacks the object the function dereferences): no information
+CEventStuckInAir::AffectsPed	every case faults identically in the port and in the exe (the fixture lacks the object the function dereferences): no information
+CEventVehicleDamage::ReportCriminalEvent	every case faults identically in the port and in the exe (the fixture lacks the object the function dereferences): no information
+CEventVehicleDied::Clone	the EXE kills the process on the garbage fixture (fastfail / stack overflow / unrecoverable fault); cannot be caught, so the row is skipped
+CEventVehicleHitAndRun::Clone	the EXE kills the process on the garbage fixture (fastfail / stack overflow / unrecoverable fault); cannot be caught, so the row is skipped
+CEventVehicleHitAndRun::ReportCriminalEvent	every case faults identically in the port and in the exe (the fixture lacks the object the function dereferences): no information
+CGroupEventHandler::ComputeDrivebyResponse	the EXE kills the process on the garbage fixture (fastfail / stack overflow / unrecoverable fault); cannot be caught, so the row is skipped
+CGroupEventHandler::ComputeWalkAlongsideResponse	the EXE kills the process on the garbage fixture (fastfail / stack overflow / unrecoverable fault); cannot be caught, so the row is skipped
+CGroupEventHandler::IsKillTaskAppropriate	every case faults identically in the port and in the exe (the fixture lacks the object the function dereferences): no information
+CTask::operator delete	every case faults identically in the port and in the exe (the fixture lacks the object the function dereferences): no information
+CTask::operator delete 0x61A5B0	every case faults identically in the port and in the exe (the fixture lacks the object the function dereferences): no information
+CTaskAllocator::IsFinished	every case faults identically in the port and in the exe (the fixture lacks the object the function dereferences): no information
+CTaskAllocatorAttack::Destructor	the EXE kills the process on the garbage fixture (fastfail / stack overflow / unrecoverable fault); cannot be caught, so the row is skipped
+CTaskAllocatorKillOnFoot::Destructor	the EXE kills the process on the garbage fixture (fastfail / stack overflow / unrecoverable fault); cannot be caught, so the row is skipped
+CTaskAllocatorKillThreatsBasic::Destructor	the EXE kills the process on the garbage fixture (fastfail / stack overflow / unrecoverable fault); cannot be caught, so the row is skipped
+CTaskAllocatorKillThreatsDriveby::Destructor	the EXE kills the process on the garbage fixture (fastfail / stack overflow / unrecoverable fault); cannot be caught, so the row is skipped
+CTaskComplexAttractorPartnerWait::CreateFirstSubTask	the EXE kills the process on the garbage fixture (fastfail / stack overflow / unrecoverable fault); cannot be caught, so the row is skipped
+CTaskComplexAvoidEntity::ComputeRoute	every case faults identically in the port and in the exe (the fixture lacks the object the function dereferences): no information
+CTaskComplexAvoidEntity::CreateFirstSubTask	the EXE kills the process on the garbage fixture (fastfail / stack overflow / unrecoverable fault); cannot be caught, so the row is skipped
+CTaskComplexAvoidEntity::LookAtTarget	every case faults identically in the port and in the exe (the fixture lacks the object the function dereferences): no information
+CTaskComplexAvoidOtherPedWhileWandering::Clone	the EXE kills the process on the garbage fixture (fastfail / stack overflow / unrecoverable fault); cannot be caught, so the row is skipped
+CTaskComplexAvoidOtherPedWhileWandering::ComputeDetourTarget	every case faults identically in the port and in the exe (the fixture lacks the object the function dereferences): no information
+CTaskComplexAvoidOtherPedWhileWandering::CreateFirstSubTask	the EXE kills the process on the garbage fixture (fastfail / stack overflow / unrecoverable fault); cannot be caught, so the row is skipped
+CTaskComplexAvoidOtherPedWhileWandering::CreateNextSubTask	every case faults identically in the port and in the exe (the fixture lacks the object the function dereferences): no information
+CTaskComplexAvoidOtherPedWhileWandering::Destructor	the EXE kills the process on the garbage fixture (fastfail / stack overflow / unrecoverable fault); cannot be caught, so the row is skipped
+CTaskComplexAvoidOtherPedWhileWandering::SetUpIK	every case faults identically in the port and in the exe (the fixture lacks the object the function dereferences): no information
+CTaskComplexBeInCouple::GetWalkSide	every case faults identically in the port and in the exe (the fixture lacks the object the function dereferences): no information
+CTaskComplexBeInGroup::ControlSubTask	every case faults identically in the port and in the exe (the fixture lacks the object the function dereferences): no information
+CTaskComplexBeInGroup::CreateFirstSubTask	the port asserts (MSVC debug check: std::array / ranges::take with a garbage index or negative count) where the exe silently reads/loops with the garbage value; a state the game never produces
+CTaskComplexBeInGroup::CreateNextSubTask	the port asserts (MSVC debug check: std::array / ranges::take with a garbage index or negative count) where the exe silently reads/loops with the garbage value; a state the game never produces
+CTaskComplexBeInGroup::MakeAbortable	the port asserts (MSVC debug check: std::array / ranges::take with a garbage index or negative count) where the exe silently reads/loops with the garbage value; a state the game never produces
+CTaskComplexBeInGroup::MonitorMainGroupTask	the port asserts (MSVC debug check: std::array / ranges::take with a garbage index or negative count) where the exe silently reads/loops with the garbage value; a state the game never produces
+CTaskComplexBeInGroup::MonitorSecondaryGroupTask	every case faults identically in the port and in the exe (the fixture lacks the object the function dereferences): no information
+CTaskComplexBeStill::CreateNextSubTask	every case faults identically in the port and in the exe (the fixture lacks the object the function dereferences): no information
+CTaskComplexCarSlowBeDraggedOut::Clone	the EXE kills the process on the garbage fixture (fastfail / stack overflow / unrecoverable fault); cannot be caught, so the row is skipped
+CTaskComplexCarSlowBeDraggedOut::CreateSubTask	every case faults identically in the port and in the exe (the fixture lacks the object the function dereferences): no information
+CTaskComplexDestroyCarArmed::CalculateSearchPositionAndRanges	every case faults identically in the port and in the exe (the fixture lacks the object the function dereferences): no information
+CTaskComplexDestroyCarMelee::CalculateSearchPositionAndRanges	every case faults identically in the port and in the exe (the fixture lacks the object the function dereferences): no information
+CTaskComplexDestroyCarMelee::CreateFirstSubTask	every case faults identically in the port and in the exe (the fixture lacks the object the function dereferences): no information
+CTaskComplexDie::SayDeathSample	every case faults identically in the port and in the exe (the fixture lacks the object the function dereferences): no information
+CTaskComplexDieInCar::PreparePedVehicleForPedDeath	every case faults identically in the port and in the exe (the fixture lacks the object the function dereferences): no information
+CTaskComplexDiveFromAttachedEntityAndGetUp::CreateFirstSubTask	every case faults identically in the port and in the exe (the fixture lacks the object the function dereferences): no information
+CTaskComplexDrivePointRoute::Clone	the EXE kills the process on the garbage fixture (fastfail / stack overflow / unrecoverable fault); cannot be caught, so the row is skipped
+CTaskComplexDrivePointRoute::CreateFirstSubTask	the EXE kills the process on the garbage fixture (fastfail / stack overflow / unrecoverable fault); cannot be caught, so the row is skipped
+CTaskComplexDrivePointRoute::CreateNextSubTask	the EXE kills the process on the garbage fixture (fastfail / stack overflow / unrecoverable fault); cannot be caught, so the row is skipped
+CTaskComplexDrivePointRoute::Destructor	every case faults identically in the port and in the exe (the fixture lacks the object the function dereferences): no information
+CTaskComplexDriveToPoint::IsTargetBlocked-Entities	overload with a signature the generator cannot call
+CTaskComplexEnterAnyCarAsDriver::CreateFirstSubTask	the EXE kills the process on the garbage fixture (fastfail / stack overflow / unrecoverable fault); cannot be caught, so the row is skipped
+CTaskComplexEnterBoatAsDriver::CreateNextSubTask	every case faults identically in the port and in the exe (the fixture lacks the object the function dereferences): no information
+CTaskComplexEnterBoatAsDriver::CreateSubTask	every case faults identically in the port and in the exe (the fixture lacks the object the function dereferences): no information
+CTaskComplexEnterCar::PreparePedForVehicleEnter	every case faults identically in the port and in the exe (the fixture lacks the object the function dereferences): no information
+CTaskComplexEnterCar::PrepareVehicleForPedEnter	every case faults identically in the port and in the exe (the fixture lacks the object the function dereferences): no information
+CTaskComplexEnterCar::SetVehicleFlags	every case faults identically in the port and in the exe (the fixture lacks the object the function dereferences): no information
+CTaskComplexEnterCarAsDriverTimed::StopTimer	every case faults identically in the port and in the exe (the fixture lacks the object the function dereferences): no information
+CTaskComplexEnterCarAsPassengerTimed::Clone	the EXE kills the process on the garbage fixture (fastfail / stack overflow / unrecoverable fault); cannot be caught, so the row is skipped
+CTaskComplexEnterCarAsPassengerTimed::ControlSubTask	the EXE kills the process on the garbage fixture (fastfail / stack overflow / unrecoverable fault); cannot be caught, so the row is skipped
+CTaskComplexEnterCarAsPassengerTimed::CreateFirstSubTask	the EXE kills the process on the garbage fixture (fastfail / stack overflow / unrecoverable fault); cannot be caught, so the row is skipped
+CTaskComplexEnterCarAsPassengerTimed::Destructor	the EXE kills the process on the garbage fixture (fastfail / stack overflow / unrecoverable fault); cannot be caught, so the row is skipped
+CTaskComplexEnterCarAsPassengerTimed::StopTimer	every case faults identically in the port and in the exe (the fixture lacks the object the function dereferences): no information
+CTaskComplexEvasiveDiveAndGetUp::CreateNextSubTask	every case faults identically in the port and in the exe (the fixture lacks the object the function dereferences): no information
+CTaskComplexEvasiveDiveAndGetUp::CreateSubTask	every case faults identically in the port and in the exe (the fixture lacks the object the function dereferences): no information
+CTaskComplexExtinguishFireOnFoot::CreateFirstSubTask	every case faults identically in the port and in the exe (the fixture lacks the object the function dereferences): no information
+CTaskComplexExtinguishFireOnFoot::FindFireNearPed	every case faults identically in the port and in the exe (the fixture lacks the object the function dereferences): no information
+CTaskComplexExtinguishFires::ControlSubTask	every case faults identically in the port and in the exe (the fixture lacks the object the function dereferences): no information
+CTaskComplexExtinguishFires::CreateFirstSubTask	every case faults identically in the port and in the exe (the fixture lacks the object the function dereferences): no information
+CTaskComplexExtinguishFires::CreateNextSubTask	the EXE kills the process on the garbage fixture (fastfail / stack overflow / unrecoverable fault); cannot be caught, so the row is skipped
+CTaskComplexExtinguishFires::GetNearestFire	every case faults identically in the port and in the exe (the fixture lacks the object the function dereferences): no information
+CTaskComplexFacial::ControlSubTask	the EXE kills the process on the garbage fixture (fastfail / stack overflow / unrecoverable fault); cannot be caught, so the row is skipped
+CTaskComplexFacial::CreateNextSubTask	OPEN: 1 of 60 cases (special inputs) leaves m_RequestB at 0 in the port and at -1 in the exe; the asm and the port source agree on every path I could read, the sub task of that fixture is the suspect (see ORACLE-W2.md, open items)
+CTaskComplexFleeEntity::CreateSubTask	every case faults identically in the port and in the exe (the fixture lacks the object the function dereferences): no information
+CTaskComplexFleeShooting::MakeAbortable	every case faults identically in the port and in the exe (the fixture lacks the object the function dereferences): no information
+CTaskComplexFollowNodeRoute::CalcBlendRatio	3 of 60 cases: the port faults inside the std::vector / tuple access of m_Route with the garbage route where the exe reads garbage memory that happens to be mapped (fixture)
+CTaskComplexFollowNodeRoute::Clone	the EXE kills the process on the garbage fixture (fastfail / stack overflow / unrecoverable fault); cannot be caught, so the row is skipped
+CTaskComplexFollowNodeRoute::ComputeRoute	every case faults identically in the port and in the exe (the fixture lacks the object the function dereferences): no information
+CTaskComplexFollowNodeRoute::Constructor	the EXE kills the process on the garbage fixture (fastfail / stack overflow / unrecoverable fault); cannot be caught, so the row is skipped
+CTaskComplexFollowNodeRoute::CreateFirstSubTask	every case faults identically in the port and in the exe (the fixture lacks the object the function dereferences): no information
+CTaskComplexFollowNodeRoute::CreateSubTask	every case faults identically in the port and in the exe (the fixture lacks the object the function dereferences): no information
+CTaskComplexFollowNodeRoute::Destructor	every case faults identically in the port and in the exe (the fixture lacks the object the function dereferences): no information
+CTaskComplexFollowNodeRoute::SetTarget	every case faults identically in the port and in the exe (the fixture lacks the object the function dereferences): no information
+CTaskComplexFollowNodeRoute::StopTimer	every case faults identically in the port and in the exe (the fixture lacks the object the function dereferences): no information
+CTaskComplexFollowPatrolRoute::Clone	the EXE kills the process on the garbage fixture (fastfail / stack overflow / unrecoverable fault); cannot be caught, so the row is skipped
+CTaskComplexFollowPatrolRoute::ComputeNextSubTaskType	every case faults identically in the port and in the exe (the fixture lacks the object the function dereferences): no information
+CTaskComplexFollowPatrolRoute::Constructor	the EXE kills the process on the garbage fixture (fastfail / stack overflow / unrecoverable fault); cannot be caught, so the row is skipped
+CTaskComplexFollowPedFootsteps::Constructor	the EXE kills the process on the garbage fixture (fastfail / stack overflow / unrecoverable fault); cannot be caught, so the row is skipped
+CTaskComplexFollowPedFootsteps::CreateFirstSubTask	every case faults identically in the port and in the exe (the fixture lacks the object the function dereferences): no information
+CTaskComplexFollowPedFootsteps::CreateNextSubTask	every case faults identically in the port and in the exe (the fixture lacks the object the function dereferences): no information
+CTaskComplexFollowPointRoute::CalcBlendRatio	1 of 60 cases: the port faults inside the std::tuple / vector access of the garbage route where the exe reads garbage memory that happens to be mapped (fixture)
+CTaskComplexFollowPointRoute::Clone	the EXE kills the process on the garbage fixture (fastfail / stack overflow / unrecoverable fault); cannot be caught, so the row is skipped
+CTaskComplexFollowPointRoute::ControlSubTask	every case faults identically in the port and in the exe (the fixture lacks the object the function dereferences): no information
+CTaskComplexFollowPointRoute::CreateFirstSubTask	every case faults identically in the port and in the exe (the fixture lacks the object the function dereferences): no information
+CTaskComplexFollowPointRoute::CreateTask	every case faults identically in the port and in the exe (the fixture lacks the object the function dereferences): no information
+CTaskComplexFollowPointRoute::GetSubTaskType	every case faults identically in the port and in the exe (the fixture lacks the object the function dereferences): no information
+CTaskComplexGangLeader::CreateFirstSubTask	every case faults identically in the port and in the exe (the fixture lacks the object the function dereferences): no information
+CTaskComplexGangLeader::TryToPassObject	every case faults identically in the port and in the exe (the fixture lacks the object the function dereferences): no information
+CTaskComplexGetOnBoatSeat::CreateFirstSubTask	the EXE kills the process on the garbage fixture (fastfail / stack overflow / unrecoverable fault); cannot be caught, so the row is skipped
+CTaskComplexGoPickUpEntity::CreateFirstSubTask	the EXE kills the process on the garbage fixture (fastfail / stack overflow / unrecoverable fault); cannot be caught, so the row is skipped
+CTaskComplexGoPickUpEntity::Destructor	the EXE kills the process on the garbage fixture (fastfail / stack overflow / unrecoverable fault); cannot be caught, so the row is skipped
+CTaskComplexGoToBoatSteeringWheel::CreateFirstSubTask	the EXE kills the process on the garbage fixture (fastfail / stack overflow / unrecoverable fault); cannot be caught, so the row is skipped
+CTaskComplexGoToCarDoorAndStandStill::CreateSubTask	every case faults identically in the port and in the exe (the fixture lacks the object the function dereferences): no information
+CTaskComplexGoToCarDoorAndStandStill::Destructor	every case faults identically in the port and in the exe (the fixture lacks the object the function dereferences): no information
+CTaskComplexGoToPointAiming::CreateFirstSubTask	every case faults identically in the port and in the exe (the fixture lacks the object the function dereferences): no information
+CTaskComplexGoToPointAiming::CreateNextSubTask	every case faults identically in the port and in the exe (the fixture lacks the object the function dereferences): no information
+CTaskComplexGoToPointAndStandStill::CreateFirstSubTask	the EXE kills the process on the garbage fixture (fastfail / stack overflow / unrecoverable fault); cannot be caught, so the row is skipped
+CTaskComplexGoToPointAndStandStillTimed::CreateFirstSubTask	the EXE kills the process on the garbage fixture (fastfail / stack overflow / unrecoverable fault); cannot be caught, so the row is skipped
+CTaskComplexGoToPointAndStandStillTimed::StopTimer	every case faults identically in the port and in the exe (the fixture lacks the object the function dereferences): no information
+CTaskComplexGoToPointAnyMeans::CreateFirstSubTask	the EXE kills the process on the garbage fixture (fastfail / stack overflow / unrecoverable fault); cannot be caught, so the row is skipped
+CTaskComplexHitPedWithCar::CreateFirstSubTask	every case faults identically in the port and in the exe (the fixture lacks the object the function dereferences): no information
+CTaskComplexInvestigateDeadPed::CreateNextSubTask	the EXE kills the process on the garbage fixture (fastfail / stack overflow / unrecoverable fault); cannot be caught, so the row is skipped
+CTaskComplexInvestigateDeadPed::CreateSubTask	every case faults identically in the port and in the exe (the fixture lacks the object the function dereferences): no information
+CTaskComplexKillPedOnFootMelee::CalculateSearchPositionAndRanges	every case faults identically in the port and in the exe (the fixture lacks the object the function dereferences): no information
+CTaskComplexLeaveBoat::Destructor	every case faults identically in the port and in the exe (the fixture lacks the object the function dereferences): no information
+CTaskComplexLeaveCar::SetupGettingOut	every case faults identically in the port and in the exe (the fixture lacks the object the function dereferences): no information
+CTaskComplexLeaveCarAndFlee::CreateFirstSubTask	the EXE kills the process on the garbage fixture (fastfail / stack overflow / unrecoverable fault); cannot be caught, so the row is skipped
+CTaskComplexLeaveCarAndFlee::CreateSubTask	every case faults identically in the port and in the exe (the fixture lacks the object the function dereferences): no information
+CTaskComplexMedicTreatInjuredPed::CalcTargetPosWithOffset	every case faults identically in the port and in the exe (the fixture lacks the object the function dereferences): no information
+CTaskComplexMoveBackAndJump::CreateNextSubTask	every case faults identically in the port and in the exe (the fixture lacks the object the function dereferences): no information
+CTaskComplexMoveBackAndJump::CreateSubTask	every case faults identically in the port and in the exe (the fixture lacks the object the function dereferences): no information
+CTaskComplexObserveTrafficLights::ControlSubTask	every case faults identically in the port and in the exe (the fixture lacks the object the function dereferences): no information
+CTaskComplexObserveTrafficLights::CreateFirstSubTask	every case faults identically in the port and in the exe (the fixture lacks the object the function dereferences): no information
+CTaskComplexOnFire::CreateSubTask	every case faults identically in the port and in the exe (the fixture lacks the object the function dereferences): no information
+CTaskComplexPartner::CalculateMeetingPoints	every case faults identically in the port and in the exe (the fixture lacks the object the function dereferences): no information
+CTaskComplexPartnerChat::GetPartnerSequence	the EXE kills the process on the garbage fixture (fastfail / stack overflow / unrecoverable fault); cannot be caught, so the row is skipped
+CTaskComplexPassObject::AbortIK	every case faults identically in the port and in the exe (the fixture lacks the object the function dereferences): no information
+CTaskComplexPassObject::CreateFirstSubTask	the EXE kills the process on the garbage fixture (fastfail / stack overflow / unrecoverable fault); cannot be caught, so the row is skipped
+CTaskComplexPassObject::CreateNextSubTask	the EXE kills the process on the garbage fixture (fastfail / stack overflow / unrecoverable fault); cannot be caught, so the row is skipped
+CTaskComplexPassObject::MakeAbortable	every case faults identically in the port and in the exe (the fixture lacks the object the function dereferences): no information
+CTaskComplexPolicePursuit::ControlSubTask	the EXE kills the process on the garbage fixture (fastfail / stack overflow / unrecoverable fault); cannot be caught, so the row is skipped
+CTaskComplexPolicePursuit::CreateSubTask	every case faults identically in the port and in the exe (the fixture lacks the object the function dereferences): no information
+CTaskComplexPolicePursuit::PersistPursuit	every case faults identically in the port and in the exe (the fixture lacks the object the function dereferences): no information
+CTaskComplexPresentIdToCop::Clone	the EXE kills the process on the garbage fixture (fastfail / stack overflow / unrecoverable fault); cannot be caught, so the row is skipped
+CTaskComplexPresentIdToCop::ComputeHeadingToCop	every case faults identically in the port and in the exe (the fixture lacks the object the function dereferences): no information
+CTaskComplexPresentIdToCop::CreateFirstSubTask	the EXE kills the process on the garbage fixture (fastfail / stack overflow / unrecoverable fault); cannot be caught, so the row is skipped
+CTaskComplexRoadRage::CreateSubTask	every case faults identically in the port and in the exe (the fixture lacks the object the function dereferences): no information
+CTaskComplexSeekCoverUntilTargetDead::ControlSubTask	the EXE kills the process on the garbage fixture (fastfail / stack overflow / unrecoverable fault); cannot be caught, so the row is skipped
+CTaskComplexSeekCoverUntilTargetDead::CreateFirstSubTask	the EXE kills the process on the garbage fixture (fastfail / stack overflow / unrecoverable fault); cannot be caught, so the row is skipped
+CTaskComplexSeekCoverUntilTargetDead::GetTargetPed	the port asserts (MSVC debug check: std::array / ranges::take with a garbage index or negative count) where the exe silently reads/loops with the garbage value; a state the game never produces
+CTaskComplexSeekEntityAiming::ControlSubTask	the EXE kills the process on the garbage fixture (fastfail / stack overflow / unrecoverable fault); cannot be caught, so the row is skipped
+CTaskComplexSeekEntityAiming::CreateFirstSubTask	embedded vptr artefact (see CreateNextSubTask)
+CTaskComplexSeekEntityAiming::CreateNextSubTask	embedded vptr artefact: the created sub task holds member objects with a vptr; port and exe write their own (different) vtable addresses at +0x2C0 / +0x140
+CTaskComplexSequence::AddTask-1	the EXE kills the process on the garbage fixture (fastfail / stack overflow / unrecoverable fault); cannot be caught, so the row is skipped
+CTaskComplexSequence::Clone	the EXE kills the process on the garbage fixture (fastfail / stack overflow / unrecoverable fault); cannot be caught, so the row is skipped
+CTaskComplexSequence::Contains	every case faults identically in the port and in the exe (the fixture lacks the object the function dereferences): no information
+CTaskComplexSequence::CreateFirstSubTask	the port asserts (MSVC debug check: std::array / ranges::take with a garbage index or negative count) where the exe silently reads/loops with the garbage value; a state the game never produces
+CTaskComplexSequence::CreateNextSubTask-V	the port asserts (MSVC debug check: std::array / ranges::take with a garbage index or negative count) where the exe silently reads/loops with the garbage value; a state the game never produces
+CTaskComplexShuffleSeats::Clone	the EXE kills the process on the garbage fixture (fastfail / stack overflow / unrecoverable fault); cannot be caught, so the row is skipped
+CTaskComplexSignalAtPed::CreateFirstSubTask	the EXE kills the process on the garbage fixture (fastfail / stack overflow / unrecoverable fault); cannot be caught, so the row is skipped
+CTaskComplexSitDownThenIdleThenStandUp::CreateSubTask	every case faults identically in the port and in the exe (the fixture lacks the object the function dereferences): no information
+CTaskComplexSmartFleePoint::SetDefaultTaskWanderDir	every case faults identically in the port and in the exe (the fixture lacks the object the function dereferences): no information
+CTaskComplexStealCar::CreateSubTask	every case faults identically in the port and in the exe (the fixture lacks the object the function dereferences): no information
+CTaskComplexSunbathe::Destructor	the EXE kills the process on the garbage fixture (fastfail / stack overflow / unrecoverable fault); cannot be caught, so the row is skipped
+CTaskComplexTrackEntity::CalcMoveRatio	the exe initialises function-local statics (0xC18CF4..0xC18D08 + guard bits) lazily in ITS data image, the port keeps them in its own storage: the whole-data-image compare differs by construction. Values verified by hand against the asm
+CTaskComplexTrackEntity::Clone	the EXE kills the process on the garbage fixture (fastfail / stack overflow / unrecoverable fault); cannot be caught, so the row is skipped
+CTaskComplexTrackEntity::ControlSubTask	the port hook is Locked (the exe version crashes the stack, see TaskComplexTrackEntity.cpp:23): the game runs the exe code, so the port version is not the unit under test
+CTaskComplexTrackEntity::CreateFirstSubTask	every case faults identically in the port and in the exe (the fixture lacks the object the function dereferences): no information
+CTaskComplexTrackEntity::CreateNextSubTask	the EXE kills the process on the garbage fixture (fastfail / stack overflow / unrecoverable fault); cannot be caught, so the row is skipped
+CTaskComplexTreatAccident::ComputeHeading	every case faults identically in the port and in the exe (the fixture lacks the object the function dereferences): no information
+CTaskComplexUseAttractorPartner::CreateFirstSubTask	the EXE kills the process on the garbage fixture (fastfail / stack overflow / unrecoverable fault); cannot be caught, so the row is skipped
+CTaskComplexUseGoggles::CreateFirstSubTask	the EXE kills the process on the garbage fixture (fastfail / stack overflow / unrecoverable fault); cannot be caught, so the row is skipped
+CTaskComplexUseScriptedAttractor::CreateFirstSubTask	the EXE kills the process on the garbage fixture (fastfail / stack overflow / unrecoverable fault); cannot be caught, so the row is skipped
+CTaskComplexUseScriptedBrain::Clone	the port copies the (garbage, unterminated) name with strcpy_s (CRT "Buffer is too small" assert) where the exe copies a bounded number of bytes; real script/anim names are short
+CTaskComplexUseScriptedBrain::Constructor	the port copies the (garbage, unterminated) name with strcpy_s (CRT "Buffer is too small" assert) where the exe copies a bounded number of bytes; real script/anim names are short
+CTaskComplexUseSequence::Clone	the EXE kills the process on the garbage fixture (fastfail / stack overflow / unrecoverable fault); cannot be caught, so the row is skipped
+CTaskComplexUseSequence::CreateFirstSubTask	the port asserts (MSVC debug check: std::array / ranges::take with a garbage index or negative count) where the exe silently reads/loops with the garbage value; a state the game never produces
+CTaskComplexUseSequence::CreateNextSubTask	the port asserts (MSVC debug check: std::array / ranges::take with a garbage index or negative count) where the exe silently reads/loops with the garbage value; a state the game never produces
+CTaskComplexUseSwatRope::Clone	the EXE kills the process on the garbage fixture (fastfail / stack overflow / unrecoverable fault); cannot be caught, so the row is skipped
+CTaskComplexWaitForPed::Clone	the EXE kills the process on the garbage fixture (fastfail / stack overflow / unrecoverable fault); cannot be caught, so the row is skipped
+CTaskComplexWalkAlongsidePed::Clone	the EXE kills the process on the garbage fixture (fastfail / stack overflow / unrecoverable fault); cannot be caught, so the row is skipped
+CTaskComplexWalkAlongsidePed::CreateFirstSubTask	the EXE kills the process on the garbage fixture (fastfail / stack overflow / unrecoverable fault); cannot be caught, so the row is skipped
+CTaskComplexWalkAlongsidePed::CreateNextSubTask	the EXE kills the process on the garbage fixture (fastfail / stack overflow / unrecoverable fault); cannot be caught, so the row is skipped
+CTaskComplexWalkAlongsidePed::CreateSubTask	every case faults identically in the port and in the exe (the fixture lacks the object the function dereferences): no information
+CTaskComplexWalkAlongsidePed::Destructor	the EXE kills the process on the garbage fixture (fastfail / stack overflow / unrecoverable fault); cannot be caught, so the row is skipped
+CTaskComplexWalkRoundBuildingAttempt::Clone	the EXE kills the process on the garbage fixture (fastfail / stack overflow / unrecoverable fault); cannot be caught, so the row is skipped
+CTaskComplexWalkRoundBuildingAttempt::Constructor	the EXE kills the process on the garbage fixture (fastfail / stack overflow / unrecoverable fault); cannot be caught, so the row is skipped
+CTaskComplexWalkRoundBuildingAttempt::CreateFirstSubTask	the EXE kills the process on the garbage fixture (fastfail / stack overflow / unrecoverable fault); cannot be caught, so the row is skipped
+CTaskComplexWalkRoundBuildingAttempt::CreateSubTask	every case faults identically in the port and in the exe (the fixture lacks the object the function dereferences): no information
+CTaskComplexWalkRoundBuildingAttempt::Destructor	every case faults identically in the port and in the exe (the fixture lacks the object the function dereferences): no information
+CTaskComplexWalkRoundCar::Clone	the EXE kills the process on the garbage fixture (fastfail / stack overflow / unrecoverable fault); cannot be caught, so the row is skipped
+CTaskComplexWalkRoundCar::ComputeRoute	every case faults identically in the port and in the exe (the fixture lacks the object the function dereferences): no information
+CTaskComplexWalkRoundCar::ComputeRouteRoundBigCar	every case faults identically in the port and in the exe (the fixture lacks the object the function dereferences): no information
+CTaskComplexWalkRoundCar::ComputeRouteRoundSmallCar	every case faults identically in the port and in the exe (the fixture lacks the object the function dereferences): no information
+CTaskComplexWalkRoundCar::Constructor	the EXE kills the process on the garbage fixture (fastfail / stack overflow / unrecoverable fault); cannot be caught, so the row is skipped
+CTaskComplexWalkRoundCar::CreateRouteTask	the EXE kills the process on the garbage fixture (fastfail / stack overflow / unrecoverable fault); cannot be caught, so the row is skipped
+CTaskComplexWalkRoundCar::Destructor	every case faults identically in the port and in the exe (the fixture lacks the object the function dereferences): no information
+CTaskComplexWalkRoundCar::SetNewVehicle	every case faults identically in the port and in the exe (the fixture lacks the object the function dereferences): no information
+CTaskComplexWalkRoundFire::ControlSubTask	every case faults identically in the port and in the exe (the fixture lacks the object the function dereferences): no information
+CTaskComplexWalkRoundFire::CreateFirstSubTask	every case faults identically in the port and in the exe (the fixture lacks the object the function dereferences): no information
+CTaskComplexWalkRoundObject::ComputeRoute	every case faults identically in the port and in the exe (the fixture lacks the object the function dereferences): no information
+CTaskComplexWalkRoundObject::Constructor	the EXE kills the process on the garbage fixture (fastfail / stack overflow / unrecoverable fault); cannot be caught, so the row is skipped
+CTaskComplexWalkRoundObject::CreateFirstSubTask	the EXE kills the process on the garbage fixture (fastfail / stack overflow / unrecoverable fault); cannot be caught, so the row is skipped
+CTaskComplexWalkRoundObject::CreateRouteTask	the EXE kills the process on the garbage fixture (fastfail / stack overflow / unrecoverable fault); cannot be caught, so the row is skipped
+CTaskComplexWander::ComputeTargetHeading	every case faults identically in the port and in the exe (the fixture lacks the object the function dereferences): no information
+CTaskComplexWander::ScanForBlockedNode-1	every case faults identically in the port and in the exe (the fixture lacks the object the function dereferences): no information
+CTaskComplexWanderCop::ControlSubTask	the EXE kills the process on the garbage fixture (fastfail / stack overflow / unrecoverable fault); cannot be caught, so the row is skipped
+CTaskComplexWanderCop::CreateFirstSubTask	the EXE kills the process on the garbage fixture (fastfail / stack overflow / unrecoverable fault); cannot be caught, so the row is skipped
+CTaskComplexWanderCop::LookForStolenCopCars	every case faults identically in the port and in the exe (the fixture lacks the object the function dereferences): no information
+CTaskComplexWanderCop::ShouldPursuePlayer	every case faults identically in the port and in the exe (the fixture lacks the object the function dereferences): no information
+CTaskComplexWanderFlee::ControlSubTask	every case faults identically in the port and in the exe (the fixture lacks the object the function dereferences): no information
+CTaskComplexWanderStandard::SetNextMinScanTime	every case faults identically in the port and in the exe (the fixture lacks the object the function dereferences): no information
+CTaskGangHassleVehicle::CalcTargetOffset	every case faults identically in the port and in the exe (the fixture lacks the object the function dereferences): no information
+CTaskGangHassleVehicle::GetTargetHeading	every case faults identically in the port and in the exe (the fixture lacks the object the function dereferences): no information
+CTaskGoToVehicleAndLean::CreateFirstSubTask	the EXE kills the process on the garbage fixture (fastfail / stack overflow / unrecoverable fault); cannot be caught, so the row is skipped
+CTaskInteriorBeInHouse::Destructor	the EXE kills the process on the garbage fixture (fastfail / stack overflow / unrecoverable fault); cannot be caught, so the row is skipped
+CTaskInteriorBeInOffice::Destructor	the EXE kills the process on the garbage fixture (fastfail / stack overflow / unrecoverable fault); cannot be caught, so the row is skipped
+CTaskInteriorBeInShop::Destructor	the EXE kills the process on the garbage fixture (fastfail / stack overflow / unrecoverable fault); cannot be caught, so the row is skipped
+CTaskInteriorGoToInfo::Destructor	the EXE kills the process on the garbage fixture (fastfail / stack overflow / unrecoverable fault); cannot be caught, so the row is skipped
+CTaskInteriorLieInBed::FinishAnimCB	every case faults identically in the port and in the exe (the fixture lacks the object the function dereferences): no information
+CTaskInteriorShopKeeper::Destructor	the EXE kills the process on the garbage fixture (fastfail / stack overflow / unrecoverable fault); cannot be caught, so the row is skipped
+CTaskInteriorUseInfo::MakeAbortable	every case faults identically in the port and in the exe (the fixture lacks the object the function dereferences): no information
+CTaskManager::Destructor	every case faults identically in the port and in the exe (the fixture lacks the object the function dereferences): no information
+CTaskManager::FindActiveTaskByType	every case faults identically in the port and in the exe (the fixture lacks the object the function dereferences): no information
+CTaskManager::Flush	every case faults identically in the port and in the exe (the fixture lacks the object the function dereferences): no information
+CTaskManager::FlushImmediately	every case faults identically in the port and in the exe (the fixture lacks the object the function dereferences): no information
+CTaskManager::GetSimplestActiveTask	every case faults identically in the port and in the exe (the fixture lacks the object the function dereferences): no information
+CTaskManager::GetTaskSecondary	the port asserts (std::array subscript out of range) with a garbage slot index where the exe reads memory; a state the game never produces
+CTaskManager::ManageTasks	every case faults identically in the port and in the exe (the fixture lacks the object the function dereferences): no information
+CTaskManager::SetTask	the port asserts (MSVC debug check: std::array / ranges::take with a garbage index or negative count) where the exe silently reads/loops with the garbage value; a state the game never produces
+CTaskManager::SetTaskSecondary	the port asserts (MSVC debug check: std::array / ranges::take with a garbage index or negative count) where the exe silently reads/loops with the garbage value; a state the game never produces
+CTaskManager::StopTimers	every case faults identically in the port and in the exe (the fixture lacks the object the function dereferences): no information
+CTaskSimpleAchieveHeading::ProcessPed	every case faults identically in the port and in the exe (the fixture lacks the object the function dereferences): no information
+CTaskSimpleAchieveHeading::SetUpIK	every case faults identically in the port and in the exe (the fixture lacks the object the function dereferences): no information
+CTaskSimpleAffectSecondaryBehaviour::ProcessPed	every case faults identically in the port and in the exe (the fixture lacks the object the function dereferences): no information
+CTaskSimpleCarAlign::SetPedPosition	every case faults identically in the port and in the exe (the fixture lacks the object the function dereferences): no information
+CTaskSimpleCarCloseDoorFromInside::SetPedPosition	the EXE kills the process on the garbage fixture (fastfail / stack overflow / unrecoverable fault); cannot be caught, so the row is skipped
+CTaskSimpleCarCloseDoorFromOutside::SetPedPosition	the EXE kills the process on the garbage fixture (fastfail / stack overflow / unrecoverable fault); cannot be caught, so the row is skipped
+CTaskSimpleCarFallOut::SetPedPosition	the EXE kills the process on the garbage fixture (fastfail / stack overflow / unrecoverable fault); cannot be caught, so the row is skipped
+CTaskSimpleCarGetIn::SetPedPosition	the EXE kills the process on the garbage fixture (fastfail / stack overflow / unrecoverable fault); cannot be caught, so the row is skipped
+CTaskSimpleCarGetOut::SetPedPosition	the EXE kills the process on the garbage fixture (fastfail / stack overflow / unrecoverable fault); cannot be caught, so the row is skipped
+CTaskSimpleCarGoToPointNearDoorUntilDoorNotInUse::Clone	the EXE kills the process on the garbage fixture (fastfail / stack overflow / unrecoverable fault); cannot be caught, so the row is skipped
+CTaskSimpleCarOpenDoorFromOutside::Destructor	the EXE kills the process on the garbage fixture (fastfail / stack overflow / unrecoverable fault); cannot be caught, so the row is skipped
+CTaskSimpleCarOpenDoorFromOutside::FinishAnimCarOpenDoorFromOutsideCB	every case faults identically in the port and in the exe (the fixture lacks the object the function dereferences): no information
+CTaskSimpleCarOpenDoorFromOutside::SetPedPosition	the EXE kills the process on the garbage fixture (fastfail / stack overflow / unrecoverable fault); cannot be caught, so the row is skipped
+CTaskSimpleCarOpenLockedDoorFromOutside::SetPedPosition	the EXE kills the process on the garbage fixture (fastfail / stack overflow / unrecoverable fault); cannot be caught, so the row is skipped
+CTaskSimpleCarSetPedSlowDraggedOut::Clone	the EXE kills the process on the garbage fixture (fastfail / stack overflow / unrecoverable fault); cannot be caught, so the row is skipped
+CTaskSimpleCarSetPedSlowDraggedOut::Destructor	the EXE kills the process on the garbage fixture (fastfail / stack overflow / unrecoverable fault); cannot be caught, so the row is skipped
+CTaskSimpleCarSetTempAction::MakeAbortable	the EXE kills the process on the garbage fixture (fastfail / stack overflow / unrecoverable fault); cannot be caught, so the row is skipped
+CTaskSimpleCarShuffle::Clone	the EXE kills the process on the garbage fixture (fastfail / stack overflow / unrecoverable fault); cannot be caught, so the row is skipped
+CTaskSimpleCarShuffle::Destructor	the EXE kills the process on the garbage fixture (fastfail / stack overflow / unrecoverable fault); cannot be caught, so the row is skipped
+CTaskSimpleCarShuffle::SetPedPosition	the EXE kills the process on the garbage fixture (fastfail / stack overflow / unrecoverable fault); cannot be caught, so the row is skipped
+CTaskSimpleCarSlowBeDraggedOut::Clone	the EXE kills the process on the garbage fixture (fastfail / stack overflow / unrecoverable fault); cannot be caught, so the row is skipped
+CTaskSimpleCarSlowBeDraggedOut::Destructor	the EXE kills the process on the garbage fixture (fastfail / stack overflow / unrecoverable fault); cannot be caught, so the row is skipped
+CTaskSimpleCarSlowBeDraggedOut::SetPedPosition	the EXE kills the process on the garbage fixture (fastfail / stack overflow / unrecoverable fault); cannot be caught, so the row is skipped
+CTaskSimpleCarSlowDragPedOut::SetPedPosition	the EXE kills the process on the garbage fixture (fastfail / stack overflow / unrecoverable fault); cannot be caught, so the row is skipped
+CTaskSimpleClearLookAt::ProcessPed	every case faults identically in the port and in the exe (the fixture lacks the object the function dereferences): no information
+CTaskSimpleDie::Constructor-2	the EXE kills the process on the garbage fixture (fastfail / stack overflow / unrecoverable fault); cannot be caught, so the row is skipped
+CTaskSimpleDoHandSignal::ProcessPed	the EXE kills the process on the garbage fixture (fastfail / stack overflow / unrecoverable fault); cannot be caught, so the row is skipped
+CTaskSimpleDuck::CanPedDuck	every case faults identically in the port and in the exe (the fixture lacks the object the function dereferences): no information
+CTaskSimpleDuckToggle::ProcessPed	the EXE kills the process on the garbage fixture (fastfail / stack overflow / unrecoverable fault); cannot be caught, so the row is skipped
+CTaskSimpleDuckWhileShotsWhizzing::ProcessPed	every case faults identically in the port and in the exe (the fixture lacks the object the function dereferences): no information
+CTaskSimpleEvasiveDive::Clone	the EXE kills the process on the garbage fixture (fastfail / stack overflow / unrecoverable fault); cannot be caught, so the row is skipped
+CTaskSimpleFacial::MakeAbortable	every case faults identically in the port and in the exe (the fixture lacks the object the function dereferences): no information
+CTaskSimpleFall::MakeAbortable	every case faults identically in the port and in the exe (the fixture lacks the object the function dereferences): no information
+CTaskSimpleFight::Destructor	the EXE kills the process on the garbage fixture (fastfail / stack overflow / unrecoverable fault); cannot be caught, so the row is skipped
+CTaskSimpleFight::FightSetUpCol	every case faults identically in the port and in the exe (the fixture lacks the object the function dereferences): no information
+CTaskSimpleFight::GetComboAnimGroupID	the port asserts (MSVC debug check: std::array / ranges::take with a garbage index or negative count) where the exe silently reads/loops with the garbage value; a state the game never produces
+CTaskSimpleFight::GetStrikeDamage	every case faults identically in the port and in the exe (the fixture lacks the object the function dereferences): no information
+CTaskSimpleFight::IsComboSet	the port asserts (MSVC debug check: std::array / ranges::take with a garbage index or negative count) where the exe silently reads/loops with the garbage value; a state the game never produces
+CTaskSimpleFight::IsHitComboSet	the port asserts (MSVC debug check: std::array / ranges::take with a garbage index or negative count) where the exe silently reads/loops with the garbage value; a state the game never produces
+CTaskSimpleGangDriveBy::ProcessPlayerPed	every case faults identically in the port and in the exe (the fixture lacks the object the function dereferences): no information
+CTaskSimpleGetUp::FinishGetUpAnimCB	every case faults identically in the port and in the exe (the fixture lacks the object the function dereferences): no information
+CTaskSimpleGoTo::SetUpIK	every case faults identically in the port and in the exe (the fixture lacks the object the function dereferences): no information
+CTaskSimpleGoToPointFine::Finish	every case faults identically in the port and in the exe (the fixture lacks the object the function dereferences): no information
+CTaskSimpleGoToPointFine::MakeAbortable	every case faults identically in the port and in the exe (the fixture lacks the object the function dereferences): no information
+CTaskSimpleGunControl::MakeAbortable	every case faults identically in the port and in the exe (the fixture lacks the object the function dereferences): no information
+CTaskSimpleHoldEntity::Constructor-2	the EXE kills the process on the garbage fixture (fastfail / stack overflow / unrecoverable fault); cannot be caught, so the row is skipped
+CTaskSimpleHoldEntity::Constructor-3	the EXE kills the process on the garbage fixture (fastfail / stack overflow / unrecoverable fault); cannot be caught, so the row is skipped
+CTaskSimpleHurtPedWithCar::Clone	the EXE kills the process on the garbage fixture (fastfail / stack overflow / unrecoverable fault); cannot be caught, so the row is skipped
+CTaskSimpleHurtPedWithCar::Destructor	the EXE kills the process on the garbage fixture (fastfail / stack overflow / unrecoverable fault); cannot be caught, so the row is skipped
+CTaskSimpleIKChain::Clone	the EXE kills the process on the garbage fixture (fastfail / stack overflow / unrecoverable fault); cannot be caught, so the row is skipped
+CTaskSimpleIKLookAt::Clone	the EXE kills the process on the garbage fixture (fastfail / stack overflow / unrecoverable fault); cannot be caught, so the row is skipped
+CTaskSimpleIKManager::AddIKChainTask	the port asserts (MSVC debug check: std::array / ranges::take with a garbage index or negative count) where the exe silently reads/loops with the garbage value; a state the game never produces
+CTaskSimpleIKManager::Clone	the EXE kills the process on the garbage fixture (fastfail / stack overflow / unrecoverable fault); cannot be caught, so the row is skipped
+CTaskSimpleIKManager::Destructor	the EXE kills the process on the garbage fixture (fastfail / stack overflow / unrecoverable fault); cannot be caught, so the row is skipped
+CTaskSimpleIKManager::GetTaskAtSlot	the port asserts (MSVC debug check: std::array / ranges::take with a garbage index or negative count) where the exe silently reads/loops with the garbage value; a state the game never produces
+CTaskSimpleIKPointArm::Clone	the EXE kills the process on the garbage fixture (fastfail / stack overflow / unrecoverable fault); cannot be caught, so the row is skipped
+CTaskSimpleJetPack::ApplyRollAndPitch	every case faults identically in the port and in the exe (the fixture lacks the object the function dereferences): no information
+CTaskSimpleKillPedWithCar::Clone	the EXE kills the process on the garbage fixture (fastfail / stack overflow / unrecoverable fault); cannot be caught, so the row is skipped
+CTaskSimpleKillPedWithCar::Destructor	the EXE kills the process on the garbage fixture (fastfail / stack overflow / unrecoverable fault); cannot be caught, so the row is skipped
+CTaskSimplePickUpBike::SetPedPosition	the EXE kills the process on the garbage fixture (fastfail / stack overflow / unrecoverable fault); cannot be caught, so the row is skipped
+CTaskSimplePickUpEntity::Constructor-1	the EXE kills the process on the garbage fixture (fastfail / stack overflow / unrecoverable fault); cannot be caught, so the row is skipped
+CTaskSimplePlayerOnFoot::ProcessPlayerWeapon	the EXE kills the process on the garbage fixture (fastfail / stack overflow / unrecoverable fault); cannot be caught, so the row is skipped
+CTaskSimpleRunAnimLoopedMiddle::Constructor2	the EXE kills the process on the garbage fixture (fastfail / stack overflow / unrecoverable fault); cannot be caught, so the row is skipped
+CTaskSimpleRunNamedAnim::Clone	the port copies the (garbage, unterminated) name with strcpy_s (CRT "Buffer is too small" assert) where the exe copies a bounded number of bytes; real script/anim names are short
+CTaskSimpleRunNamedAnim::FinishRunAnimMovePedCB	every case faults identically in the port and in the exe (the fixture lacks the object the function dereferences): no information
+CTaskSimpleRunNamedAnim::OffsetPedPosition	every case faults identically in the port and in the exe (the fixture lacks the object the function dereferences): no information
+CTaskSimpleSay::Constructor	parameter eGlobalSpeechContextS16 is a wrapper type (no generator yet); hand row in wave2_oracle_ai.inc
+CTaskSimpleSetCharDecisionMaker::ProcessPed	every case faults identically in the port and in the exe (the fixture lacks the object the function dereferences): no information
+CTaskSimpleSwim::ApplyRollAndPitch	the EXE kills the process on the garbage fixture (fastfail / stack overflow / unrecoverable fault); cannot be caught, so the row is skipped
+CTaskSimpleThrowControl::MakeAbortable	every case faults identically in the port and in the exe (the fixture lacks the object the function dereferences): no information
+CTaskSimpleThrowControl::ProcessPed	the EXE kills the process on the garbage fixture (fastfail / stack overflow / unrecoverable fault); cannot be caught, so the row is skipped
+CTaskSimpleUseGun::Clone	the EXE kills the process on the garbage fixture (fastfail / stack overflow / unrecoverable fault); cannot be caught, so the row is skipped
+CTaskSimpleUseGun::ControlGunMove	OPEN: 1 of 60 cases (special inputs) leaves a different m_MoveCmd.y (port 17.9 / exe -113.0); the rewritten step logic matches the asm on all other cases
+CTaskSimpleUseGun::RequirePistolWhip	every case faults identically in the port and in the exe (the fixture lacks the object the function dereferences): no information
+CTaskSimpleUseGun::Reset	every case faults identically in the port and in the exe (the fixture lacks the object the function dereferences): no information
+CTaskSimpleWaitForBus::ProcessPed	every case faults identically in the port and in the exe (the fixture lacks the object the function dereferences): no information
+refdiff:CTaskComplexDestroyCarArmed::Clone	same exe quirk through the constructor
+refdiff:CTaskComplexDestroyCarArmed::Constructor	the EXE registers the by-value parameter (0x621FD5 lea eax,[esp+18h]; push eax; call RegisterReference) instead of m_VehToDestroy: a stack slot in the vehicle reference list and an unregistered member. The port registers the member (deliberately not replicated: a dangling stack write)
+CTaskSimpleDuck::ControlDuckMove	OPEN: 1 of 60 cases (special inputs) leaves a different m_MoveCmd.y (port -53.2 / exe -113.0), same pattern as CTaskSimpleUseGun::ControlGunMove; the port step logic mirrors the asm for every ordinary input

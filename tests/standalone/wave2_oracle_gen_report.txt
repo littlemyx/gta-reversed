@@ -1,0 +1,66 @@
+268 ctor rows, 259 clone rows, 353 TUs
+NOARG CEventDamage::Constructor- 0x4B33B0 param "const CEventDamage&"
+SKIP CEventEditableResponse::Clone 0x420ED0: every case faults identically in the port and in the exe (the fixture lacks the object the function dereferences): no information
+SKIP CEventGroupEvent::Clone 0x4B6EE0: the EXE kills the process on the garbage fixture (fastfail / stack overflow / unrecoverable fault); cannot be caught, so the row is skipped
+SKIP CEventPedEnteredMyVehicle::CloneEditable 0x4B7170: the EXE kills the process on the garbage fixture (fastfail / stack overflow / unrecoverable fault); cannot be caught, so the row is skipped
+SKIP CEventScriptCommand::Clone 0x4B6490: every case faults identically in the port and in the exe (the fixture lacks the object the function dereferences): no information
+SKIP CEventScriptedAttractor::Constructor 0x5FEF40: every case faults identically in the port and in the exe (the fixture lacks the object the function dereferences): no information
+SKIP CEventVehicleDied::Clone 0x4B76D0: the EXE kills the process on the garbage fixture (fastfail / stack overflow / unrecoverable fault); cannot be caught, so the row is skipped
+SKIP CEventVehicleHitAndRun::Clone 0x4B7100: the EXE kills the process on the garbage fixture (fastfail / stack overflow / unrecoverable fault); cannot be caught, so the row is skipped
+SKIP CTaskComplexSequence::Clone 0x5F6710: the EXE kills the process on the garbage fixture (fastfail / stack overflow / unrecoverable fault); cannot be caught, so the row is skipped
+SKIP CTaskComplexUseSequence::Clone 0x637100: the EXE kills the process on the garbage fixture (fastfail / stack overflow / unrecoverable fault); cannot be caught, so the row is skipped
+TEMPLATE CTaskComplexSeekEntityAnyMeansXYOffset::Clone 0x696030 (class or base is a template)
+TEMPLATE CTaskComplexSeekEntityRadiusAngleOffset::Constructor 0x493730 (class or base is a template)
+TEMPLATE CTaskComplexSeekEntityRadiusAngleOffset::Clone 0x495FB0 (class or base is a template)
+TEMPLATE CTaskComplexSeekEntityStandard::Constructor 0x46AC10 (class or base is a template)
+TEMPLATE CTaskComplexSeekEntityStandard::Clone 0x46EF50 (class or base is a template)
+SKIP CTaskComplexAvoidOtherPedWhileWandering::Clone 0x66D050: the EXE kills the process on the garbage fixture (fastfail / stack overflow / unrecoverable fault); cannot be caught, so the row is skipped
+SKIP CTaskComplexCarSlowBeDraggedOut::Clone 0x64A120: the EXE kills the process on the garbage fixture (fastfail / stack overflow / unrecoverable fault); cannot be caught, so the row is skipped
+SKIP CTaskComplexDrivePointRoute::Clone 0x6439C0: the EXE kills the process on the garbage fixture (fastfail / stack overflow / unrecoverable fault); cannot be caught, so the row is skipped
+SKIP CTaskComplexEnterCarAsPassengerTimed::Clone 0x63D7E0: the EXE kills the process on the garbage fixture (fastfail / stack overflow / unrecoverable fault); cannot be caught, so the row is skipped
+SKIP CTaskComplexFollowNodeRoute::Constructor 0x66EA30: the EXE kills the process on the garbage fixture (fastfail / stack overflow / unrecoverable fault); cannot be caught, so the row is skipped
+SKIP CTaskComplexFollowNodeRoute::Clone 0x6713E0: the EXE kills the process on the garbage fixture (fastfail / stack overflow / unrecoverable fault); cannot be caught, so the row is skipped
+SKIP CTaskComplexFollowPatrolRoute::Constructor 0x674930: the EXE kills the process on the garbage fixture (fastfail / stack overflow / unrecoverable fault); cannot be caught, so the row is skipped
+SKIP CTaskComplexFollowPatrolRoute::Clone 0x674BB0: the EXE kills the process on the garbage fixture (fastfail / stack overflow / unrecoverable fault); cannot be caught, so the row is skipped
+SKIP CTaskComplexFollowPedFootsteps::Constructor 0x694E20: the EXE kills the process on the garbage fixture (fastfail / stack overflow / unrecoverable fault); cannot be caught, so the row is skipped
+NOARG CTaskComplexFollowPointRoute::Constructor 0x671510 param "CPointRoute const& route"
+SKIP CTaskComplexFollowPointRoute::Clone 0x673BE0: the EXE kills the process on the garbage fixture (fastfail / stack overflow / unrecoverable fault); cannot be caught, so the row is skipped
+SKIP CTaskComplexPresentIdToCop::Clone 0x659B60: the EXE kills the process on the garbage fixture (fastfail / stack overflow / unrecoverable fault); cannot be caught, so the row is skipped
+SKIP CTaskComplexShuffleSeats::Clone 0x63DEB0: the EXE kills the process on the garbage fixture (fastfail / stack overflow / unrecoverable fault); cannot be caught, so the row is skipped
+SKIP CTaskComplexTrackEntity::Clone 0x65F4E0: the EXE kills the process on the garbage fixture (fastfail / stack overflow / unrecoverable fault); cannot be caught, so the row is skipped
+NOARG CTaskComplexUseAttractorPartner::Constructor 0x6332C0 param "const CScriptedEffectPair& b"
+NOARG CTaskComplexUseScriptedAttractor::Constructor 0x633330 param "CPedAttractor const& attractor"
+SKIP CTaskComplexUseScriptedBrain::Constructor 0x6358B0: the port copies the (garbage, unterminated) name with strcpy_s (CRT "Buffer is too small" assert) where the exe copies a bounded number of bytes; real script/anim names are short
+SKIP CTaskComplexUseScriptedBrain::Clone 0x6371F0: the port copies the (garbage, unterminated) name with strcpy_s (CRT "Buffer is too small" assert) where the exe copies a bounded number of bytes; real script/anim names are short
+SKIP CTaskComplexUseSwatRope::Clone 0x659C30: the EXE kills the process on the garbage fixture (fastfail / stack overflow / unrecoverable fault); cannot be caught, so the row is skipped
+SKIP CTaskComplexWaitForPed::Clone 0x683950: the EXE kills the process on the garbage fixture (fastfail / stack overflow / unrecoverable fault); cannot be caught, so the row is skipped
+SKIP CTaskComplexWalkAlongsidePed::Clone 0x6838E0: the EXE kills the process on the garbage fixture (fastfail / stack overflow / unrecoverable fault); cannot be caught, so the row is skipped
+SKIP CTaskComplexWalkRoundBuildingAttempt::Constructor 0x654740: the EXE kills the process on the garbage fixture (fastfail / stack overflow / unrecoverable fault); cannot be caught, so the row is skipped
+SKIP CTaskComplexWalkRoundBuildingAttempt::Clone 0x655B90: the EXE kills the process on the garbage fixture (fastfail / stack overflow / unrecoverable fault); cannot be caught, so the row is skipped
+SKIP CTaskComplexWalkRoundCar::Constructor 0x6541B0: the EXE kills the process on the garbage fixture (fastfail / stack overflow / unrecoverable fault); cannot be caught, so the row is skipped
+SKIP CTaskComplexWalkRoundCar::Clone 0x655B00: the EXE kills the process on the garbage fixture (fastfail / stack overflow / unrecoverable fault); cannot be caught, so the row is skipped
+SKIP CTaskComplexWalkRoundObject::Constructor 0x655020: the EXE kills the process on the garbage fixture (fastfail / stack overflow / unrecoverable fault); cannot be caught, so the row is skipped
+SKIP CTaskSimpleCarGoToPointNearDoorUntilDoorNotInUse::Clone 0x646EC0: the EXE kills the process on the garbage fixture (fastfail / stack overflow / unrecoverable fault); cannot be caught, so the row is skipped
+SKIP CTaskSimpleCarSetPedSlowDraggedOut::Clone 0x64A0B0: the EXE kills the process on the garbage fixture (fastfail / stack overflow / unrecoverable fault); cannot be caught, so the row is skipped
+SKIP CTaskSimpleCarShuffle::Clone 0x649C40: the EXE kills the process on the garbage fixture (fastfail / stack overflow / unrecoverable fault); cannot be caught, so the row is skipped
+NOARG CTaskSimpleCarSlowBeDraggedOut::Constructor 0x648230 param "CTaskUtilityLineUpPedWithCar*c"
+SKIP CTaskSimpleCarSlowBeDraggedOut::Clone 0x64A040: the EXE kills the process on the garbage fixture (fastfail / stack overflow / unrecoverable fault); cannot be caught, so the row is skipped
+SKIP CTaskSimpleDie::Constructor-2 0x62FA60: the EXE kills the process on the garbage fixture (fastfail / stack overflow / unrecoverable fault); cannot be caught, so the row is skipped
+SKIP CTaskSimpleEvasiveDive::Clone 0x6558E0: the EXE kills the process on the garbage fixture (fastfail / stack overflow / unrecoverable fault); cannot be caught, so the row is skipped
+SKIP CTaskSimpleHoldEntity::Constructor-2 0x691470: the EXE kills the process on the garbage fixture (fastfail / stack overflow / unrecoverable fault); cannot be caught, so the row is skipped
+SKIP CTaskSimpleHoldEntity::Constructor-3 0x691550: the EXE kills the process on the garbage fixture (fastfail / stack overflow / unrecoverable fault); cannot be caught, so the row is skipped
+SKIP CTaskSimpleHurtPedWithCar::Clone 0x655A90: the EXE kills the process on the garbage fixture (fastfail / stack overflow / unrecoverable fault); cannot be caught, so the row is skipped
+NOARG CTaskSimpleIKChain::Constructor 0x6339C0 param "RwV3d effectorVec"
+SKIP CTaskSimpleIKChain::Clone 0x633B00: the EXE kills the process on the garbage fixture (fastfail / stack overflow / unrecoverable fault); cannot be caught, so the row is skipped
+NOARG CTaskSimpleIKLookAt::Constructor 0x633E00 param "RwV3d lookAtOffset"
+SKIP CTaskSimpleIKLookAt::Clone 0x633F00: the EXE kills the process on the garbage fixture (fastfail / stack overflow / unrecoverable fault); cannot be caught, so the row is skipped
+SKIP CTaskSimpleIKManager::Clone 0x639350: the EXE kills the process on the garbage fixture (fastfail / stack overflow / unrecoverable fault); cannot be caught, so the row is skipped
+NOARG CTaskSimpleIKPointArm::Constructor 0x634150 param "RwV3d offsetPosn"
+SKIP CTaskSimpleIKPointArm::Clone 0x634250: the EXE kills the process on the garbage fixture (fastfail / stack overflow / unrecoverable fault); cannot be caught, so the row is skipped
+SKIP CTaskSimpleKillPedWithCar::Clone 0x655A20: the EXE kills the process on the garbage fixture (fastfail / stack overflow / unrecoverable fault); cannot be caught, so the row is skipped
+SKIP CTaskSimplePickUpEntity::Constructor-1 0x691870: the EXE kills the process on the garbage fixture (fastfail / stack overflow / unrecoverable fault); cannot be caught, so the row is skipped
+NOARG CTaskSimpleRunAnim::Constructor2 0x61A900 param "const char* taskName _IGNORED_"
+SKIP CTaskSimpleRunAnimLoopedMiddle::Constructor2 0x61AD10: the EXE kills the process on the garbage fixture (fastfail / stack overflow / unrecoverable fault); cannot be caught, so the row is skipped
+SKIP CTaskSimpleRunNamedAnim::Clone 0x61B770: the port copies the (garbage, unterminated) name with strcpy_s (CRT "Buffer is too small" assert) where the exe copies a bounded number of bytes; real script/anim names are short
+SKIP CTaskSimpleSay::Constructor 0x48E360: parameter eGlobalSpeechContextS16 is a wrapper type (no generator yet); hand row in wave2_oracle_ai.inc
+SKIP CTaskSimpleUseGun::Clone 0x622F20: the EXE kills the process on the garbage fixture (fastfail / stack overflow / unrecoverable fault); cannot be caught, so the row is skipped

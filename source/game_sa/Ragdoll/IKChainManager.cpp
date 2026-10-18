@@ -113,7 +113,7 @@ void IKChainManager_c::RemoveIKChain(IKChain_c* chain) {
 inline bool IKChainManager_c::CanAccept(CPed* ped, float range) const {
     NOTSA_GLOBAL_LOCAL(s_MaxRange, 0x866BEC, (float), { 999.0f }); // 999.0f
 
-    if (!ped->GetRwMatrix()) {
+    if (!ped->GetRwObject() || !ped->GetRwMatrix()) { // 0x618808: the exe tests the clump pointer before touching its frame (the port dereferenced a null clump)
         return false;
     }
 

@@ -39,3 +39,4 @@ date	agent	rules	kind	tokens	tool_uses	minutes	outcome	notes
 2026-10-18	PT2-CORPSE	v1	playtest bug	428287	273	334	U4 fixed (asin not acos + bFallenDown); ghosting = phone exposure
 2026-10-18	ORACLE-W2	v1	oracle wave	493511	910	351	+1137 rows (tasks/events), 57 port fixes, arena alloc infra, 45/45
 2026-10-18	PT2-TRAILER	v1	playtest bug	505917	341	188	CTrailer col-data crash fixed + 4 asm deviations, oracle row; area code = original behaviour
+2026-10-18	PT2-AA	v1	playtest bug	360603	245	472	U17 fixed: exe multisample level scan/step-down/reset-revert ported; rw_engine rows

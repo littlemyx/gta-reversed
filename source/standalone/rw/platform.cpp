@@ -72,7 +72,35 @@ void FireRestoreCallbackIfReset(unsigned countBefore) {
 
 void WrappedBeginUpdate(rw::Camera* cam) {
     const unsigned before = s_ResetCount;
+    // Exe _rwD3D9CameraBeginUpdate (0x7F78FD..0x7F798B): GetClientRect, skip when it is empty / the window is iconic, and when it differs from the current MODE size
+    // (0xC9BEE4/8) reset the device; the new client size goes into the present parameters only for a WINDOWED device (`cmp [0xC9C060], 0 / je` at 0x7F796F), an
+    // exclusive device keeps its mode size (IDirect3DDevice9::Reset of an exclusive device also re-fits the window to the display mode). librw's beginUpdate writes the
+    // client size into the present parameters unconditionally, so an exclusive window that the OS had shrunk (PLAYTEST-1 U1: the DPI rescale 800x600 -> 533x400 when the
+    // exclusive switch moved a 150% 4K desktop to 800x600) reset the exclusive device to 533x400 and the game ended up in a corner of the desktop. For an exclusive device
+    // re-fit the window to the mode size first (what the exe's Reset does); should that not stick, make librw see "no change" (its check is client size vs present size)
+    // and restore the present size right after.
+    auto& present  = rw::d3d::d3d9Globals.present;
+    HWND  wnd      = rw::d3d::d3d9Globals.window;
+    UINT  keepW    = 0, keepH = 0;
+    bool  masked   = false;
+    if (!present.Windowed && wnd && !IsIconic(wnd)) {
+        RECT r{};
+        if (GetClientRect(wnd, &r) && r.right > 0 && r.bottom > 0 && (r.right != (LONG)present.BackBufferWidth || r.bottom != (LONG)present.BackBufferHeight)) {
+            SetWindowPos(wnd, nullptr, 0, 0, (int)present.BackBufferWidth, (int)present.BackBufferHeight, SWP_NOZORDER | SWP_NOACTIVATE);
+            if (GetClientRect(wnd, &r) && (r.right != (LONG)present.BackBufferWidth || r.bottom != (LONG)present.BackBufferHeight)) {
+                keepW                    = present.BackBufferWidth;
+                keepH                    = present.BackBufferHeight;
+                present.BackBufferWidth  = (UINT)r.right;
+                present.BackBufferHeight = (UINT)r.bottom;
+                masked                   = true;
+            }
+        }
+    }
     s_OrigBeginUpdate(cam);
+    if (masked) {
+        present.BackBufferWidth  = keepW;
+        present.BackBufferHeight = keepH;
+    }
     FireRestoreCallbackIfReset(before);
 }
 

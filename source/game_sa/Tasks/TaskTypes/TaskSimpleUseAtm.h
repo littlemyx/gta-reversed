@@ -9,7 +9,7 @@ class NOTSA_EXPORT_VTABLE CTaskSimpleUseAtm : public CTaskSimpleRunAnim {
 public:
     static void InjectHooks();
 
-    constexpr static auto Type = eTaskType::TASK_SIMPLE_CAR_SET_TEMP_ACTION;
+    constexpr static auto Type = eTaskType::TASK_SIMPLE_USE_ATM; // 0x48DFF2 pushes 0x1A4 (420); was TASK_SIMPLE_CAR_SET_TEMP_ACTION (723)
 
     CTaskSimpleUseAtm();
     CTaskSimpleUseAtm(const CTaskSimpleUseAtm&); // NOTSA

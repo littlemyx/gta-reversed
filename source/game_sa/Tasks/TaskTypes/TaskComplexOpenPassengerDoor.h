@@ -13,5 +13,9 @@ public:
     ~CTaskComplexOpenPassengerDoor() override = default; // 0x640420
 
     eTaskType GetTaskType() const override{ return Type; } // 0x640410
-    CTask* Clone() const override { return new CTaskComplexOpenPassengerDoor(m_Car, m_TargetSeat); } // 0x6438E0
+    CTask* Clone() const override { // 0x6438E0: also copies the move state ([edi+24h] -> [eax+24h], 0x643934); the clone used to restart with the default PEDMOVE_RUN
+        auto* const t = new CTaskComplexOpenPassengerDoor(m_Car, m_TargetSeat);
+        t->m_MoveState = m_MoveState;
+        return t;
+    }
 };

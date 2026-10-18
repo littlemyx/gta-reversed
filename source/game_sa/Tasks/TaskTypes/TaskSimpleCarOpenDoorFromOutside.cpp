@@ -27,8 +27,7 @@ CTaskSimpleCarOpenDoorFromOutside::CTaskSimpleCarOpenDoorFromOutside(CVehicle* v
     m_disallowPlayerDriverToExitCar{ disallowPlayerDriverToExitCar },
     m_lineUpTask{lineUpTask}
 {
-    CEntity::SafeRegisterRef(veh);
-    { FILE* f = fopen("dbglu.txt", "a"); if (f) { fprintf(f, "[%u] OpenDoor ctor this=%p lineUp=%p veh=%p\n", (unsigned)GetTickCount(), (void*)this, (void*)lineUpTask, (void*)veh); fclose(f); } }
+    CEntity::SafeRegisterRef(m_veh); // 0x645E50 registers the member, not the parameter (and the exe writes no file)
 }
 
 // NOTSA

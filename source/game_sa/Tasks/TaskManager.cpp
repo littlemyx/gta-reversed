@@ -135,7 +135,7 @@ bool CTaskManager::HasTaskPrimary(const CTask* task) {
 // 0x681820
 bool CTaskManager::HasTaskSecondary(const CTask* task) {
     for (auto& secondaryTask : m_aSecondaryTasks) {
-        if (secondaryTask && secondaryTask == task) {
+        if (secondaryTask == task) { // 0x681830: plain pointer compare over the 6 slots (no null test: HasTaskSecondary(nullptr) is true while a slot is empty)
             return true;
         }
     }

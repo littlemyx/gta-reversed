@@ -219,52 +219,57 @@ CVector CTaskComplexFollowPointRoute::GetNextWaypoint(CPed* ped) {
 
 // 0x66E150
 eTaskType CTaskComplexFollowPointRoute::CalcGoToTaskType(CPed* ped, eTaskType subTaskType) {
-    m_bUseBlending = false;
+    // NOTE: rewritten from the asm - the previous version cleared the wrong flag (m_bUseBlending instead of m_bWillSlowDown), never raised m_bWillSlowDown/m_bUseBlending where the exe does,
+    // tested m_bWillSlowDown (0x10) instead of m_bSlowingDown (0x20) at the end and never copied the decrease amount to the increase amount.
+    m_speedIncreaseAmt = m_speedDecreaseAmt; // 0x66E157: [this+38h] = [this+34h] (before the decrease amount is recomputed)
+    m_bWillSlowDown    = false;              // 0x66E163: flags &= ~0x10
 
-    switch (m_moveState) {
-    case PEDMOVE_JOG:
-    case PEDMOVE_RUN:
-    case PEDMOVE_SPRINT: {
-        assert(m_currPointIdx >= 0);
-        if (!m_currPointIdx) {
+    if (m_moveState > PEDMOVE_WALK) {
+        const int32 numPts = (int32)m_route->m_NumEntries;
+        int32       currPt = (int32)m_currPointIdx;
+        if (currPt >= numPts) { // 0x66E17A
+            currPt = numPts - 1;
+        }
+        if (currPt < 0) { // 0x66E183 (returns without touching the flags / the tail below)
             return subTaskType;
         }
 
-        const auto  currPt    = std::min(m_currPointIdx, m_route->m_NumEntries - 1); // Not sure why they do this?
-        const auto& currPtPos = (*m_route)[currPt];
-        const auto currToNextDotToPrev = DotProduct2D(
-            CVector2D{ currPtPos - GetLastWaypoint(ped) }.Normalized(),
-            CVector2D{ GetNextWaypoint(ped) - currPtPos }.Normalized()
-        );
+        const CVector currPtPos = (*m_route)[currPt];
 
-        const auto MAX_ANGLE_IN_COS = SQRT_2 / 2.f; // = cos(45deg)
-        if (currToNextDotToPrev >= MAX_ANGLE_IN_COS) { // if they're within [-45, 45] deg of each other
-            m_bUseBlending = false;
-        } else {
-            std::tie(m_speedDecreaseAmt, m_speedDecreaseDist, m_speedIncreaseDist) = [&, this]() -> std::tuple<float, float, float> {
-                const auto angleProgress = std::clamp(1.f - (currToNextDotToPrev + 1.f) / (MAX_ANGLE_IN_COS + 1.f), 0.f, 1.f);
-                if (m_moveState == PEDMOVE_SPRINT) {
-                    return { 3.f * angleProgress, 5.f, 5.f };
-                }
-                return { 1.5f * angleProgress, 4.f, 4.f };
-            }();
+        CVector prevToCurr = currPtPos - GetLastWaypoint(ped); // 0x66E1A5
+        prevToCurr.z       = 0.f;
+        prevToCurr.Normalise();
+
+        CVector currToNext = GetNextWaypoint(ped) - currPtPos; // 0x66E202
+        currToNext.z       = 0.f;
+        currToNext.Normalise();
+
+        // 0x66E22A: x87 order of operations
+        const float dot = (prevToCurr.y * currToNext.y + prevToCurr.x * currToNext.x) + prevToCurr.z * currToNext.z;
+        if (dot < 0.707f) { // 0x863C1C: ~cos(45deg); sharper turn than that => slow down
+            float t = 1.f - (dot + 1.f) * 0.58582306f; // 0x858624 (1.0), 0x8700A4
+            if (t < 0.f) {
+                t = 0.f;
+            } else if (t > 1.f) {
+                t = 1.f;
+            }
+            if (m_moveState == PEDMOVE_SPRINT) {
+                m_speedDecreaseDist = m_speedIncreaseDist = 5.f;
+                m_speedDecreaseAmt  = t * 3.f;
+            } else {
+                m_speedDecreaseDist = m_speedIncreaseDist = 4.f;
+                m_speedDecreaseAmt  = t * 1.5f;
+            }
+            m_bWillSlowDown = true; // 0x66E2B0 / 0x66E2D1 (or 0x10)
         }
-        m_bWillSlowDown = true;
-        break;
-    }
     }
 
-    if (m_bWillSlowDown) {
-        switch (subTaskType) {
-        case TASK_SIMPLE_GO_TO_POINT:
-        case TASK_COMPLEX_GO_TO_POINT_AND_STAND_STILL: {
-            m_bSlowingDown = false;
-            m_bSpeedingUp = true;
-            return TASK_SIMPLE_GO_TO_POINT_FINE;
-        }
-        }
+    if (m_bSlowingDown && (subTaskType == TASK_SIMPLE_GO_TO_POINT || subTaskType == TASK_COMPLEX_GO_TO_POINT_AND_STAND_STILL)) { // 0x66E2DF
+        m_bSlowingDown = false;
+        m_bSpeedingUp  = true;
+        return TASK_SIMPLE_GO_TO_POINT_FINE;
     }
-    m_bSpeedingUp = m_bSlowingDown = false;
+    m_bSlowingDown = m_bSpeedingUp = false; // 0x66E30C: flags &= ~0x60
     return subTaskType;
 }
 
@@ -347,9 +352,10 @@ CTask* CTaskComplexFollowPointRoute::CreateNextSubTask(CPed* ped) {
         return nullptr;
     case TASK_COMPLEX_LEAVE_CAR:
         return ped->bInVehicle ? nullptr : CreateFirstSubTask(ped);
-    case TASK_NONE:
-    case TASK_SIMPLE_STAND_STILL:
-    case TASK_SIMPLE_GO_TO_POINT: {
+    case TASK_NONE:               // 0x67167A: after "none" / stand-still the task is over (the port ran these through the route test below and advanced past the end)
+    case TASK_SIMPLE_STAND_STILL: // 0x67169E
+        return CreateTask(TASK_FINISHED, ped);
+    case TASK_SIMPLE_GO_TO_POINT: { // 0x6716C2
         if (m_currPointIdx + 1 == m_route->m_NumEntries && !m_bStandStillAfterMove) {
             return CreateTask(TASK_FINISHED, ped);
         }

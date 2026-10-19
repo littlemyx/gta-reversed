@@ -2724,29 +2724,33 @@ AssocGroupId CVehicle::GetAnimGroupId() const {
     return m_pHandlingData->GetAnimGroupId();
 }
 
+// The exe looks the rope up with CRopes::FindRope(&this->m_nFlags + 1) (0x556000, key = this + 0x1D) and indexes aRopes with the result (imul 0x328): 0x6D3CB0 / 0x6D3CD0 / 0x6D3CF0 / 0x6D3D10 / 0x6D3D30.
+// (the port indexed aRopes with the key itself, i.e. with a heap address). A missing rope yields -1 and reads the memory before aRopes, as the exe does.
+static int32 FindWinchRope(const CVehicle& veh) { return CRopes::FindRope(veh.GetRopeID()); }
+
 // 0x6D3CB0
 void CVehicle::ReleasePickedUpEntityWithWinch() const {
-    return CRopes::GetRope(GetRopeID()).ReleasePickedUpObject();
+    return CRopes::GetRope(FindWinchRope(*this)).ReleasePickedUpObject();
 }
 
 // 0x6D3CD0
 void CVehicle::PickUpEntityWithWinch(CEntity* entity) const {
-    return CRopes::GetRope(GetRopeID()).PickUpObject(entity);
+    return CRopes::GetRope(FindWinchRope(*this)).PickUpObject(entity);
 }
 
 // 0x6D3CF0
 CEntity* CVehicle::QueryPickedUpEntityWithWinch() const {
-    return CRopes::GetRope(GetRopeID()).m_pRopeAttachObject;
+    return CRopes::GetRope(FindWinchRope(*this)).m_pRopeAttachObject;
 }
 
 // 0x6D3D10
 float CVehicle::GetRopeHeightForHeli() const {
-    return CRopes::GetRope(GetRopeID()).m_fSegmentLength;
+    return CRopes::GetRope(FindWinchRope(*this)).m_fSegmentLength;
 }
 
 // 0x6D3D30
 void CVehicle::SetRopeHeightForHeli(float height) const {
-    CRopes::GetRope(GetRopeID()).m_fSegmentLength = height;
+    CRopes::GetRope(FindWinchRope(*this)).m_fSegmentLength = height;
 }
 
 // 0x6D3D60

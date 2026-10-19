@@ -3470,7 +3470,7 @@ void CEventHandler::ComputeVehiclePotentialPassiveCollisionResponse(CEventPotent
 // 0x4B9F80
 void CEventHandler::ComputeVehicleToStealResponse(CEventVehicleToSteal* e, CTask* tactive, CTask* tsimplest) {
     m_EventResponseTask = [&]() -> CTask* {
-        if (!m_Ped->bInVehicle || !e->m_vehicle) {
+        if (m_Ped->bInVehicle || !e->m_vehicle) {
             return nullptr;
         }
         return new CTaskComplexStealCar{ e->m_vehicle };

@@ -846,6 +846,10 @@ void CCamera::RestoreWithJumpCut() {
     m_bUseNearClipScript = false;
     m_nModeObbeCamIsInForCar = 30;
     m_bScriptParametersSetForInterp = false;
+    // 0x50BAED / 0x50BAF0 / 0x50BAF3: the exe also sets these three (the port left them untouched)
+    m_bCameraJustRestored = true;
+    m_bEnable1rstPersonCamCntrlsScript = false;
+    m_bAllow1rstPersonWeaponsCamera = false;
 
     CVehicle* vehicle = FindPlayerVehicle();
     CPlayerPed* player = FindPlayerPed();

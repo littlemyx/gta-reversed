@@ -72,10 +72,11 @@ void TransformPoints(RwV3d* pointOut, int count, const CMatrix& transformMatrix,
 
 // 0x7186E0
 char* MakeUpperCase(char* dest, const char* src) {
+    char* const start = dest; // 0x7186E0 returns the START of the destination (the port returned the end)
     for (; *src; src++, dest++)
         *dest = std::toupper(*src);
     *dest = '\0';
-    return dest;
+    return start;
 }
 
 // 0x718710

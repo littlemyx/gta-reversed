@@ -436,9 +436,14 @@ void CGarages::SetTargetCarForMissionGarage(int16 garageId, CVehicle* vehicle) {
 void CGarages::TriggerMessage(const char* tagMsg, int16 numInStr1, uint16 time, int16 numInStr2) {
     if (   strcmp(tagMsg, MessageIDString) != 0 // Different strings
         || CTimer::GetTimeInMS() < MessageStartTime
-        || CTimer::GetTimeInMS() >= MessageEndTime
+        || CTimer::GetTimeInMS() > MessageEndTime // exe `ja`: a message that ends exactly now still counts as running
     ) {
-        strcpy_s(MessageIDString, tagMsg);
+        for (size_t i = 0; ; i++) { // plain strcpy like the exe (strcpy_s refuses tags over 7 chars and, in debug CRTs, fills the rest of the buffer with 0xFE)
+            MessageIDString[i] = tagMsg[i];
+            if (!tagMsg[i]) {
+                break;
+            }
+        }
         MessageStartTime = CTimer::GetTimeInMS();
     } else {
         if (CTimer::GetTimeInMS() - MessageStartTime <= 500)
@@ -446,8 +451,8 @@ void CGarages::TriggerMessage(const char* tagMsg, int16 numInStr1, uint16 time, 
         MessageStartTime = CTimer::GetTimeInMS() - 500;
     }
     MessageEndTime = MessageStartTime + time;
-    MessageNumberInString = numInStr1;
-    MessageNumberInString2 = numInStr2;
+    MessageNumberInString2 = numInStr1; // 0x447C2A stores the first number at 0x96C010 and the second at 0x96C00C
+    MessageNumberInString = numInStr2;
 }
 
 // 0x447790

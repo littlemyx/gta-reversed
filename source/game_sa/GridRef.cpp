@@ -50,7 +50,7 @@ char* CGridRef::GetArtistBugstarID(uint8 x, uint8 y) {
     if (x >= 10 || y >= 10)
         return nullptr;
     else
-        return {};
+        return const_cast<char*>(""); // 0x71D650 returns a pointer to a (static) empty string, not null
 }
 
 // 0x71D5A0

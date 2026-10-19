@@ -499,8 +499,7 @@ eModelID CPopulation::ChooseGangOccupation(eGangID gangId) {
 
 // 0x611560 (Unused)
 CPed* CPopulation::AddExistingPedInCar(CPed* ped, CVehicle* vehicle) {
-    NOTSA_UNREACHABLE(); // Does nothing (At least not what the name suggests)
-    return ped; // 0x611560: mov eax, [esp+4]; ret
+    return ped; // 0x611560: mov eax, [esp+4]; ret (does nothing, at least not what the name suggests; no caller in the game)
 }
 
 // 0x611570

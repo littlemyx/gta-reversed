@@ -1514,9 +1514,9 @@ void CEntity::CalculateBBProjection(CVector* point1, CVector* point2, CVector* p
     // Calculate the lengths of the projections of the object's local axes. This allows for scaling to be taken into account,
     // since when scaling is present, the lengths of the right, forward, and up vectors will differ from 1
     const auto [lengthProjX, lengthProjY, lengthProjZ] = std::make_tuple(
-        right.Magnitude(),
-        forward.Magnitude(),
-        up.Magnitude()
+        std::sqrt(right.y * right.y + right.x * right.x),     // 0x535340: XY-only lengths (the z component is not part of the projection)
+        std::sqrt(forward.y * forward.y + forward.x * forward.x),
+        std::sqrt(up.y * up.y + up.x * up.x)
     );
 
     // Get bounding box
@@ -1575,8 +1575,9 @@ void CEntity::CalculateBBProjection(CVector* point1, CVector* point2, CVector* p
     }
 
     // Compute absolute values and sums
-    offsetLength = std::fabs(offsetLength1) + std::fabs(offsetLength2);
-    offsetWidth  = std::fabs(offsetWidth1)  + std::fabs(offsetWidth2);
+    const auto exeAbs = [](float v) { return v < 0.0F ? -v : v; }; // the exe's `if (v < 0) v = -v`: -0 and NaN keep their sign bit
+    offsetLength = exeAbs(offsetLength1) + exeAbs(offsetLength2);
+    offsetWidth  = exeAbs(offsetWidth2)  + exeAbs(offsetWidth1);
 
     // Helper lambda for corner calculation
     const auto calcCorner = [&](const CVector& base, float sign1, float sign2) -> CVector {

@@ -165,7 +165,9 @@ uint32 CAnimBlendAssociation::GetHashKey() const noexcept {
 
 // 0x4CE9F0
 void CAnimBlendAssociation::AllocateAnimBlendNodeArray(int32 count) {
-    m_BlendNodes = (CAnimBlendNode*)CMemoryMgr::MallocAlign(count * sizeof(CAnimBlendNode), 64);
+    // 0x4CE9F0: the exe rounds the byte count up to a multiple of 64 (((n * 0x18 - 1) >> 6) + 1 << 6; 0 for n == 0) before MallocAlign(size, 64)
+    const uint32 bytes = (uint32)count * (uint32)sizeof(CAnimBlendNode);
+    m_BlendNodes = (CAnimBlendNode*)CMemoryMgr::MallocAlign((((bytes - 1u) >> 6) + 1u) << 6, 64);
     for (auto& node : std::span{ m_BlendNodes, (size_t)count }) {
         node.Init();
     }

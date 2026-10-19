@@ -19,6 +19,8 @@
 #include "wave3_oracle_audio.inc"    // ORACLE-W3-AUDIO: game_sa/Audio/Entities + Audio root rows (wave3_audio_oracle_test)
 #elif defined(W3_ENTITY_ONLY)
 #include "wave3_oracle_entity.inc"    // ORACLE-W3-ENTITY: game_sa/Entity base-class rows (wave3_entity_oracle_test)
+#elif defined(W3_INTERIOR_ONLY)
+#include "wave3_oracle_interior.inc"  // ORACLE-W3-INTERIOR: game_sa/Interior rows (wave3_interior_oracle_test)
 #else
 #if __has_include("wave2_oracle_gen_ctor.inc")
 #include "wave2_oracle_gen_ctor.inc"      // GENERATED (tools/gen_w2_rows.py): task / event constructors
@@ -127,6 +129,12 @@ static void TestW2() {
     using namespace w2;
     g_onFault = +[] { oracle::alloc::End(); };
     TestW3EntityAll();
+    return;
+#endif
+#ifdef W3_INTERIOR_ONLY
+    using namespace w2;
+    g_onFault = +[] { oracle::alloc::End(); };
+    TestW3InteriorAll();
     return;
 #endif
     using namespace w2;

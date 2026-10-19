@@ -90,7 +90,14 @@ const RwChar* GetFrameNodeName(RwFrame* frame) {
 
 void SetFrameNodeName(RwFrame* frame, const RwChar* name) {
     if (gNodeNamePluginOffset > 0) {
-        strncpy_s(RWPLUGINOFFSET(NodeNamePluginInstance, frame, gNodeNamePluginOffset)->name, name, NAME_LENGTH);
-        RWPLUGINOFFSET(NodeNamePluginInstance, frame, gNodeNamePluginOffset)->name[NAME_LENGTH] = '\0';
+        // 0x72FB00: strncpy(dst, name, NAME_LENGTH) semantics - copies up to NAME_LENGTH chars and zero-pads the rest (strncpy_s leaves the old tail behind)
+        auto* const dst = RWPLUGINOFFSET(NodeNamePluginInstance, frame, gNodeNamePluginOffset)->name;
+        size_t i = 0;
+        for (; i < NAME_LENGTH && name[i]; ++i) {
+            dst[i] = name[i];
+        }
+        for (; i <= NAME_LENGTH; ++i) {
+            dst[i] = '\0';
+        }
     }
 }

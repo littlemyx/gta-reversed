@@ -28,14 +28,24 @@ float CPedGroup::FindDistanceToFurthestMember() {
 
 // 0x5FB0A0
 float CPedGroup::FindDistanceToNearestMember(CPed** ppOutNearestMember) {
-    const auto [nearest, distSq] = GetMembership().FindClosestFollowerToLeader();
-    if (nearest) {
-        if (ppOutNearestMember) {
-            *ppOutNearestMember = nearest;
-        }
-        return std::sqrt(distSq);
+    float nearest = 1.0e10f; // 0x86C84C
+    const auto leader = GetMembership().GetLeader();
+    if (!leader) {
+        return nearest;
     }
-    return 1.0e10f;
+    const auto& leaderPos = leader->GetPosition();
+    for (const auto mem : GetMembership().GetFollowers()) {
+        const auto d = mem->GetPosition() - leaderPos;
+        const auto dist = std::sqrt(d.z * d.z + d.x * d.x + d.y * d.y); // Order of operations as in the original
+        if (nearest >= dist) { // fcom: a NaN distance never replaces the minimum
+            nearest = dist;
+        }
+        // NOTE: the original stores the member into the out parameter for EVERY follower (the store sits after the compare, not inside the branch): the caller receives the last follower, not the nearest one
+        if (ppOutNearestMember) {
+            *ppOutNearestMember = mem;
+        }
+    }
+    return nearest;
 }
 
 // 0x5FACD0

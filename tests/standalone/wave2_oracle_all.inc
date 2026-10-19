@@ -23,6 +23,8 @@
 #include "wave3_oracle_interior.inc"  // ORACLE-W3-INTERIOR: game_sa/Interior rows (wave3_interior_oracle_test)
 #elif defined(W3_CAMERA_ONLY)
 #include "wave3_oracle_camera.inc"     // ORACLE-W3-CAMERA: camera root files rows (wave3_camera_oracle_test)
+#elif defined(W3_SCRIPTS_ONLY)
+#include "wave3_oracle_scripts.inc"     // ORACLE-W3-SCRIPTS: game_sa/Scripts rows (wave3_scripts_oracle_test)
 #else
 #if __has_include("wave2_oracle_gen_ctor.inc")
 #include "wave2_oracle_gen_ctor.inc"      // GENERATED (tools/gen_w2_rows.py): task / event constructors
@@ -143,6 +145,12 @@ static void TestW2() {
     using namespace w2;
     g_onFault = +[] { oracle::alloc::End(); };
     TestW3CameraAll();
+    return;
+#endif
+#ifdef W3_SCRIPTS_ONLY
+    using namespace w2;
+    g_onFault = +[] { oracle::alloc::End(); g_tp.Leave(); g_ep.Leave(); rf::Leave(); };
+    TestW3ScriptsAll();
     return;
 #endif
     using namespace w2;

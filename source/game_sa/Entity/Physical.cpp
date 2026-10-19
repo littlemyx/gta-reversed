@@ -1293,10 +1293,11 @@ bool CPhysical::ApplySpringDampeningOld(float dampingForce, float arg1 /*unused*
 // 0x544280
 void CPhysical::RemoveRefsToEntity(CEntity* entity)
 {
-    uint8 collidedEntityIndex = m_nNumEntitiesCollided;
-    while (collidedEntityIndex < m_nNumEntitiesCollided); { // todo: While loop has empty body
+    // 0x544280: the exe walks from slot 0 with a 16-bit index (`cmp si, ax` / `movsx eax, dx`), the count byte is re-read every step; a hit shifts the tail down and re-tests the same slot
+    int16 collidedEntityIndex = 0;
+    while (collidedEntityIndex < static_cast<int>(m_nNumEntitiesCollided)) {
         if (m_apCollidedEntities[collidedEntityIndex] == entity) {
-            for (uint16 i = collidedEntityIndex; i < m_nNumEntitiesCollided - 1; ++i) {
+            for (int16 i = collidedEntityIndex; i < static_cast<int>(m_nNumEntitiesCollided) - 1; ++i) {
                 m_apCollidedEntities[i] = m_apCollidedEntities[i + 1];
             }
             m_nNumEntitiesCollided--;

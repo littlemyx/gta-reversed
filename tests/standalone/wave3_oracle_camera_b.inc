@@ -6,13 +6,13 @@ void WellBufferMe(float target, float& valueToChange, float& speedSoFar, float t
 
 namespace w3c {
 // a spline block: count, then `stride` floats per entry (time in seconds ascending, then 3 / 1 values + control values); times sometimes equal / close (the short-segment skip), the controls sometimes equal to the point (straight line)
-static void BuildSpline(Rng& r, float* d, int stride, int maxCount = 7) {
-    const int count = r.below(8) == 0 ? 1 + r.below(2) : 2 + r.below(maxCount - 1);
+static void BuildSpline(Rng& r, float* d, int stride, int maxCount = 7, const std::vector<float>* shared = nullptr) {
+    const int count = shared ? (int)shared->size() : r.below(8) == 0 ? 1 + r.below(2) : 2 + r.below(maxCount - 1);
     d[0] = (float)count;
     float t = r.below(4) ? 0.f : FlP(r, 2.f);
     for (int e = 0; e < count; ++e) {
         float* p = d + 1 + e * stride;
-        p[0] = t;
+        p[0] = shared ? (*shared)[(size_t)e] : t;
         t += r.below(10) == 0 ? r.f01() * 0.04f : 0.2f + r.f01() * 3.f;
         const int vals = (stride - 1) / 3;   // 3 (vec3: stride 10) or 1 (float: stride 4)
         for (int k = 1; k < stride; ++k) p[k] = vals == 3 ? FlP(r, 100.f) : FlP(r, 90.f);
@@ -68,6 +68,7 @@ static void TestW3CameraB() {
             PickCamForRow(rr, k, true);
             CCam& c = *Cam(k);
             c.m_nDirectionWasLooking = rr.below(3) ? 3 : (int32)rr.below(4);
+            c.m_fTransitionBeta = (rr.f01() - 0.5f) * 14.f; c.m_fBetaSpeed = (rr.f01() - 0.5f) * 0.2f;   // angles the wrap loops of the exe and the port work on: finite
             c.m_fHorizontalAngle = rr.below(10) ? (rr.f01() - 0.5f) * 14.f : FlP(rr, 30.f);
             if (rr.below(2)) c.m_fHorizontalAngle = (rr.f01() - 0.5f) * 3.f;
             c.m_vecSource = V3P(rr, 50.f);
@@ -79,6 +80,7 @@ static void TestW3CameraB() {
     ROW("CCam::Process_Cam_TwoPlayer_Separate_Cars", 0x513510, 2500) {
         const int k = r.below(3);
         Tw tw([k](Rng& rr) {
+            SaneEntities(rr);   // NaN / inf / denormal positions: the inlined normalise differs in x87 invalid-operation results only (documented in the report)
             CWorld::Players[1].m_pPed = reinterpret_cast<CPlayerPed*>(PedF(1));
             PedF(0)->m_pVehicle = Veh(rr.below(2)); PedF(1)->m_pVehicle = Veh(rr.below(2));
             if (rr.below(3) == 0) PedF(1)->m_pVehicle = PedF(0)->m_pVehicle;
@@ -90,6 +92,7 @@ static void TestW3CameraB() {
     ROW("CCam::Process_Cam_TwoPlayer_Separate_Cars_TopDown", 0x513BE0, 1500) {
         const int k = r.below(3);
         Tw tw([k](Rng& rr) {
+            SaneEntities(rr);   // NaN / inf / denormal positions: the inlined normalise differs in x87 invalid-operation results only (documented in the report)
             CWorld::Players[1].m_pPed = reinterpret_cast<CPlayerPed*>(PedF(1));
             for (int i = 0; i < 2; ++i) { PedF(i)->m_pVehicle = Veh(rr.below(2)); PedF(i)->bInVehicle = rr.below(2); }
             Cam(k)->m_fCameraHeightMultiplier = rr.below(4) ? 0.3f + rr.f01() * 0.8f : Fl(rr, 2.f, 3);
@@ -101,18 +104,23 @@ static void TestW3CameraB() {
         const float orient = Fl(r, 3.f, 6), sv = Fl(r, 1.f, 6), svw = Fl(r, 1.f, 6);
         Tw tw([](Rng& rr) {
             float* sp[4] = { reinterpret_cast<float*>(S(oSpl + 0xC00)) /*fov*/, reinterpret_cast<float*>(S(oSpl + 0x800)) /*roll*/, reinterpret_cast<float*>(S(oSpl)) /*src*/, reinterpret_cast<float*>(S(oSpl + 0x400)) /*look*/ };
-            BuildSpline(rr, sp[0], 4); BuildSpline(rr, sp[1], 4); BuildSpline(rr, sp[2], 10); BuildSpline(rr, sp[3], 10);
+            // the four splines of a cut-scene share their time line (the segment searches of Process_FlyBy run until a later time than `time` shows up)
+            std::vector<float> times; { const int cnt = 2 + (int)rr.below(6); float t = rr.below(4) ? 0.f : FlP(rr, 2.f); for (int e = 0; e < cnt; ++e) { times.push_back(t); t += rr.below(10) == 0 ? rr.f01() * 0.04f : 0.2f + rr.f01() * 3.f; } }
+            BuildSpline(rr, sp[0], 4, 7, &times); BuildSpline(rr, sp[1], 4, 7, &times); BuildSpline(rr, sp[2], 10, 7, &times); BuildSpline(rr, sp[3], 10, 7, &times);
             for (int i = 0; i < 4; ++i) TheCamera.m_aPathArray[i].m_pArrPathData = sp[i];
             TheCamera.m_bStartingSpline = rr.below(4) != 0;
             TheCamera.m_bCutsceneFinished = rr.below(10) == 0;
             // the segment indices of a running fly-by (exe image globals)
-            At<int32_t>(0xBC407C) = 11 + 10 * (int32_t)rr.below(4); At<int32_t>(0xBC4080) = 11 + 10 * (int32_t)rr.below(4);
-            At<int32_t>(0xBC4084) = 5 + 4 * (int32_t)rr.below(4); At<int32_t>(0xBC4088) = 5 + 4 * (int32_t)rr.below(4);
+            const int32_t nseg = (int32_t)times.size() - 1;   // segments (entries 1 .. count-1)
+            At<int32_t>(0xBC407C) = 11 + 10 * (int32_t)rr.below((uint32)nseg); At<int32_t>(0xBC4080) = 11 + 10 * (int32_t)rr.below((uint32)nseg);
+            At<int32_t>(0xBC4084) = 5 + 4 * (int32_t)rr.below((uint32)nseg); At<int32_t>(0xBC4088) = 5 + 4 * (int32_t)rr.below((uint32)nseg);
             CTimer::ms_fTimeStepNonClipped = rr.below(8) ? 0.5f + rr.f01() * 3.f : Fl(rr, 5.f, 2);
             // an elapsed time inside / near the end of the spline
             const float* src = sp[2]; const float tEnd = src[1 + ((int)src[0] - 1) * 10] * 1000.f;
             Cam(0)->m_fTimeElapsedFloat = rr.below(10) == 0 ? tEnd + rr.f01() * 500.f : rr.f01() * tEnd;
             Cam(1)->m_fTimeElapsedFloat = Cam(0)->m_fTimeElapsedFloat; Cam(2)->m_fTimeElapsedFloat = Cam(0)->m_fTimeElapsedFloat;
+            // a running fly-by has its finish time set (< 2^31: the exe adds 2^32 to a negative `fild`, rounded at PC24, for garbage above that)
+            for (int c = 0; c < 3; ++c) Cam(c)->m_nFinishTime = rr.below(6) ? (uint32_t)tEnd : (uint32_t)rr.below(0x7FFFFFFF);
         });
         CVector* tg = reinterpret_cast<CVector*>(S(oOut));
         CC(Cam(k)->Process_FlyBy(*tg, orient, sv, svw); return 0;, ExeT<void>(0x5B25F0, Cam(k), tg, orient, sv, svw); return 0;);

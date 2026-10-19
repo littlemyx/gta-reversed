@@ -55,20 +55,7 @@ static void TestW3CameraA() {
         });
         CC(T->ProcessMusicFade(); return 0;, ExeT<void>(0x50B6D0, T); return 0;);
     } ENDROW;
-    ROW("CCamera::SetNearClipBasedOnPedCollision", 0x50CB90, 800) {
-        const float a2 = r.below(10) ? r.f01() * 40.f : Fl(r, 100.f, 2);
-        Tw tw([](Rng& rr) {
-            uint8_t* rw = S(oRw); FillGarbage(rr, rw, 0x300);
-            std::memset(rw + 4, 0, 4);                                          // no parent frame (RwObject::parent at +4 in both layouts)
-            for (int off = 0x40; off < 0xA0; off += 4) { const float f = (rr.f01() - 0.5f) * 4.f; std::memcpy(rw + off, &f, 4); }   // view window / offset / planes: finite
-            Scene.m_pRwCamera = reinterpret_cast<RwCamera*>(rw);
-            TheCamera.m_pRwCamera = Scene.m_pRwCamera;
-            At<uint32_t>(0xB6FE88) = 0x8CC8E0u + 24u * rr.below(28);                      // gpCamColVars: a row of gCamColVars (the image holds 0 until the first SetCamCollisionVarDataSet)
-            At<float>(0xB6EC68) = rr.below(12) == 0 ? 0.f : 1.f + rr.f01() * 20.f;         // gNearClipPedDistDivisor
-        });
-        CC(T->SetNearClipBasedOnPedCollision(a2); float nc = Scene.m_pRwCamera->nearPlane; uint32_t b; std::memcpy(&b, &nc, 4); return (uint64_t)b;,
-           ExeT<void>(0x50CB90, T, a2); uint32_t b; std::memcpy(&b, S(oRw) + 0x80, 4); return (uint64_t)b;);
-    } ENDROW;
+    // CCamera::SetNearClipBasedOnPedCollision 0x50CB90: not a row - it ends in RwCameraSetNearClipPlane (exe RW core 0x7EE1D0 on an exe-layout RwCamera vs librw; the port side is not linked here, the exe side reads frame-buffer fields)
     ROW("CCamera::ProcessScriptedCommands", 0x516AE0, 600) { CC(T->ProcessScriptedCommands(); return 0;, ExeT<void>(0x516AE0, T); return 0;); } ENDROW;
     ROW("CCamera::Restore", 0x50B930, 800) { CC(T->Restore(); return 0;, ExeT<void>(0x50B930, T); return 0;); } ENDROW;
     ROW("CCamera::RestoreWithJumpCut", 0x50BAB0, 1200) { CC(T->RestoreWithJumpCut(); return 0;, ExeT<void>(0x50BAB0, T); return 0;); } ENDROW;

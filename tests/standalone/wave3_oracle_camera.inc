@@ -109,6 +109,16 @@ static void WireEnt(Rng& r, int k, size_t sz) {
         *reinterpret_cast<CVector*>(e + offsetof(CPhysical, m_vecTurnSpeed)) = r.below(10) == 0 ? V3(r, 0.5f) : V3P(r, 0.5f);
     }
 }
+// positions / speeds of the four physical fixture entities as plain finite game values (no NaN / inf / denormal): for the rows whose normalising maths differs only in the x87 invalid-operation / denormal results
+static void SaneEntities(Rng& r) {
+    for (int k = 0; k < 4; ++k) {
+        CEntity* e = Ent(k);
+        const CVector pos((r.f01() - 0.5f) * 3000.f, (r.f01() - 0.5f) * 3000.f, (r.f01() - 0.5f) * 100.f);
+        if (e->m_matrix) e->m_matrix->GetPosition() = pos; else e->m_placement.m_vPosn = pos;
+        static_cast<CPhysical*>(e)->m_vecMoveSpeed = CVector((r.f01() - 0.5f) * 2.f, (r.f01() - 0.5f) * 2.f, (r.f01() - 0.5f) * 2.f);
+        static_cast<CPhysical*>(e)->m_vecTurnSpeed = CVector((r.f01() - 0.5f) * 0.5f, (r.f01() - 0.5f) * 0.5f, (r.f01() - 0.5f) * 0.5f);
+    }
+}
 static const int kPedStates[] = { PEDSTATE_ENTER_CAR, PEDSTATE_CARJACK, PEDSTATE_OPEN_DOOR, PEDSTATE_EXIT_CAR, PEDSTATE_IDLE, PEDSTATE_DRIVING, PEDSTATE_ARRESTED, PEDSTATE_DEAD };
 
 static void BuildCam(Rng& r) {

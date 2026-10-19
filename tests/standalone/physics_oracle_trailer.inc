@@ -67,6 +67,13 @@ static int Build(Rng& r, TrFx& f) {
     for (int i = 0; i < 4; ++i) t->m_fWheelsSuspensionCompression[i] = r.below(3) ? 1.f : r.f01();
     for (int i = 0; i < 2; ++i) t->m_supportRatios[i] = r.below(3) ? 1.f : r.f01();
     for (int i = 0; i < 4; ++i) { t->m_apWheelCollisionEntity[i] = nullptr; }
+    // COLLPOINT-ASSIGN: the wheel / support col points are written with the exe's CALLED CColPoint::operator= (0x40FC80, sites 0x6D01D7 / 0x6D0312), which leaves field_C, field_1C and the 2 bytes at 0x26
+    // alone: seed those with junk so that a full 0x2C-byte copy (the port before) shows up as a mismatch
+    for (int i = 0; i < 6; ++i) {
+        uint8* cp = i < 4 ? f.t + 0x724 + 0x2C * i : f.t + 0x988 + 0x2C * (i - 4);
+        const uint32 j0 = r.u32(), j1 = r.u32(), j2 = r.u32();
+        std::memcpy(cp + 0x0C, &j0, 4); std::memcpy(cp + 0x1C, &j1, 4); std::memcpy(cp + 0x26, &j2, 2);
+    }
     if (towRel) { if (r.below(2)) t->m_pTowingVehicle = reinterpret_cast<CVehicle*>(f.e); else t->m_pVehicleBeingTowed = reinterpret_cast<CVehicle*>(f.e); }
     else if (r.below(4) == 0) { t->m_pTowingVehicle = reinterpret_cast<CVehicle*>(f.t + 0x800); t->m_pVehicleBeingTowed = reinterpret_cast<CVehicle*>(f.t + 0x840); }   // other vehicles, not the entity
 

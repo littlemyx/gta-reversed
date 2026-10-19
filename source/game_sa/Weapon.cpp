@@ -1563,10 +1563,12 @@ bool CWeapon::CheckForShootingVehicleOccupant(CEntity** pCarEntity, CColPoint* c
         return false; // NOTSA: Original returns garbage here
     }
 
-    const CColPoint savedColPoint = *colPoint;
-    float           depth         = 1.f;
-    bool            hitOccupant   = false;
-    CColLine        line{ origin, target };
+    // 0x73F4C3 / 0x73F8E9: both copies CALL CColPoint::operator= 0x40FC80 (partial: field_C / field_1C / the 2 bytes at 0x26 are neither saved nor restored)
+    CColPoint savedColPoint{};
+    savedColPoint.AssignLikeExe(*colPoint);
+    float     depth       = 1.f;
+    bool      hitOccupant = false;
+    CColLine  line{ origin, target };
 
     // Test if line goes through the occupants' heads
     const auto CheckOccupant = [&](CPed* ped) {
@@ -1631,7 +1633,7 @@ bool CWeapon::CheckForShootingVehicleOccupant(CEntity** pCarEntity, CColPoint* c
 
     if (!hitOccupant) {
         *pCarEntity = veh;
-        *colPoint   = savedColPoint;
+        colPoint->AssignLikeExe(savedColPoint);
     }
     return hitOccupant; // NOTSA: Original returns garbage
 }

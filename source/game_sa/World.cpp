@@ -384,13 +384,13 @@ bool CWorld::ProcessVerticalLineSectorList_FillGlobeColPoints(PtrListType& ptrLi
                 if (distToEnd > 0.0f) {
                     entity->SetScanCode(ms_nCurrentScanCode - 1);
                     dontGoToNextNode = true;
-                    gaTempSphereColPoints[FilledColPointIndex++] = cp;
+                    gaTempSphereColPoints[FilledColPointIndex++].AssignLikeExe(cp);
                 }
             } else {
                 if (distToEnd < 0.0f) {
                     entity->SetScanCode(ms_nCurrentScanCode - 1);
                     dontGoToNextNode = true;
-                    gaTempSphereColPoints[FilledColPointIndex++] = cp;
+                    gaTempSphereColPoints[FilledColPointIndex++].AssignLikeExe(cp);
                 }
             }
 
@@ -1838,7 +1838,7 @@ bool CWorld::ProcessLineOfSightSectorList(PtrListType& ptrList, const CColLine& 
     
                         if (wheelTouchDist < localMinTouchDist) {
                             localMinTouchDist = wheelTouchDist;
-                            outColPoint = wheelCP;
+                            outColPoint.AssignLikeExe(wheelCP);
                             outEntity = entity;
                         } else {
                             // Since this col check consists only of checking the wheels
@@ -1866,7 +1866,7 @@ bool CWorld::ProcessLineOfSightSectorList(PtrListType& ptrList, const CColLine& 
                                 // If it is, and the vehicle is small in height this might be incorrect (because the line might go over the body itself, and just hit the wheel)
                                 if (std::abs(lineDirDotRight) / lineDir.Magnitude() > 0.5f) {
                                     localMinTouchDist = wheelTouchDist;
-                                    outColPoint = wheelCP;
+                                    outColPoint.AssignLikeExe(wheelCP);
                                     outEntity = entity;
                                 }
                             }

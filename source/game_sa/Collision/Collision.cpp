@@ -2083,7 +2083,7 @@ int32 CCollision::ProcessColModels(const CMatrix& transformA, CColModel& cmA,
                             const auto hitK = DiskHitK(cpInA, disk);
                             if (maxTouchDistances[diskIdx] <= hitK) { // Original: `!(hitK < max)`, NaN rejects
                                 maxTouchDistances[diskIdx] = (float)hitK;
-                                thisLineCP                 = cp;
+                                thisLineCP.AssignLikeExe(cp);
                                 thisLineCP.m_nSurfaceTypeA = disk.m_Surface.m_nMaterial;
                                 thisLineCP.m_nPieceTypeA   = disk.m_Surface.m_nPiece;
                                 thisLineCP.m_nLightingA    = disk.m_Surface.m_nLighting;
@@ -2118,7 +2118,7 @@ int32 CCollision::ProcessColModels(const CMatrix& transformA, CColModel& cmA,
                                     }
                                     lineCollision              = true;
                                     maxTouchDistances[diskIdx] = (float)hitK;
-                                    thisLineCP                 = cp;
+                                    thisLineCP.AssignLikeExe(cp);
                                     thisLineCP.m_nSurfaceTypeA = disk.m_Surface.m_nMaterial;
                                     thisLineCP.m_nPieceTypeA   = disk.m_Surface.m_nPiece;
                                     thisLineCP.m_nLightingA    = disk.m_Surface.m_nLighting;

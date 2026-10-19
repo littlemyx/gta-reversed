@@ -5929,7 +5929,7 @@ int32 CPed::ProcessEntityCollision(CEntity* entity, CColPoint* colPoint) {
 
             // Remove this col point
             for (int32 j = i; j < numCols - 1; j++) {
-                colPoint[j] = colPoint[j + 1]; // 0x40FC80
+                colPoint[j].AssignLikeExe(colPoint[j + 1]); // 0x40FC80
             }
             numCols--;
             continue;

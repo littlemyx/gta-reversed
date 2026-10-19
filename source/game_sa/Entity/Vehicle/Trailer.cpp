@@ -352,7 +352,7 @@ int32 CTrailer::ProcessEntityCollision(CEntity* entity, CColPoint* outColPoints)
             if (touchDist < BILLS_EXTENSION_LIMIT && touchDist < m_fWheelsSuspensionCompression[i]) {
                 numProcessedLines++;
                 m_fWheelsSuspensionCompression[i] = touchDist;
-                m_wheelColPoint[i] = cp;
+                m_wheelColPoint[i].AssignLikeExe(cp); // 0x6D01D7: CALLS the exe CColPoint::operator= 0x40FC80 (partial copy)
                 m_anCollisionLighting[i] = cp.m_nLightingB;
 
                 switch (entity->GetType()) {
@@ -387,7 +387,7 @@ int32 CTrailer::ProcessEntityCollision(CEntity* entity, CColPoint* outColPoints)
 
             numProcessedLines++;
             m_supportRatios[i] = touchDist;
-            m_supportCPs[i] = suspLineCPs[suspLineIdx];
+            m_supportCPs[i].AssignLikeExe(suspLineCPs[suspLineIdx]); // 0x6D0312: CALLS 0x40FC80 (partial copy)
         }
     } else {
         tcd->m_nNumLines = NUM_TRAILER_SUSP_LINES;

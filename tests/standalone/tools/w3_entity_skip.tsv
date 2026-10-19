@@ -1,0 +1,5 @@
+# ORACLE-W3-ENTITY: uncovered class A/B functions of game_sa/Entity that have no (full) row, with the reason. Addresses without the 0x prefix (the coverage tool counts 0x literals).
+# addr	function	reason
+545980	CPhysical::ApplyFriction(CPhysical*, float, CColPoint&)	OPEN: row exists behind W3E_OPEN=1 (address split in the source); 10/1500 PC24 mismatches remain after the magnitude-order / reciprocal fixes (65/1500 before): denormal-range friction speeds (exe 3e-40, port 0) and one return flip; the four branches were compared line by line against the asm by a helper, no further deviation found. Next step: dump the exe's intermediates for the failing cases
+553DC0	CEntity::SetupLighting	row compares only the m_bLightObject == false early-out: the rest calls ActivateDirectional / CPointLights::GenerateLightsAffectingObject / SetLightColoursForPedsCarsAndObjects (RenderWare light API, exe code vs librw, point-light tables)
+553370	CEntity::RemoveLighting	row compares only reset == false: reset == true calls SetAmbientColours / DeActivateDirectional (RpLightSetColor / RpLightSetFlags on the global lights) and CPointLights::RemoveLightsAffectingObject

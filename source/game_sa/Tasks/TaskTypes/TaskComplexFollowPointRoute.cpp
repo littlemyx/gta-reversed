@@ -199,10 +199,7 @@ CVector CTaskComplexFollowPointRoute::GetNextWaypoint(CPed* ped) {
         return m_route->GetAll().front();
     }
 
-    if (m_mode == Mode::LOOP) {
-        return {};
-    }
-
+    // 0x669448..0x66946A: LOOP (mode 3) is handled like the other modes (wraps to entry 0 when `next == numEntries`, 0x669461 je 0x66942b); only a mode outside 0..3 returns the zero vector (0x669497)
     const auto next = m_currPointIdx + 1;
     switch (m_mode) {
     case Mode::ONE_WAY:

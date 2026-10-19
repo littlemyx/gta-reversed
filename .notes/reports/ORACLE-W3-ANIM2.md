@@ -1,0 +1,30 @@
+# ORACLE-W3-ANIM2 report
+
+Agent ORACLE-W3-ANIM2 (rules v2), worktree C:/gta-wt/oracle-w3-anim2, branch oracle-w3-anim2. 25 new rows in `tests/standalone/wave3_oracle_anim2.inc` (included by `wave3_oracle_anim.inc`, target `wave3_anim_oracle_test`), PC24 0 mismatches after the 4 fixes; run_all_tests 52/52 ok in the worktree (wave3_anim_oracle_test: 87 rows) (PC53: CAnimBlendAssociation::SyncAnimation 34 = float vs 53-bit x87 division, informational like UpdateTimeStep in W3-ANIM).
+
+| | before | after |
+|---|---:|---:|
+| exe-oracle coverage, whole game | 3448 | **3476** |
+| game_sa/Animation covered (uncovered S / C) | 58 (3 / 23) | **77 (0 / 8)** |
+| game_sa/Plugins/RpAnimBlendPlugin covered (uncovered C) | 24 (9) | **30 (3)** |
+| port bugs fixed (one commit each, asm address in the subject) | | **4** |
+
+## Rows (all on the W3-ANIM fixture, extended)
+SetCurrentTime 0x4CEA80, Start 0x4CEB70, SyncAnimation 0x4CEB40, UpdateTime 0x4D13D0, UpdateBlend 0x4D1490, AllocateAnimBlendNodeArray 0x4CE9F0, FreeAnimBlendNodeArray 0x4CEA40, Init x3 (0x4CED50 / 0x4CEE40 / 0x4CEEC0), Constructors 1-3 (0x4CEFC0 / 0x4CF020 / 0x4CF080), CAnimBlendStaticAssociation Init 0x4CEC20 / Constructor2 0x4CEF60 / AllocateSequenceArray 0x4CE960, RpAnimBlendClumpRemoveAssociations 0x4D6820 / RemoveAllAssociations 0x4D6C00 / GiveAssociations 0x4D6C30, FindBone 0x4D6400 / FindFrameFromHashKey 0x4D6370 / FindFrame 0x4D62A0, CAnimBlendClumpData::SetNumberOfBones 0x4CF140 / ForAllFrames 0x4CF190, CAnimBlendAssocGroup::InitEmptyAssociations 0x4CDFB0.
+Fixture additions: frame datas with bone tags and fake RwFrames with node names (non-skinned clump: atomic-less lists), hierarchies with positive total time (uncompressed ones linked into the exe's ms_AnimCache, keep-compressed ones with compressed sequences), blend nodes with sequences (FindKeyFrame / SetupKeyFrameCompressed run for real), a callback stub, and association clones allocated in the deterministic arena on each side (exe vptr 0x85C6D0 vs the port's) so the real destructors, `delete this` and the callback re-arming run. Test-side shims: CMemoryMgr::MallocAlign / FreeAlign (= exe 0x72F4C0 / 0x72F4F0), GetFirstAtomic (0x734820, null), host toupper / _stricmp patched over the exe CRT (locale lock). The exe's FindFrame* search result global 0xB5F87C is masked (the exe keeps the ForAllFrames result there, the port in a local).
+
+## Port bugs (each row failed on the pre-fix code)
+| function | asm | bug | pre-fix failing cases |
+|---|---|---|---|
+| CAnimBlendAssociation::AllocateAnimBlendNodeArray 0x4CE9F0 | lea ecx,[eax*8-1] / shr ecx,6 / inc ecx / shl ecx,6 / MallocAlign(size, 64) | the exe requests the node bytes rounded up to a multiple of 64 (0 for n == 0), the port n*0x18 (allocation volume differs; not a memory-safety bug: the aligned block fits either way) | 72/100 (C:/gta-scratch/w3anim2_prefix_alloc.log) |
+| CAnimBlendClumpData::SetNumberOfBones 0x4CF140 | same rounding | same | 100/100 |
+| CAnimBlendAssociation::UpdateBlend 0x4D1490 | 0x4D1512 SetDeleteCallback(0x4D1390,0) for a delete callback, 0x4D1525 SetFinishCallback for a finish callback | the port always re-armed as a finish callback (callback type of the association that is deleted right after) | 1/800 |
+| CAnimBlendAssocGroup::InitEmptyAssociations 0x4CDFB0 | ebx = 0 .. inc | iterated descending; the order is observable (arena order of the node arrays) | 168/300 |
+
+Verified equal (examples): SetCurrentTime (loop / clamp, UncompressAnimation cache re-insert, FindKeyFrame / SetupKeyFrameCompressed per node), Start, UpdateTime (finish / auto-remove / callbacks), UpdateBlend delete path with the destructor, Init-0/1/2 and the three constructors (bone-tag and hash-key sequence matching), RemoveAssociations / RemoveAll / Give with REFERENCE_BLOCK refcounts, frame lookups.
+
+## Not covered (8 C + 3 C left)
+Animation C (8): CAnimManager / CAnimBlendAssocGroup paths that reach file IO or streaming stay class D and are skipped; RpAnimBlend: RpAnimBlendClumpUpdateAnimations 0x4D34F0 (S, needs skinned/non-skinned frame callbacks and RpHAnim interp frames; the per-frame callbacks are covered by W2 tables), FillFrameArray (RpHAnim ids), CreateAnimationForHierarchy, PluginAttach. Left for a follow-up brief.
+
+## Does the CAnimBlendLink::begin() bug explain SKIN-FLAKY or the bike-pedalling report? UNRELATED to both
+The bug (begin() returned the list head, fixed in ea549221) only ever affected range-for / count_if over a CAnimBlendLink: the 5 functions RpAnimBlendClumpGetNumAssociations 0x4D6B60 / GetNumPartialAssociations 0x4D6B80 / GetNumNonPartialAssociations 0x4D6BB0 / PauseAllAnimations 0x4D6B00 / UnPauseAllAnimations 0x4D6B30. Evidence that nothing calls them: `tools/standalone/exedis.py --callers` on all five finds no call / jmp / vtable / pushed operand anywhere in the exe, and grep over source/ finds no caller in the port (no other range-for over CAnimBlendLink exists; GetAnims() and RpAnimBlendClumpGetAssociations are only used by those five). So the heap overwrite (UnPause writing ANIMATION_IS_PLAYING after the clump data) was latent code, never executed in any game run: it cannot be the INTRO1B null-meshHeader crash (SKIN-FLAKY, a rendering-side geometry; none of the anim list operations of the cutscene path touch geometry, and the cutscene-end paths RemoveAll / Give / Extract / UpdateBlend / Init / constructors now match the exe on the real fixture) and cannot be the pedalling report (playtest-1 list item U9 "After a cutscene the bike pedalling animation broke"; the brief called it U8): PT-MISSION could not reproduce U9 either; the anim lifecycle functions that run after a cutscene (Remove/Give/Extract associations, ctor/Init, SetCurrentTime, UpdateTime/Blend) have no deviation left that changes playback (the 4 fixes above are allocation volume, a dead object's callback type and the allocation order of independent inits). Verdict: begin() UNRELATED; SKIN-FLAKY and U9 keep their previous status (not reproduced; SKIN-FLAKY next steps stay as in its report).

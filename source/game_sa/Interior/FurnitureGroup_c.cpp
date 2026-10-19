@@ -60,10 +60,13 @@ int32 FurnitureGroup_c::GetRandomId(int32 subGroupId, uint8 rating) {
 
 // 0x5C0230
 bool FurnitureGroup_c::AddFurniture(int32 subGroupId, uint16 modelId, int16 id, uint8 wealthMin, uint8 wealthMax, uint8 maxAng) {
-    if (const auto sg = GetSubGroup(subGroupId)) {
-        return sg->AddFurniture(modelId, id, wealthMin, wealthMax, maxAng);
+    // The original walks the whole sub-group list (not only up to the first match), ignores the result of the sub-group's AddFurniture and always returns true
+    for (auto& sg : m_subGroupsList) {
+        if (sg.m_SubGroupId == subGroupId) {
+            sg.AddFurniture(modelId, id, wealthMin, wealthMax, maxAng);
+        }
     }
-    return false;
+    return true;
 }
 
 // notsa

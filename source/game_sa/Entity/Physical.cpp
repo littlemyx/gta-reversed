@@ -1409,8 +1409,9 @@ float CPhysical::GetLightingFromCol(bool bInteriorLighting)
     float fAmbientRedBlue = CTimeCycle::GetAmbientRed_BeforeBrightness() + CTimeCycle::GetAmbientBlue_BeforeBrightness();
     float fLighting = (CTimeCycle::GetAmbientGreen_BeforeBrightness() + fAmbientRedBlue) * std::bit_cast<float>(0x3EAAAA9Fu) /* 0x863C10: the exe's 1/3 here is 0.333333f rounded to 0x3EAAAA9F */ + m_fContactSurfaceBrightness;
     if (!bInteriorLighting) {
-        fLighting *= (CTimeCycle::SumOfCurrentRGB1() * ExeRecip(765.0f) * TEST_ADD_AMBIENT_LIGHT_FRAC + 1.0f - TEST_ADD_AMBIENT_LIGHT_FRAC)
-                    + CTimeCycle::SumOfCurrentRGB2() * ExeRecip(765.0f)  * TEST_ADD_AMBIENT_LIGHT_FRAC;
+        // 0x5447EE..0x54483A: lighting * ((RGB1 / 765 * frac) + (1 - frac)) + (RGB2 / 765 * frac): the second term is ADDED to the product (the port multiplied by the sum of both)
+        const float scale1 = (CTimeCycle::SumOfCurrentRGB1() * ExeRecip(765.0f) * TEST_ADD_AMBIENT_LIGHT_FRAC) + (1.0f - TEST_ADD_AMBIENT_LIGHT_FRAC);
+        fLighting = fLighting * scale1 + CTimeCycle::SumOfCurrentRGB2() * ExeRecip(765.0f) * TEST_ADD_AMBIENT_LIGHT_FRAC;
     }
     return fLighting;
 }

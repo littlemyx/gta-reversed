@@ -2337,9 +2337,13 @@ float CPathFind::FindYCoorsForRegion(size_t y) {
 // 0x44DED0
 void CPathFind::AddInteriorLink(int32 intNodeA, int32 intNodeB) {
     const auto AddLink = [](int32 intIdx, int32 linkTo) {
-        const auto it = rng::find(ConnectsToGiven[intIdx], -1); 
-        assert(!(*it >= 0)); // NOTE: Original code did a `while (*it >= 0), if anything goes bad use `>= 0` for `rng::find`
-        *it = linkTo;
+        // The exe takes the first negative entry of the node's six, or - when all six are used - entry 6, which is the first entry of the NEXT node's row (no bounds check)
+        auto* const row = reinterpret_cast<int8*>(ConnectsToGiven.data()) + (size_t)intIdx * 6;
+        int32 i = 0;
+        while (i < 6 && row[i] >= 0) {
+            i++;
+        }
+        row[i] = (int8)linkTo;
     };
     AddLink(intNodeA, intNodeB);
     AddLink(intNodeB, intNodeA);

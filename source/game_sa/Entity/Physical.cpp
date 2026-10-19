@@ -1479,8 +1479,8 @@ bool CPhysical::CanPhysicalBeDamaged(eWeaponType weapon, bool* bDamagedDueToFire
     case WEAPON_ARMOUR:
     case WEAPON_ARMOUR | WEAPON_BASEBALLBAT:
         return true;
-    case WEAPON_MOLOTOV:
-        if (!physicalFlags.bFireProof)
+    case WEAPON_MOLOTOV: // 0x544913: explosion proof OR fire proof
+        if (!physicalFlags.bExplosionProof && !physicalFlags.bFireProof)
             break;
         return false;
     case WEAPON_PISTOL:
@@ -1510,6 +1510,8 @@ bool CPhysical::CanPhysicalBeDamaged(eWeaponType weapon, bool* bDamagedDueToFire
     case WEAPON_ARMOUR | WEAPON_SHOVEL:
         if (physicalFlags.bCollisionProof)
             return false;
+        return true;
+    default: // the exe's jump table (0x544954) sends every weapon above 0x36 (unsigned compare) to `return true` without touching the flag
         return true;
     }
 

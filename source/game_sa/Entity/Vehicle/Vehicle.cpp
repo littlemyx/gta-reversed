@@ -2867,24 +2867,26 @@ uint32 CVehicle::GetPlaneGunsRateOfFire() {
 
 // 0x6D4290
 CVector CVehicle::GetPlaneGunsPosition(int32 gunId) {
-    const auto pos = GetModelInfo()->AsVehicleModelInfoPtr()->GetModelDummyPosition(DUMMY_VEHICLE_GUN);
-    if (!pos.IsZero()) {
-        return pos;
+    CVector pos = GetModelInfo()->AsVehicleModelInfoPtr()->GetModelDummyPosition(DUMMY_VEHICLE_GUN);
+    if (pos.IsZero()) {
+        switch (m_nModelIndex) {
+        case MODEL_HUNTER:   pos = VehicleGunOffset[0]; break;
+        case MODEL_SEASPAR:  pos = CVector(-0.5f, 2.4f, -0.785f); break; // 0x8D35F8
+        case MODEL_RCBARON:  pos = CVector(0.0f, 0.45f, 0.0f); break;    // 0x8D3634
+        case MODEL_RUSTLER:  pos = CVector(2.19f, 1.5f, -0.58f); break;  // 0x8D3610
+        case MODEL_MAVERICK: pos = CVector(0.0f, 2.85f, -0.5f); break;   // 0x8D35E0
+        case MODEL_POLMAV:   pos = CVector(0.0f, 2.85f, -0.5f); break;   // 0x8D35EC [Values same as the maverick's]
+        case MODEL_HYDRA:    pos = CVector(1.48f, 0.44f, -0.52f); break; // 0x8D3628
+        case MODEL_CARGOBOB: pos = CVector(0.0f, 6.87f, -1.65f); break;  // 0x8D3604
+        case MODEL_TORNADO:  pos = CVector(); break;                       // 0xC1CC2C
+        default:             pos = CVector(0.f, 0.f, 0.f); break;
+        }
     }
-
-    switch (m_nModelIndex) {
-    case MODEL_HUNTER:   return VehicleGunOffset[0];
-    case MODEL_SEASPAR:  return { -0.5f, 2.4f, -0.785f }; // 0x8D35F8
-    case MODEL_RCBARON:  return { 0.0f, 0.45f, 0.0f };    // 0x8D3634
-    case MODEL_RUSTLER:  return CVector{ 2.19f, 1.5f, -0.58f } + CVector{ 0.2f, 0.0f, 0.0f } * (float)(gunId - 1);  // 0x8D3610 (posn), 0x8D361C (offset)
-    case MODEL_MAVERICK: return { 0.0f, 2.85f, -0.5f };   // 0x8D35E0
-    case MODEL_POLMAV:   return { 0.0f, 2.85f, -0.5f };   // 0x8D35EC [Values same as the maverick's]
-    case MODEL_HYDRA:    return { 1.48f, 0.44f, -0.52f }; // 0x8D3628
-    case MODEL_CARGOBOB: return { 0.0f, 6.87f, -1.65f };  // 0x8D3604
-    case MODEL_TORNADO:  return {};                       // 0xC1CC2C
-    default:
-        return { 0.f, 0.f, 0.f };
+    // 0x6D444E: the exe adds the per-gun offset of the Rustler (0x8D361C) for the dummy position as well as for the table one
+    if (m_nModelIndex == MODEL_RUSTLER) {
+        pos += CVector{ 0.2f, 0.0f, 0.0f } * (float)(gunId - 1);
     }
+    return pos;
 }
 
 // 0x6D4590

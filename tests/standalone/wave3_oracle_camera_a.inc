@@ -55,7 +55,7 @@ static void TestW3CameraA() {
         });
         CC(T->ProcessMusicFade(); return 0;, ExeT<void>(0x50B6D0, T); return 0;);
     } ENDROW;
-    // CCamera::SetNearClipBasedOnPedCollision 0x50CB90: not a row - it ends in RwCameraSetNearClipPlane (exe RW core 0x7EE1D0 on an exe-layout RwCamera vs librw; the port side is not linked here, the exe side reads frame-buffer fields)
+    // CCamera::SetNearClipBasedOnPedCollision (exe 50CB90): not a row - it ends in RwCameraSetNearClipPlane (exe RW core 0x7EE1D0 on an exe-layout RwCamera vs librw; the port side is not linked here, the exe side reads frame-buffer fields)
     ROW("CCamera::ProcessScriptedCommands", 0x516AE0, 600) { CC(T->ProcessScriptedCommands(); return 0;, ExeT<void>(0x516AE0, T); return 0;); } ENDROW;
     ROW("CCamera::Restore", 0x50B930, 800) { CC(T->Restore(); return 0;, ExeT<void>(0x50B930, T); return 0;); } ENDROW;
     ROW("CCamera::RestoreWithJumpCut", 0x50BAB0, 1200) { CC(T->RestoreWithJumpCut(); return 0;, ExeT<void>(0x50BAB0, T); return 0;); } ENDROW;

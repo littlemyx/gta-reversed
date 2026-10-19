@@ -962,7 +962,8 @@ void CCamera::SetCameraDirectlyBehindForFollowPed_ForAPed_CamOnAString(CPed* tar
 
     TheCamera.m_pTargetEntity = targetPed;
     CEntity::ChangeEntityReference(GetActiveCamera().m_pCamTargetEntity, targetPed);
-    m_fPedOrientForBehindOrInFront = targetPed->GetHeading();
+    // 0x50BE0B..0x50BE1B: `GetATanOfXY(forward.x, forward.y)` like the "in front" variant; the port used GetHeading (atan2(-x, y)), a quarter turn off
+    m_fPedOrientForBehindOrInFront = CGeneral::GetATanOfXY(targetPed->GetForward().x, targetPed->GetForward().y);
 }
 
 // 0x50BE30

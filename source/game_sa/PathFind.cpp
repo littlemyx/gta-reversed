@@ -1780,12 +1780,12 @@ void CPathFind::AddDynamicLinkBetween2Nodes_For1Node(CNodeAddress first, CNodeAd
     auto numAddresses = m_anNumAddresses[first.m_wAreaId];
 
     uint32 firstLinkId;
-    if (static_cast<uint32>(firstPathInfo.m_wBaseLinkId) >= numAddresses)
+    if ((int32)(int16)firstPathInfo.m_wBaseLinkId >= (int32)numAddresses) // 0x44E02B: signed compare
         firstLinkId = firstPathInfo.m_wBaseLinkId;
     else {
         auto* nodeLink = &m_pNodeLinks[first.m_wAreaId][numAddresses];
         auto linkCounter = 0u;
-        while (!nodeLink->IsValid()) {
+        while (nodeLink->m_wAreaId != 0xFFFF) { // 0x44E043: the search STOPS at the first free block (area 0xFFFF), the port stopped at the first valid link
             nodeLink += 12; // No clue why we jump 12 objects each time (Search: MAGIC_NUM_12)
             ++linkCounter;
         }
@@ -1800,7 +1800,7 @@ void CPathFind::AddDynamicLinkBetween2Nodes_For1Node(CNodeAddress first, CNodeAd
         if (first.m_wAreaId < NUM_PATH_MAP_AREAS) {
             auto& linkInfo = m_aDynamicLinksBaseIds[first.m_wAreaId];
             for (auto i = 0u; i < NUM_DYNAMIC_LINKS_PER_AREA; ++i) {
-                if (linkInfo[i] == -1) {
+                if (linkInfo[i] < 0) { // 0x44E104: signed < 0
                     m_aDynamicLinksBaseIds[first.m_wAreaId][i] = firstPathInfo.m_wBaseLinkId;
                     m_aDynamicLinksIds[first.m_wAreaId][i] = firstLinkId;
                     break;

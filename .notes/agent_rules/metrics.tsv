@@ -57,3 +57,4 @@ date	agent	rules	kind	tokens	tool_uses	minutes	outcome	notes
 2026-10-19	ORACLE-W3-EVENTS	v2	oracle wave (1 subsystem)	429266	147	55	Events A+B 43->0 uncovered, 9 port bugs; stopped at cap before full gate (orchestrator runs it)
 2026-10-19	ORACLE-W3-GAMEPLAY	v2	oracle wave (slice)	330176	148	81	gameplay root files +121 covered, 8 port bugs (garage msg swap, ChangeGarageType copy, AddExistingPedInCar trap)
 2026-10-19	ORACLE-W3-TASKS	v2	oracle wave (partial)	334343	120	97	TaskTypes +40 covered, 2 port bugs; 97 rows fixture-limited -> CONTINUE
+2026-10-19	ORACLE-W3-COLL	v2	oracle wave (1 subsystem)	488363	173	103	Collision+Core A/B -> 0/2 uncovered (+100 rows), 6 port fixes (x87 precision, NaN, colpoint copy); one bad commit self-corrected; 173 calls

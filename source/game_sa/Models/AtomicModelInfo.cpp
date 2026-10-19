@@ -128,7 +128,8 @@ void CAtomicModelInfo::SetAtomic(RpAtomic* atomic)
 
 RpAtomic* CAtomicModelInfo::GetAtomicFromDistance(float distance)
 {
-    if (TheCamera.m_fLODDistMultiplier * m_fDrawDistance <= distance)
+    // 0x4C44B0: fcomp + test ah,0x41 / jne -> null when the product is <= distance OR unordered (NaN); the atomic only for product > distance
+    if (!(TheCamera.m_fLODDistMultiplier * m_fDrawDistance > distance))
         return nullptr;
 
     return GetRpAtomic();

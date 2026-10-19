@@ -116,7 +116,7 @@ void CEventKnockOffBike::From(const CEventKnockOffBike& right)
     m_time = right.m_time;
     m_ped = right.m_ped;
     m_isVictimDriver = right.m_isVictimDriver;
-    m_forceKnockOff = right.m_forceKnockOff;
+    // 0x4AFE0F..0x4AFE46: only bit 0 (m_isVictimDriver) is merged into the flag byte; m_forceKnockOff keeps this object's value
     m_exitDoor = right.m_exitDoor;
     CEntity::SafeRegisterRef(m_vehicle);
     CEntity::SafeRegisterRef(m_ped);

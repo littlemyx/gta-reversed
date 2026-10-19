@@ -14,7 +14,8 @@ void CAEFireAudioEntity::Initialise(FxSystem_c* system) {
 
 // 0x5B9A90
 void CAEFireAudioEntity::StaticInitialise() {
-    AEAudioHardware.LoadSoundBank(SND_BANK_GENRL_RAIN, SND_BANK_SLOT_WEATHER);
+    // 0x5B9A90: push 4 / push 0x34 = the explosions bank into the explosions slot (not the weather's rain bank)
+    AEAudioHardware.LoadSoundBank(SND_BANK_GENRL_EXPLOSIONS, SND_BANK_SLOT_EXPLOSIONS);
 }
 
 // 0x4DCF40

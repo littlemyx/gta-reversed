@@ -3984,6 +3984,7 @@ void CPed::DettachPedFromEntity(){
 void CPed::SetAimFlag(float heading) {
     bIsAimingGun = true;
     bIsRestoringGun = false;
+    m_fLookDirection = heading; // exe 0x5E8847: `mov [esi+0x73C], ecx` (the heading argument)
     ClearReference(m_pLookTarget);
     m_nLookTime = 0;
 

@@ -2016,14 +2016,16 @@ size_t CPathFind::FindYRegionForCoors(float y) const {
 
 // 0x44DB60
 void CPathFind::MarkRegionsForCoors(CVector pos, float radius) {
-    // HACK: Since the below function isnt `static` (TODO...) we gotta use the class instance here...
-    ThePaths.IterAreasTouchingRect(
-        { pos, radius },
-        [](auto areaId) {
-            ToBeStreamed[areaId] = true;
-            return true;
+    // 0x44DB60: x87 - `pos - radius` / `pos + radius` are not rounded to float (the CRect(centre, radius) the port used rounds them), and the flags are stored at [xRegion * 8 + yRegion]
+    // (the same layout CPathFind::UpdateStreaming reads), not [yRegion * 8 + xRegion]
+    const auto region = [](double v) { return (size_t)std::clamp(notsa::detail::Ftol((v - (double)-3000.f) * (double)0.0013333333f), 0, 7); };
+    const size_t minX = region((double)pos.x - radius), maxX = region((double)pos.x + radius);
+    const size_t minY = region((double)pos.y - radius), maxY = region((double)pos.y + radius);
+    for (size_t x = minX; x <= maxX; x++) {
+        for (size_t y = minY; y <= maxY; y++) {
+            ToBeStreamed[x * NUM_PATH_MAP_AREA_Y + y] = true;
         }
-    );
+    }
 }
 
 // 0x44D3E0 - Moved to CPathNode

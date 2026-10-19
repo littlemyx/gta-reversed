@@ -295,36 +295,84 @@ void CAEPedAudioEntity::StopJetPackSound() {
     }
 }
 
+// exe 0x4E1068..0x4E10A4: `fld angle; fsin; fcom 0; fst dword [tmp]; (fchs if < 0); fmul [0xB613B0]; fadd 1.0` - the fsin result is a 64-bit-mantissa value that is NOT rounded to float before
+// the multiply (fsin ignores the precision control; only the `fst dword` copy is a float), so |sin| * factor rounds once at the precision control, not after a float rounding of |sin|.
+// The second use (sound 2) reloads the float copy: `fld [tmp]`, abs.
+static void JetPackSinSpeeds(float angle, float factor, float& speed0, float& speed) {
+#if NOTSA_X87_ASM
+    const float zero = 0.0f, one = 1.0f;
+    float tmp, s0, s1;
+    __asm {
+        fld   dword ptr [angle]
+        fsin
+        fcom  dword ptr [zero]
+        fst   dword ptr [tmp]
+        fnstsw ax
+        test  ah, 5
+        jp    L_abs0
+        fchs
+    L_abs0:
+        fmul  dword ptr [factor]
+        fadd  dword ptr [one]
+        fstp  dword ptr [s0]
+        fld   dword ptr [tmp]
+        fcomp dword ptr [zero]
+        fld   dword ptr [tmp]
+        fnstsw ax
+        test  ah, 5
+        jp    L_abs1
+        fchs
+    L_abs1:
+        fstp  dword ptr [s1]
+    }
+    speed0 = s0;
+    speed = s1;
+#else
+    const float sn = (float)x87::sin(angle);
+    speed = sn < 0.0f ? -sn : sn;
+    speed0 = speed * factor + 1.0f;
+#endif
+}
+
 // 0x4E0EE0
 void CAEPedAudioEntity::UpdateJetPack(float thrustFwd, float thrustAngle) {
     if (!m_bJetPackPlaying || !m_JetPackSound1 || !m_JetPackSound0 || !m_JetPackSound2) {
         return;
     }
 
-    if (thrustFwd <= 0.5f) { // flying
-        m_fVolume1 = std::max(m_fVolume1 - 5.0f, -100.0f);
-        m_fVolume2 = std::min(m_fVolume2 + 6.0f, -17.0f);
-        m_fVolume3 = std::max(m_fVolume3 - 0.3f, 2.0f);
-        m_JetPackSoundSpeedMult = std::max(m_JetPackSoundSpeedMult - 0.031f, 0.4f);
+    // The exe clamps with `fcom` + a flag test, not with min / max: the limit wins unless the value is strictly inside (a NaN becomes the limit).
+    //   0x4E0F39 / 0x4E0F87 / 0x4E0FAE / ...:  `fcom lim; test ah, 5; jnp keep`   -> v <  lim ? v : lim
+    //   0x4E0FD8 / 0x4E1026 / 0x4E1047 / ...:  `fcom lim; test ah, 0x41; je keep`  -> v >  lim ? v : lim
+    const auto ClampBelow = [](float v, float lim) { return v < lim ? v : lim; };
+    const auto ClampAbove = [](float v, float lim) { return v > lim ? v : lim; };
+
+    // 0x4E0F1C: `fcomp [0.5]; test ah, 0x41; jne`: <, == and unordered (NaN) take the "flying" branch
+    if (!(thrustFwd > 0.5f)) { // flying
+        m_fVolume1 = ClampAbove(m_fVolume1 - 5.0f, -100.0f);
+        m_fVolume2 = ClampBelow(6.0f + m_fVolume2, -17.0f);
+        m_fVolume3 = ClampAbove(m_fVolume3 - 0.3f, 2.0f);
+        m_JetPackSoundSpeedMult = ClampAbove(m_JetPackSoundSpeedMult - 0.031f, 0.4f);
     } else { // idle
-        m_fVolume1 = std::min(m_fVolume1 + 15.0f, -15.0f);
-        m_fVolume2 = std::max(m_fVolume2 - 7.1f, -100.0f);
-        m_fVolume3 = std::min(m_fVolume3 + 0.3f, 11.0f);
-        m_JetPackSoundSpeedMult = std::min(m_JetPackSoundSpeedMult + 0.031f, 0.71f);
+        m_fVolume1 = ClampBelow(15.0f + m_fVolume1, -15.0f);
+        m_fVolume2 = ClampAbove(m_fVolume2 - 7.1f, -100.0f);
+        m_fVolume3 = ClampBelow(0.3f + m_fVolume3, 11.0f);
+        m_JetPackSoundSpeedMult = ClampBelow(0.031f + m_JetPackSoundSpeedMult, 0.71f);
     }
 
-    const auto angle = x87::sin(thrustAngle);
-    const float speed = angle < 0.0f ? -angle : angle; // maybe wrong
+    // 0xB613B0 is computed by the CRT start-up (0x84C7E0): `0.93f - 1.0f` (-0.06999999285, NOT the literal -0.07f)
+    constexpr float kPitchFactor = 0.93f - 1.0f;
+    float speed0, speed; // speed0 = |sin| * kPitchFactor + 1.0, speed = (float)|sin|
+    JetPackSinSpeeds(thrustAngle, kPitchFactor, speed0, speed);
 
     // 0.0f == 0xB61384 (uninitialized)
     m_JetPackSound0->m_Volume = m_fVolume1 + 0.0f;
-    m_JetPackSound0->m_Speed = speed * -0.07f + 1.0f;
+    m_JetPackSound0->m_Speed = speed0;
 
     m_JetPackSound1->m_Volume = m_fVolume2 + 0.0f;
     m_JetPackSound1->m_Speed = 0.56f;
 
     m_JetPackSound2->m_Volume = m_fVolume3 + 0.0f;
-    m_JetPackSound2->m_Speed = (speed / 5.0f + 1.0f) * m_JetPackSoundSpeedMult;
+    m_JetPackSound2->m_Speed = (speed * 0.2f + 1.0f) * m_JetPackSoundSpeedMult; // exe 0x4E10F7: `fmul [0x8AE620]` (0.2f), not a division by 5
 }
 
 // 0x4E1170

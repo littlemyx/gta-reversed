@@ -1,3 +1,11 @@
 CVehicle::SetVehicleAtomicVisibilityCB-Object	global RpAtomic callback, not a member (hand row)
 CHeli::Fix	calls SetupDamageAfterLoad through the vtable (the exe calls it directly): garbage vptr of the fixture faults only in the port
 CPlane::Fix	same as CHeli::Fix
+CBmx::LaunchBunnyHopCB	OPEN: 1 case in 60 (special inputs) differs by the sign of a zero in m_vecTurnSpeed.z after ApplyTurnForce; not analysed (see state file)
+CAutomobile::ProcessSuspension	fixture too heavy: needs wheel collision points, the world sector lists and the surface/physical collision state; every case faults in both
+CQuadBike::ProcessSuspension	calls CAutomobile::ProcessSuspension (same)
+CBike::SetRemoveAnimFlags	needs a ped clump with an RpAnimBlend association list (RenderWare 3.7 layout in the exe, librw in the port): not constructible
+CVehicle::SetupLighting	CRenderer::SetupLightingForEntity / ActivateDirectional: renderer + D3D light state
+CVehicle::RemoveLighting	CPointLights / SetAmbientColours / DeActivateDirectional: renderer + D3D light state
+CVehicle::UpdateClumpAlpha	CVisibilityPlugins clump alpha lives in a RenderWare plugin extension of the clump (exe layout vs librw): not constructible
+CTrain::GetDooorAngleOpenRatio	every case faults in both (CDoor inline reads through the garbage vehicle layout)

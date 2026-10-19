@@ -1,17 +1,18 @@
-81 function rows, 22 TUs
-RET CAutomobile::AddMovingCollisionSpeed 0x6A1ED0 "CVector"
-NOARG CAutomobile::DoSoftGroundResistance 0x6A4AF0 param "uint32& extraHandlingFlags"
-NOARG CBike::DoSoftGroundResistance 0x6B6D40 param "uint32& extraHandlingFlags"
+73 function rows, 23 TUs
+SKIP CAutomobile::ProcessSuspension 0x6AFB10: fixture too heavy: needs wheel collision points, the world sector lists and the surface/physical collision state; every case faults in both
+SKIP CBike::SetRemoveAnimFlags 0x6B5F50: needs a ped clump with an RpAnimBlend association list (RenderWare 3.7 layout in the exe, librw in the port): not constructible
+SKIP CBmx::LaunchBunnyHopCB 0x6C0390: OPEN: 1 case in 60 (special inputs) differs by the sign of a zero in m_vecTurnSpeed.z after ApplyTurnForce; not analysed (see state file)
 DECL CBoat::GetBoatAtomicObjectCB 0x6F00D0 (0 declarations)
 SKIP CHeli::Fix 0x6C4530: calls SetupDamageAfterLoad through the vtable (the exe calls it directly): garbage vptr of the fixture faults only in the port
 SKIP CPlane::Fix 0x6CABB0: same as CHeli::Fix
-NOARG CVehicle::CanVehicleBeDamaged 0x6D1280 param "bool& bDamagedDueToFireOrExplosionOrBullet"
+SKIP CQuadBike::ProcessSuspension 0x6CE270: calls CAutomobile::ProcessSuspension (same)
+SKIP CTrain::GetDooorAngleOpenRatio 0x6F59C0: every case faults in both (CDoor inline reads through the garbage vehicle layout)
+SKIP CVehicle::RemoveLighting 0x5533D0: CPointLights / SetAmbientColours / DeActivateDirectional: renderer + D3D light state
+SKIP CVehicle::SetupLighting 0x553F20: CRenderer::SetupLightingForEntity / ActivateDirectional: renderer + D3D light state
 SKIP CVehicle::SetVehicleAtomicVisibilityCB-Object 0x6D2690: global RpAtomic callback, not a member (hand row)
 DECL CVehicle::SetCompAlphaCB 0x6D2950 (0 declarations)
-NOARG CVehicle::MakeDirty 0x6D2BF0 param "CColPoint& colPoint"
+SKIP CVehicle::UpdateClumpAlpha 0x6D2980: CVisibilityPlugins clump alpha lives in a RenderWare plugin extension of the clump (exe layout vs librw): not constructible
 DECL CVehicle::FindUpgradeCB 0x6D3370 (0 declarations)
 DECL CVehicle::FindReplacementUpgradeCB 0x6D3490 (0 declarations)
-RET CVehicle::GetPlaneGunsPosition 0x6D4290 "CVector"
-RET CVehicle::GetPlaneOrdnancePosition 0x6D46E0 "CVector"
 NOARG CVehicle::DoHeadLightEffect 0x6E0A50 param "CMatrix& vehicleMatrix"
 NOARG CVehicle::DoTailLightEffect 0x6E1780 param "CMatrix& vehicleMatrix"

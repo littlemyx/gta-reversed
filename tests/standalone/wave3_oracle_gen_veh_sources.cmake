@@ -21,5 +21,6 @@ set(W3_VEH_SOURCES
     game_sa/Models/VehicleModelInfo.cpp
     game_sa/PopCycle.cpp
     game_sa/Ropes.cpp
+    game_sa/SurfaceInfos_c.cpp
     game_sa/VisibilityPlugins.cpp
 )

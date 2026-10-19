@@ -19,13 +19,16 @@ alignas(16) static uint8_t g_vs[0x400];     // CVehicleModelInfo::CVehicleStruct
 alignas(16) static uint8_t g_col[0x80];     // CColModel
 static int g_model = 0;
 alignas(16) static uint8_t g_mi2[0x400];   // the upgrade model's CAtomicModelInfo (IsValidModForVehicle)
+alignas(16) static uint8_t g_out[0x40];     // hand rows: out parameters (CVector results, uint32& flags, bool&) - compared like the rest
+alignas(16) static uint8_t g_frame[0x100];  // a fake RwFrame (car nodes)
+alignas(16) static uint8_t g_cp[0x60];      // a fake CColPoint
 static std::function<void(Rng&, uint8_t*)> g_post;   // hand rows: extra fixture work after the vehicle is wired
 template<class T> static void Put32(uint8_t* b, size_t off, T v) { std::memcpy(b + off, &v, sizeof v); }
 
 // models the vehicle code switches on (plus random ones)
 static int PickModel(Rng& r) {
     static const int t[] = { MODEL_HUNTER, MODEL_SEASPAR, MODEL_RCBARON, MODEL_RUSTLER, MODEL_MAVERICK, MODEL_POLMAV, MODEL_HYDRA, MODEL_CARGOBOB, MODEL_TORNADO, MODEL_KART, MODEL_RCBANDIT,
-        MODEL_RHINO, MODEL_BAGBOXA, MODEL_BAGBOXB, MODEL_TOWTRUCK, MODEL_INFERNUS, MODEL_BMX, MODEL_ANDROM, MODEL_BUS };
+        MODEL_RHINO, MODEL_DUMPER, MODEL_PACKER, MODEL_DOZER, MODEL_FORKLIFT, MODEL_BAGBOXA, MODEL_BAGBOXB, MODEL_TOWTRUCK, MODEL_INFERNUS, MODEL_BMX, MODEL_ANDROM, MODEL_BUS };
     return r.below(3) ? t[r.below((uint32)std::size(t))] : 400 + r.below(212);
 }
 static void WireMatrix(Rng& r, uint8_t* m) {
@@ -45,6 +48,7 @@ static void WireVehicle(Rng& r, uint8_t* v, size_t sz) {
     WireMatrix(r, g_mat);
     Put32(v, offsetof(CPlaceable, m_matrix), (uint32_t)(uintptr_t)g_mat);
     FillGarbage(r, g_hand, sizeof g_hand);
+    FillGarbage(r, g_out, sizeof g_out); FillGarbage(r, g_frame, sizeof g_frame); FillGarbage(r, g_cp, sizeof g_cp);
     Put32(v, offsetof(CVehicle, m_pHandlingData), (uint32_t)(uintptr_t)g_hand);
     // model info + collision model + dummy table
     g_model = PickModel(r);
@@ -53,12 +57,14 @@ static void WireVehicle(Rng& r, uint8_t* v, size_t sz) {
     Put32(g_mi, offsetof(CBaseModelInfo, m_pColModel), (uint32_t)(uintptr_t)g_col);
     Put32(g_mi, offsetof(CVehicleModelInfo, m_pVehicleStruct), (uint32_t)(uintptr_t)g_vs);
     Put32(g_mi, offsetof(CVehicleModelInfo, m_nVehicleClass), (int32_t)(r.below(8) ? r.below(12) : -1));
+    // x87 extended exponent range: a square of a tiny garbage float is 0 in the port's float arithmetic but not in the exe's registers (0x6D5400 CanBeDriven) - the game's dummies are never that small
+    for (size_t i = 0; i + 4 <= sizeof g_vs; i += 4) { float f; std::memcpy(&f, g_vs + i, 4); if (std::fabs(f) < 1.0e-15f) { f = 0.f; std::memcpy(g_vs + i, &f, 4); } }
     if (r.below(2)) std::memset(g_vs, 0, 0x100);                       // all dummies at the origin (IsZero branches)
     else if (r.below(2)) std::memset(g_vs + r.below(40) * 12, 0, 12);
     { auto* bb = reinterpret_cast<float*>(g_col); for (int i = 0; i < 6; ++i) bb[i] = GF(r, 5.f); if (r.below(2)) { bb[0] = -std::fabs(bb[0]); bb[3] = std::fabs(bb[3]); bb[1] = -std::fabs(bb[1]); bb[4] = std::fabs(bb[4]); bb[2] = -std::fabs(bb[2]); bb[5] = std::fabs(bb[5]); } }
     CModelInfo::ms_modelInfoPtrs[g_model] = reinterpret_cast<CBaseModelInfo*>(g_mi);
     // counters and lists in their game ranges
-    Put32(v, offsetof(CVehicle, m_nVehicleType), (int32_t)(r.below(12) - (r.below(10) == 0 ? 1 : 0)));
+    { const int32_t vt = (int32_t)(r.below(12) - (r.below(10) == 0 ? 1 : 0)); Put32(v, offsetof(CVehicle, m_nVehicleType), vt); Put32(g_mi, offsetof(CVehicleModelInfo, m_nVehicleType), vt); }   // the game copies the model's type into the vehicle (0x6D5400 reads the model's, the port the vehicle's)
     Put32(v, offsetof(CVehicle, m_nVehicleSubType), (int32_t)r.below(12));
     Put32(v, offsetof(CVehicle, m_nDoorLock), (int32_t)r.below(10));
     v[offsetof(CVehicle, m_vehicleSpecialColIndex)] = (uint8_t)(r.below(4) ? 0xFF : r.below(4));   // -1 = the model info collision model
@@ -89,7 +95,7 @@ static bool W3FuncCase(Rng& r, std::string& d, size_t sz, std::initializer_list<
     Reg thisReg{ (uintptr_t)g_src, sz ? sz : 4 };
     if (dtor) { thisReg.mask.assign(sz ? sz : 4, 0); for (int k = 0; k < 4; ++k) thisReg.mask[k] = 1; }
     const bool ok = BothA(d, seed, { thisReg, Reg{ (uintptr_t)g_anim, sizeof g_anim }, Reg{ (uintptr_t)g_mat, sizeof g_mat }, Reg{ (uintptr_t)g_hand, sizeof g_hand }, Reg{ (uintptr_t)g_mi, sizeof g_mi }, Reg{ (uintptr_t)g_vs, sizeof g_vs },
-            Reg{ (uintptr_t)g_col, sizeof g_col }, Reg{ (uintptr_t)g_mi2, sizeof g_mi2 }, g_tp.RegStruct(), g_tp.RegFlags(), g_tp.RegStore(), g_ep.RegStruct(), g_ep.RegFlags(), g_ep.RegStore(), Reg{ kImgLo, kImgHi - kImgLo } },
+            Reg{ (uintptr_t)g_col, sizeof g_col }, Reg{ (uintptr_t)g_mi2, sizeof g_mi2 }, Reg{ (uintptr_t)g_out, sizeof g_out }, Reg{ (uintptr_t)g_frame, sizeof g_frame }, Reg{ (uintptr_t)g_cp, sizeof g_cp }, g_tp.RegStruct(), g_tp.RegFlags(), g_tp.RegStore(), g_ep.RegStruct(), g_ep.RegFlags(), g_ep.RegStore(), Reg{ kImgLo, kImgHi - kImgLo } },
         [&]() -> uint64_t { return portFn(static_cast<void*>(g_src)); }, [&]() -> uint64_t { return exeFn(static_cast<void*>(g_src)); }, kRf);
     if (!ok) { char t[96]; uint32_t hf = 0; std::memcpy(&hf, g_src + offsetof(CVehicle, m_nHandlingFlagsIntValue), 4); std::snprintf(t, sizeof t, " [model %d hflags %08X]", g_model, hf); d += t; }
     Done();
@@ -153,8 +159,11 @@ static void TestW3VehHand() {
     }, 10);
 }
 
+#include "wave3_oracle_veh_hand2.inc"
+
 static void TestW3Veh() {
     TestW3VehHand();
+    TestW3VehHand2();
 #ifdef W3_HAVE_GEN
     TestW3VehFuncs();
 #endif

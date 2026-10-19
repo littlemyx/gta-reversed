@@ -47,16 +47,17 @@ void CAETwinLoopSoundEntity::Initialise(
 ) {
     assert(!m_IsInUse);
 
-    *this = CAETwinLoopSoundEntity{
-        bank,
-        soundA,
-        soundB,
-        parent,
-        swapTimeMin,
-        swapTimeMax,
-        playPercentageA,
-        playPercentageB,
-    };
+    // 0x4F28A0: only the twin loop members are written (base class members and m_TimeToSwapSoundsMs are left alone; `*this = {...}` reset all of them)
+    m_BankSlot             = bank;
+    m_SoundIDs             = { soundA, soundB };
+    m_AudioEntity          = parent;
+    m_IsInUse              = true;
+    rng::fill(m_SoundsLengths, -1);
+    m_SwapTimeMin          = swapTimeMin;
+    m_SwapTimeMax          = swapTimeMax;
+    m_IsPlayingFirstSound  = true;
+    m_SoundPlayPercentages = { playPercentageA, playPercentageB };
+    m_Sounds               = {};
 }
 
 // 0x4F29A0

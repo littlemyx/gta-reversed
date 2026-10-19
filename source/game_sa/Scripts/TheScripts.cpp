@@ -456,16 +456,20 @@ void CTheScripts::AddToInvisibilitySwapArray(CEntity* entity, bool visible) {
 void CTheScripts::AddToListOfConnectedLodObjects(CObject* obj1, CObject* obj2) {
     const auto idx1 = GetObjectPool()->GetRef(obj1), idx2 = GetObjectPool()->GetRef(obj2);
 
-    const auto lod = rng::find_if(ScriptConnectLodsObjects, [idx1, idx2](auto& lod) {
-        return lod.a == idx1 && lod.b == idx2;
-    });
-    if (lod != ScriptConnectLodsObjects.end()) {
-        // Already exists.
+    // 0x470980: one pass; an existing pair ends it, otherwise the LAST slot with a == -1 is taken (the exe keeps overwriting its "free" index) and a full table is left alone (no out of bounds store)
+    tScriptConnectLodsObject* free = nullptr;
+    for (auto& lod : ScriptConnectLodsObjects) {
+        if (lod.a == idx1 && lod.b == idx2) {
+            // Already exists.
+            return;
+        }
+        if (lod.a == -1) {
+            free = &lod;
+        }
+    }
+    if (!free) {
         return;
     }
-
-    const auto free = rng::find_if(ScriptConnectLodsObjects, [](auto& lod) { return lod.a == -1; });
-    assert(free != ScriptConnectLodsObjects.end()); // In vanilla game does OOB access.
 
     free->a = idx1;
     free->b = idx2;

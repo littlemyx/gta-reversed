@@ -30,7 +30,7 @@ void CAEScriptAudioEntity::Reset() {
         ClearMissionAudio(i);
     }
     field_7C = 0;
-    m_Entity = nullptr;
+    m_Physical = nullptr; // 0x4EC168: `mov [edi+0x110], 0` - the physical, not m_Entity (+4)
     field_7D = 0;
     field_8C = 2.0f;
 }

@@ -886,15 +886,16 @@ void CPathFind::ComputeRoute(uint8 nodeType, const CVector& vecStart, const CVec
 
 // 0x44D960
 void CPathFind::SetLinksBridgeLights(float fXMin, float fXMax, float fYMin, float fYMax, bool value) {
-    const auto areaRect = CRect{ {fXMin, fYMin}, {fXMax, fYMax} };
     for (auto areaId = 0u; areaId < NUM_PATH_MAP_AREAS; areaId++) {
         if (!IsAreaLoaded(areaId)) {
             continue;
         }
 
-        for (auto n = 0u; n < m_anNumCarPathLinks[areaId]; n++) {
-            auto& node = GetCarPathLink({ areaId, n });
-            if (areaRect.IsPointInside(node.GetNodeCoors())) {
+        // 0x44D960: the links are walked directly (the number of car path links is not limited to the 10 bits of a CCarPathLinkAddress) and the bounds are STRICT (a NaN rejects)
+        for (auto n = 0; n < (int32)m_anNumCarPathLinks[areaId]; n++) {
+            auto& node = m_pNaviNodes[areaId][n];
+            const auto pos = node.GetNodeCoors();
+            if (fXMin < pos.x && pos.x < fXMax && fYMin < pos.y && pos.y < fYMax) {
                 node.m_bridgeLights = value;
             }
         }

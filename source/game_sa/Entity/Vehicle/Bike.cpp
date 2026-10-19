@@ -2331,6 +2331,8 @@ void CBike::DebugCode() {
 }
 
 // 0x6B6D40
+// The exe keeps `upSpeed`, the x/y components of the remaining speed, `fwdSpeed`, `fwdZ` and the x force factor in x87 registers (extended exponent range) and spills only
+// up/fwd x/y/z products, `vz` and the y/z force components to float: `double` locals mirror the registers, `float` ones the spills (only visible beyond the float range / denormals).
 void CBike::DoSoftGroundResistance(uint32& extraHandlingFlags) {
     const auto& up = GetUp();
 
@@ -2346,15 +2348,15 @@ void CBike::DoSoftGroundResistance(uint32& extraHandlingFlags) {
 
     if (IsAnyWheelOnSurface([](auto surface) { return g_surfaceInfos.GetAdhesionGroup(surface) == ADHESION_GROUP_SAND; })) {
         // Speed component along the up vector
-        const auto upSpeed = m_vecMoveSpeed.z * up.z + m_vecMoveSpeed.y * up.y + m_vecMoveSpeed.x * up.x;
+        const double upSpeed = m_vecMoveSpeed.z * up.z + m_vecMoveSpeed.y * up.y + m_vecMoveSpeed.x * up.x;
 
-        const float upX = upSpeed * up.x;
-        const float upY = upSpeed * up.y;
-        const float upZ = upSpeed * up.z;
+        const float upX = (float)(upSpeed * up.x);
+        const float upY = (float)(upSpeed * up.y);
+        const float upZ = (float)(upSpeed * up.z);
 
-        float vx = m_vecMoveSpeed.x - upX;
-        float vy = m_vecMoveSpeed.y - upY;
-        float vz = m_vecMoveSpeed.z - upZ;
+        double vx = m_vecMoveSpeed.x - upX;
+        double vy = m_vecMoveSpeed.y - upY;
+        float  vz = (float)(m_vecMoveSpeed.z - upZ);
 
         if (m_GasPedal > 0.3f) {
             if (vz * vz + vy * vy + vx * vx < 0.3f * 0.3f) {
@@ -2363,30 +2365,33 @@ void CBike::DoSoftGroundResistance(uint32& extraHandlingFlags) {
 
             // Remove the forward component
             const auto& fwd = GetForward();
-            const auto  fwdSpeed = vz * fwd.z + vy * fwd.y + vx * fwd.x;
+            const double fwdSpeed = vz * fwd.z + vy * fwd.y + vx * fwd.x;
 
-            const float fwdX = fwdSpeed * fwd.x;
-            const float fwdY = fwdSpeed * fwd.y;
-            const float fwdZ = fwdSpeed * fwd.z;
+            const float  fwdX = (float)(fwdSpeed * fwd.x);
+            const float  fwdY = (float)(fwdSpeed * fwd.y);
+            const double fwdZ = fwdSpeed * fwd.z;
 
             vx -= fwdX;
             vy -= fwdY;
-            vz -= fwdZ;
+            vz = (float)(vz - fwdZ);
         }
 
-        const auto mult = -(CTimer::GetTimeStep() * m_fMass * 0.02f);
-        ApplyMoveForce(CVector{ mult * vx, mult * vy, vz * mult });
+        const double mult  = -(CTimer::GetTimeStep() * m_fMass * 0.02f);
+        const float  multF = (float)mult; // `fst` spills it, the x product still uses the register
+        ApplyMoveForce(CVector{ (float)(mult * vx), (float)(vy * multF), vz * multF });
         return;
     }
 
     if (IsAnyWheelOnSurface([](auto surface) { return surface == SURFACE_RAILTRACK; })) {
-        const auto upSpeed = m_vecMoveSpeed.z * up.z + m_vecMoveSpeed.y * up.y + m_vecMoveSpeed.x * up.x;
-        const auto mult    = -(CTimer::GetTimeStep() * m_fMass * 0.003f);
-        ApplyMoveForce(CVector{
-            (m_vecMoveSpeed.x - upSpeed * up.x) * mult,
-            (m_vecMoveSpeed.y - upSpeed * up.y) * mult,
-            (m_vecMoveSpeed.z - upSpeed * up.z) * mult
-        });
+        const double upSpeed = m_vecMoveSpeed.z * up.z + m_vecMoveSpeed.y * up.y + m_vecMoveSpeed.x * up.x;
+        const double upX     = upSpeed * up.x; // stays in the register
+        const float  upY     = (float)(upSpeed * up.y);
+        const float  upZ     = (float)(upSpeed * up.z);
+        const double vx      = m_vecMoveSpeed.x - upX;
+        const double vy      = m_vecMoveSpeed.y - upY;
+        const float  vz      = (float)(m_vecMoveSpeed.z - upZ);
+        const float  mult    = (float)-(CTimer::GetTimeStep() * m_fMass * 0.003f);
+        ApplyMoveForce(CVector{ (float)(vx * mult), (float)(vy * mult), vz * mult });
     }
 }
 

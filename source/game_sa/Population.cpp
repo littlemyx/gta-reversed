@@ -132,7 +132,7 @@ bool CanCameraSeeAPedHere(CVector pos) {
 ePedRace CPopulation::FindPedRaceFromName(const char* modelName) {
     for (size_t i{}; i < 2; i++) {
         switch (toupper(modelName[i])) {
-        case 0:   return RACE_DEFAULT; // Not handled properly originally
+        // NUL is not handled originally: the exe keeps looking at the second character
         case 'B': return RACE_BLACK;
         case 'H': return RACE_HISPANIC;
         case 'O':

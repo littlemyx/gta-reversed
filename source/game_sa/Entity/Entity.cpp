@@ -1421,9 +1421,9 @@ void CEntity::ModifyMatrixForBannerInWind() {
     uint32 uiIndex = uiOffset / 2'048;
     auto   fWindOffset = (1.0F - fContrib) * CWeather::saBannerWindOffsets[uiIndex];
     fWindOffset += fContrib * CWeather::saBannerWindOffsets[(uiIndex + 1) & 0x1F];
-    fWindOffset *= CWeather::Wind;
+    fWindOffset *= wind; // 0x535107: the exe scales by the selected constant (0.2 / 0.43 / 0.66), not by CWeather::Wind itself
 
-    auto fZPos = sqrt(1.0F - pow(fWindOffset, 2.0F));
+    auto fZPos = sqrt(1.0F - fWindOffset * fWindOffset); // 0x535113: fld / fmul self / fsubr 1.0 / fsqrt
 
     CMatrix& matrix = GetMatrix();
     auto vecCross = matrix.GetForward().Cross(matrix.GetUp());

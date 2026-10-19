@@ -415,8 +415,6 @@ void CWanted::RegisterCrime_Immediately(eCrimeType crimeType, const CVector& pos
 
 // 0x562470
 void CWanted::SetWantedLevel(eWantedLevel level) {
-    NOTSA_LOG_DEBUG("New:{}", level); // IV
-
     if (CCheat::IsActive(CHEAT_I_DO_AS_I_PLEASE)) {
         return;
     }
@@ -452,7 +450,6 @@ void CWanted::CheatWantedLevel(eWantedLevel level) {
 
 // 0x562570
 void CWanted::SetWantedLevelNoDrop(eWantedLevel level) {
-    NOTSA_LOG_DEBUG("Wanted: SetWantedLevelNoDrop: {}", level); // IV
     assert(level <= eWantedLevel::WANTED_LEVEL_6);
     if (m_WantedLevel < m_WantedLevelBeforeParole) {
         SetWantedLevel(m_WantedLevelBeforeParole);

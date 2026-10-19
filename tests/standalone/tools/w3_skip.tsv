@@ -1,0 +1,3 @@
+CVehicle::SetVehicleAtomicVisibilityCB-Object	global RpAtomic callback, not a member (hand row)
+CHeli::Fix	calls SetupDamageAfterLoad through the vtable (the exe calls it directly): garbage vptr of the fixture faults only in the port
+CPlane::Fix	same as CHeli::Fix

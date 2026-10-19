@@ -310,7 +310,7 @@ static LONG CALLBACK DeepStackHandler(EXCEPTION_POINTERS* ep) {
 
 static int __cdecl AssertHook(int, char* msg, int*) {   // prints the call stack of a failed assert (map the addresses with the linker .map)
     void* fr[16]; const USHORT n = RtlCaptureStackBackTrace(0, 16, fr, nullptr);
-    if (oracle::g_softFault) { std::printf("    (assert in the case: %s)\n", msg); RaiseException(0xE0000001u, 0, 0, nullptr); }   // ORACLE-W2: an assert in the port / CRT ends the row like a fault
+    if (oracle::g_softFault) { std::printf("    (assert in the case: %s)\n", msg); if (std::getenv("W2_ASSERT_STACK")) { std::printf("      frames:"); for (USHORT i = 0; i < n; ++i) std::printf(" %p", fr[i]); std::printf("\n"); } RaiseException(0xE0000001u, 0, 0, nullptr); }   // ORACLE-W2: an assert in the port / CRT ends the row like a fault
     std::fprintf(stderr, "ASSERT: %s\n  frames:", msg);
     for (USHORT i = 0; i < n; ++i) std::fprintf(stderr, " %p", fr[i]);
     std::fprintf(stderr, "\n"); std::fflush(stderr);

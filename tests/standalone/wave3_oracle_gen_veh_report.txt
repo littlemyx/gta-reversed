@@ -1,0 +1,17 @@
+81 function rows, 22 TUs
+RET CAutomobile::AddMovingCollisionSpeed 0x6A1ED0 "CVector"
+NOARG CAutomobile::DoSoftGroundResistance 0x6A4AF0 param "uint32& extraHandlingFlags"
+NOARG CBike::DoSoftGroundResistance 0x6B6D40 param "uint32& extraHandlingFlags"
+DECL CBoat::GetBoatAtomicObjectCB 0x6F00D0 (0 declarations)
+SKIP CHeli::Fix 0x6C4530: calls SetupDamageAfterLoad through the vtable (the exe calls it directly): garbage vptr of the fixture faults only in the port
+SKIP CPlane::Fix 0x6CABB0: same as CHeli::Fix
+NOARG CVehicle::CanVehicleBeDamaged 0x6D1280 param "bool& bDamagedDueToFireOrExplosionOrBullet"
+SKIP CVehicle::SetVehicleAtomicVisibilityCB-Object 0x6D2690: global RpAtomic callback, not a member (hand row)
+DECL CVehicle::SetCompAlphaCB 0x6D2950 (0 declarations)
+NOARG CVehicle::MakeDirty 0x6D2BF0 param "CColPoint& colPoint"
+DECL CVehicle::FindUpgradeCB 0x6D3370 (0 declarations)
+DECL CVehicle::FindReplacementUpgradeCB 0x6D3490 (0 declarations)
+RET CVehicle::GetPlaneGunsPosition 0x6D4290 "CVector"
+RET CVehicle::GetPlaneOrdnancePosition 0x6D46E0 "CVector"
+NOARG CVehicle::DoHeadLightEffect 0x6E0A50 param "CMatrix& vehicleMatrix"
+NOARG CVehicle::DoTailLightEffect 0x6E1780 param "CMatrix& vehicleMatrix"

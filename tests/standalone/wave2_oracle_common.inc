@@ -237,7 +237,7 @@ static bool CtorCase(Rng& r, std::string& d, size_t sz, PF&& portCtor, EF&& exeC
 
 // Clone row: `src` is a garbage object whose entity-pointer members hold valid (registered or not) entities of the reference world or null; kinds: 'p' ped, 'v' vehicle, 'o' object, 'e' any entity.
 // port: src->T::Clone() (non-virtual call of the port's definition) vs the exe's Clone at `exeAddr` (thiscall, this = src). The new object lands in the fake pool at the same slot on both sides.
-alignas(16) static uint8_t g_src[0x400];
+alignas(16) static uint8_t g_src[0xC00];   // W3-VEH: vehicles are up to 0xA18 bytes
 struct EntOff { size_t off; char kind; size_t size = 4; };   // kind 'u': an enum-like member of `size` bytes, small value
 static CTask* g_subTask = nullptr;   // the sub task of a complex task under test (kind 'T'): a real CTaskSimpleStandStill from the fake task pool (the exe's CTask::operator delete indexes the pool by address)
 static void PutEnt(Rng& r, size_t off, char kind, size_t size = 4) {

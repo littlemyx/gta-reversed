@@ -1,6 +1,9 @@
 // ORACLE-W2: allocator-backed rows. Included by wave1_oracle_test.cpp when W2_ONLY is defined (executable wave2_oracle_test; the generated families live in wave2_oracle_*.inc).
 #include "wave2_oracle_common.inc"
 
+#ifdef W3_VEH_ONLY
+#include "wave3_oracle_veh.inc"      // ORACLE-W3-VEH: vehicle rows (wave3_vehicle_oracle_test)
+#else
 #if __has_include("wave2_oracle_gen_ctor.inc")
 #include "wave2_oracle_gen_ctor.inc"      // GENERATED (tools/gen_w2_rows.py): task / event constructors
 #define W2_HAVE_CTOR 1
@@ -15,6 +18,7 @@
 #define W2_HAVE_FUNC 1
 #include "wave2_oracle_edge.inc"         // hand-maintained edge-input rows (W2-OPEN)
 #endif
+#endif // !W3_VEH_ONLY
 
 static void TestW2Infra() {
     // self-test of the import redirection: the exe's CRT entry points, an exe IAT slot and the port's operator new all hand out arena memory in the same deterministic sequence
@@ -45,6 +49,14 @@ static void TestW2Infra() {
 
 static void TestW2() {
     TestW2Infra();
+#ifdef W3_VEH_ONLY
+    using namespace w2;
+    rf::Init();
+    g_tp.Init(); g_ep.Init();
+    g_onFault = &w2::OnFault;
+    TestW3Veh();
+    return;
+#endif
     using namespace w2;
     rf::Init();
     g_tp.Init(); g_ep.Init();

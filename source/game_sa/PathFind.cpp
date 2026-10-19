@@ -2214,10 +2214,11 @@ void CPathFind::SwitchOffNodeAndNeighbours(CPathNode* node, CPathNode*& outNext1
         if (!linked.HasToBeSwitchedOff()) {
             continue;
         }
-        if (linked.m_isSwitchedOff == bWhatToSwitchTo) {
+        // 0x452216: with bBackToOriginal the linked node is compared against its ORIGINAL state; 0x452238: the neighbours of the LINKED node are counted
+        if (bBackToOriginal ? (linked.m_isSwitchedOff == linked.m_isSwitchedOffOriginal) : (linked.m_isSwitchedOff == bWhatToSwitchTo)) {
             continue;
         }
-        if (CountNeighboursToBeSwitchedOff(*node) > 2) {
+        if (CountNeighboursToBeSwitchedOff(linked) > 2) {
             continue;
         }
         if (!outNext1) {

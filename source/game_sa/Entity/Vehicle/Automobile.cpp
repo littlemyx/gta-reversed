@@ -3420,15 +3420,18 @@ float CAutomobile::FindWheelWidth(bool bRear) {
     const auto& mi = *GetVehicleModelInfo();
 
     auto wheelWidth = (bRear ? mi.m_fWheelSizeRear : mi.m_fWheelSizeFront) * ExeRecip(2.8f);
-    if (m_nModelIndex == eModelID::MODEL_KART) {
-        wheelWidth *= 1.5f;
+
+    // Find first flag and apply it (0x6A60BF: the rear wheel tests the REAR flags; mapping[0] is the rear table)
+    for (auto&& [flag, mult] : mapping[bRear ? 0 : 1]) {
+        if (m_nHandlingFlagsIntValue & flag) {
+            wheelWidth *= mult;
+            break;
+        }
     }
 
-    // Find first flag and apply it, and return that as the result
-    for (auto&& [flag, mult] : mapping[bRear ? 1 : 0]) {
-        if (m_nHandlingFlagsIntValue & flag) {
-            return wheelWidth * mult;
-        }
+    // 0x6A6128: the kart factor comes after the flag factor
+    if (m_nModelIndex == eModelID::MODEL_KART) {
+        wheelWidth *= 1.5f;
     }
 
     return wheelWidth;

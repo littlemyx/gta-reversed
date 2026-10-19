@@ -28,26 +28,28 @@ bool FurnitureSubGroup_c::AddFurniture(uint16 modelId, int16 id, uint8 wealthMin
     f.m_nModelId = modelId;
     f.m_nId      = id;
 
-    // Original computes the (x87, extended precision) width/depth and rounds them up if the fraction is >= 0.02
+    // The exe computes the width / depth on the x87 stack in the game's 24-bit precision mode (float rounding after every operation), truncates with __ftol and rounds up if the fraction is not below 0.02
     const auto& bb = CModelInfo::GetModelInfo(modelId)->GetColModel()->GetBoundingBox();
-    double sizeX;
-    float  sizeY;
+    float sizeX, sizeY;
     if (m_bCanSteal) {
-        sizeX = (double)bb.m_vecMax.x - (double)bb.m_vecMin.x;
-        sizeY = (float)((double)bb.m_vecMax.y - (double)bb.m_vecMin.y);
+        sizeX = bb.m_vecMax.x - bb.m_vecMin.x;
+        sizeY = bb.m_vecMax.y - bb.m_vecMin.y;
     } else {
-        sizeX = (double)bb.m_vecMax.x + 0.5;
-        sizeY = (float)((double)bb.m_vecMax.y + 0.5);
+        sizeX = bb.m_vecMax.x + 0.5f;
+        sizeY = bb.m_vecMax.y + 0.5f;
     }
 
-    auto wx = (uint8)(int32)sizeX;
-    if (0.02f <= sizeX - (double)(int32)sizeX) {
+    // `!(frac < 0.02f)` (not `0.02f <= frac`): an unordered compare (NaN / inf) also rounds up
+    const auto intX = (int32)sizeX;
+    auto wx = (uint8)intX;
+    if (!(sizeX - (float)intX < 0.02f)) {
         wx++;
     }
     f.m_nWidthX = wx;
 
-    auto wy = (uint8)(int32)sizeY;
-    if (0.02f <= (double)sizeY - (double)(int32)sizeY) {
+    const auto intY = (int32)sizeY;
+    auto wy = (uint8)intY;
+    if (!(sizeY - (float)intY < 0.02f)) {
         wy++;
     }
     f.m_nWidthY = wy;

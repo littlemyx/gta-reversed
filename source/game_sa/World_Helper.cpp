@@ -72,10 +72,19 @@ CTrain* FindPlayerTrain(int32 playerId) {
 // Returns player coords
 // 0x56E250
 const CVector& FindPlayerCentreOfWorld(int32 playerId) {
+    if (playerId < 0) {
+        playerId = CWorld::PlayerInFocus;
+    }
+
     if (CCarCtrl::bCarsGeneratedAroundCamera)
         return TheCamera.GetPosition();
 
-    if (CVehicle* vehicle = FindPlayerVehicle(playerId, true))
+    // The remote vehicle comes first, whether or not the player is in a vehicle.
+    if (CVehicle* const remote = CWorld::Players[playerId].m_pRemoteVehicle)
+        return remote->GetPosition();
+
+    // Original quirk (0x56E2AD): the vehicle is looked up for the player IN FOCUS (FindPlayerVehicle(-1, false) inlined), only the ped fallback uses `playerId`.
+    if (CVehicle* const vehicle = FindPlayerVehicle(-1, false))
         return vehicle->GetPosition();
 
     return FindPlayerPed(playerId)->GetPosition();

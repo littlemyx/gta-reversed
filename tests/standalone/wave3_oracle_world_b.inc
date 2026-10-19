@@ -176,5 +176,29 @@ static void TestW3WorldB() {
         IC(*reinterpret_cast<int16_t*>(S(oBuf + 0x80)) = (int16_t)num; P.RemoveBadStartNode(pos, reinterpret_cast<CNodeAddress*>(S(oBuf + 0x40)), reinterpret_cast<int16_t*>(S(oBuf + 0x80))); return 0;,
            *reinterpret_cast<int16_t*>(S(oBuf + 0x80)) = (int16_t)num; PFn<void>(0x44E4F0, pos.x, pos.y, pos.z, (void*)S(oBuf + 0x40), (void*)S(oBuf + 0x80)); return 0;);
     } ENDROW;
+
+    // ---- CompleteNewInterior with exterior links (the "exterior node found" branch left by ORACLE-W3-INTERIOR: AddInteriorLinkToExternalNode + AddDynamicLinkBetween2Nodes_For1Node into real exterior nodes)
+    ROW("CPathFind::CompleteNewInterior", 0x452270, 700) {
+        Tw tw([](Rng& rr) {
+            const int n = 1 + rr.below(8);
+            CPathFind::NumNodesGiven = n; CPathFind::NewInteriorSlot = rr.below(8); CPathFind::InteriorIDBeingBuilt = rr.below(100); CPathFind::bInteriorBeingBuilt = true;
+            for (int i = 0; i < n; ++i) {
+                reinterpret_cast<float*>(0x96EE80)[i] = FlP(rr, 3000.f); reinterpret_cast<float*>(0x96ED80)[i] = FlP(rr, 3000.f); reinterpret_cast<float*>(0x96EC80)[i] = FlP(rr, 80.f);
+                reinterpret_cast<uint8_t*>(0x96EC40)[i] = (uint8_t)rr.below(2);
+                for (int j = 0; j < 6; ++j) reinterpret_cast<int8_t*>(0x96EAC0)[i * 6 + j] = rr.below(2) ? (int8_t)rr.below(n) : (int8_t)-1;
+            }
+            const int ne = rr.below(3) ? rr.below(5) : 0;
+            CPathFind::NumLinksToExteriorNodes = ne;
+            for (int k = 0; k < ne; ++k) {
+                const int a = rr.below(64), nn = rr.below(NNODE);
+                P.m_pPathNodes[a] = NodeP(a, 0);
+                reinterpret_cast<int32_t*>(0x96EA98)[k] = rr.below(n);
+                const uint32_t e = NA(a, nn); std::memcpy(reinterpret_cast<uint8_t*>(0x977B7C) + 4 * k, &e, 4);
+            }
+            for (int ar = 0; ar < 8; ++ar) if (rr.below(3) == 0) P.m_interiorIDs[ar] = rr.below(100);
+        });
+        IC(CNodeAddress o = CNodeAddress((uint16)0x1111, (uint16)0x2222); P.CompleteNewInterior(&o); uint32_t v; std::memcpy(&v, &o, 4); return (uint64_t)(o.m_wAreaId == 0xFFFF ? 0xFFFF : v);,
+           CNodeAddress o = CNodeAddress((uint16)0x1111, (uint16)0x2222); PFn<void>(0x452270, (void*)&o); uint32_t v; std::memcpy(&v, &o, 4); return (uint64_t)(o.m_wAreaId == 0xFFFF ? 0xFFFF : v););
+    } ENDROW;
 }
 #undef P

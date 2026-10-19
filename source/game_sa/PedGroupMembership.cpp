@@ -163,7 +163,7 @@ void CPedGroupMembership::Process() {
 // 0x5FB190
 void CPedGroupMembership::RemoveAllFollowers(bool bCreatedByMissionOnly) {
     for (auto&& [i, mem] : rngv::enumerate(m_members)) {
-        if (!mem || IsLeader(mem)) { // Leader isn't a follower
+        if (!mem || i == LEADER_MEM_ID) { // Leader isn't a follower (0x5FB190 compares the slot index, not the ped pointer)
             continue;
         }
         if (bCreatedByMissionOnly && mem->IsCreatedBy(PED_MISSION)) {

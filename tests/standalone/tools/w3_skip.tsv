@@ -9,3 +9,7 @@ CVehicle::RemoveLighting	CPointLights / SetAmbientColours / DeActivateDirectiona
 CVehicle::UpdateClumpAlpha	CVisibilityPlugins clump alpha lives in a RenderWare plugin extension of the clump (exe layout vs librw): not constructible
 CVehicle::SetCompAlphaCB	static in Entity.h (internal linkage): not callable from a test TU; the body is a byte store of alpha at material+7
 CTrain::GetDooorAngleOpenRatio	every case faults in both exe and port, also as a hand row with a zeroed / NaN door (CDoor::GetAngleOpenRatio 0x6F47E0 is a plain `open != 0 ? angle / open : 0`): cause not found
+CVehicle::FindUpgradeCB	CVisibilityPlugins atomic plugin data (offsets of the exe RW 3.7 plugin registry vs librw): atomic fixture not constructible for both sides; also static/undeclared
+CVehicle::FindReplacementUpgradeCB	same as FindUpgradeCB (frame/atomic plugin data)
+CVehicle::DoHeadLightEffect	NOT ATTEMPTED (budget): 962-byte corona/shadow/point-light emitter with a CMatrix& argument; needs a hand row (matrix fixture, CCoronas / CShadows / CPointLights snapshot) - see W3-VEH-OPEN-state.md
+CVehicle::DoTailLightEffect	NOT ATTEMPTED (budget): same as DoHeadLightEffect (723 bytes)

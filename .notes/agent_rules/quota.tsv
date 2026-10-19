@@ -18,3 +18,4 @@ datetime	weekly_pct	parallel_agents	rules	note
 2026-10-19T09:00	57	2	v2	55->57 in 2.7h at 2 agents (~0.75 %/h); need 0.43 -> back to 1 agent
 2026-10-19T14:40	59	1	v2	57->59 in 5.7h at 1 agent (~0.36 %/h); need 0.44 -> stay 1
 2026-10-19T17:52	61	1	v3	59->61 in 3.2h at 1 agent (~0.63 %/h; AUDIO agent 636k tokens); need 0.43 -> smaller tasks
+2026-10-19T20:52	62	1	v3	61->62 in 3h at 1 agent (~0.35 %/h)

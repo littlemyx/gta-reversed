@@ -65,3 +65,4 @@ date	agent	rules	kind	tokens	tool_uses	minutes	outcome	notes
 2026-10-19	ORACLE-W3-MODELS	v3	oracle wave (1 subsystem)	447120	169	101	Models A/B 95 -> 0 uncovered (+95 rows), 8 port fixes; cap kept (101 min); gate left partial -> orchestrator
 2026-10-19	ORACLE-W3-AUDIO	v3	oracle wave (1 subsystem)	636082	222	89	Audio Entities+root +194 covered, 16 port fixes; 4 open rows; time cap kept but tokens 3x the 200k cap
 2026-10-19	W3-AUDIO-OPEN	v3	oracle fix (small)	281970	119	79	4 open rows + 2 engine-sound rows fixed (6 port bugs incl. player engine volume/frequency 676/1500, 1880/3000)
+2026-10-19	ORACLE-W3-ENTITY	v3	oracle wave (1 subsystem)	532450	234	101	Entity A/B 48 -> 0 (+51 rows), 11 port fixes; gate cut at cap (orchestrator finishes); ran tests in the main checkout

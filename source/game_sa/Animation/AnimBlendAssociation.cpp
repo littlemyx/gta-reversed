@@ -247,8 +247,14 @@ bool CAnimBlendAssociation::UpdateBlend(float timeStep) {
 
         if (m_Flags & ANIMATION_IS_BLEND_AUTO_REMOVE) {
             if (m_nCallbackType == ANIM_BLEND_CALLBACK_DELETE || m_nCallbackType == ANIM_BLEND_CALLBACK_FINISH) { // condition simplified
+                const auto wasDelete = m_nCallbackType == ANIM_BLEND_CALLBACK_DELETE;
                 m_pCallbackFunc(this, m_pCallbackData);
-                SetFinishCallback(CDefaultAnimCallback::DefaultAnimCB, nullptr);
+                // 0x4D1512 / 0x4D1525: the callback is replaced by the default one of the SAME kind (the exe re-arms the delete callback as a delete callback)
+                if (wasDelete) {
+                    SetDeleteCallback(CDefaultAnimCallback::DefaultAnimCB, nullptr);
+                } else {
+                    SetFinishCallback(CDefaultAnimCallback::DefaultAnimCB, nullptr);
+                }
             }
             delete this;
             return false;

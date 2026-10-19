@@ -58,7 +58,17 @@ void CAEWeaponAudioEntity::Terminate() {
 // 0x503490
 void CAEWeaponAudioEntity::Reset() {
     AESoundManager.CancelSoundsOwnedByAudioEntity(this, true);
-    Clear();
+    // 0x5034A0..0x5034CF: only these members are cleared; the base class, the mini gun and the chainsaw state are left alone (`Clear()` = `*this = {}` reset them too)
+    m_IsMiniGunSpinActive           = false;
+    m_IsMiniGunFireActive           = false;
+    m_LastWeaponPlaneFrequencyIndex = 0;
+    m_LastFlameThrowerFireTimeMs    = 0;
+    m_LastSprayCanFireTimeMs        = 0;
+    m_LastFireExtFireTimeMs         = 0;
+    m_LastMiniGunFireTimeMs         = 0;
+    m_LastChainsawEventTimeMs       = 0;
+    m_LastGunFireTimeMs             = 0;
+    m_FlameThrowerIdleGasLoopSound  = nullptr;
 }
 
 // 0x504F80

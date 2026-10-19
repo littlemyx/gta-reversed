@@ -867,7 +867,7 @@ bool CEntity::LivesInThisNonOverlapSector(int32 x, int32 y) {
 void CEntity::SetupBigBuilding() {
     SetUsesCollision(false);
     m_bIsBIGBuilding = true;
-    m_bStreamingDontDelete = true;
+    m_bDontCastShadowsOn = true; // 0x533156: `or eax, 0x10100` = bits 8 (m_bIsBIGBuilding) and 16 (m_bDontCastShadowsOn); not m_bStreamingDontDelete (bit 10)
     GetModelInfo()->SetOwnsColModel(true);
 }
 

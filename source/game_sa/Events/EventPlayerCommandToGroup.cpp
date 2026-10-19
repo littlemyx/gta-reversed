@@ -34,13 +34,15 @@ CEventPlayerCommandToGroup* CEventPlayerCommandToGroup::Constructor(ePlayerGroup
 // 0x4B24D0
 bool CEventPlayerCommandToGroup::AffectsPedGroup(CPedGroup* pedGroup)
 {
+    // 0x4B24D0: a group whose leader is missing or not the player is not affected (`je 0x4B2516` -> false); the followers must all share the leader's area code
     CPed* leader = pedGroup->GetMembership().GetLeader();
-    if (leader && leader->IsPlayer()) {
-        for (int32 i = 0; i < TOTAL_PED_GROUP_FOLLOWERS; i++) {
-            CPed* member = pedGroup->GetMembership().GetMember(i);
-            if (member && member->GetAreaCode() != leader->GetAreaCode()) 
-                return false;
-        }
+    if (!leader || !leader->IsPlayer()) {
+        return false;
+    }
+    for (int32 i = 0; i < TOTAL_PED_GROUP_FOLLOWERS; i++) {
+        CPed* member = pedGroup->GetMembership().GetMember(i);
+        if (member && member->GetAreaCode() != leader->GetAreaCode())
+            return false;
     }
     return true;
 }

@@ -2269,11 +2269,12 @@ void CEntity::RemoveEscalatorsForEntity() {
 // in occlusion.cpp
 // 0x71FAE0
 bool CEntity::IsEntityOccluded() {
+    // 0x71FAE0: the bound centre is computed before the occluder count is looked at
+    const CVector center = GetBoundCentre();
+
     if (COcclusion::GetActiveOccluders().empty()) {
         return false;
     }
-
-    CVector center = GetBoundCentre();
 
     CVector centerScrPos;
     float   scaleX, scaleY;
@@ -2284,36 +2285,17 @@ bool CEntity::IsEntityOccluded() {
     const auto* mi = GetModelInfo();
     const auto& bb = mi->GetColModel()->GetBoundingBox();
 
-    const auto longEdge = std::max(scaleX, scaleY);
+    const auto longEdge = scaleX > scaleY ? scaleX : scaleY; // 0x71FB27: fcomp + `test ah, 0x41`
     const auto boundingRadius = mi->GetColModel()->GetBoundRadius();
     const auto occlusionRadius = boundingRadius * longEdge * 0.9f;
-
-    const auto GetOccluderPt = [this](CVector pt) -> std::pair<CVector, std::optional<CVector>> {
-        const auto ws = TransformFromObjectSpace(pt);
-        if (CVector scr; CalcScreenCoors(ws, scr)) {
-            return { ws, scr };
-        }
-        return { ws, std::nullopt };
-    };
 
     const CVector min = bb.m_vecMin,
                   max = bb.m_vecMax;
 
-    // The first 4 points (bounding box corners)
-    const std::array firstFourPoints = {
-        GetOccluderPt(min),                     // Point 1: min
-        GetOccluderPt(max),                     // Point 2: max
-        GetOccluderPt({ min.x, max.y, max.z }), // Point 3
-        GetOccluderPt({ max.x, min.y, min.z })  // Point 4
-    };
-    const std::array lastTwoPoints = {
-        GetOccluderPt({ min.x, min.y, max.z }), // Point 5
-        GetOccluderPt({ max.x, min.y, max.z })  // Point 6
-    };
-
-    return rng::any_of(COcclusion::GetActiveOccluders(), [&](const auto& o) -> bool {
-        if (o.GetDistToCam() >= centerScrPos.z - boundingRadius) {
-            return false;
+    for (const auto& o : COcclusion::GetActiveOccluders()) {
+        // 0x71FB96: the distance is a signed 16-bit value there (movsx), compared as `dist < z - radius` (NaN skips the occluder)
+        if (!((float)(int16)o.m_DistToCam < centerScrPos.z - boundingRadius)) {
+            continue;
         }
 
         // Checking the center with the occlusion radius
@@ -2325,46 +2307,47 @@ bool CEntity::IsEntityOccluded() {
 
         // Checking the center without radius
         if (!o.IsPointWithinOcclusionArea(centerScrPos)) {
-            return false;
+            continue;
         }
 
-        // Common lambda for point verification (screen + world, with radius=0.0f)
-        const auto checkPoint = [&](const std::optional<CVector>& scrOpt, const CVector& ws) -> bool {
-            if (!scrOpt.has_value()) {
+        // The exe transforms the corner points one after the other through the entity's matrix (GetMatrix: a placement-only entity gets a matrix allocated, even after
+        // an earlier point failed) and only tests them while no point failed yet
+        const auto OccludedPt = [&](const CVector& objPt, bool alreadyFailed) -> bool {
+            const auto ws = GetMatrix().TransformPoint(objPt);
+            if (alreadyFailed) {
                 return false;
             }
-            const auto& scr = *scrOpt;
-            return o.IsPointWithinOcclusionArea(scr) && o.IsPointBehindOccluder(ws);
+            CVector scr;
+            return CalcScreenCoors(ws, scr) && o.IsPointWithinOcclusionArea(scr) && o.IsPointBehindOccluder(ws);
         };
 
-        // Checking the first 4 points with early exit
-        bool allFirstFourPass = true;
-        for (const auto& [ws, scr] : firstFourPoints) {
-            if (!checkPoint(scr, ws)) {
-                allFirstFourPass = false;
-                break;
-            }
+        bool failed = !OccludedPt(min, false);                                    // Point 1: min
+        failed = failed || !OccludedPt(max, failed);                              // Point 2: max
+        failed = failed || !OccludedPt({ min.x, max.y, max.z }, failed);          // Point 3
+        if (failed) {
+            (void)OccludedPt({ max.x, min.y, min.z }, true);                      // Point 4 is still transformed (matrix allocation)
+            continue;
         }
-        if (!allFirstFourPass) {
-            return false;
+        if (!OccludedPt({ max.x, min.y, min.z }, false)) {
+            continue;
         }
 
-        // Checking bounding box dimensions
+        // Checking bounding box dimensions (0x71FEE4: `fcomp` + `test ah, 0x41`: NaN counts as small)
         const auto width = max.x - min.x;
         const auto length = max.y - min.y;
         const auto height = max.z - min.z;
-        if ((width <= 60.0f && length <= 60.0f) || height <= 30.0f) {
+        if ((!(width > 60.0f) && !(length > 60.0f)) || !(height > 30.0f)) {
             return true;
         }
 
         // Check the last 2 points (only for large objects)
-        for (const auto& [ws, scr] : lastTwoPoints) {
-            if (!checkPoint(scr, ws)) {
-                return false;
-            }
+        failed = !OccludedPt({ min.x, min.y, max.z }, false);                     // Point 5
+        if (!OccludedPt({ max.x, min.y, max.z }, failed)) {                       // Point 6
+            continue;
         }
         return true;
-    });
+    }
+    return false;
 }
 
 // in header

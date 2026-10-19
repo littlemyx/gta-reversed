@@ -1236,6 +1236,7 @@ if (${RE_PROJECT}_RW_LIBRW)
         game_sa/cHandlingDataMgr.cpp
         game_sa/TxdStore.cpp
         game_sa/Cheat.cpp
+        game_sa/Plugins/NodeNamePlugin/NodeName.cpp
     )
     target_compile_definitions(wave3_models_oracle_test PRIVATE W2_ONLY W3_MODELS_ONLY)
     target_compile_features(wave3_models_oracle_test PRIVATE cxx_std_23)

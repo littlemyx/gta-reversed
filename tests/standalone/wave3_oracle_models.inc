@@ -16,6 +16,8 @@
 #include "Models/VehicleModelInfo.h"
 #include "cHandlingDataMgr.h"
 #include "VisibilityPlugins.h"
+#include "TxdStore.h"
+#include "Plugins/NodeNamePlugin/NodeName.h"
 #include "Cheat.h"
 #include "World.h"
 #include "Weather.h"
@@ -286,8 +288,10 @@ static void TestW3Models() {
 }
 
 #include "wave3_oracle_models2.inc"
+#include "wave3_oracle_models3.inc"
 
 static void TestW3ModelsAll() {
     TestW3Models();
     TestW3ModelsVeh();
+    TestW3ModelsPart3();
 }

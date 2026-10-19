@@ -20,8 +20,22 @@
 #include "AnimBlendSequence.h"
 #include "AnimBlendAssociation.h"
 #include "StoredCollPoly.h"
+#include "Rect.h"
+#include "MatrixLink.h"
+#include "MatrixLinkList.h"
 #include "standalone/Fixups.h"
 #include "MemoryMgr.h"
+#ifdef W3_COLL_ONLY
+#include "CollisionData.h"
+#include "ColDisk.h"
+#include "StoredCollPoly.h"
+#include "Rect.h"
+#include "MatrixLink.h"
+#include "MatrixLinkList.h"
+#include "Entity/Vehicle/Automobile.h"
+#include "Entity/Vehicle/Bike.h"
+double ClosestSquaredDistanceBetweenFiniteLinesOG(const CVector& s1p0, const CVector& s2p0, const CVector& s2p1, const CVector& u, float a);
+#endif
 
 #include <cfloat>
 #include <cmath>
@@ -112,7 +126,11 @@ static bool SameV(const CVector& a, const CVector& b) { return SameF(a.x, b.x) &
 static bool SameQ(const CQuaternion& a, const CQuaternion& b) { return SameF(a.x, b.x) && SameF(a.y, b.y) && SameF(a.z, b.z) && SameF(a.w, b.w); }
 
 // ---------------------------------------------------------------------------------------------------------------------------------
+#ifdef W3_COLL_ONLY
+static int  g_cases = 1500;   // wave3_coll_oracle_test: ~100 rows, several with fixtures that build pools / matrices per case
+#else
 static int  g_cases = 4000;
+#endif
 static bool g_verbose = false, g_verbose53 = false, g_verboseNan = false;
 static std::vector<std::string> g_filters;
 static int g_hits = 0;
@@ -464,6 +482,11 @@ static void TestAnimNode() {
 }
 
 #include "game_oracle_collision.inc"
+#ifdef W3_COLL_ONLY
+#include "wave3_coll_oracle_a.inc"      // ORACLE-W3-COLL: class A rows of game_sa/Collision (wave3_coll_oracle_test)
+#include "wave3_coll_oracle_b.inc"      // ORACLE-W3-COLL: class A rows of game_sa/Core
+#include "wave3_coll_oracle_c.inc"      // ORACLE-W3-COLL: class B rows (exe globals)
+#endif
 
 // ---------------------------------------------------------------------------------------------------------------------------------
 
@@ -548,10 +571,16 @@ int main(int argc, char** argv) {
     oracle::Patch(0x827B3D, (void*)&HostGetPtd);
     std::printf("game_oracle_test: %d cases per function and precision mode; PC24 = game mode (D3D CreateDevice), PC53 = CRT default\n", g_cases);
     if (std::getenv("BENCH")) { TestBench(); return 0; }
+#ifdef W3_COLL_ONLY
+    TestW3CollA();
+    TestW3CollB();
+    TestW3CollC();
+#else
     TestVectorGeneral();
     TestMatrixQuat();
     TestAnimNode();
     TestCollision();
+#endif
     int bad24 = 0, bad53 = 0, hard24 = 0, hard53 = 0;
     for (auto& r : g_rows) { bad24 += r.bad24; bad53 += r.bad53; hard24 += r.hardReg24 + r.hardSpec24; hard53 += r.hardReg53 + r.hardSpec53; }
     std::printf("\n%zu functions, mismatches (strict / excluding NaN-payload-only): PC24 %d / %d, PC53 %d / %d\n", g_rows.size(), bad24, hard24, bad53, hard53);

@@ -10,12 +10,10 @@ CAnimBlendClumpData*& RpAnimBlendClumpGetData(RpClump* clump) {
 
 // 0x4D5F40
 void* ClumpAnimConstruct(void* object, RwInt32 offsetInObject, RwInt32 sizeInObject) {
-    UNUSED(offsetInObject);
     UNUSED(sizeInObject);
 
-    const auto clump = static_cast<RpClump*>(object);
-
-    RpAnimBlendClumpGetData(clump) = nullptr;
+    // 0x4D5F48: the exe clears the plugin slot at the offset RW passes in (not through the ClumpOffset global)
+    *reinterpret_cast<CAnimBlendClumpData**>(static_cast<uint8*>(object) + offsetInObject) = nullptr;
 
     return object;
 }

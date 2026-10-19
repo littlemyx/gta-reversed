@@ -328,7 +328,17 @@ bool InteriorManager_c::IsInteriorEffectVisible(C2dEffectInterior* effect, CEnti
 
 // 0x598620
 Interior_c* InteriorManager_c::GetPedsInterior(const CPed* ped) {
-    return GetVectorsInterior(ped->GetPosition());
+    // Only the interiors of the group the ped is registered in (GetPedsInteriorGroup), not of every active group
+    const auto grp = GetPedsInteriorGroup(ped);
+    if (!grp) {
+        return nullptr;
+    }
+    for (auto* const i : grp->m_interiors) {
+        if (i && i->IsPtInside(ped->GetPosition())) {
+            return i;
+        }
+    }
+    return nullptr;
 }
 
 // 0x5984B0

@@ -760,7 +760,8 @@ void CAEPedSpeechAudioEntity::LoadAndPlaySpeech(uint32 playbackTimeOffsetMS) {
 
 // 0x4E49B0
 int32 CAEPedSpeechAudioEntity::GetNumSlotsPlayingContext(eGlobalSpeechContext gCtx) {
-    return rng::count_if(s_PedSpeechSlots, [&](const CAEPedSpeechSlot& speech) {
+    // 0x4E49B8: `mov edx, 5` - the exe counts the 5 regular slots, not the player's (last) one
+    return rng::count_if(s_PedSpeechSlots | rngv::take(s_PedSpeechSlots.size() - 1), [&](const CAEPedSpeechSlot& speech) {
         return speech.Status != CAEPedSpeechSlot::eStatus::FREE && speech.GCtx == gCtx;
     });
 }

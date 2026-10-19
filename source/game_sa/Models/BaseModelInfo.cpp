@@ -217,7 +217,7 @@ void CBaseModelInfo::Add2dEffect(C2dEffect* effect) {
 // 0x5B3AD0
 void SetBaseModelInfoFlags(CBaseModelInfo* modelInfo, uint32 flags) {
     auto flagsStruct = sItemDefinitionFlags(flags);
-    modelInfo->bDrawLast          = flagsStruct.bDrawLast;
+    modelInfo->bDrawLast          = flagsStruct.bDrawLast || flagsStruct.bAdditive; // 0x5B3AD0: `test cl, 0xC` - an additive model is drawn last too
     modelInfo->bAdditiveRender    = flagsStruct.bAdditive;
     modelInfo->bDontWriteZBuffer  = flagsStruct.bNoZBufferWrite;
     modelInfo->bDontCastShadowsOn = flagsStruct.bDontReceiveShadows;

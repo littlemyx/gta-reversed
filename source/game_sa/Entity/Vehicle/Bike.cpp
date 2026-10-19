@@ -1194,8 +1194,6 @@ int32 CBike::ProcessEntityCollision(CEntity* entity, CColPoint* outColPoints) {
     if (m_pDriver && m_nTestPedCollision) {
         const auto pcd = m_pDriver->GetColData();
         if (!pcd->m_nNumLines) {
-            std::array<CColPoint, 32> pedCPs{};
-
             CMatrix driverMat = GetMatrix();
             driverMat.GetPosition() += GetDriverSeatDummyPositionWS();
 
@@ -1213,12 +1211,14 @@ int32 CBike::ProcessEntityCollision(CEntity* entity, CColPoint* outColPoints) {
                 if (m_nTestPedCollision == 1) {
                     m_nTestPedCollision = 0;
                 } else {
-                    for (auto i = 0; i < numPedEntityColPts && numColPts < 32; i++) {
-                        const auto& pedEntityCP = pedCPs[i];
+                    // 0x6BE110: the exe copies from the ProcessColModels output of the driver (static array 0xC1C280, NOT a zeroed local) and stops once 31 points
+                    // are stored (`cmp [esp+0x18], 0x1F / jge`); 0x6BE121 CALLS CColPoint::operator= 0x40FC80 (partial copy)
+                    for (auto i = 0; i < numPedEntityColPts && numColPts < 31; i++) {
+                        const auto& pedEntityCP = pedEntityColPts[i];
                         if (pedEntityCP.m_nPieceTypeA == PED_COL_SPHERE_LEG) {
                             continue;
                         }
-                        outColPoints[numColPts++] = pedEntityCP;
+                        outColPoints[numColPts++].AssignLikeExe(pedEntityCP);
                     }
                 }
             }

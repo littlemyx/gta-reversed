@@ -106,7 +106,8 @@ void CScripted2dEffects::ReturnScripted2DEffect(int32 index) {
 // notsa
 auto CScripted2dEffects::IndexOfEffect(const C2dEffectPedAttractor* effect) -> std::optional<size_t> {
     const auto fx = reinterpret_cast<const C2dEffect*>(effect);
-    if (ms_effects.data() <= fx && fx < ms_effects.data() + ms_effects.size()) {
+    // 0x6F9F60 / 0x6FA840 compare against each element's address: a pointer into the middle of an element is no effect (no -1 -> index conversion by truncation)
+    if (ms_effects.data() <= fx && fx < ms_effects.data() + ms_effects.size() && (reinterpret_cast<uintptr_t>(fx) - reinterpret_cast<uintptr_t>(ms_effects.data())) % sizeof(C2dEffect) == 0) {
         return (size_t)(fx - ms_effects.data());
     }
     return std::nullopt;

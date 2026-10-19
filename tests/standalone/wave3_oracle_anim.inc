@@ -34,6 +34,7 @@ template<class T> static T& At(size_t off) { return *reinterpret_cast<T*>(g_fx +
 struct Fx { int pick = 0, nth = 0, nAs = 0; CAnimBlendAssociation* as[kMaxAs]{}; CAnimBlendClumpData* cd = nullptr; RpClump* clump = nullptr; CAnimBlendHierarchy* hier[4]{}; size_t kfTop = kKf; };
 static Fx g_f;
 static size_t g_nameLen = 0;
+static bool g_maskImg = false;
 static float BlendVal(Rng& r) { switch (r.below(8)) { case 0: return 0.f; case 1: return 1.f; case 2: return -0.25f; case 3: return 0.5f; case 4: return 0.999f; default: return r.f01(); } }
 static float TimeVal(Rng& r) { return r.below(6) == 0 ? 0.f : r.f01() * 3.f; }
 static CQuaternion RandQuat(Rng& r) {
@@ -189,7 +190,10 @@ static bool ACase(Rng& r, std::string& d, PF&& pf, EF&& ef, void (*build)(Rng&) 
     if (vptrOff != ~size_t(0)) { fx.lenient = true; fx.skipOff = vptrOff; fx.skipN = skipN; }
     if (lenient) fx.lenient = true;
     if (maskFn) { const auto mr = maskFn(); fx.mask.assign(kFxSize, 0); for (size_t k = 0; k < mr.second; ++k) fx.mask[mr.first + k] = 1; }
-    return BothA(d, seed, { fx, Reg{ kImgLo, kImgHi - kImgLo } }, std::forward<PF>(pf), std::forward<EF>(ef));
+    Reg img{ kImgLo, kImgHi - kImgLo };
+    const bool maskImg = g_maskImg; g_maskImg = false;
+    if (maskImg) { img.mask.assign(kImgHi - kImgLo, 0); for (size_t k = 0; k < 4; ++k) img.mask[0xB5F87C - kImgLo + k] = 1; }
+    return BothA(d, seed, { fx, img }, std::forward<PF>(pf), std::forward<EF>(ef));
 }
 static inline uint64_t U(const void* p) { return (uint64_t)(uintptr_t)p; }
 } // namespace w3a
@@ -465,7 +469,10 @@ static void TestW3AnimClasses() {
     }, 300);
 }
 
+#include "wave3_oracle_anim2.inc"
+
 static void TestW3Anim() {
     TestW3AnimClump();
     TestW3AnimClasses();
+    TestW3Anim2();
 }

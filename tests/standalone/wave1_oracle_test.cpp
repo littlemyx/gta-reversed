@@ -40,6 +40,8 @@ void ReversibleHooks::RHManager::AddHookToCategory(std::string_view, HookInstall
 void* CMemoryMgr::Malloc(uint32 size, uint32) { return oracle::alloc::g_route ? oracle::alloc::Alloc(size) : std::malloc(size); }   // ORACLE-W2: the arena while a deterministic window is open
 void* CMemoryMgr::Malloc(uint32 size) { return oracle::alloc::g_route ? oracle::alloc::Alloc(size) : std::malloc(size); }
 void  CMemoryMgr::Free(void* p) { oracle::alloc::Free(p); }
+void* CMemoryMgr::MallocAlign(uint32 size, uint32 align) { void* m = Malloc(size + align); auto* r = reinterpret_cast<void*>((uint32(reinterpret_cast<uint8*>(m) + align)) & ~(align - 1)); *(reinterpret_cast<void**>(r) - 1) = m; return r; }   // ORACLE-W3-ANIM2: the exe 0x72F4C0 / 0x72F4F0 (malloc(size + align), aligned, base pointer at result[-1])
+void  CMemoryMgr::FreeAlign(void* memory) { Free(*(reinterpret_cast<void**>(memory) - 1)); }
 #ifdef W2_ONLY
 ORACLE_ALLOC_HOST_OPERATORS()   // the port's `new` / `delete` go to the deterministic arena inside an oracle::alloc::Begin()/End() window
 #endif

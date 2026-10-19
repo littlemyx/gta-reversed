@@ -1369,16 +1369,17 @@ bool Interior_c::IsPtInside(const CVector& pt, CVector bias) {
     const auto dy = pt.y - m_matrix.pos.y;
     const auto dz = pt.z - m_matrix.pos.z;
 
+    // The exe tests `limit < distance` (fcompp / test ah, 5 / jnp) and rejects only then: a NaN distance or limit counts as inside
     // Distance along the right axis
-    if (!(std::abs(m_matrix.right.x * dx + m_matrix.right.y * dy + m_matrix.right.z * dz) <= static_cast<float>(m_box->m_width) * 0.5f + bias.x)) {
+    if (static_cast<float>(m_box->m_width) * 0.5f + bias.x < std::abs(m_matrix.right.y * dy + m_matrix.right.x * dx + m_matrix.right.z * dz)) {
         return false;
     }
     // Distance along the up axis
-    if (!(std::abs(m_matrix.up.x * dx + m_matrix.up.y * dy + m_matrix.up.z * dz) <= static_cast<float>(m_box->m_depth) * 0.5f + bias.y)) {
+    if (static_cast<float>(m_box->m_depth) * 0.5f + bias.y < std::abs(m_matrix.up.y * dy + m_matrix.up.x * dx + m_matrix.up.z * dz)) {
         return false;
     }
     // Distance along the at axis
-    if (!(std::abs(m_matrix.at.x * dx + m_matrix.at.y * dy + m_matrix.at.z * dz) <= static_cast<float>(m_box->m_height) * 0.5f + bias.z)) {
+    if (static_cast<float>(m_box->m_height) * 0.5f + bias.z < std::abs(m_matrix.at.y * dy + m_matrix.at.x * dx + m_matrix.at.z * dz)) {
         return false;
     }
     return true;

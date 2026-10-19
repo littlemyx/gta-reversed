@@ -234,8 +234,14 @@ float CTheZones::Calc2DDistanceBetween2Zones(CZone* a, CZone* b) {
 void CTheZones::Init() {
     ZoneScoped;
     
-    rng::fill(NavigationZoneArray, CZone{});
-    rng::fill(MapZoneArray, CZone{});
+    // 0x572680 / 0x572753: only the first 0x17 bytes of every zone are written (the last 9 bytes are left alone); map zones get 3 at +0x16
+    for (auto& zone : NavigationZoneArray) {
+        std::memset(reinterpret_cast<void*>(&zone), 0, 0x17);
+    }
+    for (auto& zone : MapZoneArray) {
+        std::memset(reinterpret_cast<void*>(&zone), 0, 0x16);
+        reinterpret_cast<uint8*>(&zone)[0x16] = 3;
+    }
 
     InitZonesPopulationSettings();
     ResetZonesRevealed();

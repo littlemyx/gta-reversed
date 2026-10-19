@@ -302,7 +302,7 @@ bool CPlayerPed::CanPlayerStartMission() {
 
 // 0x609620
 bool CPlayerPed::IsHidden() {
-    return bInVehicle && GetLightingTotal() <= 0.05f;
+    return !bInVehicle && GetLightingTotal() <= 0.05f; // exe 0x609620: `test ah,1 ; jne -> 0`, i.e. NOT in a vehicle
 }
 
 // 0x609650

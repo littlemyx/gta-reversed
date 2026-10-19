@@ -112,20 +112,31 @@ void CAESound::Initialise(
     float           speedVariance,
     int16           playTime
 ) {
-    *this = CAESound{
-        bankSlot,
-        sfxId,
-        audioEntity,
-        pos,
-        volume,
-        rollOff,
-        speed,
-        doppler,
-        frameDelay,
-        (eSoundEnvironment)(flags),
-        speedVariance,
-    };
-    m_PlayTime = playTime;
+    // 0x4EFE50: the exe writes the fields one by one; m_IsAudioHardwareAware and the padding byte are NOT touched (`*this = CAESound{...}` reset them)
+    m_BankSlot   = bankSlot;
+    m_SoundID    = sfxId;
+    m_AudioEntity = audioEntity;
+    m_PhysicalEntity = nullptr;
+    m_Volume        = volume;
+    m_RollOffFactor = rollOff;
+    m_Speed         = speed;
+    m_SpeedVariance = speedVariance;
+    m_PrevPos       = CVector{ 0.f, 0.f, 0.f };
+    m_Event         = AE_UNDEFINED;
+    m_ClientVariable = -1.f;
+    m_LastFrameUpdatedAt = 0;
+    SetPosition(pos);
+    m_Doppler     = doppler;
+    m_FrameDelay  = frameDelay;
+    m_Flags       = flags;
+    m_IsInUse     = true;
+    m_PlayTime    = playTime;
+    m_ListenerVolume = -100.f;
+    m_ListenerSpeed  = 1.f;
+    m_Length         = -1;
+    m_IsPhysicallyPlaying = 0;
+    m_HasRequestedStopped = 0;
+    m_Headroom            = 0.f;
 }
 
 // 0x4EF1A0

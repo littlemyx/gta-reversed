@@ -161,13 +161,18 @@ void CEventGroup::RemoveInvalidEvents(bool bEverythingButScriptEvents) {
 
 // 0x4AB700
 void CEventGroup::Reorganise() {
-    const auto   old{m_events}; // Copy old event array
-    const size_t cnt{m_count};  // And count
-    m_count = 0;
-    for (size_t i = 0; i < cnt; i++) { // Make array contiguous and re-count number of events
-        if (const auto e = old[i]) {
-            m_events[m_count++] = e;
+    // 0x4AB700: the exe moves every non-null event into a local array and clears its slot, then writes them back contiguously: the slots behind the new count are null (a copy of the old array would leave stale duplicates there)
+    CEvent* moved[TOTAL_EVENTS_PER_EVENTGROUP];
+    size_t  n = 0;
+    for (size_t i = 0; i < m_count; i++) {
+        if (CEvent* const e = m_events[i]) {
+            moved[n++] = e;
+            m_events[i] = nullptr;
         }
+    }
+    m_count = n;
+    for (size_t i = 0; i < n; i++) {
+        m_events[i] = moved[i];
     }
 }
 

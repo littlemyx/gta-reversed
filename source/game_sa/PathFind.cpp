@@ -18,6 +18,7 @@ NOTSA_GLOBAL(s_pathsNeededPosn, 0x977B70, (CVector), {});
 NOTSA_GLOBAL(s_bLoadPathsNeeded, 0x96F030, (bool), {});
 
 // TODO: Remove this and use a stack array or smth..
+NOTSA_GLOBAL(NumTempExternalNodes, 0x96F02C, (int32), {}); // unused by the game, but CPathFind::Init clears it
 NOTSA_GLOBAL(ToBeStreamed, 0x96EFD0, (std::array<bool, NUM_PATH_MAP_AREAS>), {});
 
 NOTSA_GLOBAL(XCoorGiven, 0x96EE80, (std::array<float, 64>), {});
@@ -155,7 +156,7 @@ void CPathNode::InjectHooks() {
 void CPathFind::Init() {
     ZoneScoped;
 
-    static int32 NumTempExternalNodes = 0; // Unused
+    NumTempExternalNodes              = 0; // 0x44D080 stores 0 into this exe global
     m_nNumNodeSwitches                = 0;
     m_loadAreaRequestPending = false;
 

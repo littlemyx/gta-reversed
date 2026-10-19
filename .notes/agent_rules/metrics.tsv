@@ -61,3 +61,4 @@ date	agent	rules	kind	tokens	tool_uses	minutes	outcome	notes
 2026-10-19	ORACLE-W3-TASKS-2	v2	continuation	354350	173	182	+43 rows, 9 port bugs (2 Clone copy-ctor self-read, route/flee/steal/pursuit); claimed ~118 calls, actual 173 (self-count unreliable)
 2026-10-19	COLLPOINT-ASSIGN	v2	audit+fix (small)	207540	90	40	14 colpoint copy sites switched, 2 port bugs (forklift filter, bike driver colpoints); trailer row 1042/4000 -> 0
 2026-10-19	ORACLE-W3-ANIM	v2	oracle wave (1 subsystem)	365687	116	54	Anim+RpAnimBlend A/B -> 0 (+62 rows), 6 port bugs incl. AnimBlendLink begin() heap overwrite; wall-clock cap trial: finished in 54 min
+2026-10-19	ORACLE-W3-ANIM2	v2	oracle wave (S/C)	339542	124	66	+28 covered, 4 port fixes (alloc rounding, callback type, iteration order); begin() bug UNRELATED (dead code)

@@ -142,20 +142,21 @@ bool InteriorManager_c::Update() {
 // 0x598A60
 void InteriorManager_c::PruneVisibleEffects(InteriorEffectInfo_t* pIntFxInfos, size_t numInfos, size_t maxVisibleFxCount, float maxDist) {
     const std::span intFxInfos{pIntFxInfos, (size_t)numInfos};
+    const float maxDistSq = maxDist * maxDist; // The exe keeps it as a float
 
-    // Check if there's anything to cull at all (More fxs visible than allowed)
-    if ((size_t)rng::count(
-        intFxInfos,
-        0u,
-        [](const InteriorEffectInfo_t& intFxInfo) { return intFxInfo.NumFx; }
-    ) <= maxVisibleFxCount) {
+    // Check if there's anything to cull at all (more fxs visible than allowed): the exe compares the SUM of the NumFx fields (signed)
+    int32 totalFx{};
+    for (const auto& intFxInfo : intFxInfos) {
+        totalFx += (int32)intFxInfo.NumFx;
+    }
+    if (totalFx <= (int32)maxVisibleFxCount) {
         return;
     }
 
     //> 0x598AA3 - Calculate distances to camera
     for (auto& intFxInfo : intFxInfos) {
         intFxInfo.DistSq = sq(10'000.f);
-        for (size_t k = intFxInfo.NumFx; k-->0;) {
+        for (int32 k = 0; k < (int32)intFxInfo.NumFx; k++) {
             const auto fx = intFxInfo.Effects[k];
             intFxInfo.DistSq = std::min(
                 intFxInfo.DistSq,
@@ -164,20 +165,22 @@ void InteriorManager_c::PruneVisibleEffects(InteriorEffectInfo_t* pIntFxInfos, s
         }
     }
 
-    //> 0x598B6E - Sort by distance to camera
-    rng::sort(
-        intFxInfos,
-        {},
-        [](const InteriorEffectInfo_t& intFxInfo) { return intFxInfo.DistSq; }
-    );
+    //> 0x598B6E - Sort by distance to camera: the exe uses an exchange sort (swap i and j whenever j is strictly smaller), which orders ties and NaNs differently from std::sort
+    for (size_t i = 0; i + 1 < numInfos; i++) {
+        for (size_t j = i + 1; j < numInfos; j++) {
+            if (intFxInfos[j].DistSq < intFxInfos[i].DistSq) {
+                std::swap(intFxInfos[i], intFxInfos[j]);
+            }
+        }
+    }
 
     //> 0x598D4E - Cull excess effects
-    size_t n{};
+    int32 n{};
     for (auto& ifxi : intFxInfos) {
-        if (ifxi.NumFx + n > maxVisibleFxCount || ifxi.DistSq > sq(maxDist)) {
+        if ((int32)ifxi.NumFx + n > (int32)maxVisibleFxCount || !(ifxi.DistSq <= maxDistSq)) {
             ifxi.IsCulled = true;
         } else {
-            n += ifxi.NumFx;
+            n += (int32)ifxi.NumFx;
         }
     }
 }

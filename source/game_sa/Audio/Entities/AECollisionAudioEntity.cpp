@@ -163,7 +163,7 @@ eCollisionSoundStatus CAECollisionAudioEntity::GetCollisionSoundStatus(CEntity* 
             }
         }
     }
-    outIndex = -1;
+    outIndex = (int32)(m_CollisionSoundList.size()); // 0x4DA9BF: the exe's (unrolled) loop counter, 300 - not -1 - when no entry is looping
     return status;
 }
 

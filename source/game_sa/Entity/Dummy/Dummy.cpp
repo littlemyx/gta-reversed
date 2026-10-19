@@ -24,6 +24,21 @@ CDummy::CDummy() : CEntity() {
     SetTypeDummy();
 }
 
+// The exe's check reads the pool's storage base (CPool::m_Storage is private): explicit-instantiation access to it, no change to Pool.h (which every TU includes).
+namespace {
+template<class Tag, typename Tag::type M> struct DummyPoolRob { friend typename Tag::type DummyPoolRobGet(Tag) { return M; } };
+struct DummyPoolStorageTag { using type = byte (*CPool<CDummy>::*)[sizeof(CDummy)]; };
+byte (*CPool<CDummy>::* DummyPoolRobGet(DummyPoolStorageTag))[sizeof(CDummy)];
+}
+template struct DummyPoolRob<DummyPoolStorageTag, &CPool<CDummy>::m_Storage>;
+
+// 0x532730: null -> false; idx = (int)(dummy - storage) / sizeof(CDummy) (truncating); valid if 0 <= idx <= size (`jle`: one past the end counts) and the slot state is NOT looked at
 bool IsDummyPointerValid(CDummy* dummy) {
-    return GetDummyPool()->IsObjectValid(dummy);
+    if (!dummy) {
+        return false;
+    }
+    auto* const pool = GetDummyPool();
+    const auto* const storage = (pool->*DummyPoolRobGet(DummyPoolStorageTag{}));
+    const int32 idx = (int32)((int32)(uintptr_t)dummy - (int32)(uintptr_t)storage) / (int32)sizeof(CDummy);
+    return idx >= 0 && idx <= (int32)pool->GetSize();
 }

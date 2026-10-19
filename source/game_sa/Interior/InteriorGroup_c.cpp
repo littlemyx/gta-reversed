@@ -591,9 +591,9 @@ bool InteriorGroup_c::FindClosestInteriorInfo(int32 type, CVector point, float r
         for (int32 i = 0; i < interior->m_interiorInfosCount; i++) {
             auto& info = interior->m_interiorInfos[i];
             if ((type == -1 || static_cast<int32>(info.Type.get()) == type) && !info.IsInUse) {
-                const auto distSq = (point.x - info.Pos.x) * (point.x - info.Pos.x)
-                                  + (point.y - info.Pos.y) * (point.y - info.Pos.y)
-                                  + (point.z - info.Pos.z) * (point.z - info.Pos.z);
+                // The exe sums the squares as (dz^2 + dy^2) + dx^2 (float rounding after every step)
+                const float dx = point.x - info.Pos.x, dy = point.y - info.Pos.y, dz = point.z - info.Pos.z;
+                const float distSq = dz * dz + dy * dy + dx * dx;
                 if (distSq < radiusSq && distSq < bestDistSq) {
                     bestInfo     = &info;
                     bestInterior = interior;

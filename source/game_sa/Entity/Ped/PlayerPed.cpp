@@ -685,7 +685,8 @@ void CPlayerPed::CheatWantedLevel(eWantedLevel level) {
 bool CPlayerPed::CanIKReachThisTarget(CVector posn, CWeapon* weapon, bool arg2) {
     if (!weapon->GetWeaponInfo(this).flags.bAimWithArm) {
         const CVector thisPos = GetPosition();
-        return (posn - thisPos).Magnitude2D() >= thisPos.z - posn.z;
+        // exe: fcompp + `test ah,5 / jp` - false only when the 2D distance < the height difference; an unordered compare (NaN) is true
+        return !((posn - thisPos).Magnitude2D() < thisPos.z - posn.z);
     }
     return true;
 }

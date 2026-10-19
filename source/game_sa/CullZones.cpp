@@ -206,7 +206,7 @@ void CCullZones::Update() {
     }
 
     if ((CTimer::GetFrameCounter() & 7) == 6) {
-        CurrentFlags_Player = FindAttributesForCoors(FindPlayerCoors());
+        CurrentFlags_Player = (int16)FindAttributesForCoors(FindPlayerCoors()); // 0x72DF0B: sign-extended from the 16-bit flags (movsx)
         if (!bMilitaryZonesDisabled && (CurrentFlags_Player & eZoneAttributes::MILITARY_ZONE) != 0) {
             auto player = FindPlayerPed();
             if (player->IsAlive()) {

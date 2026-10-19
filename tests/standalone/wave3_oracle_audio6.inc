@@ -2,6 +2,7 @@
 namespace w3au {
 template<class R, class... A> static R ExeS(uint32_t addr, A... a) { return oracle::Fn<R __stdcall(A...)>(addr)(a...); }
 static int GCtx(Rng& r) { return (int)r.below(360); }   // 0..0x167: the exe returns 0 / false for others, the port indexes its tables (asserts) - no caller passes one
+static int GCtxWide(Rng& r) { static const int edge[] = { -1, 0, 338, 339, 358, 359, 360, 361, 32767, -32768 }; return r.below(6) == 0 ? edge[r.below(10)] : (int)r.below(383) - 2; }   // the exe takes a word
 constexpr size_t kSpeechSlots = 0xB61C38, kSpeechSlotsEnd = 0xB61CF8;   // s_PedSpeechSlots (6 x 0x1C)
 } // namespace w3au
 
@@ -50,7 +51,12 @@ static void TestW3Audio6() {
         return ACase(r, d, [&]() -> uint64_t { return Cv((int)PS::GetVoice(n, (eAudioPedType)tp)); }, [&]() -> uint64_t { return Cv((int)(int16_t)ExeC<int32_t>(0x4E3CD0, n, tp)); }, psBuild);
     }, 600);
 
-    // GetSpecificSpeechContext 4E4470 / GetRepeatTime 4E47E0: skipped (open): 1/3000 and 10/1500 cases differ - the exe finds a context by a linear search of the 16-byte table at 8C6A68, the port indexes its table by the context id
+    // wide range of global contexts (-2..380): the exe accepts 0..0x167 (a word), anything else is -1 / 0; the table at 8C6A68 has no entry for 339 (PAIN_START) and 359, an unreachable one for 360
+    Run("CAEPedSpeechAudioEntity::GetSpecificSpeechContext 0x4E4470", [&](Rng& r, std::string& d) {
+        const int c = GCtxWide(r); const int tp = r.below(4) == 0 ? 5 : (int)r.below(10) - 2;
+        return ACase(r, d, [&]() -> uint64_t { return Cv((int)(int16_t)PS::GetSpecificSpeechContext((eGlobalSpeechContext)c, (eAudioPedType)tp)); }, [&]() -> uint64_t { return Cv((int)(int16_t)ExeS<int32_t>(0x4E4470, c, tp)); }, psBuild);
+    }, 3000);
+    Run("CAEPedSpeechAudioEntity::GetRepeatTime 0x4E47E0", [&](Rng& r, std::string& d) { const int c = GCtxWide(r); return ACase(r, d, [&]() -> uint64_t { return Cv((int)(int16_t)P0()->PS::GetRepeatTime((eGlobalSpeechContext)c)); }, [&]() -> uint64_t { return Cv((int)(int16_t)ExeT<int32_t>(0x4E47E0, P(0), c)); }, psBuild); }, 1500);
 
     // ---- members (this = the fixture)
     PSR("CAEPedSpeechAudioEntity::GetPedTalking", 0x4E3F50, 200, P0()->PS::GetPedTalking() ? 1 : 0, ExeT<uint8_t>(0x4E3F50, P(0)) != 0 ? 1 : 0);
@@ -64,7 +70,7 @@ static void TestW3Audio6() {
     Run("CAEPedSpeechAudioEntity::IsGlobalContextImportantForWidescreen 0x4E46B0", [&](Rng& r, std::string& d) { const int c = GCtx(r); return ACase(r, d, [&]() -> uint64_t { return P0()->PS::IsGlobalContextImportantForWidescreen((eGlobalSpeechContext)c) ? 1 : 0; }, [&]() -> uint64_t { return ExeT<uint8_t>(0x4E46B0, P(0), c) != 0 ? 1 : 0; }, psBuild); }, 1500);
     Run("CAEPedSpeechAudioEntity::GetNextPlayTime 0x4E49E0", [&](Rng& r, std::string& d) { const int c = GCtx(r); return ACase(r, d, [&]() -> uint64_t { return Cv(P0()->PS::GetNextPlayTime((eGlobalSpeechContext)c)); }, [&]() -> uint64_t { return Cv(ExeT<uint32_t>(0x4E49E0, P(0), c)); }, psBuild); }, 1500);
     Run("CAEPedSpeechAudioEntity::GetNumSlotsPlayingContext 0x4E49B0", [&](Rng& r, std::string& d) { const int c = r.below(2) ? (int)r.below(4) : GCtx(r); return ACase(r, d, [&]() -> uint64_t { return Cv(P0()->PS::GetNumSlotsPlayingContext((eGlobalSpeechContext)c)); }, [&]() -> uint64_t { return Cv(ExeT<int32_t>(0x4E49B0, P(0), c)); }, psBuild); }, 500);
-    // CanPedSayGlobalContext 4E5730: skipped (open) - 97/3000 cases: port true, exe false (the exe indexes the per-type voice table at 8AF8A8 with sCtx * 0xD1 + voice without the port's bounds)
+    Run("CAEPedSpeechAudioEntity::CanPedSayGlobalContext 0x4E5730", [&](Rng& r, std::string& d) { const int c = GCtx(r); return ACase(r, d, [&]() -> uint64_t { return P0()->PS::CanPedSayGlobalContext((eGlobalSpeechContext)c) ? 1 : 0; }, [&]() -> uint64_t { return ExeT<uint8_t>(0x4E5730, P(0), c) != 0 ? 1 : 0; }, psBuild); }, 3000);
     Run("CAEPedSpeechAudioEntity::WillPedChatAboutTopic 0x4E5800", [&](Rng& r, std::string& d) { const int16_t t = (int16_t)((int)r.below(14) - 2); return ACase(r, d, [&]() -> uint64_t { return P0()->PS::WillPedChatAboutTopic(t) ? 1 : 0; }, [&]() -> uint64_t { return ExeT<uint8_t>(0x4E5800, P(0), (int)t) != 0 ? 1 : 0; }, psBuild); }, 1000);
     PSR("CAEPedSpeechAudioEntity::CanPedHoldConversation", 0x4E69E0, 400, P0()->PS::CanPedHoldConversation() ? 1 : 0, ExeT<uint8_t>(0x4E69E0, P(0)) != 0 ? 1 : 0);
     // ReleasePlayerConversation 4E3960: skipped - the slot reset leaves different padding bytes (the port copies an uninitialised temporary), fields are equal

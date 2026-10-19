@@ -99,7 +99,12 @@ static void TestW3Audio4() {
         auto* ped = reinterpret_cast<CPed*>((uintptr_t)(r.below(2) ? 0 : r.u32()));
         return ACase(r, d, [&]() -> uint64_t { OBJ(CAEPedAudioEntity)->CAEPedAudioEntity::Initialise(ped); return 0; }, [&]() -> uint64_t { ExeT<void>(0x4E0E80, P(0), ped); return 0; }, pedBuild);
     }, 100);
-    // CAEPedAudioEntity::UpdateJetPack 4E0EE0: skipped (open) - 6/500 cases differ in the last bit of a jet pack sound speed (the exe keeps x87 intermediates of fsin / the 0.2 and -0.07 factors; the port rounds to float earlier)
+    // CAEPedAudioEntity::UpdateJetPack 4E0EE0: the exe reads a float its CRT start-up computes (0x84C7E0: [0x8AE60C] - [0x8AE608] = 0.93f - 1.0f -> 0xB613B0, the jet pack pitch factor); seeded here as the start-up does
+    Run("CAEPedAudioEntity::UpdateJetPack 0x4E0EE0", [&](Rng& r, std::string& d) {
+        *reinterpret_cast<float*>(0xB613B0) = 0.93f - 1.0f;
+        const float fwd = r.below(4) == 0 ? (r.below(2) ? 0.5f : GenF(r, 2.f, S_NOHUGE)) : r.f01() * 1.5f, ang = GenF(r, 8.f, S_NOHUGE);
+        return ACase(r, d, [&]() -> uint64_t { OBJ(CAEPedAudioEntity)->CAEPedAudioEntity::UpdateJetPack(fwd, ang); return 0; }, [&]() -> uint64_t { ExeT<void>(0x4E0EE0, P(0), fwd, ang); return 0; }, pedBuild);
+    }, 3000);
     Run("CAEPedAudioEntity::StopJetPackSound 0x4E1120", [&](Rng& r, std::string& d) { return ACase(r, d, [&]() -> uint64_t { OBJ(CAEPedAudioEntity)->CAEPedAudioEntity::StopJetPackSound(); return 0; }, [&]() -> uint64_t { ExeT<void>(0x4E1120, P(0)); return 0; }, pedBuild); }, 200);
     Run("CAEPedAudioEntity::PlayWindRush 0x4E1170", [&](Rng& r, std::string& d) { return ACase(r, d, [&]() -> uint64_t { OBJ(CAEPedAudioEntity)->CAEPedAudioEntity::PlayWindRush(1.f, 2.f); return 0; }, [&]() -> uint64_t { ExeT<void>(0x4E1170, P(0), 1.f, 2.f); return 0; }, pedBuild); }, 20);
     Run("CAEPedAudioEntity::Terminate 0x4E1360", [&](Rng& r, std::string& d) { return ACase(r, d, [&]() -> uint64_t { OBJ(CAEPedAudioEntity)->CAEPedAudioEntity::Terminate(); return 0; }, [&]() -> uint64_t { ExeT<void>(0x4E1360, P(0)); return 0; }, pedBuild); }, 200);

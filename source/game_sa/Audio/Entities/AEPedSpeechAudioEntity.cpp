@@ -728,6 +728,10 @@ bool CAEPedSpeechAudioEntity::IsGlobalContextImportantForStreaming(eGlobalSpeech
 
 // 0x4E47E0
 int16 CAEPedSpeechAudioEntity::GetRepeatTime(eGlobalSpeechContext gCtx) const {
+    // exe 0x4E47E8: `test dx, dx; jl` / `cmp dx, 0x168; jge` - anything outside 0..0x167 is 0 (the exe table ends with a -1 terminator entry and has a 0x168 one)
+    if (gCtx < 0 || gCtx >= CTX_GLOBAL_NUM) {
+        return 0;
+    }
     if (const auto* const ctxi = GetGlobalSpeechContextInfo(gCtx)) {
         return ctxi->RepeatTime;
     }
@@ -804,13 +808,20 @@ bool CAEPedSpeechAudioEntity::CanPedSayGlobalContext(eGlobalSpeechContext gCtx) 
         return false;
     }
     const auto sCtx = GetSpecificSpeechContext(gCtx, m_PedAudioType);
-    if (sCtx == -1) {
+    if (sCtx < 0) {
         return false;
     }
-    if (const auto* const ctxi = GetSpecificSpeechContextInfo(sCtx, gCtx, m_PedAudioType, m_VoiceID)) {
-        return ctxi->IsUseable();
+    // exe 0x4E5767 (jump table at 0x4E57E8, 5 entries): the ped types GEN, EMG, PLAYER and GANG look the context up in their own table;
+    //       GFD (4) and every other type (the table's `ja`) return false. There is NO pain special case here (`GetSpecificSpeechContextInfo` switches to the
+    //       pain table for pain contexts: the exe reads [sCtx][voice] of the ped type's table, e.g. GEN [15..21] for the pain contexts, and the player table).
+    const auto voice = m_VoiceID;
+    switch (m_PedAudioType) {
+    case PED_TYPE_GEN:    return gGenSpeechLookup[sCtx][voice].IsUseable();
+    case PED_TYPE_EMG:    return gEmgSpeechLookup[sCtx][voice].IsUseable();
+    case PED_TYPE_PLAYER: return gPlySpeechLookup[sCtx][voice].IsUseable();
+    case PED_TYPE_GANG:   return gGngSpeechLookup[sCtx][voice].IsUseable();
+    default:              return false;
     }
-    return false;
 }
 
 // 0x4E58C0
@@ -1176,6 +1187,10 @@ eSpecificSpeechContext CAEPedSpeechAudioEntity::GetSpecificSpeechContext(eGlobal
     // exe 0x4E4470: ped types 0..5 are accepted (anything else is -1). `PED_TYPE_SPC` has no table: the exe reads the 6th int16 of the 16-byte entry,
     //       which is the entry's `RepeatTime` (callers then reject type SPC themselves, e.g. CanPedSayGlobalContext compares the type to 4)
     if (pedAudioType < 0 || pedAudioType > PED_TYPE_SPC) {
+        return -1;
+    }
+    // exe 0x4E4475: `test dx, dx; jl` / `cmp dx, 0x168; jge` - the global context must be 0..0x167 (the exe table also has a -1 terminator and a 0x168 entry)
+    if (gCtx < 0 || gCtx >= CTX_GLOBAL_NUM) {
         return -1;
     }
     if (const auto* const ctxi = GetGlobalSpeechContextInfo(gCtx)) {

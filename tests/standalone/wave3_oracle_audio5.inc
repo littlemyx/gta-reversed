@@ -106,8 +106,33 @@ static void TestW3Audio5() {
     Run("CAEVehicleAudioEntity::JustFinishedAccelerationLoop 0x4F5E50", [&](Rng& r, std::string& d) {
         return ACase(r, d, [&]() -> uint64_t { return VA(0)->VE::JustFinishedAccelerationLoop() ? 1 : 0; }, [&]() -> uint64_t { return ExeT<uint8_t>(0x4F5E50, P(0)) != 0 ? 1 : 0; }, &VehBuild);
     }, 600);
-    // CAEVehicleAudioEntity::GetVolForPlayerEngineSound 0x4F5D00 / GetFreqForPlayerEngineSound 0x4F8070: skipped - the exe reads precomputed factors from statics its CRT start-up
-    // fills (0xB6BA64 / 0xB6BA44 / 0xB6BA54 / 0xB6BA38 / 0xB6B9D8 ... = span / count), which the harness image holds as 0: the rows diverge on every case for a harness reason
+    // GetVolForPlayerEngineSound 0x4F5D00 / GetFreqForPlayerEngineSound 0x4F8070 read factors (a span = max - min, a count divisor ...) that the exe's CRT start-up precomputes into 0xB6BA34..0xB6BA68 with
+    // the small initialisers 0x84CED0 .. 0x84D050 (cdecl, void, no side effects other than those floats); the harness image does not run them, so a row seeds them the same way (at the CRT's PC53)
+    auto seedPlayerEngine = +[] {
+        unsigned cw = 0; _controlfp_s(&cw, 0, 0); const unsigned oldPc = cw & _MCW_PC; _controlfp_s(&cw, _PC_53, _MCW_PC);
+        for (uint32_t a : { 0x84CED0u, 0x84CEF0u, 0x84CF10u, 0x84CF20u, 0x84CF40u, 0x84CF60u, 0x84CF80u, 0x84CFA0u, 0x84CFC0u, 0x84CFE0u, 0x84CFF0u, 0x84D010u, 0x84D030u, 0x84D050u }) ExeC<void>(a);
+        _controlfp_s(&cw, oldPc, _MCW_PC);
+    };
+    static void (*seedFn)() = nullptr; seedFn = seedPlayerEngine;
+    auto playerBuild = +[](Rng& r) {
+        seedFn();
+        VehBuild(r);
+        auto* ae = reinterpret_cast<CAEVehicleAudioEntity*>(P(0));
+        if (r.below(3) == 0) ae->m_AuSettings.VehicleAudioType = eAEVehicleSoundType::AE_BIKE;
+        auto* veh = reinterpret_cast<CVehicle*>(P(kVeh));
+        auto* vp = reinterpret_cast<CAEVehicleAudioEntity::tVehicleParams*>(P(kVP));
+        *reinterpret_cast<float*>(P(kTr + 0x10)) = r.below(4) ? 0.1f + r.f01() * 1.2f : GenF(r, 2.f, S_NOHUGE);     // gear 1 change-up velocity
+        *reinterpret_cast<float*>(reinterpret_cast<uint8_t*>(veh) + 0x648) = GenF(r, 1.2f, S_NOHUGE);                // bike lean angle
+        (void)vp;
+    };
+    Run("CAEVehicleAudioEntity::GetVolForPlayerEngineSound 0x4F5D00", [&](Rng& r, std::string& d) {
+        const int st = 1 + (int)r.below(5);
+        return ACase(r, d, [&]() -> uint64_t { return FB(VA(0)->VE::GetVolForPlayerEngineSound(*VPp(), (VE::eVehicleEngineSoundType)st)); }, [&]() -> uint64_t { return FB(ExeT<float>(0x4F5D00, P(0), P(kVP), st)); }, playerBuild);
+    }, 1500);
+    Run("CAEVehicleAudioEntity::GetFreqForPlayerEngineSound 0x4F8070", [&](Rng& r, std::string& d) {
+        const int st = 1 + (int)r.below(5);
+        return ACase(r, d, [&]() -> uint64_t { return FB(VA(0)->VE::GetFreqForPlayerEngineSound(*VPp(), (VE::eVehicleEngineSoundType)st)); }, [&]() -> uint64_t { return FB(ExeT<float>(0x4F8070, P(0), P(kVP), st)); }, playerBuild);
+    }, 3000);
     Run("CAEVehicleAudioEntity::GetVehicleDriveWheelSkidValue 0x4F5F30", [&](Rng& r, std::string& d) {
         const auto ws = (tWheelState)r.below(4); const float gas = r.below(3) ? r.f01() : GenF(r, 2.f, S_ZERO | S_TINY), spd = GenF(r, 1.5f, S_ZERO | S_TINY);
         return ACase(r, d, [&]() -> uint64_t { return FB(VA(0)->VE::GetVehicleDriveWheelSkidValue(reinterpret_cast<CVehicle*>(P(kVeh)), ws, gas, *reinterpret_cast<cTransmission*>(P(kTr)), spd)); },

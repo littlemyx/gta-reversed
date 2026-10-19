@@ -54,7 +54,7 @@ CTask* CTaskComplexDrivePointRoute::CreateTaskForCurrentPoint() const {
 
 // 0x63CF90
 CTask* CTaskComplexDrivePointRoute::CreateNextSubTask(CPed* ped) {
-    if (m_currPtIdx++ == m_route->m_NumEntries) {
+    if (++m_currPtIdx == m_route->m_NumEntries) { // 0x63CFA9..0x63CFB5: inc eax / mov [esi+28h],eax / cmp eax,[route] / je: the NEW index is compared (the port compared the old one)
         return nullptr;
     }
 

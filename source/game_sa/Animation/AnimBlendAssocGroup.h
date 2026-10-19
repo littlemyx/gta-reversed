@@ -94,7 +94,7 @@ public:
 
     //! @addr 0x4D37A0
     //! @unused
-    auto IsCreated() const { return m_NumAnims != 0; }
+    auto IsCreated() const { return m_Anims != nullptr; } // 0x4D37A0 tests the association array pointer (+4), not the count
 
     //! @addr 0x45B050
     //! @unused

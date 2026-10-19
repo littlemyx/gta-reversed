@@ -1115,7 +1115,9 @@ bool CTheScripts::IsPlayerOnAMission() {
 
 // 0x4861F0
 bool CTheScripts::IsVehicleStopped(CVehicle* veh) {
-    return veh->m_fMovingSpeed <= std::min(CTimer::GetTimeStep(), CTimer::ms_fOldTimeStep) * 0.01f;
+    // 0x4861F0: `ts < old ? ts : old` (std::min(ts, old) picks ts for a NaN old step, the exe picks old; and ts for a NaN ts: the exe's compare is unordered -> old)
+    const auto ts = CTimer::GetTimeStep(), old = CTimer::ms_fOldTimeStep;
+    return veh->m_fMovingSpeed <= (ts < old ? ts : old) * 0.01f;
 }
 
 // 0x5D4FD0

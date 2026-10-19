@@ -1114,11 +1114,16 @@ void CPed::GrantAmmo(eWeaponType weaponType, uint32 ammo) {
     if (wepSlot != -1) {
         auto& wepInSlot = GetWeaponInSlot(wepSlot);
 
-        wepInSlot.m_TotalAmmo = std::min(wepInSlot.m_TotalAmmo + ammo, 99'999u); // Clamp upper
+        // exe 0x5DF249..0x5DF26F: the sum is compared SIGNED (`cmp ecx, 0x1869F ; jl`, `test ecx, ecx ; jle`), a wrapped / negative sum is kept
+        int32 total = (int32)(wepInSlot.m_TotalAmmo + ammo);
+        if (total >= 99'999) { // Clamp upper
+            total = 99'999;
+        }
+        wepInSlot.m_TotalAmmo = (uint32)total;
 
         // TODO: Inlined
         if (wepInSlot.m_State == WEAPONSTATE_OUT_OF_AMMO) {
-            if (wepInSlot.m_TotalAmmo > 0) {
+            if (total > 0) {
                 wepInSlot.m_State = WEAPONSTATE_READY;
             }
         }

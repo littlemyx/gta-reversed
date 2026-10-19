@@ -122,27 +122,24 @@ void CAEAudioEnvironment::GetReverbEnvironmentAndDepth(int8* reverbEnv, int32* d
         return;
     }
 
-    int32 nZone;
+    int32 nZone = -1;
     if (CAudioZones::m_NumActiveSpheres > 0)
         nZone = CAudioZones::m_aSpheres[CAudioZones::m_aActiveSpheres[0]].m_nAudioZone;
     else if (CAudioZones::m_NumActiveBoxes > 0)
         nZone = CAudioZones::m_aBoxes[CAudioZones::m_aActiveBoxes[0]].m_nAudioZone;
-    else if (CGame::currArea)
+
+    // 0x4D8069: an active zone WITHOUT an audio zone id (-1) falls through to the area check as well, not to the default
+    if (nZone == -1) {
+        if (!CGame::currArea) {
+            *reverbEnv = 23; // todo: EAX_ENVIRONMENT_DRUGGED
+            *depth = -100;
+            return;
+        }
         nZone = 14;
-    else {
-        *reverbEnv = 23; // todo: EAX_ENVIRONMENT_DRUGGED
-        *depth = -100;
-        return;
     }
 
-    if (nZone != -1) {
-        *reverbEnv = gAudioZoneToReverbEnvironmentMap[nZone].m_nEnvironment;
-        *depth     = gAudioZoneToReverbEnvironmentMap[nZone].m_nDepth;
-        return;
-    }
-
-    *reverbEnv = 23; // todo: EAX_ENVIRONMENT_DRUGGED
-    *depth = -100;
+    *reverbEnv = gAudioZoneToReverbEnvironmentMap[nZone].m_nEnvironment;
+    *depth     = gAudioZoneToReverbEnvironmentMap[nZone].m_nDepth;
 }
 
 // 0x4D80B0

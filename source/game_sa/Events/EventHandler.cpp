@@ -1473,7 +1473,8 @@ void CEventHandler::ComputeInWaterResponse(CEventInWater* e, CTask* tactive, CTa
 
 // 0x4BAFE0
 void CEventHandler::ComputeInteriorUseInfoResponse(CEventInteriorUseInfo* e, CTaskInteriorUseInfo* tUseInfo, CTask* tsimplest) {
-    m_EventResponseTask = tUseInfo->Clone();
+    // 0x4BAFE0: a NEW task built from the event's fields; the active task argument is never read (the port cloned it, a null dereference when the active task is not an interior use-info task)
+    m_EventResponseTask = new CTaskInteriorUseInfo{ e->m_InteriorInfo, e->m_Interior, (int32)e->m_ActionAnimTime, (bool)e->m_nLoopAction };
 }
 
 // 0x4B9FF0

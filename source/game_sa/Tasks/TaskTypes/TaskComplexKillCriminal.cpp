@@ -47,7 +47,8 @@ CTaskComplexKillCriminal::CTaskComplexKillCriminal(CPed* criminal, bool randomiz
     if (   !m_Criminal
         || m_Criminal->IsPlayer()
         || m_Criminal->IsCreatedByMission()
-        || notsa::contains({ PED_TYPE_COP, PED_TYPE_MEDIC, PED_TYPE_FIREMAN, PED_TYPE_MISSION1 }, m_Criminal->m_nPedType)
+        || notsa::contains({ PED_TYPE_COP, PED_TYPE_MEDIC, PED_TYPE_FIREMAN }, m_Criminal->m_nPedType)
+        || m_Criminal->m_nPedType >= PED_TYPE_MISSION1 // 0x68BEEA `cmp eax,0x18 / jge`: every mission ped type (MISSION1..MISSION8), not only MISSION1
     ) {
         m_Criminal = nullptr;
     }

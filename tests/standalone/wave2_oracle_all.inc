@@ -23,6 +23,8 @@
 #include "wave3_oracle_interior.inc"  // ORACLE-W3-INTERIOR: game_sa/Interior rows (wave3_interior_oracle_test)
 #elif defined(W3_CAMERA_ONLY)
 #include "wave3_oracle_camera.inc"     // ORACLE-W3-CAMERA: camera root files rows (wave3_camera_oracle_test)
+#elif defined(W3_WORLD_ONLY)
+#include "wave3_oracle_world.inc"       // ORACLE-W3-WORLD: world / physics root-file rows (wave3_world_oracle_test)
 #elif defined(W3_SCRIPTS_ONLY)
 #include "wave3_oracle_scripts.inc"     // ORACLE-W3-SCRIPTS: game_sa/Scripts rows (wave3_scripts_oracle_test)
 #else
@@ -145,6 +147,12 @@ static void TestW2() {
     using namespace w2;
     g_onFault = +[] { oracle::alloc::End(); };
     TestW3CameraAll();
+    return;
+#endif
+#ifdef W3_WORLD_ONLY
+    using namespace w2;
+    g_onFault = +[] { oracle::alloc::End(); };
+    TestW3WorldAll();
     return;
 #endif
 #ifdef W3_SCRIPTS_ONLY

@@ -518,16 +518,17 @@ void CTheScripts::AddToVehicleModelsBlockedByScript(eModelID modelIndex) {
 
 // 0x46AB60
 void CTheScripts::AddToWaitingForScriptBrainArray(CEntity* entity, int16 specialModelIndex) {
-    const auto wfsb = rng::find_if(EntitiesWaitingForScriptBrain, [entity](auto& wfsb) {
-        return wfsb.m_pEntity == entity;
-    });
-    if (wfsb != EntitiesWaitingForScriptBrain.end()) {
-        // Already exists.
-        return;
+    // 0x46AB60: one pass; an existing entry ends it, otherwise the LAST empty slot is taken (the exe keeps overwriting its "free" index)
+    tScriptBrainWaitEntity* free = nullptr;
+    for (auto& wfsb : EntitiesWaitingForScriptBrain) {
+        if (!wfsb.m_pEntity) {
+            free = &wfsb;
+        } else if (wfsb.m_pEntity == entity) {
+            // Already exists.
+            return;
+        }
     }
-
-    const auto free = rng::find_if(EntitiesWaitingForScriptBrain, [entity](auto& wfsb) { return !wfsb.m_pEntity; });
-    if (free == EntitiesWaitingForScriptBrain.end()) {
+    if (!free) {
         return;
     }
 

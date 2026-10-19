@@ -16,3 +16,4 @@ datetime	weekly_pct	parallel_agents	rules	note
 2026-10-19T01:39	54	1	v2	53->54 overnight at 1 agent (~0.3 %/h)
 2026-10-19T06:16	55	1	v2	54->55 in 4.6h at 1 agent (~0.25 %/h); need 0.44 -> go to 2 agents
 2026-10-19T09:00	57	2	v2	55->57 in 2.7h at 2 agents (~0.75 %/h); need 0.43 -> back to 1 agent
+2026-10-19T14:40	59	1	v2	57->59 in 5.7h at 1 agent (~0.36 %/h); need 0.44 -> stay 1

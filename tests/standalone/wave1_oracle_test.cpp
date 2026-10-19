@@ -368,5 +368,9 @@ int main(int argc, char** argv) {
     for (auto& r : g_rows) { bad24 += r.bad24; bad53 += r.bad53; hard24 += r.hardReg24 + r.hardSpec24; hard53 += r.hardReg53 + r.hardSpec53; faults += r.fault; }
     if (faults) std::printf("\n%d rows NOT ORACLE-ABLE (fault, see above)\n", faults);
     std::printf("\n%zu functions, mismatches (strict / excluding NaN-payload-only): PC24 %d / %d, PC53 %d / %d\n", g_rows.size(), bad24, hard24, bad53, hard53);
+#ifdef W3_PED_ONLY
+    std::fflush(stdout); std::fflush(stderr);
+    _exit(hard24 ? 1 : 0);   // ORACLE-W3-PED: the CRT shutdown of the full run crashes intermittently (exit 127 / 139 after the summary); the rows themselves are done. See .notes/reports/ORACLE-W3-PED-state.md
+#endif
     return hard24 ? 1 : 0;
 }

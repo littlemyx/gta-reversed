@@ -13,3 +13,17 @@ CVehicle::FindUpgradeCB	CVisibilityPlugins atomic plugin data (offsets of the ex
 CVehicle::FindReplacementUpgradeCB	same as FindUpgradeCB (frame/atomic plugin data)
 CVehicle::DoHeadLightEffect	NOT ATTEMPTED (budget): 962-byte corona/shadow/point-light emitter with a CMatrix& argument; needs a hand row (matrix fixture, CCoronas / CShadows / CPointLights snapshot) - see W3-VEH-OPEN-state.md
 CVehicle::DoTailLightEffect	NOT ATTEMPTED (budget): same as DoHeadLightEffect (723 bytes)
+CPed::SetupLighting	CRenderer::SetupLightingForEntity + D3D light state (not constructible)
+CPed::RemoveLighting	CPointLights / ambient colours / D3D light state (not constructible)
+CPed::StopNonPartialAnims	clump + RpAnimBlend association list (RenderWare 3.7 layout in the exe vs librw): every case faults in both
+CPed::RestartNonPartialAnims	same as StopNonPartialAnims
+CPed::operator delete-anon	pool pointer argument: needs a hand row with a pool ped (open, see ORACLE-W3-PED-state.md)
+CPed::EnablePedSpeech	thunk to CAEPedSpeechAudioEntity at this+0x294 (garbage speech state asserts in the port's audio code): needs the speech entity wired (open)
+CPed::EnablePedSpeechForScriptSpeech	same as EnablePedSpeech
+CPed::CanPedHoldConversation	same as EnablePedSpeech
+CPed::SetPedAtomicVisibilityCB	global RpAtomic callback, not a member (no declaration): RW layout of the atomic differs (exe 3.7 vs librw)
+CPlayerPed::SetWantedLevel	CWanted::SetWantedLevel on the garbage CWanted object frees / allocates (heap assert kills the whole target): needs a wired CWanted (open)
+CPlayerPed::SetWantedLevelNoDrop	same as SetWantedLevel
+CPlayerPed::CheatWantedLevel	same as SetWantedLevel
+CPlayerPed::CanIKReachThisTarget	CWeapon* argument is null in the generated row (weapon info fixture): hand row with a CWeapon (open)
+CPed::operator new-poolIndexed	hand row (valid pool slot): a random poolRef makes the pool write its flag byte at an arbitrary address (heap corruption in both implementations)

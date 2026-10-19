@@ -1042,6 +1042,28 @@ if (${RE_PROJECT}_RW_LIBRW)
     set_property(TARGET wave3_vehicle_oracle_test PROPERTY SOURCES "${STANDALONE_PAD_OBJ}" ${_w3v_sources})
     target_link_options(wave3_vehicle_oracle_test PRIVATE "$<$<CXX_COMPILER_ID:MSVC>:/BASE:0x400000;/DYNAMICBASE:NO;/FIXED;/MERGE:_TEXT=.text;/INCREMENTAL:NO;/SUBSYSTEM:CONSOLE;/FORCE:UNRESOLVED;/MAP>")
     set_target_properties(wave3_vehicle_oracle_test PROPERTIES COMPILE_WARNING_AS_ERROR OFF CXX_SCAN_FOR_MODULES OFF)
+    # ORACLE-W3-PED: exe-oracle rows of game_sa/Entity/Ped (A + B functions) on the W2 harness; rows: tests/standalone/wave3_oracle_ped.inc (+ wave3_oracle_gen_ped.inc written by tools/gen_w3_ped.py)
+    if(EXISTS "${PROJECT_SOURCE_DIR}/tests/standalone/wave3_oracle_gen_ped_sources.cmake")
+        include("${PROJECT_SOURCE_DIR}/tests/standalone/wave3_oracle_gen_ped_sources.cmake")
+    endif()
+    add_executable(wave3_ped_oracle_test EXCLUDE_FROM_ALL
+        "${PROJECT_SOURCE_DIR}/tests/standalone/wave1_oracle_test.cpp"
+        ${W2_BASE_SOURCES}
+        ${W3_PED_SOURCES}
+    )
+    target_compile_definitions(wave3_ped_oracle_test PRIVATE W2_ONLY W3_PED_ONLY)
+    target_compile_features(wave3_ped_oracle_test PRIVATE cxx_std_23)
+    target_compile_definitions(wave3_ped_oracle_test PRIVATE $<TARGET_PROPERTY:${RE_PROJECT_LIB_NAME},COMPILE_DEFINITIONS> NOTSA_ORACLE_ADDRESS_GLOBALS)
+    target_include_directories(wave3_ped_oracle_test PRIVATE $<TARGET_PROPERTY:${RE_PROJECT_LIB_NAME},INCLUDE_DIRECTORIES>)
+    target_compile_options(wave3_ped_oracle_test PRIVATE $<TARGET_PROPERTY:${RE_PROJECT_LIB_NAME},COMPILE_OPTIONS>)
+    target_precompile_headers(wave3_ped_oracle_test PRIVATE StdInc.cpp)
+    target_link_libraries(wave3_ped_oracle_test PRIVATE librw spdlog::spdlog Tracy::TracyClient user32)
+    target_sources(wave3_ped_oracle_test PRIVATE "${STANDALONE_PAD_OBJ}")
+    get_target_property(_w3p_sources wave3_ped_oracle_test SOURCES)
+    list(REMOVE_ITEM _w3p_sources "${STANDALONE_PAD_OBJ}")
+    set_property(TARGET wave3_ped_oracle_test PROPERTY SOURCES "${STANDALONE_PAD_OBJ}" ${_w3p_sources})
+    target_link_options(wave3_ped_oracle_test PRIVATE "$<$<CXX_COMPILER_ID:MSVC>:/BASE:0x400000;/DYNAMICBASE:NO;/FIXED;/MERGE:_TEXT=.text;/INCREMENTAL:NO;/SUBSYSTEM:CONSOLE;/FORCE:UNRESOLVED;/MAP>")
+    set_target_properties(wave3_ped_oracle_test PROPERTIES COMPILE_WARNING_AS_ERROR OFF CXX_SCAN_FOR_MODULES OFF)
     # x87 intrinsic fidelity oracle: inline fsin/fcos/fpatan/fptan/fsqrt/fyl2x of the exe vs the ports' math, and the CRT entry points the exe calls (pow, asin, acos, tan, floor, ceil, modf)
     add_executable(x87_oracle_test EXCLUDE_FROM_ALL
         "${PROJECT_SOURCE_DIR}/tests/standalone/x87_oracle_test.cpp"

@@ -1628,7 +1628,7 @@ void CRunningScript::ReadParametersForNewlyStartedScript(CRunningScript* newScri
             newScript->m_LocalVars[i].iParam = CTheScripts::Read2BytesFromScript(m_IP);
             break;
         case SCRIPT_PARAM_STATIC_FLOAT:
-            newScript->m_LocalVars[i].fParam = CTheScripts::ReadFloatFromScript(m_IP);
+            newScript->m_LocalVars[i].iParam = CTheScripts::Read4BytesFromScript(m_IP); // the exe copies the dword (a float round trip through st0 would quiet a signalling NaN payload)
             break;
         case SCRIPT_PARAM_GLOBAL_NUMBER_ARRAY:
             ReadArrayInformation(true, &arrVarOffset, &arrElemIdx);

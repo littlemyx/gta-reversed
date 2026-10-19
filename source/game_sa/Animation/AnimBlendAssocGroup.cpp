@@ -198,7 +198,7 @@ AnimationId CAnimBlendAssocGroup::GetAnimationId(const char* AnimName) {
 
 // 0x4CDFB0
 void CAnimBlendAssocGroup::InitEmptyAssociations(RpClump* clump) {
-    for (size_t i = m_NumAnims; i-- > 0;) {
+    for (size_t i = 0; i < (size_t)m_NumAnims; i++) { // 0x4CDFB0: ascending (the allocation order of the node arrays is observable)
         const auto anim = &GetAssociations()[i];
         if (!anim->IsValid()) {
             anim->Init(clump, anim->GetAnimHierarchy());

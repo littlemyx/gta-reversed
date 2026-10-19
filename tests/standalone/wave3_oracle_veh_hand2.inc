@@ -89,4 +89,10 @@ static void TestW3VehHand2() {
         return W3FuncCase(r, d, sizeof(CAutomobile), {}, [&](void* p) -> uint64_t { const CVector v = static_cast<CVehicle*>(p)->CVehicle::GetPlaneOrdnancePosition(type); std::memcpy(g_out + 16, &v, 12); return 0; },
             [&](void* p) -> uint64_t { oracle::Fn<void* __fastcall(void*, int, void*, int)>(0x6D46E0)(p, 0, g_out + 16, type); return 0; });
     }, 200);
+    // RenderWare callback with only plain-struct accesses (RwObject flags at +2: the same offset in librw and RW 3.7); CVehicle::SetCompAlphaCB is `static` (Entity.h) = not linkable from a test
+    Run("CBoat::GetBoatAtomicObjectCB 0x6F00D0", [&](Rng& r, std::string& d) {
+        g_post = [&](Rng& rr, uint8_t*) { std::memset(g_out, 0, 8); if (rr.below(2)) g_frame[2] |= 4; else g_frame[2] &= ~4; };
+        return W3FuncCase(r, d, sizeof(CAutomobile), {}, [&](void*) -> uint64_t { return (uint64_t)(uintptr_t)GetBoatAtomicObjectCB(reinterpret_cast<RwObject*>(g_frame), g_out) == (uint64_t)(uintptr_t)g_frame; },
+            [&](void*) -> uint64_t { return (uint64_t)(uintptr_t)oracle::Fn<void*(void*, void*)>(0x6F00D0)(g_frame, g_out) == (uint64_t)(uintptr_t)g_frame; });
+    }, 200);
 }

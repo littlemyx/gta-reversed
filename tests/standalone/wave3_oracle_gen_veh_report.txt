@@ -1,16 +1,14 @@
 73 function rows, 23 TUs
 SKIP CAutomobile::ProcessSuspension 0x6AFB10: fixture too heavy: needs wheel collision points, the world sector lists and the surface/physical collision state; every case faults in both
 SKIP CBike::SetRemoveAnimFlags 0x6B5F50: needs a ped clump with an RpAnimBlend association list (RenderWare 3.7 layout in the exe, librw in the port): not constructible
-SKIP CBmx::LaunchBunnyHopCB 0x6C0390: OPEN: 1 case in 60 (special inputs) differs by the sign of a zero in m_vecTurnSpeed.z after ApplyTurnForce; not analysed (see state file)
-DECL CBoat::GetBoatAtomicObjectCB 0x6F00D0 (0 declarations)
 SKIP CHeli::Fix 0x6C4530: calls SetupDamageAfterLoad through the vtable (the exe calls it directly): garbage vptr of the fixture faults only in the port
 SKIP CPlane::Fix 0x6CABB0: same as CHeli::Fix
 SKIP CQuadBike::ProcessSuspension 0x6CE270: calls CAutomobile::ProcessSuspension (same)
-SKIP CTrain::GetDooorAngleOpenRatio 0x6F59C0: every case faults in both (CDoor inline reads through the garbage vehicle layout)
+SKIP CTrain::GetDooorAngleOpenRatio 0x6F59C0: every case faults in both exe and port, also as a hand row with a zeroed / NaN door (CDoor::GetAngleOpenRatio 0x6F47E0 is a plain `open != 0 ? angle / open : 0`): cause not found
 SKIP CVehicle::RemoveLighting 0x5533D0: CPointLights / SetAmbientColours / DeActivateDirectional: renderer + D3D light state
 SKIP CVehicle::SetupLighting 0x553F20: CRenderer::SetupLightingForEntity / ActivateDirectional: renderer + D3D light state
 SKIP CVehicle::SetVehicleAtomicVisibilityCB-Object 0x6D2690: global RpAtomic callback, not a member (hand row)
-DECL CVehicle::SetCompAlphaCB 0x6D2950 (0 declarations)
+SKIP CVehicle::SetCompAlphaCB 0x6D2950: static in Entity.h (internal linkage): not callable from a test TU; the body is a byte store of alpha at material+7
 SKIP CVehicle::UpdateClumpAlpha 0x6D2980: CVisibilityPlugins clump alpha lives in a RenderWare plugin extension of the clump (exe layout vs librw): not constructible
 DECL CVehicle::FindUpgradeCB 0x6D3370 (0 declarations)
 DECL CVehicle::FindReplacementUpgradeCB 0x6D3490 (0 declarations)

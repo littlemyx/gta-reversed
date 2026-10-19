@@ -1172,9 +1172,15 @@ tPedSpeechSlotID CAEPedSpeechAudioEntity::GetFreeSpeechSlot() {
 // 0x4E4470
 eSpecificSpeechContext CAEPedSpeechAudioEntity::GetSpecificSpeechContext(eGlobalSpeechContext gCtx, eAudioPedType pedAudioType) {
     // Omitted useless `if`s
-    // NOTE: Original code allowed `PED_TYPE_SPC` as a valid ped type too... but that (technically) caused an out-of-bounds read...
-    //       We won't assert on that, because there are bounds check for the array (as we use std::array)
+    // exe 0x4E4470: ped types 0..5 are accepted (anything else is -1). `PED_TYPE_SPC` has no table: the exe reads the 6th int16 of the 16-byte entry,
+    //       which is the entry's `RepeatTime` (callers then reject type SPC themselves, e.g. CanPedSayGlobalContext compares the type to 4)
+    if (pedAudioType < 0 || pedAudioType > PED_TYPE_SPC) {
+        return -1;
+    }
     if (const auto* const ctxi = GetGlobalSpeechContextInfo(gCtx)) {
+        if (pedAudioType == PED_TYPE_SPC) {
+            return ctxi->RepeatTime;
+        }
         return ctxi->SpecificSpeechContext[pedAudioType];
     }
     return -1;

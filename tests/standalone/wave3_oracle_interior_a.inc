@@ -21,6 +21,23 @@ static std::string PickName(Rng& r, const char* const* tab, size_t n) {
     return s;
 }
 
+static int g_sid, g_fid, g_wl;   // a sub-group id / furniture id / wealth that exists in group g (or random)
+static void PickSub(Rng& rr, int g, int sidR, int idR, int wlR) {
+    using namespace w3i;
+    g_sid = sidR; g_fid = idR; g_wl = wlR;
+    if (rr.below(10) >= 7) return;
+    std::vector<uint8_t*> sgs;
+    for (uint32_t p = At<uint32_t>(FMA + (size_t)g * 0xC); p; p = At<uint32_t>(p + 4)) sgs.push_back(reinterpret_cast<uint8_t*>(p));
+    if (sgs.empty()) return;
+    uint8_t* sg = sgs[(size_t)rr.below((int)sgs.size())];
+    g_sid = At<int32_t>((uintptr_t)sg + 8);
+    std::vector<uint8_t*> fs;
+    for (uint32_t p = At<uint32_t>((uintptr_t)sg + 0xC); p; p = At<uint32_t>(p + 4)) fs.push_back(reinterpret_cast<uint8_t*>(p));
+    if (fs.empty()) return;
+    uint8_t* f = fs[(size_t)rr.below((int)fs.size())];
+    if (rr.below(2)) g_fid = At<int16_t>((uintptr_t)f + 0xA);
+    if (rr.below(3)) g_wl = f[0xE] + (f[0xF] >= f[0xE] ? rr.below(f[0xF] - f[0xE] + 1) : 0);
+}
 static void TestW3InteriorA() {
     using namespace w2; using namespace w3i;
     ROW("FurnitureGroup_c::Init", 0x5910A0, 20) { const int g = r.below(9); IC(return (uint64_t)(uint32_t)FG(g)->Init();, return (uint64_t)ExeT<uint32_t>(0x5910A0, FG(g));); } ENDROW;
@@ -30,19 +47,19 @@ static void TestW3InteriorA() {
         IC(return B8(FG(g)->AddSubGroup(sid, a, b, c, dd, (uint8)cp, tall != 0, steal != 0));, return (uint64_t)ExeT<uint8_t>(0x5910E0, FG(g), sid, a, b, c, dd, cp, tall, steal););
     } ENDROW;
     ROW("FurnitureGroup_c::GetFurniture", 0x591130, 500) {
-        const int g = r.below(9), sid = r.below(4) == 0 ? (int)r.below(20) : r.below(15), id = r.below(3) == 0 ? -1 - r.below(2) : r.below(45), wl = r.below(5) == 0 ? (int)r.below(256) : (int)r.below(120);
-        IC(return U(FG(g)->GetFurniture(sid, (int16)id, (uint8)wl));, return (uint64_t)ExeT<uint32_t>(0x591130, FG(g), sid, id, wl););
+        const int g = r.below(9), sid0 = r.below(4) == 0 ? (int)r.below(20) : r.below(15), id0 = r.below(3) == 0 ? -1 - r.below(2) : r.below(45), wl0 = r.below(5) == 0 ? (int)r.below(256) : (int)r.below(120);
+        Tw tw([=](Rng& rr) { PickSub(rr, g, sid0, id0, wl0); });
+        IC(return U(FG(g)->GetFurniture(g_sid, (int16)g_fid, (uint8)g_wl));, return (uint64_t)ExeT<uint32_t>(0x591130, FG(g), g_sid, g_fid, g_wl););
     } ENDROW;
     ROW("FurnitureGroup_c::GetRandomId", 0x591170, 500) {
-        const int g = r.below(9), sid = r.below(4) == 0 ? (int)r.below(20) : r.below(15), wl = r.below(5) == 0 ? (int)r.below(256) : (int)r.below(120);
-        IC(return (uint64_t)(uint32_t)FG(g)->GetRandomId(sid, (uint8)wl);, return (uint64_t)ExeT<uint32_t>(0x591170, FG(g), sid, wl););
+        const int g = r.below(9), sid0 = r.below(4) == 0 ? (int)r.below(20) : r.below(15), wl0 = r.below(5) == 0 ? (int)r.below(256) : (int)r.below(120);
+        Tw tw([=](Rng& rr) { PickSub(rr, g, sid0, 0, wl0); });
+        IC(return (uint64_t)(uint32_t)FG(g)->GetRandomId(g_sid, (uint8)g_wl);, return (uint64_t)ExeT<uint32_t>(0x591170, FG(g), g_sid, g_wl););
     } ENDROW;
     ROW("FurnitureGroup_c::AddFurniture", 0x5C0230, 500) {
-        const int g = r.below(9), sid = r.below(4) == 0 ? (int)r.below(20) : r.below(15), mid = g_wired[0] ^ 0, id = r.below(5) == 0 ? -1 : r.below(300), wmin = r.below(256), wmax = r.below(256), ang = r.below(256);
-        (void)mid;
-        int k = r.below(4);
-        Tw tw([](Rng& rr) { (void)rr; });
-        IC(return B8(FG(g)->AddFurniture(sid, (uint16)g_wired[k], (int16)id, (uint8)wmin, (uint8)wmax, (uint8)ang));, return (uint64_t)ExeT<uint8_t>(0x5C0230, FG(g), sid, (int)g_wired[k], id, wmin, wmax, ang););
+        const int g = r.below(9), sid0 = r.below(4) == 0 ? (int)r.below(20) : r.below(15), id = r.below(5) == 0 ? -1 : r.below(300), wmin = r.below(256), wmax = r.below(256), ang = r.below(256), k = r.below(4);
+        Tw tw([=](Rng& rr) { PickSub(rr, g, sid0, 0, 0); });
+        IC(return B8(FG(g)->AddFurniture(g_sid, (uint16)g_wired[k], (int16)id, (uint8)wmin, (uint8)wmax, (uint8)ang));, return (uint64_t)ExeT<uint8_t>(0x5C0230, FG(g), g_sid, (int)g_wired[k], id, wmin, wmax, ang););
     } ENDROW;
     ROW("FurnitureSubGroup_c::AddFurniture", 0x5C00C0, 800) {
         const int k = r.below(4), id = r.below(5) == 0 ? -1 : r.below(300), wmin = r.below(256), wmax = r.below(256), ang = r.below(256);
@@ -51,12 +68,14 @@ static void TestW3InteriorA() {
     } ENDROW;
     ROW("FurnitureManager_c::Exit", 0x5911A0, 200) { IC(FM()->Exit(); return 0;, ExeT<void>(0x5911A0, FM()); return 0;); } ENDROW;
     ROW("FurnitureManager_c::GetFurniture", 0x5911E0, 500) {
-        const int g = r.below(9), sid = r.below(4) == 0 ? (int)r.below(20) : r.below(15), id = r.below(3) == 0 ? -1 : r.below(45), wl = r.below(5) == 0 ? (int)r.below(256) : (int)r.below(120);
-        IC(return U(FM()->GetFurniture(g, sid, (int16)id, (uint8)wl));, return (uint64_t)ExeT<uint32_t>(0x5911E0, FM(), g, sid, id, wl););
+        const int g = r.below(9), sid0 = r.below(4) == 0 ? (int)r.below(20) : r.below(15), id0 = r.below(3) == 0 ? -1 : r.below(45), wl0 = r.below(5) == 0 ? (int)r.below(256) : (int)r.below(120);
+        Tw tw([=](Rng& rr) { PickSub(rr, g, sid0, id0, wl0); });
+        IC(return U(FM()->GetFurniture(g, g_sid, (int16)g_fid, (uint8)g_wl));, return (uint64_t)ExeT<uint32_t>(0x5911E0, FM(), g, g_sid, g_fid, g_wl););
     } ENDROW;
     ROW("FurnitureManager_c::GetRandomId", 0x591220, 500) {
-        const int g = r.below(9), sid = r.below(4) == 0 ? (int)r.below(20) : r.below(15), wl = r.below(5) == 0 ? (int)r.below(256) : (int)r.below(120);
-        IC(return (uint64_t)(uint32_t)FM()->GetRandomId(g, sid, (uint8)wl);, return (uint64_t)ExeT<uint32_t>(0x591220, FM(), g, sid, wl););
+        const int g = r.below(9), sid0 = r.below(4) == 0 ? (int)r.below(20) : r.below(15), wl0 = r.below(5) == 0 ? (int)r.below(256) : (int)r.below(120);
+        Tw tw([=](Rng& rr) { PickSub(rr, g, sid0, 0, wl0); });
+        IC(return (uint64_t)(uint32_t)FM()->GetRandomId(g, g_sid, (uint8)g_wl);, return (uint64_t)ExeT<uint32_t>(0x591220, FM(), g, g_sid, g_wl););
     } ENDROW;
     ROW("FurnitureManager_c::GetGroupId", 0x5BFB40, 600) {
         FurnitureManager_c::GetGroupId(""); FurnitureManager_c::GetSubGroupId("");   // builds the port's function-local lookup tables on the normal heap (not in the per-case arena window)

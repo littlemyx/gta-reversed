@@ -31,6 +31,46 @@ static void ZeroPool(Rng& rr) {   // an interior that is in no list
     g_retInt = cand[(size_t)rr.below((int)cand.size())];
 }
 
+static void SetupPathsFixture(Rng& rr, int g) {   // a group of 1-3 interiors with goto points / exits over a path map whose 64 map areas are loaded but hold no nodes (+ optional exterior nodes)
+    using namespace w3i;
+    uint8_t* gp = reinterpret_cast<uint8_t*>(Grp(g));
+    At<uint32_t>((uintptr_t)gp + 8) = P32(Ent(rr.below(8)));
+    gp[0xC] = (uint8_t)rr.below(8); gp[0xE] = (uint8_t)(rr.below(8) == 0 ? rr.below(256) : rr.below(3));
+    const int n = 1 + rr.below(3);
+    gp[0xF] = (uint8_t)n;
+    int order[8]; for (int i = 0; i < 8; ++i) order[i] = i;
+    for (int i = 7; i > 0; --i) std::swap(order[i], order[rr.below(i + 1)]);
+    for (int k = 0; k < 8; ++k) At<uint32_t>((uintptr_t)gp + 0x10 + 4 * (size_t)k) = k < n ? P32(Int(order[k])) : 0;
+    for (int k = 0; k < n; ++k) {
+        const int ii = order[k];
+        uint8_t* p = reinterpret_cast<uint8_t*>(Int(ii));
+        const int cnt = rr.below(8) == 0 ? 0 : rr.below(7);
+        p[0x40C] = (uint8_t)cnt;
+        for (int j = 0; j < 16; ++j) {
+            uint8_t* gpt = p + 0x410 + (size_t)j * 0x10;
+            gpt[0] = (uint8_t)rr.below(30); gpt[1] = (uint8_t)rr.below(30);
+            const CVector pos = InteriorLocal(rr, ii, 0.f); std::memcpy(gpt + 4, &pos, 12);
+        }
+        for (int e = 0; e < 4; ++e) {
+            uint8_t* ex = p + 0x510 + (size_t)e * 0x20;
+            ex[0] = (uint8_t)rr.below(256); ex[1] = (uint8_t)rr.below(256);
+            for (int j = 0; j < 2; ++j) ex[2 + j] = (uint8_t)(cnt == 0 || rr.below(3) == 0 ? -1 : rr.below(cnt));
+            const CVector in = InteriorLocal(rr, ii, 0.f), out = rr.below(4) ? InteriorLocal(rr, ii, 3.f) : CVector(FlP(rr, 3000.f), FlP(rr, 3000.f), FlP(rr, 100.f));
+            std::memcpy(ex + 4, &in, 12); std::memcpy(ex + 0x14, &out, 12);
+        }
+        if (rr.below(3) == 0) {   // exits whose outside points coincide (the "link the unlinked exits" pass)
+            const CVector c = InteriorLocal(rr, ii, 3.f);
+            for (int e = 0; e < 4; ++e) if (rr.below(2)) std::memcpy(p + 0x510 + (size_t)e * 0x20 + 0x14, &c, 12);
+        }
+    }
+    for (int a = 0; a < 72; ++a) {
+        ThePaths.m_pPathNodes[a] = a < 64 ? reinterpret_cast<CPathNode*>(S(oOut + 0x80)) : nullptr;
+        ThePaths.m_anNumNodes[a] = ThePaths.m_anNumVehicleNodes[a] = ThePaths.m_anNumPedNodes[a] = 0;
+    }
+    for (int k = 0; k < 8; ++k) ThePaths.m_interiorIDs[k] = rr.below(3) == 0 ? 0x100u + (uint32_t)k : 0xFFFFFFFFu;
+    ThePaths.m_interiorIDs[rr.below(8)] = 0xFFFFFFFFu;
+}
+
 static void TestW3InteriorB() {
     using namespace w2; using namespace w3i;
     // ---- InteriorGroup_c
@@ -76,6 +116,11 @@ static void TestW3InteriorB() {
             for (int k = 0; k < (int)std::size(ThePaths.m_pPathNodes); ++k) ThePaths.m_pPathNodes[k] = rr.below(100) < prob[pl] ? reinterpret_cast<CPathNode*>(0x1000 + 16 * k) : nullptr;
         });
         IC(return B8(Grp(g)->ArePathsLoaded());, return (uint64_t)ExeT<uint8_t>(0x595380, Grp(g)););
+    } ENDROW;
+    ROW("InteriorGroup_c::SetupPaths", 0x595590, 1000) {
+        const int g = r.below(8);
+        Tw tw([g](Rng& rr) { SetupPathsFixture(rr, g); });
+        IC(Grp(g)->SetupPaths(); return (uint64_t)(uint8_t)Grp(g)->m_pathSetupComplete;, ExeT<void>(0x595590, Grp(g)); return (uint64_t)(uint8_t)Grp(g)->m_pathSetupComplete;);
     } ENDROW;
     ROW("InteriorGroup_c::CalcIsVisible", 0x595200, 800) {
         const int g = r.below(8);

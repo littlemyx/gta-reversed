@@ -1869,6 +1869,21 @@ bool CPhysical::ApplyFriction(float fFriction, CColPoint& colPoint)
 }
 
 // 0x545980
+// 0x545980 helpers: the exe's x87 runs at 24-bit precision control with the extended exponent range: every product / sum is rounded to a float MANTISSA, but squares of tiny speeds do not underflow
+// and squares of huge ones do not overflow like a float would. R24 rounds a double to 24 mantissa bits (exponent untouched), ExeMagnitude3 is sqrt((a*a + b*b) + c*c) with every step rounded so.
+static double ExeRound24(double v) {
+    if (v == 0.0 || !std::isfinite(v)) {
+        return v;
+    }
+    int e;
+    const double m = std::frexp(v, &e);
+    return std::ldexp(std::nearbyint(std::ldexp(m, 24)), e - 24);
+}
+static float ExeMagnitude3(float a, float b, float c) {
+    const double s1 = ExeRound24(ExeRound24((double)a * a) + ExeRound24((double)b * b));
+    return (float)ExeRound24(std::sqrt(ExeRound24(s1 + ExeRound24((double)c * c))));
+}
+// 0x545980: the exe inlines the speed magnitudes as sqrt((a + b) + c) in float, with a per-branch term order (x,z,y in the first, third and fourth branch; z,y,x in the second), and multiplies by a reciprocal in every branch
 bool CPhysical::ApplyFriction(CPhysical* entity, float fFriction, CColPoint& colPoint)
 {
     if (physicalFlags.bDisableTurnForce && entity->physicalFlags.bDisableTurnForce)
@@ -1879,13 +1894,13 @@ bool CPhysical::ApplyFriction(CPhysical* entity, float fFriction, CColPoint& col
         CVector vecThisSpeedDifference = m_vecMoveSpeed - (fThisSpeedDotProduct * colPoint.m_vecNormal);
         CVector vecEntitySpeedDifference = entity->m_vecMoveSpeed - (fEntitySpeedDotProduct * colPoint.m_vecNormal);
 
-        float fThisSpeedMagnitude = vecThisSpeedDifference.Magnitude();
-        float fEntitySpeedMagnitude = vecEntitySpeedDifference.Magnitude();
+        float fThisSpeedMagnitude = ExeMagnitude3(vecThisSpeedDifference.x, vecThisSpeedDifference.z, vecThisSpeedDifference.y);
+        float fEntitySpeedMagnitude = ExeMagnitude3(vecEntitySpeedDifference.x, vecEntitySpeedDifference.z, vecEntitySpeedDifference.y);
 
         float fEntityMass = entity->m_fMass;
         float fThisMass = m_fMass;
 
-        CVector vecMoveDirection = vecThisSpeedDifference / fThisSpeedMagnitude;
+        CVector vecMoveDirection = vecThisSpeedDifference * (1.0f / fThisSpeedMagnitude);
         float fSpeed = (fEntityMass * fEntitySpeedMagnitude + fThisMass * fThisSpeedMagnitude) / (fEntityMass + fThisMass);
         if (fThisSpeedMagnitude > fSpeed) {
             float fThisSpeed = fThisMass * (fSpeed - fThisSpeedMagnitude);
@@ -1925,8 +1940,8 @@ bool CPhysical::ApplyFriction(CPhysical* entity, float fFriction, CColPoint& col
         CVector vecThisSpeedDifference = m_vecMoveSpeed - (fThisSpeedDotProduct * colPoint.m_vecNormal);
         CVector vecEntitySpeedDifference = vecEntitySpeed - (fEntitySpeedDotProduct * colPoint.m_vecNormal);
 
-        float fThisSpeedMagnitude = vecThisSpeedDifference.Magnitude();
-        float fEntitySpeedMagnitude = vecEntitySpeedDifference.Magnitude();
+        float fThisSpeedMagnitude = ExeMagnitude3(vecThisSpeedDifference.z, vecThisSpeedDifference.y, vecThisSpeedDifference.x);
+        float fEntitySpeedMagnitude = ExeMagnitude3(vecEntitySpeedDifference.z, vecEntitySpeedDifference.y, vecEntitySpeedDifference.x);
 
         CVector vecMoveDirection = vecThisSpeedDifference * (1.0f / fThisSpeedMagnitude);
         CVector vecEntityCentreOfMassMultiplied = entity->GetMatrix().TransformVector(entity->m_vecCentreOfMass);
@@ -1980,8 +1995,8 @@ bool CPhysical::ApplyFriction(CPhysical* entity, float fFriction, CColPoint& col
         CVector vecThisSpeedDifference = vecThisSpeed - (fThisSpeedDotProduct * colPoint.m_vecNormal);
         CVector vecEntitySpeedDifference = vecEntitySpeed - (fEntitySpeedDotProduct * colPoint.m_vecNormal);
 
-        float fThisSpeedMagnitude = vecThisSpeedDifference.Magnitude();
-        float fEntitySpeedMagnitude = vecEntitySpeedDifference.Magnitude();
+        float fThisSpeedMagnitude = ExeMagnitude3(vecThisSpeedDifference.x, vecThisSpeedDifference.z, vecThisSpeedDifference.y);
+        float fEntitySpeedMagnitude = ExeMagnitude3(vecEntitySpeedDifference.x, vecEntitySpeedDifference.z, vecEntitySpeedDifference.y);
 
         CVector vecMoveDirection = vecThisSpeedDifference * (1.0f / fThisSpeedMagnitude);
 
@@ -2037,8 +2052,8 @@ bool CPhysical::ApplyFriction(CPhysical* entity, float fFriction, CColPoint& col
     CVector vecThisSpeedDifference = vecThisSpeed - (fThisSpeedDotProduct * colPoint.m_vecNormal);
     CVector vecEntitySpeedDifference = entity->m_vecMoveSpeed - (fEntitySpeedDotProduct * colPoint.m_vecNormal);
 
-    float fThisSpeedMagnitude = vecThisSpeedDifference.Magnitude();
-    float fEntitySpeedMagnitude = vecEntitySpeedDifference.Magnitude();
+    float fThisSpeedMagnitude = ExeMagnitude3(vecThisSpeedDifference.x, vecThisSpeedDifference.z, vecThisSpeedDifference.y);
+    float fEntitySpeedMagnitude = ExeMagnitude3(vecEntitySpeedDifference.x, vecEntitySpeedDifference.z, vecEntitySpeedDifference.y);
 
     CVector vecMoveDirection = vecThisSpeedDifference * (1.0f / fThisSpeedMagnitude);
 

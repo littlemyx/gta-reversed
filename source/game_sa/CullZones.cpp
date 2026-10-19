@@ -201,7 +201,7 @@ void CCullZones::Update() {
     ZoneScoped;
 
     if ((CTimer::GetFrameCounter() & 7) == 2) {
-        CurrentFlags_Camera = FindAttributesForCoors(*TheCamera.GetGameCamPosition());
+        CurrentFlags_Camera = (int16)FindAttributesForCoors(*TheCamera.GetGameCamPosition()); // (movsx as well)
         return;
     }
 

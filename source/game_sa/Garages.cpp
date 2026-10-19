@@ -494,7 +494,7 @@ void CGarages::PrintMessages() {
 
 // 0x4476D0
 void CGarages::ChangeGarageType(int16 garageId, eGarageType type, uint32 unused) {
-    auto garage = GetGarage(garageId);
+    auto& garage = GetGarage(garageId); // a reference: `auto` copied the 0xD8 byte garage and the changes were lost
     garage.m_nType = type;
 
     if (type < BOMBSHOP_TIMED) {

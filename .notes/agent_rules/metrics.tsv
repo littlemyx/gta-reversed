@@ -67,3 +67,4 @@ date	agent	rules	kind	tokens	tool_uses	minutes	outcome	notes
 2026-10-19	W3-AUDIO-OPEN	v3	oracle fix (small)	281970	119	79	4 open rows + 2 engine-sound rows fixed (6 port bugs incl. player engine volume/frequency 676/1500, 1880/3000)
 2026-10-19	ORACLE-W3-ENTITY	v3	oracle wave (1 subsystem)	532450	234	101	Entity A/B 48 -> 0 (+51 rows), 11 port fixes; gate cut at cap (orchestrator finishes); ran tests in the main checkout
 2026-10-19	ORACLE-W3-INTERIOR	v3	oracle wave (1 subsystem)	467050	182	64	Interior 0 -> 47 covered, 10 port fixes (PruneVisibleEffects 804/1200, AddFurniture 448/500, peds-in-interior group search)
+2026-10-19	ORACLE-W3-CAMERA	v3	oracle wave (slice)	439433	216	94	Camera/Cam/IdleCam A/B 37 -> 3 (+34 rows), 8 port fixes (camera behind ped 357/500, jump-cut restore 867/1200, two-player cams)

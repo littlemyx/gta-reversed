@@ -344,7 +344,7 @@ Interior_c* InteriorManager_c::GetInteriorFromPool() {
 // 0x5983D0
 Interior_c* InteriorManager_c::GetVectorsInterior(const CVector& pt) { // TODO: Name is shit, should be `GetInteriorOfPoint` or something similar
     for (auto& g : m_InteriorGroupList) {
-        for (auto& i : g.GetInteriors()) {
+        for (auto* const i : g.m_interiors) { // All 8 slots (not only the first m_numInteriors), null slots skipped
             if (i && i->IsPtInside(pt)) {
                 return i;
             }

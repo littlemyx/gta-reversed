@@ -48,22 +48,22 @@ NOTSA_INLINE_IN_CPP void CRect::Resize(float resizeX, float resizeY)
     top += resizeY;
 }
 
-// 0x404290
+// 0x404290 (x87 `fcomp` + `test ah, 5 / jnp` / `test ah, 0x41 / je`: every test rejects only on a strict "less" / "greater", an unordered (NaN) operand passes)
 NOTSA_INLINE_IN_CPP bool CRect::IsPointInside(const CVector2D& point) const
 {
-    return point.x >= left
-        && point.x <= right
-        && point.y >= bottom
-        && point.y <= top;
+    return !(point.x < left)
+        && !(point.x > right)
+        && !(point.y < bottom)
+        && !(point.y > top);
 }
 
-// 0x4042D0
+// 0x4042D0 (same comparison sense as above, on `left - tol`, `tol + right`, `bottom - tol`, `tol + top`)
 NOTSA_INLINE_IN_CPP bool CRect::IsPointInside(const CVector2D& point, float tolerance) const
 {
-    return left   - tolerance <= point.x
-        && right  + tolerance >= point.x
-        && bottom - tolerance <= point.y
-        && top    + tolerance >= point.y;
+    return !(left   - tolerance > point.x)
+        && !(right  + tolerance < point.x)
+        && !(bottom - tolerance > point.y)
+        && !(top    + tolerance < point.y);
 }
 
 bool CRect::IsRectInside(const CRect& rect) const {

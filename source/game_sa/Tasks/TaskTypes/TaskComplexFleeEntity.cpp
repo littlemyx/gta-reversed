@@ -55,9 +55,7 @@ CTaskComplexFleeEntity::~CTaskComplexFleeEntity() {
 CTask* CTaskComplexFleeEntity::CreateSubTask(eTaskType taskType) {
     switch (taskType) {
     case TASK_COMPLEX_FLEE_POINT: {
-        // Below pos update code from `CreateFirstSubTask`
-        m_posCheckTimer.Start(m_posCheckPeriod);
-        m_pos = m_entity->GetPosition();
+        // 0x65BA72..0x65BAB4: only constructs the CTaskComplexFleePoint from the stored position; the timer start / position update belong to CreateFirstSubTask (the port repeated them here)
         return new CTaskComplexFleePoint{
             m_pos,
             m_pedScream,

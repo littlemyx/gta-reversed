@@ -1287,14 +1287,24 @@ CMatrix CMatrix::GetIdentity() {
     return m;
 }
 
+// 0x59BE30: every component is a float expression whose three products are added in the order the exe's x87 code uses (it differs per component: the compiler
+// reordered the commutative terms; float addition is not associative); the exe stores each component to a float
 CMatrix operator*(const CMatrix& a, const CMatrix& b)
 {
-    auto result = CMatrix();
-    result.m_right =   a.m_right * b.m_right.x   + a.m_forward * b.m_right.y   + a.m_up * b.m_right.z;
-    result.m_forward = a.m_right * b.m_forward.x + a.m_forward * b.m_forward.y + a.m_up * b.m_forward.z;
-    result.m_up =      a.m_right * b.m_up.x      + a.m_forward * b.m_up.y      + a.m_up * b.m_up.z;
-    result.m_pos =     a.m_right * b.m_pos.x     + a.m_forward * b.m_pos.y     + a.m_up * b.m_pos.z + a.m_pos;
-    return result;
+    CMatrix r;
+    r.m_right.x   = (a.m_forward.x * b.m_right.y + a.m_right.x * b.m_right.x) + b.m_right.z * a.m_up.x;
+    r.m_right.y   = (a.m_up.y * b.m_right.z + a.m_right.y * b.m_right.x) + a.m_forward.y * b.m_right.y;
+    r.m_right.z   = (a.m_forward.z * b.m_right.y + a.m_up.z * b.m_right.z) + b.m_right.x * a.m_right.z;
+    r.m_forward.x = (b.m_forward.z * a.m_up.x + a.m_forward.x * b.m_forward.y) + b.m_forward.x * a.m_right.x;
+    r.m_forward.y = (a.m_up.y * b.m_forward.z + a.m_forward.y * b.m_forward.y) + a.m_right.y * b.m_forward.x;
+    r.m_forward.z = (b.m_forward.x * a.m_right.z + a.m_up.z * b.m_forward.z) + a.m_forward.z * b.m_forward.y;
+    r.m_up.x      = (a.m_forward.x * b.m_up.y + b.m_up.z * a.m_up.x) + b.m_up.x * a.m_right.x;
+    r.m_up.y      = (a.m_up.y * b.m_up.z + a.m_forward.y * b.m_up.y) + b.m_up.x * a.m_right.y;
+    r.m_up.z      = (b.m_up.x * a.m_right.z + a.m_up.z * b.m_up.z) + a.m_forward.z * b.m_up.y;
+    r.m_pos.x     = ((a.m_forward.x * b.m_pos.y + b.m_pos.z * a.m_up.x) + b.m_pos.x * a.m_right.x) + a.m_pos.x;
+    r.m_pos.y     = ((b.m_pos.z * a.m_up.y + b.m_pos.y * a.m_forward.y) + b.m_pos.x * a.m_right.y) + a.m_pos.y;
+    r.m_pos.z     = ((b.m_pos.x * a.m_right.z + a.m_forward.z * b.m_pos.y) + a.m_up.z * b.m_pos.z) + a.m_pos.z;
+    return r;
 }
 
 CVector operator*(const CMatrix& a, const CVector& b) {

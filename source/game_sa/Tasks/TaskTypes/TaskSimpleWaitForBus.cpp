@@ -21,18 +21,23 @@ CTaskSimpleWaitForBus::CTaskSimpleWaitForBus(const CTaskSimpleWaitForBus& o) :
 
 // 0x632AA0
 bool CTaskSimpleWaitForBus::ProcessPed(CPed* ped) {
-    m_bus = [this, ped]() -> CVehicle* {
-        for (auto& veh : ped->GetIntelligence()->GetVehicleScanner().GetEntities<CVehicle>()) {
-            if (veh.vehicleFlags.bIsBus) {
-                if (veh.HasSpaceForAPassenger()) {
-                    if (sq(0.005f) >= veh.m_vecMoveSpeed.SquaredMagnitude()) {
-                        return &veh;
-                    }
-                }
-            }
+    // 0x632AA0: the exe walks the 16 scanned entities and, on the first bus with a free seat that is (nearly) standing, stores it in m_bus and returns true;
+    // without a match it returns false and leaves m_bus alone (the port cleared m_bus and always returned true). `range^2 > sum` is strict (fcompp / test ah,0x41 / jne);
+    // the squared speed is summed in extended precision (`double` mirrors the x87 stack).
+    for (auto& veh : ped->GetIntelligence()->GetVehicleScanner().GetEntities<CVehicle>()) {
+        if (!veh.vehicleFlags.bIsBus) {
+            continue;
         }
-        return nullptr;
-    }();
-
-    return true;
+        const double vx = veh.m_vecMoveSpeed.x, vy = veh.m_vecMoveSpeed.y, vz = veh.m_vecMoveSpeed.z;
+        const double range = 0.005f;
+        if (!(range * range > vx * vx + vy * vy + vz * vz)) {
+            continue;
+        }
+        if (!veh.HasSpaceForAPassenger()) {
+            continue;
+        }
+        m_bus = &veh;
+        return true;
+    }
+    return false;
 }

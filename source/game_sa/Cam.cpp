@@ -3754,12 +3754,12 @@ void CCam::Process_Cam_TwoPlayer_Separate_Cars() {
     const CVector pA{
         pos1.x - d.x * 6.0f,
         pos1.y - d.y * 6.0f,
-        (pos1.z + veh1->GetColModel()->m_boundBox.m_vecMax.z + 1.0f) - d.z * 6.0f,
+        (pos1.z + CModelInfo::GetModelInfo(veh1->m_nModelIndex)->GetColModel()->m_boundBox.m_vecMax.z + 1.0f) - d.z * 6.0f, // 0x5135A2: the model's collision model, not GetColModel() (special col model)
     };
     const CVector pB{
         d.x * 6.0f + pos2.x,
         d.y * 6.0f + pos2.y,
-        d.z * 6.0f + pos2.z + veh2->GetColModel()->m_boundBox.m_vecMax.z + 1.0f,
+        d.z * 6.0f + ((pos2.z + CModelInfo::GetModelInfo(veh2->m_nModelIndex)->GetColModel()->m_boundBox.m_vecMax.z) + 1.0f), // 0x51365B: the max z and the 1.0 are added to pos2.z first
     };
 
     const auto dirA = (veh2->GetPosition() - pA).Normalized();
@@ -3775,7 +3775,7 @@ void CCam::Process_Cam_TwoPlayer_Separate_Cars() {
     const float  c     = (float)((x87::cos(angle) + 1.0) * 0.5);
 
     const CVector dPos = veh1->GetPosition() - veh2->GetPosition();
-    const float   dist = std::sqrt(sq(dPos.y) + sq(dPos.z) + sq(dPos.x)); // NOTE: summation order as in the original
+    const float   dist = std::sqrt((sq(dPos.x) + sq(dPos.z)) + sq(dPos.y)); // NOTE: summation order as in the original (0x5137A1..0x5137C8)
 
     const float perpZ = s * perp.z;
     const float oneMinusC = 1.0f - c;
@@ -3805,9 +3805,9 @@ void CCam::Process_Cam_TwoPlayer_Separate_Cars() {
     const auto  focusedVel = focusedVeh->m_vecMoveSpeed;
     CVector     front2D{ m_vecFront.x, m_vecFront.y, 0.0f };
     front2D.Normalise();
-    const float focusedDot = focusedVel.y * front2D.y + focusedVel.z * front2D.z + focusedVel.x * front2D.x;
+    const float focusedDot = (focusedVel.x * front2D.x + focusedVel.z * front2D.z) + focusedVel.y * front2D.y; // 0x513AE5: summation order as in the original
     if (focusedDot < -0.13f &&
-        focusedDot < -front2D.x * otherVeh->m_vecMoveSpeed.x + otherVeh->m_vecMoveSpeed.y * -front2D.y + otherVeh->m_vecMoveSpeed.z * -front2D.z) {
+        focusedDot < (otherVeh->m_vecMoveSpeed.z * -front2D.z + otherVeh->m_vecMoveSpeed.y * -front2D.y) + otherVeh->m_vecMoveSpeed.x * -front2D.x) {
         m_nTwoPlayerFocusedPlayer = (m_nTwoPlayerFocusedPlayer - 1u) & 1;
     }
 

@@ -109,7 +109,7 @@ public:
 
     bool IsEmpty() const { return !next; }
 
-    auto begin() { return iterator{this}; }
+    auto begin() { return iterator{next}; } // The list head is a sentinel (in the exe: the m_AnimList of CAnimBlendClumpData, 0x4D6B60 etc. start at head->next), not an element
     auto end() { return iterator{nullptr}; }
 };
 

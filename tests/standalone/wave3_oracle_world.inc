@@ -41,6 +41,69 @@ static CPed* PedP(int k) { return reinterpret_cast<CPed*>(S(oPed + (size_t)k * 0
 static CVehicle* VehP(int k) { return reinterpret_cast<CVehicle*>(S(oVeh + (size_t)k * 0x800)); }
 static uint8_t* MatP(int k) { return S(oMat + (size_t)k * 0x60); }
 
+// path nodes: ThePaths (0x96F050) points into this block; 72 areas (64 map areas + 8 interior areas), 10 nodes and 40 link entries each (the last 16 link entries are free: area 0xFFFF)
+constexpr int NAREA = 72, NNODE = 10, NLINK = 40, NLINK_USED = 24;
+struct PfFx {
+    uint8_t nodes[NAREA][NNODE][0x1C];
+    uint32_t links[NAREA][NLINK];
+    uint8_t navi[NAREA][NLINK][0xE];
+    uint16_t naviLinks[NAREA][NLINK];
+    uint8_t linkLen[NAREA][NLINK];
+    uint8_t inter[NAREA][NLINK];
+};
+alignas(16) static PfFx g_pf;
+static void PutI16(uint8_t* base, size_t off, int v) { int16_t x = (int16_t)v; std::memcpy(base + off, &x, 2); }
+static uint8_t* Node(int a, int n) { return g_pf.nodes[a][n]; }
+static uint32_t NA(int area, int node) { return (uint32_t)(uint16_t)area | ((uint32_t)(uint16_t)node << 16); }
+static CPathNode* NodeP(int a, int n) { return reinterpret_cast<CPathNode*>(Node(a, n)); }
+static void BuildPaths(Rng& r, int loadedPct = 85) {
+    std::memset(&ThePaths, 0, sizeof(CPathFind));
+    auto& P = ThePaths;
+    for (int a = 0; a < NAREA; ++a) {
+        const bool interior = a >= 64;
+        P.m_pPathNodes[a] = ((int)r.below(100) < loadedPct) ? NodeP(a, 0) : nullptr;
+        P.m_pNaviNodes[a] = reinterpret_cast<CCarPathLink*>(g_pf.navi[a]);
+        P.m_pNodeLinks[a] = reinterpret_cast<CNodeAddress*>(g_pf.links[a]);
+        P.m_pLinkLengths[a] = g_pf.linkLen[a];
+        P.m_pPathIntersections[a] = reinterpret_cast<CPathIntersectionInfo*>(g_pf.inter[a]);
+        if (a < 64) P.m_pNaviLinks[a] = reinterpret_cast<CCarPathLinkAddress*>(g_pf.naviLinks[a]);
+        P.m_anNumNodes[a] = NNODE;
+        const uint32_t nv = r.below(NNODE + 1);
+        P.m_anNumVehicleNodes[a] = nv; P.m_anNumPedNodes[a] = NNODE - nv;
+        P.m_anNumCarPathLinks[a] = NLINK_USED; P.m_anNumAddresses[a] = NLINK_USED;
+        const int cx = a % 8, cy = (a / 8) % 8;
+        for (int n = 0; n < NNODE; ++n) {
+            uint8_t* raw = Node(a, n);
+            std::memset(raw, 0, 0x1C);
+            const bool inCell = r.below(6) != 0;
+            const float x0 = -3000.f + 750.f * cx, y0 = -3000.f + 750.f * cy;
+            const float x = inCell ? x0 + r.f01() * 750.f : (r.f01() * 2 - 1) * 3600.f, y = inCell ? y0 + r.f01() * 750.f : (r.f01() * 2 - 1) * 3600.f;
+            PutI16(raw, 8, (int)(x * 8.f)); PutI16(raw, 10, (int)(y * 8.f)); PutI16(raw, 12, (int)((r.f01() * 2 - 1) * 80.f * 8.f));
+            PutI16(raw, 0xE, (int)r.below(0x7FFE));                  // m_nTotal (path search distance)
+            PutI16(raw, 0x10, (int)r.below(NLINK_USED - 15));       // base link id
+            PutI16(raw, 0x12, a); PutI16(raw, 0x14, n);
+            raw[0x16] = (uint8_t)r.u32();
+            raw[0x17] = (uint8_t)r.below(4);                         // flood fill group
+            raw[0x18] = (uint8_t)((r.below(7)) | (r.below(5) == 0 ? 0x20 : 0) | (r.below(7) == 0 ? 0x80 : 0) | (r.u32() & 0x50));
+            raw[0x19] = (uint8_t)(r.u32() & (r.below(3) ? 0x3F : 0xFF));
+            raw[0x1A] = (uint8_t)(r.below(3) ? (r.below(12) << 4) | (r.u32() & 0xF) : r.u32());   // behaviour in the high nibble
+            if (interior) { PutI16(raw, 0x12, a); }
+        }
+        for (int l = 0; l < NLINK; ++l) {
+            g_pf.links[a][l] = l < NLINK_USED ? NA((int)r.below(r.below(8) ? 64 : NAREA), (int)r.below(NNODE)) : 0x0000FFFFu;
+            uint8_t* nv2 = g_pf.navi[a][l];
+            std::memset(nv2, 0, 0xE);
+            PutI16(nv2, 0, (int)((r.f01() * 2 - 1) * 3600.f * 8.f)); PutI16(nv2, 2, (int)((r.f01() * 2 - 1) * 3600.f * 8.f));
+            const uint32_t att = NA((int)r.below(NAREA), (int)r.below(NNODE)); std::memcpy(nv2 + 4, &att, 4);
+            for (int k = 8; k < 13; ++k) nv2[k] = (uint8_t)r.u32();
+            g_pf.naviLinks[a][l] = (uint16_t)((r.below(64) & 0x3F) << 10 | r.below(NLINK));
+            g_pf.linkLen[a][l] = (uint8_t)r.u32();
+            g_pf.inter[a][l] = (uint8_t)(r.u32() & 3);
+        }
+    }
+    for (int k = 0; k < NUM_PATH_INTERIOR_AREAS; ++k) P.m_interiorIDs[k] = r.below(3) ? 0xFFFFFFFFu : (uint32_t)r.below(4) | ((uint32_t)r.below(5) << 16);
+}
+
 static std::function<void(Rng&)> g_tweak;     // row-specific fixture work after the standard build
 static float Fl(Rng& r, float scale, int special = 14) {
     if (special && r.below((uint32)special) == 0) return GenF(r, scale, S_NAN | S_ZERO | S_DEN | S_TINY | S_INF);
@@ -88,6 +151,7 @@ static void BuildPlayers(Rng& r) {
 static void BuildAll(Rng& r) {
     FillGarbage(r, g_sc, kScSize);
     BuildPlayers(r);
+    BuildPaths(r);
     if (g_tweak) g_tweak(r);
 }
 
@@ -97,7 +161,8 @@ static bool WCase(Rng& r, std::string& d, PF&& pf, EF&& ef) {
     BuildAll(r);
     Reg sc{ (uintptr_t)g_sc, kScSize };
     Reg img{ kImgLo, kImgHi - kImgLo };
-    return BothA(d, seed, { sc, img }, std::forward<PF>(pf), std::forward<EF>(ef));
+    Reg pfr{ (uintptr_t)&g_pf, sizeof g_pf };
+    return BothA(d, seed, { sc, img, pfr }, std::forward<PF>(pf), std::forward<EF>(ef));
 }
 } // namespace w3w
 

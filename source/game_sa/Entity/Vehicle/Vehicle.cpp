@@ -1897,7 +1897,9 @@ void CVehicle::ActivateBombWhenEntered() {
         if (!vehicleFlags.bDriverLastFrame && m_nBombOnBoard == BOMB_IGNITION_ACTIVATED) { // If the driver just entered and there's an ignition bomb...
             m_wBombTimer = 1000;
             m_pWhoDetonatedMe = m_pWhoInstalledBombOnMe; // NOTE: `m_pWhoInstalledBombOnMe` isn't set in `ActivateBomb` weird...
-            CEntity::RegisterReference(m_pWhoDetonatedMe);
+            if (m_pWhoDetonatedMe) { // 0x6D25AC: the exe registers the reference only for a non-null bomber (the port dereferenced null)
+                CEntity::RegisterReference(m_pWhoDetonatedMe);
+            }
         }
     }
     vehicleFlags.bDriverLastFrame = m_pDriver != nullptr;

@@ -1350,6 +1350,7 @@ if (${RE_PROJECT}_RW_LIBRW)
         game_sa/Interior/FurnitureSubGroup_c.cpp
         game_sa/Interior/FurnitureManager_c.cpp
         game_sa/Interior/Furniture_c.cpp
+        game_sa/Collision/Box.cpp
     )
     target_compile_definitions(wave3_interior_oracle_test PRIVATE W2_ONLY W3_INTERIOR_ONLY)
     target_compile_features(wave3_interior_oracle_test PRIVATE cxx_std_23)

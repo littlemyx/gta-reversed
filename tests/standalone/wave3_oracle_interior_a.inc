@@ -59,11 +59,13 @@ static void TestW3InteriorA() {
         IC(return (uint64_t)(uint32_t)FM()->GetRandomId(g, sid, (uint8)wl);, return (uint64_t)ExeT<uint32_t>(0x591220, FM(), g, sid, wl););
     } ENDROW;
     ROW("FurnitureManager_c::GetGroupId", 0x5BFB40, 600) {
+        FurnitureManager_c::GetGroupId(""); FurnitureManager_c::GetSubGroupId("");   // builds the port's function-local lookup tables on the normal heap (not in the per-case arena window)
         const std::string nm = PickName(r, kGroupNames, 6);
         Tw tw([nm](Rng&) { std::memcpy(S(oStr), nm.c_str(), nm.size() + 1); });
         IC(return (uint64_t)(uint32_t)FurnitureManager_c::GetGroupId(reinterpret_cast<const char*>(S(oStr)));, return (uint64_t)(uint32_t)oracle::Fn<int __stdcall(const char*)>(0x5BFB40)(reinterpret_cast<const char*>(S(oStr))););
     } ENDROW;
     ROW("FurnitureManager_c::GetSubGroupId", 0x5BFBF0, 1500) {
+        FurnitureManager_c::GetGroupId(""); FurnitureManager_c::GetSubGroupId("");
         const std::string nm = PickName(r, kSubNames, sizeof(kSubNames) / sizeof(*kSubNames));
         Tw tw([nm](Rng&) { std::memcpy(S(oStr), nm.c_str(), nm.size() + 1); });
         IC(return (uint64_t)(uint32_t)FurnitureManager_c::GetSubGroupId(reinterpret_cast<const char*>(S(oStr)));, return (uint64_t)(uint32_t)oracle::Fn<int __stdcall(const char*)>(0x5BFBF0)(reinterpret_cast<const char*>(S(oStr))););

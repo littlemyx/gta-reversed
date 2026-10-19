@@ -51,14 +51,36 @@ void CGarage::InjectHooks() {
 
 // 0x4479F0
 void CGarage::BuildRotatedDoorMatrix(CEntity* entity, float fDoorPosition) {
-    const auto fAngle = fDoorPosition * -HALF_PI;
-    const auto fSin = x87::sin(fAngle);
-    const auto fCos = x87::cos(fAngle);
+    // fld door; fmul [0x859998] (= float -pi/2, 0xBFC90FDB): the product stays in ST(0) UNROUNDED (48 significant bits, exact in a double)
+    // and feeds fsin / fcos directly - it is never stored as a float.
+    const double fAngle = (double)fDoorPosition * (double)-HALF_PI;
+    // fsin -> fstp dword, fcos -> fstp dword: both are rounded to FLOAT straight from the FPU stack (no double local in between!)
+    const float fSin = (float)x87::sin(fAngle);
+    const float fCos = (float)x87::cos(fAngle);
     CMatrix& matrix = entity->GetMatrix();
 
-    const auto& vecForward = matrix.GetForward();
-    matrix.GetUp() = CVector(-fSin * vecForward.y, fSin * vecForward.x, fCos);
-    matrix.GetRight() = CrossProduct(vecForward, matrix.GetUp());
+    const auto& vecForward = matrix.GetForward(); // +0x10
+    // Temp up vector on the stack: x = -(sin * fwd.y), y = sin * fwd.x, z = cos. float*float is exact in ST(0), then one fstp dword rounding.
+    const CVector vecUp{
+        (float)(-((double)fSin * vecForward.y)),
+        (float)((double)fSin * vecForward.x),
+        fCos
+    };
+
+    // CVector::CrossProduct 0x59C730 (out = fwd x up): every product stays exact in the FPU, only the difference is rounded to float.
+    //   x: fld b.z; fmul a.y; fld a.z; fmul b.y; fsubp   -> a.y*b.z - a.z*b.y
+    //   y: fld a.z; fmul b.x; fld b.z; fmul a.x; fsubp   -> a.z*b.x - b.z*a.x
+    //   z: fld a.x; fmul b.y; fld b.x; fmul a.y; fsubp   -> a.x*b.y - b.x*a.y
+    const auto& a = vecForward;
+    const auto& b = vecUp;
+    const CVector vecRight{
+        (float)((double)a.y * b.z - (double)a.z * b.y),
+        (float)((double)a.z * b.x - (double)b.z * a.x),
+        (float)((double)a.x * b.y - (double)b.x * a.y)
+    };
+
+    matrix.GetRight() = vecRight; // +0x00..0x08
+    matrix.GetUp()    = vecUp;    // +0x20..0x28
 }
 
 // 0x59C890 - the original evaluation order; the sum stays in the FPU registers (extended precision), stored as float

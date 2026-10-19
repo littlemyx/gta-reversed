@@ -407,14 +407,13 @@ void InteriorManager_c::SetEntryExitPtr(CEntryExit* enex) {
     if (enex->GetLinkedOrThis()->m_nArea == eAreaCodes::AREA_CODE_NORMAL_WORLD) {
         return;
     }
-    if (enex->m_recEntrance == m_EnExRect) {
-        return;
+    // The exe resets the stealable-object state only when the rectangle changed (any component unequal / NaN), but always stores the pointer and the rectangle
+    if (enex->m_recEntrance != m_EnExRect) {
+        m_ObjectCount   = 0;
+        m_InteriorCount = 0;
+
+        rng::fill(m_InteriorPedsAliveState, true);
     }
-
-    m_ObjectCount   = 0;
-    m_InteriorCount = 0;
-
-    rng::fill(m_InteriorPedsAliveState, true);
 
     m_EnEx     = enex;
     m_EnExRect = enex->m_recEntrance;

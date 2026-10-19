@@ -27,8 +27,9 @@ CTaskSimpleCarShuffle::CTaskSimpleCarShuffle(CVehicle* car, int32 targetDoor, CT
 }
 
 // 0x649C40
-CTaskSimpleCarShuffle::CTaskSimpleCarShuffle(const CTaskSimpleCarShuffle&) :
-    CTaskSimpleCarShuffle{ m_Car, m_TargetDoor, m_LineUpUtility }
+CTaskSimpleCarShuffle::CTaskSimpleCarShuffle(const CTaskSimpleCarShuffle& o) :
+    // 0x649C73..0x649C81: Clone passes the vehicle, door and line-up utility of the SOURCE (esi+0x10 / +0x14 / +0x18) to the main constructor; the port read its own, not yet initialised, members
+    CTaskSimpleCarShuffle{ o.m_Car, o.m_TargetDoor, o.m_LineUpUtility }
 {
 }
 

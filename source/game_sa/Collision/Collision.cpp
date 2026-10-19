@@ -1236,7 +1236,7 @@ bool CCollision::ProcessDiscCollision(
         !(std::abs(dzE * disk.m_vThickness.z + dyE * disk.m_vThickness.y + dxE * disk.m_vThickness.x) < disk.m_fThickness)
     ) {
         if (disk.m_Surface.m_nPiece < 17 && tempTriCol.m_fDepth > diskColPoint.m_fDepth) {
-            diskColPoint = tempTriCol;
+            diskColPoint.AssignLikeExe(tempTriCol);
             //diskColPoint.m_fDepth = tempTriCol.m_fDepth; // Done in operator=
             diskColPoint.m_nSurfaceTypeB = SURFACE_WHEELBASE;
             return true;
@@ -1250,7 +1250,7 @@ bool CCollision::ProcessDiscCollision(
         if (lineRatioNow >= lineRatio) {
             lineCollision = true;
             lineRatio     = (float)lineRatioNow;
-            lineColPoint  = tempTriCol;
+            lineColPoint.AssignLikeExe(tempTriCol);
             // lineColPoint.m_fDepth = tempTriCol.m_fDepth;  // Done in operator=
             return false; // False is returned here, but `lineCollision` was set to true.
         }

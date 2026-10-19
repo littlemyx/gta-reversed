@@ -51,14 +51,16 @@ public:
     float m_fDepth;                 // 0x28
 
 public:
-    // 0x40FC80: the exe copies the point, the normal, both surface triples and the depth - NOT the padding floats at 0x0C / 0x1C and the 2 pad bytes at 0x26 (copy constructor = full copy, unchanged)
-    CColPoint& operator=(CColPoint const& o) {
+    CColPoint& operator=(CColPoint const&) = default;  // full copy (the inline struct copies of the exe, e.g. the output of the CCollision::Process* functions)
+
+    // 0x40FC80 = the exe's CColPoint::operator= when it is CALLED (ProcessDiscCollision 0x413A65 / 0x413A93, vehicle ProcessEntityCollision ...): it copies the point, the normal, both surface
+    // triples and the depth and leaves field_C, field_1C and the 2 bytes at 0x26 alone
+    void AssignLikeExe(CColPoint const& o) {
         m_vecPoint = o.m_vecPoint;
         m_vecNormal = o.m_vecNormal;
         m_nSurfaceTypeA = o.m_nSurfaceTypeA; m_nPieceTypeA = o.m_nPieceTypeA; m_nLightingA = o.m_nLightingA;
         m_nSurfaceTypeB = o.m_nSurfaceTypeB; m_nPieceTypeB = o.m_nPieceTypeB; m_nLightingB = o.m_nLightingB;
         m_fDepth = o.m_fDepth;
-        return *this;
     }
 };
 VALIDATE_SIZE(CColPoint, 0x2C);

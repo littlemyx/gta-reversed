@@ -161,7 +161,7 @@ void CAtomicModelInfo::SetupVehicleUpgradeFlags(const char* name)
         { "bntr_",     0x2  },
         { "spl_",      0x6  },
         { "wg_l_",     0x8  },
-        { "wg_r",      0x9  },
+        { "wg_r_",     0x9  },
         { "fbb_",      0xA  },
         { "bbb_",      0xB  },
         { "lgt_",      0xC  },

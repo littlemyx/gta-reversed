@@ -319,9 +319,16 @@ eSoundBankSlot CAEVehicleAudioEntity::DemandBankSlot(eSoundBank bankId) {
         return s;
     }
 
-    // Otherwise free up the least used slot
-    const auto slot = rng::min_element(s_DummyEngineSlots, std::less<>{}, &tDummyEngineSlot::RefCnt);
-    slot->RefCnt = 0;
+    // Otherwise free up a slot. 0x4F4E83: the exe compares every slot with the user count of slot 0 (the running minimum is never updated) and stops at the FIRST slot with
+    // fewer users than slot 0 - or takes slot 0 - not necessarily the least used one
+    size_t victim = 0;
+    for (size_t i = 1; i < s_DummyEngineSlots.size(); i++) {
+        if (s_DummyEngineSlots[i].RefCnt < s_DummyEngineSlots[0].RefCnt) {
+            victim = i;
+            break;
+        }
+    }
+    s_DummyEngineSlots[victim].RefCnt = 0;
 
     // Now this should always return a valid slot
     return RequestBankSlot(bankId);
@@ -333,32 +340,44 @@ eSoundBankSlot CAEVehicleAudioEntity::RequestBankSlot(eSoundBank bankId) {
         return (eSoundBankSlot)(SND_BANK_SLOT_DUMMY_FIRST + std::distance(std::begin(s_DummyEngineSlots), slot));
     };
 
-    // Check if there's a slot with this bank already
-    const auto usedSlot = rng::find_if(s_DummyEngineSlots, [&](auto&& s) {
-        return s.BankID == bankId;
-    });
-    if (usedSlot != std::end(s_DummyEngineSlots)) {
-        usedSlot->RefCnt++;
-        return SlotToBankSlot(usedSlot);
+    // 0x4F4D20: check if there's a slot with this bank already (the scan also remembers the LAST slot without users)
+    const auto numSlots = (int32)(s_DummyEngineSlots.size());
+    int32 anyFree = -1;
+    for (int32 i = 0; i < numSlots; i++) {
+        auto& s = s_DummyEngineSlots[i];
+        if (s.BankID == bankId) {
+            s.RefCnt++;
+            return (eSoundBankSlot)(SND_BANK_SLOT_DUMMY_FIRST + i);
+        }
+        if (s.RefCnt <= 0) {
+            anyFree = i;
+        }
     }
-
-    // If not, find a free slot (if any) and initialize it
-    // (NB: I left out the logic for `s_NextDummyEngineSlot`, it's really not necessary...)
-    const auto slot = rng::find_if(s_DummyEngineSlots, [&](auto&& s) {
-        return s.RefCnt < 1;
-    });
-    if (slot == std::end(s_DummyEngineSlots)) {
+    if (anyFree == -1) {
         return SND_BANK_SLOT_NONE; // No free slots
     }
 
+    // 0x4F4D5F: pick the first free slot starting at `s_NextDummyEngineSlot` (round robin, so a freshly freed bank stays cached the longest)
+    int32 slot = anyFree;
+    for (int32 i = 0; i < numSlots; i++) {
+        const auto idx = (s_NextDummyEngineSlot + i) % numSlots;
+        if (s_DummyEngineSlots[idx].RefCnt <= 0) {
+            s_DummyEngineSlots[idx].RefCnt++;
+            slot = idx;
+            s_NextDummyEngineSlot = (int16)((idx + 1) % numSlots);
+            break;
+        }
+    }
+    const auto bankSlot = (eSoundBankSlot)(SND_BANK_SLOT_DUMMY_FIRST + slot);
+
     // Initialize the slot
-    AESoundManager.CancelSoundsInBankSlot(SlotToBankSlot(slot), true);
-    AEAudioHardware.LoadSoundBank(bankId, SlotToBankSlot(slot));
-    slot->BankID = bankId;
-    slot->RefCnt = 1;
+    AESoundManager.CancelSoundsInBankSlot(bankSlot, true);
+    AEAudioHardware.LoadSoundBank(bankId, bankSlot);
+    s_DummyEngineSlots[slot].BankID = bankId;
+    s_DummyEngineSlots[slot].RefCnt = 1;
 
     // Return the bank slot id
-    return SlotToBankSlot(slot);
+    return bankSlot;
 }
 
 // 0x4F4DF0
@@ -2213,6 +2232,9 @@ void CAEVehicleAudioEntity::ProcessVehicleSkidding(tVehicleParams& vp) {
     }
 }
 
+// 0x85F0A8: the float 1 / 0.6 the exe multiplies by
+static const float kRecip0p6 = std::bit_cast<float>(0x3FD55555u);
+
 // 0x4F5F30
 float CAEVehicleAudioEntity::GetVehicleDriveWheelSkidValue(CVehicle* veh, tWheelState wheelState, float gasPedalAudioRevs, cTransmission& tr, float speed) const noexcept {
     const auto* const cfg = &s_Config.Skid.DriveWheelSkid;
@@ -2225,14 +2247,15 @@ float CAEVehicleAudioEntity::GetVehicleDriveWheelSkidValue(CVehicle* veh, tWheel
     case WHEEL_STATE_NORMAL:
         return 0.f;
     case WHEEL_STATE_SPINNING:
+        // 0x4F5FCC: (gas - 0.4) * [0x85F0A8] (the float 1 / 0.6, a multiplication not a division) * 0.75 * factor
         return gasPedalAudioRevs > 0.4f
-            ? invLerp(0.4f, 1.f, gasPedalAudioRevs) * 0.75f * cfg->SpinningFactor
+            ? (gasPedalAudioRevs - 0.4f) * kRecip0p6 * 0.75f * cfg->SpinningFactor
             : 0.f;
     case WHEEL_STATE_SKIDDING:
         return std::min(1.0f, std::fabs(speed)) * 0.75f * cfg->SkiddingFactor;
     case WHEEL_STATE_FIXED: {
         const auto s = std::fabs(speed);
-        return s >= 0.04f
+        return s > 0.04f // 0x4F5F70: `jne` on <= 0.04
             ? std::min(s * 5.0f, 1.0f) * cfg->StationaryFactor
             : 0.f;
     }
@@ -2254,18 +2277,19 @@ float CAEVehicleAudioEntity::GetVehicleNonDriveWheelSkidValue(CVehicle* vehicle,
     case WHEEL_STATE_SPINNING:
         return 0.0f;
     case WHEEL_STATE_SKIDDING: {
-        auto s = std::min(1.0f, std::fabs(velocity)) * 0.75f;
+        // 0x4F606B..0x4F609E: (min(1, |v|) * 0.75 * factor), then * 0.2 for a BMX - the BMX factor comes last
+        auto s = std::min(1.0f, std::fabs(velocity)) * 0.75f * cfg->SkiddingFactor;
         if (m_AuSettings.IsBMX()) {
             s *= 0.2f;
         }
-        return s * cfg->SkiddingFactor;
+        return s;
     }
     case WHEEL_STATE_FIXED: {
-        auto s = std::abs(velocity);
-        if (s >= 0.04f) {
-            s = std::min(s * 5.0f, 1.0f);
-        }
-        return s * cfg->StationaryFactor;
+        // 0x4F6026: |v| <= 0.04 gives 0 (the exe multiplies the 0.0 it keeps on the x87 stack), otherwise min(|v| * 5, 1) * factor
+        const auto s = std::abs(velocity);
+        return s > 0.04f
+            ? std::min(s * 5.0f, 1.0f) * cfg->StationaryFactor
+            : 0.f;
     }
     }
     NOTSA_UNREACHABLE();

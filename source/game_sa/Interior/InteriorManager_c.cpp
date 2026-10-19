@@ -295,38 +295,43 @@ end:
 
 // 0x598690
 bool InteriorManager_c::IsInteriorEffectVisible(C2dEffectInterior* effect, CEntity* entity) {
-    const auto CheckPoint = [
-        ebb = &entity->GetColModel()->GetBoundingBox(),
-        mat = entity->GetMatrix()
-    ](CVector pt) {
-        return ebb->IsPointInside(mat.InverseTransformPoint(pt));
-    };
-    return CheckPoint(TheCamera.GetPosition())
-        || CheckPoint(FindPlayerPed(0)->GetPosition())
-        || FindPlayerPed(1) && CheckPoint(FindPlayerPed(1)->GetPosition());
+    // The exe builds the world-space axis aligned box of the eight transformed corners of the entity's collision bounding box (same as InteriorGroup_c::ArePathsLoaded)
+    // and tests the camera, player 0 and (if present) player 1 against it, inclusive; NaN coordinates are outside
+    const auto& bb = CModelInfo::GetModelInfo(entity->m_nModelIndex)->GetColModel()->GetBoundingBox();
+    const auto& mn = bb.m_vecMin;
+    const auto& mx = bb.m_vecMax;
 
-    /**
-     * Original horrifically complicated code:
-    \**
-    const auto& ebb = entity->GetColModel()->GetBoundingBox();
-    const auto& ebbMin = ebb.m_vecMin,
-                ebbMax = ebb.m_vecMax;
-    CBoundingBox bb{ CVector{FLT_MAX}, CVector{FLT_MIN} };
-    const auto StretchTo = [&bb, m = entity->GetMatrix()](CVector pt) {
-        bb.StretchToPoint(m.TransformPoint(pt));
+    const CVector corners[8] = {
+        { mn.x, mn.y, mn.z }, { mn.x, mx.y, mn.z }, { mx.x, mx.y, mn.z }, { mx.x, mn.y, mn.z },
+        { mn.x, mn.y, mx.z }, { mn.x, mx.y, mx.z }, { mx.x, mx.y, mx.z }, { mx.x, mn.y, mx.z },
     };
-    StretchTo({ebbMin.x, ebbMin.y, ebbMin.z});
-    StretchTo({ebbMin.x, ebbMax.y, ebbMin.z});
-    StretchTo({ebbMax.x, ebbMax.y, ebbMin.z});
-    StretchTo({ebbMax.x, ebbMin.y, ebbMin.z});
-    StretchTo({ebbMin.x, ebbMin.y, ebbMax.z});
-    StretchTo({ebbMin.x, ebbMax.y, ebbMax.z});
-    StretchTo({ebbMax.x, ebbMax.y, ebbMax.z});
-    StretchTo({ebbMax.x, ebbMin.y, ebbMax.z});
-    return bb.IsPointWithin(TheCamera.GetPosition())
-        || bb.IsPointInside(FindPlayerPed(0)->GetPosition())
-        || bb.IsPointInside(FindPlayerPed(1)->GetPosition());
-    */
+
+    CVector lo{ 999999.f, 999999.f, 999999.f };
+    CVector hi{ -999999.f, -999999.f, -999999.f };
+    for (const auto& corner : corners) {
+        if (!entity->m_matrix) {
+            entity->AllocateMatrix();
+            entity->m_placement.UpdateMatrix(entity->m_matrix);
+        }
+        const auto pt = entity->m_matrix->TransformPoint(corner);
+        lo.x = std::min(lo.x, pt.x);
+        lo.y = std::min(lo.y, pt.y);
+        lo.z = std::min(lo.z, pt.z);
+        hi.x = std::max(hi.x, pt.x);
+        hi.y = std::max(hi.y, pt.y);
+        hi.z = std::max(hi.z, pt.z);
+    }
+
+    const auto IsInside = [&](const CVector& p) {
+        return p.x >= lo.x && p.x <= hi.x
+            && p.y >= lo.y && p.y <= hi.y
+            && p.z >= lo.z && p.z <= hi.z;
+    };
+    const bool camInside = IsInside(TheCamera.GetPosition());
+    const bool p0Inside  = IsInside(FindPlayerPed(0)->GetPosition());
+    const auto p1        = FindPlayerPed(1);
+    const bool p1Inside  = p1 && IsInside(p1->GetPosition());
+    return p1Inside || p0Inside || camInside;
 }
 
 // 0x598620

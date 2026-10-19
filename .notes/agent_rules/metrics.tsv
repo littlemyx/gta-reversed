@@ -56,3 +56,4 @@ date	agent	rules	kind	tokens	tool_uses	minutes	outcome	notes
 2026-10-19	W3-PED-OPEN-2	v2	continuation	212404	120	47	continued from state file OK: +8 rows, 3 port fixes, fixtures fault 88->0, _exit removed; first clean v2 continuation
 2026-10-19	ORACLE-W3-EVENTS	v2	oracle wave (1 subsystem)	429266	147	55	Events A+B 43->0 uncovered, 9 port bugs; stopped at cap before full gate (orchestrator runs it)
 2026-10-19	ORACLE-W3-GAMEPLAY	v2	oracle wave (slice)	330176	148	81	gameplay root files +121 covered, 8 port bugs (garage msg swap, ChangeGarageType copy, AddExistingPedInCar trap)
+2026-10-19	ORACLE-W3-TASKS	v2	oracle wave (partial)	334343	120	97	TaskTypes +40 covered, 2 port bugs; 97 rows fixture-limited -> CONTINUE

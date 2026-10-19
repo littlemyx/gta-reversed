@@ -136,5 +136,6 @@ static void TestW3ScriptsAll() {
     (void)spdlog::default_logger_raw();   // the registry / default logger is created lazily by the first NOTSA_LOG_* of the port: do it outside the redirected allocator
     TestW3ScriptsA();
     TestW3ScriptsB();
+    TestW3ScriptsB2();
     TestW3ScriptsC();
 }

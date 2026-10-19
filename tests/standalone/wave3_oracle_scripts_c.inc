@@ -73,9 +73,9 @@ static void TestW3ScriptsC() {
         CC(return (uint32_t)CScripted2dEffects::GetIndex(e);, return ExeC<uint32_t>(0x6F9F60, e););
     } ENDROW;
     ROW("CScripted2dEffects::GetEffectPairs", 0x6FA840, 600) {
-        const int k = r.below(72);
-        const uint32_t off = r.below(5) == 0 ? (uint32_t)r.below(0x40) : 0;
-        const C2dEffectPedAttractor* e = k >= 64 ? reinterpret_cast<const C2dEffectPedAttractor*>(Out()) : reinterpret_cast<const C2dEffectPedAttractor*>(0xC3AB00 + (uintptr_t)k * 0x40 + off);
+        // effects of the array only (the callers never pass anything else): index -1 would be ms_effectPairs[-1], a hardened std::array assert in the port, a plain pointer in the exe (GetIndex covers the -1 result)
+        const int k = r.below(64);
+        const C2dEffectPedAttractor* e = reinterpret_cast<const C2dEffectPedAttractor*>(0xC3AB00 + (uintptr_t)k * 0x40);
         CC(return P32(CScripted2dEffects::GetEffectPairs(e));, return P32(ExeC<void*>(0x6FA840, e)););
     } ENDROW;
 }

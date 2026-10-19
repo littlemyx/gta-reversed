@@ -268,3 +268,41 @@ static void TestW3ScriptsB() {
         CC(CTheScripts::UseSwitchJumpTable(*reinterpret_cast<int32*>(Out())); return 0;, ExeC<void>(0x4703C0, Out()); return 0;);
     } ENDROW;
 }
+
+// ProcessAllSearchLights: the 8 slots of ScriptSearchLightArray (0xA94D68, stride 0x7C); bulb / housing / followed entity are scratch entities with a matrix and NO RW object (so the exe's UpdateRwMatrix / UpdateRwFrame
+// return before any RenderWare call); entity references are stored raw (no registration)
+static void TestW3ScriptsB2() {
+    using namespace w2; using namespace w3s;
+    constexpr size_t oMat = 0x5800;
+    ROW("CTheScripts::ProcessAllSearchLights", 0x4939F0, 2500) {
+        Tw tw([](Rng& rr) {
+            for (int k = 0; k < 3; ++k) {
+                uint8_t* e = reinterpret_cast<uint8_t*>(Ent(k));
+                uint8_t* m = g_sc + oMat + (size_t)k * 0x60;
+                FillGarbage(rr, m, 0x60);
+                auto& M = *reinterpret_cast<CMatrix*>(m);
+                const float h = rr.f01() * 6.2831853f, p = (rr.f01() - 0.5f) * 3.f;
+                M.GetRight() = CVector(std::cos(h), std::sin(h), 0.f);
+                M.GetForward() = CVector(-std::sin(h) * std::cos(p), std::cos(h) * std::cos(p), std::sin(p));
+                M.GetUp() = CVector(std::sin(h) * std::sin(p), -std::cos(h) * std::sin(p), std::cos(p));
+                M.GetPosition() = CVector(GF(rr, 300.f), GF(rr, 300.f), GF(rr, 100.f));
+                std::memset(m + 0x40, 0, 8);   // no RW matrix attached
+                WriteRaw32(e, 0x14, P32(m)); WriteRaw32(e, 0x18, 0);   // m_matrix, m_pRwObject
+            }
+            const auto V = [&]() { return rr.below(12) == 0 ? CVector(GenF(rr, 100.f, S_NAN | S_ZERO | S_DEN | S_TINY | S_INF), GF(rr, 100.f), GF(rr, 100.f)) : CVector(GF(rr, 100.f), GF(rr, 100.f), GF(rr, 30.f)); };
+            for (auto& sl : CTheScripts::ScriptSearchLightArray) {
+                uint8_t* b = reinterpret_cast<uint8_t*>(&sl);
+                FillGarbage(rr, b, sizeof(sl));
+                b[0] = rr.below(4) != 0; b[1] &= 1; b[2] &= 1;
+                b[3] = (uint8_t)((rr.below(7)) | (rr.below(4) ? 0x80 : 0));   // state 0..6 + flag
+                sl.m_Target = V(); sl.m_PathCoord1 = rr.below(3) ? sl.m_Target + CVector(GF(rr, 3.f), GF(rr, 3.f), GF(rr, 3.f)) : V(); sl.m_PathCoord2 = V();
+                sl.m_fPathSpeed = rr.below(5) ? 0.05f + rr.f01() * 4.f : GenF(rr, 5.f, S_NAN | S_ZERO | S_DEN | S_TINY | S_INF);
+                WriteRaw32(b, 0x44, 0); WriteRaw32(b, 0x4C, 0);
+                WriteRaw32(b, 0x48, P32(Ent(2)));
+                const bool bulb = rr.below(3) != 0;
+                WriteRaw32(b, 0x54, bulb ? P32(Ent(0)) : 0); WriteRaw32(b, 0x50, P32(Ent(1)));
+            }
+        });
+        CC(CTheScripts::ProcessAllSearchLights(); return 0;, ExeC<void>(0x4939F0); return 0;);
+    } ENDROW;
+}

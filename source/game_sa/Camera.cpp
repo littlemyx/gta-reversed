@@ -1301,7 +1301,8 @@ void CCamera::TakeControl(CEntity* target, eCamMode modeToGoTo, eSwitchType swit
             return {
                 [&, this] {
                     if (modeToGoTo == MODE_NONE) {
-                        switch (target->GetType()) {
+                        // 0x50C840: the exe tests the type of the camera's CURRENT target (`[this + 0x958]`), not of `target` (a null current target faults in the exe too)
+                        switch (m_pTargetEntity->GetType()) {
                         case ENTITY_TYPE_PED:
                             return MODE_FOLLOWPED;
                         case ENTITY_TYPE_VEHICLE:

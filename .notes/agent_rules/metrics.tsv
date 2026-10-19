@@ -51,3 +51,4 @@ date	agent	rules	kind	tokens	tool_uses	minutes	outcome	notes
 2026-10-19	W2-OPEN	v2	oracle fix (small)	198563	91	77	2 port bugs fixed (Facial pool-fail order, DuckMove NaN/0.9), 1 harness x87-stack artefact; under cap
 2026-10-19	ORACLE-W3-VEH	v2	oracle wave (1 subsystem)	421709	170	58	Vehicle A+B: +85 covered, 81 rows, 6 port bugs; 3 open rows; claimed under cap but 170 calls
 2026-10-19	W3-VEH-OPEN	v2	oracle fix (small)	305914	137	82	3 open rows fixed (5 port bugs incl. x87-register precision class), +2 rows, 11 skips; under cap
+2026-10-19	ORACLE-W3-PED	v2	oracle wave (1 subsystem)	309164	129	59	Ped A+B: +64 covered, 8 port bugs (FindPedToAttack endless loop, look/aim flags, ammo signed compares); left a background process

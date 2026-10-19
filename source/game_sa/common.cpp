@@ -122,9 +122,12 @@ bool CalcScreenCoors(const CVector& in, CVector& out, float& scaleX, float& scal
         return false;
     }
 
-    const float r = 1.f / out.z / CDraw::ms_fFOV * 70.0f;
-    scaleX = SCREEN_WIDTH * r;
-    scaleY = SCREEN_HEIGHT * r;
+    // 0x71DA00: scale = width * (1/z), stored as float, THEN / fov * 70 (the port multiplied by (1/z/fov*70) in one go: 1 ulp off)
+    const float recpZ = 1.0f / out.z;
+    scaleX = SCREEN_WIDTH * recpZ;
+    scaleY = SCREEN_HEIGHT * recpZ;
+    scaleX = scaleX / CDraw::ms_fFOV * 70.0f;
+    scaleY = scaleY / CDraw::ms_fFOV * 70.0f;
 
     return true;
 }

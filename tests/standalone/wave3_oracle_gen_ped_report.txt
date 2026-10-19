@@ -1,14 +1,6 @@
-63 function rows, 15 TUs
+69 function rows, 15 TUs
 SKIP CPed::RemoveLighting 0x5533B0: CPointLights / ambient colours / D3D light state (not constructible)
 SKIP CPed::SetupLighting 0x553F00: CRenderer::SetupLightingForEntity + D3D light state (not constructible)
 SKIP CPed::StopNonPartialAnims 0x5DED10: clump + RpAnimBlend association list (RenderWare 3.7 layout in the exe vs librw): every case faults in both
 SKIP CPed::RestartNonPartialAnims 0x5DED50: same as StopNonPartialAnims
-SKIP CPed::operator delete-anon 0x5E4760: pool pointer argument: needs a hand row with a pool ped (open, see ORACLE-W3-PED-state.md)
-SKIP CPed::EnablePedSpeech 0x5EFF70: thunk to CAEPedSpeechAudioEntity at this+0x294 (garbage speech state asserts in the port's audio code): needs the speech entity wired (open)
-SKIP CPed::EnablePedSpeechForScriptSpeech 0x5EFF90: same as EnablePedSpeech
-SKIP CPed::CanPedHoldConversation 0x5EFFA0: same as EnablePedSpeech
 SKIP CPed::SetPedAtomicVisibilityCB 0x5F0060: global RpAtomic callback, not a member (no declaration): RW layout of the atomic differs (exe 3.7 vs librw)
-SKIP CPlayerPed::SetWantedLevel 0x609F10: CWanted::SetWantedLevel on the garbage CWanted object frees / allocates (heap assert kills the whole target): needs a wired CWanted (open)
-SKIP CPlayerPed::SetWantedLevelNoDrop 0x609F30: same as SetWantedLevel
-SKIP CPlayerPed::CheatWantedLevel 0x609F50: same as SetWantedLevel
-SKIP CPlayerPed::CanIKReachThisTarget 0x609F80: CWeapon* argument is null in the generated row (weapon info fixture): hand row with a CWeapon (open)

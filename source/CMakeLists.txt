@@ -1050,6 +1050,8 @@ if (${RE_PROJECT}_RW_LIBRW)
         "${PROJECT_SOURCE_DIR}/tests/standalone/wave1_oracle_test.cpp"
         ${W2_BASE_SOURCES}
         ${W3_PED_SOURCES}
+        game_sa/WeaponEffects.cpp   # CPlayerPed::ClearWeaponTarget -> CWeaponEffects::ClearCrossHair: the unit was not linked, every player-type case ended as an agreed fault
+        game_sa/TimeCycle.cpp   # CPhysical::GetLightingFromCol (CPlayerPed::IsHidden) calls the CTimeCycle ambient getters: without the unit the port side called 0x400000 and every non-vehicle case ended as an agreed fault
     )
     target_compile_definitions(wave3_ped_oracle_test PRIVATE W2_ONLY W3_PED_ONLY)
     target_compile_features(wave3_ped_oracle_test PRIVATE cxx_std_23)

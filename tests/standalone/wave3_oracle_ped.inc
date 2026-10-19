@@ -17,10 +17,19 @@ struct W3POffIntel_T { using type = CPedIntelligence* CPed::*; friend type W2Get
 struct W3POffPData_T { using type = CPlayerPedData* CPed::*; friend type W2Get(W3POffPData_T); }; template struct W2Rob<W3POffPData_T, &CPed::m_pPlayerData>;
 static size_t W3POffOf(CPedIntelligence* CPed::* pm) { uint32_t o = 0; std::memcpy(&o, &pm, 4); return o; }
 static size_t W3POffOf(CPlayerPedData* CPed::* pm) { uint32_t o = 0; std::memcpy(&o, &pm, 4); return o; }
+// the speech entity at CPed+0x294 (protected members): offsets via the access trick, same as above
+struct W3POffSpeech_T { using type = CAEPedSpeechAudioEntity CPed::*; friend type W2Get(W3POffSpeech_T); }; template struct W2Rob<W3POffSpeech_T, &CPed::m_pedSpeech>;
+struct W3SpInit_T { using type = bool CAEPedSpeechAudioEntity::*; friend type W2Get(W3SpInit_T); }; template struct W2Rob<W3SpInit_T, &CAEPedSpeechAudioEntity::m_IsInitialized>;
+struct W3SpType_T { using type = eAudioPedType CAEPedSpeechAudioEntity::*; friend type W2Get(W3SpType_T); }; template struct W2Rob<W3SpType_T, &CAEPedSpeechAudioEntity::m_PedAudioType>;
+struct W3SpVoice_T { using type = ePedSpeechVoiceS16 CAEPedSpeechAudioEntity::*; friend type W2Get(W3SpVoice_T); }; template struct W2Rob<W3SpVoice_T, &CAEPedSpeechAudioEntity::m_VoiceID>;
+struct W3SpOff_T { using type = bool CAEPedSpeechAudioEntity::*; friend type W2Get(W3SpOff_T); }; template struct W2Rob<W3SpOff_T, &CAEPedSpeechAudioEntity::m_IsSpeechDisabled>;
+struct W3SpScr_T { using type = bool CAEPedSpeechAudioEntity::*; friend type W2Get(W3SpScr_T); }; template struct W2Rob<W3SpScr_T, &CAEPedSpeechAudioEntity::m_IsSpeechForScriptsDisabled>;
+template<class C, class M> static size_t W3POffM(M C::* pm) { uint32_t o = 0; static_assert(sizeof pm == 4); std::memcpy(&o, &pm, 4); return o; }
 namespace w2 {   // ped arguments in their game range: the port indexes its tables with them (assert), the exe reads past the table end
 template<> eWeaponType GE<eWeaponType>(Rng& r) { return (eWeaponType)(r.below(8) ? r.below(47) : r.below(60)); }
 template<> eSprintType GE<eSprintType>(Rng& r) { return (eSprintType)r.below(4); }
 template<> ePedState GE<ePedState>(Rng& r) { return (ePedState)r.below(60); }
+template<> eWantedLevel GE<eWantedLevel>(Rng& r) { return (eWantedLevel)r.below(7); }   // the port asserts level <= 6; the exe skips the chaos assignment above 6 (never reached from the game)
 }
 namespace w3p {
 using namespace w2;
@@ -50,6 +59,36 @@ static void WireMatrix(Rng& r, uint8_t* m) {
     M.GetPosition() = GV(r);
     std::memset(m + 0x40, 0, 0x10);
 }
+// a real CWanted (the player's m_pWanted): zeroed, with the fields the wanted functions read in their game range. The exe statics (maximum wanted / chaos level, the "I do as I please" cheat byte) are
+// set per case through the exe data image (the port's globals sit at the same addresses and the image is restored after the case)
+static void WireWanted(Rng& r) {
+    std::memset(g_wanted, 0, sizeof g_wanted);
+    auto& w = *reinterpret_cast<CWanted*>(g_wanted);
+    w.m_ChaosLevel = (int32)(r.below(3) ? r.below(5200) : r.below(10000));
+    w.m_ChaosLevelBeforeParole = (int32)r.below(5200);
+    w.m_WantedLevel = (eWantedLevel)r.below(7);
+    w.m_WantedLevelBeforeParole = (eWantedLevel)r.below(7);
+    w.m_Multiplier = 1.f;
+    w.m_LastTimeWantedLevelChanged = r.below(100000);
+    w.m_Flags = (uint8_t)(r.below(6) ? 0 : r.below(64));   // police back-off / swat / fbi / army required bits
+    for (auto& c : w.m_CrimesBeingQd) { c.m_nCrimeType = (eCrimeType)(r.below(3) ? 0 : 1 + r.below(21)); c.m_nStartTime = r.below(100000); }
+    *reinterpret_cast<volatile int32_t*>(0x8CDEE4) = (int32_t)(r.below(4) ? 6 : r.below(7));        // CWanted::MaximumWantedLevel
+    *reinterpret_cast<volatile int32_t*>(0x8CDEE8) = (int32_t)(r.below(4) ? 9200 : 200 + r.below(9000));   // CWanted::MaximumChaosLevel
+    *reinterpret_cast<volatile uint8_t*>(0x969171) = (uint8_t)(r.below(8) == 0);                   // CCheat: I do as I please
+    *reinterpret_cast<volatile uint8_t*>(0x8CDE56) = 0;   // CStats::CheckForStatsMessage (via UpdateWantedLevel -> IncrementStat) is a no-op: the stat help message needs CHud / CText, which the harness does not have
+}
+// the ped's CAEPedSpeechAudioEntity (CPed+0x294) as Initialise leaves it: initialised flag, audio type and voice in the range of the speech tables (the port indexes them with an assert), disable flags
+static void WireSpeech(Rng& r, uint8_t* v) {
+    uint8_t* s = v + W3POffM(W2Get(W3POffSpeech_T{}));
+    const int16_t pt = (int16_t)r.below(6);   // GEN EMG PLAYER GANG GFD SPC
+    static constexpr uint32_t kVoices[6] = { 209, 46, 20, 52, 18, 1 };
+    const int16_t voice = (int16_t)r.below(kVoices[pt]);
+    s[W3POffM(W2Get(W3SpInit_T{}))] = (uint8_t)(r.below(4) != 0);
+    std::memcpy(s + W3POffM(W2Get(W3SpType_T{})), &pt, 2);
+    std::memcpy(s + W3POffM(W2Get(W3SpVoice_T{})), &voice, 2);
+    s[W3POffM(W2Get(W3SpOff_T{}))] = (uint8_t)r.below(2);
+    s[W3POffM(W2Get(W3SpScr_T{}))] = (uint8_t)r.below(2);
+}
 static void WirePed(Rng& r, uint8_t* v, size_t sz) {
     WireMatrix(r, g_mat);
     Put32(v, offsetof(CPlaceable, m_matrix), (uint32_t)(uintptr_t)g_mat);
@@ -69,7 +108,12 @@ static void WirePed(Rng& r, uint8_t* v, size_t sz) {
     // states and counters in their game ranges
     Put32(v, offsetof(CPed, m_nPedState), (int32_t)(r.below(3) ? r.below(60) : 0));
     Put32(v, offsetof(CPed, m_nMoveState), (int32_t)r.below(8));
-    Put32(v, offsetof(CPed, m_nPedType), (int32_t)r.below(32));
+    // a player ped is PLAYER1 / PLAYER2 (CPad::GetPad(0/1) in ControlButtonSprint, the port and the exe pass a null pad for any other type: 95% of the cases ended as agreed faults)
+    if (sz == sizeof(CPlayerPed) && r.below(8) != 0) { Put32(v, offsetof(CPed, m_nPedType), (int32_t)r.below(2)); }
+    else { Put32(v, offsetof(CPed, m_nPedType), (int32_t)r.below(32)); }
+    if (sz == sizeof(CPlayerPed)) {   // the two pads: the button / stick state the sprint, targeting and weapon code reads
+        for (int k = 0; k < 2; ++k) { FillGarbage(r, &CPad::Pads[k], sizeof(CPad)); }
+    }
     Put32(v, offsetof(CPed, m_nWeaponSkill), (int32_t)r.below(4));
     v[offsetof(CPed, m_nActiveWeaponSlot)] = (uint8_t)(r.below(13));
     {   // weapon slots
@@ -84,6 +128,11 @@ static void WirePed(Rng& r, uint8_t* v, size_t sz) {
         Put32(v, offsetof(CPed, m_nDelayedWeapon), (int32_t)(r.below(3) ? 0 : r.below(48)));
     }
     if (r.below(2)) { Put32(v, offsetof(CPed, m_pWeaponObject), (uint32_t)(uintptr_t)g_clump); }
+    {   // CPhysical lighting terms (IsHidden -> GetLightingTotal): finite, as the game keeps them (garbage floats trap in the FP unit and ended 88 of 120 cases)
+        auto* phys = reinterpret_cast<CPhysical*>(v);
+        phys->m_fContactSurfaceBrightness = r.f01() * 2.f - 0.5f;
+        phys->m_fDynamicLighting = r.below(4) ? 0.f : r.f01() * 0.2f;
+    }
     // player ped: the player data of the Players[0] slot
     // the live camera's placeable matrix points at its own camera matrix (FindPedToAttack reads TheCamera.GetForward(); the exe reads the camera matrix global directly)
     TheCamera.m_matrix = reinterpret_cast<CMatrixLink*>(&TheCamera.m_mCameraMatrix);
@@ -91,7 +140,9 @@ static void WirePed(Rng& r, uint8_t* v, size_t sz) {
     auto& pi = CWorld::Players[0];
     FillGarbage(r, &pi, sizeof pi);
     pi.m_pPed = reinterpret_cast<CPlayerPed*>(v);
-    FillGarbage(r, g_wanted, sizeof g_wanted); FillGarbage(r, g_clo, sizeof g_clo);
+    FillGarbage(r, g_clo, sizeof g_clo);
+    WireWanted(r);
+    WireSpeech(r, v);
     pi.m_PlayerData.m_pWanted = reinterpret_cast<CWanted*>(g_wanted);
     pi.m_PlayerData.m_pPedClothesDesc = reinterpret_cast<CPedClothesDesc*>(g_clo);
     pi.m_PlayerData.m_nChosenWeapon = (uint8)r.below(13);
@@ -146,6 +197,28 @@ static void TestW3PedHand() {
         return W3PedCase(r, d, 0, {}, [&](void*) -> uint64_t { return (uint64_t)(uintptr_t)CPed::operator new(sizeof(CCopPed), ref); },
             [&](void*) -> uint64_t { return (uint64_t)(uintptr_t)oracle::Fn<void* __cdecl(unsigned, int32)>(0x5E4730)(sizeof(CCopPed), ref); });
     }, 60);
+    // CPed::operator delete(void*) 0x5E4760: slot = (ptr - base) / sizeof(CPed pool object), flag byte |= 0x80, first-free index lowered; the argument is a ped of the fake pool (a random pointer is not a valid input)
+    Run("CPed::operator delete 0x5E4760", [&](Rng& r, std::string& d) {
+        void* ped = rf::PedE((int)r.below((uint32)rf::kP));
+        return W3PedCase(r, d, 0, {}, [&](void*) -> uint64_t { CPed::operator delete(ped); return 0; },
+            [&](void*) -> uint64_t { oracle::Fn<void __cdecl(void*)>(0x5E4760)(ped); return 0; });
+    }, 60);
+    // CPlayerPed::CanIKReachThisTarget 0x609F80: weapon = one of the ped's 13 weapon slots (the generated row passed null), target around the ped (and exactly level with it / at the 2D distance), NaN targets
+    Run("CPlayerPed::CanIKReachThisTarget 0x609F80", [&](Rng& r, std::string& d) {
+        const uint32 slot = r.below(13), mode = r.below(10);
+        float dx = (r.f01() - 0.5f) * 40.f, dy = (r.f01() - 0.5f) * 40.f, dz = (r.f01() - 0.5f) * 30.f;
+        if (mode == 0) { dx = std::numeric_limits<float>::quiet_NaN(); }
+        else if (mode == 1) { dz = std::numeric_limits<float>::quiet_NaN(); }
+        else if (mode == 2) { dx = 3.f; dy = 4.f; dz = -5.f; }   // |(dx,dy)| = 5 = pos.z - posn.z: the compare is exactly on the edge (when the ped height has no rounding)
+        else if (mode == 3) { dx = dy = 0.f; dz = 0.f; }
+        const bool arg2 = r.below(2);
+        return W3PedCase(r, d, sizeof(CPlayerPed), {}, [&](void* p) -> uint64_t {
+                auto* ped = static_cast<CPlayerPed*>(p); const CVector pos = ped->GetPosition();
+                return (uint64_t)(uint8_t)(ped->CPlayerPed::CanIKReachThisTarget(CVector(pos.x + dx, pos.y + dy, pos.z - dz), &ped->m_aWeapons[slot], arg2) ? 1 : 0); },
+            [&](void* p) -> uint64_t {
+                auto* ped = static_cast<CPlayerPed*>(p); const CVector pos = ped->GetPosition();
+                return (uint64_t)(uint8_t)(oracle::Fn<int __fastcall(void*, int, float, float, float, void*, int)>(0x609F80)(p, 0, pos.x + dx, pos.y + dy, pos.z - dz, &ped->m_aWeapons[slot], X(arg2)) & 0xFF); });
+    }, 3000);
 }
 
 static void TestW3Ped() {

@@ -1,4 +1,21 @@
 // ORACLE-W3-CAMERA rows A: CCamera member functions (Camera.cpp) on TheCamera. ROW / CC / Tw are defined in wave3_oracle_camera.inc.
+#include "Audio/AudioEngine.h"
+// CAudioEngine mock for ProcessMusicFade: AudioEngine.cpp is not linked into this test. The port's calls land in these definitions, the exe's calls are Patch()ed to host stubs that do the same:
+// IsLoadingTuneActive answers a flag of the scratch block, the two fader setters append (kind, float bits) to a log in the scratch block (compared).
+namespace w3c {
+constexpr size_t oAud = oOut + 0x200;   // [0] loading-tune flag, [1] entry count, [2..] (kind, bits) pairs
+static void AudLog(uint32_t kind, float f) {
+    uint32_t* a = reinterpret_cast<uint32_t*>(S(oAud)); uint32_t bits; std::memcpy(&bits, &f, 4);
+    const uint32_t n = a[1] < 20 ? a[1] : 0;
+    a[2 + 2 * n] = kind; a[3 + 2 * n] = bits; a[1] = n + 1;
+}
+static bool __fastcall HostLoadingTune(void*, void*) { return reinterpret_cast<uint32_t*>(S(oAud))[0] != 0; }
+static void __fastcall HostSetMusic(void*, void*, float f) { AudLog(1, f); }
+static void __fastcall HostSetEffects(void*, void*, float f) { AudLog(2, f); }
+} // namespace w3c
+bool CAudioEngine::IsLoadingTuneActive() { return w3c::HostLoadingTune(nullptr, nullptr); }
+void CAudioEngine::SetMusicFaderScalingFactor(float f) { w3c::AudLog(1, f); }
+void CAudioEngine::SetEffectsFaderScalingFactor(float f) { w3c::AudLog(2, f); }
 static void TestW3CameraA() {
     using namespace w2; using namespace w3c;
     CCamera* const T = reinterpret_cast<CCamera*>(CAM);
@@ -22,6 +39,35 @@ static void TestW3CameraA() {
         const int k = r.below(7);
         CPed* p = k == 6 ? nullptr : PedF(k & 1);
         CC(T->SetCameraDirectlyInFrontForFollowPed_ForAPed_CamOnAString(p); return 0;, ExeT<void>(0x50BE30, T, p); return 0;);
+    } ENDROW;
+    ROW("CCamera::ProcessMusicFade", 0x50B6D0, 3000) {
+        Tw tw([](Rng& rr) {
+            static bool patched = false;
+            if (!patched) { patched = true; oracle::Patch(0x506D90, (void*)&HostLoadingTune); oracle::Patch(0x506E40, (void*)&HostSetMusic); oracle::Patch(0x506E50, (void*)&HostSetEffects); }
+            uint32_t* a = reinterpret_cast<uint32_t*>(S(oAud)); a[0] = rr.below(4) == 0; a[1] = 0;
+            TheCamera.m_bMusicFading = rr.below(5) != 0;
+            TheCamera.m_nMusicFadingDirection = (eFadeFlag)(rr.below(8) == 0 ? (int)rr.below(4) : (int)rr.below(2));
+            TheCamera.m_nFadeInOutFlag = (eFadeFlag)(rr.below(8) == 0 ? (int)rr.below(4) : (int)rr.below(2));
+            if (rr.below(12) == 0) TheCamera.m_fTimeToWaitToFadeMusic = std::numeric_limits<float>::quiet_NaN();
+            TheCamera.m_fTimeToWaitToFadeMusic = rr.below(2) ? 0.f : (rr.below(8) ? rr.f01() * 3.f : Fl(rr, 3.f, 3));
+            TheCamera.m_fTimeToFadeMusic = rr.below(10) ? 0.1f + rr.f01() * 10.f : (rr.below(2) ? 0.f : Fl(rr, 5.f, 2));
+            TheCamera.m_fEffectsFaderScalingFactor = rr.below(8) ? rr.f01() : (rr.below(2) ? 0.f : (rr.below(2) ? 1.f : Fl(rr, 3.f, 3)));
+        });
+        CC(T->ProcessMusicFade(); return 0;, ExeT<void>(0x50B6D0, T); return 0;);
+    } ENDROW;
+    ROW("CCamera::SetNearClipBasedOnPedCollision", 0x50CB90, 800) {
+        const float a2 = r.below(10) ? r.f01() * 40.f : Fl(r, 100.f, 2);
+        Tw tw([](Rng& rr) {
+            uint8_t* rw = S(oRw); FillGarbage(rr, rw, 0x300);
+            std::memset(rw + 4, 0, 4);                                          // no parent frame (RwObject::parent at +4 in both layouts)
+            for (int off = 0x40; off < 0xA0; off += 4) { const float f = (rr.f01() - 0.5f) * 4.f; std::memcpy(rw + off, &f, 4); }   // view window / offset / planes: finite
+            Scene.m_pRwCamera = reinterpret_cast<RwCamera*>(rw);
+            TheCamera.m_pRwCamera = Scene.m_pRwCamera;
+            At<uint32_t>(0xB6FE88) = 0x8CC8E0u + 24u * rr.below(28);                      // gpCamColVars: a row of gCamColVars (the image holds 0 until the first SetCamCollisionVarDataSet)
+            At<float>(0xB6EC68) = rr.below(12) == 0 ? 0.f : 1.f + rr.f01() * 20.f;         // gNearClipPedDistDivisor
+        });
+        CC(T->SetNearClipBasedOnPedCollision(a2); float nc = Scene.m_pRwCamera->nearPlane; uint32_t b; std::memcpy(&b, &nc, 4); return (uint64_t)b;,
+           ExeT<void>(0x50CB90, T, a2); uint32_t b; std::memcpy(&b, S(oRw) + 0x80, 4); return (uint64_t)b;);
     } ENDROW;
     ROW("CCamera::ProcessScriptedCommands", 0x516AE0, 600) { CC(T->ProcessScriptedCommands(); return 0;, ExeT<void>(0x516AE0, T); return 0;); } ENDROW;
     ROW("CCamera::Restore", 0x50B930, 800) { CC(T->Restore(); return 0;, ExeT<void>(0x50B930, T); return 0;); } ENDROW;

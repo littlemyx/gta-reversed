@@ -1757,31 +1757,35 @@ void CCamera::ProcessMusicFade() {
     if (!m_bMusicFading)
         return;
 
-    if (m_fTimeToWaitToFadeMusic <= 0.0f) {
-        switch (m_nMusicFadingDirection) {
-        case eFadeFlag::FADE_OUT: {
-            m_fEffectsFaderScalingFactor = m_fTimeToFadeMusic > 0.0f
-                ? CTimer::GetTimeStepInSeconds() / m_fTimeToFadeMusic + m_fEffectsFaderScalingFactor
-                : 1.f;
-            
+    // 0x50B6E6: `fcomp 0; test ah, 0x41; jne` => the fade runs for `wait <= 0` and for an unordered (NaN) wait
+    if (!(m_fTimeToWaitToFadeMusic > 0.0f)) {
+        if (m_nMusicFadingDirection == eFadeFlag::FADE_OUT) {
+            // 0x50B724: the factor goes up; `time to fade > 0` is `jp` (greater / unordered) in the exe
+            if (!(m_fTimeToFadeMusic <= 0.0f)) {
+                m_fEffectsFaderScalingFactor = CTimer::GetTimeStepInSeconds() / m_fTimeToFadeMusic + m_fEffectsFaderScalingFactor;
+            } else {
+                m_fEffectsFaderScalingFactor = 1.0f;
+            }
             if (m_fEffectsFaderScalingFactor >= 1.0f) {
                 m_bMusicFadedOut = false;
                 m_bMusicFading = false;
                 m_fEffectsFaderScalingFactor = 1.0f;
             }
-            break;
-        }
-        case eFadeFlag::FADE_IN: {
+        } else if (m_nFadeInOutFlag == eFadeFlag::FADE_IN) {
+            // 0x50B781: BUG (original): the other direction is chosen by `m_nFadeInOutFlag` (this+0xC30, the screen fade), not by m_nMusicFadingDirection
             if (m_fEffectsFaderScalingFactor <= 0.0f) {
                 m_bMusicFadedOut = true;
                 m_bMusicFading = false;
                 m_fEffectsFaderScalingFactor = 0.0f;
             }
-            m_fEffectsFaderScalingFactor = m_fTimeToFadeMusic > 0.0f
-                ? std::max(0.f, m_fEffectsFaderScalingFactor - CTimer::GetTimeStepInSeconds() / m_fTimeToFadeMusic)
-                : 0.f;
-            break;
-        }
+            if (!(m_fTimeToFadeMusic <= 0.0f)) {
+                m_fEffectsFaderScalingFactor = m_fEffectsFaderScalingFactor - CTimer::GetTimeStepInSeconds() / m_fTimeToFadeMusic;
+            } else {
+                m_fEffectsFaderScalingFactor = 0.0f;
+            }
+            if (m_fEffectsFaderScalingFactor <= 0.0f) {
+                m_fEffectsFaderScalingFactor = 0.0f;
+            }
         }
     } else {
         m_fTimeToWaitToFadeMusic = m_fTimeToWaitToFadeMusic - CTimer::GetTimeStepInSeconds();

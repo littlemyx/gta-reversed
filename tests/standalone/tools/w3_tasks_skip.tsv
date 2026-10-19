@@ -7,8 +7,6 @@ CTaskComplexKillPedGroupOnFoot::ComputeNearestLivingGroupPed	port asserts on the
 CTaskComplexSeekEntityAiming::CreateFirstSubTask	embedded vptr of the position calculator (+0x40 of the created task) differs by construction (see ORACLE-W3-EVENTS: CTaskComplexSeekEntity<> artefact): needs the pool slot mask
 CTaskComplexUseScriptedBrain::Constructor	port copies the garbage, unterminated name with strcpy_s (CRT assert); same as the W2 skip
 CTaskComplexWalkAlongsidePed::CreateFirstSubTask	embedded float / vptr bytes of the created task (+0x40..0x43) differ: pool slot mask needed
-CTaskSimpleCarGoToPointNearDoorUntilDoorNotInUse::Clone	port copy constructor faults in 36/60 cases where the exe does not (reads the nested sub task pointers of the fixture object): needs analysis with a valid object (next step)
-CTaskSimpleCarShuffle::Clone	pool slot bytes +0x190.. written by the exe only (padding of the copy) and a port fault in CEntity::GetType in 1/60: needs analysis
 CTaskSimpleFight::GetStrikeDamage	port asserts on the garbage fight style / combo index (std::array subscript), 122 asserts: fixture needs a real fight task
 CTaskSimpleIKChain::Clone	bytes +0x12E/+0x2AE of the pool slot written by the exe only (struct padding copied as a dword): layout artefact
 CTaskSimpleIKChain::Constructor	byte +0x14 (padding of the base) left uninitialised by the exe, zeroed by the port: layout artefact
@@ -18,29 +16,51 @@ CTaskSimpleIKManager::GetTaskAtSlot	same as AddIKChainTask
 CTaskSimpleIKPointArm::Constructor	same padding artefact as CTaskSimpleIKChain::Constructor
 CTaskSimpleSay::Constructor	byte +0x1A (padding) left uninitialised by the exe, zeroed by the port: layout artefact
 CTaskSimpleUseGun::Clone	bytes +0x18D/+0x28D of the pool slot written by the exe only (padding copied as a dword): layout artefact
+CTaskComplexAvoidEntity::ComputeRoute	every case faults identically in the port and in the exe (exe fault at 66f935 accessing 14: a null / garbage pointer member or argument the fixture does not supply)
+CTaskComplexAvoidOtherPedWhileWandering::ComputeDetourTarget	every case faults identically in the port and in the exe (exe fault at 67208c accessing 47C: a null / garbage pointer member or argument the fixture does not supply)
+CTaskComplexAvoidOtherPedWhileWandering::ComputeRouteRoundSphere	every case faults identically in the port and in the exe (exe fault at 66a7e5 accessing 14: a null / garbage pointer member or argument the fixture does not supply)
+CTaskComplexAvoidOtherPedWhileWandering::ComputeSphere	every case faults identically in the port and in the exe (exe fault at 66a359 accessing 14: a null / garbage pointer member or argument the fixture does not supply)
+CTaskComplexAvoidOtherPedWhileWandering::NearbyPedsInSphere	every case faults identically in the port and in the exe (exe fault at 671ffd accessing 14: a null / garbage pointer member or argument the fixture does not supply)
+CTaskComplexDestroyCarMelee::CalculateSearchPositionAndRanges	every case faults identically in the port and in the exe (exe fault at 628a42 accessing 14: a null / garbage pointer member or argument the fixture does not supply)
+CTaskComplexDieInCar::PreparePedVehicleForPedDeath	every case faults in the port only at an unresolved callee / assert while the exe does not (fixture limit)
+CTaskComplexEnterCar::SetVehicleFlags	every case faults identically in the port and in the exe (exe fault at 64e56d accessing CC: a null / garbage pointer member or argument the fixture does not supply)
+CTaskComplexGangLeader::TryToPassObject	every case faults identically in the port and in the exe (exe fault at 5facd0 accessing C: a null / garbage pointer member or argument the fixture does not supply)
+CTaskComplexHitPedWithCar::ComputeEvasiveStepMoveDir	every case faults identically in the port and in the exe (exe fault at 54f576 accessing 50: a null / garbage pointer member or argument the fixture does not supply)
+CTaskComplexLeaveCar::SetupGettingOut	every case faults identically in the port and in the exe (exe fault at 64e56d accessing CC: a null / garbage pointer member or argument the fixture does not supply)
+CTaskComplexMoveBackAndJump::CreateSubTask	the exe function takes ONE stack argument (thiscall, ret 4, this unused) while the port's is a static: the generated exe call has the wrong shape (ESP not saved); needs a hand row
+CTaskComplexWalkRoundFire::ComputeDetourTarget	every case faults in the port only at an unresolved callee / assert while the exe does not (fixture limit)
+CTaskComplexWalkRoundFire::ControlSubTask	every case faults identically in the port and in the exe (exe fault at 65860a accessing C: a null / garbage pointer member or argument the fixture does not supply)
+CTaskGangHassleVehicle::GetTargetHeading	every case faults identically in the port and in the exe (exe fault at 65fde5 accessing 10: a null / garbage pointer member or argument the fixture does not supply)
+CTaskGoToVehicleAndLean::CalcTargetPos	every case faults identically in the port and in the exe (exe fault at 664781 accessing 14: a null / garbage pointer member or argument the fixture does not supply)
+CTaskInteriorLieInBed::FinishAnimCB	every case faults in the port only at an unresolved callee / assert while the exe does not (fixture limit)
+CTaskSimpleFacial::MakeAbortable	every case faults identically in the port and in the exe (exe fault at 4d68ba accessing ?: a null / garbage pointer member or argument the fixture does not supply)
+CTaskSimpleFight::FightSetUpCol	every case faults in the port only at an unresolved callee / assert while the exe does not (fixture limit)
+CTaskSimpleGangDriveBy::ProcessPlayerPed	every case faults identically in the port and in the exe (exe fault at 621acf accessing 480: a null / garbage pointer member or argument the fixture does not supply)
+CTaskSimpleGetUp::FinishGetUpAnimCB	every case faults identically in the port and in the exe (exe fault at 67811c accessing 1C: a null / garbage pointer member or argument the fixture does not supply)
+CTaskSimpleRunNamedAnim::FinishRunAnimMovePedCB	every case faults identically in the port and in the exe (exe fault at 4cfc65 accessing 14: a null / garbage pointer member or argument the fixture does not supply)
 CTaskComplexAttractorPartnerWait::CreateFirstSubTask	exe process killed on the garbage fixture (SEH frame of the exe faults on a pointer the function dereferences): needs a per-class fixture
 CTaskComplexAvoidEntity::CreateFirstSubTask	exe process killed on the garbage fixture (SEH frame of the exe faults on a pointer the function dereferences): needs a per-class fixture
 CTaskComplexAvoidOtherPedWhileWandering::CreateFirstSubTask	exe process killed on the garbage fixture (SEH frame of the exe faults on a pointer the function dereferences): needs a per-class fixture
 CTaskComplexExtinguishFireOnFoot::CreateFirstSubTask	exe process killed on the garbage fixture (SEH frame of the exe faults on a pointer the function dereferences): needs a per-class fixture
 CTaskComplexExtinguishFires::CreateFirstSubTask	exe process killed on the garbage fixture (SEH frame of the exe faults on a pointer the function dereferences): needs a per-class fixture
-CTaskComplexFollowNodeRoute::Constructor	exe process killed on the garbage fixture (SEH frame of the exe faults on a pointer the function dereferences): needs a per-class fixture
-CTaskComplexFollowPedFootsteps::Constructor	exe process killed on the garbage fixture (SEH frame of the exe faults on a pointer the function dereferences): needs a per-class fixture
+CTaskComplexFollowNodeRoute::Clone	exe process killed on the garbage fixture (SEH frame of the exe faults on a pointer the function dereferences): needs a per-class fixture
 CTaskComplexFollowPointRoute::Constructor	exe process killed on the garbage fixture (SEH frame of the exe faults on a pointer the function dereferences): needs a per-class fixture
 CTaskComplexGetOnBoatSeat::CreateFirstSubTask	exe process killed on the garbage fixture (SEH frame of the exe faults on a pointer the function dereferences): needs a per-class fixture
 CTaskComplexGoToBoatSteeringWheel::CreateFirstSubTask	exe process killed on the garbage fixture (SEH frame of the exe faults on a pointer the function dereferences): needs a per-class fixture
-CTaskComplexGoToPointAnyMeans::CreateFirstSubTask	exe process killed on the garbage fixture (SEH frame of the exe faults on a pointer the function dereferences): needs a per-class fixture
+CTaskComplexGoToCarDoorAndStandStill::CreateSubTask	exe process killed on the garbage fixture (SEH frame of the exe faults on a pointer the function dereferences): needs a per-class fixture
+CTaskComplexPolicePursuit::CreateSubTask	exe process killed on the garbage fixture (SEH frame of the exe faults on a pointer the function dereferences): needs a per-class fixture
 CTaskComplexPresentIdToCop::Clone	exe process killed on the garbage fixture (SEH frame of the exe faults on a pointer the function dereferences): needs a per-class fixture
 CTaskComplexPresentIdToCop::CreateFirstSubTask	exe process killed on the garbage fixture (SEH frame of the exe faults on a pointer the function dereferences): needs a per-class fixture
+CTaskComplexRoadRage::CreateSubTask	exe process killed on the garbage fixture (SEH frame of the exe faults on a pointer the function dereferences): needs a per-class fixture
 CTaskComplexTrackEntity::Clone	exe process killed on the garbage fixture (SEH frame of the exe faults on a pointer the function dereferences): needs a per-class fixture
 CTaskComplexUseAttractorPartner::CreateFirstSubTask	exe process killed on the garbage fixture (SEH frame of the exe faults on a pointer the function dereferences): needs a per-class fixture
 CTaskComplexUseGoggles::CreateFirstSubTask	exe process killed on the garbage fixture (SEH frame of the exe faults on a pointer the function dereferences): needs a per-class fixture
 CTaskComplexUseScriptedAttractor::CreateFirstSubTask	exe process killed on the garbage fixture (SEH frame of the exe faults on a pointer the function dereferences): needs a per-class fixture
 CTaskComplexWaitForPed::Clone	exe process killed on the garbage fixture (SEH frame of the exe faults on a pointer the function dereferences): needs a per-class fixture
 CTaskComplexWalkAlongsidePed::Clone	exe process killed on the garbage fixture (SEH frame of the exe faults on a pointer the function dereferences): needs a per-class fixture
-CTaskComplexWalkRoundBuildingAttempt::Constructor	exe process killed on the garbage fixture (SEH frame of the exe faults on a pointer the function dereferences): needs a per-class fixture
-CTaskComplexWalkRoundCar::Constructor	exe process killed on the garbage fixture (SEH frame of the exe faults on a pointer the function dereferences): needs a per-class fixture
+CTaskComplexWalkAlongsidePed::CreateSubTask	exe process killed on the garbage fixture (SEH frame of the exe faults on a pointer the function dereferences): needs a per-class fixture
+CTaskComplexWalkRoundBuildingAttempt::CreateFirstSubTask	exe process killed on the garbage fixture (SEH frame of the exe faults on a pointer the function dereferences): needs a per-class fixture
 CTaskComplexWalkRoundFire::CreateFirstSubTask	exe process killed on the garbage fixture (SEH frame of the exe faults on a pointer the function dereferences): needs a per-class fixture
-CTaskComplexWalkRoundObject::Constructor	exe process killed on the garbage fixture (SEH frame of the exe faults on a pointer the function dereferences): needs a per-class fixture
 CTaskSimpleCarSetPedSlowDraggedOut::Destructor	exe process killed on the garbage fixture (SEH frame of the exe faults on a pointer the function dereferences): needs a per-class fixture
 CTaskSimpleCarShuffle::Destructor	exe process killed on the garbage fixture (SEH frame of the exe faults on a pointer the function dereferences): needs a per-class fixture
 CTaskSimpleCarSlowBeDraggedOut::Destructor	exe process killed on the garbage fixture (SEH frame of the exe faults on a pointer the function dereferences): needs a per-class fixture
@@ -49,70 +69,6 @@ CTaskSimpleFight::Destructor	exe process killed on the garbage fixture (SEH fram
 CTaskSimpleHurtPedWithCar::Destructor	exe process killed on the garbage fixture (SEH frame of the exe faults on a pointer the function dereferences): needs a per-class fixture
 CTaskSimpleIKLookAt::Clone	exe process killed on the garbage fixture (SEH frame of the exe faults on a pointer the function dereferences): needs a per-class fixture
 CTaskSimpleKillPedWithCar::Destructor	exe process killed on the garbage fixture (SEH frame of the exe faults on a pointer the function dereferences): needs a per-class fixture
-66 rows NOT ORACLE-ABLE (fault, see above)	every case faults identically in the port and in the exe (the fixture lacks an object the function dereferences)
-CTaskComplexAvoidEntity::ComputeRoute	every case faults identically in the port and in the exe (the fixture lacks an object the function dereferences)
-CTaskComplexAvoidOtherPedWhileWandering::ComputeDetourTarget	every case faults identically in the port and in the exe (the fixture lacks an object the function dereferences)
-CTaskComplexAvoidOtherPedWhileWandering::ComputeRouteRoundSphere	every case faults identically in the port and in the exe (the fixture lacks an object the function dereferences)
-CTaskComplexAvoidOtherPedWhileWandering::ComputeSphere	every case faults identically in the port and in the exe (the fixture lacks an object the function dereferences)
-CTaskComplexAvoidOtherPedWhileWandering::NearbyPedsInSphere	every case faults identically in the port and in the exe (the fixture lacks an object the function dereferences)
-CTaskComplexCarSlowBeDraggedOut::CreateSubTask	every case faults identically in the port and in the exe (the fixture lacks an object the function dereferences)
-CTaskComplexDestroyCarMelee::CalculateSearchPositionAndRanges	every case faults identically in the port and in the exe (the fixture lacks an object the function dereferences)
-CTaskComplexDieInCar::PreparePedVehicleForPedDeath	every case faults identically in the port and in the exe (the fixture lacks an object the function dereferences)
-CTaskComplexDrivePointRoute::Clone	every case faults identically in the port and in the exe (the fixture lacks an object the function dereferences)
-CTaskComplexDrivePointRoute::CreateFirstSubTask	every case faults identically in the port and in the exe (the fixture lacks an object the function dereferences)
-CTaskComplexDrivePointRoute::CreateNextSubTask	every case faults identically in the port and in the exe (the fixture lacks an object the function dereferences)
-CTaskComplexEnterBoatAsDriver::CreateSubTask	every case faults identically in the port and in the exe (the fixture lacks an object the function dereferences)
-CTaskComplexEnterCar::SetVehicleFlags	every case faults identically in the port and in the exe (the fixture lacks an object the function dereferences)
-CTaskComplexEvasiveDiveAndGetUp::CreateSubTask	every case faults identically in the port and in the exe (the fixture lacks an object the function dereferences)
-CTaskComplexExtinguishFireOnFoot::FindFireNearPed	every case faults identically in the port and in the exe (the fixture lacks an object the function dereferences)
-CTaskComplexExtinguishFires::GetNearestFire	every case faults identically in the port and in the exe (the fixture lacks an object the function dereferences)
-CTaskComplexFleeEntity::CreateSubTask	every case faults identically in the port and in the exe (the fixture lacks an object the function dereferences)
-CTaskComplexFollowNodeRoute::CalcBlendRatio	every case faults identically in the port and in the exe (the fixture lacks an object the function dereferences)
-CTaskComplexFollowNodeRoute::Clone	every case faults identically in the port and in the exe (the fixture lacks an object the function dereferences)
-CTaskComplexFollowNodeRoute::ComputeRoute	every case faults identically in the port and in the exe (the fixture lacks an object the function dereferences)
-CTaskComplexFollowNodeRoute::GetLastWaypoint	every case faults identically in the port and in the exe (the fixture lacks an object the function dereferences)
-CTaskComplexFollowNodeRoute::GetNextWaypoint	every case faults identically in the port and in the exe (the fixture lacks an object the function dereferences)
-CTaskComplexFollowPatrolRoute::ComputeNextSubTaskType	every case faults identically in the port and in the exe (the fixture lacks an object the function dereferences)
-CTaskComplexFollowPointRoute::CalcBlendRatio	every case faults identically in the port and in the exe (the fixture lacks an object the function dereferences)
-CTaskComplexFollowPointRoute::Clone	every case faults identically in the port and in the exe (the fixture lacks an object the function dereferences)
-CTaskComplexFollowPointRoute::GetLastWaypoint	every case faults identically in the port and in the exe (the fixture lacks an object the function dereferences)
-CTaskComplexFollowPointRoute::GetNextWaypoint	every case faults identically in the port and in the exe (the fixture lacks an object the function dereferences)
-CTaskComplexFollowPointRoute::GetSubTaskType	every case faults identically in the port and in the exe (the fixture lacks an object the function dereferences)
-CTaskComplexGangLeader::TryToPassObject	every case faults identically in the port and in the exe (the fixture lacks an object the function dereferences)
-CTaskComplexGoToCarDoorAndStandStill::CreateSubTask	every case faults identically in the port and in the exe (the fixture lacks an object the function dereferences)
-CTaskComplexHitPedWithCar::ComputeEvasiveStepMoveDir	every case faults identically in the port and in the exe (the fixture lacks an object the function dereferences)
-CTaskComplexHitPedWithCar::CreateFirstSubTask	every case faults identically in the port and in the exe (the fixture lacks an object the function dereferences)
-CTaskComplexLeaveCar::SetupGettingOut	every case faults identically in the port and in the exe (the fixture lacks an object the function dereferences)
-CTaskComplexLeaveCarAndFlee::CreateSubTask	every case faults identically in the port and in the exe (the fixture lacks an object the function dereferences)
-CTaskComplexMoveBackAndJump::CreateSubTask	every case faults identically in the port and in the exe (the fixture lacks an object the function dereferences)
-CTaskComplexOnFire::CreateSubTask	every case faults identically in the port and in the exe (the fixture lacks an object the function dereferences)
-CTaskComplexPolicePursuit::CreateSubTask	every case faults identically in the port and in the exe (the fixture lacks an object the function dereferences)
-CTaskComplexRoadRage::CreateSubTask	every case faults identically in the port and in the exe (the fixture lacks an object the function dereferences)
-CTaskComplexSitDownThenIdleThenStandUp::CreateSubTask	every case faults identically in the port and in the exe (the fixture lacks an object the function dereferences)
-CTaskComplexStealCar::CreateSubTask	every case faults identically in the port and in the exe (the fixture lacks an object the function dereferences)
-CTaskComplexUseScriptedBrain::Clone	every case faults identically in the port and in the exe (the fixture lacks an object the function dereferences)
-CTaskComplexWalkAlongsidePed::CreateSubTask	every case faults identically in the port and in the exe (the fixture lacks an object the function dereferences)
-CTaskComplexWalkRoundBuildingAttempt::Clone	every case faults identically in the port and in the exe (the fixture lacks an object the function dereferences)
-CTaskComplexWalkRoundBuildingAttempt::ComputeMoveDir	every case faults identically in the port and in the exe (the fixture lacks an object the function dereferences)
-CTaskComplexWalkRoundBuildingAttempt::CreateFirstSubTask	every case faults identically in the port and in the exe (the fixture lacks an object the function dereferences)
-CTaskComplexWalkRoundBuildingAttempt::CreateSubTask	every case faults identically in the port and in the exe (the fixture lacks an object the function dereferences)
-CTaskComplexWalkRoundCar::Clone	every case faults identically in the port and in the exe (the fixture lacks an object the function dereferences)
-CTaskComplexWalkRoundCar::CreateRouteTask	every case faults identically in the port and in the exe (the fixture lacks an object the function dereferences)
-CTaskComplexWalkRoundCar::SetNewVehicle	every case faults identically in the port and in the exe (the fixture lacks an object the function dereferences)
-CTaskComplexWalkRoundFire::ComputeDetourTarget	every case faults identically in the port and in the exe (the fixture lacks an object the function dereferences)
-CTaskComplexWalkRoundFire::ControlSubTask	every case faults identically in the port and in the exe (the fixture lacks an object the function dereferences)
-CTaskComplexWalkRoundObject::CreateRouteTask	every case faults identically in the port and in the exe (the fixture lacks an object the function dereferences)
-CTaskComplexWander::ComputeTargetHeading	every case faults identically in the port and in the exe (the fixture lacks an object the function dereferences)
-CTaskComplexWander::ComputeTargetPos	every case faults identically in the port and in the exe (the fixture lacks an object the function dereferences)
-CTaskComplexWander::ScanForBlockedNode-	every case faults identically in the port and in the exe (the fixture lacks an object the function dereferences)
-CTaskComplexWander::ScanForBlockedNode-1	every case faults identically in the port and in the exe (the fixture lacks an object the function dereferences)
-CTaskComplexWander::UpdatePathNodes	every case faults identically in the port and in the exe (the fixture lacks an object the function dereferences)
-CTaskGangHassleVehicle::GetTargetHeading	every case faults identically in the port and in the exe (the fixture lacks an object the function dereferences)
-CTaskGoToVehicleAndLean::CalcTargetPos	every case faults identically in the port and in the exe (the fixture lacks an object the function dereferences)
-CTaskInteriorLieInBed::FinishAnimCB	every case faults identically in the port and in the exe (the fixture lacks an object the function dereferences)
-CTaskSimpleFacial::MakeAbortable	every case faults identically in the port and in the exe (the fixture lacks an object the function dereferences)
-CTaskSimpleFight::FightSetUpCol	every case faults identically in the port and in the exe (the fixture lacks an object the function dereferences)
-CTaskSimpleGangDriveBy::ProcessPlayerPed	every case faults identically in the port and in the exe (the fixture lacks an object the function dereferences)
-CTaskSimpleGetUp::FinishGetUpAnimCB	every case faults identically in the port and in the exe (the fixture lacks an object the function dereferences)
-CTaskSimpleIKPointArm::Clone	every case faults identically in the port and in the exe (the fixture lacks an object the function dereferences)
-CTaskSimpleRunNamedAnim::FinishRunAnimMovePedCB	every case faults identically in the port and in the exe (the fixture lacks an object the function dereferences)
+CTaskComplexFollowPatrolRoute::ComputeNextSubTaskType	every case faults (exe fault reading [ptr+0xC] of the patrol route member): needs a valid CPatrolRoute fixture
+CTaskComplexUseScriptedBrain::Clone	port copies the garbage, unterminated name with strcpy_s (CRT assert); same as the W2 skip
+CTaskSimpleIKPointArm::Clone	every case faults in the port only at an unresolved callee (IKChain_c member of the fixture is garbage): needs a valid IKChain_c fixture

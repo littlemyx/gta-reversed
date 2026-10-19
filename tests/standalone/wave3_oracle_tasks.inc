@@ -10,17 +10,42 @@
 
 namespace w3t {
 using namespace w2; using namespace w3e; using namespace w3p;
+#include "Pools/PointRoutePool.h"
+#include "Pools/NodeRoutePool.h"
+static PoolFx<CPointRoutePool, 0x64, 0xB744B0, 16> g_prp;   // the point route pool (CPointRoute::operator new), larger than the default so Clone / ctor rows can allocate several routes
+static PoolFx<CNodeRoutePool, 0x24, 0xB744B8, 16> g_nrp;    // the node route pool
 alignas(16) static uint8_t g_tk[0x800];      // the task object under test
 alignas(16) static uint8_t g_ta[8][0x80];    // buffer arguments / in-out parameters (CVector&, CColSphere&, CNodeAddress&)
 alignas(16) static uint8_t g_tr[0x80];       // struct return value (hidden pointer)
 alignas(16) static uint8_t g_tk2[0x100];     // a second task object (argument)
+static std::vector<std::pair<size_t, size_t>> g_tmask;   // byte ranges of the task object the exe leaves uninitialised (bit-field padding, half-initialised CNodeAddress): not compared
+static std::vector<std::pair<size_t, size_t>> g_pmask;   // the same, inside every slot of the task pool store (tasks created by the function under test)
+static bool g_tzero = false;   // constructor rows whose bit-fields / padding the exe leaves untouched: start from an all-zero object instead of garbage
 static std::function<void(Rng&)> g_tpost;    // hand rows: extra fixture work (exe globals) after everything is wired
 
 static CPed* TPedR(Rng& r) { return r.below(3) == 0 ? UnderTest() : RPedR(r); }
 static CPed* TPedN(Rng& r) { const uint32 k = r.below(9); return k < 3 ? UnderTest() : (k == 8 ? nullptr : RPedR(r)); }
 template<class T> static uint64_t StoreRet(const T& v) { std::memcpy(g_tr, &v, sizeof v); return 0; }
 
+// a valid route object from the fake pool: 0..8 entries (the game never stores more), garbage-but-finite coordinates
+static void* NewPointRoute(Rng& r) {
+    auto* p = g_prp.pool->New(); if (!p) return nullptr;
+    auto* b = reinterpret_cast<uint8_t*>(p); std::memset(b, 0, 0x64);
+    const uint32_t n = 5 + r.below(4); std::memcpy(b, &n, 4);   // 5..8 entries: the index members (kind 'x', 0..4) stay inside the route, the port asserts on an out-of-range subscript
+    for (uint32_t i = 0; i < 8; ++i) { const CVector v = GV(r); std::memcpy(b + 4 + i * 12, &v, 12); }
+    return p;
+}
+static void* NewNodeRoute(Rng& r) {
+    auto* p = g_nrp.pool->New(); if (!p) return nullptr;
+    auto* b = reinterpret_cast<uint8_t*>(p); std::memset(b, 0, 0x24);
+    const uint32_t n = 5 + r.below(4); std::memcpy(b, &n, 4);
+    for (uint32_t i = 0; i < 8; ++i) { const uint16_t a = (uint16_t)r.below(64), nd = (uint16_t)r.below(256); std::memcpy(b + 4 + i * 4, &a, 2); std::memcpy(b + 6 + i * 4, &nd, 2); }
+    return p;
+}
+
 static void PutEntTo(Rng& r, uint8_t* b, size_t off, char kind, size_t size) {
+    if (kind == 'R' || kind == 'Q') { void* v = kind == 'R' ? NewPointRoute(r) : NewNodeRoute(r); std::memcpy(b + off, &v, 4); return; }
+    if (kind == 'x') { const uint32_t v = r.below(5); std::memcpy(b + off, &v, 4); return; }
     if (kind == 'u') { const uint32_t v = r.below(5); std::memcpy(b + off, &v, size < 4 ? size : 4); if (size < 4) { std::memset(b + off + size, 0, 4 - size); } return; }
     if (kind == 'T') { std::memcpy(b + off, &g_subTask, 4); return; }
     if (kind == 'b') { b[off] = (uint8_t)r.below(2); return; }
@@ -38,6 +63,7 @@ static bool W3TaskCase(Rng& r, std::string& d, size_t sz, std::initializer_list<
     std::memcpy(img0.data(), (void*)kImgLo, img0.size());
     const uint32_t seed = Prep(r, 0);
     g_tap.Prepare(r, true); g_tap.Enter();
+    g_prp.Prepare(r, true); g_prp.Enter(); g_nrp.Prepare(r, true); g_nrp.Enter();
     FillGarbage(r, g_anim, sizeof g_anim);
     g_subTask = nullptr; g_tact = g_tsimp = nullptr;
     FillGarbage(r, g_src, (sizeof(CCopPed) + 3) & ~size_t(3));
@@ -49,19 +75,23 @@ static bool W3TaskCase(Rng& r, std::string& d, size_t sz, std::initializer_list<
     if (sz) {
         g_subTask = g_tp.pool->New(); if (g_subTask) ::new (static_cast<void*>(g_subTask)) CTaskSimpleStandStill(50, false, false, 8.0f);
         NoNegInts(r, g_tk, (sz + 3) & ~size_t(3));
-        if (build && build()) {}   // a real object built with the port's constructor (valid members); otherwise garbage with the pointer members wired
+        if (g_tzero) std::memset(g_tk, 0, sizeof g_tk);
+        if (build && build()) { for (const auto& e : ents) if (e.kind == 'R' || e.kind == 'Q' || e.kind == 'x') PutEntTo(r, g_tk, e.off, e.kind, e.size); }   // routes with 5..8 entries and index members in range replace the empty routes of the constructed object   // a real object built with the port's constructor (valid members); otherwise garbage with the pointer members wired
         else for (const auto& e : ents) PutEntTo(r, g_tk, e.off, e.kind, e.size);
     }
     if (g_tpost) { auto f = std::move(g_tpost); g_tpost = nullptr; f(r); }
     Reg tk{ (uintptr_t)g_tk, sizeof g_tk };
-    if (maskVptr) { tk.mask.assign(sizeof g_tk, 0); for (int k = 0; k < 4; ++k) tk.mask[k] = 1; }
+    if (maskVptr || !g_tmask.empty()) { tk.mask.assign(sizeof g_tk, 0); if (maskVptr) for (int k = 0; k < 4; ++k) tk.mask[k] = 1; for (const auto& m : g_tmask) for (size_t k = 0; k < m.second; ++k) tk.mask[m.first + k] = 1; }
+    Reg tps = g_tp.RegStore();
+    if (!g_pmask.empty()) { tps.mask.assign(tps.n, 0); for (size_t o = 0; o + 0x80 <= tps.n; o += 0x80) for (const auto& m : g_pmask) for (size_t k = 0; k < m.second; ++k) tps.mask[o + m.first + k] = 1; }
     const bool ok = BothA(d, seed, { Reg{ (uintptr_t)g_src, sizeof(CCopPed) }, tk, Reg{ (uintptr_t)g_ta, sizeof g_ta }, Reg{ (uintptr_t)g_tr, sizeof g_tr }, Reg{ (uintptr_t)g_anim, sizeof g_anim },
             Reg{ (uintptr_t)g_ints, sizeof g_ints }, Reg{ (uintptr_t)g_mat, sizeof g_mat }, Reg{ (uintptr_t)g_mi, sizeof g_mi }, Reg{ (uintptr_t)g_col, sizeof g_col }, Reg{ (uintptr_t)g_intel, sizeof g_intel },
             Reg{ (uintptr_t)g_stat, sizeof g_stat }, Reg{ (uintptr_t)g_wanted, sizeof g_wanted }, Reg{ (uintptr_t)g_wanted2, sizeof g_wanted2 }, Reg{ (uintptr_t)g_clo, sizeof g_clo },
-            g_tp.RegStruct(), g_tp.RegFlags(), g_tp.RegStore(), g_ep.RegStruct(), g_ep.RegFlags(), g_ep.RegStore(), g_tap.RegStruct(), g_tap.RegFlags(), g_tap.RegStore(),
-            Reg{ (uintptr_t)rf::pp, sizeof(CPedPool) }, Reg{ (uintptr_t)rf::pedSt, (size_t)rf::kP }, Reg{ kImgLo, kImgHi - kImgLo } },
+            g_tp.RegStruct(), g_tp.RegFlags(), tps, g_ep.RegStruct(), g_ep.RegFlags(), g_ep.RegStore(), g_tap.RegStruct(), g_tap.RegFlags(), g_tap.RegStore(),
+            g_prp.RegStruct(), g_prp.RegFlags(), g_prp.RegStore(), g_nrp.RegStruct(), g_nrp.RegFlags(), g_nrp.RegStore(), Reg{ (uintptr_t)rf::pp, sizeof(CPedPool) }, Reg{ (uintptr_t)rf::pedSt, (size_t)rf::kP }, Reg{ kImgLo, kImgHi - kImgLo } },
         [&]() -> uint64_t { return portFn(static_cast<void*>(g_tk)); }, [&]() -> uint64_t { return exeFn(static_cast<void*>(g_tk)); }, kRf);
-    g_tap.Leave();
+    g_tap.Leave(); g_prp.Leave(); g_nrp.Leave();
+    g_tmask.clear(); g_pmask.clear(); g_tzero = false;
     Done();
     UnwireModel();
     std::memcpy((void*)kImgLo, img0.data(), img0.size());

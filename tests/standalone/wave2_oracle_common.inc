@@ -74,7 +74,7 @@ static bool BothA(std::string& d, uint32_t seed, std::initializer_list<Reg> regs
     uint64_t ra = 0;
     const int pFault = GuardedCall(portFn, ra);
     if (g_trace) std::printf("  [port done, fault=%d]\n", pFault);
-    const DWORD pFaultCode = g_faultCode; void* const pFaultEip = g_faultEip;
+    const DWORD pFaultCode = g_faultCode; void* const pFaultEip = g_faultEip; void* const pFaultAddr = g_faultAddr; const unsigned pStk0 = g_faultStk[0], pStk1 = g_faultStk[1];
     oracle::alloc::End();
     const size_t pUsed = oracle::alloc::Used();
     std::vector<uint8_t> parena(oracle::alloc::g_arena, oracle::alloc::g_arena + pUsed);
@@ -91,6 +91,7 @@ static bool BothA(std::string& d, uint32_t seed, std::initializer_list<Reg> regs
     oracle::alloc::End();
     const size_t eUsed = oracle::alloc::Used();
     if (ext.save) ext.save(w2);
+    if ((pFault || eFault) && std::getenv("W2_FAULTLOG")) std::printf("  [fault port=%d 0x%08lX at %p access %p stk %08X %08X, exe=%d 0x%08lX at %p access %p]\n", pFault, (unsigned long)pFaultCode, pFaultEip, pFaultAddr, pStk0, pStk1, eFault, (unsigned long)g_faultCode, g_faultEip, g_faultAddr);   // diagnostic: where each side faulted
     if (pFault || eFault) {
         // one side faulting alone is a difference; both faulting is the same behaviour (e.g. a dereference of a null the fixture allows): the case carries no information and is skipped
         if (eFault && !pFault) { g_agreedFault = true; return true; }   // exe-only fault: the exe dispatches through a garbage vptr of `this` / reads exe globals no CRT start-up initialised (the port compiled the same call direct): a fixture limit
@@ -116,7 +117,8 @@ static bool BothA(std::string& d, uint32_t seed, std::initializer_list<Reg> regs
         const uint8_t* now = reinterpret_cast<const uint8_t*>(g.va);
         if (g.lenient) ok &= Cmp3(in[i].data(), pa[i].data(), now, g.n, g.skipOff, g.skipN, g.stride, dd, ("r" + std::to_string(i)).c_str(), &g.mask);
         else if (!g.mask.empty()) {   // strict compare except the masked bytes (e.g. the vptr after a destructor)
-            for (size_t k = 0; k < g.n; ++k) { if (k < g.mask.size() && g.mask[k]) continue; if (pa[i][k] != now[k]) { ok = false; char t[64]; std::snprintf(t, sizeof t, " r%zu+%02zX got %02X exe %02X;", i, k, pa[i][k], now[k]); dd += t; break; } }
+            int shown = 0;
+            for (size_t k = 0; k < g.n && shown < 8; ++k) { if (k < g.mask.size() && g.mask[k]) continue; if (pa[i][k] != now[k]) { ok = false; char t[64]; std::snprintf(t, sizeof t, " r%zu+%02zX got %02X exe %02X;", i, k, pa[i][k], now[k]); dd += t; ++shown; } }   // up to 8 differing bytes
         }
         else if (std::memcmp(pa[i].data(), now, g.n) != 0 && !SameBlob(pa[i].data(), now, g.n)) { ok = false; dd += " r" + std::to_string(i) + DiffDesc(pa[i].data(), now, g.n, "m"); }
         ++i; } }
@@ -126,9 +128,9 @@ static bool BothA(std::string& d, uint32_t seed, std::initializer_list<Reg> regs
 }
 
 // ---- pool fixtures: a tiny CTaskPool / CEventPool installed at the exe's pool globals ---------------------------------------------------
-template<class Pool, size_t Stride, uintptr_t GlobalVa>
+template<class Pool, size_t Stride, uintptr_t GlobalVa, int N_ = 6>
 struct PoolFx {
-    static constexpr int N = 6;
+    static constexpr int N = N_;
     alignas(16) uint8_t store[N * Stride];
     alignas(16) uint8_t flags[N + 2];
     alignas(16) uint8_t poolMem[0x20];

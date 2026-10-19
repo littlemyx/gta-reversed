@@ -1338,34 +1338,35 @@ void CEventHandler::ComputeFireNearbyResponse(CEventFireNearby* e, CTask* tactiv
 
 // 0x4C3430
 void CEventHandler::ComputeGotKnockedOverByCarResponse(CEventGotKnockedOverByCar* e, CTask* tactive, CTask* tsimplest) {
-    m_EventResponseTask = [&]() -> CTask* {
-        if (!e->m_vehicle) {
-            return nullptr;
+    if (!e->m_vehicle) {
+        return;
+    }
+    CPed* const drvr = e->m_vehicle->m_pDriver;
+    switch (e->m_TaskId) {
+    case TASK_NONE: // 0x4C3430: id 200 stores a null response
+        m_EventResponseTask = nullptr;
+        break;
+    case TASK_COMPLEX_SMART_FLEE_ENTITY: // 0x4C347B: flee from the driver, from the vehicle itself when it has none (0x4C34D6)
+        m_EventResponseTask = new CTaskComplexSmartFleeEntity{ drvr ? static_cast<CEntity*>(drvr) : static_cast<CEntity*>(e->m_vehicle), false, fSafeDistance };
+        break;
+    case TASK_COMPLEX_KILL_PED_ON_FOOT: // 0x4C346E
+        if (!drvr) { // 0x4C34FB
+            break;
         }
-        const auto drvr = e->m_vehicle->m_pDriver;
-        if (!drvr) {
-            return nullptr;
+        m_EventResponseTask = IsKillTaskAppropriate(m_Ped, drvr, *e)
+            ? static_cast<CTask*>(new CTaskComplexKillPedOnFoot{ drvr })
+            : static_cast<CTask*>(new CTaskComplexSmartFleeEntity{ drvr, false, fSafeDistance });
+        break;
+    case TASK_COMPLEX_KILL_CRIMINAL: // 0x4C3595: nothing for a missing or player driver (0x4C3599 IsPlayer)
+        if (!drvr || drvr->IsPlayer()) {
+            m_EventResponseTask = nullptr;
+            break;
         }
-        switch (e->m_TaskId) {
-        case TASK_COMPLEX_KILL_PED_ON_FOOT: { // 0x4C346E
-            if (IsKillTaskAppropriate(m_Ped, drvr, *e)) {
-                return new CTaskComplexKillPedOnFoot{drvr};
-            }
-            return new CTaskComplexSmartFleeEntity{drvr, true, 100'000.f};
-        }
-        case TASK_COMPLEX_FLEE_ENTITY: { // 0x4C347B
-            // There was an incorrect (it was inverted) null check at `0x4C3496`
-            // The opposite case (when `drvr == nullptr` was a no-op anyways because `CTaskComplexSmartFleeEntity` does nothing when `fleeEntity == nullptr`)
-            return notsa::IsFixBugs()
-                ? new CTaskComplexSmartFleeEntity{drvr, true, 100'000.f}
-                : nullptr; 
-        }
-        case TASK_COMPLEX_KILL_CRIMINAL: {
-            return new CTaskComplexKillCriminal{drvr};
-        }
-        }
-        return nullptr;
-    }();
+        m_EventResponseTask = new CTaskComplexKillCriminal{ drvr };
+        break;
+    default:
+        break; // the response task is left untouched
+    }
 }
 
 // 0x4C2840

@@ -2626,38 +2626,45 @@ void CAEVehicleAudioEntity::ProcessMovingParts(tVehicleParams& vp) {
 float CAEVehicleAudioEntity::GetVolForPlayerEngineSound(tVehicleParams& vp, eVehicleEngineSoundType st) const noexcept {
     const auto& cfg = s_Config.PlayerEngine;
 
-    float volume = [&]{
-        switch (st) {
-        case AE_SOUND_CAR_REV:
-            return lerp(cfg.Rev.VolMin, cfg.Rev.VolMax, vp.RealRevsRatio);
-        case AE_SOUND_CAR_ID:
-            return vp.Vehicle->GetModelIndex() == MODEL_CADDY
-                ? cfg.ID.VolMin - 30.f
-                : lerp(cfg.ID.VolMin, cfg.ID.VolMax, vp.RealRevsRatio);
-        case AE_SOUND_PLAYER_CRZ:
-            return m_IsSingleGear
-                ? cfg.SingleGearVolume
-                : lerp(cfg.Crz.VolMin, cfg.Crz.VolMax, m_CrzCount / (float)(cfg.CrzMaxCnt)); // NOTE: May be wrong
-        case AE_SOUND_PLAYER_AC:
-            return m_IsSingleGear
-                ? cfg.SingleGearVolume
-                : lerp(cfg.AC.VolMin, cfg.AC.VolMax, m_AuGear / (float)(cfg.MaxAuGear)); // NOTE: May be wrong
-        case AE_SOUND_PLAYER_OFF:
-            return GetVolForPlayerEngineSound(vp, AE_SOUND_CAR_ID);
-        default:
-            return 0.f;
-        }
-    }();
+    // exe: every lerp is `ratio * (max - min) + min` with the span a start-up constant (CRT initialisers 0x84CED0.., stored as a float): REV 0xB6BA64, ID 0xB6BA44, CRZ 0xB6BA54 (span / CrzMaxCnt),
+    //      AC 0xB6BA38 (span * 0.2f). The ID sound uses vp.SpeedRatio (+0x2C), REV the revs ratio (+0x3C).
+    float volume;
+    switch (st) {
+    case AE_SOUND_CAR_REV:
+        volume = (cfg.Rev.VolMax - cfg.Rev.VolMin) * vp.RealRevsRatio + cfg.Rev.VolMin;
+        break;
+    case AE_SOUND_CAR_ID:
+        volume = vp.Vehicle->GetModelIndex() == MODEL_CADDY
+            ? cfg.ID.VolMin - 30.f
+            : (cfg.ID.VolMax - cfg.ID.VolMin) * vp.SpeedRatio + cfg.ID.VolMin;
+        break;
+    case AE_SOUND_PLAYER_CRZ:
+        volume = m_IsSingleGear
+            ? cfg.SingleGearVolume
+            : static_cast<float>(static_cast<double>(cfg.Crz.VolMax - cfg.Crz.VolMin) / static_cast<double>(cfg.CrzMaxCnt)) * m_CrzCount + cfg.Crz.VolMin; // the divisor is computed at the CRT's PC53 (double), then stored as a float
+        break;
+    case AE_SOUND_PLAYER_AC:
+        volume = m_IsSingleGear
+            ? cfg.SingleGearVolume
+            : static_cast<float>(m_AuGear) * ((cfg.AC.VolMax - cfg.AC.VolMin) * 0.2f) + cfg.AC.VolMin; // 0.2f = 0x858CC4 (not 1 / MaxAuGear computed at run time)
+        break;
+    case AE_SOUND_PLAYER_OFF:
+        return GetVolForPlayerEngineSound(vp, AE_SOUND_CAR_ID); // 0x4F5DB1: a tail call, the offsets below are applied once (by the callee)
+    default:
+        return 0.f; // exe 0x4F5DC0: `fld dword [esp+8]` - the bits of the (invalid) sound type as a float; no caller passes one
+    }
+    // the exe adds the engine offset BEFORE the trailer and nitro terms
     if (GetVehicle()->vehicleFlags.bIsDrowning) {
         volume -= s_Config.DummyEngine.VolumeUnderwaterOffset;
     }
+    volume += m_AuSettings.EngineVolumeOffset;
     if (GetVehicle()->m_pVehicleBeingTowed) {
         volume += s_Config.DummyEngine.VolumeTrailerOffset;
     }
     if (m_bNitroOnLastFrame && m_CurrentNitroRatio <= 1.0f && m_CurrentNitroRatio >= 0.0f) {
         volume += cfg.VolNitroFactor * m_CurrentNitroRatio;
     }
-    return volume + m_AuSettings.EngineVolumeOffset;
+    return volume;
 }
 
 // 0x4F5C60

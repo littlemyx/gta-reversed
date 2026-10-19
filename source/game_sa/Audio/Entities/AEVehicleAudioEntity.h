@@ -450,7 +450,7 @@ protected: // Config:
 
             struct {
                 float FrqMin{ 0.85f }, FrqMax{ 1.5f };  // 0x8CBC70, 0x8CBC74
-                float VolMin{ -3.5f }, VolMax{ -1.5f }; // 0x8CBC78, 0x8CBC7C
+                float VolMin{ -3.f }, VolMax{ -1.5f }; // 0x8CBC78 (-3.0f in the exe data), 0x8CBC7C
             } ID; // CAR_ID    
 
             struct {

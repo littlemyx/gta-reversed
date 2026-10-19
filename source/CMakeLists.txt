@@ -1374,6 +1374,7 @@ if (${RE_PROJECT}_RW_LIBRW)
         game_sa/Cam.cpp
         game_sa/IdleCam.cpp
         game_sa/Pad.cpp
+        game_sa/Scene.cpp
     )
     target_compile_definitions(wave3_camera_oracle_test PRIVATE W2_ONLY W3_CAMERA_ONLY)
     target_compile_features(wave3_camera_oracle_test PRIVATE cxx_std_23)

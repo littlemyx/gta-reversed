@@ -63,12 +63,12 @@ static void TestW3CameraB() {
     } ENDROW;
     ROW("CCam::RotCamIfInFrontCar", 0x50A4F0, 3000) {
         const int k = r.below(3);
-        const float orient = r.below(8) ? (r.f01() - 0.5f) * 14.f : Fl(r, 10.f, 2);
+        const float orient = r.below(8) ? (r.f01() - 0.5f) * 14.f : FlP(r, 30.f);   // finite: the wrap loops of the exe and the port never end for inf / huge values
         Tw tw([k](Rng& rr) {
             PickCamForRow(rr, k, true);
             CCam& c = *Cam(k);
             c.m_nDirectionWasLooking = rr.below(3) ? 3 : (int32)rr.below(4);
-            c.m_fHorizontalAngle = rr.below(10) ? (rr.f01() - 0.5f) * 14.f : Fl(rr, 10.f, 2);
+            c.m_fHorizontalAngle = rr.below(10) ? (rr.f01() - 0.5f) * 14.f : FlP(rr, 30.f);
             if (rr.below(2)) c.m_fHorizontalAngle = (rr.f01() - 0.5f) * 3.f;
             c.m_vecSource = V3P(rr, 50.f);
             if (rr.below(3) == 0) { CVehicle* v = static_cast<CVehicle*>(c.m_pCamTargetEntity); if (v) v->m_vecMoveSpeed = CVector((rr.f01() - 0.5f) * 0.2f, (rr.f01() - 0.5f) * 0.2f, 0.f); }
@@ -119,11 +119,11 @@ static void TestW3CameraB() {
     } ENDROW;
     ROW("WellBufferMe", 0x509AE0, 5000) {
         const bool ang = r.below(2);
-        const float tgt = ang ? (r.below(10) ? (r.f01() - 0.5f) * 14.f : Fl(r, 20.f, 2)) : Fl(r, 20.f, 12);
+        const float tgt = ang ? (r.below(10) ? (r.f01() - 0.5f) * 14.f : FlP(r, 30.f)) : Fl(r, 20.f, 12);
         const float top = r.below(8) ? 0.05f + r.f01() * 0.3f : Fl(r, 1.f, 2), step = r.below(8) ? 0.001f + r.f01() * 0.1f : Fl(r, 1.f, 2);
         Tw tw([ang](Rng& rr) {
             float* v = reinterpret_cast<float*>(S(oOut)); float* sp = reinterpret_cast<float*>(S(oOut + 4));
-            *v = ang && rr.below(10) ? (rr.f01() - 0.5f) * 14.f : Fl(rr, 20.f, 12); *sp = rr.below(6) ? (rr.f01() - 0.5f) * 0.5f : Fl(rr, 2.f, 6);
+            *v = ang ? (rr.below(10) ? (rr.f01() - 0.5f) * 14.f : FlP(rr, 30.f)) : Fl(rr, 20.f, 12); *sp = rr.below(6) ? (rr.f01() - 0.5f) * 0.5f : Fl(rr, 2.f, 6);
         });
         float* v = reinterpret_cast<float*>(S(oOut)); float* sp = reinterpret_cast<float*>(S(oOut + 4));
         CC(WellBufferMe(tgt, *v, *sp, top, step, ang); return 0;, ExeC<void>(0x509AE0, tgt, v, sp, top, step, (uint8_t)ang); return 0;);

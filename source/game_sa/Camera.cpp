@@ -1122,23 +1122,17 @@ void CCamera::SetZoomValueFollowPedScript(int16 zoomMode) {
 void CCamera::SetZoomValueCamStringScript(int16 zoomMode) {
     auto entity = m_aCams[0].m_pCamTargetEntity;
 
-    if (entity->GetStatus() == STATUS_SIMPLE) {
-        int32 arrPos{};
-        VERIFY(GetArrPosForVehicleType(static_cast<eVehicleType>(entity->AsVehicle()->GetVehicleAppearance()), arrPos));
-        m_fCarZoomValueScript = [this, zoomMode]{
-            switch (zoomMode) {
-            case 0:
-                return std::array{ -1.0f, -0.2f, -3.20f, 0.05f, -2.41f }; // 0x8CC3E0
-            case 1:
-                return std::array{ +1.0f, +1.4f, +0.65f, 1.90f, +6.49f }; // 0x8CC3F4
-            case 2:
-                return std::array{ +6.0f, +6.0f, +15.9f, 15.9f, +15.0f }; // 0x8CC408
-            default:
-                NOTSA_UNREACHABLE("Unexpected zoom mode: {}", zoomMode);
-                return std::array{ m_fCarZoomValueScript, m_fCarZoomValueScript, m_fCarZoomValueScript, m_fCarZoomValueScript, m_fCarZoomValueScript }; // 0x50C248: the value stays untouched
-            }
-        }()[arrPos];
-    
+    // 0x50C1BA: the exe tests the entity TYPE (`[entity + 0x36] & 7 == ENTITY_TYPE_VEHICLE`); the port tested the status (STATUS_SIMPLE)
+    if (entity->GetIsTypeVehicle()) {
+        // 0x50C1D9: `arrPos` starts as 0 and the result of GetArrPosForVehicleType is ignored (the port VERIFYed it)
+        int32 arrPos = 0;
+        GetArrPosForVehicleType(static_cast<eVehicleType>(entity->AsVehicle()->GetVehicleAppearance()), arrPos);
+        switch (zoomMode) {
+        case 0: m_fCarZoomValueScript = std::array{ -1.0f, -0.2f, -3.20f, 0.05f, -2.41f }[arrPos]; break; // 0x8CC3E0
+        case 1: m_fCarZoomValueScript = std::array{ +1.0f, +1.4f, +0.65f, 1.90f, +6.49f }[arrPos]; break; // 0x8CC3F4
+        case 2: m_fCarZoomValueScript = std::array{ +6.0f, +6.0f, +15.9f, 15.9f, +15.0f }[arrPos]; break; // 0x8CC408
+        default: break; // 0x50C248: any other value only sets the flag, the zoom value stays
+        }
         m_bUseScriptZoomValueCar = true;
     } else {
         SetZoomValueFollowPedScript(zoomMode);

@@ -27,7 +27,7 @@ static void TestW3CameraA() {
     ROW("CCamera::Restore", 0x50B930, 800) { CC(T->Restore(); return 0;, ExeT<void>(0x50B930, T); return 0;); } ENDROW;
     ROW("CCamera::RestoreWithJumpCut", 0x50BAB0, 1200) { CC(T->RestoreWithJumpCut(); return 0;, ExeT<void>(0x50BAB0, T); return 0;); } ENDROW;
     ROW("CCamera::SetZoomValueCamStringScript", 0x50C1B0, 800) {
-        const int zm = r.below(3);
+        const int zm = r.below(6) == 0 ? (int)r.below(70000) - 33000 : (int)r.below(3);
         CC(T->SetZoomValueCamStringScript((int16)zm); return 0;, ExeT<void>(0x50C1B0, T, (int)zm); return 0;);
     } ENDROW;
     ROW("CCamera::TakeControl", 0x50C7C0, 1500) {

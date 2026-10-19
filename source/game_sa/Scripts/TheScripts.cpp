@@ -1471,38 +1471,45 @@ void CTheScripts::ProcessAllSearchLights() {
             continue;
         }
 
-        const auto dir = sl.m_PathCoord2 - sl.m_Target;
-        if (dir.SquaredMagnitude() > sq(sl.m_fPathSpeed)) { // Originally part of every case, moved it out here...
-            sl.m_Target *= dir.Normalized() * sl.m_fPathSpeed;
-        } else {
-            switch (sl.m_nCurrentState) {
-            case eScriptSearchLightState::STATE_1: {
-                sl.m_Target        = sl.m_PathCoord1;
-                sl.m_SomethingFlag = true;
-                sl.m_nCurrentState = eScriptSearchLightState::STATE_2;
-                break;
-            }
-            case eScriptSearchLightState::STATE_2: {
-                sl.m_Target        = sl.m_PathCoord2;
-                sl.m_SomethingFlag = true;
-                sl.m_nCurrentState = eScriptSearchLightState::STATE_1;
-                break;
-            }
-            case eScriptSearchLightState::STATE_3: {
-                sl.m_Target = sl.m_FollowingEntity->GetPosition();
-                /* flag is not altered */
-                break;
-            }
-            case eScriptSearchLightState::STATE_4: {
-                sl.m_Target        = sl.m_PathCoord1;
-                sl.m_fPathSpeed    = 0.0f;
-                sl.m_PathCoord1    = CVector{};
-                sl.m_SomethingFlag = true;
-                sl.m_nCurrentState = eScriptSearchLightState::STATE_0;
-                break;
-            }
-            default:
-                NOTSA_UNREACHABLE("Invalid SearchLight State ({})", (int)sl.m_nCurrentState);
+        // 0x4939F0: every state heads for its own destination: STATE_1 -> PathCoord1 (arrived: STATE_2), STATE_2 -> PathCoord2 (arrived: STATE_1), STATE_3 -> the followed entity,
+        // STATE_4 -> PathCoord1 (arrived: parks, STATE_0). Any other state (STATE_0) leaves the target alone (no unreachable).
+        CVector     entityPos{};
+        const CVector* dest = nullptr;
+        switch (sl.m_nCurrentState) {
+        case eScriptSearchLightState::STATE_1: dest = &sl.m_PathCoord1; break;
+        case eScriptSearchLightState::STATE_2: dest = &sl.m_PathCoord2; break;
+        case eScriptSearchLightState::STATE_3: entityPos = sl.m_FollowingEntity->GetPosition(); dest = &entityPos; break;
+        case eScriptSearchLightState::STATE_4: dest = &sl.m_PathCoord1; break;
+        default: break;
+        }
+        if (dest) {
+            auto dir = *dest - sl.m_Target;
+            // the exe sums z^2 + y^2 + x^2 and takes the step unless distance <= speed (a NaN distance steps)
+            if (std::sqrt(dir.z * dir.z + dir.y * dir.y + dir.x * dir.x) <= sl.m_fPathSpeed) {
+                sl.m_Target = *dest;
+                switch (sl.m_nCurrentState) {
+                case eScriptSearchLightState::STATE_1: {
+                    sl.m_SomethingFlag = true;
+                    sl.m_nCurrentState = eScriptSearchLightState::STATE_2;
+                    break;
+                }
+                case eScriptSearchLightState::STATE_2: {
+                    sl.m_SomethingFlag = true;
+                    sl.m_nCurrentState = eScriptSearchLightState::STATE_1;
+                    break;
+                }
+                case eScriptSearchLightState::STATE_4: {
+                    sl.m_fPathSpeed    = 0.0f;
+                    sl.m_PathCoord1    = CVector{};
+                    sl.m_SomethingFlag = true;
+                    sl.m_nCurrentState = eScriptSearchLightState::STATE_0;
+                    break;
+                }
+                default: break; // STATE_3: the flag is not altered
+                }
+            } else {
+                dir.Normalise();
+                sl.m_Target += dir * sl.m_fPathSpeed;
             }
         }
 
@@ -1518,7 +1525,7 @@ void CTheScripts::ProcessAllSearchLights() {
             const auto rotX = x87::atan2(tgtBulbDir.z, tgtBulbDir.Magnitude2D());
             const auto rotZ = tgtBulbDir.Heading();
 
-            entity->m_matrix->RotateX(rotX);
+            entity->m_matrix->SetRotateX(rotX); // 0x493D31 / 0x493DA2: SetRotateX (resets the orientation), not RotateX (which turned the already rotated matrix again every frame)
             entity->m_matrix->RotateZ(rotZ);
             entity->GetPosition() += prevPos;
             entity->UpdateRwMatrix();

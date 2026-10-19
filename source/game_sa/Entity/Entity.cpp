@@ -828,7 +828,8 @@ RpMaterial* MaterialUpdateUVAnimCB(RpMaterial* material, void* data) {
 // to make it point in the direction of the current wind
 // 0x532DB0
 void CEntity::BuildWindSockMatrix() {
-    auto vecWindDir = CVector(CWeather::WindDir.x + 0.01F, CWeather::WindDir.y + 0.01F, 0.1F);
+    // 0x532DC6..0x532E09: the exe negates x and y (`fchs` before storing the direction)
+    auto vecWindDir = CVector(-(CWeather::WindDir.x + 0.01F), -(CWeather::WindDir.y + 0.01F), 0.1F);
 
     auto forward = vecWindDir;
     forward.Normalise();

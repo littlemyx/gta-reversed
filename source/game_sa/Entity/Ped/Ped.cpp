@@ -1139,12 +1139,21 @@ void CPed::SetAmmo(eWeaponType weaponType, uint32 ammo) {
     if (wepSlot != -1) {
         auto& wepInSlot = GetWeaponInSlot(wepSlot);
 
-        wepInSlot.m_TotalAmmo = std::min(ammo, 99'999u);
-        wepInSlot.m_AmmoInClip = std::max(wepInSlot.m_TotalAmmo, wepInSlot.m_AmmoInClip);
+        // exe 0x5DF2B3..0x5DF2E9: signed compares; the clip is reduced to the total (`cmp ecx, edx ; jge ; mov edx, ecx`), it is never raised
+        int32 total = (int32)ammo;
+        if (total >= 99'999) {
+            total = 99'999;
+        }
+        int32 clip = (int32)wepInSlot.m_AmmoInClip;
+        if (total < clip) {
+            clip = total;
+        }
+        wepInSlot.m_TotalAmmo  = (uint32)total;
+        wepInSlot.m_AmmoInClip = (uint32)clip;
 
         // TODO: Inlined
         if (wepInSlot.m_State == WEAPONSTATE_OUT_OF_AMMO) {
-            if (wepInSlot.m_TotalAmmo > 0) {
+            if (total > 0) {
                 wepInSlot.m_State = WEAPONSTATE_READY;
             }
         }

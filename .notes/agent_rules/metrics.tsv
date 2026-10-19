@@ -53,3 +53,4 @@ date	agent	rules	kind	tokens	tool_uses	minutes	outcome	notes
 2026-10-19	W3-VEH-OPEN	v2	oracle fix (small)	305914	137	82	3 open rows fixed (5 port bugs incl. x87-register precision class), +2 rows, 11 skips; under cap
 2026-10-19	ORACLE-W3-PED	v2	oracle wave (1 subsystem)	309164	129	59	Ped A+B: +64 covered, 8 port bugs (FindPedToAttack endless loop, look/aim flags, ammo signed compares); left a background process
 2026-10-19	W3-PED-OPEN	v2	oracle fix (part 1)	169198	47	7	CONTINUE after 47 calls (claimed an orchestrator hand-back request that was never sent); WIP commit unbuilt; removed the orchestrator build.lock by mistake
+2026-10-19	W3-PED-OPEN-2	v2	continuation	212404	120	47	continued from state file OK: +8 rows, 3 port fixes, fixtures fault 88->0, _exit removed; first clean v2 continuation

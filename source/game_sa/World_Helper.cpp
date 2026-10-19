@@ -123,8 +123,12 @@ float FindPlayerHeading(int32 playerId) {
 }
 
 double FindPlayerHeadingExt(int32 playerId) {
-    CVehicle* vehicle = FindPlayerVehicle(playerId, true);
-    return vehicle ? vehicle->GetHeadingExt() : FindPlayerPed(playerId)->GetHeadingExt();
+    // 0x56E450: the remote vehicle is used whenever one is set (not only when the player is in a vehicle), then the vehicle the ped is in, else the ped
+    if (CVehicle* const remote = FindPlayerInfo(playerId).m_pRemoteVehicle)
+        return remote->GetHeadingExt();
+    const auto* const player = FindPlayerPed(playerId);
+    const auto* const vehicle = player->GetVehicleIfInOne();
+    return vehicle ? vehicle->GetHeadingExt() : player->GetHeadingExt();
 }
 
 // Returns Z coord for active player

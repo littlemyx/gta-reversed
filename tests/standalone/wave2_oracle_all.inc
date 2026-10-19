@@ -11,6 +11,8 @@
 #include "wave3_oracle_tasks.inc"     // ORACLE-W3-TASKS: game_sa/Tasks/TaskTypes rows (wave3_tasks_oracle_test)
 #elif defined(W3_GP_ONLY)
 #include "wave3_oracle_gp.inc"       // ORACLE-W3-GAMEPLAY: gameplay root-file rows (wave3_gameplay_oracle_test)
+#elif defined(W3_ANIM_ONLY)
+#include "wave3_oracle_anim.inc"     // ORACLE-W3-ANIM: game_sa/Animation + RpAnimBlendPlugin rows (wave3_anim_oracle_test)
 #else
 #if __has_include("wave2_oracle_gen_ctor.inc")
 #include "wave2_oracle_gen_ctor.inc"      // GENERATED (tools/gen_w2_rows.py): task / event constructors
@@ -95,6 +97,12 @@ static void TestW2() {
     g_tp.Init(); g_ep.Init();
     g_onFault = &w2::OnFault;
     TestW3Gp();
+    return;
+#endif
+#ifdef W3_ANIM_ONLY
+    using namespace w2;
+    g_onFault = &w3a::OnFaultA;
+    TestW3Anim();
     return;
 #endif
     using namespace w2;

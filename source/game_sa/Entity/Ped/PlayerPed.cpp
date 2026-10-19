@@ -708,7 +708,9 @@ void CPlayerPed::DoStuffToGoOnFire() {
 
 // 0x60A040
 void CPlayerPed::AnnoyPlayerPed(bool arg0) {
-    auto& temper = m_pStats->m_nTemper;
+    // exe 0x60A046: the temper byte is compared as a SIGNED char (`cmp al, 0x34 ; jge`, `cmp al, 0x37 ; jl`), the port's uint8 differs for values >= 128
+    auto& temperRef = m_pStats->m_nTemper;
+    int8  temper    = (int8)temperRef;
 
     if (temper < 52) {
         temper++;
@@ -718,6 +720,7 @@ void CPlayerPed::AnnoyPlayerPed(bool arg0) {
         else
             temper = 46;
     }
+    temperRef = (uint8)temper;
 }
 
 // 0x60A070

@@ -797,6 +797,7 @@ void CPed::SetLookFlag(float lookHeading, bool unused, bool ignoreLookTime) {
     }
 
     bIsLooking = true;
+    bIsRestoringLook = false; // exe 0x5DEDDE: `and ecx, 0xFFFFFFF7 ; or ecx, 4` on the flag word
     m_fLookDirection = lookHeading;
     m_nLookTime = 0;
 

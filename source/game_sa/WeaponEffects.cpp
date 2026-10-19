@@ -95,7 +95,7 @@ void CWeaponEffects::ClearCrossHairImmediately(CrossHairId id) {
 // 0x742CC0
 void CWeaponEffects::ClearCrossHairsImmediately() {
     for (auto i = 0u; i < gCrossHair.size(); i++) {
-        ClearCrossHair(i);
+        ClearCrossHairImmediately(i); // the exe inlines the Immediately variant (time - 100), it does not call ClearCrossHair
     }
 }
 

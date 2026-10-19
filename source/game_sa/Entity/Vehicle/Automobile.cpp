@@ -1795,7 +1795,7 @@ int32 CAutomobile::ProcessEntityCollision(CEntity* entity, CColPoint* outColPoin
             numProcessedWheels++;
 
             m_fWheelsSuspensionCompression[i] = wheelColPtsTouchDist;
-            m_wheelColPoint[i] = cp;
+            m_wheelColPoint[i].AssignLikeExe(cp); // 0x6AD11A: CALLS the exe's CColPoint::operator= 0x40FC80 (partial copy)
 
             m_anCollisionLighting[i] = cp.m_nLightingB;
             m_nContactSurface = cp.m_nSurfaceTypeB;
@@ -1833,11 +1833,18 @@ int32 CAutomobile::ProcessEntityCollision(CEntity* entity, CColPoint* outColPoin
     
     // 0x6AD38A - Remove a few specific cp's for forklifts
     if (m_nModelIndex == eModelID::MODEL_FORKLIFT && entity->GetIsTypeObject() && !m_wMiscComponentAngle && !m_wMiscComponentAnglePrev) {
-        auto pts = aAutomobileColPoints | rng::views::take(numColPts);
-        auto newEndIt = rng::remove_if(pts, [](CColPoint& cp) {
-            return cp.m_nSurfaceTypeA == SURFACE_CAR_MOVINGCOMPONENT;
-        });
-        numColPts = rng::distance(pts.begin(), newEndIt.begin()); // Cancer
+        // The exe erases from the OUTPUT array `outColPoints` (arg 2, [esp+0xA0] at 0x6AD3C5; the sphere contacts of ProcessColModels live there, not in
+        // the wheel line array aAutomobileColPoints), shifting the tail down with the CALLED CColPoint::operator= 0x40FC80 (0x6AD3E7) and re-checking the same index
+        for (auto i = 0; i < numColPts; i++) {
+            if (outColPoints[i].m_nSurfaceTypeA != SURFACE_CAR_MOVINGCOMPONENT) {
+                continue;
+            }
+            for (auto j = i; j < numColPts - 1; j++) {
+                outColPoints[j].AssignLikeExe(outColPoints[j + 1]);
+            }
+            numColPts--;
+            i--;
+        }
     }
 
     if (numColPts <= 0 && numProcessedWheels <= 0) {
@@ -1876,7 +1883,7 @@ int32 CAutomobile::ProcessEntityCollision(CEntity* entity, CColPoint* outColPoin
                 continue;
             }
             auto& outcp = outColPoints[numColPts];
-            outcp = wheelcp;
+            outcp.AssignLikeExe(wheelcp); // 0x6AD584: CALLS 0x40FC80 (partial copy)
             outcp.m_fDepth = (
                   std::abs(wheelcp.m_vecNormal.Dot(GetUp()))
                 * std::min(std::abs(GetMoveSpeed().Dot(GetForward())), 0.3f) // Forward speedsq

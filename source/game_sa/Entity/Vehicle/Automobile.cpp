@@ -4551,35 +4551,65 @@ void CAutomobile::CloseAllDoors() {
     }
 }
 
+// 0x6A4AF0
+// x87 register/spill pattern of the exe (only visible beyond the float range / denormals, see CBike::DoSoftGroundResistance): upSpeed, upX, the sand offroad ability, the force factor and
+// the rail speed x/y live in registers (`double`), up y/z, the remaining speed, the normalised speed and the rail force components are spilled to float.
+// Both range tests are `!(a > b)` in the exe (`fcompp / test ah,0x41 / jne`): NaN takes the bogged-down branch.
 void CAutomobile::DoSoftGroundResistance(uint32& extraHandlingFlags) {
     if (IsAnyWheelTouchingSand() && m_nModelIndex != MODEL_RCBANDIT && m_nModelIndex != MODEL_RHINO) {
-        CVector speedUp = m_vecMoveSpeed - DotProduct(m_vecMoveSpeed, GetUp()) * GetUp();
-        float offroadAbility = 0.005f;
-        if (speedUp.SquaredMagnitude() <= sq(0.3f)) {
+        const auto&  up      = GetUp();
+        const double upSpeed = m_vecMoveSpeed.z * up.z + m_vecMoveSpeed.y * up.y + m_vecMoveSpeed.x * up.x;
+        const double upX     = upSpeed * up.x;
+        const float  upY     = (float)(upSpeed * up.y);
+        const float  upZ     = (float)(upSpeed * up.z);
+        float        sx      = (float)(m_vecMoveSpeed.x - upX);
+        float        sy      = (float)(m_vecMoveSpeed.y - upY);
+        const double szReg   = m_vecMoveSpeed.z - upZ; // `fst`: spilled, but the z square multiplies the register by the spilled copy
+        float        sz      = (float)szReg;
+        const double sumSq   = szReg * sz + (double)sy * sy + (double)sx * sx;
+
+        double offroad;
+        if (!(sumSq > 0.3f * 0.3f)) {
             autoFlags.bIsBoggedDownInSand = true;
-        }
-        else {
-            float magnitude = speedUp.NormaliseAndMag();
-            speedUp *= 0.3f;
-            offroadAbility *= std::max(0.2f, 1.0f - (magnitude + magnitude));
+            offroad = 0.005f;
+        } else {
+            const double mag  = std::sqrt(sumSq);
+            const double x03  = sx * 0.3f;
+            const double y03  = sy * 0.3f;
+            const float  z03  = (float)(sz * 0.3f);
+            const double inv  = 1.0 / mag;
+            const float  invF = (float)inv;
+            sx = (float)(inv * x03);
+            sy = (float)(y03 * invF);
+            sz = (float)(z03 * invF);
+
+            const double ability = 1.0f - (mag + mag);
+            offroad = (0.2f > ability ? 0.2f : ability) * 0.005f;
         }
 
         if (handlingFlags.bOffroadAbility2)
-            offroadAbility *= 0.3f;
+            offroad *= 0.3f;
         else if (handlingFlags.bOffroadAbility)
-            offroadAbility *= 0.6f;
+            offroad *= 0.6f;
 
         if (CWeather::WetRoads > 0.2f)
-            offroadAbility *= (1.2f - CWeather::WetRoads);
+            offroad *= (1.2f - CWeather::WetRoads);
 
-        float direction = -(offroadAbility * (CTimer::GetTimeStep() * m_fMass));
-        ApplyMoveForce(speedUp * direction);
+        const double direction = -(CTimer::GetTimeStep() * m_fMass * offroad);
+        ApplyMoveForce(CVector{ (float)(sx * direction), (float)(sy * direction), (float)(sz * direction) });
         extraHandlingFlags |= EXTRA_HANDLING_WHEELS_TOUCHING_SAND;
     } else if (IsAnyWheelTouchingRailTrack()) {
         if (m_nModelIndex != MODEL_RCBANDIT && m_nModelIndex != MODEL_RHINO) {
-            CVector speedUp = m_vecMoveSpeed - DotProduct(m_vecMoveSpeed, GetUp()) * GetUp();
-            float direction = -(CTimer::GetTimeStep() * m_fMass * CVehicle::ms_fRailTrackResistance);
-            ApplyMoveForce(speedUp * direction);
+            const auto&  up      = GetUp();
+            const double upSpeed = m_vecMoveSpeed.z * up.z + m_vecMoveSpeed.y * up.y + m_vecMoveSpeed.x * up.x;
+            const double upX     = upSpeed * up.x;
+            const float  upY     = (float)(upSpeed * up.y);
+            const float  upZ     = (float)(upSpeed * up.z);
+            const double vx      = m_vecMoveSpeed.x - upX;
+            const double vy      = m_vecMoveSpeed.y - upY;
+            const float  vz      = (float)(m_vecMoveSpeed.z - upZ);
+            const float  mult    = (float)-(CTimer::GetTimeStep() * m_fMass * CVehicle::ms_fRailTrackResistance);
+            ApplyMoveForce(CVector{ (float)(vx * mult), (float)(vy * mult), vz * mult });
         }
     }
 }

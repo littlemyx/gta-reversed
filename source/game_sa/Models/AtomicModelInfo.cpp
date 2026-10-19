@@ -140,6 +140,9 @@ void CAtomicModelInfo::SetupVehicleUpgradeFlags(const char* name)
     if (bUseCommonVehicleDictionary)
         return;
 
+    // 0x4C4570: `and eax, 0xFF / mov [info+0x12], ax` - the upper flag byte (atomic flags / vehicle upgrade bits) is cleared before the name is matched
+    m_nFlags &= 0x00FF;
+
     const tVehicleComponentFlag aDummyComps[] = {
         { "chss_",   0x1  },
         { "wheel_",  0x2  },

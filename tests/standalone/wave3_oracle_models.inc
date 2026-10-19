@@ -151,9 +151,9 @@ static void TestW3Models() {
     M0W("CBaseModelInfo::IsRoad", 0x4C4DF0, BM()->IsRoad(), 200);
     M0V("CBaseModelInfo::IncreaseAlpha", 0x532900, BM()->IncreaseAlpha(), 300);
     // special type (bits 11-14 of the flags): the searched type about a third of the time, else random
-    for (const auto& row : { std::make_tuple("CBaseModelInfo::IsBreakableStatuePart", 0x59F090u, 11u), std::make_tuple("CBaseModelInfo::IsTagModel", 0x49CC20u, 6u) }) {
-        const uint32_t addr = std::get<1>(row), want = std::get<2>(row);
-        Run(std::string(std::get<0>(row)) + " 0x" + (addr == 0x59F090u ? "59F090" : "49CC20"), [&](Rng& r, std::string& d) {
+    for (const auto& row : { std::make_tuple("CBaseModelInfo::IsBreakableStatuePart 0x59F090", 0x59F090, 11), std::make_tuple("CBaseModelInfo::IsTagModel 0x49CC20", 0x49CC20, 6) }) {
+        const uint32_t addr = (uint32_t)std::get<1>(row), want = (uint32_t)std::get<2>(row);
+        Run(std::get<0>(row), [&](Rng& r, std::string& d) {
             g_tweak = [&](Rng& rr) { uint16_t f = At<uint16_t>(kMi + 0x12); const uint32_t t = rr.below(3) == 0 ? want : rr.below(16); At<uint16_t>(kMi + 0x12) = (uint16_t)((f & ~0x7800u) | (t << 11)); };
             const bool ok = MCase(r, d, [&]() -> uint64_t { return (want == 11 ? BM()->IsBreakableStatuePart() : BM()->IsTagModel()) ? 1 : 0; }, [&]() -> uint64_t { return ExeT<uint8_t>(addr, P(kMi)) != 0 ? 1 : 0; });
             g_tweak = nullptr;

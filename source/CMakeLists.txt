@@ -746,6 +746,7 @@ if (${RE_PROJECT}_RW_LIBRW)
         game_sa/Entity/Physical.cpp
         game_sa/Collision/ColourSet.cpp
         game_sa/Collision/Box.cpp
+        game_sa/Collision/Sphere.cpp
         game_sa/Shadows.cpp
         game_sa/Core/Vector2D.cpp
         game_sa/Entity/Vehicle/Vehicle.cpp
@@ -900,6 +901,7 @@ if (${RE_PROJECT}_RW_LIBRW)
         game_sa/Animation/AnimBlendSequence.cpp
         # --- sources needed by logic_oracle_misc.inc
         game_sa/Collision/Box.cpp
+        game_sa/Collision/Sphere.cpp
         game_sa/Core/KeyGen.cpp
         game_sa/TheZones.cpp
         game_sa/Zone.cpp
@@ -1131,6 +1133,7 @@ if (${RE_PROJECT}_RW_LIBRW)
         game_sa/Collision/CollisionPrimitives.cpp
         game_sa/Collision/CollisionData.cpp
         game_sa/Collision/Box.cpp
+        game_sa/Collision/Sphere.cpp
         game_sa/Collision/ColLine.cpp
         game_sa/Collision/ColSphere.cpp
         game_sa/Collision/ColTrianglePlane.cpp
@@ -1251,6 +1254,53 @@ if (${RE_PROJECT}_RW_LIBRW)
     set_property(TARGET wave3_models_oracle_test PROPERTY SOURCES "${STANDALONE_PAD_OBJ}" ${_w3m_sources})
     target_link_options(wave3_models_oracle_test PRIVATE "$<$<CXX_COMPILER_ID:MSVC>:/BASE:0x400000;/DYNAMICBASE:NO;/FIXED;/MERGE:_TEXT=.text;/INCREMENTAL:NO;/SUBSYSTEM:CONSOLE;/FORCE:UNRESOLVED;/MAP>")
     set_target_properties(wave3_models_oracle_test PROPERTIES COMPILE_WARNING_AS_ERROR OFF CXX_SCAN_FOR_MODULES OFF)
+    # ORACLE-W3-AUDIO: exe-oracle rows of game_sa/Audio/Entities + game_sa/Audio root (A + B functions) on the W2 harness; rows: tests/standalone/wave3_oracle_audio*.inc
+    add_executable(wave3_audio_oracle_test EXCLUDE_FROM_ALL
+        "${PROJECT_SOURCE_DIR}/tests/standalone/wave1_oracle_test.cpp"
+        ${W2_BASE_SOURCES}
+        game_sa/Audio/AEAudioEnvironment.cpp
+        game_sa/Audio/AEAudioUtility.cpp
+        game_sa/Audio/AESmoothFadeThread.cpp
+        game_sa/Audio/AESound.cpp
+        game_sa/Audio/AEStreamThread.cpp
+        game_sa/Audio/AudioEngine.cpp
+        game_sa/Audio/AudioZones.cpp
+        game_sa/Audio/Entities/AEAudioEntity.cpp
+        game_sa/Audio/Entities/AECollisionAudioEntity.cpp
+        game_sa/Audio/Entities/AEDoorAudioEntity.cpp
+        game_sa/Audio/Entities/AEExplosionAudioEntity.cpp
+        game_sa/Audio/Entities/AEFireAudioEntity.cpp
+        game_sa/Audio/Entities/AEFrontendAudioEntity.cpp
+        game_sa/Audio/Entities/AEGlobalWeaponAudioEntity.cpp
+        game_sa/Audio/Entities/AEPedAudioEntity.cpp
+        game_sa/Audio/Entities/AEPedSpeechAudioEntity.cpp
+        game_sa/Audio/Entities/AEPedWeaponAudioEntity.cpp
+        game_sa/Audio/Entities/AEPedlessSpeechAudioEntity.cpp
+        game_sa/Audio/Entities/AEPoliceScannerAudioEntity.cpp
+        game_sa/Audio/Entities/AEScriptAudioEntity.cpp
+        game_sa/Audio/Entities/AETwinLoopSoundEntity.cpp
+        game_sa/Audio/Entities/AEVehicleAudioEntity.cpp
+        game_sa/Audio/Entities/AEWaterCannonAudioEntity.cpp
+        game_sa/Audio/Entities/AEWeaponAudioEntity.cpp
+        game_sa/Audio/Entities/AEWeatherAudioEntity.cpp
+        game_sa/Collision/Box.cpp
+        game_sa/Collision/Sphere.cpp
+        game_sa/CompressedBox.cpp
+
+    )
+    target_compile_definitions(wave3_audio_oracle_test PRIVATE W2_ONLY W3_AUDIO_ONLY)
+    target_compile_features(wave3_audio_oracle_test PRIVATE cxx_std_23)
+    target_compile_definitions(wave3_audio_oracle_test PRIVATE $<TARGET_PROPERTY:${RE_PROJECT_LIB_NAME},COMPILE_DEFINITIONS> NOTSA_ORACLE_ADDRESS_GLOBALS)
+    target_include_directories(wave3_audio_oracle_test PRIVATE $<TARGET_PROPERTY:${RE_PROJECT_LIB_NAME},INCLUDE_DIRECTORIES>)
+    target_compile_options(wave3_audio_oracle_test PRIVATE $<TARGET_PROPERTY:${RE_PROJECT_LIB_NAME},COMPILE_OPTIONS>)
+    target_precompile_headers(wave3_audio_oracle_test PRIVATE StdInc.cpp)
+    target_link_libraries(wave3_audio_oracle_test PRIVATE librw spdlog::spdlog Tracy::TracyClient user32)
+    target_sources(wave3_audio_oracle_test PRIVATE "${STANDALONE_PAD_OBJ}")
+    get_target_property(_w3au_sources wave3_audio_oracle_test SOURCES)
+    list(REMOVE_ITEM _w3au_sources "${STANDALONE_PAD_OBJ}")
+    set_property(TARGET wave3_audio_oracle_test PROPERTY SOURCES "${STANDALONE_PAD_OBJ}" ${_w3au_sources})
+    target_link_options(wave3_audio_oracle_test PRIVATE "$<$<CXX_COMPILER_ID:MSVC>:/BASE:0x400000;/DYNAMICBASE:NO;/FIXED;/MERGE:_TEXT=.text;/INCREMENTAL:NO;/SUBSYSTEM:CONSOLE;/FORCE:UNRESOLVED;/MAP>")
+    set_target_properties(wave3_audio_oracle_test PROPERTIES COMPILE_WARNING_AS_ERROR OFF CXX_SCAN_FOR_MODULES OFF)
     # x87 intrinsic fidelity oracle: inline fsin/fcos/fpatan/fptan/fsqrt/fyl2x of the exe vs the ports' math, and the CRT entry points the exe calls (pow, asin, acos, tan, floor, ceil, modf)
     add_executable(x87_oracle_test EXCLUDE_FROM_ALL
         "${PROJECT_SOURCE_DIR}/tests/standalone/x87_oracle_test.cpp"

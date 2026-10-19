@@ -15,6 +15,8 @@
 #include "wave3_oracle_anim.inc"     // ORACLE-W3-ANIM: game_sa/Animation + RpAnimBlendPlugin rows (wave3_anim_oracle_test)
 #elif defined(W3_MODELS_ONLY)
 #include "wave3_oracle_models.inc"   // ORACLE-W3-MODELS: game_sa/Models rows (wave3_models_oracle_test)
+#elif defined(W3_AUDIO_ONLY)
+#include "wave3_oracle_audio.inc"    // ORACLE-W3-AUDIO: game_sa/Audio/Entities + Audio root rows (wave3_audio_oracle_test)
 #else
 #if __has_include("wave2_oracle_gen_ctor.inc")
 #include "wave2_oracle_gen_ctor.inc"      // GENERATED (tools/gen_w2_rows.py): task / event constructors
@@ -111,6 +113,12 @@ static void TestW2() {
     using namespace w2;
     g_onFault = +[] { oracle::alloc::End(); };
     TestW3ModelsAll();
+    return;
+#endif
+#ifdef W3_AUDIO_ONLY
+    using namespace w2;
+    g_onFault = +[] { oracle::alloc::End(); };
+    TestW3AudioAll();
     return;
 #endif
     using namespace w2;

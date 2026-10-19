@@ -3830,31 +3830,37 @@ void CCam::Process_Cam_TwoPlayer_Separate_Cars() {
 // 0x513BE0
 void CCam::Process_Cam_TwoPlayer_Separate_Cars_TopDown() {
     m_fFOV = 80.0f;
-    const auto p1 = FindPlayerEntity(PED_TYPE_PLAYER1), p2 = FindPlayerEntity(PED_TYPE_PLAYER2);
+    // 0x513BF4..0x513C19: the exe takes the raw `m_pVehicle` (no bInVehicle test), else the ped itself
+    auto* const ped1 = CWorld::Players[0].m_pPed;
+    auto* const ped2 = CWorld::Players[1].m_pPed;
+    CEntity* const p1 = ped1->m_pVehicle ? static_cast<CEntity*>(ped1->m_pVehicle) : ped1;
+    CEntity* const p2 = ped2->m_pVehicle ? static_cast<CEntity*>(ped2->m_pVehicle) : ped2;
 
     const auto p1p2Centroid = (p1->GetPosition() + p2->GetPosition()) / 2.0f;
-    const auto p1p2Distance = DistanceBetweenPoints(p1->GetPosition(), p2->GetPosition());
+    const CVector d = p1->GetPosition() - p2->GetPosition();
+    const float p1p2Distance = std::sqrt((sq(d.z) + sq(d.y)) + sq(d.x)); // NOTE: summation order as in the original (0x513C91..0x513C9F)
 
-    auto camHeightMult = std::abs([&] {
-        if (FindPlayerVehicle(PED_TYPE_PLAYER1)) {
-            return FindPlayerVehicle(PED_TYPE_PLAYER2) ? 1.0f : 0.75f;
-        }
-        return FindPlayerVehicle(PED_TYPE_PLAYER2) ? 0.75f : 0.45f;
-    }() - m_fCameraHeightMultiplier);
+    const float targetMult = ped1->m_pVehicle ? (ped2->m_pVehicle ? 1.0f : 0.75f) : (ped2->m_pVehicle ? 0.75f : 0.45f);
 
-    if (const auto s = CTimer::GetTimeStep() * ExeRecip(200.0f); camHeightMult >= s) {
-        camHeightMult = (camHeightMult >= 0.0f ? s : -s) + m_fCameraHeightMultiplier;
+    // 0x513CD5: step towards the target by ts * 0.005 (the port took abs() first and always added)
+    const float diff = targetMult - m_fCameraHeightMultiplier;
+    const float step = CTimer::GetTimeStep() * 0.005f;
+    m_fCameraHeightMultiplier = std::abs(diff) < step ? targetMult : (diff >= 0.0f ? m_fCameraHeightMultiplier + step : m_fCameraHeightMultiplier - step);
+
+    // 0x513D38: (distance + 10) limited to >= 30, times the (new) height multiplier
+    float v21 = p1p2Distance + 10.0f;
+    if (!(30.0f <= v21)) { // fcomp: 30 > v21 or unordered keeps 30
+        v21 = 30.0f;
     }
-    m_fCameraHeightMultiplier = camHeightMult;
-
-    const auto v21 = std::max(p1p2Distance + 10.0f, 30.0f);
+    v21 = v21 * m_fCameraHeightMultiplier;
+    const float sf = (float)x87::sin(0.4f), nc = -(float)x87::cos(0.4f);
     m_vecSource.Set(
         p1p2Centroid.x,
-        p1p2Centroid.y - v21 * x87::sin(0.4f),
-        p1p2Centroid.z - v21 * -x87::cos(0.4f)
+        (float)((double)p1p2Centroid.y - (double)(float)(sf * v21)),
+        (float)((double)p1p2Centroid.z - (double)(float)(nc * v21))
     );
-    m_vecFront.Set(0.0f, x87::sin(0.4f), -x87::cos(0.4f));
-    m_vecUp.Set(0.0f, m_vecSource.y, x87::sin(0.4f));
+    m_vecFront.Set(0.0f, sf, nc);
+    m_vecUp.Set(0.0f, -nc, sf); // 0x513E0F: (0, cos, sin)
     m_vecTargetCoorsForFudgeInter = m_vecSource;
 }
 

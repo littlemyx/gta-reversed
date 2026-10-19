@@ -113,6 +113,13 @@ static void BuildPassengers(Rng& r) {
 }
 } // namespace w3m
 
+// W3M_SCALE=<k>: every row runs k times its case count (deeper sweeps)
+template<class Fn> static void RunScaled(const std::string& name, Fn&& fn, int cases) {
+    static const int scale = std::getenv("W3M_SCALE") ? std::max(1, std::atoi(std::getenv("W3M_SCALE"))) : 1;
+    Run(name, std::forward<Fn>(fn), cases * scale);
+}
+#define Run RunScaled
+
 static void TestW3Models() {
     using namespace w2; using namespace w3m;
     auto BM = [] { return reinterpret_cast<CBaseModelInfo*>(P(kMi)); };
@@ -229,7 +236,7 @@ static void TestW3Models() {
         g_tweak = nullptr;
         return ok;
     }, 40);
-    // CClumpModelInfo::SetAtomicRendererCB 0x4C5280 is not rowed: the standalone RW shim (standalone/rw/plugins.cpp RpAtomicSetRenderCallBack) keeps the callback in a plugin slot + trampoline, the exe writes atomic+0x48 (a null callback stores the exe's default 0x7491C0)
+    // CClumpModelInfo::SetAtomicRendererCB 0x4C5280: row in wave3_oracle_models4.inc (recording stubs for the RW calls)
     Run("::SetAtomicModelInfoFlags 0x5B3B20", [&](Rng& r, std::string& d) {
         const uint32_t f = ItemFlags(r);
         return MCase(r, d, [&]() -> uint64_t { ::SetAtomicModelInfoFlags(AM(), f); return 0; }, [&]() -> uint64_t { ExeC<void>(0x5B3B20, P(kMi), f); return 0; });
@@ -289,9 +296,12 @@ static void TestW3Models() {
 
 #include "wave3_oracle_models2.inc"
 #include "wave3_oracle_models3.inc"
+#include "wave3_oracle_models4.inc"
 
 static void TestW3ModelsAll() {
     TestW3Models();
     TestW3ModelsVeh();
     TestW3ModelsPart3();
+    TestW3ModelsPart4();
 }
+#undef Run

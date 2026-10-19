@@ -224,7 +224,7 @@ bool CPathFind::ThisNodeWillLeadIntoADeadEnd(CPathNode* startNode, CPathNode* en
             if (&linked == prev) { // Obviously don't count the previous node
                 continue;
             }
-            if (linked.m_nBehaviourType == 4u || linked.m_nBehaviourType > 10u) { // TODO: Enum?
+            if (linked.m_nBehaviourType == 0u || linked.m_nBehaviourType > 10u) { // 0x44D371: 0 (not 4) or > 10
                 // I'm unsure what's happening here
                 // I think, since this function isn't recursive, they just
                 // consider having 2 appropriate links as a non-deadend

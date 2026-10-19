@@ -206,7 +206,7 @@ bool IsPointInsideLine(
     CVector2D pt,
     float     radius
 ) {
-    return DistAlongPerpRightLine2D(origin, dir, pt) >= radius;
+    return !(DistAlongPerpRightLine2D(origin, dir, pt) < radius); // 0x71E06A: fcomp + `test ah, 5` / jp: true for "not less" - equal AND unordered (NaN) count as inside
 }
 
 // Convert UTF-8 string to Windows Unicode. Free pointer using delete[]

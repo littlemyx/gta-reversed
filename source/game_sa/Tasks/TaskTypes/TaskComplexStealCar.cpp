@@ -60,7 +60,7 @@ CTask* CTaskComplexStealCar::CreateSubTask(eTaskType taskType, CPed* ped) {
     case TASK_SIMPLE_SET_PED_AS_AUTO_DRIVER:
         return new CTaskSimpleSetPedAsAutoDriver{ m_veh };
     case TASK_FINISHED: {
-        if (!ped->bInVehicle) {
+        if (ped && !ped->bInVehicle) { // 0x641066..0x641068: the exe tests the ped for null (test ecx,ecx / je) before reading its flags
             ped->SetUsesCollision(true);
         }
         return nullptr;

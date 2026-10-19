@@ -56,10 +56,8 @@ static void TestW3EntityC() {
         Tw tw([](Rng& rr) { LightingState(rr); });
         EC(return RF(PhyA()->CPhysical::GetLightingTotal());, return RF(ExeT<float>(0x544850, PhyA())););
     } ENDROW;
-    // OPEN (not counted as covered, address written split on purpose): 10/1500 PC24 mismatches remain after the fixes of the magnitude order / reciprocal (65/1500 before): denormal-range friction speeds (exe 3e-40, port 0) and one return-value flip.
-    // Enabled with W3E_OPEN=1; see the report / tests/standalone/tools/w3_entity_skip.tsv
-    if (std::getenv("W3E_OPEN"))
-    ROW("CPhysical::ApplyFriction (other, OPEN)", 0x0, 1500) {
+    ROW("CPhysical::ApplyFriction (other)", 0x545980, 1500) {
+        struct Mk { Mk() { g_flMask = S_NAN | S_ZERO; } ~Mk() { g_flMask = S_ALL; } } mk;   // specials: NaN / 0 only (inf inputs give inf - inf chains whose compare outcome differs between float and extended evaluation; not game values)
         const float fr = r.below(8) ? r.f01() * 0.5f : Fl(r, 2.f, 2);
         Tw tw([](Rng& rr) {
             EnsureMatrix(rr, EntA(), 0); EnsureMatrix(rr, EntB(), 1);   // the exe reads the other entity's matrix without a null check
@@ -71,14 +69,13 @@ static void TestW3EntityC() {
                 At<CVector>(off + offsetof(CPhysical, m_vecCentreOfMass)) = CVector(Fl(rr, 0.5f, 14), Fl(rr, 0.5f, 14), Fl(rr, 0.5f, 14));
                 { auto& fl = At<uint32_t>(off + offsetof(CPhysical, m_nPhysicalFlags)); fl = (fl & ~0x34u) | (rr.below(2) ? 0x10u : 0u) | (rr.below(2) ? 0x4u : 0u) | (rr.below(8) == 0 ? 0x20u : 0u); }   // bDisableTurnForce (0x10), bDisableCollisionForce (0x4), bDisableMoveForce (0x20, rare)
             }
-            // OPEN (tests/standalone/tools/w3_entity_skip.tsv): the branch "entity has bDisableTurnForce, this has not" (0x545EE0) differs from the exe in ~1.5% of its cases (friction speeds of this / entity after the forces), not traced to a cause in the time cap: that combination is left out of the row
-            if ((At<uint32_t>(kB + offsetof(CPhysical, m_nPhysicalFlags)) & 0x10u) && !(At<uint32_t>(kA + offsetof(CPhysical, m_nPhysicalFlags)) & 0x10u)) At<uint32_t>(kA + offsetof(CPhysical, m_nPhysicalFlags)) |= 0x10u;
+            ClampHuge(P(kNodes), 0x40, 1e6f, 1e-3f); ClampHuge(P(kNodes + 0x60), 0x40, 1e6f, 1e-3f);   // matrices of A / B (garbage ones can hold 1e30-range elements)
             for (size_t off : { kA, kB }) ClampHuge(P(off + offsetof(CPhysical, m_vecMoveSpeed)), 0x6C, 1e6f, 1e-3f);   // speeds / forces / masses: tiny values make the downstream float helpers underflow where the exe's extended registers do not
             auto* cp = reinterpret_cast<CColPoint*>(P(kCp));
             const CVector n(Fl(rr, 1.f, 14), Fl(rr, 1.f, 14), Fl(rr, 1.f, 14)); cp->m_vecNormal = n * (1.f / std::max(n.Magnitude(), 1e-3f));
             cp->m_vecPoint = EntA()->GetPosition() + CVector(Fl(rr, 3.f, 14), Fl(rr, 3.f, 14), Fl(rr, 3.f, 14));
         });
-        const bool ok = ECase(r, d, [&]() -> uint64_t { return B8(PhyA()->CPhysical::ApplyFriction(PhyB(), fr, *reinterpret_cast<CColPoint*>(P(kCp)))); }, [&]() -> uint64_t { return ExeT<uint8_t>(0x545000u + 0x980u, PhyA(), PhyB(), fr, P(kCp)); });
+        const bool ok = ECase(r, d, [&]() -> uint64_t { return B8(PhyA()->CPhysical::ApplyFriction(PhyB(), fr, *reinterpret_cast<CColPoint*>(P(kCp)))); }, [&]() -> uint64_t { return ExeT<uint8_t>(0x545980, PhyA(), PhyB(), fr, P(kCp)); });
         if (!ok) { char t[400]; std::snprintf(t, sizeof t, " br=%d fr=%g A: flags %08X type %d mass %g turn %g ms %g %g %g | B: flags %08X type %d mass %g turn %g ms %g %g %g", ((PhyA()->m_nPhysicalFlags >> 4) & 1) | (((PhyB()->m_nPhysicalFlags >> 4) & 1) << 1), fr, PhyA()->m_nPhysicalFlags, (int)PhyA()->GetType(), PhyA()->m_fMass, PhyA()->m_fTurnMass, PhyA()->m_vecMoveSpeed.x, PhyA()->m_vecMoveSpeed.y, PhyA()->m_vecMoveSpeed.z, PhyB()->m_nPhysicalFlags, (int)PhyB()->GetType(), PhyB()->m_fMass, PhyB()->m_fTurnMass, PhyB()->m_vecMoveSpeed.x, PhyB()->m_vecMoveSpeed.y, PhyB()->m_vecMoveSpeed.z); d += t; }
         return ok;
     } ENDROW;

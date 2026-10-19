@@ -2679,76 +2679,111 @@ float CAEVehicleAudioEntity::GetFreqForIdle(float ratio) const noexcept {
     return ExeLinearTable5(ratio, points);
 }
 
+// exe 0x4F8148..: the bike lean term `|fsin(lean)| * 0.12f`; fsin ignores the precision control, so its extended result goes into the fmul unrounded (see CAEPedAudioEntity::UpdateJetPack)
+static float BikeLeanTerm(float lean, float factor) {
+#if NOTSA_X87_ASM
+    const float zero = 0.0f;
+    float out;
+    __asm {
+        fld   dword ptr [lean]
+        fsin
+        fcom  dword ptr [zero]
+        fnstsw ax
+        test  ah, 5
+        jp    L_abs
+        fchs
+    L_abs:
+        fmul  dword ptr [factor]
+        fstp  dword ptr [out]
+    }
+    return out;
+#else
+    const float sn = (float)x87::sin(lean);
+    return (sn < 0.0f ? -sn : sn) * factor;
+#endif
+}
+
 // 0x4F8070
 float CAEVehicleAudioEntity::GetFreqForPlayerEngineSound(tVehicleParams& vp, eVehicleEngineSoundType st) const noexcept {
     auto* const cfg = &s_Config.PlayerEngine;
 
-    float f;
-    if (st == AE_SOUND_CAR_ID && vp.Vehicle->GetModelId() == MODEL_CADDY) { // Moved out here to simplify logic...
-        f = 0.f;
+    // 0x4F80A6 - z move speed factor. The exe compares with `fcom` + a flag test: a NaN takes the `<= 0` path, a NaN clamp becomes the limit
+    float zf;
+    if (!(vp.ZOverSpeed > 0.f)) {
+        const float z = vp.ZOverSpeed > cfg->FrqZMoveSpeedLimitMin ? vp.ZOverSpeed : cfg->FrqZMoveSpeedLimitMin;
+        zf = z / cfg->FrqZMoveSpeedLimitMin * cfg->FrqZMoveSpeedFactor;
     } else {
-        // 0x4F80A6 - Calculate z move speed factor
-        auto zf = vp.ZOverSpeed <= 0.f
-            ? +(std::max(cfg->FrqZMoveSpeedLimitMin, vp.ZOverSpeed) / cfg->FrqZMoveSpeedLimitMin)
-            : -(std::min(cfg->FrqZMoveSpeedLimitMax, vp.ZOverSpeed) / cfg->FrqZMoveSpeedLimitMax);
-        zf *= cfg->FrqZMoveSpeedFactor;
-        if (vp.Speed < -0.001f) {
-            zf = -zf;
-        }
-
-        // 0x4F8111 - Calculate gear factor
-        float gf = std::min(1.f, vp.AbsSpeed / vp.Transmission->m_aGears[1].ChangeUpVelocity);
-
-        // 0x4F8131 - Calculate bike factor
-        float bf = 0.f;
-        if (m_AuSettings.VehicleAudioType == AE_BIKE) {
-            auto* const bike = vp.Vehicle->AsBike();
-
-            bf = x87::sin(bike->GetRideAnimData()->LeanAngle) * cfg->FrqBikeLeanFactor;
-            if (bike->bikeFlags.bPlayerBoost) {
-                bf += cfg->FrqPlayerBikeBoostOffset;
-            }
-            bf *= gf;
-        }
-
-        // 0x4F81AB - Calculate frequency with some additional factors for the sound type
-        switch (st) {
-        case AE_SOUND_CAR_REV: { // 0x4F81BB
-            f = vp.WheelSpin <= 5.f
-                ? cfg->Rev.FrqOffset + vp.WheelSpin * ExeRecip(5.f) * cfg->Rev.FrqWheelSpinFactor
-                : cfg->Rev.FrqOffset + lerp(cfg->Rev.FrqMin, cfg->Rev.FrqMax, invLerp(5.f, 10.f, vp.WheelSpin));
-            break;
-        }
-        case AE_SOUND_CAR_ID: { // 0x4F8235
-            f = lerp(cfg->ID.FrqMin, cfg->ID.FrqMax, GetFreqForIdle(vp.SpeedRatio));
-            break;
-        }
-        case AE_SOUND_PLAYER_CRZ: { // 0x4F826D
-            f  = vp.WheelSpin * ExeRecip(5.f) * cfg->FrqWheelSpinFactor; 
-            f += (cfg->Crz.FrqMax - cfg->Crz.FrqMin) * m_CrzCount / (float)(cfg->CrzMaxCnt); // NB: Not sure if this was intended to be a lerp or not...
-            f += m_IsSingleGear
-                ? cfg->Crz.FrqSingleGear
-                : cfg->Crz.FrqMin;
-            break;
-        }
-        case AE_SOUND_PLAYER_AC: { // 0x4F8281
-            f  = vp.WheelSpin * ExeRecip(5.f) * cfg->FrqWheelSpinFactor;
-            f += m_IsSingleGear
-                ? cfg->AC.FrqSingleGear
-                : cfg->AC.FrqPerGearFactor[m_AuGear] + cfg->AC.FrqMultiGearOffset;
-            break;
-        }
-        case AE_SOUND_PLAYER_OFF: { // 0x4F82C1
-            f = lerp(cfg->Off.FrqMin, cfg->Off.FrqMax, vp.SpeedRatio);
-            break;
-        }
-        default:
-            NOTSA_UNREACHABLE();
-        }
-        f *= ((gf * zf) + 1.f) * (bf + 1.f);
+        const float z = vp.ZOverSpeed < cfg->FrqZMoveSpeedLimitMax ? vp.ZOverSpeed : cfg->FrqZMoveSpeedLimitMax;
+        zf = -(z / cfg->FrqZMoveSpeedLimitMax * cfg->FrqZMoveSpeedFactor);
+    }
+    if (vp.Speed < -0.001f) {
+        zf = -zf;
     }
 
-    if (vp.Vehicle->m_bUnderwater) {
+    // 0x4F810B - gear factor (min(1, q) written as the exe's compare: a NaN stays a NaN), and `gz = zf * gf` stored as a float
+    const float q  = vp.AbsSpeed / vp.Transmission->m_aGears[1].ChangeUpVelocity;
+    const float gf = q > 1.0f ? 1.0f : q;
+    const float gz = zf * gf;
+
+    // 0x4F8131 - bike factor: |sin(lean)| * 0.12f (+ 0.1f when boosting), times the gear factor
+    float bf = 0.f;
+    if (m_AuSettings.VehicleAudioType == AE_BIKE) {
+        auto* const bike = vp.Vehicle->AsBike();
+        float t = BikeLeanTerm(bike->m_RideAnimData.LeanAngle, cfg->FrqBikeLeanFactor);
+        if (bike->bikeFlags.bPlayerBoost) {
+            t += cfg->FrqPlayerBikeBoostOffset;
+        }
+        bf = t * gf;
+    }
+
+    // 0x4F819C - frequency of the sound type. The spans are start-up floats (0xB6BA68 / 0xB6BA40 / 0xB6BA50 = span * (1/150) / 0xB6BA5C); `0.2f` is 0x858CC4
+    float f;
+    switch (st) {
+    case AE_SOUND_CAR_REV: { // 0x4F81B2
+        if (!(vp.WheelSpin > 5.f)) { // `test ah, 0x41; jne`
+            f = vp.WheelSpin * 0.2f * cfg->Rev.FrqWheelSpinFactor + cfg->Rev.FrqOffset;
+        } else {
+            f = (vp.WheelSpin - 5.f) * 0.2f * (cfg->Rev.FrqMax - cfg->Rev.FrqMin);
+            f += cfg->Rev.FrqMin;
+            f += cfg->Rev.FrqOffset;
+        }
+        break;
+    }
+    case AE_SOUND_CAR_ID: { // 0x4F81FF
+        f = GetFreqForIdle(vp.SpeedRatio) * (cfg->ID.FrqMax - cfg->ID.FrqMin) + cfg->ID.FrqMin;
+        break;
+    }
+    case AE_SOUND_PLAYER_CRZ: { // 0x4F824A
+        f  = vp.WheelSpin * 0.2f * cfg->FrqWheelSpinFactor;
+        f += (cfg->Crz.FrqMax - cfg->Crz.FrqMin) * (1.f / 150.f) * m_CrzCount; // 0xB6BA50 = span * [0x862D6C]
+        f += m_IsSingleGear
+            ? cfg->Crz.FrqSingleGear
+            : cfg->Crz.FrqMin;
+        break;
+    }
+    case AE_SOUND_PLAYER_AC: { // 0x4F8281
+        f  = vp.WheelSpin * 0.2f * cfg->FrqWheelSpinFactor;
+        if (m_IsSingleGear) {
+            f += cfg->AC.FrqSingleGear;
+        } else {
+            f += cfg->AC.FrqPerGearFactor[m_AuGear];
+            f += cfg->AC.FrqMultiGearOffset;
+        }
+        break;
+    }
+    case AE_SOUND_PLAYER_OFF: { // 0x4F82B8
+        f = (cfg->Off.FrqMax - cfg->Off.FrqMin) * vp.SpeedRatio + cfg->Off.FrqMin;
+        break;
+    }
+    default:
+        return 0.f; // exe 0x4F82E1: `fld dword [esp+0x14]` - the bits of the (invalid) sound type as a float; no caller passes one
+    }
+    f = f * (gz + 1.f) * (bf + 1.f);
+    if (st == AE_SOUND_CAR_ID && vp.Vehicle->GetModelId() == MODEL_CADDY) { // 0x4F8237 / 0x4F823D: the caddy's idle frequency is 1.0 (the computation above is dropped)
+        f = 1.f;
+    }
+
+    if (vp.Vehicle->vehicleFlags.bIsDrowning) { // 0x4F82E8: `test byte [veh + 0x42B], 0x40`
         f *= s_Config.FreqUnderwaterFactor;
     }
 

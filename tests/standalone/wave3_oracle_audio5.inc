@@ -129,6 +129,10 @@ static void TestW3Audio5() {
         const int st = 1 + (int)r.below(5);
         return ACase(r, d, [&]() -> uint64_t { return FB(VA(0)->VE::GetVolForPlayerEngineSound(*VPp(), (VE::eVehicleEngineSoundType)st)); }, [&]() -> uint64_t { return FB(ExeT<float>(0x4F5D00, P(0), P(kVP), st)); }, playerBuild);
     }, 1500);
+    Run("CAEVehicleAudioEntity::GetFreqForPlayerEngineSound 0x4F8070", [&](Rng& r, std::string& d) {
+        const int st = 1 + (int)r.below(5);
+        return ACase(r, d, [&]() -> uint64_t { return FB(VA(0)->VE::GetFreqForPlayerEngineSound(*VPp(), (VE::eVehicleEngineSoundType)st)); }, [&]() -> uint64_t { return FB(ExeT<float>(0x4F8070, P(0), P(kVP), st)); }, playerBuild);
+    }, 3000);
     Run("CAEVehicleAudioEntity::GetVehicleDriveWheelSkidValue 0x4F5F30", [&](Rng& r, std::string& d) {
         const auto ws = (tWheelState)r.below(4); const float gas = r.below(3) ? r.f01() : GenF(r, 2.f, S_ZERO | S_TINY), spd = GenF(r, 1.5f, S_ZERO | S_TINY);
         return ACase(r, d, [&]() -> uint64_t { return FB(VA(0)->VE::GetVehicleDriveWheelSkidValue(reinterpret_cast<CVehicle*>(P(kVeh)), ws, gas, *reinterpret_cast<cTransmission*>(P(kTr)), spd)); },

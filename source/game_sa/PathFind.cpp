@@ -997,7 +997,7 @@ void CPathFind::SwitchRoadsOffInAreaForOneRegion(float xMin, float xMax, float y
         CPathNode& node     = m_pPathNodes[areaId][nodeIdx];
         const auto position = node.GetPosition();
 
-        if (position.x < xMin || position.x > xMax || position.y < yMin || position.y > yMax || position.z < zMin || position.z > zMax) {
+        if (!(position.x >= xMin && position.x <= xMax && position.y >= yMin && position.y <= yMax && position.z >= zMin && position.z <= zMax)) { // (0x4528A2: a NaN bound skips the node)
             continue;
         }
         if (!ThisNodeHasToBeSwitchedOff(&node) || node.m_isSwitchedOff == (bBackToOriginal ? node.m_isSwitchedOffOriginal : bSwitchOff)) {
@@ -2433,7 +2433,7 @@ void CPathFind::SwitchRoadsOffInArea(float xMin, float xMax, float yMin, float y
         }
 
         // If the existing area is completely inside the area we are switching off, remove it
-        if (pArea->xMin < xMin || pArea->yMin < yMin || pArea->zMin < zMin || pArea->xMax > xMax || pArea->yMax > yMax || pArea->zMax > zMax) {
+        if (!(pArea->xMin >= xMin && pArea->yMin >= yMin && pArea->zMin >= zMin && pArea->xMax <= xMax && pArea->yMax <= yMax && pArea->zMax <= zMax)) { // (0x452D1A: any NaN compare keeps the existing area)
             continue;
         }
 

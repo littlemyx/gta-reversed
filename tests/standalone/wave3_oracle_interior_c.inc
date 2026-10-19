@@ -1,5 +1,6 @@
 // ORACLE-W3-INTERIOR rows C: Interior_c (see wave3_oracle_interior.inc). ROW / IC / Tw are defined there.
 static int g_ti;   // the interior under test
+static uint32_t TileHash(int i) { const uint8_t* t = reinterpret_cast<const uint8_t*>(w3i::Int(i)) + 0x68; uint32_t h = 0; for (int k = 0; k < 900; ++k) h = h * 31 + t[k]; return h; }
 static void ClearTileRect(Rng& rr, int x, int y, int w, int d) {   // zero a rectangle of the grid so that the "empty" paths are reached
     using namespace w3i;
     uint8_t* t = reinterpret_cast<uint8_t*>(Int(g_ti)) + 0x68;
@@ -34,13 +35,16 @@ static void TestW3InteriorC() {
     } ENDROW;
     ROW("Interior_c::SetTilesStatus", 0x591700, 3000) {
         const int i = r.below(8), x = r.below(8) == 0 ? (int)r.below(70) - 20 : r.below(32), y = r.below(8) == 0 ? (int)r.below(70) - 20 : r.below(32), w = r.below(8) == 0 ? (int)r.below(60) - 10 : r.below(7), dp = r.below(8) == 0 ? (int)r.below(60) - 10 : r.below(7), st = r.below(14), ov = r.below(2);
-        Tw tw([i](Rng& rr) { g_ti = i; if (rr.below(3) == 0) { uint8_t* t = reinterpret_cast<uint8_t*>(Int(i)) + 0x68; for (int k = 0; k < 900; ++k) if (t[k] == 0 && rr.below(2)) t[k] = (uint8_t)(rr.below(2) ? 3 : 9); } });
-        IC(Int(i)->SetTilesStatus(x, y, w, dp, st, (int8)ov); return 0;, ExeT<void>(0x591700, Int(i), x, y, w, dp, st, ov); return 0;);
+        Tw tw([i, x, y, w, dp](Rng& rr) {
+            g_ti = i;
+            { auto* b = At<tEffectInterior*>((uintptr_t)Int(i) + 0x14); if (rr.below(4)) { if (x >= 0 && w > 0 && x + w <= 40 && b->m_width < x + w) b->m_width = (uint8_t)(x + w + rr.below(3)); if (y >= 0 && dp > 0 && y + dp <= 40 && b->m_depth < y + dp) b->m_depth = (uint8_t)(y + dp + rr.below(3)); } }   // mostly inside the grid so that the tile rules run
+            if (rr.below(3) == 0) { uint8_t* t = reinterpret_cast<uint8_t*>(Int(i)) + 0x68; for (int k = 0; k < 900; ++k) if (t[k] == 0 && rr.below(2)) t[k] = (uint8_t)(rr.below(2) ? 3 : 9); } });
+        IC(const uint32_t h0 = TileHash(i); Int(i)->SetTilesStatus(x, y, w, dp, st, (int8)ov); return (uint64_t)(TileHash(i) ^ h0);, const uint32_t h0 = TileHash(i); ExeT<void>(0x591700, Int(i), x, y, w, dp, st, ov); return (uint64_t)(TileHash(i) ^ h0););
     } ENDROW;
     ROW("Interior_c::SetCornerTiles", 0x5917C0, 2000) {
         const int i = r.below(8), cn = r.below(8) == 0 ? (int)r.below(8) - 2 : r.below(4), sz = r.below(8) == 0 ? (int)r.below(40) : 1 + r.below(7), st = r.below(14), ov = r.below(2);
         Tw tw([i](Rng& rr) { (void)rr; g_ti = i; });
-        IC(Int(i)->SetCornerTiles(cn, sz, st, (uint8)ov); return 0;, ExeT<void>(0x5917C0, Int(i), cn, sz, st, ov); return 0;);
+        IC(const uint32_t h0 = TileHash(i); Int(i)->SetCornerTiles(cn, sz, st, (uint8)ov); return (uint64_t)(TileHash(i) ^ h0);, const uint32_t h0 = TileHash(i); ExeT<void>(0x5917C0, Int(i), cn, sz, st, ov); return (uint64_t)(TileHash(i) ^ h0););
     } ENDROW;
     ROW("Interior_c::GetTileStatus", 0x5918E0, 2000) {
         const int i = r.below(8), x = r.below(5) == 0 ? (int)r.below(80) - 25 : r.below(32), y = r.below(5) == 0 ? (int)r.below(80) - 25 : r.below(32);
@@ -64,12 +68,12 @@ static void TestW3InteriorC() {
             if (rr.below(10) == 0) for (int k = 0; k < 60; ++k) SAt<int32_t>(oVis + 4 * (size_t)rr.below(900)) = 1;
             SAt<int32_t>(oOut) = x; SAt<int32_t>(oOut + 4) = x; SAt<int32_t>(oOut + 8) = y; SAt<int32_t>(oOut + 12) = y;
         });
-        IC(Int(i)->FindBoundingBox(x, y, &SAt<int32_t>(oOut), &SAt<int32_t>(oOut + 4), &SAt<int32_t>(oOut + 8), &SAt<int32_t>(oOut + 12), &SAt<int32_t>(oVis)); return 0;,
-           ExeT<void>(0x5922C0, Int(i), x, y, (void*)S(oOut), (void*)S(oOut + 4), (void*)S(oOut + 8), (void*)S(oOut + 12), (void*)S(oVis)); return 0;);
+        IC(Int(i)->FindBoundingBox(x, y, &SAt<int32_t>(oOut), &SAt<int32_t>(oOut + 4), &SAt<int32_t>(oOut + 8), &SAt<int32_t>(oOut + 12), &SAt<int32_t>(oVis)); return (uint64_t)((SAt<int32_t>(oOut) != x) | ((SAt<int32_t>(oOut + 4) != x) << 1) | ((SAt<int32_t>(oOut + 8) != y) << 2) | ((SAt<int32_t>(oOut + 12) != y) << 3));,
+           ExeT<void>(0x5922C0, Int(i), x, y, (void*)S(oOut), (void*)S(oOut + 4), (void*)S(oOut + 8), (void*)S(oOut + 12), (void*)S(oVis)); return (uint64_t)((SAt<int32_t>(oOut) != x) | ((SAt<int32_t>(oOut + 4) != x) << 1) | ((SAt<int32_t>(oOut + 8) != y) << 2) | ((SAt<int32_t>(oOut + 12) != y) << 3)););
     } ENDROW;
     ROW("Interior_c::ResetTiles", 0x593910, 4000) {
         const int i = r.below(8);
-        IC(Int(i)->ResetTiles(); return 0;, ExeT<void>(0x593910, Int(i)); return 0;);
+        IC(const uint32_t h0 = TileHash(i); Int(i)->ResetTiles(); return (uint64_t)(TileHash(i) ^ h0);, const uint32_t h0 = TileHash(i); ExeT<void>(0x593910, Int(i)); return (uint64_t)(TileHash(i) ^ h0););
     } ENDROW;
     ROW("Interior_c::Shop_FurnishCeiling", 0x59A130, 20) {
         const int i = r.below(8);

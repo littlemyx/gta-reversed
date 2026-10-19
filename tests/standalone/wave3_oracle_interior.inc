@@ -21,6 +21,7 @@
 #include "Camera.h"
 #include "World.h"
 #include "PlayerInfo.h"
+#include "PathFind.h"
 
 namespace w3i {
 using namespace w2;

@@ -67,6 +67,16 @@ static void TestW3InteriorB() {
         const int g = r.below(8), ty = r.below(10) == 0 ? (int)r.below(600) - 30 : r.below(5);
         IC(return B8(Grp(g)->ContainsInteriorType(ty));, return (uint64_t)ExeT<uint8_t>(0x595250, Grp(g), ty););
     } ENDROW;
+    ROW("InteriorGroup_c::ArePathsLoaded", 0x595380, 2000) {
+        const int g = r.below(8), pl = r.below(5);
+        Tw tw([g, pl](Rng& rr) {   // the group's building plus a random subset of loaded path areas (the 64 map areas + the interior areas)
+            uint8_t* gp = reinterpret_cast<uint8_t*>(Grp(g));
+            if (!At<uint32_t>((uintptr_t)gp + 8)) At<uint32_t>((uintptr_t)gp + 8) = P32(Ent(rr.below(8)));
+            const int prob[5] = { 0, 30, 60, 90, 100 };
+            for (int k = 0; k < (int)std::size(ThePaths.m_pPathNodes); ++k) ThePaths.m_pPathNodes[k] = rr.below(100) < prob[pl] ? reinterpret_cast<CPathNode*>(0x1000 + 16 * k) : nullptr;
+        });
+        IC(return B8(Grp(g)->ArePathsLoaded());, return (uint64_t)ExeT<uint8_t>(0x595380, Grp(g)););
+    } ENDROW;
     ROW("InteriorGroup_c::CalcIsVisible", 0x595200, 800) {
         const int g = r.below(8);
         Tw tw([g](Rng& rr) {   // the first m_numInteriors slots are interiors (the game's groups are filled from the front)

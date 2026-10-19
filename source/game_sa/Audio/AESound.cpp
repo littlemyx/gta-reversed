@@ -248,7 +248,10 @@ void CAESound::StopSoundAndForget() {
 
 // 0x4EF880
 void CAESound::SetPosition(CVector pos) {
-    const auto dist = DistanceBetweenPoints(pos, TheCamera.GetPosition());
+    // 0x4EF8C4: the exe sums the squares as (dz*dz + dy*dy) + dx*dx (x87, 24-bit), not x, y, z
+    const auto camPos = TheCamera.GetPosition();
+    const auto dx = pos.x - camPos.x, dy = pos.y - camPos.y, dz = pos.z - camPos.z;
+    const auto dist = std::sqrt((dz * dz + dy * dy) + dx * dx);
     if (!m_LastFrameUpdatedAt) { // 0x4EF898
         m_PrevCamDist       = dist;
         m_PrevPos           = pos;

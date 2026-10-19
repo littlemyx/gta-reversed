@@ -7,6 +7,8 @@
 #include "wave3_oracle_ped.inc"      // ORACLE-W3-PED: ped rows (wave3_ped_oracle_test)
 #elif defined(W3_EV_ONLY)
 #include "wave3_oracle_ev.inc"        // ORACLE-W3-EVENTS: game_sa/Events rows (wave3_events_oracle_test)
+#elif defined(W3_TASKS_ONLY)
+#include "wave3_oracle_tasks.inc"     // ORACLE-W3-TASKS: game_sa/Tasks/TaskTypes rows (wave3_tasks_oracle_test)
 #elif defined(W3_GP_ONLY)
 #include "wave3_oracle_gp.inc"       // ORACLE-W3-GAMEPLAY: gameplay root-file rows (wave3_gameplay_oracle_test)
 #else
@@ -24,7 +26,7 @@
 #define W2_HAVE_FUNC 1
 #include "wave2_oracle_edge.inc"         // hand-maintained edge-input rows (W2-OPEN)
 #endif
-#endif // !W3_VEH_ONLY && !W3_PED_ONLY && !W3_EV_ONLY && !W3_GP_ONLY
+#endif // !W3_VEH_ONLY && !W3_PED_ONLY && !W3_EV_ONLY && !W3_TASKS_ONLY && !W3_GP_ONLY
 
 static void TestW2Infra() {
     // self-test of the import redirection: the exe's CRT entry points, an exe IAT slot and the port's operator new all hand out arena memory in the same deterministic sequence
@@ -77,6 +79,14 @@ static void TestW2() {
     g_tp.Init(); g_ep.Init();
     g_onFault = &w2::OnFault;
     TestW3Ev();
+    return;
+#endif
+#ifdef W3_TASKS_ONLY
+    using namespace w2;
+    rf::Init();
+    g_tp.Init(); g_ep.Init();
+    g_onFault = &w2::OnFault;
+    TestW3Tasks();
     return;
 #endif
 #ifdef W3_GP_ONLY

@@ -160,6 +160,7 @@ static uint64_t B(bool v) { return (uint64_t)(uint8_t)(v ? 1 : 0); }
 static uint64_t B8(int v) { return (uint64_t)(uint8_t)v; }
 } // namespace w3e
 
+#ifndef W3_EV_FIXTURE_ONLY   // ORACLE-W3-TASKS includes this file for the fixture only (EvCase, the wired reference world, TEv, the task allocator pool)
 static void TestW3EvA() {
     using namespace w2; using namespace w3e;
     // ---- TakesPriorityOver that answers true without looking (the class is `return true` in the port): 0x4B1FC0 FireNearby, 0x4B2390 LeaderEntryExit, 0x4ACEF0 ObjectCollision
@@ -275,3 +276,4 @@ static void TestW3Ev() {
     TestW3EvMisc();
     TestW3EvHandler();
 }
+#endif // !W3_EV_FIXTURE_ONLY

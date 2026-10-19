@@ -1764,9 +1764,10 @@ void CVehicle::ProcessCarAlarm() {
     }
     }
 
-    const auto ts = (uint16)CTimer::GetTimeStepInMS();
+    // 0x6D2207: the exe converts the step with _ftol (signed 32 bit), compares the 16 bit alarm timer against it unsigned and SUBTRACTS it (the port stored the step itself)
+    const auto ts = (uint32)(int32)CTimer::GetTimeStepInMS();
     if (m_nAlarmState >= ts) {
-        m_nAlarmState = ts;
+        m_nAlarmState = (uint16)(m_nAlarmState - ts);
     } else {
         m_nAlarmState = 0;
         m_HornCounter = 0;

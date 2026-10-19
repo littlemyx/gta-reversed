@@ -1290,9 +1290,41 @@ bool CEntity::GetIsTouching(const CVector& centre, float radius) const {
     CVector centreB;
 
     GetBoundCentre(centreB);
-    float totalRadius = GetBoundRadius() + radius;
+    const float boundRadius = GetBoundRadius();
 
-    return (centreB - centre).SquaredMagnitude() < sq(totalRadius);
+    // 0x5344B0..0x534523: the x87 sequence VERBATIM - the squared distance is summed (dz^2 + dx^2) + dy^2 with every intermediate in extended range (no float overflow
+    // for huge coordinates), then `fcompp R^2, sum` + `test ah, 0x41`: the answer is true only for an ordered "sum < R^2"
+    const float cbx = centreB.x, cby = centreB.y, cbz = centreB.z;
+    const CVector* const c = &centre;
+    uint16 status;
+    __asm {
+        mov  eax, c
+        fld  dword ptr [boundRadius]
+        fadd dword ptr [radius]
+        fld  dword ptr [cbx]
+        fsub dword ptr [eax]
+        fld  dword ptr [cby]
+        fsub dword ptr [eax + 4]
+        fld  dword ptr [cbz]
+        fsub dword ptr [eax + 8]
+        fld  st(0)
+        fmul st(0), st(1)
+        fld  st(3)
+        fmul st(0), st(4)
+        faddp st(1), st(0)
+        fld  st(2)
+        fmul st(0), st(3)
+        faddp st(1), st(0)
+        fld  st(4)
+        fmul st(0), st(5)
+        fcompp
+        fstp st(0)
+        fstp st(0)
+        fnstsw word ptr [status]
+        fstp st(0)
+        fstp st(0)
+    }
+    return (status & 0x4100) == 0;
 }
 
 // Checks if the entity's bounding sphere is visible within the camera's view frustum

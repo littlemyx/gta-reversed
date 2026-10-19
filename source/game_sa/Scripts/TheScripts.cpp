@@ -440,6 +440,10 @@ void CTheScripts::AddToInvisibilitySwapArray(CEntity* entity, bool visible) {
         return;
     }
 
+    if (visible) {
+        return; // 0x481249: nothing to undo for an entity that was never made invisible (the port added it to the array anyway)
+    }
+
     const auto free = rng::find(InvisibilitySettingArray, nullptr);
     if (free == InvisibilitySettingArray.end()) {
         return;

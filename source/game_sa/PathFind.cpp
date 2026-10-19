@@ -1620,7 +1620,8 @@ CNodeAddress CPathFind::ReturnInteriorNodeIndex(int32 unkn, uint32 intId, int16 
             return CNodeAddress(NUM_PATH_MAP_AREAS + i, nodeId);
         }
     }
-    return {};
+    // 0x451321: only the low word of the temporary (0xFFFF) is written, the high word is the high word of the `intId` argument
+    return CNodeAddress{ (uint16)0xFFFF, (uint16)(intId >> 16) };
 }
 
 // 0x451350

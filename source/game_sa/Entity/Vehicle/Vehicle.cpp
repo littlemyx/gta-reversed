@@ -1431,6 +1431,9 @@ bool CVehicle::AddPassenger(CPed* passenger, uint8 seatIdx) {
         return AddPassenger(passenger);
     }
 
+    // 0x6D14F2: the exe nudges the vehicle for the entering ped before any seat test (even when the seat is invalid / taken)
+    ApplyTurnForceToOccupantOnEntry(passenger);
+
     // Check if seat is valid
     if (seatIdx >= m_nMaxPassengers) {
         return false;

@@ -7414,3 +7414,10 @@ bool IsLampPost(eModelID modelId) {
         modelId
     );
 }
+
+#ifdef NOTSA_ORACLE_ADDRESS_GLOBALS
+// exe-oracle access (tests/standalone/wave3_oracle_camera_b.inc) to the functions of the anonymous namespaces above that the exe has as free functions
+void OracleFlyBySplineVec3(CVector* out, float* data, float time, int32* idx) { FlyBySplineVec3(out, data, time, idx); }
+void OracleFlyBySplineFloat(float* out, float* data, float time, int32* idx) { FlyBySplineFloat(out, data, time, idx); }
+bool OracleGetArrestCamPosBesideCop(CEntity* target, CPed* cop, const CVector* targetPos, CVector* outPos) { return GetArrestCamPosBesideCop(target, cop, targetPos, outPos); }
+#endif

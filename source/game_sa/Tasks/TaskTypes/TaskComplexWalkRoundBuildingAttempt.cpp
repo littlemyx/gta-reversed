@@ -72,9 +72,21 @@ CTaskComplexWalkRoundBuildingAttempt::~CTaskComplexWalkRoundBuildingAttempt() {
 
 // 0x654B80
 void CTaskComplexWalkRoundBuildingAttempt::ComputeMoveDir(CPed const& ped, CVector& outDir) {
-    const CVector2D normal{ m_normal };
-    const CVector2D targetToPos = m_targetPos - m_pos;
-    outDir = CVector{ targetToPos - targetToPos.ProjectOnToNormal(normal), 0.f };
+    // 0x654B80..0x654C2C: the exe measures from the PED's position (matrix+0x30, or ped+4 without a matrix), never reads m_pos, projects the offset off m_normal (2D),
+    // normalises the result (CVector::Normalise 0x59C910) and, when the squared length is not above 1e-8 (0x86F360), returns the ped's right vector instead (0x654C11..0x654C24)
+    const CVector& p = ped.GetPosition();
+    const float dx = m_targetPos.x - p.x;
+    const float dy = m_targetPos.y - p.y;
+    const float dot = dx * m_normal.x + dy * m_normal.y + m_normal.z * 0.f;
+    outDir = m_normal;
+    outDir.z = 0.f;
+    outDir.x = dx - dot * m_normal.x;
+    outDir.y = dy - dot * m_normal.y;
+    if (outDir.x * outDir.x + outDir.y * outDir.y > 1e-8f) {
+        outDir.Normalise();
+    } else {
+        outDir = ped.GetRight();
+    }
 }
 
 // 0x654C80

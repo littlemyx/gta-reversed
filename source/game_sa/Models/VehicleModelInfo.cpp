@@ -541,7 +541,7 @@ void CVehicleModelInfo::SetEnvMapCoeff(float coeff)
 
 int32 CVehicleModelInfo::GetNumDoors()
 {
-    return m_nNumDoors;
+    return (int8)m_nNumDoors; // 0x4C73C0: movsx eax, byte ptr [ecx+0x4C]
 }
 
 void CVehicleModelInfo::PreprocessHierarchy()

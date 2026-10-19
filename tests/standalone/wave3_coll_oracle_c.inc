@@ -191,10 +191,10 @@ static void TestW3CollC() {
             alignas(16) uint8 buf[sizeof(ColDef)]; W3Garbage(r, buf, sizeof buf); auto* def = reinterpret_cast<ColDef*>(buf);
             const float S = std::fmin(W3S(r), 3000.f);
             float a = GenF(r, S), b = GenF(r, S), c = GenF(r, S), e = GenF(r, S);
-            float v[4] = { std::fmin(a, c), std::fmin(b, e), std::fmax(a, c), std::fmax(b, e) };   // left, bottom, right, top
+            float v[4] = { std::fmin(a, c), std::fmax(b, e), std::fmax(a, c), std::fmin(b, e) };   // memory order left, +4 (upper y), right, +0xC (lower y)
             if (r.below(8) == 0) std::swap(v[0], v[2]);
             std::memcpy(&def->m_Area, v, 16); def->m_bCollisionIsRequired = r.below(2); def->m_bInterior = r.below(2);
-            CVector2D p{ v[0] + (v[2] - v[0]) * (r.f01() * 1.3f - 0.15f), v[1] + (v[3] - v[1]) * (r.f01() * 1.3f - 0.15f) };
+            CVector2D p{ v[0] + (v[2] - v[0]) * (r.f01() * 1.3f - 0.15f), v[3] + (v[1] - v[3]) * (r.f01() * 1.3f - 0.15f) };
             if (reduced && r.below(2)) { const float k = r.below(2) ? 80.f : -80.f; p.x = v[0] + k + (r.below(3) == 0 ? 0.f : r.f01()); }
             if (r.below(7) == 0) p.y = GenF(r, S);
             const int codes[] = { 0, 1, 2, 3, 5, 18 }; StaticRef<int32>(0x965554) = codes[r.below(6)];

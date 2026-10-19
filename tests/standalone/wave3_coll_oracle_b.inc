@@ -190,7 +190,9 @@ static void TestW3CollB() {
     });
 
     // ---- CRect (left, bottom, right, top) ----
-    auto genRect = [](Rng& r, float S) { CRect c; float v[4] = { GenF(r, S), GenF(r, S), GenF(r, S), GenF(r, S) }; if (r.below(4)) { std::sort(v, v + 4); v[1] = v[1] + 0.f; std::swap(v[1], v[2]); /* left <= right, bottom <= top after the swap below */ std::swap(v[1], v[2]); }
+    // memory order: left, +4 (upper y), right, +0xC (lower y); mostly a valid rectangle (left <= right, lower <= upper)
+    auto genRect = [](Rng& r, float S) { CRect c; float v[4] = { GenF(r, S), GenF(r, S), GenF(r, S), GenF(r, S) };
+        if (r.below(4)) { const float x0 = std::fmin(v[0], v[2]), x1 = std::fmax(v[0], v[2]), y0 = std::fmin(v[1], v[3]), y1 = std::fmax(v[1], v[3]); v[0] = x0; v[2] = x1; v[3] = y0; v[1] = y1; }
         std::memcpy(&c, v, 16); return c; };
     Run("CRect::IsFlipped 0x404190", [genRect](Rng& r, std::string& d) {
         const CRect c = genRect(r, W3S(r)); const bool x = c.IsFlipped(), y = oracle::Fn<bool __fastcall(const CRect*)>(0x404190)(&c);
@@ -216,14 +218,14 @@ static void TestW3CollB() {
     rectMut("CRect::StretchToPoint 0x5327F0", 0x5327F0, 3);
     Run("CRect::IsPointInside- 0x404290", [genRect](Rng& r, std::string& d) {
         const float S = W3S(r); const CRect c = genRect(r, S); CVector2D p{ GenF(r, S), GenF(r, S) };
-        if (r.below(2)) { float v[4]; std::memcpy(v, &c, 16); p = { v[0] + (v[2] - v[0]) * (r.f01() * 1.2f - 0.1f), v[1] + (v[3] - v[1]) * (r.f01() * 1.2f - 0.1f) }; if (r.below(8) == 0) p.x = v[0]; if (r.below(8) == 0) p.y = v[3]; }
+        if (r.below(2)) { float v[4]; std::memcpy(v, &c, 16); p = { v[0] + (v[2] - v[0]) * (r.f01() * 1.2f - 0.1f), v[3] + (v[1] - v[3]) * (r.f01() * 1.2f - 0.1f) }; if (r.below(8) == 0) p.x = v[0]; if (r.below(8) == 0) p.y = v[1]; }
         const bool x = c.IsPointInside(p), y = oracle::Fn<bool __fastcall(const CRect*, int, const CVector2D*)>(0x404290)(&c, 0, &p);
         Hit(x); if (x == y) return true;
         d = "rect " + Hex(&c, 16) + " p " + F(p.x) + F(p.y) + " got " + (x ? "1" : "0"); return false;
     });
     Run("CRect::IsPointInside-Tolerance 0x4042D0", [genRect](Rng& r, std::string& d) {
         const float S = W3S(r); const CRect c = genRect(r, S); CVector2D p{ GenF(r, S), GenF(r, S) }; const float tol = r.below(3) ? r.f01() * S * 0.1f : GenF(r, S);
-        if (r.below(2)) { float v[4]; std::memcpy(v, &c, 16); p = { v[0] + (v[2] - v[0]) * (r.f01() * 1.4f - 0.2f), v[1] + (v[3] - v[1]) * (r.f01() * 1.4f - 0.2f) }; }
+        if (r.below(2)) { float v[4]; std::memcpy(v, &c, 16); p = { v[0] + (v[2] - v[0]) * (r.f01() * 1.4f - 0.2f), v[3] + (v[1] - v[3]) * (r.f01() * 1.4f - 0.2f) }; }
         const bool x = c.IsPointInside(p, tol), y = oracle::Fn<bool __fastcall(const CRect*, int, const CVector2D*, float)>(0x4042D0)(&c, 0, &p, tol);
         Hit(x); if (x == y) return true;
         d = "rect " + Hex(&c, 16) + " p " + F(p.x) + F(p.y) + " tol " + F(tol) + " got " + (x ? "1" : "0"); return false;

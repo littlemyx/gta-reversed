@@ -1321,9 +1321,27 @@ CMatrix operator+(const CMatrix& a, const CMatrix& b)
     return result;
 }
 
+// 0x59B920: transposes the rotation, then builds -(pos * R^T) in 3 passes (right, forward, up) with a float store after every step (NOT TransformVector in extended precision)
 CMatrix& Invert(CMatrix& in, CMatrix& out)
 {
-    out = in.Inverted();
+    auto& oR = out.GetRight(); auto& oF = out.GetForward(); auto& oU = out.GetUp(); auto& oP = out.GetPosition();
+    auto& iR = in.GetRight();  auto& iF = in.GetForward();  auto& iU = in.GetUp();  auto& iP = in.GetPosition();
+    oP = CVector{ 0.f, 0.f, 0.f };
+    oR.x   = iR.x;   oR.y   = iF.x; oR.z   = iU.x;
+    oF.x = iR.y;   oF.y = iF.y; oF.z = iU.y;
+    oU.x      = iR.z;   oU.y      = iF.z; oU.z      = iU.z;
+    oP.x = iP.x * oR.x;
+    oP.y = oR.y * iP.x;
+    oP.z = oR.z * iP.x;
+    oP.x = iP.y * oF.x + oP.x;
+    oP.y = oF.y * iP.y + oP.y;
+    oP.z = oF.z * iP.y + oP.z;
+    oP.x = oU.x * iP.z + oP.x;
+    oP.y = iP.z * oU.y + oP.y;
+    oP.z = oU.z * iP.z + oP.z;
+    oP.x = oP.x * -1.0f;
+    oP.y = oP.y * -1.0f;
+    oP.z = oP.z * -1.0f;
     return out;
 }
 

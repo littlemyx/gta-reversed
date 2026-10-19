@@ -2,6 +2,7 @@
 namespace w3au {
 template<class R, class... A> static R ExeS(uint32_t addr, A... a) { return oracle::Fn<R __stdcall(A...)>(addr)(a...); }
 static int GCtx(Rng& r) { return (int)r.below(360); }   // 0..0x167: the exe returns 0 / false for others, the port indexes its tables (asserts) - no caller passes one
+static int GCtxWide(Rng& r) { static const int edge[] = { -1, 0, 338, 339, 358, 359, 360, 361, 32767, -32768 }; return r.below(6) == 0 ? edge[r.below(10)] : (int)r.below(383) - 2; }   // the exe takes a word
 constexpr size_t kSpeechSlots = 0xB61C38, kSpeechSlotsEnd = 0xB61CF8;   // s_PedSpeechSlots (6 x 0x1C)
 } // namespace w3au
 
@@ -50,7 +51,12 @@ static void TestW3Audio6() {
         return ACase(r, d, [&]() -> uint64_t { return Cv((int)PS::GetVoice(n, (eAudioPedType)tp)); }, [&]() -> uint64_t { return Cv((int)(int16_t)ExeC<int32_t>(0x4E3CD0, n, tp)); }, psBuild);
     }, 600);
 
-    // GetSpecificSpeechContext 4E4470 / GetRepeatTime 4E47E0: skipped (open): 1/3000 and 10/1500 cases differ - the exe finds a context by a linear search of the 16-byte table at 8C6A68, the port indexes its table by the context id
+    // wide range of global contexts (-2..380): the exe accepts 0..0x167 (a word), anything else is -1 / 0; the table at 8C6A68 has no entry for 339 (PAIN_START) and 359, an unreachable one for 360
+    Run("CAEPedSpeechAudioEntity::GetSpecificSpeechContext 0x4E4470", [&](Rng& r, std::string& d) {
+        const int c = GCtxWide(r); const int tp = r.below(4) == 0 ? 5 : (int)r.below(10) - 2;
+        return ACase(r, d, [&]() -> uint64_t { return Cv((int)(int16_t)PS::GetSpecificSpeechContext((eGlobalSpeechContext)c, (eAudioPedType)tp)); }, [&]() -> uint64_t { return Cv((int)(int16_t)ExeS<int32_t>(0x4E4470, c, tp)); }, psBuild);
+    }, 3000);
+    Run("CAEPedSpeechAudioEntity::GetRepeatTime 0x4E47E0", [&](Rng& r, std::string& d) { const int c = GCtxWide(r); return ACase(r, d, [&]() -> uint64_t { return Cv((int)(int16_t)P0()->PS::GetRepeatTime((eGlobalSpeechContext)c)); }, [&]() -> uint64_t { return Cv((int)(int16_t)ExeT<int32_t>(0x4E47E0, P(0), c)); }, psBuild); }, 1500);
 
     // ---- members (this = the fixture)
     PSR("CAEPedSpeechAudioEntity::GetPedTalking", 0x4E3F50, 200, P0()->PS::GetPedTalking() ? 1 : 0, ExeT<uint8_t>(0x4E3F50, P(0)) != 0 ? 1 : 0);

@@ -728,6 +728,10 @@ bool CAEPedSpeechAudioEntity::IsGlobalContextImportantForStreaming(eGlobalSpeech
 
 // 0x4E47E0
 int16 CAEPedSpeechAudioEntity::GetRepeatTime(eGlobalSpeechContext gCtx) const {
+    // exe 0x4E47E8: `test dx, dx; jl` / `cmp dx, 0x168; jge` - anything outside 0..0x167 is 0 (the exe table ends with a -1 terminator entry and has a 0x168 one)
+    if (gCtx < 0 || gCtx >= CTX_GLOBAL_NUM) {
+        return 0;
+    }
     if (const auto* const ctxi = GetGlobalSpeechContextInfo(gCtx)) {
         return ctxi->RepeatTime;
     }
@@ -1183,6 +1187,10 @@ eSpecificSpeechContext CAEPedSpeechAudioEntity::GetSpecificSpeechContext(eGlobal
     // exe 0x4E4470: ped types 0..5 are accepted (anything else is -1). `PED_TYPE_SPC` has no table: the exe reads the 6th int16 of the 16-byte entry,
     //       which is the entry's `RepeatTime` (callers then reject type SPC themselves, e.g. CanPedSayGlobalContext compares the type to 4)
     if (pedAudioType < 0 || pedAudioType > PED_TYPE_SPC) {
+        return -1;
+    }
+    // exe 0x4E4475: `test dx, dx; jl` / `cmp dx, 0x168; jge` - the global context must be 0..0x167 (the exe table also has a -1 terminator and a 0x168 entry)
+    if (gCtx < 0 || gCtx >= CTX_GLOBAL_NUM) {
         return -1;
     }
     if (const auto* const ctxi = GetGlobalSpeechContextInfo(gCtx)) {

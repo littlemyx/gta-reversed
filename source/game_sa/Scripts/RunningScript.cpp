@@ -195,7 +195,7 @@ void CRunningScript::InjectCustomCommandHooks() {
 
 // 0x4648E0
 void CRunningScript::Init() {
-    SetName("noname");
+    std::memcpy(m_szName, "noname", 7); // 0x4648E0 copies 7 bytes ("noname ") from 0x859D44 (a strcpy_s of the 8 byte name would fill the tail with the debug CRT's 0xFE / leave m_szName[7] to the CRT)
     rng::fill(m_IPStack, nullptr);
     rng::fill(m_LocalVars, tScriptParam{ 0 });
     m_BaseIP                          = nullptr;

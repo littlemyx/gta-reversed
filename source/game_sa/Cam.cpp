@@ -3814,12 +3814,12 @@ void CCam::Process_Cam_TwoPlayer_Separate_Cars() {
     float blend;
     if (m_nTwoPlayerFocusedPlayer == 0) {
         blend = m_fTwoPlayerFocusBlend - CTimer::GetTimeStep() * 0.04f;
-        if (blend <= 0.0f) {
+        if (!(blend > 0.0f)) { // unordered (NaN) clamps like <= 0
             blend = 0.0f;
         }
     } else {
         blend = CTimer::GetTimeStep() * 0.04f + m_fTwoPlayerFocusBlend;
-        if (1.0f <= blend) {
+        if (!(blend < 1.0f)) { // unordered (NaN) clamps like >= 1
             m_fTwoPlayerFocusBlend = 1.0f;
             return;
         }
@@ -3845,7 +3845,7 @@ void CCam::Process_Cam_TwoPlayer_Separate_Cars_TopDown() {
     // 0x513CD5: step towards the target by ts * 0.005 (the port took abs() first and always added)
     const float diff = targetMult - m_fCameraHeightMultiplier;
     const float step = CTimer::GetTimeStep() * 0.005f;
-    m_fCameraHeightMultiplier = std::abs(diff) < step ? targetMult : (diff >= 0.0f ? m_fCameraHeightMultiplier + step : m_fCameraHeightMultiplier - step);
+    m_fCameraHeightMultiplier = std::abs(diff) < step ? targetMult : (!(diff < 0.0f) ? m_fCameraHeightMultiplier + step : m_fCameraHeightMultiplier - step); // 0x513D0F: `jp` => greater / equal / unordered add
 
     // 0x513D38: (distance + 10) limited to >= 30, times the (new) height multiplier
     float v21 = p1p2Distance + 10.0f;
@@ -3855,7 +3855,7 @@ void CCam::Process_Cam_TwoPlayer_Separate_Cars_TopDown() {
     v21 = v21 * m_fCameraHeightMultiplier;
     const float sf = (float)x87::sin(0.4f), nc = -(float)x87::cos(0.4f);
     m_vecSource.Set(
-        p1p2Centroid.x,
+        p1p2Centroid.x - 0.0f * v21, // 0x513D89: the exe subtracts 0 * W too (NaN / inf when W is)
         (float)((double)p1p2Centroid.y - (double)(float)(sf * v21)),
         (float)((double)p1p2Centroid.z - (double)(float)(nc * v21))
     );

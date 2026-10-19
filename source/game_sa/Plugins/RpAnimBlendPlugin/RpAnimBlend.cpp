@@ -499,8 +499,9 @@ CAnimBlendAssociation* RpAnimBlendClumpGetMainAssociation(RpClump* clump, CAnimB
 
 // 0x4D6A30
 CAnimBlendAssociation* RpAnimBlendClumpGetMainAssociation_N(RpClump* clump, uint32 n) {
+    // NOTE: the exe's 0x4D6A30 selects the n-th association WITH the partial flag (0x4D6A50 `shr dl,4 / test dl,1 / je next`), despite the plugin-sdk name; no exe code calls it
     return RpAnimBlendClumpFindAssociationIf_N(clump, [](const CAnimBlendAssociation& a){
-        return !a.IsPartial();
+        return a.IsPartial();
     }, n);
 }
 
@@ -524,8 +525,9 @@ CAnimBlendAssociation* RpAnimBlendClumpGetMainPartialAssociation(RpClump* clump)
 
 // 0x4D69F0
 CAnimBlendAssociation* RpAnimBlendClumpGetMainPartialAssociation_N(RpClump* clump, int32 n) {
+    // NOTE: the exe's 0x4D69F0 selects the n-th association WITHOUT the partial flag (0x4D6A10 `shr dl,4 / test dl,1 / jne next`), despite the plugin-sdk name; no exe code calls it
     return RpAnimBlendClumpFindAssociationIf_N(clump, [](const CAnimBlendAssociation& a){
-        return a.IsPartial();
+        return !a.IsPartial();
     }, n);
 }
 

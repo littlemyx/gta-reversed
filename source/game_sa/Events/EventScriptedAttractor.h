@@ -14,7 +14,7 @@ public:
     CEventScriptedAttractor(C2dEffectPedAttractor* the2dEffect, CEntity* entity, bool bAvoidLookingAtAttractor);
     ~CEventScriptedAttractor() override = default;
 
-    CEventScriptedAttractor* Constructor(C2dEffectPedAttractor* the2dEffect, CEntity* entity, bool bAvoidLookingAtAttractor);
+    CEventScriptedAttractor* Constructor(C2dEffectPedAttractor* the2dEffect, CEntity* entity); // 0x5FEF40: `ret 8`, the exe passes `false` as the third constructor argument itself
     eEventType GetEventType() const override { return EVENT_SCRIPTED_ATTRACTOR; }
     CEventScriptedAttractor* CloneEditable() const noexcept override { return new CEventScriptedAttractor(m_2dEffect, m_entity, false); }
 };

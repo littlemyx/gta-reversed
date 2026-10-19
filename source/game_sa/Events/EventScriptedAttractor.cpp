@@ -17,9 +17,9 @@ CEventScriptedAttractor::CEventScriptedAttractor(C2dEffectPedAttractor* the2dEff
 }
 
 // 0x5FEF40
-CEventScriptedAttractor* CEventScriptedAttractor::Constructor(C2dEffectPedAttractor* the2dEffect, CEntity* entity, bool bAvoidLookingAtAttractor)
+CEventScriptedAttractor* CEventScriptedAttractor::Constructor(C2dEffectPedAttractor* the2dEffect, CEntity* entity)
 {
-    this->CEventScriptedAttractor::CEventScriptedAttractor(the2dEffect, entity, bAvoidLookingAtAttractor);
+    this->CEventScriptedAttractor::CEventScriptedAttractor(the2dEffect, entity, false);
     return this;
 }
 

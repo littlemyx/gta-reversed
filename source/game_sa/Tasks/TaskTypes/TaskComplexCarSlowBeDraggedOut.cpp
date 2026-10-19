@@ -52,7 +52,7 @@ CTask* CTaskComplexCarSlowBeDraggedOut::CreateSubTask(eTaskType taskType) {
         return new CTaskSimpleCarSetPedSlowDraggedOut{ m_Vehicle, m_Door };
     }
     case TASK_SIMPLE_CAR_SET_PED_OUT: { // 0x64C72C
-        return new CTaskSimpleCarSetPedOut{ m_Vehicle, m_Door, m_IsDraggedBySelf };
+        return new CTaskSimpleCarSetPedOut{ m_Vehicle, m_Door, !m_IsDraggedBySelf }; // 0x64C744..0x64C74F: `test cl,cl / sete cl` pushes the NEGATED flag (the port passed it as is)
     }
     case TASK_SIMPLE_CAR_SLOW_BE_DRAGGED_OUT: { // 0x64C6E3
         return new CTaskSimpleCarSlowBeDraggedOut{ m_Vehicle, m_Door, m_LineUpUtility.get(), m_IsDraggedBySelf };

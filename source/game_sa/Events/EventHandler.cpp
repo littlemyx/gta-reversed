@@ -805,15 +805,14 @@ void CEventHandler::ComputeChatPartnerResponse(CEventChatPartner* e, CTask* tact
 
 // 0x4BB740
 void CEventHandler::ComputeCopCarBeingStolenResponse(CEventCopCarBeingStolen* e, CTask* tactive, CTask* tsimplest) {
-    m_EventResponseTask = [&]() -> CTask* {
-        if (!e->m_hijacker || !e->m_vehicle || m_Ped->GetVehicleIfInOne() != e->m_vehicle) {
-            return nullptr;
-        }
-        if (e->m_hijacker->IsPlayer()) {
-            FindPlayerWanted()->SetWantedLevelNoDrop(eWantedLevel::WANTED_LEVEL_1);
-        }
-        return new CTaskComplexLeaveCar{ e->m_vehicle, 0, 0, true, false };
-    }();
+    if (!e->m_hijacker || !e->m_vehicle || m_Ped->GetVehicleIfInOne() != e->m_vehicle) {
+        return; // 0x4BB7DE: the response task is not touched
+    }
+    m_EventResponseTask = new CTaskComplexLeaveCar{ e->m_vehicle, 0, 0, true, false };
+    if (e->m_hijacker->IsPlayer()) {
+        // 0x4BB7C5: the wanted level of the HIJACKER's own player data (the port used FindPlayerWanted(), the wanted level of the player in focus)
+        e->m_hijacker->GetPlayerWanted()->SetWantedLevelNoDrop(eWantedLevel::WANTED_LEVEL_1);
+    }
 }
 
 // 0x4BB130

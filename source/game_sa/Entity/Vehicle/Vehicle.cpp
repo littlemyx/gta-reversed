@@ -1367,7 +1367,8 @@ bool CVehicle::CanVehicleBeDamaged(CEntity* damager, eWeaponType weapon, bool& b
 
     bDamagedDueToFireOrExplosionOrBullet = false;
     if (CanPhysicalBeDamaged(weapon, &bDamagedDueToFireOrExplosionOrBullet)) {
-        return !bDamagedDueToFireOrExplosionOrBullet || GetStatus() != STATUS_PLAYER || m_fHealth >= 250.0f;
+        // 0x6D131E: `health < 250` is `fcomp / test ah,5 / jnp` -> false only for an ordered "less": a NaN health counts as damageable
+        return !bDamagedDueToFireOrExplosionOrBullet || GetStatus() != STATUS_PLAYER || !(m_fHealth < 250.0f);
     } else {
         return false;
     }

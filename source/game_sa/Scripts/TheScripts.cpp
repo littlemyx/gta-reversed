@@ -252,13 +252,15 @@ void CTheScripts::InitialiseConnectLodObjects(uint16 index) {
 // 0x474730
 void CTheScripts::InitialiseSpecialAnimGroupsAttachedToCharModels() {
     for (auto& group : ScriptAttachedAnimGroups) {
-        group = tScriptAttachedAnimGroup(); // InitialiseSpecialAnimGroup();
+        group.m_nModelID   = -1; // 0x474730 only stores the model id and the first name byte (copying a default constructed temporary overwrote name[1..15] with its uninitialised bytes)
+        group.m_IfpName[0] = 0;
     }
 }
 
 // 0x474710
 void CTheScripts::InitialiseSpecialAnimGroup(uint16 index) {
-    ScriptAttachedAnimGroups[index] = tScriptAttachedAnimGroup();
+    ScriptAttachedAnimGroups[index].m_nModelID   = -1; // 0x474710: model id and first name byte only
+    ScriptAttachedAnimGroups[index].m_IfpName[0] = 0;
 }
 
 // 0x486720

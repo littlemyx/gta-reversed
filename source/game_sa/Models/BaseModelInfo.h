@@ -191,7 +191,7 @@ public:
     [[nodiscard]] bool IsBackfaceCulled() const { return bIsBackfaceCulled; }
     [[nodiscard]] bool IsLod() const { return bIsLod; }
     [[nodiscard]] bool IsRoad() const { return bIsRoad; }
-    void SetHasBeenPreRendered(int32 bPreRendered) { bHasBeenPreRendered = bPreRendered; }
+    void SetHasBeenPreRendered(int32 bPreRendered) { bHasBeenPreRendered = bPreRendered != 0; } // 0x4C42F0: `test eax, eax` (the bit-field assignment alone would keep only bit 0 of the int)
     void SetIsLod(bool bLod) { bIsLod = bLod; }
     void SetOwnsColModel(bool bOwns) { bDoWeOwnTheColModel = bOwns; }
     void IncreaseAlpha() {

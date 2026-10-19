@@ -287,6 +287,9 @@ CAnimBlendAssociation* RpAnimBlendClumpExtractAssociations(RpClump* clump) {
     const auto bd = RpAnimBlendClumpGetData(clump);
 
     const auto head = std::exchange(bd->m_AnimList.next, nullptr);
+    if (head) {
+        head->prev = nullptr; // 0x4D6BF5: the extracted list no longer points back at the clump's list head
+    }
     return CAnimBlendAssociation::FromLink(head);
 }
 

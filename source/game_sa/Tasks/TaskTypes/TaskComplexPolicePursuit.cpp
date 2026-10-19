@@ -136,6 +136,9 @@ bool CTaskComplexPolicePursuit::PersistPursuit(CCopPed* pursuer) {
 CTask* CTaskComplexPolicePursuit::CreateSubTask(eTaskType taskType, CPed* ped) {
     switch (taskType) {
     case TASK_COMPLEX_ARREST_PED:
+        if (!m_Pursued) { // 0x68DA66..0x68DA6B: mov eax,[esi+14h] / test eax,eax / je -> null
+            return nullptr;
+        }
         return new CTaskComplexArrestPed{m_Pursued};
     case TASK_COMPLEX_SEEK_ENTITY:
         return new CTaskComplexSeekEntity<CEntitySeekPosCalculatorStandard>{

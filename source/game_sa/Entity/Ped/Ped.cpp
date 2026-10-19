@@ -2471,7 +2471,7 @@ void CPed::ClearLookFlag() {
     // do { ...
 
     bIsLooking = false;
-    bIsDrowning = false;
+    bShakeFist = false; // exe 0x5E1966: `and [ecx+0x470], 0xFFFFF7FF` = bit 11 of the second flag word (bShakeFist), not bIsDrowning (bit 19)
     bIsRestoringLook = true;
 
     if (CanUseTorsoWhenLooking()) {

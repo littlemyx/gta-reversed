@@ -214,14 +214,15 @@ void SetAtomicModelInfoFlags(CAtomicModelInfo* modelInfo, uint32 dwFlags)
     if (flagsStruct.bIsPalm)
         modelInfo->nSpecialType = eModelInfoSpecialType::PALM;
 
-    if (flagsStruct.bIsUnknown)
-        modelInfo->nSpecialType = eModelInfoSpecialType::UNKNOWN;
-
+    // 0x5B3B20: the exe assigns tag, breakable statue, then "unknown" last (the last flag set wins)
     if (flagsStruct.bIsTag)
         modelInfo->nSpecialType = eModelInfoSpecialType::TAG;
 
     if (flagsStruct.bisBreakableStatue)
         modelInfo->nSpecialType = eModelInfoSpecialType::BREAKABLE_STATUE;
+
+    if (flagsStruct.bIsUnknown)
+        modelInfo->nSpecialType = eModelInfoSpecialType::UNKNOWN;
 
 
     modelInfo->bIsRoad = flagsStruct.bIsRoad;

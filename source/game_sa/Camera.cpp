@@ -453,19 +453,8 @@ void CCamera::InitialiseScriptableComponents() {
     m_bFOVLerpProcessed        = false;
 }
 
-// 0x50AF90
+// 0x50AF90 - the exe's body is a single `ret` (the debug camera is compiled out of the final game)
 void CCamera::InitialiseCameraForDebugMode() {
-#ifndef FINAL
-    if (auto* vehicle = FindPlayerVehicle()) {
-        m_aCams[2].m_vecSource = vehicle->GetPosition();
-    } else if (auto* player = FindPlayerPed()) {
-        m_aCams[2].m_vecSource = player->GetPosition();
-    }
-
-    m_aCams[2].m_fTrueAlpha = 0.0f;
-    m_aCams[2].m_fTrueBeta  = 0.0f;
-    m_aCams[2].m_nMode = eCamMode::MODE_DEBUG;
-#endif
 }
 
 // 0x50A480

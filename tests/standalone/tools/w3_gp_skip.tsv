@@ -1,0 +1,19 @@
+CGarages::TriggerMessage	hand row (wave3_oracle_gp_fix.inc): tag <= 7 chars, times on the edges of the current time
+CPedGroupMembership::AddMember	hand row: slot 0..7 and empty, member ped with empty intelligence
+CPedGroupMembership::RemoveMember-ByMemIdx	hand row: slot 0..7 and occupied
+CWeather::FindWeatherTypesList	hand row: returns a pointer into a data table (compare the content)
+CPickup::FindStringForTextIndex	hand row: returns a string literal (compare the content)
+CPlayerInfo::CancelPlayerEnteringCars	hand row: the exe is `ret 4` (stdcall), the port declares it static
+CPopulation::AddExistingPedInCar	hand row: cdecl, returns its first argument
+CGangWars::AddKillToProvocation	NOT ORACLE-ABLE yet (all cases fault in both): CTheScripts / CTheZones state: every case faults in port and exe (zone tables not wired)
+CGangWars::ClearSpecificZonesToTriggerGangWar	NOT ORACLE-ABLE yet (all cases fault in both): CTheZones::FillZonesWithGangColours: zone tables not wired
+CGangWars::SetSpecificZoneToTriggerGangWar	NOT ORACLE-ABLE yet (all cases fault in both): same
+CStats::DisplayScriptStatUpdateMessage	NOT ORACLE-ABLE yet (all cases fault in both): CText / CHud help message: not wired
+CStats::PopulateFavoriteRadioStationList	NOT ORACLE-ABLE yet (all cases fault in both): listening-time stat arrays: fixture missing, every case faults
+CPedStats::GetPedStatType	NOT ORACLE-ABLE yet (all cases fault in both): ped stat name table: every case faults in both (random name pointer)
+CGarage::IsPlayerOutsideGarage	NOT ORACLE-ABLE yet (all cases fault in both): needs the player ped + FindPlayerVehicle wiring (CWorld::Players[0])
+CGarage::NeatlyLineUpStoredCars	NOT ORACLE-ABLE yet (all cases fault in both): CStoredCar array + vehicle model info: fixture missing
+CGarages::Shutdown	NOT ORACLE-ABLE yet (all cases fault in both): CAEDoorAudioEntity::Reset over the 50 garages: audio entity state not wired
+CGarages::StopCarFromBlowingUp	NOT ORACLE-ABLE yet (all cases fault in both): CAutomobile damage manager of a ref-world vehicle: fixture missing
+CStoredCar::StoreCar	NOT ORACLE-ABLE yet (all cases fault in both): vehicle model info / handling / paint-job fixture missing
+CPickups::TestForPickupsInBubble	NOT ORACLE-ABLE yet (all cases fault in both): pickup array + camera/player wiring missing

@@ -1,0 +1,23 @@
+110 function rows, 25 TUs
+SKIP CGangWars::AddKillToProvocation 0x443950: NOT ORACLE-ABLE yet (all cases fault in both): CTheScripts / CTheZones state: every case faults in port and exe (zone tables not wired)
+SKIP CGangWars::ClearSpecificZonesToTriggerGangWar 0x443FF0: NOT ORACLE-ABLE yet (all cases fault in both): CTheZones::FillZonesWithGangColours: zone tables not wired
+SKIP CGangWars::SetSpecificZoneToTriggerGangWar 0x444010: NOT ORACLE-ABLE yet (all cases fault in both): same
+SKIP CGarage::NeatlyLineUpStoredCars 0x448330: NOT ORACLE-ABLE yet (all cases fault in both): CStoredCar array + vehicle model info: fixture missing
+SKIP CGarage::IsPlayerOutsideGarage 0x448E50: NOT ORACLE-ABLE yet (all cases fault in both): needs the player ped + FindPlayerVehicle wiring (CWorld::Players[0])
+SKIP CStoredCar::StoreCar 0x449760: NOT ORACLE-ABLE yet (all cases fault in both): vehicle model info / handling / paint-job fixture missing
+SKIP CGarages::Shutdown 0x4471B0: NOT ORACLE-ABLE yet (all cases fault in both): CAEDoorAudioEntity::Reset over the 50 garages: audio entity state not wired
+SKIP CGarages::StopCarFromBlowingUp 0x448890: NOT ORACLE-ABLE yet (all cases fault in both): CAutomobile damage manager of a ref-world vehicle: fixture missing
+NOCLASS Teleport 0x5F7AD0
+NOCLASS PlayerGaveCommand_Attack 0x5F7CC0
+NOCLASS IsAnyoneUsingCar 0x5F7DB0
+NOCLASS PlayerGaveCommand_Gather 0x5FAB60
+NOCLASS Constructor 0x5FC150
+NOCLASS Destructor 0x5FC190
+NOARG CPedGroupMembership::From 0x5F7FE0 param "const CPedGroupMembership& obj"
+SKIP CPedStats::GetPedStatType 0x6088D0: NOT ORACLE-ABLE yet (all cases fault in both): ped stat name table: every case faults in both (random name pointer)
+RET CPickup::GetPosn 0x4549A0 "CVector"
+DECL CPickups::ModifyStringLabelForControlSetting 0x454B70 (0 declarations)
+SKIP CPickups::TestForPickupsInBubble 0x456450: NOT ORACLE-ABLE yet (all cases fault in both): pickup array + camera/player wiring missing
+NOARG CPlayerInfo::EvaluateCarPosition 0x56DAD0 param "CVehicle** outVehicle"
+SKIP CStats::PopulateFavoriteRadioStationList 0x558EC0: NOT ORACLE-ABLE yet (all cases fault in both): listening-time stat arrays: fixture missing, every case faults
+SKIP CStats::DisplayScriptStatUpdateMessage 0x55B980: NOT ORACLE-ABLE yet (all cases fault in both): CText / CHud help message: not wired

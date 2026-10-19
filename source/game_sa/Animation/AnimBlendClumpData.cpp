@@ -35,7 +35,9 @@ void CAnimBlendClumpData::SetNumberOfBones(uint32 numBones) {
         CMemoryMgr::FreeAlign(m_FrameDatas);
     }
     m_NumFrameData = numBones;
-    m_FrameDatas = static_cast<AnimBlendFrameData*>(CMemoryMgr::MallocAlign(sizeof(AnimBlendFrameData) * numBones, 64));
+    // 0x4CF140: the exe rounds the byte count up to a multiple of 64 (((n * 0x18 - 1) >> 6) + 1 << 6; 0 for n == 0) before MallocAlign(size, 64)
+    const uint32 bytes = numBones * (uint32)sizeof(AnimBlendFrameData);
+    m_FrameDatas = static_cast<AnimBlendFrameData*>(CMemoryMgr::MallocAlign((((bytes - 1u) >> 6) + 1u) << 6, 64));
 }
 
 // 0x4CF190

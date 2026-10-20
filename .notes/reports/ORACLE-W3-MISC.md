@@ -6,8 +6,8 @@ Agent ORACLE-W3-MISC (rules v3), 2026-10-20 17:54 - 18:15 WEST, worktree C:/gta-
 | | before | after |
 |---|---:|---:|
 | exe-oracle coverage, whole game | 4550 | **4581** |
-| Localisation.cpp uncovered (A/B) | 18 | **0** |
-| TagManager.cpp uncovered A / B / C | 12 (A+B) / IsTag C | **SetupAtomic (B), RenderTagForPC (C), Save, Load (S)** |
+| Localisation.cpp uncovered (A/B) | 17 (GermanGame was covered) | **0** |
+| TagManager.cpp uncovered (A/B + IsTag) | 14 | **SetupAtomic (B), RenderTagForPC (C), Save, Load (S)** |
 | port bugs fixed (one commit each) | | **4** |
 
 ## Fixtures

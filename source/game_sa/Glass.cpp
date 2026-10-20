@@ -38,8 +38,8 @@ void CGlass::Init() {
     for (auto i = 0u; i < std::size(PanePolyPositions); i++) {
         const auto& poly = PanePolyPositions[i];
 
-        // Calculate center position of each pane by taking an average
-        PanePolyCenterPositions[i] = std::accumulate(std::begin(poly), std::end(poly), CVector2D{}) / (float)std::size(PanePolyPositions);
+        // 0x71A8D0: centre of each pane polygon = (v0 + v1 + v2) * 0.33333334f (0x859040) per component
+        PanePolyCenterPositions[i] = CVector2D{ (poly[0].x + poly[1].x + poly[2].x) * 0.33333334f, (poly[0].y + poly[1].y + poly[2].y) * 0.33333334f };
     }
 }
 
@@ -638,9 +638,10 @@ bool CGlass::IsObjectGlass(CEntity* entity) {
 }
 
 // Initial values of the globals declared with NOTSA_GLOBAL_DECL in Glass.h (detached mode; ignored in address mode)
-NOTSA_GLOBAL_DEF(CGlass, PanePolyPositions, 0x8D5CD8, (CVector2D[4][3]), {
+NOTSA_GLOBAL_DEF(CGlass, PanePolyPositions, 0x8D5CD8, (CVector2D[5][3]), {
     { { 0.0f, 0.0f }, { 0.0f, 1.0f }, { 0.4f, 0.5f } },
     { { 0.0f, 1.0f }, { 1.0f, 1.0f }, { 0.4f, 0.5f } },
     { { 0.0f, 0.0f }, { 0.4f, 0.5f }, { 0.7f, 0.0f } },
-    { { 0.7f, 0.0f }, { 0.4f, 0.5f }, { 1.0f, 1.0f } }
+    { { 0.7f, 0.0f }, { 0.4f, 0.5f }, { 1.0f, 1.0f } },
+    { { 0.7f, 0.0f }, { 1.0f, 1.0f }, { 1.0f, 0.0f } }
 });

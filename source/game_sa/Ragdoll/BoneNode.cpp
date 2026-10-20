@@ -158,7 +158,7 @@ void BoneNode_c::QuatToEuler(const RtQuat& quat, CVector& outAngles) {
 // 0x617050
 inline int32 BoneNode_c::GetIdFromBoneTag(eBoneTag32 tag) {
     for (auto&& [i, info] : rngv::enumerate(BoneNodeManager_c::ms_boneInfos)) {
-        if (info.BoneTag == tag) {
+        if ((int32)info.BoneTag == tag.get_underlying()) { // 0x617063: `movsx esi, word [ecx]; cmp edx, esi` - all 32 bits of the tag are compared (a WEnum->enum compare would truncate to 16 bits)
             return (eBoneTag)(i);
         }
     }

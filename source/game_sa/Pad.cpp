@@ -205,10 +205,10 @@ void CPad::Update(int32 pad) {
     iCurrHornHistory = (iCurrHornHistory + 1) % 5;
     bHornHistory[iCurrHornHistory] = GetHorn();
 
-    // Shift right by 1
-    std::rotate(
+    // Shift right by 1: buffer[i] = buffer[i - 1] for i = 9..1, buffer[0] keeps its value (the exe loop at 0x541D2D; NOT a rotation)
+    std::copy_backward(
         std::begin(SteeringLeftRightBuffer),
-        std::begin(SteeringLeftRightBuffer) + 1,
+        std::end(SteeringLeftRightBuffer) - 1,
         std::end(SteeringLeftRightBuffer)
     );
 

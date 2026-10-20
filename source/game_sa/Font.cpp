@@ -272,11 +272,12 @@ void CFont::PrintChar(float x, float y, char character) {
 // Removes all `~x~` style tokens from the string (in place)
 // 0x719240
 void CFont::FilterOutTokensFromString(GxtChar* str) {
-    // NOTSA: Original copied the string into a 252 bytes long stack buffer (no bounds check)
-    const std::string copy{ (const char*)str };
+    // The original copies the string into a 252 bytes long stack buffer (no bounds check; we truncate instead of overflowing it)
+    char copy[252];
+    notsa::string_copy(copy, (const char*)str, sizeof(copy));
 
     // BUG: Original doesn't stop at the terminating null of an unterminated token (reads past the end of its buffer), we do
-    const char* cur = copy.c_str();
+    const char* cur = copy;
     char*       out = (char*)str;
     for (; *cur; cur++) {
         if (*cur == '~') {

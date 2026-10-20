@@ -238,8 +238,7 @@ int32 CShopping::FindItem(uint32 itemKey) {
         }
     }
 
-    NOTSA_UNREACHABLE();
-    return -1; // 0x49AD42
+    return -1; // 0x49AD42 (absent key: the exe returns -1, `or eax, -1`)
 }
 
 /*!
@@ -304,8 +303,7 @@ int32 CShopping::GetItemIndex(uint32 itemKey) {
         }
     }
 
-    NOTSA_UNREACHABLE();
-    return -1; // 0x49AB27
+    return -1; // 0x49AB27 (absent key: -1)
 }
 
 // 0x49AB30

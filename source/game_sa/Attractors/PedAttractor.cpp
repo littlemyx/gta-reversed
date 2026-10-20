@@ -141,7 +141,8 @@ bool CPedAttractor::IsRegisteredWithPed(const CPed* ped) const {
 
 // 0x5EB530
 bool CPedAttractor::IsAtHeadOfQueue(CPed* ped) {
-    return !m_ArrivedPeds.empty() && m_ArrivedPeds.front() == ped; // NOTE/BUGFIX: Check if the array is empty
+    // 0x5EB530: compares the first slot of the vector without looking at the size (an emptied queue still holds the ped that left last in slot 0)
+    return *m_ArrivedPeds.begin() == ped;
 }
 
 // 0x5EC500
@@ -159,8 +160,9 @@ CTask* CPedAttractor::GetTaskForPed(CPed* ped) {
 
 // 0x5EB550
 int32 CPedAttractor::GetQueueSlot(const CPed* ped) {
-    assert(rng::find(m_ArrivedPeds, ped) != m_ArrivedPeds.end());
-    return rng::distance(m_ArrivedPeds.begin(), rng::find(m_ArrivedPeds, ped));
+    // 0x5EB550: -1 when the ped is not in the queue
+    const auto it = rng::find(m_ArrivedPeds, ped);
+    return it == m_ArrivedPeds.end() ? -1 : (int32)rng::distance(m_ArrivedPeds.begin(), it);
 }
 
 // 0x5EB590

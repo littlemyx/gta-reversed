@@ -2041,7 +2041,7 @@ void CVehicle::UpdateClumpAlpha() {
         } else if (curr < 255) {
             return std::min(255, curr + 16);
         }
-        return 255;
+        return curr; // 0x6D29B0: `cmp eax, 0xFF; jge` stores the alpha unchanged when it is already >= 255 (the port stored 255)
     };
     CVisibilityPlugins::SetClumpAlpha(GetRpClump(), GetAlphaToSet());
 }

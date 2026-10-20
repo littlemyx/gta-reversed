@@ -1565,6 +1565,30 @@ if (${RE_PROJECT}_RW_LIBRW)
     set_property(TARGET wave3_carenv_oracle_test PROPERTY SOURCES "${STANDALONE_PAD_OBJ}" ${_w3carenv_sources})
     target_link_options(wave3_carenv_oracle_test PRIVATE "$<$<CXX_COMPILER_ID:MSVC>:/BASE:0x400000;/DYNAMICBASE:NO;/FIXED;/MERGE:_TEXT=.text;/INCREMENTAL:NO;/SUBSYSTEM:CONSOLE;/FORCE:UNRESOLVED;/MAP>")
     set_target_properties(wave3_carenv_oracle_test PROPERTIES COMPILE_WARNING_AS_ERROR OFF CXX_SCAN_FOR_MODULES OFF)
+    # ORACLE-W3-GP2: exe-oracle rows of game_sa/TrafficLights.cpp + Restart.cpp + Shopping.cpp + Attractors/PedAttractor.cpp (A + B functions); rows: tests/standalone/wave3_oracle_gp2.inc
+    add_executable(wave3_gp2_oracle_test EXCLUDE_FROM_ALL
+        "${PROJECT_SOURCE_DIR}/tests/standalone/wave1_oracle_test.cpp"
+        ${W2_BASE_SOURCES}
+        game_sa/TrafficLights.cpp
+        game_sa/Restart.cpp
+        game_sa/Shopping.cpp
+        game_sa/Attractors/PedAttractor.cpp
+        game_sa/ModelIndices.cpp
+        game_sa/Core/Rect.cpp
+    )
+    target_compile_definitions(wave3_gp2_oracle_test PRIVATE W2_ONLY W3_GP2_ONLY)
+    target_compile_features(wave3_gp2_oracle_test PRIVATE cxx_std_23)
+    target_compile_definitions(wave3_gp2_oracle_test PRIVATE $<TARGET_PROPERTY:${RE_PROJECT_LIB_NAME},COMPILE_DEFINITIONS> NOTSA_ORACLE_ADDRESS_GLOBALS)
+    target_include_directories(wave3_gp2_oracle_test PRIVATE $<TARGET_PROPERTY:${RE_PROJECT_LIB_NAME},INCLUDE_DIRECTORIES>)
+    target_compile_options(wave3_gp2_oracle_test PRIVATE $<TARGET_PROPERTY:${RE_PROJECT_LIB_NAME},COMPILE_OPTIONS>)
+    target_precompile_headers(wave3_gp2_oracle_test PRIVATE StdInc.cpp)
+    target_link_libraries(wave3_gp2_oracle_test PRIVATE librw spdlog::spdlog Tracy::TracyClient user32)
+    target_sources(wave3_gp2_oracle_test PRIVATE "${STANDALONE_PAD_OBJ}")
+    get_target_property(_w3gp2_sources wave3_gp2_oracle_test SOURCES)
+    list(REMOVE_ITEM _w3gp2_sources "${STANDALONE_PAD_OBJ}")
+    set_property(TARGET wave3_gp2_oracle_test PROPERTY SOURCES "${STANDALONE_PAD_OBJ}" ${_w3gp2_sources})
+    target_link_options(wave3_gp2_oracle_test PRIVATE "$<$<CXX_COMPILER_ID:MSVC>:/BASE:0x400000;/DYNAMICBASE:NO;/FIXED;/MERGE:_TEXT=.text;/INCREMENTAL:NO;/SUBSYSTEM:CONSOLE;/FORCE:UNRESOLVED;/MAP>")
+    set_target_properties(wave3_gp2_oracle_test PROPERTIES COMPILE_WARNING_AS_ERROR OFF CXX_SCAN_FOR_MODULES OFF)
     # ORACLE-W3-MISC: exe-oracle rows of game_sa/Localisation.cpp + game_sa/TagManager.cpp (A + B functions); rows: tests/standalone/wave3_oracle_misc.inc
     add_executable(wave3_misc_oracle_test EXCLUDE_FROM_ALL
         "${PROJECT_SOURCE_DIR}/tests/standalone/wave1_oracle_test.cpp"

@@ -142,12 +142,13 @@ float CTrafficLights::FindOrientationForTrafficLightType(CEntity* entity) {
 
 // 0x49D4D0
 int32 CTrafficLights::FindTrafficLightTypeFromOrientation(float fOrientation) {
-    if ((fOrientation <= 60.0F || fOrientation >= 150.0F) &&
-        (fOrientation <= 240.0F || fOrientation >= 330.0F)
+    // 0x49D4D0 (fcomp + `test ah, 0x41` / `test ah, 5`): north-south only for a headed in (60, 150) or (240, 330); a NaN heading is west-east
+    if ((fOrientation > 60.0F && fOrientation < 150.0F) ||
+        (fOrientation > 240.0F && fOrientation < 330.0F)
     ) {
-        return eTrafficLightsDirection::DIR_WEST_EAST;
+        return eTrafficLightsDirection::DIR_NORTH_SOUTH;
     }
-    return eTrafficLightsDirection::DIR_NORTH_SOUTH;
+    return eTrafficLightsDirection::DIR_WEST_EAST;
 }
 
 // 0x49DAB0
@@ -402,7 +403,8 @@ uint8 CTrafficLights::LightForPeds() {
     if (uiMaskedTime < 12000)
         return eTrafficLightsState::LIGHT_RED;
 
-    if (uiMaskedTime < 16383 - 1000)
+    // 0x49D41B: `cmp eax, 0x3C18; sbb al, al; inc al` - green while the masked time is below 15384 (not 15383)
+    if (uiMaskedTime < 15384)
         return eTrafficLightsState::LIGHT_GREEN;
 
     return eTrafficLightsState::LIGHT_YELLOW;

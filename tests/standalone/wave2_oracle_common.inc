@@ -22,6 +22,7 @@ template<class Tag, typename Tag::type M> struct W2Rob { friend typename Tag::ty
 
 namespace w2 {
 
+static bool g_portFaultIsDiff = false;   // ORACLE-W3-GP2-2: a row sets it while its port function reaches an unresolved/unlinked symbol (e.g. NOTSA_UNREACHABLE) on inputs where the exe returns a value: that port-only fault is then a mismatch, not a fixture limit
 static int g_portExtra = 0;            // INFO: bits only the port wrote (exe left them as garbage)
 
 #ifdef ORACLE_FAST_HELPERS   // oracle_fast.cpp: the CRT memcmp of this /Od target is a call per dword (4 MB data image per case)
@@ -112,7 +113,7 @@ static bool BothA(std::string& d, uint32_t seed, std::initializer_list<Reg> regs
     if (pFault || eFault) {
         // one side faulting alone is a difference; both faulting is the same behaviour (e.g. a dereference of a null the fixture allows): the case carries no information and is skipped
         if (eFault && !pFault) { g_agreedFault = true; return true; }   // exe-only fault: the exe dispatches through a garbage vptr of `this` / reads exe globals no CRT start-up initialised (the port compiled the same call direct): a fixture limit
-        if ((pFault && eFault) || (pFault && pFaultEip == reinterpret_cast<void*>(0x400000))) { g_agreedFault = true; return true; }   // 0x400000 = a call to a port function whose translation unit is not linked into this test (an unresolved symbol): a fixture limit, not a port difference
+        if ((pFault && eFault) || (pFault && !g_portFaultIsDiff && pFaultEip == reinterpret_cast<void*>(0x400000))) { g_agreedFault = true; return true; }   // 0x400000 = a call to a port function whose translation unit is not linked into this test (an unresolved symbol): a fixture limit, not a port difference
         char t[160]; std::snprintf(t, sizeof t, " %s faulted (0x%08lX at %p) while the %s did not;", pFault ? "PORT" : "EXE", pFault ? (unsigned long)pFaultCode : (unsigned long)g_faultCode, pFault ? pFaultEip : g_faultEip, pFault ? "exe" : "port");
         d = t;
         return false;

@@ -122,4 +122,64 @@ static void TestW3WorldG() {
             reset(); oracle::Fn<void __cdecl(void*, const CBox*, const void*, const CVector*, int16_t*, uint32_t, void*)>(0x565200)(S(oList), &box, MatP(15), &C, &SAt<int16_t>(oCnt), (uint32_t)(int32_t)maxC, noOut ? nullptr : S(oOutE)); return (uint16_t)SAt<int16_t>(oCnt);
         });
     } ENDROW;
+
+    // ORACLE-W3-GP2-2: the exe stamps the scan code of every listed entity before the distance test and checks the maxCount only when it is about to store (jge -> next); the port returns as soon as the count is full
+    ROW("CWorld::FindObjectsKindaCollidingSectorList", 0x565000, 1500) {
+        const CVector P = QPos(r); const float rad = r.below(10) == 0 ? Fl(r, 100.f, 1) : 5.f + r.f01() * 120.f; const bool b2D = r.below(2);
+        const int16_t maxC = (int16_t)(r.below(8) == 0 ? (int)r.below(3) : 1 + (int)r.below(20)); const bool noOut = r.below(6) == 0; const uint32_t sc = r.u32();
+        Tw tw([&](Rng& rr) { CWorld::ms_nCurrentScanCode = (uint16)sc; BuildSectors(rr, P, Spread(rad)); });
+        const auto reset = [&] { std::memset(S(oCnt), 0xCD, 0x100); SAt<int16_t>(oCnt) = 0; };
+        return w3w::WCase(r, d, [&]() -> uint64_t {
+            reset(); CWorld::FindObjectsKindaCollidingSectorList(ListR(), P, rad, b2D, &SAt<int16_t>(oCnt), maxC, noOut ? nullptr : reinterpret_cast<CEntity**>(S(oOutE))); return (uint16_t)SAt<int16_t>(oCnt);
+        }, [&]() -> uint64_t {
+            reset(); oracle::Fn<void __cdecl(void*, const CVector*, float, uint32_t, int16_t*, uint32_t, void*)>(0x565000)(S(oList), &P, rad, (uint32_t)b2D, &SAt<int16_t>(oCnt), (uint32_t)(int32_t)maxC, noOut ? nullptr : S(oOutE)); return (uint16_t)SAt<int16_t>(oCnt);
+        });
+    } ENDROW;
+    ROW("CWorld::TestForUnusedModels(list)", 0x5639D0, 1000) {
+        const uint32_t sc = r.u32(); const CVector P = QPos(r);
+        Tw tw([&](Rng& rr) { CWorld::ms_nCurrentScanCode = (uint16)sc; BuildSectors(rr, P, 50.f); });
+        const auto reset = [&] { std::memset(S(oCnt), 0xCD, 0x100); for (int i = 0; i < 8; ++i) SAt<int32_t>(oCnt + 4 * i) = (int32_t)(i * 3 + 1); };
+        return w3w::WCase(r, d, [&]() -> uint64_t {
+            reset(); CWorld::TestForUnusedModels(reinterpret_cast<decltype(CSector::Buildings)&>(ListR())   /* the instantiation World.cpp has (single-link nodes share the prefix) */, &SAt<int32_t>(oCnt)); return 0;
+        }, [&]() -> uint64_t {
+            reset(); oracle::Fn<void __cdecl(void*, void*)>(0x5639D0)(S(oList), S(oCnt)); return 0;
+        });
+    } ENDROW;
+
+    // ORACLE-W3-GP2-2: the vehicle-pool leftovers on the W2 reference world (rf::VehE: 8 vehicles in the fake CVehiclePool, slot occupancy random); every vehicle gets a matrix blob (position / forward), status, creator, sub type, law-enforcer / can-be-damaged flags
+    alignas(16) static uint8_t vm[8][0x60];
+    const auto PoolCase = [&](Rng& r, std::string& d, auto&& pf, auto&& ef) -> bool {
+        const uint32_t seed = r.u32() | 1;
+        rf::Init(); rf::Enter(); rf::Reset(r, 0);
+        std::memset(vm, 0, sizeof vm);
+        for (int i = 0; i < rf::kV; ++i) {
+            auto* v = static_cast<CVehicle*>(rf::VehE(i));
+            uint8_t* m = vm[i];
+            const float fwd[3] = { r.below(6) ? (r.f01() * 2 - 1) : GF(r, 3.f), r.below(6) ? (r.f01() * 2 - 1) : GF(r, 3.f), r.below(6) ? (r.f01() * 2 - 1) : 0.f };
+            std::memcpy(m + 0x10, fwd, 12);
+            const CVector pos(r.below(5) ? (r.f01() * 2 - 1) * 60.f : GF(r, 500.f), r.below(5) ? (r.f01() * 2 - 1) * 60.f : GF(r, 500.f), (r.f01() * 2 - 1) * 5.f);
+            std::memcpy(m + 0x30, &pos, 12);
+            v->m_matrix = reinterpret_cast<CMatrixLink*>(m);
+            v->vehicleFlags.bIsLawEnforcer = r.below(2); v->vehicleFlags.bCanBeDamaged = r.below(2);
+            v->m_vecMoveSpeed = CVector(GF(r, 2.f), GF(r, 2.f), GF(r, 2.f));
+            v->SetStatus((eEntityStatus)r.below(32));
+            v->m_nCreatedBy = (eVehicleCreatedBy)(r.below(4) ? r.below(2) : r.below(6));
+            v->m_nVehicleSubType = (eVehicleType)(r.below(3) ? 0 : r.below(12));
+        }
+        const bool ok = BothA(d, seed, { Reg{ kImgLo, kImgHi - kImgLo }, Reg{ (uintptr_t)vm, sizeof vm } }, pf, ef, kRf);
+        rf::Leave();
+        return ok;
+    };
+    ROW("CWorld::SetAllCarsCanBeDamaged", 0x5668F0, 600) {
+        const bool en = r.below(2);
+        return PoolCase(r, d, [&]() -> uint64_t { CWorld::SetAllCarsCanBeDamaged(en); return 0; }, [&]() -> uint64_t { oracle::Fn<void __cdecl(uint32_t)>(0x5668F0)((uint32_t)en); return 0; });
+    } ENDROW;
+    ROW("CWorld::StopAllLawEnforcersInTheirTracks", 0x566C10, 600) {
+        return PoolCase(r, d, [&]() -> uint64_t { CWorld::StopAllLawEnforcersInTheirTracks(); return 0; }, [&]() -> uint64_t { oracle::Fn<void __cdecl()>(0x566C10)(); return 0; });
+    } ENDROW;
+    ROW("CWorld::FindUnsuspectingTargetCar", 0x566C90, 1500) {
+        const CVector pt(GF(r, 80.f), GF(r, 80.f), GF(r, 5.f)), pl(GF(r, 80.f), GF(r, 80.f), GF(r, 5.f));
+        return PoolCase(r, d, [&]() -> uint64_t { return (uint64_t)(uintptr_t)CWorld::FindUnsuspectingTargetCar(pt, pl); },
+            [&]() -> uint64_t { return (uint64_t)(uintptr_t)oracle::Fn<void* __cdecl(float, float, float, float, float, float)>(0x566C90)(pt.x, pt.y, pt.z, pl.x, pl.y, pl.z); });
+    } ENDROW;
 }

@@ -988,11 +988,6 @@ void CWorld::FindLodOfTypeInRange(uint32 modelId, const CVector& point, float ra
 template<typename PtrListType>
 void CWorld::FindObjectsKindaCollidingSectorList(PtrListType& ptrList, const CVector& point, float radius, bool b2D, int16* outCount, int16 maxCount, CEntity** outEntities) {
     for (auto* const entity : ptrList) {
-        // NOTSA: If we can't store more entities there's no point in trying
-        if (*outCount >= maxCount) {
-            return;
-        }
-
         if (entity->IsScanCodeCurrent()) {
             continue;
         }
@@ -1001,16 +996,19 @@ void CWorld::FindObjectsKindaCollidingSectorList(PtrListType& ptrList, const CVe
 
         const float fRadiusToCheck = CModelInfo::GetModelInfo(entity->m_nModelIndex)->GetColModel()->GetBoundRadius() + radius;
         if (b2D) {
-            if (DistanceBetweenPoints2D(entity->GetBoundCentre(), point) >= fRadiusToCheck) {
+            if (!(DistanceBetweenPoints2D(entity->GetBoundCentre(), point) < fRadiusToCheck)) { // exe: fcompp + `test ah, 5` -> only dist < radius stores; a NaN skips
                 continue;
             }
         } else {
-            if (DistanceBetweenPoints(entity->GetBoundCentre(), point) >= fRadiusToCheck) {
+            if (!(DistanceBetweenPoints(entity->GetBoundCentre(), point) < fRadiusToCheck)) {
                 continue;
             }
         }
 
-        // NOTSA: `outCount` checked above already
+        // 0x5650A8: the exe stamps the scan code of every listed entity and checks the room (`*outCount < maxCount`) only here, then goes on with the next entity
+        if (*outCount >= maxCount) {
+            continue;
+        }
         if (outEntities) {
             outEntities[*outCount] = entity;
         }

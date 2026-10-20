@@ -574,7 +574,7 @@ void CPad::StartShake_Train(CVector2D point) {
         return;
     }
 
-    if (!FindPlayerVehicle(-1) || !FindPlayerVehicle(-1)->IsTrain()) {
+    if (const auto* const veh = FindPlayerVehicle(-1); veh && veh->IsTrain()) { // (cmp [veh + 0x590], 6; je ret)
         return;
     }
 

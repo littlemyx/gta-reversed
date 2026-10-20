@@ -142,12 +142,13 @@ float CTrafficLights::FindOrientationForTrafficLightType(CEntity* entity) {
 
 // 0x49D4D0
 int32 CTrafficLights::FindTrafficLightTypeFromOrientation(float fOrientation) {
-    if ((fOrientation <= 60.0F || fOrientation >= 150.0F) &&
-        (fOrientation <= 240.0F || fOrientation >= 330.0F)
+    // 0x49D4D0 (fcomp + `test ah, 0x41` / `test ah, 5`): north-south only for a headed in (60, 150) or (240, 330); a NaN heading is west-east
+    if ((fOrientation > 60.0F && fOrientation < 150.0F) ||
+        (fOrientation > 240.0F && fOrientation < 330.0F)
     ) {
-        return eTrafficLightsDirection::DIR_WEST_EAST;
+        return eTrafficLightsDirection::DIR_NORTH_SOUTH;
     }
-    return eTrafficLightsDirection::DIR_NORTH_SOUTH;
+    return eTrafficLightsDirection::DIR_WEST_EAST;
 }
 
 // 0x49DAB0

@@ -287,7 +287,8 @@ int32 CVisibilityPlugins::CalculateFadingAtomicAlpha(CBaseModelInfo* modelInfo, 
     fDrawDistanceRadius = std::min(fDrawDistanceRadius, TheCamera.m_fLODDistMultiplier * modelInfo->m_fDrawDistance);
 
     if (!entity->GetLod()) {
-        const float fDrawDistance = std::min(modelInfo->m_fDrawDistance, fDrawDistanceRadius);
+        // (a < b) ? a : b with the exe's fcom/jnp (0x73254A): a NaN draw distance yields the radius, std::min(drawDist, radius) would keep the NaN
+        const float fDrawDistance = std::min(fDrawDistanceRadius, modelInfo->m_fDrawDistance);
         if (fDrawDistance > MAX_LOWLOD_DISTANCE) {
             fFadingDistance = fDrawDistance * ExeRecip(15.0f) + 10.0f;
         }

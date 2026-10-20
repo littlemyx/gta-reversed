@@ -1138,14 +1138,20 @@ void CWorld::FindNearestObjectOfTypeSectorList(int32 modelId, PtrListType& ptrLi
             continue;
         }
 
+        // exe 0x5654A2..0x5654E6: the squares are summed as (dx^2 + dz^2) + dy^2 (2D: dx^2 + dy^2), then fsqrt (a different order is 1 ulp off)
         const auto GetDistance = [&] {
+            const CVector pos = entity->GetPosition();
+            const float   dx = point.x - pos.x, dy = point.y - pos.y;
             if (b2D) {
-                return DistanceBetweenPoints2D(entity->GetPosition(), point);
+                return std::sqrt(dx * dx + dy * dy);
             }
-            return DistanceBetweenPoints(entity->GetPosition(), point);
+            const float dz = point.z - pos.z;
+            return std::sqrt((dx * dx + dz * dz) + dy * dy);
         };
 
-        if (const float dist = GetDistance(); dist <= radius) {
+        // exe 0x5654E6: `fcom [outNearestDist]` + `test ah, 5` / `jp`: an entity replaces the current one only when STRICTLY nearer than the best distance so far
+        // (the `radius` argument is not read at all: the callers pass the same variable as `outNearestDist`, which starts at the radius)
+        if (const float dist = GetDistance(); dist < outNearestDist) {
             outNearestDist = dist;
             outNearestEntity = entity;
         }

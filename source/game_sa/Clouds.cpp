@@ -122,7 +122,8 @@ void CClouds::SetUpOneSkyPoly(CVector vert1pos, CVector vert2pos, CVector vert3p
 
 // 0x713660
 void CClouds::MovingFogInit() {
-    ms_mf = {};
+    // 0x713660: the exe clears only the 350 slot flags (rep stosd), not the positions / sizes / intensities / speeds
+    ms_mf.m_bFogSlots.fill(false);
     ms_mf.m_vecWind = CVector(0.06f, 0.06f, 0.0f);
     ms_mf.m_nPrimIndices = { 0, 1, 2, 0, 2, 3 };
 }

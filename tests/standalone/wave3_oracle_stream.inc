@@ -88,7 +88,7 @@ static void BuildAll(Rng& r) {
         SAt<uint32_t>(kTxdSt + 12 * i + 8) = r.below(3) ? 0x1000u + r.below(6) : r.u32();
     }
     // dictionary blobs: the parent plugin at ms_txdPluginOffset (random 4-aligned), a texture result at +0x3C
-    StaticRef<int32_t>(0xC88018) = 0x10 + 4 * (int32_t)r.below(14);
+    StaticRef<int32_t>(0xC88018) = 0x10 + 4 * (int32_t)r.below(11);        // 0x10..0x38: inside the 0x40 blob, clear of the texture result at +0x3C
     for (int k = 0; k < 8; ++k) {
         SAt<uint32_t>(kDict + 0x40 * k + 0x3C) = r.below(3) == 0 ? P(kTex + 0x20 * r.below(4)) : 0;
         const uint32_t pk = r.below(10);

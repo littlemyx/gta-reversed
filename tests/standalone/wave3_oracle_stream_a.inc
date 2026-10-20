@@ -137,7 +137,7 @@ static void TestW3sTxd() {
         return VCase(r, d, [&]() -> uint64_t { CT::SetupTxdParent(slot); return 0; }, [&]() -> uint64_t { ExeC<void, int32_t>(0x731D50, slot); return 0; });
     SEND(800)
     SROW("CTxdStore::TxdStoreFindCB", 0x731720)
-        g_post = nullptr;
+        g_post = [](Rng& rr) { SAt<uint32_t>(kCur) = rr.below(6) ? P(kDict + 0x40 * rr.below(8)) : 0; };      // the current dictionary is a blob or null (the stub reads through it)
         return VCase(r, d, [&]() -> uint64_t { return U(CT::TxdStoreFindCB((const char*)S(kStr))); }, [&]() -> uint64_t { return U(ExeC<void*, const char*>(0x731720, (const char*)S(kStr))); });
     SEND(800)
     SROW("CTxdStore::TxdStoreLoadCB", 0x731710)

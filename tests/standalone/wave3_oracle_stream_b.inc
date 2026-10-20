@@ -156,7 +156,7 @@ static void TestW3sStreaming() {
         Link(cur, ft);
         StaticRef<uint32_t>(0x8E48A0) = (uint32_t)(uintptr_t)L(rr.below(5) == 0 ? 0 : 1 + rr.below(kN));   // render link: usually an item
         const uint32_t m = rr.below(8);
-        link = m == 0 ? 0 : m == 1 ? (int)StaticRef<uint32_t>(0x8E48A0) : (int)(uintptr_t)L(1 + rr.below(kN));
+        link = m == 0 ? 0 : (m == 1 && StaticRef<uint32_t>(0x8E48A0) != (uint32_t)(uintptr_t)L(0)) ? (int)StaticRef<uint32_t>(0x8E48A0) : (int)(uintptr_t)L(1 + rr.below(kN));   // never the head sentinel (its prev is not part of the list)
         (void)wantItem;
     };
     SROW("CStreaming::RenderEntity", 0x4096D0)

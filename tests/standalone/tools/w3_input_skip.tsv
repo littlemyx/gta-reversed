@@ -1,0 +1,17 @@
+# ORACLE-W3-INPUT: functions of ControllerConfigManager.cpp / Pad.cpp that have no exe-oracle row, with the reason. Addresses without the 0x prefix (the coverage tool counts 0x literals).
+# All class A / B functions of the two files have a row; what is left is class C / D.
+# addr	function	reason
+52D200	CControllerConfigManager::SaveSettings	file IO (CFileMgr::Write on a FILESTREAM)
+530530	CControllerConfigManager::LoadSettings	file IO (CFileMgr::Read / Seek on a FILESTREAM)
+52F390	CControllerConfigManager::GetControllerSettingTextMouse	GXT text lookup (TheText.Get) + heap strings
+52F450	CControllerConfigManager::GetControllerSettingTextJoystick	GXT text lookup + CMessages::InsertNumberInString into a function-local buffer
+52F560	CControllerConfigManager::GetButtonComboText	GXT text lookup (unused in SA: the combo flag is always false)
+52FE10	CControllerConfigManager::GetControllerSettingTextKeyBoard	GXT text lookup (TheText.Get) for every key name + InsertNumberInString
+5303D0	CControllerConfigManager::GetGxtStringOfCommandKeys	GXT text lookup, copies the text of the first bound control
+531E20	CControllerConfigManager::GetControllerSettingTextWithOrderNumber	GXT text lookup through the three functions above
+531E90	CControllerConfigManager::GetFirstKeyboardControllerText	GXT text lookup through GetControllerSettingTextKeyBoard
+53F3C0	CPad::UpdateMouse	DirectInput mouse (GetMouseState) in the exe, SDL3 / ImGui handling in the port (Locked)
+541DD0	CPad::UpdatePads	whole input frame: UpdateMouse, ProcessPad (DirectInput / XInput), the ImGui renderer state
+746A10	CPad::ProcessPad	DirectInput joystick polling (IAT calls)
+746ED0	CPad::GetMouseState	IDirectInputDevice::GetDeviceState through a vtable
+746F70	CPad::DIReleaseMouse	IDirectInputDevice::Unacquire / Release

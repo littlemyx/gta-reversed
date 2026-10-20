@@ -1009,7 +1009,17 @@ void RotateVecAboutVec(RwV3d& vecRes, const RwV3d& vec, const RwV3d& axis, float
     const float c = CMaths::GetCosFast(angle);
     const float t = 1.0f - c;
 
-    vecRes.x = (t*x*x + c)   * vec.x + (t*x*y - s*z) * vec.y + (t*x*z + s*y) * vec.z;
-    vecRes.y = (t*x*y + s*z) * vec.x + (t*y*y + c)   * vec.y + (t*y*z - s*x) * vec.z;
-    vecRes.z = (t*x*z - s*y) * vec.x + (t*y*z + s*x) * vec.y + (t*z*z + c)   * vec.z;
+    // The exe's evaluation order (x87 at PC24: every intermediate is rounded to float, so the association of the products and of the sums matters):
+    // t*x*y = (t*x)*y, t*x*z = (z*x)*t, t*y*z = (t*z)*y, t*a*a = (a*a)*t
+    const float txy = (t * x) * y;
+    const float txz = (z * x) * t;
+    const float tyz = (t * z) * y;
+    const float sx = s * x, sy = s * y, sz = s * z;
+    const float xx = (x * x) * t + c;
+    const float yy = (y * y) * t + c;
+    const float zz = (z * z) * t + c;
+
+    vecRes.x = xx * vec.x + (txy - sz) * vec.y + (sy + txz) * vec.z;
+    vecRes.y = (sz + txy) * vec.x + (tyz - sx) * vec.z + yy * vec.y; // the exe sums the z term before the y term
+    vecRes.z = (txz - sy) * vec.x + (sx + tyz) * vec.y + zz * vec.z;
 }

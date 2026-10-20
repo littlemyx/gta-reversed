@@ -651,7 +651,7 @@ void CFont::SetDropColor(CRGBA color) {
     m_FontDropColor = color;
 
     if (m_fFontAlpha < 255.0f) {
-        m_FontDropColor.a = (uint8)(float(m_Color.a) * m_fFontAlpha);
+        m_FontDropColor.a = (uint8)(float(m_Color.a) * m_fFontAlpha * ExeRecip(255.0f)); // 0x71954F..0x719555: * alpha * (1/255) (0x859A3C), like SetColor
     }
 }
 

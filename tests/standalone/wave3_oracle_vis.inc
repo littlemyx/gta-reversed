@@ -414,7 +414,8 @@ static void TestW3VisLights() {
     VEND(60)
     VROW("Light::WorldReplaceNormalLightsWithScorched", 0x7357E0)
         const float f = Fe(r, 1.2f, 8);
-        return L(r, d, [&]() -> uint64_t { WorldReplaceNormalLightsWithScorched(world, f); return 0; }, [&]() -> uint64_t { ExeC<void, RpWorld*, float>(0x7357E0, world, f); return 0; });
+        // the exe builds the colour on its stack and leaves the alpha uninitialised (RpLightSetColor copies it): the recorded alpha (record 0, +0x18) is not compared
+        return L(r, d, [&]() -> uint64_t { WorldReplaceNormalLightsWithScorched(world, f); SAt<uint32_t>(kRec + 0x18) = 0; return 0; }, [&]() -> uint64_t { ExeC<void, RpWorld*, float>(0x7357E0, world, f); SAt<uint32_t>(kRec + 0x18) = 0; return 0; });
     VEND(500)
     VROW("Light::WorldReplaceScorchedLightsWithNormal", 0x735820)
         return L(r, d, [&]() -> uint64_t { WorldReplaceScorchedLightsWithNormal(world); return 0; }, [&]() -> uint64_t { ExeC<void, RpWorld*>(0x735820, world); return 0; });

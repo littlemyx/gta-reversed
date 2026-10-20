@@ -257,9 +257,9 @@ CFire* CFireManager::GetNextFreeFire(bool bMayExtinguish) {
         return nullptr;
 
     // At this point there are no inactive fires in the pool
-    // So try to extinguish a script / first generation fire
+    // So take the first fire that is not a first generation script fire (0x539E70: test flags,2 -> take; test flags,0x10 -> take) and extinguish it
     for (CFire& fire : m_aFires) {
-        if (fire.IsFirstGen() || fire.IsScript()) {
+        if (!fire.IsScript() || !fire.IsFirstGen()) {
             fire.SetIsScript(false);
             fire.Extinguish();
             return &fire;

@@ -31,17 +31,21 @@ void* CCustomCarEnvMapPipeline::pluginSpecMatCopyConstructorCB(void* dstObject, 
     auto*& dst = SpecMapPlGetData(dstMat);
     if (src) {
         if (!dst) {
-            dst = m_gSpecMapPipeMatDataPool->New();
+            if (!(dst = m_gSpecMapPipeMatDataPool->New())) { // exe 0x5D9830: a full pool leaves a null in the slot and stops
+                return dstObject;
+            }
         }
         dst->Specularity = src->Specularity;
-        RwTextureAddRef(src->Texture);
+        if (src->Texture) { // exe: the reference is only taken for a non-null texture
+            RwTextureAddRef(src->Texture);
+        }
         if (auto* const t = std::exchange(dst->Texture, src->Texture)) {
             if (notsa::IsFixBugs()) { // Memory leak
                 RwTextureDestroy(t);
             }
         }
     }
-    return dst;
+    return dstObject; // exe: the destination OBJECT (not the plugin data)
 }
 
 // 0x5D9880

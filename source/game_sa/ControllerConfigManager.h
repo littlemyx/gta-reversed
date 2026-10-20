@@ -264,7 +264,7 @@ protected:
     void DeleteMatchingCommonControls(eControllerAction nop, KeyCode button, eControllerType type);
     void DeleteMatching3rdPersonControls(eControllerAction action, KeyCode button, eControllerType type);
     void DeleteMatchingVehicleControls(eControllerAction nop, KeyCode button, eControllerType type);
-    void DeleteMatchingVehicle_3rdPersonControls(KeyCode button, eControllerType type);
+    void DeleteMatchingVehicle_3rdPersonControls(eControllerAction nop, KeyCode button, eControllerType type);
     void DeleteMatching1rstPersonControls(eControllerAction nop, KeyCode button, eControllerType type);
     void DeleteMatching1rst3rdPersonControls(eControllerAction action, KeyCode button, eControllerType type);
     bool GetIsKeyBlank(KeyCode button, eControllerType type);
@@ -279,6 +279,7 @@ private:
     void CheckAndReset(eControllerAction action, eControllerType type, KeyCode button, int16& state);
     void CheckAndSetPad(eControllerAction action, eControllerType type, KeyCode button, int16& primaryState, int16& secondaryState);
     void CheckAndSetStick(eControllerAction action, eControllerType type, KeyCode button, int16& state, bool& movementBothDown, int16 value);
+    void CheckAndSetStickLeft(eControllerAction action, eControllerType type, KeyCode button, int16& state, bool& movementBothDown, int16 value); // left stick (walk / steer): no opposite-direction test
 
     bool UseDrivingControls();
     bool UseFirstPersonControls();

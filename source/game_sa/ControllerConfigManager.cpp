@@ -232,7 +232,7 @@ void CControllerConfigManager::DeleteMatching1rstPersonControls(eControllerActio
 }
 
 // 0x531BC0
-void CControllerConfigManager::DeleteMatchingVehicle_3rdPersonControls(KeyCode button, eControllerType type) {
+void CControllerConfigManager::DeleteMatchingVehicle_3rdPersonControls(eControllerAction nop, KeyCode button, eControllerType type) {
     if (GetIsKeyBlank(button, type)) {
         return;
     }
@@ -282,10 +282,10 @@ void CControllerConfigManager::AffectControllerStateOn_ButtonDown_FirstAndThirdP
     CheckAndSetButton(PED_FIRE_WEAPON, type, button, state.ButtonCircle);
     CheckAndSetButton(PED_FIRE_WEAPON_ALT, type, button, state.LeftShoulder1);
     CheckAndSetButton(PED_LOCK_TARGET, type, button, state.RightShoulder1);
-    CheckAndSetStick(GO_FORWARD, type, button, state.LeftStickY, m_bStickL_Up_Dwn_MovementBothDown[+type], -128);
-    CheckAndSetStick(GO_BACK, type, button, state.LeftStickY, m_bStickL_Up_Dwn_MovementBothDown[+type], 128);
-    CheckAndSetStick(GO_LEFT, type, button, state.LeftStickX, m_bStickL_X_Rgh_Lft_MovementBothDown[+type], -128);
-    CheckAndSetStick(GO_RIGHT, type, button, state.LeftStickX, m_bStickL_X_Rgh_Lft_MovementBothDown[+type], 128);
+    CheckAndSetStickLeft(GO_FORWARD, type, button, state.LeftStickY, m_bStickL_Up_Dwn_MovementBothDown[+type], -128);
+    CheckAndSetStickLeft(GO_BACK, type, button, state.LeftStickY, m_bStickL_Up_Dwn_MovementBothDown[+type], 128);
+    CheckAndSetStickLeft(GO_LEFT, type, button, state.LeftStickX, m_bStickL_X_Rgh_Lft_MovementBothDown[+type], -128);
+    CheckAndSetStickLeft(GO_RIGHT, type, button, state.LeftStickX, m_bStickL_X_Rgh_Lft_MovementBothDown[+type], 128);
     CheckAndSetButton(PED_WALK, type, button, state.m_bPedWalk);
     CheckAndSetPad(GROUP_CONTROL_FWD, type, button, state.DPadDown, state.DPadUp);
     CheckAndSetPad(GROUP_CONTROL_BWD, type, button, state.DPadUp, state.DPadDown);
@@ -359,10 +359,10 @@ void CControllerConfigManager::AffectControllerStateOn_ButtonDown_Driving(KeyCod
     CheckAndSetButton(VEHICLE_HANDBRAKE, type, button, state.RightShoulder1);
     CheckAndSetButton(VEHICLE_ACCELERATE, type, button, state.ButtonCross);
     CheckAndSetButton(VEHICLE_BRAKE, type, button, state.ButtonSquare);
-    CheckAndSetStick(VEHICLE_STEERUP, type, button, state.LeftStickY, m_bStickL_Up_Dwn_MovementBothDown[+type], -128);
-    CheckAndSetStick(VEHICLE_STEERDOWN, type, button, state.LeftStickY, m_bStickL_Up_Dwn_MovementBothDown[+type], 128);
-    CheckAndSetStick(VEHICLE_STEERLEFT, type, button, state.LeftStickX, m_bStickL_X_Rgh_Lft_MovementBothDown[+type], -128);
-    CheckAndSetStick(VEHICLE_STEERRIGHT, type, button, state.LeftStickX, m_bStickL_X_Rgh_Lft_MovementBothDown[+type], 128);
+    CheckAndSetStickLeft(VEHICLE_STEERUP, type, button, state.LeftStickY, m_bStickL_Up_Dwn_MovementBothDown[+type], -128);
+    CheckAndSetStickLeft(VEHICLE_STEERDOWN, type, button, state.LeftStickY, m_bStickL_Up_Dwn_MovementBothDown[+type], 128);
+    CheckAndSetStickLeft(VEHICLE_STEERLEFT, type, button, state.LeftStickX, m_bStickL_X_Rgh_Lft_MovementBothDown[+type], -128);
+    CheckAndSetStickLeft(VEHICLE_STEERRIGHT, type, button, state.LeftStickX, m_bStickL_X_Rgh_Lft_MovementBothDown[+type], 128);
     CheckAndSetButton(VEHICLE_RADIO_STATION_UP, type, button, state.DPadUp);
     CheckAndSetButton(VEHICLE_RADIO_STATION_DOWN, type, button, state.DPadDown);
     CheckAndSetButton(VEHICLE_RADIO_TRACK_SKIP, type, button, state.m_bRadioTrackSkip);
@@ -809,7 +809,7 @@ void CControllerConfigManager::ReinitControls() {
 
 // 0x52F590
 void CControllerConfigManager::SetMouseButtonAssociatedWithAction(eControllerAction action, KeyCode button) {
-    ResetSettingOrder(action);
+    // (unlike SetControllerKeyAssociatedWithAction the exe does NOT call ResetSettingOrder here)
     const auto numOfSettings = GetNumOfSettingsForAction(action);
     m_Actions[+action].Keys[+eControllerType::MOUSE].m_uiActionInitiator = button;
     m_Actions[+action].Keys[+eControllerType::MOUSE].m_uiSetOrder = eContSetOrder(+numOfSettings + 1);
@@ -853,7 +853,7 @@ void CControllerConfigManager::UpdateJoyInConfigMenus_ButtonDown(KeyCode button,
         return;
     }
 
-    if ((button != eJoyButtons::JOYBUTTON_TWELVE && padNumber != 1) || notsa::IsFixBugs()) {
+    if ((button != eJoyButtons::JOYBUTTON_TWELVE || padNumber == 1) || notsa::IsFixBugs()) { // the exe writes START (button 12) of pad 2 only
         GetControllerStateJoyStick(*pad, button) = 255;
     }
 }
@@ -865,7 +865,7 @@ void CControllerConfigManager::UpdateJoyInConfigMenus_ButtonUp(KeyCode button, i
         return;
     }
 
-    if ((button != eJoyButtons::JOYBUTTON_TWELVE && padNumber != 1) || notsa::IsFixBugs()) {
+    if ((button != eJoyButtons::JOYBUTTON_TWELVE || padNumber == 1) || notsa::IsFixBugs()) { // the exe writes START (button 12) of pad 2 only
         GetControllerStateJoyStick(*pad, button) = 0;
     }
 }
@@ -957,14 +957,17 @@ constexpr inline bool CheckMouseButton(KeyCode& key) {
 
     bool result = false;
     if constexpr (CheckType == eMouseCheckType::JUST_UP) {
+        // just released: down in the old state, up in the new one (the exe compares the two state bytes of the button)
+        const auto JustReleased = [](bool CMouseControllerState::* button) { return !(CPad::NewMouseControllerState.*button) && (CPad::OldMouseControllerState.*button); };
         switch (key) {
-        case rsMOUSE_LEFT_BUTTON:       result = pad->IsMouseLButtonPressed(); break;
-        case rsMOUSE_MIDDLE_BUTTON:     result = pad->IsMouseMButtonPressed(); break;
-        case rsMOUSE_RIGHT_BUTTON:      result = pad->IsMouseRButtonPressed(); break;
-        case rsMOUSE_WHEEL_UP_BUTTON:   result = pad->IsMouseWheelUpPressed(); break;
-        case rsMOUSE_WHEEL_DOWN_BUTTON: result = pad->IsMouseWheelDownPressed(); break;
-        case rsMOUSE_X1_BUTTON:         result = pad->IsMouseBmx1Pressed(); break;
-        case rsMOUSE_X2_BUTTON:         result = pad->IsMouseBmx2Pressed(); break;
+        case rsMOUSE_LEFT_BUTTON:       result = JustReleased(&CMouseControllerState::isMouseLeftButtonPressed); break;
+        // (the exe's jump table of 0x52F110 reads the RIGHT button bytes for key 2 and the MIDDLE button bytes for key 3; Down / Up (0x52EF30, 0x52F020) have them the other way round)
+        case rsMOUSE_MIDDLE_BUTTON:     result = JustReleased(&CMouseControllerState::isMouseRightButtonPressed); break;
+        case rsMOUSE_RIGHT_BUTTON:      result = JustReleased(&CMouseControllerState::isMouseMiddleButtonPressed); break;
+        case rsMOUSE_WHEEL_UP_BUTTON:   result = JustReleased(&CMouseControllerState::isMouseWheelMovedUp); break;
+        case rsMOUSE_WHEEL_DOWN_BUTTON: result = JustReleased(&CMouseControllerState::isMouseWheelMovedDown); break;
+        case rsMOUSE_X1_BUTTON:         result = JustReleased(&CMouseControllerState::isMouseFirstXPressed); break;
+        case rsMOUSE_X2_BUTTON:         result = JustReleased(&CMouseControllerState::isMouseSecondXPressed); break;
         default:                        NOTSA_UNREACHABLE("Invalid Key: {}", (uint32)key); break;
         }
     } else if constexpr (CheckType == eMouseCheckType::IS_DOWN || CheckType == eMouseCheckType::IS_UP) {
@@ -1146,20 +1149,27 @@ void CControllerConfigManager::AffectPadFromKeyBoard() {
 
     const auto inMenu = !CPad::padNumber && !FrontEndMenuManager.m_bMenuActive;
     for (auto& action : m_Actions) {
-        // Handle key press logic
+        // Presses of both key types first ...
         for (const auto& type : CONTROLLER_TYPES_KEYBOARD) {
             const auto key = action.Keys[+type].m_uiActionInitiator;
 
             if (GetIsKeyboardKeyDown(key) && inMenu && !GetIsKeyBlank(key, type)) {
-                if (inMenu) {
-                    AffectControllerStateOn_ButtonDown(key, type);
-                }
-                auto* pad = CPad::GetPad();
-                if (!pad || FrontEndMenuManager.m_bMenuActive) {
-                    continue;
-                }
-                AffectControllerStateOn_ButtonUp_All_Player_States(key, type, GetControllerState(*pad, type));
+                AffectControllerStateOn_ButtonDown(key, type);
             }
+        }
+        // ... then the release (a key that is NOT down): the exe handles the optional key only when the primary key IS down (if / else if)
+        const auto Release = [&](eControllerType type) {
+            const auto key = action.Keys[+type].m_uiActionInitiator;
+            if (!GetIsKeyboardKeyDown(key)) {
+                if (auto* pad = CPad::GetPad(); pad && !GetIsKeyBlank(key, type) && !FrontEndMenuManager.m_bMenuActive) {
+                    AffectControllerStateOn_ButtonUp_All_Player_States(key, type, GetControllerState(*pad, type));
+                }
+            }
+        };
+        if (!GetIsKeyboardKeyDown(action.Keys[+eControllerType::KEYBOARD].m_uiActionInitiator)) {
+            Release(eControllerType::KEYBOARD);
+        } else {
+            Release(eControllerType::OPTIONAL_EXTRA_KEY);
         }
     }
 }
@@ -1177,7 +1187,8 @@ void CControllerConfigManager::AffectPadFromMouse() {
         }
 
         if (GetIsMouseButtonUp(button)) {
-            if (auto* pad = CPad::GetPad()) {
+            // (the exe skips a blank button and a pause menu)
+            if (auto* pad = CPad::GetPad(); pad && !GetIsKeyBlank(button, eControllerType::MOUSE) && !FrontEndMenuManager.m_bMenuActive) {
                 AffectControllerStateOn_ButtonUp_All_Player_States(button, eControllerType::MOUSE, GetControllerState(*pad, eControllerType::MOUSE));
             }
         }
@@ -1199,12 +1210,12 @@ void CControllerConfigManager::DeleteMatchingActionInitiators(eControllerAction 
         DeleteMatchingCommonControls(action, button, type);
         DeleteMatching1rst3rdPersonControls(action, button, type);
         DeleteMatching3rdPersonControls(action, button, type);
-        DeleteMatchingVehicle_3rdPersonControls(button, type);
+        DeleteMatchingVehicle_3rdPersonControls(action, button, type);
         break;
     case eActionType::IN_CAR:
         DeleteMatchingCommonControls(action, button, type);
         DeleteMatchingVehicleControls(action, button, type);
-        DeleteMatchingVehicle_3rdPersonControls(button, type);
+        DeleteMatchingVehicle_3rdPersonControls(action, button, type);
         break;
     case eActionType::IN_CAR_THIRD_PERSON:
         DeleteMatchingCommonControls(action, button, type);
@@ -1218,14 +1229,14 @@ void CControllerConfigManager::DeleteMatchingActionInitiators(eControllerAction 
         DeleteMatching1rst3rdPersonControls(action, button, type);
         DeleteMatching3rdPersonControls(action, button, type);
         DeleteMatchingVehicleControls(action, button, type);
-        DeleteMatchingVehicle_3rdPersonControls(button, type);
+        DeleteMatchingVehicle_3rdPersonControls(action, button, type);
         break;
     case eActionType::FIRST_THIRD_PERSON:
         DeleteMatchingCommonControls(action, button, type);
         DeleteMatching1rstPersonControls(action, button, type);
         DeleteMatching1rst3rdPersonControls(action, button, type);
         DeleteMatching3rdPersonControls(action, button, type);
-        DeleteMatchingVehicle_3rdPersonControls(button, type);
+        DeleteMatchingVehicle_3rdPersonControls(action, button, type);
         break;
     default:
         return;
@@ -1423,6 +1434,17 @@ void CControllerConfigManager::CheckAndSetStick(eControllerAction action, eContr
         if (state == -value || movementBothDown) {
             state = 0;
             movementBothDown = true;
+        } else {
+            state = value;
+        }
+    }
+}
+
+// The exe tests only the "both directions held" flag on the left stick (walk / steer); the opposite value of the stick is not looked at
+void CControllerConfigManager::CheckAndSetStickLeft(eControllerAction action, eControllerType type, KeyCode button, int16& state, bool& movementBothDown, int16 value) {
+    if (GetControllerKeyAssociatedWithAction(action, type) == button) {
+        if (movementBothDown) {
+            state = 0;
         } else {
             state = value;
         }

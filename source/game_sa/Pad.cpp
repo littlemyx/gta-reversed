@@ -205,10 +205,10 @@ void CPad::Update(int32 pad) {
     iCurrHornHistory = (iCurrHornHistory + 1) % 5;
     bHornHistory[iCurrHornHistory] = GetHorn();
 
-    // Shift right by 1
-    std::rotate(
+    // Shift right by 1: buffer[i] = buffer[i - 1] for i = 9..1, buffer[0] keeps its value (the exe loop at 0x541D2D; NOT a rotation)
+    std::copy_backward(
         std::begin(SteeringLeftRightBuffer),
-        std::begin(SteeringLeftRightBuffer) + 1,
+        std::end(SteeringLeftRightBuffer) - 1,
         std::end(SteeringLeftRightBuffer)
     );
 
@@ -471,7 +471,7 @@ CControllerState& CPad::ReconcileTwoControllersInput(CControllerState& out, cons
         }                                                                                                                                                                          \
     }
 
-    static CControllerState reconciledState;
+    NOTSA_GLOBAL_LOCAL_NS(reconciledState, 0xB736C0, (CControllerState), {});   // function-local static of the exe, right behind Pads[1]
     reconciledState.Clear();
 
     RECONCILE_BUTTON(LeftShoulder1)
@@ -569,16 +569,18 @@ void CPad::StartShake_Distance(int16 time, uint8 freq, CVector pos) {
 }
 
 // 0x53FA70
-void CPad::StartShake_Train(const CVector2D& point) {
+void CPad::StartShake_Train(CVector2D point) {
     if (!FrontEndMenuManager.m_PrefsUseVibration || CCutsceneMgr::ms_running) {
         return;
     }
 
-    if (!FindPlayerVehicle(-1) || !FindPlayerVehicle(-1)->IsTrain()) {
+    if (const auto* const veh = FindPlayerVehicle(-1); veh && veh->IsTrain()) { // (cmp [veh + 0x590], 6; je ret)
         return;
     }
 
-    const auto fDistSq = (TheCamera.GetPosition() - point).SquaredMagnitude();
+    // 2D distance (x, y only): the exe has no z term
+    const auto& camPos = TheCamera.GetPosition();
+    const auto fDistSq = (camPos.y - point.y) * (camPos.y - point.y) + (camPos.x - point.x) * (camPos.x - point.x);
     if (ShakeDur < 100 && fDistSq < 4900.0f) {
         ShakeDur = 100;
         ShakeFreq = static_cast<uint8>(70.0f - sqrt(fDistSq) + 30.0f);

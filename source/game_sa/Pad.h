@@ -152,7 +152,7 @@ public:
 
     void StartShake(int16 time, uint8 frequency, uint32 arg2);
     void StartShake_Distance(int16 time, uint8 frequency, CVector pos);
-    void StartShake_Train(const CVector2D& point);
+    void StartShake_Train(CVector2D point); // by value: two floats on the stack (ret 8)
     static void StopPadsShaking();
     void StopShaking(int16 pad);
 

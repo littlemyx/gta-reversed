@@ -1365,10 +1365,15 @@ CObject* CObject::Create(CDummyObject* dummyObject) {
 // 0x59F200
 void CObject::SetMatrixForTrainCrossing(CMatrix* matrix, float fAngle) {
     auto vecForward = CrossProduct(CVector(0.0F, 0.0F, 1.0F), matrix->GetRight());
-    const auto fCos = x87::cos(fAngle);
-    const auto fSin = x87::sin(fAngle);
-    vecForward *= fCos;
-    vecForward.z += fSin;
+    // 0x59F200: fcos stays in the register (extended), so the products are formed with the UNROUNDED cosine; x and y get `+ 0.0f * sin` added (0 * sin(fsin) stored as float),
+    // z gets the sine rounded to float (it is stored / reloaded) added
+    const double fCos = x87::cos(fAngle);
+    const double fSin = x87::sin(fAngle);
+    const float  zeroSin = (float)(0.0f * fSin);
+    const float  sinF    = (float)fSin;
+    vecForward.x = (float)((double)zeroSin + (double)(float)((double)vecForward.x * fCos));
+    vecForward.y = (float)((double)zeroSin + (double)(float)((double)vecForward.y * fCos));
+    vecForward.z = (float)((double)sinF + (double)(float)(fCos * (double)vecForward.z));
 
     matrix->GetUp() = CrossProduct(matrix->GetRight(), vecForward);
     matrix->GetForward() = vecForward;

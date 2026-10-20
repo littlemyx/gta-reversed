@@ -83,4 +83,4 @@ date	agent	rules	kind	tokens	tool_uses	minutes	outcome	notes
 2026-10-20	ORACLE-W3-VIS	v3	oracle wave (small)	323588	112	39	VisibilityPlugins+app_light A/B 62 -> 0, 8 fixes (ped/car/object light colour green/blue used red 1399/1500, road-group ambient idx&8 vs %7, flashy colours alpha) + 1 wrong hook address
 2026-10-20	HOOK-ADDR	v3	audit (small)	180605	78	56	9249 hook sites: 10 flagged, 4 addresses fixed + 1 bogus hook removed (would corrupt Clear in DLL builds), 3 explained
 2026-10-20	ORACLE-W3-CARENV	v3	oracle wave (small)	274996	82	30	CarEnvMap pipeline A/B 24 -> 0, 6 fixes (spec-mat copy ctor returned data ptr 800/800, env texture pool crash)
-2026-10-20	ORACLE-W3-MISC	v3	oracle wave (small)	~150k	~	18	Localisation exact; TagManager 4 fixes (SetAlphaInArea 1404/3000, AddTag 300/300, FindTagDesc scan order)
+2026-10-20	ORACLE-W3-MISC	v3	oracle wave (small)	206412	58	18	Localisation exact; TagManager 4 fixes (SetAlphaInArea 1404/3000, AddTag 300/300, FindTagDesc scan order)

@@ -15,7 +15,7 @@ void FxInfoUnderwater_c::InjectHooks() {
 // 0x4A5E20
 FxInfoUnderwater_c::FxInfoUnderwater_c() : FxInfo_c() {
     m_nType = FX_INFO_UNDERWATER_DATA;
-    m_InterpInfo.Allocate(0);
+    m_InterpInfo.m_nCount = 0; // the exe only stores the count here: Allocate(0) would take a zero-sized (but aligned) block from the Fx pool
 }
 
 void FxInfoUnderwater_c::Load(FILESTREAM file, int32 version) {

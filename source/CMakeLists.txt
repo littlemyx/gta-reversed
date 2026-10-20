@@ -1522,6 +1522,7 @@ if (${RE_PROJECT}_RW_LIBRW)
     target_link_options(wave3_ui_oracle_test PRIVATE "$<$<CXX_COMPILER_ID:MSVC>:/BASE:0x400000;/DYNAMICBASE:NO;/FIXED;/MERGE:_TEXT=.text;/INCREMENTAL:NO;/SUBSYSTEM:CONSOLE;/FORCE:UNRESOLVED;/MAP>")
     set_target_properties(wave3_ui_oracle_test PROPERTIES COMPILE_WARNING_AS_ERROR OFF CXX_SCAN_FOR_MODULES OFF)
     # ORACLE-W3-FX: exe-oracle rows of game_sa/Fx (FxSystem, FxManager, FxMemoryPool, FxSphere, FxFrustumInfo, FxSystemBP, FxEmitterBP) on fixture blocks; rows: tests/standalone/wave3_oracle_fxs.inc
+    file(GLOB _W3X_BP_SOURCES RELATIVE "${CMAKE_CURRENT_SOURCE_DIR}" "${CMAKE_CURRENT_SOURCE_DIR}/game_sa/Fx/Blueprints/*.cpp" "${CMAKE_CURRENT_SOURCE_DIR}/game_sa/Fx/Blueprints/Interp/*.cpp")
     add_executable(wave3_fxs_oracle_test EXCLUDE_FROM_ALL
         "${PROJECT_SOURCE_DIR}/tests/standalone/wave1_oracle_test.cpp"
         ${W2_BASE_SOURCES}
@@ -1534,6 +1535,13 @@ if (${RE_PROJECT}_RW_LIBRW)
         game_sa/Fx/FxPrimBP.cpp
         game_sa/Fx/FxPrim.cpp
         game_sa/Fx/FxEmitterPrt.cpp
+        # ORACLE-W3-FXBP: the per-prim info blueprints + key curves, FxInfoManager (AddFxInfo), Fx.cpp (RotateVecAboutVec), CarFXRenderer, the sine LUT (Maths.cpp); rows: tests/standalone/wave3_oracle_fxbp.inc
+        ${_W3X_BP_SOURCES}
+        game_sa/Fx/FxInfoManager.cpp
+        game_sa/Fx/Fx.cpp
+        game_sa/Fx/CarFXRenderer.cpp
+        game_sa/Maths.cpp
+        game_sa/Plugins/PipelinePlugin/PipelinePlugin.cpp
         standalone/rw/math.cpp
         standalone/rw/rwmath_tables.cpp
     )

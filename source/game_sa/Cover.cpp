@@ -284,6 +284,7 @@ bool CCover::DoesCoverPointStillProvideCover(CCoverPoint* cpt, CVector pos) {
 
 // 0x6988E0
 void CCover::Find2HighestPoints(CColTriangle* triangle, CVector* vertPositions, int32& outPoint1, int32& outPoint2) {
+    // 0x6988E0: all three branches write both outputs (the stack arguments are read after pops that move esp: the second store goes to outPoint2)
     const auto a = triangle->m_vertIndices[0], b = triangle->m_vertIndices[1], c = triangle->m_vertIndices[2];
     const float za = vertPositions[a].z, zb = vertPositions[b].z, zc = vertPositions[c].z;
     if (za < zb && za < zc) { // A is lowest => B, C highest
@@ -293,21 +294,11 @@ void CCover::Find2HighestPoints(CColTriangle* triangle, CVector* vertPositions, 
     }
     if (zb < za && zb < zc) { // B is lowest => A, C highest
         outPoint1 = a;
-        // BUG: the original writes the second index into outPoint1 again, so outPoint2 is left untouched
-        if (notsa::IsFixBugs()) {
-            outPoint2 = c;
-        } else {
-            outPoint1 = c;
-        }
+        outPoint2 = c;
         return;
     }
     outPoint1 = a; // C lowest (or ties) => A, B highest
-    // BUG: same as above
-    if (notsa::IsFixBugs()) {
-        outPoint2 = b;
-    } else {
-        outPoint1 = b;
-    }
+    outPoint2 = b;
 }
 
 // 0x6992B0

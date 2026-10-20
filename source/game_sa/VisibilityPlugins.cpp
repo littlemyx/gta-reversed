@@ -414,15 +414,20 @@ float CVisibilityPlugins::GetDistanceSquaredFromCamera(RwV3d* pos) {
     return SquaredMagnitudeZYX(distance);
 }
 
+// The exe sums every dot product of GetDotProductWithCameraVector as (y*y + x*x) + z*z (0x7326D0), CVector::Dot sums x, y, z: the float rounding differs.
+static float DotYXZ(const CVector& a, const CVector& b) {
+    return (a.y * b.y + a.x * b.x) + a.z * b.z;
+}
+
 // 0x7326D0
 float CVisibilityPlugins::GetDotProductWithCameraVector(RwMatrix* matrix, RwMatrix* carMatrix, uint32 atomicId) {
     const CVector distance = matrix->pos - *ms_pCameraPosn;
     float primaryDot{};
 
     if (atomicId & (ATOMIC_REAR | ATOMIC_FRONT)) {
-        primaryDot = distance.Dot(carMatrix->up);
+        primaryDot = DotYXZ(distance, carMatrix->up);
     } else if (atomicId & (ATOMIC_RIGHT | ATOMIC_LEFT)) {
-        primaryDot = distance.Dot(carMatrix->right);
+        primaryDot = DotYXZ(distance, carMatrix->right);
     }
 
     // flip sign for Rear or Left components
@@ -436,7 +441,7 @@ float CVisibilityPlugins::GetDotProductWithCameraVector(RwMatrix* matrix, RwMatr
     const float tailgatMul = 2.5f;
     const float doorsMul = 0.25f;
     if (atomicId & ATOMIC_TOP) {
-        const float zDot = distance.Dot(carMatrix->at);
+        const float zDot = DotYXZ(distance, carMatrix->at);
         const float multiplier = isDoor ? doorsMul : tailgatMul;
 
         primaryDot += zDot * multiplier;
@@ -452,9 +457,9 @@ float CVisibilityPlugins::GetDotProductWithCameraVector(RwMatrix* matrix, RwMatr
     float secondaryDot = 0.0f;
 
     if (atomicId & ATOMIC_REAR_DOOR) {
-        secondaryDot = -distance.Dot(carMatrix->up);
+        secondaryDot = -DotYXZ(distance, carMatrix->up);
     } else if (atomicId & ATOMIC_FRONT_DOOR) {
-        secondaryDot = distance.Dot(carMatrix->up);
+        secondaryDot = DotYXZ(distance, carMatrix->up);
     }
 
     // combine results if both dot products share the same sign (both visible or both hidden)

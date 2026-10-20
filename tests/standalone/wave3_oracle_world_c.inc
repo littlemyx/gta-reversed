@@ -96,4 +96,47 @@ static void TestW3WorldC() {
         if (!ok) d += " o=" + F(o.x) + "," + F(o.y) + " dir=" + F(dir.x) + "," + F(dir.y) + " W=" + std::to_string(RsGlobal.maximumWidth) + " H=" + std::to_string(RsGlobal.maximumHeight);
         return ok;
     } ENDROW;
+
+    // ---- zones / cull zones
+    ROW("CTheZones::Init", 0x572670, 60) {
+        Tw tw([](Rng& rr) { FillGarbage(rr, 0xBA1900, 0xBA671C - 0xBA1900); At<uint32_t>(0xBA6718) = rr.below(8); });   // (the port stores the level as a byte, the exe as a dword: the upper bytes are always 0 in the game)
+        IC(CTheZones::Init(); return 0;, oracle::Fn<void __cdecl()>(0x572670)(); return 0;);
+    } ENDROW;
+    ROW("CCullZones::Init", 0x72D6B0, 40) {
+        Tw tw([](Rng& rr) { FillGarbage(rr, 0xC87AB8, 0x20); });
+        IC(CCullZones::Init(); return 0;, oracle::Fn<void __cdecl()>(0x72D6B0)(); return 0;);
+    } ENDROW;
+    ROW("CCullZones::AddTunnelAttributeZone", 0x72DB50, 400) {
+        const CVector pos = CVector(FlP(r, 3000.f), FlP(r, 3000.f), FlP(r, 100.f));
+        const float v[6] = { FlP(r, 200.f), FlP(r, 200.f), FlP(r, 100.f), FlP(r, 200.f), FlP(r, 200.f), FlP(r, 100.f) };
+        const uint32_t flags = r.below(2) ? 0x800 : r.u32() & 0xFFFF;
+        Tw tw([](Rng& rr) { CCullZones::NumTunnelAttributeZones = rr.below(40); });
+        IC(CCullZones::AddTunnelAttributeZone(pos, v[0], v[1], v[2], v[3], v[4], v[5], (eZoneAttributes)flags); return 0;,
+           oracle::Fn<void __cdecl(const CVector*, float, float, float, float, float, float, int)>(0x72DB50)(&pos, v[0], v[1], v[2], v[3], v[4], v[5], (int)flags); return 0;);
+    } ENDROW;
+    const auto CullFx = [](Rng& rr) {   // attribute zones around the player (or the camera) position
+        for (int k = 0; k < 2; ++k) if (!CWorld::Players[k].m_pPed) CWorld::Players[k].m_pPed = reinterpret_cast<CPlayerPed*>(PedP(k));
+        CCullZones::NumAttributeZones = rr.below(8);
+        CCullZones::bMilitaryZonesDisabled = true;
+        const CVector pc = FindPlayerCoors();
+        for (int i = 0; i < 8; ++i) {
+            CAttributeZone& z = CCullZones::aAttributeZones[i];
+            const CVector c = rr.below(2) ? pc : CVector(FlP(rr, 3000.f), FlP(rr, 3000.f), FlP(rr, 100.f));
+            const float a = 5.f + rr.f01() * 80.f, b = 5.f + rr.f01() * 80.f;
+            z.zoneDef.Init(c + CVector(FlP(rr, 20.f), FlP(rr, 20.f), 0.f), a, 0.f, c.z - 10.f - rr.f01() * 50.f, 0.f, b, c.z + 10.f + rr.f01() * 50.f);
+            z.flags = (eZoneAttributes)(rr.below(2) ? 0x2 : (rr.u32() & 0xFFFF));
+        }
+    };
+    ROW("CCullZones::FindZoneWithStairsAttributeForPlayer", 0x72DAD0, 600) {
+        Tw tw(CullFx);
+        IC(return PtrId(CCullZones::FindZoneWithStairsAttributeForPlayer());, return PtrId(oracle::Fn<const void* __cdecl()>(0x72DAD0)()););
+    } ENDROW;
+    ROW("CCullZones::Update", 0x72DEC0, 800) {
+        Tw tw([&](Rng& rr) {
+            CullFx(rr);
+            FillGarbage(rr, &TheCamera, sizeof(TheCamera)); TheCamera.m_matrix = nullptr;
+            CTimer::m_FrameCounter = rr.below(3) ? 8 * rr.below(1000) + (rr.below(2) ? 2 : 6) : rr.u32();
+        });
+        IC(CCullZones::Update(); return 0;, oracle::Fn<void __cdecl()>(0x72DEC0)(); return 0;);
+    } ENDROW;
 }

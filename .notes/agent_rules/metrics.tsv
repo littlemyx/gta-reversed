@@ -90,3 +90,4 @@ date	agent	rules	kind	tokens	tool_uses	minutes	outcome	notes
 2026-10-20	TRAP-AUDIT	v3	audit	240608	125	88	26 targets with port-faults-as-diff: 43 rows, 0 port bugs (17 UNREACHABLE debug traps fall through = PC24 0, 26 unlinked callees)
 2026-10-21	LINK-CALLEES	v3	harness+fixes	250418	132	64	26 cut-short rows now complete (port-only faults -> 0), 3 port fixes (help msg stat sign, control-keys string rewrite 188/1500, gang war zone compare)
 2026-10-21	ZONEINFO	v3	audit+fix (small)	166931	63	35	8 script zone commands + 2 gang-war fns fixed (territory percentage 2657/3000, provocation zone 0 64/400)
+2026-10-21	ORACLE-W3-AUDIO2	v3	oracle wave (small)	267922	90	39	AudioHardware A/B 19 -> 0 (+26 rows), 4 fixes (vehicle audio settings index +400 twice 424/424, speech slot reservation, global speech context)

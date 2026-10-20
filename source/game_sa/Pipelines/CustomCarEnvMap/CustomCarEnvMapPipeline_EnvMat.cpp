@@ -159,7 +159,9 @@ void CCustomCarEnvMapPipeline::SetFxEnvTexture(RpMaterial* material, RwTexture* 
     auto*& data = EnvMapPlGetData(material);
 
     if (data == &fakeEnvMapPipeMatData) {
-        data = new (m_gEnvMapPipeMatDataPool->New()) CustomEnvMapPipeMaterialData{fakeEnvMapPipeMatData};
+        if ((data = m_gEnvMapPipeMatDataPool->New())) { // exe 0x5DA230: a full pool leaves a null in the slot (no placement new on it)
+            *data = fakeEnvMapPipeMatData;
+        }
     }
 
     if (!data) {

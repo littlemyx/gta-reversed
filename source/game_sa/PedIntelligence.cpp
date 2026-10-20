@@ -865,21 +865,25 @@ float CPedIntelligence::CanSeeEntityWithLights(CEntity* entity, int32 unUsed) {
     if (!ped->IsPlayer())
         return LIGHT_AI_LEVEL_MAX;
 
-    float fLightingTotal = ped->GetLightingTotal();
+    const float fLightingTotal = ped->GetLightingTotal();
     if (fLightingTotal > LIGHT_AI_LEVEL_MAX)
         return LIGHT_AI_LEVEL_MAX;
 
-    const float fLightLevelSquared = LIGHT_AI_LEVEL_MAX * LIGHT_AI_LEVEL_MAX;
-    float fMagnitude = (ped->GetPosition() - m_pPed->GetPosition()).Magnitude() - 0.7f;
-    float result = fLightingTotal * fLightingTotal - fMagnitude / 30.0f * fLightLevelSquared;
-    if (result <= 0.0f) {
-        result = result * result - fMagnitude / 50.0f * fLightLevelSquared;
-        if (result <= 0.0f)
-            result = 0.0f;
-        else
-            result *= -1.0f;
-    }
-    return result;
+    // 0x605550: x87 chain. The distance is sqrt((dz^2 + dx^2) + dy^2) kept in extended precision (differences target - this), minus 0.7f, then rounded to float;
+    // the light terms are ((distance / 30) * L) * L (NOT distance / 30 * L^2), and both compares are `fcom` + `test ah, 0x41` (<= 0 and unordered take the same branch)
+    const auto& pedPos = ped->GetPosition();
+    const auto& thisPos = m_pPed->GetPosition();
+    const double dx = (double)pedPos.x - (double)thisPos.x;
+    const double dy = (double)pedPos.y - (double)thisPos.y;
+    const double dz = (double)pedPos.z - (double)thisPos.z;
+    const float fMagnitude = (float)(std::sqrt(dz * dz + dx * dx + dy * dy) - (double)0.7f);
+    double result = (double)fLightingTotal * fLightingTotal - (double)fMagnitude / 30.0f * LIGHT_AI_LEVEL_MAX * LIGHT_AI_LEVEL_MAX;
+    if (result > 0.0) // 0x605606
+        return (float)result;
+    result = result * result - (double)fMagnitude / 50.0f * LIGHT_AI_LEVEL_MAX * LIGHT_AI_LEVEL_MAX;
+    if (!(result > 0.0)) // 0x60562F: <= 0 or NaN
+        return 0.0f;
+    return (float)(result * -1.0f);
 }
 
 // 0x605650

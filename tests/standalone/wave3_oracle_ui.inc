@@ -40,7 +40,7 @@ static float Fl(Rng& r, float scale, int special = 14) {
 // the strings the rows point at (a pool of GXT-like strings; the same text lives at several addresses, upper / lower case twins, strings with ~1~ markers, an empty string)
 static const char* const kStr[] = {
     "ABC", "ABC", "abc", "", "HELLO", "~1~", "A ~1~ B ~1~ C", "x~1~", "~1~~1~~1~", "NO MARKER HERE", "~1", "1~", "~2~ ~1~", "~k~~PED_FIREWEAPON~ press", "Z", "ABCD", "HELLO ~1~ WORLD",
-    "ABC ", " ABC", "0123456789012345678901234567890123456789", "~", "~~", "~~~", "~1~ ~1~ ~1~ ~1~ ~1~ ~1~ ~1~ ~1~", "tail~1~", "~1~head",
+    "ABC ", " ABC", "0123456789012345678901234567890123456789", "~", "~~", "~~~", "~1~ ~1~ ~1~ ~1~ ~1~ ~1~ ~1~ ~1~", "tail~1~", "~1~head", "~a~", "FOO ~a~ BAR", "~a~~a~", "~a~ and ~1~", "x~a", "~a",
 };
 constexpr int kNStr = (int)(sizeof(kStr) / sizeof(kStr[0]));
 static GxtChar* Str(int k) { return reinterpret_cast<GxtChar*>(S(oStr + (size_t)k * 0x100)); }
@@ -66,7 +66,8 @@ static bool UCase(Rng& r, std::string& d, PF&& pf, EF&& ef) {
 struct Tu { explicit Tu(std::function<void(Rng&)> f) { w3u::g_tweak = std::move(f); } ~Tu() { w3u::g_tweak = nullptr; } };
 template<class Fn> static void RunScaledU(const std::string& name, Fn&& fn, int cases) {
     static const int scale = std::getenv("W3U_SCALE") ? std::max(1, std::atoi(std::getenv("W3U_SCALE"))) : 1;
-    Run(name, std::forward<Fn>(fn), cases * scale);
+    static const int div = std::getenv("W3U_DIV") ? std::max(1, std::atoi(std::getenv("W3U_DIV"))) : 1;   // quick runs while developing
+    Run(name, std::forward<Fn>(fn), std::max(10, cases * scale / div));
 }
 #define ROW(NAME, ADDR, CASES) { const int _cs = (CASES); const std::string _nm = std::string(NAME " " #ADDR); RunScaledU(_nm, [&](Rng& r, std::string& d) -> bool
 #define ENDROW , _cs); }

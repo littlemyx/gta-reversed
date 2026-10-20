@@ -629,6 +629,11 @@ tBlipHandle CRadar::SetCoordBlip(eBlipType type, CVector posn, eBlipColour color
     t.m_nBlipSprite      = eRadarSprite::RADAR_SPRITE_NONE;
     t.m_bBright          = true;
     t.m_bTrackingBlip    = true;
+    t.m_bShortRange      = false; // the exe stores the flag byte [+0x25] = 3: every other flag of the reused slot is cleared too
+    t.m_bFriendly        = false;
+    t.m_bBlipRemain      = false;
+    t.m_bBlipFade        = false;
+    t.m_nCoordBlipAppearance = BLIP_FLAG_FRIEND;
     t.m_pEntryExit       = nullptr;
 
     return GetNewUniqueBlipIndex(index);
@@ -810,12 +815,12 @@ bool CRadar::DisplayThisBlip(eRadarSprite spriteId, int8 priority) {
 /*!
  * @brief Changes the brightness of a blip. (Unused)
  * @param blip Blip handle
- * @param brightness Brightness flag. (=1: bright, ≠1: not bright)
+ * @param brightness Brightness flag. (=1: not bright (dim), ≠1: bright)
  * @addr 0x583C70
  */
 void CRadar::ChangeBlipBrightness(tBlipHandle blip, int32 brightness) {
     if (const auto index = GetActualBlipArrayIndex(blip); index != -1) {
-        ms_RadarTrace[index].m_bBright = brightness == 1 ? true : false;
+        ms_RadarTrace[index].m_bBright = brightness == 1 ? false : true; // 0x583CA1: brightness == 1 CLEARS the bright bit (and byte [+0x25], 0xFE), anything else sets it
     }
 }
 

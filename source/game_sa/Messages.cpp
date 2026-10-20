@@ -45,7 +45,7 @@ void CMessages::InjectHooks() {
 void CMessages::Init() {
     ZoneScoped;
 
-    ClearMessages(true);
+    ClearMessages(false); // the exe clears the text of EVERY big message stack (also the mission-title styles), not only the ignorable ones
     rng::fill(PreviousBriefs, tPreviousBrief{});
 }
 
@@ -238,11 +238,11 @@ void CMessages::AddToPreviousBriefArray(const GxtChar* text, int32 n1, int32 n2,
         i = PreviousBriefs.size() - 1;
     }
 
-    // Move entries so that we overwrite the unused entry at `i` and thus free up the 0th entry
-    // if `i == 0` this won't do anything.
+    // Move entries 0..i-1 to 1..i so that we overwrite the unused entry at `i` (or the last one) and thus free up the 0th entry
+    // if `i == 0` this won't do anything. (The range is [0, i + 1): std::shift_right keeps the elements INSIDE the range, so the old `begin() + i` lost entry i - 1.)
     std::shift_right(
         PreviousBriefs.begin(),
-        PreviousBriefs.begin() + i,
+        PreviousBriefs.begin() + i + 1,
         1
     );
 
@@ -324,7 +324,7 @@ void ClearThisPrint_Impl(std::array<tMessage, N>& messages, const GxtChar* text,
 // 0x69EA30
 void CMessages::ClearThisPrint(const GxtChar* text) {
     ClearThisPrint_Impl(BriefMessages, text, [](tMessage& msg) {
-        if (!msg.Text) {
+        if (!msg.Text || !msg.PreviousBrief) { // the exe tests the new front message's PreviousBrief byte (+0x2C)
             return;
         }
         AddToPreviousBriefArray(
@@ -443,16 +443,40 @@ void CMessages::InsertNumberInString(const GxtChar* str, int32 n1, int32 n2, int
 
 // Inserts string into src
 // 0x69E040
+// Replaces every "~a~" of `target` with `replacement` (the exe works through a 0x180 byte stack buffer, in place, stops once the output reached len(target) + len(replacement)
+// characters and zero-fills `target` up to 400 bytes).
 void CMessages::InsertStringInString(GxtChar* target, const GxtChar* replacement) {
     if (!target || !replacement) { // Appereantly that's valid?
         return;
     }
 
-    GxtChar buf[MSG_BUF_SZ];
-    notsa::string_copy((char*)buf, AsciiFromGxtChar(target), sizeof(buf));
-    StringReplace(AsciiFromGxtChar(buf), "~1~", (char*)target, [&, szrepl = strlen(AsciiFromGxtChar(replacement))](char* where) {
-        return std::copy(replacement, replacement + szrepl, where);
-    });
+    const auto lenT = (uint32)std::strlen(AsciiFromGxtChar(target));
+    const auto lenR = (uint16)std::strlen(AsciiFromGxtChar(replacement));
+    const auto total = (uint16)(lenT + lenR);
+
+    GxtChar buf[0x180]{};
+    uint16 out = 0, in = 0;
+    if (total != 0) {
+        do {
+            const GxtChar* p = target + in;
+            if (p[0] == '~' && p[1] == 'a' && p[2] == '~') {
+                in += 3;
+                for (uint16 k = 0; k < lenR; k++) { // (the exe's replacement loop is a do-while: lenR == 0 copies nothing)
+                    buf[out++] = replacement[k];
+                }
+            } else {
+                buf[out++] = p[0];
+                in++;
+            }
+        } while (out < total);
+    }
+    buf[out] = 0;
+    if (total != 0) {
+        std::memcpy(target, buf, total);
+    }
+    if (total < 400) {
+        std::memset(target + total, 0, 400 - total);
+    }
 }
 
 // Inserts key events into string
@@ -532,20 +556,26 @@ void CMessages::InsertPlayerControlKeysInString(GxtChar* string) {
 // Processing messages. This is called from CWorld::Process
 // 0x69EE60
 void CMessages::Process() {
+    // Returns true when the front message expired and the queue advanced (the exe clears the front, moves the following live messages one slot down and stamps the new front)
     const auto ProcessMessagesArray = [](auto&& msgs) {
         auto& f = msgs.front();
         if (!f.IsValid()) { // Not even valid (Neither are the ones after it)
-            return;
+            return false;
         }
         if (CTimer::GetTimeInMS() <= f.GetTimeToDisappearAtMS()) { // Still visible
-            return;
+            return false;
         }
-        std::destroy_at(&f); // First one disappeared, so we can delete it
-        std::shift_right(msgs.begin(), msgs.end(), 1);
-        std::destroy_at(&msgs.back()); // Last is def. unused now
-        if (f.IsValid()) { // front is now another object (because of the shift)
-            f.CreatedAtMS = CTimer::GetTimeInMS();
+        f.Text = nullptr; // First one disappeared, so we can delete it
+        size_t i = 0;
+        while (msgs[i + 1].IsValid()) { // move the live messages after it one slot down
+            msgs[i] = msgs[i + 1];
+            if (++i >= msgs.size() - 1) {
+                break;
+            }
         }
+        msgs[i].Text = nullptr; // the last moved-from slot is unused now
+        f.CreatedAtMS = CTimer::GetTimeInMS(); // (also when the queue is empty now)
+        return true;
     };
 
     // Process big messages
@@ -553,19 +583,20 @@ void CMessages::Process() {
         ProcessMessagesArray(omgVeryBig.Stack);
 	}
 
-    // Process briefs
-    ProcessMessagesArray(BriefMessages);
-    if (const auto f = BriefMessages.front(); f.IsValid()) {
-		AddToPreviousBriefArray(
-            f.Text,
-            f.NumbersToInsert[0],
-            f.NumbersToInsert[1],
-            f.NumbersToInsert[2],
-            f.NumbersToInsert[3],
-            f.NumbersToInsert[4],
-            f.NumbersToInsert[5],
-            f.StringToInsert
-        );
+    // Process briefs: when the queue advanced, the new front goes to the previous briefs if it asks for it
+    if (ProcessMessagesArray(BriefMessages)) {
+        if (const auto f = BriefMessages.front(); f.IsValid() && f.PreviousBrief) {
+            AddToPreviousBriefArray(
+                f.Text,
+                f.NumbersToInsert[0],
+                f.NumbersToInsert[1],
+                f.NumbersToInsert[2],
+                f.NumbersToInsert[3],
+                f.NumbersToInsert[4],
+                f.NumbersToInsert[5],
+                f.StringToInsert
+            );
+        }
     }
 }
 

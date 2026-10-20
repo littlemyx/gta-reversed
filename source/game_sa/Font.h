@@ -166,5 +166,5 @@ public:
 };
 
 static void ReadFontsDat();
-static float GetScriptLetterSize(uint8 letterId);
-static float GetLetterIdPropValue(uint8 letterId);
+float GetScriptLetterSize(uint8 letterId); // (external linkage so the exe-oracle rows can call it; only Font.cpp uses it)
+float GetLetterIdPropValue(uint8 letterId);

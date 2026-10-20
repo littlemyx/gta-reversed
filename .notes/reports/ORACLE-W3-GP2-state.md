@@ -1,8 +1,5 @@
-# ORACLE-W3-GP2 state (partial landing)
-
-Done and committed on branch oracle-w3-gp2: TrafficLights / Restart / Shopping / PedAttractor rows + 5 fixes (see ORACLE-W3-GP2.md). Target wave3_gp2_oracle_test (3 min 45 s, PC24 0).
-
-Remaining: Vehicle.cpp A/B (9) and World.cpp A/B leftovers (12), lists in the report. Next steps:
-1. World rows: either add game_sa/World.cpp, PathFind.cpp, Collision/Collision.cpp, Shadows.cpp, WaterLevel.cpp, RenderBuffer.cpp, TheZones.cpp, CullZones.cpp, TimeCycle.cpp, common.cpp, GridRef.cpp, Draw.cpp (the wave3_world_oracle_test list) to wave3_gp2_oracle_test (then drop the CTheZones::GetLevelFromPosition stub in wave3_oracle_gp2.inc, it would be defined twice), or put the rows into wave3_world_oracle_test (wave3_oracle_world*.inc has the fixtures).
-2. Vehicle-pool World rows (SetAllCarsCanBeDamaged, StopAllLawEnforcersInTheirTracks, FindUnsuspectingTargetCar): rf::Enter / Reset (logic_oracle_refs.inc), rf::VehE(i) blobs, matrix pointer at +0x14, FuncCase-style Prep / Done with the kRf extension.
-3. Vehicle.cpp rows go into wave3_vehicle_oracle_test (Vehicle.cpp is already linked there).
+# ORACLE-W3-GP2 state after continuation ORACLE-W3-GP2-2 (partial landing, token budget)
+Done: see the continuation section of ORACLE-W3-GP2.md (coverage 4658). Remaining uncovered A/B in these files:
+- Vehicle.cpp (5): SetupLighting 0x553F20, RemoveLighting 0x5533D0, DoHeadLightEffect, DoTailLightEffect, SetCompAlphaCB 0x6D2950 (internal linkage: make it non-static in Entity.h/Vehicle.cpp or reach it through a test-only accessor).
+- World.cpp (7): FindLodOfTypeInRange 0x564ED0, CallOffChaseForAreaSectorListVehicles 0x563A80, CastShadowSectorList 0x563390, TestForUnusedModels() 0x566510, TestForBuildingsOnTopOfEachOther() 0x5664A0 + list overload 0x563950, FindPlayerCentreOfWorldForMap 0x56E400.
+Recipes: Vehicle rows go in tests/standalone/wave3_oracle_veh_hand2.inc (W3FuncCase(r, d, 0, {}, ...) with g_frame/g_mi2/g_out as raw RW blobs; plugin offsets at 0x8D608C/90/94); World list rows in wave3_oracle_world_g.inc (BuildSectors + ListR, or the PoolCase lambda for the vehicle pool, which needs rf::Init()). Set w2::g_portFaultIsDiff = true around VCase/BothA when the port must not hit an unlinked symbol. Build with -DGTASA_COMPILE_CACHE=OFF -DGTASA_NO_EDIT_AND_CONTINUE=ON (the sccache + librw pdb failure).

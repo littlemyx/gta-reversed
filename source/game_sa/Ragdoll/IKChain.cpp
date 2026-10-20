@@ -102,7 +102,9 @@ void IKChain_c::Update(float deltaTime) {
 
 // 0x617F30
 bool IKChain_c::IsAtTarget(float range, float* outDist) const {
-    const auto len = (m_OffsetPosWS - GetBones().front()->GetPosition()).Magnitude();
+    // 0x617F68: the distance is RwV3dLength (0x7EDAC0, RenderWare's table-based approximate sqrt, relative error ~1e-4), NOT an exact sqrt (CVector::Magnitude)
+    const CVector diff = m_OffsetPosWS - GetBones().front()->GetPosition();
+    const float   len  = RwV3dLength(&diff);
     if (outDist) {
         *outDist = len;
     }

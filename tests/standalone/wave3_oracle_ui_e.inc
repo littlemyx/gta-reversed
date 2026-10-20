@@ -31,7 +31,7 @@ static void TestW3UiE() {
             [&]() -> uint64_t {
             CKeyArray ka; ka.m_data = Keys(); ka.m_size = (uint32_t)n;
             const uint32_t hs = hit ? Keys()[pick].hash : rnd;
-            const auto rv = ExeThis<CKeyEntry*, uint32_t, CKeyEntry*, int, int>(0x69F570, &ka, hs, Keys(), first, last); return KeyOff(rv); });
+            const auto rv = ExeThis<CKeyEntry*, uint32_t, CKeyEntry*, int, int>(0x69F570, &ka, hs, Keys(), first, last); ka.m_data = nullptr; return KeyOff(rv); });
     } ENDROW;
     ROW("CText::GetNameOfLoadedMissionText", 0x69FBD0, 300) {
         const int len = (int)r.below(8); char nm[8]{}; for (int i = 0; i < len; ++i) nm[i] = (char)('A' + r.below(26));
@@ -72,13 +72,37 @@ static void TestW3UiE() {
         return UCase(r, d, [&]() -> uint64_t { FrontEndMenuManager.ResetHelperText(); return 0; }, [&]() -> uint64_t { ExeThis<void>(0x57CD30, &FrontEndMenuManager); return 0; });
     } ENDROW;
     ROW("CMenuManager::CheckHover", 0x57C4F0, 2000) {
-        const float l = Fl(r, 700.f, 8), rt = Fl(r, 700.f, 8), t = Fl(r, 500.f, 8), b = Fl(r, 500.f, 8); const int mx = r.below(5) == 0 ? (int)r.u32() : (int)r.below(700) - 20, my = (int)r.below(500) - 20;
-        Tu tu([&](Rng& rr) { FillGarbage(rr, &FrontEndMenuManager, sizeof(FrontEndMenuManager)); FrontEndMenuManager.m_nMousePosX = (rr.below(3) == 0 && (int)l == mx) ? (int)l : mx; FrontEndMenuManager.m_nMousePosY = my; });
-        return UCase(r, d, [&]() -> uint64_t { return B8(FrontEndMenuManager.CheckHover(l, rt, t, b)); }, [&]() -> uint64_t { return ExeThis<uint32_t, float, float, float, float>(0x57C4F0, &FrontEndMenuManager, l, rt, t, b) & 0xFF; });
+        const int mx = r.below(10) == 0 ? (int)r.u32() : (int)r.below(700) - 20, my = (int)r.below(500) - 20;
+        const auto edge = [&](int v) { return r.below(3) == 0 ? v : v + (int)r.below(41) - 20; };   // bounds around the mouse (equal bounds exclude it)
+        const int l = r.below(10) == 0 ? (int)r.u32() : edge(mx - (int)r.below(60)), rt = r.below(10) == 0 ? (int)r.u32() : edge(mx + (int)r.below(60)), t = edge(my - (int)r.below(40)), b = edge(my + (int)r.below(40));
+        Tu tu([&](Rng& rr) { FillGarbage(rr, &FrontEndMenuManager, sizeof(FrontEndMenuManager)); FrontEndMenuManager.m_nMousePosX = mx; FrontEndMenuManager.m_nMousePosY = my; });
+        return UCase(r, d, [&]() -> uint64_t { return B8(FrontEndMenuManager.CheckHover(l, rt, t, b)); }, [&]() -> uint64_t { return ExeThis<uint32_t, int, int, int, int>(0x57C4F0, &FrontEndMenuManager, l, rt, t, b) & 0xFF; });
     } ENDROW;
     ROW("CMenuManager::GetNumberOfMenuOptions", 0x573E70, 1500) {
         const int screen = r.below(12) == 0 ? (int)r.below(3) : (int)r.below(SCREEN_COUNT); const bool cached = r.below(3) == 0; const uint8_t cachedN = (uint8_t)r.below(30);
         Tu tu([&](Rng& rr) { FillGarbage(rr, &FrontEndMenuManager, sizeof(FrontEndMenuManager)); FrontEndMenuManager.m_nCurrentScreen = (eMenuScreen)screen; FrontEndMenuManager.m_nNumberOfMenuOptions = cachedN; *reinterpret_cast<int32_t*>(0x8CDFF0) = cached ? screen : (int)rr.below(SCREEN_COUNT) - 5; });
         return UCase(r, d, [&]() -> uint64_t { return FrontEndMenuManager.GetNumberOfMenuOptions(); }, [&]() -> uint64_t { return ExeThis<uint32_t>(0x573E70, &FrontEndMenuManager) & 0xFF; });   // (the exe returns the count in al only)
     } ENDROW;
+    // front-end direction checks: key state, analogue stick (with the function-local "previous stick" static at its exe address) and d-pad of the menu's pad
+    {
+        struct In { const char* nm; uint32_t addr; bool (CMenuManager::*pf)() const; };
+        static const In ins[] = { { "CMenuManager::CheckFrontEndUpInput", 0x573840, &CMenuManager::CheckFrontEndUpInput }, { "CMenuManager::CheckFrontEndDownInput", 0x5738B0, &CMenuManager::CheckFrontEndDownInput },
+            { "CMenuManager::CheckFrontEndLeftInput", 0x573920, &CMenuManager::CheckFrontEndLeftInput }, { "CMenuManager::CheckFrontEndRightInput", 0x573990, &CMenuManager::CheckFrontEndRightInput } };
+        for (const auto& in : ins) {
+            const std::string nm = std::string(in.nm) + " 0x" + [&] { char b[16]; std::snprintf(b, sizeof b, "%X", in.addr); return std::string(b); }();
+            RunScaledU(nm, [&](Rng& r, std::string& d) -> bool {
+                Tu tu([&](Rng& rr) {
+                    FillGarbage(rr, &CPad::Pads, sizeof(CPad::Pads));
+                    for (auto& p : CPad::Pads) {
+                        auto* b = reinterpret_cast<uint8_t*>(&p);
+                        for (size_t i = 0; i < sizeof(CPad); ++i) if (rr.below(3) != 0) b[i] = 0;   // sparse buttons / keys
+                    }
+                    FillGarbage(rr, &FrontEndMenuManager, sizeof(FrontEndMenuManager)); FrontEndMenuManager.m_nPlayerNumber = (uint8_t)rr.below(2);
+                    for (auto& p : CPad::Pads) { p.NewState.LeftStickX = (int16_t)(rr.below(3) ? (int)rr.below(255) - 127 : 0); p.NewState.LeftStickY = (int16_t)(rr.below(3) ? (int)rr.below(255) - 127 : 0); }
+                    *reinterpret_cast<int16_t*>(0xB736F0) = (int16_t)((int)rr.below(255) - 127); *reinterpret_cast<int16_t*>(0xB736F4) = (int16_t)((int)rr.below(255) - 127); *reinterpret_cast<int16_t*>(0xB73700) = (int16_t)((int)rr.below(255) - 127); *reinterpret_cast<int16_t*>(0xB73704) = (int16_t)((int)rr.below(255) - 127);
+                });
+                return UCase(r, d, [&]() -> uint64_t { return B8((FrontEndMenuManager.*in.pf)()); }, [&]() -> uint64_t { return ExeThis<uint32_t>(in.addr, &FrontEndMenuManager) & 0xFF; });
+            }, 1500);
+        }
+    }
 }

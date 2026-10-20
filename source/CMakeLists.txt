@@ -1458,6 +1458,8 @@ if (${RE_PROJECT}_RW_LIBRW)
         game_sa/Sprite2d.cpp
         game_sa/Sprite.cpp
         game_sa/MenuManager.cpp
+        game_sa/Frontend/MenuManager_Input.cpp
+        game_sa/Pad.cpp
         game_sa/Text/Text.cpp
         game_sa/Text/KeyArray.cpp
         game_sa/Text/Data.cpp

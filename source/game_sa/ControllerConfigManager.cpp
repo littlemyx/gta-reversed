@@ -853,7 +853,7 @@ void CControllerConfigManager::UpdateJoyInConfigMenus_ButtonDown(KeyCode button,
         return;
     }
 
-    if ((button != eJoyButtons::JOYBUTTON_TWELVE && padNumber != 1) || notsa::IsFixBugs()) {
+    if ((button != eJoyButtons::JOYBUTTON_TWELVE || padNumber == 1) || notsa::IsFixBugs()) { // the exe writes START (button 12) of pad 2 only
         GetControllerStateJoyStick(*pad, button) = 255;
     }
 }
@@ -865,7 +865,7 @@ void CControllerConfigManager::UpdateJoyInConfigMenus_ButtonUp(KeyCode button, i
         return;
     }
 
-    if ((button != eJoyButtons::JOYBUTTON_TWELVE && padNumber != 1) || notsa::IsFixBugs()) {
+    if ((button != eJoyButtons::JOYBUTTON_TWELVE || padNumber == 1) || notsa::IsFixBugs()) { // the exe writes START (button 12) of pad 2 only
         GetControllerStateJoyStick(*pad, button) = 0;
     }
 }

@@ -357,8 +357,8 @@ void SetLightColoursForPedsCarsAndObjects(float fMult) {
     AmbientLightColour.blue      = fMult * AmbientLightColourForFrame_PedsCarsAndObjects.blue;
 
     AmbientLightColour.red      += CTimeCycle::m_BrightnessAddedToAmbientRed;
-    AmbientLightColour.green    += CTimeCycle::m_BrightnessAddedToAmbientRed;
-    AmbientLightColour.blue     += CTimeCycle::m_BrightnessAddedToAmbientRed;
+    AmbientLightColour.green    += CTimeCycle::m_BrightnessAddedToAmbientGreen;
+    AmbientLightColour.blue     += CTimeCycle::m_BrightnessAddedToAmbientBlue;
 
     RpLightSetColor(pAmbient, &AmbientLightColour);
     RpLightSetColor(pDirect, &DirectionalLightColour);

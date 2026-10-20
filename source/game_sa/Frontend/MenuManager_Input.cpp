@@ -1139,13 +1139,14 @@ void CMenuManager::CheckForMenuClosing() {
 }
 
 // 0x57C4F0
-[[nodiscard]] bool CMenuManager::CheckHover(float left, float right, float top, float bottom) const {
+// The exe compares the integer mouse position with INTEGER bounds (its callers _ftol the stretched coordinates before the call, 0x57A8F9..0x57A93B)
+[[nodiscard]] bool CMenuManager::CheckHover(int32 left, int32 right, int32 top, int32 bottom) const {
     // debug: CSprite2d::DrawRect(CRect(left, top, right, bottom), CRGBA(255, 0, 0, 255));
     return (
-        (float)m_nMousePosX > left  &&
-        (float)m_nMousePosX < right &&
-        (float)m_nMousePosY > top   &&
-        (float)m_nMousePosY < bottom
+        m_nMousePosX > left  &&
+        m_nMousePosX < right &&
+        m_nMousePosY > top   &&
+        m_nMousePosY < bottom
     );
 }
 

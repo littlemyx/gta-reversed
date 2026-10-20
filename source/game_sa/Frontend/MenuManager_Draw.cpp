@@ -781,9 +781,9 @@ void CMenuManager::DrawStandardMenus(bool drawTitle) {
             const auto verticalOffset = isRadioVolumeSlider ? 30.0f : 0.0f;
             const auto sliderPos = DisplaySlider(StretchX(500.0f), StretchY(125.0f - verticalOffset), StretchY(4.0f), StretchY(20.0f), StretchX(100.0f), value, (int32)StretchX(3.0f));
             if (i == m_nCurrentScreenItem && shouldDrawStandardItems) {
-                if (CheckHover(0, sliderPos - StretchX(3.0f), StretchY(125.0f - verticalOffset), StretchY(150.0f - verticalOffset))) {
+                if (CheckHover(0, (int32)(sliderPos - StretchX(3.0f)), (int32)StretchY(125.0f - verticalOffset), (int32)StretchY(150.0f - verticalOffset))) {
                     m_MouseInBounds = leftBound;
-                } else if (CheckHover(sliderPos + StretchX(3.0f), StretchX(SCREEN_WIDTH), StretchY(125.0f - verticalOffset), StretchY(150.0f - verticalOffset))) {
+                } else if (CheckHover((int32)(sliderPos + StretchX(3.0f)), (int32)StretchX(SCREEN_WIDTH), (int32)StretchY(125.0f - verticalOffset), (int32)StretchY(150.0f - verticalOffset))) {
                     m_MouseInBounds = rightBound;
                     if (StretchX(500.0f) <= m_nMousePosX && StretchY(125.0f - verticalOffset) <= m_nMousePosY && m_nMousePosY <= StretchY(150.0f - verticalOffset)) {
                         return;

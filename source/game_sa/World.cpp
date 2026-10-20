@@ -317,11 +317,12 @@ void CWorld::FindObjectsInRangeSectorList(PtrListType& ptrList, const CVector& p
 // 0x5635C0
 template<typename PtrListType>
 void CWorld::FindObjectsOfTypeInRangeSectorList(uint32 modelId, PtrListType& ptrList, const CVector& point, float radius, bool b2D, int16* outCount, int16 maxCount, CEntity** outEntities) {
+    // exe 0x56365E: `fcomp radiusSq` + `test ah, 5` / `jp`: strictly less (equal or NaN is out)
     const auto IsInRange = [&, radiusSq = radius * radius](CEntity* entity) {
         if (b2D) {
-            return DistanceBetweenPointsSquared2D(point, entity->GetPosition()) <= radiusSq;
+            return DistanceBetweenPointsSquared2D(point, entity->GetPosition()) < radiusSq;
         }
-        return DistanceBetweenPointsSquared(point, entity->GetPosition()) <= radiusSq;
+        return DistanceBetweenPointsSquared(point, entity->GetPosition()) < radiusSq;
     };
 
     for (auto* const entity : ptrList) {

@@ -70,7 +70,7 @@ fs::path GetSourceCodeBasePath();
 // In debug mode it will do a DebugBreak() and print a message to the console,
 // while in release code it'll be optimized away (by using special compiler directives)
 // Also serves as a way to supress compiler warnings (for example, when you don't have need a `default` case in a `switch`)
-#if _DEBUG
+#if _DEBUG && !defined(W2_UNREACHABLE_RUNBUILD)   // W2_UNREACHABLE_RUNBUILD: the wave2/3 oracle tests take the run-build branch below (log the site, fall through like the exe) instead of the MessageBox + exit(3) of the Debug build
 #include <format>
 #include <winuser.h>
 

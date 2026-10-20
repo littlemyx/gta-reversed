@@ -22,6 +22,7 @@ template<class Tag, typename Tag::type M> struct W2Rob { friend typename Tag::ty
 
 namespace w2 {
 
+static const bool g_envPortFaultIsDiff = [] { const char* e = std::getenv("W2_PORT_FAULT_IS_DIFF"); return e && *e && *e != '0'; }();   // TRAP-AUDIT: env switch, makes EVERY row count a port-only fault at EIP 0x400000 as a mismatch (and lists the return address per row)
 static bool g_portFaultIsDiff = false;   // ORACLE-W3-GP2-2: a row sets it while its port function reaches an unresolved/unlinked symbol (e.g. NOTSA_UNREACHABLE) on inputs where the exe returns a value: that port-only fault is then a mismatch, not a fixture limit
 static int g_portExtra = 0;            // INFO: bits only the port wrote (exe left them as garbage)
 
@@ -112,8 +113,14 @@ static bool BothA(std::string& d, uint32_t seed, std::initializer_list<Reg> regs
     if ((pFault || eFault) && std::getenv("W2_FAULTLOG")) std::printf("  [fault port=%d 0x%08lX at %p access %p stk %08X %08X, exe=%d 0x%08lX at %p access %p]\n", pFault, (unsigned long)pFaultCode, pFaultEip, pFaultAddr, pStk0, pStk1, eFault, (unsigned long)g_faultCode, g_faultEip, g_faultAddr);   // diagnostic: where each side faulted
     if (pFault || eFault) {
         // one side faulting alone is a difference; both faulting is the same behaviour (e.g. a dereference of a null the fixture allows): the case carries no information and is skipped
-        if (eFault && !pFault) { g_agreedFault = true; return true; }   // exe-only fault: the exe dispatches through a garbage vptr of `this` / reads exe globals no CRT start-up initialised (the port compiled the same call direct): a fixture limit
-        if ((pFault && eFault) || (pFault && !g_portFaultIsDiff && pFaultEip == reinterpret_cast<void*>(0x400000))) { g_agreedFault = true; return true; }   // 0x400000 = a call to a port function whose translation unit is not linked into this test (an unresolved symbol): a fixture limit, not a port difference
+        if (eFault && !pFault) { ++g_trapExeOnly; g_agreedFault = true; return true; }   // exe-only fault: the exe dispatches through a garbage vptr of `this` / reads exe globals no CRT start-up initialised (the port compiled the same call direct): a fixture limit
+        if (pFault && eFault) ++g_trapBoth;
+        if (pFault && !eFault && pFaultEip == reinterpret_cast<void*>(0x400000)) {
+            ++g_trapPortOnly;
+            bool seen = false; for (int k = 0; k < g_trapRetN; ++k) seen |= g_trapRet[k] == pStk0;
+            if (!seen && g_trapRetN < 8) g_trapRet[g_trapRetN++] = pStk0;
+        }
+        if ((pFault && eFault) || (pFault && !g_portFaultIsDiff && !g_envPortFaultIsDiff && pFaultEip == reinterpret_cast<void*>(0x400000))) { g_agreedFault = true; return true; }   // 0x400000 = a call to a port function whose translation unit is not linked into this test (an unresolved symbol): a fixture limit, not a port difference
         char t[160]; std::snprintf(t, sizeof t, " %s faulted (0x%08lX at %p) while the %s did not;", pFault ? "PORT" : "EXE", pFault ? (unsigned long)pFaultCode : (unsigned long)g_faultCode, pFault ? pFaultEip : g_faultEip, pFault ? "exe" : "port");
         d = t;
         return false;

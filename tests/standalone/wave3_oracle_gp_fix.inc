@@ -64,7 +64,7 @@ static bool Is(const char* a, const char* b) { return std::strcmp(a, b) == 0; }
 static void GpFix(const char* cls, Rng& r, uint8_t* v, size_t sz) {
     (void)sz;
     if (Is(cls, "CGarage") || Is(cls, "CGarages") || Is(cls, "CStoredCar") || Is(cls, "CPickups") || Is(cls, "CPickup")) WireWorld(r);
-    if (Is(cls, "CGangWars")) { CGangWars::NumSpecificZones = (int32)r.below(6); for (auto& z : CGangWars::aSpecificZones) z = (int32)r.below(40); }
+    if (Is(cls, "CGangWars")) { CGangWars::NumSpecificZones = (int32)r.below(6); for (auto& z : CGangWars::aSpecificZones) z = (int32)r.below(40); CTheZones::TotalNumberOfNavigationZones = (int16)(40 + r.below(300)); for (int k = 0; k < 40; ++k) CTheZones::NavigationZoneArray[k].m_ZoneInfoIndex = (decltype(CZone::m_ZoneInfoIndex))r.below(4); }   // LINK-CALLEES: the port indexes the navigation zones through a take-view that asserts past TotalNumberOfNavigationZones, the exe reads the array unchecked: keep the indices inside the view
     if (Is(cls, "CGarage")) SaneGarage(r, *reinterpret_cast<CGarage*>(v));
     if (Is(cls, "CGarages")) {
         CGarages::NumGarages = (int32)r.below(CGarages::MAX_NUM_GARAGES + 1);
@@ -139,6 +139,11 @@ static void TestW3GpHand() {
     }, 20);
     // ---- rows with out parameters (the generator skips reference / pointer-to-pointer parameters): the return value and the out values are folded into one compared word
     const auto mix = [](uint64_t a, uint64_t b) { return (a * 0x9E3779B97F4A7C15ull) ^ (b + 0x1234567ull); };
+    Run("CGangWars::CanPlayerStartAGangWarHere 0x443F80 (real zone infos)", [&](Rng& r, std::string& d) {   // LINK-CALLEES: navigation zones with zone-info index 0..3 and the argument = a real entry of the zone info array (the exe compares with &ZoneInfoArray[index], index 0 included)
+        CZoneInfo* zi = &CTheZones::ZoneInfoArray[r.below(5)];
+        return W3GpCase(r, d, "CGangWars", 0, {}, [&](void*) -> uint64_t { return (uint64_t)(uint8_t)(CGangWars::CanPlayerStartAGangWarHere(zi) ? 1 : 0); },
+            [&](void*) -> uint64_t { return (uint64_t)((uint8_t)(oracle::Fn<int __cdecl(CZoneInfo*)>(0x443F80)(zi)) ? 1 : 0); });
+    }, 200);
     Run("CGangWars::PickStreamedInPedForThisGang 0x443A20", [&](Rng& r, std::string& d) {
         const int gang = (int)r.below(3); int32 o1 = GI(r), o2 = o1;
         return W3GpCase(r, d, "CGangWars", 0, {}, [&](void*) -> uint64_t { const bool b = CGangWars::PickStreamedInPedForThisGang((eGangID)gang, o1); return mix(b ? 1 : 0, (uint32)o1); },

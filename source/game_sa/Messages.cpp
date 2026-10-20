@@ -45,7 +45,7 @@ void CMessages::InjectHooks() {
 void CMessages::Init() {
     ZoneScoped;
 
-    ClearMessages(true);
+    ClearMessages(false); // the exe clears the text of EVERY big message stack (also the mission-title styles), not only the ignorable ones
     rng::fill(PreviousBriefs, tPreviousBrief{});
 }
 

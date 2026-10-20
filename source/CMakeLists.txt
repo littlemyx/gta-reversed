@@ -1783,6 +1783,12 @@ if (${RE_PROJECT}_RW_LIBRW)
     set_property(TARGET wave3_ai_oracle_test PROPERTY SOURCES "${STANDALONE_PAD_OBJ}" ${_w3ai_sources})
     target_link_options(wave3_ai_oracle_test PRIVATE "$<$<CXX_COMPILER_ID:MSVC>:/BASE:0x400000;/DYNAMICBASE:NO;/FIXED;/MERGE:_TEXT=.text;/INCREMENTAL:NO;/SUBSYSTEM:CONSOLE;/FORCE:UNRESOLVED;/MAP>")
     set_target_properties(wave3_ai_oracle_test PROPERTIES COMPILE_WARNING_AS_ERROR OFF CXX_SCAN_FOR_MODULES OFF)
+    # TRAP-AUDIT: the wave3 oracle tests (not wave2_oracle_test: its ControlSubTask rows die with STATUS_INVALID_EXCEPTION_HANDLER under this) see NOTSA_UNREACHABLE like the run build (Fixups::UnreachableHit stub in wave1_oracle_test.cpp) instead of the Debug MessageBox/exit(3)
+    foreach (_t wave3_ai_oracle_test wave3_anim_oracle_test wave3_audio_oracle_test wave3_camera_oracle_test wave3_carenv_oracle_test wave3_coll_oracle_test wave3_entity_oracle_test wave3_events_oracle_test wave3_fx_oracle_test wave3_fxs_oracle_test wave3_gameplay_oracle_test wave3_gp2_oracle_test wave3_ik_oracle_test wave3_input_oracle_test wave3_interior_oracle_test wave3_misc_oracle_test wave3_models_oracle_test wave3_ped_oracle_test wave3_scripts_oracle_test wave3_stream_oracle_test wave3_tasks_oracle_test wave3_ui_oracle_test wave3_vehicle_oracle_test wave3_vis_oracle_test wave3_world_oracle_test)
+        if (TARGET ${_t})
+            target_compile_definitions(${_t} PRIVATE W2_UNREACHABLE_RUNBUILD)
+        endif()
+    endforeach()
     # x87 intrinsic fidelity oracle: inline fsin/fcos/fpatan/fptan/fsqrt/fyl2x of the exe vs the ports' math, and the CRT entry points the exe calls (pow, asin, acos, tan, floor, ceil, modf)
     add_executable(x87_oracle_test EXCLUDE_FROM_ALL
         "${PROJECT_SOURCE_DIR}/tests/standalone/x87_oracle_test.cpp"

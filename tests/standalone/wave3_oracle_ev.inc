@@ -21,7 +21,7 @@
 #include "PedGroups.h"
 #include "Models/BaseModelInfo.h"
 
-namespace notsa::standalone::Fixups { void UnreachableHit(const char*, const char*, int) {} }   // NOTSA_UNREACHABLE in the run build: the exe falls through; nothing to log here
+// NOTSA_UNREACHABLE: Fixups::UnreachableHit lives in wave1_oracle_test.cpp (TRAP-AUDIT: W2_PORT_FAULT_IS_DIFF=1 falls through like the run build, otherwise the old fault at 0x400000)
 
 #define W3E_ROB(Name, Cls, Type, Mem) \
     struct Name##_T { using type = Type Cls::*; friend type W2Get(Name##_T); }; template struct W2Rob<Name##_T, &Cls::Mem>; \

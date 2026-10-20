@@ -178,6 +178,10 @@ static DWORD g_faultCode = 0; static void* g_faultEip = nullptr; static void* g_
 static void (*g_onFault)() = nullptr;
 static bool g_agreedFault = false;   // ORACLE-W2: set by BothA when port AND exe faulted in this case (same behaviour: no information, not a mismatch)
 static int  g_agreedFaults = 0;
+// TRAP-AUDIT: per-case fault classification of BothA (reset per row by Run): port-only at EIP 0x400000 (unlinked symbol / NOTSA_UNREACHABLE / trap), both sides, exe-only
+static int g_trapPortOnly = 0, g_trapBoth = 0, g_trapExeOnly = 0, g_trapUnreach = 0;   // g_trapUnreach: NOTSA_UNREACHABLE sites hit by the port in this row (run-build semantics, see Fixups::UnreachableHit below)
+static const char* g_trapUnreachSite[6]; static int g_trapUnreachLine[6]; static int g_trapUnreachSites = 0;
+static unsigned g_trapRet[8]; static int g_trapRetN = 0;   // distinct return addresses (stack top at the fault) of the port-only faults of this row
 static const char* g_curRow = "";
 static LONG WINAPI LastChance(EXCEPTION_POINTERS* ep) { std::printf("\nUNHANDLED exception 0x%08lX at EIP=%p in row '%s'\n", ep->ExceptionRecord->ExceptionCode, ep->ExceptionRecord->ExceptionAddress, g_curRow); std::fflush(stdout); std::exit(6); }
 static int FaultFilter(EXCEPTION_POINTERS* ep) {
@@ -202,6 +206,7 @@ static void Run(const std::string& name, Fn&& fn, int cases = 0) {
     g_curRow = name.c_str();
     if (std::getenv("W2_PROGRESS")) std::printf(">> %s\n", name.c_str());
     int agreed = 0;
+    g_trapPortOnly = g_trapBoth = g_trapExeOnly = g_trapUnreach = 0; g_trapRetN = 0; g_trapUnreachSites = 0;
     for (int pc : { 24, 53 }) {
         if (row.fault) break;
         SetPC(pc);
@@ -237,6 +242,12 @@ static void Run(const std::string& name, Fn&& fn, int cases = 0) {
     else if (agreed) std::printf("    (%d of %d cases faulted identically in port and exe: skipped)\n", agreed, 2 * N);
     g_caseTick = 0;
     SetPC(53);
+    if (g_trapPortOnly || g_trapBoth || g_trapExeOnly || g_trapUnreach) {   // TRAP-AUDIT: only printed for rows that had any fault classification (BothA rows)
+        std::printf("    TRAPAUDIT %s: port-only(0x400000) %d, both %d, exe-only %d, unreachable-hits %d of %d cases;", name.c_str(), g_trapPortOnly, g_trapBoth, g_trapExeOnly, g_trapUnreach, 2 * N);
+        for (int k = 0; k < g_trapRetN; ++k) std::printf(" ret=%08X", g_trapRet[k]);
+        for (int k = 0; k < g_trapUnreachSites; ++k) { const char* f = std::strrchr(g_trapUnreachSite[k], 0x5C); std::printf(" UNREACH=%s:%d", f ? f + 1 : g_trapUnreachSite[k], g_trapUnreachLine[k]); }
+        std::putchar(10);
+    }
     row.hits = g_hits;
     if (row.fault) { g_rows.push_back(row); return; }
     std::printf("%-58s %5d%s  PC24 %4d [reg %d spec %d nanpayload %d]  PC53 %4d [reg %d spec %d nanpayload %d]\n", name.c_str(), N, row.hits ? (" true:" + std::to_string(row.hits)).c_str() : "", row.bad24, row.hardReg24, row.hardSpec24, row.nan24,
@@ -372,3 +383,17 @@ int main(int argc, char** argv) {
     std::printf("\n%zu functions, mismatches (strict / excluding NaN-payload-only): PC24 %d / %d, PC53 %d / %d\n", g_rows.size(), bad24, hard24, bad53, hard53);
     return hard24 ? 1 : 0;
 }
+
+#ifdef W2_UNREACHABLE_RUNBUILD
+// TRAP-AUDIT: NOTSA_UNREACHABLE in the wave2/3 oracle tests. Default (W2_PORT_FAULT_IS_DIFF unset): a call to 0x400000 = the old behaviour (a fault the harness skips as a fixture limit).
+// With the switch: like the run build (Base.h): record the site and fall through, so the port continues exactly as in the game and the normal comparison finds any difference to the exe.
+namespace notsa::standalone::Fixups {
+void UnreachableHit(const char* fn, const char* file, int line) {
+    static const bool on = [] { const char* e = std::getenv("W2_PORT_FAULT_IS_DIFF"); return e && *e && *e != '0'; }();
+    if (!on) reinterpret_cast<void(__cdecl*)()>(0x400000)();
+    ++g_trapUnreach;
+    for (int k = 0; k < g_trapUnreachSites; ++k) if (g_trapUnreachLine[k] == line && g_trapUnreachSite[k] == file) return;
+    if (g_trapUnreachSites < 6) { g_trapUnreachSite[g_trapUnreachSites] = file; g_trapUnreachLine[g_trapUnreachSites++] = line; }
+}
+}
+#endif

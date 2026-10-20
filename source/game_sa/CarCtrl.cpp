@@ -4479,10 +4479,10 @@ void CCarCtrl::RemoveDistantCars() {
 
 // 0x423ED0
 void CCarCtrl::RemoveFromInterestingVehicleList(CVehicle* vehicle) {
+    // 0x423ED0: no early exit, every slot that holds the vehicle is cleared
     for (auto& car : apCarsToKeep) {
         if (car == vehicle) {
             car = nullptr;
-            break;
         }
     }
 }

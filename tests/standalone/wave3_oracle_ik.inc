@@ -115,7 +115,7 @@ static void BuildMgrNone(Rng&) {}
 // one case: `build` fills the fixture, port and exe run on identical bytes (fixture, arena, whole data image restored between the two runs)
 // padding words of the RwMatrix world matrices (offsets 0x1C / 0x2C / 0x3C of each node's m_WorldMat) and of the pivot matrix: indeterminate in the exe (stack junk of the local matrix), not compared when `maskPads`
 static void MaskPads(Reg& fx) {
-    fx.mask.assign(kFxSize, 0);
+    fx.mask.assign(fx.n, 0);
     auto Pad = [&](size_t matOff) { for (size_t o : { 0x1Cu, 0x2Cu, 0x3Cu }) for (size_t b = 0; b < 4; ++b) fx.mask[matOff + o + b] = 1; };
     for (size_t i = 0; i < kMaxN; ++i) Pad(kNode + i * kNodeSz + oWld);
     Pad(0x740);
@@ -137,6 +137,7 @@ static bool KCase(Rng& r, std::string& d, PF&& pf, EF&& ef, void (*build)(Rng&) 
 #include "wave3_oracle_ik_a.inc"   // BoneNode_c, BoneNodeManager_c
 #include "wave3_oracle_ik_b.inc"   // IKChain_c, IKChainManager_c
 #include "wave3_oracle_ik_c.inc"   // CalcWldMat, MoveBonesToTarget
+#include "wave3_oracle_ik_d.inc"   // ped clump fixture: Init / SetupBones / Update / Exit / UpdateEntity
 #include "wave3_oracle_ik_dbg.inc" // developer probe (W3K_PROBE=1)
 
 namespace w3k {
@@ -160,6 +161,7 @@ static void TestW3IkAll() {
     (void)spdlog::default_logger_raw();   // the default logger is created lazily by the first NOTSA_LOG_* of the port: do it outside the redirected allocator
     spdlog::set_level(spdlog::level::off);   // "bone tag not found" warnings (IKChain_c::GetBoneNodeFromTag) would allocate in the port only
     w3k::InitExeRw();
+    rf::Init();
     if (std::getenv("W3K_DUMPTAB")) {   // debugging: compare the exe's sqrt tables (built by its own plugin constructor) with the shim's
         const uint32_t off = (uint32_t)StaticRef<int32_t>(0xC97934);
         const uint32_t* const* tp = reinterpret_cast<const uint32_t* const*>(w3k::g_engine + off);
@@ -188,4 +190,5 @@ static void TestW3IkAll() {
     TestW3IkA();
     TestW3IkB();
     TestW3IkC();
+    TestW3IkD();
 }

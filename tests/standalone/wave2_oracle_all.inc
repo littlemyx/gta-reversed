@@ -197,7 +197,7 @@ static void TestW2() {
 #endif
 #ifdef W3_IK_ONLY
     using namespace w2;
-    g_onFault = +[] { oracle::alloc::End(); };
+    g_onFault = +[] { oracle::alloc::End(); rf::Leave(); };
     TestW3IkAll();
     return;
 #endif

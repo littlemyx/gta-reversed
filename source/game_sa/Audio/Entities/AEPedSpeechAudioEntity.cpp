@@ -262,10 +262,20 @@ void CAEPedSpeechAudioEntity::Reset() {
 
 // 0x4E37F0
 bool CAEPedSpeechAudioEntity::ReservePedConversationSpeechSlots() {
-    const auto slotA = GetFreeSpeechSlot();
-    const auto slotB = GetFreeSpeechSlot();
-
-    if (slotA == -1 || slotB == -1) {
+    // exe 0x4E37F0: the first two free slots in index order (0..4, the player's slot 5 is never taken); no round robin, `s_NextSpeechSlot` is not touched
+    tPedSpeechSlotID slotA = -1, slotB = -1;
+    for (tPedSpeechSlotID i = 0; i < (tPedSpeechSlotID)s_PedSpeechSlots.size() - 1; i++) {
+        if (s_PedSpeechSlots[i].Status != CAEPedSpeechSlot::eStatus::FREE) {
+            continue;
+        }
+        if (slotA == -1) {
+            slotA = i;
+        } else {
+            slotB = i;
+            break;
+        }
+    }
+    if (slotB == -1) {
         return false;
     }
 

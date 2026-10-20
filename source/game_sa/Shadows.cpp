@@ -413,7 +413,6 @@ void CShadows::SetRenderModeForShadowType(eShadowType type) {
 
 // 0x7074F0
 void CShadows::RemoveOilInArea(float minX, float maxX, float minY, float maxY) {
-    CRect rect{ {minX, minY}, {maxX, maxY} };
     for (auto& shadow : aPermanentShadows) {
         switch (shadow.m_nType) {
         case SHADOW_OIL_1:
@@ -422,7 +421,10 @@ void CShadows::RemoveOilInArea(float minX, float maxX, float minY, float maxY) {
         default:
             continue;
         }
-        if (rect.IsPointInside(shadow.m_vecPosn)) {
+        // x87 `fcomp` + `test ah, 0x41` / `test ah, 5`: the bounds are STRICT (a point on an edge is outside) and a NaN operand rejects (unlike CRect::IsPointInside)
+        if (minX < shadow.m_vecPosn.x && shadow.m_vecPosn.x < maxX
+            && minY < shadow.m_vecPosn.y && shadow.m_vecPosn.y < maxY
+        ) {
             shadow.m_nType = SHADOW_NONE;
         }
     }

@@ -10,9 +10,8 @@ void* CCustomCarEnvMapPipeline::pluginEnvAtmConstructorCB(void* object, int32 of
 
 // 0x5D9730
 void* CCustomCarEnvMapPipeline::pluginEnvAtmDestructorCB(void* object, int32 offsetInObject, int32 sizeInObject) {
-    auto* const self = static_cast<RpAtomic*>(object);
-
-    if (auto* const data = std::exchange(EnvMapAtmPlGetData(self), nullptr)) {
+    // exe 0x5D9730: the slot is addressed with the offset ARGUMENT (not ms_envMapAtmPluginOffset)
+    if (auto* const data = std::exchange(*RWPLUGINOFFSET(CustomEnvMapPipeAtomicData*, object, offsetInObject), nullptr)) {
         m_gEnvMapPipeAtmDataPool->Delete(data);
     }
     return object;

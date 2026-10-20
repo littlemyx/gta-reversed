@@ -22,3 +22,4 @@ datetime	weekly_pct	parallel_agents	rules	note
 2026-10-20T08:52	67	1	v3	64->67 in 6.4h at 1 agent (~0.47 %/h); need 0.43
 2026-10-20T12:00	69	1	v3	67->69 in 3.1h (~0.64 %/h, IK agent 562k); need 0.42 -> tighter scopes
 2026-10-20T13:30	70	1	v3	69->70 in 1.5h (~0.67 %/h: short agents ~1 % each, 1.5/h); need 0.42 -> pace: one agent start per ~2h
+2026-10-20T17:54	71	1	v3	70->71 in 4.4h with pacing (~0.23 %/h); need 0.45 -> pauses can shrink to ~30 min

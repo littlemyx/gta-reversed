@@ -1521,6 +1521,35 @@ if (${RE_PROJECT}_RW_LIBRW)
     set_property(TARGET wave3_ui_oracle_test PROPERTY SOURCES "${STANDALONE_PAD_OBJ}" ${_w3ui_sources})
     target_link_options(wave3_ui_oracle_test PRIVATE "$<$<CXX_COMPILER_ID:MSVC>:/BASE:0x400000;/DYNAMICBASE:NO;/FIXED;/MERGE:_TEXT=.text;/INCREMENTAL:NO;/SUBSYSTEM:CONSOLE;/FORCE:UNRESOLVED;/MAP>")
     set_target_properties(wave3_ui_oracle_test PROPERTIES COMPILE_WARNING_AS_ERROR OFF CXX_SCAN_FOR_MODULES OFF)
+    # ORACLE-W3-FX: exe-oracle rows of game_sa/Fx (FxSystem, FxManager, FxMemoryPool, FxSphere, FxFrustumInfo, FxSystemBP, FxEmitterBP) on fixture blocks; rows: tests/standalone/wave3_oracle_fxs.inc
+    add_executable(wave3_fxs_oracle_test EXCLUDE_FROM_ALL
+        "${PROJECT_SOURCE_DIR}/tests/standalone/wave1_oracle_test.cpp"
+        ${W2_BASE_SOURCES}
+        game_sa/Fx/FxSystem.cpp
+        game_sa/Fx/FxManager.cpp
+        game_sa/Fx/FxMemoryPool.cpp
+        game_sa/Fx/FxFrustumInfo.cpp
+        game_sa/Fx/FxSystemBP.cpp
+        game_sa/Fx/FxEmitterBP.cpp
+        game_sa/Fx/FxPrimBP.cpp
+        game_sa/Fx/FxPrim.cpp
+        game_sa/Fx/FxEmitterPrt.cpp
+        standalone/rw/math.cpp
+        standalone/rw/rwmath_tables.cpp
+    )
+    target_compile_definitions(wave3_fxs_oracle_test PRIVATE W2_ONLY W3_FXS_ONLY)
+    target_compile_features(wave3_fxs_oracle_test PRIVATE cxx_std_23)
+    target_compile_definitions(wave3_fxs_oracle_test PRIVATE $<TARGET_PROPERTY:${RE_PROJECT_LIB_NAME},COMPILE_DEFINITIONS> NOTSA_ORACLE_ADDRESS_GLOBALS)
+    target_include_directories(wave3_fxs_oracle_test PRIVATE $<TARGET_PROPERTY:${RE_PROJECT_LIB_NAME},INCLUDE_DIRECTORIES>)
+    target_compile_options(wave3_fxs_oracle_test PRIVATE $<TARGET_PROPERTY:${RE_PROJECT_LIB_NAME},COMPILE_OPTIONS>)
+    target_precompile_headers(wave3_fxs_oracle_test PRIVATE StdInc.cpp)
+    target_link_libraries(wave3_fxs_oracle_test PRIVATE librw spdlog::spdlog Tracy::TracyClient user32)
+    target_sources(wave3_fxs_oracle_test PRIVATE "${STANDALONE_PAD_OBJ}")
+    get_target_property(_w3x_sources wave3_fxs_oracle_test SOURCES)
+    list(REMOVE_ITEM _w3x_sources "${STANDALONE_PAD_OBJ}")
+    set_property(TARGET wave3_fxs_oracle_test PROPERTY SOURCES "${STANDALONE_PAD_OBJ}" ${_w3x_sources})
+    target_link_options(wave3_fxs_oracle_test PRIVATE "$<$<CXX_COMPILER_ID:MSVC>:/BASE:0x400000;/DYNAMICBASE:NO;/FIXED;/MERGE:_TEXT=.text;/INCREMENTAL:NO;/SUBSYSTEM:CONSOLE;/FORCE:UNRESOLVED;/MAP>")
+    set_target_properties(wave3_fxs_oracle_test PROPERTIES COMPILE_WARNING_AS_ERROR OFF CXX_SCAN_FOR_MODULES OFF)
     # ORACLE-W3-EFFECTS: exe-oracle rows of the world-effect root files (Explosion, Fire, FireManager, CreepingFire, Glass, Rope(s), Cranes, Bridge, Birds, Skidmarks, WaterCannon(s), Coronas, Clouds, Plant*, ProjectileInfo; A + B functions); rows: tests/standalone/wave3_oracle_fx*.inc
     set(_W3F_BASE ${W2_BASE_SOURCES})
     add_executable(wave3_fx_oracle_test EXCLUDE_FROM_ALL

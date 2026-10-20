@@ -9,7 +9,8 @@ public:
     static constexpr auto SECTIONS_COUNT = 32;
 
     uint32                    m_nId;
-    int32                     m_nSectionsCount;
+    int16                     m_nSectionsCount; // 16 bit in the exe (movsx word [this+4]); the word at +6 is never written
+    int16                     field_6;
     uint32                    m_nCreationTime;
     CVector                   m_sectionPoint[SECTIONS_COUNT];
     CVector                   m_sectionMoveSpeed[SECTIONS_COUNT];

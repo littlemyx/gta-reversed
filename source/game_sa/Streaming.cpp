@@ -2978,9 +2978,10 @@ bool CStreaming::IsCarModelNeededInCurrentZone(int32 modelId) {
     }
 
     // Check gangs
-    for (int32 groupId = 0; groupId < TOTAL_GANGS; groupId++) {
-        if (CPopCycle::m_pCurrZoneInfo->GangStrength[groupId] != 0 &&
-            CPopulation::DoesCarGroupHaveModelId(groupId, modelId)
+    // 0x407EC6: the exe tests the car group POPCYCLE_CARGROUP_BALLAS + gang (esi runs 0x12..0x1B) against GangStrength[gang]; the port tested the groups 0..9 (workers, business ...)
+    for (int32 gangId = 0; gangId < TOTAL_GANGS; gangId++) {
+        if (CPopCycle::m_pCurrZoneInfo->GangStrength[gangId] != 0 &&
+            CPopulation::DoesCarGroupHaveModelId(gangId + POPCYCLE_CARGROUP_BALLAS, modelId)
         ) {
             return true;
         }

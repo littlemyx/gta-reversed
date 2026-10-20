@@ -76,3 +76,4 @@ date	agent	rules	kind	tokens	tool_uses	minutes	outcome	notes
 2026-10-20	ORACLE-W3-INPUT	v3	oracle wave (slice)	482322	188	79	CCM+Pad A/B 65 -> 0 (+67 rows), 13 port fixes (pad steering buffer shifted wrong way 750/750, keyboard release handler in press branch, mouse just-up)
 2026-10-20	ORACLE-W3-AI	v3	oracle wave (slice)	511844	213	92	CarCtrl/PedIntel/Cover/Object +58 rows, 9 port fixes (cover high points 1194/1500, slow-for-object 871/3000, train crossing 788/2000); 2 cover funcs need rewrite
 2026-10-20	COVER-REWRITE	v3	rewrite (small)	217354	65	54	2 cover functions rewritten from asm, 483/2500 + 113/2500 -> 0, rows strengthened
+2026-10-20	INPUT-HANG	v3	investigation (small)	215714	112	72	not a hang: 18-min target vs 900 s timeout; oracle_fast.cpp (SSE2 compare, delta snapshot) -> 58 s

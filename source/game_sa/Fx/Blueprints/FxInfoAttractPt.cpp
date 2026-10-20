@@ -32,13 +32,16 @@ void FxInfoAttractPt_c::GetValue(float currentTime, float mult, float totalTime,
     m_InterpInfo.GetVal(values, mult);
 
     auto& movement = *static_cast<MovementInfo_t*>(info);
-    CVector in = *(CVector*)&values[0] - movement.m_Pos;
-
-    auto length = in.Magnitude();
-    if (length > 0.0f)
-        in.Normalise();
-
+    // The exe uses RenderWare's table-based RwV3dLength (0x7EDAC0) / RwV3dNormalize (0x7ED9B0), not sqrtf, and scales the direction by (values[0] * totalTime)
+    CVector in{ values[0] - movement.m_Pos.x, values[1] - movement.m_Pos.y, values[2] - movement.m_Pos.z };
+    const float length = RwV3dLength(&in);
+    if (length > 0.0f) {
+        RwV3dNormalize(&in, &in);
+    }
     if (length > 0.1f) {
-        movement.m_Vel += in * values[0] * totalTime;
+        const float strength = values[0] * totalTime;
+        movement.m_Vel.x += in.x * strength;
+        movement.m_Vel.y += in.y * strength;
+        movement.m_Vel.z += in.z * strength;
     }
 }

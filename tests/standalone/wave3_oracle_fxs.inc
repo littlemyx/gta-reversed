@@ -349,6 +349,8 @@ static void TestW3FxsSmall() {
     XEND(500)
 }
 
+#include "wave3_oracle_fxbp.inc"
+
 static void TestW3FxsAll() {
     using namespace w3x;
     if (std::getenv("W3X_DBG")) {   // layout of the port's librw camera / frame (the camera fixture fills both layouts)
@@ -360,4 +362,5 @@ static void TestW3FxsAll() {
     TestW3FxsSystem();
     TestW3FxsManager();
     TestW3FxsSmall();
+    TestW3FxsBlueprints();
 }

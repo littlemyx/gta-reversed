@@ -38,3 +38,39 @@ FxMemoryPool_c: Reset, GetMem (alignments 1..0x100, sizes up to 2^32); FxSystemB
 
 ## Tests run (worktree)
 wave3_fxs_oracle_test (39 functions, ~110 s, exit 0, log C:/gta-scratch/w3fx/r4.log). The changed TUs (FxSphere.cpp, FxSystem.cpp, FxManager.cpp) are linked by no other test target, so no other target needed a rerun; the orchestrator runs the full run_all_tests.
+
+## Blueprints (ORACLE-W3-FXBP, rules v3, 2026-10-20 12:28 - ~12:55 WEST)
+Rows in `tests/standalone/wave3_oracle_fxbp.inc` (included by wave3_oracle_fxs.inc, same target; CMake adds Blueprints/*.cpp, Interp/*.cpp, FxInfoManager.cpp, Fx.cpp, CarFXRenderer.cpp, Maths.cpp, PipelinePlugin.cpp). **73 functions in the target, PC24 0 mismatches, whole target ~155 s** (the new rows compare only the 16 KB fixture block, not the 4 MB image: ~45 s). PC53 4189 informational (x87 extended precision).
+
+| | before | after |
+|---|---:|---:|
+| exe-oracle coverage, whole game | 4428 | **4462** |
+| game_sa/Fx/Blueprints covered (uncovered A / B) | 5 (26 / 4) | **35 (0 / 0)** |
+| game_sa/Fx covered (uncovered A / B) | 51 (1 / 4) | **55 (0 / 1)** |
+| port bugs fixed (one commit each) | | **6** |
+
+Fixture: an FxInfo object in the block (vptr, m_nType, m_bTimeModeParticle, embedded FxInterpInfo: looped / numKeys / count / times* / keys*), uint16 time array, per-attribute key arrays (float / int16 / uint16 storage), 1..6 keys (rarely 7..8, 1 key 1 in 8), ascending times (rarely unordered, zero-length last key), looped 1 in 3, key values game range + NaN / inf / 1000x; args ct / mult / totalTime / len: game range + NaN / inf / negative / 0; useConst and m_bTimeModeParticle both ways (incl. other non-zero bytes); output EmissionInfo / MovementInfo / RenderInfo pre-filled with random floats (untouched fields must stay). The exe's RenderWare maths (RwV3dLength / RwV3dNormalize / RwMatrixUpdate) needs the engine plugin data: `w3x::InitExeRw` (copy of w3k::InitExeRw). Wind reads g_fxMan.m_pfWindSpeed / m_pWindDir (pointed into the block). AddFxInfo: all 32 types of the exe's switch + gaps + garbage, g_fxMan pool over the block, vptrs and the exe-uninitialised bytes (+6/+7, high byte of m_nCount) cleared on both sides.
+
+### Port bugs fixed (failing PC24 cases of the first full run on the unfixed code, log C:/gta-scratch/w3fxbp/r2.log)
+| function | asm | bug | pre-fix | commit |
+|---|---|---|---|---|
+| Fx_c RotateVecAboutVec | 0x4A1780 | exe association: t*x*z = (z*x)*t, t*y*z = (t*z)*y, t*a*a = (a*a)*t, sums of .y in order x, z, y terms (x87 PC24 rounds each op) | 1911/4000 | 19d02bae |
+| FxInfoAttractPt_c::GetValue | 0x4A56E0 | exe calls RwV3dLength 0x7EDAC0 / RwV3dNormalize 0x7ED9B0 (table sqrt), not sqrtf; direction * (values[0] * totalTime) (values[0] is the exe's strength too) | 2664/3000 | 3bbb1098 |
+| FxInfoAttractLine_c::GetValue | 0x4A5850 | same, strength values[6] * totalTime | 2656/3000 | af73001a |
+| FxInfoEmRate_c::GetValue | 0x4A4B60 | `test ah,5 / jp`: NaN (currentTime - totalTime) takes the >= 0 branch (port took the split-integral branch) | 3/2000 | 9f79fd11 |
+| FxInfoManager_c::AddFxInfo | 0x4A7B00 | the exe allocates every FxInfo from the Fx pool (GetMem(size, 4) on g_fxMan.m_Pool 0xA9AF2C), the port used the game heap: FxInfo_c::operator new added (+ no-op delete) | 791/1500 | 8d1cf0bb |
+| FxInfoFloat_c 0x4A5DA0 / HeatHaze 0x4A61A0 / SelfLit 0x4A6760 / Underwater 0x4A5E20 ctors | | no Allocate(0): the exe stores only the count byte (m_Keys stays null); the port took a zero-sized aligned block from the pool | 94/1500 (AddFxInfo, after the previous fix) | 25617bc4 |
+
+### Pass without a change
+FxInfo*::GetValue of EmSize, EmSpeed, EmDir, EmAngle, EmLife, EmPos, EmWeather, EmRotation, Force, Wind, RotSpeed, Underwater, Float, Colour, Size (count 2 and 4), SpriteRect, HeatHaze, Trail, Flat (RwMatrixUpdate), Dir, AnimTexture, ColourRange, SelfLit, ColourBright, Smoke; FxInfoSelfLit_c::Load; FindClosestPtOnLine (4000 cases, degenerate / short / on-line); CCarFXRenderer::SetFxEnvMapLightMult, IsCCPCPipelineAttached (random plugin offset, id hit 1 in 3).
+
+### Observed, not changed
+* The port writes the full int16 m_nCount in Allocate, the exe one byte (readers do movsx byte; high byte garbage in the exe): masked in the AddFxInfo row. FxInfo_c's value-initialised base zeroes m_bTimeModeParticle / padding that the exe leaves uninitialised (Load sets it): masked.
+* The eFxInfo "ROTATE / TEXCOORDS / ROTATEOFFSET" (MH-only) types return null in the port; the AddFxInfo row includes the gap values and they agree with the exe (null).
+
+### Not covered
+* CCarFXRenderer::PreRenderUpdate 0x5D5B10 (B): jumps to CCustomCarEnvMapPipeline::PreRenderUpdate 0x5D8870, which reads pDirect's RpLight -> frame -> matrix (RenderWare layouts differ between the exe and librw, as for the CalcFrustumInfo camera: needs a light / frame fixture in both layouts) and fills g_GameLight; the TU (CustomCarEnvMapPipeline.cpp) is not linked. Next candidate, small.
+* Class C/S/D remaining in Blueprints (Load file IO 7, CRT 1) and the C ones (Noise / Friction / GroundCollide / Jitter GetValue, Process* with virtual calls): see ORACLE_COVERAGE.md.
+
+### Tests run (worktree)
+wave3_fxs_oracle_test (73 functions, ~155 s, exit 0, PC24 0; log C:/gta-scratch/w3fxbp/full1.log). The changed TUs (Fx.cpp, FxInfo*.cpp) are linked by no other test target (wave3_fx_oracle_test etc. link only the Interp TUs, unchanged); the orchestrator runs the full run_all_tests.

@@ -14,7 +14,7 @@ void FxInfoHeatHaze_c::InjectHooks() {
 // 0x4A61A0
 FxInfoHeatHaze_c::FxInfoHeatHaze_c() : FxInfo_c() {
     m_nType = FX_INFO_HEATHAZE_DATA;
-    m_InterpInfo.Allocate(0);
+    m_InterpInfo.m_nCount = 0; // the exe only stores the count here: Allocate(0) would take a zero-sized (but aligned) block from the Fx pool
 }
 
 // 0x4A61F0

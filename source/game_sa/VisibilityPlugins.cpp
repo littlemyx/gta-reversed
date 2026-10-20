@@ -83,7 +83,7 @@ void CVisibilityPlugins::InjectHooks() {
     RH_ScopedInstall(RenderVehicleReallyLowDetailCB_BigVehicle, 0x732820);
     RH_ScopedInstall(RenderWeaponCB, 0x733670);
     RH_ScopedInstall(RenderWeaponPedsForPC, 0x732F30);
-    RH_ScopedInstall(SetClumpForAllAtomicsFlag, 0x732307);
+    RH_ScopedInstall(SetClumpForAllAtomicsFlag, 0x7322F0);
     RH_ScopedInstall(SetAtomicId, 0x732290);
     RH_ScopedInstall(SetModelInfoIndex, 0x732230);
     RH_ScopedInstall(SetAtomicRenderCallback, 0x7328A0);
@@ -181,7 +181,8 @@ bool CVisibilityPlugins::InsertAtomicIntoBoatSortedList(RpAtomic* atomic, float 
 
 // 0x734570
 bool CVisibilityPlugins::InsertEntityIntoSortedList(CEntity* entity, float dist) {
-    if (entity->GetModelIndex() == ModelIndices::MI_GRASSHOUSE
+    // the exe sign-extends the entity's 16 bit model index (movsx) and zero-extends the global (movzx) before comparing (0x734570)
+    if (static_cast<int16>(entity->GetModelIndex()) == static_cast<uint16>(ModelIndices::MI_GRASSHOUSE)
         //  || entity->GetModelIndex() == ModelIndices::MI_GASSTATION // In Android
     ) {
         if (InsertEntityIntoReallyDrawLastList(entity, dist)) {
@@ -286,7 +287,8 @@ int32 CVisibilityPlugins::CalculateFadingAtomicAlpha(CBaseModelInfo* modelInfo, 
     fDrawDistanceRadius = std::min(fDrawDistanceRadius, TheCamera.m_fLODDistMultiplier * modelInfo->m_fDrawDistance);
 
     if (!entity->GetLod()) {
-        const float fDrawDistance = std::min(modelInfo->m_fDrawDistance, fDrawDistanceRadius);
+        // (a < b) ? a : b with the exe's fcom/jnp (0x73254A): a NaN draw distance yields the radius, std::min(drawDist, radius) would keep the NaN
+        const float fDrawDistance = std::min(fDrawDistanceRadius, modelInfo->m_fDrawDistance);
         if (fDrawDistance > MAX_LOWLOD_DISTANCE) {
             fFadingDistance = fDrawDistance * ExeRecip(15.0f) + 10.0f;
         }
@@ -395,18 +397,28 @@ CClumpModelInfo* CVisibilityPlugins::GetClumpModelInfo(RpClump* clump) {
     return (CClumpModelInfo*)GetFrameHierarchyId(frame);
 }
 
+// The exe sums the squares as (z*z + y*y) + x*x (0x732C80 / 0x732CC0: fld/fmul in z, y, x order); float rounding makes the order observable.
+static float SquaredMagnitudeZYX(const CVector& d) {
+    return (d.z * d.z + d.y * d.y) + d.x * d.x;
+}
+
 // 0x732C80
 float CVisibilityPlugins::GetDistanceSquaredFromCamera(RwFrame* frame) {
     RwMatrix* transformMatrix = RwFrameGetLTM(frame);
     CVector distance;
     RwV3dSub(&distance, &transformMatrix->pos, ms_pCameraPosn);
-    return distance.SquaredMagnitude();
+    return SquaredMagnitudeZYX(distance);
 }
 
 // 0x732CC0
 float CVisibilityPlugins::GetDistanceSquaredFromCamera(RwV3d* pos) {
     CVector distance = *pos - *ms_pCameraPosn;
-    return distance.SquaredMagnitude();
+    return SquaredMagnitudeZYX(distance);
+}
+
+// The exe sums every dot product of GetDotProductWithCameraVector as (y*y + x*x) + z*z (0x7326D0), CVector::Dot sums x, y, z: the float rounding differs.
+static float DotYXZ(const CVector& a, const CVector& b) {
+    return (a.y * b.y + a.x * b.x) + a.z * b.z;
 }
 
 // 0x7326D0
@@ -415,9 +427,9 @@ float CVisibilityPlugins::GetDotProductWithCameraVector(RwMatrix* matrix, RwMatr
     float primaryDot{};
 
     if (atomicId & (ATOMIC_REAR | ATOMIC_FRONT)) {
-        primaryDot = distance.Dot(carMatrix->up);
+        primaryDot = DotYXZ(distance, carMatrix->up);
     } else if (atomicId & (ATOMIC_RIGHT | ATOMIC_LEFT)) {
-        primaryDot = distance.Dot(carMatrix->right);
+        primaryDot = DotYXZ(distance, carMatrix->right);
     }
 
     // flip sign for Rear or Left components
@@ -431,7 +443,7 @@ float CVisibilityPlugins::GetDotProductWithCameraVector(RwMatrix* matrix, RwMatr
     const float tailgatMul = 2.5f;
     const float doorsMul = 0.25f;
     if (atomicId & ATOMIC_TOP) {
-        const float zDot = distance.Dot(carMatrix->at);
+        const float zDot = DotYXZ(distance, carMatrix->at);
         const float multiplier = isDoor ? doorsMul : tailgatMul;
 
         primaryDot += zDot * multiplier;
@@ -447,9 +459,9 @@ float CVisibilityPlugins::GetDotProductWithCameraVector(RwMatrix* matrix, RwMatr
     float secondaryDot = 0.0f;
 
     if (atomicId & ATOMIC_REAR_DOOR) {
-        secondaryDot = -distance.Dot(carMatrix->up);
+        secondaryDot = -DotYXZ(distance, carMatrix->up);
     } else if (atomicId & ATOMIC_FRONT_DOOR) {
-        secondaryDot = distance.Dot(carMatrix->up);
+        secondaryDot = DotYXZ(distance, carMatrix->up);
     }
 
     // combine results if both dot products share the same sign (both visible or both hidden)

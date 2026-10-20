@@ -15,7 +15,7 @@ void FxInfoFloat_c::InjectHooks() {
 // 0x4A5DA0
 FxInfoFloat_c::FxInfoFloat_c() : FxInfo_c(), m_InterpInfo() {
     m_nType = FX_INFO_FLOAT_DATA;
-    m_InterpInfo.Allocate(0);
+    m_InterpInfo.m_nCount = 0; // the exe only stores the count here: Allocate(0) would take a zero-sized (but aligned) block from the Fx pool
 }
 
 // 0x4A5DF0

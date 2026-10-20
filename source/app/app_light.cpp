@@ -261,7 +261,10 @@ void SetFlashyColours(float fMult) {
         AmbientLightColour.red   = 1.0f;
         AmbientLightColour.green = 1.0f;
         AmbientLightColour.blue  = 1.0f;
-        DirectionalLightColour = DirectionalLightColourForFrame;
+        // the exe copies only red, green, blue (0x735AB0 / 0x735B40), the alpha of DirectionalLightColour is left alone
+        DirectionalLightColour.red   = DirectionalLightColourForFrame.red;
+        DirectionalLightColour.green = DirectionalLightColourForFrame.green;
+        DirectionalLightColour.blue  = DirectionalLightColourForFrame.blue;
 
         RpLightSetColor(pAmbient, &AmbientLightColour);
         RpLightSetColor(pDirect,  &DirectionalLightColour);
@@ -277,7 +280,10 @@ void SetFlashyColours_Mild(float fMult) {
         AmbientLightColour.red   = 0.65f;
         AmbientLightColour.green = 0.65f;
         AmbientLightColour.blue  = 0.65f;
-        DirectionalLightColour = DirectionalLightColourForFrame;
+        // the exe copies only red, green, blue (0x735AB0 / 0x735B40), the alpha of DirectionalLightColour is left alone
+        DirectionalLightColour.red   = DirectionalLightColourForFrame.red;
+        DirectionalLightColour.green = DirectionalLightColourForFrame.green;
+        DirectionalLightColour.blue  = DirectionalLightColourForFrame.blue;
 
         RpLightSetColor(pAmbient, &AmbientLightColour);
         RpLightSetColor(pDirect,  &DirectionalLightColour);
@@ -309,14 +315,15 @@ void SetDirectionalColours(RwRGBAReal* color) {
 
 // unused
 // 0x735C90
+// the exe indexes the three tables with idx % 7 (idiv by 7, 0x735C90)
 void SetAmbientColoursToIndicateRoadGroup(int32 idx) {
     NOTSA_GLOBAL_LOCAL(IndicateR, 0x8D60D0, (std::array<uint8, 8>), { 0, 255, 0, 0, 255, 255 });
     NOTSA_GLOBAL_LOCAL(IndicateG, 0x8D60D8, (std::array<uint8, 8>), { 0, 0, 255, 0, 255, 0, 255 });
     NOTSA_GLOBAL_LOCAL(IndicateB, 0x8D60E0, (std::array<uint8, 8>), { 0, 0, 0, 255, 0, 255, 255 });
 
-    AmbientLightColour.red   = (float)IndicateR[idx & std::size(IndicateR)] * (1.0f / 255.0f);
-    AmbientLightColour.green = (float)IndicateG[idx & std::size(IndicateG)] * (1.0f / 255.0f);
-    AmbientLightColour.blue  = (float)IndicateB[idx & std::size(IndicateB)] * (1.0f / 255.0f);
+    AmbientLightColour.red   = (float)IndicateR[idx % 7] * (1.0f / 255.0f);
+    AmbientLightColour.green = (float)IndicateG[idx % 7] * (1.0f / 255.0f);
+    AmbientLightColour.blue  = (float)IndicateB[idx % 7] * (1.0f / 255.0f);
     RpLightSetColor(pAmbient, &AmbientLightColour);
 }
 
@@ -350,8 +357,8 @@ void SetLightColoursForPedsCarsAndObjects(float fMult) {
     AmbientLightColour.blue      = fMult * AmbientLightColourForFrame_PedsCarsAndObjects.blue;
 
     AmbientLightColour.red      += CTimeCycle::m_BrightnessAddedToAmbientRed;
-    AmbientLightColour.green    += CTimeCycle::m_BrightnessAddedToAmbientRed;
-    AmbientLightColour.blue     += CTimeCycle::m_BrightnessAddedToAmbientRed;
+    AmbientLightColour.green    += CTimeCycle::m_BrightnessAddedToAmbientGreen;
+    AmbientLightColour.blue     += CTimeCycle::m_BrightnessAddedToAmbientBlue;
 
     RpLightSetColor(pAmbient, &AmbientLightColour);
     RpLightSetColor(pDirect, &DirectionalLightColour);
@@ -398,7 +405,7 @@ float GetDayNightBalance() {
         return 1.0f;
 
     if (minutes < 7.0f * 60.0f) // 6-7 o'clock
-        return (7.0f * 60.0f - minutes) / 60.0f;
+        return (7.0f * 60.0f - minutes) * ExeRecip(60.0f); // the exe multiplies by the float 1/60 (0x859044), it does not divide
 
     if (minutes < 20.0f * 60.0f) // 7-20 o'clock
         return 0.0f;
@@ -406,5 +413,5 @@ float GetDayNightBalance() {
     if (minutes >= 21.0f * 60.0f) // 21-0 o'clock
         return 1.0f;
 
-    return 1.0f - (21.0f * 60.0f - minutes) / 60.0f; // 20-21 o'clock
+    return 1.0f - (21.0f * 60.0f - minutes) * ExeRecip(60.0f); // 20-21 o'clock
 }

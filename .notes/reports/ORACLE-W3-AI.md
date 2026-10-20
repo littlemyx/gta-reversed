@@ -3,11 +3,11 @@
 Agent ORACLE-W3-AI (rules v3), start 07:19, end ~08:45 (2026-10-20), worktree C:/gta-wt/oracle-w3-ai (branch oracle-w3-ai, base 4b7c7468).
 New target `wave3_ai_oracle_test` (W2 harness: deterministic arena, whole exe data image + a 128 KB scratch block + the fake double-link / txd pools + the reference world compared after every case), rows in `tests/standalone/wave3_oracle_ai*.inc`
 (`_ped` PedIntelligence.cpp, `_obj` Object.cpp, `_car` / `_car2` / `_car3` CarCtrl.cpp, `_cover` Cover.cpp). Development switches: `W3A_DIV=n` divides the case counts, `W3A_SCALE=n` multiplies them, `W3A_PENDING=1` also runs the two pending Cover rows, `W2_FAULTLOG=1`.
-**60 new rows (CarCtrl 22, PedIntelligence 17, Object 13, Cover 8), PC24 0 mismatches** (the 2 pending Cover rows are off by default, see below).
+**58 active rows (CarCtrl 22, PedIntelligence 17, Object 13, Cover 6) + 2 pending Cover rows (off by default, see below), PC24 0 mismatches, PC53 74 (informational, x87-order rows), exit 0**.
 
 | | before | after |
 |---|---:|---:|
-| exe-oracle coverage, whole game | 4275 | **4335** (2 of the 60 are the guarded pending Cover rows: their address literals count) |
+| exe-oracle coverage, whole game | 4275 | **4335** (2 of the 60 literals are the guarded pending Cover rows: their address literals count) |
 | CarCtrl.cpp uncovered A / B | 23 | **1** (DealWithBend_Racing) |
 | PedIntelligence.cpp uncovered A / B | 17 | **0** |
 | Cover.cpp uncovered A / B | 11 | **3** (CalculateHorizontalSize, DoLineCheckWithinObject, FindVectorFromFirstToMissingVertex: port bodies are NOTSA_UNREACHABLE / unused, nothing to compare) |
@@ -51,4 +51,6 @@ Cover: RemoveCoverPointIfEntityLost, RemoveCoverPointsForThisEntity, DoesCoverPo
 - The counts above are of the first run on the unfixed code with the final fixture, except ReInit (measured with the first fixture, see table).
 
 ## Gates
-`wave3_ai_oracle_test` (rows above, PC24 0, exit 0) and, built and run in this worktree on the same tree: wave3_entity_oracle_test (Object.cpp), wave3_ped_oracle_test (PedIntelligence.cpp), physics_oracle_test (CarCtrl.cpp), gameplay_oracle_test (PedIntelligence.cpp), x87_oracle_test + fixed_oracle_test (Cover.cpp / CoverPoint.cpp): results in the hand-back. logic_oracle_test (CarCtrl / Population.h), the review target and the gp / tasks / events wave3 targets also link changed TUs and are left to the orchestrator's run_all_tests.
+Built and run in this worktree on the final tree (RW_EXE_ORACLE = the main checkout's gta_sa_compact.exe): `wave3_ai_oracle_test` 58 functions PC24 0 (PC53 74, informational), exit 0 (~11 min; `W3A_DIV` for quick runs); wave3_entity_oracle_test (Object.cpp) 52 functions PC24 0; wave3_ped_oracle_test (PedIntelligence.cpp) 72 functions PC24 0; x87_oracle_test + fixed_oracle_test (Cover.cpp / CoverPoint.cpp) PC24 0 / PC24 0;
+physics_oracle_test (CarCtrl.cpp) 108 functions exit 0, hard PC24 0 (74 strict = NaN-payload-only rows, not touched); gameplay_oracle_test (PedIntelligence.cpp) 313 functions exit 0, hard PC24 0 (57 strict = NaN-payload-only rows as before). NOT run here (also link changed TUs, left to the orchestrator's run_all_tests):
+logic_oracle_test (CarCtrl.cpp / Population.h), review_oracle_test (CoverPoint.cpp), the gp / tasks / events wave3 targets (PedIntelligence.cpp).

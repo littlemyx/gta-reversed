@@ -86,4 +86,41 @@ static void TestW3AiCover() {
         Tu tu([&](Rng& rr) { CoverWorld(rr, 100); CoverList(rr); }, true);
         return UCaseCov(r, d, [&]() -> uint64_t { CCover::Init(); return 0; }, [&]() -> uint64_t { oracle::Fn<void __cdecl()>(0x698710)(); return 0; });
     } ENDROW;
+    // the ped of FindAndReserveCoverPoint / FindCoordinatesCoverPoint: a scratch ped that is one of the covered peds of some points
+    const auto pedWorld = [&](Rng& rr) {
+        PedWorld(rr, oPedA, oIntA, 2);
+        for (int i = 0; i < 10; ++i) if (rr.below(3) == 0) { uint8_t* p = Cpt(i); const uint32_t pp = (uint32_t)(uintptr_t)S(oPedA); std::memcpy(p + 0x14 + 4 * rr.below(2), &pp, 4); }
+    };
+    if (std::getenv("W3A_PENDING")) {   // port differs structurally from the exe (see ORACLE-W3-AI.md): rows kept, off by default
+    ROW("CCover::FindAndReserveCoverPoint", 0x6992B0, 2500) {
+        const bool attack = r.below(2) != 0; const CVector target = Vec(r, 300.f, 14);
+        Tu tu([&](Rng& rr) {
+            CoverWorld(rr, 10); pedWorld(rr);
+            // points close to the ped so the distance tests go both ways
+            auto* ped = reinterpret_cast<CPed*>(S(oPedA)); const CVector pp = ped->GetPosition();
+            for (int i = 0; i < 10; ++i) if (rr.below(2)) { const CVector q = pp + CVector((rr.f01() - 0.5f) * 60.f, (rr.f01() - 0.5f) * 60.f, 0.f); std::memcpy(Cpt(i) + 4, &q, 12); }
+            std::memcpy(S(oOut), &target, 12);
+        }, true);
+        return UCase(r, d, [&]() -> uint64_t { return U(CCover::FindAndReserveCoverPoint(reinterpret_cast<CPed*>(S(oPedA)), *reinterpret_cast<CVector*>(S(oOut)), attack)); },
+                           [&]() -> uint64_t { return U(oracle::Fn<void* __cdecl(void*, void*, int)>(0x6992B0)(S(oPedA), S(oOut), (int)attack)); });
+    } ENDROW;
+    ROW("CCover::FindCoordinatesCoverPoint", 0x699570, 2500) {
+        const int k = (int)r.below(10); const CVector target = Vec(r, 300.f, 14);
+        Tu tu([&](Rng& rr) { CoverWorld(rr, 10); pedWorld(rr); std::memcpy(S(oOut), &target, 12); FillGarbage(rr, S(oOut + 0x20), 12); for (int i = 0; i < 10; ++i) if (rr.below(2)) { uint8_t* p = Cpt(i); const uint32_t pp = (uint32_t)(uintptr_t)S(oPedA); std::memcpy(p + 0x14, &pp, 4); } }, true);
+        return UCase(r, d, [&]() -> uint64_t { return B8(CCover::FindCoordinatesCoverPoint(*reinterpret_cast<CCoverPoint*>(Cpt(k)), reinterpret_cast<CPed*>(S(oPedA)), *reinterpret_cast<CVector*>(S(oOut)), *reinterpret_cast<CVector*>(S(oOut + 0x20)))); },
+                           [&]() -> uint64_t { return B8(oracle::Fn<bool __cdecl(void*, void*, void*, void*)>(0x699570)(Cpt(k), S(oPedA), S(oOut), S(oOut + 0x20))); });
+    } ENDROW;
+    }
+    ROW("CCover::ShouldThisBuildingHaveItsCoverPointsCreated", 0x699230, 2500) {
+        Tu tu([&](Rng& rr) {
+            Ent(rr, oObjA, 3, 1, 700, 0x100, false);      // a building (type 1) with a col model
+            ModelInfoFor(rr, 2, 700, rr.below(10) == 0 ? Fl(rr, 40.f, 3) : 5.f + rr.f01() * 60.f);
+            PedWorld(rr, oPedA, oIntA, 2);
+            CWorld::PlayerInFocus = 0; CWorld::Players[0].m_pPed = reinterpret_cast<CPlayerPed*>(S(oPedA)); reinterpret_cast<CPed*>(S(oPedA))->bInVehicle = false;
+            auto* b = reinterpret_cast<CEntity*>(S(oObjA)); auto* p = reinterpret_cast<CPed*>(S(oPedA));
+            if (rr.below(2) && b->m_matrix && p->m_matrix) p->m_matrix->GetPosition() = b->m_matrix->GetPosition() + CVector((rr.f01() - 0.5f) * 140.f, (rr.f01() - 0.5f) * 140.f, (rr.f01() - 0.5f) * 40.f);
+        });
+        return UCase(r, d, [&]() -> uint64_t { return B8(CCover::ShouldThisBuildingHaveItsCoverPointsCreated(reinterpret_cast<CBuilding*>(S(oObjA)))); },
+                           [&]() -> uint64_t { return B8(oracle::Fn<bool __cdecl(void*)>(0x699230)(S(oObjA))); });
+    } ENDROW;
 }

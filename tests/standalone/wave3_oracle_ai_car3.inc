@@ -80,4 +80,44 @@ static void TestW3AiCarC() {
         return UCase(r, d, [&]() -> uint64_t { float b[4]; bounds(oObjA, b); CCarCtrl::SlowCarDownForObjectsSectorList(*reinterpret_cast<CPtrListDoubleLink<CObject*>*>(S(oHead)), VehS(oVehA), b[0], b[1], b[2], b[3], reinterpret_cast<float*>(S(oOut)), mult); return B8(SAt<float>(oOut) != sf0); },
                            [&]() -> uint64_t { float b[4]; bounds(oObjA, b); oracle::Fn<void __cdecl(void*, void*, float, float, float, float, float*, float)>(0x42D4F0)(S(oHead), S(oVehA), b[0], b[1], b[2], b[3], reinterpret_cast<float*>(S(oOut)), mult); return B8(SAt<float>(oOut) != sf0); });
     } ENDROW;
+    // the vehicle looks at / next to the player (a ped at a position near the vehicle, with a speed); outputs at oOut: steer / gas / brake floats, handbrake byte
+    const auto playerWorld = [&](Rng& rr) {
+        TrafficWorld(rr);
+        PedWorld(rr, oPedA, oIntA, 3);
+        auto* p = reinterpret_cast<CPed*>(S(oPedA)); p->bInVehicle = false;
+        CWorld::PlayerInFocus = 0; CWorld::Players[0].m_pPed = reinterpret_cast<CPlayerPed*>(p);
+        auto* a = reinterpret_cast<CEntity*>(S(oVehA));
+        if (p->m_matrix && a->m_matrix) {
+            const float yaw = rr.f01() * 6.2831853f; SetMatPose(oPedA, a->m_matrix->GetPosition() + CVector((rr.f01() - 0.5f) * 80.f, (rr.f01() - 0.5f) * 80.f, (rr.f01() - 0.5f) * (rr.below(4) ? 4.f : 40.f)), yaw, 0.f);
+        }
+        reinterpret_cast<CPhysical*>(p)->m_vecMoveSpeed = rr.below(3) ? CVector((rr.f01() - 0.5f) * 0.4f, (rr.f01() - 0.5f) * 0.4f, 0.f) : CVector(0.f, 0.f, 0.f);
+        reinterpret_cast<CVehicle*>(S(oVehA))->m_nRandomSeed = (uint16_t)rr.u32();
+        FillGarbage(rr, S(oOut), 0x40); SAt<uint8_t>(oOut + 0x20) = (uint8_t)rr.below(2);
+    };
+    const auto outs = [&]() { return U(0) + FBits(SAt<float>(oOut)) + 3 * (uint64_t)FBits(SAt<float>(oOut + 4)) + 5 * (uint64_t)FBits(SAt<float>(oOut + 8)) + SAt<uint8_t>(oOut + 0x20); };
+    ROW("CCarCtrl::SteerAICarBlockingPlayerForwardAndBack", 0x422B20, 3000) {
+        Tu tu(playerWorld);
+        return UCase(r, d, [&]() -> uint64_t { CCarCtrl::SteerAICarBlockingPlayerForwardAndBack(VehS(oVehA), reinterpret_cast<float*>(S(oOut)), reinterpret_cast<float*>(S(oOut + 4)), reinterpret_cast<float*>(S(oOut + 8)), reinterpret_cast<bool*>(S(oOut + 0x20))); return outs(); },
+                           [&]() -> uint64_t { oracle::Fn<void __cdecl(void*, float*, float*, float*, bool*)>(0x422B20)(S(oVehA), reinterpret_cast<float*>(S(oOut)), reinterpret_cast<float*>(S(oOut + 4)), reinterpret_cast<float*>(S(oOut + 8)), reinterpret_cast<bool*>(S(oOut + 0x20))); return outs(); });
+    } ENDROW;
+    ROW("CCarCtrl::SteerAIBoatWithPhysicsCirclingPlayer", 0x429090, 3000) {
+        Tu tu(playerWorld);
+        return UCase(r, d, [&]() -> uint64_t { CCarCtrl::SteerAIBoatWithPhysicsCirclingPlayer(VehS(oVehA), reinterpret_cast<float*>(S(oOut)), reinterpret_cast<float*>(S(oOut + 4)), reinterpret_cast<float*>(S(oOut + 8)), reinterpret_cast<bool*>(S(oOut + 0x20))); return outs(); },
+                           [&]() -> uint64_t { oracle::Fn<void __cdecl(void*, float*, float*, float*, bool*)>(0x429090)(S(oVehA), reinterpret_cast<float*>(S(oOut)), reinterpret_cast<float*>(S(oOut + 4)), reinterpret_cast<float*>(S(oOut + 8)), reinterpret_cast<bool*>(S(oOut + 0x20))); return outs(); });
+    } ENDROW;
+    // CObject::GrabObjectToCarryWithRope: the object (id = its address) owns a rope, the hook object is entity B of the object block, the grabbed physical is vehicle B (col model behind its model index)
+    ROW("CObject::GrabObjectToCarryWithRope", 0x5A1AB0, 2500) {
+        const int k = (int)r.below(8);
+        Tu tu([&](Rng& rr) {
+            TrafficWorld(rr);
+            ObjWorld(rr, oObjA, 3); ObjWorld(rr, oObjB, 4);
+            FillGarbage(rr, reinterpret_cast<void*>(0xB768B8), 8 * 0x328);
+            for (int i = 0; i < 8; ++i) { auto* rp = reinterpret_cast<uint8_t*>(0xB768B8 + i * 0x328); std::memset(rp + 0x310, 0, 0x18); const uint32_t ty = i == k ? 1 + rr.below(6) : rr.below(3) == 0 ? 0 : rr.below(8); std::memcpy(rp + 0x324 - 0, &ty, 0); rp[0x325] = (uint8_t)ty; }
+            auto* rope = reinterpret_cast<uint8_t*>(0xB768B8 + k * 0x328);
+            const uint32_t id = (uint32_t)(uintptr_t)S(oObjA), hook = (uint32_t)(uintptr_t)S(oObjB), picked = rr.below(2) ? (uint32_t)(uintptr_t)S(oVehA) : 0u;
+            std::memcpy(rope + 0x300, &id, 4); std::memcpy(rope + 0x314, &hook, 4); std::memcpy(rope + 0x318, &picked, 4);
+        });
+        return UCase(r, d, [&]() -> uint64_t { reinterpret_cast<CObject*>(S(oObjA))->GrabObjectToCarryWithRope(reinterpret_cast<CPhysical*>(S(oVehB))); return 0; },
+                           [&]() -> uint64_t { ExeThis<void, void*>(0x5A1AB0, S(oObjA), S(oVehB)); return 0; });
+    } ENDROW;
 }

@@ -907,6 +907,8 @@ if (${RE_PROJECT}_RW_LIBRW)
         game_sa/TheZones.cpp
         game_sa/Zone.cpp
         game_sa/Acquaintance.cpp
+        game_sa/Ropes.cpp
+        game_sa/Rope.cpp
         game_sa/ModelIndices.cpp
         game_sa/Collision/Collision.cpp
         game_sa/LoadedCarGroup.cpp
@@ -1567,6 +1569,8 @@ if (${RE_PROJECT}_RW_LIBRW)
         game_sa/Entity/Physical.cpp
         game_sa/PedType.cpp
         game_sa/Acquaintance.cpp
+        game_sa/Ropes.cpp
+        game_sa/Rope.cpp
         game_sa/ModelIndices.cpp
         game_sa/Collision/Collision.cpp
         game_sa/LoadedCarGroup.cpp

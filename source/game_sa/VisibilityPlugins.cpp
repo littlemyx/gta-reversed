@@ -395,18 +395,23 @@ CClumpModelInfo* CVisibilityPlugins::GetClumpModelInfo(RpClump* clump) {
     return (CClumpModelInfo*)GetFrameHierarchyId(frame);
 }
 
+// The exe sums the squares as (z*z + y*y) + x*x (0x732C80 / 0x732CC0: fld/fmul in z, y, x order); float rounding makes the order observable.
+static float SquaredMagnitudeZYX(const CVector& d) {
+    return (d.z * d.z + d.y * d.y) + d.x * d.x;
+}
+
 // 0x732C80
 float CVisibilityPlugins::GetDistanceSquaredFromCamera(RwFrame* frame) {
     RwMatrix* transformMatrix = RwFrameGetLTM(frame);
     CVector distance;
     RwV3dSub(&distance, &transformMatrix->pos, ms_pCameraPosn);
-    return distance.SquaredMagnitude();
+    return SquaredMagnitudeZYX(distance);
 }
 
 // 0x732CC0
 float CVisibilityPlugins::GetDistanceSquaredFromCamera(RwV3d* pos) {
     CVector distance = *pos - *ms_pCameraPosn;
-    return distance.SquaredMagnitude();
+    return SquaredMagnitudeZYX(distance);
 }
 
 // 0x7326D0

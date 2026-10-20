@@ -66,6 +66,10 @@ static bool UCase(Rng& r, std::string& d, PF&& pf, EF&& ef) {
 // Game.cpp is not linked (it pulls in the whole game): the one tiny callee DisplayThisBlip needs, with the port body
 bool CGame::CanSeeOutSideFromCurrArea() { return currArea == AREA_CODE_NORMAL_WORLD; }
 
+#include "EntryExitManager.h"
+// EntryExitManager.cpp is not linked: FindPlayerCentreOfWorldForMap shifts the position by the interior stack, which the fixture keeps empty (ms_entryExitStackPosn == 0: the exe loop does nothing either)
+void CEntryExitManager::GetPositionRelativeToOutsideWorld(CVector&) {}
+
 struct Tu { explicit Tu(std::function<void(Rng&)> f) { w3u::g_tweak = std::move(f); } ~Tu() { w3u::g_tweak = nullptr; } };
 template<class Fn> static void RunScaledU(const std::string& name, Fn&& fn, int cases) {
     static const int scale = std::getenv("W3U_SCALE") ? std::max(1, std::atoi(std::getenv("W3U_SCALE"))) : 1;
@@ -77,9 +81,13 @@ template<class Fn> static void RunScaledU(const std::string& name, Fn&& fn, int 
 #include "wave3_oracle_ui_a.inc"      // Messages.cpp
 #include "wave3_oracle_ui_b.inc"      // Hud.cpp
 #include "wave3_oracle_ui_c.inc"      // Radar.cpp
+#include "wave3_oracle_ui_d.inc"      // Font.cpp
+#include "wave3_oracle_ui_e.inc"      // Text / Sprite2d / MenuManager
 static void TestW3UiAll() {
     (void)spdlog::default_logger_raw();   // the default logger is created lazily by the first NOTSA_LOG_* of the port: do it outside the redirected allocator
     TestW3UiA();
     TestW3UiB();
     TestW3UiC();
+    TestW3UiD();
+    TestW3UiE();
 }

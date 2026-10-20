@@ -37,7 +37,9 @@ static void PutFrontEnd(Rng& r) {
     CGame::currArea = (eAreaCodes)(r.below(3) == 0 ? r.below(4) : 0);
     CWorld::PlayerInFocus = (uint8)r.below(2);
     for (auto& p : CWorld::Players) p.m_pPed = nullptr;
-    CWorld::Players[CWorld::PlayerInFocus].m_pPed = r.below(5) ? reinterpret_cast<CPlayerPed*>(S(oBuf)) : nullptr;
+    CWorld::Players[0].m_pPed = reinterpret_cast<CPlayerPed*>(S(oBuf)); CWorld::Players[1].m_pPed = reinterpret_cast<CPlayerPed*>(S(oBuf));
+    if (r.below(5) == 0) CWorld::Players[CWorld::PlayerInFocus].m_pPed = nullptr;
+    CEntryExitManager::ms_entryExitStackPosn = 0;
     std::memset(S(oBuf), 0, 0x800);
     SAt<uint8_t>(oBuf + EntAcc::Off()) = (uint8_t)(r.below(3) == 0 ? r.below(4) : 0);
 }

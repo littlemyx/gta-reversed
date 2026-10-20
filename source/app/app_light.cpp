@@ -315,14 +315,15 @@ void SetDirectionalColours(RwRGBAReal* color) {
 
 // unused
 // 0x735C90
+// the exe indexes the three tables with idx % 7 (idiv by 7, 0x735C90)
 void SetAmbientColoursToIndicateRoadGroup(int32 idx) {
     NOTSA_GLOBAL_LOCAL(IndicateR, 0x8D60D0, (std::array<uint8, 8>), { 0, 255, 0, 0, 255, 255 });
     NOTSA_GLOBAL_LOCAL(IndicateG, 0x8D60D8, (std::array<uint8, 8>), { 0, 0, 255, 0, 255, 0, 255 });
     NOTSA_GLOBAL_LOCAL(IndicateB, 0x8D60E0, (std::array<uint8, 8>), { 0, 0, 0, 255, 0, 255, 255 });
 
-    AmbientLightColour.red   = (float)IndicateR[idx & std::size(IndicateR)] * (1.0f / 255.0f);
-    AmbientLightColour.green = (float)IndicateG[idx & std::size(IndicateG)] * (1.0f / 255.0f);
-    AmbientLightColour.blue  = (float)IndicateB[idx & std::size(IndicateB)] * (1.0f / 255.0f);
+    AmbientLightColour.red   = (float)IndicateR[idx % 7] * (1.0f / 255.0f);
+    AmbientLightColour.green = (float)IndicateG[idx % 7] * (1.0f / 255.0f);
+    AmbientLightColour.blue  = (float)IndicateB[idx % 7] * (1.0f / 255.0f);
     RpLightSetColor(pAmbient, &AmbientLightColour);
 }
 

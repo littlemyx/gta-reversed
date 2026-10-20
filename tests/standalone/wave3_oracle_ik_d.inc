@@ -4,6 +4,9 @@
 // and an RpHAnimHierarchy in RenderWare's layout with the 32 node ids of the BoneInfo table and a matrix array. The ped is a slot of the fake ped pool of the reference fixture (rf::PedE(0)): its clump
 // pointer is the fake clump and bHasBeenRendered is set. RwHelper.cpp is not part of this target: GetAnimHierarchyFromSkinClump (0x734A40) / GetAnimHierarchyFromClump (0x734B10) are test-local functions
 // (port) and Patch()ed host functions (exe) that return the fixture hierarchy.
+struct W3K_TaskChain { using type = IKChain_c* CTaskSimpleIKChain::*; friend type W2Get(W3K_TaskChain); };
+template struct W2Rob<W3K_TaskChain, &CTaskSimpleIKChain::m_IKChain>;
+
 namespace w3k {
 constexpr size_t kClumpB = 0x1000, kCDB = 0x1100, kFramesB = 0x1200, kKeyB = 0x1500, kHierB = 0x1900, kNodeInfoB = 0x1A00, kMatB = 0x1C00, kPedCmp = 0x2400;
 constexpr uint32_t kClumpOffV = 0x40;
@@ -85,12 +88,27 @@ static void BuildIkTasks(Rng& r) {
     if (r.below(3) != 0) mgr->AddIKChainTask(::new (P(kTaskLArm)) CTaskSimpleIKPointArm("la", eIKArm::IK_ARM_LEFT, nullptr, (eBoneTag)r.below(40), CVector{ FinF(r, 3.f), FinF(r, 3.f), FinF(r, 3.f) }, r.f01(), (int)r.below(800)), eIKChainSlot::LEFT_ARM);
     ped->GetTaskManager().m_aSecondaryTasks[TASK_SECONDARY_IK] = mgr;
 }
-template<class PF, class EF>
-static bool TCase(Rng& r, std::string& d, PF&& pf, EF&& ef) {
-    const uint32_t seed = r.u32() | 1;
-    rf::Enter(); rf::Reset(r, 0);
+// IsFacingTarget: the chain of every present IK task is the fixture chain; the target is on the effector's line (plus noise) in half of the cases
+static void BuildFacing(Rng& r) {
+    BuildChain(r);
     BuildPedWorld(r, true);
     BuildIkTasks(r);
+    if (auto* mgr = static_cast<CTaskSimpleIKManager*>(PedPtr()->GetTaskManager().GetTaskSecondary(TASK_SECONDARY_IK))) {
+        for (int sl = 0; sl < 3; ++sl) if (auto* t = mgr->GetTaskAtSlot((eIKChainSlot)sl)) t->*W2Get(W3K_TaskChain{}) = Ch();
+    }
+    if (r.below(2)) {   // offsetPosWS = rootBonePos + k * (effectorPos transformed by the root bone matrix)
+        float t[3]; const float* m = reinterpret_cast<const float*>(NdB(0) + oWld); const float* e = &At<float>(kChain + cEffPos);
+        t[0] = e[0] * m[0] + e[1] * m[4] + e[2] * m[8]; t[1] = e[0] * m[1] + e[1] * m[5] + e[2] * m[9]; t[2] = e[0] * m[2] + e[1] * m[6] + e[2] * m[10];
+        const float k = 1.f + r.f01() * 40.f;
+        for (int a = 0; a < 3; ++a) At<float>(kChain + cOffWS + 4 * a) = m[12 + a] + k * t[a] + (r.below(3) ? 0.f : FinF(r, 0.3f));
+        At<float>(kChain + cBlend) = r.below(4) ? 1.f : r.f01();
+    }
+}
+template<class PF, class EF>
+static bool TCase(Rng& r, std::string& d, PF&& pf, EF&& ef, void (*build)(Rng&) = nullptr) {
+    const uint32_t seed = r.u32() | 1;
+    rf::Enter(); rf::Reset(r, 0);
+    if (build) build(r); else { BuildPedWorld(r, true); BuildIkTasks(r); }
     Reg fx{ (uintptr_t)g_fx, kTasksCmp };
     Reg img{ kImgLo, kImgHi - kImgLo };
     const bool ok = BothA(d, seed, { fx, img }, std::forward<PF>(pf), std::forward<EF>(ef), kRf);
@@ -208,4 +226,8 @@ static void TestW3IkD() {
         const int arm = (int)r.below(2); const int blend = (int)r.below(3) ? (int)r.below(1000) : (int)r.u32();
         return TCase(r, d, [&]() -> uint64_t { IKChainManager_c::AbortPointArm((eIKArm)arm, PedPtr(), blend); return 0; }, [&]() -> uint64_t { oracle::Fn<void __stdcall(int, void*, int)>(0x6182F0)(arm, PedPtr(), blend); return 0; });
     KEND(300)
+    KROW("IKChainManager_c::IsFacingTarget", 0x618330, 0)
+        const int slot = (int)r.below(4);
+        return TCase(r, d, [&]() -> uint64_t { return g_ikChainMan.IsFacingTarget(PedPtr(), (eIKChainSlot)slot) ? 1 : 0; }, [&]() -> uint64_t { return (uint8_t)ExeThis<uint32_t, void*, int>(0x618330, &g_ikChainMan, PedPtr(), slot) ? 1 : 0; }, &BuildFacing);
+    KEND(600)
 }

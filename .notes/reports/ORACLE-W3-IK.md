@@ -1,12 +1,12 @@
 # ORACLE-W3-IK report
 
 Agent ORACLE-W3-IK (rules v3), worktree C:/gta-wt/oracle-w3-ik (branch oracle-w3-ik), 2026-10-20 10:58 - ~12:15 WEST. New target `wave3_ik_oracle_test` (= wave1_oracle_test.cpp + W2 harness, `W3_IK_ONLY`, + oracle_fast helpers),
-rows in `tests/standalone/wave3_oracle_ik{,_a,_b,_c,_d}.inc`: **57 rows, PC24 0 mismatches**, run time **~30 s** (PC53 3116 informational: extended precision vs the port's floats; 126 + 102 agreed-fault cases skipped by design).
+rows in `tests/standalone/wave3_oracle_ik{,_a,_b,_c,_d}.inc`: **58 rows, PC24 0 mismatches**, run time **~30 s** (PC53 3116 informational: extended precision vs the port's floats; 126 + 102 agreed-fault cases skipped by design).
 
 | | before | after |
 |---|---:|---:|
-| game_sa/Ragdoll covered (uncovered A / B / C) | 7 (29 / 9 / 9) | **57 (0 / 0 / 5)** |
-| exe-oracle coverage, whole game | 4336 | **4388** |
+| game_sa/Ragdoll covered (uncovered A / B / C) | 7 (29 / 9 / 9) | **58 (0 / 0 / 4)** |
+| exe-oracle coverage, whole game | 4336 | **4389** |
 | port bugs fixed (one commit each, asm address and pre-fix failures in the subject) | | **8** |
 
 ## Fixtures (real, not garbage)
@@ -32,7 +32,7 @@ rows in `tests/standalone/wave3_oracle_ik{,_a,_b,_c,_d}.inc`: **57 rows, PC24 0 
 ## Verified equal
 BoneNode_c ctor / dtor / Init / InitLimits / ClampLimitsCurrent / ClampLimitsDefault (flags 0x8D2BD0/1 toggled: the clamps are dead code in the game, both flags are 1 in the exe image) / Get-SetSpeed / Get-SetLimits / AddChild;
 BoneNodeManager_c ctor / dtor / Init / Exit / Reset / GetBoneNode / ReturnBoneNode / GetNumBoneNodesLeft; IKChain_c setters, UpdateOffset / UpdateTarget / UpdateEntity (null old target), Get/SetLimits, Get/SetBoneSpeed, ClampLimits, SetupBones, Exit (after SetupBones), Update;
-IKChainManager_c Init / AddIKChain / RemoveIKChain / Exit / Reset / GetLookAtEntity / GetLookAtOffset / IsArmPointing / AbortPointArm. RW helpers the solver calls (RwV3dTransformVector, RwV3dLength, RwV3dNormalize, RtQuatConvertFromMatrix / TransformVectors / Rotate, CRT acos 0x822380) are exact at PC24 on finite game-range inputs.
+IKChainManager_c Init / AddIKChain / RemoveIKChain / Exit / Reset / GetLookAtEntity / GetLookAtOffset / IsArmPointing / AbortPointArm / IsFacingTarget. RW helpers the solver calls (RwV3dTransformVector, RwV3dLength, RwV3dNormalize, RtQuatConvertFromMatrix / TransformVectors / Rotate, CRT acos 0x822380) are exact at PC24 on finite game-range inputs.
 
 ## Observed, not changed
 * IKChain_c::UpdateEntity: the port also cleans up the OLD target reference (comment in the source, deliberate); only a null old target is compared. Init: a re-used chain's stale `m_Ped` reference is dropped by the port, the exe never did.
@@ -43,7 +43,7 @@ IKChainManager_c Init / AddIKChain / RemoveIKChain / Exit / Reset / GetLookAtEnt
 * IKChainManager_c::AbortPointArm / GetLookAt* : the exe has no type check of the secondary task (the port uses dyn_cast): same results for the real IK manager task, a different task type in that slot would differ.
 
 ## Not covered (class C: indirect calls) - next candidates
-IKChainManager_c Update 0x6186D0 (CWorld scan code + ped->UpdateRpHAnim vtable), CanAccept 0x618800 / CanAcceptLookAt 0x6188B0 (camera, ped virtuals), IsFacingTarget 0x618330 (task->GetIKChain virtual; the chain's IsFacingTarget is covered by gameplay_oracle_peds), PointArm 0x618B60 (task creation). Same fixture (rf ped + ped IK manager task) with fake vtables would do.
+IKChainManager_c Update 0x6186D0 (CWorld scan code + ped->UpdateRpHAnim), CanAccept 0x618800 / CanAcceptLookAt 0x6188B0 (CEntity::GetIsOnScreen = camera frustum + model info, CPed::IsAlive), PointArm 0x618B60 (task creation). Same fixture (rf ped + ped IK manager task) with fake vtables would do.
 
 ## Tests run (worktree)
-wave3_ik_oracle_test (57 rows, ~30 s), rw_math_stream_test (127 checks), rw_rtanim_rtquat_test (4816), rw_atomic_clump_test (104), rw_skin_hanim_test (141), rw_frame_camera_test (PASSED): all green. The orchestrator runs the full run_all_tests.
+wave3_ik_oracle_test (58 rows, ~32 s, exit 0), rw_math_stream_test (127 checks), rw_rtanim_rtquat_test (4816), rw_atomic_clump_test (104), rw_skin_hanim_test (141), rw_frame_camera_test (PASSED): all green. The orchestrator runs the full run_all_tests.

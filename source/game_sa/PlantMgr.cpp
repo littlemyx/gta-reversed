@@ -7,6 +7,7 @@
 #include "PlantSurfPropMgr.h"
 #include "ColHelpers.h"
 #include "ProcObjectMan.h"
+#include "Fx/FxFtol.h"
 
 // 0x5DD100 (todo: move)
 // Replaces the atomic's geometry with a pre-lit copy of it (if it's not already pre-lit)
@@ -401,12 +402,15 @@ void CPlantMgr::PreUpdateOnceForNewCameraPos(const CVector& posn) {
 
 // 0x5DB310
 void CPlantMgr::UpdateAmbientColor() {
-    auto r = 64 + (uint32)(CTimeCycle::GetAmbientRed()   * 2.5f * 255.0f);
-    auto g = 64 + (uint32)(CTimeCycle::GetAmbientGreen() * 2.5f * 255.0f);
-    auto b = 64 + (uint32)(CTimeCycle::GetAmbientBlue()  * 2.5f * 255.0f);
-    m_AmbientColor.r = (uint8)std::max(r, 255u);
-    m_AmbientColor.g = (uint8)std::max(g, 255u);
-    m_AmbientColor.b = (uint8)std::max(b, 255u);
+    // 0x5DB310: 64 - _ftol2(ambient * 2.5 * -255) per channel (game mode: every x87 product rounds to float), clamped to 255 by an unsigned 16 bit compare (the old port took max() of the value and 255 and cut it to a byte)
+    const auto Channel = [](float ambient) -> uint8 {
+        const float scaled = ambient * 2.5f;
+        const uint32 v = (uint32)(64 - notsa::detail::Ftol((double)(scaled * -255.0f)));
+        return (uint16)v > 255 ? (uint8)255 : (uint8)v;
+    };
+    m_AmbientColor.r = Channel(CTimeCycle::GetAmbientRed());
+    m_AmbientColor.g = Channel(CTimeCycle::GetAmbientGreen());
+    m_AmbientColor.b = Channel(CTimeCycle::GetAmbientBlue());
 }
 
 // 0x5DB3D0

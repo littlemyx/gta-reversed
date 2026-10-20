@@ -292,7 +292,14 @@ bool CAEPedSpeechAudioEntity::ReservePedConversationSpeechSlots() {
 
 // 0x4E3870
 bool CAEPedSpeechAudioEntity::ReservePlayerConversationSpeechSlot() {
-    const auto slot = GetFreeSpeechSlot();
+    // exe 0x4E3870: the first free slot of 0..4 in index order (no round robin, `s_NextSpeechSlot` is not touched)
+    tPedSpeechSlotID slot = -1;
+    for (tPedSpeechSlotID i = 0; i < (tPedSpeechSlotID)s_PedSpeechSlots.size() - 1; i++) {
+        if (s_PedSpeechSlots[i].Status == CAEPedSpeechSlot::eStatus::FREE) {
+            slot = i;
+            break;
+        }
+    }
     if (slot == -1) {
         return false;
     }

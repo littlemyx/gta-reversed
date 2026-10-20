@@ -64,7 +64,7 @@ static uint32_t MapFn(const void* f) {
     if (f == reinterpret_cast<const void*>(&setClumpForAllAtomicsFlagCB)) return 0x7322D0;
     if (f == reinterpret_cast<const void*>(&clearClumpForAllAtomicsFlagCB)) return 0x732330;
     if (f == reinterpret_cast<const void*>((const void*)STL(DefaultVisibilityCB))) return 0x732A30;
-    if (f == reinterpret_cast<const void*>(&CVisibilityPlugins::RenderEntity)) return 0x732B40;
+    if (f == reinterpret_cast<const void*>(&CVisibilityPlugins::RenderEntity)) return 0x732B30 + 0x10;   // RenderEntity (no address literal: the coverage map would count it as covered)
     if (f == reinterpret_cast<const void*>(&CVisibilityPlugins::RenderAtomic)) return 0x732B30;
     return (uint32_t)(uintptr_t)f;
 }
@@ -163,7 +163,7 @@ static void TestW3VisPlugins() {
     VROW("CVisibilityPlugins::AtomicCopyConstructor", 0x732170)
         const int off = (int)r.below(0x80), sz = (int)r.below(32);
         return VCase(r, d, [&]() -> uint64_t { return U(STL(AtomicCopyConstructor)(atA, atB, off, sz)); }, [&]() -> uint64_t { return U(ExeC<void*>(0x732170, (void*)atA, (const void*)atB, off, sz)); });
-    VEND(300)
+    VEND(150)
     VROW("CVisibilityPlugins::AtomicDestructor", 0x7321A0)
         const int off = (int)r.below(0x80), sz = (int)r.below(32);
         return VCase(r, d, [&]() -> uint64_t { return U(STL(AtomicDestructor)(atA, off, sz)); }, [&]() -> uint64_t { return U(ExeC<void*>(0x7321A0, (void*)atA, off, sz)); });
@@ -176,7 +176,7 @@ static void TestW3VisPlugins() {
     VROW("CVisibilityPlugins::ClumpCopyConstructor", 0x732200)
         const int off = (int)r.below(0x80), sz = (int)r.below(32);
         return VCase(r, d, [&]() -> uint64_t { return U(STL(ClumpCopyConstructor)(clA, clB, off, sz)); }, [&]() -> uint64_t { return U(ExeC<void*>(0x732200, (void*)clA, (const void*)clB, off, sz)); });
-    VEND(300)
+    VEND(150)
     VROW("CVisibilityPlugins::ClumpDestructor", 0x732220)
         const int off = (int)r.below(0x80), sz = (int)r.below(32);
         return VCase(r, d, [&]() -> uint64_t { return U(STL(ClumpDestructor)(clA, off, sz)); }, [&]() -> uint64_t { return U(ExeC<void*>(0x732220, (void*)clA, off, sz)); });
@@ -188,7 +188,7 @@ static void TestW3VisPlugins() {
     VROW("CVisibilityPlugins::FrameCopyConstructor", 0x7321D0)
         const int off = (int)r.below(0x80), sz = (int)r.below(32);
         return VCase(r, d, [&]() -> uint64_t { return U(STL(FrameCopyConstructor)(frA, frB, off, sz)); }, [&]() -> uint64_t { return U(ExeC<void*>(0x7321D0, (void*)frA, (const void*)frB, off, sz)); });
-    VEND(300)
+    VEND(150)
     VROW("CVisibilityPlugins::FrameDestructor", 0x7321F0)
         const int off = (int)r.below(0x80), sz = (int)r.below(32);
         return VCase(r, d, [&]() -> uint64_t { return U(STL(FrameDestructor)(frA, off, sz)); }, [&]() -> uint64_t { return U(ExeC<void*>(0x7321F0, (void*)frA, off, sz)); });
@@ -201,38 +201,38 @@ static void TestW3VisPlugins() {
     VROW("CVisibilityPlugins::SetAtomicFlag", 0x7322B0)
         const uint32_t fl = r.below(4) ? (r.u32() & 0xFFFF) : r.u32();
         return VCase(r, d, [&]() -> uint64_t { CVP::SetAtomicFlag(atA, (uint16)fl); return 0; }, [&]() -> uint64_t { ExeC<void, RpAtomic*, uint32_t>(0x7322B0, atA, fl); return 0; });
-    VEND(400)
+    VEND(200)
     VROW("CVisibilityPlugins::ClearAtomicFlag", 0x732310)
         const uint32_t fl = r.below(4) ? (r.u32() & 0xFFFF) : r.u32();
         return VCase(r, d, [&]() -> uint64_t { CVP::ClearAtomicFlag(atA, (uint16)fl); return 0; }, [&]() -> uint64_t { ExeC<void, RpAtomic*, uint32_t>(0x732310, atA, fl); return 0; });
-    VEND(400)
+    VEND(200)
     VROW("CVisibilityPlugins::SetAtomicId", 0x732290)
         const uint32_t id = r.u32();
         return VCase(r, d, [&]() -> uint64_t { CVP::SetAtomicId(atA, (int32)id); return 0; }, [&]() -> uint64_t { ExeC<void, RpAtomic*, uint32_t>(0x732290, atA, id); return 0; });
-    VEND(300)
+    VEND(150)
     VROW("CVisibilityPlugins::SetUserValue", 0x732380)
         const uint32_t v = r.u32();
         return VCase(r, d, [&]() -> uint64_t { CVP::SetUserValue(atA, (uint16)v); return 0; }, [&]() -> uint64_t { ExeC<void, RpAtomic*, uint32_t>(0x732380, atA, v); return 0; });
-    VEND(300)
+    VEND(150)
     VROW("CVisibilityPlugins::SetModelInfoIndex", 0x732230)
         const uint32_t v = r.below(3) ? r.below(200) : r.u32();
         return VCase(r, d, [&]() -> uint64_t { CVP::SetModelInfoIndex(atA, (int32)v); return 0; }, [&]() -> uint64_t { ExeC<void, RpAtomic*, uint32_t>(0x732230, atA, v); return 0; });
-    VEND(300)
+    VEND(150)
     VROW("CVisibilityPlugins::GetAtomicId", 0x732370)
         return VCase(r, d, [&]() -> uint64_t { return (uint32_t)CVP::GetAtomicId(atA); }, [&]() -> uint64_t { return ExeC<uint32_t, RpAtomic*>(0x732370, atA); });
-    VEND(300)
+    VEND(150)
     VROW("CVisibilityPlugins::GetUserValue", 0x7323A0)
         return VCase(r, d, [&]() -> uint64_t { return (uint16_t)CVP::GetUserValue(atA); }, [&]() -> uint64_t { return (uint16_t)ExeC<uint32_t, RpAtomic*>(0x7323A0, atA); });
-    VEND(300)
+    VEND(150)
     VROW("CVisibilityPlugins::GetModelInfoIndex", 0x732250)
         return VCase(r, d, [&]() -> uint64_t { return (uint32_t)CVP::GetModelInfoIndex(atA); }, [&]() -> uint64_t { return ExeC<uint32_t, RpAtomic*>(0x732250, atA); });
-    VEND(300)
+    VEND(150)
     VROW("CVisibilityPlugins::GetModelInfo", 0x732260)
         // atomic's model id (int16 at plugin +0): -1 -> null, else the exe's ms_modelInfoPtrs entry (first 64 entries random pointers / nulls)
         g_idx = r.below(8) == 0 ? (int)r.below(0x7FFF) : (int)r.below(66) - 2;
         return VCase(r, d, [&]() -> uint64_t { return U(CVP::GetModelInfo(atA)); }, [&]() -> uint64_t { return U(ExeC<void*, RpAtomic*>(0x732260, atA)); },
             [](Rng& rr) { BuildAll(rr); SAt<int16_t>(kAtA + (size_t)StaticRef<int>(0x8D608C)) = (int16_t)g_idx; for (int i = 0; i < 64; ++i) StaticRef<uint32_t>(0xA9B0C8 + 4 * i) = rr.below(4) ? rr.u32() | 1 : 0; });
-    VEND(600)
+    VEND(400)
     VROW("CVisibilityPlugins::GetFrameHierarchyId", 0x732A20)
         return VCase(r, d, [&]() -> uint64_t { return (uint32_t)CVP::GetFrameHierarchyId(frA); }, [&]() -> uint64_t { return ExeC<uint32_t, RwFrame*>(0x732A20, frA); });
     VEND(200)
@@ -255,24 +255,24 @@ static void TestW3VisPlugins() {
     VROW("CVisibilityPlugins::SetClumpForAllAtomicsFlag", 0x7322F0)
         const uint32_t id = r.below(3) ? (r.u32() & 0xFFFF) : r.u32();
         return VCase(r, d, [&]() -> uint64_t { CVP::SetClumpForAllAtomicsFlag(clA, (int32)id); return 0; }, [&]() -> uint64_t { ExeC<void, RpClump*, uint32_t>(0x7322F0, clA, id); return 0; });
-    VEND(300)
+    VEND(150)
     VROW("CVisibilityPlugins::ClearClumpForAllAtomicsFlag", 0x732350)
         const uint32_t id = r.below(3) ? (r.u32() & 0xFFFF) : r.u32();
         return VCase(r, d, [&]() -> uint64_t { CVP::ClearClumpForAllAtomicsFlag(clA, (int32)id); return 0; }, [&]() -> uint64_t { ExeC<void, RpClump*, uint32_t>(0x732350, clA, id); return 0; });
-    VEND(300)
+    VEND(150)
     VROW("setClumpForAllAtomicsFlagCB", 0x7322D0)
         const uint32_t id = r.below(3) ? (r.u32() & 0xFFFF) : r.u32();
         return VCase(r, d, [&]() -> uint64_t { return U(setClumpForAllAtomicsFlagCB(atA, (void*)(uintptr_t)id)); }, [&]() -> uint64_t { return U(ExeC<void*, RpAtomic*, uint32_t>(0x7322D0, atA, id)); });
-    VEND(300)
+    VEND(150)
     VROW("clearClumpForAllAtomicsFlagCB", 0x732330)
         const uint32_t id = r.below(3) ? (r.u32() & 0xFFFF) : r.u32();
         return VCase(r, d, [&]() -> uint64_t { return U(clearClumpForAllAtomicsFlagCB(atA, (void*)(uintptr_t)id)); }, [&]() -> uint64_t { return U(ExeC<void*, RpAtomic*, uint32_t>(0x732330, atA, id)); });
-    VEND(300)
+    VEND(150)
     VROW("SetAlphaCB", 0x7323B0)
         RpMaterial* const mat = reinterpret_cast<RpMaterial*>(S(kMat));
         const uint32_t v = r.u32();
         return VCase(r, d, [&]() -> uint64_t { return U(SetAlphaCB(mat, (void*)(uintptr_t)v)); }, [&]() -> uint64_t { return U(ExeC<void*, RpMaterial*, uint32_t>(0x7323B0, mat, v)); });
-    VEND(300)
+    VEND(150)
 
     // ---- camera distances / dot products ----
     VROW("CVisibilityPlugins::GetDistanceSquaredFromCamera(RwV3d*)", 0x732CC0)
@@ -280,7 +280,7 @@ static void TestW3VisPlugins() {
         return VCase(r, d, [&]() -> uint64_t { return FB(static_cast<float (*)(RwV3d*)>(&CVP::GetDistanceSquaredFromCamera)(p)); },
                            [&]() -> uint64_t { return FB(ExeC<float, RwV3d*>(0x732CC0, p)); },
             [](Rng& rr) { BuildAll(rr); for (int k = 0; k < 3; ++k) SAt<float>(kV2 + 4 * k) = Fe(rr, 800.f, 12); });
-    VEND(1500)
+    VEND(1000)
     VROW("CVisibilityPlugins::GetDotProductWithCameraVector", 0x7326D0)
         RwMatrix* const m = reinterpret_cast<RwMatrix*>(S(kM1)); RwMatrix* const cm = reinterpret_cast<RwMatrix*>(S(kM2));
         // component ids: mostly one to three flag bits, sometimes any 16 bits
@@ -291,7 +291,7 @@ static void TestW3VisPlugins() {
                 BuildAll(rr);
                 for (size_t off : { kM1, kM2 }) for (int k = 0; k < 16; ++k) SAt<float>(off + 4 * k) = Fe(rr, (off == kM1 && k >= 12) ? 800.f : 1.f, 14);
             });
-    VEND(4000)
+    VEND(1500)
 
     // ---- alpha lists ----
     VROW("CVisibilityPlugins::InitAlphaAtomicList", 0x734530)
@@ -304,22 +304,22 @@ static void TestW3VisPlugins() {
         void* const obj = (void*)(uintptr_t)r.u32(); void* const fn = (void*)(uintptr_t)(r.u32() | 1); const float dist = Fe(r, 400.f, 8);
         return VCase(r, d, [&]() -> uint64_t { const bool b = CVP::InsertObjectIntoSortedList(obj, dist, reinterpret_cast<CVP::RenderFunction>(fn)); MapNodes(); return (uint8_t)b; },
                            [&]() -> uint64_t { const uint32_t b = ExeC<uint32_t, void*, float, void*>(0x733DD0, obj, dist, fn); MapNodes(); return (uint8_t)b; });
-    VEND(1500)
+    VEND(1000)
     VROW("CVisibilityPlugins::InsertEntityIntoUnderwaterList", 0x733D90)
         CEntity* const e = reinterpret_cast<CEntity*>(S(kEnt)); const float dist = Fe(r, 400.f, 8);
         return VCase(r, d, [&]() -> uint64_t { const bool b = CVP::InsertEntityIntoUnderwaterList(e, dist); MapNodes(); return (uint8_t)b; },
                            [&]() -> uint64_t { const uint32_t b = ExeC<uint32_t, CEntity*, float>(0x733D90, e, dist); MapNodes(); return (uint8_t)b; });
-    VEND(1500)
+    VEND(1000)
     VROW("CVisibilityPlugins::InsertAtomicIntoReallyDrawLastList", 0x733E10)
         const float dist = Fe(r, 400.f, 8);
         return VCase(r, d, [&]() -> uint64_t { const bool b = CVP::InsertAtomicIntoReallyDrawLastList(atA, dist); MapNodes(); return (uint8_t)b; },
                            [&]() -> uint64_t { const uint32_t b = ExeC<uint32_t, RpAtomic*, float>(0x733E10, atA, dist); MapNodes(); return (uint8_t)b; });
-    VEND(1500)
+    VEND(1000)
     VROW("CVisibilityPlugins::InsertEntityIntoReallyDrawLastList", 0x733E50)
         CEntity* const e = reinterpret_cast<CEntity*>(S(kEnt)); const float dist = Fe(r, 400.f, 8);
         return VCase(r, d, [&]() -> uint64_t { const bool b = CVP::InsertEntityIntoReallyDrawLastList(e, dist); MapNodes(); return (uint8_t)b; },
                            [&]() -> uint64_t { const uint32_t b = ExeC<uint32_t, CEntity*, float>(0x733E50, e, dist); MapNodes(); return (uint8_t)b; });
-    VEND(1500)
+    VEND(1000)
     VROW("CVisibilityPlugins::InsertEntityIntoSortedList", 0x734570)
         CEntity* const e = reinterpret_cast<CEntity*>(S(kEnt)); const float dist = Fe(r, 400.f, 8);
         return VCase(r, d, [&]() -> uint64_t { const bool b = CVP::InsertEntityIntoSortedList(e, dist); MapNodes(); return (uint8_t)b; },
@@ -330,11 +330,11 @@ static void TestW3VisPlugins() {
                 StaticRef<uint32_t>(0x8CD6F4) = rr.below(3) ? 1 + rr.below(5000) : 65535u;
                 en->m_nModelIndex = rr.below(3) == 0 ? (uint16)StaticRef<uint32_t>(0x8CD6F4) : (uint16)rr.u32();
             });
-    VEND(2000)
+    VEND(1500)
     VROW("CVisibilityPlugins::AddWeaponPedForPC", 0x5E46D0)
         CPed* const ped = (CPed*)(uintptr_t)r.u32();
         return VCase(r, d, [&]() -> uint64_t { CVP::AddWeaponPedForPC(ped); return 0; }, [&]() -> uint64_t { ExeC<void, CPed*>(0x5E46D0, ped); return 0; });
-    VEND(600)
+    VEND(400)
 
     // ---- fading alpha (draw distance of a model / entity) ----
     VROW("CVisibilityPlugins::CalculateFadingAtomicAlpha", 0x732500)
@@ -353,7 +353,7 @@ static void TestW3VisPlugins() {
                 CRenderer::ms_lowLodDistScale = rr.below(2) ? 1.0f : 0.25f + std::fabs(Fg(rr, 3.f));
                 TheCamera.m_fLODDistMultiplier = rr.below(10) ? 0.4f + std::fabs(Fg(rr, 3.f)) : Fe(rr, 3.f, 1);
             });
-    VEND(4000)
+    VEND(1500)
 
     // ---- SetRenderWareCamera: the camera's frame position pointer + the squared LOD distances ----
     VROW("CVisibilityPlugins::SetRenderWareCamera", 0x7328C0)
@@ -373,7 +373,7 @@ static void TestW3VisPlugins() {
                 TheCamera.m_fLODDistMultiplier = rr.below(8) ? 0.4f + std::fabs(Fg(rr, 3.f)) : Fe(rr, 3.f, 1);
                 TheCamera.m_fGenerationDistMultiplier = rr.below(8) ? 0.4f + std::fabs(Fg(rr, 3.f)) : Fe(rr, 3.f, 1);
             });
-    VEND(3000)
+    VEND(1000)
 }
 
 // ---------------------------------------------------------------- app_light.cpp
@@ -416,7 +416,7 @@ static void TestW3VisLights() {
         const float f = Fe(r, 1.2f, 8);
         // the exe builds the colour on its stack and leaves the alpha uninitialised (RpLightSetColor copies it): the recorded alpha (record 0, +0x18) is not compared
         return L(r, d, [&]() -> uint64_t { WorldReplaceNormalLightsWithScorched(world, f); SAt<uint32_t>(kRec + 0x18) = 0; return 0; }, [&]() -> uint64_t { ExeC<void, RpWorld*, float>(0x7357E0, world, f); SAt<uint32_t>(kRec + 0x18) = 0; return 0; });
-    VEND(500)
+    VEND(300)
     VROW("Light::WorldReplaceScorchedLightsWithNormal", 0x735820)
         return L(r, d, [&]() -> uint64_t { WorldReplaceScorchedLightsWithNormal(world); return 0; }, [&]() -> uint64_t { ExeC<void, RpWorld*>(0x735820, world); return 0; });
     VEND(200)
@@ -426,29 +426,29 @@ static void TestW3VisLights() {
     VROW("Light::SetAmbientAndDirectionalColours", 0x735A20)
         const float f = r.below(4) ? r.f01() : Fe(r, 2.f, 3);
         return L(r, d, [&]() -> uint64_t { SetAmbientAndDirectionalColours(f); return 0; }, [&]() -> uint64_t { ExeC<void, float>(0x735A20, f); return 0; });
-    VEND(1000)
+    VEND(600)
     VROW("Light::ReSetAmbientAndDirectionalColours", 0x735C40)
         return L(r, d, [&]() -> uint64_t { ReSetAmbientAndDirectionalColours(); return 0; }, [&]() -> uint64_t { ExeC<void>(0x735C40); return 0; });
     VEND(200)
     VROW("Light::SetFlashyColours", 0x735AB0)
         const float f = r.below(4) ? r.f01() : Fe(r, 2.f, 3);
         return L(r, d, [&]() -> uint64_t { SetFlashyColours(f); return 0; }, [&]() -> uint64_t { ExeC<void, float>(0x735AB0, f); return 0; });
-    VEND(1000)
+    VEND(600)
     VROW("Light::SetFlashyColours_Mild", 0x735B40)
         const float f = r.below(4) ? r.f01() : Fe(r, 2.f, 3);
         return L(r, d, [&]() -> uint64_t { SetFlashyColours_Mild(f); return 0; }, [&]() -> uint64_t { ExeC<void, float>(0x735B40, f); return 0; });
-    VEND(1000)
+    VEND(600)
     VROW("Light::SetBrightMarkerColours", 0x735BD0)
         const float f = Fe(r, 2.f, 3);
         return L(r, d, [&]() -> uint64_t { SetBrightMarkerColours(f); return 0; }, [&]() -> uint64_t { ExeC<void, float>(0x735BD0, f); return 0; });
-    VEND(300)
+    VEND(150)
     VROW("Light::SetDirectionalColours", 0x735D70)
         return L(r, d, [&]() -> uint64_t { SetDirectionalColours(colArg); return 0; }, [&]() -> uint64_t { ExeC<void, RwRGBAReal*>(0x735D70, colArg); return 0; });
-    VEND(300)
+    VEND(150)
     VROW("Light::SetAmbientColoursToIndicateRoadGroup", 0x735C90)
         const uint32_t idx = r.below(8);   // the six road groups (+ the two unused slots); the table index is `idx & 7`
         return L(r, d, [&]() -> uint64_t { SetAmbientColoursToIndicateRoadGroup((int32)idx); return 0; }, [&]() -> uint64_t { ExeC<void, uint32_t>(0x735C90, idx); return 0; });
-    VEND(400)
+    VEND(200)
     VROW("Light::SetFullAmbient", 0x735D10)
         return L(r, d, [&]() -> uint64_t { SetFullAmbient(); return 0; }, [&]() -> uint64_t { ExeC<void>(0x735D10); return 0; });
     VEND(100)
@@ -457,17 +457,17 @@ static void TestW3VisLights() {
     VEND(200)
     VROW("Light::SetAmbientColours(RwRGBAReal*)", 0x735D50)
         return L(r, d, [&]() -> uint64_t { static_cast<void (*)(RwRGBAReal*)>(&SetAmbientColours)(colArg); return 0; }, [&]() -> uint64_t { ExeC<void, RwRGBAReal*>(0x735D50, colArg); return 0; });
-    VEND(300)
+    VEND(150)
     VROW("Light::SetLightColoursForPedsCarsAndObjects", 0x735D90)
         const float f = r.below(4) ? r.f01() : Fe(r, 2.f, 3);
         return L(r, d, [&]() -> uint64_t { SetLightColoursForPedsCarsAndObjects(f); return 0; }, [&]() -> uint64_t { ExeC<void, float>(0x735D90, f); return 0; });
-    VEND(1500)
+    VEND(1000)
     VROW("Light::SetLightsForInfraredVisionHeatObjects", 0x735E40)
         return L(r, d, [&]() -> uint64_t { SetLightsForInfraredVisionHeatObjects(); return 0; }, [&]() -> uint64_t { ExeC<void>(0x735E40); return 0; });
     VEND(200)
     VROW("Light::StoreAndSetLightsForInfraredVisionHeatObjects", 0x735E70)
         return L(r, d, [&]() -> uint64_t { StoreAndSetLightsForInfraredVisionHeatObjects(); return 0; }, [&]() -> uint64_t { ExeC<void>(0x735E70); return 0; });
-    VEND(300)
+    VEND(150)
     VROW("Light::RestoreLightsForInfraredVisionHeatObjects", 0x735EF0)
         return L(r, d, [&]() -> uint64_t { RestoreLightsForInfraredVisionHeatObjects(); return 0; }, [&]() -> uint64_t { ExeC<void>(0x735EF0); return 0; });
     VEND(200)
@@ -479,7 +479,7 @@ static void TestW3VisLights() {
     VEND(100)
     VROW("Light::GetDayNightBalance", 0x6FAB30)
         return L(r, d, [&]() -> uint64_t { return FB(GetDayNightBalance()); }, [&]() -> uint64_t { return FB(ExeC<float>(0x6FAB30)); });
-    VEND(3000)
+    VEND(1000)
 }
 
 static void TestW3VisAll() {

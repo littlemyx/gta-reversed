@@ -181,7 +181,8 @@ bool CVisibilityPlugins::InsertAtomicIntoBoatSortedList(RpAtomic* atomic, float 
 
 // 0x734570
 bool CVisibilityPlugins::InsertEntityIntoSortedList(CEntity* entity, float dist) {
-    if (entity->GetModelIndex() == ModelIndices::MI_GRASSHOUSE
+    // the exe sign-extends the entity's 16 bit model index (movsx) and zero-extends the global (movzx) before comparing (0x734570)
+    if (static_cast<int16>(entity->GetModelIndex()) == static_cast<uint16>(ModelIndices::MI_GRASSHOUSE)
         //  || entity->GetModelIndex() == ModelIndices::MI_GASSTATION // In Android
     ) {
         if (InsertEntityIntoReallyDrawLastList(entity, dist)) {

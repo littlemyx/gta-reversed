@@ -91,7 +91,6 @@ static void TestW3AiCover() {
         PedWorld(rr, oPedA, oIntA, 2);
         for (int i = 0; i < 10; ++i) if (rr.below(3) == 0) { uint8_t* p = Cpt(i); const uint32_t pp = (uint32_t)(uintptr_t)S(oPedA); std::memcpy(p + 0x14 + 4 * rr.below(2), &pp, 4); }
     };
-    if (std::getenv("W3A_PENDING")) {   // port differs structurally from the exe (see ORACLE-W3-AI.md): rows kept, off by default
     ROW("CCover::FindAndReserveCoverPoint", 0x6992B0, 2500) {
         const bool attack = r.below(2) != 0; const CVector target = Vec(r, 300.f, 14);
         Tu tu([&](Rng& rr) {
@@ -99,11 +98,14 @@ static void TestW3AiCover() {
             // points close to the ped so the distance tests go both ways
             auto* ped = reinterpret_cast<CPed*>(S(oPedA)); const CVector pp = ped->GetPosition();
             for (int i = 0; i < 10; ++i) if (rr.below(2)) { const CVector q = pp + CVector((rr.f01() - 0.5f) * 60.f, (rr.f01() - 0.5f) * 60.f, 0.f); std::memcpy(Cpt(i) + 4, &q, 12); }
+            // OBJECT / VEHICLE points take the position of their entity: move those entities next to the ped too (within 15 horizontally, around the 4 vertical limit), so that the point is found in a fair share of the cases
+            for (int i = 0; i < 10; ++i) { CEntity* e = At<CEntity*>(kCovPts + (uintptr_t)i * 0x1C + 0x10); if (e && rr.below(2)) e->GetPosition() = pp + CVector((rr.f01() - 0.5f) * 36.f, (rr.f01() - 0.5f) * 36.f, (rr.f01() - 0.5f) * 10.f); }
             std::memcpy(S(oOut), &target, 12);
         }, true);
         return UCase(r, d, [&]() -> uint64_t { return U(CCover::FindAndReserveCoverPoint(reinterpret_cast<CPed*>(S(oPedA)), *reinterpret_cast<CVector*>(S(oOut)), attack)); },
                            [&]() -> uint64_t { return U(oracle::Fn<void* __cdecl(void*, void*, int)>(0x6992B0)(S(oPedA), S(oOut), (int)attack)); });
     } ENDROW;
+    if (std::getenv("W3A_PENDING")) {   // port differs structurally from the exe (see ORACLE-W3-AI.md): rows kept, off by default
     ROW("CCover::FindCoordinatesCoverPoint", 0x699570, 2500) {
         const int k = (int)r.below(10); const CVector target = Vec(r, 300.f, 14);
         Tu tu([&](Rng& rr) { CoverWorld(rr, 10); pedWorld(rr); std::memcpy(S(oOut), &target, 12); FillGarbage(rr, S(oOut + 0x20), 12); for (int i = 0; i < 10; ++i) if (rr.below(2)) { uint8_t* p = Cpt(i); const uint32_t pp = (uint32_t)(uintptr_t)S(oPedA); std::memcpy(p + 0x14, &pp, 4); } }, true);

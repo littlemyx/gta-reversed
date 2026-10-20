@@ -305,33 +305,107 @@ void CCover::Find2HighestPoints(CColTriangle* triangle, CVector* vertPositions, 
 }
 
 // 0x6992B0
+// Translated line by line from the exe (x87, PC24 in game mode). Per point: drop it if its entity is gone (the exe inlines 0x698DB0), skip points that cannot take another
+// ped, load the position of the point into locals (Note: for a type outside 1..3 the exe keeps the position of the PREVIOUS point in its stack slots, so `cptPos` lives
+// outside of the loop), POINTONMAP points must face the target, the ped must be within 4 units vertically and 15 units horizontally, then the point with the smallest
+// ped distance (a float; strictly smaller wins) is remembered. For an attacker the point may be at most 4 units farther from the target than the ped is.
 CCoverPoint* CCover::FindAndReserveCoverPoint(CPed* ped, const CVector& targetPos, bool isForAttack) {
-    rng::for_each(m_Points, RemoveCoverPointIfEntityLost);
+    constexpr float kDirStep = 0.02454369328916073f; // 0x859BBC - 2pi/256 (as float)
 
-    auto points = m_Points |
-        rng::views::filter(&CCoverPoint::CanAccommodateAnotherPed) |
-        rng::views::filter([&](const CCoverPoint& cpt) { // 0x69936B (Yes, I had to move this up here)
-            return cpt.GetType() != CCoverPoint::eType::POINTONMAP
-                || (targetPos - cpt.GetPointOnMap()).Dot(cpt.GetDirVector()) > 0.f;
-        }) |
-        rng::views::transform([&](CCoverPoint& cpt) -> std::pair<CCoverPoint*, CVector> { // 0x699316
-            return { &cpt, cpt.GetPos() };
-        }) |
-        rng::views::filter([&](auto&& pair) { // 0x6994A1
-            return !isForAttack || CVector2D::Dist(ped->GetPosition2D(), pair.second) < CVector2D::Dist(ped->GetPosition2D(), targetPos) + 4.f;
-        }) |
-        rng::views::transform([&](auto&& pair) -> std::pair<CCoverPoint*, float> { 
-            return { pair.first, CVector2D::DistSqr(ped->GetPosition2D(), pair.second) };
-        });
-    if (points.empty()) {
+    float   bestDist = 99999.9f; // 0x85999C - the best distance is kept on the x87 stack across the loop
+    int32   bestIdx  = -1;
+    CVector cptPos{};            // [esp+0x20]
+
+    for (int32 i = 0; i < (int32)m_Points.size(); i++) {
+        CCoverPoint& cpt = m_Points[i];
+
+        // 0x6992D8 - CCover::RemoveCoverPointIfEntityLost, inlined
+        RemoveCoverPointIfEntityLost(cpt);
+        if (cpt.GetType() == CCoverPoint::eType::NONE) {
+            continue;
+        }
+
+        // 0x6992FA - Can accommodate another ped? (VEHICLE: `!ped[0] || ped[1]`, everything else `!ped[0]`)
+        const auto coveredPeds = cpt.GetCoveredPeds();
+        if (cpt.GetType() == CCoverPoint::eType::VEHICLE) {
+            if (coveredPeds[0] && !coveredPeds[1]) {
+                continue;
+            }
+        } else if (coveredPeds[0]) {
+            continue;
+        }
+
+        // 0x699316 - Position of the point
+        switch (cpt.GetType()) {
+        case CCoverPoint::eType::OBJECT:
+        case CCoverPoint::eType::VEHICLE:
+            cptPos = cpt.GetCoverEntity()->GetPosition(); // 0x699342
+            break;
+        case CCoverPoint::eType::POINTONMAP: { // 0x69932B
+            cptPos = cpt.GetPointOnMap();
+
+            // 0x69936B - The point has to face the target: dot((target - pos), (-sin(dir), cos(dir), 0)) > 0
+            // `sin` stays unrounded on the x87 stack (and is negated), `cos` is stored to a float, `dz` is multiplied by 0.0
+            const double dx    = (double)targetPos.x - cpt.GetPointOnMap().x;
+            const double dy    = (double)targetPos.y - cpt.GetPointOnMap().y;
+            const double dz    = (double)targetPos.z - cpt.GetPointOnMap().z;
+            const double angle = (double)cpt.GetDir().Raw() * kDirStep;
+            const double nsinX = -x87::sin(angle) * dx;
+            const float  cosF  = (float)x87::cos(angle);
+            const double dyCos = dy * cosF;
+            const double dot   = (dyCos + nsinX) + dz * 0.0;
+            if (!(dot > 0.0)) {
+                continue;
+            }
+            break;
+        }
+        default: // outside of 1..3: `cptPos` keeps the value of the previous point
+            break;
+        }
+
+        // 0x6993C5 - The ped has to be less than 4 units above / below the point
+        const CVector pedPos = ped->GetPosition();
+        const double  pedDz  = (double)pedPos.z - cptPos.z;
+        const double  absDz  = pedDz < 0.0 ? -pedDz : pedDz;
+        if (!(absDz < 4.0)) {
+            continue;
+        }
+
+        // 0x69941A - and less than 15 units away (2D). The distance is also stored as a float (it is the value that is compared below)
+        const double pedDx    = (double)pedPos.x - cptPos.x;
+        const double pedDy    = (double)pedPos.y - cptPos.y;
+        const double cptDist  = x87::sqrt(pedDy * pedDy + pedDx * pedDx);
+        const float  cptDistF = (float)cptDist;
+        if (!(cptDist < 15.0)) {
+            continue;
+        }
+
+        // 0x699456 - Distance (float) between the ped and the target, and (not rounded) between the point and the target
+        const double pedTgtDx  = (double)pedPos.x - targetPos.x;
+        const double pedTgtDy  = (double)pedPos.y - targetPos.y;
+        const float  pedToTgt  = (float)x87::sqrt(pedTgtDy * pedTgtDy + pedTgtDx * pedTgtDx);
+        const double cptTgtDx  = (double)cptPos.x - targetPos.x;
+        const double cptTgtDy  = (double)cptPos.y - targetPos.y;
+        const double cptToTgt  = x87::sqrt(cptTgtDy * cptTgtDy + cptTgtDx * cptTgtDx);
+
+        // 0x6994A1
+        if (!(cptDistF < bestDist)) {
+            continue;
+        }
+        if (isForAttack && !(cptToTgt < (double)pedToTgt + 4.0f)) { // 0x6994CF
+            continue;
+        }
+        bestDist = cptDistF;
+        bestIdx  = i;
+    }
+
+    // 0x69950E
+    if (bestIdx < 0) {
         return nullptr;
     }
-    const auto [cpt, dist] = *rng::max_element(points, [](auto&& a, auto&& b) { return a.second < b.second; });;
-    if (!rng::contains(cpt->GetCoveredPeds(), ped)) {
-        return nullptr;
-    }
-    cpt->ReserveCoverPointForPed(ped);
-    return cpt;
+    CCoverPoint* const best = &m_Points[bestIdx];
+    best->ReserveCoverPointForPed(ped); // 0x699519 - the first slot that already holds `ped` stops the search, else the first free slot gets it (RegisterReference)
+    return best;
 }
 
 // 0x699570

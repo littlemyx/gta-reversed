@@ -13,6 +13,10 @@ protected:
     bool        m_bTimeModeParticle;
 
 public:
+    // NOTSA: the exe allocates every FxInfo in FxInfoManager_c::AddFxInfo (0x4A7B00) from the Fx memory pool: GetMem(sizeof, 4)
+    static void* operator new(size_t size);
+    static void operator delete(void*) { /* pool memory is released all at once */ }
+
     FxInfo_c() = default;    // 0x4A4B30
     virtual ~FxInfo_c() = 0; // 0x4A4940
     virtual void Load(FILESTREAM file, int32 version) = 0;

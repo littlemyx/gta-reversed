@@ -1478,6 +1478,48 @@ if (${RE_PROJECT}_RW_LIBRW)
     set_property(TARGET wave3_ui_oracle_test PROPERTY SOURCES "${STANDALONE_PAD_OBJ}" ${_w3ui_sources})
     target_link_options(wave3_ui_oracle_test PRIVATE "$<$<CXX_COMPILER_ID:MSVC>:/BASE:0x400000;/DYNAMICBASE:NO;/FIXED;/MERGE:_TEXT=.text;/INCREMENTAL:NO;/SUBSYSTEM:CONSOLE;/FORCE:UNRESOLVED;/MAP>")
     set_target_properties(wave3_ui_oracle_test PROPERTIES COMPILE_WARNING_AS_ERROR OFF CXX_SCAN_FOR_MODULES OFF)
+    # ORACLE-W3-EFFECTS: exe-oracle rows of the world-effect root files (Explosion, Fire, FireManager, CreepingFire, Glass, Rope(s), Cranes, Bridge, Birds, Skidmarks, WaterCannon(s), Coronas, Clouds, Plant*, ProjectileInfo; A + B functions); rows: tests/standalone/wave3_oracle_fx*.inc
+    set(_W3F_BASE ${W2_BASE_SOURCES})
+    add_executable(wave3_fx_oracle_test EXCLUDE_FROM_ALL
+        "${PROJECT_SOURCE_DIR}/tests/standalone/wave1_oracle_test.cpp"
+        ${_W3F_BASE}
+        game_sa/Explosion.cpp
+        game_sa/Fire.cpp
+        game_sa/FireManager.cpp
+        game_sa/CreepingFire.cpp
+        game_sa/Glass.cpp
+        game_sa/FallingGlassPane.cpp
+        game_sa/Rope.cpp
+        game_sa/Ropes.cpp
+        game_sa/Cranes.cpp
+        game_sa/Bridge.cpp
+        game_sa/Birds.cpp
+        game_sa/Skidmarks.cpp
+        game_sa/WaterCannon.cpp
+        game_sa/WaterCannons.cpp
+        game_sa/Coronas.cpp
+        game_sa/Clouds.cpp
+        game_sa/PlantMgr.cpp
+        game_sa/PlantSurfPropMgr.cpp
+        game_sa/PPTriPlantBuffer.cpp
+        game_sa/ProjectileInfo.cpp
+        game_sa/TimeCycle.cpp
+        game_sa/SurfaceInfos_c.cpp
+        game_sa/Collision/Box.cpp
+    )
+    target_compile_definitions(wave3_fx_oracle_test PRIVATE W2_ONLY W3_FX_ONLY)
+    target_compile_features(wave3_fx_oracle_test PRIVATE cxx_std_23)
+    target_compile_definitions(wave3_fx_oracle_test PRIVATE $<TARGET_PROPERTY:${RE_PROJECT_LIB_NAME},COMPILE_DEFINITIONS> NOTSA_ORACLE_ADDRESS_GLOBALS)
+    target_include_directories(wave3_fx_oracle_test PRIVATE $<TARGET_PROPERTY:${RE_PROJECT_LIB_NAME},INCLUDE_DIRECTORIES>)
+    target_compile_options(wave3_fx_oracle_test PRIVATE $<TARGET_PROPERTY:${RE_PROJECT_LIB_NAME},COMPILE_OPTIONS>)
+    target_precompile_headers(wave3_fx_oracle_test PRIVATE StdInc.cpp)
+    target_link_libraries(wave3_fx_oracle_test PRIVATE librw spdlog::spdlog Tracy::TracyClient user32)
+    target_sources(wave3_fx_oracle_test PRIVATE "${STANDALONE_PAD_OBJ}")
+    get_target_property(_w3fx_sources wave3_fx_oracle_test SOURCES)
+    list(REMOVE_ITEM _w3fx_sources "${STANDALONE_PAD_OBJ}")
+    set_property(TARGET wave3_fx_oracle_test PROPERTY SOURCES "${STANDALONE_PAD_OBJ}" ${_w3fx_sources})
+    target_link_options(wave3_fx_oracle_test PRIVATE "$<$<CXX_COMPILER_ID:MSVC>:/BASE:0x400000;/DYNAMICBASE:NO;/FIXED;/MERGE:_TEXT=.text;/INCREMENTAL:NO;/SUBSYSTEM:CONSOLE;/FORCE:UNRESOLVED;/MAP>")
+    set_target_properties(wave3_fx_oracle_test PROPERTIES COMPILE_WARNING_AS_ERROR OFF CXX_SCAN_FOR_MODULES OFF)
     # x87 intrinsic fidelity oracle: inline fsin/fcos/fpatan/fptan/fsqrt/fyl2x of the exe vs the ports' math, and the CRT entry points the exe calls (pow, asin, acos, tan, floor, ceil, modf)
     add_executable(x87_oracle_test EXCLUDE_FROM_ALL
         "${PROJECT_SOURCE_DIR}/tests/standalone/x87_oracle_test.cpp"

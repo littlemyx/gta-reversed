@@ -29,6 +29,8 @@
 #include "wave3_oracle_scripts.inc"     // ORACLE-W3-SCRIPTS: game_sa/Scripts rows (wave3_scripts_oracle_test)
 #elif defined(W3_UI_ONLY)
 #include "wave3_oracle_ui.inc"          // ORACLE-W3-UI: HUD / radar / text root-file rows (wave3_ui_oracle_test)
+#elif defined(W3_FX_ONLY)
+#include "wave3_oracle_fx.inc"          // ORACLE-W3-EFFECTS: explosion / fire / glass / rope / crane / plant ... root-file rows (wave3_fx_oracle_test)
 #else
 #if __has_include("wave2_oracle_gen_ctor.inc")
 #include "wave2_oracle_gen_ctor.inc"      // GENERATED (tools/gen_w2_rows.py): task / event constructors
@@ -167,6 +169,12 @@ static void TestW2() {
     using namespace w2;
     g_onFault = +[] { oracle::alloc::End(); };
     TestW3UiAll();
+    return;
+#endif
+#ifdef W3_FX_ONLY
+    using namespace w2;
+    g_onFault = +[] { oracle::alloc::End(); };
+    TestW3FxAll();
     return;
 #endif
     using namespace w2;

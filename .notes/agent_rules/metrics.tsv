@@ -81,3 +81,4 @@ date	agent	rules	kind	tokens	tool_uses	minutes	outcome	notes
 2026-10-20	ORACLE-W3-FX	v3	oracle wave (scope-cut)	288132	95	28	Fx root A/B 44 -> 5 (+39 rows), 3 fixes (frustum info 1353/1500, ctor uninit, dist-to-plane sum order); Blueprints left
 2026-10-20	ORACLE-W3-FXBP	v3	oracle wave (small)	284157	105	23	Fx/Blueprints A/B 30 -> 0 (+34 rows), 6 fixes (attract pt/line 2664/3000, AddFxInfo pool, RotateVecAboutVec 1911/4000)
 2026-10-20	ORACLE-W3-VIS	v3	oracle wave (small)	323588	112	39	VisibilityPlugins+app_light A/B 62 -> 0, 8 fixes (ped/car/object light colour green/blue used red 1399/1500, road-group ambient idx&8 vs %7, flashy colours alpha) + 1 wrong hook address
+2026-10-20	HOOK-ADDR	v3	audit (small)	180605	78	56	9249 hook sites: 10 flagged, 4 addresses fixed + 1 bogus hook removed (would corrupt Clear in DLL builds), 3 explained

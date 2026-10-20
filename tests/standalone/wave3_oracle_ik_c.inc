@@ -2,6 +2,12 @@
 struct W3K_Move { using type = void (IKChain_c::*)(); friend type W2Get(W3K_Move); };
 template struct W2Rob<W3K_Move, &IKChain_c::MoveBonesToTarget>;
 
+// _CIacos takes its argument in st0 (fst qword [esp] ... call): a cdecl thunk loads it
+static __declspec(naked) double __cdecl ExeAcos(double) { __asm { fld qword ptr [esp + 4]
+ mov eax, 0x822380
+ call eax
+ ret } }
+
 namespace w3k {
 constexpr size_t kPivotMat = 0x740;   // RwMatrix of the pivot bone / the parent matrix passed to CalcWldMat
 static void Attach(int child, int parent) {   // TList_c::AddItem at the head of parent's child list + m_Parent
@@ -23,6 +29,7 @@ static void BuildMove(Rng& r) {   // a chain of g_n bones: bone i's parent is bo
     BuildChain(r);
     for (int i = 0; i < g_n; ++i) { Nf<void*>(i, oParent) = nullptr; Nf<void*>(i, oChHead) = nullptr; Nf<void*>(i, oChTail) = nullptr; Nf<size_t>(i, oChCnt) = 0; Nf<void*>(i, oPrev) = nullptr; Nf<void*>(i, oNext) = nullptr; }
     for (int i = 0; i + 1 < g_n; ++i) Attach(i, i + 1);
+    for (int i = 0; i < g_n; ++i) Nf<float>(i, oSpeed) = r.below(4) == 0 ? 1.f : r.f01() * 2.f;   // finite bone speeds (the game's are 1.0 from Init; NaN speeds only exercise the NaN rules of the RtQuat code)
     RandRwMat(r, kPivotMat);
     At<void*>(kChain + cPivotMat) = P(kPivotMat);
     Nd(g_n - 1)->CalcWldMat(reinterpret_cast<const RwMatrix*>(P(kPivotMat)));
@@ -75,6 +82,11 @@ static void TestW3IkC() {
         return KCase(r, d, [&]() -> uint64_t { return U(RtQuatRotate(&At<RtQuat>(kOut + 0x60), &At<RwV3d>(kOut + 0x50), ang, rwCOMBINEPOSTCONCAT)); },
             [&]() -> uint64_t { return U(oracle::Fn<void* __cdecl(void*, void*, float, int)>(0x7EB7C0)(P(kOut + 0x60), P(kOut + 0x50), ang, 2)); }, pBuildRw, false, true);
     KEND(1000)
+    KROW("x87::acos (CRT _CIacos)", 0x822380, 0)
+        const float x = r.below(2) ? 0.9f + r.f01() * 0.1f : FinF(r, 1.f);
+        return KCase(r, d, [&]() -> uint64_t { const double v = x87::acos((double)x); uint64_t u; std::memcpy(&u, &v, 8); return u; },
+            [&]() -> uint64_t { const double v = ExeAcos((double)x); uint64_t u; std::memcpy(&u, &v, 8); return u; }, &BuildNone);
+    KEND(2000)
     KROW("IKChain_c::MoveBonesToTarget", 0x6178B0, 0)
         return KCase(r, d, [&]() -> uint64_t { (Ch()->*W2Get(W3K_Move{}))(); return 0; }, [&]() -> uint64_t { ExeThis<void>(0x6178B0, Ch()); return 0; }, &BuildMove, false, true);
     KEND(1500)

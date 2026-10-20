@@ -137,6 +137,7 @@ static bool KCase(Rng& r, std::string& d, PF&& pf, EF&& ef, void (*build)(Rng&) 
 #include "wave3_oracle_ik_a.inc"   // BoneNode_c, BoneNodeManager_c
 #include "wave3_oracle_ik_b.inc"   // IKChain_c, IKChainManager_c
 #include "wave3_oracle_ik_c.inc"   // CalcWldMat, MoveBonesToTarget
+#include "wave3_oracle_ik_dbg.inc" // developer probe (W3K_PROBE=1)
 
 namespace w3k {
 static uint8_t g_engine[0x1000];   // stand-in for the exe's RwEngineInstance (0xC97B24): the allocator hooks and the plugin data the exe's RwV3d / RwMatrix code reads
@@ -183,6 +184,7 @@ static void TestW3IkAll() {
             std::printf("  normalise probe: %d of 3000 differ\n", badN);
         }
     }
+    if (std::getenv("W3K_PROBE")) { w3k::ProbeMove(); return; }
     TestW3IkA();
     TestW3IkB();
     TestW3IkC();

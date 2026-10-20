@@ -47,7 +47,7 @@ void CTagManager::ShutdownForRestart() {
         ms_numTags = 0;
     }
 #else
-    for (auto& tag : ms_tagDesc) {
+    for (auto& tag : GetTags()) { // exe 0x49CC60 clears only the first ms_numTags entries (not the whole array)
         tag.Alpha = 0;
     }
 #endif

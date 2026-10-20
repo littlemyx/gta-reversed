@@ -324,7 +324,7 @@ void ClearThisPrint_Impl(std::array<tMessage, N>& messages, const GxtChar* text,
 // 0x69EA30
 void CMessages::ClearThisPrint(const GxtChar* text) {
     ClearThisPrint_Impl(BriefMessages, text, [](tMessage& msg) {
-        if (!msg.Text) {
+        if (!msg.Text || !msg.PreviousBrief) { // the exe tests the new front message's PreviousBrief byte (+0x2C)
             return;
         }
         AddToPreviousBriefArray(

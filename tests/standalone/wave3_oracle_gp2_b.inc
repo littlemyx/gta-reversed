@@ -21,13 +21,21 @@ static void TestW3Gp2Shopping() {
     };
     GROW("CShopping::FindItem", 0x49AD20)
         uint32_t key = 0;
-        g_post = [&](Rng& rr) { Tables(rr); int32_t n = StaticRef<int32_t>(kNumPrices); if (n < 1) { n = 1; StaticRef<int32_t>(kNumPrices) = 1; } key = StaticRef<uint32_t>(kPrices + 0x18 * rr.below((uint32_t)n)); };
-        return VCase(r, d, [&]() -> uint64_t { return (uint32_t)CShopping::FindItem(key); }, [&]() -> uint64_t { return ExeC<uint32_t, uint32_t>(0x49AD20, key); });
+        g_post = [&](Rng& rr) {
+            Tables(rr); int32_t n = StaticRef<int32_t>(kNumPrices);
+            if (rr.below(4) == 0) { key = rr.u32(); if (rr.below(3) == 0) key = 0; return; }     // absent key (exe: -1; n may be 0): the scan finds nothing, or a zero key in a zeroed row
+            if (n < 1) { n = 1; StaticRef<int32_t>(kNumPrices) = 1; }
+            key = StaticRef<uint32_t>(kPrices + 0x18 * rr.below((uint32_t)n)); };
+        g_portFaultIsDiff = true;   // absent key: the exe returns -1, the port must not reach NOTSA_UNREACHABLE (unresolved symbol in this link = fault at 0x400000)
+        const bool ok = VCase(r, d, [&]() -> uint64_t { return (uint32_t)CShopping::FindItem(key); }, [&]() -> uint64_t { return ExeC<uint32_t, uint32_t>(0x49AD20, key); });
+        g_portFaultIsDiff = false; return ok;
     GEND(2000)
     GROW("CShopping::GetItemIndex", 0x49AB10)
         uint32_t key = 0;
-        g_post = [&](Rng& rr) { Tables(rr); key = StaticRef<uint32_t>(kKeys + 4 * rr.below(560)); };
-        return VCase(r, d, [&]() -> uint64_t { return (uint32_t)CShopping::GetItemIndex(key); }, [&]() -> uint64_t { return ExeC<uint32_t, uint32_t>(0x49AB10, key); });
+        g_post = [&](Rng& rr) { Tables(rr); key = rr.below(4) == 0 ? rr.u32() : StaticRef<uint32_t>(kKeys + 4 * rr.below(560)); };     // 1 in 4: a random key, absent (exe: -1)
+        g_portFaultIsDiff = true;   // absent key: the exe returns -1, the port must not reach NOTSA_UNREACHABLE (unresolved symbol in this link = fault at 0x400000)
+        const bool ok = VCase(r, d, [&]() -> uint64_t { return (uint32_t)CShopping::GetItemIndex(key); }, [&]() -> uint64_t { return ExeC<uint32_t, uint32_t>(0x49AB10, key); });
+        g_portFaultIsDiff = false; return ok;
     GEND(2000)
     GROW("CShopping::SetPlayerHasBought", 0x49B610)
         uint32_t key = 0;

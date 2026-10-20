@@ -150,7 +150,8 @@ bool CGangWars::CanPlayerStartAGangWarHere(CZoneInfo* zoneInfo) {
         return true;
 
     for (const auto zone : GetSpecificZones()) {
-        if (zoneInfo == CTheZones::GetZoneInfo(CTheZones::GetNavigationZone(zone))) {
+        // 0x443FB6: &ZoneInfoArray[navZone.m_ZoneInfoIndex] with no null-for-index-0 special case and no bounds check (CTheZones::GetZoneInfo(const CZone*) returns nullptr for index 0)
+        if (zoneInfo == CTheZones::ZoneInfoArray.data() + CTheZones::GetNavigationZone(zone)->m_ZoneInfoIndex) {
             return true;
         }
     }

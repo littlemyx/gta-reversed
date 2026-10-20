@@ -15,6 +15,11 @@ template struct W2Rob<W3K_GetId, &BoneNode_c::GetIdFromBoneTag>;
 struct W3K_GetBoneNode { using type = BoneNode_c* (IKChain_c::*)(eBoneTag32); friend type W2Get(W3K_GetBoneNode); };
 template struct W2Rob<W3K_GetBoneNode, &IKChain_c::GetBoneNodeFromTag>;
 
+struct W3K_MgrCtor { using type = BoneNodeManager_c* (BoneNodeManager_c::*)(); friend type W2Get(W3K_MgrCtor); };
+template struct W2Rob<W3K_MgrCtor, &BoneNodeManager_c::Constructor>;
+struct W3K_MgrDtor { using type = BoneNodeManager_c* (BoneNodeManager_c::*)(); friend type W2Get(W3K_MgrDtor); };
+template struct W2Rob<W3K_MgrDtor, &BoneNodeManager_c::Destructor>;
+
 namespace w3k {
 using namespace w2;
 constexpr size_t kFxSize = 0x1000;                   // compared region (the fixture)

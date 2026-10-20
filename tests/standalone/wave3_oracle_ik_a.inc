@@ -93,6 +93,17 @@ static void TestW3IkA() {
         return KCase(r, d, [&]() -> uint64_t { Nd(0)->AddChild(Nd(1)); return 0; }, [&]() -> uint64_t { ExeThis<void, void*>(0x616BD0, Nd(0), Nd(1)); return 0; }, &BuildAddChild);
     KEND(300)
     // ---- BoneNodeManager_c (the exe's global g_boneNodeMan: 128 nodes + free list)
+    KROW("BoneNodeManager_c::Constructor", 0x617330, 0)
+        const uint32_t seed = r.u32() | 1;
+        FillGarbage(r, reinterpret_cast<void*>(kMgr), 0x4C0C);   // the object memory starts as garbage; lenient compare (the ctor of 128 nodes leaves their non-link fields alone in the port)
+        Reg mgr{ kMgr, 0x4C0C }; mgr.lenient = true;
+        Reg img{ kImgLo, kImgHi - kImgLo }; img.mask.assign(kImgHi - kImgLo, 0); for (size_t k = 0; k < 0x4C0C; ++k) img.mask[kMgr - kImgLo + k] = 1;
+        return BothA(d, seed, { mgr, img }, [&]() -> uint64_t { return U((g_boneNodeMan.*W2Get(W3K_MgrCtor{}))()); }, [&]() -> uint64_t { return U(ExeThis<void*>(0x617330, &g_boneNodeMan)); });
+    KEND(40)
+    KROW("BoneNodeManager_c::Destructor", 0x617390, 0)
+        s_k = (int)r.below(9);
+        return KCase(r, d, [&]() -> uint64_t { (void)(g_boneNodeMan.*W2Get(W3K_MgrDtor{}))(); return 0; }, [&]() -> uint64_t { ExeThis<void>(0x617390, &g_boneNodeMan); return 0; }, &BuildMgrK);
+    KEND(40)
     KROW("BoneNodeManager_c::Init", 0x6173F0, 0)
         return KCase(r, d, [&]() -> uint64_t { return g_boneNodeMan.Init() ? 1 : 0; }, [&]() -> uint64_t { return (uint8_t)ExeThis<uint32_t>(0x6173F0, &g_boneNodeMan) ? 1 : 0; }, &BuildMgr0);
     KEND(60)

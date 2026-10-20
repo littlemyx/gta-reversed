@@ -66,14 +66,18 @@ void FxInfoAttractLine_c::GetValue(float currentTime, float mult, float totalTim
 
     auto& movement = *static_cast<MovementInfo_t*>(info);
     FindClosestPtOnLine(out, lineA, lineB, movement.m_Pos);
+    // The exe uses RenderWare's table-based RwV3dLength (0x7EDAC0) / RwV3dNormalize (0x7ED9B0), not sqrtf, and scales the direction by (values[6] * totalTime)
     CVector in = out - movement.m_Pos;
-    auto dist = in.Magnitude();
+    const float dist = RwV3dLength(&in);
 
     if (dist > 0.0f) {
-        in.Normalise();
+        RwV3dNormalize(&in, &in);
     }
 
     if (dist > 0.1f) {
-        movement.m_Vel += in * values[6] * totalTime;
+        const float strength = values[6] * totalTime;
+        movement.m_Vel.x += in.x * strength;
+        movement.m_Vel.y += in.y * strength;
+        movement.m_Vel.z += in.z * strength;
     }
 }

@@ -809,7 +809,7 @@ void CControllerConfigManager::ReinitControls() {
 
 // 0x52F590
 void CControllerConfigManager::SetMouseButtonAssociatedWithAction(eControllerAction action, KeyCode button) {
-    ResetSettingOrder(action);
+    // (unlike SetControllerKeyAssociatedWithAction the exe does NOT call ResetSettingOrder here)
     const auto numOfSettings = GetNumOfSettingsForAction(action);
     m_Actions[+action].Keys[+eControllerType::MOUSE].m_uiActionInitiator = button;
     m_Actions[+action].Keys[+eControllerType::MOUSE].m_uiSetOrder = eContSetOrder(+numOfSettings + 1);

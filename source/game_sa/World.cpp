@@ -293,12 +293,13 @@ void CWorld::FindObjectsInRangeSectorList(PtrListType& ptrList, const CVector& p
 
         entity->SetCurrentScanCode();
 
+        // exe: `fcomp radiusSq` + `test ah, 5` / `jp`: only an ordered "less" counts, so a distance EQUAL to radius^2 or a NaN one is out
         if (b2D) {
-            if (DistanceBetweenPointsSquared2D(CVector2D{ point }, entity->GetPosition()) > radiusSq) {
+            if (!(DistanceBetweenPointsSquared2D(CVector2D{ point }, entity->GetPosition()) < radiusSq)) {
                 continue;
             }
         } else {
-            if (DistanceBetweenPointsSquared(point, entity->GetPosition()) > radiusSq) {
+            if (!(DistanceBetweenPointsSquared(point, entity->GetPosition()) < radiusSq)) {
                 continue;
             }
         }

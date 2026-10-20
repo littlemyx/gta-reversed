@@ -1149,20 +1149,27 @@ void CControllerConfigManager::AffectPadFromKeyBoard() {
 
     const auto inMenu = !CPad::padNumber && !FrontEndMenuManager.m_bMenuActive;
     for (auto& action : m_Actions) {
-        // Handle key press logic
+        // Presses of both key types first ...
         for (const auto& type : CONTROLLER_TYPES_KEYBOARD) {
             const auto key = action.Keys[+type].m_uiActionInitiator;
 
             if (GetIsKeyboardKeyDown(key) && inMenu && !GetIsKeyBlank(key, type)) {
-                if (inMenu) {
-                    AffectControllerStateOn_ButtonDown(key, type);
-                }
-                auto* pad = CPad::GetPad();
-                if (!pad || FrontEndMenuManager.m_bMenuActive) {
-                    continue;
-                }
-                AffectControllerStateOn_ButtonUp_All_Player_States(key, type, GetControllerState(*pad, type));
+                AffectControllerStateOn_ButtonDown(key, type);
             }
+        }
+        // ... then the release (a key that is NOT down): the exe handles the optional key only when the primary key IS down (if / else if)
+        const auto Release = [&](eControllerType type) {
+            const auto key = action.Keys[+type].m_uiActionInitiator;
+            if (!GetIsKeyboardKeyDown(key)) {
+                if (auto* pad = CPad::GetPad(); pad && !GetIsKeyBlank(key, type) && !FrontEndMenuManager.m_bMenuActive) {
+                    AffectControllerStateOn_ButtonUp_All_Player_States(key, type, GetControllerState(*pad, type));
+                }
+            }
+        };
+        if (!GetIsKeyboardKeyDown(action.Keys[+eControllerType::KEYBOARD].m_uiActionInitiator)) {
+            Release(eControllerType::KEYBOARD);
+        } else {
+            Release(eControllerType::OPTIONAL_EXTRA_KEY);
         }
     }
 }

@@ -1,5 +1,11 @@
 // ORACLE-W3-AI rows: Cover.cpp (classes A + B). CCover::m_Points (100 x 0x1C at 0xC197C8) holds cover points whose entities / covered peds are entities of the reference world (registered references), the processed-building list
 // uses the double-link node pool. CalculateHorizontalSize / DoLineCheckWithinObject / FindVectorFromFirstToMissingVertex are skipped: the port bodies are NOTSA_UNREACHABLE / unused (never called by the game).
+#include "Formation.h"
+// Formation.cpp is not part of this test: the port's call from CCoverPoint::FindCoordinatesCoverPoint (VEHICLE points) goes to the exe's CFormation::FindCoverPointsBehindBox
+// (0x699FF0, cdecl), so that the row compares only the code of the cover point itself.
+void CFormation::FindCoverPointsBehindBox(CPointList* outPoints, CVector target, CMatrix* mat, const CVector& center, const CVector& bbMin, const CVector& bbMax, float cutoffDist) {
+    oracle::Fn<void __cdecl(void*, CVector, void*, const void*, const void*, const void*, float)>(0x699FF0)(outPoints, target, mat, &center, &bbMin, &bbMax, cutoffDist);
+}
 namespace w3a {
 constexpr uintptr_t kCovPts = 0xC197C8, kCovNum = 0xC197A4, kCovList = 0xC1A2B8;
 static uint8_t* Cpt(int i) { return reinterpret_cast<uint8_t*>(kCovPts + (uintptr_t)i * 0x1C); }
@@ -105,14 +111,31 @@ static void TestW3AiCover() {
         return UCase(r, d, [&]() -> uint64_t { return U(CCover::FindAndReserveCoverPoint(reinterpret_cast<CPed*>(S(oPedA)), *reinterpret_cast<CVector*>(S(oOut)), attack)); },
                            [&]() -> uint64_t { return U(oracle::Fn<void* __cdecl(void*, void*, int)>(0x6992B0)(S(oPedA), S(oOut), (int)attack)); });
     } ENDROW;
-    if (std::getenv("W3A_PENDING")) {   // port differs structurally from the exe (see ORACLE-W3-AI.md): rows kept, off by default
     ROW("CCover::FindCoordinatesCoverPoint", 0x699570, 2500) {
         const int k = (int)r.below(10); const CVector target = Vec(r, 300.f, 14);
-        Tu tu([&](Rng& rr) { CoverWorld(rr, 10); pedWorld(rr); std::memcpy(S(oOut), &target, 12); FillGarbage(rr, S(oOut + 0x20), 12); for (int i = 0; i < 10; ++i) if (rr.below(2)) { uint8_t* p = Cpt(i); const uint32_t pp = (uint32_t)(uintptr_t)S(oPedA); std::memcpy(p + 0x14, &pp, 4); } }, true);
+        Tu tu([&](Rng& rr) {
+            CoverWorld(rr, 10); pedWorld(rr); std::memcpy(S(oOut), &target, 12); FillGarbage(rr, S(oOut + 0x20), 12);
+            for (int i = 0; i < 10; ++i) if (rr.below(2)) { uint8_t* p = Cpt(i); const uint32_t pp = (uint32_t)(uintptr_t)S(oPedA); std::memcpy(p + 0x14, &pp, 4); }
+            // OBJECT / VEHICLE points: the entities of the reference world get a model info with a col model (two of them), and (mostly) a matrix next to the target so that
+            // CFormation::FindCoverPointsBehindBox finds its two points; a few keep no matrix (the position comes from the placement)
+            ModelInfoFor(rr, 0, 700, 5.f); ModelInfoFor(rr, 1, 701, 5.f);
+            for (int i = 0; i < 10; ++i) {
+                CEntity* e = At<CEntity*>(kCovPts + (uintptr_t)i * 0x1C + 0x10);
+                if (!e) continue;
+                e->m_nModelIndex = (uint16_t)(700 + rr.below(2));
+                if (rr.below(5) != 0) {
+                    auto* m = reinterpret_cast<CMatrix*>(Mat(rr, 4 + (int)i));
+                    m->GetPosition() = target + CVector((rr.f01() - 0.5f) * 30.f, (rr.f01() - 0.5f) * 30.f, (rr.f01() - 0.5f) * 10.f);
+                    *reinterpret_cast<void**>(reinterpret_cast<uint8_t*>(e) + 0x14) = m;
+                } else {
+                    *reinterpret_cast<void**>(reinterpret_cast<uint8_t*>(e) + 0x14) = nullptr;
+                    e->GetPosition() = target + CVector((rr.f01() - 0.5f) * 30.f, (rr.f01() - 0.5f) * 30.f, 0.f);
+                }
+            }
+        }, true);
         return UCase(r, d, [&]() -> uint64_t { return B8(CCover::FindCoordinatesCoverPoint(*reinterpret_cast<CCoverPoint*>(Cpt(k)), reinterpret_cast<CPed*>(S(oPedA)), *reinterpret_cast<CVector*>(S(oOut)), *reinterpret_cast<CVector*>(S(oOut + 0x20)))); },
                            [&]() -> uint64_t { return B8(oracle::Fn<bool __cdecl(void*, void*, void*, void*)>(0x699570)(Cpt(k), S(oPedA), S(oOut), S(oOut + 0x20))); });
     } ENDROW;
-    }
     ROW("CCover::ShouldThisBuildingHaveItsCoverPointsCreated", 0x699230, 2500) {
         Tu tu([&](Rng& rr) {
             Ent(rr, oObjA, 3, 1, 700, 0x100, false);      // a building (type 1) with a col model

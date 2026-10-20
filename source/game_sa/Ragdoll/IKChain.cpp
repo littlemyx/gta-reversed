@@ -45,30 +45,36 @@ bool IKChain_c::Init(
     float        speed,
     int32        priority
 ) {
-    m_Ped = ped;
+    // 0x618379: the exe only STORES the ped here; the reference to it is registered after every check has passed (0x618404), so a failing Init leaves no reference behind
+    m_Ped = nullptr; // (the port also drops a reference a re-used chain still holds: the exe never did)
+    *reinterpret_cast<CPed**>(std::addressof(m_Ped)) = ped;
 
-    const auto frames = m_Ped->GetAnimBlendData().GetFrames();
+    const auto frames = ped->GetAnimBlendData().GetFrames();
 
     if (frames[0].NeedsKeyFrameUpdate || !frames[0].IsUpdatingFrame) {
         return false;
     }
 
-    if (!m_Ped->bHasBeenRendered) { // Bone data isn't present yet in this case
+    if (!ped->bHasBeenRendered) { // Bone data isn't present yet in this case
         return false;
     }
 
     // Check if frame of this bone has non-zero translation
     {
-        const auto& boneFrame = frames[RpHAnimIDGetIndex(&m_Ped->GetAnimHierarchy(), (RwInt32)effectorBone)].KeyFrame;
+        const auto& boneFrame = frames[RpHAnimIDGetIndex(&ped->GetAnimHierarchy(), (RwInt32)effectorBone)].KeyFrame;
         if (boneFrame->t.IsZero()) {
             return false;
         }
     }
 
+    ped->RegisterReference(reinterpret_cast<CEntity**>(std::addressof(m_Ped))); // 0x618404
+    m_Bones = nullptr; // 0x61842B
+
     SetupBones(effectorBone, effectorPos, pivotBone, frames);
     UpdateEntity(entity);
 
     m_EffectorPos  = effectorPos;
+    m_Blend        = 0.f; // 0x61844F
     m_EffectorBone = effectorBone;
     m_OffsetBone   = offsetBone;
     m_OffsetPos    = offsetPos;

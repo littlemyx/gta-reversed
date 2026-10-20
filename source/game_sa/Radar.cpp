@@ -810,12 +810,12 @@ bool CRadar::DisplayThisBlip(eRadarSprite spriteId, int8 priority) {
 /*!
  * @brief Changes the brightness of a blip. (Unused)
  * @param blip Blip handle
- * @param brightness Brightness flag. (=1: bright, ≠1: not bright)
+ * @param brightness Brightness flag. (=1: not bright (dim), ≠1: bright)
  * @addr 0x583C70
  */
 void CRadar::ChangeBlipBrightness(tBlipHandle blip, int32 brightness) {
     if (const auto index = GetActualBlipArrayIndex(blip); index != -1) {
-        ms_RadarTrace[index].m_bBright = brightness == 1 ? true : false;
+        ms_RadarTrace[index].m_bBright = brightness == 1 ? false : true; // 0x583CA1: brightness == 1 CLEARS the bright bit (and byte [+0x25], 0xFE), anything else sets it
     }
 }
 

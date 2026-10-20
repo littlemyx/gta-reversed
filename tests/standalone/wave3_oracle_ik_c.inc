@@ -43,6 +43,38 @@ static void TestW3IkC() {
     KROW("BoneNode_c::CalcWldMat", 0x616CD0, 0)
         return KCase(r, d, [&]() -> uint64_t { Nd(0)->CalcWldMat(reinterpret_cast<const RwMatrix*>(P(kPivotMat))); return 0; }, [&]() -> uint64_t { ExeThis<void, void*>(0x616CD0, Nd(0), P(kPivotMat)); return 0; }, &BuildTree, false, true);
     KEND(800)
+    // ---- the RenderWare maths the IK solver calls (shim vs the exe's own code), on the same kind of inputs: vectors / rigid matrices / unit quaternions of the fixture
+    const auto BuildRw = [](Rng& r) {
+        BuildTree(r);
+        for (int k = 0; k < 3; ++k) { At<float>(kOut + 0x40 + 4 * k) = FinF(r, 10.f); At<float>(kOut + 0x50 + 4 * k) = r.below(2) ? FinF(r, 1.f) : FinF(r, 100.f); }
+        RandQuatAt(r, reinterpret_cast<float*>(P(kOut + 0x60)), r.below(3) != 0);
+    };
+    static void (*const pBuildRw)(Rng&) = +BuildRw;
+    KROW("RwV3dTransformVector", 0x7EDDC0, 0)
+        return KCase(r, d, [&]() -> uint64_t { return U(RwV3dTransformVector(&At<RwV3d>(kOut), &At<RwV3d>(kOut + 0x40), reinterpret_cast<const RwMatrix*>(P(kNode + oWld)))); },
+            [&]() -> uint64_t { return U(oracle::Fn<void* __cdecl(void*, void*, void*)>(0x7EDDC0)(P(kOut), P(kOut + 0x40), P(kNode + oWld))); }, pBuildRw, false, true);
+    KEND(800)
+    KROW("RwV3dNormalize", 0x7ED9B0, 0)
+        return KCase(r, d, [&]() -> uint64_t { return FB(RwV3dNormalize(&At<RwV3d>(kOut), &At<RwV3d>(kOut + 0x50))); },
+            [&]() -> uint64_t { return FB(oracle::Fn<float __cdecl(void*, void*)>(0x7ED9B0)(P(kOut), P(kOut + 0x50))); }, pBuildRw, false, true);
+    KEND(800)
+    KROW("RwV3dLength", 0x7EDAC0, 0)
+        return KCase(r, d, [&]() -> uint64_t { return FB(RwV3dLength(&At<RwV3d>(kOut + 0x50))); },
+            [&]() -> uint64_t { return FB(oracle::Fn<float __cdecl(void*)>(0x7EDAC0)(P(kOut + 0x50))); }, pBuildRw, false, true);
+    KEND(800)
+    KROW("RtQuatConvertFromMatrix", 0x7EB5C0, 0)
+        return KCase(r, d, [&]() -> uint64_t { return RtQuatConvertFromMatrix(&At<RtQuat>(kOut), reinterpret_cast<const RwMatrix*>(P(kNode + oWld))) ? 1 : 0; },
+            [&]() -> uint64_t { return oracle::Fn<int __cdecl(void*, void*)>(0x7EB5C0)(P(kOut), P(kNode + oWld)) ? 1 : 0; }, pBuildRw, false, true);
+    KEND(1000)
+    KROW("RtQuatTransformVectors", 0x7EBBB0, 0)
+        return KCase(r, d, [&]() -> uint64_t { return U(RtQuatTransformVectors(&At<RwV3d>(kOut), &At<RwV3d>(kOut + 0x50), 1, &At<RtQuat>(kOut + 0x60))); },
+            [&]() -> uint64_t { return U(oracle::Fn<void* __cdecl(void*, void*, int, void*)>(0x7EBBB0)(P(kOut), P(kOut + 0x50), 1, P(kOut + 0x60))); }, pBuildRw, false, true);
+    KEND(800)
+    KROW("RtQuatRotate", 0x7EB7C0, 0)
+        const float ang = FinF(r, r.below(2) ? 5.f : 360.f);
+        return KCase(r, d, [&]() -> uint64_t { return U(RtQuatRotate(&At<RtQuat>(kOut + 0x60), &At<RwV3d>(kOut + 0x50), ang, rwCOMBINEPOSTCONCAT)); },
+            [&]() -> uint64_t { return U(oracle::Fn<void* __cdecl(void*, void*, float, int)>(0x7EB7C0)(P(kOut + 0x60), P(kOut + 0x50), ang, 2)); }, pBuildRw, false, true);
+    KEND(1000)
     KROW("IKChain_c::MoveBonesToTarget", 0x6178B0, 0)
         return KCase(r, d, [&]() -> uint64_t { (Ch()->*W2Get(W3K_Move{}))(); return 0; }, [&]() -> uint64_t { ExeThis<void>(0x6178B0, Ch()); return 0; }, &BuildMove, false, true);
     KEND(1500)

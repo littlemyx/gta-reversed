@@ -7,6 +7,7 @@
 #include "Ragdoll/BoneNode.h"
 #include "Ragdoll/BoneNodeManager.h"
 #include "Ragdoll/IKChainManager.h"
+#include "standalone/rw/rwmath_exact.h"
 
 // private members through explicit instantiation (W2Rob, wave2_oracle_common.inc)
 struct W3K_GetId { using type = int32 (*)(eBoneTag32); friend type W2Get(W3K_GetId); };
@@ -46,6 +47,7 @@ static float SpF(Rng& r, float scale) {
     }
     return (r.f01() * 2.f - 1.f) * scale;
 }
+static float FinF1(Rng& r) { return r.f01() * 2.f - 1.f; }
 static float FinF(Rng& r, float scale) { return (r.f01() * 2.f - 1.f) * scale; }
 static float AngF(Rng& r) { return r.below(8) == 0 ? 0.f : FinF(r, r.below(4) ? 120.f : 180.f); }
 static void RandQuatAt(Rng& r, float* q4, bool unit) {
@@ -101,6 +103,7 @@ static int g_n = 0;
 static void BuildChain(Rng& r) {
     BuildNodes(r);
     g_n = 1 + (int)r.below((uint32_t)kMaxN);
+    if (const char* e = std::getenv("W3K_N")) g_n = std::atoi(e);   // debugging knob: fixed chain length
     for (int i = 0; i < g_n; ++i) At<BoneNode_c*>(kBoneArr + 4 * i) = Nd(i);
     At<int32_t>(kChain + cCount) = g_n; At<void*>(kChain + cBones) = P(kBoneArr);
     At<float>(kChain + cBlend) = r.below(4) == 0 ? (r.below(2) ? 1.f : 0.98f) : r.f01() * 1.2f;
@@ -156,6 +159,30 @@ static void TestW3IkAll() {
     (void)spdlog::default_logger_raw();   // the default logger is created lazily by the first NOTSA_LOG_* of the port: do it outside the redirected allocator
     spdlog::set_level(spdlog::level::off);   // "bone tag not found" warnings (IKChain_c::GetBoneNodeFromTag) would allocate in the port only
     w3k::InitExeRw();
+    if (std::getenv("W3K_DUMPTAB")) {   // debugging: compare the exe's sqrt tables (built by its own plugin constructor) with the shim's
+        const uint32_t off = (uint32_t)StaticRef<int32_t>(0xC97934);
+        const uint32_t* const* tp = reinterpret_cast<const uint32_t* const*>(w3k::g_engine + off);
+        unsigned pcOld = 0, pcTmp = 0;
+        if (std::getenv("W3K_PC24TAB")) { _controlfp_s(&pcOld, 0, 0); _controlfp_s(&pcTmp, _PC_24, _MCW_PC); }   // the game runs at PC=24 when the shim first needs its tables
+        const auto& T = rwx::Tables();
+        if (std::getenv("W3K_PC24TAB")) _controlfp_s(&pcTmp, pcOld, _MCW_PC);
+        int bad1 = 0, bad2 = 0, shown = 0;
+        for (int i = 0; i < 4096; ++i) {
+            if (tp[0][i] != T.sq[i]) { ++bad1; if (shown++ < 6) std::printf("  sq[%d] exe %08X shim %08X\n", i, tp[0][i], T.sq[i]); }
+            if (tp[1][i] != T.isq[i]) { ++bad2; if (shown++ < 12) std::printf("  isq[%d] exe %08X shim %08X\n", i, tp[1][i], T.isq[i]); }
+        }
+        std::printf("  sqrt tables: sq mismatches %d, isq mismatches %d (of 4096)\n", bad1, bad2);
+        { // normalise probe
+            Rng rr(777); int shownN = 0, badN = 0;
+            for (int n = 0; n < 3000; ++n) {
+                auto M = [&] { return (rr.below(2) ? 1.f : 100.f) * w3k::FinF1(rr); }; alignas(16) float in[4] = { M(), M(), M(), 0.f }, po[4] = {}, eo[4] = {};
+                RwV3dNormalize(reinterpret_cast<RwV3d*>(po), reinterpret_cast<const RwV3d*>(in));
+                oracle::Fn<float __cdecl(void*, void*)>(0x7ED9B0)(eo, in);
+                if (std::memcmp(po, eo, 12)) { ++badN; if (shownN++ < 4) { uint32_t b[9]; std::memcpy(b, in, 12); std::memcpy(b + 3, po, 12); std::memcpy(b + 6, eo, 12); std::printf("  norm in %08X %08X %08X port %08X %08X %08X exe %08X %08X %08X\n", b[0], b[1], b[2], b[3], b[4], b[5], b[6], b[7], b[8]); } }
+            }
+            std::printf("  normalise probe: %d of 3000 differ\n", badN);
+        }
+    }
     TestW3IkA();
     TestW3IkB();
     TestW3IkC();

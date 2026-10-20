@@ -69,3 +69,33 @@ Switch off (default): wave2_oracle_test, wave3_anim/audio/camera/events/gameplay
 | vehicle | CBmx::LaunchBunnyHopCB 0x6C0390 | 32/120 | unlinked callee | CStats::GetFatAndMuscleModifier | FIXTURE (callee TU not linked into the test; not a trap) |
 | vehicle | CVehicle::ActivateBomb 0x6D24F0 | 18/120 | unlinked callee | CGarages::TriggerMessage | FIXTURE (callee TU not linked into the test; not a trap) |
 | vehicle | CVehicle::ProcessSirenAndHorn 0x6E0950 | 16/120 | unlinked callee | CPad::GetHorn | FIXTURE (callee TU not linked into the test; not a trap) |
+
+## Callees (LINK-CALLEES, 2026-10-20/21, rules v3, 23:25 - ~00:50)
+All 26 unlinked-callee rows now run to the end: `W2_PORT_FAULT_IS_DIFF=1` port-only faults 0 in every affected target (full runs of wave2 rows, anim, camera, events, gameplay, ped, tasks, ui, vehicle: PC24 0;
+remaining TRAPAUDIT lines are `both`/`exe-only` faults (the exe faults too: fixture limits) and the 17 UNREACHABLE rows). Fix = link the callee TU (`target_sources(... PRIVATE ...)` after the target in
+source/CMakeLists.txt) or forward the call to the exe inside the test (2 cases). Port-only before -> after (cases of 2*N):
+| target | row | callee | how | port-only |
+|---|---|---|---|---|
+| wave2 | DestroyCar::CreateFirstSubTask / DestroyCarArmed::CreateFirstSubTask | CWeapon::IsTypeMelee / GetWeaponInfo | link Weapon.cpp, WeaponInfo.cpp | 90 / 104 -> 0 |
+| wave2 | EnterCarAsDriverTimed::ControlSubTask | CTaskSimpleCarSetPedInAsDriver ctor | link TaskSimpleCarSetPedInAsDriver.cpp | 8 -> 0 |
+| wave2 | PartnerChat::MakeAbortable / UseMobilePhone::MakeAbortable | CAEPedSpeechAudioEntity::ReleasePedConversation / CWeaponInfo::GetWeaponInfo | link AEPedSpeechAudioEntity.cpp / WeaponInfo.cpp | 30 / 48 -> 0 |
+| wave2 | CarFallOut::FinishAnimFallOutCB / CarWaitForDoorNotToBeInUse::ProcessPed | CDamageManager::SetDoorClosed_Component / CCarEnterExit::IsCarDoorInUse | link DamageManager.cpp, CarEnterExit.cpp | 106 / 100 -> 0 |
+| anim | CAnimBlendSequence / Hierarchy::MoveMemory | CMemoryMgr::MoveMemory | forward to exe 0x72F500 (MemoryMgr.cpp collides with the harness allocator: LNK2005) | 122 / 164 -> 0 |
+| camera | CCam::GetCoreDataForDWCineyCamMode | TransformPoint (via CEntity::TransformFromObjectSpace) | link common.cpp | 236 -> 0 |
+| events / tasks | WantsToRiotAgainst / WillChat | CPedType::GetPedFlag | link PedType.cpp | 32 / 16 -> 0 |
+| tasks | PersistPursuit / ScanForBlockedNode- | CCullZones::NoPolice / CVehicleScanner::GetClosestVehicleInRange | link CullZones.cpp, VehicleScanner.cpp | 12 / 60 -> 0 (18 `both` remain: exe faults too) |
+| gameplay / ped | RemoveMember-ByMemIdx / FlagToDestroyWhenNextProcessed | CRadar::ClearBlipForEntity | link Radar.cpp | 182 / 2 -> 0 |
+| gameplay | CanPlayerStartAGangWarHere / StoreCarInNearestImpoundingGarage | CTheZones::GetNavigationZone / CVehicleModelInfo::GetNumRemaps | link TheZones.cpp, VehicleModelInfo.cpp | 102 / 90 -> 0 |
+| gameplay | CGarages::Init_AfterRestart | CAEDoorAudioEntity::Reset -> CAESoundManager::CancelSoundsOwnedByAudioEntity | link AEDoorAudioEntity.cpp + forward to exe 0x4EFCD0 | 118 -> 0 |
+| ui | SetHelpMessageStatUpdate / SetHelpMessageWithNumber / AddBlipToLegendList | AsciiToGxtChar, GxtCharStrcpy / InsertPlayerControlKeysInString -> CControllerConfigManager / CHudColours::GetIntColour | link GxtChar.cpp, ControllerConfigManager.cpp, HudColours.cpp | 404 / 1540 / 170 -> 0 |
+| vehicle | BoostJumpControl / LaunchBunnyHopCB / ActivateBomb / ProcessSirenAndHorn | CPad::HornJustDown, GetHorn / CStats::GetFatAndMuscleModifier / CGarages::TriggerMessage | link Pad.cpp, Stats.cpp, Garages.cpp | 84 / 32 / 18 / 16 -> 0 |
+
+Now-compared code found 3 real port differences (one commit each; pre-fix = PC24 mismatches of the row, post-fix 0):
+* `CHud::SetHelpMessageStatUpdate` 0x588D40: the sign char is '+' for every non-zero state byte (0x588E00-0x588E19), the port tested `== STAT_UPDATE_INCREASE` - 71/1500.
+* `CMessages::InsertPlayerControlKeysInString` 0x69E160: the port was a rewrite (strstr / string_view lookup, unknown tags copied as text, no zero-fill behind the result); ported the exe algorithm
+  (59-entry name table at ControlsManager+0x224, unknown tag: the 4 chars `~k~~` dropped, result copied back + zero-filled to 400 bytes) - row SetHelpMessageWithNumber 188/1500.
+* `CGangWars::CanPlayerStartAGangWarHere` 0x443F80: compares with `&ZoneInfoArray[navZone.m_ZoneInfoIndex]` (no index-0 nullptr, no bounds check; the port went through GetZoneInfo(const CZone*) / a
+  take-view subscript) - new row "(real zone infos)" 167/200 (+49/60 of the generated row), mostly the Debug-only subscript assert.
+Not changed: other `CTheZones::GetZoneInfo(const CZone*)` users (GangWars.cpp:106/693/710/1187, Radar.cpp:1705, ZoneCommands.cpp:19) have the same index-0 nullptr/bounds deviation from the exe asm if the
+exe code at those sites is unchecked - not oracle-covered, follow-up. Harness: `_CrtSetDebugFillThreshold(0)` in main (Debug CRT 0xFE fill of sprintf_s tails), gameplay fixture sets TotalNumberOfNavigationZones.
+Run times with the switch on (3 targets in parallel, nice 15): ui 677 s (the largest target), wave3 camera 377 s, gameplay 72 s, vehicle 157 s, ped 62 s, tasks 44 s, events 49 s.

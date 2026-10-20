@@ -70,3 +70,4 @@ date	agent	rules	kind	tokens	tool_uses	minutes	outcome	notes
 2026-10-19	ORACLE-W3-CAMERA	v3	oracle wave (slice)	439433	216	94	Camera/Cam/IdleCam A/B 37 -> 3 (+34 rows), 8 port fixes (camera behind ped 357/500, jump-cut restore 867/1200, two-player cams)
 2026-10-20	ORACLE-W3-SCRIPTS	v3	oracle wave (1 subsystem)	418035	134	70	Scripts A/B 50 -> 1 (+52 rows), 10 port fixes (searchlights 2463/2500, CRunningScript::Init 200/200, LOD/brain arrays last-free-slot)
 2026-10-20	ORACLE-W3-WORLD	v3	oracle wave (slice)	444609	149	106	world/path/zones/timer +75 rows, 16 port fixes (MarkRegionsForCoors x/y transposed, dynamic links 629/800, TheZones::Init 60/60)
+2026-10-20	ORACLE-W3-PATHS	v3	oracle wave (slice)	417389	173	78	route finding exact (0 fixes), +25 rows, 7 port fixes (water edge clamp 490/1500, RemoveOilInArea 555/1000, nearest-object 453/1500)

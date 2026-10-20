@@ -290,13 +290,28 @@ void BoneNode_c::AddChild(BoneNode_c* children) {
 
 // 0x616CD0
 void BoneNode_c::CalcWldMat(const RwMatrix* boneMatrix) {
-    RwMatrix rotMatrix = [this] {
-        CMatrix mat{};
-        mat.SetRotate(CQuaternion{ m_Orientation });
-        mat.GetPosition() = m_Pos;
-        return mat.ToRwMatrix();
-    }();
+    // The exe builds the rotation inline (no CMatrix::SetRotate): the quaternion is normalised by s = 2 / (((x*x + y*y) + z*z) + w*w) (0x858CA0 = 2.0f), products are
+    // stored as floats in this order (all rounded to 24 bits: the game runs the x87 at PC=24); the matrix is flagged ORTHONORMAL and multiplied with the parent matrix (RwMatrixMultiply 0x7F18B0).
+    const float x = m_Orientation.imag.x, y = m_Orientation.imag.y, z = m_Orientation.imag.z, w = m_Orientation.real;
+    const float s   = 2.0f / (((x * x + y * y) + z * z) + w * w);
+    const float sx  = s * x;
+    const float sy  = s * y;
+    const float sz  = s * z;
+    const float sxw = sx * w;
+    const float syw = sy * w;
+    const float szw = sz * w;
+    const float sxx = sx * x;
+    const float syy = sy * y;
+    const float szz = sz * z;
+    const float szy = sz * y;
+    const float sxz = sx * z;
+    const float syx = sy * x;
 
+    RwMatrix rotMatrix; // (padding words stay indeterminate, as in the exe)
+    rotMatrix.right = { 1.0f - (szz + syy), szw + syx, sxz - syw };
+    rotMatrix.up    = { syx - szw, 1.0f - (szz + sxx), szy + sxw };
+    rotMatrix.at    = { sxz + syw, szy - sxw, 1.0f - (syy + sxx) };
+    rotMatrix.pos   = { m_Pos.x, m_Pos.y, m_Pos.z };
     rwMatrixSetFlags(&rotMatrix, rwMATRIXTYPEORTHONORMAL);
     RwMatrixMultiply(&m_WorldMat, &rotMatrix, boneMatrix);
 

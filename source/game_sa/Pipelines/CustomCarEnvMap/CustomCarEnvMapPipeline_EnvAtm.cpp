@@ -19,9 +19,15 @@ void* CCustomCarEnvMapPipeline::pluginEnvAtmDestructorCB(void* object, int32 off
 
 // 0x5D9780
 void* CCustomCarEnvMapPipeline::pluginEnvAtmCopyConstructorCB(void* dstObject, const void* srcObject, int32 offsetInObject, int32 sizeInObject) {
-    if (auto* const src = EnvMapAtmPlGetData((RpAtomic*)(srcObject))) {
-        if (auto* const dst = AllocEnvMapPipeAtomicData((RpAtomic*)(dstObject))) {
-            *dst = *src;
+    // exe 0x5D9780: slots addressed with the offset ARGUMENT; a missing destination comes straight from the pool (NOT AllocEnvMapPipeAtomicData: no defaults are written) and only
+    // `sizeInObject` bytes are copied (the plugin is registered with size 4: OffsetU only, the rest of the slot keeps whatever it held)
+    if (auto* const src = *RWPLUGINOFFSET(CustomEnvMapPipeAtomicData*, srcObject, offsetInObject)) {
+        auto*& dst = *RWPLUGINOFFSET(CustomEnvMapPipeAtomicData*, dstObject, offsetInObject);
+        if (!dst) {
+            dst = m_gEnvMapPipeAtmDataPool->New();
+        }
+        if (dst) {
+            std::memcpy(dst, src, sizeInObject);
         }
     }
     return dstObject;

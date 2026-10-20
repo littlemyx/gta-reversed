@@ -86,7 +86,7 @@ static void TestW3Audio6() {
     PSR("CAEPedSpeechAudioEntity::CanWePlayScriptedSpeech", 0x4E4950, 600, (int)RobGet(RobScripted{})(), (int)(int16_t)ExeC<int32_t>(0x4E4950));
     PSR("CAEPedSpeechAudioEntity::ReservePedConversationSpeechSlots", 0x4E37F0, 800, RobGet(RobReservePed{})() ? 1 : 0, ExeC<uint8_t>(0x4E37F0) != 0 ? 1 : 0);
     PSR("CAEPedSpeechAudioEntity::ReservePlayerConversationSpeechSlot", 0x4E3870, 800, RobGet(RobReservePlayer{})() ? 1 : 0, ExeC<uint8_t>(0x4E3870) != 0 ? 1 : 0);
-    // CAEPedSpeechAudioEntity::Constructor 0x4E4F10: not a row - see tests/standalone/tools/w3_audio_skip.tsv
+    // CAEPedSpeechAudioEntity::Constructor (4E4F10, no 0x prefix: not a coverage row): see tests/standalone/tools/w3_audio_skip.tsv
     // vehicle: the table lookup takes the model id (400..611; `sub eax, 0x190`), the output struct is the hidden first argument
     Run("CAEVehicleAudioEntity::GetVehicleAudioSettings 0x4F5C10", [&](Rng& r, std::string& d) {
         const int16_t m = (int16_t)(400 + r.below(212)); auto* o1 = P(0x10000); auto* o2 = P(0x10100);

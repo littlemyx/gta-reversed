@@ -7,11 +7,11 @@
 507670	CAudioEngine::Constructor	3-way constructor compare: port leaves bytes the exe zeroes (+0x7C.. of the first sub-entity); not analysed, see the report
 5DE990	CAEWeaponAudioEntity::Constructor	3-way compare: port leaves +0xA0..0xA7 (tail of the object) as it was, the exe zeroes them; not analysed
 507560	CAEWeaponAudioEntity::Destructor	3-way compare mismatches on every case (vptr / member resets), not analysed
-4E4F10	CAEPedSpeechAudioEntity::Constructor	port stores m_PedAudioType = -1 (NSDMI), the exe 0 (+0x92): gated by m_IsInitialized (GetPedType returns UNK while it is 0), benign but the row cannot pass without a mask
+4E4F10	CAEPedSpeechAudioEntity::Constructor	diagnostic run (ORACLE-W3-AUDIO2) on a zeroed object: the exe constructor writes only the speech-level fields (type 0, flags, slots -1, volume -100); the base-class CAEAudioEntity fields (+0x14..+0x78) are initialised by the caller in the exe but by the port constructor (NSDMI), and the port stores m_PedAudioType = -1 (UNK) where the exe stores 0 (read only behind m_IsInitialized); not a row
 4E6070	CAEPedlessSpeechAudioEntity::Constructor	same as 4E4F10
 56DA00	CAEPoliceScannerAudioEntity::Constructor	3-way compare mismatch (member defaults), not analysed
 5074D0	CAEScriptAudioEntity::Constructor	port leaves +0x1ECA/+0x1ECB (tail of the embedded explosion entity), the exe zeroes them; not analysed
-4F63E0	CAEVehicleAudioEntity::Constructor	3-way compare (vehicle audio members use NSDMI defaults), not analysed
+4F63E0	CAEVehicleAudioEntity::Constructor	3-way compare of a garbage object: the port zero-fills / NSDMI-initialises members the exe leaves (AUDIO2: not run)
 728A90	CAEWaterCannonAudioEntity::Constructor	not run
 4DA540	CAECollisionAudioEntity::UpdateLoopingCollisionSound	255 instructions, needs entities + sounds + surface lookups; not written
 4DEDA0	CAEFrontendAudioEntity::UpdateParameters	virtual override with sound/twin-loop state; not written
@@ -20,21 +20,15 @@
 4E4E10	CAEPedlessSpeechAudioEntity::Initialise	`*this = CAEPedlessSpeechAudioEntity{...}` pattern (same class of bug as the fixed TwinLoop / Weapon ones, likely resets the base class); not written
 4E4E80	CAEPedlessSpeechAudioEntity::StopCurrentSpeech	speech slot fixture; not written
 4E6300	CAEPedlessSpeechAudioEntity::Terminate	same pattern as 4E4E10; not written
-4E37F0	CAEPedSpeechAudioEntity::ReservePedConversationSpeechSlots	private; not written
-4E3870	CAEPedSpeechAudioEntity::ReservePlayerConversationSpeechSlot	private; not written
-4E38C0	CAEPedSpeechAudioEntity::RequestPlayerConversation	needs ped fixtures; not written
-4E4200	CAEPedSpeechAudioEntity::GetSexFromModel	needs the model info table; not written
-4E4840	CAEPedSpeechAudioEntity::LoadAndPlaySpeech	hardware + speech slot state; not written
-4E4950	CAEPedSpeechAudioEntity::CanWePlayScriptedSpeech	not written
-4E4AE0	CAEPedSpeechAudioEntity::GetSpeechContextVolumeOffset	128 instructions with 16 CStats::GetStatValue calls; not written
-4E5F10	CAEPedSpeechAudioEntity::CanWePlayGlobalSpeechContext	not written
+4E38C0	CAEPedSpeechAudioEntity::RequestPlayerConversation	needs two ped fixtures (GetSpeechAE, GetPedTalking) and FindPlayerPed; AUDIO2 budget
+4E4200	CAEPedSpeechAudioEntity::GetSexFromModel	needs the ped model info table (CModelInfo array + PedModelInfo objects); AUDIO2 budget
+4E4840	CAEPedSpeechAudioEntity::LoadAndPlaySpeech	hardware + speech slot + sound manager state (259 bytes); needs recording stubs for CAEAudioHardware::PlaySound / LoadSound; AUDIO2 budget
+4E4AE0	CAEPedSpeechAudioEntity::GetSpeechContextVolumeOffset	5 contexts, 2 read CStats::GetStatValue(FAT, MUSCLE): needs Stats.cpp linked into the audio target; AUDIO2 budget
 4E7590	CAEPoliceScannerAudioEntity::UpdateParameters	not written
 4E71B0	CAEPoliceScannerAudioEntity::DisableScanner	with a scanner playing it calls StopScanner (CAESound / speech slot state); the row crashed the harness
-4F5700	CAEVehicleAudioEntity::JustGotInVehicleAsDriver	297 instructions (bank slots, sound manager, radio); not written
-4F7670	CAEVehicleAudioEntity::Initialise	160 instructions, needs a vehicle + model info fixture; not written
-4F8F10	CAEVehicleAudioEntity::ProcessVehicleSkidding	needs wheel/surface fixtures; not written
-500AB0	CAEVehicleAudioEntity::ProcessPlayerTrainBrakes	needs a train + pad fixture; not written
-501AB0	CAEVehicleAudioEntity::ProcessSpecialVehicle	dispatch into the special-vehicle processors; not written
-5B99F0	CAEVehicleAudioEntity::StaticInitialise	29 instructions of bank loads; not written
-4F5EB0	CAEVehicleAudioEntity::UpdateGasPedalAudio	needs CAutomobile / CBike layout fixtures; not written
+4F5700	CAEVehicleAudioEntity::JustGotInVehicleAsDriver	1041 bytes (bank slots, sound manager, radio); AUDIO2 budget
+4F7670	CAEVehicleAudioEntity::Initialise	798 bytes, needs a vehicle + model info + handling fixture; AUDIO2 budget
+4F8F10	CAEVehicleAudioEntity::ProcessVehicleSkidding	933 bytes, wheel / surface fixtures; AUDIO2 budget
+500AB0	CAEVehicleAudioEntity::ProcessPlayerTrainBrakes	train + pad fixture; AUDIO2 budget
+501AB0	CAEVehicleAudioEntity::ProcessSpecialVehicle	dispatch into the special-vehicle processors (hydra / heli / plane / train); AUDIO2 budget
 4E3960	CAEPedSpeechAudioEntity::ReleasePlayerConversation	slot reset: fields equal, padding bytes differ (the port copies an uninitialised temporary): no game-visible difference

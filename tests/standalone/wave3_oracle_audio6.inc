@@ -86,10 +86,7 @@ static void TestW3Audio6() {
     PSR("CAEPedSpeechAudioEntity::CanWePlayScriptedSpeech", 0x4E4950, 600, (int)RobGet(RobScripted{})(), (int)(int16_t)ExeC<int32_t>(0x4E4950));
     PSR("CAEPedSpeechAudioEntity::ReservePedConversationSpeechSlots", 0x4E37F0, 800, RobGet(RobReservePed{})() ? 1 : 0, ExeC<uint8_t>(0x4E37F0) != 0 ? 1 : 0);
     PSR("CAEPedSpeechAudioEntity::ReservePlayerConversationSpeechSlot", 0x4E3870, 800, RobGet(RobReservePlayer{})() ? 1 : 0, ExeC<uint8_t>(0x4E3870) != 0 ? 1 : 0);
-    Run("CAEPedSpeechAudioEntity::Constructor 0x4E4F10", [&](Rng& r, std::string& d) {
-        return ACase(r, d, [&]() -> uint64_t { new (P(0)) CAEPedSpeechAudioEntity(); At<uint32_t>(0) = 0; return 0; }, [&]() -> uint64_t { ExeT<void>(0x4E4F10, P(0)); At<uint32_t>(0) = 0; return 0; },
-            +[](Rng& r) { BuildEnt(r); std::memset(P(0), 0, sizeof(CAEPedSpeechAudioEntity)); });   // vptr (port vtable vs exe 0x85F310) cleared after the call on both sides; zeroed object (fresh pool memory)
-    }, 20);
+    // CAEPedSpeechAudioEntity::Constructor 0x4E4F10: not a row - see tests/standalone/tools/w3_audio_skip.tsv
     // vehicle: the table lookup takes the model id (400..611; `sub eax, 0x190`), the output struct is the hidden first argument
     Run("CAEVehicleAudioEntity::GetVehicleAudioSettings 0x4F5C10", [&](Rng& r, std::string& d) {
         const int16_t m = (int16_t)(400 + r.below(212)); auto* o1 = P(0x10000); auto* o2 = P(0x10100);
@@ -101,6 +98,20 @@ static void TestW3Audio6() {
         return ACase(r, d, [&]() -> uint64_t { OBJ(CAEVehicleAudioEntity)->CAEVehicleAudioEntity::UpdateGasPedalAudio(reinterpret_cast<CVehicle*>(veh), type); return 0; }, [&]() -> uint64_t { ExeT<void>(0x4F5EB0, P(0), (void*)veh, type); return 0; },
             +[](Rng& r) { BuildEnt(r); At<float>(0x10000 + 0x49C) = GenF(r, 2.f); At<float>(0x10000 + 0x808) = GenF(r, 2.f); At<float>(0x10000 + 0x964) = GenF(r, 2.f); if (r.below(3) == 0) At<float>(0x10000 + 0x964) = At<float>(0x10000 + 0x808) = std::fabs(At<float>(0x10000 + 0x49C)); });
     }, 1500);
+    // CanWePlayGlobalSpeechContext 0x4E5F10: ped / player conversation state (the exe tests `this == ped + 0x294`, no dereference) and the statics 0xB613FC / FD, B61400 / 04 / 08 / 0C / 10
+    Run("CAEPedSpeechAudioEntity::CanWePlayGlobalSpeechContext 0x4E5F10", [&](Rng& r, std::string& d) {
+        const int c = GCtx(r);
+        g_atweak = [](Rng& r) {
+            auto pick = [&]() -> uint32_t { return r.below(2) ? (uint32_t)(uintptr_t)(P(0) - 0x294) : (r.below(2) ? 0u : 0x5000u); };
+            *reinterpret_cast<uint8_t*>(0xB613FD) = (uint8_t)r.below(2);                                   // s_bPedConversationHappening
+            *reinterpret_cast<uint32_t*>(0xB61410) = pick(); *reinterpret_cast<uint32_t*>(0xB6140C) = pick(); *reinterpret_cast<uint32_t*>(0xB61400) = pick();   // ped 1, ped 2, player ped
+            *reinterpret_cast<int16_t*>(0xB61404) = (int16_t)((int)r.below(7) - 1);                         // slot 2 (slot 1: 0xB61408 set by the builder)
+            *reinterpret_cast<int16_t*>(0xB61408) = (int16_t)((int)r.below(7) - 1);   // valid slot ids -1..5: the port asserts on an out-of-range array subscript where the exe reads on
+        };
+        const bool ok = ACase(r, d, [&]() -> uint64_t { return Cv((int)(int16_t)P0()->PS::CanWePlayGlobalSpeechContext((eGlobalSpeechContext)c)); }, [&]() -> uint64_t { return Cv((int)(int16_t)ExeT<int32_t>(0x4E5F10, P(0), c)); }, psBuild);
+        g_atweak = nullptr;
+        return ok;
+    }, 3000);
 #undef OBJ
 #undef PSR
 #undef PSV

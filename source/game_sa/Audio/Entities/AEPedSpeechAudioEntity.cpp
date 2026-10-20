@@ -943,29 +943,38 @@ int16 CAEPedSpeechAudioEntity::GetSoundAndBankIDs(eGlobalSpeechContext gCtx, eSp
 
 // 0x4E5F10
 int16 CAEPedSpeechAudioEntity::CanWePlayGlobalSpeechContext(eGlobalSpeechContext gCtx) {
-    if (!IsGlobalContextImportantForInterupting(gCtx) && !IsGlobalContextPain(gCtx)) {
-        const auto CheckSlot = [](auto slot) {
-            return s_PedSpeechSlots[slot].Status == CAEPedSpeechSlot::eStatus::RESERVED
-                ? slot
-                : -1;
-        };
-        if (s_bPedConversationHappening) {
-            if (this == &s_pConversationPed1->GetSpeechAE()) {
-                return CheckSlot(s_pConversationPedSlot1);
-            }
-            if (this == &s_pConversationPed2->GetSpeechAE()) {
-                return CheckSlot(s_pConversationPedSlot2);
-            }
+    // exe 0x4E5F10: a conversation slot only counts when it is not -1 - otherwise the next check (player conversation, then a free slot) runs; the free slot is taken
+    // (s_NextSpeechSlot advanced) BEFORE the next-play-time test
+    const auto IsConversationContext = [&] { return !IsGlobalContextImportantForInterupting(gCtx) && !IsGlobalContextPain(gCtx); };
+    const auto CheckSlot = [](tPedSpeechSlotID slot) -> int16 {
+        return s_PedSpeechSlots[slot].Status == CAEPedSpeechSlot::eStatus::RESERVED
+            ? slot
+            : -1;
+    };
+    if (s_bPedConversationHappening && IsConversationContext()) {
+        tPedSpeechSlotID slot = -1;
+        if (this == &s_pConversationPed1->GetSpeechAE()) {
+            slot = s_pConversationPedSlot1;
+        } else if (this == &s_pConversationPed2->GetSpeechAE()) {
+            slot = s_pConversationPedSlot2;
         }
-        if (s_bPlayerConversationHappening) {
-            if (this == &s_pPlayerConversationPed->GetSpeechAE()) {
-                return CheckSlot(s_pConversationPedSlot1);
-            }    
+        if (slot != -1) {
+            return CheckSlot(slot);
         }
     }
-    return CTimer::GetTimeInMS() >= GetNextPlayTime(gCtx)
-        ? GetFreeSpeechSlot() // s_NextSpeechSlot is set in `GetFreeSpeechSlot`
-        : -1;
+    if (s_bPlayerConversationHappening && IsConversationContext()) {
+        if (this == &s_pPlayerConversationPed->GetSpeechAE() && s_pConversationPedSlot1 != -1) {
+            return CheckSlot(s_pConversationPedSlot1);
+        }
+    }
+    const auto slot = GetFreeSpeechSlot(); // s_NextSpeechSlot is set in `GetFreeSpeechSlot`
+    if (slot == -1) {
+        return -1;
+    }
+    if ((int16)gCtx >= 0 && (int16)gCtx < 0x168 && CTimer::GetTimeInMS() < GetNextPlayTime(gCtx)) {
+        return -1;
+    }
+    return slot;
 }
 
 // 0x4E6550

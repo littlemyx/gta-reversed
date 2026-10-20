@@ -1427,6 +1427,11 @@ if (${RE_PROJECT}_RW_LIBRW)
         game_sa/common.cpp
         game_sa/GridRef.cpp
         game_sa/Draw.cpp
+        game_sa/Collision/Collision.cpp
+        game_sa/Shadows.cpp
+        game_sa/WaterLevel.cpp
+        game_sa/RenderBuffer.cpp
+        game_sa/Core/Rect.cpp
     )
     target_compile_definitions(wave3_world_oracle_test PRIVATE W2_ONLY W3_WORLD_ONLY)
     target_compile_features(wave3_world_oracle_test PRIVATE cxx_std_23)

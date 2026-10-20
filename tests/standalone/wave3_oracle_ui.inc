@@ -83,6 +83,7 @@ template<class Fn> static void RunScaledU(const std::string& name, Fn&& fn, int 
 #include "wave3_oracle_ui_c.inc"      // Radar.cpp
 #include "wave3_oracle_ui_d.inc"      // Font.cpp
 #include "wave3_oracle_ui_e.inc"      // Text / Sprite2d / MenuManager
+#include "wave3_oracle_ui_f.inc"      // recorded draw / debug calls
 static void TestW3UiAll() {
     (void)spdlog::default_logger_raw();   // the default logger is created lazily by the first NOTSA_LOG_* of the port: do it outside the redirected allocator
     TestW3UiA();
@@ -90,4 +91,5 @@ static void TestW3UiAll() {
     TestW3UiC();
     TestW3UiD();
     TestW3UiE();
+    TestW3UiF();
 }

@@ -95,10 +95,6 @@ static void TestW3UiD() {
         const int v = (int)r.below(3); Tu tu([](Rng& rr) { PutFont(rr); });   // (the exe leaves the flags alone for an out-of-range alignment; the port clears them: no caller passes one)
         return UCase(r, d, [&]() -> uint64_t { CFont::SetOrientation((eFontAlignment)v); return 0; }, [&]() -> uint64_t { oracle::Fn<void __cdecl(int)>(0x719610)(v); return 0; });
     } ENDROW;
-    ROW("CFont::InitPerFrame", 0x719800, 100) {
-        Tu tu([](Rng& rr) { PutFont(rr); });
-        return UCase(r, d, [&]() -> uint64_t { CFont::InitPerFrame(); return 0; }, [&]() -> uint64_t { oracle::Fn<void __cdecl()>(0x719800)(); return 0; });
-    } ENDROW;
     ROW("GetLetterIdPropValue", 0x718770, 1000) {
         const uint8_t id = (uint8_t)(r.below(6) == 0 ? '?' : r.below(208)); Tu tu([](Rng& rr) { PutFont(rr); });
         return UCase(r, d, [&]() -> uint64_t { return FB(GetLetterIdPropValue(id)); }, [&]() -> uint64_t { return FB(oracle::Fn<float __cdecl(int)>(0x718770)(id)); });

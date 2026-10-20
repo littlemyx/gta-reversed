@@ -1,0 +1,11 @@
+# ORACLE-W3-UI: uncovered class A/B functions of Messages / Hud / Radar / Font / Sprite / Sprite2d / MenuManager / Text that have no row, with the reason. Addresses without the 0x prefix (the coverage tool counts 0x literals).
+# addr	function	reason
+69DC50	CMessages::CutString	no caller anywhere in the exe (the word-wrap splitter is dead code); the port asserts NOTSA_UNREACHABLE on purpose
+6A00F0	CText::Constructor	the exe zeroes the arrays, flags and the first 8 name bytes + GxtErrorString (0xC1AEB8); the port runs Unload() (delete[]) on the members and clears only byte 0 of the strings: not callable on a garbage object, identical on the zeroed TheText of the game
+70CE10	CSprite::Initialise	bare ret in the exe, NOP in the port
+70CFB0	CSprite::InitSpriteBuffer	reads RwEngineInstance (exe pointer 0xC97B24) +0x18 / +0x1C; the port reads its own RwEngineInstance variable (standalone/rw/rwglobals.cpp, not linked): needs an RW engine fixture
+727350	CSprite2d::InitPerFrame	same (RwEngineInstance zBufferNear) plus Scene.m_pRwCamera near plane
+719800	CFont::InitPerFrame	calls CSprite::InitSpriteBuffer (RwEngineInstance): every case faulted identically; needs the RW engine fixture
+587D20	CRadar::SetupAirstripBlips	the port replaces the frame-counter test by a function-local static timer (FIX_BUGS), not at the exe address: deliberately different
+4A6140	FxInfoSpriteRect_c::GetValue	Fx key-curve (class A, game_sa/Fx/Blueprints): outside this slice
+# class C/S/D draw functions (Radar Draw*, Hud Draw*, Font Render* / Print*, Sprite2d Draw*, Sprite Render*, MenuManager Draw* / Print*, Messages::Display, Text Load / Unload): need recorded RW / draw stubs on both sides (the CSprite2d / CFont draw entry points) and file IO for Text; not written in this slice

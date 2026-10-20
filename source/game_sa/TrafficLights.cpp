@@ -402,7 +402,8 @@ uint8 CTrafficLights::LightForPeds() {
     if (uiMaskedTime < 12000)
         return eTrafficLightsState::LIGHT_RED;
 
-    if (uiMaskedTime < 16383 - 1000)
+    // 0x49D41B: `cmp eax, 0x3C18; sbb al, al; inc al` - green while the masked time is below 15384 (not 15383)
+    if (uiMaskedTime < 15384)
         return eTrafficLightsState::LIGHT_GREEN;
 
     return eTrafficLightsState::LIGHT_YELLOW;

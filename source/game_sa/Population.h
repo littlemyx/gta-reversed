@@ -40,7 +40,7 @@ public:
     NOTSA_GLOBAL_ZERO(m_LoadedBoats, 0xC0E998, (CLoadedCarGroup)); static_assert(sizeof(m_LoadedBoats) == 46); // zero .bss in the exe (not the repo default ctor values)
     NOTSA_GLOBAL_ZERO(m_InAppropriateLoadedCars, 0xC0E9C8, (CLoadedCarGroup)); static_assert(sizeof(m_InAppropriateLoadedCars) == 46); // zero .bss in the exe (not the repo default ctor values)
     NOTSA_GLOBAL_ZERO(m_AppropriateLoadedCars, 0xC0E9F8, (CLoadedCarGroup)); static_assert(sizeof(m_AppropriateLoadedCars) == 46); // zero .bss in the exe (not the repo default ctor values)
-    NOTSA_GLOBAL_ZERO(m_LoadedGangCars, 0xC0EA28, (std::array<CLoadedCarGroup, 10>)); static_assert(sizeof(m_LoadedGangCars) == 460); // zero .bss in the exe (not the repo default ctor values)
+    NOTSA_GLOBAL_ZERO(m_LoadedGangCars, 0xC0EA28, (std::array<CLoadedCarGroup, 11>)); static_assert(sizeof(m_LoadedGangCars) == 506); // zero .bss in the exe (not the repo default ctor values). The exe loops over 11 groups (0xC0EA28..0xC0EC22 in CCarCtrl::Init / ReInit and CStreaming::RemoveCarModel); only the first 10 are gangs
     static inline NOTSA_GLOBAL(bZoneChangeHasHappened, 0xC0EC22, (bool), {});
     static inline NOTSA_GLOBAL(m_CountDownToPedsAtStart, 0xC0EC23, (uint8), {});
     static inline NOTSA_GLOBAL(ms_nTotalMissionPeds, 0xC0EC24, (uint32), {});

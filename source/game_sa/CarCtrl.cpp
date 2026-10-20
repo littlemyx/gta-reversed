@@ -4479,10 +4479,10 @@ void CCarCtrl::RemoveDistantCars() {
 
 // 0x423ED0
 void CCarCtrl::RemoveFromInterestingVehicleList(CVehicle* vehicle) {
+    // 0x423ED0: no early exit, every slot that holds the vehicle is cleared
     for (auto& car : apCarsToKeep) {
         if (car == vehicle) {
             car = nullptr;
-            break;
         }
     }
 }
@@ -4680,12 +4680,16 @@ void CCarCtrl::SlowCarDownForCarsSectorList(CPtrListDoubleLink<CVehicle*>& carLi
 
 // 0x426220
 void CCarCtrl::SlowCarDownForObject(CEntity* entity, CVehicle* vehicle, float* arg3, float arg4) {
+    // 0x426220: the dot products are summed z first ((z + y) + x) and the vehicle's matrix is used directly (not null checked); the factor is min(*arg3, (1 - (heading - 7) / 13) * arg4)
     const CVector entityDir = entity->GetPosition() - vehicle->GetPosition();
-    const float entityHeading = DotProduct(entityDir, vehicle->GetMatrix().GetForward());
+    const auto&   mat       = *vehicle->m_matrix;
+    const float entityHeading = entityDir.z * mat.GetForward().z + entityDir.y * mat.GetForward().y + entityDir.x * mat.GetForward().x;
     if (entityHeading > 0.0f && entityHeading < 20.0f) {
-        if (entity->GetColModel()->GetBoundRadius() + vehicle->GetColModel()->GetBoundingBox().m_vecMax.x > fabs(DotProduct(entityDir, vehicle->GetMatrix().GetRight()))) {
+        const float side = entityDir.z * mat.GetRight().z + entityDir.y * mat.GetRight().y + entityDir.x * mat.GetRight().x;
+        if (entity->GetColModel()->GetBoundRadius() + vehicle->GetColModel()->GetBoundingBox().m_vecMax.x > fabs(side)) {
             if (entityHeading >= 7.0f) {
-                *arg3 = std::min(*arg3, (1.0f - (entityHeading - 7.0f) * ExeRecip(13.0f))) * arg4; // Original code multiplies by 0.07692308, which is the recp. of 13
+                const float factor = (1.0f - (entityHeading - 7.0f) * ExeRecip(13.0f)) * arg4; // Original code multiplies by 0.07692308, which is the recp. of 13
+                *arg3 = std::min(*arg3, factor);
             } else {
                 *arg3 = 0.0f;
             }

@@ -44,6 +44,7 @@ public:
     void ReserveCoverPointForPed(CPed* ped);
     bool FindCoordinatesCoverPoint(CPed* ped, const CVector& position, CVector& outPt) const noexcept;
     void Remove();
+    void ClearType() { m_Type = eType::NONE; } // CCover::Init (0x698710) only resets the type byte
     void Update();
     bool CanBeRemoved() const;
     auto GetType() const { return m_Type; }

@@ -1298,19 +1298,20 @@ bool CObject::IsCraneMovingPart() const {
 
 // 0x5A1AB0
 void CObject::GrabObjectToCarryWithRope(CPhysical* attachTo) {
+    // 0x5A1AB0: the grabbed entity goes into the rope's `m_pRopeAttachObject` slot (+0x318, reference registered there) and it is the rope's HOOK object (`m_pAttachedEntity`, +0x314)
+    // that is moved to the top of the grabbed entity (its matrix applied to (0, 0, pickup height)) and loses its collision
     const auto iRopeInd = CRopes::FindRope(reinterpret_cast<uint32>(this));
     auto& rope = CRopes::GetRope(iRopeInd);
     rope.ReleasePickedUpObject();
-    rope.m_pAttachedEntity = attachTo;
-    assert(rope.m_pAttachedEntity);
-    rope.m_pAttachedEntity->RegisterReference(&rope.m_pAttachedEntity);
+    rope.m_pRopeAttachObject = attachTo;
+    attachTo->RegisterReference(&rope.m_pRopeAttachObject);
 
     auto vecRopePoint = CVector();
     vecRopePoint.z = CRopes::FindPickupHeight(attachTo);
-    vecRopePoint *= attachTo->m_matrix->TransformPoint(vecRopePoint);
+    vecRopePoint = attachTo->m_matrix->TransformPoint(vecRopePoint);
 
-    rope.m_pRopeAttachObject->SetPosn(vecRopePoint);
-    rope.m_pRopeAttachObject->SetUsesCollision(false);
+    rope.m_pAttachedEntity->SetPosn(vecRopePoint);
+    rope.m_pAttachedEntity->SetUsesCollision(false);
 }
 
 // 0x5A1B60
@@ -1365,10 +1366,15 @@ CObject* CObject::Create(CDummyObject* dummyObject) {
 // 0x59F200
 void CObject::SetMatrixForTrainCrossing(CMatrix* matrix, float fAngle) {
     auto vecForward = CrossProduct(CVector(0.0F, 0.0F, 1.0F), matrix->GetRight());
-    const auto fCos = x87::cos(fAngle);
-    const auto fSin = x87::sin(fAngle);
-    vecForward *= fCos;
-    vecForward.z += fSin;
+    // 0x59F200: fcos stays in the register (extended), so the products are formed with the UNROUNDED cosine; x and y get `+ 0.0f * sin` added (0 * sin(fsin) stored as float),
+    // z gets the sine rounded to float (it is stored / reloaded) added
+    const double fCos = x87::cos(fAngle);
+    const double fSin = x87::sin(fAngle);
+    const float  zeroSin = (float)(0.0f * fSin);
+    const float  sinF    = (float)fSin;
+    vecForward.x = (float)((double)zeroSin + (double)(float)((double)vecForward.x * fCos));
+    vecForward.y = (float)((double)zeroSin + (double)(float)((double)vecForward.y * fCos));
+    vecForward.z = (float)((double)sinF + (double)(float)(fCos * (double)vecForward.z));
 
     matrix->GetUp() = CrossProduct(matrix->GetRight(), vecForward);
     matrix->GetForward() = vecForward;

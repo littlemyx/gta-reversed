@@ -907,6 +907,16 @@ if (${RE_PROJECT}_RW_LIBRW)
         game_sa/TheZones.cpp
         game_sa/Zone.cpp
         game_sa/Acquaintance.cpp
+        game_sa/Ropes.cpp
+        game_sa/Rope.cpp
+        game_sa/ModelIndices.cpp
+        game_sa/Collision/Collision.cpp
+        game_sa/LoadedCarGroup.cpp
+        game_sa/Models/BaseModelInfo.cpp
+        game_sa/TxdStore.cpp
+        game_sa/Core/PtrNodeDoubleLink.cpp
+        game_sa/Core/PtrNodeSingleLink.cpp
+        game_sa/TimeCycle.cpp
         game_sa/Weather.cpp
         game_sa/Timer.cpp
         standalone/FtolExe.cpp
@@ -1546,6 +1556,44 @@ if (${RE_PROJECT}_RW_LIBRW)
     set_property(TARGET wave3_input_oracle_test PROPERTY SOURCES "${STANDALONE_PAD_OBJ}" ${_w3in_sources})
     target_link_options(wave3_input_oracle_test PRIVATE "$<$<CXX_COMPILER_ID:MSVC>:/BASE:0x400000;/DYNAMICBASE:NO;/FIXED;/MERGE:_TEXT=.text;/INCREMENTAL:NO;/SUBSYSTEM:CONSOLE;/FORCE:UNRESOLVED;/MAP>")
     set_target_properties(wave3_input_oracle_test PROPERTIES COMPILE_WARNING_AS_ERROR OFF CXX_SCAN_FOR_MODULES OFF)
+    # ORACLE-W3-AI: exe-oracle rows of CarCtrl.cpp, PedIntelligence.cpp, Cover.cpp, Entity/Object/Object.cpp (A + B functions); rows: tests/standalone/wave3_oracle_ai*.inc
+    set(_W3A_BASE ${W2_BASE_SOURCES})
+    add_executable(wave3_ai_oracle_test EXCLUDE_FROM_ALL
+        "${PROJECT_SOURCE_DIR}/tests/standalone/wave1_oracle_test.cpp"
+        ${_W3A_BASE}
+        game_sa/CarCtrl.cpp
+        game_sa/PedIntelligence.cpp
+        game_sa/Cover.cpp
+        game_sa/CoverPoint.cpp
+        game_sa/Entity/Object/Object.cpp
+        game_sa/Entity/Physical.cpp
+        game_sa/PedType.cpp
+        game_sa/Acquaintance.cpp
+        game_sa/Ropes.cpp
+        game_sa/Rope.cpp
+        game_sa/ModelIndices.cpp
+        game_sa/Collision/Collision.cpp
+        game_sa/LoadedCarGroup.cpp
+        game_sa/Models/BaseModelInfo.cpp
+        game_sa/TxdStore.cpp
+        game_sa/Core/PtrNodeDoubleLink.cpp
+        game_sa/Core/PtrNodeSingleLink.cpp
+        game_sa/TimeCycle.cpp
+        game_sa/Tasks/TaskManager.cpp
+    )
+    target_compile_definitions(wave3_ai_oracle_test PRIVATE W2_ONLY W3_AI_ONLY)
+    target_compile_features(wave3_ai_oracle_test PRIVATE cxx_std_23)
+    target_compile_definitions(wave3_ai_oracle_test PRIVATE $<TARGET_PROPERTY:${RE_PROJECT_LIB_NAME},COMPILE_DEFINITIONS> NOTSA_ORACLE_ADDRESS_GLOBALS)
+    target_include_directories(wave3_ai_oracle_test PRIVATE $<TARGET_PROPERTY:${RE_PROJECT_LIB_NAME},INCLUDE_DIRECTORIES>)
+    target_compile_options(wave3_ai_oracle_test PRIVATE $<TARGET_PROPERTY:${RE_PROJECT_LIB_NAME},COMPILE_OPTIONS>)
+    target_precompile_headers(wave3_ai_oracle_test PRIVATE StdInc.cpp)
+    target_link_libraries(wave3_ai_oracle_test PRIVATE librw spdlog::spdlog Tracy::TracyClient user32)
+    target_sources(wave3_ai_oracle_test PRIVATE "${STANDALONE_PAD_OBJ}")
+    get_target_property(_w3ai_sources wave3_ai_oracle_test SOURCES)
+    list(REMOVE_ITEM _w3ai_sources "${STANDALONE_PAD_OBJ}")
+    set_property(TARGET wave3_ai_oracle_test PROPERTY SOURCES "${STANDALONE_PAD_OBJ}" ${_w3ai_sources})
+    target_link_options(wave3_ai_oracle_test PRIVATE "$<$<CXX_COMPILER_ID:MSVC>:/BASE:0x400000;/DYNAMICBASE:NO;/FIXED;/MERGE:_TEXT=.text;/INCREMENTAL:NO;/SUBSYSTEM:CONSOLE;/FORCE:UNRESOLVED;/MAP>")
+    set_target_properties(wave3_ai_oracle_test PROPERTIES COMPILE_WARNING_AS_ERROR OFF CXX_SCAN_FOR_MODULES OFF)
     # x87 intrinsic fidelity oracle: inline fsin/fcos/fpatan/fptan/fsqrt/fyl2x of the exe vs the ports' math, and the CRT entry points the exe calls (pow, asin, acos, tan, floor, ceil, modf)
     add_executable(x87_oracle_test EXCLUDE_FROM_ALL
         "${PROJECT_SOURCE_DIR}/tests/standalone/x87_oracle_test.cpp"

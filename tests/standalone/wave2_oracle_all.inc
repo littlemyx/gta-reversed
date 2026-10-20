@@ -31,6 +31,8 @@
 #include "wave3_oracle_ui.inc"          // ORACLE-W3-UI: HUD / radar / text root-file rows (wave3_ui_oracle_test)
 #elif defined(W3_INPUT_ONLY)
 #include "wave3_oracle_input.inc"        // ORACLE-W3-INPUT: ControllerConfigManager + Pad rows (wave3_input_oracle_test)
+#elif defined(W3_AI_ONLY)
+#include "wave3_oracle_ai.inc"          // ORACLE-W3-AI: CarCtrl / PedIntelligence / Cover / Object rows (wave3_ai_oracle_test)
 #elif defined(W3_FX_ONLY)
 #include "wave3_oracle_fx.inc"          // ORACLE-W3-EFFECTS: explosion / fire / glass / rope / crane / plant ... root-file rows (wave3_fx_oracle_test)
 #else
@@ -177,6 +179,12 @@ static void TestW2() {
     using namespace w2;
     g_onFault = +[] { oracle::alloc::End(); };
     TestW3FxAll();
+    return;
+#endif
+#ifdef W3_AI_ONLY
+    using namespace w2;
+    g_onFault = +[] { oracle::alloc::End(); rf::Leave(); };
+    TestW3AiAll();
     return;
 #endif
 #ifdef W3_INPUT_ONLY

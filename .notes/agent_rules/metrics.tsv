@@ -87,4 +87,4 @@ date	agent	rules	kind	tokens	tool_uses	minutes	outcome	notes
 2026-10-20	ORACLE-W3-STREAM	v3	oracle wave (small)	311908	119	55	Ipl/Txd/Streaming A/B 34 -> 0, 2 fixes (gang car model needed-in-zone loop 220/2500, textures-used-by-requested channel slot compare); left a background task
 2026-10-20	ORACLE-W3-GP2	v3	oracle wave (partial)	275949	105	36	TrafficLights/Restart/Shopping/PedAttractor A/B -> 0 (+34), 5 fixes (attractor queue slot 2260/3000); stopped at token budget -> CONTINUE
 2026-10-20	ORACLE-W3-GP2-2	v3	continuation	224802	102	41	+9 rows, 3 fixes (shopping absent-key trap, clump alpha, kinda-colliding scan); found harness hiding port traps at EIP 0x400000
-2026-10-20	TRAP-AUDIT	v3	audit	~	~	88	26 targets with port-faults-as-diff: 43 rows, 0 port bugs (17 UNREACHABLE debug traps fall through = PC24 0, 26 unlinked callees)
+2026-10-20	TRAP-AUDIT	v3	audit	240608	125	88	26 targets with port-faults-as-diff: 43 rows, 0 port bugs (17 UNREACHABLE debug traps fall through = PC24 0, 26 unlinked callees)

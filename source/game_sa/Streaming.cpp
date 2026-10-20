@@ -273,21 +273,13 @@ bool CStreaming::AreTexturesUsedByRequestedModels(int32 txdModelId) {
         }
     }
 
+    // 0x409B63..0x409BC8: the exe classifies a loading-channel model as TXD by testing the ADDRESS of the channel's model id slot (esi) against the TXD
+    // range of the info array (0x8F8378..0x8FD198) instead of the model id, so that branch can never be taken: only DFF models (id < 20000) count here
     for (auto& ch : ms_channel) {
         for (const auto& model : ch.modelIds) {
-            if (model != MODEL_INVALID) {
-                switch (GetModelType(model)) {
-                case eModelType::DFF: {
-                    if (CModelInfo::GetModelInfo(model)->m_nTxdIndex == txdModelId)
-                        return true;
-                    break;
-                }
-                case eModelType::TXD: {
-                    if (CTxdStore::GetParentTxdSlot(ModelIdToTXD(model)) == txdModelId)
-                        return true;
-                    break;
-                }
-                }
+            if (model != MODEL_INVALID && model < RESOURCE_ID_TXD) {
+                if (CModelInfo::GetModelInfo(model)->m_nTxdIndex == txdModelId)
+                    return true;
             }
         }
     }

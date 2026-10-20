@@ -15,6 +15,9 @@
 #include <cstdint>
 #include <cstring>
 #include <cmath>
+#if defined(_MSC_VER) && defined(_M_IX86)
+#include <float.h>
+#endif
 
 namespace rwx {
 
@@ -31,8 +34,20 @@ struct SqrtTables {
     uint32_t isq[4096];  // 1/sqrt:    [2048 + i] = bits(1/sqrt(f)) - 0x20000000; [i] = bits(1/sqrt(f)) - 0x1FC00000
 };
 
+// The exe builds the tables in the plugin constructor 0x7EDE90 (RwEngineOpen), i.e. BEFORE D3D9 device creation sets the x87 to PC=24: with the default 53 bit precision.
+// Here the tables are built on first use, which is usually after that (PC=24 rounds `1.0 / sqrt(f)` twice: 26 % of the inverse sqrt entries came out one ulp off the exe's
+// and every RwV3dNormalize / RtQuatRotate / ... then differed by an ulp in a quarter of the calls): build them at 53 bits whatever the current precision control is.
+struct Pc53Scope {
+#if defined(_MSC_VER) && defined(_M_IX86)
+    unsigned old = 0, tmp = 0;
+    Pc53Scope() { _controlfp_s(&old, 0, 0); _controlfp_s(&tmp, _PC_53, _MCW_PC); }
+    ~Pc53Scope() { _controlfp_s(&tmp, old, _MCW_PC); }
+#endif
+};
+
 inline const SqrtTables& Tables() {
     static const SqrtTables t = [] {
+        const Pc53Scope pc53;
         SqrtTables r{};
         uint32_t   fb = 0x3F800000u; // 1.0f; the exe walks the float bit pattern in steps of 0x1000 across [1, 4)
         for (int i = 0; i < 2048; i++, fb += 0x1000u) {

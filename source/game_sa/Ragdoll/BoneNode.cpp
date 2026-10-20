@@ -211,8 +211,19 @@ void BoneNode_c::Limit(float blend) {
     CVector angles{};
     QuatToEuler(m_Orientation, angles);
 
-    angles.x = std::clamp(angles.x, m_LimitMin.x, m_LimitMax.x);
-    angles.y = std::clamp(angles.y, m_LimitMin.y, m_LimitMax.y);
+    // 0x617665..: every limit is `fcomp` + conditional store, in two steps (below the minimum -> minimum, then above the maximum -> maximum): a NaN stays a NaN,
+    // and inverted limits (min > max) end up at the maximum - std::clamp would assert / return something else
+    const auto Clamp = [](float v, float lo, float hi) {
+        if (v < lo) {
+            v = lo;
+        }
+        if (v > hi) {
+            v = hi;
+        }
+        return v;
+    };
+    angles.x = Clamp(angles.x, m_LimitMin.x, m_LimitMax.x);
+    angles.y = Clamp(angles.y, m_LimitMin.y, m_LimitMax.y);
 
     float minZ = m_LimitMin.z;
     float maxZ = m_LimitMax.z;
@@ -222,13 +233,15 @@ void BoneNode_c::Limit(float blend) {
             float pose = info->PoseRots.z;
 
             // Scale the Z range toward boneOffset as angleX approaches 45°
-            const float factor = std::max(std::abs(angles.x) / -45.0f + 1.0f, 0.0f);
+            // 0x617707: factor = 1.0 - |angleX| * (1/45 as a float, 0x86D2B8), NOT `|angleX| / -45 + 1` (different rounding); `fcomp 0.0` replaces a negative / NaN factor by 0
+            const float f      = 1.0f - std::abs(angles.x) * std::bit_cast<float>(0x3CB60B61u);
+            const float factor = f >= 0.0f ? f : 0.0f;
             minZ = (minZ - pose) * factor + pose;
             maxZ = (maxZ - pose) * factor + pose;
         }
     }
 
-    angles.z = std::clamp(angles.z, minZ, maxZ);
+    angles.z = Clamp(angles.z, minZ, maxZ);
 
     EulerToQuat(angles, m_Orientation);
 }

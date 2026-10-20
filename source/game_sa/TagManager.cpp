@@ -71,7 +71,7 @@ void CTagManager::AddTag(CEntity& entity) {
 
 // 0x49CCB0
 tTagDesc* CTagManager::FindTagDesc(const CEntity& entity) {
-    for (auto& tag : GetTags()) {
+    for (auto& tag : GetTags() | std::views::reverse) { // exe 0x49CCB0 scans from the last tag to the first: with a repeated entity the LAST entry wins
         if (tag.Entity == &entity) {
             return &tag;
         }

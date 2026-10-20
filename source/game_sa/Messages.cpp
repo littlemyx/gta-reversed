@@ -443,16 +443,40 @@ void CMessages::InsertNumberInString(const GxtChar* str, int32 n1, int32 n2, int
 
 // Inserts string into src
 // 0x69E040
+// Replaces every "~a~" of `target` with `replacement` (the exe works through a 0x180 byte stack buffer, in place, stops once the output reached len(target) + len(replacement)
+// characters and zero-fills `target` up to 400 bytes).
 void CMessages::InsertStringInString(GxtChar* target, const GxtChar* replacement) {
     if (!target || !replacement) { // Appereantly that's valid?
         return;
     }
 
-    GxtChar buf[MSG_BUF_SZ];
-    notsa::string_copy((char*)buf, AsciiFromGxtChar(target), sizeof(buf));
-    StringReplace(AsciiFromGxtChar(buf), "~1~", (char*)target, [&, szrepl = strlen(AsciiFromGxtChar(replacement))](char* where) {
-        return std::copy(replacement, replacement + szrepl, where);
-    });
+    const auto lenT = (uint32)std::strlen(AsciiFromGxtChar(target));
+    const auto lenR = (uint16)std::strlen(AsciiFromGxtChar(replacement));
+    const auto total = (uint16)(lenT + lenR);
+
+    GxtChar buf[0x180]{};
+    uint16 out = 0, in = 0;
+    if (total != 0) {
+        do {
+            const GxtChar* p = target + in;
+            if (p[0] == '~' && p[1] == 'a' && p[2] == '~') {
+                in += 3;
+                for (uint16 k = 0; k < lenR; k++) { // (the exe's replacement loop is a do-while: lenR == 0 copies nothing)
+                    buf[out++] = replacement[k];
+                }
+            } else {
+                buf[out++] = p[0];
+                in++;
+            }
+        } while (out < total);
+    }
+    buf[out] = 0;
+    if (total != 0) {
+        std::memcpy(target, buf, total);
+    }
+    if (total < 400) {
+        std::memset(target + total, 0, 400 - total);
+    }
 }
 
 // Inserts key events into string

@@ -1180,7 +1180,8 @@ void CControllerConfigManager::AffectPadFromMouse() {
         }
 
         if (GetIsMouseButtonUp(button)) {
-            if (auto* pad = CPad::GetPad()) {
+            // (the exe skips a blank button and a pause menu)
+            if (auto* pad = CPad::GetPad(); pad && !GetIsKeyBlank(button, eControllerType::MOUSE) && !FrontEndMenuManager.m_bMenuActive) {
                 AffectControllerStateOn_ButtonUp_All_Player_States(button, eControllerType::MOUSE, GetControllerState(*pad, eControllerType::MOUSE));
             }
         }

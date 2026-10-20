@@ -79,8 +79,8 @@ static void TestW3ModelsVeh() {
     Run("CVehicleModelInfo::DeleteVehicleColourTextures 0x4C8770", [&](Rng& r, std::string& d) {
         return MCase(r, d, [&]() -> uint64_t { VM()->DeleteVehicleColourTextures(); return 0; }, [&]() -> uint64_t { ExeT<void>(0x4C8770, P(kMi)); return 0; });
     }, 20);
-    Run("CVehicleModelInfo::SetRenderPipelinesCB 0x4C88F4", [&](Rng& r, std::string& d) {
-        return MCase(r, d, [&]() -> uint64_t { return U(CVehicleModelInfo::SetRenderPipelinesCB(reinterpret_cast<RpAtomic*>(P(kAt)), P(kOut))) != 0; }, [&]() -> uint64_t { return ExeC<uint32_t>(0x4C88F4, P(kAt), P(kOut)) != 0; });   // the exe body is a bare `ret` (eax = whatever the caller left: non-zero = keep iterating); only "non-zero" is comparable
+    Run("CVehicleModelInfo::SetRenderPipelinesCB 0x4C88F0", [&](Rng& r, std::string& d) {
+        return MCase(r, d, [&]() -> uint64_t { return U(CVehicleModelInfo::SetRenderPipelinesCB(reinterpret_cast<RpAtomic*>(P(kAt)), P(kOut))); }, [&]() -> uint64_t { return ExeC<uint32_t>(0x4C88F0, P(kAt), P(kOut)); });   // the exe body is `mov eax, [esp+4]; ret` (entry 0x4C88F0; 0x4C88F4 is its ret) -> returns the atomic, compared exactly
     }, 20);
     // ---- CLinkedUpgradeList
     Run("CLinkedUpgradeList::AddUpgradeLink 0x4C74B0", [&](Rng& r, std::string& d) {

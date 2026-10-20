@@ -161,7 +161,7 @@ void IKChain_c::UpdateEntity(CEntity* entity) {
 // 0x617C60
 inline BoneNode_c* IKChain_c::GetBoneNodeFromTag(eBoneTag32 boneTag) {
     for (auto&& bone : GetBones()) {
-        if (bone->GetBoneTag() == boneTag) {
+        if (bone->GetBoneTag().get_underlying() == boneTag.get_underlying()) { // 0x617C77 `cmp [ebx+8], edi`: all 32 bits (a WEnum->enum compare would truncate to 16 bits)
             return bone;
         }
     }

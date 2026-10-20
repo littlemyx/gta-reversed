@@ -1230,6 +1230,34 @@ if (${RE_PROJECT}_RW_LIBRW)
     set_property(TARGET wave3_anim_oracle_test PROPERTY SOURCES "${STANDALONE_PAD_OBJ}" ${_w3a_sources})
     target_link_options(wave3_anim_oracle_test PRIVATE "$<$<CXX_COMPILER_ID:MSVC>:/BASE:0x400000;/DYNAMICBASE:NO;/FIXED;/MERGE:_TEXT=.text;/INCREMENTAL:NO;/SUBSYSTEM:CONSOLE;/FORCE:UNRESOLVED;/MAP>")
     set_target_properties(wave3_anim_oracle_test PROPERTIES COMPILE_WARNING_AS_ERROR OFF CXX_SCAN_FOR_MODULES OFF)
+    # ORACLE-W3-IK: exe-oracle rows of game_sa/Ragdoll (IKChain, BoneNode, BoneNodeManager, IKChainManager) on bone-node / ped-hierarchy fixtures; rows: tests/standalone/wave3_oracle_ik*.inc
+    add_executable(wave3_ik_oracle_test EXCLUDE_FROM_ALL
+        "${PROJECT_SOURCE_DIR}/tests/standalone/wave1_oracle_test.cpp"
+        "${PROJECT_SOURCE_DIR}/tests/standalone/oracle_fast.cpp"
+        ${W2_BASE_SOURCES}
+        game_sa/Ragdoll/IKChain.cpp
+        game_sa/Ragdoll/BoneNode.cpp
+        game_sa/Ragdoll/BoneNodeManager.cpp
+        standalone/rw/math.cpp
+        standalone/rw/rwmath_tables.cpp
+        standalone/rw/rtquat.cpp
+        standalone/rw/hanim.cpp
+    )
+    set_source_files_properties("${PROJECT_SOURCE_DIR}/tests/standalone/oracle_fast.cpp" PROPERTIES SKIP_PRECOMPILE_HEADERS ON)
+    target_compile_definitions(wave3_ik_oracle_test PRIVATE ORACLE_FAST_HELPERS)
+    target_compile_definitions(wave3_ik_oracle_test PRIVATE W2_ONLY W3_IK_ONLY)
+    target_compile_features(wave3_ik_oracle_test PRIVATE cxx_std_23)
+    target_compile_definitions(wave3_ik_oracle_test PRIVATE $<TARGET_PROPERTY:${RE_PROJECT_LIB_NAME},COMPILE_DEFINITIONS> NOTSA_ORACLE_ADDRESS_GLOBALS)
+    target_include_directories(wave3_ik_oracle_test PRIVATE $<TARGET_PROPERTY:${RE_PROJECT_LIB_NAME},INCLUDE_DIRECTORIES>)
+    target_compile_options(wave3_ik_oracle_test PRIVATE $<TARGET_PROPERTY:${RE_PROJECT_LIB_NAME},COMPILE_OPTIONS>)
+    target_precompile_headers(wave3_ik_oracle_test PRIVATE StdInc.cpp)
+    target_link_libraries(wave3_ik_oracle_test PRIVATE librw spdlog::spdlog Tracy::TracyClient user32)
+    target_sources(wave3_ik_oracle_test PRIVATE "${STANDALONE_PAD_OBJ}")
+    get_target_property(_w3k_sources wave3_ik_oracle_test SOURCES)
+    list(REMOVE_ITEM _w3k_sources "${STANDALONE_PAD_OBJ}")
+    set_property(TARGET wave3_ik_oracle_test PROPERTY SOURCES "${STANDALONE_PAD_OBJ}" ${_w3k_sources})
+    target_link_options(wave3_ik_oracle_test PRIVATE "$<$<CXX_COMPILER_ID:MSVC>:/BASE:0x400000;/DYNAMICBASE:NO;/FIXED;/MERGE:_TEXT=.text;/INCREMENTAL:NO;/SUBSYSTEM:CONSOLE;/FORCE:UNRESOLVED;/MAP>")
+    set_target_properties(wave3_ik_oracle_test PROPERTIES COMPILE_WARNING_AS_ERROR OFF CXX_SCAN_FOR_MODULES OFF)
     # ORACLE-W3-MODELS: exe-oracle rows of game_sa/Models (A + B functions) on model-info fixtures; rows: tests/standalone/wave3_oracle_models*.inc
     add_executable(wave3_models_oracle_test EXCLUDE_FROM_ALL
         "${PROJECT_SOURCE_DIR}/tests/standalone/wave1_oracle_test.cpp"

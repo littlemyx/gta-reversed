@@ -72,3 +72,4 @@ date	agent	rules	kind	tokens	tool_uses	minutes	outcome	notes
 2026-10-20	ORACLE-W3-WORLD	v3	oracle wave (slice)	444609	149	106	world/path/zones/timer +75 rows, 16 port fixes (MarkRegionsForCoors x/y transposed, dynamic links 629/800, TheZones::Init 60/60)
 2026-10-20	ORACLE-W3-PATHS	v3	oracle wave (slice)	417389	173	78	route finding exact (0 fixes), +25 rows, 7 port fixes (water edge clamp 490/1500, RemoveOilInArea 555/1000, nearest-object 453/1500)
 2026-10-20	ORACLE-W3-UI	v3	oracle wave (slice)	463208	176	60	HUD/radar/messages/font/menu +77 rows, 10 port fixes (message queue shifted wrong way 1484/1500, previous briefs 1241/1500, ~a~ insertion, blip slot reuse)
+2026-10-20	ORACLE-W3-EFFECTS	v3	oracle wave (slice)	435227	212	73	effects root A/B 62 -> 0 (+71 rows), 7 port fixes (glass 4 vs 5 panes, plant ambient colour 1500/1500, fire slot inverted, water cannon word index)

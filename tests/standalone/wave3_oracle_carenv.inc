@@ -33,9 +33,14 @@ static void* StubEnvTex(const void* mat) {   // the exe's inline: data = *(mat +
     uint8_t* data = *reinterpret_cast<uint8_t* const*>(reinterpret_cast<const uint8_t*>(mat) + off);
     return *reinterpret_cast<void**>(data + 4);
 }
+static int StubTexDestroy(void* tex) {   // RwTextureDestroy (exe 0x7F3820): records the call (count at kRnd, last texture at kRnd + 4)
+    SAt<uint32_t>(kRnd) += 1; SAt<uint32_t>(kRnd + 4) = (uint32_t)(uintptr_t)tex;
+    return 1;
+}
 static void InstallStubs() {
     static bool done = false; if (done) return; done = true;
     oracle::Patch(0x812140, (void*)&StubEffects);
+    oracle::Patch(0x7F3820, (void*)&StubTexDestroy);
 }
 
 // ---- pools ----
@@ -121,6 +126,7 @@ static bool CCase(Rng& r, std::string& d, PF&& pf, EF&& ef, void (*build)(Rng&) 
 
 // port-side RW entry points -> the shared stubs
 RpMatFXMaterialFlags RpMatFXMaterialGetEffects(const RpMaterial* m) { return static_cast<RpMatFXMaterialFlags>(w3c::StubEffects(m)); }
+RwBool RwTextureDestroy(RwTexture* t) { return w3c::StubTexDestroy(t); }
 RwTexture* RpMatFXMaterialGetEnvMapTexture(const RpMaterial* m) { return static_cast<RwTexture*>(w3c::StubEnvTex(m)); }
 
 #define CROW(NAME, ADDR) Run(NAME " " #ADDR, [&](Rng& r, std::string& d) -> bool { w3c::g_unc.clear();
@@ -246,6 +252,11 @@ static void TestW3CarEnvRows() {
     CEND(800)
     CROW("CCustomCarEnvMapPipeline::AllocEnvMapPipeAtomicData", 0x5D96F0)
         return CCase(r, d, [&]() -> uint64_t { return U(CCP::AllocEnvMapPipeAtomicData(aA)); }, [&]() -> uint64_t { return U(ExeC<void*>(0x5D96F0, (void*)aA)); });
+    CEND(500)
+    // class C bonus (the only RenderWare call is RwTextureDestroy, stubbed on both sides)
+    CROW("CCustomCarEnvMapPipeline::pluginSpecMatDestructorCB", 0x5D97D0)
+        const int32_t off = (int32_t)r.u32(), sz = (int32_t)r.u32();
+        return CCase(r, d, [&]() -> uint64_t { return U(CCP::pluginSpecMatDestructorCB(mA, off, sz)); }, [&]() -> uint64_t { return U(ExeC<void*>(0x5D97D0, (void*)mA, off, sz)); });
     CEND(500)
     CROW("CCustomCarEnvMapPipeline::pluginSpecMatCopyConstructorCB", 0x5D9830)
         const int32_t off = (int32_t)r.u32(), sz = (int32_t)r.u32();

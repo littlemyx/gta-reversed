@@ -31,7 +31,10 @@ void CCover::Init() {
 
     m_NumPoints = 0;
     m_ListOfProcessedBuildings.Flush();
-    rng::fill(m_Points, CCoverPoint{});
+    // 0x698710: only the type byte of each point is cleared (the entity / ped pointers and their references stay as they are)
+    for (auto& cpt : m_Points) {
+        cpt.ClearType();
+    }
 }
 
 // 0x698DB0

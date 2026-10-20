@@ -4,6 +4,14 @@ template<class R, class... A> static R ExeS(uint32_t addr, A... a) { return orac
 static int GCtx(Rng& r) { return (int)r.below(360); }   // 0..0x167: the exe returns 0 / false for others, the port indexes its tables (asserts) - no caller passes one
 static int GCtxWide(Rng& r) { static const int edge[] = { -1, 0, 338, 339, 358, 359, 360, 361, 32767, -32768 }; return r.below(6) == 0 ? edge[r.below(10)] : (int)r.below(383) - 2; }   // the exe takes a word
 constexpr size_t kSpeechSlots = 0xB61C38, kSpeechSlotsEnd = 0xB61CF8;   // s_PedSpeechSlots (6 x 0x1C)
+// access to the private statics through explicit instantiation (access checks do not apply to the template arguments of an explicit instantiation)
+template<class Tag, class Tag::type Mem> struct Rob { friend typename Tag::type RobGet(Tag) { return Mem; } };
+struct RobScripted { using type = tPedSpeechSlotID (*)(); friend type RobGet(RobScripted); };
+struct RobReservePed { using type = bool (*)(); friend type RobGet(RobReservePed); };
+struct RobReservePlayer { using type = bool (*)(); friend type RobGet(RobReservePlayer); };
+template struct Rob<RobScripted, &CAEPedSpeechAudioEntity::CanWePlayScriptedSpeech>;
+template struct Rob<RobReservePed, &CAEPedSpeechAudioEntity::ReservePedConversationSpeechSlots>;
+template struct Rob<RobReservePlayer, &CAEPedSpeechAudioEntity::ReservePlayerConversationSpeechSlot>;
 } // namespace w3au
 
 static void TestW3Audio6() {
@@ -74,6 +82,25 @@ static void TestW3Audio6() {
     Run("CAEPedSpeechAudioEntity::WillPedChatAboutTopic 0x4E5800", [&](Rng& r, std::string& d) { const int16_t t = (int16_t)((int)r.below(14) - 2); return ACase(r, d, [&]() -> uint64_t { return P0()->PS::WillPedChatAboutTopic(t) ? 1 : 0; }, [&]() -> uint64_t { return ExeT<uint8_t>(0x4E5800, P(0), (int)t) != 0 ? 1 : 0; }, psBuild); }, 1000);
     PSR("CAEPedSpeechAudioEntity::CanPedHoldConversation", 0x4E69E0, 400, P0()->PS::CanPedHoldConversation() ? 1 : 0, ExeT<uint8_t>(0x4E69E0, P(0)) != 0 ? 1 : 0);
     // ReleasePlayerConversation 4E3960: skipped - the slot reset leaves different padding bytes (the port copies an uninitialised temporary), fields are equal
+    // ---- ORACLE-W3-AUDIO2: slot reservation, scripted-speech slot, constructor, vehicle statics (private statics through the Rob accessors above)
+    PSR("CAEPedSpeechAudioEntity::CanWePlayScriptedSpeech", 0x4E4950, 600, (int)RobGet(RobScripted{})(), (int)(int16_t)ExeC<int32_t>(0x4E4950));
+    PSR("CAEPedSpeechAudioEntity::ReservePedConversationSpeechSlots", 0x4E37F0, 800, RobGet(RobReservePed{})() ? 1 : 0, ExeC<uint8_t>(0x4E37F0) != 0 ? 1 : 0);
+    PSR("CAEPedSpeechAudioEntity::ReservePlayerConversationSpeechSlot", 0x4E3870, 800, RobGet(RobReservePlayer{})() ? 1 : 0, ExeC<uint8_t>(0x4E3870) != 0 ? 1 : 0);
+    Run("CAEPedSpeechAudioEntity::Constructor 0x4E4F10", [&](Rng& r, std::string& d) {
+        return ACase(r, d, [&]() -> uint64_t { new (P(0)) CAEPedSpeechAudioEntity(); At<uint32_t>(0) = 0; return 0; }, [&]() -> uint64_t { ExeT<void>(0x4E4F10, P(0)); At<uint32_t>(0) = 0; return 0; },
+            +[](Rng& r) { BuildEnt(r); std::memset(P(0), 0, sizeof(CAEPedSpeechAudioEntity)); });   // vptr (port vtable vs exe 0x85F310) cleared after the call on both sides; zeroed object (fresh pool memory)
+    }, 20);
+    // vehicle: the table lookup takes the model id (400..611; `sub eax, 0x190`), the output struct is the hidden first argument
+    Run("CAEVehicleAudioEntity::GetVehicleAudioSettings 0x4F5C10", [&](Rng& r, std::string& d) {
+        const int16_t m = (int16_t)(400 + r.below(212)); auto* o1 = P(0x10000); auto* o2 = P(0x10100);
+        return ACase(r, d, [&]() -> uint64_t { const auto s = CAEVehicleAudioEntity::GetVehicleAudioSettings(m); std::memcpy(o1, &s, sizeof s); std::memcpy(o2, &s, sizeof s); return 0; }, [&]() -> uint64_t { ExeS<void>(0x4F5C10, (void*)o2, (int)m); std::memcpy(o1, o2, 0x24); return 0; }, psBuild);
+    }, 424);
+    PSV("CAEVehicleAudioEntity::StaticInitialise", 0x5B99F0, 20, CAEVehicleAudioEntity::StaticInitialise(), ExeC<void>(0x5B99F0));
+    Run("CAEVehicleAudioEntity::UpdateGasPedalAudio 0x4F5EB0", [&](Rng& r, std::string& d) {
+        auto* veh = P(0x10000); const int type = r.below(2) ? 0 : 9;   // the exe handles type 0 (automobile) and 9 (bike) only
+        return ACase(r, d, [&]() -> uint64_t { OBJ(CAEVehicleAudioEntity)->CAEVehicleAudioEntity::UpdateGasPedalAudio(reinterpret_cast<CVehicle*>(veh), type); return 0; }, [&]() -> uint64_t { ExeT<void>(0x4F5EB0, P(0), (void*)veh, type); return 0; },
+            +[](Rng& r) { BuildEnt(r); At<float>(0x10000 + 0x49C) = GenF(r, 2.f); At<float>(0x10000 + 0x808) = GenF(r, 2.f); At<float>(0x10000 + 0x964) = GenF(r, 2.f); if (r.below(3) == 0) At<float>(0x10000 + 0x964) = At<float>(0x10000 + 0x808) = std::fabs(At<float>(0x10000 + 0x49C)); });
+    }, 1500);
 #undef OBJ
 #undef PSR
 #undef PSV

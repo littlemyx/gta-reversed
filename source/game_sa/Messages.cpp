@@ -238,11 +238,11 @@ void CMessages::AddToPreviousBriefArray(const GxtChar* text, int32 n1, int32 n2,
         i = PreviousBriefs.size() - 1;
     }
 
-    // Move entries so that we overwrite the unused entry at `i` and thus free up the 0th entry
-    // if `i == 0` this won't do anything.
+    // Move entries 0..i-1 to 1..i so that we overwrite the unused entry at `i` (or the last one) and thus free up the 0th entry
+    // if `i == 0` this won't do anything. (The range is [0, i + 1): std::shift_right keeps the elements INSIDE the range, so the old `begin() + i` lost entry i - 1.)
     std::shift_right(
         PreviousBriefs.begin(),
-        PreviousBriefs.begin() + i,
+        PreviousBriefs.begin() + i + 1,
         1
     );
 

@@ -63,7 +63,10 @@ const CVector& CTagManager::GetTagPos(int32 idx) {
 void CTagManager::AddTag(CEntity& entity) {
     assert(IsTag(entity) && "Must be a tag entity");
 
-    ms_tagDesc[ms_numTags++] = tTagDesc{ &entity, 0 };
+    // exe 0x49CC90 stores the entity pointer and the alpha byte only; assigning a whole tTagDesc temporary would also write its 3 padding bytes
+    auto& tag = ms_tagDesc[ms_numTags++];
+    tag.Entity = &entity;
+    tag.Alpha  = 0;
 }
 
 // 0x49CCB0

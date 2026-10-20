@@ -261,7 +261,10 @@ void SetFlashyColours(float fMult) {
         AmbientLightColour.red   = 1.0f;
         AmbientLightColour.green = 1.0f;
         AmbientLightColour.blue  = 1.0f;
-        DirectionalLightColour = DirectionalLightColourForFrame;
+        // the exe copies only red, green, blue (0x735AB0 / 0x735B40), the alpha of DirectionalLightColour is left alone
+        DirectionalLightColour.red   = DirectionalLightColourForFrame.red;
+        DirectionalLightColour.green = DirectionalLightColourForFrame.green;
+        DirectionalLightColour.blue  = DirectionalLightColourForFrame.blue;
 
         RpLightSetColor(pAmbient, &AmbientLightColour);
         RpLightSetColor(pDirect,  &DirectionalLightColour);
@@ -277,7 +280,10 @@ void SetFlashyColours_Mild(float fMult) {
         AmbientLightColour.red   = 0.65f;
         AmbientLightColour.green = 0.65f;
         AmbientLightColour.blue  = 0.65f;
-        DirectionalLightColour = DirectionalLightColourForFrame;
+        // the exe copies only red, green, blue (0x735AB0 / 0x735B40), the alpha of DirectionalLightColour is left alone
+        DirectionalLightColour.red   = DirectionalLightColourForFrame.red;
+        DirectionalLightColour.green = DirectionalLightColourForFrame.green;
+        DirectionalLightColour.blue  = DirectionalLightColourForFrame.blue;
 
         RpLightSetColor(pAmbient, &AmbientLightColour);
         RpLightSetColor(pDirect,  &DirectionalLightColour);

@@ -232,7 +232,7 @@ void CControllerConfigManager::DeleteMatching1rstPersonControls(eControllerActio
 }
 
 // 0x531BC0
-void CControllerConfigManager::DeleteMatchingVehicle_3rdPersonControls(KeyCode button, eControllerType type) {
+void CControllerConfigManager::DeleteMatchingVehicle_3rdPersonControls(eControllerAction nop, KeyCode button, eControllerType type) {
     if (GetIsKeyBlank(button, type)) {
         return;
     }
@@ -1199,12 +1199,12 @@ void CControllerConfigManager::DeleteMatchingActionInitiators(eControllerAction 
         DeleteMatchingCommonControls(action, button, type);
         DeleteMatching1rst3rdPersonControls(action, button, type);
         DeleteMatching3rdPersonControls(action, button, type);
-        DeleteMatchingVehicle_3rdPersonControls(button, type);
+        DeleteMatchingVehicle_3rdPersonControls(action, button, type);
         break;
     case eActionType::IN_CAR:
         DeleteMatchingCommonControls(action, button, type);
         DeleteMatchingVehicleControls(action, button, type);
-        DeleteMatchingVehicle_3rdPersonControls(button, type);
+        DeleteMatchingVehicle_3rdPersonControls(action, button, type);
         break;
     case eActionType::IN_CAR_THIRD_PERSON:
         DeleteMatchingCommonControls(action, button, type);
@@ -1218,14 +1218,14 @@ void CControllerConfigManager::DeleteMatchingActionInitiators(eControllerAction 
         DeleteMatching1rst3rdPersonControls(action, button, type);
         DeleteMatching3rdPersonControls(action, button, type);
         DeleteMatchingVehicleControls(action, button, type);
-        DeleteMatchingVehicle_3rdPersonControls(button, type);
+        DeleteMatchingVehicle_3rdPersonControls(action, button, type);
         break;
     case eActionType::FIRST_THIRD_PERSON:
         DeleteMatchingCommonControls(action, button, type);
         DeleteMatching1rstPersonControls(action, button, type);
         DeleteMatching1rst3rdPersonControls(action, button, type);
         DeleteMatching3rdPersonControls(action, button, type);
-        DeleteMatchingVehicle_3rdPersonControls(button, type);
+        DeleteMatchingVehicle_3rdPersonControls(action, button, type);
         break;
     default:
         return;

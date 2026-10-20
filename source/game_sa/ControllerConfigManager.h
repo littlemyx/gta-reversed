@@ -264,7 +264,7 @@ protected:
     void DeleteMatchingCommonControls(eControllerAction nop, KeyCode button, eControllerType type);
     void DeleteMatching3rdPersonControls(eControllerAction action, KeyCode button, eControllerType type);
     void DeleteMatchingVehicleControls(eControllerAction nop, KeyCode button, eControllerType type);
-    void DeleteMatchingVehicle_3rdPersonControls(KeyCode button, eControllerType type);
+    void DeleteMatchingVehicle_3rdPersonControls(eControllerAction nop, KeyCode button, eControllerType type);
     void DeleteMatching1rstPersonControls(eControllerAction nop, KeyCode button, eControllerType type);
     void DeleteMatching1rst3rdPersonControls(eControllerAction action, KeyCode button, eControllerType type);
     bool GetIsKeyBlank(KeyCode button, eControllerType type);

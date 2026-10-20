@@ -957,14 +957,17 @@ constexpr inline bool CheckMouseButton(KeyCode& key) {
 
     bool result = false;
     if constexpr (CheckType == eMouseCheckType::JUST_UP) {
+        // just released: down in the old state, up in the new one (the exe compares the two state bytes of the button)
+        const auto JustReleased = [](bool CMouseControllerState::* button) { return !(CPad::NewMouseControllerState.*button) && (CPad::OldMouseControllerState.*button); };
         switch (key) {
-        case rsMOUSE_LEFT_BUTTON:       result = pad->IsMouseLButtonPressed(); break;
-        case rsMOUSE_MIDDLE_BUTTON:     result = pad->IsMouseMButtonPressed(); break;
-        case rsMOUSE_RIGHT_BUTTON:      result = pad->IsMouseRButtonPressed(); break;
-        case rsMOUSE_WHEEL_UP_BUTTON:   result = pad->IsMouseWheelUpPressed(); break;
-        case rsMOUSE_WHEEL_DOWN_BUTTON: result = pad->IsMouseWheelDownPressed(); break;
-        case rsMOUSE_X1_BUTTON:         result = pad->IsMouseBmx1Pressed(); break;
-        case rsMOUSE_X2_BUTTON:         result = pad->IsMouseBmx2Pressed(); break;
+        case rsMOUSE_LEFT_BUTTON:       result = JustReleased(&CMouseControllerState::isMouseLeftButtonPressed); break;
+        // (the exe's jump table of 0x52F110 reads the RIGHT button bytes for key 2 and the MIDDLE button bytes for key 3; Down / Up (0x52EF30, 0x52F020) have them the other way round)
+        case rsMOUSE_MIDDLE_BUTTON:     result = JustReleased(&CMouseControllerState::isMouseRightButtonPressed); break;
+        case rsMOUSE_RIGHT_BUTTON:      result = JustReleased(&CMouseControllerState::isMouseMiddleButtonPressed); break;
+        case rsMOUSE_WHEEL_UP_BUTTON:   result = JustReleased(&CMouseControllerState::isMouseWheelMovedUp); break;
+        case rsMOUSE_WHEEL_DOWN_BUTTON: result = JustReleased(&CMouseControllerState::isMouseWheelMovedDown); break;
+        case rsMOUSE_X1_BUTTON:         result = JustReleased(&CMouseControllerState::isMouseFirstXPressed); break;
+        case rsMOUSE_X2_BUTTON:         result = JustReleased(&CMouseControllerState::isMouseSecondXPressed); break;
         default:                        NOTSA_UNREACHABLE("Invalid Key: {}", (uint32)key); break;
         }
     } else if constexpr (CheckType == eMouseCheckType::IS_DOWN || CheckType == eMouseCheckType::IS_UP) {

@@ -47,7 +47,7 @@ void CTagManager::ShutdownForRestart() {
         ms_numTags = 0;
     }
 #else
-    for (auto& tag : ms_tagDesc) {
+    for (auto& tag : GetTags()) { // exe 0x49CC60 clears only the first ms_numTags entries (not the whole array)
         tag.Alpha = 0;
     }
 #endif
@@ -63,12 +63,15 @@ const CVector& CTagManager::GetTagPos(int32 idx) {
 void CTagManager::AddTag(CEntity& entity) {
     assert(IsTag(entity) && "Must be a tag entity");
 
-    ms_tagDesc[ms_numTags++] = tTagDesc{ &entity, 0 };
+    // exe 0x49CC90 stores the entity pointer and the alpha byte only; assigning a whole tTagDesc temporary would also write its 3 padding bytes
+    auto& tag = ms_tagDesc[ms_numTags++];
+    tag.Entity = &entity;
+    tag.Alpha  = 0;
 }
 
 // 0x49CCB0
 tTagDesc* CTagManager::FindTagDesc(const CEntity& entity) {
-    for (auto& tag : GetTags()) {
+    for (auto& tag : GetTags() | std::views::reverse) { // exe 0x49CCB0 scans from the last tag to the first: with a repeated entity the LAST entry wins
         if (tag.Entity == &entity) {
             return &tag;
         }
@@ -185,11 +188,9 @@ void CTagManager::ResetAlpha(const CEntity& entity) {
 // 0x49CFE0
 void CTagManager::SetAlphaInArea(const CRect& area, uint8 alphaToSet) {
     for (auto& tag : GetTagsInArea(area)) {
-        auto* const atomicOfTag = tag.Entity->GetRpAtomic();
-        if (!atomicOfTag) {
-            continue;
+        if (auto* const atomicOfTag = tag.Entity->GetRpAtomic()) { // exe 0x49CFE0: the atomic's user value is set only if there is an atomic, the tag's own alpha always
+            SetAlpha(*atomicOfTag, alphaToSet);
         }
-        SetAlpha(*atomicOfTag, alphaToSet);
         tag.Alpha = alphaToSet;
     }           
     UpdateNumTagged();

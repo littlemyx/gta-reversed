@@ -10,7 +10,7 @@ void* CCustomCarEnvMapPipeline::pluginSpecMatConstructorCB(void* object, int32 o
 
 // 0x5D97D0
 void* CCustomCarEnvMapPipeline::pluginSpecMatDestructorCB(void* object, int32 offsetInObject, int32 sizeInObject) {
-    auto* data = *RWPLUGINOFFSET(CustomSpecMapPipeMaterialData*, object, ms_specularMapPluginOffset);
+    auto*& data = *RWPLUGINOFFSET(CustomSpecMapPipeMaterialData*, object, ms_specularMapPluginOffset); // exe 0x5D981A: the plugin slot itself is cleared
     if (data) {
         if (data->Texture) {
             RwTextureDestroy(data->Texture);
@@ -31,17 +31,21 @@ void* CCustomCarEnvMapPipeline::pluginSpecMatCopyConstructorCB(void* dstObject, 
     auto*& dst = SpecMapPlGetData(dstMat);
     if (src) {
         if (!dst) {
-            dst = m_gSpecMapPipeMatDataPool->New();
+            if (!(dst = m_gSpecMapPipeMatDataPool->New())) { // exe 0x5D9830: a full pool leaves a null in the slot and stops
+                return dstObject;
+            }
         }
         dst->Specularity = src->Specularity;
-        RwTextureAddRef(src->Texture);
+        if (src->Texture) { // exe: the reference is only taken for a non-null texture
+            RwTextureAddRef(src->Texture);
+        }
         if (auto* const t = std::exchange(dst->Texture, src->Texture)) {
             if (notsa::IsFixBugs()) { // Memory leak
                 RwTextureDestroy(t);
             }
         }
     }
-    return dst;
+    return dstObject; // exe: the destination OBJECT (not the plugin data)
 }
 
 // 0x5D9880

@@ -37,6 +37,10 @@
 #include "wave3_oracle_ik.inc"          // ORACLE-W3-IK: game_sa/Ragdoll rows (wave3_ik_oracle_test)
 #elif defined(W3_VIS_ONLY)
 #include "wave3_oracle_vis.inc"         // ORACLE-W3-VIS: VisibilityPlugins + app_light rows (wave3_vis_oracle_test)
+#elif defined(W3_CARENV_ONLY)
+#include "wave3_oracle_carenv.inc"      // ORACLE-W3-CARENV: game_sa/Pipelines/CustomCarEnvMap rows (wave3_carenv_oracle_test)
+#elif defined(W3_MISC_ONLY)
+#include "wave3_oracle_misc.inc"       // ORACLE-W3-MISC: Localisation + TagManager rows (wave3_misc_oracle_test)
 #elif defined(W3_FXS_ONLY)
 #include "wave3_oracle_fxs.inc"        // ORACLE-W3-FX: game_sa/Fx rows (wave3_fxs_oracle_test)
 #elif defined(W3_FX_ONLY)
@@ -203,6 +207,18 @@ static void TestW2() {
     using namespace w2;
     g_onFault = +[] { oracle::alloc::End(); };
     TestW3VisAll();
+    return;
+#endif
+#ifdef W3_CARENV_ONLY
+    using namespace w2;
+    g_onFault = +[] { oracle::alloc::End(); };
+    TestW3CarEnvAll();
+    return;
+#endif
+#ifdef W3_MISC_ONLY
+    using namespace w2;
+    g_onFault = +[] { oracle::alloc::End(); };
+    TestW3MiscAll();
     return;
 #endif
 #ifdef W3_FXS_ONLY

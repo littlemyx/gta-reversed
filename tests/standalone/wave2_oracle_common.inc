@@ -24,6 +24,12 @@ namespace w2 {
 
 static int g_portExtra = 0;            // INFO: bits only the port wrote (exe left them as garbage)
 
+#ifdef ORACLE_FAST_HELPERS   // oracle_fast.cpp: the CRT memcmp of this /Od target is a call per dword (4 MB data image per case)
+static bool BytesDiffer(const void* a, const void* b, size_t n) { return oraclefast::BytesDiffer(a, b, n); }
+#else
+static bool BytesDiffer(const void* a, const void* b, size_t n) { return std::memcmp(a, b, n) != 0; }
+#endif
+
 // three-way compare of constructed memory: init = before, p = port result, e = exe result (all n bytes). skipOff/skipN: dwords not compared (vptr).
 static bool Cmp3(const uint8_t* init, const uint8_t* p, const uint8_t* e, size_t n, size_t skipOff, size_t skipN, size_t stride, std::string& d, const char* tag, const std::vector<uint8_t>* mask = nullptr) {
     bool ok = true; int shown = 0, extra = 0;
@@ -64,6 +70,17 @@ static int GuardedCall(const std::function<uint64_t()>& f, uint64_t& out) {
 }
 // Both with the deterministic allocator. Returns true when return value, allocation volume, arena contents and every register agree.
 static bool BothA(std::string& d, uint32_t seed, std::initializer_list<Reg> regs, const std::function<uint64_t()>& portFn, const std::function<uint64_t()>& exeFn, const Ext& ext = {}, bool lenientArena = true) {   // non-template: one copy for the ~800 generated rows
+#ifdef ORACLE_FAST_HELPERS   // big regions (the 4 MB data image) are snapshotted as a delta of changed 64-byte blocks: oracle_fast.cpp
+    static std::vector<std::vector<oraclefast::Blk>> dl(16);
+    const auto IsBig = [](const Reg& g) { return g.n >= 0x100000 && (g.n & 63) == 0 && !g.lenient && g.mask.empty(); };
+    const auto BigCapture = [](const std::vector<uint8_t>& before, const Reg& g, std::vector<oraclefast::Blk>& d) { oraclefast::Capture(before.data(), reinterpret_cast<const uint8_t*>(g.va), g.n, d); };
+    const auto BigRestore = [](const std::vector<uint8_t>& before, const Reg& g, const std::vector<oraclefast::Blk>& d) { oraclefast::Restore(reinterpret_cast<uint8_t*>(g.va), before.data(), d); };
+#else
+    struct Dummy { int x; }; Dummy dl[16] = {};
+    const auto IsBig = [](const Reg&) { return false; };
+    const auto BigCapture = [](const std::vector<uint8_t>&, const Reg&, Dummy&) {};
+    const auto BigRestore = [](const std::vector<uint8_t>&, const Reg&, Dummy&) {};
+#endif
     static std::vector<std::vector<uint8_t>> in, pa;   // reused between cases: the 4 MB image snapshot would otherwise be page-faulted afresh per case
     if (in.size() < regs.size()) { in.resize(regs.size()); pa.resize(regs.size()); }
     { size_t i = 0; for (const auto& g : regs) { in[i].resize(g.n); std::memcpy(in[i].data(), (void*)g.va, g.n); ++i; } }
@@ -79,9 +96,9 @@ static bool BothA(std::string& d, uint32_t seed, std::initializer_list<Reg> regs
     const size_t pUsed = oracle::alloc::Used();
     std::vector<uint8_t> parena(oracle::alloc::g_arena, oracle::alloc::g_arena + pUsed);
     const int pAllocs = oracle::alloc::g_allocs; const bool pOvf = oracle::alloc::g_overflow;
-    { size_t i = 0; for (const auto& g : regs) { pa[i].resize(g.n); std::memcpy(pa[i].data(), (void*)g.va, g.n); ++i; } }
+    { size_t i = 0; for (const auto& g : regs) { if (IsBig(g)) { BigCapture(in[i], g, dl[i]); } else { pa[i].resize(g.n); std::memcpy(pa[i].data(), (void*)g.va, g.n); } ++i; } }
     if (ext.save) ext.save(w1);
-    { size_t i = 0; for (const auto& g : regs) std::memcpy((void*)g.va, in[i++].data(), g.n); }
+    { size_t i = 0; for (const auto& g : regs) { if (IsBig(g)) BigRestore(in[i], g, dl[i]); else std::memcpy((void*)g.va, in[i].data(), g.n); ++i; } }
     if (ext.restore) ext.restore(w0);
     oracle::alloc::Begin(seed);
     SeedBoth(seed);
@@ -111,16 +128,22 @@ static bool BothA(std::string& d, uint32_t seed, std::initializer_list<Reg> regs
         std::vector<uint8_t> init(n);
         oracle::alloc::FillPattern(init.data(), n & ~size_t(3), seed);
         if (lenientArena) ok &= Cmp3(init.data(), parena.data(), oracle::alloc::g_arena, n, ~size_t(0), 0, 0, dd, "arena");
-        else if (std::memcmp(parena.data(), oracle::alloc::g_arena, n) != 0) { ok = false; dd += " arena" + DiffDesc(parena.data(), oracle::alloc::g_arena, n, "A"); }
+        else if (BytesDiffer(parena.data(), oracle::alloc::g_arena, n)) { ok = false; dd += " arena" + DiffDesc(parena.data(), oracle::alloc::g_arena, n, "A"); }
     }
     { size_t i = 0; for (const auto& g : regs) {
         const uint8_t* now = reinterpret_cast<const uint8_t*>(g.va);
+#ifdef ORACLE_FAST_HELPERS
+        if (IsBig(g)) {
+            if (oraclefast::Equal(in[i].data(), now, g.n, dl[i])) { ++i; continue; }
+            pa[i] = in[i]; oraclefast::Apply(pa[i].data(), dl[i]);   // differs: rebuild the port-side image for the report below
+        }
+#endif
         if (g.lenient) ok &= Cmp3(in[i].data(), pa[i].data(), now, g.n, g.skipOff, g.skipN, g.stride, dd, ("r" + std::to_string(i)).c_str(), &g.mask);
         else if (!g.mask.empty()) {   // strict compare except the masked bytes (e.g. the vptr after a destructor)
             int shown = 0;
             for (size_t k = 0; k < g.n && shown < 8; ++k) { if (k < g.mask.size() && g.mask[k]) continue; if (pa[i][k] != now[k]) { ok = false; char t[64]; std::snprintf(t, sizeof t, " r%zu+%02zX got %02X exe %02X;", i, k, pa[i][k], now[k]); dd += t; ++shown; } }   // up to 8 differing bytes
         }
-        else if (std::memcmp(pa[i].data(), now, g.n) != 0 && !SameBlob(pa[i].data(), now, g.n)) { ok = false; dd += " r" + std::to_string(i) + DiffDesc(pa[i].data(), now, g.n, "m"); }
+        else if (BytesDiffer(pa[i].data(), now, g.n) && !SameBlob(pa[i].data(), now, g.n)) { ok = false; dd += " r" + std::to_string(i) + DiffDesc(pa[i].data(), now, g.n, "m"); }
         ++i; } }
     if (ext.same) ok &= ext.same(w1, w2, dd);
     if (!ok) d = dd;

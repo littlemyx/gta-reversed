@@ -10,7 +10,10 @@ struct Rg { uintptr_t va; size_t n; };
 // random dwords with structure: zeros, small floats / ints, full random. NaN / Inf bit patterns are never produced (an exponent of all ones is turned into 0x3F): fixture floats are game
 // states, and the C++ `>` / `max` of the port and the exe's x87 compare + fnstsw legitimately treat unordered operands differently (mask documented in .notes/reports/ORACLE-W1.md).
 static uint32_t NoNaN(uint32_t v) { return (v & 0x7F800000u) == 0x7F800000u ? (v & ~0x40000000u) : v; }
-static void FillGarbage(Rng& r, void* p, size_t n) {
+#ifdef ORACLE_FAST_HELPERS   // tests/standalone/oracle_fast.cpp: the same code compiled /O2 (the targets are /Od /Ob0; this fill of the 128 KB scratch block was ~half of a case)
+#include "oracle_fast.h"
+#endif
+static void FillGarbageRef(Rng& r, void* p, size_t n) {
     auto* w = static_cast<uint32_t*>(p);
     for (size_t i = 0; i + 4 <= n; i += 4) {
         uint32_t v;
@@ -25,6 +28,25 @@ static void FillGarbage(Rng& r, void* p, size_t n) {
         w[i / 4] = v;
     }
 }
+static void FillGarbage(Rng& r, void* p, size_t n) {
+#ifdef ORACLE_FAST_HELPERS
+    if (oraclefast::FillGarbage(&r.s, r.sp, p, n)) g_special = true;
+#else
+    FillGarbageRef(r, p, n);
+#endif
+}
+#ifdef ORACLE_FAST_HELPERS
+// start-up check: the optimised fill produces the same bytes, the same Rng state and the same g_special as the reference
+static struct FillSelfTest { FillSelfTest() {
+    static uint8_t a[0x10000], b[0x10000];
+    for (int sp : { 0, 30, 100 }) for (uint64_t seed = 1; seed <= 3; ++seed) {
+        Rng ra(seed), rb(seed); ra.sp = rb.sp = sp; const bool sp0 = g_special; g_special = false;
+        FillGarbageRef(ra, a, sizeof a); const bool refSpecial = g_special; g_special = false;
+        const bool fastSpecial = oraclefast::FillGarbage(&rb.s, rb.sp, b, sizeof b); g_special = sp0;
+        if (std::memcmp(a, b, sizeof a) != 0 || ra.s != rb.s || refSpecial != fastSpecial) { std::printf("oracle_fast: FillGarbage self-test FAILED (sp %d seed %d)\n", sp, (int)seed); std::abort(); }
+    }
+} } g_fillSelfTest;
+#endif
 // finite generators for game-state inputs (zeros, denormals, tiny values are still produced, NaN / Inf / huge are not)
 static float GF(Rng& r, float scale) { return GenF(r, scale, S_ZERO | S_DEN | S_TINY); }
 static CVector GVf(Rng& r, float scale) { return GenV(r, scale, S_ZERO | S_DEN | S_TINY); }

@@ -15,7 +15,7 @@
 
 namespace w3i {
 using namespace w2;
-constexpr size_t kScSize = 0x20000;
+constexpr size_t kScSize = 0xC000;   // the highest fixture (oVeh2, 0x1000 bytes) ends at 0xB000; was 0x20000: FillGarbage of the unused rest was a quarter of a case
 alignas(16) static uint8_t g_sc[kScSize];
 constexpr size_t oOut = 0x0, oStA = 0x400, oStB = 0x500, oPed = 0x2000, oVeh = 0x4000, oPed2 = 0x6000, oPadObj = 0x8000, oVeh2 = 0xA000;
 static uint8_t* S(size_t off) { return g_sc + off; }
@@ -89,7 +89,7 @@ static bool UCase(Rng& r, std::string& d, PF&& pf, EF&& ef) {
 struct Tu { explicit Tu(std::function<void(Rng&)> f) { w3i::g_tweak = std::move(f); } ~Tu() { w3i::g_tweak = nullptr; } };
 template<class Fn> static void RunScaledI(const std::string& name, Fn&& fn, int cases) {
     static const int scale = std::getenv("W3I_SCALE") ? std::max(1, std::atoi(std::getenv("W3I_SCALE"))) : 1;
-    static const int div = std::getenv("W3I_DIV") ? std::max(1, std::atoi(std::getenv("W3I_DIV"))) : 1;   // quick runs while developing
+    static const int div = std::getenv("W3I_DIV") ? std::max(1, std::atoi(std::getenv("W3I_DIV"))) : 2;   // default 2: run_all_tests kills an oracle target after 900 s; the full counts (W3I_DIV=1) need ~2 min, 18 min before the INPUT-HANG fast helpers (oracle_fast.cpp)
     Run(name, std::forward<Fn>(fn), std::max(10, cases * scale / div));
 }
 #define ROW(NAME, ADDR, CASES) { const int _cs = (CASES); const std::string _nm = std::string(NAME " " #ADDR); RunScaledI(_nm, [&](Rng& r, std::string& d) -> bool

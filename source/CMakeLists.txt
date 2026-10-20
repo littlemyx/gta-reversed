@@ -1534,6 +1534,7 @@ if (${RE_PROJECT}_RW_LIBRW)
     set(_W3I_BASE ${W2_BASE_SOURCES})
     add_executable(wave3_input_oracle_test EXCLUDE_FROM_ALL
         "${PROJECT_SOURCE_DIR}/tests/standalone/wave1_oracle_test.cpp"
+        "${PROJECT_SOURCE_DIR}/tests/standalone/oracle_fast.cpp"
         ${_W3I_BASE}
         game_sa/ControllerConfigManager.cpp
         game_sa/Pad.cpp
@@ -1543,6 +1544,9 @@ if (${RE_PROJECT}_RW_LIBRW)
         game_sa/GxtChar.cpp
         game_sa/MenuManager.cpp
     )
+    # INPUT-HANG: the harness helpers that dominate a case (4 MB image compare, FillGarbage of the scratch block) are optimised (pragmas) in their own TU; the /Od target took 18 min (run_all_tests timeout 15)
+    set_source_files_properties("${PROJECT_SOURCE_DIR}/tests/standalone/oracle_fast.cpp" PROPERTIES SKIP_PRECOMPILE_HEADERS ON)
+    target_compile_definitions(wave3_input_oracle_test PRIVATE ORACLE_FAST_HELPERS)
     target_compile_definitions(wave3_input_oracle_test PRIVATE W2_ONLY W3_INPUT_ONLY)
     target_compile_features(wave3_input_oracle_test PRIVATE cxx_std_23)
     target_compile_definitions(wave3_input_oracle_test PRIVATE $<TARGET_PROPERTY:${RE_PROJECT_LIB_NAME},COMPILE_DEFINITIONS> NOTSA_ORACLE_ADDRESS_GLOBALS)

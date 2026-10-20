@@ -89,3 +89,4 @@ date	agent	rules	kind	tokens	tool_uses	minutes	outcome	notes
 2026-10-20	ORACLE-W3-GP2-2	v3	continuation	224802	102	41	+9 rows, 3 fixes (shopping absent-key trap, clump alpha, kinda-colliding scan); found harness hiding port traps at EIP 0x400000
 2026-10-20	TRAP-AUDIT	v3	audit	240608	125	88	26 targets with port-faults-as-diff: 43 rows, 0 port bugs (17 UNREACHABLE debug traps fall through = PC24 0, 26 unlinked callees)
 2026-10-21	LINK-CALLEES	v3	harness+fixes	250418	132	64	26 cut-short rows now complete (port-only faults -> 0), 3 port fixes (help msg stat sign, control-keys string rewrite 188/1500, gang war zone compare)
+2026-10-21	ZONEINFO	v3	audit+fix (small)	~	~	35	8 script zone commands + 2 gang-war fns fixed (territory percentage 2657/3000, provocation zone 0 64/400)

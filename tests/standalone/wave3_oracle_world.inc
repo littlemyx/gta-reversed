@@ -20,6 +20,10 @@
 #include "RenderBuffer.hpp"
 #include "Pipelines/CustomBuilding/CustomBuildingDNPipeline.h"
 #include "PolyBunch.h"
+#include "Entity/Object/Object.h"
+#include "Models/ModelInfo.h"
+#include "Collision/ColModel.h"
+#include "Collision/Box.h"
 
 namespace w3w {
 using namespace w2;
@@ -185,6 +189,7 @@ template<class Fn> static void RunScaledW(const std::string& name, Fn&& fn, int 
 
 #include "wave3_oracle_world_e.inc"      // ORACLE-W3-PATHS: WaterLevel
 #include "wave3_oracle_world_f.inc"      // ORACLE-W3-PATHS: Shadows
+#include "wave3_oracle_world_g.inc"      // ORACLE-W3-PATHS: sector-list templates
 #include "wave3_oracle_world_d.inc"      // ORACLE-W3-PATHS: route finding, WaterLevel, Shadows maths, sector templates
 static void TestW3WorldAll() {
     TestW3WorldA();
@@ -193,4 +198,5 @@ static void TestW3WorldAll() {
     TestW3WorldD();
     TestW3WorldE();
     TestW3WorldShadows();
+    TestW3WorldG();
 }

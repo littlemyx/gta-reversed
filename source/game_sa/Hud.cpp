@@ -300,7 +300,7 @@ void CHud::SetHelpMessageStatUpdate(eStatUpdateState state, uint16 statId, float
     m_nHelpMessageStatId = statId;
     m_fHelpMessageStatUpdateValue = diff;
     m_nHelpMessageMaxStatValue = (uint16)notsa::detail::Ftol(max); // _ftol2, low word
-    sprintf_s(gString, state == STAT_UPDATE_INCREASE ? "+" : "-");
+    sprintf_s(gString, state != STAT_UPDATE_DECREASE ? "+" : "-"); // 0x588E0C: `state == 0` -> 0x2D, any other byte -> 0x2B (was: only STAT_UPDATE_INCREASE gave '+')
     AsciiToGxtChar(gString, m_pHelpMessage);
 }
 

@@ -39,6 +39,8 @@
 #include "wave3_oracle_vis.inc"         // ORACLE-W3-VIS: VisibilityPlugins + app_light rows (wave3_vis_oracle_test)
 #elif defined(W3_CARENV_ONLY)
 #include "wave3_oracle_carenv.inc"      // ORACLE-W3-CARENV: game_sa/Pipelines/CustomCarEnvMap rows (wave3_carenv_oracle_test)
+#elif defined(W3_STREAM_ONLY)
+#include "wave3_oracle_stream.inc"     // ORACLE-W3-STREAM: IplStore + TxdStore + Streaming rows (wave3_stream_oracle_test)
 #elif defined(W3_MISC_ONLY)
 #include "wave3_oracle_misc.inc"       // ORACLE-W3-MISC: Localisation + TagManager rows (wave3_misc_oracle_test)
 #elif defined(W3_FXS_ONLY)
@@ -213,6 +215,12 @@ static void TestW2() {
     using namespace w2;
     g_onFault = +[] { oracle::alloc::End(); };
     TestW3CarEnvAll();
+    return;
+#endif
+#ifdef W3_STREAM_ONLY
+    using namespace w2;
+    g_onFault = +[] { oracle::alloc::End(); };
+    TestW3StreamAll();
     return;
 #endif
 #ifdef W3_MISC_ONLY

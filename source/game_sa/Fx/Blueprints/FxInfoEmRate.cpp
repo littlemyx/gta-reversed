@@ -32,7 +32,7 @@ void FxInfoEmRate_c::GetValue(float currentTime, float mult, float totalTime, fl
     auto v10 = currentTime - totalTime;
     if (useConst) {
         emission.m_fCount = values[0] * totalTime;
-    } else if (v10 >= 0.0f) {
+    } else if (!(v10 < 0.0f)) { // the exe branches on `test ah, 5; jp`: v10 >= 0 and NaN take this path
         emission.m_fCount = m_InterpInfo.GetVal(0, currentTime, totalTime);
     } else {
         emission.m_fCount = m_InterpInfo.GetVal(0, len, -v10);

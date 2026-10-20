@@ -1588,6 +1588,30 @@ if (${RE_PROJECT}_RW_LIBRW)
     set_property(TARGET wave3_misc_oracle_test PROPERTY SOURCES "${STANDALONE_PAD_OBJ}" ${_w3misc_sources})
     target_link_options(wave3_misc_oracle_test PRIVATE "$<$<CXX_COMPILER_ID:MSVC>:/BASE:0x400000;/DYNAMICBASE:NO;/FIXED;/MERGE:_TEXT=.text;/INCREMENTAL:NO;/SUBSYSTEM:CONSOLE;/FORCE:UNRESOLVED;/MAP>")
     set_target_properties(wave3_misc_oracle_test PROPERTIES COMPILE_WARNING_AS_ERROR OFF CXX_SCAN_FOR_MODULES OFF)
+    # ORACLE-W3-STREAM: exe-oracle rows of game_sa/IplStore.cpp + TxdStore.cpp + Streaming.cpp (A + B functions); rows: tests/standalone/wave3_oracle_stream.inc
+    add_executable(wave3_stream_oracle_test EXCLUDE_FROM_ALL
+        "${PROJECT_SOURCE_DIR}/tests/standalone/wave1_oracle_test.cpp"
+        ${W2_BASE_SOURCES}
+        game_sa/IplStore.cpp
+        game_sa/TxdStore.cpp
+        game_sa/TxdStore_Plugin.cpp
+        game_sa/Core/Rect.cpp
+        game_sa/Population.cpp
+        game_sa/LoadedCarGroup.cpp
+    )
+    target_compile_definitions(wave3_stream_oracle_test PRIVATE W2_ONLY W3_STREAM_ONLY)
+    target_compile_features(wave3_stream_oracle_test PRIVATE cxx_std_23)
+    target_compile_definitions(wave3_stream_oracle_test PRIVATE $<TARGET_PROPERTY:${RE_PROJECT_LIB_NAME},COMPILE_DEFINITIONS> NOTSA_ORACLE_ADDRESS_GLOBALS)
+    target_include_directories(wave3_stream_oracle_test PRIVATE $<TARGET_PROPERTY:${RE_PROJECT_LIB_NAME},INCLUDE_DIRECTORIES>)
+    target_compile_options(wave3_stream_oracle_test PRIVATE $<TARGET_PROPERTY:${RE_PROJECT_LIB_NAME},COMPILE_OPTIONS>)
+    target_precompile_headers(wave3_stream_oracle_test PRIVATE StdInc.cpp)
+    target_link_libraries(wave3_stream_oracle_test PRIVATE librw spdlog::spdlog Tracy::TracyClient user32)
+    target_sources(wave3_stream_oracle_test PRIVATE "${STANDALONE_PAD_OBJ}")
+    get_target_property(_w3stream_sources wave3_stream_oracle_test SOURCES)
+    list(REMOVE_ITEM _w3stream_sources "${STANDALONE_PAD_OBJ}")
+    set_property(TARGET wave3_stream_oracle_test PROPERTY SOURCES "${STANDALONE_PAD_OBJ}" ${_w3stream_sources})
+    target_link_options(wave3_stream_oracle_test PRIVATE "$<$<CXX_COMPILER_ID:MSVC>:/BASE:0x400000;/DYNAMICBASE:NO;/FIXED;/MERGE:_TEXT=.text;/INCREMENTAL:NO;/SUBSYSTEM:CONSOLE;/FORCE:UNRESOLVED;/MAP>")
+    set_target_properties(wave3_stream_oracle_test PROPERTIES COMPILE_WARNING_AS_ERROR OFF CXX_SCAN_FOR_MODULES OFF)
     # ORACLE-W3-FX: exe-oracle rows of game_sa/Fx (FxSystem, FxManager, FxMemoryPool, FxSphere, FxFrustumInfo, FxSystemBP, FxEmitterBP) on fixture blocks; rows: tests/standalone/wave3_oracle_fxs.inc
     file(GLOB _W3X_BP_SOURCES RELATIVE "${CMAKE_CURRENT_SOURCE_DIR}" "${CMAKE_CURRENT_SOURCE_DIR}/game_sa/Fx/Blueprints/*.cpp" "${CMAKE_CURRENT_SOURCE_DIR}/game_sa/Fx/Blueprints/Interp/*.cpp")
     add_executable(wave3_fxs_oracle_test EXCLUDE_FROM_ALL

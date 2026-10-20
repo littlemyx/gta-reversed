@@ -56,6 +56,7 @@ FxSystem_c::FxSystem_c() : ListItem_c() {
     m_SystemBP        = nullptr;
     m_BoundingSphere  = nullptr;
     m_MustCreateParticles = false;
+    m_FireAE.m_FxSystem = nullptr; // exe 0x4AAF00 clears [+0x100] (the inlined CAEFireAudioEntity constructor)
 }
 
 // 0x4AA260

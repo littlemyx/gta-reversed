@@ -44,5 +44,6 @@ bool FxSphere_c::IsCollision(const FxSphere_c& sphere) const {
 
 // 0x4AA010
 float FxSphere_c::GetDistToPlane(const FxPlane_c& plane) const {
-    return DotProduct(plane.normal, m_vecCenter) - plane.distance;
+    // the exe sums the products in y, x, z order (each rounded to float at PC24), then subtracts the distance
+    return ((plane.normal.y * m_vecCenter.y + plane.normal.x * m_vecCenter.x) + plane.normal.z * m_vecCenter.z) - plane.distance;
 }

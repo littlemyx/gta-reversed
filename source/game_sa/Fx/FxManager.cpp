@@ -215,26 +215,23 @@ void FxManager_c::CalcFrustumInfo(RwCamera* camera) {
     const auto* viewWindow = RwCameraGetViewWindow(camera);
     const auto farClip     = RwCameraGetFarClipPlane(camera);
 
-    // The exe keeps `dist` and the radius on the x87 stack (extended precision), spills `angle` and sin(angle * k) to floats, and uses its OWN
-    // rad->deg (0x85A998 = 57.29582595825195) and deg->rad (0x85A7BC = 0.017453279...) factors, neither is common.h's
-    constexpr double kRadToDeg = (double)std::bit_cast<float>(0x42652EEDu); // 0x85A998
-    constexpr double kDegToRad = (double)std::bit_cast<float>(0x3C8EFA2Eu); // 0x85A7BC
-    const double dist  = std::sqrt((double)viewWindow->x * (double)viewWindow->x + (double)viewWindow->y * (double)viewWindow->y);
-    const float  angle = (float)(x87::atan2(dist, 1.0) * kRadToDeg);
-    const double radius0 = std::sqrt(dist * dist + (double)1.0f) * (double)farClip;
-    const double sinB    = x87::sin(((double)180.0f - (double)angle * 2.0) * kDegToRad);
-    const double sinA    = (double)(float)x87::sin((double)angle * kDegToRad);
-    const double radius  = radius0 / sinB * sinA;
-    const float  atZ     = (float)((double)matrix->at.z * radius);
+    // 0x4A9140. The game runs the x87 at PC=24 (D3D), so every add / mul / div / sqrt of the exe rounds to float: plain float arithmetic below. Only FPATAN and FSIN
+    // (not affected by the precision control) stay unrounded: the sine feeds the division / the product as an extended value (the `fst dword [esp+0x18]` after the
+    // second FSIN stores a copy, the register is used unrounded); the angle is stored as a float. The exe has its OWN rad->deg (0x85A998) and deg->rad (0x85A7BC) factors.
+    constexpr float kRadToDeg = std::bit_cast<float>(0x42652EEDu); // 0x85A998
+    constexpr float kDegToRad = std::bit_cast<float>(0x3C8EFA2Eu); // 0x85A7BC
+    const float dist    = std::sqrt(viewWindow->x * viewWindow->x + viewWindow->y * viewWindow->y);
+    const float angle   = (float)(x87::atan2((double)dist, 1.0) * (double)kRadToDeg);
+    const float radius0 = std::sqrt(dist * dist + 1.0f) * farClip;
+    const double sinB   = x87::sin((double)((180.0f - (angle + angle)) * kDegToRad));
+    const float  q      = (float)((double)radius0 / sinB);
+    const double sinA   = x87::sin((double)(angle * kDegToRad));
+    const float  radius = (float)((double)q * sinA);
+    const float  atX = matrix->at.x * radius, atY = matrix->at.y * radius, atZ = matrix->at.z * radius;
 
-    m_Frustum.m_Sphere = {
-        CVector{
-            (float)((double)matrix->pos.x + (double)matrix->at.x * radius),
-            (float)((double)matrix->pos.y + (double)matrix->at.y * radius),
-            (float)((double)matrix->pos.z + (double)atZ),
-        },
-        (float)radius
-    };
+    // the exe writes the centre and the radius only: m_Sphere.m_nNumPlanesPassed (+0x10) keeps its value
+    m_Frustum.m_Sphere.m_vecCenter = CVector{ matrix->pos.x + atX, matrix->pos.y + atY, matrix->pos.z + atZ };
+    m_Frustum.m_Sphere.m_fRadius   = radius;
 
     m_Frustum.m_Planes[0] = camera->frustumPlanes[2].plane;
     m_Frustum.m_Planes[1] = camera->frustumPlanes[3].plane;

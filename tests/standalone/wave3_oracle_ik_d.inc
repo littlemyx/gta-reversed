@@ -71,6 +71,32 @@ static void BuildIkMgrPed(Rng& r) {
     std::memset(reinterpret_cast<void*>(kIkMgr), 0, 0xB18);
     g_ikChainMan.Init();
 }
+// the ped's IK manager secondary task with look-at / right-arm / left-arm chain tasks: real port objects (placement new, port vtables) in the fixture, an own CPedIntelligence block for the task manager.
+// The exe functions read the same memory without a type check.
+constexpr size_t kTaskMgr = 0x2500, kTaskLook = 0x2600, kTaskRArm = 0x2800, kTaskLArm = 0x2A00, kIntel = 0x3000, kTasksCmp = 0x3800;
+static void BuildIkTasks(Rng& r) {
+    std::memset(g_fx + 0x2400, 0, kTasksCmp - 0x2400);
+    CPed* ped = PedPtr();
+    *reinterpret_cast<void**>(reinterpret_cast<uint8_t*>(ped) + 0x47C) = P(kIntel);   // CPed::m_pIntelligence (protected)
+    if (r.below(6) == 0) return;   // no IK manager task on this ped
+    auto* mgr = ::new (P(kTaskMgr)) CTaskSimpleIKManager{};
+    if (r.below(4) != 0) mgr->AddIKChainTask(::new (P(kTaskLook)) CTaskSimpleIKLookAt("la", r.below(2) ? rf::VehE(0) : nullptr, (int)r.below(5000), (eBoneTag)r.below(40), CVector{ FinF(r, 3.f), FinF(r, 3.f), FinF(r, 3.f) }, r.below(2), r.f01(), (int)r.below(800), (int8)r.below(6)), eIKChainSlot::LOOK_AT);
+    if (r.below(3) != 0) mgr->AddIKChainTask(::new (P(kTaskRArm)) CTaskSimpleIKPointArm("ra", eIKArm::IK_ARM_RIGHT, nullptr, (eBoneTag)r.below(40), CVector{ FinF(r, 3.f), FinF(r, 3.f), FinF(r, 3.f) }, r.f01(), (int)r.below(800)), eIKChainSlot::RIGHT_ARM);
+    if (r.below(3) != 0) mgr->AddIKChainTask(::new (P(kTaskLArm)) CTaskSimpleIKPointArm("la", eIKArm::IK_ARM_LEFT, nullptr, (eBoneTag)r.below(40), CVector{ FinF(r, 3.f), FinF(r, 3.f), FinF(r, 3.f) }, r.f01(), (int)r.below(800)), eIKChainSlot::LEFT_ARM);
+    ped->GetTaskManager().m_aSecondaryTasks[TASK_SECONDARY_IK] = mgr;
+}
+template<class PF, class EF>
+static bool TCase(Rng& r, std::string& d, PF&& pf, EF&& ef) {
+    const uint32_t seed = r.u32() | 1;
+    rf::Enter(); rf::Reset(r, 0);
+    BuildPedWorld(r, true);
+    BuildIkTasks(r);
+    Reg fx{ (uintptr_t)g_fx, kTasksCmp };
+    Reg img{ kImgLo, kImgHi - kImgLo };
+    const bool ok = BothA(d, seed, { fx, img }, std::forward<PF>(pf), std::forward<EF>(ef), kRf);
+    rf::Leave();
+    return ok;
+}
 static void BuildChainClean(Rng& r) { BuildChain(r); At<void*>(kChain + cEntity) = nullptr; At<void*>(kChain + cPed) = nullptr; }
 static void BuildUpdate(Rng& r) {
     BuildMove(r);
@@ -166,5 +192,20 @@ static void TestW3IkD() {
         return PCase(r, d,
             [&]() -> uint64_t { for (int i = 0; i < n; ++i) PortAdd(a); g_ikChainMan.Reset(); return 0; },
             [&]() -> uint64_t { for (int i = 0; i < n; ++i) ExeAdd(a); ExeThis<void>(0x618140, &g_ikChainMan); return 0; }, &BuildIkMgrPed);
+    KEND(300)
+    // ---- IKChainManager_c: queries / abort through the ped's IK manager task
+    KROW("IKChainManager_c::GetLookAtEntity", 0x6181D0, 0)
+        return TCase(r, d, [&]() -> uint64_t { return U(g_ikChainMan.GetLookAtEntity(PedPtr())); }, [&]() -> uint64_t { return U(ExeThis<void*, void*>(0x6181D0, &g_ikChainMan, PedPtr())); });
+    KEND(300)
+    KROW("IKChainManager_c::GetLookAtOffset", 0x618210, 0)
+        return TCase(r, d, [&]() -> uint64_t { g_ikChainMan.GetLookAtOffset(PedPtr(), At<CVector>(kOut)); return 0; }, [&]() -> uint64_t { ExeThis<void, void*, void*>(0x618210, &g_ikChainMan, PedPtr(), P(kOut)); return 0; });
+    KEND(300)
+    KROW("IKChainManager_c::IsArmPointing", 0x6182B0, 0)
+        const int arm = (int)r.below(2);
+        return TCase(r, d, [&]() -> uint64_t { return IKChainManager_c::IsArmPointing((eIKArm)arm, PedPtr()) ? 1 : 0; }, [&]() -> uint64_t { return (uint8_t)oracle::Fn<uint32_t __stdcall(int, void*)>(0x6182B0)(arm, PedPtr()) ? 1 : 0; });
+    KEND(300)
+    KROW("IKChainManager_c::AbortPointArm", 0x6182F0, 0)
+        const int arm = (int)r.below(2); const int blend = (int)r.below(3) ? (int)r.below(1000) : (int)r.u32();
+        return TCase(r, d, [&]() -> uint64_t { IKChainManager_c::AbortPointArm((eIKArm)arm, PedPtr(), blend); return 0; }, [&]() -> uint64_t { oracle::Fn<void __stdcall(int, void*, int)>(0x6182F0)(arm, PedPtr(), blend); return 0; });
     KEND(300)
 }

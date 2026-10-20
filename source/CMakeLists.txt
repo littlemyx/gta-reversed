@@ -1238,6 +1238,11 @@ if (${RE_PROJECT}_RW_LIBRW)
         game_sa/Ragdoll/IKChain.cpp
         game_sa/Ragdoll/BoneNode.cpp
         game_sa/Ragdoll/BoneNodeManager.cpp
+        game_sa/Tasks/TaskManager.cpp
+        game_sa/Tasks/TaskTypes/TaskSimpleIKChain.cpp
+        game_sa/Tasks/TaskTypes/TaskSimpleIKManager.cpp
+        game_sa/Tasks/TaskTypes/TaskSimpleIKLookAt.cpp
+        game_sa/Tasks/TaskTypes/TaskSimpleIKPointArm.cpp
         standalone/rw/math.cpp
         standalone/rw/rwmath_tables.cpp
         standalone/rw/rtquat.cpp

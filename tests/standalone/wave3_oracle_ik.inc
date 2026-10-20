@@ -8,6 +8,10 @@
 #include "Ragdoll/BoneNodeManager.h"
 #include "Ragdoll/IKChainManager.h"
 #include "standalone/rw/rwmath_exact.h"
+#include "TaskSimpleIKManager.h"
+#include "TaskSimpleIKLookAt.h"
+#include "TaskSimpleIKPointArm.h"
+#include "PedIntelligence.h"
 
 // private members through explicit instantiation (W2Rob, wave2_oracle_common.inc)
 struct W3K_GetId { using type = int32 (*)(eBoneTag32); friend type W2Get(W3K_GetId); };

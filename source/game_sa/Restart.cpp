@@ -104,12 +104,14 @@ void CRestart::FindClosestHospitalRestartPoint(CVector point, CVector& outPos, f
         bOverrideRespawnBasePointForMission = false;
     }
 
-    if (ExtraHospitalRestartRadius <= 0.0f || DistanceBetweenPoints2D(ExtraHospitalRestartCoors, point) >= ExtraHospitalRestartRadius) {
+    // 0x4608C9 / 0x4608FA (fcomp + `test ah, 0x41` / `test ah, 5`): a NaN radius or a NaN distance takes the search below, only `distance < radius` takes the extra point
+    if (!(ExtraHospitalRestartRadius > 0.0f) || !(DistanceBetweenPoints2D(ExtraHospitalRestartCoors, point) < ExtraHospitalRestartRadius)) {
         const auto pointLevel = CTheZones::GetLevelFromPosition(point);
         float closestDist = 10'000'000.0f; // todo: FLT_MAX
         int32 closestIdx = -1;
         for (auto i = 0u; i < NumberOfHospitalRestarts; i++) {
-            if (CStats::GetStatValue(STAT_CITY_UNLOCKED) >= (float)HospitalRestartWhenToUse[i]) {
+            // 0x460978 (fcomp + `test ah, 5; jnp`): only `stat < when` skips the point, a NaN stat does not
+            if (!(CStats::GetStatValue(STAT_CITY_UNLOCKED) < (float)HospitalRestartWhenToUse[i])) {
                 const auto& restartPos = HospitalRestartPoints[i];
                 auto dist = DistanceBetweenPoints(restartPos, point);
                 if (pointLevel != eLevelName::LEVEL_NAME_COUNTRY_SIDE && pointLevel != CTheZones::GetLevelFromPosition(restartPos)) {

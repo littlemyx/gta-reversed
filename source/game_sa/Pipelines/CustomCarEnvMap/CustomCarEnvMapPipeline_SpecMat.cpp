@@ -10,7 +10,7 @@ void* CCustomCarEnvMapPipeline::pluginSpecMatConstructorCB(void* object, int32 o
 
 // 0x5D97D0
 void* CCustomCarEnvMapPipeline::pluginSpecMatDestructorCB(void* object, int32 offsetInObject, int32 sizeInObject) {
-    auto* data = *RWPLUGINOFFSET(CustomSpecMapPipeMaterialData*, object, ms_specularMapPluginOffset);
+    auto*& data = *RWPLUGINOFFSET(CustomSpecMapPipeMaterialData*, object, ms_specularMapPluginOffset); // exe 0x5D981A: the plugin slot itself is cleared
     if (data) {
         if (data->Texture) {
             RwTextureDestroy(data->Texture);

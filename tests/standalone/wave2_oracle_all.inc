@@ -35,8 +35,10 @@
 #include "wave3_oracle_ai.inc"          // ORACLE-W3-AI: CarCtrl / PedIntelligence / Cover / Object rows (wave3_ai_oracle_test)
 #elif defined(W3_IK_ONLY)
 #include "wave3_oracle_ik.inc"          // ORACLE-W3-IK: game_sa/Ragdoll rows (wave3_ik_oracle_test)
+#elif defined(W3_VIS_ONLY)
+#include "wave3_oracle_vis.inc"         // ORACLE-W3-VIS: VisibilityPlugins + app_light rows (wave3_vis_oracle_test)
 #elif defined(W3_FXS_ONLY)
-#include "wave3_oracle_fxs.inc"         // ORACLE-W3-FX: game_sa/Fx rows (wave3_fxs_oracle_test)
+#include "wave3_oracle_fxs.inc"        // ORACLE-W3-FX: game_sa/Fx rows (wave3_fxs_oracle_test)
 #elif defined(W3_FX_ONLY)
 #include "wave3_oracle_fx.inc"          // ORACLE-W3-EFFECTS: explosion / fire / glass / rope / crane / plant ... root-file rows (wave3_fx_oracle_test)
 #else
@@ -195,6 +197,12 @@ static void TestW2() {
     using namespace w2;
     g_onFault = +[] { oracle::alloc::End(); };
     TestW3InputAll();
+    return;
+#endif
+#ifdef W3_VIS_ONLY
+    using namespace w2;
+    g_onFault = +[] { oracle::alloc::End(); };
+    TestW3VisAll();
     return;
 #endif
 #ifdef W3_FXS_ONLY

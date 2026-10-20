@@ -188,11 +188,9 @@ void CTagManager::ResetAlpha(const CEntity& entity) {
 // 0x49CFE0
 void CTagManager::SetAlphaInArea(const CRect& area, uint8 alphaToSet) {
     for (auto& tag : GetTagsInArea(area)) {
-        auto* const atomicOfTag = tag.Entity->GetRpAtomic();
-        if (!atomicOfTag) {
-            continue;
+        if (auto* const atomicOfTag = tag.Entity->GetRpAtomic()) { // exe 0x49CFE0: the atomic's user value is set only if there is an atomic, the tag's own alpha always
+            SetAlpha(*atomicOfTag, alphaToSet);
         }
-        SetAlpha(*atomicOfTag, alphaToSet);
         tag.Alpha = alphaToSet;
     }           
     UpdateNumTagged();

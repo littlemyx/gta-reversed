@@ -1,0 +1,91 @@
+# ORACLE-W3-EFFECTS: uncovered functions of Explosion / Fire / FireManager / CreepingFire / ProjectileInfo / Glass / FallingGlassPane / Rope(s) / Cranes / Bridge / Birds / Skidmarks / WaterCannon(s) / Coronas / Clouds / PlantMgr / PlantSurfPropMgr / PPTriPlantBuffer after the slice (all class A and B functions are covered; the rest is class C / S / D with the reason). Addresses without the 0x prefix (the coverage tool counts 0x literals).
+# addr	function	class	reason
+711EF0	::CreateNumberOfBirds	D	imports (D3D / file IO / audio hardware / CRT threads): not oracle-able as is
+712330	::Update	D	imports (D3D / file IO / audio hardware / CRT threads): not oracle-able as is
+712810	::Render	C	indirect (vtable / function pointer) calls or RenderWare draw calls: needs recorded draw / virtual stubs on both sides
+712FA0	::Shutdown	C	indirect (vtable / function pointer) calls or RenderWare draw calls: needs recorded draw / virtual stubs on both sides
+713760	::MovingFog_Create	D	imports (D3D / file IO / audio hardware / CRT threads): not oracle-able as is
+7138D0	::Init	D	imports (D3D / file IO / audio hardware / CRT threads): not oracle-able as is
+713950	::Render	D	imports (D3D / file IO / audio hardware / CRT threads): not oracle-able as is
+714650	::RenderSkyPolys	C	indirect (vtable / function pointer) calls or RenderWare draw calls: needs recorded draw / virtual stubs on both sides
+7154B0	::RenderBottomFromHeight	C	indirect (vtable / function pointer) calls or RenderWare draw calls: needs recorded draw / virtual stubs on both sides
+715F40	::VolumetricClouds_Create	D	imports (D3D / file IO / audio hardware / CRT threads): not oracle-able as is
+716380	::VolumetricCloudsRender	S	heap / CRT lock / pool allocation (CPtrList nodes, CObject delete, rope hook object): reachable with the arena but needs a world / object-pool fixture (CWorld::Add / Remove, model info): not written in this slice
+716B10	::MovingFog_Update	S	heap / CRT lock / pool allocation (CPtrList nodes, CObject delete, rope hook object): reachable with the arena but needs a world / object-pool fixture (CWorld::Add / Remove, model info): not written in this slice
+716C90	::MovingFogRender	D	imports (D3D / file IO / audio hardware / CRT threads): not oracle-able as is
+6FAA10	::RenderOutGeometryBufferForReflections	C	indirect (vtable / function pointer) calls or RenderWare draw calls: needs recorded draw / virtual stubs on both sides
+6FAA70	::Init	D	imports (D3D / file IO / audio hardware / CRT threads): not oracle-able as is
+6FAB00	::Shutdown	C	indirect (vtable / function pointer) calls or RenderWare draw calls: needs recorded draw / virtual stubs on both sides
+6FADF0	::Update	D	imports (D3D / file IO / audio hardware / CRT threads): not oracle-able as is
+6FAEC0	::Render	D	imports (D3D / file IO / audio hardware / CRT threads): not oracle-able as is
+6FB630	::RenderReflections	D	imports (D3D / file IO / audio hardware / CRT threads): not oracle-able as is
+6FBAA0	::RenderSunReflection	C	indirect (vtable / function pointer) calls or RenderWare draw calls: needs recorded draw / virtual stubs on both sides
+71AA10	::Update	D	imports (D3D / file IO / audio hardware / CRT threads): not oracle-able as is
+71B100	::Render	C	indirect (vtable / function pointer) calls or RenderWare draw calls: needs recorded draw / virtual stubs on both sides
+539360	::CreateFxSysForStrength	D	imports (D3D / file IO / audio hardware / CRT threads): not oracle-able as is
+53A570	::ProcessFire	D	imports (D3D / file IO / audio hardware / CRT threads): not oracle-able as is
+539D10	::DestroyAllFxSystems	D	imports (D3D / file IO / audio hardware / CRT threads): not oracle-able as is
+539D50	::CreateAllFxSystems	D	imports (D3D / file IO / audio hardware / CRT threads): not oracle-able as is
+53A050	::StartFire-	D	imports (D3D / file IO / audio hardware / CRT threads): not oracle-able as is
+53A270	::StartScriptFire	D	imports (D3D / file IO / audio hardware / CRT threads): not oracle-able as is
+53AF00	::Update	D	imports (D3D / file IO / audio hardware / CRT threads): not oracle-able as is
+46A760	::IsObjectGlass	C	indirect (vtable / function pointer) calls or RenderWare draw calls: needs recorded draw / virtual stubs on both sides
+71ADA0	::RenderHiLightPolys	C	indirect (vtable / function pointer) calls or RenderWare draw calls: needs recorded draw / virtual stubs on both sides
+71AE30	::RenderShatteredPolys	C	indirect (vtable / function pointer) calls or RenderWare draw calls: needs recorded draw / virtual stubs on both sides
+71AED0	::RenderReflectionPolys	C	indirect (vtable / function pointer) calls or RenderWare draw calls: needs recorded draw / virtual stubs on both sides
+71AFC0	::FindWindowSectorList<CPtrListSingleLink<CPhysical*>>	C	indirect (vtable / function pointer) calls or RenderWare draw calls: needs recorded draw / virtual stubs on both sides
+71B0D0	::Update	S	heap / CRT lock / pool allocation (CPtrList nodes, CObject delete, rope hook object): reachable with the arena but needs a world / object-pool fixture (CWorld::Add / Remove, model info): not written in this slice
+71B620	::GeneratePanesForWindow	D	imports (D3D / file IO / audio hardware / CRT threads): not oracle-able as is
+71BC40	::WindowRespondsToCollision	S	heap / CRT lock / pool allocation (CPtrList nodes, CObject delete, rope hook object): reachable with the arena but needs a world / object-pool fixture (CWorld::Add / Remove, model info): not written in this slice
+71C0D0	::WasGlassHitByBullet	D	imports (D3D / file IO / audio hardware / CRT threads): not oracle-able as is
+71C1A0	::WindowRespondsToExplosion	D	imports (D3D / file IO / audio hardware / CRT threads): not oracle-able as is
+71C2B0	::CarWindscreenShatters	S	heap / CRT lock / pool allocation (CPtrList nodes, CObject delete, rope hook object): reachable with the arena but needs a world / object-pool fixture (CWorld::Add / Remove, model info): not written in this slice
+71CB70	::HasGlassBeenShatteredAtCoors	D	imports (D3D / file IO / audio hardware / CRT threads): not oracle-able as is
+71CE20	::Render	C	indirect (vtable / function pointer) calls or RenderWare draw calls: needs recorded draw / virtual stubs on both sides
+71CF50	::BreakGlassPhysically	S	heap / CRT lock / pool allocation (CPtrList nodes, CObject delete, rope hook object): reachable with the arena but needs a world / object-pool fixture (CWorld::Add / Remove, model info): not written in this slice
+5DAC10	CPPTriPlantBuffer::SetGrassMaterialCB	C	indirect (vtable / function pointer) calls or RenderWare draw calls: needs recorded draw / virtual stubs on both sides
+5DB0C0	CPPTriPlantBuffer::Flush	D	imports (D3D / file IO / audio hardware / CRT threads): not oracle-able as is
+5DB140	CPPTriPlantBuffer::GetPPTriPlantPtr	D	imports (D3D / file IO / audio hardware / CRT threads): not oracle-able as is
+5DB170	CPPTriPlantBuffer::ChangeCurrentPlantModelsSet	D	imports (D3D / file IO / audio hardware / CRT threads): not oracle-able as is
+5DB1A0	CPPTriPlantBuffer::IncreaseBufferIndex	D	imports (D3D / file IO / audio hardware / CRT threads): not oracle-able as is
+5DB3D0	CPlantMgr::CalculateWindBending	D	imports (D3D / file IO / audio hardware / CRT threads): not oracle-able as is
+5DB940	CPlantMgr::Shutdown	D	imports (D3D / file IO / audio hardware / CRT threads): not oracle-able as is
+5DBAE0	CPlantMgr::Render	D	imports (D3D / file IO / audio hardware / CRT threads): not oracle-able as is
+5DBEB0	CPlantMgr::_ColEntityCache_Add	S	heap / CRT lock / pool allocation (CPtrList nodes, CObject delete, rope hook object): reachable with the arena but needs a world / object-pool fixture (CWorld::Add / Remove, model info): not written in this slice
+5DBEF0	CPlantMgr::_ColEntityCache_Remove	D	imports (D3D / file IO / audio hardware / CRT threads): not oracle-able as is
+5DBF20	CPlantMgr::_ProcessEntryCollisionDataSections_RemoveLocTris	D	imports (D3D / file IO / audio hardware / CRT threads): not oracle-able as is
+5DC510	CPlantMgr::_ColEntityCache_Update	D	imports (D3D / file IO / audio hardware / CRT threads): not oracle-able as is
+5DC8B0	CPlantMgr::_ProcessEntryCollisionDataSections_AddLocTris	S	heap / CRT lock / pool allocation (CPtrList nodes, CObject delete, rope hook object): reachable with the arena but needs a world / object-pool fixture (CWorld::Add / Remove, model info): not written in this slice
+5DCD80	CPlantMgr::_ProcessEntryCollisionDataSections	D	imports (D3D / file IO / audio hardware / CRT threads): not oracle-able as is
+5DCF00	CPlantMgr::_UpdateLocTris	S	heap / CRT lock / pool allocation (CPtrList nodes, CObject delete, rope hook object): reachable with the arena but needs a world / object-pool fixture (CWorld::Add / Remove, model info): not written in this slice
+5DCF30	CPlantMgr::PreUpdateOnceForNewCameraPos	D	imports (D3D / file IO / audio hardware / CRT threads): not oracle-able as is
+5DCFA0	CPlantMgr::Update	D	imports (D3D / file IO / audio hardware / CRT threads): not oracle-able as is
+5DD780	CPlantMgr::ReloadConfig	D	imports (D3D / file IO / audio hardware / CRT threads): not oracle-able as is
+5DD910	CPlantMgr::Initialise	D	imports (D3D / file IO / audio hardware / CRT threads): not oracle-able as is
+5DD3B0	CPlantSurfPropMgr::LoadPlantsDat	D	imports (D3D / file IO / audio hardware / CRT threads): not oracle-able as is
+5DD6C0	CPlantSurfPropMgr::Initialise	D	imports (D3D / file IO / audio hardware / CRT threads): not oracle-able as is
+737B80	::RemoveFXSystem	D	imports (D3D / file IO / audio hardware / CRT threads): not oracle-able as is
+737BC0	::Shutdown	D	imports (D3D / file IO / audio hardware / CRT threads): not oracle-able as is
+737C00	::RemoveNotAdd	D	imports (D3D / file IO / audio hardware / CRT threads): not oracle-able as is
+737C80	::AddProjectile	D	imports (D3D / file IO / audio hardware / CRT threads): not oracle-able as is
+738860	::RemoveDetonatorProjectiles	D	imports (D3D / file IO / audio hardware / CRT threads): not oracle-able as is
+7399B0	::RemoveAllProjectiles	D	imports (D3D / file IO / audio hardware / CRT threads): not oracle-able as is
+556070	::CreateHookObjectForRope	S	heap / CRT lock / pool allocation (CPtrList nodes, CObject delete, rope hook object): reachable with the arena but needs a world / object-pool fixture (CWorld::Add / Remove, model info): not written in this slice
+556780	::Remove	C	indirect (vtable / function pointer) calls or RenderWare draw calls: needs recorded draw / virtual stubs on both sides
+556800	::Render	C	indirect (vtable / function pointer) calls or RenderWare draw calls: needs recorded draw / virtual stubs on both sides
+5569C0	::PickUpObject	C	indirect (vtable / function pointer) calls or RenderWare draw calls: needs recorded draw / virtual stubs on both sides
+557530	::Update	D	imports (D3D / file IO / audio hardware / CRT threads): not oracle-able as is
+556AE0	::Render	C	indirect (vtable / function pointer) calls or RenderWare draw calls: needs recorded draw / virtual stubs on both sides
+556B10	::Shutdown	C	indirect (vtable / function pointer) calls or RenderWare draw calls: needs recorded draw / virtual stubs on both sides
+556B40	::RegisterRope	S	heap / CRT lock / pool allocation (CPtrList nodes, CObject delete, rope hook object): reachable with the arena but needs a world / object-pool fixture (CWorld::Add / Remove, model info): not written in this slice
+558D10	::CreateRopeForSwatPed	C	indirect (vtable / function pointer) calls or RenderWare draw calls: needs recorded draw / virtual stubs on both sides
+558D70	::Update	S	heap / CRT lock / pool allocation (CPtrList nodes, CObject delete, rope hook object): reachable with the arena but needs a world / object-pool fixture (CWorld::Add / Remove, model info): not written in this slice
+7204E0	::Init	D	imports (D3D / file IO / audio hardware / CRT threads): not oracle-able as is
+720570	::Shutdown	C	indirect (vtable / function pointer) calls or RenderWare draw calls: needs recorded draw / virtual stubs on both sides
+720640	::Render	C	indirect (vtable / function pointer) calls or RenderWare draw calls: needs recorded draw / virtual stubs on both sides
+720EC0	::RegisterOne-EC0	C	indirect (vtable / function pointer) calls or RenderWare draw calls: needs recorded draw / virtual stubs on both sides
+728DA0	::Render	D	imports (D3D / file IO / audio hardware / CRT threads): not oracle-able as is
+7295E0	::PushPeds	S	heap / CRT lock / pool allocation (CPtrList nodes, CObject delete, rope hook object): reachable with the arena but needs a world / object-pool fixture (CWorld::Add / Remove, model info): not written in this slice
+72A280	::Update_OncePerFrame	S	heap / CRT lock / pool allocation (CPtrList nodes, CObject delete, rope hook object): reachable with the arena but needs a world / object-pool fixture (CWorld::Add / Remove, model info): not written in this slice
+729B30	::Render	D	imports (D3D / file IO / audio hardware / CRT threads): not oracle-able as is
+72A3C0	::Update	C	indirect (vtable / function pointer) calls or RenderWare draw calls: needs recorded draw / virtual stubs on both sides

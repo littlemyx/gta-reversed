@@ -19,7 +19,7 @@ enum class ePaneType : uint32 {
 
 class CGlass {
 public:
-    static NOTSA_GLOBAL_DECL(CGlass, PanePolyPositions, 0x8D5CD8, (CVector2D[4][3]));
+    static NOTSA_GLOBAL_DECL(CGlass, PanePolyPositions, 0x8D5CD8, (CVector2D[5][3]));
     static inline NOTSA_GLOBAL(ReflectionPolyVertexBaseIdx, 0xC71B18, (int32), {});
     static inline NOTSA_GLOBAL(ReflectionPolyIndexBaseIdx, 0xC71B1C, (int32), {});
     static inline NOTSA_GLOBAL_ALIAS(ReflectionPolyVertexBuffer, 0xC5B158, (std::array<RxObjSpace3DLitVertex, 1706>), *reinterpret_cast<std::array<RxObjSpace3DLitVertex, 1706>*>(reinterpret_cast<uint8*>(&TempBufferVertices) + 55296));
@@ -31,7 +31,7 @@ public:
     static inline NOTSA_GLOBAL(PanePolyCenterPositions, 0xC71B30, (std::array<CVector2D, 5>), {});
     static inline NOTSA_GLOBAL(apEntitiesToBeRendered, 0xC71B58, (CEntity*[32]), {});
     static inline NOTSA_GLOBAL(NumGlassEntities, 0xC71BD8, (uint32), {});
-    static inline NOTSA_GLOBAL(aGlassPanes, 0xC71BF8, (std::array<CFallingGlassPane, 44>), {}); static_assert(sizeof(aGlassPanes) == 4928);
+    static inline NOTSA_GLOBAL(aGlassPanes, 0xC71BF8, (std::array<CFallingGlassPane, 45>), {}); static_assert(sizeof(aGlassPanes) == 5040); // 45 panes: the exe loops end at 0xC73015 (+0x6D of pane 44) and the array ends at LastColCheckMS 0xC72FA8
     static inline NOTSA_GLOBAL(LastColCheckMS, 0xC72FA8, (uint32), {});
 
 public:

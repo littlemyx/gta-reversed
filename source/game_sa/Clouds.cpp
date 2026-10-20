@@ -122,7 +122,8 @@ void CClouds::SetUpOneSkyPoly(CVector vert1pos, CVector vert2pos, CVector vert3p
 
 // 0x713660
 void CClouds::MovingFogInit() {
-    ms_mf = {};
+    // 0x713660: the exe clears only the 350 slot flags (rep stosd), not the positions / sizes / intensities / speeds
+    ms_mf.m_bFogSlots.fill(false);
     ms_mf.m_vecWind = CVector(0.06f, 0.06f, 0.0f);
     ms_mf.m_nPrimIndices = { 0, 1, 2, 0, 2, 3 };
 }
@@ -1297,7 +1298,9 @@ int32 CClouds::VolumetricClouds_GetFirstFreeSlot() {
 
 // 0x713630
 float CClouds::VolumetricCloudsGetMaxDistance() {
-    return std::min(RwCameraGetFarClipPlane(Scene.m_pRwCamera), 600.f);
+    // 0x713630: fcomp + jp: a NaN far plane (unordered) gives 600 like a far plane >= 600, std::min(NaN, 600) would give NaN
+    const float farZ = RwCameraGetFarClipPlane(Scene.m_pRwCamera);
+    return farZ < 600.f ? farZ : 600.f;
 }
 
 // 0x716380

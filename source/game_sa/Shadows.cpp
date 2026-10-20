@@ -69,10 +69,11 @@ void CStaticShadow::Free() {
             it = static_cast<CPolyBunch*>(it->m_pNext);
         }
         it->m_pNext = prevHead;
-
-        m_pPolyBunch = nullptr;
-        m_nId = 0;
     }
+
+    // The exe clears these two also when there is no poly bunch (0x70769E is the target of the `je` of the null test)
+    m_pPolyBunch = nullptr;
+    m_nId = 0;
 }
 
 // 0x706CD0

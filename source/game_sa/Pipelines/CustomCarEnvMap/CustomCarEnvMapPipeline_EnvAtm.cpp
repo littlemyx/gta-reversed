@@ -4,9 +4,7 @@
 
 // 0x5D8D30
 void* CCustomCarEnvMapPipeline::pluginEnvAtmConstructorCB(void* object, int32 offsetInObject, int32 sizeInObject) {
-    auto* const self = static_cast<RpAtomic*>(object);
-
-    EnvMapAtmPlGetData(self) = nullptr;
+    *RWPLUGINOFFSET(CustomEnvMapPipeAtomicData*, object, offsetInObject) = nullptr; // exe 0x5D8D30: the offset ARGUMENT (not ms_envMapAtmPluginOffset)
     return object;
 }
 

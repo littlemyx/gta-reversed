@@ -2112,13 +2112,16 @@ bool CWaterLevel::GetWaterLevel(const CVector& pos, float& outWaterLevel, bool t
 
 // 0x6E5A40
 uint32 CWaterLevel::AddWaterLevelVertex(int32 X, int32 Y, CRenPar P) {
-    // Make sure point is inside world bounds
-    if (CVector2D pt{ (float)X, (float)Y }; WORLD_BOUNDS.DoConstrainPoint(pt)) {
-        X = (int32)pt.x;
-        Y = (int32)pt.y;
-
-        P = {};
-    }
+    // Make sure the point is inside the world bounds (exe: every coordinate that is <= -3000 or >= 3000 is clamped to the bound AND the parameters are reset to
+    // z = 0, bigWaves = 1.0f, smallWaves = 0, flow = 0 - the bound itself counts as outside, and the reset value of bigWaves is 1.0, not 0)
+    const auto ConstrainCoord = [&P](int32& c) {
+        if (c <= -3000 || c >= 3000) {
+            c = c <= -3000 ? -3000 : 3000;
+            P = CRenPar{ 0.f, 1.f, 0.f, 0, 0 };
+        }
+    };
+    ConstrainCoord(X);
+    ConstrainCoord(Y);
 
     // Try finding a vertex with the same coords, and use that
     for (auto&& [id, vtx] : rngv::enumerate(m_aVertices | rng::views::take(NumWaterVertices))) {

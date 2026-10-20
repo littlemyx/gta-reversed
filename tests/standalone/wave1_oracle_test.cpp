@@ -332,6 +332,7 @@ static int __cdecl AssertHook(int, char* msg, int*) {   // prints the call stack
 
 int main(int argc, char** argv) {
     std::setvbuf(stdout, nullptr, _IONBF, 0);
+    _CrtSetDebugFillThreshold(0);   // LINK-CALLEES: the Debug CRT fills the unused rest of a sprintf_s/strcpy_s destination with 0xFE; the exe (release CRT) and the run build do not - no spurious mismatch in the buffer tail
     for (int i = 1; i < argc; ++i) {
         if (!std::strcmp(argv[i], "-v")) g_verbose = true;
         else if (!std::strcmp(argv[i], "-v53")) g_verbose53 = true;

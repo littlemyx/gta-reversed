@@ -10,6 +10,7 @@
 #include "Pickups.h"
 #include "Darkel.h"
 #include "GangWars.h"
+#include "TheZones.h"
 #include "PedGroups.h"
 #include "PlayerInfo.h"
 #include "Population.h"
@@ -18,6 +19,10 @@
 #include "Clock.h"
 #include "Wanted.h"
 #include "WeaponEffects.h"
+#include "Audio/Managers/AESoundManager.h"
+// LINK-CALLEES: CAEDoorAudioEntity::Reset (CGarages::Init_AfterRestart, linked) calls AESoundManager.CancelSoundsOwnedByAudioEntity; the sound-manager TU is not linked into this test, so the port's call goes to the
+// exe's CAESoundManager::CancelSoundsOwnedByAudioEntity 0x4EFCD0 (thiscall, ret 8) on the same global AESoundManager
+void CAESoundManager::CancelSoundsOwnedByAudioEntity(CAEAudioEntity* audioEntity, bool bFullStop) { oracle::Fn<void __fastcall(void*, int, CAEAudioEntity*, bool)>(0x4EFCD0)(this, 0, audioEntity, bFullStop); }
 namespace w2 {   // arguments in game range (the port indexes its tables with them under an assert, the exe reads past the table end)
 template<> eWeaponType GE<eWeaponType>(Rng& r) { return (eWeaponType)(r.below(8) ? r.below(47) : r.below(60)); }
 template<> eGarageType GE<eGarageType>(Rng& r) { static constexpr uint8_t k[] = { 0,1,2,3,4,5,11,14,15,16,17,18,19,20,21,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45 }; return (eGarageType)k[r.below(sizeof k)]; }

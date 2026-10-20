@@ -10,6 +10,10 @@
 #include "Animation/AnimBlendClumpData.h"
 #include "Animation/AnimBlendHierarchy.h"
 #include "Animation/AnimBlendSequence.h"
+// LINK-CALLEES: MemoryMgr.cpp cannot be linked (the harness defines CMemoryMgr::Malloc/Free itself, LNK2005), so the port's CMemoryMgr::MoveMemory call from CAnimBlendSequence/Hierarchy::MoveMemory goes
+// to the exe's 0x72F500 (cdecl, `mov eax,[esp+4]; ret`: returns its argument; the port's own body is the same through the no-op heap move)
+#include "MemoryMgr.h"
+void* CMemoryMgr::MoveMemory(void* memory) { return oracle::Fn<void* __cdecl(void*)>(0x72F500)(memory); }
 #include "Plugins/RpAnimBlendPlugin/RpAnimBlend.h"
 #include "Plugins/NodeNamePlugin/NodeName.h"
 

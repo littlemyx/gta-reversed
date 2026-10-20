@@ -1020,6 +1020,8 @@ if (${RE_PROJECT}_RW_LIBRW)
         ${W2_GEN_SOURCES}
         ${W2_FUNC_SOURCES}
     )
+    # LINK-CALLEES: callee translation units the port reaches from the rows of this target (was: unresolved -> port fault at 0x400000, rest of the function not compared)
+    target_sources(wave2_oracle_test PRIVATE game_sa/Weapon.cpp game_sa/WeaponInfo.cpp game_sa/Audio/Entities/AEPedSpeechAudioEntity.cpp game_sa/DamageManager.cpp game_sa/CarEnterExit.cpp game_sa/Tasks/TaskTypes/TaskSimpleCarSetPedInAsDriver.cpp)
     target_compile_definitions(wave2_oracle_test PRIVATE W2_ONLY)
     target_compile_features(wave2_oracle_test PRIVATE cxx_std_23)
     target_compile_definitions(wave2_oracle_test PRIVATE $<TARGET_PROPERTY:${RE_PROJECT_LIB_NAME},COMPILE_DEFINITIONS> NOTSA_ORACLE_ADDRESS_GLOBALS)
@@ -1042,6 +1044,8 @@ if (${RE_PROJECT}_RW_LIBRW)
         ${W2_BASE_SOURCES}
         ${W3_VEH_SOURCES}
     )
+    # LINK-CALLEES: callee translation units the port reaches from the rows of this target (was: unresolved -> port fault at 0x400000, rest of the function not compared)
+    target_sources(wave3_vehicle_oracle_test PRIVATE game_sa/Pad.cpp game_sa/Stats.cpp game_sa/Garages.cpp)
     target_compile_definitions(wave3_vehicle_oracle_test PRIVATE W2_ONLY W3_VEH_ONLY)
     target_compile_features(wave3_vehicle_oracle_test PRIVATE cxx_std_23)
     target_compile_definitions(wave3_vehicle_oracle_test PRIVATE $<TARGET_PROPERTY:${RE_PROJECT_LIB_NAME},COMPILE_DEFINITIONS> NOTSA_ORACLE_ADDRESS_GLOBALS)
@@ -1066,6 +1070,8 @@ if (${RE_PROJECT}_RW_LIBRW)
         game_sa/WeaponEffects.cpp   # CPlayerPed::ClearWeaponTarget -> CWeaponEffects::ClearCrossHair: the unit was not linked, every player-type case ended as an agreed fault
         game_sa/TimeCycle.cpp   # CPhysical::GetLightingFromCol (CPlayerPed::IsHidden) calls the CTimeCycle ambient getters: without the unit the port side called 0x400000 and every non-vehicle case ended as an agreed fault
     )
+    # LINK-CALLEES: callee translation units the port reaches from the rows of this target (was: unresolved -> port fault at 0x400000, rest of the function not compared)
+    target_sources(wave3_ped_oracle_test PRIVATE game_sa/Radar.cpp)
     target_compile_definitions(wave3_ped_oracle_test PRIVATE W2_ONLY W3_PED_ONLY)
     target_compile_features(wave3_ped_oracle_test PRIVATE cxx_std_23)
     target_compile_definitions(wave3_ped_oracle_test PRIVATE $<TARGET_PROPERTY:${RE_PROJECT_LIB_NAME},COMPILE_DEFINITIONS> NOTSA_ORACLE_ADDRESS_GLOBALS)
@@ -1093,6 +1099,8 @@ if (${RE_PROJECT}_RW_LIBRW)
         game_sa/Events/EventScriptedAttractor.cpp
         game_sa/Events/EventScanner.cpp
     )
+    # LINK-CALLEES: callee translation units the port reaches from the rows of this target (was: unresolved -> port fault at 0x400000, rest of the function not compared)
+    target_sources(wave3_events_oracle_test PRIVATE game_sa/PedType.cpp)
     target_compile_definitions(wave3_events_oracle_test PRIVATE W2_ONLY W3_EV_ONLY)
     target_compile_features(wave3_events_oracle_test PRIVATE cxx_std_23)
     target_compile_definitions(wave3_events_oracle_test PRIVATE $<TARGET_PROPERTY:${RE_PROJECT_LIB_NAME},COMPILE_DEFINITIONS> NOTSA_ORACLE_ADDRESS_GLOBALS)
@@ -1124,6 +1132,8 @@ if (${RE_PROJECT}_RW_LIBRW)
         game_sa/Events/EventScriptedAttractor.cpp
         game_sa/Events/EventScanner.cpp
     )
+    # LINK-CALLEES: callee translation units the port reaches from the rows of this target (was: unresolved -> port fault at 0x400000, rest of the function not compared)
+    target_sources(wave3_tasks_oracle_test PRIVATE game_sa/PedType.cpp game_sa/CullZones.cpp game_sa/VehicleScanner.cpp)
     target_compile_definitions(wave3_tasks_oracle_test PRIVATE W2_ONLY W3_TASKS_ONLY)
     target_compile_features(wave3_tasks_oracle_test PRIVATE cxx_std_23)
     target_compile_definitions(wave3_tasks_oracle_test PRIVATE $<TARGET_PROPERTY:${RE_PROJECT_LIB_NAME},COMPILE_DEFINITIONS> NOTSA_ORACLE_ADDRESS_GLOBALS)
@@ -1192,6 +1202,8 @@ if (${RE_PROJECT}_RW_LIBRW)
         ${W3_GP_SOURCES}
         game_sa/TimeCycle.cpp
     )
+    # LINK-CALLEES: callee translation units the port reaches from the rows of this target (was: unresolved -> port fault at 0x400000, rest of the function not compared)
+    target_sources(wave3_gameplay_oracle_test PRIVATE game_sa/Radar.cpp game_sa/TheZones.cpp game_sa/Audio/Entities/AEDoorAudioEntity.cpp game_sa/Models/VehicleModelInfo.cpp)
     target_compile_definitions(wave3_gameplay_oracle_test PRIVATE W2_ONLY W3_GP_ONLY)
     target_compile_features(wave3_gameplay_oracle_test PRIVATE cxx_std_23)
     target_compile_definitions(wave3_gameplay_oracle_test PRIVATE $<TARGET_PROPERTY:${RE_PROJECT_LIB_NAME},COMPILE_DEFINITIONS> NOTSA_ORACLE_ADDRESS_GLOBALS)
@@ -1420,6 +1432,8 @@ if (${RE_PROJECT}_RW_LIBRW)
         game_sa/Scene.cpp
         game_sa/Collision/ColSphere.cpp
     )
+    # LINK-CALLEES: CEntity::TransformFromObjectSpace (matrix-less entities) calls the free function TransformPoint (common.cpp); was unresolved -> port fault at 0x400000
+    target_sources(wave3_camera_oracle_test PRIVATE game_sa/common.cpp)
     target_compile_definitions(wave3_camera_oracle_test PRIVATE W2_ONLY W3_CAMERA_ONLY)
     target_compile_features(wave3_camera_oracle_test PRIVATE cxx_std_23)
     target_compile_definitions(wave3_camera_oracle_test PRIVATE $<TARGET_PROPERTY:${RE_PROJECT_LIB_NAME},COMPILE_DEFINITIONS> NOTSA_ORACLE_ADDRESS_GLOBALS)
@@ -1508,6 +1522,8 @@ if (${RE_PROJECT}_RW_LIBRW)
         game_sa/Text/Data.cpp
         game_sa/Text/MissionTextOffsets.cpp
     )
+    # LINK-CALLEES: callee translation units the port reaches from the rows of this target (was: unresolved -> port fault at 0x400000, rest of the function not compared)
+    target_sources(wave3_ui_oracle_test PRIVATE game_sa/GxtChar.cpp game_sa/HudColours.cpp game_sa/ControllerConfigManager.cpp)
     target_compile_definitions(wave3_ui_oracle_test PRIVATE W2_ONLY W3_UI_ONLY)
     target_compile_features(wave3_ui_oracle_test PRIVATE cxx_std_23)
     target_compile_definitions(wave3_ui_oracle_test PRIVATE $<TARGET_PROPERTY:${RE_PROJECT_LIB_NAME},COMPILE_DEFINITIONS> NOTSA_ORACLE_ADDRESS_GLOBALS)

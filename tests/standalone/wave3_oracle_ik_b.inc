@@ -66,7 +66,7 @@ static void TestW3IkB() {
             [&]() -> uint64_t { ExeThis<void, int32_t, uint32_t, uint32_t, uint32_t, uint32_t>(0x618520, Ch(), SelTag(sel, o), lx, ly, lz, cur); return 0; });
     KEND(500)
     KROW("IKChain_c::IsAtTarget", 0x617F30, 0)
-        const float range = r.below(6) == 0 ? SpF(r, 10.f) : r.f01() * 100.f; const bool wantDist = r.below(4) != 0;
+        const float range = r.below(6) == 0 ? SpF(r, 10.f) : r.f01() * 260.f; const bool wantDist = r.below(4) != 0;
         return KCase(r, d, [&]() -> uint64_t { return Ch()->IsAtTarget(range, wantDist ? &At<float>(kOut) : nullptr) ? 1 : 0; },
             [&]() -> uint64_t { return (uint8_t)ExeThis<uint32_t, float, void*>(0x617F30, Ch(), range, wantDist ? P(kOut) : nullptr) ? 1 : 0; });
     KEND(1000)

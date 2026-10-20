@@ -110,12 +110,20 @@ static void BuildChain(Rng& r) {
 static void BuildMgrNone(Rng&) {}
 
 // one case: `build` fills the fixture, port and exe run on identical bytes (fixture, arena, whole data image restored between the two runs)
+// padding words of the RwMatrix world matrices (offsets 0x1C / 0x2C / 0x3C of each node's m_WorldMat) and of the pivot matrix: indeterminate in the exe (stack junk of the local matrix), not compared when `maskPads`
+static void MaskPads(Reg& fx) {
+    fx.mask.assign(kFxSize, 0);
+    auto Pad = [&](size_t matOff) { for (size_t o : { 0x1Cu, 0x2Cu, 0x3Cu }) for (size_t b = 0; b < 4; ++b) fx.mask[matOff + o + b] = 1; };
+    for (size_t i = 0; i < kMaxN; ++i) Pad(kNode + i * kNodeSz + oWld);
+    Pad(0x740);
+}
 template<class PF, class EF>
-static bool KCase(Rng& r, std::string& d, PF&& pf, EF&& ef, void (*build)(Rng&) = &BuildChain, bool lenient = false) {
+static bool KCase(Rng& r, std::string& d, PF&& pf, EF&& ef, void (*build)(Rng&) = &BuildChain, bool lenient = false, bool maskPads = false) {
     const uint32_t seed = r.u32() | 1;
     build(r);
     Reg fx{ (uintptr_t)g_fx, kFxSize };
     if (lenient) fx.lenient = true;
+    if (maskPads) MaskPads(fx);
     Reg img{ kImgLo, kImgHi - kImgLo };
     return BothA(d, seed, { fx, img }, std::forward<PF>(pf), std::forward<EF>(ef));
 }
@@ -125,6 +133,7 @@ static bool KCase(Rng& r, std::string& d, PF&& pf, EF&& ef, void (*build)(Rng&) 
 
 #include "wave3_oracle_ik_a.inc"   // BoneNode_c, BoneNodeManager_c
 #include "wave3_oracle_ik_b.inc"   // IKChain_c, IKChainManager_c
+#include "wave3_oracle_ik_c.inc"   // CalcWldMat, MoveBonesToTarget
 
 namespace w3k {
 static uint8_t g_engine[0x1000];   // stand-in for the exe's RwEngineInstance (0xC97B24): the allocator hooks and the plugin data the exe's RwV3d / RwMatrix code reads
@@ -149,4 +158,5 @@ static void TestW3IkAll() {
     w3k::InitExeRw();
     TestW3IkA();
     TestW3IkB();
+    TestW3IkC();
 }

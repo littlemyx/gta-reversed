@@ -1298,7 +1298,9 @@ int32 CClouds::VolumetricClouds_GetFirstFreeSlot() {
 
 // 0x713630
 float CClouds::VolumetricCloudsGetMaxDistance() {
-    return std::min(RwCameraGetFarClipPlane(Scene.m_pRwCamera), 600.f);
+    // 0x713630: fcomp + jp: a NaN far plane (unordered) gives 600 like a far plane >= 600, std::min(NaN, 600) would give NaN
+    const float farZ = RwCameraGetFarClipPlane(Scene.m_pRwCamera);
+    return farZ < 600.f ? farZ : 600.f;
 }
 
 // 0x716380

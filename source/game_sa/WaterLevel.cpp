@@ -1108,7 +1108,8 @@ void CWaterLevel::FindNearestWaterAndItsFlow() {
     const float camY   = camPos.y;
 
     // Camera is outside of the world
-    if (!(camX > -3000.f && camX < 3000.f && camY > -3000.f && camY < 3000.f)) {
+    // x87 `fcomp` + `test ah, 0x41` / `test ah, 1`: only an ordered <= -3000 or >= 3000 is outside, a NaN coordinate passes every test (0x6E9DC3..0x6E9E05)
+    if (camX <= -3000.f || camX >= 3000.f || camY <= -3000.f || camY >= 3000.f) {
         TheCamera.m_fDistanceToWater      = 0.f;
         TheCamera.m_fHeightOfNearestWater = 0.f;
         m_CurrentDesiredFlow.y            = 0.f;

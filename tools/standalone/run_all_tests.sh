@@ -128,13 +128,15 @@ for t in $TESTS; do
     n=$((n+1)); log="$OUT/$t.$n.log"
     if [ "$HOST" = windows ]; then ( cd "$BDIR/source" && exec "./$t.exe" "${args[@]+"${args[@]}"}" ) > "$log" 2>&1 &
     else ( cd "$BDIR/source" && exec wine "$t.exe" "${args[@]+"${args[@]}"}" ) > "$log" 2>&1 & fi
-    pid=$!; code=""
-    for ((s=0; s<TMO; s++)); do sleep 1; kill -0 $pid 2>/dev/null || { wait $pid; code=$?; break; }; done
+    pid=$!; code=""; wp=""
+    for ((s=0; s<TMO; s++)); do sleep 1; [ -z "$wp" ] && wp=$(cat /proc/$pid/winpid 2>/dev/null); kill -0 $pid 2>/dev/null || { wait $pid; code=$?; break; }; done
     if [ -z "$code" ]; then kill -9 $pid 2>/dev/null; echo "  $t attempt $n: hang >${TMO}s"; code=hang; fi
     if [ "$code" = 77 ]; then res=SKIP; break; fi          # exit 77 = "exe oracle not available" (RW_EXE_ORACLE unset): not a result, not a failure, no retry
     res=$(parse "$log")
     if [ -z "$res" ] || [ "$code" = hang ]; then
-      if [ "$HOST" = windows ]; then taskkill //F //IM "$t.exe" >/dev/null 2>&1; else pkill -9 -f "$t.exe" 2>/dev/null; pkill -9 winedbg 2>/dev/null; fi
+      # Windows: kill only our own instance (by its Windows pid) - killing by image name also killed agents' runs of the same test.
+      if [ "$HOST" = windows ]; then [ -n "$wp" ] && taskkill //F //T //PID "$wp" >/dev/null 2>&1
+      else pkill -9 -f "$t.exe" 2>/dev/null; pkill -9 winedbg 2>/dev/null; fi
       sleep 1
     fi
     if [ -n "$res" ] && [ "$code" != hang ]; then break; fi

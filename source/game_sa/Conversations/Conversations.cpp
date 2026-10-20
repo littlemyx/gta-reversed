@@ -14,7 +14,8 @@ void CConversations::InjectHooks() {
     RH_ScopedInstall(IsConversationGoingOn, 0x43AAC0);
     RH_ScopedInstall(IsConversationAtNode, 0x43B000);
     RH_ScopedInstall(AwkwardSay, 0x43A810);
-    RH_ScopedInstall(EnableConversation, 0x43A7F0);
+    // EnableConversation: no function of its own in the exe (0x43A7F0 is the middle of Clear, `add eax, 0x18`); the script handler inlines it
+    // RH_ScopedInstall(EnableConversation, 0x0);
     RH_ScopedInstall(StartSettingUpConversation, 0x43A840);
     RH_ScopedInstall(DoneSettingUpConversation, 0x43ADB0);
 }

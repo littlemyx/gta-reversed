@@ -629,6 +629,11 @@ tBlipHandle CRadar::SetCoordBlip(eBlipType type, CVector posn, eBlipColour color
     t.m_nBlipSprite      = eRadarSprite::RADAR_SPRITE_NONE;
     t.m_bBright          = true;
     t.m_bTrackingBlip    = true;
+    t.m_bShortRange      = false; // the exe stores the flag byte [+0x25] = 3: every other flag of the reused slot is cleared too
+    t.m_bFriendly        = false;
+    t.m_bBlipRemain      = false;
+    t.m_bBlipFade        = false;
+    t.m_nCoordBlipAppearance = BLIP_FLAG_FRIEND;
     t.m_pEntryExit       = nullptr;
 
     return GetNewUniqueBlipIndex(index);

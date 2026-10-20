@@ -405,7 +405,7 @@ float GetDayNightBalance() {
         return 1.0f;
 
     if (minutes < 7.0f * 60.0f) // 6-7 o'clock
-        return (7.0f * 60.0f - minutes) / 60.0f;
+        return (7.0f * 60.0f - minutes) * ExeRecip(60.0f); // the exe multiplies by the float 1/60 (0x859044), it does not divide
 
     if (minutes < 20.0f * 60.0f) // 7-20 o'clock
         return 0.0f;
@@ -413,5 +413,5 @@ float GetDayNightBalance() {
     if (minutes >= 21.0f * 60.0f) // 21-0 o'clock
         return 1.0f;
 
-    return 1.0f - (21.0f * 60.0f - minutes) / 60.0f; // 20-21 o'clock
+    return 1.0f - (21.0f * 60.0f - minutes) * ExeRecip(60.0f); // 20-21 o'clock
 }

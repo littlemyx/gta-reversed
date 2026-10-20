@@ -58,7 +58,8 @@ static void TestNotsa() {
         }
         const int nZones = r.below(10) == 0 ? 0 : 1 + r.below(380);
         *totalZones = static_cast<int16>(nZones);
-        for (int i = 0; i < 380; ++i) *reinterpret_cast<uint16_t*>(zones + i * 0x20 + 0x1C) = static_cast<uint16_t>(i < nZones ? r.below(nInfos + 1) : 0);
+        // ZONEINFO: the exe loops over the first TotalNumberOfNavigationZones zones only (0x443DE0: count word at 0xBA3794); slots past the count keep stale zone info indices half of the time
+        for (int i = 0; i < 380; ++i) *reinterpret_cast<uint16_t*>(zones + i * 0x20 + 0x1C) = static_cast<uint16_t>(i < nZones || r.below(2) ? r.below(nInfos + 1) : 0);
 
         auto poisonOut = [&](uint32_t seed) {
             Rng p(seed);

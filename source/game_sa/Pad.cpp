@@ -471,7 +471,7 @@ CControllerState& CPad::ReconcileTwoControllersInput(CControllerState& out, cons
         }                                                                                                                                                                          \
     }
 
-    static CControllerState reconciledState;
+    NOTSA_GLOBAL_LOCAL_NS(reconciledState, 0xB736C0, (CControllerState), {});   // function-local static of the exe, right behind Pads[1]
     reconciledState.Clear();
 
     RECONCILE_BUTTON(LeftShoulder1)

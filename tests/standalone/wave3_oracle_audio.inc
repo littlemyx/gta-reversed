@@ -40,7 +40,9 @@
 
 // globals whose translation units are not linked into this test (their methods are recording stubs below): the same exe addresses the port's NOTSA_GLOBAL definitions use
 NOTSA_GLOBAL(AESoundManager, 0xB62CB0, (CAESoundManager), {});
+#ifndef W3_AUDIOHW
 NOTSA_GLOBAL(AEAudioHardware, 0xB5F8B8, (CAEAudioHardware), {});
+#endif
 NOTSA_GLOBAL(AERadioTrackManager, 0x8CB6F8, (CAERadioTrackManager), {});
 NOTSA_GLOBAL(AECutsceneTrackManager, 0x8AE554, (CAECutsceneTrackManager), {});
 NOTSA_GLOBAL(AEAmbienceTrackManager, 0x8AC15C, (CAEAmbienceTrackManager), {});
@@ -101,6 +103,7 @@ enum K : uint32_t { K_LoadSoundBank = 1, K_IsSoundBankLoaded, K_GetBankStatus, K
 
 // port side: the methods of the unlinked TUs, defined with the same recording bodies
 using namespace w3au;
+#ifndef W3_AUDIOHW   // the audiohw build links the real AEAudioHardware.cpp
 void CAEAudioHardware::LoadSoundBank(eSoundBank b, eSoundBankSlot s) { Rec(K_LoadSoundBank, this, (uint16_t)b, (uint16_t)s); }
 bool CAEAudioHardware::IsSoundBankLoaded(eSoundBank b, eSoundBankSlot s) { Rec(K_IsSoundBankLoaded, this, (uint16_t)b, (uint16_t)s); return RetV(K_IsSoundBankLoaded, (uint16_t)b, (uint16_t)s) & 1; }
 int8 CAEAudioHardware::GetSoundBankLoadingStatus(eSoundBank b, eSoundBankSlot s) { Rec(K_GetBankStatus, this, (uint16_t)b, (uint16_t)s); return (int8)(RetV(K_GetBankStatus, (uint16_t)b, (uint16_t)s) % 3); }
@@ -115,6 +118,7 @@ void CAEAudioHardware::SetNonStreamFaderScalingFactor(float f) { Rec(K_NonStream
 void CAEAudioHardware::SetStreamFaderScalingFactor(float f) { Rec(K_StreamFader, this, (uint32_t)FB(f)); }
 void CAEAudioHardware::EnableEffectsLoading() { Rec(K_EnableFx, this); }
 void CAEAudioHardware::DisableEffectsLoading() { Rec(K_DisableFx, this); }
+#endif
 int16 CAESoundManager::AreSoundsPlayingInBankSlot(int16 s) { Rec(K_BankSlotPlaying, this, (uint16_t)s); return (int16)(RetV(K_BankSlotPlaying, (uint16_t)s, 0) % 3); }
 int16 CAESoundManager::AreSoundsOfThisEventPlayingForThisEntity(int16 e, CAEAudioEntity* a) { Rec(K_EventPlaying, this, (uint16_t)e, (uint32_t)(uintptr_t)a); return (int16)(RetV(K_EventPlaying, (uint16_t)e, (uint32_t)(uintptr_t)a) % 3); }
 void CAESoundManager::CancelSoundsInBankSlot(int16 s, bool f) { Rec(K_CancelBankSlot, this, (uint16_t)s, f ? 1 : 0); }
@@ -192,8 +196,16 @@ static void InstallStubs() {
 #include "wave3_oracle_audio4.inc"
 #include "wave3_oracle_audio5.inc"
 #include "wave3_oracle_audio6.inc"
+#ifdef W3_AUDIOHW
+#include "wave3_oracle_audiohw.inc"
+#endif
 
 static void TestW3AudioAll() {
+#ifdef W3_AUDIOHW
+    rf::Init(); g_tp.Init(); g_ep.Init(); g_onFault = &w2::OnFault;
+    TestW3AudioHw();
+    return;
+#endif
     w3au::InstallStubs();
     TestW3Audio1();
     rf::Init(); g_tp.Init(); g_ep.Init(); g_onFault = &w2::OnFault;

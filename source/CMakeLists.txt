@@ -1357,6 +1357,21 @@ if (${RE_PROJECT}_RW_LIBRW)
     set_property(TARGET wave3_audio_oracle_test PROPERTY SOURCES "${STANDALONE_PAD_OBJ}" ${_w3au_sources})
     target_link_options(wave3_audio_oracle_test PRIVATE "$<$<CXX_COMPILER_ID:MSVC>:/BASE:0x400000;/DYNAMICBASE:NO;/FIXED;/MERGE:_TEXT=.text;/INCREMENTAL:NO;/SUBSYSTEM:CONSOLE;/FORCE:UNRESOLVED;/MAP>")
     set_target_properties(wave3_audio_oracle_test PROPERTIES COMPILE_WARNING_AS_ERROR OFF CXX_SCAN_FOR_MODULES OFF)
+    # ORACLE-W3-AUDIO2: the same harness + the rows of game_sa/Audio/Hardware/AEAudioHardware.cpp (its real TU linked, the recording stubs of CAEAudioHardware are left out of this build): tests/standalone/wave3_oracle_audiohw.inc
+    add_executable(wave3_audiohw_oracle_test EXCLUDE_FROM_ALL ${_w3au_sources}
+        game_sa/Audio/Hardware/AEAudioHardware.cpp
+        game_sa/Audio/Loaders/AEMP3BankLoader.cpp
+    )
+    target_compile_definitions(wave3_audiohw_oracle_test PRIVATE W2_ONLY W3_AUDIO_ONLY W3_AUDIOHW)
+    target_compile_features(wave3_audiohw_oracle_test PRIVATE cxx_std_23)
+    target_compile_definitions(wave3_audiohw_oracle_test PRIVATE $<TARGET_PROPERTY:${RE_PROJECT_LIB_NAME},COMPILE_DEFINITIONS> NOTSA_ORACLE_ADDRESS_GLOBALS)
+    target_include_directories(wave3_audiohw_oracle_test PRIVATE $<TARGET_PROPERTY:${RE_PROJECT_LIB_NAME},INCLUDE_DIRECTORIES>)
+    target_compile_options(wave3_audiohw_oracle_test PRIVATE $<TARGET_PROPERTY:${RE_PROJECT_LIB_NAME},COMPILE_OPTIONS>)
+    target_precompile_headers(wave3_audiohw_oracle_test PRIVATE StdInc.cpp)
+    target_link_libraries(wave3_audiohw_oracle_test PRIVATE librw spdlog::spdlog Tracy::TracyClient user32)
+    set_property(TARGET wave3_audiohw_oracle_test PROPERTY SOURCES "${STANDALONE_PAD_OBJ}" ${_w3au_sources} game_sa/Audio/Hardware/AEAudioHardware.cpp game_sa/Audio/Loaders/AEMP3BankLoader.cpp)
+    target_link_options(wave3_audiohw_oracle_test PRIVATE "$<$<CXX_COMPILER_ID:MSVC>:/BASE:0x400000;/DYNAMICBASE:NO;/FIXED;/MERGE:_TEXT=.text;/INCREMENTAL:NO;/SUBSYSTEM:CONSOLE;/FORCE:UNRESOLVED;/MAP>")
+    set_target_properties(wave3_audiohw_oracle_test PROPERTIES COMPILE_WARNING_AS_ERROR OFF CXX_SCAN_FOR_MODULES OFF)
     # ORACLE-W3-ENTITY: exe-oracle rows of game_sa/Entity (CEntity / CPhysical / CPlaceable / CBuilding / CAnimatedBuilding, A + B functions) on entity fixtures; rows: tests/standalone/wave3_oracle_entity*.inc
     set(_W3E_BASE ${W2_BASE_SOURCES})
     list(REMOVE_ITEM _W3E_BASE game_sa/Entity/Entity.cpp)

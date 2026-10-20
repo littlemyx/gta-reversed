@@ -1,6 +1,7 @@
 #include "StdInc.h"
 
 #include "Glass.h"
+#include "Fx/FxFtol.h"
 #include "FallingGlassPane.h"
 #include "Shadows.h"
 
@@ -477,24 +478,31 @@ void CGlass::RenderHiLightPolys() {
 
 // 0x71ACF0
 uint8 CGlass::CalcAlphaWithNormal(const CVector& normal) {
-    const auto& camFwd = TheCamera.GetForward();
+    // 0x71ACF0, step by step in the exe's order (game mode: every x87 operation rounds to float): reflect = fwd - 2 * dot(fwd, N) * N, then
+    // specular = (reflect.x + reflect.y) * 0.57 - reflect.z * 0.57 (the light direction (0.57, 0.57, -0.57) is not normalised in the exe), alpha = _ftol2(specular^6 * 235 + 20),
+    // the sixth power by five multiplications (the old port called pow()).
+    const auto& fwd = TheCamera.GetForward();
 
-    // reflect(I, N) = I - 2 * project(I, N) where `N` is assumed to be normalized (eg.: unit vector)
-    const auto reflect = camFwd - 2.0f * camFwd.ProjectOnToNormal(normal);
+    const float dot  = (fwd.y * normal.y + fwd.z * normal.z) + fwd.x * normal.x;
+    const float dot2 = dot + dot;
+    const float px   = dot2 * normal.x;
+    const float py   = dot2 * normal.y;
+    const float pz   = dot2 * normal.z;
+    const float rx   = fwd.x - px;
+    const float ry   = fwd.y - py;
+    const float rz   = fwd.z - pz;
 
-    // Original code uses a hardcoded value of 0.57 for the light direction vector,
-    // which is approximately the normalized value of (1, 1, -1).
-    // We use the normalized vector for better accuracy.
-    static const auto LightDir = notsa::IsFixBugs()
-        ? CVector{ 1.0f, 1.0f, -1.0f }.Normalized()
-        : CVector{ 1.0f, 1.0f, -1.0f } * 0.57f;
-    
-    // We don't clamp to 0 here to match the vanilla's behavior where negative
-    // dot products result in positive highlights since we power it by 6.
-    const auto specular = reflect.Dot(LightDir);
-    
-    // This gives a range of [20, 255] for specular values in [0, 1].
-    return static_cast<uint8>(std::pow(specular, 6.0f) * 235.0f + 20.0f);
+    // FIX_BUGS: the normalised light direction (1, 1, -1) / sqrt(3) instead of the exe's 0.57
+    const float k        = notsa::IsFixBugs() ? 0.57735026f : 0.57f;
+    const float specular = (rx + ry) * k - rz * k;
+
+    // negative dot products give positive highlights (even power)
+    const float sq    = specular * specular;
+    const float cube  = sq * specular;
+    const float p4    = cube * specular;
+    const float p5    = p4 * specular;
+    const float p6    = p5 * specular;
+    return (uint8)notsa::detail::Ftol((double)(p6 * 235.0f + 20.0f));
 }
 
 // 0x71ACD0

@@ -218,27 +218,37 @@ void IKChain_c::MoveBonesToTarget() {
         return;
     }
 
-    constexpr auto DIST_TOLERANCE = 0.00001f;
+    constexpr auto DIST_TOLERANCE = 0.00001f; // 0x858C14
 
+    // NOTE: everything below mirrors the x87 code of 0x6178B0 operation by operation (the game runs at PC=24: every instruction rounds to a float mantissa), including the
+    // table-based RwV3dLength / RwV3dNormalize (0x7EDAC0 / 0x7ED9B0) and `fcomp` tests that also skip NaN
     const auto rootBone = bones.front();
     for (auto&& bone : bones) {
         CVector transformedBonePos;
         RwV3dTransformVector(&transformedBonePos, &m_EffectorPos, &rootBone->GetMatrix()); // Not sure why it's transformed every iteration..
 
-        CVector dirBoneToRoot = transformedBonePos + (rootBone->GetPosition() - bone->GetPosition());
-        if (dirBoneToRoot.Magnitude() <= DIST_TOLERANCE) {
+        // 0x6179B4: (t + rootPos) - bonePos, NOT t + (rootPos - bonePos)
+        const auto& rootPos = rootBone->GetPosition();
+        const auto& bonePos = bone->GetPosition();
+        CVector dirBoneToRoot{
+            (transformedBonePos.x + rootPos.x) - bonePos.x,
+            (transformedBonePos.y + rootPos.y) - bonePos.y,
+            (transformedBonePos.z + rootPos.z) - bonePos.z,
+        };
+        if (!(RwV3dLength(&dirBoneToRoot) > DIST_TOLERANCE)) {
             continue;
         }
         RwV3dNormalize(&dirBoneToRoot, &dirBoneToRoot);
 
         CVector dirBoneToOffset = m_OffsetPosWS - bone->GetPosition();
-        if (dirBoneToOffset.Magnitude() <= DIST_TOLERANCE) {
+        if (!(RwV3dLength(&dirBoneToOffset) > DIST_TOLERANCE)) {
             continue;
         }
         RwV3dNormalize(&dirBoneToOffset, &dirBoneToOffset);
 
-        const auto dot = DotProduct(&dirBoneToOffset, &dirBoneToRoot);
-        if (dot >= 0.997f) { // Make sure they don't point in the same direction
+        // 0x617A6D: (Oy*Ry + Ox*Rx) + Oz*Rz (not DotProduct's z, y, x order); `fcomp 0.997; test ah,5; jp`: only a dot strictly below 0.997 continues (NaN skips)
+        const float dot = (dirBoneToOffset.y * dirBoneToRoot.y + dirBoneToOffset.x * dirBoneToRoot.x) + dirBoneToOffset.z * dirBoneToRoot.z;
+        if (!(dot < 0.997f)) { // Make sure they don't point in the same direction
             continue;
         }
 
@@ -259,10 +269,16 @@ void IKChain_c::MoveBonesToTarget() {
             }
         }
 
-        CVector cross = CrossProduct(dirBoneToRoot, dirBoneToOffset);
+        // 0x617AC9: R x O with every product stored as a float
+        const CVector& R = dirBoneToRoot;
+        const CVector& O = dirBoneToOffset;
+        CVector cross{ O.z * R.y - O.y * R.z, O.x * R.z - O.z * R.x, O.y * R.x - O.x * R.y };
         CVector axis;
         RtQuatTransformVectors(&axis, &cross, 1, &quat);
-        RtQuatRotate(reinterpret_cast<RtQuat*>(&bone->GetOrientation()), &axis, RadiansToDegrees(bone->GetSpeed() * x87::acos(dot) * m_Speed), rwCOMBINEPOSTCONCAT);
+        // 0x617AA3: ((speed * acos(dot)) * m_Speed) * (180/pi float), one rounding to float per multiplication (PC=24). The acos result stays unrounded on the x87 stack (FPATAN ignores the
+        // precision control: it is NOT a float; only the copy `fst [esp+0x10]` is), so it must not be cast to float before the first multiplication
+        const float angle = RadiansToDegrees((float)((double)bone->GetSpeed() * x87::acos(dot)) * m_Speed);
+        RtQuatRotate(reinterpret_cast<RtQuat*>(&bone->GetOrientation()), &axis, angle, rwCOMBINEPOSTCONCAT);
 
         bone->Limit(m_Blend); // Originally this was in an `if`, but the variable that was checked was always `true`
         bone->CalcWldMat(boneParentMat);

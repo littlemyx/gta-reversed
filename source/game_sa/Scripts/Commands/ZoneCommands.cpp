@@ -14,11 +14,22 @@ CZone* GetZoneByLabel(const char* label) {
     return &CTheZones::GetNavigationZones()[zoneID];
 }
 
+// The exe handlers (0x46B4DC, 0x46ECC0, 0x46ED23, 0x4718CD, 0x47962B: the SET_ commands) skip a missing label (`test ax, ax; jl`) and otherwise use &ZoneInfoArray[navZone.m_ZoneInfoIndex]
+// with no null-for-index-0 special case (CTheZones::GetZoneInfo(const CZone*) returns nullptr for index 0, which made the port ignore a script writing to zone info 0)
 CZoneInfo* GetZoneInfoByLabel(const char* label) {
     if (auto* const zone = GetZoneByLabel(label)) {
-        return CTheZones::GetZoneInfo(zone);
+        return CTheZones::ZoneInfoArray.data() + zone->m_ZoneInfoIndex;
     }
     return nullptr;
+}
+
+// The exe handlers that do not check FindZoneByLabel's result (0x46B535 GET_ZONE_GANG_STRENGTH, 0x46ED64 GET_ZONE_DEALER_STRENGTH, 0x475222 SET_ZONE_FOR_GANG_WARS_TRAINING) index the
+// navigation zones with the movsx'ed -1: the word at +0x1C of "zone -1" is TotalNumberOfNavigationZones (0xBA3794), so a missing label selects ZoneInfoArray[TotalNumberOfNavigationZones]
+uint16 GetZoneInfoIndexByLabelUnchecked(const char* label) {
+    if (auto* const zone = GetZoneByLabel(label)) {
+        return zone->m_ZoneInfoIndex;
+    }
+    return (uint16)CTheZones::TotalNumberOfNavigationZones;
 }
 
 // SET_ZONE_POPULATION_TYPE (1895)
@@ -37,10 +48,7 @@ void SetZoneDealerStrength(const char* label, uint8 strength) {
 
 // GET_ZONE_DEALER_STRENGTH (1899)
 auto GetZoneDealerStrength(const char* label) {
-    if (auto* const zi = GetZoneInfoByLabel(label)) {
-        return zi->DealerStrength;
-    }
-    NOTSA_UNREACHABLE();
+    return CTheZones::ZoneInfoArray[GetZoneInfoIndexByLabelUnchecked(label)].DealerStrength;
 }
 
 // SET_ZONE_GANG_STRENGTH (1900)
@@ -52,10 +60,7 @@ void SetZoneGangStrength(const char* label, eGangID gang, uint8 strength) {
 
 // GET_ZONE_GANG_STRENGTH (1901)
 auto GetZoneGangStrength(const char* label, eGangID gang) {
-    if (auto* const zi = GetZoneInfoByLabel(label)) {
-        return zi->GangStrength[gang];
-    }
-    NOTSA_UNREACHABLE();
+    return CTheZones::ZoneInfoArray[GetZoneInfoIndexByLabelUnchecked(label)].GangStrength[gang];
 }
 
 // todo
@@ -73,9 +78,7 @@ void SetZonePopulationRace(const char* label, uint8 races) {
 
 // SET_ZONE_FOR_GANG_WARS_TRAINING (2227)
 void SetZoneForGangWarsTraining(const char* label) {
-    if (auto* const zone = GetZoneByLabel(label)) {
-        CGangWars::ZoneInfoForTraining = zone->m_ZoneInfoIndex;
-    }
+    CGangWars::ZoneInfoForTraining = GetZoneInfoIndexByLabelUnchecked(label);
 }
 
 // INIT_ZONE_POPULATION_SETTINGS (2250)

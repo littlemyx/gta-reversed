@@ -65,6 +65,12 @@ static void BuildInit(Rng& r) {
     MgrBuild(r, 40 + (int)r.below(88));
 }
 static void BuildSetup(Rng& r) { BuildInit(r); At<void*>(kChain + cPed) = PedPtr(); }   // SetupBones reads m_Ped (raw: no reference registered)
+// the exe's IK chain manager initialised (all 32 chains on the free list, nothing active) by the port's own Init; ped world / bone node manager as for Init
+static void BuildIkMgrPed(Rng& r) {
+    BuildInit(r);
+    std::memset(reinterpret_cast<void*>(kIkMgr), 0, 0xB18);
+    g_ikChainMan.Init();
+}
 static void BuildChainClean(Rng& r) { BuildChain(r); At<void*>(kChain + cEntity) = nullptr; At<void*>(kChain + cPed) = nullptr; }
 static void BuildUpdate(Rng& r) {
     BuildMove(r);
@@ -133,5 +139,32 @@ static void TestW3IkD() {
     KROW("IKChain_c::UpdateEntity", 0x617E00, 0)
         CEntity* const e = r.below(4) == 0 ? nullptr : GEntN(r);
         return PCase(r, d, [&]() -> uint64_t { Ch()->UpdateEntity(e); return 0; }, [&]() -> uint64_t { ExeThis<void, void*>(0x617E00, Ch(), e); return 0; }, &BuildChainClean);
+    KEND(300)
+    // ---- IKChainManager_c: chains from the exe's free list through Init (ped world), the active list, Exit / Reset of the active chains
+    struct AddArgs { int slot; float speed; int prio; CVector effPos, offPos; int offBone; };
+    const auto Args = [&](Rng& r) { return AddArgs{ (int)r.below(4), r.f01() * 2.f, (int)r.below(6) - 1, CVector{ FinF(r, 1.f), FinF(r, 1.f), FinF(r, 1.f) }, CVector{ FinF(r, 30.f), FinF(r, 30.f), FinF(r, 30.f) }, r.below(2) ? -1 : (int)r.below(40) }; };
+    const auto PortAdd = [&](const AddArgs& a) { return g_ikChainMan.AddIKChain("ik", (eIKChainSlot)a.slot, PedPtr(), BT(g_effTag), a.effPos, BT(g_pivTag), g_entArg, BT(a.offBone), a.offPos, a.speed, a.prio); };
+    const auto ExeAdd = [&](const AddArgs& a) { return ExeThis<void*, const char*, int, void*, int32_t, CVector, int32_t, void*, int32_t, CVector, float, int32_t>(0x618750, &g_ikChainMan, "ik", a.slot, PedPtr(), g_effTag, a.effPos, g_pivTag, g_entArg, a.offBone, a.offPos, a.speed, a.prio); };
+    KROW("IKChainManager_c::AddIKChain", 0x618750, 0)
+        const auto a = Args(r);
+        return PCase(r, d, [&]() -> uint64_t { return U(PortAdd(a)); }, [&]() -> uint64_t { return U(ExeAdd(a)); }, &BuildIkMgrPed);
+    KEND(500)
+    KROW("IKChainManager_c::RemoveIKChain (after AddIKChain)", 0x618170, 0)
+        const auto a = Args(r); const int extra = (int)r.below(3);
+        return PCase(r, d,
+            [&]() -> uint64_t { for (int i = 0; i < extra; ++i) PortAdd(a); auto* c = PortAdd(a); if (c) g_ikChainMan.RemoveIKChain(c); return U(c); },
+            [&]() -> uint64_t { for (int i = 0; i < extra; ++i) ExeAdd(a); auto* c = ExeAdd(a); if (c) ExeThis<void, void*>(0x618170, &g_ikChainMan, c); return U(c); }, &BuildIkMgrPed);
+    KEND(300)
+    KROW("IKChainManager_c::Exit (after AddIKChain)", 0x6180D0, 0)
+        const auto a = Args(r); const int n = (int)r.below(4);
+        return PCase(r, d,
+            [&]() -> uint64_t { for (int i = 0; i < n; ++i) PortAdd(a); g_ikChainMan.Exit(); return 0; },
+            [&]() -> uint64_t { for (int i = 0; i < n; ++i) ExeAdd(a); ExeThis<void>(0x6180D0, &g_ikChainMan); return 0; }, &BuildIkMgrPed);
+    KEND(300)
+    KROW("IKChainManager_c::Reset (after AddIKChain)", 0x618140, 0)
+        const auto a = Args(r); const int n = (int)r.below(4);
+        return PCase(r, d,
+            [&]() -> uint64_t { for (int i = 0; i < n; ++i) PortAdd(a); g_ikChainMan.Reset(); return 0; },
+            [&]() -> uint64_t { for (int i = 0; i < n; ++i) ExeAdd(a); ExeThis<void>(0x618140, &g_ikChainMan); return 0; }, &BuildIkMgrPed);
     KEND(300)
 }

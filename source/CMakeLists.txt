@@ -1453,6 +1453,15 @@ if (${RE_PROJECT}_RW_LIBRW)
         ${_W3U_BASE}
         game_sa/Messages.cpp
         game_sa/Hud.cpp
+        game_sa/Radar.cpp
+        game_sa/Font.cpp
+        game_sa/Sprite2d.cpp
+        game_sa/Sprite.cpp
+        game_sa/MenuManager.cpp
+        game_sa/Text/Text.cpp
+        game_sa/Text/KeyArray.cpp
+        game_sa/Text/Data.cpp
+        game_sa/Text/MissionTextOffsets.cpp
     )
     target_compile_definitions(wave3_ui_oracle_test PRIVATE W2_ONLY W3_UI_ONLY)
     target_compile_features(wave3_ui_oracle_test PRIVATE cxx_std_23)

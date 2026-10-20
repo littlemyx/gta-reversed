@@ -532,20 +532,26 @@ void CMessages::InsertPlayerControlKeysInString(GxtChar* string) {
 // Processing messages. This is called from CWorld::Process
 // 0x69EE60
 void CMessages::Process() {
+    // Returns true when the front message expired and the queue advanced (the exe clears the front, moves the following live messages one slot down and stamps the new front)
     const auto ProcessMessagesArray = [](auto&& msgs) {
         auto& f = msgs.front();
         if (!f.IsValid()) { // Not even valid (Neither are the ones after it)
-            return;
+            return false;
         }
         if (CTimer::GetTimeInMS() <= f.GetTimeToDisappearAtMS()) { // Still visible
-            return;
+            return false;
         }
-        std::destroy_at(&f); // First one disappeared, so we can delete it
-        std::shift_right(msgs.begin(), msgs.end(), 1);
-        std::destroy_at(&msgs.back()); // Last is def. unused now
-        if (f.IsValid()) { // front is now another object (because of the shift)
-            f.CreatedAtMS = CTimer::GetTimeInMS();
+        f.Text = nullptr; // First one disappeared, so we can delete it
+        size_t i = 0;
+        while (msgs[i + 1].IsValid()) { // move the live messages after it one slot down
+            msgs[i] = msgs[i + 1];
+            if (++i >= msgs.size() - 1) {
+                break;
+            }
         }
+        msgs[i].Text = nullptr; // the last moved-from slot is unused now
+        f.CreatedAtMS = CTimer::GetTimeInMS(); // (also when the queue is empty now)
+        return true;
     };
 
     // Process big messages
@@ -553,19 +559,20 @@ void CMessages::Process() {
         ProcessMessagesArray(omgVeryBig.Stack);
 	}
 
-    // Process briefs
-    ProcessMessagesArray(BriefMessages);
-    if (const auto f = BriefMessages.front(); f.IsValid()) {
-		AddToPreviousBriefArray(
-            f.Text,
-            f.NumbersToInsert[0],
-            f.NumbersToInsert[1],
-            f.NumbersToInsert[2],
-            f.NumbersToInsert[3],
-            f.NumbersToInsert[4],
-            f.NumbersToInsert[5],
-            f.StringToInsert
-        );
+    // Process briefs: when the queue advanced, the new front goes to the previous briefs if it asks for it
+    if (ProcessMessagesArray(BriefMessages)) {
+        if (const auto f = BriefMessages.front(); f.IsValid() && f.PreviousBrief) {
+            AddToPreviousBriefArray(
+                f.Text,
+                f.NumbersToInsert[0],
+                f.NumbersToInsert[1],
+                f.NumbersToInsert[2],
+                f.NumbersToInsert[3],
+                f.NumbersToInsert[4],
+                f.NumbersToInsert[5],
+                f.StringToInsert
+            );
+        }
     }
 }
 

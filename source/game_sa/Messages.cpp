@@ -480,77 +480,52 @@ void CMessages::InsertStringInString(GxtChar* target, const GxtChar* replacement
 }
 
 // Inserts key events into string
-// 0x69E160
+// 0x69E160: scans the string for `~k~~NAME~`; NAME is looked up in the controller action name table (59 entries, ControlsManager+0x224, the name must be followed by `~`), the key names of that
+// action replace the whole tag. A `~k~~` whose name matches no entry is dropped (the 4 tag characters are skipped, the rest of the text is kept). The result is copied back over the string and
+// the rest of the 400-byte buffer is zeroed.
 void CMessages::InsertPlayerControlKeysInString(GxtChar* string) {
-    GxtChar haystack[MSG_BUF_SZ];
-    GxtCharStrcpy(haystack, string);
-
-    // Based on https://stackoverflow.com/a/32413923
-    auto        pDst = string;
-    const auto* pHS  = haystack;
-
-    // Skip over a portion in the haystack and copy it into `dst`
-    const auto SkipTo = [&](const GxtChar* to) {
-        pDst = std::copy(pHS, to, pDst);
-        pHS  = to;
-    };
-
-    // An action is in the format of ~k~~ACTION_NAME_HERE~
-    // We tolerate errors because this function is called for all strings printed on the screen
-    // So in case it's a debug string that happens to contain ~k~ we don't want to `assert` and crash.
-    for(;;) {
-        const auto pNeedle = strstr(AsciiFromGxtChar(pHS), "~k~~");
-
-        // walked past last occurrence of needle; copy remaining part (up to the end)
-        if (!pNeedle) {
-            SkipTo(pHS + strlen(AsciiFromGxtChar(pHS)));
-            break;
-        }
-
-        // Now pneedle points at the beginning of ~k~~
-        // there should be another `~` after it, and in
-        // [pControlName, pend) should be the action name
-        const auto pControlName = pNeedle + 4; // + 4 to skip `~k~~`
-
-        const auto pNameEnd = strchr(pControlName, '~');  
-
-        // If not found, skip `~k`, as that for sure won't be a valid format string the next time. (This way ~k~k would still work)
-        if (!pNameEnd) {
-            NOTSA_LOG_WARN("Closing tag of ~k~ not found [String: {}]", AsciiFromGxtChar(haystack));
-            SkipTo(pHS + 2);
-            continue;
-        }
-        
-        // Okay, find this action's ID
-        const auto actionName = std::string_view{ pControlName, pNameEnd };
-        const auto actionId   = ControlsManager.GetActionIDByName(actionName);
-
-        // If not found we know the location of the next `~`, so skip to there
-        if (actionId == eControllerAction::CA_NONE) {
-            SkipTo((const GxtChar*)pNameEnd);
-            NOTSA_LOG_WARN("Invalid action name({}) [String: {}]", std::string_view{ pNeedle, pNameEnd }, AsciiFromGxtChar(haystack));
-            continue;
-        }
-
-        // Copy stuff from before the control name (Using SkipTo for ease of life)
-        SkipTo((const GxtChar*)pNeedle);
-
-        // Get action name....
-        GxtChar aname[400]{};
-        ControlsManager.GetGxtStringOfCommandKeys(actionId, aname, 400);
-
-        // ...and insert it into the string.
-        // This is kinda shit for now, as we  don't know the 
-        // size of the output (dst) buffer so we might as
-        // well just be writing over the stack :)
-        pDst = std::copy(aname, aname + strlen(AsciiFromGxtChar(aname)), pDst);
-
-        // We don't use SkipTo here, as we don't want to copy anything
-        pHS  = GxtCharFromAscii(pNameEnd) + 1; // Go past the `~` that's after the control name
+    static_assert(+eControllerAction::CONTROLLER_ACTION_COUNT == 0x3B);
+    if (!string) {
+        return;
     }
-
-    // null terminate
-    *pDst = 0;
+    const uint16 len = (uint16)strlen(AsciiFromGxtChar(string));
+    GxtChar      out[MSG_BUF_SZ];
+    GxtChar      aname[MSG_BUF_SZ]{};
+    uint32       outLen = 0;
+    uint32       i      = 0;
+    while ((uint16)i < len) {
+        const GxtChar* c = string + (uint16)i;
+        if (c[0] == '~' && c[1] == 'k' && c[2] == '~') {
+            i += 4;
+            bool found = false;
+            for (uint16 bx = 0; !found && bx < 0x3B; ++bx) {
+                const GxtChar* name    = ControlsManager.m_ControllerActionName[bx];
+                const uint16   nameLen = (uint16)strlen(AsciiFromGxtChar(name));
+                if (nameLen == 0) {
+                    continue;
+                }
+                if (StringCompare(string + (uint16)i, name, nameLen) && string[nameLen + (uint16)i] == '~') {
+                    found = true;
+                    ControlsManager.GetGxtStringOfCommandKeys((eControllerAction)bx, aname, MSG_BUF_SZ);
+                    i = nameLen + i + 1;
+                    const uint16 keysLen = (uint16)strlen(AsciiFromGxtChar(aname));
+                    for (uint16 k = 0; k < keysLen; ++k) {
+                        out[(uint16)outLen++] = aname[k];
+                        aname[k]              = 0;
+                    }
+                }
+            }
+        } else {
+            out[(uint16)outLen++] = *c;
+            ++i;
+        }
+    }
+    out[(uint16)outLen] = 0;
+    const uint16 n      = (uint16)strlen(AsciiFromGxtChar(out));
+    std::memcpy(string, out, n);
+    if (n < MSG_BUF_SZ) {
+        std::memset(string + n, 0, MSG_BUF_SZ - n);
+    }
 }
 
 // Processing messages. This is called from CWorld::Process

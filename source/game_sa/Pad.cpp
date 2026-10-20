@@ -578,7 +578,9 @@ void CPad::StartShake_Train(CVector2D point) {
         return;
     }
 
-    const auto fDistSq = (TheCamera.GetPosition() - point).SquaredMagnitude();
+    // 2D distance (x, y only): the exe has no z term
+    const auto& camPos = TheCamera.GetPosition();
+    const auto fDistSq = (camPos.y - point.y) * (camPos.y - point.y) + (camPos.x - point.x) * (camPos.x - point.x);
     if (ShakeDur < 100 && fDistSq < 4900.0f) {
         ShakeDur = 100;
         ShakeFreq = static_cast<uint8>(70.0f - sqrt(fDistSq) + 30.0f);

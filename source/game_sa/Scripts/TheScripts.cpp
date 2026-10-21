@@ -1412,6 +1412,7 @@ void CTheScripts::Process() {
     }
 
     CommandsExecuted = 0;
+    ScriptsUpdated = 0; // 0x46A028
 
     UpsideDownCars.UpdateTimers();
     StuckCars.Process();
@@ -1445,12 +1446,22 @@ void CTheScripts::Process() {
 
     CLoadingScreen::NewChunkLoaded();
 
-    for (CRunningScript* it = pActiveScripts, *next{}; it; it = next) {
-        next = it->m_pNext;
+    // 0x46A1F0..0x46A22C: the exe saves the next script BEFORE Process (a script may terminate itself or another one) and continues only while that next script is
+    // still active (`cmp byte [edi + 0xC4], bl; jne`). A script killed by an earlier one in the same pass (A_TERM -> TERMINATE_ALL_SCRIPTS_WITH_THIS_NAME 'A_CONT' while A_CONT
+    // is its successor) has moved to the idle list, and the port kept walking the idle list: terminated scripts resumed after their END_THREAD (CELLFON: RETURN on an empty stack
+    // -> IP 2 -> access violation reading 0 right after the new game starts). ScriptsUpdated (0xA447F8) counts the processed scripts.
+    for (CRunningScript* it = pActiveScripts; it;) {
+        ++ScriptsUpdated;
+        CRunningScript* const next = it->m_pNext;
 
         it->m_LocalVars[SCRIPT_VAR_TIMERA].iParam += timeStepMS;
         it->m_LocalVars[SCRIPT_VAR_TIMERB].iParam += timeStepMS;
         it->Process();
+
+        if (!next || !next->m_IsActive) {
+            break;
+        }
+        it = next;
     }
 
     CLoadingScreen::NewChunkLoaded();

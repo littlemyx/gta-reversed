@@ -115,7 +115,7 @@ void CAEVehicleAudioEntity::Initialise(CEntity* entity) {
     m_MovingPartSmoothedSpeed     = 0.0f;
     m_FadeIn                      = 1.0f;
     m_FadeOut                     = 0.0f;
-    m_AuSettings                  = GetVehicleAudioSettings(entity->GetModelIndex() - MODEL_VEHICLE_FIRST);
+    m_AuSettings                  = GetVehicleAudioSettings((int16)entity->GetModelIndex());
     m_HasSiren                    = entity->AsVehicle()->UsesSiren();
 
     for (uint32 i = 0; auto& es : m_EngineSounds) {
@@ -443,8 +443,9 @@ void CAEVehicleAudioEntity::GetAccelAndBrake(tVehicleParams& vp) const noexcept 
 
 
 // 0x4F5C10
-tVehicleAudioSettings CAEVehicleAudioEntity::GetVehicleAudioSettings(int16 vehId) {
-    return ::GetVehicleAudioSettings((eModelID)(+MODEL_VEHICLE_FIRST + vehId));
+tVehicleAudioSettings CAEVehicleAudioEntity::GetVehicleAudioSettings(int16 modelId) {
+    // exe 0x4F5C10 takes the vehicle MODEL id (400..611; `sub eax, 0x190` before the table lookup), the port added MODEL_VEHICLE_FIRST once more
+    return ::GetVehicleAudioSettings((eModelID)modelId);
 }
 
 // 0x4F4F00

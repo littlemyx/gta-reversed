@@ -103,7 +103,8 @@ void CGangWars::AddKillToProvocation(ePedType pedType) {
     }
 
     for (auto& zone : std::span { aSpecificZones.data(), (size_t)NumSpecificZones }) {
-        auto zoneInfo = CTheZones::GetZoneInfo(CTheZones::GetNavigationZone(zone));
+        // 0x44398C..0x443996: &ZoneInfoArray[navZone.m_ZoneInfoIndex] with no null-for-index-0 special case (CTheZones::GetZoneInfo(const CZone*) returns nullptr for index 0)
+        const auto* const zoneInfo = CTheZones::ZoneInfoArray.data() + CTheZones::GetNavigationZone(zone)->m_ZoneInfoIndex;
 
         if (zoneInfo->GangStrength[pedType - PED_TYPE_GANG1] != 0) {
             Provocation += 1.0f;
@@ -1184,7 +1185,7 @@ void CGangWars::Update() {
 void CGangWars::UpdateTerritoryUnderControlPercentage() {
     auto ballasZones = 0, groveZones = 0, vagosZones = 0;
     if (CTheZones::TotalNumberOfNavigationZones) {
-        for (auto& zone : CTheZones::NavigationZoneArray) {
+        for (auto& zone : CTheZones::GetNavigationZones()) { // 0x443E02: the exe walks the first TotalNumberOfNavigationZones zones only (the port walked all 380 slots, stale ones included)
             auto zoneInfo = CTheZones::GetZoneInfo(&zone);
             if (!zoneInfo)
                 continue;

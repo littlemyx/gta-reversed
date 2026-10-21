@@ -262,10 +262,20 @@ void CAEPedSpeechAudioEntity::Reset() {
 
 // 0x4E37F0
 bool CAEPedSpeechAudioEntity::ReservePedConversationSpeechSlots() {
-    const auto slotA = GetFreeSpeechSlot();
-    const auto slotB = GetFreeSpeechSlot();
-
-    if (slotA == -1 || slotB == -1) {
+    // exe 0x4E37F0: the first two free slots in index order (0..4, the player's slot 5 is never taken); no round robin, `s_NextSpeechSlot` is not touched
+    tPedSpeechSlotID slotA = -1, slotB = -1;
+    for (tPedSpeechSlotID i = 0; i < (tPedSpeechSlotID)s_PedSpeechSlots.size() - 1; i++) {
+        if (s_PedSpeechSlots[i].Status != CAEPedSpeechSlot::eStatus::FREE) {
+            continue;
+        }
+        if (slotA == -1) {
+            slotA = i;
+        } else {
+            slotB = i;
+            break;
+        }
+    }
+    if (slotB == -1) {
         return false;
     }
 
@@ -282,7 +292,14 @@ bool CAEPedSpeechAudioEntity::ReservePedConversationSpeechSlots() {
 
 // 0x4E3870
 bool CAEPedSpeechAudioEntity::ReservePlayerConversationSpeechSlot() {
-    const auto slot = GetFreeSpeechSlot();
+    // exe 0x4E3870: the first free slot of 0..4 in index order (no round robin, `s_NextSpeechSlot` is not touched)
+    tPedSpeechSlotID slot = -1;
+    for (tPedSpeechSlotID i = 0; i < (tPedSpeechSlotID)s_PedSpeechSlots.size() - 1; i++) {
+        if (s_PedSpeechSlots[i].Status == CAEPedSpeechSlot::eStatus::FREE) {
+            slot = i;
+            break;
+        }
+    }
     if (slot == -1) {
         return false;
     }
@@ -926,29 +943,38 @@ int16 CAEPedSpeechAudioEntity::GetSoundAndBankIDs(eGlobalSpeechContext gCtx, eSp
 
 // 0x4E5F10
 int16 CAEPedSpeechAudioEntity::CanWePlayGlobalSpeechContext(eGlobalSpeechContext gCtx) {
-    if (!IsGlobalContextImportantForInterupting(gCtx) && !IsGlobalContextPain(gCtx)) {
-        const auto CheckSlot = [](auto slot) {
-            return s_PedSpeechSlots[slot].Status == CAEPedSpeechSlot::eStatus::RESERVED
-                ? slot
-                : -1;
-        };
-        if (s_bPedConversationHappening) {
-            if (this == &s_pConversationPed1->GetSpeechAE()) {
-                return CheckSlot(s_pConversationPedSlot1);
-            }
-            if (this == &s_pConversationPed2->GetSpeechAE()) {
-                return CheckSlot(s_pConversationPedSlot2);
-            }
+    // exe 0x4E5F10: a conversation slot only counts when it is not -1 - otherwise the next check (player conversation, then a free slot) runs; the free slot is taken
+    // (s_NextSpeechSlot advanced) BEFORE the next-play-time test
+    const auto IsConversationContext = [&] { return !IsGlobalContextImportantForInterupting(gCtx) && !IsGlobalContextPain(gCtx); };
+    const auto CheckSlot = [](tPedSpeechSlotID slot) -> int16 {
+        return s_PedSpeechSlots[slot].Status == CAEPedSpeechSlot::eStatus::RESERVED
+            ? slot
+            : -1;
+    };
+    if (s_bPedConversationHappening && IsConversationContext()) {
+        tPedSpeechSlotID slot = -1;
+        if (this == &s_pConversationPed1->GetSpeechAE()) {
+            slot = s_pConversationPedSlot1;
+        } else if (this == &s_pConversationPed2->GetSpeechAE()) {
+            slot = s_pConversationPedSlot2;
         }
-        if (s_bPlayerConversationHappening) {
-            if (this == &s_pPlayerConversationPed->GetSpeechAE()) {
-                return CheckSlot(s_pConversationPedSlot1);
-            }    
+        if (slot != -1) {
+            return CheckSlot(slot);
         }
     }
-    return CTimer::GetTimeInMS() >= GetNextPlayTime(gCtx)
-        ? GetFreeSpeechSlot() // s_NextSpeechSlot is set in `GetFreeSpeechSlot`
-        : -1;
+    if (s_bPlayerConversationHappening && IsConversationContext()) {
+        if (this == &s_pPlayerConversationPed->GetSpeechAE() && s_pConversationPedSlot1 != -1) {
+            return CheckSlot(s_pConversationPedSlot1);
+        }
+    }
+    const auto slot = GetFreeSpeechSlot(); // s_NextSpeechSlot is set in `GetFreeSpeechSlot`
+    if (slot == -1) {
+        return -1;
+    }
+    if ((int16)gCtx >= 0 && (int16)gCtx < 0x168 && CTimer::GetTimeInMS() < GetNextPlayTime(gCtx)) {
+        return -1;
+    }
+    return slot;
 }
 
 // 0x4E6550

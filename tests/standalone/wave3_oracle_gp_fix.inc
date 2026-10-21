@@ -144,6 +144,16 @@ static void TestW3GpHand() {
         return W3GpCase(r, d, "CGangWars", 0, {}, [&](void*) -> uint64_t { return (uint64_t)(uint8_t)(CGangWars::CanPlayerStartAGangWarHere(zi) ? 1 : 0); },
             [&](void*) -> uint64_t { return (uint64_t)((uint8_t)(oracle::Fn<int __cdecl(CZoneInfo*)>(0x443F80)(zi)) ? 1 : 0); });
     }, 200);
+    // ZONEINFO: AddKillToProvocation 0x443950 reads GangStrength of &ZoneInfoArray[navZone.m_ZoneInfoIndex] with no index-0 special case (0x443982..0x443996); the fixture's zones carry zone-info indices 0..3 and the zone infos 0..3 random strengths
+    Run("CGangWars::AddKillToProvocation 0x443950 (zone info index 0 included)", [&](Rng& r, std::string& d) {
+        const int32 type = (int32)r.below(12);   // 7 / 9 (PED_TYPE_GANG1 / GANG3) reach the zone loop
+        g_post = [=](Rng& rr, uint8_t*) {
+            CGangWars::bCanTriggerGangWarWhenOnAMission = true;
+            for (int i = 0; i < 4; ++i) for (auto& s : CTheZones::ZoneInfoArray[i].GangStrength) s = rr.below(3) ? 0 : (uint8)rr.below(256);
+        };
+        return W3GpCase(r, d, "CGangWars", 0, {}, [&](void*) -> uint64_t { CGangWars::AddKillToProvocation((ePedType)type); return 0; },
+            [&](void*) -> uint64_t { oracle::Fn<void __cdecl(int)>(0x443950)(X(type)); return 0; });
+    }, 400);
     Run("CGangWars::PickStreamedInPedForThisGang 0x443A20", [&](Rng& r, std::string& d) {
         const int gang = (int)r.below(3); int32 o1 = GI(r), o2 = o1;
         return W3GpCase(r, d, "CGangWars", 0, {}, [&](void*) -> uint64_t { const bool b = CGangWars::PickStreamedInPedForThisGang((eGangID)gang, o1); return mix(b ? 1 : 0, (uint32)o1); },

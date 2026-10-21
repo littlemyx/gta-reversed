@@ -894,7 +894,7 @@ void CPostEffects::InfraredVisionStoreAndSetLightsForHeatObjects(CPed* ped) {
     // gradually changing from red to blue (dead)
     if (ped->m_nPedState == PEDSTATE_DEAD) {
         const auto time = std::abs((int32)(CTimer::GetTimeInMS() - ped->m_nDeathTimeMS));
-        const auto delta = (float)time / 10'000.0f;
+        const auto delta = (float)time * 0.0001f; // exe 0x701320: fild + fmul by the float 0.0001f (0x858FC4), not a division by 10000
 
         m_fInfraredVisionHeatObjectCol.red = std::max(m_fInfraredVisionHeatObjectCol.red - delta, 0.0f);
         m_fInfraredVisionHeatObjectCol.green = 0.0f;

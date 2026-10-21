@@ -92,3 +92,4 @@ date	agent	rules	kind	tokens	tool_uses	minutes	outcome	notes
 2026-10-21	ZONEINFO	v3	audit+fix (small)	166931	63	35	8 script zone commands + 2 gang-war fns fixed (territory percentage 2657/3000, provocation zone 0 64/400)
 2026-10-21	ORACLE-W3-AUDIO2	v3	oracle wave (small)	267922	90	39	AudioHardware A/B 19 -> 0 (+26 rows), 4 fixes (vehicle audio settings index +400 twice 424/424, speech slot reservation, global speech context)
 2026-10-21	ORACLE-W3-RENDER	v3	oracle wave (small)	289900	100	23	Renderer/PostEffects/Grass/2dEffect A/B 37 -> 0 (+38), 2 fixes (IR vision death-time scale, IsInCurrentArea movzx); post-fx raster pow2 deviation found
+2026-10-21	POSTFX-RASTER	v3	fix (small)	202515	74	16	exe raster size helper (bit_ceil wrong at 14/8192 widths = all powers of 2); found HEAD crashes at new game (soak not in gates since 10-18!)

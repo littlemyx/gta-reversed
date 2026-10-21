@@ -86,13 +86,52 @@ void CPostEffects::DoScreenModeDependentInitializations() {
     HeatHazeFXInit();
 }
 
+// 0x7043D9 / 0x703EB5: the exe sizes the front-buffer raster as 2^(ftol(ln(w) / ln(2)) + 1) = the next power of two strictly ABOVE w (1024 -> 2048, 1 -> 2), NOT std::bit_ceil
+// (1024 -> 1024). ln(2) is computed as fldln2 * log2(2.0) (fyl2x) and every step is rounded at the CURRENT x87 precision control (PC24 after D3D CreateDevice): the quotient
+// of a power of two is the exact integer k there, so ftol gives k and the size is 2^(k+1); it is also what makes non-powers of two round up (1000 -> 1024).
+// ExeRasterLog2 is the ftol(...) part (_ftol on the extended quotient = truncation toward zero, `fistp qword` low dword on overflow / NaN like the CRT), the pow(2.0, n) part
+// is exact for every integer n in the UCRT as well.
+#if NOTSA_X87_ASM
+__declspec(naked) static int __cdecl ExeRasterLog2(int) {
+    __asm {
+        fldln2
+        fld1
+        fadd  st(0), st(0)                  // 2.0 (the exe loads the constant at 0x86F990)
+        fyl2x                               // ln(2) * log2(2)
+        fldln2
+        fild  dword ptr [esp + 4]
+        fyl2x                               // ln(2) * log2(w)
+        fdiv  st(0), st(1)                  // fdiv st(1) (D8 F1)
+        sub   esp, 12
+        fnstcw word ptr [esp]
+        movzx eax, word ptr [esp]
+        or    eax, 0xC00
+        mov   word ptr [esp + 2], ax
+        fldcw word ptr [esp + 2]
+        fistp qword ptr [esp + 4]
+        fldcw word ptr [esp]
+        fstp  st(0)
+        mov   eax, dword ptr [esp + 4]
+        add   esp, 12
+        ret
+    }
+}
+#else
+static int ExeRasterLog2(int w) { return (int)(std::log((double)w) / std::log(2.0)); }
+#endif
+
+// notsa
+int32 CPostEffects::ExeRasterSize(int32 w) {
+    return (int32)std::pow(2.0, (double)(ExeRasterLog2(w) + 1));
+}
+
 // 0x7043D0
 void CPostEffects::SetupBackBufferVertex() {
     RwRaster* raster = RwCameraGetRaster(Scene.m_pRwCamera);
 
-    // clamp width/height to next (or equal) 2^n
-    const auto width   = std::bit_ceil(static_cast<uint32>(RwRasterGetWidth(raster)));
-    const auto height  = std::bit_ceil(static_cast<uint32>(RwRasterGetHeight(raster)));
+    // width/height rounded up to the next 2^n STRICTLY above (1024 -> 2048), exactly like the exe's ln/pow arithmetic
+    const auto width   = ExeRasterSize(RwRasterGetWidth(raster));
+    const auto height  = ExeRasterSize(RwRasterGetHeight(raster));
     const auto fwidth  = float(width);
     const auto fheight = float(height);
 
@@ -307,8 +346,8 @@ void CPostEffects::ImmediateModeFilterStuffInitialize() {
 
     const auto* frameBuffer = RwCameraGetRaster(Scene.m_pRwCamera);
     ms_imf.fFrontBufferU1 = ms_imf.fFrontBufferV1 = 0.0f;
-    ms_imf.fFrontBufferU2 = SCREEN_WIDTH / std::bit_ceil(static_cast<uint32>(RwRasterGetWidth(frameBuffer)));
-    ms_imf.fFrontBufferV2 = SCREEN_HEIGHT / std::bit_ceil(static_cast<uint32>(RwRasterGetHeight(frameBuffer)));
+    ms_imf.fFrontBufferU2 = SCREEN_WIDTH / (float)ExeRasterSize(RwRasterGetWidth(frameBuffer));
+    ms_imf.fFrontBufferV2 = SCREEN_HEIGHT / (float)ExeRasterSize(RwRasterGetHeight(frameBuffer));
 }
 
 // 0x700D70

@@ -23,6 +23,7 @@ public:
     static void Close();
     static void DoScreenModeDependentInitializations();
     static void SetupBackBufferVertex();
+    static int32 ExeRasterSize(int32 w); // notsa: the exe's next-power-of-two-strictly-above-w, see PostEffects.cpp
     static void Update();
 
     // X2,Y2 is added to X1,Y1. So they are more like width and height in a rectangle.

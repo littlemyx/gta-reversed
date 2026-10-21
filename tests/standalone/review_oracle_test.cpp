@@ -797,6 +797,93 @@ static void TestFtol() {
     });
 }
 
+// POSTFX-RASTER: the raster size of CPostEffects::SetupBackBufferVertex (0x7043D9..0x70446A) and ImmediateModeFilterStuffInitialize (0x703EB5..0x703F3A) is
+// 2^(ftol(ln(w) / ln(2)) + 1), ln(2) = fldln2 * log2(2.0) (fyl2x) at the CURRENT precision control: the next power of two strictly ABOVE w (1024 -> 2048, 1 -> 2).
+// The two snippets are the exe's instruction sequences (SetupBackBufferVertex spills ln(2) to a qword, the Initialize function keeps it in st(1)), calling the exe's own
+// pow (0x8220F0) and _ftol (0x821B40) from the mapped image.
+__declspec(naked) static int __cdecl ExeRasterSizeSpill(int) {
+    __asm {
+        push ebp
+        mov  ebp, esp
+        sub  esp, 0x20
+        mov  eax, 0x86F990
+        fldln2
+        fld  qword ptr [eax]
+        fyl2x
+        fstp qword ptr [ebp - 8]
+        fldln2
+        fild dword ptr [ebp + 8]
+        fyl2x
+        fdiv qword ptr [ebp - 8]
+        mov  eax, 0x821B40
+        call eax
+        inc  eax
+        mov  dword ptr [ebp - 12], eax
+        fild dword ptr [ebp - 12]
+        sub  esp, 8
+        fstp qword ptr [esp]
+        push 0x40000000
+        push 0
+        mov  eax, 0x8220F0
+        call eax
+        mov  eax, 0x821B40
+        call eax
+        mov  esp, ebp
+        pop  ebp
+        ret
+    }
+}
+__declspec(naked) static int __cdecl ExeRasterSizeReg(int) {
+    __asm {
+        push ebp
+        mov  ebp, esp
+        sub  esp, 0x20
+        mov  eax, 0x86F990
+        fldln2
+        fld  qword ptr [eax]
+        fyl2x
+        fldln2
+        fild dword ptr [ebp + 8]
+        fyl2x
+        fdiv st(0), st(1)
+        mov  eax, 0x821B40
+        call eax
+        fstp st(0)
+        inc  eax
+        mov  dword ptr [ebp - 12], eax
+        fild dword ptr [ebp - 12]
+        sub  esp, 8
+        fstp qword ptr [esp]
+        push 0x40000000
+        push 0
+        mov  eax, 0x8220F0
+        call eax
+        mov  eax, 0x821B40
+        call eax
+        mov  esp, ebp
+        pop  ebp
+        ret
+    }
+}
+static void TestRaster() {
+    static int k = 0;
+    Run("CPostEffects::ExeRasterSize w=1..8192 (0x7043D9 / 0x703EB5)", [&](Rng&, std::string& d) {
+        const int w = (k++ % 8192) + 1;
+        const int a = CPostEffects::ExeRasterSize(w), e1 = ExeRasterSizeSpill(w), e2 = ExeRasterSizeReg(w);
+        Hit(w > 1 && (w & (w - 1)) == 0);
+        if (a == e1 && a == e2) return true;
+        d = "w " + std::to_string(w) + " port " + std::to_string(a) + " exe(spill) " + std::to_string(e1) + " exe(reg) " + std::to_string(e2) + " bit_ceil " + std::to_string(std::bit_ceil((unsigned)w));
+        return false;
+    }, 8192);
+    // informational: how many w of 1..8192 the old std::bit_ceil port got wrong (the pre-fix failure count of the row above)
+    SetPC(24);
+    int old24 = 0, firstBad = 0; std::string list;
+    for (int w = 1; w <= 8192; ++w) if ((int)std::bit_ceil((unsigned)w) != ExeRasterSizeReg(w)) { ++old24; if (list.size() < 120) list += std::to_string(w) + " "; }
+    SetPC(53);
+    std::printf("    (pre-fix std::bit_ceil would mismatch %d of 8192 widths at PC24: %s...)\n", old24, list.c_str());
+    (void)firstBad;
+}
+
 // ---------------------------------------------------------------------------------------------------------------------------------
 int main(int argc, char** argv) {
     std::setvbuf(stdout, nullptr, _IONBF, 0);
@@ -825,6 +912,7 @@ int main(int argc, char** argv) {
     TestFidelity();
     TestRecip();
     TestFtol();
+    TestRaster();
     int bad24 = 0, bad53 = 0, hard24 = 0, hard53 = 0;
     for (auto& r : g_rows) { bad24 += r.bad24; bad53 += r.bad53; hard24 += r.hardReg24 + r.hardSpec24; hard53 += r.hardReg53 + r.hardSpec53; }
     std::printf("\n%zu functions, mismatches (strict / excluding NaN-payload-only): PC24 %d / %d, PC53 %d / %d\n", g_rows.size(), bad24, hard24, bad53, hard53);

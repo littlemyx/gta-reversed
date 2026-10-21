@@ -33,7 +33,7 @@ missions          missions.txt    330 -                                         
 render_vmode      vmode.txt       200 -                                                 1 1 0
 input_mouse       mouse.txt       200 NOTSA_STANDALONE_WINDOWED_FOCUS=1                 1 1 0
 render_firststart firststart.txt  150 -                                                 1 0 0
-interior_lspd     interior.txt    330 -                                                 0 1 1
+interior_lspd     interior.txt    330 NOTSA_STANDALONE_PROBE=1 0 1 1
 arrest0          arrest0.txt     400 -                                                 0 1 0
 "
 if [ "$LIST" = 1 ]; then echo "$SCENARIOS" | awk 'NF {printf "%-18s route=%-14s limit=%3ss%s%s%s\n", $1, $2, $3, ($5=="1" ? " pixels" : ""), ($6=="0" ? " EXCLUSIVE-FULLSCREEN" : ""), ($7=="1" ? " [live original reference with -o]" : "")}'; exit 0; fi

@@ -406,10 +406,12 @@ def chk_interior(run, R, B, orig):
     Sin = [s for s in S if num(s, 'area', 0) != 0]
     R.add('cops_present', bool(Sin) and max(num(s, 'cops40', 0) for s in Sin) >= 1, 'cops within 40 m (snapshots inside the interior): %s of all %s' % ([s.get('cops40') for s in Sin], [s.get('cops40') for s in S]), '>= 1 (the station is populated by PopulateInterior)')
     dz_of = lambda ss: [int(x) for s in ss for x in s.get('copdz', '-').split(',') if x not in ('', '-')]
-    dz4 = dz_of(Sin[:1])
-    dz = dz_of(Sin[1:]) or dz4   # (CJ already out of the interior at 10 s: busted very early -> the 4 s snapshot is all there is)   # int_t4 (4 s after the teleport: the cops of PopulateInterior may still be settling onto the floor) / int_t10 on (settled)
-    lim = val(B, 'cop_dz_max_dm', 10)
-    R.add('cops_on_floor', bool(dz) and max(abs(x) for x in dz) <= lim, 'vertical offsets of the cops from CJ (dm), settled snapshots (>= 10 s) %s; at 4 s (info) %s' % (dz[:12] or '-', dz4[:8] or '-'), '|dz| <= %s dm from 10 s after entering (same floor; the playtest saw them spawn above CJ and stay there; a transient +1.3 m at 4 s is seen in ~1 run in 3, REGRESS-FLAKES)' % lim)
+    dz_all = dz_of(Sin)
+    # LSPD-POP: the original exe also keeps cops on another level of the station (its poller: +14 dm for the whole 15 s, -12 / -26 dm too: nodes of the upper / lower walkways), so a vertical-offset limit is not a property of the exe.
+    # U15 (cops stacked on top of CJ) is the cops standing ABOVE him at the same XY: `copstk` = living cops within 40 m, horizontal distance < 1.5 m and > 0.5 m higher.
+    lim = val(B, 'cop_stack_max', 0)
+    stk = [int(num(s, 'copstk', 0)) for s in Sin]
+    R.add('cops_on_floor', bool(Sin) and max(stk) <= lim, 'cops standing above CJ (xy < 1.5 m, > 0.5 m higher), snapshots inside the interior: %s; vertical offsets of the cops (dm, info): %s' % (stk, dz_all[:12] or '-'), '<= %s (U15: the playtest saw them spawn on top of CJ and stay there; cops on other levels of the station are the exe own placement, LSPD-POP)' % lim)
     base = hpar(S[0])
     eng = [s for s in S if num(s, 'copsEngaged', 0) >= 1 or hpar(s) < base - 1 or num(s, 'pst', 0) in (ST['PED_ARRESTED'], ST['PED_ARREST_PLAYER']) or num(s, 'wl', 9) == 0]
     oi = orig.get('interior')

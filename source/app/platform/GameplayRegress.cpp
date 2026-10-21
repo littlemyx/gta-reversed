@@ -78,7 +78,7 @@ void Snap(const std::string& name) {
     if (pl && GetPedPool() && GetVehiclePool()) { // (the menu / start-up has no pools yet: only the video part D is logged)
         int peds = 0, cops = 0, copsDead = 0, copsDeadAlive = 0, copsCar = 0, copsFoot = 0, copsEngaged = 0, copsFootEngaged = 0, nearCop = 99999, law = 0, lawDrv = 0, nearLaw = 99999, copsHurtInCar = 0;
         std::string copdz; // vertical offset (decimetres) from the player of up to 8 living cops within 40 m: cops standing on top of CJ (playtest-2 U15) show up as big positive values
-        int copsNear40 = 0;
+        int copsNear40 = 0, copsStack = 0; // copsStack: living cops standing ABOVE CJ (horizontal distance < 1.5 m, > 0.5 m higher): the U15 symptom. Cops on another level of the station (+1.4 m at the balcony nodes) are the exe's own placement (LSPD-POP)
         const CVector pos = pl ? pl->GetPosition() : CVector{};
         for (auto& ped : GetPedPool()->GetAllValid()) {
             if (&ped == pl) continue;
@@ -95,7 +95,7 @@ void Snap(const std::string& name) {
                 continue;
             }
             nearCop = std::min(nearCop, (int)d);
-            if (d <= 40.f) { copsNear40++; if (copsNear40 <= 8) copdz += std::to_string((int)((ped.GetPosition().z - pos.z) * 10.f)) + ","; }
+            if (d <= 40.f) { if ((ped.GetPosition() - pos).Magnitude2D() < 1.5f && ped.GetPosition().z - pos.z > 0.5f) copsStack++; copsNear40++; if (copsNear40 <= 8) copdz += std::to_string((int)((ped.GetPosition().z - pos.z) * 10.f)) + ","; }
             (ped.bInVehicle ? copsCar : copsFoot)++;
             // "engaged": acts against the player: pursuit / arrest / kill tasks
             const bool eng = PedHasTask(ped, TASK_COMPLEX_POLICE_PURSUIT) || PedHasTask(ped, TASK_COMPLEX_ARREST_PED) || PedHasTask(ped, TASK_SIMPLE_ARREST_PED) || PedHasTask(ped, TASK_COMPLEX_COP_ARREST_PED) ||
@@ -118,8 +118,8 @@ void Snap(const std::string& name) {
         }
         prevActive = std::move(nowActive);
         for (auto& p : CPickups::GetAllActivePickups()) { pk++; if (p.m_nPickupType == PICKUP_ONCE || p.m_nPickupType == PICKUP_ONCE_TIMEOUT || p.m_nPickupType == PICKUP_ONCE_TIMEOUT_SLOW || p.m_nPickupType == PICKUP_ONCE_FOR_MISSION) wpk++; }
-        GR_LOG("[gr] %s B peds60=%d cops=%d copsDead=%d copsDeadAlive=%d copsCar=%d copsFoot=%d copsEngaged=%d copsFootEngaged=%d nearCop=%d law100=%d lawDrv=%d nearLaw=%d pickups=%d pnew=%d pickupsOnce=%d area=%d cops40=%d copdz=%s",
-            id.c_str(), peds, cops, copsDead, copsDeadAlive, copsCar, copsFoot, copsEngaged, copsFootEngaged, nearCop, law, lawDrv, nearLaw, pk, pnew, wpk, (int)CGame::currArea, copsNear40, copdz.empty() ? "-" : copdz.c_str());
+        GR_LOG("[gr] %s B peds60=%d cops=%d copsDead=%d copsDeadAlive=%d copsCar=%d copsFoot=%d copsEngaged=%d copsFootEngaged=%d nearCop=%d law100=%d lawDrv=%d nearLaw=%d pickups=%d pnew=%d pickupsOnce=%d area=%d cops40=%d copdz=%s copstk=%d",
+            id.c_str(), peds, cops, copsDead, copsDeadAlive, copsCar, copsFoot, copsEngaged, copsFootEngaged, nearCop, law, lawDrv, nearLaw, pk, pnew, wpk, (int)CGame::currArea, copsNear40, copdz.empty() ? "-" : copdz.c_str(), copsStack);
     }
     if (pl && GetPedPool() && GetVehiclePool()) {
         // the last spawned car and its driver (spawnveh) + the last spawned cop (spawncop)

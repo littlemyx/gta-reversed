@@ -82,9 +82,9 @@
   }
  },
  "interior_lspd": {
-  "cop_dz_max_dm": {
-   "value": 10,
-   "why": "cops inside the station stand on the floor CJ stands on (peds are placed on the floor at spawn): |dz| <= 1 m; the playtest saw them spawn on top of CJ (measured 1.4 m and 2.5 m above him at 4 s after entering, 0 later when they had dropped). Judged from the snapshots >= 10 s after entering and taken INSIDE the interior (area != 0): the 4 s snapshot shows a transient +1.3 m (two cops) in ~1 run of 3 on the fixed build (REGRESS-FLAKES, info only), and the snapshots after CJ is busted (back on the street) see the exterior police (streaming works again; |dz| 2.1-2.6 m)."
+  "cop_stack_max": {
+   "value": 0,
+   "why": "U15 (playtest 2): all interior cops were put at CJ's XY with z += 0.9 per ped (PopulateInterior passed the player position to AddPed). The exe places them on the generated interior nodes; none stands above CJ at the same XY. Cops on other levels of the station (+1.4 m / -1.2 m / -2.6 m) are the exe's own node placement: its own poller sees +14 dm for 15 s (LSPD-POP.md), which is why the old |dz| <= 10 dm limit flaked (REGRESS-FLAKES) and is gone."
   }
  },
  "cheats": {

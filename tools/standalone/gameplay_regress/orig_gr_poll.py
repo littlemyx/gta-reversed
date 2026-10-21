@@ -6,8 +6,8 @@ usage: python -X utf8 -I orig_gr_poll.py <out-file> [interval-s=1.0] [process=gt
 With tp-after-dismount-s > 0 the player is teleported to the Idlewood street by the Pizza Stack (2100,-1790,13.5; the open street of the routes' cmd:tp) that many seconds after he has left a vehicle for the first time (the scenario mounts and dismounts the tutorial BMX first, which ends the opening mission); the original has no injector.
 One line per sample: `[gr-o] qpc=<ms> pl=1 x= y= z= hp= arm= pst= wl= chaos= invh= peds60= cops= copsDead= copsDeadAlive= copsCar= copsFoot= nearCop= law100= lawDrv= nearLaw= pickups=`
 qpc is the QueryPerformanceCounter clock in ms = the clock of inputdrv.exe's `[mark]` lines (Python's perf_counter on Windows is the same counter).
-Addresses (v1.0 US): player ped pointer 0xB7CD98, ped pool 0xB74490 (stride 0x7A4), vehicle pool 0xB74494 (stride 0xA18), pickups 0x9788C0 (stride 0x20), CPed: health +0x540, armour +0x548, wanted ptr +0x480
-(CPlayerPedData), pedstate +0x530, pedtype +0x594, flags dword +0x46C (bit 8 = bInVehicle); CVehicle: model +0x22, driver +0x460; CWanted: chaos +0, wanted level +0x2C.
+Addresses (v1.0 US): player ped pointer 0xB7CD98, ped pool 0xB74490 (stride 0x7C4: CPools::Initialise imul 0x7c4 in the pool ctor 0x5503F0, PT2-TRAILER 2b), vehicle pool 0xB74494 (stride 0xA18), pickups 0x9788C0 (stride 0x20), CPed: health +0x540, armour +0x548, wanted ptr +0x480
+(CPlayerPedData), pedstate +0x530, pedtype +0x598 (m_nPedType; +0x594 is field_594), intelligence +0x47C, contact entity +0x584, flags dword +0x46C (bit 8 = bInVehicle); CVehicle: model +0x22, driver +0x460; CWanted: chaos +0, wanted level +0x2C.
 """
 import ctypes, ctypes.wintypes as wt, struct, sys, time, subprocess, os
 
@@ -29,6 +29,7 @@ def find_pid(name):
 
 
 # GR_ORIG_TP=x,y,z overrides the teleport target (default: the Idlewood street; the interior leg uses the LSPD entrance marker)
+PEDDUMP = os.environ.get('GR_ORIG_PEDDUMP', '1') != '0'     # [ped-o] lines (one per ped within 60 m, max 20 per sample)
 TPXYZ = tuple(float(v) for v in os.environ.get('GR_ORIG_TP', '2100,-1790,13.5').split(','))
 
 
@@ -60,6 +61,36 @@ def main():
         m = u32(p + 0x14)
         b = rd(m + 0x30 if m else p + 4, 12)
         return struct.unpack('<fff', b) if b else None
+
+    def tasktype(t):
+        vt = u32(t)
+        fn = u32(vt + 16) if vt else None
+        b = rd(fn, 6) if fn else None
+        if b and b[0] == 0xB8 and b[5] == 0xC3:
+            return struct.unpack('<I', b[1:5])[0]
+        return -1
+
+    def chain(ped):
+        ints = u32(ped + 0x47C)
+        out = []
+        for i in range(5):
+            t = u32(ints + 4 + 4 * i) if ints else None
+            s, n = [], 0
+            while t and n < 8:
+                ty = tasktype(t)
+                s.append(str(ty))
+                t = u32(t + 8) if ty > 0 else 0
+                n += 1
+            if s:
+                out.append('p%d:%s' % (i, '>'.join(s)))
+        return ' '.join(out) or '-'
+
+    def contact(ped):
+        c = u32(ped + 0x584)
+        if not c:
+            return 'none'
+        a, m = rd(c + 0x2F, 1), rd(c + 0x22, 2)
+        return '%x(model %d area %d)' % (c, struct.unpack('<H', m)[0] if m else -1, a[0] if a else -1)
 
     while time.time() - t0 < tmax:
         if not h:
@@ -101,6 +132,8 @@ def main():
         pool = u32(0xB74490)
         curarea = u32(0xB72914)
         cops40 = 0
+        copstk = 0
+        ped_lines = 0
         copsnopos = 0
         copdz = ''
         peds = cops = dead = deadAlive = copsCar = copsFoot = live = nopos = 0
@@ -114,21 +147,26 @@ def main():
             for i in range(size):
                 if bmap[i] & 0x80:
                     continue
-                p = objs + i * 0x7A4
+                p = objs + i * 0x7C4
                 if p == pl:
                     continue
                 live += 1
                 pe = pos(p)
                 if not pe:
                     nopos += 1
-                    if u32(p + 0x594) == 6:      # a cop whose position cannot be read: still counted (REGRESS-FLAKES: the interior leg)
+                    if u32(p + 0x598) == 6:      # a cop whose position cannot be read: still counted (REGRESS-FLAKES: the interior leg)
                         copsnopos += 1
                     continue
                 d = sum((a - b) ** 2 for a, b in zip(pe, pp)) ** .5
                 if d > 60:
                     continue
                 peds += 1
-                if u32(p + 0x594) != 6:      # PED_TYPE_COP
+                if PEDDUMP and ped_lines < 20:      # LSPD-POP: every ped near CJ (all types) with the data of the port's NOTSA_STANDALONE_PROBE `ped` lines
+                    ped_lines += 1
+                    mdl = struct.unpack('<H', rd(p + 0x22, 2) or bytes(2))[0]
+                    out.write('[ped-o] qpc=%.0f %x pos10=(%d,%d,%d) d=%d area=%d currArea=%s type=%s model=%d hp=%d st=%s contact=%s tasks=%s\n' % (
+                        time.perf_counter() * 1000, p, pe[0] * 10, pe[1] * 10, pe[2] * 10, d, (rd(p + 0x2F, 1) or bytes([255]))[0], curarea, u32(p + 0x598), mdl, f32(p + 0x540) or 0, u32(p + 0x530), contact(p), chain(p)))
+                if u32(p + 0x598) != 6:      # PED_TYPE_COP
                     continue
                 cops += 1
                 php, pstate = f32(p + 0x540) or 0, u32(p + 0x530)
@@ -138,7 +176,9 @@ def main():
                         deadAlive += 1
                     continue
                 nearCop = min(nearCop, int(d))
-                if d <= 40 and (rd(p + 0x2F, 1) or bytes([255]))[0] == curarea:
+                if d <= 40:
+                    if ((pe[0] - pp[0]) ** 2 + (pe[1] - pp[1]) ** 2) ** .5 < 1.5 and pe[2] - pp[2] > 0.5:
+                        copstk += 1      # standing above CJ (the U15 symptom)
                     cops40 += 1
                     if cops40 <= 8:
                         copdz += '%d,' % int((pe[2] - pp[2]) * 10)
@@ -172,8 +212,8 @@ def main():
         pkb = rd(0x9788C0, 620 * 0x20)
         if pkb:
             pk = sum(1 for i in range(620) if pkb[i * 0x20 + 0x1C])
-        out.write('[gr-o] live=%d nopos=%d qpc=%.0f pl=1 x=%d y=%d z=%d hp=%d arm=%d pst=%s wl=%s chaos=%s invh=%d peds60=%d cops=%d copsDead=%d copsDeadAlive=%d copsCar=%d copsFoot=%d nearCop=%d law100=%d lawDrv=%d nearLaw=%d pickups=%d area=%s cops40=%d copdz=%s copsnopos=%d\n' % (
-            live, nopos, time.perf_counter() * 1000, pp[0], pp[1], pp[2], hp, arm, pst, wl, chaos, invh, peds, cops, dead, deadAlive, copsCar, copsFoot, nearCop, law, lawDrv, nearLaw, pk, curarea, cops40, copdz or '-', copsnopos))
+        out.write('[gr-o] live=%d nopos=%d qpc=%.0f pl=1 x=%d y=%d z=%d hp=%d arm=%d pst=%s wl=%s chaos=%s invh=%d peds60=%d cops=%d copsDead=%d copsDeadAlive=%d copsCar=%d copsFoot=%d nearCop=%d law100=%d lawDrv=%d nearLaw=%d pickups=%d area=%s cops40=%d copdz=%s copsnopos=%d copstk=%d\n' % (
+            live, nopos, time.perf_counter() * 1000, pp[0], pp[1], pp[2], hp, arm, pst, wl, chaos, invh, peds, cops, dead, deadAlive, copsCar, copsFoot, nearCop, law, lawDrv, nearLaw, pk, curarea, cops40, copdz or '-', copsnopos, copstk))
 
 
 if __name__ == '__main__':

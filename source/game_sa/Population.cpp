@@ -1456,7 +1456,16 @@ void CPopulation::PlaceCouple(ePedType husbandPedType, eModelID husbandModelId, 
 
 // 0x614210
 bool CPopulation::AddPedAtAttractor(eModelID modelIndex, C2dEffectPedAttractor* attractor, CVector posn, CEntity* entity, int32 decisionMakerType) {
-    if (FindDistanceToNearestPed(posn) <= 0.015f) {
+    // 0x614250..0x6142B1: the exe inlines its own scan here - the minimum over ALL pooled peds of the squared XY distance (z ignored, no sqrt) to `posn`,
+    // refused when it is <= 0.1225 (= 0.35 m squared, float @ 0x86D26C). (The port used the 3D distance of FindDistanceToNearestPed <= 0.015, so a second
+    // ped could be put on the very spot of the first one: LSPD-POP, one attractor was filled with 12 peds instead of one.)
+    float minDistSq = FLT_MAX; // 0x863A3C
+    for (CPed& ped : GetPedPool()->GetAllValid()) {
+        const auto& pp = ped.GetPosition();
+        const float dx = posn.x - pp.x, dy = posn.y - pp.y;
+        minDistSq = std::min(minDistSq, dx * dx + dy * dy);
+    }
+    if (minDistSq <= 0.1225f) {
         return false;
     }
 

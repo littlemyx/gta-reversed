@@ -425,7 +425,8 @@ private:
 VALIDATE_SIZE(CEntity, 0x38);
 
 inline bool CEntity::IsInCurrentArea() const {
-    return GetAreaCode() == CGame::currArea || GetAreaCode() == AREA_CODE_13;
+    const int32 area = (uint8)m_AreaCode; // exe: `movzx edx, al` (the port's signed byte differs for area codes >= 0x80)
+    return area == (int32)CGame::currArea || area == (int32)AREA_CODE_13;
 }
 
 inline bool CEntity::IsInArea(int32 area) {

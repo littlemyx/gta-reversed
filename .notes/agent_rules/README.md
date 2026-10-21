@@ -8,3 +8,4 @@
 | v1 | 2026-10-16 | sonnet agents ≤ 5 parallel, worktrees, build/GPU locks, -j4, reports ≤ 15 lines, watchdog |
 | v2 | 2026-10-18 | 2–3 parallel, smaller tasks, context cap ~200k with continuation hand-off, ≤ 1 read-only helper sub-agent, no-vsync test runs, compile cache |
 | v3 | 2026-10-19 | 1–2 parallel by quota pace, 100-min wall-clock cap (replaces call count), orchestrator gates partial landings, lock/cleanup/worktree rules, real oracle fixtures |
+| v4 | 2026-10-21 | gate adds soak (+ daily gameplay_regress); consumer audit for state-layout fixes; agents soak before landing gameplay fixes |

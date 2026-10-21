@@ -2220,9 +2220,15 @@ int32 CPopulation::GeneratePedsAtAttractors(
             : EffInRange(minRadiusClose, maxRadiusClose);
     };
 
+    // Exe loop shape (0x6159E0..0x615C57): the pass counter `i` (limit 12) is reset to 0 by every created ped, so 12 consecutive passes without a new ped end
+    // the search; every entity iteration first re-checks the remaining count (0x615A00 `test esi, esi; je end`); decisionMaker == -1 returns right after the first
+    // ped (0x615C1E `cmp ebx, -1; je 0x615C57`). (The port counted 12 passes in total and only left the inner loop.)
     int32 numPedsCreated{};
     for (size_t i{}; i < 12; i++) {
         for (int16 o{}; o < numEntitiesInRng; o++) {
+            if (!numPedsToCreate) {
+                return numPedsCreated;
+            }
             const auto ent = entitiesInRng[o];
             assert(ent);
             if (!ent->GetRwObject()) {
@@ -2271,9 +2277,7 @@ int32 CPopulation::GeneratePedsAtAttractors(
                 decisionMaker = 1; // TODO: Shouldn't this be local to this iteration instead? Right now this will presist into all futher iterations...
             }
 
-            switch (model) {
-            case MODEL_INVALID:
-            case MODEL_MALE01:
+            if (model <= 0 || model == MODEL_MALE01) { // 0x615BE3 `test eax, eax; jle` / 0x615BE7 `cmp eax, 7`
                 continue;
             }
 
@@ -2284,12 +2288,11 @@ int32 CPopulation::GeneratePedsAtAttractors(
             numPedsCreated++;
 
             if (decisionMaker == -1) {
-                break;
+                return numPedsCreated;
             }
 
-            if (numPedsCreated == numPedsToCreate) {
-                break;
-            }
+            numPedsToCreate--;
+            i = (size_t)-1; // 0x615C2E: `mov [esp+0x2c], 0` - the pass counter restarts (the `i++` of the for turns this into 0 for the next pass)
         }
     }
 

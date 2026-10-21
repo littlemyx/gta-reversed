@@ -95,3 +95,4 @@ date	agent	rules	kind	tokens	tool_uses	minutes	outcome	notes
 2026-10-21	POSTFX-RASTER	v3	fix (small)	202515	74	16	exe raster size helper (bit_ceil wrong at 14/8192 widths = all powers of 2); found HEAD crashes at new game (soak not in gates since 10-18!)
 2026-10-21	NEWGAME-CRASH	v3	crash fix	252922	122	83	root cause CTheScripts::Process walked past scripts killed in the same pass (resumed ended scripts); soak 3/3 OK; no bisect
 2026-10-21	REGRESS-POLICE	v3	regression fix	177993	96	80	culprit 1ef99baa MarkRegionsForCoors (right) vs UpdateStreaming/LoadSceneForPathNodes readers still on old index layout -> no traffic/police; fixed readers; combat 3/3
+2026-10-21	REGRESS-FLAKES	v4	test fixes (partial)	~	~	91	interior check limited to in-interior snapshots, orig-exe interior leg, until:onfoot gate for dismounts; found orig LSPD has no cop peds vs ours 2-4

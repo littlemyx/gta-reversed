@@ -1128,9 +1128,12 @@ void CPathFind::UnLoadPathFindData(int32 index) {
 void CPathFind::LoadSceneForPathNodes(CVector point) {
     rng::fill(ToBeStreamed, false);
     MarkRegionsForCoors(point, 350.f);
-    for (const auto [areaId, load] : rngv::enumerate(ToBeStreamed)) {
-        if (load) {
-            CStreaming::RequestModel(DATToModelId((int32)areaId), STREAMING_DEFAULT);
+    // 0x44DE39: ToBeStreamed is laid out [xRegion * 8 + yRegion] (see MarkRegionsForCoors), the area (= node file / model) number is yRegion * 8 + xRegion
+    for (size_t x = 0; x < NUM_PATH_MAP_AREA_X; x++) {
+        for (size_t y = 0; y < NUM_PATH_MAP_AREA_Y; y++) {
+            if (ToBeStreamed[x * NUM_PATH_MAP_AREA_Y + y]) {
+                CStreaming::RequestModel(DATToModelId((int32)GetAreaIdFromXY(x, y)), STREAMING_DEFAULT);
+            }
         }
     }
 }
@@ -1386,27 +1389,33 @@ void CPathFind::UpdateStreaming(bool bForceStreaming) {
         IterAreasTouchingRect(
             { m_loadAreaRequestMinX, m_loadAreaRequestMinY, m_loadAreaRequestMaxX, m_loadAreaRequestMaxY },
             [&, this](auto areaId) {
-                ToBeStreamed[areaId] = ToBeStreamedForScript[areaId] = true;
+                // 0x450C84: both flag arrays are laid out [xRegion * 8 + yRegion], the area number is yRegion * 8 + xRegion
+                const auto flagId = (areaId % NUM_PATH_MAP_AREA_X) * NUM_PATH_MAP_AREA_Y + areaId / NUM_PATH_MAP_AREA_X;
+                ToBeStreamed[flagId] = ToBeStreamedForScript[flagId] = true;
                 return true;
             }
         );
     }
 
-    // Load/unload areas as per `ToBeStreamed`
-    for (const auto [areaId, shouldBeLoaded] : rngv::enumerate(ToBeStreamed)) {
-        if (shouldBeLoaded) {
-            if (!IsAreaLoaded(areaId)) {
-                CStreaming::RequestModel(
-                    DATToModelId(areaId),
-                    ToBeStreamedForScript[areaId]
-                        ? STREAMING_MISSION_REQUIRED
-                        : STREAMING_KEEP_IN_MEMORY
-                );
-                NOTSA_LOG_DEBUG("Requested area: {}", (int)areaId);
+    // Load/unload areas as per `ToBeStreamed` (0x450CF0: x outer, y inner; flag [x * 8 + y], area / model yRegion * 8 + xRegion)
+    for (size_t x = 0; x < NUM_PATH_MAP_AREA_X; x++) {
+        for (size_t y = 0; y < NUM_PATH_MAP_AREA_Y; y++) {
+            const auto areaId = GetAreaIdFromXY(x, y);
+            const auto flagId = x * NUM_PATH_MAP_AREA_Y + y;
+            if (ToBeStreamed[flagId]) {
+                if (!IsAreaLoaded(areaId)) {
+                    CStreaming::RequestModel(
+                        DATToModelId((int32)areaId),
+                        ToBeStreamedForScript[flagId]
+                            ? STREAMING_MISSION_REQUIRED
+                            : STREAMING_KEEP_IN_MEMORY
+                    );
+                    NOTSA_LOG_DEBUG("Requested area: {}", (int)areaId);
+                }
+            } else if (IsAreaLoaded(areaId)) {
+                CStreaming::RemoveModel(DATToModelId((int32)areaId));
+                NOTSA_LOG_DEBUG("Removed area: {}", (int)areaId);
             }
-        } else if (IsAreaLoaded(areaId)) {
-            CStreaming::RemoveModel(DATToModelId(areaId));
-            NOTSA_LOG_DEBUG("Removed area: {}", (int)areaId);
         }
     }
 }

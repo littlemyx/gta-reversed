@@ -45,6 +45,8 @@
 #include "wave3_oracle_gp2.inc"         // ORACLE-W3-GP2: TrafficLights + Restart + Shopping + PedAttractor rows (wave3_gp2_oracle_test)
 #elif defined(W3_MISC_ONLY)
 #include "wave3_oracle_misc.inc"       // ORACLE-W3-MISC: Localisation + TagManager rows (wave3_misc_oracle_test)
+#elif defined(W3_RENDER_ONLY)
+#include "wave3_oracle_render.inc"      // ORACLE-W3-RENDER: Renderer + PostEffects + GrassRenderer + 2dEffect rows (wave3_render_oracle_test)
 #elif defined(W3_FXS_ONLY)
 #include "wave3_oracle_fxs.inc"        // ORACLE-W3-FX: game_sa/Fx rows (wave3_fxs_oracle_test)
 #elif defined(W3_FX_ONLY)
@@ -235,6 +237,12 @@ static void TestW2() {
     using namespace w2;
     g_onFault = +[] { oracle::alloc::End(); };
     TestW3MiscAll();
+    return;
+#endif
+#ifdef W3_RENDER_ONLY
+    using namespace w2;
+    g_onFault = +[] { oracle::alloc::End(); };
+    TestW3RenderAll();
     return;
 #endif
 #ifdef W3_FXS_ONLY

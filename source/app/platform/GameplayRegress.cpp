@@ -68,12 +68,12 @@ void Snap(const std::string& name) {
         const auto ch = pl ? Chain(*pl, &hit) : std::string("-");
         auto* pad = CPad::GetPad(0);
         const bool ctl = pl && pad && !FrontEndMenuManager.m_bMenuActive && !CCutsceneMgr::IsRunning() && !pad->bPlayerSafe && !pad->ArePlayerControlsDisabled() && !TheCamera.GetFading();
-        GR_LOG("[gr] %s A t=%lu frame=%u pl=%d x=%d y=%d z=%d head=%d hp=%d arm=%d pst=%d wl=%d chaos=%d mission=%d fail=%d invh=%d vmodel=%d ptasks=%s phit=%d hitevents=%u ctl=%d cut=%d fade=%d menu=%d relmouse=%d cam10=%d camraw10=%d money=%d",
+        GR_LOG("[gr] %s A t=%lu frame=%u pl=%d x=%d y=%d z=%d head=%d hp=%d arm=%d pst=%d wl=%d chaos=%d mission=%d fail=%d invh=%d vmodel=%d ptasks=%s phit=%d hitevents=%u ctl=%d cut=%d fade=%d menu=%d relmouse=%d cam10=%d camraw10=%d money=%d vspd=%d",
             id.c_str(), (unsigned long)GetTickCount(), (unsigned)CTimer::GetFrameCounter(), pl ? 1 : 0, (int)pos.x, (int)pos.y, (int)pos.z, pl ? (int)(RadiansToDegrees(pl->GetHeading())) : 0,
             pl ? (int)pl->m_fHealth : -1, pl ? (int)pl->m_fArmour : -1, pl ? (int)pl->m_nPedState : -1, w ? (int)w->GetWantedLevel() : -1, w ? (int)w->m_ChaosLevel : -1,
             (int)CTheScripts::IsPlayerOnAMission(), (int)CTheScripts::FailCurrentMission, pl ? (int)pl->bInVehicle : 0, pl && pl->m_pVehicle ? (int)pl->m_pVehicle->m_nModelIndex : -1,
             ch.c_str(), (int)hit, s_HitEvents, (int)ctl, (int)CCutsceneMgr::IsRunning(), (int)TheCamera.GetFading(), (int)FrontEndMenuManager.m_bMenuActive,
-            PSGLOBAL(sdlWindow) ? (int)SDL_GetWindowRelativeMouseMode(PSGLOBAL(sdlWindow)) : -1, (int)(s_CamAccum * 572.9578), (int)(CamHeading() * 572.9578), (int)FindPlayerInfo().m_nMoney);
+            PSGLOBAL(sdlWindow) ? (int)SDL_GetWindowRelativeMouseMode(PSGLOBAL(sdlWindow)) : -1, (int)(s_CamAccum * 572.9578), (int)(CamHeading() * 572.9578), (int)FindPlayerInfo().m_nMoney, pl && pl->m_pVehicle ? (int)(pl->m_pVehicle->m_vecMoveSpeed.Magnitude() * 1000.f) : -1);
     }
     if (pl && GetPedPool() && GetVehiclePool()) { // (the menu / start-up has no pools yet: only the video part D is logged)
         int peds = 0, cops = 0, copsDead = 0, copsDeadAlive = 0, copsCar = 0, copsFoot = 0, copsEngaged = 0, copsFootEngaged = 0, nearCop = 99999, law = 0, lawDrv = 0, nearLaw = 99999, copsHurtInCar = 0;

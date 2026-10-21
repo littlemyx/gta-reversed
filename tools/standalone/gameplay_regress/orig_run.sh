@@ -1,7 +1,7 @@
 #!/bin/bash
 # Original-exe leg of the gameplay regression suite (gameplay_regress.sh -o): runs the ORIGINAL gta_sa.exe (v1.0 US) through the same scenario with inputdrv.exe (SendInput + ReadProcessMemory gates) while an
 # out-of-process poller samples the game state. Output: $OUT/<scenario>/orig/ (inputdrv.log, the poller log, game log).
-# usage: orig_run.sh <combat|audio|cheats> <out-root>
+# usage: orig_run.sh <combat|audio|cheats|interior_lspd> <out-root>
 # env:   GR_ORIG_DIR  directory with the original gta_sa.exe and the full data (default C:/gta-perf/orig; "private data dir" of WIN-PERF.md)
 #        GR_INPUTDRV  inputdrv.exe to use (default $GR_PX/inputdrv.exe)
 #        GR_PX        directory with d3d9.dll (Present proxy, no vsync pacing) / dsound.dll (mute proxy) / inputdrv.exe (build: tools/standalone/windows/build_tools.sh)
@@ -21,6 +21,7 @@ case "$SCN" in
   combat) POLL=gr; SCRIPT="$GRD/orig/combat.scn";;
   audio)  POLL=audio; SCRIPT="$GRD/orig/audio.scn";;
   cheats) POLL=cheats; SCRIPT="$GRD/orig/cheats.scn";;
+  interior_lspd) POLL=gr; SCRIPT="$GRD/orig/interior.scn";;
   *) echo "orig_run: no original-exe leg for $SCN"; exit 2;;
 esac
 awk -v d="$GRD/orig" '/^#include / { f = d "/" $2 ".inc"; while ((getline l < f) > 0) print l; close(f); next } { print }' "$SCRIPT" > "$od/script.txt"
@@ -54,6 +55,7 @@ sleep 5
 tasklist | grep -qi gta_sa.exe || { echo "orig_run: gta_sa.exe did not start"; exit 2; }
 # every original leg also runs the poller that teleports CJ to the Idlewood street (2100,-1790) (2 s after he stepped off the tutorial BMX), like the routes do with cmd:tp
 TPAFTER=2.0; [ "$SCN" = cheats ] && TPAFTER=0   # (the cheat scene stays in the quiet start alley: Idlewood is Ballas turf, CJ gets shot in the original)
+[ "$SCN" = interior_lspd ] && { TPAFTER=9; export GR_ORIG_TP=1554.95,-1675.0,15.8; }   # (the LSPD entrance marker of routes/interior.txt)
 "$PY" -X utf8 -I "$GRD/orig_gr_poll.py" "$(cygpath -w "$od/poll.txt")" 1.0 gta_sa.exe 900 $TPAFTER > "$od/poll.out" 2>&1 &
 TPID=$!
 case "$POLL" in

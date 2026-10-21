@@ -36,8 +36,16 @@ cmd:snap:bike_in_1
 down:s
 wait:1500
 up:s
+cmd:snap:pre_exit1
+# (REGRESS-FLAKES: the dismount of the rolling BMX is gated, not timed - once in a full run the Return was not taken while the bike was still moving and CJ got off only with the next press,
+# so the car press below dismounted him instead; one retry if he is still on the bike after 4 s)
 key:return
-wait:3500
+until:onfoot:4000
+skipif:onfoot:exit1
+key:return
+until:onfoot:4000
+label:exit1
+wait:1500
 cmd:snap:bike_out
 key:return
 until:invehicle:8000
@@ -47,8 +55,16 @@ cmd:snap:bike_in_2
 down:s
 wait:1500
 up:s
+cmd:snap:pre_exit2
+# (REGRESS-FLAKES: the dismount of the rolling BMX is gated, not timed - once in a full run the Return was not taken while the bike was still moving and CJ got off only with the next press,
+# so the car press below dismounted him instead; one retry if he is still on the bike after 4 s)
 key:return
-wait:3500
+until:onfoot:4000
+skipif:onfoot:exit2
+key:return
+until:onfoot:4000
+label:exit2
+wait:1500
 # ---- and a car
 cmd:spawnveh:410:0:4
 wait:2000

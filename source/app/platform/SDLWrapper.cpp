@@ -45,7 +45,7 @@ static bool IsInFullscreen()
 // NOTSA_INPUT_INJECT (cmake -DGTASA_INPUT_INJECT=ON) enables it in the ASI/DLL build too (logs through spdlog instead of Fixups).
 // `until:COND[:MAXMS]` is a barrier: the script clock stops until COND holds (or MAXMS, default 60000, elapsed), then continues from there, so everything after it is
 // relative to the moment the game was actually ready (deterministic car entry etc.). COND = control (player ped exists, no menu / cutscene / fade, pad not disabled)
-// | invehicle (the player ped is in a vehicle) | menu (main menu idle and rendering). Logs "[until] COND ok|TIMEOUT after N ms".
+// | invehicle (the player ped is in a vehicle) | onfoot (the player ped is not in a vehicle) | menu (main menu idle and rendering). Logs "[until] COND ok|TIMEOUT after N ms".
 // `label:NAME` / `skipif:COND:NAME` (COND as above, evaluated once, no waiting): when COND holds the script jumps forward to `label:NAME` (the clock jumps with it, i.e.
 // the skipped waits are not waited), e.g. a second car-entry attempt that is skipped when the first one worked.
 // `vmode:IDX` applies video mode IDX the way the menu's resolution screen does (m_nPrefsVideoMode, SetVideoMode, CPostEffects::DoScreenModeDependentInitializations): regression
@@ -124,6 +124,10 @@ bool InjCond(const std::string& c) {
     if (c == "invehicle") {
         auto* ped = FindPlayerPed();
         return ped && ped->bInVehicle && ped->m_pVehicle;
+    }
+    if (c == "onfoot") { // the player is out of any vehicle (the leave-vehicle animation has finished): gates the Return key presses of the gameplay regression missions route instead of a fixed wait
+        auto* ped = FindPlayerPed();
+        return ped && !ped->bInVehicle;
     }
     if (c == "cutscene") { // a cutscene is running (the new-game intro): `until:cutscene` replaces a fixed wait for its loading (gameplay regression suite)
         return CCutsceneMgr::IsRunning() && !FrontEndMenuManager.m_bMenuActive;

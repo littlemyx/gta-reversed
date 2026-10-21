@@ -401,12 +401,20 @@ def chk_interior(run, R, B, orig):
         R.add('snaps', False, 'snapshots missing (%d of 4)' % len(S), '', setup=True)
         return
     R.add('entered', any(num(s, 'area', 0) != 0 for s in S[:2]), 'CGame::currArea %s' % [s.get('area') for s in S], 'CJ is inside the interior (area != 0) 4-10 s after the teleport to the entrance')
-    R.add('cops_present', max(num(s, 'cops40', 0) for s in S) >= 1, 'cops within 40 m: %s' % [s.get('cops40') for s in S], '>= 1 (the station is populated by PopulateInterior)')
-    dz = [int(x) for s in S for x in s.get('copdz', '-').split(',') if x not in ('', '-')]
+    # only the snapshots taken INSIDE the interior (area != 0): the later ones (busted / wasted, CJ back on the street) see the exterior police, which streams again and stands on the street 2+ m
+    # below / above whatever the interior check is about (REGRESS-FLAKES: that made cops_on_floor fail ~1 run in 3). (Peds carry no usable area of their own here: the cops of the interior show up in cops40 with area code 0, so the filter is the area CJ is in.)
+    Sin = [s for s in S if num(s, 'area', 0) != 0]
+    R.add('cops_present', bool(Sin) and max(num(s, 'cops40', 0) for s in Sin) >= 1, 'cops within 40 m (snapshots inside the interior): %s of all %s' % ([s.get('cops40') for s in Sin], [s.get('cops40') for s in S]), '>= 1 (the station is populated by PopulateInterior)')
+    dz_of = lambda ss: [int(x) for s in ss for x in s.get('copdz', '-').split(',') if x not in ('', '-')]
+    dz4 = dz_of(Sin[:1])
+    dz = dz_of(Sin[1:]) or dz4   # (CJ already out of the interior at 10 s: busted very early -> the 4 s snapshot is all there is)   # int_t4 (4 s after the teleport: the cops of PopulateInterior may still be settling onto the floor) / int_t10 on (settled)
     lim = val(B, 'cop_dz_max_dm', 10)
-    R.add('cops_on_floor', bool(dz) and max(abs(x) for x in dz) <= lim, 'vertical offsets of the cops from CJ (dm): %s' % (dz[:12] or '-'), '|dz| <= %s dm (same floor; the playtest saw them spawn above CJ)' % lim)
+    R.add('cops_on_floor', bool(dz) and max(abs(x) for x in dz) <= lim, 'vertical offsets of the cops from CJ (dm), settled snapshots (>= 10 s) %s; at 4 s (info) %s' % (dz[:12] or '-', dz4[:8] or '-'), '|dz| <= %s dm from 10 s after entering (same floor; the playtest saw them spawn above CJ and stay there; a transient +1.3 m at 4 s is seen in ~1 run in 3, REGRESS-FLAKES)' % lim)
     base = hpar(S[0])
     eng = [s for s in S if num(s, 'copsEngaged', 0) >= 1 or hpar(s) < base - 1 or num(s, 'pst', 0) in (ST['PED_ARRESTED'], ST['PED_ARREST_PLAYER']) or num(s, 'wl', 9) == 0]
+    oi = orig.get('interior')
+    if oi is not None:   # the original exe's own leg (orig_gr_poll.py: PED_TYPE_COP peds of CJ's area within 40 m); informational: the original shows NO cop-type ped inside the station (REGRESS-FLAKES.md)
+        R.add('orig_reference', oi['entered'], 'original exe: entered the interior %s, cop-type peds within 40 m inside (max) %d, vertical offsets (dm): %s' % (oi['entered'], oi['cops'], oi['dz'][:12] or '-'), 'info: the original got into the interior (no pass/fail on its cops)')
     R.add('cops_react', bool(eng), 'engaged cops %s, health+armour %s, wanted %s, ped state %s' % ([s.get('copsEngaged') for s in S], [int(hpar(s)) for s in S], [s.get('wl') for s in S], [s.get('pst') for s in S]), 'within 30 s at 3 stars some cop attacks / arrests / the player is hurt or busted')
 
 
@@ -439,6 +447,14 @@ def live_orig(scn, od):
             o = {'law_arrive_s': '%s s (this run)' % law, 'engage_s': '%s s (this run)' % eng}
         except Exception as e:
             print('# original leg unusable:', e)
+    if scn == 'interior_lspd':
+        o['interior'] = {'entered': False, 'cops': 0, 'dz': []}
+        for ln in read(os.path.join(d, 'poll.txt')):
+            m = re.search(r'area=(\d+) cops40=(\d+) copdz=(\S*)', ln)
+            if m and int(m.group(1)) != 0:
+                o['interior']['entered'] = True
+                o['interior']['cops'] = max(o['interior']['cops'], int(m.group(2)))
+                o['interior']['dz'] += [int(x) for x in m.group(3).split(',') if x not in ('', '-')]
     return o
 
 

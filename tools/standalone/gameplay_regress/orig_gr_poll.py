@@ -9,7 +9,7 @@ qpc is the QueryPerformanceCounter clock in ms = the clock of inputdrv.exe's `[m
 Addresses (v1.0 US): player ped pointer 0xB7CD98, ped pool 0xB74490 (stride 0x7A4), vehicle pool 0xB74494 (stride 0xA18), pickups 0x9788C0 (stride 0x20), CPed: health +0x540, armour +0x548, wanted ptr +0x480
 (CPlayerPedData), pedstate +0x530, pedtype +0x594, flags dword +0x46C (bit 8 = bInVehicle); CVehicle: model +0x22, driver +0x460; CWanted: chaos +0, wanted level +0x2C.
 """
-import ctypes, ctypes.wintypes as wt, struct, sys, time, subprocess
+import ctypes, ctypes.wintypes as wt, struct, sys, time, subprocess, os
 
 k32 = ctypes.WinDLL('kernel32', use_last_error=True)
 k32.OpenProcess.restype = wt.HANDLE
@@ -26,6 +26,10 @@ def find_pid(name):
         if len(p) > 1 and p[0].lower() == name.lower():
             return int(p[1])
     return None
+
+
+# GR_ORIG_TP=x,y,z overrides the teleport target (default: the Idlewood street; the interior leg uses the LSPD entrance marker)
+TPXYZ = tuple(float(v) for v in os.environ.get('GR_ORIG_TP', '2100,-1790,13.5').split(','))
 
 
 def main():
@@ -81,7 +85,7 @@ def main():
             m = u32(pl + 0x14)
             if m:
                 n = ctypes.c_size_t()
-                k32.WriteProcessMemory(h, ctypes.c_void_p(m + 0x30), struct.pack('<fff', 2100.0, -1790.0, 13.5), 12, ctypes.byref(n))
+                k32.WriteProcessMemory(h, ctypes.c_void_p(m + 0x30), struct.pack('<fff', *TPXYZ), 12, ctypes.byref(n))
                 tp_done = True
                 out.write('# teleported to Idlewood at qpc=%.0f' % (time.perf_counter() * 1000) + chr(10))
         pp = pos(pl)
@@ -95,6 +99,10 @@ def main():
         pst = u32(pl + 0x530)
         invh = ((rd(pl + 0x46D, 1) or b'\0')[0] & 1)
         pool = u32(0xB74490)
+        curarea = u32(0xB72914)
+        cops40 = 0
+        copsnopos = 0
+        copdz = ''
         peds = cops = dead = deadAlive = copsCar = copsFoot = live = nopos = 0
         nearCop = 99999
         if pool:
@@ -113,6 +121,8 @@ def main():
                 pe = pos(p)
                 if not pe:
                     nopos += 1
+                    if u32(p + 0x594) == 6:      # a cop whose position cannot be read: still counted (REGRESS-FLAKES: the interior leg)
+                        copsnopos += 1
                     continue
                 d = sum((a - b) ** 2 for a, b in zip(pe, pp)) ** .5
                 if d > 60:
@@ -128,6 +138,10 @@ def main():
                         deadAlive += 1
                     continue
                 nearCop = min(nearCop, int(d))
+                if d <= 40 and (rd(p + 0x2F, 1) or bytes([255]))[0] == curarea:
+                    cops40 += 1
+                    if cops40 <= 8:
+                        copdz += '%d,' % int((pe[2] - pp[2]) * 10)
                 if (rd(p + 0x46D, 1) or b'\0')[0] & 1:
                     copsCar += 1
                 else:
@@ -158,8 +172,8 @@ def main():
         pkb = rd(0x9788C0, 620 * 0x20)
         if pkb:
             pk = sum(1 for i in range(620) if pkb[i * 0x20 + 0x1C])
-        out.write('[gr-o] live=%d nopos=%d qpc=%.0f pl=1 x=%d y=%d z=%d hp=%d arm=%d pst=%s wl=%s chaos=%s invh=%d peds60=%d cops=%d copsDead=%d copsDeadAlive=%d copsCar=%d copsFoot=%d nearCop=%d law100=%d lawDrv=%d nearLaw=%d pickups=%d\n' % (
-            live, nopos, time.perf_counter() * 1000, pp[0], pp[1], pp[2], hp, arm, pst, wl, chaos, invh, peds, cops, dead, deadAlive, copsCar, copsFoot, nearCop, law, lawDrv, nearLaw, pk))
+        out.write('[gr-o] live=%d nopos=%d qpc=%.0f pl=1 x=%d y=%d z=%d hp=%d arm=%d pst=%s wl=%s chaos=%s invh=%d peds60=%d cops=%d copsDead=%d copsDeadAlive=%d copsCar=%d copsFoot=%d nearCop=%d law100=%d lawDrv=%d nearLaw=%d pickups=%d area=%s cops40=%d copdz=%s copsnopos=%d\n' % (
+            live, nopos, time.perf_counter() * 1000, pp[0], pp[1], pp[2], hp, arm, pst, wl, chaos, invh, peds, cops, dead, deadAlive, copsCar, copsFoot, nearCop, law, lawDrv, nearLaw, pk, curarea, cops40, copdz or '-', copsnopos))
 
 
 if __name__ == '__main__':

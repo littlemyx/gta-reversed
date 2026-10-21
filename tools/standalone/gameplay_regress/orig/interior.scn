@@ -1,0 +1,11 @@
+# original exe: the LSPD interior of routes/interior.txt (a wanted level, then CJ is teleported onto the LSPD entrance marker 9 s after he stepped off the tutorial BMX = 3 s into this script, GR_ORIG_TP);
+# orig_gr_poll.py logs the player's area, and the cops of that area within 40 m with their vertical offsets (the run build's cops40 / copdz)
+#include orig_header
+mark:foot_stand
+cap:30
+wait:500
+cheat:turnuptheheat
+wait:2500
+mark:int_tp
+wait:30000
+mark:int_end

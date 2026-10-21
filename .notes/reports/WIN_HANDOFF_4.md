@@ -24,3 +24,17 @@ Then class C/S (fake vtables / small worlds) by subsystem, starting with Tasks a
 ## Open user-facing
 Playtest offer pending (non-blocking): new build differs a lot from playtest 2 (lighting tint, engine sound, pad steering, glass,
 plants, messages queue, cover/attractor AI). SKIN-FLAKY crash still unreproduced.
+
+## PAUSE 2026-10-21 14:40 WEST (user asked to pause all work)
+- Everything committed and pushed: origin/reverse/interior_c (main line) + origin/consumer-audit (WIP branch, see below).
+- Since the checkpoint above landed: ORACLE-W3-RENDER, POSTFX-RASTER (code; screenshots pending), NEWGAME-CRASH (505a4aef: CTheScripts::Process
+  successor test — new game crashed since ~10-18), REGRESS-POLICE (729926c4: ToBeStreamed readers — no traffic/police), REGRESS-FLAKES,
+  LSPD-POP (a7b39d64/ff4685f3: attractor ped placement), rules v4 (soak + gameplay_regress in every gate, consumer audit).
+- Last full gate: 565fb3a0 — run_all_tests 72/72, soak OK; gameplay_regress 3 runs after REGRESS-FLAKES on 4a99e638: PASS/FAIL(interior,
+  since explained and fixed by LSPD-POP)/PASS. The gate on 1190459b (LSPD-POP) was STOPPED by the pause: not gated yet.
+- C:\gta-play = build of 565fb3a0 (police fix, soak OK). LSPD-POP and later are NOT in it.
+- Open WIP: worktree C:/gta-wt/consumer-audit (kept on purpose), branch consumer-audit pushed: CONSUMER-AUDIT table complete (311 commits,
+  89 non-local checked, 0 unexplained) + 1 fix 671d3437 (CGarages::PrintMessages number order). NOT soaked/gated, not merged.
+- Resume order: (1) gate.sh regress on reverse/interior_c HEAD; (2) soak + gameplay_regress on consumer-audit, then merge it;
+  (3) POSTFX-RASTER screenshots (command in its report); (4) next A/B slices (list above), then classes C/S, then record/replay for D.
+- Agent rules: CURRENT = v4. Orchestrator gate script: tools/standalone/windows/orch_gate.sh (+ orch_watchdog.sh).

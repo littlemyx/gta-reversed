@@ -488,7 +488,8 @@ void CGarages::PrintMessages() {
             DrawFormattedString(MessageNumberInString2, -1, -1, -1, -1, -1);
         }
     } else {
-        DrawFormattedString(MessageNumberInString, MessageNumberInString2, -1, -1, -1, -1);
+        // 0x447887..0x447899: n1 = [0x96C010] (the first number TriggerMessage was given), n2 = [0x96C00C] (the second one)
+        DrawFormattedString(MessageNumberInString2, MessageNumberInString, -1, -1, -1, -1);
     }
 }
 

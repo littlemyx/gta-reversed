@@ -26,3 +26,6 @@ the out-of-object read `m_IPStack[0xFFFF]` finds: in the old image layout that r
 globals (NOTSA_GLOBAL conversions, HOOK-ADDR moves, new oracle statics), so the value became 2. None of the ~10 script commits since 67087158 (zone commands, Init name copy,
 ReadParametersForNewlyStartedScript, ...) touch the loop, the lists, or START_NEW_SCRIPT, and the wave-3 oracle rows were not wrong. A real bisect needs ~9 full-tree rebuilds of ~30 min each
 (the incremental build only works for a few TUs; a header-level layout change recompiles ~1200), which does not fit the 100-minute cap; if the exact layout-changing commit is wanted it is a separate job.
+
+## soak.sh on the fixed tree (505a4aef, StandaloneRelease, NOVSYNC, 3-minute route, outputs C:/gta-scratch/ngc/soak{1,2,3})
+RESULT: OK 3/3 (exit 0 each; 04:28 - 04:47 WEST). Before the fix the same route died at the new game every time.

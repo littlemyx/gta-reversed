@@ -111,3 +111,4 @@ date	agent	rules	kind	tokens	tool_uses	minutes	outcome	notes
 2026-10-23	ANIM-CRASH	v4	crash hunt (no fix)	235817	125	90	1 anim crash + 1 shadow crash in 19 cheats runs; null m_BlendHier slot of a 40-slot group, group/id not captured; diag patch left; found regress retry hiding crashes
 2026-10-23	MAC-A1b	v4	mac preset brew llvm + GL3 defines	174111	53	20	done: no-op 7/7, clean TUs 845, R honest 1315
 2026-10-23	MAC-P2-DESIGN	v4	design P-2 (read-only)	250399	68	13	done: 11 slices
+2026-10-23	MAC-P2a	v4	P-2 infra trait+guard+layout_diff	205263	68	33	done: 10 guard hits, 17 layout diffs

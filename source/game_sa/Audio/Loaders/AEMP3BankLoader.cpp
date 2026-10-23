@@ -82,22 +82,18 @@ uint8* CAEMP3BankLoader::GetSoundBuffer(eSoundID soundId, eSoundBankSlot bankSlo
         return nullptr;
     }
 
-    if (slot.IsSingleSound() ? m_BankSlotSound[bankSlot] != soundId : soundId >= slot.NumSounds) {
+    // 0x4E0280: the sound id is zero-extended (a negative id never matches), the slot is not range checked, the ids index the raw arrays
+    const auto sid = (int32)(uint16)soundId;
+    if (slot.IsSingleSound() ? (int32)m_BankSlotSound[bankSlot] != sid : (int32)slot.NumSounds <= sid) {
         return nullptr;
     }
 
-    uint32 bankSlotBufferSize{};
-    auto*  bankSlotBuffer = GetBankSlotBuffer(bankSlot, bankSlotBufferSize);
-
-    outSize = soundId < (eSoundID)(slot.Sounds.size()) && slot.IsSingleSound() || soundId < slot.NumSounds - 1
-        ? slot.Sounds[(soundId + 1) % slot.Sounds.size()].BankOffsetBytes - slot.Sounds[soundId].BankOffsetBytes
-        : GetBankLookup(slot.Bank).NumBytes - slot.Sounds[soundId].BankOffsetBytes;
-    outSampleRate = slot.Sounds[soundId].SampleFrequency;
-
-    const auto offset = slot.Sounds[soundId].BankOffsetBytes;
-    assert(offset < bankSlotBufferSize && "Out-of-bounds offset");
-    assert(offset + outSize < bankSlotBufferSize && "Out-of-bounds size");
-    return &bankSlotBuffer[offset];
+    const auto* const sounds = slot.Sounds.data();
+    outSize = sid < AE_BANK_MAX_NUM_SOUNDS && slot.IsSingleSound() || sid < (int32)slot.NumSounds - 1
+        ? sounds[(sid + 1) % AE_BANK_MAX_NUM_SOUNDS].BankOffsetBytes - sounds[sid].BankOffsetBytes
+        : m_BankLkups[slot.Bank].NumBytes - sounds[sid].BankOffsetBytes;
+    outSampleRate = sounds[sid].SampleFrequency;
+    return m_Buffer + slot.OffsetBytes + sounds[sid].BankOffsetBytes;
 }
 
 // 0x4E0380

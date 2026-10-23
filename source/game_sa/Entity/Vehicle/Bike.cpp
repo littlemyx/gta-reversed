@@ -2412,7 +2412,18 @@ void CBike::CalculateLeanMatrix() {
     m_mLeanMatrix = GetMatrix();
     m_mLeanMatrix = m_mLeanMatrix * mat;
     // place wheel back on ground
-    m_mLeanMatrix.GetPosition() += GetUp() * (1.0f - x87::cos(m_RideAnimData.LeanAngle)) * GetColModel()->GetBoundingBox().m_vecMin.z;
+    // 0x6B71E1..0x6B7253: the exe multiplies the up vector by the box's min z FIRST (x and y rounded to float, z kept unrounded on the x87 stack) and only then by
+    // (1 - cos(angle)) (rounded to float); the port multiplied by (1 - cos) first, which rounds differently (1 ulp)
+    const auto minZ = GetColModel()->GetBoundingBox().m_vecMin.z;
+    const auto& up  = GetUp();
+    const float upX = up.x * minZ;
+    const float upY = up.y * minZ;
+    const double upZ = (double)up.z * minZ;
+    const float k   = (float)(1.0 - x87::cos(m_RideAnimData.LeanAngle));
+    auto& lp = m_mLeanMatrix.GetPosition();
+    lp.x = (float)((double)upX * k + lp.x);
+    lp.y = (float)((double)upY * k + lp.y);
+    lp.z = (float)(upZ * k + lp.z);
     m_bLeanMatrixCalculated = true;
 }
 

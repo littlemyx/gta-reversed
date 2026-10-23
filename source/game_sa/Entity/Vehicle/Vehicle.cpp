@@ -1139,11 +1139,19 @@ bool CVehicle::GetTowBarPos(CVector& outPos, bool bCheckModelInfo, CVehicle* veh
 
 // 0x5D4760
 bool CVehicle::Save() {
+#ifdef NOTSA_PORTABLE
+    uint32 size = (uint32)notsa::FileSizeOf<CVehicleSaveStructure>; // 0x68 on file (the in-memory object is larger on LP64)
+#else
     uint32 size = sizeof(CVehicleSaveStructure);
+#endif
     CVehicleSaveStructure data;
     data.Construct(this);
     CGenericGameStorage::SaveDataToWorkBuffer(&size, sizeof(uint32)); // Unused, game ignores it on load and uses const value
+#ifdef NOTSA_PORTABLE
+    CGenericGameStorage::SaveDataToWorkBuffer(data);
+#else
     CGenericGameStorage::SaveDataToWorkBuffer(&data, size);
+#endif
     return true;
 }
 
@@ -1152,7 +1160,11 @@ bool CVehicle::Load() {
     uint32 size;
     CVehicleSaveStructure data;
     CGenericGameStorage::LoadDataFromWorkBuffer(&size, sizeof(uint32));
+#ifdef NOTSA_PORTABLE
+    CGenericGameStorage::LoadDataFromWorkBuffer(data); // BUG (kept): the size read above is ignored, the constant record size is used
+#else
     CGenericGameStorage::LoadDataFromWorkBuffer(&data, sizeof(CVehicleSaveStructure)); // BUG: Should use the value readen line above this, not constant
+#endif
     data.Extract(this);
     return true;
 }

@@ -9,6 +9,8 @@
 #include "RenderWare.h"
 #include "Quaternion.h"
 #include <Vector.h>
+#include "FileRecord.hpp"
+#include "FileRecords/MatrixFile.hpp"
 
 enum eMatrixEulerFlags : uint32 {
     SWAP_XZ = 0x01,
@@ -255,11 +257,38 @@ public:
 private:
     friend class CVector; // So Vector methods have access to private fields of matrix whitout accessor methods, for more readable code
     friend class CVector2D;
+    friend struct notsa::FileRecord<CMatrix>; // P-2c
     friend CMatrix operator*(const CMatrix& a, const CMatrix& b);
     friend CVector operator*(const CMatrix& a, const CVector& b);
     friend CMatrix operator+(const CMatrix& a, const CMatrix& b);
 };
-VALIDATE_SIZE_FILE(CMatrix, 0x48);
+VALIDATE_SIZE(CMatrix, 0x48); // x86 in-memory (the attach pointer widens it on LP64); the on-disk 0x48 is VALIDATE_SIZE_FILE(CMatrix_File) in FileRecords/MatrixFile.hpp
+
+// P-2c: file layout of the matrix (0x48 on the exe). Used only under NOTSA_PORTABLE (typed CGenericGameStorage Save/Load, tReplayCameraBlock accessors, CVehicleSaveStructure_File).
+// ToFile copies the 0x40 RwMatrix bytes (right/flags/top/pad/at/pad/pos/pad) exactly like CMatrix::CopyOnlyMatrix; attach pointer and ownership flag are written as 0.
+// FromFile behaves like CopyOnlyMatrix: it never touches the attach state of `m` (a pointer slot read from a file would be meaningless).
+template<> struct notsa::FileRecord<CMatrix> {
+    using Type = CMatrix_File;
+    static Type ToFile(const CMatrix& m) {
+        Type f{};
+        f.right[0] = m.m_right.x;   f.right[1] = m.m_right.y;     f.right[2] = m.m_right.z;     f.flags = m.flags;
+        f.top[0]   = m.m_forward.x; f.top[1]   = m.m_forward.y;   f.top[2]   = m.m_forward.z;   f.pad1  = m.pad1;
+        f.at[0]    = m.m_up.x;      f.at[1]    = m.m_up.y;        f.at[2]    = m.m_up.z;        f.pad2  = m.pad2;
+        f.pos[0]   = m.m_pos.x;     f.pos[1]   = m.m_pos.y;       f.pos[2]   = m.m_pos.z;       f.pad3  = m.pad3;
+        return f;
+    }
+    static void FromFile(CMatrix& m, const Type& f) {
+        m.m_right.x   = f.right[0]; m.m_right.y   = f.right[1]; m.m_right.z   = f.right[2]; m.flags = f.flags;
+        m.m_forward.x = f.top[0];   m.m_forward.y = f.top[1];   m.m_forward.z = f.top[2];   m.pad1  = f.pad1;
+        m.m_up.x      = f.at[0];    m.m_up.y      = f.at[1];    m.m_up.z      = f.at[2];    m.pad2  = f.pad2;
+        m.m_pos.x     = f.pos[0];   m.m_pos.y     = f.pos[1];   m.m_pos.z     = f.pos[2];   m.pad3  = f.pad3;
+    }
+    // The 0x40 RwMatrix bytes sit at the same offsets in the in-memory object (x86 and LP64) as in the record; only the attach pointer differs (4 vs 8 bytes).
+    static_assert(offsetof(CMatrix, m_right) == offsetof(Type, right) && offsetof(CMatrix, flags) == offsetof(Type, flags) && offsetof(CMatrix, m_forward) == offsetof(Type, top)
+               && offsetof(CMatrix, pad1) == offsetof(Type, pad1) && offsetof(CMatrix, m_up) == offsetof(Type, at) && offsetof(CMatrix, pad2) == offsetof(Type, pad2)
+               && offsetof(CMatrix, m_pos) == offsetof(Type, pos) && offsetof(CMatrix, pad3) == offsetof(Type, pad3) && offsetof(CMatrix, m_pAttachMatrix) == offsetof(Type, attach));
+    static_assert(sizeof(void*) != 4 || (sizeof(CMatrix) == sizeof(Type) && offsetof(CMatrix, m_bOwnsAttachedMatrix) == offsetof(Type, owns))); // x86: the raw object == the record (owns only moves on LP64)
+};
 
 CMatrix operator*(const CMatrix& a, const CMatrix& b);
 [[deprecated]] CVector operator*(const CMatrix& a, const CVector& b);

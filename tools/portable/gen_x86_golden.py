@@ -26,15 +26,34 @@ RECORDS = {
                             ('timeForNextShot', 0x10, 'I', 1), ('firstPerson', 0x14, 'B', 1), ('dontPlaceInHand', 0x15, 'B', 1), ('fx', 0x18, 'I', 1)],
                      {'CWeapon': {'m_Type': 'type', 'm_State': 'state', 'm_AmmoInClip': 'ammoInClip', 'm_TotalAmmo': 'totalAmmo', 'm_TimeForNextShotMs': 'timeForNextShot',
                                   'm_IsFirstPersonWeaponModeSelected': 'firstPerson', 'm_DontPlaceInHand': 'dontPlaceInHand', 'm_FxSystem': 'fx'}}),
-    # P-2c: CMatrix 0x48 : right/top/at (3 floats + u32 pad each), pos (3 floats + pad), RwMatrix* attach @0x40, owns-flag @0x44 (+3 pad)
-    'CMatrix_File': (0x48, [('right', 0x00, 'f', 3), ('pad0', 0x0C, 'I', 1), ('top', 0x10, 'f', 3), ('pad1', 0x1C, 'I', 1), ('at', 0x20, 'f', 3), ('pad2', 0x2C, 'I', 1),
-                            ('pos', 0x30, 'f', 3), ('pad3', 0x3C, 'I', 1), ('attach', 0x40, 'I', 1), ('owns', 0x44, 'B', 1)], {}),
+    # P-2c: CMatrix 0x48 : right/top/at (3 floats + u32 each), pos (3 floats + u32), RwMatrix* attach @0x40, owns-flag @0x44 (+3 pad). The u32 after each vector: flags @0xC (RwMatrix::flags), pad1..3.
+    'CMatrix_File': (0x48, [('right', 0x00, 'f', 3), ('flags', 0x0C, 'I', 1), ('top', 0x10, 'f', 3), ('pad1', 0x1C, 'I', 1), ('at', 0x20, 'f', 3), ('pad2', 0x2C, 'I', 1),
+                            ('pos', 0x30, 'f', 3), ('pad3', 0x3C, 'I', 1), ('attach', 0x40, 'I', 1), ('owns', 0x44, 'B', 1)],
+                     {'CMatrix': {'m_right': 'right', 'flags': 'flags', 'm_forward': 'top', 'pad1': 'pad1', 'm_up': 'at', 'pad2': 'pad2', 'm_pos': 'pos', 'pad3': 'pad3',
+                                  'm_pAttachMatrix': 'attach', 'm_bOwnsAttachedMatrix': 'owns'}}),
+    # P-2c: CVehicleSaveStructure 0x68 (Vehicle.cpp Save/Load): CMatrix @0, then the scalars; field_48 and the pad bytes are never written by Construct (0 here)
+    'CVehicleSaveStructure_File': (0x68, [('matrix', 0x00, 'B', 0x48), ('field_48', 0x48, 'B', 1), ('primary', 0x49, 'B', 1), ('secondary', 0x4A, 'B', 1), ('tertiary', 0x4B, 'B', 1),
+                                          ('quaternary', 0x4C, 'B', 1), ('alarm', 0x4E, 'H', 1), ('maxPass', 0x50, 'B', 1), ('steer', 0x54, 'f', 1), ('gas', 0x58, 'f', 1),
+                                          ('brake', 0x5C, 'f', 1), ('upper', 0x60, 'I', 1), ('lower', 0x64, 'I', 1)],
+                                   {'CVehicleSaveStructure': {'m_matrix': 'matrix', 'field_48': 'field_48', 'm_nPrimaryColor': 'primary', 'm_nSecondaryColor': 'secondary',
+                                                              'm_nTertiaryColor': 'tertiary', 'm_nQuaternaryColor': 'quaternary', 'm_nAlarmState': 'alarm', 'm_nMaxPassengers': 'maxPass',
+                                                              'm_fSteerAngle': 'steer', 'm_fGasPedal': 'gas', 'm_fBrakePedal': 'brake', 'm_nVehicleUpperFlags': 'upper',
+                                                              'm_nVehicleLowerFlags': 'lower'}}),
+    # P-2c: tReplayCameraBlock 88 bytes (pack 1; = CReplay::FindSizeOfPacket(REPLAY_PACKET_GENERAL)): type, isUsingRemoteVehicle, pad[2], CMatrix @4 (0x48 bytes), firstFocusPosn @0x4C
+    'tReplayCameraBlock': (88, [('type', 0x00, 'B', 1), ('usingRemote', 0x01, 'B', 1), ('matrix', 0x04, 'B', 0x48), ('focus', 0x4C, 'f', 3)],
+                           {'tReplayCameraBlock': {'isUsingRemoteVehicle': 'usingRemote', 'matrix': 'matrix', 'firstFocusPosn': 'focus'}}),
 }
+MAT_ROT = dict(right=(0, 1, 0), flags=3, top=(-1, 0, 0), at=(0, 0, 1), pos=(-2500.5, 1000.25, 12.125), attach=0, owns=0)
 # built-in cases (name, record, values) used by `cpp` and by the self-test of this generator
 CASES = [
     ('basic', 'CPickup_File', dict(rev=1.5, obj=1, ammo=77, regen=1000, pos=(100, -200, 300), moneyPerDay=5, model=1212, ref=3, type=2, flags=0x81)),
     ('basic', 'CWeapon_File', dict(type=30, state=0, ammoInClip=30, totalAmmo=500, timeForNextShot=0, firstPerson=0, dontPlaceInHand=1, fx=0)),
     ('identity', 'CMatrix_File', dict(right=(1, 0, 0), top=(0, 1, 0), at=(0, 0, 1), pos=(10.5, -3.25, 7), attach=0, owns=0)),
+    ('rotated', 'CMatrix_File', MAT_ROT),
+    # values given as a callable are resolved by golden() (embedding one record into another)
+    ('basic', 'CVehicleSaveStructure_File', dict(matrix=lambda: list(golden('CMatrix_File', **MAT_ROT)), primary=1, secondary=126, tertiary=3, quaternary=255, alarm=0x1234, maxPass=3,
+                                                 steer=0.5, gas=1.0, brake=-0.25, upper=0x80000001, lower=0x00402010)),
+    ('basic', 'tReplayCameraBlock', dict(type=5, usingRemote=1, matrix=lambda: list(golden('CMatrix_File', **MAT_ROT)), focus=(-2500.5, 1000.25, 12.125))),
 ]
 
 
@@ -53,6 +72,8 @@ def golden(name, **vals):
     buf = bytearray(size)
     for f, off, fmt, cnt in fields:
         v = vals.get(f, 0)
+        if callable(v):
+            v = v()
         v = list(v) if isinstance(v, (list, tuple)) else [v]
         if len(v) == 1 and cnt > 1:
             v = v * cnt

@@ -909,7 +909,11 @@ void CReplay::RecordThisFrame() {
         .matrix               = 0 /* to be filled */,
         .firstFocusPosn       = FindPlayerCoors()
     };
+#ifdef NOTSA_PORTABLE
+    cameraPacket.WriteMatrix(TheCamera.GetMatrix());
+#else
     cameraPacket.GetMatrix() = TheCamera.GetMatrix();
+#endif
     Record.Write(cameraPacket);
 
     Record.Write<tReplayClockBlock>({
@@ -1170,7 +1174,11 @@ bool CReplay::PlayBackThisFrameInterpolation(CAddressInReplayBuffer& buffer, flo
         case REPLAY_PACKET_GENERAL: {
             auto cameraPacket = buffer.Read<tReplayCameraBlock>();
 
+#ifdef NOTSA_PORTABLE
+            TheCamera.GetMatrix() = Lerp(TheCamera.GetMatrix(), cameraPacket.ReadMatrix(), interpolation);
+#else
             TheCamera.GetMatrix() = Lerp(TheCamera.GetMatrix(), cameraPacket.GetMatrix(), interpolation);
+#endif
             auto modelling = TheCamera.GetRwMatrix();
             modelling->pos = TheCamera.GetMatrix().GetPosition();
             modelling->at = TheCamera.GetMatrix().GetForward();

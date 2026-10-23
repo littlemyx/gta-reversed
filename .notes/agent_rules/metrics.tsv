@@ -115,3 +115,4 @@ date	agent	rules	kind	tokens	tool_uses	minutes	outcome	notes
 2026-10-23	MAC-W0	v4	platform layer compile gate	318451	99	71	done: W 915->3, clean 945; #line hack to undo
 2026-10-23	MAC-P2b	v4	P-2b save scalar fixes	-	-	-	done: guard 10->0, 15/15 A/B
 2026-10-23	MAC-P2c	v4	P-2c matrix/vehicle records	-	-	-	done: 9/11 identical + 2 __LINE__ only
+2026-10-23	MAC-W0-REV	v4	review W0 + drop #line	185712	51	30	done: 3 bugs fixed, 6 listed

@@ -61,16 +61,15 @@ CVehicle::SetComponentAtomicAlpha	ORACLE-C-VEH: every case faults in both exe an
 CVehicle::SetModelIndex	ORACLE-C-VEH: every case faults in both exe and port (RenderWare clump/frame/atomic layout, renderer or a virtual callee outside the closure): not constructible
 CVehicle::SetWindowOpenFlag	ORACLE-C-VEH: every case faults in both exe and port (RenderWare clump/frame/atomic layout, renderer or a virtual callee outside the closure): not constructible
 CVehicle::SetupUpgradesAfterLoad	ORACLE-C-VEH: every case faults in both exe and port (RenderWare clump/frame/atomic layout, renderer or a virtual callee outside the closure): not constructible
-CAutomobile::Fix	ORACLE-C-VEH: kills the test process (unhandled fault in the closure after a first agreed fault); not analysed
-CAutomobile::ProcessAutoBusDoors	ORACLE-C-VEH: kills the test process (unhandled fault in the closure after a first agreed fault); not analysed
-CAutomobile::Teleport	ORACLE-C-VEH: kills the test process (unhandled fault in the closure after a first agreed fault); not analysed
-CAutomobile::CloseBoot	ORACLE-C-VEH: kills the test process (unhandled fault in the closure after a first agreed fault); not analysed
-CBike::CalculateLeanMatrix	ORACLE-C-VEH: kills the test process (unhandled fault in the closure after a first agreed fault); not analysed
-CBike::FixHandsToBars	ORACLE-C-VEH: kills the test process (unhandled fault in the closure after a first agreed fault); not analysed
-CBike::Teleport	ORACLE-C-VEH: kills the test process (unhandled fault in the closure after a first agreed fault); not analysed
-CBoat::Teleport	ORACLE-C-VEH: kills the test process (unhandled fault in the closure after a first agreed fault); not analysed
-CTrain::Teleport	ORACLE-C-VEH: kills the test process (unhandled fault in the closure after a first agreed fault); not analysed
-CVehicle::UpdateWinch	ORACLE-C-VEH: kills the test process (unhandled fault in the closure after a first agreed fault); not analysed
-CVehicle::UpdateTrailerLink	ORACLE-C-VEH: kills the test process (unhandled fault in the closure after a first agreed fault); not analysed
 CVehicle::RemoveWinch	ORACLE-C-VEH: unused by the game; the port asserts NOTSA_UNREACHABLE by design (the exe indexes the rope table with this+0xA320)
 CAutomobile::GetComponentWorldPosition	ORACLE-C-VEH: garbage component index trips the port std::array assert where the exe reads out of range (fixture artefact)
+CAutomobile::ProcessAutoBusDoors	ORACLE-C-VEH-2: hand row (wave3_oracle_veh_hand3.inc): null car nodes so OpenDoor returns at once
+CBike::CalculateLeanMatrix	ORACLE-C-VEH-2: hand row (wave3_oracle_veh_hand3.inc): padding words of the lean matrix zeroed after the call
+CAutomobile::CloseBoot	ORACLE-C-VEH-2: no longer kills the process; a hand row with a shared fake frame (matrix at +0x10) faults in every case on the port side at an unresolved symbol inside CMatrix::UpdateRwMatrix (the RwMatrixUpdate shim is not linked into the test): needs that TU linked
+CVehicle::UpdateWinch	ORACLE-C-VEH-2: no longer kills the process (SafeSEH fixed); the port-side CRopes::RegisterRope runs now but the exe/port rope hook object (CRope::CreateHookObjectForRope creates a CObject through the pools / global matrix list) and the garbage rope segment counts (port asserts, exe writes past the segment array) need a rope fixture: not done
+CVehicle::SpecialEntityPreCollisionStuff	ORACLE-C-VEH-2: hand row (wave3_oracle_veh_hand3.inc): pool entity as colPhysical, 4 out bools
+CAutomobile::Fix	ORACLE-C-VEH-2: no longer kills the process; every case faults identically in port and exe (RpClumpForAllAtomics on the null clump; the clump needs an RW 3.7 clump built on the exe side)
+CAutomobile::Teleport	ORACLE-C-VEH-2: no longer kills the process; the port calls CWorld::Remove/Add whose TU is not linked into this test (0x400000) and the exe walks the uninitialised sector lists: needs CWorld linked + a sector fixture
+CBike::Teleport	ORACLE-C-VEH-2: same as CAutomobile::Teleport
+CBoat::Teleport	ORACLE-C-VEH-2: same as CAutomobile::Teleport
+CTrain::Teleport	ORACLE-C-VEH-2: same as CAutomobile::Teleport

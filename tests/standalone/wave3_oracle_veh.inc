@@ -201,12 +201,14 @@ static void TestW3VehHand() {
 }
 
 #include "wave3_oracle_veh_hand2.inc"
+#include "wave3_oracle_veh_hand3.inc"
 
 static void TestW3VtInfra();
 static void TestW3Veh() {
     TestW3VtInfra();
     TestW3VehHand();
     TestW3VehHand2();
+    TestW3VehHand3();
 #ifdef W3_HAVE_GEN
     TestW3VehFuncs();
 #endif

@@ -19,7 +19,7 @@ source/app/platform/win/WinMain.cpp, source/extensions/utility.hpp. MAC-P1's unc
 ## No-op proof (sonnet sub-agent, scratch /private/tmp/claude-501/a1b_ab, BEFORE = git archive HEAD, AFTER = + exactly the 5 files; msvc-wine)
 * `cmake --preset StandaloneRelease`: 1284 / 1284 compile commands identical; whole build.ninja byte-identical after path normalisation (link statement identical).
 * cl.exe under wine, same-path symlink swap, obj_code_sig (code + reloc names), 7/7 identical: WinMain 163018, CutsceneMgr 159474, HookFilter 59826, InjectHooksMain 140245,
-  standalone/rw/engine 31586, standalone/rw/raster 28777, TaskComplexArrestPad... (TaskComplexArrestPed) 37120 bytes code.
+  standalone/rw/engine 31586, standalone/rw/raster 28777, TaskComplexArrestPed 37120 bytes code.
 * Only difference: `.debug$T` +13.5 KB per TU (CodeView) because utility.hpp now includes portable/stdcompat.h (<stacktrace>, <charconv>) on _WIN32 - no code effect.
 
 ## Census: see MAC-A1b-census.md. 1105 TUs, 845 clean (was 404), 3033 unique (was 3643); R 1315, W 915, P 159, F 208, C 15, A 0, unclassified 421. Contains MAC-P1's uncommitted codemod.

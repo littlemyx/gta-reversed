@@ -12,7 +12,6 @@
 #include "StdInc.h"
 
 #include <mutex>
-#include <pthread.h>
 #include <unistd.h>
 
 #include "oswrapper.h"
@@ -35,6 +34,7 @@ NOTSA_GLOBAL(gLastCdStreamPosn, 0x8E4898, (uint32), {});
 namespace {
 std::mutex        s_cdStreamThreadSync; // guards stream.nSectorsToRead / bLocked against CdStreamSync (the "deadlock fix" of the Win32 version)
 std::atomic<bool> s_shutdown{false};
+struct CdStreamThreadExit {}; // thrown by CdStreamThread (declared [[noreturn]]) to leave the OS thread routine normally: pthread_exit would skip the thread gate's `finished` signal
 
 int FdOf(HANDLE h) { return fileno((FILE*)h); }
 } // namespace
@@ -133,7 +133,7 @@ bool CdStreamRead(int32 streamId, void* lpBuffer, CdStreamPos pos, int32 sectorC
     while (true) {
         OS_SemaphoreWait(gStreamSemaphore);
         if (s_shutdown) {
-            pthread_exit(nullptr);
+            throw CdStreamThreadExit{};
         }
 
         ZoneScoped;
@@ -188,7 +188,12 @@ void CdStreamInitThread() {
     InitialiseQueue(&gStreamQueue, gStreamCount + 1);
     gStreamSemaphore = OS_SemaphoreCreate(5, "CdStream");
     if (gStreamSemaphore) {
-        gStreamingThread = OS_ThreadLaunch([](void*) -> uint32 { CdStreamThread(nullptr); }, nullptr, 0, "CdStream");
+        gStreamingThread = OS_ThreadLaunch([](void*) -> uint32 {
+            try {
+                CdStreamThread(nullptr);
+            } catch (const CdStreamThreadExit&) {}
+            return 0;
+        }, nullptr, 0, "CdStream");
         if (!gStreamingThread) {
             NOTSA_LOG_DEBUG("cdvd_stream: failed to create streaming thread");
         }

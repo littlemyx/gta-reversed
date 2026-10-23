@@ -21,7 +21,9 @@ CTaskSimpleIKManager::CTaskSimpleIKManager(const CTaskSimpleIKManager& o) :
     CTaskSimpleIKManager{}
 {
     for (auto&& [slot, t] : rngv::enumerate(o.m_IKChainTasks)) {
-        m_IKChainTasks[slot] = notsa::cast<CTaskSimpleIKChain>(t->Clone());
+        if (t) { // 0x6393C4 `test ecx,ecx / je skip`: empty slots stay empty (the port dereferenced them: 120/120 cases faulted in the oracle row)
+            m_IKChainTasks[slot] = notsa::cast<CTaskSimpleIKChain>(t->Clone());
+        }
     }
 }
 

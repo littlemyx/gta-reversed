@@ -136,11 +136,21 @@ public:
 
     class CAddressInReplayBuffer {
     public:
+#ifdef __clang__
+        // NOTSA: clang rejects 'default member initializer needed within definition of enclosing class' (Playback / Record below default-construct the nested type), so no DMIs and a
+        // constexpr user ctor. Not used with cl.exe: there a user-provided ctor makes the static inline Playback / Record dynamically initialised (extra code in every TU).
+        uint32 m_nOffset;
+        tReplayBuffer* m_pBase;
+        uint8 m_bSlot; // first slot to contain data
+
+        constexpr CAddressInReplayBuffer() : m_nOffset(0), m_pBase(nullptr), m_bSlot(0) {}
+#else
         uint32 m_nOffset{0};
         tReplayBuffer* m_pBase{nullptr};
         uint8 m_bSlot{0}; // first slot to contain data
 
         CAddressInReplayBuffer() = default;
+#endif
         CAddressInReplayBuffer(tReplayBuffer& buffer, uint8 slot = 0u, uint32 offset = 0u)
             : m_pBase(&buffer), m_bSlot(slot), m_nOffset(offset)
         {}

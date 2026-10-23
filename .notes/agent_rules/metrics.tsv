@@ -97,4 +97,4 @@ date	agent	rules	kind	tokens	tool_uses	minutes	outcome	notes
 2026-10-21	REGRESS-POLICE	v3	regression fix	177993	96	80	culprit 1ef99baa MarkRegionsForCoors (right) vs UpdateStreaming/LoadSceneForPathNodes readers still on old index layout -> no traffic/police; fixed readers; combat 3/3
 2026-10-21	REGRESS-FLAKES	v4	test fixes (partial)	208650	123	91	interior check limited to in-interior snapshots, orig-exe interior leg, until:onfoot gate for dismounts; found orig LSPD has no cop peds vs ours 2-4
 2026-10-21	LSPD-POP	v4	investigation+fix	239171	126	56	poller bug (orig had 9 cops); 2 port fixes: AddPedAtAttractor XY dist/0.1225 stacking peds, GeneratePedsAtAttractors 4 deviations; +13 dm cops are exe walkway
-2026-10-23	ORACLE-W3-REPLAY	v4	oracle wave (small)	~	~	45	Replay A/B 27 -> 0 (24 default), 7 fixes incl. NumberFramesAvailableToPlay infinite loop, GetIndex always 0
+2026-10-23	ORACLE-W3-REPLAY	v4	oracle wave (small)	306829	121	45	Replay A/B 27 -> 0 (24 default), 7 fixes incl. NumberFramesAvailableToPlay infinite loop, GetIndex always 0

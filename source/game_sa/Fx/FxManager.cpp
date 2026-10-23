@@ -15,7 +15,7 @@
 #include "FxPrimBP.h"
 #include "Particle.h"
 
-NOTSA_GLOBAL(g_fxMan, 0xA9AE80, (FxManager_c), {}); static_assert(sizeof(g_fxMan) == 188);
+NOTSA_GLOBAL(g_fxMan, 0xA9AE80, (FxManager_c), {}); VALIDATE_SIZE(g_fxMan, 188);
 
 void FxManager_c::InjectHooks() {
     RH_ScopedClass(FxManager_c);

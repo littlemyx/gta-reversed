@@ -19,7 +19,7 @@
 
 static NOTSA_GLOBAL_ALIAS(TempVertexBuffer, 0xC4D958, (std::array<RxObjSpace3DVertex, 4>), reinterpret_cast<std::array<RxObjSpace3DVertex, 4>&>(TempBufferVertices)); // prefix view of the scratch arena
 
-NOTSA_GLOBAL(g_fx, 0xA9AE00, (Fx_c), {}); static_assert(sizeof(g_fx) == 112);
+NOTSA_GLOBAL(g_fx, 0xA9AE00, (Fx_c), {}); VALIDATE_SIZE(g_fx, 112);
 
 // Debris prim rotation counter, lives right before `g_fx`
 static NOTSA_GLOBAL(s_DebrisPrimIdx, 0xA9ADE4, (int32), {});

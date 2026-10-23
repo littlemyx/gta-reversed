@@ -299,7 +299,9 @@ void CReplay::EmptyReplayBuffer() {
     rng::fill(BufferStatus, REPLAYBUFFER_NOT_AVAILABLE);
     BufferStatus[0] = REPLAYBUFFER_IN_USE;
     Buffers[0].Write<tReplayEndBlock>(0u);
-    Record = CAddressInReplayBuffer(Buffers[0]);
+    Record.m_nOffset = 0u; // field by field like 0x45EC90: assigning a temporary also copied its 3 padding bytes (stack garbage) into the image
+    Record.m_pBase   = &Buffers[0];
+    Record.m_bSlot   = 0u;
     MarkEverythingAsNew();
 }
 

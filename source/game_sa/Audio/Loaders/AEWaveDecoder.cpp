@@ -70,9 +70,10 @@ size_t CAEWaveDecoder::FillBuffer(void* dest, size_t size) {
 // 0x503310
 long CAEWaveDecoder::GetStreamLengthMs() {
     if (m_bInitialized) {
-        uint32 samples = dataChunkSize / blockAlign;
-        // More precise way would be involving using GCD
-        return long((float)samples * 1000.0f / (float)sampleRate);
+        // 0x503310: data bytes / (sampleRate * 4) * 1000 in x87 arithmetic: the exe assumes 4 bytes per sample (16 bit stereo) and ignores blockAlign.
+        // Both operands enter as signed fild + 2^32 for "negative" values (the add rounds to the current precision), the quotient is rounded once.
+        const auto ToFp = [](uint32 v) { double f = (double)(int32)v; if ((int32)v < 0) f += 4294967296.0f; return f; };
+        return long((float)(ToFp(dataChunkSize) / ToFp(sampleRate << 2)) * 1000.0f);
     }
 
     return -1;

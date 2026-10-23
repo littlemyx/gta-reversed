@@ -19,10 +19,16 @@ wait:3000
 mark:control
 wait:1000
 key:return
-until:invehicle:10000
+until:invehicle:6000
+# (REGRESS-SETUP: once in a full run (audio) the first Return did not mount the bike within 10 s and the dismount press below then mounted it: one retry press if CJ is still on foot after 6 s)
+skipif:invehicle:hf_on
+key:return
+until:invehicle:8000
+label:hf_on
 wait:1500
 # (REGRESS-SETUP: the dismount is gated, not timed - once in a full run the Return was not taken while the tutorial bike was still moving, CJ was still on it at free_ready (SETUP combat.free_start invehicle=1);
 # same fix as routes/missions.txt (REGRESS-FLAKES): wait for onfoot, one retry press if he is still on the bike after 4 s)
+skipif:onfoot:hf_off
 key:return
 until:onfoot:4000
 skipif:onfoot:hf_off

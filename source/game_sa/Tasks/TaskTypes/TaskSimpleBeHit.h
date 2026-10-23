@@ -3,7 +3,7 @@
 #include "TaskSimple.h"
 #include "Base.h"
 #include "AnimationEnums.h"
-enum ePedPieceTypes;
+enum ePedPieceTypes : int;
 
 class CAnimBlendAssociation;
 

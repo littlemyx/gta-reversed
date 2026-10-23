@@ -66,7 +66,7 @@ enum ePedNode : int32 {
     TOTAL_PED_NODES
 };
 
-enum ePedPieceTypes {
+enum ePedPieceTypes : int {
     PED_COL_SPHERE_LEG  = 0,
     PED_COL_SPHERE_MID  = 1,
     PED_COL_SPHERE_HEAD = 2,

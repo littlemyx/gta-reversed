@@ -15,7 +15,7 @@
 class FxSystem_c;
 class CColPoint;
 
-enum ePedPieceTypes;
+enum ePedPieceTypes : int;
 
 enum eWeaponState : uint32 {
     WEAPONSTATE_READY = 0,

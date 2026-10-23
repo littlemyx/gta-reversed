@@ -97,7 +97,7 @@ enum eVehicleOverrideLightsState {
     FORCE_CAR_LIGHTS_ON = 2
 };
 
-enum eCarPiece {
+enum eCarPiece : int {
     CAR_PIECE_DEFAULT     = 0,
     CAR_PIECE_BONNET      = 1,
     CAR_PIECE_BOOT        = 2,

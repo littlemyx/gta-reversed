@@ -174,7 +174,7 @@ void CReplay::StorePedUpdate(CPed* ped, uint8 index) {
         if (ped->IsInVehicle()) {
             return GetVehiclePool()->GetIndex(ped->GetVehicleIfInOne()) + 1;
         } else {
-            return 0;
+            return ptrdiff_t{0};
         }
     }();
 

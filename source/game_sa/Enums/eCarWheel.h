@@ -9,4 +9,4 @@ enum eCarWheel {
     MAX_CARWHEELS
 };
 
-enum eCarPiece CarWheelToCarPiece(eCarWheel i);
+enum eCarPiece : int; eCarPiece CarWheelToCarPiece(eCarWheel i);

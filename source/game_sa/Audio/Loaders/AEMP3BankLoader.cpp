@@ -114,9 +114,10 @@ int32 CAEMP3BankLoader::GetLoopOffset(eSoundID soundId, eSoundBankSlot bankSlot)
 
 // 0x4E03B0
 bool CAEMP3BankLoader::IsSoundLoaded(eSoundBank bankId, eSoundID soundId, eSoundBankSlot bankSlot) const {
+    // 0x4E03B0: bank and sound ids are zero-extended, the values in the slot sign-extended (-1 never matches)
     return m_IsInitialised
-        && GetBankSlot(bankSlot).Bank == bankId
-        && m_BankSlotSound[bankSlot] == soundId;
+        && (int32)GetBankSlot(bankSlot).Bank == (int32)(uint16)bankId
+        && (int32)m_BankSlotSound[bankSlot] == (int32)(uint16)soundId;
 }
 
 // 0x4E0400

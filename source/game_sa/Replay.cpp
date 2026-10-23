@@ -1024,8 +1024,8 @@ void CReplay::RestoreClothesDesc(CPedClothesDesc& desc, tReplayClothesBlock& pac
     assert(packet.type == REPLAY_PACKET_CLOTHES);
     rng::copy(packet.modelKeys, desc.m_anModelKeys.begin());
     rng::copy(packet.textureKeys, desc.m_anTextureKeys.begin());
-    desc.m_fFatStat = (float)packet.fatStat;
-    desc.m_fMuscleStat = (float)packet.muscleStat;
+    desc.m_fFatStat = (float)(int16)packet.fatStat; // 0x45C7D0 sign-extends (movsx)
+    desc.m_fMuscleStat = (float)(int16)packet.muscleStat;
 }
 
 // 0x45CEA0

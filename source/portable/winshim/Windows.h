@@ -3,3 +3,4 @@
 // include path (-I). It provides ONLY the scalar types and CRT names of source/portable; no Win32 API (stream W).
 #include "portable/wintypes.h"
 #include "portable/crt.h"
+#include "portable/winapi_compat.h"

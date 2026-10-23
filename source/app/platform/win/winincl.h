@@ -48,6 +48,8 @@
 // Non-Windows (portable) build: the scalar types and the MSVC CRT names only; Win32 API calls are NOT shimmed (stream W)
 #include "portable/wintypes.h"
 #include "portable/crt.h"
+#include "portable/winapi_compat.h"
+#include "portable/app_win32_compat.h"
 #endif
 
 #undef GetCurrentTime

@@ -509,7 +509,7 @@ void CVehicle::SpecialEntityPreCollisionStuff(CPhysical* colPhysical, bool bIgno
         return;
     }
 
-    if (physicalFlags.bSubmergedInWater
+    if (physicalFlags.bDontCollideWithFlyers // 0x6D66... `test byte [esi+0x43], 1` = bit 24 of physicalFlags (the port tested bSubmergedInWater, bit 8)
         && GetStatus() != STATUS_PLAYER
         && (GetStatus() != STATUS_REMOTE_CONTROLLED && colPhysical->DoesNotCollideWithFlyers())) // BUG:? Seems like it should check for it being heli
     {

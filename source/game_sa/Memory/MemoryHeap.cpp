@@ -5,7 +5,7 @@
 
 #define CORE_COMMON_SIZE_COUNT 64
 
-static_assert(sizeof(HeapBlockDesc) <= MEMORY_HEAP_ALIGN, "HeapBlockDesc is too big");
+VALIDATE_LAYOUT(sizeof(HeapBlockDesc) <= MEMORY_HEAP_ALIGN, "HeapBlockDesc is too big");
 
 uint32 memMoved = 0;
 

@@ -41,21 +41,6 @@ CTaskSimpleRunNamedAnim::FinishRunAnimMovePedCB	every case faults identically in
 CTaskComplexFollowPatrolRoute::ComputeNextSubTaskType	every case faults (exe fault reading [ptr+0xC] of the patrol route member): needs a valid CPatrolRoute fixture
 CTaskComplexUseScriptedBrain::Clone	port copies the garbage, unterminated name with strcpy_s (CRT assert); same as the W2 skip
 CTaskSimpleIKPointArm::Clone	every case faults in the port only at an unresolved callee (IKChain_c member of the fixture is garbage): needs a valid IKChain_c fixture
-CTaskSimpleIKLookAt::Clone	CReferences list consumption differs in 9/60 'special input' cases (exe registers the target-entity reference, the port does not: r31/aRefs); the IKChain offset-bone fix (m_OffsetBone) is verified by the pre-fix failure of this row (18/60 pool bytes +0x2C..+0x2F), the remaining refs difference is open (ORACLE-C-TASKS.md)
-CTaskSimpleEvasiveDive::Clone	same CReferences list difference as CTaskSimpleIKLookAt::Clone (9/60): open, see ORACLE-C-TASKS.md
-CTaskComplexSeekCoverUntilTargetDead::CreateFirstSubTask	same CReferences list / pEmptyList difference (52/60): open
-CTaskComplexBeInGroup::CreateFirstSubTask	port raises an assert / exception (0xE0000001) in 28/60 cases while the exe does not: probably the garbage group member index of the fixture (open, may be a port bug)
-CTaskComplexBeInGroup::CreateNextSubTask	same as BeInGroup::CreateFirstSubTask (29/60)
-CTaskComplexBeInGroup::MonitorSecondaryGroupTask	same as BeInGroup::CreateFirstSubTask (28/60)
-CTaskComplexSunbathe::Destructor	port raises an assert / exception (0xE0000001) in 17/60 cases while the exe does not (open)
-CTaskSimpleAffectSecondaryBehaviour::ProcessPed	port raises an assert / exception in 3/60 cases while the exe does not (open)
-CTaskComplexDie::SayDeathSample	port-only null matrix dereference (CPlaceable::GetPosition +0x14) in 47/60 cases in the CPed::Say / AddAudioEvent chain, the exe survives (open: fixture peds without matrix or real port difference)
-CTaskComplexPassObject::CreateFirstSubTask	port-only fault in CEntity::GetType on a garbage pointer (15/60), exe survives (open)
-CTaskSimpleDuckToggle::ProcessPed	port-only fault in CTask::classof on a garbage sub task (10/60), exe survives (open)
-CTaskComplexFollowPedFootsteps::CreateFirstSubTask	created task pool bytes +0x141..+0x142 differ (21/60): padding / uninitialised bytes of the created task (open)
-CTaskComplexTrackEntity::CreateFirstSubTask	created task pool byte (slot+8) 0x32 written by the exe only (42/60): open
-CTaskComplexTrackEntity::CreateNextSubTask	same as TrackEntity::CreateFirstSubTask (50/60)
-CTaskComplexWanderCop::CreateFirstSubTask	16-bit (exe 0x0000FFFF) vs 32-bit (port 0xFFFFFFFF) store in a created task (43/60): CNodeAddress-style initialisation, open
 CTaskComplexFollowPointRoute::Constructor	exe-side access violation kills the process on the garbage fixture (still, with /SAFESEH:NO)
 CTaskInteriorUseInfo::MakeAbortable	ORACLE-C-TASKS: every case faults identically in the port and the exe on the class-C fixture (this task + ped with real vftables, other objects garbage): needs a per-class fixture (valid pointed-to objects)
 CTaskComplexAttractorPartnerWait::CreateFirstSubTask	ORACLE-C-TASKS: every case faults identically in the port and the exe on the class-C fixture (this task + ped with real vftables, other objects garbage): needs a per-class fixture (valid pointed-to objects)
@@ -125,4 +110,3 @@ CTaskSimpleGoTo::SetUpIK	ORACLE-C-TASKS: every case faults identically in the po
 CTaskSimplePickUpBike::SetPedPosition	ORACLE-C-TASKS: every case faults identically in the port and the exe on the class-C fixture (this task + ped with real vftables, other objects garbage): needs a per-class fixture (valid pointed-to objects)
 CTaskSimpleRunNamedAnim::OffsetPedPosition	ORACLE-C-TASKS: every case faults identically in the port and the exe on the class-C fixture (this task + ped with real vftables, other objects garbage): needs a per-class fixture (valid pointed-to objects)
 CTaskSimpleSwim::ApplyRollAndPitch	ORACLE-C-TASKS: every case faults identically in the port and the exe on the class-C fixture (this task + ped with real vftables, other objects garbage): needs a per-class fixture (valid pointed-to objects)
-CTaskComplexGoPickUpEntity::Destructor	port raises an assert / exception (0xE0000001) in 1/60 cases while the exe does not (open)

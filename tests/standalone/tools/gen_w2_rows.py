@@ -215,7 +215,10 @@ class Index:
                 if '(' in st or st.startswith(('typedef', 'using', 'static', 'friend', 'enum', 'class', 'struct', 'template')): continue
                 if hidden and any(re.search(r'(?<![\w:])' + h + r'(?![\w])', st) for h in hidden): continue
                 access = ('public' if kind == 'struct' and False else access)
-                m = re.match(r'^(?:notsa::)?EntityRef\s*<\s*(\w+)\s*>\s+(\w+)\s*(?:\{\})?(?:=.*)?$', st)
+                m = re.match(r'^(?:notsa::)?EntityRef\s*<\s*(\w*)\s*>\s+(\w+)\s*(?:\{\})?(?:=.*)?$', st)
+                if m:
+                    res.append((n, access, ENT_KIND.get(m.group(1) or 'CEntity', 'n'), m.group(2), 1, 'notsa::EntityRef<%s>' % (m.group(1) or 'CEntity'), 0)); continue
+                m = re.match(r'^(CVehicle|CPed|CObject)::Ref\s+(\w+)\s*(?:\{\})?(?:=.*)?$', st)   # ORACLE-C-TASKS-2: the alias of notsa::EntityRef<T>
                 if m:
                     res.append((n, access, ENT_KIND.get(m.group(1), 'n'), m.group(2), 1, 'notsa::EntityRef<%s>' % m.group(1), 0)); continue
                 m = re.match(r'^(?:mutable\s+)?((?:const\s+)?)((?:volatile\s+)?)([\w:]+)\s*(\*+)\s*(\w+)\s*(?:\[\s*(\w+)\s*\])?\s*(?:=.*|\{\})?$', st)

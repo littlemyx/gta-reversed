@@ -436,7 +436,7 @@ CVehicle::~CVehicle() {
     }
 }
 
-void* CVehicle::operator new(unsigned size) {
+void* CVehicle::operator new(size_t size) {
     return GetVehiclePool()->New();
 }
 
@@ -444,7 +444,7 @@ void CVehicle::operator delete(void* data) {
     GetVehiclePool()->Delete(static_cast<CVehicle*>(data));
 }
 
-void* CVehicle::operator new(unsigned size, int32 poolRef) {
+void* CVehicle::operator new(size_t size, int32 poolRef) {
     return GetVehiclePool()->NewAt(poolRef);
 }
 

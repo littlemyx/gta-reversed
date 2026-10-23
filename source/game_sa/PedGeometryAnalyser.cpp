@@ -1328,7 +1328,7 @@ bool CPedGeometryAnalyser::LiesInsideBoundingBox(const CPed& ped, const CVector&
 }
 
 // 0x41B7C0
-void* CPointRoute::operator new(uint32 size) {
+void* CPointRoute::operator new(size_t size) {
     return GetPointRoutePool()->New();
 }
 

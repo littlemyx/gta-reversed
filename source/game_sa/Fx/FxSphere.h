@@ -10,7 +10,7 @@ public:
 public:
     static void InjectHooks();
 
-    static void* operator new(uint32 size, bool32 bUseGlobalHeep);
+    static void* operator new(size_t size, bool32 bUseGlobalHeep);
     static void  operator delete(void* data);
     static void  operator delete(void* data, bool32 bUseGlobalHeep);
 

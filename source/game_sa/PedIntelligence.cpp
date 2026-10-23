@@ -1007,7 +1007,7 @@ void CPedIntelligence::IncrementAngerAtPlayer(uint8 anger) {
 }
 
 // 0x6074A0
-void* CPedIntelligence::operator new(unsigned size) {
+void* CPedIntelligence::operator new(size_t size) {
     return GetPedIntelligencePool()->New();
 }
 

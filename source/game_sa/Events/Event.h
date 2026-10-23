@@ -15,7 +15,7 @@ public:
     bool  m_bValid;
 
 public:
-    static void* operator new(unsigned size);
+    static void* operator new(size_t size);
     static void operator delete(void* object);
 
     CEvent();

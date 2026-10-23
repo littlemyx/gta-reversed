@@ -11,7 +11,7 @@
 class NOTSA_EXPORT_VTABLE CBuilding : public CEntity {
 public:
     CBuilding();
-    static void* operator new(unsigned size);
+    static void* operator new(size_t size);
     static void operator delete(void* data);
 
 public:

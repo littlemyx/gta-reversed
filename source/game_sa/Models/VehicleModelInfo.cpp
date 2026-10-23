@@ -1569,7 +1569,7 @@ CVehicleModelInfo::CVehicleStructure::~CVehicleStructure()
     }
 }
 
-void* CVehicleModelInfo::CVehicleStructure::operator new(unsigned size)
+void* CVehicleModelInfo::CVehicleStructure::operator new(size_t size)
 {
     return m_pInfoPool->New();
 }

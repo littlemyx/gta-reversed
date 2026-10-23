@@ -390,14 +390,14 @@ CPed::~CPed() {
 /*!
 * @addr 0x5E4720
 */
-void* CPed::operator new(unsigned size) {
+void* CPed::operator new(size_t size) {
     return GetPedPool()->New();
 }
 
 /*!
 * @addr 0x5E4730
 */
-void* CPed::operator new(unsigned size, int32 poolRef) {
+void* CPed::operator new(size_t size, int32 poolRef) {
     return GetPedPool()->NewAt(poolRef);
 }
 

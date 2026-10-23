@@ -38,7 +38,7 @@ void CPedAttractor::InjectHooks() {
 }
 
 // 0x5EAFD0
-void* CPedAttractor::operator new(unsigned size) {
+void* CPedAttractor::operator new(size_t size) {
     return GetPedAttractorPool()->New();
 }
 

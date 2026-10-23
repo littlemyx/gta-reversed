@@ -163,7 +163,7 @@ void CColModel::RemoveTrianglePlanes() {
         m_pColData->RemoveTrianglePlanes();
 }
 
-void* CColModel::operator new(unsigned size) {
+void* CColModel::operator new(size_t size) {
     return GetColModelPool()->New();
 }
 

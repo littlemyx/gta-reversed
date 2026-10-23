@@ -17,7 +17,7 @@ CBuilding::CBuilding() : CEntity()
     SetUsesCollision(true);
 }
 
-void* CBuilding::operator new(unsigned size)
+void* CBuilding::operator new(size_t size)
 {
     return GetBuildingPool()->New();
 }

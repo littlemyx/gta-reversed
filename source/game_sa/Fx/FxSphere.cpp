@@ -19,7 +19,7 @@ FxSphere_c::FxSphere_c() {
 }
 
 // 0x4A9F80
-void* FxSphere_c::operator new(uint32 size, bool32 bUseGlobalHeep) {
+void* FxSphere_c::operator new(size_t size, bool32 bUseGlobalHeep) {
     if (bUseGlobalHeep)
         return CMemoryMgr::Malloc(size);
     else

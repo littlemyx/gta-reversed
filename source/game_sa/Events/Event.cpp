@@ -12,7 +12,7 @@ void CEvent::InjectHooks() {
 }
 
 // 0x4B5620
-void* CEvent::operator new(unsigned) {
+void* CEvent::operator new(size_t) {
     return GetEventPool()->New();
 }
 

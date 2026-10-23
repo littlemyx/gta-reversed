@@ -11,7 +11,7 @@ void CEntryInfoNode::InjectHooks()
     RH_ScopedInstall(operator delete, 0x536DD0, {.Locked = true});
 }
 
-void* CEntryInfoNode::operator new(unsigned size)
+void* CEntryInfoNode::operator new(size_t size)
 {
     return GetEntryInfoNodePool()->New();
 }

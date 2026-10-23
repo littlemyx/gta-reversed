@@ -2256,10 +2256,10 @@ void CEntity::ProcessLightsForEntity() {
 // in fluff.cpp
 // 0x717900
 void CEntity::RemoveEscalatorsForEntity() {
+    // 0x717910..0x717933: the exe walks all 32 escalators and switches off every one that uses this entity (no early return after the first)
     for (auto& escalator : CEscalators::GetAllExists()) {
         if (escalator.GetEntity() == this) {
             escalator.Remove();
-            return;
         }
     }
 }

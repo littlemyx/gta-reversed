@@ -1416,6 +1416,13 @@ if (${RE_PROJECT}_RW_LIBRW)
         game_sa/Entity/Dummy/Dummy.cpp
         game_sa/TimeCycle.cpp
         game_sa/Glass.cpp
+        game_sa/Camera.cpp
+        game_sa/Escalator.cpp
+        game_sa/Escalators.cpp
+        game_sa/TrafficLights.cpp
+        game_sa/Models/BaseModelInfo.cpp
+        standalone/rw/math.cpp
+        standalone/rw/rwmath_tables.cpp
         game_sa/Clock.cpp
         game_sa/SimpleTransform.cpp
         game_sa/common.cpp

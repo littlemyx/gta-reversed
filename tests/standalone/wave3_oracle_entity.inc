@@ -199,6 +199,7 @@ static inline uint64_t B8(bool b) { return b ? 1 : 0; }
 struct Tw { explicit Tw(std::function<void(Rng&)> f) { w3e::g_tweak = std::move(f); } ~Tw() { w3e::g_tweak = nullptr; } };
 template<class Fn> static void RunScaledE(const std::string& name, Fn&& fn, int cases) {
     static const int scale = std::getenv("W3E_SCALE") ? std::max(1, std::atoi(std::getenv("W3E_SCALE"))) : 1;
+    if (const char* only = std::getenv("W3E_ONLY")) { if (*only) { bool hit = false; std::string o(only); for (size_t b = 0; b <= o.size();) { size_t e = o.find('|', b); if (e == std::string::npos) e = o.size(); if (e > b && name.find(o.substr(b, e - b)) != std::string::npos) hit = true; b = e + 1; } if (!hit) return; } }   // row filter (substring of the row name)
     Run(name, std::forward<Fn>(fn), cases * scale);
 }
 
@@ -209,10 +210,12 @@ template<class Fn> static void RunScaledE(const std::string& name, Fn&& fn, int 
 #include "wave3_oracle_entity_b.inc"      // CPlaceable / matrix list / pool-pointer rows
 #include "wave3_oracle_entity_c.inc"      // CPhysical state rows, pool-pointer validity
 #include "wave3_oracle_entity_d.inc"      // occlusion, lighting early-outs
+#include "wave3_oracle_entity_e.inc"      // ORACLE-C-ENTITY: class C rows (camera, model-info 2d effects, escalators, vtable-reading functions)
 
 static void TestW3EntityAll() {
     TestW3EntityA();
     TestW3EntityB();
     TestW3EntityC();
     TestW3EntityD();
+    TestW3EntityE();
 }

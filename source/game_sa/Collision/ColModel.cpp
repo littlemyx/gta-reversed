@@ -126,6 +126,13 @@ void CColModel::AllocateData(int32 size) {
     m_bIsSingleColDataAlloc = true;
     m_pColData = static_cast<CCollisionData*>(CMemoryMgr::Malloc(size));
     assert(m_pColData);
+
+    // 0x40F870 (the exe's inlined single allocation) does not run the CCollisionData constructor and only fills the fields up to m_pTrianglePlanes (+0x1C):
+    // the flag byte (bHasFaceGroups, bHasShadowInfo), the shadow counts and the shadow pointers (+0x20..+0x2F) are never written. The exe allocates the
+    // CTempColModels during start-up, from a heap that has not been recycled yet, so there they read as zero. Here the heap is already recycled
+    // (CRT blocks with stale contents), which gave temp colmodels (flying car doors/bumpers) a bHasShadowInfo = 1 / garbage m_pShadowVertices and
+    // crashed CCollisionData::GetShadTrianglePoint (read at 0x3) from CStencilShadows::Process (CRASH-HUNT). Start from the zeroed state the exe sees.
+    std::memset(m_pColData, 0, sizeof(CCollisionData));
 }
 
 void CColModel::RemoveCollisionVolumes() {

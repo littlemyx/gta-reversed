@@ -140,6 +140,8 @@ void DeleteCriticalSection(CRITICAL_SECTION* cs);
     #define WC_ERR_INVALID_CHARS 0x00000080
 #endif
 //! CP_UTF8 (and CP_ACP, which is UTF-8 on macOS): the real conversion. Any other code page: logs and returns 0 (failure), like an unknown code page does.
+//! GetACP: macOS file names / narrow strings are UTF-8 (common.h WindowsCharset == CP_UTF8 selects the no-conversion paths of FileMgr)
+inline UINT GetACP() { return CP_UTF8; }
 int MultiByteToWideChar(UINT codePage, DWORD flags, LPCSTR src, int srcLen, LPWSTR dst, int dstLen);
 int WideCharToMultiByte(UINT codePage, DWORD flags, LPCWSTR src, int srcLen, LPSTR dst, int dstLen, LPCSTR defaultChar, LPBOOL usedDefault);
 

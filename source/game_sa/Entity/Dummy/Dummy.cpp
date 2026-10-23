@@ -29,8 +29,8 @@ namespace {
 template<class Tag, typename Tag::type M> struct DummyPoolRob { friend typename Tag::type DummyPoolRobGet(Tag) { return M; } };
 struct DummyPoolStorageTag { using type = byte (*CPool<CDummy>::*)[sizeof(CDummy)]; };
 byte (*CPool<CDummy>::* DummyPoolRobGet(DummyPoolStorageTag))[sizeof(CDummy)];
+template struct DummyPoolRob<DummyPoolStorageTag, &CPool<CDummy>::m_Storage>; // inside the unnamed namespace: clang requires the instantiation in the template's own namespace
 }
-template struct DummyPoolRob<DummyPoolStorageTag, &CPool<CDummy>::m_Storage>;
 
 // 0x532730: null -> false; idx = (int)(dummy - storage) / sizeof(CDummy) (truncating); valid if 0 <= idx <= size (`jle`: one past the end counts) and the slot state is NOT looked at
 bool IsDummyPointerValid(CDummy* dummy) {

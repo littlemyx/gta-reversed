@@ -13,7 +13,7 @@ public:
     static inline uint32 livingCount{};
 
     // To be garbage collected OpenAL objects.
-    static inline std::vector<std::unique_ptr<OALBase>> trashCan{};
+    static std::vector<std::unique_ptr<OALBase>> trashCan; // defined in OALBase.cpp: an in-class initializer needs OALBase complete (unique_ptr<incomplete> dtor), libc++ checks it
 
     uint32 m_refCount;
 

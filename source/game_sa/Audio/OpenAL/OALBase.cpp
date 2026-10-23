@@ -1,6 +1,8 @@
 #include "StdInc.h"
 #include "OALBase.h"
 
+std::vector<std::unique_ptr<OALBase>> OALBase::trashCan{};
+
 OALBase::OALBase() {
     m_refCount = 1;
     ++livingCount;

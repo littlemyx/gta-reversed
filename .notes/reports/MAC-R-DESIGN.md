@@ -1,0 +1,11 @@
+# MAC-R-DESIGN report: stream R (render) plan for the portable build
+
+Plan: `.notes/STREAM_R_PLAN.md` (inventory, architecture, 14 slices R-1..R-12, hot files, reference-frame protocol). Branch portable/main b9f8d1a5; source untouched.
+
+* Inventory (post-W0 census, 1,998 unique): R-owned ~1,498 = standalone/rw 978, Pipelines 205, game-code cascade 220 (all caused by fakerw.h `rw::d3d::Im3DVertex` failing under GL3 -> RwIm3DVertex = int), RenderWare/D3D* 69, fakerw 15, Gamma/Radar 11. The D3D vocabulary is 569 FF stage constants, 189 device types, 137 render-state constants, 98 FF structs.
+* Decision: native GL3 pipelines (librw gl3 default/skin/matfx + GL3 twins of the 3 SA custom pipelines), not an FF emulator; exclude the D3D9 façade files (pipeline.cpp, pipeline_matfx.cpp, rwd3d_ff.cpp, HW skin, im2d_im3d, D3DResourceSystem*); Win32 path touched only by neutral `#ifndef NOTSA_PORTABLE` lines.
+* Platform: librw SDL3 backend creates its own window and sets no depth/stencil size (stencil 0 would break stencil shadows). Plan: WinMain creates the window with SDL_WINDOW_OPENGL, librw fork adopts it (+ depth 24 / stencil 8), core 3.3 request -> macOS 4.1 core; gl3 shaders are `#version 330`, no GL>=4.2 call found. UNVERIFIED until the R-3a smoke app runs.
+* Slices: compile gate R-1 (fakerw types) -> R-2 (exclusions, guards, link stubs) -> R-3a (engine/window/smoke app) -> R-3b (camera/raster/renderstate; census R = 0); menu R-4 Im2D/Im3D, R-5 TXD->GL3, R-6 stock pipelines, R-7 boot to menu; world R-8 buildings, R-9 cars, R-10 skin, R-11a/b effects; R-12 frame-diff harness. ~1,300 agent-min.
+* Hot files: last 3 days on standalone/rw, fakerw, Pipelines, RenderWare/D3D*, vendor/librw: no commits (only 4 CRenderer.cpp commits match `*Render*`). 14 days: CarEnvMap plugin oracle fixes, engine.cpp MSAA/windowed. No pending Windows-only change in these paths.
+* Reference frames: soak_route marks + NOTSA_STANDALONE_SCREENSHOT on Windows; REF-1 request text and metric thresholds in plan s.6 (PORTABLE_SYNC entry to be appended by the orchestrator).
+* Note: `M vendor/librw` in git status = checkout 6f80bf3 differs from the recorded gitlink; first librw-touching slice must pin it in its own commit.

@@ -1145,7 +1145,7 @@ if (${RE_PROJECT}_RW_LIBRW)
     get_target_property(_w3t_sources wave3_tasks_oracle_test SOURCES)
     list(REMOVE_ITEM _w3t_sources "${STANDALONE_PAD_OBJ}")
     set_property(TARGET wave3_tasks_oracle_test PROPERTY SOURCES "${STANDALONE_PAD_OBJ}" ${_w3t_sources})
-    target_link_options(wave3_tasks_oracle_test PRIVATE "$<$<CXX_COMPILER_ID:MSVC>:/BASE:0x400000;/DYNAMICBASE:NO;/FIXED;/MERGE:_TEXT=.text;/INCREMENTAL:NO;/SUBSYSTEM:CONSOLE;/FORCE:UNRESOLVED;/MAP>")
+    target_link_options(wave3_tasks_oracle_test PRIVATE "$<$<CXX_COMPILER_ID:MSVC>:/BASE:0x400000;/DYNAMICBASE:NO;/FIXED;/MERGE:_TEXT=.text;/INCREMENTAL:NO;/SUBSYSTEM:CONSOLE;/FORCE:UNRESOLVED;/MAP;/SAFESEH:NO>")
     set_target_properties(wave3_tasks_oracle_test PROPERTIES COMPILE_WARNING_AS_ERROR OFF CXX_SCAN_FOR_MODULES OFF)
     # ORACLE-W3-COLL: exe-oracle rows of game_sa/Collision + game_sa/Core (class A/B functions) on the game_oracle_test machinery (tests/standalone/wave3_coll_oracle_*.inc, selected by W3_COLL_ONLY)
     add_executable(wave3_coll_oracle_test EXCLUDE_FROM_ALL

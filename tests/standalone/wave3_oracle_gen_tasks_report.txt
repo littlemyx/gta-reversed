@@ -1,85 +1,154 @@
-82 function rows, 320 TUs
+157 function rows, 325 TUs
 SKIP CTaskInteriorLieInBed::FinishAnimCB 0x675FC0: every case faults in the port only at an unresolved callee / assert while the exe does not (fixture limit)
+SKIP CTaskInteriorUseInfo::MakeAbortable 0x675B30: ORACLE-C-TASKS: every case faults identically in the port and the exe on the class-C fixture (this task + ped with real vftables, other objects garbage): needs a per-class fixture (valid pointed-to objects)
 TEMPLATE CTaskComplexSeekEntityAnyMeansXYOffset::Clone 0x696030
+TEMPLATE CTaskComplexSeekEntityAnyMeansXYOffset::CreateFirstSubTask 0x6960B0
+TEMPLATE CTaskComplexSeekEntityAnyMeansXYOffset::ControlSubTask 0x696160
 TEMPLATE CTaskComplexSeekEntityRadiusAngleOffset::Constructor 0x493730
+TEMPLATE CTaskComplexSeekEntityRadiusAngleOffset::MakeAbortable 0x493810
+TEMPLATE CTaskComplexSeekEntityRadiusAngleOffset::Destructor 0x493890
 TEMPLATE CTaskComplexSeekEntityRadiusAngleOffset::Clone 0x495FB0
 TEMPLATE CTaskComplexSeekEntityStandard::Constructor 0x46AC10
+TEMPLATE CTaskComplexSeekEntityStandard::MakeAbortable 0x46ACF0
+TEMPLATE CTaskComplexSeekEntityStandard::Destructor 0x46AD50
 TEMPLATE CTaskComplexSeekEntityStandard::Clone 0x46EF50
-SKIP CTaskComplexAttractorPartnerWait::CreateFirstSubTask 0x638F20: exe process killed on the garbage fixture (SEH frame of the exe faults on a pointer the function dereferences): needs a per-class fixture
+SKIP CTaskComplexAttractorPartnerWait::CreateFirstSubTask 0x638F20: ORACLE-C-TASKS: every case faults identically in the port and the exe on the class-C fixture (this task + ped with real vftables, other objects garbage): needs a per-class fixture (valid pointed-to objects)
 SKIP CTaskComplexAvoidEntity::ComputeBoundingSphere 0x66F6C0: hand row: CEntity** array argument
 SKIP CTaskComplexAvoidEntity::ComputeRoute 0x66FD30: every case faults identically in the port and in the exe (exe fault at 66f935 accessing 14: a null / garbage pointer member or argument the fixture does not supply)
-SKIP CTaskComplexAvoidEntity::CreateFirstSubTask 0x672530: exe process killed on the garbage fixture (SEH frame of the exe faults on a pointer the function dereferences): needs a per-class fixture
+SKIP CTaskComplexAvoidEntity::CreateFirstSubTask 0x672530: ORACLE-C-TASKS: every case faults identically in the port and the exe on the class-C fixture (this task + ped with real vftables, other objects garbage): needs a per-class fixture (valid pointed-to objects)
+SKIP CTaskComplexAvoidOtherPedWhileWandering::CreateNextSubTask 0x66A2C0: ORACLE-C-TASKS: every case faults identically in the port and the exe on the class-C fixture (this task + ped with real vftables, other objects garbage): needs a per-class fixture (valid pointed-to objects)
 SKIP CTaskComplexAvoidOtherPedWhileWandering::ComputeSphere 0x66A320: every case faults identically in the port and in the exe (exe fault at 66a359 accessing 14: a null / garbage pointer member or argument the fixture does not supply)
 SKIP CTaskComplexAvoidOtherPedWhileWandering::ComputeRouteRoundSphere 0x66A7B0: every case faults identically in the port and in the exe (exe fault at 66a7e5 accessing 14: a null / garbage pointer member or argument the fixture does not supply)
 SKIP CTaskComplexAvoidOtherPedWhileWandering::NearbyPedsInSphere 0x671FE0: every case faults identically in the port and in the exe (exe fault at 671ffd accessing 14: a null / garbage pointer member or argument the fixture does not supply)
 SKIP CTaskComplexAvoidOtherPedWhileWandering::ComputeAvoidSphere 0x672080: the exe leaves uninitialised padding / surface bytes of the CColSphere out parameter (+0x10..0x13, stack garbage), the port does not write them: layout artefact (needs a mask on the out sphere)
 SKIP CTaskComplexAvoidOtherPedWhileWandering::ComputeDetourTarget 0x672180: every case faults identically in the port and in the exe (exe fault at 67208c accessing 47C: a null / garbage pointer member or argument the fixture does not supply)
-SKIP CTaskComplexAvoidOtherPedWhileWandering::CreateFirstSubTask 0x674610: exe process killed on the garbage fixture (SEH frame of the exe faults on a pointer the function dereferences): needs a per-class fixture
+SKIP CTaskComplexBeInGroup::MakeAbortable 0x632EB0: ORACLE-C-TASKS: every case faults identically in the port and the exe on the class-C fixture (this task + ped with real vftables, other objects garbage): needs a per-class fixture (valid pointed-to objects)
+SKIP CTaskComplexBeInGroup::CreateNextSubTask 0x632F40: same as BeInGroup::CreateFirstSubTask (29/60)
+SKIP CTaskComplexBeInGroup::CreateFirstSubTask 0x632FB0: port raises an assert / exception (0xE0000001) in 28/60 cases while the exe does not: probably the garbage group member index of the fixture (open, may be a port bug)
+SKIP CTaskComplexBeInGroup::MonitorMainGroupTask 0x633010: ORACLE-C-TASKS: every case faults identically in the port and the exe on the class-C fixture (this task + ped with real vftables, other objects garbage): needs a per-class fixture (valid pointed-to objects)
+SKIP CTaskComplexBeInGroup::MonitorSecondaryGroupTask 0x6330B0: same as BeInGroup::CreateFirstSubTask (28/60)
+SKIP CTaskComplexBeInGroup::ControlSubTask 0x638AA0: ORACLE-C-TASKS: every case faults identically in the port and the exe on the class-C fixture (this task + ped with real vftables, other objects garbage): needs a per-class fixture (valid pointed-to objects)
+SKIP CTaskComplexBeStill::CreateNextSubTask 0x62F8D0: ORACLE-C-TASKS: every case faults identically in the port and the exe on the class-C fixture (this task + ped with real vftables, other objects garbage): needs a per-class fixture (valid pointed-to objects)
 SKIP CTaskComplexDestroyCarMelee::CalculateSearchPositionAndRanges 0x6289F0: every case faults identically in the port and in the exe (exe fault at 628a42 accessing 14: a null / garbage pointer member or argument the fixture does not supply)
+SKIP CTaskComplexDestroyCarMelee::CreateFirstSubTask 0x62DB20: ORACLE-C-TASKS: every case faults identically in the port and the exe on the class-C fixture (this task + ped with real vftables, other objects garbage): needs a per-class fixture (valid pointed-to objects)
+SKIP CTaskComplexDie::SayDeathSample 0x630100: port-only null matrix dereference (CPlaceable::GetPosition +0x14) in 47/60 cases in the CPed::Say / AddAudioEvent chain, the exe survives (open: fixture peds without matrix or real port difference)
 SKIP CTaskComplexDieInCar::PreparePedVehicleForPedDeath 0x62FD00: every case faults in the port only at an unresolved callee / assert while the exe does not (fixture limit)
 SKIP CTaskComplexDriveToPoint::IsTargetBlocked-Entities 0x6432A0: hand row: CEntity** array argument
+SKIP CTaskComplexEnterBoatAsDriver::CreateNextSubTask 0x640E60: ORACLE-C-TASKS: every case faults identically in the port and the exe on the class-C fixture (this task + ped with real vftables, other objects garbage): needs a per-class fixture (valid pointed-to objects)
+NOARG CTaskComplexEnterCar::GetCameraStickModifier 0x63A380 param "float& vertAngle"
 SKIP CTaskComplexEnterCar::SetVehicleFlags 0x63AB90: every case faults identically in the port and in the exe (exe fault at 64e56d accessing CC: a null / garbage pointer member or argument the fixture does not supply)
-SKIP CTaskComplexExtinguishFireOnFoot::CreateFirstSubTask 0x65A720: exe process killed on the garbage fixture (SEH frame of the exe faults on a pointer the function dereferences): needs a per-class fixture
-SKIP CTaskComplexExtinguishFires::CreateFirstSubTask 0x698290: exe process killed on the garbage fixture (SEH frame of the exe faults on a pointer the function dereferences): needs a per-class fixture
-SKIP CTaskComplexFollowNodeRoute::Clone 0x6713E0: exe process killed on the garbage fixture (SEH frame of the exe faults on a pointer the function dereferences): needs a per-class fixture
+SKIP CTaskComplexEnterCarAsDriverTimed::StopTimer 0x63AFF0: ORACLE-C-TASKS: every case faults identically in the port and the exe on the class-C fixture (this task + ped with real vftables, other objects garbage): needs a per-class fixture (valid pointed-to objects)
+SKIP CTaskComplexEnterCarAsPassengerTimed::StopTimer 0x63B2E0: ORACLE-C-TASKS: every case faults identically in the port and the exe on the class-C fixture (this task + ped with real vftables, other objects garbage): needs a per-class fixture (valid pointed-to objects)
+SKIP CTaskComplexEvasiveDiveAndGetUp::CreateNextSubTask 0x656000: ORACLE-C-TASKS: every case faults identically in the port and the exe on the class-C fixture (this task + ped with real vftables, other objects garbage): needs a per-class fixture (valid pointed-to objects)
+SKIP CTaskComplexExtinguishFires::CreateNextSubTask 0x698110: ORACLE-C-TASKS: every case faults identically in the port and the exe on the class-C fixture (this task + ped with real vftables, other objects garbage): needs a per-class fixture (valid pointed-to objects)
+SKIP CTaskComplexExtinguishFires::ControlSubTask 0x698330: ORACLE-C-TASKS: every case faults identically in the port and the exe on the class-C fixture (this task + ped with real vftables, other objects garbage): needs a per-class fixture (valid pointed-to objects)
+SKIP CTaskComplexFacial::ControlSubTask 0x690FC0: ORACLE-C-TASKS: every case faults identically in the port and the exe on the class-C fixture (this task + ped with real vftables, other objects garbage): needs a per-class fixture (valid pointed-to objects)
+SKIP CTaskComplexFleeShooting::MakeAbortable 0x65CA00: ORACLE-C-TASKS: every case faults identically in the port and the exe on the class-C fixture (this task + ped with real vftables, other objects garbage): needs a per-class fixture (valid pointed-to objects)
+SKIP CTaskComplexFollowNodeRoute::StopTimer 0x6694E0: ORACLE-C-TASKS: every case faults identically in the port and the exe on the class-C fixture (this task + ped with real vftables, other objects garbage): needs a per-class fixture (valid pointed-to objects)
+SKIP CTaskComplexFollowNodeRoute::SetTarget 0x671750: ORACLE-C-TASKS: every case faults identically in the port and the exe on the class-C fixture (this task + ped with real vftables, other objects garbage): needs a per-class fixture (valid pointed-to objects)
 SKIP CTaskComplexFollowPatrolRoute::ComputeNextSubTaskType 0x670A70: every case faults (exe fault reading [ptr+0xC] of the patrol route member): needs a valid CPatrolRoute fixture
-SKIP CTaskComplexFollowPointRoute::Constructor 0x671510: exe process killed on the garbage fixture (SEH frame of the exe faults on a pointer the function dereferences): needs a per-class fixture
+SKIP CTaskComplexFollowPatrolRoute::Constructor 0x674930: ORACLE-C-TASKS: every case faults identically in the port and the exe on the class-C fixture (this task + ped with real vftables, other objects garbage): needs a per-class fixture (valid pointed-to objects)
+SKIP CTaskComplexFollowPatrolRoute::Clone 0x674BB0: ORACLE-C-TASKS: fault 0xC0000005 at EIP=01206650 (access 0000000C) EAX=00000000 ECX=00000000 stack 001ADA3C 001AE170 00000000, PC=24 case 0
+SKIP CTaskComplexFollowPedFootsteps::CreateFirstSubTask 0x695000: created task pool bytes +0x141..+0x142 differ (21/60): padding / uninitialised bytes of the created task (open)
+SKIP CTaskComplexFollowPointRoute::CreateTask 0x669090: ORACLE-C-TASKS: every case faults identically in the port and the exe on the class-C fixture (this task + ped with real vftables, other objects garbage): needs a per-class fixture (valid pointed-to objects)
+SKIP CTaskComplexFollowPointRoute::ControlSubTask 0x66E860: ORACLE-C-TASKS: every case faults identically in the port and the exe on the class-C fixture (this task + ped with real vftables, other objects garbage): needs a per-class fixture (valid pointed-to objects)
+SKIP CTaskComplexFollowPointRoute::Constructor 0x671510: exe-side access violation kills the process on the garbage fixture (still, with /SAFESEH:NO)
+SKIP CTaskComplexGangLeader::CreateFirstSubTask 0x65E1F0: ORACLE-C-TASKS: every case faults identically in the port and the exe on the class-C fixture (this task + ped with real vftables, other objects garbage): needs a per-class fixture (valid pointed-to objects)
 SKIP CTaskComplexGangLeader::TryToPassObject 0x65EA50: every case faults identically in the port and in the exe (exe fault at 5facd0 accessing C: a null / garbage pointer member or argument the fixture does not supply)
-SKIP CTaskComplexGetOnBoatSeat::CreateFirstSubTask 0x649310: exe process killed on the garbage fixture (SEH frame of the exe faults on a pointer the function dereferences): needs a per-class fixture
-SKIP CTaskComplexGoToBoatSteeringWheel::CreateFirstSubTask 0x64E390: exe process killed on the garbage fixture (SEH frame of the exe faults on a pointer the function dereferences): needs a per-class fixture
-SKIP CTaskComplexGoToCarDoorAndStandStill::CreateSubTask 0x64A5F0: exe process killed on the garbage fixture (SEH frame of the exe faults on a pointer the function dereferences): needs a per-class fixture
+SKIP CTaskComplexGetOnBoatSeat::CreateFirstSubTask 0x649310: ORACLE-C-TASKS: every case faults identically in the port and the exe on the class-C fixture (this task + ped with real vftables, other objects garbage): needs a per-class fixture (valid pointed-to objects)
+SKIP CTaskComplexGoPickUpEntity::Destructor 0x691A50: port raises an assert / exception (0xE0000001) in 1/60 cases while the exe does not (open)
+SKIP CTaskComplexGoPickUpEntity::CreateFirstSubTask 0x693610: ORACLE-C-TASKS: every case faults identically in the port and the exe on the class-C fixture (this task + ped with real vftables, other objects garbage): needs a per-class fixture (valid pointed-to objects)
+SKIP CTaskComplexGoToBoatSteeringWheel::CreateFirstSubTask 0x64E390: ORACLE-C-TASKS: every case faults identically in the port and the exe on the class-C fixture (this task + ped with real vftables, other objects garbage): needs a per-class fixture (valid pointed-to objects)
+SKIP CTaskComplexGoToPointAiming::CreateNextSubTask 0x66DD70: ORACLE-C-TASKS: every case faults identically in the port and the exe on the class-C fixture (this task + ped with real vftables, other objects garbage): needs a per-class fixture (valid pointed-to objects)
+SKIP CTaskComplexGoToPointAndStandStillTimed::StopTimer 0x6686A0: ORACLE-C-TASKS: every case faults identically in the port and the exe on the class-C fixture (this task + ped with real vftables, other objects garbage): needs a per-class fixture (valid pointed-to objects)
 SKIP CTaskComplexHitPedWithCar::ComputeEvasiveStepMoveDir 0x653B40: every case faults identically in the port and in the exe (exe fault at 54f576 accessing 50: a null / garbage pointer member or argument the fixture does not supply)
+SKIP CTaskComplexInvestigateDeadPed::CreateSubTask 0x696F90: exe writes a float 2.0 (0x40000000) into the created task / its argument buffer that the port leaves 0 (9/60): open, candidate port bug
+SKIP CTaskComplexInvestigateDeadPed::CreateNextSubTask 0x697840: ORACLE-C-TASKS: every case faults identically in the port and the exe on the class-C fixture (this task + ped with real vftables, other objects garbage): needs a per-class fixture (valid pointed-to objects)
 SKIP CTaskComplexKillPedGroupOnFoot::ComputeNearestLivingGroupPed 0x622450: port asserts on the garbage group member index (std::array subscript) in 21/60 cases: fixture needs a real ped group
+SKIP CTaskComplexLeaveBoat::Destructor 0x642250: ORACLE-C-TASKS: every case faults identically in the port and the exe on the class-C fixture (this task + ped with real vftables, other objects garbage): needs a per-class fixture (valid pointed-to objects)
 SKIP CTaskComplexLeaveCar::SetupGettingOut 0x63BA00: every case faults identically in the port and in the exe (exe fault at 64e56d accessing CC: a null / garbage pointer member or argument the fixture does not supply)
 SKIP CTaskComplexMoveBackAndJump::CreateSubTask 0x655390: the exe function takes ONE stack argument (thiscall, ret 4, this unused) while the port's is a static: the generated exe call has the wrong shape (ESP not saved); needs a hand row
-SKIP CTaskComplexPolicePursuit::CreateSubTask 0x68D910: exe process killed on the garbage fixture (SEH frame of the exe faults on a pointer the function dereferences): needs a per-class fixture
-SKIP CTaskComplexPresentIdToCop::Clone 0x659B60: exe process killed on the garbage fixture (SEH frame of the exe faults on a pointer the function dereferences): needs a per-class fixture
-SKIP CTaskComplexPresentIdToCop::CreateFirstSubTask 0x65B050: exe process killed on the garbage fixture (SEH frame of the exe faults on a pointer the function dereferences): needs a per-class fixture
-SKIP CTaskComplexRoadRage::CreateSubTask 0x629080: exe process killed on the garbage fixture (SEH frame of the exe faults on a pointer the function dereferences): needs a per-class fixture
+SKIP CTaskComplexMoveBackAndJump::CreateNextSubTask 0x657770: ORACLE-C-TASKS: every case faults identically in the port and the exe on the class-C fixture (this task + ped with real vftables, other objects garbage): needs a per-class fixture (valid pointed-to objects)
+SKIP CTaskComplexObserveTrafficLights::ControlSubTask 0x6318E0: ORACLE-C-TASKS: every case faults identically in the port and the exe on the class-C fixture (this task + ped with real vftables, other objects garbage): needs a per-class fixture (valid pointed-to objects)
+NOARG CTaskComplexOnFire::ComputeFireDamage 0x6333D0 param "CPedDamageResponse& resp"
+SKIP CTaskComplexPassObject::CreateFirstSubTask 0x6613A0: port-only fault in CEntity::GetType on a garbage pointer (15/60), exe survives (open)
+SKIP CTaskComplexPolicePursuit::ControlSubTask 0x690920: ORACLE-C-TASKS: every case faults identically in the port and the exe on the class-C fixture (this task + ped with real vftables, other objects garbage): needs a per-class fixture (valid pointed-to objects)
+SKIP CTaskComplexSeekCoverUntilTargetDead::CreateFirstSubTask 0x62E6C0: same CReferences list / pEmptyList difference (52/60): open
+SKIP CTaskComplexSeekCoverUntilTargetDead::ControlSubTask 0x62E8B0: ORACLE-C-TASKS: every case faults identically in the port and the exe on the class-C fixture (this task + ped with real vftables, other objects garbage): needs a per-class fixture (valid pointed-to objects)
+SKIP CTaskComplexSeekEntityAiming::ControlSubTask 0x694C70: ORACLE-C-TASKS: every case faults identically in the port and the exe on the class-C fixture (this task + ped with real vftables, other objects garbage): needs a per-class fixture (valid pointed-to objects)
+SKIP CTaskComplexSeekEntityAiming::CreateNextSubTask 0x695C20: ORACLE-C-TASKS: every case faults identically in the port and the exe on the class-C fixture (this task + ped with real vftables, other objects garbage): needs a per-class fixture (valid pointed-to objects)
 SKIP CTaskComplexSeekEntityAiming::CreateFirstSubTask 0x695D30: embedded vptr of the position calculator (+0x40 of the created task) differs by construction (see ORACLE-W3-EVENTS: CTaskComplexSeekEntity<> artefact): needs the pool slot mask
+SKIP CTaskComplexSunbathe::Destructor 0x632050: port raises an assert / exception (0xE0000001) in 17/60 cases while the exe does not (open)
 DECL CTaskComplexSunbathe::ShouldLoadSunbatheAnims 0x632190 (0 declarations)
-SKIP CTaskComplexTrackEntity::Clone 0x65F4E0: exe process killed on the garbage fixture (SEH frame of the exe faults on a pointer the function dereferences): needs a per-class fixture
+SKIP CTaskComplexTrackEntity::CreateNextSubTask 0x65F590: same as TrackEntity::CreateFirstSubTask (50/60)
+SKIP CTaskComplexTrackEntity::CreateFirstSubTask 0x65F700: created task pool byte (slot+8) 0x32 written by the exe only (42/60): open
+SKIP CTaskComplexTrackEntity::ControlSubTask 0x663640: ORACLE-C-TASKS: every case faults identically in the port and the exe on the class-C fixture (this task + ped with real vftables, other objects garbage): needs a per-class fixture (valid pointed-to objects)
+SKIP CTaskComplexTreatAccident::ComputeHeading 0x658AF0: ORACLE-C-TASKS: every case faults identically in the port and the exe on the class-C fixture (this task + ped with real vftables, other objects garbage): needs a per-class fixture (valid pointed-to objects)
 NOARG CTaskComplexUseAttractorPartner::Constructor 0x6332C0 param "const CScriptedEffectPair& b"
-SKIP CTaskComplexUseAttractorPartner::CreateFirstSubTask 0x638FF0: exe process killed on the garbage fixture (SEH frame of the exe faults on a pointer the function dereferences): needs a per-class fixture
-SKIP CTaskComplexUseGoggles::CreateFirstSubTask 0x634F90: exe process killed on the garbage fixture (SEH frame of the exe faults on a pointer the function dereferences): needs a per-class fixture
+SKIP CTaskComplexUseAttractorPartner::CreateFirstSubTask 0x638FF0: ORACLE-C-TASKS: every case faults identically in the port and the exe on the class-C fixture (this task + ped with real vftables, other objects garbage): needs a per-class fixture (valid pointed-to objects)
 NOARG CTaskComplexUseScriptedAttractor::Constructor 0x633330 param "CPedAttractor const& attractor"
-SKIP CTaskComplexUseScriptedAttractor::CreateFirstSubTask 0x6390C0: exe process killed on the garbage fixture (SEH frame of the exe faults on a pointer the function dereferences): needs a per-class fixture
+SKIP CTaskComplexUseScriptedAttractor::CreateFirstSubTask 0x6390C0: ORACLE-C-TASKS: every case faults identically in the port and the exe on the class-C fixture (this task + ped with real vftables, other objects garbage): needs a per-class fixture (valid pointed-to objects)
 SKIP CTaskComplexUseScriptedBrain::Constructor 0x6358B0: port copies the garbage, unterminated name with strcpy_s (CRT assert); same as the W2 skip
 SKIP CTaskComplexUseScriptedBrain::Clone 0x6371F0: port copies the garbage, unterminated name with strcpy_s (CRT assert); same as the W2 skip
-SKIP CTaskComplexWaitForPed::Clone 0x683950: exe process killed on the garbage fixture (SEH frame of the exe faults on a pointer the function dereferences): needs a per-class fixture
-SKIP CTaskComplexWalkAlongsidePed::Clone 0x6838E0: exe process killed on the garbage fixture (SEH frame of the exe faults on a pointer the function dereferences): needs a per-class fixture
-SKIP CTaskComplexWalkAlongsidePed::CreateSubTask 0x685000: exe process killed on the garbage fixture (SEH frame of the exe faults on a pointer the function dereferences): needs a per-class fixture
 SKIP CTaskComplexWalkAlongsidePed::CreateFirstSubTask 0x685630: embedded float / vptr bytes of the created task (+0x40..0x43) differ: pool slot mask needed
-SKIP CTaskComplexWalkRoundBuildingAttempt::CreateFirstSubTask 0x654A00: exe process killed on the garbage fixture (SEH frame of the exe faults on a pointer the function dereferences): needs a per-class fixture
+SKIP CTaskComplexWalkRoundCar::ComputeRouteRoundSmallCar 0x6544F0: ORACLE-C-TASKS: every case faults identically in the port and the exe on the class-C fixture (this task + ped with real vftables, other objects garbage): needs a per-class fixture (valid pointed-to objects)
+SKIP CTaskComplexWalkRoundCar::ComputeRouteRoundBigCar 0x656BB0: ORACLE-C-TASKS: every case faults identically in the port and the exe on the class-C fixture (this task + ped with real vftables, other objects garbage): needs a per-class fixture (valid pointed-to objects)
+SKIP CTaskComplexWalkRoundCar::ComputeRoute 0x657B80: ORACLE-C-TASKS: every case faults identically in the port and the exe on the class-C fixture (this task + ped with real vftables, other objects garbage): needs a per-class fixture (valid pointed-to objects)
 SKIP CTaskComplexWalkRoundFire::ComputeDetourTarget 0x6581B0: every case faults in the port only at an unresolved callee / assert while the exe does not (fixture limit)
-SKIP CTaskComplexWalkRoundFire::CreateFirstSubTask 0x6584E0: exe process killed on the garbage fixture (SEH frame of the exe faults on a pointer the function dereferences): needs a per-class fixture
 SKIP CTaskComplexWalkRoundFire::ControlSubTask 0x6585C0: every case faults identically in the port and in the exe (exe fault at 65860a accessing C: a null / garbage pointer member or argument the fixture does not supply)
+SKIP CTaskComplexWalkRoundObject::ComputeRoute 0x6551D0: ORACLE-C-TASKS: every case faults identically in the port and the exe on the class-C fixture (this task + ped with real vftables, other objects garbage): needs a per-class fixture (valid pointed-to objects)
+SKIP CTaskComplexWalkRoundObject::CreateFirstSubTask 0x657380: ORACLE-C-TASKS: every case faults identically in the port and the exe on the class-C fixture (this task + ped with real vftables, other objects garbage): needs a per-class fixture (valid pointed-to objects)
+SKIP CTaskComplexWanderCop::CreateFirstSubTask 0x674750: 16-bit (exe 0x0000FFFF) vs 32-bit (port 0xFFFFFFFF) store in a created task (43/60): CNodeAddress-style initialisation, open
+SKIP CTaskComplexWanderCop::ControlSubTask 0x674D80: ORACLE-C-TASKS: every case faults identically in the port and the exe on the class-C fixture (this task + ped with real vftables, other objects garbage): needs a per-class fixture (valid pointed-to objects)
+SKIP CTaskComplexWanderFlee::ControlSubTask 0x65B380: ORACLE-C-TASKS: every case faults identically in the port and the exe on the class-C fixture (this task + ped with real vftables, other objects garbage): needs a per-class fixture (valid pointed-to objects)
 SKIP CTaskGangHassleVehicle::GetTargetHeading 0x65FDD0: every case faults identically in the port and in the exe (exe fault at 65fde5 accessing 10: a null / garbage pointer member or argument the fixture does not supply)
 SKIP CTaskGoToVehicleAndLean::CalcTargetPos 0x664770: every case faults identically in the port and in the exe (exe fault at 664781 accessing 14: a null / garbage pointer member or argument the fixture does not supply)
-SKIP CTaskSimpleCarSetPedSlowDraggedOut::Destructor 0x648430: exe process killed on the garbage fixture (SEH frame of the exe faults on a pointer the function dereferences): needs a per-class fixture
-SKIP CTaskSimpleCarShuffle::Destructor 0x646890: exe process killed on the garbage fixture (SEH frame of the exe faults on a pointer the function dereferences): needs a per-class fixture
+SKIP CTaskGoToVehicleAndLean::CreateFirstSubTask 0x664D40: ORACLE-C-TASKS: every case faults identically in the port and the exe on the class-C fixture (this task + ped with real vftables, other objects garbage): needs a per-class fixture (valid pointed-to objects)
+SKIP CTaskSimpleAffectSecondaryBehaviour::ProcessPed 0x691320: port raises an assert / exception in 3/60 cases while the exe does not (open)
+SKIP CTaskSimpleCarAlign::SetPedPosition 0x645C70: ORACLE-C-TASKS: every case faults identically in the port and the exe on the class-C fixture (this task + ped with real vftables, other objects garbage): needs a per-class fixture (valid pointed-to objects)
+SKIP CTaskSimpleCarCloseDoorFromInside::SetPedPosition 0x6463F0: ORACLE-C-TASKS: every case faults identically in the port and the exe on the class-C fixture (this task + ped with real vftables, other objects garbage): needs a per-class fixture (valid pointed-to objects)
+NOARG CTaskSimpleCarCloseDoorFromInside::ComputeAnimID 0x646410 param "AssocGroupId& outGroup"
+SKIP CTaskSimpleCarCloseDoorFromOutside::SetPedPosition 0x6465E0: ORACLE-C-TASKS: every case faults identically in the port and the exe on the class-C fixture (this task + ped with real vftables, other objects garbage): needs a per-class fixture (valid pointed-to objects)
+NOARG CTaskSimpleCarCloseDoorFromOutside::ComputeAnimID 0x646600 param "AssocGroupId& outGroup"
+SKIP CTaskSimpleCarFallOut::SetPedPosition 0x648E40: ORACLE-C-TASKS: every case faults identically in the port and the exe on the class-C fixture (this task + ped with real vftables, other objects garbage): needs a per-class fixture (valid pointed-to objects)
+SKIP CTaskSimpleCarGetIn::SetPedPosition 0x6467A0: ORACLE-C-TASKS: every case faults identically in the port and the exe on the class-C fixture (this task + ped with real vftables, other objects garbage): needs a per-class fixture (valid pointed-to objects)
+SKIP CTaskSimpleCarGetOut::SetPedPosition 0x6472F0: ORACLE-C-TASKS: every case faults identically in the port and the exe on the class-C fixture (this task + ped with real vftables, other objects garbage): needs a per-class fixture (valid pointed-to objects)
+NOARG CTaskSimpleCarGetOut::ComputeAnimID_ToHook 0x647330 param "AssocGroupId& animGroup"
+NOARG CTaskSimpleCarJumpOut::ComputeAnimID_ToHook 0x647690 param "AssocGroupId& animGroup"
+SKIP CTaskSimpleCarOpenDoorFromOutside::SetPedPosition 0x645F80: ORACLE-C-TASKS: every case faults identically in the port and the exe on the class-C fixture (this task + ped with real vftables, other objects garbage): needs a per-class fixture (valid pointed-to objects)
+NOARG CTaskSimpleCarOpenDoorFromOutside::ComputeAnimID_ToHook 0x645FA0 param "AssocGroupId& grp"
+SKIP CTaskSimpleCarOpenDoorFromOutside::FinishAnimCarOpenDoorFromOutsideCB 0x646020: ORACLE-C-TASKS: every case faults identically in the port and the exe on the class-C fixture (this task + ped with real vftables, other objects garbage): needs a per-class fixture (valid pointed-to objects)
+SKIP CTaskSimpleCarOpenLockedDoorFromOutside::SetPedPosition 0x646180: ORACLE-C-TASKS: every case faults identically in the port and the exe on the class-C fixture (this task + ped with real vftables, other objects garbage): needs a per-class fixture (valid pointed-to objects)
+SKIP CTaskSimpleCarShuffle::SetPedPosition 0x646920: ORACLE-C-TASKS: every case faults identically in the port and the exe on the class-C fixture (this task + ped with real vftables, other objects garbage): needs a per-class fixture (valid pointed-to objects)
 NOARG CTaskSimpleCarSlowBeDraggedOut::Constructor 0x648230 param "CTaskUtilityLineUpPedWithCar*c"
-SKIP CTaskSimpleCarSlowBeDraggedOut::Destructor 0x6482C0: exe process killed on the garbage fixture (SEH frame of the exe faults on a pointer the function dereferences): needs a per-class fixture
-SKIP CTaskSimpleEvasiveDive::Clone 0x6558E0: exe process killed on the garbage fixture (SEH frame of the exe faults on a pointer the function dereferences): needs a per-class fixture
+SKIP CTaskSimpleCarSlowBeDraggedOut::SetPedPosition 0x64C0E0: ORACLE-C-TASKS: every case faults identically in the port and the exe on the class-C fixture (this task + ped with real vftables, other objects garbage): needs a per-class fixture (valid pointed-to objects)
+SKIP CTaskSimpleCarSlowDragPedOut::SetPedPosition 0x6480E0: ORACLE-C-TASKS: every case faults identically in the port and the exe on the class-C fixture (this task + ped with real vftables, other objects garbage): needs a per-class fixture (valid pointed-to objects)
+NOARG CTaskSimpleCarSlowDragPedOut::ComputeAnimID_Wrapper 0x648100 param "AssocGroupId& animGroup"
+SKIP CTaskSimpleDoHandSignal::ProcessPed 0x660940: ORACLE-C-TASKS: every case faults identically in the port and the exe on the class-C fixture (this task + ped with real vftables, other objects garbage): needs a per-class fixture (valid pointed-to objects)
+SKIP CTaskSimpleDuckToggle::ProcessPed 0x62F6E0: port-only fault in CTask::classof on a garbage sub task (10/60), exe survives (open)
+SKIP CTaskSimpleDuckWhileShotsWhizzing::ProcessPed 0x694640: ORACLE-C-TASKS: every case faults identically in the port and the exe on the class-C fixture (this task + ped with real vftables, other objects garbage): needs a per-class fixture (valid pointed-to objects)
+SKIP CTaskSimpleEvasiveDive::Clone 0x6558E0: same CReferences list difference as CTaskSimpleIKLookAt::Clone (9/60): open, see ORACLE-C-TASKS.md
 SKIP CTaskSimpleFacial::MakeAbortable 0x692E50: every case faults identically in the port and in the exe (exe fault at 4d68ba accessing ?: a null / garbage pointer member or argument the fixture does not supply)
-SKIP CTaskSimpleFight::Destructor 0x61C530: exe process killed on the garbage fixture (SEH frame of the exe faults on a pointer the function dereferences): needs a per-class fixture
+SKIP CTaskSimpleFall::MakeAbortable 0x678370: ORACLE-C-TASKS: every case faults identically in the port and the exe on the class-C fixture (this task + ped with real vftables, other objects garbage): needs a per-class fixture (valid pointed-to objects)
 SKIP CTaskSimpleFight::GetStrikeDamage 0x61C740: port asserts on the garbage fight style / combo index (std::array subscript), 122 asserts: fixture needs a real fight task
 SKIP CTaskSimpleFight::FightSetUpCol 0x61D5F0: every case faults in the port only at an unresolved callee / assert while the exe does not (fixture limit)
 SKIP CTaskSimpleGangDriveBy::ProcessPlayerPed 0x621960: every case faults identically in the port and in the exe (exe fault at 621acf accessing 480: a null / garbage pointer member or argument the fixture does not supply)
 SKIP CTaskSimpleGetUp::FinishGetUpAnimCB 0x678110: every case faults identically in the port and in the exe (exe fault at 67811c accessing 1C: a null / garbage pointer member or argument the fixture does not supply)
+SKIP CTaskSimpleGoTo::SetUpIK 0x667AD0: ORACLE-C-TASKS: every case faults identically in the port and the exe on the class-C fixture (this task + ped with real vftables, other objects garbage): needs a per-class fixture (valid pointed-to objects)
 SKIP CTaskSimpleHoldEntity::Constructor-3 0x691550: private overloaded constructor wrapper
-SKIP CTaskSimpleHurtPedWithCar::Destructor 0x653F30: exe process killed on the garbage fixture (SEH frame of the exe faults on a pointer the function dereferences): needs a per-class fixture
 SKIP CTaskSimpleIKChain::Constructor 0x6339C0: byte +0x14 (padding of the base) left uninitialised by the exe, zeroed by the port: layout artefact
 SKIP CTaskSimpleIKChain::Clone 0x633B00: bytes +0x12E/+0x2AE of the pool slot written by the exe only (struct padding copied as a dword): layout artefact
 SKIP CTaskSimpleIKLookAt::Constructor 0x633E00: same padding artefact as CTaskSimpleIKChain::Constructor
-SKIP CTaskSimpleIKLookAt::Clone 0x633F00: exe process killed on the garbage fixture (SEH frame of the exe faults on a pointer the function dereferences): needs a per-class fixture
+SKIP CTaskSimpleIKLookAt::Clone 0x633F00: CReferences list consumption differs in 9/60 'special input' cases (exe registers the target-entity reference, the port does not: r31/aRefs); the IKChain offset-bone fix (m_OffsetBone) is verified by the pre-fix failure of this row (18/60 pool bytes +0x2C..+0x2F), the remaining refs difference is open (ORACLE-C-TASKS.md)
 SKIP CTaskSimpleIKManager::AddIKChainTask 0x633940: port asserts on the garbage slot index (std::array subscript), the exe has no bounds check: fixture limit (the game passes 0..3)
 SKIP CTaskSimpleIKManager::GetTaskAtSlot 0x6339B0: same as AddIKChainTask
 SKIP CTaskSimpleIKPointArm::Constructor 0x634150: same padding artefact as CTaskSimpleIKChain::Constructor
 SKIP CTaskSimpleIKPointArm::Clone 0x634250: every case faults in the port only at an unresolved callee (IKChain_c member of the fixture is garbage): needs a valid IKChain_c fixture
-SKIP CTaskSimpleKillPedWithCar::Destructor 0x653C90: exe process killed on the garbage fixture (SEH frame of the exe faults on a pointer the function dereferences): needs a per-class fixture
+SKIP CTaskSimplePickUpBike::SetPedPosition 0x6462D0: ORACLE-C-TASKS: every case faults identically in the port and the exe on the class-C fixture (this task + ped with real vftables, other objects garbage): needs a per-class fixture (valid pointed-to objects)
 SKIP CTaskSimplePickUpEntity::Constructor-1 0x691870: private overloaded constructor wrapper
 NOARG CTaskSimpleRunAnim::Constructor2 0x61A900 param "const char* taskName _IGNORED_"
 SKIP CTaskSimpleRunNamedAnim::FinishRunAnimMovePedCB 0x61AAA0: every case faults identically in the port and in the exe (exe fault at 4cfc65 accessing 14: a null / garbage pointer member or argument the fixture does not supply)
+SKIP CTaskSimpleRunNamedAnim::OffsetPedPosition 0x61AB00: ORACLE-C-TASKS: every case faults identically in the port and the exe on the class-C fixture (this task + ped with real vftables, other objects garbage): needs a per-class fixture (valid pointed-to objects)
 SKIP CTaskSimpleSay::Constructor 0x48E360: byte +0x1A (padding) left uninitialised by the exe, zeroed by the port: layout artefact
+SKIP CTaskSimpleSwim::ApplyRollAndPitch 0x68A8E0: ORACLE-C-TASKS: every case faults identically in the port and the exe on the class-C fixture (this task + ped with real vftables, other objects garbage): needs a per-class fixture (valid pointed-to objects)
 SKIP CTaskSimpleUseGun::Clone 0x622F20: bytes +0x18D/+0x28D of the pool slot written by the exe only (padding copied as a dword): layout artefact

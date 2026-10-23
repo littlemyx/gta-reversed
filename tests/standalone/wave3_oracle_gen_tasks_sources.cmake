@@ -20,6 +20,11 @@ set(W3_TASKS_SOURCES
     game_sa/Tasks/Task.cpp
     game_sa/Tasks/TaskComplex.cpp
     game_sa/Tasks/TaskSimple.cpp
+    game_sa/Tasks/TaskTypes/Interior/TaskInteriorBeInHouse.cpp
+    game_sa/Tasks/TaskTypes/Interior/TaskInteriorBeInOffice.cpp
+    game_sa/Tasks/TaskTypes/Interior/TaskInteriorBeInShop.cpp
+    game_sa/Tasks/TaskTypes/Interior/TaskInteriorGoToInfo.cpp
+    game_sa/Tasks/TaskTypes/Interior/TaskInteriorShopKeeper.cpp
     game_sa/Tasks/TaskTypes/SeekEntity/PosCalculators/EntitySeekPosCalculator.cpp
     game_sa/Tasks/TaskTypes/SeekEntity/PosCalculators/EntitySeekPosCalculatorStandard.cpp
     game_sa/Tasks/TaskTypes/TaskComplexArrestPed.cpp

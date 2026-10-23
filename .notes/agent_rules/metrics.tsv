@@ -101,3 +101,4 @@ date	agent	rules	kind	tokens	tool_uses	minutes	outcome	notes
 2026-10-23	REPLAY-2	v4	fix (small)	225917	100	28	CompressFromFullMatrix exact; 3 fixes (StorePedUpdate in-place packet, StorePedAnimation byte, CPlayerInfo::operator= flags/padding/name)
 2026-10-23	ORACLE-W3-AUDLOAD	v4	oracle wave (small)	275892	83	53	Audio loaders A 38 -> 3 (+35), 6 fixes (bank slot buffer 407/1200, sound buffer 430/2500, wave length 710/1500)
 2026-10-23	ORACLE-C-VEH	v4	class C wave (partial)	274254	159	47	vtable-swap helper W3FuncCase(vtCls); +24 class-C vehicle rows, 2 fixes (delayed explosion step, BlowUpCarsInPath flag)
+2026-10-23	ORACLE-C-VEH-2	v4	class C wave (small)	287661	152	68	11 process-killing rows were SafeSEH in the fixture (/SAFESEH:NO); Vehicle 239 -> 244, 3 fixes (bus doors, lean matrix, SpecialEntityPreCollisionStuff flag bit); own soak 1 crash in UncompressAnimation, 1 OK

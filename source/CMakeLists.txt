@@ -1305,6 +1305,12 @@ if (${RE_PROJECT}_RW_LIBRW)
         game_sa/TxdStore.cpp
         game_sa/Cheat.cpp
         game_sa/Plugins/NodeNamePlugin/NodeName.cpp
+        game_sa/Plugins/PipelinePlugin/PipelinePlugin.cpp
+        game_sa/Plugins/TwoDEffectPlugin/2dEffect.cpp
+        game_sa/Pipelines/CustomBuilding/CustomBuildingRenderer.cpp
+        game_sa/Pipelines/CustomBuilding/CustomBuildingDNPipeline.cpp
+        game_sa/Fx/CarFXRenderer.cpp
+        game_sa/RwHelper.cpp
     )
     target_compile_definitions(wave3_models_oracle_test PRIVATE W2_ONLY W3_MODELS_ONLY)
     target_compile_features(wave3_models_oracle_test PRIVATE cxx_std_23)

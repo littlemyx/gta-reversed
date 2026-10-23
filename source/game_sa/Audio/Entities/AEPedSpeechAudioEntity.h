@@ -377,7 +377,7 @@ private:
 protected:
     // 0x4E6550 / 0x4E60D0
     template<bool IsPedless>
-    int16 I_AddSayEvent(CVector pos, eAudioEvents audioEvent, eGlobalSpeechContext gCtx, uint32 startTimeDelayMs, float probability, bool overrideSilence, bool isForceAudible, bool isFrontEnd);
+    int16 I_AddSayEvent(const CEntity* posEntity, eAudioEvents audioEvent, eGlobalSpeechContext gCtx, uint32 startTimeDelayMs, float probability, bool overrideSilence, bool isForceAudible, bool isFrontEnd);
 
     // 0x4E3520 / 0x4E4D10
     template<bool IsPedless>

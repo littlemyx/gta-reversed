@@ -1,0 +1,25 @@
+diff --git a/source/game_sa/Animation/AnimBlendAssocGroup.cpp b/source/game_sa/Animation/AnimBlendAssocGroup.cpp
+index bc5f216f..b96e7b78 100644
+--- a/source/game_sa/Animation/AnimBlendAssocGroup.cpp
++++ b/source/game_sa/Animation/AnimBlendAssocGroup.cpp
+@@ -42,6 +42,7 @@ CAnimBlendAssociation* CAnimBlendAssocGroup::CopyAnimation(const char* name) {
+ 
+ // 0x4CE130
+ CAnimBlendAssociation* CAnimBlendAssocGroup::CopyAnimation(AnimationId id) {
++    { auto* a = GetAnimation(id); if (!a->m_BlendHier) { NOTSA_LOG_ERR("DIAG-ANIM null hier: group={} id={} idOffset={} numAnims={} block={} anims={} assoc.animId={} assoc.groupId={}", (int)m_GroupID, (int)id, (int)m_IdOffset, (int)m_NumAnims, m_AnimBlock ? m_AnimBlock->Name : "<null>", (void*)m_Anims, (int)a->m_AnimId, (int)a->m_AnimGroupId); } }
+     return CopyAnimation(GetAnimation(id));
+ }
+ 
+diff --git a/source/game_sa/Animation/AnimManager.cpp b/source/game_sa/Animation/AnimManager.cpp
+index 25b06f5b..215f515e 100644
+--- a/source/game_sa/Animation/AnimManager.cpp
++++ b/source/game_sa/Animation/AnimManager.cpp
+@@ -504,6 +504,8 @@ CAnimBlendAssociation* CAnimManager::BlendAnimation(RpClump* clump, CAnimBlendHi
+ CAnimBlendAssociation* CAnimManager::BlendAnimation(RpClump* clump, AssocGroupId groupId, AnimationId animId, float blendDelta) {
+     const auto clumpAnimData = RpAnimBlendClumpGetData(clump); // Get running anim data
+ 
++    { auto& g = GetAssocGroups()[groupId]; const int idx = (int)animId - (int)g.m_IdOffset; auto* aa = (idx >= 0 && idx < (int)g.m_NumAnims) ? &g.m_Anims[idx] : nullptr;
++      if (!aa || !aa->m_BlendHier) { NOTSA_LOG_ERR("DIAG-BLEND bad: group={} id={} idOffset={} numAnims={} idx={} block={} anims={}", (int)groupId, (int)animId, (int)g.m_IdOffset, (int)g.m_NumAnims, idx, g.m_AnimBlock ? g.m_AnimBlock->Name : "<null>", (void*)g.m_Anims); } }
+     const auto toBlendAnim             = GetAssocGroups()[groupId].GetAnimation(animId);
+     const bool toBlendIsMoving         = toBlendAnim->m_Flags & ANIMATION_IS_SYNCRONISED;
+     const bool toBlendIsPartial        = toBlendAnim->m_Flags & ANIMATION_IS_PARTIAL;

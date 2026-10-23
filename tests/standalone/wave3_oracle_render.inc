@@ -18,6 +18,11 @@
 #include "Entity/Ped/Ped.h"
 #include "Pipelines/CustomBuilding/CustomBuildingDNPipeline.h"
 #include "app/app_light.h"
+#include "Entity/Vehicle/Heli.h"
+#include "Shadows.h"
+#include "Streaming.h"
+#include "Clock.h"
+#include "World.h"
 
 namespace w3r {
 using namespace w2;
@@ -338,11 +343,156 @@ static void TestW3RenderTwoD() {
     REND(400)
 }
 
+// ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+// ORACLE-W3-MISC second pass: C-class rows of Renderer.cpp that only need a fake vtable / recording stubs: ShouldModelBeStreamed + the two model-request scan functions (fake model infos with a
+// GetTimeInfo stub, col models, draw distances), RenderOneRoad / PreRender (entity vtable stubs that record the call order), ProcessLodRenderLists (LOD render list entries).
+// The recording stubs (CStreaming::RequestModel 0x4087E0, CHeli::SpecialHeliPreRender 0x6C4750, CShadows::RenderExtraPlayerShadows 0x707FA0) are patched into the exe and defined for the port.
+namespace w3r {
+constexpr size_t kVt2 = 0x3000 /*0x80*/, kCm2 = 0x3100 /*4 x 0x40*/, kTi2 = 0x3200 /*4 x 4*/, kPos2 = 0x3240 /*0x10*/, kAl = 0x3300 /*8 x 0x20*/, kRec2 = 0x3500 /*0x100*/;
+static void Rec2(uint32_t a, uint32_t b, uint32_t c) {
+    uint32_t& n = SAt<uint32_t>(kRec2);
+    if (n < 20) { uint32_t* p = &SAt<uint32_t>(kRec2 + 4 + n * 12); p[0] = a; p[1] = b; p[2] = c; }
+    ++n;
+}
+static void __cdecl StubReqModel(int32_t model, int32_t flags) { Rec2(1, (uint32_t)model, (uint32_t)flags); }
+static void __cdecl StubHeli() { Rec2(2, 0, 0); }
+static void __cdecl StubShadows() { Rec2(3, 0, 0); }
+static void* __fastcall FakeTimeInfo(void* self, void*) { return reinterpret_cast<void*>((uintptr_t)*reinterpret_cast<uint32_t*>(reinterpret_cast<uint8_t*>(self) + 0x30)); }
+static void __fastcall FakePreRender(void* self, void*) { Rec2(4, (uint32_t)(uintptr_t)self, 0); }
+static void __fastcall FakeRender(void* self, void*) { Rec2(5, (uint32_t)(uintptr_t)self, 0); }
+static void InstallStubs2() {
+    static bool done = false; if (done) return; done = true;
+    oracle::Patch(0x4087E0, (void*)&StubReqModel);
+    oracle::Patch(0x6C4750, (void*)&StubHeli);
+    oracle::Patch(0x707FA0, (void*)&StubShadows);
+}
+// the fixture: model infos 0..3 with a vtable (slot 5 = GetTimeInfo), col models, draw distances, time infos; entities with a vtable (PreRender slot 0x44, Render slot 0x48)
+static void BuildMi(Rng& rr) {
+    for (int i = 0; i < 0x80 / 4; ++i) SAt<uint32_t>(kVt2 + 4 * i) = 0;
+    SAt<uint32_t>(kVt2 + 4 * 5) = (uint32_t)(uintptr_t)&FakeTimeInfo;
+    SAt<uint32_t>(kVt2 + 0x44) = (uint32_t)(uintptr_t)&FakePreRender;
+    SAt<uint32_t>(kVt2 + 0x48) = (uint32_t)(uintptr_t)&FakeRender;
+    for (int k = 0; k < 4; ++k) {
+        SAt<uint32_t>(kMi + 0x80 * k) = (uint32_t)(uintptr_t)S(kVt2);
+        SAt<uint32_t>(kMi + 0x80 * k + 0x14) = (uint32_t)(uintptr_t)S(kCm2 + 0x40 * k);
+        SAt<float>(kMi + 0x80 * k + 0x18) = rr.below(10) ? 20.f + rr.f01() * 600.f : Fe(rr, 800.f, 1);
+        SAt<float>(kCm2 + 0x40 * k + 0x24) = rr.below(10) ? rr.f01() * 80.f : Fe(rr, 100.f, 1);
+        SAt<uint8_t>(kTi2 + 4 * k) = (uint8_t)(rr.below(8) ? rr.below(24) : rr.u32()); SAt<uint8_t>(kTi2 + 4 * k + 1) = (uint8_t)(rr.below(8) ? rr.below(24) : rr.u32());
+        SAt<uint32_t>(kMi + 0x80 * k + 0x30) = rr.below(3) ? (uint32_t)(uintptr_t)S(kTi2 + 4 * k) : 0u;
+    }
+    for (int i = 0; i < kNEnt; ++i) SAt<uint32_t>(kEnt + 0x200 * i) = (uint32_t)(uintptr_t)S(kVt2);
+    CClock::ms_nGameClockHours = (uint8)rr.below(24); CClock::ms_nGameClockMinutes = (uint8)rr.below(60);
+    StaticRef<float>(0xB6F118) = rr.below(8) ? 0.5f + rr.f01() * 1.5f : Fe(rr, 3.f, 1);          // TheCamera.m_fLODDistMult
+    SAt<uint32_t>(kRec2) = 0;
+}
+// entity positions around the camera (some exactly on the streaming / draw distance boundary of their model)
+static void BuildStream(Rng& rr) {
+    BuildScan(rr);
+    BuildMi(rr);
+    float cam[3]; for (float& f : cam) f = Fg(rr, 2500.f);
+    std::memcpy(&StaticRef<CVector>(0xB76870), cam, 12);                                  // CRenderer::ms_vecCameraPosition
+    StaticRef<float>(0xB76848) = rr.below(8) ? 100.f + rr.f01() * 900.f : Fe(rr, 1200.f, 1);   // ms_fFarClipPlane
+    StaticRef<uint32_t>(0xB745C4) = rr.below(2) ? 0x1B : rr.u32();                          // gnRendererModelRequestFlags
+    for (int i = -1; i < kNEnt; ++i) {
+        float* p = i < 0 ? reinterpret_cast<float*>(S(kMat + 0x30)) : reinterpret_cast<float*>(S(kEnt + 0x200 * i + 4));
+        const float len = rr.below(3) == 0 ? 0.f : rr.f01() * 700.f;
+        const float a = rr.f01() * 6.2831853f, b = rr.f01() * 3.14159f;
+        p[0] = cam[0] + len * std::sin(b) * std::cos(a); p[1] = cam[1] + len * std::sin(b) * std::sin(a); p[2] = cam[2] + len * std::cos(b);
+        if (rr.below(10) == 0) { for (int k = 0; k < 3; ++k) p[k] = GenF(rr, 3000.f, S_NAN | S_ZERO | S_DEN | S_TINY | S_INF); }   // no 3e38: the exe squares at 24-bit mantissa but a 15-bit exponent (no overflow), a float square would
+        if (rr.below(4) == 0) {   // on the boundary of the streaming range of model `m` (or of the draw distance)
+            const int m = (int)SAt<uint16_t>(kEnt + 0x200 * (i < 0 ? 0 : i) + 0x22) & 3;
+            const bool farR = rr.below(2);
+            const double tgt = farR ? (double)SAt<float>(kCm2 + 0x40 * m + 0x24) + (double)StaticRef<float>(0xB76848) : (double)StaticRef<float>(0xB6F118) * (double)SAt<float>(kMi + 0x80 * m + 0x18);
+            const double sc = tgt * (1.0 + (double)((int)rr.below(7) - 3) * 6.0e-8);
+            const float dx = (float)sc;
+            p[0] = cam[0] + dx; p[1] = cam[1]; p[2] = cam[2];
+        }
+    }
+}
+} // namespace w3r
+// CStreaming::RequestModel is also linked from Streaming.cpp: this definition wins (/FORCE:MULTIPLE, first definition)
+void CStreaming::RequestModel(int32 modelId, int32 flags) { w3r::StubReqModel(modelId, flags); }
+void CHeli::SpecialHeliPreRender() { w3r::StubHeli(); }
+void CShadows::RenderExtraPlayerShadows() { w3r::StubShadows(); }
+
+static void TestW3RenderRenderer2() {
+    using namespace w2; using namespace w3r;
+    InstallStubs2();
+    CEntity* const en = Ent(1);
+    RROW("CRenderer::ShouldModelBeStreamed", 0x554EB0)
+        const int e = (int)r.below(kNEnt);
+        const bool useCam = r.below(4) != 0;
+        const float farClip = Fe(r, 1200.f, 12);
+        return RCase(r, d, [&]() -> uint64_t { return (uint8_t)CRenderer::ShouldModelBeStreamed(Ent(e), useCam ? StaticRef<CVector>(0xB76870) : *reinterpret_cast<CVector*>(S(kPos2)), useCam ? StaticRef<float>(0xB76848) : farClip); },
+                           [&]() -> uint64_t { return (uint8_t)ExeC<uint32_t, CEntity*, const void*, float>(0x554EB0, Ent(e), useCam ? (const void*)0xB76870 : (const void*)S(kPos2), useCam ? StaticRef<float>(0xB76848) : farClip); },
+            [](Rng& rr) { BuildStream(rr); for (int k = 0; k < 3; ++k) SAt<float>(kPos2 + 4 * k) = Fg(rr, 2500.f); });
+    REND(5000)
+    RROW("CRenderer::ScanSectorList_RequestModels (+ ScanPtrList_RequestModels<CPtrListSingleLink<CPhysical*>> 0x555680 on its three lists)", 0x555900)
+        const int dx = r.below(8) ? 0 : (int)r.below(300) - 150, dy = r.below(8) ? 0 : (int)r.below(300) - 150;
+        return RCase(r, d, [&]() -> uint64_t { CRenderer::ScanSectorList_RequestModels(g_secX + dx, g_secY + dy); return 0; }, [&]() -> uint64_t { ExeC<void, int, int>(0x555900, g_secX + dx, g_secY + dy); return 0; }, &BuildStream);
+    REND(4000)
+    RROW("CRenderer::RenderOneRoad", 0x553230)
+        return RCase(r, d, [&]() -> uint64_t { CRenderer::RenderOneRoad(en); return 0; }, [&]() -> uint64_t { ExeC<void, CEntity*>(0x553230, en); return 0; },
+            [](Rng& rr) { BuildR(rr); BuildMi(rr); });
+    REND(600)
+    // PreRender: the four entity pointer arrays, the two alpha lists (nodes whose callback is CVisibilityPlugins::RenderEntity get the entity's offscreen bit cleared and PreRender called), CHeli / CShadows stubs
+    static const auto BuildPre = [](Rng& rr) {
+        BuildR(rr); BuildMi(rr);
+        const auto fill = [&](uint32_t addr, uint32_t countAddr) {
+            const int n = (int)rr.below(5); StaticRef<int32_t>(countAddr) = n;
+            for (int j = 0; j < n; ++j) StaticRef<uint32_t>(addr + 4 * j) = (uint32_t)(uintptr_t)Ent((int)rr.below(kNEnt));
+        };
+        fill(0xB748F8, 0xB76840); fill(0xB75898, 0xB76844); fill(0xB74830, 0xB76838); fill(0xB745D8, 0xB7683C);
+        for (int l = 0; l < 2; ++l) {   // alpha lists: head.next at 0xC88130 / 0xC88188, tail node at 0xC88134 / 0xC8818C
+            const uint32_t tail = l == 0 ? 0xC88134 : 0xC8818C, headNext = l == 0 ? 0xC88130 : 0xC88188;
+            const int n = (int)rr.below(4); uint32_t next = tail;
+            for (int j = n - 1; j >= 0; --j) {
+                uint8_t* node = S(kAl + 0x80 * l + 0x20 * j);
+                SAt<uint32_t>(kAl + 0x80 * l + 0x20 * j) = (uint32_t)(uintptr_t)Ent((int)rr.below(kNEnt));
+                SAt<uint32_t>(kAl + 0x80 * l + 0x20 * j + 4) = rr.below(3) ? 0x732B40u : rr.u32();   // canonical marker of "RenderEntity" (patched per side below)
+                SAt<uint32_t>(kAl + 0x80 * l + 0x20 * j + 0x10) = next;
+                next = (uint32_t)(uintptr_t)node;
+            }
+            StaticRef<uint32_t>(headNext) = next;
+        }
+    };
+    const auto patchCb = [](uint32_t from, uint32_t val) {   // `from` -> `val` in the fixture alpha nodes
+        for (int l = 0; l < 2; ++l) for (int k = 0; k < 4; ++k) if (SAt<uint32_t>(kAl + 0x80 * l + 0x20 * k + 4) == from) SAt<uint32_t>(kAl + 0x80 * l + 0x20 * k + 4) = val;
+    };
+    RROW("CRenderer::PreRender", 0x553910)
+        return RCase(r, d, [&]() -> uint64_t { const uint32_t mine = (uint32_t)(uintptr_t)&CVisibilityPlugins::RenderEntity; patchCb(0x732B40u, mine); CRenderer::PreRender(); patchCb(mine, 0x732B40u); return 0; },
+                           [&]() -> uint64_t { ExeC<void>(0x553910); return 0; }, +BuildPre);
+    REND(1500)
+    // ProcessLodRenderLists: 0..6 entries (entity or null, distance) in the LOD render list; entities with LOD parent / children counters / flags (visible, displayed-super-low-lod, distance fade ...)
+    static const auto BuildLod = [](Rng& rr) {
+        BuildR(rr); BuildMi(rr);
+        for (int i = 0; i < kNEnt; ++i) {
+            const size_t o = kEnt + 0x200 * i;
+            SAt<uint32_t>(o + 0x1C) = rr.u32() & (rr.below(2) ? 0xFFFFFFFFu : 0x02FFFFFFu);
+            if (rr.below(2)) SAt<uint32_t>(o + 0x1C) |= 0x80;
+            SAt<uint8_t>(o + 0x34) = (uint8_t)(rr.below(3) ? rr.below(4) : rr.u32());
+            SAt<int8_t>(o + 0x35) = (int8_t)(rr.below(3) ? (int)rr.below(4) : (int)rr.u32());
+            SAt<uint32_t>(o + 0x30) = rr.below(3) ? (uint32_t)(uintptr_t)Ent((int)rr.below(kNEnt)) : 0u;     // LOD parent
+            SAt<uint32_t>(o + 0x18) = rr.below(3) ? (uint32_t)(uintptr_t)S(kOut) : 0u;                      // RW object
+        }
+        for (int k = 0; k < 4; ++k) SAt<uint8_t>(kMi + 0x80 * k + 0xC) = (uint8_t)(rr.below(2) ? 255 : rr.u32());   // CBaseModelInfo::m_nAlpha
+        const int n = (int)rr.below(7);
+        tRenderListEntry* base = CRenderer::GetLodRenderListBase();
+        for (int j = 0; j < n; ++j) { base[j].entity = rr.below(6) ? Ent((int)rr.below(kNEnt)) : nullptr; base[j].distance = Fe(rr, 500.f, 8); }
+        CRenderer::ms_pLodRenderList = base + n;
+        CRenderer::ms_nNoOfVisibleEntities = (int32)rr.below(100); CRenderer::ms_nNoOfVisibleLods = (int32)rr.below(100);
+    };
+    RROW("CRenderer::ProcessLodRenderLists", 0x553770)
+        return RCase(r, d, [&]() -> uint64_t { CRenderer::ProcessLodRenderLists(); return 0; }, [&]() -> uint64_t { ExeC<void>(0x553770); return 0; }, +BuildLod);
+    REND(4000)
+}
+
 static void TestW3RenderAll() {
     using namespace w3r;
     (void)spdlog::default_logger_raw();
     InstallStubs();
     TestW3RenderRenderer();
+    TestW3RenderRenderer2();
     TestW3RenderPostEffects();
     TestW3RenderGrass();
     TestW3RenderTwoD();

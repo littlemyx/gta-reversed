@@ -107,3 +107,6 @@ date	agent	rules	kind	tokens	tool_uses	minutes	outcome	notes
 2026-10-23	MAC-C6	v4	mac win types/CRT shim + libc++ gaps	-	-	75	done: CRT 305->8, libc++ 0, no-op 5 TUs identical; swept one P1 line into its commit
 2026-10-23	MAC-P1	v4	mac VALIDATE split codemod 161 files	203138	75	41	done: P 927->33, clean TUs 404->858, no-op 6/6; review pending
 2026-10-23	MAC-P1-REV	v4	review P-1 codemod	-	-	-	clean, 1 debatable (MemoryHeap invariant)
+2026-10-23	ORACLE-W3-MISC	v4	oracle wave (small)	348668	172	93	platform 0->11, WinPs 0->3, CustomBuildingRenderer 0->2, Renderer 11->17 (4815 -> 4838); 4 Renderer fixes (LOD phase 2 never ran, NaN stream test, draw-last flag, alpha peds unsorted); no soak (lock contention); over 250k budget
+2026-10-23	ANIM-CRASH	v4	crash hunt (no fix)	235817	125	90	1 anim crash + 1 shadow crash in 19 cheats runs; null m_BlendHier slot of a 40-slot group, group/id not captured; diag patch left; found regress retry hiding crashes
+2026-10-23	MAC-A1b	v4	mac preset brew llvm + GL3 defines	174111	53	20	done: no-op 7/7, clean TUs 845, R honest 1315

@@ -30,3 +30,26 @@ Rows that matched without a fix: all 18 Localisation functions, Init, GetTagPos,
 - CTagManager::Save 0x5D3D60 / Load 0x5D3DA0 (S): CGenericGameStorage work buffer (file IO state); Load stores ms_numTags into the buffer instead of loading (kept, noted in the source).
 - CTagManager::GetNearestTag was already covered (script_oracle_g19_test).
 - Not reproducible by a fixture: IsTag's `movsx` of the model index (the exe sign-extends m_nModelIndex, the port reads it unsigned) matters only for index >= 0x8000, impossible with 20000 model slots.
+
+## Second pass (ORACLE-W3-MISC2, rules v4, 2026-10-23 18:32 - 20:0x WEST, worktree C:/gta-wt/oracle-w3-misc2)
+Recount at the start: Grass (all 12 A/B covered), 2dEffect (all A/B covered), PostEffects / Renderer A/B were already done by W3-RENDER; what was left: platform.cpp / WinPs.cpp (A/B), CustomBuildingRenderer (B) and the C-class Renderer functions.
+| | before | after |
+|---|---:|---:|
+| whole game covered | 4815 | **4838** (+23; +1 is Shadows.cpp RenderExtraPlayerShadows, an over-approximation: the address is only Patch()ed) |
+| platform.cpp | 0/30 | 11 |
+| WinPs.cpp | 0/22 | 3 |
+| CustomBuildingRenderer.cpp | 0/7 | 2 |
+| Renderer.cpp | 11/35 | 17 |
+Rows (tests/standalone/wave3_oracle_misc2.inc in wave3_misc_oracle_test, 46 functions, PC24 0; tests/standalone/wave3_oracle_render.inc TestW3RenderRenderer2 in wave3_render_oracle_test): RsKeyFromScanCode, RsPathGetSeparator, RsRegisterImageLoader, RsSetDebug, psPathGetSeparator, psInstallFileSystem, psGetMemoryFunctions, RsInputDeviceAttach, Rs{Keyboard,Mouse,Pad}EventHandler (recording handler stub), rsPreInitCommandLine (eax thunk), CCustomBuildingRenderer::UpdateDayNightBalanceParam / Update, CRenderer::ShouldModelBeStreamed, ScanSectorList_RequestModels (+ ScanPtrList_RequestModels 0x555680), RenderOneRoad, PreRender, ProcessLodRenderLists. Stubs: CStreaming::RequestModel 0x4087E0 / CHeli::SpecialHeliPreRender / CShadows::RenderExtraPlayerShadows (render target links Streaming.cpp, so /FORCE:MULTIPLE lets the TU's recording definition win); entity / model-info fake vtables.
+### Port bugs (one commit each)
+| function | exe | bug | pre-fix | commit |
+|---|---|---|---|---|
+| CRenderer::ProcessLodRenderLists + CEntity::CanLodChildrenRender | 0x553770 | do-while written as `while(false)` (whole phase 2 skipped); `int8 != 128` always true | 1522/4000 (118 after the loop fix alone) | 8591eef0 |
+| CRenderer::ShouldModelBeStreamed | 0x554EB0 | fcompp + `test ah,0x41; jne` passes on NaN (`!(mag > sum)`), port `<=`; sum order dz,dy,dx | 2/5000 + 3/4000 (ScanSectorList_RequestModels), both edits together | d4e2e9aa |
+| CRenderer::SetupEntityVisibility | 0x554230 | draw-last test used m_bWasPostponed (bit 6) instead of m_bDrawLast (bit 14), two sites | no row (asm only) | adef2d25 |
+| CRenderer::RenderEverythingBarRoads | 0x553AA0 | alpha peds (type 3, clump alpha != 255) not inserted into the sorted list | no row (asm only) | d38c4c81 |
+The last two were found by a read-only asm-vs-source helper (SetupEntityVisibility / SetupMapEntityVisibility / SetupBigBuildingVisibility / ScanSectorList / ScanBigBuildingList / RenderEverythingBarRoads / RenderFirstPersonVehicle; the other five reported no deviation) and re-verified by me against the asm (0x5543D6 / 0x554523 `test ah,0x40`; 0x553B28-0x553BA9). No row because the render states go through the RW engine table (0xC97B24) and SetupEntityVisibility needs camera / mirror / area / time-model fixtures. Remaining low-priority note from the helper: SetupEntityVisibility / SetupBigBuildingVisibility / RenderEverythingBarRoads distance sums (dz2+dy2+dx2 order) differ from DistanceBetweenPoints in the last float bit.
+### Skips
+platform.cpp RsTerminate / psTerminate (SDL3 build: port deletes RsGlobal.ps, exe `ret`), RsPathnameCreate / psPathnameCreate / Destroy (allocator behind the RW engine table), RsRwTerminate, VideoMode / VideoPlayer / WinInput / WinMain (DirectInput / DirectShow / window class D), psDebugMessageHandler 0x745540 (the exe function is a (type, msg) RwDebug handler that calls OutputDebugStringA twice; the port's function has another meaning, not called by the port itself), CustomBuildingRenderer::IsCBPCPipelineAttached / AtomicSetup (RW atomic layout), CarFXRenderer thin wrappers (RW), Renderer RenderFadingIn* / RenderRoads / RenderOneNonRoad / RenderEverythingBarRoads / ScanSectorList / SetupMapEntityVisibility (RW engine table / large C closure).
+### Game check
+NOT done by the agent: the orchestrator's gate held build.lock with a 40-minute Release build from 19:04 to ~19:45 (this agent's Release build could not start, a full Release build in a fresh worktree does not fit the 100 min cap). The fixes are render / LOD-list code (ProcessLodRenderLists also calls CStreaming::RequestModel), so soak.sh + gameplay_regress should be run by the gate on the landed tree. The final tree (Entity.h included) was rebuilt and both targets re-run: wave3_misc_oracle_test 46 functions PC24 0, wave3_render_oracle_test 43 functions PC24 0 (PC53 informational).

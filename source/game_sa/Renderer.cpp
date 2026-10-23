@@ -524,8 +524,10 @@ void CRenderer::ProcessLodRenderLists() {
         }
     }
 
-    bool bAllLodsRendered = false;
-    while (bAllLodsRendered) {
+    // exe 0x5537B0-0x553839: a do-while (the body runs at least once, the pass is repeated while an entry was cleared); the port's `while (false)` skipped the whole phase
+    bool bAllLodsRendered;
+    do {
+        bAllLodsRendered = false;
         for (auto renderListEntry = GetLodRenderListBase(); renderListEntry != ms_pLodRenderList; renderListEntry++) {
             CEntity* entity = renderListEntry->entity;
             if (entity) {
@@ -552,7 +554,7 @@ void CRenderer::ProcessLodRenderLists() {
                 }
             }
         }
-    }
+    } while (bAllLodsRendered);
     for (auto renderListEntry = GetLodRenderListBase(); renderListEntry != ms_pLodRenderList; renderListEntry++) {
         CEntity* entity = renderListEntry->entity;
         if (entity && entity->HasLodChildrenRendered()) {
@@ -659,9 +661,10 @@ void CRenderer::RenderEverythingBarRoads() {
 
         bool bInserted = false;
         if (entity->GetIsTypeVehicle() || (entity->GetIsTypePed() && CVisibilityPlugins::GetClumpAlpha(entity->GetRpClump()) != 255)) {
-            // todo: R* nice check | or we missed smth here?
+            // exe 0x553B47: a ped (type 3, clump alpha != 255) falls through to 0x553BA9 = the sorted-list insertion; only vehicles choose between the sorted and the underwater list
+            bool bInsertIntoSortedList = true;
             if (entity->GetIsTypeVehicle()) {
-                bool bInsertIntoSortedList = false;
+                bInsertIntoSortedList = false;
                 if (vehicle->IsBoat()) {
                     const auto& camMode = CCamera::GetActiveCamera().m_nMode;
                     const auto& lookDirection = TheCamera.GetLookDirection();
@@ -676,12 +679,12 @@ void CRenderer::RenderEverythingBarRoads() {
                 else if (!vehicle->physicalFlags.bTouchingWater) {
                     bInsertIntoSortedList = true;
                 }
-                const float fMagnitude = DistanceBetweenPoints(entity->GetPosition(), ms_vecCameraPosition);
-                if (bInsertIntoSortedList)
-                    bInserted = CVisibilityPlugins::InsertEntityIntoSortedList(entity, fMagnitude);
-                else
-                    bInserted = CVisibilityPlugins::InsertEntityIntoUnderwaterList(entity, fMagnitude);
             }
+            const float fMagnitude = DistanceBetweenPoints(entity->GetPosition(), ms_vecCameraPosition);
+            if (bInsertIntoSortedList)
+                bInserted = CVisibilityPlugins::InsertEntityIntoSortedList(entity, fMagnitude);
+            else
+                bInserted = CVisibilityPlugins::InsertEntityIntoUnderwaterList(entity, fMagnitude);
         }
         if (!bInserted)
             RenderOneNonRoad(entity);
@@ -883,7 +886,7 @@ int32 CRenderer::SetupEntityVisibility(CEntity* entity, float& outDistance) {
                 return RENDERER_CULLED;
             }
 
-            if (entity->GetWasPostponed()) {
+            if (entity->m_bDrawLast) { // exe 0x5543D6: `test ah, 0x40` on the flags dword = bit 14 = m_bDrawLast (not m_bWasPostponed, bit 6)
                 entity->m_bDistanceFade = false;
                 AddEntityToRenderList(entity, DistanceBetweenPoints(ms_vecCameraPosition, entity->GetPosition()));
                 return RENDERER_INVISIBLE;
@@ -927,7 +930,7 @@ int32 CRenderer::SetupEntityVisibility(CEntity* entity, float& outDistance) {
                     return RENDERER_CULLED;
                 }
 
-                if (!entity->GetWasPostponed())
+                if (!entity->m_bDrawLast) // exe 0x554523: `test ah, 0x40` = bit 14 = m_bDrawLast
                 {
                     return RENDERER_VISIBLE;
                 }
@@ -1198,9 +1201,11 @@ bool CRenderer::ShouldModelBeStreamed(CEntity* entity, const CVector& point, flo
     if (timeInfo && !CClock::GetIsTimeInRange(timeInfo->GetTimeOn(), timeInfo->GetTimeOff()))
         return false;
 
-    const float fMagnitude = DistanceBetweenPoints(point, entity->GetPosition());
+    // exe 0x554F10-0x554F5C: dist = sqrt((dz*dz + dy*dy) + dx*dx) at 24-bit precision (the sum order matters for the last bit)
+    const CVector delta = entity->GetPosition() - point;
+    const float fMagnitude = std::sqrt((delta.z * delta.z + delta.y * delta.y) + delta.x * delta.x);
     const float fDrawDistanceRadius = TheCamera.m_fLODDistMultiplier * modelInfo->m_fDrawDistance;
-    if (fMagnitude <= modelInfo->GetColModel()->GetBoundRadius() + farClip && fDrawDistanceRadius > fMagnitude)
+    if (!(fMagnitude > modelInfo->GetColModel()->GetBoundRadius() + farClip) && fDrawDistanceRadius > fMagnitude) // exe 0x554F6B: fcompp + `test ah, 0x41; jne` passes on <, == AND unordered (NaN), i.e. !(a > b)
         return true;
 
     return false;

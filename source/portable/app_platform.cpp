@@ -21,6 +21,23 @@
 
 namespace notsa::portable {
 
+RwImage* GrabScreenBlank(RwCamera* camera) {
+    Unsupported("psGrabScreen: no GL3 front-buffer read-back yet, returning a black image");
+    const auto* raster = camera ? RwCameraGetRaster(camera) : nullptr;
+    const int32 w = raster ? RwRasterGetWidth(raster) : RsGlobal.maximumWidth;
+    const int32 h = raster ? RwRasterGetHeight(raster) : RsGlobal.maximumHeight;
+    RwImage* image = RwImageCreate(w, h, 32);
+    if (image) {
+        RwImageAllocatePixels(image);
+        if (auto* px = RwImageGetPixels(image)) {
+            for (int32 i = 0; i < w * h; i++) { // opaque black (the memory from RwImageAllocatePixels is not guaranteed zeroed)
+                reinterpret_cast<RwRGBA*>(px)[i] = RwRGBA{ 0, 0, 0, 255 };
+            }
+        }
+    }
+    return image;
+}
+
 bool AcquireSingleInstance() {
     // Win32: a named event + FindWindow. Here: an advisory lock on a file in the temp directory, held until the process exits.
     static int s_Fd = -1;

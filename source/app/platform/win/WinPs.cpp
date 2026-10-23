@@ -232,7 +232,7 @@ RwBool psInitialize() {
         s_OSStatus.RAM.AvailVirtual = avail;
     }
     notsa::portable::Unsupported("video memory query (DirectDraw GetAvailableVidMem; unified memory on Apple Silicon)"); // W-A9
-    s_OSStatus.VRAM.Total = s_OSStatus.VRAM.Avail = 0;
+    s_OSStatus.VRAM.Total = s_OSStatus.VRAM.Avail = s_OSStatus.RAM.TotalPhys; // unified memory (VideoMode.cpp compares Avail against a size_t expression: 0 only worked through unsigned wrap)
 #else
     MEMORYSTATUS memstat{ sizeof(MEMORYSTATUS) };
     GlobalMemoryStatus(&memstat); // TODO: `GlobalMemoryStatusEx`
@@ -309,8 +309,8 @@ uint32 psTimer() {
 // 0x7452B0
 RwImage* psGrabScreen(RwCamera* camera) {
 #ifdef NOTSA_PORTABLE
-    notsa::portable::Unsupported("psGrabScreen (D3D9 front buffer read-back; no GL3 read-back yet)"); // W-A11
-    return nullptr;
+    // W-A11: D3D9 front buffer read-back has no GL3 equivalent yet; callers (JPegCompressScreen) dereference the result, so it is a black image, not nullptr
+    return notsa::portable::GrabScreenBlank(camera);
 #else
     auto* device = static_cast<IDirect3DDevice9*>(RwD3D9GetCurrentD3DDevice());
     assert(device);

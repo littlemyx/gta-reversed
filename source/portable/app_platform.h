@@ -21,6 +21,8 @@ void QueryPhysMemory(size_t& total, size_t& avail);
 std::pair<uint32_t, uint32_t> GetNativeResolution();
 //! Same contract as WinPs.cpp GetBestRefreshRate: lowest rate >= 60 Hz among the primary display's modes of w x h; 0 if a matching mode reports 0; UINT_MAX if none
 uint32_t GetBestRefreshRate(uint32_t w, uint32_t h);
+//! W-A11: no read-back of the presented frame yet. A valid, fully black RGBA image of the screen size (never nullptr: JPegCompressScreen dereferences the result), logged once.
+RwImage* GrabScreenBlank(RwCamera* camera);
 //! Installs the fatal-signal handler that dumps registers-less backtrace through the game logger (replaces SetUnhandledExceptionFilter)
 void InstallCrashHandler();
 }

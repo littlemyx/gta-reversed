@@ -1,0 +1,5 @@
+# ORACLE-W3-AUDLOAD: uncovered class A functions of game_sa/Audio/Loaders without a row, with the reason. Addresses without the 0x prefix.
+# addr	function	reason
+4DFB10	CAEMP3BankLoader::Constructor	the exe constructor writes only m_IsInitialised and the streaming channel; the port constructor also stores the NSDMI defaults (-1 in the 50 requests) the exe zeroes - all overwritten by Initialise() (rng::fill of the requests) before any read, flag cleared until then: no game-visible difference
+4E78E0	CAEMFDecoder::SetCursor	the exe seeks a QuickTime movie, the port a MediaFoundation source reader (deliberate replacement, QuickTime is not installable): the fields differ by design
+4E7940	CAEMFDecoder::GetStreamPlayTimeMs	exe: play time / QuickTime time scale (+0xC0); the port keeps the MediaFoundation play time in ms and returns it: replacement, not comparable

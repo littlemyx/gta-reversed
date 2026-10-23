@@ -67,7 +67,9 @@ void CReplay::InjectHooks() {
 // 0x45E220
 void CReplay::Init() {
     Mode = MODE_RECORD;
-    Playback = {};
+    Playback.m_nOffset = 0u; // field by field like 0x45E220 (assigning {} also zeroed the padding bytes)
+    Playback.m_pBase   = nullptr;
+    Playback.m_bSlot   = 0u;
     EmptyReplayBuffer();
     pReferences = nullptr;
     pPickups = nullptr;
@@ -138,10 +140,18 @@ void CReplay::StorePedAnimation(CPed* ped, CStoredAnimationState& state) {
     float blendValue{};
     CAnimBlendAssociation* second{};
     const auto main = RpAnimBlendClumpGetMainAssociation(ped->GetRpClump(), &second, &blendValue);
+    // 0x45B170 writes the first four fields of state[0] and leaves m_nGroupId2 alone (it is only used by the blend states 1 and 2)
+    const auto StoreMain = [&state](const AnimationState& made) {
+        auto& st       = state[0];
+        st.m_nAnimId   = made.m_nAnimId;
+        st.m_nTime     = made.m_nTime;
+        st.m_nSpeed    = made.m_nSpeed;
+        st.m_nGroupId1 = made.m_nGroupId1;
+    };
     if (main) {
-        state[0] = AnimationState::Make(main->m_AnimId, main->m_CurrentTime, main->m_Speed, static_cast<uint8>(main->m_AnimGroupId));
+        StoreMain(AnimationState::Make(main->m_AnimId, main->m_CurrentTime, main->m_Speed, static_cast<uint8>(main->m_AnimGroupId)));
     } else {
-        state[0] = AnimationState::Make(ANIM_ID_IDLE, 0.0f, 1.0f, 0);
+        StoreMain(AnimationState::Make(ANIM_ID_IDLE, 0.0f, 1.0f, 0));
     }
 
     if (second) {
@@ -168,24 +178,23 @@ void CReplay::StorePedUpdate(CPed* ped, uint8 index) {
         }
     }();
 
-    CStoredAnimationState animState{};
-    StorePedAnimation(ped, animState);
-
-    Record.Write<tReplayPedUpdateBlock>({
-        .poolRef                  = index,
-        .heading                  = (int8)(ped->m_fCurrentRotation * HEADING_COMPRESS_VALUE),
-        .vehicleIndex             = (uint8)vehicleIdx,
-        .animState                = animState,
-        .matrix                   = CCompressedMatrixNotAligned::Compress(ped->GetMatrix()),
-        .weaponModel              = (int16)ped->m_nWeaponModelId,
-        .animGroup                = (uint16)ped->m_nAnimGroup,
-        .contactSurfaceBrightness = (uint8)(ped->m_fContactSurfaceBrightness * 100.0f),
-        .flags = {
-            .isTalking            = (bool)(ped == FindPlayerPed() && gbFirstPersonRunThisFrame && ped->bIsTalking),
-            .stillOnValidPoly     = (bool)ped->bStillOnValidPoly,
-            .usesCollision        = ped->GetUsesCollision()
-        }
-    });
+    // 0x45C940 writes the packet in place, field by field, and never touches the padding (2 bytes before the matrix, 2 inside the compressed matrix, 2 at the end), the unused bits of the
+    // flags byte and state[0].m_nGroupId2: whatever the buffer held there stays. A local packet copied in with Record.Write overwrote them (zeros).
+    auto* const block = reinterpret_cast<tReplayPedUpdateBlock*>(reinterpret_cast<uint8*>(Record.m_pBase) + Record.m_nOffset);
+    static_assert(sizeof(tReplayPedUpdateBlock) == 52);
+    block->type                     = REPLAY_PACKET_PED_UPDATE;
+    block->poolRef                  = index;
+    block->heading                  = (int8)(ped->m_fCurrentRotation * HEADING_COMPRESS_VALUE);
+    block->matrix.CompressFromFullMatrix(ped->GetMatrix());
+    block->weaponModel              = (int16)ped->m_nWeaponModelId;
+    block->contactSurfaceBrightness = (uint8)(ped->m_fContactSurfaceBrightness * 100.0f);
+    block->flags.stillOnValidPoly   = (bool)ped->bStillOnValidPoly;
+    block->flags.usesCollision      = ped->GetUsesCollision();
+    block->flags.isTalking          = (bool)(ped == FindPlayerPed() && gbFirstPersonRunThisFrame && ped->bIsTalking);
+    block->vehicleIndex             = (uint8)vehicleIdx;
+    block->animGroup                = (uint16)ped->m_nAnimGroup;
+    StorePedAnimation(ped, block->animState);
+    Record.m_nOffset += sizeof(tReplayPedUpdateBlock);
 }
 
 // 0x45B4D0
@@ -299,7 +308,9 @@ void CReplay::EmptyReplayBuffer() {
     rng::fill(BufferStatus, REPLAYBUFFER_NOT_AVAILABLE);
     BufferStatus[0] = REPLAYBUFFER_IN_USE;
     Buffers[0].Write<tReplayEndBlock>(0u);
-    Record = CAddressInReplayBuffer(Buffers[0]);
+    Record.m_nOffset = 0u; // field by field like 0x45EC90: assigning a temporary also copied its 3 padding bytes (stack garbage) into the image
+    Record.m_pBase   = &Buffers[0];
+    Record.m_bSlot   = 0u;
     MarkEverythingAsNew();
 }
 
@@ -1024,8 +1035,8 @@ void CReplay::RestoreClothesDesc(CPedClothesDesc& desc, tReplayClothesBlock& pac
     assert(packet.type == REPLAY_PACKET_CLOTHES);
     rng::copy(packet.modelKeys, desc.m_anModelKeys.begin());
     rng::copy(packet.textureKeys, desc.m_anTextureKeys.begin());
-    desc.m_fFatStat = (float)packet.fatStat;
-    desc.m_fMuscleStat = (float)packet.muscleStat;
+    desc.m_fFatStat = (float)(int16)packet.fatStat; // 0x45C7D0 sign-extends (movsx)
+    desc.m_fMuscleStat = (float)(int16)packet.muscleStat;
 }
 
 // 0x45CEA0
@@ -1389,7 +1400,7 @@ constexpr uint32 CReplay::FindSizeOfPacket(eReplayPacket type) {
 
 // 0x45DE40
 bool CReplay::IsThisVehicleUsedInRecording(int32 index) {
-    for (auto& buffer : Buffers) {
+    for (auto& buffer : GetAllActiveBuffers()) {
         for (auto& packet : buffer) {
             switch (packet.type) {
             case REPLAY_PACKET_VEHICLE:
@@ -1417,7 +1428,7 @@ bool CReplay::IsThisVehicleUsedInRecording(int32 index) {
 
 // 0x45DDE0
 bool CReplay::IsThisPedUsedInRecording(int32 index) {
-    for (auto& buffer : Buffers) {
+    for (auto& buffer : GetAllActiveBuffers()) {
         const auto packet = rng::find_if(buffer, [index](auto&& p) {
             return p.type == REPLAY_PACKET_PED_HEADER && p.As<tReplayPedHeaderBlock>()->poolRef == index;
         });
@@ -1431,6 +1442,7 @@ bool CReplay::IsThisPedUsedInRecording(int32 index) {
 
 // 0x45D6C0
 void CReplay::FindFirstFocusCoordinate(CVector& outPos) {
+    outPos = CVector{}; // 0x45D6C0 clears the result first
     for (auto& buffer : GetAllActiveBuffers()) {
         const auto packet = rng::find_if(buffer, [](auto&& p) { return p.type == REPLAY_PACKET_GENERAL; });
         if (packet != buffer.end()) {
@@ -1444,9 +1456,8 @@ void CReplay::FindFirstFocusCoordinate(CVector& outPos) {
 uint32 CReplay::NumberFramesAvailableToPlay() {
     auto frames = 0u;
     for (auto& buffer : GetAllActiveBuffers()) {
-        for (auto it = buffer.begin(); it != buffer.end();) {
-            it = std::find_if(it, buffer.end(), [](auto&& p) { return p.type == REPLAY_PACKET_END_OF_FRAME; });
-            if (it != buffer.end())
+        for (auto& packet : buffer) { // 0x45D670: one count per end-of-frame packet
+            if (packet.type == REPLAY_PACKET_END_OF_FRAME)
                 frames++;
         }
     }

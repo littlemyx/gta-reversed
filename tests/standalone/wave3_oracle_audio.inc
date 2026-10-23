@@ -199,8 +199,16 @@ static void InstallStubs() {
 #ifdef W3_AUDIOHW
 #include "wave3_oracle_audiohw.inc"
 #endif
+#ifdef W3_AUDLOAD
+#include "wave3_oracle_audload.inc"
+#endif
 
 static void TestW3AudioAll() {
+#ifdef W3_AUDLOAD
+    rf::Init(); g_tp.Init(); g_ep.Init(); g_onFault = &w2::OnFault;
+    TestW3AudLoad();
+    return;
+#endif
 #ifdef W3_AUDIOHW
     rf::Init(); g_tp.Init(); g_ep.Init(); g_onFault = &w2::OnFault;
     TestW3AudioHw();

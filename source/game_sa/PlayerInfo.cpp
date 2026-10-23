@@ -1,6 +1,7 @@
 #include "StdInc.h"
 
 #include "PlayerInfo.h"
+#include "Replay.h"
 #include "FireManager.h"
 #include "MenuSystem.h"
 #include "Hud.h"
@@ -1466,10 +1467,35 @@ bool CPlayerInfo::Save() {
     return true;
 }
 
+//! The address the exe has for a CPlayerInfo object: 0x45C4B0 (CPlayerPedData::operator=) builds the PlayerData flags word from the caller's `esi` register, which 0x45DEF0 loaded with `this`.
+//! The game's own instances are mapped to their exe addresses, so that the garbage bits are the exe's and not whatever address the object has in this build.
+static uint32 ExeAddressOf(const CPlayerInfo* p) {
+    if (p == &CReplay::PlayerInfo) {
+        return 0xA430B0;
+    }
+    for (auto i = 0u; i < std::size(CWorld::Players); i++) {
+        if (p == &CWorld::Players[i]) {
+            return 0xB7CD98 + i * sizeof(CPlayerInfo);
+        }
+    }
+    return (uint32)(uintptr_t)p;
+}
+
+//! 0x45C4B0: a field-wise copy of the PlayerData that leaves the 4 padding bytes (+0x22, +0x23, +0x87, +0x8F) alone. The flags word at +0x34: bit 9 stays as it is in the destination, bits 10..12 come from the
+//! source and every other bit (0..8, 13..31) is the stale `esi` (the exe's compiled bitfield assignments never load it)
+static void CopyPlayerPedData(CPlayerPedData& dst, const CPlayerPedData& src, uint32 staleEsi) {
+    constexpr size_t kFlags = 0x34;
+    const auto copy = [&](size_t from, size_t to) { std::memcpy(reinterpret_cast<uint8*>(&dst) + from, reinterpret_cast<const uint8*>(&src) + from, to - from); };
+    const uint32 oldFlags = dst.m_nPlayerFlags;
+    copy(0x00, 0x22); copy(0x24, kFlags); copy(0x38, 0x87); copy(0x88, 0x8F); copy(0x90, sizeof(CPlayerPedData));
+    constexpr uint32 kKeepDst = 0x200, kFromSrc = 0x400 | 0x800 | 0x1000;
+    dst.m_nPlayerFlags = (staleEsi & ~(kKeepDst | kFromSrc)) | (oldFlags & kKeepDst) | (src.m_nPlayerFlags & kFromSrc);
+}
+
 // 0x45DEF0
 CPlayerInfo& CPlayerInfo::operator=(const CPlayerInfo& rhs) {
     m_pPed                             = rhs.m_pPed;
-    m_PlayerData                       = rhs.m_PlayerData;
+    CopyPlayerPedData(m_PlayerData, rhs.m_PlayerData, ExeAddressOf(this));
     m_pRemoteVehicle                   = rhs.m_pRemoteVehicle;
     m_pSpecCar                         = rhs.m_pSpecCar;
     m_nMoney                           = rhs.m_nMoney;
@@ -1528,6 +1554,6 @@ CPlayerInfo& CPlayerInfo::operator=(const CPlayerInfo& rhs) {
     m_pSkinTexture                     = rhs.m_pSkinTexture;
     m_bParachuteReferenced             = rhs.m_bParachuteReferenced;
     m_nRequireParachuteTimer           = rhs.m_nRequireParachuteTimer;
-    strcpy_s(m_szSkinName, rhs.m_szSkinName);
+    std::memcpy(m_szSkinName, rhs.m_szSkinName, sizeof(m_szSkinName)); // the exe copies the 32 bytes (a loop of 0x20), not up to the terminator
     return *this;
 }

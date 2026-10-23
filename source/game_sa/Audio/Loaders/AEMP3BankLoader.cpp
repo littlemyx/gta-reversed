@@ -39,10 +39,15 @@ bool CAEMP3BankLoader::Initialise() {
 
 // 0x4DFDE0, inlined
 uint8* CAEMP3BankLoader::GetBankSlotBuffer(eSoundBankSlot bankSlot, uint32& outLength) {
-    if (!m_IsInitialised || bankSlot >= m_BankSlotCnt) {
+    if (!m_IsInitialised) {
+        return nullptr; // outLength untouched
+    }
+    // The exe compares the zero-extended slot with the sign-extended count and writes 0 to outLength before returning null
+    if ((int32)(uint16)bankSlot >= (int32)(int16)m_BankSlotCnt) {
+        outLength = 0;
         return nullptr;
     }
-    const auto& slot = GetBankSlot(bankSlot);
+    const auto& slot = m_BankSlots[(uint16)bankSlot];
     outLength = slot.NumBytes;
     return &m_Buffer[slot.OffsetBytes];
 }
@@ -56,7 +61,8 @@ float CAEMP3BankLoader::GetSoundHeadroom(eSoundID soundId, eSoundBankSlot bankSl
 
 // 0x4E0220
 bool CAEMP3BankLoader::IsSoundBankLoaded(eSoundBank bankId, eSoundBankSlot bankSlot) {
-    return m_IsInitialised && GetBankSlot(bankSlot).Bank == bankId;
+    // 0x4E0220: the bank id is zero-extended, the id in the slot sign-extended: SND_BANK_UNK (-1) is never "loaded"
+    return m_IsInitialised && (int32)GetBankSlot(bankSlot).Bank == (int32)(uint16)bankId;
 }
 
 // 0x4E0250
@@ -76,22 +82,18 @@ uint8* CAEMP3BankLoader::GetSoundBuffer(eSoundID soundId, eSoundBankSlot bankSlo
         return nullptr;
     }
 
-    if (slot.IsSingleSound() ? m_BankSlotSound[bankSlot] != soundId : soundId >= slot.NumSounds) {
+    // 0x4E0280: the sound id is zero-extended (a negative id never matches), the slot is not range checked, the ids index the raw arrays
+    const auto sid = (int32)(uint16)soundId;
+    if (slot.IsSingleSound() ? (int32)m_BankSlotSound[bankSlot] != sid : (int32)slot.NumSounds <= sid) {
         return nullptr;
     }
 
-    uint32 bankSlotBufferSize{};
-    auto*  bankSlotBuffer = GetBankSlotBuffer(bankSlot, bankSlotBufferSize);
-
-    outSize = soundId < (eSoundID)(slot.Sounds.size()) && slot.IsSingleSound() || soundId < slot.NumSounds - 1
-        ? slot.Sounds[(soundId + 1) % slot.Sounds.size()].BankOffsetBytes - slot.Sounds[soundId].BankOffsetBytes
-        : GetBankLookup(slot.Bank).NumBytes - slot.Sounds[soundId].BankOffsetBytes;
-    outSampleRate = slot.Sounds[soundId].SampleFrequency;
-
-    const auto offset = slot.Sounds[soundId].BankOffsetBytes;
-    assert(offset < bankSlotBufferSize && "Out-of-bounds offset");
-    assert(offset + outSize < bankSlotBufferSize && "Out-of-bounds size");
-    return &bankSlotBuffer[offset];
+    const auto* const sounds = slot.Sounds.data();
+    outSize = sid < AE_BANK_MAX_NUM_SOUNDS && slot.IsSingleSound() || sid < (int32)slot.NumSounds - 1
+        ? sounds[(sid + 1) % AE_BANK_MAX_NUM_SOUNDS].BankOffsetBytes - sounds[sid].BankOffsetBytes
+        : m_BankLkups[slot.Bank].NumBytes - sounds[sid].BankOffsetBytes;
+    outSampleRate = sounds[sid].SampleFrequency;
+    return m_Buffer + slot.OffsetBytes + sounds[sid].BankOffsetBytes;
 }
 
 // 0x4E0380
@@ -108,9 +110,10 @@ int32 CAEMP3BankLoader::GetLoopOffset(eSoundID soundId, eSoundBankSlot bankSlot)
 
 // 0x4E03B0
 bool CAEMP3BankLoader::IsSoundLoaded(eSoundBank bankId, eSoundID soundId, eSoundBankSlot bankSlot) const {
+    // 0x4E03B0: bank and sound ids are zero-extended, the values in the slot sign-extended (-1 never matches)
     return m_IsInitialised
-        && GetBankSlot(bankSlot).Bank == bankId
-        && m_BankSlotSound[bankSlot] == soundId;
+        && (int32)GetBankSlot(bankSlot).Bank == (int32)(uint16)bankId
+        && (int32)m_BankSlotSound[bankSlot] == (int32)(uint16)soundId;
 }
 
 // 0x4E0400
@@ -163,9 +166,9 @@ void CAEMP3BankLoader::AddRequest(eSoundBank bank, eSoundBankSlot slot, std::opt
         return;
     }
 
-    // Same request already exists?
+    // Same request already exists? (0x4E06C0 / 0x4E0803: LoadSoundBank compares bank and slot only, LoadSound also the sound)
     for (auto& req : m_Requests) {
-        if (req.Bank == bank && req.Slot == slot && req.SoundID == sound.value_or(-1)) {
+        if (req.Bank == bank && req.Slot == slot && (!sound.has_value() || req.SoundID == *sound)) {
             return;
         }
     }
@@ -191,6 +194,10 @@ void CAEMP3BankLoader::AddRequest(eSoundBank bank, eSoundBankSlot slot, std::opt
 
 // 0x4E0670
 void CAEMP3BankLoader::LoadSoundBank(eSoundBank bankId, eSoundBankSlot bankSlot) {
+    // The exe range checks bank and slot before it looks at the slot (a negative slot is never indexed)
+    if (!m_IsInitialised || (int32)(uint16)bankId > (int32)(int16)m_BankLkupCnt || bankSlot < 0 || bankSlot > m_BankSlotCnt) {
+        return;
+    }
     // Already loaded?
     if (IsSoundBankLoaded(bankId, bankSlot)) {
         return;
@@ -200,14 +207,21 @@ void CAEMP3BankLoader::LoadSoundBank(eSoundBank bankId, eSoundBankSlot bankSlot)
 
 // 0x4E07A0
 void CAEMP3BankLoader::LoadSound(eSoundBank bankId, eSoundID soundId, eSoundBankSlot bankSlot) {
+    if (!m_IsInitialised) {
+        return;
+    }
+    // Exe order: sound id, bank and slot range checks, then the loaded test
+    if ((uint16)soundId >= AE_BANK_MAX_NUM_SOUNDS) {
+        NOTSA_LOG_WARN("Trying to load invalid sound ({})", (int32)(soundId));
+        return;
+    }
+    if ((int32)(uint16)bankId > (int32)(int16)m_BankLkupCnt || bankSlot < 0 || bankSlot > m_BankSlotCnt) {
+        return;
+    }
     if (IsSoundLoaded(bankId, soundId, bankSlot)) {
         return;
     }
-    if (soundId >= 0 && soundId < AE_BANK_MAX_NUM_SOUNDS) {
-        AddRequest((eSoundBank)(bankId), (eSoundBankSlot)(bankSlot), (eSoundID)(soundId));
-    } else {
-        NOTSA_LOG_WARN("Trying to load invalid sound ({})", (int32)(soundId));
-    }
+    AddRequest((eSoundBank)(bankId), (eSoundBankSlot)(bankSlot), (eSoundID)(soundId));
 }
 
 // 0x4DFE30

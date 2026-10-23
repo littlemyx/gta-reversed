@@ -263,6 +263,8 @@ static void TestW3MiscTags() {
     MEND(3000)
 }
 
+#include "wave3_oracle_misc2.inc"
+
 static void TestW3MiscAll() {
     using namespace w3m;
     (void)spdlog::default_logger_raw();
@@ -270,5 +272,7 @@ static void TestW3MiscAll() {
     InstallStubs();
     TestW3MiscLocalisation();
     TestW3MiscTags();
+    TestW3MiscPlatform();
+    TestW3MiscCustomBuilding();
     for (int m = 0; m < 4; ++m) StaticRef<uint32_t>(0xA9B0C8 + 4 * m) = 0;   // the fake model infos must not outlive the rows (static destructors at exit)
 }

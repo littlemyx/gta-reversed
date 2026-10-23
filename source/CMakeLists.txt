@@ -1596,6 +1596,7 @@ if (${RE_PROJECT}_RW_LIBRW)
         game_sa/PostEffects.cpp
         game_sa/GrassRenderer.cpp
         game_sa/Plugins/TwoDEffectPlugin/2dEffect.cpp
+        game_sa/Clock.cpp
         game_sa/PPTriPlantBuffer.cpp
         game_sa/ModelIndices.cpp
         app/app_light.cpp
@@ -1611,7 +1612,7 @@ if (${RE_PROJECT}_RW_LIBRW)
     get_target_property(_w3render_sources wave3_render_oracle_test SOURCES)
     list(REMOVE_ITEM _w3render_sources "${STANDALONE_PAD_OBJ}")
     set_property(TARGET wave3_render_oracle_test PROPERTY SOURCES "${STANDALONE_PAD_OBJ}" ${_w3render_sources})
-    target_link_options(wave3_render_oracle_test PRIVATE "$<$<CXX_COMPILER_ID:MSVC>:/BASE:0x400000;/DYNAMICBASE:NO;/FIXED;/MERGE:_TEXT=.text;/INCREMENTAL:NO;/SUBSYSTEM:CONSOLE;/FORCE:UNRESOLVED;/MAP>")
+    target_link_options(wave3_render_oracle_test PRIVATE "$<$<CXX_COMPILER_ID:MSVC>:/BASE:0x400000;/DYNAMICBASE:NO;/FIXED;/MERGE:_TEXT=.text;/INCREMENTAL:NO;/SUBSYSTEM:CONSOLE;/FORCE:UNRESOLVED;/FORCE:MULTIPLE;/MAP>")
     set_target_properties(wave3_render_oracle_test PROPERTIES COMPILE_WARNING_AS_ERROR OFF CXX_SCAN_FOR_MODULES OFF)
     # ORACLE-W3-CARENV: exe-oracle rows of game_sa/Pipelines/CustomCarEnvMap (car paint env-map / specular plugin data, A + B functions) on fixture blocks; rows: tests/standalone/wave3_oracle_carenv.inc
     add_executable(wave3_carenv_oracle_test EXCLUDE_FROM_ALL
@@ -1666,6 +1667,9 @@ if (${RE_PROJECT}_RW_LIBRW)
         ${W2_BASE_SOURCES}
         game_sa/Localisation.cpp
         game_sa/TagManager.cpp
+        app/platform/platform.cpp
+        app/platform/win/WinPs.cpp
+        game_sa/Pipelines/CustomBuilding/CustomBuildingRenderer.cpp
         game_sa/Core/Rect.cpp
         game_sa/VisibilityPlugins.cpp
         game_sa/ModelIndices.cpp

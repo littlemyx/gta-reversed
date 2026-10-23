@@ -2076,7 +2076,7 @@ void CVehicle::UpdatePassengerList() {
 CPed* CVehicle::PickRandomPassenger() {
     // TODO: Add a function for this to random.hpp
 
-    const auto rnd = CGeneral::GetRandomNumberInRange(0u, std::size(m_apPassengers));
+    const auto rnd = CGeneral::GetRandomNumberInRange<size_t>(0u, std::size(m_apPassengers));
     for (auto i = 0u; i < std::size(m_apPassengers); i++) {
         if (const auto psgr = m_apPassengers[(rnd + i) % std::size(m_apPassengers)]) {
             return psgr;

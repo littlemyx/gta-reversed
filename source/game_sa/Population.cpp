@@ -1541,7 +1541,7 @@ eModelID CPopulation::PickGangCar(eGangID forGang) {
 // 0x6144B0
 eModelID CPopulation::PickRiotRoadBlockCar() {
     // First try gang cars: start at a random gang and walk all of them (wrapping around)
-    const auto baseIdx = CGeneral::GetRandomNumberInRange(0u, (size_t)TOTAL_GANGS);
+    const auto baseIdx = CGeneral::GetRandomNumberInRange<size_t>(0u, (size_t)TOTAL_GANGS);
     for (size_t i{}; i < TOTAL_GANGS; i++) {
         const auto model = PickGangCar((eGangID)((baseIdx + i) % TOTAL_GANGS)); // 0x6144E0: idiv by 10
         if (model != MODEL_INVALID) {

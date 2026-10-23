@@ -699,7 +699,7 @@ void CAEAudioHardware::GetBeatInfo(tBeatInfo* beatInfo) {
     }
 
     // 0x4D9346 and 0x4D9088 combined - Copy beats at the beginning of the time window
-    for (auto k = 0u; k < std::min(10u, i); k++) {
+    for (auto k = 0u; k < std::min<size_t>(10u, i); k++) {
         auto& beat    = bi->BeatWindow[10 - i];
         beat          = trkInfo->m_aBeats[i - k - 1];
         beat.m_nTime -= trkPlayTime;
@@ -712,7 +712,7 @@ void CAEAudioHardware::GetBeatInfo(tBeatInfo* beatInfo) {
         }
 
         // 0x4D91A9
-        for (auto k = 0u; k < std::min(std::size(trkInfo->m_aBeats) - i, 10u); k++) { // Copy beats towards the end
+        for (auto k = 0u; k < std::min<size_t>(std::size(trkInfo->m_aBeats) - i, 10u); k++) { // Copy beats towards the end
             auto& beat = bi->BeatWindow[10 + i];
             if (beat.m_nKey) {
                 beat         =  trkInfo->m_aBeats[i + k];

@@ -308,7 +308,7 @@ public:
 #endif
         const auto idx = GetIndex(obj);
         m_SlotState[idx].IsEmpty = true;
-        m_LastFreeSlot          = std::min(m_LastFreeSlot, idx);
+        m_LastFreeSlot          = std::min<int32>(m_LastFreeSlot, idx);
         DoFillDebug(DEADLAND_FILL, (StorageType*)(obj)); // the exe only sets the 0x80 flag (0x5E4784) and lowers the first-free index
     }
 

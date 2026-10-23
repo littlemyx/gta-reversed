@@ -915,8 +915,8 @@ int16 CAEPedSpeechAudioEntity::GetSoundAndBankIDs(eGlobalSpeechContext gCtx, eSp
     };
 
     int16      maxPhraseIMemdx = -1;
-    const auto rndOffset    = CAEAudioUtility::GetRandomNumberInRange(0u, numSounds);
-    for (size_t i = 0; i < std::min(20u, numSounds); i++) { // NOTE: Here you can tune the maximum tries (Default: 20)
+    const auto rndOffset    = CAEAudioUtility::GetRandomNumberInRange<size_t>(0u, numSounds);
+    for (size_t i = 0; i < std::min<size_t>(20u, numSounds); i++) { // NOTE: Here you can tune the maximum tries (Default: 20)
         const auto soundIDCurr  = ctx->FirstSoundID + (int16)((rndOffset + i) % numSounds);
         const auto phraseMemIdx = GetPhraseIndexInMemory(soundIDCurr);
 

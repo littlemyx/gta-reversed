@@ -2020,9 +2020,9 @@ bool CAEVehicleAudioEntity::GetHornState(tVehicleParams& vp) const noexcept {
     if (vp.Vehicle->GetStatus() == STATUS_PLAYER) {
         return true;
     }
-    vp.Vehicle->m_HornCounter = std::min(HORN_PATTERN_SIZE, vp.Vehicle->m_HornCounter);
+    vp.Vehicle->m_HornCounter = std::min<size_t>(HORN_PATTERN_SIZE, vp.Vehicle->m_HornCounter);
     if (vp.Vehicle->m_HornCounter == HORN_PATTERN_SIZE) {
-        vp.Vehicle->m_HornPattern = (int8)(CGeneral::GetRandomNumberInRange(0u, HORN_NUM_PATTERNS));
+        vp.Vehicle->m_HornPattern = (int8)(CGeneral::GetRandomNumberInRange<size_t>(0u, HORN_NUM_PATTERNS));
     }
     return HornPattern[vp.Vehicle->m_HornPattern][HORN_PATTERN_SIZE - vp.Vehicle->m_HornCounter];
 }

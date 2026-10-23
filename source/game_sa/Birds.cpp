@@ -156,7 +156,7 @@ void CBirds::Update() {
         if (TheCamera.m_fDistanceToWater > 30.0F) {
             if (CWeather::WeatherRegion == eWeatherRegion::WEATHER_REGION_DESERT) {
                 biome = eBirdsBiome::BIOME_DESERT;
-                iNumBirdsToCreate = std::min(iNumBirdsToCreate, uiNumberOfBirds);
+                iNumBirdsToCreate = std::min<size_t>(iNumBirdsToCreate, uiNumberOfBirds);
             }
             else {
                 biome = eBirdsBiome::BIOME_NORMAL;

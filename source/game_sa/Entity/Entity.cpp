@@ -989,7 +989,7 @@ C2dEffect* CEntity::GetRandom2dEffect(int32 effectType, bool mustBeFree) {
         }
     }
 
-    return numCandidates ? candidates[CGeneral::GetRandomNumberInRange(0u, numCandidates)] : nullptr;
+    return numCandidates ? candidates[CGeneral::GetRandomNumberInRange<size_t>(0u, numCandidates)] : nullptr;
 }
 
 // Transforms a point from the entity's local (object) space to world space

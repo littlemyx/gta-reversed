@@ -1304,7 +1304,7 @@ eSprayPaintState CWorld::SprayPaintWorld(CVector& posn, CVector& outDir, float r
         uint8 newAlpha{ 0 };
         uint8 currAlpha = CTagManager::GetAlpha(*entity);
         if (processTagAlphaState) {
-            newAlpha = (uint8)std::min((size_t)(currAlpha + SPRAY_ALPHA_CHANGE), 255u);
+            newAlpha = (uint8)std::min<size_t>((size_t)(currAlpha + SPRAY_ALPHA_CHANGE), 255u);
         }
 
         if (currAlpha != 255 && newAlpha == 255) {

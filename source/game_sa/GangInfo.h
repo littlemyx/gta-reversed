@@ -22,7 +22,7 @@ public:
         return CGeneral::RandomChoice(
             m_nGangWeapons
             | rng::views::take(
-                skipUnarmed ? std::max(GetNumOfWeaponChoices(), 1u) : m_nGangWeapons.size()
+                skipUnarmed ? std::max<size_t>(GetNumOfWeaponChoices(), 1u) : m_nGangWeapons.size()
             )
         );
     }

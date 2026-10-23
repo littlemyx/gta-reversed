@@ -2512,12 +2512,24 @@ void CRadar::DrawBlips() {
 bool CRadar::Load() {
     Initialise();
 
+#ifdef NOTSA_PORTABLE
+    // P-2f: the file holds tRadarTrace_File (0x28, enex pool index+1 in a plain u32); the in-memory trace (pointer in the union, 0x30 on LP64) is never read from the stream.
+    for (auto& trace : ms_RadarTrace) {
+        tRadarTrace_File rec{};
+        CGenericGameStorage::LoadDataFromWorkBuffer(rec);
+        notsa::FileRecord<tRadarTrace>::FromFile(trace, rec);
+        if (rec.entryExitPoolInd) {
+            trace.m_pEntryExit = CEntryExitManager::GetInSlot(rec.entryExitPoolInd - 1);
+        }
+    }
+#else
     for (auto& trace : ms_RadarTrace) {
         CGenericGameStorage::LoadDataFromWorkBuffer(trace);
         if (trace.m_EntryExitPoolInd) {
             trace.m_pEntryExit = CEntryExitManager::GetInSlot(trace.m_EntryExitPoolInd - 1);
         }
     }
+#endif
 
     return true;
 }
@@ -2527,6 +2539,29 @@ bool CRadar::Load() {
  * @addr 0x5D5860
  */
 bool CRadar::Save() {
+#ifdef NOTSA_PORTABLE
+    // P-2f: no in-place union patching: serialise a copy through tRadarTrace_File. Differences from the exe: a trace whose enex is not a live pool slot writes index 0
+    // (the exe wrote the raw pointer's low 32 bits there); m_bTrackingBlip is cleared in the record only (the live trace is never touched).
+    for (auto& trace : ms_RadarTrace) {
+        uint32 enexInd = 0;
+        if (trace.m_pEntryExit) {
+            const auto index = CEntryExitManager::GetPool()->GetIndex(trace.m_pEntryExit);
+            if (CEntryExitManager::GetPool()->IsIndexInBounds(index) && !CEntryExitManager::GetPool()->IsFreeSlotAtIndex(index)) {
+                enexInd = (uint32)(index + 1);
+            }
+        }
+
+        auto copy = trace;
+        if (copy.m_nBlipType != BLIP_COORD && copy.m_nBlipType != BLIP_CONTACT_POINT) {
+            copy.m_bTrackingBlip = false;
+        }
+
+        const auto rec = notsa::FileRecord<tRadarTrace>::ToFile(copy, enexInd);
+        CGenericGameStorage::SaveDataToWorkBuffer(rec);
+    }
+
+    return true;
+#else
     for (auto& trace : ms_RadarTrace) {
         CEntryExit* savedEnex = nullptr;
         if (trace.m_pEntryExit) {
@@ -2556,7 +2591,7 @@ bool CRadar::Save() {
     }
 
     return true;
-
+#endif
 }
 
 /*!

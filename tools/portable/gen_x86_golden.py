@@ -21,6 +21,13 @@ RECORDS = {
                             ('moneyPerDay', 0x16, 'H', 1), ('model', 0x18, 'h', 1), ('ref', 0x1A, 'h', 1), ('type', 0x1C, 'B', 1), ('flags', 0x1D, 'B', 1)],
                      {'CPickup': {'m_fRevenueValue': 'rev', 'm_pObject': 'obj', 'm_nAmmo': 'ammo', 'm_nRegenerationTime': 'regen', 'm_vecPos': 'pos',
                                   'm_nMoneyPerDay': 'moneyPerDay', 'm_nModelIndex': 'model', 'm_nReferenceIndex': 'ref', 'm_nPickupType': 'type', 'm_nFlags': 'flags'}}),
+    # P-2f: tRadarTrace 0x28 (Radar.cpp CRadar::Save/Load, array of 175): colour u32, handle, pos[3], counter u16 @0x14, radius @0x18, blipSize u16 @0x1C, enex pool index+1 (the union slot) @0x20,
+    # sprite i8 @0x24, bit-field bytes flags0 @0x25 (bright b0, tracking b1, shortRange b2, friendly b3, remain b4, fade b5, coordAppearance b6-7), flags1 @0x26 (display b0-1, type b2-5, appearance b6-7)
+    'tRadarTrace_File': (0x28, [('colour', 0x00, 'I', 1), ('handle', 0x04, 'I', 1), ('pos', 0x08, 'f', 3), ('counter', 0x14, 'H', 1), ('radius', 0x18, 'f', 1), ('blipSize', 0x1C, 'H', 1),
+                                ('enex', 0x20, 'I', 1), ('sprite', 0x24, 'b', 1), ('flags0', 0x25, 'B', 1), ('flags1', 0x26, 'B', 1)],
+                         {'tRadarTrace': {'m_nColour': 'colour', 'm_nEntityHandle': 'handle', 'm_vPosition': 'pos', 'm_nCounter': 'counter', 'm_fSphereRadius': 'radius', 'm_nBlipSize': 'blipSize',
+                                          'm_nBlipSprite': 'sprite', 'm_bBright': 'flags0', 'm_bTrackingBlip': 'flags0', 'm_bShortRange': 'flags0', 'm_bFriendly': 'flags0', 'm_bBlipRemain': 'flags0',
+                                          'm_bBlipFade': 'flags0', 'm_nCoordBlipAppearance': 'flags0', 'm_nBlipDisplayFlag': 'flags1', 'm_nBlipType': 'flags1', 'm_nAppearance': 'flags1'}}),
     # P-2i: BreakInfo_t 0x34 (DFF geometry extension chunk 0xFD, BreakablePlugin.cpp): 9 pointer slots (@8,0xC,0x10,0x18,0x1C,0x24,0x28,0x2C,0x30; all garbage in the file, re-pointed by the reader)
     'BreakInfo_File': (0x34, [('posRule', 0x00, 'I', 1), ('numVerts', 0x04, 'H', 1), ('pVertexPos', 0x08, 'I', 1), ('pTexCoords', 0x0C, 'I', 1), ('pVertexColors', 0x10, 'I', 1),
                               ('numTris', 0x14, 'H', 1), ('pTriangles', 0x18, 'I', 1), ('pTriMaterials', 0x1C, 'I', 1), ('numMats', 0x20, 'H', 1), ('pTextures', 0x24, 'I', 1),
@@ -62,6 +69,17 @@ CASES = [
     ('basic', 'CPickup_File', dict(rev=1.5, obj=1, ammo=77, regen=1000, pos=(100, -200, 300), moneyPerDay=5, model=1212, ref=3, type=2, flags=0x5D)),
     ('noobj', 'CPickup_File', dict(rev=0.0, obj=0, ammo=5, regen=0, pos=(-32768, 32767, 0), moneyPerDay=65535, model=-1, ref=-2, type=3, flags=0x0A)),   # type ONCE, no object: bVisible stays as on file
     ('none_obj', 'CPickup_File', dict(rev=0.0, obj=1, ammo=0, regen=0, pos=(0, 0, 0), moneyPerDay=0, model=0, ref=0, type=0, flags=0x08)),   # PICKUP_NONE with a stale object: loader leaves it alone
+    # P-2f: 'basic' = a mission blip bound to enex slot 6 (pool index+1 = 7): colour 8, sprite 27, flags0 0x0D (bright|shortRange|friendly), flags1 0x4A (display 2, type 2 -> bits 2-5 = 0x08, appearance 1 -> 0x40)
+    ('basic', 'tRadarTrace_File', dict(colour=8, handle=0x00A1B2C3, pos=(-2500.5, 1000.25, 12.125), counter=300, radius=2.5, blipSize=3, enex=7, sprite=27, flags0=0x0D, flags1=0x4A)),
+    # every bit-field set once (flags bytes only; the rest zero) : the test sets exactly this member in a zeroed trace and compares
+    ('b_bright', 'tRadarTrace_File', dict(flags0=0x01)), ('b_tracking', 'tRadarTrace_File', dict(flags0=0x02)), ('b_short', 'tRadarTrace_File', dict(flags0=0x04)),
+    ('b_friendly', 'tRadarTrace_File', dict(flags0=0x08)), ('b_remain', 'tRadarTrace_File', dict(flags0=0x10)), ('b_fade', 'tRadarTrace_File', dict(flags0=0x20)),
+    ('b_coord1', 'tRadarTrace_File', dict(flags0=0x40)), ('b_coord2', 'tRadarTrace_File', dict(flags0=0x80)), ('b_coord3', 'tRadarTrace_File', dict(flags0=0xC0)),
+    ('b_disp1', 'tRadarTrace_File', dict(flags1=0x01)), ('b_disp2', 'tRadarTrace_File', dict(flags1=0x02)), ('b_disp3', 'tRadarTrace_File', dict(flags1=0x03)),
+    ('b_type1', 'tRadarTrace_File', dict(flags1=0x04)), ('b_type2', 'tRadarTrace_File', dict(flags1=0x08)), ('b_type4', 'tRadarTrace_File', dict(flags1=0x10)),
+    ('b_type8', 'tRadarTrace_File', dict(flags1=0x20)), ('b_type15', 'tRadarTrace_File', dict(flags1=0x3C)),
+    ('b_app1', 'tRadarTrace_File', dict(flags1=0x40)), ('b_app2', 'tRadarTrace_File', dict(flags1=0x80)), ('b_app3', 'tRadarTrace_File', dict(flags1=0xC0)),
+    ('extreme', 'tRadarTrace_File', dict(colour=0xFFFFFFFF, handle=0xFFFFFFFF, pos=(3.4e38, -3.4e38, 0.0), counter=65535, radius=-0.5, blipSize=65535, enex=0xFFFFFFFF, sprite=-5, flags0=0xFF, flags1=0xFF)),
     # P-2i: 'exe' = what the exe wrote (pointer slots hold live addresses, here recognisable garbage); 'port' = what the port writes (pointer slots 0); counts 7 / 5 / 3, rule COLLISION_ORIGIN
     ('exe', 'BreakInfo_File', dict(posRule=1, numVerts=7, pVertexPos=0x0B1E0034, pTexCoords=0x0B1E0088, pVertexColors=0x0B1E00E8, numTris=5, pTriangles=0x0B1E0104, pTriMaterials=0x0B1E0122,
                                    numMats=3, pTextures=0x0B1E01B4, pTextureNames=0x0B1E0136, pMaskNames=0x0B1E0196, pMaterialProps=0x0B1E01F6)),

@@ -9,6 +9,8 @@
 #include "Vector.h"
 #include "RGBA.h"
 #include "Vector2D.h"
+#include "FileRecord.hpp"
+#include "FileRecords/RadarFile.hpp"
 
 class CSprite2d;
 
@@ -193,7 +195,57 @@ struct tRadarTrace {
 
     std::pair<CVector2D, CVector2D> GetRadarAndScreenPos(float* radarPointDist) const;
 };
-VALIDATE_SIZE_FILE(tRadarTrace, 0x28);
+VALIDATE_SIZE(tRadarTrace, 0x28); // x86 in-memory (the pointer in the union widens it to 0x30 on LP64); the on-disk 0x28 is VALIDATE_SIZE_FILE(tRadarTrace_File) in FileRecords/RadarFile.hpp
+
+// P-2f: file layout (0x28) of a radar trace (CRadar::Save / Load). The CEntryExit link is a pool index+1 that only CRadar can compute/resolve, so the 1-argument ToFile writes
+// "no enex" (0) and FromFile leaves m_pEntryExit null; CRadar::Save/Load use ToFile(trace, poolIndexPlusOne) and read `entryExitPoolInd` from the record themselves.
+// Bit-fields are packed byte-wise (no memcpy of the bit-field storage).
+template<> struct notsa::FileRecord<tRadarTrace> {
+    using Type = tRadarTrace_File;
+    static Type ToFile(const tRadarTrace& t, uint32 entryExitPoolIndPlusOne) {
+        Type f{};
+        f.colour           = (uint32)t.m_nColour;
+        f.entityHandle     = t.m_nEntityHandle;
+        f.pos[0] = t.m_vPosition.x; f.pos[1] = t.m_vPosition.y; f.pos[2] = t.m_vPosition.z;
+        f.counter          = t.m_nCounter;
+        f.sphereRadius     = t.m_fSphereRadius;
+        f.blipSize         = t.m_nBlipSize;
+        f.entryExitPoolInd = entryExitPoolIndPlusOne;
+        f.blipSprite       = (int8)t.m_nBlipSprite;
+        f.flags0           = uint8((t.m_bBright ? kRadarFlagBright : 0) | (t.m_bTrackingBlip ? kRadarFlagTracking : 0) | (t.m_bShortRange ? kRadarFlagShortRange : 0)
+                                 | (t.m_bFriendly ? kRadarFlagFriendly : 0) | (t.m_bBlipRemain ? kRadarFlagBlipRemain : 0) | (t.m_bBlipFade ? kRadarFlagBlipFade : 0)
+                                 | ((t.m_nCoordBlipAppearance & kRadarCoordAppearanceMask) << kRadarCoordAppearanceShift));
+        f.flags1           = uint8(((((unsigned)t.m_nBlipDisplayFlag) & kRadarDisplayMask) << kRadarDisplayShift) | ((((unsigned)t.m_nBlipType) & kRadarTypeMask) << kRadarTypeShift)
+                                 | ((((unsigned)t.m_nAppearance) & kRadarAppearanceMask) << kRadarAppearanceShift));
+        return f;
+    }
+    static Type ToFile(const tRadarTrace& t) { return ToFile(t, 0u); }
+    static void FromFile(tRadarTrace& t, const Type& f) {
+        t.m_nColour       = (eBlipColour)f.colour;
+        t.m_nEntityHandle = f.entityHandle;
+        t.m_vPosition     = CVector{ f.pos[0], f.pos[1], f.pos[2] };
+        t.m_nCounter      = f.counter;
+        t.m_fSphereRadius = f.sphereRadius;
+        t.m_nBlipSize     = f.blipSize;
+        t.m_pEntryExit    = nullptr; // resolved by CRadar::Load from f.entryExitPoolInd
+        t.m_nBlipSprite   = (eRadarSprite)f.blipSprite;
+        t.m_bBright       = (f.flags0 & kRadarFlagBright) != 0;
+        t.m_bTrackingBlip = (f.flags0 & kRadarFlagTracking) != 0;
+        t.m_bShortRange   = (f.flags0 & kRadarFlagShortRange) != 0;
+        t.m_bFriendly     = (f.flags0 & kRadarFlagFriendly) != 0;
+        t.m_bBlipRemain   = (f.flags0 & kRadarFlagBlipRemain) != 0;
+        t.m_bBlipFade     = (f.flags0 & kRadarFlagBlipFade) != 0;
+        t.m_nCoordBlipAppearance = (f.flags0 >> kRadarCoordAppearanceShift) & kRadarCoordAppearanceMask;
+        t.m_nBlipDisplayFlag = (eBlipDisplay)((f.flags1 >> kRadarDisplayShift) & kRadarDisplayMask);
+        t.m_nBlipType        = (eBlipType)((f.flags1 >> kRadarTypeShift) & kRadarTypeMask);
+        t.m_nAppearance      = (eBlipAppearance)((f.flags1 >> kRadarAppearanceShift) & kRadarAppearanceMask);
+    }
+    // x86: every non-bit-field member of the raw object sits where the record has it (the bit-field bytes follow the sprite byte; layout_diff.py proves the bit positions)
+    static_assert(sizeof(void*) != 4 || (sizeof(tRadarTrace) == sizeof(Type) && offsetof(tRadarTrace, m_nColour) == offsetof(Type, colour) && offsetof(tRadarTrace, m_nEntityHandle) == offsetof(Type, entityHandle)
+        && offsetof(tRadarTrace, m_vPosition) == offsetof(Type, pos) && offsetof(tRadarTrace, m_nCounter) == offsetof(Type, counter) && offsetof(tRadarTrace, m_fSphereRadius) == offsetof(Type, sphereRadius)
+        && offsetof(tRadarTrace, m_nBlipSize) == offsetof(Type, blipSize) && offsetof(tRadarTrace, m_EntryExitPoolInd) == offsetof(Type, entryExitPoolInd)
+        && offsetof(tRadarTrace, m_nBlipSprite) == offsetof(Type, blipSprite)));
+};
 
 static constexpr uint32 MAX_RADAR_WIDTH_TILES = 12;
 static constexpr uint32 MAX_RADAR_HEIGHT_TILES = 12;

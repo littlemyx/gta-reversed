@@ -4166,7 +4166,7 @@ bool CPed::GetPedTalking() {
 /*!
 * @addr 0x5EFF60
 */
-void CPed::DisablePedSpeech(bool stopCurrentSpeech) {
+void CPed::DisablePedSpeech(int16 stopCurrentSpeech) {
     m_pedSpeech.DisablePedSpeech(stopCurrentSpeech);
 }
 
@@ -4180,7 +4180,7 @@ void CPed::EnablePedSpeech() {
 /*!
 * @addr 0x5EFF80
 */
-void CPed::DisablePedSpeechForScriptSpeech(bool stopCurrentSpeech) {
+void CPed::DisablePedSpeechForScriptSpeech(int16 stopCurrentSpeech) {
     m_pedSpeech.DisablePedSpeechForScriptSpeech(stopCurrentSpeech);
 }
 

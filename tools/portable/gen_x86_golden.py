@@ -16,6 +16,14 @@ import argparse, glob, os, struct, sys
 # record -> (total size, [(field, offset, fmt, count)], {in-memory member path -> field}) ; fmt is a struct char ('f' float, 'I' u32, 'H' u16, 'h' i16, 'B' u8, ...)
 # The third element is only used by `selfcheck` (x86 in-memory struct == file layout there); {} when the file record has no x86 in-memory twin.
 RECORDS = {
+    # P-2h: CPathNode 0x1C (data/paths/NODES%d.DAT, PathFind.cpp LoadPathFindData): m_next/m_prev (@0, @4) are zero in the files, pos int16[3] @8, then the scalar members and the uint32 bit-field word @0x18 (bytes flags0..3)
+    # (numLinks b0-3, deadEnd b4, switchedOff b5, roadBlocks b6, water b7, switchedOffOrig b8, unk1 b9, dontWander b10, unk2 b11, notHighway b12, highway b13, unk3 b14, unk4 b15, spawnProb b16-19, behaviour b20-23)
+    'CPathNode_File': (0x1C, [('links', 0x00, 'I', 2), ('pos', 0x08, 'h', 3), ('totalDist', 0x0E, 'h', 1), ('baseLink', 0x10, 'h', 1), ('area', 0x12, 'H', 1), ('node', 0x14, 'H', 1),
+                              ('width', 0x16, 'B', 1), ('flood', 0x17, 'B', 1), ('flags0', 0x18, 'B', 1), ('flags1', 0x19, 'B', 1), ('flags2', 0x1A, 'B', 1), ('flags3', 0x1B, 'B', 1)],
+                       {'CPathNode': {'m_next': 'links', 'm_vPos': 'pos', 'm_totalDistFromOrigin': 'totalDist', 'm_wBaseLinkId': 'baseLink', 'm_wAreaId': 'area', 'm_wNodeId': 'node',
+                                      'm_nPathWidth': 'width', 'm_nFloodFill': 'flood', 'm_nNumLinks': 'flags0', 'm_onDeadEnd': 'flags0', 'm_isSwitchedOff': 'flags0', 'm_bRoadBlocks': 'flags0',
+                                      'm_bWaterNode': 'flags0', 'm_isSwitchedOffOriginal': 'flags1', 'unk1': 'flags1', 'm_bDontWander': 'flags1', 'unk2': 'flags1', 'm_bNotHighway': 'flags1',
+                                      'm_bHighway': 'flags1', 'unk3': 'flags1', 'unk4': 'flags1', 'm_nSpawnProbability': 'flags2', 'm_nBehaviourType': 'flags2'}}),
     # P-2g: CRunningScript 0xE0 (TheScripts.cpp CTheScripts::Save/Load, followed by u32 ipOffset + 8 x u32 ipStack offsets): 10 pointer slots (next, prev, baseIP, ip, ipStack[8]) -> u32; localVars = 34 x tScriptParam (4 B)
     'CRunningScript_File': (0xE0, [('next', 0x00, 'I', 1), ('prev', 0x04, 'I', 1), ('scrName', 0x08, 'B', 8), ('baseIP', 0x10, 'I', 1), ('ip', 0x14, 'I', 1), ('ipStack', 0x18, 'I', 8),
                                    ('depth', 0x38, 'H', 1), ('locals', 0x3C, 'I', 34), ('active', 0xC4, 'B', 1), ('cond', 0xC5, 'B', 1), ('cleanup', 0xC6, 'B', 1), ('external', 0xC7, 'B', 1),
@@ -87,6 +95,10 @@ CASES = [
                                             locals=lambda: [i for i in range(34)], active=1, cond=0, cleanup=1, external=0, textOverride=0, extType=-1, wake=-5, andor=0, notFlag=0,
                                             deathArrest=0, doneDeathArrest=1, sceneSkip=0x4321, mission=1)),
     # P-2e: flags 0x5D = bDisabled | bHelpMessageDisplayed | bVisible | nPropertyTextIndex=5 (<<4); live object present (obj=1), type ON_STREET
+    ('basic', 'CPathNode_File', dict(links=(0, 0), pos=(100, -200, 300), totalDist=32766, baseLink=57, area=12, node=34, width=48, flood=3,
+                                     flags0=(3 | 1 << 5 | 1 << 10 | 1 << 13 | 5 << 16 | 2 << 20) & 255, flags1=((3 | 1 << 5 | 1 << 10 | 1 << 13 | 5 << 16 | 2 << 20) >> 8) & 255, flags2=((3 | 1 << 5 | 1 << 10 | 1 << 13 | 5 << 16 | 2 << 20) >> 16) & 255, flags3=((3 | 1 << 5 | 1 << 10 | 1 << 13 | 5 << 16 | 2 << 20) >> 24) & 255)),
+    ('extreme', 'CPathNode_File', dict(links=(0, 0), pos=(-32768, 32767, 0), totalDist=-1, baseLink=-2, area=65535, node=65535, width=255, flood=255, flags0=(0x00FFFFFF) & 255, flags1=((0x00FFFFFF) >> 8) & 255, flags2=((0x00FFFFFF) >> 16) & 255, flags3=((0x00FFFFFF) >> 24) & 255)),
+    ('chain', 'CPathNode_File', dict(links=(0x11223344, 0x55667788), pos=(1, 2, 3), totalDist=0, baseLink=0, area=0, node=0, width=0, flood=0, flags0=(1 << 4 | 1 << 7 | 1 << 8 | 1 << 11 | 1 << 12 | 1 << 14 | 1 << 15 | 0xF << 16) & 255, flags1=((1 << 4 | 1 << 7 | 1 << 8 | 1 << 11 | 1 << 12 | 1 << 14 | 1 << 15 | 0xF << 16) >> 8) & 255, flags2=((1 << 4 | 1 << 7 | 1 << 8 | 1 << 11 | 1 << 12 | 1 << 14 | 1 << 15 | 0xF << 16) >> 16) & 255, flags3=((1 << 4 | 1 << 7 | 1 << 8 | 1 << 11 | 1 << 12 | 1 << 14 | 1 << 15 | 0xF << 16) >> 24) & 255)),   # exe-style garbage in the link slots: FromFile must null them
     ('basic', 'CPickup_File', dict(rev=1.5, obj=1, ammo=77, regen=1000, pos=(100, -200, 300), moneyPerDay=5, model=1212, ref=3, type=2, flags=0x5D)),
     ('noobj', 'CPickup_File', dict(rev=0.0, obj=0, ammo=5, regen=0, pos=(-32768, 32767, 0), moneyPerDay=65535, model=-1, ref=-2, type=3, flags=0x0A)),   # type ONCE, no object: bVisible stays as on file
     ('none_obj', 'CPickup_File', dict(rev=0.0, obj=1, ammo=0, regen=0, pos=(0, 0, 0), moneyPerDay=0, model=0, ref=0, type=0, flags=0x08)),   # PICKUP_NONE with a stale object: loader leaves it alone

@@ -1061,7 +1061,12 @@ void CPathFind::LoadPathFindData(RwStream* stream, int32 areaId) {
     auto numNodes = m_anNumNodes[areaId];
     if (numNodes) {
         m_pPathNodes[areaId] = new CPathNode[numNodes];
+#ifdef NOTSA_PORTABLE
+        // P-2h: the file stride is 0x1C (CPathNode_File); CPathNode is 40 B on LP64 (hash-chain pointers)
+        notsa::LoadPathNodesFromFile(m_pPathNodes[areaId], numNodes, [stream](void* dst, size_t bytes) { RwStreamRead(stream, dst, (uint32)bytes); });
+#else
         RwStreamRead(stream, m_pPathNodes[areaId], sizeof(CPathNode) * numNodes);
+#endif
     } else {
         m_pPathNodes[areaId] = new CPathNode[1];
     }

@@ -1,0 +1,126 @@
+#!/usr/bin/env python3
+"""gen_x86_golden.py - independent generator of x86 (exe) save-game / stream record bytes for the P-2 host tests.   SKELETON (P-2a).
+
+The golden vectors must NOT come from the code under test: each record below is a table of (field, x86 byte offset, struct format, count) taken from the
+original layout (VALIDATE_OFFSET / VALIDATE_SIZE numbers of the x86 build, cross-checked with the i686-pc-windows-msvc layout dump by `selfcheck`),
+and encoded with Python's `struct` (little endian, no implicit padding). Slices c..h add their records to RECORDS and their tests compare
+`FileRecord<X>::ToFile(x)` byte-for-byte with `golden('X_File', **values)` (padding bytes zero).
+
+  gen_x86_golden.py list                              names, sizes
+  gen_x86_golden.py hex  CPickup_File rev=1.5 ...     print the vector as hex (field=value; arrays as a,b,c)
+  gen_x86_golden.py cpp  [names...]                   emit a C++ header body: `constexpr uint8_t kGolden_<name>_<case>[N] = {...}` for the built-in cases
+  gen_x86_golden.py selfcheck [--work DIR]            compare every record's offsets with the i686 layout dump of the in-memory struct (needs a layout_diff.py run)
+"""
+import argparse, glob, os, struct, sys
+
+# record -> (total size, [(field, offset, fmt, count)], {in-memory member path -> field}) ; fmt is a struct char ('f' float, 'I' u32, 'H' u16, 'h' i16, 'B' u8, ...)
+# The third element is only used by `selfcheck` (x86 in-memory struct == file layout there); {} when the file record has no x86 in-memory twin.
+RECORDS = {
+    # P-2e: save Pickups.cpp, CPickup is dumped raw; m_pObject (@4) is a pointer -> u32 in the record
+    'CPickup_File': (0x20, [('rev', 0x00, 'f', 1), ('obj', 0x04, 'I', 1), ('ammo', 0x08, 'I', 1), ('regen', 0x0C, 'I', 1), ('pos', 0x10, 'h', 3),
+                            ('moneyPerDay', 0x16, 'H', 1), ('model', 0x18, 'h', 1), ('ref', 0x1A, 'h', 1), ('type', 0x1C, 'B', 1), ('flags', 0x1D, 'B', 1)],
+                     {'CPickup': {'m_fRevenueValue': 'rev', 'm_pObject': 'obj', 'm_nAmmo': 'ammo', 'm_nRegenerationTime': 'regen', 'm_vecPos': 'pos',
+                                  'm_nMoneyPerDay': 'moneyPerDay', 'm_nModelIndex': 'model', 'm_nReferenceIndex': 'ref', 'm_nPickupType': 'type', 'm_nFlags': 'flags'}}),
+    # P-2d: member of CPedSaveStructure[13]; m_FxSystem (@0x18) pointer -> u32 (never read back, the exe writes the live pointer)
+    'CWeapon_File': (0x1C, [('type', 0x00, 'I', 1), ('state', 0x04, 'I', 1), ('ammoInClip', 0x08, 'I', 1), ('totalAmmo', 0x0C, 'I', 1),
+                            ('timeForNextShot', 0x10, 'I', 1), ('firstPerson', 0x14, 'B', 1), ('dontPlaceInHand', 0x15, 'B', 1), ('fx', 0x18, 'I', 1)],
+                     {'CWeapon': {'m_Type': 'type', 'm_State': 'state', 'm_AmmoInClip': 'ammoInClip', 'm_TotalAmmo': 'totalAmmo', 'm_TimeForNextShotMs': 'timeForNextShot',
+                                  'm_IsFirstPersonWeaponModeSelected': 'firstPerson', 'm_DontPlaceInHand': 'dontPlaceInHand', 'm_FxSystem': 'fx'}}),
+    # P-2c: CMatrix 0x48 : right/top/at (3 floats + u32 pad each), pos (3 floats + pad), RwMatrix* attach @0x40, owns-flag @0x44 (+3 pad)
+    'CMatrix_File': (0x48, [('right', 0x00, 'f', 3), ('pad0', 0x0C, 'I', 1), ('top', 0x10, 'f', 3), ('pad1', 0x1C, 'I', 1), ('at', 0x20, 'f', 3), ('pad2', 0x2C, 'I', 1),
+                            ('pos', 0x30, 'f', 3), ('pad3', 0x3C, 'I', 1), ('attach', 0x40, 'I', 1), ('owns', 0x44, 'B', 1)], {}),
+}
+# built-in cases (name, record, values) used by `cpp` and by the self-test of this generator
+CASES = [
+    ('basic', 'CPickup_File', dict(rev=1.5, obj=1, ammo=77, regen=1000, pos=(100, -200, 300), moneyPerDay=5, model=1212, ref=3, type=2, flags=0x81)),
+    ('basic', 'CWeapon_File', dict(type=30, state=0, ammoInClip=30, totalAmmo=500, timeForNextShot=0, firstPerson=0, dontPlaceInHand=1, fx=0)),
+    ('identity', 'CMatrix_File', dict(right=(1, 0, 0), top=(0, 1, 0), at=(0, 0, 1), pos=(10.5, -3.25, 7), attach=0, owns=0)),
+]
+
+
+def check_table(name):
+    size, fields, _ = RECORDS[name]
+    end = 0
+    for f, off, fmt, cnt in sorted(fields, key=lambda x: x[1]):
+        assert off >= end, '%s.%s overlaps (offset 0x%X < end 0x%X)' % (name, f, off, end)
+        end = off + struct.calcsize('<' + fmt) * cnt
+    assert end <= size, '%s: fields end 0x%X > size 0x%X' % (name, end, size)
+
+
+def golden(name, **vals):
+    check_table(name)
+    size, fields, _ = RECORDS[name]
+    buf = bytearray(size)
+    for f, off, fmt, cnt in fields:
+        v = vals.get(f, 0)
+        v = list(v) if isinstance(v, (list, tuple)) else [v]
+        if len(v) == 1 and cnt > 1:
+            v = v * cnt
+        assert len(v) == cnt, '%s.%s needs %d values' % (name, f, cnt)
+        struct.pack_into('<%d%s' % (cnt, fmt), buf, off, *v)
+    return bytes(buf)
+
+
+def cmd_selfcheck(a):
+    sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+    import layout_diff as ld
+    files = glob.glob(os.path.join(a.work, '*_msvc_*.dump'))
+    if not files:
+        print('no msvc dumps in %s: run layout_diff.py run first' % a.work); return 1
+    want = {t for _, _, tw in RECORDS.values() for t in tw}
+    recs = {}
+    for f in files:
+        for n, r in ld.parse_dump(open(f, errors='replace').read(), lambda n: n in want).items():
+            recs.setdefault(n, r)
+    bad = 0
+    for name, (size, fields, tw) in RECORDS.items():
+        check_table(name)
+        for twin, mapping in tw.items():
+            r = recs.get(twin)
+            if not r:
+                print('%s: in-memory twin %s not found in dumps' % (name, twin)); bad += 1; continue
+            offs = {f: off for f, off, _, _ in fields}
+            for member, field in mapping.items():
+                got = r['fields'].get(member)
+                if got is None:
+                    print('%s: member %s not in the %s dump' % (name, member, twin)); bad += 1
+                    continue
+                got_b = int(got.split(':')[0])
+                if got_b != offs[field]:
+                    print('%s.%s: golden 0x%X but x86 %s.%s is at 0x%X' % (name, field, offs[field], twin, member, got_b)); bad += 1
+            if r['size'] != size:
+                print('%s: golden size 0x%X vs x86 sizeof(%s)=0x%X' % (name, size, twin, r['size'])); bad += 1
+    print('selfcheck: %s' % ('OK' if not bad else '%d mismatches' % bad))
+    return 1 if bad else 0
+
+
+def main():
+    ap = argparse.ArgumentParser()
+    sp = ap.add_subparsers(dest='cmd', required=True)
+    sp.add_parser('list')
+    h = sp.add_parser('hex'); h.add_argument('name'); h.add_argument('vals', nargs='*')
+    c = sp.add_parser('cpp'); c.add_argument('names', nargs='*')
+    s = sp.add_parser('selfcheck'); s.add_argument('--work', default='/private/tmp/layout_diff_work')
+    a = ap.parse_args()
+    if a.cmd == 'list':
+        for n, (sz, f, _) in RECORDS.items():
+            check_table(n); print('%-16s 0x%X  %d fields' % (n, sz, len(f)))
+    elif a.cmd == 'hex':
+        vals = {}
+        for kv in a.vals:
+            k, v = kv.split('=', 1)
+            vs = [float(x) if '.' in x else int(x, 0) for x in v.split(',')]
+            vals[k] = vs if len(vs) > 1 else vs[0]
+        print(golden(a.name, **vals).hex())
+    elif a.cmd == 'cpp':
+        for case, rec, vals in CASES:
+            if a.names and rec not in a.names:
+                continue
+            b = golden(rec, **vals)
+            print('constexpr uint8_t kGolden_%s_%s[%d] = {%s};' % (rec, case, len(b), ', '.join('0x%02X' % x for x in b)))
+    else:
+        sys.exit(cmd_selfcheck(a))
+
+
+if __name__ == '__main__':
+    main()

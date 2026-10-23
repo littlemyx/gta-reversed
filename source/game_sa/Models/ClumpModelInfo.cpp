@@ -117,7 +117,7 @@ RwObject* CClumpModelInfo::CreateInstance(RwMatrix* matrix)
         return nullptr;
 
     auto clump = CreateInstance();
-    memcpy(RpClumpGetFrame(clump), matrix, sizeof(RwMatrix));
+    memcpy(RwFrameGetMatrix(RpClumpGetFrame(reinterpret_cast<RpClump*>(clump))), matrix, sizeof(RwMatrix)); // exe 0x4C5110: copies the 0x40 bytes into frame+0x10 (the modelling matrix), not over the frame's object header
     return clump;
 }
 

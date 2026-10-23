@@ -432,7 +432,7 @@ public:
     static inline NOTSA_GLOBAL(m_bEnableMouseFlying, 0xC1CC03, (bool), { true });
     static inline NOTSA_GLOBAL(m_nLastControlInput, 0xC1CC04, (eControllerType), {});
     static NOTSA_GLOBAL_DECL(CVehicle, m_aSpecialColVehicle, 0xC1CC08, (std::array<CVehicle*, 4>));
-    static inline NOTSA_GLOBAL(m_aSpecialColModel, 0xC1CC78, (std::array<CColModel, 4>), {}); static_assert(sizeof(std::array<CColModel, 4>) == 192);
+    static inline NOTSA_GLOBAL(m_aSpecialColModel, 0xC1CC78, (std::array<CColModel, 4>), {}); VALIDATE_LAYOUT(sizeof(std::array<CColModel, 4>) == 192);
     static inline NOTSA_GLOBAL(ms_forceVehicleLightsOff, 0xC1CC18, (bool), {});
     static inline NOTSA_GLOBAL(s_bPlaneGunsEjectShellCasings, 0xC1CC19, (bool), {});
     static inline NOTSA_GLOBAL(m_aSpecialHydraulicData, 0xC1CB60, (std::array<tHydraulicData, 4>), {});

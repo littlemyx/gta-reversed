@@ -22,4 +22,4 @@ public:
     void Extract(CPed* ped);
     void Construct(CPed* ped);
 };
-VALIDATE_SIZE(CPedSaveStructure, 0x18C);
+VALIDATE_SIZE_FILE(CPedSaveStructure, 0x18C);

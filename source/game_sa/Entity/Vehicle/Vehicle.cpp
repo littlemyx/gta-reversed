@@ -6836,8 +6836,8 @@ void CVehicle::FillVehicleWithPeds(bool setClothesToAfro) {
 
 // 0x6E2E50
 bool CVehicle::DoBladeCollision(CVector pos, CMatrix& matrix, int16 rotorType, float radius, float damageMult) {
-    NOTSA_GLOBAL_LOCAL(s_TestBladeCol, 0xC1CD38, (CColModel), {}); static_assert(sizeof(s_TestBladeCol) == 48);
-    NOTSA_GLOBAL_LOCAL(s_TestBladeColData, 0xC1CD68, (CCollisionData), {}); static_assert(sizeof(s_TestBladeColData) == 48);
+    NOTSA_GLOBAL_LOCAL(s_TestBladeCol, 0xC1CD38, (CColModel), {}); VALIDATE_SIZE(s_TestBladeCol, 48);
+    NOTSA_GLOBAL_LOCAL(s_TestBladeColData, 0xC1CD68, (CCollisionData), {}); VALIDATE_SIZE(s_TestBladeColData, 48);
     NOTSA_GLOBAL_LOCAL(s_TestBladeColSphere, 0xC1CD98, (CColSphere), {});
 
     // Set-up collision model for the blade

@@ -5597,12 +5597,12 @@ CObject* CAutomobile::RemoveBonnetInPedCollision() {
 // 0x6AA290
 void CAutomobile::UpdateWheelMatrix(int32 nodeIndex, int32 flags) {
     // Sanity checks for the raw offsets used by the original
-    static_assert(offsetof(CAutomobile, m_aCarNodes) == 0x648 && offsetof(CAutomobile, m_wheelColPoint) == 0x724 && offsetof(CAutomobile, m_fWheelsSuspensionCompressionPrev) == 0x7E4);
-    static_assert(offsetof(CAutomobile, m_wheelRotation) == 0x828 && offsetof(CAutomobile, m_wheelPosition) == 0x838 && offsetof(CAutomobile, m_fFrontHeightAboveRoad) == 0x898);
-    static_assert(offsetof(CAutomobile, m_damageManager) == 0x5A0 && offsetof(CAutomobile, autoFlags) == 0x868);
-    static_assert(offsetof(CAutomobile, m_fWheelScale) == 0x458 && offsetof(CAutomobile, m_fSteerAngle) == 0x494 && offsetof(CAutomobile, m_f2ndSteerAngle) == 0x498);
-    static_assert(offsetof(CAutomobile, m_nVehicleSubType) == 0x594 && offsetof(CAutomobile, m_nHandlingFlagsIntValue) == 0x38C && offsetof(CAutomobile, m_nVehicleUpperFlags) == 0x428);
-    static_assert(offsetof(CVehicleModelInfo, m_fWheelSizeFront) == 0x40 && offsetof(CVehicleModelInfo, m_fWheelSizeRear) == 0x44 && offsetof(CVehicleModelInfo, m_nWheelModelIndex) == 0x48);
+    VALIDATE_OFFSET(CAutomobile, m_aCarNodes, 0x648); VALIDATE_OFFSET(CAutomobile, m_wheelColPoint, 0x724); VALIDATE_OFFSET(CAutomobile, m_fWheelsSuspensionCompressionPrev, 0x7E4);
+    VALIDATE_OFFSET(CAutomobile, m_wheelRotation, 0x828); VALIDATE_OFFSET(CAutomobile, m_wheelPosition, 0x838); VALIDATE_OFFSET(CAutomobile, m_fFrontHeightAboveRoad, 0x898);
+    VALIDATE_OFFSET(CAutomobile, m_damageManager, 0x5A0); VALIDATE_OFFSET(CAutomobile, autoFlags, 0x868);
+    VALIDATE_OFFSET(CAutomobile, m_fWheelScale, 0x458); VALIDATE_OFFSET(CAutomobile, m_fSteerAngle, 0x494); VALIDATE_OFFSET(CAutomobile, m_f2ndSteerAngle, 0x498);
+    VALIDATE_OFFSET(CAutomobile, m_nVehicleSubType, 0x594); VALIDATE_OFFSET(CAutomobile, m_nHandlingFlagsIntValue, 0x38C); VALIDATE_OFFSET(CAutomobile, m_nVehicleUpperFlags, 0x428);
+    VALIDATE_OFFSET(CVehicleModelInfo, m_fWheelSizeFront, 0x40); VALIDATE_OFFSET(CVehicleModelInfo, m_fWheelSizeRear, 0x44); VALIDATE_OFFSET(CVehicleModelInfo, m_nWheelModelIndex, 0x48);
     static_assert(offsetof(tHandlingData, m_nModelFlags) == 0xCC && WHEEL_STATUS_BURST == 1 && CAR_WHEEL_FRONT_LEFT == 0 && CAR_WHEEL_REAR_LEFT == 1 && CAR_WHEEL_FRONT_RIGHT == 2 && CAR_WHEEL_REAR_RIGHT == 3);
 
     constexpr auto PI = std::numbers::pi_v<float>;

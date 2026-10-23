@@ -23,7 +23,6 @@ inline void createDirectory(const wchar_t* path)
     std::error_code ec; // like CreateDirectoryW's result, the outcome is not checked by the callers
     fs::create_directory(fs::path(path), ec);
 #else
-#line 22 // W0a
     HANDLE folderHandle = CreateFileW(
         path,
         GENERIC_READ,
@@ -38,7 +37,6 @@ inline void createDirectory(const wchar_t* path)
     else
         CloseHandle(folderHandle);
 #endif
-#line 35 // W0a
 }
 
 // 0x744FB0
@@ -55,11 +53,9 @@ char* InitUserDirectories()
     constexpr const wchar_t*             GALLERY    = L"./Gallery"; // W-7: '/' separators on this platform
     constexpr const wchar_t*             USERTRACKS = L"./User Tracks";
 #else
-#line 47 // W0a
     constexpr const wchar_t*             GALLERY    = L".\\Gallery";
     constexpr const wchar_t*             USERTRACKS = L".\\User Tracks";
 #endif
-#line 49 // W0a
 
 #ifdef NOTSA_STANDALONE_RUN
     // NOTSA_STANDALONE_USERDIR=<path> (run build only; unset = the exe's behaviour, Documents\GTA San Andreas User Files): use <path> as the user-files
@@ -85,10 +81,8 @@ char* InitUserDirectories()
 #ifdef NOTSA_PORTABLE
         constexpr const wchar_t* USERFILES = L"/GTA San Andreas User Files";
 #else
-#line 71 // W0a
         constexpr const wchar_t* USERFILES = L"\\GTA San Andreas User Files";
 #endif
-#line 72 // W0a
         // Base GTASA User Files
         if ((wcslen(gtaUserDirWide.data()) + wcslen(USERFILES)) >= MAX_PATH) {
             wcscpy_s(gtaUserDirWide.data(), gtaUserDirWide.size(), L".");

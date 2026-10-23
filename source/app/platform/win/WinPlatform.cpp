@@ -21,12 +21,10 @@ void ResetGammaWhenExiting() {
 #ifdef NOTSA_PORTABLE
         notsa::portable::Unsupported("gamma ramp reset (D3D9 SetGammaRamp; no gamma control on the GL3 backend yet)"); // W-A8
 #else
-#line 21 // W0a
         if (auto d3dDevice = (IDirect3DDevice9*)RwD3D9GetCurrentD3DDevice()) {
             d3dDevice->SetGammaRamp(0u, D3DSGR_CALIBRATE, &CGamma::ms_SavedGamma);
         }
 #endif
-#line 24 // W0a
         gbGammaChanged = false;
     }
 }

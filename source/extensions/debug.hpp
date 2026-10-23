@@ -5,10 +5,8 @@
 #include <thread>
 #include <chrono>
 #ifndef NOTSA_PORTABLE
-#line 7 // W0a
 #include <debugapi.h>
 #endif
-#line 8 // W0a
 #include <cstdio>
 
 
@@ -29,7 +27,6 @@ inline void DisplayConsole() {
 #ifdef NOTSA_PORTABLE
     // Nothing to do: stdin/stdout/stderr already are the terminal the process was started from (no console window to allocate/attach, no code page to set)
 #else
-#line 25 // W0a
     // Support UTF-8 IO for Windows Terminal. (or CMD if a supported font is used)
     SetConsoleCP(CP_UTF8);
     SetConsoleOutputCP(CP_UTF8);
@@ -49,7 +46,6 @@ inline void DisplayConsole() {
     VERIFY(freopen_s(&fs, "CONOUT$", "w", stdout) == NOERROR);
     VERIFY(freopen_s(&fs, "CONOUT$", "w", stderr) == NOERROR);
 #endif
-#line 43 // W0a
 }
 
 /*!
@@ -58,10 +54,8 @@ inline void DisplayConsole() {
 #ifdef NOTSA_PORTABLE
 std::string GetFunctionInfoAtAddress(uintptr_t address, bool compact = false, HANDLE hProcess = nullptr); // portable/app_debug_posix.cpp (dladdr); hProcess is ignored
 #else
-#line 48 // W0a
 std::string GetFunctionInfoAtAddress(uintptr_t address, bool compact = false, HANDLE hProcess = GetCurrentProcess());
 #endif
-#line 49 // W0a
 
 /*!
  * @brief Initialize debugging symbols

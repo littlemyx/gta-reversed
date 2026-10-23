@@ -519,7 +519,6 @@ uint32 SafeVptrRva(const void* obj) {
     // W-B8: no SEH on this platform, the read is not fault-protected (objects come from the sound manager's own tables); 64-bit vptr minus the image start
     return (uint32)(*reinterpret_cast<const uintptr_t*>(obj) - notsa::portable::MainImageRange().first);
 #else
-#line 518 // W0a
     uint32 v = 0;
     __try {
         v = *reinterpret_cast<const uint32*>(obj);
@@ -529,7 +528,6 @@ uint32 SafeVptrRva(const void* obj) {
     const auto base = reinterpret_cast<uint32>(GetModuleHandleW(nullptr));
     return v - base;
 #endif
-#line 526 // W0a
 }
 } // namespace
 

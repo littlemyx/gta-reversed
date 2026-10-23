@@ -280,10 +280,8 @@ DWORD __stdcall CAEUserRadioTrackManager::WriteUserTracksThread(CAEUserRadioTrac
         #ifdef NOTSA_PORTABLE
         int32 amountOfTracks = self->WriteUserTracksFile((fs::path(CFileMgr::ms_dirName) / "User Tracks").string().c_str(), dummy, ufiles, offsets, 0);
 #else
-#line 280 // W0a
         int32 amountOfTracks = self->WriteUserTracksFile(fs::path(CFileMgr::ms_dirName) / "User Tracks", dummy, ufiles, offsets, 0);
 #endif
-#line 281 // W0a
         CFileMgr::CloseFile(ufiles);
 
         // Open sa-utrax.dat containing the offsets
@@ -336,10 +334,8 @@ int32 CAEUserRadioTrackManager::WriteUserTracksFile(const std::wstring& dir, siz
 #ifdef NOTSA_PORTABLE
             numTracks += WriteUserTracksFile(entry.path().wstring(), currentLength, file, offsets, depth + 1);
 #else
-#line 330 // W0a
             numTracks += WriteUserTracksFile(entry.path(), currentLength, file, offsets, depth + 1);
 #endif
-#line 331 // W0a
             continue;
         }
 
@@ -358,10 +354,8 @@ int32 CAEUserRadioTrackManager::WriteUserTracksFile(const std::wstring& dir, siz
 #ifdef NOTSA_PORTABLE
             numTracks += WriteUserTracksFile(path.wstring(), currentLength, file, offsets, depth + 1);
 #else
-#line 346 // W0a
             numTracks += WriteUserTracksFile(path, currentLength, file, offsets, depth + 1);
 #endif
-#line 347 // W0a
             continue;
         }
 
@@ -396,7 +390,6 @@ std::wstring CAEUserRadioTrackManager::ResolveShortcut(const std::wstring& path)
     NOTSA_LOG_ERR("W-B7: ResolveShortcut: Windows shell links are not supported on this platform");
     return {};
 #else
-#line 376 // W0a
     IShellLinkW* shellLink{};
     IPersistFile* persistFile{};
 
@@ -423,7 +416,6 @@ std::wstring CAEUserRadioTrackManager::ResolveShortcut(const std::wstring& path)
 
     return target;
 #endif
-#line 401 // W0a
 }
 
 void CAEUserRadioTrackManager::InjectHooks() {

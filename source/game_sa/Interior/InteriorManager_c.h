@@ -85,7 +85,7 @@ private:
 };
 VALIDATE_SIZE(InteriorManager_c, 0x4758);
 
-NOTSA_GLOBAL_HDR(g_interiorMan, 0xBAF670, (InteriorManager_c), {}); static_assert(sizeof(InteriorManager_c) == 18264);
+NOTSA_GLOBAL_HDR(g_interiorMan, 0xBAF670, (InteriorManager_c), {}); VALIDATE_SIZE(InteriorManager_c, 18264);
 
 #ifdef NOTSA_GLOBALS_DETACHED
 // Interior_c.cpp / InteriorGroup_c.cpp name some private members of `g_interiorMan` by their exe address (`NOTSA_GLOBAL_ALIAS(s_X, 0xADDR, (T), InteriorManagerMembers::X(g_interiorMan))`);

@@ -13,7 +13,7 @@
 #include <DebugModules/Audio/SoundManagerDebugModule.hpp>
 #include <UIRenderer.h>
 
-NOTSA_GLOBAL(AESoundManager, 0xB62CB0, (CAESoundManager), {}); static_assert(sizeof(AESoundManager) == 36028);
+NOTSA_GLOBAL(AESoundManager, 0xB62CB0, (CAESoundManager), {}); VALIDATE_SIZE(AESoundManager, 36028);
 
 void CAESoundManager::InjectHooks() {
     RH_ScopedClass(CAESoundManager);
@@ -357,7 +357,7 @@ CAESound* CAESoundManager::RequestNewSound(CAESound* pSound) {
 
 #ifdef NOTSA_DEBUG
     notsa::ui::UIRenderer::GetInstance().GetDebugModules().GetModule<notsa::debugmodules::SoundManagerDebugModule>()->SetSoundInfo(sidx, {
-        .StackTrace = std::stacktrace::current()
+        .StackTrace = notsa::StackTrace::current()
     });
 #endif
 

@@ -105,7 +105,11 @@ void SoundManagerDebugModule::RenderSoundsTable() {
                 buf, sizeof(buf),
                 "Stack trace: \n"
                 "%s",
+#ifdef _WIN32
                 std::to_string(info->StackTrace).c_str()
+#else
+                notsa::StackTraceToString(info->StackTrace).c_str()
+#endif
             );
             ig::SetTooltip(buf);
         }

@@ -1,6 +1,6 @@
 #pragma once
 
-#include <stacktrace>
+#include "portable/stdcompat.h" // notsa::StackTrace: std::stacktrace where the standard library has it
 
 #include "../DebugModule.h"
 #include <Audio/managers/AESoundManager.h>
@@ -10,7 +10,7 @@ namespace debugmodules {
 class SoundManagerDebugModule final : public DebugModule {
 public:
     struct SoundInfo {
-        std::stacktrace StackTrace{};
+        notsa::StackTrace StackTrace{};
         bool            IsPaused{};
         float           OriginalVolume{};
         float           OriginalSpeed{};

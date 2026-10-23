@@ -1,0 +1,46 @@
+category	file	line	msg
+P: 64-bit layout (sizeof/offsetof static_assert)	source/game_sa/Animation/AnimManager.h	30	static assertion failed due to requirement 'sizeof(std::array<CAnimBlendHierarchy, 2500>) == 60000'
+F/C: inline asm / naked	source/game_sa/Audio/AEAudioUtility.cpp	91	unsupported architecture 'arm64' for MS-style inline assembly
+F/C: inline asm / naked	source/game_sa/Core/Matrix.cpp	235	unsupported architecture 'arm64' for MS-style inline assembly
+F/C: inline asm / naked	source/game_sa/Core/Matrix.cpp	321	unsupported architecture 'arm64' for MS-style inline assembly
+F/C: inline asm / naked	source/game_sa/Core/Matrix.cpp	404	unsupported architecture 'arm64' for MS-style inline assembly
+F/C: inline asm / naked	source/game_sa/Core/Matrix.cpp	485	unsupported architecture 'arm64' for MS-style inline assembly
+F/C: inline asm / naked	source/game_sa/Core/Matrix.cpp	566	unsupported architecture 'arm64' for MS-style inline assembly
+F/C: inline asm / naked	source/game_sa/Core/Matrix.cpp	844	unsupported architecture 'arm64' for MS-style inline assembly
+F/C: inline asm / naked	source/game_sa/Core/Matrix.cpp	1054	unsupported architecture 'arm64' for MS-style inline assembly
+F/C: inline asm / naked	source/game_sa/Core/Quaternion.cpp	126	unsupported architecture 'arm64' for MS-style inline assembly
+F/C: inline asm / naked	source/game_sa/Core/Quaternion.cpp	283	unsupported architecture 'arm64' for MS-style inline assembly
+F/C: inline asm / naked	source/game_sa/Cover.cpp	442	unsupported architecture 'arm64' for MS-style inline assembly
+F/C: inline asm / naked	source/game_sa/Cover.cpp	470	unsupported architecture 'arm64' for MS-style inline assembly
+F/C: inline asm / naked	source/game_sa/Entity/Entity.cpp	1300	unsupported architecture 'arm64' for MS-style inline assembly
+F/C: inline asm / naked	source/game_sa/Entity/Placeable.cpp	112	unsupported architecture 'arm64' for MS-style inline assembly
+F/C: inline asm / naked	source/game_sa/EntryExit.cpp	127	unsupported architecture 'arm64' for MS-style inline assembly
+F/C: inline asm / naked	source/game_sa/EntryExit.cpp	134	unsupported architecture 'arm64' for MS-style inline assembly
+other static_assert	source/game_sa/General.cpp	199	static assertion failed due to requirement '2147483647 == 32767': PC-generated random numbers should not exceed 32767
+F/C: inline asm / naked	source/game_sa/Maths.cpp	17	unsupported architecture 'arm64' for MS-style inline assembly
+P: pointer/int width (cast/narrowing)	source/game_sa/Models/VehicleModelInfo.cpp	900	cast to smaller integer type 'unsigned int' from 'void *' [-Werror,-Wvoid-pointer-to-int-cast]
+F/C: inline asm / naked	source/game_sa/PathFind.cpp	2056	unsupported architecture 'arm64' for MS-style inline assembly
+F/C: inline asm / naked	source/game_sa/PathFind.cpp	2160	unsupported architecture 'arm64' for MS-style inline assembly
+F/C: inline asm / naked	source/game_sa/Radar.cpp	441	unsupported architecture 'arm64' for MS-style inline assembly
+F/C: inline asm / naked	source/game_sa/Radar.cpp	443	unsupported architecture 'arm64' for MS-style inline assembly
+F/C: inline asm / naked	source/game_sa/Radar.cpp	449	unsupported architecture 'arm64' for MS-style inline assembly
+F/C: inline asm / naked	source/game_sa/Radar.cpp	508	unsupported architecture 'arm64' for MS-style inline assembly
+F/C: inline asm / naked	source/game_sa/Radar.cpp	525	unsupported architecture 'arm64' for MS-style inline assembly
+F/C: inline asm / naked	source/game_sa/Scripts/Commands/Ported/Group13_15.cpp	394	unsupported architecture 'arm64' for MS-style inline assembly
+F/C: inline asm / naked	source/game_sa/Scripts/Commands/Ported/Group13_15.cpp	415	unsupported architecture 'arm64' for MS-style inline assembly
+F/C: inline asm / naked	source/game_sa/Scripts/Commands/Ported/Group13_15.cpp	569	unsupported architecture 'arm64' for MS-style inline assembly
+F/C: inline asm / naked	source/game_sa/Scripts/Commands/Ported/Group13_15.cpp	606	unsupported architecture 'arm64' for MS-style inline assembly
+F/C: inline asm / naked	source/game_sa/Scripts/Commands/Ported/Group24b.cpp	91	unsupported architecture 'arm64' for MS-style inline assembly
+P: pointer/int width (cast/narrowing)	source/game_sa/Text/KeyArray.cpp	38	cast to smaller integer type 'unsigned int' from 'const unsigned char *' [-Werror,-Wpointer-to-int-cast]
+P: pointer/int width (cast/narrowing)	source/game_sa/VisibilityPlugins.cpp	364	cast to 'CClumpModelInfo *' from smaller integer type 'int32' (aka 'int') [-Werror,-Wint-to-pointer-cast]
+P: pointer/int width (cast/narrowing)	source/game_sa/VisibilityPlugins.cpp	397	cast to 'CClumpModelInfo *' from smaller integer type 'int32' (aka 'int') [-Werror,-Wint-to-pointer-cast]
+P: pointer/int width (cast/narrowing)	source/game_sa/VisibilityPlugins.cpp	1109	cast to smaller integer type 'int' from 'CClumpModelInfo *' [-Werror,-Wpointer-to-int-cast]
+F/C: inline asm / naked	source/standalone/FtolExe.cpp	12	unsupported architecture 'arm64' for MS-style inline assembly
+F/C: inline asm / naked	source/standalone/FtolExe.cpp	29	unsupported architecture 'arm64' for MS-style inline assembly
+F/C: inline asm / naked	source/standalone/FtolExe.cpp	33	unsupported architecture 'arm64' for MS-style inline assembly
+F/C: inline asm / naked	source/standalone/FtolExe.cpp	40	unsupported architecture 'arm64' for MS-style inline assembly
+F/C: inline asm / naked	source/standalone/FtolExe.cpp	43	unsupported architecture 'arm64' for MS-style inline assembly
+F/C: inline asm / naked	source/standalone/FtolExe.cpp	47	unsupported architecture 'arm64' for MS-style inline assembly
+F/C: inline asm / naked	source/standalone/FtolExe.cpp	80	unsupported architecture 'arm64' for MS-style inline assembly
+other: conversion/overload	source/toolsmenu/UIRenderer.cpp	63	no matching function for call to 'ImGui_ImplDX9_Init'
+W: Win32 API / type	source/toolsmenu/UIRenderer.cpp	100	use of undeclared identifier 'SetFocus'

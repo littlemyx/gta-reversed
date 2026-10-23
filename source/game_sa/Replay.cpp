@@ -173,21 +173,20 @@ void CReplay::StorePedUpdate(CPed* ped, uint8 index) {
     CStoredAnimationState animState{};
     StorePedAnimation(ped, animState);
 
-    Record.Write<tReplayPedUpdateBlock>({
-        .poolRef                  = index,
-        .heading                  = (int8)(ped->m_fCurrentRotation * HEADING_COMPRESS_VALUE),
-        .vehicleIndex             = (uint8)vehicleIdx,
-        .animState                = animState,
-        .matrix                   = CCompressedMatrixNotAligned::Compress(ped->GetMatrix()),
-        .weaponModel              = (int16)ped->m_nWeaponModelId,
-        .animGroup                = (uint16)ped->m_nAnimGroup,
-        .contactSurfaceBrightness = (uint8)(ped->m_fContactSurfaceBrightness * 100.0f),
-        .flags = {
-            .isTalking            = (bool)(ped == FindPlayerPed() && gbFirstPersonRunThisFrame && ped->bIsTalking),
-            .stillOnValidPoly     = (bool)ped->bStillOnValidPoly,
-            .usesCollision        = ped->GetUsesCollision()
-        }
-    });
+    tReplayPedUpdateBlock block; // a designated-initialiser temporary leaves the 2+2 padding bytes as stack garbage (0xCC), which then lands in the replay buffer; 0x45C940 writes the fields only
+    std::memset(&block, 0, sizeof(block));
+    block.poolRef                  = index;
+    block.heading                  = (int8)(ped->m_fCurrentRotation * HEADING_COMPRESS_VALUE);
+    block.vehicleIndex             = (uint8)vehicleIdx;
+    block.animState                = animState;
+    block.matrix                   = CCompressedMatrixNotAligned::Compress(ped->GetMatrix());
+    block.weaponModel              = (int16)ped->m_nWeaponModelId;
+    block.animGroup                = (uint16)ped->m_nAnimGroup;
+    block.contactSurfaceBrightness = (uint8)(ped->m_fContactSurfaceBrightness * 100.0f);
+    block.flags.isTalking          = (bool)(ped == FindPlayerPed() && gbFirstPersonRunThisFrame && ped->bIsTalking);
+    block.flags.stillOnValidPoly   = (bool)ped->bStillOnValidPoly;
+    block.flags.usesCollision      = ped->GetUsesCollision();
+    Record.Write<tReplayPedUpdateBlock>(block);
 }
 
 // 0x45B4D0

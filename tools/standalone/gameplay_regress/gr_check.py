@@ -467,9 +467,14 @@ def main():
         print('=' * 100)
         for f in sorted(glob.glob(os.path.join(od, '*.result'))):
             rows = [l.rstrip('\n') for l in read(f) if re.match(r'(PASS|FAIL|KNOWN|SKIP|SETUP)\s', l)]
+            scn = os.path.basename(f)[:-7]
+            if scn.endswith('.attempt1') and os.path.exists(os.path.join(od, scn[:-9] + '.result')):
+                # REGRESS-SETUP: a first attempt whose set-up failed and that gameplay_regress.sh re-ran: the scenario's verdict is the retry's, the failed attempt is info only (not counted)
+                setup_rows = [l for l in rows if l.startswith('SETUP')]
+                print('%-18s info   first attempt of %s: set-up failed, retried, verdict = the retry%s' % (scn, scn[:-9], ''.join('\n    ' + l[:200] for l in setup_rows[:2])))
+                continue
             for l in rows:
                 tot[l.split()[0]] = tot.get(l.split()[0], 0) + 1
-            scn = os.path.basename(f)[:-7]
             bad = [l for l in rows if l.startswith(('FAIL', 'SETUP'))]
             print('%-18s %-5s  %s' % (scn, 'FAIL' if bad else 'ok', ' '.join('%s=%d' % (k, sum(1 for l in rows if l.startswith(k))) for k in ('PASS', 'FAIL', 'KNOWN', 'SKIP', 'SETUP') if any(l.startswith(k) for l in rows))))
             for l in bad:

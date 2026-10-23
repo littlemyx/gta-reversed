@@ -51,7 +51,10 @@ RECORDS = {
 MAT_ROT = dict(right=(0, 1, 0), flags=3, top=(-1, 0, 0), at=(0, 0, 1), pos=(-2500.5, 1000.25, 12.125), attach=0, owns=0)
 # built-in cases (name, record, values) used by `cpp` and by the self-test of this generator
 CASES = [
-    ('basic', 'CPickup_File', dict(rev=1.5, obj=1, ammo=77, regen=1000, pos=(100, -200, 300), moneyPerDay=5, model=1212, ref=3, type=2, flags=0x81)),
+    # P-2e: flags 0x5D = bDisabled | bHelpMessageDisplayed | bVisible | nPropertyTextIndex=5 (<<4); live object present (obj=1), type ON_STREET
+    ('basic', 'CPickup_File', dict(rev=1.5, obj=1, ammo=77, regen=1000, pos=(100, -200, 300), moneyPerDay=5, model=1212, ref=3, type=2, flags=0x5D)),
+    ('noobj', 'CPickup_File', dict(rev=0.0, obj=0, ammo=5, regen=0, pos=(-32768, 32767, 0), moneyPerDay=65535, model=-1, ref=-2, type=3, flags=0x0A)),   # type ONCE, no object: bVisible stays as on file
+    ('none_obj', 'CPickup_File', dict(rev=0.0, obj=1, ammo=0, regen=0, pos=(0, 0, 0), moneyPerDay=0, model=0, ref=0, type=0, flags=0x08)),   # PICKUP_NONE with a stale object: loader leaves it alone
     ('basic', 'CWeapon_File', dict(type=30, state=0, ammoInClip=30, totalAmmo=500, timeForNextShot=0, firstPerson=0, dontPlaceInHand=1, fx=0)),
     # P-2d: 13 slots, slot k = type 10+k (k=0 is WEAPON_UNARMED-like 0), ammo 100*k, inClip k; the pointer slot (fx) is 0 in ToFile output
     ('basic', 'CPedSaveStructure_File', dict(pos=(-2500.5, 1000.25, 12.125), health=100.0, armor=50.5, weapons=lambda: [b for k in range(13) for b in golden('CWeapon_File', type=0 if k == 0 else 10 + k, state=k % 5, ammoInClip=k, totalAmmo=100 * k, timeForNextShot=1000 + k, firstPerson=k & 1, dontPlaceInHand=1 if k == 12 else 0)],

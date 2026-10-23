@@ -66,7 +66,7 @@ VALIDATE_OFFSET(CVehicle, m_apPassengers, 0x464);
 VALIDATE_OFFSET(CVehicle, m_nNumPassengers, 0x484); VALIDATE_OFFSET(CVehicle, m_nMaxPassengers, 0x488);
 VALIDATE_OFFSET(CVehicle, m_nExtendedRemovalRange, 0x4A6); // the next (bitfield) byte at 0x4A8 holds m_nBombOnBoard:3, m_nOverrideLights:2 (mask 0x18), m_ropeType:2
 VALIDATE_OFFSET(CAutomobile, m_aCarNodes, 0x648);
-VALIDATE_SIZE_FILE(CPickup, 0x20);
+VALIDATE_SIZE(CPickup, 0x20); // x86 in-memory (0x28 on LP64); file record: CPickup_File
 static_assert((int32)eScriptedTaskStatus::EVENT_ASSOCIATED == 0);
 
 //! x87-compare idiom `fcom -100.0f; test ah, 0x41; jp skip`: the ground Z is looked up only when `z <= -100.0f` (ordered).

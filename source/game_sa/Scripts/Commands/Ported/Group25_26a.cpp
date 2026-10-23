@@ -68,7 +68,7 @@ VALIDATE_OFFSET(CPlayerPedData, m_nScriptLimitToGangSize, 0x43);
 VALIDATE_OFFSET(CPlayerPedData, m_bDontAllowWeaponChange, 0x85);
 VALIDATE_OFFSET(CPlayerPedData, m_bForceInteriorLighting, 0x86);
 static_assert(offsetof(CPad, DisablePlayerControls) == 0x10E);
-VALIDATE_OFFSET_FILE(CPickup, m_nPickupType, 0x1C); VALIDATE_SIZE_FILE(CPickup, 0x20);
+VALIDATE_OFFSET(CPickup, m_nPickupType, 0x1C); VALIDATE_SIZE(CPickup, 0x20); // x86 in-memory; the file record is CPickup_File (P-2e)
 static_assert(MAX_NUM_PICKUPS == 620); // 0x4D80 / 0x20
 VALIDATE_OFFSET(CVehicleModelInfo, m_nHandlingId, 0x4A);
 static_assert(offsetof(cHandlingDataMgr, m_aVehicleHandling) + offsetof(tHandlingData, m_nMonetaryValue) == 236); // 0xC2BAB4 - 0xC2B9C8 (gHandlingDataMgr @0xC2B9C8)

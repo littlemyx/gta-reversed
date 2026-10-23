@@ -262,6 +262,9 @@ if (${RE_PROJECT}_PORTABLE)
         message(FATAL_ERROR "${RE_PROJECT}_VERIFY_GLOBALS / ${RE_PROJECT}_IMAGE_DIAG are dev configurations of the Windows run exe (original data image); not available with ${RE_PROJECT}_PORTABLE")
     endif()
     target_compile_definitions(${RE_PROJECT_LIB_NAME} PRIVATE NOTSA_PORTABLE=1)
+    # P-2k: the 64-bit width guard of the typed save/stream templates (FileRecord.hpp) is an ERROR in the portable build: `layout_diff.py guard` lists 0 offenders after P-2b..j,
+    # so a new SaveDataToWorkBuffer/LoadDataFromWorkBuffer/RwStreamRead<T> with a pointer/long/size_t/ptrdiff_t fails to compile instead of writing 8 bytes into a 4-byte slot.
+    target_compile_definitions(${RE_PROJECT_LIB_NAME} PRIVATE NOTSA_FILE_SCALAR_STRICT)
 endif()
 if (${RE_PROJECT}_VERIFY_GLOBALS)
     target_compile_definitions(${RE_PROJECT_LIB_NAME} PRIVATE NOTSA_VERIFY_GLOBALS)
@@ -2742,4 +2745,9 @@ if (${RE_PROJECT}_INSTALL)
     if (MSVC)
         install(FILES $<TARGET_PDB_FILE:${RE_PROJECT_LIB_NAME}> DESTINATION "." OPTIONAL)
     endif()
+endif()
+
+# Portable build only (P-2k): host tests of the portable layer as ctest tests, label "portable" (fast) / "mutation" (slow). enable_testing() is in the top-level CMakeLists.txt.
+if (${RE_PROJECT}_PORTABLE)
+    include("${PROJECT_SOURCE_DIR}/tools/portable/portable_tests.cmake")
 endif()

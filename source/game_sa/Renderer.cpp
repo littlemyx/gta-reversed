@@ -883,7 +883,7 @@ int32 CRenderer::SetupEntityVisibility(CEntity* entity, float& outDistance) {
                 return RENDERER_CULLED;
             }
 
-            if (entity->GetWasPostponed()) {
+            if (entity->m_bDrawLast) { // exe 0x5543D6: `test ah, 0x40` on the flags dword = bit 14 = m_bDrawLast (not m_bWasPostponed, bit 6)
                 entity->m_bDistanceFade = false;
                 AddEntityToRenderList(entity, DistanceBetweenPoints(ms_vecCameraPosition, entity->GetPosition()));
                 return RENDERER_INVISIBLE;
@@ -927,7 +927,7 @@ int32 CRenderer::SetupEntityVisibility(CEntity* entity, float& outDistance) {
                     return RENDERER_CULLED;
                 }
 
-                if (!entity->GetWasPostponed())
+                if (!entity->m_bDrawLast) // exe 0x554523: `test ah, 0x40` = bit 14 = m_bDrawLast
                 {
                     return RENDERER_VISIBLE;
                 }

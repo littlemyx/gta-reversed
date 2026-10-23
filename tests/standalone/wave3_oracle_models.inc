@@ -297,11 +297,13 @@ static void TestW3Models() {
 #include "wave3_oracle_models2.inc"
 #include "wave3_oracle_models3.inc"
 #include "wave3_oracle_models4.inc"
+#include "wave3_oracle_models5.inc"
 
 static void TestW3ModelsAll() {
     TestW3Models();
     TestW3ModelsVeh();
     TestW3ModelsPart3();
     TestW3ModelsPart4();
+    TestW3ModelsPart5();
 }
 #undef Run

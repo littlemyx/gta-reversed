@@ -910,8 +910,8 @@ void CEntity::SetRwObjectAlpha(int32 alpha) {
         return;
     }
     switch (const auto type = RwObjectGetType(object)) {
-    case rpATOMIC: SetAtomicAlpha(GetRpAtomic(), (void*)(alpha)); break;
-    case rpCLUMP:  RpClumpForAllAtomics(GetRpClump(), SetAtomicAlpha, (void*)alpha); break;
+    case rpATOMIC: SetAtomicAlpha(GetRpAtomic(), (void*)(uintptr_t)(alpha)); break;
+    case rpCLUMP:  RpClumpForAllAtomics(GetRpClump(), SetAtomicAlpha, (void*)(uintptr_t)alpha); break;
     default:       NOTSA_UNREACHABLE_CASE(type);
     }
 }

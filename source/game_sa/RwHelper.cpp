@@ -260,26 +260,26 @@ bool RpClumpConvertGeometryToTS(RpClump* clump) {
 // 0x734D60
 RpMaterial* forceLinearFilteringMatTexturesCB(RpMaterial* material, void* data) {
     if (RwTexture* texture = RpMaterialGetTexture(material)) {
-        RwTextureSetFilterMode(texture, (RwTextureFilterMode)((unsigned)data));
+        RwTextureSetFilterMode(texture, (RwTextureFilterMode)((unsigned)(uintptr_t)data));
     }
     return material;
 }
 
 // 0x734D80
 bool SetFilterModeOnAtomicsTextures(RpAtomic* atomic, RwTextureFilterMode filtering) {
-    RpGeometryForAllMaterials(RpAtomicGetGeometry(atomic), forceLinearFilteringMatTexturesCB, (void*)(unsigned)filtering);
+    RpGeometryForAllMaterials(RpAtomicGetGeometry(atomic), forceLinearFilteringMatTexturesCB, (void*)(uintptr_t)(unsigned)filtering);
     return true;
 }
 
 // 0x734DA0
 RpAtomic* forceLinearFilteringAtomicsCB(RpAtomic* atomic, void* data) {
-    SetFilterModeOnAtomicsTextures(atomic, (RwTextureFilterMode)((unsigned)data));
+    SetFilterModeOnAtomicsTextures(atomic, (RwTextureFilterMode)((unsigned)(uintptr_t)data));
     return atomic;
 }
 
 // 0x734DC0
 bool SetFilterModeOnClumpsTextures(RpClump* clump, RwTextureFilterMode filtering) {
-    RpClumpForAllAtomics(clump, forceLinearFilteringAtomicsCB, (void*)(unsigned)filtering);
+    RpClumpForAllAtomics(clump, forceLinearFilteringAtomicsCB, (void*)(uintptr_t)(unsigned)filtering);
     return true;
 }
 

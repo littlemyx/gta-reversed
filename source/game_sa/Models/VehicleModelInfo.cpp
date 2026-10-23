@@ -536,7 +536,7 @@ void CVehicleModelInfo::SetEnvMapCoeff(float coeff)
     if (!GetRwObject())
         return;
 
-    RpClumpForAllAtomics(GetRpClump(), SetEnvMapCoeffAtomicCB, (void*)iUsedCoeff);
+    RpClumpForAllAtomics(GetRpClump(), SetEnvMapCoeffAtomicCB, (void*)(uintptr_t)iUsedCoeff);
 }
 
 int32 CVehicleModelInfo::GetNumDoors()
@@ -920,7 +920,7 @@ RpAtomic* CVehicleModelInfo::HideDamagedAtomicCB(RpAtomic* atomic, void* data)
 
 RpAtomic* CVehicleModelInfo::HideAllComponentsAtomicCB(RpAtomic* atomic, void* data)
 {
-    auto uiData = reinterpret_cast<uint32>(data);
+    auto uiData = (uint32)(uintptr_t)data;
     auto checkedFlags = uiData & CVisibilityPlugins::GetAtomicId(atomic);
     if (checkedFlags)
         RpAtomicSetFlags(atomic, 0);
@@ -1146,7 +1146,7 @@ RpMaterial* CVehicleModelInfo::SetEnvMapCoeffCB(RpMaterial* material, void* data
 
     // 0x4C88B0: fild + (2^32 when negative) = the data as an unsigned int, times the float constant 0.001f (0x858CDC) - not a division by 1000 (differs in the last bit)
     // (PC=24: the add of 2^32 to a negative int is rounded to 24 bits before the multiply; reproduced below)
-    const auto sCoeff = reinterpret_cast<int32>(data);
+    const auto sCoeff = (int32)(uintptr_t)data;
     double dCoeff = static_cast<double>(sCoeff);
     if (sCoeff < 0)
         dCoeff = static_cast<double>(static_cast<float>(dCoeff + 4294967296.0));

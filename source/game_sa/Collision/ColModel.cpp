@@ -97,7 +97,7 @@ void CColModel::AllocateData(int32 numSpheres, int32 numBoxes, int32 numLines, i
     auto* pTrisStart = reinterpret_cast<void*>(vertsOffset + vertsSize);
     auto space = trianglesSize + 4;
     auto* pAlignedAddress = std::align(4, trianglesSize, pTrisStart, space); // 4 bytes aligned address
-    const auto trianglesOffset = reinterpret_cast<uint32>(pAlignedAddress);
+    const auto trianglesOffset = static_cast<uint32>(reinterpret_cast<uintptr_t>(pAlignedAddress)); // the "address" is a file offset (see pTrisStart)
     assert(trianglesOffset && trianglesOffset >= (vertsOffset + vertsSize)); // Just to make sure that the alignment works properly
 
     AllocateData(trianglesOffset + trianglesSize);

@@ -1957,7 +1957,7 @@ float CVehicle::HeightAboveCeiling(float height, eFlightModel flightModel) {
 RwObject* SetVehicleAtomicVisibilityCB(RwObject* object, void* data) {
     assert(RwObjectGetType(object) == rpATOMIC);
     const auto atomic      = reinterpret_cast<RpAtomic*>(object);
-    const auto toSet = std::bit_cast<eAtomicComponentFlag>(data);
+    const auto toSet = static_cast<eAtomicComponentFlag>(reinterpret_cast<uintptr_t>(data));
     if (const auto current = CVisibilityPlugins::GetUserValue(atomic) & ATOMIC_MASK; current != ATOMIC_NONE) {
         RpAtomicSetFlags(atomic, current != toSet ? 0 : rpATOMICRENDER);
     }
@@ -1978,8 +1978,8 @@ void CVehicle::SetComponentVisibility(RwFrame* component, uint32 visibilityState
         if (visibilityState == eAtomicComponentFlag::ATOMIC_DAMAGED) {
             vehicleFlags.bIsDamaged = true;
         }
-        RwFrameForAllObjects(component, SetVehicleAtomicVisibilityCB, (void*)visibilityState);
-        RwFrameForAllChildren(component, SetVehicleAtomicVisibilityCB, (void*)visibilityState);
+        RwFrameForAllObjects(component, SetVehicleAtomicVisibilityCB, (void*)(uintptr_t)visibilityState);
+        RwFrameForAllChildren(component, SetVehicleAtomicVisibilityCB, (void*)(uintptr_t)visibilityState);
     }
 }
 

@@ -130,7 +130,7 @@ void* CMemoryMgr::MallocFromScratchPad(uint32 size) {
 void* CMemoryMgr::MallocAlignFromScratchPad(uint32 size, uint32 align) {
     void* memory = MallocFromScratchPad(size + align);
 
-    void* result = (void*)(uint32((uint8*)memory + align) & ~(align - 1));
+    void* result = (void*)(uintptr_t((uint8*)memory + align) & ~uintptr_t(align - 1));
     *((void**)result - 1) = memory;
     return result;
 }
@@ -338,7 +338,7 @@ uint8* CMemoryMgr::Calloc(uint32 numObj, uint32 sizeObj, uint32 hint) {
 uint8* CMemoryMgr::MallocAlign(uint32 size, uint32 align, uint32 nHint) {
     auto* memory = Malloc(size + align, nHint);
 
-    auto* result = (void*)(uint32((uint8*)memory + align) & ~(align - 1));
+    auto* result = (void*)(uintptr_t((uint8*)memory + align) & ~uintptr_t(align - 1));
     *((void**)result - 1) = memory;
     return static_cast<uint8*>(result);
 }

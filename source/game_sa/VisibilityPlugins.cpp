@@ -307,13 +307,13 @@ void CVisibilityPlugins::ClearAtomicFlag(RpAtomic* atomic, uint16 flag) {
 
 // 0x732330
 RpAtomic* clearClumpForAllAtomicsFlagCB(RpAtomic* atomic, void* data) {
-    CVisibilityPlugins::ClearAtomicFlag(atomic, (int32)data);
+    CVisibilityPlugins::ClearAtomicFlag(atomic, (int32)(uintptr_t)data);
     return atomic;
 }
 
 // 0x732350
 void CVisibilityPlugins::ClearClumpForAllAtomicsFlag(RpClump* clump, int32 id) {
-    RpClumpForAllAtomics(clump, clearClumpForAllAtomicsFlagCB, (void*)id);
+    RpClumpForAllAtomics(clump, clearClumpForAllAtomicsFlagCB, (void*)(uintptr_t)id);
 }
 
 // 0x732E10
@@ -1074,14 +1074,14 @@ void CVisibilityPlugins::SetAtomicFlag(RpAtomic* atomic, uint16 flag) {
 // optimization?
 // 0x7322D0
 RpAtomic* setClumpForAllAtomicsFlagCB(RpAtomic* atomic, void* data) {
-    CVisibilityPlugins::SetAtomicFlag(atomic, int32(data));
+    CVisibilityPlugins::SetAtomicFlag(atomic, int32(uintptr_t(data)));
     return atomic;
 }
 
 // 0x7322F0
 void CVisibilityPlugins::SetClumpForAllAtomicsFlag(RpClump* clump, int32 id) {
     // like Mobile (in PC call SetAtomicFlag)
-    RpClumpForAllAtomics(clump, setClumpForAllAtomicsFlagCB, (void*)id);
+    RpClumpForAllAtomics(clump, setClumpForAllAtomicsFlagCB, (void*)(uintptr_t)id);
 }
 
 // 0x732290

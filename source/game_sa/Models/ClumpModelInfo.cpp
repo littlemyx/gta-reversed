@@ -264,7 +264,7 @@ RwFrame* CClumpModelInfo::FindFrameFromNameCB(RwFrame* frame, void* searchData)
 {
     auto searchInfo = reinterpret_cast<tCompSearchStructByName*>(searchData);
     auto name = GetFrameNodeName(frame);
-    if (!strcmp(searchInfo->m_pName, name)) {
+    if (!_stricmp(searchInfo->m_pName, name)) { // exe 0x4C52A0 calls the CRT _stricmp (0x8229B6): frame names are matched case-insensitively
         searchInfo->m_pFrame = frame;
         return nullptr;
     }
@@ -280,7 +280,7 @@ RwFrame* CClumpModelInfo::FindFrameFromNameWithoutIdCB(RwFrame* frame, void* sea
 {
     auto searchInfo = reinterpret_cast<tCompSearchStructByName*>(searchData);
     auto name = GetFrameNodeName(frame);
-    if (!CVisibilityPlugins::GetFrameHierarchyId(frame) && !strcmp(searchInfo->m_pName, name)) {
+    if (!CVisibilityPlugins::GetFrameHierarchyId(frame) && !_stricmp(searchInfo->m_pName, name)) { // exe 0x4C52F0: _stricmp (0x8229B6), not strcmp
         searchInfo->m_pFrame = frame;
         return nullptr;
     }

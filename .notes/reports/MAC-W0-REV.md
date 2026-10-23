@@ -3,7 +3,7 @@
 Commits (portable/main, pushed to fork): 7203bc53 (remove directives), 5f6ce85d (psGrabScreen/VRAM fix), + cdstream fix commit. Sub-report (wine A/B, sonnet sub-agent): MAC-W0-REV-AB.md.
 
 ## 1. `#line` removal
-108 `#line N // W0a` lines removed from 9 files (app_debug.cpp, WinMain.cpp, WinPlatform.cpp, WinPs.cpp, debug.hpp, AESound.cpp, AESoundManager.cpp, AEUserRadioTrackManager.cpp, FileMgr.cpp). Pre-existing `#line` (Base.h, app_game.cpp, platform.cpp, dllmain.cpp, FastLoader.hpp, 3dMarker.cpp ...) untouched.
+101 `#line N // W0a` lines removed from 9 files (app_debug.cpp, WinMain.cpp, WinPlatform.cpp, WinPs.cpp, debug.hpp, AESound.cpp, AESoundManager.cpp, AEUserRadioTrackManager.cpp, FileMgr.cpp). Pre-existing `#line` (Base.h, app_game.cpp, platform.cpp, dllmain.cpp, FastLoader.hpp, 3dMarker.cpp ...) untouched.
 tools/portable/w0a_guardlines.py: `fix` removed, `check` is report-only (text compare of the Windows view vs base, no numbering). All 9 files: TEXT OK vs 3f46d831~1.
 
 ## 2. Review (every W0 hunk in MSVC-compiled files)

@@ -47,3 +47,48 @@ Consumer audit: neither fix changes a layout or a shared value; `m_wBombTimer` i
 ## Gates
 
 wave3_vehicle_oracle_test: exit 0, PC24 0, PC53 14 (the same 14 informational x87 artefacts as before the wave). Release build of the worktree + soak: PHASE2_STATUS line.
+
+## Continuation 2 (ORACLE-C-VEH-2, rules v4, 17:22-, worktree C:/gta-wt/oracle-c-veh-2)
+
+### The 11 process-killing rows: cause = fixture (SafeSEH), not the port
+cdb (`sxd av;g;k`) on CVehicle::UpdateWinch: the port's first fault (0x400000, unresolved CRopes symbol) was an agreed/skipped fault, the second was the EXE side:
+`CRopes::RegisterRope 0x556B40 -> ... CPhysical ctor 0x542260 -> 0x54F4C0` read the uninitialised global matrix-link list (`mov ecx,[eax+0x50]`, eax = 0). The exe
+function has a C++ EH frame (`push 0x83D2C8; push fs:[0]`), and a fault unwinding through an fs:[0] record whose handler is in the exe image (not in the test's
+SafeSEH handler table) raises STATUS_INVALID_EXCEPTION_HANDLER (c00001a5) as an unhandled second-chance exception -> the process dies. Every killer row has such a frame
+(CAutomobile::OpenDoor 0x6A6AE0 -> 0x847F98, CBike::CalculateLeanMatrix 0x848258, SpecialEntity 0x848718 ...). Fix: `/SAFESEH:NO` on wave3_vehicle_oracle_test (source/CMakeLists.txt).
+With it all 11 run. A port-only fault where the exe survived did exist (ProcessAutoBusDoors, below) and was a real port bug.
+
+| row | now | note |
+|---|---|---|
+| CVehicle::UpdateTrailerLink | 0/60 PC24 | generated row passes (16 of 120 cases fault in both: skipped) |
+| CBike::FixHandsToBars | 0/60 | generated row passes (60 of 120 fault in both) |
+| CBike::CalculateLeanMatrix | hand row, **fix**, 0/600 | see fixes |
+| CAutomobile::ProcessAutoBusDoors | hand row, **fix**, 0/600 | see fixes |
+| CAutomobile::CloseBoot | skipped | with a shared fake frame (matrix at +0x10 is the same layout in librw and RW 3.7) every case faults port-only inside CMatrix::UpdateRwMatrix at an unresolved symbol (the RwMatrixUpdate shim TU is not linked) |
+| CVehicle::UpdateWinch | skipped | Ropes.cpp linked now; the port asserts on garbage rope segment counts (the exe writes past the array), and the exe constructs a CObject hook through the pools/global lists: needs a rope + sector fixture |
+| CAutomobile::Fix | skipped | every case faults in both (RpClumpForAllAtomics on the null clump) |
+| CAutomobile/CBike/CBoat/CTrain::Teleport | skipped | the port calls CWorld::Remove/Add whose TU is not linked (0x400000); the exe walks uninitialised sector lists |
+
+### Port bugs fixed (one commit each; all pre-fix counts from the new rows)
+| function | exe asm | bug | pre-fix | post |
+|---|---|---|---|---|
+| `CAutomobile::ProcessAutoBusDoors` 0x6A38A0 | 0x6A38DD / 0x6A3966 / 0x6A39FE / 0x6A3A28 `test [esi+0x486],mask / jne skip`; 0x6A392A `mov [esi+0x870],[0xB7CB84]` | the getting-in test had the wrong polarity (port moved the door when the bit was SET), and for a closed left-front door the port wrote m_nBusDoorTimerStart = 0 instead of m_nBusDoorTimerEnd = time | 67/600 | 0/600 |
+| `CBike::CalculateLeanMatrix` 0x6B7150 | 0x6B71E1..0x6B7253 | position += (up * minZ) * float(1 - cos) with x/y rounded to float and z unrounded (port: (up * k) * minZ) -> 1 ulp | 11/600 | 0/600 |
+| `CVehicle::SpecialEntityPreCollisionStuff` 0x6D6640 | 0x6D668F `test byte [esi+0x43],1` | tested physicalFlags.bSubmergedInWater (bit 8) instead of bDontCollideWithFlyers (bit 24: set by CHeli / CPlane) -> wrong collision exemptions for submerged vehicles and flyers | 112/3000 | 0/3000 |
+
+Consumer audit (no layout/meaning change in any of the three): m_nBusDoorTimerEnd/Start only in ProcessControl (timer decrement), SetBusDoorTimer and this function; m_mLeanMatrix only through the matrix by rider/render code;
+bDontCollideWithFlyers read at Collision.cpp:3159, Physical.cpp:2147/4149 with the same meaning. Soak: see the PHASE2_STATUS line.
+
+### Numbers
+| | before | after |
+|---|---:|---:|
+| game_sa/Entity/Vehicle covered | 239 | **244** |
+| uncovered class C in Entity/Vehicle | 62 | **57** |
+| whole game (oracle_coverage.py) | 4810 | **4815** |
+| wave3_vehicle_oracle_test | 113 rows | 118 rows, PC24 **0**, PC53 14 (same informational x87 artefacts), exit 0, 2 min 35 s |
+
+New hand rows live in tests/standalone/wave3_oracle_veh_hand3.inc (ProcessAutoBusDoors compares the end time relative to each side's clock and nulls the car nodes so OpenDoor returns at once;
+CalculateLeanMatrix zeroes the 4 padding words of the matrix temp, which hold stack garbage in the exe and the debug fill in the port; SpecialEntityPreCollisionStuff uses pool ped/vehicle/object colliders
+with the links between the two set in a share of the cases and a garbage model info for the collider).
+Lesson: a "port faulted while the exe did not" mismatch in a skipped-looking row pointed at two real bugs - read the exe asm of the whole function once the row diverges.
+Still open: CloseBoot/Teleports/UpdateWinch/Fix (above), lights (DoVehicleLights/DoHeadLight*), the RW-bound rows (clump + frames), TrainHitStuff, CopyObjectsCB, CustomCarPlate_BeforeRenderingStart.

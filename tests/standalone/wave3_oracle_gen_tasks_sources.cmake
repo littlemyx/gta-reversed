@@ -14,6 +14,9 @@ set(W3_TASKS_SOURCES
     game_sa/PatrolRoute.cpp
     game_sa/PedGeometryAnalyser.cpp
     game_sa/PedGroup.cpp
+    game_sa/PedGroupIntelligence.cpp
+    game_sa/PedGroupMembership.cpp
+    game_sa/PedGroups.cpp
     game_sa/PedIntelligence.cpp
     game_sa/PedScanner.cpp
     game_sa/Stats.cpp

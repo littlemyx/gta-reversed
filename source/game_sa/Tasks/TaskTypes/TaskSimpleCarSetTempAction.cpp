@@ -41,7 +41,8 @@ bool CTaskSimpleCarSetTempAction::MakeAbortable(CPed* ped, eAbortPriority priori
 
 // 0x645370
 bool CTaskSimpleCarSetTempAction::ProcessPed(CPed* ped) {
-    const auto ap = &m_pVehicle->m_autoPilot;
+    // The exe re-reads m_pVehicle at every use (0x6453A1, 0x6453C4, 0x6453FF): CTaskSimpleCarDrive::ProcessPed can swap it (0x6444CC), so no pointer into the vehicle is cached
+    const auto AP = [this]() -> CAutoPilot& { return m_pVehicle->m_autoPilot; };
 
     if (!m_pVehicle) {
         m_pVehicle = ped->m_pVehicle;
@@ -50,18 +51,18 @@ bool CTaskSimpleCarSetTempAction::ProcessPed(CPed* ped) {
 
     if (CTaskSimpleCarDrive::ProcessPed(ped)) {
         if (m_pVehicle) {
-            ap->SetTempAction(TEMPACT_NONE, 0);
+            AP().SetTempAction(TEMPACT_NONE, 0);
             return true;
         }
     }
 
     if (m_pVehicle) {
         if (m_TempAct != TEMPACT_NONE) {
-            ap->SetTempAction(m_TempAct, m_DurMs);
+            AP().SetTempAction(m_TempAct, m_DurMs);
             m_TempAct = TEMPACT_NONE;
             return false;
         }
-        if (ap->m_nTempAction == TEMPACT_NONE) {
+        if (AP().m_nTempAction == TEMPACT_NONE) {
             return true;
         }
     }

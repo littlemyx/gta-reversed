@@ -73,12 +73,20 @@ CTask* CTaskComplexPassObject::CreateFirstSubTask(CPed* ped) {
         {
             const auto passer = m_isPasser ? ped : m_ped;
             m_entityToPass = passer->GetEntityThatThisPedIsHolding();
-            assert(m_entityToPass);
-            CEntity::RegisterReference(m_entityToPass);
+            CEntity::SafeRegisterRef(m_entityToPass); // 0x661403: `test ecx, ecx / je` the exe does not require an entity here (the port had an assert and an unconditional register)
         }
-        if (const auto pedToOther = (m_ped->GetPosition() - ped->GetPosition()); sq(1.5f) >= pedToOther.SquaredMagnitude()) {
-            m_targetPos = m_ped->GetPosition() + pedToOther / 2.f; // Position intbetween the 2 peds
-            return new CTaskComplexTurnToFaceEntityOrCoord{ m_targetPos }; 
+        // 0x661415..0x661466: x87 evaluation. dx / dy are rounded to float once (stored), dz stays unrounded; dx enters the square as unrounded * rounded
+        const auto& otherPos = m_ped->GetPosition();
+        const auto& pedPos   = ped->GetPosition();
+        const double dzU = (double)otherPos.z - (double)pedPos.z;
+        const double dxU = (double)otherPos.x - (double)pedPos.x;
+        const float  dx  = (float)dxU;
+        const float  dy  = (float)((double)otherPos.y - (double)pedPos.y);
+        const double distSq = (dxU * (double)dx + (double)dy * (double)dy) + dzU * dzU;
+        if (distSq <= (double)sq(1.5f)) { // 0x66145B: fcomp [0x86E104] (2.25); NaN => no
+            m_timer.Start(1000); // 0x66147B..0x66148B: `[this+0x20] = CTimer::m_snTimeInMilliseconds; [this+0x24] = 1000; [this+0x28] = 1` (the port never started the timer)
+            m_targetPos = CVector{ (float)((double)dx * 0.5 + otherPos.x), (float)((double)dy * 0.5 + otherPos.y), (float)(dzU * 0.5 + otherPos.z) }; // position in between the 2 peds
+            return new CTaskComplexTurnToFaceEntityOrCoord{ static_cast<CEntity*>(m_ped) }; // 0x66150D..0x661514: the ENTITY constructor (0x66B890) with the other ped, not the position one
         }
     }
     AbortIK(ped);

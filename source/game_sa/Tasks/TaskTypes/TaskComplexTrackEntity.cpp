@@ -146,10 +146,10 @@ CTask* CTaskComplexTrackEntity::CreateNextSubTask(CPed* ped) {
     }
 
     if (!m_pSubTask || m_pSubTask->GetTaskType() != TASK_SIMPLE_STAND_STILL) {
-        return new CTaskSimpleStandStill{ };
+        return new CTaskSimpleStandStill{ 50 }; // 0x65F6C7 `push 0x32`: the exe stands still for 50 ms (the port passed the default 0)
     }
 
-    if (m_distToTargetSq < sq(m_rangeMin)) {
+    if ((double)m_distToTargetSq < (double)m_rangeMin * (double)m_rangeMin) { // 0x65F5D0..0x65F5E3: x87 product in extended precision, strict compare (NaN / equal => follow route)
         return new CTaskSimpleGoToPointFine{ m_fMoveRatio, m_goToPos, 0.25f, nullptr };
     }
 

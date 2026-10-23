@@ -937,7 +937,9 @@ void CTaskSimpleUseGun::Reset(CPed* ped, CEntity* targetEntity, CVector targetPo
     m_IsLOSBlocked    = false;
     m_IsArmIKInUse    = false;
     m_IsLookIKInUse   = false;
-    m_TargetEntity    = targetEntity;
+    if (m_TargetEntity != targetEntity) { // 0x624E0E: the exe does nothing at all for the same entity (no cleanup / re-register, which would reorder the CReferences list)
+        m_TargetEntity = targetEntity;
+    }
 }
 
 // 0x61E3F0

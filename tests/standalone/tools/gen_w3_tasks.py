@@ -171,7 +171,7 @@ def main():
                 for e in range(ln if ln else 0): ents.append((r2, e * (1 if k == 'b' else 4), k))
         for (oc_, mn_), kk_ in W3_MEMBER_KIND.items():   # index members the port range-checks (kind 'x': 0..4, the routes of the fixture have 5..8 entries)
             if ((not d['static']) or d.get('static_obj')) and oc_ in index.chain(cls):
-                r3 = 'W2Off_%s_%s' % (oc_, mn_); G_robs_offsets[r3] = (oc_, mn_, 'uint32', 0); ents.append((r3, 0, kk_))
+                r3 = 'W2Off_%s_%s' % (oc_, mn_); G_robs_offsets[r3] = (oc_, mn_, W3_MEMBER_TYPE.get((oc_, mn_), 'uint32'), 0); ents.append((r3, 0, kk_))
         if rk == 'S': call = 'w3t::StoreRet(%s)' % call; exe = '(%s, 0)' % exe
         build = None
         if (not d['static']) and not fn.startswith('Constructor') and len(d['params']) <= 3 and not is_dtor:
@@ -237,7 +237,10 @@ def main():
 G_robs_offsets = {}
 # pointer member type -> fixture kind (PutEntTo in wave3_oracle_tasks.inc)
 W3_PTR_KIND = {'CPointRoute*': 'R', 'CNodeRoute*': 'Q'}
-W3_MEMBER_KIND = {('CTaskComplexFollowPointRoute', 'm_currPointIdx'): 'x', ('CTaskComplexFollowNodeRoute', 'm_CurrPtIdx'): 'x', ('CTaskComplexDrivePointRoute', 'm_currPtIdx'): 'x'}
+W3_MEMBER_KIND = {('CTaskComplexFollowPointRoute', 'm_currPointIdx'): 'x', ('CTaskComplexFollowNodeRoute', 'm_CurrPtIdx'): 'x', ('CTaskComplexDrivePointRoute', 'm_currPtIdx'): 'x',
+                 ('CTaskComplexBeInGroup', 'm_nGroupId'): 'x', ('CTaskComplexBeInGroup', 'm_nSecondaryTaskSlot'): 'x', ('CTaskSimpleAffectSecondaryBehaviour', 'm_secTaskType'): 'x',
+                 ('CTaskComplexSunbathe', 'm_BeachAnimBlockIndex'): 'x', ('CTaskComplexSunbathe', 'm_SunbatheAnimBlockIndex'): 'x', ('CTaskComplexGoPickUpEntity', 'm_nAnimGroupId'): 'x'}   # ORACLE-C-TASKS-2: table / array indices the port range-checks (std::array subscript), the exe has no check and the game passes valid ones
+W3_MEMBER_TYPE = {('CTaskComplexBeInGroup', 'm_nGroupId'): 'int32', ('CTaskComplexBeInGroup', 'm_nSecondaryTaskSlot'): 'int32', ('CTaskSimpleAffectSecondaryBehaviour', 'm_secTaskType'): 'eSecondaryTask', ('CTaskComplexSunbathe', 'm_BeachAnimBlockIndex'): 'int32', ('CTaskComplexSunbathe', 'm_SunbatheAnimBlockIndex'): 'int32', ('CTaskComplexGoPickUpEntity', 'm_nAnimGroupId'): 'AssocGroupId'}
 # per-row fixture: exe statics the CRT start-up (not run by the harness) or the function's lazy first-call code would initialise
 PRE = {
     # the exe's bit-field / CNodeAddress initialisation leaves bytes of the (pool garbage) object untouched, the port writes a value or 0 there: masked, see the report
@@ -247,13 +250,16 @@ PRE = {
     'CTaskComplexStealCar::CreateSubTask': 'w3t::g_pmask = { {0x29, 3} };',   # padding after a bool of a created task (the exe zeroes it, the port leaves it)
     'CTaskComplexOnFire::CreateSubTask': 'w3t::g_pmask = { {0x25, 3} };',   # CTaskComplexSmartFleeEntity: the exe zeroes the 3 padding bytes after the bool at +0x24, the port leaves them
     'CTaskComplexWalkAlongsidePed::CreateSubTask': 'w3t::g_pmask = { {0x40, 4} };',   # CTaskComplexSeekEntity<...>: embedded calculator vptr at +0x40 (port vtable address vs exe)
+    'CTaskComplexFollowPedFootsteps::CreateFirstSubTask': 'w3t::g_pmask = { {0x40, 4} };',   # CTaskComplexSeekEntity<...>: embedded calculator vptr at +0x40 (the +0x41/+0x42 bytes of port vs exe address)
+    'CTaskComplexSunbathe::Destructor': 'volatile uint32_t* s_ = reinterpret_cast<volatile uint32_t*>(0xB4EA30); s_[0] = 120;',   # CAnimManager::ms_numAnimBlocks: the port's GetAnimBlocks() is a take(ms_numAnimBlocks) view (0 in the fixture) -> RemoveAnimBlockRef asserts on any index
+    'CTaskComplexWanderCop::CreateFirstSubTask': 'w3t::g_tmask = { {0x1A, 2}, {0x1E, 2} };',   # CNodeAddress node ids of m_LastNode / m_NextNode: CPathFind::FindNextNodeWandering (0x451FD6, 0x451FED) copies an exe stack local whose node id is uninitialised, the port copies -1 (only read when the area is valid)
     'CTaskComplexWalkRoundBuildingAttempt::Constructor': 'w3t::g_tzero = true;',
     'CTaskComplexWalkRoundCar::Constructor': 'w3t::g_tzero = true;',
     'CTaskComplexWalkRoundObject::Constructor': 'w3t::g_tzero = true;',
     'CTaskComplexFollowPedFootsteps::Constructor': 'w3t::g_tzero = true;',
     'CTaskComplexTrackEntity::CalcMoveRatio': 'volatile uint32_t* s_ = reinterpret_cast<volatile uint32_t*>(0xC18CF4); s_[0] = 0x3FA00000; s_[1] = 0x3E800000; s_[2] = 0x41C80000; s_[3] = 0x3F800000; s_[4] = 0x3D23D70B; s_[5] = 0x1F;',   # lazily initialised function-local statics of the exe (1.25, 0.25, 25.0, 1.0, 0.04 + guard bits)
 }
-TASK_CALLEE_TUS = ['game_sa/PedGeometryAnalyser.cpp', 'game_sa/NodeRoute.cpp', 'game_sa/PatrolRoute.cpp', 'game_sa/PathFind.cpp', 'game_sa/EntityScanner.cpp', 'game_sa/PedScanner.cpp', 'game_sa/FireManager.cpp', 'game_sa/Fire.cpp', 'game_sa/CarEnterExit.cpp', 'game_sa/PedGroup.cpp', 'game_sa/Clock.cpp', 'game_sa/Entity/Ped/PlayerPed.cpp', 'game_sa/Entity/Ped/CopPed.cpp', 'game_sa/Stats.cpp', 'game_sa/WeaponInfo.cpp', 'game_sa/Weapon.cpp', 'game_sa/Wanted.cpp', 'game_sa/Pad.cpp', 'game_sa/PedIntelligence.cpp', 'game_sa/Audio/Entities/AEPedSpeechAudioEntity.cpp']
+TASK_CALLEE_TUS = ['game_sa/PedGeometryAnalyser.cpp', 'game_sa/NodeRoute.cpp', 'game_sa/PatrolRoute.cpp', 'game_sa/PathFind.cpp', 'game_sa/EntityScanner.cpp', 'game_sa/PedScanner.cpp', 'game_sa/FireManager.cpp', 'game_sa/Fire.cpp', 'game_sa/CarEnterExit.cpp', 'game_sa/PedGroup.cpp', 'game_sa/PedGroupIntelligence.cpp', 'game_sa/PedGroups.cpp', 'game_sa/PedGroupMembership.cpp', 'game_sa/Clock.cpp', 'game_sa/Entity/Ped/PlayerPed.cpp', 'game_sa/Entity/Ped/CopPed.cpp', 'game_sa/Stats.cpp', 'game_sa/WeaponInfo.cpp', 'game_sa/Weapon.cpp', 'game_sa/Wanted.cpp', 'game_sa/Pad.cpp', 'game_sa/PedIntelligence.cpp', 'game_sa/Audio/Entities/AEPedSpeechAudioEntity.cpp']
 
 _VT = {}
 def exe_vt(repo, cls):

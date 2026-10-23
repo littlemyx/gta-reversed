@@ -979,7 +979,7 @@ int16 CAEPedSpeechAudioEntity::CanWePlayGlobalSpeechContext(eGlobalSpeechContext
 
 // 0x4E6550
 int16 CAEPedSpeechAudioEntity::AddSayEvent(eAudioEvents audioEvent, eGlobalSpeechContext gCtx, uint32 startTimeDelayMs, float probability, bool overrideSilence, bool isForceAudible, bool isFrontEnd) {
-    return I_AddSayEvent<false>(m_Entity->GetPosition(), audioEvent, gCtx, startTimeDelayMs, probability, overrideSilence, isForceAudible, isFrontEnd);
+    return I_AddSayEvent<false>(m_Entity, audioEvent, gCtx, startTimeDelayMs, probability, overrideSilence, isForceAudible, isFrontEnd);
 }
 
 // 0x4E68D0
@@ -1275,7 +1275,7 @@ eSoundBank CAEPedSpeechAudioEntity::GetVoiceSoundBank(eGlobalSpeechContext gCtx,
 
 // 0x4E6550 / 0x4E60D0
 template<bool IsPedless>
-int16 CAEPedSpeechAudioEntity::I_AddSayEvent(CVector pos, eAudioEvents audioEvent, eGlobalSpeechContext gCtx, uint32 startTimeDelayMs, float probability, bool overrideSilence, bool isForceAudible, bool isFrontEnd) {
+int16 CAEPedSpeechAudioEntity::I_AddSayEvent(const CEntity* posEntity, eAudioEvents audioEvent, eGlobalSpeechContext gCtx, uint32 startTimeDelayMs, float probability, bool overrideSilence, bool isForceAudible, bool isFrontEnd) {
     if (!m_IsInitialized || s_bAllSpeechDisabled || m_IsSpeechForScriptsDisabled) {
         return -1;
     }
@@ -1349,7 +1349,8 @@ int16 CAEPedSpeechAudioEntity::I_AddSayEvent(CVector pos, eAudioEvents audioEven
         }
     }
 
-    if (CVector::DistSqr(TheCamera.GetPosition(), pos) >= sq(IsPedless ? 60.f : 40.f)) {
+    // 0x4E6750: the exe reads the position of the entity here only (after every early out); the port read it on entry (a ped without a matrix faulted)
+    if (CVector::DistSqr(TheCamera.GetPosition(), posEntity->GetPosition()) >= sq(IsPedless ? 60.f : 40.f)) {
         return -1;
     }
 
@@ -1403,7 +1404,7 @@ int16 CAEPedSpeechAudioEntity::I_AddSayEvent(CVector pos, eAudioEvents audioEven
 }
 
 template
-int16 CAEPedSpeechAudioEntity::I_AddSayEvent<true>(CVector pos, eAudioEvents audioEvent, eGlobalSpeechContext gCtx, uint32 startTimeDelayMs, float probability, bool overrideSilence, bool isForceAudible, bool isFrontEnd);
+int16 CAEPedSpeechAudioEntity::I_AddSayEvent<true>(const CEntity* posEntity, eAudioEvents audioEvent, eGlobalSpeechContext gCtx, uint32 startTimeDelayMs, float probability, bool overrideSilence, bool isForceAudible, bool isFrontEnd);
 
 // 0x4E3520 / 0x4E4D10
 template<bool IsPedless>

@@ -100,28 +100,28 @@ CPed* CTaskComplexKillPedGroupOnFoot::ComputeNearestLivingGroupPed(CPed& ped, bo
     return closest;
 }
 
-eTaskType CTaskComplexKillPedGroupOnFoot::ComputeNewTargetAndTaskType(CPed* ped) {
-    CEntity::ChangeEntityReference(m_currPedToKill, ComputeNearestLivingGroupPed(*ped)); // Find new target
-    return m_currPedToKill
-        ? TASK_COMPLEX_KILL_PED_ON_FOOT
-        : TASK_SIMPLE_LOOK_ABOUT;
+// 0x629570..0x6295D8 / 0x62963F..0x629666: the exe stores the new target raw and registers it only when there is one (the old reference is cleaned up by the caller)
+eTaskType CTaskComplexKillPedGroupOnFoot::ComputeNewTargetAndTaskType(CPed* ped, eTaskType noTargetType) {
+    m_currPedToKill = ComputeNearestLivingGroupPed(*ped); // Find new target
+    if (!m_currPedToKill) {
+        return noTargetType;
+    }
+    CEntity::RegisterReference(m_currPedToKill);
+    return TASK_COMPLEX_KILL_PED_ON_FOOT;
 }
 
 // 0x629570
 CTask* CTaskComplexKillPedGroupOnFoot::CreateNextSubTask(CPed* ped) {
-    // CEntity::ClearReference(m_currPedToKill); // Not necessary, destructor will clear it
-    return CreateSubTask([this, ped] {
-        switch (m_pSubTask->GetTaskType()) {
-        case TASK_NONE:
-        case TASK_SIMPLE_LOOK_ABOUT:
-            return TASK_FINISHED;
-        case TASK_COMPLEX_KILL_PED_ON_FOOT:
-            return ComputeNewTargetAndTaskType(ped); // Kill next or finish
-        default:
-            NOTSA_UNREACHABLE();
-            return TASK_FINISHED; // 0x629619: returns nullptr without CreateSubTask; CreateSubTask(TASK_FINISHED) => nullptr
-        }
-    }(), ped);
+    CEntity::ClearReference(m_currPedToKill); // 0x629577..0x629585: cleaned up and nulled at entry for every sub task type
+    switch (m_pSubTask->GetTaskType()) {
+    case TASK_NONE:
+    case TASK_SIMPLE_LOOK_ABOUT:
+        return CreateSubTask(TASK_FINISHED, ped);
+    case TASK_COMPLEX_KILL_PED_ON_FOOT:
+        return CreateSubTask(ComputeNewTargetAndTaskType(ped, TASK_SIMPLE_LOOK_ABOUT), ped); // Kill next or look about
+    default:
+        return nullptr; // 0x629619
+    }
 }
 
 // 0x629630
@@ -132,7 +132,7 @@ CTask* CTaskComplexKillPedGroupOnFoot::CreateFirstSubTask(CPed* ped) {
                 ? TASK_NONE
                 : TASK_COMPLEX_KILL_PED_ON_FOOT;
         } else {
-            return ComputeNewTargetAndTaskType(ped);
+            return ComputeNewTargetAndTaskType(ped, TASK_NONE); // 0x629651: TASK_NONE (0xC8) here, LOOK_ABOUT only after a kill task
         }
     }(), ped);
 }

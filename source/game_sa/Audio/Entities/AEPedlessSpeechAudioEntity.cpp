@@ -45,7 +45,7 @@ int16 CAEPedlessSpeechAudioEntity::AddSayEvent(eAudioEvents audioEvent, eGlobalS
         return -1;
     }
     m_AttachedTo = attachTo;
-    return I_AddSayEvent<true>(attachTo->GetPosition(), audioEvent, gCtx, startTimeDelayMs, probability, overrideSilence, isForceAudible, isFrontEnd);
+    return I_AddSayEvent<true>(attachTo, audioEvent, gCtx, startTimeDelayMs, probability, overrideSilence, isForceAudible, isFrontEnd);
 }
 
 // 0x4E4D10

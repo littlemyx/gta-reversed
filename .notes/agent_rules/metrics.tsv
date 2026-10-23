@@ -124,3 +124,4 @@ date	agent	rules	kind	tokens	tool_uses	minutes	outcome	notes
 2026-10-24	MAC-R1	v4	R-1 fakerw under GL3	-	-	-	done: unique 1992->1752, 10/10 A/B
 2026-10-24	MAC-P2i	v4	P-2i breakable record + real data	-	-	-	done: 16264 chunks ok, 4/4 A/B
 2026-10-24	MAC-P2f	v4	P-2f radar + P-2j test	-	-	-	done
+2026-10-23	ORACLE-C-TASKS-2	v4	class C fixes (over cap)	410889	244	108	16 skip rows un-skipped (CReferences = fixture artefact), 7 row-proven + 6 audit fixes (cover refs, PassObject, TrackEntity 50 ms, DuckToggle null, SayEvent, ReportFinishedTask...); soak OK; 410k tokens = 1.6x budget

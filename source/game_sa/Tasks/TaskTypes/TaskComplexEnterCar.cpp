@@ -214,7 +214,8 @@ CTask* CTaskComplexEnterCar::CreateNextSubTask(CPed* ped) {
         }
 
         if (m_bQuitAfterDraggingPedOut || CCarEnterExit::IsCarSlowJackRequired(m_Car, m_TargetDoor)) { // 0x63EEBE
-            CEntity::ChangeEntityReference(m_DraggedPed, CCarEnterExit::ComputeSlowJackedPed(m_Car, m_TargetDoor));
+            m_DraggedPed = CCarEnterExit::ComputeSlowJackedPed(m_Car, m_TargetDoor); // 0x63EE97: no cleanup of the old reference in the exe
+            CEntity::SafeRegisterRef(m_DraggedPed);
 
             if (m_bQuitAfterDraggingPedOut || m_DraggedPed && !CPedGroups::AreInSameGroup(ped, m_DraggedPed) && !m_DraggedPed->bDontDragMeOutCar) { // 0x63EEBE
                 if (m_DraggedPed && m_DraggedPed->IsPlayer() && CGameLogic::SkipState == SKIP_IN_PROGRESS) { // 0x63EF63
@@ -430,9 +431,8 @@ CTask* CTaskComplexEnterCar::CreateNextSubTask_AfterSimpleCarAlign(CPed* ped) {
             return C(m_bQuitAfterDraggingPedOut ? TASK_FINISHED : TASK_SIMPLE_CAR_GET_IN);
         }
 
-        if (const auto slowJackedPed = CCarEnterExit::ComputeSlowJackedPed(m_Car, m_TargetDoor)) { // 0x63FB5E
-            CEntity::ChangeEntityReference(m_DraggedPed, slowJackedPed);
-        }
+        m_DraggedPed = CCarEnterExit::ComputeSlowJackedPed(m_Car, m_TargetDoor); // 0x63FB5B..0x63FB63: stored even when null (the old value is not cleaned up), registered when set
+        CEntity::SafeRegisterRef(m_DraggedPed);
 
         if (!m_DraggedPed || !m_DraggedPed->IsPlayer() || CGameLogic::SkipState != SKIP_IN_PROGRESS) { // 0x63FB68
             if (m_bQuitAfterDraggingPedOut) {
@@ -477,7 +477,8 @@ CTask* CTaskComplexEnterCar::CreateNextSubTask_AfterSimpleCarAlign(CPed* ped) {
         return C(TASK_SIMPLE_CAR_GET_IN);
     }
 
-    CEntity::ChangeEntityReference(m_DraggedPed, CCarEnterExit::ComputeSlowJackedPed(m_Car, m_TargetDoor));
+    m_DraggedPed = CCarEnterExit::ComputeSlowJackedPed(m_Car, m_TargetDoor); // 0x63FE69: no cleanup of the old reference in the exe
+    CEntity::SafeRegisterRef(m_DraggedPed);
 
 
     if (m_DraggedPed && m_DraggedPed->IsPlayer() && CGameLogic::SkipState == SKIP_IN_PROGRESS) { // 0x63FE9B - Inverted

@@ -1445,9 +1445,8 @@ void CReplay::FindFirstFocusCoordinate(CVector& outPos) {
 uint32 CReplay::NumberFramesAvailableToPlay() {
     auto frames = 0u;
     for (auto& buffer : GetAllActiveBuffers()) {
-        for (auto it = buffer.begin(); it != buffer.end();) {
-            it = std::find_if(it, buffer.end(), [](auto&& p) { return p.type == REPLAY_PACKET_END_OF_FRAME; });
-            if (it != buffer.end())
+        for (auto& packet : buffer) { // 0x45D670: one count per end-of-frame packet
+            if (packet.type == REPLAY_PACKET_END_OF_FRAME)
                 frames++;
         }
     }

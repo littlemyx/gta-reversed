@@ -524,8 +524,10 @@ void CRenderer::ProcessLodRenderLists() {
         }
     }
 
-    bool bAllLodsRendered = false;
-    while (bAllLodsRendered) {
+    // exe 0x5537B0-0x553839: a do-while (the body runs at least once, the pass is repeated while an entry was cleared); the port's `while (false)` skipped the whole phase
+    bool bAllLodsRendered;
+    do {
+        bAllLodsRendered = false;
         for (auto renderListEntry = GetLodRenderListBase(); renderListEntry != ms_pLodRenderList; renderListEntry++) {
             CEntity* entity = renderListEntry->entity;
             if (entity) {
@@ -552,7 +554,7 @@ void CRenderer::ProcessLodRenderLists() {
                 }
             }
         }
-    }
+    } while (bAllLodsRendered);
     for (auto renderListEntry = GetLodRenderListBase(); renderListEntry != ms_pLodRenderList; renderListEntry++) {
         CEntity* entity = renderListEntry->entity;
         if (entity && entity->HasLodChildrenRendered()) {

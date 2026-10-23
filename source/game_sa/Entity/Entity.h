@@ -284,8 +284,8 @@ public:
     void ResetLodChildrenRendered() { m_NumLodChildrenRendered = 0; } // orig ResetLodRenderedCounter
     bool HasLodChildrenRendered() { return m_NumLodChildrenRendered > 0; } // orig HasLodChildBeenRendered
     int32 GetNumLodChildrenRendered() { return m_NumLodChildrenRendered; }
-    void SetCannotLodChildrenRender() { m_NumLodChildrenRendered = 128; } // orig SetLodChildCannotRender
-    bool CanLodChildrenRender() { return m_NumLodChildrenRendered != 128; } // orig CanLodChildRender
+    void SetCannotLodChildrenRender() { m_NumLodChildrenRendered = -128; } // orig SetLodChildCannotRender
+    bool CanLodChildrenRender() { return m_NumLodChildrenRendered != -128; } // orig CanLodChildRender
 
     // 128 = displaySuperLowLodFlag, yes, this is very hacky. Blame R*
 

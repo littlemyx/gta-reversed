@@ -122,3 +122,4 @@ date	agent	rules	kind	tokens	tool_uses	minutes	outcome	notes
 2026-10-24	MAC-P2d	v4	P-2d ped/weapon records	181645	50	18	done: 10/10 A/B after by-value fix
 2026-10-24	MAC-P2e	v4	P-2e pickup record	-	-	-	done: 9/9 A/B
 2026-10-24	MAC-R1	v4	R-1 fakerw under GL3	-	-	-	done: unique 1992->1752, 10/10 A/B
+2026-10-24	MAC-P2i	v4	P-2i breakable record + real data	-	-	-	done: 16264 chunks ok, 4/4 A/B

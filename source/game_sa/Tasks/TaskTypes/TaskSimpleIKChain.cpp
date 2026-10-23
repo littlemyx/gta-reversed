@@ -38,6 +38,7 @@ CTaskSimpleIKChain::CTaskSimpleIKChain(
     m_OffsetPos{ offsetPos },
     m_PivotBone{ pivotBone },
     m_TargetEntity{ entity },
+    m_OffsetBone{ offsetBone }, // 0x633E38 (IKLookAt ctor inlines the chain init): `mov [esi+2Ch], offsetBone`
     m_TargetEntityExisted{ !!entity },
     m_Speed{ speed }
 {

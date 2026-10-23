@@ -43,8 +43,8 @@ int main() {
     CHECK(bytesAre({ 0x8C, 0x01, 0x00, 0x00 }));
     // (b) GetIndex()+1 (ptrdiff_t) in TheScripts.cpp
     { std::ptrdiff_t idx = 0x1234; reset(); CGenericGameStorage::SaveDataToWorkBuffer<uint32>(idx + 1); CHECK(bytesAre({ 0x35, 0x12, 0x00, 0x00 })); }
-    // (c) IplStore::Save count (size_t -> int32; the loader reads int32)
-    { size_t num = 0x100; reset(); CGenericGameStorage::SaveDataToWorkBuffer<int32>(num); CHECK(bytesAre({ 0x00, 0x01, 0x00, 0x00 })); }
+    // (c) IplStore::Save count (size_t -> uint32; the loader reads int32, same 4 bytes)
+    { size_t num = 0x100; reset(); CGenericGameStorage::SaveDataToWorkBuffer<uint32>(num); CHECK(bytesAre({ 0x00, 0x01, 0x00, 0x00 })); }
     // the write is read back by the loader's type
     { reset(); CGenericGameStorage::SaveDataToWorkBuffer<uint32>(sizeof(std::array<uint8, 0x68>)); g_pos = 0; CHECK(CGenericGameStorage::LoadDataFromWorkBuffer<uint32>() == 0x68); CHECK(g_pos == 4); }
 

@@ -798,7 +798,7 @@ int32 CIplStore::SetupRelatedIpls(const char* filename, int32 index, CEntity** p
  */
 bool CIplStore::Save() {
     const auto num = ms_pPool->GetSize();
-    CGenericGameStorage::SaveDataToWorkBuffer<int32>(num);
+    CGenericGameStorage::SaveDataToWorkBuffer<uint32>(num); // GetSize() is size_t (8 B on 64-bit); Load() reads int32 (same 4 bytes). <uint32> == the deduced type on x86 (no code change)
     for (auto i = 1u; i < num; i++) { // skips 1st
         const auto ipl = ms_pPool->GetAt(i);
         CGenericGameStorage::SaveDataToWorkBuffer(ipl && ipl->loaded && ipl->disableDynamicStreaming);

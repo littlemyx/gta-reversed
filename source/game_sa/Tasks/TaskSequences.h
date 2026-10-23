@@ -7,7 +7,7 @@ public:
     static constexpr auto NUM_SEQUENCES = 64;
 
     static inline NOTSA_GLOBAL(ms_iActiveSequence, 0x8D2E98, (int32), { -1 });
-    static inline NOTSA_GLOBAL(ms_taskSequence, 0xC178F0, (CTaskComplexSequence[NUM_SEQUENCES]), {}); static_assert(sizeof(ms_taskSequence) == 4096);
+    static inline NOTSA_GLOBAL(ms_taskSequence, 0xC178F0, (CTaskComplexSequence[NUM_SEQUENCES]), {}); VALIDATE_SIZE(ms_taskSequence, 4096);
     static inline NOTSA_GLOBAL(ms_bIsOpened, 0xC17898, (bool[NUM_SEQUENCES]), {});
 
 public:

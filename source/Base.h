@@ -21,16 +21,32 @@ namespace fs = std::filesystem;
 
 #define PLUGIN_API
 
-#define VALIDATE_SIZE(struc, size) static_assert(sizeof(struc) == size, "Invalid structure size of " #struc)
-#define VALIDATE_OFFSET(struc, member, offset) \
+// Layout checks. Two kinds, because the original exe is a 32-bit x86 program and a 64-bit build cannot (and need not) keep the in-memory layout:
+//  * VALIDATE_SIZE / VALIDATE_OFFSET      - the x86 IN-MEMORY layout of the original exe (the struct is only ever accessed through memory, never
+//                                           as raw bytes of a file). Enforced when the code is built as the 32-bit x86 reference; compiled out
+//                                           under NOTSA_PORTABLE (pointers, size_t, long ... grow on 64-bit targets).
+//  * VALIDATE_SIZE_FILE / VALIDATE_OFFSET_FILE - the layout is an ON-DISK / raw-byte format (read or written with fread / CFileMgr::Read /
+//                                           RwStreamRead / memcpy from a file buffer / save-game blocks / IMG, COL, IPL, IFP, DAT headers /
+//                                           script-file structures). Enforced in EVERY build, including NOTSA_PORTABLE: a failure on a 64-bit
+//                                           target means the struct needs a portable on-disk definition. There is deliberately no switch that
+//                                           disables these.
+#define VALIDATE_SIZE_FILE(struc, size) static_assert(sizeof(struc) == size, "Invalid structure size of " #struc)
+#define VALIDATE_OFFSET_FILE(struc, member, offset) \
 	static_assert(offsetof(struc, member) == offset, "The offset of " #member " in " #struc " is not " #offset "...")
+#ifdef NOTSA_PORTABLE
+#define VALIDATE_SIZE(struc, size) static_assert(true) // x86 in-memory layout: not checked in a portable build
+#define VALIDATE_OFFSET(struc, member, offset) static_assert(true)
+#else
+#define VALIDATE_SIZE(struc, size) VALIDATE_SIZE_FILE(struc, size)
+#define VALIDATE_OFFSET(struc, member, offset) VALIDATE_OFFSET_FILE(struc, member, offset)
+#endif
 
-VALIDATE_SIZE(bool, 1);
-VALIDATE_SIZE(char, 1);
-VALIDATE_SIZE(short, 2);
-VALIDATE_SIZE(int, 4);
-VALIDATE_SIZE(float, 4);
-VALIDATE_SIZE(long long, 8);
+VALIDATE_SIZE_FILE(bool, 1);
+VALIDATE_SIZE_FILE(char, 1);
+VALIDATE_SIZE_FILE(short, 2);
+VALIDATE_SIZE_FILE(int, 4);
+VALIDATE_SIZE_FILE(float, 4);
+VALIDATE_SIZE_FILE(long long, 8);
 
 // Use this to add const that wasn't there in the original code
 #define Const const

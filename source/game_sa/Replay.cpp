@@ -1431,6 +1431,7 @@ bool CReplay::IsThisPedUsedInRecording(int32 index) {
 
 // 0x45D6C0
 void CReplay::FindFirstFocusCoordinate(CVector& outPos) {
+    outPos = CVector{}; // 0x45D6C0 clears the result first
     for (auto& buffer : GetAllActiveBuffers()) {
         const auto packet = rng::find_if(buffer, [](auto&& p) { return p.type == REPLAY_PACKET_GENERAL; });
         if (packet != buffer.end()) {

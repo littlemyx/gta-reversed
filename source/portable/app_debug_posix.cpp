@@ -10,7 +10,7 @@
 
 namespace notsa {
 namespace debug {
-// dladdr: image (module) + nearest exported/debug symbol; no source line (that needs DWARF + atos/dsymutil: W-A9)
+// dladdr: image (module) + nearest exported/debug symbol; no source line (that needs DWARF + atos/dsymutil: W-A13)
 std::string GetFunctionInfoAtAddress(uintptr_t address, bool compact, HANDLE) {
     Dl_info info{};
     if (!::dladdr(reinterpret_cast<void*>(address), &info) || !info.dli_fname) {

@@ -131,3 +131,4 @@ date	agent	rules	kind	tokens	tool_uses	minutes	outcome	notes
 2026-10-24	MAC-R3b	v4	R-3b camera/raster/renderstate	310104	79	34	done: R 152->6, total 308, smoke 86 ok
 2026-10-24	MAC-P2h	v4	P-2h path nodes + real data	-	-	-	done: 64 NODES ok
 2026-10-24	MAC-P4	v4	P-4 width triage + mechanical fixes	-	-	-	done: 320->45, 68/71 identical + 3 dead COMDAT
+2026-10-24	MAC-P4-REV	v4	review P-4	-	-	-	clean

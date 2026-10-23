@@ -33,12 +33,15 @@ namespace fs = std::filesystem;
 #define VALIDATE_SIZE_FILE(struc, size) static_assert(sizeof(struc) == size, "Invalid structure size of " #struc)
 #define VALIDATE_OFFSET_FILE(struc, member, offset) \
 	static_assert(offsetof(struc, member) == offset, "The offset of " #member " in " #struc " is not " #offset "...")
+#define VALIDATE_LAYOUT_FILE(...) static_assert(__VA_ARGS__) // any other constant expression over an on-disk layout (arguments of static_assert)
 #ifdef NOTSA_PORTABLE
 #define VALIDATE_SIZE(struc, size) static_assert(true) // x86 in-memory layout: not checked in a portable build
 #define VALIDATE_OFFSET(struc, member, offset) static_assert(true)
+#define VALIDATE_LAYOUT(...) static_assert(true)
 #else
 #define VALIDATE_SIZE(struc, size) VALIDATE_SIZE_FILE(struc, size)
 #define VALIDATE_OFFSET(struc, member, offset) VALIDATE_OFFSET_FILE(struc, member, offset)
+#define VALIDATE_LAYOUT(...) static_assert(__VA_ARGS__) // any other constant expression over the x86 in-memory layout (arguments of static_assert)
 #endif
 
 VALIDATE_SIZE_FILE(bool, 1);

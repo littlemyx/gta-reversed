@@ -1462,7 +1462,7 @@ bool CPlayerInfo::Load() {
 bool CPlayerInfo::Save() {
     CPlayerInfoSaveStructure data;
     data.Construct(this);
-    CGenericGameStorage::SaveDataToWorkBuffer(sizeof(CPlayerInfoSaveStructure));
+    CGenericGameStorage::SaveDataToWorkBuffer<uint32>(sizeof(CPlayerInfoSaveStructure));
     CGenericGameStorage::SaveDataToWorkBuffer(data);
     return true;
 }

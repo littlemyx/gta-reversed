@@ -161,7 +161,7 @@ bool CPlayerPed::Save() {
     saveData.ClothesDesc  = *GetPlayerData()->m_pPedClothesDesc;
 
     CPed::Save();
-    CGenericGameStorage::SaveDataToWorkBuffer(sizeof(CPlayerPedDataSaveStructure));
+    CGenericGameStorage::SaveDataToWorkBuffer<uint32>(sizeof(CPlayerPedDataSaveStructure));
     CGenericGameStorage::SaveDataToWorkBuffer(saveData);
 
     return true;

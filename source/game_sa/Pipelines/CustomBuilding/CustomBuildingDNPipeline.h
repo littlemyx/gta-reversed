@@ -17,7 +17,7 @@ struct ExtraVertColour { // AKA `gtaVertexColorPlugin`
     RwRGBA *NightColors, *DayColors; //!<  heap allocated
     float   DNBalance; //!< lerp(DayColors, NightColors, DNBalance)
 };
-VALIDATE_SIZE_FILE(ExtraVertColour, 12); // 24 on Android
+VALIDATE_SIZE(ExtraVertColour, 12); // In-memory plugin data (heap pointers), NOT an on-disk record: 24 on 64-bit. The DFF chunk (0xF9) holds a u32 magic + night RGBA[numVerts], see pluginExtraVertColourStream*CB
 
 class CCustomBuildingDNPipeline {
 public:

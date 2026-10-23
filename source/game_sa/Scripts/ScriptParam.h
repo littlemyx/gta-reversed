@@ -14,8 +14,7 @@ union tScriptParam {
     int32  iParam;
 
     float  fParam;
-    void*  pParam;
-    char*  szParam;
     bool   bParam;
+    // NOTE: the exe's `void* pParam / char* szParam` members were never used and made the union 8 bytes on 64-bit targets (it is dumped raw inside CRunningScript).
 };
 VALIDATE_SIZE_FILE(tScriptParam, 0x4);

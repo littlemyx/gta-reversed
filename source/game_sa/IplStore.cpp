@@ -798,7 +798,7 @@ int32 CIplStore::SetupRelatedIpls(const char* filename, int32 index, CEntity** p
  */
 bool CIplStore::Save() {
     const auto num = ms_pPool->GetSize();
-    CGenericGameStorage::SaveDataToWorkBuffer(num);
+    CGenericGameStorage::SaveDataToWorkBuffer<int32>(num);
     for (auto i = 1u; i < num; i++) { // skips 1st
         const auto ipl = ms_pPool->GetAt(i);
         CGenericGameStorage::SaveDataToWorkBuffer(ipl && ipl->loaded && ipl->disableDynamicStreaming);

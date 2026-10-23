@@ -72,7 +72,7 @@ bool CGangWars::Load() {
 bool CGangWars::Save() {
     CGangWarsSaveStructure data{};
     data.Construct();
-    CGenericGameStorage::SaveDataToWorkBuffer(sizeof(CGangWarsSaveStructure));
+    CGenericGameStorage::SaveDataToWorkBuffer<uint32>(sizeof(CGangWarsSaveStructure));
     CGenericGameStorage::SaveDataToWorkBuffer(data);
     return true;
 }

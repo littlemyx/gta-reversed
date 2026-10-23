@@ -1,6 +1,12 @@
 #pragma once
 
+#ifdef NOTSA_PORTABLE
+#include "portable/systemtime.h" // notsa::SystemTime: the 16 byte Win32 SYSTEMTIME layout + GetLocalTime (ADL) for non-Windows hosts
+using SaveSystemTime = notsa::SystemTime;
+#else
 #include <minwinbase.h> // SYSTEMTIME
+using SaveSystemTime = SYSTEMTIME;
+#endif
 
 #include "eWeatherType.h"
 
@@ -56,7 +62,7 @@ public:
     bool         m_bNastyGame;
     char         _padEF[45];
     bool         m_bCineyCamMessageDisplayed;
-    SYSTEMTIME   m_systemTime;
+    SaveSystemTime m_systemTime;
     int32        m_nTargetBlipIndex;
     bool         m_bHasDisplayedPlayerQuitEnterCarHelpText;
     bool         m_bAllTaxisNitro;
@@ -70,3 +76,4 @@ public:
 };
 
 VALIDATE_SIZE_FILE(CSimpleVariablesSaveStructure, 0x138);
+VALIDATE_SIZE_FILE(SaveSystemTime, 0x10);

@@ -544,7 +544,7 @@ bool CPed::Save() {
     CPedSaveStructure save;
     save.Construct(this);
 
-    CGenericGameStorage::SaveDataToWorkBuffer(sizeof(save));
+    CGenericGameStorage::SaveDataToWorkBuffer<uint32>(sizeof(save));
     CGenericGameStorage::SaveDataToWorkBuffer(save);
 
     return true;

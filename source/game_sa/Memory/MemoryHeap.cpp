@@ -5,6 +5,7 @@
 
 #define CORE_COMMON_SIZE_COUNT 64
 
+// x86 in-memory layout only (HeapBlockDesc has pointers; compiled out under NOTSA_PORTABLE). Enabling MEMORY_MGR_USE_MEMORY_HEAP with NOTSA_PORTABLE is an #error in MemoryMgr.h.
 VALIDATE_LAYOUT(sizeof(HeapBlockDesc) <= MEMORY_HEAP_ALIGN, "HeapBlockDesc is too big");
 
 uint32 memMoved = 0;

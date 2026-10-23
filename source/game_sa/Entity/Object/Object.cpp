@@ -607,7 +607,7 @@ bool CObject::Load() {
 bool CObject::Save() {
     CObjectSaveStructure data;
     data.Construct(this);
-    CGenericGameStorage::SaveDataToWorkBuffer(sizeof(CObjectSaveStructure));
+    CGenericGameStorage::SaveDataToWorkBuffer<uint32>(sizeof(CObjectSaveStructure));
     CGenericGameStorage::SaveDataToWorkBuffer(data);
     return true;
 }

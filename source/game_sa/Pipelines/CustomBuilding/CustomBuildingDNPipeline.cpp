@@ -97,7 +97,13 @@ RwStream* CCustomBuildingDNPipeline::pluginExtraVertColourStreamWriteCB(RwStream
     const auto self = GetExtraVertColourPtr(object);
     const auto geo  = static_cast<const RpGeometry*>(object);
 
+#ifdef NOTSA_PORTABLE
+    // The chunk starts with a 32 bit "night colours present" magic (the exe writes the raw heap pointer, whose width is 4 on x86 and 8 on 64-bit; the reader only tests != 0).
+    const uint32 magicNumber = self->NightColors ? 1u : 0u;
+    RwStreamWrite(stream, &magicNumber, sizeof(magicNumber));
+#else
     RwStreamWrite(stream, &self->NightColors, sizeof(self->NightColors));
+#endif
     if (self->NightColors) {
         RwStreamWrite(stream, self->NightColors, sizeof(RwRGBA) * RpGeometryGetNumVertices(geo));
     }

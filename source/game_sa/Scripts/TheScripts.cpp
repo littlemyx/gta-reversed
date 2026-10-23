@@ -1296,7 +1296,7 @@ void CTheScripts::Save() {
             CGenericGameStorage::SaveDataToWorkBuffer(ScriptSavedObjectType::BUILDING);
 
             // Add 1 to the index because 0 is considered invalid and index can be 0.
-            CGenericGameStorage::SaveDataToWorkBuffer(GetBuildingPool()->GetIndex(b) + 1);
+            CGenericGameStorage::SaveDataToWorkBuffer<uint32>(GetBuildingPool()->GetIndex(b) + 1);
         } else {
             CGenericGameStorage::SaveDataToWorkBuffer(ScriptSavedObjectType::NONE);
             CGenericGameStorage::SaveDataToWorkBuffer(0);
@@ -1320,15 +1320,15 @@ void CTheScripts::Save() {
             break;
         case ENTITY_TYPE_BUILDING:
             CGenericGameStorage::SaveDataToWorkBuffer(ScriptSavedObjectType::BUILDING);
-            CGenericGameStorage::SaveDataToWorkBuffer(GetBuildingPool()->GetIndex(is->AsBuilding()) + 1);
+            CGenericGameStorage::SaveDataToWorkBuffer<uint32>(GetBuildingPool()->GetIndex(is->AsBuilding()) + 1);
             break;
         case ENTITY_TYPE_OBJECT:
             CGenericGameStorage::SaveDataToWorkBuffer(ScriptSavedObjectType::OBJECT);
-            CGenericGameStorage::SaveDataToWorkBuffer(GetObjectPool()->GetIndex(is->AsObject()) + 1);
+            CGenericGameStorage::SaveDataToWorkBuffer<uint32>(GetObjectPool()->GetIndex(is->AsObject()) + 1);
             break;
         case ENTITY_TYPE_DUMMY:
             CGenericGameStorage::SaveDataToWorkBuffer(ScriptSavedObjectType::DUMMY);
-            CGenericGameStorage::SaveDataToWorkBuffer(GetDummyPool()->GetIndex(is->AsDummy()) + 1);
+            CGenericGameStorage::SaveDataToWorkBuffer<uint32>(GetDummyPool()->GetIndex(is->AsDummy()) + 1);
             break;
         default:
             NOTSA_UNREACHABLE();

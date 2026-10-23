@@ -10,7 +10,7 @@
 #include "AEWaterCannonAudioEntity.h"
 #include "LoadingScreen.h"
 
-NOTSA_GLOBAL(AudioEngine, 0xB6BC90, (CAudioEngine), {}); static_assert(sizeof(AudioEngine) == 8152);
+NOTSA_GLOBAL(AudioEngine, 0xB6BC90, (CAudioEngine), {}); VALIDATE_SIZE(AudioEngine, 8152);
 
 void CAudioEngine::InjectHooks() {
     RH_ScopedClass(CAudioEngine);

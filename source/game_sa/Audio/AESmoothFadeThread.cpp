@@ -10,7 +10,7 @@
 #define NOTSA_TAP_FADE(k) ((void)0)
 #endif
 
-NOTSA_GLOBAL(AESmoothFadeThread, 0xB608D0, (CAESmoothFadeThread), {}); static_assert(sizeof(AESmoothFadeThread) == 2076);
+NOTSA_GLOBAL(AESmoothFadeThread, 0xB608D0, (CAESmoothFadeThread), {}); VALIDATE_SIZE(AESmoothFadeThread, 2076);
 
 void CAESmoothFadeThread::InjectHooks() {
     RH_ScopedClass(CAESmoothFadeThread);

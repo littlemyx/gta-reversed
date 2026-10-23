@@ -11,7 +11,7 @@
 #include "AEAudioTap.h"
 #include "AEAudioStats.h"
 
-NOTSA_GLOBAL(AEAudioHardware, 0xB5F8B8, (CAEAudioHardware), {}); static_assert(sizeof(AEAudioHardware) == 4116);
+NOTSA_GLOBAL(AEAudioHardware, 0xB5F8B8, (CAEAudioHardware), {}); VALIDATE_SIZE(AEAudioHardware, 4116);
 
 void CAEAudioHardware::InjectHooks() {
     RH_ScopedClass(CAEAudioHardware);

@@ -19,8 +19,8 @@ enum class eWeatherEvent {
 constexpr CVector DEFAULT_POS = { -0.906f, 0.423f, 0.f };
 
 NOTSA_GLOBAL(m_snLastRainDropSoundID, 0x8CC310, (int16), { 2 }); // TODO: Use `eSoundID`. NOTE: The original loads 32 bits (high half is always 0) but stores only 16 (`mov word ptr [0x8CC310], di`)
-NOTSA_GLOBAL(m_sRainSoundL, 0xB6BB18, (CAETwinLoopSoundEntity), {}); static_assert(sizeof(m_sRainSoundL) == 168);  // dunno about names
-NOTSA_GLOBAL(m_sRainSoundR, 0xB6BBC0, (CAETwinLoopSoundEntity), {}); static_assert(sizeof(m_sRainSoundR) == 168);
+NOTSA_GLOBAL(m_sRainSoundL, 0xB6BB18, (CAETwinLoopSoundEntity), {}); VALIDATE_SIZE(m_sRainSoundL, 168);  // dunno about names
+NOTSA_GLOBAL(m_sRainSoundR, 0xB6BBC0, (CAETwinLoopSoundEntity), {}); VALIDATE_SIZE(m_sRainSoundR, 168);
 
 // 0x72A620
 CAEWeatherAudioEntity::CAEWeatherAudioEntity() : CAEAudioEntity() {

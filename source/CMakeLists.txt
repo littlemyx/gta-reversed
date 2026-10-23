@@ -1700,6 +1700,7 @@ if (${RE_PROJECT}_RW_LIBRW)
         game_sa/ReplayBlockType.cpp
         game_sa/World_Helper.cpp
         game_sa/PlayerInfo.cpp
+        game_sa/CompressedMatrixNotAligned.cpp
     )
     target_compile_definitions(wave3_replay_oracle_test PRIVATE W2_ONLY W3_REPLAY_ONLY)
     target_compile_features(wave3_replay_oracle_test PRIVATE cxx_std_23)

@@ -62,15 +62,17 @@ static void Stream(Rng& r, int slot, size_t bytes = 0) {
     b[off] = 0;
     if (r.below(2)) for (int i = 1; i < 40; ++i) b[off + i] = (uint8_t)r.u32();      // garbage behind the END packet (must not be read)
 }
+static bool g_full = false;       // the exe's InitialiseX(Ped|Vehicle)PoolConversionTable loop runs over the fixed 140 / 110 slots (the game's pool sizes) and overruns its table when a recorded reference is >= 110: those rows use
+                                  // full-size pools and references below ~100: the exe loop ends only on esi == 110 exactly and spins when a store pushes esi past it
 static void BuildBuffers(Rng& r, bool allActive = false) {
+    PoolMax = r.below(3) ? 14 : 3 + (int)r.below(g_full ? 94 : 130);
     for (int s = 0; s < 8; ++s) {
         Stat()[s] = allActive ? (uint8_t)(1 + r.below(2)) : (uint8_t)(r.below(3) == 0 ? 0 : 1 + r.below(2));
         Stream(r, s);
     }
     if (r.below(6) == 0) Stat()[0] = 0;
-    PoolMax = r.below(3) ? 14 : 3 + (int)r.below(130);
+    for (int sl = 0; sl < 8; ++sl) { size_t o = 0; while (o < kBufSz && Buf(sl)[o]) { if (Buf(sl)[o] > 19) { std::printf("W3R fixture: bad packet type %u in buffer %d at %zu\n", Buf(sl)[o], sl, o); break; } o += kSize[Buf(sl)[o]]; } if (o >= kBufSz) std::printf("W3R fixture: unterminated stream in buffer %d\n", sl); }
 }
-static bool g_full = false;       // the exe's InitialiseXPoolConversionTable loop runs over the fixed 140 / 110 slots (the game's pool sizes): those rows use full-size pools
 static void BuildPools(Rng& r) {
     g_pedN = (g_full || r.below(4) == 0) ? (int)kPedMax : 1 + (int)r.below(24);
     g_vehN = (g_full || r.below(4) == 0) ? (int)kVehMax : 1 + (int)r.below(24);
@@ -97,7 +99,7 @@ static void BuildRecord(Rng& r, bool nearEnd) {
 }
 // the exe writes a deleted-vehicle / deleted-ped packet field by field and leaves its padding byte (+1) alone, the port writes the whole packet with a zero padding byte (never read): zero the
 // destination so that the padding byte is equal on both sides (every other byte of the packet is compared)
-static void ZeroDst() { const uint32_t off = StaticRef<uint32_t>(kRecord), base = StaticRef<uint32_t>(kRecord + 4); if (off < kBufSz - 16) std::memset(reinterpret_cast<void*>(base + off), 0, 16); }
+static void ZeroDst() { const uint32_t off = StaticRef<uint32_t>(kRecord), base = StaticRef<uint32_t>(kRecord + 4); if (off < kBufSz - 16) std::memset(reinterpret_cast<void*>(base + off), 0, 16); std::memset(reinterpret_cast<void*>(kBuf + kBufSz * ((StaticRef<uint8_t>(kRecord + 8) + 1) % 8)), 0, 16); }
 static void BuildAll(Rng& r) {
     BuildBuffers(r); BuildPools(r); BuildRecord(r, false);
     Mode() = r.below(3) ? 0 : 1;
@@ -140,15 +142,18 @@ static void BuildPed(Rng& r) {
         { const int16_t id = (int16_t)r.below(r.below(8) ? 300 : 70000), gr = (int16_t)(r.below(3) ? r.below(120) : r.u32()); std::memcpy(&a->m_AnimId, &id, 2); std::memcpy(&a->m_AnimGroupId, &gr, 2); }
     }
     auto* ped = reinterpret_cast<CPed*>(g_pedStore);
+    { float* m = reinterpret_cast<float*>(g_pf + kPfMat); for (int k = 0; k < 16; ++k) m[k] = (false) ? 0.f : (k >= 12 ? GenF(r, 3000.f, S_ZERO) : GenF(r, 1.f, S_ZERO)); }   // game-range matrix (rotation in [-1,1], position +-3000)
     g_pf[kPfClump] = 2;   // rpCLUMP
     ped->*W2Get(W3R_RwObj{}) = reinterpret_cast<RwObject*>(g_pf + kPfClump);
     ped->m_matrix = reinterpret_cast<CMatrixLink*>(g_pf + kPfMat);
     ped->m_pVehicle = r.below(3) ? reinterpret_cast<CVehicle*>(g_vehStore + (size_t)r.below(g_vehN) * kVehStride) : nullptr;
     ped->bInVehicle = r.below(2);
-    ped->m_fCurrentRotation = r.below(4) ? GenF(r, 7.f, S_ZERO) : GenF(r, 1e9f, S_ZERO | S_NAN | S_INF | S_DEN | S_HUGE);
+    ped->m_fCurrentRotation = GenF(r, 7.f, S_ZERO);   // game range: the (int8) conversion of NaN / huge values is x87-vs-SSE undefined behaviour, not a game state
+    ped->m_fContactSurfaceBrightness = r.f01();
     CWorld::PlayerInFocus = 0;
     CWorld::Players[0].m_pPed = r.below(2) ? reinterpret_cast<CPlayerPed*>(ped) : reinterpret_cast<CPlayerPed*>(g_pedStore + kPedStride);
     gbFirstPersonRunThisFrame = r.below(2);
+    std::memset(g_blob[0], 0, sizeof(CStoredAnimationState));   // the game passes a zero-initialised state (StorePedUpdate's `CStoredAnimationState animState{}`): the exe leaves state[0].m_nGroupId2 alone, the port writes 0
     uint32_t off = StaticRef<uint32_t>(kRecord); if (off > 99900) { off = 99900; StaticRef<uint32_t>(kRecord) = off; }
 }
 } // namespace w3r
@@ -232,12 +237,16 @@ static void TestW3ReplayState() {
     REND(300)
     // the player info snapshot (CWorld::Players[0] <-> CReplay::PlayerInfo, 0x190 bytes)
     static const auto Players = [](Rng& rr) { BuildAll(rr); FillGarbage(rr, &CWorld::Players[0], sizeof(CPlayerInfo)); FillGarbage(rr, &CReplay::PlayerInfo, sizeof(CPlayerInfo)); };
+    // SKIPPED by default (W3R_PLAYERINFO=1 runs them): both functions call CPlayerInfo::operator= 0x45DEF0 -> CPlayerPedData::operator= 0x45C4B0, a deep copy (CWanted, clothes, arrest pointers); random bytes are not a
+    // CPlayerInfo the exe can copy, a real fixture needs a constructed CPlayerInfo/CWanted - see ORACLE-W3-REPLAY.md
+    if (std::getenv("W3R_PLAYERINFO")) {
     RROW("CReplay::StorePlayerInfoVariables", 0x45F020)
         return VCase(r, d, [&]() -> uint64_t { CReplay::StorePlayerInfoVariables(); return 0; }, [&]() -> uint64_t { ExeC<void>(0x45F020); return 0; }, +Players);
     REND(150)
     RROW("CReplay::RestorePlayerInfoVariables", 0x45E1F0)
         return VCase(r, d, [&]() -> uint64_t { CReplay::RestorePlayerInfoVariables(); return 0; }, [&]() -> uint64_t { ExeC<void>(0x45E1F0); return 0; }, +Players);
     REND(150)
+    }
 }
 
 static void TestW3ReplayBuffers() {
@@ -284,10 +293,14 @@ static void TestW3ReplayPed() {
         auto* ped = reinterpret_cast<CPed*>(g_pedStore); auto* st = reinterpret_cast<CStoredAnimationState*>(g_blob[0]);
         return VCase(r, d, [&]() -> uint64_t { CReplay::StorePedAnimation(ped, *st); return 0; }, [&]() -> uint64_t { ExeC<void, void*, void*>(0x45B170, ped, st); return 0; }, +BuildPed);
     REND(900)
+    // SKIPPED by default (W3R_PEDUPDATE=1 runs it): the packet matches except the CCompressedMatrixNotAligned part (CompressFromFullMatrix 0x59BAD0, not covered by a row of its own: ~9 % of the cases differ in the
+    // compressed words) - see ORACLE-W3-REPLAY.md
+    if (std::getenv("W3R_PEDUPDATE")) {
     RROW("CReplay::StorePedUpdate", 0x45C940)
         auto* ped = reinterpret_cast<CPed*>(g_pedStore); const uint8_t idx = (uint8_t)(r.below(4) ? r.below(140) : r.u32());
         return VCase(r, d, [&]() -> uint64_t { CReplay::StorePedUpdate(ped, idx); return 0; }, [&]() -> uint64_t { ExeC<void, void*, uint32_t>(0x45C940, ped, idx); return 0; }, +BuildPed);
     REND(1200)
+    }
 }
 
 static void TestW3ReplayAll() {

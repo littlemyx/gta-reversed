@@ -39,10 +39,15 @@ bool CAEMP3BankLoader::Initialise() {
 
 // 0x4DFDE0, inlined
 uint8* CAEMP3BankLoader::GetBankSlotBuffer(eSoundBankSlot bankSlot, uint32& outLength) {
-    if (!m_IsInitialised || bankSlot >= m_BankSlotCnt) {
+    if (!m_IsInitialised) {
+        return nullptr; // outLength untouched
+    }
+    // The exe compares the zero-extended slot with the sign-extended count and writes 0 to outLength before returning null
+    if ((int32)(uint16)bankSlot >= (int32)(int16)m_BankSlotCnt) {
+        outLength = 0;
         return nullptr;
     }
-    const auto& slot = GetBankSlot(bankSlot);
+    const auto& slot = m_BankSlots[(uint16)bankSlot];
     outLength = slot.NumBytes;
     return &m_Buffer[slot.OffsetBytes];
 }

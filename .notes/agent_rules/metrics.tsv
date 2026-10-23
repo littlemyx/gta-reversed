@@ -127,3 +127,4 @@ date	agent	rules	kind	tokens	tool_uses	minutes	outcome	notes
 2026-10-23	ORACLE-C-TASKS-2	v4	class C fixes (over cap)	410889	244	108	16 skip rows un-skipped (CReferences = fixture artefact), 7 row-proven + 6 audit fixes (cover refs, PassObject, TrackEntity 50 ms, DuckToggle null, SayEvent, ReportFinishedTask...); soak OK; 410k tokens = 1.6x budget
 2026-10-24	MAC-R2	v4	R-2 exclusions/guards/stubs	-	-	50	done: R 1269->344, total 655
 2026-10-24	MAC-P2g	v4	P-2g script record + real main.scm	-	-	-	done: 13/13 A/B
+2026-10-24	MAC-R3a	v4	R-3a engine/window/smoke	-	-	-	done: smoke OK on Mac GL4.1, total 462

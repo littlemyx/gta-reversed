@@ -128,7 +128,10 @@ while read -r name route limit xenv px win live <&3; do
     echo "== $name$([ "$attempt" = 2 ] && echo "  (attempt 2)")"
     run_ours "$name" "$route" "$limit" "$xenv" "$px" "$win" || exit 2
     "$PY" -X utf8 -I "$GRD/gr_check.py" "$name" "$OUT" $RECARG > "$OUT/$name.result" 2>&1; rc=$?
-    # rc 3 = the set-up of the scenario failed (a gate timed out / the game died before it started): once more
+    # rc 3 = the set-up of the scenario failed (a gate timed out / the game died before it started): once more.
+    # A crash is never a set-up flake: it stays the verdict (a retry would hide it, ANIM-CRASH 2026-10-23).
+    if [ "$rc" = 3 ] && grep -aqs "UNHANDLED EXCEPTION" "$OUT/$name/log.log" "$OUT/$name/standalone.log"; then
+      echo "CRASH $name: unhandled exception during set-up (see $OUT/$name/log.log), not retried" >> "$OUT/$name.result"; rc=1; fi
     [ "$rc" = 3 ] && [ "$attempt" = 1 ] && { echo "  set-up failed ($(grep -m1 SETUP "$OUT/$name.result" | cut -c1-110)), retrying once"; rm -rf "$OUT/$name.attempt1"; mv "$OUT/$name" "$OUT/$name.attempt1"; mv "$OUT/$name.result" "$OUT/$name.attempt1.result"; continue; }
     break
   done

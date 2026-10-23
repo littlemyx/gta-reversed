@@ -1,0 +1,14 @@
+# Native macOS arm64 profile for the portable build (preset PortableMac, option GTASA_PORTABLE). Apple clang (Xcode), libc++.
+# Use tools/portable/conan_install_mac.sh: it runs `conan install` from a scratch copy of conanfile.py so that the
+# repo's ConanPresets.json (used by the Windows presets) and source/libs/imgui are never rewritten.
+[settings]
+os=Macos
+arch=armv8
+build_type=Release
+compiler=apple-clang
+compiler.cppstd=23
+compiler.libcxx=libc++
+compiler.version=21
+
+[conf]
+tools.cmake.cmaketoolchain:generator=Ninja

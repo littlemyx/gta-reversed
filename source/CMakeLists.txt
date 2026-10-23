@@ -9,6 +9,22 @@ option(${RE_PROJECT}_WITH_OPENAL "Use OpenAL" OFF)
 option(${RE_PROJECT}_USE_SDL3 "Use SDL3" OFF)
 option(${RE_PROJECT}_STANDALONE "Build standalone executable" OFF)
 option(${RE_PROJECT}_STANDALONE_DUMP_HOOKS_ONLY "Dump hooks only" OFF)
+# Portable (non-Windows / non-x86) build of the runnable standalone exe, preset PortableMac (.notes/STREAM_C_PLAN.md, slice A-1 + C-0). Needs STANDALONE=ON (the detached run
+# configuration). OFF (default): nothing below changes, every compile command and every Windows build artefact stays as it was (the Win32 x86 MSVC build is the fidelity reference).
+# ON: defines NOTSA_PORTABLE=1 on the game target and
+#   * the hook registry is not built: reversiblehooks/*.cpp, reversiblehooks/ReversibleHook/*.cpp, the hook UI (toolsmenu/DebugModules/HooksDebugModule/*.cpp), dllmain.cpp (ASI entry),
+#     PluginBase.cpp (GetModuleHandle based plugin-sdk base address). The RH_Scoped* macros are already no-ops in the detached run build (reversiblehooks/NoHookRegistry.h; NOTSA_PORTABLE
+#     implies NOTSA_NO_HOOK_REGISTRY) and ReversibleHooks.h includes only reversiblehooks/PortableStub.h (empty RHManager, HookInstallOptions::HS) instead of the registry headers.
+#     InjectHooksMain.cpp stays: it calls the (empty) X::InjectHooks() and the non-hook part (script command handler registration, CommandLine::PostHooksInjected).
+#   * standalone/Fixups.cpp keeps only the portable part (Log / Fatal / InstallDiagnostics, std C++); its Win32 / SEH / CRT-debug code is `#if !NOTSA_PORTABLE`.
+#   * the exe-oracle / shim unit tests (tests/standalone, EXCLUDE_FROM_ALL, they map gta_sa_compact.exe) are not defined, GTASA_IMAGE_DIAG / GTASA_VERIFY_GLOBALS are rejected.
+#   * the Windows system libraries (d3d9 ddraw dxguid strmiids Winmm dsound), /SUBSYSTEM and the .exe suffix are not applied; warnings are off (-w) and not errors (stream C-3 audits them).
+option(${RE_PROJECT}_PORTABLE "Portable (macOS arm64) build: hook registry / exe-oracle / Win32 startup compiled out, see source/CMakeLists.txt" OFF)
+if (${RE_PROJECT}_PORTABLE)
+    if (NOT ${RE_PROJECT}_STANDALONE OR ${RE_PROJECT}_STANDALONE_DUMP_HOOKS_ONLY)
+        message(FATAL_ERROR "${RE_PROJECT}_PORTABLE requires ${RE_PROJECT}_STANDALONE=ON and ${RE_PROJECT}_STANDALONE_DUMP_HOOKS_ONLY=OFF (the detached run configuration)")
+    endif()
+endif()
 
 if (${RE_PROJECT}_USE_SDL3)
     add_compile_definitions(NOTSA_USE_SDL3)
@@ -131,6 +147,19 @@ if (${RE_PROJECT}_RW_LIBRW)
     list(REMOVE_ITEM SOURCE_FILES_WITHOUT_MODULES_LIST app/platform/win/WindowedMode.cpp)
 endif()
 
+if (${RE_PROJECT}_PORTABLE)
+    # Hook registry, hook UI, ASI entry point and the plugin-sdk base address are not part of the portable exe (documented at the option above)
+    file(
+        GLOB_RECURSE PORTABLE_EXCLUDED_FILES
+        LIST_DIRECTORIES false
+        RELATIVE "${CMAKE_CURRENT_SOURCE_DIR}"
+        "${CMAKE_CURRENT_SOURCE_DIR}/reversiblehooks/*.c*"
+        "${CMAKE_CURRENT_SOURCE_DIR}/toolsmenu/DebugModules/HooksDebugModule/*.c*"
+    )
+    list(APPEND PORTABLE_EXCLUDED_FILES dllmain.cpp PluginBase.cpp)
+    list(REMOVE_ITEM SOURCE_FILES_WITHOUT_MODULES_LIST ${PORTABLE_EXCLUDED_FILES})
+endif()
+
 #
 # Source files that should be scanned for modules
 #
@@ -168,10 +197,18 @@ if (NOT ${RE_PROJECT}_STANDALONE_RELEASE)
         "$<$<CXX_COMPILER_ID:MSVC>:/INCREMENTAL>"
     )
 endif()
+if (${RE_PROJECT}_PORTABLE)
+    # Provisional portable flag set (C-8 decides the final one): the front-end flags the census (tools/standalone/clang_census.py) uses, plus the codegen flags that keep the
+    # original's semantics (no FMA contraction, MSVC bit-field layout, signed char, no TBAA/overflow tricks). Warnings are not errors here (C-3 audits them).
+    target_compile_options(${RE_PROJECT_LIB_NAME} PRIVATE
+        "$<$<COMPILE_LANGUAGE:CXX>:-fms-extensions;-mms-bitfields;-fno-delayed-template-parsing;-ffp-contract=off;-fsigned-char;-fno-strict-aliasing;-fwrapv;-w>"
+    )
+else()
 target_compile_options(${RE_PROJECT_LIB_NAME} PRIVATE
     "$<$<CXX_COMPILER_ID:MSVC>:/MP;/Zc:preprocessor;/W3;/wd4200;/wd4251;/wd4275;/wd4996;/wd26495;/wd26812;/wd28159>"
     "$<$<OR:$<CXX_COMPILER_ID:Clang,GCC>,$<CXX_COMPILER_ID:GNU>>:-Wall;-Wno-switch>"
 )
+endif()
 
 #--------------------------------------------------------------------
 # The run build has no original data image (slices A2..F3 of .notes/DETACH_DATA_PLAN.md)
@@ -193,6 +230,12 @@ if (${RE_PROJECT}_VERIFY_GLOBALS OR ${RE_PROJECT}_IMAGE_DIAG)
 endif()
 if (${RE_PROJECT}_STANDALONE_RUN_BUILD)
     target_compile_definitions(${RE_PROJECT_LIB_NAME} PRIVATE NOTSA_DETACHED_GLOBALS)
+endif()
+if (${RE_PROJECT}_PORTABLE)
+    if (${RE_PROJECT}_VERIFY_GLOBALS OR ${RE_PROJECT}_IMAGE_DIAG)
+        message(FATAL_ERROR "${RE_PROJECT}_VERIFY_GLOBALS / ${RE_PROJECT}_IMAGE_DIAG are dev configurations of the Windows run exe (original data image); not available with ${RE_PROJECT}_PORTABLE")
+    endif()
+    target_compile_definitions(${RE_PROJECT_LIB_NAME} PRIVATE NOTSA_PORTABLE=1)
 endif()
 if (${RE_PROJECT}_VERIFY_GLOBALS)
     target_compile_definitions(${RE_PROJECT_LIB_NAME} PRIVATE NOTSA_VERIFY_GLOBALS)
@@ -217,7 +260,11 @@ set_target_properties(${RE_PROJECT_LIB_NAME}
     RUNTIME_OUTPUT_DIRECTORY "${PROJECT_SOURCE_DIR}/bin/${CMAKE_BUILD_TYPE}/"
     COMPILE_WARNING_AS_ERROR ON
 )
+if (${RE_PROJECT}_PORTABLE)
+    set_target_properties(${RE_PROJECT_LIB_NAME} PROPERTIES SUFFIX "" COMPILE_WARNING_AS_ERROR OFF)
+else()
 target_link_options(${RE_PROJECT_LIB_NAME} PRIVATE "/SUBSYSTEM:WINDOWS")
+endif()
 
 if (${RE_PROJECT}_STANDALONE AND NOT ${RE_PROJECT}_STANDALONE_DUMP_HOOKS_ONLY)
     # F3: a normal exe image. Default image base, ASLR (/DYNAMICBASE) and a relocation table: nothing in the run code depends on a fixed address any more (the census proves it
@@ -294,7 +341,12 @@ endif()
 if (${RE_PROJECT}_RW_LIBRW)
     # librw as a static library built with the same (static) CRT. Options are forced before add_subdirectory (cache vars of the subproject).
     # NOTE: must come BEFORE the add_dependency() calls below: that macro leaks junk tokens into the directory-wide compile options.
-    set(LIBRW_PLATFORM D3D9 CACHE STRING "" FORCE)
+    if (${RE_PROJECT}_PORTABLE)
+        # librw offers NULL / GL3 off Windows. NULL configures without OpenGL; the render backend (stream R) is not part of A-1 / C-0.
+        set(LIBRW_PLATFORM NULL CACHE STRING "" FORCE)
+    else()
+        set(LIBRW_PLATFORM D3D9 CACHE STRING "" FORCE)
+    endif()
     set(LIBRW_TOOLS OFF CACHE BOOL "" FORCE)
     set(LIBRW_INSTALL OFF CACHE BOOL "" FORCE)
     set(LIBRW_EXAMPLES OFF CACHE BOOL "" FORCE)
@@ -305,6 +357,8 @@ if (${RE_PROJECT}_RW_LIBRW)
     # librw is third-party code: never -Werror (COMPILE_WARNING_AS_ERROR is set per target on ${RE_PROJECT_LIB_NAME} only)
     set_target_properties(librw PROPERTIES COMPILE_WARNING_AS_ERROR OFF)
 
+    # Portable build: no exe-oracle / shim unit tests (they map gta_sa_compact.exe at its original VAs and link Windows libraries; they would also pollute compile_commands.json)
+    if (NOT ${RE_PROJECT}_PORTABLE)
     # P2B-01 unit test (defined here, before add_dependency() leaks junk into the directory compile options) of the RW math/stream shim (not part of `all`): ninja rw_math_stream_test
     if (EXISTS "${PROJECT_SOURCE_DIR}/tests/standalone/rw_math_stream_test.cpp")
         add_executable(rw_math_stream_test EXCLUDE_FROM_ALL
@@ -2387,6 +2441,7 @@ if (${RE_PROJECT}_RW_LIBRW)
             target_sources(${_t} PRIVATE "${PROJECT_SOURCE_DIR}/tests/standalone/fixups_log_stub.cpp")
         endif()
     endforeach()
+    endif() # NOT PORTABLE
 endif()
 
 #--------------------------------------------------------------------
@@ -2452,6 +2507,18 @@ if (${RE_PROJECT}_RW_LIBRW)
     set_source_files_properties(standalone/rw/matfx.cpp standalone/rw/uvanim.cpp PROPERTIES SKIP_UNITY_BUILD_INCLUSION ON)
 endif()
 
+if (${RE_PROJECT}_PORTABLE)
+    target_link_libraries(${RE_PROJECT_LIB_NAME} PRIVATE
+        nlohmann_json::nlohmann_json
+        Ogg::ogg
+        spdlog::spdlog
+        Tracy::TracyClient
+        vorbis::vorbis
+        imgui::imgui
+        libjpeg-turbo::libjpeg-turbo
+        Boost::headers
+    )
+else()
 target_link_libraries(${RE_PROJECT_LIB_NAME} PRIVATE
     nlohmann_json::nlohmann_json
     Ogg::ogg
@@ -2467,6 +2534,7 @@ target_link_libraries(${RE_PROJECT_LIB_NAME} PRIVATE
     d3d9
     Boost::headers
 )
+endif()
 if (${RE_PROJECT}_USE_SDL3)
     target_link_libraries(${RE_PROJECT_LIB_NAME} PRIVATE
         SDL3::SDL3

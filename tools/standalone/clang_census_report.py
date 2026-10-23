@@ -78,8 +78,14 @@ def classify(mode, file, msg):
     return 'other'
 
 
-def stream_of(cat, f):
-    """owner stream of a unique diagnostic: by file first (the code area belongs to a stream), else by category"""
+A_MSG = re.compile(r'ReversibleHooks|RHManager|HookInstallOptions|HookCategory|VMTInfo|kCallByAddressForbidden|plugin::(Call|Get)|PluginBase|GetBaseAddress|GetGlobalAddress|StaticRef')
+
+
+def stream_of(cat, f, msg=''):
+    """owner stream of a unique diagnostic: by file first (the code area belongs to a stream), else by category.
+    Slice A-1/C-0: a diagnostic whose MESSAGE names the hook machinery / call-by-address helpers is stream A whatever file it is reported in."""
+    if msg and A_MSG.search(msg):
+        return 'A fixed addresses / hooks'
     if re.search(r'^source/(standalone/rw/|fakerw/|game_sa/Pipelines/|game_sa/RenderWare/|vendor/librw|game_sa/Gamma|game_sa/RealTimeShadow)', f) or 'librw' in f or 'rwd3d' in f.lower():
         return 'R render'
     if re.search(r'^source/(app/platform/|app/|oswrapper/|game_sa/Audio/Hardware/|game_sa/Audio/Loaders/|game_sa/CdStream|game_sa/VideoPlayer|game_sa/FileMgr|game_sa/WinInput|game_sa/Pad|extensions/File)', f):
@@ -146,7 +152,7 @@ def main():
             per_tu[tu] += 1
             per_tu_cat[tu][cat] += 1
             cat_tus[cat].add(tu); cat_files[cat].add(f)
-            st = stream_of(cat, f); stream_tus[st].add(tu); stream_files[st].add(f)
+            st = stream_of(cat, f, msg); stream_tus[st].add(tu); stream_files[st].add(f)
             if key not in uniq:
                 uniq[key] = cat
                 per_file[f] += 1
@@ -170,10 +176,33 @@ def main():
     for c, n in uc.most_common():
         print('| %s | %d | %d | %d | %d |' % (c, n, raw[c], len(cat_files[c]), len(cat_tus[c])))
     print('\n## By owner stream (unique diagnostics; stream chosen by file area first, then category)\n')
-    sc = collections.Counter(stream_of(c, f) for (f, l, m), c in uniq.items())
+    sc = collections.Counter(stream_of(c, f, m) for (f, l, m), c in uniq.items())
     print('| stream | unique | files | TUs reaching it |\n|---|---|---|---|')
     for c, n in sc.most_common():
         print('| %s | %d | %d | %d |' % (c, n, len(stream_files[c]), len(stream_tus[c])))
+    # per top-level directory of source/ (game_sa is split one level further): TUs, TUs clean, unique root diagnostics (by the file they point to) and their streams
+    def dir_of(f):
+        parts = f.split('/')
+        if len(parts) >= 3 and parts[0] == 'source':
+            if parts[1] == 'game_sa':
+                return 'source/game_sa/' + parts[2] if len(parts) > 3 else 'source/game_sa (root)'
+            return 'source/' + parts[1]
+        if len(parts) == 2 and parts[0] == 'source':
+            return 'source (root)'
+        return '(outside source/)'
+    dir_tus, dir_clean = collections.Counter(), collections.Counter()
+    for t in real:
+        d = dir_of(t.replace(REPO, ''))
+        dir_tus[d] += 1
+        dir_clean[d] += 1 if per_tu[t] == 0 and tus[t] == 0 else 0
+    dir_uniq = collections.Counter(); dir_stream = collections.defaultdict(collections.Counter)
+    for (f, l, m), c in uniq.items():
+        d = dir_of(f); dir_uniq[d] += 1; dir_stream[d][stream_of(c, f, m)[:1]] += 1
+    print('\n## By directory (TUs of the directory | clean TUs | unique root diagnostics located in it | by stream letter; u = unclassified)\n')
+    print('| directory | TUs | TUs clean | unique diagnostics | A | W | R | P | F | C | u |\n|---|---|---|---|---|---|---|---|---|---|---|')
+    for d in sorted(set(dir_tus) | set(dir_uniq), key=lambda x: -dir_uniq[x]):
+        ds = dir_stream[d]
+        print('| %s | %d | %d | %d | %d | %d | %d | %d | %d | %d | %d |' % (d, dir_tus[d], dir_clean[d], dir_uniq[d], ds['A'], ds['W'], ds['R'], ds['P'], ds['F'], ds['C'], ds['u']))
     print('\n## Top %d files by unique diagnostics (file the diagnostic points to)\n' % a.top)
     print('| file | unique | main categories |\n|---|---|---|')
     for f, n in per_file.most_common(a.top):

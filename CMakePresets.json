@@ -67,6 +67,34 @@
                 "GTASA_VERIFY_GLOBALS": "ON",
                 "GTASA_IMAGE_DIAG": "ON"
             }
+        },
+        {
+            "name": "PortableMac",
+            "displayName": "Portable build, native macOS arm64 (Apple clang, libc++): GTASA_PORTABLE=ON, hook registry / Win32 startup / exe-oracle compiled out. Produces compile_commands.json for the C-0 census",
+            "description": "Slices A-1 + C-0 of .notes/STREAM_C_PLAN.md. Run tools/portable/conan_install_mac.sh once (conan install from a scratch copy of conanfile.py into build/PortableMac/generators with conan/profiles/macos-arm64.txt: ConanPresets.json and source/libs/imgui are not touched), then `cmake --preset PortableMac`. Compiler: Apple clang 21 (/usr/bin/clang++, Xcode): what every Mac has, its libc++ / SDK are the ones the C-4 gap list was measured against; the census tool defaults to brew llvm only as a newer front end. The game does not compile on arm64 yet (streams P/W/F/R/C): the target is configured and its TUs are checked with `python3 tools/standalone/clang_census.py run --mode native --compdb build/PortableMac/compile_commands.json`, not linked.",
+            "generator": "Ninja",
+            "binaryDir": "${sourceDir}/build/PortableMac",
+            "toolchainFile": "${sourceDir}/build/PortableMac/generators/conan_toolchain.cmake",
+            "condition": {
+                "type": "equals",
+                "lhs": "${hostSystemName}",
+                "rhs": "Darwin"
+            },
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "Release",
+                "CMAKE_C_COMPILER": "/usr/bin/clang",
+                "CMAKE_CXX_COMPILER": "/usr/bin/clang++",
+                "CMAKE_CXX_FLAGS_RELEASE": "-O2 -DNDEBUG",
+                "CMAKE_C_FLAGS_RELEASE": "-O2 -DNDEBUG",
+                "GTASA_STANDALONE": "ON",
+                "GTASA_STANDALONE_DUMP_HOOKS_ONLY": "OFF",
+                "GTASA_PORTABLE": "ON",
+                "GTASA_STANDALONE_RELEASE": "ON",
+                "GTASA_NO_EDIT_AND_CONTINUE": "ON",
+                "GTASA_WITH_SCRIPT_COMMAND_HOOKS": "OFF",
+                "GTASA_USE_SDL3": "ON",
+                "GTASA_UNITY_BUILD": "OFF"
+            }
         }
     ],
     "include": [

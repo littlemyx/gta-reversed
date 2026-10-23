@@ -254,12 +254,12 @@ void CPedGroupIntelligence::SetEventResponseTask(CPed* ped, bool hasMainTask, co
 
 // 0x5F76C0
 bool CPedGroupIntelligence::ReportFinishedTask(const CPed* ped, const CTask* task, PedTaskPairs& taskPairs) {
-    const auto tt = task->GetTaskType();
     for (auto& tp : taskPairs) {
         if (tp.Ped != ped) {
             continue;
         }
-        if (!tp.Task || tp.Task->GetTaskType() != tt) {
+        // 0x5F76DA..0x5F76F1: the exe asks for the types only for a pair of this ped that holds a task (the stored task first); the port read `task`'s type on entry (null task => fault)
+        if (!tp.Task || tp.Task->GetTaskType() != task->GetTaskType()) {
             continue;
         }
         delete std::exchange(tp.Task, nullptr);

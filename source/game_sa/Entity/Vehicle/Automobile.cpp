@@ -4241,7 +4241,7 @@ void CAutomobile::ProcessAutoBusDoors() {
             };
 
             for (auto&& [door, comp, flagMask] : doors) {
-                if (!IsDoorMissing(door) && (m_nGettingInFlags & flagMask)) {
+                if (!IsDoorMissing(door) && !(m_nGettingInFlags & flagMask)) { // 0x6A39FE / 0x6A3A28: `test [esi+0x486], mask / jne skip` - the door is only moved when nobody is getting in through it
                     OpenDoor(nullptr, comp, door, 0.f, true);
                 }
             }
@@ -4250,20 +4250,20 @@ void CAutomobile::ProcessAutoBusDoors() {
             m_nBusDoorTimerStart = 0;
         }
     } else if (m_nBusDoorTimerEnd && CTimer::GetTimeInMS() > m_nBusDoorTimerEnd - 500) {
-        if (!IsDoorMissing(eDoors::DOOR_LEFT_FRONT) && (m_nGettingInFlags & 1)) {
+        if (!IsDoorMissing(eDoors::DOOR_LEFT_FRONT) && !(m_nGettingInFlags & 1)) { // 0x6A38DD: `test [esi+0x486], 1 / jne skip`
             const auto OpenThisDoor = [this](float ratio) {
                 OpenDoor(nullptr, COMPONENT_DOOR_RR, DOOR_LEFT_FRONT, ratio, true); // TODO: `COMPONENT_DOOR_RR` doesn't match up with `DOOR_LEFT_FRONT`
             };
 
             if (IsDoorClosed(eDoors::DOOR_LEFT_FRONT)) {
-                m_nBusDoorTimerStart = 0;
+                m_nBusDoorTimerEnd = CTimer::GetTimeInMS(); // 0x6A392A: `mov [esi+0x870], [CTimer::m_snTimeInMilliseconds]` (the port wrote m_nBusDoorTimerStart = 0 here)
                 OpenThisDoor(0.f);
             } else {
                 OpenThisDoor(1.f - (float)(CTimer::GetTimeInMS() - m_nBusDoorTimerEnd + 500) * ExeRecip(500.f));
             }
         }
 
-        if (!IsDoorMissing(eDoors::DOOR_RIGHT_FRONT) && (m_nGettingInFlags & 4)) {
+        if (!IsDoorMissing(eDoors::DOOR_RIGHT_FRONT) && !(m_nGettingInFlags & 4)) { // 0x6A3966: `test [esi+0x486], 4 / jne skip`
             if (IsDoorClosed(eDoors::DOOR_RIGHT_FRONT)) {
                 m_nBusDoorTimerEnd = CTimer::GetTimeInMS();
             }

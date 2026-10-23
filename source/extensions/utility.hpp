@@ -7,7 +7,7 @@
 #include <unordered_map>
 #include "Base.h"
 #include <game_sa/Timer.h>
-
+#include "portable/stdcompat.h" // notsa::compat::from_chars (std:: on MSVC); replaces a blank line, line numbers unchanged
 namespace notsa {
 //template<typename TChar, size_t N>
 //struct basic_static_string {
@@ -143,7 +143,7 @@ template<typename T>
     requires std::is_floating_point_v<T>
 std::optional<T> try_ston(std::string_view str, std::chars_format fmt = std::chars_format::general, const char** end = nullptr) {
     T out;
-    const auto [ptr, ec] = std::from_chars(str.data(), str.data() + str.size(), out, fmt);
+    const auto [ptr, ec] = notsa::compat::from_chars(str.data(), str.data() + str.size(), out, fmt);
     if (ec != std::errc{}) {
         return std::nullopt;
     }

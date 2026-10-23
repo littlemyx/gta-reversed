@@ -24,12 +24,14 @@
 #define NOMINMAX
 #endif
 #include <Windows.h>
+#ifndef NOTSA_PORTABLE // portable build: librw GL3 (RW_GL3 comes from the librw target), no D3D9
 #include <d3d9.h>
 #ifndef WITH_D3D
 #define WITH_D3D
 #endif
 #ifndef RW_D3D9
 #define RW_D3D9
+#endif
 #endif
 
 #include <rw.h>

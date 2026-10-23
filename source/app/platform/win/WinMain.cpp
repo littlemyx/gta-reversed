@@ -597,9 +597,9 @@ INT WINAPI WinMain(HINSTANCE instance, HINSTANCE hPrevInstance, LPSTR cmdLine, I
     }};
     InjectHooksMain();
 
-    // (3 lines of the removed image fixup pass, kept so the __LINE__ of the hooks below stay identical in the DLL build)
-    //
-    //
+#ifdef NOTSA_PORTABLE
+    void LoadConfigurations(); LoadConfigurations(); // gta-reversed.ini; dllmain.cpp (where the DLL build loads it) is not part of the portable target, defined at the end of this file
+#endif
     NOTSA_VERIFY_GLOBALS_BOOT(); // A2: boot dump for tools/standalone/verify_globals.py (nothing unless NOTSA_VERIFY_GLOBALS)
     NOTSA_IMAGE_DIAG_ARM();      // A3: dev-only stray-access census / poison over the mapped original image (nothing unless GTASA_IMAGE_DIAG and the env variable is set)
     return NOTSA_WinMain(instance, hPrevInstance, cmdLine, nCmdShow);
@@ -623,3 +623,14 @@ void InjectWinMainStuff() {
     RH_ScopedGlobalInstall(Win32_InitInstance, 0x745560, {.Locked = true});
 #endif
 }
+
+#ifdef NOTSA_PORTABLE
+// Portable build: the body of dllmain.cpp's LoadConfigurations() (same INI file, same configs); dllmain.cpp is excluded from the portable target.
+// Placed at the end of the file so that no __LINE__ above it moves.
+#include "extensions/Configs/Miscellaneous.hpp"
+void LoadConfigurations() {
+    g_ConfigurationMgr.Load("gta-reversed.ini");
+    g_FastLoaderConfig.Load();
+    g_MiscConfig.Load();
+}
+#endif

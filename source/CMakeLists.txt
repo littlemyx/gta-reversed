@@ -342,8 +342,10 @@ if (${RE_PROJECT}_RW_LIBRW)
     # librw as a static library built with the same (static) CRT. Options are forced before add_subdirectory (cache vars of the subproject).
     # NOTE: must come BEFORE the add_dependency() calls below: that macro leaks junk tokens into the directory-wide compile options.
     if (${RE_PROJECT}_PORTABLE)
-        # librw offers NULL / GL3 off Windows. NULL configures without OpenGL; the render backend (stream R) is not part of A-1 / C-0.
-        set(LIBRW_PLATFORM NULL CACHE STRING "" FORCE)
+        # librw offers NULL / GL3 off Windows. The portable build renders through librw's GL3 backend (RW_GL3, public define of the librw target) with SDL3 as the window/GL
+        # context library (stream W-1); the platform glue itself is not part of this slice. The D3D9 defines (RW_D3D9 / USE_D3D9 / WITH_D3D) are not set at all.
+        set(LIBRW_PLATFORM GL3 CACHE STRING "" FORCE)
+        set(LIBRW_GL3_GFXLIB SDL3 CACHE STRING "" FORCE)
     else()
         set(LIBRW_PLATFORM D3D9 CACHE STRING "" FORCE)
     endif()
@@ -2483,7 +2485,11 @@ endif()
 
 if (${RE_PROJECT}_RW_LIBRW)
     target_link_libraries(${RE_PROJECT_LIB_NAME} PRIVATE librw)
-    target_compile_definitions(${RE_PROJECT_LIB_NAME} PRIVATE NOTSA_RW_LIBRW RW_D3D9)
+    if (${RE_PROJECT}_PORTABLE)
+        target_compile_definitions(${RE_PROJECT_LIB_NAME} PRIVATE NOTSA_RW_LIBRW) # RW_GL3 comes from the librw target (PUBLIC)
+    else()
+        target_compile_definitions(${RE_PROJECT_LIB_NAME} PRIVATE NOTSA_RW_LIBRW RW_D3D9)
+    endif()
     # fakerw headers (same file names as the RenderWare headers) take precedence over game_sa/RenderWare/rw/
     target_include_directories(${RE_PROJECT_LIB_NAME} BEFORE PRIVATE fakerw)
     # P2B-02a: engine.cpp is the shim's RwEngine*/RwD3D9 device layer and includes librw's private d3d9 header (rwd3dimpl.h)
@@ -2613,9 +2619,13 @@ target_compile_definitions(${RE_PROJECT_LIB_NAME} PRIVATE
     EXTRA_DEBUG_FEATURES
     NOTSA_WINDOWED_MODE # NOTE: This is a workaround for the game to run in windowed mode, and it must be enabled, otherwise shit's gonna crash
     SA_SKINNED_PEDS
-
-    USE_D3D9 # TODO
 )
+if (NOT ${RE_PROJECT}_PORTABLE)
+    target_compile_definitions(${RE_PROJECT_LIB_NAME} PRIVATE USE_D3D9) # TODO (portable: librw GL3, no D3D9 code path)
+else()
+    # The ~10 files that #include <Windows.h> directly get the shim (source/portable/winshim/Windows.h -> wintypes.h + crt.h)
+    target_include_directories(${RE_PROJECT_LIB_NAME} PRIVATE portable/winshim)
+endif()
 # D8 (.notes/PHASE2_STATUS.md "D8 defaults"): the runnable standalone build reproduces the ORIGINAL behaviour, so no FIX_BUGS (EXTRA_DEBUG_FEATURES only adds the occlusion debug-module header; the debug UI itself is disabled in source)
 if (NOT ${RE_PROJECT}_STANDALONE_RUN_BUILD)
     target_compile_definitions(${RE_PROJECT_LIB_NAME} PRIVATE FIX_BUGS)

@@ -15,5 +15,5 @@ CPlayerPed::CanPlayerStartMission	every case faults identically (player ped data
 CPlayerPed::MakeChangesForNewWeapon-BySlot	every case faults identically (weapon model / clump fixture)
 CPlayerSkin::Shutdown	every case faults identically (RW raster / texture fixture)
 CPlayerSkin::RenderFrontendSkinEdit	every case faults identically (renderer)
-CPed::DisablePedSpeech	OPEN FINDING: 1 of 60 cases differ (special-input case, PC24 and PC53); not analysed (see report)
-CPed::DisablePedSpeechForScriptSpeech	OPEN FINDING: 1 of 60 cases differ (special-input case); not analysed (see report)
+CPed::DisablePedSpeech	hand row in wave3_oracle_ped.inc (int16 parameter, the exe compares a word)
+CPed::DisablePedSpeechForScriptSpeech	hand row in wave3_oracle_ped.inc (int16 parameter, the exe compares a word)

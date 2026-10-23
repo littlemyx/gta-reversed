@@ -144,7 +144,7 @@ static bool EvCase(Rng& r, std::string& d, SF&& setup, PF&& portFn, EF&& exeFn) 
     FillGarbage(r, g_src, (sizeof(CCopPed) + 3) & ~size_t(3));
     WirePed(r, g_src, sizeof(CPlayerPed));
     // exe statics the CRT start-up would have initialised (the harness does not run it): EntityPosChangeThreshold 0xC18CF0 = 1.0f, fSafeDistance 0xC18CEC = 60.0f (flee task arguments)
-    *reinterpret_cast<volatile float*>(0xC18CF0) = 1.0f; *reinterpret_cast<volatile float*>(0xC18CEC) = 60.0f;
+    *reinterpret_cast<volatile float*>(0xC18CF0) = 1.0f; *reinterpret_cast<volatile float*>(0xC18CEC) = 60.0f; *reinterpret_cast<volatile float*>(0xC18CE4) = 60.0f;
     WireRef(r); WireUnderTest(r); WireWeaponInfos(r); NewTevs(r); ClearHandler();
     FillGarbage(r, g_ev, sizeof g_ev); FillGarbage(r, g_ev2, sizeof g_ev2); FillGarbage(r, g_grp, sizeof g_grp);
     std::memset(g_evg, 0, sizeof g_evg);

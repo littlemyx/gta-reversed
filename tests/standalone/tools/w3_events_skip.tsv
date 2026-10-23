@@ -4,4 +4,4 @@ CEventGroupEvent::Clone	every case faults identically: needs a real CEventGroup 
 CEventLeaderExitedCarAsDriver::AffectsPedGroup	every case faults identically: needs a real CPedGroup with intelligence (fixture)
 CEventLeaderQuitEnteringCarAsDriver::AffectsPedGroup	every case faults identically: needs a real CPedGroup with intelligence (fixture)
 CGroupEventHandler::ComputeWalkAlongsideResponse	every case faults identically: needs a real CPedGroup + task allocator (fixture)
-CEventVehicleHitAndRun::ReportCriminalEvent	OPEN FINDING: port-only access violation in CEntity::GetType (0xE6A73A, access 0x36) on case 1 - the exe survives; not analysed (see report)
+CEventVehicleHitAndRun::ReportCriminalEvent	hand row in wave3_oracle_ev_c.inc (real event as this; the generated garbage-this row faulted)

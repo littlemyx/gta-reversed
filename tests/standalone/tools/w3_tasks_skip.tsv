@@ -53,7 +53,6 @@ CTaskComplexDie::SayDeathSample	port-only null matrix dereference (CPlaceable::G
 CTaskComplexPassObject::CreateFirstSubTask	port-only fault in CEntity::GetType on a garbage pointer (15/60), exe survives (open)
 CTaskSimpleDuckToggle::ProcessPed	port-only fault in CTask::classof on a garbage sub task (10/60), exe survives (open)
 CTaskComplexFollowPedFootsteps::CreateFirstSubTask	created task pool bytes +0x141..+0x142 differ (21/60): padding / uninitialised bytes of the created task (open)
-CTaskComplexInvestigateDeadPed::CreateSubTask	exe writes a float 2.0 (0x40000000) into the created task / its argument buffer that the port leaves 0 (9/60): open, candidate port bug
 CTaskComplexTrackEntity::CreateFirstSubTask	created task pool byte (slot+8) 0x32 written by the exe only (42/60): open
 CTaskComplexTrackEntity::CreateNextSubTask	same as TrackEntity::CreateFirstSubTask (50/60)
 CTaskComplexWanderCop::CreateFirstSubTask	16-bit (exe 0x0000FFFF) vs 32-bit (port 0xFFFFFFFF) store in a created task (43/60): CNodeAddress-style initialisation, open

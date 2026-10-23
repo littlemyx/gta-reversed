@@ -1,4 +1,4 @@
-157 function rows, 325 TUs
+158 function rows, 325 TUs
 SKIP CTaskInteriorLieInBed::FinishAnimCB 0x675FC0: every case faults in the port only at an unresolved callee / assert while the exe does not (fixture limit)
 SKIP CTaskInteriorUseInfo::MakeAbortable 0x675B30: ORACLE-C-TASKS: every case faults identically in the port and the exe on the class-C fixture (this task + ped with real vftables, other objects garbage): needs a per-class fixture (valid pointed-to objects)
 TEMPLATE CTaskComplexSeekEntityAnyMeansXYOffset::Clone 0x696030
@@ -62,7 +62,6 @@ SKIP CTaskComplexGoToBoatSteeringWheel::CreateFirstSubTask 0x64E390: ORACLE-C-TA
 SKIP CTaskComplexGoToPointAiming::CreateNextSubTask 0x66DD70: ORACLE-C-TASKS: every case faults identically in the port and the exe on the class-C fixture (this task + ped with real vftables, other objects garbage): needs a per-class fixture (valid pointed-to objects)
 SKIP CTaskComplexGoToPointAndStandStillTimed::StopTimer 0x6686A0: ORACLE-C-TASKS: every case faults identically in the port and the exe on the class-C fixture (this task + ped with real vftables, other objects garbage): needs a per-class fixture (valid pointed-to objects)
 SKIP CTaskComplexHitPedWithCar::ComputeEvasiveStepMoveDir 0x653B40: every case faults identically in the port and in the exe (exe fault at 54f576 accessing 50: a null / garbage pointer member or argument the fixture does not supply)
-SKIP CTaskComplexInvestigateDeadPed::CreateSubTask 0x696F90: exe writes a float 2.0 (0x40000000) into the created task / its argument buffer that the port leaves 0 (9/60): open, candidate port bug
 SKIP CTaskComplexInvestigateDeadPed::CreateNextSubTask 0x697840: ORACLE-C-TASKS: every case faults identically in the port and the exe on the class-C fixture (this task + ped with real vftables, other objects garbage): needs a per-class fixture (valid pointed-to objects)
 SKIP CTaskComplexKillPedGroupOnFoot::ComputeNearestLivingGroupPed 0x622450: port asserts on the garbage group member index (std::array subscript) in 21/60 cases: fixture needs a real ped group
 SKIP CTaskComplexLeaveBoat::Destructor 0x642250: ORACLE-C-TASKS: every case faults identically in the port and the exe on the class-C fixture (this task + ped with real vftables, other objects garbage): needs a per-class fixture (valid pointed-to objects)

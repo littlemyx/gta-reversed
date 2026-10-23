@@ -159,7 +159,7 @@ DWORD WINAPI CAEStreamThread::MainLoop(LPVOID data) {
             self->Service();
             self->m_pStreamingChannel->Service();
             auto end = CAEAudioUtility::GetCurrentTimeInMS();
-#ifdef NOTSA_STANDALONE_RUN
+#if defined(NOTSA_STANDALONE_RUN) && !defined(NOTSA_PORTABLE) // MAC-W0: DirectSound vtable tap/mute are Windows debug tools
             notsa::audio_tap::StreamIter((double)(end - start)); // NOTSA: NOTSA_AUDIO_TAP
 #endif
             if (end - start < 5) {

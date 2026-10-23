@@ -4,7 +4,7 @@
 #include "AEAudioChannel.h"
 #include "AEAudioUtility.h"
 #include "AEAudioTap.h"
-#ifdef NOTSA_STANDALONE_RUN
+#if defined(NOTSA_STANDALONE_RUN) && !defined(NOTSA_PORTABLE) // MAC-W0: DirectSound vtable tap/mute are Windows debug tools
 #define NOTSA_TAP_FADE(k) ::notsa::audio_tap::FadeEvent(k)
 #else
 #define NOTSA_TAP_FADE(k) ((void)0)
@@ -107,7 +107,7 @@ void CAESmoothFadeThread::Service() {
             const double fVolume   = x87::log10(fStep * fProgress + 1.0) * 20.0 + (double)entry.m_fStartVolume;
             entry.m_fCurVolume = (float)fVolume;
             NOTSA_TAP_FADE(7);
-#ifdef NOTSA_STANDALONE_RUN
+#if defined(NOTSA_STANDALONE_RUN) && !defined(NOTSA_PORTABLE) // MAC-W0: DirectSound vtable tap/mute are Windows debug tools
             if (notsa::audio_tap::Enabled()) { // NOTSA: NOTSA_AUDIO_TAP counts how often the pre-fix formula (no `1 +` inside the log) disagrees with the exe's by > 1 dB
                 notsa::audio_tap::NoteFadeStep(fVolume, (double)entry.m_fStartVolume + 0.301029 * std::log2(fStep * fProgress) * 20.0);
             }

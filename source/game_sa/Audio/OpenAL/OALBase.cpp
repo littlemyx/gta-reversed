@@ -15,7 +15,7 @@ void OALBase::Release() {
         return;
 
     // OS_MutexObtain(trashMutex);
-    trashCan.push_back(this);
+    trashCan.emplace_back(this); // the garbage collector owns it from now on
     // OS_MutexRelease(trashMutex);
 }
 

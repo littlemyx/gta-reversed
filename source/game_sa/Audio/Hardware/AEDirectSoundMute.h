@@ -16,7 +16,7 @@
 //! fades, streaming, position handling) runs unchanged on the real Wine buffer. The menu volume settings can not undo it: nothing but this
 //! patched `SetVolume` ever reaches the real buffer's volume.
 //! Without the env var, or in a build without NOTSA_STANDALONE_RUN, `NOTSA_AUDIO_MUTE_ATTACH` does nothing.
-#ifdef NOTSA_STANDALONE_RUN
+#if defined(NOTSA_STANDALONE_RUN) && !defined(NOTSA_PORTABLE) // MAC-W0: DirectSound vtable tap/mute are Windows debug tools
 namespace notsa::audio_mute {
 namespace detail {
 // IDirectSoundBuffer8 vtable slots: IUnknown(3) + GetCaps GetCurrentPosition GetFormat [GetVolume=6] GetPan GetFrequency GetStatus Initialize Lock Play

@@ -260,7 +260,7 @@ void CAEAudioHardware::PlaySound(int16 channel, uint16 channelSlot, uint16 sound
         return;
     }
 
-#ifdef NOTSA_STANDALONE_RUN
+#if defined(NOTSA_STANDALONE_RUN) && !defined(NOTSA_PORTABLE) // MAC-W0: DirectSound vtable tap/mute are Windows debug tools
     notsa::audio_tap::NotePlaySound(bufferSize); // NOTSA: NOTSA_AUDIO_TAP
 #endif
     const auto loopOffset = m_pMP3BankLoader->GetLoopOffset((eSoundID)soundIdInSlot, (eSoundBankSlot)bankSlot);

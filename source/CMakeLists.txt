@@ -159,6 +159,8 @@ if (${RE_PROJECT}_PORTABLE)
     list(APPEND PORTABLE_EXCLUDED_FILES dllmain.cpp PluginBase.cpp)
     # MAC-W0: Win32-only translation units that have a portable counterpart in source/portable/*.cpp (oswrapper_win.cpp -> portable/oswrapper_portable.cpp)
     list(APPEND PORTABLE_EXCLUDED_FILES oswrapper/oswrapper_win.cpp)
+    # MAC-W0: Win32 overlapped-I/O CdStream -> portable/cdstream_portable.cpp; Media Foundation / WMA user-track decoders -> portable/audio_decoders_portable.cpp
+    list(APPEND PORTABLE_EXCLUDED_FILES game_sa/CdStreamInfo.cpp game_sa/Audio/Loaders/AEMFDecoder.cpp game_sa/Audio/Loaders/AEWMADecoder.cpp)
     # MAC-W0a (app/): Win32-only app/platform TUs replaced by portable/app_*.cpp
     set(PORTABLE_EXCLUDED_APP_FILES app/platform/win/VideoPlayer/VideoPlayer.cpp app/platform/win/VideoModeSelectDialog.cpp extensions/debug.cpp)
     list(APPEND PORTABLE_EXCLUDED_FILES ${PORTABLE_EXCLUDED_APP_FILES})
@@ -2681,6 +2683,15 @@ endif()
 #--------------------------------------------------------------------
 if (${RE_PROJECT}_WITH_OPENAL)
     target_compile_definitions(${RE_PROJECT_LIB_NAME} PRIVATE USE_OPENAL)
+    if (${RE_PROJECT}_PORTABLE)
+        # openal-soft (Homebrew: `brew install openal-soft`, keg-only; installs OpenALConfig.cmake, headers <AL/al.h>). The macOS OpenAL.framework (<OpenAL/al.h>) is
+        # deliberately not used: it is deprecated and lacks the ALC/EFX extensions the EAX replacement needs. A conan route (openal-soft) works the same way via CMAKE_PREFIX_PATH.
+        find_package(OpenAL CONFIG REQUIRED HINTS /opt/homebrew/opt/openal-soft /usr/local/opt/openal-soft)
+        target_link_libraries(${RE_PROJECT_LIB_NAME} PRIVATE OpenAL::OpenAL)
+        # The hardware layer (CAEAudioChannel & co) is still DirectSound code: USE_DSOUND selects it, its types come from source/portable/winshim/dsound.h
+        # (abstract interfaces; DirectSoundCreate8 logs and fails, so audio is disabled at run time) until the OpenAL hardware layer replaces it (stream W-3/W-4).
+        target_compile_definitions(${RE_PROJECT_LIB_NAME} PRIVATE USE_DSOUND)
+    endif()
 
     target_include_directories(${RE_PROJECT_LIB_NAME} PRIVATE
         game_sa/Audio/OpenAL

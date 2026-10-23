@@ -46,17 +46,17 @@ namespace {
 constexpr float DEG_TO_RAD_F = std::bit_cast<float>(0x3C8EFA35u);
 
 // Raw offsets the asm relies on
-static_assert(offsetof(CPed, m_nWeaponSkill) == 0x72C);
-static_assert(offsetof(CPed, m_nFightingStyle) == 0x72D);
-static_assert(offsetof(CPed, m_nAllowedAttackMoves) == 0x72E);
+VALIDATE_OFFSET(CPed, m_nWeaponSkill, 0x72C);
+VALIDATE_OFFSET(CPed, m_nFightingStyle, 0x72D);
+VALIDATE_OFFSET(CPed, m_nAllowedAttackMoves, 0x72E);
 static_assert(sizeof(eFightingStyle) == 1 && sizeof(eWeaponSkill) == 1);
-static_assert(offsetof(CPedIntelligence, m_nEventId) == 0xD1);
-static_assert(offsetof(CVehicle, handlingFlags) == 0x38C);
-static_assert(offsetof(CVehicle, vehicleFlags) == 0x428);
-static_assert(offsetof(CVehicle, m_nVehicleSubType) == 0x594);
-static_assert(offsetof(CAutomobile, m_fHeliRotorSpeed) == 0x84C);
-static_assert(offsetof(CPlane, m_fPropSpeed) == 0x9C4);
-static_assert(offsetof(CPhysical, m_vecMoveSpeed) == 0x44);
+VALIDATE_OFFSET(CPedIntelligence, m_nEventId, 0xD1);
+VALIDATE_OFFSET(CVehicle, handlingFlags, 0x38C);
+VALIDATE_OFFSET(CVehicle, vehicleFlags, 0x428);
+VALIDATE_OFFSET(CVehicle, m_nVehicleSubType, 0x594);
+VALIDATE_OFFSET(CAutomobile, m_fHeliRotorSpeed, 0x84C);
+VALIDATE_OFFSET(CPlane, m_fPropSpeed, 0x9C4);
+VALIDATE_OFFSET(CPhysical, m_vecMoveSpeed, 0x44);
 static_assert(TASK_SIMPLE_FALL == 0xCF);
 
 //! 0x4119D0 - `v / s`. x87: the reciprocal is kept in extended precision for the Z, and rounded to float for X and Y

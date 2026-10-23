@@ -191,12 +191,12 @@ int32 GetCarModel(CVehicle& veh) {
 }
 }; // namespace
 
-static_assert(offsetof(CPlayerInfo, m_bFreeHealthCare) == 0x152);
-static_assert(offsetof(CVehicle, m_nMaxPassengers) == 0x488);
-static_assert(offsetof(CBike, nBikeFlags) == 0x614 && offsetof(CAutomobile, autoFlags) == 0x868);
-static_assert(offsetof(CCamera, m_bIgnoreFadingStuffForMusic) == 0x25);
-static_assert(offsetof(CAutomobile, m_fCarTraction) == 0x8A0);
-static_assert(offsetof(CBike, m_fExtraTractionMult) == 0x794);
+VALIDATE_OFFSET(CPlayerInfo, m_bFreeHealthCare, 0x152);
+VALIDATE_OFFSET(CVehicle, m_nMaxPassengers, 0x488);
+VALIDATE_OFFSET(CBike, nBikeFlags, 0x614); VALIDATE_OFFSET(CAutomobile, autoFlags, 0x868);
+VALIDATE_OFFSET(CCamera, m_bIgnoreFadingStuffForMusic, 0x25);
+VALIDATE_OFFSET(CAutomobile, m_fCarTraction, 0x8A0);
+VALIDATE_OFFSET(CBike, m_fExtraTractionMult, 0x794);
 
 void notsa::script::commands::ported::g09_12::RegisterG10() {
     REGISTER_COMMAND_HANDLER_BEGIN("Ported g10");

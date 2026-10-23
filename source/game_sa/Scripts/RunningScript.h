@@ -413,4 +413,4 @@ public:
     }
 };
 
-VALIDATE_SIZE(CRunningScript, 0xE0);
+VALIDATE_SIZE_FILE(CRunningScript, 0xE0);

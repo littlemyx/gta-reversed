@@ -68,21 +68,21 @@ using namespace notsa::script;
 */
 
 namespace {
-static_assert(offsetof(CVehicle, m_autoPilot) + offsetof(CAutoPilot, m_nCarMission)   == 0x3BA);
-static_assert(offsetof(CVehicle, m_autoPilot) + offsetof(CAutoPilot, m_TargetEntity)  == 0x41C);
-static_assert(offsetof(CVehicle, m_autoPilot) + offsetof(CAutoPilot, m_nCruiseSpeed)  == 0x3D0);
-static_assert(offsetof(CVehicle, m_autoPilot) + offsetof(CAutoPilot, m_ucHeliTargetDist) == 0x3D8);
-static_assert(offsetof(CVehicle, m_autoPilot) + offsetof(CAutoPilot, m_ucHeliSpeedMult)  == 0x3D9);
-static_assert(offsetof(CHeli, m_fMinAltitude) == 0x9B0);
-static_assert(offsetof(CVehicle, m_pTowingVehicle) == 0x4C4 && offsetof(CVehicle, m_pVehicleBeingTowed) == 0x4C8);
-static_assert(offsetof(CPed, m_acquaintance) == 0x4E0);
+VALIDATE_LAYOUT(offsetof(CVehicle, m_autoPilot) + offsetof(CAutoPilot, m_nCarMission)   == 0x3BA);
+VALIDATE_LAYOUT(offsetof(CVehicle, m_autoPilot) + offsetof(CAutoPilot, m_TargetEntity)  == 0x41C);
+VALIDATE_LAYOUT(offsetof(CVehicle, m_autoPilot) + offsetof(CAutoPilot, m_nCruiseSpeed)  == 0x3D0);
+VALIDATE_LAYOUT(offsetof(CVehicle, m_autoPilot) + offsetof(CAutoPilot, m_ucHeliTargetDist) == 0x3D8);
+VALIDATE_LAYOUT(offsetof(CVehicle, m_autoPilot) + offsetof(CAutoPilot, m_ucHeliSpeedMult)  == 0x3D9);
+VALIDATE_OFFSET(CHeli, m_fMinAltitude, 0x9B0);
+VALIDATE_OFFSET(CVehicle, m_pTowingVehicle, 0x4C4); VALIDATE_OFFSET(CVehicle, m_pVehicleBeingTowed, 0x4C8);
+VALIDATE_OFFSET(CPed, m_acquaintance, 0x4E0);
 static_assert(offsetof(CWeaponInfo, m_nModelId1) == 0xC && offsetof(CWeaponInfo, m_nSlot) == 0x14);
-static_assert(offsetof(CVehicleModelInfo, m_nPlateType) == 0x31 && offsetof(CVehicleModelInfo, m_pPlateMaterial) == 0x24);
+VALIDATE_OFFSET(CVehicleModelInfo, m_nPlateType, 0x31); VALIDATE_OFFSET(CVehicleModelInfo, m_pPlateMaterial, 0x24);
 static_assert(offsetof(tBeatInfo, IsBeatInfoPresent) == 0xA0 && offsetof(tBeatInfo, BeatNumber) == 0xA8 && sizeof(tTrackInfo::tBeat) == 8);
-static_assert(offsetof(CTaskComplexUseSequence, m_nCurrentTaskIndex) == 0x10 && offsetof(CTaskComplexUseSequence, m_nEndTaskIndex) == 0x14);
-static_assert(offsetof(CTaskComplexJump, m_UsePlayerLaunchForce) == 0x10);
-static_assert(sizeof(CPedGroup) == 0x2D4);
-static_assert(sizeof(tScriptSearchlight) == 0x7C);
+VALIDATE_OFFSET(CTaskComplexUseSequence, m_nCurrentTaskIndex, 0x10); VALIDATE_OFFSET(CTaskComplexUseSequence, m_nEndTaskIndex, 0x14);
+VALIDATE_OFFSET(CTaskComplexJump, m_UsePlayerLaunchForce, 0x10);
+VALIDATE_SIZE(CPedGroup, 0x2D4);
+VALIDATE_SIZE(tScriptSearchlight, 0x7C);
 static_assert(PEDMOVE_WALK == 4);
 static_assert(MISSION_HELI_KEEP_ENTITY_IN_VIEW == 0x33 && MISSION_PLANE_CRASH_AND_BURN == 0x39 && MISSION_HELI_CRASH_AND_BURN == 0x3A);
 static_assert(TASK_COMPLEX_USE_SEQUENCE == 0x113);

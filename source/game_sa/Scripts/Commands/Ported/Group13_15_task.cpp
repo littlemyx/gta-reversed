@@ -129,7 +129,7 @@ void TaskFallAndGetUp(eScriptCommands command, CRunningScript& S, int32 pedHandl
 //! CollectParameters(2); CTaskComplexJump(OK) [0x67A030]; byte [task + 0x10] = (flag != 0)
 void TaskJump(eScriptCommands command, CRunningScript& S, int32 pedHandle, int32 flag) {
     auto* const task = new CTaskComplexJump{ CTaskComplexJump::eForceClimb::OK };
-    static_assert(offsetof(CTaskComplexJump, m_UsePlayerLaunchForce) == 0x10);
+    VALIDATE_OFFSET(CTaskComplexJump, m_UsePlayerLaunchForce, 0x10);
     task->m_UsePlayerLaunchForce = flag != 0;
     S.GivePedScriptedTask(pedHandle, task, command);
 }

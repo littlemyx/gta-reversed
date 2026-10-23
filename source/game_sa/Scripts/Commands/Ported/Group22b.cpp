@@ -61,7 +61,7 @@ void ReadMenuText(CRunningScript& S, char* dst) {
 //! +0x42A bit 0x20 (`bCanBeDamaged`) is set, then virtual slot 42 `BlowUpCarCutSceneNoExtras(bNoCamShake = a == 0, bNoSpawnFlyingComps = b == 0,
 //! bDetachWheels = false, bExplosionSound = c != 0)`
 void ExplodeCarInCutsceneShakeAndBits(CVehicle& veh, int32 a, int32 b, int32 c) {
-    static_assert(offsetof(CVehicle, vehicleFlags) + 2 == 0x42A);
+    VALIDATE_LAYOUT(offsetof(CVehicle, vehicleFlags) + 2 == 0x42A);
     veh.vehicleFlags.bCanBeDamaged = true;
     veh.BlowUpCarCutSceneNoExtras(a == 0, b == 0, false, c != 0);
 }
@@ -80,7 +80,7 @@ CVector GetCutsceneOffset() {
 //! x = x * (maximumWidth * 1/640) [0x859520], width = width * (maximumWidth * 1/640), y = y * (maximumHeight * 1/448) [0x859524] (all x87, stored as float);
 //! CMenuSystem::CreateNewMenu(0, title, x, y, width, columns, interactive, background, alignment) [0x582300]
 OpcodeResult ScriptCreateMenu(CRunningScript& S) {
-    static_assert(offsetof(RsGlobalType, maximumWidth) == 4 && offsetof(RsGlobalType, maximumHeight) == 8); // 0xC17044 / 0xC17048
+    VALIDATE_OFFSET(RsGlobalType, maximumWidth, 4); VALIDATE_OFFSET(RsGlobalType, maximumHeight, 8); // 0xC17044 / 0xC17048
     char title[16]{};
     ReadMenuText(S, title);
     S.CollectParameters(7);
@@ -248,7 +248,7 @@ OpcodeResult AttachAnimsToModel(CRunningScript& S) {
 
 //! 2281 SET_OBJECT_AS_STEALABLE (case @0x475C40): object, flag => objectFlags (+0x140) bit 0x2000 (`bIsLiftable`), no null check
 void SetObjectAsStealable(CObject& obj, int32 flag) {
-    static_assert(offsetof(CObject, objectFlags) == 0x140);
+    VALIDATE_OFFSET(CObject, objectFlags, 0x140);
     obj.objectFlags.bIsLiftable = flag != 0;
 }
 
@@ -267,7 +267,7 @@ void AddSparks(CVector pos, CVector dir, int32 count) {
 
 //! 2284 GET_VEHICLE_CLASS (case @0x475D73): car => the model info's vehicle class (signed byte @+0x4D); model info = ms_modelInfoPtrs[(int16)+0x22], no checks
 int32 GetVehicleClass(CVehicle& veh) {
-    static_assert(offsetof(CVehicleModelInfo, m_nVehicleClass) == 0x4D && sizeof(eVehicleClass) == 1);
+    VALIDATE_OFFSET(CVehicleModelInfo, m_nVehicleClass, 0x4D); VALIDATE_SIZE(eVehicleClass, 1);
     const auto* const mi = static_cast<CVehicleModelInfo*>(CModelInfo::ms_modelInfoPtrs[(int32)(int16)veh.m_nModelIndex]);
     return (int32)(int8)mi->m_nVehicleClass;
 }
@@ -334,7 +334,7 @@ void SetFreebiesInVehicle(CVehicle& veh, int32 flag) {
 //! player data (+0x480 of the player ped).m_nScriptLimitToGangSize (+0x43) = limit; then the player's group (index @+0x38) loses
 //! `CountMembersExcludingLeader() - limit` followers when that is positive (RemoveNFollowers [0x5FB1D0]).
 void SetScriptLimitToGangSize(int32 limit) {
-    static_assert(offsetof(CPlayerPedData, m_nPlayerGroup) == 0x38 && offsetof(CPlayerPedData, m_nScriptLimitToGangSize) == 0x43);
+    VALIDATE_OFFSET(CPlayerPedData, m_nPlayerGroup, 0x38); VALIDATE_OFFSET(CPlayerPedData, m_nScriptLimitToGangSize, 0x43);
     FindPlayerPed(-1)->GetPlayerData()->m_nScriptLimitToGangSize = (uint8)limit;
     const auto groupIdx = FindPlayerPed(-1)->GetPlayerData()->m_nPlayerGroup;
     auto&      members  = CPedGroups::ms_groups[groupIdx].GetMembership(); // 0xC09920 + 8 + 0x2D4 * idx
@@ -358,8 +358,8 @@ void MakePlayerGangReappear() {
 //! desc = CWorld::Players[player] (stride 0x190).m_PlayerData.m_pPedClothesDesc (info +8); texture key = desc->m_anTextureKeys[part] (desc +0x28 + 4*part),
 //! model key = ((uint32*)desc)[CClothes::GetTextureDependency(part) [0x5A7EA0]] (the model keys start at +0; "unavailable" indexes past them; no checks)
 MultiRet<uint32, uint32> GetClothesItem(int32 player, int32 part) {
-    static_assert(sizeof(CPlayerInfo) == 0x190);
-    static_assert(offsetof(CPlayerInfo, m_PlayerData) + offsetof(CPlayerPedData, m_pPedClothesDesc) == 8);
+    VALIDATE_SIZE(CPlayerInfo, 0x190);
+    VALIDATE_LAYOUT(offsetof(CPlayerInfo, m_PlayerData) + offsetof(CPlayerPedData, m_pPedClothesDesc) == 8);
     static_assert(offsetof(CPedClothesDesc, m_anModelKeys) == 0 && offsetof(CPedClothesDesc, m_anTextureKeys) == 0x28);
     const auto* const desc = CWorld::Players[player].m_PlayerData.m_pPedClothesDesc;
     const uint32      tex  = reinterpret_cast<const uint32*>(desc)[0x28 / 4 + part];

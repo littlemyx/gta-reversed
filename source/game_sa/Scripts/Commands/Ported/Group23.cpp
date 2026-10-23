@@ -59,20 +59,20 @@ using namespace notsa::script;
 */
 
 namespace {
-static_assert(offsetof(CObject, m_nObjectFlags) == 0x140);
-static_assert(offsetof(CObject, m_nLastWeaponDamage) == 0x148);
-static_assert(offsetof(CPhysical, m_nPhysicalFlags) == 0x40);
-static_assert(offsetof(CPhysical, m_vecTurnSpeed) == 0x50);
-static_assert(offsetof(CPhysical, m_fMass) == 0x8C && offsetof(CPhysical, m_fTurnMass) == 0x90);
-static_assert(offsetof(CPed, m_pEnex) == 0x78C);
-static_assert(offsetof(CPlane, m_fLandingGearStatus) == 0x9CC);
-static_assert(offsetof(CAutomobile, m_damageManager) == 0x5A0 && offsetof(CAutomobile, m_doors) == 0x5B8 && sizeof(CDoor) == 0x18);
-static_assert(offsetof(CAutomobile, m_swingingChassis) == 0x70C);
+VALIDATE_OFFSET(CObject, m_nObjectFlags, 0x140);
+VALIDATE_OFFSET(CObject, m_nLastWeaponDamage, 0x148);
+VALIDATE_OFFSET(CPhysical, m_nPhysicalFlags, 0x40);
+VALIDATE_OFFSET(CPhysical, m_vecTurnSpeed, 0x50);
+VALIDATE_OFFSET(CPhysical, m_fMass, 0x8C); VALIDATE_OFFSET(CPhysical, m_fTurnMass, 0x90);
+VALIDATE_OFFSET(CPed, m_pEnex, 0x78C);
+VALIDATE_OFFSET(CPlane, m_fLandingGearStatus, 0x9CC);
+VALIDATE_OFFSET(CAutomobile, m_damageManager, 0x5A0); VALIDATE_OFFSET(CAutomobile, m_doors, 0x5B8); VALIDATE_SIZE(CDoor, 0x18);
+VALIDATE_OFFSET(CAutomobile, m_swingingChassis, 0x70C);
 static_assert(offsetof(CDoor, m_doorState) == 0xB && offsetof(CDoor, m_angle) == 0xC);
-static_assert(offsetof(CGarage, m_nFlags) == 0x4E);
-static_assert(offsetof(CPedGroup, m_bMembersEnterLeadersVehicle) == 4 && offsetof(CPedGroup, m_groupMembership) == 8 && sizeof(CPedGroup) == 0x2D4);
-static_assert(offsetof(tScriptSearchlight, m_bClipIfColliding) == 1 && sizeof(tScriptSearchlight) == 0x7C);
-static_assert(sizeof(CStreamedScripts::CStreamedScriptInfo) == 0x20 && offsetof(CStreamedScripts::CStreamedScriptInfo, m_NumberOfUsers) == 4);
+VALIDATE_OFFSET(CGarage, m_nFlags, 0x4E);
+VALIDATE_OFFSET(CPedGroup, m_bMembersEnterLeadersVehicle, 4); VALIDATE_OFFSET(CPedGroup, m_groupMembership, 8); VALIDATE_SIZE(CPedGroup, 0x2D4);
+VALIDATE_OFFSET(tScriptSearchlight, m_bClipIfColliding, 1); VALIDATE_SIZE(tScriptSearchlight, 0x7C);
+VALIDATE_SIZE(CStreamedScripts::CStreamedScriptInfo, 0x20); VALIDATE_OFFSET(CStreamedScripts::CStreamedScriptInfo, m_NumberOfUsers, 4);
 static_assert(offsetof(CEntryExit, m_recEntrance) == 8 && offsetof(CEntryExit, m_fEntranceZ) == 0x18 && offsetof(CEntryExit, m_vecExitPos) == 0x20);
 static_assert(offsetof(CEntryExit, m_fExitAngle) == 0x2C && offsetof(CEntryExit, m_pLink) == 0x38);
 static_assert(SCRIPT_THING_PED_GROUP == 8 && SCRIPT_THING_SEARCH_LIGHT == 2);
@@ -609,7 +609,7 @@ bool HasObjectBeenUprooted(CObject& obj) {
 //! 2396 ADD_SMOKE_PARTICLE (case @0x4779EC): pos (3), velocity (3), r, g, b, a, size, life (12 floats)
 //! `FxPrtMult_c mults(r, g, b, a, size, 1.0f, life)` (0x4AB290); `g_fx.m_SmokeHuge (0xA9AE20)->AddParticle(pos, vel, 0.0f, mults, -1.0f, 1.2f (0x3F99999A), 0.6f (0x3F19999A), false)` (0x4AA440). No null check on the system.
 void AddSmokeParticle(float px, float py, float pz, float vx, float vy, float vz, float r, float g, float b, float a, float size, float life) {
-    static_assert(offsetof(Fx_c, m_SmokeHuge) == 32); // exe 0xA9AE20 - g_fx 0xA9AE00
+    VALIDATE_OFFSET(Fx_c, m_SmokeHuge, 32); // exe 0xA9AE20 - g_fx 0xA9AE00
     const CVector     pos{ px, py, pz };
     const CVector     vel{ vx, vy, vz };
     const FxPrtMult_c mults{ r, g, b, a, size, 1.0f, life };

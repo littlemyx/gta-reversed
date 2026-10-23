@@ -52,13 +52,13 @@ using namespace notsa::script::commands::ported::g09_12;
 
 // Raw offsets the exe uses directly in these cases
 static_assert(offsetof(CPad, bDisablePlayerCycleWeapon) == 0x11D);
-static_assert(offsetof(CPed, m_pVehicle) == 0x58C && offsetof(CVehicle, m_nVehicleType) == 0x590);
-static_assert(offsetof(CPed, m_nBodypartToRemove) == 0x754);
-static_assert(offsetof(CPhysical, m_fContactSurfaceBrightness) == 0x12C);
-static_assert(offsetof(CVehicleModelInfo, m_nVehicleClass) == 0x4D);
-static_assert(offsetof(CVehicle, m_nDoorLock) == 0x4F8 && offsetof(CAutomobile, m_damageManager) == 0x5A0);
-static_assert(offsetof(CRunningScript, m_UsesMissionCleanup) == 0xC6 && offsetof(CRunningScript, m_IsTextBlockOverride) == 0xC8);
-static_assert(offsetof(CCheckpoint, m_ID) == 4 && sizeof(tScriptCheckpoint) == 8 && offsetof(tScriptCheckpoint, m_Checkpoint) == 4);
+VALIDATE_OFFSET(CPed, m_pVehicle, 0x58C); VALIDATE_OFFSET(CVehicle, m_nVehicleType, 0x590);
+VALIDATE_OFFSET(CPed, m_nBodypartToRemove, 0x754);
+VALIDATE_OFFSET(CPhysical, m_fContactSurfaceBrightness, 0x12C);
+VALIDATE_OFFSET(CVehicleModelInfo, m_nVehicleClass, 0x4D);
+VALIDATE_OFFSET(CVehicle, m_nDoorLock, 0x4F8); VALIDATE_OFFSET(CAutomobile, m_damageManager, 0x5A0);
+VALIDATE_OFFSET_FILE(CRunningScript, m_UsesMissionCleanup, 0xC6); VALIDATE_OFFSET_FILE(CRunningScript, m_IsTextBlockOverride, 0xC8);
+VALIDATE_OFFSET(CCheckpoint, m_ID, 4); VALIDATE_SIZE(tScriptCheckpoint, 8); VALIDATE_OFFSET(tScriptCheckpoint, m_Checkpoint, 4);
 static_assert(STAT_RESPECT_MISSION_TOTAL == 228 && STAT_RESPECT_MISSION == 224);
 static_assert(sizeof(eCrossHairType) == 4);
 static_assert(TASK_SIMPLE_HOLD_ENTITY == 0x133 && ABORT_PRIORITY_URGENT == 1);

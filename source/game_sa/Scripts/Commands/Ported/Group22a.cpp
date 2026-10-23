@@ -43,10 +43,10 @@ using namespace notsa::script::commands::ported::g22;
 */
 
 namespace {
-static_assert(offsetof(CPed, m_nPedType) == 0x598);
-static_assert(offsetof(CPed, m_fMaxHealth) == 0x544);
-static_assert(offsetof(CPed, m_pEnex) == 0x78C);
-static_assert(offsetof(CPedModelInfo, m_nPedFlags) == 0x32);
+VALIDATE_OFFSET(CPed, m_nPedType, 0x598);
+VALIDATE_OFFSET(CPed, m_fMaxHealth, 0x544);
+VALIDATE_OFFSET(CPed, m_pEnex, 0x78C);
+VALIDATE_OFFSET(CPedModelInfo, m_nPedFlags, 0x32);
 
 //! 0x6002F0 (unnamed in the symbol table; used by TASK_USE_CLOSEST_MAP_ATTRACTOR): finds the closest 2D effect of type `EFFECT_ATTRACTOR` whose
 //! attractor type is `attractorType`, around `pos`. Outputs (both cleared first) the effect and the entity owning it; returns whether one was found.

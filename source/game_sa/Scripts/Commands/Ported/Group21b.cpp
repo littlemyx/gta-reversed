@@ -36,18 +36,18 @@ using namespace notsa::script::commands::ported::g20_21;
 */
 
 namespace {
-static_assert(offsetof(CEntity, m_nFlags) == 0x1C);
-static_assert(offsetof(CPhysical, m_nPhysicalFlags) == 0x40);
-static_assert(offsetof(CPhysical, m_fAirResistance) == 0x98);
-static_assert(offsetof(CObject, m_nObjectFlags) == 0x140);
-static_assert(offsetof(CVehicle, m_pHandlingData) == 0x384);
-static_assert(offsetof(CVehicle, m_fDirtLevel) == 0x4B0);
+VALIDATE_OFFSET(CEntity, m_nFlags, 0x1C);
+VALIDATE_OFFSET(CPhysical, m_nPhysicalFlags, 0x40);
+VALIDATE_OFFSET(CPhysical, m_fAirResistance, 0x98);
+VALIDATE_OFFSET(CObject, m_nObjectFlags, 0x140);
+VALIDATE_OFFSET(CVehicle, m_pHandlingData, 0x384);
+VALIDATE_OFFSET(CVehicle, m_fDirtLevel, 0x4B0);
 static_assert(offsetof(tHandlingData, m_fDragMult) == 0x10);
-static_assert(offsetof(CPed, m_fTurretAngleA) == 0x778);
-static_assert(offsetof(CPed, m_fTurretAngleB) == 0x77C);
-static_assert(offsetof(CPlayerInfo, m_PlayerData) + offsetof(CPlayerPedData, m_pPedClothesDesc) == 0x8);
-static_assert(sizeof(CPlayerInfo) == 0x190);
-static_assert(sizeof(CPedGroup) == 0x2D4);
+VALIDATE_OFFSET(CPed, m_fTurretAngleA, 0x778);
+VALIDATE_OFFSET(CPed, m_fTurretAngleB, 0x77C);
+VALIDATE_LAYOUT(offsetof(CPlayerInfo, m_PlayerData) + offsetof(CPlayerPedData, m_pPedClothesDesc) == 0x8);
+VALIDATE_SIZE(CPlayerInfo, 0x190);
+VALIDATE_SIZE(CPedGroup, 0x2D4);
 static_assert(std::bit_cast<uint32>(0.017453292f) == 0x3C8EFA35); // 0x8595EC
 static_assert(BLIP_DISPLAY_BOTH == 3 && BLIP_CHAR == 2);
 

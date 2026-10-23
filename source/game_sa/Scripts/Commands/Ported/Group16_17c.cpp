@@ -37,12 +37,12 @@ using namespace notsa::script;
 */
 
 namespace {
-static_assert(offsetof(CVehicleModelInfo, m_anUpgrades) == 0x2D6);
-static_assert(offsetof(CRunningScript, m_SceneSkipIP) == 0xD8);
-static_assert(offsetof(CVehicle, m_autoPilot) + offsetof(CAutoPilot, m_nCarMission) == 0x3BA);
-static_assert(offsetof(CVehicle, m_autoPilot) + offsetof(CAutoPilot, m_nCruiseSpeed) == 0x3D0);
-static_assert(offsetof(CVehicle, m_autoPilot) + offsetof(CAutoPilot, m_nTimeToStartMission) == 0x3AC);
-static_assert(offsetof(CEntity, m_nModelIndex) == 0x22);
+VALIDATE_OFFSET(CVehicleModelInfo, m_anUpgrades, 0x2D6);
+VALIDATE_OFFSET_FILE(CRunningScript, m_SceneSkipIP, 0xD8);
+VALIDATE_LAYOUT(offsetof(CVehicle, m_autoPilot) + offsetof(CAutoPilot, m_nCarMission) == 0x3BA);
+VALIDATE_LAYOUT(offsetof(CVehicle, m_autoPilot) + offsetof(CAutoPilot, m_nCruiseSpeed) == 0x3D0);
+VALIDATE_LAYOUT(offsetof(CVehicle, m_autoPilot) + offsetof(CAutoPilot, m_nTimeToStartMission) == 0x3AC);
+VALIDATE_OFFSET(CEntity, m_nModelIndex, 0x22);
 
 //! x87-compare idiom `fcom -100.0f; test ah, 0x41; jp skip`: the ground Z is looked up only when `z <= -100.0f` (ordered).
 float GroundZIfAuto(float x, float y, float z) {

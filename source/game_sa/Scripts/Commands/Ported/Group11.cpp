@@ -185,13 +185,13 @@ int32 CreateProtectionPickup(float x, float y, float z, int32 ammo, int32 moneyP
 }
 }; // namespace
 
-static_assert(offsetof(CPlayerInfo, m_pRemoteVehicle) == 0xB0);
-static_assert(offsetof(CVehicle, m_pFire) == 0x490 && offsetof(CVehicle, m_fHealth) == 0x4C0);
-static_assert(offsetof(CVehicle, m_nLastWeaponDamageType) == 0x508 && offsetof(CVehicle, m_nForcedRandomRouteSeed) == 0x45E);
-static_assert(offsetof(CVehicle, m_pDriver) == 0x460);
-static_assert(offsetof(CVehicle, m_autoPilot) + offsetof(CAutoPilot, m_nTempAction) == 0x3BB && offsetof(CVehicle, m_autoPilot) + offsetof(CAutoPilot, m_nTempActionTime) == 0x3BC);
-static_assert(offsetof(CBike, m_nWheelStatus) == 0x65C);
-static_assert(offsetof(CAutomobile, m_damageManager) == 0x5A0);
+VALIDATE_OFFSET(CPlayerInfo, m_pRemoteVehicle, 0xB0);
+VALIDATE_OFFSET(CVehicle, m_pFire, 0x490); VALIDATE_OFFSET(CVehicle, m_fHealth, 0x4C0);
+VALIDATE_OFFSET(CVehicle, m_nLastWeaponDamageType, 0x508); VALIDATE_OFFSET(CVehicle, m_nForcedRandomRouteSeed, 0x45E);
+VALIDATE_OFFSET(CVehicle, m_pDriver, 0x460);
+VALIDATE_LAYOUT(offsetof(CVehicle, m_autoPilot) + offsetof(CAutoPilot, m_nTempAction) == 0x3BB); VALIDATE_LAYOUT(offsetof(CVehicle, m_autoPilot) + offsetof(CAutoPilot, m_nTempActionTime) == 0x3BC);
+VALIDATE_OFFSET(CBike, m_nWheelStatus, 0x65C);
+VALIDATE_OFFSET(CAutomobile, m_damageManager, 0x5A0);
 
 void notsa::script::commands::ported::g09_12::RegisterG11() {
     REGISTER_COMMAND_HANDLER_BEGIN("Ported g11");

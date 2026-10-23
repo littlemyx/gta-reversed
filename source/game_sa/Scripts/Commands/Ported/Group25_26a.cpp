@@ -52,28 +52,28 @@ using namespace notsa::script::commands::ported::g25_26;
 
 namespace {
 // Raw offsets the asm relies on
-static_assert(offsetof(CVehicle, vehicleFlags) == 0x428);
-static_assert(offsetof(CVehicle, m_nVehicleType) == 0x590);
-static_assert(offsetof(CVehicle, m_nTertiaryColor) == 0x436 && offsetof(CVehicle, m_nQuaternaryColor) == 0x437);
-static_assert(offsetof(CVehicle, m_fHealth) == 0x4C0);
-static_assert(offsetof(CPhysical, m_nPhysicalFlags) == 0x40);
-static_assert(offsetof(CTrain, m_nTrainFlags) == 0x5B8);
-static_assert(offsetof(CBike, m_nNoOfContactWheels) == 0x804);
-static_assert(offsetof(CAutomobile, m_nNumContactWheels) == 0x960);
-static_assert(offsetof(CAutomobile, m_wMiscComponentAngle) == 0x86C);
-static_assert(offsetof(CPed, m_nAnimGroup) == 0x4D4);
-static_assert(offsetof(CPed, m_pGogglesObject) == 0x4FC);
-static_assert(offsetof(CPlayerPedData, m_nPlayerGroup) == 0x38);
-static_assert(offsetof(CPlayerPedData, m_nScriptLimitToGangSize) == 0x43);
-static_assert(offsetof(CPlayerPedData, m_bDontAllowWeaponChange) == 0x85);
-static_assert(offsetof(CPlayerPedData, m_bForceInteriorLighting) == 0x86);
+VALIDATE_OFFSET(CVehicle, vehicleFlags, 0x428);
+VALIDATE_OFFSET(CVehicle, m_nVehicleType, 0x590);
+VALIDATE_OFFSET(CVehicle, m_nTertiaryColor, 0x436); VALIDATE_OFFSET(CVehicle, m_nQuaternaryColor, 0x437);
+VALIDATE_OFFSET(CVehicle, m_fHealth, 0x4C0);
+VALIDATE_OFFSET(CPhysical, m_nPhysicalFlags, 0x40);
+VALIDATE_OFFSET(CTrain, m_nTrainFlags, 0x5B8);
+VALIDATE_OFFSET(CBike, m_nNoOfContactWheels, 0x804);
+VALIDATE_OFFSET(CAutomobile, m_nNumContactWheels, 0x960);
+VALIDATE_OFFSET(CAutomobile, m_wMiscComponentAngle, 0x86C);
+VALIDATE_OFFSET(CPed, m_nAnimGroup, 0x4D4);
+VALIDATE_OFFSET(CPed, m_pGogglesObject, 0x4FC);
+VALIDATE_OFFSET(CPlayerPedData, m_nPlayerGroup, 0x38);
+VALIDATE_OFFSET(CPlayerPedData, m_nScriptLimitToGangSize, 0x43);
+VALIDATE_OFFSET(CPlayerPedData, m_bDontAllowWeaponChange, 0x85);
+VALIDATE_OFFSET(CPlayerPedData, m_bForceInteriorLighting, 0x86);
 static_assert(offsetof(CPad, DisablePlayerControls) == 0x10E);
-static_assert(offsetof(CPickup, m_nPickupType) == 0x1C && sizeof(CPickup) == 0x20);
+VALIDATE_OFFSET_FILE(CPickup, m_nPickupType, 0x1C); VALIDATE_SIZE_FILE(CPickup, 0x20);
 static_assert(MAX_NUM_PICKUPS == 620); // 0x4D80 / 0x20
-static_assert(offsetof(CVehicleModelInfo, m_nHandlingId) == 0x4A);
+VALIDATE_OFFSET(CVehicleModelInfo, m_nHandlingId, 0x4A);
 static_assert(offsetof(cHandlingDataMgr, m_aVehicleHandling) + offsetof(tHandlingData, m_nMonetaryValue) == 236); // 0xC2BAB4 - 0xC2B9C8 (gHandlingDataMgr @0xC2B9C8)
 static_assert(sizeof(tHandlingData) == 0xE0);
-static_assert(sizeof(CPlayerInfo) == 0x190);
+VALIDATE_SIZE(CPlayerInfo, 0x190);
 
 //! 0x859A3C: 1/255
 constexpr float ONE_OVER_255 = std::bit_cast<float>(0x3B808081u);

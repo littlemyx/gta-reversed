@@ -18,7 +18,7 @@ struct tSCMChunkHeader {
 		return (ChunkT*)this;
 	}
 };
-VALIDATE_SIZE(tSCMChunkHeader, 0x8);
+VALIDATE_SIZE_FILE(tSCMChunkHeader, 0x8);
 
 // m_ChunkIndex = 's' -- for San Andreas
 struct tSCMGlobalVarChunk : tSCMChunkHeader {
@@ -32,7 +32,7 @@ struct tSCMGlobalVarChunk : tSCMChunkHeader {
 		return *reinterpret_cast<T*>(m_GlobalVarSpace[offset - 8]);
 	}
 };
-VALIDATE_SIZE(tSCMGlobalVarChunk, 0x8 /* + m_NextChunkOffset - 8 */);
+VALIDATE_SIZE_FILE(tSCMGlobalVarChunk, 0x8 /* + m_NextChunkOffset - 8 */);
 
 // m_ChunkIndex = 0
 struct tSCMUsedObjectsChunk : tSCMChunkHeader {
@@ -47,7 +47,7 @@ struct tSCMUsedObjectsChunk : tSCMChunkHeader {
 		return std::span<const UsedObjectName>{ m_UsedObjectNames, m_NumberOfUsedObjects };
 	}
 };
-VALIDATE_SIZE(tSCMUsedObjectsChunk, 0xC /* + m_NumberOfUsedObjects * 24 */);
+VALIDATE_SIZE_FILE(tSCMUsedObjectsChunk, 0xC /* + m_NumberOfUsedObjects * 24 */);
 
 // m_ChunkIndex = 1
 struct tSCMScriptFileInfoChunk : tSCMChunkHeader {
@@ -65,7 +65,7 @@ struct tSCMScriptFileInfoChunk : tSCMChunkHeader {
 		return std::span<const uint32>{ m_MissionScriptOffsets, m_NumberOfMissionScripts };
 	}
 };
-VALIDATE_SIZE(tSCMScriptFileInfoChunk, 0x18 /* + 4 * m_NumberOfMissionScripts */);
+VALIDATE_SIZE_FILE(tSCMScriptFileInfoChunk, 0x18 /* + 4 * m_NumberOfMissionScripts */);
 
 // m_ChunkIndex = 2
 struct tSCMStreamedScriptFileInfoChunk : tSCMChunkHeader {
@@ -86,8 +86,8 @@ struct tSCMStreamedScriptFileInfoChunk : tSCMChunkHeader {
 		return std::span<const StreamScriptDefinition>{ m_StreamedScriptDefs, m_NumberOfStreamedScripts };
 	}
 };
-VALIDATE_SIZE(tSCMStreamedScriptFileInfoChunk, 0x10 /* + 28 * m_NumberOfStreamedScripts */);
-VALIDATE_SIZE(tSCMStreamedScriptFileInfoChunk::StreamScriptDefinition, 28);
+VALIDATE_SIZE_FILE(tSCMStreamedScriptFileInfoChunk, 0x10 /* + 28 * m_NumberOfStreamedScripts */);
+VALIDATE_SIZE_FILE(tSCMStreamedScriptFileInfoChunk::StreamScriptDefinition, 28);
 
 // m_ChunkIndex = 3
 struct tSCMUnknownChunk3 : tSCMChunkHeader {
@@ -95,7 +95,7 @@ struct tSCMUnknownChunk3 : tSCMChunkHeader {
 
 	uint32 unk;
 };
-VALIDATE_SIZE(tSCMUnknownChunk3, 0xC);
+VALIDATE_SIZE_FILE(tSCMUnknownChunk3, 0xC);
 
 // m_ChunkIndex = 4
 struct tSCMExtraInfoChunk : tSCMChunkHeader {
@@ -104,5 +104,5 @@ struct tSCMExtraInfoChunk : tSCMChunkHeader {
 	uint32 m_GlobalVarSpaceSize;
 	uint32 m_BuildNumber; // ?
 };
-VALIDATE_SIZE(tSCMExtraInfoChunk, 0x10);
+VALIDATE_SIZE_FILE(tSCMExtraInfoChunk, 0x10);
 #pragma pack(pop)

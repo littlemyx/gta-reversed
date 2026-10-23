@@ -33,8 +33,8 @@ using namespace notsa::script::commands::ported::g25_26;
 */
 
 namespace {
-static_assert(offsetof(CVehicle, m_fHealth) == 0x4C0);
-static_assert(offsetof(CPlayerInfo, m_PlayerData) + offsetof(CPlayerPedData, m_nModelIndexOfLastBuildingShot) == 0xA0);
+VALIDATE_OFFSET(CVehicle, m_fHealth, 0x4C0);
+VALIDATE_LAYOUT(offsetof(CPlayerInfo, m_PlayerData) + offsetof(CPlayerPedData, m_nModelIndexOfLastBuildingShot) == 0xA0);
 static_assert(offsetof(tUsedObject, nModelIndex) == 0x18 && sizeof(tUsedObject) == 0x1C);
 
 //! 2602 IS_THIS_HELP_MESSAGE_BEING_DISPLAYED (case @0x479E75): text label (8) => compare flag. No CollectParameters.

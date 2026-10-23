@@ -62,25 +62,25 @@ using namespace notsa::script;
 
 namespace {
 //! Offsets the raw-offset accesses of the asm resolve to (checked against the headers)
-static_assert(offsetof(CVehicle, m_nDoorLock) == 0x4F8);
-static_assert(offsetof(CVehicle, m_fHealth) == 0x4C0);
-static_assert(offsetof(CVehicle, m_nPrimaryColor) == 0x434);
-static_assert(offsetof(CVehicle, m_nSecondaryColor) == 0x435);
-static_assert(offsetof(CVehicle, m_nLastWeaponDamageType) == 0x508);
-static_assert(offsetof(CVehicle, m_autoPilot) + offsetof(CAutoPilot, m_nCarMission) == 0x3BA);
-static_assert(offsetof(CVehicle, m_autoPilot) + offsetof(CAutoPilot, m_nCruiseSpeed) == 0x3D0);
-static_assert(offsetof(CVehicle, m_autoPilot) + offsetof(CAutoPilot, m_nTimeToStartMission) == 0x3AC);
-static_assert(offsetof(CVehicle, m_autoPilot) + offsetof(CAutoPilot, m_vecDestinationCoors) == 0x3EC);
-static_assert(offsetof(CAutomobile, m_fWheelsSuspensionCompression) == 0x7D4);
-static_assert(offsetof(CAutomobile, autoFlags) == 0x868);
-static_assert(offsetof(CBoat, m_nBoatFlags) == 0x5AC);
-static_assert(offsetof(CPed, m_fArmour) == 0x548);
-static_assert(offsetof(CPed, m_nAnimGroup) == 0x4D4);
-static_assert(offsetof(CPed, m_pVehicle) == 0x58C);
-static_assert(offsetof(CPed, m_pTargetedObject) == 0x71C);
-static_assert(offsetof(CPlayerInfo, m_nTotalNumCollectables) == 0xC4);
-static_assert(offsetof(CPlayerInfo, m_nMaxArmour) == 0x150);
-static_assert(offsetof(CRunningScript, m_IP) == 0x14);
+VALIDATE_OFFSET(CVehicle, m_nDoorLock, 0x4F8);
+VALIDATE_OFFSET(CVehicle, m_fHealth, 0x4C0);
+VALIDATE_OFFSET(CVehicle, m_nPrimaryColor, 0x434);
+VALIDATE_OFFSET(CVehicle, m_nSecondaryColor, 0x435);
+VALIDATE_OFFSET(CVehicle, m_nLastWeaponDamageType, 0x508);
+VALIDATE_LAYOUT(offsetof(CVehicle, m_autoPilot) + offsetof(CAutoPilot, m_nCarMission) == 0x3BA);
+VALIDATE_LAYOUT(offsetof(CVehicle, m_autoPilot) + offsetof(CAutoPilot, m_nCruiseSpeed) == 0x3D0);
+VALIDATE_LAYOUT(offsetof(CVehicle, m_autoPilot) + offsetof(CAutoPilot, m_nTimeToStartMission) == 0x3AC);
+VALIDATE_LAYOUT(offsetof(CVehicle, m_autoPilot) + offsetof(CAutoPilot, m_vecDestinationCoors) == 0x3EC);
+VALIDATE_OFFSET(CAutomobile, m_fWheelsSuspensionCompression, 0x7D4);
+VALIDATE_OFFSET(CAutomobile, autoFlags, 0x868);
+VALIDATE_OFFSET(CBoat, m_nBoatFlags, 0x5AC);
+VALIDATE_OFFSET(CPed, m_fArmour, 0x548);
+VALIDATE_OFFSET(CPed, m_nAnimGroup, 0x4D4);
+VALIDATE_OFFSET(CPed, m_pVehicle, 0x58C);
+VALIDATE_OFFSET(CPed, m_pTargetedObject, 0x71C);
+VALIDATE_OFFSET(CPlayerInfo, m_nTotalNumCollectables, 0xC4);
+VALIDATE_OFFSET(CPlayerInfo, m_nMaxArmour, 0x150);
+VALIDATE_OFFSET_FILE(CRunningScript, m_IP, 0x14);
 static_assert(BLIP_COORD == 4 && BLIP_CONTACT_POINT == 5);
 
 //! `_ftol2` (0x821B40): truncates to a 64 bit integer (`fistp qword` + truncation fix-up; NaN / out of range => the "integer

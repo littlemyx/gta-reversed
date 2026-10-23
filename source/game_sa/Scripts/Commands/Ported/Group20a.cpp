@@ -44,24 +44,24 @@ using namespace notsa::script::commands::ported::g20_21;
 */
 
 // Raw offsets the exe uses directly in these cases
-static_assert(offsetof(CPhysical, m_vecTurnSpeed) == 0x50);
-static_assert(offsetof(CPhysical, m_fMass) == 0x8C);
-static_assert(offsetof(CPhysical, m_fTurnMass) == 0x90);
-static_assert(offsetof(CPhysical, m_vecCentreOfMass) == 0xA4);
-static_assert(offsetof(CVehicle, m_vehicleSpecialColIndex) == 0x48B);
-static_assert(offsetof(CObject, objectFlags) == 0x140);
-static_assert(offsetof(CObject, m_nColDamageEffect) == 0x144);
-static_assert(offsetof(CObject, m_nSpecialColResponseCase) == 0x145);
-static_assert(offsetof(CPed, m_nWeaponShootingRate) == 0x719);
-static_assert(offsetof(CTaskSimpleSwim, m_vecPos) == 0x14);
+VALIDATE_OFFSET(CPhysical, m_vecTurnSpeed, 0x50);
+VALIDATE_OFFSET(CPhysical, m_fMass, 0x8C);
+VALIDATE_OFFSET(CPhysical, m_fTurnMass, 0x90);
+VALIDATE_OFFSET(CPhysical, m_vecCentreOfMass, 0xA4);
+VALIDATE_OFFSET(CVehicle, m_vehicleSpecialColIndex, 0x48B);
+VALIDATE_OFFSET(CObject, objectFlags, 0x140);
+VALIDATE_OFFSET(CObject, m_nColDamageEffect, 0x144);
+VALIDATE_OFFSET(CObject, m_nSpecialColResponseCase, 0x145);
+VALIDATE_OFFSET(CPed, m_nWeaponShootingRate, 0x719);
+VALIDATE_OFFSET(CTaskSimpleSwim, m_vecPos, 0x14);
 static_assert(offsetof(CCheckpoint, m_ID) == 4);
-static_assert(offsetof(CRunningScript, m_UsesMissionCleanup) == 0xC6);
+VALIDATE_OFFSET_FILE(CRunningScript, m_UsesMissionCleanup, 0xC6);
 static_assert(sizeof(CDecisionMaker) == 0x99C);
 static_assert(offsetof(CDecisionMakerTypes, m_DecisionMakers) == 4);
 static_assert(offsetof(CDecisionMakerTypes, m_DefaultMissionPedDecisionMaker) == 0xCB50);
 static_assert(offsetof(CDecisionMakerTypes, m_DefaultMissionPedGroupDecisionMaker) == 0xE824);
-static_assert(sizeof(CPedGroup) == 0x2D4);
-static_assert(offsetof(CPedGroup, m_groupMembership) == 8);
+VALIDATE_SIZE(CPedGroup, 0x2D4);
+VALIDATE_OFFSET(CPedGroup, m_groupMembership, 8);
 static_assert(sizeof(tHydraulicData) == 0x28 && offsetof(tHydraulicData, m_aWheelSuspension) == 0x18);
 static_assert(MISSION_CLEANUP_ENTITY_TYPE_DECISION_MAKER == 9 && SCRIPT_THING_DECISION_MAKER == 7 && SCRIPT_THING_PED_GROUP == 8 && SCRIPT_THING_CHECKPOINT == 3);
 

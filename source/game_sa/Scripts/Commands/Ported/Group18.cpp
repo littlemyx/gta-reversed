@@ -68,32 +68,32 @@ using namespace notsa::script;
 
 namespace {
 //! Offsets the raw-offset accesses of the asm resolve to (checked against the headers)
-static_assert(offsetof(CVehicle, m_autoPilot) + offsetof(CAutoPilot, m_nCarMission) == 0x3BA);
-static_assert(offsetof(CVehicle, m_autoPilot) + offsetof(CAutoPilot, m_nCruiseSpeed) == 0x3D0);
-static_assert(offsetof(CVehicle, m_autoPilot) + offsetof(CAutoPilot, m_nCarCtrlFlags) == 0x3DB);
-static_assert(offsetof(CVehicle, m_autoPilot) + offsetof(CAutoPilot, m_TargetEntity) == 0x41C);
-static_assert(offsetof(CVehicle, m_nCreatedBy) == 0x4A4);
-static_assert(offsetof(CAutomobile, m_damageManager) == 0x5A0);
-static_assert(offsetof(CPlane, m_maxAltitude) == 0x9A8);   // 1807
-static_assert(offsetof(CPlane, m_minAltitude) == 0x9B0);   // 1806, 1807, 1808
-static_assert(offsetof(CPlane, m_planeHeading) == 0x9B4);  // 1807
-static_assert(offsetof(CPlane, m_planeHeadingPrev) == 0x9B8); // 1807
-static_assert(offsetof(CPlane, m_fAccelerationBreakStatusPrev) == 0x998); // 1858
-static_assert(offsetof(CHeli, m_fMinAltitude) == 0x9B0);   // 1828, 1830, 1831
-static_assert(offsetof(CAutomobile, m_wMiscComponentAngle) == 0x86C); // 1861
-static_assert(offsetof(CPed, m_nPedState) == 0x530);
-static_assert(offsetof(CPed, m_nPedType) == 0x598);
-static_assert(offsetof(CPedIntelligence, m_nDmNumPedsToScan) == 0xC4);
-static_assert(offsetof(CPedIntelligence, m_fDmRadius) == 0xC8);
+VALIDATE_LAYOUT(offsetof(CVehicle, m_autoPilot) + offsetof(CAutoPilot, m_nCarMission) == 0x3BA);
+VALIDATE_LAYOUT(offsetof(CVehicle, m_autoPilot) + offsetof(CAutoPilot, m_nCruiseSpeed) == 0x3D0);
+VALIDATE_LAYOUT(offsetof(CVehicle, m_autoPilot) + offsetof(CAutoPilot, m_nCarCtrlFlags) == 0x3DB);
+VALIDATE_LAYOUT(offsetof(CVehicle, m_autoPilot) + offsetof(CAutoPilot, m_TargetEntity) == 0x41C);
+VALIDATE_OFFSET(CVehicle, m_nCreatedBy, 0x4A4);
+VALIDATE_OFFSET(CAutomobile, m_damageManager, 0x5A0);
+VALIDATE_OFFSET(CPlane, m_maxAltitude, 0x9A8);   // 1807
+VALIDATE_OFFSET(CPlane, m_minAltitude, 0x9B0);   // 1806, 1807, 1808
+VALIDATE_OFFSET(CPlane, m_planeHeading, 0x9B4);  // 1807
+VALIDATE_OFFSET(CPlane, m_planeHeadingPrev, 0x9B8); // 1807
+VALIDATE_OFFSET(CPlane, m_fAccelerationBreakStatusPrev, 0x998); // 1858
+VALIDATE_OFFSET(CHeli, m_fMinAltitude, 0x9B0);   // 1828, 1830, 1831
+VALIDATE_OFFSET(CAutomobile, m_wMiscComponentAngle, 0x86C); // 1861
+VALIDATE_OFFSET(CPed, m_nPedState, 0x530);
+VALIDATE_OFFSET(CPed, m_nPedType, 0x598);
+VALIDATE_OFFSET(CPedIntelligence, m_nDmNumPedsToScan, 0xC4);
+VALIDATE_OFFSET(CPedIntelligence, m_fDmRadius, 0xC8);
 static_assert(PEDSTATE_ARRESTED == 0x3F);
-static_assert(offsetof(CObject, m_fHealth) == 0x154);
-static_assert(offsetof(CObject, m_pObjectInfo) == 0x160);
-static_assert(offsetof(CObject, m_nObjectFlags) == 0x140);
-static_assert(offsetof(CObjectData, m_vecBreakVelocity) == 0x38 && offsetof(CObjectData, m_fBreakVelocityRand) == 0x44);
-static_assert(offsetof(CTaskSimpleGangDriveBy, m_bFromScriptCommand) == 0xE);
-static_assert(offsetof(CTaskSimpleGangDriveBy, m_pTargetEntity) == 0x34);
-static_assert(offsetof(CTaskSimpleHoldEntity, m_pEntityToHold) == 0x8);
-static_assert(offsetof(CPedIntelligence, m_TaskMgr) + sizeof(void*) * TASK_PRIMARY_PRIMARY == 0x10);
+VALIDATE_OFFSET(CObject, m_fHealth, 0x154);
+VALIDATE_OFFSET(CObject, m_pObjectInfo, 0x160);
+VALIDATE_OFFSET(CObject, m_nObjectFlags, 0x140);
+VALIDATE_OFFSET(CObjectData, m_vecBreakVelocity, 0x38); VALIDATE_OFFSET(CObjectData, m_fBreakVelocityRand, 0x44);
+VALIDATE_OFFSET(CTaskSimpleGangDriveBy, m_bFromScriptCommand, 0xE);
+VALIDATE_OFFSET(CTaskSimpleGangDriveBy, m_pTargetEntity, 0x34);
+VALIDATE_OFFSET(CTaskSimpleHoldEntity, m_pEntityToHold, 0x8);
+VALIDATE_LAYOUT(offsetof(CPedIntelligence, m_TaskMgr) + sizeof(void*) * TASK_PRIMARY_PRIMARY == 0x10);
 
 //! `_ftol2` (0x821B40): truncates to a 64 bit integer (NaN / out of range => the "integer indefinite") and the callers only
 //! use the LOW dword (EAX). NOT the saturating 0x80000000 of a 32 bit conversion.

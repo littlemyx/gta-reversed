@@ -18,4 +18,4 @@ union tScriptParam {
     char*  szParam;
     bool   bParam;
 };
-VALIDATE_SIZE(tScriptParam, 0x4);
+VALIDATE_SIZE_FILE(tScriptParam, 0x4);

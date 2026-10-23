@@ -52,21 +52,21 @@ using namespace notsa::script;
 */
 
 namespace {
-static_assert(offsetof(CPed, m_nActiveWeaponSlot) == 0x718);
-static_assert(offsetof(CPed, m_aWeapons) == 0x5A0 && sizeof(CWeapon) == 0x1C);
-static_assert(offsetof(CPedIntelligence, m_FollowNodeThresholdDistance) == 0xCC);
-static_assert(offsetof(CPedIntelligence, m_TaskMgr) + sizeof(void*) * TASK_PRIMARY_PRIMARY == 0x10);
-static_assert(offsetof(CTaskComplexUseSequence, m_nCurrentTaskIndex) == 0x10);
-static_assert(offsetof(CPhysical, m_pAttachedTo) == 0xFC);
-static_assert(offsetof(CPhysical, m_vecMoveSpeed) == 0x44);
-static_assert(offsetof(CPhysical, m_fMass) == 0x8C);
-static_assert(offsetof(CPhysical, physicalFlags) == 0x40);
-static_assert(offsetof(CVehicle, m_pDriver) == 0x460);
-static_assert(offsetof(CVehicle, m_apPassengers) == 0x464);
-static_assert(offsetof(CVehicle, m_nNumPassengers) == 0x484 && offsetof(CVehicle, m_nMaxPassengers) == 0x488);
-static_assert(offsetof(CVehicle, m_nExtendedRemovalRange) == 0x4A6); // the next (bitfield) byte at 0x4A8 holds m_nBombOnBoard:3, m_nOverrideLights:2 (mask 0x18), m_ropeType:2
-static_assert(offsetof(CAutomobile, m_aCarNodes) == 0x648);
-static_assert(sizeof(CPickup) == 0x20);
+VALIDATE_OFFSET(CPed, m_nActiveWeaponSlot, 0x718);
+VALIDATE_OFFSET(CPed, m_aWeapons, 0x5A0); VALIDATE_SIZE_FILE(CWeapon, 0x1C);
+VALIDATE_OFFSET(CPedIntelligence, m_FollowNodeThresholdDistance, 0xCC);
+VALIDATE_LAYOUT(offsetof(CPedIntelligence, m_TaskMgr) + sizeof(void*) * TASK_PRIMARY_PRIMARY == 0x10);
+VALIDATE_OFFSET(CTaskComplexUseSequence, m_nCurrentTaskIndex, 0x10);
+VALIDATE_OFFSET(CPhysical, m_pAttachedTo, 0xFC);
+VALIDATE_OFFSET(CPhysical, m_vecMoveSpeed, 0x44);
+VALIDATE_OFFSET(CPhysical, m_fMass, 0x8C);
+VALIDATE_OFFSET(CPhysical, physicalFlags, 0x40);
+VALIDATE_OFFSET(CVehicle, m_pDriver, 0x460);
+VALIDATE_OFFSET(CVehicle, m_apPassengers, 0x464);
+VALIDATE_OFFSET(CVehicle, m_nNumPassengers, 0x484); VALIDATE_OFFSET(CVehicle, m_nMaxPassengers, 0x488);
+VALIDATE_OFFSET(CVehicle, m_nExtendedRemovalRange, 0x4A6); // the next (bitfield) byte at 0x4A8 holds m_nBombOnBoard:3, m_nOverrideLights:2 (mask 0x18), m_ropeType:2
+VALIDATE_OFFSET(CAutomobile, m_aCarNodes, 0x648);
+VALIDATE_SIZE_FILE(CPickup, 0x20);
 static_assert((int32)eScriptedTaskStatus::EVENT_ASSOCIATED == 0);
 
 //! x87-compare idiom `fcom -100.0f; test ah, 0x41; jp skip`: the ground Z is looked up only when `z <= -100.0f` (ordered).

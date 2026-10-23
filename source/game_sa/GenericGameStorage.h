@@ -1,5 +1,7 @@
 #pragma once
 
+#include "FileRecord.hpp"
+
 static constexpr auto MAX_SAVEGAME_SLOTS{ 8u };
 
 enum class eSlotState {
@@ -96,14 +98,50 @@ public:
     static bool RestoreForStartLoad();
 
     // NOTSA
+    // Typed access. Under NOTSA_PORTABLE a type with a notsa::FileRecord<T> specialisation goes through its fixed-width file record (FileRecord.hpp, P-2);
+    // otherwise (and always in the MSVC build) the raw sizeof(T) copy of the exe. The 64-bit scalar guard is a compile-time check (vacuous on x86).
     template<typename T>
-    static bool LoadDataFromWorkBuffer(T& data) { return LoadDataFromWorkBuffer((void*)&data, sizeof(T)); }
+    static bool LoadDataFromWorkBuffer(T& data) NOTSA_FILE_SCALAR_GUARD(T) {
+#ifdef NOTSA_PORTABLE
+        if constexpr (notsa::HasFileRecord<T>) {
+            typename notsa::FileRecord<T>::Type rec{};
+            if (!LoadDataFromWorkBuffer((void*)&rec, (int32)sizeof(rec))) {
+                return false;
+            }
+            notsa::FileRecord<T>::FromFile(data, rec);
+            return true;
+        } else
+#endif
+        {
+            if constexpr (sizeof(void*) > 4) { notsa::FileScalarCheck<T>(); }
+            return LoadDataFromWorkBuffer((void*)&data, sizeof(T));
+        }
+    }
 
     template<typename T>
-    static T LoadDataFromWorkBuffer() { T data; LoadDataFromWorkBuffer((void*)&data, sizeof(T)); return data; }
+    static T LoadDataFromWorkBuffer() NOTSA_FILE_SCALAR_GUARD(T) {
+        T data;
+#ifdef NOTSA_PORTABLE
+        LoadDataFromWorkBuffer(data);
+#else
+        LoadDataFromWorkBuffer((void*)&data, sizeof(T));
+#endif
+        return data;
+    }
 
     template<typename T>
-    static bool SaveDataToWorkBuffer(const T& data) { return SaveDataToWorkBuffer(const_cast<void*>((const void*)&data), sizeof(T)); }
+    static bool SaveDataToWorkBuffer(const T& data) NOTSA_FILE_SCALAR_GUARD(T) {
+#ifdef NOTSA_PORTABLE
+        if constexpr (notsa::HasFileRecord<T>) {
+            auto rec = notsa::FileRecord<T>::ToFile(data);
+            return SaveDataToWorkBuffer((void*)&rec, (int32)sizeof(rec));
+        } else
+#endif
+        {
+            if constexpr (sizeof(void*) > 4) { notsa::FileScalarCheck<T>(); }
+            return SaveDataToWorkBuffer(const_cast<void*>((const void*)&data), sizeof(T));
+        }
+    }
 private:
     static const char* GetBlockName(eBlocks);
 };

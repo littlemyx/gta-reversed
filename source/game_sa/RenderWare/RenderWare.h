@@ -6,6 +6,8 @@
 */
 #pragma once
 
+#include "FileRecord.hpp"
+
 #ifdef NOTSA_RW_LIBRW
 #include <rwcore.h> // fakerw (librw), see source/fakerw/fakerw.h
 #include <skeleton.h>
@@ -73,7 +75,8 @@ struct RwResEntrySA : RwResEntry {
 void RwCoreInjectHooks();
 
 template<typename T>
-inline T RwStreamRead(RwStream* stream, size_t size = sizeof(T)) {
+inline T RwStreamRead(RwStream* stream, size_t size = sizeof(T)) NOTSA_FILE_SCALAR_GUARD(T) {
+    if constexpr (sizeof(void*) > 4) { notsa::FileScalarCheck<T>(); } // P-2a: 64-bit scalar guard (compile-time, vacuous on x86)
     T data;
     RwStreamRead(stream, &data, size);
     return data;

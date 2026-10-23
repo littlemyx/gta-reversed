@@ -71,7 +71,7 @@ static_assert(SCRIPT_THING_EFFECT_SYSTEM == 1 && SCRIPT_THING_FIRE == 5 && SCRIP
 static_assert(MISSION_CLEANUP_ENTITY_TYPE_PARTICLE == 4 && MISSION_CLEANUP_ENTITY_TYPE_DECISION_MAKER == 9 && RESOURCE_TYPE_DECISION_MAKER == 3);
 static_assert(TASK_SECONDARY_FACIAL_COMPLEX == 3 && (int32)eFacialExpression::NONE == -1 && (int32)eFacialExpression::TALKING == 7);
 static_assert(CMenuSystem::MENU_TYPE_GRID == 1);
-VALIDATE_OFFSET_FILE(CRunningScript, m_UsesMissionCleanup, 0xC6);
+VALIDATE_OFFSET(CRunningScript, m_UsesMissionCleanup, 0xC6);
 static_assert(sizeof(CDecisionMaker) == 0x99C);
 static_assert(offsetof(CDecisionMakerTypes, m_DecisionMakers) == 4);
 static_assert(offsetof(CDecisionMakerTypes, m_DefaultMissionPedDecisionMaker) == 0xCB50);

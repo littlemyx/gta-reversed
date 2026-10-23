@@ -57,7 +57,7 @@ VALIDATE_OFFSET(CPed, m_nBodypartToRemove, 0x754);
 VALIDATE_OFFSET(CPhysical, m_fContactSurfaceBrightness, 0x12C);
 VALIDATE_OFFSET(CVehicleModelInfo, m_nVehicleClass, 0x4D);
 VALIDATE_OFFSET(CVehicle, m_nDoorLock, 0x4F8); VALIDATE_OFFSET(CAutomobile, m_damageManager, 0x5A0);
-VALIDATE_OFFSET_FILE(CRunningScript, m_UsesMissionCleanup, 0xC6); VALIDATE_OFFSET_FILE(CRunningScript, m_IsTextBlockOverride, 0xC8);
+VALIDATE_OFFSET(CRunningScript, m_UsesMissionCleanup, 0xC6); VALIDATE_OFFSET(CRunningScript, m_IsTextBlockOverride, 0xC8);
 VALIDATE_OFFSET(CCheckpoint, m_ID, 4); VALIDATE_SIZE(tScriptCheckpoint, 8); VALIDATE_OFFSET(tScriptCheckpoint, m_Checkpoint, 4);
 static_assert(STAT_RESPECT_MISSION_TOTAL == 228 && STAT_RESPECT_MISSION == 224);
 static_assert(sizeof(eCrossHairType) == 4);

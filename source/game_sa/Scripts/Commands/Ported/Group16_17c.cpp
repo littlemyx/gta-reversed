@@ -38,7 +38,7 @@ using namespace notsa::script;
 
 namespace {
 VALIDATE_OFFSET(CVehicleModelInfo, m_anUpgrades, 0x2D6);
-VALIDATE_OFFSET_FILE(CRunningScript, m_SceneSkipIP, 0xD8);
+VALIDATE_OFFSET(CRunningScript, m_SceneSkipIP, 0xD8);
 VALIDATE_LAYOUT(offsetof(CVehicle, m_autoPilot) + offsetof(CAutoPilot, m_nCarMission) == 0x3BA);
 VALIDATE_LAYOUT(offsetof(CVehicle, m_autoPilot) + offsetof(CAutoPilot, m_nCruiseSpeed) == 0x3D0);
 VALIDATE_LAYOUT(offsetof(CVehicle, m_autoPilot) + offsetof(CAutoPilot, m_nTimeToStartMission) == 0x3AC);

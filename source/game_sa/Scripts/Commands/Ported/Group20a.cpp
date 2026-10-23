@@ -55,7 +55,7 @@ VALIDATE_OFFSET(CObject, m_nSpecialColResponseCase, 0x145);
 VALIDATE_OFFSET(CPed, m_nWeaponShootingRate, 0x719);
 VALIDATE_OFFSET(CTaskSimpleSwim, m_vecPos, 0x14);
 static_assert(offsetof(CCheckpoint, m_ID) == 4);
-VALIDATE_OFFSET_FILE(CRunningScript, m_UsesMissionCleanup, 0xC6);
+VALIDATE_OFFSET(CRunningScript, m_UsesMissionCleanup, 0xC6);
 static_assert(sizeof(CDecisionMaker) == 0x99C);
 static_assert(offsetof(CDecisionMakerTypes, m_DecisionMakers) == 4);
 static_assert(offsetof(CDecisionMakerTypes, m_DefaultMissionPedDecisionMaker) == 0xCB50);

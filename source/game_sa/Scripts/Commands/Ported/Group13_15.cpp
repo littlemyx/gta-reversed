@@ -80,7 +80,7 @@ VALIDATE_LAYOUT(offsetof(CVehicle, m_autoPilot) + offsetof(CAutoPilot, m_nCarMis
 VALIDATE_OFFSET(CPhysical, m_nFakePhysics, 0xB8);
 VALIDATE_OFFSET(CEntity, m_nFlags, 0x1C);
 VALIDATE_OFFSET(CPed, m_pVehicle, 0x58C);
-VALIDATE_OFFSET_FILE(CRunningScript, m_szName, 0x8);
+VALIDATE_OFFSET(CRunningScript, m_szName, 0x8);
 static_assert(BLIP_CONTACT_POINT == 5);
 
 //! x87-compare idiom `fcom -100.0f; test ah, 0x41; jp skip`: the ground Z is looked up only when `z <= -100.0f` (ordered).

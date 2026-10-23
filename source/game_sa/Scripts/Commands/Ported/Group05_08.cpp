@@ -80,7 +80,7 @@ VALIDATE_OFFSET(CPed, m_pVehicle, 0x58C);
 VALIDATE_OFFSET(CPed, m_pTargetedObject, 0x71C);
 VALIDATE_OFFSET(CPlayerInfo, m_nTotalNumCollectables, 0xC4);
 VALIDATE_OFFSET(CPlayerInfo, m_nMaxArmour, 0x150);
-VALIDATE_OFFSET_FILE(CRunningScript, m_IP, 0x14);
+VALIDATE_OFFSET(CRunningScript, m_IP, 0x14);
 static_assert(BLIP_COORD == 4 && BLIP_CONTACT_POINT == 5);
 
 //! `_ftol2` (0x821B40): truncates to a 64 bit integer (`fistp qword` + truncation fix-up; NaN / out of range => the "integer

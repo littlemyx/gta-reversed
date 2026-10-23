@@ -16,6 +16,16 @@ import argparse, glob, os, struct, sys
 # record -> (total size, [(field, offset, fmt, count)], {in-memory member path -> field}) ; fmt is a struct char ('f' float, 'I' u32, 'H' u16, 'h' i16, 'B' u8, ...)
 # The third element is only used by `selfcheck` (x86 in-memory struct == file layout there); {} when the file record has no x86 in-memory twin.
 RECORDS = {
+    # P-2g: CRunningScript 0xE0 (TheScripts.cpp CTheScripts::Save/Load, followed by u32 ipOffset + 8 x u32 ipStack offsets): 10 pointer slots (next, prev, baseIP, ip, ipStack[8]) -> u32; localVars = 34 x tScriptParam (4 B)
+    'CRunningScript_File': (0xE0, [('next', 0x00, 'I', 1), ('prev', 0x04, 'I', 1), ('scrName', 0x08, 'B', 8), ('baseIP', 0x10, 'I', 1), ('ip', 0x14, 'I', 1), ('ipStack', 0x18, 'I', 8),
+                                   ('depth', 0x38, 'H', 1), ('locals', 0x3C, 'I', 34), ('active', 0xC4, 'B', 1), ('cond', 0xC5, 'B', 1), ('cleanup', 0xC6, 'B', 1), ('external', 0xC7, 'B', 1),
+                                   ('textOverride', 0xC8, 'B', 1), ('extType', 0xC9, 'b', 1), ('wake', 0xCC, 'i', 1), ('andor', 0xD0, 'H', 1), ('notFlag', 0xD2, 'B', 1),
+                                   ('deathArrest', 0xD3, 'B', 1), ('doneDeathArrest', 0xD4, 'B', 1), ('sceneSkip', 0xD8, 'i', 1), ('mission', 0xDC, 'B', 1)],
+                            {'CRunningScript': {'m_pNext': 'next', 'm_pPrev': 'prev', 'm_szName': 'scrName', 'm_BaseIP': 'baseIP', 'm_IP': 'ip', 'm_IPStack': 'ipStack', 'm_StackDepth': 'depth',
+                                                'm_LocalVars': 'locals', 'm_IsActive': 'active', 'm_CondResult': 'cond', 'm_UsesMissionCleanup': 'cleanup', 'm_IsExternal': 'external',
+                                                'm_IsTextBlockOverride': 'textOverride', 'm_ExternalType': 'extType', 'm_WakeTime': 'wake', 'm_AndOrState': 'andor', 'm_NotFlag': 'notFlag',
+                                                'm_IsDeathArrestCheckEnabled': 'deathArrest', 'm_DoneDeathArrest': 'doneDeathArrest', 'm_SceneSkipIP': 'sceneSkip',
+                                                'm_ThisMustBeTheOnlyMissionRunning': 'mission'}}),
     # P-2e: save Pickups.cpp, CPickup is dumped raw; m_pObject (@4) is a pointer -> u32 in the record
     'CPickup_File': (0x20, [('rev', 0x00, 'f', 1), ('obj', 0x04, 'I', 1), ('ammo', 0x08, 'I', 1), ('regen', 0x0C, 'I', 1), ('pos', 0x10, 'h', 3),
                             ('moneyPerDay', 0x16, 'H', 1), ('model', 0x18, 'h', 1), ('ref', 0x1A, 'h', 1), ('type', 0x1C, 'B', 1), ('flags', 0x1D, 'B', 1)],
@@ -65,6 +75,17 @@ RECORDS = {
 MAT_ROT = dict(right=(0, 1, 0), flags=3, top=(-1, 0, 0), at=(0, 0, 1), pos=(-2500.5, 1000.25, 12.125), attach=0, owns=0)
 # built-in cases (name, record, values) used by `cpp` and by the self-test of this generator
 CASES = [
+    # P-2g: SCRIPT_VA = 0xA49960 (ScriptSpace in the exe), MissionBlock = +0x30D40. 'exe' = what the exe wrote (list links = heap garbage, VAs live); 'port' = what the port writes (links 0)
+    ('exe', 'CRunningScript_File', dict(next=0x0B1E5A40, prev=0x0B1E5B20, scrName=list(b'MAIN\0\0\0\0'), baseIP=0xA49960, ip=0xA49960 + 0x1234, ipStack=[0xA49960 + 0x2000, 0xA49960 + 0x2468, 0xA49960 + 0x10, 0, 0xA49960 + 0x7FFF, 0xA49960 + 1, 0xA49960 + 2, 0xA49960 + 3],
+                                         depth=3, locals=lambda: [(i * 0x9E3779B1) & 0xFFFFFFFF for i in range(34)], active=1, cond=1, cleanup=0, external=0, textOverride=1, extType=-1, wake=123456, andor=22, notFlag=1,
+                                         deathArrest=1, doneDeathArrest=0, sceneSkip=-1, mission=0)),
+    ('port', 'CRunningScript_File', dict(scrName=list(b'MAIN\0\0\0\0'), baseIP=0xA49960, ip=0xA49960 + 0x1234, ipStack=[0xA49960 + 0x2000, 0xA49960 + 0x2468, 0xA49960 + 0x10, 0, 0xA49960 + 0x7FFF, 0xA49960 + 1, 0xA49960 + 2, 0xA49960 + 3],
+                                         depth=3, locals=lambda: [(i * 0x9E3779B1) & 0xFFFFFFFF for i in range(34)], active=1, cond=1, cleanup=0, external=0, textOverride=1, extType=-1, wake=123456, andor=22, notFlag=1,
+                                         deathArrest=1, doneDeathArrest=0, sceneSkip=-1, mission=0)),
+    # a mission script: BaseIP = MissionBlock (0xA7A6A0), IP inside it, mission cleanup, only-mission flag, ExternalType -1, sleeping
+    ('mission', 'CRunningScript_File', dict(scrName=list(b'FLASH\0\0\0'), baseIP=0xA49960 + 200000, ip=0xA49960 + 200000 + 0x400, ipStack=[0xA49960 + 200000 + 0x100, 0, 0, 0, 0, 0, 0, 0], depth=1,
+                                            locals=lambda: [i for i in range(34)], active=1, cond=0, cleanup=1, external=0, textOverride=0, extType=-1, wake=-5, andor=0, notFlag=0,
+                                            deathArrest=0, doneDeathArrest=1, sceneSkip=0x4321, mission=1)),
     # P-2e: flags 0x5D = bDisabled | bHelpMessageDisplayed | bVisible | nPropertyTextIndex=5 (<<4); live object present (obj=1), type ON_STREET
     ('basic', 'CPickup_File', dict(rev=1.5, obj=1, ammo=77, regen=1000, pos=(100, -200, 300), moneyPerDay=5, model=1212, ref=3, type=2, flags=0x5D)),
     ('noobj', 'CPickup_File', dict(rev=0.0, obj=0, ammo=5, regen=0, pos=(-32768, 32767, 0), moneyPerDay=65535, model=-1, ref=-2, type=3, flags=0x0A)),   # type ONCE, no object: bVisible stays as on file

@@ -2,7 +2,7 @@
 
 #include "Buoyancy.h"
 
-NOTSA_GLOBAL(mod_Buoyancy, 0xC1C890, (cBuoyancy), {}); static_assert(sizeof(mod_Buoyancy) == 208);
+NOTSA_GLOBAL(mod_Buoyancy, 0xC1C890, (cBuoyancy), {}); VALIDATE_SIZE(mod_Buoyancy, 208);
 
 void cBuoyancy::InjectHooks()
 {

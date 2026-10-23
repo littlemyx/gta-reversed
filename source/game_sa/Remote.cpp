@@ -8,9 +8,9 @@
 #include "Scripts/TheScripts.h"
 #include "Pools/Pools.h"
 
-static_assert(offsetof(CVehicle, m_autoPilot) == 0x390);
-static_assert(offsetof(CVehicle, vehicleFlags) == 0x428);
-static_assert(offsetof(CPlayerInfo, m_nTimeOfRemoteVehicleExplosion) == 0xE0);
+VALIDATE_OFFSET(CVehicle, m_autoPilot, 0x390);
+VALIDATE_OFFSET(CVehicle, vehicleFlags, 0x428);
+VALIDATE_OFFSET(CPlayerInfo, m_nTimeOfRemoteVehicleExplosion, 0xE0);
 
 void CRemote::InjectHooks() {
     RH_ScopedClass(CRemote);

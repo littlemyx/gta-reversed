@@ -34,7 +34,7 @@ private:
     static inline NOTSA_GLOBAL(m_bWantToPause, 0xBAB319, (bool), {}); // unused
     static inline NOTSA_GLOBAL(m_bPaused, 0xBAB31A, (bool), {}); // unused
     static bool m_bForceShutdown; // unknown, unused
-    static inline NOTSA_GLOBAL(m_aSplashes, 0xBAB35C, (std::array<CSprite2d, +eDisplayedSplash::COUNT>), {}); static_assert(sizeof(m_aSplashes) == 28);
+    static inline NOTSA_GLOBAL(m_aSplashes, 0xBAB35C, (std::array<CSprite2d, +eDisplayedSplash::COUNT>), {}); VALIDATE_SIZE(m_aSplashes, 28);
     static inline NOTSA_GLOBAL(m_currDisplayedSplash, 0x8D093C, (eDisplayedSplash), { eDisplayedSplash::NONE });
 
     static inline NOTSA_GLOBAL(m_bFading, 0xBAB31C, (bool), {});

@@ -295,7 +295,7 @@ void CVehicleRecording::RestoreInfoForCar(CVehicle* vehicle, const CVehicleState
     }
 
     if (vehicle->m_nVehicleType == VEHICLE_TYPE_BIKE) {
-        static_assert(offsetof(CBike, nBikeFlags) == 0x614);
+        VALIDATE_OFFSET(CBike, nBikeFlags, 0x614);
         static_cast<CBike*>(vehicle)->nBikeFlags &= 0xE7; // bGettingPickedUp, bOnSideStand
     }
 }

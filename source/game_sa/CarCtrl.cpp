@@ -3081,9 +3081,9 @@ bool CCarCtrl::IsAnyoneParking() {
     return false;
 }
 
-static_assert(offsetof(CVehicle, m_nCreatedBy) == 0x4A4);
-static_assert(offsetof(CPed, m_nPedType) == 0x598);
-static_assert(offsetof(CVehicleModelInfo, m_nVehicleClass) == 0x4D);
+VALIDATE_OFFSET(CVehicle, m_nCreatedBy, 0x4A4);
+VALIDATE_OFFSET(CPed, m_nPedType, 0x598);
+VALIDATE_OFFSET(CVehicleModelInfo, m_nVehicleClass, 0x4D);
 
 // 0x42DAB0
 bool CCarCtrl::IsThisAnAppropriateNode(CVehicle* vehicle, CNodeAddress nodeAddress1, CNodeAddress nodeAddress2, CNodeAddress nodeAddress3, bool arg5, bool arg6) {
@@ -5215,25 +5215,25 @@ void CCarCtrl::SteerAICarBlockingPlayerForwardAndBack(CVehicle* vehicle, float* 
 }
 
 // The raw offsets the AI steering code of the original works with (checked, so the named members can be used)
-static_assert(offsetof(CVehicle, m_autoPilot) + offsetof(CAutoPilot, m_vehicleRecordingId) == 0x424);
-static_assert(offsetof(CVehicle, m_autoPilot) + offsetof(CAutoPilot, m_nCarDrivingStyle) == 0x3B9);
-static_assert(offsetof(CVehicle, m_autoPilot) + offsetof(CAutoPilot, m_nCarMission) == 0x3BA);
-static_assert(offsetof(CVehicle, m_autoPilot) + offsetof(CAutoPilot, m_nTempAction) == 0x3BB);
-static_assert(offsetof(CVehicle, m_autoPilot) + offsetof(CAutoPilot, m_nCruiseSpeed) == 0x3D0);
-static_assert(offsetof(CVehicle, m_autoPilot) + offsetof(CAutoPilot, m_nMovementFlags) == 0x3DC);
-static_assert(offsetof(CVehicle, m_autoPilot) + offsetof(CAutoPilot, m_startingRouteNode) == 0x394);
-static_assert(offsetof(CVehicle, m_autoPilot) + offsetof(CAutoPilot, m_nTimeToStartMission) == 0x3AC);
-static_assert(offsetof(CVehicle, m_autoPilot) + offsetof(CAutoPilot, m_nTimeSwitchedToRealPhysics) == 0x3B0);
-static_assert(offsetof(CVehicle, m_autoPilot) + offsetof(CAutoPilot, m_nTempActionTime) == 0x3BC);
-static_assert(offsetof(CVehicle, m_autoPilot) + offsetof(CAutoPilot, m_vecDestinationCoors) == 0x3EC);
-static_assert(offsetof(CVehicle, m_autoPilot) + offsetof(CAutoPilot, m_ucCarFollowDist) == 0x3DE);
-static_assert(offsetof(CVehicle, m_autoPilot) + offsetof(CAutoPilot, m_TargetEntity) == 0x41C);
-static_assert(offsetof(CVehicle, m_autoPilot) + offsetof(CAutoPilot, m_ObstructingEntity) == 0x420);
-static_assert(offsetof(CVehicle, m_fSteerAngle) == 0x494);
-static_assert(offsetof(CVehicle, m_GasPedal) == 0x49C);
-static_assert(offsetof(CVehicle, m_BrakePedal) == 0x4A0);
-static_assert(offsetof(CVehicle, m_nRandomSeed) == 0x20);
-static_assert(offsetof(CBmx, m_fControlPedaling) == 0x818);
+VALIDATE_LAYOUT(offsetof(CVehicle, m_autoPilot) + offsetof(CAutoPilot, m_vehicleRecordingId) == 0x424);
+VALIDATE_LAYOUT(offsetof(CVehicle, m_autoPilot) + offsetof(CAutoPilot, m_nCarDrivingStyle) == 0x3B9);
+VALIDATE_LAYOUT(offsetof(CVehicle, m_autoPilot) + offsetof(CAutoPilot, m_nCarMission) == 0x3BA);
+VALIDATE_LAYOUT(offsetof(CVehicle, m_autoPilot) + offsetof(CAutoPilot, m_nTempAction) == 0x3BB);
+VALIDATE_LAYOUT(offsetof(CVehicle, m_autoPilot) + offsetof(CAutoPilot, m_nCruiseSpeed) == 0x3D0);
+VALIDATE_LAYOUT(offsetof(CVehicle, m_autoPilot) + offsetof(CAutoPilot, m_nMovementFlags) == 0x3DC);
+VALIDATE_LAYOUT(offsetof(CVehicle, m_autoPilot) + offsetof(CAutoPilot, m_startingRouteNode) == 0x394);
+VALIDATE_LAYOUT(offsetof(CVehicle, m_autoPilot) + offsetof(CAutoPilot, m_nTimeToStartMission) == 0x3AC);
+VALIDATE_LAYOUT(offsetof(CVehicle, m_autoPilot) + offsetof(CAutoPilot, m_nTimeSwitchedToRealPhysics) == 0x3B0);
+VALIDATE_LAYOUT(offsetof(CVehicle, m_autoPilot) + offsetof(CAutoPilot, m_nTempActionTime) == 0x3BC);
+VALIDATE_LAYOUT(offsetof(CVehicle, m_autoPilot) + offsetof(CAutoPilot, m_vecDestinationCoors) == 0x3EC);
+VALIDATE_LAYOUT(offsetof(CVehicle, m_autoPilot) + offsetof(CAutoPilot, m_ucCarFollowDist) == 0x3DE);
+VALIDATE_LAYOUT(offsetof(CVehicle, m_autoPilot) + offsetof(CAutoPilot, m_TargetEntity) == 0x41C);
+VALIDATE_LAYOUT(offsetof(CVehicle, m_autoPilot) + offsetof(CAutoPilot, m_ObstructingEntity) == 0x420);
+VALIDATE_OFFSET(CVehicle, m_fSteerAngle, 0x494);
+VALIDATE_OFFSET(CVehicle, m_GasPedal, 0x49C);
+VALIDATE_OFFSET(CVehicle, m_BrakePedal, 0x4A0);
+VALIDATE_OFFSET(CVehicle, m_nRandomSeed, 0x20);
+VALIDATE_OFFSET(CBmx, m_fControlPedaling, 0x818);
 
 //! Limits the steering angle to +-`FindMaxSteerAngle`
 static float ClampSteerToMax(CVehicle* vehicle, float steer) {
@@ -8244,20 +8244,20 @@ float CCarCtrl::FindMaxSteerAngle(CVehicle* veh) {
 //
 namespace {
 // The raw offsets the original works with (checked, so the named members can be used)
-static_assert(offsetof(CVehicle, m_autoPilot) == 0x390);
-static_assert(offsetof(CVehicle, vehicleFlags) == 0x428);
-static_assert(offsetof(CVehicle, m_pDriver) == 0x460);
-static_assert(offsetof(CVehicle, m_nExtendedRemovalRange) == 0x4A6);
-static_assert(offsetof(CVehicle, m_fHealth) == 0x4C0);
-static_assert(offsetof(CVehicle, m_nPrimaryColor) == 0x434);
-static_assert(offsetof(CVehicle, m_nVehicleType) == 0x590);
-static_assert(offsetof(CVehicle, m_nVehicleSubType) == 0x594);
-static_assert(offsetof(CVehicle, m_vecMoveSpeed) == 0x44);
-static_assert(offsetof(CVehicleModelInfo, m_nVehicleType) == 0x3C);
-static_assert(offsetof(CVehicleModelInfo, m_nTimesUsed) == 0x50);
-static_assert(offsetof(CCamera, m_mCameraMatrix) + 0x18 == 2444);   // exe 0xB6F9B4 - TheCamera 0xB6F028;   // `m_mCameraMatrix.GetForward().z`
-static_assert(offsetof(CCamera, m_fCamFrontXNorm) == 220);   // exe 0xB6F104 - TheCamera
-static_assert(offsetof(CCamera, m_fGenerationDistMultiplier) == 244);   // exe 0xB6F11C - TheCamera
+VALIDATE_OFFSET(CVehicle, m_autoPilot, 0x390);
+VALIDATE_OFFSET(CVehicle, vehicleFlags, 0x428);
+VALIDATE_OFFSET(CVehicle, m_pDriver, 0x460);
+VALIDATE_OFFSET(CVehicle, m_nExtendedRemovalRange, 0x4A6);
+VALIDATE_OFFSET(CVehicle, m_fHealth, 0x4C0);
+VALIDATE_OFFSET(CVehicle, m_nPrimaryColor, 0x434);
+VALIDATE_OFFSET(CVehicle, m_nVehicleType, 0x590);
+VALIDATE_OFFSET(CVehicle, m_nVehicleSubType, 0x594);
+VALIDATE_OFFSET(CVehicle, m_vecMoveSpeed, 0x44);
+VALIDATE_OFFSET(CVehicleModelInfo, m_nVehicleType, 0x3C);
+VALIDATE_OFFSET(CVehicleModelInfo, m_nTimesUsed, 0x50);
+VALIDATE_LAYOUT(offsetof(CCamera, m_mCameraMatrix) + 0x18 == 2444);   // exe 0xB6F9B4 - TheCamera 0xB6F028;   // `m_mCameraMatrix.GetForward().z`
+VALIDATE_OFFSET(CCamera, m_fCamFrontXNorm, 220);   // exe 0xB6F104 - TheCamera
+VALIDATE_OFFSET(CCamera, m_fGenerationDistMultiplier, 244);   // exe 0xB6F11C - TheCamera
 
 //! Where (and in what direction) `GenerateCarCreationCoors2` looks for a place for the new car
 struct RandomCarSearch {

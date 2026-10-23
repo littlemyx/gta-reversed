@@ -51,7 +51,7 @@ public:
     static inline NOTSA_GLOBAL(ms_fExtinguisherAimAngle, 0x8D610C, (float), { -0.34906587f }); // default -0.34907 rad. (-pi/8)
     static inline NOTSA_GLOBAL(bPhotographHasBeenTaken, 0xC8A7C0, (bool), {});
     static inline NOTSA_GLOBAL(ms_bTakePhoto, 0xC8A7C1, (bool), {});
-    static inline NOTSA_GLOBAL(ms_PelletTestCol, 0xC8A7DC, (CColModel), {}); static_assert(sizeof(ms_PelletTestCol) == 48);
+    static inline NOTSA_GLOBAL(ms_PelletTestCol, 0xC8A7DC, (CColModel), {}); VALIDATE_SIZE(ms_PelletTestCol, 48);
 
     static inline struct DebugSettings {
         bool NoShotDelay;
@@ -160,6 +160,6 @@ public: // TODO: Eventually make this private
     FxSystem_c*  m_FxSystem{};                        //< Fx system [flamethrower, spraycan, extinguisher]
 };
 
-VALIDATE_SIZE(CWeapon, 0x1C);
+VALIDATE_SIZE_FILE(CWeapon, 0x1C);
 
 void FireOneInstantHitRound(const CVector& startPoint, const CVector& endPoint, int32 intensity);

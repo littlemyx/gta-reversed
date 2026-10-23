@@ -21,7 +21,7 @@ uint32 MAX_NUM_CUTSCENE_ITEMS_TO_HIDE = 50;
 uint32 MAX_NUM_CUTSCENE_ATTACHMENTS = 50;
 
 //! Is the cutscene close to finishing (If this is set the camera is already fading in)
-static inline NOTSA_GLOBAL(g_bCutSceneFinishing, 0xBC1CF8, (bool), {}); NOTSA_GLOBAL_DEF(CCutsceneMgr, ms_cutsceneAssociations, 0xBC4020, (CAnimBlendAssocGroup), {}); static_assert(sizeof(CAnimBlendAssocGroup) == 20);
+static inline NOTSA_GLOBAL(g_bCutSceneFinishing, 0xBC1CF8, (bool), {}); NOTSA_GLOBAL_DEF(CCutsceneMgr, ms_cutsceneAssociations, 0xBC4020, (CAnimBlendAssocGroup), {}); VALIDATE_SIZE(CAnimBlendAssocGroup, 20);
 
 // 0x5B0380
 int32 CCutsceneMgr::AddCutsceneHead(CObject* object, int32 arg1) {

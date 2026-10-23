@@ -9,7 +9,7 @@
 
 using enum eControllerAction;
 
-NOTSA_GLOBAL(ControlsManager, 0xB70198, (CControllerConfigManager), {}); static_assert(sizeof(ControlsManager) == 4836);
+NOTSA_GLOBAL(ControlsManager, 0xB70198, (CControllerConfigManager), {}); VALIDATE_SIZE(ControlsManager, 4836);
 
 void CControllerConfigManager::InjectHooks() {
     RH_ScopedClass(CControllerConfigManager);

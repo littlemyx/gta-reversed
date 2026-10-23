@@ -11,7 +11,7 @@
 #include "PedAttractorManager.h"
 #include "Models/ModelInfo.h"
 
-static_assert(sizeof(C2dEffect) == 0x40 && sizeof(tUserList) == 0x24); // Strides used by the original (0xC3AB00, 0xC3A200)
+VALIDATE_SIZE(C2dEffect, 0x40); VALIDATE_SIZE(tUserList, 0x24); // Strides used by the original (0xC3AB00, 0xC3A200)
 
 void CAttractorScanner::InjectHooks() {
     RH_ScopedClass(CAttractorScanner);

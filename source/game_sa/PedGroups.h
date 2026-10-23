@@ -17,7 +17,7 @@ public:
     static inline NOTSA_GLOBAL(ms_activeGroups, 0xC098E0, (std::array<char, 8>), {});
     static inline NOTSA_GLOBAL(ms_bIsPlayerOnAMission, 0xC098E8, (bool), {});
     static inline NOTSA_GLOBAL(ms_iNoOfPlayerKills, 0xC098EC, (uint32), {});
-    static inline NOTSA_GLOBAL(ms_groups, 0xC09920, (std::array<CPedGroup, 8>), {}); static_assert(sizeof(ms_groups) == 5792);
+    static inline NOTSA_GLOBAL(ms_groups, 0xC09920, (std::array<CPedGroup, 8>), {}); VALIDATE_SIZE(ms_groups, 5792);
 
 public:
     static void InjectHooks();

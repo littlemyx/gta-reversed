@@ -44,7 +44,7 @@ struct AnimationState {
     }
 };
 #pragma pack(pop)
-VALIDATE_SIZE(AnimationState, 0x6);
+VALIDATE_SIZE_FILE(AnimationState, 0x6);
 
 /*
 struct CStoredAnimationState {
@@ -54,7 +54,7 @@ struct CStoredAnimationState {
 };
 */
 using CStoredAnimationState = std::array<AnimationState, 3>;
-VALIDATE_SIZE(CStoredAnimationState, 0x12);
+VALIDATE_SIZE_FILE(CStoredAnimationState, 0x12);
 
 #pragma pack(push, 1)
 struct tReplayBlockBase {
@@ -66,7 +66,7 @@ struct tReplayBlockBase {
         return reinterpret_cast<T*>(this);
     }
 };
-VALIDATE_SIZE(tReplayBlockBase, 0x1);
+VALIDATE_SIZE_FILE(tReplayBlockBase, 0x1);
 
 struct tReplayEndBlock : tReplayBlockBase {
     static constexpr auto Type = REPLAY_PACKET_END;

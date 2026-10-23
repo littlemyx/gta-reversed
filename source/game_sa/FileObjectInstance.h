@@ -29,4 +29,4 @@ public:
     int32 m_nLodInstanceIndex; // -1 - without LOD model
 };
 
-VALIDATE_SIZE(CFileObjectInstance, 0x28);
+VALIDATE_SIZE_FILE(CFileObjectInstance, 0x28);

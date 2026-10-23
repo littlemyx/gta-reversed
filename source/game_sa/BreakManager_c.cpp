@@ -2,7 +2,7 @@
 
 #include "BreakManager_c.h"
 
-NOTSA_GLOBAL(g_breakMan, 0xBB4240, (BreakManager_c), {}); static_assert(sizeof(g_breakMan) == 2048);
+NOTSA_GLOBAL(g_breakMan, 0xBB4240, (BreakManager_c), {}); VALIDATE_SIZE(g_breakMan, 2048);
 
 void BreakManager_c::InjectHooks() {
     RH_ScopedClass(BreakManager_c);

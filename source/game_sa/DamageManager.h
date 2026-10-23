@@ -219,4 +219,4 @@ private:
     uint32 GetWheelStatus_Hooked(eCarWheel wheel) { return (uint32)GetWheelStatus(wheel); }
 };
 
-VALIDATE_SIZE(CDamageManager, 0x18);
+VALIDATE_SIZE_FILE(CDamageManager, 0x18);

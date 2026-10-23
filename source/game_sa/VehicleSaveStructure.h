@@ -25,4 +25,4 @@ public:
     void Construct(CVehicle* v);
     void Extract(CVehicle* v);
 };
-VALIDATE_SIZE(CVehicleSaveStructure, 0x68);
+VALIDATE_SIZE_FILE(CVehicleSaveStructure, 0x68);

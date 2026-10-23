@@ -744,4 +744,4 @@ bool CWeather::IsRainy() {
 }
 
 // Defined here: detached build only (Weather.h declares it, the address-mode text is the old inline reference)
-NOTSA_GLOBAL_DEF(CWeather, m_WeatherAudioEntity, 0xC81360, (CAEWeatherAudioEntity), {}); static_assert(sizeof(CWeather::m_WeatherAudioEntity) == 128);
+NOTSA_GLOBAL_DEF(CWeather, m_WeatherAudioEntity, 0xC81360, (CAEWeatherAudioEntity), {}); VALIDATE_SIZE(CWeather::m_WeatherAudioEntity, 128);

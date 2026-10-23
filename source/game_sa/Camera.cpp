@@ -29,7 +29,7 @@ static double ExeTimeMS() {
     return t;
 }
 
-NOTSA_GLOBAL(TheCamera, 0xB6F028, (CCamera), {}); static_assert(sizeof(TheCamera) == 3448);
+NOTSA_GLOBAL(TheCamera, 0xB6F028, (CCamera), {}); VALIDATE_SIZE(TheCamera, 3448);
 NOTSA_GLOBAL(gbModelViewer, 0xBA6728, (bool), {});
 NOTSA_GLOBAL(gbCineyCamMessageDisplayed, 0x8CC381, (int8), { 2 }); // 2
 NOTSA_GLOBAL(gCameraDirection, 0x8CC384, (int32), { 3 });         // 3
@@ -235,7 +235,7 @@ CCamera::~CCamera() {
 // Written store-for-store from the exe: one `rep stosd` over the whole object behind the CPlaceable base (0x18..0xD78), then the stores/calls in the exe's order
 // (the many `= 0` stores after the memset are redundant on their own, but they come AFTER the CCam::Init calls and so also reset what those wrote).
 void CCamera::Init() {
-    static_assert(sizeof(CPlaceable) == 0x18 && sizeof(CCamera) == 0xD78 && sizeof(CCam) == 0x238);
+    VALIDATE_SIZE(CPlaceable, 0x18); VALIDATE_SIZE(CCamera, 0xD78); VALIDATE_SIZE(CCam, 0x238);
     std::memset(reinterpret_cast<std::byte*>(this) + sizeof(CPlaceable), 0, sizeof(CCamera) - sizeof(CPlaceable)); // 0x5BC535: ecx = 0x358 dwords from this+0x18
     m_pRwCamera = nullptr;
     InitialiseScriptableComponents(); // 0x5BC544 (the exe passes &TheCamera in ecx)

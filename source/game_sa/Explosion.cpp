@@ -536,5 +536,5 @@ void CExplosion::Update() {
     }
 }
 
-NOTSA_GLOBAL_DEF(CExplosion, m_ExplosionAudioEntity, 0xC888D0, (CAEExplosionAudioEntity), {}); static_assert(sizeof(CExplosion::m_ExplosionAudioEntity) == 128);
-NOTSA_GLOBAL_ZERO_DEF(CExplosion, aExplosions, 0xC88950, (std::array<CExplosion, 16>)); static_assert(sizeof(CExplosion::aExplosions) == 1984); // zero .bss in the exe (not the repo default ctor values)
+NOTSA_GLOBAL_DEF(CExplosion, m_ExplosionAudioEntity, 0xC888D0, (CAEExplosionAudioEntity), {}); VALIDATE_SIZE(CExplosion::m_ExplosionAudioEntity, 128);
+NOTSA_GLOBAL_ZERO_DEF(CExplosion, aExplosions, 0xC88950, (std::array<CExplosion, 16>)); VALIDATE_SIZE(CExplosion::aExplosions, 1984); // zero .bss in the exe (not the repo default ctor values)

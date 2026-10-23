@@ -45,4 +45,4 @@ inline std::array<CHandShaker, NUM_HANDSHAKERS> MakeExeHandShakers() {
     }(std::make_index_sequence<NUM_HANDSHAKERS>{});
 }
 #endif
-NOTSA_GLOBAL_HDR(gHandShaker, 0xB6ECA0, (std::array<CHandShaker, NUM_HANDSHAKERS>), = MakeExeHandShakers()); static_assert(sizeof(gHandShaker) == 888);
+NOTSA_GLOBAL_HDR(gHandShaker, 0xB6ECA0, (std::array<CHandShaker, NUM_HANDSHAKERS>), = MakeExeHandShakers()); VALIDATE_SIZE(gHandShaker, 888);

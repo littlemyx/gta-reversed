@@ -5,7 +5,7 @@
 #include "HandShaker.h"
 #include "Fx/FxFtol.h"
 
-NOTSA_GLOBAL(gIdleCam, 0xB6FDA0, (CIdleCam), {}); static_assert(sizeof(gIdleCam) == 156);
+NOTSA_GLOBAL(gIdleCam, 0xB6FDA0, (CIdleCam), {}); VALIDATE_SIZE(gIdleCam, 156);
 NOTSA_GLOBAL(gbCineyCamProcessedOnFrame, 0xB6EC40, (uint32), {});
 
 void CIdleCam::InjectHooks() {

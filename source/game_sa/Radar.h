@@ -193,7 +193,7 @@ struct tRadarTrace {
 
     std::pair<CVector2D, CVector2D> GetRadarAndScreenPos(float* radarPointDist) const;
 };
-VALIDATE_SIZE(tRadarTrace, 0x28);
+VALIDATE_SIZE_FILE(tRadarTrace, 0x28);
 
 static constexpr uint32 MAX_RADAR_WIDTH_TILES = 12;
 static constexpr uint32 MAX_RADAR_HEIGHT_TILES = 12;
@@ -215,7 +215,7 @@ public:
     static inline NOTSA_GLOBAL(ArrowBlipColour, 0xBA86D4, (std::array<CRGBA, 6>), {}); static_assert(sizeof(ArrowBlipColour) == 24);
     static inline NOTSA_GLOBAL(ms_RadarTrace, 0xBA86F0, (std::array<tRadarTrace, MAX_RADAR_TRACES>), {});
     static inline NOTSA_GLOBAL(vec2DRadarOrigin, 0xBAA248, (CVector2D), {});
-    static inline NOTSA_GLOBAL(RadarBlipSprites, 0xBAA250, (std::array<CSprite2d, MAX_RADAR_SPRITES>), {}); static_assert(sizeof(RadarBlipSprites) == 256);
+    static inline NOTSA_GLOBAL(RadarBlipSprites, 0xBAA250, (std::array<CSprite2d, MAX_RADAR_SPRITES>), {}); VALIDATE_SIZE(RadarBlipSprites, 256);
     static inline NOTSA_GLOBAL(m_radarRect, 0x8D0920, (CRect), {}); // { 1000000.0f, -1000000.0f, -1000000.0f, 1000000.0f }
 
     static inline NOTSA_GLOBAL(airstrip_location, 0xBA8300, (eAirstripLocation), {}); // current airstrip index in airstrip_table

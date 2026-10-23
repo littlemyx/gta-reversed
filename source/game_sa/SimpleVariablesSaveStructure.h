@@ -69,4 +69,4 @@ public:
     void Extract(uint32& versionId) const;
 };
 
-VALIDATE_SIZE(CSimpleVariablesSaveStructure, 0x138);
+VALIDATE_SIZE_FILE(CSimpleVariablesSaveStructure, 0x138);

@@ -18,7 +18,7 @@
 #include "Hud.h"
 #include "ControllerConfigManager.h"
 
-NOTSA_GLOBAL(FrontEndMenuManager, 0xBA6748, (CMenuManager), {}); static_assert(sizeof(FrontEndMenuManager) == 7032);
+NOTSA_GLOBAL(FrontEndMenuManager, 0xBA6748, (CMenuManager), {}); VALIDATE_SIZE(FrontEndMenuManager, 7032);
 
 CMenuManager& GetMenu() {
     return FrontEndMenuManager;

@@ -89,4 +89,4 @@ public:
     static ePickupPropertyText FindTextIndexForString(const char* message);
     static const char* FindStringForTextIndex(ePickupPropertyText index);
 };
-VALIDATE_SIZE(CPickup, 0x20);
+VALIDATE_SIZE_FILE(CPickup, 0x20);

@@ -51,4 +51,4 @@ private:
 };
 
 VALIDATE_SIZE(CDirectory, 0x10);
-VALIDATE_SIZE(CDirectory::DirectoryInfo, 0x20);
+VALIDATE_SIZE_FILE(CDirectory::DirectoryInfo, 0x20);

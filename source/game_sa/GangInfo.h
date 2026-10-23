@@ -36,4 +36,4 @@ public:
     int8                       m_nPedModelOverride = -1;
     std::array<eWeaponType, 3> m_nGangWeapons{ WEAPON_UNARMED, WEAPON_UNARMED, WEAPON_UNARMED };
 };
-VALIDATE_SIZE(CGangInfo, 0x10);
+VALIDATE_SIZE_FILE(CGangInfo, 0x10);

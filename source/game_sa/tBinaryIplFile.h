@@ -26,4 +26,4 @@ struct tBinaryIplFile {
     auto GetObjInstances() const { return std::span{ reinterpret_cast<CFileObjectInstance*>((char*)this + offsetInst), (size_t)numInst }; }
     auto GetCarGens()      const { return std::span{ reinterpret_cast<CFileCarGenerator*>((char*)this + offsetCarGens), (size_t)numCarGens }; }
 };
-VALIDATE_SIZE(tBinaryIplFile, 0x4C);
+VALIDATE_SIZE_FILE(tBinaryIplFile, 0x4C);

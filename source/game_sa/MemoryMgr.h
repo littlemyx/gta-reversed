@@ -65,7 +65,7 @@ enum eMemoryId {
 };
 
 static inline NOTSA_GLOBAL_ALIAS(s_MemoryHeapBuffer, 0xC8E0C8, (char[16384]), PC_Scratch); // same storage as `PC_Scratch` (common.h owns the 16 KB scratch buffer)
-NOTSA_GLOBAL_HDR(g_Heaps, 0xC87B40, (std::array<CMemoryHeap, 3>), {}); static_assert(sizeof(g_Heaps) == 216);
+NOTSA_GLOBAL_HDR(g_Heaps, 0xC87B40, (std::array<CMemoryHeap, 3>), {}); VALIDATE_SIZE(g_Heaps, 216);
 
 // todo fixed stack
 template <typename _Type, uint32 _nSize> class CStack {

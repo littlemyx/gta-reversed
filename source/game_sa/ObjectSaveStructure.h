@@ -39,4 +39,4 @@ public:
     void Construct(CObject* obj);
     void Extract(CObject* obj);
 };
-VALIDATE_SIZE(CObjectSaveStructure, 0x30);
+VALIDATE_SIZE_FILE(CObjectSaveStructure, 0x30);

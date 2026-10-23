@@ -19,7 +19,7 @@ public:
     static constexpr auto MAX_NUM_GARAGES{ 50 };
 
     static inline NOTSA_GLOBAL(aCarsInSafeHouse, 0x96ABD8, (CStoredCar[MAX_NUM_SAFEHOUSES][MAX_CARS_IN_SAFEHOUSE]), {});
-    static inline NOTSA_GLOBAL(aGarages, 0x96C048, (CGarage[MAX_NUM_GARAGES]), {}); static_assert(sizeof(aGarages) == 10800);
+    static inline NOTSA_GLOBAL(aGarages, 0x96C048, (CGarage[MAX_NUM_GARAGES]), {}); VALIDATE_SIZE(aGarages, 10800);
     static inline NOTSA_GLOBAL(MessageIDString, 0x96C014, (char[8]), {});
     static inline NOTSA_GLOBAL(LastGaragePlayerWasIn, 0x96BFDC, (int32), {});
     static inline NOTSA_GLOBAL(LastTimeHelpMessage, 0x96BFE0, (int32), {});

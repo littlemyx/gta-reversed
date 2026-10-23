@@ -6,7 +6,7 @@ static_assert(offsetof(tScriptSearchlight, m_Target) == 0x14);
 static_assert(offsetof(tScriptSearchlight, m_PathCoord1) == 0x28);
 static_assert(offsetof(tScriptSearchlight, m_PathCoord2) == 0x34);
 static_assert(offsetof(tScriptSearchlight, m_fPathSpeed) == 0x40);
-static_assert(offsetof(tScriptSearchlight, m_FollowingEntity) == 0x48);
+VALIDATE_OFFSET(tScriptSearchlight, m_FollowingEntity, 0x48);
 
 void CSearchLight::InjectHooks() {
     RH_ScopedClass(CSearchLight);

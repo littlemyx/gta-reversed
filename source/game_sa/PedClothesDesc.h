@@ -41,4 +41,4 @@ public:
     }
 };
 
-VALIDATE_SIZE(CPedClothesDesc, 0x78);
+VALIDATE_SIZE_FILE(CPedClothesDesc, 0x78);

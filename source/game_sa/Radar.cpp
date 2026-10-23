@@ -1929,7 +1929,7 @@ void CRadar::DrawEntityBlip(int32 blipIndex, uint8 arg1) {
     const bool isSprite = arg1 != 0;
 
     // 0x859CF8 / 0xA444A2 / 0xA444A3 / 0xBA67A1 / 0xBA678F are named globals, see CTheScripts / FrontEndMenuManager
-    static_assert(sizeof(CSprite2d) == 4);
+    VALIDATE_SIZE(CSprite2d, 4);
     constexpr float kInv640   = 1.f / 640.f;                       // 0x859520
     constexpr float kInv448   = 1.f / 448.f;                       // 0x859524
     constexpr float kDegToRad = std::bit_cast<float>(0x3C8EFA35u); // 0x8595EC

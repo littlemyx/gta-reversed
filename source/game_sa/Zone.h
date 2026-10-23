@@ -39,4 +39,4 @@ public:
 
 
 };
-VALIDATE_SIZE(CZone, 0x20);
+VALIDATE_SIZE_FILE(CZone, 0x20);

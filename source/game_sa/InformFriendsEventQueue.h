@@ -12,7 +12,7 @@ VALIDATE_SIZE(CInformFriendsEvent, 0xC);
 
 class CInformFriendsEventQueue {
 public:
-    static inline NOTSA_GLOBAL(ms_informFriendsEvents, 0xA9AFB8, (std::array<CInformFriendsEvent, 8>), {}); static_assert(sizeof(ms_informFriendsEvents) == 96);
+    static inline NOTSA_GLOBAL(ms_informFriendsEvents, 0xA9AFB8, (std::array<CInformFriendsEvent, 8>), {}); VALIDATE_SIZE(ms_informFriendsEvents, 96);
 
 public:
     static void InjectHooks();

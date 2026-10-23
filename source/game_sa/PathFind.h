@@ -44,7 +44,7 @@ public:
     bool  isOff;
     bool  isCars;
 };
-VALIDATE_SIZE(CNodesSwitchedOnOrOff, 0x1C);
+VALIDATE_SIZE_FILE(CNodesSwitchedOnOrOff, 0x1C);
 
 class CCarPathLinkAddress {
 public:
@@ -69,7 +69,7 @@ public:
         return *reinterpret_cast<uint16*>(this) != 0xFFFF;
     }
 };
-VALIDATE_SIZE(CCarPathLinkAddress, 0x2);
+VALIDATE_SIZE_FILE(CCarPathLinkAddress, 0x2);
 
 class CPathIntersectionInfo {
 public:
@@ -80,7 +80,7 @@ public:
         *(uint8*)this = 0u;
     }
 };
-VALIDATE_SIZE(CPathIntersectionInfo, 0x1);
+VALIDATE_SIZE_FILE(CPathIntersectionInfo, 0x1);
 
 class CCarPathLink { // "Navi Nodes"
 public:
@@ -121,7 +121,7 @@ public:
         return m_posn;
     }
 };
-VALIDATE_SIZE(CCarPathLink, 0xE);
+VALIDATE_SIZE_FILE(CCarPathLink, 0xE);
 
 class CPathNode {
 public:
@@ -183,7 +183,7 @@ public:
         }
     }
 };
-VALIDATE_SIZE(CPathNode, 0x1C);
+VALIDATE_SIZE_FILE(CPathNode, 0x1C);
 
 class CPathFind {
     static constexpr auto NUM_TOTAL_PATH_NODE_AREAS = NUM_PATH_MAP_AREAS + NUM_PATH_INTERIOR_AREAS;
@@ -625,4 +625,4 @@ public:
 
 VALIDATE_SIZE(CPathFind, 0x3C80);
 
-NOTSA_GLOBAL_ZERO_HDR(ThePaths, 0x96F050, (CPathFind)); static_assert(sizeof(ThePaths) == 15488); // zero .bss in the exe (not the repo default ctor values)
+NOTSA_GLOBAL_ZERO_HDR(ThePaths, 0x96F050, (CPathFind)); VALIDATE_SIZE(ThePaths, 15488); // zero .bss in the exe (not the repo default ctor values)

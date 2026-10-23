@@ -860,7 +860,7 @@ const GxtChar* CStats::FindCriminalRatingString() {
         return TheText.Get(flightTime > 10 ? "RATNG50" : "RATNG49");
     }
 
-    static_assert(offsetof(CPlayerInfo, m_nDisplayMoney) == 0xBC);
+    VALIDATE_OFFSET(CPlayerInfo, m_nDisplayMoney, 0xBC);
     if (rating >= 1000000 && CWorld::Players[CWorld::PlayerInFocus].m_nDisplayMoney > 10000000 /* NOTE: not m_nMoney */) {
         return TheText.Get("RATNG52");
     }

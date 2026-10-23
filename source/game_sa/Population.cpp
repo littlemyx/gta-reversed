@@ -1644,7 +1644,7 @@ int32 GetNumGangMembersToPlace() {
 //! 0x6EABA0 - `CWaterLevel::CreateBeachToy` (not declared in `WaterLevel.h`). `toyType`: 1 = ball, 2-4 = loungers, 5 = random lounger, 6 = lotion, 7-10 = towels, 11 = random towel
 CObject* CreateBeachToy(const CVector& pos, int32 toyType) {
     using namespace ModelIndices;
-    static_assert(offsetof(CObject, m_nObjectType) == 0x13C && offsetof(CObject, m_nRemovalTime) == 0x150);
+    VALIDATE_OFFSET(CObject, m_nObjectType, 0x13C); VALIDATE_OFFSET(CObject, m_nRemovalTime, 0x150);
 
     if (CObject::nNoTempObjects >= 0x96) {
         return nullptr;

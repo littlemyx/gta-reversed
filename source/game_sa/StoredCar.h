@@ -38,4 +38,4 @@ public:
     bool HasCar() { return m_wModelIndex != 0; }
 };
 
-VALIDATE_SIZE(CStoredCar, 0x40);
+VALIDATE_SIZE_FILE(CStoredCar, 0x40);

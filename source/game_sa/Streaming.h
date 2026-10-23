@@ -244,7 +244,7 @@ public:
     static inline NOTSA_GLOBAL(ms_pStreamingBuffer, 0x8E4CAC, (uint8*[2]), {});
     static inline NOTSA_GLOBAL(ms_memoryUsedBytes, 0x8E4CB4, (uint32), {});
     static inline NOTSA_GLOBAL(ms_numModelsRequested, 0x8E4CB8, (int32), {});
-    NOTSA_GLOBAL_ZERO(ms_aInfoForModel, 0x8E4CC0, (std::array<CStreamingInfo, 26316>)); static_assert(sizeof(ms_aInfoForModel) == 526320); // zero .bss in the exe (not the repo default ctor values)
+    NOTSA_GLOBAL_ZERO(ms_aInfoForModel, 0x8E4CC0, (std::array<CStreamingInfo, 26316>)); VALIDATE_SIZE(ms_aInfoForModel, 526320); // zero .bss in the exe (not the repo default ctor values)
     static inline NOTSA_GLOBAL(ms_disableStreaming, 0x9654B0, (bool), {});
     static inline NOTSA_GLOBAL(ms_bIsInitialised, 0x9654B8, (int32), {});
     static inline NOTSA_GLOBAL(m_bBoatsNeeded, 0x9654BC, (bool), {});

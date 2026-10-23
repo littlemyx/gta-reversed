@@ -78,4 +78,4 @@ private:
 
 VALIDATE_SIZE(CFireManager, 0x964);
 
-NOTSA_GLOBAL_HDR(gFireManager, 0xB71F80, (CFireManager), {}); static_assert(sizeof(gFireManager) == 2404);
+NOTSA_GLOBAL_HDR(gFireManager, 0xB71F80, (CFireManager), {}); VALIDATE_SIZE(gFireManager, 2404);

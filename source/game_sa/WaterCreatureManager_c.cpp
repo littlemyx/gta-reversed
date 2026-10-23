@@ -2,7 +2,7 @@
 
 #include "WaterCreatureManager_c.h"
 
-NOTSA_GLOBAL(g_waterCreatureMan, 0xC1DF30, (WaterCreatureManager_c), {}); static_assert(sizeof(g_waterCreatureMan) == 6684);
+NOTSA_GLOBAL(g_waterCreatureMan, 0xC1DF30, (WaterCreatureManager_c), {}); VALIDATE_SIZE(g_waterCreatureMan, 6684);
 
 void WaterCreatureManager_c::InjectHooks() {
     RH_ScopedClass(WaterCreatureManager_c);

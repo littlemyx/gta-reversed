@@ -1,16 +1,74 @@
-73 function rows, 23 TUs
+97 function rows, 24 TUs
+SKIP CAutomobile::SetupModelNodes 0x6A0770: ORACLE-C-VEH: every case faults in both exe and port (RenderWare clump/frame/atomic layout, renderer or a virtual callee outside the closure): not constructible
+SKIP CAutomobile::GetComponentWorldPosition 0x6A2210: ORACLE-C-VEH: garbage component index trips the port std::array assert where the exe reads out of range (fixture artefact)
+SKIP CAutomobile::Render 0x6A2B10: ORACLE-C-VEH: every case faults in both exe and port (RenderWare clump/frame/atomic layout, renderer or a virtual callee outside the closure): not constructible
+NOARG CAutomobile::CustomCarPlate_BeforeRenderingStart 0x6A2F00 param "const CVehicleModelInfo& model"
+SKIP CAutomobile::CustomCarPlate_AfterRenderingStop 0x6A2F30: ORACLE-C-VEH: every case faults in both exe and port (RenderWare clump/frame/atomic layout, renderer or a virtual callee outside the closure): not constructible
+SKIP CAutomobile::Fix 0x6A3440: ORACLE-C-VEH: kills the test process (unhandled fault in the closure after a first agreed fault); not analysed
+SKIP CAutomobile::ProcessAutoBusDoors 0x6A38A0: ORACLE-C-VEH: kills the test process (unhandled fault in the closure after a first agreed fault); not analysed
+SKIP CAutomobile::StopNitroEffect 0x6A3E60: ORACLE-C-VEH: every case faults in both exe and port (RenderWare clump/frame/atomic layout, renderer or a virtual callee outside the closure): not constructible
+SKIP CAutomobile::SetModelIndex 0x6A6590: ORACLE-C-VEH: every case faults in both exe and port (RenderWare clump/frame/atomic layout, renderer or a virtual callee outside the closure): not constructible
+SKIP CAutomobile::Teleport 0x6A9CA0: ORACLE-C-VEH: kills the test process (unhandled fault in the closure after a first agreed fault); not analysed
+SKIP CAutomobile::CloseBoot 0x6AFA20: ORACLE-C-VEH: kills the test process (unhandled fault in the closure after a first agreed fault); not analysed
 SKIP CAutomobile::ProcessSuspension 0x6AFB10: fixture too heavy: needs wheel collision points, the world sector lists and the surface/physical collision state; every case faults in both
 SKIP CBike::SetRemoveAnimFlags 0x6B5F50: needs a ped clump with an RpAnimBlend association list (RenderWare 3.7 layout in the exe, librw in the port): not constructible
+SKIP CBike::SetUpWheelColModel 0x6B67E0: ORACLE-C-VEH: every case faults in both exe and port (RenderWare clump/frame/atomic layout, renderer or a virtual callee outside the closure): not constructible
+SKIP CBike::CalculateLeanMatrix 0x6B7150: ORACLE-C-VEH: kills the test process (unhandled fault in the closure after a first agreed fault); not analysed
+SKIP CBike::FixHandsToBars 0x6B7F90: ORACLE-C-VEH: kills the test process (unhandled fault in the closure after a first agreed fault); not analysed
+SKIP CBike::SetModelIndex 0x6B8970: ORACLE-C-VEH: every case faults in both exe and port (RenderWare clump/frame/atomic layout, renderer or a virtual callee outside the closure): not constructible
+SKIP CBike::SetupSuspensionLines 0x6B89B0: ORACLE-C-VEH: every case faults in both exe and port (RenderWare clump/frame/atomic layout, renderer or a virtual callee outside the closure): not constructible
+SKIP CBike::Teleport 0x6BCFC0: ORACLE-C-VEH: kills the test process (unhandled fault in the closure after a first agreed fault); not analysed
+SKIP CBike::Render 0x6BDE20: ORACLE-C-VEH: every case faults in both exe and port (RenderWare clump/frame/atomic layout, renderer or a virtual callee outside the closure): not constructible
+SKIP CBoat::SetupModelNodes 0x6F01A0: ORACLE-C-VEH: every case faults in both exe and port (RenderWare clump/frame/atomic layout, renderer or a virtual callee outside the closure): not constructible
+SKIP CBoat::GetComponentWorldPosition 0x6F01D0: ORACLE-C-VEH: every case faults in both exe and port (RenderWare clump/frame/atomic layout, renderer or a virtual callee outside the closure): not constructible
+SKIP CBoat::Render 0x6F0210: ORACLE-C-VEH: every case faults in both exe and port (RenderWare clump/frame/atomic layout, renderer or a virtual callee outside the closure): not constructible
+SKIP CBoat::SetModelIndex 0x6F1140: ORACLE-C-VEH: every case faults in both exe and port (RenderWare clump/frame/atomic layout, renderer or a virtual callee outside the closure): not constructible
+SKIP CBoat::Teleport 0x6F20E0: ORACLE-C-VEH: kills the test process (unhandled fault in the closure after a first agreed fault); not analysed
+SKIP CHeli::Render 0x6C4400: ORACLE-C-VEH: every case faults in both exe and port (RenderWare clump/frame/atomic layout, renderer or a virtual callee outside the closure): not constructible
 SKIP CHeli::Fix 0x6C4530: calls SetupDamageAfterLoad through the vtable (the exe calls it directly): garbage vptr of the fixture faults only in the port
+SKIP CHeli::Pre_SearchLightCone 0x6C4650: ORACLE-C-VEH: every case faults in both exe and port (RenderWare clump/frame/atomic layout, renderer or a virtual callee outside the closure): not constructible
+SKIP CHeli::Post_SearchLightCone 0x6C46E0: ORACLE-C-VEH: every case faults in both exe and port (RenderWare clump/frame/atomic layout, renderer or a virtual callee outside the closure): not constructible
+SKIP CMonsterTruck::ProcessControl 0x6C8250: ORACLE-C-VEH: every case faults in both exe and port (RenderWare clump/frame/atomic layout, renderer or a virtual callee outside the closure): not constructible
+SKIP CMonsterTruck::ProcessSuspension 0x6C83A0: ORACLE-C-VEH: every case faults in both exe and port (RenderWare clump/frame/atomic layout, renderer or a virtual callee outside the closure): not constructible
+SKIP CPlane::Render 0x6CAB70: ORACLE-C-VEH: every case faults in both exe and port (RenderWare clump/frame/atomic layout, renderer or a virtual callee outside the closure): not constructible
 SKIP CPlane::Fix 0x6CABB0: same as CHeli::Fix
 SKIP CQuadBike::ProcessSuspension 0x6CE270: calls CAutomobile::ProcessSuspension (same)
+SKIP CQuadBike::Fix 0x6CE2B0: ORACLE-C-VEH: every case faults in both exe and port (RenderWare clump/frame/atomic layout, renderer or a virtual callee outside the closure): not constructible
+SKIP CTrailer::ProcessControl 0x6CED20: ORACLE-C-VEH: every case faults in both exe and port (RenderWare clump/frame/atomic layout, renderer or a virtual callee outside the closure): not constructible
+SKIP CTrain::SetModelIndex 0x6F5530: ORACLE-C-VEH: every case faults in both exe and port (RenderWare clump/frame/atomic layout, renderer or a virtual callee outside the closure): not constructible
 SKIP CTrain::GetDooorAngleOpenRatio 0x6F59C0: every case faults in both exe and port, also as a hand row with a zeroed / NaN door (CDoor::GetAngleOpenRatio 0x6F47E0 is a plain `open != 0 ? angle / open : 0`): cause not found
+DECL CTrain::TrainHitStuff<CPtrListSingleLink<CPhysical*>> 0x6F5CF0 (0 declarations)
+SKIP CTrain::Teleport 0x6F7190: ORACLE-C-VEH: kills the test process (unhandled fault in the closure after a first agreed fault); not analysed
 SKIP CVehicle::RemoveLighting 0x5533D0: CPointLights / SetAmbientColours / DeActivateDirectional: renderer + D3D light state
 SKIP CVehicle::SetupLighting 0x553F20: CRenderer::SetupLightingForEntity / ActivateDirectional: renderer + D3D light state
-SKIP CVehicle::SetVehicleAtomicVisibilityCB-Object 0x6D2690: global RpAtomic callback, not a member (hand row)
+SKIP CVehicle::ResetAfterRender 0x6D0E20: ORACLE-C-VEH: every case faults in both exe and port (RenderWare clump/frame/atomic layout, renderer or a virtual callee outside the closure): not constructible
+SKIP CVehicle::Render 0x6D0E60: ORACLE-C-VEH: every case faults in both exe and port (RenderWare clump/frame/atomic layout, renderer or a virtual callee outside the closure): not constructible
+SKIP CVehicle::CustomCarPlate_TextureCreate 0x6D10E0: ORACLE-C-VEH: every case faults in both exe and port (RenderWare clump/frame/atomic layout, renderer or a virtual callee outside the closure): not constructible
+SKIP CVehicle::SetVehicleAtomicVisibilityCB-Frame 0x6D26D0: global RwFrame callback (RW frame hierarchy: exe RW 3.7 vs librw), not a member
 SKIP CVehicle::SetCompAlphaCB 0x6D2950: static in Entity.h (internal linkage): not callable from a test TU; the body is a byte store of alpha at material+7
-SKIP CVehicle::UpdateClumpAlpha 0x6D2980: CVisibilityPlugins clump alpha lives in a RenderWare plugin extension of the clump (exe layout vs librw): not constructible
-DECL CVehicle::FindUpgradeCB 0x6D3370 (0 declarations)
-DECL CVehicle::FindReplacementUpgradeCB 0x6D3490 (0 declarations)
-NOARG CVehicle::DoHeadLightEffect 0x6E0A50 param "CMatrix& vehicleMatrix"
-NOARG CVehicle::DoTailLightEffect 0x6E1780 param "CMatrix& vehicleMatrix"
+SKIP CVehicle::SetComponentAtomicAlpha 0x6D2960: ORACLE-C-VEH: every case faults in both exe and port (RenderWare clump/frame/atomic layout, renderer or a virtual callee outside the closure): not constructible
+SKIP CVehicle::SetWindowOpenFlag 0x6D3080: ORACLE-C-VEH: every case faults in both exe and port (RenderWare clump/frame/atomic layout, renderer or a virtual callee outside the closure): not constructible
+SKIP CVehicle::ClearWindowOpenFlag 0x6D30B0: ORACLE-C-VEH: every case faults in both exe and port (RenderWare clump/frame/atomic layout, renderer or a virtual callee outside the closure): not constructible
+SKIP CVehicle::RemoveObjectsCB-Frame 0x6D3420: global RwFrame callback (RW frame hierarchy), not a member
+DECL CVehicle::CopyObjectsCB 0x6D3450 (0 declarations)
+SKIP CVehicle::CreateUpgradeAtomic 0x6D3510: ORACLE-C-VEH: every case faults in both exe and port (RenderWare clump/frame/atomic layout, renderer or a virtual callee outside the closure): not constructible
+SKIP CVehicle::RemoveUpgrade 0x6D3630: ORACLE-C-VEH: every case faults in both exe and port (RenderWare clump/frame/atomic layout, renderer or a virtual callee outside the closure): not constructible
+SKIP CVehicle::CreateReplacementAtomic 0x6D3700: ORACLE-C-VEH: every case faults in both exe and port (RenderWare clump/frame/atomic layout, renderer or a virtual callee outside the closure): not constructible
+SKIP CVehicle::AddReplacementUpgrade 0x6D3830: ORACLE-C-VEH: every case faults in both exe and port (RenderWare clump/frame/atomic layout, renderer or a virtual callee outside the closure): not constructible
+SKIP CVehicle::RemoveReplacementUpgrade 0x6D39E0: ORACLE-C-VEH: every case faults in both exe and port (RenderWare clump/frame/atomic layout, renderer or a virtual callee outside the closure): not constructible
+SKIP CVehicle::RemoveAllUpgrades 0x6D3AB0: ORACLE-C-VEH: every case faults in both exe and port (RenderWare clump/frame/atomic layout, renderer or a virtual callee outside the closure): not constructible
+SKIP CVehicle::UpdateWinch 0x6D3B80: ORACLE-C-VEH: kills the test process (unhandled fault in the closure after a first agreed fault); not analysed
+SKIP CVehicle::RemoveWinch 0x6D3C70: ORACLE-C-VEH: unused by the game; the port asserts NOTSA_UNREACHABLE by design (the exe indexes the rope table with this+0xA320)
+SKIP CVehicle::PickUpEntityWithWinch 0x6D3CD0: ORACLE-C-VEH: every case faults in both exe and port (RenderWare clump/frame/atomic layout, renderer or a virtual callee outside the closure): not constructible
+NOARG CVehicle::SpecialEntityPreCollisionStuff 0x6D6640 param "bool& bCollisionDisabled"
+SKIP CVehicle::SetModelIndex 0x6D6A40: ORACLE-C-VEH: every case faults in both exe and port (RenderWare clump/frame/atomic layout, renderer or a virtual callee outside the closure): not constructible
+SKIP CVehicle::AddUpgrade 0x6DFA20: ORACLE-C-VEH: every case faults in both exe and port (RenderWare clump/frame/atomic layout, renderer or a virtual callee outside the closure): not constructible
+SKIP CVehicle::UpdateTrailerLink 0x6DFC50: ORACLE-C-VEH: kills the test process (unhandled fault in the closure after a first agreed fault); not analysed
+SKIP CVehicle::DoHeadLightEffect 0x6E0A50: NOT ATTEMPTED (budget): 962-byte corona/shadow/point-light emitter with a CMatrix& argument; needs a hand row (matrix fixture, CCoronas / CShadows / CPointLights snapshot) - see W3-VEH-OPEN-state.md
+NOARG CVehicle::DoHeadLightBeam 0x6E0E20 param "CMatrix& vehicleMatrix"
+NOARG CVehicle::DoHeadLightReflectionSingle 0x6E1440 param "CMatrix& vehicleMatrix"
+NOARG CVehicle::DoHeadLightReflectionTwin 0x6E1600 param "CMatrix& vehicleMatrix"
+NOARG CVehicle::DoHeadLightReflection 0x6E1720 param "CMatrix& vehicleMatrix"
+SKIP CVehicle::DoTailLightEffect 0x6E1780: NOT ATTEMPTED (budget): same as DoHeadLightEffect (723 bytes)
+NOARG CVehicle::DoVehicleLights 0x6E1A60 param "CMatrix& vehicleMatrix"
+SKIP CVehicle::SetupUpgradesAfterLoad 0x6E3400: ORACLE-C-VEH: every case faults in both exe and port (RenderWare clump/frame/atomic layout, renderer or a virtual callee outside the closure): not constructible

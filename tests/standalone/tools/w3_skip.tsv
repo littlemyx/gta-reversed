@@ -21,3 +21,56 @@ CPed::operator delete-anon	hand row in wave3_oracle_ped.inc (CPed::operator dele
 CPed::SetPedAtomicVisibilityCB	global RpAtomic callback, not a member (no declaration): RW layout of the atomic differs (exe 3.7 vs librw)
 CPlayerPed::CanIKReachThisTarget	hand row in wave3_oracle_ped.inc (weapon slot argument)
 CPed::operator new-poolIndexed	hand row (valid pool slot): a random poolRef makes the pool write its flag byte at an arbitrary address (heap corruption in both implementations)
+CVehicle::SetVehicleAtomicVisibilityCB-Frame	global RwFrame callback (RW frame hierarchy: exe RW 3.7 vs librw), not a member
+CVehicle::RemoveObjectsCB-Frame	global RwFrame callback (RW frame hierarchy), not a member
+CAutomobile::CustomCarPlate_AfterRenderingStop	ORACLE-C-VEH: every case faults in both exe and port (RenderWare clump/frame/atomic layout, renderer or a virtual callee outside the closure): not constructible
+CAutomobile::Render	ORACLE-C-VEH: every case faults in both exe and port (RenderWare clump/frame/atomic layout, renderer or a virtual callee outside the closure): not constructible
+CAutomobile::SetModelIndex	ORACLE-C-VEH: every case faults in both exe and port (RenderWare clump/frame/atomic layout, renderer or a virtual callee outside the closure): not constructible
+CAutomobile::SetupModelNodes	ORACLE-C-VEH: every case faults in both exe and port (RenderWare clump/frame/atomic layout, renderer or a virtual callee outside the closure): not constructible
+CAutomobile::StopNitroEffect	ORACLE-C-VEH: every case faults in both exe and port (RenderWare clump/frame/atomic layout, renderer or a virtual callee outside the closure): not constructible
+CBike::Render	ORACLE-C-VEH: every case faults in both exe and port (RenderWare clump/frame/atomic layout, renderer or a virtual callee outside the closure): not constructible
+CBike::SetModelIndex	ORACLE-C-VEH: every case faults in both exe and port (RenderWare clump/frame/atomic layout, renderer or a virtual callee outside the closure): not constructible
+CBike::SetUpWheelColModel	ORACLE-C-VEH: every case faults in both exe and port (RenderWare clump/frame/atomic layout, renderer or a virtual callee outside the closure): not constructible
+CBike::SetupSuspensionLines	ORACLE-C-VEH: every case faults in both exe and port (RenderWare clump/frame/atomic layout, renderer or a virtual callee outside the closure): not constructible
+CBoat::GetComponentWorldPosition	ORACLE-C-VEH: every case faults in both exe and port (RenderWare clump/frame/atomic layout, renderer or a virtual callee outside the closure): not constructible
+CBoat::Render	ORACLE-C-VEH: every case faults in both exe and port (RenderWare clump/frame/atomic layout, renderer or a virtual callee outside the closure): not constructible
+CBoat::SetModelIndex	ORACLE-C-VEH: every case faults in both exe and port (RenderWare clump/frame/atomic layout, renderer or a virtual callee outside the closure): not constructible
+CBoat::SetupModelNodes	ORACLE-C-VEH: every case faults in both exe and port (RenderWare clump/frame/atomic layout, renderer or a virtual callee outside the closure): not constructible
+CHeli::Post_SearchLightCone	ORACLE-C-VEH: every case faults in both exe and port (RenderWare clump/frame/atomic layout, renderer or a virtual callee outside the closure): not constructible
+CHeli::Pre_SearchLightCone	ORACLE-C-VEH: every case faults in both exe and port (RenderWare clump/frame/atomic layout, renderer or a virtual callee outside the closure): not constructible
+CHeli::Render	ORACLE-C-VEH: every case faults in both exe and port (RenderWare clump/frame/atomic layout, renderer or a virtual callee outside the closure): not constructible
+CMonsterTruck::ProcessControl	ORACLE-C-VEH: every case faults in both exe and port (RenderWare clump/frame/atomic layout, renderer or a virtual callee outside the closure): not constructible
+CMonsterTruck::ProcessSuspension	ORACLE-C-VEH: every case faults in both exe and port (RenderWare clump/frame/atomic layout, renderer or a virtual callee outside the closure): not constructible
+CPlane::Render	ORACLE-C-VEH: every case faults in both exe and port (RenderWare clump/frame/atomic layout, renderer or a virtual callee outside the closure): not constructible
+CQuadBike::Fix	ORACLE-C-VEH: every case faults in both exe and port (RenderWare clump/frame/atomic layout, renderer or a virtual callee outside the closure): not constructible
+CTrailer::ProcessControl	ORACLE-C-VEH: every case faults in both exe and port (RenderWare clump/frame/atomic layout, renderer or a virtual callee outside the closure): not constructible
+CTrain::SetModelIndex	ORACLE-C-VEH: every case faults in both exe and port (RenderWare clump/frame/atomic layout, renderer or a virtual callee outside the closure): not constructible
+CVehicle::AddReplacementUpgrade	ORACLE-C-VEH: every case faults in both exe and port (RenderWare clump/frame/atomic layout, renderer or a virtual callee outside the closure): not constructible
+CVehicle::AddUpgrade	ORACLE-C-VEH: every case faults in both exe and port (RenderWare clump/frame/atomic layout, renderer or a virtual callee outside the closure): not constructible
+CVehicle::ClearWindowOpenFlag	ORACLE-C-VEH: every case faults in both exe and port (RenderWare clump/frame/atomic layout, renderer or a virtual callee outside the closure): not constructible
+CVehicle::CreateReplacementAtomic	ORACLE-C-VEH: every case faults in both exe and port (RenderWare clump/frame/atomic layout, renderer or a virtual callee outside the closure): not constructible
+CVehicle::CreateUpgradeAtomic	ORACLE-C-VEH: every case faults in both exe and port (RenderWare clump/frame/atomic layout, renderer or a virtual callee outside the closure): not constructible
+CVehicle::CustomCarPlate_TextureCreate	ORACLE-C-VEH: every case faults in both exe and port (RenderWare clump/frame/atomic layout, renderer or a virtual callee outside the closure): not constructible
+CVehicle::PickUpEntityWithWinch	ORACLE-C-VEH: every case faults in both exe and port (RenderWare clump/frame/atomic layout, renderer or a virtual callee outside the closure): not constructible
+CVehicle::RemoveAllUpgrades	ORACLE-C-VEH: every case faults in both exe and port (RenderWare clump/frame/atomic layout, renderer or a virtual callee outside the closure): not constructible
+CVehicle::RemoveReplacementUpgrade	ORACLE-C-VEH: every case faults in both exe and port (RenderWare clump/frame/atomic layout, renderer or a virtual callee outside the closure): not constructible
+CVehicle::RemoveUpgrade	ORACLE-C-VEH: every case faults in both exe and port (RenderWare clump/frame/atomic layout, renderer or a virtual callee outside the closure): not constructible
+CVehicle::Render	ORACLE-C-VEH: every case faults in both exe and port (RenderWare clump/frame/atomic layout, renderer or a virtual callee outside the closure): not constructible
+CVehicle::ResetAfterRender	ORACLE-C-VEH: every case faults in both exe and port (RenderWare clump/frame/atomic layout, renderer or a virtual callee outside the closure): not constructible
+CVehicle::SetComponentAtomicAlpha	ORACLE-C-VEH: every case faults in both exe and port (RenderWare clump/frame/atomic layout, renderer or a virtual callee outside the closure): not constructible
+CVehicle::SetModelIndex	ORACLE-C-VEH: every case faults in both exe and port (RenderWare clump/frame/atomic layout, renderer or a virtual callee outside the closure): not constructible
+CVehicle::SetWindowOpenFlag	ORACLE-C-VEH: every case faults in both exe and port (RenderWare clump/frame/atomic layout, renderer or a virtual callee outside the closure): not constructible
+CVehicle::SetupUpgradesAfterLoad	ORACLE-C-VEH: every case faults in both exe and port (RenderWare clump/frame/atomic layout, renderer or a virtual callee outside the closure): not constructible
+CAutomobile::Fix	ORACLE-C-VEH: kills the test process (unhandled fault in the closure after a first agreed fault); not analysed
+CAutomobile::ProcessAutoBusDoors	ORACLE-C-VEH: kills the test process (unhandled fault in the closure after a first agreed fault); not analysed
+CAutomobile::Teleport	ORACLE-C-VEH: kills the test process (unhandled fault in the closure after a first agreed fault); not analysed
+CAutomobile::CloseBoot	ORACLE-C-VEH: kills the test process (unhandled fault in the closure after a first agreed fault); not analysed
+CBike::CalculateLeanMatrix	ORACLE-C-VEH: kills the test process (unhandled fault in the closure after a first agreed fault); not analysed
+CBike::FixHandsToBars	ORACLE-C-VEH: kills the test process (unhandled fault in the closure after a first agreed fault); not analysed
+CBike::Teleport	ORACLE-C-VEH: kills the test process (unhandled fault in the closure after a first agreed fault); not analysed
+CBoat::Teleport	ORACLE-C-VEH: kills the test process (unhandled fault in the closure after a first agreed fault); not analysed
+CTrain::Teleport	ORACLE-C-VEH: kills the test process (unhandled fault in the closure after a first agreed fault); not analysed
+CVehicle::UpdateWinch	ORACLE-C-VEH: kills the test process (unhandled fault in the closure after a first agreed fault); not analysed
+CVehicle::UpdateTrailerLink	ORACLE-C-VEH: kills the test process (unhandled fault in the closure after a first agreed fault); not analysed
+CVehicle::RemoveWinch	ORACLE-C-VEH: unused by the game; the port asserts NOTSA_UNREACHABLE by design (the exe indexes the rope table with this+0xA320)
+CAutomobile::GetComponentWorldPosition	ORACLE-C-VEH: garbage component index trips the port std::array assert where the exe reads out of range (fixture artefact)

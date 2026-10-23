@@ -9,6 +9,25 @@
 #include "Models/ModelInfo.h"
 #include "Collision/ColModel.h"
 #include "Ropes.h"
+#include "game_sa/Entity/Vehicle/Automobile.h"
+#include "game_sa/Entity/Vehicle/Bike.h"
+#include "game_sa/Entity/Vehicle/Bmx.h"
+#include "game_sa/Entity/Vehicle/Boat.h"
+#include "game_sa/Entity/Vehicle/Heli.h"
+#include "game_sa/Entity/Vehicle/MonsterTruck.h"
+#include "game_sa/Entity/Vehicle/Plane.h"
+#include "game_sa/Entity/Vehicle/QuadBike.h"
+#include "game_sa/Entity/Vehicle/Trailer.h"
+#include "game_sa/Entity/Vehicle/Train.h"
+#include "game_sa/Entity/Vehicle/Vehicle.h"
+
+// ---- ORACLE-C-VEH: vehicle fixture with REAL vtable pointers (class C = the exe function's closure contains virtual calls) --------------------------------------------------------------
+// A garbage vptr makes every virtual call fault (both sides: the case carries no information). W3FuncCase(..., vtCls) writes the EXE's vftable address (RH_ScopedVirtualClass VA) into the vehicle
+// (and its embedded CAEVehicleAudioEntity and the model info) before the exe call and the PORT's vftable before the port call, and clears the words again afterwards, so the compare of the object ignores
+// them. The port's vftable is the compiler's `??_7Cls@@6B@`, reached through /alternatename (no object has to be constructed). Virtual callees then run their real code on each side.
+#define W3_PORT_VT(C) extern "C" const uint32_t w3vt_##C[]; __pragma(comment(linker, "/alternatename:_w3vt_" #C "=??_7" #C "@@6B@"))
+W3_PORT_VT(CAutomobile) W3_PORT_VT(CMonsterTruck) W3_PORT_VT(CQuadBike) W3_PORT_VT(CHeli) W3_PORT_VT(CPlane) W3_PORT_VT(CBoat) W3_PORT_VT(CTrain) W3_PORT_VT(CBike) W3_PORT_VT(CBmx) W3_PORT_VT(CTrailer)
+W3_PORT_VT(CAEVehicleAudioEntity) W3_PORT_VT(CVehicleModelInfo)
 
 namespace w3 {
 using namespace w2;
@@ -81,8 +100,29 @@ static void WireVehicle(Rng& r, uint8_t* v, size_t sz) {
 }
 static void UnwireModel() { CModelInfo::ms_modelInfoPtrs[g_model] = nullptr; }
 
+// ORACLE-C-VEH: class table. exeVt = RH_ScopedVirtualClass VA, portVt = the compiler's vftable (alternatename above), vtype = the eVehicleType the game stores for the class
+struct VtInfo { const char* name; uint32_t exeVt; const uint32_t* portVt; size_t size; int vtype; };
+static const VtInfo kVt[] = {
+    { "CAutomobile", 0x871120, w3vt_CAutomobile, sizeof(CAutomobile), VEHICLE_TYPE_AUTOMOBILE }, { "CMonsterTruck", 0x8717D8, w3vt_CMonsterTruck, sizeof(CMonsterTruck), VEHICLE_TYPE_MTRUCK },
+    { "CQuadBike", 0x871AE8, w3vt_CQuadBike, sizeof(CQuadBike), VEHICLE_TYPE_QUAD }, { "CHeli", 0x871680, w3vt_CHeli, sizeof(CHeli), VEHICLE_TYPE_HELI },
+    { "CPlane", 0x871948, w3vt_CPlane, sizeof(CPlane), VEHICLE_TYPE_PLANE }, { "CBoat", 0x8721A0, w3vt_CBoat, sizeof(CBoat), VEHICLE_TYPE_BOAT },
+    { "CTrain", 0x872370, w3vt_CTrain, sizeof(CTrain), VEHICLE_TYPE_TRAIN }, { "CBike", 0x871360, w3vt_CBike, sizeof(CBike), VEHICLE_TYPE_BIKE },
+    { "CBmx", 0x871528, w3vt_CBmx, sizeof(CBmx), VEHICLE_TYPE_BMX }, { "CTrailer", 0x871C28, w3vt_CTrailer, sizeof(CTrailer), VEHICLE_TYPE_TRAILER },
+};
+constexpr uint32_t kExeAudioVt = 0x862CEC, kExeVmiVt = 0x85C5C8;
+static int VtIdx(const char* cls) { for (int i = 0; i < (int)std::size(kVt); ++i) if (!std::strcmp(kVt[i].name, cls)) return i; return -1; }   // -1: a base class (CVehicle / CPhysical ...): the case picks a random vehicle class
+// writes the exe's (`exe`) or the port's vptrs into the wired vehicle / model info; `clear` zeroes them (after the call, so the compare ignores them)
+static void SetVptrs(uint8_t* v, int vi, int side /* 0 clear, 1 port, 2 exe */) {
+    const uint32_t vt = side == 1 ? (uint32_t)(uintptr_t)kVt[vi].portVt : side == 2 ? kVt[vi].exeVt : 0;
+    const uint32_t au = side == 1 ? (uint32_t)(uintptr_t)w3vt_CAEVehicleAudioEntity : side == 2 ? kExeAudioVt : 0;
+    const uint32_t mi = side == 1 ? (uint32_t)(uintptr_t)w3vt_CVehicleModelInfo : side == 2 ? kExeVmiVt : 0;
+    Put32(v, 0, vt); Put32(v, offsetof(CVehicle, m_vehicleAudio), au); Put32(g_mi, 0, mi);
+}
 template<class PF, class EF>
-static bool W3FuncCase(Rng& r, std::string& d, size_t sz, std::initializer_list<EntOff> ents, PF&& portFn, EF&& exeFn, bool sub = false, bool dtor = false) {
+static bool W3FuncCase(Rng& r, std::string& d, size_t sz, std::initializer_list<EntOff> ents, PF&& portFn, EF&& exeFn, bool sub = false, bool dtor = false, const char* vtCls = nullptr) {
+    const int vi0 = vtCls ? VtIdx(vtCls) : -2;                                  // -2: no vptr injection (classes A / B); -1: base class
+    const int vi = vi0 == -1 ? (int)r.below((uint32)std::size(kVt)) : vi0;      // base-class rows get a random vehicle class (and its size)
+    if (vi >= 0 && sz) sz = kVt[vi].size;
     static std::vector<uint8_t> img0(kImgHi - kImgLo);
     const auto post = std::move(g_post); g_post = nullptr;   // a faulting case must not leave a hook with dangling captures behind
     std::memcpy(img0.data(), (void*)kImgLo, img0.size());
@@ -90,13 +130,14 @@ static bool W3FuncCase(Rng& r, std::string& d, size_t sz, std::initializer_list<
     FillGarbage(r, g_anim, sizeof g_anim);
     g_subTask = nullptr;
     if (sub) { g_subTask = g_tp.pool->New(); if (g_subTask) ::new (static_cast<void*>(g_subTask)) CTaskSimpleStandStill(50, false, false, 8.0f); }
-    if (sz) { FillGarbage(r, g_src, (sz + 3) & ~size_t(3)); for (const auto& e : ents) PutEnt(r, e.off, e.kind, e.size); WireVehicle(r, g_src, sz); }
+    if (sz) { FillGarbage(r, g_src, (sz + 3) & ~size_t(3)); for (const auto& e : ents) PutEnt(r, e.off, e.kind, e.size); WireVehicle(r, g_src, sz); if (vi >= 0) { Put32(g_src, offsetof(CVehicle, m_nVehicleType), (int32_t)kVt[vi].vtype); Put32(g_mi, offsetof(CVehicleModelInfo, m_nVehicleType), (int32_t)kVt[vi].vtype); } }
     if (post) post(r, g_src);
     Reg thisReg{ (uintptr_t)g_src, sz ? sz : 4 };
     if (dtor) { thisReg.mask.assign(sz ? sz : 4, 0); for (int k = 0; k < 4; ++k) thisReg.mask[k] = 1; }
     const bool ok = BothA(d, seed, { thisReg, Reg{ (uintptr_t)g_anim, sizeof g_anim }, Reg{ (uintptr_t)g_mat, sizeof g_mat }, Reg{ (uintptr_t)g_hand, sizeof g_hand }, Reg{ (uintptr_t)g_mi, sizeof g_mi }, Reg{ (uintptr_t)g_vs, sizeof g_vs },
             Reg{ (uintptr_t)g_col, sizeof g_col }, Reg{ (uintptr_t)g_mi2, sizeof g_mi2 }, Reg{ (uintptr_t)g_out, sizeof g_out }, Reg{ (uintptr_t)g_frame, sizeof g_frame }, Reg{ (uintptr_t)g_cp, sizeof g_cp }, g_tp.RegStruct(), g_tp.RegFlags(), g_tp.RegStore(), g_ep.RegStruct(), g_ep.RegFlags(), g_ep.RegStore(), Reg{ kImgLo, kImgHi - kImgLo } },
-        [&]() -> uint64_t { return portFn(static_cast<void*>(g_src)); }, [&]() -> uint64_t { return exeFn(static_cast<void*>(g_src)); }, kRf);
+        [&]() -> uint64_t { if (vi >= 0 && sz) SetVptrs(g_src, vi, 1); const uint64_t rv = portFn(static_cast<void*>(g_src)); if (vi >= 0 && sz) SetVptrs(g_src, vi, 0); return rv; },
+        [&]() -> uint64_t { if (vi >= 0 && sz) SetVptrs(g_src, vi, 2); const uint64_t rv = exeFn(static_cast<void*>(g_src)); if (vi >= 0 && sz) SetVptrs(g_src, vi, 0); return rv; }, kRf);
     if (!ok) { char t[96]; uint32_t hf = 0; std::memcpy(&hf, g_src + offsetof(CVehicle, m_nHandlingFlagsIntValue), 4); std::snprintf(t, sizeof t, " [model %d hflags %08X]", g_model, hf); d += t; }
     Done();
     UnwireModel();
@@ -161,7 +202,9 @@ static void TestW3VehHand() {
 
 #include "wave3_oracle_veh_hand2.inc"
 
+static void TestW3VtInfra();
 static void TestW3Veh() {
+    TestW3VtInfra();
     TestW3VehHand();
     TestW3VehHand2();
 #ifdef W3_HAVE_GEN
@@ -170,3 +213,16 @@ static void TestW3Veh() {
 }
 static_assert(offsetof(CVehicleModelInfo, m_fWheelSizeFront) == 0x40 && offsetof(CVehicleModelInfo, m_fWheelSizeRear) == 0x44, "exe 0x6A6090 reads +0x40 / +0x44");
 static_assert(offsetof(CVehicle, m_nHandlingFlagsIntValue) == 0x38C, "exe 0x6A6090 reads +0x38C");
+
+// ORACLE-C-VEH self-test: every slot of the port's vftable must be a real function (an unresolved symbol is 0x400000 under /FORCE:UNRESOLVED: a virtual call through it faults in the port only).
+// Prints the slot numbers that are unresolved (their TU is not linked into this test); the exe's vftable is checked to point into .text.
+static void TestW3VtInfra() {
+    using namespace w3;
+    int bad = 0;
+    for (const auto& c : kVt) {
+        int n = 0; std::string un;
+        for (int i = 0; i < 71; ++i) { const uint32_t pv = c.portVt[i]; const uint32_t ev = *reinterpret_cast<const uint32_t*>(c.exeVt + 4 * i); if (pv == 0x400000) { un += " " + std::to_string(i); ++n; } if (i < 66 && (ev < 0x401000 || ev > 0x850000)) ++bad; }
+        std::printf("w3 vt: %-14s port vftable %p, unresolved slots:%s\n", c.name, (const void*)c.portVt, un.empty() ? " none" : un.c_str());
+    }
+    std::printf("w3 vt infra: exe vftable slots outside .text: %d\n", bad);
+}

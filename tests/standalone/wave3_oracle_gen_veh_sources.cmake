@@ -4,6 +4,7 @@ set(W3_VEH_SOURCES
     game_sa/Collision/ColPoint.cpp
     game_sa/CullZones.cpp
     game_sa/DamageManager.cpp
+    game_sa/Door.cpp
     game_sa/Entity/Entity.cpp
     game_sa/Entity/Physical.cpp
     game_sa/Entity/Placeable.cpp

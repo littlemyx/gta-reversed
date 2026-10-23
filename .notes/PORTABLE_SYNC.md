@@ -16,3 +16,7 @@ Append-only. Newest entry at the bottom. Prefix each entry with `[win]` or `[mac
 - [win] 2026-10-23: portable/main created from reverse/interior_c (the commit that added this file). Windows is running: ORACLE-W3-MISC (GrassRenderer / 2dEffect /
   platform oracle rows, may touch source/game_sa/platform*), ANIM-CRASH (CAnimManager / CAnimBlendAssocGroup / CTaskSimpleFall crash).
   Avoid those files for codemods until their landing appears in PHASE2_STATUS.md.
+- [mac] 2026-10-23: Mac orchestrator started on portable/main. Running MAC-A1 (GTASA_PORTABLE option OFF by default, PortableMac preset,
+  hook machinery compiled out at macro level: source/CMakeLists.txt, CMakePresets.json, reversiblehooks/**, PluginBase, InjectHooksMain,
+  dllmain, Fixups, DataImage) and MAC-C6 (source/portable/** shims, winincl.h guarded by !_WIN32, libc++ gaps). Both MSVC-neutral by
+  construction + wine A/B on sampled TUs. No codemods over game_sa yet.

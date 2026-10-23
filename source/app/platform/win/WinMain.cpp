@@ -18,6 +18,11 @@
 #include "WinPlatform.h"
 
 #include "extensions/Configs/FastLoader.hpp"
+#ifdef NOTSA_PORTABLE
+#include <cfenv>
+#include "portable/app_platform.h"
+#endif
+#line 21 // W0a
 
 #ifndef NOTSA_USE_SDL3
 #include "WinInput.h"
@@ -43,6 +48,10 @@ constexpr auto NO_FOREGROUND_PAUSE = true;
 
 // 0x747300
 char* getDvdGamePath() {
+#ifdef NOTSA_PORTABLE
+    return notsa::portable::FindDvdGamePath(); // /Volumes/GTA_SAN_ANDREAS/ if such a volume is mounted
+#else
+#line 46 // W0a
     SetErrorMode(SEM_FAILCRITICALERRORS);
 
     size_t bufferSize = GetLogicalDriveStringsA(0, nullptr);
@@ -75,6 +84,8 @@ char* getDvdGamePath() {
 
     delete[] drivesBuffer;
     return nullptr;
+#endif
+#line 78 // W0a
 }
 
 // 0x746870
@@ -131,6 +142,10 @@ auto Win32_InitInstance(HINSTANCE hInstance) {
 
 // 0x7468E0
 bool IsAlreadyRunning() {
+#ifdef NOTSA_PORTABLE
+    return !notsa::portable::AcquireSingleInstance();
+#else
+#line 134 // W0a
     CreateEvent(nullptr, false, true, APP_CLASS);
     if (GetLastError() != ERROR_ALREADY_EXISTS) {
         return false;
@@ -140,6 +155,8 @@ bool IsAlreadyRunning() {
     SetForegroundWindow(fgwnd != INVALID_HANDLE_VALUE ? fgwnd : PSGLOBAL(window));
     
     return true;
+#endif
+#line 143 // W0a
 };
 
 // 0x746060
@@ -264,7 +281,14 @@ bool ProcessGameLogic(INT nCmdShow) {
         }
         CGame::InitialiseCoreDataAfterRW();
         ChangeGameStateTo(GAME_STATE_FRONTEND_LOADED);
+#ifdef NOTSA_PORTABLE
+        notsa::portable::Unsupported("GPU capability query (anisotropic filtering assumed supported: GL3 core on macOS has EXT_texture_filter_anisotropic)"); // W-A4
+        anisotropySupportedByGFX = true;
+#else
+#line 267 // W0a
         anisotropySupportedByGFX = (((const D3DCAPS9*)RwD3D9GetCaps())->RasterCaps & D3DPRASTERCAPS_ANISOTROPY) != 0; // todo: func
+#endif
+#line 268 // W0a
 
 #ifdef NOTSA_WINDOWED_MODE
         RwCameraClear(Scene.m_pRwCamera, &gColourTop, rwCAMERACLEARZ);
@@ -292,8 +316,14 @@ bool ProcessGameLogic(INT nCmdShow) {
     case GAME_STATE_FRONTEND_IDLE: { // 0x748CB2
         ZoneScopedN("FRONTEND_IDLE");
 
+#ifdef NOTSA_PORTABLE
+        const struct { int showCmd; } wndpl{ (SDL_GetWindowFlags(PSGLOBAL(sdlWindow)) & SDL_WINDOW_MINIMIZED) ? SW_SHOWMINIMIZED : SW_SHOWNORMAL };
+#else
+#line 295 // W0a
         WINDOWPLACEMENT wndpl{ .length = sizeof(WINDOWPLACEMENT) };
         VERIFY(GetWindowPlacement(PSGLOBAL(window), &wndpl));
+#endif
+#line 297 // W0a
         if (g_FastLoaderConfig.ShouldLoadSaveGame()) {
             RsEventHandler(rsFRONTENDIDLE, nullptr); // We need to still run the frontend processing once because it has some important stuff
             if ((GetAsyncKeyState(g_FastLoaderConfig.SkipSaveGameLoadKey) & 0xF000) == 0) {
@@ -405,7 +435,11 @@ void MainLoop(INT nCmdShow) {
 
 // 0x748710
 INT WINAPI NOTSA_WinMain(HINSTANCE instance, HINSTANCE hPrevInstance, LPSTR cmdLine, INT nCmdShow) {
+#ifndef NOTSA_PORTABLE
+#line 408 // W0a
     SystemParametersInfo(SPI_SETFOREGROUNDLOCKTIMEOUT, 0u, nullptr, 2);
+#endif
+#line 409 // W0a
     if (IsAlreadyRunning()) {
         return false;
     }
@@ -434,9 +468,13 @@ INT WINAPI NOTSA_WinMain(HINSTANCE instance, HINSTANCE hPrevInstance, LPSTR cmdL
     // Dirty fix for crash in crt when trying to free cmd line args
     // Yeah we leak memory, but who cares
     // Crash was in `uninitialize_allocated_io_buffers` (`C:\Program Files (x86)\Windows Kits\10\Source\<Win 10 SDK Version>\ucrt\internal\initialization.cpp`)
+#ifndef NOTSA_PORTABLE
+#line 437 // W0a
     __argc  = 0;
     __argv  = nullptr;
     __wargv = nullptr;
+#endif
+#line 440 // W0a
 
 #ifdef NOTSA_USE_SDL3
     SDL_Window* sdlWnd = SDL_CreateWindow(
@@ -445,7 +483,13 @@ INT WINAPI NOTSA_WinMain(HINSTANCE instance, HINSTANCE hPrevInstance, LPSTR cmdL
         SDL_WINDOW_RESIZABLE  //| SDL_WINDOW_INPUT_FOCUS | SDL_WINDOW_MOUSE_FOCUS// | SDL_WINDOW_MOUSE_GRABBED | SDL_WINDOW_INPUT_FOCUS | SDL_WINDOW_MOUSE_FOCUS
     );
     PSGLOBAL(sdlWindow) = sdlWnd;
+#ifdef NOTSA_PORTABLE
+    PSGLOBAL(window) = (HWND)sdlWnd; // no Win32 window: the HWND slot carries the SDL_Window* (portable/app_win32_compat.h)
+#else
+#line 448 // W0a
     PSGLOBAL(window) = (HWND)(SDL_GetPointerProperty(SDL_GetWindowProperties(sdlWnd), SDL_PROP_WINDOW_WIN32_HWND_POINTER, NULL)); // NOTE/TODO: Hacky, but required due to RW
+#endif
+#line 449 // W0a
 #else
     PSGLOBAL(window) = Win32_InitInstance(instance);
 #endif
@@ -463,7 +507,13 @@ INT WINAPI NOTSA_WinMain(HINSTANCE instance, HINSTANCE hPrevInstance, LPSTR cmdL
 
     // 0x748847
     if (RsEventHandler(rsRWINITIALIZE, PSGLOBAL(window)) == rsEVENTERROR) {
+#ifdef NOTSA_PORTABLE
+        SDL_DestroyWindow(PSGLOBAL(sdlWindow));
+#else
+#line 466 // W0a
         DestroyWindow(PSGLOBAL(window));
+#endif
+#line 467 // W0a
         RsEventHandler(rsTERMINATE, nullptr);
         return false;
     }
@@ -488,6 +538,10 @@ INT WINAPI NOTSA_WinMain(HINSTANCE instance, HINSTANCE hPrevInstance, LPSTR cmdL
     RwRect rect{ 0, 0, RsGlobal.maximumWidth, RsGlobal.maximumHeight };
     RsEventHandler(rsCAMERASIZE, &rect);
 
+#ifdef NOTSA_PORTABLE
+    SDL_DisableScreenSaver(); // = SPI_SETSCREENSAVEACTIVE 0; the power-off / low-power timeouts and the sticky-keys accessibility flag are Windows-only and not touched
+#else
+#line 491 // W0a
     SystemParametersInfo(SPI_SETSCREENSAVEACTIVE, 0u, nullptr, 2u);
     SystemParametersInfo(SPI_SETPOWEROFFACTIVE, 0u, nullptr, 2u);
     SystemParametersInfo(SPI_SETLOWPOWERACTIVE, 0u, nullptr, 2u);
@@ -497,6 +551,8 @@ INT WINAPI NOTSA_WinMain(HINSTANCE instance, HINSTANCE hPrevInstance, LPSTR cmdL
     SystemParametersInfo(SPI_SETSTICKYKEYS, sizeof(STICKYKEYS), &pvParam1, 2u);
 
     UpdateWindow(PSGLOBAL(window));
+#endif
+#line 500 // W0a
 
 #ifdef NOTSA_USE_SDL3
     SDL_SetWindowFocusable(sdlWnd, true);
@@ -522,7 +578,11 @@ INT WINAPI NOTSA_WinMain(HINSTANCE instance, HINSTANCE hPrevInstance, LPSTR cmdL
     }
     CFileMgr::SetDir("");
 
+#ifndef NOTSA_PORTABLE
+#line 525 // W0a
     SetErrorMode(SEM_FAILCRITICALERRORS);
+#endif
+#line 526 // W0a
 
     notsa::ui::UIRenderer::CreateInstance();
 
@@ -540,6 +600,15 @@ INT WINAPI NOTSA_WinMain(HINSTANCE instance, HINSTANCE hPrevInstance, LPSTR cmdL
     AudioEngine.Shutdown();
     FreeVideoModeList();
     RsEventHandler(rsRWTERMINATE, nullptr);
+#ifdef NOTSA_PORTABLE
+    SDL_DestroyWindow(PSGLOBAL(sdlWindow));
+    RsEventHandler(rsTERMINATE, nullptr);
+    // (argv is the process's own array here, not a CRT allocation: not freed)
+    SDL_ShowCursor();
+
+    SDL_EnableScreenSaver();
+#else
+#line 543 // W0a
     DestroyWindow(PSGLOBAL(window));
     RsEventHandler(rsTERMINATE, nullptr);
     free(argv);
@@ -551,6 +620,8 @@ INT WINAPI NOTSA_WinMain(HINSTANCE instance, HINSTANCE hPrevInstance, LPSTR cmdL
     SystemParametersInfo(SPI_SETSCREENSAVEACTIVE, 1u, nullptr, 2u);
     // nullsub_0x72F3C0()
     SetErrorMode(0);
+#endif
+#line 554 // W0a
 
     return 0; // Msg.wParam
 }
@@ -586,9 +657,19 @@ INT WINAPI WinMain(HINSTANCE instance, HINSTANCE hPrevInstance, LPSTR cmdLine, I
     notsa::standalone::Fixups::InstallDiagnostics();
 
     // D7: the original's CRT runs x87 libm (VS2005); the 32-bit UCRT would otherwise route sin/cos/pow/... to its SSE2 implementations on any SSE2 CPU
+#ifndef NOTSA_PORTABLE
+#line 589 // W0a
     _set_SSE2_enable(0);
+#endif // (portable: arm64 has no x87/SSE2 libm split; bit-exact libm behaviour is stream F's)
+#line 590 // W0a
     notsa::standalone::Fixups::LogFpuState("WinMain");
+#ifdef NOTSA_PORTABLE
+    std::feclearexcept(FE_ALL_EXCEPT); // start without sticky exception flags
+#else
+#line 591 // W0a
     _clearfp(); // the CRT's _FPinit ends with fnclex: start without sticky exception flags
+#endif
+#line 592 // W0a
 
     // The hook macros are no-ops here (reversiblehooks/NoHookRegistry.h): InjectHooksMain only runs the non-hook part (script command handlers, logger, CLI)
     ReversibleHooks::RHManager::CreateInstance();

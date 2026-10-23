@@ -2,8 +2,12 @@
 
 #include <platform/win/WinPlatform.h>
 #include <platform/platform.h>
+#ifndef NOTSA_PORTABLE
+#line 5 // W0a
 #include <ddraw.h>
 #include <dsound.h>
+#endif
+#line 7 // W0a
 #include "VideoMode.h"
 #include "VideoModeSelectDialog.h"
 #include "LoadingScreen.h"
@@ -15,7 +19,13 @@
 #include "WindowedMode.hpp"
 #endif
 #include "winincl.h"
+#ifndef NOTSA_PORTABLE
+#line 18 // W0a
 #include "intrin.h"
+#else
+#include "portable/app_platform.h"
+#endif
+#line 19 // W0a
 
 //! Disable "This function was depracated"
 //#pragma warning (disable : 28159 4996)
@@ -27,6 +37,8 @@ static NOTSA_GLOBAL(PsGlobal, 0xC8CF88, (psGlobalType), {});
 #endif
 
 // 0x7455E0 - Get available videomem
+#ifndef NOTSA_PORTABLE // (portable: video memory is not queried, see psInitialize)
+#line 30 // W0a
 static HRESULT GetVideoMemInfo(LPDWORD total, LPDWORD available) {
 	LPDIRECTDRAW7 dd;
 
@@ -52,9 +64,16 @@ static BOOL CheckDirectX() {
     FreeLibrary(hD3D9DLL);
     return TRUE;
 }
+#endif // !NOTSA_PORTABLE
+#line 55 // W0a
 
 //! 0x745840 - Check if DirectSound can be loaded
 static BOOL CheckDirectSound() {
+#ifdef NOTSA_PORTABLE
+    notsa::portable::Unsupported("sound hardware probe (DirectSound); a sound device is assumed, the OpenAL backend reports it if opening the device fails"); // W-A12
+    return TRUE;
+#else
+#line 58 // W0a
     LPDIRECTSOUND ds;
 
     if (FAILED(DirectSoundCreate(NULL, &ds, NULL))) {
@@ -67,14 +86,25 @@ static BOOL CheckDirectSound() {
     ds->Release();
 
     return SUCCEEDED(hr);
+#endif
+#line 70 // W0a
 }
 
 // 0x7465B0
 static void InitialiseLanguage() {
     // TODO: Use `GetLocaleInfoEx`
+#ifdef NOTSA_PORTABLE
+    const auto langIds        = notsa::portable::GetLangIds(); // SDL preferred locale -> Win32 primary language id
+    const auto sysDefaultLCID = langIds.sys;
+    const auto usrDefaultLCID = langIds.usr;
+    const auto kbLayoutLCID   = langIds.kb;
+#else
+#line 75 // W0a
     const auto sysDefaultLCID = PRIMARYLANGID(GetSystemDefaultLCID());
 	const auto usrDefaultLCID = PRIMARYLANGID(GetUserDefaultLCID());
     const auto kbLayoutLCID   = PRIMARYLANGID(LOWORD(GetKeyboardLayout(0)));
+#endif
+#line 78 // W0a
 
 	FrontEndMenuManager.m_nTitleLanguage = sysDefaultLCID;
 
@@ -102,7 +132,11 @@ static void InitialiseLanguage() {
 
 // 0x747420
 RwBool psInitialize() {
+#ifndef NOTSA_PORTABLE // (portable: high-DPI is a window property in SDL3)
+#line 105 // W0a
     SetProcessDPIAware();
+#endif
+#line 106 // W0a
 #ifdef NOTSA_USE_SDL3
     auto ps = new psGlobalType;
 #else
@@ -125,15 +159,23 @@ RwBool psInitialize() {
 
     gGameState = GAME_STATE_INITIAL;
 
+#ifndef NOTSA_PORTABLE // (portable: no cpuid on arm64, gCpuVendor keeps its placeholder; W-A10)
+#line 128 // W0a
     int regs[4]{};
     __cpuid(regs, 0); // EAX=0: Highest Function Parameter and Manufacturer ID
     std::memcpy(gCpuVendor, &regs[1], 4);
     std::memcpy(gCpuVendor + 4, &regs[3], 4);
     std::memcpy(gCpuVendor + 8, &regs[2], 4);
     gCpuVendor[12] = '\0';
+#endif
+#line 134 // W0a
     NOTSA_LOG_DEBUG("CPU vendor: {}", gCpuVendor);
 
     // Figure out Windows version (TODO: Use `IsWindowsVersion*` from VersionHelpers.h instead)
+#ifdef NOTSA_PORTABLE
+    s_OSStatus.OSVer = WinVer::WIN_VISTA_OR_LATER; // W-A10: there is no Windows version; "modern" is the only value that disables the Win9x/NT special cases
+#else
+#line 137 // W0a
     s_OSStatus.OSVer = [&] {
         OSVERSIONINFO verInfo{ sizeof(OSVERSIONINFO) };	
 	    GetVersionEx(&verInfo);
@@ -152,7 +194,11 @@ RwBool psInitialize() {
         }
         NOTSA_UNREACHABLE(); // If this is reached the game wouldn't run anyways, so might as well just crash it.
     }();
+#endif
+#line 155 // W0a
 
+#ifndef NOTSA_PORTABLE // (portable: OSVer is never WIN_95 and there is no DirectX to check for)
+#line 156 // W0a
     if (s_OSStatus.OSVer == WinVer::WIN_95) {
         MessageBoxW(
             NULL,
@@ -174,20 +220,41 @@ RwBool psInitialize() {
         );
         return FALSE;
     }
+#endif
+#line 177 // W0a
 
     // CheckDirectX() Checks for Dx9 only, so use that
     s_OSStatus.DxVer = 0x900;
 
     if (!CheckDirectSound()) {
+#ifdef NOTSA_PORTABLE
+        SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_WARNING, "Grand Theft Auto San Andreas", "Grand Theft Auto San Andreas requires a sound card", nullptr); // (the GXT strings are UTF-16)
+#else
+#line 182 // W0a
         MessageBoxW(
             NULL,
             (LPCWSTR)TheText.Get("WIN_NSC"), // Grand Theft Auto San Andreas requires a sound card (I guess?)
             (LPCWSTR)TheText.Get("WIN_TTL"), // Grand Theft Auto San Andreas
             MB_ICONEXCLAMATION
         );
+#endif
+#line 188 // W0a
         return FALSE;
     }
 
+#ifdef NOTSA_PORTABLE
+    {
+        size_t total{}, avail{};
+        notsa::portable::QueryPhysMemory(total, avail);
+        s_OSStatus.RAM.TotalPhys    = total;
+        s_OSStatus.RAM.AvailPhys    = avail;
+        s_OSStatus.RAM.TotalVirtual = total; // W-A9: no separate virtual figure (the 32-bit address space limit of the original does not apply)
+        s_OSStatus.RAM.AvailVirtual = avail;
+    }
+    notsa::portable::Unsupported("video memory query (DirectDraw GetAvailableVidMem; unified memory on Apple Silicon)"); // W-A9
+    s_OSStatus.VRAM.Total = s_OSStatus.VRAM.Avail = 0;
+#else
+#line 191 // W0a
     MEMORYSTATUS memstat{ sizeof(MEMORYSTATUS) };
     GlobalMemoryStatus(&memstat); // TODO: `GlobalMemoryStatusEx`
     s_OSStatus.RAM.TotalPhys    = memstat.dwTotalPhys;
@@ -197,6 +264,8 @@ RwBool psInitialize() {
 
     VERIFY(SUCCEEDED(GetVideoMemInfo(&s_OSStatus.VRAM.Total, &s_OSStatus.VRAM.Avail)));
     VERIFY(SUCCEEDED(CoInitialize(NULL)));
+#endif
+#line 200 // W0a
 
     // Load setting only after everything was checked - TODO: Move this out from here, it's not platform specific
     FrontEndMenuManager.LoadSettings();
@@ -213,17 +282,35 @@ void psTerminate() {
 
 // 0x7451B0
 void psWindowSetText(const char* str) {
+#ifdef NOTSA_PORTABLE
+    SDL_SetWindowTitle(PSGLOBAL(sdlWindow), str);
+#else
+#line 216 // W0a
     SetWindowTextA(PSGLOBAL(window), str);
+#endif
+#line 217 // W0a
 }
 
 // 0x7451D0
 void psErrorMessage(const char* str) {
+#ifdef NOTSA_PORTABLE
+    SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR, RsGlobal.appName, str, PSGLOBAL(sdlWindow));
+#else
+#line 221 // W0a
     MessageBoxA(nullptr, str, RsGlobal.appName, MB_ICONERROR | MB_TASKMODAL | MB_TOPMOST);
+#endif
+#line 222 // W0a
 }
 
 // 0x7451F0
 void psWarningMessage(const char* str) {
+#ifdef NOTSA_PORTABLE
+    SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_WARNING, RsGlobal.appName, str, PSGLOBAL(sdlWindow));
+#else
+#line 226 // W0a
     MessageBoxA(nullptr, str, RsGlobal.appName, MB_ICONWARNING | MB_TASKMODAL | MB_TOPMOST);
+#endif
+#line 227 // W0a
 }
 
 // 0x745210
@@ -249,6 +336,11 @@ uint32 psTimer() {
 
 // 0x7452B0
 RwImage* psGrabScreen(RwCamera* camera) {
+#ifdef NOTSA_PORTABLE
+    notsa::portable::Unsupported("psGrabScreen (D3D9 front buffer read-back; no GL3 read-back yet)"); // W-A11
+    return nullptr;
+#else
+#line 252 // W0a
     auto* device = static_cast<IDirect3DDevice9*>(RwD3D9GetCurrentD3DDevice());
     assert(device);
 
@@ -319,18 +411,30 @@ RwImage* psGrabScreen(RwCamera* camera) {
     }
 
     return image;
+#endif
+#line 322 // W0a
 }
 
 // 0x7453E0
 void psMouseSetVisibility(bool visible) {
+#ifdef NOTSA_PORTABLE
+    if (visible) { SDL_ShowCursor(); } else { SDL_HideCursor(); }
+#else
+#line 326 // W0a
     ::ShowCursor(visible);
+#endif
+#line 327 // W0a
 }
 
 // 0x7453F0
 void psMouseSetPos(RwV2d* pos) {
+#ifndef NOTSA_PORTABLE
+#line 331 // W0a
     POINT point = { .x = LONG(pos->x), .y = LONG(pos->y) };
     ::ClientToScreen(PSGLOBAL(window), &point);
     ::SetCursorPos(point.x, point.y);
+#endif
+#line 334 // W0a
 #ifdef NOTSA_USE_SDL3
     // The exe's SetCursorPos produces a WM_MOUSEMOVE (__MainWndProc WM_MOUSEMOVE 0x748323: m_nMousePosWinX/Y = lParam), which is how CentreMousePointer centred the menu cursor.
     // The SDL mouse is in relative mode (UIRenderer.cpp, PLAYTEST-1 U3): it ignores the Windows cursor and queues nothing for the warp, so do both parts by hand.
@@ -396,6 +500,10 @@ RsEventStatus psDebugMessageHandler(RsEvent event, void* param) {
 
 // 0x7458B0
 bool psAlwaysOnTop(bool alwaysOnTop) {
+#ifdef NOTSA_PORTABLE
+    return SDL_SetWindowAlwaysOnTop(PSGLOBAL(sdlWindow), alwaysOnTop);
+#else
+#line 399 // W0a
     const auto hwnd = PSGLOBAL(window);
 
     RECT winRect;
@@ -408,10 +516,16 @@ bool psAlwaysOnTop(bool alwaysOnTop) {
         winRect.right - winRect.left, winRect.bottom - winRect.top,
         NULL
     );
+#endif
+#line 411 // W0a
 }
 
 // NOTSA
 static auto GetNativeResolutionOfCurrentSubsystem() {
+#ifdef NOTSA_PORTABLE
+    return notsa::portable::GetNativeResolution(); // SDL desktop mode of the primary display
+#else
+#line 415 // W0a
 #ifdef USE_D3D9
     const auto d3d = Direct3DCreate9(D3D_SDK_VERSION);
 #else
@@ -426,6 +540,8 @@ static auto GetNativeResolutionOfCurrentSubsystem() {
     NOTSA_LOG_DEBUG("Got native resolution from RW subsystem ({}): {} x {}", RwEngineGetCurrentSubSystem(), nativeRes.Width, nativeRes.Height);
 
     return std::make_pair(nativeRes.Width, nativeRes.Height);
+#endif
+#line 429 // W0a
 }
 
 static BOOL CheckDefaultVideoModeSupported() {
@@ -491,12 +607,22 @@ static BOOL CheckDefaultVideoModeSupported() {
         }
     }
 #endif
+#ifdef NOTSA_PORTABLE
+    SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR, "GTA: San Andreas", "Cannot find 800x600x32 video mode", PSGLOBAL(sdlWindow));
+#else
+#line 494 // W0a
     MessageBox(NULL, "Cannot find 800x600x32 video mode", "GTA: San Andreas", IDOK);
+#endif
+#line 495 // W0a
     return FALSE;
 }
 
 // 0x7460A0
 static RwUInt32 GetBestRefreshRate(RwUInt32 width, RwUInt32 height, RwUInt32 depth) {
+#ifdef NOTSA_PORTABLE
+    return notsa::portable::GetBestRefreshRate(width, height); // SDL fullscreen modes of the primary display (depth is not part of an SDL mode)
+#else
+#line 500 // W0a
 #ifdef USE_D3D9
     const auto d3d = Direct3DCreate9(D3D_SDK_VERSION);
 #else
@@ -541,6 +667,8 @@ static RwUInt32 GetBestRefreshRate(RwUInt32 width, RwUInt32 height, RwUInt32 dep
     }
 
     return refreshRate;
+#endif
+#line 544 // W0a
 }
 
 // 0x746190

@@ -6055,8 +6055,8 @@ void CAutomobile::BlowUpCarsInPath() {
         return;
     }
 
-    if (autoFlags.bTankExplodesCars) {
-        return;
+    if (!autoFlags.bTankExplodesCars) {
+        return; // 0x6AF145 `test [this+0x868], 0x20 / je` leaves when the bit is CLEAR (the ctor sets it for every vehicle)
     }
 
     for (auto&& entity : GetCollidingEntities()) {

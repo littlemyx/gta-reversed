@@ -1166,19 +1166,21 @@ void CEventHandler::ComputeDangerResponse(CEventDanger* e, CTask* tactive, CTask
 
 // 0x4B9470
 void CEventHandler::ComputeDeadPedResponse(CEventDeadPed* e, CTask* tactive, CTask* tsimplest) {
+    // Every `return m_EventResponseTask` is an exit of the exe that does not write the field (jumps to the epilogue 0x4B96AF)
     m_EventResponseTask = [&]() -> CTask* {
         if (!e->GetDeadPed()) {
-            return nullptr;
+            return m_EventResponseTask; // 0x4B9493
         }
         if (m_Ped->IsPlayer()) {
-            if ((m_Ped->GetPosition() - e->GetDeadPed()->GetPosition()).SquaredMagnitude2D() >= sq(0.75f)) {
-                return nullptr;
+            // 0x4B94E4 fcomp / test ah,5 / jp: continues only when the distance is strictly below 0.75^2 (a NaN distance leaves, `>=` would let it through)
+            if (!((m_Ped->GetPosition() - e->GetDeadPed()->GetPosition()).SquaredMagnitude2D() < sq(0.75f))) {
+                return m_EventResponseTask;
             }
             if (m_Ped->GetIntelligence()->GetTaskFighting()) {
-                return nullptr;
+                return m_EventResponseTask;
             }
             if (g_ikChainMan.IsLooking(m_Ped)) {
-                return nullptr;
+                return m_EventResponseTask;
             }
             const auto c = &TheCamera.GetActiveCam();
             switch (c->m_nMode) {
@@ -1189,10 +1191,10 @@ void CEventHandler::ComputeDeadPedResponse(CEventDeadPed* e, CTask* tactive, CTa
             case MODE_M16_1STPERSON:
             case MODE_1STPERSON:
             case MODE_HELICANNON_1STPERSON:
-                return nullptr;
+                return m_EventResponseTask;
             }
             if (c->GetWeaponFirstPersonOn()) {
-                return nullptr;
+                return m_EventResponseTask;
             }
             g_ikChainMan.LookAt(
                 "CompDeadPedResp",
@@ -1207,17 +1209,19 @@ void CEventHandler::ComputeDeadPedResponse(CEventDeadPed* e, CTask* tactive, CTa
                 3,
                 false
             );
-            return nullptr;
+            return m_EventResponseTask; // 0x4B95B3: the exe returns right after LookAt, without touching the response task
         }
         switch (e->m_TaskId) {
         case TASK_COMPLEX_SMART_FLEE_ENTITY:
-            return new CTaskComplexSmartFleeEntity{e->GetDeadPed(), true, 100'000.f};
+            return new CTaskComplexSmartFleeEntity{e->GetDeadPed(), true, fSafeDistance}; // 0x4B96A3: [0xC18CEC] (60.0f), not 100000
         case TASK_COMPLEX_INVESTIGATE_DEAD_PED:
             return new CTaskComplexInvestigateDeadPed{e->GetDeadPed()};
         case TASK_SIMPLE_DUCK_FOREVER:
             return new CTaskSimpleDuck{ DUCK_STANDALONE, 57599u, -1 };
-        default:
+        case TASK_NONE: // 0xC8, 0x4B9622: the only case that stores nullptr
             return nullptr;
+        default:
+            return m_EventResponseTask; // 0x4B95E9 / 0x4B9666
         }
     }();
 }

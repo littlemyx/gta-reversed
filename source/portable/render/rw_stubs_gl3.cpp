@@ -54,8 +54,6 @@ void RxD3D9AllInOneSetReinstanceCallBack(RxPipelineNode*, RxD3D9AllInOneReinstan
 void RxD3D9AllInOneSetRenderCallBack(RxPipelineNode*, RxD3D9AllInOneRenderCallBack) { R2_STUB("R-8/R-9"); }
 
 // ---- RwD3D9* fixed-function state API: only renderstate.cpp still calls these two (guarded in R-3b); the rest of the FF API has no kept caller ----
-void   RwD3D9SetRenderState(RwUInt32, RwUInt32) { R2_STUB("R-8/R-9"); }
-void   RwD3D9SetTextureStageState(RwUInt32, RwUInt32, RwUInt32) { R2_STUB("R-8/R-9"); }
 
 // ---- D3DResourceSystem (inert): pools of IDirect3D* objects of the exe's RenderWare, nothing to pool under GL3 ----------------
 void D3DResourceSystem::InjectHooks() {}

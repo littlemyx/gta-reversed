@@ -37,10 +37,13 @@ PY
 )
 [ -n "$BASE" ] || { echo "no compile flags (build/PortableMac/compile_commands.json missing?)"; exit 1; }
 INC="-I$S/fakerw -I$S -I$S/portable/winshim -I$S/game_sa -I$S/game_sa/RenderWare -I$S/game_sa/RenderWare/rw -I${LIBRW_SRC:-$REPO/vendor/librw} -isystem $SDL3/include"
-FILES=("$REPO/tests/portable/gl_smoke.cpp" "$S/standalone/rw/engine.cpp" "$S/standalone/rw/rwglobals.cpp" "$S/portable/render/engine_gl3.cpp" "$S/portable/render/platform_gl3.cpp")
+FILES=("$REPO/tests/portable/gl_smoke.cpp" "$S/standalone/rw/engine.cpp" "$S/standalone/rw/rwglobals.cpp" "$S/portable/render/engine_gl3.cpp" "$S/portable/render/platform_gl3.cpp"
+       "$S/standalone/rw/camera.cpp" "$S/standalone/rw/raster.cpp" "$S/standalone/rw/renderstate.cpp" "$S/portable/render/camera_gl3.cpp" "$S/portable/render/raster_gl3.cpp")
 OBJS=()
 for f in "${FILES[@]}"; do
   o="$OUT/$(basename "$f" .cpp).o"; OBJS+=("$o")
+  # background-free incremental build: recompile only when the source (or one of the portable headers) is newer
+  if [ -f "$o" ] && [ -z "$(find "$f" "$S/standalone/rw" "$S/portable/render" "$S/fakerw" "${LIBRW_SRC:-$REPO/vendor/librw}/src" -newer "$o" \( -name '*.cpp' -o -name '*.h' -o -name '*.inc' \) -print -quit)" ]; then continue; fi
   eval "$LOW $BASE $INC -w -g -c '$f' -o '$o'" >"$o.log" 2>&1 || { head -40 "$o.log"; echo "COMPILE FAILED: $f"; exit 1; }
 done
 eval "$LOW $BASE -o '$OUT/gl_smoke' ${OBJS[*]} '$LIBRW' -L$SDL3/lib -lSDL3 -Wl,-rpath,$SDL3/lib -framework OpenGL -framework Cocoa -framework IOKit -L$LLVM/lib/c++ -Wl,-rpath,$LLVM/lib/c++" >"$OUT/link.log" 2>&1 \

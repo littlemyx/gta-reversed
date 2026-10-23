@@ -22,8 +22,13 @@
 #ifdef NOTSA_RW_LIBRW
 #include "fakerw.h"
 
+#ifndef NOTSA_PORTABLE
 // librw's D3D9 device internals (d3ddevice, d3d9Globals, D3dRaster)
 #include <src/d3d/rwd3dimpl.h>
+#else
+#include "portable/render/raster_gl3.h"   // Gl3Raster (librw gl3) + the GL3 parts in portable/render/raster_gl3.cpp (R-3b)
+#include <unordered_map>
+#endif
 
 #include "rwpixel.h"
 
@@ -40,12 +45,16 @@ static_assert(rwRASTERPIXELLOCKEDREAD == rw::Raster::PRIVATELOCK_READ && rwRASTE
               rwRASTERPALETTELOCKEDREAD == rw::Raster::PRIVATELOCK_READ_PALETTE && rwRASTERPALETTELOCKEDWRITE == rw::Raster::PRIVATELOCK_WRITE_PALETTE);
 
 namespace {
+#ifndef NOTSA_PORTABLE
 using rw::d3d::D3dRaster;
+#endif
 
 constexpr int kPixelLockMask   = rw::Raster::PRIVATELOCK_READ | rw::Raster::PRIVATELOCK_WRITE;
 constexpr int kPaletteLockMask = rw::Raster::PRIVATELOCK_READ_PALETTE | rw::Raster::PRIVATELOCK_WRITE_PALETTE;
 
+#ifndef NOTSA_PORTABLE
 inline D3dRaster* Ext(RwRaster* r) { return GETD3DRASTEREXT(r); }
+#endif
 inline bool IsSub(const RwRaster* r) { return r->parent && r->parent != r; }
 inline bool IsPaletted(const RwRaster* r) { return (r->format & (rwRASTERFORMATPAL8 | rwRASTERFORMATPAL4)) != 0; }
 
@@ -64,6 +73,7 @@ RwRaster* CreateRaster(RwInt32 width, RwInt32 height, RwInt32 depth, RwInt32 fla
 // Real (parent) raster behind r; sub rasters share the parent's texture.
 inline RwRaster* Root(RwRaster* r) { return IsSub(r) ? r->parent : r; }
 
+#ifndef NOTSA_PORTABLE
 bool HasLockableStorage(RwRaster* r) {
     RwRaster* root = Root(r);
     switch (root->type & rwRASTERTYPEMASK) {
@@ -76,7 +86,25 @@ bool HasLockableStorage(RwRaster* r) {
     }
     return false; // z buffers are not lockable
 }
+#else
+// gl3: a texture object (NORMAL / TEXTURE / CAMERATEXTURE), or the window's back buffer (CAMERA, needs the started device)
+bool HasLockableStorage(RwRaster* r) {
+    RwRaster* root = Root(r);
+    switch (root->type & rwRASTERTYPEMASK) {
+    case rwRASTERTYPENORMAL:
+    case rwRASTERTYPETEXTURE:
+    case rwRASTERTYPECAMERATEXTURE:
+        return GETGL3RASTEREXT(root)->texid != 0;
+    case rwRASTERTYPECAMERA:
+        return NotsaGl3DeviceLive();
+    }
+    return false;
+}
+// RW's RwRasterUnlock has no level argument; gl3's rasterUnlock needs the locked level (upload target)
+std::unordered_map<const RwRaster*, int> s_LockedLevel;
+#endif
 
+#ifndef NOTSA_PORTABLE
 // Read lock of a render target texture. librw's rasterLock does the same (copy the render target into a system memory surface and lock that) but
 // never releases the IDirect3DSurface9 it gets from GetSurfaceLevel, so the texture could not be destroyed afterwards ("texture wasn't destroyed").
 // Fills the same raster fields (pixels / stride / width / height / lockedSurf) so librw's rasterUnlock undoes it.
@@ -212,6 +240,12 @@ RwRaster* DrawQuad(RwRaster* raster, float x, float y, float w, float h, bool fi
     rw::SetRenderState(rw::DESTBLEND, savDst);
     return raster;
 }
+#else
+// gl3: DeviceClear / DrawQuad are NotsaGl3* in portable/render/raster_gl3.cpp (framebuffer binding, scissor, Im2D on gl3 vertices); a camera texture is read
+// back by librw's own rasterLock (glGetTexImage), no system-memory copy needed
+inline bool DeviceClear(RwRaster* ctx, const RwRect* rect, uint32_t argb) { return NotsaGl3DeviceClear(ctx, rect, argb); }
+inline RwRaster* DrawQuad(RwRaster* raster, float x, float y, float w, float h, bool filtered) { return NotsaGl3DrawQuad(raster, x, y, w, h, filtered); }
+#endif
 } // namespace
 
 // D (+ RW AUTOMIPMAP rule): every combination the game uses is the plain librw path.
@@ -274,14 +308,28 @@ RwUInt8* RwRasterLock(RwRaster* raster, RwUInt8 level, RwInt32 lockMode) {
     if (IsSub(raster) && level != 0) {
         return nullptr;
     }
+#ifndef NOTSA_PORTABLE
     uint8_t* p = rootType == rwRASTERTYPECAMERATEXTURE ? LockCameraTexture(root, level, lockMode) : root->lock(level, lockMode);
+#else
+    uint8_t* p = root->lock(level, lockMode);
+    if (p) {
+        s_LockedLevel[root] = level;
+        if (isCam) {
+            NotsaGl3FlipLockedRows(root); // GL reads bottom-up, RW / D3D hand out the top row first
+        }
+    }
+#endif
     if (!p) {
         return nullptr;
     }
     if (!IsSub(raster)) {
         return p;
     }
+#ifndef NOTSA_PORTABLE
     const D3dRaster* nr = Ext(root);
+#else
+    const Gl3Raster* nr = GETGL3RASTEREXT(root);
+#endif
     raster->pixels = p + raster->offsetY * root->stride + raster->offsetX * (int)nr->bpp;
     raster->stride = root->stride;
     raster->privateFlags |= root->privateFlags & kPixelLockMask;
@@ -296,7 +344,13 @@ RwRaster* RwRasterUnlock(RwRaster* raster) {
     }
     RwRaster* root = Root(raster);
     if (root->privateFlags & kPixelLockMask) {
+#ifndef NOTSA_PORTABLE
         root->unlock(0);
+#else
+        const auto it = s_LockedLevel.find(root);
+        root->unlock(it != s_LockedLevel.end() ? it->second : 0);
+        s_LockedLevel.erase(root);
+#endif
     }
     if (root != raster) {
         raster->pixels = raster->originalPixels;
@@ -308,6 +362,12 @@ RwRaster* RwRasterUnlock(RwRaster* raster) {
 
 // W (declared in rwextra.h): the palette of a P8 raster is D3dRaster::palette, 4 bytes (R,G,B,A) per entry, 256 entries; NULL for non
 // paletted rasters or when already locked.
+#ifdef NOTSA_PORTABLE
+// gl3 has no paletted rasters (rasterCreate refuses PAL4 / PAL8; imageFindRasterFormat expands palettized images to true colour): nothing to lock
+RwUInt8* RwRasterLockPalette(RwRaster* /*raster*/, RwInt32 /*lockMode*/) {
+    return nullptr;
+}
+#else
 RwUInt8* RwRasterLockPalette(RwRaster* raster, RwInt32 lockMode) {
     if (!raster || !IsPaletted(raster) || (raster->privateFlags & kPaletteLockMask)) {
         return nullptr;
@@ -327,6 +387,7 @@ RwUInt8* RwRasterLockPalette(RwRaster* raster, RwInt32 lockMode) {
     }
     return pal;
 }
+#endif
 
 // W: only clears the lock bits; D3D9 P8 textures take their palette from the device, which nothing in the shim sets (P8 is unsupported by
 // current devices and the shim's FindRasterFormat/SetFromImage expand palettized images to 32 bit, see isP8supported).
@@ -357,7 +418,11 @@ RwInt32 RwRasterGetNumLevels(RwRaster* raster) {
     case rwRASTERTYPENORMAL:
     case rwRASTERTYPETEXTURE:
     case rwRASTERTYPECAMERATEXTURE:
+#ifndef NOTSA_PORTABLE
         return Ext(root)->texture ? root->getNumLevels() : 0;
+#else
+        return GETGL3RASTEREXT(root)->texid ? root->getNumLevels() : 0;
+#endif
     }
     return 1;
 }
@@ -382,9 +447,16 @@ RwRaster* RwRasterSubRaster(RwRaster* subRaster, RwRaster* raster, RwRect* rect)
     subRaster->originalStride = raster->stride;
     subRaster->originalPixels = nullptr;
     subRaster->pixels = nullptr;
+#ifndef NOTSA_PORTABLE
     D3dRaster* s = Ext(subRaster);
     const D3dRaster* p = Ext(Root(raster));
     s->format = p->format; s->bpp = p->bpp; s->hasAlpha = p->hasAlpha; s->customFormat = p->customFormat; s->autogenMipmap = false;
+#else
+    // texid stays 0: destroying the sub raster must not delete the parent's texture (R3b-2: a sub raster is not usable as a texture on gl3 yet)
+    Gl3Raster* s = GETGL3RASTEREXT(subRaster);
+    const Gl3Raster* p = GETGL3RASTEREXT(Root(raster));
+    s->internalFormat = p->internalFormat; s->type = p->type; s->format = p->format; s->bpp = p->bpp; s->hasAlpha = p->hasAlpha; s->autogenMipmap = false;
+#endif
     return subRaster;
 }
 
@@ -403,7 +475,11 @@ RwRaster* RwRasterGetCurrentContext(void) {
 // a camera texture, the source raster the camera's frame buffer: PostEffects' front-buffer copy) and dereferences the context unconditionally.
 RwRaster* RwRasterRenderFast(RwRaster* raster, RwInt32 x, RwInt32 y) {
     RwRaster* ctx = rw::Raster::getCurrentContext();
+#ifndef NOTSA_PORTABLE
     if (!raster || !ctx || !rw::d3d::d3ddevice || !Ext(Root(ctx))->texture) {
+#else
+    if (!raster || !ctx || !NotsaGl3DeviceLive() || !GETGL3RASTEREXT(Root(ctx))->texid) {
+#endif
         return nullptr;
     }
     return raster->renderFast(x, y) ? raster : nullptr;
@@ -443,7 +519,11 @@ RwBool RwRasterClearRect(RwRect* rect, RwInt32 pixelValue) {
         return DeviceClear(ctx, rect, (uint32_t)pixelValue);
     case rwRASTERTYPENORMAL:
     case rwRASTERTYPETEXTURE: {
+#ifndef NOTSA_PORTABLE
         const int bpp = Ext(Root(ctx))->bpp;
+#else
+        const int bpp = GETGL3RASTEREXT(Root(ctx))->bpp;
+#endif
         if (bpp != 1 && bpp != 2 && bpp != 4) {
             return FALSE;
         }
@@ -474,7 +554,11 @@ RwBool RwRasterClearRect(RwRect* rect, RwInt32 pixelValue) {
 
 // A: `dev` is the window handle in RW and unused by librw (the swap chain belongs to the device); flags = rwRASTERFLIPWAITVSYNC or 0.
 RwRaster* RwRasterShowRaster(RwRaster* raster, void* /*dev*/, RwUInt32 flags) {
+#ifndef NOTSA_PORTABLE
     if (!raster || !rw::d3d::d3ddevice) {
+#else
+    if (!raster || !NotsaGl3DeviceLive()) {
+#endif
         return nullptr;
     }
     raster->show(flags);
@@ -484,6 +568,12 @@ RwRaster* RwRasterShowRaster(RwRaster* raster, void* /*dev*/, RwUInt32 flags) {
 // W (full RW behaviour; see the header comment): a raster of type NORMAL / TEXTURE with a texture, the same size as the image. The image is
 // converted to the raster format: 8888, 888 (X8R8G8B8), 1555, 555, 565, 4444, LUM8; PAL8 / PAL4 rasters take an image of depth 8 / 4 (indices +
 // palette); palettized images go through their palette when the raster is true colour. Returns NULL for anything else.
+#ifdef NOTSA_PORTABLE
+// gl3 (portable/render/raster_gl3.cpp): true colour rasters 8888 / 888 / 1555 in gl3's byte order; no palettes, no custom formats
+RwRaster* RwRasterSetFromImage(RwRaster* raster, RwImage* image) {
+    return NotsaGl3RasterSetFromImage(raster, image);
+}
+#else
 RwRaster* RwRasterSetFromImage(RwRaster* raster, RwImage* image) {
     if (!raster || !image || !image->pixels || IsSub(raster)) {
         return nullptr;
@@ -537,6 +627,7 @@ RwRaster* RwRasterSetFromImage(RwRaster* raster, RwImage* image) {
     RwRasterUnlock(raster);
     return raster;
 }
+#endif
 
 // A (RwRGBAToPixel, exe 0x803740 -> D3D9 0x7FEE20): the texel word of a colour in a raster format (what JPegCompress writes into a locked 8888 / 888
 // raster). Only `rasterFormat & 0xF00` counts (PAL / mipmap bits are ignored); 8888 keeps the alpha, 888 is X8R8G8B8 with 0xFF in the unused byte,

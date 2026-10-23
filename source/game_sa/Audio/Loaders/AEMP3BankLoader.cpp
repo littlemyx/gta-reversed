@@ -61,7 +61,8 @@ float CAEMP3BankLoader::GetSoundHeadroom(eSoundID soundId, eSoundBankSlot bankSl
 
 // 0x4E0220
 bool CAEMP3BankLoader::IsSoundBankLoaded(eSoundBank bankId, eSoundBankSlot bankSlot) {
-    return m_IsInitialised && GetBankSlot(bankSlot).Bank == bankId;
+    // 0x4E0220: the bank id is zero-extended, the id in the slot sign-extended: SND_BANK_UNK (-1) is never "loaded"
+    return m_IsInitialised && (int32)GetBankSlot(bankSlot).Bank == (int32)(uint16)bankId;
 }
 
 // 0x4E0250

@@ -1,4 +1,4 @@
-174 function rows, 325 TUs
+174 function rows, 328 TUs
 SKIP CTaskInteriorLieInBed::FinishAnimCB 0x675FC0: every case faults in the port only at an unresolved callee / assert while the exe does not (fixture limit)
 SKIP CTaskInteriorUseInfo::MakeAbortable 0x675B30: ORACLE-C-TASKS: every case faults identically in the port and the exe on the class-C fixture (this task + ped with real vftables, other objects garbage): needs a per-class fixture (valid pointed-to objects)
 TEMPLATE CTaskComplexSeekEntityAnyMeansXYOffset::Clone 0x696030

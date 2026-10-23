@@ -259,7 +259,7 @@ PRE = {
     'CTaskComplexFollowPedFootsteps::Constructor': 'w3t::g_tzero = true;',
     'CTaskComplexTrackEntity::CalcMoveRatio': 'volatile uint32_t* s_ = reinterpret_cast<volatile uint32_t*>(0xC18CF4); s_[0] = 0x3FA00000; s_[1] = 0x3E800000; s_[2] = 0x41C80000; s_[3] = 0x3F800000; s_[4] = 0x3D23D70B; s_[5] = 0x1F;',   # lazily initialised function-local statics of the exe (1.25, 0.25, 25.0, 1.0, 0.04 + guard bits)
 }
-TASK_CALLEE_TUS = ['game_sa/PedGeometryAnalyser.cpp', 'game_sa/NodeRoute.cpp', 'game_sa/PatrolRoute.cpp', 'game_sa/PathFind.cpp', 'game_sa/EntityScanner.cpp', 'game_sa/PedScanner.cpp', 'game_sa/FireManager.cpp', 'game_sa/Fire.cpp', 'game_sa/CarEnterExit.cpp', 'game_sa/PedGroup.cpp', 'game_sa/Clock.cpp', 'game_sa/Entity/Ped/PlayerPed.cpp', 'game_sa/Entity/Ped/CopPed.cpp', 'game_sa/Stats.cpp', 'game_sa/WeaponInfo.cpp', 'game_sa/Weapon.cpp', 'game_sa/Wanted.cpp', 'game_sa/Pad.cpp', 'game_sa/PedIntelligence.cpp', 'game_sa/Audio/Entities/AEPedSpeechAudioEntity.cpp']
+TASK_CALLEE_TUS = ['game_sa/PedGeometryAnalyser.cpp', 'game_sa/NodeRoute.cpp', 'game_sa/PatrolRoute.cpp', 'game_sa/PathFind.cpp', 'game_sa/EntityScanner.cpp', 'game_sa/PedScanner.cpp', 'game_sa/FireManager.cpp', 'game_sa/Fire.cpp', 'game_sa/CarEnterExit.cpp', 'game_sa/PedGroup.cpp', 'game_sa/PedGroupIntelligence.cpp', 'game_sa/PedGroups.cpp', 'game_sa/PedGroupMembership.cpp', 'game_sa/Clock.cpp', 'game_sa/Entity/Ped/PlayerPed.cpp', 'game_sa/Entity/Ped/CopPed.cpp', 'game_sa/Stats.cpp', 'game_sa/WeaponInfo.cpp', 'game_sa/Weapon.cpp', 'game_sa/Wanted.cpp', 'game_sa/Pad.cpp', 'game_sa/PedIntelligence.cpp', 'game_sa/Audio/Entities/AEPedSpeechAudioEntity.cpp']
 
 _VT = {}
 def exe_vt(repo, cls):

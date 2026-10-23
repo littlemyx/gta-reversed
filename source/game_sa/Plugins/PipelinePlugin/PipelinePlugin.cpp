@@ -22,7 +22,7 @@ typedef struct tPipelinePlugin {
     RwUInt32 pipelineId;
 } PipelinePluginInstance;
 
-VALIDATE_SIZE(tPipelinePlugin, 0x4);
+VALIDATE_SIZE_FILE(tPipelinePlugin, 0x4);
 
 // internal
 // 0x72FB50

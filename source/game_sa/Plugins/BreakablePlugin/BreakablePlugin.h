@@ -24,7 +24,7 @@ struct BreakInfoColor {
     float green;
     float blue;
 };
-VALIDATE_SIZE(BreakInfoColor, 0xC);
+VALIDATE_SIZE_FILE(BreakInfoColor, 0xC);
 
 // RW PLUGIN
 struct BreakInfo_t {
@@ -44,7 +44,7 @@ struct BreakInfo_t {
     char*                        m_pMaskNames;
     struct BreakInfoColor*       m_pMaterialProperties;
 };
-VALIDATE_SIZE(BreakInfo_t, 0x34);
+VALIDATE_SIZE_FILE(BreakInfo_t, 0x34);
 
 struct BreakablePlugin {
     union {
@@ -56,7 +56,7 @@ struct BreakablePlugin {
 
     auto GetTextures() { return std::span { m_pBreakableInfo->m_pTextures, m_pBreakableInfo->m_usNumMaterials }; }
 };
-VALIDATE_SIZE(BreakablePlugin, 0x4);
+VALIDATE_SIZE_FILE(BreakablePlugin, 0x4);
 
 struct BreakablePluginData {
     BreakInfo_t m_Info;

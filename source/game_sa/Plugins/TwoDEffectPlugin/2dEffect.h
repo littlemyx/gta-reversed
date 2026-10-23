@@ -149,7 +149,7 @@ struct CRoadsignAttrFlags {
     uint16 m_nSymbolsPerLine : 2;
     uint16 m_nTextColor : 2;
 };
-VALIDATE_SIZE(CRoadsignAttrFlags, 0x2);
+VALIDATE_SIZE_FILE(CRoadsignAttrFlags, 0x2);
 
 struct tEffectRoadsign {
     static inline constexpr e2dEffectType Type = EFFECT_ROADSIGN;

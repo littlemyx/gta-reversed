@@ -67,7 +67,9 @@ void CReplay::InjectHooks() {
 // 0x45E220
 void CReplay::Init() {
     Mode = MODE_RECORD;
-    Playback = {};
+    Playback.m_nOffset = 0u; // field by field like 0x45E220 (assigning {} also zeroed the padding bytes)
+    Playback.m_pBase   = nullptr;
+    Playback.m_bSlot   = 0u;
     EmptyReplayBuffer();
     pReferences = nullptr;
     pPickups = nullptr;

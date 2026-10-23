@@ -25,20 +25,24 @@ CTaskSimpleDuckToggle::CTaskSimpleDuckToggle(eMode mode) :
 
 // 0x62F6E0
 bool CTaskSimpleDuckToggle::ProcessPed(CPed* ped) {
-    auto* const intel = ped->GetIntelligence();
+    // 0x62F6FD..0x62F738: the exe tests the mode first and reads the ped's intelligence only inside the branches (an unknown mode never touches the ped)
 
     // Try to toggle off
-    if (auto* const tDuck = intel->GetTaskDuck(false); tDuck && notsa::contains({ eMode::OFF, eMode::AUTO }, m_ToggleMode)) {
-        tDuck->MakeAbortable(ped, ABORT_PRIORITY_LEISURE);
-        if (auto* const tUseGun = intel->GetTaskUseGun()) {
-            tUseGun->ClearAnim(ped);
+    if (notsa::contains({ eMode::OFF, eMode::AUTO }, m_ToggleMode)) {
+        auto* const intel = ped->GetIntelligence();
+        if (auto* const tDuck = intel->GetTaskDuck(false)) {
+            tDuck->MakeAbortable(ped, ABORT_PRIORITY_LEISURE);
+            if (auto* const tUseGun = intel->GetTaskUseGun()) {
+                tUseGun->ClearAnim(ped);
+            }
+            return true;
         }
-        return true;
     }
 
     // Try to toggle on
     if (notsa::contains({ eMode::ON, eMode::AUTO }, m_ToggleMode)) {
-        auto* const tSimplestDuck  = notsa::dyn_cast<CTaskSimpleDuck>(intel->GetTaskManager().GetSimplestActiveTask());
+        auto* const intel = ped->GetIntelligence();
+        auto* const tSimplestDuck  = notsa::dyn_cast_if_present<CTaskSimpleDuck>(intel->GetTaskManager().GetSimplestActiveTask()); // 0x62F759: `test eax, eax / je` - there may be no active task at all (dyn_cast dereferenced null)
         auto* const tSecondaryDuck = intel->GetTaskDuck(true);
 
         const auto SetScriptControlledDuckTask = [intel] {

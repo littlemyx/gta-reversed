@@ -96,12 +96,19 @@ CTask* CTaskComplexSeekCoverUntilTargetDead::CreateNextSubTask(CPed* ped) {
 
 // 0x62E6C0
 CTask* CTaskComplexSeekCoverUntilTargetDead::CreateFirstSubTask(CPed* ped) {
-    CEntity::ChangeEntityReference(m_coverPed, GetCoverPed(ped));
-    CEntity::ChangeEntityReference(m_targetPed, GetTargetPed());
+    // 0x62E6DD..0x62E736: the exe cleans up the old target (+0x10) and cover (+0x14) references, stores BOTH new pointers raw, and registers them (target first, then cover)
+    // only when both are present; with one of them missing nothing is registered (the task is then over, the pointers are not used again).
+    CEntity::SafeCleanUpRef(m_targetPed);
+    CEntity::SafeCleanUpRef(m_coverPed);
+    m_coverPed  = GetCoverPed(ped);
+    m_targetPed = GetTargetPed();
 
     if (!m_coverPed || !m_targetPed) {
         return nullptr;
     }
+
+    CEntity::RegisterReference(m_targetPed);
+    CEntity::RegisterReference(m_coverPed);
 
     return CreateSequence(ped);
 }

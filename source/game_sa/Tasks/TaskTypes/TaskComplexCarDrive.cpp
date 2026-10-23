@@ -105,8 +105,9 @@ CTask* CTaskComplexCarDrive::CreateNextSubTask(CPed* ped) {
         }
         return CreateSubTaskCannotGetInCar(ped);
     }
+    case TASK_COMPLEX_GO_TO_POINT_ANY_MEANS: // 0x644FE8: the jump table sends 0x396 to CreateSubTask(TASK_FINISHED) (the port fell into NOTSA_UNREACHABLE)
+        return Create(TASK_FINISHED);
     default:
-        NOTSA_UNREACHABLE();
         return nullptr; // 0x644FFB: default => edi = 0
     }
 }

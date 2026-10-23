@@ -7009,8 +7009,8 @@ CEntity* CVehicle::GetPlaneWeaponFiringStatus(bool& status, eOrdnanceType& ordna
         auto&       crossHair = gCrossHair[0];
         if (pad.CarGunJustDown() == 2) {
             if (CWeaponEffects::IsLockedOn(0) && plane->field_9DC) {
-                CEntity* const target = ScanAndMarkTargetForHeatSeekingMissile((CEntity*)plane->field_9E0);
-                if (target && target == (CEntity*)plane->field_9E0 && now - (uint32)plane->field_9DC > 1500) {
+                CEntity* const target = ScanAndMarkTargetForHeatSeekingMissile(plane->field_9E0);
+                if (target && target == plane->field_9E0 && now - (uint32)plane->field_9DC > 1500) {
                     ordnanceType = 2;
                     crossHair.m_color.r      = 255;
                     crossHair.m_color.g      = 0;
@@ -7026,7 +7026,7 @@ CEntity* CVehicle::GetPlaneWeaponFiringStatus(bool& status, eOrdnanceType& ordna
 
         if (pad.GetEnterTargeting()) {
             plane->field_9DC = now;
-            plane->field_9E0 = 0;
+            plane->field_9E0 = nullptr;
             return nullptr;
         }
 
@@ -7034,8 +7034,8 @@ CEntity* CVehicle::GetPlaneWeaponFiringStatus(bool& status, eOrdnanceType& ordna
             if (!plane->field_9DC) {
                 plane->field_9DC = now;
             }
-            CEntity* const target = ScanAndMarkTargetForHeatSeekingMissile((CEntity*)plane->field_9E0);
-            if (!target || target != (CEntity*)plane->field_9E0) {
+            CEntity* const target = ScanAndMarkTargetForHeatSeekingMissile(plane->field_9E0);
+            if (!target || target != plane->field_9E0) {
                 plane->field_9DC = now;
             }
             crossHair.m_nTimeWhenToDeactivate = 0;
@@ -7050,12 +7050,12 @@ CEntity* CVehicle::GetPlaneWeaponFiringStatus(bool& status, eOrdnanceType& ordna
                 crossHair.m_color.b   = 255;
                 crossHair.m_fRotation = 0.f;
             }
-            plane->field_9E0 = (int32)target;
+            plane->field_9E0 = target;
             return nullptr;
         }
 
         plane->field_9DC = 0;
-        plane->field_9E0 = 0;
+        plane->field_9E0 = nullptr;
         return nullptr;
     }
     }

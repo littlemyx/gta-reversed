@@ -19,8 +19,8 @@ public:
     CTaskTimer field_4;
     C2dEffect* m_pEffectInUse;              // 0x10
     CEntity*   m_pEntityInUse;              // 0x14
-    int32      field_18[10];
-    int32      field_40[10];
+    CEntity*   field_18[10];                // NOTSA: was int32[10] holding pointers (same 0x28 bytes on x86)
+    C2dEffect* field_40[10];                // NOTSA: was int32[10] holding pointers
     float      field_68[10];
 
 public:

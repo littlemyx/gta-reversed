@@ -28,8 +28,8 @@ void CAttractorScanner::InjectHooks() {
 // 0x5FFF90
 void CAttractorScanner::Clear() {
     for (auto i = 0; i < 10; i++) {
-        field_18[i] = 0;
-        field_40[i] = 0;
+        field_18[i] = nullptr;
+        field_40[i] = nullptr;
         field_68[i] = 15.0f * 15.0f; // 0x86C52C = 15.0f
         if (i != 4 && i != 7) {
             field_68[i] = 25.0f;
@@ -211,8 +211,8 @@ void CAttractorScanner::AddEffect(C2dEffect* effect, CEntity* entity, CPed& ped)
     const auto mat = entity ? CMatrix{entity->GetMatrix()} : CMatrix::Identity(); // 0x60010F | 0x600120
     if (CPedAttractorManager::IsApproachable(reinterpret_cast<C2dEffectPedAttractor*>(effect), mat, 0, &ped)) { // 0x60013B
         field_68[type] = distSqF;
-        field_18[type] = (int32)entity;
-        field_40[type] = (int32)effect;
+        field_18[type] = entity;
+        field_40[type] = effect;
     }
 }
 

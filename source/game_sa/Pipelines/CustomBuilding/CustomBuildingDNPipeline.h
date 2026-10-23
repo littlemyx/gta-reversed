@@ -17,7 +17,7 @@ struct ExtraVertColour { // AKA `gtaVertexColorPlugin`
     RwRGBA *NightColors, *DayColors; //!<  heap allocated
     float   DNBalance; //!< lerp(DayColors, NightColors, DNBalance)
 };
-VALIDATE_SIZE(ExtraVertColour, 12); // 24 on Android
+VALIDATE_SIZE_FILE(ExtraVertColour, 12); // 24 on Android
 
 class CCustomBuildingDNPipeline {
 public:

@@ -544,7 +544,7 @@ bool CPed::Save() {
     CPedSaveStructure save;
     save.Construct(this);
 
-    CGenericGameStorage::SaveDataToWorkBuffer<uint32>(notsa::FileSizeOf<CPedSaveStructure>); // P-2d: file record size (0x18C), == sizeof(save) on x86
+    CGenericGameStorage::SaveDataToWorkBuffer<uint32>(uint32(notsa::FileSizeOf<CPedSaveStructure>)); // P-2d: file record size (0x18C), == sizeof(save) on x86; by-value so x86 codegen is unchanged (no ref to the variable)
     CGenericGameStorage::SaveDataToWorkBuffer(save);
 
     return true;

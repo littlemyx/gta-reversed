@@ -137,7 +137,7 @@ int main() {
         std::string body; { std::istringstream ls(ped.substr(lPos, ePos - lPos)); std::string l; while (std::getline(ls, l)) { body += l.substr(0, l.find("//")); body += '\n'; } }   // comments stripped
         CHECK(body.find("sizeof(save)") == std::string::npos);
         CHECK(body.find("assert(size == notsa::FileSizeOf<CPedSaveStructure>)") != std::string::npos);
-        CHECK(body.find("SaveDataToWorkBuffer<uint32>(notsa::FileSizeOf<CPedSaveStructure>)") != std::string::npos);
+        CHECK(body.find("SaveDataToWorkBuffer<uint32>(uint32(notsa::FileSizeOf<CPedSaveStructure>))") != std::string::npos);
         CHECK(body.find("SaveDataToWorkBuffer(save);") != std::string::npos && body.find("LoadDataFromWorkBuffer(save);") != std::string::npos);
     }
     std::printf(fails ? "p2d FAILED (%d)\n" : "p2d host test: ALL OK (fails=%d)\n", fails);

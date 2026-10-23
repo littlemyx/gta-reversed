@@ -120,3 +120,4 @@ date	agent	rules	kind	tokens	tool_uses	minutes	outcome	notes
 2026-10-23	CRASH-HUNT	v4	crash hunt (1 of 2 fixed)	258428	128	89	shadow AV root-caused (AllocateData malloc without ctor: header garbage) + fixed 216181de; anim AV not captured in 13 cdb runs; GR_WRAP cdb harness, GR_NORETRY
 2026-10-24	MAC-R-DESIGN	v4	design stream R (read-only)	242783	54	10	done: 14 slices
 2026-10-24	MAC-P2d	v4	P-2d ped/weapon records	181645	50	18	done: 10/10 A/B after by-value fix
+2026-10-24	MAC-P2e	v4	P-2e pickup record	-	-	-	done: 9/9 A/B

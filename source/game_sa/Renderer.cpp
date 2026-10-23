@@ -1198,9 +1198,11 @@ bool CRenderer::ShouldModelBeStreamed(CEntity* entity, const CVector& point, flo
     if (timeInfo && !CClock::GetIsTimeInRange(timeInfo->GetTimeOn(), timeInfo->GetTimeOff()))
         return false;
 
-    const float fMagnitude = DistanceBetweenPoints(point, entity->GetPosition());
+    // exe 0x554F10-0x554F5C: dist = sqrt((dz*dz + dy*dy) + dx*dx) at 24-bit precision (the sum order matters for the last bit)
+    const CVector delta = entity->GetPosition() - point;
+    const float fMagnitude = std::sqrt((delta.z * delta.z + delta.y * delta.y) + delta.x * delta.x);
     const float fDrawDistanceRadius = TheCamera.m_fLODDistMultiplier * modelInfo->m_fDrawDistance;
-    if (fMagnitude <= modelInfo->GetColModel()->GetBoundRadius() + farClip && fDrawDistanceRadius > fMagnitude)
+    if (!(fMagnitude > modelInfo->GetColModel()->GetBoundRadius() + farClip) && fDrawDistanceRadius > fMagnitude) // exe 0x554F6B: fcompp + `test ah, 0x41; jne` passes on <, == AND unordered (NaN), i.e. !(a > b)
         return true;
 
     return false;

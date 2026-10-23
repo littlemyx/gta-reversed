@@ -1380,8 +1380,10 @@ void CVehicle::ProcessDelayedExplosion() {
         return;
     }
 
-    const auto period = (int16)(CTimer::GetTimeStep() * (100.0f / 6.0f));
-    m_wBombTimer = std::max(m_wBombTimer - period, 0);
+    // 0x6D1350..0x6D1375: period = _ftol(step * 100/6) as a 32-bit value, timer = timer > period (unsigned) ? timer - period : 0
+    const auto period = (uint32)(int32)(CTimer::GetTimeStep() * (100.0f / 6.0f));
+    const auto timer = (uint32)(uint16)m_wBombTimer; // movzx
+    m_wBombTimer = (int16)(timer > period ? timer - period : 0u);
 
     if (!m_wBombTimer) {
         BlowUpCar(m_pWhoDetonatedMe, false);

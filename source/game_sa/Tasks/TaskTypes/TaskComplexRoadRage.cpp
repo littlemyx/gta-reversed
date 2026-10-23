@@ -45,6 +45,9 @@ CTaskComplexRoadRage::~CTaskComplexRoadRage() {
 
 // 0x629080
 CTask* CTaskComplexRoadRage::CreateSubTask(eTaskType taskType, CPed* ped) {
+    if (!m_rageWith) { // 0x62909B: `test ecx,ecx / je 0x6292AC` for every task type
+        return nullptr;
+    }
     switch (taskType) {
     case TASK_COMPLEX_TURN_TO_FACE_ENTITY:
         return new CTaskComplexTurnToFaceEntityOrCoord{ m_rageWith };
@@ -54,19 +57,28 @@ CTask* CTaskComplexRoadRage::CreateSubTask(eTaskType taskType, CPed* ped) {
         return new CTaskSimpleShakeFist{};
     case TASK_COMPLEX_ENTER_CAR_AS_DRIVER:
         return new CTaskComplexEnterCarAsDriver{ ped->m_pVehicle };
-    case TASK_COMPLEX_SEEK_ENTITY:
+    case TASK_COMPLEX_SEEK_ENTITY: {
+        CVehicle* const target = m_rageWith->m_pVehicle; // 0x6291A9: the exe seeks the VEHICLE OF THE RAGE TARGET (`[m_rageWith + 0x58C]`), not the ped's own
+        if (!target) { // 0x629237: no vehicle to seek -> the on-foot kill task (0x629323)
+            return new CTaskComplexKillPedOnFoot{ m_rageWith, -1, 0, 0, 0, true };
+        }
         return new CTaskComplexSeekEntityStandard{
-            ped->m_pVehicle,
+            target,
             20'000,
             1'000,
-            m_rageWith->m_pVehicle->GetModelInfo()->GetColModel()->GetBoundRadius() + 1.f,
+            target->GetModelInfo()->GetColModel()->GetBoundRadius() + 1.f,
             2.f,
             2.f,
             true,
             true
         };
-    case TASK_COMPLEX_DESTROY_CAR:
+    }
+    case TASK_COMPLEX_DESTROY_CAR: {
+        if (!m_rageWith->m_pVehicle) { // 0x6292C8 / 0x62930D: no vehicle to destroy -> the on-foot kill task
+            return new CTaskComplexKillPedOnFoot{ m_rageWith, -1, 0, 0, 0, true };
+        }
         return new CTaskComplexDestroyCar{ m_rageWith->m_pVehicle };
+    }
     case TASK_COMPLEX_KILL_PED_ON_FOOT:
         return new CTaskComplexKillPedOnFoot{ m_rageWith, -1, 0, 0, 0, true };
     case TASK_FINISHED:

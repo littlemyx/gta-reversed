@@ -93,7 +93,7 @@ run_ours() { # name route limit env px windowed -> $OUT/<name>/ (logs, route, sc
     [ "$px" = 1 ] && export NOTSA_STANDALONE_SCREENSHOT=100000 NOTSA_STANDALONE_SCREENSHOT_MAX=60
     [ "$px" = 0 ] && [ "${GR_NOPRESENT:-1}" = 1 ] && export NOTSA_STANDALONE_NOPRESENT=1
     for kv in $xenv; do [ "$kv" = - ] || export "$(echo "$kv" | sed "s#@OUT@#$od#g")"; done
-    $GR_WRAP ./gta_reversed.exe > "$od/run.out" 2>&1 &
+    ${GR_WRAP:-} ./gta_reversed.exe > "$od/run.out" 2>&1 &
     echo $! > "$od/pid"
   )
   WPID=$(cat "$od/pid")

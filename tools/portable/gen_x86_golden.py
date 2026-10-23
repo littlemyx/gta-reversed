@@ -26,6 +26,11 @@ RECORDS = {
                             ('timeForNextShot', 0x10, 'I', 1), ('firstPerson', 0x14, 'B', 1), ('dontPlaceInHand', 0x15, 'B', 1), ('fx', 0x18, 'I', 1)],
                      {'CWeapon': {'m_Type': 'type', 'm_State': 'state', 'm_AmmoInClip': 'ammoInClip', 'm_TotalAmmo': 'totalAmmo', 'm_TimeForNextShotMs': 'timeForNextShot',
                                   'm_IsFirstPersonWeaponModeSelected': 'firstPerson', 'm_DontPlaceInHand': 'dontPlaceInHand', 'm_FxSystem': 'fx'}}),
+    # P-2d: CPedSaveStructure 0x18C (Ped.cpp CPed::Save/Load, behind a uint32 size prefix): pos, health, armor, CWeapon[13] @0x14 (13 * 0x1C), then the scalars; pads (0x183, 0x18A..B) are 0 here
+    'CPedSaveStructure_File': (0x18C, [('pos', 0x00, 'f', 3), ('health', 0x0C, 'f', 1), ('armor', 0x10, 'f', 1), ('weapons', 0x14, 'B', 13 * 0x1C), ('createdBy', 0x180, 'B', 1),
+                                       ('activeSlot', 0x181, 'b', 1), ('areaCode', 0x182, 'b', 1), ('exitIndex', 0x184, 'i', 1), ('fightingStyle', 0x188, 'B', 1), ('allowedMoves', 0x189, 'B', 1)],
+                               {'CPedSaveStructure': {'m_pos': 'pos', 'm_health': 'health', 'm_armor': 'armor', 'm_weapons': 'weapons', 'm_createdBy': 'createdBy', 'm_activeWeaponSlot': 'activeSlot',
+                                                      'm_areaCode': 'areaCode', 'm_nExitIndex': 'exitIndex', 'm_nFightingStyle': 'fightingStyle', 'm_nAllowedAttackMoves': 'allowedMoves'}}),
     # P-2c: CMatrix 0x48 : right/top/at (3 floats + u32 each), pos (3 floats + u32), RwMatrix* attach @0x40, owns-flag @0x44 (+3 pad). The u32 after each vector: flags @0xC (RwMatrix::flags), pad1..3.
     'CMatrix_File': (0x48, [('right', 0x00, 'f', 3), ('flags', 0x0C, 'I', 1), ('top', 0x10, 'f', 3), ('pad1', 0x1C, 'I', 1), ('at', 0x20, 'f', 3), ('pad2', 0x2C, 'I', 1),
                             ('pos', 0x30, 'f', 3), ('pad3', 0x3C, 'I', 1), ('attach', 0x40, 'I', 1), ('owns', 0x44, 'B', 1)],
@@ -48,6 +53,9 @@ MAT_ROT = dict(right=(0, 1, 0), flags=3, top=(-1, 0, 0), at=(0, 0, 1), pos=(-250
 CASES = [
     ('basic', 'CPickup_File', dict(rev=1.5, obj=1, ammo=77, regen=1000, pos=(100, -200, 300), moneyPerDay=5, model=1212, ref=3, type=2, flags=0x81)),
     ('basic', 'CWeapon_File', dict(type=30, state=0, ammoInClip=30, totalAmmo=500, timeForNextShot=0, firstPerson=0, dontPlaceInHand=1, fx=0)),
+    # P-2d: 13 slots, slot k = type 10+k (k=0 is WEAPON_UNARMED-like 0), ammo 100*k, inClip k; the pointer slot (fx) is 0 in ToFile output
+    ('basic', 'CPedSaveStructure_File', dict(pos=(-2500.5, 1000.25, 12.125), health=100.0, armor=50.5, weapons=lambda: [b for k in range(13) for b in golden('CWeapon_File', type=0 if k == 0 else 10 + k, state=k % 5, ammoInClip=k, totalAmmo=100 * k, timeForNextShot=1000 + k, firstPerson=k & 1, dontPlaceInHand=1 if k == 12 else 0)],
+                                             createdBy=2, activeSlot=5, areaCode=1, exitIndex=-1, fightingStyle=6, allowedMoves=0x1F)),
     ('identity', 'CMatrix_File', dict(right=(1, 0, 0), top=(0, 1, 0), at=(0, 0, 1), pos=(10.5, -3.25, 7), attach=0, owns=0)),
     ('rotated', 'CMatrix_File', MAT_ROT),
     # values given as a callable are resolved by golden() (embedding one record into another)

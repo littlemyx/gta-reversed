@@ -9,6 +9,8 @@
 #include "eWeaponType.h"
 #include "Vector2D.h"
 #include "eWeaponSkill.h"
+#include "FileRecord.hpp"
+#include "FileRecords/PedFile.hpp"
 
 class FxSystem_c;
 class CColPoint;
@@ -160,6 +162,39 @@ public: // TODO: Eventually make this private
     FxSystem_c*  m_FxSystem{};                        //< Fx system [flamethrower, spraycan, extinguisher]
 };
 
-VALIDATE_SIZE_FILE(CWeapon, 0x1C);
+VALIDATE_SIZE(CWeapon, 0x1C); // x86 in-memory (m_FxSystem widens it on LP64); the on-disk 0x1C is VALIDATE_SIZE_FILE(CWeapon_File) in FileRecords/PedFile.hpp
+
+// P-2d: file layout of the weapon (0x1C on the exe), used under NOTSA_PORTABLE by the typed CGenericGameStorage Save/Load (through CPedSaveStructure_File).
+// m_FxSystem is written as 0 (the exe wrote the live pointer; nothing reads it back) and left null by FromFile.
+template<> struct notsa::FileRecord<CWeapon> {
+    using Type = CWeapon_File;
+    static Type ToFile(const CWeapon& w) {
+        Type f{};
+        f.type               = (uint32)w.m_Type;
+        f.state              = (uint32)w.m_State;
+        f.ammoInClip         = w.m_AmmoInClip;
+        f.totalAmmo          = w.m_TotalAmmo;
+        f.timeForNextShotMs  = w.m_TimeForNextShotMs;
+        f.firstPersonModeSel = w.m_IsFirstPersonWeaponModeSelected;
+        f.dontPlaceInHand    = w.m_DontPlaceInHand;
+        return f;
+    }
+    static void FromFile(CWeapon& w, const Type& f) {
+        w.m_Type                            = (eWeaponType)f.type;
+        w.m_State                           = (eWeaponState)f.state;
+        w.m_AmmoInClip                      = f.ammoInClip;
+        w.m_TotalAmmo                       = f.totalAmmo;
+        w.m_TimeForNextShotMs               = f.timeForNextShotMs;
+        w.m_IsFirstPersonWeaponModeSelected = f.firstPersonModeSel != 0;
+        w.m_DontPlaceInHand                 = f.dontPlaceInHand != 0;
+        w.m_FxSystem                        = nullptr;
+    }
+    // x86: the record IS the raw object (same size, same member offsets) - proves the MSVC raw copy == the record path
+    static_assert(sizeof(void*) != 4 || (sizeof(CWeapon) == sizeof(Type)
+        && offsetof(CWeapon, m_Type) == offsetof(Type, type) && offsetof(CWeapon, m_State) == offsetof(Type, state) && offsetof(CWeapon, m_AmmoInClip) == offsetof(Type, ammoInClip)
+        && offsetof(CWeapon, m_TotalAmmo) == offsetof(Type, totalAmmo) && offsetof(CWeapon, m_TimeForNextShotMs) == offsetof(Type, timeForNextShotMs)
+        && offsetof(CWeapon, m_IsFirstPersonWeaponModeSelected) == offsetof(Type, firstPersonModeSel) && offsetof(CWeapon, m_DontPlaceInHand) == offsetof(Type, dontPlaceInHand)
+        && offsetof(CWeapon, m_FxSystem) == offsetof(Type, fxSystem)));
+};
 
 void FireOneInstantHitRound(const CVector& startPoint, const CVector& endPoint, int32 intensity);

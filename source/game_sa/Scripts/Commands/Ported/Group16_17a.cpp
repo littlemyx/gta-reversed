@@ -53,7 +53,7 @@ using namespace notsa::script;
 
 namespace {
 VALIDATE_OFFSET(CPed, m_nActiveWeaponSlot, 0x718);
-VALIDATE_OFFSET(CPed, m_aWeapons, 0x5A0); VALIDATE_SIZE_FILE(CWeapon, 0x1C);
+VALIDATE_OFFSET(CPed, m_aWeapons, 0x5A0); VALIDATE_SIZE(CWeapon, 0x1C); // P-2d: in-memory (x86); on-disk = CWeapon_File
 VALIDATE_OFFSET(CPedIntelligence, m_FollowNodeThresholdDistance, 0xCC);
 VALIDATE_LAYOUT(offsetof(CPedIntelligence, m_TaskMgr) + sizeof(void*) * TASK_PRIMARY_PRIMARY == 0x10);
 VALIDATE_OFFSET(CTaskComplexUseSequence, m_nCurrentTaskIndex, 0x10);

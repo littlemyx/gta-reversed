@@ -531,7 +531,7 @@ bool CPed::Load() {
     // Would be nice if someone with more knowledge of templates and shit can fix that
     CPedSaveStructure save;
     CGenericGameStorage::LoadDataFromWorkBuffer(save);
-    assert(size == sizeof(save));
+    assert(size == notsa::FileSizeOf<CPedSaveStructure>); // P-2d: the prefix is the FILE size (0x18C); sizeof(save) is larger on LP64 (CWeapon::m_FxSystem). == sizeof on x86
 
     save.Extract(this);
     return true;
@@ -544,7 +544,7 @@ bool CPed::Save() {
     CPedSaveStructure save;
     save.Construct(this);
 
-    CGenericGameStorage::SaveDataToWorkBuffer<uint32>(sizeof(save));
+    CGenericGameStorage::SaveDataToWorkBuffer<uint32>(notsa::FileSizeOf<CPedSaveStructure>); // P-2d: file record size (0x18C), == sizeof(save) on x86
     CGenericGameStorage::SaveDataToWorkBuffer(save);
 
     return true;

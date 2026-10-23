@@ -42,12 +42,12 @@
 
 // Sanity checks for the raw offsets used by the original
 static_assert(WEAPON_FLAMETHROWER == 0x25 && WEAPON_FALL == 0x36 && WEAPON_UNIDENTIFIED == 0x37 && PED_PIECE_TORSO == 3);
-static_assert(offsetof(CPed, m_fHealth) == 0x540 && offsetof(CPed, m_pContactEntity) == 0x584 && offsetof(CPed, m_pVehicle) == 0x58C && offsetof(CPed, m_pFire) == 0x730);
-static_assert(offsetof(CVehicle, m_nVehicleType) == 0x590 && offsetof(CVehicle, m_nVehicleSubType) == 0x594);
-static_assert(offsetof(CTaskComplexKillPedOnFoot, m_target) == 0x10);
-static_assert(offsetof(CObject, objectFlags) == 0x140 && offsetof(CPedIntelligence, m_nDmNumPedsToScan) == 0xC4);
-static_assert(offsetof(CPedIntelligence, m_pedScanner) + offsetof(CPedScanner, m_apEntities) == 0x130);
-static_assert(offsetof(CPed, m_nPedType) == 0x598 && offsetof(CPed, m_pStats) == 0x59C);
+VALIDATE_OFFSET(CPed, m_fHealth, 0x540); VALIDATE_OFFSET(CPed, m_pContactEntity, 0x584); VALIDATE_OFFSET(CPed, m_pVehicle, 0x58C); VALIDATE_OFFSET(CPed, m_pFire, 0x730);
+VALIDATE_OFFSET(CVehicle, m_nVehicleType, 0x590); VALIDATE_OFFSET(CVehicle, m_nVehicleSubType, 0x594);
+VALIDATE_OFFSET(CTaskComplexKillPedOnFoot, m_target, 0x10);
+VALIDATE_OFFSET(CObject, objectFlags, 0x140); VALIDATE_OFFSET(CPedIntelligence, m_nDmNumPedsToScan, 0xC4);
+VALIDATE_LAYOUT(offsetof(CPedIntelligence, m_pedScanner) + offsetof(CPedScanner, m_apEntities) == 0x130);
+VALIDATE_OFFSET(CPed, m_nPedType, 0x598); VALIDATE_OFFSET(CPed, m_pStats, 0x59C);
 
 // x87 helpers (0x406DA0 and 0x40FDB0 return an extended precision value in ST0)
 static double SqMagnitude(const CVector& v) {

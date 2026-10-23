@@ -659,9 +659,10 @@ void CRenderer::RenderEverythingBarRoads() {
 
         bool bInserted = false;
         if (entity->GetIsTypeVehicle() || (entity->GetIsTypePed() && CVisibilityPlugins::GetClumpAlpha(entity->GetRpClump()) != 255)) {
-            // todo: R* nice check | or we missed smth here?
+            // exe 0x553B47: a ped (type 3, clump alpha != 255) falls through to 0x553BA9 = the sorted-list insertion; only vehicles choose between the sorted and the underwater list
+            bool bInsertIntoSortedList = true;
             if (entity->GetIsTypeVehicle()) {
-                bool bInsertIntoSortedList = false;
+                bInsertIntoSortedList = false;
                 if (vehicle->IsBoat()) {
                     const auto& camMode = CCamera::GetActiveCamera().m_nMode;
                     const auto& lookDirection = TheCamera.GetLookDirection();
@@ -676,12 +677,12 @@ void CRenderer::RenderEverythingBarRoads() {
                 else if (!vehicle->physicalFlags.bTouchingWater) {
                     bInsertIntoSortedList = true;
                 }
-                const float fMagnitude = DistanceBetweenPoints(entity->GetPosition(), ms_vecCameraPosition);
-                if (bInsertIntoSortedList)
-                    bInserted = CVisibilityPlugins::InsertEntityIntoSortedList(entity, fMagnitude);
-                else
-                    bInserted = CVisibilityPlugins::InsertEntityIntoUnderwaterList(entity, fMagnitude);
             }
+            const float fMagnitude = DistanceBetweenPoints(entity->GetPosition(), ms_vecCameraPosition);
+            if (bInsertIntoSortedList)
+                bInserted = CVisibilityPlugins::InsertEntityIntoSortedList(entity, fMagnitude);
+            else
+                bInserted = CVisibilityPlugins::InsertEntityIntoUnderwaterList(entity, fMagnitude);
         }
         if (!bInserted)
             RenderOneNonRoad(entity);

@@ -50,4 +50,4 @@ public:
     eSurfaceType m_nMaterial;
     tColLighting m_nLight;
 };
-VALIDATE_SIZE(CColTriangle, 0x8);
+VALIDATE_SIZE_FILE(CColTriangle, 0x8);

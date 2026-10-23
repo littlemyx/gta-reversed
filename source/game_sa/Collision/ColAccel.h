@@ -9,7 +9,7 @@ struct CColAccelColBound {
     bool  m_bProcedural;
     bool  m_bInterior;
 };
-VALIDATE_SIZE(CColAccelColBound, 0x18);
+VALIDATE_SIZE_FILE(CColAccelColBound, 0x18);
 
 struct CColAccelColEntry {
     CBoundingBox m_boundBox;
@@ -19,7 +19,7 @@ struct CColAccelColEntry {
     uint8        m_nColSlot;
     bool         m_bColModelNotEmpty;
 };
-VALIDATE_SIZE(CColAccelColEntry, 0x30);
+VALIDATE_SIZE_FILE(CColAccelColEntry, 0x30);
 
 struct CColAccelIPLEntry {
     int32 m_nLodIndex;
@@ -36,7 +36,7 @@ struct CColAccelIPLEntry {
         };
     };
 };
-VALIDATE_SIZE(CColAccelIPLEntry, 0x14);
+VALIDATE_SIZE_FILE(CColAccelIPLEntry, 0x14);
 
 enum eColAccelState : int32 {
     COLACCEL_ENDED = 0,

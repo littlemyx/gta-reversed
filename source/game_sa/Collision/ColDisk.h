@@ -28,4 +28,4 @@ public:
     }
     */
 };
-VALIDATE_SIZE(CColDisk, 0x24);
+VALIDATE_SIZE_FILE(CColDisk, 0x24);

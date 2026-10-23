@@ -25,11 +25,11 @@
 #include "Weapon.h"
 
 // Sanity checks for the raw offsets used by the original
-static_assert(offsetof(CPed, m_pContactEntity) == 0x584 && offsetof(CPed, m_standingOnEntity) == 0x568);
-static_assert(offsetof(CPed, m_vecAnimMovingShift) == 0x550);
-static_assert(offsetof(CPhysical, m_fMass) == 0x8C && offsetof(CPhysical, m_pAttachedTo) == 0xFC && offsetof(CPhysical, m_pEntityIgnoredCollision) == 0x128);
-static_assert(offsetof(CPhysical, m_fDamageIntensity) == 0xD8 && offsetof(CPhysical, m_pDamageEntity) == 0xDC && offsetof(CPhysical, m_nPieceType) == 0xF8);
-static_assert(offsetof(CPhysical, m_vecLastCollisionImpactVelocity) == 0xE0 && offsetof(CPhysical, m_vecLastCollisionPosn) == 0xEC && offsetof(CPhysical, m_vecTurnSpeed) == 0x50);
+VALIDATE_OFFSET(CPed, m_pContactEntity, 0x584); VALIDATE_OFFSET(CPed, m_standingOnEntity, 0x568);
+VALIDATE_OFFSET(CPed, m_vecAnimMovingShift, 0x550);
+VALIDATE_OFFSET(CPhysical, m_fMass, 0x8C); VALIDATE_OFFSET(CPhysical, m_pAttachedTo, 0xFC); VALIDATE_OFFSET(CPhysical, m_pEntityIgnoredCollision, 0x128);
+VALIDATE_OFFSET(CPhysical, m_fDamageIntensity, 0xD8); VALIDATE_OFFSET(CPhysical, m_pDamageEntity, 0xDC); VALIDATE_OFFSET(CPhysical, m_nPieceType, 0xF8);
+VALIDATE_OFFSET(CPhysical, m_vecLastCollisionImpactVelocity, 0xE0); VALIDATE_OFFSET(CPhysical, m_vecLastCollisionPosn, 0xEC); VALIDATE_OFFSET(CPhysical, m_vecTurnSpeed, 0x50);
 
 namespace {
 //! 0x40FDB0 - `a.z * b.z + a.y * b.y + a.x * b.x` (the result is left in an x87 register => extended precision)

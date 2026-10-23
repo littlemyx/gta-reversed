@@ -18,7 +18,7 @@ public:
     void SetMinMax(CVector min, CVector max);
 };
 
-VALIDATE_SIZE(CBoundingBox, 0x18);
+VALIDATE_SIZE_FILE(CBoundingBox, 0x18);
 
 // in entity.cpp
 NOTSA_GLOBAL_HDR(numBBFailed, 0xB71808, (int32), {}); // 0xB71808

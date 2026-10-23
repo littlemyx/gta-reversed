@@ -53,4 +53,4 @@ public:
     static void InjectHooks();
 };
 
-VALIDATE_SIZE(CBox, 0x18);
+VALIDATE_SIZE_FILE(CBox, 0x18);

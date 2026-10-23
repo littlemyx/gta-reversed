@@ -6691,7 +6691,7 @@ void CAutomobile::FireTruckControl(CFire* fire) {
         endPoint += point * 0.4f;
     else
         endPoint += point * 0.5f;
-    CWaterCannons::UpdateOne((uint32)this, &newTurretPosition, &endPoint);
+    CWaterCannons::UpdateOne(NOTSA_PTR_ID32(this), &newTurretPosition, &endPoint);
 }
 
 // 0x44D520

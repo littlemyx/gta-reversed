@@ -199,7 +199,7 @@ void CTrafficLights::DisplayActualLight(CEntity* entity) {
         auto fSize = CTimeCycle::m_CurrentColours.m_fSpriteSize * 0.175F;
 
         CCoronas::RegisterCorona(
-            reinterpret_cast<uint32>(entity) + iFxInd,
+            NOTSA_PTR_ID32(entity) + iFxInd,
             nullptr,
             static_cast<uint8>((float)aTrafficLightColoursR[iColorState] * fBrightness),
             static_cast<uint8>((float)aTrafficLightColoursG[iColorState] * fBrightness),
@@ -263,7 +263,7 @@ void CTrafficLights::DisplayActualLight(CEntity* entity) {
                 auto ucBlue  = static_cast<uint8>((float)aTrafficLightColoursB[iLightState] * fColMult);
 
                 CShadows::StoreStaticShadow(
-                    reinterpret_cast<uint32>(entity),
+                    NOTSA_PTR_ID32(entity),
                     eShadowType::SHADOW_ADDITIVE,
                     gpShadowExplosionTex,
                     vecCenter,

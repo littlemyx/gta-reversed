@@ -1278,7 +1278,7 @@ void CHeli::PreRender() {
             m_vecSearchLightTarget,
             20.0f,
             m_fSearchLightIntensity,
-            reinterpret_cast<uint32>(this) + 11, // Corona index
+            NOTSA_PTR_ID32(this) + 11, // Corona index
             1,
             1
         );
@@ -1597,7 +1597,7 @@ void CHeli::ProcessControl() {
 
         state--;
 
-        const auto ropeId = reinterpret_cast<uint32>(this) + i; // The rope is identified by `this + i`
+        const auto ropeId = NOTSA_PTR_ID32(this) + i; // The rope is identified by `this + i`
         const auto swatOffset = FindSwatPositionRelativeToHeli(i);
         CRopes::RegisterRope(ropeId, 8, GetMatrix().TransformPoint(swatOffset), false, 0, 0, nullptr, 20000);
 

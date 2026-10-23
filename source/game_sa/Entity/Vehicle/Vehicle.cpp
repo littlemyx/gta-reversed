@@ -426,7 +426,7 @@ CVehicle::~CVehicle() {
         m_pCustomCarPlate = nullptr;
     }
 
-    const auto iRopeInd = CRopes::FindRope(reinterpret_cast<uint32>(this) + 1);
+    const auto iRopeInd = CRopes::FindRope(NOTSA_PTR_ID32(this) + 1);
     if (iRopeInd >= 0) {
         CRopes::GetRope(iRopeInd).Remove();
     }
@@ -6529,7 +6529,7 @@ void CVehicle::DoHeadLightReflectionImpl(CMatrix& vehicleMatrix, eVehicleLightsF
 
         CShadows::StoreCarLightShadow(
             this,
-            reinterpret_cast<int32>(&m_matrix) + 2,
+            static_cast<int32>(NOTSA_PTR_ID32(&m_matrix)) + 2,
             doTwin ? gpShadowHeadLightsTex : gpShadowHeadLightsTex2,
             GetPosition() + CVector(lightPos2D, 2.0f),
             shdwFront.x, shdwFront.y,

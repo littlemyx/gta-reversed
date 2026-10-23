@@ -159,7 +159,7 @@ void CCustomBuildingDNPipeline::PreRenderUpdate(RpAtomic* a, bool ignoreDNBalanc
     if (intensity <= 0.01f && !ignoreDNBalanceParam) {
         return;
     }
-    if (((uint32)a / 0x70) % 16 != s_Magic1 && !s_Magic2 && !ignoreDNBalanceParam && intensity <= 0.3f) {
+    if ((NOTSA_PTR_ID32(a) / 0x70) % 16 != s_Magic1 && !s_Magic2 && !ignoreDNBalanceParam && intensity <= 0.3f) {
         return;
     }
     NVCPipelineProcess(a, m_fDNBalanceParam);

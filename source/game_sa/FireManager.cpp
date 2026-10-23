@@ -452,7 +452,7 @@ void CFireManager::Update() {
             {
                 const CRGBA shdwColor = baseColor * fColorMult;
                 CShadows::StoreStaticShadow(
-                    reinterpret_cast<uint32>(strongest),
+                    NOTSA_PTR_ID32(strongest),
                     SHADOW_ADDITIVE,
                     gpShadowExplosionTex,
                     shdwPos,
@@ -481,7 +481,7 @@ void CFireManager::Update() {
                     + CVector{ 0.0f, 0.0f, 2.6f }
                     + (TheCamera.GetPosition() - point).Normalized() * 3.5f;
 
-                auto strongestId = reinterpret_cast<uint32>(strongest);
+                auto strongestId = NOTSA_PTR_ID32(strongest);
                 // Wrapper lambda for code readability
                 const auto RegisterCorona = [&](auto idx, CVector pos, eCoronaFlareType flare = eCoronaFlareType::FLARETYPE_NONE) {
                     const CRGBA crnaColor = baseColor * (fColorMult * 0.8f);

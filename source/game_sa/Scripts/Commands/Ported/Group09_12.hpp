@@ -41,6 +41,6 @@ inline CVector TransformVectorOriginal(const CMatrix& m, const CVector& v) {
 
 //! The id the exe derives from the script pointer + IP (`this + this->m_IP`, used e.g. by the sphere / marker commands)
 inline uint32 ScriptThingIdFromIP(const CRunningScript& S) {
-    return reinterpret_cast<uint32>(&S) + reinterpret_cast<uint32>(S.m_IP);
+    return NOTSA_PTR_ID32(&S) + NOTSA_PTR_ID32(S.m_IP);
 }
 } // namespace notsa::script::commands::ported::g09_12

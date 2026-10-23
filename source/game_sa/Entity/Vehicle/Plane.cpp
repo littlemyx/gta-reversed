@@ -1340,14 +1340,14 @@ void CPlane::PreRender() {
         CVector        b{ dummy.x - 0.1f, dummy.y, dummy.z }; // 0x858B1C
         const auto     rightA = m_matrix->TransformPoint(a);
         const auto     rightB = m_matrix->TransformPoint(b);
-        CMotionBlurStreaks::RegisterStreak(reinterpret_cast<uint32>(this), 255, 255, 255, streakAlpha, rightA, rightB);
+        CMotionBlurStreaks::RegisterStreak(NOTSA_PTR_ID32(this), 255, 255, 255, streakAlpha, rightA, rightB);
 
         // Left wing (mirrored)
         a.x = -a.x;
         b.x = -b.x;
         const auto leftA = m_matrix->TransformPoint(a);
         const auto leftB = m_matrix->TransformPoint(b);
-        CMotionBlurStreaks::RegisterStreak(reinterpret_cast<uint32>(this) + 1, 255, 255, 255, streakAlpha, leftA, leftB);
+        CMotionBlurStreaks::RegisterStreak(NOTSA_PTR_ID32(this) + 1, 255, 255, 255, streakAlpha, leftA, leftB);
     }
 
     //> 0x6CA937 - Smoke ejector

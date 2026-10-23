@@ -372,7 +372,7 @@ bool IsPointInAngledArea2D(float px, float py, float x1, float y1, float x2, flo
 
 //! The id used to identify the highlighted area (original: `m_IP + this`)
 int32 GetHighlightId(const CRunningScript* s) {
-    return reinterpret_cast<int32>(s) + reinterpret_cast<int32>(s->m_IP);
+    return static_cast<int32>(NOTSA_PTR_ID32(s) + NOTSA_PTR_ID32(s->m_IP));
 }
 } // namespace
 
@@ -1831,7 +1831,7 @@ OpcodeResult CRunningScript::Process() {
 }
 
 void CRunningScript::HighlightImportantArea(CVector2D from, CVector2D to, float z) {
-    CTheScripts::HighlightImportantArea(reinterpret_cast<int32>(this) + reinterpret_cast<int32>(m_IP), from.x, from.y, to.x, to.y, z);
+    CTheScripts::HighlightImportantArea(NOTSA_PTR_ID32(this) + NOTSA_PTR_ID32(m_IP), from.x, from.y, to.x, to.y, z);
 }
 
 void CRunningScript::HighlightImportantArea(CRect area, float z) {

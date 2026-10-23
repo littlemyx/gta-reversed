@@ -203,6 +203,12 @@ namespace notsa::standalone::Fixups { void UnreachableHit(const char* fn, const 
 
 #define NOTSA_FORCEINLINE __forceinline
 
+//! 32-bit identity key of an object address (corona / rope / streak / crime / shadow / marker ids, srand seeds, bug-compatible "pointer passed as int").
+//! x86: the address itself, code identical to `(uint32)p`. 64-bit: its low 32 bits - the keys are only compared / hashed, never converted back
+//! to a pointer; objects of one pool differ in the low bits (pools are far smaller than 4 GiB). A macro on purpose: an (even always-inlined) function
+//! template would still be emitted as an unreferenced COMDAT by cl and change the object file of every user (wine A/B, P-4c).
+#define NOTSA_PTR_ID32(p) static_cast<uint32>(reinterpret_cast<uintptr_t>(p))
+
 /*!
 * @brief Used for static variable references
 *

@@ -40,7 +40,7 @@ void AngledRect::HighlightWithMarkers(const CMatrix& transform) const {
     for (const auto& corner : GetCorners()) {
         auto corner3D = transform.TransformPoint(CVector{ corner, CWorld::FindGroundZForCoord(corner.x, corner.y) });
         C3dMarkers::PlaceMarkerSet(
-            reinterpret_cast<uint32>(this) + rand(),
+            NOTSA_PTR_ID32(this) + rand(),
             MARKER3D_CYLINDER,
             corner3D,
             0.2f,

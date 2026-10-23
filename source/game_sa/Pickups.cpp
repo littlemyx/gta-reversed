@@ -191,7 +191,7 @@ void CPickups::DoCollectableEffects(CEntity* entity) {
         const auto t = (uint8)((x87::sin((float)(((uint16)std::bit_cast<uintptr_t>(entity) + (uint16)CTimer::GetTimeInMS()) % 2048) * 0.0030664064f) + 1.0f) / 2.0f * ((14.0f - d) * ExeRecip(14.0f)) * 255.0f);
 
         CShadows::StoreStaticShadow(
-            (uint32)entity,
+            NOTSA_PTR_ID32(entity),
             SHADOW_ADDITIVE,
             gpShadowExplosionTex,
             entityPos,
@@ -210,7 +210,7 @@ void CPickups::DoCollectableEffects(CEntity* entity) {
             0.0f
         );
         CCoronas::RegisterCorona(
-            (uint32)entity,
+            NOTSA_PTR_ID32(entity),
             nullptr,
             t,
             t,
@@ -246,7 +246,7 @@ void CPickups::DoMineEffects(CEntity* entity) {
         const auto t = (uint8)((x87::sin((float)(((uint16)std::bit_cast<uintptr_t>(entity) + (uint16)CTimer::GetTimeInMS()) % 512) * 0.012265625f) + 1.0f) / 2.0f * ((20.0f - d) * ExeRecip(20.0f)) * 64.0f);
 
         CShadows::StoreStaticShadow(
-            (uint32)entity,
+            NOTSA_PTR_ID32(entity),
             SHADOW_ADDITIVE,
             gpShadowExplosionTex,
             entityPos,
@@ -265,7 +265,7 @@ void CPickups::DoMineEffects(CEntity* entity) {
             0.0f
         );
         CCoronas::RegisterCorona(
-            (uint32)entity,
+            NOTSA_PTR_ID32(entity),
             nullptr,
             t,
             0,

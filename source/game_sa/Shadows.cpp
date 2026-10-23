@@ -2002,7 +2002,7 @@ void CShadows::StoreCarLightShadow(CVehicle* vehicle, int32 id, RwTexture* textu
         );
     } else {
         StoreStaticShadow(
-            reinterpret_cast<uint32>(vehicle) + id,
+            NOTSA_PTR_ID32(vehicle) + id,
             SHADOW_ADDITIVE,
             texture,
             posn,
@@ -2037,7 +2037,7 @@ void CShadows::StoreShadowForPole(CEntity* entity, float offsetX, float offsetY,
     const auto right     = CVector2D{ CTimeCycle::GetShadowSide() } * poleWidth;
 
     StoreStaticShadow(
-        reinterpret_cast<uint32>(entity->GetLod()) + localId + 3,
+        NOTSA_PTR_ID32(entity->GetLod()) + localId + 3,
         SHADOW_DEFAULT,
         gpPostShadowTex,
         mat.GetPosition() + CVector{ front, 0.f } + CVector{

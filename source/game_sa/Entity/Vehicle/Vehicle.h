@@ -748,7 +748,7 @@ protected:
     float GetNewSteeringAmt();
 
 public:
-    [[nodiscard]] auto GetRopeID() const { return (uint32)&m_nFlags + 1; } // yep, flags + 1
+    [[nodiscard]] auto GetRopeID() const { return NOTSA_PTR_ID32(&m_nFlags) + 1; } // yep, flags + 1
     [[nodiscard]] CVehicleAnimGroup& GetAnimGroup() const;
     [[nodiscard]] AssocGroupId GetAnimGroupId() const;
 

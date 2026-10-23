@@ -38,10 +38,16 @@
 // #define NOCTLMGR -- for LPCDLGTEMPLATE at some headers of Windows SDK
 // #define NONLS -- for GetACP at common.h
 
+#ifdef _WIN32
 #include <Windows.h>
 
 #ifdef USE_DSOUND
     #include <mmsystem.h> // for DirectSound types
+#endif
+#else
+// Non-Windows (portable) build: the scalar types and the MSVC CRT names only; Win32 API calls are NOT shimmed (stream W)
+#include "portable/wintypes.h"
+#include "portable/crt.h"
 #endif
 
 #undef GetCurrentTime

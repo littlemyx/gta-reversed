@@ -106,3 +106,4 @@ date	agent	rules	kind	tokens	tool_uses	minutes	outcome	notes
 2026-10-23	MAC-A1	v4	mac portable option+preset+census	317154	104	26	done: stream A 71->0, no-op 8/8 TUs + 1281 cmds identical
 2026-10-23	MAC-C6	v4	mac win types/CRT shim + libc++ gaps	-	-	75	done: CRT 305->8, libc++ 0, no-op 5 TUs identical; swept one P1 line into its commit
 2026-10-23	MAC-P1	v4	mac VALIDATE split codemod 161 files	203138	75	41	done: P 927->33, clean TUs 404->858, no-op 6/6; review pending
+2026-10-23	MAC-P1-REV	v4	review P-1 codemod	-	-	-	clean, 1 debatable (MemoryHeap invariant)

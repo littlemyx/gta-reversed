@@ -221,7 +221,7 @@ public:
 
     NLOHMANN_DEFINE_TYPE_INTRUSIVE(CVector, x, y, z);
 };
-VALIDATE_SIZE(CVector, 0xC);
+VALIDATE_SIZE_FILE(CVector, 0xC);
 
 constexpr inline CVector operator-(const CVector& vecOne, const CVector& vecTwo) {
     return { vecOne.x - vecTwo.x, vecOne.y - vecTwo.y, vecOne.z - vecTwo.z };

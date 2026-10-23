@@ -259,7 +259,7 @@ private:
     friend CVector operator*(const CMatrix& a, const CVector& b);
     friend CMatrix operator+(const CMatrix& a, const CMatrix& b);
 };
-VALIDATE_SIZE(CMatrix, 0x48);
+VALIDATE_SIZE_FILE(CMatrix, 0x48);
 
 CMatrix operator*(const CMatrix& a, const CMatrix& b);
 [[deprecated]] CVector operator*(const CMatrix& a, const CVector& b);

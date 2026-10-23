@@ -121,7 +121,7 @@ public:
     operator RtQuat() const { return RtQuat{x, y, z, w}; }
 };
 
-VALIDATE_SIZE(CQuaternion, 0x10);
+VALIDATE_SIZE_FILE(CQuaternion, 0x10);
 
 constexpr float DotProduct(const CQuaternion& q1, const CQuaternion& q2) {
     return q1.x * q2.x +

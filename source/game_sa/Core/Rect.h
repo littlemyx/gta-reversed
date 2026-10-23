@@ -138,4 +138,4 @@ public:
     bool operator!=(const CRect&) const = default;
 };
 
-VALIDATE_SIZE(CRect, 0x10);
+VALIDATE_SIZE_FILE(CRect, 0x10);

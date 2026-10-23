@@ -8,7 +8,7 @@
 #include "TaskSimpleIKLookAt.h"
 #include "TaskSimpleIKPointArm.h"
 
-NOTSA_GLOBAL(g_ikChainMan, 0xC15448, (IKChainManager_c), {}); static_assert(sizeof(g_ikChainMan) == 2840);
+NOTSA_GLOBAL(g_ikChainMan, 0xC15448, (IKChainManager_c), {}); VALIDATE_SIZE(g_ikChainMan, 2840);
 
 void IKChainManager_c::InjectHooks() {
     RH_ScopedClass(IKChainManager_c);

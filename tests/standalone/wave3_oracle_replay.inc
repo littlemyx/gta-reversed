@@ -14,6 +14,7 @@
 #include "Animation/AnimBlendClumpData.h"
 #include "Plugins/RpAnimBlendPlugin/RpAnimBlend.h"
 #include "Cam.h"
+#include "CompressedMatrixNotAligned.h"
 
 struct W3R_RwObj { using type = RwObject* CEntity::*; friend type W2Get(W3R_RwObj); };
 template struct W2Rob<W3R_RwObj, &CEntity::m_pRwObject>;
@@ -32,6 +33,7 @@ static int g_pedN = 0, g_vehN = 0;
 static uint8_t* Buf(int slot) { return reinterpret_cast<uint8_t*>(kBuf + kBufSz * slot); }
 static uint8_t* Stat() { return reinterpret_cast<uint8_t*>(kStat); }
 static int8_t& Mode() { return StaticRef<int8_t>(kMode); }
+template<class R, class... A> static R ExeThis(uint32_t addr, void* self, A... a) { return oracle::Fn<R __fastcall(void*, int, A...)>(addr)(self, 0, a...); }
 static uint64_t U(const void* p) { return (uint64_t)(uintptr_t)p; }
 template<class R, class... A> static R ExeC(uint32_t addr, A... a) { return oracle::Fn<R __cdecl(A...)>(addr)(a...); }
 static int PoolMax = 14;                          // largest pool reference a packet may carry (the fixtures' lookups hit with a fair probability)
@@ -153,7 +155,6 @@ static void BuildPed(Rng& r) {
     CWorld::PlayerInFocus = 0;
     CWorld::Players[0].m_pPed = r.below(2) ? reinterpret_cast<CPlayerPed*>(ped) : reinterpret_cast<CPlayerPed*>(g_pedStore + kPedStride);
     gbFirstPersonRunThisFrame = r.below(2);
-    std::memset(g_blob[0], 0, sizeof(CStoredAnimationState));   // the game passes a zero-initialised state (StorePedUpdate's `CStoredAnimationState animState{}`): the exe leaves state[0].m_nGroupId2 alone, the port writes 0
     uint32_t off = StaticRef<uint32_t>(kRecord); if (off > 99900) { off = 99900; StaticRef<uint32_t>(kRecord) = off; }
 }
 } // namespace w3r
@@ -235,18 +236,32 @@ static void TestW3ReplayState() {
         const int32_t i = Idx(r, 110);
         return VCase(r, d, [&]() -> uint64_t { return (uint8_t)CReplay::CanWeFindPoolIndexForVehicle(i); }, [&]() -> uint64_t { return (uint8_t)ExeC<uint32_t, int32_t>(0x45C490, i); });
     REND(300)
+    // CPlayerInfo::operator= 0x45DEF0 (REPLAY-2; calls CPlayerPedData::operator= 0x45C4B0): a field-wise copy (shallow: the CWanted / clothes / arresting cop pointers are copied as pointers) that leaves the
+    // padding bytes alone; the exe's flags word at PlayerData +0x34 keeps bit 9 of the destination, takes bits 10..12 from the source and every other bit from the caller's stale esi (= the destination
+    // address, 0x45DEF0 does `mov esi, ecx`). Fixture: two CPlayerInfo-sized blocks of random bytes (pointers, floats incl. NaN, a 32-byte skin name without a terminator) and a real-looking one with a terminated name
+    RROW("CPlayerInfo::operator=", 0x45DEF0)
+        static_assert(sizeof(CPlayerInfo) == 0x190 && sizeof(CPlayerInfo) <= sizeof g_blob[0]);
+        auto* dst = reinterpret_cast<CPlayerInfo*>(g_blob[0]); const auto* src = reinterpret_cast<const CPlayerInfo*>(g_blob[1]);
+        return VCase(r, d, [&]() -> uint64_t { return U(&dst->operator=(*src)); }, [&]() -> uint64_t { return U(ExeThis<void*, const void*>(0x45DEF0, dst, src)); },
+            +[](Rng& rr) { BuildAll(rr); if (rr.below(2)) { auto* sn = reinterpret_cast<CPlayerInfo*>(g_blob[1])->m_szSkinName; std::memset(sn + rr.below(20), 0, 8); } });
+    REND(1500)
     // the player info snapshot (CWorld::Players[0] <-> CReplay::PlayerInfo, 0x190 bytes)
-    static const auto Players = [](Rng& rr) { BuildAll(rr); FillGarbage(rr, &CWorld::Players[0], sizeof(CPlayerInfo)); FillGarbage(rr, &CReplay::PlayerInfo, sizeof(CPlayerInfo)); };
-    // SKIPPED by default (W3R_PLAYERINFO=1 runs them): both functions call CPlayerInfo::operator= 0x45DEF0 -> CPlayerPedData::operator= 0x45C4B0, a deep copy (CWanted, clothes, arrest pointers); random bytes are not a
-    // CPlayerInfo the exe can copy, a real fixture needs a constructed CPlayerInfo/CWanted - see ORACLE-W3-REPLAY.md
-    if (std::getenv("W3R_PLAYERINFO")) {
+    // the copy is shallow (the exe copies the CWanted / clothes / arresting cop pointers as pointers, 0x45C4B0), so the fixture needs real-looking contents rather than a deep object graph: random bytes in both
+    // CPlayerInfos, and half of the cases with a terminated skin name and the pointers of a live player (a CWanted-sized block, a clothes description, a cop) in PlayerData
+    static const auto Players = [](Rng& rr) {
+        BuildAll(rr); FillGarbage(rr, &CWorld::Players[0], sizeof(CPlayerInfo)); FillGarbage(rr, &CReplay::PlayerInfo, sizeof(CPlayerInfo));
+        for (CPlayerInfo* pi : { &CWorld::Players[0], &CReplay::PlayerInfo }) if (rr.below(2)) {
+            std::memset(pi->m_szSkinName, 0, sizeof pi->m_szSkinName); std::memcpy(pi->m_szSkinName, "player", 6);
+            pi->m_PlayerData.m_pWanted = reinterpret_cast<CWanted*>(g_blob[0]); pi->m_PlayerData.m_pPedClothesDesc = reinterpret_cast<CPedClothesDesc*>(g_blob[1]);
+            pi->m_PlayerData.m_pArrestingCop = rr.below(2) ? reinterpret_cast<CCopPed*>(g_pedStore) : nullptr;
+        }
+    };
     RROW("CReplay::StorePlayerInfoVariables", 0x45F020)
         return VCase(r, d, [&]() -> uint64_t { CReplay::StorePlayerInfoVariables(); return 0; }, [&]() -> uint64_t { ExeC<void>(0x45F020); return 0; }, +Players);
     REND(150)
     RROW("CReplay::RestorePlayerInfoVariables", 0x45E1F0)
         return VCase(r, d, [&]() -> uint64_t { CReplay::RestorePlayerInfoVariables(); return 0; }, [&]() -> uint64_t { ExeC<void>(0x45E1F0); return 0; }, +Players);
     REND(150)
-    }
 }
 
 static void TestW3ReplayBuffers() {
@@ -293,14 +308,30 @@ static void TestW3ReplayPed() {
         auto* ped = reinterpret_cast<CPed*>(g_pedStore); auto* st = reinterpret_cast<CStoredAnimationState*>(g_blob[0]);
         return VCase(r, d, [&]() -> uint64_t { CReplay::StorePedAnimation(ped, *st); return 0; }, [&]() -> uint64_t { ExeC<void, void*, void*>(0x45B170, ped, st); return 0; }, +BuildPed);
     REND(900)
-    // SKIPPED by default (W3R_PEDUPDATE=1 runs it): the packet matches except the CCompressedMatrixNotAligned part (CompressFromFullMatrix 0x59BAD0, not covered by a row of its own: ~9 % of the cases differ in the
-    // compressed words) - see ORACLE-W3-REPLAY.md
-    if (std::getenv("W3R_PEDUPDATE")) {
+    // CCompressedMatrixNotAligned::CompressFromFullMatrix 0x59BAD0 (REPLAY-2): right / forward (3 floats each, matrix +0 / +0x10) * 127 -> _ftol2 -> byte, position (+0x30) copied. Matrices: real
+    // rotations (+-1), values on the k/127 truncation boundaries (+-2 ulp), a little beyond +-1, wide / special values (NaN, inf, 1e30: the int8 wrap and the x87 indefinite result)
+    RROW("CCompressedMatrixNotAligned::CompressFromFullMatrix", 0x59BAD0)
+        auto* m = g_blob[0]; auto* out = g_blob[1];
+        return VCase(r, d, [&]() -> uint64_t { reinterpret_cast<CCompressedMatrixNotAligned*>(out)->CompressFromFullMatrix(*reinterpret_cast<const CMatrix*>(m)); return 0; },
+            [&]() -> uint64_t { ExeThis<void, const void*>(0x59BAD0, out, m); return 0; },
+            +[](Rng& rr) {
+                BuildAll(rr);
+                float f[16]; for (auto& x : f) x = GenF(rr, 1.f, S_ZERO);
+                const int mode = (int)rr.below(8);
+                for (int k = 0; k < 16; ++k) {
+                    if (k % 4 == 3 && k < 12) { f[k] = 0.f; continue; }
+                    if (k >= 12) { f[k] = GenF(rr, 3000.f, S_ALL); continue; }
+                    if (mode >= 4 && mode < 6) { f[k] = (float)((int)rr.below(255) - 127) / 127.f; uint32_t b = std::bit_cast<uint32_t>(f[k]); b += (int)rr.below(5) - 2; f[k] = std::bit_cast<float>(b); }
+                    else if (mode == 6) f[k] = GenF(rr, 1.6f, S_ZERO);
+                    else if (mode == 7) f[k] = GenF(rr, 5.f, S_ALL);
+                }
+                std::memcpy(g_blob[0], f, 0x40);
+            });
+    REND(3000)
     RROW("CReplay::StorePedUpdate", 0x45C940)
         auto* ped = reinterpret_cast<CPed*>(g_pedStore); const uint8_t idx = (uint8_t)(r.below(4) ? r.below(140) : r.u32());
         return VCase(r, d, [&]() -> uint64_t { CReplay::StorePedUpdate(ped, idx); return 0; }, [&]() -> uint64_t { ExeC<void, void*, uint32_t>(0x45C940, ped, idx); return 0; }, +BuildPed);
     REND(1200)
-    }
 }
 
 static void TestW3ReplayAll() {

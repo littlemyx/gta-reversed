@@ -170,23 +170,23 @@ void CReplay::StorePedUpdate(CPed* ped, uint8 index) {
         }
     }();
 
-    CStoredAnimationState animState{};
-    StorePedAnimation(ped, animState);
-
-    tReplayPedUpdateBlock block; // a designated-initialiser temporary leaves the 2+2 padding bytes as stack garbage (0xCC), which then lands in the replay buffer; 0x45C940 writes the fields only
-    std::memset(&block, 0, sizeof(block));
-    block.poolRef                  = index;
-    block.heading                  = (int8)(ped->m_fCurrentRotation * HEADING_COMPRESS_VALUE);
-    block.vehicleIndex             = (uint8)vehicleIdx;
-    block.animState                = animState;
-    block.matrix                   = CCompressedMatrixNotAligned::Compress(ped->GetMatrix());
-    block.weaponModel              = (int16)ped->m_nWeaponModelId;
-    block.animGroup                = (uint16)ped->m_nAnimGroup;
-    block.contactSurfaceBrightness = (uint8)(ped->m_fContactSurfaceBrightness * 100.0f);
-    block.flags.isTalking          = (bool)(ped == FindPlayerPed() && gbFirstPersonRunThisFrame && ped->bIsTalking);
-    block.flags.stillOnValidPoly   = (bool)ped->bStillOnValidPoly;
-    block.flags.usesCollision      = ped->GetUsesCollision();
-    Record.Write<tReplayPedUpdateBlock>(block);
+    // 0x45C940 writes the packet in place, field by field, and never touches the padding (2 bytes before the matrix, 2 inside the compressed matrix, 2 at the end), the unused bits of the
+    // flags byte: whatever the buffer held there stays. A local packet copied in with Record.Write overwrote them (zeros).
+    auto* const block = reinterpret_cast<tReplayPedUpdateBlock*>(reinterpret_cast<uint8*>(Record.m_pBase) + Record.m_nOffset);
+    static_assert(sizeof(tReplayPedUpdateBlock) == 52);
+    block->type                     = REPLAY_PACKET_PED_UPDATE;
+    block->poolRef                  = index;
+    block->heading                  = (int8)(ped->m_fCurrentRotation * HEADING_COMPRESS_VALUE);
+    block->matrix.CompressFromFullMatrix(ped->GetMatrix());
+    block->weaponModel              = (int16)ped->m_nWeaponModelId;
+    block->contactSurfaceBrightness = (uint8)(ped->m_fContactSurfaceBrightness * 100.0f);
+    block->flags.stillOnValidPoly   = (bool)ped->bStillOnValidPoly;
+    block->flags.usesCollision      = ped->GetUsesCollision();
+    block->flags.isTalking          = (bool)(ped == FindPlayerPed() && gbFirstPersonRunThisFrame && ped->bIsTalking);
+    block->vehicleIndex             = (uint8)vehicleIdx;
+    block->animGroup                = (uint16)ped->m_nAnimGroup;
+    StorePedAnimation(ped, block->animState);
+    Record.m_nOffset += sizeof(tReplayPedUpdateBlock);
 }
 
 // 0x45B4D0

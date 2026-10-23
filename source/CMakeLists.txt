@@ -164,6 +164,14 @@ if (${RE_PROJECT}_PORTABLE)
     # MAC-W0a (app/): Win32-only app/platform TUs replaced by portable/app_*.cpp
     set(PORTABLE_EXCLUDED_APP_FILES app/platform/win/VideoPlayer/VideoPlayer.cpp app/platform/win/VideoModeSelectDialog.cpp extensions/debug.cpp)
     list(APPEND PORTABLE_EXCLUDED_FILES ${PORTABLE_EXCLUDED_APP_FILES})
+    # MAC-R2 (stream R, .notes/STREAM_R_PLAN.md): the D3D9 fixed-function render facade has no GL counterpart; librw's gl3 pipelines replace it.
+    # Symbols still referenced from kept TUs are stubbed in portable/render/rw_stubs_gl3.cpp (honest Unsupported + failure), see tools/portable/rw_symbol_audit.py.
+    set(PORTABLE_EXCLUDED_RENDER_FILES
+        standalone/rw/pipeline.cpp standalone/rw/pipeline_matfx.cpp standalone/rw/rwd3d_ff.cpp
+        standalone/rw/pipeline_skin.cpp standalone/rw/pipeline_skin_cpu.cpp standalone/rw/skin_vs.cpp
+        standalone/rw/im2d_im3d.cpp
+        game_sa/RenderWare/D3DResourceSystem.cpp game_sa/RenderWare/D3DTextureBuffer.cpp game_sa/RenderWare/D3DIndexDataBuffer.cpp)
+    list(APPEND PORTABLE_EXCLUDED_FILES ${PORTABLE_EXCLUDED_RENDER_FILES})
     list(REMOVE_ITEM SOURCE_FILES_WITHOUT_MODULES_LIST ${PORTABLE_EXCLUDED_FILES})
 else()
     # source/portable/*.cpp are the portable-only implementations (MAC-W0); the Windows builds never see them (headers there are fine: they are never compiled on their own)

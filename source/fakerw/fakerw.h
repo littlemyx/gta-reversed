@@ -32,6 +32,8 @@
 #ifndef RW_D3D9
 #define RW_D3D9
 #endif
+#else
+#include "d3d9_lite.h"
 #endif
 
 #include <rw.h>

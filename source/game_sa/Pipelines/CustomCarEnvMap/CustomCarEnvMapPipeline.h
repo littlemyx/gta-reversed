@@ -107,7 +107,9 @@ public:
     static inline NOTSA_GLOBAL(m_gEnvMapPipeAtmDataPool, 0xC02D2C, (CustomEnvMapPipeAtomicDataPool*), {});
     static inline NOTSA_GLOBAL(m_gSpecMapPipeMatDataPool, 0xC02D30, (CustomSpecMapPipeMaterialDataPool*), {});
 
+#ifndef NOTSA_PORTABLE // FF light of the D3D9 render callback (R-9 uses its own uniform under GL3)
     static inline NOTSA_GLOBAL(g_GameLight, 0xC02CB0, (D3DLIGHT9), {});
+#endif
 
 public:
     static void InjectHooks();

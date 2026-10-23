@@ -22,8 +22,12 @@ void CCustomBuildingPipeline::InjectHooks() {
 
 // 0x5D7D90
 bool CCustomBuildingPipeline::CreatePipe() {
+#ifndef NOTSA_PORTABLE
     ObjPipeline = CreateCustomObjPipe();
     return ObjPipeline != nullptr;
+#else
+    return true; // R-2: no FF ObjPipeline under GL3, ObjPipeline stays null and building atomics keep librw's stock pipeline (R-8 creates the gl3 one)
+#endif
 }
 
 // 0x5D7380
@@ -94,6 +98,7 @@ RpMaterial* CCustomBuildingPipeline::CustomPipeMaterialSetup(RpMaterial* materia
 // Line-by-line from the exe: identical to CCustomBuildingDNPipeline::CustomPipeRenderCB (0x5D6480) except for its own texture matrix
 // (0xC02C70 vs 0xC02C28) and COLORARG2 of the env stage (D3DTA_TFACTOR here, D3DTA_DIFFUSE in the DN version).
 void CCustomBuildingPipeline::CustomPipeRenderCB(RwResEntry* resEntry, void* object, RwUInt8 type, RwUInt32 rxGeoFlags) {
+#ifndef NOTSA_PORTABLE // R-2: D3D9 fixed-function render callback, never invoked under GL3 (R-8 twin)
     // The texture transform matrix of the env map stage, only the diagonal is ever set (and it is never applied: D3DTS_TEXTURE1 isn't set here)
     NOTSA_GLOBAL_LOCAL(s_EnvMapTexMatrix, 0xC02C70, (D3DMATRIX), {});
 
@@ -182,6 +187,7 @@ void CCustomBuildingPipeline::CustomPipeRenderCB(RwResEntry* resEntry, void* obj
     RwD3D9SetTextureStageState(1, D3DTSS_ALPHAOP, D3DTOP_DISABLE);
     RwD3D9SetTextureStageState(1, D3DTSS_TEXCOORDINDEX, 1);
     RwD3D9SetTextureStageState(1, D3DTSS_TEXTURETRANSFORMFLAGS, NULL);
+#endif
 }
 
 // 0x5D77A0

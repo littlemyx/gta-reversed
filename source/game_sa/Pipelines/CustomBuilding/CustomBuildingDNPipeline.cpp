@@ -175,8 +175,12 @@ void CCustomBuildingDNPipeline::PreRenderUpdate(RpClump* clump, bool ignoreDNBal
 
 // 0x5D7100
 bool CCustomBuildingDNPipeline::CreatePipe() {
+#ifndef NOTSA_PORTABLE
     ObjPipeline = CreateCustomObjPipe();
     return ObjPipeline != nullptr;
+#else
+    return true; // R-2: no FF ObjPipeline under GL3, ObjPipeline stays null and the atomics keep librw's stock pipeline (R-8: gl3 instance + CPU colour blend)
+#endif
 }
 
 // 0x5D6750
@@ -268,6 +272,7 @@ RpMaterial* CCustomBuildingDNPipeline::CustomPipeMaterialSetup(RpMaterial* mater
 
 // 0x5D6480
 void CCustomBuildingDNPipeline::CustomPipeRenderCB(RwResEntry* resEntry, void* object, uint8 type, uint32 rxGeoFlags) {
+#ifndef NOTSA_PORTABLE // R-2: D3D9 fixed-function render callback, never invoked under GL3 (R-8 twin)
     // 0x7FE0A0 - `_rwD3D9RenderStateVertexAlphaEnable`
     const auto D3D9RenderStateVertexAlphaEnable = [](bool enable) {
         RwCompatVertexAlphaEnable(enable);
@@ -360,6 +365,7 @@ void CCustomBuildingDNPipeline::CustomPipeRenderCB(RwResEntry* resEntry, void* o
     RwD3D9SetTextureStageState(1, D3DTSS_ALPHAOP, D3DTOP_DISABLE);
     RwD3D9SetTextureStageState(1, D3DTSS_TEXCOORDINDEX, 1);
     RwD3D9SetTextureStageState(1, D3DTSS_TEXTURETRANSFORMFLAGS, NULL);
+#endif
 }
 
 // 0x5D6E90

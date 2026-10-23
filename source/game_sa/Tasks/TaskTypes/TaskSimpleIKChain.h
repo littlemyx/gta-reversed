@@ -46,7 +46,7 @@ protected:
     eBoneTag16         m_EffectorBone{}; //! Bone we're moving
     CVector            m_EffectorOffset{};
     notsa::EntityRef<> m_TargetEntity{};
-    eBoneTag16         m_OffsetBone{};
+    eBoneTag32         m_OffsetBone{};   // 32 bit in the exe: 0x633E38 `mov [esi+2Ch], edi` (dword store of the constructor argument, 0x633F5F dword load in Clone)
     CVector            m_OffsetPos{};
     float              m_Speed{};
     bool               m_TargetEntityExisted{};

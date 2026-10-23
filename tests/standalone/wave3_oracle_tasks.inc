@@ -8,7 +8,13 @@
 #define W3_EV_FIXTURE_ONLY 1
 #include "wave3_oracle_ev.inc"
 
+// ORACLE-C-TASKS: class C rows (virtual calls in the exe closure). W3TaskCase(..., vt) writes the EXE's vftable (RH_ScopedVirtualClass VA) into word 0 of the task `this` and of the ped under test
+// (CPlayerPed) before the exe call and the PORT's vftable (the compiler's ??_7 symbol through /alternatename, no object needed) before the port call, and clears both afterwards so the compare ignores them.
+#define W3_PORT_VT(C) extern "C" const uint32_t w3vt_##C[]; __pragma(comment(linker, "/alternatename:_w3vt_" #C "=??_7" #C "@@6B@"))
+W3_PORT_VT(CPlayerPed)
 namespace w3t {
+struct VtEnt { const char* name; uint32_t exeVt; const uint32_t* portVt; };
+constexpr uint32_t kExePlayerPedVt = 0x86D168;
 using namespace w2; using namespace w3e; using namespace w3p;
 #include "Pools/PointRoutePool.h"
 #include "Pools/NodeRoutePool.h"
@@ -56,9 +62,16 @@ static void PutEntTo(Rng& r, uint8_t* b, size_t off, char kind, size_t size) {
 
 template<class T, class... A> static bool Build(A&&... a) { if constexpr (!std::is_abstract_v<T> && std::is_constructible_v<T, A&&...>) { ::new (static_cast<void*>(g_tk)) T(std::forward<A>(a)...); return true; } else return false; }
 
+// side 1 = port vftables, 2 = exe vftables, 0 = clear (word 0 of the task and of the ped under test)
+static void SetVt(const VtEnt* vt, int side) {
+    if (!vt) return;
+    Put32(g_tk, 0, side == 1 ? (uint32_t)(uintptr_t)vt->portVt : side == 2 ? vt->exeVt : 0);
+    Put32(g_src, 0, side == 1 ? (uint32_t)(uintptr_t)w3vt_CPlayerPed : side == 2 ? kExePlayerPedVt : 0);
+}
+
 // one case: fresh worlds, the wired ped under test, the reference world; then the task object `this` (sz > 0); compared after the call
 template<class PF, class EF>
-static bool W3TaskCase(Rng& r, std::string& d, size_t sz, std::initializer_list<EntOff> ents, PF&& portFn, EF&& exeFn, bool maskVptr = false, std::function<bool()> build = nullptr) {
+static bool W3TaskCase(Rng& r, std::string& d, size_t sz, std::initializer_list<EntOff> ents, PF&& portFn, EF&& exeFn, bool maskVptr = false, std::function<bool()> build = nullptr, const VtEnt* vt = nullptr) {
     static std::vector<uint8_t> img0(kImgHi - kImgLo);
     std::memcpy(img0.data(), (void*)kImgLo, img0.size());
     const uint32_t seed = Prep(r, 0);
@@ -89,7 +102,7 @@ static bool W3TaskCase(Rng& r, std::string& d, size_t sz, std::initializer_list<
             Reg{ (uintptr_t)g_stat, sizeof g_stat }, Reg{ (uintptr_t)g_wanted, sizeof g_wanted }, Reg{ (uintptr_t)g_wanted2, sizeof g_wanted2 }, Reg{ (uintptr_t)g_clo, sizeof g_clo },
             g_tp.RegStruct(), g_tp.RegFlags(), tps, g_ep.RegStruct(), g_ep.RegFlags(), g_ep.RegStore(), g_tap.RegStruct(), g_tap.RegFlags(), g_tap.RegStore(),
             g_prp.RegStruct(), g_prp.RegFlags(), g_prp.RegStore(), g_nrp.RegStruct(), g_nrp.RegFlags(), g_nrp.RegStore(), Reg{ (uintptr_t)rf::pp, sizeof(CPedPool) }, Reg{ (uintptr_t)rf::pedSt, (size_t)rf::kP }, Reg{ kImgLo, kImgHi - kImgLo } },
-        [&]() -> uint64_t { return portFn(static_cast<void*>(g_tk)); }, [&]() -> uint64_t { return exeFn(static_cast<void*>(g_tk)); }, kRf);
+        [&]() -> uint64_t { SetVt(vt, 1); const uint64_t rv = portFn(static_cast<void*>(g_tk)); SetVt(vt, 0); return rv; }, [&]() -> uint64_t { SetVt(vt, 2); const uint64_t rv = exeFn(static_cast<void*>(g_tk)); SetVt(vt, 0); return rv; }, kRf);
     g_tap.Leave(); g_prp.Leave(); g_nrp.Leave();
     g_tmask.clear(); g_pmask.clear(); g_tzero = false;
     Done();

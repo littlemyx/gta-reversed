@@ -93,7 +93,7 @@ run_ours() { # name route limit env px windowed -> $OUT/<name>/ (logs, route, sc
     [ "$px" = 1 ] && export NOTSA_STANDALONE_SCREENSHOT=100000 NOTSA_STANDALONE_SCREENSHOT_MAX=60
     [ "$px" = 0 ] && [ "${GR_NOPRESENT:-1}" = 1 ] && export NOTSA_STANDALONE_NOPRESENT=1
     for kv in $xenv; do [ "$kv" = - ] || export "$(echo "$kv" | sed "s#@OUT@#$od#g")"; done
-    ./gta_reversed.exe > "$od/run.out" 2>&1 &
+    $GR_WRAP ./gta_reversed.exe > "$od/run.out" 2>&1 &
     echo $! > "$od/pid"
   )
   WPID=$(cat "$od/pid")
@@ -132,7 +132,7 @@ while read -r name route limit xenv px win live <&3; do
     # A crash is never a set-up flake: it stays the verdict (a retry would hide it, ANIM-CRASH 2026-10-23).
     if [ "$rc" = 3 ] && grep -aqs "UNHANDLED EXCEPTION" "$OUT/$name/log.log" "$OUT/$name/standalone.log"; then
       echo "CRASH $name: unhandled exception during set-up (see $OUT/$name/log.log), not retried" >> "$OUT/$name.result"; rc=1; fi
-    [ "$rc" = 3 ] && [ "$attempt" = 1 ] && { echo "  set-up failed ($(grep -m1 SETUP "$OUT/$name.result" | cut -c1-110)), retrying once"; rm -rf "$OUT/$name.attempt1"; mv "$OUT/$name" "$OUT/$name.attempt1"; mv "$OUT/$name.result" "$OUT/$name.attempt1.result"; continue; }
+    [ "$rc" = 3 ] && [ "$attempt" = 1 ] && [ -z "${GR_NORETRY:-}" ] && { echo "  set-up failed ($(grep -m1 SETUP "$OUT/$name.result" | cut -c1-110)), retrying once"; rm -rf "$OUT/$name.attempt1"; mv "$OUT/$name" "$OUT/$name.attempt1"; mv "$OUT/$name.result" "$OUT/$name.attempt1.result"; continue; }
     break
   done
   if [ "$ORIG" = 1 ] && [ "$live" = 1 ]; then

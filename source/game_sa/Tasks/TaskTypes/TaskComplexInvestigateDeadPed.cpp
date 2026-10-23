@@ -45,13 +45,16 @@ CTaskComplexInvestigateDeadPed::~CTaskComplexInvestigateDeadPed() {
 // 0x696EE0
 void CTaskComplexInvestigateDeadPed::ComputeTargetPos(CPed* ped, CVector& targetPos) {
     const auto& deadPedPos = m_deadPed->GetPosition();
-    targetPos = deadPedPos + Normalized(ped->GetPosition() - deadPedPos) * 2.f;
+    auto dir = ped->GetPosition() - deadPedPos;
+    dir.z = 0.f; // 0x696F19: mov [esp+0Ch], 0 - the exe normalises the 2D direction only (z stays the dead ped's z)
+    targetPos = deadPedPos + Normalized(dir) * 2.f;
 }
 
 // 0x696F90
 CTask* CTaskComplexInvestigateDeadPed::CreateSubTask(eTaskType taskType, CPed* ped) {
     switch (taskType) {
     case TASK_COMPLEX_GO_TO_POINT_AND_STAND_STILL:
+        ComputeTargetPos(ped, m_targetPos); // 0x69714C: the exe recomputes the target position (into this+0x1C) before building the task; the port used the stale member
         return new CTaskComplexGoToPointAndStandStill{ PEDMOVE_RUN, m_targetPos, 0.5f, 2.f, false, false };
     case TASK_COMPLEX_SIGNAL_AT_PED:
         return new CTaskComplexSignalAtPed{ m_deadPed, -1, false };
@@ -59,8 +62,12 @@ CTask* CTaskComplexInvestigateDeadPed::CreateSubTask(eTaskType taskType, CPed* p
         return nullptr;
     case TASK_SIMPLE_ACHIEVE_HEADING:
         return new CTaskSimpleAchieveHeading{ m_targetHeading, 0.5f, 0.2f };
-    case TASK_SIMPLE_STAND_STILL:
-        return new CTaskSimpleStandStill{ 1000 };
+    case TASK_SIMPLE_STAND_STILL: {
+        auto* const task = new CTaskSimpleStandStill{ 1000 };
+        // 0x6970A3..0x6970BD: the exe also starts the head look-at at the dead ped right after building the stand-still task (name 0x870D68 "TaskInvDeadPed", 1000 ms, head bone, no offset, no torso, 0.25, 500, prio 3)
+        g_ikChainMan.LookAt("TaskInvDeadPed", ped, m_deadPed, 1000, BONE_HEAD, nullptr, false, 0.25f, 500, 3, false);
+        return task;
+    }
     case TASK_SIMPLE_ANIM:
         return new CTaskSimpleRunAnim{ ped->m_nAnimGroup, ANIM_ID_ROADCROSS, 4.0f, false };
     case TASK_SIMPLE_GO_TO_POINT:

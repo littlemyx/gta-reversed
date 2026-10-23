@@ -75,6 +75,9 @@ def main():
         if b.startswith('wave2_oracle_gen') or b.startswith('wave3_oracle_gen'): continue
         if f.endswith(('.cpp', '.inc', '.h')):
             for m in G.RE_ADDR.finditer(open(f, encoding='utf-8', errors='replace').read()): covered.add(int(m.group(1), 16))
+    prev_gen = set()   # rows of an earlier run of this generator (the coverage tool counts them as covered): regenerated
+    if '--prev' in sys.argv:
+        for m in G.RE_ADDR.finditer(open(sys.argv[sys.argv.index('--prev') + 1], encoding='utf-8', errors='replace').read()): prev_gen.add(int(m.group(1), 16))
     index = G.Index(repo)
     rows = []; report = []; srcs = set(); robs = {}; nrob = 0
     base_tus = {'CTask': 'game_sa/Tasks/Task.cpp', 'CTaskSimple': 'game_sa/Tasks/TaskSimple.cpp', 'CTaskComplex': 'game_sa/Tasks/TaskComplex.cpp', 'CEvent': 'game_sa/Events/Event.cpp', 'CEventEditableResponse': 'game_sa/Events/EventEditableResponse.cpp'}
@@ -83,7 +86,7 @@ def main():
         fn = s['fn']
         if not s['cls'] or s['sub'] != 'game_sa/Tasks/TaskTypes': continue
         if fn in ('CloneEditable',): continue
-        if s['addr'] in covered or s['covered'] or s['oc'] not in classes: continue
+        if s['addr'] in covered or (s['covered'] and s['addr'] not in prev_gen) or s['oc'] not in classes: continue
         cls = s['cls']; key = '%s::%s' % (cls, fn)
         if key in skip: report.append('SKIP %s 0x%X: %s' % (key, s['addr'], skip[key])); continue
         if cls not in index.cls: report.append('NOHEADER %s 0x%X' % (key, s['addr'])); continue
@@ -176,7 +179,7 @@ def main():
             if cr is not None: build = cr
         hdr_rel = os.path.relpath(index.header_of(cls), os.path.join(repo, 'source')).replace(chr(92), '/')
         pre = PRE.get(key)
-        rows.append(dict(pre=pre, build=build, cls=cls, fn=fn, addr=s['addr'], decls=decls, ctor=fn.startswith('Constructor'), call=call, exe=exe, rk=rk, static=d['static'] and not d.get('static_obj'), static_call=d['static'], ents=ents, hdr=hdr_rel, boolret=(rk == 'b'), sub=(s['oc'] == 'C' and 'CTaskComplex' in index.chain(cls)), dtor=is_dtor or fn.startswith('Constructor')))
+        rows.append(dict(pre=pre, build=build, cls=cls, fn=fn, addr=s['addr'], decls=decls, ctor=fn.startswith('Constructor'), call=call, exe=exe, rk=rk, static=d['static'] and not d.get('static_obj'), static_call=d['static'], ents=ents, hdr=hdr_rel, boolret=(rk == 'b'), sub=(s['oc'] == 'C' and 'CTaskComplex' in index.chain(cls)), dtor=is_dtor or fn.startswith('Constructor'), vt=(cls if s['oc'] == 'C' and not d['static'] and not fn.startswith('Constructor') and not is_dtor else None)))
         for c in index.chain(cls):
             tu = G.tu_for_cls(index, repo, c) if hasattr(G, 'tu_for_cls') else None
         for c in index.chain(cls):
@@ -205,6 +208,13 @@ def main():
         L.append('static size_t %s() { auto pm = W2Get(%s_T{}); uint32_t o = 0; std::memcpy(&o, &pm, 4); return o; }' % (rob, rob))
         L.append('static size_t %s_sz() { return sizeof(W2MemberOf<%s_T::type>::type); }' % (rob, rob))
     L.append('')
+    vcls = sorted(set(r['vt'] for r in rows if r.get('vt')))
+    for c in vcls:
+        va = exe_vt(repo, c)
+        if va is None: print('no exe vftable for', c); continue
+        L.append('W3_PORT_VT(%s) static const w3t::VtEnt kTVt_%s = { "%s", 0x%X, w3vt_%s };' % (c, c, c, va, c))
+    for r in rows:
+        if r.get('vt') and exe_vt(repo, r['vt']) is None: r['vt'] = None
     L.append('static void TestW3TaskFuncs() {')
     L.append('    using namespace w2;')
     for r in rows:
@@ -215,7 +225,7 @@ def main():
         L.append('    Run("%s::%s 0x%X", [&](Rng& r, std::string& d) {' % (r['cls'], r['fn'], r['addr']))
         L.append('        %s' % (r['decls'] + (' ' + r['build'][0] if r.get('build') else '')))
         if r.get('pre'): L.append(('        %s' if 'g_t' in r['pre'].split(' ')[0] or 'g_pmask' in r['pre'].split(' ')[0] else '        w3t::g_tpost = [](Rng&) { %s };') % r['pre'])   # fixture-flag assignments run at once (g_tzero is read before the wiring), exe-static presets are deferred
-        L.append('        return W3TaskCase(r, d, %s, { %s }, [&](void* p) -> uint64_t { (void)p; return %s; }, [&](void* p) -> uint64_t { (void)p; return %s; }%s);' % (sz, el, conv[0] % r['call'], conv[1] % r['exe'], (', true' if r.get('dtor') else ', false') + ((', [&]() -> bool { return w3t::Build<%s>(%s); }' % (r['cls'], r['build'][1])) if r.get('build') else '')))
+        L.append('        return W3TaskCase(r, d, %s, { %s }, [&](void* p) -> uint64_t { (void)p; return %s; }, [&](void* p) -> uint64_t { (void)p; return %s; }%s);' % (sz, el, conv[0] % r['call'], conv[1] % r['exe'], (', true' if r.get('dtor') else ', false') + ((', [&]() -> bool { return w3t::Build<%s>(%s); }' % (r['cls'], r['build'][1])) if r.get('build') else (', nullptr' if r.get('vt') else '')) + ((', &kTVt_%s' % r['vt']) if r.get('vt') else '')))
         L.append('    }, 60);')
     L.append('}')
     w('wave3_oracle_gen_tasks.inc', L)
@@ -244,6 +254,14 @@ PRE = {
     'CTaskComplexTrackEntity::CalcMoveRatio': 'volatile uint32_t* s_ = reinterpret_cast<volatile uint32_t*>(0xC18CF4); s_[0] = 0x3FA00000; s_[1] = 0x3E800000; s_[2] = 0x41C80000; s_[3] = 0x3F800000; s_[4] = 0x3D23D70B; s_[5] = 0x1F;',   # lazily initialised function-local statics of the exe (1.25, 0.25, 25.0, 1.0, 0.04 + guard bits)
 }
 TASK_CALLEE_TUS = ['game_sa/PedGeometryAnalyser.cpp', 'game_sa/NodeRoute.cpp', 'game_sa/PatrolRoute.cpp', 'game_sa/PathFind.cpp', 'game_sa/EntityScanner.cpp', 'game_sa/PedScanner.cpp', 'game_sa/FireManager.cpp', 'game_sa/Fire.cpp', 'game_sa/CarEnterExit.cpp', 'game_sa/PedGroup.cpp', 'game_sa/Clock.cpp', 'game_sa/Entity/Ped/PlayerPed.cpp', 'game_sa/Entity/Ped/CopPed.cpp', 'game_sa/Stats.cpp', 'game_sa/WeaponInfo.cpp', 'game_sa/Weapon.cpp', 'game_sa/Wanted.cpp', 'game_sa/Pad.cpp', 'game_sa/PedIntelligence.cpp', 'game_sa/Audio/Entities/AEPedSpeechAudioEntity.cpp']
+
+_VT = {}
+def exe_vt(repo, cls):
+    if not _VT:
+        for f in glob.glob(os.path.join(repo, 'source/**/*.cpp'), recursive=True):
+            t = open(f, encoding='utf-8', errors='replace').read()
+            for m in re.finditer(r'RH_ScopedVirtualClass\s*\(\s*(\w+)\s*,\s*(0x[0-9A-Fa-f]+)', t): _VT[m.group(1)] = int(m.group(2), 16)
+    return _VT.get(cls)
 
 def subtask_cases(repo, file, cls):
     """-> the `case TASK_xxx:` labels in the body of Class::CreateSubTask of the port source"""

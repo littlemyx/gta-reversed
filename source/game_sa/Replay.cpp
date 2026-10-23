@@ -140,10 +140,18 @@ void CReplay::StorePedAnimation(CPed* ped, CStoredAnimationState& state) {
     float blendValue{};
     CAnimBlendAssociation* second{};
     const auto main = RpAnimBlendClumpGetMainAssociation(ped->GetRpClump(), &second, &blendValue);
+    // 0x45B170 writes the first four fields of state[0] and leaves m_nGroupId2 alone (it is only used by the blend states 1 and 2)
+    const auto StoreMain = [&state](const AnimationState& made) {
+        auto& st       = state[0];
+        st.m_nAnimId   = made.m_nAnimId;
+        st.m_nTime     = made.m_nTime;
+        st.m_nSpeed    = made.m_nSpeed;
+        st.m_nGroupId1 = made.m_nGroupId1;
+    };
     if (main) {
-        state[0] = AnimationState::Make(main->m_AnimId, main->m_CurrentTime, main->m_Speed, static_cast<uint8>(main->m_AnimGroupId));
+        StoreMain(AnimationState::Make(main->m_AnimId, main->m_CurrentTime, main->m_Speed, static_cast<uint8>(main->m_AnimGroupId)));
     } else {
-        state[0] = AnimationState::Make(ANIM_ID_IDLE, 0.0f, 1.0f, 0);
+        StoreMain(AnimationState::Make(ANIM_ID_IDLE, 0.0f, 1.0f, 0));
     }
 
     if (second) {
@@ -171,7 +179,7 @@ void CReplay::StorePedUpdate(CPed* ped, uint8 index) {
     }();
 
     // 0x45C940 writes the packet in place, field by field, and never touches the padding (2 bytes before the matrix, 2 inside the compressed matrix, 2 at the end), the unused bits of the
-    // flags byte: whatever the buffer held there stays. A local packet copied in with Record.Write overwrote them (zeros).
+    // flags byte and state[0].m_nGroupId2: whatever the buffer held there stays. A local packet copied in with Record.Write overwrote them (zeros).
     auto* const block = reinterpret_cast<tReplayPedUpdateBlock*>(reinterpret_cast<uint8*>(Record.m_pBase) + Record.m_nOffset);
     static_assert(sizeof(tReplayPedUpdateBlock) == 52);
     block->type                     = REPLAY_PACKET_PED_UPDATE;

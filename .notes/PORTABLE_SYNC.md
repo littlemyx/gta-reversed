@@ -20,3 +20,4 @@ Append-only. Newest entry at the bottom. Prefix each entry with `[win]` or `[mac
   hook machinery compiled out at macro level: source/CMakeLists.txt, CMakePresets.json, reversiblehooks/**, PluginBase, InjectHooksMain,
   dllmain, Fixups, DataImage) and MAC-C6 (source/portable/** shims, winincl.h guarded by !_WIN32, libc++ gaps). Both MSVC-neutral by
   construction + wine A/B on sampled TUs. No codemods over game_sa yet.
+- [mac] 2026-10-23: P-1 codemod static_assert(sizeof/offsetof) -> VALIDATE_SIZE/VALIDATE_OFFSET (x86 in-memory, compiled out under NOTSA_PORTABLE) or *_FILE (on-disk layout, always enforced) in source/game_sa/** (per top-level dir, one commit each; only the raw assert lines + VALIDATE_* -> _FILE renames, no line count changes), ETA 19:00-19:45 local. Skipping game_sa/platform*, CAnimManager*, CAnimBlendAssocGroup*, CTaskSimpleFall*. Base.h macros landed in f5fa55f1 (MSVC expansion unchanged).

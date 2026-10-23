@@ -76,7 +76,7 @@ public:
         const uint8& at(size_t index) const { return buffer.at(index); }
 
         // Returns its index from CReplay::Buffers array.
-        size_t GetIndex() const  { return (this - Buffers.data()) / sizeof(tReplayBuffer); }
+        size_t GetIndex() const  { return this - Buffers.data(); }   // element difference (the old extra "/ sizeof(tReplayBuffer)" made it 0 for every buffer)
         bool IsAvailable() const { return BufferStatus[GetIndex()] != REPLAYBUFFER_NOT_AVAILABLE; }
 
         struct Iterator {

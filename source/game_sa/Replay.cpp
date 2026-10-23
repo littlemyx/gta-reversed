@@ -1389,7 +1389,7 @@ constexpr uint32 CReplay::FindSizeOfPacket(eReplayPacket type) {
 
 // 0x45DE40
 bool CReplay::IsThisVehicleUsedInRecording(int32 index) {
-    for (auto& buffer : Buffers) {
+    for (auto& buffer : GetAllActiveBuffers()) {
         for (auto& packet : buffer) {
             switch (packet.type) {
             case REPLAY_PACKET_VEHICLE:
@@ -1417,7 +1417,7 @@ bool CReplay::IsThisVehicleUsedInRecording(int32 index) {
 
 // 0x45DDE0
 bool CReplay::IsThisPedUsedInRecording(int32 index) {
-    for (auto& buffer : Buffers) {
+    for (auto& buffer : GetAllActiveBuffers()) {
         const auto packet = rng::find_if(buffer, [index](auto&& p) {
             return p.type == REPLAY_PACKET_PED_HEADER && p.As<tReplayPedHeaderBlock>()->poolRef == index;
         });

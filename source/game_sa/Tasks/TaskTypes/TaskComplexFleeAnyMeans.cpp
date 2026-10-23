@@ -5,6 +5,7 @@
 #include "TaskComplexStealCar.h"
 #include "TaskComplexCarDriveMission.h"
 #include "TaskComplexGoToPointShooting.h"
+#include "CarEnterExit.h"
 
 void CTaskComplexFleeAnyMeans::InjectHooks() {
     RH_ScopedVirtualClass(CTaskComplexFleeAnyMeans, 0x86f7f0, 11);
@@ -181,6 +182,11 @@ CTask* CTaskComplexFleeAnyMeans::ControlSubTask(CPed* ped) {
 
     // Check if vehicle is in front of the ped ([-90, 90] deg)
     if (const auto pedToVeh = closestVeh->GetPosition() - pedPos; 0.f >= pedToVeh.Normalized().Dot(ped->GetForward())) {
+        return m_pSubTask;
+    }
+
+    // 0x65D8E4: the exe asks CCarEnterExit::IsVehicleStealable before it registers the vehicle (the port skipped the test)
+    if (!CCarEnterExit::IsVehicleStealable(closestVeh, ped)) {
         return m_pSubTask;
     }
 

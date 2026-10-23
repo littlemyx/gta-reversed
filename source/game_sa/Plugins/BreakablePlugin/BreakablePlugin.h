@@ -1,5 +1,8 @@
 #pragma once
 
+#include "FileRecord.hpp"
+#include "FileRecords/BreakFile.hpp"
+
 /**
  * Breakable plugin unique rwID
  */
@@ -44,7 +47,39 @@ struct BreakInfo_t {
     char*                        m_pMaskNames;
     struct BreakInfoColor*       m_pMaterialProperties;
 };
-VALIDATE_SIZE_FILE(BreakInfo_t, 0x34);
+VALIDATE_SIZE(BreakInfo_t, 0x34); // x86 in-memory (9 pointers widen it to 0x60 on LP64); the on-disk 0x34 is VALIDATE_SIZE_FILE(BreakInfo_File) in FileRecords/BreakFile.hpp
+
+// P-2i: x86 equivalence proof, compiled in the 32-bit build only: the raw BreakInfo_t read/written by the exe is bit-for-bit the record.
+static_assert(sizeof(void*) != 4 || (sizeof(BreakInfo_t) == sizeof(BreakInfo_File)
+    && offsetof(BreakInfo_t, m_uiPosRule) == offsetof(BreakInfo_File, posRule) && offsetof(BreakInfo_t, m_usNumVertices) == offsetof(BreakInfo_File, numVertices)
+    && offsetof(BreakInfo_t, m_pVertexPos) == offsetof(BreakInfo_File, pVertexPos) && offsetof(BreakInfo_t, m_pTexCoors) == offsetof(BreakInfo_File, pTexCoords)
+    && offsetof(BreakInfo_t, m_pVertexColors) == offsetof(BreakInfo_File, pVertexColors) && offsetof(BreakInfo_t, m_usNumTriangles) == offsetof(BreakInfo_File, numTriangles)
+    && offsetof(BreakInfo_t, m_pTriangles) == offsetof(BreakInfo_File, pTriangles) && offsetof(BreakInfo_t, m_pTrianglesMaterialIndices) == offsetof(BreakInfo_File, pTriMaterials)
+    && offsetof(BreakInfo_t, m_usNumMaterials) == offsetof(BreakInfo_File, numMaterials) && offsetof(BreakInfo_t, m_pTextures) == offsetof(BreakInfo_File, pTextures)
+    && offsetof(BreakInfo_t, m_pTextureNames) == offsetof(BreakInfo_File, pTextureNames) && offsetof(BreakInfo_t, m_pMaskNames) == offsetof(BreakInfo_File, pMaskNames)
+    && offsetof(BreakInfo_t, m_pMaterialProperties) == offsetof(BreakInfo_File, pMaterialProps)),
+    "BreakInfo_File != x86 BreakInfo_t");
+
+// P-2i: file layout (0x34). ToFile: pointer slots and padding are written 0 (the exe wrote the live pointers / padding garbage; the reader never looks at them).
+// FromFile: counts and the position rule only; every pointer is null until BreakableStreamRead re-points it into the trailing blob.
+template<> struct notsa::FileRecord<BreakInfo_t> {
+    using Type = BreakInfo_File;
+    static Type ToFile(const BreakInfo_t& i) {
+        Type f{};
+        f.posRule      = (uint32)i.m_uiPosRule;
+        f.numVertices  = i.m_usNumVertices;
+        f.numTriangles = i.m_usNumTriangles;
+        f.numMaterials = i.m_usNumMaterials;
+        return f;
+    }
+    static void FromFile(BreakInfo_t& i, const Type& f) {
+        i = {};
+        i.m_uiPosRule      = (eBreakablePluginPositionRule)f.posRule;
+        i.m_usNumVertices  = f.numVertices;
+        i.m_usNumTriangles = f.numTriangles;
+        i.m_usNumMaterials = f.numMaterials;
+    }
+};
 
 struct BreakablePlugin {
     union {
@@ -56,7 +91,7 @@ struct BreakablePlugin {
 
     auto GetTextures() { return std::span { m_pBreakableInfo->m_pTextures, m_pBreakableInfo->m_usNumMaterials }; }
 };
-VALIDATE_SIZE_FILE(BreakablePlugin, 0x4);
+VALIDATE_SIZE(BreakablePlugin, 0x4); // x86 in-memory plugin slot; 8 on LP64 (the stream code reads the 4 header bytes into a local, never into the slot: P-2i)
 
 struct BreakablePluginData {
     BreakInfo_t m_Info;
@@ -70,9 +105,13 @@ struct BreakablePluginData {
     // char                m_aTextureNames[m_usNumMaterials][32];
     // char                m_aMaskNames[m_usNumMaterials][32];
     // BreakInfoColor      m_aMaterialProperties[m_usNumMaterial];
-    // RwTexture*          m_aTexturePointers[m_usNumMaterial];
+    // RwTexture*          m_aTexturePointers[m_usNumMaterial];   (P-2i: on a 64-bit target preceded by padding so that the pointers are naturally aligned)
 
 // NOTSA: Helper functions
+    //! P-2i: the RwTexture* array follows BreakInfoColor[n] (12 B each) => on a 64-bit target the 8-byte pointers would be misaligned. 1 (no pad) on the 32-bit build, so the
+    //! rounding below folds away and the x86 code is unchanged (a helper function would add an out-of-line COMDAT to the object).
+    static constexpr size_t kTexturesAlign = sizeof(void*) > 4 ? alignof(RwTexture*) : 1;
+
     static size_t GetRequiredAllocationSize(const BreakInfo_t& baseInfo) {
         auto size = sizeof(BreakInfo_t);
         size += sizeof(RwV3d) * baseInfo.m_usNumVertices;
@@ -83,6 +122,7 @@ struct BreakablePluginData {
         size += sizeof(char[32]) * baseInfo.m_usNumMaterials;
         size += sizeof(char[32]) * baseInfo.m_usNumMaterials;
         size += sizeof(BreakInfoColor) * baseInfo.m_usNumMaterials;
+        size = (size + kTexturesAlign - 1) & ~(kTexturesAlign - 1);
         size += sizeof(RwTexture*) * baseInfo.m_usNumMaterials;
         return size;
     };
@@ -95,7 +135,7 @@ struct BreakablePluginData {
     auto GetTextureNamesOffset()    { return GetMaterialIndicesOffset() + sizeof(uint16)            * m_Info.m_usNumTriangles; };
     auto GetMaskNamesOffset()       { return GetTextureNamesOffset()    + sizeof(char[32])          * m_Info.m_usNumMaterials; };
     auto GetSurfacePropsOffset()    { return GetMaskNamesOffset()       + sizeof(char[32])          * m_Info.m_usNumMaterials; };
-    auto GetTexturesOffset()        { return GetSurfacePropsOffset()    + sizeof(BreakInfoColor)    * m_Info.m_usNumMaterials; };
+    auto GetTexturesOffset()        { return (GetSurfacePropsOffset() + sizeof(BreakInfoColor) * m_Info.m_usNumMaterials + kTexturesAlign - 1) & ~(kTexturesAlign - 1); };
 
     template <typename T>
     auto As(auto byteOffset) {

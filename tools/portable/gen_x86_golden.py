@@ -21,6 +21,13 @@ RECORDS = {
                             ('moneyPerDay', 0x16, 'H', 1), ('model', 0x18, 'h', 1), ('ref', 0x1A, 'h', 1), ('type', 0x1C, 'B', 1), ('flags', 0x1D, 'B', 1)],
                      {'CPickup': {'m_fRevenueValue': 'rev', 'm_pObject': 'obj', 'm_nAmmo': 'ammo', 'm_nRegenerationTime': 'regen', 'm_vecPos': 'pos',
                                   'm_nMoneyPerDay': 'moneyPerDay', 'm_nModelIndex': 'model', 'm_nReferenceIndex': 'ref', 'm_nPickupType': 'type', 'm_nFlags': 'flags'}}),
+    # P-2i: BreakInfo_t 0x34 (DFF geometry extension chunk 0xFD, BreakablePlugin.cpp): 9 pointer slots (@8,0xC,0x10,0x18,0x1C,0x24,0x28,0x2C,0x30; all garbage in the file, re-pointed by the reader)
+    'BreakInfo_File': (0x34, [('posRule', 0x00, 'I', 1), ('numVerts', 0x04, 'H', 1), ('pVertexPos', 0x08, 'I', 1), ('pTexCoords', 0x0C, 'I', 1), ('pVertexColors', 0x10, 'I', 1),
+                              ('numTris', 0x14, 'H', 1), ('pTriangles', 0x18, 'I', 1), ('pTriMaterials', 0x1C, 'I', 1), ('numMats', 0x20, 'H', 1), ('pTextures', 0x24, 'I', 1),
+                              ('pTextureNames', 0x28, 'I', 1), ('pMaskNames', 0x2C, 'I', 1), ('pMaterialProps', 0x30, 'I', 1)],
+                       {'BreakInfo_t': {'m_uiPosRule': 'posRule', 'm_usNumVertices': 'numVerts', 'm_pVertexPos': 'pVertexPos', 'm_pTexCoors': 'pTexCoords', 'm_pVertexColors': 'pVertexColors',
+                                        'm_usNumTriangles': 'numTris', 'm_pTriangles': 'pTriangles', 'm_pTrianglesMaterialIndices': 'pTriMaterials', 'm_usNumMaterials': 'numMats',
+                                        'm_pTextures': 'pTextures', 'm_pTextureNames': 'pTextureNames', 'm_pMaskNames': 'pMaskNames', 'm_pMaterialProperties': 'pMaterialProps'}}),
     # P-2d: member of CPedSaveStructure[13]; m_FxSystem (@0x18) pointer -> u32 (never read back, the exe writes the live pointer)
     'CWeapon_File': (0x1C, [('type', 0x00, 'I', 1), ('state', 0x04, 'I', 1), ('ammoInClip', 0x08, 'I', 1), ('totalAmmo', 0x0C, 'I', 1),
                             ('timeForNextShot', 0x10, 'I', 1), ('firstPerson', 0x14, 'B', 1), ('dontPlaceInHand', 0x15, 'B', 1), ('fx', 0x18, 'I', 1)],
@@ -55,6 +62,11 @@ CASES = [
     ('basic', 'CPickup_File', dict(rev=1.5, obj=1, ammo=77, regen=1000, pos=(100, -200, 300), moneyPerDay=5, model=1212, ref=3, type=2, flags=0x5D)),
     ('noobj', 'CPickup_File', dict(rev=0.0, obj=0, ammo=5, regen=0, pos=(-32768, 32767, 0), moneyPerDay=65535, model=-1, ref=-2, type=3, flags=0x0A)),   # type ONCE, no object: bVisible stays as on file
     ('none_obj', 'CPickup_File', dict(rev=0.0, obj=1, ammo=0, regen=0, pos=(0, 0, 0), moneyPerDay=0, model=0, ref=0, type=0, flags=0x08)),   # PICKUP_NONE with a stale object: loader leaves it alone
+    # P-2i: 'exe' = what the exe wrote (pointer slots hold live addresses, here recognisable garbage); 'port' = what the port writes (pointer slots 0); counts 7 / 5 / 3, rule COLLISION_ORIGIN
+    ('exe', 'BreakInfo_File', dict(posRule=1, numVerts=7, pVertexPos=0x0B1E0034, pTexCoords=0x0B1E0088, pVertexColors=0x0B1E00E8, numTris=5, pTriangles=0x0B1E0104, pTriMaterials=0x0B1E0122,
+                                   numMats=3, pTextures=0x0B1E01B4, pTextureNames=0x0B1E0136, pMaskNames=0x0B1E0196, pMaterialProps=0x0B1E01F6)),
+    ('port', 'BreakInfo_File', dict(posRule=1, numVerts=7, numTris=5, numMats=3)),
+    ('max', 'BreakInfo_File', dict(posRule=0, numVerts=65535, numTris=65535, numMats=65535)),
     ('basic', 'CWeapon_File', dict(type=30, state=0, ammoInClip=30, totalAmmo=500, timeForNextShot=0, firstPerson=0, dontPlaceInHand=1, fx=0)),
     # P-2d: 13 slots, slot k = type 10+k (k=0 is WEAPON_UNARMED-like 0), ammo 100*k, inClip k; the pointer slot (fx) is 0 in ToFile output
     ('basic', 'CPedSaveStructure_File', dict(pos=(-2500.5, 1000.25, 12.125), health=100.0, armor=50.5, weapons=lambda: [b for k in range(13) for b in golden('CWeapon_File', type=0 if k == 0 else 10 + k, state=k % 5, ammoInClip=k, totalAmmo=100 * k, timeForNextShot=1000 + k, firstPerson=k & 1, dontPlaceInHand=1 if k == 12 else 0)],

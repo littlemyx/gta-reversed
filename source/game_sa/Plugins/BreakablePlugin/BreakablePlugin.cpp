@@ -56,19 +56,38 @@ void* BreakableDestructor(void* object, RwInt32 offsetInObject, RwInt32 sizeInOb
             RwTextureDestroy(texture);
         }
     }
+#ifdef NOTSA_PORTABLE
+    // P-2i: the blob came from `operator new(allocSize)` (BreakableStreamRead); `delete BreakInfo_t*` would be a sized delete with the wrong size (UB, ASan new-delete-type-mismatch)
+    ::operator delete(plugin->m_pBreakableInfo);
+#else
     delete plugin->m_pBreakableInfo;
+#endif
     return object;
 }
 
 // 0x59CEC0
 RwStream* BreakableStreamRead(RwStream* stream, int binaryLength, void* object, RwInt32 offsetInObject, RwInt32 sizeInObject) {
     auto* plugin = RWPLUGINOFFSET(BreakablePlugin, object, g_BreakablePlugin);
+#ifdef NOTSA_PORTABLE
+    // P-2i: the 4 header bytes go into a local (the plugin slot is a pointer-sized union: on LP64 the read would fill only its low half), and BreakInfo_t is read through
+    // its 0x34-byte file record (the in-memory struct is 0x58 bytes there); the 9 pointer slots of the file are garbage and re-pointed below anyway.
+    uint32 sectionHeader = 0;
+    RwStreamRead(stream, &sectionHeader, sizeof(sectionHeader));
+    if (!sectionHeader)
+        return stream;
+
+    BreakInfo_File infoFile;
+    RwStreamRead(stream, &infoFile, sizeof(infoFile));
+    BreakInfo_t infoBuffer;
+    notsa::FileRecord<BreakInfo_t>::FromFile(infoBuffer, infoFile);
+#else
     RwStreamRead(stream, &plugin->m_SectionHeader, 4u);
     if (!plugin->m_SectionHeader)
         return stream;
 
     BreakInfo_t infoBuffer;
     RwStreamRead(stream, &infoBuffer, sizeof(BreakInfo_t));
+#endif
 
     auto allocSize = BreakablePluginData::GetRequiredAllocationSize(infoBuffer);
     auto* data = reinterpret_cast<BreakablePluginData*>(operator new(allocSize)); // Allocated on heap dynamically sized BreakablePluginData
@@ -115,11 +134,22 @@ RwStream* BreakableStreamRead(RwStream* stream, int binaryLength, void* object, 
 // 0x59CDE0
 RwStream* BreakableStreamWrite(RwStream* stream, RwInt32 binaryLength, const void* object, RwInt32 offsetInObject, RwInt32 sizeInObject) {
     auto* plugin = RWPLUGINOFFSET(BreakablePlugin, object, g_BreakablePlugin);
+#ifdef NOTSA_PORTABLE
+    // P-2i: header = "info follows" flag in a local uint32 (the exe wrote the low 4 bytes of the pointer; the reader only tests for non-zero, and a 64-bit pointer's low half can be 0)
+    const uint32 sectionHeader = plugin->m_pBreakableInfo ? 1u : 0u;
+    RwStreamWrite(stream, &sectionHeader, sizeof(sectionHeader));
+#else
     RwStreamWrite(stream, plugin, 4u);
+#endif
 
     if (plugin->m_pBreakableInfo) {
         auto* info = plugin->m_pBreakableInfo;
+#ifdef NOTSA_PORTABLE
+        const BreakInfo_File infoFile = notsa::FileRecord<BreakInfo_t>::ToFile(*info);
+        RwStreamWrite(stream, &infoFile, sizeof(infoFile));
+#else
         RwStreamWrite(stream, info, sizeof(BreakInfo_t));
+#endif
         RwStreamWrite(stream, info->m_pVertexPos, sizeof(RwV3d) * info->m_usNumVertices);
         RwStreamWrite(stream, info->m_pTexCoors, sizeof(RwTexCoords) * info->m_usNumVertices);
         RwStreamWrite(stream, info->m_pVertexColors, sizeof(RwRGBA) * info->m_usNumVertices);
@@ -135,5 +165,5 @@ RwStream* BreakableStreamWrite(RwStream* stream, RwInt32 binaryLength, const voi
 
 // 0x59D0F0
 RwInt32 BreakableStreamGetSize(const void* object, RwInt32 offsetInObject, RwInt32 sizeInObject) {
-    return sizeof(BreakInfo_t);
+    return sizeof(BreakInfo_File); // == sizeof(BreakInfo_t) on x86 (static_assert in BreakablePlugin.h)
 }

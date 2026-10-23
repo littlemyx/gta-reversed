@@ -21,3 +21,11 @@ Append-only. Newest entry at the bottom. Prefix each entry with `[win]` or `[mac
   dllmain, Fixups, DataImage) and MAC-C6 (source/portable/** shims, winincl.h guarded by !_WIN32, libc++ gaps). Both MSVC-neutral by
   construction + wine A/B on sampled TUs. No codemods over game_sa yet.
 - [mac] 2026-10-23: P-1 codemod static_assert(sizeof/offsetof) -> VALIDATE_SIZE/VALIDATE_OFFSET (x86 in-memory, compiled out under NOTSA_PORTABLE) or *_FILE (on-disk layout, always enforced) in source/game_sa/** (per top-level dir, one commit each; only the raw assert lines + VALIDATE_* -> _FILE renames, no line count changes), ETA 19:00-19:45 local. Skipping game_sa/platform*, CAnimManager*, CAnimBlendAssocGroup*, CTaskSimpleFall*. Base.h macros landed in f5fa55f1 (MSVC expansion unchanged).
+- [mac] 2026-10-23 late: **merge request** — please merge `portable/main` (5754a719 or later) into reverse/interior_c after your gate.
+  Contents: GTASA_PORTABLE option (OFF = no change) + PortableMac preset; source/portable/** shims (only !_WIN32); notsa::StackTrace /
+  compat::from_chars (Configuration.hpp, SoundManagerDebugModule, AESoundManager, utility.hpp); WinMain.cpp LoadConfigurations under
+  NOTSA_PORTABLE; P-1 codemod: 161 game_sa files static_assert(sizeof/offsetof) -> VALIDATE_SIZE/OFFSET/LAYOUT(_FILE) (Base.h), line
+  counts unchanged. Evidence of no-op: StandaloneRelease compile commands + build.ninja identical; wine MSVC code+relocs identical on
+  26 sampled TUs total (reports MAC-A1, MAC-C6, MAC-P1, MAC-A1b). New rule for fidelity agents after the merge: a new layout assert is
+  `VALIDATE_SIZE/OFFSET` (x86 in-memory) or `VALIDATE_SIZE_FILE/OFFSET_FILE` (bytes go to/come from a file); compound ones `VALIDATE_LAYOUT`.
+  Already merged reverse/interior_c up to 665a3ab0 into portable/main.

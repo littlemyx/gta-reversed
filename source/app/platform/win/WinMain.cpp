@@ -468,6 +468,9 @@ INT WINAPI NOTSA_WinMain(HINSTANCE instance, HINSTANCE hPrevInstance, LPSTR cmdL
         APP_CLASS,
         APP_DEFAULT_WIDTH, APP_DEFAULT_HEIGHT,
         SDL_WINDOW_RESIZABLE  //| SDL_WINDOW_INPUT_FOCUS | SDL_WINDOW_MOUSE_FOCUS// | SDL_WINDOW_MOUSE_GRABBED | SDL_WINDOW_INPUT_FOCUS | SDL_WINDOW_MOUSE_FOCUS
+#ifdef NOTSA_PORTABLE
+        | SDL_WINDOW_OPENGL // R-3a: librw's gl3 backend adopts this window (gl3device.cpp startSDL3: GL context with depth 24 / stencil 8 on it)
+#endif
     );
     PSGLOBAL(sdlWindow) = sdlWnd;
 #ifdef NOTSA_PORTABLE

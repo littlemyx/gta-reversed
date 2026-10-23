@@ -14,7 +14,9 @@
 #include "fakerw.h"
 
 // librw's D3D9 device internals (d3d9Globals: adapter / mode list / present parameters). Same header the library itself compiles with.
+#ifndef NOTSA_PORTABLE
 #include <src/d3d/rwd3dimpl.h>
+#endif
 
 #include <cstdio>
 #include <cstdlib>
@@ -29,7 +31,9 @@
 
 namespace {
 
+#ifndef NOTSA_PORTABLE
 using rw::d3d::d3d9Globals;
+#endif
 
 //--------------------------------------------------------------------------------------------------
 // Memory (D3): every RW allocation goes through the CRT this image is linked with, i.e. the same heap the game's
@@ -75,6 +79,7 @@ void FillStringFuncs(RwStringFunctions& sf) {
 bool Is(rw::Engine::State s) { return rw::Engine::state == s; }
 bool IsOpenedOrStarted() { return (Is(rw::Engine::Opened) || Is(rw::Engine::Started)) && rw::engine; }
 
+#ifndef NOTSA_PORTABLE
 bool ModeIndexValid(RwInt32 i) { return i >= 0 && i < d3d9Globals.numModes && d3d9Globals.modes; }
 
 // Raster format RW reports for a display format (RwVideoMode::format). Table of the exe's D3D9 driver (0x7F6105 -> jump table 0x7F6AB0):
@@ -260,6 +265,7 @@ void BuildExeModeList() {
 #endif
 }
 
+#endif
 void PublishDeviceRange() {
     if (rw::engine) {
         RwEngineInstance->dOpenDevice.zBufferNear = rw::engine->device.zNear;
@@ -267,6 +273,7 @@ void PublishDeviceRange() {
     }
 }
 
+#ifndef NOTSA_PORTABLE
 // W: refresh rate chosen via RwD3D9EngineSetRefreshRate (librw always asks for D3DPRESENT_RATE_DEFAULT)
 RwUInt32 s_RefreshRate = 0;
 
@@ -431,6 +438,7 @@ bool ApplyModeToDevice(int idx) {
     return ResetDeviceNow();
 }
 
+#endif
 } // namespace
 
 //--------------------------------------------------------------------------------------------------
@@ -454,6 +462,7 @@ RwBool RwEngineInit(const RwMemoryFunctions* /*memFuncs*/, RwUInt32 /*initFlags*
     return TRUE;
 }
 
+#ifndef NOTSA_PORTABLE
 // A: RwEngineOpenParams{displayID = HWND} -> EngineOpenParams{window}. librw ignores a failing DEVICEOPEN (Direct3DCreate9 failed / no HAL
 // adapter) and still reports "opened"; a later Engine::close would then dereference the missing IDirect3D9. That case is detected here and
 // the half-opened engine is torn down by hand (Engine::close minus the device call).
@@ -482,14 +491,18 @@ RwBool RwEngineOpen(RwEngineOpenParams* initParams) {
     return TRUE;
 }
 
+#endif
 // P2B-08: the RxPipeline façade (pipeline.cpp) must replace the D3D9 default pipeline after every Engine::start/open and be dropped before the engine
 // stops. Units that link engine.cpp without pipeline.cpp (the lower-level unit tests) get no-ops through /alternatename.
 void RwShimPipelineEnsure();
 void RwShimPipelineShutdown();
+#ifndef NOTSA_PORTABLE
 void NotsaRwEngineNoPipeline() {}
 #pragma comment(linker, "/alternatename:?RwShimPipelineEnsure@@YAXXZ=?NotsaRwEngineNoPipeline@@YAXXZ")
 #pragma comment(linker, "/alternatename:?RwShimPipelineShutdown@@YAXXZ=?NotsaRwEngineNoPipeline@@YAXXZ")
+#endif
 
+#ifndef NOTSA_PORTABLE
 // A: Engine::start. librw's DEVICEINIT result is dropped by Engine::start (a failing CreateDevice would leave state "Started" with no device).
 RwBool RwEngineStart(void) {
     if (!Is(rw::Engine::Opened) || !rw::engine) {
@@ -522,6 +535,7 @@ RwBool RwEngineStart(void) {
     return TRUE;
 }
 
+#endif
 // D (+ state check, librw logs an error and returns void)
 RwBool RwEngineStop(void) {
     if (!Is(rw::Engine::Started) || !rw::engine) {
@@ -569,6 +583,7 @@ RwInt32 RwEngineGetNumSubSystems(void) { return IsOpenedOrStarted() ? rw::Engine
 
 RwInt32 RwEngineGetCurrentSubSystem(void) { return IsOpenedOrStarted() ? rw::Engine::getCurrentSubSystem() : -1; }
 
+#ifndef NOTSA_PORTABLE
 // A: librw's DEVICEGETSUBSSYSTEMINFO always describes the CURRENT adapter (it ignores `n`), so ask Direct3D directly.
 RwSubSystemInfo* RwEngineGetSubSystemInfo(RwSubSystemInfo* subSystemInfo, RwInt32 subSystemIndex) {
     if (!IsOpenedOrStarted() || !subSystemInfo || subSystemIndex < 0 || subSystemIndex >= d3d9Globals.numAdapters) {
@@ -596,10 +611,12 @@ RwBool RwEngineSetSubSystem(RwInt32 subSystemIndex) {
     return TRUE;
 }
 
+#endif
 RwInt32 RwEngineGetNumVideoModes(void) { return IsOpenedOrStarted() ? rw::Engine::getNumVideoModes() : -1; }
 
 RwInt32 RwEngineGetCurrentVideoMode(void) { return IsOpenedOrStarted() ? rw::Engine::getCurrentVideoMode() : -1; }
 
+#ifndef NOTSA_PORTABLE
 // A: librw's VideoMode has no refresh rate / raster format; both come from the D3DDISPLAYMODE the enumeration stored
 RwVideoMode* RwEngineGetVideoModeInfo(RwVideoMode* modeinfo, RwInt32 modeIndex) {
     if (!IsOpenedOrStarted() || !modeinfo || !ModeIndexValid(modeIndex)) {
@@ -736,4 +753,5 @@ RwBool RwD3D9DeviceSupportsDXTTexture(void) {
     return TRUE;
 }
 
+#endif
 #endif // NOTSA_RW_LIBRW

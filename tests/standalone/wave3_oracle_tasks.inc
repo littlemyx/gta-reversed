@@ -113,6 +113,7 @@ static bool W3TaskCase(Rng& r, std::string& d, size_t sz, std::initializer_list<
 } // namespace w3t
 using w3t::W3TaskCase;
 
+#ifndef W3_TASKS_FIXTURE_ONLY   // ORACLE-C-EVENTS: wave3_oracle_ev.inc includes this file for the fixture only (W3TaskCase, g_tk / g_ta / g_tr, route pools) and adds its own generated event rows
 #if __has_include("wave3_oracle_gen_tasks.inc")
 #include "wave3_oracle_gen_tasks.inc"     // GENERATED (tools/gen_w3_tasks.py)
 #define W3_HAVE_TASKGEN 1
@@ -126,3 +127,4 @@ static void TestW3Tasks() {
     TestW3TaskFuncs();
 #endif
 }
+#endif // !W3_TASKS_FIXTURE_ONLY

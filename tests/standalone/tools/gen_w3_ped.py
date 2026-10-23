@@ -157,7 +157,7 @@ def main():
                 if s['oc'] == 'C' and o2 == 'CTaskComplex' and mname == 'm_pSubTask': k = 'T'   # indirect calls go to a real sub task
                 for e in range(ln if ln else 0): ents.append((r2, e * (1 if k == 'b' else 4), k))
         hdr_rel = os.path.relpath(index.header_of(cls), os.path.join(repo, 'source')).replace(chr(92), '/')
-        rows.append(dict(cls=cls, fn=fn, addr=s['addr'], decls=decls, call=call, exe=exe, rk=rk, static=d['static'] and not d.get('static_obj'), static_call=d['static'], ents=ents, hdr=hdr_rel, boolret=(rk == 'b'), sub=(s['oc'] == 'C' and 'CTaskComplex' in index.chain(cls)), dtor=is_dtor))
+        rows.append(dict(cls=cls, fn=fn, addr=s['addr'], decls=decls, call=call, exe=exe, rk=rk, static=d['static'] and not d.get('static_obj'), static_call=d['static'], ents=ents, hdr=hdr_rel, boolret=(rk == 'b'), sub=(s['oc'] == 'C' and 'CTaskComplex' in index.chain(cls)), dtor=is_dtor, vt=('CPlayerPed' if s['oc'] == 'C' and not d['static'] and not is_dtor else None)))
         for c in index.chain(cls):
             tu = G.tu_for_cls(index, repo, c) if hasattr(G, 'tu_for_cls') else None
         for c in index.chain(cls):
@@ -184,6 +184,8 @@ def main():
         L.append('static size_t %s() { auto pm = W2Get(%s_T{}); uint32_t o = 0; std::memcpy(&o, &pm, 4); return o; }' % (rob, rob))
         L.append('static size_t %s_sz() { return sizeof(W2MemberOf<%s_T::type>::type); }' % (rob, rob))
     L.append('')
+    for c in sorted(set(r['vt'] for r in rows if r.get('vt'))):
+        L.append('W3_PORT_VT(%s) static const w3p::PVtEnt kPVt_%s = { "%s", 0x86D168, w3vt_%s };' % (c, c, c, c))   # CPlayerPed: exe vftable 0x86D168 (RH_ScopedVirtualClass)
     L.append('static void TestW3PedFuncs() {')
     L.append('    using namespace w2;')
     for r in rows:
@@ -193,7 +195,7 @@ def main():
                 'p': ('(uint64_t)(uintptr_t)(%s)', '(uint64_t)(uintptr_t)(%s)'), 'i': ('(uint64_t)(uint32_t)(%s)', '(uint64_t)(uint32_t)(%s)'), 'h': ('(uint64_t)(uint16_t)(%s)', '(uint64_t)(uint16_t)(%s)'), 'c': ('(uint64_t)(uint8_t)(%s)', '(uint64_t)(uint8_t)(%s)')}[r['rk']]
         L.append('    Run("%s::%s 0x%X", [&](Rng& r, std::string& d) {' % (r['cls'], r['fn'], r['addr']))
         L.append('        %s' % r['decls'])
-        L.append('        return W3PedCase(r, d, %s, { %s }, [&](void* p) -> uint64_t { (void)p; return %s; }, [&](void* p) -> uint64_t { (void)p; return %s; }%s);' % (sz, el, conv[0] % r['call'], conv[1] % r['exe'], (', true' if r.get('sub') else ', false') + (', true' if r.get('dtor') else '')))
+        L.append('        return W3PedCase(r, d, %s, { %s }, [&](void* p) -> uint64_t { (void)p; return %s; }, [&](void* p) -> uint64_t { (void)p; return %s; }%s);' % (sz, el, conv[0] % r['call'], conv[1] % r['exe'], (', true' if r.get('sub') else ', false') + (', true' if r.get('dtor') else (', false' if r.get('vt') else '')) + ((', &kPVt_%s' % r['vt']) if r.get('vt') else '')))
         L.append('    }, 60);')
     L.append('}')
     w('wave3_oracle_gen_ped.inc', L)
@@ -203,7 +205,7 @@ def main():
     print(dict(collections.Counter(x.split()[0] for x in report)))
 
 G_robs_offsets = {}
-PED_CALLEE_TUS = ['game_sa/Clock.cpp', 'game_sa/Entity/Ped/PlayerPed.cpp', 'game_sa/Entity/Ped/CopPed.cpp', 'game_sa/Stats.cpp', 'game_sa/WeaponInfo.cpp', 'game_sa/Weapon.cpp', 'game_sa/Wanted.cpp', 'game_sa/Pad.cpp', 'game_sa/PedIntelligence.cpp', 'game_sa/Audio/Entities/AEPedSpeechAudioEntity.cpp']
+PED_CALLEE_TUS = ['game_sa/Tasks/TaskManager.cpp', 'game_sa/Clock.cpp', 'game_sa/Entity/Ped/PlayerPed.cpp', 'game_sa/Entity/Ped/CopPed.cpp', 'game_sa/Stats.cpp', 'game_sa/WeaponInfo.cpp', 'game_sa/Weapon.cpp', 'game_sa/Wanted.cpp', 'game_sa/Pad.cpp', 'game_sa/PedIntelligence.cpp', 'game_sa/Audio/Entities/AEPedSpeechAudioEntity.cpp']
 
 def argspec_ext(ptype, idx):
     """G.argspec plus the pointer types the function rows need"""
@@ -212,6 +214,7 @@ def argspec_ext(ptype, idx):
     base = re.sub(r'' + chr(92) + 'bconst' + chr(92) + 'b', '', ptype).replace(' ', '')
     name = 'a%d' % idx
     core = base.rstrip('&*')
+    if base.endswith('**'): return None    # pointer to pointer: the generic code below would treat `T**` as `T*`
     if base.endswith('*'):
         if core == 'void': return ('void* %s = static_cast<void*>(g_src);' % name, name, 'void*', name)           # callback data pointer: the task itself (the `this` buffer)
         if core == 'CAnimBlendAssociation': return ('CAnimBlendAssociation* %s = reinterpret_cast<CAnimBlendAssociation*>(g_anim);' % name, name, 'CAnimBlendAssociation*', name)

@@ -1,3 +1,4 @@
+#pragma once   // ORACLE-C-EVENTS: wave3_oracle_tasks.inc (fixture of the generated class-C rows) includes this file for its fixture part; the events target includes it first
 // ORACLE-W3-EVENTS: exe-oracle rows for game_sa/Events (classes A and B of .notes/ORACLE_COVERAGE.md). Included by wave2_oracle_all.inc when W3_EV_ONLY is defined
 // (executable wave3_events_oracle_test = the W2 harness: deterministic arena, fake pools, entity reference world, whole exe data image compared after every case).
 //
@@ -41,8 +42,13 @@ struct TEv final : CEvent {
     CEvent* Clone() const noexcept override { return nullptr; }
 };
 
+W3_PORT_VT(CPlayerPed)
 namespace w3e {
 using namespace w2; using namespace w3p;
+// ORACLE-C-EVENTS: class C rows with a hand-built event: a row's setup sets g_evVt, EvCase then writes the EXE's vftable of the event class into word 0 of the event g_ev and of the ped under test (CPlayerPed 0x86D168) before the exe call
+// and the PORT's vftables (??_7 through /alternatename) before the port call, and clears both afterwards
+struct EvVt { uint32_t exeVt; const uint32_t* portVt; };
+static const EvVt* g_evVt = nullptr;
 alignas(16) static uint8_t g_wanted2[0x800]; // the CWanted of the second player (reference ped 0 in some cases)
 alignas(16) static uint8_t g_hdl[0x100];     // CEventHandler
 alignas(16) static uint8_t g_ev[0x200];      // the event under test (garbage or a real object)
@@ -117,6 +123,11 @@ static void ClearHandler() {
     std::memset(g_hdl, 0, sizeof g_hdl);
     Put32(g_hdl, W3EHdlPed(), (uint32_t)(uintptr_t)g_src);
 }
+static void SetEvVt(int side) {   // side 1 = port, 2 = exe, 0 = clear
+    if (!g_evVt) return;
+    Put32(g_ev, 0, side == 1 ? (uint32_t)(uintptr_t)g_evVt->portVt : side == 2 ? g_evVt->exeVt : 0);
+    Put32(g_src, 0, side == 1 ? (uint32_t)(uintptr_t)w3vt_CPlayerPed : side == 2 ? 0x86D168u : 0u);
+}
 static void NewTevs(Rng& r) {
     for (auto& e : g_tev) { ::new (static_cast<void*>(&e)) TEv(); e.type = (eEventType)(r.below(4) ? (int)r.below(120) : 93); e.prio = (int32)(r.below(2) ? 70 + r.below(10) : r.below(120)); }
 }
@@ -137,7 +148,7 @@ static bool EvCase(Rng& r, std::string& d, SF&& setup, PF&& portFn, EF&& exeFn) 
     WireRef(r); WireUnderTest(r); WireWeaponInfos(r); NewTevs(r); ClearHandler();
     FillGarbage(r, g_ev, sizeof g_ev); FillGarbage(r, g_ev2, sizeof g_ev2); FillGarbage(r, g_grp, sizeof g_grp);
     std::memset(g_evg, 0, sizeof g_evg);
-    g_evMaskVptr = false; g_evTag = -1; std::memset(g_tpMaskBytes, 0, sizeof g_tpMaskBytes);
+    g_evMaskVptr = false; g_evTag = -1; g_evVt = nullptr; std::memset(g_tpMaskBytes, 0, sizeof g_tpMaskBytes);
     setup(r);
     Reg tpStore = g_tp.RegStore();
     if (std::memchr(g_tpMaskBytes, 1, sizeof g_tpMaskBytes)) tpStore.mask.assign(g_tpMaskBytes, g_tpMaskBytes + 0x80);
@@ -148,13 +159,20 @@ static bool EvCase(Rng& r, std::string& d, SF&& setup, PF&& portFn, EF&& exeFn) 
             Reg{ (uintptr_t)g_mat, sizeof g_mat }, Reg{ (uintptr_t)g_mi, sizeof g_mi }, Reg{ (uintptr_t)g_col, sizeof g_col }, Reg{ (uintptr_t)g_intel, sizeof g_intel }, Reg{ (uintptr_t)g_stat, sizeof g_stat },
             Reg{ (uintptr_t)g_wanted, sizeof g_wanted }, Reg{ (uintptr_t)g_wanted2, sizeof g_wanted2 }, Reg{ (uintptr_t)g_clo, sizeof g_clo },
             g_tp.RegStruct(), g_tp.RegFlags(), tpStore, g_ep.RegStruct(), g_ep.RegFlags(), g_ep.RegStore(), g_tap.RegStruct(), g_tap.RegFlags(), g_tap.RegStore(), Reg{ (uintptr_t)rf::pp, sizeof(CPedPool) }, Reg{ (uintptr_t)rf::pedSt, (size_t)rf::kP }, Reg{ kImgLo, kImgHi - kImgLo } },
-        [&]() -> uint64_t { return portFn(); }, [&]() -> uint64_t { return exeFn(); }, kRf);
+        [&]() -> uint64_t { SetEvVt(1); const uint64_t rv = portFn(); SetEvVt(0); return rv; }, [&]() -> uint64_t { SetEvVt(2); const uint64_t rv = exeFn(); SetEvVt(0); return rv; }, kRf);
+    g_evVt = nullptr;
     if (!ok && g_evTag >= 0) { char t[48]; std::snprintf(t, sizeof t, " [tag %d]", g_evTag); d += t; }
     g_tap.Leave();
     Done();
     UnwireModel();
     std::memcpy((void*)kImgLo, img0.data(), img0.size());
     return ok;
+}
+// ORACLE-C-EVENTS: an event argument with a controlled type / priority (slot 0..3 of g_tev, a fresh TEv each time: the port's vftable on both sides, the exe calls its virtuals through it)
+static CEvent* NewTev(Rng& r, int slot) {
+    auto* e = ::new (static_cast<void*>(&g_tev[slot & 3])) TEv();
+    e->type = (eEventType)(r.below(4) ? (int)r.below(120) : 93); e->prio = (int32)(r.below(2) ? 70 + r.below(10) : r.below(120));
+    return e;
 }
 static uint64_t B(bool v) { return (uint64_t)(uint8_t)(v ? 1 : 0); }
 static uint64_t B8(int v) { return (uint64_t)(uint8_t)v; }
@@ -269,11 +287,24 @@ static void TestW3EvGroup() {
 
 #include "wave3_oracle_ev_misc.inc"
 #include "wave3_oracle_ev_handler.inc"
+#include "wave3_oracle_ev_c.inc"
+
+// ORACLE-C-EVENTS: class C rows (virtual calls in the exe closure) of game_sa/Events: the task fixture (W3TaskCase: `this` = g_tk, vftables of the event and of the ped swapped around each call) + the generated rows (tools/gen_w3_tasks.py --sub game_sa/Events --prefix events)
+#define W3_TASKS_FIXTURE_ONLY 1
+#include "wave3_oracle_tasks.inc"
+#if __has_include("wave3_oracle_gen_events.inc")
+#include "wave3_oracle_gen_events.inc"     // GENERATED (tools/gen_w3_tasks.py --sub game_sa/Events --prefix events)
+#define W3_HAVE_EVGEN 1
+#endif
 
 static void TestW3Ev() {
+#ifdef W3_HAVE_EVGEN
+    TestW3EventsFuncs();
+#endif
     TestW3EvA();
     TestW3EvGroup();
     TestW3EvMisc();
     TestW3EvHandler();
+    TestW3EvC();
 }
 #endif // !W3_EV_FIXTURE_ONLY

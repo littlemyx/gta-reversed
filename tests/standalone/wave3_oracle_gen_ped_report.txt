@@ -1,6 +1,24 @@
-69 function rows, 15 TUs
-SKIP CPed::RemoveLighting 0x5533B0: CPointLights / ambient colours / D3D light state (not constructible)
-SKIP CPed::SetupLighting 0x553F00: CRenderer::SetupLightingForEntity + D3D light state (not constructible)
-SKIP CPed::StopNonPartialAnims 0x5DED10: clump + RpAnimBlend association list (RenderWare 3.7 layout in the exe vs librw): every case faults in both
-SKIP CPed::RestartNonPartialAnims 0x5DED50: same as StopNonPartialAnims
-SKIP CPed::SetPedAtomicVisibilityCB 0x5F0060: global RpAtomic callback, not a member (no declaration): RW layout of the atomic differs (exe 3.7 vs librw)
+89 function rows, 16 TUs
+SKIP CPed::PedCanPickUpPickUp 0x455560: every case faults identically in port and exe (fixture lacks the pickup / model data)
+SKIP CPed::RemoveLighting 0x5533B0: every case faults identically (RW clump / atomic lighting fixture)
+SKIP CPed::SetupLighting 0x553F00: every case faults identically (RW clump / atomic lighting fixture)
+SKIP CPed::StopNonPartialAnims 0x5DED10: every case faults identically (anim blend clump data fixture)
+SKIP CPed::RestartNonPartialAnims 0x5DED50: every case faults identically (anim blend clump data fixture)
+SKIP CPed::ShoulderBoneRotation 0x5DF560: every case faults identically (RW skeleton fixture)
+SKIP CPed::SetPedPositionInCar 0x5DF910: every case faults identically (vehicle model info / seat position fixture)
+SKIP CPed::Dress 0x5E0130: every case faults identically (player clothes / RW clump fixture)
+NOARG CPed::GetTransformedBonePosition 0x5E01C0 param "RwV3d& inOutPos"
+NOARG CPed::SpecialEntityPreCollisionStuff 0x5E3C30 param "bool& bCollisionDisabled"
+SKIP CPed::DisablePedSpeech 0x5EFF60: OPEN FINDING: 1 of 60 cases differ (special-input case, PC24 and PC53); not analysed (see report)
+SKIP CPed::DisablePedSpeechForScriptSpeech 0x5EFF80: OPEN FINDING: 1 of 60 cases differ (special-input case); not analysed (see report)
+SKIP CPed::SayScript 0x5EFFB0: every case faults identically (ped speech audio entity fixture)
+DECL CPed::SetPedAtomicVisibilityCB 0x5F0060 (0 declarations)
+NOARG CPed::DoesLOSBulletHitPed 0x5F01A0 param "CColPoint& colPoint"
+SKIP CPed::IsPedHeadAbovePos 0x5F02C0: every case faults identically (RW skeleton fixture)
+SKIP CPlayerPed::DeactivatePlayerPed 0x609520: every case faults identically (CWorld::Players / pool fixture)
+SKIP CPlayerPed::ReactivatePlayerPed 0x609540: every case faults identically (CWorld::Players / pool fixture)
+SKIP CPlayerPed::CanPlayerStartMission 0x609590: every case faults identically (player ped data / pad fixture)
+SKIP CPlayerPed::MakeChangesForNewWeapon-BySlot 0x60D000: every case faults identically (weapon model / clump fixture)
+NOARG CPlayerPed::EvaluateNeighbouringTarget 0x60D1C0 param "CEntity** outTarget"
+SKIP CPlayerSkin::Shutdown 0x6FF8D0: every case faults identically (RW raster / texture fixture)
+SKIP CPlayerSkin::RenderFrontendSkinEdit 0x6FF900: every case faults identically (renderer)

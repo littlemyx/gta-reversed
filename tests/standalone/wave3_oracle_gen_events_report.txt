@@ -1,0 +1,11 @@
+41 function rows, 338 TUs
+SKIP CEventAttractor::IsEffectActive 0x4AF460: every case faults identically: needs a valid C2dEffectPedAttractor + entity 2d-effect table (fixture)
+SKIP CEventGroupEvent::Clone 0x4B6EE0: every case faults identically: needs a real CEventGroup member (fixture)
+SKIP CEventLeaderExitedCarAsDriver::AffectsPedGroup 0x4B0F80: every case faults identically: needs a real CPedGroup with intelligence (fixture)
+SKIP CEventLeaderQuitEnteringCarAsDriver::AffectsPedGroup 0x4B1010: every case faults identically: needs a real CPedGroup with intelligence (fixture)
+SKIP CEventVehicleHitAndRun::ReportCriminalEvent 0x4B27D0: OPEN FINDING: port-only access violation in CEntity::GetType (0xE6A73A, access 0x36) on case 1 - the exe survives; not analysed (see report)
+NOARG CGroupEventHandler::ComputeResponseLeaderEnterExit 0x5F9710 param "const CEventLeaderEntryExit& e"
+NOARG CGroupEventHandler::ComputeResponseNewGangMember 0x5F9840 param "const CEventNewGangMember& e"
+NOARG CGroupEventHandler::ComputeResponseGather 0x5F99F0 param "const CEventPlayerCommandToGroupGather& e"
+SKIP CGroupEventHandler::ComputeWalkAlongsideResponse 0x5FA910: every case faults identically: needs a real CPedGroup + task allocator (fixture)
+NOARG CGroupEventHandler::ComputeResponsePlayerCommand 0x5FB470 param "const CEventPlayerCommandToGroup& event"

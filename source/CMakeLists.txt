@@ -1083,15 +1083,24 @@ if (${RE_PROJECT}_RW_LIBRW)
     get_target_property(_w3p_sources wave3_ped_oracle_test SOURCES)
     list(REMOVE_ITEM _w3p_sources "${STANDALONE_PAD_OBJ}")
     set_property(TARGET wave3_ped_oracle_test PROPERTY SOURCES "${STANDALONE_PAD_OBJ}" ${_w3p_sources})
-    target_link_options(wave3_ped_oracle_test PRIVATE "$<$<CXX_COMPILER_ID:MSVC>:/BASE:0x400000;/DYNAMICBASE:NO;/FIXED;/MERGE:_TEXT=.text;/INCREMENTAL:NO;/SUBSYSTEM:CONSOLE;/FORCE:UNRESOLVED;/MAP>")
+    target_link_options(wave3_ped_oracle_test PRIVATE "$<$<CXX_COMPILER_ID:MSVC>:/BASE:0x400000;/DYNAMICBASE:NO;/FIXED;/MERGE:_TEXT=.text;/INCREMENTAL:NO;/SUBSYSTEM:CONSOLE;/FORCE:UNRESOLVED;/MAP;/SAFESEH:NO>")
     set_target_properties(wave3_ped_oracle_test PROPERTIES COMPILE_WARNING_AS_ERROR OFF CXX_SCAN_FOR_MODULES OFF)
     # ORACLE-W3-EVENTS: exe-oracle rows of game_sa/Events (A + B functions) on the W2 harness (all W2 translation units + the ped ones); rows: tests/standalone/wave3_oracle_ev.inc
+    # ORACLE-C-EVENTS: class C rows (generated: wave3_oracle_gen_events.inc by tools/gen_w3_tasks.py --sub game_sa/Events --prefix events) use the task fixture, so the task translation units are linked as well
+    if(EXISTS "${PROJECT_SOURCE_DIR}/tests/standalone/wave3_oracle_gen_tasks_sources.cmake")
+        include("${PROJECT_SOURCE_DIR}/tests/standalone/wave3_oracle_gen_tasks_sources.cmake")
+    endif()
+    if(EXISTS "${PROJECT_SOURCE_DIR}/tests/standalone/wave3_oracle_gen_events_sources.cmake")
+        include("${PROJECT_SOURCE_DIR}/tests/standalone/wave3_oracle_gen_events_sources.cmake")
+    endif()
     add_executable(wave3_events_oracle_test EXCLUDE_FROM_ALL
         "${PROJECT_SOURCE_DIR}/tests/standalone/wave1_oracle_test.cpp"
         ${W2_BASE_SOURCES}
         ${W2_GEN_SOURCES}
         ${W2_FUNC_SOURCES}
         ${W3_PED_SOURCES}
+        ${W3_TASKS_SOURCES}
+        ${W3_EVENTS_SOURCES}
         game_sa/WeaponEffects.cpp
         game_sa/TimeCycle.cpp
         game_sa/Events/GroupEventHandler.cpp
@@ -1100,7 +1109,7 @@ if (${RE_PROJECT}_RW_LIBRW)
         game_sa/Events/EventScanner.cpp
     )
     # LINK-CALLEES: callee translation units the port reaches from the rows of this target (was: unresolved -> port fault at 0x400000, rest of the function not compared)
-    target_sources(wave3_events_oracle_test PRIVATE game_sa/PedType.cpp)
+    target_sources(wave3_events_oracle_test PRIVATE game_sa/PedType.cpp game_sa/CullZones.cpp game_sa/VehicleScanner.cpp)
     target_compile_definitions(wave3_events_oracle_test PRIVATE W2_ONLY W3_EV_ONLY)
     target_compile_features(wave3_events_oracle_test PRIVATE cxx_std_23)
     target_compile_definitions(wave3_events_oracle_test PRIVATE $<TARGET_PROPERTY:${RE_PROJECT_LIB_NAME},COMPILE_DEFINITIONS> NOTSA_ORACLE_ADDRESS_GLOBALS)
@@ -1112,7 +1121,7 @@ if (${RE_PROJECT}_RW_LIBRW)
     get_target_property(_w3e_sources wave3_events_oracle_test SOURCES)
     list(REMOVE_ITEM _w3e_sources "${STANDALONE_PAD_OBJ}")
     set_property(TARGET wave3_events_oracle_test PROPERTY SOURCES "${STANDALONE_PAD_OBJ}" ${_w3e_sources})
-    target_link_options(wave3_events_oracle_test PRIVATE "$<$<CXX_COMPILER_ID:MSVC>:/BASE:0x400000;/DYNAMICBASE:NO;/FIXED;/MERGE:_TEXT=.text;/INCREMENTAL:NO;/SUBSYSTEM:CONSOLE;/FORCE:UNRESOLVED;/MAP>")
+    target_link_options(wave3_events_oracle_test PRIVATE "$<$<CXX_COMPILER_ID:MSVC>:/BASE:0x400000;/DYNAMICBASE:NO;/FIXED;/MERGE:_TEXT=.text;/INCREMENTAL:NO;/SUBSYSTEM:CONSOLE;/FORCE:UNRESOLVED;/MAP;/SAFESEH:NO>")
     set_target_properties(wave3_events_oracle_test PROPERTIES COMPILE_WARNING_AS_ERROR OFF CXX_SCAN_FOR_MODULES OFF)
     # ORACLE-W3-TASKS: exe-oracle rows of game_sa/Tasks/TaskTypes (A + B functions) on the W2 harness (all W2 translation units + the ped / events ones); rows: tests/standalone/wave3_oracle_tasks.inc (+ wave3_oracle_gen_tasks.inc written by tools/gen_w3_tasks.py)
     if(EXISTS "${PROJECT_SOURCE_DIR}/tests/standalone/wave3_oracle_gen_tasks_sources.cmake")

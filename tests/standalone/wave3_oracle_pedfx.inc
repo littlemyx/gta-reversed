@@ -159,8 +159,14 @@ static void WirePed(Rng& r, uint8_t* v, size_t sz) {
 }
 static void UnwireModel() { CModelInfo::ms_modelInfoPtrs[g_model] = nullptr; }
 
+// ORACLE-C-EVENTS: class C rows of game_sa/Entity/Ped (virtual calls in the exe closure): W3PedCase(..., vt) writes the EXE's vftable of the ped class into word 0 of the ped `this` before the exe call and the PORT's
+// vftable (the compiler's ??_7 symbol through /alternatename, no object needed) before the port call, and clears it afterwards so the compare ignores it (same scheme as wave3_oracle_tasks.inc).
+#define W3_PORT_VT(C) extern "C" const uint32_t w3vt_##C[]; __pragma(comment(linker, "/alternatename:_w3vt_" #C "=??_7" #C "@@6B@"))
+struct PVtEnt { const char* name; uint32_t exeVt; const uint32_t* portVt; };
+static void SetPedVt(const PVtEnt* vt, int side) { if (vt) Put32(g_src, 0, side == 1 ? (uint32_t)(uintptr_t)vt->portVt : side == 2 ? vt->exeVt : 0); }
+
 template<class PF, class EF>
-static bool W3PedCase(Rng& r, std::string& d, size_t sz, std::initializer_list<EntOff> ents, PF&& portFn, EF&& exeFn, bool sub = false, bool dtor = false) {
+static bool W3PedCase(Rng& r, std::string& d, size_t sz, std::initializer_list<EntOff> ents, PF&& portFn, EF&& exeFn, bool sub = false, bool dtor = false, const PVtEnt* vt = nullptr) {
     static std::vector<uint8_t> img0(kImgHi - kImgLo);
     const auto post = std::move(g_post); g_post = nullptr;
     std::memcpy(img0.data(), (void*)kImgLo, img0.size());
@@ -175,7 +181,7 @@ static bool W3PedCase(Rng& r, std::string& d, size_t sz, std::initializer_list<E
     const bool ok = BothA(d, seed, { thisReg, Reg{ (uintptr_t)g_anim, sizeof g_anim }, Reg{ (uintptr_t)g_mat, sizeof g_mat }, Reg{ (uintptr_t)g_mi, sizeof g_mi }, Reg{ (uintptr_t)g_col, sizeof g_col },
             Reg{ (uintptr_t)g_intel, sizeof g_intel }, Reg{ (uintptr_t)g_stat, sizeof g_stat }, Reg{ (uintptr_t)g_wanted, sizeof g_wanted }, Reg{ (uintptr_t)g_clo, sizeof g_clo }, Reg{ (uintptr_t)g_out, sizeof g_out }, Reg{ (uintptr_t)g_clump, sizeof g_clump },
             g_tp.RegStruct(), g_tp.RegFlags(), g_tp.RegStore(), g_ep.RegStruct(), g_ep.RegFlags(), g_ep.RegStore(), Reg{ (uintptr_t)rf::pp, sizeof(CPedPool) }, Reg{ (uintptr_t)rf::pedSt, (size_t)rf::kP }, Reg{ kImgLo, kImgHi - kImgLo } },
-        [&]() -> uint64_t { return portFn(static_cast<void*>(g_src)); }, [&]() -> uint64_t { return exeFn(static_cast<void*>(g_src)); }, kRf);
+        [&]() -> uint64_t { SetPedVt(vt, 1); const uint64_t rv = portFn(static_cast<void*>(g_src)); SetPedVt(vt, 0); return rv; }, [&]() -> uint64_t { SetPedVt(vt, 2); const uint64_t rv = exeFn(static_cast<void*>(g_src)); SetPedVt(vt, 0); return rv; }, kRf);
     if (!ok) { char t[96]; std::snprintf(t, sizeof t, " [model %d state %d]", g_model, *reinterpret_cast<int*>(g_src + offsetof(CPed, m_nPedState))); d += t; }
     Done();
     UnwireModel();

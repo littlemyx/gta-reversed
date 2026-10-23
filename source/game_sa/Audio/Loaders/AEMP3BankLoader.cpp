@@ -166,9 +166,9 @@ void CAEMP3BankLoader::AddRequest(eSoundBank bank, eSoundBankSlot slot, std::opt
         return;
     }
 
-    // Same request already exists?
+    // Same request already exists? (0x4E06C0 / 0x4E0803: LoadSoundBank compares bank and slot only, LoadSound also the sound)
     for (auto& req : m_Requests) {
-        if (req.Bank == bank && req.Slot == slot && req.SoundID == sound.value_or(-1)) {
+        if (req.Bank == bank && req.Slot == slot && (!sound.has_value() || req.SoundID == *sound)) {
             return;
         }
     }
@@ -194,6 +194,10 @@ void CAEMP3BankLoader::AddRequest(eSoundBank bank, eSoundBankSlot slot, std::opt
 
 // 0x4E0670
 void CAEMP3BankLoader::LoadSoundBank(eSoundBank bankId, eSoundBankSlot bankSlot) {
+    // The exe range checks bank and slot before it looks at the slot (a negative slot is never indexed)
+    if (!m_IsInitialised || (int32)(uint16)bankId > (int32)(int16)m_BankLkupCnt || bankSlot < 0 || bankSlot > m_BankSlotCnt) {
+        return;
+    }
     // Already loaded?
     if (IsSoundBankLoaded(bankId, bankSlot)) {
         return;
@@ -203,14 +207,21 @@ void CAEMP3BankLoader::LoadSoundBank(eSoundBank bankId, eSoundBankSlot bankSlot)
 
 // 0x4E07A0
 void CAEMP3BankLoader::LoadSound(eSoundBank bankId, eSoundID soundId, eSoundBankSlot bankSlot) {
+    if (!m_IsInitialised) {
+        return;
+    }
+    // Exe order: sound id, bank and slot range checks, then the loaded test
+    if ((uint16)soundId >= AE_BANK_MAX_NUM_SOUNDS) {
+        NOTSA_LOG_WARN("Trying to load invalid sound ({})", (int32)(soundId));
+        return;
+    }
+    if ((int32)(uint16)bankId > (int32)(int16)m_BankLkupCnt || bankSlot < 0 || bankSlot > m_BankSlotCnt) {
+        return;
+    }
     if (IsSoundLoaded(bankId, soundId, bankSlot)) {
         return;
     }
-    if (soundId >= 0 && soundId < AE_BANK_MAX_NUM_SOUNDS) {
-        AddRequest((eSoundBank)(bankId), (eSoundBankSlot)(bankSlot), (eSoundID)(soundId));
-    } else {
-        NOTSA_LOG_WARN("Trying to load invalid sound ({})", (int32)(soundId));
-    }
+    AddRequest((eSoundBank)(bankId), (eSoundBankSlot)(bankSlot), (eSoundID)(soundId));
 }
 
 // 0x4DFE30

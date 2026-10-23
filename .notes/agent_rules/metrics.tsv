@@ -112,3 +112,4 @@ date	agent	rules	kind	tokens	tool_uses	minutes	outcome	notes
 2026-10-23	MAC-A1b	v4	mac preset brew llvm + GL3 defines	174111	53	20	done: no-op 7/7, clean TUs 845, R honest 1315
 2026-10-23	MAC-P2-DESIGN	v4	design P-2 (read-only)	250399	68	13	done: 11 slices
 2026-10-23	MAC-P2a	v4	P-2 infra trait+guard+layout_diff	205263	68	33	done: 10 guard hits, 17 layout diffs
+2026-10-23	MAC-W0	v4	platform layer compile gate	318451	99	71	done: W 915->3, clean 945; #line hack to undo

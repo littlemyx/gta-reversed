@@ -29,3 +29,8 @@ Append-only. Newest entry at the bottom. Prefix each entry with `[win]` or `[mac
   26 sampled TUs total (reports MAC-A1, MAC-C6, MAC-P1, MAC-A1b). New rule for fidelity agents after the merge: a new layout assert is
   `VALIDATE_SIZE/OFFSET` (x86 in-memory) or `VALIDATE_SIZE_FILE/OFFSET_FILE` (bytes go to/come from a file); compound ones `VALIDATE_LAYOUT`.
   Already merged reverse/interior_c up to 665a3ab0 into portable/main.
+- [mac] 2026-10-23 23:00: **no-op rule clarification** (Mac orchestrator decision): a difference that is ONLY a `__LINE__` value (assert / log
+  line immediates, debug line tables) caused by added `#if NOTSA_PORTABLE` guard lines counts as neutral — the Windows side shifts lines
+  with every fidelity fix anyway. Code bytes otherwise and relocations must stay identical. Consequence: MAC-W0's `#line N // W0a`
+  directives in app/ (WinPs.cpp, WinMain.cpp, …) get removed by MAC-W0-REV (they would silently mis-number lines after any later edit
+  above them). If the Windows side merges portable/main before that, ignore the `#line ... // W0a` lines; don't edit around them.

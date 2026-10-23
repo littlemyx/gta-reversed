@@ -31,3 +31,6 @@ Rows that matched without a fix: FindSizeOfPacket, StoreClothesDesc, StorePedAni
 * Packet padding: RecordVehicleDeleted/RecordPedDeleted - the port writes a zero pad byte, the exe leaves it; the row zeroes the destination (never read). StorePedAnimation - state[0].m_nGroupId2 is left alone by the exe, zeroed by the port; the game passes a zeroed state.
 * Initialise{Vehicle,Ped}PoolConversionTable: the exe loop runs over the fixed 110/140 slots and ends on `esi == 110` exactly, so a recorded reference >= ~100 makes it spin (latent exe bug, the game never records such); rows use full-size pools and references < 100. Float-to-int8/int16 conversions of NaN/huge values (heading, matrix) are x87-vs-SSE UB and not generated.
 * Not in scope (class C/D): Update, RetrievePedAnimation, Display, ProcessReplayCamera, ... 
+
+## Soak (v4 rule 3)
+Release build of this tree (build/StandaloneRelease, ninja -j4), `soak.sh build/StandaloneRelease 3` with NOTSA_STANDALONE_NOVSYNC=1: RESULT OK, errors 0, 48300 frames; 1 gate timeout in the route (a step never saw its condition), no crash/assert.

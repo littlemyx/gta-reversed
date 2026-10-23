@@ -3468,23 +3468,20 @@ void CEventHandler::ComputeVehiclePotentialCollisionResponse(CEventPotentialGetR
 
 // 0x4B96D0
 void CEventHandler::ComputeVehiclePotentialPassiveCollisionResponse(CEventPotentialWalkIntoVehicle* e, CTask* tactive, CTask* tsimplest) {
-    m_EventResponseTask = [&]() -> CTask* {
-        if (!e->m_vehicle || !m_Ped->bInVehicle || !CTask::IsGoToTask(tsimplest)) {
-            return nullptr;
-        }
-        const auto tGoTo = static_cast<CTaskSimpleGoTo*>(tsimplest);
-        if (tGoTo->m_moveState == PEDMOVE_STILL) {
-            return nullptr;
-        }
-        return new CTaskComplexWalkRoundCar{
-            m_Ped->GetGroup()
-            ? PEDMOVE_RUN
-            : (eMoveState)e->m_moveState,
-            static_cast<CTaskSimpleGoTo*>(tsimplest)->m_vecTargetPoint,
-            e->m_vehicle,
-            m_Ped->GetIntelligence()->IsPedGoingForCarDoor(),
-        };
-    }();
+    // 0x4B96EF..0x4B972C: every early exit leaves m_EventResponseTask untouched; the ped must NOT be in a vehicle (test ch,1 / jne 0x4B978D),
+    // tsimplest is null-checked before IsGoToTask, and the skipped move state is the EVENT's (e->m_moveState == PEDMOVE_STILL, cmp esi,1), not the go-to task's
+    if (!e->m_vehicle || m_Ped->bInVehicle || !tsimplest || !CTask::IsGoToTask(tsimplest) || e->m_moveState == PEDMOVE_STILL) {
+        return;
+    }
+    const auto tGoTo = static_cast<CTaskSimpleGoTo*>(tsimplest);
+    m_EventResponseTask = new CTaskComplexWalkRoundCar{
+        m_Ped->GetGroup()
+        ? PEDMOVE_RUN
+        : (eMoveState)e->m_moveState,
+        tGoTo->m_vecTargetPoint,
+        e->m_vehicle,
+        m_Ped->GetIntelligence()->IsPedGoingForCarDoor(),
+    };
 }
 
 // 0x4B9F80

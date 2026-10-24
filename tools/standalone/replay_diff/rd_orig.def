@@ -1,0 +1,9 @@
+LIBRARY vorbisFile
+EXPORTS
+  ov_open_callbacks
+  ov_clear
+  ov_time_total
+  ov_time_tell
+  ov_read
+  ov_info
+  ov_time_seek

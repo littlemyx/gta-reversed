@@ -49,10 +49,11 @@ static void tick(void){
     if(pp){ u32 fl = U32(pp + 4), n = U32(pp + 8); for(u32 i = 0; i < n; i++) if(!(*(unsigned char*)(size_t)(fl + i) & 0x80)) np++; }
     if(vp){ u32 fl = U32(vp + 4), n = U32(vp + 8); for(u32 i = 0; i < n; i++) if(!(*(unsigned char*)(size_t)(fl + i) & 0x80)) nv++; }
     sh = fnv(sh, (void*)0xA49960, 269000);
+    { static const char* dp; static int dpi; if(!dpi){ dpi = 1; dp = getenv("RD_DUMPSCR"); } if(dp && nf <= 4){ char fn[512]; FILE* df; sprintf(fn, "%s.%u", dp, nf); if((df = fopen(fn, "wb"))){ fwrite((void*)0xA49960, 1, 269000, df); fclose(df); } } }   /* RD_DUMPSCR=<prefix>: raw script space at traced frames 1..4 (A-B frame-1 hash hunt) */
   } __except(1) { }
   if(g_pin & 64) { /* pin bit 64: "D fc ..." debugging probes, same values as source/standalone/Lockstep.cpp (ignored by rd_diff.py) */
-    fprintf(g_f, "D %u run=%d cd=%d cars=%08x,%08x,%08x,%08x perc=%08x,%08x,%08x,%08x zt=%d tw=%d ti=%d\n", fc, (int)*(unsigned char*)0xB5F851, (int)*(signed char*)0x9690C0,
-            U32(0xC0BC30), U32(0xC0BC34), U32(0xC0BC38), U32(0xC0BC3C), U32(0xC0BC4C), U32(0xC0BC50), U32(0xC0BC54), U32(0xC0BC58), (int)U32(0xC0BC6C), (int)U32(0xC0BC70), (int)U32(0xC0BC74));
+    fprintf(g_f, "D %u run=%d cd=%d cars=%08x,%08x,%08x,%08x perc=%08x,%08x,%08x,%08x zt=%d tw=%d ti=%d pk=%d,%d,%d bc=%d,%d,%d\n", fc, (int)*(unsigned char*)0xB5F851, (int)*(signed char*)0x9690C0,
+            U32(0xC0BC30), U32(0xC0BC34), U32(0xC0BC38), U32(0xC0BC3C), U32(0xC0BC4C), U32(0xC0BC50), U32(0xC0BC54), U32(0xC0BC58), (int)U32(0xC0BC6C), (int)U32(0xC0BC70), (int)U32(0xC0BC74), (int)*(short*)0x9788DA, (int)*(short*)(0x9788DA + 3 * 0x20), (int)*(short*)(0x9788DA + 0x23 * 0x20), (int)*(unsigned short*)0xBA8704, (int)*(unsigned short*)(0xBA8704 + 3 * 40), (int)*(unsigned short*)(0xBA8704 + 0x23 * 40));
   }
   fprintf(g_f, "F %u %u %08x %u %08x %08x %08x %u %u %u %08x\n", fc, tms, g_seed, g_calls, *(u32*)&pos[0], *(u32*)&pos[1], *(u32*)&pos[2], hp, np, nv, sh);
   g_calls = 0; if((nf & 63) == 0) fflush(g_f);
@@ -96,6 +97,7 @@ BOOL WINAPI DllMain(HINSTANCE h, DWORD why, LPVOID r){
     if((e = getenv("RD_OUT"))) g_f = fopen(e, "w");
     if(GetModuleHandleA(0) != (HMODULE)0x400000) return TRUE; /* not the original image */
     patch(0x821B1E, my_rand); patch(0x821B11, my_srand); patch(0x5617A0, my_timer); patch(0x745270, my_pstimer);
+    if(g_pin & 512){ DWORD o; unsigned char* p = (unsigned char*)0x507750; VirtualProtect(p, 1, PAGE_EXECUTE_READWRITE, &o); p[0] = 0xC3; VirtualProtect(p, 1, o, &o); } /* pin bit 512: CAudioEngine::Service() (0x507750, thiscall, no stack args) = ret, as Lockstep.cpp NoAudio() in the port (= NOTSA_RR_NOAUDIO of the RR harness) */
   } else if(why == DLL_PROCESS_DETACH && g_f) fflush(g_f);
   return TRUE;
 }

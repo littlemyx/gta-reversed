@@ -24,6 +24,12 @@
 #include "CarFXRenderer.h"
 
 #include "extensions/Configs/FastLoader.hpp"
+#ifdef NOTSA_STANDALONE_RUN
+#include "standalone/Lockstep.h"
+#define RD_NOTE(x) notsa::lockstep::Note(x) // REPLAY-DIFF: "X fc what" trace line
+#else
+#define RD_NOTE(x) ((void)0)
+#endif
 #ifdef NOTSA_STATEHASH
 #include "portable/statehash.h" // RR-1: deterministic state-hash harness (hook lines below are #ifdef NOTSA_STATEHASH)
 #endif
@@ -331,6 +337,7 @@ void Idle(void* param) {
 #endif
     SetLightsWithTimeOfDayColour(Scene.m_pRpWorld);
     if (!param) {
+        RD_NOTE("skip: param false");
         return;
     }
 
@@ -340,6 +347,7 @@ void Idle(void* param) {
         CVisibilityPlugins::SetRenderWareCamera(Scene.m_pRwCamera);
         RwCameraClear(Scene.m_pRwCamera, &gColourTop, rwCAMERACLEARZ);
         if (!RsCameraBeginUpdate(Scene.m_pRwCamera)) {
+            RD_NOTE("skip: menu BeginUpdate failed");
             return;
         }
     }
@@ -372,8 +380,10 @@ void Idle(void* param) {
                 255
             );
         }
-        if (!started)
+        if (!started) {
+            RD_NOTE("skip: Horizon failed");
             return;
+        }
 
         DefinedState();
         RwCameraSetFarClipPlane(Scene.m_pRwCamera, CTimeCycle::GetFarClip());
@@ -407,6 +417,7 @@ void Idle(void* param) {
 
     RwCameraEndUpdate(Scene.m_pRwCamera);
     RsCameraShowRaster(Scene.m_pRwCamera);
+    RD_NOTE("rendered");
 }
 
 // 0x53E770

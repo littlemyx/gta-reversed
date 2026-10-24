@@ -179,6 +179,7 @@ void CRadar::Initialise() {
 
     for (auto& trace : ms_RadarTrace) {
         ClearActualBlip(trace);
+        trace.m_nCounter = 1; // 0x587FF2 (`mov [eax-8], cx` in the init loop): the handle counter starts at 1, so the first blip handle is (2 << 16) | index. ClearActualBlip (0x587C10) leaves it alone. Found by REPLAY-DIFF: script space (blip handles) differed at frame 1
     }
 
     m_radarRange = 350.0f;

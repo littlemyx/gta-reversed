@@ -4,6 +4,7 @@
 # usage: run.sh [intro] [--reps 3] [--pin 31] [--frames 3000] [--port-exe <gta_reversed.exe>] [--out <dir>] [--secs-orig 45] [--secs-port 45] [--legs o,p] [--build-proxy] [--rlog N]
 #   scenario "intro" = menu -> new game by real-time input (same route as gameplay_regress/orig/cheats.scn up to gstate=9), then NO input; the trace starts at the arm point (first frame with a player ped).
 #   --pin     NOTSA_LOCKSTEP_PIN / RD_PIN bits: 1 time-derived srand seeds, 2 CTimer clock, 4 psTimer, 8 RNG re-seed at the arm point, 16 frame counter jump at the arm point (default 31 = all)
+#            32 R log, 64 D probe, 128 audio RNG partition, 256 CdStream tick barrier, 512 audio off (= RR harness NOTSA_RR_NOAUDIO; rd_orig.c patches CAudioEngine::Service to ret); all = 1023
 #   --rlog N  with pin bit 32 (add 32 to --pin): log every rand() call (R fc site) of the first N traced frames, for noise hunting
 #   --frames  compare the first N traced frames; a run with fewer traced frames than N (focus lost, crash) is repeated (up to 2 more times)
 # What it touches: gpu.lock around EVERY game run (rd_orig_run.sh / rd_port_run.sh acquire it per run; waits while another owner has it, USER-PLAY included); the ORIGINAL leg backs up

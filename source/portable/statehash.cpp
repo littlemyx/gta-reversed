@@ -3,13 +3,15 @@
 
 #ifdef NOTSA_STATEHASH
 #include "statehash.h"
-#include "dsound_al.h"
 #include "fakerw.h"
+#ifdef NOTSA_PORTABLE // RR-3: this file also builds into the Win32 StandaloneRelease variant (-DGTASA_STATEHASH=ON); the portable-only parts are marked
+#include "dsound_al.h"
 #include <src/gl/rwgl3impl.h>
+#include <mach/mach.h>
+#endif
 
 #include <atomic>
 #include <new>
-#include <mach/mach.h>
 #include <thread>
 #include <bit>
 #include <cmath>
@@ -319,6 +321,7 @@ uint32_t StableId(const void* p) {
     return 0xF0000000u | ((uint32_t)((uintptr_t)p - (uintptr_t)&StableId) & 0x0FFFFFFFu);
 }
 
+#ifdef NOTSA_PORTABLE
 // ---- rand() draw log (NOTSA_RR_RANDLOG=<file>, NOTSA_RR_RANDLOG_FRAMES=A-B in Idle frames): for bisecting a divergence of the RNG state down to the call site of the first differing draw
 namespace {
 struct RandLog {
@@ -346,6 +349,12 @@ __attribute__((noinline)) void RandHook(uint32_t stateBefore) {
     void**    fp    = (void**)__builtin_frame_address(0); // arm64 / x64 clang keep the frame-pointer chain: [fp] = caller's fp, [fp+1] = return address
     for (int i = 0; i < 5 && fp && ((uintptr_t)fp & 7) == 0; i++) { ra[i] = (uintptr_t)fp[1] - base; fp = (void**)fp[0]; }
     std::fprintf(r.f, "%u %u %08x %llx %llx %llx %llx %llx\n", g_idleFrames, r.idx++, stateBefore, (unsigned long long)ra[0], (unsigned long long)ra[1], (unsigned long long)ra[2], (unsigned long long)ra[3], (unsigned long long)ra[4]);
+}
+#endif // NOTSA_PORTABLE (rand() draw log: the RandHook call sits in portable/msvc_rand.h)
+
+void RngMark(const char* name) {
+    static const bool on = Active() && std::getenv("NOTSA_RR_RNGMARKS");
+    if (on && g_idleFrames <= 2) { NOTSA_LOG_INFO("rrm {} rng={:08x} idle={} gf={}", name, RngState(), g_idleFrames, CTimer::GetFrameCounter()); }
 }
 
 void Probe(const char* tag) {
@@ -388,7 +397,9 @@ void AdvanceClock() {
     if (!Active()) return;
     PinRwHeap();
     g_vns.fetch_add((uint64_t)Cfg().stepMs * 1'000'000ull, std::memory_order_relaxed);
+#ifdef NOTSA_PORTABLE
     notsa::portable::dsal::RrPump(Cfg().stepMs); // the software DirectSound mixer: cursors / playing state advance with game time (the audio entities read them and draw random numbers on that basis)
+#endif
 }
 
 void OnFrame() {
@@ -417,6 +428,7 @@ void OnFrame() {
             }
         }
     }
+#ifdef NOTSA_PORTABLE
     if (Active() && (g_idleFrames == 100 || g_idleFrames == 200)) { // which threads exist (any thread that touches game state is a suspect for a nondeterminism)
         thread_act_array_t th; mach_msg_type_number_t n = 0;
         if (task_threads(mach_task_self(), &th, &n) == KERN_SUCCESS) {
@@ -425,6 +437,7 @@ void OnFrame() {
             NOTSA_LOG_INFO("{}", l);
         }
     }
+#endif
     if (Active() && g_idleFrames % 250 == 0) { NOTSA_LOG_INFO("rr: idle frame {} (virtual {} ms, game frame {}, recording {})", g_idleFrames, VirtualMs(), CTimer::GetFrameCounter(), g_recording); }
     if (!g_recording || !g_f) return;
     Record();

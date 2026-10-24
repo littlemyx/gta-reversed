@@ -192,6 +192,11 @@ else()
         "${CMAKE_CURRENT_SOURCE_DIR}/portable/*.c*"
     )
     list(REMOVE_ITEM SOURCE_FILES_WITHOUT_MODULES_LIST ${PORTABLE_ONLY_FILES})
+    if (${RE_PROJECT}_STATEHASH)
+        # RR-3: the state-hash harness is the one source/portable/ TU that also builds into the Win32 StandaloneRelease variant (the portable-only parts of it are #ifdef NOTSA_PORTABLE).
+        # Nothing is added when the option is OFF.
+        list(APPEND SOURCE_FILES_WITHOUT_MODULES_LIST portable/statehash.cpp)
+    endif()
 endif()
 
 #

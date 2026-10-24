@@ -299,7 +299,7 @@ bool CTaskSimpleHoldEntity::SetPedPosition(CPed* ped) {
     if (bUpdateEntityToHoldPosition) {
         if (m_pEntityToHold) {
             m_pEntityToHold->SetIsVisible(ped->GetIsVisible());
-#ifdef NOTSA_STATEHASH
+#if defined(NOTSA_STATEHASH) && defined(NOTSA_PORTABLE) // RR-3: F6 diagnostics, portable only
             if (std::getenv("NOTSA_RR_HOLDLOG")) { // RR diagnostics: every bone read of a held prop (first 80)
                 static int s_N = 0;
                 if (s_N++ < 80) {

@@ -3,11 +3,27 @@
 #include "oswrapper.h"
 
 #include <Windows.h>
+#ifdef NOTSA_STATEHASH
+#include "portable/statehash.h"
+#endif
 
 CHAR BasePath[_MAX_PATH] = { 0 };
 
+#ifdef NOTSA_STATEHASH
+// RR-3: with NOTSA_RR=1 the QueryPerformanceCounter is the frame-stepped virtual clock of the state-hash harness, expressed in counter units of the real
+// frequency (the portable build's counter is the same virtual nanoseconds at 1 GHz, so both builds see the same time in ms).
+static uint64 RrCounter() {
+    static const uint64 freq = []{ LARGE_INTEGER f; ::QueryPerformanceFrequency(&f); return (uint64)f.QuadPart; }();
+    const uint64 ns = notsa::rr::VirtualNs();
+    return (ns / 1'000'000'000ull) * freq + (ns % 1'000'000'000ull) * freq / 1'000'000'000ull;
+}
+#endif
+
 // 0x5617A0
 uint64 GetOSWPerformanceTime() {
+#ifdef NOTSA_STATEHASH
+    if (notsa::rr::Active()) { return RrCounter(); }
+#endif
     LARGE_INTEGER PerformanceCount = { 0 };
     ::QueryPerformanceCounter(&PerformanceCount);
     return PerformanceCount.QuadPart;
@@ -204,6 +220,9 @@ void OS_ThreadResume(void* thread) {
 }
 
 double OS_TimeAccurate() {
+#ifdef NOTSA_STATEHASH
+    if (notsa::rr::Active()) { return RrCounter() / double(1000.f); } // RR: virtual clock (as the portable build)
+#endif
     LARGE_INTEGER PerformanceCount;
     QueryPerformanceCounter(&PerformanceCount);
     return PerformanceCount.QuadPart / double(1000.f);

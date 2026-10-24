@@ -38,6 +38,8 @@ void PinHeap();
 bool NoAudio();
 //! true while a trace is being recorded
 bool Recording();
+//! RR-3 diagnostics: logs `rrm <name> rng=<state> idle=<n>` when NOTSA_RR_RNGMARKS=1 (bisecting where the RNG state of two builds first differs)
+void RngMark(const char* name);
 //! debug probe (NOTSA_RR_PROBE=A-B in Idle frames): logs a hash of all vehicles + the state of vehicle slot NOTSA_RR_PROBE_SLOT at a named point inside the frame (bisecting where two runs diverge)
 void Probe(const char* tag);
 //! (declared in msvc_rand.h) logs a draw of the game thread's rand() when NOTSA_RR_RANDLOG is set

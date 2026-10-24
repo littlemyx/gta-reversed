@@ -712,13 +712,13 @@ void CEntity::UpdateRwFrame() {
 void CEntity::UpdateRpHAnim() {
     if (const auto atomic = GetFirstAtomic(GetRpClump())) {
         if (RpSkinGeometryGetSkin(RpAtomicGetGeometry(atomic)) && !m_bDontUpdateHierarchy) {
-#ifdef NOTSA_STATEHASH
+#if defined(NOTSA_STATEHASH) && defined(NOTSA_PORTABLE) // RR-3: F6 diagnostics (clang builtins), portable only
             if (std::getenv("NOTSA_RR_HOLDLOG") && GetIsTypePed() && GetPedPool()->GetIndex(AsPed()) == 11) { // RR diagnostics for the held-prop bone matrix (RR_PLAN section 9.5)
                 static int s_N = 0;
                 if (s_N++ < 40) { NOTSA_LOG_INFO("rru frame={} ped=11 caller={:x} firstAssoc={} dontUpdate={}", CTimer::GetFrameCounter(), (unsigned long long)((uintptr_t)__builtin_return_address(0) - (uintptr_t)(void*)&notsa::rr::StableId), (void*)RpAnimBlendClumpGetFirstAssociation(GetRpClump()) != nullptr, (int)m_bDontUpdateHierarchy); }
             }
 #endif
-#ifdef NOTSA_STATEHASH
+#if defined(NOTSA_STATEHASH) && defined(NOTSA_PORTABLE) // RR-3: F6 diagnostics (clang builtins), portable only
             if (std::getenv("NOTSA_RR_HOLDLOG") && GetIsTypePed() && GetPedPool()->GetIndex(AsPed()) == 11) {
                 static int s_M = 0;
                 auto* h = GetAnimHierarchyFromSkinClump(GetRpClump());
@@ -727,7 +727,7 @@ void CEntity::UpdateRpHAnim() {
             }
 #endif
             RpHAnimHierarchyUpdateMatrices(GetAnimHierarchyFromSkinClump(GetRpClump()));
-#ifdef NOTSA_STATEHASH
+#if defined(NOTSA_STATEHASH) && defined(NOTSA_PORTABLE) // RR-3: F6 diagnostics (clang builtins), portable only
             if (std::getenv("NOTSA_RR_HOLDLOG") && GetIsTypePed() && GetPedPool()->GetIndex(AsPed()) == 11) {
                 static int s_A = 0;
                 auto* h = GetAnimHierarchyFromSkinClump(GetRpClump());

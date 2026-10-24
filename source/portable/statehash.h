@@ -32,6 +32,8 @@ void AdvanceClock();
 void OnFrame();
 //! injector commands; true when `name` was one of ours
 bool Cmd(const char* name, const std::string& args);
+//! NOTSA_RR_NOAUDIO=1 (with NOTSA_RR=1): Idle() does not call AudioEngine.Service()
+bool NoAudio();
 //! true while a trace is being recorded
 bool Recording();
 //! debug probe (NOTSA_RR_PROBE=A-B in Idle frames): logs a hash of all vehicles + the state of vehicle slot NOTSA_RR_PROBE_SLOT at a named point inside the frame (bisecting where two runs diverge)

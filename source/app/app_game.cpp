@@ -322,6 +322,9 @@ void Idle(void* param) {
     CFont::InitPerFrame();
     CPointLights::NumLights = 0;
     CGame::Process();
+#ifdef NOTSA_STATEHASH
+    if (!notsa::rr::NoAudio()) // NOTSA_RR_NOAUDIO=1: the audio engine is not serviced at all (the cross-build comparison does not depend on how a DirectSound device is emulated)
+#endif
     AudioEngine.Service();
 #ifdef NOTSA_STATEHASH
     notsa::rr::OnFrame(); // RR: per-frame state hash (end of the simulation part)

@@ -4,6 +4,8 @@
 #ifdef NOTSA_STATEHASH
 #include "statehash.h"
 #include "dsound_al.h"
+#include "fakerw.h"
+#include <src/gl/rwgl3impl.h>
 
 #include <atomic>
 #include <mach/mach.h>
@@ -286,6 +288,7 @@ uint32_t Seed() { return Cfg().seed; }
 uint64_t VirtualNs() { return g_vns.load(std::memory_order_relaxed); }
 uint64_t VirtualMs() { return (VirtualNs() - g_vStartNs) / 1'000'000ull; }
 bool     Recording() { return g_recording; }
+bool     NoAudio() { static const bool v = Active() && std::getenv("NOTSA_RR_NOAUDIO") && std::getenv("NOTSA_RR_NOAUDIO")[0] == '1'; return v; }
 
 uint32_t StableId(const void* p) {
     if (!p) return 0;
@@ -350,8 +353,22 @@ void Probe(const char* tag) {
     NOTSA_LOG_INFO("rrp {} {} all={:016x}{}", g_idleFrames, tag, all.e, l);
 }
 
+namespace {
+// RR: every RenderWare allocation (clump hierarchies, animation interpolators, keyframe buffers, ...) comes back zeroed. Without it a held prop (CJ_CIGGY) occasionally reads a NaN bone matrix
+// (u6 in RR_PLAN section 9) and CPhysical::RemoveAndAdd then crashes on the NaN position: librw's HAnimHierarchy matrices / interpolator buffers are malloc'd and read before the first update.
+void* RrRwMalloc(size_t sz, uint32_t) { return sz ? std::calloc(1, sz) : nullptr; }
+void PinRwHeap() {
+    static bool s_Done = false;
+    if (s_Done || !rw::Engine::memfuncs.rwmalloc) return;
+    s_Done = true;
+    rw::Engine::memfuncs.rwmalloc = RrRwMalloc;
+    NOTSA_LOG_INFO("rr: RenderWare allocations are zeroed from now on");
+}
+} // namespace
+
 void AdvanceClock() {
     if (!Active()) return;
+    PinRwHeap();
     g_vns.fetch_add((uint64_t)Cfg().stepMs * 1'000'000ull, std::memory_order_relaxed);
     notsa::portable::dsal::RrPump(Cfg().stepMs); // the software DirectSound mixer: cursors / playing state advance with game time (the audio entities read them and draw random numbers on that basis)
 }

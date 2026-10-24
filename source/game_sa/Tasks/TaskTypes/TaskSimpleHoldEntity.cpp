@@ -305,6 +305,9 @@ bool CTaskSimpleHoldEntity::SetPedPosition(CPed* ped) {
                     RpHAnimHierarchy* pHAnimHierarchy = GetAnimHierarchyFromSkinClump(ped->GetRpClump());
                     int32 animIndex = RpHAnimIDGetIndex(pHAnimHierarchy, ped->m_apBones[m_nBoneFrameId]->BoneTag);
                     RwMatrix* pBoneMatrix = &RpHAnimHierarchyGetMatrixArray(pHAnimHierarchy)[animIndex];
+#ifdef NOTSA_STATEHASH // RR diagnostics: a bone matrix read that is not a finite matrix (or a negative index) is the source of NaN positions of held props
+    if (animIndex < 0 || !std::isfinite(pBoneMatrix->pos.x) || !std::isfinite(pBoneMatrix->right.x)) { NOTSA_LOG_WARN("rr: HoldEntity(translation) animIndex={} bonetag={} pos=({},{},{}) right.x={} nodes={}", animIndex, ped->m_apBones[m_nBoneFrameId]->BoneTag, pBoneMatrix->pos.x, pBoneMatrix->pos.y, pBoneMatrix->pos.z, pBoneMatrix->right.x, pHAnimHierarchy ? pHAnimHierarchy->numNodes : -1); }
+#endif
                     RwV3dTransformPoints((RwV3d*)&entityToHoldPos, (RwV3d*)&entityToHoldPos, 1, pBoneMatrix);
                     m_pEntityToHold->GetMatrix().UpdateMatrix(pBoneMatrix);
                     m_pEntityToHold->SetPosn(entityToHoldPos);
@@ -314,6 +317,9 @@ bool CTaskSimpleHoldEntity::SetPedPosition(CPed* ped) {
                     RpHAnimHierarchy* pHAnimHierarchy = GetAnimHierarchyFromSkinClump(ped->GetRpClump());
                     int32 animIndex = RpHAnimIDGetIndex(pHAnimHierarchy, ped->m_apBones[m_nBoneFrameId]->BoneTag);
                     RwMatrix* pBoneMatrix = RpHAnimHierarchyGetMatrixArray(pHAnimHierarchy);
+#ifdef NOTSA_STATEHASH
+                    if (animIndex < 0 || !std::isfinite(pBoneMatrix[animIndex].pos.x)) { NOTSA_LOG_WARN("rr: HoldEntity animIndex={} bonetag={} pos=({},{},{}) nodes={} ped={} frame={}", animIndex, ped->m_apBones[m_nBoneFrameId]->BoneTag, pBoneMatrix[animIndex].pos.x, pBoneMatrix[animIndex].pos.y, pBoneMatrix[animIndex].pos.z, pHAnimHierarchy ? pHAnimHierarchy->numNodes : -1, (void*)ped, CTimer::GetFrameCounter()); }
+#endif
                     entityToHoldPos += *RwMatrixGetPos(&pBoneMatrix[animIndex]);
                     CMatrix rotationMatrix(ped->GetMatrix());
                     rotationMatrix.RotateZ(m_fRotation);

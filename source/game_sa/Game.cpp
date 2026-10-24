@@ -91,6 +91,9 @@ void CGame::InjectHooks() {
 }
 
 // 0x72FD90
+#ifdef NOTSA_PORTABLE
+#define CameraDestroy Game_CameraDestroy_static // MSVC gives this `static` internal linkage; clang keeps the extern linkage of app.h's declaration and the symbol would clash with app_camera.cpp's
+#endif
 static void CameraDestroy(RwCamera* rwCamera) {
     if (!rwCamera)
         return;

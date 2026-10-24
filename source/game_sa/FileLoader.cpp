@@ -2658,3 +2658,7 @@ void LoadingScreenLoadingFile(const char* str) {
     sprintf_s(gString, "Loading %s", screenName);
     LoadingScreen("Loading the Game", gString);
 }
+#ifdef NOTSA_PORTABLE
+// The hook registration (RH_ScopedOverloadedInstall(LoadLine, ..., char* (*)(FILESTREAM))) is what instantiates this `auto` overload on Windows; the portable build has no hook registry
+template char* CFileLoader::LoadLine<FILESTREAM>(FILESTREAM);
+#endif

@@ -174,6 +174,8 @@ if (${RE_PROJECT}_PORTABLE)
     # MAC-R3a: platform.cpp is the D3D9 Reset watch -> portable/render/platform_gl3.cpp (engine.cpp stays, its D3D parts are guarded; twin: portable/render/engine_gl3.cpp)
     list(APPEND PORTABLE_EXCLUDED_RENDER_FILES standalone/rw/platform.cpp)
     list(APPEND PORTABLE_EXCLUDED_FILES ${PORTABLE_EXCLUDED_RENDER_FILES})
+    # MAC-BUILD1: the ImGui D3D9 backend needs <d3d9.h>; the GL3 build drives ImGui through the SDL3 (+ GL) bindings instead
+    list(APPEND PORTABLE_EXCLUDED_FILES libs/imgui/bindings/imgui_impl_dx9.cpp)
     list(REMOVE_ITEM SOURCE_FILES_WITHOUT_MODULES_LIST ${PORTABLE_EXCLUDED_FILES})
 else()
     # source/portable/*.cpp are the portable-only implementations (MAC-W0); the Windows builds never see them (headers there are fine: they are never compiled on their own)

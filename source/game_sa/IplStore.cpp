@@ -11,7 +11,13 @@
 #include "TheCarGenerators.h"
 
 using IplTreeNode  = CQuadTreeNode<IplDef*>;
+#ifdef NOTSA_PORTABLE
+namespace { // Itanium mangling has no variable types: ColStore.cpp's TU-local `ms_pQuadTree` (another type) would be a duplicate symbol
+#endif
 NOTSA_GLOBAL(ms_pQuadTree, 0x8E3FAC, (IplTreeNode*), {});
+#ifdef NOTSA_PORTABLE
+}
+#endif
 
 NOTSA_GLOBAL(ms_pPool, 0x8E3FB0, (CIplPool*), {});
 

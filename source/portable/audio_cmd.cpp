@@ -12,7 +12,9 @@
 #include "Hardware/AEStreamingChannel.h"
 
 namespace notsa::portable {
+bool PlayCmd(const char* name, const std::string& args); // play_cmd.cpp (MAC-PLAY1)
 bool AudioCmd(const char* name, const std::string& args) {
+    if (PlayCmd(name, args)) { return true; }
     if (!std::strcmp(name, "radio")) {
         const int id = std::atoi(args.c_str());
         NOTSA_LOG_INFO("[audio-cmd] StartRadio({})", id);

@@ -60,8 +60,13 @@ public:
     static inline NOTSA_GLOBAL(ms_WorkBufferSize, 0x8D2BE0, (uint32), { 51200 });
     static inline NOTSA_GLOBAL(ms_SaveFileNameJustSaved, 0xC16030, (char[MAX_PATH]), {});
     static inline NOTSA_GLOBAL(ms_SaveFileName, 0xC16DB8, (char[256]), {});
+#ifdef NOTSA_PORTABLE // MAC-PLAY1: the exe's 104-byte buffers overflow (into the neighbouring statics) for a save path longer than ~100 characters (a long macOS user dir, NOTSA_STANDALONE_USERDIR)
+    static inline NOTSA_GLOBAL(ms_LoadFileName, 0xC15FC8, (char[1024]), {});
+    static inline NOTSA_GLOBAL(ms_LoadFileNameWithPath, 0xC15F60, (char[1024]), {});
+#else
     static inline NOTSA_GLOBAL(ms_LoadFileName, 0xC15FC8, (char[104]), {});
     static inline NOTSA_GLOBAL(ms_LoadFileNameWithPath, 0xC15F60, (char[104]), {});
+#endif
     static inline NOTSA_GLOBAL(ms_CheckSum, 0xC16134, (uint32), {});
     static inline NOTSA_GLOBAL(ms_WorkBuffer, 0xC16EE8, (uint8*), {});
     static inline NOTSA_GLOBAL(ms_WorkBufferPos, 0xC16EEC, (int32), {});

@@ -139,7 +139,7 @@ bool CTaskSimpleJetPack::ProcessPed(CPed* ped) {
             m_ThrustStrafe = std::clamp(m_ThrustStrafe + CGeneral::DoCoinFlip() ? -1.f : 1.f, -3.f, 3.f);
 
             ped->m_fAimingRotation +=
-                x87::sin((float)CTimer::m_snTimeInMilliseconds * 0.0015707964f) * CTimer::GetTimeStep() * JETPACK_TURN_RATE * CGeneral::GetRandomNumberInRange(0.f, 1.f); // TODO: Magic number
+                X87R(x87::sin((float)CTimer::m_snTimeInMilliseconds * 0.0015707964f) * CTimer::GetTimeStep()) * JETPACK_TURN_RATE * CGeneral::GetRandomNumberInRange(0.f, 1.f); // TODO: Magic number
 
             if (ped->GetPlayerData()) {
                 ped->GetPlayerData()->m_fMoveBlendRatio = 0.f;
@@ -191,8 +191,8 @@ void CTaskSimpleJetPack::RenderJetPack(CPed* ped) {
             if (m_ThrustStop) {
                 const auto t = (float)CTimer::GetTimeInMS() / 79.577469f; // TODO: Magic number
                 RotateJB(
-                    x87::sin(t) * (bLeftSide ? 45.f : -45.f),
-                    x87::cos(t) * 45.f
+                    X87R(x87::sin(t) * (bLeftSide ? 45.f : -45.f)),
+                    X87R(x87::cos(t) * 45.f)
                 );
             } else {
                 const auto rotY = m_ThrustStrafe * 45.f;
@@ -261,7 +261,7 @@ void CTaskSimpleJetPack::ProcessThrust(CPed* ped) {
             const auto sumAppliedVelocity = ped->GetMoveSpeed() - prevPedVel;       // Total velocity applied this frame
             speed -= (deltaVelocity + sumAppliedVelocity).Dot(dir) * LEG_SWING_DELTA_V_MULT;
         }
-        speed -= x87::sin(angle) * CTimer::GetTimeStep() * LEG_SWING_GRAVITY_MULT;
+        speed -= X87R(x87::sin(angle) * CTimer::GetTimeStep()) * LEG_SWING_GRAVITY_MULT;
         speed *= swingDampingFactor;
 
         angle = std::clamp(angle + speed * CTimer::GetTimeStep(), -LEG_SWING_MAX_ANGLE, LEG_SWING_MAX_ANGLE);
@@ -334,7 +334,7 @@ void CTaskSimpleJetPack::ProcessControlInput(CPlayerPed* player) {
         // exe (0x67E938): `p = pow(0.9, timestep)` stays on the x87 stack; result = (1 - p) * (walkUpDown * (1/128)) * 75deg + thrustAngle * p
         // (NOT common.h's `lerp`: this is the `from * (1 - t) + to * t` form with the multiplications in this order)
         const double p = std::pow((double)JETPACK_ANGLE_RATE, (double)CTimer::GetTimeStep());
-        m_ThrustAngle = (float)(((1.0 - p) * (double)(walkUpDown / 128.f)) * (double)THRUST_MAX_ANGLE + (double)m_ThrustAngle * p);
+        m_ThrustAngle = (float)(((X87R(1.0 - p)) * (x87d)(walkUpDown / 128.f)) * (double)THRUST_MAX_ANGLE + X87R((double)m_ThrustAngle * p));
     };
 
     const auto UpdateStrafe = [this](float step, float clampTo = 1.f) {

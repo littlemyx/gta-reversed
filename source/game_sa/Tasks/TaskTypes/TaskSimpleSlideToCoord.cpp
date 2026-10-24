@@ -77,28 +77,28 @@ bool CTaskSimpleSlideToCoord::ProcessPed(CPed* ped) {
 
     // x87: The differences/sum aren't rounded to float
     const auto&  pedPos = ped->GetPosition();
-    const double dx     = (double)pedPos.x - (double)m_SlideToPos.x;
-    const double dy     = (double)pedPos.y - (double)m_SlideToPos.y;
-    const double distSq = dy * dy + dx * dx;
-    const double minSq  = (double)0.05f * (double)0.05f; // 0x86FD10
+    const x87d dx     = (x87d)pedPos.x - (x87d)m_SlideToPos.x;
+    const x87d dy     = (x87d)pedPos.y - (x87d)m_SlideToPos.y;
+    const x87d distSq = dy * dy + dx * dx;
+    const x87d minSq  = (x87d)0.05f * (x87d)0.05f; // 0x86FD10
 
     if (!(distSq >= minSq)) { // (FCOMPP, JNZ on C0: NaN takes this path)
         ped->m_vecAnimMovingShiftLocal = CVector2D{ 0.f, 0.f };
     } else {
         const auto& mat = *ped->m_matrix; // BUG: Not checked for null
-        const double a  = (double)m_SlideToPos.x - (double)pedPos.x;
-        const double b  = (double)m_SlideToPos.y - (double)pedPos.y;
-        const float  cf = (float)((double)m_SlideToPos.z - (double)pedPos.z);
-        const double spd = (double)m_Speed;
+        const x87d a  = (x87d)m_SlideToPos.x - (x87d)pedPos.x;
+        const x87d b  = (x87d)m_SlideToPos.y - (x87d)pedPos.y;
+        const float  cf = (float)((x87d)m_SlideToPos.z - (x87d)pedPos.z);
+        const x87d spd = (x87d)m_Speed;
 
         const float  axf = (float)(a * spd);
-        const double by  = b * spd;
-        const double cz  = (double)cf * spd;
+        const x87d by  = b * spd;
+        const x87d cz  = (x87d)cf * spd;
         const float  czf = (float)cz;
 
         const auto &r = mat.GetRight(), &f = mat.GetForward();
-        const double fwd   = (cz * f.z + by * f.y) + (double)axf * f.x;
-        const double right = ((double)czf * r.z + by * r.y) + (double)axf * r.x;
+        const x87d fwd   = (cz * f.z + by * f.y) + (x87d)axf * f.x;
+        const x87d right = ((x87d)czf * r.z + by * r.y) + (x87d)axf * r.x;
         ped->m_vecAnimMovingShiftLocal = CVector2D{ (float)right, (float)fwd };
     }
 

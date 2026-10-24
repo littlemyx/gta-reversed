@@ -109,8 +109,8 @@ bool CTaskSimpleDead::ProcessPed(CPed* ped) {
         const auto& n     = ped->field_578;
 
         // x87: chains are kept in extended precision, and rounded to float on store
-        const float dotFwd   = (float)((double)n.z * (double)fwd.z   + (double)n.y * (double)fwd.y   + (double)n.x * (double)fwd.x);
-        const float dotRight = (float)((double)n.z * (double)right.z + (double)n.y * (double)right.y + (double)n.x * (double)right.x);
+        const float dotFwd   = (float)((x87d)n.z * (x87d)fwd.z   + (x87d)n.y * (x87d)fwd.y   + (x87d)n.x * (x87d)fwd.x);
+        const float dotRight = (float)((x87d)n.z * (x87d)right.z + (x87d)n.y * (x87d)right.y + (x87d)n.x * (x87d)right.x);
 
         // 0x6308DA / 0x630927 call 0x821E70 = the CRT's _CIasin (NOT _CIacos 0x822380: a flat ground gives dot = 0 -> 0 rad, the body lies flat;
         // acos would give pi/2 and PitchForSlope would stand every corpse on its head once the die anim ends)
@@ -132,13 +132,13 @@ bool CTaskSimpleDead::ProcessPed(CPed* ped) {
         const uint32 timeSinceDeath = CTimer::GetTimeInMS() - m_nDeathTimeMS;
 
         // Radius in which the peds will step into the blood
-        double radius; // x87: stays in extended precision
+        x87d radius; // x87: stays in extended precision
         if (timeSinceDeath < 2000) {
-            radius = 0.0;
+            radius = (x87d)0.0;
         } else if (timeSinceDeath > 7000) {
-            radius = (double)0.75f;
+            radius = (x87d)0.75f;
         } else {
-            radius = (double)(int32)(timeSinceDeath - 2000) * (double)0.00015f;
+            radius = (x87d)(int32)(timeSinceDeath - 2000) * (x87d)0.00015f;
         }
 
         const auto& pedPos = ped->GetPosition();
@@ -147,9 +147,9 @@ bool CTaskSimpleDead::ProcessPed(CPed* ped) {
                 continue;
             }
             const auto& pos = entity->GetPosition();
-            const double dx = (double)pos.x - (double)pedPos.x;
-            const double dy = (double)pos.y - (double)pedPos.y;
-            const double dz = (double)pos.z - (double)pedPos.z;
+            const x87d dx = (x87d)pos.x - (x87d)pedPos.x;
+            const x87d dy = (x87d)pos.y - (x87d)pedPos.y;
+            const x87d dz = (x87d)pos.z - (x87d)pedPos.z;
             if (dz * dz + dy * dy + dx * dx < radius * radius) {
                 const auto other = static_cast<CPed*>(entity);
                 other->m_nDeathTimeMS = 200; // Used as the number of remaining bloody footprints
@@ -173,16 +173,16 @@ bool CTaskSimpleDead::ProcessPed(CPed* ped) {
 
             if (!m_bBloodPuddleCreated && CLocalisation::Blood()) {
                 if (puddleTime < 5000) {
-                    const double f = (double)(int32)puddleTime;
+                    const x87d f = (x87d)(int32)puddleTime;
                     CShadows::StoreStaticShadow(
                         (uint32)(uintptr_t)this + 0x11,
                         SHADOW_DEFAULT,
                         gpBloodPoolTex,
                         pos,
-                        (float)(f * (double)0.00015f),
+                        (float)(f * (x87d)0.00015f),
                         0.f,
                         0.f,
-                        (float)((double)-0.00015f * f),
+                        (float)((x87d)-0.00015f * f),
                         255,
                         200,
                         0,

@@ -71,10 +71,10 @@ CTask* CTaskComplexFollowPedFootsteps::CreateNextSubTask(CPed* ped) {
     case TASK_COMPLEX_SEEK_ENTITY: {
         const auto& targetPos = m_targetPed->GetPosition();
         const auto& pedPos    = ped->GetPosition();
-        const double dx = (double)targetPos.x - pedPos.x;
-        const double dy = (double)targetPos.y - pedPos.y;
-        const double dz = (double)targetPos.z - pedPos.z;
-        const double distSq = (dz * dz + dx * dx) + dy * dy; // x87, no float rounding
+        const x87d dx = (x87d)targetPos.x - pedPos.x;
+        const x87d dy = (x87d)targetPos.y - pedPos.y;
+        const x87d dz = (x87d)targetPos.z - pedPos.z;
+        const x87d distSq = (dz * dz + dx * dx) + dy * dy; // x87, no float rounding
         constexpr float SEEK_DIST = 1.4f; // 0x870C20
         if (distSq > (double)SEEK_DIST) { // NOTE: Compared against the distance itself, not its square (as in the original)
             return CreateSubTask(TASK_COMPLEX_SEEK_ENTITY, ped);
@@ -93,10 +93,10 @@ CTask* CTaskComplexFollowPedFootsteps::CreateFirstSubTask(CPed* ped) {
     }
     const auto& pedPos    = ped->GetPosition();
     const auto& targetPos = m_targetPed->GetPosition();
-    const double dx = (double)targetPos.x - pedPos.x;
-    const double dy = (double)targetPos.y - pedPos.y;
-    const double dz = (double)targetPos.z - pedPos.z;
-    const double distSq = (dx * dx + dz * dz) + dy * dy; // x87, no float rounding
+    const x87d dx = (x87d)targetPos.x - pedPos.x;
+    const x87d dy = (x87d)targetPos.y - pedPos.y;
+    const x87d dz = (x87d)targetPos.z - pedPos.z;
+    const x87d distSq = (dx * dx + dz * dz) + dy * dy; // x87, no float rounding
     constexpr float SEEK_DIST = 1.4f; // 0x870C20
     if ((double)SEEK_DIST < distSq) { // NOTE: Compared against the distance itself, not its square (as in the original)
         return CreateSubTask(TASK_COMPLEX_SEEK_ENTITY, ped);
@@ -106,12 +106,12 @@ CTask* CTaskComplexFollowPedFootsteps::CreateFirstSubTask(CPed* ped) {
 
 //! 0x59C910 - `CVector::Normalise` as the original evaluates it (sum of squares and reciprocal root in extended precision).
 static void NormaliseOriginal(CVector& v) {
-    const double sumSq = ((double)v.x * v.x + (double)v.y * v.y) + (double)v.z * v.z;
+    const x87d sumSq = ((x87d)v.x * v.x + (x87d)v.y * v.y) + (x87d)v.z * v.z;
     if (sumSq <= 0.0) { // NaN takes the sqrt path
         v.x = 1.0f;
         return;
     }
-    const double recip = 1.0 / std::sqrt(sumSq);
+    const x87d recip = (x87d)1.0 / std::sqrt(sumSq);
     v.x = (float)(v.x * recip);
     v.y = (float)(v.y * recip);
     v.z = (float)(v.z * recip);
@@ -119,7 +119,7 @@ static void NormaliseOriginal(CVector& v) {
 
 //! 0x406DA0 - Squared magnitude, left in ST0 (extended precision) by the original: (x^2 + y^2) + z^2
 static double SqMagnitudeOriginal(const CVector& v) {
-    return ((double)v.x * v.x + (double)v.y * v.y) + (double)v.z * v.z;
+    return ((x87d)v.x * v.x + (x87d)v.y * v.y) + (x87d)v.z * v.z;
 }
 
 // 0x695090
@@ -160,11 +160,11 @@ CTask* CTaskComplexFollowPedFootsteps::ControlSubTask(CPed* ped) {
     const CVector targetPos = m_targetPed->GetPosition();
     const CVector delta     = targetPos - pedPos; // 0x40FE60
     const float   sqDist    = (float)SqMagnitudeOriginal(delta);
-    const float   dist2D    = (float)std::sqrt((double)delta.y * delta.y + (double)delta.x * delta.x);
+    const float   dist2D    = (float)std::sqrt((x87d)delta.y * delta.y + (x87d)delta.x * delta.x);
 
     constexpr float NEAR_DIST = 1.4f;  // 0x870C20
     constexpr float FAR_DIST  = 8.f;   // 0x870C38
-    if ((double)NEAR_DIST * NEAR_DIST > sqDist && m_pSubTask->GetTaskType() != TASK_SIMPLE_STAND_STILL) {
+    if ((x87d)NEAR_DIST * NEAR_DIST > sqDist && m_pSubTask->GetTaskType() != TASK_SIMPLE_STAND_STILL) {
         if (!m_updateGoToPoint) {
             return ret;
         }
@@ -172,7 +172,7 @@ CTask* CTaskComplexFollowPedFootsteps::ControlSubTask(CPed* ped) {
         return Finish(TASK_SIMPLE_STAND_STILL);
     }
 
-    if ((double)FAR_DIST * FAR_DIST < sqDist) {
+    if ((x87d)FAR_DIST * FAR_DIST < sqDist) {
         return Finish(TASK_COMPLEX_SEEK_ENTITY);
     }
     if (dist2D < 1.f && std::abs(delta.z) > 2.f) { // 0x858624, 0x858CA0
@@ -205,13 +205,13 @@ CTask* CTaskComplexFollowPedFootsteps::ControlSubTask(CPed* ped) {
     if (numPoints != 0) {
         const CVector last = m_pointRoute->m_Entries[numPoints - 1];
         CVector       d    = targetPos - last;
-        if ((double)0.35f * 0.35f < SqMagnitudeOriginal(d)) { // 0x870C24
+        if ((x87d)0.35f * 0.35f < SqMagnitudeOriginal(d)) { // 0x870C24
             if (m_pointRoute->m_NumEntries >= 2) { // Re-read, as in the original
                 const CVector prev = m_pointRoute->m_Entries[m_pointRoute->m_NumEntries - 2];
                 CVector       e    = last - prev;
                 NormaliseOriginal(e);
                 NormaliseOriginal(d);
-                const double dot = ((double)e.y * d.y + (double)e.x * d.x) + (double)e.z * d.z;
+                const x87d dot = ((x87d)e.y * d.y + (x87d)e.x * d.x) + (x87d)e.z * d.z;
                 if (dot >= (double)0.95f) { // 0x858EF0; NaN keeps the point
                     m_pointRoute->ResizeTo(m_pointRoute->m_NumEntries - 1); // 0x5F13A0 (RemoveAt last)
                 }
@@ -229,13 +229,13 @@ CTask* CTaskComplexFollowPedFootsteps::ControlSubTask(CPed* ped) {
     float         total = 0.f;
     for (uint32 i = 1; i < m_pointRoute->m_NumEntries; i++) {
         const CVector v = m_pointRoute->m_Entries[i] - first;
-        total = (float)(SqMagnitudeOriginal(v) + (double)total);
+        total = (float)(X87R(SqMagnitudeOriginal(v) + (double)total));
     }
 
     const CVector toTarget = pedPos - m_targetPed->GetPosition();
-    const double  sum      = SqMagnitudeOriginal(toTarget) + (double)total;
+    const x87d  sum      = X87R(SqMagnitudeOriginal(toTarget) + (double)total);
     constexpr float RUN_DIST = 3.5f; // 0x870C2C
-    m_moveState = ((double)RUN_DIST * RUN_DIST < sum) ? PEDMOVE_RUN : PEDMOVE_WALK;
+    m_moveState = ((x87d)RUN_DIST * RUN_DIST < sum) ? PEDMOVE_RUN : PEDMOVE_WALK;
 
     if (m_pSubTask->GetTaskType() == TASK_SIMPLE_GO_TO_POINT) {
         static_cast<CTaskSimpleGoToPoint*>(m_pSubTask)->m_moveState = (eMoveState)m_moveState;

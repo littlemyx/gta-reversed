@@ -50,8 +50,8 @@ namespace {
 //! Random distance at which the ped should hassle the target at ([3, 5])
 float GetRandomHassleDistance() {
     // `rand() * (1.f / RAND_MAX)` * 2 + 3
-    const auto r = (double)CGeneral::GetRandomNumber();
-    return (float)(r * (double)RAND_MAX_FLOAT_RECIPROCAL * 2.0 + 3.0);
+    const auto r = (x87d)CGeneral::GetRandomNumber();
+    return (float)(r * (x87d)RAND_MAX_FLOAT_RECIPROCAL * (x87d)2.0 + (x87d)3.0);
 }
 }
 
@@ -73,9 +73,9 @@ CTask* CTaskGangHasslePed::CreateFirstSubTask(CPed* ped) {
     const float distance = GetRandomHassleDistance();
 
     // `rand() & 0xFFFF` * 2^-15 * (max - min) [truncated] + min
-    const auto rnd = (double)(CGeneral::GetRandomNumber() & 0xFFFF);
+    const auto rnd = (x87d)(CGeneral::GetRandomNumber() & 0xFFFF);
     m_nTime                    = CTimer::GetTimeInMS();
-    m_nSomeRandomShit          = (int32)(rnd * 3.0517578125e-05 * (double)(m_RndMax - m_RndMin)) + m_RndMin;
+    m_nSomeRandomShit          = (int32)(rnd * (x87d)3.0517578125e-05 * (x87d)(m_RndMax - m_RndMin)) + m_RndMin;
     m_bFirstSubTaskInitialised = true;
 
     return new CTaskComplexSeekEntity<CEntitySeekPosCalculatorStandard>{m_Ped, 999'999, 1'000, 1.f * distance, 2.f, 2.f, false, true};
@@ -125,7 +125,7 @@ CTask* CTaskGangHasslePed::ControlSubTask(CPed* ped) {
         CTask* animTask{};
         if (r > 50 && r < 56) {
             // `rand() & 0xFFFF` * 2^-15 * 8 [truncated]
-            const auto idx = (int32)((double)(CGeneral::GetRandomNumber() & 0xFFFF) * 3.0517578125e-05 * 8.0);
+            const auto idx = (int32)((x87d)(CGeneral::GetRandomNumber() & 0xFFFF) * (x87d)3.0517578125e-05 * (x87d)8.0);
             animTask = new CTaskSimpleRunAnim{ANIM_GROUP_GANGS, (AnimationId)(ANIM_ID_PRTIAL_GNGTLKA + idx), 4.f, false};
         } else if (r == 100) {
             animTask = new CTaskComplexPlayHandSignalAnim{ANIM_ID_UNDEFINED, 4.f};

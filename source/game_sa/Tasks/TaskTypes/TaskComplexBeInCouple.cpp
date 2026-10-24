@@ -95,8 +95,8 @@ uint32 CTaskComplexBeInCouple::GetWalkSide(CPed* ped) const {
     const auto& partnerPos  = m_partner->GetPosition();
     const auto& pedPos      = ped->GetPosition();
 
-    const double dotPartner = (double)partnerRight.y * partnerPos.y + (double)partnerRight.z * partnerPos.z + (double)partnerRight.x * partnerPos.x;
-    const double dotPed     = (double)partnerRight.y * pedPos.y     + (double)partnerRight.z * pedPos.z     + (double)partnerRight.x * pedPos.x;
+    const x87d dotPartner = (x87d)partnerRight.y * partnerPos.y + (x87d)partnerRight.z * partnerPos.z + (x87d)partnerRight.x * partnerPos.x;
+    const x87d dotPed     = (x87d)partnerRight.y * pedPos.y     + (x87d)partnerRight.z * pedPos.z     + (x87d)partnerRight.x * pedPos.x;
 
     // NOTE: `fcomp` + `test ah, 1` (C0) => true for `<` and for unordered
     return !(dotPed + -dotPartner >= 0.0) ? 2 : 1;
@@ -134,12 +134,12 @@ CTask* CTaskComplexBeInCouple::ControlSubTask(CPed* ped) {
     const auto& partnerPos = m_partner->GetPosition();
     const auto& pedPos     = ped->GetPosition();
 
-    const double dyE = (double)partnerPos.y - (double)pedPos.y;      // stays on the x87 stack
-    const float  dx  = (float)((double)partnerPos.x - (double)pedPos.x);
+    const x87d dyE = (x87d)partnerPos.y - (x87d)pedPos.y;      // stays on the x87 stack
+    const float  dx  = (float)((x87d)partnerPos.x - (x87d)pedPos.x);
     const float  dy  = (float)dyE;
-    const float  distSq = (float)(dyE * (double)dy + (double)dx * (double)dx);
+    const float  distSq = (float)(dyE * (x87d)dy + (x87d)dx * (x87d)dx);
 
-    const double giveUp = m_giveUpDist;
+    const x87d giveUp = m_giveUpDist;
     if (distSq > giveUp * giveUp || !pedActive || !partnerActive) { // NaN => passes
         return Abort();
     }

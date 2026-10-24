@@ -28,8 +28,8 @@ bool CTaskSimpleWaitForBus::ProcessPed(CPed* ped) {
         if (!veh.vehicleFlags.bIsBus) {
             continue;
         }
-        const double vx = veh.m_vecMoveSpeed.x, vy = veh.m_vecMoveSpeed.y, vz = veh.m_vecMoveSpeed.z;
-        const double range = 0.005f;
+        const x87d vx = veh.m_vecMoveSpeed.x, vy = veh.m_vecMoveSpeed.y, vz = veh.m_vecMoveSpeed.z;
+        const x87d range = 0.005f;
         if (!(range * range > vx * vx + vy * vy + vz * vz)) {
             continue;
         }

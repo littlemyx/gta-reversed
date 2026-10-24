@@ -55,16 +55,16 @@ CTaskComplexWalkRoundObject* CTaskComplexWalkRoundObject::Constructor(int32 move
 
 //! 0x59C970 - `CVector::NormaliseAndMag` as the original evaluates it (extended precision for the sum of squares and the reciprocal root)
 static float NormaliseAndMagOriginal(CVector& v) {
-    const double sumSq = ((double)v.x * v.x + (double)v.y * v.y) + (double)v.z * v.z;
+    const x87d sumSq = ((x87d)v.x * v.x + (x87d)v.y * v.y) + (x87d)v.z * v.z;
     if (sumSq <= 0.0) { // NaN takes the sqrt path
         v.x = 1.0f;
         return 1.0f;
     }
-    const double recip = 1.0 / std::sqrt(sumSq);
+    const x87d recip = (x87d)1.0 / std::sqrt(sumSq);
     v.x = (float)(v.x * recip);
     v.y = (float)(v.y * recip);
     v.z = (float)(v.z * recip);
-    return (float)(1.0 / recip);
+    return (float)((x87d)1.0 / recip);
 }
 
 // 0x6551D0
@@ -86,7 +86,7 @@ float CTaskComplexWalkRoundObject::ComputeRoute(CPed* ped) {
 
     // x87: all in extended precision
     const auto& n = planes[side];
-    return (float)(((double)n.z * pedPos.z + (double)n.y * pedPos.y + (double)n.x * pedPos.x) + dots[side]);
+    return (float)(((x87d)n.z * pedPos.z + (x87d)n.y * pedPos.y + (x87d)n.x * pedPos.x) + dots[side]);
 }
 
 // 0x655290
@@ -137,21 +137,21 @@ CTask* CTaskComplexWalkRoundObject::ControlSubTask(CPed* ped) {
     // Has the object moved/rotated significantly since the route was computed?
     auto& objMat = m_object->GetMatrix(); // Allocates the matrix if there's none
     const auto& objPos = m_object->GetPosition();
-    const double dx = (double)field_30.x - objPos.x;
-    const double dy = (double)field_30.y - objPos.y;
-    const double dz = (double)field_30.z - objPos.z;
+    const x87d dx = (x87d)field_30.x - objPos.x;
+    const x87d dy = (x87d)field_30.y - objPos.y;
+    const x87d dz = (x87d)field_30.z - objPos.z;
     if (((dz * dz + dy * dy) + dx * dx) > (double)0.0625f) { // 0x86F15C
         return Abort();
     }
 
     const auto& objFwd = objMat.GetForward();
-    const double fwdDot = ((double)objFwd.z * field_3C.z + (double)objFwd.y * field_3C.y) + (double)field_3C.x * objFwd.x;
+    const x87d fwdDot = ((x87d)objFwd.z * field_3C.z + (x87d)objFwd.y * field_3C.y) + (x87d)field_3C.x * objFwd.x;
     if (fwdDot < 0.9f) { // 0x86F160
         return Abort();
     }
 
     const auto& objRight = objMat.GetRight();
-    const double rightDot = (double)field_48.z * objRight.z + (double)field_48.y * objRight.y + (double)field_48.x * objRight.x; // 0x40FDB0
+    const x87d rightDot = (x87d)field_48.z * objRight.z + (x87d)field_48.y * objRight.y + (x87d)field_48.x * objRight.x; // 0x40FDB0
     if (!(rightDot >= 0.9f) && !std::isnan(rightDot)) { // JP: NaN => OK
         return Abort();
     }
@@ -217,7 +217,7 @@ CTask* CTaskComplexWalkRoundObject::CreateFirstSubTask(CPed* ped) {
     const float distToRoute = NormaliseAndMagOriginal(dirToRoute);
 
     const auto& pedFwd = ped->GetMatrix().GetForward();
-    const double dot = ((double)dirToRoute.z * pedFwd.z + (double)dirToRoute.y * pedFwd.y) + (double)dirToRoute.x * pedFwd.x;
+    const x87d dot = ((x87d)dirToRoute.z * pedFwd.z + (x87d)dirToRoute.y * pedFwd.y) + (x87d)dirToRoute.x * pedFwd.x;
 
     const float distThreshold = m_moveState == PEDMOVE_WALK
         ? 2.f  // 0x858CA0

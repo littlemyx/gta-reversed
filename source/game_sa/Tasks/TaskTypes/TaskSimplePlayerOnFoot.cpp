@@ -631,7 +631,7 @@ void CTaskSimplePlayerOnFoot::ProcessPlayerWeapon(CPlayerPed* player) {
 
                 firingPoint.x = firingPoint.x * 5.0f;
                 firingPoint.y = firingPoint.y * 5.0f;
-                firingPoint.z = (x87::sin(player->GetPlayerData()->m_fLookPitch) + firingPoint.z) * 5.0f;
+                firingPoint.z = (X87R(x87::sin(player->GetPlayerData()->m_fLookPitch) + firingPoint.z)) * 5.0f;
 
                 firingPoint += player->GetPosition();
                 TheCamera.UpdateAimingCoors(firingPoint);
@@ -793,8 +793,8 @@ void CTaskSimplePlayerOnFoot::PlayerControlFighter(CPlayerPed* player) {
                 const auto& r   = mat.GetRight();
                 const auto& f   = mat.GetForward();
                 // x87: Products and sums stay in extended precision until the final store
-                x = (float)(((double)cos * r.y + (double)negSin * r.x + (double)r.z * 0.0) * (double)len);
-                y = (float)(-(((double)cos * f.y + (double)negSin * f.x + (double)f.z * 0.0) * (double)len));
+                x = (float)(((x87d)cos * r.y + (x87d)negSin * r.x + (x87d)r.z * (x87d)0.0) * (x87d)len);
+                y = (float)(-(((x87d)cos * f.y + (x87d)negSin * f.x + (x87d)f.z * (x87d)0.0) * (x87d)len));
             } else {
                 x = 0.f;
                 y = 0.f;
@@ -812,8 +812,8 @@ void CTaskSimplePlayerOnFoot::PlayerControlFighter(CPlayerPed* player) {
             const auto& mat = player->GetMatrix();
             const auto& r   = mat.GetRight();
             const auto& f   = mat.GetForward();
-            x = (float)((cos * r.y + negSin * r.x + (double)r.z * 0.0) * (double)len);
-            y = (float)(-((cos * f.y + negSin * f.x + (double)f.z * 0.0) * (double)len));
+            x = (float)((X87R(cos * r.y) + X87R(negSin * r.x) + (x87d)r.z * (x87d)0.0) * (x87d)len);
+            y = (float)(-((X87R(cos * f.y) + X87R(negSin * f.x) + (x87d)f.z * (x87d)0.0) * (x87d)len));
         }
     }
 
@@ -841,9 +841,9 @@ void CTaskSimplePlayerOnFoot::PlayerControlFighter(CPlayerPed* player) {
             const auto& pedPos    = player->GetPosition();
             const auto& targetPos = player->m_pTargetedObject->GetPosition();
             // x87: extended precision
-            const double dx = (double)targetPos.x - (double)pedPos.x;
-            const double dy = (double)targetPos.y - (double)pedPos.y;
-            const double dz = (double)targetPos.z - (double)pedPos.z;
+            const x87d dx = (x87d)targetPos.x - (x87d)pedPos.x;
+            const x87d dy = (x87d)targetPos.y - (x87d)pedPos.y;
+            const x87d dz = (x87d)targetPos.z - (x87d)pedPos.z;
             if (dz * dz + dy * dy + dx * dx > 16.0 && lastCmd < 11) {
                 doSprintCmds = true;
             } else {
@@ -889,7 +889,7 @@ void CTaskSimplePlayerOnFoot::PlayerControlFighter(CPlayerPed* player) {
         }
 
         if (!player->m_pTargetedObject && y <= 0.f && lastCmd < 11) {
-            m_nTimer += (int32)((double)CTimer::GetTimeStep() * (double)0.02f * 1000.0);
+            m_nTimer += (int32)((x87d)CTimer::GetTimeStep() * (x87d)0.02f * (x87d)1000.0);
         } else {
             m_nTimer = 0;
         }

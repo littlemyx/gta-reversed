@@ -178,7 +178,7 @@ bool CTaskSimpleCarJumpOut::ProcessPed(CPed* ped) {
     {
         // 0x64DF04: CPlaceable::GetHeading leaves the extended result in ST0 and `+ PI` [0x858CB8] is added to it before the float is passed to LimitRadianAngle
         const auto rot = m_veh->GetHeadingExt();
-        ped->m_fAimingRotation = ped->m_fCurrentRotation = m_veh->IsTotallyUpsideDown() ? CGeneral::LimitRadianAngle((float)(rot + (double)PI)) : (float)rot;
+        ped->m_fAimingRotation = ped->m_fCurrentRotation = m_veh->IsTotallyUpsideDown() ? CGeneral::LimitRadianAngle((float)(X87R(rot + (double)PI))) : (float)rot;
         ped->SetHeading(ped->m_fCurrentRotation);
     }
     ped->GetMoveSpeed() = m_veh->GetMoveSpeed();

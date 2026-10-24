@@ -103,7 +103,7 @@ bool CTaskSimpleGangDriveBy::CheckLineOfSight(CPed* ped, const CVector& targetPo
         m_nLOSBlocked = false;
         if (m_pTargetEntity) {
             const auto&   pos = ped->GetPosition();
-            const CVector origin{pos.x, pos.y, (float)((double)pos.z + (double)0.5f)}; // 0x858B8C
+            const CVector origin{pos.x, pos.y, (float)((x87d)pos.z + (x87d)0.5f)}; // 0x858B8C
 
             CWorld::pIgnoreEntity = m_pTargetEntity; // 0xB7CD68
             if (!CWorld::GetIsLineOfSightClear(origin, targetPos, true, false, false, false, false, true, false)) { // 0x56A490
@@ -112,7 +112,7 @@ bool CTaskSimpleGangDriveBy::CheckLineOfSight(CPed* ped, const CVector& targetPo
             CWorld::pIgnoreEntity = nullptr;
         }
         // Next check in [1750, 2250) ms. (x87: rand * 2^-15 * -500.0 (0x85AB78) is truncated, then subtracted)
-        m_nLOSCheckTime = (uint32)((int32)now - (int32)((double)(CGeneral::GetRandomNumber() & 0xFFFF) * (double)(1.f / 32768.f) * (double)-500.f) + 0x6D6); // 0x858B14
+        m_nLOSCheckTime = (uint32)((int32)now - (int32)((x87d)(CGeneral::GetRandomNumber() & 0xFFFF) * (x87d)(1.f / 32768.f) * (x87d)-500.f) + 0x6D6); // 0x858B14
     }
     return !m_nLOSBlocked;
 }
@@ -182,9 +182,9 @@ bool CTaskSimpleGangDriveBy::StartDriveByAnim(CPed* ped) {
 static CVector TransformPointExt(const CMatrix& m, const CVector& v) {
     const auto &r = m.GetRight(), &f = m.GetForward(), &u = m.GetUp(), &p = m.GetPosition();
     return CVector{
-        (float)((((double)u.x * v.z + (double)f.x * v.y) + (double)r.x * v.x) + p.x),
-        (float)((((double)u.y * v.z + (double)r.y * v.x) + (double)f.y * v.y) + p.y),
-        (float)((((double)u.z * v.z + (double)r.z * v.x) + (double)f.z * v.y) + p.z)
+        (float)((((x87d)u.x * v.z + (x87d)f.x * v.y) + (x87d)r.x * v.x) + p.x),
+        (float)((((x87d)u.y * v.z + (x87d)r.y * v.x) + (x87d)f.y * v.y) + p.y),
+        (float)((((x87d)u.z * v.z + (x87d)r.z * v.x) + (x87d)f.z * v.y) + p.z)
     };
 }
 
@@ -234,15 +234,15 @@ void CTaskSimpleGangDriveBy::ProcessPlayerPed(CPed* ped) {
 
         // x87: Everything stays in extended precision until the sector is truncated
         const double aimHeading = x87::atan2(-(double)aimDir.x, (double)aimDir.y);
-        double       rel        = aimHeading - GetVehicleHeading(ped->m_pVehicle);
+        x87d       rel        = X87R(aimHeading - GetVehicleHeading(ped->m_pVehicle));
         if (rel > (double)std::numbers::pi_v<float>) { // 0x858CB8
-            rel -= (double)(2.f * std::numbers::pi_v<float>); // 0x858CBC
+            rel -= (x87d)(2.f * std::numbers::pi_v<float>); // 0x858CBC
         } else if (rel < -(double)std::numbers::pi_v<float>) { // 0x858CC0
-            rel += (double)(2.f * std::numbers::pi_v<float>);
+            rel += (x87d)(2.f * std::numbers::pi_v<float>);
         }
-        rel += (double)(std::numbers::pi_v<float> / 4.f); // 0x859AB0
+        rel += (x87d)(std::numbers::pi_v<float> / 4.f); // 0x859AB0
         if (rel < 0.0) {
-            rel += (double)(2.f * std::numbers::pi_v<float>);
+            rel += (x87d)(2.f * std::numbers::pi_v<float>);
         }
         rel *= (double)NOTSA_GLOBAL_EXPR(0x858FB8, (float), k_858FB8_TwoOverPi); // 2/pi
         const auto sector = (int8)(int32)rel; // 0x821B40 (truncated), only the low byte is used
@@ -277,28 +277,28 @@ void CTaskSimpleGangDriveBy::ProcessAIPed(CPed* ped) {
     if (m_pTargetEntity) {
         const auto w = TransformPointExt(EnsureEntityMatrix(m_pTargetEntity), m_vecCoords); // 0x59C890
         toTgt = CVector{
-            (float)((double)w.x - (double)pedPos.x),
-            (float)((double)w.y - (double)pedPos.y),
-            (float)((double)w.z - (double)pedPos.z),
+            (float)((x87d)w.x - (x87d)pedPos.x),
+            (float)((x87d)w.y - (x87d)pedPos.y),
+            (float)((x87d)w.z - (x87d)pedPos.z),
         };
     } else {
         toTgt = CVector{
-            (float)((double)m_vecCoords.x - (double)pedPos.x),
-            (float)((double)m_vecCoords.y - (double)pedPos.y),
-            (float)((double)m_vecCoords.z - (double)pedPos.z),
+            (float)((x87d)m_vecCoords.x - (x87d)pedPos.x),
+            (float)((x87d)m_vecCoords.y - (x87d)pedPos.y),
+            (float)((x87d)m_vecCoords.z - (x87d)pedPos.z),
         };
     }
 
     // x87: The sum of squares stays in extended precision
-    const float  dist       = (float)std::sqrt(((double)toTgt.z * toTgt.z + (double)toTgt.x * toTgt.x) + (double)toTgt.y * toTgt.y);
+    const float  dist       = (float)std::sqrt(((x87d)toTgt.z * toTgt.z + (x87d)toTgt.x * toTgt.x) + (x87d)toTgt.y * toTgt.y);
     const double aimHeading = x87::atan2(-(double)toTgt.x, (double)toTgt.y);
 
     // Heading of the target relative to the vehicle's
-    float rel = (float)(aimHeading - GetVehicleHeading(ped->m_pVehicle));
+    float rel = (float)(X87R(aimHeading - GetVehicleHeading(ped->m_pVehicle)));
     if (rel > PI) { // 0x858CB8
-        rel = (float)((double)rel - (double)(2.f * PI)); // 0x858CBC
+        rel = (float)((x87d)rel - (x87d)(2.f * PI)); // 0x858CBC
     } else if (rel < -PI) { // 0x858CC0
-        rel = (float)((double)rel + (double)(2.f * PI));
+        rel = (float)((x87d)rel + (x87d)(2.f * PI));
     }
 
     m_bInRangeToShoot = false;
@@ -326,9 +326,9 @@ void CTaskSimpleGangDriveBy::ProcessAIPed(CPed* ped) {
 
     // Target position again (floats this time)
     const CVector tgtPos{
-        (float)((double)toTgt.x + (double)pedPos.x),
-        (float)((double)toTgt.y + (double)pedPos.y),
-        (float)((double)toTgt.z + (double)pedPos.z),
+        (float)((x87d)toTgt.x + (x87d)pedPos.x),
+        (float)((x87d)toTgt.y + (x87d)pedPos.y),
+        (float)((x87d)toTgt.z + (x87d)pedPos.z),
     };
     if (!CheckLineOfSight(ped, tgtPos)) { // 0x621B10
         m_bInRangeToShoot = false;
@@ -342,11 +342,11 @@ void CTaskSimpleGangDriveBy::ProcessAIPed(CPed* ped) {
     int8       aimFwdBwd = 0; // -1 = forward, 1 = backward
     if (style != 0 && style != 1 && style != 5 && style != 6) {
         // x87: Everything stays in extended precision until the sector is truncated
-        double v = (double)rel + (double)(PI / 4.f); // 0x859AB0
+        x87d v = (x87d)rel + (x87d)(PI / 4.f); // 0x859AB0
         if (v < 0.0) {
-            v += (double)(2.f * PI);
+            v += (x87d)(2.f * PI);
         }
-        sector = (int8)(int32)(v * (double)NOTSA_GLOBAL_EXPR(0x858FB8, (float), k_858FB8_TwoOverPi)); // 2/pi, 0x821B40 (truncated)
+        sector = (int8)(int32)(v * (x87d)NOTSA_GLOBAL_EXPR(0x858FB8, (float), k_858FB8_TwoOverPi)); // 2/pi, 0x821B40 (truncated)
 
         constexpr float DEG_15  = std::bit_cast<float>(0x3E860A92u); // 0x858F1C
         constexpr float DEG_165 = std::bit_cast<float>(0x40384E89u); // 0x86DB10
@@ -465,17 +465,17 @@ void CTaskSimpleGangDriveBy::ProcessAimIK(CPed* ped) {
         float range = 20.f; // 0x41A00000
         if (cam.m_nMode == MODE_TWOPLAYER_IN_CAR_AND_SHOOTING) {
             const auto&  pos = ped->GetPosition();
-            const double dx  = (double)pos.x - cam.m_vecSource.x;
-            const double dy  = (double)pos.y - cam.m_vecSource.y;
-            const double dz  = (double)pos.z - cam.m_vecSource.z;
-            range            = (float)(std::sqrt((dz * dz + dy * dy) + dx * dx) + 20.0); // 0x858BA4
+            const x87d dx  = (x87d)pos.x - cam.m_vecSource.x;
+            const x87d dy  = (x87d)pos.y - cam.m_vecSource.y;
+            const x87d dz  = (x87d)pos.z - cam.m_vecSource.z;
+            range            = (float)(std::sqrt((dz * dz + dy * dy) + dx * dx) + (x87d)20.0); // 0x858BA4
         } else if (cam.m_nMode != MODE_AIMWEAPON_FROMCAR) {
             return;
         }
 
         const auto& pos = ped->GetPosition();
         CVector     unused;
-        TheCamera.Find3rdPersonCamTargetVector(range, CVector{pos.x, pos.y, (float)((double)pos.z + (double)0.7f)}, unused, target); // 0x514970, 0x858CB0
+        TheCamera.Find3rdPersonCamTargetVector(range, CVector{pos.x, pos.y, (float)((x87d)pos.z + (x87d)0.7f)}, unused, target); // 0x514970, 0x858CB0
     } else if (auto* const tgt = m_pTargetEntity) {
         if (m_vecCoords.x == 0.f && m_vecCoords.y == 0.f && m_vecCoords.z == 0.f) {
             if (tgt->GetType() == ENTITY_TYPE_PED) {
@@ -502,14 +502,14 @@ void CTaskSimpleGangDriveBy::ProcessAimIK(CPed* ped) {
     auto* const veh = ped->m_pVehicle; // NOTE: No check for the vehicle in the player's case either
     if (veh && veh->m_nVehicleType == VEHICLE_TYPE_BIKE) {
         // x87: The differences stay in extended precision
-        const double dx    = (double)from.x - (double)target.x;
-        const double dy    = (double)from.y - (double)target.y;
+        const x87d dx    = (x87d)from.x - (x87d)target.x;
+        const x87d dy    = (x87d)from.y - (x87d)target.y;
         const double pitch = CGeneral::GetRadianAngleBetweenPointsExt(target.z, (float)std::sqrt(dy * dy + dx * dx), from.z, 0.f); // Not rounded to float (stays in the FPU)
 
         const auto* const bike = static_cast<CBike*>(veh);
-        tilt = (float)(x87::sin((double)aim - GetVehicleHeading(veh)) * (double)bike->m_RideAnimData.LeanAngle + pitch);
+        tilt = (float)(X87R(X87R(x87::sin(X87R((double)aim - GetVehicleHeading(veh))) * (double)bike->m_RideAnimData.LeanAngle) + pitch));
 
-        const float cosHeading = (float)x87::cos((double)aim - GetVehicleHeading(veh));
+        const float cosHeading = (float)x87::cos(X87R((double)aim - GetVehicleHeading(veh)));
 
         // BUG: The original doesn't check for the vehicle's matrix here
         const float fwdZ = veh->m_matrix->GetForward().z;
@@ -521,7 +521,7 @@ void CTaskSimpleGangDriveBy::ProcessAimIK(CPed* ped) {
         } else {
             clampedFwdZ = fwdZ;
         }
-        tilt = (float)(x87::asin((double)clampedFwdZ) * (double)cosHeading + (double)tilt); // 0x821E70
+        tilt = (float)(X87R(x87::asin((double)clampedFwdZ) * (double)cosHeading) + (x87d)tilt); // 0x821E70
     }
 
     // Flip it if we're shooting from the other side
@@ -531,18 +531,18 @@ void CTaskSimpleGangDriveBy::ProcessAimIK(CPed* ped) {
     case ANIM_ID_DRIVEBYLHS:      // 0xE7
     case ANIM_ID_DRIVEBYTOP_RHS:  // 0xEC
         bFlip = true;
-        aim   = (float)((double)aim - (double)(std::numbers::pi_v<float> / 2.f)); // 0x858FE4
-        tilt  = (float)((double)tilt * (double)-1.f);                              // 0x858C1C
+        aim   = (float)((x87d)aim - (x87d)(std::numbers::pi_v<float> / 2.f)); // 0x858FE4
+        tilt  = (float)((x87d)tilt * (x87d)-1.f);                              // 0x858C1C
         break;
     case ANIM_ID_DRIVEBYRHS:      // 0xEB
     case ANIM_ID_DRIVEBYTOP_LHS:  // 0xE8
         bFlip = true;
-        aim   = (float)((double)aim + (double)(std::numbers::pi_v<float> / 2.f));
+        aim   = (float)((x87d)aim + (x87d)(std::numbers::pi_v<float> / 2.f));
         break;
     case ANIM_ID_DRIVEBYLHS_BWD:  // 0xEA
     case ANIM_ID_DRIVEBYRHS_BWD:  // 0xEE
-        aim  = (float)((double)aim - (double)std::numbers::pi_v<float>);
-        tilt = (float)((double)tilt * (double)-1.f);
+        aim  = (float)((x87d)aim - (x87d)std::numbers::pi_v<float>);
+        tilt = (float)((x87d)tilt * (x87d)-1.f);
         break;
     default:
         break;
@@ -678,9 +678,9 @@ bool CTaskSimpleGangDriveBy::ProcessPed(CPed* ped) {
     if (StartDriveByAnim(ped)) { // 0x627B20
         auto* a = m_pAnimAssoc;
         if (a->m_Flags & ANIMATION_IS_PLAYING) {
-            const double cur = a->m_CurrentTime;
+            const x87d cur = a->m_CurrentTime;
             if (cur > (double)NOTSA_GLOBAL_EXPR(0x8D2E84, (float), k_8D2E84_0p3) // 0.3f
-                && cur - (double)a->m_TimeStep <= (double)NOTSA_GLOBAL_EXPR(0x8D2E84, (float), k_8D2E84_0p3)
+                && cur - (x87d)a->m_TimeStep <= (double)NOTSA_GLOBAL_EXPR(0x8D2E84, (float), k_8D2E84_0p3)
                 && (m_nLastCommand == 2 || m_nLastCommand == 3)
             ) {
                 FireGun(ped);
@@ -694,7 +694,7 @@ bool CTaskSimpleGangDriveBy::ProcessPed(CPed* ped) {
             && (a->m_BlendHier->m_fTotalTime > a->m_CurrentTime || a->m_BlendDelta >= 0.f)
         ) {
             a->m_Flags |= ANIMATION_IS_PLAYING;
-            m_nBurstShots = (int8)CGeneral::GetRandomNumberInRange(1, (int32)((double)(int16)m_pWeaponInfo->m_nAmmoClip * (double)0.5f)); // 0x858B8C
+            m_nBurstShots = (int8)CGeneral::GetRandomNumberInRange(1, (int32)((x87d)(int16)m_pWeaponInfo->m_nAmmoClip * (x87d)0.5f)); // 0x858B8C
             m_nLastCommand = m_nNextCommand;
             m_nNextCommand = 0;
         } else if (!bPlaying) {
@@ -707,7 +707,7 @@ bool CTaskSimpleGangDriveBy::ProcessPed(CPed* ped) {
             }
         } else if (m_nLastCommand == 1 && a->m_AnimId == m_nRequiredAnimID
             && (double)a->m_CurrentTime > (double)t26
-            && (double)a->m_CurrentTime - (double)a->m_TimeStep <= (double)t26
+            && (x87d)a->m_CurrentTime - (x87d)a->m_TimeStep <= (double)t26
         ) {
             a->m_Flags &= ~ANIMATION_IS_PLAYING;
             m_pAnimAssoc->SetCurrentTime(t26);
@@ -717,7 +717,7 @@ bool CTaskSimpleGangDriveBy::ProcessPed(CPed* ped) {
         const float t43 = NOTSA_GLOBAL_EXPR(0x8D2E80, (float), k_8D2E80);
         if (a->m_AnimId == m_nRequiredAnimID
             && (double)a->m_CurrentTime > (double)t43
-            && (double)a->m_CurrentTime - (double)a->m_TimeStep <= (double)t43
+            && (x87d)a->m_CurrentTime - (x87d)a->m_TimeStep <= (double)t43
         ) {
             if (ped->GetActiveWeapon().m_State == WEAPONSTATE_RELOADING && m_nNextCommand <= 2) {
                 m_nNextCommand = 2;
@@ -754,7 +754,7 @@ bool CTaskSimpleGangDriveBy::ProcessPed(CPed* ped) {
     }
 
     // x87: Time step * 0.02 (0x858B38) * 1000.0 (0x858C4C) is truncated
-    const auto TimeStepMS = [] { return (int32)((double)CTimer::GetTimeStep() * (double)0.02f * (double)1000.0f); };
+    const auto TimeStepMS = [] { return (int32)((x87d)CTimer::GetTimeStep() * (x87d)0.02f * (x87d)1000.0f); };
 
     if (m_nAttackTimer < 0) {
         m_nAttackTimer = (int16)CGeneral::GetRandomNumberInRange(200, (100 - m_nFrequencyPercentage) * 100);
@@ -798,7 +798,7 @@ bool CTaskSimpleGangDriveBy::ProcessPed(CPed* ped) {
 
     // x87: Sum of squares stays in extended precision
     const auto& spd = ped->m_pVehicle->m_vecMoveSpeed; // BUG: Not checked for null (checked above, but `ProcessPlayerPed`/`ProcessAIPed` might have changed it)
-    const double speedSq = (double)spd.x * spd.x + (double)spd.y * spd.y;
+    const x87d speedSq = (x87d)spd.x * spd.x + (x87d)spd.y * spd.y;
     if (speedSq > (double)0.5f) { // 0x858B8C
         ped->Say(CTX_GLOBAL_CAR_DRIVEBY_TOO_FAST, 0, 1.f, false, false, false); // 0x1F
         return false;
@@ -832,9 +832,9 @@ void CTaskSimpleGangDriveBy::FireGun(CPed* ped) {
     const auto TransformPoint = [](const CMatrix& m, const CVector& v) {
         const auto &mr = m.GetRight(), &mf = m.GetForward(), &mu = m.GetUp(), &mp = m.GetPosition();
         return CVector{
-            (float)(mu.x * (double)v.z + mf.x * (double)v.y + mr.x * (double)v.x + mp.x),
-            (float)(mu.y * (double)v.z + mr.y * (double)v.x + mf.y * (double)v.y + mp.y),
-            (float)(mu.z * (double)v.z + mr.z * (double)v.x + mf.z * (double)v.y + mp.z)
+            (float)(mu.x * (x87d)v.z + mf.x * (x87d)v.y + mr.x * (x87d)v.x + mp.x),
+            (float)(mu.y * (x87d)v.z + mr.y * (x87d)v.x + mf.y * (x87d)v.y + mp.y),
+            (float)(mu.z * (x87d)v.z + mr.z * (x87d)v.x + mf.z * (x87d)v.y + mp.z)
         };
     };
     const auto EnsureMatrix = [](CEntity* e) -> const CMatrix& {
@@ -852,10 +852,10 @@ void CTaskSimpleGangDriveBy::FireGun(CPed* ped) {
         auto& cam  = TheCamera.GetActiveCam();
         if (cam.m_nMode == MODE_TWOPLAYER_IN_CAR_AND_SHOOTING) {
             const auto&  pos = ped->GetPosition();
-            const double dx  = (double)pos.x - cam.m_vecSource.x;
-            const double dy  = (double)pos.y - cam.m_vecSource.y;
-            const double dz  = (double)pos.z - cam.m_vecSource.z;
-            dist             = (float)(std::sqrt((dz * dz + dy * dy) + dx * dx) + 20.0); // 0x858BA4
+            const x87d dx  = (x87d)pos.x - cam.m_vecSource.x;
+            const x87d dy  = (x87d)pos.y - cam.m_vecSource.y;
+            const x87d dz  = (x87d)pos.z - cam.m_vecSource.z;
+            dist             = (float)(std::sqrt((dz * dz + dy * dy) + dx * dx) + (x87d)20.0); // 0x858BA4
         } else if (cam.m_nMode != MODE_AIMWEAPON_FROMCAR) {
             return;
         }
@@ -879,39 +879,39 @@ void CTaskSimpleGangDriveBy::FireGun(CPed* ped) {
     constexpr float MARGIN  = 0.2f; // 0x858CC4
     CVector         aim     = muzzle;
     if (IsAnim(ANIM_ID_DRIVEBYLHS, ANIM_ID_DRIVEBYTOP_RHS) || m_nFakeShootDirn == 1) {
-        const double v = -(((double)dir.z * vehRight.z + (double)dir.y * vehRight.y) + (double)dir.x * vehRight.x);
+        const x87d v = -(((x87d)dir.z * vehRight.z + (x87d)dir.y * vehRight.y) + (x87d)dir.x * vehRight.x);
         if (v > MIN_DOT) {
-            const double relR = ((double)rel.y * vehRight.y + (double)rel.z * vehRight.z) + (double)rel.x * vehRight.x;
-            const double s    = (((double)vehBox.m_vecMin.x - relR) - MARGIN) / v;
+            const x87d relR = ((x87d)rel.y * vehRight.y + (x87d)rel.z * vehRight.z) + (x87d)rel.x * vehRight.x;
+            const x87d s    = (((x87d)vehBox.m_vecMin.x - relR) - MARGIN) / v;
             aim = CVector{
                 (float)(dir.x * s + muzzle.x),
-                (float)((double)(float)(dir.y * s) + muzzle.y),
-                (float)((double)(float)(dir.z * s) + muzzle.z),
+                (float)((x87d)(float)(dir.y * s) + muzzle.y),
+                (float)((x87d)(float)(dir.z * s) + muzzle.z),
             };
         }
     } else if (IsAnim(ANIM_ID_DRIVEBYRHS, ANIM_ID_DRIVEBYTOP_LHS) || m_nFakeShootDirn == 3) {
-        const double v = ((double)dir.z * vehRight.z + (double)dir.y * vehRight.y) + (double)dir.x * vehRight.x;
+        const x87d v = ((x87d)dir.z * vehRight.z + (x87d)dir.y * vehRight.y) + (x87d)dir.x * vehRight.x;
         if (v > MIN_DOT) {
-            const double relR = ((double)rel.y * vehRight.y + (double)rel.z * vehRight.z) + (double)rel.x * vehRight.x;
-            const double s    = (((double)vehBox.m_vecMax.x - relR) + MARGIN) / v;
+            const x87d relR = ((x87d)rel.y * vehRight.y + (x87d)rel.z * vehRight.z) + (x87d)rel.x * vehRight.x;
+            const x87d s    = (((x87d)vehBox.m_vecMax.x - relR) + MARGIN) / v;
             aim = CVector{
                 (float)(dir.x * s + muzzle.x),
-                (float)((double)(float)(dir.y * s) + muzzle.y),
-                (float)((double)(float)(dir.z * s) + muzzle.z),
+                (float)((x87d)(float)(dir.y * s) + muzzle.y),
+                (float)((x87d)(float)(dir.z * s) + muzzle.z),
             };
         }
     } else if (IsAnim(ANIM_ID_DRIVEBYLHS_BWD, ANIM_ID_DRIVEBYRHS_BWD) || m_nFakeShootDirn == 2) {
-        const double v = -(((double)dir.z * vehFwd.z + (double)dir.y * vehFwd.y) + (double)dir.x * vehFwd.x);
+        const x87d v = -(((x87d)dir.z * vehFwd.z + (x87d)dir.y * vehFwd.y) + (x87d)dir.x * vehFwd.x);
         if (v > MIN_DOT) {
-            const double relF = ((double)rel.y * vehFwd.y + (double)rel.z * vehFwd.z) + (double)rel.x * vehFwd.x;
-            const auto   s    = (float)((((double)vehBox.m_vecMin.y - relF) - MARGIN) / v);
+            const x87d relF = ((x87d)rel.y * vehFwd.y + (x87d)rel.z * vehFwd.z) + (x87d)rel.x * vehFwd.x;
+            const auto   s    = (float)((((x87d)vehBox.m_vecMin.y - relF) - MARGIN) / v);
             aim               = muzzle + dir * s;
         }
     } else {
-        const double v = ((double)dir.z * vehFwd.z + (double)dir.y * vehFwd.y) + (double)dir.x * vehFwd.x;
+        const x87d v = ((x87d)dir.z * vehFwd.z + (x87d)dir.y * vehFwd.y) + (x87d)dir.x * vehFwd.x;
         if (v > MIN_DOT) {
-            const double relF = ((double)rel.y * vehFwd.y + (double)rel.z * vehFwd.z) + (double)rel.x * vehFwd.x;
-            const auto   s    = (float)((((double)vehBox.m_vecMax.y - relF) + MARGIN) / v);
+            const x87d relF = ((x87d)rel.y * vehFwd.y + (x87d)rel.z * vehFwd.z) + (x87d)rel.x * vehFwd.x;
+            const auto   s    = (float)((((x87d)vehBox.m_vecMax.y - relF) + MARGIN) / v);
             aim               = muzzle + dir * s;
         }
     }

@@ -65,10 +65,10 @@ C2dEffect* CTaskComplexUseClosestFreeScriptedAttractor::ComputeClosestFreeScript
 
         // x87: the distance stays in extended precision until the comparison
         const auto  pos = ped.GetPosition();
-        const double dx = (double)pos.x - (double)fx.m_Pos.x;
-        const double dy = (double)pos.y - (double)fx.m_Pos.y;
-        const double dz = (double)pos.z - (double)fx.m_Pos.z;
-        const double distSq = dx * dx + dy * dy + dz * dz;
+        const x87d dx = (x87d)pos.x - (x87d)fx.m_Pos.x;
+        const x87d dy = (x87d)pos.y - (x87d)fx.m_Pos.y;
+        const x87d dz = (x87d)pos.z - (x87d)fx.m_Pos.z;
+        const x87d distSq = dx * dx + dy * dy + dz * dz;
         if (distSq < (double)closestDistSq) {
             if (GetPedAttractorManager()->HasEmptySlot(reinterpret_cast<const C2dEffectPedAttractor*>(&fx), nullptr)) {
                 closestDistSq = (float)distSq;

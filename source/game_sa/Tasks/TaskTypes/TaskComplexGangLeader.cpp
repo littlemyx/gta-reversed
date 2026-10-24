@@ -104,7 +104,7 @@ bool CTaskComplexGangLeader::ShouldLoadGangAnims() {
     if (player->IsInVehicle()) {
         constexpr auto MAX_SPEED_SQ = std::bit_cast<float>(0x3D23D70Bu);
         const auto& spd = player->m_pVehicle->m_vecMoveSpeed;
-        const double speedSq = (double)spd.x * (double)spd.x + (double)spd.y * (double)spd.y + (double)spd.z * (double)spd.z;
+        const x87d speedSq = (x87d)spd.x * (x87d)spd.x + (x87d)spd.y * (x87d)spd.y + (x87d)spd.z * (x87d)spd.z;
         if (speedSq > (double)MAX_SPEED_SQ) {
             return false;
         }
@@ -194,7 +194,7 @@ bool CTaskComplexGangLeader::MakeAbortable(CPed* ped, eAbortPriority priority, C
 CTask* CTaskComplexGangLeader::CreateNextSubTask(CPed* ped) {
     // The original scales `rand() & 0xFFFF` by 1/32768 (0x858B14) and by the range, all on the x87 stack, then truncates
     const auto RandScaled = [](double range) {
-        return (int32)((double)CGeneral::GetRandomNumber() * (double)(1.f / 32768.f) * range);
+        return (int32)(X87R((x87d)CGeneral::GetRandomNumber() * (x87d)(1.f / 32768.f) * range));
     };
 
     auto& membership = m_gang->GetMembership();
@@ -285,7 +285,7 @@ CTask* CTaskComplexGangLeader::ControlSubTask(CPed* ped) {
 
     // If ped isn't already looking at someone, find a random meber to look at them
     // 0x662574 - `(int)(r * 100) > 95`, i.e. 4% (NOT 5%)
-    if (!g_ikChainMan.IsLooking(ped) && (int32)((double)CGeneral::GetRandomNumber() * (double)(1.f / 32768.f) * 100.0) > 95) {
+    if (!g_ikChainMan.IsLooking(ped) && (int32)((x87d)CGeneral::GetRandomNumber() * (x87d)(1.f / 32768.f) * (x87d)100.0) > 95) {
         // NOTE: Order of the random calls is the same as in the original: look time first, then the member slot
         const auto lookTime = CGeneral::GetRandomNumberInRange(3000, 5000);
         if (const auto mem = m_gang->GetMembership().GetMember(CGeneral::GetRandomNumberInRange(0, 8))) { // Random slot, may be empty
@@ -446,9 +446,9 @@ void CTaskComplexGangLeader::ScanForStuff(CPed* ped) {
             // (FCOMP + JP: the conditions are "strictly less", NaN => skip)
             // NOTE: The differences/products are kept on the x87 stack (extended precision) => doubles here
             const auto& vehPos = veh.GetPosition();
-            const double dx = (double)vehPos.x - (double)pedPos.x;
-            const double dy = (double)vehPos.y - (double)pedPos.y;
-            const double dz = (double)vehPos.z - (double)pedPos.z;
+            const x87d dx = (x87d)vehPos.x - (x87d)pedPos.x;
+            const x87d dy = (x87d)vehPos.y - (x87d)pedPos.y;
+            const x87d dz = (x87d)vehPos.z - (x87d)pedPos.z;
             if (!(dx * dx + dy * dy + dz * dz < 300.0) || !(std::abs(dz) < 5.0)) {
                 continue;
             }

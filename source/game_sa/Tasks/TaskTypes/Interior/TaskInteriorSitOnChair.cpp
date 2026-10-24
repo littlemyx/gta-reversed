@@ -26,9 +26,9 @@ void CTaskInteriorSitOnChair::InjectHooks() {
 static CVector TransformPointExt(const CMatrix& m, const CVector& v) {
     const auto &r = m.GetRight(), &f = m.GetForward(), &u = m.GetUp(), &p = m.GetPosition();
     return CVector{
-        (float)((((double)u.x * v.z + (double)f.x * v.y) + (double)r.x * v.x) + p.x),
-        (float)((((double)u.y * v.z + (double)r.y * v.x) + (double)f.y * v.y) + p.y),
-        (float)((((double)u.z * v.z + (double)r.z * v.x) + (double)f.z * v.y) + p.z)
+        (float)((((x87d)u.x * v.z + (x87d)f.x * v.y) + (x87d)r.x * v.x) + p.x),
+        (float)((((x87d)u.y * v.z + (x87d)r.y * v.x) + (x87d)f.y * v.y) + p.y),
+        (float)((((x87d)u.z * v.z + (x87d)r.z * v.x) + (x87d)f.z * v.y) + p.z)
     };
 }
 
@@ -172,23 +172,23 @@ bool CTaskInteriorSitOnChair::ProcessPed(CPed* ped) {
             // x87: dx and dy are stored as floats, dz is stored but also kept (unrounded) on the FPU stack
             const float  dx  = m_InteriorInfo->Pos.x - pedPos.x;
             const float  dy  = m_InteriorInfo->Pos.y - pedPos.y;
-            const double dzE = (double)m_InteriorInfo->Pos.z - (double)pedPos.z;
+            const x87d dzE = (x87d)m_InteriorInfo->Pos.z - (x87d)pedPos.z;
             const float  dz  = (float)dzE;
 
             // x87: The sum of squares + sqrt is kept in extended precision until the comparison
-            const double lenD    = std::sqrt(dzE * (double)dz + (double)dy * (double)dy + (double)dx * (double)dx);
+            const x87d lenD    = std::sqrt(dzE * (x87d)dz + (x87d)dy * (x87d)dy + (x87d)dx * (x87d)dx);
             const float  len     = (float)lenD;
             const float  clamped = lenD < (double)0.02f ? len : 0.02f; // FCOMP + JP: NaN takes the constant
 
-            const double inv = 1.0 / (double)len;
-            const double vx  = ((double)dx * inv) * (double)clamped;
-            const double vy  = (double)(float)((double)dy * inv) * (double)clamped;
-            const double vz  = (double)(float)((double)dz * inv) * (double)clamped;
+            const x87d inv = (x87d)1.0 / (x87d)len;
+            const x87d vx  = ((x87d)dx * inv) * (x87d)clamped;
+            const x87d vy  = (x87d)(float)((x87d)dy * inv) * (x87d)clamped;
+            const x87d vz  = (x87d)(float)((x87d)dz * inv) * (x87d)clamped;
 
             const auto& right = mat.GetRight();
             const auto& fwd   = mat.GetForward();
-            ped->m_vecAnimMovingShiftLocal.x = (float)(((double)right.z * vz + (double)right.y * vy) + (double)right.x * vx);
-            ped->m_vecAnimMovingShiftLocal.y = (float)(((double)fwd.z * vz + (double)fwd.y * vy) + (double)fwd.x * vx);
+            ped->m_vecAnimMovingShiftLocal.x = (float)(((x87d)right.z * vz + (x87d)right.y * vy) + (x87d)right.x * vx);
+            ped->m_vecAnimMovingShiftLocal.y = (float)(((x87d)fwd.z * vz + (x87d)fwd.y * vy) + (x87d)fwd.x * vx);
 
             ped->m_fAimingRotation = CGeneral::LimitRadianAngle(CGeneral::GetRadianAngleBetweenPoints( // 0x53CB50, 0x53CBE0
                 m_InteriorInfo->Dir.x,

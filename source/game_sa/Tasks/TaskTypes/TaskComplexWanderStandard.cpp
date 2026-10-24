@@ -109,12 +109,12 @@ bool CTaskComplexWanderStandard::LookForSexyCars(CPed* ped) {
 
         // Original keeps these on the x87 stack (extended precision)
         const auto&  vehPos = veh->GetPosition();
-        const double dx     = (double)vehPos.x - (double)pedPos.x;
-        const double dy     = (double)vehPos.y - (double)pedPos.y;
-        const double dz     = (double)vehPos.z - (double)pedPos.z;
+        const x87d dx     = (x87d)vehPos.x - (x87d)pedPos.x;
+        const x87d dy     = (x87d)vehPos.y - (x87d)pedPos.y;
+        const x87d dz     = (x87d)vehPos.z - (x87d)pedPos.z;
 
         constexpr float RANGE = 5.0f; // 0x86FCD8
-        if (!((dz * dz + dy * dy) + dx * dx < (double)RANGE * (double)RANGE)) {
+        if (!((dz * dz + dy * dy) + dx * dx < (x87d)RANGE * (x87d)RANGE)) {
             continue;
         }
         const auto& pedFwd = ped->GetForward(); // NOTE: the original reads the matrix only here
@@ -147,7 +147,7 @@ bool CTaskComplexWanderStandard::LookForChatPartners(CPed* ped) {
         if (playerPed->bInVehicle && playerVeh) {
             const auto& ms = playerVeh->m_vecMoveSpeed;
             // x87: (x^2 + y^2) + z^2 in extended precision; fails only if strictly greater
-            const double speed2 = ((double)ms.x * ms.x + (double)ms.y * ms.y) + (double)ms.z * ms.z;
+            const x87d speed2 = ((x87d)ms.x * ms.x + (x87d)ms.y * ms.y) + (x87d)ms.z * ms.z;
             if (speed2 > (double)0.04f) { // 0x863244
                 return false;
             }
@@ -195,19 +195,19 @@ bool CTaskComplexWanderStandard::LookForChatPartners(CPed* ped) {
         const auto& otherPos = other->GetPosition();
         const CVector diff   = otherPos - pedPos; // 0x40FE00
         // 0x406DA0 (extended precision: (x^2 + y^2) + z^2)
-        const double distSq = ((double)diff.x * diff.x + (double)diff.y * diff.y) + (double)diff.z * diff.z;
+        const x87d distSq = ((x87d)diff.x * diff.x + (x87d)diff.y * diff.y) + (x87d)diff.z * diff.z;
         constexpr float RANGE = 10.0f; // 0x86FCD4
-        if (!(distSq < (double)RANGE * (double)RANGE)) {
+        if (!(distSq < (x87d)RANGE * (x87d)RANGE)) {
             continue;
         }
 
         // Ped must be facing the partner, and the partner must be facing the ped
         const auto& pedFwd   = ped->GetForward();
         const auto& otherFwd = other->GetForward();
-        if (!((double)diff.y * pedFwd.y + (double)diff.z * pedFwd.z + (double)diff.x * pedFwd.x > 0.0)) { // 0x858B50
+        if (!((x87d)diff.y * pedFwd.y + (x87d)diff.z * pedFwd.z + (x87d)diff.x * pedFwd.x > 0.0)) { // 0x858B50
             continue;
         }
-        if (!((double)diff.y * otherFwd.y + (double)diff.z * otherFwd.z + (double)diff.x * otherFwd.x < 0.0)) {
+        if (!((x87d)diff.y * otherFwd.y + (x87d)diff.z * otherFwd.z + (x87d)diff.x * otherFwd.x < 0.0)) {
             continue;
         }
         if (!CWorld::GetIsLineOfSightClear(pedPos, otherPos, true, false, false, true, false, false, false)) {
@@ -243,20 +243,20 @@ bool CTaskComplexWanderStandard::LookForGangMembers(CPed* ped) {
 
         // Original: the ped's delta stays in extended precision, the other ped's delta is stored to floats,
         // except for z which is used unrounded in the dot product, but rounded in the length
-        const double sx = (double)pedPos.x - (double)targetPos.x;
-        const double sy = (double)pedPos.y - (double)targetPos.y;
-        const double sz = (double)pedPos.z - (double)targetPos.z;
+        const x87d sx = (x87d)pedPos.x - (x87d)targetPos.x;
+        const x87d sy = (x87d)pedPos.y - (x87d)targetPos.y;
+        const x87d sz = (x87d)pedPos.z - (x87d)targetPos.z;
 
         const auto&  otherPos = other->GetPosition();
-        const float  ox       = (float)((double)otherPos.x - (double)targetPos.x);
-        const float  oy       = (float)((double)otherPos.y - (double)targetPos.y);
-        const double ozExt    = (double)otherPos.z - (double)targetPos.z;
+        const float  ox       = (float)((x87d)otherPos.x - (x87d)targetPos.x);
+        const float  oy       = (float)((x87d)otherPos.y - (x87d)targetPos.y);
+        const x87d ozExt    = (x87d)otherPos.z - (x87d)targetPos.z;
         const float  oz       = (float)ozExt;
 
-        if (!(ozExt * sz + (double)oy * sy + (double)ox * sx > 0.0)) { // 0x858B50
+        if (!(ozExt * sz + (x87d)oy * sy + (x87d)ox * sx > 0.0)) { // 0x858B50
             continue;
         }
-        if (!(((double)oz * oz + (double)oy * oy) + (double)ox * ox < (double)25.0f)) { // 0x858FE8
+        if (!(((x87d)oz * oz + (x87d)oy * oy) + (x87d)ox * ox < (double)25.0f)) { // 0x858FE8
             continue;
         }
 

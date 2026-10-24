@@ -504,7 +504,7 @@ CEntity* CTaskSimpleClimb::ScanToGrab(CPed* ped, CVector& outClimbPos, float& ou
     if (collidedEntity) {
         if (collidedEntity->GetIsTypePhysical()) {
             outClimbPos = Invert(collidedEntity->GetMatrix()).TransformPoint(outClimbPos);
-            outClimbAngle = (float)((double)outClimbAngle - collidedEntity->GetHeadingExt()); // 0x68019B..0x6801AD: the entity's heading stays unrounded in ST0
+            outClimbAngle = (float)(X87R((double)outClimbAngle - collidedEntity->GetHeadingExt())); // 0x68019B..0x6801AD: the entity's heading stays unrounded in ST0
         }
     }
 
@@ -679,7 +679,7 @@ void CTaskSimpleClimb::GetCameraStickModifier(CEntity* entity, float& outAlpha, 
             outStickAlpha = std::max((outAlpha - d) * -0.05f, -0.05f);
         }
     } else if (m_Anim->m_AnimId == ANIM_ID_CLIMB_IDLE) {
-        float fHeading = (float)(m_ClimbEntity->GetHeadingExt() - (double)HALF_PI); // 0x67A792..0x67A799: heading unrounded, - PI/2 [0x858FE4]
+        float fHeading = (float)(X87R(m_ClimbEntity->GetHeadingExt() - (double)HALF_PI)); // 0x67A792..0x67A799: heading unrounded, - PI/2 [0x858FE4]
         if (fHeading > outBeta + PI) {
             fHeading -= TWO_PI;
         } else if (fHeading < outBeta - PI) {
@@ -732,7 +732,7 @@ CVector CTaskSimpleClimb::GetClimbOffset3D(CVector2D offset2D, float angle) {
 
 std::pair<CVector, float> CTaskSimpleClimb::GetHandholdPosAndAngleForEntity(CEntity* entity, const CVector& handPos, float handAngle) {
     if (entity->GetIsTypePhysical()) {
-        return { entity->GetMatrix().TransformPoint(handPos), (float)(entity->GetHeadingExt() + (double)handAngle) }; // inlined in the exe (e.g. 0x680F30, 0x68045x, 0x67A566): the heading stays unrounded in ST0 for the `+ handAngle`
+        return { entity->GetMatrix().TransformPoint(handPos), (float)(X87R(entity->GetHeadingExt() + (double)handAngle)) }; // inlined in the exe (e.g. 0x680F30, 0x68045x, 0x67A566): the heading stays unrounded in ST0 for the `+ handAngle`
     }
     return { handPos, handAngle };
 }

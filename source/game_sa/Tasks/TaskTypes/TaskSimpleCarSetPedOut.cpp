@@ -59,33 +59,33 @@ void CTaskSimpleCarSetPedOut::PositionPedOutOfCollision(CPed* ped, CVehicle* veh
         if (veh->m_pHandlingData->m_bSitInBoat) {
             // x, y: extended precision products; z: spilled to a float
             const auto& up = veh->m_matrix->GetUp();
-            const double px = (double)up.x * 0.5;
-            const double py = (double)up.y * 0.5;
-            const float  pz = (float)((double)up.z * 0.5);
-            pedPos.x = (float)(px + (double)pedPos.x);
-            pedPos.y = (float)(py + (double)pedPos.y);
-            pedPos.z = (float)((double)pz + (double)pedPos.z);
+            const x87d px = (x87d)up.x * (x87d)0.5;
+            const x87d py = (x87d)up.y * (x87d)0.5;
+            const float  pz = (float)((x87d)up.z * (x87d)0.5);
+            pedPos.x = (float)(px + (x87d)pedPos.x);
+            pedPos.y = (float)(py + (x87d)pedPos.y);
+            pedPos.z = (float)((x87d)pz + (x87d)pedPos.z);
         }
 
         if (ped->TestCollision(false)) {
             auto& mat = *ped->m_matrix;
             if (veh->vehicleFlags.bIsDrowning) {
-                mat.GetPosition().z = (float)((double)mat.GetPosition().z - (double)0.3f);
+                mat.GetPosition().z = (float)((x87d)mat.GetPosition().z - (x87d)0.3f);
                 if (!ped->TestCollision(false)) {
                     return;
                 }
-                mat.GetPosition().z = (float)((double)mat.GetPosition().z + (double)0.3f);
+                mat.GetPosition().z = (float)((x87d)mat.GetPosition().z + (x87d)0.3f);
                 ped->PositionPedOutOfCollision(door, veh, true);
                 return;
             }
 
             const auto& fwd = mat.GetForward();
-            const double bx = (double)fwd.x * (double)0.3f;
-            const double by = (double)fwd.y * (double)0.3f;
-            const float  bz = (float)((double)fwd.z * (double)0.3f);
-            mat.GetPosition().x = (float)((double)mat.GetPosition().x - bx);
-            mat.GetPosition().y = (float)((double)mat.GetPosition().y - by);
-            mat.GetPosition().z = (float)((double)mat.GetPosition().z - (double)bz);
+            const x87d bx = (x87d)fwd.x * (x87d)0.3f;
+            const x87d by = (x87d)fwd.y * (x87d)0.3f;
+            const float  bz = (float)((x87d)fwd.z * (x87d)0.3f);
+            mat.GetPosition().x = (float)((x87d)mat.GetPosition().x - bx);
+            mat.GetPosition().y = (float)((x87d)mat.GetPosition().y - by);
+            mat.GetPosition().z = (float)((x87d)mat.GetPosition().z - (x87d)bz);
 
             if (ped->TestCollision(false)) {
                 auto& m = *ped->m_matrix;
@@ -186,7 +186,7 @@ bool CTaskSimpleCarSetPedOut::ProcessPed(CPed* ped) {
 
     if (!m_bFallingOutOfCar && !m_bKnockedOffBike) {
         if (auto* const veh = ped->m_pVehicle; veh && veh->m_nVehicleType == VEHICLE_TYPE_BIKE) {
-            if (std::fabs((double)veh->m_vecMoveSpeed.x) < 0.1 && std::fabs((double)veh->m_vecMoveSpeed.y) < 0.1) { // 0x86EEE0 (double)
+            if (std::fabs((x87d)veh->m_vecMoveSpeed.x) < 0.1 && std::fabs((x87d)veh->m_vecMoveSpeed.y) < 0.1) { // 0x86EEE0 (double)
                 static_cast<CBike*>(veh)->bikeFlags.bOnSideStand = true;
             }
         }

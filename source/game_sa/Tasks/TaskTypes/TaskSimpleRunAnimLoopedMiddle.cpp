@@ -94,7 +94,7 @@ bool CTaskSimpleRunAnimLoopedMiddle::ProcessPed(CPed* ped) {
     if (m_pAnim) {
         const auto cur = m_pAnim->m_CurrentTime;
         if (cur > m_LoopEndTime) { // Just passed the end of the loop?
-            if ((double)cur - (double)m_pAnim->m_TimeStep <= (double)m_LoopEndTime) { // ...and the previous step was before it
+            if ((x87d)cur - (x87d)m_pAnim->m_TimeStep <= (double)m_LoopEndTime) { // ...and the previous step was before it
                 m_pAnim->SetCurrentTime(m_LoopStartTime);
                 m_pAnim->m_Flags |= ANIMATION_IS_PLAYING;
             }

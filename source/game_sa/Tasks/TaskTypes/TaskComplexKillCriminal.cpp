@@ -524,8 +524,8 @@ Finish:
 // 0x68E950
 CTask* CTaskComplexKillCriminal::ControlSubTask(CPed* ped) {
     // x87: All the distance related calculations are kept in extended precision until the comparison
-    const auto SqMag = [](const CVector& v) { return (double)v.x * (double)v.x + (double)v.y * (double)v.y + (double)v.z * (double)v.z; };
-    const auto Mag   = [&](const CVector& v) { return std::sqrt(SqMag(v)); };
+    const auto SqMag = [](const CVector& v) { return (x87d)v.x * (x87d)v.x + (x87d)v.y * (x87d)v.y + (x87d)v.z * (x87d)v.z; };
+    const auto Mag   = [&](const CVector& v) { return X87R(std::sqrt(SqMag(v))); };
 
     CTask* const origSubTask   = m_pSubTask;
     eTaskType    taskToCreate  = TASK_NONE; // TASK_NONE => keep the current one
@@ -603,7 +603,7 @@ CTask* CTaskComplexKillCriminal::ControlSubTask(CPed* ped) {
                     if (Mag(m_Criminal->m_pVehicle->GetMoveSpeed()) >= 0.12) {
                         m_TimeToGetOutOfCar = 1.f;
                     } else {
-                        m_TimeToGetOutOfCar = (float)((double)m_TimeToGetOutOfCar - (double)CTimer::GetTimeStep() * (double)0.02f);
+                        m_TimeToGetOutOfCar = (float)((x87d)m_TimeToGetOutOfCar - (x87d)CTimer::GetTimeStep() * (x87d)0.02f);
                         if (m_TimeToGetOutOfCar <= 0.f
                             && m_Criminal->GetIntelligence()->GetEventHandler().GetCurrentEventType() != EVENT_ACQUAINTANCE_PED_HATE) {
                             const auto diff = m_Criminal->m_pVehicle->GetPosition() - ped->m_pVehicle->GetPosition();
@@ -654,14 +654,14 @@ CTask* CTaskComplexKillCriminal::ControlSubTask(CPed* ped) {
         } else { //> 0x68F0A9 - Criminal is on foot
             if (ped->bInVehicle && ped->m_pVehicle) {
                 const auto   veh        = ped->m_pVehicle;
-                const double crimDistSq = SqMag(m_Criminal->GetPosition() - veh->GetPosition());
+                const x87d crimDistSq = SqMag(m_Criminal->GetPosition() - veh->GetPosition());
                 const bool   partnerGone = !partner || partner->m_fHealth <= 0.f || partner->bInVehicle;
                 if (crimDistSq > 225.0) {
                     if (partnerGone) {
                         taskToCreate = TASK_COMPLEX_CAR_DRIVE_MISSION;
                     }
                 } else {
-                    const double thr = veh->m_nVehicleType == VEHICLE_TYPE_BIKE ? (double)5.f : (double)16.f;
+                    const x87d thr = veh->m_nVehicleType == VEHICLE_TYPE_BIKE ? (x87d)5.f : (x87d)16.f;
                     const auto   mission = (int32)veh->m_autoPilot.m_nCarMission;
                     if (mission == MISSION_KILLPED_CLOSE || mission == MISSION_KILLPED_FARAWAY) {
                         if (crimDistSq < thr) {
@@ -757,7 +757,7 @@ BikeSection:
             if (m_Criminal->bInVehicle && m_Criminal->m_pVehicle) {
                 veh->SetStatus(STATUS_PHYSICS);
                 veh->m_autoPilot.m_nCarMission = MISSION_FOLLOWCAR_CLOSE;
-                veh->m_autoPilot.m_nCruiseSpeed = (uint8)(int32)((double)m_Criminal->m_pVehicle->m_autoPilot.m_nCruiseSpeed + 10.0);
+                veh->m_autoPilot.m_nCruiseSpeed = (uint8)(int32)((x87d)m_Criminal->m_pVehicle->m_autoPilot.m_nCruiseSpeed + (x87d)10.0);
                 veh->m_autoPilot.m_fMaxTrafficSpeed = (float)veh->m_autoPilot.m_nCruiseSpeed;
                 veh->m_autoPilot.m_nCarDrivingStyle = DRIVING_STYLE_AVOID_CARS;
                 veh->m_autoPilot.m_TargetEntity = m_Criminal->m_pVehicle;

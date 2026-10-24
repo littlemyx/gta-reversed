@@ -78,14 +78,14 @@ CTask* CTaskComplexPassObject::CreateFirstSubTask(CPed* ped) {
         // 0x661415..0x661466: x87 evaluation. dx / dy are rounded to float once (stored), dz stays unrounded; dx enters the square as unrounded * rounded
         const auto& otherPos = m_ped->GetPosition();
         const auto& pedPos   = ped->GetPosition();
-        const double dzU = (double)otherPos.z - (double)pedPos.z;
-        const double dxU = (double)otherPos.x - (double)pedPos.x;
+        const x87d dzU = (x87d)otherPos.z - (x87d)pedPos.z;
+        const x87d dxU = (x87d)otherPos.x - (x87d)pedPos.x;
         const float  dx  = (float)dxU;
-        const float  dy  = (float)((double)otherPos.y - (double)pedPos.y);
-        const double distSq = (dxU * (double)dx + (double)dy * (double)dy) + dzU * dzU;
+        const float  dy  = (float)((x87d)otherPos.y - (x87d)pedPos.y);
+        const x87d distSq = (dxU * (x87d)dx + (x87d)dy * (x87d)dy) + dzU * dzU;
         if (distSq <= (double)sq(1.5f)) { // 0x66145B: fcomp [0x86E104] (2.25); NaN => no
             m_timer.Start(1000); // 0x66147B..0x66148B: `[this+0x20] = CTimer::m_snTimeInMilliseconds; [this+0x24] = 1000; [this+0x28] = 1` (the port never started the timer)
-            m_targetPos = CVector{ (float)((double)dx * 0.5 + otherPos.x), (float)((double)dy * 0.5 + otherPos.y), (float)(dzU * 0.5 + otherPos.z) }; // position in between the 2 peds
+            m_targetPos = CVector{ (float)((x87d)dx * (x87d)0.5 + otherPos.x), (float)((x87d)dy * (x87d)0.5 + otherPos.y), (float)(dzU * (x87d)0.5 + otherPos.z) }; // position in between the 2 peds
             return new CTaskComplexTurnToFaceEntityOrCoord{ static_cast<CEntity*>(m_ped) }; // 0x66150D..0x661514: the ENTITY constructor (0x66B890) with the other ped, not the position one
         }
     }

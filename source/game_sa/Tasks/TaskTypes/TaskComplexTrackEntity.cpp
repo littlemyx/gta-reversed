@@ -59,42 +59,42 @@ void CTaskComplexTrackEntity::CalcTargetPos(CPed* ped) {
     m_goToPos = m_toTrack->GetPosition();
 
     if (!f) { // NOTE: The asm tests the byte at 0x2C (`f`), not 0x1C (`a`) like `CalcMoveRatio` does
-        m_goToPos.x = (float)((double)m_offsetPosn.x + (double)m_goToPos.x);
-        m_goToPos.y = (float)((double)m_offsetPosn.y + (double)m_goToPos.y);
+        m_goToPos.x = (float)((x87d)m_offsetPosn.x + (x87d)m_goToPos.x);
+        m_goToPos.y = (float)((x87d)m_offsetPosn.y + (x87d)m_goToPos.y);
     } else {
         const CVector right = m_toTrack->GetMatrix().GetRight();
         const CVector fwd   = m_toTrack->GetMatrix().GetForward();
 
-        const double offX = m_offsetPosn.x;
-        m_goToPos.x = (float)((double)right.x * offX + (double)m_goToPos.x);
-        const float ry = (float)((double)right.y * offX);
-        const float rz = (float)((double)right.z * offX);
-        m_goToPos.y = (float)((double)ry + (double)m_goToPos.y);
-        m_goToPos.z = (float)((double)rz + (double)m_goToPos.z);
+        const x87d offX = m_offsetPosn.x;
+        m_goToPos.x = (float)((x87d)right.x * offX + (x87d)m_goToPos.x);
+        const float ry = (float)((x87d)right.y * offX);
+        const float rz = (float)((x87d)right.z * offX);
+        m_goToPos.y = (float)((x87d)ry + (x87d)m_goToPos.y);
+        m_goToPos.z = (float)((x87d)rz + (x87d)m_goToPos.z);
 
-        const double offY = m_offsetPosn.y;
-        m_goToPos.x = (float)((double)fwd.x * offY + (double)m_goToPos.x);
-        const float fy = (float)((double)fwd.y * offY);
-        const float fz = (float)((double)fwd.z * offY);
-        m_goToPos.y = (float)((double)fy + (double)m_goToPos.y);
-        m_goToPos.z = (float)((double)fz + (double)m_goToPos.z);
+        const x87d offY = m_offsetPosn.y;
+        m_goToPos.x = (float)((x87d)fwd.x * offY + (x87d)m_goToPos.x);
+        const float fy = (float)((x87d)fwd.y * offY);
+        const float fz = (float)((x87d)fwd.z * offY);
+        m_goToPos.y = (float)((x87d)fy + (x87d)m_goToPos.y);
+        m_goToPos.z = (float)((x87d)fz + (x87d)m_goToPos.z);
     }
 
     // Predict where the tracked entity will be
     if (m_toTrack->GetType() == ENTITY_TYPE_VEHICLE || m_toTrack->GetType() == ENTITY_TYPE_PED) {
         const auto&  speed = m_toTrack->AsPhysical()->m_vecMoveSpeed;
-        const double ts    = CTimer::GetTimeStep();
-        const double px    = ts * speed.x;
-        const double py    = ts * speed.y;
+        const x87d ts    = CTimer::GetTimeStep();
+        const x87d px    = ts * speed.x;
+        const x87d py    = ts * speed.y;
         const float  pz    = (float)(ts * speed.z);
-        m_goToPos.x = (float)(px + (double)m_goToPos.x);
-        m_goToPos.y = (float)(py + (double)m_goToPos.y);
-        m_goToPos.z = (float)((double)pz + (double)m_goToPos.z);
+        m_goToPos.x = (float)(px + (x87d)m_goToPos.x);
+        m_goToPos.y = (float)(py + (x87d)m_goToPos.y);
+        m_goToPos.z = (float)((x87d)pz + (x87d)m_goToPos.z);
     }
 
     const auto&  pedPos = ped->GetPosition();
-    const double dx     = (double)m_goToPos.x - (double)pedPos.x;
-    const double dy     = (double)m_goToPos.y - (double)pedPos.y;
+    const x87d dx     = (x87d)m_goToPos.x - (x87d)pedPos.x;
+    const x87d dy     = (x87d)m_goToPos.y - (x87d)pedPos.y;
     m_distToTargetSq    = (float)(dy * dy + dx * dx);
 }
 
@@ -102,33 +102,33 @@ void CTaskComplexTrackEntity::CalcTargetPos(CPed* ped) {
 void CTaskComplexTrackEntity::CalcMoveRatio(CPed* ped) {
     // Function-local statics in the original (lazily initialised, guarded by flags in 0xC18D08)
     constexpr float RANGE_MIN = 0.2f, RANGE_MID = 1.f, RANGE_MAX = 5.f;
-    static const float sqMin    = (float)((double)RANGE_MIN * (double)RANGE_MIN); // 0xC18D04
-    static const float sqMid    = (float)((double)RANGE_MID * (double)RANGE_MID); // 0xC18D00
-    static const float sqMax    = (float)((double)RANGE_MAX * (double)RANGE_MAX); // 0xC18CFC
-    static const float scaleHi  = (float)(1.0 / ((double)RANGE_MAX - (double)RANGE_MID)); // 0xC18CF8
-    static const float scaleLow = (float)(1.0 / ((double)RANGE_MID - (double)RANGE_MIN)); // 0xC18CF4
+    static const float sqMin    = (float)((x87d)RANGE_MIN * (x87d)RANGE_MIN); // 0xC18D04
+    static const float sqMid    = (float)((x87d)RANGE_MID * (x87d)RANGE_MID); // 0xC18D00
+    static const float sqMax    = (float)((x87d)RANGE_MAX * (x87d)RANGE_MAX); // 0xC18CFC
+    static const float scaleHi  = (float)((x87d)1.0 / ((x87d)RANGE_MAX - (x87d)RANGE_MID)); // 0xC18CF8
+    static const float scaleLow = (float)((x87d)1.0 / ((x87d)RANGE_MID - (x87d)RANGE_MIN)); // 0xC18CF4
 
     if (m_distToTargetSq < sqMin) {
         float40 = 0.f;
     } else if (m_distToTargetSq > sqMax) {
         float40 = 1.f;
     } else {
-        const double dist = std::sqrt((double)m_distToTargetSq);
+        const x87d dist = std::sqrt((x87d)m_distToTargetSq);
         if (m_distToTargetSq < sqMid) {
-            float40 = (float)((dist - (double)RANGE_MIN) * (double)scaleLow * 0.5);
+            float40 = (float)((dist - (x87d)RANGE_MIN) * (x87d)scaleLow * (x87d)0.5);
         } else {
-            float40 = (float)((dist - (double)RANGE_MID) * (double)scaleHi * 0.5 + 0.5);
+            float40 = (float)((dist - (x87d)RANGE_MID) * (x87d)scaleHi * (x87d)0.5 + (x87d)0.5);
         }
     }
 
-    const double ratio = std::sqrt((double)float40) * 3.0;
+    const x87d ratio = std::sqrt((x87d)float40) * (x87d)3.0;
     float40 = (float)ratio;
     if (!a && ratio > 2.0) { // FCOMP on the unrounded value; NaN => not taken
         float40 = 2.0f;
     }
 
-    if ((double)float40 - (double)m_fMoveRatio > (double)0.2f) { // NaN => copy
-        m_fMoveRatio = (float)((double)0.2f + (double)m_fMoveRatio);
+    if ((x87d)float40 - (x87d)m_fMoveRatio > (double)0.2f) { // NaN => copy
+        m_fMoveRatio = (float)((x87d)0.2f + (x87d)m_fMoveRatio);
     } else {
         m_fMoveRatio = float40;
     }
@@ -149,7 +149,7 @@ CTask* CTaskComplexTrackEntity::CreateNextSubTask(CPed* ped) {
         return new CTaskSimpleStandStill{ 50 }; // 0x65F6C7 `push 0x32`: the exe stands still for 50 ms (the port passed the default 0)
     }
 
-    if ((double)m_distToTargetSq < (double)m_rangeMin * (double)m_rangeMin) { // 0x65F5D0..0x65F5E3: x87 product in extended precision, strict compare (NaN / equal => follow route)
+    if ((double)m_distToTargetSq < (x87d)m_rangeMin * (x87d)m_rangeMin) { // 0x65F5D0..0x65F5E3: x87 product in extended precision, strict compare (NaN / equal => follow route)
         return new CTaskSimpleGoToPointFine{ m_fMoveRatio, m_goToPos, 0.25f, nullptr };
     }
 

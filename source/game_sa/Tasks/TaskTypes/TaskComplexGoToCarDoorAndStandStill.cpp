@@ -240,8 +240,8 @@ bool CTaskComplexGoToCarDoorAndStandStill::IsVehicleInRange(const CPed& ped) {
     // 0x6458B2..0x645904: the exe keeps the differences on the x87 stack (extended precision, summed dz*dz + dx*dx + dy*dy) and returns `range^2 > sum` (fcompp / test ah,0x41 / jne -> 0):
     // exactly equal gives false (the port's `<=` gave true), NaN gives false. `double` mirrors the register residency.
     const CVector vp = m_Vehicle->GetPosition(), pp = ped.GetPosition();
-    const double dx = (double)vp.x - pp.x, dy = (double)vp.y - pp.y, dz = (double)vp.z - pp.z;
-    const double range = m_MaxSeekDist;
+    const x87d dx = (x87d)vp.x - pp.x, dy = (x87d)vp.y - pp.y, dz = (x87d)vp.z - pp.z;
+    const x87d range = m_MaxSeekDist;
     return range * range > dz * dz + dx * dx + dy * dy;
 }
 

@@ -10,11 +10,11 @@ namespace {
 //! 0x44E480 - `CVector2D::Normalise` as the exe has it: the squared length and `1 / sqrt` stay in extended precision,
 //! a NaN length is normalised (JP), a non-positive one yields (1, y)
 void NormaliseOriginal(CVector2D& v) {
-    const double sq = (double)v.x * (double)v.x + (double)v.y * (double)v.y;
+    const x87d sq = (x87d)v.x * (x87d)v.x + (x87d)v.y * (x87d)v.y;
     if (!(sq <= 0.0)) {
-        const double recip = 1.0 / std::sqrt(sq);
-        v.x = (float)((double)v.x * recip);
-        v.y = (float)((double)v.y * recip);
+        const x87d recip = (x87d)1.0 / std::sqrt(sq);
+        v.x = (float)((x87d)v.x * recip);
+        v.y = (float)((x87d)v.y * recip);
     } else {
         v.x = 1.0f;
     }
@@ -101,15 +101,15 @@ CTask* CTaskComplexReactToAttack::CreateFirstSubTask(CPed* ped) {
                 const auto& pedPos      = ped->GetPosition();
 
                 CVector2D dir{
-                    (float)((double)attackerPos.x - (double)pedPos.x),
-                    (float)((double)attackerPos.y - (double)pedPos.y)
+                    (float)((x87d)attackerPos.x - (x87d)pedPos.x),
+                    (float)((x87d)attackerPos.y - (x87d)pedPos.y)
                 };
                 NormaliseOriginal(dir); // 0x44E480
 
                 ped->bIsStanding = false;
                 ped->ApplyMoveForce(CVector{
-                    (float)((double)dir.x * -5.0), // 0x858FC8
-                    (float)((double)dir.y * -5.0),
+                    (float)((x87d)dir.x * -(x87d)5.0), // 0x858FC8
+                    (float)((x87d)dir.y * -(x87d)5.0),
                     5.f
                 }); // 0x5429F0
                 return CreateSubTask(TASK_COMPLEX_FALL_AND_GET_UP);

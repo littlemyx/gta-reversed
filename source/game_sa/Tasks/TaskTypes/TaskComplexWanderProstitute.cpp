@@ -49,14 +49,14 @@ void CTaskComplexWanderProstitute::ScanForStuff(CPed* ped) {
 
         // Chance based on the vehicle's value
         const auto veh = other->m_pVehicle;
-        if (!((uint32)(int32)((double)(CGeneral::GetRandomNumber() & 0xFFFF) * (1.0 / 32768.0) * 50000.0) < veh->m_pHandlingData->m_nMonetaryValue)) {
+        if (!((uint32)(int32)((x87d)(CGeneral::GetRandomNumber() & 0xFFFF) * ((x87d)1.0 / (x87d)32768.0) * (x87d)50000.0) < veh->m_pHandlingData->m_nMonetaryValue)) {
             continue;
         }
 
         // Vehicle must be (almost) standing still: |speed * 50|^2 < 4 (x87 extended in the original, hence `double`)
-        const double sx = (double)veh->m_vecMoveSpeed.x * 50.0;
-        const double sy = (double)veh->m_vecMoveSpeed.y * 50.0;
-        const double sz = (double)veh->m_vecMoveSpeed.z * 50.0;
+        const x87d sx = (x87d)veh->m_vecMoveSpeed.x * (x87d)50.0;
+        const x87d sy = (x87d)veh->m_vecMoveSpeed.y * (x87d)50.0;
+        const x87d sz = (x87d)veh->m_vecMoveSpeed.z * (x87d)50.0;
         if (!((sx * sx + sy * sy) + sz * sz < 4.0)) {
             continue;
         }

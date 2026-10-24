@@ -63,9 +63,9 @@ CTask* CTaskComplexWaitForPed::CreateFirstSubTask(CPed* ped) {
 static CVector TransformPointExt(const CMatrix& m, const CVector& v) {
     const auto &r = m.GetRight(), &f = m.GetForward(), &u = m.GetUp(), &p = m.GetPosition();
     return CVector{
-        (float)((((double)u.x * v.z + (double)f.x * v.y) + (double)r.x * v.x) + p.x),
-        (float)((((double)u.y * v.z + (double)r.y * v.x) + (double)f.y * v.y) + p.y),
-        (float)((((double)u.z * v.z + (double)r.z * v.x) + (double)f.z * v.y) + p.z)
+        (float)((((x87d)u.x * v.z + (x87d)f.x * v.y) + (x87d)r.x * v.x) + p.x),
+        (float)((((x87d)u.y * v.z + (x87d)r.y * v.x) + (x87d)f.y * v.y) + p.y),
+        (float)((((x87d)u.z * v.z + (x87d)r.z * v.x) + (x87d)f.z * v.y) + p.z)
     };
 }
 
@@ -89,22 +89,22 @@ CTask* CTaskComplexWaitForPed::ControlSubTask(CPed* ped) {
     // Offset from the origin of this ped to the waited-for ped. If the latter is walking alongside someone,
     // the walk offset (transformed by *our* matrix, which is not null-checked) is used as our position
     const auto&  partnerPos = m_ped->GetPosition();
-    double       dx, dy, dz;
+    x87d       dx, dy, dz;
     if (const auto walk = static_cast<CTaskComplexWalkAlongsidePed*>(m_ped->GetIntelligence()->FindTaskByType(TASK_COMPLEX_WALK_ALONGSIDE_PED))) { // 0x600EE0
         const auto pos = TransformPointExt(*ped->m_matrix, walk->GetOffset()); // 0x59C890
-        dx = (double)pos.x - partnerPos.x;
-        dy = (double)pos.y - partnerPos.y;
-        dz = (double)pos.z - partnerPos.z;
+        dx = (x87d)pos.x - partnerPos.x;
+        dy = (x87d)pos.y - partnerPos.y;
+        dz = (x87d)pos.z - partnerPos.z;
     } else {
         const auto& pedPos = ped->GetPosition();
-        dx = (double)pedPos.x - partnerPos.x;
-        dy = (double)pedPos.y - partnerPos.y;
-        dz = (double)pedPos.z - partnerPos.z;
+        dx = (x87d)pedPos.x - partnerPos.x;
+        dy = (x87d)pedPos.y - partnerPos.y;
+        dz = (x87d)pedPos.z - partnerPos.z;
     }
 
     // Extended precision sum, evaluated z, y, x
-    const double distSq = (dz * dz + dy * dy) + dx * dx;
-    const double radius = m_radius;
+    const x87d distSq = (dz * dz + dy * dy) + dx * dx;
+    const x87d radius = m_radius;
     if (distSq < radius * radius) { // FCOMPP + JP: NaN continues
         return nullptr;
     }

@@ -143,9 +143,9 @@ void NVCPipelineProcess(RpAtomic* a, float DNBalance) {
 
     // exe (0x5D6850, unrolled by 4): out = _ftol(night * t + day * (1.0f - t)) per channel, evaluated in extended precision (the products are exact
     // in a double) and TRUNCATED, so e.g. day == night can come out one less when t + (1 - t) != 1 in float
-    const auto t   = (double)DNBalance;
-    const auto omt = (double)(1.f - DNBalance); // stored as float by the exe
-    const auto Mix = [&](uint8 day, uint8 night) { return (uint8)(int32)((double)night * t + (double)day * omt); };
+    const auto t   = (x87d)DNBalance;
+    const auto omt = (x87d)(1.f - DNBalance); // stored as float by the exe
+    const auto Mix = [&](uint8 day, uint8 night) { return (uint8)(int32)((x87d)night * t + (x87d)day * omt); };
 
     geo = RpGeometryLock(geo, rpGEOMETRYLOCKPRELIGHT);
     auto* const prelit = RpGeometryGetPreLightColors(geo);

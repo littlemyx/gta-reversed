@@ -19,6 +19,8 @@
 #include "TxdStore.h"
 #include "Plugins/NodeNamePlugin/NodeName.h"
 #include "Cheat.h"
+#include "Pipelines/CustomBuilding/CustomBuildingRenderer.h"
+#include "Fx/CarFXRenderer.h"
 #include "World.h"
 #include "Weather.h"
 #include "Entity/Ped/PlayerPed.h"
@@ -116,6 +118,8 @@ static void BuildPassengers(Rng& r) {
 // W3M_SCALE=<k>: every row runs k times its case count (deeper sweeps)
 template<class Fn> static void RunScaled(const std::string& name, Fn&& fn, int cases) {
     static const int scale = std::getenv("W3M_SCALE") ? std::max(1, std::atoi(std::getenv("W3M_SCALE"))) : 1;
+    static const char* const only = std::getenv("W3M_ONLY");   // W3M_ONLY=<substring>: run only the rows whose name contains it
+    if (only && *only && name.find(only) == std::string::npos) return;
     Run(name, std::forward<Fn>(fn), cases * scale);
 }
 #define Run RunScaled
@@ -297,11 +301,15 @@ static void TestW3Models() {
 #include "wave3_oracle_models2.inc"
 #include "wave3_oracle_models3.inc"
 #include "wave3_oracle_models4.inc"
+#include "wave3_oracle_models5.inc"
+#include "wave3_oracle_models6.inc"
 
 static void TestW3ModelsAll() {
     TestW3Models();
     TestW3ModelsVeh();
     TestW3ModelsPart3();
     TestW3ModelsPart4();
+    TestW3ModelsPart5();
+    TestW3ModelsPart6();
 }
 #undef Run

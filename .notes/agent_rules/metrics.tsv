@@ -141,3 +141,8 @@ date	agent	rules	kind	tokens	tool_uses	minutes	outcome	notes
 2026-10-24	MAC-BOOT1	v4	W-7 paths + boot loop	355266	162	33	done: main menu reached
 2026-10-24	MAC-W3	v4	W-3/W-4 OpenAL audio	-	-	-	done: audio + radio native
 2026-10-24	MAC-R5	v4	R-5 TXD to GL3	290479	80	27	done: 32823 textures 0 fail
+2026-10-23	ORACLE-C-EVENTS	v4	class C wave (no fixes)	330588	160	91	Events 337 -> 391, Ped 102 -> 122 (game 4914 -> 4988); 5 suspected bugs left open (GunAimedAt null task, PassiveCollision 62/150, HitAndRun null AV); 35 min lost on build.lock
+2026-10-23	ORACLE-C-MODELS	v4	class C wave (no fixes)	214653	85	28	Models 105 -> 126 (game 4930 -> 4951), 21 rows all pass; RW-bound frame walkers + Entity root left (recipe in report)
+2026-10-24	ORACLE-C-EVENTS-2	v4	class C fixes (small)	252409	144	33	4 of 5 findings real: GunAimedAt null task + flee mapping, PassiveCollision inverted, DeadPed NaN + safe distance 60 (port 100000), DisablePedSpeech word compare; HitAndRun = fixture; soak OK
+2026-10-24	ORACLE-C-MODELS-2	v4	class C wave (small)	259647	124	85	+15 Models rows (game 5039), 3 fixes: frame-name stricmp, CreateInstance(mat) matrix target, IsCBPCPipelineAttached tested plugin addr (building pipeline on any prelit geometry); soak OK
+2026-10-24	ORACLE-C-ENTITY	v4	class C wave (small)	245549	107	31	Entity 87 -> 94 (game 5049), 1 fix: RemoveEscalatorsForEntity returned after first match (587/600); tokens hit cap in 31 min (~35k tokens per class-C row)

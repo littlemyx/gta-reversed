@@ -1,0 +1,7 @@
+# ORACLE-C-EVENTS: class C event rows not generated (key = Class::Function, TAB, reason)
+CEventAttractor::IsEffectActive	every case faults identically: needs a valid C2dEffectPedAttractor + entity 2d-effect table (fixture)
+CEventGroupEvent::Clone	every case faults identically: needs a real CEventGroup member (fixture)
+CEventLeaderExitedCarAsDriver::AffectsPedGroup	every case faults identically: needs a real CPedGroup with intelligence (fixture)
+CEventLeaderQuitEnteringCarAsDriver::AffectsPedGroup	every case faults identically: needs a real CPedGroup with intelligence (fixture)
+CGroupEventHandler::ComputeWalkAlongsideResponse	every case faults identically: needs a real CPedGroup + task allocator (fixture)
+CEventVehicleHitAndRun::ReportCriminalEvent	hand row in wave3_oracle_ev_c.inc (real event as this; the generated garbage-this row faulted)

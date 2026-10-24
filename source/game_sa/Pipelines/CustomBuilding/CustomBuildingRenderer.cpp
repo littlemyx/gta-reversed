@@ -60,7 +60,7 @@ bool CCustomBuildingRenderer::IsCBPCPipelineAttached(RpAtomic* atomic) {
     if (pipeID == CUSTOM_BUILDING_DN_PIPELINE_ID || pipeID == CUSTOM_BUILDING_PIPELINE_ID) {
         return true;
     }
-    return CCustomBuildingDNPipeline::GetExtraVertColourPtr(geometry) && RwCompatGeometryPreLit(geometry);
+    return CCustomBuildingDNPipeline::GetExtraVertColourPtr(geometry)->NightColors && RwCompatGeometryPreLit(geometry); // exe 0x5D7F40 tests the value 0x5D6E90 returns ([geometry + plugin offset] = the night colours pointer), not the always non-null plugin data address
 }
 
 // 0x5D7F80

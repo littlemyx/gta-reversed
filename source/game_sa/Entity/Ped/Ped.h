@@ -511,9 +511,9 @@ public:
     void GiveWeaponAtStartOfFight();
     void GiveWeaponWhenJoiningGang();
     bool GetPedTalking();
-    void DisablePedSpeech(bool stopCurrentSpeech);
+    void DisablePedSpeech(int16 stopCurrentSpeech); // the exe compares the whole word (0x4E56DA cmp word ptr [esp+4], 0)
     void EnablePedSpeech();
-    void DisablePedSpeechForScriptSpeech(bool stopCurrentSpeech);
+    void DisablePedSpeechForScriptSpeech(int16 stopCurrentSpeech);
     void EnablePedSpeechForScriptSpeech();
     bool CanPedHoldConversation() const;
     void SayScript(eAudioEvents scriptID, bool overrideSilence, bool isForceAudible, bool isFrontEnd);

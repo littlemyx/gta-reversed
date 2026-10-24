@@ -12,6 +12,7 @@ set(W3_PED_SOURCES
     game_sa/Pad.cpp
     game_sa/PedIntelligence.cpp
     game_sa/Stats.cpp
+    game_sa/Tasks/TaskManager.cpp
     game_sa/Wanted.cpp
     game_sa/Weapon.cpp
     game_sa/WeaponInfo.cpp

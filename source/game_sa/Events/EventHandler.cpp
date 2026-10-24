@@ -1166,19 +1166,21 @@ void CEventHandler::ComputeDangerResponse(CEventDanger* e, CTask* tactive, CTask
 
 // 0x4B9470
 void CEventHandler::ComputeDeadPedResponse(CEventDeadPed* e, CTask* tactive, CTask* tsimplest) {
+    // Every `return m_EventResponseTask` is an exit of the exe that does not write the field (jumps to the epilogue 0x4B96AF)
     m_EventResponseTask = [&]() -> CTask* {
         if (!e->GetDeadPed()) {
-            return nullptr;
+            return m_EventResponseTask; // 0x4B9493
         }
         if (m_Ped->IsPlayer()) {
-            if ((m_Ped->GetPosition() - e->GetDeadPed()->GetPosition()).SquaredMagnitude2D() >= sq(0.75f)) {
-                return nullptr;
+            // 0x4B94E4 fcomp / test ah,5 / jp: continues only when the distance is strictly below 0.75^2 (a NaN distance leaves, `>=` would let it through)
+            if (!((m_Ped->GetPosition() - e->GetDeadPed()->GetPosition()).SquaredMagnitude2D() < sq(0.75f))) {
+                return m_EventResponseTask;
             }
             if (m_Ped->GetIntelligence()->GetTaskFighting()) {
-                return nullptr;
+                return m_EventResponseTask;
             }
             if (g_ikChainMan.IsLooking(m_Ped)) {
-                return nullptr;
+                return m_EventResponseTask;
             }
             const auto c = &TheCamera.GetActiveCam();
             switch (c->m_nMode) {
@@ -1189,10 +1191,10 @@ void CEventHandler::ComputeDeadPedResponse(CEventDeadPed* e, CTask* tactive, CTa
             case MODE_M16_1STPERSON:
             case MODE_1STPERSON:
             case MODE_HELICANNON_1STPERSON:
-                return nullptr;
+                return m_EventResponseTask;
             }
             if (c->GetWeaponFirstPersonOn()) {
-                return nullptr;
+                return m_EventResponseTask;
             }
             g_ikChainMan.LookAt(
                 "CompDeadPedResp",
@@ -1207,17 +1209,19 @@ void CEventHandler::ComputeDeadPedResponse(CEventDeadPed* e, CTask* tactive, CTa
                 3,
                 false
             );
-            return nullptr;
+            return m_EventResponseTask; // 0x4B95B3: the exe returns right after LookAt, without touching the response task
         }
         switch (e->m_TaskId) {
         case TASK_COMPLEX_SMART_FLEE_ENTITY:
-            return new CTaskComplexSmartFleeEntity{e->GetDeadPed(), true, 100'000.f};
+            return new CTaskComplexSmartFleeEntity{e->GetDeadPed(), true, fSafeDistance}; // 0x4B96A3: [0xC18CEC] (60.0f), not 100000
         case TASK_COMPLEX_INVESTIGATE_DEAD_PED:
             return new CTaskComplexInvestigateDeadPed{e->GetDeadPed()};
         case TASK_SIMPLE_DUCK_FOREVER:
             return new CTaskSimpleDuck{ DUCK_STANDALONE, 57599u, -1 };
-        default:
+        case TASK_NONE: // 0xC8, 0x4B9622: the only case that stores nullptr
             return nullptr;
+        default:
+            return m_EventResponseTask; // 0x4B95E9 / 0x4B9666
         }
     }();
 }
@@ -1376,11 +1380,18 @@ void CEventHandler::ComputeGunAimedAtResponse(CEventGunAimedAt* e, CTask* tactiv
             return nullptr;
         }
 
-        const auto IsFleeTask = [](CTask* t) {
-            return notsa::contains({TASK_COMPLEX_SMART_FLEE_ENTITY, TASK_COMPLEX_SMART_FLEE_POINT}, t->GetTaskType());
-        };
-        if (IsFleeTask(tactive) || IsFleeTask(tsimplest)) {
-            return new CTaskComplexSmartFleeEntity{e->m_AimedBy, false, fSafeDistance}; // 0x4C28F5
+        // 0x4C2872: only the active task is looked at (tsimplest never is), and only when it is not null
+        if (tactive) {
+            switch (tactive->GetTaskType()) {
+            case TASK_COMPLEX_FLEE_ENTITY:  // 0x38D, 0x4C28FF -> 0x4C2E09
+            case TASK_COMPLEX_FLEE_POINT:   // 0x38C
+                return new CTaskComplexFleeEntity{e->m_AimedBy, false};
+            case TASK_COMPLEX_SMART_FLEE_POINT:  // 0x38E
+            case TASK_COMPLEX_SMART_FLEE_ENTITY: // 0x38F, 0x4C28B6 -> 0x4C28F5
+                return new CTaskComplexSmartFleeEntity{e->m_AimedBy, false, fSafeDistance};
+            default:
+                break;
+            }
         }
 
         if (m_Ped->IsCreatedBy(PED_GAME) && !m_Ped->bInVehicle && !m_Ped->GetActiveWeapon().IsTypeMelee()) {
@@ -1412,8 +1423,15 @@ void CEventHandler::ComputeGunAimedAtResponse(CEventGunAimedAt* e, CTask* tactiv
             return new CTaskComplexReactToGunAimedAt{e->m_AimedBy}; 
         case TASK_COMPLEX_KILL_PED_ON_FOOT_STEALTH: // 0x4C2E30
             return new CTaskComplexKillPedOnFootStealth{e->m_AimedBy};
-        case TASK_COMPLEX_KILL_CRIMINAL:
-            return new CTaskComplexKillCriminal{e->m_AimedBy};
+        case TASK_COMPLEX_KILL_CRIMINAL: { // 0x4C2D7C
+            if (e->m_AimedBy->IsPlayer()) {
+                return nullptr; // 0x4C29A8: explicit store of nullptr
+            }
+            if (IsKillTaskAppropriate(m_Ped, e->m_AimedBy, *e)) {
+                return new CTaskComplexKillCriminal{e->m_AimedBy}; // 0x4C2DC0 (second argument 0)
+            }
+            return new CTaskComplexFleeEntity{e->m_AimedBy, false}; // 0x4C2DCA..0x4C2E09
+        }
         case TASK_COMPLEX_KILL_PED_ON_FOOT: { // 0x4C2E3D
             if (IsKillTaskAppropriate(m_Ped, e->m_AimedBy, *e)) {
                 return new CTaskComplexKillPedOnFoot{e->m_AimedBy};
@@ -1429,7 +1447,7 @@ void CEventHandler::ComputeGunAimedAtResponse(CEventGunAimedAt* e, CTask* tactiv
                 }
             }
             if (!m_Ped->bWantedByPolice || !e->m_AimedBy->IsCop()) {
-                return new CTaskComplexFleeEntity{e->m_AimedBy, false};
+                return new CTaskComplexSmartFleeEntity{e->m_AimedBy, false, fSafeDistance}; // 0x4C2CB8 / 0x4C2B94 (0x40 bytes): SmartFleeEntity, not FleeEntity
             }
             return new CTaskComplexFleeAnyMeans{e->m_AimedBy, true, fSafeDistance};
         }
@@ -1437,7 +1455,7 @@ void CEventHandler::ComputeGunAimedAtResponse(CEventGunAimedAt* e, CTask* tactiv
             return new CTaskComplexFleeEntity{e->m_AimedBy, false};
         case TASK_COMPLEX_SMART_FLEE_ENTITY: { // 0x4C2B5C
             if (!m_Ped->bWantedByPolice || !e->m_AimedBy->IsCop()) {
-                return new CTaskComplexFleeEntity{e->m_AimedBy, false};
+                return new CTaskComplexSmartFleeEntity{e->m_AimedBy, false, fSafeDistance}; // 0x4C2CB8 / 0x4C2B94 (0x40 bytes): SmartFleeEntity, not FleeEntity
             }
             return new CTaskComplexFleeAnyMeans{e->m_AimedBy, true, fSafeDistance};
         }
@@ -3450,23 +3468,20 @@ void CEventHandler::ComputeVehiclePotentialCollisionResponse(CEventPotentialGetR
 
 // 0x4B96D0
 void CEventHandler::ComputeVehiclePotentialPassiveCollisionResponse(CEventPotentialWalkIntoVehicle* e, CTask* tactive, CTask* tsimplest) {
-    m_EventResponseTask = [&]() -> CTask* {
-        if (!e->m_vehicle || !m_Ped->bInVehicle || !CTask::IsGoToTask(tsimplest)) {
-            return nullptr;
-        }
-        const auto tGoTo = static_cast<CTaskSimpleGoTo*>(tsimplest);
-        if (tGoTo->m_moveState == PEDMOVE_STILL) {
-            return nullptr;
-        }
-        return new CTaskComplexWalkRoundCar{
-            m_Ped->GetGroup()
-            ? PEDMOVE_RUN
-            : (eMoveState)e->m_moveState,
-            static_cast<CTaskSimpleGoTo*>(tsimplest)->m_vecTargetPoint,
-            e->m_vehicle,
-            m_Ped->GetIntelligence()->IsPedGoingForCarDoor(),
-        };
-    }();
+    // 0x4B96EF..0x4B972C: every early exit leaves m_EventResponseTask untouched; the ped must NOT be in a vehicle (test ch,1 / jne 0x4B978D),
+    // tsimplest is null-checked before IsGoToTask, and the skipped move state is the EVENT's (e->m_moveState == PEDMOVE_STILL, cmp esi,1), not the go-to task's
+    if (!e->m_vehicle || m_Ped->bInVehicle || !tsimplest || !CTask::IsGoToTask(tsimplest) || e->m_moveState == PEDMOVE_STILL) {
+        return;
+    }
+    const auto tGoTo = static_cast<CTaskSimpleGoTo*>(tsimplest);
+    m_EventResponseTask = new CTaskComplexWalkRoundCar{
+        m_Ped->GetGroup()
+        ? PEDMOVE_RUN
+        : (eMoveState)e->m_moveState,
+        tGoTo->m_vecTargetPoint,
+        e->m_vehicle,
+        m_Ped->GetIntelligence()->IsPedGoingForCarDoor(),
+    };
 }
 
 // 0x4B9F80

@@ -2,6 +2,7 @@
 // called from AudioCmd (audio_cmd.cpp) which InjRunCmd already calls under NOTSA_PORTABLE. Portable-only file; runs on the main thread like every injector command.
 //   cmd:poolstat          logs used / capacity of the entity, node and ped/vehicle/object pools ([play] line)
 //   cmd:savemenu          what the script command ACTIVATE_SAVE_MENU does (the main loop then opens the save-game menu): m_bIsSaveDone = true, player velocity cleared
+//   cmd:lighting:old|new     R-12: gl3 lighting model at run time
 //   cmd:interior:X:Y:Z:AREA  R-12: the player into an interior (CGame::currArea + area code + streaming)
 //   cmd:roadveh:MODEL     the player is put 3 m beside the closest vehicle path node, a car of MODEL (script-created, no driver) stands on the node pointing along its first link
 //   cmd:pickup:WEAPON:AMMO a one-off weapon pickup 2 m in front of the player (walk onto it to collect it)
@@ -18,6 +19,8 @@
 #include "Pools/Pools.h"
 #include "World.h"
 #include "portable/render/pipelines_gl3.h"
+
+namespace rw::gl3 { extern rw::int32 lightingModel; } // librw gl3 (vendor/librw/src/gl/gl3device.cpp): 1 = D3D9 FF lighting order (R-12), 0 = librw's original
 
 namespace notsa::portable {
 template<typename PoolT>
@@ -81,6 +84,11 @@ bool PlayCmd(const char* name, const std::string& args) {
             const auto ref = CPickups::GenerateNewOne_WeaponType(pos, (eWeaponType)w, PICKUP_ONCE, (uint32)n, false, nullptr);
             NOTSA_LOG_INFO("[play] pickup weapon {} ammo {} at ({:.1f},{:.1f},{:.1f}) ref {}", w, n, pos.x, pos.y, pos.z, (int)ref.index);
         }
+        return true;
+    }
+    if (!std::strcmp(name, "lighting")) { // R-12: cmd:lighting:old|new  switches the gl3 vertex-shader lighting model at run time (A/B frames of one scene)
+        rw::gl3::lightingModel = args.find("old") != std::string::npos ? 0 : 1;
+        NOTSA_LOG_INFO("[play] lighting model = {}", (int)rw::gl3::lightingModel);
         return true;
     }
     if (!std::strcmp(name, "interior")) { // R-12: cmd:interior:X:Y:Z:AREA  puts the player into an interior (what SET_AREA_VISIBLE + SET_CHAR_AREA_VISIBLE + SET_CHAR_COORDINATES do)

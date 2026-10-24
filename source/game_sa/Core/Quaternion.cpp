@@ -68,7 +68,7 @@ void CQuaternion::Get(float* x, float* y, float* z) { // 0x59C160
     const auto StoreWrapped = [](float* out, double angle) {
         *out = (float)angle;
         if (angle < 0.0) {
-            *out = (float)(angle + TWO_PI);
+            *out = (float)(X87R(angle + TWO_PI));
         }
     };
 
@@ -79,17 +79,17 @@ void CQuaternion::Get(float* x, float* y, float* z) { // 0x59C160
     StoreWrapped(z, x87::atan2(ry, uy));
     const double sz = x87::sin((double)*z), cz = x87::cos((double)*z); // Re-read from memory (float)
 
-    StoreWrapped(x, x87::atan2(-ay, sz * ry + cz * uy));
+    StoreWrapped(x, x87::atan2(-ay, X87R(sz * ry) + X87R(cz * uy)));
 
     // = -(rz * cz - uz * sz), = rx * cz - ux * sz
-    StoreWrapped(y, x87::atan2(-(rz * cz - uz * sz), rx * cz - ux * sz));
+    StoreWrapped(y, x87::atan2(-(X87R(rz * cz) - X87R(uz * sz)), X87R(rx * cz) - X87R(ux * sz)));
 }
 
 // Quat to axis & angle
 void CQuaternion::Get(RwV3d* axis, float* angle) { // 0x59C230
     const double theta = x87::acos((x87d)w + (x87d)w);
     *angle = (float)theta;
-    const double k = 1.0 / x87::sin(theta);
+    const x87d k = X87R(1.0 / x87::sin(theta));
     axis->x = (float)(k * x);
     axis->y = (float)(k * y);
     axis->z = (float)(k * z);
@@ -239,24 +239,24 @@ void CQuaternion::Set(float ex, float ey, float ez) { // 0x59C530
     const float  s2 = (float)x87::sin(a2);
     const float  s3 = (float)x87::sin(a3);
 
-    const float P = (float)(ca2 * ca1);
+    const float P = (float)(X87R(ca2 * ca1));
     const float Q = s2 * s1; // product of two floats, spilled to float
-    const float R = (float)(s1 * ca2);
-    const double S = ca1 * s2;
+    const float R = (float)(X87R(s1 * ca2));
+    const x87d S = X87R(ca1 * s2);
 
     w = (float)((x87d)Q * s3 + (x87d)P * c3);
     x = (float)((x87d)P * s3 - (x87d)Q * c3);
-    y = (float)((double)s3 * S + (double)R * c3);
-    z = (float)(S * c3 - (double)R * s3);
+    y = (float)((x87d)s3 * S + (x87d)R * c3);
+    z = (float)(S * c3 - (x87d)R * s3);
 }
 
 // Quat from axis & angle
 void CQuaternion::Set(RwV3d* axis, float angle) { // 0x59C600
     const x87d half = (x87d)angle * 0.5f;
     const double s = x87::sin(half);
-    x = (float)(s * axis->x);
-    y = (float)(s * axis->y);
-    z = (float)(s * axis->z);
+    x = (float)(X87R(s * axis->x));
+    y = (float)(X87R(s * axis->y));
+    z = (float)(X87R(s * axis->z));
     w = (float)x87::cos(half);
 }
 

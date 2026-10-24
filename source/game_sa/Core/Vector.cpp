@@ -53,13 +53,13 @@ CVector CVector::Random(float min, float max) {
 // The original squares, adds and takes the root in extended precision (x87, term order ((x*x + y*y) + z*z)) and only the caller rounds to float
 float CVector::Magnitude() const
 {
-    return (float)std::sqrt(((double)x * x + (double)y * y) + (double)z * z);
+    return (float)std::sqrt(((x87d)x * x + (x87d)y * y) + (x87d)z * z);
 }
 
 // 0x406D50 (see Magnitude for the evaluation)
 float CVector::Magnitude2D() const
 {
-    return (float)std::sqrt((double)x * x + (double)y * y);
+    return (float)std::sqrt((x87d)x * x + (x87d)y * y);
 }
 
 // 0x59C910
@@ -68,14 +68,14 @@ float CVector::Magnitude2D() const
 //       components are only rounded when stored => `double` intermediates, fixed term order (x, y, z)
 void CVector::Normalise()
 {
-    const double sqMag = (double)x * x + (double)y * y + (double)z * z;
+    const x87d sqMag = (x87d)x * x + (x87d)y * y + (x87d)z * z;
     if (sqMag <= 0.0) // NaN is NOT handled here (goes on to the division)
     {
         x = 1.0F;
         return;
     }
 
-    const double recip = 1.0 / std::sqrt(sqMag);
+    const x87d recip = (x87d)1.0 / std::sqrt(sqMag);
     x = (float)(x * recip);
     y = (float)(y * recip);
     z = (float)(z * recip);
@@ -85,19 +85,19 @@ void CVector::Normalise()
 // Normalises a vector and returns length (see `Normalise` for the precision notes)
 float CVector::NormaliseAndMag()
 {
-    const double sqMag = (double)x * x + (double)y * y + (double)z * z;
+    const x87d sqMag = (x87d)x * x + (x87d)y * y + (x87d)z * z;
     if (sqMag <= 0.0)
     {
         x = 1.0F;
         return 1.0F;
     }
 
-    const double recip = 1.0 / std::sqrt(sqMag);
+    const x87d recip = (x87d)1.0 / std::sqrt(sqMag);
     x = (float)(x * recip);
     y = (float)(y * recip);
     z = (float)(z * recip);
 
-    return (float)(1.0 / recip);
+    return (float)((x87d)1.0 / recip);
 }
 
 auto CVector::Dot(const CVector& o) const -> float{

@@ -788,7 +788,7 @@ void CMatrix::Reorthogonalise()
     // 0x59B6A0: fully inlined x87 code. Squared lengths are summed z, y, x on the x87 stack; the reciprocal 1 / sqrt(..) is stored as a float
     // (the x component is scaled with the unrounded one), cy / cz / nz / my / mz / the cross products are spilled to floats.
     const auto NormaliseInline = [](float x, float y, float z) {
-        const double recip = 1.0 / std::sqrt((double)z * z + (double)y * y + (double)x * x);
+        const x87d recip = (x87d)1.0 / std::sqrt((x87d)z * z + (x87d)y * y + (x87d)x * x);
         const float  recipF = (float)recip;
         return CVector{ (float)(x * recip), (float)(recipF * y), (float)(recipF * z) };
     };

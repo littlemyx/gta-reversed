@@ -1171,10 +1171,10 @@ RpMaterial* CVehicleModelInfo::SetEnvMapCoeffCB(RpMaterial* material, void* data
     // 0x4C88B0: fild + (2^32 when negative) = the data as an unsigned int, times the float constant 0.001f (0x858CDC) - not a division by 1000 (differs in the last bit)
     // (PC=24: the add of 2^32 to a negative int is rounded to 24 bits before the multiply; reproduced below)
     const auto sCoeff = (int32)(uintptr_t)data;
-    double dCoeff = static_cast<double>(sCoeff);
+    x87d dCoeff = static_cast<x87d>(sCoeff);
     if (sCoeff < 0)
-        dCoeff = static_cast<double>(static_cast<float>(dCoeff + 4294967296.0));
-    float fCoeff = static_cast<float>(dCoeff * static_cast<double>(0.001F));
+        dCoeff = static_cast<x87d>(static_cast<float>(dCoeff + (x87d)4294967296.0));
+    float fCoeff = static_cast<float>(dCoeff * static_cast<x87d>(0.001F));
     RpMatFXMaterialSetEnvMapCoefficient(material, fCoeff);
     return material;
 }

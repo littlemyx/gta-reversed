@@ -17,8 +17,8 @@
 // Helpers that reproduce the x87 evaluation (extended precision intermediates / float spills) of the exe
 namespace AnimBlendNodeX87 {
 // Blend amount: `partial ? amount : amount * weight`, product kept unrounded (extended)
-inline double BlendAmountExt(const CAnimBlendAssociation* assoc, float weight) {
-    return assoc->IsPartial() ? (double)assoc->m_BlendAmount : (double)assoc->m_BlendAmount * (double)weight;
+inline x87d BlendAmountExt(const CAnimBlendAssociation* assoc, float weight) {
+    return assoc->IsPartial() ? (x87d)assoc->m_BlendAmount : (x87d)assoc->m_BlendAmount * (x87d)weight;
 }
 
 inline int16 CompressedDeltaTimeRaw(const KeyFrameCompressed* kf) {
@@ -26,8 +26,8 @@ inline int16 CompressedDeltaTimeRaw(const KeyFrameCompressed* kf) {
 }
 
 // `fild; fmul [0x859044]` - NOT a division by 60 (the constant is the float 1/60 = 0x3C888889)
-inline double CompressedDeltaTime(const KeyFrameCompressed* kf) {
-    return (double)CompressedDeltaTimeRaw(kf) * (double)std::bit_cast<float>(0x3C888889u);
+inline x87d CompressedDeltaTime(const KeyFrameCompressed* kf) {
+    return (x87d)CompressedDeltaTimeRaw(kf) * (x87d)std::bit_cast<float>(0x3C888889u);
 }
 
 // from + (to - from) * t, with the exe's spills:
@@ -35,19 +35,19 @@ inline double CompressedDeltaTime(const KeyFrameCompressed* kf) {
 // y: (to.y - from.y) in extended, `* t` rounded to float only if `RoundY` (0x4CFC50), + from.y
 // z: (to.z - from.z) rounded to float, `* t` in extended, + from.z
 template<bool RoundY>
-inline CVector LerpTranslation(const CVector& from, const CVector& to, double t) {
-    const double dx = (double)to.x - (double)from.x;
-    const double dy = (double)to.y - (double)from.y;
-    const float  dz = (float)((double)to.z - (double)from.z);
+inline CVector LerpTranslation(const CVector& from, const CVector& to, x87d t) {
+    const x87d dx = (x87d)to.x - (x87d)from.x;
+    const x87d dy = (x87d)to.y - (x87d)from.y;
+    const float  dz = (float)((x87d)to.z - (x87d)from.z);
 
     const float  dxt = (float)(dx * t);
-    const double dyt = RoundY ? (double)(float)(dy * t) : dy * t;
-    const double dzt = t * (double)dz;
+    const x87d dyt = RoundY ? (x87d)(float)(dy * t) : dy * t;
+    const x87d dzt = t * (x87d)dz;
 
     return {
-        (float)((double)dxt + (double)from.x),
-        (float)(dyt + (double)from.y),
-        (float)(dzt + (double)from.z),
+        (float)((x87d)dxt + (x87d)from.x),
+        (float)(dyt + (x87d)from.y),
+        (float)(dzt + (x87d)from.z),
     };
 }
 } // namespace AnimBlendNodeX87
@@ -116,17 +116,17 @@ public:
     //! @brief Inverse progress of current frame (Eg.: How much is left of this frame)
     //! @details The exe keeps this on the x87 stack (extended precision), callers that spill it round to float themselves.
     template<bool IsCompressed>
-    NOTSA_FORCEINLINE double GetTimeRemainingProgress() const {
+    NOTSA_FORCEINLINE x87d GetTimeRemainingProgress() const {
         const auto kf = m_Seq->GetKeyFrame<IsCompressed>(m_KFCurr);
         if constexpr (IsCompressed) {
             const auto dt = AnimBlendNodeX87::CompressedDeltaTime(kf);
             return AnimBlendNodeX87::CompressedDeltaTimeRaw(kf) == 0
-                ? 0.0
-                : (dt - (double)m_KFRemainingTime) / dt;
+                ? (x87d)0.0
+                : (dt - (x87d)m_KFRemainingTime) / dt;
         } else {
             return kf->DeltaTime == 0.0f // NaN goes to the division (`test ah, 0x44; jnp`)
-                ? 0.0
-                : ((double)kf->DeltaTime - (double)m_KFRemainingTime) / (double)kf->DeltaTime;
+                ? (x87d)0.0
+                : ((x87d)kf->DeltaTime - (x87d)m_KFRemainingTime) / (x87d)kf->DeltaTime;
         }
     }
 
@@ -136,7 +136,7 @@ public:
         trans = CVector{0.0f, 0.0f, 0.0f};
 
         // Uncompressed: the blend amount stays on the x87 stack unrounded, compressed: only the copy that is multiplied in is rounded to float
-        const double blend = AnimBlendNodeX87::BlendAmountExt(m_BlendAssoc, weight);
+        const x87d blend = AnimBlendNodeX87::BlendAmountExt(m_BlendAssoc, weight);
         if (!(blend > 0.0)) { // `test ah, 0x41; jne` => return if !(blend > 0) (NaN returns)
             return;
         }
@@ -149,14 +149,14 @@ public:
                    kfB = m_Seq->GetKeyFrame<IsCompressed>(m_KFPrev);
         if constexpr (IsCompressed) {
             const float t = (float)GetTimeRemainingProgress<true>(); // Spilled
-            trans = AnimBlendNodeX87::LerpTranslation<false>(kfB->Trans, kfA->Trans, (double)t);
+            trans = AnimBlendNodeX87::LerpTranslation<false>(kfB->Trans, kfA->Trans, (x87d)t);
             trans *= (float)blend;
         } else {
             trans = AnimBlendNodeX87::LerpTranslation<true>(kfB->Trans, kfA->Trans, GetTimeRemainingProgress<false>());
             trans = CVector{
-                (float)((double)trans.x * blend),
-                (float)((double)trans.y * blend),
-                (float)((double)trans.z * blend),
+                (float)((x87d)trans.x * blend),
+                (float)((x87d)trans.y * blend),
+                (float)((x87d)trans.z * blend),
             };
         }
     }
@@ -166,7 +166,7 @@ public:
     NOTSA_FORCEINLINE void I_GetEndTranslation(CVector& trans, float weight) {
         trans = CVector{ 0.0f, 0.0f, 0.0f };
 
-        const double blend = AnimBlendNodeX87::BlendAmountExt(m_BlendAssoc, weight);
+        const x87d blend = AnimBlendNodeX87::BlendAmountExt(m_BlendAssoc, weight);
         if (!(blend > 0.0)) { // `test ah, 0x41; jne` => return if !(blend > 0) (NaN returns)
             return;
         }
@@ -219,7 +219,7 @@ public:
             const auto kf = m_Seq->GetKeyFrame<IsCompressed>(m_KFCurr);
             if constexpr (IsCompressed) {
                 // `fild; fmul; fadd [remaining]; fstp` => single rounding
-                m_KFRemainingTime = (float)(AnimBlendNodeX87::CompressedDeltaTime(kf) + (double)m_KFRemainingTime);
+                m_KFRemainingTime = (float)(AnimBlendNodeX87::CompressedDeltaTime(kf) + (x87d)m_KFRemainingTime);
             } else {
                 m_KFRemainingTime += kf->DeltaTime;
             }
@@ -256,7 +256,7 @@ public:
         }
 
         // Uncompressed: spilled to float, then compared. Compressed: the unrounded product is compared, the rounded copy is used.
-        const double blendExt = AnimBlendNodeX87::BlendAmountExt(m_BlendAssoc, weight);
+        const x87d blendExt = AnimBlendNodeX87::BlendAmountExt(m_BlendAssoc, weight);
         const float  blend    = (float)blendExt;
         if (IsCompressed ? blendExt > 0.0 : blend > 0.0f) {
             const auto kfA = m_Seq->GetKeyFrame<IsCompressed>(m_KFCurr);
@@ -270,7 +270,7 @@ public:
 
             // Update translation
             if (m_Seq->m_bHasTranslation) {
-                trans = AnimBlendNodeX87::LerpTranslation<false>(kfB->Trans, kfA->Trans, (double)t);
+                trans = AnimBlendNodeX87::LerpTranslation<false>(kfB->Trans, kfA->Trans, (x87d)t);
                 trans *= blend;
             }
 

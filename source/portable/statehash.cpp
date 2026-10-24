@@ -29,6 +29,8 @@
 #include "Streaming.h"
 #include "Weather.h"
 #include "Clock.h"
+#include "AnimBlendAssociation.h"
+#include "Plugins/RpAnimBlendPlugin/RpAnimBlend.h"
 
 // RR: every C++ `new` returns zeroed memory too (the default operator delete is free()). Only the two plain forms are replaced; aligned / nothrow forms keep the library versions.
 // (MAC-RR2: must not call notsa::rr::Active(): its Cfg() static holds std::strings, whose first allocation lands back here -> __cxa_guard_acquire "recursive initialization"
@@ -439,6 +441,22 @@ void OnFrame() {
     }
 #endif
     if (Active() && g_idleFrames % 250 == 0) { NOTSA_LOG_INFO("rr: idle frame {} (virtual {} ms, game frame {}, recording {})", g_idleFrames, VirtualMs(), CTimer::GetFrameCounter(), g_recording); }
+    if (g_recording && g_f) { // NOTSA_RR_LOG_PLAYER=A-B (recorded frames): the player's anim-driven movement state + every animation association, bit patterns (diff the Win32 and the native log)
+        static const std::pair<uint32_t, uint32_t> pr = [] { unsigned a = 1, b = 0; if (const char* e = std::getenv("NOTSA_RR_LOG_PLAYER")) { std::sscanf(e, "%u-%u", &a, &b); if (!b) b = a; } else { a = 1; b = 0; } return std::pair<uint32_t, uint32_t>{ a, b }; }();
+        if (g_frame >= pr.first && g_frame <= pr.second) {
+            if (auto* pl = FindPlayerPed()) {
+                auto B = [](float f) { return std::bit_cast<uint32_t>(f); };
+                std::string l = std::format("rrpl {} shl={:08x},{:08x} sh={:08x},{:08x} mv={:08x},{:08x},{:08x} rot={:08x}", g_frame, B(pl->m_vecAnimMovingShiftLocal.x), B(pl->m_vecAnimMovingShiftLocal.y), B(pl->m_vecAnimMovingShift.x), B(pl->m_vecAnimMovingShift.y),
+                    B(pl->m_vecMoveSpeed.x), B(pl->m_vecMoveSpeed.y), B(pl->m_vecMoveSpeed.z), B(pl->m_fCurrentRotation));
+                if (pl->GetRpClump()) {
+                    for (auto* a = RpAnimBlendClumpGetFirstAssociation(pl->GetRpClump()); a; a = RpAnimBlendGetNextAssociation(a)) {
+                        l += std::format(" [id{} t={:08x} bl={:08x} bd={:08x} sp={:08x} ts={:08x} fl={:x}]", (int)a->m_AnimId, B(a->m_CurrentTime), B(a->m_BlendAmount), B(a->m_BlendDelta), B(a->m_Speed), B(a->m_TimeStep), (unsigned)a->m_Flags);
+                    }
+                }
+                NOTSA_LOG_INFO("{}", l);
+            }
+        }
+    }
     if (!g_recording || !g_f) return;
     Record();
     g_frame++;

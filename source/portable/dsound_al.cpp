@@ -23,6 +23,9 @@
 // Debug knobs (environment): NOTSA_AUDIO=device|loopback|null (default device, falls back to null), NOTSA_AUDIO_WAV=<file> (everything that was output as 16-bit stereo WAV),
 // NOTSA_AUDIO_RATE=<hz> (loopback / null mix rate, default 48000), NOTSA_AUDIO_DUMP=<dir> (the raw bytes of the first 32 buffers that are played).
 #ifdef NOTSA_PORTABLE
+#ifdef NOTSA_STATEHASH
+#include "statehash.h"
+#endif
 #include <AL/al.h>
 #include <AL/alc.h>
 #include <AL/alext.h>
@@ -780,8 +783,29 @@ std::uint32_t MixRate(IDirectSound8* dev) {
 }
 } // namespace dsal
 
+#ifdef NOTSA_STATEHASH
+namespace dsal {
+IDirectSound8* g_rrDev = nullptr;
+void RrPump(std::uint32_t ms) { // one game frame of audio time: the play / write cursors move with the virtual clock, not with the steady clock
+    if (!g_rrDev) { return; }
+    static std::vector<std::int16_t> scratch;
+    const std::size_t frames = ((std::size_t)ms * MixRate(g_rrDev) + 500) / 1000;
+    scratch.resize(frames * 2);
+    Render(g_rrDev, scratch.data(), frames);
+}
+} // namespace dsal
+#endif
+
 HRESULT CreatePortableDirectSound(IDirectSound8** out) {
-    return dsal::Create(dsal::Options{}, out);
+    dsal::Options opt{};
+#ifdef NOTSA_STATEHASH
+    if (notsa::rr::Active()) { opt.output = dsal::Output::Null; opt.manual = true; } // RR: a mixer without a thread and a clock: it advances only through RrPump
+#endif
+    const HRESULT hr = dsal::Create(opt, out);
+#ifdef NOTSA_STATEHASH
+    if (SUCCEEDED(hr) && notsa::rr::Active()) { dsal::g_rrDev = *out; }
+#endif
+    return hr;
 }
 } // namespace notsa::portable
 #endif

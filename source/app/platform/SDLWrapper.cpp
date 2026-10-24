@@ -73,9 +73,19 @@ namespace notsa::portable { bool AudioCmd(const char* name, const std::string& a
 #include "portable/app_pad.h"    // MAC-W2: gamepad feed + injector commands padattach / padbtn / padaxis / padstat / menustat
 #include "portable/app_window.h" // MAC-W2: HiDPI, mouse mode, present pacing; injector commands presentstat / windowstat / fakeocclude
 #endif
+#ifdef NOTSA_STATEHASH
+#include "portable/statehash.h" // RR-1: virtual script clock + cmd:rr_*
+#endif
 struct NotsaInjectMissionInfo { int32 offset; uint8 bytes[16]; };
 bool NotsaInjectStartMission(int32 missionId, NotsaInjectMissionInfo* info); // toolsmenu/DebugModules/Script/MissionDebugModule.cpp
 namespace {
+#ifdef NOTSA_STATEHASH
+// the script clock source: wall clock, or (NOTSA_RR=1) the frame-stepped virtual clock of the state-hash harness, so `wait:N` / `until:` count game frames, not host time
+uint64_t InjNowMs() { return notsa::rr::Active() ? notsa::rr::VirtualMs() : (uint64_t)GetTickCount64(); }
+#define NOTSA_INJ_NOW_MS() InjNowMs()
+#else
+#define NOTSA_INJ_NOW_MS() GetTickCount64()
+#endif
 struct InjEv { uint64_t t; bool down; SDL_Keycode key; int mx = -1, my = -1; int vmode = -1; int vw = 0, vh = 0; int aa = -1; int mission = -1; std::string mark; std::string probe; std::string cmd; std::string until; uint64_t maxMs = 0; std::string skipIf, label; size_t skipTo = 0; };
 std::vector<InjEv> s_InjEvents;
 size_t             s_InjNext = 0;
@@ -242,7 +252,7 @@ void InjInit() {
             if (s_InjEvents[i].skipIf.empty() && s_InjEvents[i].label == ev.label) { ev.skipTo = i; break; }
         }
     }
-    s_InjStart = GetTickCount64();
+    s_InjStart = NOTSA_INJ_NOW_MS();
     NOTSA_INJ_LOG("input injector: %u events", (unsigned)s_InjEvents.size());
 }
 
@@ -377,6 +387,9 @@ static void InjRunCmd(const std::string& c) {
 #ifdef NOTSA_PORTABLE
     if (::notsa::portable::AudioCmd(name, args)) { return; } // MAC-W3: cmd:radio:ID / cmd:track:ID / cmd:audiostat (audio runs on the native Mac)
     if (::notsa::portable::InputCmd(name, args) || ::notsa::portable::WindowCmd(name, args)) { return; } // MAC-W2
+#endif
+#ifdef NOTSA_STATEHASH
+    if (notsa::rr::Cmd(name, args)) { return; } // RR-1: cmd:rr_start[:SEED] / rr_stop / rr_stat
 #endif
     if (NotsaGrCmd(name, args)) { return; } // gameplay regression suite commands (GameplayRegress.cpp: snap, spawncop, spawnveh, shootlast, shootdrv, hitplayer, time, quit)
     NOTSA_INJ_LOG("[cmd] %s", c.c_str());
@@ -534,7 +547,7 @@ void InjPump() {
     ProbeDump();
     NotsaGrTick();
 #endif
-    const uint64_t real = GetTickCount64() - s_InjStart;
+    const uint64_t real = NOTSA_INJ_NOW_MS() - s_InjStart;
     // script clock: frozen at the barrier's time while it holds, shifted by the total hold time afterwards
     const auto clock = [&]() -> uint64_t { return s_InjHolding ? s_InjEvents[s_InjNext].t : (uint64_t)((int64_t)real - s_InjShift); };
     while (s_InjNext < s_InjEvents.size() && s_InjEvents[s_InjNext].t <= clock()) {

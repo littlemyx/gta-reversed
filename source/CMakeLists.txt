@@ -37,6 +37,12 @@ option(${RE_PROJECT}_INPUT_INJECT "Enable the NOTSA_STANDALONE_INPUT key injecto
 if (${RE_PROJECT}_INPUT_INJECT)
     add_compile_definitions(NOTSA_INPUT_INJECT) # also #undefs TRACY_ENABLE in StdInc.h (no profiler server -> events queue forever)
 endif()
+# RR-1 (.notes/RR_PLAN.md): deterministic record/replay state-hash harness (per-frame hashes of player / peds / vehicles / RNG / timer, trace file, virtual clock).
+# OFF by default => every TU is byte-identical to a build without it. The Windows reference host builds StandaloneRelease with -DGTASA_STATEHASH=ON to produce traces.
+option(${RE_PROJECT}_STATEHASH "Compile the NOTSA_STATEHASH deterministic state-hash harness hooks" OFF)
+if (${RE_PROJECT}_STATEHASH)
+    add_compile_definitions(NOTSA_STATEHASH)
+endif()
 if (${RE_PROJECT}_STANDALONE_DUMP_HOOKS_ONLY)
     if (NOT ${RE_PROJECT}_STANDALONE)
         message(FATAL_ERROR "${RE_PROJECT}_STANDALONE_DUMP_HOOKS_ONLY requires ${RE_PROJECT}_STANDALONE=ON")

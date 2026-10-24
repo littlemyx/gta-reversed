@@ -17,6 +17,9 @@
 #include "oswrapper.h"
 #include "AEBankLoader.h"
 #include "path_resolve.h"
+#ifdef NOTSA_STATEHASH
+#include "statehash.h"
+#endif
 
 NOTSA_GLOBAL(gStreamFileHandles, 0x8E4010, (HANDLE[MAX_CD_STREAM_HANDLES]), {});
 NOTSA_GLOBAL(gCdImageNames, 0x8E4098, (char[MAX_CD_STREAM_HANDLES][MAX_CD_STREAM_IMAGE_NAME_SIZE]), {});
@@ -38,6 +41,31 @@ std::atomic<bool> s_shutdown{false};
 struct CdStreamThreadExit {}; // thrown by CdStreamThread (declared [[noreturn]]) to leave the OS thread routine normally: pthread_exit would skip the thread gate's `finished` signal
 
 int FdOf(HANDLE h) { return fileno((FILE*)h); }
+
+// the read of one request (shared by the streaming thread and, in RR mode, by CdStreamRead itself)
+void DoRead(CdStream& stream) {
+    if (stream.status != eCdStreamStatus::READING_SUCCESS) {
+        return;
+    }
+    auto           remaining = (size_t)stream.nSectorsToRead * STREAMING_SECTOR_SIZE;
+    off_t          offset    = (off_t)stream.nSectorOffset * STREAMING_SECTOR_SIZE;
+    auto*          dst       = (uint8*)stream.lpBuffer;
+    const int      fd        = stream.hFile ? FdOf(stream.hFile) : -1;
+    while (remaining) {
+        const auto n = fd >= 0 ? ::pread(fd, dst, remaining, offset) : -1;
+        if (n < 0) {
+            if (errno == EINTR)
+                continue;
+            stream.status = eCdStreamStatus::READING_FAILURE;
+            break;
+        }
+        if (n == 0) // end of file: ReadFile reports success with fewer bytes
+            break;
+        dst += n;
+        offset += n;
+        remaining -= (size_t)n;
+    }
+}
 } // namespace
 
 void InjectCdStreamHooks() {} // no hook registry in the portable build
@@ -118,6 +146,13 @@ bool CdStreamRead(int32 streamId, void* lpBuffer, CdStreamPos pos, int32 sectorC
     stream.nSectorsToRead = sectorCount;
     stream.lpBuffer = lpBuffer;
     stream.bLocked = false;
+#ifdef NOTSA_STATEHASH
+    if (notsa::rr::Active()) { // RR: synchronous streaming - the request completes inside this call, so when a model is "loaded" is a function of the game's own calls, not of thread timing
+        DoRead(stream);
+        stream.nSectorsToRead = 0;
+        return true;
+    }
+#endif
     AddToQueue(&gStreamQueue, streamId);
     if (!OS_SemaphorePost(gStreamSemaphore))
         NOTSA_LOG_DEBUG("Signal Sema Error");
@@ -141,26 +176,7 @@ bool CdStreamRead(int32 streamId, void* lpBuffer, CdStreamPos pos, int32 sectorC
         const int32 streamId = GetFirstInQueue(&gStreamQueue);
         CdStream& stream = gCdStreams[streamId];
         stream.bInUse = true;
-        if (stream.status == eCdStreamStatus::READING_SUCCESS) {
-            auto           remaining = (size_t)stream.nSectorsToRead * STREAMING_SECTOR_SIZE;
-            off_t          offset    = (off_t)stream.nSectorOffset * STREAMING_SECTOR_SIZE;
-            auto*          dst       = (uint8*)stream.lpBuffer;
-            const int      fd        = stream.hFile ? FdOf(stream.hFile) : -1;
-            while (remaining) {
-                const auto n = fd >= 0 ? ::pread(fd, dst, remaining, offset) : -1;
-                if (n < 0) {
-                    if (errno == EINTR)
-                        continue;
-                    stream.status = eCdStreamStatus::READING_FAILURE;
-                    break;
-                }
-                if (n == 0) // end of file: ReadFile reports success with fewer bytes
-                    break;
-                dst += n;
-                offset += n;
-                remaining -= (size_t)n;
-            }
-        }
+        DoRead(stream);
 
         RemoveFirstInQueue(&gStreamQueue);
         {

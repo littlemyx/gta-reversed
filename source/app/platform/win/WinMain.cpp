@@ -10,6 +10,9 @@
 #endif
 
 #include "LoadingScreen.h"
+#ifdef NOTSA_STATEHASH
+#include "portable/statehash.h"
+#endif
 #include "ControllerConfigManager.h"
 #include "Gamma.h"
 
@@ -359,6 +362,12 @@ bool ProcessGameLogic(INT nCmdShow) {
 
         auto v9_1 = 1000.0f / (float)RsGlobal.frameLimit;
         auto v9_2 = (float)CTimer::GetCurrentTimeInCycles() / (float)CTimer::GetCyclesPerMillisecond();
+#ifdef NOTSA_STATEHASH
+        if (notsa::rr::Active()) { // RR: the frame-stepped virtual clock only moves inside Idle, so the frame-limiter wait below would never end; every iteration is a frame
+            RsEventHandler(rsIDLE, (void*)true);
+            break;
+        }
+#endif
         if (!FrontEndMenuManager.m_bPrefsFrameLimiter && CReplay::Mode != eReplayMode::MODE_PLAYBACK && !AudioEngine.IsBeatInfoPresent() || v9_1 < v9_2) {
             RsEventHandler(rsIDLE, (void*)true);
         }

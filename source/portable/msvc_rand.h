@@ -52,8 +52,16 @@ inline uint32_t& HoldRand() {
     return holdrand;
 }
 
+#ifdef NOTSA_STATEHASH
+} // namespace notsa::msvc_crt
+namespace notsa::rr { void RandHook(uint32_t stateBefore); } // statehash.cpp (NOINLINE: its return address identifies the call site of rand())
+namespace notsa::msvc_crt {
+#endif
 inline int Rand() {
     auto& h = HoldRand();
+#ifdef NOTSA_STATEHASH
+    ::notsa::rr::RandHook(h);
+#endif
     h       = RandStep(h);
     return (int)((h >> 16) & 0x7FFF);
 }

@@ -207,7 +207,14 @@ namespace notsa::standalone::Fixups { void UnreachableHit(const char* fn, const 
 //! x86: the address itself, code identical to `(uint32)p`. 64-bit: its low 32 bits - the keys are only compared / hashed, never converted back
 //! to a pointer; objects of one pool differ in the low bits (pools are far smaller than 4 GiB). A macro on purpose: an (even always-inlined) function
 //! template would still be emitted as an unreferenced COMDAT by cl and change the object file of every user (wine A/B, P-4c).
+#ifdef NOTSA_STATEHASH
+// RR-1 (.notes/RR_PLAN.md row 8): ASLR makes object addresses differ from run to run on every OS, and some of these keys seed the game's RNG (`srand(NOTSA_PTR_ID32(this) + days)`),
+// so the state-hash harness replaces them with a stable id (pool tag + slot index; see portable/statehash.cpp). Only defined with -DGTASA_STATEHASH=ON.
+namespace notsa::rr { uint32_t StableId(const void* p); }
+#define NOTSA_PTR_ID32(p) ::notsa::rr::StableId(p)
+#else
 #define NOTSA_PTR_ID32(p) static_cast<uint32>(reinterpret_cast<uintptr_t>(p))
+#endif
 
 /*!
 * @brief Used for static variable references

@@ -30,6 +30,10 @@ HRESULT Create(const Options& opt, IDirectSound8** out);
 // Mixes `frames` frames of interleaved signed 16-bit stereo into `out` (Loopback: through the OpenAL source and alcRenderSamplesSOFT). Returns the frames written.
 std::size_t Render(IDirectSound8* dev, std::int16_t* out, std::size_t frames);
 
+#ifdef NOTSA_STATEHASH
+void RrPump(std::uint32_t ms); // RR (NOTSA_RR=1): advance the manual-mode mixer by `ms` of audio time (called once per game frame by notsa::rr::AdvanceClock)
+#endif
+
 // ---- introspection ----
 bool          UsesOpenAL(IDirectSound8* dev);
 const char*   OutputName(IDirectSound8* dev); // "device" | "loopback" | "null"

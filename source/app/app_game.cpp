@@ -24,6 +24,9 @@
 #include "CarFXRenderer.h"
 
 #include "extensions/Configs/FastLoader.hpp"
+#ifdef NOTSA_STATEHASH
+#include "portable/statehash.h" // RR-1: deterministic state-hash harness (hook lines below are #ifdef NOTSA_STATEHASH)
+#endif
 
 void AppGameInjectHooks() {
     RH_ScopedCategory("App");
@@ -49,6 +52,9 @@ void AppGameInjectHooks() {
 // 0x5BF3B0
 void GameInit() {
     VERIFY(RwInitialize(nullptr));
+#ifdef NOTSA_STATEHASH
+    if (notsa::rr::Active()) { srand(notsa::rr::Seed()); return; } // RR: fixed seed, not the wall clock
+#endif
     srand(RsTimer());
 }
 
@@ -302,6 +308,10 @@ void Idle(void* param) {
     // so a wrap-around behaves exactly like the exe's. The two discarded calls at 0x53E923/0x53E928 have no side effects and are omitted.
     NOTSA_GLOBAL_LOCAL(g_LastTickTime, 0xB72CA8, (uint32), {});
     uint32 nowMs;
+#ifdef NOTSA_STATEHASH
+    notsa::rr::AdvanceClock(); // RR: one fixed virtual step (>= 14 ms) per frame: the lock below is satisfied by construction (on a frozen clock it would spin for ever, and a virtual clock must not advance inside a spin)
+    if (!notsa::rr::Active())
+#endif
     do {
         nowMs = CTimer::GetCurrentTimeInCycles() / CTimer::GetCyclesPerMillisecond();
     } while (nowMs - g_LastTickTime < 14);
@@ -313,6 +323,9 @@ void Idle(void* param) {
     CPointLights::NumLights = 0;
     CGame::Process();
     AudioEngine.Service();
+#ifdef NOTSA_STATEHASH
+    notsa::rr::OnFrame(); // RR: per-frame state hash (end of the simulation part)
+#endif
     SetLightsWithTimeOfDayColour(Scene.m_pRpWorld);
     if (!param) {
         return;
@@ -397,6 +410,9 @@ void Idle(void* param) {
 void FrontendIdle() {
     ZoneScoped;
 
+#ifdef NOTSA_STATEHASH
+    notsa::rr::AdvanceClock();
+#endif
     CDraw::CalculateAspectRatio();
     CTimer::Update();
     CSprite2d::SetRecipNearClip();

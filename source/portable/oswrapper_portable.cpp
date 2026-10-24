@@ -8,6 +8,9 @@
 //  * W-B1: thread priorities are accepted and ignored (std::thread has none; pthread priorities on macOS are not comparable with Win32's).
 //  * OS_TimeAccurate/OS_TimeMS keep the formulas of the Win32 version (counter / 1000, counter / frequency) on a 1 GHz steady clock.
 #include "StdInc.h"
+#ifdef NOTSA_STATEHASH
+#include "statehash.h"
+#endif
 
 #include <chrono>
 #include <condition_variable>
@@ -57,6 +60,9 @@ void W_B1_PriorityIgnored() {
 } // namespace
 
 uint64 GetOSWPerformanceTime() {
+#ifdef NOTSA_STATEHASH
+    if (notsa::rr::Active()) { return notsa::rr::VirtualNs(); } // RR: CTimer & co run on the frame-stepped virtual clock
+#endif
     return (uint64)std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::steady_clock::now().time_since_epoch()).count();
 }
 

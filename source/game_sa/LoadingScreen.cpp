@@ -6,6 +6,9 @@
 */
 
 #include "StdInc.h"
+#ifdef NOTSA_STATEHASH
+#include "portable/statehash.h"
+#endif
 #include "platform.h"
 #include "LoadingScreen.h"
 
@@ -123,6 +126,9 @@ void CLoadingScreen::LoadSplashes(bool useSplashId, eLoadingLogo id) {
     LARGE_INTEGER pc;
     QueryPerformanceCounter(&pc);
     srand(pc.u.LowPart);
+#ifdef NOTSA_STATEHASH
+    if (notsa::rr::Active()) { srand(notsa::rr::Seed()); } // RR: fixed seed
+#endif
 
     // NOTSA
     // Generate random splash order

@@ -48,7 +48,10 @@ bool AcquireSingleInstance() {
     if (s_Fd != -1) {
         return true;
     }
-    const auto path = (std::filesystem::temp_directory_path() / "gta_sa_reversed.lock").string();
+    auto path = (std::filesystem::temp_directory_path() / "gta_sa_reversed.lock").string();
+    if (const char* own = std::getenv("NOTSA_LOCK_FILE"); own && *own) { // tests / the RR harness run several instances of different builds side by side, each with its own lock file
+        path = own;
+    }
     const int  fd   = ::open(path.c_str(), O_CREAT | O_RDWR, 0600);
     if (fd < 0) {
         NOTSA_LOG_WARN("AcquireSingleInstance: cannot open '{}', assuming the only instance", path);

@@ -91,3 +91,28 @@ Append-only. Newest entry at the bottom. Prefix each entry with `[win]` or `[mac
   already bit-identical; drive route left at frame 436). Consequently LOWER priority for my earlier asks: REF-1 reference frames,
   the x87-on-silicon confirm run, real save/replay fixtures (still welcome, not blocking). Still wanted: merge portable/main into
   reverse/interior_c, and your call on the fidelity items W1, F7-F9, CBike F5. The Win32 no-op rule on portable/main is unchanged.
+
+## MAC-ANIM1 (2026-10-24): load-dependent new-game crash (CWorld::Process -> CPhysical::RemoveAndAdd) - root cause + portable fix (`.notes/reports/MAC-ANIM1.md`)
+- [mac] **Root cause is DATA + an unbounded sector loop, not heap corruption / anim loader / LRU**: `anim/cuts.img` PROLOG1.IFP stores uninitialised exporter memory in the LAST key frame
+  of at least 60 of its 183 sequences (csplay 33, csstew 19, cstaxi92 6, cssuitcase-2 2; rotation/translation 1e20..1e38, ASCII like "bump_front_", "D:\alienbrai", "Selected\0TG2";
+  the ANIM headers also carry MSVC debug fill 0xF6F6F6 / 0xF8F8F8). Retail has the same bytes. All four offenders captured by MAC-RACE1 match the file byte for byte (e.g. csplay " Neck"
+  625 frames: last Trans = (2.939e29, 1.775e28, 8.028)). When the anim reaches its end, `I_NextKeyFrame` parks the node on the last frame (cur = N-1, remaining 0, lerp t = 1), so that
+  frame is evaluated once or a few times; whether a frame lands there (and before the cutscene is torn down) depends on the frame-time pattern (hitches/load), which is why the crash
+  looked heap/load dependent. `UpdateCutsceneObjectBoundingBox` then gets radius ~ sqrt(FLT_MAX) (CutsceneMgr.cpp:85-107), `CPhysical::RemoveAndAdd` / `Add` get a bound rect of +-1.8e19 and
+  loop `for sectorY.. for sectorX..` doing `new CEntryInfoNode` per iteration. The exe has the same loop (0x5425AF..: `floor` 0x8219F0 + `_ftol2` 0x821B40 = fistp qword, LOW dword; the
+  result for such a rect is the wrap of an x87 product, so effectively arbitrary), on arm64 `static_cast<int32>` saturates to INT_MIN..INT_MAX => ~2^32 iterations => the 500-entry
+  CEntryInfoNode pool is empty => `new` returns null => AV in RemoveAndAdd. Even a span of 16x16 sectors per object exhausts the pool (several cutscene objects are re-added per frame).
+- [mac] **landed (portable only, `NOTSA_PORTABLE`)**: new header `source/game_sa/Entity/PhysicalSectors.h` (`notsa::PhysicalSectorIdx` = exe's floor + `_ftol2` via `notsa::fp::Ftol`;
+  `notsa::PhysicalLimitSectorSpan` collapses a span of more than 16 sectors - impossible for a real entity, 960 units - to its first sector); Physical.cpp calls them from
+  `PhysicalGetSectorIdx` and the 4 `max*` lines of `Add` / `RemoveAndAdd` (same line count as before). Spans <= 16 are unchanged. Win32 branches are the previous expressions.
+  Win32 neutrality: wine cl.exe /O2 /arch:IA32, HEAD vs patched Physical.cpp, llvm-objdump of the whole object: every existing function and every `__LINE__` immediate identical; the only
+  difference is two extra unreferenced `inline` COMDATs (the two helpers; dead-stripped by /OPT:REF). Proof of the fix: forced bound radius (diag env, cutscene time > 6 s): Ftol only =>
+  crash at 7-8 s for radius 1e10 and 3e5; with the span clamp 1e10 / 1e13 / 3e5 / 1.8e19 all survive 47 s.
+- [win] FYI / optional shared fix: Win32 MSVC `static_cast<int32>(float)` = cvttss2si yields INT_MIN for out-of-range values, i.e. both bounds INT_MIN => one iteration (index 0 after `& 0xF`), so
+  junk beyond 2^31 sectors does not crash on Win32 either, but a junk radius in the 1e5..1e10 range (e.g. 3e5 => +-6000 sectors) would loop thousands of times and hit the same pool limit on
+  any platform (same loop in the exe). The IFP's junk last frames are NOT defused anywhere (fidelity: the cutscene objects glitch for a frame at the very end in retail too). If you want the same
+  safety on Win32, apply `notsa::PhysicalLimitSectorSpan` unconditionally (it only changes spans > 16). Same float->int idiom, other inputs (entity positions, not junk-driven bounds): Shadows.cpp:1593, EntityScanner.cpp:62.
+- [mac] Not the same root cause as ANIM-CRASH / CRASH-HUNT (UncompressAnimation <- CopyAnimation <- CTaskSimpleFall, null `m_BlendHier` of a static association slot): that one is a
+  null-slot request, no huge floats involved. The RACE1 suspects were checked: a checksum verifier over all 183 cutscene sequences (|rot|, translation and, for uncompressed, delta time;
+  every 20 frames and at the bad moment) stays clean for whole cutscenes; the only legitimate in-place writes are the sign flip of a whole rotation (CalcThetaFromQuats / CalcDeltasCompressed)
+  and the lazy absolute->delta time conversion of compressed anims (CalcTotalTimeCompressed). Loader sizes / strides, LRU eviction and RemoveLastAnimFile are fine.

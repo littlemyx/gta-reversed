@@ -7,7 +7,7 @@
 // does nothing (void state setters). Nothing here pretends to render. The list is generated and checked by tools/portable/rw_symbol_audit.py
 // (.notes/reports/MAC-R2-symbols.tsv); every symbol names the slice that replaces it:
 //   R-4  RwIm2D* / RwIm3D*            -> render/im2d_im3d_gl3.cpp (DONE: real GL3 implementation, no stub left here)
-//   R-6  RwShimPipelineEnsure/Shutdown -> stock gl3 pipelines wired in render/pipelines_gl3.cpp
+//   R-6  RwShimPipelineEnsure/Shutdown -> render/pipelines_gl3.cpp (DONE: stock gl3 pipelines, no stub left here)
 //   R-8/R-9  RxPipeline*, RxD3D9AllInOne*, RwD3D9*, _rwD3D9*  -> ObjPipeline creation in render/pipelines_{building,carenv}_gl3.cpp; the
 //        guarded-out FF render callbacks in game_sa/Pipelines get GL3 twins there
 //   D3DResourceSystem: inert on purpose (the pools only ever held IDirect3D* objects of the exe's own RenderWare)
@@ -25,9 +25,7 @@
 
 // ---- Im2D / Im3D: implemented in render/im2d_im3d_gl3.cpp (R-4), no stubs left ----------------------------------------------------
 
-// ---- pipeline bring-up hooks called from the engine shim (R-6) ---------------------------------------------------------
-void RwShimPipelineEnsure() { R2_STUB("R-6"); }
-void RwShimPipelineShutdown() {}
+// ---- pipeline bring-up hooks called from the engine shim: render/pipelines_gl3.cpp (R-6, DONE) ----------------------------
 
 // ---- RxPipeline / AllInOne node API (R-8, R-9): creating a custom pipeline fails, the atomic keeps the stock (null) pipeline ----------
 RxPipeline* RxPipelineCreate(void) { R2_STUB("R-8/R-9"); return nullptr; }

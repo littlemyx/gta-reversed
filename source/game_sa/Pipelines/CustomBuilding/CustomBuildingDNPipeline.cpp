@@ -119,7 +119,17 @@ RwInt32 CCustomBuildingDNPipeline::pluginExtraVertColourStreamGetSizeCB(const vo
 
 // 0x5D5FC0
 bool AtomicHasNVCPipeline(RpAtomic* atomic) {
+#ifndef NOTSA_PORTABLE
     return atomic->pipeline == CCustomBuildingDNPipeline::ObjPipeline;
+#else
+    // R-6: under GL3 ObjPipeline is null (the atomic keeps librw's stock pipeline, so `pipeline == ObjPipeline` is true for EVERY atomic with a stock pipeline and
+    // NVCPipelineProcess crashed on DayColors == nullptr). The atomic is an NVC atomic when CustomPipeAtomicSetup tagged it and the day / night colours exist.
+    if (GetPipelineID(atomic) != CUSTOM_BUILDING_DN_PIPELINE_ID) {
+        return false;
+    }
+    const auto* const data = CCustomBuildingDNPipeline::GetExtraVertColourPtr(RpAtomicGetGeometry(atomic));
+    return data->NightColors && data->DayColors;
+#endif
 }
 
 // 0x5D6850 [AKA `NVC__Process`]

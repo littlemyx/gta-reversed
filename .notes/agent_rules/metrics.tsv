@@ -164,3 +164,4 @@ date	agent	rules	kind	tokens	tool_uses	minutes	outcome	notes
 2026-10-24	MAC-RACE1	v4	load-dependent crash hunt	-	-	-	root chain found, writer unknown
 2026-10-24	MAC-LNX1	v4	Linux x64 build + CI	251113	91	45	links in container; CI blocked on librw access
 2026-10-24	MAC-ANIM1	v4	cutscene anim crash	-	-	-	fixed: IFP garbage + ftol saturation
+2026-10-24	MAC-FTOL1	v4	float->int class A sweep	-	-	-	done: 155 sites

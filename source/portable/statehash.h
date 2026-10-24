@@ -32,6 +32,8 @@ void AdvanceClock();
 void OnFrame();
 //! injector commands; true when `name` was one of ours
 bool Cmd(const char* name, const std::string& args);
+//! RenderWare allocations (rwMalloc) return zeroed memory from now on; call right after the RW engine was initialised (GameInit)
+void PinHeap();
 //! NOTSA_RR_NOAUDIO=1 (with NOTSA_RR=1): Idle() does not call AudioEngine.Service()
 bool NoAudio();
 //! true while a trace is being recorded

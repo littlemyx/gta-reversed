@@ -1,4 +1,7 @@
 #include "StdInc.h"
+#ifdef NOTSA_STATEHASH
+#include "portable/statehash.h"
+#endif
 
 #include <cstdlib>
 
@@ -250,6 +253,9 @@ void* CMemoryMgr::Malloc(uint32 size, uint32 nHint) {
     _UNLOCK_MEMORYHEAP();
     return memory;
 #elif defined(NOTSA_STANDALONE_RUN)
+#ifdef NOTSA_STATEHASH
+    if (notsa::rr::Active()) { return ::calloc(1, size); } // RR: zeroed (e.g. CAnimBlendClumpData::m_FrameDatas is read by the constructor's UpdateRpHAnim before any animation wrote it, RR_PLAN section 9.5)
+#endif
     return ::malloc(size); // 0x72F420 => CRT malloc (0x824257)
 #else
     return plugin::CallAndReturn<void*, 0x72F420, size_t>(size);

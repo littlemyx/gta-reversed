@@ -53,7 +53,7 @@ void AppGameInjectHooks() {
 void GameInit() {
     VERIFY(RwInitialize(nullptr));
 #ifdef NOTSA_STATEHASH
-    if (notsa::rr::Active()) { srand(notsa::rr::Seed()); return; } // RR: fixed seed, not the wall clock
+    if (notsa::rr::Active()) { notsa::rr::PinHeap(); srand(notsa::rr::Seed()); return; } // RR: fixed seed, not the wall clock; RenderWare allocations zeroed from here on (right after RwEngineInit)
 #endif
     srand(RsTimer());
 }

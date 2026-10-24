@@ -8,6 +8,7 @@
 #include <src/gl/rwgl3impl.h>
 
 #include <atomic>
+#include <new>
 #include <mach/mach.h>
 #include <thread>
 #include <bit>
@@ -26,6 +27,14 @@
 #include "Streaming.h"
 #include "Weather.h"
 #include "Clock.h"
+
+// RR: every C++ `new` returns zeroed memory too (the default operator delete is free()). Only the two plain forms are replaced; aligned / nothrow forms keep the library versions.
+void* operator new(std::size_t n) {
+    void* p = notsa::rr::Active() ? std::calloc(1, n ? n : 1) : std::malloc(n ? n : 1);
+    if (!p) { throw std::bad_alloc(); }
+    return p;
+}
+void* operator new[](std::size_t n) { return ::operator new(n); }
 
 namespace notsa::rr {
 namespace {
@@ -365,6 +374,8 @@ void PinRwHeap() {
     NOTSA_LOG_INFO("rr: RenderWare allocations are zeroed from now on");
 }
 } // namespace
+
+void PinHeap() { PinRwHeap(); }
 
 void AdvanceClock() {
     if (!Active()) return;

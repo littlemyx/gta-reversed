@@ -712,7 +712,29 @@ void CEntity::UpdateRwFrame() {
 void CEntity::UpdateRpHAnim() {
     if (const auto atomic = GetFirstAtomic(GetRpClump())) {
         if (RpSkinGeometryGetSkin(RpAtomicGetGeometry(atomic)) && !m_bDontUpdateHierarchy) {
+#ifdef NOTSA_STATEHASH
+            if (std::getenv("NOTSA_RR_HOLDLOG") && GetIsTypePed() && GetPedPool()->GetIndex(AsPed()) == 11) { // RR diagnostics for the held-prop bone matrix (RR_PLAN section 9.5)
+                static int s_N = 0;
+                if (s_N++ < 40) { NOTSA_LOG_INFO("rru frame={} ped=11 caller={:x} firstAssoc={} dontUpdate={}", CTimer::GetFrameCounter(), (unsigned long long)((uintptr_t)__builtin_return_address(0) - (uintptr_t)(void*)&notsa::rr::StableId), (void*)RpAnimBlendClumpGetFirstAssociation(GetRpClump()) != nullptr, (int)m_bDontUpdateHierarchy); }
+            }
+#endif
+#ifdef NOTSA_STATEHASH
+            if (std::getenv("NOTSA_RR_HOLDLOG") && GetIsTypePed() && GetPedPool()->GetIndex(AsPed()) == 11) {
+                static int s_M = 0;
+                auto* h = GetAnimHierarchyFromSkinClump(GetRpClump());
+                const float* m = h ? (const float*)RpHAnimHierarchyGetMatrixArray(h) : nullptr;
+                if (s_M++ < 6 && h) { NOTSA_LOG_INFO("rru2 frame={} flags={:x} nodes={} anim={} curTime={} m_before={:08x},{:08x},{:08x}", CTimer::GetFrameCounter(), (unsigned)h->flags, (int)h->numNodes, (void*)h->interpolator, h->interpolator ? h->interpolator->currentTime : -1.f, m ? std::bit_cast<uint32_t>(m[0]) : 0u, m ? std::bit_cast<uint32_t>(m[12]) : 0u, m ? std::bit_cast<uint32_t>(m[13]) : 0u); }
+            }
+#endif
             RpHAnimHierarchyUpdateMatrices(GetAnimHierarchyFromSkinClump(GetRpClump()));
+#ifdef NOTSA_STATEHASH
+            if (std::getenv("NOTSA_RR_HOLDLOG") && GetIsTypePed() && GetPedPool()->GetIndex(AsPed()) == 11) {
+                static int s_A = 0;
+                auto* h = GetAnimHierarchyFromSkinClump(GetRpClump());
+                const float* m = h ? (const float*)RpHAnimHierarchyGetMatrixArray(h) : nullptr;
+                if (s_A++ < 6 && h) { NOTSA_LOG_INFO("rru3 frame={} m_after={:08x},{:08x},{:08x}", CTimer::GetFrameCounter(), m ? std::bit_cast<uint32_t>(m[0]) : 0u, m ? std::bit_cast<uint32_t>(m[12]) : 0u, m ? std::bit_cast<uint32_t>(m[13]) : 0u); }
+            }
+#endif
         }
     }
 }

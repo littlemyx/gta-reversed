@@ -14,12 +14,16 @@ static_assert(std::bit_cast<float>(0x3CC90FDBu) == 0x1.921fb6p-6f);
 static float SinTableEntry(int32 i) {
     static const float step = std::bit_cast<float>(0x3CC90FDBu); // 0x859BBC
     float res;
+#ifdef NOTSA_PORTABLE
+#include "x87_lifted/Maths_SinTableEntry.inc"
+#else
     __asm {
         fild  i
         fmul  step
         fsin
         fstp  res
     }
+#endif
     return res;
 }
 

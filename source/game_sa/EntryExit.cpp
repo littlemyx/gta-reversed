@@ -124,14 +124,18 @@ CEntryExit* CEntryExit::GetEntryExitToDisplayNameOf() {
 // TODO: `_asm` shouldn't be removed, because the caller `EntryExitManager::GetPositionRelativeToOutsideWorld`
 // uses it as well (and without reserving `edx` it is going to crash)
 void CEntryExit::GetPositionRelativeToOutsideWorld(CVector& outPos) {
+#ifndef NOTSA_PORTABLE
     _asm { push edx };
+#endif
 
     const auto enex = GetLinkedOrThis(); // this = GetLinkedOrThis();
     if (enex->m_nArea != eAreaCodes::AREA_CODE_NORMAL_WORLD) {
         outPos += GetPosition() - enex->m_vecExitPos;
     }
 
+#ifndef NOTSA_PORTABLE
     _asm { pop edx };
+#endif
 }
 
 // Return center of entrance rect

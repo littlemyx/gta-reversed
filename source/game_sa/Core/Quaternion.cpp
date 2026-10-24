@@ -123,6 +123,9 @@ void CQuaternion::Slerp(const CQuaternion& from, const CQuaternion& to, float ha
     CQuaternion*       self   = this;
     const CQuaternion* pFrom  = &from;
     const CQuaternion* pTo    = &to;
+#ifdef NOTSA_PORTABLE
+#include "x87_lifted/Quaternion_Slerp.inc"
+#else
     __asm {
         fld   dword ptr [halftheta]
         fcomp dword ptr [halfPi]
@@ -181,6 +184,7 @@ void CQuaternion::Slerp(const CQuaternion& from, const CQuaternion& to, float ha
         faddp st(1), st(0)
         fstp  dword ptr [ecx + 0xC]
     }
+#endif
 }
 
 // Quat from matrix
@@ -280,6 +284,9 @@ void CQuaternion::CalcThetaFromQuats(const CQuaternion& a, const CQuaternion& b,
     static const float         one      = 1.0f; // 0x858624
     float*                     pTheta   = &theta;
     float*                     pInv     = &invSinTheta;
+#ifdef NOTSA_PORTABLE
+#include "x87_lifted/Quaternion_CalcThetaFromQuats.inc"
+#else
     __asm {
         fld   dword ptr [dot]
         mov   eax, mode
@@ -328,6 +335,7 @@ void CQuaternion::CalcThetaFromQuats(const CQuaternion& a, const CQuaternion& b,
         mov   dword ptr [ecx], 0
     L_done:
     }
+#endif
 }
 
 // Conjugate of a quat

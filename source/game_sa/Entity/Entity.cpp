@@ -1297,6 +1297,9 @@ bool CEntity::GetIsTouching(const CVector& centre, float radius) const {
     const float cbx = centreB.x, cby = centreB.y, cbz = centreB.z;
     const CVector* const c = &centre;
     uint16 status;
+#ifdef NOTSA_PORTABLE
+#include "x87_lifted/Entity_GetIsTouching.inc"
+#else
     __asm {
         mov  eax, c
         fld  dword ptr [boundRadius]
@@ -1324,6 +1327,7 @@ bool CEntity::GetIsTouching(const CVector& centre, float radius) const {
         fstp st(0)
         fstp st(0)
     }
+#endif
     return (status & 0x4100) == 0;
 }
 

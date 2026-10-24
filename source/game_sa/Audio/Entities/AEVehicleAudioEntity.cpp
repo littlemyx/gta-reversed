@@ -2698,6 +2698,8 @@ static float BikeLeanTerm(float lean, float factor) {
         fstp  dword ptr [out]
     }
     return out;
+#elif defined(NOTSA_PORTABLE)
+    return notsa::fp::sites::BikeLeanTerm(lean, factor);
 #else
     const float sn = (float)x87::sin(lean);
     return (sn < 0.0f ? -sn : sn) * factor;

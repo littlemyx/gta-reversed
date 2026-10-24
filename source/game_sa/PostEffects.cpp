@@ -116,6 +116,8 @@ __declspec(naked) static int __cdecl ExeRasterLog2(int) {
         ret
     }
 }
+#elif defined(NOTSA_PORTABLE)
+static int ExeRasterLog2(int w) { return notsa::fp::sites::ExeRasterLog2(w); }
 #else
 static int ExeRasterLog2(int w) { return (int)(std::log((double)w) / std::log(2.0)); }
 #endif

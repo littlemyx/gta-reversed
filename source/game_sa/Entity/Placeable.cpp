@@ -109,6 +109,9 @@ float CPlaceable::GetRoll() const {
     static const uint32 K858C1C = 0xBF800000u;
     float res;
     const CPlaceable* self_ = this;
+#ifdef NOTSA_PORTABLE
+#include "x87_lifted/Placeable_GetRoll.inc"
+#else
     __asm {
         mov ecx, self_
         call L_BODY
@@ -144,6 +147,7 @@ float CPlaceable::GetRoll() const {
         ret
     L_END:
     }
+#endif
     return res;
 }
 

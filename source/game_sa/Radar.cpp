@@ -440,15 +440,21 @@ uint8 CRadar::CalculateBlipAlpha(float distance) {
  */
 CVector2D CRadar::TransformRadarPointToScreenSpace(const CVector2D& in) {
     // CRadar::DrawRadarSection assumes this function won't spoil EDX, but it does, so we need to keep it up to data.
+#ifndef NOTSA_PORTABLE
     _asm { push edx };
+#endif
     if (FrontEndMenuManager.m_bDrawingMap) {
+#ifndef NOTSA_PORTABLE
         _asm { pop edx };
+#endif
         return {
             FrontEndMenuManager.m_vMapOrigin.x + FrontEndMenuManager.m_fMapZoom * in.x,
             FrontEndMenuManager.m_vMapOrigin.y - FrontEndMenuManager.m_fMapZoom * in.y
         };
     } else {
+#ifndef NOTSA_PORTABLE
         _asm { pop edx };
+#endif
         // Exact x87 form of the exe (0x583480), everything stays in extended precision: wk = W * (1/640), hk = (1/448) * H
         const double wk = (double)RsGlobal.maximumWidth * (double)SCREEN_RECIPROCAL_X; // 0x859520
         const double hk = (double)SCREEN_RECIPROCAL_Y * (double)RsGlobal.maximumHeight; // 0x859524
@@ -501,6 +507,15 @@ CVector2D CRadar::TransformRealWorldToTexCoordSpace(const CVector2D& in, int32 x
 // 0x583670
 namespace {
 // atan2(y, x) via fpatan (the extended result stays on the FPU stack), stored as the radar orientation, and its sin / cos computed from the UNROUNDED angle (0x5837B5 / 0x5837E9)
+#ifdef NOTSA_PORTABLE
+// portable: the same fld/fpatan/fst/fsin/fcos sequence on the soft x87 (X87Sites.h, PC24): fpatan's unrounded result is stored as the orientation (rounded to float) and its sin / cos are
+// taken from the UNROUNDED value (tests/portable/f4a_lift_test.cpp rows Radar_SetRadarAngle*: bit-exact vs the asm)
+float* const s_pRadarOrientation = &CRadar::m_fRadarOrientation;
+float* const s_pRadarSin         = &CRadar::cachedSin;
+float* const s_pRadarCos         = &CRadar::cachedCos;
+void SetRadarAngleAtan2(float y, float x) { notsa::fp::sites::RadarAngleAtan2(y, x, s_pRadarOrientation, s_pRadarSin, s_pRadarCos); }
+void SetRadarAngle(float a) { notsa::fp::sites::RadarAngle(a, s_pRadarOrientation, s_pRadarSin, s_pRadarCos); }
+#else
 #ifdef NOTSA_GLOBALS_DETACHED
 // detached: the asm stores through pointers to the globals (same fld/fst/fsin/fstp sequence; eax is scratch in cdecl)
 float* const s_pRadarOrientation = &CRadar::m_fRadarOrientation;
@@ -567,6 +582,7 @@ __declspec(naked) void __cdecl SetRadarAngle(float a) {
     }
 }
 #endif
+#endif // NOTSA_PORTABLE
 #line 529
 }
 

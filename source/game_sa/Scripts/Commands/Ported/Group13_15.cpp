@@ -393,6 +393,9 @@ double MagnitudeOriginal(const CVector& v) {
 void DivideAssignOriginal(CVector& v, float d) {
     const float one = 1.0f; // 0x858624
     float* const p = &v.x;
+#ifdef NOTSA_PORTABLE
+#include "x87_lifted/Group13_DivideAssign.inc"
+#else
     __asm {
         mov   eax, p
         fld   dword ptr [one]
@@ -406,6 +409,7 @@ void DivideAssignOriginal(CVector& v, float d) {
         fmul  dword ptr [eax + 8]
         fstp  dword ptr [eax + 8]
     }
+#endif
 }
 
 //! The direction of a 1565 attractor heading (degrees), exactly as the exe's x87 code computes it: angle = deg * 0.01745329f [0x8595EC] stays in the register,
@@ -414,6 +418,9 @@ void DivideAssignOriginal(CVector& v, float d) {
 CVector AttractorDirOriginal(float degrees) {
     const float k = 0.01745329238474369f; // 0x8595EC
     float       x, y;
+#ifdef NOTSA_PORTABLE
+#include "x87_lifted/Group13_AttractorDir.inc"
+#else
     __asm {
         fld   dword ptr [degrees]
         fmul  dword ptr [k]
@@ -424,6 +431,7 @@ CVector AttractorDirOriginal(float degrees) {
         fcos
         fstp  dword ptr [y]
     }
+#endif
     CVector d{ x, y, 0.0f };
     NormaliseOriginal(d);
     return d;
@@ -568,6 +576,9 @@ double AcosCrt(double x) {
     const int    mode = ad < 1.0 ? 0 : x == 1.0 ? 1 : x == -1.0 ? 2 : x != x ? 4 : 3;
     static const unsigned char qnan[10] = { 0, 0, 0, 0, 0, 0, 0, 0xC0, 0xFF, 0xFF };
     double                     out;
+#ifdef NOTSA_PORTABLE
+#include "x87_lifted/Group13_AcosCrt.inc"
+#else
     __asm {
         fld   qword ptr [x]
         mov   eax, mode
@@ -600,16 +611,21 @@ double AcosCrt(double x) {
     L_have:
         fstp  qword ptr [out]
     }
+#endif
     return out;
 }
 
 //! x87 `fsqrt` at the current precision control (std::sqrt may be computed by the SSE2 CRT at full double precision)
 double Fsqrt(double v) {
+#ifdef NOTSA_PORTABLE
+#include "x87_lifted/Group13_Fsqrt.inc"
+#else
     __asm {
         fld   qword ptr [v]
         fsqrt
         fstp  qword ptr [v]
     }
+#endif
     return v;
 }
 

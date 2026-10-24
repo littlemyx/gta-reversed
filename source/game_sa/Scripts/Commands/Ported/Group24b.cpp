@@ -88,6 +88,9 @@ bool IsPointInAngledAreaOriginal(const CVector& p, float x1, float y1, float x2,
         // fsin / fcos of the extended angle
         const double a = angle;
         double       s, c;
+#ifdef NOTSA_PORTABLE
+#include "x87_lifted/Group24b_SinCos.inc"
+#else
         __asm {
             fld   qword ptr [a]
             fld   st(0)
@@ -96,6 +99,7 @@ bool IsPointInAngledAreaOriginal(const CVector& p, float x1, float y1, float x2,
             fcos
             fstp  qword ptr [c]
         }
+#endif
         sn = s;
         cs = c;
     }

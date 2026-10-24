@@ -388,6 +388,8 @@ static double X87SinP1Half(double x) {
     }
     return x;
 }
+#elif defined(NOTSA_PORTABLE)
+static double X87SinP1Half(double x) { return notsa::fp::sites::SinP1Half(x); }
 #else
 static double X87SinP1Half(double x) { return (x87::sin(x) + 1.0) * 0.5; }
 #endif

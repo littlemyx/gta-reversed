@@ -87,6 +87,12 @@ float CAEAudioUtility::GetPiecewiseLinear(float x, int16 dataCount, const float 
 
 // 0x4d9e50 - the exe's code verbatim: the unrounded extended result of `fldlg2; fld p; fyl2x` stays in ST0 (callers multiply it by 10 / 20 and round ONCE; a float return would round twice)
 static const float kAudioLog10Min = 0.00001f, kAudioLog10Floor = -5.0f;   // 0x858C14 and the -5.0f the exe loads; `p < 1e-5f` or NaN (fcomp unordered sets C0) -> -5
+#ifdef NOTSA_PORTABLE
+// portable (no naked / x87): fcomp against 1e-5f (NaN and p < 1e-5f -> the -5 constant), else log10 = fyl2x(lg2, p) on the soft x87. The exe returns the UNROUNDED 64 bit value in ST0
+// and every caller multiplies it by 10 / 20 and rounds ONCE; a C++ float return rounds before that multiplication. F-4 TODO: not bit-exact in that product (ULP table in
+// tests/portable/f4a_lift_test.cpp rows AudioLog10_x20 / _x10: the function result itself is bit-exact vs the asm).
+float CAEAudioUtility::AudioLog10(float p) { return notsa::fp::sites::AudioLog10(p, kAudioLog10Min, kAudioLog10Floor); }
+#else
 __declspec(naked) float CAEAudioUtility::AudioLog10(float p) {
     __asm {
         fld   dword ptr [esp + 4]
@@ -103,6 +109,7 @@ __declspec(naked) float CAEAudioUtility::AudioLog10(float p) {
         ret
     }
 }
+#endif
 
 // REFACTORED
 // 0x4d9e80

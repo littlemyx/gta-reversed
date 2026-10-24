@@ -2055,7 +2055,9 @@ bool CPathFind::ThisNodeHasToBeSwitchedOff(CPathNode* node) {
 // If not just lock both :D
 size_t CPathFind::CountNeighboursToBeSwitchedOff(const CPathNode& node) {
     const auto ret = (size_t)rng::count_if(GetNodeLinkedNodes(node), &CPathNode::HasToBeSwitchedOff);
+#ifndef NOTSA_PORTABLE
     __asm mov eax, this // It has to be `this`
+#endif
     return ret;
 }
 
@@ -2159,6 +2161,9 @@ void CPathFind::FindNodePairClosestToCoors(CVector pos, uint8 nodeType, CNodeAdd
         const float xv = dir.x, yv = dir.y;
         static const float radToDeg = 57.2957763671875f;
         float res;
+#ifdef NOTSA_PORTABLE
+#include "x87_lifted/PathFind_Heading.inc"
+#else
         __asm {
             fld  xv
             fchs
@@ -2167,6 +2172,7 @@ void CPathFind::FindNodePairClosestToCoors(CVector pos, uint8 nodeType, CNodeAdd
             fmul radToDeg
             fstp res
         }
+#endif
         *outDist = res;
     }
 }

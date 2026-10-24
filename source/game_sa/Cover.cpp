@@ -439,6 +439,9 @@ CCoverPoint::Dir CCover::FindDirFromVector(CVector dir) {
     const float a_x = dir.x;
     const float a_y = dir.y;
     const float a_z = dir.z;
+#ifdef NOTSA_PORTABLE
+#include "x87_lifted/Cover_FindDirFromVector.inc"
+#else
     __asm {
         push dword ptr [a_z]
         push dword ptr [a_y]
@@ -456,6 +459,7 @@ CCoverPoint::Dir CCover::FindDirFromVector(CVector dir) {
         ret
     L_END:
     }
+#endif
     return CCoverPoint::Dir{ static_cast<uint8>(notsa::detail::Ftol(res)) }; // _ftol2 of the unrounded product, low byte
 }
 
@@ -467,6 +471,9 @@ CVector CCover::FindVectorFromDir(CCoverPoint::Dir direction) {
     static const uint32 K859BBC = 0x3CC90FDBu;
 
     const uint32 a_raw = raw;
+#ifdef NOTSA_PORTABLE
+#include "x87_lifted/Cover_FindVectorFromDir.inc"
+#else
     __asm {
         push dword ptr [a_raw]
         lea eax, [out]
@@ -499,6 +506,7 @@ CVector CCover::FindVectorFromDir(CCoverPoint::Dir direction) {
         ret
     L_END:
     }
+#endif
     return CVector{ out[0], out[1], out[2] };
 }
 

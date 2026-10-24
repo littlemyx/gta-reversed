@@ -10,6 +10,11 @@
 // exactly like the exe's code does. Do not store the result into a `double` local if the exe keeps it on the stack (the store rounds to 53 bits).
 // Outside MSVC x86 (clang, 64-bit) the helpers fall back to <cmath>.
 #include <cmath>
+#ifdef NOTSA_PORTABLE
+#include "X87Soft.h"
+#include "X87Lift.h"
+#include "X87Sites.h"
+#endif
 
 namespace x87 {
 #if defined(_MSC_VER) && !defined(__clang__) && defined(_M_IX86)
@@ -159,6 +164,49 @@ inline void sincos(double x, double& s, double& c) {
     }
     s = resSin; c = resCos;
 }
+#elif defined(NOTSA_PORTABLE)
+// Portable build (arm64 / x64 / clang): the instructions are reproduced by the integer-only software x87 (X87Soft.h, .notes/reports/F1_soft.md). The arithmetic steps of the CRT
+// asin / acos sequences are rounded at the game's precision control (24 bits); the transcendental results are 64 bit values, returned as a round-to-odd double so that the
+// caller's NEXT rounding to float (or to 24 bits) is identical to rounding the 80 bit value. Bit-exact vs the Win32 asm at float level (0 mismatches in > 10^7 cases per
+// function, F1_soft.md) - at the 80 / 53 bit level 88..99% (the reference FPU is not correctly rounded). tests/portable/f4a_lift_test.cpp: x87:: rows.
+#define NOTSA_X87_ASM 0
+namespace soft_detail {
+inline constexpr int kGamePc = 24;                                 // x87 precision control of the game thread (set by D3D9 CreateDevice)
+inline notsa::fp::soft::F80 In(double x) { return notsa::fp::soft::FromDouble(x); }
+inline double Out(const notsa::fp::soft::F80& v) { return notsa::fp::soft::ToDoubleRoundToOdd(v); }
+// the CRT asin / acos (0x821E70 / 0x822380): |x| < 1 => atan2 of (x, sqrt((1 + x) * (1 - x))) at the current PC; |x| == 1 => +-pi/2 / (0, pi); NaN => quieted NaN; else the real indefinite
+inline double AsinAcos(double x, bool isAcos) {
+    using namespace notsa::fp::soft;
+    const uint64_t bits = std::bit_cast<uint64_t>(x);
+    const uint32_t hi = uint32_t(bits >> 32), lo = uint32_t(bits);
+    const uint32_t e = hi & 0x7ff00000u;
+    const bool mantZero = ((hi & 0xfffffu) | lo) == 0;
+    if (e == 0x7ff00000u) return mantZero ? Out(Indefinite()) : Out(FromDouble(x));    // inf: domain error; NaN: returned quieted
+    if (e > 0x3ff00000u) return Out(Indefinite());
+    if (e == 0x3ff00000u) {                                        // 1 <= |x| < 2
+        if (!mantZero) return Out(Indefinite());
+        const bool neg = (hi & 0x80000000u) != 0;
+        if (!isAcos) return Out(neg ? Neg(kHalfPi) : kHalfPi);
+        return Out(neg ? kPi : Zero());
+    }
+    const F80 xv = FromDouble(x), one = One();
+    const F80 r = Sqrt(Mul(Add(one, xv, kGamePc), Sub(one, xv, kGamePc), kGamePc), kGamePc);
+    return Out(isAcos ? Atan2(r, xv) : Atan2(xv, r));
+}
+}
+inline double sin(double x)               { return soft_detail::Out(notsa::fp::soft::Sin(soft_detail::In(x))); }
+inline double cos(double x)               { return soft_detail::Out(notsa::fp::soft::Cos(soft_detail::In(x))); }
+// fptan with |x| >= 2^63 sets C2 and pushes nothing: the helper's `fstp st(0)` then pops the operand and returns an EMPTY stack (real indefinite)
+inline double tan(double x)               { bool c2; const auto t = notsa::fp::soft::Tan(soft_detail::In(x), &c2); return soft_detail::Out(c2 ? notsa::fp::soft::Indefinite() : t); }
+inline double atan2(double y, double x)   { return soft_detail::Out(notsa::fp::soft::Atan2(soft_detail::In(y), soft_detail::In(x))); }
+inline double sqrt(double x)              { return soft_detail::Out(notsa::fp::soft::Sqrt(soft_detail::In(x), soft_detail::kGamePc)); }
+inline double atan(double x)              { return soft_detail::Out(notsa::fp::soft::Atan(soft_detail::In(x))); }
+inline double asin(double x)              { return soft_detail::AsinAcos(x, false); }
+inline double acos(double x)              { return soft_detail::AsinAcos(x, true); }
+inline double log2(double x)              { return soft_detail::Out(notsa::fp::soft::Yl2x(notsa::fp::soft::One(), soft_detail::In(x))); }
+inline double log10(double x)             { return soft_detail::Out(notsa::fp::soft::Yl2x(notsa::fp::soft::kLg2, soft_detail::In(x))); }
+inline double ln(double x)                { return soft_detail::Out(notsa::fp::soft::Yl2x(notsa::fp::soft::kLn2, soft_detail::In(x))); }
+inline void   sincos(double x, double& s, double& c) { s = sin(x); c = cos(x); }
 #else
 #define NOTSA_X87_ASM 0
 inline double sin(double x)               { return std::sin(x); }

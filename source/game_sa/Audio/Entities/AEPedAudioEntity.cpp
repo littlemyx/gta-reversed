@@ -327,6 +327,8 @@ static void JetPackSinSpeeds(float angle, float factor, float& speed0, float& sp
     }
     speed0 = s0;
     speed = s1;
+#elif defined(NOTSA_PORTABLE)
+    notsa::fp::sites::JetPackSinSpeeds(angle, factor, speed0, speed);
 #else
     const float sn = (float)x87::sin(angle);
     speed = sn < 0.0f ? -sn : sn;

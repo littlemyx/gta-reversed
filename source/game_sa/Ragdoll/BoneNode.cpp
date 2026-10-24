@@ -118,6 +118,8 @@ static float AtanDeg(double y, double x) {
     }
     return r;
 }
+#elif defined(NOTSA_PORTABLE)
+static float AtanDeg(double y, double x) { return notsa::fp::sites::AtanDeg(y, x); }
 #else
 static float AtanDeg(double y, double x) { return (float)(x87::atan2(y, x) * 180.0 * (double)std::bit_cast<float>(0x3EA2F983u)); }
 #endif

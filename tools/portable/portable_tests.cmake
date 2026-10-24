@@ -19,7 +19,7 @@ foreach(_name _script IN ZIP_LISTS PORTABLE_HOST_TEST_NAMES PORTABLE_HOST_TEST_S
     set_tests_properties(portable.${_name} PROPERTIES
         LABELS "portable"
         TIMEOUT 900
-        ENVIRONMENT "COMPDB=${CMAKE_BINARY_DIR}/compile_commands.json;OUT=${PORTABLE_TESTS_OUT}/${_name};ASAN_OPTIONS=detect_leaks=0:symbolize=0"
+        ENVIRONMENT "CLANG=${CMAKE_CXX_COMPILER};COMPDB=${CMAKE_BINARY_DIR}/compile_commands.json;OUT=${PORTABLE_TESTS_OUT}/${_name};ASAN_OPTIONS=detect_leaks=0:symbolize=0"
         FAIL_REGULAR_EXPRESSION "CENSUS MISMATCH;BUILD FAILED")
     if(_name IN_LIST PORTABLE_MUTATE_TESTS)
         add_test(NAME portable.${_name}.mutate
@@ -28,7 +28,7 @@ foreach(_name _script IN ZIP_LISTS PORTABLE_HOST_TEST_NAMES PORTABLE_HOST_TEST_S
         set_tests_properties(portable.${_name}.mutate PROPERTIES
             LABELS "mutation"
             TIMEOUT 3600
-            ENVIRONMENT "COMPDB=${CMAKE_BINARY_DIR}/compile_commands.json;OUT=${PORTABLE_TESTS_OUT}/${_name}_mut;ASAN_OPTIONS=detect_leaks=0:symbolize=0")
+            ENVIRONMENT "CLANG=${CMAKE_CXX_COMPILER};COMPDB=${CMAKE_BINARY_DIR}/compile_commands.json;OUT=${PORTABLE_TESTS_OUT}/${_name}_mut;ASAN_OPTIONS=detect_leaks=0:symbolize=0")
     endif()
 endforeach()
 
@@ -37,8 +37,15 @@ endforeach()
 add_test(NAME portable.txd_gl
     COMMAND bash "${PORTABLE_TESTS_DIR}/run_txd_test.sh"
     WORKING_DIRECTORY "${PROJECT_SOURCE_DIR}")
+# Linux (MAC-LNX1): the script still drives a macOS toolchain (taskpolicy, frameworks, Homebrew paths) and needs a display + game data, so on Linux it is labelled "display_needed" and
+# stays out of `-L portable` (CI).
+if(APPLE)
+    set(_txd_label "portable")
+else()
+    set(_txd_label "display_needed")
+endif()
 set_tests_properties(portable.txd_gl PROPERTIES
-    LABELS "portable"
+    LABELS "${_txd_label}"
     TIMEOUT 900
     RUN_SERIAL TRUE
     ENVIRONMENT "OUT=${PORTABLE_TESTS_OUT}/txd_gl;COMPDB=${CMAKE_BINARY_DIR}/compile_commands.json"

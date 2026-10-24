@@ -66,7 +66,7 @@ h = re.sub(r'#include[^\n]*\n|#pragma once|class CVector;', '', h)
 h = re.sub(r'using SaveSystemTime[^\n]*\n', '', h)
 h = re.sub(r'VALIDATE_SIZE_FILE\([^\n]*\n', '', h)
 open(out + '/ref_i686.cpp', 'w').write(src + h)
-r = subprocess.run(['/opt/homebrew/opt/llvm/bin/clang++', '--target=i686-pc-windows-msvc', '-fms-extensions', '-std=c++23', '-fsyntax-only', '-Xclang', '-fdump-record-layouts-complete', out + '/ref_i686.cpp'], capture_output=True, text=True)
+r = subprocess.run([__import__('os').environ.get('CLANG', '/opt/homebrew/opt/llvm/bin/clang++'), '--target=i686-pc-windows-msvc', '-fms-extensions', '-std=c++23', '-fsyntax-only', '-Xclang', '-fdump-record-layouts-complete', out + '/ref_i686.cpp'], capture_output=True, text=True)
 x86, x86size = records(r.stdout, 'CSimpleVariablesSaveStructure')
 diff = [(k, x86.get(k), v) for k, v in a64.items() if x86.get(k) != v]
 print('CSimpleVariablesSaveStructure: arm64 sizeof=%s i686 sizeof=%s; %d members compared, %d mismatches' % (a64size, x86size, len(a64), len(diff)))

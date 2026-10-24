@@ -97,6 +97,38 @@
                 "GTASA_USE_SDL3": "ON",
                 "GTASA_UNITY_BUILD": "OFF"
             }
+        },
+        {
+            "name": "PortableLinux",
+            "displayName": "Portable build, native Linux x86_64 (clang 23 + libc++ from apt.llvm.org): GTASA_PORTABLE=ON, librw GL3 + SDL3, OpenAL",
+            "description": "MAC-LNX1 (.notes/reports/MAC-LNX1.md). Linux twin of PortableMac. Run tools/portable/linux_deps.sh once (apt: clang-23, libc++-23-dev, lld, OpenAL, X11/GL dev headers; pip: cmake>=4.2, ninja, conan), then tools/portable/conan_install_linux.sh (conan install with conan/profiles/linux-x64.txt into build/PortableLinux/generators; deps are built with the same clang 23 + libc++, one ABI), then `cmake --preset PortableLinux && cmake --build --preset PortableLinux -- -k 0`. Compiler: clang 23 because the game needs libc++ >= 23 (std::views::enumerate, ranges::shift_right; libstdc++ 13 of Ubuntu 24.04 has neither, gcc is not supported yet). Render backend, audio and flags as PortableMac (RW_GL3 + SDL3, openal-soft via find_package(OpenAL CONFIG)).",
+            "generator": "Ninja",
+            "binaryDir": "${sourceDir}/build/PortableLinux",
+            "toolchainFile": "${sourceDir}/build/PortableLinux/generators/conan_toolchain.cmake",
+            "condition": {
+                "type": "equals",
+                "lhs": "${hostSystemName}",
+                "rhs": "Linux"
+            },
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "Release",
+                "CMAKE_POLICY_VERSION_MINIMUM": "3.5",
+                "CMAKE_C_COMPILER": "clang-23",
+                "CMAKE_CXX_COMPILER": "clang++-23",
+                "CMAKE_CXX_FLAGS": "-stdlib=libc++",
+                "CMAKE_EXE_LINKER_FLAGS": "-stdlib=libc++ -fuse-ld=lld",
+                "CMAKE_SHARED_LINKER_FLAGS": "-stdlib=libc++ -fuse-ld=lld",
+                "CMAKE_CXX_FLAGS_RELEASE": "-O2 -DNDEBUG",
+                "CMAKE_C_FLAGS_RELEASE": "-O2 -DNDEBUG",
+                "GTASA_STANDALONE": "ON",
+                "GTASA_STANDALONE_DUMP_HOOKS_ONLY": "OFF",
+                "GTASA_PORTABLE": "ON",
+                "GTASA_STANDALONE_RELEASE": "ON",
+                "GTASA_NO_EDIT_AND_CONTINUE": "ON",
+                "GTASA_WITH_SCRIPT_COMMAND_HOOKS": "OFF",
+                "GTASA_USE_SDL3": "ON",
+                "GTASA_UNITY_BUILD": "OFF"
+            }
         }
     ],
     "include": [

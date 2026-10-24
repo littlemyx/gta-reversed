@@ -5,13 +5,22 @@
 #include <cstdint>
 #include <string_view>
 #include <utility>
+#ifdef __APPLE__
 #include <mach-o/dyld.h>
 #include <mach-o/loader.h>
+#else
+extern "C" char __executable_start, _end; // ELF linker symbols
+#endif
 
 namespace notsa::portable {
 //! [begin, end) of the main executable image in memory (all its Mach-O segments, i.e. text + static data/bss): the straight equivalent of
 //! GetModuleHandle(nullptr) + IMAGE_NT_HEADERS::OptionalHeader.SizeOfImage
 inline std::pair<uintptr_t, uintptr_t> MainImageRange() {
+#ifndef __APPLE__
+    // ELF: linker-provided symbols (GNU ld / lld) bound the main program image: text + rodata + data + bss. (<link.h> / dl_iterate_phdr is shadowed by game_sa/Core/link.h on the include path)
+    static const auto range = std::pair{ reinterpret_cast<uintptr_t>(&__executable_start), reinterpret_cast<uintptr_t>(&_end) };
+    return range;
+#else
     static const auto range = [] {
         const auto hdr   = reinterpret_cast<const mach_header_64*>(_dyld_get_image_header(0));
         const auto slide = (uintptr_t)_dyld_get_image_vmaddr_slide(0);
@@ -29,6 +38,7 @@ inline std::pair<uintptr_t, uintptr_t> MainImageRange() {
         return std::pair{ lo, hi };
     }();
     return range;
+#endif
 }
 } // namespace notsa::portable
 #endif

@@ -21,8 +21,10 @@ while i < len(c):
 print(' '.join(shlex.quote(k) for k in keep))
 PY
 )
+LINKTAIL=""
+if [ "$(uname)" = Darwin ]; then DYNLOOKUP="-Wl,-undefined,dynamic_lookup"; else DYNLOOKUP="-fuse-ld=lld -Wl,--unresolved-symbols=ignore-all"; fi # ELF: no dynamic_lookup: leave what the test does not define unresolved (never called)
 build() {  # $1 = hanim.cpp to compile, $2 = exe
-eval "nice -n 10 $FLAGS -g -fsanitize=address,undefined -Wl,-undefined,dynamic_lookup -o '$2' '$REPO/tests/portable/p2j_hanim_test.cpp' '$1'" 2>"$OUT/build.err" || { grep -m 20 error "$OUT/build.err"; return 1; }
+eval "nice -n 10 $FLAGS -g -fsanitize=address,undefined $DYNLOOKUP -o '$2' '$REPO/tests/portable/p2j_hanim_test.cpp' '$1' $LINKTAIL" 2>"$OUT/build.err" || { grep -m 20 error "$OUT/build.err"; return 1; }
 }
 SRC="$REPO/source/standalone/rw/hanim.cpp"
 build "$SRC" "$OUT/p2j_hanim_test" || { echo "BUILD FAILED"; exit 1; }

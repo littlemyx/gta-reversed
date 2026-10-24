@@ -46,7 +46,7 @@ if [ "${1:-}" == "mutate" ]; then
   mutate() { # name, file (relative to source/game_sa), sed expr
     local D="$OUT/mut/$1"; rm -rf "$D"; mkdir -p "$D/Plugins/BreakablePlugin" "$D/FileRecords"
     cp "$S/game_sa/Plugins/BreakablePlugin/BreakablePlugin.h" "$S/game_sa/Plugins/BreakablePlugin/BreakablePlugin.cpp" "$D/Plugins/BreakablePlugin/"
-    sed -i '' -e "$3" "$D/$2"
+    sed -i.orig -e "$3" "$D/$2"
     if cmp -s "$D/$2" "$S/game_sa/$2"; then echo "MUTANT $1: sed did not change anything"; mrc=1; return; fi
     build "$D" "$D/t" || { echo "MUTANT $1: build failed"; head -5 "$D/t.err"; mrc=1; return; }
     if ( "$D/t" >"$D/run.log" 2>&1 ) 2>/dev/null; then echo "MUTANT $1: SURVIVED (test passed) <-- BAD"; mrc=1; else echo "MUTANT $1: caught ($(grep -c -E 'FAIL|runtime error|ERROR: AddressSanitizer|P2I-STUB' "$D/run.log") signals)"; fi

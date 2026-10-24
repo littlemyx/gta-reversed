@@ -144,6 +144,7 @@ struct TextFile {
     std::vector<char> data;
     size_t            pos{};
 };
+#ifdef __APPLE__
 int TextRead(void* c, char* buf, int n) {
     auto* t = (TextFile*)c;
     const size_t left = t->data.size() - t->pos;
@@ -161,6 +162,27 @@ fpos_t TextSeek(void* c, fpos_t off, int whence) {
     return (fpos_t)np;
 }
 int TextClose(void* c) { delete (TextFile*)c; return 0; }
+#else
+// glibc: fopencookie (funopen is BSD/macOS only); same semantics, 64-bit offsets
+ssize_t TextRead(void* c, char* buf, size_t n) {
+    auto* t = (TextFile*)c;
+    const size_t left = t->data.size() - t->pos;
+    const size_t k    = left < n ? left : n;
+    std::memcpy(buf, t->data.data() + t->pos, k);
+    t->pos += k;
+    return (ssize_t)k;
+}
+int TextSeek(void* c, off64_t* off, int whence) {
+    auto* t = (TextFile*)c;
+    long long base = whence == SEEK_SET ? 0 : whence == SEEK_CUR ? (long long)t->pos : (long long)t->data.size();
+    const long long np = base + (long long)*off;
+    if (np < 0) { errno = EINVAL; return -1; }
+    t->pos = (size_t)np;
+    *off   = (off64_t)np;
+    return 0;
+}
+int TextClose(void* c) { delete (TextFile*)c; return 0; }
+#endif
 } // namespace
 
 std::FILE* OpenResolvedText(const char* path, const char* mode) {
@@ -187,7 +209,11 @@ std::FILE* OpenResolvedText(const char* path, const char* mode) {
     }
     if (cr) t->data.push_back('\r');
     std::fclose(f);
+#ifdef __APPLE__
     std::FILE* r = ::funopen(t, TextRead, nullptr, TextSeek, TextClose);
+#else
+    std::FILE* r = ::fopencookie(t, "r", cookie_io_functions_t{ TextRead, nullptr, TextSeek, TextClose });
+#endif
     if (!r) delete t;
     return r;
 }

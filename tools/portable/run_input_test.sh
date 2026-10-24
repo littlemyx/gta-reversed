@@ -7,12 +7,35 @@ OUT="${OUT:-${TMPDIR:-/tmp}/input_test}"; mkdir -p "$OUT"
 CLANG="${CLANG:-/opt/homebrew/opt/llvm/bin/clang++}"; [ -x "$CLANG" ] || CLANG=clang++
 SDL3="${SDL3:-/opt/homebrew/opt/sdl3}"
 SDK=(); [ "$(uname)" = Darwin ] && SDK=(-isysroot "$(xcrun --show-sdk-path)")
+if [ -d "$SDL3/include" ]; then
+  SDLINC=(-I"$SDL3/include"); SDLLIBS=(-L"$SDL3/lib" -lSDL3 -Wl,-rpath,"$SDL3/lib")
+else # Linux / conan: SDL3 headers from the -isystem set of the build, SDL3 + its system libs from the game's link line
+  COMPDB="${COMPDB:-$REPO/build/PortableLinux/compile_commands.json}"; BDIR="$(dirname "$COMPDB")"
+  SDLINC=(-I"$(python3 - "$COMPDB" <<'PY'
+import json, os, shlex, sys
+for e in json.load(open(sys.argv[1])):
+    c = shlex.split(e['command'])
+    for i, a in enumerate(c[:-1]):
+        if a == '-isystem' and os.path.exists(os.path.join(c[i + 1], 'SDL3', 'SDL.h')):
+            print(c[i + 1]); sys.exit(0)
+sys.exit(1)
+PY
+)")
+  SDLLIBS=($(python3 - "$BDIR" <<'PY'
+import re, sys
+t = open(sys.argv[1] + '/build.ninja').read()
+m = re.search(r'^build bin/gta_reversed:.*?\n  LINK_LIBRARIES = (.*?)\n', t, re.S | re.M)
+print(m.group(1).replace('vendor/librw/src/librw.a', sys.argv[1] + '/vendor/librw/src/librw.a'))
+PY
+))
+  SDK+=(-stdlib=libc++)
+fi
 T="$REPO/tests/portable"; S="$REPO/source/portable"
 build() { # $1 = app_input_map.h, $2 = app_present_pacer.h, $3 exe  (mutants shadow the headers through a copy of the tree layout)
   local d="$OUT/tree_$(basename "$3")"; rm -rf "$d"; mkdir -p "$d/tests/portable" "$d/portable"
   cp "$T/input_test.cpp" "$d/tests/portable/"; cp "$1" "$d/portable/app_input_map.h"; cp "$2" "$d/portable/app_present_pacer.h"
-  "$CLANG" "${SDK[@]}" -std=c++20 -O1 -g -fsanitize=address,undefined -fno-sanitize-recover=undefined -w -I"$d" -I"$SDL3/include" -o "$3" "$d/tests/portable/input_test.cpp" \
-      -L"$SDL3/lib" -lSDL3 -Wl,-rpath,"$SDL3/lib" 2>"$OUT/build.err" || { head -30 "$OUT/build.err"; return 1; }
+  "$CLANG" "${SDK[@]}" -std=c++20 -O1 -g -fsanitize=address,undefined -fno-sanitize-recover=undefined -w -I"$d" "${SDLINC[@]}" -o "$3" "$d/tests/portable/input_test.cpp" \
+      "${SDLLIBS[@]}" 2>"$OUT/build.err" || { head -30 "$OUT/build.err"; return 1; }
 }
 build "$S/app_input_map.h" "$S/app_present_pacer.h" "$OUT/t" || { echo "BUILD FAILED"; exit 1; }
 rc=0; ASAN_OPTIONS=detect_leaks=0:symbolize=0 SDL_VIDEODRIVER=dummy "$OUT/t" || rc=1

@@ -1,0 +1,26 @@
+# Native Linux x86_64 profile for the portable build (preset PortableLinux, option GTASA_PORTABLE). Dependencies AND the game are built with clang 23 + libc++ (apt.llvm.org,
+# tools/portable/linux_deps.sh): the game needs libc++ >= 23 (std::views::enumerate), and C++ dependencies (spdlog, imgui, tracy) must share its ABI.
+# Use tools/portable/conan_install_linux.sh (scratch copy of conanfile.py, so ConanPresets.json and source/libs/imgui of the repo are never rewritten).
+[settings]
+os=Linux
+arch=x86_64
+build_type=Release
+compiler=clang
+compiler.version=23
+compiler.cppstd=23
+compiler.libcxx=libc++
+
+[conf]
+tools.cmake.cmaketoolchain:generator=Ninja
+tools.build:compiler_executables={"c": "clang-23", "cpp": "clang++-23"}
+tools.build:exelinkflags=["-fuse-ld=lld"]
+tools.build:sharedlinkflags=["-fuse-ld=lld"]
+tools.system.package_manager:mode=install
+
+[options]
+# SDL3 only opens the window / GL context / keyboard (audio goes through OpenAL): no Wayland / sndio / PulseAudio / Vulkan, so conan pulls in the X11 system packages only (apt)
+sdl/*:wayland=False
+sdl/*:sndio=False
+sdl/*:pulseaudio=False
+sdl/*:vulkan=False
+sdl/*:libusb=False

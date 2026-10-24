@@ -11,6 +11,8 @@ COMPDB="${COMPDB:-$REPO/build/PortableMac/compile_commands.json}"
 OUT="${OUT:-${TMPDIR:-/tmp}/p2g_test}"; mkdir -p "$OUT"
 export P2G_MAIN_SCM="${P2G_MAIN_SCM:-$HOME/Library/Application Support/Steam/steamapps/common/grand theft auto - san andreas/Grand Theft Auto - San Andreas.app/Contents/Resources/transgaming/c_drive/Program Files/Rockstar Games/GTA San Andreas/data/script/main.scm}"
 S="$REPO/source"
+# CI (GitHub sets CI=true) has no game data: the real-main.scm part is skipped there instead of failing
+[ -r "$P2G_MAIN_SCM" ] || [ -z "${CI:-}" ] || export P2G_ALLOW_NO_SCM=1
 { echo '#include <cstdint>'; python3 "$REPO/tools/portable/gen_x86_golden.py" cpp CRunningScript_File; } > "$OUT/p2g_golden.inc" || exit 1
 BASE=$(python3 - "$COMPDB" <<'PY'
 import json, shlex, sys

@@ -63,7 +63,7 @@ if [ "${1:-}" == "mutate" ]; then
     local F
     case $2 in cut) F="$D/p2h_cut.h";; hdr) F="$D/FileRecords/PathNodeFile.hpp";; blk) F="$D/p2h_load_block.inc";; esac
     local before; before=$(cksum < "$F")
-    sed -i '' -e "$3" "$F"
+    sed -i.orig -e "$3" "$F"
     if [ "$before" == "$(cksum < "$F")" ]; then echo "MUTANT $1: sed did not change anything"; mrc=1; return; fi
     build "$D" "$D" "$D/t" || { echo "MUTANT $1: build failed"; head -5 "$D/t.err"; mrc=1; return; }
     if ( "$D/t" >"$D/run.log" 2>&1 ) 2>/dev/null; then echo "MUTANT $1: SURVIVED (test passed) <-- BAD"; mrc=1; else echo "MUTANT $1: caught ($(grep -c -E 'FAIL|runtime error|ERROR: AddressSanitizer' "$D/run.log") signals)"; fi

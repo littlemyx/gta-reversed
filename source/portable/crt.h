@@ -321,8 +321,7 @@ inline errno_t freopen_s(FILE** f, const char* path, const char* mode, FILE* str
     return *f ? 0 : errno;
 }
 
-extern "C" char* getcwd(char*, size_t);
-extern "C" int   chdir(const char*);
+#include <unistd.h> // getcwd / chdir (their glibc declarations carry noexcept: do not redeclare)
 inline char* _getcwd(char* buf, int size) { return ::getcwd(buf, size > 0 ? (size_t)size : 0); }
 inline int   _chdir(const char* path) { return ::chdir(path); }
 inline int   _wchdir(const wchar_t* path) {

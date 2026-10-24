@@ -5,10 +5,16 @@
 // never needed by the language. The explicit call above does reference C1, hence an undefined symbol at link time. Without virtual bases C1 and C2 are the same
 // code, so the missing C1 is a plain tail branch to C2 (this is what clang itself emits as an alias for concrete classes).
 // These are NOT stubs: the behaviour is exactly the constructor's. Only compiled for the portable (arm64 Mach-O) build; the Windows builds never see this file.
-#if defined(__aarch64__) && defined(__APPLE__)
+#if (defined(__aarch64__) && defined(__APPLE__)) || (defined(__x86_64__) && defined(__linux__))
+// (Linux x86_64 ELF: same reason, found by the first PortableLinux link, MAC-LNX1; symbols have one underscore less than Mach-O and the tail call goes through the PLT)
 
+#if defined(__APPLE__)
 #define NOTSA_C1_ALIAS(MANGLED_STEM, ARGS) \
     __asm__(".text\n.p2align 2\n.globl __ZN" MANGLED_STEM "C1" ARGS "\n__ZN" MANGLED_STEM "C1" ARGS ":\n    b __ZN" MANGLED_STEM "C2" ARGS "\n")
+#else
+#define NOTSA_C1_ALIAS(MANGLED_STEM, ARGS) \
+    __asm__(".text\n.p2align 4\n.globl _ZN" MANGLED_STEM "C1" ARGS "\n.type _ZN" MANGLED_STEM "C1" ARGS ",@function\n_ZN" MANGLED_STEM "C1" ARGS ":\n    jmp _ZN" MANGLED_STEM "C2" ARGS "@PLT\n")
+#endif
 
 NOTSA_C1_ALIAS("6CEvent", "Ev");                                                    // CEvent::CEvent()
 NOTSA_C1_ALIAS("21CEventAcquaintancePed", "EP4CPed9eTaskType");                      // CEventAcquaintancePed::CEventAcquaintancePed(CPed*, eTaskType)

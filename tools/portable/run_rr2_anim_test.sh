@@ -29,8 +29,9 @@ m = re.search(r'^build bin/gta_reversed:.*?\n  LINK_LIBRARIES = (.*?)\n', t, re.
 print(m.group(1).replace('vendor/librw/src/librw.a', sys.argv[1] + '/vendor/librw/src/librw.a'))
 PY
 )
+WEAKFW=""; [ "$(uname)" = Darwin ] && WEAKFW="-Wl,-weak_framework,CoreHaptics"
 build() {  # $1 = rtanim.cpp to compile, $2 = exe
-eval "nice -n 10 $FLAGS -g -fsanitize=address,undefined -o '$2' '$REPO/tests/portable/rr2_setcurrentanim_test.cpp' '$1' $LIBS -Wl,-weak_framework,CoreHaptics" 2>"$OUT/build.err" || { grep -m 20 -i "error" "$OUT/build.err"; return 1; }
+eval "nice -n 10 $FLAGS -g -fsanitize=address,undefined -o '$2' '$REPO/tests/portable/rr2_setcurrentanim_test.cpp' '$1' $LIBS $WEAKFW" 2>"$OUT/build.err" || { grep -m 20 -i "error" "$OUT/build.err"; return 1; }
 }
 SRC="$REPO/source/standalone/rw/rtanim.cpp"
 build "$SRC" "$OUT/rr2_test" || { echo "BUILD FAILED"; exit 1; }

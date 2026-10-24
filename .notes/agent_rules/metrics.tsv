@@ -151,3 +151,4 @@ date	agent	rules	kind	tokens	tool_uses	minutes	outcome	notes
 2026-10-24	MAC-RR-DESIGN	v4	RR plan + RR-1 harness	-	-	-	done; 1 nondeterminism left
 2026-10-24	MAC-RR2	v4	RR self-determinism root cause	-	-	-	done: rtanim LP64 pointer overwrite
 2026-10-24	MAC-PLAY1	v4	gameplay smoke + triage	-	-	-	all scenarios PASS, 3 fixes
+2026-10-24	MAC-R9	v4	R-9 + R-8 env/specular GL3	-	-	-	done; found regression R9-1

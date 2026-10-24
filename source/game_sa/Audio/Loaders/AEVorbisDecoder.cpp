@@ -88,7 +88,7 @@ size_t CAEVorbisDecoder::FillBuffer(void* dest, size_t size) {
 long CAEVorbisDecoder::GetStreamLengthMs() {
     if (m_bInitialized) {
         double length = ov_time_total(m_pVorbisFileHandle, -1);
-        return (long)(length * 1000.0f);
+        return (long)(X87R(length * 1000.0f));
     }
 
     return -1;
@@ -98,7 +98,7 @@ long CAEVorbisDecoder::GetStreamLengthMs() {
 long CAEVorbisDecoder::GetStreamPlayTimeMs() {
     if (m_bInitialized) {
         double length = ov_time_tell(m_pVorbisFileHandle);
-        return (long)(length * 1000.0f);
+        return (long)(X87R(length * 1000.0f));
     }
 
     return -1;

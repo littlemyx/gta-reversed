@@ -2642,7 +2642,7 @@ float CAEVehicleAudioEntity::GetVolForPlayerEngineSound(tVehicleParams& vp, eVeh
     case AE_SOUND_PLAYER_CRZ:
         volume = m_IsSingleGear
             ? cfg.SingleGearVolume
-            : static_cast<float>(static_cast<double>(cfg.Crz.VolMax - cfg.Crz.VolMin) / static_cast<double>(cfg.CrzMaxCnt)) * m_CrzCount + cfg.Crz.VolMin; // the divisor is computed at the CRT's PC53 (double), then stored as a float
+            : static_cast<float>(static_cast<x87d>(cfg.Crz.VolMax - cfg.Crz.VolMin) / static_cast<x87d>(cfg.CrzMaxCnt)) * m_CrzCount + cfg.Crz.VolMin; // the divisor is computed at the CRT's PC53 (double), then stored as a float
         break;
     case AE_SOUND_PLAYER_AC:
         volume = m_IsSingleGear
@@ -4564,7 +4564,7 @@ static void ProcessBicycleSounds(CAEVehicleAudioEntity& ae, CAEVehicleAudioEntit
     const auto tyreVolume       = CAEAudioUtility::AudioLog10(numContactWheels * 0.25f * speedRatio) * 20.f + ae.m_EventVolume + -8.f; // 0x8CBEBC
 
     // 0x4FFF17
-    const auto tyreFrq = (std::abs(x87::sin(bmx->m_RideAnimData.LeanAngle)) * 0.2f + 1.f) // 0x8CBD60
+    const auto tyreFrq = (X87R(std::abs(x87::sin(bmx->m_RideAnimData.LeanAngle))) * 0.2f + 1.f) // 0x8CBD60
         * (((numContactWheels * FRQ_TYRE_RANGE) * 0.125f + FRQ_TYRE_RANGE * speedRatio) + 1.05f); // 0x8CBD5C
 
     // 0x4FFF6C

@@ -282,8 +282,8 @@ void CAEAudioHardware::PlaySound(int16 channel, uint16 channelSlot, uint16 sound
 
     const int32 length = ch->GetLength();
     if ((flags & 0x8) && (int16)startPos > 0) { // Play position is a percentage
-        const auto  scaled = (float)((double)(int16)startPos * (double)0.01f * (double)length);
-        startPos = (int32)std::floor((double)scaled); // 0x406CE0 = `floor`, then `_ftol`
+        const auto  scaled = (float)((x87d)(int16)startPos * (x87d)0.01f * (x87d)length);
+        startPos = (int32)std::floor((x87d)scaled); // 0x406CE0 = `floor`, then `_ftol`
     }
     if ((int16)startPos > length) {
         startPos = length;

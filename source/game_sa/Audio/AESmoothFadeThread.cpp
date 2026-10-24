@@ -102,9 +102,9 @@ void CAESmoothFadeThread::Service() {
             //           intermediate (and the value that goes to SetVolume) in extended precision; only m_fCurVolume is a float store.
             // BUG (port): this used `log2(fStep * fProgress)` (no `1 +`): NaN for fade-outs (-> SetVolume(0) = FULL volume for the 20-30 ms of the fade) and a
             //        huge negative number at the start of fade-ins -> audible clicks/crackle on every fade.
-            const double fStep     = std::pow(10.0, (double)entry.m_fVolumeDiff * (double)0.05f) - 1.0;
-            const double fProgress = (double)elapsed / (double)entry.m_wFadeTime;
-            const double fVolume   = x87::log10(fStep * fProgress + 1.0) * 20.0 + (double)entry.m_fStartVolume;
+            const x87d fStep     = X87R(std::pow(10.0, (x87d)entry.m_fVolumeDiff * (x87d)0.05f) - 1.0);
+            const x87d fProgress = (x87d)elapsed / (x87d)entry.m_wFadeTime;
+            const x87d fVolume   = X87R(x87::log10(fStep * fProgress + (x87d)1.0) * 20.0) + (x87d)entry.m_fStartVolume;
             entry.m_fCurVolume = (float)fVolume;
             NOTSA_TAP_FADE(7);
 #if defined(NOTSA_STANDALONE_RUN) && !defined(NOTSA_PORTABLE) // MAC-W0: DirectSound vtable tap/mute are Windows debug tools
@@ -113,7 +113,7 @@ void CAESmoothFadeThread::Service() {
             }
 #endif
 
-            const auto dwVolume = static_cast<LONG>(fVolume * 100.0);
+            const auto dwVolume = static_cast<LONG>(fVolume * (x87d)100.0);
             entry.m_pSoundBuffer->SetVolume(dwVolume);
             continue;
         }

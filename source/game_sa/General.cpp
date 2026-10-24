@@ -196,7 +196,7 @@ double CGeneral::GetAngleBetweenPointsExt(float x1, float y1, float x2, float y2
 }
 
 uint16 CGeneral::GetRandomNumber() { // Why does this return `uint16`? Should be `int32` (same as retval of `rand()`)
-    static_assert(RAND_MAX == 0x7FFF, "PC-generated random numbers should not exceed 32767");
+    static_assert(RAND_MAX == 0x7FFF, "PC-generated random numbers should not exceed 32767"); static_assert(RAND_MAX_FLOAT_RECIPROCAL == 1.0f / 32767.0f);
 #ifdef BETTER_RNG
     static_assert(false, "PC-generated random numbers should not exceed 32767");
 #else

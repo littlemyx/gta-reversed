@@ -7,6 +7,7 @@
 #pragma once
 
 #include <cstdlib> // RAND_MAX
+#include "portable/msvc_rand.h" // NOTSA_PORTABLE only: RAND_MAX == 0x7FFF (MSVC CRT), see P4-S1
 #include <extensions/utility.hpp>
 
 //! If you see this value USE THE INTEGER VERSION of `GetRandomNumberInRange`

@@ -366,4 +366,7 @@ inline LONG64 InterlockedCompareExchange64(volatile LONG64* p, LONG64 xchg, LONG
     return cmp;
 }
 
+// MSVC CRT rand/srand/RAND_MAX (P4-S1): LCG + RAND_MAX 0x7FFF + per-thread state like the exe's _tiddata
+#include "msvc_rand.h"
+
 #endif // !_WIN32

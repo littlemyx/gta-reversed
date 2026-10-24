@@ -400,20 +400,20 @@ float CBoat::IsVertexAffectedByWake(CVector coords, CBoat* boat, int16 wakeQuadr
     // 0x6F0F50 (oracle-proven): the squared radius is a plain product (not powf), everything stays on the x87 stack (=> `double`: a huge coordinate squares past FLT_MAX),
     // the contribution is clamped with a compare-and-select (NaN passes)
     for (uint16 iTrail = 0; iTrail < boat->m_NumWakeCoords; ++iTrail) {
-        const double fWakeRadius = ((double)WAKE_LIFETIME - (double)boat->m_WakePtCounters[iTrail]) * (double)fShapeTime + (double)iTrail * (double)fShapeLength;
-        const double fWakeDistSquared = fWakeRadius * fWakeRadius;
-        const double fDX = (double)boat->m_WakeCoords[iTrail].x - (double)coords.x, fDY = (double)boat->m_WakeCoords[iTrail].y - (double)coords.y;
-        const double fTrailDistSquared = fDY * fDY + fDX * fDX;
+        const x87d fWakeRadius = ((x87d)WAKE_LIFETIME - (x87d)boat->m_WakePtCounters[iTrail]) * (x87d)fShapeTime + (x87d)iTrail * (x87d)fShapeLength;
+        const x87d fWakeDistSquared = fWakeRadius * fWakeRadius;
+        const x87d fDX = (x87d)boat->m_WakeCoords[iTrail].x - (x87d)coords.x, fDY = (x87d)boat->m_WakeCoords[iTrail].y - (x87d)coords.y;
+        const x87d fTrailDistSquared = fDY * fDY + fDX * fDX;
         if (fTrailDistSquared < fWakeDistSquared) {
             nWakeSkipCounterVertex[wakeQuadrant] = 0;
-            double fContrib = std::sqrt(fTrailDistSquared / fWakeDistSquared) * (double)fRangeMult + ((double)WAKE_LIFETIME - (double)boat->m_WakePtCounters[iTrail]) * (double)fTimeMult;
+            x87d fContrib = std::sqrt(fTrailDistSquared / fWakeDistSquared) * (x87d)fRangeMult + ((x87d)WAKE_LIFETIME - (x87d)boat->m_WakePtCounters[iTrail]) * (x87d)fTimeMult;
             if (1.0 < fContrib) {
-                fContrib = 1.0;
+                fContrib = (x87d)1.0;
             }
-            return (float)(1.0 - fContrib);
+            return (float)((x87d)1.0 - fContrib);
         }
 
-        const double fDistDiff = fTrailDistSquared - fWakeDistSquared;
+        const x87d fDistDiff = fTrailDistSquared - fWakeDistSquared;
         if (fDistDiff > 20.0) {
             if (nWakeSkipCounterVertex[wakeQuadrant] > 3) {
                 nWakeSkipCounterVertex[wakeQuadrant] = 3;

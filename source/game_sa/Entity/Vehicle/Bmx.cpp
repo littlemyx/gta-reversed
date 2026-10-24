@@ -371,9 +371,9 @@ void CBmx::LaunchBunnyHopCB(CAnimBlendAssociation* assoc, void* data) {
         }
         // the exe keeps the scalar factors (0.06 * mass * power, 0.01 * turnMass * power) on the x87 stack and spills only the three products (extended exponent range): `double` locals
         const auto& up   = bmx->m_matrix->GetUp();
-        const double f1  = 0.06f * bmx->m_fMass * power;
+        const x87d f1  = 0.06f * bmx->m_fMass * power;
         bmx->ApplyMoveForce(CVector{ (float)(f1 * up.x), (float)(f1 * up.y), (float)(f1 * up.z) });
-        const double f2  = 0.01f * bmx->m_fTurnMass * power;
+        const x87d f2  = 0.01f * bmx->m_fTurnMass * power;
         bmx->ApplyTurnForce(CVector{ (float)(f2 * up.x), (float)(f2 * up.y), (float)(f2 * up.z) }, bmx->m_matrix->GetForward());
     }
 }

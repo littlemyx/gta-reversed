@@ -151,14 +151,14 @@ void CQuadBike::ProcessControl() {
         float pitchCoef = QUAD_PITCH_DAMP_COEF;
         float rollCoef  = QUAD_ROLL_DAMP_COEF;
 
-        double pitchDamp = vecQuadResistance.x; // Note: the original keeps this in the FPU (extended precision)
+        x87d pitchDamp = vecQuadResistance.x; // Note: the original keeps this in the FPU (extended precision)
         float  rollDamp  = vecQuadResistance.y;
 
         const auto wheelRatios = m_fWheelsSuspensionCompression;
         if (wheelRatios[0] == 1.0f && wheelRatios[2] == 1.0f) { // Front wheels in the air => wheelie
             if ((wheelRatios[1] < 1.0f || wheelRatios[3] < 1.0f) && GetForward().z > 0.0f) {
                 const auto error = std::fabs(m_pHandling->m_fWheelieAng - GetForward().z) * 0.25f;
-                pitchDamp = (double)vecQuadResistance.x - (double)std::min(error, 0.07f);
+                pitchDamp = (x87d)vecQuadResistance.x - (x87d)std::min(error, 0.07f);
             } else {
                 pitchDamp = QUAD_PITCH_DAMP_COEF;
                 rollCoef  = QUAD_ROLL_DAMP_COEF_AIR;
@@ -166,19 +166,19 @@ void CQuadBike::ProcessControl() {
         } else if (m_WheelCounts[1] == 1.0f && m_WheelCounts[3] == 1.0f) { // Front wheels on the ground, rear ones in the air => stoppie
             if (GetForward().z < 0.0f) {
                 const auto error = std::fabs(m_pHandling->m_fStoppieAng - GetForward().z) * 0.3f;
-                pitchDamp = ((double)std::min(error, 0.1f) + (double)0.9f) * (double)vecQuadResistance.x;
+                pitchDamp = ((x87d)std::min(error, 0.1f) + (x87d)0.9f) * (x87d)vecQuadResistance.x;
             }
         } else {
             pitchCoef = QUAD_PITCH_DAMP_COEF_AIR;
         }
 
-        const auto pitchDampF = (float)(pitchDamp / ((double)turnLocal.x * (double)turnLocal.x * (double)pitchCoef + 1.0));
-        const auto rollDampF  = (float)((double)rollDamp / ((double)turnLocal.y * (double)turnLocal.y * (double)rollCoef + 1.0));
+        const auto pitchDampF = (float)(pitchDamp / ((x87d)turnLocal.x * (x87d)turnLocal.x * (x87d)pitchCoef + (x87d)1.0));
+        const auto rollDampF  = (float)((x87d)rollDamp / ((x87d)turnLocal.y * (x87d)turnLocal.y * (x87d)rollCoef + (x87d)1.0));
 
         const auto pitchFactor = (float)std::pow((double)pitchDampF, (double)CTimer::GetTimeStep());
         const auto rollFactor  = std::pow((double)rollDampF, (double)CTimer::GetTimeStep());
 
-        const auto pitchDelta = (float)((double)turnLocal.x * (double)pitchFactor - (double)turnLocal.x);
+        const auto pitchDelta = (float)((x87d)turnLocal.x * (x87d)pitchFactor - (x87d)turnLocal.x);
         const auto rollDelta  = (double)turnLocal.y * rollFactor - (double)turnLocal.y; // Stays in the FPU
 
         const auto turnMass = m_fTurnMass;
@@ -186,23 +186,23 @@ void CQuadBike::ProcessControl() {
 
         {
             const auto fx = (float)((double)up.x * -1.0 * rollDelta);
-            const auto fz = (float)((double)(float)((double)up.z * -1.0) * rollDelta);
+            const auto fz = (float)((double)(float)((x87d)up.z * -(x87d)1.0) * rollDelta);
             ApplyTurnForce(
                 CVector{
-                    (float)((double)fx * (double)turnMass),
+                    (float)((x87d)fx * (x87d)turnMass),
                     (float)((double)up.y * -1.0 * rollDelta * (double)turnMass),
-                    (float)((double)fz * (double)turnMass)
+                    (float)((x87d)fz * (x87d)turnMass)
                 },
                 TransformVectorOriginal(mat, m_vecCentreOfMass) + GetRight()
             );
         }
         {
-            const auto fz = (float)((double)pitchDelta * (double)up.z);
+            const auto fz = (float)((x87d)pitchDelta * (x87d)up.z);
             ApplyTurnForce(
                 CVector{
-                    (float)((double)pitchDelta * (double)up.x * (double)turnMass),
-                    (float)((double)pitchDelta * (double)up.y * (double)turnMass),
-                    (float)((double)fz * (double)turnMass)
+                    (float)((x87d)pitchDelta * (x87d)up.x * (x87d)turnMass),
+                    (float)((x87d)pitchDelta * (x87d)up.y * (x87d)turnMass),
+                    (float)((x87d)fz * (x87d)turnMass)
                 },
                 TransformVectorOriginal(mat, m_vecCentreOfMass) + GetForward()
             );

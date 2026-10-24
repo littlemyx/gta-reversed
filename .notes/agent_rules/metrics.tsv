@@ -169,3 +169,5 @@ date	agent	rules	kind	tokens	tool_uses	minutes	outcome	notes
 2026-10-24	MAC-FRFIX	v4	file_records strict warn step	-	-	-	done: ctest 18/18 + 12/12
 2026-10-24	MAC-RACE1	v4	load-dependent crash hunt	-	-	-	root chain found, writer unknown
 2026-10-24	MAC-LNX1	v4	Linux x64 build + CI	251113	91	45	links in container; CI blocked on librw access
+2026-10-24	FID-MAC	v5	fidelity items (Mac-found)	249803	131	29	9 items: 6 port bugs fixed (W1 save padding, F7 fire corona, F8 GetUpperCase, F9, W3 enex load, P4 StareAtPed value, DELETE_OBJECT handle), 3 faithful; found W6 save-load crash; branch fid-mac
+2026-10-24	SAVE-LOAD	v5	save/load fix	254457	129	58	W6 = save made during a mission (exe never restores mission code; same in exe); real fix 4b231249: Win32 saved ASLR addresses in CRunningScript IPs instead of exe VAs; round trip OK (777 money, 3.6 min after load); branch save-load

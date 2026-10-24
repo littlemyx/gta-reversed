@@ -70,6 +70,17 @@ typedef uint8     bool8;
 typedef uint16    bool16;
 typedef uint32    bool32;
 
+//! x87d: the type of an arithmetic expression the exe evaluates on the x87 stack with the FPU precision control at PC=24 (D3D9 CreateDevice without
+//! FPU_PRESERVE): EVERY operation result is rounded to a 24 bit significand, so the faithful equivalent on SSE/arm64 is IEEE single arithmetic per operation.
+//! The reversed code often spells such expressions with (double) casts / double locals; write them with x87d instead (tools/portable/pc24_scan.py finds and
+//! rewrites them). `double` in every non-portable build (the Win32 reference keeps its x87 code, bytes unchanged), `float` when NOTSA_PORTABLE. RR_PLAN 11.8.
+//! Exact-float literals in such an expression are written `(x87d)1.0`; a literal that is not exactly a float (0.02) needs fp::MulD / fp::AddD (Core/Fp.h).
+#ifdef NOTSA_PORTABLE
+typedef float x87d;
+#else
+typedef double x87d;
+#endif
+
 #if (defined(__GNUC__) || defined(__GNUG__) || defined(__clang__))
 #define UNREACHABLE_INTRINSIC(...) __builtin_unreachable()
 #elif (defined(_MSC_VER))

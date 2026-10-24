@@ -130,6 +130,17 @@ def main(argv):
     ha, fa, da = parse(args[0])
     hb, fb, db = parse(args[1])
     common = sorted(set(fa) & set(fb))
+    if not quiet:
+        # per-subsystem first divergent frame (exact / quantised), the number the F-loop tracks (RR_PLAN 11.7/11.8)
+        firsts = {}
+        for fr in common:
+            for sub, ex, qu, _ in diff_frame(fa[fr], fb[fr]):
+                e, q = firsts.setdefault(sub, [None, None])
+                if ex and e is None:
+                    firsts[sub][0] = fr
+                if qu and q is None:
+                    firsts[sub][1] = fr
+        print("per-subsystem first divergent frame (exact/quantised): " + " ".join(f"{s}={firsts[s][0] if s in firsts and firsts[s][0] is not None else 'none'}/{firsts[s][1] if s in firsts and firsts[s][1] is not None else 'none'}" for s in SUBSYS))
     first_exact = first_quant = None
     for fr in common:
         d = diff_frame(fa[fr], fb[fr])

@@ -165,3 +165,4 @@ date	agent	rules	kind	tokens	tool_uses	minutes	outcome	notes
 2026-10-24	MAC-LNX1	v4	Linux x64 build + CI	251113	91	45	links in container; CI blocked on librw access
 2026-10-24	MAC-ANIM1	v4	cutscene anim crash	-	-	-	fixed: IFP garbage + ftol saturation
 2026-10-24	MAC-FTOL1	v4	float->int class A sweep	-	-	-	done: 155 sites
+2026-10-24	MAC-R10	v4	R-10 skin audit	-	-	-	done: fog + palette bugs fixed

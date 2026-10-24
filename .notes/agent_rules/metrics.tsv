@@ -160,3 +160,4 @@ date	agent	rules	kind	tokens	tool_uses	minutes	outcome	notes
 2026-10-24	MAC-FLOOP2-REV	v4	review PC24 codemod	-	-	-	3 real bugs + 6 misses fixed
 2026-10-24	MAC-C3	v4	return-type + UB sweep + exit abort	-	-	-	done; load race open
 2026-10-24	MAC-FLOOP3	v4	RR loop 3 + tool v3	-	-	-	done: walk routes bit-identical
+2026-10-24	MAC-FRFIX	v4	file_records strict warn step	-	-	-	done: ctest 18/18 + 12/12

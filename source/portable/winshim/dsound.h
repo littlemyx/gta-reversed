@@ -2,8 +2,8 @@
 /*
  * MAC-W0: DirectSound as TYPES for non-Windows builds, so that the audio hardware layer (CAEAudioHardware / CAEAudioChannel / CAEStaticChannel /
  * CAEStreamingChannel / CAESmoothFadeThread) compiles unchanged. The interfaces are abstract: nothing in the portable build can create an
- * implementation, EXCEPT the silent software device of portable/dsound_null.cpp that DirectSoundCreate / DirectSoundCreate8 return (MAC-BOOT1, W-3 stage 1:
- * the whole audio engine runs, nothing is played). Real audio on this platform is the OpenAL port of the hardware layer (stream W-3/W-4, game_sa/Audio/OpenAL).
+ * implementation, EXCEPT the software mixer of portable/dsound_al.cpp that DirectSoundCreate / DirectSoundCreate8 return (MAC-W3: DirectSound semantics over
+ * OpenAL, the hardware layer of the game stays unchanged; MAC-BOOT1's silent device was its first stage).
  *
  * Constant values are the Windows SDK's; GUID values are placeholders (only compared with each other by the silent device's QueryInterface).
  */
@@ -179,16 +179,16 @@ using LPDIRECTSOUND       = IDirectSound*;
 using LPDIRECTSOUND8      = IDirectSound8*;
 using LPDIRECTSOUNDBUFFER = IDirectSoundBuffer*;
 
-// ---- factories: W-3 stage 1 returns a SILENT software device (portable/dsound_null.cpp); the OpenAL layer will replace its role ----
+// ---- factories: the OpenAL-backed software mixer of portable/dsound_al.cpp (MAC-W3) ----
 namespace notsa::portable {
-HRESULT CreateNullDirectSound(IDirectSound8** out); // dsound_null.cpp
+HRESULT CreatePortableDirectSound(IDirectSound8** out); // dsound_al.cpp
 }
 inline HRESULT DirectSoundCreate(const GUID*, IDirectSound** ds, IUnknown*) {
     IDirectSound8* d = nullptr;
-    const HRESULT hr = notsa::portable::CreateNullDirectSound(&d);
+    const HRESULT hr = notsa::portable::CreatePortableDirectSound(&d);
     *ds = d;
     return hr;
 }
 inline HRESULT DirectSoundCreate8(const GUID*, IDirectSound8** ds, IUnknown*) {
-    return notsa::portable::CreateNullDirectSound(ds);
+    return notsa::portable::CreatePortableDirectSound(ds);
 }

@@ -5,6 +5,8 @@
 #   (NOTSA_STANDALONE_USERDIR), nothing is written into the Steam copy;
 # - NOTSA_STANDALONE_NOVSYNC=1: SDL3's Cocoa swap waits forever for a CVDisplayLink tick when the display is asleep / the window is not visible (agent runs);
 # - NOTSA_HANG_DUMP_SECS=<timeout-2>: a hang is turned into a call stack of the main thread (lldb / sample cannot attach to this exe on the dev Mac);
+# - MAC-W3 audio: NOTSA_AUDIO=loopback (default here: ALC_SOFT_loopback, nothing is audible while an agent runs the game) and NOTSA_AUDIO_WAV=$OUT/<tag>.wav (the first
+#   seconds of the mixed output); set NOTSA_AUDIO=device to hear it, NOTSA_AUDIO=null for no OpenAL at all;
 # - the exe is killed (process group) after <timeout_s>+3 s. Output: $OUT/<tag>.out
 set -u
 REPO="$(cd "$(dirname "$0")/../.." && pwd)"
@@ -18,6 +20,7 @@ if [ ! -d "$G" ]; then
   for e in Text anim audio autorun.inf data models movies stream.ini; do [ -e "$STEAM/$e" ] && ln -s "$STEAM/$e" "$G/$e"; done
 fi
 cd "$G" || exit 1
+export NOTSA_AUDIO="${NOTSA_AUDIO:-loopback}" NOTSA_AUDIO_WAV="${NOTSA_AUDIO_WAV:-$OUT/$TAG.wav}"
 export NOTSA_STANDALONE_USERDIR="$OUT/userdir" NOTSA_STANDALONE_SKIP_VIDEOS=1 NOTSA_STANDALONE_NOVSYNC=1 NOTSA_HANG_DUMP_SECS=$((TMO-2)) NOTSA_STANDALONE_INPUT="$SCRIPT"
 python3 - "$EXE" "$OUT/$TAG.out" "$TMO" <<'PY'
 import subprocess, sys, os, signal, time

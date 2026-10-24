@@ -30,20 +30,20 @@ void FxInfoAttractLine_c::Load(FILESTREAM file, int32 version) {
 void FindClosestPtOnLine(CVector& out, CVector& lineA, CVector& lineB, CVector& point) {
     // The original keeps everything on the x87 stack (extended precision); only the X delta of the
     // line is spilled to a float temporary, and it is used for the X term of the dot product only.
-    const double dx = (double)lineB.x - lineA.x;
-    const double dy = (double)lineB.y - lineA.y;
-    const double dz = (double)lineB.z - lineA.z;
+    const x87d dx = (x87d)lineB.x - lineA.x;
+    const x87d dy = (x87d)lineB.y - lineA.y;
+    const x87d dz = (x87d)lineB.z - lineA.z;
     const float  dxf = (float)dx;
 
-    const double dot    = ((double)point.y - lineA.y) * dy + ((double)point.z - lineA.z) * dz + ((double)point.x - lineA.x) * dxf;
-    const double sqMag  = dy * dy + dz * dz + dx * dx;
-    double       t      = dot / sqMag;
+    const x87d dot    = ((x87d)point.y - lineA.y) * dy + ((x87d)point.z - lineA.z) * dz + ((x87d)point.x - lineA.x) * dxf;
+    const x87d sqMag  = dy * dy + dz * dz + dx * dx;
+    x87d       t      = dot / sqMag;
 
     // NaN passes through unchanged
     if (t < 0.0) {
-        t = 0.0;
+        t = (x87d)0.0;
     } else if (t > 1.0) {
-        t = 1.0;
+        t = (x87d)1.0;
     }
 
     out.x = (float)(dxf * t + lineA.x);

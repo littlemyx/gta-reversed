@@ -29,9 +29,9 @@ namespace {
 // (z^2 + x^2) + y^2   (a + b == b + a, so this is also (x^2 + z^2) + y^2)
 double CamDistSq_ZXY(const CVector& pos) {
     const auto& cam = TheCamera.GetPosition();
-    const double dx = (double)cam.x - pos.x;
-    const double dy = (double)cam.y - pos.y;
-    const double dz = (double)cam.z - pos.z;
+    const x87d dx = (x87d)cam.x - pos.x;
+    const x87d dy = (x87d)cam.y - pos.y;
+    const x87d dz = (x87d)cam.z - pos.z;
     return (dz * dz + dx * dx) + dy * dy;
 }
 double CamDistSq_XZY(const CVector& pos) { return CamDistSq_ZXY(pos); }
@@ -39,24 +39,24 @@ double CamDistSq_XZY(const CVector& pos) { return CamDistSq_ZXY(pos); }
 // (z^2 + y^2) + x^2
 double CamDistSq_ZYX(const CVector& pos) {
     const auto& cam = TheCamera.GetPosition();
-    const double dx = (double)cam.x - pos.x;
-    const double dy = (double)cam.y - pos.y;
-    const double dz = (double)cam.z - pos.z;
+    const x87d dx = (x87d)cam.x - pos.x;
+    const x87d dy = (x87d)cam.y - pos.y;
+    const x87d dz = (x87d)cam.z - pos.z;
     return (dz * dz + dy * dy) + dx * dx;
 }
 
 // `rand() % 10000 * 1e-4f` (0x821B1E, 0x858FC4)
 double RandFrac10000() {
-    return (double)(rand() % 10000) * (double)1e-4f;
+    return (x87d)(rand() % 10000) * (x87d)1e-4f;
 }
 
 // 0x59C810 - `v` transformed by the transposed rotation of `m` (x87: extended precision, this term order)
 CVector InverseTransformVectorOriginal(const CMatrix& m, const CVector& v) {
     const auto &r = m.GetRight(), &f = m.GetForward(), &u = m.GetUp();
     return CVector{
-        (float)(((double)r.y * v.y + (double)r.z * v.z) + (double)v.x * r.x),
-        (float)(((double)f.y * v.y + (double)f.x * v.x) + (double)f.z * v.z),
-        (float)(((double)u.y * v.y + (double)u.x * v.x) + (double)u.z * v.z)
+        (float)(((x87d)r.y * v.y + (x87d)r.z * v.z) + (x87d)v.x * r.x),
+        (float)(((x87d)f.y * v.y + (x87d)f.x * v.x) + (x87d)f.z * v.z),
+        (float)(((x87d)u.y * v.y + (x87d)u.x * v.x) + (x87d)u.z * v.z)
     };
 }
 
@@ -89,19 +89,19 @@ void AddWheelDirt(Fx_c& fx, CVehicle* vehicle, const CVector& pos, float lightMu
 
     FxPrtMult_c fxMults{ color.red, color.green, color.blue, 1.0f, 0.0f, 0.0f, 0.05f }; // 0x4AB290
     for (auto i = 0; i < 3; i++) {
-        fxMults.m_fSize = (float)((double)rand() * (double)RAND_MAX_FLOAT_RECIPROCAL * (double)0.03f + (double)0.03f); // 0x821B1E, 0x858C7C, 0x858B10
+        fxMults.m_fSize = (float)((x87d)rand() * (x87d)RAND_MAX_FLOAT_RECIPROCAL * (x87d)0.03f + (x87d)0.03f); // 0x821B1E, 0x858C7C, 0x858B10
 
         float tmp = vehicle->m_vecMoveSpeed.x * -1.5f; // 0x85A704
         CVector vel;
-        vel.x = (float)((double)rand() * (double)RAND_MAX_FLOAT_RECIPROCAL * (double)tmp);
+        vel.x = (float)((x87d)rand() * (x87d)RAND_MAX_FLOAT_RECIPROCAL * (x87d)tmp);
         tmp   = vehicle->m_vecMoveSpeed.y * -1.5f;
-        vel.y = (float)((double)rand() * (double)RAND_MAX_FLOAT_RECIPROCAL * (double)tmp);
+        vel.y = (float)((x87d)rand() * (x87d)RAND_MAX_FLOAT_RECIPROCAL * (x87d)tmp);
 
         CVector partPos = pos;
-        vel.z = (float)((double)rand() * (double)RAND_MAX_FLOAT_RECIPROCAL * (double)1.5f + 2.0); // 0x858CE8, 0x858CA0
+        vel.z = (float)((x87d)rand() * (x87d)RAND_MAX_FLOAT_RECIPROCAL * (x87d)1.5f + (x87d)2.0); // 0x858CE8, 0x858CA0
 
-        partPos.x = (float)((double)rand() * (double)RAND_MAX_FLOAT_RECIPROCAL * (double)0.4f + (double)partPos.x - (double)0.2f); // 0x858EE8, 0x858CC4
-        partPos.y = (float)((double)rand() * (double)RAND_MAX_FLOAT_RECIPROCAL * (double)0.4f + (double)partPos.y - (double)0.2f);
+        partPos.x = (float)((x87d)rand() * (x87d)RAND_MAX_FLOAT_RECIPROCAL * (x87d)0.4f + (x87d)partPos.x - (x87d)0.2f); // 0x858EE8, 0x858CC4
+        partPos.y = (float)((x87d)rand() * (x87d)RAND_MAX_FLOAT_RECIPROCAL * (x87d)0.4f + (x87d)partPos.y - (x87d)0.2f);
 
         fx.m_WheelDirt->AddParticle(partPos, vel, 0.0f, fxMults, -1.0f, lightMult, 0.6f, false); // 0x4AA440
     }
@@ -143,33 +143,33 @@ void AddWheelSandOrDust(Fx_c& fx, CVehicle* vehicle, const CVector& pos, bool bW
     const float absGasPedal = std::fabs(vehicle->m_GasPedal); // vehicle + 0x49C
 
     const auto& moveSpeed = vehicle->m_vecMoveSpeed;
-    const auto Speed = [&] { return std::sqrt(((double)moveSpeed.x * moveSpeed.x + (double)moveSpeed.y * moveSpeed.y) + (double)moveSpeed.z * moveSpeed.z); };
-    double speedMult; // stays on the x87 stack (no float rounding)
+    const auto Speed = [&] { return std::sqrt(((x87d)moveSpeed.x * moveSpeed.x + (x87d)moveSpeed.y * moveSpeed.y) + (x87d)moveSpeed.z * moveSpeed.z); };
+    x87d speedMult; // stays on the x87 stack (no float rounding)
     if (bWheelsSpinning) {
-        speedMult = 1.0;
-    } else if (Speed() + Speed() > 1.0) { // 0x858624 (NaN takes the else branch)
-        speedMult = 1.0;
+        speedMult = (x87d)1.0;
+    } else if (X87R(Speed() + Speed()) > 1.0) { // 0x858624 (NaN takes the else branch)
+        speedMult = (x87d)1.0;
     } else {
-        speedMult = Speed() + Speed();
+        speedMult = X87R(Speed() + Speed());
     }
 
     // 0x858B1C = 0.1f, 0x858C20 = 0.9f, 0x858C28 = 0.05f
     fxMults.m_fLife = isDust
-        ? (float)((double)0.05f * speedMult + (double)0.1f)
-        : (float)((1.0 + speedMult) * (double)0.1f);
-    fxMults.m_fSize = (float)((double)0.9f * speedMult + (double)0.1f);
+        ? (float)((x87d)0.05f * speedMult + (x87d)0.1f)
+        : (float)(((x87d)1.0 + speedMult) * (x87d)0.1f);
+    fxMults.m_fSize = (float)((x87d)0.9f * speedMult + (x87d)0.1f);
 
     // Smaller particles for bikes
-    double stepMult;
+    x87d stepMult;
     float  sizeMult;
     switch (vehicle->m_nVehicleSubType) {
     case VEHICLE_TYPE_BMX:
-        stepMult = 2.0;
+        stepMult = (x87d)2.0;
         sizeMult = 0.25f; // 0x858C84
         break;
     case VEHICLE_TYPE_BIKE:
     case VEHICLE_TYPE_QUAD:
-        stepMult = 2.0;
+        stepMult = (x87d)2.0;
         sizeMult = 0.5f; // 0x858B8C
         break;
     default:
@@ -177,34 +177,34 @@ void AddWheelSandOrDust(Fx_c& fx, CVehicle* vehicle, const CVector& pos, bool bW
         sizeMult = 0.7f; // 0x858CB0
         break;
     }
-    fxMults.m_fSize = (float)((double)fxMults.m_fSize * (double)sizeMult);
+    fxMults.m_fSize = (float)((x87d)fxMults.m_fSize * (x87d)sizeMult);
 
     // Distance moved this frame -> number of particles
     const float  moveX  = CTimer::GetTimeStep() * moveSpeed.x;
     const float  moveY  = CTimer::GetTimeStep() * moveSpeed.y;
-    const double moveZd = (double)CTimer::GetTimeStep() * moveSpeed.z;
+    const x87d moveZd = (x87d)CTimer::GetTimeStep() * moveSpeed.z;
     const float  moveZ  = (float)moveZd;
-    const double length = std::sqrt((moveZd * (double)moveZ + (double)moveY * moveY) + (double)moveX * moveX);
+    const x87d length = std::sqrt((moveZd * (x87d)moveZ + (x87d)moveY * moveY) + (x87d)moveX * moveX);
     const int32  numParticles = std::max(1, (int32)(length * stepMult)); // 0x821B40 (ftol)
 
-    const float velMult = (float)((speedMult + (double)0.8f) - (double)0.2f); // 0x858C98, 0x858CC4
+    const float velMult = (float)((speedMult + (x87d)0.8f) - (x87d)0.2f); // 0x858C98, 0x858CC4
     const float numParticlesF = (float)numParticles;
     for (auto i = 0; i < numParticles; i++) {
         CVector vel;
-        float   tmp = (float)((double)absGasPedal * moveSpeed.x * (double)-40.0f); // 0x85A708
-        vel.x = (float)((double)rand() * (double)RAND_MAX_FLOAT_RECIPROCAL * (double)tmp); // 0x821B1E, 0x858C7C
-        tmp   = (float)((double)absGasPedal * moveSpeed.y * (double)-40.0f);
-        vel.y = (float)((double)rand() * (double)RAND_MAX_FLOAT_RECIPROCAL * (double)tmp);
-        vel.z = (float)((double)rand() * (double)RAND_MAX_FLOAT_RECIPROCAL * (double)velMult + (double)0.2f); // 0x858CC4
+        float   tmp = (float)((x87d)absGasPedal * moveSpeed.x * (x87d)-40.0f); // 0x85A708
+        vel.x = (float)((x87d)rand() * (x87d)RAND_MAX_FLOAT_RECIPROCAL * (x87d)tmp); // 0x821B1E, 0x858C7C
+        tmp   = (float)((x87d)absGasPedal * moveSpeed.y * (x87d)-40.0f);
+        vel.y = (float)((x87d)rand() * (x87d)RAND_MAX_FLOAT_RECIPROCAL * (x87d)tmp);
+        vel.z = (float)((x87d)rand() * (x87d)RAND_MAX_FLOAT_RECIPROCAL * (x87d)velMult + (x87d)0.2f); // 0x858CC4
 
-        const double f = 1.0 - (double)i / (double)numParticlesF;
-        const double offX = (double)moveX * f;
-        const float  offY = (float)((double)moveY * f);
-        const float  offZ = (float)((double)moveZ * f);
+        const x87d f = (x87d)1.0 - (x87d)i / (x87d)numParticlesF;
+        const x87d offX = (x87d)moveX * f;
+        const float  offY = (float)((x87d)moveY * f);
+        const float  offZ = (float)((x87d)moveZ * f);
         const CVector partPos{
-            (float)((double)pos.x - offX),
-            (float)((double)pos.y - (double)offY),
-            (float)((double)pos.z - (double)offZ)
+            (float)((x87d)pos.x - offX),
+            (float)((x87d)pos.y - (x87d)offY),
+            (float)((x87d)pos.z - (x87d)offZ)
         };
 
         fx.m_Sand->AddParticle(partPos, vel, 0.0f, fxMults, -1.0f, lightMult, 0.7f, false); // 0x4AA440
@@ -411,11 +411,11 @@ void Fx_c::CreateMatFromVec(RwMatrix* out, const CVector* origin, const CVector*
     RwV3dNormalize(&out->up, &out->up); // 0x7ED9B0
 
     // Cross products with (0, 0, 1)-like constants, the intermediates stay on the x87 stack (no float rounding)
-    const double ux = out->up.x, uy = out->up.y, uz = out->up.z;
-    const double t = uz * 0.0;               // 0x858B50
-    const double a = t - uy * -1.0;          // 0x858C1C
-    const double b = ux * -1.0 - t;
-    const double c = uy * 0.0 - ux * 0.0;
+    const x87d ux = out->up.x, uy = out->up.y, uz = out->up.z;
+    const x87d t = uz * (x87d)0.0;               // 0x858B50
+    const x87d a = t - uy * -(x87d)1.0;          // 0x858C1C
+    const x87d b = ux * -(x87d)1.0 - t;
+    const x87d c = uy * (x87d)0.0 - ux * (x87d)0.0;
     out->right.x = (float)a;
     out->right.y = (float)b;
     out->right.z = (float)c;
@@ -448,25 +448,25 @@ void Fx_c::AddBlood(const CVector& pos, const CVector& direction, int32 amount, 
     }
 
     // Wrap the 0..9999 random into a [0..1) float multiplier
-    const auto Rand10000 = [] { return (double)(rand() % 10000) * (double)1e-4f; }; // 0x821B1E, 0x858FC4
+    const auto Rand10000 = [] { return (x87d)(rand() % 10000) * (x87d)1e-4f; }; // 0x821B1E, 0x858FC4
 
     FxPrtMult_c fxMults{ 0.5f, 0.0f, 0.0f, 1.0f, 0.8f, 0.0f, 0.8f }; // 0x4AB290
     for (auto i = 0; i < amount; i++) {
-        fxMults.m_fSize = (float)(Rand10000() * (double)0.3f + (double)0.7f); // 0x858C24, 0x858CB0
+        fxMults.m_fSize = (float)(X87R(Rand10000() * (x87d)0.3f) + (x87d)0.7f); // 0x858C24, 0x858CB0
 
         CVector vel{ direction.x * 1.5f, direction.y * 1.5f, direction.z * 1.5f }; // 0x858CE8
-        vel.x = (float)(Rand10000() * 2.0 - 1.0 + vel.x);
-        vel.y = (float)(Rand10000() * 2.0 - 1.0 + vel.y);
-        vel.z = (float)(Rand10000() * 2.0 - 1.0 + vel.z);
+        vel.x = (float)(X87R(Rand10000() * (x87d)2.0) - (x87d)1.0 + vel.x);
+        vel.y = (float)(X87R(Rand10000() * (x87d)2.0) - (x87d)1.0 + vel.y);
+        vel.z = (float)(X87R(Rand10000() * (x87d)2.0) - (x87d)1.0 + vel.z);
 
         m_Blood->AddParticle(pos, vel, 0.0f, fxMults, -1.0f, lightMult, 0.6f, false); // 0x4AA440
     }
 
     CVector dropPos{ direction.x * 0.5f + pos.x, direction.y * 0.5f + pos.y, direction.z * 0.5f + pos.z }; // 0x858B8C
-    dropPos.x = (float)(Rand10000() * (double)0.2f - (double)0.1f + dropPos.x); // 0x858CC4, 0x858B1C
+    dropPos.x = (float)(X87R(Rand10000() * (x87d)0.2f) - (x87d)0.1f + dropPos.x); // 0x858CC4, 0x858B1C
     const auto yRand = Rand10000();
     m_Randomizer++;
-    dropPos.y = (float)(yRand * (double)0.2f - (double)0.1f + dropPos.y);
+    dropPos.y = (float)(X87R(yRand * (x87d)0.2f) - (x87d)0.1f + dropPos.y);
     dropPos.z += 1.0f;
 
     switch (m_Randomizer & 7) {
@@ -488,15 +488,15 @@ void Fx_c::AddWood(const CVector& pos, const CVector& direction, int32 amount, f
     FxPrtMult_c fxMults{ 0.5f, 0.25f, 0.0f, 1.0f, 0.3f, 0.0f, 1.0f }; // 0x4AB290
     for (auto i = 0; i < amount; i++) {
         // NOTE: the multipliers are NOT 0.12f/0.03f/0.03f, they differ in the last mantissa bits (0x85A6F8, 0x85A6F4, 0x85A6EC)
-        fxMults.m_Color.red   = (float)(RandFrac10000() * (double)std::bit_cast<float>(0x3DF5C290u) + (double)0.13f);  // 0x85A6F8, 0x859020
-        fxMults.m_Color.green = (float)(RandFrac10000() * (double)std::bit_cast<float>(0x3CF5C294u) + (double)0.12f);  // 0x85A6F4, 0x85A6F0
-        fxMults.m_Color.blue  = (float)(RandFrac10000() * (double)std::bit_cast<float>(0x3CF5C290u) + (double)0.04f);  // 0x85A6EC, 0x858CEC
-        fxMults.m_fSize       = (float)(RandFrac10000() * (double)0.3f  + (double)0.7f);   // 0x858C24, 0x858CB0
+        fxMults.m_Color.red   = (float)(X87R(RandFrac10000() * (double)std::bit_cast<float>(0x3DF5C290u)) + (x87d)0.13f);  // 0x85A6F8, 0x859020
+        fxMults.m_Color.green = (float)(X87R(RandFrac10000() * (double)std::bit_cast<float>(0x3CF5C294u)) + (x87d)0.12f);  // 0x85A6F4, 0x85A6F0
+        fxMults.m_Color.blue  = (float)(X87R(RandFrac10000() * (double)std::bit_cast<float>(0x3CF5C290u)) + (x87d)0.04f);  // 0x85A6EC, 0x858CEC
+        fxMults.m_fSize       = (float)(X87R(RandFrac10000() * (double)0.3f)  + (x87d)0.7f);   // 0x858C24, 0x858CB0
 
         CVector vel{ direction.x * 4.0f, direction.y * 4.0f, direction.z * 4.0f }; // 0x858B90
-        vel.x = (float)(RandFrac10000() * 4.0 - 2.0 + vel.x); // 0x858B90, 0x858CA0
-        vel.y = (float)(RandFrac10000() * 4.0 - 2.0 + vel.y);
-        vel.z = (float)(RandFrac10000() * 4.0 - 2.0 + vel.z);
+        vel.x = (float)(X87R(RandFrac10000() * 4.0) - (x87d)2.0 + vel.x); // 0x858B90, 0x858CA0
+        vel.y = (float)(X87R(RandFrac10000() * 4.0) - (x87d)2.0 + vel.y);
+        vel.z = (float)(X87R(RandFrac10000() * 4.0) - (x87d)2.0 + vel.z);
 
         g_fx.m_Blood->AddParticle(pos, vel, 0.0f, fxMults, -1.0f, lightMult, 0.6f, false); // 0x4AA440
     }
@@ -512,7 +512,7 @@ void Fx_c::AddSparks(const CVector& origin, const CVector& direction, float forc
         return;
     }
 
-    FxPrtMult_c fxMults{ 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 0.0f, (float)((double)life * (double)0.8f) }; // 0x4AB290, 0x858C98
+    FxPrtMult_c fxMults{ 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 0.0f, (float)((x87d)life * (x87d)0.8f) }; // 0x4AB290, 0x858C98
 
     const CVector acrossStep{ across.x * CTimer::GetTimeStep(), across.y * CTimer::GetTimeStep(), across.z * CTimer::GetTimeStep() };
     if (amount <= 0) {
@@ -521,33 +521,33 @@ void Fx_c::AddSparks(const CVector& origin, const CVector& direction, float forc
 
     const float amountF = (float)amount;
     const float nSpread = -spread;
-    const float range   = (float)((double)spread - (double)nSpread);
+    const float range   = (float)((x87d)spread - (x87d)nSpread);
     for (auto i = 0; i < amount; i++) {
         CVector dir = direction;
-        const float f = (float)(1.0 - (double)i / (double)amountF); // 0x858624
+        const float f = (float)((x87d)1.0 - (x87d)i / (x87d)amountF); // 0x858624
 
         // 0x858C7C = 1/32767
-        dir.x = (float)((double)rand() * (double)RAND_MAX_FLOAT_RECIPROCAL * ((double)spread - (double)nSpread) + (double)nSpread + (double)dir.x); // 0x821B1E
-        dir.y = (float)((double)rand() * (double)RAND_MAX_FLOAT_RECIPROCAL * ((double)spread - (double)nSpread) + (double)nSpread + (double)dir.y);
-        const double dirZ = (double)rand() * (double)RAND_MAX_FLOAT_RECIPROCAL * (double)range + (double)nSpread + (double)dir.z; // stays unrounded on the x87 stack
+        dir.x = (float)((x87d)rand() * (x87d)RAND_MAX_FLOAT_RECIPROCAL * ((x87d)spread - (x87d)nSpread) + (x87d)nSpread + (x87d)dir.x); // 0x821B1E
+        dir.y = (float)((x87d)rand() * (x87d)RAND_MAX_FLOAT_RECIPROCAL * ((x87d)spread - (x87d)nSpread) + (x87d)nSpread + (x87d)dir.y);
+        const x87d dirZ = (x87d)rand() * (x87d)RAND_MAX_FLOAT_RECIPROCAL * (x87d)range + (x87d)nSpread + (x87d)dir.z; // stays unrounded on the x87 stack
 
         const CVector vel{
-            (float)((double)dir.x * (double)force),
-            (float)((double)dir.y * (double)force),
-            (float)(dirZ * (double)force)
+            (float)((x87d)dir.x * (x87d)force),
+            (float)((x87d)dir.y * (x87d)force),
+            (float)(dirZ * (x87d)force)
         };
 
-        const double stepX = (double)acrossStep.x * (double)f;
-        const double stepY = (double)acrossStep.y * (double)f;
-        const float  stepZ = (float)((double)acrossStep.z * (double)f);
+        const x87d stepX = (x87d)acrossStep.x * (x87d)f;
+        const x87d stepY = (x87d)acrossStep.y * (x87d)f;
+        const float  stepZ = (float)((x87d)acrossStep.z * (x87d)f);
         const CVector pos{
-            (float)((double)origin.x - stepX),
-            (float)((double)origin.y - stepY),
-            (float)((double)origin.z - (double)stepZ)
+            (float)((x87d)origin.x - stepX),
+            (float)((x87d)origin.y - stepY),
+            (float)((x87d)origin.z - (x87d)stepZ)
         };
 
         auto* const sys = sparksType != SPARK_PARTICLE_SPARK2 ? m_Spark : m_Spark2;
-        sys->AddParticle(pos, vel, (float)((double)f * (double)0.05f), fxMults, -1.0f, 1.2f, 0.6f, false); // 0x858C28, 0x4AA440
+        sys->AddParticle(pos, vel, (float)((x87d)f * (x87d)0.05f), fxMults, -1.0f, 1.2f, 0.6f, false); // 0x858C28, 0x4AA440
     }
 }
 
@@ -559,7 +559,7 @@ void Fx_c::AddTyreBurst(const CVector& posn, const CVector& velocity) {
 
     const FxPrtMult_c fxMults{ 1.0f, 1.0f, 1.0f, 0.4f, 0.12f, 0.0f, 0.1f }; // 0x4AB290
     for (auto i = 0; i < 4; i++) {
-        m_SmokeII3expand->AddParticle(posn, velocity, (float)((double)i * (double)0.05f), fxMults, -1.0f, 1.2f, 0.6f, false); // 0x858C28, 0x4AA440
+        m_SmokeII3expand->AddParticle(posn, velocity, (float)((x87d)i * (x87d)0.05f), fxMults, -1.0f, 1.2f, 0.6f, false); // 0x858C28, 0x4AA440
     }
 }
 
@@ -585,7 +585,7 @@ void Fx_c::AddBulletImpact(const CVector& posn, const CVector& direction, int32 
             fxMults.m_Color.alpha += fxMults.m_Color.alpha;
         }
         for (auto i = 0; i < numParticles; i++) {
-            g_fx.m_SmokeII3expand->AddParticle(posn, direction, (float)((double)i * (double)0.05f), fxMults, -1.0f, arg4, 0.6f, false); // 0x858C28, 0x4AA440
+            g_fx.m_SmokeII3expand->AddParticle(posn, direction, (float)((x87d)i * (x87d)0.05f), fxMults, -1.0f, arg4, 0.6f, false); // 0x858C28, 0x4AA440
         }
         break;
     }
@@ -602,12 +602,12 @@ void Fx_c::AddBulletImpact(const CVector& posn, const CVector& direction, int32 
         }
         for (auto i = 0; i < numParticles; i++) {
             const CVector vel{ direction.x * 0.3f, direction.y * 0.3f, direction.z * 0.3f }; // 0x858C24
-            g_fx.m_Sand->AddParticle(posn, vel, (float)((double)i * (double)0.05f), fxMults, -1.0f, arg4, 0.6f, false); // 0x858C28, 0x4AA440
+            g_fx.m_Sand->AddParticle(posn, vel, (float)((x87d)i * (x87d)0.05f), fxMults, -1.0f, arg4, 0.6f, false); // 0x858C28, 0x4AA440
         }
         break;
     }
     case 3: // Wood
-        g_fx.AddWood(posn, direction, (int32)((double)amount * 0.5), 1.0f); // 0x858B8C, 0x49EE10
+        g_fx.AddWood(posn, direction, (int32)((x87d)amount * (x87d)0.5), 1.0f); // 0x858B8C, 0x49EE10
         break;
     default:
         break;
@@ -633,19 +633,19 @@ void Fx_c::AddDebris(const CVector& pos, const RwRGBA& color, float scale, int32
     }
 
     FxPrtMult_c fxMults{}; // 0x4AB270
-    fxMults.m_Color.red   = (float)((double)color.red   * (double)ExeRecip(255.0f)); // 0x859A3C
-    fxMults.m_Color.green = (float)((double)color.green * (double)ExeRecip(255.0f));
-    fxMults.m_Color.blue  = (float)((double)color.blue  * (double)ExeRecip(255.0f));
-    fxMults.m_Color.alpha = (float)((double)color.alpha * (double)ExeRecip(255.0f));
+    fxMults.m_Color.red   = (float)((x87d)color.red   * (x87d)ExeRecip(255.0f)); // 0x859A3C
+    fxMults.m_Color.green = (float)((x87d)color.green * (x87d)ExeRecip(255.0f));
+    fxMults.m_Color.blue  = (float)((x87d)color.blue  * (x87d)ExeRecip(255.0f));
+    fxMults.m_Color.alpha = (float)((x87d)color.alpha * (x87d)ExeRecip(255.0f));
     fxMults.m_fSize = scale;
     fxMults.m_fLife = 0.2f;
-    fxMults.m_Rot   = (float)((RandFrac10000() + 1.0) * (double)0.5f); // 0x858624, 0x858B8C
+    fxMults.m_Rot   = (float)((X87R(RandFrac10000() + 1.0)) * (x87d)0.5f); // 0x858624, 0x858B8C
 
     for (auto i = 0; i < amount; i++) {
         CVector vel;
-        vel.x = (float)((double)rand() * (double)RAND_MAX_FLOAT_RECIPROCAL * 0.5 * 20.0 - 5.0); // 0x858C7C, 0x858B8C, 0x858BA4, 0x858C80
-        vel.y = (float)((double)rand() * (double)RAND_MAX_FLOAT_RECIPROCAL * 0.5 * 20.0 - 5.0);
-        vel.z = (float)((double)rand() * (double)RAND_MAX_FLOAT_RECIPROCAL * (double)0.15f * 20.0 + 2.0); // 0x858FCC, 0x858CA0
+        vel.x = (float)((x87d)rand() * (x87d)RAND_MAX_FLOAT_RECIPROCAL * (x87d)0.5 * (x87d)20.0 - (x87d)5.0); // 0x858C7C, 0x858B8C, 0x858BA4, 0x858C80
+        vel.y = (float)((x87d)rand() * (x87d)RAND_MAX_FLOAT_RECIPROCAL * (x87d)0.5 * (x87d)20.0 - (x87d)5.0);
+        vel.z = (float)((x87d)rand() * (x87d)RAND_MAX_FLOAT_RECIPROCAL * (x87d)0.15f * (x87d)20.0 + (x87d)2.0); // 0x858FCC, 0x858CA0
 
         // Only one of the 4 prims is enabled at a time
         m_Cardebris->EnablePrim(0, false); // 0x4AA610
@@ -667,19 +667,19 @@ void Fx_c::AddGlass(const CVector& pos, const RwRGBA& color, float scale, int32 
     }
 
     FxPrtMult_c fxMults{}; // 0x4AB270
-    fxMults.m_Color.red   = (float)((double)color.red   * (double)ExeRecip(255.0f)); // 0x859A3C
-    fxMults.m_Color.green = (float)((double)color.green * (double)ExeRecip(255.0f));
-    fxMults.m_Color.blue  = (float)((double)color.blue  * (double)ExeRecip(255.0f));
-    fxMults.m_Color.alpha = (float)((double)color.alpha * (double)ExeRecip(255.0f));
+    fxMults.m_Color.red   = (float)((x87d)color.red   * (x87d)ExeRecip(255.0f)); // 0x859A3C
+    fxMults.m_Color.green = (float)((x87d)color.green * (x87d)ExeRecip(255.0f));
+    fxMults.m_Color.blue  = (float)((x87d)color.blue  * (x87d)ExeRecip(255.0f));
+    fxMults.m_Color.alpha = (float)((x87d)color.alpha * (x87d)ExeRecip(255.0f));
     fxMults.m_fSize = scale;
     fxMults.m_fLife = 0.2f;
-    fxMults.m_Rot   = (float)((RandFrac10000() + 1.0) * (double)0.5f); // 0x858624, 0x858B8C
+    fxMults.m_Rot   = (float)((X87R(RandFrac10000() + 1.0)) * (x87d)0.5f); // 0x858624, 0x858B8C
 
     for (auto i = 0; i < amount; i++) {
         CVector vel;
-        vel.x = (float)((double)rand() * (double)RAND_MAX_FLOAT_RECIPROCAL * 0.5 * 20.0 - 5.0); // 0x858C7C, 0x858B8C, 0x858BA4, 0x858C80
-        vel.y = (float)((double)rand() * (double)RAND_MAX_FLOAT_RECIPROCAL * 0.5 * 20.0 - 5.0);
-        vel.z = (float)((double)rand() * (double)RAND_MAX_FLOAT_RECIPROCAL * (double)0.15f * 20.0 + 2.0); // 0x858FCC, 0x858CA0
+        vel.x = (float)((x87d)rand() * (x87d)RAND_MAX_FLOAT_RECIPROCAL * (x87d)0.5 * (x87d)20.0 - (x87d)5.0); // 0x858C7C, 0x858B8C, 0x858BA4, 0x858C80
+        vel.y = (float)((x87d)rand() * (x87d)RAND_MAX_FLOAT_RECIPROCAL * (x87d)0.5 * (x87d)20.0 - (x87d)5.0);
+        vel.z = (float)((x87d)rand() * (x87d)RAND_MAX_FLOAT_RECIPROCAL * (x87d)0.15f * (x87d)20.0 + (x87d)2.0); // 0x858FCC, 0x858CA0
 
         m_Glass->AddParticle(pos, vel, 0.0f, fxMults, -1.0f, 1.2f, 0.6f, false); // 0x4AA440
     }
@@ -706,8 +706,8 @@ void Fx_c::AddWheelSpray(CVehicle* vehicle, CVector pos, bool bWheelsSpinning, b
     }
 
     const auto& moveSpeed = vehicle->m_vecMoveSpeed;
-    const auto Speed = [&] { return std::sqrt(((double)moveSpeed.x * moveSpeed.x + (double)moveSpeed.y * moveSpeed.y) + (double)moveSpeed.z * moveSpeed.z); };
-    if (!(std::fabs(Speed()) > (double)0.01f) && !bWheelsSpinning) { // 0x858C58
+    const auto Speed = [&] { return std::sqrt(((x87d)moveSpeed.x * moveSpeed.x + (x87d)moveSpeed.y * moveSpeed.y) + (x87d)moveSpeed.z * moveSpeed.z); };
+    if (!(X87R(std::fabs(Speed())) > (double)0.01f) && !bWheelsSpinning) { // 0x858C58
         return;
     }
 
@@ -716,19 +716,19 @@ void Fx_c::AddWheelSpray(CVehicle* vehicle, CVector pos, bool bWheelsSpinning, b
     float speedMult;
     if (bWheelsSpinning) {
         speedMult = 1.0f;
-    } else if (Speed() + Speed() > 1.0) { // 0x858624 (NaN takes the else branch)
+    } else if (X87R(Speed() + Speed()) > 1.0) { // 0x858624 (NaN takes the else branch)
         speedMult = 1.0f;
     } else {
-        speedMult = (float)(Speed() + Speed());
+        speedMult = (float)(X87R(Speed() + Speed()));
     }
 
-    fxMults.m_Color.alpha = (float)(((double)speedMult + 1.0) * (double)(bInWater ? 0.2f : 0.15f)); // 0x858CC4, 0x858FCC
+    fxMults.m_Color.alpha = (float)(((x87d)speedMult + (x87d)1.0) * (x87d)(bInWater ? 0.2f : 0.15f)); // 0x858CC4, 0x858FCC
     fxMults.m_fLife       = 0.08f;
-    fxMults.m_fSize       = (float)(((double)speedMult + 1.0) * (double)0.2f);                     // 0x858CC4
+    fxMults.m_fSize       = (float)(((x87d)speedMult + (x87d)1.0) * (x87d)0.2f);                     // 0x858CC4
 
-    const float rangeMax = (float)(((double)speedMult + 1.0) * 10.0); // 0x85862C
-    const float rangeMin = (float)(30.0 - (double)rangeMax);          // 0x858CA4
-    const double mult = (double)rand() * (double)RAND_MAX_FLOAT_RECIPROCAL * (((double)rangeMax + 30.0) - (double)rangeMin) + (double)rangeMin; // 0x821B1E, 0x858C7C
+    const float rangeMax = (float)(((x87d)speedMult + (x87d)1.0) * (x87d)10.0); // 0x85862C
+    const float rangeMin = (float)((x87d)30.0 - (x87d)rangeMax);          // 0x858CA4
+    const x87d mult = (x87d)rand() * (x87d)RAND_MAX_FLOAT_RECIPROCAL * (((x87d)rangeMax + (x87d)30.0) - (x87d)rangeMin) + (x87d)rangeMin; // 0x821B1E, 0x858C7C
     const CVector velBase{
         (float)(mult * moveSpeed.x),
         (float)(mult * moveSpeed.y),
@@ -736,31 +736,31 @@ void Fx_c::AddWheelSpray(CVehicle* vehicle, CVector pos, bool bWheelsSpinning, b
     };
 
     // Number of particles to cover the distance moved this frame
-    const double stepX = (double)CTimer::GetTimeStep() * moveSpeed.x;
-    const double stepY = (double)CTimer::GetTimeStep() * moveSpeed.y;
-    const double stepZ = (double)CTimer::GetTimeStep() * moveSpeed.z;
+    const x87d stepX = (x87d)CTimer::GetTimeStep() * moveSpeed.x;
+    const x87d stepY = (x87d)CTimer::GetTimeStep() * moveSpeed.y;
+    const x87d stepZ = (x87d)CTimer::GetTimeStep() * moveSpeed.z;
     const int32  numParticles = std::max(1, (int32)std::sqrt((stepZ * stepZ + stepY * stepY) + stepX * stepX)); // 0x821B40 (ftol)
 
-    const float invNum = (float)(1.0 / (double)numParticles);
+    const float invNum = (float)((x87d)1.0 / (x87d)numParticles);
     for (auto i = 0; i < numParticles; i++) {
-        const double perX = (double)invNum * moveSpeed.x;
-        const double perY = (double)invNum * moveSpeed.y;
-        const float  perZ = (float)((double)invNum * moveSpeed.z);
+        const x87d perX = (x87d)invNum * moveSpeed.x;
+        const x87d perY = (x87d)invNum * moveSpeed.y;
+        const float  perZ = (float)((x87d)invNum * moveSpeed.z);
         const float  fi   = (float)i;
 
-        const float  offX = (float)((double)(float)(perX * fi) * CTimer::GetTimeStep());
+        const float  offX = (float)((x87d)(float)(perX * fi) * CTimer::GetTimeStep());
         const float  offY = (float)(perY * fi * CTimer::GetTimeStep());
-        const float  offZ = (float)((double)perZ * fi * CTimer::GetTimeStep());
+        const float  offZ = (float)((x87d)perZ * fi * CTimer::GetTimeStep());
 
-        const float pz = (float)((double)pos.z - offZ);
+        const float pz = (float)((x87d)pos.z - offZ);
         const CVector partPos{
-            (float)((double)pos.x - offX),
-            (float)((double)pos.y - offY),
-            (float)((double)pz + (double)0.25f) // 0x858C84
+            (float)((x87d)pos.x - offX),
+            (float)((x87d)pos.y - offY),
+            (float)((x87d)pz + (x87d)0.25f) // 0x858C84
         };
 
         CVector vel = velBase;
-        vel.z = (float)(((double)rand() * (double)RAND_MAX_FLOAT_RECIPROCAL + 1.0) * (double)speedMult + (double)vel.z);
+        vel.z = (float)(((x87d)rand() * (x87d)RAND_MAX_FLOAT_RECIPROCAL + (x87d)1.0) * (x87d)speedMult + (x87d)vel.z);
 
         m_BoatSplash->AddParticle(partPos, vel, 0.0f, fxMults, -1.0f, lightMult, 0.6f, false); // 0x4AA440
     }

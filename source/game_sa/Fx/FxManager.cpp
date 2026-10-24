@@ -228,12 +228,12 @@ void FxManager_c::CalcFrustumInfo(RwCamera* camera) {
     constexpr float kRadToDeg = std::bit_cast<float>(0x42652EEDu); // 0x85A998
     constexpr float kDegToRad = std::bit_cast<float>(0x3C8EFA2Eu); // 0x85A7BC
     const float dist    = std::sqrt(viewWindow->x * viewWindow->x + viewWindow->y * viewWindow->y);
-    const float angle   = (float)(x87::atan2((double)dist, 1.0) * (double)kRadToDeg);
+    const float angle   = (float)(X87R(x87::atan2((double)dist, 1.0) * (double)kRadToDeg));
     const float radius0 = std::sqrt(dist * dist + 1.0f) * farClip;
     const double sinB   = x87::sin((double)((180.0f - (angle + angle)) * kDegToRad));
-    const float  q      = (float)((double)radius0 / sinB);
+    const float  q      = (float)(X87R((double)radius0 / sinB));
     const double sinA   = x87::sin((double)(angle * kDegToRad));
-    const float  radius = (float)((double)q * sinA);
+    const float  radius = (float)(X87R((double)q * sinA));
     const float  atX = matrix->at.x * radius, atY = matrix->at.y * radius, atZ = matrix->at.z * radius;
 
     // the exe writes the centre and the radius only: m_Sphere.m_nNumPlanesPassed (+0x10) keeps its value

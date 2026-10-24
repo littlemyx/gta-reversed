@@ -308,8 +308,11 @@ void InstallDiagnostics() {
 namespace notsa::standalone {
 namespace {
 std::mutex& LogMutex() {
-    static std::mutex s_Mutex;
-    return s_Mutex;
+    // Never destroyed (MAC-W2): Log is also called from std::atexit handlers (OnAtExit) and static destructors; a function-local `static std::mutex`
+    // constructed on the first Log (after atexit(OnAtExit) was registered) is destroyed BEFORE those run, and libc++'s try_lock on a destroyed mutex throws
+    // std::system_error inside the exit sequence -> terminate -> abort (exit 139 after cmd:quit).
+    static std::mutex* const s_Mutex = new std::mutex;
+    return *s_Mutex;
 }
 void OnAtExit() { Fixups::Log("atexit handler ran (exit() or normal return from main)"); }
 void OnTerminate() {

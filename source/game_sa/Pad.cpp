@@ -17,6 +17,9 @@
 #ifdef NOTSA_USE_SDL3
 #include <SDL3/SDL.h>
 #include <SDLWrapper.hpp>
+#ifdef NOTSA_PORTABLE
+#include "portable/app_pad.h"
+#endif
 #endif
 
 
@@ -422,6 +425,9 @@ void CPad::ProcessPad(ePadID padID) {
         UpdateJoyStickPosition(rightStickPos.x, pPad.PCTempJoyState.RightStickY, pPad.PCTempJoyState.RightStickX, FrontEndMenuManager.m_bInvertPadX2, FrontEndMenuManager.m_bSwapPadAxis2);
         UpdateJoyStickPosition(rightStickPos.y, pPad.PCTempJoyState.RightStickX, pPad.PCTempJoyState.RightStickY, FrontEndMenuManager.m_bInvertPadY2, FrontEndMenuManager.m_bSwapPadAxis2);
     }
+#endif
+#ifdef NOTSA_PORTABLE
+    notsa::portable::PadProcess((int)padID); // MAC-W2: the SDL3 gamepad takes the place of the DirectInput device above (portable/app_pad.cpp)
 #endif
 }
 

@@ -167,7 +167,12 @@ void* OS_MutexCreate(const char* /*name*/) {
 void OS_MutexRelease(void* mutex) {
     // CAEStreamThread::~CAEStreamThread passes the address of a CRITICAL_SECTION member here (not a mutex): ReleaseMutex fails on such a handle, so does this
     if (!mutex || ((OsMutex*)mutex)->magic != kMutexMagic) {
-        NOTSA_LOG_WARN("OS_MutexRelease: not an OS mutex handle ({}), ignored", mutex);
+        // stderr, not the game logger: this runs from a static destructor at exit (CAEAudioHardware -> ~CAEStreamThread) when spdlog's logger is already gone
+        // (MAC-W2: null deref -> SIGSEGV -> exit 139/134 after cmd:quit)
+        static bool s_Warned = false;
+        if (!std::exchange(s_Warned, true)) {
+            std::fprintf(stderr, "OS_MutexRelease: not an OS mutex handle (%p), ignored (further occurrences are silent)\n", mutex);
+        }
         return;
     }
     ((OsMutex*)mutex)->m.unlock();

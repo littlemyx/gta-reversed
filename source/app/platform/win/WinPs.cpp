@@ -21,6 +21,7 @@
 #include "intrin.h"
 #else
 #include "portable/app_platform.h"
+#include "portable/app_window.h"
 #endif
 
 //! Disable "This function was depracated"
@@ -298,6 +299,10 @@ bool psCameraBeginUpdate(RwCamera* camera) {
 RwCamera* psCameraShowRaster(RwCamera* camera) {
     // Mobile anyway flags = 0x0
     const auto flags = FrontEndMenuManager.m_bPrefsFrameLimiter || CLoadingScreen::IsActive() ? rwRASTERFLIPWAITVSYNC : rwRASTERFLIPDONTWAIT;
+#ifdef NOTSA_PORTABLE
+    // MAC-W2: SDL3's vsync swap waits for a display link tick without a timeout (hangs when the display sleeps / the window is not on screen): bounded wait + timed limiter
+    return RwCameraShowRaster(camera, PSGLOBAL(window), notsa::portable::PresentPace(flags));
+#endif
     return RwCameraShowRaster(camera, PSGLOBAL(window), flags);
 }
 
@@ -405,7 +410,11 @@ void psMouseSetPos(RwV2d* pos) {
     // The exe's SetCursorPos produces a WM_MOUSEMOVE (__MainWndProc WM_MOUSEMOVE 0x748323: m_nMousePosWinX/Y = lParam), which is how CentreMousePointer centred the menu cursor.
     // The SDL mouse is in relative mode (UIRenderer.cpp, PLAYTEST-1 U3): it ignores the Windows cursor and queues nothing for the warp, so do both parts by hand.
     if (PSGLOBAL(sdlWindow)) {
+#ifdef NOTSA_PORTABLE
+        SDL_WarpMouseInWindow(PSGLOBAL(sdlWindow), notsa::portable::MouseFromGame(pos->x), notsa::portable::MouseFromGame(pos->y)); // game pixels -> window points
+#else
         SDL_WarpMouseInWindow(PSGLOBAL(sdlWindow), pos->x, pos->y);
+#endif
     }
     FrontEndMenuManager.m_nMousePosWinX = (int32)pos->x;
     FrontEndMenuManager.m_nMousePosWinY = (int32)pos->y;
@@ -712,7 +721,11 @@ bool psSelectDevice() {
     RwEngineGetVideoModeInfo(&vmi, GcurSelVM);
 
 #ifdef NOTSA_USE_SDL3
+#ifdef NOTSA_PORTABLE
+    SDL_SetWindowSize(PSGLOBAL(sdlWindow), notsa::portable::PointsFromPixels((int)vmi.width), notsa::portable::PointsFromPixels((int)vmi.height)); // video modes are in drawable pixels, SDL sizes in points
+#else
     SDL_SetWindowSize(PSGLOBAL(sdlWindow), (int)(vmi.width), (int)(vmi.height));
+#endif
 #endif
 
     if (vmi.flags & rwVIDEOMODEEXCLUSIVE) {

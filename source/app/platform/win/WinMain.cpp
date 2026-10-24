@@ -21,6 +21,8 @@
 #ifdef NOTSA_PORTABLE
 #include <cfenv>
 #include "portable/app_platform.h"
+#include "portable/app_window.h"
+#include "portable/app_pad.h"
 #endif
 
 #ifndef NOTSA_USE_SDL3
@@ -470,9 +472,15 @@ INT WINAPI NOTSA_WinMain(HINSTANCE instance, HINSTANCE hPrevInstance, LPSTR cmdL
         SDL_WINDOW_RESIZABLE  //| SDL_WINDOW_INPUT_FOCUS | SDL_WINDOW_MOUSE_FOCUS// | SDL_WINDOW_MOUSE_GRABBED | SDL_WINDOW_INPUT_FOCUS | SDL_WINDOW_MOUSE_FOCUS
 #ifdef NOTSA_PORTABLE
         | SDL_WINDOW_OPENGL // R-3a: librw's gl3 backend adopts this window (gl3device.cpp startSDL3: GL context with depth 24 / stencil 8 on it)
+        | notsa::portable::HiDpiWindowFlag() // MAC-W2: drawable in pixels (NOTSA_STANDALONE_HIDPI=0 keeps the 1x backing store)
 #endif
     );
     PSGLOBAL(sdlWindow) = sdlWnd;
+#ifdef NOTSA_PORTABLE
+    if (sdlWnd) {
+        notsa::portable::OnWindowCreated(sdlWnd); // MAC-W2: log sizes, hide the system cursor, windowed default size in points
+    }
+#endif
 #ifdef NOTSA_PORTABLE
     PSGLOBAL(window) = (HWND)sdlWnd; // no Win32 window: the HWND slot carries the SDL_Window* (portable/app_win32_compat.h)
 #else
@@ -490,6 +498,9 @@ INT WINAPI NOTSA_WinMain(HINSTANCE instance, HINSTANCE hPrevInstance, LPSTR cmdL
     // 0x7487CF
 #ifndef NOTSA_USE_SDL3
     VERIFY(WinInput::Initialise());
+#endif
+#ifdef NOTSA_PORTABLE
+    notsa::portable::PadInit(); // MAC-W2: connected gamepads -> AllValidWinJoys (ReinitControls adds the default joypad bindings when pad 1 is attached)
 #endif
     ControlsManager.ReinitControls();
 
@@ -583,6 +594,7 @@ INT WINAPI NOTSA_WinMain(HINSTANCE instance, HINSTANCE hPrevInstance, LPSTR cmdL
     FreeVideoModeList();
     RsEventHandler(rsRWTERMINATE, nullptr);
 #ifdef NOTSA_PORTABLE
+    notsa::portable::PadShutdown();
     SDL_DestroyWindow(PSGLOBAL(sdlWindow));
     RsEventHandler(rsTERMINATE, nullptr);
     // (argv is the process's own array here, not a CRT allocation: not freed)

@@ -70,6 +70,8 @@ void NotsaGrTick();
 #endif
 #ifdef NOTSA_PORTABLE
 namespace notsa::portable { bool AudioCmd(const char* name, const std::string& args); } // portable/audio_cmd.cpp (MAC-W3)
+#include "portable/app_pad.h"    // MAC-W2: gamepad feed + injector commands padattach / padbtn / padaxis / padstat / menustat
+#include "portable/app_window.h" // MAC-W2: HiDPI, mouse mode, present pacing; injector commands presentstat / windowstat / fakeocclude
 #endif
 struct NotsaInjectMissionInfo { int32 offset; uint8 bytes[16]; };
 bool NotsaInjectStartMission(int32 missionId, NotsaInjectMissionInfo* info); // toolsmenu/DebugModules/Script/MissionDebugModule.cpp
@@ -374,6 +376,7 @@ static void InjRunCmd(const std::string& c) {
     const std::string args = c.size() > strlen(name) ? c.substr(strlen(name) + 1) : "";
 #ifdef NOTSA_PORTABLE
     if (::notsa::portable::AudioCmd(name, args)) { return; } // MAC-W3: cmd:radio:ID / cmd:track:ID / cmd:audiostat (audio runs on the native Mac)
+    if (::notsa::portable::InputCmd(name, args) || ::notsa::portable::WindowCmd(name, args)) { return; } // MAC-W2
 #endif
     if (NotsaGrCmd(name, args)) { return; } // gameplay regression suite commands (GameplayRegress.cpp: snap, spawncop, spawnveh, shootlast, shootdrv, hitplayer, time, quit)
     NOTSA_INJ_LOG("[cmd] %s", c.c_str());
@@ -653,8 +656,13 @@ void InjPump() {
         }
         if (ev.mx >= 0) {
             e.type     = SDL_EVENT_MOUSE_MOTION;
+#ifdef NOTSA_PORTABLE
+            e.motion.x = notsa::portable::MouseFromGame((float)ev.mx); // `mouse:x,y` is in game pixels, SDL positions are window points
+            e.motion.y = notsa::portable::MouseFromGame((float)ev.my);
+#else
             e.motion.x = (float)ev.mx;
             e.motion.y = (float)ev.my;
+#endif
             SDL_PushEvent(&e);
             NOTSA_INJ_LOG("injected mouse %d,%d at %u ms", ev.mx, ev.my, (unsigned)now);
             continue;
@@ -758,6 +766,9 @@ void ProcessEvents() {
 #endif
 #endif
 
+#ifdef NOTSA_PORTABLE
+    notsa::portable::UpdateMouseMode(); // MAC-W2: relative in game, absolute pointer in the front-end menu
+#endif
     // Now process events
     const auto* const imCtx = ImGui::GetCurrentContext();
     const auto* const imIO  = imCtx ? &imCtx->IO : nullptr;
@@ -768,6 +779,11 @@ void ProcessEvents() {
         }
 #endif
 
+#ifdef NOTSA_PORTABLE
+        if (notsa::portable::PadOnEvent(e)) { // MAC-W2: gamepad hot plug
+            continue;
+        }
+#endif
         switch (e.type) {
         case SDL_EVENT_QUIT: {
             RsGlobal.quit = true;
@@ -795,8 +811,13 @@ void ProcessEvents() {
                 s_MousePos.x += e.motion.xrel * CCamera::m_fMouseAccelHorzntl * 100.f;
                 s_MousePos.y += e.motion.yrel * CCamera::m_fMouseAccelVertical * 100.f;
             } else {
+#ifdef NOTSA_PORTABLE
+                s_MousePos.x = notsa::portable::MouseToGame(e.motion.x); // window points -> game (drawable) pixels
+                s_MousePos.y = notsa::portable::MouseToGame(e.motion.y);
+#else
                 s_MousePos.x = e.motion.x;
                 s_MousePos.y = e.motion.y;
+#endif
             }
             FrontEndMenuManager.m_nMousePosWinX = (int32)(s_MousePos.x);
             FrontEndMenuManager.m_nMousePosWinY = (int32)(s_MousePos.y);

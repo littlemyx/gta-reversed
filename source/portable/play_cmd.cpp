@@ -6,6 +6,8 @@
 //   cmd:interior:X:Y:Z:AREA  R-12: the player into an interior (CGame::currArea + area code + streaming)
 //   cmd:roadveh:MODEL     the player is put 3 m beside the closest vehicle path node, a car of MODEL (script-created, no driver) stands on the node pointing along its first link
 //   cmd:pickup:WEAPON:AMMO a one-off weapon pickup 2 m in front of the player (walk onto it to collect it)
+//   cmd:weather:ID        R-11: CWeather::ForceWeatherNow(ID) (4 rainy, 8 foggy, 9 thunderstorm, 10 extra sunny...)
+//   cmd:fx:NAME[:0|1]     R-11: post effect switches: night, ir, grain, cctv, haze, radiosity, darkness, speed (default 1)
 //   cmd:playerstat        logs player position / heading / camera mode / money / game clock / vehicle (what a save + load must preserve)
 #include "StdInc.h"
 
@@ -14,6 +16,8 @@
 #include "Camera.h"
 #include "CarCtrl.h"
 #include "Clock.h"
+#include "PostEffects.h"
+#include "Weather.h"
 #include "PathFind.h"
 #include "Pickups.h"
 #include "Pools/Pools.h"
@@ -84,6 +88,29 @@ bool PlayCmd(const char* name, const std::string& args) {
             const auto ref = CPickups::GenerateNewOne_WeaponType(pos, (eWeaponType)w, PICKUP_ONCE, (uint32)n, false, nullptr);
             NOTSA_LOG_INFO("[play] pickup weapon {} ammo {} at ({:.1f},{:.1f},{:.1f}) ref {}", w, n, pos.x, pos.y, pos.z, (int)ref.index);
         }
+        return true;
+    }
+    if (!std::strcmp(name, "weather")) { // R-11: cmd:weather:ID
+        CWeather::ForceWeatherNow((eWeatherType)std::atoi(args.c_str()));
+        NOTSA_LOG_INFO("[play] weather forced to {}", std::atoi(args.c_str()));
+        return true;
+    }
+    if (!std::strcmp(name, "fx")) { // R-11: cmd:fx:NAME[:0|1]  post effect switches (the game re-derives most of them each frame from camera / weather, so the ones set here persist only for the pure flags)
+        char fx[32] = {};
+        int  on = 1;
+        std::sscanf(args.c_str(), "%31[^:]:%d", fx, &on);
+        const bool b = on != 0;
+        if (!std::strcmp(fx, "night")) { CPostEffects::m_bNightVision = b; }
+        else if (!std::strcmp(fx, "ir")) { CPostEffects::m_bInfraredVision = b; }
+        else if (!std::strcmp(fx, "grain")) { CPostEffects::m_bGrainEnable = b; }
+        else if (!std::strcmp(fx, "cctv")) { CPostEffects::m_bCCTV = b; }
+        else if (!std::strcmp(fx, "haze")) { CPostEffects::m_bHeatHazeFX = b; }
+        else if (!std::strcmp(fx, "radiosity")) { CPostEffects::m_bRadiosity = b; }
+        else if (!std::strcmp(fx, "darkness")) { CPostEffects::m_bDarknessFilter = b; }
+        else if (!std::strcmp(fx, "speed")) { CPostEffects::m_bSpeedFX = b; }
+        else if (!std::strcmp(fx, "color")) { CPostEffects::m_bColorEnable = b; }
+        else { NOTSA_LOG_INFO("[play] fx: unknown '{}'", fx); }
+        NOTSA_LOG_INFO("[play] fx {} = {}", fx, (int)b);
         return true;
     }
     if (!std::strcmp(name, "lighting")) { // R-12: cmd:lighting:old|new  switches the gl3 vertex-shader lighting model at run time (A/B frames of one scene)

@@ -13,6 +13,7 @@
 #include <cstdlib> // must precede the macros below (declares ::rand(void) / ::srand(unsigned))
 #include <stdlib.h>
 #include <cstdint>
+#include <source_location>
 
 namespace notsa {
 constexpr uint32_t RandStep(uint32_t seed) { return seed * 214013u + 2531011u; }
@@ -26,11 +27,15 @@ constexpr uint32_t InitialRandSeed() {
 
 inline uint32_t g_RandSeed = InitialRandSeed();
 
+inline uint32_t g_RandCalls = 0; // rand() calls since the last REPLAY-DIFF trace line (Lockstep.cpp)
+namespace lockstep { void OnSrand(unsigned& seed, const char* file); }
+
 inline int GameRand() {
+    g_RandCalls++;
     g_RandSeed = RandStep(g_RandSeed);
     return (int)((g_RandSeed >> 16) & 0x7FFF);
 }
-inline void GameSRand(unsigned seed) { g_RandSeed = seed; }
+inline void GameSRand(unsigned seed, const std::source_location loc = std::source_location::current()) { lockstep::OnSrand(seed, loc.file_name()); g_RandSeed = seed; }
 } // namespace notsa
 
 #define rand()       (::notsa::GameRand())

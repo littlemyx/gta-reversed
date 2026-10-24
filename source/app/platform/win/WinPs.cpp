@@ -1,5 +1,8 @@
 #include "StdInc.h"
 
+#ifdef NOTSA_STANDALONE_RUN
+#include "standalone/Lockstep.h"
+#endif
 #include <platform/win/WinPlatform.h>
 #include <platform/platform.h>
 #include <ddraw.h>
@@ -244,6 +247,9 @@ RwCamera* psCameraShowRaster(RwCamera* camera) {
 
 // 0x745270
 uint32 psTimer() {
+#ifdef NOTSA_STANDALONE_RUN
+    if (uint32 v; notsa::lockstep::PsTimer(v)) { return v; } // REPLAY-DIFF pin bit 4
+#endif
     return OS_TimeMS();
 }
 

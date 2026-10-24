@@ -68,6 +68,9 @@ void NotsaRwMsaaState(char* buf, size_t n);   // standalone/rw/engine.cpp: selec
 bool NotsaGrCmd(const char* name, const std::string& args); // GameplayRegress.cpp (gameplay regression suite)
 void NotsaGrTick();
 #endif
+#ifdef NOTSA_PORTABLE
+namespace notsa::portable { bool AudioCmd(const char* name, const std::string& args); } // portable/audio_cmd.cpp (MAC-W3)
+#endif
 struct NotsaInjectMissionInfo { int32 offset; uint8 bytes[16]; };
 bool NotsaInjectStartMission(int32 missionId, NotsaInjectMissionInfo* info); // toolsmenu/DebugModules/Script/MissionDebugModule.cpp
 namespace {
@@ -369,6 +372,9 @@ static void InjRunCmd(const std::string& c) {
     char name[32] = {}; float a = 0, b = 0, d = 0; int w = 0, n = 0;
     std::sscanf(c.c_str(), "%31[^:]", name);
     const std::string args = c.size() > strlen(name) ? c.substr(strlen(name) + 1) : "";
+#ifdef NOTSA_PORTABLE
+    if (::notsa::portable::AudioCmd(name, args)) { return; } // MAC-W3: cmd:radio:ID / cmd:track:ID / cmd:audiostat (audio runs on the native Mac)
+#endif
     if (NotsaGrCmd(name, args)) { return; } // gameplay regression suite commands (GameplayRegress.cpp: snap, spawncop, spawnveh, shootlast, shootdrv, hitplayer, time, quit)
     NOTSA_INJ_LOG("[cmd] %s", c.c_str());
     if (!pl) return;

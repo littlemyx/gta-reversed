@@ -21,7 +21,7 @@
 //  * NOT available (reported like a card without them): EAX (IKsPropertySet -> E_NOINTERFACE, logged once), the FX chain (SetFX with effects -> DSERR_UNSUPPORTED: the radio bass
 //    EQ is off), hardware mixing (caps report 0 hardware buffers so the game picks the 48 software channels).
 // Debug knobs (environment): NOTSA_AUDIO=device|loopback|null (default device, falls back to null), NOTSA_AUDIO_WAV=<file> (everything that was output as 16-bit stereo WAV),
-// NOTSA_AUDIO_RATE=<hz> (loopback / null mix rate, default 48000).
+// NOTSA_AUDIO_RATE=<hz> (loopback / null mix rate, default 48000), NOTSA_AUDIO_DUMP=<dir> (the raw bytes of the first 32 buffers that are played).
 #ifdef NOTSA_PORTABLE
 #include <AL/al.h>
 #include <AL/alc.h>
@@ -104,7 +104,7 @@ struct Core {
     bool                      lisDirty{false};
     std::vector<BufState*>    bufs;
     std::vector<float>        acc;
-    std::atomic<int>          playLogs{0};
+    std::atomic<int>          playLogs{0}, dumped{0};
     std::atomic<std::uint64_t> framesMixed{0}, playCalls{0};
 
     void Mix(std::int16_t* out, std::size_t frames);
@@ -535,6 +535,11 @@ struct Buffer final : Unk<IDirectSoundBuffer8> {
         s->playing = true;
         s->looping = (playFlags & DSBPLAY_LOOPING) != 0;
         ++s->core->playCalls;
+        if (const char* dump = std::getenv("NOTSA_AUDIO_DUMP"); dump && *dump && s->data.size() <= (1u << 20) && s->core->dumped.fetch_add(1) < 32) { // debug: the raw bytes of the first plays
+            char path[1024];
+            std::snprintf(path, sizeof(path), "%s/play%02d_%uHz_%uch_%ubit.raw", dump, (int)s->core->dumped.load(), (unsigned)s->freq, (unsigned)s->fmt.nChannels, (unsigned)s->fmt.wBitsPerSample);
+            if (std::FILE* f = std::fopen(path, "wb")) { std::fwrite(s->data.data(), 1, s->data.size(), f); std::fclose(f); }
+        }
         if (s->core->playLogs.fetch_add(1) < 24) {
             Log("Play buf=%p bytes=%zu %uHz %uch %ubit loop=%d vol=%ld pan=%ld%s", (void*)s.get(), s->data.size(), (unsigned)s->freq, (unsigned)s->fmt.nChannels,
                 (unsigned)s->fmt.wBitsPerSample, (int)s->looping, (long)s->volume, (long)s->pan, (s->flags & DSBCAPS_CTRL3D) ? " 3D" : "");

@@ -42,15 +42,17 @@ CObject& CreateObject(CRunningScript& S, script::Model model, CVector posn) {
     return *object;
 }
 
-void RemoveObject(CRunningScript& S, CObject* object) {
-    if (object) {
+// 264 DELETE_OBJECT (0x4698C2..0x469916): the exe removes the object, then calls CMissionCleanup::RemoveEntityFromList with the SCRIPT HANDLE (ScriptParams[0]), type OBJECT.
+// The port passed the (just deleted) object pointer instead, so the mission-cleanup entry of a script-deleted object was never removed.
+void RemoveObject(CRunningScript& S, int32 handle) {
+    if (auto* const object = CPools::GetObject(handle)) {
         CWorld::Remove(object);
         CWorld::RemoveReferencesToDeletedObject(object);
         delete object;
     }
 
     if (S.m_UsesMissionCleanup) {
-        CTheScripts::MissionCleanUp.RemoveEntityFromList(static_cast<int32>(NOTSA_PTR_ID32(object)), MISSION_CLEANUP_ENTITY_TYPE_OBJECT);
+        CTheScripts::MissionCleanUp.RemoveEntityFromList(handle, MISSION_CLEANUP_ENTITY_TYPE_OBJECT);
     }
 }
 

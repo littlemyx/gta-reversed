@@ -2870,19 +2870,30 @@ void CCarCtrl::GenerateRandomCars() {
     }
     TimeNextMadDriverChaseCreated -= (CTimer::GetTimeStep() * 0.02f);
 
+    // 0x434237 (`jge`): the cars are generated only while there are fewer than 45 random cars
     if (NumRandomCars < 45) {
         if (CountDownToCarsAtStart) {
+            // 0x434242: the 100-car burst happens only in the frame the countdown REACHES zero (`dec al; mov [cd], al; jne skip`), i.e. once, in the 2nd frame; the port ran it on every decrement
             CountDownToCarsAtStart--;
-            for (auto i = 100; i --> 0;) {
-                GenerateOneRandomCar();
+            if (!CountDownToCarsAtStart) {
+                for (auto i = 100; i --> 0;) {
+                    GenerateOneRandomCar();
+                }
+                CTheCarGenerators::GenerateEvenIfPlayerIsCloseCounter = 20;
             }
-            CTheCarGenerators::GenerateEvenIfPlayerIsCloseCounter = 20;
         } else {
             GenerateOneRandomCar();
             GenerateOneRandomCar();
         }
     }
 
+    // 0x43426D: the exe's tail, missing in the port (no trains, planes or emergency services cars were generated from here)
+    CTrain::DoTrainGenerationAndRemoval();
+    CPlane::DoPlaneGenerationAndRemoval();
+    // 0x434277: an emergency services car is considered whenever the game clock crosses a 4096 ms boundary (the two times differ in a bit >= 12)
+    if ((CTimer::m_snPreviousTimeInMilliseconds ^ CTimer::m_snTimeInMilliseconds) & 0xFFFFF000u) {
+        GenerateEmergencyServicesCar();
+    }
 }
 
 // 0x42F3C0

@@ -477,9 +477,10 @@ void CFireManager::Update() {
                 // Keep in mind, the right line's end is always pointing towards the camera,
                 // so what you see is more like |
 
-                CVector point = strongest->GetPosition()
-                    + CVector{ 0.0f, 0.0f, 2.6f }
-                    + (TheCamera.GetPosition() - point).Normalized() * 3.5f;
+                // 0x53B6BE..0x53B707: base = fire position + (0, 0, 2.6); direction = Normalise(camera - base); corona point = base + direction * 3.5
+                // (the original port read `point` in its own initialiser, i.e. the direction came from an indeterminate vector)
+                const CVector base = strongest->GetPosition() + CVector{ 0.0f, 0.0f, 2.6f };
+                CVector point = base + (TheCamera.GetPosition() - base).Normalized() * 3.5f;
 
                 auto strongestId = NOTSA_PTR_ID32(strongest);
                 // Wrapper lambda for code readability

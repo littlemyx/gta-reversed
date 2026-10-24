@@ -66,6 +66,21 @@ void InjectCdStreamHooks() {
     RH_ScopedGlobalInstall(CdStreamShutdown, 0x406370);
 }
 
+#ifdef NOTSA_STANDALONE_RUN
+// REPLAY-DIFF tick barrier (source/standalone/Lockstep.cpp, pin bit 256): true when no channel has a read queued or in flight
+bool CdStreamAllIdle() {
+    if (!gStreamingInitialized || !gCdStreams) {
+        return true;
+    }
+    for (const auto& stream : std::span{ gCdStreams, (size_t)gStreamCount }) {
+        if (stream.nSectorsToRead || stream.bInUse) {
+            return false;
+        }
+    }
+    return true;
+}
+#endif
+
 // 0x4067B0
 CdStreamHandle CdStreamOpen(const char* lpFileName) {
     NOTSA_LOG_DEBUG("CdStreamOpen: {}", lpFileName);

@@ -200,6 +200,9 @@ uint16 CGeneral::GetRandomNumber() { // Why does this return `uint16`? Should be
 #ifdef BETTER_RNG
     static_assert(false, "PC-generated random numbers should not exceed 32767");
 #else
+#ifdef NOTSA_STANDALONE_RUN
+    if (notsa::g_RandHook) { notsa::g_RandCaller = _ReturnAddress(); } // REPLAY-DIFF: the caller of this wrapper, for the R log / the audio partition (inert without NOTSA_LOCKSTEP_OUT)
+#endif
     return rand();
 #endif
 }
@@ -208,7 +211,15 @@ float CGeneral::GetRadianAngleBetweenPoints(CVector2D a, CVector2D b) {
     return GetRadianAngleBetweenPoints(a.x, a.y, b.x, b.y);
 }
 
+#ifdef NOTSA_STANDALONE_RUN
+namespace notsa::lockstep { extern const void* g_Outer; }
+#define NOTSA_RD_OUTER() do { if (notsa::g_RandHook) { notsa::lockstep::g_Outer = _ReturnAddress(); } } while (0) // REPLAY-DIFF: the caller of a wrapper of GetRandomNumber (R log only)
+#else
+#define NOTSA_RD_OUTER() ((void)0)
+#endif
+
 bool CGeneral::RandomBool(float chanceOfTrue) {
+    NOTSA_RD_OUTER();
     assert(chanceOfTrue <= 100.f);
     return CGeneral::GetRandomNumberInRange(0.f, 100.f) <= chanceOfTrue;
 }
@@ -218,5 +229,6 @@ bool CGeneral::RandomBool(float chanceOfTrue) {
 * @addr notsa
 */
 bool CGeneral::DoCoinFlip() {
+	NOTSA_RD_OUTER();
 	return CGeneral::GetRandomNumber() >= RAND_MAX / 2;
 }

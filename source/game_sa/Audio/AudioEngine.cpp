@@ -9,6 +9,9 @@
 #include "AEAudioUtility.h"
 #include "AEWaterCannonAudioEntity.h"
 #include "LoadingScreen.h"
+#ifdef NOTSA_STANDALONE_RUN
+#include "standalone/Lockstep.h"
+#endif
 
 NOTSA_GLOBAL(AudioEngine, 0xB6BC90, (CAudioEngine), {}); VALIDATE_SIZE(AudioEngine, 8152);
 
@@ -605,6 +608,9 @@ void CAudioEngine::ResumeAllSounds() {
 // 0x507750
 void CAudioEngine::Service() {
     ZoneScoped;
+#ifdef NOTSA_STANDALONE_RUN
+    if (notsa::lockstep::NoAudio()) { return; } // REPLAY-DIFF pin bit 512 (= NOTSA_RR_NOAUDIO of the RR harness; rd_orig.c patches 0x507750 to ret)
+#endif
 
     m_FrontendAE.AddAudioEvent(AE_FRONTEND_WAKEUP_AMPLIFIER);
     if (!CTimer::GetIsPaused())

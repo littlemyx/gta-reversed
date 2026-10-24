@@ -146,6 +146,12 @@ date	agent	rules	kind	tokens	tool_uses	minutes	outcome	notes
 2026-10-24	ORACLE-C-EVENTS-2	v4	class C fixes (small)	252409	144	33	4 of 5 findings real: GunAimedAt null task + flee mapping, PassiveCollision inverted, DeadPed NaN + safe distance 60 (port 100000), DisablePedSpeech word compare; HitAndRun = fixture; soak OK
 2026-10-24	ORACLE-C-MODELS-2	v4	class C wave (small)	259647	124	85	+15 Models rows (game 5039), 3 fixes: frame-name stricmp, CreateInstance(mat) matrix target, IsCBPCPipelineAttached tested plugin addr (building pipeline on any prelit geometry); soak OK
 2026-10-24	ORACLE-C-ENTITY	v4	class C wave (small)	245549	107	31	Entity 87 -> 94 (game 5049), 1 fix: RemoveEscalatorsForEntity returned after first match (587/600); tokens hit cap in 31 min (~35k tokens per class-C row)
+2026-10-24	REPLAY-DIFF-DESIGN	v4	design + probe	268494	118	60	plan .notes/REPLAY_DIFF_PLAN.md (8 slices); vorbisFile.dll proxy hooks the original; timer pin works; orig vs port frame 0 identical, frame 1 rand calls 74 vs 327; probe branch replay-diff-probe
+2026-10-24	ANIM-CRASH-3	v4	crash root cause + fix	254117	123	99	fall-task AV = sentinel anim id 0xC0 (no response in exe at 0x4C0488) built into FallAndGetUp(192, DEFAULT); fix 679fbdc3 + AddAnimation ids 0x1C-0x1F + m_bAnimAdded; 11 runs 0 hits; run_all_tests incomplete
+2026-10-24	RD-ARM	v4	lockstep slice 1 (branch)	243887	140	102	arm frame bit-identical orig vs port; A-A equal prefix orig 91, port 7-9 (spawn timing / CdStream); orig-port diverges frame 1 (rand 74 vs 317); branch rd-arm 50e686ca, gate incomplete
+2026-10-24	CHEATS-ARMOUR	v4	regress artefacts	223097	144	98	armour 97 = Ballas peds shooting CJ under slow frames (gr_check reads [pc-dmg]); free_start SETUP = dismount before mission flag cleared (until:nomission); 8 runs clean; no port bug
+2026-10-24	RD-NOISE	v4	lockstep slice 2 (branch)	321122	211	99	frame-1 rand 317 -> 74 = GenerateRandomCars burst every frame + missing train/plane/emergency generation (9ac69102, branch rd-noise); orig-orig prefix 91 -> 1520-2177, port-port 7-9; gate not done
+2026-10-24	KILL-AUDIT	v5	scripts fix (small)	103995	20	4	own_kill.sh helper; build_locked / orig_run / fps_run kill only their own job tree or private-dir processes; dummy-process tests
 2026-10-24	MAC-W2	v4	W-1/2/8 input vsync exit hidpi	-	-	-	done
 2026-10-24	MAC-R6	v4	R-6 stock pipes + NVC	-	-	-	done: new game playable
 2026-10-24	MAC-RR-DESIGN	v4	RR plan + RR-1 harness	-	-	-	done; 1 nondeterminism left
@@ -169,3 +175,7 @@ date	agent	rules	kind	tokens	tool_uses	minutes	outcome	notes
 2026-10-24	MAC-R12	v4	R-12 D3D FF lighting	-	-	-	done; hang in GL swap seen
 2026-10-24	MAC-WIN64	v4	portable Win x64 build	-	-	-	done: links
 2026-10-24	MAC-HL1	v4	GL loader guard + Windows CI workflow	-	-	-	done
+2026-10-24	FID-MAC	v5	fidelity items (Mac-found)	249803	131	29	9 items: 6 port bugs fixed (W1 save padding, F7 fire corona, F8 GetUpperCase, F9, W3 enex load, P4 StareAtPed value, DELETE_OBJECT handle), 3 faithful; found W6 save-load crash; branch fid-mac
+2026-10-24	SAVE-LOAD	v5	save/load fix	254457	129	58	W6 = save made during a mission (exe never restores mission code; same in exe); real fix 4b231249: Win32 saved ASLR addresses in CRunningScript IPs instead of exe VAs; round trip OK (777 money, 3.6 min after load); branch save-load
+2026-10-24	RD-NOISE-2	v5	lockstep + A-B fix	271740	153	101	port-port prefix 7-9 -> 2985-2999 (audio-off pin 512); A-B frame 1 = CRadar::Initialise blip counter 1 (0x587FF2) fixed; frame 3 open (FxSystem Play, GenerateCarCreationCoors2 start node); checked out the main checkout detached (rule breach)
+2026-10-25	RD-AB-3	v5	A-B fixes	277970	170	95	orig-port prefix 3 -> 10: RemoveBuildingsNotInArea inverted IsInArea (89 dummies lost RwObject at start, no object effects), ProcessBuoyancy dropped rand; frame 10 open (population); shared proxy stale (use RD_PX)

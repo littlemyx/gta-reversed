@@ -5,6 +5,8 @@ cd /c/Users/littl/github/gta-reversed || exit 2
 source tools/standalone/windows/msvcenv.sh >/dev/null 2>&1
 echo "HEAD $(git log --oneline -1)"
 GTA_JOBS=4 tools/standalone/run_all_tests.sh 2>&1 | grep -E "^summary| (fail|nobuild|noresult|timeout)|hang"
+# Re-run CMake first: sources are globbed at configure time, so a new .cpp from a merge (e.g. standalone/Lockstep.cpp) is otherwise not built (LNK2019, 2026-10-24).
+cmake --compile-no-warning-as-error build/StandaloneRelease > /dev/null 2>&1 || echo "cmake reconfigure of build/StandaloneRelease FAILED"
 tools/standalone/build_locked.sh cmd //c start //low //b //wait ninja -j4 -C build/StandaloneRelease gta_reversed.exe 2>&1 | tail -1
 S=C:/gta-scratch/gate_soak/$(date +%m%d-%H%M)
 NOTSA_STANDALONE_NOVSYNC=1 OUT=$S tools/standalone/soak.sh build/StandaloneRelease 3 > $S.log 2>&1; rc=$?

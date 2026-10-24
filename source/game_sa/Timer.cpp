@@ -8,6 +8,9 @@
 
 #include "oswrapper.h"
 #include "platform.h"
+#ifdef NOTSA_STANDALONE_RUN
+#include "standalone/Lockstep.h"
+#endif
 
 
 void CTimer::InjectHooks()
@@ -75,7 +78,13 @@ void CTimer::Initialise()
         timerFunc = GetMillisecondTime;
         m_snTimerDivider = 1;
     }
+#ifdef NOTSA_STANDALONE_RUN
+    if (notsa::lockstep::PinTimer()) { timerFunc = notsa::lockstep::TimerFn; } // REPLAY-DIFF pin bit 2
+#endif
     ms_fnTimerFunction = timerFunc;
+#ifdef NOTSA_STANDALONE_RUN
+    notsa::lockstep::FrameRead();
+#endif
     m_snRenderStartTime = timerFunc();
 }
 
@@ -225,6 +234,9 @@ void CTimer::Update() {
 
     m_snPreviousTimeInMillisecondsNonClipped = m_snTimeInMillisecondsNonClipped;
 
+#ifdef NOTSA_STANDALONE_RUN
+    notsa::lockstep::Tick(); // REPLAY-DIFF: one trace line per frame, at the same point as the original's timer-function call
+#endif
     const uint64 nRenderTimeBefore = m_snRenderStartTime;
     m_snRenderStartTime = ms_fnTimerFunction();
     auto fTimeDelta = float(m_snRenderStartTime - nRenderTimeBefore);

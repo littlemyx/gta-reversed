@@ -11,6 +11,8 @@
 #include "CutsceneMgr.h"
 #include "Pickups.h"
 #include "Radar.h"
+#include "Streaming.h"
+#include "PathFind.h"
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
@@ -94,15 +96,28 @@ void Tick() {
     if (const char* dp = std::getenv("NOTSA_LOCKSTEP_DUMPSCR"); dp && nf <= 4) { // raw script space at traced frames 1..4 (A-B hash hunt; counterpart RD_DUMPSCR in rd_orig.c)
         if (FILE* df = std::fopen((std::string{dp} + "." + std::to_string(nf)).c_str(), "wb")) { std::fwrite(CTheScripts::ScriptSpace.data(), 1, CTheScripts::ScriptSpace.size(), df); std::fclose(df); }
     }
+    if (const char* dp = std::getenv("NOTSA_LOCKSTEP_DUMPSTR"); dp && nf <= 6) { // per model id (load state, flags) of CStreamingInfo at traced frames 1..6 (A-B streaming hunt; counterpart RD_DUMPSTR in rd_orig.c)
+        if (FILE* df = std::fopen((std::string{dp} + "." + std::to_string(nf)).c_str(), "wb")) {
+            std::vector<unsigned char> tab;
+            for (const auto& si : CStreaming::ms_aInfoForModel) { tab.push_back((unsigned char)si.m_LoadState); tab.push_back((unsigned char)si.m_Flags); }
+            std::fwrite(tab.data(), 1, tab.size(), df); std::fclose(df);
+        }
+    }
     uint32_t px, py, pz; std::memcpy(&px, &pos[0], 4); std::memcpy(&py, &pos[1], 4); std::memcpy(&pz, &pos[2], 4);
     if (c.pin & 64) { // pin bit 64: "D fc ..." line of debugging probes (ignored by rd_diff.py); rd_orig.c reads the same values from their original addresses
         auto fb = [](float v) { uint32_t u; std::memcpy(&u, &v, 4); return u; };
-        std::fprintf(c.f, "D %u run=%d cd=%d cars=%08x,%08x,%08x,%08x perc=%08x,%08x,%08x,%08x zt=%d tw=%d ti=%d pk=%d,%d,%d bc=%d,%d,%d\n", (unsigned)CTimer::m_FrameCounter, (int)CCutsceneMgr::ms_running, (int)CCarCtrl::CountDownToCarsAtStart,
+        uint32_t pn_lo = 0, pn_hi = 0; // loaded path-node areas 0..63 (A-B hunt: GenerateCarCreationCoors2 needs the area of the nodes near the player)
+        int rw_b = 0, rw_d = 0, rw_o = 0; // entities of the building / dummy / object pools that have an RwObject (A-B hunt: ConvertToRealObject steals the dummy's RwObject)
+        if (auto* pl = GetBuildingPool()) for (auto& e : pl->GetAllValid()) rw_b += e.GetRwObject() != nullptr;
+        if (auto* pl = GetDummyPool()) for (auto& e : pl->GetAllValid()) rw_d += e.GetRwObject() != nullptr;
+        if (auto* pl = GetObjectPool()) for (auto& e : pl->GetAllValid()) rw_o += e.GetRwObject() != nullptr;
+        for (int a = 0; a < 64; a++) if (ThePaths.m_pPathNodes[a]) (a < 32 ? pn_lo : pn_hi) |= 1u << (a & 31);
+        std::fprintf(c.f, "D %u run=%d cd=%d cars=%08x,%08x,%08x,%08x perc=%08x,%08x,%08x,%08x zt=%d tw=%d ti=%d pk=%d,%d,%d bc=%d,%d,%d pn=%08x%08x rw=%d,%d,%d\n", (unsigned)CTimer::m_FrameCounter, (int)CCutsceneMgr::ms_running, (int)CCarCtrl::CountDownToCarsAtStart,
                      fb(CPopCycle::m_NumOther_Cars), fb(CPopCycle::m_NumCops_Cars), fb(CPopCycle::m_NumGangs_Cars), fb(CPopCycle::m_NumDealers_Cars),
                      fb(CPopCycle::m_fPercOther), fb(CPopCycle::m_fPercCops), fb(CPopCycle::m_fPercGangs), fb(CPopCycle::m_fPercDealers),
                      (int)CPopCycle::m_nCurrentZoneType, (int)CPopCycle::m_nCurrentTimeOfWeek, (int)CPopCycle::m_nCurrentTimeIndex,
                      (int)CPickups::aPickUps[0].m_nReferenceIndex, (int)CPickups::aPickUps[3].m_nReferenceIndex, (int)CPickups::aPickUps[0x23].m_nReferenceIndex,
-                     (int)CRadar::ms_RadarTrace[0].m_nCounter, (int)CRadar::ms_RadarTrace[3].m_nCounter, (int)CRadar::ms_RadarTrace[0x23].m_nCounter);
+                     (int)CRadar::ms_RadarTrace[0].m_nCounter, (int)CRadar::ms_RadarTrace[3].m_nCounter, (int)CRadar::ms_RadarTrace[0x23].m_nCounter, pn_hi, pn_lo, rw_b, rw_d, rw_o);
     }
     std::fprintf(c.f, "F %u %u %08x %u %08x %08x %08x %u %u %u %08x\n", (unsigned)CTimer::m_FrameCounter, (unsigned)CTimer::m_snTimeInMilliseconds, (unsigned)g_RandSeed, (unsigned)g_RandCalls,
                  px, py, pz, hp, np, nv, sh);

@@ -5206,12 +5206,9 @@ CObject* CAutomobile::SpawnFlyingComponent(eCarNodes nodeIndex, uint32 collision
 // 0x6A8C00
 void CAutomobile::ProcessBuoyancy()
 {
-    /* Unused code in sa function
-    CTimeCycle::GetAmbientRed_Obj();
-    CTimeCycle::GetAmbientGreen_Obj();
-    CTimeCycle::GetAmbientBlue_Obj();
-    CGeneral::GetRandomNumber();
-    */
+    // Unused code in sa function: the three CTimeCycle::GetAmbient*_Obj() results (0x6A8C21..0x6A8C2F) are dropped (pure getters), but the call to the
+    // CRT rand() at 0x6A8C36 (result dropped) still advances the one RNG - without it every later draw of the frame is shifted (REPLAY-DIFF A-B, frame 4)
+    (void)CGeneral::GetRandomNumber(); // 0x6A8C36
 
     CVector vecBuoyancyTurnPoint;
     CVector vecBuoyancyForce;

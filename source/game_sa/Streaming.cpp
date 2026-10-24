@@ -2135,6 +2135,8 @@ void CStreaming::RemoveBigBuildings() {
 
 // 0x4094B0
 // Remove buildings, objects and dummies not in the current area (as in CWorld::currArea)
+// NOTE: the exe skips an entity whose area code is `area` or 13 (IsInArea) in all 3 loops; the objects and dummies loops here tested the inverse
+//       (so an in-area object/dummy lost its RwObject, e.g. CGameLogic::RestorePlayerStuffDuringResurrection at the start of a new game) - RD-AB-3
 void CStreaming::RemoveBuildingsNotInArea(eAreaCodes area) {
         for (auto i = GetBuildingPool()->GetSize(); i --> 0;) {
         CBuilding* building = GetBuildingPool()->GetAt(i);
@@ -2148,7 +2150,7 @@ void CStreaming::RemoveBuildingsNotInArea(eAreaCodes area) {
     for (auto i = GetObjectPool()->GetSize(); i --> 0;) {
         CObject* obj = GetObjectPool()->GetAt(i);
         if (obj && obj->GetRwObject()) {
-            if (obj->IsInArea(area)) {
+            if (!obj->IsInArea(area)) { // 0x409545, 0x409549
                 if (!obj->m_bImBeingRendered && obj->m_nObjectType == eObjectType::OBJECT_GAME)
                     obj->DeleteRwObject();
             }
@@ -2157,7 +2159,7 @@ void CStreaming::RemoveBuildingsNotInArea(eAreaCodes area) {
     for (auto i = GetDummyPool()->GetSize(); i --> 0;) {
         CDummy* dummy = GetDummyPool()->GetAt(i);
         if (dummy && dummy->GetRwObject()) {
-            if (dummy->IsInArea(area)) {
+            if (!dummy->IsInArea(area)) { // 0x4095A2, 0x4095A6
                 if (!dummy->m_bImBeingRendered)
                     dummy->DeleteRwObject();
             }

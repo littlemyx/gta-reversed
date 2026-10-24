@@ -1843,9 +1843,9 @@ void CStoredCar::StoreCar(CVehicle* vehicle) {
 
     // Forward vector packed as signed bytes (x100); `_ftol` truncates, the product is kept at extended precision
     const auto& fwd  = vehicle->m_matrix->GetForward();
-    m_nPackedForwardX = static_cast<uint8>(static_cast<int32>(X87R(double(fwd.x) * 100.0)));
-    m_nPackedForwardY = static_cast<uint8>(static_cast<int32>(X87R(double(fwd.y) * 100.0)));
-    m_nPackedForwardZ = static_cast<uint8>(static_cast<int32>(X87R(double(fwd.z) * 100.0)));
+    m_nPackedForwardX = static_cast<uint8>(static_cast<int32>(X87R(x87d(fwd.x) * (x87d)100.0)));
+    m_nPackedForwardY = static_cast<uint8>(static_cast<int32>(X87R(x87d(fwd.y) * (x87d)100.0)));
+    m_nPackedForwardZ = static_cast<uint8>(static_cast<int32>(X87R(x87d(fwd.z) * (x87d)100.0)));
 
     m_nPrimaryColor    = vehicle->m_nPrimaryColor;
     m_nSecondaryColor  = vehicle->m_nSecondaryColor;

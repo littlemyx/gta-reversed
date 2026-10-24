@@ -23,7 +23,7 @@ inline int32 Ftol(double v) {
 }
 
 //! `CVector::Magnitude` (0x4082C0) as the exe evaluates it: ((x*x + y*y) + z*z) in extended precision, `fsqrt`, result left in ST0 (unrounded)
-inline double Magnitude87(const CVector& v) {
-    return std::sqrt((double)v.x * v.x + (double)v.y * v.y + (double)v.z * v.z);
+inline x87d Magnitude87(const CVector& v) {
+    return std::sqrt((x87d)v.x * v.x + (x87d)v.y * v.y + (x87d)v.z * v.z);
 }
 } // namespace notsa::script::commands::ported::g25_26

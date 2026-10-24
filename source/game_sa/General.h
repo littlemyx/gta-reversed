@@ -139,8 +139,9 @@ namespace CGeneral { // More like `Math` (Or `Meth`, given how bad the code is, 
 #else
         // NOTSA: no `max >= min` assert - the original (0x41BD90) just lerps, and callers legitimately pass max < min (e.g. 0x6DF26D)
         // 0x41BD90: x87 chain `min + (rand() * 1/32767) * (max - min)` with no float spill until the return
-        const double t = static_cast<double>(GetRandomNumber()) * static_cast<double>(RAND_MAX_FLOAT_RECIPROCAL);
-        return static_cast<T>(static_cast<double>(min) + t * (static_cast<double>(max) - static_cast<double>(min)));
+        // (PC=24: every op of the chain rounds to a float, x87d)
+        const x87d t = static_cast<x87d>(GetRandomNumber()) * static_cast<x87d>(RAND_MAX_FLOAT_RECIPROCAL);
+        return static_cast<T>(static_cast<x87d>(min) + t * (static_cast<x87d>(max) - static_cast<x87d>(min)));
 #endif
     }
 
@@ -156,9 +157,9 @@ namespace CGeneral { // More like `Math` (Or `Meth`, given how bad the code is, 
         }
         // 0x407180: `min + (int)(rand() * (1/32768) * (max - min))` => uniform in [min, max). (NOT the float version with `max - 1`,
         // that one would almost never yield `max - 1`.) The product stays in extended precision in the original.
-        const double t = static_cast<double>(GetRandomNumber() & 0xFFFF) * static_cast<double>(1.f / 32768.f); // 0x858B14
-        const auto   range = static_cast<int64>(max) - static_cast<int64>(min);
-        return static_cast<T>(static_cast<int64>(min) + static_cast<int64>(t * static_cast<double>(range)));
+        const x87d t = static_cast<x87d>(GetRandomNumber() & 0xFFFF) * static_cast<x87d>(1.f / 32768.f); // 0x858B14
+        const auto range = static_cast<int64>(max) - static_cast<int64>(min);
+        return static_cast<T>(static_cast<int64>(min) + static_cast<int64>(t * static_cast<x87d>(range)));
     }
 
     /**

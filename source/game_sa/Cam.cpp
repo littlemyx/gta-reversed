@@ -6280,8 +6280,8 @@ void CCam::Process_FollowPed_SA(const CVector& target, float orientation, float 
             const auto     Speed           = [&] {
                 return X87R(std::sqrt(SqMagExt(standingOnSpeed ? ped->m_vecMoveSpeed - *standingOnSpeed : ped->m_vecMoveSpeed)));
             };
-            const x87d scaled = X87R(Speed() * (double)sp1);
-            sp1                 = (scaled > 1.0) ? 1.0f : (float)(X87R(Speed() * (double)sp1));
+            const x87d scaled = X87R(Speed() * (x87d)sp1);
+            sp1                 = (scaled > 1.0) ? 1.0f : (float)(X87R(Speed() * (x87d)sp1));
         } else {
             sp1 = sp1 * 0.5f;
             if (1.0f < sp1) {

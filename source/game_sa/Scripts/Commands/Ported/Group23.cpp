@@ -167,10 +167,10 @@ bool FindClosestScriptedAttractor(
                 continue;
             }
             const CVector w  = entity->TransformFromObjectSpace(fx->m_Pos); // 0x5334F0
-            const double  dx = (double)pos.x - (double)w.x;
-            const double  dy = (double)pos.y - (double)w.y;
-            const double  dz = (double)pos.z - (double)w.z;
-            const double  sq = (dz * dz + dy * dy) + dx * dx;
+            const x87d  dx = (x87d)pos.x - (x87d)w.x;
+            const x87d  dy = (x87d)pos.y - (x87d)w.y;
+            const x87d  dz = (x87d)pos.z - (x87d)w.z;
+            const x87d  sq = (dz * dz + dy * dy) + dx * dx;
             if (sq < (double)best) { // fcom + `test ah, 5; jp skip`: only when strictly less (ordered)
                 best      = (float)sq;
                 outEffect = fx;
@@ -188,7 +188,7 @@ bool FindClosestScriptedAttractor(
 int32 CreateCollectiblePickup(float x, float y, float z, eStats stat, uint16 model, ePickupType type) {
     CStats::IncrementStat(stat, 1.0f); // 0x55C180
     if (z <= -100.0f) {
-        z = (float)((double)CWorld::FindGroundZForCoord(x, y) + (double)0.5f); // 0x569660
+        z = (float)((x87d)CWorld::FindGroundZForCoord(x, y) + (x87d)0.5f); // 0x569660
     }
     return CPickups::GenerateNewOne({ x, y, z }, (uint32)model, type, 0, 0, false, nullptr).num; // 0x456F20
 }
@@ -425,9 +425,9 @@ float GetWaterHeightAtCoords(float x, float y, int32 withWaves) {
 //! Each rotation component = (float)(deg * 0.017453292f (0x8595EC)); `car->AttachEntityToEntity(object, offset, rotation)` (0x54D570). No null checks.
 void AttachCarToObject(CVehicle& veh, CObject& obj, float ox, float oy, float oz, float rx, float ry, float rz) {
     const CVector rot{
-        (float)((double)rx * (double)DEG_TO_RAD),
-        (float)((double)ry * (double)DEG_TO_RAD),
-        (float)((double)rz * (double)DEG_TO_RAD)
+        (float)((x87d)rx * (x87d)DEG_TO_RAD),
+        (float)((x87d)ry * (x87d)DEG_TO_RAD),
+        (float)((x87d)rz * (x87d)DEG_TO_RAD)
     };
     veh.AttachEntityToEntity(&obj, CVector{ ox, oy, oz }, rot);
 }
@@ -525,11 +525,11 @@ OpcodeResult GetPositionOfEntryExitCharUsed(CRunningScript& S) {
             x     = RawF(enex->m_vecExitPos.x);
             y     = RawF(enex->m_vecExitPos.y);
             z     = RawF(enex->m_vecExitPos.z);
-            angle = (float)((double)enex->m_fExitAngle * (double)DEG_TO_RAD);
+            angle = (float)((x87d)enex->m_fExitAngle * (x87d)DEG_TO_RAD);
         } else {
             const auto& r = enex->m_recEntrance; // CRect: left, bottom, right, top (+8, +0xC, +0x10, +0x14)
-            x = RawF((float)(((double)r.right + (double)r.left) * (double)0.5f));
-            y = RawF((float)(((double)r.top + (double)r.bottom) * (double)0.5f));
+            x = RawF((float)(((x87d)r.right + (x87d)r.left) * (x87d)0.5f));
+            y = RawF((float)(((x87d)r.top + (x87d)r.bottom) * (x87d)0.5f));
             z = RawF(enex->m_fEntranceZ);
         }
         ScriptParams[0].iParam = x;
@@ -630,7 +630,7 @@ OpcodeResult ControlCarDoor(CRunningScript& S) {
     CVehicle* const veh    = GetVehiclePool()->GetAtRef(ScriptParams[0].iParam); // no null check
     const int32     door   = ScriptParams[1].iParam;
     const int32     status = ScriptParams[2].iParam;
-    const double    ratioD = (double)ScriptParams[3].iParam; // fild
+    const x87d    ratioD = (x87d)ScriptParams[3].iParam; // fild
     const float     ratio  = (float)ratioD;                  // fst
     if (door < 6) {
         auto* const car = static_cast<CAutomobile*>(veh);

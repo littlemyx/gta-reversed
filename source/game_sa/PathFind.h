@@ -102,15 +102,15 @@ public:
     }
 
     //! 0x44DB00 - The original returns this at extended precision (x87 `st0`), use this if the result is used in further float math
-    double OneWayLaneOffsetExtended() const {
+    x87d OneWayLaneOffsetExtended() const {
         if (m_numOppositeDirLanes == 0) {
-            return 0.5 - (double)m_numSameDirLanes * 0.5;
+            return (x87d)0.5 - (x87d)m_numSameDirLanes * (x87d)0.5;
         }
         if (m_numSameDirLanes == 0) {
-            return 0.5 - (double)m_numOppositeDirLanes * 0.5;
+            return (x87d)0.5 - (x87d)m_numOppositeDirLanes * (x87d)0.5;
         }
         // The width is used as the raw (unsigned) byte here. 0.011574074f = 1 / 86.4f (0x858EEC)
-        return (double)*reinterpret_cast<const uint8*>(&m_nPathNodeWidth) * (double)0.011574074f + 0.5;
+        return (x87d)*reinterpret_cast<const uint8*>(&m_nPathNodeWidth) * (x87d)0.011574074f + (x87d)0.5;
     }
 
     //! 0x44DB00

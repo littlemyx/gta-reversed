@@ -264,7 +264,7 @@ void CCutsceneMgr::FinishCutscene() {
 uint64 CCutsceneMgr::GetCutsceneTimeInMilleseconds() {
     // 0x5B0550: `fld [timerS]; fmul 1000.0f; jmp _ftol2` - scale first, then truncate (the old code truncated the seconds BEFORE the multiply).
     // _ftol2 = fistp qword; edx:eax (0x8000000000000000 on NaN/overflow). All exe callers read EAX only.
-    const double v = (double)ms_cutsceneTimerS * (double)1000.0f;
+    const x87d v = (x87d)ms_cutsceneTimerS * (x87d)1000.0f;
     if (!(v > -9223372036854775808.0 && v < 9223372036854775808.0)) { // also catches NaN
         return 0x8000000000000000ull;
     }

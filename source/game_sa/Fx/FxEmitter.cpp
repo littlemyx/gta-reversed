@@ -255,7 +255,7 @@ FxEmitterPrt_c* FxEmitter_c::CreateParticle(const EmissionInfo_t& emissionInfo, 
         // exe (0x4A2925..0x4A298D): `rand() % 10000 * 0.0001f` (0x858FC4) scaled by its OWN constants 6.2831802f (0x85A7C0) and 0.0174532793f (0x85A7BC);
         // the lerp is `(max - min) * t + min`, angles are spilled to floats
         const auto Rand01 = [] { return (x87d)(rand() % 10000) * (x87d)std::bit_cast<float>(0x38D1B717u); };
-        const auto randomAngle = (float)(X87R(Rand01() * (double)std::bit_cast<float>(0x40C90FD0u)));
+        const auto randomAngle = (float)(X87R(Rand01() * (x87d)std::bit_cast<float>(0x40C90FD0u)));
         const auto minAngle    = (float)((x87d)emissionInfo.m_fAngleMin * (x87d)std::bit_cast<float>(0x3C8EFA2Eu));
         const auto randomAngleBetweenMinMax = (float)(X87R(((x87d)emissionInfo.m_fAngleMax * (x87d)std::bit_cast<float>(0x3C8EFA2Eu) - (x87d)minAngle) * Rand01()) + (x87d)minAngle);
 

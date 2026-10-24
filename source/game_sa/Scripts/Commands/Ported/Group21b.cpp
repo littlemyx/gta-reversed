@@ -262,11 +262,11 @@ void SetVehicleAirResistanceMultiplier(CVehicle& veh, float mult) {
         return;
     }
     if (h->m_fDragMult > 0.01f) {
-        veh.m_fAirResistance = (float)((double)h->m_fDragMult / (double)1000.0f * (double)0.5f);
+        veh.m_fAirResistance = (float)((x87d)h->m_fDragMult / (x87d)1000.0f * (x87d)0.5f);
     } else {
         veh.m_fAirResistance = h->m_fDragMult;
     }
-    veh.m_fAirResistance = (float)((double)mult * (double)veh.m_fAirResistance);
+    veh.m_fAirResistance = (float)((x87d)mult * (x87d)veh.m_fAirResistance);
 }
 
 //! 2188 SET_CAR_COORDINATES_NO_OFFSET (case @0x471EA5): car, x, y, z  => CCarCtrl::SetCoordsOfScriptCar(car, x, y, z, 0, 0) [0x4342A0]; the handle isn't checked

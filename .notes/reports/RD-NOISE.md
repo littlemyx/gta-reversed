@@ -46,6 +46,8 @@ Attribution of the orig-orig gain (91 -> 1520..2177, and 1530/1530 in the R-log 
 orig diverges at 1520 / 2177 (a single rand call; the runs flake - one orig start segfaulted and its retry diverged at 1520), port at 7-9 (one extra `CGeneral::RandomBool` General.cpp:216 call at the tail of frame 8; its caller was being resolved with the outer-caller capture).
 Orig leg start flake: `rd_orig_run` o2 try 1 died with a segfault at startup (0 frames), the runner's retry handled it.
 
+Orig-orig residual explained (rdn5, 2 reps with R logs 1517..1523): the 1520/1521 divergence is ONE extra `CAEAudioUtility::ResolveProbability` (0x4D9C80, audio code) rand call in one of two runs, right before CEntryExitManager::AddOne - exactly what the audio partition (pin 128) is for; the same audio call was the frame-11 lead in the RD-ARM orig runs. So the next measurement is `--pin 511` (383+128) on both exes.
+
 ## 4. Not done
 * No zero-divergence A-A over 3000 frames; no 60 s free-roam scenario (needs RD-INPUT).
 * Audio partition (pin 128) unmeasured; threads (row 9) only documented.
@@ -53,4 +55,4 @@ Orig leg start flake: `rd_orig_run` o2 try 1 died with a segfault at startup (0 
 * Note for the next agent: never edit run.sh while a run is in progress (a revert of my edit still broke the running instance's report phase: rdn3 has traces but no report; compare with rd_diff.py by hand).
 
 ## 5. Gate (rules v4)
-Release build (StandaloneRelease, this tree): ok. run_all_tests: all 74 targets BUILD ok on this tree (the RUN phase and the soak were queued behind other GPU users, result in the hand-back). Not landed on reverse/interior_c (rd-arm itself is not there yet): branch origin/rd-noise.
+Release build (StandaloneRelease, this tree): ok. run_all_tests: 74 targets BUILD ok; RUN phase killed at the 100-minute cap after 44/74 targets (none of the finished ones reported a failure in the formats my quick parser knows - not a valid gate). Soak: queued behind other GPU users for 40 min, NEVER RAN - the GenerateRandomCars tail (trains/planes/emergency cars now spawn) is therefore ungated: run soak + run_all_tests before landing. Not landed on reverse/interior_c (rd-arm itself is not there yet): branch origin/rd-noise.

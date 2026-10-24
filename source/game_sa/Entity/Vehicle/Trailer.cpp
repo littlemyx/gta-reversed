@@ -462,13 +462,13 @@ bool CTrailer::ProcessAI(uint32& extraHandlingFlags) {
     const double headingSelf = GetHeadingExt();
 
     // Calculation of the shortest angle difference
-    double angleDiff;
-    if (headingTow > (double)PI + headingSelf) {
-        angleDiff = (headingTow - (double)TWO_PI) - headingSelf;
-    } else if (headingTow < headingSelf - (double)PI) {
-        angleDiff = (headingTow + (double)TWO_PI) - headingSelf;
+    x87d angleDiff;
+    if (headingTow > X87R((double)PI + headingSelf)) {
+        angleDiff = X87R((X87R(headingTow - (double)TWO_PI)) - headingSelf);
+    } else if (headingTow < X87R(headingSelf - (double)PI)) {
+        angleDiff = X87R((X87R(headingTow + (double)TWO_PI)) - headingSelf);
     } else {
-        angleDiff = headingTow - headingSelf;
+        angleDiff = X87R(headingTow - headingSelf);
     }
     m_fSteerAngle = (float)angleDiff;
 

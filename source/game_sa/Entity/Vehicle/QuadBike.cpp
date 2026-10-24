@@ -179,18 +179,18 @@ void CQuadBike::ProcessControl() {
         const auto rollFactor  = std::pow((double)rollDampF, (double)CTimer::GetTimeStep());
 
         const auto pitchDelta = (float)((x87d)turnLocal.x * (x87d)pitchFactor - (x87d)turnLocal.x);
-        const auto rollDelta  = (double)turnLocal.y * rollFactor - (double)turnLocal.y; // Stays in the FPU
+        const auto rollDelta  = X87R((double)turnLocal.y * rollFactor) - (x87d)turnLocal.y; // Stays in the FPU
 
         const auto turnMass = m_fTurnMass;
         const auto up       = GetUp();
 
         {
-            const auto fx = (float)((double)up.x * -1.0 * rollDelta);
-            const auto fz = (float)((double)(float)((x87d)up.z * -(x87d)1.0) * rollDelta);
+            const auto fx = (float)((x87d)up.x * -(x87d)1.0 * rollDelta);
+            const auto fz = (float)((x87d)(float)((x87d)up.z * -(x87d)1.0) * rollDelta);
             ApplyTurnForce(
                 CVector{
                     (float)((x87d)fx * (x87d)turnMass),
-                    (float)((double)up.y * -1.0 * rollDelta * (double)turnMass),
+                    (float)((x87d)up.y * -(x87d)1.0 * rollDelta * (x87d)turnMass),
                     (float)((x87d)fz * (x87d)turnMass)
                 },
                 TransformVectorOriginal(mat, m_vecCentreOfMass) + GetRight()

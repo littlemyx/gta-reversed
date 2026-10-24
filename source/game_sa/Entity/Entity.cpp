@@ -1435,7 +1435,7 @@ void CEntity::ModifyMatrixForTreeInWind() {
         auto uiTimeOffset = (NOTSA_PTR_ID32(this) + CTimer::GetTimeInMS()) & 0xFFF;
 
         constexpr float scalingFactor = 6.28f / 4096.f;
-        fWindOffset = x87::sin(uiTimeOffset * scalingFactor) * 0.005F;
+        fWindOffset = X87R(x87::sin(uiTimeOffset * scalingFactor) * 0.005F);
         if (CWeather::Wind >= 0.2F) {
             fWindOffset *= 1.6F;
         }

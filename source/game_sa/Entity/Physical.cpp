@@ -37,10 +37,10 @@ CVector PhysicalCrossProductOriginal(const CVector& a, const CVector& b) {
 
 // `dst += v * r` as the exe does it (0x5429F0, 0x542A50, 0x542B50, 0x5430A0, 0x543100, 0x543220): r = 1.0 / divisor stays on the x87 stack (extended), the x product is
 // added unrounded, the y and z products are spilled to float first
-void PhysicalAddScaledByRecip(CVector& dst, const CVector& v, double r) {
-    dst.x = (float)((double)v.x * r + dst.x);
-    const float ty = (float)((double)v.y * r);
-    const float tz = (float)((double)v.z * r);
+void PhysicalAddScaledByRecip(CVector& dst, const CVector& v, x87d r) {
+    dst.x = (float)((x87d)v.x * r + dst.x);
+    const float ty = (float)((x87d)v.y * r);
+    const float tz = (float)((x87d)v.z * r);
     dst.y = ty + dst.y;
     dst.z = tz + dst.z;
 }
@@ -374,7 +374,7 @@ void CPhysical::ProcessCollision() {
                     m_vecTurnSpeed.x = 0.0f;
                     m_vecTurnSpeed.y = 0.0f;
                     m_matrix->ForceUpVector(CVector(0.0f, 0.0f, 1.0f));
-                    GetPosition().z = (float)(FindGhostRoadHeightOriginal(vehicle) + vehicle->GetHeightAboveRoad()); // 0x54E366 - x87: the road height is not rounded to float before the addition
+                    GetPosition().z = (float)(X87R(FindGhostRoadHeightOriginal(vehicle) + vehicle->GetHeightAboveRoad())); // 0x54E366 - x87: the road height is not rounded to float before the addition
                     ApplySpeed();
                     m_matrix->Reorthogonalise();
                     RemoveAndAdd();
@@ -1542,7 +1542,7 @@ void CPhysical::ApplyAirResistance()
         }
 
         // pow() (the exe's _CIpow, 0x822130) returns its result on the x87 stack: each component is rounded once
-        const double p = pow((x87d)1.0 - (x87d)fSpeedMagnitude, (double)CTimer::GetTimeStep());
+        const x87d p = pow((x87d)1.0 - (x87d)fSpeedMagnitude, (double)CTimer::GetTimeStep());
         m_vecMoveSpeed.x = (float)(m_vecMoveSpeed.x * p);
         m_vecMoveSpeed.y = (float)(m_vecMoveSpeed.y * p);
         m_vecMoveSpeed.z = (float)(m_vecMoveSpeed.z * p);
@@ -1551,12 +1551,12 @@ void CPhysical::ApplyAirResistance()
     else
     {
         const double p = pow((double)m_fAirResistance, (double)CTimer::GetTimeStep());
-        m_vecMoveSpeed.x = (float)(m_vecMoveSpeed.x * p);
-        m_vecMoveSpeed.y = (float)(m_vecMoveSpeed.y * p);
-        m_vecMoveSpeed.z = (float)(m_vecMoveSpeed.z * p);
-        m_vecTurnSpeed.x = (float)(m_vecTurnSpeed.x * p);
-        m_vecTurnSpeed.y = (float)(m_vecTurnSpeed.y * p);
-        m_vecTurnSpeed.z = (float)(m_vecTurnSpeed.z * p);
+        m_vecMoveSpeed.x = (float)(X87R(m_vecMoveSpeed.x * p));
+        m_vecMoveSpeed.y = (float)(X87R(m_vecMoveSpeed.y * p));
+        m_vecMoveSpeed.z = (float)(X87R(m_vecMoveSpeed.z * p));
+        m_vecTurnSpeed.x = (float)(X87R(m_vecTurnSpeed.x * p));
+        m_vecTurnSpeed.y = (float)(X87R(m_vecTurnSpeed.y * p));
+        m_vecTurnSpeed.z = (float)(X87R(m_vecTurnSpeed.z * p));
     }
 }
 
@@ -1880,8 +1880,8 @@ static double ExeRound24(double v) {
     return std::ldexp(std::nearbyint(std::ldexp(m, 24)), e - 24);
 }
 static float ExeMagnitude3(float a, float b, float c) {
-    const double s1 = ExeRound24(ExeRound24((x87d)a * a) + ExeRound24((x87d)b * b));
-    return (float)ExeRound24(std::sqrt(ExeRound24(s1 + ExeRound24((x87d)c * c))));
+    const x87d s1 = ExeRound24(X87R(ExeRound24((x87d)a * a) + ExeRound24((x87d)b * b)));
+    return (float)ExeRound24(X87R(std::sqrt(ExeRound24(X87R(s1 + ExeRound24((x87d)c * c))))));
 }
 // 0x545980: the exe inlines the speed magnitudes as sqrt((a + b) + c) in float, with a per-branch term order (x,z,y in the first, third and fourth branch; z,y,x in the second), and multiplies by a reciprocal in every branch
 bool CPhysical::ApplyFriction(CPhysical* entity, float fFriction, CColPoint& colPoint)

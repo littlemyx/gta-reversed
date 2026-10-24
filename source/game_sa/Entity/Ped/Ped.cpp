@@ -867,11 +867,11 @@ void CPed::ClearAimFlag() {
 int32 CPed::GetLocalDirection(const CVector2D& point) const {
     // Exact x87 form of the exe (0x5DEF60): everything stays in extended precision (doubles), the angle is truncated by _ftol2 after `* (2/PI)` (0x858FB8)
     // and then reduced with `(dir - 4) & 3` for dir > 3 (== dir & 3).
-    double angle = x87::atan2(-(double)point.x, (double)point.y) - (double)m_fCurrentRotation + (double)std::bit_cast<float>(0x3F490FDBu); // 0x859AB0 (PI / 4)
+    x87d angle = X87R(x87::atan2(-(double)point.x, (double)point.y) - (double)m_fCurrentRotation) + (double)std::bit_cast<float>(0x3F490FDBu); // 0x859AB0 (PI / 4)
     while (angle < 0.0) {
-        angle += (double)TWO_PI; // 0x858CBC
+        angle += (x87d)TWO_PI; // 0x858CBC
     }
-    int32 dir = notsa::detail::Ftol(angle * (double)std::bit_cast<float>(0x3F22F983u)); // 0x858FB8 (2 / PI)
+    int32 dir = notsa::detail::Ftol(angle * (x87d)std::bit_cast<float>(0x3F22F983u)); // 0x858FB8 (2 / PI)
     if (dir > 3) {
         dir = dir - 4 - (int32)(((uint32)(dir - 4) >> 2) << 2);
     }
@@ -1659,18 +1659,18 @@ bool CPed::CanSeeEntity(CEntity* entity, float limitAngle) {
     // 0x5E0730: R* used the degree returning function and converted to radians (0x8595EC); both the point angle and the ped's own rotation are wrapped into [0, 2PI]
     // once, everything stays on the x87 stack
     constexpr x87d ExeTwoPi = (x87d)(2.f * std::numbers::pi_v<float>); // 0x858CBC
-    const auto Wrap = [](double angle) {
+    const auto Wrap = [](double angle) -> x87d {
         if (angle > ExeTwoPi) {
-            return angle - ExeTwoPi;
+            return X87R(angle - ExeTwoPi);
         }
-        return angle < 0.0 ? angle + ExeTwoPi : angle;
+        return angle < 0.0 ? X87R(angle + ExeTwoPi) : angle;
     };
 
     const double deg        = CGeneral::GetAngleBetweenPointsExt(entity->GetPosition2D().x, entity->GetPosition2D().y, GetPosition2D().x, GetPosition2D().y);
-    const double pointAngle = Wrap(deg * (double)0.017453292f);
-    const double ownAngle   = Wrap(m_fCurrentRotation);
+    const x87d pointAngle = Wrap(X87R(deg * (double)0.017453292f));
+    const x87d ownAngle   = Wrap(m_fCurrentRotation);
 
-    double delta = pointAngle - ownAngle;
+    x87d delta = pointAngle - ownAngle;
     if (delta < 0.0) {
         delta = -delta;
     }
@@ -2531,12 +2531,12 @@ bool CPed::TurnBody() {
 
     m_fAimingRotation = (float)look;
 
-    const double diff = (double)m_fCurrentRotation - look;
+    const x87d diff = X87R((double)m_fCurrentRotation - look);
     m_fLookDirection  = (float)look;
     if (!(std::abs(diff) > 0.05f)) { // 0x858C28; a NaN difference takes this branch, too
         return true;
     }
-    m_fCurrentRotation = (float)((double)m_fCurrentRotation - diff * (double)std::bit_cast<float>(0x3E4CCCCDu)); // 0x858CC4 (0.2f)
+    m_fCurrentRotation = (float)((x87d)m_fCurrentRotation - diff * (x87d)std::bit_cast<float>(0x3E4CCCCDu)); // 0x858CC4 (0.2f)
     return false;
 }
 
@@ -2683,7 +2683,7 @@ void CPed::CalculateNewVelocity() {
         } else if ((x87d)m_fCurrentRotation - ExePi > targetRot) {
             targetRot += ExeTwoPi;
         }
-        diff = (float)(targetRot - (double)m_fCurrentRotation);
+        diff = (float)(X87R(targetRot - (double)m_fCurrentRotation));
 
         const auto isPlayer = IsPlayer();
         if (isPlayer) {
@@ -2750,7 +2750,7 @@ void CPed::CalculateNewVelocity() {
     };
 
     const auto UpdateSlopeRollFromRight = [&] { m_pedIK.m_fSlopeRoll = AsinClamped(rightDot); };
-    const auto UpdateSlopePitchFromFwd  = [&] { m_pedIK.m_fSlopePitch = 0.75f * m_pedIK.m_fSlopePitch + (1.0f - 0.75f) * AsinClamped(fwdDot); };
+    const auto UpdateSlopePitchFromFwd  = [&] { m_pedIK.m_fSlopePitch = 0.75f * m_pedIK.m_fSlopePitch + X87R((1.0f - 0.75f) * AsinClamped(fwdDot)); };
 
     if (!m_pedIK.bSlopePitch) {
         if (m_nMoveState >= PEDMOVE_WALK && !IsPlayer()) {
@@ -3736,7 +3736,7 @@ void CPed::PreRenderAfterTest()
     if (m_Wobble > 0.0f) {
         static constexpr float WOBBLE_FACTOR = 5.0f; // 0x8D21F0
 
-        const auto angle = x87::sin(m_Wobble) * -WOBBLE_FACTOR;
+        const auto angle = X87R(x87::sin(m_Wobble) * -WOBBLE_FACTOR);
         m_Wobble -= CTimer::GetTimeStep() * m_WobbleSpeed;
 
         if (IsPlayer()) {
@@ -4525,7 +4525,7 @@ void CPed::KillPedWithCar(CVehicle* car, float fDamageIntensity, bool bPlayDeadA
             const float carSpeed = car->m_vecMoveSpeed.Magnitude();
             const float time     = length / carSpeed; // Time it takes the car to go over
             const float zSpeed   = (targetZ - GetPosition().z) / time;
-            const float randMult = (float)(((double)(CGeneral::GetRandomNumber() & 0xFF) * 0.002 + 1.5) * (double)zSpeed);
+            const float randMult = (float)((X87R((double)(CGeneral::GetRandomNumber() & 0xFF) * 0.002) + (x87d)1.5) * (x87d)zSpeed);
 
             CVector newVel = car->m_vecMoveSpeed;
             newVel.Normalise();

@@ -1505,8 +1505,8 @@ void CPlayerPed::DrawTriangleForMouseRecruitPed() {
         right_y = x87::sin((double)heading);
         right_z = 0.f;
     }
-    const float rx = (float)(right_x * scale);
-    const float ry = (float)(right_y * scale);
+    const float rx = (float)(X87R(right_x * scale));
+    const float ry = (float)(X87R(right_y * scale));
     const float rz = (float)((x87d)right_z * scale);
     const float k  = (float)((x87d)0.0 * scale); // Always 0
 
@@ -1978,15 +1978,15 @@ void CPlayerPed::EvaluateTarget(CEntity* target, CEntity *& outTarget, float & o
 
     // 0x60D0E9: `GetATanOfXY`'s result stays unrounded on the x87 stack through `- compensationRotRad`, the inlined `LimitRadianAngle` loops,
     // `* 57.29578f` (0x859878), the sign flip and `/ 140.0f`; the multiplier is spilled to a float at 0x60D156
-    double targetAngle = CGeneral::GetATanOfXYExt((float)ddx, (float)ddy) - (double)compensationRotRad;
+    x87d targetAngle = X87R(CGeneral::GetATanOfXYExt((float)ddx, (float)ddy) - (double)compensationRotRad);
     constexpr auto PI = std::numbers::pi_v<float>; // 0x858CB8
     while (targetAngle > (double)PI) {
-        targetAngle -= (double)(2.f * PI); // 0x858CBC
+        targetAngle -= (x87d)(2.f * PI); // 0x858CBC
     }
     while (targetAngle < (double)-PI) { // 0x858CC0
-        targetAngle += (double)(2.f * PI);
+        targetAngle += (x87d)(2.f * PI);
     }
-    double targetAngleDeg = targetAngle * (double)RAD_TO_DEG;
+    x87d targetAngleDeg = targetAngle * (x87d)RAD_TO_DEG;
     if (targetAngleDeg < 0.0) { // FCOM + `jp` + FCHS (NaN keeps its sign)
         targetAngleDeg = -targetAngleDeg;
     }
@@ -2022,13 +2022,13 @@ void CPlayerPed::EvaluateNeighbouringTarget(CEntity* target, CEntity** outTarget
     const auto& camPos = TheCamera.GetPosition();
     const float diffY = targetPos.y - camPos.y;
     const float diffX = targetPos.x - camPos.x;
-    double angle = CGeneral::GetATanOfXYExt(diffX, diffY) - (double)arg4;
+    x87d angle = X87R(CGeneral::GetATanOfXYExt(diffX, diffY) - (double)arg4);
     constexpr auto PI = std::numbers::pi_v<float>; // 0x858CB8
     while (angle > (double)PI) {
-        angle -= (double)(2.f * PI); // 0x858CBC
+        angle -= (x87d)(2.f * PI); // 0x858CBC
     }
     while (angle < (double)-PI) { // 0x858CC0
-        angle += (double)(2.f * PI);
+        angle += (x87d)(2.f * PI);
     }
 
     constexpr auto MAX_ANGLE = 0.8726646304130554f; // 0x86D1D0 (50 deg)
@@ -2039,11 +2039,11 @@ void CPlayerPed::EvaluateNeighbouringTarget(CEntity* target, CEntity** outTarget
     // `arg5` selects which side of the camera's view direction the target has to be on
     // Priority is the (negated) angle distance, or a big negative number if the target is on the wrong side.
     constexpr auto WRONG_SIDE_PRIORITY = -100000.f; // 0x86D1E8
-    double priority;
+    x87d priority;
     if (!arg5) {
-        priority = !(angle >= 0.0) ? angle : (double)WRONG_SIDE_PRIORITY;
+        priority = !(angle >= 0.0) ? angle : (x87d)WRONG_SIDE_PRIORITY;
     } else {
-        priority = !(angle <= 0.0) ? -angle : (double)WRONG_SIDE_PRIORITY;
+        priority = !(angle <= 0.0) ? -angle : (x87d)WRONG_SIDE_PRIORITY;
     }
 
     if (priority > (double)*outTargetPriority) {
@@ -2338,7 +2338,7 @@ bool CPlayerPed::FindWeaponLockOnTarget() {
         const auto upDown    = pad->GetPedWalkUpDown();
         const auto leftRight = pad->GetPedWalkLeftRight();
         const double stickAngle = CGeneral::GetRadianAngleBetweenPointsExt(0.0f, 0.0f, (float)-(int32)leftRight, (float)upDown); // 0x53CBE0
-        aimAngle = CGeneral::LimitRadianAngle((float)(stickAngle - (double)TheCamera.m_fOrientation + (double)HALF_PI));
+        aimAngle = CGeneral::LimitRadianAngle((float)(X87R(stickAngle - (double)TheCamera.m_fOrientation) + (x87d)HALF_PI));
     }
 
     // Spray can => look for a tag to spray first
@@ -2374,11 +2374,11 @@ bool CPlayerPed::FindWeaponLockOnTarget() {
                 continue;
             }
 
-            double delta = x87::atan2(-dx, dy) - (double)heading;
+            x87d delta = X87R(x87::atan2(-dx, dy) - (double)heading);
             if (delta < (double)-PI) {
-                delta += (double)TWO_PI;
+                delta += (x87d)TWO_PI;
             } else if (delta > (double)PI) {
-                delta -= (double)TWO_PI;
+                delta -= (x87d)TWO_PI;
             }
 
             if (delta < (double)bestDelta || !bestTag) {
@@ -2423,8 +2423,8 @@ bool CPlayerPed::FindWeaponLockOnTarget() {
         // Is the ped within the view cone?
         const auto& pedPos  = ped->GetPosition();
         const auto& selfPos = GetPosition();
-        const double angleToPed = CGeneral::GetATanOfXYExt(pedPos.x - selfPos.x, pedPos.y - selfPos.y); // 0x53CC70
-        if (!(WrapAngleAbs(angleToPed - (double)aimAngle) < (x87d)PLAYER_MAX_TARGET_VIEW_ANGLE * (x87d)FOV_SCALE)) {
+        const x87d angleToPed = CGeneral::GetATanOfXYExt(pedPos.x - selfPos.x, pedPos.y - selfPos.y); // 0x53CC70
+        if (!(WrapAngleAbs(angleToPed - (x87d)aimAngle) < (x87d)PLAYER_MAX_TARGET_VIEW_ANGLE * (x87d)FOV_SCALE)) {
             continue;
         }
 
@@ -2433,7 +2433,7 @@ bool CPlayerPed::FindWeaponLockOnTarget() {
         fwdNorm.Normalise(); // 0x59C910
         const CVector behindPos = GetPosition() - fwdNorm * NOTSA_GLOBAL_EXPR(0x8D2440, (float), k_8D2440); // 3.0f
         const double angleToPedFromBehind = CGeneral::GetATanOfXYExt(ped->GetPosition().x - behindPos.x, ped->GetPosition().y - behindPos.y); // 0x53CC70
-        if (!(WrapAngleAbs(angleToPedFromBehind - (double)aimAngle) < (x87d)NOTSA_GLOBAL_EXPR(0x8D2438, (float), k_8D2438) * (x87d)FOV_SCALE)) { // 90.0f
+        if (!(WrapAngleAbs(X87R(angleToPedFromBehind - (double)aimAngle)) < (x87d)NOTSA_GLOBAL_EXPR(0x8D2438, (float), k_8D2438) * (x87d)FOV_SCALE)) { // 90.0f
             continue;
         }
 

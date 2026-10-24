@@ -927,7 +927,7 @@ void CObject::ProcessSamSiteBehaviour() {
             const auto fAngle    = (float)fAngleExt;
 
             // `fAngle - fHeading`, then the inlined `LimitRadianAngle` loops (0x5A094C..0x5A09A3); NaN skips both loops
-            double fAngleDiffExt = fAngleExt - (double)fHeading;
+            x87d fAngleDiffExt = X87R(fAngleExt - (double)fHeading);
             while (fAngleDiffExt > PI) {
                 fAngleDiffExt -= 2.0f * PI; // 0x858CBC
             }
@@ -1370,11 +1370,11 @@ void CObject::SetMatrixForTrainCrossing(CMatrix* matrix, float fAngle) {
     // z gets the sine rounded to float (it is stored / reloaded) added
     const double fCos = x87::cos(fAngle);
     const double fSin = x87::sin(fAngle);
-    const float  zeroSin = (float)(0.0f * fSin);
+    const float  zeroSin = (float)(X87R(0.0f * fSin));
     const float  sinF    = (float)fSin;
-    vecForward.x = (float)((double)zeroSin + (double)(float)((double)vecForward.x * fCos));
-    vecForward.y = (float)((double)zeroSin + (double)(float)((double)vecForward.y * fCos));
-    vecForward.z = (float)((double)sinF + (double)(float)(fCos * (double)vecForward.z));
+    vecForward.x = (float)((x87d)zeroSin + (double)(float)(X87R((double)vecForward.x * fCos)));
+    vecForward.y = (float)((x87d)zeroSin + (double)(float)(X87R((double)vecForward.y * fCos)));
+    vecForward.z = (float)((x87d)sinF + (double)(float)(X87R(fCos * (double)vecForward.z)));
 
     matrix->GetUp() = CrossProduct(matrix->GetRight(), vecForward);
     matrix->GetForward() = vecForward;

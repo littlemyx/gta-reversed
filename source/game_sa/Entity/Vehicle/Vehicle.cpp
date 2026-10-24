@@ -3184,7 +3184,7 @@ double SquaredMagnitude_x87(const CVector& v) {
 void Normalise_x87(CVector& v) {
     const double sq = SquaredMagnitude_x87(v);
     if (sq > 0.0 || std::isnan(sq)) {
-        const double inv = 1.0 / std::sqrt(sq);
+        const x87d inv = (x87d)1.0 / X87R(std::sqrt(sq));
         v.x = (float)(inv * v.x);
         v.y = (float)(inv * v.y);
         v.z = (float)(inv * v.z);
@@ -4097,14 +4097,14 @@ static void FlyingControlModel0(const FlyingControlCtx& c) {
     const CVector right = mat.GetRight(), fwd = mat.GetForward(), up = mat.GetUp();
 
     const float rightDot = (float)((((x87d)V.z * right.z + (x87d)V.y * right.y) + (x87d)V.x * right.x) * -1.0f);
-    const float rightFac = (float)((double)rightDot / MagnitudeExt(V));
+    const float rightFac = (float)(X87R((double)rightDot / MagnitudeExt(V)));
 
     const float dotFwd = (float)(((x87d)fwd.y * V.y + (x87d)fwd.x * V.x) + (x87d)fwd.z * V.z);
-    const float k      = (float)((SquaredMagnitudeExt(V) * dotFwd) * dotFwd);
+    const float k      = (float)((X87R(SquaredMagnitudeExt(V) * dotFwd)) * dotFwd);
 
     const CVector fwdScaled = fwd * -4.0f;
 
-    const float steerTurn = (float)(((((double)v.m_fSteerAngle * 0.001 + (double)rightFac * 0.003) * ts) * k) * v.m_fTurnMass);
+    const float steerTurn = (float)((((X87R((double)v.m_fSteerAngle * 0.001) + X87R((double)rightFac * 0.003)) * ts) * k) * v.m_fTurnMass);
     v.ApplyTurnForce(right * steerTurn, fwdScaled);
 
     const float moveScale = (float)(((((x87d)ts * v.m_fMass) * k) * rightFac) * 0.2f);
@@ -4113,7 +4113,7 @@ static void FlyingControlModel0(const FlyingControlCtx& c) {
     v.ApplyTurnForce(sideMove, up * 2.0f);
 
     const float upDot = (float)((((x87d)V.z * up.z + (x87d)V.y * up.y) + (x87d)V.x * up.x) * -1.0f);
-    const float upFac = (float)((double)upDot / MagnitudeExt(V));
+    const float upFac = (float)(X87R((double)upDot / MagnitudeExt(V)));
 
     x87d pitchIn = (x87d)0.0;
     if (c.pad) {
@@ -4123,7 +4123,7 @@ static void FlyingControlModel0(const FlyingControlCtx& c) {
     const float pitchTurn = (float)(((((pitchIn + (x87d)upFac * 0.002f) * ts) * k) * v.m_fTurnMass));
     v.ApplyTurnForce(up * pitchTurn, fwdScaled);
 
-    float lift = (float)((((((double)upFac * 3.5 + 0.5) * v.m_fMass) * ts) * k) * 0.05);
+    float lift = (float)(X87R((((((x87d)upFac * (x87d)3.5 + (x87d)0.5) * v.m_fMass) * ts) * k) * 0.05));
     if (v.GetStatus() == STATUS_PLAYER || v.GetStatus() == STATUS_REMOTE_CONTROLLED) {
         if (((x87d)ts * v.m_fMass) * 0.008f < lift) {
             if (v.HeightAboveCeiling(v.GetPosition().z, FLIGHT_MODEL_UNK) > 0.0f) {
@@ -4135,7 +4135,7 @@ static void FlyingControlModel0(const FlyingControlCtx& c) {
     v.ApplyMoveForce(liftForce);
     v.ApplyTurnForce(liftForce, (up * 2.0f) + c.com);
 
-    v.m_vecTurnSpeed.y = (float)(std::pow((double)0.9f, (double)ts) * v.m_vecTurnSpeed.y);
+    v.m_vecTurnSpeed.y = (float)(X87R(std::pow((double)0.9f, (double)ts) * v.m_vecTurnSpeed.y));
 }
 
 // 0x6D8B1D - flight models 1 (baron), 3 (plane), 4, 5 (boat)
@@ -4172,22 +4172,22 @@ static void FlyingControlModel1345(FlyingControlCtx& c) {
     // Scale the inputs by 1 / cos(angle to the nearest axis)
     const float inputAngle = (float)x87::atan2((double)upDown, (double)skid);
     constexpr x87d PI = std::numbers::pi_v<float>, HALF_PI = 1.5707964f;
-    double angleFac = 1.0;
+    x87d angleFac = (x87d)1.0;
     {
         const x87d a = inputAngle;
         if (inputAngle > -0.7853981852531433f && inputAngle <= 0.7853981852531433f) {
-            angleFac = 1.0 / x87::cos(a);
+            angleFac = X87R(1.0 / x87::cos(a));
         } else if (inputAngle > 0.7853981852531433f && inputAngle <= 2.356194496154785f) {
-            angleFac = 1.0 / x87::cos(a - HALF_PI);
+            angleFac = X87R(1.0 / x87::cos(a - HALF_PI));
         } else if (inputAngle > 2.356194496154785f) {
-            angleFac = 1.0 / x87::cos(a - PI);
+            angleFac = X87R(1.0 / x87::cos(a - PI));
         } else if (inputAngle <= -2.356194496154785f) {
-            angleFac = 1.0 / x87::cos(a + PI);
+            angleFac = X87R(1.0 / x87::cos(a + PI));
         } else if (inputAngle < -0.7853981852531433f) {
-            angleFac = 1.0 / x87::cos(a + HALF_PI);
+            angleFac = X87R(1.0 / x87::cos(a + HALF_PI));
         }
     }
-    skid   = (float)((double)skid * angleFac);
+    skid   = (float)((x87d)skid * angleFac);
     upDown = (float)(-(angleFac * upDown));
 
     const CVector fwd  = mat.GetForward();
@@ -4365,7 +4365,7 @@ static void FlyingControlModel1345(FlyingControlCtx& c) {
         const float  r1     = (float)((x87d)upDotF / den);
         const float  r2     = (1.0f < r1) ? 1.0f : r1;               // 0x404330
         const float  r3     = (-1.0f > r2) ? -1.0f : r2;             // 0x420800
-        const double pitch  = x87::asin((double)r3) * -1.0f;         // 0x821E70
+        const x87d pitch  = X87R(x87::asin((double)r3) * -1.0f);         // 0x821E70
         if (v.m_nVehicleSubType == VEHICLE_TYPE_PLANE && pitch > 0.3490658700466156f) {
             v.AsPlane()->field_9A0 += (int32)(((x87d)ts * 0.02f) * 1000.0f);
         }
@@ -4380,7 +4380,7 @@ static void FlyingControlModel1345(FlyingControlCtx& c) {
             formLift = formLift * fh->m_fGearDownL;
         }
 
-        const double lift  = (((pitch * fh->m_fAttackLift + formLift) * v.m_fMass) * ts) * dotFwdSq;
+        const x87d lift  = (((pitch * fh->m_fAttackLift + formLift) * v.m_fMass) * ts) * dotFwdSq;
         float        liftF = (float)lift;
         if (lift > ((x87d)ts * v.m_fMass) * 0.008f) {
             const float height = v.HeightAboveCeiling(v.GetPosition().z, model);
@@ -4422,9 +4422,9 @@ static void FlyingControlModel268(FlyingControlCtx& c) {
     // Move speed drag
     {
         const double r = std::pow((double)fh->m_fMoveRes, (double)ts);
-        ms.x = (float)(r * ms.x);
-        ms.y = (float)(r * ms.y);
-        ms.z = (float)(r * ms.z);
+        ms.x = (float)(X87R(r * ms.x));
+        ms.y = (float)(X87R(r * ms.y));
+        ms.z = (float)(X87R(r * ms.z));
     }
 
     if ((int32)model == 8) {
@@ -4467,7 +4467,7 @@ static void FlyingControlModel268(FlyingControlCtx& c) {
 
             const float spinNew = (float)((x87d)spin - (((x87d)tiltDot * ts) * AUTOGYRO_ROTORSPIN_MULT));
             spin = spinNew;
-            const double damped = std::pow((double)AUTOGYRO_ROTORSPIN_DAMP, (double)ts) * spinNew;
+            const x87d damped = X87R(std::pow((double)AUTOGYRO_ROTORSPIN_DAMP, (double)ts) * spinNew);
             spin = (float)damped;
             if (damped > 0.4f) {
                 spin = 0.4f;
@@ -4482,9 +4482,9 @@ static void FlyingControlModel268(FlyingControlCtx& c) {
     } else {
         CVector dir = mat.GetUp();
         if (v.vehicleFlags.bHeliMinimumTilt) { // +0x42B & 0x10
-            dir.x = (float)x87::sin(x87::asin((double)dir.x) * 4.0f);
-            dir.y = (float)x87::sin(x87::asin((double)dir.y) * 4.0f);
-            dir.z = (float)x87::cos(x87::acos((double)dir.z) * 4.0f);
+            dir.x = (float)x87::sin(X87R(x87::asin((double)dir.x) * 4.0f));
+            dir.y = (float)x87::sin(X87R(x87::asin((double)dir.y) * 4.0f));
+            dir.z = (float)x87::cos(X87R(x87::acos((double)dir.z) * 4.0f));
         } else if (v.m_nModelIndex == 0x208) {
             dir = FlyingControlHydraDirection(v);
         }
@@ -4527,7 +4527,7 @@ static void FlyingControlModel268(FlyingControlCtx& c) {
         const x87d lo = -fh->m_fFormLift;
         const auto Clamp = [&](const CVector& axis) -> float {
             const auto dot = [&] { return ((x87d)wind.z * axis.z + (x87d)wind.y * axis.y) + (x87d)wind.x * axis.x; };
-            const double m = (lo > dot()) ? lo : dot();
+            const x87d m = (lo > dot()) ? lo : dot();
             if (m > fh->m_fFormLift) {
                 return fh->m_fFormLift;
             }
@@ -4607,7 +4607,7 @@ static void FlyingControlModel268(FlyingControlCtx& c) {
     }
 
     if (v.vehicleFlags.bHeliMinimumTilt) {
-        const double s = (x87::sin(x87::asin((x87d)fh->m_fPitch / (x87d)fh->m_fAttackLift) * 0.25f) / fh->m_fPitch) * fh->m_fAttackLift;
+        const x87d s = (X87R(x87::sin(X87R(x87::asin((x87d)fh->m_fPitch / (x87d)fh->m_fAttackLift) * 0.25f)) / fh->m_fPitch)) * fh->m_fAttackLift;
         upDown    = (float)(upDown * s);
         leftRight = (float)(s * leftRight);
     }
@@ -4688,14 +4688,14 @@ static void FlyingControlDrag(FlyingControlCtx& c) {
     case FLIGHT_MODEL_PLANE:
     case FLIGHT_MODEL_UNK2:
     case FLIGHT_MODEL_BOAT:
-        exponent = (float)(std::sqrt(SquaredMagnitudeExt(ms)) * 2.0);
+        exponent = (float)(X87R(std::sqrt(SquaredMagnitudeExt(ms))) * (x87d)2.0);
         break;
     case FLIGHT_MODEL_BARON:
-        exponent = (float)(MagnitudeExt(ms) * 6.0f);
+        exponent = (float)(X87R(MagnitudeExt(ms) * 6.0f));
         break;
     case FLIGHT_MODEL_HELI:
     case 8:
-        exponent = (float)(MagnitudeExt(ms) + 1.0f);
+        exponent = (float)(X87R(MagnitudeExt(ms) + 1.0f));
         break;
     default:
         break;
@@ -4704,9 +4704,9 @@ static void FlyingControlDrag(FlyingControlCtx& c) {
     const auto Axis = [&](float speedRes, float base, float& localAxis, float& accAxis) {
         if (speedRes > 0.0f) {
             const x87d q = (x87d)base / (((x87d)localAxis * localAxis) * speedRes + (x87d)1.0);
-            accAxis = (float)(std::pow(q, (double)ts) * localAxis - localAxis);
+            accAxis = (float)(X87R(std::pow(q, (double)ts) * localAxis) - localAxis);
         } else {
-            localAxis = (float)(std::pow((double)base, (double)exponent) * localAxis);
+            localAxis = (float)(X87R(std::pow((double)base, (double)exponent) * localAxis));
         }
     };
     Axis(fh->m_vecSpeedRes.x, baseX, local.x, acc.x);
@@ -5912,14 +5912,14 @@ bool CVehicle::AddSingleWheelParticles(tWheelState wheelState, uint32 arg1, floa
         }
 
         const CVector step  = m_vecMoveSpeed * CTimer::ms_fTimeStep;
-        const int32   num   = (int32)(MagnitudeExt(step) * countScale); // _ftol
+        const int32   num   = (int32)(X87R(MagnitudeExt(step) * countScale)); // _ftol
         const int32   count = num >= 1 ? num : 1;
         const float   countF = (float)count;
         for (int32 i = 0; i < count; i++) {
             const double rnd = RandomInRangeExt(0.5f, 1.0f);
             mults.m_Color.blue  = (float)rnd;
-            mults.m_Color.green = (float)(rnd * 0.9f);
-            mults.m_Color.red   = (float)(rnd * 0.9f);
+            mults.m_Color.green = (float)(X87R(rnd * 0.9f));
+            mults.m_Color.red   = (float)(X87R(rnd * 0.9f));
 
             const float   frac = (float)((x87d)1.0 - (x87d)i / (x87d)countF);
             const CVector pos  = *wheelPos - step * frac;
@@ -5970,8 +5970,8 @@ bool CVehicle::AddSingleWheelParticles(tWheelState wheelState, uint32 arg1, floa
 
             const double rnd = RandomInRangeExt(0.5f, 1.0f);
             mults.m_Color.blue  = (float)rnd;
-            mults.m_Color.green = (float)(rnd * 0.9f);
-            mults.m_Color.red   = (float)(rnd * 0.9f);
+            mults.m_Color.green = (float)(X87R(rnd * 0.9f));
+            mults.m_Color.red   = (float)(X87R(rnd * 0.9f));
             g_fx.m_SmokeII3expand->AddParticle(*wheelPos, vel, 0.0f, mults, -1.0f, m_fContactSurfaceBrightness, 0.6f, false); // 0x4AA440
         }
         AddSkidmark();
@@ -6197,7 +6197,7 @@ void CVehicle::UpdateTrailerLink(bool arg0, bool arg1) {
     const CVector lever{ hitchPos.x - com.x, hitchPos.y - com.y, hitchPos.z - com.z };
     const CVector cross = Cross_x87(lever, dir);
 
-    const auto impulse = (float)(1.0 / (SquaredMagnitude_x87(cross) / (double)m_fTurnMass + 1.0 / (double)m_fMass));
+    const auto impulse = (float)((x87d)1.0 / (X87R(SquaredMagnitude_x87(cross) / (double)m_fTurnMass) + (x87d)1.0 / (x87d)m_fMass));
     ApplyForce(relSpeed * impulse, hitchPos, true);
 }
 
@@ -6274,9 +6274,9 @@ void CVehicle::UpdateTractorLink(bool arg0, bool arg1) {
     const CVector cross = Cross_x87(lever, dir);
 
     // Note: Unlike in `UpdateTrailerLink` the impulse isn't rounded to a float before being applied
-    const double impulse = 1.0 / (SquaredMagnitude_x87(cross) / (double)m_fTurnMass + 1.0 / (double)m_fMass);
+    const x87d impulse = (x87d)1.0 / (X87R(SquaredMagnitude_x87(cross) / (double)m_fTurnMass) + (x87d)1.0 / (x87d)m_fMass);
     ApplyForce(
-        CVector{ (float)((double)relSpeed.x * impulse), (float)((double)relSpeed.y * impulse), (float)((double)relSpeed.z * impulse) },
+        CVector{ (float)((x87d)relSpeed.x * impulse), (float)((x87d)relSpeed.y * impulse), (float)((x87d)relSpeed.z * impulse) },
         barPos,
         true
     );
@@ -7235,7 +7235,7 @@ void CVehicle::FireFixedMachineGuns() {
     // NOTE: The offsets are `double`s because the first gun uses the unrounded products (in the FPU registers) while the second one uses their float copies
     const auto FireFromGun = [&](CVector localPos, double scaledOffX, double scaledOffY) {
         CVector start = TransformPointExt(*m_matrix, localPos); // 0x59C890
-        CVector end{ (float)(scaledOffX + start.x), (float)(start.y + scaledOffY), start.z };
+        CVector end{ (float)(X87R(scaledOffX + start.x)), (float)(X87R(start.y + scaledOffY)), start.z };
 
         const auto r1 = rand();
         const auto r2 = rand();

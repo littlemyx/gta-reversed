@@ -581,8 +581,8 @@ CHeli* CHeli::GenerateHeli(CPed* target, bool newsHeli) {
     float         angle     = (float)angle0;
 
     CVector pos{
-        (float)(x87::cos(angle0) * 250.0f + targetPos.x), // 0x859F80
-        (float)(x87::sin((double)angle) * 250.0f + targetPos.y),
+        (float)(X87R(x87::cos(angle0) * 250.0f) + targetPos.x), // 0x859F80
+        (float)(X87R(x87::sin((double)angle) * 250.0f) + targetPos.y),
         targetPos.z
     };
 
@@ -592,8 +592,8 @@ CHeli* CHeli::GenerateHeli(CPed* target, bool newsHeli) {
 
         const CVector targetPos2 = target->GetPosition();
         pos = CVector{
-            (float)(x87::cos((double)angle) * 250.0f + targetPos2.x),
-            (float)(x87::sin((double)angle) * 250.0f + targetPos2.y),
+            (float)(X87R(x87::cos((double)angle) * 250.0f) + targetPos2.x),
+            (float)(X87R(x87::sin((double)angle) * 250.0f) + targetPos2.y),
             targetPos2.z
         };
     }
@@ -676,7 +676,7 @@ void CHeli::TestSniperCollision(CVector* origin, CVector* target) {
 
         const auto mat = (CMatrix*)heli->m_matrix;
         if (CCollision::DistToLine(*origin, *target, mat->TransformPoint({ -0.43f, 1.49f, 1.5f })) < 0.8f) {
-            heli->m_fRotationBalance = (float)(CGeneral::GetRandomNumber() < pow(2, 14) - 1) * 0.1f - 0.05f; // 2^14 - 1 = 16383 [-0.05, 0.05]
+            heli->m_fRotationBalance = (float)(CGeneral::GetRandomNumber() < X87R(pow(2, 14) - 1)) * 0.1f - 0.05f; // 2^14 - 1 = 16383 [-0.05, 0.05]
             heli->BlowUpCar(FindPlayerPed(), false);
             heli->m_nNumSwatOccupants = 0;
         };
@@ -1045,10 +1045,10 @@ void CHeli::ProcessControlInputs(uint8 playerNum) {
                 m_fSteeringUpDown    = (float)((x87d)mouseMoved.y * (x87d)0.0025f + (x87d)m_fSteeringUpDown);
             }
             if (std::abs(m_fSteeringLeftRight) < 0.5f) {
-                m_fSteeringLeftRight = (float)(std::pow((double)0.98f, (double)CTimer::GetTimeStep()) * (double)m_fSteeringLeftRight); // 0x87167C
+                m_fSteeringLeftRight = (float)(X87R(std::pow((double)0.98f, (double)CTimer::GetTimeStep()) * (double)m_fSteeringLeftRight)); // 0x87167C
             }
             if (std::abs(m_fSteeringUpDown) < 0.5f) {
-                m_fSteeringUpDown = (float)(std::pow((double)0.98f, (double)CTimer::GetTimeStep()) * (double)m_fSteeringUpDown);
+                m_fSteeringUpDown = (float)(X87R(std::pow((double)0.98f, (double)CTimer::GetTimeStep()) * (double)m_fSteeringUpDown));
             }
         } else if (pad->GetSteeringLeftRight() != 0 || pad->GetSteeringUpDown() != 0 || m_nLastControlInput != eControllerType::MOUSE) { // 0x6C492E
             SteerWithPad();

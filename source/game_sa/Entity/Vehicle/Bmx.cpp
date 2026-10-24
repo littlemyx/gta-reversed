@@ -118,12 +118,12 @@ void CBmx::ProcessControl() {
 
     if (animBikeSprint && animBikeSprint->GetBlendAmount() > 0.01f) {
         float mult         = isMountainBike ? MTB_SPRINT_LEANMULT : BMX_SPRINT_LEANMULT;
-        m_fSprintLeanAngle = x87::sin(animBikeSprint->GetCurrentTime() / animBikeSprint->GetHier()->GetTotalTime() * TWO_PI + BMX_SPRINT_LEANSTART) * animBikeSprint->GetBlendAmount() * mult;
+        m_fSprintLeanAngle = X87R(x87::sin(animBikeSprint->GetCurrentTime() / animBikeSprint->GetHier()->GetTotalTime() * TWO_PI + BMX_SPRINT_LEANSTART) * animBikeSprint->GetBlendAmount()) * mult;
     } else {
         auto animBikePedal = RpAnimBlendClumpGetAssociation(m_pDriver->GetRpClump(), ANIM_ID_BIKE_PEDAL);
         if (animBikePedal && animBikePedal->GetBlendAmount() > 0.01f) {
             float mult = isMountainBike ? MTB_PEDAL_LEANMULT : BMX_PEDAL_LEANMULT;
-            GetRideAnimData()->LeanAngle += x87::sin(animBikePedal->GetCurrentTime() / animBikePedal->GetHier()->GetTotalTime() * TWO_PI + BMX_PEDAL_LEANSTART) * animBikePedal->GetBlendAmount() * mult;
+            GetRideAnimData()->LeanAngle += X87R(x87::sin(animBikePedal->GetCurrentTime() / animBikePedal->GetHier()->GetTotalTime() * TWO_PI + BMX_PEDAL_LEANSTART) * animBikePedal->GetBlendAmount()) * mult;
         }
         m_fSprintLeanAngle *= 0.95f;
     }
@@ -229,7 +229,7 @@ void CBmx::ProcessDrivingAnims(CPed* driver, bool blend) {
         } else if (fwdAnim && fwdAnim->m_BlendAmount > 0.1f) {
             newCrankAngle = BlendCrankTowards(fwdAnim, BMX_HALF_PI);
         } else {
-            newCrankAngle = (float)(std::pow((double)0.97f, (double)CTimer::GetTimeStep()) * (double)m_fCrankAngle); // NOTE: x87 keeps the `pow` result in extended precision
+            newCrankAngle = (float)(X87R(std::pow((double)0.97f, (double)CTimer::GetTimeStep()) * (double)m_fCrankAngle)); // NOTE: x87 keeps the `pow` result in extended precision
         }
         m_fCrankAngle = newCrankAngle;
 
@@ -296,7 +296,7 @@ void CBmx::ProcessDrivingAnims(CPed* driver, bool blend) {
         }
 
         if (!mainAnim) {
-            m_fCrankAngle = (float)(std::pow((double)0.97f, (double)CTimer::GetTimeStep()) * (double)m_fCrankAngle); // NOTE: x87 keeps the `pow` result in extended precision
+            m_fCrankAngle = (float)(X87R(std::pow((double)0.97f, (double)CTimer::GetTimeStep()) * (double)m_fCrankAngle)); // NOTE: x87 keeps the `pow` result in extended precision
         } else {
             bool synced = false;
             if (isNewAnim) {
@@ -524,7 +524,7 @@ void CBmx::PreRender() {
             }
 
             auto&      colPt   = m_aWheelColPoints[colPtIdx];
-            const auto offsetX = x87::sin(m_RideAnimData.LeanAngle) * GetColModel()->m_boundBox.m_vecMin.z * 0.8f;
+            const auto offsetX = X87R(x87::sin(m_RideAnimData.LeanAngle) * GetColModel()->m_boundBox.m_vecMin.z) * 0.8f;
             CVector    pos     = colPt.m_vecPoint + GetRight() * offsetX;
 
             if (m_bWheelBloody[wheel]) {
@@ -630,7 +630,7 @@ void CBmx::PreRender() {
 
     // Rear forks (swing arm)
     if (const auto forkRear = m_aBikeNodes[BMX_FORKS_REAR]) {
-        const auto angle = x87::asin((m_aWheelSuspensionHeights[1] - m_aWheelOrigHeights[1]) / m_fSwingArmLength) * -1.0f;
+        const auto angle = X87R(x87::asin((m_aWheelSuspensionHeights[1] - m_aWheelOrigHeights[1]) / m_fSwingArmLength) * -1.0f);
         mat.Attach(RwFrameGetMatrix(forkRear), false);
         const CVector savedPos = mat.GetPosition();
         mat.SetRotate(angle, 0.0f, 0.0f);
@@ -650,7 +650,7 @@ void CBmx::PreRender() {
                      - (m_aWheelSuspensionHeights[0] - m_aWheelOrigHeights[0]) * m_fSteerAngleTan;
         }
         if (m_nWheelStatus[0] == 1) {
-            mat.SetRotate(m_aWheelPitchAngles[0], 0.0f, x87::sin(m_aWheelPitchAngles[0]) * 0.02f);
+            mat.SetRotate(m_aWheelPitchAngles[0], 0.0f, X87R(x87::sin(m_aWheelPitchAngles[0]) * 0.02f));
         } else {
             mat.SetRotateX(m_aWheelPitchAngles[0]);
         }
@@ -668,7 +668,7 @@ void CBmx::PreRender() {
             offset.z = m_aWheelSuspensionHeights[1];
         }
         if (m_nWheelStatus[1] == 1) {
-            mat.SetRotate(m_aWheelPitchAngles[1], 0.0f, x87::sin(m_aWheelPitchAngles[1]) * 0.04f);
+            mat.SetRotate(m_aWheelPitchAngles[1], 0.0f, X87R(x87::sin(m_aWheelPitchAngles[1]) * 0.04f));
         } else {
             mat.SetRotateX(m_aWheelPitchAngles[1]);
         }
@@ -687,7 +687,7 @@ void CBmx::PreRender() {
 
         mat.Attach(RwFrameGetMatrix(chassis), false);
         CVector offset = mat.GetPosition();
-        offset.z = (1.0f - x87::cos(m_RideAnimData.LeanAngle)) * cm->m_boundBox.m_vecMin.z * 0.9f + zOffset;
+        offset.z = (X87R(1.0f - x87::cos(m_RideAnimData.LeanAngle))) * cm->m_boundBox.m_vecMin.z * 0.9f + zOffset;
 
         mat.SetRotateX(std::abs(m_RideAnimData.LeanAngle) * -0.05f + angleOffset);
         mat.RotateY(m_fSprintLeanAngle + m_RideAnimData.LeanAngle);

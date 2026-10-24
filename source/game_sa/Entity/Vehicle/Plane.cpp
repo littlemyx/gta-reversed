@@ -604,8 +604,8 @@ void CPlane::FindPlaneCreationCoors(CVector* outCoors, CVector* outTargetCoors, 
 
         *outCoors = FindPlayerCoors();
         *outFlightHeight = (float)((CGeneral::GetRandomNumber() & 0xF) + i) + baseHeight;
-        outCoors->x = x87::cos(angle) * distFromPlayer + outCoors->x;
-        outCoors->y = x87::sin(angle) * distFromPlayer + outCoors->y;
+        outCoors->x = X87R(x87::cos(angle) * distFromPlayer) + outCoors->x;
+        outCoors->y = X87R(x87::sin(angle) * distFromPlayer) + outCoors->y;
         outCoors->z += *outFlightHeight;
 
         *outTargetCoors = FindPlayerCoors();
@@ -698,7 +698,7 @@ void CPlane::DoPlaneGenerationAndRemoval() {
             heli->m_autoPilot.m_nCarMission = MISSION_HELI_FLYINDIRECTION;
             heli->field_9B4 = heading;
             heli->m_fMaxAltitude = height;
-            heli->SetVelocity(CVector{ (float)(x87::cos(heading) * 0.6666667f), (float)(x87::sin(heading) * 0.6666667f), 0.0f });
+            heli->SetVelocity(CVector{ (float)(X87R(x87::cos(heading) * 0.6666667f)), (float)(X87R(x87::sin(heading) * 0.6666667f)), 0.0f });
             heli->vehicleFlags.bNeverUseSmallerRemovalRange = true;
             heli->m_nExtendedRemovalRange = 255;
             heli->m_autoPilot.m_nCruiseSpeed = 50;
@@ -760,7 +760,7 @@ void CPlane::DoPlaneGenerationAndRemoval() {
             plane->m_autoPilot.m_nCarMission = MISSION_PLANE_FLYINDIRECTION;
             plane->m_planeHeadingPrev = heading;
             plane->m_maxAltitude      = height;
-            plane->SetVelocity(CVector{ (float)(x87::cos(heading) * 0.6666667f), (float)(x87::sin(heading) * 0.6666667f), 0.0f });
+            plane->SetVelocity(CVector{ (float)(X87R(x87::cos(heading) * 0.6666667f)), (float)(X87R(x87::sin(heading) * 0.6666667f)), 0.0f });
             plane->vehicleFlags.bNeverUseSmallerRemovalRange = true;
 
             if (!isBigPlane && GenPlane_ModelIndex != MODEL_HYDRA) {
@@ -1250,7 +1250,7 @@ void CPlane::PreRender() {
         mat.GetUp().x = ClampVortexTilt(SpeedAlong(myMat.GetRight()), VORTEX_HOVER_SPEED_LIMIT);
 
         const double blend = std::pow((double)VORTEX_HOVER_BLEND_BASE, (double)CTimer::GetTimeStep());
-        const float  inv   = (float)(1.0 - blend);
+        const float  inv   = (float)(X87R(1.0 - blend));
 
         const auto ClampRatio = [](double v, float limit) {
             if (v > (double)limit) {
@@ -1264,22 +1264,22 @@ void CPlane::PreRender() {
 
         // Pitch
         {
-            const double r = ClampRatio(
+            const x87d r = ClampRatio(
                 ((((x87d)m_wheelPosition[2] - (x87d)m_wheelPosition[3]) + ((x87d)m_wheelPosition[0] - (x87d)m_wheelPosition[1])) * (x87d)0.5)
                     / ((x87d)lines[0].m_vecStart.y - (x87d)lines[1].m_vecStart.y),
                 VORTEX_HOVER_PITCH_LIMIT
             );
-            mat.GetForward().z = (float)((double)mat.GetForward().z * blend + (double)inv * r);
+            mat.GetForward().z = (float)(X87R((double)mat.GetForward().z * blend) + (x87d)inv * r);
         }
 
         // Roll
         {
-            const double r = ClampRatio(
+            const x87d r = ClampRatio(
                 ((((x87d)m_wheelPosition[3] - (x87d)m_wheelPosition[1]) + ((x87d)m_wheelPosition[2] - (x87d)m_wheelPosition[0])) * (x87d)0.5)
                     / ((x87d)lines[3].m_vecStart.x - (x87d)lines[1].m_vecStart.x),
                 VORTEX_HOVER_ROLL_LIMIT
             );
-            mat.GetRight().z = (float)((double)mat.GetRight().z * blend + (double)inv * r);
+            mat.GetRight().z = (float)(X87R((double)mat.GetRight().z * blend) + (x87d)inv * r);
         }
 
         // Height
@@ -1289,7 +1289,7 @@ void CPlane::PreRender() {
             if (r > (double)VORTEX_HOVER_MAX_COMPRESSION) {
                 r = (x87d)VORTEX_HOVER_MAX_COMPRESSION;
             }
-            mat.GetUp().z = (float)((double)mat.GetUp().z * blend + (double)inv * r);
+            mat.GetUp().z = (float)(X87R((double)mat.GetUp().z * blend) + (x87d)inv * r);
         }
 
         mat.UpdateRW();

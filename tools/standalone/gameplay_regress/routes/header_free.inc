@@ -25,6 +25,8 @@ skipif:invehicle:hf_on
 key:return
 until:invehicle:8000
 label:hf_on
+# (CHEATS-ARMOUR: the opening mission ends when the script polls and sees CJ in the bike; under load (cdb, CPU burners, 5 of 11 cdb runs) the dismount below came first and the mission stayed on (SETUP mission=1): gate on the mission being over, then the usual settle time)
+until:nomission:20000
 wait:1500
 # (REGRESS-SETUP: the dismount is gated, not timed - once in a full run the Return was not taken while the tutorial bike was still moving, CJ was still on it at free_ready (SETUP combat.free_start invehicle=1);
 # same fix as routes/missions.txt (REGRESS-FLAKES): wait for onfoot, one retry press if he is still on the bike after 4 s)

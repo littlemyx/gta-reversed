@@ -48,6 +48,7 @@ class Run:
         self.gates = []       # (cond, ok?, ms)
         self.cmds = []        # [gr-cmd] / [cmd] lines
         self.probes = []      # (name, dict)
+        self.hurt = []        # (number of probes logged so far, weapon, died?) per [pc-dmg] event in which an ENTITY lowered the player's armour / killed him (NOTSA_STANDALONE_PROBE=1 runs)
         for ln in self.sl:
             m = re.search(r'\[gr\] (\S+?)#(\d+) ([A-D]) (.*)$', ln)
             if m:
@@ -67,6 +68,12 @@ class Run:
                 continue
             if '[gr-cmd]' in ln or '[cmd]' in ln or '[vmode]' in ln or '[kill]' in ln or '[mission]' in ln:
                 self.cmds.append(ln)
+                continue
+            m = re.search(r'\[pc-dmg\] .* player hp (-?\d+) -> (-?\d+) armour (-?\d+) -> (-?\d+) lastDamager=(\w+) weap=(-?\d+)', ln)
+            if m:
+                hp0, hp1, a0, a1, who, wp = int(m.group(1)), int(m.group(2)), int(m.group(3)), int(m.group(4)), int(m.group(5), 16), int(m.group(6))
+                if who and ((a0 >= 0 and a1 < a0) or (hp0 > 0 and hp1 <= 0)):
+                    self.hurt.append((len(self.probes), wp, hp0 > 0 and hp1 <= 0))
                 continue
             m = re.search(r'\[probe\] (c\d+_\w+) (.*)$', ln)
             if m:
@@ -273,9 +280,19 @@ def chk_cheats(run, R, B, orig):
         if k == 'weather':
             return str(int(v.split('/')[0]) & 0xFFFF)
         return v
-    bad, n, prev, attacked = [], 0, {}, False
-    for name in [x for x, _ in run.probes if x != 'start']:
+    bad, n, prev, attacked, died = [], 0, {}, False, False
+    why = ''
+    order = [x for x, _ in run.probes]
+    for name in [x for x in order if x != 'start']:
         attacked = attacked or name.startswith('c40_')     # from the Village People cheat on, peds shoot rockets at CJ: his armour then depends on the fight
+        # CHEATS-ARMOUR: a gang ped of the Idlewood start area (Ballas, pistol / fists) that attacks CJ is the game's own population, not a cheat effect: once an entity has lowered CJ's armour (or killed him)
+        # in the window of a probe, armour is not comparable from that probe on (his armour only goes up again with the next HESOYAM); a death also takes weapons and money (hospital fee). The cheat's own armour changes (HESOYAM) have no damager.
+        for (k, wp, dead) in run.hurt:
+            if k <= order.index(name):
+                if not attacked or (dead and not died):
+                    why = why or '%s on: CJ %s by weapon %d (pc-dmg), armour%s not compared' % (name, 'killed' if dead else 'hurt', wp, ' / weapons / money' if dead else '')
+                attacked = True
+                died = died or dead
         ref = base.get(name)
         d = got[name]
         models = {}
@@ -287,13 +304,13 @@ def chk_cheats(run, R, B, orig):
         if not ref:
             continue
         n += 1
-        diffs = ['%s %s != %s' % (k, norm(k, d.get(k, '?')), norm(k, ref.get(k, '?'))) for k in keys if k in ref and not (k == 'armour' and attacked) and norm(k, d.get(k, '?')) != norm(k, ref.get(k, '?'))]
+        diffs = ['%s %s != %s' % (k, norm(k, d.get(k, '?')), norm(k, ref.get(k, '?'))) for k in keys if k in ref and not (k == 'armour' and attacked) and not (died and k in ('weap', 'money')) and norm(k, d.get(k, '?')) != norm(k, ref.get(k, '?'))]
         spawn = SPAWN_CHEATS.get(name.split('_')[0])    # only the cheats that spawn a vehicle: that model must appear among the vehicles added (traffic comes and goes at random)
         if spawn and (spawn not in added) != (spawn not in (ref.get('veh_added') or [])):
             diffs.append('spawned model %s: ours added %s, original added %s' % (spawn, spawn in added, spawn in (ref.get('veh_added') or [])))
         if diffs:
             bad.append('%s: %s' % (name, '; '.join(diffs)))
-    R.add('state_matches_original', not bad and n > 0, '%d cheats compared, %d differ%s' % (n, len(bad), (': ' + ' | '.join(bad[:3])) if bad else ''), 'wanted / armour / money / cheat flags / weapons / weather / time scale / spawned models equal to the original exe after the same cheat')
+    R.add('state_matches_original', not bad and n > 0, '%d cheats compared, %d differ%s%s' % (n, len(bad), (': ' + ' | '.join(bad[:3])) if bad else '', ('; ' + why) if why else ''), 'wanted / armour / money / cheat flags / weapons / weather / time scale / spawned models equal to the original exe after the same cheat')
 
 
 def chk_missions(run, R, B, orig):

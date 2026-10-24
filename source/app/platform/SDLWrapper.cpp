@@ -129,6 +129,9 @@ bool InjCond(const std::string& c) {
         auto* ped = FindPlayerPed();
         return ped && !ped->bInVehicle;
     }
+    if (c == "nomission") { // no mission is running (the opening mission ends one script poll after CJ is on the tutorial bike): gates the dismount in routes/header_free.inc (CHEATS-ARMOUR: under load the dismount came before the script saw CJ in the bike -> SETUP mission=1)
+        return !CTheScripts::IsPlayerOnAMission();
+    }
     if (c == "cutscene") { // a cutscene is running (the new-game intro): `until:cutscene` replaces a fixed wait for its loading (gameplay regression suite)
         return CCutsceneMgr::IsRunning() && !FrontEndMenuManager.m_bMenuActive;
     }

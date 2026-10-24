@@ -28,7 +28,7 @@ shift $((OPTIND-1)); [ "$REC" = 1 ] && RECARG="--record"
 SCENARIOS="
 combat            combat.txt      330 NOTSA_STANDALONE_PROBE=1                         0 1 1
 audio             audio.txt       330 NOTSA_AUDIO_STATS=@OUT@/audio_stats.txt           0 1 1
-cheats            cheats.txt      330 -                                                 0 1 1
+cheats            cheats.txt      330 NOTSA_STANDALONE_PROBE=1                         0 1 1
 missions          missions.txt    330 -                                                 0 1 0
 render_vmode      vmode.txt       200 -                                                 1 1 0
 input_mouse       mouse.txt       200 NOTSA_STANDALONE_WINDOWED_FOCUS=1                 1 1 0

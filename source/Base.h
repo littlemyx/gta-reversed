@@ -95,6 +95,17 @@ typedef double x87d;
 #define X87W(...) __VA_ARGS__
 #endif
 
+//! NOTSA_FTOL(T, expr): the float / double -> integer conversion `(T)(expr)` of the exe (MAC-FTOL1, tools/portable/ftol_scan.py lists the sites). The exe's CRT converts through `_ftol2`
+//! (x87 fistp, truncation, low dword), so a NaN / inf / out-of-range value (a junk float from a file, a position that left the map) gives a defined integer; a plain C++ cast is UB there,
+//! saturates on arm64 and gives 0x80000000 on x86-64, which turns sector / grid / index arithmetic into 2^32-iteration loops or out-of-bounds accesses. Portable: notsa::fp::FtolCast<T>
+//! (Core/Fp.h); every other build keeps the plain cast (same code bytes as before: `(T)(expr)`).
+#ifdef NOTSA_PORTABLE
+#include "game_sa/Core/Fp.h"
+#define NOTSA_FTOL(T, ...) (::notsa::fp::FtolCast<T>(__VA_ARGS__))
+#else
+#define NOTSA_FTOL(T, ...) ((T)(__VA_ARGS__))
+#endif
+
 #if (defined(__GNUC__) || defined(__GNUG__) || defined(__clang__))
 #define UNREACHABLE_INTRINSIC(...) __builtin_unreachable()
 #elif (defined(_MSC_VER))

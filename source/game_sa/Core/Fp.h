@@ -20,6 +20,7 @@
 #include <bit>
 #include <cmath>
 #include <cstdint>
+#include <type_traits>
 
 #if defined(_M_X64) || defined(__SSE2__) || (defined(_M_IX86_FP) && _M_IX86_FP >= 1)
 #define NOTSA_FP_SSE 1
@@ -214,5 +215,26 @@ inline void SetSseModeGameCompatible() { _mm_setcsr(_mm_getcsr() & ~(0x8000u | 0
 }
 [[nodiscard]] inline int32_t Ftol(double x) { return (int32_t)(uint32_t)(uint64_t)Ftol64(x); }
 [[nodiscard]] inline uint32_t FtolU(double x) { return (uint32_t)(uint64_t)Ftol64(x); }
+
+//! `(T)x` for a float / double `x` and an integer (or enum) `T`, with the exe's conversion semantics (MAC-FTOL1, spelled NOTSA_FTOL(T, x) in game code, Base.h): the exe's CRT converts through
+//! `_ftol2` (fistp qword, truncation, LOW dword) for every integer target; the 8 / 16 bit targets are the low bits of that dword (MSVC's `mov al / ax`). So an out-of-range / NaN / inf value gives
+//! the exe's bit pattern (NaN, inf, |x| >= 2^63 -> 0, 2^31 <= |x| < 2^63 wraps) instead of the arm64 saturation / x86 `cvttsd2si` 0x80000000 / UB of a plain cast. In range: exact truncation.
+//! 64 bit targets: Ftol64 (`uint64` = the same bits; values in [2^63, 2^64) are not reproduced: the game has no such site).
+template<class T, class F>
+[[nodiscard]] inline T FtolCast(F x) {
+    static_assert(std::is_floating_point_v<F>);
+    if constexpr (std::is_enum_v<T>) {
+        return static_cast<T>(FtolCast<std::underlying_type_t<T>>(x));
+    } else {
+        static_assert(std::is_integral_v<T> && !std::is_same_v<T, bool>);
+        if constexpr (sizeof(T) == 8) {
+            return static_cast<T>(Ftol64(x));
+        } else if constexpr (sizeof(T) == 4 && std::is_unsigned_v<T>) {
+            return static_cast<T>(FtolU(x));
+        } else {
+            return static_cast<T>(Ftol(x)); // int32 itself, and int8 / int16 / uint8 / uint16: low bits
+        }
+    }
+}
 
 } // namespace notsa::fp

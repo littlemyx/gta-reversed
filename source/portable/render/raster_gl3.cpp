@@ -110,7 +110,7 @@ RwRaster* NotsaGl3DrawQuad(RwRaster* raster, float x, float y, float w, float h,
         q[i].setCameraZ(1.0f);
         q[i].setColor(255, 255, 255, 255);
         q[i].setU(us[i], 1.0f);
-        q[i].setV(vs[i], 1.0f);
+        q[i].setV(NotsaGl3TextureNeedsVFlip(root) ? 1.0f - vs[i] : vs[i], 1.0f); // R-4: shader samples 1 - v, game rasters are top-row first
     }
     RwRaster* tex = const_cast<RwRaster*>(root);
     const auto savedRaster = rw::GetRenderStatePtr(rw::TEXTURERASTER);

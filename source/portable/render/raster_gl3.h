@@ -22,3 +22,15 @@ void NotsaGl3FlipLockedRows(RwRaster* root);
 
 //! RwRasterSetFromImage for gl3 rasters (8888 RGBA, 888 RGB, 1555 R5G5B5A1 in gl3's byte order); null on any mismatch.
 RwRaster* NotsaGl3RasterSetFromImage(RwRaster* raster, RwImage* image);
+
+//! Texture orientation (R-4). librw's gl3 fragment shaders sample at (u, 1 - v): they expect GL row order (first uploaded row = bottom), which is also what a
+//! rendered camera texture (FBO) has. Game rasters hold D3D order (top row first; lock / unlock / the TXD reader upload it as is, DXT blocks included), so
+//! immediate-mode vertices of a draw with such a texture bound must use v' = 1 - v for the shader flip to cancel. A CAMERATEXTURE raster needs no flip.
+//! `tex` = the TEXTURERASTER bound for the draw (null = untextured: no flip needed, the value is irrelevant).
+inline bool NotsaGl3TextureNeedsVFlip(const RwRaster* tex) {
+    if (!tex) {
+        return false;
+    }
+    const RwRaster* root = (tex->parent && tex->parent != tex) ? tex->parent : tex;
+    return (root->type & rwRASTERTYPEMASK) != rwRASTERTYPECAMERATEXTURE;
+}

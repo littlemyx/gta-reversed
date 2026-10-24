@@ -6,7 +6,7 @@
 // references from them is defined here, honestly: the first call of each symbol is logged (R-2 stub), the call fails (FALSE / nullptr) or
 // does nothing (void state setters). Nothing here pretends to render. The list is generated and checked by tools/portable/rw_symbol_audit.py
 // (.notes/reports/MAC-R2-symbols.tsv); every symbol names the slice that replaces it:
-//   R-4  RwIm2D* / RwIm3D*            -> render/im2d_im3d_gl3.cpp
+//   R-4  RwIm2D* / RwIm3D*            -> render/im2d_im3d_gl3.cpp (DONE: real GL3 implementation, no stub left here)
 //   R-6  RwShimPipelineEnsure/Shutdown -> stock gl3 pipelines wired in render/pipelines_gl3.cpp
 //   R-8/R-9  RxPipeline*, RxD3D9AllInOne*, RwD3D9*, _rwD3D9*  -> ObjPipeline creation in render/pipelines_{building,carenv}_gl3.cpp; the
 //        guarded-out FF render callbacks in game_sa/Pipelines get GL3 twins there
@@ -23,17 +23,7 @@
         }                                                                                                                     \
     } while (0)
 
-// ---- Im2D / Im3D (R-4) -----------------------------------------------------------------------------------------------
-// Return values follow the exe contract: FALSE = nothing rendered.
-RwBool RwIm2DRenderPrimitive(RwPrimitiveType, RwIm2DVertex*, RwInt32) { R2_STUB("R-4"); return FALSE; }
-RwBool RwIm2DRenderLine(RwIm2DVertex*, RwInt32, RwInt32, RwInt32) { R2_STUB("R-4"); return FALSE; }
-RwBool RwIm2DRenderTriangle(RwIm2DVertex*, RwInt32, RwInt32, RwInt32, RwInt32) { R2_STUB("R-4"); return FALSE; }
-RwBool RwIm2DRenderIndexedPrimitive(RwPrimitiveType, RwIm2DVertex*, RwInt32, RwImVertexIndex*, RwInt32) { R2_STUB("R-4"); return FALSE; }
-void*  RwIm3DTransform(RwIm3DVertex*, RwUInt32, RwMatrix*, RwUInt32) { R2_STUB("R-4"); return nullptr; }
-RwBool RwIm3DEnd(void) { R2_STUB("R-4"); return FALSE; }
-RwBool RwIm3DRenderPrimitive(RwPrimitiveType) { R2_STUB("R-4"); return FALSE; }
-RwBool RwIm3DRenderIndexedPrimitive(RwPrimitiveType, RwImVertexIndex*, RwInt32) { R2_STUB("R-4"); return FALSE; }
-RwBool RwIm3DRenderLine(RwInt32, RwInt32) { R2_STUB("R-4"); return FALSE; }
+// ---- Im2D / Im3D: implemented in render/im2d_im3d_gl3.cpp (R-4), no stubs left ----------------------------------------------------
 
 // ---- pipeline bring-up hooks called from the engine shim (R-6) ---------------------------------------------------------
 void RwShimPipelineEnsure() { R2_STUB("R-6"); }

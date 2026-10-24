@@ -14,6 +14,9 @@
 //     near / far clipping work, a Z-only clear of the main camera also clears the stencil (to RwD3D9SetStencilClear's value, even with a closed write mask);
 //     the vsync flag maps to the swap interval; RwRenderStateSet / Get round trips (incl. a 64 bit raster pointer); raster create / lock / unlock / upload round
 //     trips (8888 texture, mip level, RwRasterSetFromImage, textured quad, camera texture clear + read-back, camera without z raster);
+//   * R-4 (Im2D / Im3D, portable/render/im2d_im3d_gl3.cpp, through RwIm2D* / RwIm3D*): triangle / strip / fan / indexed list / indexed strip / lines /
+//     polyline pixel read-back, ARGB->RGBA vertex colours, textured + vertex-coloured, vertex alpha, frame buffer offset, return-value contract, Im3D transform /
+//     LTM / indexed / UV / ALLOPAQUE / lines / > 10000 vertices and indices, depth z convention;
 //   * clean shutdown: RwEngineStop / Close / Term, window kept by the owner (adopted, not destroyed by librw), exit code 0.
 // The result line is "SMOKE RESULT OK" / "SMOKE RESULT FAIL: <what>".
 #include "fakerw.h"
@@ -24,11 +27,13 @@
 
 #include <SDL3/SDL.h>
 
+#include <algorithm>
 #include <cmath>
 #include <cstdarg>
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
+#include <vector>
 
 // ---- link seams: what the game provides / later slices replace -----------------------------------------------------------------------------
 namespace notsa::standalone::Fixups {
@@ -410,6 +415,469 @@ void RunR3b(SDL_Window* win, int pw, int ph) {
     Check(NoGlError("R-3b"), "glGetError clean after R-3b");
 }
 
+// ---- R-4: Im2D / Im3D through the game's RW API (im2d_im3d_gl3.cpp) ------------------------------------------------------------------------------
+struct Snap {
+    int w = 0, h = 0;
+    std::vector<unsigned char> d; // RGBA, top row first
+    void grab(int pw, int ph) {
+        w = pw; h = ph;
+        std::vector<unsigned char> raw((size_t)pw * ph * 4);
+        glReadBuffer(GL_BACK);
+        glPixelStorei(GL_PACK_ALIGNMENT, 1);
+        glReadPixels(0, 0, pw, ph, GL_RGBA, GL_UNSIGNED_BYTE, raw.data());
+        d.resize(raw.size());
+        for (int y = 0; y < ph; y++) {
+            std::memcpy(&d[(size_t)y * pw * 4], &raw[(size_t)(ph - 1 - y) * pw * 4], (size_t)pw * 4);
+        }
+    }
+    Px at(int x, int y) const { const unsigned char* p = &d[((size_t)y * w + x) * 4]; return Px{ p[0], p[1], p[2], p[3] }; }
+    bool is(int x, int y, int r, int g, int b, int tol = 1) const { return Near(at(x, y), r, g, b, tol); }
+    int countNot(int r, int g, int b, int tol = 1) const {
+        int n = 0;
+        for (int y = 0; y < h; y++) for (int x = 0; x < w; x++) n += !is(x, y, r, g, b, tol);
+        return n;
+    }
+    int count(int r, int g, int b, int tol = 1) const { return w * h - countNot(r, g, b, tol); }
+    // bounding box of the pixels that differ from the background (black)
+    bool bbox(int& x0, int& y0, int& x1, int& y1) const {
+        x0 = y0 = 1 << 30; x1 = y1 = -1;
+        for (int y = 0; y < h; y++) for (int x = 0; x < w; x++) {
+            if (!is(x, y, 0, 0, 0, 0)) { x0 = std::min(x0, x); y0 = std::min(y0, y); x1 = std::max(x1, x); y1 = std::max(y1, y); }
+        }
+        return x1 >= 0;
+    }
+};
+
+RwIm2DVertex V2(float x, float y, unsigned a, unsigned r, unsigned g, unsigned b, float u = 0.0f, float v = 0.0f) {
+    RwIm2DVertex vt{};
+    RwIm2DVertexSetScreenX(&vt, x);
+    RwIm2DVertexSetScreenY(&vt, y);
+    RwIm2DVertexSetScreenZ(&vt, RwIm2DGetNearScreenZ());
+    RwIm2DVertexSetRecipCameraZ(&vt, 2.0f);
+    RwIm2DVertexSetU(&vt, u, 2.0f);
+    RwIm2DVertexSetV(&vt, v, 2.0f);
+    RwIm2DVertexSetIntRGBA(&vt, r, g, b, a);
+    return vt;
+}
+
+RwIm3DVertex V3(float x, float y, float z, unsigned r, unsigned g, unsigned b, unsigned a = 255, float u = 0.0f, float v = 0.0f) {
+    RwIm3DVertex vt{};
+    RwIm3DVertexSetPos(&vt, x, y, z);
+    RwIm3DVertexSetRGBA(&vt, r, g, b, a);
+    RwIm3DVertexSetU(&vt, u);
+    RwIm3DVertexSetV(&vt, v);
+    return vt;
+}
+
+void RunR4(int pw, int ph) {
+    std::printf("---- R-4: Im2D / Im3D through RwIm2D* / RwIm3D* ----\n");
+    char what[200];
+
+    // -- contract without a camera update: nothing can be drawn, the Im3D bookkeeping still works
+    RwIm2DVertex t0[3] = { V2(10, 10, 255, 255, 0, 0), V2(110, 10, 255, 255, 0, 0), V2(10, 110, 255, 255, 0, 0) };
+    RwIm3DVertex v3[3] = { V3(0, 0, 1, 1, 2, 3), V3(1, 0, 1, 4, 5, 6), V3(0, 1, 1, 7, 8, 9) };
+    Check(RwIm2DRenderPrimitive(rwPRIMTYPETRILIST, t0, 3) == FALSE, "Im2D outside a camera update fails (logged once)");
+    Check(RwIm3DEnd() == FALSE && RwIm3DRenderPrimitive(rwPRIMTYPETRILIST) == FALSE, "Im3D End / Render without a transform fail");
+    RwImVertexIndex idx3[3] = { 0, 1, 2 };
+    Check(RwIm3DRenderIndexedPrimitive(rwPRIMTYPETRILIST, idx3, 3) == FALSE && RwIm3DRenderLine(0, 1) == FALSE && RwIm3DRenderTriangle(0, 1, 2) == FALSE, "Im3D indexed / line / triangle without a transform fail");
+    Check(RwIm3DTransform(v3, 0x10001, nullptr, 0) == nullptr && RwIm3DEnd() == FALSE, "RwIm3DTransform > 0x10000 vertices fails and starts nothing");
+    Check(RwIm3DTransform(v3, 3, nullptr, rwIM3D_VERTEXUV) == v3, "RwIm3DTransform returns the vertex pointer");
+    Check(RwIm3DRenderPrimitive(rwPRIMTYPENAPRIMTYPE) == FALSE && RwIm3DRenderPrimitive(rwPRIMTYPEPOINTLIST) == FALSE, "Im3D rejects primitive type 0 and point lists");
+    Check(RwIm3DEnd() == TRUE && RwIm3DEnd() == FALSE, "RwIm3DEnd pairs with one transform");
+    Check(v3[1].color == 0xFF040506u || v3[1].color == 0x00040506u, "RwIm3DVertexSetRGBA packs ARGB (D3DCOLOR)");
+    Check(RwIm2DGetNearScreenZ() == rw::engine->device.zNear && RwIm2DGetFarScreenZ() == rw::engine->device.zFar, "RwIm2DGetNear/FarScreenZ come from the device z range");
+
+    // -- camera: 2D tests only need the frame buffer; the same camera serves the Im3D tests (identity frame, view window 1 x 0.75, near 0.5, far 10)
+    RwCamera* cam = RwCameraCreate();
+    cam->setFrame(rw::Frame::create());
+    RwCameraSetNearClipPlane(cam, 0.5f);
+    RwCameraSetFarClipPlane(cam, 10.0f);
+    const RwV2d vw{ 1.0f, 0.75f };
+    RwCameraSetViewWindow(cam, &vw);
+    cam->frameBuffer = RwRasterCreate(pw, ph, 0, rwRASTERTYPECAMERA);
+    cam->zBuffer     = RwRasterCreate(pw, ph, 0, rwRASTERTYPEZBUFFER);
+    const RwRGBA black{ 0, 0, 0, 255 };
+    auto begin = [&]() {
+        RwCameraBeginUpdate(cam);
+        RwRGBA c = black;
+        RwCameraClear(cam, &c, rwCAMERACLEARIMAGE | rwCAMERACLEARZ | rwCAMERACLEARSTENCIL);
+        RS(rwRENDERSTATETEXTURERASTER, 0);
+        RS(rwRENDERSTATEZTESTENABLE, 0);
+        RS(rwRENDERSTATEZWRITEENABLE, 0);
+        RS(rwRENDERSTATEVERTEXALPHAENABLE, 0);
+        RS(rwRENDERSTATECULLMODE, rwCULLMODECULLNONE);
+        RS(rwRENDERSTATETEXTUREFILTER, rwFILTERNEAREST);
+    };
+    auto clear = [&]() { RwRGBA c = black; RwCameraClear(cam, &c, rwCAMERACLEARIMAGE | rwCAMERACLEARZ); };
+    Snap s;
+    int x0, y0, x1, y1;
+
+    begin();
+    // ---- Im2D ----
+    // triangle (10,10) (110,10) (10,110): vertex colour order (ARGB packed -> R,G,B bytes), bbox, area
+    {
+        RwIm2DVertex t[3] = { V2(10, 10, 255, 255, 0, 0), V2(110, 10, 255, 255, 0, 0), V2(10, 110, 255, 255, 0, 0) };
+        Check(RwIm2DRenderPrimitive(rwPRIMTYPETRILIST, t, 3) == TRUE, "Im2D triangle list draws");
+        s.grab(pw, ph);
+        Check(s.is(20, 20, 255, 0, 0) && s.is(50, 50, 255, 0, 0) && s.is(200, 200, 0, 0, 0) && s.is(100, 100, 0, 0, 0), "triangle: red where inside, black outside (ARGB -> RGBA)");
+        Check(s.bbox(x0, y0, x1, y1) && std::abs(x0 - 10) <= 1 && std::abs(y0 - 10) <= 1 && std::abs(x1 - 109) <= 2 && std::abs(y1 - 109) <= 2, "triangle bbox == (10,10)-(110,110), screen y down");
+        std::snprintf(what, sizeof(what), "triangle area %d (expected ~5000)", s.countNot(0, 0, 0, 0));
+        Check(std::abs(s.countNot(0, 0, 0, 0) - 5000) < 250, what);
+        Check(NoGlError("Im2D triangle"), "glGetError clean after Im2D triangle");
+        t[0] = V2(10, 10, 255, 10, 100, 200);
+        clear();
+        t[1] = V2(110, 10, 255, 10, 100, 200); t[2] = V2(10, 110, 255, 10, 100, 200);
+        RwIm2DRenderPrimitive(rwPRIMTYPETRILIST, t, 3);
+        s.grab(pw, ph);
+        Check(s.is(30, 30, 10, 100, 200), "triangle colour (10,100,200) exact: R/B not swapped");
+    }
+    // quad (150,20)-(230,100): strip, fan, indexed list, indexed strip all cover the same 80 x 80
+    {
+        RwIm2DVertex q[4]  = { V2(150, 20, 255, 0, 255, 0), V2(230, 20, 255, 0, 255, 0), V2(150, 100, 255, 0, 255, 0), V2(230, 100, 255, 0, 255, 0) };
+        RwIm2DVertex f[4]  = { q[0], q[1], q[3], q[2] };
+        RwImVertexIndex il[6] = { 0, 1, 2, 2, 1, 3 }, is[4] = { 0, 1, 2, 3 };
+        auto quadOk = [&](const char* name, RwBool rc) {
+            s.grab(pw, ph);
+            std::snprintf(what, sizeof(what), "%s: rect (150,20)-(230,100) filled, area %d", name, s.count(0, 255, 0));
+            Check(rc == TRUE && s.is(190, 60, 0, 255, 0) && s.is(149, 60, 0, 0, 0) && s.is(231, 60, 0, 0, 0) && s.is(190, 101, 0, 0, 0) && std::abs(s.count(0, 255, 0) - 6400) < 200, what);
+        };
+        clear(); quadOk("Im2D tri strip", RwIm2DRenderPrimitive(rwPRIMTYPETRISTRIP, q, 4));
+        clear(); quadOk("Im2D tri fan", RwIm2DRenderPrimitive(rwPRIMTYPETRIFAN, f, 4));
+        clear(); quadOk("Im2D indexed tri list", RwIm2DRenderIndexedPrimitive(rwPRIMTYPETRILIST, q, 4, il, 6));
+        clear(); quadOk("Im2D indexed tri strip", RwIm2DRenderIndexedPrimitive(rwPRIMTYPETRISTRIP, q, 4, is, 4));
+        clear();
+        Check(RwIm2DRenderTriangle(q, 4, 0, 1, 2) == TRUE, "RwIm2DRenderTriangle draws");
+        s.grab(pw, ph);
+        Check(s.is(160, 30, 0, 255, 0) && s.is(220, 90, 0, 0, 0), "RwIm2DRenderTriangle: only the upper-left half");
+        Check(RwIm2DRenderTriangle(q, 4, 0, 1, 4) == FALSE && RwIm2DRenderLine(q, 4, -1, 1) == FALSE, "out-of-array vertex index fails");
+        Check(NoGlError("Im2D quads"), "glGetError clean after the Im2D quads");
+    }
+    // vertex colour interpolation black -> white across x
+    {
+        clear();
+        RwIm2DVertex g[3] = { V2(300, 20, 255, 0, 0, 0), V2(400, 20, 255, 255, 255, 255), V2(300, 120, 255, 0, 0, 0) };
+        g[2] = V2(400, 120, 255, 255, 255, 255);
+        RwIm2DVertex gq[4] = { V2(300, 20, 255, 0, 0, 0), V2(400, 20, 255, 255, 255, 255), V2(300, 120, 255, 0, 0, 0), g[2] };
+        RwIm2DRenderPrimitive(rwPRIMTYPETRISTRIP, gq, 4);
+        s.grab(pw, ph);
+        const Px mid = s.at(350, 70), lo = s.at(305, 70), hi = s.at(395, 70);
+        std::snprintf(what, sizeof(what), "gradient: x=305 -> %d, x=350 -> %d, x=395 -> %d", lo.r, mid.r, hi.r);
+        Check(mid.r > 110 && mid.r < 145 && mid.r == mid.g && lo.r < 30 && hi.r > 225, what);
+    }
+    // lines: RwIm2DRenderLine (1 px horizontal at y = 60), polyline, line list
+    {
+        clear();
+        RwIm2DVertex l[3] = { V2(20, 60.5f, 255, 255, 255, 255), V2(120, 60.5f, 255, 255, 255, 255), V2(120, 90.5f, 255, 255, 255, 255) };
+        Check(RwIm2DRenderLine(l, 3, 0, 1) == TRUE, "RwIm2DRenderLine draws");
+        s.grab(pw, ph);
+        const int onLine = s.countNot(0, 0, 0, 0);
+        std::snprintf(what, sizeof(what), "line: %d pixels (expected ~100), bbox y within 1 row", onLine);
+        Check(onLine >= 90 && onLine <= 110 && s.bbox(x0, y0, x1, y1) && y1 - y0 <= 1 && std::abs(x0 - 20) <= 1, what);
+        clear();
+        Check(RwIm2DRenderPrimitive(rwPRIMTYPEPOLYLINE, l, 3) == TRUE, "Im2D polyline draws");
+        s.grab(pw, ph);
+        Check(s.is(70, 60, 255, 255, 255, 2) && (s.is(119, 75, 255, 255, 255, 2) || s.is(120, 75, 255, 255, 255, 2)) && s.countNot(0, 0, 0, 0) >= 125, "polyline: both segments");
+        clear();
+        RwIm2DVertex ll[4] = { l[0], l[1], V2(20, 100.5f, 255, 255, 255, 255), V2(60, 100.5f, 255, 255, 255, 255) };
+        Check(RwIm2DRenderPrimitive(rwPRIMTYPELINELIST, ll, 4) == TRUE, "Im2D line list draws");
+        s.grab(pw, ph);
+        Check(s.is(70, 60, 255, 255, 255, 2) && s.is(40, 100, 255, 255, 255, 2) && s.is(90, 100, 0, 0, 0), "line list: two separate segments");
+    }
+    // textured: 2 x 2 texture, nearest filter, white vertex colour = the texel, grey vertex colour modulates; top row of the lock = top of the quad
+    {
+        RwRaster* tr = RwRasterCreate(2, 2, 32, rwRASTERTYPETEXTURE | rwRASTERFORMAT8888);
+        RwUInt8*  p  = RwRasterLock(tr, 0, rwRASTERLOCKWRITE | rwRASTERLOCKNOFETCH);
+        const unsigned char texel[4][4] = { { 255, 0, 0, 255 }, { 0, 255, 0, 255 }, { 0, 0, 255, 255 }, { 255, 255, 0, 255 } }; // row 0: red green; row 1: blue yellow (R,G,B,A)
+        if (p) {
+            for (int y = 0; y < 2; y++) for (int x = 0; x < 2; x++) std::memcpy(p + y * RwRasterGetStride(tr) + x * 4, texel[y * 2 + x], 4);
+        }
+        RwRasterUnlock(tr);
+        RS(rwRENDERSTATETEXTURERASTER, (uintptr_t)tr);
+        clear();
+        RwIm2DVertex tq[4] = { V2(400, 200, 255, 255, 255, 255, 0, 0), V2(480, 200, 255, 255, 255, 255, 1, 0), V2(400, 280, 255, 255, 255, 255, 0, 1), V2(480, 280, 255, 255, 255, 255, 1, 1) };
+        Check(RwIm2DRenderPrimitive(rwPRIMTYPETRISTRIP, tq, 4) == TRUE, "textured Im2D quad draws");
+        s.grab(pw, ph);
+        {
+            const Px a = s.at(420, 220), b = s.at(460, 220), c = s.at(420, 260), d = s.at(460, 260);
+            std::snprintf(what, sizeof(what), "texture quadrants red green / blue yellow (top row first, RGBA texel order): %d,%d,%d %d,%d,%d / %d,%d,%d %d,%d,%d", a.r, a.g, a.b, b.r, b.g, b.b, c.r, c.g, c.b, d.r, d.g, d.b);
+            Check(Near(a, 255, 0, 0) && Near(b, 0, 255, 0) && Near(c, 0, 0, 255) && Near(d, 255, 255, 0), what);
+        }
+        clear();
+        for (auto& v : tq) { v.emissiveColor = 0xFF808080u; }
+        RwIm2DRenderPrimitive(rwPRIMTYPETRISTRIP, tq, 4);
+        s.grab(pw, ph);
+        Check(s.is(420, 220, 128, 0, 0, 2) && s.is(460, 260, 128, 128, 0, 2), "texture * vertex colour (0x80 grey) modulates");
+        // texture off again: the same vertices give the plain vertex colour
+        RS(rwRENDERSTATETEXTURERASTER, 0);
+        clear();
+        RwIm2DRenderPrimitive(rwPRIMTYPETRISTRIP, tq, 4);
+        s.grab(pw, ph);
+        Check(s.is(420, 220, 128, 128, 128, 1), "no texture: vertex colour only");
+        Check(NoGlError("Im2D textured"), "glGetError clean after textured Im2D");
+        RwRasterDestroy(tr);
+    }
+    // camera texture (rendered, GL row order): drawn upright with D3D UVs (v = 0 at the top), no v flip compensation for it
+    {
+        RwRaster* ct = RwRasterCreate(64, 32, 0, rwRASTERTYPECAMERATEXTURE | rwRASTERFORMAT8888);
+        RwRasterPushContext(ct);
+        RwRasterClear((RwInt32)0xFF0000FFu);                       // blue
+        RwRect rc{ 0, 0, 16, 8 };                                  // top-left in RW's top-down coordinates
+        RwRasterClearRect(&rc, (RwInt32)0xFFFF0000u);              // red
+        RwRasterPopContext();
+        RS(rwRENDERSTATETEXTURERASTER, (uintptr_t)ct);
+        clear();
+        RwIm2DVertex tq[4] = { V2(400, 200, 255, 255, 255, 255, 0, 0), V2(528, 200, 255, 255, 255, 255, 1, 0), V2(400, 264, 255, 255, 255, 255, 0, 1), V2(528, 264, 255, 255, 255, 255, 1, 1) };
+        RwIm2DRenderPrimitive(rwPRIMTYPETRISTRIP, tq, 4);
+        s.grab(pw, ph);
+        std::snprintf(what, sizeof(what), "camera texture upright via Im2D: top-left %d,%d,%d (red), bottom-right %d,%d,%d (blue)", s.at(405, 205).r, s.at(405, 205).g, s.at(405, 205).b, s.at(520, 260).r, s.at(520, 260).g, s.at(520, 260).b);
+        Check(s.is(405, 205, 255, 0, 0) && s.is(520, 260, 0, 0, 255) && s.is(520, 205, 0, 0, 255) && s.is(405, 260, 0, 0, 255), what);
+        RS(rwRENDERSTATETEXTURERASTER, 0);
+        RwRasterDestroy(ct);
+    }
+    // alpha: vertex alpha only counts when the caller enabled vertex alpha (Im2D leaves the blend state to the caller)
+    {
+        RwIm2DVertex h[3] = { V2(10, 10, 128, 255, 0, 0), V2(110, 10, 128, 255, 0, 0), V2(10, 110, 128, 255, 0, 0) };
+        clear();
+        RwIm2DRenderPrimitive(rwPRIMTYPETRILIST, h, 3);
+        s.grab(pw, ph);
+        Check(s.is(30, 30, 255, 0, 0), "blending off: alpha ignored, opaque");
+        RS(rwRENDERSTATEVERTEXALPHAENABLE, 1);
+        RS(rwRENDERSTATESRCBLEND, rwBLENDSRCALPHA);
+        RS(rwRENDERSTATEDESTBLEND, rwBLENDINVSRCALPHA);
+        clear();
+        RwIm2DRenderPrimitive(rwPRIMTYPETRILIST, h, 3);
+        s.grab(pw, ph);
+        Check(s.is(30, 30, 128, 0, 0, 2), "vertex alpha enabled: 50% red over black");
+        RS(rwRENDERSTATEVERTEXALPHAENABLE, 0);
+    }
+    // contract: empty draws, invalid calls
+    {
+        RwIm2DVertex t[3] = { V2(10, 10, 255, 255, 0, 0), V2(110, 10, 255, 255, 0, 0), V2(10, 110, 255, 255, 0, 0) };
+        RwImVertexIndex il[6] = { 0, 1, 2, 2, 1, 0 };
+        clear();
+        Check(RwIm2DRenderPrimitive(rwPRIMTYPENAPRIMTYPE, t, 3) == FALSE && RwIm2DRenderPrimitive(rwPRIMTYPETRILIST, nullptr, 3) == FALSE, "Im2D type 0 / null vertices fail");
+        Check(RwIm2DRenderPrimitive(rwPRIMTYPETRILIST, t, 2) == TRUE && RwIm2DRenderPrimitive(rwPRIMTYPELINELIST, t, 1) == TRUE && RwIm2DRenderPrimitive(rwPRIMTYPEPOLYLINE, t, 1) == TRUE &&
+              RwIm2DRenderPrimitive(rwPRIMTYPETRISTRIP, t, 2) == TRUE && RwIm2DRenderPrimitive(rwPRIMTYPEPOINTLIST, t, 3) == TRUE, "empty Im2D draws (too few vertices, point list) return TRUE");
+        Check(RwIm2DRenderPrimitive(rwPRIMTYPETRISTRIP, t, 1) == FALSE && RwIm2DRenderPrimitive(rwPRIMTYPETRIFAN, t, 0) == FALSE, "strip / fan with too few vertices return FALSE");
+        Check(RwIm2DRenderIndexedPrimitive(rwPRIMTYPETRILIST, t, 3, il, 0) == TRUE && RwIm2DRenderIndexedPrimitive(rwPRIMTYPETRILIST, t, 3, il, 2) == TRUE &&
+              RwIm2DRenderIndexedPrimitive(rwPRIMTYPETRILIST, t, 3, il, -1) == FALSE && RwIm2DRenderIndexedPrimitive(rwPRIMTYPETRISTRIP, t, 3, il, 1) == FALSE &&
+              RwIm2DRenderIndexedPrimitive(rwPRIMTYPENAPRIMTYPE, t, 3, il, 3) == FALSE, "Im2D indexed count contract");
+        std::vector<RwImVertexIndex> many(10002, 0);
+        Check(RwIm2DRenderIndexedPrimitive(rwPRIMTYPETRILIST, t, 3, many.data(), 10002) == FALSE, "> 10000 indices for fewer vertices fail (exe index buffer limit)");
+        s.grab(pw, ph);
+        Check(s.countNot(0, 0, 0, 0) == 0, "none of the empty / invalid calls drew anything");
+    }
+    // sub-raster offset: the offset of the camera's frame buffer raster is added to x / y of every vertex; the caller's vertices stay untouched
+    {
+        RwIm2DVertex ot[3] = { V2(10, 10, 255, 255, 0, 0), V2(110, 10, 255, 255, 0, 0), V2(10, 110, 255, 255, 0, 0) };
+        cam->frameBuffer->offsetX = 7; cam->frameBuffer->offsetY = 3;
+        clear();
+        Check(RwIm2DRenderPrimitive(rwPRIMTYPETRILIST, ot, 3) == TRUE, "Im2D with a frame buffer offset draws");
+        s.grab(pw, ph);
+        Check(s.bbox(x0, y0, x1, y1) && std::abs(x0 - 17) <= 1 && std::abs(y0 - 13) <= 1 && std::abs(x1 - 116) <= 2 && std::abs(y1 - 112) <= 2, "offset (7,3) added: bbox starts at (17,13)");
+        Check(ot[0].x == 10.0f && ot[0].y == 10.0f, "the caller's vertices are not modified");
+        clear();
+        RwIm2DRenderLine(ot, 3, 0, 1);
+        s.grab(pw, ph);
+        Check(s.bbox(x0, y0, x1, y1) && std::abs(x0 - 17) <= 1 && y0 >= 12 && y1 <= 14, "RwIm2DRenderLine honours the offset");
+        clear();
+        RwImVertexIndex oi[3] = { 0, 1, 2 };
+        RwIm2DRenderIndexedPrimitive(rwPRIMTYPETRILIST, ot, 3, oi, 3);
+        s.grab(pw, ph);
+        Check(s.bbox(x0, y0, x1, y1) && std::abs(x0 - 17) <= 1 && std::abs(y0 - 13) <= 1, "indexed Im2D honours the offset");
+        cam->frameBuffer->offsetX = cam->frameBuffer->offsetY = 0;
+    }
+    // more than 10000 vertices / indices (librw's start-size buffers grow): a visible triangle at the very end of a long list
+    {
+        std::vector<RwIm2DVertex> big(12000, V2(0, 0, 255, 0, 0, 0));
+        big[11997] = V2(500, 400, 255, 255, 255, 255); big[11998] = V2(560, 400, 255, 255, 255, 255); big[11999] = V2(500, 460, 255, 255, 255, 255);
+        clear();
+        Check(RwIm2DRenderPrimitive(rwPRIMTYPETRILIST, big.data(), 12000) == TRUE, "Im2D 12000 vertices");
+        s.grab(pw, ph);
+        Check(s.is(510, 410, 255, 255, 255), "12000-vertex Im2D list: the triangle at the end is drawn (buffer grown)");
+        std::vector<RwImVertexIndex> bi(12000, 0);
+        bi[11997] = 11997; bi[11998] = 11998; bi[11999] = 11999;
+        clear();
+        Check(RwIm2DRenderIndexedPrimitive(rwPRIMTYPETRILIST, big.data(), 12000, bi.data(), 12000) == TRUE, "Im2D 12000 indices");
+        s.grab(pw, ph);
+        Check(s.is(510, 410, 255, 255, 255), "12000-index Im2D list: the triangle at the end is drawn");
+        Check(NoGlError("Im2D big"), "glGetError clean after the big Im2D draws");
+    }
+
+    // ---- Im3D (identity camera, view window 1 x 0.75: NDC x = -X/Z, NDC y = Y/(0.75 Z)) ----
+    auto ndcX = [&](double n) { return (int)(pw * 0.5 + n * pw * 0.5); };
+    auto ndcY = [&](double n) { return (int)(ph * 0.5 - n * ph * 0.5); };
+    {
+        clear();
+        RS(rwRENDERSTATEZTESTENABLE, 1);
+        RS(rwRENDERSTATEZWRITEENABLE, 1);
+        // triangle at z = 2: NDC (0,0) (0.5,0) (0,0.5); colour (200,50,10): R/B order
+        RwIm3DVertex t[3] = { V3(0, 0, 2, 200, 50, 10), V3(-1, 0, 2, 200, 50, 10), V3(0, 0.75f, 2, 200, 50, 10) };
+        Check(RwIm3DTransform(t, 3, nullptr, 0) == t, "RwIm3DTransform");
+        Check(RwIm3DRenderPrimitive(rwPRIMTYPETRILIST) == TRUE, "RwIm3DRenderPrimitive(tri list)");
+        Check(RwIm3DEnd() == TRUE, "RwIm3DEnd");
+        s.grab(pw, ph);
+        std::snprintf(what, sizeof(what), "Im3D triangle at its projected pixels: in %d,%d,%d, mirrored side %d,%d,%d", s.at(ndcX(0.1), ndcY(0.1)).r, s.at(ndcX(0.1), ndcY(0.1)).g, s.at(ndcX(0.1), ndcY(0.1)).b,
+                      s.at(ndcX(-0.1), ndcY(0.1)).r, s.at(ndcX(-0.1), ndcY(0.1)).g, s.at(ndcX(-0.1), ndcY(0.1)).b);
+        Check(s.is(ndcX(0.1), ndcY(0.1), 200, 50, 10) && s.is(ndcX(-0.1), ndcY(0.1), 0, 0, 0) && s.is(ndcX(0.4), ndcY(0.4), 0, 0, 0), what);
+        // depth buffer holds the z-convention value (R-3b proved it for librw's own Im3D; the game path must agree)
+        float dp = 0;
+        glReadPixels(ndcX(0.1), ph - 1 - ndcY(0.1), 1, 1, GL_DEPTH_COMPONENT, GL_FLOAT, &dp);
+        const double expect = (cam->zScale / 2.0 + cam->zShift + 1.0) * 0.5;
+        std::snprintf(what, sizeof(what), "Im3D depth %.4f vs zScale/zShift %.4f", (double)dp, expect);
+        Check(std::fabs(dp - expect) < 2e-3, what);
+        RS(rwRENDERSTATEZTESTENABLE, 0);
+        RS(rwRENDERSTATEZWRITEENABLE, 0);
+
+        // LTM translate (+1, 0, 0): X mirrored -> NDC x shifts by -0.5
+        clear();
+        rw::Matrix m{};
+        m.right = { 1, 0, 0 }; m.up = { 0, 1, 0 }; m.at = { 0, 0, 1 }; m.pos = { 1, 0, 0 }; m.flags = rw::Matrix::TYPEORTHONORMAL;
+        RwIm3DTransform(t, 3, &m, 0);
+        RwIm3DRenderPrimitive(rwPRIMTYPETRILIST);
+        RwIm3DEnd();
+        s.grab(pw, ph);
+        Check(s.is(ndcX(-0.4), ndcY(0.1), 200, 50, 10) && s.is(ndcX(0.1), ndcY(0.1), 0, 0, 0), "LTM translation moves the triangle to NDC x -0.5..0");
+        // LTM scale 2 about the origin: area x4 (count against the plain triangle)
+        clear();
+        RwIm3DTransform(t, 3, nullptr, 0); RwIm3DRenderPrimitive(rwPRIMTYPETRILIST); RwIm3DEnd();
+        s.grab(pw, ph);
+        const int base = s.countNot(0, 0, 0, 0);
+        clear();
+        m.right = { 2, 0, 0 }; m.up = { 0, 2, 0 }; m.at = { 0, 0, 2 }; m.pos = { 0, 0, 0 };
+        RwIm3DTransform(t, 3, &m, 0); RwIm3DRenderPrimitive(rwPRIMTYPETRILIST); RwIm3DEnd();
+        s.grab(pw, ph);
+        // x2 in x, y and z: z = 4 halves the NDC extent again -> same size as the base triangle (a wrong/ignored LTM would give 1/4 or 4x)
+        const int scaled = s.countNot(0, 0, 0, 0);
+        std::snprintf(what, sizeof(what), "LTM uniform scale 2: z doubles too, projected size unchanged (%d vs %d px)", scaled, base);
+        Check(std::abs(scaled - base) < base / 10 + 8, what);
+        // identity-flagged LTM is treated as identity whatever its numbers say
+        clear();
+        rw::Matrix idm{};
+        idm.right = { 5, 0, 0 }; idm.up = { 0, 5, 0 }; idm.at = { 0, 0, 5 }; idm.pos = { 9, 9, 9 }; idm.flags = rw::Matrix::IDENTITY;
+        RwIm3DTransform(t, 3, &idm, 0); RwIm3DRenderPrimitive(rwPRIMTYPETRILIST); RwIm3DEnd();
+        s.grab(pw, ph);
+        Check(s.is(ndcX(0.1), ndcY(0.1), 200, 50, 10) && std::abs(s.countNot(0, 0, 0, 0) - base) < 8, "identity-flagged LTM == no LTM");
+        // after End the transform is gone
+        Check(RwIm3DRenderPrimitive(rwPRIMTYPETRILIST) == FALSE, "Im3D render after End fails");
+
+        // indexed quad with UV and a texture; index count 5 rounds down to one triangle
+        RwRaster* tr = RwRasterCreate(2, 2, 32, rwRASTERTYPETEXTURE | rwRASTERFORMAT8888);
+        RwUInt8*  p  = RwRasterLock(tr, 0, rwRASTERLOCKWRITE | rwRASTERLOCKNOFETCH);
+        const unsigned char texel[4][4] = { { 255, 0, 0, 255 }, { 0, 255, 0, 255 }, { 0, 0, 255, 255 }, { 255, 255, 0, 255 } };
+        if (p) {
+            for (int y = 0; y < 2; y++) for (int x = 0; x < 2; x++) std::memcpy(p + y * RwRasterGetStride(tr) + x * 4, texel[y * 2 + x], 4);
+        }
+        RwRasterUnlock(tr);
+        RS(rwRENDERSTATETEXTURERASTER, (uintptr_t)tr);
+        // quad in NDC [-0.5,0.5] x [-0.5,0.5] at z = 2: X = -2 * ndcx, Y = 1.5 * ndcy; u grows with screen x, v grows downwards
+        RwIm3DVertex q[4] = { V3(1, 0.75f, 2, 255, 255, 255, 255, 0, 0), V3(-1, 0.75f, 2, 255, 255, 255, 255, 1, 0), V3(1, -0.75f, 2, 255, 255, 255, 255, 0, 1), V3(-1, -0.75f, 2, 255, 255, 255, 255, 1, 1) };
+        RwImVertexIndex qi[6] = { 0, 1, 2, 2, 1, 3 };
+        clear();
+        Check(RwIm3DTransform(q, 4, nullptr, rwIM3D_VERTEXUV) == q && RwIm3DRenderIndexedPrimitive(rwPRIMTYPETRILIST, qi, 6) == TRUE && RwIm3DEnd() == TRUE, "textured Im3D indexed quad");
+        s.grab(pw, ph);
+        {
+            const Px a = s.at(ndcX(-0.25), ndcY(0.25)), b = s.at(ndcX(0.25), ndcY(0.25)), c = s.at(ndcX(-0.25), ndcY(-0.25)), d = s.at(ndcX(0.25), ndcY(-0.25));
+            std::snprintf(what, sizeof(what), "Im3D texture quadrants (UV flag keeps the texture): %d,%d,%d %d,%d,%d / %d,%d,%d %d,%d,%d", a.r, a.g, a.b, b.r, b.g, b.b, c.r, c.g, c.b, d.r, d.g, d.b);
+            Check(Near(a, 255, 0, 0) && Near(b, 0, 255, 0) && Near(c, 0, 0, 255) && Near(d, 255, 255, 0), what);
+        }
+        const int quadPx = s.countNot(0, 0, 0, 0);
+        clear();
+        RwIm3DTransform(q, 4, nullptr, rwIM3D_VERTEXUV);
+        Check(RwIm3DRenderIndexedPrimitive(rwPRIMTYPETRILIST, qi, 5) == TRUE, "5 indices accepted (rounded to 3)");
+        RwIm3DEnd();
+        s.grab(pw, ph);
+        std::snprintf(what, sizeof(what), "5 indices draw one triangle: %d of %d quad px", s.countNot(0, 0, 0, 0), quadPx);
+        Check(s.countNot(0, 0, 0, 0) < quadPx * 6 / 10 && s.countNot(0, 0, 0, 0) > quadPx * 4 / 10, what);
+        // no UV flag: untextured (vertex colour only) and TEXTURERASTER is left as the caller set it
+        clear();
+        RwIm3DVertex nq[4] = { V3(1, 0.75f, 2, 90, 90, 200), V3(-1, 0.75f, 2, 90, 90, 200), V3(1, -0.75f, 2, 90, 90, 200), V3(-1, -0.75f, 2, 90, 90, 200) };
+        RwIm3DTransform(nq, 4, nullptr, 0);
+        RwIm3DRenderIndexedPrimitive(rwPRIMTYPETRILIST, qi, 6);
+        RwIm3DEnd();
+        s.grab(pw, ph);
+        RwRaster* back = nullptr;
+        RwRenderStateGet(rwRENDERSTATETEXTURERASTER, &back);
+        Check(s.is(ndcX(0.25), ndcY(0.25), 90, 90, 200) && s.is(ndcX(-0.25), ndcY(-0.25), 90, 90, 200), "no UV flag: vertex colour only");
+        Check(back == tr, "no UV flag: the caller's TEXTURERASTER is restored after the draw");
+        RS(rwRENDERSTATETEXTURERASTER, 0);
+        RwRasterDestroy(tr);
+
+        // vertex alpha: flags 0 -> blended (VERTEXALPHAENABLE set by the call), rwIM3D_ALLOPAQUE -> opaque
+        RS(rwRENDERSTATESRCBLEND, rwBLENDSRCALPHA);
+        RS(rwRENDERSTATEDESTBLEND, rwBLENDINVSRCALPHA);
+        RwIm3DVertex at[3] = { V3(0, 0, 2, 255, 0, 0, 128), V3(-1, 0, 2, 255, 0, 0, 128), V3(0, 0.75f, 2, 255, 0, 0, 128) };
+        clear();
+        RwIm3DTransform(at, 3, nullptr, 0); RwIm3DRenderPrimitive(rwPRIMTYPETRILIST); RwIm3DEnd();
+        s.grab(pw, ph);
+        Check(s.is(ndcX(0.1), ndcY(0.1), 128, 0, 0, 2) && RSGet(rwRENDERSTATEVERTEXALPHAENABLE) == 1, "Im3D vertex alpha 128: 50% red over black, VERTEXALPHAENABLE on");
+        clear();
+        RwIm3DTransform(at, 3, nullptr, rwIM3D_ALLOPAQUE); RwIm3DRenderPrimitive(rwPRIMTYPETRILIST); RwIm3DEnd();
+        s.grab(pw, ph);
+        Check(s.is(ndcX(0.1), ndcY(0.1), 255, 0, 0) && RSGet(rwRENDERSTATEVERTEXALPHAENABLE) == 0, "rwIM3D_ALLOPAQUE: alpha ignored, VERTEXALPHAENABLE off");
+
+        // lines: RwIm3DRenderLine and an indexed line list
+        clear();
+        RwIm3DVertex lv[3] = { V3(1, 0, 2, 255, 255, 255), V3(-1, 0, 2, 255, 255, 255), V3(0, 0.75f, 2, 255, 255, 255) };
+        RwIm3DTransform(lv, 3, nullptr, 0);
+        Check(RwIm3DRenderLine(0, 1) == TRUE, "RwIm3DRenderLine");
+        RwIm3DEnd();
+        s.grab(pw, ph);
+        const int lp = s.countNot(0, 0, 0, 0);
+        std::snprintf(what, sizeof(what), "Im3D line: %d px, spans NDC x -0.5..0.5 (~%d px)", lp, pw / 2);
+        Check(lp >= pw / 2 - 12 && lp <= pw / 2 + 12 && (s.is(ndcX(0.0), ndcY(0.0), 255, 255, 255) || s.is(ndcX(0.0), ndcY(0.0) - 1, 255, 255, 255)), what);
+        clear();
+        RwIm3DTransform(lv, 3, nullptr, 0);
+        RwImVertexIndex ll[4] = { 0, 1, 1, 2 };
+        Check(RwIm3DRenderIndexedPrimitive(rwPRIMTYPELINELIST, ll, 4) == TRUE, "Im3D indexed line list");
+        RwIm3DEnd();
+        s.grab(pw, ph);
+        Check(s.countNot(0, 0, 0, 0) > lp + 20, "two lines drawn");
+        clear();
+        RwIm3DTransform(lv, 3, nullptr, 0);
+        Check(RwIm3DRenderTriangle(0, 1, 2) == TRUE, "RwIm3DRenderTriangle");
+        RwIm3DEnd();
+        s.grab(pw, ph);
+        Check(s.is(ndcX(0.0), ndcY(0.2), 255, 255, 255) || s.is(ndcX(0.05), ndcY(0.1), 255, 255, 255), "Im3D triangle by indices");
+
+        // > 10000 vertices (buffers grow) and > 10000 indices; 0x10000 vertices become 0
+        std::vector<RwIm3DVertex> big(30003, V3(0, 0, 2, 255, 255, 255));
+        big[30000] = V3(0, 0, 2, 0, 255, 255); big[30001] = V3(-1, 0, 2, 0, 255, 255); big[30002] = V3(0, 0.75f, 2, 0, 255, 255);
+        clear();
+        RwIm3DTransform(big.data(), 30003, nullptr, 0);
+        Check(RwIm3DRenderPrimitive(rwPRIMTYPETRILIST) == TRUE, "Im3D 30003 vertices");
+        RwIm3DEnd();
+        s.grab(pw, ph);
+        Check(s.is(ndcX(0.1), ndcY(0.1), 0, 255, 255), "30003-vertex Im3D list: the triangle at the end is drawn (buffer grown)");
+        std::vector<RwIm3DVertex> bv(10, V3(0, 0, 2, 255, 0, 255));
+        bv[7] = V3(0, 0, 2, 255, 0, 255); bv[8] = V3(-1, 0, 2, 255, 0, 255); bv[9] = V3(0, 0.75f, 2, 255, 0, 255);
+        std::vector<RwImVertexIndex> bi2(20004, 0);
+        bi2[20001] = 7; bi2[20002] = 8; bi2[20003] = 9;
+        clear();
+        RwIm3DTransform(bv.data(), 10, nullptr, 0);
+        Check(RwIm3DRenderIndexedPrimitive(rwPRIMTYPETRILIST, bi2.data(), 20004) == TRUE, "Im3D 20004 indices");
+        RwIm3DEnd();
+        s.grab(pw, ph);
+        Check(s.is(ndcX(0.1), ndcY(0.1), 255, 0, 255), "20004-index Im3D list: the triangle at the end is drawn");
+        Check(NoGlError("Im3D"), "glGetError clean after the Im3D tests");
+    }
+    // Im2D after Im3D: shader / attribute state is not left in a broken state by the Im3D End
+    {
+        clear();
+        RwIm2DVertex t[3] = { V2(10, 10, 255, 255, 0, 0), V2(110, 10, 255, 255, 0, 0), V2(10, 110, 255, 255, 0, 0) };
+        RwIm2DRenderPrimitive(rwPRIMTYPETRILIST, t, 3);
+        s.grab(pw, ph);
+        Check(s.is(30, 30, 255, 0, 0), "Im2D still draws after the Im3D sequence");
+    }
+    RwCameraEndUpdate(cam);
+    RwRasterDestroy(cam->frameBuffer);
+    RwRasterDestroy(cam->zBuffer);
+    cam->frameBuffer = cam->zBuffer = nullptr;
+    cam->getFrame()->destroy();
+    RwCameraDestroy(cam);
+    Check(NoGlError("R-4"), "glGetError clean after R-4");
+}
+
 } // namespace
 
 int main(int argc, char** argv) {
@@ -560,6 +1028,7 @@ int main(int argc, char** argv) {
     cam->destroy();
     cam = nullptr;
     RunR3b(win, pw, ph);
+    RunR4(pw, ph);
 
     // ---- shutdown ------------------------------------------------------------------------------------------------------------------------
     Check(RwEngineStop() == TRUE, "RwEngineStop");

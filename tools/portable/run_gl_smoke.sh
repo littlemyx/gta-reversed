@@ -38,7 +38,7 @@ PY
 [ -n "$BASE" ] || { echo "no compile flags (build/PortableMac/compile_commands.json missing?)"; exit 1; }
 INC="-I$S/fakerw -I$S -I$S/portable/winshim -I$S/game_sa -I$S/game_sa/RenderWare -I$S/game_sa/RenderWare/rw -I${LIBRW_SRC:-$REPO/vendor/librw} -isystem $SDL3/include"
 FILES=("$REPO/tests/portable/gl_smoke.cpp" "$S/standalone/rw/engine.cpp" "$S/standalone/rw/rwglobals.cpp" "$S/portable/render/engine_gl3.cpp" "$S/portable/render/platform_gl3.cpp"
-       "$S/standalone/rw/camera.cpp" "$S/standalone/rw/raster.cpp" "$S/standalone/rw/renderstate.cpp" "$S/portable/render/camera_gl3.cpp" "$S/portable/render/raster_gl3.cpp")
+       "$S/standalone/rw/camera.cpp" "$S/standalone/rw/raster.cpp" "$S/standalone/rw/renderstate.cpp" "$S/portable/render/camera_gl3.cpp" "$S/portable/render/raster_gl3.cpp" "$S/portable/render/im2d_im3d_gl3.cpp" "$S/portable/path_resolve.cpp")
 OBJS=()
 for f in "${FILES[@]}"; do
   o="$OUT/$(basename "$f" .cpp).o"; OBJS+=("$o")

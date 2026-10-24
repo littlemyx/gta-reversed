@@ -185,7 +185,7 @@ void AddWheelSandOrDust(Fx_c& fx, CVehicle* vehicle, const CVector& pos, bool bW
     const x87d moveZd = (x87d)CTimer::GetTimeStep() * moveSpeed.z;
     const float  moveZ  = (float)moveZd;
     const x87d length = std::sqrt((moveZd * (x87d)moveZ + (x87d)moveY * moveY) + (x87d)moveX * moveX);
-    const int32  numParticles = std::max(1, (int32)(length * stepMult)); // 0x821B40 (ftol)
+    const int32  numParticles = std::max(1, NOTSA_FTOL(int32, length * stepMult)); // 0x821B40 (ftol)
 
     const float velMult = (float)((speedMult + (x87d)0.8f) - (x87d)0.2f); // 0x858C98, 0x858CC4
     const float numParticlesF = (float)numParticles;
@@ -739,7 +739,7 @@ void Fx_c::AddWheelSpray(CVehicle* vehicle, CVector pos, bool bWheelsSpinning, b
     const x87d stepX = (x87d)CTimer::GetTimeStep() * moveSpeed.x;
     const x87d stepY = (x87d)CTimer::GetTimeStep() * moveSpeed.y;
     const x87d stepZ = (x87d)CTimer::GetTimeStep() * moveSpeed.z;
-    const int32  numParticles = std::max(1, (int32)std::sqrt((stepZ * stepZ + stepY * stepY) + stepX * stepX)); // 0x821B40 (ftol)
+    const int32  numParticles = std::max(1, NOTSA_FTOL(int32, std::sqrt((stepZ * stepZ + stepY * stepY) + stepX * stepX))); // 0x821B40 (ftol)
 
     const float invNum = (float)((x87d)1.0 / (x87d)numParticles);
     for (auto i = 0; i < numParticles; i++) {

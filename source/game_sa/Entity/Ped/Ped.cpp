@@ -5286,7 +5286,7 @@ uint8 CPed::SpecialEntityCalcCollisionSteps(bool& bProcessCollisionBeforeSetting
 
     int32 steps;
     if (!m_pPlayerData) {
-        steps = (int32)std::ceil(moveSpeed * 5.0f); // 0x5E3FA8 (the product is stored as a double)
+        steps = NOTSA_FTOL(int32, std::ceil(moveSpeed * 5.0f)); // 0x5E3FA8 (the product is stored as a double)
     } else {
         // 0x5E3F2B..: `FST float [tmp]` keeps a float-rounded copy, but the argument of the first `ceil`
         // is `FSTP double` of the unrounded product. The clamp decision is made on that first ceil;
@@ -5298,7 +5298,7 @@ uint8 CPed::SpecialEntityCalcCollisionSteps(bool& bProcessCollisionBeforeSetting
             if (ceiled0 < minSteps) {
                 return (int32)minSteps;
             }
-            return (int32)std::ceil((x87d)(float)product);
+            return NOTSA_FTOL(int32, std::ceil((x87d)(float)product));
         };
         steps = m_standingOnEntity
             ? Calc(6.6666665f, 4.0)

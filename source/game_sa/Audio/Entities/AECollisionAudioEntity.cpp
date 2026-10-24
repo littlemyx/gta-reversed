@@ -199,7 +199,7 @@ void CAECollisionAudioEntity::PlayOneShotCollisionSound(CEntity* entityA, CEntit
             offset *= 10.f;
         }
         offset *= 500.f;
-        const auto startAt = 100 - std::min(100, (int32)(std::floor(offset))); // 0x4DB2FB
+        const auto startAt = 100 - std::min(100, NOTSA_FTOL(int32, std::floor(offset))); // 0x4DB2FB
         if (startAt >= 100) {
             return true;
         }

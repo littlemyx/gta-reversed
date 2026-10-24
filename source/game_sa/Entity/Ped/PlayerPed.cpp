@@ -2062,7 +2062,7 @@ void CPlayerPed::ProcessGroupBehaviour(CPad* pad) {
 
     // `CTimer::ms_fTimeStepNonClipped * 0.02f * 1000.0f` kept in extended precision, then truncated by _ftol (0x821B40)
     const auto TimeStepInMS = [] {
-        return (uint16)(int32)((x87d)CTimer::GetTimeStepNonClipped() * (x87d)0.02f * (x87d)1000.0);
+        return (uint16)NOTSA_FTOL(int32, (x87d)CTimer::GetTimeStepNonClipped() * (x87d)0.02f * (x87d)1000.0);
     };
 
     // 0x609380 (inlined here)
@@ -2774,7 +2774,7 @@ void CPlayerPed::ProcessControl() {
                 }
             }
             SetLookFlag(lookDir, true, false);
-            SetLookTimer(static_cast<uint32>((CTimer::GetTimeStep() * 0.02f * 1000.0f) * 5.0f));
+            SetLookTimer(NOTSA_FTOL(uint32, (CTimer::GetTimeStep() * 0.02f * 1000.0f) * 5.0f));
         } else {
             ClearLookFlag();
         }

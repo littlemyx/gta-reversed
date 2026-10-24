@@ -3337,8 +3337,8 @@ bool CCollision::BuildCacheOfCameraCollision(
     // The unrounded (x87) value is used to check the range, while the value that is used is calculated from the value spilled to the stack (float)
     const auto GetSectorCoord = [](float v, auto&& Clamp) {
         const x87d ext = (x87d)v * (x87d)0.02f + (x87d)60.0;
-        const auto   a   = (int32)std::floor(ext);
-        const auto   b   = (int32)std::floor((x87d)(float)ext);
+        const auto   a   = NOTSA_FTOL(int32, std::floor(ext));
+        const auto   b   = NOTSA_FTOL(int32, std::floor((x87d)(float)ext));
         return Clamp(a, b);
     };
     const auto ClampLow  = [](int32 a, int32 b) { return a > 0 ? b : 0; };       // 0x41AD12 jle

@@ -532,7 +532,7 @@ void CVehicleModelInfo::DisableEnvMap()
 
 void CVehicleModelInfo::SetEnvMapCoeff(float coeff)
 {
-    auto iUsedCoeff = static_cast<int32>(floor(coeff * 1000.0F));
+    auto iUsedCoeff = NOTSA_FTOL(int32, floor(coeff * 1000.0F));
     if (!GetRwObject())
         return;
 

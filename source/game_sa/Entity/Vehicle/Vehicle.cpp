@@ -673,7 +673,7 @@ uint8 CVehicle::SpecialEntityCalcCollisionSteps(bool& bProcessCollisionBeforeSet
     else if (fLongestDir < 2.0F)
         unk2 = true;
 
-    return static_cast<uint8>(ceil(fMove));
+    return NOTSA_FTOL(uint8, ceil(fMove));
 }
 
 // 0x6D6480
@@ -4367,7 +4367,7 @@ static void FlyingControlModel1345(FlyingControlCtx& c) {
         const float  r3     = (-1.0f > r2) ? -1.0f : r2;             // 0x420800
         const x87d pitch  = X87R(x87::asin((double)r3) * -1.0f);         // 0x821E70
         if (v.m_nVehicleSubType == VEHICLE_TYPE_PLANE && pitch > 0.3490658700466156f) {
-            v.AsPlane()->field_9A0 += (int32)(((x87d)ts * 0.02f) * 1000.0f);
+            v.AsPlane()->field_9A0 += NOTSA_FTOL(int32, ((x87d)ts * 0.02f) * 1000.0f);
         }
 
         x87d formLift = fh->m_fFormLift;
@@ -5658,7 +5658,7 @@ void CVehicle::AddWaterSplashParticles() {
         const auto v0v1 = vertices[1] - vertices[0];
         const auto v1v2 = vertices[2] - vertices[1];
 
-        for (auto i = 1 - (size_t)(CWeather::Rain * -2.f); i > 0; i--) {
+        for (auto i = 1 - NOTSA_FTOL(size_t, CWeather::Rain * -2.f); i > 0; i--) {
             g_fx.m_Splash->AddParticle(
                 vertices[0]
                     + v0v1 * CGeneral::GetRandomNumberInRange(0.f, 1.f)
@@ -5912,7 +5912,7 @@ bool CVehicle::AddSingleWheelParticles(tWheelState wheelState, uint32 arg1, floa
         }
 
         const CVector step  = m_vecMoveSpeed * CTimer::ms_fTimeStep;
-        const int32   num   = (int32)(X87R(MagnitudeExt(step) * countScale)); // _ftol
+        const int32   num   = NOTSA_FTOL(int32, X87R(MagnitudeExt(step) * countScale)); // _ftol
         const int32   count = num >= 1 ? num : 1;
         const float   countF = (float)count;
         for (int32 i = 0; i < count; i++) {

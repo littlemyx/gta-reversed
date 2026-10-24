@@ -1419,7 +1419,7 @@ void CPlane::ProcessControl() {
     }
 
     if (m_pSmokeParticle) {
-        m_nSmokeTimer += (int32)(CTimer::GetTimeStep() * 0.02f * -1000.0f); // `-CTimer::GetTimeStepInMS()`
+        m_nSmokeTimer += NOTSA_FTOL(int32, CTimer::GetTimeStep() * 0.02f * -1000.0f); // `-CTimer::GetTimeStepInMS()`
 
         RwMatrix mat;
         m_pSmokeParticle->GetCompositeMatrix(&mat);
@@ -1619,7 +1619,7 @@ void CPlane::ProcessFlyingCarStuff() {
         const float waveMax = PLANE_DAMAGE_WAVE_COUNTER_VAR + 1.0f;
         const float waveMin = 1.0f - PLANE_DAMAGE_WAVE_COUNTER_VAR;
         const float wave    = (waveMax - waveMin) * Rand01() + waveMin;
-        const auto  timeMS  = (uint32)(int32)(CTimer::GetTimeStep() * 0.02f * 1000.0f); // `GetTimeStepInMS()`
+        const auto  timeMS  = (uint32)NOTSA_FTOL(int32, CTimer::GetTimeStep() * 0.02f * 1000.0f); // `GetTimeStepInMS()`
         m_planeDamageWave += (int32)((float)timeMS * wave);
     }
 

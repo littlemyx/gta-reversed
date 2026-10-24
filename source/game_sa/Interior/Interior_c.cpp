@@ -1317,8 +1317,8 @@ CObject* Interior_c::PlaceObject(uint8 isStealable, Furniture_c* furniture, floa
     obj->m_nObjectType = OBJECT_TYPE_DECORATION;
     obj->SetIsStatic(true);
     CWorld::Add(obj);
-    item->m_tileX = static_cast<uint16>(static_cast<int32>(offsetX));
-    item->m_tileY = static_cast<uint16>(static_cast<int32>(offsetY));
+    item->m_tileX = static_cast<uint16>(NOTSA_FTOL(int32, offsetX));
+    item->m_tileY = static_cast<uint16>(NOTSA_FTOL(int32, offsetY));
     m_furnitureList.AddItem(item);
 
     if (isStealable) {

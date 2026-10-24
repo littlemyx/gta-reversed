@@ -1464,7 +1464,7 @@ void CEntity::ModifyMatrixForBannerInWind() {
     }
 
     auto vecPos = CVector2D(GetPosition());
-    auto uiOffset = static_cast<uint16>(16 * (CTimer::GetTimeInMS() + (static_cast<uint16>(vecPos.x + vecPos.y) * 64)));
+    auto uiOffset = static_cast<uint16>(16 * (CTimer::GetTimeInMS() + (NOTSA_FTOL(uint16, vecPos.x + vecPos.y) * 64)));
 
     float wind;
     if (CWeather::Wind < 0.1f) {

@@ -2104,7 +2104,7 @@ void CBike::ProcessControl() {
         }
 
         // NOTE: x87 keeps the product in extended precision before truncating it
-        const auto timeStepInMS = static_cast<int32>(static_cast<x87d>(CTimer::GetTimeStep()) * static_cast<x87d>(0.02f) * static_cast<x87d>(1000.0f));
+        const auto timeStepInMS = NOTSA_FTOL(int32, static_cast<x87d>(CTimer::GetTimeStep()) * static_cast<x87d>(0.02f) * static_cast<x87d>(1000.0f));
         auto       timeStepF    = static_cast<float>(timeStepInMS);
         if (timeStepInMS < 0) {
             timeStepF += 4294967296.0f;

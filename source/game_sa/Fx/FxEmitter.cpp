@@ -205,7 +205,7 @@ FxEmitterPrt_c* FxEmitter_c::CreateParticle(const EmissionInfo_t& emissionInfo, 
     particle->m_MultColor = CRGBA{fxMults.m_Color};
 
     // NOTSA: Fields are raw bytes (the original stores `(uint8)(value * 255)` / `(uint8)(brightness * 100)`)
-    particle->m_MultSize = (uint8)(int32)(fxMults.m_fSize * 255.0f);
+    particle->m_MultSize = (uint8)NOTSA_FTOL(int32, fxMults.m_fSize * 255.0f);
     particle->m_MultRot  = (uint8)(int32)(fxMults.m_Rot * 255.0f);
 
     particle->m_bLocalToSystem = createLocal;

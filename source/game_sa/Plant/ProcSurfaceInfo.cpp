@@ -218,10 +218,10 @@ int32 ProcSurfaceInfo_c::AddObjects(CPlantLocTri* plant) {
 
     // A mess, but required one, could do that with some floorf and a single cast per line, but then the results would differ from original one for negative numbers
     auto step = 1.f / m_fSpacing;
-    auto xCur = float(int32(int32(minX * step) * m_fSpacing));
-    auto xEnd = float(int32((int32(maxX * step) + 1) * m_fSpacing));
-    auto yCur = float(int32(int32(minY * step) * m_fSpacing));
-    auto yEnd = float(int32((int32(maxY * step) + 1) * m_fSpacing));
+    auto xCur = float(NOTSA_FTOL(int32, NOTSA_FTOL(int32, minX * step) * m_fSpacing));
+    auto xEnd = float(NOTSA_FTOL(int32, (NOTSA_FTOL(int32, maxX * step) + 1) * m_fSpacing));
+    auto yCur = float(NOTSA_FTOL(int32, NOTSA_FTOL(int32, minY * step) * m_fSpacing));
+    auto yEnd = float(NOTSA_FTOL(int32, (NOTSA_FTOL(int32, maxY * step) + 1) * m_fSpacing));
     normal.Normalise();
 
     for (xCur; xCur < xEnd; xCur += m_fSpacing) {

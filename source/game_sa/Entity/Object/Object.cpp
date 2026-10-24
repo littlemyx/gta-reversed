@@ -450,7 +450,7 @@ uint8 CObject::SpecialEntityCalcCollisionSteps(bool& bProcessCollisionBeforeSett
         auto* cm = GetModelInfo()->GetColModel();
         const auto fMove = m_vecMoveSpeed.SquaredMagnitude() * sq(CTimer::GetTimeStep());
         if (fMove >= sq(cm->GetBoundRadius()))
-            return static_cast<uint8>(std::ceil(std::sqrt(fMove) / cm->GetBoundRadius()));
+            return NOTSA_FTOL(uint8, std::ceil(std::sqrt(fMove) / cm->GetBoundRadius()));
 
         return 1;
     }
@@ -462,7 +462,7 @@ uint8 CObject::SpecialEntityCalcCollisionSteps(bool& bProcessCollisionBeforeSett
             auto vecSpeed = CPhysical::GetSpeed(vecMin);
             const auto fMove = vecSpeed.SquaredMagnitude() * sq(CTimer::GetTimeStep());
             if (fMove >= 0.0225F) // std::pow(0.15F, 2.0F)
-                return static_cast<uint8>(std::ceil(std::sqrt(fMove) / 0.15F));
+                return NOTSA_FTOL(uint8, std::ceil(std::sqrt(fMove) / 0.15F));
 
             return 1;
         }
@@ -484,7 +484,7 @@ uint8 CObject::SpecialEntityCalcCollisionSteps(bool& bProcessCollisionBeforeSett
             auto& vecUsed = vecMin.SquaredMagnitude() >= vecMax.SquaredMagnitude() ? vecMin : vecMax;
             const auto fMove = vecUsed.SquaredMagnitude() * sq(CTimer::GetTimeStep());
             if (fMove >= 0.09F)
-                return static_cast<uint8>(std::ceil(std::sqrt(fMove) / 0.3F));
+                return NOTSA_FTOL(uint8, std::ceil(std::sqrt(fMove) / 0.3F));
 
             return 1;
         }
@@ -496,14 +496,14 @@ uint8 CObject::SpecialEntityCalcCollisionSteps(bool& bProcessCollisionBeforeSett
             const auto fEdge = std::max({ vecSize.x, vecSize.y, vecSize.z }) / 2.0F;
             const auto fMove = m_vecMoveSpeed.SquaredMagnitude() * sq(CTimer::GetTimeStep());
             if (fMove >= sq(fEdge)) {
-                return static_cast<uint8>(std::ceil(std::sqrt(fMove) / fEdge));
+                return NOTSA_FTOL(uint8, std::ceil(std::sqrt(fMove) / fEdge));
             }
             return 1;
         }
 
         const auto fMove = m_vecMoveSpeed.SquaredMagnitude() * sq(CTimer::GetTimeStep());
         if (fMove >= 0.09F)
-            return static_cast<uint8>(std::ceil(sqrt(fMove) / 0.3F));
+            return NOTSA_FTOL(uint8, std::ceil(sqrt(fMove) / 0.3F));
 
         return 1;
     }
@@ -512,7 +512,7 @@ uint8 CObject::SpecialEntityCalcCollisionSteps(bool& bProcessCollisionBeforeSett
     const auto fLongest = std::max({ box.m_vecMax.x, box.m_vecMax.y, -box.m_vecMin.x, -box.m_vecMin.y });
     const auto fMove = std::fabs(fLongest * m_vecTurnSpeed.z);
     if (fMove > 0.1F)
-        return static_cast<uint8>(std::ceil(fMove * 10.0F));
+        return NOTSA_FTOL(uint8, std::ceil(fMove * 10.0F));
 
     return 1;
 }
@@ -864,7 +864,7 @@ void CObject::Init() {
 void CObject::DoBurnEffect() const {
     const auto& box = GetModelInfo()->GetColModel()->GetBoundingBox();
     const auto& vecSize = box.GetSize();
-    const auto nUsedSize = static_cast<int32>(vecSize.x * vecSize.y * vecSize.z * m_fBurnDamage / 20.0F);
+    const auto nUsedSize = NOTSA_FTOL(int32, vecSize.x * vecSize.y * vecSize.z * m_fBurnDamage / 20.0F);
     if (nUsedSize <= 0)
         return;
 

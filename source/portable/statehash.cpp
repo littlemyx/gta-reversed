@@ -29,8 +29,15 @@
 #include "Clock.h"
 
 // RR: every C++ `new` returns zeroed memory too (the default operator delete is free()). Only the two plain forms are replaced; aligned / nothrow forms keep the library versions.
+// (MAC-RR2: must not call notsa::rr::Active(): its Cfg() static holds std::strings, whose first allocation lands back here -> __cxa_guard_acquire "recursive initialization"
+// abort at startup. A constant-initialised tri-state read straight from the environment has no guard.)
+static int g_rrNewMode = -1;
 void* operator new(std::size_t n) {
-    void* p = notsa::rr::Active() ? std::calloc(1, n ? n : 1) : std::malloc(n ? n : 1);
+    if (g_rrNewMode < 0) {
+        const char* e = std::getenv("NOTSA_RR");
+        g_rrNewMode = (e && e[0] && std::strcmp(e, "0") != 0) ? 1 : 0;
+    }
+    void* p = g_rrNewMode ? std::calloc(1, n ? n : 1) : std::malloc(n ? n : 1);
     if (!p) { throw std::bad_alloc(); }
     return p;
 }

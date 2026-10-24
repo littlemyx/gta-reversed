@@ -81,10 +81,3 @@ jobs:
             build.log
             ctest.log
           if-no-files-found: ignore
-
-      - name: Upload binary
-        if: steps.build.outcome == 'success'
-        uses: actions/upload-artifact@v7
-        with:
-          name: gta_reversed-macos-arm64
-          path: build/PortableMac/bin/gta_reversed

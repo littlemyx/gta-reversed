@@ -65,7 +65,7 @@ public:
 
 private:
     bool ReadChunkHeader(ChunkHeader* header, FILESTREAM file, uint32* offset, uint8 unknown);
-    [[nodiscard]] char GetUpperCase(const char c) const;
+    [[nodiscard]] char GetUpperCase(const uint8 c) const;
 
 public:
     auto GetKeys() { return std::span{ m_MainKeyArray.m_data, m_MainKeyArray.m_size }; }

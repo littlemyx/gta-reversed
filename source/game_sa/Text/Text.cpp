@@ -408,29 +408,32 @@ bool CText::ReadChunkHeader(ChunkHeader* header, FILESTREAM file, uint32* offset
 }
 
 // 0x69F750
-char CText::GetUpperCase(const char c) const {
+// The exe compares the argument as an UNSIGNED byte (jb/ja on al, movzx for the table index): with a signed `char` the `c >= 128` branches were dead and the accent tables never used.
+// Table choice (jump table at 0x69F7B4 / 0x69F7C4, index = langcode - 'e'): French -> the table at 0x8D30B8 (accented capitals lose their accents = `UpperCaseTable`),
+// German / Italian / Spanish -> the table at 0x8D3038 (`FrenchUpperCaseTable`; the two names are swapped relative to the exe's use).
+char CText::GetUpperCase(const uint8 c) const {
     switch (m_nLangCode) {
     case eTextLangCode::ENGLISH:
         if (c >= 'a' && c <= 'z')
-            return std::toupper(c);
+            return c - 0x20;
         break;
 
     case eTextLangCode::FRENCH:
         if (c >= 'a' && c <= 'z')
-            return std::toupper(c);
+            return c - 0x20;
 
-        if (c >= 128 && c <= 255)
-            return FrenchUpperCaseTable[c - 128];
+        if (c >= 128)
+            return UpperCaseTable[c - 128];
         break;
 
     case eTextLangCode::GERMAN:
     case eTextLangCode::ITALIAN:
     case eTextLangCode::SPANISH:
         if (c >= 'a' && c <= 'z')
-            return std::toupper(c);
+            return c - 0x20;
 
-        if (c >= 128 && c <= 255)
-            return UpperCaseTable[c - 128];
+        if (c >= 128)
+            return FrenchUpperCaseTable[c - 128];
         break;
 
     default:

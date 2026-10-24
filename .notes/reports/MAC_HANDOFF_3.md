@@ -7,3 +7,8 @@ F stream for trace equality (F-2..F-7 per STREAM_F_PLAN, AudioLog10 rounding); R
 User decision pending: portable.file_records warn step vs global STRICT (auto-mode refused the runner edit).
 Windows asks open in PORTABLE_SYNC: merge portable/main, REF-1 frames, real save/replay fixtures, W1 (GenericSave padding), W2, CBike F5.
 Build dirs to prune when space matters: build/PortableMacRR, build/PortableMacP1 (~800 MB each).
+
+## 2026-10-24 update — goal change
+User: portable fidelity bar = re3 (GTA III port) level; no Win32 trace equality. Stop FLOOP. Use re3 (~/github/re-GTA) as the model.
+New queue: re3 digest (.notes/RE3_DIGEST.md) -> Linux x64 build + CI on the fork -> render completeness R-10..R-12 (skin audit,
+effects/PostFX, D3D-like lighting) -> Win x64 -> stability soak on Mac (long play sessions, load race MAC-RACE1).

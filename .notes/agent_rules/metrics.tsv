@@ -163,3 +163,4 @@ date	agent	rules	kind	tokens	tool_uses	minutes	outcome	notes
 2026-10-24	MAC-FRFIX	v4	file_records strict warn step	-	-	-	done: ctest 18/18 + 12/12
 2026-10-24	MAC-RACE1	v4	load-dependent crash hunt	-	-	-	root chain found, writer unknown
 2026-10-24	MAC-LNX1	v4	Linux x64 build + CI	251113	91	45	links in container; CI blocked on librw access
+2026-10-24	MAC-ANIM1	v4	cutscene anim crash	-	-	-	fixed: IFP garbage + ftol saturation

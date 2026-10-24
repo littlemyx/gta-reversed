@@ -40,7 +40,9 @@ Frame 0 (the arm frame) is identical orig-vs-orig, port-vs-port AND orig-vs-port
 * srand at frame 1509 differs in every pair: the pointer-derived seed of Entity.cpp:1056 (plan row 8).
 
 ## Gate (rules v4, env vars unset = inert)
-See the status line in PHASE2_STATUS.md / the hand-back for the numbers (Release build, run_all_tests, soak).
+* Release build (StandaloneRelease, rebased tree 70536578 minus this note): ok. Soak (NOVSYNC, 3 min route, env unset, pre-rebase tree = same code): RESULT OK, 0 errors, 33100 frames.
+* run_all_tests: all 74 RW test targets BUILD ok on the rebased tree; the RUN phase was NOT completed (three run_all_tests instances shared the PC and the build lock for 40+ min; my own
+  run was invalidated when I rebased mid-build). => **not landed on reverse/interior_c, pushed as branch origin/rd-arm** (fast-forward onto interior_c; needs the orchestrator gate).
 
 ## Not done / next
 RD-NOISE (slice 2) is exactly this list: CdStream tick barrier (spawn timing), audio RNG partition, pointer seed, Grain/OS_TimeMS + time(). The port-port prefix (7-9 frames) is shorter than

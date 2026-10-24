@@ -1,7 +1,7 @@
 // Host test of source/game_sa/FileRecord.hpp + the typed CGenericGameStorage::Save/LoadDataFromWorkBuffer<T> dispatch (real GenericGameStorage.h, stubbed globals). Not wired into CMake.
 //   tools/portable/run_file_records_test.sh            (prints fails=0; also compiles the negative cases below and requires every one to FAIL to compile)
 // Negative cases (-DFR_NEG=n, with NOTSA_FILE_SCALAR_STRICT): 1 size_t prefix, 2 pointer, 3 long, 4 ptrdiff_t (GetIndex), 5 enum class : size_t, 6 array of pointers.
-// Warning mode (default): the same hits compile and emit one [[deprecated]] diagnostic each (WARN_CASES below; the script counts them).
+// Former warn-mode cases (-DFR_WARN=1..4, size_t / ptrdiff_t / pointer / unsigned long): with the globally enabled NOTSA_FILE_SCALAR_STRICT the guard is an error, so each must fail to compile with exactly one guard diagnostic.
 #include <array>
 #include <cassert>
 #include <cstdint>
@@ -17,8 +17,10 @@ using GxtChar = uint16;
 #define MAX_PATH 260
 #define NOTSA_UNPAREN(...) __VA_ARGS__
 #define NOTSA_GLOBAL(name, addr, type, ...) std::type_identity_t<NOTSA_UNPAREN type> name __VA_ARGS__
-#ifdef FR_NEG
+#if defined(FR_NEG) || defined(FR_WARN)
+#ifndef NOTSA_FILE_SCALAR_STRICT
 #define NOTSA_FILE_SCALAR_STRICT 1
+#endif
 #endif
 #include "GenericGameStorage.h"
 
@@ -110,13 +112,17 @@ int main() {
         CHECK(CGenericGameStorage::LoadDataFromWorkBuffer<uint32>() == 16);
     }
 
-#ifdef FR_WARN_CASES   // each line must produce exactly one -Wdeprecated-declarations warning (script counts 4 on LP64, 0 with -m32 style targets)
+#if defined(FR_WARN)   // strict-mode "former warning" cases (-DFR_WARN=1..4, with NOTSA_FILE_SCALAR_STRICT): each must FAIL to compile with exactly one guard error
     reset();
+#if FR_WARN == 1
     CGenericGameStorage::SaveDataToWorkBuffer(sizeof(Fake));                         // size_t prefix, the P-2b bug
+#elif FR_WARN == 2
     CGenericGameStorage::SaveDataToWorkBuffer(ptrdiff_t(5));                         // GetIndex()+1
+#elif FR_WARN == 3
     void* ptr = nullptr; CGenericGameStorage::SaveDataToWorkBuffer(ptr);
+#elif FR_WARN == 4
     unsigned long ul = 0; CGenericGameStorage::LoadDataFromWorkBuffer(ul);
-    CHECK(g_buf.size() == 3 * 8);   // the broken 8-byte records the guard exists to prevent
+#endif
 #endif
 #if defined(FR_NEG)
     reset();

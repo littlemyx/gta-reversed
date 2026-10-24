@@ -35,3 +35,13 @@ using GxtChar = uint16;
 namespace rng = std::ranges;
 #define NOTSA_UNREACHABLE(...) std::abort()
 #define NLOHMANN_DEFINE_TYPE_INTRUSIVE(...)
+// F-loop 2 / MAC-C3 additions to the real Base.h that the real Core headers (Vector2D.h, Vector.h, Matrix.h) now use.
+#ifdef NOTSA_PORTABLE
+typedef float x87d;
+#define X87R(...) ((x87d)(__VA_ARGS__))
+#define NOTSA_UNREACHABLE_RET(RET, ...) do { NOTSA_UNREACHABLE(__VA_ARGS__); return RET; } while (false)
+#else
+typedef double x87d;
+#define X87R(...) __VA_ARGS__
+#define NOTSA_UNREACHABLE_RET(RET, ...) NOTSA_UNREACHABLE(__VA_ARGS__)
+#endif

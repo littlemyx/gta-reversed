@@ -6,11 +6,18 @@
 #include "World.h"
 #include "Pools/Pools.h"
 #include "Scripts/TheScripts.h"
+#include "CarCtrl.h"
+#include "PopCycle.h"
+#include "CutsceneMgr.h"
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
 #include <string_view>
 #include <utility>
+#include <vector>
+
+bool CdStreamAllIdle(); // CdStreamInfo.cpp
+namespace notsa::lockstep { const void* g_Outer; } // set by CGeneral::RandomBool / DoCoinFlip (General.cpp): their caller, printed as "o+rva" in the R line
 
 namespace notsa::lockstep {
 namespace {
@@ -20,18 +27,27 @@ struct Cfg {
     unsigned pin{};
     unsigned step{16};
     unsigned maxf{20000};
+    unsigned rstack{0};
+    unsigned rfrom{0}; // NOTSA_LOCKSTEP_RFROM=<n>: R lines only from the n-th traced frame on (with RLOG = the last frame)
+    std::vector<std::pair<uintptr_t, uintptr_t>> audioRva;
     unsigned rlog{0}; // pin bit 32: log every rand() call (R fc file:line) in the first `rlog` traced frames
     Cfg() {
         if (const char* o = std::getenv("NOTSA_LOCKSTEP_OUT")) { f = std::fopen(o, "w"); }
         if (const char* e = std::getenv("NOTSA_LOCKSTEP_PIN")) { pin = (unsigned)std::strtoul(e, nullptr, 0); }
         if (const char* e = std::getenv("NOTSA_LOCKSTEP_STEP")) { step = (unsigned)std::atoi(e); }
         if (const char* e = std::getenv("NOTSA_LOCKSTEP_MAXF")) { maxf = (unsigned)std::atoi(e); }
+        if (const char* e = std::getenv("NOTSA_LOCKSTEP_RSTACK")) { rstack = (unsigned)std::atoi(e); }
+        if (const char* e = std::getenv("NOTSA_LOCKSTEP_RFROM")) { rfrom = (unsigned)std::atoi(e); }
         if (const char* e = std::getenv("NOTSA_LOCKSTEP_RLOG")) { rlog = (unsigned)std::atoi(e); }
-        if (f) { g_SrandHook = &OnSrand; if (rlog && (pin & 32)) { g_RandHook = &OnRand; } } // inert (hooks stay null) unless a trace file was requested
+        if (const char* e = std::getenv("NOTSA_LOCKSTEP_AUDIO_RVA")) { // "lo-hi,lo-hi" hex image offsets of the audio code (tools/standalone/replay_diff/audio_rva.py)
+            for (const char* q = e; *q;) { char* end; const auto lo = std::strtoull(q, &end, 16); if (*end != '-') break; const auto hi = std::strtoull(end + 1, &end, 16); audioRva.emplace_back(lo, hi); q = (*end == ',') ? end + 1 : end; if (!*q) break; }
+        }
+        if (f) { g_SrandHook = &OnSrand; if ((rlog && (pin & 32)) || (pin & 128)) { g_RandHook = &OnRand; } } // inert (hooks stay null) unless a trace file was requested
     }
 };
 Cfg& C() { static Cfg c; return c; }
 unsigned g_nf; // traced frames so far
+uint32_t g_AudioSeed = 0x5EED5EED; unsigned g_AudioCalls; // pin bit 128: the audio stream
 uint64_t g_anchor; bool g_anchorSet; bool g_started; bool g_frameRead; // g_frameRead: the next timer-function call is CTimer::Update's / CTimer::Initialise's
 uint32_t Fnv(uint32_t h, const void* p, size_t n) { auto b = (const uint8_t*)p; while (n--) { h ^= *b++; h *= 16777619u; } return h; }
 uint64_t RealQ() { return GetOSWPerformanceTime(); }
@@ -56,6 +72,12 @@ void Tick() {
             CTimer::m_FrameCounter = to;
         }
         g_RandCalls = 0;
+        g_AudioSeed = 0x5EED5EED; g_AudioCalls = 0;
+    }
+    if (c.pin & 256) { // pin bit 256: CdStream tick barrier (plan row 7). The CdStream thread finishes a read at a real-time dependent moment, and the streaming code (spawning, model-loaded checks) sees the
+        // completion at whichever frame comes next; waiting here until every channel is idle makes a read requested during frame N complete before the tick of frame N+1 in both exes (rd_orig.c does the same).
+        const auto t0 = GetTickCount64();
+        while (!CdStreamAllIdle() && GetTickCount64() - t0 < 10000) { Sleep(0); }
     }
     nf++;
     float pos[3]{}; uint32_t hp = 0, np = 0, nv = 0;
@@ -68,6 +90,13 @@ void Tick() {
     if (auto* pool = GetVehiclePool()) nv = (uint32_t)pool->GetNoOfUsedSpaces();
     const uint32_t sh = Fnv(2166136261u, CTheScripts::ScriptSpace.data(), CTheScripts::ScriptSpace.size());
     uint32_t px, py, pz; std::memcpy(&px, &pos[0], 4); std::memcpy(&py, &pos[1], 4); std::memcpy(&pz, &pos[2], 4);
+    if (c.pin & 64) { // pin bit 64: "D fc ..." line of debugging probes (ignored by rd_diff.py); rd_orig.c reads the same values from their original addresses
+        auto fb = [](float v) { uint32_t u; std::memcpy(&u, &v, 4); return u; };
+        std::fprintf(c.f, "D %u run=%d cd=%d cars=%08x,%08x,%08x,%08x perc=%08x,%08x,%08x,%08x zt=%d tw=%d ti=%d\n", (unsigned)CTimer::m_FrameCounter, (int)CCutsceneMgr::ms_running, (int)CCarCtrl::CountDownToCarsAtStart,
+                     fb(CPopCycle::m_NumOther_Cars), fb(CPopCycle::m_NumCops_Cars), fb(CPopCycle::m_NumGangs_Cars), fb(CPopCycle::m_NumDealers_Cars),
+                     fb(CPopCycle::m_fPercOther), fb(CPopCycle::m_fPercCops), fb(CPopCycle::m_fPercGangs), fb(CPopCycle::m_fPercDealers),
+                     (int)CPopCycle::m_nCurrentZoneType, (int)CPopCycle::m_nCurrentTimeOfWeek, (int)CPopCycle::m_nCurrentTimeIndex);
+    }
     std::fprintf(c.f, "F %u %u %08x %u %08x %08x %08x %u %u %u %08x\n", (unsigned)CTimer::m_FrameCounter, (unsigned)CTimer::m_snTimeInMilliseconds, (unsigned)g_RandSeed, (unsigned)g_RandCalls,
                  px, py, pz, hp, np, nv, sh);
     g_RandCalls = 0;
@@ -93,12 +122,33 @@ bool PsTimer(uint32_t& out) {
     return true;
 }
 
-// rand hook (GameRand.h), pin bit 32: one "R fc file:line" line per call during the first NOTSA_LOCKSTEP_RLOG traced frames (counterpart: RD_RLOG in rd_orig.c logs the return address)
-void OnRand(const char* file, unsigned line) {
+// rand hook (GameRand.h). Pin bit 32: one "R fc file:line [+caller-rva ...]" line per call during the first NOTSA_LOCKSTEP_RLOG traced frames (counterpart: RD_RLOG in rd_orig.c logs the return address).
+// Pin bit 128 (audio RNG partition, plan row 6): rand() calls made from audio code draw from a separate stream (g_AudioSeed), so the real-time dependent number of audio rand() calls (DirectSound
+// playback state) cannot move the gameplay stream. Audio code = a source file under .../Audio/ or a CGeneral::GetRandomNumber call whose return address is in NOTSA_LOCKSTEP_AUDIO_RVA=lo-hi[,lo-hi..] (hex image offsets).
+uint32_t* OnRand(const char* file, unsigned line) {
     auto& c = C();
-    if (!c.f || !g_started || g_nf > c.rlog) return;
+    if (!c.f) return nullptr;
     const auto f = Base(file);
-    std::fprintf(c.f, "R %u %.*s:%u\n", (unsigned)CTimer::m_FrameCounter, (int)f.size(), f.data(), line);
+    const void* caller = (f == "General.cpp") ? g_RandCaller : nullptr;
+    const uintptr_t crva = caller ? (uintptr_t)caller - (uintptr_t)GetModuleHandleA(nullptr) : 0;
+    uint32_t* alt = nullptr;
+    if ((c.pin & 128) && g_started) {
+        bool audio = std::string_view{file}.find("\\Audio\\") != std::string_view::npos || std::string_view{file}.find("/Audio/") != std::string_view::npos;
+        if (!audio && caller) for (const auto& r : c.audioRva) audio |= crva >= r.first && crva < r.second;
+        if (audio) { alt = &g_AudioSeed; g_AudioCalls++; }
+    }
+    if (!(c.pin & 32) || !g_started || g_nf > c.rlog || g_nf < c.rfrom) return alt;
+    std::fprintf(c.f, "R %u %.*s:%u%s", (unsigned)CTimer::m_FrameCounter, (int)f.size(), f.data(), line, alt ? "A" : "");
+    if (caller) std::fprintf(c.f, " +%x", (unsigned)crva);
+    if (g_Outer) { std::fprintf(c.f, " +%x", (unsigned)((uintptr_t)g_Outer - (uintptr_t)GetModuleHandleA(nullptr))); g_Outer = nullptr; }
+    if (c.rstack) { // NOTSA_LOCKSTEP_RSTACK=<n>: the first n caller return addresses as image-relative offsets (resolved by tools/standalone/replay_diff/resolve_stack.py against the pdb)
+        void* bt[16]{};
+        const auto n = CaptureStackBackTrace(1, std::min<unsigned>(c.rstack, 16), bt, nullptr);
+        const auto base = (uintptr_t)GetModuleHandleA(nullptr);
+        for (USHORT i = 0; i < n; i++) std::fprintf(c.f, " +%x", (unsigned)((uintptr_t)bt[i] - base));
+    }
+    std::fputc('\n', c.f);
+    return alt;
 }
 
 // srand hook (GameRand.h): pin bit 1 + the "S fc file:line seed" trace line (the original's S line carries the return address instead of file:line; rd_diff.py ignores that column)
@@ -106,7 +156,8 @@ void OnSrand(unsigned& seed, const char* file, unsigned line) {
     auto& c = C();
     if (!c.f) return;
     const auto f = Base(file);
-    if ((c.pin & 1) && (f == "app_game.cpp" || f == "LoadingScreen.cpp")) seed = 0x13572468;
+    // pin bit 1: time-/pointer-derived seeds -> a constant: GameInit, LoadSplashes (clock), CEntity::CreateEffects (this + days: a heap address, plan row 8), CPostEffects::Grain (OS_TimeMS, row 3)
+    if ((c.pin & 1) && (f == "app_game.cpp" || f == "LoadingScreen.cpp" || f == "Entity.cpp" || f == "PostEffects.cpp")) seed = 0x13572468;
     if (g_started) std::fprintf(c.f, "S %u %.*s:%u %08x\n", (unsigned)CTimer::m_FrameCounter, (int)f.size(), f.data(), line, seed);
 }
 } // namespace notsa::lockstep

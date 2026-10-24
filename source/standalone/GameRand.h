@@ -31,10 +31,15 @@ inline uint32_t g_RandCalls = 0; // rand() calls since the last REPLAY-DIFF trac
 // REPLAY-DIFF hook (Lockstep.cpp installs it only when NOTSA_LOCKSTEP_OUT is set; null = inert): may rewrite a srand() seed and logs the call with its source location
 inline void (*g_SrandHook)(unsigned& seed, const char* file, unsigned line) = nullptr;
 
-inline void (*g_RandHook)(const char* file, unsigned line) = nullptr; // REPLAY-DIFF pin bit 32 (per-call log "R fc file:line"); null = inert
+// REPLAY-DIFF pin bit 32/128 (per-call log "R fc file:line"; audio RNG partition): called for every rand() before the draw; returns null = draw from the main stream, else the seed of an alternate
+// stream (audio callers, so their real-time dependent call counts cannot move the gameplay stream). null function pointer = inert.
+inline uint32_t* (*g_RandHook)(const char* file, unsigned line) = nullptr;
+inline const void* g_RandCaller = nullptr; // set by CGeneral::GetRandomNumber (the wrapper hides its caller) while g_RandHook is installed; read by the hook
 inline int GameRand(const std::source_location loc = std::source_location::current()) {
+    if (g_RandHook) {
+        if (uint32_t* alt = g_RandHook(loc.file_name(), loc.line())) { *alt = RandStep(*alt); return (int)((*alt >> 16) & 0x7FFF); }
+    }
     g_RandCalls++;
-    if (g_RandHook) g_RandHook(loc.file_name(), loc.line());
     g_RandSeed = RandStep(g_RandSeed);
     return (int)((g_RandSeed >> 16) & 0x7FFF);
 }

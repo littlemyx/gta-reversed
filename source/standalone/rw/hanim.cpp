@@ -327,8 +327,8 @@ void RpHAnimKeyFrameBlend(void* voidOut, void* voidIn1, void* voidIn2, RwReal al
     float scale0 = 1.0f - alpha;
     float scale1 = alpha;
     if (!(cosom >= 0.999f)) {
-        const double omega  = rwtrig::ACos(cosom);
-        const double invSin = 1.0 / rwtrig::SinMinusPiToPi(omega);
+        const x87d omega  = rwtrig::ACos(cosom);
+        const x87d invSin = (x87d)1.0 / rwtrig::SinMinusPiToPi(omega);
         scale0 = (float)(rwtrig::SinMinusPiToPi(omega * scale0) * invSin);
         scale1 = (float)(rwtrig::SinMinusPiToPi(omega * alpha) * invSin);
     }

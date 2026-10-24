@@ -1,6 +1,6 @@
 // x87-exact helpers of the exe's inlined RenderWare macros, shared by rtquat.cpp and hanim.cpp (RpHAnimKeyFrameBlend inlines the same RwACos / RwSin
 // polynomials as RtQuatSetupSlerpCache). Constants are the exe's .rdata values; every float local / (float) cast is a store to memory in the exe, the
-// double temporaries are x87 registers (rounded to the 24-bit precision control the game runs with).
+// x87d temporaries are x87 registers (rounded to the 24-bit precision control the game runs with).
 #pragma once
 #include <bit>
 #include <cmath>
@@ -13,11 +13,11 @@ namespace rwtrig {
 #ifdef NOTSA_RW_UNIT_TEST
 inline bool g_exactSqrt = false;   // unit test only: the Unicorn recordings of rw_rtanim_rtquat_test substitute fsqrt for the table sqrt
 #endif
-inline double Sqrt(float x) {
+inline x87d Sqrt(float x) {
 #ifdef NOTSA_RW_UNIT_TEST
-    if (g_exactSqrt) return (double)std::sqrt(x);
+    if (g_exactSqrt) return (x87d)std::sqrt(x);
 #endif
-    return (double)rwx::Sqrt(x);
+    return (x87d)rwx::Sqrt(x);
 }   // RwSqrt 0x7EDB30: the exe's table based approximation (01r2; bit-exact vs the exe, rw_math_stream_test)
 constexpr uint32_t Bits(float f) { return std::bit_cast<uint32_t>(f); }
 constexpr float    FromBits(uint32_t u) { return std::bit_cast<float>(u); }
@@ -51,17 +51,17 @@ constexpr float K_S4 = FromBits(0x3638ef1bu);   // 0x86D2A8
 constexpr float K_S3 = FromBits(0x39500d01u);   // 0x86D2A4 (subtracted)
 constexpr float K_S2 = FromBits(0x3c088889u);   // 0x864E0C
 
-// numerator / denominator of the acos rational approximation r(z) = p(z) / q(z) (z in float memory, evaluated in double like the exe)
-inline double AcosRatio(double z) {
-    const double p = (((((K_pS5 * z + K_pS4) * z - K_pS3) * z + K_pS2) * z - K_pS1) * z + K_pS0) * z;
-    const double q = ((((z * K_qS4 - K_qS2) * z + K_qS3) * z - K_qS1) * z + K_1);
+// numerator / denominator of the acos rational approximation r(z) = p(z) / q(z) (z in float memory, evaluated in x87d like the exe)
+inline x87d AcosRatio(x87d z) {
+    const x87d p = (((((K_pS5 * z + K_pS4) * z - K_pS3) * z + K_pS2) * z - K_pS1) * z + K_pS0) * z;
+    const x87d q = ((((z * K_qS4 - K_qS2) * z + K_qS3) * z - K_qS1) * z + K_1);
     return p / q;
 }
 
 // RwSinMinusPiToPiMacro as the exe evaluates it (z = x*x, sin = x + (poly * (z*x)))
-inline double SinMinusPiToPi(double x) {
-    const double z = x * x;
-    const double poly = (((((K_S6 * z - K_S5) * z + K_S4) * z - K_S3) * z + K_S2) * z) - K_pS0;
+inline x87d SinMinusPiToPi(x87d x) {
+    const x87d z = x * x;
+    const x87d poly = (((((K_S6 * z - K_S5) * z + K_S4) * z - K_S3) * z + K_S2) * z) - K_pS0;
     return x + poly * (z * x);
 }
 
@@ -76,24 +76,24 @@ inline float ACos(float c) {
         if (absb <= 0x23000000u) {
             return FromBits(kPio2Bits);
         }
-        const double x = c;
-        const double r = AcosRatio(x * x);
-        return (float)((double)K_pio2_hi - ((double)c - ((double)K_pio2_lo - r * c)));
+        const x87d x = c;
+        const x87d r = AcosRatio(x * x);
+        return (float)((x87d)K_pio2_hi - ((x87d)c - ((x87d)K_pio2_lo - r * c)));
     }
     if ((int32_t)cb < 0) {   // c <= -0.5
-        const float  z = (float)(((double)c + (double)K_1) * (double)K_0p5);
-        const double s = Sqrt(z);
-        const double r = AcosRatio(z);
-        const double w = r * s - (double)K_pio2_lo;
-        return (float)((double)K_pi_hi - ((w + s) + (w + s)));   // the exe computes (r * s - pio2_lo) + s, doubles it and subtracts from pi
+        const float  z = (float)(((x87d)c + (x87d)K_1) * (x87d)K_0p5);
+        const x87d s = Sqrt(z);
+        const x87d r = AcosRatio(z);
+        const x87d w = r * s - (x87d)K_pio2_lo;
+        return (float)((x87d)K_pi_hi - ((w + s) + (w + s)));   // the exe computes (r * s - pio2_lo) + s, doubles it and subtracts from pi
     }
     // c >= 0.5
-    const float  z  = (float)(((double)K_1 - (double)c) * (double)K_0p5);
-    const double s  = Sqrt(z);
+    const float  z  = (float)(((x87d)K_1 - (x87d)c) * (x87d)K_0p5);
+    const x87d s  = Sqrt(z);
     const float  df = FromBits(Bits((float)s) & 0xfffff000u);
-    const double r  = AcosRatio(z);
-    const double cc = ((double)z - (double)df * df) / ((double)df + s);
-    const double v  = (r * s + cc) + df;
+    const x87d r  = AcosRatio(z);
+    const x87d cc = ((x87d)z - (x87d)df * df) / ((x87d)df + s);
+    const x87d v  = (r * s + cc) + df;
     return (float)(v + v);
 }
 } // namespace rwtrig

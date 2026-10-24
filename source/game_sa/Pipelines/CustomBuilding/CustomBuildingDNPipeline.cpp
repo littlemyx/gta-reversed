@@ -189,7 +189,9 @@ bool CCustomBuildingDNPipeline::CreatePipe() {
     ObjPipeline = CreateCustomObjPipe();
     return ObjPipeline != nullptr;
 #else
-    return true; // R-2: no FF ObjPipeline under GL3, ObjPipeline stays null and the atomics keep librw's stock pipeline (R-8: gl3 instance + CPU colour blend)
+    extern RxPipeline* NotsaGl3CreateBuildingDNPipe(); // R-8: portable/render/pipelines_saenv_game_gl3.cpp (gl3 default instance + env shader; the CPU colour blend is NVCPipelineProcess)
+    ObjPipeline = NotsaGl3CreateBuildingDNPipe();
+    return ObjPipeline != nullptr;
 #endif
 }
 

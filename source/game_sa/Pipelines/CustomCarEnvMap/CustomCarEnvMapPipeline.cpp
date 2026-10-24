@@ -106,7 +106,10 @@ bool CCustomCarEnvMapPipeline::CreatePipe() {
         return false;
     }
     std::memset(&g_GameLight, 0, sizeof(g_GameLight));
-#endif // portable (R-2): no FF ObjPipeline under GL3, ObjPipeline stays null and cars keep librw's stock pipeline (R-9); the data pools below are still needed by the EnvMat / SpecMat / EnvAtm plugins
+#else
+    extern RxPipeline* NotsaGl3CreateCarEnvPipe(); // R-9: portable/render/pipelines_saenv_game_gl3.cpp, a gl3 ObjPipeline (env map + specular shader)
+    ObjPipeline = NotsaGl3CreateCarEnvPipe();
+#endif // the data pools below are needed by the EnvMat / SpecMat / EnvAtm plugins
     m_gEnvMapPipeMatDataPool = new CustomEnvMapPipeMaterialDataPool(4096, "CustomEnvMapPipeMatDataPool");
     m_gEnvMapPipeAtmDataPool = new CustomEnvMapPipeAtomicDataPool(1024, "CustomEnvMapPipeAtmDataPool");
     m_gSpecMapPipeMatDataPool = new CustomSpecMapPipeMaterialDataPool(4096, "CustomSpecMapPipeMaterialDataPool");

@@ -26,7 +26,9 @@ bool CCustomBuildingPipeline::CreatePipe() {
     ObjPipeline = CreateCustomObjPipe();
     return ObjPipeline != nullptr;
 #else
-    return true; // R-2: no FF ObjPipeline under GL3, ObjPipeline stays null and building atomics keep librw's stock pipeline (R-8 creates the gl3 one)
+    extern RxPipeline* NotsaGl3CreateBuildingPipe(); // R-8: portable/render/pipelines_saenv_game_gl3.cpp
+    ObjPipeline = NotsaGl3CreateBuildingPipe();
+    return ObjPipeline != nullptr;
 #endif
 }
 

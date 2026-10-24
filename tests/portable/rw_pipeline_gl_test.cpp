@@ -19,6 +19,7 @@
 #include "portable/render/camera_gl3.h"
 #include "portable/render/raster_gl3.h"
 #include "portable/render/pipelines_gl3.h"
+#include "portable/render/pipelines_carenv_gl3.h"
 
 #include <SDL3/SDL.h>
 
@@ -439,6 +440,252 @@ void RunSynthetic() {
 }
 
 // ---------------------------------------------------------------------------------------------------------------------------------------------
+// part C (R-9 / R-8): the SA env-map + specular pipeline (pipelines_carenv_gl3.cpp) against CPU-computed expectations
+// ---------------------------------------------------------------------------------------------------------------------------------------------
+NotsaSaEnvMesh g_envMesh;
+void TestPrepare(rw::Atomic*, rw::Material*, NotsaSaEnvMesh& o) { o = g_envMesh; }
+
+RwTexture* MakeTexWH(int w, int h, const std::vector<RwRGBA>& c) { // row 0 first
+    RwRaster* r = RwRasterCreate(w, h, 32, rwRASTERTYPETEXTURE | rwRASTERFORMAT8888);
+    RwUInt8*  p = RwRasterLock(r, 0, rwRASTERLOCKWRITE | rwRASTERLOCKNOFETCH);
+    const int stride = RwRasterGetStride(r);
+    for (int y = 0; y < h; ++y) {
+        for (int x = 0; x < w; ++x) {
+            RwRGBA c4 = c[y * w + x];
+            *reinterpret_cast<RwUInt32*>(p + y * stride + x * 4) = RwRGBAToPixel(&c4, rwRASTERFORMAT8888);
+        }
+    }
+    RwRasterUnlock(r);
+    RwTexture* t = RwTextureCreate(r);
+    RwTextureSetFilterMode(t, rwFILTERNEAREST);
+    RwTextureSetAddressing(t, rwTEXTUREADDRESSCLAMP); // the pipeline must force WRAP for the env stage
+    return t;
+}
+void SetNormals(Quad& q, RwV3d n) {
+    RpGeometryLock(q.geo, rpGEOMETRYLOCKNORMALS);
+    for (int i = 0; i < 4; ++i) q.geo->morphTargets[0].normals[i] = n;
+    RpGeometryUnlock(q.geo);
+}
+void SetPrelit(Quad& q, RwRGBA c) {
+    RpGeometryLock(q.geo, rpGEOMETRYLOCKPRELIGHT);
+    for (int i = 0; i < 4; ++i) q.geo->colors[i] = c;
+    RpGeometryUnlock(q.geo);
+}
+Px DrawCenter(Quad& q) {
+    Begin();
+    RpAtomicRender(q.atomic);
+    End();
+    return At(g_pw / 2, g_ph / 2);
+}
+
+void RunSaEnv() {
+    std::printf("---- R-9 / R-8 part C: SA env map + specular pipeline vs CPU expectations ----\n");
+    char what[240];
+    SetLights(0.0f, 0.0f);
+    rw::ObjPipeline* pipe = NotsaGl3CreateSaEnvPipeline(TestPrepare, 0x9A);
+    Check(pipe != nullptr, "NotsaGl3CreateSaEnvPipeline");
+    const float Z = 4.0f;
+    const uint32_t d0 = NotsaGl3SaEnvDrawCount();
+
+    // ---- CAR_CAM: s = u + sx*nx/nz, t = v + sy*ny/nz  (camera space normal, x flipped view space; 8x1 and 1x8 gradient env textures, WRAP, nearest) ----
+    {
+        std::vector<RwRGBA> row, col;
+        for (int i = 0; i < 8; ++i) {
+            row.push_back({ (RwUInt8)(i * 30), (RwUInt8)(255 - i * 30), (RwUInt8)(i * 10), 255 });
+            col.push_back({ (RwUInt8)(i * 30), (RwUInt8)(255 - i * 30), (RwUInt8)(i * 10), 255 });
+        }
+        RwTexture* envRow = MakeTexWH(8, 1, row);
+        RwTexture* envCol = MakeTexWH(1, 8, col);
+        Quad q = MakeQuad(rpGEOMETRYPRELIT | rpGEOMETRYNORMALS, Z, nullptr, { 255, 255, 255, 255 }, { 0, 0, 0, 255 });
+        q.atomic->pipeline = pipe;
+        g_envMesh = NotsaSaEnvMesh{};
+        g_envMesh.mode = NOTSA_SAENV_CAR_CAM;
+        g_envMesh.factor = 0.5f;
+
+        // (a) facing normal: s = u, t = v. u = 0.4375 -> texel 3 of 8
+        g_envMesh.envTex = envRow;
+        g_envMesh.env[0] = 0.5f; g_envMesh.env[1] = 0.5f; g_envMesh.env[2] = 0.4375f; g_envMesh.env[3] = 0.0f;
+        SetNormals(q, { 0.0f, 0.0f, -1.0f });
+        Px p = DrawCenter(q);
+        auto texel = [&](int i) { return row[i]; };
+        std::snprintf(what, sizeof(what), "CAR_CAM facing normal: s = u = 0.4375 -> env texel 3 * 0.5 = (%d,%d,%d)", texel(3).red / 2, texel(3).green / 2, texel(3).blue / 2);
+        Check(Near(p, texel(3).red / 2, texel(3).green / 2, texel(3).blue / 2, 3), what, Str(p).c_str());
+
+        // (b) tilted in x: world normal (3,0,-8)/|.|: view-space nx = -3k (x flipped), nz = -8k -> nx/nz = 0.375; s = 0.25 + 0.5*0.375 = 0.4375 -> texel 3 again; and with u = 0.5 -> 0.6875 = texel 5
+        const float len = std::sqrt(9.0f + 64.0f);
+        SetNormals(q, { 3.0f / len, 0.0f, -8.0f / len });
+        g_envMesh.env[2] = 0.25f;
+        p = DrawCenter(q);
+        std::snprintf(what, sizeof(what), "CAR_CAM tilted normal (x flip + projective divide): s = 0.25 + 0.5*0.375 -> texel 3 (%d,%d,%d)", texel(3).red / 2, texel(3).green / 2, texel(3).blue / 2);
+        Check(Near(p, texel(3).red / 2, texel(3).green / 2, texel(3).blue / 2, 3), what, Str(p).c_str());
+        g_envMesh.env[2] = 0.5f;
+        p = DrawCenter(q);
+        std::snprintf(what, sizeof(what), "CAR_CAM u = 0.5 translation (nz row of the texture matrix): s = 0.6875 -> texel 5 (%d,%d,%d)", texel(5).red / 2, texel(5).green / 2, texel(5).blue / 2);
+        Check(Near(p, texel(5).red / 2, texel(5).green / 2, texel(5).blue / 2, 3), what, Str(p).c_str());
+        // wrap: u = 1.4375 -> same texel 3 (the exe forces D3DTADDRESS_WRAP, the texture itself says CLAMP)
+        g_envMesh.env[2] = 1.25f; // 1.25 + 0.1875 = 1.4375 -> frac 0.4375
+        p = DrawCenter(q);
+        Check(Near(p, texel(3).red / 2, texel(3).green / 2, texel(3).blue / 2, 3), "CAR_CAM s > 1 wraps (WRAP forced on the env sampler although the texture says CLAMP)", Str(p).c_str());
+
+        // (c) vertical: normal up (view +y): ny/nz = -c/b; t = v + sy*(-c/b); normal (0,3,-8): t = 0.5 - 0.5*0.375 = 0.3125 -> texel 2 of 8
+        g_envMesh.envTex = envCol;
+        g_envMesh.env[2] = 0.0f; g_envMesh.env[3] = 0.5f;
+        SetNormals(q, { 0.0f, 3.0f / len, -8.0f / len });
+        p = DrawCenter(q);
+        std::snprintf(what, sizeof(what), "CAR_CAM normal up samples ABOVE v: t = 0.5 - 0.5*0.375 = 0.3125 -> texel 2 (%d,%d,%d)", col[2].red / 2, col[2].green / 2, col[2].blue / 2);
+        Check(Near(p, col[2].red / 2, col[2].green / 2, col[2].blue / 2, 3), what, Str(p).c_str());
+
+        // (d) additive on top of the lit colour: prelit (60,60,60): result = prelit + env*factor (clamped)
+        SetPrelit(q, { 60, 60, 60, 255 });
+        SetNormals(q, { 0.0f, 0.0f, -1.0f });
+        g_envMesh.envTex = envRow; g_envMesh.env[0] = 0.5f; g_envMesh.env[1] = 0.5f; g_envMesh.env[2] = 0.4375f; g_envMesh.env[3] = 0.0f;
+        p = DrawCenter(q);
+        Check(Near(p, 60 + texel(3).red / 2, 60 + texel(3).green / 2, 60 + texel(3).blue / 2, 3), "CAR_CAM is additive (MULTIPLYADD): prelit 60 + env*0.5", Str(p).c_str());
+        g_envMesh.factor = 1.0f;
+        p = DrawCenter(q);
+        Check(Near(p, std::min(255, 60 + texel(3).red), std::min(255, 60 + texel(3).green), std::min(255, 60 + texel(3).blue), 3), "CAR_CAM factor 1.0: saturates at 255", Str(p).c_str());
+        g_envMesh.factor = 0.5f;
+
+        // (e) painted-over placeholder colour renders black (isSpecialColor), env still added
+        SetPrelit(q, { 255, 255, 255, 255 });
+        RpGeometry* g = q.geo;
+        g->flags |= rpGEOMETRYMODULATEMATERIALCOLOR;
+        RwRGBA mc{ 60, 255, 0, 255 };
+        RpMaterialSetColor(q.mat, &mc);
+        g_envMesh.mode = NOTSA_SAENV_NONE;
+        g_envMesh.envTex = nullptr;
+        p = DrawCenter(q);
+        Check(Near(p, 60, 255, 0, 2), "no env, no special colour: material colour modulates (60,255,0)", Str(p).c_str());
+        g_envMesh.blackColor = true;
+        // a mesh with neither env nor specular uses librw's default shader, which has no black override: the pipeline only honours blackColor on its own shader (specular / env)
+        g_envMesh.mode = NOTSA_SAENV_CAR_CAM; g_envMesh.envTex = envRow;
+        p = DrawCenter(q);
+        Check(Near(p, texel(3).red / 2, texel(3).green / 2, texel(3).blue / 2, 3), "blackColor: base colour black, only the env term remains", Str(p).c_str());
+        g_envMesh.blackColor = false;
+        FreeQuad(q);
+        RwTextureDestroy(envRow);
+        RwTextureDestroy(envCol);
+        Check(NoGlError("CAR_CAM"), "glGetError clean (CAR_CAM)");
+    }
+
+    // ---- CAR_WAVE: second UV set + (u,v) offset, blend by factor ----
+    {
+        const std::vector<RwRGBA> c = { { 255, 0, 0, 255 }, { 0, 255, 0, 255 }, { 0, 0, 255, 255 }, { 200, 100, 50, 255 } };
+        RwTexture* env = MakeTexWH(2, 2, c);
+        Quad q = MakeQuad(rpGEOMETRYPRELIT | rpGEOMETRYNORMALS | rpGEOMETRYTEXTURED2, Z, nullptr, { 255, 255, 255, 255 }, { 100, 100, 100, 255 });
+        q.atomic->pipeline = pipe;
+        RpGeometryLock(q.geo, rpGEOMETRYLOCKTEXCOORDS1);
+        for (int i = 0; i < 4; ++i) q.geo->texCoords[1][i] = { (i & 1) ? 1.0f : 0.0f, (i & 2) ? 1.0f : 0.0f };
+        RpGeometryUnlock(q.geo);
+        g_envMesh = NotsaSaEnvMesh{};
+        g_envMesh.mode = NOTSA_SAENV_CAR_WAVE;
+        g_envMesh.envTex = env;
+        g_envMesh.factor = 0.5f;
+        int px[4][2];
+        QuadPixels(1.0f, Z, px);
+        const char* nm[4] = { "TL", "TR", "BL", "BR" };
+        for (int i = 0; i < 4; ++i) {
+            Begin();
+            RpAtomicRender(q.atomic);
+            End();
+            const Px p = At(px[i][0], px[i][1]);
+            std::snprintf(what, sizeof(what), "CAR_WAVE %s quadrant = mix(prelit 100, env texel (%d,%d,%d), 0.5)", nm[i], c[i].red, c[i].green, c[i].blue);
+            Check(Near(p, (100 + c[i].red) / 2, (100 + c[i].green) / 2, (100 + c[i].blue) / 2, 3), what, Str(p).c_str());
+        }
+        // offset u = 0.5: columns swap (WRAP)
+        g_envMesh.env[0] = 0.5f;
+        Begin();
+        RpAtomicRender(q.atomic);
+        End();
+        Px p = At(px[0][0], px[0][1]);
+        Check(Near(p, (100 + c[1].red) / 2, (100 + c[1].green) / 2, (100 + c[1].blue) / 2, 3), "CAR_WAVE offset u = 0.5 shifts the env map by one texel column (TL shows TR)", Str(p).c_str());
+        // offset v = 0.5: rows swap
+        g_envMesh.env[0] = 0.0f; g_envMesh.env[1] = 0.5f;
+        Begin();
+        RpAtomicRender(q.atomic);
+        End();
+        p = At(px[0][0], px[0][1]);
+        Check(Near(p, (100 + c[2].red) / 2, (100 + c[2].green) / 2, (100 + c[2].blue) / 2, 3), "CAR_WAVE offset v = 0.5 (D3D v down) shifts by one texel row (TL shows BL)", Str(p).c_str());
+        FreeQuad(q);
+        RwTextureDestroy(env);
+        Check(NoGlError("CAR_WAVE"), "glGetError clean (CAR_WAVE)");
+    }
+
+    // ---- specular: per-vertex D3D FF model, non-local viewer, N.L > 0 only ----
+    {
+        Quad q = MakeQuad(rpGEOMETRYPRELIT | rpGEOMETRYNORMALS, Z, nullptr, { 255, 255, 255, 255 }, { 0, 0, 0, 255 });
+        q.atomic->pipeline = pipe;
+        SetNormals(q, { 0.0f, 0.0f, -1.0f });
+        auto expect = [&](float lx, float ly, float lz, float spec, float power) { // light vector in world space (towards the light); identity camera: view = (-x, y, z)
+            const float ll = std::sqrt(lx * lx + ly * ly + lz * lz);
+            const float L[3] = { -lx / ll, ly / ll, lz / ll };
+            const float N[3] = { 0.f, 0.f, -1.f };
+            const float ndl = N[0] * L[0] + N[1] * L[1] + N[2] * L[2];
+            if (ndl <= 0.f) return 0.f;
+            float H[3] = { L[0], L[1], L[2] - 1.f };
+            const float hl = std::sqrt(H[0] * H[0] + H[1] * H[1] + H[2] * H[2]);
+            const float ndh = std::max(0.f, -(H[2] / hl));
+            // + g_GameLight is an enabled D3D light too: diffuse 0.25 * N.L (ambient 0.75 * world ambient = 0 here), added before the texture stage
+            return std::min(1.f, std::min(1.f, 0.25f * ndl) + std::pow(ndh, power) * spec * 0.65f);
+        };
+        struct Case { float lx, ly, lz, spec, power; };
+        const Case cases[] = { { 0, 0, -1, 0.5f, 10 }, { 0.5f, 0, -1, 0.8f, 20 }, { 0, -0.3f, -1, 1.0f, 50 }, { 0, 0, 1, 1.0f, 10 }, { 1, 0, 0, 1.0f, 10 } };
+        for (const Case& k : cases) {
+            g_envMesh = NotsaSaEnvMesh{};
+            g_envMesh.spec = k.spec; g_envMesh.power = k.power;
+            g_envMesh.lightDir[0] = k.lx; g_envMesh.lightDir[1] = k.ly; g_envMesh.lightDir[2] = k.lz;
+            const Px p = DrawCenter(q);
+            const int e = (int)std::lround(expect(k.lx, k.ly, k.lz, k.spec, k.power) * 255.f);
+            std::snprintf(what, sizeof(what), "specular L=(%.1f,%.1f,%.1f) spec %.1f power %.0f: expected %d (D3D FF: Gouraud spec + 0.25 N.L of g_GameLight)", k.lx, k.ly, k.lz, k.spec, k.power, e);
+            Check(Near(p, e, e, e, 3), what, Str(p).c_str());
+        }
+        g_envMesh = NotsaSaEnvMesh{};
+        FreeQuad(q);
+        Check(NoGlError("specular"), "glGetError clean (specular)");
+    }
+
+    // ---- buildings: raw camera-space normal as uv (texture transform disabled), TFACTOR / DIFFUSE modulated ----
+    {
+        const std::vector<RwRGBA> c = { { 255, 0, 0, 255 }, { 0, 255, 0, 255 }, { 0, 0, 255, 255 }, { 200, 100, 50, 255 } };
+        RwTexture* env = MakeTexWH(2, 2, c);
+        Quad q = MakeQuad(rpGEOMETRYPRELIT | rpGEOMETRYNORMALS, Z, nullptr, { 255, 255, 255, 255 }, { 0, 0, 0, 255 });
+        q.atomic->pipeline = pipe;
+        // view-space normal (nx, ny) = (0.25, 0.25) -> TL texel; (0.75, 0.25) TR; (0.25, 0.75) BL; (0.75, 0.75) BR.  World x = -view x
+        const float nxy[4][2] = { { 0.25f, 0.25f }, { 0.75f, 0.25f }, { 0.25f, 0.75f }, { 0.75f, 0.75f } };
+        const char* nm[4] = { "TL", "TR", "BL", "BR" };
+        g_envMesh = NotsaSaEnvMesh{};
+        g_envMesh.mode = NOTSA_SAENV_BLD_CAM;
+        g_envMesh.envTex = env;
+        g_envMesh.factor = 0.5f;
+        for (int i = 0; i < 4; ++i) {
+            SetNormals(q, { -nxy[i][0], nxy[i][1], -0.5f });
+            const Px p = DrawCenter(q);
+            std::snprintf(what, sizeof(what), "BLD_CAM raw normal uv (%.2f,%.2f) -> texel %s * 0.5", nxy[i][0], nxy[i][1], nm[i]);
+            Check(Near(p, c[i].red / 2, c[i].green / 2, c[i].blue / 2, 3), what, Str(p).c_str());
+        }
+        // DN variant: env * lit vertex colour: prelit 128 -> + env*128/255 on top of 128
+        g_envMesh.mode = NOTSA_SAENV_BLD_CAM_DN;
+        SetPrelit(q, { 128, 128, 128, 255 });
+        SetNormals(q, { -0.25f, 0.25f, -0.5f });
+        Px p = DrawCenter(q);
+        Check(Near(p, 128 + 255 * 128 / 255, 128, 128, 3), "BLD_CAM_DN: env texel TL (255,0,0) * prelit 128 added to 128 -> (255,128,128)", Str(p).c_str());
+        // NVC mechanism through this pipeline: Lock(PRELIGHT)/Unlock changes the colours (CPU day/night blend), twice
+        g_envMesh.mode = NOTSA_SAENV_NONE;
+        SetPrelit(q, { 200, 50, 20, 255 });
+        p = DrawCenter(q);
+        Check(Near(p, 200, 50, 20, 2), "NVC: night colours written under RpGeometryLock(PRELIGHT) reach a plain mesh of the SA pipeline", Str(p).c_str());
+        g_envMesh.mode = NOTSA_SAENV_BLD_CAM_DN; // env mesh: the colour stream is re-uploaded too
+        SetPrelit(q, { 10, 20, 30, 255 });
+        p = DrawCenter(q);
+        Check(Near(p, 10 + 255 * 10 / 255, 20, 30, 3), "NVC: second update on an env mesh: prelit (10,20,30) + env TL (255,0,0)*prelit", Str(p).c_str());
+        FreeQuad(q);
+        RwTextureDestroy(env);
+        Check(NoGlError("buildings"), "glGetError clean (buildings)");
+    }
+    Check(NotsaGl3SaEnvDrawCount() > d0 + 20, "env / specular shader draws were counted");
+}
+
+// ---------------------------------------------------------------------------------------------------------------------------------------------
 // part B: real data
 // ---------------------------------------------------------------------------------------------------------------------------------------------
 struct ImgEntry { long offset, size; };
@@ -586,6 +833,20 @@ RwTexDictionary* LoadDict(const std::vector<uint8_t>& txd) {
     return d;
 }
 
+// R-9 / R-8 on real geometry: attach the SA env pipeline to every atomic and compare the frame with the stock-pipeline frame
+RwTexture* g_realEnv = nullptr;
+bool       g_realCar = true;
+void RealPrepare(rw::Atomic*, rw::Material* m, NotsaSaEnvMesh& o) {
+    o = NotsaSaEnvMesh{};
+    if (g_realCar) {
+        o.mode = NOTSA_SAENV_CAR_CAM; o.envTex = g_realEnv; o.env[0] = 0.5f; o.env[1] = 0.5f; o.factor = 0.4f;
+        o.spec = 0.6f; o.power = 30.0f; o.lightDir[0] = 0.3f; o.lightDir[1] = 0.5f; o.lightDir[2] = -0.8f;
+    } else if (m->texture) {
+        o.mode = NOTSA_SAENV_BLD_CAM_DN; o.envTex = g_realEnv; o.factor = 0.5f;
+    }
+}
+std::vector<uint8_t> g_baseFrame;
+
 struct Model { const char* img; const char* dff; const char* txd; const char* kind; };
 
 void RunReal(const std::string& gta, const std::string& dumpDir) {
@@ -605,7 +866,26 @@ void RunReal(const std::string& gta, const std::string& dumpDir) {
         { "player.img", "afro.dff", nullptr, "player.img hair" },
         { "player.img", "country.dff", nullptr, "player.img clothes" },
         { "gta3.img", "infernus.dff", "infernus.txd", "car (matfx env)" },
+        { "gta3.img", "sentinel.dff", "sentinel.txd", "car (matfx env)" },
     };
+    // models/generic/vehicle.txd: the game's shared car env textures (vehicleenvmap128 & co)
+    RwTexDictionary* vehDict = nullptr;
+    RwTexture*       vehEnv  = nullptr;
+    {
+        std::vector<uint8_t> buf;
+        if (FILE* f = std::fopen((models + "/generic/vehicle.txd").c_str(), "rb")) {
+            std::fseek(f, 0, SEEK_END); buf.resize((size_t)std::ftell(f)); std::fseek(f, 0, SEEK_SET);
+            buf.resize(std::fread(buf.data(), 1, buf.size(), f)); std::fclose(f);
+            if (buf.size() > 12) vehDict = LoadDict(buf);
+        }
+        if (vehDict) {
+            RwTexDictionaryForAllTextures(vehDict, [](RwTexture* t, void* d) -> RwTexture* {
+                if (std::strstr(RwTextureGetName(t), "env") && !*static_cast<RwTexture**>(d)) *static_cast<RwTexture**>(d) = t;
+                return t;
+            }, &vehEnv);
+        }
+        std::printf("  models/generic/vehicle.txd: %s, env texture %s\n", vehDict ? "loaded" : "not found", vehEnv ? RwTextureGetName(vehEnv) : "(none)");
+    }
     int idx = 0;
     for (const Model& m : list) {
         ImgDir& dir = std::strcmp(m.img, "gta3.img") == 0 ? gta3 : player;
@@ -640,6 +920,44 @@ void RunReal(const std::string& gta, const std::string& dumpDir) {
         std::snprintf(what, sizeof(what), "%s [%s]: %d atomics %d tris %d verts, skinned %d prelit %d textured mats %d matfx mats %d; coverage %.1f%% colours %d mean (%d,%d,%d)", m.dff, m.kind,
                       st.atomics, st.tris, st.verts, st.skinned, st.prelit, st.textured, st.matfx, best.coverage * 100.0, best.colours, best.mean.r, best.mean.g, best.mean.b);
         Check(best.glClean && best.coverage > 0.002 && best.colours >= 4, what);
+        if (!std::strcmp(m.kind, "car (matfx env)") || !std::strcmp(m.kind, "building")) {
+            // SA env pipeline on the same model (R-9 cars, R-8 buildings): same view, count the pixels that changed; the env texture is the model's own matfx env texture, else a synthetic checker
+            DrawClump(clump, 30.0f, "", 0.6f, 0.4f);
+            g_baseFrame = g_frame;
+            RwTexture* env = nullptr;
+            RpClumpForAllAtomics(clump, [](RpAtomic* a, void* d) -> RpAtomic* {
+                for (int k = 0; k < a->geometry->matList.numMaterials; ++k) {
+                    rw::MatFX* fx = rw::MatFX::get(a->geometry->matList.materials[k]);
+                    if (fx && fx->fx[0].env.tex && !*static_cast<RwTexture**>(d)) *static_cast<RwTexture**>(d) = fx->fx[0].env.tex;
+                }
+                return a;
+            }, &env);
+            RwTexture* synth = nullptr;
+            if (!env && vehEnv && !std::strcmp(m.kind, "car (matfx env)")) env = vehEnv;
+            if (!env) {
+                std::vector<RwRGBA> ck;
+                for (int i = 0; i < 64; ++i) ck.push_back(((i / 8 + i % 8) & 1) ? RwRGBA{ 255, 230, 200, 255 } : RwRGBA{ 40, 60, 120, 255 });
+                synth = env = MakeTexWH(8, 8, ck);
+            }
+            g_realEnv = env;
+            g_realCar = !std::strcmp(m.kind, "car (matfx env)");
+            static rw::ObjPipeline* realPipe = NotsaGl3CreateSaEnvPipeline(RealPrepare, 0x9B);
+            RpClumpForAllAtomics(clump, [](RpAtomic* a, void*) -> RpAtomic* { a->pipeline = realPipe; return a; }, nullptr);
+            const uint32_t d1 = NotsaGl3SaEnvDrawCount();
+            DrawResult r2 = DrawClump(clump, 30.0f, dumpDir + "/" + std::string(m.dff) + "_saenv.ppm", 0.6f, 0.4f);
+            size_t diff = 0, cov = 0, covBase = 0;
+            for (size_t i = 0; i < g_frame.size(); i += 4) {
+                if (!(std::abs(g_baseFrame[i] - 40) <= 1 && std::abs(g_baseFrame[i + 1] - 60) <= 1 && std::abs(g_baseFrame[i + 2] - 90) <= 1)) covBase++;
+                const int d = std::abs(g_frame[i] - g_baseFrame[i]) + std::abs(g_frame[i + 1] - g_baseFrame[i + 1]) + std::abs(g_frame[i + 2] - g_baseFrame[i + 2]);
+                if (d > 12) diff++;
+                if (!(std::abs(g_frame[i] - 40) <= 1 && std::abs(g_frame[i + 1] - 60) <= 1 && std::abs(g_frame[i + 2] - 90) <= 1)) cov++;
+            }
+            std::snprintf(what, sizeof(what), "%s: SA env pipeline (%s env texture %s): %u env draws, %zu of %zu covered pixels changed vs the stock pipeline (%.1f%%), coverage %.1f%% (stock %.1f%%), no GL error", m.dff,
+                          g_realCar ? "CAR_CAM + specular" : "BLD_CAM_DN", synth ? "synthetic" : (env == vehEnv ? "vehicle.txd" : "matfx"), NotsaGl3SaEnvDrawCount() - d1, diff, cov, cov ? 100.0 * diff / cov : 0.0, r2.coverage * 100.0, 100.0 * covBase / ((double)g_pw * g_ph));
+            Check(r2.glClean && NotsaGl3SaEnvDrawCount() > d1 && cov > 0 && diff * 100 >= cov * 1 && std::fabs((double)cov - (double)covBase) < 0.02 * (double)g_pw * g_ph, what);
+            if (synth) RwTextureDestroy(synth);
+            g_realEnv = nullptr;
+        }
         idx++;
         RpClumpDestroy(clump);
         if (dict) RwTexDictionaryDestroy(dict);
@@ -697,6 +1015,7 @@ int main() {
     std::string mk = "mkdir -p '" + dumpDir + "'";
     (void)std::system(mk.c_str());
     RunSynthetic();
+    RunSaEnv();
     if (haveData) {
         RunReal(gta, dumpDir);
     } else {

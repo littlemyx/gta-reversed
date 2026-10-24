@@ -39,7 +39,7 @@ PY
 )
 [ -n "$BASE" ] || { echo "no compile flags (build/PortableMac/compile_commands.json missing?)"; exit 1; }
 INC="-I$S/fakerw -I$S -I$S/portable/winshim -I$S/game_sa -I$S/game_sa/RenderWare -I$S/game_sa/RenderWare/rw -I${LIBRW_SRC:-$REPO/vendor/librw} -isystem $SDL3/include"
-FILES=("$REPO/tests/portable/rw_pipeline_gl_test.cpp" "$S/portable/render/pipelines_gl3.cpp" "$S/portable/render/texture_gl3.cpp" "$S/portable/render/engine_gl3.cpp" "$S/portable/render/platform_gl3.cpp"
+FILES=("$REPO/tests/portable/rw_pipeline_gl_test.cpp" "$S/portable/render/pipelines_gl3.cpp" "$S/portable/render/pipelines_carenv_gl3.cpp" "$S/portable/render/texture_gl3.cpp" "$S/portable/render/engine_gl3.cpp" "$S/portable/render/platform_gl3.cpp"
        "$S/portable/render/camera_gl3.cpp" "$S/portable/render/raster_gl3.cpp" "$S/portable/render/im2d_im3d_gl3.cpp" "$S/portable/path_resolve.cpp")
 # the renderer-neutral RW shim (everything of standalone/rw except the D3D9 fixed-function files that the portable build excludes, see PORTABLE_EXCLUDED_RENDER_FILES)
 for f in "$S"/standalone/rw/*.cpp; do

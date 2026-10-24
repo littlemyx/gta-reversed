@@ -299,6 +299,18 @@ bool CTaskSimpleHoldEntity::SetPedPosition(CPed* ped) {
     if (bUpdateEntityToHoldPosition) {
         if (m_pEntityToHold) {
             m_pEntityToHold->SetIsVisible(ped->GetIsVisible());
+#ifdef NOTSA_STATEHASH
+            if (std::getenv("NOTSA_RR_HOLDLOG")) { // RR diagnostics: every bone read of a held prop (first 80)
+                static int s_N = 0;
+                if (s_N++ < 80) {
+                    RpHAnimHierarchy* h = GetAnimHierarchyFromSkinClump(ped->GetRpClump());
+                    const int32 ai = h ? RpHAnimIDGetIndex(h, ped->m_apBones[m_nBoneFrameId]->BoneTag) : -2;
+                    const float* m = (h && ai >= 0) ? (const float*)&RpHAnimHierarchyGetMatrixArray(h)[ai] : nullptr;
+                    NOTSA_LOG_INFO("rrh frame={} ped={} model={} calledPreRender={} transOnly={} ai={} m0={:08x} m12={:08x} m13={:08x}", CTimer::GetFrameCounter(), (int)GetPedPool()->GetIndex(ped), (int)m_pEntityToHold->m_nModelIndex, (int)ped->bCalledPreRender,
+                        (int)((m_bBoneFlags & HOLD_ENTITY_UPDATE_TRANSLATION_ONLY) != 0), ai, m ? std::bit_cast<uint32_t>(m[0]) : 0u, m ? std::bit_cast<uint32_t>(m[12]) : 0u, m ? std::bit_cast<uint32_t>(m[13]) : 0u);
+                }
+            }
+#endif
             if (ped->bCalledPreRender) {
                 if (m_bBoneFlags & HOLD_ENTITY_UPDATE_TRANSLATION_ONLY) {
                     CVector entityToHoldPos = m_vecPosition;

@@ -1,0 +1,18 @@
+# Windows x64 host profile for the portable build (preset PortableWin64, option GTASA_PORTABLE): MSVC, static CRT, C++23.
+# Native Windows: tools/portable/win64/conan_install_win64.sh from an "x64 Native Tools" shell (or windows-latest). Under wine on a Mac/Linux box:
+# tools/portable/win64/conanprofile-wine.txt includes this file. MAC-WIN64 (.notes/reports/MAC-WIN64.md).
+[settings]
+os=Windows
+arch=x86_64
+build_type=Release
+compiler=msvc
+compiler.cppstd=23
+compiler.runtime=static
+compiler.version=195
+
+[options]
+# libusb in SDL3 builds through MSBuild (.vcxproj): not needed (the portable build uses SDL3 for window / GL / input only)
+sdl/*:libusb=False
+
+[replace_tool_requires]
+cmake/*: cmake/4.2.0

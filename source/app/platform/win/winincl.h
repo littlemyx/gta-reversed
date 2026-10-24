@@ -44,6 +44,12 @@
 #ifdef USE_DSOUND
     #include <mmsystem.h> // for DirectSound types
 #endif
+#ifdef NOTSA_PORTABLE
+#include "portable/audio_portable.h" // PortableWin64: MainImageRange()
+#include "portable/app_win32_compat.h" // PortableWin64: notsa::portable::Unsupported() only (the Win32 API itself is real)
+// D3DGAMMARAMP (d3d9types.h) without <d3d9.h>: librw's rwd3d.h defines the D3D vocabulary itself and rejects the real header
+struct D3DGAMMARAMP { WORD red[256]; WORD green[256]; WORD blue[256]; };
+#endif
 #else
 // Non-Windows (portable) build: the scalar types and the MSVC CRT names only; Win32 API calls are NOT shimmed (stream W)
 #include "portable/wintypes.h"

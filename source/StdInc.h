@@ -47,8 +47,11 @@
 #include <Tracy.hpp>
 
 // DirectX
-#ifdef _WIN32
+#if defined(_WIN32) && !defined(NOTSA_PORTABLE)
 #include <d3d9.h>
+#include <dinput.h>
+#elif defined(_WIN32)
+// PortableWin64: librw's rwd3d.h defines the D3D vocabulary itself and rejects <d3d9.h>; input is SDL3, but the game's structs still use DIJOYSTATE2
 #include <dinput.h>
 #endif
 

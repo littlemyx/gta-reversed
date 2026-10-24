@@ -55,7 +55,11 @@ if (${RE_PROJECT}_STANDALONE AND NOT ${RE_PROJECT}_STANDALONE_DUMP_HOOKS_ONLY)
     set(${RE_PROJECT}_STANDALONE_RUN_BUILD ON)
     # D7 (.notes/PHASE2_PLAN.md): the original is x87 code (no SSE) running at PC=24 (D3D9 CreateDevice without FPU_PRESERVE). Everything compiled
     # in this directory (game code, shim, librw, shim unit tests) uses x87 + strict FP: no SSE/SSE2 codegen, no /fp:fast, no FMA contraction.
-    if (MSVC)
+    if (MSVC AND CMAKE_SIZEOF_VOID_P EQUAL 8)
+        # MAC-WIN64: x64 has no x87 code generation (SSE2 is the baseline, /arch:IA32 does not exist); the x87 sites are the lifted portable branches (NOTSA_PORTABLE, MAC-F4a)
+        add_compile_options(/fp:precise)
+        add_compile_options(/wd4716)
+    elseif (MSVC)
         add_compile_options(/arch:IA32 /fp:precise)
         add_compile_options(/wd4716) # NOTSA_UNREACHABLE is a logging fall-through in the run build (Base.h): stub functions that consist only of it would otherwise be 'must return a value' errors
     endif()
@@ -80,7 +84,7 @@ endif()
 # Stream F (.notes/STREAM_F_PLAN.md): float-only translation units of the run build are compiled for SSE2 instead of the x87. They are written with
 # notsa::fp (Core/Fp.h): plain float arithmetic, bit-identical to the x87 at PC=24 unless an intermediate leaves the float exponent range, in which case the
 # F24 model takes over. No PCH (the PCH is built with /arch:IA32; /arch must match), no unity build.
-if (MSVC AND ${RE_PROJECT}_STANDALONE_RUN_BUILD)
+if (MSVC AND CMAKE_SIZEOF_VOID_P EQUAL 4 AND ${RE_PROJECT}_STANDALONE_RUN_BUILD)
     set_source_files_properties(game_sa/Collision/CollisionPrimitives.cpp PROPERTIES COMPILE_OPTIONS "/arch:SSE2" SKIP_UNITY_BUILD_INCLUSION ON)
 endif()
 
@@ -163,12 +167,22 @@ if (${RE_PROJECT}_PORTABLE)
         "${CMAKE_CURRENT_SOURCE_DIR}/toolsmenu/DebugModules/HooksDebugModule/*.c*"
     )
     list(APPEND PORTABLE_EXCLUDED_FILES dllmain.cpp PluginBase.cpp)
-    # MAC-W0: Win32-only translation units that have a portable counterpart in source/portable/*.cpp (oswrapper_win.cpp -> portable/oswrapper_portable.cpp)
-    list(APPEND PORTABLE_EXCLUDED_FILES oswrapper/oswrapper_win.cpp)
-    # MAC-W0: Win32 overlapped-I/O CdStream -> portable/cdstream_portable.cpp; Media Foundation / WMA user-track decoders -> portable/audio_decoders_portable.cpp
-    list(APPEND PORTABLE_EXCLUDED_FILES game_sa/CdStreamInfo.cpp game_sa/Audio/Loaders/AEMFDecoder.cpp game_sa/Audio/Loaders/AEWMADecoder.cpp)
+    if (NOT WIN32)
+        # MAC-W0: Win32-only translation units that have a portable counterpart in source/portable/*.cpp (oswrapper_win.cpp -> portable/oswrapper_portable.cpp)
+        list(APPEND PORTABLE_EXCLUDED_FILES oswrapper/oswrapper_win.cpp)
+        # MAC-W0: Win32 overlapped-I/O CdStream -> portable/cdstream_portable.cpp; Media Foundation / WMA user-track decoders -> portable/audio_decoders_portable.cpp
+        list(APPEND PORTABLE_EXCLUDED_FILES game_sa/CdStreamInfo.cpp game_sa/Audio/Loaders/AEMFDecoder.cpp game_sa/Audio/Loaders/AEWMADecoder.cpp)
+    else()
+        # MAC-WIN64: the portable build on Windows (x64 MSVC) uses the real Windows headers and the original Win32 OS services (oswrapper_win.cpp, overlapped CdStream, Media Foundation /
+        # WMA decoders, DirectSound), so the POSIX / OpenAL stand-ins in source/portable are not part of it. Everything else in source/portable (SDL3 app layer, GL3 render) is shared.
+        list(APPEND PORTABLE_EXCLUDED_FILES portable/oswrapper_portable.cpp portable/cdstream_portable.cpp portable/audio_decoders_portable.cpp portable/dsound_al.cpp
+             portable/app_debug_posix.cpp portable/link_aliases.cpp portable/app_main.cpp portable/statehash.cpp)
+    endif()
     # MAC-W0a (app/): Win32-only app/platform TUs replaced by portable/app_*.cpp
-    set(PORTABLE_EXCLUDED_APP_FILES app/platform/win/VideoPlayer/VideoPlayer.cpp app/platform/win/VideoModeSelectDialog.cpp extensions/debug.cpp)
+    set(PORTABLE_EXCLUDED_APP_FILES app/platform/win/VideoPlayer/VideoPlayer.cpp app/platform/win/VideoModeSelectDialog.cpp)
+    if (NOT WIN32)
+        list(APPEND PORTABLE_EXCLUDED_APP_FILES extensions/debug.cpp) # DbgHelp symbolication -> portable/app_debug_posix.cpp (Windows keeps the original: x64 DbgHelp)
+    endif()
     list(APPEND PORTABLE_EXCLUDED_FILES ${PORTABLE_EXCLUDED_APP_FILES})
     # MAC-R2 (stream R, .notes/STREAM_R_PLAN.md): the D3D9 fixed-function render facade has no GL counterpart; librw's gl3 pipelines replace it.
     # Symbols still referenced from kept TUs are stubbed in portable/render/rw_stubs_gl3.cpp (honest Unsupported + failure), see tools/portable/rw_symbol_audit.py.
@@ -239,9 +253,14 @@ endif()
 if (${RE_PROJECT}_PORTABLE)
     # Provisional portable flag set (C-8 decides the final one): the front-end flags the census (tools/standalone/clang_census.py) uses, plus the codegen flags that keep the
     # original's semantics (no FMA contraction, MSVC bit-field layout, signed char, no TBAA/overflow tricks). Warnings are not errors here (C-3 audits them).
+    if (MSVC)
+        # MAC-WIN64: cl.exe x64. /fp:precise is the default (SSE2, no x87 on x64: the x87 sites take the portable lifted branches), /Zc:preprocessor like the Win32 build, warnings off like -w
+        target_compile_options(${RE_PROJECT_LIB_NAME} PRIVATE "$<$<COMPILE_LANGUAGE:CXX>:/MP;/Zc:preprocessor;/w;/EHsc;/bigobj>")
+    else()
     target_compile_options(${RE_PROJECT_LIB_NAME} PRIVATE
         "$<$<COMPILE_LANGUAGE:CXX>:-fms-extensions;-mms-bitfields;-fno-delayed-template-parsing;-ffp-contract=off;-fsigned-char;-fno-strict-aliasing;-fwrapv;-w>"
     )
+    endif()
 else()
 target_compile_options(${RE_PROJECT_LIB_NAME} PRIVATE
     "$<$<CXX_COMPILER_ID:MSVC>:/MP;/Zc:preprocessor;/W3;/wd4200;/wd4251;/wd4275;/wd4996;/wd26495;/wd26812;/wd28159>"
@@ -312,7 +331,12 @@ set_target_properties(${RE_PROJECT_LIB_NAME}
     COMPILE_WARNING_AS_ERROR ON
 )
 if (${RE_PROJECT}_PORTABLE)
-    set_target_properties(${RE_PROJECT_LIB_NAME} PROPERTIES SUFFIX "" COMPILE_WARNING_AS_ERROR OFF)
+    if (WIN32)
+        set_target_properties(${RE_PROJECT_LIB_NAME} PROPERTIES COMPILE_WARNING_AS_ERROR OFF)
+        target_link_options(${RE_PROJECT_LIB_NAME} PRIVATE "/SUBSYSTEM:WINDOWS")
+    else()
+        set_target_properties(${RE_PROJECT_LIB_NAME} PROPERTIES SUFFIX "" COMPILE_WARNING_AS_ERROR OFF)
+    endif()
 else()
 target_link_options(${RE_PROJECT_LIB_NAME} PRIVATE "/SUBSYSTEM:WINDOWS")
 endif()
@@ -2605,6 +2629,10 @@ if (${RE_PROJECT}_PORTABLE)
         libjpeg-turbo::libjpeg-turbo
         Boost::headers
     )
+    if (WIN32)
+        # MAC-WIN64: import libraries of the Win32 services that stay native on Windows (timers / MF decoders / DirectInput-free input path is SDL3)
+        target_link_libraries(${RE_PROJECT_LIB_NAME} PRIVATE Winmm dxguid ole32 oleaut32 uuid shlwapi version)
+    endif()
 else()
 target_link_libraries(${RE_PROJECT_LIB_NAME} PRIVATE
     nlohmann_json::nlohmann_json
@@ -2703,8 +2731,8 @@ target_compile_definitions(${RE_PROJECT_LIB_NAME} PRIVATE
 )
 if (NOT ${RE_PROJECT}_PORTABLE)
     target_compile_definitions(${RE_PROJECT_LIB_NAME} PRIVATE USE_D3D9) # TODO (portable: librw GL3, no D3D9 code path)
-else()
-    # The ~10 files that #include <Windows.h> directly get the shim (source/portable/winshim/Windows.h -> wintypes.h + crt.h)
+elseif (NOT WIN32)
+    # The ~10 files that #include <Windows.h> directly get the shim (source/portable/winshim/Windows.h -> wintypes.h + crt.h). On Windows (PortableWin64) the real SDK headers are used.
     target_include_directories(${RE_PROJECT_LIB_NAME} PRIVATE portable/winshim)
 endif()
 # D8 (.notes/PHASE2_STATUS.md "D8 defaults"): the runnable standalone build reproduces the ORIGINAL behaviour, so no FIX_BUGS (EXTRA_DEBUG_FEATURES only adds the occlusion debug-module header; the debug UI itself is disabled in source)

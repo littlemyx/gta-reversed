@@ -234,7 +234,7 @@ bool CPedAttractor::BroadcastDeparture(CPed* ped) {
     if (it == m_AttractPeds.end()) {
         return false;
     }
-    const auto idx = rng::distance(m_AttractPeds.begin(), it);
+    const auto idx = (int32)rng::distance(m_AttractPeds.begin(), it);
     for (auto i = idx + 1; i < (int32)(m_AttractPeds.size()); ++i) { // 0x5EF1C6
         SetTaskForPed(m_AttractPeds[i], new CTaskComplexSequence{
             new CTaskSimpleStandStill{ 2000 * i },

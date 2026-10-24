@@ -41,4 +41,18 @@ inline std::pair<uintptr_t, uintptr_t> MainImageRange() {
 #endif
 }
 } // namespace notsa::portable
+#else
+// MAC-WIN64: Windows x64 portable build: the PE image of the exe (what IsInExeImage / the audio stats read through GetModuleHandle in the Win32 build)
+#include <cstdint>
+#include <utility>
+namespace notsa::portable {
+inline std::pair<uintptr_t, uintptr_t> MainImageRange() {
+    static const auto range = [] {
+        const auto base = reinterpret_cast<uintptr_t>(::GetModuleHandleW(nullptr));
+        const auto nt   = reinterpret_cast<const IMAGE_NT_HEADERS*>(base + reinterpret_cast<const IMAGE_DOS_HEADER*>(base)->e_lfanew);
+        return std::pair{ base, base + (uintptr_t)nt->OptionalHeader.SizeOfImage };
+    }();
+    return range;
+}
+} // namespace notsa::portable
 #endif

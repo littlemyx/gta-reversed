@@ -333,7 +333,7 @@ CTaskAllocator* CGroupEventHandler::ComputeResponseLeaderExitedCar(const CEventE
                     new CTaskComplexLeaveCar{
                         mveh,
                         eTargetDoor::TARGET_DOOR_FRONT_LEFT,
-                        CGeneral::GetRandomNumberInRange(-250, 250) + (i + 1) * 500, // SEE NOTE
+                        CGeneral::GetRandomNumberInRange(-250, 250) + (int32)((i + 1) * 500), // SEE NOTE
                         false,
                         false
                     },
@@ -350,7 +350,7 @@ CTaskAllocator* CGroupEventHandler::ComputeResponseLeaderExitedCar(const CEventE
                 SetResponseTask(CTaskComplexLeaveCar{
                      mveh,
                     eTargetDoor::TARGET_DOOR_FRONT_LEFT,
-                    CGeneral::GetRandomNumberInRange(-250, 250) + i * 500, // SEE NOTE
+                    CGeneral::GetRandomNumberInRange(-250, 250) + (int32)(i * 500), // SEE NOTE
                     false,
                     false
                 });

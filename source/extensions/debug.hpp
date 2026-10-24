@@ -4,7 +4,7 @@
 #include <windows.h>
 #include <thread>
 #include <chrono>
-#ifndef NOTSA_PORTABLE
+#if !defined(NOTSA_PORTABLE) || defined(_WIN32)
 #include <debugapi.h>
 #endif
 #include <cstdio>
@@ -24,7 +24,7 @@ inline void WaitForDebugger() {
 }
 
 inline void DisplayConsole() {
-#ifdef NOTSA_PORTABLE
+#if defined(NOTSA_PORTABLE) && !defined(_WIN32)
     // Nothing to do: stdin/stdout/stderr already are the terminal the process was started from (no console window to allocate/attach, no code page to set)
 #else
     // Support UTF-8 IO for Windows Terminal. (or CMD if a supported font is used)
@@ -51,7 +51,7 @@ inline void DisplayConsole() {
 /*!
  * @return function information (module, function name, line number) at the given address.
  */
-#ifdef NOTSA_PORTABLE
+#if defined(NOTSA_PORTABLE) && !defined(_WIN32)
 std::string GetFunctionInfoAtAddress(uintptr_t address, bool compact = false, HANDLE hProcess = nullptr); // portable/app_debug_posix.cpp (dladdr); hProcess is ignored
 #else
 std::string GetFunctionInfoAtAddress(uintptr_t address, bool compact = false, HANDLE hProcess = GetCurrentProcess());

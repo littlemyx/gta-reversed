@@ -1,5 +1,31 @@
 // MAC-BOOT1 / W-7: see path_resolve.h. Standalone on purpose (no StdInc): the host test compiles this file directly.
-#ifdef NOTSA_PORTABLE
+#if defined(NOTSA_PORTABLE) && defined(_WIN32)
+// MAC-WIN64: Windows paths are what the game builds ('\\' separators, case-insensitive file system, CRT text mode): nothing to resolve.
+#include "path_resolve.h"
+
+#include <io.h>
+#include <direct.h>
+
+namespace notsa::portable {
+std::string ResolvePathFrom(std::string_view baseDir, std::string_view path) {
+    if (baseDir.empty() || (path.size() > 1 && (path[1] == ':' || path[0] == '\\' || path[0] == '/'))) {
+        return std::string{path};
+    }
+    std::string r{baseDir};
+    if (!r.empty() && r.back() != '\\' && r.back() != '/') {
+        r += '\\';
+    }
+    r += path;
+    return r;
+}
+std::FILE* OpenResolved(const char* path, const char* mode) { return std::fopen(path, mode); }
+std::FILE* OpenResolvedText(const char* path, const char* mode) { return std::fopen(path, mode); } // the MSVC CRT is the reference: native text mode
+void*      RwFopenResolved(const char* path, const char* mode) { return std::fopen(path, mode); }
+int        ChdirResolved(const char* path) { return ::_chdir(path); }
+bool       ExistsResolved(const char* path) { return ::_access(path, 0) == 0; }
+void       ClearPathCache() {}
+} // namespace notsa::portable
+#elif defined(NOTSA_PORTABLE)
 #include "path_resolve.h"
 
 #include <cerrno>

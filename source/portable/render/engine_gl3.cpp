@@ -29,7 +29,7 @@
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
-#include <strings.h>
+#include "portable/posix_compat_win.h"
 #include <vector>
 
 #include "engine_gl3.h"

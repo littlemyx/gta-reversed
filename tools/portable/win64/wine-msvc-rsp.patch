@@ -1,0 +1,47 @@
+--- msvc/bin/x64/wine-msvc.sh.bak	2026-10-24 15:47:16
++++ msvc/bin/x64/wine-msvc.sh	2026-10-24 15:47:16
+@@ -57,6 +57,44 @@
+ 	ARGS+=("$a")
+ done
+ 
++# [PATCH] Expand @response files: convert unix paths inside to z: paths (link/cl can't take raw /Users/... from an rsp)
++conv_path() {
++	local a=$1 path=
++	case "$a" in
++	[-/][A-Za-z]/*) path=${a#??} ;;
++	[-/][A-Za-z][A-Za-z]/*) path=${a#???} ;;
++	[-/][A-Za-z][A-Za-z][A-Za-z]*:/*) path=${a#*:} ;;
++	/*) path=$a ;;
++	esac
++	if [ -n "$path" ] && [ -d "$(dirname "$path")" ] && [ "$(dirname "$path")" != "/" ]; then
++		a=${a%$path}z:$path
++	fi
++	printf '%s' "$a"
++}
++NEWARGS=()
++for a in "${ARGS[@]}"; do
++	case "$a" in
++	@*)
++		rsp=${a#@}
++		[ -f "$rsp" ] || { NEWARGS+=("$a"); continue; }
++		tmp=$(mktemp "${TMPDIR:-/tmp}/wine-msvc-rsp.XXXXXX")
++		while IFS= read -r line || [ -n "$line" ]; do
++			line=${line%$'\r'}
++			first=${line%% *}
++			if [ "$first" = "$line" ]; then
++				printf '%s\n' "$(conv_path "$line")" >>"$tmp"
++			else
++				out=
++				for tok in $line; do out="$out $(conv_path "$tok")"; done
++				printf '%s\n' "${out# }" >>"$tmp"
++			fi
++		done <"$rsp"
++		a="@z:$tmp"
++		;;
++	esac
++	NEWARGS+=("$a")
++done
++ARGS=("${NEWARGS[@]}")
+ WINE=$(command -v wine64 || command -v wine || false)
+ export WINEDEBUG=${WINEDEBUG:-"-all"}
+ 

@@ -275,7 +275,7 @@ size_t InteriorManager_c::GetVisibleEffects(InteriorEffectInfo_t* intFxInfos, ui
                 .Entity   = e,
                 .NumFx    = 1,
                 .Effects  = { ifx },
-                .FxIds    = { i },
+                .FxIds    = { (uint32)i },
                 .IsCulled = false,
             };
 

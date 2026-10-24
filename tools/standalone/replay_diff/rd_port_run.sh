@@ -39,7 +39,7 @@ wait:$((SECS*1000))
 cmd:quit
 EOR
 LOCK="$HERE/../gpu_locked.sh"; HELD=0
-cleanup() { taskkill //F //IM gta_reversed.exe >/dev/null 2>&1; [ "$HELD" = 1 ] && "$LOCK" --release $$; HELD=0; }
+cleanup() { if [ "$HELD" = 1 ]; then taskkill //F //IM gta_reversed.exe >/dev/null 2>&1; "$LOCK" --release $$; HELD=0; fi; }   # kill only while WE own gpu.lock
 trap cleanup EXIT
 "$LOCK" --acquire "REPLAY-DIFF port $TAG" $$; HELD=1
 cd "$DATA" || exit 2
@@ -47,7 +47,7 @@ taskkill //F //IM gta_reversed.exe >/dev/null 2>&1
 rm -f gta_reversed.exe standalone*.log; rm -rf logs; cp "$EXE" gta_reversed.exe
 (
   export NOTSA_STANDALONE_SKIP_VIDEOS=1 NOTSA_STANDALONE_MUTE=1 NOTSA_STANDALONE_INPUT="$OUT/$TAG.route" NOTSA_STANDALONE_USERDIR="$UD" NOTSA_STANDALONE_WINDOWED=960x600 NOTSA_STANDALONE_NOVSYNC=1 NOTSA_STANDALONE_NOPRESENT=1
-  export NOTSA_LOCKSTEP_OUT="$(cygpath -w "$OUT/$TAG.trace")" NOTSA_LOCKSTEP_PIN="$PIN" NOTSA_LOCKSTEP_STEP=16 NOTSA_LOCKSTEP_MAXF=6000
+  export NOTSA_LOCKSTEP_OUT="$(cygpath -w "$OUT/$TAG.trace")" NOTSA_LOCKSTEP_PIN="$PIN" NOTSA_LOCKSTEP_STEP=16 NOTSA_LOCKSTEP_MAXF="${NOTSA_LOCKSTEP_MAXF:-6000}"
   ./gta_reversed.exe > "$OUT/$TAG.run.out" 2>&1 &
   echo $! > "$OUT/$TAG.pid"
 )

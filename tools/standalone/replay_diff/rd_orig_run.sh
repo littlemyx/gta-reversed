@@ -18,16 +18,19 @@ cp -f "$RDX/vorbisFile.dll" "$PX/d3d9.dll" "$PX/dsound.dll" "$DIR/"
 # input: the header of orig/cheats.scn up to the game start (gstate=9), then a quiet wait
 awk -v d="$GRD/orig" '/^#include / { f = d "/" $2 ".inc"; while ((getline l < f) > 0) print l; close(f); next } { print }' "$GRD/orig/cheats.scn" | awk '{print} /^until:gstate=9/ {exit}' > "$OUT/$TAG.script"
 echo "wait:$((SECS*1000))" >> "$OUT/$TAG.script"
-BK="$OUT/$TAG.userfiles_backup"; docs_backup "$BK"
+BK="$OUT/$TAG.userfiles_backup"
 HELD=0
-cleanup() {
-  taskkill //F //IM gta_sa.exe >/dev/null 2>&1
-  docs_restore "$BK"
-  [ "$HELD" = 1 ] && "$HERE/../gpu_locked.sh" --release $$; HELD=0
+cleanup() {   # only what this script holds: the game is killed and the Documents files restored only while WE own gpu.lock (another owner may be running a game)
+  if [ "$HELD" = 1 ]; then
+    taskkill //F //IM gta_sa.exe >/dev/null 2>&1; taskkill //F //IM inputdrv.exe >/dev/null 2>&1
+    docs_restore "$BK"
+    "$HERE/../gpu_locked.sh" --release $$; HELD=0
+  fi
 }
 trap cleanup EXIT
 "$HERE/../gpu_locked.sh" --acquire "REPLAY-DIFF orig $TAG" $$
 HELD=1
+docs_backup "$BK"   # after the lock: nobody else is running an original-exe leg that writes the same directory
 taskkill //F //IM gta_sa.exe >/dev/null 2>&1
 "$PY" -I - "$DOCS_USERFILES/gta_sa.set" "$GRD/orig/gta_sa.set.good" <<'EOPY'
 import sys
@@ -37,7 +40,7 @@ open(sys.argv[1], 'wb').write(b)
 EOPY
 cd "$DIR" || exit 2
 rm -rf logs; mkdir -p movies
-export D3D9PX_OUT="$(cygpath -w "$OUT/$TAG.px.bin")" D3D9PX_NOVSYNC=1 RD_OUT="$(cygpath -w "$OUT/$TAG.trace")" RD_PIN="$PIN" RD_STEP=16 RD_MAXF=6000
+export D3D9PX_OUT="$(cygpath -w "$OUT/$TAG.px.bin")" D3D9PX_NOVSYNC=1 RD_OUT="$(cygpath -w "$OUT/$TAG.trace")" RD_PIN="$PIN" RD_STEP=16 RD_MAXF="${RD_MAXF:-6000}"
 ./gta_sa.exe > "$OUT/$TAG.run.out" 2>&1 &
 sleep 5
 tasklist | grep -qi gta_sa.exe || { echo "rd_orig_run: gta_sa.exe did not start"; exit 2; }

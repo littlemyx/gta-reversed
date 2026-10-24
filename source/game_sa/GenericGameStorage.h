@@ -103,11 +103,11 @@ public:
     static bool RestoreForStartLoad();
 
     // NOTSA
-    // Typed access. Under NOTSA_PORTABLE a type with a notsa::FileRecord<T> specialisation goes through its fixed-width file record (FileRecord.hpp, P-2);
-    // otherwise (and always in the MSVC build) the raw sizeof(T) copy of the exe. The 64-bit scalar guard is a compile-time check (vacuous on x86).
+    // Typed access. A type with a notsa::FileRecord<T> specialisation goes through its fixed-width file record (FileRecord.hpp, P-2) on EVERY platform (SAVE-LOAD: on Win32 the raw
+    // sizeof(T) copy wrote ASLR-dependent process addresses into the save - CRunningScript::m_BaseIP, m_IP, m_IPStack - where the exe has the fixed 0xA49960-based ones; the record has x86 layout
+    // static_asserts, so on Win32 it is the exe's record with the pointer fields as exe VAs); every other type is the raw sizeof(T) copy of the exe. The 64-bit scalar guard is a compile-time check (vacuous on x86).
     template<typename T>
     static bool LoadDataFromWorkBuffer(T& data) NOTSA_FILE_SCALAR_GUARD(T) {
-#ifdef NOTSA_PORTABLE
         if constexpr (notsa::HasFileRecord<T>) {
             typename notsa::FileRecord<T>::Type rec{};
             if (!LoadDataFromWorkBuffer((void*)&rec, (int32)sizeof(rec))) {
@@ -115,9 +115,7 @@ public:
             }
             notsa::FileRecord<T>::FromFile(data, rec);
             return true;
-        } else
-#endif
-        {
+        } else {
             if constexpr (sizeof(void*) > 4) { notsa::FileScalarCheck<T>(); }
             return LoadDataFromWorkBuffer((void*)&data, sizeof(T));
         }
@@ -126,23 +124,16 @@ public:
     template<typename T>
     static T LoadDataFromWorkBuffer() NOTSA_FILE_SCALAR_GUARD(T) {
         T data;
-#ifdef NOTSA_PORTABLE
         LoadDataFromWorkBuffer(data);
-#else
-        LoadDataFromWorkBuffer((void*)&data, sizeof(T));
-#endif
         return data;
     }
 
     template<typename T>
     static bool SaveDataToWorkBuffer(const T& data) NOTSA_FILE_SCALAR_GUARD(T) {
-#ifdef NOTSA_PORTABLE
         if constexpr (notsa::HasFileRecord<T>) {
             auto rec = notsa::FileRecord<T>::ToFile(data);
             return SaveDataToWorkBuffer((void*)&rec, (int32)sizeof(rec));
-        } else
-#endif
-        {
+        } else {
             if constexpr (sizeof(void*) > 4) { notsa::FileScalarCheck<T>(); }
             return SaveDataToWorkBuffer(const_cast<void*>((const void*)&data), sizeof(T));
         }

@@ -687,8 +687,207 @@ void RunSaEnv() {
 }
 
 // ---------------------------------------------------------------------------------------------------------------------------------------------
-// part B: real data
+// part D (R-12): lighting against a CPU reference of the D3D9 fixed-function model the Win32 exe uses
+//   exe 0x7574E0 (stock lighting callback: AmbientSaturated = sum of the ambient lights, directional lights only with NORMALS, none without the LIGHT flag),
+//   RwD3D9SetSurfaceProperties 0x7FC4D0 (material / emissive / ambient sources, global ambient = the material colour for prelit + MODULATE), the car
+//   pipeline's extra D3D light (g_GameLight: diffuse 0.25, ambient 0.75, CCustomCarEnvMapPipeline::PreRenderUpdate); D3D adds
+//   Emissive + AmbientSource * (GlobalAmbient + light ambient) + sum(Diffuse * Ld * max(N.-d, 0)) and saturates ONCE at the end.
+// The reference is written the D3D way (material sources), not as the simplified shader product, so it is an independent check.
 // ---------------------------------------------------------------------------------------------------------------------------------------------
+struct LCase {
+    const char* name;
+    bool        lightFlag, prelit, modulate;
+    RwRGBA      mat, pre;
+    float       ka, kd;
+    float       amb[3];
+    float       d1[3];          // colour of the first directional light (travel direction +Z)
+    float       d2[3];          // colour of the second directional light (travel direction d2dir)
+    float       d2dir[3];       // (unused: the direction is read from the light's frame)
+    float       pad[3];
+    float       n[3];           // vertex normal (unit)
+    bool        car;            // SA car pipeline, specular material (extra D3D light 1)
+};
+
+void RefD3D(const LCase& c, const float d2at[3], float out[3]) {
+    const float inv = 1.0f / 255.0f;
+    const float col[3] = { c.mat.red * inv, c.mat.green * inv, c.mat.blue * inv };
+    const float pre[3] = { c.pre.red * inv, c.pre.green * inv, c.pre.blue * inv };
+    const bool  mod = c.modulate && !(c.mat.red == 255 && c.mat.green == 255 && c.mat.blue == 255 && c.mat.alpha == 255);
+    if (!c.lightFlag) { // D3DRS_LIGHTING off: the vertex colour (x TFACTOR = material colour when modulating), black without prelit colours
+        for (int k = 0; k < 3; ++k) out[k] = c.prelit ? pre[k] * (mod ? col[k] : 1.0f) : 0.0f;
+        return;
+    }
+    float diffuseMat[3], ambMat[3] = { 0, 0, 0 }, emis[3] = { 0, 0, 0 }, globalAmb[3];
+    bool  ambFromVertex = false;
+    for (int k = 0; k < 3; ++k) {
+        if (mod) {
+            diffuseMat[k] = col[k] * c.kd;
+            if (c.prelit) { globalAmb[k] = col[k]; ambFromVertex = true; emis[k] = col[k] * c.amb[k] * c.ka; }
+            else          { globalAmb[k] = 1.0f; ambMat[k] = col[k] * c.amb[k] * c.ka; }
+        } else {
+            diffuseMat[k] = c.kd;
+            globalAmb[k]  = 1.0f;
+            ambMat[k]     = c.amb[k] * c.ka;
+            if (c.prelit) emis[k] = pre[k];
+        }
+    }
+    const float lightAmb = c.car ? 0.75f : 0.0f;
+    const float ndl1 = std::max(0.0f, -c.n[2]); // light 1 travels along +Z
+    float ndl2 = 0.0f;
+    if (c.d2[0] + c.d2[1] + c.d2[2] > 0.0f) ndl2 = std::max(0.0f, -(c.n[0] * d2at[0] + c.n[1] * d2at[1] + c.n[2] * d2at[2]));
+    const float ndlCar = c.car ? 0.25f * ndl1 : 0.0f; // g_GameLight: same direction as the main light, diffuse 0.25 grey
+    for (int k = 0; k < 3; ++k) {
+        const float ambSrc = ambFromVertex ? pre[k] : ambMat[k];
+        const float v = emis[k] + ambSrc * (globalAmb[k] + lightAmb) + diffuseMat[k] * (c.d1[k] * ndl1 + c.d2[k] * ndl2 + ndlCar);
+        out[k] = std::min(1.0f, std::max(0.0f, v));
+    }
+}
+
+void RunLighting() {
+    std::printf("---- R-12: lighting vs the CPU reference of the D3D9 fixed-function model ----\n");
+    char what[320];
+    const float Z = 4.0f;
+    // second directional light (extra directionals of the game, pExtraDirectionals), rotated 90 degrees about X
+    RpLight* dir2 = RpLightCreate(rpLIGHTDIRECTIONAL);
+    RwFrame* f2   = RwFrameCreate();
+    const RwV3d axisX{ 1.0f, 0.0f, 0.0f };
+    RwFrameRotate(f2, &axisX, 90.0f, rwCOMBINEREPLACE);
+    RpLightSetFrame(dir2, f2);
+    RpWorldAddLight(g_world, dir2);
+    const RwV3d at2 = RwFrameGetLTM(f2)->at;
+    const float d2at[3] = { at2.x, at2.y, at2.z };
+    std::printf("  second directional light travels along (%.2f, %.2f, %.2f)\n", at2.x, at2.y, at2.z);
+
+    const RwRGBA W{ 255, 255, 255, 255 }, B0{ 0, 0, 0, 255 };
+    // clang-format off
+    const LCase cases[] = {
+      // name                                           light prelit mod   mat                    prelit                 ka    kd    ambient              dir 1                 dir 2                 dir2 travel   normal  car
+      { "day: white material, no prelit",                true, false, true,  W,                     B0,                    1.0f, 1.0f, {0.20f,0.20f,0.18f}, {0.50f,0.45f,0.30f}, {0,0,0}, {0,0,0}, {0,0,0}, {0,0,-1}, false },
+      { "day: tilted normal, ka 0.8 kd 0.6",             true, false, true,  W,                     B0,                    0.8f, 0.6f, {0.25f,0.25f,0.22f}, {0.80f,0.70f,0.40f}, {0,0,0}, {0,0,0}, {0,0,0}, {0.5f,0.0f,-0.8660254f}, false },
+      { "day: saturating light on a coloured material",  true, false, true,  {200,100,50,255},      B0,                    1.0f, 1.0f, {0.50f,0.50f,0.45f}, {1.00f,0.85f,0.45f}, {0,0,0}, {0,0,0}, {0,0,0}, {0,0,-1}, false },
+      { "day: coloured material, 60 degrees",            true, false, true,  {30,160,220,255},      B0,                    1.0f, 1.0f, {0.35f,0.35f,0.30f}, {0.90f,0.80f,0.50f}, {0,0,0}, {0,0,0}, {0,0,0}, {0.8f,0.0f,-0.6f}, false },
+      { "day: building prelit + coloured material",      true, true,  true,  {220,200,180,255},     {150,140,120,255},     1.0f, 1.0f, {0.30f,0.30f,0.27f}, {0.60f,0.55f,0.35f}, {0,0,0}, {0,0,0}, {0,0,0}, {0.5f,0.0f,-0.8660254f}, false },
+      { "day: prelit, material colour not modulated",    true, true,  false, {220,200,180,255},     {150,140,120,255},     1.0f, 1.0f, {0.30f,0.30f,0.27f}, {0.60f,0.55f,0.35f}, {0,0,0}, {0,0,0}, {0,0,0}, {0.5f,0.0f,-0.8660254f}, false },
+      { "day: prelit + saturating light, modulated",     true, true,  true,  {180,180,255,255},     {200,200,200,255},     1.0f, 1.0f, {0.50f,0.50f,0.50f}, {1.00f,0.90f,0.60f}, {0,0,0}, {0,0,0}, {0,0,0}, {0,0,-1}, false },
+      { "night: street, ped skin (no prelit)",           true, false, true,  {240,190,160,255},     B0,                    1.0f, 1.0f, {0.12f,0.12f,0.20f}, {0.06f,0.06f,0.14f}, {0,0,0}, {0,0,0}, {0,0,0}, {0.5f,0.0f,-0.8660254f}, false },
+      { "night: prelit body, modulated",                 true, true,  true,  {120,20,20,255},       {200,200,200,255},     1.0f, 1.0f, {0.10f,0.10f,0.18f}, {0.05f,0.05f,0.12f}, {0,0,0}, {0,0,0}, {0,0,0}, {0,-0.6f,-0.8f}, false },
+      { "interior: ambient only, prelit white",          true, true,  true,  {200,180,160,255},     {255,255,255,255},     1.0f, 1.0f, {0.55f,0.50f,0.45f}, {0,0,0},             {0,0,0}, {0,0,0}, {0,0,0}, {0,0,-1}, false },
+      { "interior: ambient + two directionals, ped",     true, false, true,  {235,200,170,255},     B0,                    1.0f, 1.0f, {0.35f,0.33f,0.30f}, {0.30f,0.28f,0.20f}, {0.25f,0.25f,0.30f}, {0,0,0}, {0,0,0}, {0.5f,0.0f,-0.8660254f}, false },
+      { "two directionals (extra directional), day",     true, false, true,  W,                     B0,                    1.0f, 1.0f, {0.20f,0.20f,0.20f}, {0.40f,0.35f,0.25f}, {0.30f,0.30f,0.35f}, {0,0,0}, {0,0,0}, {0,-0.6f,-0.8f}, false },
+      { "ka 0, kd 1",                                    true, true,  true,  {200,150,100,255},     {100,90,80,255},       0.0f, 1.0f, {0.40f,0.40f,0.40f}, {0.50f,0.50f,0.50f}, {0,0,0}, {0,0,0}, {0,0,0}, {0.5f,0.0f,-0.8660254f}, false },
+      { "ka 1, kd 0",                                    true, true,  true,  {200,150,100,255},     {100,90,80,255},       1.0f, 0.0f, {0.40f,0.40f,0.40f}, {0.50f,0.50f,0.50f}, {0,0,0}, {0,0,0}, {0,0,0}, {0.5f,0.0f,-0.8660254f}, false },
+      { "normal facing away from the light: ambient only", true, false, true, {220,220,220,255},    B0,                    1.0f, 1.0f, {0.30f,0.30f,0.30f}, {0.90f,0.90f,0.90f}, {0,0,0}, {0,0,0}, {0,0,0}, {0,0,1}, false },
+      { "lighting off, prelit, modulated (TFACTOR)",     false, true, true,  {128,255,64,255},      {200,100,50,255},      1.0f, 1.0f, {0.50f,0.50f,0.50f}, {0.90f,0.90f,0.90f}, {0,0,0}, {0,0,0}, {0,0,0}, {0,0,-1}, false },
+      { "lighting off, prelit, not modulated",           false, true, false, {128,255,64,255},      {200,100,50,255},      1.0f, 1.0f, {0.50f,0.50f,0.50f}, {0.90f,0.90f,0.90f}, {0,0,0}, {0,0,0}, {0,0,0}, {0,0,-1}, false },
+      { "lighting off, not prelit: flat black (R9-3)",   false, false, true, {128,255,64,255},      B0,                    1.0f, 1.0f, {0.50f,0.50f,0.50f}, {0.90f,0.90f,0.90f}, {0,0,0}, {0,0,0}, {0,0,0}, {0,0,-1}, false },
+      { "car spec, day, prelit + modulated body",        true, true,  true,  {30,60,150,255},       {230,230,230,255},     1.0f, 1.0f, {0.40f,0.40f,0.38f}, {0.90f,0.80f,0.60f}, {0,0,0}, {0,0,0}, {0,0,0}, {0.5f,0.0f,-0.8660254f}, true },
+      { "car spec, night, prelit + modulated body",      true, true,  true,  {150,20,20,255},       {200,200,200,255},     1.0f, 1.0f, {0.10f,0.10f,0.18f}, {0.05f,0.05f,0.12f}, {0,0,0}, {0,0,0}, {0,0,0}, {0.5f,0.0f,-0.8660254f}, true },
+      { "car spec, day, not prelit + modulated",         true, false, true,  {30,60,150,255},       B0,                    1.0f, 1.0f, {0.40f,0.40f,0.38f}, {0.90f,0.80f,0.60f}, {0,0,0}, {0,0,0}, {0,0,0}, {0.5f,0.0f,-0.8660254f}, true },
+      { "car spec, prelit, white material (not modulated)", true, true, true, W,                    {120,130,140,255},     1.0f, 1.0f, {0.30f,0.30f,0.30f}, {0.50f,0.50f,0.50f}, {0,0,0}, {0,0,0}, {0,0,0}, {0,0,-1}, true },
+      { "car spec, interior (ambient only), prelit + mod", true, true, true,  {200,200,40,255},     {255,255,255,255},     1.0f, 1.0f, {0.50f,0.50f,0.50f}, {0,0,0},             {0,0,0}, {0,0,0}, {0,0,0}, {0,0,-1}, true },
+    };
+    // clang-format on
+    rw::ObjPipeline* pipe = NotsaGl3CreateSaEnvPipeline(TestPrepare, 0x9C);
+    for (const LCase& c : cases) {
+        RwUInt32 fl = rpGEOMETRYNORMALS;
+        if (c.lightFlag) fl |= rpGEOMETRYLIGHT;
+        if (c.prelit)    fl |= rpGEOMETRYPRELIT;
+        if (c.modulate)  fl |= rpGEOMETRYMODULATEMATERIALCOLOR;
+        Quad q = MakeQuad(fl, Z, nullptr, c.mat, c.prelit ? c.pre : B0);
+        q.mat->surfaceProps.ambient  = c.ka;
+        q.mat->surfaceProps.diffuse  = c.kd;
+        q.mat->surfaceProps.specular = 0.0f;
+        SetNormals(q, { c.n[0], c.n[1], c.n[2] });
+        const RwRGBAReal a{ c.amb[0], c.amb[1], c.amb[2], 1.0f }, d1{ c.d1[0], c.d1[1], c.d1[2], 1.0f }, d2{ c.d2[0], c.d2[1], c.d2[2], 1.0f };
+        RpLightSetColor(g_ambient, &a);
+        RpLightSetColor(g_dir, &d1);
+        RpLightSetColor(dir2, &d2);
+        if (c.car) {
+            q.atomic->pipeline = pipe;
+            g_envMesh = NotsaSaEnvMesh{};
+            g_envMesh.spec = 0.5f; g_envMesh.power = 10.0f;
+            g_envMesh.lightDir[0] = 0.0f; g_envMesh.lightDir[1] = 0.0f; g_envMesh.lightDir[2] = -1.0f; g_envMesh.lightSpec = 0.0f; // towards the light; lightSpec 0: no specular term, the extra light stays
+        }
+        float ref[3];
+        RefD3D(c, d2at, ref);
+        const Px p = DrawCenter(q);
+        const int e[3] = { (int)std::lround(ref[0] * 255.f), (int)std::lround(ref[1] * 255.f), (int)std::lround(ref[2] * 255.f) };
+        std::snprintf(what, sizeof(what), "D3D ref: %s -> (%d,%d,%d)", c.name, e[0], e[1], e[2]);
+        Check(Near(p, e[0], e[1], e[2], 3), what, Str(p).c_str());
+        g_envMesh = NotsaSaEnvMesh{};
+        FreeQuad(q);
+    }
+    RpLightSetColor(dir2, &(const RwRGBAReal&)RwRGBAReal{ 0, 0, 0, 1 });
+    SetLights(0.0f, 0.0f);
+
+    // ---- unlit and not prelit: black AND opaque (exe 0x756EF6: TFACTOR 0xFF000000, vertex alpha off), the material alpha must not leak in ----
+    {
+        Quad q = MakeQuad(rpGEOMETRYNORMALS | rpGEOMETRYMODULATEMATERIALCOLOR, Z, nullptr, { 128, 255, 64, 128 }, B0);
+        SetLights(0.5f, 0.5f);
+        Begin({ 50, 60, 70, 255 });
+        RpAtomicRender(q.atomic);
+        End();
+        const Px p = At(g_pw / 2, g_ph / 2);
+        Check(Near(p, 0, 0, 0, 1), "unlit, not prelit, material alpha 128: opaque black (not blended with the background (50,60,70))", Str(p).c_str());
+        // the same geometry with a prelit colour: vertex colour x TFACTOR, and the material alpha blends
+        FreeQuad(q);
+        q = MakeQuad(rpGEOMETRYNORMALS | rpGEOMETRYPRELIT | rpGEOMETRYMODULATEMATERIALCOLOR, Z, nullptr, { 255, 255, 255, 128 }, { 200, 100, 50, 255 });
+        Begin({ 50, 60, 70, 255 });
+        RpAtomicRender(q.atomic);
+        End();
+        const Px p2 = At(g_pw / 2, g_ph / 2);
+        // material colour white = no TFACTOR modulation in the exe, but the alpha 128 still goes through the material in the GL path: blend with the background
+        Check(Near(p2, (200 + 50) / 2, (100 + 60) / 2, (50 + 70) / 2, 4), "unlit, prelit (200,100,50), material alpha 128: blended over (50,60,70)", Str(p2).c_str());
+        FreeQuad(q);
+        SetLights(0.0f, 0.0f);
+    }
+
+    // ---- D3DRS_NORMALIZENORMALS: a scaled frame must not brighten the light (exe 0x757757 turns the state on for non-unit matrices) ----
+    {
+        Quad q = MakeQuad(rpGEOMETRYNORMALS | rpGEOMETRYLIGHT, Z, nullptr, W, B0, false, 0.4f);
+        const RwV3d sc{ 2.5f, 2.5f, 2.5f };
+        RwMatrix* fm = RwFrameGetMatrix(q.frame);
+        RwMatrixScale(fm, &sc, rwCOMBINEREPLACE);
+        RwMatrixUpdate(fm);
+        RwFrameUpdateObjects(q.frame);
+        SetLights(0.0f, 0.3f);
+        const Px p = DrawCenter(q);
+        Check(Near(p, 77, 77, 77, 3), "scaled frame (x2.5): directional 0.3 facing the quad = 77 (normals are normalised like D3DRS_NORMALIZENORMALS)", Str(p).c_str());
+        FreeQuad(q);
+        SetLights(0.0f, 0.0f);
+    }
+
+    // ---- fog colour channel order (re3 f027c3af): RW passes 0xAARRGGBB; an asymmetric colour must come out as is (R and B not swapped) ----
+    {
+        Quad q = MakeQuad(rpGEOMETRYPRELIT, Z, nullptr, W, { 255, 255, 255, 255 });
+        RS(rwRENDERSTATEFOGCOLOR, 0xFFC86432u); // r 200, g 100, b 50
+        RS(rwRENDERSTATEFOGTYPE, rwFOGTYPELINEAR);
+        RS(rwRENDERSTATEFOGENABLE, 1);
+        g_cam->fogPlane = 1.0f;
+        RwCameraSetFarClipPlane(g_cam, 4.5f);
+        const float f = (Z - 4.5f) / (1.0f - 4.5f); // DoFog: (w - end) / (start - end)
+        const Px p = DrawCenter(q);
+        const int e[3] = { (int)std::lround(255.f * f + 200.f * (1.f - f)), (int)std::lround(255.f * f + 100.f * (1.f - f)), (int)std::lround(255.f * f + 50.f * (1.f - f)) };
+        std::snprintf(what, sizeof(what), "fog colour 0xFFC86432 (200,100,50), fog factor %.3f: expected (%d,%d,%d), R and B not swapped", f, e[0], e[1], e[2]);
+        Check(Near(p, e[0], e[1], e[2], 4), what, Str(p).c_str());
+        char got[64]; std::snprintf(got, sizeof(got), "%d,%d,%d", p.r, p.g, p.b);
+        // RwRenderStateGet returns what was set
+        void* back = nullptr;
+        RwRenderStateGet(rwRENDERSTATEFOGCOLOR, &back);
+        Check((uintptr_t)back == 0xFFC86432u, "RwRenderStateGet(FOGCOLOR) returns the RW value 0xFFC86432", got);
+        RwCameraSetFarClipPlane(g_cam, 100.0f);
+        RS(rwRENDERSTATEFOGENABLE, 0);
+        FreeQuad(q);
+    }
+
+    RpWorldRemoveLight(g_world, dir2);
+    RpLightDestroy(dir2);
+    Check(NoGlError("R-12 lighting"), "glGetError clean (R-12 lighting)");
+}
+
+// ---------------------------------------------------------------------------------------------------------------------------------------------
+// ---------------------------------------------------------------------------------------------------------------------------------------------
+// part B: real data
 struct ImgEntry { long offset, size; };
 using ImgDir = std::map<std::string, ImgEntry>;
 
@@ -1532,6 +1731,7 @@ int main() {
     (void)std::system(mk.c_str());
     RunSynthetic();
     RunSaEnv();
+    RunLighting();
     RunSkinSynthetic();
     if (haveData) {
         RunReal(gta, dumpDir);

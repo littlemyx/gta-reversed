@@ -18,6 +18,8 @@
 
 #include <cstdarg>
 #include <cstdio>
+#include <cstdlib>
+#include <string>
 
 #include "pipelines_carenv_gl3.h"
 
@@ -67,20 +69,33 @@ main(void)
 	vec4 Vertex = u_world * vec4(in_pos, 1.0);
 	gl_Position = u_proj * u_view * Vertex;
 	vec3 Normal = mat3(u_world) * in_normal;
+	bool d3d = u_ambLight.a > 0.5;	// R-12 lighting model (librw gl3: ambLight.alpha), 0 = librw's original (NOTSA_GL3_OLD_LIGHTING)
+	if(d3d)
+		Normal = NormalizeNormal(Normal);
 	vec3 Nv = mat3(u_view) * Normal;	// camera (view) space normal
 
 	v_tex0 = in_tex0;
 
-	v_color = in_color;
-	v_color.rgb += u_ambLight.rgb*surfAmbient;
-	v_color.rgb += DoDynamicLight(Vertex.xyz, Normal)*surfDiffuse;
+	// D3D9 FF order (R-12): (prelit + ambient*ka + lights*kd) * material colour, saturated at the end
+	vec3 lit = in_color.rgb;
+	lit += u_ambLight.rgb*surfAmbient;
+	lit += DoDynamicLight(Vertex.xyz, Normal)*surfDiffuse;
+	vec3 addAfter = vec3(0.0, 0.0, 0.0);
 	if(u_saFx.z > 0.0){
-		// g_GameLight is also an enabled D3D light: diffuse 0.25 and ambient 0.75 (CCustomCarEnvMapPipeline::PreRenderUpdate)
-		v_color.rgb += u_ambLight.rgb*surfAmbient*0.75;
-		v_color.rgb += vec3(0.25*max(dot(normalize(Normal), normalize(u_saLight.xyz)), 0.0))*surfDiffuse;
+		// g_GameLight is also an enabled D3D light: diffuse 0.25 and ambient 0.75 (CCustomCarEnvMapPipeline::PreRenderUpdate).
+		// Its ambient term multiplies the AMBIENT material source: prelit + modulate (u_surfProps.w = 1): the vertex colour (not scaled by the material
+		// colour), otherwise the material ambient (ambient light * ka, scaled by the material colour like the rest).
+		if(d3d && u_surfProps.w > 0.5)
+			addAfter = in_color.rgb*0.75;
+		else
+			lit += u_ambLight.rgb*surfAmbient*0.75;
+		lit += vec3(0.25*max(dot(normalize(Normal), normalize(u_saLight.xyz)), 0.0))*surfDiffuse;
 	}
-	v_color = clamp(v_color, 0.0, 1.0);
-	v_color *= u_matColor;
+	if(d3d){
+		v_color.rgb = clamp(lit*u_matColor.rgb + addAfter, 0.0, 1.0);
+		v_color.a = clamp(in_color.a, 0.0, 1.0)*u_matColor.a;
+	}else
+		v_color = clamp(vec4(lit, in_color.a), 0.0, 1.0)*u_matColor;
 
 	int mode = int(u_saFx.x + 0.5);
 	v_env = vec3(0.0, 0.0, 1.0);
@@ -196,6 +211,32 @@ NotsaSaEnvPrepareFn FindPrepare(const rw::ObjPipeline* p) {
     return nullptr;
 }
 
+// R-12 diagnostics: NOTSA_R12_LIGHTLOG=1 logs the lights an SA env atomic is drawn with (every 300th mesh, at most 60 lines)
+void LogLightsOnce(Atomic* atomic, Material* m, uint32 flags) {
+    static const bool on = std::getenv("NOTSA_R12_LIGHTLOG") != nullptr;
+    static int        counter = 0, lines = 0;
+    if (!on || lines >= 60 || (counter++ % 300) != 0) {
+        return;
+    }
+    rw::WorldLights ld;
+    rw::Light*      dirs[8];
+    rw::Light*      locs[8];
+    ld.directionals    = dirs;
+    ld.numDirectionals = 8;
+    ld.locals          = locs;
+    ld.numLocals       = 8;
+    ((rw::World*)rw::engine->currentWorld)->enumerateLights(atomic, &ld);
+    std::string d;
+    char        b[160];
+    for (int i = 0; i < ld.numDirectionals; i++) {
+        std::snprintf(b, sizeof(b), " dir%d=(%.2f,%.2f,%.2f)", i, dirs[i]->color.red, dirs[i]->color.green, dirs[i]->color.blue);
+        d += b;
+    }
+    lines++;
+    LogF("R-12 light: flags=0x%x amb=(%.2f,%.2f,%.2f) n_amb=%d%s | mat=(%d,%d,%d,%d) ka=%.2f kd=%.2f", flags, ld.ambient.red, ld.ambient.green, ld.ambient.blue, ld.numAmbients, d.c_str(), m->color.red,
+         m->color.green, m->color.blue, m->color.alpha, m->surfaceProps.ambient, m->surfaceProps.diffuse);
+}
+
 void SaEnvRenderCB(Atomic* atomic, InstanceDataHeader* header) {
     NotsaSaEnvPrepareFn prepare = FindPrepare(atomic->pipeline);
     const uint32 flags = atomic->geometry->flags;
@@ -214,11 +255,16 @@ void SaEnvRenderCB(Atomic* atomic, InstanceDataHeader* header) {
         const bool useFx = (mesh.mode != NOTSA_SAENV_NONE && mesh.envTex && mesh.envTex->raster) || mesh.spec > 0.f;
         const bool haveShader = useFx && EnsureShaders();
 
+        LogLightsOnce(atomic, m, flags);
         RGBA col = m->color;
         if (mesh.blackColor) {
             col.red = col.green = col.blue = 0;
         }
-        setMaterial(flags, col, m->surfaceProps);
+        // exe 0x5DA7A9: the material colour only modulates when the geometry has MODULATE and the colour is not white; with prelit colours the
+        // ambient term of the extra D3D light (g_GameLight) then multiplies the vertex colour instead of the material ambient (u_surfProps.w)
+        const bool white      = col.red == 255 && col.green == 255 && col.blue == 255 && col.alpha == 255;
+        const bool prelitMod  = (flags & rw::Geometry::PRELIT) && (flags & rw::Geometry::MODULATE) && !white;
+        setMaterial(flags, col, m->surfaceProps, prelitMod ? 1.0f : 0.0f);
         setTexture(0, m->texture);
         rw::SetRenderState(rw::VERTEXALPHA, inst->vertexAlpha || m->color.alpha != 0xFF);
 

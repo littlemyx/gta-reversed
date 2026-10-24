@@ -2,6 +2,7 @@
 // called from AudioCmd (audio_cmd.cpp) which InjRunCmd already calls under NOTSA_PORTABLE. Portable-only file; runs on the main thread like every injector command.
 //   cmd:poolstat          logs used / capacity of the entity, node and ped/vehicle/object pools ([play] line)
 //   cmd:savemenu          what the script command ACTIVATE_SAVE_MENU does (the main loop then opens the save-game menu): m_bIsSaveDone = true, player velocity cleared
+//   cmd:interior:X:Y:Z:AREA  R-12: the player into an interior (CGame::currArea + area code + streaming)
 //   cmd:roadveh:MODEL     the player is put 3 m beside the closest vehicle path node, a car of MODEL (script-created, no driver) stands on the node pointing along its first link
 //   cmd:pickup:WEAPON:AMMO a one-off weapon pickup 2 m in front of the player (walk onto it to collect it)
 //   cmd:playerstat        logs player position / heading / camera mode / money / game clock / vehicle (what a save + load must preserve)
@@ -79,6 +80,23 @@ bool PlayCmd(const char* name, const std::string& args) {
             CStreaming::LoadAllRequestedModels(false);
             const auto ref = CPickups::GenerateNewOne_WeaponType(pos, (eWeaponType)w, PICKUP_ONCE, (uint32)n, false, nullptr);
             NOTSA_LOG_INFO("[play] pickup weapon {} ammo {} at ({:.1f},{:.1f},{:.1f}) ref {}", w, n, pos.x, pos.y, pos.z, (int)ref.index);
+        }
+        return true;
+    }
+    if (!std::strcmp(name, "interior")) { // R-12: cmd:interior:X:Y:Z:AREA  puts the player into an interior (what SET_AREA_VISIBLE + SET_CHAR_AREA_VISIBLE + SET_CHAR_COORDINATES do)
+        float x = 0, y = 0, z = 0;
+        int   area = 0;
+        std::sscanf(args.c_str(), "%f:%f:%f:%d", &x, &y, &z, &area);
+        if (pl) {
+            const CVector pos{ x, y, z };
+            CGame::currArea = (eAreaCodes)area;
+            pl->SetAreaCode((eAreaCodes)area);
+            CStreaming::RemoveBuildingsNotInArea((eAreaCodes)area);
+            pl->Teleport(pos, false);
+            CStreaming::LoadScene(pos);
+            CStreaming::LoadSceneCollision(pos);
+            CStreaming::LoadAllRequestedModels(false);
+            NOTSA_LOG_INFO("[play] interior area {} at ({:.1f},{:.1f},{:.1f})", area, x, y, z);
         }
         return true;
     }

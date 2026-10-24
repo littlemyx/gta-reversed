@@ -6,7 +6,7 @@
 # Takes/releases the GPU lock (C:/gta-scratch/gpu.lock) itself, through tools/standalone/gpu_locked.sh (re-exec). The original runs SILENT: dsound.dll proxy (dsmute) + SFX/radio volume 0 + empty movies dir. Output: C:/gta-perf/runs/TAG.{bin,log,csv}
 # USERDIR: OUR exe runs with a private user-files dir (NOTSA_STANDALONE_USERDIR=C:/gta-scratch/userdir/fps-<tag>-<time>-<pid>, seeded with the generated set file); the ORIGINAL exe cannot be redirected: the whole
 # Documents\GTA San Andreas User Files dir is backed up before and restored after the run (hostenv.sh docs_backup / docs_restore).
-HERE="$(cd "$(dirname "$0")" && pwd)"; . "$HERE/../hostenv.sh"
+HERE="$(cd "$(dirname "$0")" && pwd)"; . "$HERE/../hostenv.sh"; . "$HERE/../own_kill.sh"
 KIND="$1"; LIM="$2"; TAG="$3"; VM="${4:-}"; SCR="${5:-$HERE/fps_scenes.txt}"
 [ -n "$TAG" ] || { sed -n 2,8p "$0"; exit 2; }
 # GPU lock: re-run under gpu_locked.sh (dead-holder detection, USER-PLAY respected); the lock is released by it when this script ends or is killed
@@ -14,15 +14,17 @@ KIND="$1"; LIM="$2"; TAG="$3"; VM="${4:-}"; SCR="${5:-$HERE/fps_scenes.txt}"
 PY="${GTASA_PYTHON:-/c/Users/littl/AppData/Local/Programs/Python/Python312/python.exe}"
 PX=C:/gta-perf/px; RUNS=C:/gta-perf/runs; mkdir -p $RUNS
 if [ "$KIND" = ours ]; then DIR=C:/gta-perf/ours; EXE=gta_reversed.exe; else DIR=C:/gta-perf/orig; EXE=gta_sa.exe; fi
+# kill only OUR exe (rules v5 item 1, never by image name): the job we started (+ its tree) and any stray $EXE running from $DIR (private perf data dir; we hold gpu.lock)
+GPID=""; kill_exe() { own_kill_pid "$GPID"; own_kill_in_dir "${EXE%.exe}" "$DIR"; }
 if [ "$KIND" = ours ]; then
   UD="$(userdir_new "fps-$TAG" none)"; SET="$UD/gta_sa.set"; export NOTSA_STANDALONE_USERDIR="$UD"
-  cleanup() { taskkill //F //IM $EXE >/dev/null 2>&1; }
+  cleanup() { kill_exe; }
 else
   SET="$DOCS_USERFILES/gta_sa.set"; DBK="$RUNS/userfiles_backup_$TAG"; docs_backup "$DBK"
-  cleanup() { taskkill //F //IM $EXE >/dev/null 2>&1; docs_restore "$DBK"; }
+  cleanup() { kill_exe; docs_restore "$DBK"; }
 fi
 trap cleanup EXIT
-taskkill //F //IM $EXE >/dev/null 2>&1
+kill_exe   # a stray exe of an earlier, killed run
 # settings file (written to $SET: the private dir for ours, Documents for the original)
 SFX=64; [ "$KIND" = orig ] && SFX=0
 "$PY" - "$LIM" "$VM" "$SFX" "$SET" <<'EOPY'
@@ -46,6 +48,7 @@ if [ -n "${CDB:-}" ]; then   # CDB=1: run the exe under cdb (first-chance dz/av 
 else
   ./$EXE > $RUNS/$TAG.out 2>&1 &
 fi
+GPID=$!
 sleep 5
 if ! tasklist | grep -qi "$EXE"; then echo "fps_run: $EXE did not start"; exit 2; fi
 sed "s/@RUN@/$TAG/g" "$SCR" > $RUNS/$TAG.script

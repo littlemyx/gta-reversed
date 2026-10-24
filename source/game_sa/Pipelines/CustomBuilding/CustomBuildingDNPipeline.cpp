@@ -190,8 +190,8 @@ bool CCustomBuildingDNPipeline::CreatePipe() {
     return ObjPipeline != nullptr;
 #else
     extern RxPipeline* NotsaGl3CreateBuildingDNPipe(); // R-8: portable/render/pipelines_saenv_game_gl3.cpp (gl3 default instance + env shader; the CPU colour blend is NVCPipelineProcess)
-    ObjPipeline = NotsaGl3CreateBuildingDNPipe();
-    return ObjPipeline != nullptr;
+    ObjPipeline = NotsaGl3CreateBuildingDNPipe(); // null (NOTSA_R9_OFF / pool failure): the atomics keep librw's stock pipeline
+    return true;
 #endif
 }
 

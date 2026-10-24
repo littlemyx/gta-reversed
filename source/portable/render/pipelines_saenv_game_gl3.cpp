@@ -136,6 +136,8 @@ void BuildingPrepareCB(RpAtomic*, RpMaterial* mat, NotsaSaEnvMesh& out) { Buildi
 void BuildingDNPrepareCB(RpAtomic*, RpMaterial* mat, NotsaSaEnvMesh& out) { BuildingPrepare(mat, out, true); }
 } // namespace
 
-RxPipeline* NotsaGl3CreateCarEnvPipe() { return NotsaGl3CreateSaEnvPipeline(CarPrepare, CUSTOM_CAR_ENV_MAP_PIPELINE_PLUGIN_ID); }
-RxPipeline* NotsaGl3CreateBuildingPipe() { return NotsaGl3CreateSaEnvPipeline(BuildingPrepareCB, rpPDS_MAKEPIPEID(rwVENDORID_DEVELOPER, 0x9C)); }
-RxPipeline* NotsaGl3CreateBuildingDNPipe() { return NotsaGl3CreateSaEnvPipeline(BuildingDNPrepareCB, CUSTOM_BUILDING_DN_PIPELINE_ID); }
+// NOTSA_R9_OFF=1 (diagnostics): no SA env pipelines, the atomics keep librw's stock pipelines (the R-6 behaviour)
+static bool R9Off() { const char* e = std::getenv("NOTSA_R9_OFF"); return e && *e && *e != '0'; }
+RxPipeline* NotsaGl3CreateCarEnvPipe() { return R9Off() ? nullptr : NotsaGl3CreateSaEnvPipeline(CarPrepare, CUSTOM_CAR_ENV_MAP_PIPELINE_PLUGIN_ID); }
+RxPipeline* NotsaGl3CreateBuildingPipe() { return R9Off() ? nullptr : NotsaGl3CreateSaEnvPipeline(BuildingPrepareCB, rpPDS_MAKEPIPEID(rwVENDORID_DEVELOPER, 0x9C)); }
+RxPipeline* NotsaGl3CreateBuildingDNPipe() { return R9Off() ? nullptr : NotsaGl3CreateSaEnvPipeline(BuildingDNPrepareCB, CUSTOM_BUILDING_DN_PIPELINE_ID); }

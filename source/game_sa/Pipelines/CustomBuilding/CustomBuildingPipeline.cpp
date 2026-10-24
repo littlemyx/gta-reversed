@@ -27,8 +27,8 @@ bool CCustomBuildingPipeline::CreatePipe() {
     return ObjPipeline != nullptr;
 #else
     extern RxPipeline* NotsaGl3CreateBuildingPipe(); // R-8: portable/render/pipelines_saenv_game_gl3.cpp
-    ObjPipeline = NotsaGl3CreateBuildingPipe();
-    return ObjPipeline != nullptr;
+    ObjPipeline = NotsaGl3CreateBuildingPipe(); // null (NOTSA_R9_OFF / pool failure): the atomics keep librw's stock pipeline
+    return true;
 #endif
 }
 

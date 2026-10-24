@@ -5,6 +5,7 @@
  *  - '\\' becomes '/',
  *  - every component is matched case-insensitively against the real directory (exact match first; directory listings are cached,
  *    a cached listing is re-read when the directory's mtime changed or a lookup misses and the directory mtime moved on),
+ *  - trailing spaces and dots of a component are dropped (Win32 path normalisation; the game's data files list "DATA\\DEFAULT.IDE " with a trailing blank),
  *  - "", "." and ".." components are kept as they are (".." goes to the real parent, as the OS does),
  *  - a component that does not exist stays verbatim (so "wb"/"a" modes create new files with the game's own spelling), and so does everything after it.
  * Relative paths stay relative to the cwd (the exe's CFileMgr::ChangeDir/SetDir chdir); absolute paths are resolved from "/".

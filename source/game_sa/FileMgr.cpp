@@ -306,6 +306,9 @@ FILESTREAM CFileMgr::OpenFile(const char *path, const char *mode) {
     FILESTREAM fs{nullptr};
 #ifdef NOTSA_PORTABLE
     fs = notsa::portable::OpenResolvedText(path, mode); // W-7: '\\' -> '/', case-insensitive components; "r" = MSVC text mode (CRLF -> LF)
+    if (!fs) {
+        NOTSA_LOG_WARN("CFileMgr::OpenFile('{}', '{}') failed (errno {})", path, mode, errno);
+    }
 #else
     if (WindowsCharset == CP_UTF8) {
         fopen_s(&fs, path, mode);

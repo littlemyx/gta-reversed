@@ -109,9 +109,14 @@ std::string ResolvePathFrom(std::string_view baseDir, std::string_view path) {
     while (pos < norm.size()) {
         size_t end = norm.find('/', pos);
         if (end == std::string::npos) end = norm.size();
-        const std::string comp = norm.substr(pos, end - pos);
+        std::string comp = norm.substr(pos, end - pos);
         pos = end + 1;
         if (comp.empty() || comp == ".") continue;
+        if (comp != "..") { // Win32 path normalisation drops trailing spaces and dots of a component ("DATA\\DEFAULT.IDE " is DEFAULT.IDE)
+            const auto n = comp.find_last_not_of(" .");
+            if (n == std::string::npos) continue; // only spaces / dots
+            comp.resize(n + 1);
+        }
         if (comp == ".." || missing) {
             cur = join(cur, comp);
             continue;

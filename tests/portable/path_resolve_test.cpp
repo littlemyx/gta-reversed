@@ -51,6 +51,11 @@ int main() {
     CHECK_EQ(ResolvePathFrom("", ""), "");
     CHECK_EQ(ResolvePathFrom("", "."), ".");
     CHECK_EQ(ResolvePathFrom(R, "models\\Zz\\..\\coll\\peds.col"), R + "/models/Zz/../coll/peds.col"); // after a missing component: verbatim
+    // --- Win32 trailing space / dot normalisation
+    CHECK_EQ(ResolvePathFrom(R, "models\\coll\\peds.col  "), R + "/models/coll/Peds.COL");
+    CHECK_EQ(ResolvePathFrom(R, "models. \\COLL.\\peds.col."), R + "/models/coll/Peds.COL");
+    CHECK_EQ(ResolvePathFrom(R, "new thing .txt "), R + "/new thing .txt");
+    CHECK_EQ(ResolvePathFrom(R, "models\\.. \\x"), R + "/models/x"); // ".. " is empty after trimming: dropped
     // --- absolute path (resolved from "/")
     CHECK_EQ(ResolvePath(R + "/MODELS/COLL/peds.col"), R + "/models/coll/Peds.COL");
     // --- cwd-relative semantics (the exe's ChangeDir/SetDir chdir)

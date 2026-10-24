@@ -26,6 +26,7 @@ PY
 mut nobackslash "if (c == '\\\\') c = '/';" "if (c == '\\\\') c = '\\\\';"
 mut crlf "if (c == '\\r') { cr = true; continue; }" ""
 mut ctrlz "if (c == 0x1A) { eof = true; break; }" ""
+mut notrim 'comp.resize(n + 1);' ''
 mut nolower "c = (char)(c - 'A' + 'a');" "c = c;"
 mut nomtime "if (!l.valid || !SameTime(l.mtime, mt)) {" "if (!l.valid) {"
 mut trailing "if (norm.back() == '/' && cur.back() != '/') cur += '/';" ""

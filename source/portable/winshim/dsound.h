@@ -2,11 +2,10 @@
 /*
  * MAC-W0: DirectSound as TYPES for non-Windows builds, so that the audio hardware layer (CAEAudioHardware / CAEAudioChannel / CAEStaticChannel /
  * CAEStreamingChannel / CAESmoothFadeThread) compiles unchanged. The interfaces are abstract: nothing in the portable build can create an
- * implementation, because the only factory functions (DirectSoundCreate / DirectSoundCreate8 / EAXDirectSoundCreate) log and FAIL with
- * DSERR_NODRIVER. CAEAudioHardware::Initialise then returns false before any channel exists (audio disabled).
- * Real audio on this platform is the OpenAL port of the hardware layer (stream W-3/W-4, game_sa/Audio/OpenAL).
+ * implementation, EXCEPT the silent software device of portable/dsound_null.cpp that DirectSoundCreate / DirectSoundCreate8 return (MAC-BOOT1, W-3 stage 1:
+ * the whole audio engine runs, nothing is played). Real audio on this platform is the OpenAL port of the hardware layer (stream W-3/W-4, game_sa/Audio/OpenAL).
  *
- * Constant values are the Windows SDK's; GUID values are placeholders that are never interpreted (no QueryInterface can succeed).
+ * Constant values are the Windows SDK's; GUID values are placeholders (only compared with each other by the silent device's QueryInterface).
  */
 #include "objidl.h"
 #include "mmsystem.h"
@@ -180,22 +179,16 @@ using LPDIRECTSOUND       = IDirectSound*;
 using LPDIRECTSOUND8      = IDirectSound8*;
 using LPDIRECTSOUNDBUFFER = IDirectSoundBuffer*;
 
-// ---- factories: log and FAIL (W-B4: no DirectSound on this platform; the OpenAL hardware layer replaces them) ----
+// ---- factories: W-3 stage 1 returns a SILENT software device (portable/dsound_null.cpp); the OpenAL layer will replace its role ----
 namespace notsa::portable {
-inline HRESULT DirectSoundUnavailable(const char* fn) {
-    static bool logged = false;
-    if (!logged) {
-        logged = true;
-        std::fprintf(stderr, "W-B4: %s: DirectSound does not exist on this platform, audio hardware is disabled (OpenAL port pending)\n", fn);
-    }
-    return DSERR_NODRIVER;
+HRESULT CreateNullDirectSound(IDirectSound8** out); // dsound_null.cpp
 }
-} // namespace notsa::portable
 inline HRESULT DirectSoundCreate(const GUID*, IDirectSound** ds, IUnknown*) {
-    *ds = nullptr;
-    return notsa::portable::DirectSoundUnavailable("DirectSoundCreate");
+    IDirectSound8* d = nullptr;
+    const HRESULT hr = notsa::portable::CreateNullDirectSound(&d);
+    *ds = d;
+    return hr;
 }
 inline HRESULT DirectSoundCreate8(const GUID*, IDirectSound8** ds, IUnknown*) {
-    *ds = nullptr;
-    return notsa::portable::DirectSoundUnavailable("DirectSoundCreate8");
+    return notsa::portable::CreateNullDirectSound(ds);
 }

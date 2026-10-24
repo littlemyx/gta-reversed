@@ -1,5 +1,5 @@
 #include "StdInc.h"
-#ifdef NOTSA_STANDALONE_RUN
+#if defined(NOTSA_STANDALONE_RUN) && !defined(NOTSA_PORTABLE)
 #include "Lockstep.h"
 #include "GameRand.h"
 #include "Timer.h"

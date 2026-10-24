@@ -133,3 +133,4 @@ date	agent	rules	kind	tokens	tool_uses	minutes	outcome	notes
 2026-10-24	MAC-P4	v4	P-4 width triage + mechanical fixes	-	-	-	done: 320->45, 68/71 identical + 3 dead COMDAT
 2026-10-24	MAC-P4-REV	v4	review P-4	-	-	-	clean
 2026-10-24	MAC-P2k	v4	P-2k verification + ctest + strict	235824	137	90	done; p2d red from P-4f
+2026-10-24	MAC-F4a	v4	F inline asm lift (soft x87)	-	-	-	done: 36->0, 40/43 bit-exact

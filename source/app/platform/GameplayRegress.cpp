@@ -173,6 +173,23 @@ bool NotsaGrCmd(const char* name, const std::string& args) {
 #ifndef NOTSA_PORTABLE // (portable has the same command in portable/play_cmd.cpp)
     if (!std::strcmp(name, "savemenu")) { FrontEndMenuManager.m_bIsSaveDone = true; pl->m_vecMoveSpeed = CVector{}; pl->m_vecTurnSpeed = CVector{}; GR_LOG("[gr-cmd] savemenu requested (m_bIsSaveDone = 1)"); return true; } // what ACTIVATE_SAVE_MENU does: the main loop then opens the save-game menu (FID-MAC W1 round trip)
 #endif
+    if (!std::strcmp(name, "endmission")) { // endmission  what the running mission script's MISSION_HAS_FINISHED + TERMINATE_THIS_SCRIPT do (test shortcut: the save menu is only legal outside a mission; SAVE-LOAD)
+        for (auto* s = CTheScripts::pActiveScripts; s;) {
+            auto* next = s->m_pNext;
+            if (s->m_ThisMustBeTheOnlyMissionRunning) {
+                if (s->m_UsesMissionCleanup) { CTheScripts::MissionCleanUp.Process(); }
+                CTheScripts::bAlreadyRunningAMissionScript = false;
+                s->RemoveScriptFromList(&CTheScripts::pActiveScripts);
+                s->AddScriptToList(&CTheScripts::pIdleScripts);
+                s->ShutdownThisScript();
+                GR_LOG("[gr-cmd] endmission: stopped %s", s->m_szName);
+            }
+            s = next;
+        }
+        if (CTheScripts::OnAMissionFlag) { { const uint32_t zero = 0; std::memcpy(&CTheScripts::ScriptSpace[CTheScripts::OnAMissionFlag], &zero, sizeof(zero)); } }
+        GR_LOG("[gr-cmd] endmission: OnAMission = %d", (int)CTheScripts::IsPlayerOnAMission());
+        return true;
+    }
     if (!std::strcmp(name, "money")) { FindPlayerInfo().m_nMoney = std::atoi(args.c_str()); GR_LOG("[gr-cmd] money %d", FindPlayerInfo().m_nMoney); return true; } // money:N  the player's money (may be negative or 0: CGameLogic fee tests)
     if (!std::strcmp(name, "spawncop")) { // spawncop[:MODEL[:DIST]]  an armed LAPD cop (ped type COP) DIST m in front of the player, standing
         int mdl = 280; float dist = 6.f;
